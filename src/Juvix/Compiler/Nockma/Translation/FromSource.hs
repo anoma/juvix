@@ -53,8 +53,10 @@ atomOp = do
 
 atomDirection :: Parser (N.Atom Natural)
 atomDirection = do
-  dirs <- some (choice [symbol "L" $> N.L, symbol "R" $> N.R])
-  return (N.Atom (N.serializePosition (N.Position (NonEmpty.toList dirs))) (Irrelevant (Just N.AtomHintPosition)))
+  dirs <-
+    symbol "S" $> []
+      <|> NonEmpty.toList <$> some (choice [symbol "L" $> N.L, symbol "R" $> N.R])
+  return (N.Atom (N.serializePosition (N.Position dirs)) (Irrelevant (Just N.AtomHintPosition)))
 
 atomNat :: Parser (N.Atom Natural)
 atomNat = (\n -> N.Atom n (Irrelevant Nothing)) <$> dottedNatural
