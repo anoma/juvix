@@ -1447,8 +1447,10 @@ checkLocalModule ::
   Module 'Parsed 'ModuleLocal ->
   Sem r (Module 'Scoped 'ModuleLocal)
 checkLocalModule md@Module {..} = do
+  tab1 <- ask @InfoTable
+  tab2 <- getInfoTable
   (tab, (moduleExportInfo, moduleBody', moduleDoc')) <-
-    withLocalScope $ runInfoTableBuilder mempty $ do
+    withLocalScope $ runReader (tab1 <> tab2) $ runInfoTableBuilder mempty $ do
       inheritScope
       (e, b) <- checkModuleBody _moduleBody
       doc' <- mapM checkJudoc _moduleDoc
