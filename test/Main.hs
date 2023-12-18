@@ -12,6 +12,7 @@ import Formatter qualified
 import Internal qualified
 import Package qualified
 import Parsing qualified
+import Resolver qualified
 import Runtime qualified
 import Scope qualified
 import Termination qualified
@@ -37,6 +38,7 @@ fastTests =
   testGroup
     "Juvix fast tests"
     [ Parsing.allTests,
+      Resolver.allTests,
       Scope.allTests,
       Termination.allTests,
       Typecheck.allTests,

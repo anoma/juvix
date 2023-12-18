@@ -226,12 +226,4 @@ withPath' path a = withPathFile path (either throwError a)
   where
     throwError :: PathResolverError -> Sem r a
     throwError e =
-      mapError (JuvixError @GenericError) $
-        throw
-          GenericError
-            { _genericErrorLoc = loc,
-              _genericErrorMessage = mkAnsiText $ ppCodeAnn e,
-              _genericErrorIntervals = [loc]
-            }
-      where
-        loc = getLoc path
+      mapError (JuvixError @PathResolverError) $ throw e

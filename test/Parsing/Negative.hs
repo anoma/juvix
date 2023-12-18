@@ -1,7 +1,6 @@
 module Parsing.Negative where
 
 import Base
-import Juvix.Compiler.Pipeline.Loader.PathResolver.Error
 import Juvix.Parser.Error
 
 root :: Path Abs Dir
@@ -95,14 +94,6 @@ parserErrorTests =
 filesErrorTests :: [NegTest]
 filesErrorTests =
   [ negTest
-      "Importing a module that conflicts with a module in the stdlib"
-      $(mkRelDir "StdlibConflict")
-      $(mkRelFile "Input.juvix")
-      $ \case
-        ErrTopModulePath
-          TopModulePathError {_topModulePathError = ErrDependencyConflict {}} -> Nothing
-        _ -> wrongError,
-    negTest
       "Incorrect top module path"
       $(mkRelDir ".")
       $(mkRelFile "WrongModuleName.juvix")
@@ -115,14 +106,6 @@ filesErrorTests =
       $(mkRelFile "NoGood.juvix")
       $ \case
         ErrWrongTopModuleNameOrphan {} -> Nothing
-        _ -> wrongError,
-    negTest
-      "Import a module that doesn't exist"
-      $(mkRelDir "NoDependencies")
-      $(mkRelFile "InvalidImport.juvix")
-      $ \case
-        ErrTopModulePath
-          TopModulePathError {_topModulePathError = ErrMissingModule {}} -> Nothing
         _ -> wrongError,
     negTest
       "Dangling Judoc comment"

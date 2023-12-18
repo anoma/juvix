@@ -96,6 +96,26 @@ data PathResolverError
   | ErrPackageInvalidImport PackageInvalidImport
   deriving stock (Show)
 
+instance ToGenericError PathResolverError where
+  genericError e =
+    return $
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = mkAnsiText $ ppCodeAnn e,
+          _genericErrorIntervals = [i]
+        }
+    where
+      i = getLoc e
+
+instance HasLoc PathResolverError where
+  getLoc = \case
+    ErrDependencyConflict DependencyConflict {..} ->
+      getLoc _conflictPath
+    ErrMissingModule MissingModule {..} ->
+      getLoc _missingModule
+    ErrPackageInvalidImport PackageInvalidImport {..} ->
+      getLoc _packageInvalidImport
+
 instance PrettyCodeAnn PathResolverError where
   ppCodeAnn = \case
     ErrDependencyConflict e -> ppCodeAnn e

@@ -16,7 +16,6 @@ import Text.Parsec.Pos qualified as P
 data ParserError
   = ErrMegaparsec MegaparsecError
   | ErrCommonmark CommonmarkError
-  | ErrTopModulePath TopModulePathError
   | ErrWrongTopModuleName WrongTopModuleName
   | ErrWrongTopModuleNameOrphan WrongTopModuleNameOrphan
   | ErrStdinOrFile StdinOrFileError
@@ -28,7 +27,6 @@ instance ToGenericError ParserError where
   genericError = \case
     ErrMegaparsec e -> genericError e
     ErrCommonmark e -> genericError e
-    ErrTopModulePath e -> genericError e
     ErrWrongTopModuleName e -> genericError e
     ErrWrongTopModuleNameOrphan e -> genericError e
     ErrStdinOrFile e -> genericError e
