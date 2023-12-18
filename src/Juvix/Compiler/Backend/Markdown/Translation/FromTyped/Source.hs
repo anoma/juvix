@@ -153,9 +153,7 @@ go = do
                   else
                     MkTextBlock
                       TextBlock
-                        { _textBlock =
-                            Text.replace "\n" "<br/>" $
-                              resHtml,
+                        { _textBlock = Text.replace "\n" "<br/>" resHtml,
                           _textBlockInterval = j ^. juvixCodeBlockInterval
                         }
           let newState =

@@ -4,8 +4,6 @@ import Base
 import Juvix.Compiler.Backend.Markdown.Translation.FromTyped.Source
 import Juvix.Compiler.Concrete qualified as Concrete
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
-import Juvix.Compiler.Pipeline.Loader.PathResolver
-import Juvix.Compiler.Pipeline.Setup
 
 data PosTest = PosTest
   { _name :: String,
@@ -36,17 +34,8 @@ testDescr PosTest {..} =
       _testRoot = _dir,
       _testAssertion = Steps $ \step -> do
         entryPoint <- testDefaultEntryPointIO _dir _file
-        step "Parsing"
-        PipelineResult p _ <- snd <$> testRunIO entryPoint upToParsing
-        step "Scoping"
-        PipelineResult s _ <-
-          snd
-            <$> testRunIO
-              entryPoint
-              ( do
-                  void (entrySetup defaultDependenciesConfig)
-                  runReader p Concrete.fromParsed
-              )
+        step "Parsing & Scoping"
+        PipelineResult s _ <- snd <$> testRunIO entryPoint upToScoping
         let m = s ^. Scoper.resultModule
         let opts =
               ProcessJuvixBlocksArgs
