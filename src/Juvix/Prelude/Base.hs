@@ -556,3 +556,6 @@ indexedByInt getIx l = IntMap.fromList [(getIx i, i) | i <- toList l]
 
 indexedByHash :: (Foldable f, Hashable k) => (a -> k) -> f a -> HashMap k a
 indexedByHash getIx l = HashMap.fromList [(getIx i, i) | i <- toList l]
+
+hashMap :: (Foldable f, Hashable k) => f (k, v) -> HashMap k v
+hashMap = HashMap.fromList . toList

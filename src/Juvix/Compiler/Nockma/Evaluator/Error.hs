@@ -7,6 +7,7 @@ data NockEvalError
   = InvalidPosition
   | ExpectedAtom
   | ExpectedCell
+  | NoStack
   deriving stock (Show)
 
 newtype GenericNockEvalError = GenericNockEvalError

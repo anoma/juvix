@@ -2,6 +2,7 @@ module Juvix.Compiler.Nockma.Translation.FromSource where
 
 import Data.HashMap.Internal.Strict qualified as HashMap
 import Data.List.NonEmpty qualified as NonEmpty
+import Data.Text qualified as Text
 import Juvix.Compiler.Nockma.Language qualified as N
 import Juvix.Parser.Error
 import Juvix.Prelude hiding (Atom, many, some)
@@ -14,10 +15,24 @@ type Parser = Parsec Void Text
 parseText :: Text -> Either MegaparsecError (N.Term Natural)
 parseText = runParser ""
 
-runParser :: FilePath -> Text -> Either MegaparsecError (N.Term Natural)
-runParser f input = case P.runParser term f input of
+parseProgramFile :: (MonadIO m) => FilePath -> m (Either MegaparsecError (N.Program Natural))
+parseProgramFile fp = do
+  txt <- readFile fp
+  return (runParserProgram fp txt)
+
+parseReplExpression :: Text -> Either MegaparsecError (N.ReplExpression Natural)
+parseReplExpression = runParserFor replExpression ""
+
+runParserProgram :: FilePath -> Text -> Either MegaparsecError (N.Program Natural)
+runParserProgram = runParserFor program
+
+runParserFor :: Parser a -> FilePath -> Text -> Either MegaparsecError a
+runParserFor p f input = case P.runParser p f input of
   Left err -> Left (MegaparsecError err)
   Right t -> Right t
+
+runParser :: FilePath -> Text -> Either MegaparsecError (N.Term Natural)
+runParser = runParserFor term
 
 spaceConsumer :: Parser ()
 spaceConsumer = L.space space1 empty empty
@@ -62,10 +77,18 @@ atomNat :: Parser (N.Atom Natural)
 atomNat = (\n -> N.Atom n (Irrelevant Nothing)) <$> dottedNatural
 
 atomBool :: Parser (N.Atom Natural)
-atomBool = choice [symbol "true" $> N.nockTrue, symbol "false" $> N.nockFalse]
+atomBool =
+  choice
+    [ symbol "true" $> N.nockTrue,
+      symbol "false" $> N.nockFalse
+    ]
 
 atom :: Parser (N.Atom Natural)
-atom = atomOp <|> atomNat <|> atomDirection <|> atomBool
+atom =
+  atomOp
+    <|> atomNat
+    <|> atomDirection
+    <|> atomBool
 
 cell :: Parser (N.Cell Natural)
 cell = do
@@ -84,3 +107,49 @@ term :: Parser (N.Term Natural)
 term =
   N.TermAtom <$> atom
     <|> N.TermCell <$> cell
+
+program :: Parser (N.Program Natural)
+program = N.Program <$> many statement <* eof
+  where
+    statement :: Parser (N.Statement Natural)
+    statement =
+      P.try (N.StatementAssignment <$> assig)
+        <|> N.StatementStandalone <$> term
+
+    assig :: Parser (N.Assignment Natural)
+    assig = do
+      n <- name
+      symbol ":="
+      t <- term
+      return
+        N.Assignment
+          { _assignmentName = n,
+            _assignmentBody = t
+          }
+
+name :: Parser Text
+name = lexeme $ do
+  h <- P.satisfy isLetter
+  hs <- P.takeWhileP Nothing isAlphaNum
+  return (Text.cons h hs)
+
+withStack :: Parser (N.WithStack Natural)
+withStack = do
+  st <- replTerm
+  symbol "/"
+  tm <- replTerm
+  return
+    N.WithStack
+      { _withStackStack = st,
+        _withStackTerm = tm
+      }
+
+replExpression :: Parser (N.ReplExpression Natural)
+replExpression =
+  N.ReplExpressionWithStack <$> P.try withStack
+    <|> N.ReplExpressionTerm <$> replTerm
+
+replTerm :: Parser (N.ReplTerm Natural)
+replTerm =
+  N.ReplName <$> name
+    <|> N.ReplTerm <$> term

@@ -5,6 +5,32 @@ import GHC.Base (Type)
 import Juvix.Prelude hiding (Atom)
 import Juvix.Prelude.Pretty
 
+data ReplExpression a
+  = ReplExpressionTerm (ReplTerm a)
+  | ReplExpressionWithStack (WithStack a)
+
+data WithStack a = WithStack
+  { _withStackStack :: ReplTerm a,
+    _withStackTerm :: ReplTerm a
+  }
+
+data ReplTerm a
+  = ReplName Text
+  | ReplTerm (Term a)
+
+newtype Program a = Program
+  { _programStatements :: [Statement a]
+  }
+
+data Statement a
+  = StatementAssignment (Assignment a)
+  | StatementStandalone (Term a)
+
+data Assignment a = Assignment
+  { _assignmentName :: Text,
+    _assignmentBody :: Term a
+  }
+
 data Term a
   = TermAtom (Atom a)
   | TermCell (Cell a)
@@ -78,7 +104,9 @@ data ParsedCell a
 
 type EncodedPosition = Natural
 
-data Direction = L | R
+data Direction
+  = L
+  | R
   deriving stock (Show)
 
 newtype Position = Position {_positionDirections :: [Direction]}
@@ -89,6 +117,9 @@ makeLenses ''Atom
 makeLenses ''OperatorCell
 makeLenses ''AutoConsCell
 makeLenses ''Position
+makeLenses ''Program
+makeLenses ''Assignment
+makeLenses ''WithStack
 
 naturalNockOps :: HashMap Natural NockOp
 naturalNockOps = HashMap.fromList [(serializeOp op, op) | op <- allElements]
