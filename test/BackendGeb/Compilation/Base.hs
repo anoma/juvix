@@ -14,5 +14,5 @@ gebCompilationAssertion ::
 gebCompilationAssertion root mainFile expectedFile step = do
   step "Translate to JuvixCore"
   entryPoint <- set entryPointTarget TargetGeb <$> testDefaultEntryPointIO root mainFile
-  m <- (^. pipelineResult . Core.coreResultModule) . snd <$> testRunIO entryPoint upToCore
+  m <- (^. pipelineResult . Core.coreResultModule) . snd <$> testRunIO entryPoint upToStoredCore
   coreToGebTranslationAssertion' (Core.computeCombinedInfoTable m) entryPoint expectedFile step
