@@ -3,6 +3,7 @@ module BackendGeb where
 import BackendGeb.Compilation qualified as Compilation
 import BackendGeb.Eval qualified as Eval
 import BackendGeb.FromCore qualified as FromCore
+import BackendGeb.Out.Positive qualified as Out
 import Base
 
 allTests :: TestTree
@@ -11,5 +12,6 @@ allTests =
     "BackendGeb tests"
     [ Eval.allTests,
       FromCore.allTests,
-      Compilation.allTests
+      Compilation.allTests,
+      Out.allTests
     ]
