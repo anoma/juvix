@@ -60,12 +60,14 @@ typeCheckingNew a = do
     itab <- getInternalModuleTable <$> ask
     let md :: InternalModule
         md = res ^. Internal.resultInternalModule
+        itab' :: InternalModuleTable
+        itab' = insertInternalModule itab md
         table :: InfoTable
-        table = computeCombinedInfoTable (insertInternalModule itab md)
+        table = computeCombinedInfoTable itab'
     fmap (res,)
       . runOutputList
-      . runState (mempty :: TypesTable)
-      . runState (mempty :: FunctionsTable)
+      . runState (computeTypesTable itab')
+      . runState (computeFunctionsTable itab')
       . runReader table
       . mapError (JuvixError @TypeCheckerError)
       $ checkTable >> checkModule (res ^. Internal.resultModule)
