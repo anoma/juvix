@@ -179,7 +179,7 @@ corePipelineIOEither' lockMode entry = do
           parserResult = scopedResult ^. Scoped.resultParserResult
 
           resultScoperTable :: InfoTable
-          resultScoperTable = scopedResult ^. Scoped.resultScopedModule . Scoped.scopedModuleInfoTable
+          resultScoperTable = Scoped.getCombinedInfoTable (scopedResult ^. Scoped.resultScopedModule)
        in Right $
             Artifacts
               { _artifactMainModuleScope = Nothing,

@@ -69,8 +69,8 @@ fromConcrete _resultScoper = do
         _resultScoper ^. Scoper.resultExports
           <> mconcatMap (createExportsTable . (^. Store.moduleInfoScopedModule . S.scopedModuleExportInfo)) ms
       tab =
-        _resultScoper ^. Scoper.resultScopedModule . S.scopedModuleInfoTable
-          <> mconcatMap (^. Store.moduleInfoScopedModule . S.scopedModuleInfoTable) ms
+        S.getCombinedInfoTable (_resultScoper ^. Scoper.resultScopedModule)
+          <> mconcatMap (S.getCombinedInfoTable . (^. Store.moduleInfoScopedModule)) ms
   mapError (JuvixError @ScoperError) $ do
     _resultModule <-
       runReader @Pragmas mempty
