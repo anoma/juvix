@@ -59,14 +59,14 @@ testDescr PosTest {..} = helper renderCodeNew
                     fScoped :: Text
                     fScoped = renderer $ s ^. Scoper.resultModule
                     fParsed :: Text
-                    fParsed = renderCodeNew $ p ^. Parser.resultModule
+                    fParsed = renderer $ p ^. Parser.resultModule
 
                 step "Parsing & scoping pretty scoped"
                 PipelineResult s' _ <- evalHelper fScoped upToScoping
                 let p' = s' ^. Scoper.resultParserResult
 
                 step "Parsing pretty parsed"
-                PipelineResult parsedPretty' _ <- evalHelper fParsed upToParsing
+                PipelineResult parsedPretty' _ <- evalHelper fParsed upToParsedSource
 
                 step "Checks"
                 let smodule = s ^. Scoper.resultModule

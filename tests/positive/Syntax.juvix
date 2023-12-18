@@ -28,24 +28,19 @@ odd : Nat -> Bool
   | (suc n) := even n;
 
 syntax fixity cmp := binary {};
-
 syntax operator ==1 cmp;
-
 ==1 : Nat -> Nat -> Bool
   | zero zero := true
   | (suc a) (suc b) := a ==2 b
   | _ _ := false;
 
--- note that ==2 is used before its infix definition
 syntax operator ==2 cmp;
-
 ==2 : Nat -> Nat -> Bool
   | zero zero := true
   | (suc a) (suc b) := a ==1 b
   | _ _ := false;
 
 module MutualTypes;
-  -- we use Tree and isEmpty before their definition
   isNotEmpty {a : Type} (t : Tree a) : Bool :=
     not (isEmpty t);
 
