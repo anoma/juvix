@@ -8,7 +8,7 @@ where
 import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Pretty.Options
 import Juvix.Data.CodeAnn
-import Juvix.Prelude hiding (Atom)
+import Juvix.Prelude hiding (Atom, Path)
 
 doc :: (PrettyCode c) => Options -> c -> Doc Ann
 doc opts =
@@ -29,7 +29,7 @@ instance (PrettyCode a, NockNatural a) => PrettyCode (Atom a) where
       h' <- failMaybe (h ^. unIrrelevant)
       case h' of
         AtomHintOp -> nockOp atm >>= ppCode
-        AtomHintPosition -> nockPosition atm >>= ppCode
+        AtomHintPath -> nockPath atm >>= ppCode
         AtomHintBool
           | atm == nockTrue -> return (annotate (AnnKind KNameInductive) "true")
           | atm == nockFalse -> return (annotate (AnnKind KNameAxiom) "false")
@@ -38,8 +38,8 @@ instance (PrettyCode a, NockNatural a) => PrettyCode (Atom a) where
 instance PrettyCode Natural where
   ppCode = return . pretty
 
-instance PrettyCode Position where
-  ppCode p = case p ^. positionDirections of
+instance PrettyCode Path where
+  ppCode = \case
     [] -> return "S"
     ds -> mconcatMapM ppCode ds
 

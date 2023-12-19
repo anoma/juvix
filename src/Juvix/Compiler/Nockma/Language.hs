@@ -2,7 +2,7 @@ module Juvix.Compiler.Nockma.Language where
 
 import Data.HashMap.Strict qualified as HashMap
 import GHC.Base (Type)
-import Juvix.Prelude hiding (Atom)
+import Juvix.Prelude hiding (Atom, Path)
 import Juvix.Prelude.Pretty
 
 data ReplStatement a
@@ -54,7 +54,7 @@ data Atom a = Atom
 
 data AtomHint
   = AtomHintOp
-  | AtomHintPosition
+  | AtomHintPath
   | AtomHintBool
 
 data NockOp
@@ -106,21 +106,19 @@ data ParsedCell a
   = ParsedOperatorCell (OperatorCell a)
   | ParsedAutoConsCell (AutoConsCell a)
 
-type EncodedPosition = Natural
+type EncodedPath = Natural
 
 data Direction
   = L
   | R
   deriving stock (Show)
 
-newtype Position = Position {_positionDirections :: [Direction]}
-  deriving stock (Show)
+type Path = [Direction]
 
 makeLenses ''Cell
 makeLenses ''Atom
 makeLenses ''OperatorCell
 makeLenses ''AutoConsCell
-makeLenses ''Position
 makeLenses ''Program
 makeLenses ''Assignment
 makeLenses ''WithStack
@@ -149,10 +147,10 @@ serializeOp = \case
   OpReplace -> 10
   OpHint -> 11
 
-decodePosition :: forall r. (Member Fail r) => EncodedPosition -> Sem r Position
-decodePosition ep = Position <$> execOutputList (go ep)
+decodePath :: forall r. (Member Fail r) => EncodedPath -> Sem r Path
+decodePath ep = execOutputList (go ep)
   where
-    go :: EncodedPosition -> Sem (Output Direction ': r) ()
+    go :: EncodedPath -> Sem (Output Direction ': r) ()
     go = \case
       0 -> fail
       1 -> return ()
@@ -165,8 +163,8 @@ decodePosition ep = Position <$> execOutputList (go ep)
                 go ((x - 1) `div` 2)
                 output R
 
-serializePositionNatural :: Position -> Natural
-serializePositionNatural p = foldl' step 1 (p ^. positionDirections)
+serializePathNatural :: Path -> Natural
+serializePathNatural = foldl' step 1
   where
     step :: Natural -> Direction -> Natural
     step n = \case
@@ -177,28 +175,28 @@ class (Eq a) => NockNatural a where
   type ErrNockNatural a :: Type
   nockNatural :: (Member (Error (ErrNockNatural a)) r) => Atom a -> Sem r Natural
   serializeNockOp :: NockOp -> a
-  serializePosition :: Position -> a
+  serializePath :: Path -> a
 
   errInvalidOp :: Atom a -> ErrNockNatural a
 
-  errInvalidPosition :: Atom a -> ErrNockNatural a
+  errInvalidPath :: Atom a -> ErrNockNatural a
 
   nockOp :: (Member (Error (ErrNockNatural a)) r) => Atom a -> Sem r NockOp
   nockOp atm = do
     n <- nockNatural atm
     failWithError (errInvalidOp atm) (parseOp n)
 
-  nockPosition :: (Member (Error (ErrNockNatural a)) r) => Atom a -> Sem r Position
-  nockPosition atm = do
+  nockPath :: (Member (Error (ErrNockNatural a)) r) => Atom a -> Sem r Path
+  nockPath atm = do
     n <- nockNatural atm
-    failWithError (errInvalidPosition atm) (decodePosition n)
+    failWithError (errInvalidPath atm) (decodePath n)
 
   nockTrue :: Atom a
   nockFalse :: Atom a
   nockSucc :: Atom a -> Atom a
 
 data NockNaturalNaturalError
-  = NaturalInvalidPosition (Atom Natural)
+  = NaturalInvalidPath (Atom Natural)
   | NaturalInvalidOp (Atom Natural)
   deriving stock (Show)
 
@@ -209,9 +207,9 @@ instance NockNatural Natural where
   nockFalse = Atom 1 (Irrelevant (Just AtomHintBool))
   nockSucc = over atom succ
   errInvalidOp atm = NaturalInvalidOp atm
-  errInvalidPosition atm = NaturalInvalidPosition atm
+  errInvalidPath atm = NaturalInvalidPath atm
   serializeNockOp = serializeOp
-  serializePosition = serializePositionNatural
+  serializePath = serializePathNatural
 
 class IsNock nock where
   toNock :: nock -> Term Natural
@@ -236,8 +234,8 @@ instance IsNock Bool where
     False -> toNock (nockFalse @Natural)
     True -> toNock (nockTrue @Natural)
 
-instance IsNock Position where
-  toNock pos = toNock (Atom (serializePositionNatural pos) (Irrelevant (Just AtomHintPosition)))
+instance IsNock Path where
+  toNock pos = toNock (Atom (serializePathNatural pos) (Irrelevant (Just AtomHintPath)))
 
 infixr 5 #
 

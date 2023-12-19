@@ -6,7 +6,7 @@ where
 
 import Juvix.Compiler.Nockma.Evaluator.Error
 import Juvix.Compiler.Nockma.Language
-import Juvix.Prelude hiding (Atom)
+import Juvix.Prelude hiding (Atom, Path)
 
 asAtom :: (Member (Error NockEvalError) r) => Term a -> Sem r (Atom a)
 asAtom = \case
@@ -23,35 +23,35 @@ asBool t = do
   a <- asAtom t
   return (a == nockTrue)
 
-asPosition :: (Members '[Error NockEvalError, Error (ErrNockNatural a)] r, NockNatural a) => Term a -> Sem r Position
-asPosition = asAtom >=> nockPosition
+asPath :: (Members '[Error NockEvalError, Error (ErrNockNatural a)] r, NockNatural a) => Term a -> Sem r Path
+asPath = asAtom >=> nockPath
 
-subTermT' :: Position -> Traversal (Term a) (Term a) (First (Term a)) (Term a)
+subTermT' :: Path -> Traversal (Term a) (Term a) (First (Term a)) (Term a)
 subTermT' pos f = subTermT pos (f . First . Just)
 
-subTermT :: Position -> Traversal' (Term a) (Term a)
+subTermT :: Path -> Traversal' (Term a) (Term a)
 subTermT = go
   where
-    go :: Position -> (forall f. (Applicative f) => (Term a -> f (Term a)) -> Term a -> f (Term a))
-    go p = case p ^. positionDirections of
+    go :: Path -> (forall f. (Applicative f) => (Term a -> f (Term a)) -> Term a -> f (Term a))
+    go = \case
       [] -> id
       d : ds -> \g t -> case t of
         TermAtom {} -> pure t
         TermCell c -> case d of
-          L -> (\l' -> TermCell (set cellLeft l' c)) <$> go (Position ds) g (c ^. cellLeft)
-          R -> (\r' -> TermCell (set cellRight r' c)) <$> go (Position ds) g (c ^. cellRight)
+          L -> (\l' -> TermCell (set cellLeft l' c)) <$> go ds g (c ^. cellLeft)
+          R -> (\r' -> TermCell (set cellRight r' c)) <$> go ds g (c ^. cellRight)
 
-subTerm :: (Member (Error NockEvalError) r) => Term a -> Position -> Sem r (Term a)
+subTerm :: (Member (Error NockEvalError) r) => Term a -> Path -> Sem r (Term a)
 subTerm term pos = do
   case term ^? subTermT pos of
-    Nothing -> throw InvalidPosition
+    Nothing -> throw InvalidPath
     Just t -> return t
 
-setSubTerm :: (Member (Error NockEvalError) r) => Term a -> Position -> Term a -> Sem r (Term a)
+setSubTerm :: (Member (Error NockEvalError) r) => Term a -> Path -> Term a -> Sem r (Term a)
 setSubTerm term pos repTerm =
   let (old, new) = setAndRemember (subTermT' pos) repTerm term
    in if
-          | isNothing (getFirst old) -> throw InvalidPosition
+          | isNothing (getFirst old) -> throw InvalidPath
           | otherwise -> return new
 
 parseCell :: forall r a. (Members '[Error NockEvalError, Error (ErrNockNatural a)] r, NockNatural a) => Cell a -> Sem r (ParsedCell a)
@@ -134,7 +134,7 @@ eval stack = \case
       OpHint -> goOpHint
       where
         goOpAddress :: Sem r (Term a)
-        goOpAddress = asPosition (c ^. operatorCellTerm) >>= subTerm stack
+        goOpAddress = asPath (c ^. operatorCellTerm) >>= subTerm stack
 
         goOpQuote :: Sem r (Term a)
         goOpQuote = return (c ^. operatorCellTerm)
@@ -161,7 +161,7 @@ eval stack = \case
         goOpReplace = do
           cellTerm <- asCell (c ^. operatorCellTerm)
           rt1 <- asCell (cellTerm ^. cellLeft)
-          r <- asPosition (rt1 ^. cellLeft)
+          r <- asPath (rt1 ^. cellLeft)
           let t1 = rt1 ^. cellRight
           t1' <- eval stack t1
           t2' <- eval stack (cellTerm ^. cellRight)
@@ -200,7 +200,7 @@ eval stack = \case
         goOpCall :: Sem r (Term a)
         goOpCall = do
           cellTerm <- asCell (c ^. operatorCellTerm)
-          r <- asPosition (cellTerm ^. cellLeft)
+          r <- asPath (cellTerm ^. cellLeft)
           t' <- eval stack (cellTerm ^. cellRight)
           subTerm t' r >>= eval t'
 
