@@ -110,7 +110,7 @@ fromMegaParsecError = \case
 direction' :: String -> Repl ()
 direction' s = Repline.dontCrash $ do
   let n = read s :: Natural
-      p = run (runFailDefault (error "invalid position") (decodePath n))
+      p = run (runFailDefault (error "invalid position") (decodePath (EncodedPath n)))
   liftIO (putStrLn (ppPrint p))
 
 readTerm :: String -> Repl (Term Natural)

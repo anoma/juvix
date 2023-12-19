@@ -106,7 +106,9 @@ data ParsedCell a
   = ParsedOperatorCell (OperatorCell a)
   | ParsedAutoConsCell (AutoConsCell a)
 
-type EncodedPath = Natural
+newtype EncodedPath = EncodedPath
+  { _encodedPath :: Natural
+  }
 
 data Direction
   = L
@@ -125,6 +127,7 @@ makeLenses ''AutoConsCell
 makeLenses ''Program
 makeLenses ''Assignment
 makeLenses ''WithStack
+makeLenses ''EncodedPath
 
 naturalNockOps :: HashMap Natural NockOp
 naturalNockOps = HashMap.fromList [(serializeOp op, op) | op <- allElements]
@@ -151,9 +154,9 @@ serializeOp = \case
   OpHint -> 11
 
 decodePath :: forall r. (Member Fail r) => EncodedPath -> Sem r Path
-decodePath ep = execOutputList (go ep)
+decodePath ep = execOutputList (go (ep ^. encodedPath))
   where
-    go :: EncodedPath -> Sem (Output Direction ': r) ()
+    go :: Natural -> Sem (Output Direction ': r) ()
     go = \case
       0 -> fail
       1 -> return ()
@@ -192,7 +195,7 @@ class (Eq a) => NockNatural a where
   nockPath :: (Member (Error (ErrNockNatural a)) r) => Atom a -> Sem r Path
   nockPath atm = do
     n <- nockNatural atm
-    failWithError (errInvalidPath atm) (decodePath n)
+    failWithError (errInvalidPath atm) (decodePath (EncodedPath n))
 
   nockTrue :: Atom a
   nockFalse :: Atom a
