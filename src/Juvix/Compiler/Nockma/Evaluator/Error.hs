@@ -8,6 +8,7 @@ data NockEvalError
   | ExpectedAtom
   | ExpectedCell
   | NoStack
+  | AssignmentNotFound Text
   deriving stock (Show)
 
 newtype GenericNockEvalError = GenericNockEvalError

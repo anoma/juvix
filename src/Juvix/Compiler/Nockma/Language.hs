@@ -5,6 +5,10 @@ import GHC.Base (Type)
 import Juvix.Prelude hiding (Atom)
 import Juvix.Prelude.Pretty
 
+data ReplStatement a
+  = ReplStatementExpression (ReplExpression a)
+  | ReplStatementAssignment (Assignment a)
+
 data ReplExpression a
   = ReplExpressionTerm (ReplTerm a)
   | ReplExpressionWithStack (WithStack a)

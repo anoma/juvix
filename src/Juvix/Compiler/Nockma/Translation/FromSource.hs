@@ -15,13 +15,16 @@ type Parser = Parsec Void Text
 parseText :: Text -> Either MegaparsecError (N.Term Natural)
 parseText = runParser ""
 
+parseReplText :: Text -> Either MegaparsecError (N.ReplTerm Natural)
+parseReplText = runParserFor replTerm ""
+
 parseProgramFile :: (MonadIO m) => FilePath -> m (Either MegaparsecError (N.Program Natural))
 parseProgramFile fp = do
   txt <- readFile fp
   return (runParserProgram fp txt)
 
-parseReplExpression :: Text -> Either MegaparsecError (N.ReplExpression Natural)
-parseReplExpression = runParserFor replExpression ""
+parseReplStatement :: Text -> Either MegaparsecError (N.ReplStatement Natural)
+parseReplStatement = runParserFor replStatement ""
 
 runParserProgram :: FilePath -> Text -> Either MegaparsecError (N.Program Natural)
 runParserProgram = runParserFor program
@@ -108,6 +111,17 @@ term =
   N.TermAtom <$> atom
     <|> N.TermCell <$> cell
 
+assig :: Parser (N.Assignment Natural)
+assig = do
+  n <- name
+  symbol ":="
+  t <- term
+  return
+    N.Assignment
+      { _assignmentName = n,
+        _assignmentBody = t
+      }
+
 program :: Parser (N.Program Natural)
 program = N.Program <$> many statement <* eof
   where
@@ -115,17 +129,6 @@ program = N.Program <$> many statement <* eof
     statement =
       P.try (N.StatementAssignment <$> assig)
         <|> N.StatementStandalone <$> term
-
-    assig :: Parser (N.Assignment Natural)
-    assig = do
-      n <- name
-      symbol ":="
-      t <- term
-      return
-        N.Assignment
-          { _assignmentName = n,
-            _assignmentBody = t
-          }
 
 name :: Parser Text
 name = lexeme $ do
@@ -148,6 +151,11 @@ replExpression :: Parser (N.ReplExpression Natural)
 replExpression =
   N.ReplExpressionWithStack <$> P.try withStack
     <|> N.ReplExpressionTerm <$> replTerm
+
+replStatement :: Parser (N.ReplStatement Natural)
+replStatement =
+  N.ReplStatementAssignment <$> P.try assig
+    <|> N.ReplStatementExpression <$> replExpression
 
 replTerm :: Parser (N.ReplTerm Natural)
 replTerm =

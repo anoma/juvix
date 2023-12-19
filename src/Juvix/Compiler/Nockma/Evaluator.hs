@@ -68,6 +68,18 @@ parseCell c = case c ^. cellLeft of
             _operatorCellTerm = t
           }
 
+fromReplTerm :: (Members '[Error NockEvalError] r) => HashMap Text (Term a) -> ReplTerm a -> Sem r (Term a)
+fromReplTerm namedTerms = \case
+  ReplName n -> maybe (throw (AssignmentNotFound n)) return (namedTerms ^. at n)
+  ReplTerm t -> return t
+
+programAssignments :: Maybe (Program a) -> HashMap Text (Term a)
+programAssignments mprog =
+  hashMap
+    [ (as ^. assignmentName, as ^. assignmentBody)
+      | StatementAssignment as <- mprog ^. _Just . programStatements
+    ]
+
 -- | The stack provided in the replExpression has priority
 evalRepl ::
   forall r a.
@@ -77,26 +89,19 @@ evalRepl ::
   ReplExpression a ->
   Sem r (Term a)
 evalRepl mprog defaultStack expr = do
-  let (mstack, t) = case expr of
-        ReplExpressionTerm tm -> (defaultStack, tm)
-        ReplExpressionWithStack w -> (Just (fromReplTerm (w ^. withStackStack)), w ^. withStackTerm)
+  (mstack, t) <- case expr of
+    ReplExpressionTerm tm -> return (defaultStack, tm)
+    ReplExpressionWithStack w -> do
+      t' <- fromReplTerm namedTerms (w ^. withStackStack)
+      return (Just t', w ^. withStackTerm)
   stack <- maybe errNoStack return mstack
-  eval stack (fromReplTerm t)
+  fromReplTerm namedTerms t >>= eval stack
   where
     errNoStack :: Sem r x
     errNoStack = throw NoStack
 
-    fromReplTerm :: ReplTerm a -> Term a
-    fromReplTerm = \case
-      ReplName n -> namedTerms ^?! at n . _Just
-      ReplTerm t -> t
-
     namedTerms :: HashMap Text (Term a)
-    namedTerms =
-      hashMap
-        [ (as ^. assignmentName, as ^. assignmentBody)
-          | StatementAssignment as <- mprog ^. _Just . programStatements
-        ]
+    namedTerms = programAssignments mprog
 
 eval :: forall r a. (Members '[Error NockEvalError, Error (ErrNockNatural a)] r, NockNatural a) => Term a -> Term a -> Sem r (Term a)
 eval stack = \case
