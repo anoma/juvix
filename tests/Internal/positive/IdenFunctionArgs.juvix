@@ -6,4 +6,3 @@ f : Nat → Nat → Nat
   | x y := x;
 
 main : Nat := f 100 200;
-

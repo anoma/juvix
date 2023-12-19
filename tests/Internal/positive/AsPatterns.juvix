@@ -16,13 +16,16 @@ f2 : List Nat -> List Nat
   | _ := nil;
 
 f3 : Nat -> List Nat -> List Nat
-  | _ a@(x :: x' :: xs) := a;
+  | _ a@(x :: x' :: xs) := a
+  | _ _ := nil;
 
 f4 : Nat -> List Nat -> Nat
-  | y (x :: a@(x' :: xs)) := y;
+  | y (x :: a@(x' :: xs)) := y
+  | _ _ := zero;
 
 f5 : List Nat -> List Nat -> List Nat
-  | (x :: a@(x' :: xs)) (y :: b@(y' :: ys)) := b;
+  | (x :: a@(x' :: xs)) (y :: b@(y' :: ys)) := b
+  | a b := a;
 
 l1 : List Nat := zero :: suc zero :: nil;
 

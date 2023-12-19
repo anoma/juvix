@@ -1,7 +1,5 @@
 module BuiltinInductive;
 
-builtin string
-axiom MyString : Type;
+type MyString := str;
 
 main : Type := MyString;
-

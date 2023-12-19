@@ -16,7 +16,7 @@ internalCoreAssertion :: Path Abs Dir -> Path Abs File -> Path Abs File -> (Stri
 internalCoreAssertion root' mainFile expectedFile step = do
   step "Translate to Core"
   entryPoint <- testDefaultEntryPointIO root' mainFile
-  PipelineResult r _ <- snd <$> testRunIO entryPoint upToCore
+  PipelineResult r _ <- snd <$> testRunIO entryPoint upToStoredCore
   let m = etaExpansionApps (r ^. Core.coreResultModule)
       tab = computeCombinedInfoTable m
   case (tab ^. infoMain) >>= ((tab ^. identContext) HashMap.!?) of

@@ -4,7 +4,8 @@ import Stdlib.Prelude open;
 
 f : Nat → Nat → Nat
   | zero k := zero
-  | n (suc (suc m)) := n;
+  | n (suc (suc m)) := n
+  | _ _ := zero;
 
 n : Nat := suc (suc (suc (suc (suc zero))));
 
