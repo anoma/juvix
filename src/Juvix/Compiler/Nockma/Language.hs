@@ -169,8 +169,11 @@ decodePath ep = execOutputList (go (ep ^. encodedPath))
                 go ((x - 1) `div` 2)
                 output R
 
-encodePath :: Path -> Natural
-encodePath = foldl' step 1
+decodePath' :: EncodedPath -> Path
+decodePath' = run . runFailDefault (error "encoded path cannot be 0") . decodePath
+
+encodePath :: Path -> EncodedPath
+encodePath = EncodedPath . foldl' step 1
   where
     step :: Natural -> Direction -> Natural
     step n = \case
@@ -215,7 +218,7 @@ instance NockNatural Natural where
   errInvalidOp atm = NaturalInvalidOp atm
   errInvalidPath atm = NaturalInvalidPath atm
   serializeNockOp = serializeOp
-  serializePath = encodePath
+  serializePath = (^. encodedPath) . encodePath
 
 class IsNock nock where
   toNock :: nock -> Term Natural
@@ -241,7 +244,10 @@ instance IsNock Bool where
     True -> toNock (nockTrue @Natural)
 
 instance IsNock Path where
-  toNock pos = toNock (Atom (encodePath pos) (Irrelevant (Just AtomHintPath)))
+  toNock pos = TermAtom (Atom (encodePath pos ^. encodedPath) (Irrelevant (Just AtomHintPath)))
+
+instance IsNock EncodedPath where
+  toNock = toNock . decodePath'
 
 infixr 5 #
 
