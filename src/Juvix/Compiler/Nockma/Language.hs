@@ -213,33 +213,33 @@ instance NockNatural Natural where
   serializeNockOp = serializeOp
   serializePosition = serializePositionNatural
 
-class IsNock nock a where
-  toNock :: nock -> Term a
+class IsNock nock where
+  toNock :: nock -> Term Natural
 
-instance IsNock (Term a) a where
+instance IsNock (Term Natural) where
   toNock = id
 
-instance IsNock (Atom a) a where
+instance IsNock (Atom Natural) where
   toNock = TermAtom
 
-instance IsNock (Cell a) a where
+instance IsNock (Cell Natural) where
   toNock = TermCell
 
-instance IsNock Natural Natural where
+instance IsNock Natural where
   toNock n = toNock (Atom n (Irrelevant Nothing))
 
-instance IsNock NockOp Natural where
+instance IsNock NockOp where
   toNock op = toNock (Atom (serializeOp op) (Irrelevant (Just AtomHintOp)))
 
-instance IsNock Bool Natural where
+instance IsNock Bool where
   toNock = \case
     False -> toNock (nockFalse @Natural)
     True -> toNock (nockTrue @Natural)
 
-instance IsNock Position Natural where
+instance IsNock Position where
   toNock pos = toNock (Atom (serializePositionNatural pos) (Irrelevant (Just AtomHintPosition)))
 
 infixr 5 #
 
-(#) :: (IsNock x nat, IsNock y nat) => x -> y -> Term nat
+(#) :: (IsNock x, IsNock y) => x -> y -> Term Natural
 a # b = TermCell (Cell (toNock a) (toNock b))
