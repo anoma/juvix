@@ -125,7 +125,8 @@ pruneInfoTable' tab =
       infoConstructors
       ( HashMap.filter
           ( \ConstructorInfo {..} ->
-              HashMap.member _constructorInductive (tab ^. infoInductives)
+              isBuiltinTag _constructorTag
+                || HashMap.member _constructorInductive (tab ^. infoInductives)
           )
       )
     $ over
