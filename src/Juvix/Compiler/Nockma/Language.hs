@@ -115,6 +115,9 @@ data Direction
 
 type Path = [Direction]
 
+emptyPath :: Path
+emptyPath = []
+
 makeLenses ''Cell
 makeLenses ''Atom
 makeLenses ''OperatorCell
