@@ -1,7 +1,5 @@
 module Juvix.Compiler.Internal.Extra.DependencyBuilder
-  ( buildDependencyInfo,
-    buildDependencyInfoPreModule,
-    buildDependencyInfoExpr,
+  ( buildDependencyInfoPreModule,
     buildDependencyInfoLet,
     ExportsTable,
   )
@@ -10,7 +8,6 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Internal.Data.NameDependencyInfo
-import Juvix.Compiler.Internal.Extra.Base
 import Juvix.Compiler.Internal.Language
 import Juvix.Prelude
 
@@ -43,21 +40,13 @@ buildDependencyInfoPreModule :: PreModule -> ExportsTable -> NameDependencyInfo
 buildDependencyInfoPreModule ms tab =
   buildDependencyInfoHelper tab (goPreModule ms >> addCastEdges)
 
-buildDependencyInfo :: NonEmpty Module -> ExportsTable -> NameDependencyInfo
-buildDependencyInfo ms tab =
-  buildDependencyInfoHelper tab (mapM_ (visit . ModuleIndex) ms >> addCastEdges)
-
-buildDependencyInfoExpr :: Expression -> NameDependencyInfo
-buildDependencyInfoExpr e =
-  buildDependencyInfoHelper mempty (goExpression Nothing e >> addCastEdges)
-
 buildDependencyInfoLet :: NonEmpty PreLetStatement -> NameDependencyInfo
 buildDependencyInfoLet ls =
-  buildDependencyInfoHelper mempty (mapM_ goPreLetStatement ls >> addCastEdges)
+  buildDependencyInfoHelper mempty (goPreLetStatements Nothing (toList ls) >> addCastEdges)
 
 buildDependencyInfoHelper ::
   ExportsTable ->
-  Sem '[Visit ModuleIndex, Reader ExportsTable, State DependencyGraph, State StartNodes, State BuilderState] () ->
+  Sem '[Reader ExportsTable, State DependencyGraph, State StartNodes, State BuilderState] () ->
   NameDependencyInfo
 buildDependencyInfoHelper tbl m = createDependencyInfo graph startNodes
   where
@@ -69,7 +58,6 @@ buildDependencyInfoHelper tbl m = createDependencyInfo graph startNodes
         . runState HashSet.empty
         . execState HashMap.empty
         . runReader tbl
-        . evalVisitEmpty goModuleNoVisited
         $ m
 
 addCastEdges :: (Members '[State DependencyGraph, State BuilderState] r) => Sem r ()
@@ -120,65 +108,73 @@ checkStartNode n = do
     (HashSet.member (n ^. nameId) tab)
     (addStartNode n)
 
-goModuleNoVisited :: forall r. (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, State BuilderState, Visit ModuleIndex] r) => ModuleIndex -> Sem r ()
-goModuleNoVisited (ModuleIndex m) = do
-  checkStartNode (m ^. moduleName)
-  let b = m ^. moduleBody
-  mapM_ (goMutual (m ^. moduleName)) (b ^. moduleStatements)
-  mapM_ goImport (b ^. moduleImports)
-
-goImport ::
-  --  (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, State BuilderState, Visit ModuleIndex] r) =>
-  Import ->
-  Sem r ()
-goImport (Import _) = return ()
-
-goPreModule :: (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, State BuilderState, Visit ModuleIndex] r) => PreModule -> Sem r ()
+goPreModule :: (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, State BuilderState] r) => PreModule -> Sem r ()
 goPreModule m = do
   checkStartNode (m ^. moduleName)
   let b = m ^. moduleBody
-  mapM_ (goPreStatement (m ^. moduleName)) (b ^. moduleStatements)
-  -- We cannot ignore imports with instances, because a trait in a module M may
-  -- depend on an instance in a module N which imports M (i.e. new edges may be
-  -- added from definitions in M to definitions in N)
-  mapM_ goImport (b ^. moduleImports)
+  -- Declarations in a module depend on the module, not the other way round (a
+  -- module is reachable if at least one of the declarations in it is reachable)
+  goPreStatements (m ^. moduleName) (b ^. moduleStatements)
 
-goMutual :: forall r. (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, State BuilderState] r) => Name -> MutualBlock -> Sem r ()
-goMutual parentModule (MutualBlock s) = mapM_ go s
+goPreLetStatements :: forall r. (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, State BuilderState] r) => Maybe Name -> [PreLetStatement] -> Sem r ()
+goPreLetStatements mp = \case
+  stmt : stmts -> do
+    goPreLetStatement mp stmt
+    goPreLetStatements (Just $ getPreLetStatementName stmt) stmts
+  [] -> return ()
   where
-    go :: MutualStatement -> Sem r ()
-    go = \case
-      StatementInductive i -> goInductive parentModule i
-      StatementFunction i -> goTopFunctionDef parentModule i
-      StatementAxiom ax -> goAxiom parentModule ax
+    getPreLetStatementName :: PreLetStatement -> Name
+    getPreLetStatementName = \case
+      PreLetFunctionDef f -> f ^. funDefName
 
 goPreLetStatement ::
   forall r.
   (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, State BuilderState] r) =>
+  Maybe Name ->
   PreLetStatement ->
   Sem r ()
-goPreLetStatement = \case
-  PreLetFunctionDef f -> goFunctionDefHelper f
+goPreLetStatement mp = \case
+  PreLetFunctionDef f -> do
+    whenJust mp $ \n ->
+      addEdge (f ^. funDefName) n
+    goFunctionDefHelper f
 
--- | Declarations in a module depend on the module, not the other way round (a
--- module is reachable if at least one of the declarations in it is reachable)
+-- | `p` is the parent -- the previous declaration or the enclosing module. A
+-- declaraction depends on its parent (on the previous declaration in the module
+-- if it exists) in order to guarantee that instance declarations are always
+-- processed before their uses. For an instance to be taken into account in
+-- instance resolution, it needs to be declared textually earlier.
+goPreStatements :: forall r. (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, State BuilderState] r) => Name -> [PreStatement] -> Sem r ()
+goPreStatements p = \case
+  stmt : stmts -> do
+    goPreStatement p stmt
+    goPreStatements (getPreStatementName stmt) stmts
+  [] -> return ()
+  where
+    getPreStatementName :: PreStatement -> Name
+    getPreStatementName = \case
+      PreAxiomDef ax -> ax ^. axiomName
+      PreFunctionDef f -> f ^. funDefName
+      PreInductiveDef i -> i ^. inductiveName
+
+-- | `p` is the parent -- the previous declaration or the enclosing module
 goPreStatement :: forall r. (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, State BuilderState] r) => Name -> PreStatement -> Sem r ()
-goPreStatement parentModule = \case
-  PreAxiomDef ax -> goAxiom parentModule ax
-  PreFunctionDef f -> goTopFunctionDef parentModule f
-  PreInductiveDef i -> goInductive parentModule i
+goPreStatement p = \case
+  PreAxiomDef ax -> goAxiom p ax
+  PreFunctionDef f -> goTopFunctionDef p f
+  PreInductiveDef i -> goInductive p i
 
 goAxiom :: forall r. (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, State BuilderState] r) => Name -> AxiomDef -> Sem r ()
-goAxiom parentModule ax = do
+goAxiom p ax = do
   checkStartNode (ax ^. axiomName)
-  addEdge (ax ^. axiomName) parentModule
+  addEdge (ax ^. axiomName) p
   goExpression (Just (ax ^. axiomName)) (ax ^. axiomType)
 
 goInductive :: forall r. (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, State BuilderState] r) => Name -> InductiveDef -> Sem r ()
-goInductive parentModule i = do
+goInductive p i = do
   checkStartNode (i ^. inductiveName)
   checkBuiltinInductiveStartNode i
-  addEdge (i ^. inductiveName) parentModule
+  addEdge (i ^. inductiveName) p
   mapM_ (goInductiveParameter (Just (i ^. inductiveName))) (i ^. inductiveParameters)
   goExpression (Just (i ^. inductiveName)) (i ^. inductiveType)
   mapM_ (goConstructorDef (i ^. inductiveName)) (i ^. inductiveConstructors)
@@ -203,25 +199,9 @@ checkBuiltinInductiveStartNode i = whenJust (i ^. inductiveBuiltin) go
     addInductiveStartNode = addStartNode (i ^. inductiveName)
 
 goTopFunctionDef :: (Members '[State DependencyGraph, State StartNodes, State BuilderState, Reader ExportsTable] r) => Name -> FunctionDef -> Sem r ()
-goTopFunctionDef modName f = do
-  addEdge (f ^. funDefName) modName
+goTopFunctionDef p f = do
+  addEdge (f ^. funDefName) p
   goFunctionDefHelper f
-
--- | An instance must be in the same component as the trait, because before type
--- checking the instance holes are not filled which may result in missing
--- dependencies. In other words, the trait needs to depend on all its instances.
-goInstance ::
-  (Members '[State DependencyGraph, State StartNodes, State BuilderState, Reader ExportsTable] r) =>
-  FunctionDef ->
-  Sem r ()
-goInstance f = do
-  let app = snd (unfoldFunType (f ^. funDefType))
-      h = fst (unfoldExpressionApp app)
-  case h of
-    ExpressionIden (IdenInductive i) ->
-      addEdge i (f ^. funDefName)
-    _ ->
-      return ()
 
 checkCast ::
   (Member (State BuilderState) r) =>
@@ -240,8 +220,6 @@ goFunctionDefHelper f = do
   addNode (f ^. funDefName)
   checkStartNode (f ^. funDefName)
   checkCast f
-  when (f ^. funDefInstance || f ^. funDefCoercion) $
-    goInstance f
   goExpression (Just (f ^. funDefName)) (f ^. funDefType)
   goExpression (Just (f ^. funDefName)) (f ^. funDefBody)
   mapM_ (goExpression (Just (f ^. funDefName))) (f ^.. funDefArgsInfo . each . argInfoDefault . _Just)
