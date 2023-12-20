@@ -50,7 +50,7 @@ compileErrorAssertion ::
 compileErrorAssertion root' mainFile step = do
   step "Translate to JuvixCore"
   entryPoint <- testDefaultEntryPointIO root' mainFile
-  PipelineResult res _ <- snd <$> testRunIO entryPoint upToStoredCore
-  case run $ runReader Core.defaultCoreOptions $ runError @JuvixError $ Core.toStripped' (res ^. Core.coreResultModule) of
+  PipelineResult res _ <- snd <$> testRunIO entryPoint upToCore
+  case run $ runReader Core.defaultCoreOptions $ runError @JuvixError $ Core.toStored' (res ^. Core.coreResultModule) >>= Core.toStripped' of
     Left _ -> assertBool "" True
     Right _ -> assertFailure "no error"
