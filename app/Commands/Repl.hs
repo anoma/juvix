@@ -29,17 +29,9 @@ import Juvix.Compiler.Core.Transformation qualified as Core
 import Juvix.Compiler.Core.Transformation.DisambiguateNames (disambiguateNames)
 import Juvix.Compiler.Internal.Language qualified as Internal
 import Juvix.Compiler.Internal.Pretty qualified as Internal
-import Juvix.Compiler.Pipeline.Loader.PathResolver (runPathResolver)
-import Juvix.Compiler.Pipeline.Loader.PathResolver.DependenciesConfig
-import Juvix.Compiler.Pipeline.Loader.PathResolver.Error
-import Juvix.Compiler.Pipeline.Package.Loader.Error
-import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
 import Juvix.Compiler.Pipeline.Repl
 import Juvix.Compiler.Pipeline.Run
-import Juvix.Compiler.Pipeline.Setup (entrySetup)
 import Juvix.Data.CodeAnn (Ann)
-import Juvix.Data.Effect.Git
-import Juvix.Data.Effect.Process
 import Juvix.Data.Error.GenericError qualified as Error
 import Juvix.Data.NameKind
 import Juvix.Extra.Paths qualified as P
@@ -119,7 +111,7 @@ quit _ = liftIO (throwIO Interrupt)
 
 loadEntryPoint :: EntryPoint -> Repl ()
 loadEntryPoint ep = do
-  artif <- liftIO (corePipelineIO' ep)
+  artif <- liftIO (runReplPipelineIO ep)
   let newCtx =
         ReplContext
           { _replContextArtifacts = artif,
@@ -141,29 +133,10 @@ loadFile f = do
   loadEntryPoint entryPoint
 
 loadDefaultPrelude :: Repl ()
-loadDefaultPrelude = whenJustM defaultPreludeEntryPoint $ \e -> do
-  root <- Reader.asks (^. replRoot . rootRootDir)
-  let hasInternet = not (e ^. entryPointOffline)
-  -- The following is needed to ensure that the default location of the
-  -- standard library exists
-  void
-    . liftIO
-    . runM
-    . evalInternet hasInternet
-    . runFilesIO
-    . runError @JuvixError
-    . runReader e
-    . runTaggedLockPermissive
-    . runLogIO
-    . runProcessIO
-    . runError @GitProcessError
-    . runGitProcess
-    . runError @DependencyError
-    . runError @PackageLoaderError
-    . runEvalFileEffIO
-    . runPathResolver root
-    $ entrySetup defaultDependenciesConfig
-  loadEntryPoint e
+loadDefaultPrelude =
+  whenJustM
+    defaultPreludeEntryPoint
+    loadEntryPoint
 
 getReplEntryPoint :: (Root -> a -> GlobalOptions -> IO EntryPoint) -> a -> Repl EntryPoint
 getReplEntryPoint f inputFile = do

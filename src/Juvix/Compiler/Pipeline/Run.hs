@@ -98,27 +98,27 @@ runIO opts entry = runIOEither entry >=> mayThrow
       Left err -> runReader opts $ printErrorAnsiSafe err >> embed exitFailure
       Right r -> return r
 
-corePipelineIO' :: EntryPoint -> IO Artifacts
-corePipelineIO' = corePipelineIO defaultGenericOptions
+runReplPipelineIO :: EntryPoint -> IO Artifacts
+runReplPipelineIO = runReplPipelineIO' defaultGenericOptions
 
-corePipelineIO :: GenericOptions -> EntryPoint -> IO Artifacts
-corePipelineIO opts entry = corePipelineIOEither entry >>= mayThrow
+runReplPipelineIO' :: GenericOptions -> EntryPoint -> IO Artifacts
+runReplPipelineIO' opts entry = runReplPipelineIOEither entry >>= mayThrow
   where
     mayThrow :: Either JuvixError r -> IO r
     mayThrow = \case
       Left err -> runM . runReader opts $ printErrorAnsiSafe err >> embed exitFailure
       Right r -> return r
 
-corePipelineIOEither ::
+runReplPipelineIOEither ::
   EntryPoint ->
   IO (Either JuvixError Artifacts)
-corePipelineIOEither = corePipelineIOEither' LockModePermissive
+runReplPipelineIOEither = runReplPipelineIOEither' LockModePermissive
 
-corePipelineIOEither' ::
+runReplPipelineIOEither' ::
   LockMode ->
   EntryPoint ->
   IO (Either JuvixError Artifacts)
-corePipelineIOEither' lockMode entry = do
+runReplPipelineIOEither' lockMode entry = do
   let hasInternet = not (entry ^. entryPointOffline)
       runPathResolver'
         | mainIsPackageFile entry = runPackagePathResolverArtifacts (entry ^. entryPointResolverRoot)
@@ -144,7 +144,7 @@ corePipelineIOEither' lockMode entry = do
       . mapError (JuvixError @PackageLoaderError)
       . runEvalFileEffIO
       . runPathResolver'
-      $ processFileToStoredCore entry
+      $ entrySetup defaultDependenciesConfig >> processFileToStoredCore entry
   return $ case eith of
     Left err -> Left err
     Right (art, PipelineResult {..}) ->
