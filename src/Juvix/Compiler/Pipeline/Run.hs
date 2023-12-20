@@ -181,22 +181,23 @@ runReplPipelineIOEither' lockMode entry = do
           resultScoperTable :: InfoTable
           resultScoperTable = Scoped.getCombinedInfoTable (scopedResult ^. Scoped.resultScopedModule)
        in Right $
-            Artifacts
-              { _artifactMainModuleScope = Nothing,
-                _artifactParsing = parserResult ^. P.resultParserState,
-                _artifactInternalTypedTable = typedTable,
-                _artifactTerminationState = typedResult ^. Typed.resultTermination,
-                _artifactCoreModule = coreModule,
-                _artifactScopeTable = resultScoperTable,
-                _artifactScopeExports = scopedResult ^. Scoped.resultExports,
-                _artifactTypes = typesTable,
-                _artifactFunctions = functionsTable,
-                _artifactScoperState = scopedResult ^. Scoped.resultScoperState,
-                _artifactResolver = art ^. artifactResolver,
-                _artifactBuiltins = art ^. artifactBuiltins,
-                _artifactNameIdState = art ^. artifactNameIdState,
-                _artifactModuleTable = _pipelineResultImports
-              }
+            appendArtifactsModuleTable _pipelineResultImports $
+              Artifacts
+                { _artifactMainModuleScope = Just $ scopedResult ^. Scoped.resultScope,
+                  _artifactParsing = parserResult ^. P.resultParserState,
+                  _artifactInternalTypedTable = typedTable,
+                  _artifactTerminationState = typedResult ^. Typed.resultTermination,
+                  _artifactCoreModule = coreModule,
+                  _artifactScopeTable = resultScoperTable,
+                  _artifactScopeExports = scopedResult ^. Scoped.resultExports,
+                  _artifactTypes = typesTable,
+                  _artifactFunctions = functionsTable,
+                  _artifactScoperState = scopedResult ^. Scoped.resultScoperState,
+                  _artifactResolver = art ^. artifactResolver,
+                  _artifactBuiltins = art ^. artifactBuiltins,
+                  _artifactNameIdState = art ^. artifactNameIdState,
+                  _artifactModuleTable = mempty
+                }
   where
     initialArtifacts :: Artifacts
     initialArtifacts =
@@ -204,10 +205,10 @@ runReplPipelineIOEither' lockMode entry = do
         { _artifactParsing = mempty,
           _artifactMainModuleScope = Nothing,
           _artifactInternalTypedTable = mempty,
-          _artifactTypes = mempty,
           _artifactTerminationState = iniTerminationState,
           _artifactResolver = iniResolverState,
           _artifactNameIdState = genNameIdState defaultModuleId,
+          _artifactTypes = mempty,
           _artifactFunctions = mempty,
           _artifactCoreModule = Core.emptyModule,
           _artifactScopeTable = mempty,

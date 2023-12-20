@@ -16,7 +16,7 @@ import Juvix.Compiler.Pipeline.Loader.PathResolver.Error
 import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
 import Juvix.Compiler.Pipeline.Result
-import Juvix.Compiler.Store.Language qualified as Store
+import Juvix.Compiler.Store.Extra qualified as Store
 import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process (runProcessIO)
 import Juvix.Data.Effect.TaggedLock
@@ -113,8 +113,8 @@ registerImport ::
 registerImport i = do
   e <- ask
   PipelineResult mi mtab <- Driver.processImport e i
-  modify' (over artifactModuleTable (Store.insertModule (i ^. importModulePath) mi))
-  modify' (over artifactModuleTable (mtab <>))
+  let mtab' = Store.insertModule (i ^. importModulePath) mi mtab
+  modify' (appendArtifactsModuleTable mtab')
 
 fromInternalExpression :: (Members '[State Artifacts] r) => Internal.Expression -> Sem r Core.Node
 fromInternalExpression exp = do

@@ -15,6 +15,7 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Che
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking
 import Juvix.Compiler.Pipeline.Artifacts
 import Juvix.Compiler.Pipeline.EntryPoint
+import Juvix.Compiler.Store.Extra
 import Juvix.Compiler.Store.Language
 import Juvix.Data.Effect.NameIdGen
 import Juvix.Prelude hiding (fromEither)

@@ -19,7 +19,7 @@ import Juvix.Compiler.Internal.Pretty (ppTrace)
 import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Compiler.Internal.Translation.Extra qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qualified as InternalTyped
-import Juvix.Compiler.Store.Extra (computeCombinedCoreInfoTable)
+import Juvix.Compiler.Store.Extra qualified as Store
 import Juvix.Compiler.Store.Language qualified as Store
 import Juvix.Data.Loc qualified as Loc
 import Juvix.Data.PPOutput
@@ -50,7 +50,7 @@ mkIdentIndex = show . (^. Internal.nameId)
 fromInternal :: (Members '[NameIdGen, Reader Store.ModuleTable] k) => Internal.InternalTypedResult -> Sem k CoreResult
 fromInternal i = do
   importTab <- asks Store.getInternalModuleTable
-  coreImportsTab <- asks computeCombinedCoreInfoTable
+  coreImportsTab <- asks Store.computeCombinedCoreInfoTable
   let md =
         Module
           { _moduleId = i ^. InternalTyped.resultInternalModule . Internal.internalModuleId,

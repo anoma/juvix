@@ -6,7 +6,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination qualified as Termination
-import Juvix.Compiler.Store.Language qualified as Stored
+import Juvix.Compiler.Store.Extra qualified as Stored
 import Juvix.Prelude.Pretty
 
 runCommand :: (Members '[Embed IO, TaggedLock, App] r) => CallGraphOptions -> Sem r ()

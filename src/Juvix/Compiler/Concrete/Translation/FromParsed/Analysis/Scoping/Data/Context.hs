@@ -12,7 +12,8 @@ data ScoperResult = ScoperResult
     _resultModule :: Module 'Scoped 'ModuleTop,
     _resultScopedModule :: ScopedModule,
     _resultExports :: HashSet NameId,
-    _resultScoperState :: ScoperState
+    _resultScoperState :: ScoperState,
+    _resultScope :: Scope
   }
 
 makeLenses ''ScoperResult

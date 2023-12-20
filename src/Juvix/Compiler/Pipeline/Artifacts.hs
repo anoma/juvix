@@ -13,12 +13,23 @@ import Juvix.Compiler.Builtins
 import Juvix.Compiler.Concrete.Data.InfoTableBuilder qualified as Scoped
 import Juvix.Compiler.Concrete.Data.Scope qualified as S
 import Juvix.Compiler.Core.Data.InfoTableBuilder qualified as Core
+import Juvix.Compiler.Core.Data.Module qualified as Core
 import Juvix.Compiler.Internal.Language qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromConcrete qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context
 import Juvix.Compiler.Pipeline.Artifacts.Base
+import Juvix.Compiler.Store.Extra
+import Juvix.Compiler.Store.Language
 import Juvix.Prelude
+
+appendArtifactsModuleTable :: ModuleTable -> Artifacts -> Artifacts
+appendArtifactsModuleTable mtab =
+  over artifactInternalTypedTable (computeCombinedInfoTable importTab <>)
+    . over (artifactCoreModule . Core.moduleImportsTable) (computeCombinedCoreInfoTable mtab <>)
+  where
+    importTab :: Internal.InternalModuleTable
+    importTab = getInternalModuleTable mtab
 
 -- | It only reads the Artifacts. It does not modify the table in it.
 extendedTableReplArtifacts :: forall r. (Members '[State Artifacts] r) => Internal.Expression -> Sem r Internal.InfoTable

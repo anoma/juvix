@@ -77,15 +77,16 @@ scopeCheck' importTab pr m = do
       ScopeParameters
         { _scopeImportedModules = importTab ^. scopedModuleTable
         }
-    mkResult :: (ScoperState, (Module 'Scoped 'ModuleTop, ScopedModule)) -> ScoperResult
-    mkResult (scoperSt, (md, sm)) =
+    mkResult :: (ScoperState, (Module 'Scoped 'ModuleTop, ScopedModule, Scope)) -> ScoperResult
+    mkResult (scoperSt, (md, sm, sc)) =
       let exp = createExportsTable (sm ^. scopedModuleExportInfo)
        in ScoperResult
             { _resultParserResult = pr,
               _resultModule = md,
               _resultScopedModule = sm,
               _resultExports = exp,
-              _resultScoperState = scoperSt
+              _resultScoperState = scoperSt,
+              _resultScope = sc
             }
 
 -- TODO refactor to have less code duplication
@@ -1033,7 +1034,7 @@ checkTopModule ::
   forall r.
   (Members '[Error ScoperError, Reader ScopeParameters, State ScoperState, Reader InfoTable, NameIdGen, Reader EntryPoint] r) =>
   Module 'Parsed 'ModuleTop ->
-  Sem r (Module 'Scoped 'ModuleTop, ScopedModule)
+  Sem r (Module 'Scoped 'ModuleTop, ScopedModule, Scope)
 checkTopModule m@Module {..} = checkedModule
   where
     freshTopModulePath ::
@@ -1061,9 +1062,9 @@ checkTopModule m@Module {..} = checkedModule
     iniScope :: Scope
     iniScope = emptyScope (getTopModulePath m)
 
-    checkedModule :: Sem r (Module 'Scoped 'ModuleTop, ScopedModule)
+    checkedModule :: Sem r (Module 'Scoped 'ModuleTop, ScopedModule, Scope)
     checkedModule = do
-      (tab, (e, body', path', doc')) <- evalState iniScope $ runInfoTableBuilder mempty $ do
+      (sc, (tab, (e, body', path', doc'))) <- runState iniScope $ runInfoTableBuilder mempty $ do
         path' <- freshTopModulePath
         withTopScope $ do
           (e, body') <- topBindings (checkModuleBody _moduleBody)
@@ -1093,7 +1094,7 @@ checkTopModule m@Module {..} = checkedModule
                 _scopedModuleLocalModules = localModules,
                 _scopedModuleInfoTable = tab
               }
-      return (md, smd)
+      return (md, smd, sc)
 
 withTopScope :: (Members '[State Scope] r) => Sem r a -> Sem r a
 withTopScope ma = do
