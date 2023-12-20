@@ -1066,9 +1066,9 @@ checkTopModule m@Module {..} = checkedModule
       (tab, (e, body', path', doc')) <- evalState iniScope $ runInfoTableBuilder mempty $ do
         path' <- freshTopModulePath
         withTopScope $ do
+          (e, body') <- topBindings (checkModuleBody _moduleBody)
           doc' <- mapM checkJudoc _moduleDoc
           registerModuleDoc (path' ^. S.nameId) doc'
-          (e, body') <- topBindings (checkModuleBody _moduleBody)
           return (e, body', path', doc')
       localModules <- getLocalModules e
       let md =
