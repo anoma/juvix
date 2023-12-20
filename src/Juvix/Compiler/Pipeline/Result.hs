@@ -5,6 +5,10 @@ import Juvix.Prelude
 
 data PipelineResult a = PipelineResult
   { _pipelineResult :: a,
+    -- | Transitive imports. The imports table contains all dependencies,
+    -- transitively. E.g., if module M imports A but not B, but A imports B,
+    -- then still both A and B will be in the imports table in the pipeline
+    -- result for processing M.
     _pipelineResultImports :: Store.ModuleTable
   }
 
