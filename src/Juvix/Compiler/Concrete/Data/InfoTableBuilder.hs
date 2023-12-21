@@ -29,10 +29,12 @@ data InfoTableBuilder m a where
 
 makeSem ''InfoTableBuilder
 
-registerDoc :: forall r. (Member (State InfoTable) r) => NameId -> Maybe (Judoc 'Scoped) -> Sem r ()
-registerDoc k md = modify (set (infoHighlightDoc . at k) md)
+registerDoc :: forall r. (Members '[HighlightBuilder, State InfoTable] r) => NameId -> Maybe (Judoc 'Scoped) -> Sem r ()
+registerDoc k md = do
+  modify (set (highlightDoc . at k) md)
+  modify (set (infoHighlightDoc . at k) md)
 
-toState :: Sem (InfoTableBuilder ': r) a -> Sem (State InfoTable ': r) a
+toState :: (Member HighlightBuilder r) => Sem (InfoTableBuilder ': r) a -> Sem (State InfoTable ': r) a
 toState = reinterpret $ \case
   RegisterAxiom d ->
     let j = d ^. axiomDoc
@@ -54,8 +56,12 @@ toState = reinterpret $ \case
      in do
           modify' (over infoFunctions (HashMap.insert (f ^. signName . nameId) f))
           registerDoc (f ^. signName . nameId) j
-  RegisterName n -> modify (over infoHighlightNames (cons (S.anameFromName n)))
-  RegisterScopedIden n -> modify (over infoHighlightNames (cons (anameFromScopedIden n)))
+  RegisterName n -> do
+    modify (over highlightNames (cons (S.anameFromName n)))
+    modify (over infoHighlightNames (cons (S.anameFromName n)))
+  RegisterScopedIden n -> do
+    modify (over highlightNames (cons (anameFromScopedIden n)))
+    modify (over infoHighlightNames (cons (anameFromScopedIden n)))
   RegisterModuleDoc uid doc -> do
     registerDoc uid doc
   RegisterFixity f -> do
@@ -84,10 +90,10 @@ toState = reinterpret $ \case
 runInfoTableBuilderRepl :: InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
 runInfoTableBuilderRepl tab = ignoreHighlightBuilder . runInfoTableBuilder tab . raiseUnder
 
-runInfoTableBuilder :: InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
+runInfoTableBuilder :: (Member HighlightBuilder r) => InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
 runInfoTableBuilder tab = runState tab . toState
 
-ignoreInfoTableBuilder :: Sem (InfoTableBuilder ': r) a -> Sem r a
+ignoreInfoTableBuilder :: (Member HighlightBuilder r) => Sem (InfoTableBuilder ': r) a -> Sem r a
 ignoreInfoTableBuilder = evalState mempty . toState
 
 anameFromScopedIden :: ScopedIden -> AName

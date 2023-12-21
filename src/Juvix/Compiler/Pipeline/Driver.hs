@@ -9,6 +9,7 @@ where
 
 import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Concrete (ImportCycle (ImportCycle), ScoperError (ErrImportCycle))
+import Juvix.Compiler.Concrete.Data.Highlight
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
@@ -55,7 +56,7 @@ type MCache = Cache EntryIndex (PipelineResult Store.ModuleInfo)
 
 processFile ::
   forall r.
-  (Members '[Error JuvixError, Files, GitClone, PathResolver] r) =>
+  (Members '[HighlightBuilder, Error JuvixError, Files, GitClone, PathResolver] r) =>
   EntryPoint ->
   Sem r (PipelineResult Parser.ParserResult)
 processFile entry =
@@ -96,7 +97,7 @@ processFileToStoredCore entry =
 
 processFileUpTo ::
   forall r a.
-  (Members '[Reader EntryPoint, Error JuvixError, Files, GitClone, PathResolver] r) =>
+  (Members '[HighlightBuilder, Reader EntryPoint, Error JuvixError, Files, GitClone, PathResolver] r) =>
   Sem (Reader Parser.ParserResult ': Reader Store.ModuleTable ': NameIdGen ': r) a ->
   Sem r (PipelineResult a)
 processFileUpTo a = do
@@ -111,7 +112,7 @@ processFileUpTo a = do
 
 processFile' ::
   forall r.
-  (Members '[Reader ImportParents, Error JuvixError, Files, GitClone, PathResolver, MCache] r) =>
+  (Members '[HighlightBuilder, Reader ImportParents, Error JuvixError, Files, GitClone, PathResolver, MCache] r) =>
   EntryPoint ->
   Sem r (PipelineResult Parser.ParserResult)
 processFile' entry = do
@@ -165,7 +166,7 @@ processFileToStoredCore' ::
   (Members '[Reader ImportParents, Error JuvixError, Files, GitClone, PathResolver, MCache] r) =>
   EntryPoint ->
   Sem r (PipelineResult Core.CoreResult)
-processFileToStoredCore' entry = do
+processFileToStoredCore' entry = ignoreHighlightBuilder $ do
   res <- processFile' entry
   r <-
     evalTopNameIdGen

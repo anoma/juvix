@@ -68,13 +68,15 @@ registerLiteral l =
 registerItem' :: (Member (State ParserState) r) => ParsedItem -> Sem r ()
 registerItem' i = modify' (over parserStateParsedItems (i :))
 
-runParserResultBuilder :: ParserState -> Sem (ParserResultBuilder ': r) a -> Sem r (ParserState, a)
+runParserResultBuilder :: (Member HighlightBuilder r) => ParserState -> Sem (ParserResultBuilder ': r) a -> Sem r (ParserState, a)
 runParserResultBuilder s =
   runState s
     . reinterpret
       ( \case
           RegisterImport i -> modify' (over parserStateImports (i :))
-          RegisterItem i -> registerItem' i
+          RegisterItem i -> do
+            modify' (over highlightParsed (i :))
+            registerItem' i
           RegisterSpaceSpan g -> do
             modify' (over parserStateComments (g :))
             forM_ (g ^.. spaceSpan . each . _SpaceComment) $ \c ->

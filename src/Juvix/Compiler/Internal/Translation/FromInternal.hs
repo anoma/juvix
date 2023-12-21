@@ -26,6 +26,7 @@ typeCheckExpressionType ::
   Expression ->
   Sem r TypedExpression
 typeCheckExpressionType exp = do
+  -- TODO: refactor: modules outside of REPL should not refer to Artifacts
   table <- extendedTableReplArtifacts exp
   runTypesTableArtifacts
     . runFunctionsTableArtifacts
@@ -52,7 +53,7 @@ typeCheckImport = return
 
 typeCheckingNew ::
   forall r.
-  (Members '[Reader EntryPoint, Error JuvixError, NameIdGen, Reader ModuleTable] r) =>
+  (Members '[HighlightBuilder, Reader EntryPoint, Error JuvixError, NameIdGen, Reader ModuleTable] r) =>
   Sem (Termination ': r) InternalResult ->
   Sem r InternalTypedResult
 typeCheckingNew a = do

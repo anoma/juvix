@@ -14,6 +14,7 @@ import Data.Text qualified as Text
 import Juvix.Compiler.Backend.Markdown.Data.Types (Mk (..))
 import Juvix.Compiler.Backend.Markdown.Data.Types qualified as MK
 import Juvix.Compiler.Backend.Markdown.Error
+import Juvix.Compiler.Concrete (HighlightBuilder, ignoreHighlightBuilder)
 import Juvix.Compiler.Concrete.Extra (takeWhile1P)
 import Juvix.Compiler.Concrete.Extra qualified as P
 import Juvix.Compiler.Concrete.Language
@@ -49,7 +50,7 @@ type JudocStash = State (Maybe (Judoc 'Parsed))
 type PragmasStash = State (Maybe ParsedPragmas)
 
 fromSource ::
-  (Members '[Files, PathResolver, Error JuvixError] r) =>
+  (Members '[HighlightBuilder, Files, PathResolver, Error JuvixError] r) =>
   EntryPoint ->
   Sem r ParserResult
 fromSource e = mapError (JuvixError @ParserError) $ do
@@ -269,9 +270,10 @@ runExpressionParser ::
   Sem r (Either ParserError (ExpressionAtoms 'Parsed))
 runExpressionParser fpath input = do
   m <-
-    runParserResultBuilder mempty
-      . evalState (Nothing @ParsedPragmas)
-      . evalState (Nothing @(Judoc 'Parsed))
+    ignoreHighlightBuilder
+      $ runParserResultBuilder mempty
+        . evalState (Nothing @ParsedPragmas)
+        . evalState (Nothing @(Judoc 'Parsed))
       $ P.runParserT parseExpressionAtoms (toFilePath fpath) input
   case m of
     (_, Left err) -> return (Left (ErrMegaparsec (MegaparsecError err)))
