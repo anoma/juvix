@@ -9,22 +9,7 @@ tests:
       - from-concrete
       - --eval
       - --transforms
-      - eta-expand-apps
-    args:
-      - positive/Internal/LiteralInt.juvix
-    stdout: |
-      suc (suc zero)
-    exit-status: 0
-
-  - name: core-from-concrete-eval
-    command:
-      - juvix
-      - dev
-      - core
-      - from-concrete
-      - --eval
-      - --transforms
-      - eta-expand-apps,nat-to-primint
+      - pipeline-stored
     args:
       - positive/Internal/LiteralInt.juvix
     stdout: |
@@ -39,13 +24,13 @@ tests:
       - from-concrete
       - --eval
       - --transforms
-      - eta-expand-apps
+      - pipeline-stored
       - --symbol-name
       - f
     args:
       - positive/Internal/LiteralInt.juvix
     stdout: |
-      suc zero
+      1
     exit-status: 0
 
   - name: core-repl-normalize
@@ -66,12 +51,12 @@ tests:
       - dev
       - core
       - from-concrete
-      - -t eta-expand-apps
+      - -t pipeline-stored
       - --normalize
     args:
       - positive/Internal/Norm.juvix
     stdout: |
-      suc (suc (suc zero))
+      3
     exit-status: 0
 
   - name: core-read-normalize

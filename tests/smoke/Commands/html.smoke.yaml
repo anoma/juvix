@@ -67,7 +67,7 @@ tests:
         cat html/HelloWorld.html
     stdout:
       matches: |
-        .*href="HelloWorld.html#XYZ[0-9]+".*
+        .*href="HelloWorld.html#XYZHelloWorld:[0-9]+".*
     exit-status: 0
 
   - name: html-no-path
@@ -81,5 +81,5 @@ tests:
         cat html/HelloWorld.html
     stdout:
       matches: |
-        .*href="#[0-9]+".*
+        .*href="#HelloWorld:[0-9]+".*
     exit-status: 0
