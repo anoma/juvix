@@ -139,11 +139,7 @@ processImport' ::
 processImport' entry p = do
   checkCycle
   local (over importParents (p :)) $
-    withPath'
-      p
-      ( \path ->
-          cacheGet (EntryIndex entry {_entryPointModulePath = Just path})
-      )
+    withPath' p getCachedImport
   where
     checkCycle :: Sem r ()
     checkCycle = do
@@ -154,6 +150,15 @@ processImport' entry p = do
           let cyc = NonEmpty.reverse (p :| c)
            in mapError (JuvixError @ScoperError) $
                 throw (ErrImportCycle (ImportCycle cyc))
+
+    getCachedImport :: Path Abs File -> Sem r (PipelineResult Store.ModuleInfo)
+    getCachedImport path = cacheGet (EntryIndex entry')
+      where
+        entry' =
+          entry
+            { _entryPointStdin = Nothing,
+              _entryPointModulePath = Just path
+            }
 
 processFileToStoredCore' ::
   forall r.
