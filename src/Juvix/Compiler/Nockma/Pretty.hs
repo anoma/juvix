@@ -21,7 +21,8 @@ ppOut :: (CanonicalProjection a Options, PrettyCode c) => a -> c -> AnsiText
 ppOut o = mkAnsiText . PPOutput . doc (project o)
 
 ppTrace :: (PrettyCode c) => c -> Text
-ppTrace = Ansi.renderStrict . reAnnotateS stylize . layoutPretty defaultLayoutOptions . doc traceOptions
+ppTrace =
+  Ansi.renderStrict . reAnnotateS stylize . layoutPretty defaultLayoutOptions . doc defaultOptions
 
 ppPrint :: (PrettyCode c) => c -> Text
 ppPrint = renderStrict . toTextStream . ppOutDefault
