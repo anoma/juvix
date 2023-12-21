@@ -89,23 +89,25 @@ scopeCheck' importTab pr m = do
               _resultScope = sc
             }
 
--- TODO refactor to have less code duplication
-scopeCheckExpressionAtoms ::
-  forall r.
-  (Members '[Error JuvixError, NameIdGen, Reader EntryPoint, State Scope] r) =>
+scopeCheckRepl ::
+  forall r a b.
+  (Members '[Error JuvixError, NameIdGen, Reader EntryPoint, State Scope, State ScoperState] r) =>
+  ( forall r'.
+    (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader EntryPoint] r') =>
+    a ->
+    Sem r' b
+  ) ->
   ScopedModuleTable ->
   InfoTable ->
-  ExpressionAtoms 'Parsed ->
-  Sem r (ExpressionAtoms 'Scoped)
-scopeCheckExpressionAtoms importTab tab as = mapError (JuvixError @ScoperError) $ do
+  a ->
+  Sem r b
+scopeCheckRepl check importTab tab a = mapError (JuvixError @ScoperError) $ do
   fmap snd
     . ignoreHighlightBuilder
     . runInfoTableBuilder tab
     . runReader iniScopeParameters
-    . evalState (iniScoperState tab')
     . runReader tab'
-    . withLocalScope
-    $ checkExpressionAtoms as
+    $ check a
   where
     tab' = computeCombinedInfoTable importTab
 
@@ -114,6 +116,16 @@ scopeCheckExpressionAtoms importTab tab as = mapError (JuvixError @ScoperError) 
       ScopeParameters
         { _scopeImportedModules = importTab ^. scopedModuleTable
         }
+
+-- TODO refactor to have less code duplication
+scopeCheckExpressionAtoms ::
+  forall r.
+  (Members '[Error JuvixError, NameIdGen, Reader EntryPoint, State Scope, State ScoperState] r) =>
+  ScopedModuleTable ->
+  InfoTable ->
+  ExpressionAtoms 'Parsed ->
+  Sem r (ExpressionAtoms 'Scoped)
+scopeCheckExpressionAtoms = scopeCheckRepl checkExpressionAtoms
 
 scopeCheckExpression ::
   forall r.
@@ -122,29 +134,16 @@ scopeCheckExpression ::
   InfoTable ->
   ExpressionAtoms 'Parsed ->
   Sem r Expression
-scopeCheckExpression importTab tab as = mapError (JuvixError @ScoperError) $ do
-  fmap snd
-    . ignoreHighlightBuilder
-    . runInfoTableBuilder tab
-    . runReader iniScopeParameters
-    . runReader tab'
-    . withLocalScope
-    $ checkParseExpressionAtoms as
-  where
-    tab' = computeCombinedInfoTable importTab
-
-    iniScopeParameters :: ScopeParameters
-    iniScopeParameters =
-      ScopeParameters
-        { _scopeImportedModules = importTab ^. scopedModuleTable
-        }
+scopeCheckExpression = scopeCheckRepl checkParseExpressionAtoms
 
 scopeCheckImport ::
   forall r.
-  (Members '[Error JuvixError, InfoTableBuilder, Reader InfoTable, NameIdGen, State Scope, Reader ScopeParameters, State ScoperState] r) =>
+  (Members '[Error JuvixError, NameIdGen, Reader EntryPoint, State Scope, State ScoperState] r) =>
+  ScopedModuleTable ->
+  InfoTable ->
   Import 'Parsed ->
   Sem r (Import 'Scoped)
-scopeCheckImport = mapError (JuvixError @ScoperError) . checkImport
+scopeCheckImport = scopeCheckRepl checkImport
 
 scopeCheckOpenModule ::
   forall r.

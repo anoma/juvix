@@ -53,9 +53,10 @@ expressionUpToAtomsScoped ::
 expressionUpToAtomsScoped fp txt = do
   scopeTable <- gets (^. artifactScopeTable)
   mtab <- gets (^. artifactModuleTable)
-  runNameIdGenArtifacts
-    . runBuiltinsArtifacts
+  runBuiltinsArtifacts
     . runScoperScopeArtifacts
+    . runStateArtifacts artifactScoperState
+    . runNameIdGenArtifacts
     $ Parser.expressionFromTextSource fp txt
       >>= Scoper.scopeCheckExpressionAtoms (Store.getScopedModuleTable mtab) scopeTable
 
@@ -70,8 +71,7 @@ scopeCheckExpression p = do
     . runBuiltinsArtifacts
     . runScoperScopeArtifacts
     . runStateArtifacts artifactScoperState
-    . Scoper.scopeCheckExpression (Store.getScopedModuleTable mtab) scopeTable
-    $ p
+    $ Scoper.scopeCheckExpression (Store.getScopedModuleTable mtab) scopeTable p
 
 parseReplInput ::
   (Members '[PathResolver, Files, State Artifacts, Error JuvixError] r) =>
@@ -115,6 +115,13 @@ registerImport i = do
   PipelineResult mi mtab <- Driver.processImport e i
   let mtab' = Store.insertModule (i ^. importModulePath) mi mtab
   modify' (appendArtifactsModuleTable mtab')
+  scopeTable <- gets (^. artifactScopeTable)
+  void
+    . runNameIdGenArtifacts
+    . runBuiltinsArtifacts
+    . runScoperScopeArtifacts
+    . runStateArtifacts artifactScoperState
+    $ Scoper.scopeCheckImport (Store.getScopedModuleTable mtab') scopeTable i
 
 fromInternalExpression :: (Members '[State Artifacts] r) => Internal.Expression -> Sem r Core.Node
 fromInternalExpression exp = do
