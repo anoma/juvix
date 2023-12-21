@@ -7,6 +7,7 @@ import Juvix.Compiler.Core.Data.InfoTable qualified as Core
 import Juvix.Compiler.Store.Core.Extra
 import Juvix.Compiler.Store.Internal.Language
 import Juvix.Compiler.Store.Language
+import Juvix.Compiler.Store.Scoped.Data.InfoTable qualified as Scoped
 import Juvix.Compiler.Store.Scoped.Language
 import Juvix.Prelude
 
@@ -33,6 +34,10 @@ lookupModule mtab n = fromJust $ HashMap.lookup n (mtab ^. moduleTable)
 
 insertModule :: TopModulePath -> ModuleInfo -> ModuleTable -> ModuleTable
 insertModule p mi = over moduleTable (HashMap.insert p mi)
+
+computeCombinedScopedInfoTable :: ModuleTable -> Scoped.InfoTable
+computeCombinedScopedInfoTable mtab =
+  mconcatMap (^. moduleInfoScopedModule . scopedModuleInfoTable) (HashMap.elems (mtab ^. moduleTable))
 
 computeCombinedCoreInfoTable :: ModuleTable -> Core.InfoTable
 computeCombinedCoreInfoTable mtab =

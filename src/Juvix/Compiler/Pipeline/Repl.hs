@@ -116,12 +116,13 @@ registerImport i = do
   let mtab' = Store.insertModule (i ^. importModulePath) mi mtab
   modify' (appendArtifactsModuleTable mtab')
   scopeTable <- gets (^. artifactScopeTable)
+  mtab'' <- gets (^. artifactModuleTable)
   void
     . runNameIdGenArtifacts
     . runBuiltinsArtifacts
     . runScoperScopeArtifacts
     . runStateArtifacts artifactScoperState
-    $ Scoper.scopeCheckImport (Store.getScopedModuleTable mtab') scopeTable i
+    $ Scoper.scopeCheckImport (Store.getScopedModuleTable mtab'') scopeTable i
 
 fromInternalExpression :: (Members '[State Artifacts] r) => Internal.Expression -> Sem r Core.Node
 fromInternalExpression exp = do

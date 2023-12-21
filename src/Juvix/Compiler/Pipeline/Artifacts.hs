@@ -27,6 +27,7 @@ appendArtifactsModuleTable :: ModuleTable -> Artifacts -> Artifacts
 appendArtifactsModuleTable mtab =
   over artifactInternalTypedTable (computeCombinedInfoTable importTab <>)
     . over (artifactCoreModule . Core.moduleImportsTable) (computeCombinedCoreInfoTable mtab <>)
+    . over artifactModuleTable (mtab <>)
   where
     importTab :: Internal.InternalModuleTable
     importTab = getInternalModuleTable mtab
