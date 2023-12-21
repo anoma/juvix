@@ -56,6 +56,7 @@ data AtomHint
   = AtomHintOp
   | AtomHintPath
   | AtomHintBool
+  | AtomHintNil
 
 data NockOp
   = OpAddress
@@ -203,6 +204,7 @@ class (Eq a) => NockNatural a where
   nockTrue :: Atom a
   nockFalse :: Atom a
   nockSucc :: Atom a -> Atom a
+  nockNil :: Atom a
 
 data NockNaturalNaturalError
   = NaturalInvalidPath (Atom Natural)
@@ -214,6 +216,7 @@ instance NockNatural Natural where
   nockNatural a = return (a ^. atom)
   nockTrue = Atom 0 (Irrelevant (Just AtomHintBool))
   nockFalse = Atom 1 (Irrelevant (Just AtomHintBool))
+  nockNil = Atom 0 (Irrelevant (Just AtomHintNil))
   nockSucc = over atom succ
   errInvalidOp atm = NaturalInvalidOp atm
   errInvalidPath atm = NaturalInvalidPath atm
