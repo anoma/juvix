@@ -30,7 +30,7 @@ runParserProgram :: FilePath -> Text -> Either MegaparsecError (N.Program Natura
 runParserProgram = runParserFor program
 
 runParserFor :: Parser a -> FilePath -> Text -> Either MegaparsecError a
-runParserFor p f input = case P.runParser p f input of
+runParserFor p f input = case P.runParser (p <* eof) f input of
   Left err -> Left (MegaparsecError err)
   Right t -> Right t
 
@@ -86,12 +86,16 @@ atomBool =
       symbol "false" $> N.nockFalse
     ]
 
+atomNil :: Parser (N.Atom Natural)
+atomNil = symbol "nil" $> N.nockNil
+
 atom :: Parser (N.Atom Natural)
 atom =
   atomOp
     <|> atomNat
     <|> atomDirection
     <|> atomBool
+    <|> atomNil
 
 cell :: Parser (N.Cell Natural)
 cell = do
