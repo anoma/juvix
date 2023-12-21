@@ -125,12 +125,6 @@ getEntryPoint' RunAppIOArgs {..} inputFile = do
         | otherwise -> return Nothing
   set entryPointStdin estdin <$> entryPointFromGlobalOptionsPre root (inputFile ^. pathPath) opts
 
-runPipelineNoFileEither :: (Members '[Embed IO, TaggedLock, App] r) => Sem (PipelineEff r) a -> Sem r (Either JuvixError (ResolverState, PipelineResult a))
-runPipelineNoFileEither p = do
-  args <- askArgs
-  entry <- getEntryPointStdin' args
-  runIOEither entry p
-
 runPipelineEither :: (Members '[Embed IO, TaggedLock, App] r) => AppPath File -> Sem (PipelineEff r) a -> Sem r (Either JuvixError (ResolverState, PipelineResult a))
 runPipelineEither input p = do
   args <- askArgs
@@ -192,9 +186,9 @@ runPipeline input p = do
     Left err -> exitJuvixError err
     Right res -> return (snd res ^. pipelineResult)
 
-runPipelineNoFile :: (Members '[App, Embed IO, TaggedLock] r) => Sem (PipelineEff r) a -> Sem r a
-runPipelineNoFile p = do
-  r <- runPipelineNoFileEither p
+runPipelineNoFile :: (Members '[App, Embed IO, TaggedLock] r) => EntryPoint -> Sem (PipelineEff r) a -> Sem r a
+runPipelineNoFile entry p = do
+  r <- runIOEither entry p
   case r of
     Left err -> exitJuvixError err
     Right res -> return (snd res ^. pipelineResult)

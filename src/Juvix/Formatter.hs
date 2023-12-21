@@ -16,7 +16,7 @@ data FormattedFileInfo = FormattedFileInfo
 
 data ScopeEff m a where
   ScopeFile :: Path Abs File -> ScopeEff m Scoper.ScoperResult
-  ScopeStdin :: ScopeEff m Scoper.ScoperResult
+  ScopeStdin :: EntryPoint -> ScopeEff m Scoper.ScoperResult
 
 makeLenses ''FormattedFileInfo
 makeSem ''ScopeEff
@@ -104,7 +104,7 @@ formatStdin ::
   Sem r FormatResult
 formatStdin = do
   entry <- ask
-  res <- scopeStdin
+  res <- scopeStdin entry
   let originalContents = fromMaybe "" (entry ^. entryPointStdin)
   runReader originalContents $ do
     formattedContents :: Text <- formatScoperResult False res
