@@ -224,7 +224,6 @@ processModule'' sha256 entry = over pipelineResult mkModuleInfo <$> processFileT
           _moduleInfoCoreTable = fromCore (_coreResultModule ^. Core.moduleInfoTable),
           _moduleInfoImports = map (^. importModulePath) $ scoperResult ^. Scoper.resultParserResult . Parser.resultParserState . parserStateImports,
           _moduleInfoOptions = StoredOptions.fromEntryPoint entry,
-          _moduleInfoSourceFile = entry ^. entryPointModulePath,
           _moduleInfoSHA256 = sha256
         }
       where
