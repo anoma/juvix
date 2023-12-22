@@ -79,3 +79,6 @@ preludePath = $(mkRelFile "Stdlib/Prelude.juvix")
 
 defaultStdlibPath :: Path Abs Dir -> Path Abs Dir
 defaultStdlibPath buildDir = buildDir <//> $(mkRelDir "stdlib")
+
+nockStdlibPath :: Path Rel File
+nockStdlibPath = $(mkRelFile "include/nock/Stdlib.nock")
