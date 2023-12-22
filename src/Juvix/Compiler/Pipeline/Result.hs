@@ -9,7 +9,10 @@ data PipelineResult a = PipelineResult
     -- transitively. E.g., if module M imports A but not B, but A imports B,
     -- then still both A and B will be in the imports table in the pipeline
     -- result for processing M.
-    _pipelineResultImports :: Store.ModuleTable
+    _pipelineResultImports :: Store.ModuleTable,
+    -- | True if the module had to be recompiled. False if the module was loaded
+    -- from disk.
+    _pipelineResultChanged :: Bool
   }
 
 makeLenses ''PipelineResult

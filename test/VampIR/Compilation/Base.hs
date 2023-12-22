@@ -10,8 +10,8 @@ vampirCompileAssertion :: Path Abs Dir -> Path Abs File -> Path Abs File -> (Str
 vampirCompileAssertion root' mainFile dataFile step = do
   step "Translate to JuvixCore"
   entryPoint <- testDefaultEntryPointIO root' mainFile
-  PipelineResult res _ <- snd <$> testRunIO entryPoint upToStoredCore
-  let tab = computeCombinedInfoTable (res ^. coreResultModule)
+  PipelineResult {..} <- snd <$> testRunIO entryPoint upToStoredCore
+  let tab = computeCombinedInfoTable (_pipelineResult ^. coreResultModule)
   coreVampIRAssertion' tab toVampIRTransformations mainFile dataFile step
   vampirAssertion' VampirHalo2 tab dataFile step
 

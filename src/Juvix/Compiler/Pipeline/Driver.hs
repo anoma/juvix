@@ -125,7 +125,7 @@ processFile' entry = do
   res <- runReader entry upToParsing
   let imports = res ^. Parser.resultParserState . Parser.parserStateImports
   mtab <- processImports' entry (map (^. importModulePath) imports)
-  return (PipelineResult res mtab)
+  return (PipelineResult res mtab True)
 
 processImports' ::
   forall r.
@@ -133,9 +133,19 @@ processImports' ::
   EntryPoint ->
   [TopModulePath] ->
   Sem r Store.ModuleTable
-processImports' entry imports = do
+processImports' entry imports = snd <$> processImports'' entry imports
+
+processImports'' ::
+  forall r.
+  (Members '[Reader ImportParents, Error JuvixError, Files, GitClone, PathResolver, MCache] r) =>
+  EntryPoint ->
+  [TopModulePath] ->
+  Sem r (Bool, Store.ModuleTable)
+processImports'' entry imports = do
   ms <- forM imports (processImport' entry)
-  return $ Store.mkModuleTable (map (^. pipelineResult) ms) <> mconcatMap (^. pipelineResultImports) ms
+  let mtab = Store.mkModuleTable (map (^. pipelineResult) ms) <> mconcatMap (^. pipelineResultImports) ms
+      changed = any (^. pipelineResultChanged) ms
+  return (changed, mtab)
 
 processImport' ::
   forall r a.
@@ -197,16 +207,28 @@ processModule' (EntryIndex entry) = do
     Just info
       | info ^. Store.moduleInfoSHA256 == sha256
           && info ^. Store.moduleInfoOptions == opts -> do
-          mtab <- processImports' entry (info ^. Store.moduleInfoImports)
-          return (PipelineResult info mtab)
-    _ -> do
-      res <- processModule'' sha256 entry
-      saveToFile absPath (res ^. pipelineResult)
-      return res
+          (changed, mtab) <- processImports'' entry (info ^. Store.moduleInfoImports)
+          -- We need to check whether any of the recursive imports is fragile,
+          -- not only the direct ones, because identifiers may be re-exported
+          -- (with `open public`).
+          let fragile = any (^. Store.moduleInfoFragile) (HashMap.elems $ mtab ^. Store.moduleTable)
+          if
+              | changed && fragile ->
+                  recompile sha256 absPath
+              | otherwise ->
+                  return (PipelineResult info mtab False)
+    _ ->
+      recompile sha256 absPath
   where
     root = entry ^. entryPointRoot
     sourcePath = fromJust $ entry ^. entryPointModulePath
     opts = StoredModule.fromEntryPoint entry
+
+    recompile :: Text -> Path Abs File -> Sem r (PipelineResult Store.ModuleInfo)
+    recompile sha256 absPath = do
+      res <- processModule'' sha256 entry
+      saveToFile absPath (res ^. pipelineResult)
+      return res
 
 processModule'' ::
   forall r.
@@ -224,6 +246,7 @@ processModule'' sha256 entry = over pipelineResult mkModuleInfo <$> processFileT
           _moduleInfoCoreTable = fromCore (_coreResultModule ^. Core.moduleInfoTable),
           _moduleInfoImports = map (^. importModulePath) $ scoperResult ^. Scoper.resultParserResult . Parser.resultParserState . parserStateImports,
           _moduleInfoOptions = StoredOptions.fromEntryPoint entry,
+          _moduleInfoFragile = Core.moduleIsFragile _coreResultModule,
           _moduleInfoSHA256 = sha256
         }
       where
@@ -235,7 +258,7 @@ processRecursiveUpToTyped ::
   Sem r (InternalTypedResult, [InternalTypedResult])
 processRecursiveUpToTyped = do
   entry <- ask
-  PipelineResult res mtab <- processFile entry
+  PipelineResult res mtab _ <- processFile entry
   let imports = HashMap.keys (mtab ^. Store.moduleTable)
   ms <- forM imports (`withPath'` goImport)
   a <-

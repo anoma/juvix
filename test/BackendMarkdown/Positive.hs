@@ -35,8 +35,8 @@ testDescr PosTest {..} =
       _testAssertion = Steps $ \step -> do
         entryPoint <- testDefaultEntryPointIO _dir _file
         step "Parsing & Scoping"
-        PipelineResult s _ <- snd <$> testRunIO entryPoint upToScoping
-        let m = s ^. Scoper.resultModule
+        PipelineResult {..} <- snd <$> testRunIO entryPoint upToScoping
+        let m = _pipelineResult ^. Scoper.resultModule
         let opts =
               ProcessJuvixBlocksArgs
                 { _processJuvixBlocksArgsConcreteOpts = Concrete.defaultOptions,
@@ -44,7 +44,7 @@ testDescr PosTest {..} =
                   _processJuvixBlocksArgsIdPrefix = _IdPrefix,
                   _processJuvixBlocksArgsNoPath = _NoPath,
                   _processJuvixBlocksArgsComments =
-                    Scoper.getScoperResultComments s,
+                    Scoper.getScoperResultComments _pipelineResult,
                   _processJuvixBlocksArgsModule = m,
                   _processJuvixBlocksArgsOutputDir =
                     root <//> $(mkRelDir "markdown")

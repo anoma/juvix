@@ -33,8 +33,8 @@ compileAssertionEntry ::
 compileAssertionEntry adjustEntry root' optLevel mode mainFile expectedFile step = do
   step "Translate to JuvixCore"
   entryPoint <- adjustEntry <$> testDefaultEntryPointIO root' mainFile
-  PipelineResult res _ <- snd <$> testRunIO entryPoint upToStoredCore
-  let tab' = Core.computeCombinedInfoTable (res ^. Core.coreResultModule)
+  PipelineResult {..} <- snd <$> testRunIO entryPoint upToStoredCore
+  let tab' = Core.computeCombinedInfoTable (_pipelineResult ^. Core.coreResultModule)
       evalAssertion = coreEvalAssertion' EvalModePlain tab' mainFile expectedFile step
       compileAssertion' stdinText = coreCompileAssertion' optLevel tab' mainFile expectedFile stdinText step
   case mode of
@@ -50,7 +50,7 @@ compileErrorAssertion ::
 compileErrorAssertion root' mainFile step = do
   step "Translate to JuvixCore"
   entryPoint <- testDefaultEntryPointIO root' mainFile
-  PipelineResult res _ <- snd <$> testRunIO entryPoint upToCore
-  case run $ runReader Core.defaultCoreOptions $ runError @JuvixError $ Core.toStored' (res ^. Core.coreResultModule) >>= Core.toStripped' of
+  PipelineResult {..} <- snd <$> testRunIO entryPoint upToCore
+  case run $ runReader Core.defaultCoreOptions $ runError @JuvixError $ Core.toStored' (_pipelineResult ^. Core.coreResultModule) >>= Core.toStripped' of
     Left _ -> assertBool "" True
     Right _ -> assertFailure "no error"

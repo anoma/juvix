@@ -112,3 +112,6 @@ freshIdentName m = freshName (identNames m)
 
 pruneInfoTable :: Module -> Module
 pruneInfoTable = over moduleInfoTable pruneInfoTable'
+
+moduleIsFragile :: Module -> Bool
+moduleIsFragile Module {..} = tableIsFragile _moduleInfoTable
