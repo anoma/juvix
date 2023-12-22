@@ -4,7 +4,7 @@ import Data.HashMap.Internal.Strict qualified as HashMap
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.Text qualified as Text
 import Juvix.Compiler.Nockma.Language qualified as N
-import Juvix.Extra.Paths
+import Juvix.Compiler.Nockma.StdlibSrc (stdlibSrc)
 import Juvix.Parser.Error
 import Juvix.Prelude hiding (Atom, many, some)
 import Juvix.Prelude.Parsing hiding (runParser)
@@ -14,10 +14,9 @@ import Text.Megaparsec.Char.Lexer qualified as L
 type Parser = Parsec Void Text
 
 stdlib :: N.Term Natural
-stdlib = do
-  case parseText $(nockStdlibText) of
-    Left {} -> impossible
-    Right t -> t
+stdlib = case parseText stdlibSrc of
+  Left {} -> impossible
+  Right t -> t
 
 parseText :: Text -> Either MegaparsecError (N.Term Natural)
 parseText = runParser ""

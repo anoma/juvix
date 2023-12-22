@@ -1,3 +1,12 @@
+{-# LANGUAGE QuasiQuotes #-}
+
+module Juvix.Compiler.Nockma.StdlibSrc where
+
+import Data.String.Interpolate (i)
+import Juvix.Prelude
+
+stdlibSrc :: Text
+stdlibSrc = [i|
 [ [ [ 7
         [ 8
         [1 1 1]
@@ -288,3 +297,4 @@
     [0 3]
     909
 ]
+|]
