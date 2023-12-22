@@ -9,7 +9,8 @@ import Juvix.Compiler.Backend.Html.Translation.FromTyped.Source
   )
 import Juvix.Compiler.Concrete.Pretty qualified as Concrete
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context (getScoperResultComments)
+import Juvix.Compiler.Internal.Translation
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context (resultInternal, resultNormalized)
 import Juvix.Extra.Process
 import System.Process qualified as Process
 
@@ -30,26 +31,38 @@ runGenOnlySourceHtml HtmlOptions {..} = do
           _genSourceHtmlArgsNoPath = _htmlNoPath,
           _genSourceHtmlArgsConcreteOpts = Concrete.defaultOptions,
           _genSourceHtmlArgsModule = m,
-          _genSourceHtmlArgsComments = getScoperResultComments res,
+          _genSourceHtmlArgsComments = Scoper.getScoperResultComments res,
           _genSourceHtmlArgsOutputDir = outputDir,
           _genSourceHtmlArgsNoFooter = _htmlNoFooter,
           _genSourceHtmlArgsNonRecursive = _htmlNonRecursive,
           _genSourceHtmlArgsTheme = _htmlTheme
         }
 
-runCommand :: (Members '[Embed IO, TaggedLock, App] r) => HtmlOptions -> Sem r ()
+resultToJudocCtx :: InternalTypedResult -> Html.JudocCtx
+resultToJudocCtx res =
+  Html.JudocCtx
+    { _judocCtxComments = Scoper.getScoperResultComments sres,
+      _judocCtxNormalizedTable = res ^. resultNormalized,
+      _judocCtxTopModules = [sres ^. Scoper.resultModule]
+    }
+  where
+    sres = res ^. resultInternal . resultScoper
+
+runCommand :: forall r. (Members '[Embed IO, TaggedLock, App] r) => HtmlOptions -> Sem r ()
 runCommand HtmlOptions {..}
   | _htmlOnlySource = runGenOnlySourceHtml HtmlOptions {..}
   | otherwise = do
       entry <- getEntryPoint _htmlInputFile
-      ctx <- runPipeline _htmlInputFile upToInternalTyped
+      (r, rs) <- runPipelineHtml _htmlNonRecursive _htmlInputFile
       outputDir <- fromAppPathDir _htmlOutputDir
+      let ctx = resultToJudocCtx r <> mconcatMap resultToJudocCtx rs
       Html.genJudocHtml
         entry
         JudocArgs
           { _judocArgsAssetsPrefix = _htmlAssetsPrefix,
             _judocArgsBaseName = "proj",
             _judocArgsCtx = ctx,
+            _judocArgsMainModule = r ^. resultInternal . resultScoper . Scoper.resultModule,
             _judocArgsOutputDir = outputDir,
             _judocArgsUrlPrefix = _htmlUrlPrefix,
             _judocArgsIdPrefix = _htmlIdPrefix,

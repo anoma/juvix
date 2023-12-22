@@ -4,9 +4,11 @@ module Juvix.Compiler.Pipeline.Driver
     processFileToStoredCore,
     processModule,
     processImport,
+    processRecursiveUpToTyped,
   )
 where
 
+import Data.HashMap.Strict qualified as HashMap
 import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Concrete (ImportCycle (ImportCycle), ScoperError (ErrImportCycle))
 import Juvix.Compiler.Concrete.Data.Highlight
@@ -19,6 +21,7 @@ import Juvix.Compiler.Core.Data.Module qualified as Core
 import Juvix.Compiler.Core.Translation.FromInternal.Data.Context qualified as Core
 import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as InternalTyped
+import Juvix.Compiler.Internal.Translation.FromInternal.Data (InternalTypedResult)
 import Juvix.Compiler.Pipeline
 import Juvix.Compiler.Pipeline.Loader.PathResolver
 import Juvix.Compiler.Store.Core.Extra
@@ -53,7 +56,9 @@ instance Eq EntryIndex where
 instance Hashable EntryIndex where
   hashWithSalt s = hashWithSalt s . (^. entryIxEntry . entryPointModulePath)
 
-type MCache = Cache EntryIndex (PipelineResult Store.ModuleInfo)
+type MCache' a = Cache EntryIndex a
+
+type MCache = MCache' (PipelineResult Store.ModuleInfo)
 
 processFile ::
   forall r.
@@ -133,11 +138,11 @@ processImports' entry imports = do
   return $ Store.mkModuleTable (map (^. pipelineResult) ms) <> mconcatMap (^. pipelineResultImports) ms
 
 processImport' ::
-  forall r.
-  (Members '[Reader ImportParents, Error JuvixError, Files, GitClone, PathResolver, MCache] r) =>
+  forall r a.
+  (Members '[Reader ImportParents, Error JuvixError, Files, GitClone, PathResolver, MCache' a] r) =>
   EntryPoint ->
   TopModulePath ->
-  Sem r (PipelineResult Store.ModuleInfo)
+  Sem r a
 processImport' entry p = do
   checkCycle
   local (over importParents (p :)) $
@@ -153,7 +158,7 @@ processImport' entry p = do
            in mapError (JuvixError @ScoperError) $
                 throw (ErrImportCycle (ImportCycle cyc))
 
-    getCachedImport :: Path Abs File -> Sem r (PipelineResult Store.ModuleInfo)
+    getCachedImport :: Path Abs File -> Sem r a
     getCachedImport path = cacheGet (EntryIndex entry')
       where
         entry' =
@@ -219,10 +224,38 @@ processModule'' sha256 entry = over pipelineResult mkModuleInfo <$> processFileT
           _moduleInfoCoreTable = fromCore (_coreResultModule ^. Core.moduleInfoTable),
           _moduleInfoImports = map (^. importModulePath) $ scoperResult ^. Scoper.resultParserResult . Parser.resultParserState . parserStateImports,
           _moduleInfoOptions = StoredOptions.fromEntryPoint entry,
+          _moduleInfoSourceFile = entry ^. entryPointModulePath,
           _moduleInfoSHA256 = sha256
         }
       where
         scoperResult = _coreResultInternalTypedResult ^. InternalTyped.resultInternal . Internal.resultScoper
+
+processRecursiveUpToTyped ::
+  forall r.
+  (Members '[Reader EntryPoint, TaggedLock, HighlightBuilder, Error JuvixError, Files, GitClone, PathResolver] r) =>
+  Sem r (InternalTypedResult, [InternalTypedResult])
+processRecursiveUpToTyped = do
+  entry <- ask
+  PipelineResult res mtab <- processFile entry
+  let imports = HashMap.keys (mtab ^. Store.moduleTable)
+  ms <- forM imports (`withPath'` goImport)
+  a <-
+    evalTopNameIdGen
+      (res ^. Parser.resultModule . moduleId)
+      . runReader mtab
+      . runReader res
+      $ upToInternalTyped
+  return (a, ms)
+  where
+    goImport :: Path Abs File -> Sem r InternalTypedResult
+    goImport path = do
+      entry <- ask
+      let entry' =
+            entry
+              { _entryPointStdin = Nothing,
+                _entryPointModulePath = Just path
+              }
+      (^. pipelineResult) <$> runReader entry' (processFileUpTo upToInternalTyped)
 
 withPath' ::
   forall r a.

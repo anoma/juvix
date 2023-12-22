@@ -40,6 +40,11 @@ runIOEither' entry = fmap snd . runIOEitherHelper entry
 runPipelineHighlight :: forall a r. (Members '[TaggedLock, Embed IO] r) => EntryPoint -> Sem (PipelineEff r) a -> Sem r HighlightInput
 runPipelineHighlight entry = fmap fst . runIOEitherHelper entry
 
+runPipelineHtmlEither :: forall r. (Members '[TaggedLock, Embed IO] r) => EntryPoint -> Sem r (Either JuvixError (Typed.InternalTypedResult, [Typed.InternalTypedResult]))
+runPipelineHtmlEither entry = do
+  x <- runIOEitherPipeline' entry $ entrySetup defaultDependenciesConfig >> processRecursiveUpToTyped
+  return $ mapRight snd $ snd x
+
 runIOEitherHelper :: forall a r. (Members '[TaggedLock, Embed IO] r) => EntryPoint -> Sem (PipelineEff r) a -> Sem r (HighlightInput, (Either JuvixError (ResolverState, PipelineResult a)))
 runIOEitherHelper entry a = do
   runIOEitherPipeline' entry $

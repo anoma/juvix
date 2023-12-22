@@ -15,10 +15,6 @@ import Juvix.Compiler.Backend.Html.Translation.FromTyped.Source hiding (go)
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Print
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoped
-import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context qualified as Parser
-import Juvix.Compiler.Concrete.Translation.FromSource.Data.ParserState qualified as Parser
-import Juvix.Compiler.Internal.Translation.FromConcrete qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qualified as InternalTyped
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context
 import Juvix.Compiler.Pipeline.EntryPoint
@@ -31,12 +27,19 @@ import Text.Blaze.Html.Renderer.Utf8 qualified as Html
 import Text.Blaze.Html5 as Html hiding (map)
 import Text.Blaze.Html5.Attributes qualified as Attr
 
+data JudocCtx = JudocCtx
+  { _judocCtxComments :: Comments,
+    _judocCtxTopModules :: [Module 'Scoped 'ModuleTop],
+    _judocCtxNormalizedTable :: InternalTyped.NormalizedTable
+  }
+
 data JudocArgs = JudocArgs
   { _judocArgsOutputDir :: Path Abs Dir,
     _judocArgsBaseName :: Text,
+    _judocArgsCtx :: JudocCtx,
+    _judocArgsMainModule :: Module 'Scoped 'ModuleTop,
     _judocArgsAssetsPrefix :: Text,
     _judocArgsUrlPrefix :: Text,
-    _judocArgsCtx :: InternalTypedResult,
     _judocArgsTheme :: Theme,
     _judocArgsNonRecursive :: Bool,
     _judocArgsNoFooter :: Bool,
@@ -44,7 +47,24 @@ data JudocArgs = JudocArgs
     _judocArgsNoPath :: Bool
   }
 
+makeLenses ''JudocCtx
 makeLenses ''JudocArgs
+
+instance Semigroup JudocCtx where
+  ctx1 <> ctx2 =
+    JudocCtx
+      { _judocCtxComments = ctx1 ^. judocCtxComments <> ctx2 ^. judocCtxComments,
+        _judocCtxTopModules = ctx1 ^. judocCtxTopModules <> ctx2 ^. judocCtxTopModules,
+        _judocCtxNormalizedTable = ctx1 ^. judocCtxNormalizedTable <> ctx2 ^. judocCtxNormalizedTable
+      }
+
+instance Monoid JudocCtx where
+  mempty =
+    JudocCtx
+      { _judocCtxComments = mempty,
+        _judocCtxTopModules = mempty,
+        _judocCtxNormalizedTable = mempty
+      }
 
 data Tree k a = Tree
   { _treeLabel :: a,
@@ -164,24 +184,13 @@ genJudocHtml entry JudocArgs {..} =
     createIndexFile (map topModulePath (toList allModules))
   where
     cs :: Comments
-    cs =
-      mkComments $
-        _judocArgsCtx
-          ^. InternalTyped.resultInternal
-            . Internal.resultScoper
-            . Scoped.resultParserResult
-            . Parser.resultParserState
-            . Parser.parserStateComments
+    cs = _judocArgsCtx ^. judocCtxComments
 
     normTable :: InternalTyped.NormalizedTable
-    normTable = _judocArgsCtx ^. InternalTyped.resultNormalized
+    normTable = _judocArgsCtx ^. judocCtxNormalizedTable
 
     mainMod :: Module 'Scoped 'ModuleTop
-    mainMod =
-      _judocArgsCtx
-        ^. InternalTyped.resultInternal
-          . Internal.resultScoper
-          . Scoped.mainModule
+    mainMod = _judocArgsMainModule
 
     htmlOpts :: HtmlOptions
     htmlOpts =
@@ -202,9 +211,8 @@ genJudocHtml entry JudocArgs {..} =
       | _judocArgsNonRecursive = pure mainMod
       | otherwise = toList topModules
 
-    -- TODO: calculate top modules
-    topModules :: HashMap NameId (Module 'Scoped 'ModuleTop)
-    topModules = HashMap.fromList [(mainMod ^. modulePath . S.nameId, mainMod)]
+    topModules :: [Module 'Scoped 'ModuleTop]
+    topModules = _judocArgsCtx ^. judocCtxTopModules
 
 moduleDocPath :: (Members '[Reader HtmlOptions] r) => Module 'Scoped 'ModuleTop -> Sem r (Path Abs File)
 moduleDocPath m = do

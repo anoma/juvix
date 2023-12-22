@@ -3,6 +3,7 @@ module App where
 import CommonOptions
 import Data.ByteString qualified as ByteString
 import GlobalOptions
+import Juvix.Compiler.Internal.Translation (InternalTypedResult)
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 import Juvix.Compiler.Pipeline.Loader.PathResolver
 import Juvix.Compiler.Pipeline.Root
@@ -186,8 +187,22 @@ runPipeline input p = do
     Left err -> exitJuvixError err
     Right res -> return (snd res ^. pipelineResult)
 
-runPipelineNoFile :: (Members '[App, Embed IO, TaggedLock] r) => EntryPoint -> Sem (PipelineEff r) a -> Sem r a
-runPipelineNoFile entry p = do
+runPipelineHtml :: (Members '[App, Embed IO, TaggedLock] r) => Bool -> AppPath File -> Sem r (InternalTypedResult, [InternalTypedResult])
+runPipelineHtml bNonRecursive input =
+  if
+      | bNonRecursive -> do
+          r <- runPipeline input upToInternalTyped
+          return (r, [])
+      | otherwise -> do
+          args <- askArgs
+          entry <- getEntryPoint' args input
+          r <- runPipelineHtmlEither entry
+          case r of
+            Left err -> exitJuvixError err
+            Right res -> return res
+
+runPipelineEntry :: (Members '[App, Embed IO, TaggedLock] r) => EntryPoint -> Sem (PipelineEff r) a -> Sem r a
+runPipelineEntry entry p = do
   r <- runIOEither entry p
   case r of
     Left err -> exitJuvixError err

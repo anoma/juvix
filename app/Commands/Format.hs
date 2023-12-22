@@ -107,4 +107,4 @@ runScopeFileApp = interpret $ \case
               _pathIsInput = False
             }
     runPipeline appFile upToScoping
-  ScopeStdin e -> runPipelineNoFile e upToScoping
+  ScopeStdin e -> runPipelineEntry e upToScoping
