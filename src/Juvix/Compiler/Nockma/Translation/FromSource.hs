@@ -13,12 +13,11 @@ import Text.Megaparsec.Char.Lexer qualified as L
 
 type Parser = Parsec Void Text
 
-stdlib :: IO (N.Term Natural)
+stdlib :: N.Term Natural
 stdlib = do
-  txt <- readFile (toFilePath (relToProject nockStdlibPath))
-  case parseText txt of
+  case parseText $(nockStdlibText) of
     Left {} -> impossible
-    Right t -> return t
+    Right t -> t
 
 parseText :: Text -> Either MegaparsecError (N.Term Natural)
 parseText = runParser ""

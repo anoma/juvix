@@ -26,6 +26,9 @@ projectPath = FE.makeRelativeToProject "." >>= lift . absDir
 stdlibDir :: Q Exp
 stdlibDir = FE.makeRelativeToProject "juvix-stdlib" >>= FE.embedDir
 
+nockStdlibText :: Q Exp
+nockStdlibText = FE.makeRelativeToProject "include/nock/Stdlib.nock" >>= FE.embedStringFile
+
 packageDescriptionDirContents :: Q Exp
 packageDescriptionDirContents = FE.makeRelativeToProject (toFilePath packageDescriptionDir) >>= FE.embedDir
 
@@ -79,6 +82,3 @@ preludePath = $(mkRelFile "Stdlib/Prelude.juvix")
 
 defaultStdlibPath :: Path Abs Dir -> Path Abs Dir
 defaultStdlibPath buildDir = buildDir <//> $(mkRelDir "stdlib")
-
-nockStdlibPath :: Path Rel File
-nockStdlibPath = $(mkRelFile "include/nock/Stdlib.nock")
