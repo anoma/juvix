@@ -295,5 +295,5 @@ tests:
     stdin: "0"
     stdout:
       contains: |
-        zero
+        0
     exit-status: 0
