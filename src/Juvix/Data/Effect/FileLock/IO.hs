@@ -1,7 +1,8 @@
 module Juvix.Data.Effect.FileLock.IO where
 
 import Juvix.Data.Effect.FileLock.Base
-import Juvix.Prelude
+import Juvix.Prelude.Base
+import Juvix.Prelude.Path
 import System.FileLock hiding (FileLock)
 
 -- | Interpret `FileLock` using `System.FileLock`

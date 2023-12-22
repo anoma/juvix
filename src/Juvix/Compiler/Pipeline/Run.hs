@@ -64,21 +64,19 @@ runIOEitherPipeline' entry a = do
       runPathResolver'
         | mainIsPackageFile entry = runPackagePathResolver' (entry ^. entryPointResolverRoot)
         | otherwise = runPathResolverPipe
-      buildDir = resolveAbsBuildDir (entry ^. entryPointRoot) (entry ^. entryPointBuildDir)
-  withTaggedLockDir buildDir
-    $ evalInternet hasInternet
-      . runHighlightBuilder
-      . runJuvixError
-      . runFilesIO
-      . runReader entry
-      . runLogIO
-      . runProcessIO
-      . mapError (JuvixError @GitProcessError)
-      . runGitProcess
-      . mapError (JuvixError @DependencyError)
-      . mapError (JuvixError @PackageLoaderError)
-      . runEvalFileEffIO
-      . runPathResolver'
+  evalInternet hasInternet
+    . runHighlightBuilder
+    . runJuvixError
+    . runFilesIO
+    . runReader entry
+    . runLogIO
+    . runProcessIO
+    . mapError (JuvixError @GitProcessError)
+    . runGitProcess
+    . mapError (JuvixError @DependencyError)
+    . mapError (JuvixError @PackageLoaderError)
+    . runEvalFileEffIO
+    . runPathResolver'
     $ a
 
 mainIsPackageFile :: EntryPoint -> Bool

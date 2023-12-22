@@ -13,6 +13,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Data.Serialize as S
 import Juvix.Data.Effect.Files
+import Juvix.Data.Effect.TaggedLock
 import Juvix.Prelude.Base
 import Juvix.Prelude.Path
 
@@ -37,14 +38,14 @@ instance (Hashable a, Serialize a) => Serialize (HashSet a) where
 
   get = HashSet.fromList <$> S.get
 
-saveToFile :: (Member Files r, Serialize a) => Path Abs File -> a -> Sem r ()
-saveToFile file a = do
+saveToFile :: (Members '[Files, TaggedLock] r, Serialize a) => Path Abs File -> a -> Sem r ()
+saveToFile file a = withTaggedLockDir (parent file) $ do
   ensureDir' (parent file)
   let bs = runPut (S.put a)
   writeFileBS file bs
 
-loadFromFile :: forall a r. (Member Files r, Serialize a) => Path Abs File -> Sem r (Maybe a)
-loadFromFile file = do
+loadFromFile :: forall a r. (Members '[Files, TaggedLock] r, Serialize a) => Path Abs File -> Sem r (Maybe a)
+loadFromFile file = withTaggedLockDir (parent file) $ do
   ex <- fileExists' file
   if
       | ex -> do

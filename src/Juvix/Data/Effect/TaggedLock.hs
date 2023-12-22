@@ -9,7 +9,8 @@ where
 import Juvix.Data.Effect.TaggedLock.Base
 import Juvix.Data.Effect.TaggedLock.IO
 import Juvix.Data.Effect.TaggedLock.Permissive
-import Juvix.Prelude
+import Juvix.Prelude.Base
+import Juvix.Prelude.Path
 
 -- | A variant of `withTaggedLock` that accepts an absolute directory as a tag.
 --

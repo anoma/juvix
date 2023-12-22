@@ -109,7 +109,7 @@ compileExpression p =
     >>= fromInternalExpression
 
 registerImport ::
-  (Members '[Error JuvixError, State Artifacts, Reader EntryPoint, Files, GitClone, PathResolver] r) =>
+  (Members '[TaggedLock, Error JuvixError, State Artifacts, Reader EntryPoint, Files, GitClone, PathResolver] r) =>
   Import 'Parsed ->
   Sem r ()
 registerImport i = do

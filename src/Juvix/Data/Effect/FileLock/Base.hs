@@ -1,6 +1,7 @@
 module Juvix.Data.Effect.FileLock.Base where
 
-import Juvix.Prelude
+import Juvix.Prelude.Base
+import Juvix.Prelude.Path
 
 -- | An effect for wrapping an action in  file lock
 data FileLock m a where

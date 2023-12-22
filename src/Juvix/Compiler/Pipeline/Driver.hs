@@ -28,6 +28,7 @@ import Juvix.Compiler.Store.Options qualified as StoredModule
 import Juvix.Compiler.Store.Options qualified as StoredOptions
 import Juvix.Data.CodeAnn
 import Juvix.Data.Effect.Git
+import Juvix.Data.Effect.TaggedLock
 import Juvix.Data.SHA256 qualified as SHA256
 import Juvix.Extra.Serialize
 import Juvix.Prelude
@@ -56,7 +57,7 @@ type MCache = Cache EntryIndex (PipelineResult Store.ModuleInfo)
 
 processFile ::
   forall r.
-  (Members '[HighlightBuilder, Error JuvixError, Files, GitClone, PathResolver] r) =>
+  (Members '[TaggedLock, HighlightBuilder, Error JuvixError, Files, GitClone, PathResolver] r) =>
   EntryPoint ->
   Sem r (PipelineResult Parser.ParserResult)
 processFile entry =
@@ -66,7 +67,7 @@ processFile entry =
 
 processImport ::
   forall r.
-  (Members '[Error JuvixError, Files, GitClone, PathResolver] r) =>
+  (Members '[TaggedLock, Error JuvixError, Files, GitClone, PathResolver] r) =>
   EntryPoint ->
   Import 'Parsed ->
   Sem r (PipelineResult Store.ModuleInfo)
@@ -77,7 +78,7 @@ processImport entry i =
 
 processModule ::
   forall r.
-  (Members '[Error JuvixError, Files, GitClone, PathResolver] r) =>
+  (Members '[TaggedLock, Error JuvixError, Files, GitClone, PathResolver] r) =>
   EntryPoint ->
   Sem r (PipelineResult Store.ModuleInfo)
 processModule entry =
@@ -87,7 +88,7 @@ processModule entry =
 
 processFileToStoredCore ::
   forall r.
-  (Members '[Error JuvixError, Files, GitClone, PathResolver] r) =>
+  (Members '[TaggedLock, Error JuvixError, Files, GitClone, PathResolver] r) =>
   EntryPoint ->
   Sem r (PipelineResult Core.CoreResult)
 processFileToStoredCore entry =
@@ -97,7 +98,7 @@ processFileToStoredCore entry =
 
 processFileUpTo ::
   forall r a.
-  (Members '[HighlightBuilder, Reader EntryPoint, Error JuvixError, Files, GitClone, PathResolver] r) =>
+  (Members '[TaggedLock, HighlightBuilder, Reader EntryPoint, Error JuvixError, Files, GitClone, PathResolver] r) =>
   Sem (Reader Parser.ParserResult ': Reader Store.ModuleTable ': NameIdGen ': r) a ->
   Sem r (PipelineResult a)
 processFileUpTo a = do
@@ -178,7 +179,7 @@ processFileToStoredCore' entry = ignoreHighlightBuilder $ do
 
 processModule' ::
   forall r.
-  (Members '[Reader ImportParents, Error JuvixError, Files, GitClone, PathResolver, MCache] r) =>
+  (Members '[TaggedLock, Reader ImportParents, Error JuvixError, Files, GitClone, PathResolver, MCache] r) =>
   EntryIndex ->
   Sem r (PipelineResult Store.ModuleInfo)
 processModule' (EntryIndex entry) = do
