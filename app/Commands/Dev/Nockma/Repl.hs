@@ -12,9 +12,9 @@ import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Pretty (ppPrint)
 import Juvix.Compiler.Nockma.Translation.FromSource (parseProgramFile, parseReplStatement, parseReplText, parseText)
 import Juvix.Parser.Error
+import Juvix.Prelude.Pretty
 import System.Console.Haskeline
 import System.Console.Repline qualified as Repline
-import Text.Megaparsec (errorBundlePretty)
 import Prelude (read)
 
 type ReplS = State.StateT ReplState IO
@@ -104,7 +104,7 @@ readProgram s = fromMegaParsecError <$> parseProgramFile s
 
 fromMegaParsecError :: Either MegaparsecError a -> a
 fromMegaParsecError = \case
-  Left (MegaparsecError e) -> error (pack (errorBundlePretty e))
+  Left e -> error (prettyText e)
   Right a -> a
 
 direction' :: String -> Repl ()

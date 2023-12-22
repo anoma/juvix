@@ -8,15 +8,19 @@ import Juvix.Compiler.Nockma.StdlibSrc (stdlibSrc)
 import Juvix.Parser.Error
 import Juvix.Prelude hiding (Atom, many, some)
 import Juvix.Prelude.Parsing hiding (runParser)
+import Juvix.Prelude.Pretty
 import Text.Megaparsec qualified as P
 import Text.Megaparsec.Char.Lexer qualified as L
 
 type Parser = Parsec Void Text
 
+fromMegaParsecError :: Either MegaparsecError a -> a
+fromMegaParsecError = \case
+  Left e -> error (prettyText e)
+  Right a -> a
+
 stdlib :: N.Term Natural
-stdlib = case parseText stdlibSrc of
-  Left {} -> impossible
-  Right t -> t
+stdlib = fromMegaParsecError (parseText stdlibSrc)
 
 parseText :: Text -> Either MegaparsecError (N.Term Natural)
 parseText = runParser ""
@@ -36,7 +40,7 @@ runParserProgram :: FilePath -> Text -> Either MegaparsecError (N.Program Natura
 runParserProgram = runParserFor program
 
 runParserFor :: Parser a -> FilePath -> Text -> Either MegaparsecError a
-runParserFor p f input = case P.runParser (p <* eof) f input of
+runParserFor p f input = case P.runParser (spaceConsumer >> p <* eof) f input of
   Left err -> Left (MegaparsecError err)
   Right t -> Right t
 

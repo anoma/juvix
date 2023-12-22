@@ -6,7 +6,8 @@ import Data.String.Interpolate (i)
 import Juvix.Prelude
 
 stdlibSrc :: Text
-stdlibSrc = [i|
+stdlibSrc =
+  [i|
 [ [ [ 7
         [ 8
         [1 1 1]
