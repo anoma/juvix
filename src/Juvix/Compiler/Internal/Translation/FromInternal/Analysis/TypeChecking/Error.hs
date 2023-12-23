@@ -37,6 +37,7 @@ data TypeCheckerError
   | ErrTraitNotTerminating TraitNotTerminating
   | ErrArityCheckerError ArityCheckerError
   | ErrDefaultArgLoop DefaultArgLoop
+  | ErrBadScope BadScope
 
 instance ToGenericError TypeCheckerError where
   genericError :: (Member (Reader GenericOptions) r) => TypeCheckerError -> Sem r GenericError
@@ -64,6 +65,7 @@ instance ToGenericError TypeCheckerError where
     ErrTraitNotTerminating e -> genericError e
     ErrArityCheckerError e -> genericError e
     ErrDefaultArgLoop e -> genericError e
+    ErrBadScope e -> genericError e
 
 instance Show TypeCheckerError where
   show = \case
@@ -90,3 +92,4 @@ instance Show TypeCheckerError where
     ErrTraitNotTerminating {} -> "ErrTraitNotTerminating"
     ErrArityCheckerError {} -> "ErrArityCheckerError"
     ErrDefaultArgLoop {} -> "ErrDefaultArgLoop"
+    ErrBadScope {} -> "ErrBadScope"

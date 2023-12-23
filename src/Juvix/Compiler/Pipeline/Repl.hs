@@ -12,6 +12,7 @@ import Juvix.Compiler.Core qualified as Core
 import Juvix.Compiler.Internal qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromConcrete qualified as FromConcrete
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error
 import Juvix.Compiler.Pipeline.Artifacts
 import Juvix.Compiler.Pipeline.Artifacts.PathResolver
 import Juvix.Compiler.Pipeline.EntryPoint
@@ -157,7 +158,7 @@ registerImport p =
     )
     >>= fromInternalImport
 
-fromInternalImport :: (Members '[State Artifacts] r) => Internal.Import -> Sem r ()
+fromInternalImport :: (Members '[State Artifacts, Error JuvixError] r) => Internal.Import -> Sem r ()
 fromInternalImport i = do
   artiTable <- gets (^. artifactInternalTypedTable)
   let table = Internal.buildTable [i ^. Internal.importModule . Internal.moduleIxModule] <> artiTable
@@ -167,11 +168,12 @@ fromInternalImport i = do
     . runFunctionsTableArtifacts
     . readerTypesTableArtifacts
     . runReader Core.initIndexTable
+    . mapError (JuvixError . ErrBadScope)
     -- TODO add cache in Artifacts
     . evalVisitEmpty Core.goModuleNoVisit
     $ Core.goModule (i ^. Internal.importModule . Internal.moduleIxModule)
 
-fromInternalExpression :: (Members '[State Artifacts] r) => Internal.Expression -> Sem r Core.Node
+fromInternalExpression :: (Members '[State Artifacts, Error JuvixError] r) => Internal.Expression -> Sem r Core.Node
 fromInternalExpression exp = do
   typedTable <- gets (^. artifactInternalTypedTable)
   runNameIdGenArtifacts
@@ -180,6 +182,7 @@ fromInternalExpression exp = do
     . runFunctionsTableArtifacts
     . readerTypesTableArtifacts
     . runReader Core.initIndexTable
+    . mapError (JuvixError . ErrBadScope)
     $ Core.goExpression exp
 
 data ReplPipelineResult
