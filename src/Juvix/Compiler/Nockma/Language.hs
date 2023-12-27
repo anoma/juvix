@@ -38,25 +38,26 @@ data Assignment a = Assignment
 data Term a
   = TermAtom (Atom a)
   | TermCell (Cell a)
-  deriving stock (Show, Eq)
+  deriving stock (Show, Eq, Lift)
 
 data Cell a = Cell
   { _cellLeft :: Term a,
     _cellRight :: Term a
   }
-  deriving stock (Show, Eq)
+  deriving stock (Show, Eq, Lift)
 
 data Atom a = Atom
   { _atom :: a,
     _atomInfo :: Irrelevant (Maybe AtomHint)
   }
-  deriving stock (Show, Eq)
+  deriving stock (Show, Eq, Lift)
 
 data AtomHint
   = AtomHintOp
   | AtomHintPath
   | AtomHintBool
   | AtomHintNil
+  deriving stock (Show, Eq, Lift)
 
 data NockOp
   = OpAddress

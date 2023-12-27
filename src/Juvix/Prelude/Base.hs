@@ -160,7 +160,7 @@ import GHC.Generics (Generic)
 import GHC.Num
 import GHC.Real
 import GHC.Stack.Types
-import Language.Haskell.TH.Syntax (Lift)
+import Language.Haskell.TH.Syntax (Exp, Lift, Q)
 import Lens.Micro.Platform
 import Path
 import Path.IO qualified as Path hiding (getCurrentDir, setCurrentDir, withCurrentDir)

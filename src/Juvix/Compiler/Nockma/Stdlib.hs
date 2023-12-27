@@ -1,13 +1,13 @@
 {-# LANGUAGE QuasiQuotes #-}
 
-module Juvix.Compiler.Nockma.StdlibSrc where
+module Juvix.Compiler.Nockma.Stdlib where
 
-import Data.String.Interpolate (i)
+import Juvix.Compiler.Nockma.Translation.FromSource.QQ
 import Juvix.Prelude
 
-stdlibSrc :: Text
-stdlibSrc =
-  [i|
+stdlib :: Term Natural
+stdlib =
+  [nock|
 [ [ [ 7
         [ 8
         [1 1 1]
