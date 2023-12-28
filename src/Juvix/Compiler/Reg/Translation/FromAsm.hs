@@ -4,7 +4,6 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Asm.Data.InfoTable qualified as Asm
 import Juvix.Compiler.Asm.Error qualified as Asm
 import Juvix.Compiler.Asm.Extra.Recursors qualified as Asm
-import Juvix.Compiler.Asm.Language qualified as Asm
 import Juvix.Compiler.Reg.Data.InfoTable
 import Juvix.Compiler.Reg.Language
 

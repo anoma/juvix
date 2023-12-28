@@ -257,3 +257,9 @@ infixr 5 #
 
 (#) :: (IsNock x, IsNock y) => x -> y -> Term Natural
 a # b = TermCell (Cell (toNock a) (toNock b))
+
+instance Semigroup EncodedPath where
+  a <> b = encodePath (decodePath' a <> decodePath' b)
+
+instance Monoid EncodedPath where
+  mempty = encodePath []

@@ -6,7 +6,6 @@ import Juvix.Compiler.Asm.Data.Stack (Stack)
 import Juvix.Compiler.Asm.Data.Stack qualified as Stack
 import Juvix.Compiler.Asm.Error
 import Juvix.Compiler.Asm.Extra.Type
-import Juvix.Compiler.Asm.Language
 import Juvix.Compiler.Asm.Pretty
 import Safe (atMay)
 

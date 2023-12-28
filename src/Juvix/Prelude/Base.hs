@@ -115,7 +115,7 @@ import Data.Int
 import Data.IntMap.Strict (IntMap)
 import Data.IntMap.Strict qualified as IntMap
 import Data.IntSet (IntSet)
-import Data.List.Extra hiding (allSame, groupSortOn, head, last, mconcatMap)
+import Data.List.Extra hiding (allSame, groupSortOn, head, last, mconcatMap, replicate)
 import Data.List.Extra qualified as List
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.List.NonEmpty.Extra
@@ -477,6 +477,9 @@ nubHashable = HashSet.toList . HashSet.fromList
 
 allElements :: (Bounded a, Enum a) => [a]
 allElements = [minBound .. maxBound]
+
+replicate :: (Integral n) => n -> a -> [a]
+replicate n a = List.replicate (fromIntegral n) a
 
 infixr 3 .&&.
 

@@ -7,4 +7,4 @@ where
 
 import Juvix.Compiler.Asm.Data.InfoTable
 import Juvix.Compiler.Asm.Data.InfoTableBuilder
-import Juvix.Compiler.Asm.Data.Stack
+import Juvix.Compiler.Asm.Data.Stack hiding (empty)
