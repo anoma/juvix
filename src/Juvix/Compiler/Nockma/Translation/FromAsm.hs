@@ -4,7 +4,6 @@ import Juvix.Compiler.Asm.Data.InfoTable qualified as Asm
 -- import Juvix.Compiler.Asm.Language qualified as Asm
 
 import Juvix.Compiler.Nockma.Evaluator
-import Juvix.Compiler.Nockma.Evaluator.Error
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Stdlib
 import Juvix.Prelude hiding (Atom, Path)
@@ -43,10 +42,10 @@ numStacks = fromIntegral (length (allElements @StackId))
 
 data Compiler m a where
   Verbatim :: Term Natural -> Compiler m ()
-  Push :: StackId -> Term Natural -> Compiler m ()
-  Pop :: StackId -> Compiler m ()
+  PushOnto :: StackId -> Term Natural -> Compiler m ()
+  PopFrom :: StackId -> Compiler m ()
   Call :: Text -> Natural -> Compiler m ()
-  Increment :: StackId -> Compiler m ()
+  IncrementOn :: StackId -> Compiler m ()
   Branch :: m () -> m () -> Compiler m ()
   CallStdlib :: StdlibFunction -> Compiler m ()
   AsmReturn :: Compiler m ()
@@ -121,9 +120,12 @@ funIncrement' = funCode # nockNil'
     funCode :: Term Natural
     funCode = OpPush # (OpInc # (OpAddress # pathToArg 0)) # topStack ValueStack
 
+push :: (Members '[Compiler] r) => Term Natural -> Sem r ()
+push = pushOnto ValueStack
+
 compileFunIncrement :: Sem '[Compiler, Reader (HashMap Text Path)] ()
 compileFunIncrement = do
-  push ValueStack (OpInc # (OpAddress # pathToArg 0))
+  push (OpInc # (OpAddress # pathToArg 0))
   asmReturn
 
 funConst :: Term Natural
@@ -134,12 +136,12 @@ funConst = funCode # nockNil'
 
 compileFunConst :: Sem '[Compiler, Reader (HashMap Text Path)] ()
 compileFunConst = do
-  push ValueStack (OpAddress # pathToArg 0)
+  push (OpAddress # pathToArg 0)
   asmReturn
 
 compileCallInc :: Sem '[Compiler, Reader (HashMap Text Path)] ()
 compileCallInc = do
-  push ValueStack (OpAddress # pathToArg 0)
+  push (OpAddress # pathToArg 0)
   call "increment" 1
   asmReturn
 
@@ -153,8 +155,8 @@ runCompiler sem = do
 
 re :: (Member (Reader (HashMap Text Path)) r) => Sem (Compiler ': r) a -> Sem (Output (Term Natural) ': r) a
 re = reinterpretH $ \case
-  Push s n -> outputT (pushOnStack s n)
-  Pop s -> outputT (popStack s)
+  PushOnto s n -> outputT (pushOnStack s n)
+  PopFrom s -> outputT (popStack s)
   Verbatim s -> outputT s
   Call funName funArgsNum -> (pureT =<<) $ do
     -- 1. Obtain the path to the function
@@ -196,15 +198,15 @@ re = reinterpretH $ \case
 
     -- call the function
     output (OpCall # ((indexInStack CurrentFunction 0 ++ [L]) # (OpAddress # emptyPath)))
-  Increment s -> (pureT =<<) $ do
+  IncrementOn s -> (pureT =<<) $ do
     output
       ( replaceOnStack
           s
           (OpInc # (OpAddress # pathInStack s [L]))
       )
   Branch t f -> do
-    termT <- runT t >>= raise . execCompiler . (pop ValueStack >>)
-    termF <- runT f >>= raise . execCompiler . (pop ValueStack >>)
+    termT <- runT t >>= raise . execCompiler . (pop >>)
+    termF <- runT f >>= raise . execCompiler . (pop >>)
     outputT (OpIf # (OpAddress # pathInStack ValueStack [L]) # termT # termF)
   CallStdlib f -> (pureT =<<) $ do
     let fNumArgs = stdlibNumArgs f
@@ -227,6 +229,18 @@ re = reinterpretH $ \case
   where
     outputT :: (Functor f, Member (Output (Term Natural)) r) => Term Natural -> Sem (WithTactics e f m r) (f ())
     outputT = pureT <=< output
+
+add :: (Members '[Compiler] r) => Sem r ()
+add = callStdlib StdlibAdd
+
+dec :: (Members '[Compiler] r) => Sem r ()
+dec = callStdlib StdlibDec
+
+increment :: (Members '[Compiler] r) => Sem r ()
+increment = incrementOn ValueStack
+
+pop :: (Members '[Compiler] r) => Sem r ()
+pop = popFrom ValueStack
 
 stackTake :: StackId -> Natural -> Term Natural
 stackTake sn n = remakeList (take (fromIntegral n) [OpAddress # indexInStack sn i | i <- [0 ..]])
@@ -288,8 +302,11 @@ replaceTopStack sn =
       | s <- allElements
     ]
 
-pushNat :: (Member Compiler r) => StackId -> Natural -> Sem r ()
-pushNat s n = push s (OpQuote # toNock n)
+pushNat :: (Member Compiler r) => Natural -> Sem r ()
+pushNat = pushNatOnto ValueStack
+
+pushNatOnto :: (Member Compiler r) => StackId -> Natural -> Sem r ()
+pushNatOnto s n = pushOnto s (OpQuote # toNock n)
 
 debugProgPrint :: NockmaCompiler '[Embed IO] -> IO ()
 debugProgPrint = debugProg >=> putStrLn . ppTrace
@@ -302,7 +319,7 @@ debugProg m = runM $ runCompiledNock takeValueStack
       m
       verbatim (OpAddress # stackPath ValueStack)
 
-runCompiledNock :: (Members '[Embed IO] r) => Sem (Compiler ': Reader (HashMap Text Path) ': r) () -> Sem r (Term Natural)
+runCompiledNock :: NockmaCompiler r -> Sem r (Term Natural)
 runCompiledNock s = do
   let stack = initStack functions
   t <-
@@ -321,14 +338,14 @@ runCompiledNock s = do
 
 prog1 :: (Members '[Compiler, Reader (HashMap Text Path)] r) => Sem r ()
 prog1 = do
-  pushNat ValueStack 2
-  pushNat ValueStack 3
-  increment ValueStack
+  pushNat 2
+  pushNat 3
+  increment
   -- callStdlib StdlibDec
   callStdlib StdlibAdd
   call "increment" 1
   -- call "increment" 1
-  pushNat ValueStack 8
+  pushNat 8
   call "const" 2
   call "callInc" 1
 
@@ -353,4 +370,4 @@ prog1 = do
 -- pop ValueStack
 -- increment CallStack
 -- pushNat ValueStack 0
--- branch (pushNat ValueStack 99) (pushNat ValueStack 77)
+-- branch (pushNat 99) (pushNat 77)
