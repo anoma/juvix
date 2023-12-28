@@ -1,18 +1,20 @@
 module Juvix.Compiler.Nockma.Translation.FromAsm where
 
-import Juvix.Prelude hiding (Atom, Path)
 import Juvix.Compiler.Asm.Data.InfoTable qualified as Asm
 -- import Juvix.Compiler.Asm.Language qualified as Asm
+
+import Juvix.Compiler.Nockma.Evaluator
+import Juvix.Compiler.Nockma.Evaluator.Error
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Stdlib
-import Juvix.Compiler.Nockma.Evaluator.Error
-import Juvix.Compiler.Nockma.Evaluator
+import Juvix.Prelude hiding (Atom, Path)
 
+type NockmaCompiler r = Sem (Compiler ': Reader (HashMap Text Path) ': r) ()
 
-fromAsm :: Members '[] r => Asm.Symbol -> Asm.InfoTable -> Sem r (Term Natural)
-fromAsm mainfun tab = undefined
+fromAsm :: Asm.Symbol -> Asm.InfoTable -> Term Natural
+fromAsm = undefined
 
-data StackName
+data StackId
   = CurrentFunction
   | ValueStack
   | CallStack
@@ -31,24 +33,25 @@ stdlibNumArgs = \case
   StdlibAdd -> 2
 
 stdlibPath :: StdlibFunction -> Path
-stdlibPath = decodePath' . EncodedPath . \case
-  StdlibDec -> 342
-  StdlibAdd -> 20
+stdlibPath =
+  decodePath' . EncodedPath . \case
+    StdlibDec -> 342
+    StdlibAdd -> 20
 
 numStacks :: (Integral a) => a
-numStacks = fromIntegral (length (allElements @StackName))
+numStacks = fromIntegral (length (allElements @StackId))
 
 data Compiler m a where
-  Push :: StackName -> Term Natural -> Compiler m ()
-  Pop :: StackName -> Compiler m ()
+  Verbatim :: Term Natural -> Compiler m ()
+  Push :: StackId -> Term Natural -> Compiler m ()
+  Pop :: StackId -> Compiler m ()
   Call :: Text -> Natural -> Compiler m ()
-  Increment :: StackName -> Compiler m ()
+  Increment :: StackId -> Compiler m ()
   Branch :: m () -> m () -> Compiler m ()
   CallStdlib :: StdlibFunction -> Compiler m ()
   AsmReturn :: Compiler m ()
 
--- | The path to the head of a named stack
-stackPath :: StackName -> Path
+stackPath :: StackId -> Path
 stackPath s = indexStack (fromIntegral (fromEnum s))
 
 indexStack :: Natural -> Path
@@ -57,7 +60,7 @@ indexStack idx = replicate idx R ++ [L]
 indexInPath :: Path -> Natural -> Path
 indexInPath p idx = p ++ indexStack idx
 
-indexInStack :: StackName -> Natural -> Path
+indexInStack :: StackId -> Natural -> Path
 indexInStack s idx = stackPath s ++ indexStack idx
 
 pathToArgumentsArea :: Path
@@ -67,14 +70,8 @@ pathToArg :: Natural -> Path
 pathToArg = indexInPath pathToArgumentsArea
 
 -- | Construct a path rooted at he head of a named stack
-pathInStack :: StackName -> Path -> Path
+pathInStack :: StackId -> Path -> Path
 pathInStack s p = stackPath s ++ p
-
-data StackId
-  = StackMemory
-  | StackMain
-  | StackProgram
-  deriving stock (Enum, Bounded)
 
 makeSem ''Compiler
 
@@ -96,7 +93,7 @@ nockNil' = TermAtom nockNil
 initStack :: [Term Natural] -> Term Natural
 initStack defs = makeList (initSubStack <$> allElements)
   where
-    initSubStack :: StackName -> Term Natural
+    initSubStack :: StackId -> Term Natural
     initSubStack = \case
       CurrentFunction -> nockNil'
       ValueStack -> nockNil'
@@ -146,25 +143,6 @@ compileCallInc = do
   call "increment" 1
   asmReturn
 
-runCompiledNock :: (MonadIO m) => Sem '[Compiler, Reader (HashMap Text Path)] () -> m ()
-runCompiledNock s = do
-  let t =
-        run
-          . runReader functionLocations
-          . execCompiler
-          $ s
-      stack = initStack functions
-      evalT =
-        run
-          . runError @(ErrNockNatural Natural)
-          . runError @NockEvalError
-          $ eval stack t
-  case evalT of
-    Left e -> error (show e)
-    Right ev -> case ev of
-      Left e -> error (show e)
-      Right res -> putStrLn (ppTrace res)
-
 execCompiler :: (Member (Reader (HashMap Text Path)) r) => Sem (Compiler ': r) a -> Sem r (Term Natural)
 execCompiler = fmap fst . runCompiler
 
@@ -176,9 +154,9 @@ runCompiler sem = do
 re :: (Member (Reader (HashMap Text Path)) r) => Sem (Compiler ': r) a -> Sem (Output (Term Natural) ': r) a
 re = reinterpretH $ \case
   Push s n -> outputT (pushOnStack s n)
-  Pop s -> outputT (popStack 1 s)
+  Pop s -> outputT (popStack s)
+  Verbatim s -> outputT s
   Call funName funArgsNum -> (pureT =<<) $ do
-
     -- 1. Obtain the path to the function
     -- 2.
     --   i. Take a copy of the value stack without the arguments to the function
@@ -200,18 +178,24 @@ re = reinterpretH $ \case
     output (pushOnStack CallStack (OpAddress # pathInStack ValueStack (replicate funArgsNum R)))
 
     -- Setup function to call with it arguments
-    output (pushOnStack CurrentFunction
-              (OpReplace #
-                   -- TODO: copy funArgs elements from the value stack
-                   (([R] # stackTake ValueStack funArgsNum) #
-                    OpAddress # funPath)))
+    output
+      ( pushOnStack
+          CurrentFunction
+          ( OpReplace
+              #
+              -- TODO: copy funArgs elements from the value stack
+              ( ([R] # stackTake ValueStack funArgsNum)
+                  # OpAddress
+                  # funPath
+              )
+          )
+      )
 
     -- Init 'activation frame'
     output (resetStack ValueStack)
 
     -- call the function
     output (OpCall # ((indexInStack CurrentFunction 0 ++ [L]) # (OpAddress # emptyPath)))
-
   Increment s -> (pureT =<<) $ do
     output
       ( replaceOnStack
@@ -222,120 +206,151 @@ re = reinterpretH $ \case
     termT <- runT t >>= raise . execCompiler . (pop ValueStack >>)
     termF <- runT f >>= raise . execCompiler . (pop ValueStack >>)
     outputT (OpIf # (OpAddress # pathInStack ValueStack [L]) # termT # termF)
-
   CallStdlib f -> (pureT =<<) $ do
     let fNumArgs = stdlibNumArgs f
         fPath = stdlibPath f
         decodeFn = OpCall # (fPath # (OpAddress # stackPath StandardLibrary))
         arguments = OpSequence # (OpAddress # [R]) # stdlibStackTake ValueStack fNumArgs
-        extractResult = (OpAddress # [L]) # (OpAddress # [R,R])
+        extractResult = (OpAddress # [L]) # (OpAddress # [R, R])
         callFn = OpPush # (OpCall # [L] # (OpReplace # ([R, L] # arguments) # (OpAddress # [L]))) # extractResult
 
     output (OpPush # decodeFn # callFn)
     output (replaceTopStack ValueStack)
     where
-      stdlibStackTake :: StackName -> Natural -> Term Natural
-      stdlibStackTake sn n = foldr1 (#) (take (fromIntegral n) [OpAddress # indexInStack sn i | i <- [0..]])
-
+      stdlibStackTake :: StackId -> Natural -> Term Natural
+      stdlibStackTake sn n = foldr1 (#) (take (fromIntegral n) [OpAddress # indexInStack sn i | i <- [0 ..]])
   AsmReturn -> (pureT =<<) $ do
     output (replaceStack ValueStack ((OpAddress # indexInStack ValueStack 0) # (OpAddress # indexInStack CallStack 0)))
     -- discard the 'activation' frame
-    output (popStack 1 CallStack)
-    output (popStack 1 CurrentFunction)
-
+    output (popStack CallStack)
+    output (popStack CurrentFunction)
   where
     outputT :: (Functor f, Member (Output (Term Natural)) r) => Term Natural -> Sem (WithTactics e f m r) (f ())
     outputT = pureT <=< output
 
-stackTake :: StackName -> Natural -> Term Natural
-stackTake sn n = remakeList (take (fromIntegral n) [OpAddress # indexInStack sn i | i <- [0..]])
+stackTake :: StackId -> Natural -> Term Natural
+stackTake sn n = remakeList (take (fromIntegral n) [OpAddress # indexInStack sn i | i <- [0 ..]])
 
-pushOnStack :: StackName -> Term Natural -> Term Natural
+pushOnStack :: StackId -> Term Natural -> Term Natural
 pushOnStack s t = OpPush # t # topStack s
 
-replaceOnStack :: StackName -> Term Natural -> Term Natural
+replaceOnStack :: StackId -> Term Natural -> Term Natural
 replaceOnStack s t = OpPush # t # replaceTopStack s
 
-popStack :: Natural -> StackName -> Term Natural
-popStack n sn =
+popStack :: StackId -> Term Natural
+popStack = popStackN 1
+
+popStackN :: Natural -> StackId -> Term Natural
+popStackN n sn =
   remakeList
     [ let p = stackPath s
           a
             | sn == s = p ++ replicate n R
             | otherwise = p
-        in OpAddress # a
+       in OpAddress # a
       | s <- allElements
     ]
 
-replaceStack :: StackName -> Term Natural -> Term Natural
+replaceStack :: StackId -> Term Natural -> Term Natural
 replaceStack sn t =
   remakeList
     [ if
-            | sn == s -> t
-            | otherwise -> OpAddress # (stackPath s)
+          | sn == s -> t
+          | otherwise -> OpAddress # (stackPath s)
       | s <- allElements
     ]
 
-resetStack :: StackName -> Term Natural
+resetStack :: StackId -> Term Natural
 resetStack sn = replaceStack sn (OpQuote # nockNil')
 
 -- | Reconstruct the value-stack / call-stack cell by moving the global head to the
 -- respective stack head.
+
 --- [h [s1 s1 s3 nil]]
 --- [ s1 .. [h si] ... sn nil]
-topStack :: StackName -> Term Natural
+topStack :: StackId -> Term Natural
 topStack sn =
   remakeList
     [ let p = OpAddress # (R : stackPath s)
-        in if
-            | sn == s -> (OpAddress # [L]) # p
-            | otherwise -> p
+       in if
+              | sn == s -> (OpAddress # [L]) # p
+              | otherwise -> p
       | s <- allElements
     ]
 
-replaceTopStack :: StackName -> Term Natural
+replaceTopStack :: StackId -> Term Natural
 replaceTopStack sn =
   remakeList
     [ let p = R : stackPath s
-        in if
-            | sn == s -> (OpAddress # [L]) # (OpAddress # (p ++ [R]))
-            | otherwise -> OpAddress # p
+       in if
+              | sn == s -> (OpAddress # [L]) # (OpAddress # (p ++ [R]))
+              | otherwise -> OpAddress # p
       | s <- allElements
     ]
 
-pushNat :: (Member Compiler r) => StackName -> Natural -> Sem r ()
+pushNat :: (Member Compiler r) => StackId -> Natural -> Sem r ()
 pushNat s n = push s (OpQuote # toNock n)
 
-prog1 :: Sem '[Compiler, Reader (HashMap Text Path)] ()
+debugProgPrint :: NockmaCompiler '[Embed IO] -> IO ()
+debugProgPrint = debugProg >=> putStrLn . ppTrace
+
+debugProg :: NockmaCompiler '[Embed IO] -> IO (Term Natural)
+debugProg m = runM $ runCompiledNock takeValueStack
+  where
+    takeValueStack :: NockmaCompiler '[Embed IO]
+    takeValueStack = do
+      m
+      verbatim (OpAddress # stackPath ValueStack)
+
+runCompiledNock :: (Members '[Embed IO] r) => Sem (Compiler ': Reader (HashMap Text Path) ': r) () -> Sem r (Term Natural)
+runCompiledNock s = do
+  let stack = initStack functions
+  t <-
+    runReader functionLocations
+      . execCompiler
+      $ s
+  evalT <-
+    runError @(ErrNockNatural Natural)
+      . runError @NockEvalError
+      $ eval stack t
+  case evalT of
+    Left e -> error (show e)
+    Right ev -> case ev of
+      Left e -> error (show e)
+      Right res -> return res
+
+prog1 :: (Members '[Compiler, Reader (HashMap Text Path)] r) => Sem r ()
 prog1 = do
   pushNat ValueStack 2
   pushNat ValueStack 3
   increment ValueStack
   -- callStdlib StdlibDec
-  -- callStdlib StdlibAdd
+  callStdlib StdlibAdd
   call "increment" 1
   -- call "increment" 1
+  pushNat ValueStack 8
   call "const" 2
   call "callInc" 1
-  -- pushNat ValueStack 111
-  -- pushNat ValueStack 222
-  -- pushNat ValueStack 333
-  -- call "increment" 1
-  -- pushNat ValueStack 444
-  -- call "increment" 1
-  -- push FunctionsLibrary funIncrement
-  -- pushNat ValueStack 13
-  -- pushNat TempStack 20
-  -- pushNat CallStack 666
-  -- increment CallStack
-  -- pushNat ValueStack 13
-  -- increment CallStack
-  -- pop ValueStack
-  -- pushNat ValueStack 50
-  -- pushNat CallStack 33
-  -- pushNat CallStack 44
-  -- pop CallStack
-  -- pop ValueStack
-  -- increment CallStack
-  -- pushNat ValueStack 0
-  -- branch (pushNat ValueStack 99) (pushNat ValueStack 77)
+
+-- pushNat ValueStack 111
+-- pushNat ValueStack 222
+-- pushNat ValueStack 333
+-- call "increment" 1
+-- pushNat ValueStack 444
+-- call "increment" 1
+-- push FunctionsLibrary funIncrement
+-- pushNat ValueStack 13
+-- pushNat TempStack 20
+-- pushNat CallStack 666
+-- increment CallStack
+-- pushNat ValueStack 13
+-- increment CallStack
+-- pop ValueStack
+-- pushNat ValueStack 50
+-- pushNat CallStack 33
+-- pushNat CallStack 44
+-- pop CallStack
+-- pop ValueStack
+-- increment CallStack
+-- pushNat ValueStack 0
+-- branch (pushNat ValueStack 99) (pushNat ValueStack 77)
