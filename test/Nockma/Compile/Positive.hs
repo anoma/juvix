@@ -52,10 +52,10 @@ tests =
       pushNat 6
       dec,
     Test "branch true" [nock| [5 0] |] $ do
-      push (OpQuote # TermAtom (nockTrue @Natural))
+      push nockTrueLiteral
       branch (pushNat 5) (pushNat 666),
     Test "branch false" [nock| [666 0] |] $ do
-      push (OpQuote # TermAtom (nockFalse @Natural))
+      push nockFalseLiteral
       branch (pushNat 5) (pushNat 666),
     Test "add" [nock| [5 0] |] $ do
       pushNat 2

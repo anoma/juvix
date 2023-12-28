@@ -217,7 +217,7 @@ re = reinterpretH $ \case
         callFn = OpPush # (OpCall # [L] # (OpReplace # ([R, L] # arguments) # (OpAddress # [L]))) # extractResult
 
     output (OpPush # decodeFn # callFn)
-    output (replaceTopStack ValueStack)
+    output (replaceTopStackN fNumArgs ValueStack)
     where
       stdlibStackTake :: StackId -> Natural -> Term Natural
       stdlibStackTake sn n = foldr1 (#) (take (fromIntegral n) [OpAddress # indexInStack sn i | i <- [0 ..]])
@@ -244,6 +244,17 @@ pop = popFrom ValueStack
 
 stackTake :: StackId -> Natural -> Term Natural
 stackTake sn n = remakeList (take (fromIntegral n) [OpAddress # indexInStack sn i | i <- [0 ..]])
+
+-- | Takes a slice of a stack. Both indices are inclusive
+stackSlice :: StackId -> Natural -> Natural -> Term Natural
+stackSlice sn fromIx toIx =
+  remakeList [OpAddress # indexInStack sn i | i <- indices]
+  where
+    indices
+     -- this check is needed for the [0 .. pred 0] edge case
+     | fromIx < toIx = [fromIx .. pred toIx]
+     | fromIx == toIx = [fromIx]
+     | otherwise = impossible
 
 pushOnStack :: StackId -> Term Natural -> Term Natural
 pushOnStack s t = OpPush # t # topStack s
@@ -279,7 +290,6 @@ resetStack sn = replaceStack sn (OpQuote # nockNil')
 
 -- | Reconstruct the value-stack / call-stack cell by moving the global head to the
 -- respective stack head.
-
 --- [h [s1 s1 s3 nil]]
 --- [ s1 .. [h si] ... sn nil]
 topStack :: StackId -> Term Natural
@@ -292,15 +302,18 @@ topStack sn =
       | s <- allElements
     ]
 
-replaceTopStack :: StackId -> Term Natural
-replaceTopStack sn =
+replaceTopStackN :: Natural -> StackId -> Term Natural
+replaceTopStackN n sn =
   remakeList
     [ let p = R : stackPath s
        in if
-              | sn == s -> (OpAddress # [L]) # (OpAddress # (p ++ [R]))
+              | sn == s -> (OpAddress # [L]) # (OpAddress # p ++ replicate n R)
               | otherwise -> OpAddress # p
       | s <- allElements
     ]
+
+replaceTopStack :: StackId -> Term Natural
+replaceTopStack = replaceTopStackN 1
 
 pushNat :: (Member Compiler r) => Natural -> Sem r ()
 pushNat = pushNatOnto ValueStack
