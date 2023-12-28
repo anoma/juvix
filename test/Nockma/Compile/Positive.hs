@@ -11,12 +11,28 @@ import Juvix.Compiler.Nockma.Translation.FromSource.QQ
 data Test = Test
   { _testName :: Text,
     _testExpected :: Term Natural,
-    _testProgram :: NockmaCompiler '[Embed IO]
+    _testProgram :: Sem '[Compiler, Embed IO] ()
   }
 
 makeLenses ''Test
 
-newtype PPTerm = PPTerm (Term Natural)
+debugProgPrint :: Sem '[Compiler, Embed IO] () -> IO ()
+debugProgPrint = debugProg >=> putStrLn . ppTrace
+
+debugProg :: Sem '[Compiler, Embed IO] () -> IO (Term Natural)
+debugProg m = runM $ runCompiledNock exampleFunctions takeValueStack
+  where
+    takeValueStack :: Sem '[Compiler, Embed IO] ()
+    takeValueStack = do
+      m
+      verbatim (OpAddress # stackPath ValueStack)
+
+exampleFunctions :: [CompilerFunction]
+exampleFunctions =
+  [ CompilerFunction "increment" compileFunIncrement,
+    CompilerFunction "const" compileFunConst,
+    CompilerFunction "callInc" compileCallInc
+  ]
 
 allTests :: TestTree
 allTests = testGroup "Nockma compile unit positive" (map mk tests)
@@ -60,5 +76,15 @@ tests =
     Test "add" [nock| [5 0] |] $ do
       pushNat 2
       pushNat 3
-      add
+      add,
+    Test "call increment" [nock| [5 0] |] $ do
+      pushNat 2
+      call "increment" 1
+      call "increment" 1
+      call "increment" 1,
+    Test "call increment indirectly" [nock| [5 0] |] $ do
+      pushNat 2
+      call "increment" 1
+      call "callInc" 1
+      call "increment" 1
   ]

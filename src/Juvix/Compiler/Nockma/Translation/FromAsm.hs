@@ -8,7 +8,12 @@ import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Stdlib
 import Juvix.Prelude hiding (Atom, Path)
 
-type NockmaCompiler r = Sem (Compiler ': Reader (HashMap Text Path) ': r) ()
+type FunctionPaths = HashMap Text Path
+
+data CompilerFunction = CompilerFunction {
+  _compilerFunctionName :: Text,
+  _compilerFunction :: Sem '[Compiler,  Reader FunctionPaths] ()
+                                     }
 
 fromAsm :: Asm.Symbol -> Asm.InfoTable -> Term Natural
 fromAsm = undefined
@@ -73,6 +78,7 @@ pathInStack :: StackId -> Path -> Path
 pathInStack s p = stackPath s ++ p
 
 makeSem ''Compiler
+makeLenses ''CompilerFunction
 
 seqTerms :: [Term Natural] -> Term Natural
 seqTerms = foldl' step (OpAddress # emptyPath) . reverse
@@ -101,19 +107,6 @@ initStack defs = makeList (initSubStack <$> allElements)
       StandardLibrary -> stdlib
       FunctionsLibrary -> makeList defs
 
-compileFunctions :: [(Text, Sem '[Compiler, Reader (HashMap Text Path)] ())]
-compileFunctions = [("increment", compileFunIncrement), ("const", compileFunConst), ("callInc", compileCallInc)]
-
-functions :: [Term Natural]
-functions = (# nockNil') <$> run (runReader functionLocations (mapM execCompiler (snd <$> compileFunctions)))
-
-functionLocations :: HashMap Text Path
-functionLocations =
-  hashMap
-    [ (n, indexInStack FunctionsLibrary i)
-      | (i, (n, _)) <- zip [0 ..] compileFunctions
-    ]
-
 funIncrement' :: Term Natural
 funIncrement' = funCode # nockNil'
   where
@@ -123,7 +116,7 @@ funIncrement' = funCode # nockNil'
 push :: (Members '[Compiler] r) => Term Natural -> Sem r ()
 push = pushOnto ValueStack
 
-compileFunIncrement :: Sem '[Compiler, Reader (HashMap Text Path)] ()
+compileFunIncrement :: Sem '[Compiler, Reader FunctionPaths] ()
 compileFunIncrement = do
   push (OpInc # (OpAddress # pathToArg 0))
   asmReturn
@@ -134,26 +127,43 @@ funConst = funCode # nockNil'
     funCode :: Term Natural
     funCode = OpPush # (OpAddress # pathToArg 0) # topStack ValueStack
 
-compileFunConst :: Sem '[Compiler, Reader (HashMap Text Path)] ()
+compileFunConst :: Sem '[Compiler, Reader FunctionPaths] ()
 compileFunConst = do
   push (OpAddress # pathToArg 0)
   asmReturn
 
-compileCallInc :: Sem '[Compiler, Reader (HashMap Text Path)] ()
+compileCallInc :: Sem '[Compiler, Reader FunctionPaths] ()
 compileCallInc = do
   push (OpAddress # pathToArg 0)
   call "increment" 1
   asmReturn
 
-execCompiler :: (Member (Reader (HashMap Text Path)) r) => Sem (Compiler ': r) a -> Sem r (Term Natural)
+execCompiler :: (Member (Reader FunctionPaths) r) => Sem (Compiler ': r) a -> Sem r (Term Natural)
 execCompiler = fmap fst . runCompiler
 
-runCompiler :: (Member (Reader (HashMap Text Path)) r) => Sem (Compiler ': r) a -> Sem r (Term Natural, a)
+runCompiler :: (Member (Reader FunctionPaths) r) => Sem (Compiler ': r) a -> Sem r (Term Natural, a)
 runCompiler sem = do
   (ts, a) <- runOutputList (re sem)
   return (seqTerms ts, a)
 
-re :: (Member (Reader (HashMap Text Path)) r) => Sem (Compiler ': r) a -> Sem (Output (Term Natural) ': r) a
+execCompilerWith :: [CompilerFunction] -> Sem (Compiler ': r) a -> Sem r ([Term Natural], Term Natural)
+execCompilerWith funs sem = fst <$> runCompilerWith funs sem
+
+runCompilerWith :: [CompilerFunction] -> Sem (Compiler ': r) a -> Sem r (([Term Natural], Term Natural), a)
+runCompilerWith funs sem = do
+  (ts, a) <- runReader functionLocations (runOutputList (re (raiseUnder sem)))
+  let compiledFuns :: [Term Natural]
+      compiledFuns = (# nockNil') <$>
+        (run . runReader functionLocations . mapM (execCompiler . (^. compilerFunction)) $ funs)
+  return ((compiledFuns, seqTerms ts), a)
+  where
+  functionLocations :: FunctionPaths
+  functionLocations =   hashMap
+    [ (_compilerFunctionName, indexInStack FunctionsLibrary i)
+      | (i, CompilerFunction {..}) <- zip [0 ..] funs
+    ]
+
+re :: (Member (Reader FunctionPaths) r) => Sem (Compiler ': r) a -> Sem (Output (Term Natural) ': r) a
 re = reinterpretH $ \case
   PushOnto s n -> outputT (pushOnStack s n)
   PopFrom s -> outputT (popStack s)
@@ -174,7 +184,7 @@ re = reinterpretH $ \case
     --         from the call stack and push the result (the head of the current value stack) to it.
     --      i. Pop the call stack and the current function stack.
 
-    funPath <- fromJust <$> asks @(HashMap Text Path) (^. at funName)
+    funPath <- fromJust <$> asks @FunctionPaths (^. at funName)
 
     -- Save the current state of the value stack
     output (pushOnStack CallStack (OpAddress # pathInStack ValueStack (replicate funArgsNum R)))
@@ -251,10 +261,10 @@ stackSlice sn fromIx toIx =
   remakeList [OpAddress # indexInStack sn i | i <- indices]
   where
     indices
-     -- this check is needed for the [0 .. pred 0] edge case
-     | fromIx < toIx = [fromIx .. pred toIx]
-     | fromIx == toIx = [fromIx]
-     | otherwise = impossible
+      -- this check is needed for the [0 .. pred 0] edge case
+      | fromIx < toIx = [fromIx .. pred toIx]
+      | fromIx == toIx = [fromIx]
+      | otherwise = impossible
 
 pushOnStack :: StackId -> Term Natural -> Term Natural
 pushOnStack s t = OpPush # t # topStack s
@@ -290,6 +300,7 @@ resetStack sn = replaceStack sn (OpQuote # nockNil')
 
 -- | Reconstruct the value-stack / call-stack cell by moving the global head to the
 -- respective stack head.
+
 --- [h [s1 s1 s3 nil]]
 --- [ s1 .. [h si] ... sn nil]
 topStack :: StackId -> Term Natural
@@ -321,24 +332,10 @@ pushNat = pushNatOnto ValueStack
 pushNatOnto :: (Member Compiler r) => StackId -> Natural -> Sem r ()
 pushNatOnto s n = pushOnto s (OpQuote # toNock n)
 
-debugProgPrint :: NockmaCompiler '[Embed IO] -> IO ()
-debugProgPrint = debugProg >=> putStrLn . ppTrace
-
-debugProg :: NockmaCompiler '[Embed IO] -> IO (Term Natural)
-debugProg m = runM $ runCompiledNock takeValueStack
-  where
-    takeValueStack :: NockmaCompiler '[Embed IO]
-    takeValueStack = do
-      m
-      verbatim (OpAddress # stackPath ValueStack)
-
-runCompiledNock :: NockmaCompiler r -> Sem r (Term Natural)
-runCompiledNock s = do
-  let stack = initStack functions
-  t <-
-    runReader functionLocations
-      . execCompiler
-      $ s
+runCompiledNock :: [CompilerFunction] -> Sem (Compiler ': r) () -> Sem r (Term Natural)
+runCompiledNock funs s = do
+  (functionTerms, t) <- execCompilerWith funs s
+  let stack = initStack functionTerms
   evalT <-
     runError @(ErrNockNatural Natural)
       . runError @NockEvalError
@@ -349,7 +346,7 @@ runCompiledNock s = do
       Left e -> error (show e)
       Right res -> return res
 
-prog1 :: (Members '[Compiler, Reader (HashMap Text Path)] r) => Sem r ()
+prog1 :: (Members '[Compiler, Reader FunctionPaths] r) => Sem r ()
 prog1 = do
   pushNat 2
   pushNat 3
@@ -361,26 +358,3 @@ prog1 = do
   pushNat 8
   call "const" 2
   call "callInc" 1
-
--- pushNat ValueStack 111
--- pushNat ValueStack 222
--- pushNat ValueStack 333
--- call "increment" 1
--- pushNat ValueStack 444
--- call "increment" 1
--- push FunctionsLibrary funIncrement
--- pushNat ValueStack 13
--- pushNat TempStack 20
--- pushNat CallStack 666
--- increment CallStack
--- pushNat ValueStack 13
--- increment CallStack
--- pop ValueStack
--- pushNat ValueStack 50
--- pushNat CallStack 33
--- pushNat CallStack 44
--- pop CallStack
--- pop ValueStack
--- increment CallStack
--- pushNat ValueStack 0
--- branch (pushNat 99) (pushNat 77)
