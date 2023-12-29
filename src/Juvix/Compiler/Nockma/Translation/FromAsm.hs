@@ -98,100 +98,117 @@ pathInStack s p = stackPath s ++ p
 makeSem ''Compiler
 makeLenses ''CompilerFunction
 
-fromAsm :: Asm.Symbol -> Asm.InfoTable -> Term Natural
-fromAsm = undefined
+fromAsm :: Asm.Symbol -> Asm.InfoTable -> ([Term Natural], Term Natural)
+fromAsm mainSym Asm.InfoTable {..} = let
+  funs = map compileFunction allFunctions
+  in run (execCompilerWith funs (compile mainCode))
+  where
+  mainCode :: Asm.Code
+  mainCode = _infoFunctions ^?! at mainSym . _Just . Asm.functionCode
 
-compile :: forall r. Members '[Compiler] r => Asm.Code -> Sem r ()
+  allFunctions :: [Asm.FunctionInfo]
+  allFunctions = filter notMain (toList _infoFunctions)
+    where
+    notMain :: Asm.FunctionInfo -> Bool
+    notMain Asm.FunctionInfo {..} = _functionSymbol /= mainSym
+
+  compileFunction :: Asm.FunctionInfo -> CompilerFunction
+  compileFunction Asm.FunctionInfo {..} = CompilerFunction {
+    _compilerFunctionName = _functionName,
+    _compilerFunction = compile _functionCode
+                                                           }
+
+compile :: forall r. (Members '[Compiler] r) => Asm.Code -> Sem r ()
 compile = mapM_ goCommand
   where
-  goCommand :: Asm.Command -> Sem r ()
-  goCommand = \case
-    Asm.Instr i -> goCmdInstr i
-    Asm.Branch b -> goBranch b
-    Asm.Case c -> goCase c
+    goCommand :: Asm.Command -> Sem r ()
+    goCommand = \case
+      Asm.Instr i -> goCmdInstr i
+      Asm.Branch b -> goBranch b
+      Asm.Case c -> goCase c
 
-  goCase :: Asm.CmdCase -> Sem r ()
-  goCase = undefined
+    goCase :: Asm.CmdCase -> Sem r ()
+    goCase = undefined
 
-  goBranch :: Asm.CmdBranch -> Sem r ()
-  goBranch Asm.CmdBranch {..} = branch (compile _cmdBranchTrue) (compile _cmdBranchFalse)
+    goBranch :: Asm.CmdBranch -> Sem r ()
+    goBranch Asm.CmdBranch {..} = branch (compile _cmdBranchTrue) (compile _cmdBranchFalse)
 
-  goBinop :: Asm.Opcode -> Sem r ()
-  goBinop o = case o of
-    Asm.IntAdd -> callStdlib StdlibAdd
-    Asm.IntSub -> callStdlib StdlibSub
-    Asm.IntMul -> callStdlib StdlibMul
-    Asm.IntDiv -> callStdlib StdlibDiv
-    Asm.IntMod -> callStdlib StdlibMod
-    Asm.IntLt -> callStdlib StdlibLt
-    Asm.IntLe -> callStdlib StdlibLe
-    Asm.ValEq -> testEqOn ValueStack
-    Asm.StrConcat -> stringsErr
+    goBinop :: Asm.Opcode -> Sem r ()
+    goBinop o = case o of
+      Asm.IntAdd -> callStdlib StdlibAdd
+      Asm.IntSub -> callStdlib StdlibSub
+      Asm.IntMul -> callStdlib StdlibMul
+      Asm.IntDiv -> callStdlib StdlibDiv
+      Asm.IntMod -> callStdlib StdlibMod
+      Asm.IntLt -> callStdlib StdlibLt
+      Asm.IntLe -> callStdlib StdlibLe
+      Asm.ValEq -> testEqOn ValueStack
+      Asm.StrConcat -> stringsErr
 
-  goPush :: Asm.Value -> Sem r ()
-  goPush = \case
-    Asm.ConstInt i
-      | i < 0 -> unsupported "negative numbers"
-      | otherwise -> pushNat (fromInteger i)
-    Asm.ConstBool i -> push (nockBoolLiteral i)
-    Asm.ConstString {} -> stringsErr
-    Asm.ConstUnit -> undefined
-    Asm.ConstVoid -> undefined
-    Asm.Ref r -> goPushRef r
-    where
-    goPushRef :: Asm.MemValue -> Sem r ()
-    goPushRef = \case
-      Asm.DRef r -> goDirectRef r
-      Asm.ConstrRef r -> goConstrRef r
+    goPush :: Asm.Value -> Sem r ()
+    goPush = \case
+      Asm.ConstInt i
+        | i < 0 -> unsupported "negative numbers"
+        | otherwise -> pushNat (fromInteger i)
+      Asm.ConstBool i -> push (nockBoolLiteral i)
+      Asm.ConstString {} -> stringsErr
+      Asm.ConstUnit -> undefined
+      Asm.ConstVoid -> undefined
+      Asm.Ref r -> goPushRef r
+      where
+        goPushRef :: Asm.MemValue -> Sem r ()
+        goPushRef = \case
+          Asm.DRef r -> goDirectRef r
+          Asm.ConstrRef r -> goConstrRef r
 
-    goConstrRef :: Asm.Field -> Sem r ()
-    goConstrRef = undefined
+        goConstrRef :: Asm.Field -> Sem r ()
+        goConstrRef = undefined
 
-    goDirectRef :: Asm.DirectRef -> Sem r ()
-    goDirectRef = undefined
+        goDirectRef :: Asm.DirectRef -> Sem r ()
+        goDirectRef = undefined
 
-  goPushTemp :: Sem r ()
-  goPushTemp = undefined
+    goPushTemp :: Sem r ()
+    goPushTemp = undefined
 
-  goPrealloc :: Asm.InstrPrealloc -> Sem r ()
-  goPrealloc = undefined
+    goPrealloc :: Asm.InstrPrealloc -> Sem r ()
+    goPrealloc = undefined
 
-  goAllocConstr :: Asm.Tag -> Sem r ()
-  goAllocConstr = undefined
+    goAllocConstr :: Asm.Tag -> Sem r ()
+    goAllocConstr = undefined
 
-  goAllocClosure :: Asm.InstrAllocClosure -> Sem r ()
-  goAllocClosure = undefined
+    goAllocClosure :: Asm.InstrAllocClosure -> Sem r ()
+    goAllocClosure = undefined
 
-  goExtendClosure :: Asm.InstrExtendClosure -> Sem r ()
-  goExtendClosure = undefined
+    goExtendClosure :: Asm.InstrExtendClosure -> Sem r ()
+    goExtendClosure = undefined
 
-  goCall :: Asm.InstrCall -> Sem r ()
-  goCall = undefined
+    goCall :: Asm.InstrCall -> Sem r ()
+    goCall = undefined
 
-  goTailCall :: Asm.InstrCall -> Sem r ()
-  goTailCall = undefined
+    goTailCall :: Asm.InstrCall -> Sem r ()
+    goTailCall = undefined
 
-  goCmdInstr :: Asm.CmdInstr -> Sem r ()
-  goCmdInstr Asm.CmdInstr {..} = case _cmdInstrInstruction of
-    Asm.Binop op -> goBinop op
-    Asm.Push p -> goPush p
-    Asm.Pop -> pop
-    Asm.PopTemp -> popFrom TempStack
-    Asm.PushTemp -> goPushTemp
-    Asm.Failure -> undefined
-    Asm.Prealloc i -> goPrealloc i
-    Asm.AllocConstr i -> goAllocConstr i
-    Asm.AllocClosure c -> goAllocClosure c
-    Asm.ExtendClosure c -> goExtendClosure c
-    Asm.Call c -> goCall c
-    Asm.TailCall c -> goTailCall c
-    Asm.Return -> asmReturn
-    Asm.ValShow -> stringsErr
-    Asm.StrToInt -> stringsErr
-    Asm.Trace -> unsupported "trace"
-    Asm.Dump -> unsupported "dump"
-    Asm.CallClosures {} -> impossible
-    Asm.TailCallClosures {} -> impossible
+    goCmdInstr :: Asm.CmdInstr -> Sem r ()
+    goCmdInstr Asm.CmdInstr {..} = case _cmdInstrInstruction of
+      Asm.Binop op -> goBinop op
+      Asm.Push p -> goPush p
+      Asm.Pop -> pop
+      Asm.PopTemp -> popFrom TempStack
+      Asm.PushTemp -> goPushTemp
+      Asm.Failure -> undefined
+      Asm.Prealloc i -> goPrealloc i
+      Asm.AllocConstr i -> goAllocConstr i
+      Asm.AllocClosure c -> goAllocClosure c
+      Asm.ExtendClosure c -> goExtendClosure c
+      Asm.Call c -> goCall c
+      Asm.TailCall c -> goTailCall c
+      Asm.Return -> asmReturn
+      Asm.ValShow -> stringsErr
+      Asm.StrToInt -> stringsErr
+      Asm.Trace -> unsupported "trace"
+      Asm.Dump -> unsupported "dump"
+      Asm.CallClosures {} -> impossible
+      Asm.TailCallClosures {} -> impossible
 
 unsupported :: Text -> a
 unsupported thing = error ("The Nockma backend does not support" <> thing)
@@ -208,7 +225,7 @@ seqTerms = foldl' step (OpAddress # emptyPath) . reverse
 makeList :: [Term Natural] -> Term Natural
 makeList ts = foldr1 (#) (ts ++ [TermAtom nockNil])
 
-remakeList :: Foldable l => l (Term Natural) -> Term Natural
+remakeList :: (Foldable l) => l (Term Natural) -> Term Natural
 remakeList ts = foldr1 (#) (toList ts ++ [OpQuote # nockNil'])
 
 nockNil' :: Term Natural
@@ -226,36 +243,8 @@ initStack defs = makeList (initSubStack <$> allElements)
       StandardLibrary -> stdlib
       FunctionsLibrary -> makeList defs
 
-funIncrement' :: Term Natural
-funIncrement' = funCode # nockNil'
-  where
-    funCode :: Term Natural
-    funCode = OpPush # (OpInc # (OpAddress # pathToArg 0)) # topStack ValueStack
-
 push :: (Members '[Compiler] r) => Term Natural -> Sem r ()
 push = pushOnto ValueStack
-
-compileFunIncrement :: Sem '[Compiler, Reader FunctionPaths] ()
-compileFunIncrement = do
-  push (OpInc # (OpAddress # pathToArg 0))
-  asmReturn
-
-funConst :: Term Natural
-funConst = funCode # nockNil'
-  where
-    funCode :: Term Natural
-    funCode = OpPush # (OpAddress # pathToArg 0) # topStack ValueStack
-
-compileFunConst :: Sem '[Compiler, Reader FunctionPaths] ()
-compileFunConst = do
-  push (OpAddress # pathToArg 0)
-  asmReturn
-
-compileCallInc :: Sem '[Compiler, Reader FunctionPaths] ()
-compileCallInc = do
-  push (OpAddress # pathToArg 0)
-  call "increment" 1
-  asmReturn
 
 execCompiler :: (Member (Reader FunctionPaths) r) => Sem (Compiler ': r) a -> Sem r (Term Natural)
 execCompiler = fmap fst . runCompiler
@@ -287,9 +276,13 @@ runCompilerWith funs sem = do
 call' :: (Members '[Output (Term Natural), Reader FunctionPaths] r) => Text -> Natural -> Sem r ()
 call' funName funArgsNum = do
   -- 1. Obtain the path to the function
+  funPath <- fromJust <$> asks @FunctionPaths (^. at funName)
+
   -- 2.
   --   i. Take a copy of the value stack without the arguments to the function
   --   ii. Push this copy to the call stack
+  output (pushOnStack CallStack (OpAddress # pathInStack ValueStack (replicate funArgsNum R)))
+
   -- 3.
   --  i. Take a copy of the function from the function library
   --  ii. Replace its argument area with the arguments from the value stack
@@ -300,11 +293,6 @@ call' funName funArgsNum = do
   --      i. Restore the previous value stack (created in 2.). i.e copy the previous value stack
   --         from the call stack and push the result (the head of the current value stack) to it.
   --      i. Pop the call stack and the current function stack.
-
-  funPath <- fromJust <$> asks @FunctionPaths (^. at funName)
-
-  -- Save the current state of the value stack
-  output (pushOnStack CallStack (OpAddress # pathInStack ValueStack (replicate funArgsNum R)))
 
   -- Setup function to call with it arguments
   output
@@ -358,7 +346,7 @@ asmReturn' = do
   output (popStack CurrentFunction)
 
 branch' ::
-  (Functor f, Member (Output (Term Natural)) r, Member (Reader FunctionPaths) r) =>
+  (Functor f, Members '[Output (Term Natural), Reader FunctionPaths] r) =>
   m () ->
   m () ->
   Sem (WithTactics Compiler f m r) (f ())
@@ -367,10 +355,10 @@ branch' t f = do
   termF <- runT f >>= raise . execCompiler . (pop >>)
   (output >=> pureT) (OpIf # (OpAddress # pathInStack ValueStack [L]) # termT # termF)
 
-pushArgRef' :: (Members '[Output (Term Natural), Reader FunctionPaths] r) => Offset -> Sem r ()
+pushArgRef' :: (Members '[Output (Term Natural)] r) => Offset -> Sem r ()
 pushArgRef' = undefined
 
-pushTempRef' :: (Members '[Output (Term Natural), Reader FunctionPaths] r) => Offset -> Sem r ()
+pushTempRef' :: (Members '[Output (Term Natural)] r) => Offset -> Sem r ()
 pushTempRef' = undefined
 
 re :: (Member (Reader FunctionPaths) r) => Sem (Compiler ': r) a -> Sem (Output (Term Natural) ': r) a

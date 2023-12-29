@@ -24,9 +24,16 @@ debugProg = runM . runCompiledNock exampleFunctions
 
 exampleFunctions :: [CompilerFunction]
 exampleFunctions =
-  [ CompilerFunction "increment" compileFunIncrement,
-    CompilerFunction "const" compileFunConst,
-    CompilerFunction "callInc" compileCallInc
+  [ CompilerFunction "increment" $ do
+      push (OpInc # (OpAddress # pathToArg 0))
+      asmReturn,
+    CompilerFunction "const" $ do
+      push (OpAddress # pathToArg 0)
+      asmReturn,
+    CompilerFunction "callInc" $ do
+      push (OpAddress # pathToArg 0)
+      call "increment" 1
+      asmReturn
   ]
 
 allTests :: TestTree
