@@ -1,8 +1,6 @@
 module Juvix.Compiler.Nockma.Translation.FromAsm where
 
 import Juvix.Compiler.Asm.Data.InfoTable qualified as Asm
--- import Juvix.Compiler.Asm.Language qualified as Asm
-
 import Juvix.Compiler.Nockma.Evaluator
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Stdlib
@@ -35,13 +33,6 @@ data StdlibFunction
   | StdlibMod
   | StdlibLt
   | StdlibLe
-    --   Asm.IntSub -> callStdlib undefined
-    -- Asm.IntMul -> callStdlib undefined
-    -- Asm.IntDiv -> callStdlib undefined
-    -- Asm.IntMod -> callStdlib undefined
-    -- Asm.IntLt -> callStdlib undefined
-    -- Asm.IntLe -> callStdlib undefined
-
 
 stdlibNumArgs :: StdlibFunction -> Natural
 stdlibNumArgs = \case
@@ -125,14 +116,14 @@ compile = mapM_ goCommand
   goBranch Asm.CmdBranch {..} = branch (compile _cmdBranchTrue) (compile _cmdBranchFalse)
 
   goBinop :: Asm.Opcode -> Sem r ()
-  goBinop = \case
-    Asm.IntAdd -> callStdlib StdlibAdd
-    Asm.IntSub -> callStdlib undefined
-    Asm.IntMul -> callStdlib undefined
-    Asm.IntDiv -> callStdlib undefined
-    Asm.IntMod -> callStdlib undefined
-    Asm.IntLt -> callStdlib undefined
-    Asm.IntLe -> callStdlib undefined
+  goBinop o = callStdlib $ case o of
+    Asm.IntAdd -> StdlibAdd
+    Asm.IntSub -> StdlibSub
+    Asm.IntMul -> StdlibMul
+    Asm.IntDiv -> StdlibDiv
+    Asm.IntMod -> StdlibMod
+    Asm.IntLt -> StdlibLt
+    Asm.IntLe -> StdlibLe
     Asm.StrConcat -> stringsErr
 
   goPush :: Asm.Value -> Sem r ()

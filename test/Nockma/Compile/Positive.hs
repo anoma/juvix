@@ -78,10 +78,42 @@ tests =
     Test "branch false" (eqStack ValueStack [nock| [666 0] |]) $ do
       push nockFalseLiteral
       branch (pushNat 5) (pushNat 666),
+    Test "sub" (eqStack ValueStack [nock| [5 0] |]) $ do
+      pushNat 3
+      pushNat 8
+      callStdlib StdlibSub,
+    Test "mul" (eqStack ValueStack [nock| [24 0] |]) $ do
+      pushNat 8
+      pushNat 3
+      callStdlib StdlibMul,
+    Test "div" (eqStack ValueStack [nock| [3 0] |]) $ do
+      pushNat 5
+      pushNat 15
+      callStdlib StdlibDiv,
+    Test "mod" (eqStack ValueStack [nock| [5 0] |]) $ do
+      pushNat 10
+      pushNat 15
+      callStdlib StdlibMod,
     Test "add" (eqStack ValueStack [nock| [5 0] |]) $ do
       pushNat 2
       pushNat 3
       add,
+    Test "le less" (eqStack ValueStack [nock| [1 0] |]) $ do
+      pushNat 2
+      pushNat 3
+      callStdlib StdlibLe,
+    Test "lt true" (eqStack ValueStack [nock| [0 0] |]) $ do
+      pushNat 4
+      pushNat 3
+      callStdlib StdlibLt,
+    Test "lt eq" (eqStack ValueStack [nock| [1 0] |]) $ do
+      pushNat 3
+      pushNat 3
+      callStdlib StdlibLt,
+    Test "le eq" (eqStack ValueStack [nock| [0 0] |]) $ do
+      pushNat 3
+      pushNat 3
+      callStdlib StdlibLe,
     Test "call increment" (eqStack ValueStack [nock| [5 0] |]) $ do
       pushNat 2
       call "increment" 1
