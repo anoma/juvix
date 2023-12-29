@@ -7,6 +7,7 @@ import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Translation.FromAsm
 import Juvix.Compiler.Nockma.Translation.FromSource.QQ
+import Juvix.Compiler.Asm.Language qualified as Asm
 
 type Check = Sem '[Reader (Term Natural), Embed IO]
 
@@ -18,20 +19,29 @@ data Test = Test
 
 makeLenses ''Test
 
+data FunctionName =
+  FunIncrement
+  | FunConst
+  | FunCallInc
+  deriving stock (Enum)
+
+sym :: Enum a => a -> Asm.Symbol
+sym = fromIntegral . fromEnum
+
 debugProg :: Sem '[Compiler, Embed IO] () -> IO (Term Natural)
 debugProg = runM . compileAndRunNock exampleFunctions
 
 exampleFunctions :: [CompilerFunction]
 exampleFunctions =
-  [ CompilerFunction "increment" $ do
+  [ CompilerFunction (sym FunIncrement) $ do
       push (OpInc # (OpAddress # pathToArg 0))
       asmReturn,
-    CompilerFunction "const" $ do
+    CompilerFunction (sym FunConst) $ do
       push (OpAddress # pathToArg 0)
       asmReturn,
-    CompilerFunction "callInc" $ do
+    CompilerFunction (sym FunCallInc) $ do
       push (OpAddress # pathToArg 0)
-      call "increment" 1
+      call (sym FunIncrement) 1
       asmReturn
   ]
 
@@ -131,12 +141,12 @@ tests =
       increment,
     Test "call increment" (eqStack ValueStack [nock| [5 0] |]) $ do
       pushNat 2
-      call "increment" 1
-      call "increment" 1
-      call "increment" 1,
+      callEnum FunIncrement 1
+      callEnum FunIncrement 1
+      callEnum FunIncrement 1,
     Test "call increment indirectly" (eqStack ValueStack [nock| [5 0] |]) $ do
       pushNat 2
-      call "increment" 1
-      call "callInc" 1
-      call "increment" 1
+      callEnum FunIncrement 1
+      callEnum FunCallInc 1
+      callEnum FunIncrement 1
   ]

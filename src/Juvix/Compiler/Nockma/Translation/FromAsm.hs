@@ -6,7 +6,7 @@ import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Stdlib
 import Juvix.Prelude hiding (Atom, Path)
 
-type FunctionId = Text
+type FunctionId = Asm.Symbol
 
 type FunctionPaths = HashMap FunctionId Path
 
@@ -116,7 +116,7 @@ fromAsm mainSym Asm.InfoTable {..} = let
 
   compileFunction :: Asm.FunctionInfo -> CompilerFunction
   compileFunction Asm.FunctionInfo {..} = CompilerFunction {
-    _compilerFunctionName = _functionName,
+    _compilerFunctionName = _functionSymbol,
     _compilerFunction = compile _functionCode
                                                            }
 
@@ -274,6 +274,9 @@ runCompilerWith funs sem = do
         [ (_compilerFunctionName, indexInStack FunctionsLibrary i)
           | (i, CompilerFunction {..}) <- zip [0 ..] funs
         ]
+
+callEnum :: (Enum funId, Members '[Compiler] r) => funId -> Natural -> Sem r ()
+callEnum f = call (fromIntegral (fromEnum f))
 
 call' :: (Members '[Output (Term Natural), Reader FunctionPaths] r) => FunctionId -> Natural -> Sem r ()
 call' funName funArgsNum = do
