@@ -6,12 +6,14 @@ import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Stdlib
 import Juvix.Prelude hiding (Atom, Path)
 
-type FunctionPaths = HashMap Text Path
+type FunctionId = Text
+
+type FunctionPaths = HashMap FunctionId Path
 
 type Offset = Natural
 
 data CompilerFunction = CompilerFunction
-  { _compilerFunctionName :: Text,
+  { _compilerFunctionName :: FunctionId,
     _compilerFunction :: Sem '[Compiler, Reader FunctionPaths] ()
   }
 
@@ -65,7 +67,7 @@ data Compiler m a where
   PushOnto :: StackId -> Term Natural -> Compiler m ()
   PopFrom :: StackId -> Compiler m ()
   TestEqOn :: StackId -> Compiler m ()
-  Call :: Text -> Natural -> Compiler m ()
+  Call :: FunctionId -> Natural -> Compiler m ()
   IncrementOn :: StackId -> Compiler m ()
   PushArgRef :: Offset -> Compiler m ()
   PushTempRef :: Offset -> Compiler m ()
@@ -273,7 +275,7 @@ runCompilerWith funs sem = do
           | (i, CompilerFunction {..}) <- zip [0 ..] funs
         ]
 
-call' :: (Members '[Output (Term Natural), Reader FunctionPaths] r) => Text -> Natural -> Sem r ()
+call' :: (Members '[Output (Term Natural), Reader FunctionPaths] r) => FunctionId -> Natural -> Sem r ()
 call' funName funArgsNum = do
   -- 1. Obtain the path to the function
   funPath <- fromJust <$> asks @FunctionPaths (^. at funName)
@@ -478,29 +480,25 @@ pushNat = pushNatOnto ValueStack
 pushNatOnto :: (Member Compiler r) => StackId -> Natural -> Sem r ()
 pushNatOnto s n = pushOnto s (OpQuote # toNock n)
 
-runCompiledNock :: [CompilerFunction] -> Sem (Compiler ': r) () -> Sem r (Term Natural)
-runCompiledNock funs s = do
+compileAndRunNock :: [CompilerFunction] -> Sem (Compiler ': r) () -> Sem r (Term Natural)
+compileAndRunNock funs s = do
   (functionTerms, t) <- execCompilerWith funs s
+  return (evalCompiledNock functionTerms t)
+
+evalCompiledNock :: [Term Natural] -> Term Natural -> Term Natural
+evalCompiledNock functionTerms mainTerm =
   let stack = initStack functionTerms
-  evalT <-
-    runError @(ErrNockNatural Natural)
-      . runError @NockEvalError
-      $ eval stack t
-  case evalT of
+      evalT =
+         run
+        . runError @(ErrNockNatural Natural)
+        . runError @NockEvalError
+        $ eval stack mainTerm
+  in case evalT of
     Left e -> error (show e)
     Right ev -> case ev of
       Left e -> error (show e)
-      Right res -> return res
+      Right res -> res
 
-prog1 :: (Members '[Compiler, Reader FunctionPaths] r) => Sem r ()
-prog1 = do
-  pushNat 2
-  pushNat 3
-  increment
-  -- callStdlib StdlibDec
-  callStdlib StdlibAdd
-  call "increment" 1
-  -- call "increment" 1
-  pushNat 8
-  call "const" 2
-  call "callInc" 1
+-- | Used in testing and app
+getStack :: StackId -> Term Natural -> Term Natural
+getStack st m = fromRight' (run (runError @NockEvalError (subTerm m (stackPath st))))

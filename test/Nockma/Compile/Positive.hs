@@ -3,7 +3,6 @@
 module Nockma.Compile.Positive where
 
 import Base
-import Juvix.Compiler.Nockma.Evaluator
 import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Translation.FromAsm
@@ -20,7 +19,7 @@ data Test = Test
 makeLenses ''Test
 
 debugProg :: Sem '[Compiler, Embed IO] () -> IO (Term Natural)
-debugProg = runM . runCompiledNock exampleFunctions
+debugProg = runM . compileAndRunNock exampleFunctions
 
 exampleFunctions :: [CompilerFunction]
 exampleFunctions =
@@ -43,9 +42,6 @@ allTests = testGroup "Nockma compile unit positive" (map mk tests)
     mk Test {..} = testCase (unpack _testName) $ do
       n <- debugProg _testProgram
       runM (runReader n _testCheck)
-
-getStack :: StackId -> Term Natural -> Term Natural
-getStack st m = fromRight' (run (runError @NockEvalError (subTerm m (stackPath st))))
 
 eqStack :: StackId -> Term Natural -> Check ()
 eqStack st expected = do

@@ -3,11 +3,13 @@ module Commands.Dev.Nockma.FromAsm.Options where
 import CommonOptions
 
 newtype NockmaFromAsmOptions = NockmaFromAsmOptions
-  { _nockmaFromAsmOptionsStackFile :: Maybe (AppPath File)
+  { _nockmaFromAsmOptionsAsmFile :: AppPath File
   }
   deriving stock (Data)
 
+makeLenses ''NockmaFromAsmOptions
+
 parseNockmaFromAsmOptions :: Parser NockmaFromAsmOptions
 parseNockmaFromAsmOptions = do
-  _nockmaFromAsmOptionsStackFile <- optional (parseInputFile FileExtJuvixAsm)
+  _nockmaFromAsmOptionsAsmFile <- parseInputFile FileExtJuvixAsm
   pure NockmaFromAsmOptions {..}

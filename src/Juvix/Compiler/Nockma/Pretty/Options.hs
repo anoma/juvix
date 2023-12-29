@@ -20,7 +20,7 @@ newtype Options = Options
 traceOptions :: Options
 traceOptions =
   Options
-    { _optPrettyMode = AllDelimiters
+    { _optPrettyMode = MinimizeDelimiters
     }
 
 makeLenses ''Options
