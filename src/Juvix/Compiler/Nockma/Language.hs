@@ -218,6 +218,11 @@ nockTrueLiteral = OpQuote # (TermAtom (nockTrue @Natural))
 nockFalseLiteral :: Term Natural
 nockFalseLiteral = OpQuote # (TermAtom (nockFalse @Natural))
 
+nockBoolLiteral :: Bool -> Term Natural
+nockBoolLiteral b
+  | b = nockTrueLiteral
+  | otherwise = nockFalseLiteral
+
 instance NockNatural Natural where
   type ErrNockNatural Natural = NockNaturalNaturalError
   nockNatural a = return (a ^. atom)

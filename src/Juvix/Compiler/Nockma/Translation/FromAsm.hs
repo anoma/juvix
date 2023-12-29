@@ -64,6 +64,7 @@ data Compiler m a where
   Verbatim :: Term Natural -> Compiler m ()
   PushOnto :: StackId -> Term Natural -> Compiler m ()
   PopFrom :: StackId -> Compiler m ()
+  TestEqOn :: StackId -> Compiler m ()
   Call :: Text -> Natural -> Compiler m ()
   IncrementOn :: StackId -> Compiler m ()
   PushArgRef :: Offset -> Compiler m ()
@@ -116,18 +117,38 @@ compile = mapM_ goCommand
   goBranch Asm.CmdBranch {..} = branch (compile _cmdBranchTrue) (compile _cmdBranchFalse)
 
   goBinop :: Asm.Opcode -> Sem r ()
-  goBinop o = callStdlib $ case o of
-    Asm.IntAdd -> StdlibAdd
-    Asm.IntSub -> StdlibSub
-    Asm.IntMul -> StdlibMul
-    Asm.IntDiv -> StdlibDiv
-    Asm.IntMod -> StdlibMod
-    Asm.IntLt -> StdlibLt
-    Asm.IntLe -> StdlibLe
+  goBinop o = case o of
+    Asm.IntAdd -> callStdlib StdlibAdd
+    Asm.IntSub -> callStdlib StdlibSub
+    Asm.IntMul -> callStdlib StdlibMul
+    Asm.IntDiv -> callStdlib StdlibDiv
+    Asm.IntMod -> callStdlib StdlibMod
+    Asm.IntLt -> callStdlib StdlibLt
+    Asm.IntLe -> callStdlib StdlibLe
+    Asm.ValEq -> testEqOn ValueStack
     Asm.StrConcat -> stringsErr
 
   goPush :: Asm.Value -> Sem r ()
-  goPush = undefined
+  goPush = \case
+    Asm.ConstInt i
+      | i < 0 -> unsupported "negative numbers"
+      | otherwise -> pushNat (fromInteger i)
+    Asm.ConstBool i -> push (nockBoolLiteral i)
+    Asm.ConstString {} -> stringsErr
+    Asm.ConstUnit -> undefined
+    Asm.ConstVoid -> undefined
+    Asm.Ref r -> goPushRef r
+    where
+    goPushRef :: Asm.MemValue -> Sem r ()
+    goPushRef = \case
+      Asm.DRef r -> goDirectRef r
+      Asm.ConstrRef r -> goConstrRef r
+
+    goConstrRef :: Asm.Field -> Sem r ()
+    goConstrRef = undefined
+
+    goDirectRef :: Asm.DirectRef -> Sem r ()
+    goDirectRef = undefined
 
   goPushTemp :: Sem r ()
   goPushTemp = undefined
@@ -187,8 +208,8 @@ seqTerms = foldl' step (OpAddress # emptyPath) . reverse
 makeList :: [Term Natural] -> Term Natural
 makeList ts = foldr1 (#) (ts ++ [TermAtom nockNil])
 
-remakeList :: [Term Natural] -> Term Natural
-remakeList ts = foldr1 (#) (ts ++ [OpQuote # nockNil'])
+remakeList :: Foldable l => l (Term Natural) -> Term Natural
+remakeList ts = foldr1 (#) (toList ts ++ [OpQuote # nockNil'])
 
 nockNil' :: Term Natural
 nockNil' = TermAtom nockNil
@@ -305,10 +326,16 @@ call' funName funArgsNum = do
   -- call the function
   output (OpCall # ((indexInStack CurrentFunction 0 ++ [L]) # (OpAddress # emptyPath)))
 
-incrementOn' :: (Members '[Output (Term Natural), Reader FunctionPaths] r) => StackId -> Sem r ()
-incrementOn' s = output (replaceOnStack s (OpInc # (OpAddress # pathInStack s [L])))
+testEq :: (Members '[Compiler] r) => Sem r ()
+testEq = testEqOn ValueStack
 
-callStdlib' :: (Members '[Output (Term Natural), Reader FunctionPaths] r) => StdlibFunction -> Sem r ()
+testEqOn' :: (Members '[Output (Term Natural)] r) => StackId -> Sem r ()
+testEqOn' s = output (replaceOnStackN 2 s (OpEq # stackSliceAsCell s 0 1))
+
+incrementOn' :: (Members '[Output (Term Natural)] r) => StackId -> Sem r ()
+incrementOn' s = output (replaceOnStack s (OpInc # stackSliceAsCell s 0 0))
+
+callStdlib' :: (Members '[Output (Term Natural)] r) => StdlibFunction -> Sem r ()
 callStdlib' f = do
   let fNumArgs = stdlibNumArgs f
       fPath = stdlibPath f
@@ -358,6 +385,7 @@ re = reinterpretH $ \case
   Branch t f -> branch' t f
   CallStdlib f -> callStdlib' f >>= pureT
   AsmReturn -> asmReturn' >>= pureT
+  TestEqOn s -> testEqOn' s >>= pureT
   where
     outputT :: (Functor f, Member (Output (Term Natural)) r) => Term Natural -> Sem (WithTactics e f m r) (f ())
     outputT = pureT <=< output
@@ -377,22 +405,30 @@ pop = popFrom ValueStack
 stackTake :: StackId -> Natural -> Term Natural
 stackTake sn n = remakeList (take (fromIntegral n) [OpAddress # indexInStack sn i | i <- [0 ..]])
 
--- | Takes a slice of a stack. Both indices are inclusive
-stackSlice :: StackId -> Natural -> Natural -> Term Natural
-stackSlice sn fromIx toIx =
-  remakeList [OpAddress # indexInStack sn i | i <- indices]
+stackSliceHelper :: StackId -> Natural -> Natural -> NonEmpty (Term Natural)
+stackSliceHelper sn fromIx toIx = fromMaybe err (nonEmpty [OpAddress # indexInStack sn i | i <- indices])
   where
+    err :: a
+    err = error "impossible: empty slice"
     indices
-      -- this check is needed for the [0 .. pred 0] edge case
-      | fromIx < toIx = [fromIx .. pred toIx]
-      | fromIx == toIx = [fromIx]
+      | fromIx <= toIx = [fromIx .. toIx]
       | otherwise = impossible
+
+stackSliceAsCell :: StackId -> Natural -> Natural -> Term Natural
+stackSliceAsCell sn a b = foldr1 (#) (stackSliceHelper sn a b)
+
+-- | Takes a slice of a stack. Both indices are inclusive
+stackSliceAsList :: StackId -> Natural -> Natural -> Term Natural
+stackSliceAsList sn fromIx toIx = remakeList (stackSliceHelper sn fromIx toIx)
 
 pushOnStack :: StackId -> Term Natural -> Term Natural
 pushOnStack s t = OpPush # t # topStack s
 
+replaceOnStackN :: Natural -> StackId -> Term Natural -> Term Natural
+replaceOnStackN numToReplace s t = OpPush # t # replaceTopStackN numToReplace s
+
 replaceOnStack :: StackId -> Term Natural -> Term Natural
-replaceOnStack s t = OpPush # t # replaceTopStack s
+replaceOnStack = replaceOnStackN 1
 
 popStack :: StackId -> Term Natural
 popStack = popStackN 1

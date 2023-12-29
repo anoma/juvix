@@ -73,10 +73,10 @@ tests =
       pushNat 6
       dec,
     Test "branch true" (eqStack ValueStack [nock| [5 0] |]) $ do
-      push nockTrueLiteral
+      push (nockBoolLiteral True)
       branch (pushNat 5) (pushNat 666),
     Test "branch false" (eqStack ValueStack [nock| [666 0] |]) $ do
-      push nockFalseLiteral
+      push (nockBoolLiteral False)
       branch (pushNat 5) (pushNat 666),
     Test "sub" (eqStack ValueStack [nock| [5 0] |]) $ do
       pushNat 3
@@ -114,6 +114,18 @@ tests =
       pushNat 3
       pushNat 3
       callStdlib StdlibLe,
+    Test "primitive eq true" (eqStack ValueStack [nock| [0 0] |]) $ do
+      pushNat 4
+      pushNat 4
+      testEq,
+    Test "primitive eq false" (eqStack ValueStack [nock| [1 0] |]) $ do
+      pushNat 4
+      pushNat 1
+      testEq,
+    Test "primitive increment" (eqStack ValueStack [nock| [5 0] |]) $ do
+      pushNat 3
+      increment
+      increment,
     Test "call increment" (eqStack ValueStack [nock| [5 0] |]) $ do
       pushNat 2
       call "increment" 1
