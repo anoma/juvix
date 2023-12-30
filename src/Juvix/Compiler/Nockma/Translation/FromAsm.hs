@@ -130,6 +130,9 @@ fromAsm mainSym Asm.InfoTable {..} =
           _compilerFunction = compile _functionCode
         }
 
+fromOffsetRef :: Asm.OffsetRef -> Natural
+fromOffsetRef = fromIntegral . (^. Asm.offsetRefOffset)
+
 compile :: forall r. (Members '[Compiler] r) => Asm.Code -> Sem r ()
 compile = mapM_ goCommand
   where
@@ -138,6 +141,15 @@ compile = mapM_ goCommand
       Asm.Instr i -> goCmdInstr i
       Asm.Branch b -> goBranch b
       Asm.Case c -> goCase c
+      Asm.Save s -> goSave s
+
+    goSave :: Asm.CmdSave -> Sem r ()
+    goSave = error "TODO"
+      where
+        pushTemp :: Sem r ()
+        pushTemp = do
+          pushOnto TempStack (OpAddress # topOfStack ValueStack)
+          pop
 
     goCase :: Asm.CmdCase -> Sem r ()
     goCase = error "TODO"
@@ -179,8 +191,8 @@ compile = mapM_ goCommand
         pushDirectRef :: Asm.DirectRef -> Sem r ()
         pushDirectRef = \case
           Asm.StackRef -> push (OpAddress # topOfStack ValueStack)
-          Asm.ArgRef a -> pushArgRef (fromIntegral a)
-          Asm.TempRef off -> push (OpAddress # indexInStack TempStack (fromIntegral off))
+          Asm.ArgRef a -> pushArgRef (fromIntegral (a ^. Asm.offsetRefOffset))
+          Asm.TempRef off -> push (OpAddress # indexInStack TempStack (fromIntegral (off ^. Asm.offsetRefOffset)))
 
     goPrealloc :: Asm.InstrPrealloc -> Sem r ()
     goPrealloc = error "TODO"
@@ -210,8 +222,6 @@ compile = mapM_ goCommand
       Asm.Binop op -> goBinop op
       Asm.Push p -> goPush p
       Asm.Pop -> pop
-      Asm.PopTemp -> popFrom TempStack
-      Asm.PushTemp -> pushTemp
       Asm.Failure -> crash
       Asm.Prealloc i -> goPrealloc i
       Asm.AllocConstr i -> goAllocConstr i
@@ -224,6 +234,7 @@ compile = mapM_ goCommand
       Asm.StrToInt -> stringsErr
       Asm.Trace -> unsupported "trace"
       Asm.Dump -> unsupported "dump"
+      Asm.ArgsNum {} -> impossible
       Asm.CallClosures {} -> impossible
       Asm.TailCallClosures {} -> impossible
 
@@ -301,7 +312,7 @@ runCompilerWith libFuns mainFun =
         ]
 
 callEnum :: (Enum funId, Members '[Compiler] r) => funId -> Natural -> Sem r ()
-callEnum f = call (fromIntegral (fromEnum f))
+callEnum f = call (Asm.defaultSymbol (fromIntegral (fromEnum f)))
 
 call :: (Members '[Compiler] r) => FunctionId -> Natural -> Sem r ()
 call = callHelper False
@@ -387,11 +398,6 @@ branch' t f = do
 
 pushArgRef :: (Members '[Compiler] r) => Offset -> Sem r ()
 pushArgRef n = push (OpAddress # pathToArg n)
-
-pushTemp :: (Members '[Compiler] r) => Sem r ()
-pushTemp = do
-  pushOnto TempStack (OpAddress # topOfStack ValueStack)
-  pop
 
 re :: (Member (Reader FunctionPaths) r) => Sem (Compiler ': r) a -> Sem (Output (Term Natural) ': r) a
 re = reinterpretH $ \case

@@ -12,7 +12,6 @@ import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Pretty (ppPrint)
 import Juvix.Compiler.Nockma.Translation.FromSource (parseProgramFile, parseReplStatement, parseReplText, parseText)
 import Juvix.Parser.Error
-import Juvix.Prelude.Pretty
 import System.Console.Haskeline
 import System.Console.Repline qualified as Repline
 import Prelude (read)

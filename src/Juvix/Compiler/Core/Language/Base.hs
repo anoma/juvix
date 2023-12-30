@@ -34,6 +34,9 @@ instance Pretty Symbol where
 instance Show Symbol where
   show = show . pretty
 
+defaultSymbol :: Word -> Symbol
+defaultSymbol = Symbol defaultModuleId
+
 uniqueName :: Text -> Symbol -> Text
 uniqueName txt sym = txt <> "_" <> show sym
 

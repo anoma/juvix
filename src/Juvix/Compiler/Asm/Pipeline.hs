@@ -7,7 +7,6 @@ where
 
 import Juvix.Compiler.Asm.Data.InfoTable
 import Juvix.Compiler.Asm.Extra
-import Juvix.Compiler.Asm.Language
 import Juvix.Compiler.Asm.Options
 import Juvix.Compiler.Asm.Transformation
 import Juvix.Compiler.Pipeline.EntryPoint
