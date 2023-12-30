@@ -34,7 +34,6 @@ import Juvix.Compiler.Store.Language qualified as Store
 import Juvix.Compiler.Store.Scoped.Data.InfoTable qualified as S
 import Juvix.Compiler.Store.Scoped.Language (createExportsTable)
 import Juvix.Compiler.Store.Scoped.Language qualified as S
-import Juvix.Data.NameKind
 import Juvix.Prelude
 import Safe (lastMay)
 
