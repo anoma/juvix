@@ -1,5 +1,5 @@
-zero
-suc (suc zero)
-zero
-suc (suc zero)
-suc (suc (suc (suc (suc (suc zero)))))
+0
+2
+0
+2
+6

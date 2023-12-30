@@ -4,7 +4,7 @@ import Base
 import Core.Eval.Base
 import Core.Eval.Positive qualified as Eval
 import Data.Text.IO qualified as TIO
-import Juvix.Compiler.Core.Pipeline
+import Juvix.Compiler.Core.Data.Module (computeCombinedInfoTable, moduleFromInfoTable)
 import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation.DisambiguateNames (disambiguateNames)
 import Juvix.Compiler.Core.Translation.FromSource
@@ -46,9 +46,10 @@ corePrintAssertion mainFile expectedFile step = do
       expected <- TIO.readFile (toFilePath expectedFile)
       assertEqDiffText ("Check: EVAL output = " <> toFilePath expectedFile) "" expected
     Right (tabIni, Just node) -> do
-      let tab = disambiguateNames (setupMainFunction tabIni node)
+      let m = disambiguateNames (moduleFromInfoTable $ setupMainFunction defaultModuleId tabIni node)
+          tab = computeCombinedInfoTable m
       step "Print and parse back"
-      let r' = runParserMain mainFile emptyInfoTable (ppPrint tab)
+      let r' = runParserMain mainFile defaultModuleId mempty (ppPrint tab)
       case r' of
         Left err -> assertFailure (show (pretty err))
         Right tab' -> coreEvalAssertion' EvalModePlain tab' mainFile expectedFile step

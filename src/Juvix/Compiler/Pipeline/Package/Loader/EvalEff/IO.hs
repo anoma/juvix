@@ -5,14 +5,14 @@ module Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
 where
 
 import Data.HashMap.Strict qualified as HashMap
-import Juvix.Compiler.Builtins
 import Juvix.Compiler.Concrete hiding (Symbol)
-import Juvix.Compiler.Core (CoreResult, coreResultTable)
+import Juvix.Compiler.Core (CoreResult, coreResultModule)
 import Juvix.Compiler.Core qualified as Core
 import Juvix.Compiler.Core.Evaluator
 import Juvix.Compiler.Core.Extra.Value
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Pipeline
+import Juvix.Compiler.Pipeline.Driver (processFileToStoredCore)
 import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
 import Juvix.Compiler.Pipeline.Package.Loader.PathResolver
@@ -58,7 +58,7 @@ runEvalFileEffIO = interpretScopedAs allocator handler
       AssertNodeType n ty -> assertNodeType' n ty
       where
         tab :: Core.InfoTable
-        tab = res ^. loaderResourceResult . coreResultTable
+        tab = Core.computeCombinedInfoTable (res ^. loaderResourceResult . coreResultModule)
 
         packagePath :: Path Abs File
         packagePath = res ^. loaderResourcePackagePath
@@ -93,8 +93,8 @@ runEvalFileEffIO = interpretScopedAs allocator handler
           evalN <- evalNode n
           case evalN of
             NCtr Constr {..} -> do
-              let ci = Core.lookupConstructorInfo tab _constrTag
-                  ii = Core.lookupInductiveInfo tab (ci ^. Core.constructorInductive)
+              let ci = Core.lookupTabConstructorInfo tab _constrTag
+                  ii = Core.lookupTabInductiveInfo tab (ci ^. Core.constructorInductive)
                   ty = find (checkInductiveType ii) tys
               fromMaybeM err (return ty)
             _ -> err
@@ -127,16 +127,14 @@ loadPackage' packagePath = do
       . evalInternetOffline
       . ignoreHighlightBuilder
       . runProcessIO
-      . evalTopBuiltins
-      . evalTopNameIdGen
-      . evalTopBuiltins
-      . evalTopNameIdGen
+      . runFilesIO
+      . evalTopNameIdGen defaultModuleId
       . runReader packageEntryPoint
       . ignoreLog
       . mapError (JuvixError @GitProcessError)
       . runGitProcess
       . runPackagePathResolver rootPath
-      $ upToEval
+      $ (^. pipelineResult) <$> processFileToStoredCore packageEntryPoint
     )
   where
     rootPath :: Path Abs Dir

@@ -17,7 +17,7 @@ createTypeDependencyInfo tab = createDependencyInfo graph startVertices
         <$> HashMap.filter (isNothing . (^. inductiveBuiltin)) (tab ^. infoInductives)
 
     constructorTypes :: SimpleFold Tag Type
-    constructorTypes = to (lookupConstructorInfo tab) . constructorType . to typeArgs . each
+    constructorTypes = to (lookupTabConstructorInfo tab) . constructorType . to typeArgs . each
 
     inductiveSymbols :: SimpleFold InductiveInfo Symbol
     inductiveSymbols = inductiveConstructors . each . constructorTypes . nodeInductives

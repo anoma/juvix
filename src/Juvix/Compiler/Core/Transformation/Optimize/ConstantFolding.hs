@@ -7,8 +7,8 @@ import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info.FreeVarsInfo as Info
 import Juvix.Compiler.Core.Transformation.Base
 
-convertNode :: HashSet Symbol -> InfoTable -> Node -> Node
-convertNode nonRecSyms tab = umap go
+convertNode :: HashSet Symbol -> InfoTable -> Module -> Node -> Node
+convertNode nonRecSyms tab md = umap go
   where
     go :: Node -> Node
     go node = case node of
@@ -27,14 +27,14 @@ convertNode nonRecSyms tab = umap go
                     && evalAllowed
                     && length args == ii ^. identifierArgsNum
                     && length tyargs == ii ^. identifierArgsNum
-                    && isZeroOrderType tab tgt'
+                    && isZeroOrderType md tgt'
                     && all isNonRecValue args ->
                     doEval' node
                 where
-                  ii = lookupIdentifierInfo tab _identSymbol
+                  ii = lookupIdentifierInfo md _identSymbol
                   evalAllowed = maybe True (^. pragmaEval) (ii ^. identifierPragmas . pragmasEval)
                   (tyargs, tgt) = unfoldPi' (ii ^. identifierType)
-                  n = length (takeWhile (isTypeConstr tab) tyargs)
+                  n = length (takeWhile (isTypeConstr md) tyargs)
                   tys = reverse (take n args)
                   tgt' = substs tys (shift (-(length tyargs - n)) tgt)
               _ -> node
@@ -62,14 +62,16 @@ convertNode nonRecSyms tab = umap go
               _evalOptionsSilent = True
             }
 
-constantFolding' :: HashSet Symbol -> InfoTable -> InfoTable
-constantFolding' nonRecSyms tab =
+constantFolding' :: HashSet Symbol -> InfoTable -> Module -> Module
+constantFolding' nonRecSyms tab md =
   mapAllNodes
     ( removeInfo kFreeVarsInfo
-        . convertNode nonRecSyms tab
+        . convertNode nonRecSyms tab md
         . computeFreeVarsInfo
     )
-    tab
+    md
 
-constantFolding :: InfoTable -> InfoTable
-constantFolding tab = constantFolding' (nonRecursiveIdents tab) tab
+constantFolding :: Module -> Module
+constantFolding md = constantFolding' (nonRecursiveIdents' tab) tab md
+  where
+    tab = computeCombinedInfoTable md

@@ -9,10 +9,9 @@ runScopeEffIO :: (Member (Embed IO) r) => Path Abs Dir -> Sem (ScopeEff ': r) a 
 runScopeEffIO root = interpret $ \case
   ScopeFile p -> do
     entry <- embed (testDefaultEntryPointIO root p)
-    embed (snd <$> testRunIO entry upToScoping)
-  ScopeStdin -> do
-    entry <- embed (testDefaultEntryPointNoFileIO root)
-    embed (snd <$> testRunIO entry upToScoping)
+    embed ((^. pipelineResult) . snd <$> testRunIO entry upToScoping)
+  ScopeStdin entry -> do
+    embed ((^. pipelineResult) . snd <$> testRunIO entry upToScoping)
 
 makeFormatTest' :: Scope.PosTest -> TestDescr
 makeFormatTest' Scope.PosTest {..} =

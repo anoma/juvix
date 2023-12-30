@@ -1,5 +1,6 @@
 module Juvix.Data.IsImplicit where
 
+import Juvix.Extra.Serialize
 import Juvix.Prelude.Base
 import Juvix.Prelude.Pretty
 
@@ -16,6 +17,8 @@ isImplicitOrInstance = \case
   ImplicitInstance -> True
 
 instance Hashable IsImplicit
+
+instance Serialize IsImplicit
 
 instance Pretty IsImplicit where
   pretty = \case

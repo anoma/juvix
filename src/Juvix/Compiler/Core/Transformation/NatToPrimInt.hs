@@ -7,13 +7,15 @@ import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.NameInfo
 import Juvix.Compiler.Core.Transformation.Base
 
-convertNode :: InfoTable -> Node -> Node
-convertNode tab = rmap go
+convertNode :: Module -> Node -> Node
+convertNode md = rmap go
   where
+    intToNat = getInfoLiteralIntToNat md
+
     go :: ([BinderChange] -> Node -> Node) -> Node -> Node
     go recur node = case node of
       NApp (App _ (NIdt (Ident {..})) l)
-        | Just _identSymbol == tab ^. infoLiteralIntToNat ->
+        | Just _identSymbol == intToNat ->
             go recur l
       NApp (App _ (NApp (App _ (NIdt (Ident {..})) l)) r) ->
         recur [] $ convertIdentApp node (\g -> g _identInfo l r) _identSymbol
@@ -28,7 +30,7 @@ convertNode tab = rmap go
             )
             _identSymbol
       NIdt (Ident {..})
-        | Just _identSymbol == tab ^. infoLiteralIntToNat ->
+        | Just _identSymbol == intToNat ->
             mkLambda' mkTypeInteger' (mkVar' 0)
       NIdt (Ident {..}) ->
         recur [] $
@@ -41,7 +43,7 @@ convertNode tab = rmap go
             )
             _identSymbol
       NCtr (Constr {..}) ->
-        let ci = lookupConstructorInfo tab _constrTag
+        let ci = lookupConstructorInfo md _constrTag
          in case ci ^. constructorBuiltin of
               Just BuiltinNatZero ->
                 mkConstant _constrInfo (ConstInteger 0)
@@ -49,7 +51,7 @@ convertNode tab = rmap go
                 recur [] $ mkBuiltinApp _constrInfo OpIntAdd (_constrArgs ++ [mkConstant' (ConstInteger 1)])
               _ -> recur [] node
       NCase (Case {..}) ->
-        let ii = lookupInductiveInfo tab _caseInductive
+        let ii = lookupInductiveInfo md _caseInductive
          in case ii ^. inductiveBuiltin of
               Just (BuiltinTypeInductive BuiltinNat) ->
                 case _caseBranches of
@@ -68,7 +70,7 @@ convertNode tab = rmap go
         where
           makeIf :: CaseBranch -> Node -> Node
           makeIf CaseBranch {..} br =
-            let ci = lookupConstructorInfo tab (BuiltinTag TagTrue)
+            let ci = lookupConstructorInfo md (BuiltinTag TagTrue)
                 sym = ci ^. constructorInductive
              in case _caseBranchBindersNum of
                   0 ->
@@ -94,12 +96,12 @@ convertNode tab = rmap go
           Just (BuiltinTypeInductive BuiltinNat) -> mkTypeInteger'
           _ -> recur [] node
         where
-          ii = fromJust $ tab ^. infoInductives . at _typeConstrSymbol
+          ii = lookupInductiveInfo md _typeConstrSymbol
       _ -> recur [] node
 
     convertIdentApp :: Node -> ((Info -> Node -> Node -> Node) -> Node) -> Symbol -> Node
     convertIdentApp node f sym =
-      let ii = lookupIdentifierInfo tab sym
+      let ii = lookupIdentifierInfo md sym
        in case ii ^. identifierBuiltin of
             Just BuiltinNatPlus -> f (\info x y -> mkBuiltinApp info OpIntAdd [x, y])
             Just BuiltinNatSub ->
@@ -114,7 +116,7 @@ convertNode tab = rmap go
                 )
               where
                 boolSymbol =
-                  lookupConstructorInfo tab (BuiltinTag TagTrue) ^. constructorInductive
+                  lookupConstructorInfo md (BuiltinTag TagTrue) ^. constructorInductive
             Just BuiltinNatMul -> f (\info x y -> mkBuiltinApp info OpIntMul [x, y])
             Just BuiltinNatUDiv ->
               f
@@ -128,26 +130,12 @@ convertNode tab = rmap go
             Just BuiltinNatEq -> f (\info x y -> mkBuiltinApp info OpEq [x, y])
             _ -> node
 
-filterNatBuiltins :: InfoTable -> InfoTable
-filterNatBuiltins tab =
-  let tab' =
-        over
-          infoIdentifiers
-          (HashMap.filter (isNotNatBuiltin . (^. identifierBuiltin)))
-          tab
-   in pruneInfoTable tab'
+natToPrimInt :: Module -> Module
+natToPrimInt md = mapAllNodes (convertNode md') md'
   where
-    isNotNatBuiltin :: Maybe BuiltinFunction -> Bool
-    isNotNatBuiltin = \case
-      Just b -> not (isNatBuiltin b)
-      Nothing -> True
-
-natToPrimInt :: InfoTable -> InfoTable
-natToPrimInt tab = filterNatBuiltins $ mapAllNodes (convertNode tab') tab'
-  where
-    tab' =
-      case tab ^. infoLiteralIntToNat of
+    md' =
+      case md ^. moduleInfoTable . infoLiteralIntToNat of
         Just sym ->
-          tab {_identContext = HashMap.insert sym (mkLambda' mkTypeInteger' (mkVar' 0)) (tab ^. identContext)}
+          over (moduleInfoTable . identContext) (HashMap.insert sym (mkLambda' mkTypeInteger' (mkVar' 0))) md
         Nothing ->
-          tab
+          md

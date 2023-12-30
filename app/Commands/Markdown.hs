@@ -18,7 +18,7 @@ runCommand ::
 runCommand opts = do
   let inputFile = opts ^. markdownInputFile
   scopedM <- runPipeline inputFile upToScoping
-  let m = head (scopedM ^. Scoper.resultModules)
+  let m = scopedM ^. Scoper.resultModule
   outputDir <- fromAppPathDir (opts ^. markdownOutputDir)
   let res =
         MK.fromJuvixMarkdown'
@@ -29,7 +29,7 @@ runCommand opts = do
                 opts ^. markdownIdPrefix,
               _processJuvixBlocksArgsNoPath =
                 opts ^. markdownNoPath,
-              _processJuvixBlocksArgsComments = scopedM ^. Scoper.comments,
+              _processJuvixBlocksArgsComments = Scoper.getScoperResultComments scopedM,
               _processJuvixBlocksArgsModule = m,
               _processJuvixBlocksArgsOutputDir = outputDir
             }

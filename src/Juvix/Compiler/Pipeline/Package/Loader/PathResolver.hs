@@ -2,11 +2,11 @@ module Juvix.Compiler.Pipeline.Package.Loader.PathResolver where
 
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Concrete hiding (Symbol)
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Base
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Data
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Error
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Paths
 import Juvix.Compiler.Core.Language
+import Juvix.Compiler.Pipeline.Loader.PathResolver.Base
+import Juvix.Compiler.Pipeline.Loader.PathResolver.Data
+import Juvix.Compiler.Pipeline.Loader.PathResolver.Error
+import Juvix.Compiler.Pipeline.Loader.PathResolver.Paths
 import Juvix.Data.Effect.TaggedLock
 import Juvix.Extra.PackageFiles
 import Juvix.Extra.Paths

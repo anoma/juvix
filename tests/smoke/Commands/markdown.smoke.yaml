@@ -56,7 +56,7 @@ tests:
         cat markdown/Test.md
     stdout:
       matches: |
-        .*href="Test.html#XYZ[0-9]+".*
+        .*href="Test.html#XYZTest:[0-9]+".*
     exit-status: 0
 
   - name: markdown-no-path
@@ -72,7 +72,7 @@ tests:
         juvix markdown Test.juvix.md --no-path --stdout
     stdout:
       matches: |
-        .*href="#[0-9]+".*
+        .*href="#Test:[0-9]+".*
     exit-status: 0
 
   - name: markdown-options-for-mkdocs
@@ -88,5 +88,5 @@ tests:
         juvix markdown Test.juvix.md --no-path --prefix-url Y --prefix-id X --stdout
     stdout:
       matches: |
-        .*href="Y#X[0-9]+".*
+        .*href="Y#XTest:[0-9]+".*
     exit-status: 0

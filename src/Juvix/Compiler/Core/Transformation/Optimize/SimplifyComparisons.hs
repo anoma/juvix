@@ -3,10 +3,10 @@ module Juvix.Compiler.Core.Transformation.Optimize.SimplifyComparisons (simplify
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Transformation.Base
 
-convertNode :: InfoTable -> Node -> Node
-convertNode tab = dmap go
+convertNode :: Module -> Node -> Node
+convertNode md = dmap go
   where
-    boolSym = lookupConstructorInfo tab (BuiltinTag TagTrue) ^. constructorInductive
+    boolSym = lookupConstructorInfo md (BuiltinTag TagTrue) ^. constructorInductive
 
     go :: Node -> Node
     go node = case node of
@@ -91,5 +91,5 @@ convertNode tab = dmap go
       where
         theIfs = mkIf' boolSym v b1 (mkIf' boolSym v' b1' b2')
 
-simplifyComparisons :: InfoTable -> InfoTable
-simplifyComparisons tab = mapAllNodes (convertNode tab) tab
+simplifyComparisons :: Module -> Module
+simplifyComparisons md = mapAllNodes (convertNode md) md

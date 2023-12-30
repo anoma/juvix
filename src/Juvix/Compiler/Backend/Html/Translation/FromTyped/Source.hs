@@ -1,5 +1,6 @@
 module Juvix.Compiler.Backend.Html.Translation.FromTyped.Source where
 
+import Data.HashMap.Strict qualified as HashMap
 import Data.Text qualified as Text
 import Data.Text.IO qualified as Text
 import Data.Text.Lazy (toStrict)
@@ -8,11 +9,10 @@ import Data.Time.Format
 import Juvix.Compiler.Backend.Html.Data.Options
 import Juvix.Compiler.Backend.Html.Extra
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
-import Juvix.Compiler.Concrete.Extra
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Print
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Internal.Pretty qualified as Internal
+import Juvix.Compiler.Pipeline.Loader.PathResolver
 import Juvix.Extra.Assets (writeAssets)
 import Juvix.Prelude
 import Prettyprinter
@@ -108,8 +108,9 @@ genSourceHtml o@GenSourceHtmlArgs {..} = do
       | _genSourceHtmlArgsNonRecursive = pure entry
       | otherwise = toList topModules
 
+    -- TODO: top modules
     topModules :: HashMap NameId (Module 'Scoped 'ModuleTop)
-    topModules = getAllModules entry
+    topModules = HashMap.fromList [(entry ^. modulePath . S.nameId, entry)]
 
     outputModule :: Module 'Scoped 'ModuleTop -> IO ()
     outputModule m = do
@@ -345,9 +346,9 @@ putTag ann x = case ann of
         ! juColor (juKindColor k)
 
 nameIdAttr :: (Members '[Reader HtmlOptions] r) => S.NameId -> Sem r AttributeValue
-nameIdAttr (S.NameId k) = do
+nameIdAttr nid = do
   pfx <- unpack <$> asks (^. htmlOptionsIdPrefix)
-  return $ fromString $ pfx <> show k
+  return $ fromString $ pfx <> show (pretty nid)
 
 moduleDocRelativePath :: (Members '[Reader HtmlOptions] r) => TopModulePath -> Sem r (Path Rel File)
 moduleDocRelativePath m = do

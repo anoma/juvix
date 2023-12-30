@@ -6,10 +6,10 @@ import Juvix.Compiler.Core.Transformation.Base
 import Juvix.Compiler.Core.Transformation.Check.Base
 import Juvix.Data.PPOutput
 
-checkExec :: forall r. (Member (Error CoreError) r) => InfoTable -> Sem r InfoTable
-checkExec tab = do
-  checkNoAxioms tab
-  case tab ^. infoMain of
+checkExec :: forall r. (Member (Error CoreError) r) => Module -> Sem r Module
+checkExec md = do
+  checkNoAxioms md
+  case md ^. moduleInfoTable . infoMain of
     Nothing ->
       throw
         CoreError
@@ -27,7 +27,7 @@ checkExec tab = do
                 _coreErrorLoc = loc
               }
         ty
-          | isTypeConstr tab ty ->
+          | isTypeConstr md ty ->
               throw
                 CoreError
                   { _coreErrorMsg = ppOutput "`main` cannot be a type for this target",
@@ -35,7 +35,7 @@ checkExec tab = do
                     _coreErrorLoc = loc
                   }
         _ ->
-          return tab
+          return md
       where
-        ii = lookupIdentifierInfo tab sym
+        ii = lookupIdentifierInfo md sym
         loc = fromMaybe defaultLoc (ii ^. identifierLocation)

@@ -11,15 +11,14 @@ runCommand :: (Members '[Embed IO, TaggedLock, App] r) => ScopeOptions -> Sem r 
 runCommand opts = do
   globalOpts <- askGlobalOptions
   res :: Scoper.ScoperResult <- runPipeline (opts ^. scopeInputFile) upToScoping
-  let modules :: NonEmpty (Module 'Scoped 'ModuleTop) = res ^. Scoper.resultModules
-  forM_ modules $ \s ->
-    if
-        | opts ^. scopeWithComments ->
-            renderStdOut (Print.ppOut (globalOpts, opts) (res ^. Scoper.comments) s)
-        | otherwise ->
-            renderStdOut (Print.ppOutNoComments (globalOpts, opts) s)
+  let m :: Module 'Scoped 'ModuleTop = res ^. Scoper.resultModule
+  if
+      | opts ^. scopeWithComments ->
+          renderStdOut (Print.ppOut (globalOpts, opts) (Scoper.getScoperResultComments res) m)
+      | otherwise ->
+          renderStdOut (Print.ppOutNoComments (globalOpts, opts) m)
   when (opts ^. scopeListComments) $ do
     newline
     newline
     say "Comments:"
-    say (prettyText (res ^. Scoper.comments))
+    say (prettyText (Scoper.getScoperResultComments res))

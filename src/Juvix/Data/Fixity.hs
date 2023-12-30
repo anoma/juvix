@@ -1,6 +1,7 @@
 module Juvix.Data.Fixity where
 
 import Juvix.Data.NameId
+import Juvix.Extra.Serialize
 import Juvix.Prelude.Base
 
 -- | Note that the order of the constructors is important due to the `Ord`
@@ -10,31 +11,41 @@ data Precedence
   | PrecNat Int
   | PrecApp
   | PrecUpdate
-  deriving stock (Show, Eq, Data, Ord)
+  deriving stock (Show, Eq, Data, Ord, Generic)
 
 data UnaryAssoc = AssocPostfix
-  deriving stock (Show, Eq, Ord, Data)
+  deriving stock (Show, Eq, Ord, Data, Generic)
 
 data BinaryAssoc
   = AssocNone
   | AssocLeft
   | AssocRight
-  deriving stock (Show, Eq, Ord, Data)
+  deriving stock (Show, Eq, Ord, Data, Generic)
 
 data OperatorArity
   = OpUnary UnaryAssoc
   | OpBinary BinaryAssoc
   | OpNone
-  deriving stock (Show, Eq, Ord, Data)
+  deriving stock (Show, Eq, Ord, Data, Generic)
 
 data Fixity = Fixity
   { _fixityPrecedence :: Precedence,
     _fixityArity :: OperatorArity,
     _fixityId :: Maybe NameId
   }
-  deriving stock (Show, Eq, Ord, Data)
+  deriving stock (Show, Eq, Ord, Data, Generic)
 
 makeLenses ''Fixity
+
+instance Serialize Precedence
+
+instance Serialize UnaryAssoc
+
+instance Serialize BinaryAssoc
+
+instance Serialize OperatorArity
+
+instance Serialize Fixity
 
 data Atomicity
   = Atom

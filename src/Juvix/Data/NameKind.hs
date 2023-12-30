@@ -1,5 +1,6 @@
 module Juvix.Data.NameKind where
 
+import Juvix.Extra.Serialize
 import Juvix.Prelude
 import Juvix.Prelude.Pretty
 import Prettyprinter.Render.Terminal
@@ -23,9 +24,11 @@ data NameKind
     KNameFixity
   | -- | An alias name. Only used in the declaration site.
     KNameAlias
-  deriving stock (Show, Eq, Data)
+  deriving stock (Show, Eq, Data, Generic)
 
 $(genSingletons [''NameKind])
+
+instance Serialize NameKind
 
 class HasNameKind a where
   getNameKind :: a -> NameKind

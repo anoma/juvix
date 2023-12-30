@@ -21,7 +21,7 @@ coreVampIRAssertion transforms mainFile expectedFile step = do
     Left err -> assertFailure (show (pretty err))
     Right (_, Nothing) -> assertFailure "Empty program"
     Right (tabIni, Just node) -> do
-      coreVampIRAssertion' (setupMainFunction tabIni node) transforms mainFile expectedFile step
+      coreVampIRAssertion' (setupMainFunction defaultModuleId tabIni node) transforms mainFile expectedFile step
 
 coreVampIRAssertion' ::
   InfoTable ->
@@ -33,9 +33,10 @@ coreVampIRAssertion' ::
 coreVampIRAssertion' tab transforms mainFile expectedFile step = do
   step "Transform and normalize"
   case run . runReader defaultCoreOptions . runError @JuvixError $
-    applyTransformations transforms tab of
+    applyTransformations transforms (moduleFromInfoTable tab) of
     Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
-    Right tab' -> do
+    Right m -> do
+      let tab' = computeCombinedInfoTable m
       step "Check let-hoisted"
       walkT checkHoisted tab'
       coreEvalAssertion' EvalModeJSON tab' mainFile expectedFile step

@@ -13,6 +13,7 @@ import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty.Options (Options, fromGenericOptions)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Pretty
+import Juvix.Compiler.Store.Scoped.Language (FixitySymbolEntry, ModuleSymbolEntry, PreSymbolEntry, ScopedModule)
 import Juvix.Data.CodeAnn
 import Juvix.Prelude
 
@@ -97,7 +98,7 @@ instance ToGenericError InfixErrorP where
 
 newtype ImportCycle = ImportCycle
   { -- | If we have [a, b, c] it means that a import b imports c imports a.
-    _importCycleImports :: NonEmpty (Import 'Parsed)
+    _importCycleImports :: NonEmpty TopModulePath
   }
   deriving stock (Show)
 
@@ -120,7 +121,7 @@ instance ToGenericError ImportCycle where
               <> line
               <> indent' (vsep (intersperse "⇓" (map pp (toList (tie _importCycleImports)))))
 
-          pp :: Import 'Parsed -> Doc Ann
+          pp :: TopModulePath -> Doc Ann
           pp t = ppCode opts' t <+> parens ("at" <+> pretty (getLoc t))
 
           tie :: NonEmpty a -> NonEmpty a
@@ -611,9 +612,8 @@ instance ToGenericError ConstructorExpectedLeftApplication where
 
 data ModuleDoesNotExportSymbol = ModuleDoesNotExportSymbol
   { _moduleDoesNotExportSymbol :: Symbol,
-    _moduleDoesNotExportModule :: ModuleRef
+    _moduleDoesNotExportModule :: ScopedModule
   }
-  deriving stock (Show)
 
 instance ToGenericError ModuleDoesNotExportSymbol where
   genericError :: (Member (Reader GenericOptions) r) => ModuleDoesNotExportSymbol -> Sem r GenericError

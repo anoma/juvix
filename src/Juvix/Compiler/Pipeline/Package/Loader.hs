@@ -67,6 +67,12 @@ toConcrete t p = run . runReader l $ do
     return (stdlib <> body)
   _moduleKw <- kw kwModule
   let _modulePath = mkTopModulePath (packageSymbol :| [])
+      _moduleId =
+        ModuleId
+          { _moduleIdPath = show $ pretty (p ^. packageFile),
+            _moduleIdPackage = p ^. packageName,
+            _moduleIdPackageVersion = show (p ^. packageVersion)
+          }
   return
     Module
       { _moduleKwEnd = (),
@@ -104,7 +110,7 @@ toConcrete t p = run . runReader l $ do
       | otherwise = return Nothing
 
     mkImport :: (Member (Reader Interval) r) => TopModulePath -> Sem r (Statement 'Parsed)
-    mkImport _importModule = do
+    mkImport _importModulePath = do
       _openModuleKw <- kw kwOpen
       _importKw <- kw kwImport
       return

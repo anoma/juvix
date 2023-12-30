@@ -4,8 +4,6 @@ import Base
 import Juvix.Compiler.Backend.Markdown.Translation.FromTyped.Source
 import Juvix.Compiler.Concrete qualified as Concrete
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
-import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
-import Juvix.Compiler.Pipeline.Setup
 
 data PosTest = PosTest
   { _name :: String,
@@ -36,18 +34,9 @@ testDescr PosTest {..} =
       _testRoot = _dir,
       _testAssertion = Steps $ \step -> do
         entryPoint <- testDefaultEntryPointIO _dir _file
-        step "Parsing"
-        p :: Parser.ParserResult <- snd <$> testRunIO entryPoint upToParsing
-        step "Scoping"
-        s :: Scoper.ScoperResult <-
-          snd
-            <$> testRunIO
-              entryPoint
-              ( do
-                  void (entrySetup defaultDependenciesConfig)
-                  Concrete.fromParsed p
-              )
-        let m = head (s ^. Scoper.resultModules)
+        step "Parsing & Scoping"
+        PipelineResult {..} <- snd <$> testRunIO entryPoint upToScoping
+        let m = _pipelineResult ^. Scoper.resultModule
         let opts =
               ProcessJuvixBlocksArgs
                 { _processJuvixBlocksArgsConcreteOpts = Concrete.defaultOptions,
@@ -55,7 +44,7 @@ testDescr PosTest {..} =
                   _processJuvixBlocksArgsIdPrefix = _IdPrefix,
                   _processJuvixBlocksArgsNoPath = _NoPath,
                   _processJuvixBlocksArgsComments =
-                    s ^. Scoper.comments,
+                    Scoper.getScoperResultComments _pipelineResult,
                   _processJuvixBlocksArgsModule = m,
                   _processJuvixBlocksArgsOutputDir =
                     root <//> $(mkRelDir "markdown")

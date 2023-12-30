@@ -20,13 +20,13 @@ makeLenses ''ApplyBuiltins
 addApplyBuiltins :: InfoTable -> (ApplyBuiltins, InfoTable)
 addApplyBuiltins tab = (blts, bs' ^. stateInfoTable)
   where
-    nextSymbol = maximum (0 : HashMap.keys (tab ^. infoFunctions) ++ HashMap.keys (tab ^. infoInductives)) + 1
-    nextUserId = maximum (0 : mapMaybe getUserTag (HashMap.keys (tab ^. infoConstrs))) + 1
+    nextSymbolId = maximum (0 : map (^. symbolId) (HashMap.keys (tab ^. infoFunctions) ++ HashMap.keys (tab ^. infoInductives))) + 1
+    nextUserId = maximum (0 : mapMaybe getUserTagId (HashMap.keys (tab ^. infoConstrs))) + 1
 
     bs :: BuilderState
     bs =
       BuilderState
-        { _stateNextSymbol = nextSymbol,
+        { _stateNextSymbolId = nextSymbolId,
           _stateNextUserTag = nextUserId,
           _stateInfoTable = tab,
           _stateIdents = mempty
@@ -53,8 +53,3 @@ addApplyBuiltins tab = (blts, bs' ^. stateInfoTable)
         f = case fromJust $ HashMap.lookup idt (bs' ^. stateIdents) of
           IdentFun s -> s
           _ -> impossible
-
-    getUserTag :: Tag -> Maybe Word
-    getUserTag = \case
-      BuiltinTag {} -> Nothing
-      UserTag x -> Just x

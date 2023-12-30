@@ -15,7 +15,7 @@ data SymbolPruningMode
   | KeepAll
   deriving stock (Eq, Show)
 
--- | The head of _entryModulePaths is assumed to be the Main module
+-- | A module in _entryModulePath is the unit of compilation
 data EntryPoint = EntryPoint
   { _entryPointRoot :: Path Abs Dir,
     -- | initial root for the path resolver. Usually it should be equal to
@@ -36,7 +36,7 @@ data EntryPoint = EntryPoint
     _entryPointOptimizationLevel :: Int,
     _entryPointInliningDepth :: Int,
     _entryPointGenericOptions :: GenericOptions,
-    _entryPointModulePaths :: [Path Abs File],
+    _entryPointModulePath :: Maybe (Path Abs File),
     _entryPointSymbolPruningMode :: SymbolPruningMode,
     _entryPointOffline :: Bool
   }
@@ -47,7 +47,7 @@ makeLenses ''EntryPoint
 defaultEntryPoint :: Package -> Root -> Path Abs File -> EntryPoint
 defaultEntryPoint pkg root mainFile =
   (defaultEntryPointNoFile pkg root)
-    { _entryPointModulePaths = pure mainFile
+    { _entryPointModulePath = pure mainFile
     }
 
 defaultEntryPointNoFile :: Package -> Root -> EntryPoint
@@ -70,7 +70,7 @@ defaultEntryPointNoFile pkg root =
       _entryPointUnrollLimit = defaultUnrollLimit,
       _entryPointOptimizationLevel = defaultOptimizationLevel,
       _entryPointInliningDepth = defaultInliningDepth,
-      _entryPointModulePaths = [],
+      _entryPointModulePath = Nothing,
       _entryPointSymbolPruningMode = FilterUnreachable,
       _entryPointOffline = False
     }
@@ -83,6 +83,3 @@ defaultOptimizationLevel = 1
 
 defaultInliningDepth :: Int
 defaultInliningDepth = 3
-
-mainModulePath :: Traversal' EntryPoint (Path Abs File)
-mainModulePath = entryPointModulePaths . _head

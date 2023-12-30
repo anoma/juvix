@@ -52,7 +52,9 @@ runCommand opts = do
     res <- case target of
       TargetFile p -> format p
       TargetProject p -> formatProject p
-      TargetStdin -> formatStdin
+      TargetStdin -> do
+        entry <- getEntryPointStdin
+        runReader entry formatStdin
 
     let exitFail :: IO a
         exitFail = exitWith (ExitFailure 1)
@@ -105,4 +107,4 @@ runScopeFileApp = interpret $ \case
               _pathIsInput = False
             }
     runPipeline appFile upToScoping
-  ScopeStdin -> runPipelineNoFile upToScoping
+  ScopeStdin e -> runPipelineEntry e upToScoping

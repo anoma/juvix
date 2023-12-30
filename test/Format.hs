@@ -1,10 +1,6 @@
 module Format where
 
 import Base
-import Juvix.Compiler.Concrete qualified as Concrete
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
-import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
-import Juvix.Compiler.Pipeline.Setup
 import Juvix.Formatter
 
 data PosTest = PosTest
@@ -34,25 +30,15 @@ testDescr PosTest {..} =
       _testRoot = _dir,
       _testAssertion = Steps $ \step -> do
         entryPoint <- testDefaultEntryPointIO _dir _file
-        let maybeFile = entryPoint ^? entryPointModulePaths . _head
+        let maybeFile = entryPoint ^. entryPointModulePath
         f <- fromMaybeM (assertFailure "Not a module") (return maybeFile)
 
         original :: Text <- readFile (toFilePath f)
 
-        step "Parsing"
-        p :: Parser.ParserResult <- snd <$> testRunIO entryPoint upToParsing
+        step "Parsing & scoping"
+        PipelineResult {..} <- snd <$> testRunIO entryPoint upToScoping
 
-        step "Scoping"
-        s :: Scoper.ScoperResult <-
-          snd
-            <$> testRunIO
-              entryPoint
-              ( do
-                  void (entrySetup defaultDependenciesConfig)
-                  Concrete.fromParsed p
-              )
-
-        let formatted = formatScoperResult' _force original s
+        let formatted = formatScoperResult' _force original _pipelineResult
         case _expectedFile of
           Nothing -> do
             step "Format"

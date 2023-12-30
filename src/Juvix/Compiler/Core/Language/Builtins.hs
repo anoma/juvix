@@ -1,5 +1,6 @@
 module Juvix.Compiler.Core.Language.Builtins where
 
+import Juvix.Extra.Serialize
 import Juvix.Prelude
 
 -- Builtin operations which the evaluator and the code generator treat
@@ -19,7 +20,9 @@ data BuiltinOp
   | OpSeq
   | OpTrace
   | OpFail
-  deriving stock (Eq)
+  deriving stock (Eq, Generic)
+
+instance Serialize BuiltinOp
 
 -- Builtin data tags
 data BuiltinDataTag
@@ -32,6 +35,8 @@ data BuiltinDataTag
   deriving stock (Eq, Generic, Ord, Show)
 
 instance Hashable BuiltinDataTag
+
+instance Serialize BuiltinDataTag
 
 builtinOpArgsNum :: BuiltinOp -> Int
 builtinOpArgsNum = \case

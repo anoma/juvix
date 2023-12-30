@@ -9,6 +9,7 @@ import Prettyprinter
 newtype Comments = Comments
   { _commentsByFile :: HashMap (Path Abs File) FileComments
   }
+  deriving newtype (Semigroup, Monoid)
   deriving stock (Eq, Show, Generic, Data)
 
 data FileComments = FileComments

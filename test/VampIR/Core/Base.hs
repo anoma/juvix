@@ -13,7 +13,7 @@ vampirAssertion :: VampirBackend -> Path Abs File -> Path Abs File -> (String ->
 vampirAssertion backend mainFile dataFile step = do
   step "Parse"
   s <- readFile (toFilePath mainFile)
-  case runParserMain mainFile emptyInfoTable s of
+  case runParserMain mainFile defaultModuleId mempty s of
     Left err -> assertFailure (show err)
     Right tab -> vampirAssertion' backend tab dataFile step
 
@@ -23,7 +23,7 @@ vampirAssertion' backend tab dataFile step = do
     ( \dirPath -> do
         step "Translate to VampIR"
         let vampirFile = dirPath <//> $(mkRelFile "program.pir")
-        case run (runReader defaultCoreOptions (runError @JuvixError (coreToVampIR' tab))) of
+        case run (runReader defaultCoreOptions (runError @JuvixError (coreToVampIR' (moduleFromInfoTable tab)))) of
           Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
           Right VampIR.Result {..} -> do
             TIO.writeFile (toFilePath vampirFile) _resultCode

@@ -8,7 +8,7 @@ import CommonOptions
 import Juvix.Compiler.Core.Options qualified as Core
 import Juvix.Compiler.Internal.Pretty.Options qualified as Internal
 import Juvix.Compiler.Pipeline
-import Juvix.Compiler.Pipeline.Package (readPackageRootIO)
+import Juvix.Compiler.Pipeline.Root
 import Juvix.Data.Effect.TaggedLock
 import Juvix.Data.Error.GenericError qualified as E
 

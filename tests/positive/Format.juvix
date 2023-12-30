@@ -4,8 +4,8 @@ Format;
 
 ------------ many --- in comment
 
-import -- Import a module of name:
-Stdlib.Prelude open -- Bring all names into scope but..
+import Stdlib.Prelude -- Import a module of name:
+open -- Bring all names into scope but..
 hiding -- Hide some names
 {-- like this
 ,; -- don't want , here

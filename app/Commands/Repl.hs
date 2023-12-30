@@ -14,14 +14,12 @@ import Control.Monad.State.Strict qualified as State
 import Control.Monad.Trans.Class (lift)
 import Data.String.Interpolate (i, __i)
 import Evaluator
-import Juvix.Compiler.Concrete.Data.InfoTable qualified as Scoped
 import Juvix.Compiler.Concrete.Data.Scope (scopePath)
+import Juvix.Compiler.Concrete.Data.Scope qualified as Scoped
 import Juvix.Compiler.Concrete.Data.ScopedName (absTopModulePath)
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as Scoped
 import Juvix.Compiler.Concrete.Language qualified as Concrete
 import Juvix.Compiler.Concrete.Pretty qualified as Concrete
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver (runPathResolver)
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Error
 import Juvix.Compiler.Core qualified as Core
 import Juvix.Compiler.Core.Extra.Value
 import Juvix.Compiler.Core.Info qualified as Info
@@ -31,14 +29,10 @@ import Juvix.Compiler.Core.Transformation qualified as Core
 import Juvix.Compiler.Core.Transformation.DisambiguateNames (disambiguateNames)
 import Juvix.Compiler.Internal.Language qualified as Internal
 import Juvix.Compiler.Internal.Pretty qualified as Internal
-import Juvix.Compiler.Pipeline.Package.Loader.Error
-import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
 import Juvix.Compiler.Pipeline.Repl
 import Juvix.Compiler.Pipeline.Run
-import Juvix.Compiler.Pipeline.Setup (entrySetup)
+import Juvix.Compiler.Store.Extra
 import Juvix.Data.CodeAnn (Ann)
-import Juvix.Data.Effect.Git
-import Juvix.Data.Effect.Process
 import Juvix.Data.Error.GenericError qualified as Error
 import Juvix.Data.NameKind
 import Juvix.Extra.Paths qualified as P
@@ -118,14 +112,14 @@ quit _ = liftIO (throwIO Interrupt)
 
 loadEntryPoint :: EntryPoint -> Repl ()
 loadEntryPoint ep = do
-  artif <- liftIO (corePipelineIO' ep)
+  artif <- liftIO (runReplPipelineIO ep)
   let newCtx =
         ReplContext
           { _replContextArtifacts = artif,
             _replContextEntryPoint = ep
           }
   State.modify (set replStateContext (Just newCtx))
-  let epPath :: Maybe (Path Abs File) = ep ^? entryPointModulePaths . _head
+  let epPath :: Maybe (Path Abs File) = ep ^. entryPointModulePath
   whenJust epPath $ \path -> liftIO (putStrLn [i|OK loaded: #{toFilePath path}|])
 
 reloadFile :: String -> Repl ()
@@ -140,29 +134,10 @@ loadFile f = do
   loadEntryPoint entryPoint
 
 loadDefaultPrelude :: Repl ()
-loadDefaultPrelude = whenJustM defaultPreludeEntryPoint $ \e -> do
-  root <- Reader.asks (^. replRoot . rootRootDir)
-  let hasInternet = not (e ^. entryPointOffline)
-  -- The following is needed to ensure that the default location of the
-  -- standard library exists
-  void
-    . liftIO
-    . runM
-    . evalInternet hasInternet
-    . runFilesIO
-    . runError @JuvixError
-    . runReader e
-    . runTaggedLockPermissive
-    . runLogIO
-    . runProcessIO
-    . runError @GitProcessError
-    . runGitProcess
-    . runError @DependencyError
-    . runError @PackageLoaderError
-    . runEvalFileEffIO
-    . runPathResolver root
-    $ entrySetup defaultDependenciesConfig
-  loadEntryPoint e
+loadDefaultPrelude =
+  whenJustM
+    defaultPreludeEntryPoint
+    loadEntryPoint
 
 getReplEntryPoint :: (Root -> a -> GlobalOptions -> IO EntryPoint) -> a -> Repl EntryPoint
 getReplEntryPoint f inputFile = do
@@ -182,7 +157,7 @@ displayVersion _ = liftIO (putStrLn versionTag)
 replCommand :: ReplOptions -> String -> Repl ()
 replCommand opts input = catchAll $ do
   ctx <- replGetContext
-  let tab = ctx ^. replContextArtifacts . artifactCoreTable
+  let tab = Core.computeCombinedInfoTable $ ctx ^. replContextArtifacts . artifactCoreModule
   evalRes <- compileThenEval ctx input
   whenJust evalRes $ \n ->
     if
@@ -215,7 +190,7 @@ replCommand opts input = catchAll $ do
         doEvalIO' :: Artifacts -> Core.Node -> IO (Either JuvixError Core.Node)
         doEvalIO' artif' n =
           mapLeft (JuvixError @Core.CoreError)
-            <$> doEvalIO False replDefaultLoc (artif' ^. artifactCoreTable) n
+            <$> doEvalIO False replDefaultLoc (Core.computeCombinedInfoTable $ artif' ^. artifactCoreModule) n
 
         compileString :: Repl (Maybe Core.Node)
         compileString = do
@@ -281,6 +256,12 @@ replParseIdentifiers input =
             err :: Repl a
             err = replError (mkAnsiText @Text ":def expects one or more identifiers")
 
+getScopedInfoTable :: Repl Scoped.InfoTable
+getScopedInfoTable = do
+  artifs <- (^. replContextArtifacts) <$> replGetContext
+  let tab0 = artifs ^. artifactScopeTable
+  return $ tab0 <> computeCombinedScopedInfoTable (artifs ^. artifactModuleTable)
+
 printDocumentation :: String -> Repl ()
 printDocumentation = replParseIdentifiers >=> printIdentifiers
   where
@@ -289,9 +270,6 @@ printDocumentation = replParseIdentifiers >=> printIdentifiers
       printIdentifier d
       whenJust (nonEmpty ds) $ \ds' -> replNewline >> printIdentifiers ds'
       where
-        getInfoTable :: Repl Scoped.InfoTable
-        getInfoTable = (^. replContextArtifacts . artifactScopeTable) <$> replGetContext
-
         printIdentifier :: Concrete.ScopedIden -> Repl ()
         printIdentifier s = do
           let n = s ^. Concrete.scopedIdenFinal . Scoped.nameId
@@ -317,27 +295,27 @@ printDocumentation = replParseIdentifiers >=> printIdentifiers
 
             getDocFunction :: Scoped.NameId -> Repl (Maybe (Concrete.Judoc 'Concrete.Scoped))
             getDocFunction fun = do
-              tbl :: Scoped.InfoTable <- getInfoTable
-              let def :: Scoped.FunctionInfo = tbl ^?! Scoped.infoFunctions . at fun . _Just
-              return (def ^. Scoped.functionInfoDoc)
+              tbl :: Scoped.InfoTable <- getScopedInfoTable
+              let def = tbl ^?! Scoped.infoFunctions . at fun . _Just
+              return (def ^. Concrete.signDoc)
 
             getDocInductive :: Scoped.NameId -> Repl (Maybe (Concrete.Judoc 'Concrete.Scoped))
             getDocInductive ind = do
-              tbl :: Scoped.InfoTable <- (^. replContextArtifacts . artifactScopeTable) <$> replGetContext
-              let def :: Concrete.InductiveDef 'Concrete.Scoped = tbl ^?! Scoped.infoInductives . at ind . _Just . Scoped.inductiveInfoDef
+              tbl :: Scoped.InfoTable <- getScopedInfoTable
+              let def :: Concrete.InductiveDef 'Concrete.Scoped = tbl ^?! Scoped.infoInductives . at ind . _Just
               return (def ^. Concrete.inductiveDoc)
 
             getDocAxiom :: Scoped.NameId -> Repl (Maybe (Concrete.Judoc 'Concrete.Scoped))
             getDocAxiom ax = do
-              tbl :: Scoped.InfoTable <- (^. replContextArtifacts . artifactScopeTable) <$> replGetContext
-              let def :: Concrete.AxiomDef 'Concrete.Scoped = tbl ^?! Scoped.infoAxioms . at ax . _Just . Scoped.axiomInfoDef
+              tbl :: Scoped.InfoTable <- getScopedInfoTable
+              let def :: Concrete.AxiomDef 'Concrete.Scoped = tbl ^?! Scoped.infoAxioms . at ax . _Just
               return (def ^. Concrete.axiomDoc)
 
             getDocConstructor :: Scoped.NameId -> Repl (Maybe (Concrete.Judoc 'Concrete.Scoped))
             getDocConstructor c = do
-              tbl :: Scoped.InfoTable <- (^. replContextArtifacts . artifactScopeTable) <$> replGetContext
-              let def :: Scoped.ConstructorInfo = tbl ^?! Scoped.infoConstructors . at c . _Just
-              return (def ^. Scoped.constructorInfoDef . Concrete.constructorDoc)
+              tbl :: Scoped.InfoTable <- getScopedInfoTable
+              let def = tbl ^?! Scoped.infoConstructors . at c . _Just
+              return (def ^. Concrete.constructorDoc)
 
 printDefinition :: String -> Repl ()
 printDefinition = replParseIdentifiers >=> printIdentifiers
@@ -347,9 +325,6 @@ printDefinition = replParseIdentifiers >=> printIdentifiers
       printIdentifier d
       whenJust (nonEmpty ds) $ \ds' -> replNewline >> printIdentifiers ds'
       where
-        getInfoTable :: Repl Scoped.InfoTable
-        getInfoTable = (^. replContextArtifacts . artifactScopeTable) <$> replGetContext
-
         printIdentifier :: Concrete.ScopedIden -> Repl ()
         printIdentifier s =
           let n = s ^. Concrete.scopedIdenFinal . Scoped.nameId
@@ -372,7 +347,7 @@ printDefinition = replParseIdentifiers >=> printIdentifiers
 
             printFunction :: Scoped.NameId -> Repl ()
             printFunction fun = do
-              tbl :: Scoped.InfoTable <- getInfoTable
+              tbl :: Scoped.InfoTable <- getScopedInfoTable
               case tbl ^. Scoped.infoFunctions . at fun of
                 Just def -> do
                   printLocation def
@@ -381,22 +356,22 @@ printDefinition = replParseIdentifiers >=> printIdentifiers
 
             printInductive :: Scoped.NameId -> Repl ()
             printInductive ind = do
-              tbl :: Scoped.InfoTable <- (^. replContextArtifacts . artifactScopeTable) <$> replGetContext
-              let def :: Concrete.InductiveDef 'Concrete.Scoped = tbl ^?! Scoped.infoInductives . at ind . _Just . Scoped.inductiveInfoDef
+              tbl :: Scoped.InfoTable <- getScopedInfoTable
+              let def :: Concrete.InductiveDef 'Concrete.Scoped = tbl ^?! Scoped.infoInductives . at ind . _Just
               printLocation def
               printConcreteLn def
 
             printAxiom :: Scoped.NameId -> Repl ()
             printAxiom ax = do
-              tbl :: Scoped.InfoTable <- (^. replContextArtifacts . artifactScopeTable) <$> replGetContext
-              let def :: Concrete.AxiomDef 'Concrete.Scoped = tbl ^?! Scoped.infoAxioms . at ax . _Just . Scoped.axiomInfoDef
+              tbl :: Scoped.InfoTable <- getScopedInfoTable
+              let def :: Concrete.AxiomDef 'Concrete.Scoped = tbl ^?! Scoped.infoAxioms . at ax . _Just
               printLocation def
               printConcreteLn def
 
             printConstructor :: Scoped.NameId -> Repl ()
             printConstructor c = do
-              tbl :: Scoped.InfoTable <- (^. replContextArtifacts . artifactScopeTable) <$> replGetContext
-              let ind :: Scoped.Symbol = tbl ^?! Scoped.infoConstructors . at c . _Just . Scoped.constructorInfoTypeName
+              tbl :: Scoped.InfoTable <- getScopedInfoTable
+              let ind = tbl ^?! Scoped.infoConstructors . at c . _Just . Concrete.constructorInductiveName
               printInductive (ind ^. Scoped.nameId)
 
 inferType :: String -> Repl ()
@@ -634,8 +609,8 @@ runTransformations shouldDisambiguate ts n = runCoreInfoTableBuilderArtifacts $ 
       Core.registerIdentNode sym node
       -- `n` will get filtered out by the transformations unless it has a
       -- corresponding entry in `infoIdentifiers`
-      tab <- Core.getInfoTable
-      let name = Core.freshIdentName tab "_repl"
+      md <- Core.getModule
+      let name = Core.freshIdentName md "_repl"
           idenInfo =
             Core.IdentifierInfo
               { _identifierName = name,
@@ -653,13 +628,13 @@ runTransformations shouldDisambiguate ts n = runCoreInfoTableBuilderArtifacts $ 
 
     applyTransforms :: Bool -> [Core.TransformationId] -> Sem (Core.InfoTableBuilder ': r) ()
     applyTransforms shouldDisambiguate' ts' = do
-      tab <- Core.getInfoTable
-      tab' <- mapReader Core.fromEntryPoint $ Core.applyTransformations ts' tab
-      let tab'' =
+      md <- Core.getModule
+      md' <- mapReader Core.fromEntryPoint $ Core.applyTransformations ts' md
+      let md'' =
             if
-                | shouldDisambiguate' -> disambiguateNames tab'
-                | otherwise -> tab'
-      Core.setInfoTable tab''
+                | shouldDisambiguate' -> disambiguateNames md'
+                | otherwise -> md'
+      Core.setModule md''
 
     getNode :: Core.Symbol -> Sem (Core.InfoTableBuilder ': r) Core.Node
-    getNode sym = fromMaybe impossible . flip Core.lookupIdentifierNode' sym <$> Core.getInfoTable
+    getNode sym = fromMaybe impossible . flip Core.lookupIdentifierNode' sym <$> Core.getModule

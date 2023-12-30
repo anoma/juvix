@@ -11,5 +11,5 @@ runCommand localOpts = do
   res <- runPipeline (localOpts ^. internalTypeInputFile) upToInternalTyped
   say "Well done! It type checks"
   when (localOpts ^. internalTypePrint) $ do
-    let checkedModule = head (res ^. InternalTyped.resultModules)
+    let checkedModule = res ^. InternalTyped.resultModule
     renderStdOut (Internal.ppOut globalOpts checkedModule)

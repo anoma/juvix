@@ -1,7 +1,6 @@
 module Juvix.Compiler.Concrete.Translation.FromSource
   ( module Juvix.Compiler.Concrete.Translation.FromSource,
     module Juvix.Compiler.Concrete.Translation.FromSource.Data.Context,
-    module Juvix.Compiler.Concrete.Data.ParsedInfoTable,
     module Juvix.Parser.Error,
   )
 where
@@ -15,20 +14,18 @@ import Data.Text qualified as Text
 import Juvix.Compiler.Backend.Markdown.Data.Types (Mk (..))
 import Juvix.Compiler.Backend.Markdown.Data.Types qualified as MK
 import Juvix.Compiler.Backend.Markdown.Error
-import Juvix.Compiler.Concrete.Data.Highlight.Input (HighlightBuilder, ignoreHighlightBuilder)
-import Juvix.Compiler.Concrete.Data.ParsedInfoTable
-import Juvix.Compiler.Concrete.Data.ParsedInfoTableBuilder
+import Juvix.Compiler.Concrete (HighlightBuilder, ignoreHighlightBuilder)
 import Juvix.Compiler.Concrete.Extra (takeWhile1P)
 import Juvix.Compiler.Concrete.Extra qualified as P
 import Juvix.Compiler.Concrete.Language
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Base
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Error
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Paths
 import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context
 import Juvix.Compiler.Concrete.Translation.FromSource.Lexer hiding
   ( symbol,
   )
+import Juvix.Compiler.Concrete.Translation.FromSource.ParserResultBuilder
 import Juvix.Compiler.Pipeline.EntryPoint
+import Juvix.Compiler.Pipeline.Loader.PathResolver.Base
+import Juvix.Compiler.Pipeline.Loader.PathResolver.Paths
 import Juvix.Data.Yaml
 import Juvix.Extra.Paths
 import Juvix.Extra.Strings qualified as Str
@@ -53,33 +50,35 @@ type JudocStash = State (Maybe (Judoc 'Parsed))
 type PragmasStash = State (Maybe ParsedPragmas)
 
 fromSource ::
-  (Members '[HighlightBuilder, PathResolver, Files, Error JuvixError, NameIdGen] r) =>
+  (Members '[HighlightBuilder, Files, PathResolver, Error JuvixError] r) =>
   EntryPoint ->
   Sem r ParserResult
 fromSource e = mapError (JuvixError @ParserError) $ do
-  (_resultBuilderState, _resultTable, _resultModules) <- runParserInfoTableBuilder (runReader e getParsedModuleTops)
-  let _resultEntry = e
+  (_resultParserState, _resultModule) <-
+    runParserResultBuilder mempty $
+      evalTopNameIdGen defaultModuleId $
+        runReader e getParsedModuleTop
   return ParserResult {..}
   where
-    getParsedModuleTops ::
+    getParsedModuleTop ::
       forall r.
-      (Members '[PathResolver, Files, Error ParserError, InfoTableBuilder, NameIdGen] r) =>
-      Sem r (NonEmpty (Module 'Parsed 'ModuleTop))
-    getParsedModuleTops = case (e ^. entryPointStdin, e ^. entryPointModulePaths) of
-      (Nothing, []) -> throw $ ErrStdinOrFile StdinOrFileError
-      (Just txt, x : _) ->
+      (Members '[Reader EntryPoint, Files, PathResolver, Error ParserError, ParserResultBuilder, NameIdGen] r) =>
+      Sem r (Module 'Parsed 'ModuleTop)
+    getParsedModuleTop = case (e ^. entryPointStdin, e ^. entryPointModulePath) of
+      (Nothing, Nothing) -> throw $ ErrStdinOrFile StdinOrFileError
+      (Just txt, Just x) ->
         runModuleParser x txt >>= \case
           Left err -> throw err
-          Right r -> return (r :| [])
-      (Just txt, []) ->
+          Right r -> return r
+      (Just txt, Nothing) ->
         runModuleStdinParser txt >>= \case
           Left err -> throw err
-          Right r -> return (r :| [])
-      (_, x : xs) -> mapM goFile (x :| xs)
+          Right r -> return r
+      (Nothing, Just x) -> goFile x
 
     goFile ::
       forall r.
-      (Members '[PathResolver, Files, Error ParserError, InfoTableBuilder, NameIdGen] r) =>
+      (Members '[Reader EntryPoint, Files, PathResolver, Error ParserError, ParserResultBuilder, NameIdGen] r) =>
       Path Abs File ->
       Sem r (Module 'Parsed 'ModuleTop)
     goFile fileName = do
@@ -91,7 +90,7 @@ fromSource e = mapError (JuvixError @ParserError) $ do
       where
         getFileContents :: Path Abs File -> Sem r Text
         getFileContents fp
-          | Just fp == e ^? mainModulePath,
+          | Just fp == e ^. entryPointModulePath,
             Just txt <- e ^. entryPointStdin =
               return txt
           | otherwise = readFile' fp
@@ -113,14 +112,14 @@ expressionFromTextSource fp txt = mapError (JuvixError @ParserError) $ do
     Right exp' -> return exp'
 
 replInputFromTextSource ::
-  (Members '[Error JuvixError, NameIdGen, Files, PathResolver, InfoTableBuilder] r) =>
+  (Members '[Error JuvixError, NameIdGen, Files, PathResolver, ParserResultBuilder] r) =>
   Path Abs File ->
   Text ->
   Sem r ReplInput
 replInputFromTextSource fp txt = mapError (JuvixError @ParserError) $ runReplInputParser fp txt
 
 runReplInputParser ::
-  (Members '[Files, NameIdGen, Error ParserError, PathResolver, InfoTableBuilder] r) =>
+  (Members '[Files, NameIdGen, Error ParserError, PathResolver, ParserResultBuilder] r) =>
   Path Abs File ->
   Text ->
   Sem r ReplInput
@@ -134,7 +133,7 @@ runReplInputParser fileName input = do
     Right r -> return r
 
 runModuleParser ::
-  (Members '[Error ParserError, Files, PathResolver, NameIdGen, InfoTableBuilder] r) =>
+  (Members '[Reader EntryPoint, ParserResultBuilder, Error ParserError, Files, PathResolver, NameIdGen] r) =>
   Path Abs File ->
   Text ->
   Sem r (Either ParserError (Module 'Parsed 'ModuleTop))
@@ -155,10 +154,10 @@ runModuleParser fileName input
           $ P.runParserT topModuleDef (toFilePath fileName) input
       case m of
         Left err -> return . Left . ErrMegaparsec . MegaparsecError $ err
-        Right r -> registerModule r $> Right r
+        Right r -> return $ Right r
 
 runMarkdownModuleParser ::
-  (Members '[Files, PathResolver, NameIdGen, InfoTableBuilder] r) =>
+  (Members '[Reader EntryPoint, ParserResultBuilder, Files, PathResolver, NameIdGen] r) =>
   Path Abs File ->
   Mk ->
   Sem r (Either ParserError (Module 'Parsed 'ModuleTop))
@@ -190,7 +189,7 @@ runMarkdownModuleParser fpath mk =
                     }
               )
               $ res ^. mdModuleBuilder
-      registerModule m $> m
+      return m
   where
     getInitPos :: Interval -> P.SourcePos
     getInitPos i =
@@ -236,14 +235,14 @@ runMarkdownModuleParser fpath mk =
         Right m -> return m
 
     parseFirstBlock ::
-      (Members '[Error ParserError, Files, InfoTableBuilder, NameIdGen, PathResolver] r') =>
+      (Members '[Reader EntryPoint, ParserResultBuilder, Error ParserError, Files, NameIdGen, PathResolver] r') =>
       MK.JuvixCodeBlock ->
       Sem r' (Module 'Parsed 'ModuleTop)
     parseFirstBlock x = parseHelper topMarkdownModuleDef x
 
     parseRestBlocks ::
       forall r'.
-      (Members '[Error ParserError, Input (Maybe MK.JuvixCodeBlock), State MdModuleBuilder, Files, PathResolver, NameIdGen, InfoTableBuilder] r') =>
+      (Members '[Reader EntryPoint, ParserResultBuilder, Error ParserError, Input (Maybe MK.JuvixCodeBlock), State MdModuleBuilder, Files, PathResolver, NameIdGen] r') =>
       Sem r' ()
     parseRestBlocks = whenJustM Input.input $ \x -> do
       stmts <- parseHelper parseTopStatements x
@@ -252,7 +251,7 @@ runMarkdownModuleParser fpath mk =
       parseRestBlocks
 
 runModuleStdinParser ::
-  (Members '[Error ParserError, Files, PathResolver, NameIdGen, InfoTableBuilder] r) =>
+  (Members '[Reader EntryPoint, Error ParserError, Files, PathResolver, NameIdGen, ParserResultBuilder] r) =>
   Text ->
   Sem r (Either ParserError (Module 'Parsed 'ModuleTop))
 runModuleStdinParser input = do
@@ -262,7 +261,7 @@ runModuleStdinParser input = do
       $ P.runParserT topModuleDefStdin (toFilePath formatStdinPath) input
   case m of
     Left err -> return (Left (ErrMegaparsec (MegaparsecError err)))
-    Right r -> registerModule r $> Right r
+    Right r -> return $ Right r
 
 runExpressionParser ::
   (Members '[NameIdGen] r) =>
@@ -272,29 +271,29 @@ runExpressionParser ::
 runExpressionParser fpath input = do
   m <-
     ignoreHighlightBuilder
-      . runParserInfoTableBuilder
-      . evalState (Nothing @ParsedPragmas)
-      . evalState (Nothing @(Judoc 'Parsed))
+      $ runParserResultBuilder mempty
+        . evalState (Nothing @ParsedPragmas)
+        . evalState (Nothing @(Judoc 'Parsed))
       $ P.runParserT parseExpressionAtoms (toFilePath fpath) input
   case m of
-    (_, _, Left err) -> return (Left (ErrMegaparsec (MegaparsecError err)))
-    (_, _, Right r) -> return (Right r)
+    (_, Left err) -> return (Left (ErrMegaparsec (MegaparsecError err)))
+    (_, Right r) -> return (Right r)
 
 -- | The first pipe is optional, and thus we need a `Maybe`. The rest of the elements are guaranted to be given a `Just`.
-pipeSep1 :: (Member InfoTableBuilder r) => (Irrelevant (Maybe KeywordRef) -> ParsecS r a) -> ParsecS r (NonEmpty a)
+pipeSep1 :: (Member ParserResultBuilder r) => (Irrelevant (Maybe KeywordRef) -> ParsecS r a) -> ParsecS r (NonEmpty a)
 pipeSep1 e = do
   p <- Irrelevant <$> optional (kw kwPipe)
   h <- e p
   (h :|) <$> many (kw kwPipe >>= e . Irrelevant . Just)
 
 top ::
-  (Member InfoTableBuilder r) =>
+  (Member ParserResultBuilder r) =>
   ParsecS r a ->
   ParsecS r a
 top p = space >> p <* (optional semicolon >> P.eof)
 
 topModuleDefStdin ::
-  (Members '[Error ParserError, Files, PathResolver, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
+  (Members '[Reader EntryPoint, Error ParserError, Files, PathResolver, ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
   ParsecS r (Module 'Parsed 'ModuleTop)
 topModuleDefStdin = do
   optional_ stashJudoc
@@ -336,7 +335,7 @@ checkModulePath m = do
           )
 
 topModuleDef ::
-  (Members '[Error ParserError, Files, PathResolver, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
+  (Members '[Reader EntryPoint, Error ParserError, Files, PathResolver, ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
   ParsecS r (Module 'Parsed 'ModuleTop)
 topModuleDef = do
   space >> optional_ stashJudoc
@@ -390,7 +389,7 @@ juvixCodeBlockParser = do
 -- Keep it. Intended to be used later for processing Markdown inside TextBlocks
 -- or (Judoc) comments.
 commanMarkParser ::
-  (Members '[Error ParserError, Files, NameIdGen, InfoTableBuilder, PathResolver] r) =>
+  (Members '[Reader EntryPoint, ParserResultBuilder, Error ParserError, Files, NameIdGen, PathResolver] r) =>
   Path Abs File ->
   Text ->
   Sem r (Either ParserError (Module 'Parsed 'ModuleTop))
@@ -401,7 +400,7 @@ commanMarkParser fileName input = do
     Left r -> return . Left . ErrCommonmark . CommonmarkError $ r
 
 topMarkdownModuleDef ::
-  (Members '[Error ParserError, Files, PathResolver, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
+  (Members '[Reader EntryPoint, ParserResultBuilder, Error ParserError, Files, PathResolver, PragmasStash, JudocStash, NameIdGen] r) =>
   ParsecS r (Module 'Parsed 'ModuleTop)
 topMarkdownModuleDef = do
   optional_ stashJudoc
@@ -410,11 +409,11 @@ topMarkdownModuleDef = do
 
 parseTopStatements ::
   forall r.
-  (Members '[Error ParserError, Files, PathResolver, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
+  (Members '[Reader EntryPoint, ParserResultBuilder, Error ParserError, Files, PathResolver, PragmasStash, JudocStash, NameIdGen] r) =>
   ParsecS r [Statement 'Parsed]
 parseTopStatements = top $ P.sepEndBy statement semicolon
 
-replInput :: forall r. (Members '[Files, PathResolver, InfoTableBuilder, JudocStash, NameIdGen, Error ParserError, State (Maybe ParsedPragmas)] r) => ParsecS r ReplInput
+replInput :: forall r. (Members '[Files, PathResolver, ParserResultBuilder, JudocStash, NameIdGen, Error ParserError, State (Maybe ParsedPragmas)] r) => ParsecS r ReplInput
 replInput =
   P.label "<repl input>" $
     ReplExpression <$> parseExpressionAtoms
@@ -425,13 +424,13 @@ replInput =
 -- Symbols and names
 --------------------------------------------------------------------------------
 
-symbol :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r Symbol
+symbol :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r Symbol
 symbol = uncurry (flip WithLoc) <$> identifierL
 
-dottedSymbol :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (NonEmpty Symbol)
+dottedSymbol :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (NonEmpty Symbol)
 dottedSymbol = fmap (uncurry (flip WithLoc)) <$> dottedIdentifier
 
-name :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r Name
+name :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r Name
 name = do
   parts <- dottedSymbol
   return $ case nonEmptyUnsnoc parts of
@@ -441,7 +440,7 @@ name = do
 mkTopModulePath :: NonEmpty Symbol -> TopModulePath
 mkTopModulePath l = TopModulePath (NonEmpty.init l) (NonEmpty.last l)
 
-usingItem :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (UsingItem 'Parsed)
+usingItem :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (UsingItem 'Parsed)
 usingItem = do
   _usingModuleKw <- optional (kw kwModule)
   _usingSymbol <- symbol
@@ -452,13 +451,13 @@ usingItem = do
       _usingAs = snd <$> alias
   return UsingItem {..}
 
-hidingItem :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (HidingItem 'Parsed)
+hidingItem :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (HidingItem 'Parsed)
 hidingItem = do
   _hidingModuleKw <- optional (kw kwModule)
   _hidingSymbol <- symbol
   return HidingItem {..}
 
-phidingList :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (HidingList 'Parsed)
+phidingList :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (HidingList 'Parsed)
 phidingList = do
   _hidingKw <- Irrelevant <$> kw kwHiding
   l <- kw delimBraceL
@@ -470,7 +469,7 @@ phidingList = do
         ..
       }
 
-pusingList :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (UsingList 'Parsed)
+pusingList :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (UsingList 'Parsed)
 pusingList = do
   _usingKw <- Irrelevant <$> kw kwUsing
   l <- kw delimBraceL
@@ -482,7 +481,7 @@ pusingList = do
         ..
       }
 
-topModulePath :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r TopModulePath
+topModulePath :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r TopModulePath
 topModulePath = mkTopModulePath <$> dottedSymbol
 
 --------------------------------------------------------------------------------
@@ -502,23 +501,7 @@ l <?|> r = do
         r
   P.withRecovery (const recover) (P.try l)
 
-initialState :: String -> s -> P.State s e
-initialState fpath s =
-  P.State
-    { stateInput = s,
-      stateOffset = 0,
-      statePosState =
-        P.PosState
-          { pstateInput = s,
-            pstateOffset = 0,
-            pstateSourcePos = P.initialPos fpath,
-            pstateTabWidth = P.defaultTabWidth,
-            pstateLinePrefix = ""
-          },
-      stateParseErrors = []
-    }
-
-statement :: (Members '[Files, Error ParserError, PathResolver, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Statement 'Parsed)
+statement :: (Members '[Reader EntryPoint, Files, Error ParserError, PathResolver, ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Statement 'Parsed)
 statement = P.label "<top level statement>" $ do
   optional_ stashJudoc
   optional_ stashPragmas
@@ -541,7 +524,7 @@ statement = P.label "<top level statement>" $ do
         Nothing -> P.failure Nothing mempty
         Just j -> P.lift . throw . ErrDanglingJudoc . DanglingJudoc $ j
 
-stashPragmas :: forall r. (Members '[InfoTableBuilder, PragmasStash, NameIdGen] r) => ParsecS r ()
+stashPragmas :: forall r. (Members '[ParserResultBuilder, PragmasStash, NameIdGen] r) => ParsecS r ()
 stashPragmas = do
   pragmas <- withLoc parsePragmas
   P.lift (registerPragmas (getLoc pragmas))
@@ -550,7 +533,7 @@ stashPragmas = do
     parsePragmas :: ParsecS r (WithSource Pragmas)
     parsePragmas = parseYaml Str.pragmasStart Str.pragmasEnd
 
-parseYaml :: (Member InfoTableBuilder r, FromJSON a) => Text -> Text -> ParsecS r (WithSource a)
+parseYaml :: (Member ParserResultBuilder r, FromJSON a) => Text -> Text -> ParsecS r (WithSource a)
 parseYaml l r = do
   void (P.chunk l)
   off <- P.getOffset
@@ -564,7 +547,7 @@ parseYaml l r = do
     Left err -> parseFailure off (prettyPrintParseException err)
     Right yaml -> return $ WithSource (fromString str) yaml
 
-stashJudoc :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r ()
+stashJudoc :: forall r. (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r ()
 stashJudoc = do
   b <- judoc
   many (judocEmptyLine False)
@@ -641,7 +624,7 @@ stashJudoc = do
 
 judocAtom ::
   forall r.
-  (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
+  (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
   Bool ->
   ParsecS r (JudocAtom 'Parsed)
 judocAtom inBlock =
@@ -682,17 +665,17 @@ judocAtom inBlock =
       judocText_ (P.char ';')
       return e
 
-builtinInductive :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (WithLoc BuiltinInductive)
+builtinInductive :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (WithLoc BuiltinInductive)
 builtinInductive = builtinHelper
 
-builtinFunction :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (WithLoc BuiltinFunction)
+builtinFunction :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (WithLoc BuiltinFunction)
 builtinFunction = builtinHelper
 
-builtinAxiom :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (WithLoc BuiltinAxiom)
+builtinAxiom :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (WithLoc BuiltinAxiom)
 builtinAxiom = builtinHelper
 
 builtinHelper ::
-  (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r, Bounded a, Enum a, Pretty a) =>
+  (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r, Bounded a, Enum a, Pretty a) =>
   ParsecS r (WithLoc a)
 builtinHelper =
   P.choice
@@ -700,29 +683,29 @@ builtinHelper =
       | a <- allElements
     ]
 
-builtinInductiveDef :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => WithLoc BuiltinInductive -> ParsecS r (InductiveDef 'Parsed)
+builtinInductiveDef :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => WithLoc BuiltinInductive -> ParsecS r (InductiveDef 'Parsed)
 builtinInductiveDef = inductiveDef . Just
 
 builtinAxiomDef ::
-  (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
+  (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
   WithLoc BuiltinAxiom ->
   ParsecS r (AxiomDef 'Parsed)
 builtinAxiomDef = axiomDef . Just
 
 builtinFunctionDef ::
-  (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
+  (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
   WithLoc BuiltinFunction ->
   ParsecS r (FunctionDef 'Parsed)
 builtinFunctionDef = functionDefinition False True . Just
 
-builtinStatement :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Statement 'Parsed)
+builtinStatement :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Statement 'Parsed)
 builtinStatement = do
   void (kw kwBuiltin)
   (builtinInductive >>= fmap StatementInductive . builtinInductiveDef)
     <|> (builtinFunction >>= fmap StatementFunctionDef . builtinFunctionDef)
     <|> (builtinAxiom >>= fmap StatementAxiom . builtinAxiomDef)
 
-builtinRecordField :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (WithLoc BuiltinFunction)
+builtinRecordField :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (WithLoc BuiltinFunction)
 builtinRecordField = do
   void (kw kwBuiltin)
   builtinFunction
@@ -731,7 +714,7 @@ builtinRecordField = do
 -- Syntax declaration
 --------------------------------------------------------------------------------
 
-syntaxDef :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (SyntaxDef 'Parsed)
+syntaxDef :: forall r. (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (SyntaxDef 'Parsed)
 syntaxDef = do
   syn <- kw kwSyntax
   SyntaxFixity <$> fixitySyntaxDef syn
@@ -739,7 +722,7 @@ syntaxDef = do
     <|> SyntaxIterator <$> iteratorSyntaxDef syn
     <|> SyntaxAlias <$> aliasDef syn
 
-aliasDef :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => KeywordRef -> ParsecS r (AliasDef 'Parsed)
+aliasDef :: forall r. (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => KeywordRef -> ParsecS r (AliasDef 'Parsed)
 aliasDef synKw = do
   let _aliasDefSyntaxKw = Irrelevant synKw
   _aliasDefAliasKw <- Irrelevant <$> kw kwAlias
@@ -750,7 +733,7 @@ aliasDef synKw = do
 
 parsedFixityFields ::
   forall r.
-  (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
+  (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
   ParsecS r (ParsedFixityFields 'Parsed)
 parsedFixityFields = do
   l <- kw delimBraceL
@@ -789,7 +772,7 @@ parsedFixityFields = do
         <|> kw kwNone
           $> AssocNone
 
-parsedFixityInfo :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (ParsedFixityInfo 'Parsed)
+parsedFixityInfo :: forall r. (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (ParsedFixityInfo 'Parsed)
 parsedFixityInfo = do
   _fixityParsedArity <- withLoc ari
   _fixityFields <- optional parsedFixityFields
@@ -804,7 +787,7 @@ parsedFixityInfo = do
         <|> kw kwNone
           $> None
 
-fixitySyntaxDef :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => KeywordRef -> ParsecS r (FixitySyntaxDef 'Parsed)
+fixitySyntaxDef :: forall r. (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => KeywordRef -> ParsecS r (FixitySyntaxDef 'Parsed)
 fixitySyntaxDef _fixitySyntaxKw = P.label "<fixity declaration>" $ do
   _fixityDoc <- getJudoc
   _fixityKw <- kw kwFixity
@@ -813,7 +796,7 @@ fixitySyntaxDef _fixitySyntaxKw = P.label "<fixity declaration>" $ do
   _fixityInfo <- parsedFixityInfo
   return FixitySyntaxDef {..}
 
-operatorSyntaxDef :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => KeywordRef -> ParsecS r OperatorSyntaxDef
+operatorSyntaxDef :: forall r. (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => KeywordRef -> ParsecS r OperatorSyntaxDef
 operatorSyntaxDef _opSyntaxKw = do
   _opKw <- kw kwOperator
   _opSymbol <- symbol
@@ -822,7 +805,7 @@ operatorSyntaxDef _opSyntaxKw = do
 
 parsedIteratorInfo ::
   forall r.
-  (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
+  (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
   ParsecS r ParsedIteratorInfo
 parsedIteratorInfo = do
   l <- kw delimBraceL
@@ -844,7 +827,7 @@ parsedIteratorInfo = do
       void (kw kwRange >> kw kwAssign)
       fmap fromIntegral <$> integer
 
-iteratorSyntaxDef :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => KeywordRef -> ParsecS r IteratorSyntaxDef
+iteratorSyntaxDef :: forall r. (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => KeywordRef -> ParsecS r IteratorSyntaxDef
 iteratorSyntaxDef _iterSyntaxKw = do
   _iterIteratorKw <- kw kwIterator
   _iterSymbol <- symbol
@@ -855,39 +838,20 @@ iteratorSyntaxDef _iterSyntaxKw = do
 -- Import statement
 --------------------------------------------------------------------------------
 
-import_ :: forall r. (Members '[Files, PathResolver, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen, Error ParserError] r) => ParsecS r (Import 'Parsed)
+import_ :: forall r. (Members '[Files, PathResolver, ParserResultBuilder, PragmasStash, JudocStash, NameIdGen, Error ParserError] r) => ParsecS r (Import 'Parsed)
 import_ = do
   _importKw <- kw kwImport
-  _importModule <- topModulePath
-  P.lift (importedModule _importModule)
+  _importModulePath <- topModulePath
   _importAsName <- optional pasName
   _importOpen <- optional popenModuleParams
-  return Import {..}
+  let i = Import {..}
+  P.lift (registerImport i)
+  return i
   where
     pasName :: ParsecS r TopModulePath
     pasName = void (kw kwAs) >> topModulePath
 
-withPath' ::
-  forall r a.
-  (Members '[PathResolver, Error ParserError] r) =>
-  TopModulePath ->
-  (Path Abs File -> Sem r a) ->
-  Sem r a
-withPath' mp a = withPathFile mp (either err a)
-  where
-    err :: PathResolverError -> Sem r a
-    err = throw . ErrTopModulePath . TopModulePathError mp
-
-importedModule :: forall r. (Members '[PathResolver, InfoTableBuilder, NameIdGen, Files, Error ParserError] r) => TopModulePath -> Sem r ()
-importedModule t = unlessM (moduleVisited t) go
-  where
-    go :: Sem r ()
-    go = withPath' t $ \path -> do
-      visitModule t
-      txt <- readFile' path
-      eitherM throw (const (return ())) (runModuleParser path txt)
-
-recordUpdateField :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (RecordUpdateField 'Parsed)
+recordUpdateField :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (RecordUpdateField 'Parsed)
 recordUpdateField = do
   _fieldUpdateName <- symbol
   _fieldUpdateAssignKw <- Irrelevant <$> kw kwAssign
@@ -895,7 +859,7 @@ recordUpdateField = do
   let _fieldUpdateArgIx = ()
   return RecordUpdateField {..}
 
-recordUpdate :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (RecordUpdate 'Parsed)
+recordUpdate :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (RecordUpdate 'Parsed)
 recordUpdate = do
   _recordUpdateAtKw <- Irrelevant <$> kw kwAt
   _recordUpdateTypeName <- name
@@ -906,7 +870,7 @@ recordUpdate = do
       _recordUpdateExtra = Irrelevant ()
   return RecordUpdate {..}
 
-expressionAtom :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (ExpressionAtom 'Parsed)
+expressionAtom :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (ExpressionAtom 'Parsed)
 expressionAtom =
   P.label "<expression>" $
     AtomLiteral <$> P.try literal
@@ -929,7 +893,7 @@ expressionAtom =
       <|> AtomRecordUpdate <$> recordUpdate
 
 parseExpressionAtoms ::
-  (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
+  (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
   ParsecS r (ExpressionAtoms 'Parsed)
 parseExpressionAtoms = do
   (_expressionAtoms, _expressionAtomsLoc) <- second Irrelevant <$> interval (P.some expressionAtom)
@@ -937,7 +901,7 @@ parseExpressionAtoms = do
 
 pdoubleBracesExpression ::
   forall r.
-  (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
+  (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
   ParsecS r (DoubleBracesExpression 'Parsed)
 pdoubleBracesExpression = do
   l <- kw delimDoubleBraceL
@@ -964,7 +928,7 @@ pdoubleBracesExpression = do
 
 iterator ::
   forall r.
-  (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
+  (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
   ParsecS r (Either (Iterator 'Parsed) (NamedApplication 'Parsed))
 iterator = do
   off <- P.getOffset
@@ -1067,7 +1031,7 @@ iterator = do
 
 namedApplicationNew ::
   forall r.
-  (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
+  (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
   ParsecS r (NamedApplicationNew 'Parsed)
 namedApplicationNew = P.label "<named application>" $ do
   (_namedApplicationNewName, _namedApplicationNewAtKw, _namedApplicationNewExhaustive) <- P.try $ do
@@ -1089,7 +1053,7 @@ namedApplicationNew = P.label "<named application>" $ do
 
 namedApplication ::
   forall r.
-  (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
+  (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
   ParsecS r (NamedApplication 'Parsed)
 namedApplication = P.label "<named application>" $ do
   (_namedAppName, firstBlockStart) <- P.try $ do
@@ -1104,7 +1068,7 @@ namedApplication = P.label "<named application>" $ do
 
 namedArgument ::
   forall r.
-  (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
+  (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
   ParsecS r (NamedArgument 'Parsed)
 namedArgument = do
   _namedArgName <- symbol
@@ -1114,7 +1078,7 @@ namedArgument = do
 
 argumentBlockStart ::
   forall r.
-  (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
+  (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
   ParsecS r (KeywordRef, IsImplicit, Symbol, Irrelevant KeywordRef)
 argumentBlockStart = do
   (l, impl) <- implicitOpen
@@ -1124,7 +1088,7 @@ argumentBlockStart = do
 
 argumentBlockCont ::
   forall r.
-  (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
+  (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
   (KeywordRef, IsImplicit, Symbol, Irrelevant KeywordRef) ->
   ParsecS r (ArgumentBlock 'Parsed)
 argumentBlockCont (l, _argBlockImplicit, _namedArgName, _namedArgAssignKw) = do
@@ -1137,23 +1101,23 @@ argumentBlockCont (l, _argBlockImplicit, _namedArgName, _namedArgAssignKw) = do
 
 argumentBlock ::
   forall r.
-  (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
+  (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
   ParsecS r (ArgumentBlock 'Parsed)
 argumentBlock = do
   s <- P.try argumentBlockStart
   argumentBlockCont s
 
-hole :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (HoleType 'Parsed)
+hole :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (HoleType 'Parsed)
 hole = kw kwHole
 
-parseListPattern :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (ListPattern 'Parsed)
+parseListPattern :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (ListPattern 'Parsed)
 parseListPattern = do
   _listpBracketL <- Irrelevant <$> kw kwBracketL
   _listpItems <- P.sepBy parsePatternAtoms (kw delimSemicolon)
   _listpBracketR <- Irrelevant <$> kw kwBracketR
   return ListPattern {..}
 
-parseList :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (List 'Parsed)
+parseList :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (List 'Parsed)
 parseList = do
   _listBracketL <- Irrelevant <$> kw kwBracketL
   _listItems <- P.sepBy parseExpressionAtoms (kw delimSemicolon)
@@ -1164,15 +1128,15 @@ parseList = do
 -- Literals
 --------------------------------------------------------------------------------
 
-literalInteger :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r LiteralLoc
+literalInteger :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r LiteralLoc
 literalInteger = fmap LitInteger <$> integer
 
-literalString :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r LiteralLoc
+literalString :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r LiteralLoc
 literalString = do
   (x, loc) <- string
   return (WithLoc loc (LitString x))
 
-literal :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r LiteralLoc
+literal :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r LiteralLoc
 literal = do
   l <-
     literalInteger
@@ -1181,19 +1145,19 @@ literal = do
 
 letFunDef ::
   forall r.
-  (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
+  (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
   ParsecS r (FunctionDef 'Parsed)
 letFunDef = do
   optional_ stashPragmas
   functionDefinition True False Nothing
 
-letStatement :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (LetStatement 'Parsed)
+letStatement :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (LetStatement 'Parsed)
 letStatement =
   LetFunctionDef <$> letFunDef
     <|> LetAliasDef <$> (kw kwSyntax >>= aliasDef)
     <|> LetOpen <$> openModule
 
-letBlock :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Let 'Parsed)
+letBlock :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Let 'Parsed)
 letBlock = do
   _letKw <- kw kwLet
   _letFunDefs <- P.sepEndBy1 letStatement semicolon
@@ -1201,7 +1165,7 @@ letBlock = do
   _letExpression <- parseExpressionAtoms
   return Let {..}
 
-caseBranch :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (CaseBranch 'Parsed)
+caseBranch :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (CaseBranch 'Parsed)
 caseBranch = do
   _caseBranchPipe <- Irrelevant <$> kw kwPipe
   _caseBranchPattern <- parsePatternAtoms
@@ -1209,7 +1173,7 @@ caseBranch = do
   _caseBranchExpression <- parseExpressionAtoms
   return CaseBranch {..}
 
-case_ :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Case 'Parsed)
+case_ :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Case 'Parsed)
 case_ = do
   _caseKw <- kw kwCase
   _caseExpression <- parseExpressionAtoms
@@ -1217,14 +1181,14 @@ case_ = do
   let _caseParens = False
   return Case {..}
 
-newCaseBranch :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => Irrelevant (Maybe KeywordRef) -> ParsecS r (NewCaseBranch 'Parsed)
+newCaseBranch :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => Irrelevant (Maybe KeywordRef) -> ParsecS r (NewCaseBranch 'Parsed)
 newCaseBranch _newCaseBranchPipe = do
   _newCaseBranchPattern <- parsePatternAtoms
   _newCaseBranchAssignKw <- Irrelevant <$> kw kwAssign
   _newCaseBranchExpression <- parseExpressionAtoms
   return NewCaseBranch {..}
 
-newCase :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (NewCase 'Parsed)
+newCase :: forall r. (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (NewCase 'Parsed)
 newCase = P.label "new case" $ do
   _newCaseKw <- kw kwCase
   _newCaseExpression <- parseExpressionAtoms
@@ -1236,7 +1200,7 @@ newCase = P.label "new case" $ do
 -- Universe expression
 --------------------------------------------------------------------------------
 
-universe :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r Universe
+universe :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r Universe
 universe = do
   i <- kw kwType
   lvl :: Maybe (WithLoc Natural) <- fmap (uncurry (flip WithLoc)) <$> optional decimal
@@ -1264,7 +1228,7 @@ getPragmas = P.lift $ do
 
 functionDefinition ::
   forall r.
-  (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
+  (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
   Bool ->
   Bool ->
   Maybe (WithLoc BuiltinFunction) ->
@@ -1363,7 +1327,7 @@ functionDefinition allowOmitType allowInstance _signBuiltin = P.label "<function
           parseExpressionAtoms
 
 axiomDef ::
-  (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
+  (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
   Maybe (WithLoc BuiltinAxiom) ->
   ParsecS r (AxiomDef 'Parsed)
 axiomDef _axiomBuiltin = do
@@ -1379,19 +1343,19 @@ axiomDef _axiomBuiltin = do
 -- Function expression
 --------------------------------------------------------------------------------
 
-implicitOpen :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (KeywordRef, IsImplicit)
+implicitOpen :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (KeywordRef, IsImplicit)
 implicitOpen =
   (,ImplicitInstance) <$> kw delimDoubleBraceL
     <|> (,Implicit) <$> kw delimBraceL
     <|> (,Explicit) <$> kw delimParenL
 
-implicitClose :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => IsImplicit -> ParsecS r KeywordRef
+implicitClose :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => IsImplicit -> ParsecS r KeywordRef
 implicitClose = \case
   Implicit -> kw delimBraceR
   Explicit -> kw delimParenR
   ImplicitInstance -> kw delimDoubleBraceR
 
-functionParams :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (FunctionParameters 'Parsed)
+functionParams :: forall r. (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (FunctionParameters 'Parsed)
 functionParams = do
   (openDelim, _paramNames, _paramImplicit, _paramColon) <- P.try $ do
     (opn, impl) <- implicitOpen
@@ -1413,7 +1377,7 @@ functionParams = do
       FunctionParameterName <$> symbol
         <|> FunctionParameterWildcard <$> kw kwWildcard
 
-function :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Function 'Parsed)
+function :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Function 'Parsed)
 function = do
   _funParameters <- functionParams
   _funKw <- kw kwRightArrow
@@ -1424,14 +1388,14 @@ function = do
 -- Lambda expression
 --------------------------------------------------------------------------------
 
-lambdaClause :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => Irrelevant (Maybe KeywordRef) -> ParsecS r (LambdaClause 'Parsed)
+lambdaClause :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => Irrelevant (Maybe KeywordRef) -> ParsecS r (LambdaClause 'Parsed)
 lambdaClause _lambdaPipe = do
   _lambdaParameters <- P.some patternAtom
   _lambdaAssignKw <- Irrelevant <$> kw kwAssign
   _lambdaBody <- parseExpressionAtoms
   return LambdaClause {..}
 
-lambda :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Lambda 'Parsed)
+lambda :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Lambda 'Parsed)
 lambda = do
   _lambdaKw <- kw kwLambda
   brl <- kw delimBraceL
@@ -1444,7 +1408,7 @@ lambda = do
 -- Data type construction declaration
 -------------------------------------------------------------------------------
 
-inductiveDef :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => Maybe (WithLoc BuiltinInductive) -> ParsecS r (InductiveDef 'Parsed)
+inductiveDef :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => Maybe (WithLoc BuiltinInductive) -> ParsecS r (InductiveDef 'Parsed)
 inductiveDef _inductiveBuiltin = do
   _inductivePositive <- optional (kw kwPositive)
   _inductiveTrait <- optional (kw kwTrait)
@@ -1460,11 +1424,11 @@ inductiveDef _inductiveBuiltin = do
       P.<?> "<type annotation e.g. ': Type'>"
   _inductiveAssignKw <- Irrelevant <$> kw kwAssign P.<?> "<assignment symbol ':='>"
   _inductiveConstructors <-
-    pipeSep1 constructorDef
+    pipeSep1 (constructorDef _inductiveName)
       P.<?> "<constructor definition>"
   return InductiveDef {..}
 
-inductiveParamsLong :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (InductiveParameters 'Parsed)
+inductiveParamsLong :: forall r. (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (InductiveParameters 'Parsed)
 inductiveParamsLong = parens $ do
   _inductiveParametersNames <- some1 symbol
   colonMay <- optional (Irrelevant <$> kw kwColon)
@@ -1476,7 +1440,7 @@ inductiveParamsLong = parens $ do
       _inductiveParametersType <- parseExpressionAtoms
       return InductiveParametersRhs {..}
 
-inductiveParamsShort :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (InductiveParameters 'Parsed)
+inductiveParamsShort :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (InductiveParameters 'Parsed)
 inductiveParamsShort = do
   _inductiveParametersNames <- some1 symbol
   return
@@ -1485,16 +1449,16 @@ inductiveParamsShort = do
         ..
       }
 
-inductiveParams :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (InductiveParameters 'Parsed)
+inductiveParams :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (InductiveParameters 'Parsed)
 inductiveParams = inductiveParamsLong <|> inductiveParamsShort
 
-rhsGadt :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (RhsGadt 'Parsed)
+rhsGadt :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (RhsGadt 'Parsed)
 rhsGadt = P.label "<constructor gadt>" $ do
   _rhsGadtColon <- Irrelevant <$> kw kwColon
   _rhsGadtType <- parseExpressionAtoms P.<?> "<constructor type>"
   return RhsGadt {..}
 
-recordField :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (RecordField 'Parsed)
+recordField :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (RecordField 'Parsed)
 recordField = do
   _fieldBuiltin <- optional builtinRecordField
   _fieldName <- symbol
@@ -1502,12 +1466,12 @@ recordField = do
   _fieldType <- parseExpressionAtoms
   return RecordField {..}
 
-rhsAdt :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (RhsAdt 'Parsed)
+rhsAdt :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (RhsAdt 'Parsed)
 rhsAdt = P.label "<constructor arguments>" $ do
   _rhsAdtArguments <- many atomicExpression
   return RhsAdt {..}
 
-rhsRecord :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (RhsRecord 'Parsed)
+rhsRecord :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (RhsRecord 'Parsed)
 rhsRecord = P.label "<constructor record>" $ do
   l <- kw delimBraceL
   _rhsRecordStatements <- P.sepEndBy recordStatement semicolon
@@ -1515,7 +1479,7 @@ rhsRecord = P.label "<constructor record>" $ do
   let _rhsRecordDelim = Irrelevant (l, r)
   return RhsRecord {..}
 
-recordStatement :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (RecordStatement 'Parsed)
+recordStatement :: forall r. (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (RecordStatement 'Parsed)
 recordStatement =
   RecordStatementOperator <$> operator
     <|> RecordStatementField <$> recordField
@@ -1525,24 +1489,24 @@ recordStatement =
       syn <- kw kwSyntax
       operatorSyntaxDef syn
 
-pconstructorRhs :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (ConstructorRhs 'Parsed)
+pconstructorRhs :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (ConstructorRhs 'Parsed)
 pconstructorRhs =
   ConstructorRhsGadt <$> rhsGadt
     <|> ConstructorRhsRecord <$> rhsRecord
     <|> ConstructorRhsAdt <$> rhsAdt
 
-constructorDef :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => Irrelevant (Maybe KeywordRef) -> ParsecS r (ConstructorDef 'Parsed)
-constructorDef _constructorPipe = do
+constructorDef :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => Symbol -> Irrelevant (Maybe KeywordRef) -> ParsecS r (ConstructorDef 'Parsed)
+constructorDef _constructorInductiveName _constructorPipe = do
   _constructorDoc <- optional stashJudoc >> getJudoc
   _constructorPragmas <- optional stashPragmas >> getPragmas
   _constructorName <- symbol P.<?> "<constructor name>"
   _constructorRhs <- pconstructorRhs
   return ConstructorDef {..}
 
-wildcard :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r Wildcard
+wildcard :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r Wildcard
 wildcard = Wildcard . snd <$> interval (kw kwWildcard)
 
-patternAtomWildcardConstructor :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (WildcardConstructor 'Parsed)
+patternAtomWildcardConstructor :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (WildcardConstructor 'Parsed)
 patternAtomWildcardConstructor = P.try $ do
   _wildcardConstructor <- name
   _wildcardConstructorAtKw <- Irrelevant <$> kw kwAt
@@ -1551,7 +1515,7 @@ patternAtomWildcardConstructor = P.try $ do
   let _wildcardConstructorDelims = Irrelevant (l, r)
   return WildcardConstructor {..}
 
-patternAtomAnon :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (PatternAtom 'Parsed)
+patternAtomAnon :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (PatternAtom 'Parsed)
 patternAtomAnon =
   PatternAtomWildcard <$> wildcard
     <|> PatternAtomDoubleBraces <$> doubleBraces parsePatternAtomsNested
@@ -1559,13 +1523,13 @@ patternAtomAnon =
     <|> PatternAtomBraces <$> braces parsePatternAtomsNested
     <|> PatternAtomList <$> parseListPattern
 
-patternAtomAt :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => Symbol -> ParsecS r PatternBinding
+patternAtomAt :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => Symbol -> ParsecS r PatternBinding
 patternAtomAt _patternBindingName = do
   _patternBindingAtKw <- Irrelevant <$> kw kwAt
   _patternBindingPattern <- patternAtom
   return PatternBinding {..}
 
-recordPatternItem :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (RecordPatternItem 'Parsed)
+recordPatternItem :: forall r. (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (RecordPatternItem 'Parsed)
 recordPatternItem = do
   f <- symbol
   RecordPatternItemAssign <$> recordPatternItemAssign f
@@ -1589,20 +1553,17 @@ recordPatternItem = do
           _fieldPunField = f
         }
 
-patternAtomRecord :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => Name -> ParsecS r (RecordPattern 'Parsed)
+patternAtomRecord :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => Name -> ParsecS r (RecordPattern 'Parsed)
 patternAtomRecord _recordPatternConstructor = do
   -- The try is needed to disambiguate from `at` pattern
   P.try (void (kw kwAt >> kw delimBraceL))
   _recordPatternItems <- P.sepEndBy recordPatternItem semicolon
   kw delimBraceR
   return
-    RecordPattern
-      { _recordPatternSignature = Irrelevant (),
-        ..
-      }
+    RecordPattern {..}
 
 -- | A pattern that starts with an identifier
-patternAtomNamed :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => Bool -> ParsecS r (PatternAtom 'Parsed)
+patternAtomNamed :: forall r. (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => Bool -> ParsecS r (PatternAtom 'Parsed)
 patternAtomNamed nested = do
   off <- P.getOffset
   n <- name
@@ -1622,25 +1583,25 @@ patternAtomNamed nested = do
         (not nested && t ^. withLocParam == "=")
         (parseFailure off "expected \":=\" instead of \"=\"")
 
-patternAtomNested :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (PatternAtom 'Parsed)
+patternAtomNested :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (PatternAtom 'Parsed)
 patternAtomNested = patternAtom' True
 
-patternAtom :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (PatternAtom 'Parsed)
+patternAtom :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (PatternAtom 'Parsed)
 patternAtom = patternAtom' False
 
-patternAtom' :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => Bool -> ParsecS r (PatternAtom 'Parsed)
+patternAtom' :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => Bool -> ParsecS r (PatternAtom 'Parsed)
 patternAtom' nested =
   P.label "<pattern>" $
     PatternAtomWildcardConstructor <$> patternAtomWildcardConstructor
       <|> patternAtomNamed nested
       <|> patternAtomAnon
 
-parsePatternAtoms :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (PatternAtoms 'Parsed)
+parsePatternAtoms :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (PatternAtoms 'Parsed)
 parsePatternAtoms = do
   (_patternAtoms, _patternAtomsLoc) <- second Irrelevant <$> interval (P.some patternAtom)
   return PatternAtoms {..}
 
-parsePatternAtomsNested :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (PatternAtoms 'Parsed)
+parsePatternAtomsNested :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (PatternAtoms 'Parsed)
 parsePatternAtomsNested = do
   (_patternAtoms, _patternAtomsLoc) <- second Irrelevant <$> interval (P.some patternAtomNested)
   return PatternAtoms {..}
@@ -1649,12 +1610,25 @@ parsePatternAtomsNested = do
 -- Module declaration
 --------------------------------------------------------------------------------
 
-pmodulePath :: forall t r. (SingI t, Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (ModulePathType 'Parsed t)
+pmodulePath :: forall t r. (SingI t, Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (ModulePathType 'Parsed t)
 pmodulePath = case sing :: SModuleIsTop t of
   SModuleTop -> topModulePath
   SModuleLocal -> symbol
 
-moduleDef :: forall t r. (SingI t, Members '[Error ParserError, Files, PathResolver, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Module 'Parsed t)
+getModuleId :: forall t r. (SingI t, Member (Reader EntryPoint) r) => ModulePathType 'Parsed t -> ParsecS r ModuleId
+getModuleId path = do
+  p <- P.lift $ asks (^. entryPointPackage)
+  return $
+    ModuleId
+      { _moduleIdPath =
+          case sing :: SModuleIsTop t of
+            SModuleLocal -> prettyText path
+            SModuleTop -> prettyText path,
+        _moduleIdPackage = p ^. packageName,
+        _moduleIdPackageVersion = show (p ^. packageVersion)
+      }
+
+moduleDef :: forall t r. (SingI t, Members '[Reader EntryPoint, Error ParserError, Files, PathResolver, ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Module 'Parsed t)
 moduleDef = P.label "<module definition>" $ do
   _moduleKw <- kw kwModule
   _moduleDoc <- getJudoc
@@ -1663,6 +1637,7 @@ moduleDef = P.label "<module definition>" $ do
   semicolon
   _moduleBody <- P.sepEndBy statement semicolon
   _moduleKwEnd <- endModule
+  _moduleId <- getModuleId _modulePath
   return
     Module
       { _moduleMarkdownInfo = Nothing,
@@ -1680,7 +1655,7 @@ moduleDef = P.label "<module definition>" $ do
       SModuleTop -> optional_ (kw kwEnd >> semicolon)
 
 -- | An ExpressionAtom which is a valid expression on its own.
-atomicExpression :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (ExpressionAtoms 'Parsed)
+atomicExpression :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (ExpressionAtoms 'Parsed)
 atomicExpression = do
   (atom, loc) <- interval expressionAtom
   case atom of
@@ -1688,7 +1663,7 @@ atomicExpression = do
     _ -> return ()
   return $ ExpressionAtoms (NonEmpty.singleton atom) (Irrelevant loc)
 
-openModule :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (OpenModule 'Parsed)
+openModule :: forall r. (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (OpenModule 'Parsed)
 openModule = do
   _openModuleKw <- kw kwOpen
   _openModuleName <- name
@@ -1699,7 +1674,7 @@ openModule = do
   return OpenModule {..}
 
 -- TODO is there way to merge this with `openModule`?
-popenModuleParams :: forall r. (Members '[Error ParserError, PathResolver, Files, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (OpenModuleParams 'Parsed)
+popenModuleParams :: forall r. (Members '[Error ParserError, PathResolver, Files, ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (OpenModuleParams 'Parsed)
 popenModuleParams = do
   _openModuleKw <- kw kwOpen
   _openUsingHiding <- optional usingOrHiding
@@ -1708,7 +1683,7 @@ popenModuleParams = do
       _openModuleParams = OpenModuleParams {..}
   return OpenModuleParams {..}
 
-usingOrHiding :: (Members '[InfoTableBuilder, JudocStash, NameIdGen, PragmasStash] r) => ParsecS r (UsingHiding 'Parsed)
+usingOrHiding :: (Members '[ParserResultBuilder, JudocStash, NameIdGen, PragmasStash] r) => ParsecS r (UsingHiding 'Parsed)
 usingOrHiding =
   Using <$> pusingList
     <|> Hiding <$> phidingList

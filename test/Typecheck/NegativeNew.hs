@@ -30,7 +30,7 @@ testDescr Old.NegTest {..} =
           _testRoot = tRoot,
           _testAssertion = Single $ do
             entryPoint <- testDefaultEntryPointIO tRoot file'
-            result <- snd <$> testRunIOEither entryPoint upToCore
+            result <- testRunIOEither entryPoint upToCore
             case mapLeft fromJuvixError result of
               Left (Just tyError) -> whenJust (_checkErr tyError) assertFailure
               Left Nothing -> assertFailure "An error ocurred but it was not in the type checker."

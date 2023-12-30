@@ -4,6 +4,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Internal.Extra.Base
 import Juvix.Compiler.Internal.Language
+import Juvix.Extra.Serialize
 import Juvix.Prelude
 
 data InstanceParam
@@ -12,7 +13,9 @@ data InstanceParam
   | InstanceParamFun InstanceFun
   | InstanceParamHole Hole
   | InstanceParamMeta VarName
-  deriving stock (Eq)
+  deriving stock (Eq, Generic)
+
+instance Serialize InstanceParam
 
 data InstanceApp = InstanceApp
   { _instanceAppHead :: Name,
@@ -20,7 +23,9 @@ data InstanceApp = InstanceApp
     -- | The original expression from which this InstanceApp was created
     _instanceAppExpression :: Expression
   }
-  deriving stock (Eq)
+  deriving stock (Eq, Generic)
+
+instance Serialize InstanceApp
 
 data InstanceFun = InstanceFun
   { _instanceFunLeft :: InstanceParam,
@@ -28,7 +33,9 @@ data InstanceFun = InstanceFun
     -- | The original expression from which this InstanceFun was created
     _instanceFunExpression :: Expression
   }
-  deriving stock (Eq)
+  deriving stock (Eq, Generic)
+
+instance Serialize InstanceFun
 
 data InstanceInfo = InstanceInfo
   { _instanceInfoInductive :: InductiveName,
@@ -36,15 +43,20 @@ data InstanceInfo = InstanceInfo
     _instanceInfoResult :: Expression,
     _instanceInfoArgs :: [FunctionParameter]
   }
-  deriving stock (Eq)
+  deriving stock (Eq, Generic)
 
 instance Hashable InstanceInfo where
   hashWithSalt salt InstanceInfo {..} = hashWithSalt salt _instanceInfoResult
+
+instance Serialize InstanceInfo
 
 -- | Maps trait names to available instances
 newtype InstanceTable = InstanceTable
   { _instanceTableMap :: HashMap InductiveName [InstanceInfo]
   }
+  deriving stock (Eq, Generic)
+
+instance Serialize InstanceTable
 
 makeLenses ''InstanceApp
 makeLenses ''InstanceFun

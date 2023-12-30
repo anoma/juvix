@@ -7,15 +7,15 @@ import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info.NameInfo (setInfoName)
 import Juvix.Compiler.Core.Transformation.Base
 
-disambiguateNodeNames' :: (BinderList Binder -> Text -> Text) -> InfoTable -> Node -> Node
-disambiguateNodeNames' disambiguate tab = dmapL go
+disambiguateNodeNames' :: (BinderList Binder -> Text -> Text) -> Module -> Node -> Node
+disambiguateNodeNames' disambiguate md = dmapL go
   where
     go :: BinderList Binder -> Node -> Node
     go bl node = case node of
       NVar Var {..} ->
         mkVar (setInfoName (BL.lookup _varIndex bl ^. binderName) _varInfo) _varIndex
       NIdt Ident {..} ->
-        mkIdent (setInfoName (identName tab _identSymbol) _identInfo) _identSymbol
+        mkIdent (setInfoName (identName md _identSymbol) _identInfo) _identSymbol
       NLam lam ->
         NLam (over lambdaBinder (over binderName (disambiguate bl)) lam)
       NLet lt ->
@@ -39,7 +39,7 @@ disambiguateNodeNames' disambiguate tab = dmapL go
       NMatch m ->
         NMatch (over matchBranches (map (over matchBranchPatterns (NonEmpty.fromList . snd . disambiguatePatterns bl . toList))) m)
       NTyp TypeConstr {..} ->
-        mkTypeConstr (setInfoName (typeName tab _typeConstrSymbol) _typeConstrInfo) _typeConstrSymbol _typeConstrArgs
+        mkTypeConstr (setInfoName (typeName md _typeConstrSymbol) _typeConstrInfo) _typeConstrSymbol _typeConstrArgs
       NPi pi
         | varOccurs 0 (pi ^. piBody) ->
             NPi (over piBinder (over binderName (disambiguate bl)) pi)
@@ -66,8 +66,8 @@ disambiguateNodeNames' disambiguate tab = dmapL go
             (bl', args') = disambiguatePatterns (BL.cons b' bl) (c ^. patternConstrArgs)
             pat' = PatConstr $ set patternConstrBinder b' $ set patternConstrArgs args' c
 
-disambiguateNodeNames :: InfoTable -> Node -> Node
-disambiguateNodeNames tab = disambiguateNodeNames' disambiguate tab
+disambiguateNodeNames :: Module -> Node -> Node
+disambiguateNodeNames md = disambiguateNodeNames' disambiguate md
   where
     disambiguate :: BinderList Binder -> Text -> Text
     disambiguate bl name =
@@ -81,20 +81,23 @@ disambiguateNodeNames tab = disambiguateNodeNames' disambiguate tab
               name
 
     names :: HashSet Text
-    names = identNames tab
+    names = identNames md
 
-setArgNames :: InfoTable -> Symbol -> Node -> Node
-setArgNames tab sym node = reLambdas lhs' body
+setArgNames :: Module -> Symbol -> Node -> Node
+setArgNames md sym node = reLambdas lhs' body
   where
     (lhs, body) = unfoldLambdas node
-    ii = lookupIdentifierInfo tab sym
+    ii = lookupIdentifierInfo md sym
     lhs' =
       zipWith
         (\l mn -> over lambdaLhsBinder (over binderName (`fromMaybe` mn)) l)
         lhs
         (ii ^. identifierArgNames ++ repeat Nothing)
 
-disambiguateNames :: InfoTable -> InfoTable
-disambiguateNames tab =
-  let tab' = mapT (setArgNames tab) tab
-   in mapAllNodes (disambiguateNodeNames tab') tab'
+disambiguateNames :: Module -> Module
+disambiguateNames md =
+  let md' = mapT (setArgNames md) md
+   in mapAllNodes (disambiguateNodeNames md') md'
+
+disambiguateNames' :: InfoTable -> InfoTable
+disambiguateNames' = withInfoTable disambiguateNames

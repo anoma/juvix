@@ -1,6 +1,6 @@
 module Juvix.Compiler.Internal.Data.InfoTable
-  ( module Juvix.Compiler.Internal.Data.InfoTable.Base,
-    buildTable,
+  ( module Juvix.Compiler.Store.Internal.Language,
+    computeInternalModule,
     extendWithReplExpression,
     lookupConstructor,
     lookupConstructorArgTypes,
@@ -13,33 +13,48 @@ module Juvix.Compiler.Internal.Data.InfoTable
     lookupConstructorType,
     getAxiomBuiltinInfo,
     getFunctionBuiltinInfo,
-    buildTableShallow,
     mkConstructorEntries,
+    functionInfoFromFunctionDef,
+    inductiveInfoFromInductiveDef,
   )
 where
 
 import Data.Generics.Uniplate.Data
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Internal.Data.CoercionInfo
-import Juvix.Compiler.Internal.Data.InfoTable.Base
 import Juvix.Compiler.Internal.Data.InstanceInfo
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty (ppTrace)
+import Juvix.Compiler.Store.Internal.Data.FunctionsTable
+import Juvix.Compiler.Store.Internal.Data.TypesTable
+import Juvix.Compiler.Store.Internal.Language
 import Juvix.Prelude
 
-type MCache = Cache ModuleIndex InfoTable
+functionInfoFromFunctionDef :: FunctionDef -> FunctionInfo
+functionInfoFromFunctionDef FunctionDef {..} =
+  FunctionInfo
+    { _functionInfoName = _funDefName,
+      _functionInfoType = _funDefType,
+      _functionInfoArgsInfo = _funDefArgsInfo,
+      _functionInfoBuiltin = _funDefBuiltin,
+      _functionInfoCoercion = _funDefCoercion,
+      _functionInfoInstance = _funDefInstance,
+      _functionInfoTerminating = _funDefTerminating,
+      _functionInfoPragmas = _funDefPragmas
+    }
 
-buildTable :: (Foldable f) => f Module -> InfoTable
-buildTable = run . evalCache (computeTable True) mempty . getMany
-
-buildTable' :: (Foldable f) => Bool -> f Module -> InfoTable
-buildTable' recurIntoImports = run . evalCache (computeTable recurIntoImports) mempty . getMany
-
-buildTableShallow :: Module -> InfoTable
-buildTableShallow = buildTable' False . pure @[]
-
-getMany :: (Members '[MCache] r, Foldable f) => f Module -> Sem r InfoTable
-getMany = mconcatMap (cacheGet . ModuleIndex)
+inductiveInfoFromInductiveDef :: InductiveDef -> InductiveInfo
+inductiveInfoFromInductiveDef InductiveDef {..} =
+  InductiveInfo
+    { _inductiveInfoName = _inductiveName,
+      _inductiveInfoType = _inductiveType,
+      _inductiveInfoBuiltin = _inductiveBuiltin,
+      _inductiveInfoParameters = _inductiveParameters,
+      _inductiveInfoConstructors = map (^. inductiveConstructorName) _inductiveConstructors,
+      _inductiveInfoPositive = _inductivePositive,
+      _inductiveInfoTrait = _inductiveTrait,
+      _inductiveInfoPragmas = _inductivePragmas
+    }
 
 extendWithReplExpression :: Expression -> InfoTable -> InfoTable
 extendWithReplExpression e =
@@ -47,7 +62,7 @@ extendWithReplExpression e =
     infoFunctions
     ( HashMap.union
         ( HashMap.fromList
-            [ (f ^. funDefName, FunctionInfo f)
+            [ (f ^. funDefName, functionInfoFromFunctionDef f)
               | f <- letFunctionDefs e
             ]
         )
@@ -65,19 +80,20 @@ letFunctionDefs e =
       LetFunDef f -> pure f
       LetMutualBlock (MutualBlockLet fs) -> fs
 
-computeTable :: forall r. (Members '[MCache] r) => Bool -> ModuleIndex -> Sem r InfoTable
-computeTable recurIntoImports (ModuleIndex m) = compute
+computeInternalModule :: TypesTable -> FunctionsTable -> Module -> InternalModule
+computeInternalModule tysTab funsTab m@Module {..} =
+  InternalModule
+    { _internalModuleId = _moduleId,
+      _internalModuleName = _moduleName,
+      _internalModuleImports = _moduleBody ^. moduleImports,
+      _internalModuleInfoTable = computeInfoTable m,
+      _internalModuleTypesTable = tysTab,
+      _internalModuleFunctionsTable = funsTab
+    }
+
+computeInfoTable :: Module -> InfoTable
+computeInfoTable m = InfoTable {..}
   where
-    compute :: Sem r InfoTable
-    compute = do
-      infoInc <- mconcatMapM (cacheGet . (^. importModule)) imports
-      return (InfoTable {..} <> infoInc)
-
-    imports :: [Import]
-    imports
-      | recurIntoImports = m ^. moduleBody . moduleImports
-      | otherwise = []
-
     mutuals :: [MutualStatement]
     mutuals =
       [ d
@@ -94,7 +110,7 @@ computeTable recurIntoImports (ModuleIndex m) = compute
     _infoInductives :: HashMap Name InductiveInfo
     _infoInductives =
       HashMap.fromList
-        [ (d ^. inductiveName, InductiveInfo d)
+        [ (d ^. inductiveName, inductiveInfoFromInductiveDef d)
           | d <- inductives
         ]
 
@@ -109,10 +125,10 @@ computeTable recurIntoImports (ModuleIndex m) = compute
     _infoFunctions :: HashMap Name FunctionInfo
     _infoFunctions =
       HashMap.fromList $
-        [ (f ^. funDefName, FunctionInfo f)
+        [ (f ^. funDefName, functionInfoFromFunctionDef f)
           | StatementFunction f <- mutuals
         ]
-          <> [ (f ^. funDefName, FunctionInfo f)
+          <> [ (f ^. funDefName, functionInfoFromFunctionDef f)
                | s <- ss,
                  f <- letFunctionDefs s
              ]
@@ -124,16 +140,44 @@ computeTable recurIntoImports (ModuleIndex m) = compute
           | StatementAxiom d <- mutuals
         ]
 
+    _infoBuiltins :: HashMap BuiltinPrim Name
+    _infoBuiltins =
+      HashMap.fromList $
+        mapMaybe goInd (HashMap.elems _infoInductives)
+          <> mapMaybe goConstr (HashMap.elems _infoConstructors)
+          <> mapMaybe goFun (HashMap.elems _infoFunctions)
+          <> mapMaybe goAxiom (HashMap.elems _infoAxioms)
+      where
+        goInd :: InductiveInfo -> Maybe (BuiltinPrim, Name)
+        goInd InductiveInfo {..} =
+          _inductiveInfoBuiltin
+            >>= (\b -> Just (BuiltinsInductive b, _inductiveInfoName))
+
+        goConstr :: ConstructorInfo -> Maybe (BuiltinPrim, Name)
+        goConstr ConstructorInfo {..} =
+          _constructorInfoBuiltin
+            >>= (\b -> Just (BuiltinsConstructor b, _constructorInfoName))
+
+        goFun :: FunctionInfo -> Maybe (BuiltinPrim, Name)
+        goFun FunctionInfo {..} =
+          _functionInfoBuiltin
+            >>= (\b -> Just (BuiltinsFunction b, _functionInfoName))
+
+        goAxiom :: AxiomInfo -> Maybe (BuiltinPrim, Name)
+        goAxiom AxiomInfo {..} =
+          _axiomInfoDef ^. axiomBuiltin
+            >>= (\b -> Just (BuiltinsAxiom b, _axiomInfoDef ^. axiomName))
+
     _infoInstances :: InstanceTable
     _infoInstances = foldr (flip updateInstanceTable) mempty $ mapMaybe mkInstance (HashMap.elems _infoFunctions)
       where
         mkInstance :: FunctionInfo -> Maybe InstanceInfo
-        mkInstance (FunctionInfo FunctionDef {..})
-          | _funDefInstance =
+        mkInstance (FunctionInfo {..})
+          | _functionInfoInstance =
               instanceFromTypedExpression
                 ( TypedExpression
-                    { _typedType = _funDefType,
-                      _typedExpression = ExpressionIden (IdenFunction _funDefName)
+                    { _typedType = _functionInfoType,
+                      _typedExpression = ExpressionIden (IdenFunction _functionInfoName)
                     }
                 )
           | otherwise =
@@ -143,12 +187,12 @@ computeTable recurIntoImports (ModuleIndex m) = compute
     _infoCoercions = foldr (flip updateCoercionTable) mempty $ mapMaybe mkCoercion (HashMap.elems _infoFunctions)
       where
         mkCoercion :: FunctionInfo -> Maybe CoercionInfo
-        mkCoercion (FunctionInfo FunctionDef {..})
-          | _funDefCoercion =
+        mkCoercion (FunctionInfo {..})
+          | _functionInfoCoercion =
               coercionFromTypedExpression
                 ( TypedExpression
-                    { _typedType = _funDefType,
-                      _typedExpression = ExpressionIden (IdenFunction _funDefName)
+                    { _typedType = _functionInfoType,
+                      _typedExpression = ExpressionIden (IdenFunction _functionInfoName)
                     }
                 )
           | otherwise =
@@ -235,7 +279,7 @@ getFunctionBuiltinInfo :: (Member (Reader InfoTable) r) => Name -> Sem r (Maybe 
 getFunctionBuiltinInfo n = do
   maybeFunInfo <- HashMap.lookup n <$> asks (^. infoFunctions)
   return $ case maybeFunInfo of
-    Just funInfo -> funInfo ^. functionInfoDef . funDefBuiltin
+    Just funInfo -> funInfo ^. functionInfoBuiltin
     Nothing -> Nothing
 
 mkConstructorEntries :: InductiveDef -> [(ConstructorName, ConstructorInfo)]

@@ -42,7 +42,7 @@ runParser' bs fileName input =
     evalState @Index 0 $
       evalState @LocalNameMap mempty $
         runInfoTableBuilder' bs $
-          evalTopNameIdGen $
+          evalTopNameIdGen defaultModuleId $
             P.runParserT parseToplevel fileName input of
     (_, Left err) -> Left (MegaparsecError err)
     (bs', Right ()) -> Right bs'

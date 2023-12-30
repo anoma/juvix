@@ -3,6 +3,7 @@ module Commands.Dev.Core.Repl where
 import Commands.Base
 import Commands.Dev.Core.Repl.Options
 import Juvix.Compiler.Core.Data.InfoTable qualified as Core
+import Juvix.Compiler.Core.Data.Module qualified as Core
 import Juvix.Compiler.Core.Evaluator qualified as Core
 import Juvix.Compiler.Core.Extra.Base qualified as Core
 import Juvix.Compiler.Core.Info qualified as Info
@@ -18,10 +19,10 @@ import Juvix.Extra.Paths
 runCommand :: forall r. (Members '[Embed IO, App] r) => CoreReplOptions -> Sem r ()
 runCommand opts = do
   showReplWelcome
-  runRepl opts Core.emptyInfoTable
+  runRepl opts mempty
 
 parseText :: Core.InfoTable -> Text -> Either Core.MegaparsecError (Core.InfoTable, Maybe Core.Node)
-parseText = Core.runParser replPath
+parseText = Core.runParser replPath defaultModuleId
 
 runRepl :: forall r. (Members '[Embed IO, App] r) => CoreReplOptions -> Core.InfoTable -> Sem r ()
 runRepl opts tab = do
@@ -76,7 +77,7 @@ runRepl opts tab = do
       ':' : 'l' : ' ' : f -> do
         s' <- readFile f
         sf <- someBaseToAbs' (someFile f)
-        case Core.runParser sf Core.emptyInfoTable s' of
+        case Core.runParser sf defaultModuleId mempty s' of
           Left err -> do
             printJuvixError (JuvixError err)
             runRepl opts tab
@@ -84,7 +85,7 @@ runRepl opts tab = do
             Nothing -> runRepl opts tab'
             Just node -> replEval False tab' node
       ":r" ->
-        runRepl opts Core.emptyInfoTable
+        runRepl opts mempty
       _ ->
         case parseText tab s of
           Left err -> do
@@ -105,7 +106,7 @@ runRepl opts tab = do
         Right node'
           | Info.member Info.kNoDisplayInfo (Core.getInfo node') -> runRepl opts tab'
           | otherwise -> do
-              renderStdOut (Core.ppOut opts (Core.disambiguateNodeNames tab' node'))
+              renderStdOut (Core.ppOut opts (Core.disambiguateNodeNames (Core.moduleFromInfoTable tab') node'))
               embed (putStrLn "")
               runRepl opts tab'
       where
@@ -113,18 +114,20 @@ runRepl opts tab = do
 
     replNormalize :: Core.InfoTable -> Core.Node -> Sem r ()
     replNormalize tab' node =
-      let node' = normalize tab' node
+      let md' = Core.moduleFromInfoTable tab'
+          node' = normalize md' node
        in if
               | Info.member Info.kNoDisplayInfo (Core.getInfo node') ->
                   runRepl opts tab'
               | otherwise -> do
-                  renderStdOut (Core.ppOut opts (Core.disambiguateNodeNames tab' node'))
+                  renderStdOut (Core.ppOut opts (Core.disambiguateNodeNames md' node'))
                   embed (putStrLn "")
                   runRepl opts tab'
 
     replType :: Core.InfoTable -> Core.Node -> Sem r ()
     replType tab' node = do
-      let ty = Core.disambiguateNodeNames tab' (Core.computeNodeType tab' node)
+      let md' = Core.moduleFromInfoTable tab'
+          ty = Core.disambiguateNodeNames md' (Core.computeNodeType md' node)
       renderStdOut (Core.ppOut opts ty)
       embed (putStrLn "")
       runRepl opts tab'

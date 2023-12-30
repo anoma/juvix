@@ -6,10 +6,10 @@ Ty1 : Type := Bool → Bool;
 
 idTy (A : Type) : Type := A;
 
+typeToType : Type := Type -> Type;
+
 idTy2 : typeToType
   | A := A;
-
-typeToType : Type := Type -> Type;
 
 Ty2 : idTy Type := Ty1;
 

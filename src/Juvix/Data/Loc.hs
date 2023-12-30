@@ -1,13 +1,16 @@
 module Juvix.Data.Loc where
 
+import Juvix.Extra.Serialize
 import Juvix.Prelude.Base
 import Juvix.Prelude.Path
 import Prettyprinter
 import Text.Megaparsec qualified as M
 
 newtype Pos = Pos {_unPos :: Word64}
-  deriving stock (Show, Eq, Ord, Data)
+  deriving stock (Show, Eq, Ord, Data, Generic)
   deriving newtype (Hashable, Num, Enum, Real, Integral)
+
+instance Serialize Pos
 
 instance Semigroup Pos where
   Pos x <> Pos y = Pos (x + y)
@@ -26,6 +29,8 @@ data FileLoc = FileLoc
   deriving stock (Show, Eq, Generic, Data)
 
 instance Hashable FileLoc
+
+instance Serialize FileLoc
 
 instance Ord FileLoc where
   compare (FileLoc l c o) (FileLoc l' c' o') = compare (l, c, o) (l', c', o')
@@ -70,6 +75,8 @@ data Interval = Interval
   deriving stock (Show, Ord, Eq, Generic, Data)
 
 instance Hashable Interval
+
+instance Serialize Interval
 
 class HasLoc t where
   getLoc :: t -> Interval

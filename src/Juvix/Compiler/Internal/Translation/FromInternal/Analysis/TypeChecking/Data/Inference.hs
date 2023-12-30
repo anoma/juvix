@@ -1,5 +1,5 @@
 module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Inference
-  ( module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.FunctionsTable,
+  ( module Juvix.Compiler.Store.Internal.Data.FunctionsTable,
     Inference,
     MatchError,
     registerFunctionDef,
@@ -20,13 +20,12 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Da
 where
 
 import Data.HashMap.Strict qualified as HashMap
-import Juvix.Compiler.Concrete.Data.Highlight.Input
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context
-import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.FunctionsTable
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error
+import Juvix.Compiler.Store.Internal.Data.FunctionsTable
 import Juvix.Prelude hiding (fromEither)
 
 data MetavarState
@@ -308,7 +307,7 @@ re = reinterpret $ \case
   WeakNormalize ty -> weakNormalize' ty
   where
     registerIdenType' :: (Members '[State InferenceState] r) => Name -> Expression -> Sem r ()
-    registerIdenType' i ty = modify (over inferenceIdens (HashMap.insert (i ^. nameId) ty))
+    registerIdenType' i ty = modify (over (inferenceIdens . typesTable) (HashMap.insert (i ^. nameId) ty))
 
     -- Supports alpha equivalence.
     matchTypes' :: (Members '[State InferenceState, State FunctionsTable, Error TypeCheckerError, NameIdGen] r) => Expression -> Expression -> Sem r (Maybe MatchError)
@@ -484,28 +483,27 @@ matchPatterns (PatternArg impl1 name1 pat1) (PatternArg impl2 name2 pat2) =
     err = return False
 
 runInferenceDefs ::
-  (Members '[Termination, HighlightBuilder, Error TypeCheckerError, State FunctionsTable, State TypesTable, NameIdGen] r, HasExpressions funDef) =>
+  (Members '[Termination, Error TypeCheckerError, State FunctionsTable, State TypesTable, NameIdGen] r, HasExpressions funDef) =>
   Sem (Inference ': r) (NonEmpty funDef) ->
   Sem r (NonEmpty funDef)
 runInferenceDefs a = do
   (finalState, expr) <- runState iniState (re a)
   (subs, idens) <- closeState finalState
-  idens' <- mapM (subsHoles subs) idens
+  idens' <- mapM (subsHoles subs) (idens ^. typesTable)
   stash' <- mapM (subsHoles subs) (finalState ^. inferenceFunctionsStash)
   forM_ stash' registerFunctionDef
-  addIdens idens'
+  addIdens (TypesTable idens')
   mapM (subsHoles subs) expr
 
 runInferenceDef ::
-  (Members '[Termination, HighlightBuilder, Error TypeCheckerError, State FunctionsTable, State TypesTable, NameIdGen] r, HasExpressions funDef) =>
+  (Members '[Termination, Error TypeCheckerError, State FunctionsTable, State TypesTable, NameIdGen] r, HasExpressions funDef) =>
   Sem (Inference ': r) funDef ->
   Sem r funDef
 runInferenceDef = fmap head . runInferenceDefs . fmap pure
 
-addIdens :: (Members '[HighlightBuilder, State TypesTable] r) => TypesTable -> Sem r ()
+addIdens :: (Members '[State TypesTable] r) => TypesTable -> Sem r ()
 addIdens idens = do
-  modify (HashMap.union idens)
-  modify (over highlightTypes (HashMap.union idens))
+  modify (over typesTable (HashMap.union (idens ^. typesTable)))
 
 -- | Assumes the given function has been type checked. Does *not* register the
 -- function.

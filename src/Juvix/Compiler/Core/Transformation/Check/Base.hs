@@ -2,6 +2,7 @@ module Juvix.Compiler.Core.Transformation.Check.Base where
 
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Data.InfoTableBuilder
+import Juvix.Compiler.Core.Data.Module
 import Juvix.Compiler.Core.Data.TypeDependencyInfo (createTypeDependencyInfo)
 import Juvix.Compiler.Core.Error
 import Juvix.Compiler.Core.Extra
@@ -22,8 +23,8 @@ dynamicTypeError node loc =
 
 axiomError :: (Members '[Error CoreError, InfoTableBuilder] r) => Symbol -> Maybe Location -> Sem r a
 axiomError sym loc = do
-  tbl <- getInfoTable
-  let nameTxt = identName tbl sym
+  md <- getModule
+  let nameTxt = identName md sym
   throw
     CoreError
       { _coreErrorMsg = ppOutput ("The symbol" <+> annotate (AnnKind KNameAxiom) (pretty nameTxt) <> " is defined as an axiom and thus it cannot be compiled"),
@@ -73,7 +74,7 @@ checkBuiltins allowUntypedFail = dmapRM go
 -- | Checks that the root of the node is not `Bottom`. Currently the only way we
 -- create `Bottom` is when translating axioms that are not builtin. Hence it is
 -- enough to check the root only.
-checkNoAxioms :: forall r. (Member (Error CoreError) r) => InfoTable -> Sem r ()
+checkNoAxioms :: forall r. (Member (Error CoreError) r) => Module -> Sem r ()
 checkNoAxioms = void . mapT' checkNodeNoAxiom
   where
     checkNodeNoAxiom :: Symbol -> Node -> Sem (InfoTableBuilder ': r) Node
@@ -95,13 +96,13 @@ checkNoIO = dmapM go
           _ -> return node
       _ -> return node
 
-checkTypes :: forall r. (Member (Error CoreError) r) => Bool -> InfoTable -> Node -> Sem r Node
-checkTypes allowPolymorphism tab = dmapM go
+checkTypes :: forall r. (Member (Error CoreError) r) => Bool -> Module -> Node -> Sem r Node
+checkTypes allowPolymorphism md = dmapM go
   where
     go :: Node -> Sem r Node
     go node = case node of
       NIdt Ident {..}
-        | isDynamic (lookupIdentifierInfo tab _identSymbol ^. identifierType) ->
+        | isDynamic (lookupIdentifierInfo md _identSymbol ^. identifierType) ->
             throw (dynamicTypeError node (getInfoLocation _identInfo))
       NLam Lambda {..}
         | isDynamic (_lambdaBinder ^. binderType) ->
@@ -113,7 +114,7 @@ checkTypes allowPolymorphism tab = dmapM go
         | any (isDynamic . (^. letItemBinder . binderType)) _letRecValues ->
             throw (dynamicTypeError node (head _letRecValues ^. letItemBinder . binderLocation))
       NPi Pi {..}
-        | not allowPolymorphism && isTypeConstr tab (_piBinder ^. binderType) ->
+        | not allowPolymorphism && isTypeConstr md (_piBinder ^. binderType) ->
             throw
               CoreError
                 { _coreErrorMsg = ppOutput "polymorphism not supported for this target",
@@ -122,9 +123,9 @@ checkTypes allowPolymorphism tab = dmapM go
                 }
       _ -> return node
 
-checkNoRecursiveTypes :: forall r. (Member (Error CoreError) r) => InfoTable -> Sem r ()
-checkNoRecursiveTypes tab =
-  when (isCyclic (createTypeDependencyInfo tab)) $
+checkNoRecursiveTypes :: forall r. (Member (Error CoreError) r) => Module -> Sem r ()
+checkNoRecursiveTypes md =
+  when (isCyclic (createTypeDependencyInfo (md ^. moduleInfoTable))) $
     throw
       CoreError
         { _coreErrorMsg = ppOutput "recursive types not supported for this target",
@@ -132,9 +133,9 @@ checkNoRecursiveTypes tab =
           _coreErrorLoc = defaultLoc
         }
 
-checkMainExists :: forall r. (Member (Error CoreError) r) => InfoTable -> Sem r ()
-checkMainExists tab =
-  when (isNothing (tab ^. infoMain)) $
+checkMainExists :: forall r. (Member (Error CoreError) r) => Module -> Sem r ()
+checkMainExists md =
+  when (isNothing (md ^. moduleInfoTable . infoMain)) $
     throw
       CoreError
         { _coreErrorMsg = ppOutput "no `main` function",

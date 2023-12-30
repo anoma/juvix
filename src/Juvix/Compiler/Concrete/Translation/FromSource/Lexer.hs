@@ -8,10 +8,10 @@ where
 
 import Data.Text qualified as Text
 import GHC.Unicode
-import Juvix.Compiler.Concrete.Data.ParsedInfoTableBuilder
 import Juvix.Compiler.Concrete.Extra hiding (Pos, hspace, space, string')
 import Juvix.Compiler.Concrete.Extra qualified as P
 import Juvix.Compiler.Concrete.Keywords
+import Juvix.Compiler.Concrete.Translation.FromSource.ParserResultBuilder
 import Juvix.Data.Keyword
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Parser.Lexer
@@ -20,37 +20,37 @@ import Text.Megaparsec.Char.Lexer qualified as L
 
 type OperatorSym = Text
 
-judocText :: (Members '[InfoTableBuilder] r) => ParsecS r a -> ParsecS r a
+judocText :: (Members '[ParserResultBuilder] r) => ParsecS r a -> ParsecS r a
 judocText c = do
   (a, i) <- interval c
   P.lift (registerJudocText i)
   return a
 
-judocText_ :: (Members '[InfoTableBuilder] r) => ParsecS r a -> ParsecS r ()
+judocText_ :: (Members '[ParserResultBuilder] r) => ParsecS r a -> ParsecS r ()
 judocText_ = void . judocText
 
-space :: forall r. (Members '[InfoTableBuilder] r) => ParsecS r ()
+space :: forall r. (Members '[ParserResultBuilder] r) => ParsecS r ()
 space = space' True >>= mapM_ (P.lift . registerSpaceSpan)
 
-lexeme :: (Members '[InfoTableBuilder] r) => ParsecS r a -> ParsecS r a
+lexeme :: (Members '[ParserResultBuilder] r) => ParsecS r a -> ParsecS r a
 lexeme = L.lexeme space
 
-symbol :: (Members '[InfoTableBuilder] r) => Text -> ParsecS r ()
+symbol :: (Members '[ParserResultBuilder] r) => Text -> ParsecS r ()
 symbol = void . L.symbol space
 
-lexemeInterval :: (Members '[InfoTableBuilder] r) => ParsecS r a -> ParsecS r (a, Interval)
+lexemeInterval :: (Members '[ParserResultBuilder] r) => ParsecS r a -> ParsecS r (a, Interval)
 lexemeInterval = lexeme . interval
 
-decimal :: (Members '[InfoTableBuilder] r, Num n) => ParsecS r (n, Interval)
+decimal :: (Members '[ParserResultBuilder] r, Num n) => ParsecS r (n, Interval)
 decimal = lexemeInterval L.decimal
 
-identifier :: (Members '[InfoTableBuilder] r) => ParsecS r Text
+identifier :: (Members '[ParserResultBuilder] r) => ParsecS r Text
 identifier = fmap fst identifierL
 
-identifierL :: (Members '[InfoTableBuilder] r) => ParsecS r (Text, Interval)
+identifierL :: (Members '[ParserResultBuilder] r) => ParsecS r (Text, Interval)
 identifierL = lexeme bareIdentifier
 
-integer :: (Members '[InfoTableBuilder] r) => ParsecS r (WithLoc Integer)
+integer :: (Members '[ParserResultBuilder] r) => ParsecS r (WithLoc Integer)
 integer = do
   (num, i) <- integer' decimal
   return (WithLoc i num)
@@ -70,26 +70,26 @@ bracedString =
       void (char '\\')
       char '}'
 
-string :: (Members '[InfoTableBuilder] r) => ParsecS r (Text, Interval)
+string :: (Members '[ParserResultBuilder] r) => ParsecS r (Text, Interval)
 string = lexemeInterval string'
 
 judocExampleStart :: ParsecS r ()
 judocExampleStart = P.chunk Str.judocExample >> hspace_
 
-judocBlockEnd :: (Members '[InfoTableBuilder] r) => ParsecS r KeywordRef
+judocBlockEnd :: (Members '[ParserResultBuilder] r) => ParsecS r KeywordRef
 judocBlockEnd = kw delimJudocBlockEnd
 
-judocBlockStart :: (Members '[InfoTableBuilder] r) => ParsecS r KeywordRef
+judocBlockStart :: (Members '[ParserResultBuilder] r) => ParsecS r KeywordRef
 judocBlockStart = kwBare delimJudocBlockStart
 
-judocStart :: (Members '[InfoTableBuilder] r) => ParsecS r KeywordRef
+judocStart :: (Members '[ParserResultBuilder] r) => ParsecS r KeywordRef
 judocStart = kwBare delimJudocStart <* hspace_
 
 -- | Does not consume space after it
-kwBare :: (Member InfoTableBuilder r) => Keyword -> ParsecS r KeywordRef
+kwBare :: (Member ParserResultBuilder r) => Keyword -> ParsecS r KeywordRef
 kwBare k = kw' k >>= P.lift . registerKeyword
 
-kw :: (Member InfoTableBuilder r) => Keyword -> ParsecS r KeywordRef
+kw :: (Member ParserResultBuilder r) => Keyword -> ParsecS r KeywordRef
 kw = lexeme . kwBare
 
 -- | Same as @identifier@ but does not consume space after it.
@@ -99,41 +99,41 @@ bareIdentifier = interval (rawIdentifier allKeywordStrings)
 dot :: forall e m. (MonadParsec e Text m) => m Char
 dot = P.char '.'
 
-dottedIdentifier :: (Members '[InfoTableBuilder] r) => ParsecS r (NonEmpty (Text, Interval))
+dottedIdentifier :: (Members '[ParserResultBuilder] r) => ParsecS r (NonEmpty (Text, Interval))
 dottedIdentifier = lexeme $ P.sepBy1 bareIdentifier dot
 
-delim :: (Members '[InfoTableBuilder] r) => Text -> ParsecS r ()
+delim :: (Members '[ParserResultBuilder] r) => Text -> ParsecS r ()
 delim sym = lexeme $ delim' sym >>= P.lift . registerDelimiter
 
-lbrace :: (Members '[InfoTableBuilder] r) => ParsecS r ()
+lbrace :: (Members '[ParserResultBuilder] r) => ParsecS r ()
 lbrace = delim "{"
 
-rbrace :: (Members '[InfoTableBuilder] r) => ParsecS r ()
+rbrace :: (Members '[ParserResultBuilder] r) => ParsecS r ()
 rbrace = delim "}"
 
-ldoubleBrace :: (Members '[InfoTableBuilder] r) => ParsecS r ()
+ldoubleBrace :: (Members '[ParserResultBuilder] r) => ParsecS r ()
 ldoubleBrace = delim "{{"
 
-rdoubleBrace :: (Members '[InfoTableBuilder] r) => ParsecS r ()
+rdoubleBrace :: (Members '[ParserResultBuilder] r) => ParsecS r ()
 rdoubleBrace = delim "}}"
 
-lparen :: (Members '[InfoTableBuilder] r) => ParsecS r ()
+lparen :: (Members '[ParserResultBuilder] r) => ParsecS r ()
 lparen = delim "("
 
-rparen :: (Members '[InfoTableBuilder] r) => ParsecS r ()
+rparen :: (Members '[ParserResultBuilder] r) => ParsecS r ()
 rparen = delim ")"
 
-pipe :: (Members '[InfoTableBuilder] r) => ParsecS r ()
+pipe :: (Members '[ParserResultBuilder] r) => ParsecS r ()
 pipe = delim "|"
 
-semicolon :: (Members '[InfoTableBuilder] r) => ParsecS r ()
+semicolon :: (Members '[ParserResultBuilder] r) => ParsecS r ()
 semicolon = delim ";"
 
-parens :: (Members '[InfoTableBuilder] r) => ParsecS r a -> ParsecS r a
+parens :: (Members '[ParserResultBuilder] r) => ParsecS r a -> ParsecS r a
 parens = between lparen rparen
 
-braces :: (Members '[InfoTableBuilder] r) => ParsecS r a -> ParsecS r a
+braces :: (Members '[ParserResultBuilder] r) => ParsecS r a -> ParsecS r a
 braces = between lbrace rbrace
 
-doubleBraces :: (Members '[InfoTableBuilder] r) => ParsecS r a -> ParsecS r a
+doubleBraces :: (Members '[ParserResultBuilder] r) => ParsecS r a -> ParsecS r a
 doubleBraces = between ldoubleBrace rdoubleBrace

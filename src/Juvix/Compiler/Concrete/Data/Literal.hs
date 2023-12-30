@@ -1,6 +1,7 @@
 module Juvix.Compiler.Concrete.Data.Literal where
 
 import Juvix.Data.Fixity
+import Juvix.Extra.Serialize
 import Juvix.Prelude
 import Prettyprinter
 
@@ -12,6 +13,8 @@ data Literal
   deriving stock (Show, Eq, Ord, Generic, Data)
 
 instance Hashable Literal
+
+instance Serialize Literal
 
 instance HasAtomicity Literal where
   atomicity = \case

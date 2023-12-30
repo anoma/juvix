@@ -2,14 +2,10 @@ module Evaluator where
 
 import App
 import CommonOptions
-import Juvix.Compiler.Core.Data.InfoTable qualified as Core
-import Juvix.Compiler.Core.Error qualified as Core
-import Juvix.Compiler.Core.Evaluator qualified as Core
-import Juvix.Compiler.Core.Extra.Base qualified as Core
+import Juvix.Compiler.Core qualified as Core
 import Juvix.Compiler.Core.Extra.Value qualified as Core
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.NoDisplayInfo qualified as Info
-import Juvix.Compiler.Core.Language qualified as Core
 import Juvix.Compiler.Core.Normalizer
 import Juvix.Compiler.Core.Pretty qualified as Core
 import Juvix.Compiler.Core.Transformation.DisambiguateNames qualified as Core
@@ -54,7 +50,7 @@ evalAndPrint opts tab node = do
           renderStdOut (Core.ppOut opts node'')
           newline
       where
-        node'' = if project opts ^. evalNoDisambiguate then node' else Core.disambiguateNodeNames tab node'
+        node'' = if project opts ^. evalNoDisambiguate then node' else Core.disambiguateNodeNames (Core.moduleFromInfoTable tab) node'
   where
     defaultLoc :: Sem r Interval
     defaultLoc = singletonInterval . mkInitialLoc <$> fromAppPathFile f
@@ -69,11 +65,11 @@ normalizeAndPrint ::
   Core.Node ->
   Sem r ()
 normalizeAndPrint opts tab node =
-  let node' = normalize tab node
+  let node' = normalize (Core.moduleFromInfoTable tab) node
    in if
           | Info.member Info.kNoDisplayInfo (Core.getInfo node') ->
               return ()
           | otherwise -> do
-              let node'' = if project opts ^. evalNoDisambiguate then node' else Core.disambiguateNodeNames tab node'
+              let node'' = if project opts ^. evalNoDisambiguate then node' else Core.disambiguateNodeNames (Core.moduleFromInfoTable tab) node'
               renderStdOut (Core.ppOut opts node'')
               embed (putStrLn "")

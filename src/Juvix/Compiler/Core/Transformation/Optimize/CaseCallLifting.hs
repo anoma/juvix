@@ -5,15 +5,15 @@ import Data.List qualified as List
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Transformation.Base
 
-convertNode :: InfoTable -> Node -> Node
-convertNode tab = umap go
+convertNode :: Module -> Node -> Node
+convertNode md = umap go
   where
     go :: Node -> Node
     go = \case
       NCase Case {..}
         | not (null idents) ->
             if
-                | isCaseBoolean _caseBranches && not (isImmediate tab _caseValue) ->
+                | isCaseBoolean _caseBranches && not (isImmediate md _caseValue) ->
                     mkLet'
                       mkTypeBool'
                       _caseValue
@@ -47,7 +47,7 @@ convertNode tab = umap go
           dargs0 = fmap (fromJust . gatherAppArgs sym) def
           appArgs = computeArgs args0 dargs0
           app = mkApps' (mkIdent' sym) appArgs
-          (tyargs, tgt) = unfoldPi' (lookupIdentifierInfo tab sym ^. identifierType)
+          (tyargs, tgt) = unfoldPi' (lookupIdentifierInfo md sym ^. identifierType)
           tyargs' = drop (length appArgs) tyargs
           ty = substs appArgs (mkPis' tyargs' tgt)
           brs' = map (\br -> over caseBranchBody (substApps sym (mkVar' (br ^. caseBranchBindersNum + idx))) br) brs
@@ -76,7 +76,7 @@ convertNode tab = umap go
             let (h, args) = unfoldApps' node
              in case h of
                   NIdt Ident {..}
-                    | length args == lookupIdentifierInfo tab _identSymbol ^. identifierArgsNum ->
+                    | length args == lookupIdentifierInfo md _identSymbol ^. identifierArgsNum ->
                         HashSet.insert _identSymbol acc
                   _ -> acc
           _ -> acc
@@ -84,7 +84,7 @@ convertNode tab = umap go
     countApps :: Symbol -> Node -> Int
     countApps sym = sgather go' 0
       where
-        argsNum = lookupIdentifierInfo tab sym ^. identifierArgsNum
+        argsNum = lookupIdentifierInfo md sym ^. identifierArgsNum
 
         go' :: Int -> Node -> Int
         go' acc node = case node of
@@ -101,7 +101,7 @@ convertNode tab = umap go
     gatherAppArgs :: Symbol -> Node -> Maybe [Node]
     gatherAppArgs sym = sgather go' Nothing
       where
-        argsNum = lookupIdentifierInfo tab sym ^. identifierArgsNum
+        argsNum = lookupIdentifierInfo md sym ^. identifierArgsNum
 
         go' :: Maybe [Node] -> Node -> Maybe [Node]
         go' acc node = case node of
@@ -118,7 +118,7 @@ convertNode tab = umap go
     substApps :: Symbol -> Node -> Node -> Node
     substApps sym snode = sumap go'
       where
-        argsNum = lookupIdentifierInfo tab sym ^. identifierArgsNum
+        argsNum = lookupIdentifierInfo md sym ^. identifierArgsNum
 
         go' :: Node -> Node
         go' node = case node of
@@ -132,5 +132,5 @@ convertNode tab = umap go
                   _ -> node
           _ -> node
 
-caseCallLifting :: InfoTable -> InfoTable
-caseCallLifting tab = mapAllNodes (convertNode tab) tab
+caseCallLifting :: Module -> Module
+caseCallLifting md = mapAllNodes (convertNode md) md

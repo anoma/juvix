@@ -5,8 +5,8 @@ import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Transformation.Base
 
-isConstructorTree :: InfoTable -> Case -> Node -> Bool
-isConstructorTree tab c node = case run $ runFail $ go mempty node of
+isConstructorTree :: Module -> Case -> Node -> Bool
+isConstructorTree md c node = case run $ runFail $ go mempty node of
   Just ctrsMap ->
     all (checkOne ctrsMap) tags && checkDefault ctrsMap (c ^. caseDefault)
   Nothing -> False
@@ -18,13 +18,13 @@ isConstructorTree tab c node = case run $ runFail $ go mempty node of
     checkOne ctrsMap tag = case HashMap.lookup tag ctrsMap of
       Just 1 -> True
       Nothing -> True
-      _ -> isImmediate tab (fromJust $ HashMap.lookup tag tagMap)
+      _ -> isImmediate md (fromJust $ HashMap.lookup tag tagMap)
 
     checkDefault :: HashMap Tag Int -> Maybe Node -> Bool
     checkDefault ctrsMap = \case
       Just d ->
         sum (HashMap.filterWithKey (\k _ -> not (HashSet.member k tags')) ctrsMap) <= 1
-          || isImmediate tab d
+          || isImmediate md d
         where
           tags' = HashSet.fromList tags
       Nothing -> True
@@ -39,14 +39,14 @@ isConstructorTree tab c node = case run $ runFail $ go mempty node of
       _ ->
         fail
 
-convertNode :: InfoTable -> Node -> Node
-convertNode tab = dmap go
+convertNode :: Module -> Node -> Node
+convertNode md = dmap go
   where
     go :: Node -> Node
     go node = case node of
       NCase c@Case {..} -> case _caseValue of
         NCase c'
-          | isConstructorTree tab c _caseValue ->
+          | isConstructorTree md c _caseValue ->
               NCase
                 c'
                   { _caseBranches = map permuteBranch (c' ^. caseBranches),
@@ -66,5 +66,5 @@ convertNode tab = dmap go
           node
       _ -> node
 
-casePermutation :: InfoTable -> InfoTable
-casePermutation tab = mapAllNodes (convertNode tab) tab
+casePermutation :: Module -> Module
+casePermutation md = mapAllNodes (convertNode md) md

@@ -1,28 +1,27 @@
 module Juvix.Compiler.Core.Transformation.FoldTypeSynonyms where
 
-import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Transformation.Base
 
-convertNode :: InfoTable -> Node -> Node
-convertNode tab = rmap go
+convertNode :: Module -> Node -> Node
+convertNode md = rmap go
   where
     go :: ([BinderChange] -> Node -> Node) -> Node -> Node
     go recur = \case
       NIdt Ident {..}
-        | isTypeConstr tab (ii ^. identifierType) ->
-            go recur $ fromJust $ HashMap.lookup _identSymbol (tab ^. identContext)
+        | isTypeConstr md (ii ^. identifierType) ->
+            go recur $ lookupIdentifierNode md _identSymbol
         where
-          ii = fromJust $ HashMap.lookup _identSymbol (tab ^. infoIdentifiers)
+          ii = lookupIdentifierInfo md _identSymbol
       NLet Let {..}
-        | isTypeConstr tab (_letItem ^. letItemBinder . binderType) ->
+        | isTypeConstr md (_letItem ^. letItemBinder . binderType) ->
             go (recur . (mkBCRemove (_letItem ^. letItemBinder) val' :)) _letBody
         where
           val' = go recur (_letItem ^. letItemValue)
       node ->
         recur [] node
 
-foldTypeSynonyms :: InfoTable -> InfoTable
-foldTypeSynonyms tab =
+foldTypeSynonyms :: Module -> Module
+foldTypeSynonyms md =
   filterOutTypeSynonyms $
-    mapAllNodes (convertNode tab) tab
+    mapAllNodes (convertNode md) md

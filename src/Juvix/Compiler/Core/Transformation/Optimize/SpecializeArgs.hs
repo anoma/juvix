@@ -9,29 +9,29 @@ import Juvix.Compiler.Core.Transformation.LambdaLetRecLifting (lambdaLiftNode')
 
 -- | Check if an argument value is suitable for specialisation (e.g. not a
 -- variable)
-isSpecializable :: InfoTable -> Node -> Bool
-isSpecializable tab node =
-  isType tab mempty node
+isSpecializable :: Module -> Node -> Bool
+isSpecializable md node =
+  isType md mempty node
     || case node of
       NIdt Ident {..} ->
-        case lookupIdentifierInfo tab _identSymbol ^. identifierPragmas . pragmasSpecialise of
+        case lookupIdentifierInfo md _identSymbol ^. identifierPragmas . pragmasSpecialise of
           Just (PragmaSpecialise False) -> False
           _ -> True
       NLam {} -> True
       NCst {} -> True
-      NCtr Constr {..} -> all (isSpecializable tab) _constrArgs
+      NCtr Constr {..} -> all (isSpecializable md) _constrArgs
       NApp {} ->
         let (h, _) = unfoldApps' node
-         in isSpecializable tab h
+         in isSpecializable md h
       _ -> False
 
 -- | Check for `h a1 .. an` where `h` is an identifier explicitly marked for
 -- specialisation with `specialize: true`.
-isMarkedSpecializable :: InfoTable -> Node -> Bool
-isMarkedSpecializable tab = \case
+isMarkedSpecializable :: Module -> Node -> Bool
+isMarkedSpecializable md = \case
   NTyp TypeConstr {..}
     | Just (PragmaSpecialise True) <-
-        lookupInductiveInfo tab _typeConstrSymbol
+        lookupInductiveInfo md _typeConstrSymbol
           ^. inductivePragmas . pragmasSpecialise ->
         True
   node ->
@@ -39,14 +39,14 @@ isMarkedSpecializable tab = \case
      in case h of
           NIdt Ident {..}
             | Just (PragmaSpecialise True) <-
-                lookupIdentifierInfo tab _identSymbol
+                lookupIdentifierInfo md _identSymbol
                   ^. identifierPragmas . pragmasSpecialise ->
                 True
           _ ->
             False
 
 -- | Checks if an argument is passed without modification to recursive calls.
-isArgSpecializable :: InfoTable -> Symbol -> Int -> Bool
+isArgSpecializable :: Module -> Symbol -> Int -> Bool
 isArgSpecializable tab sym argNum = run $ execState True $ dmapNRM go body
   where
     nodeSym = lookupIdentifierNode tab sym
@@ -94,20 +94,20 @@ convertNode = dmapLRM go
     goIdentApp :: BinderList Binder -> Ident -> [Node] -> Sem r Recur
     goIdentApp bl idt@Ident {..} args = do
       args' <- mapM (dmapLRM' (bl, go)) args
-      tab <- getInfoTable
-      let ii = lookupIdentifierInfo tab _identSymbol
+      md <- getModule
+      let ii = lookupIdentifierInfo md _identSymbol
           pspec = ii ^. identifierPragmas . pragmasSpecialiseArgs
           pspecby = ii ^. identifierPragmas . pragmasSpecialiseBy
           argsNum = ii ^. identifierArgsNum
           (tyargs, tgt) = unfoldPi' (ii ^. identifierType)
-          def = lookupIdentifierNode tab _identSymbol
+          def = lookupIdentifierNode md _identSymbol
           (lams, body) = unfoldLambdas def
           argnames = map (^. lambdaLhsBinder . binderName) lams
 
           -- arguments marked for specialisation with `specialize: true`
           psargs0 =
             map fst3 $
-              filter (\(_, arg, ty) -> isMarkedSpecializable tab arg || isMarkedSpecializable tab ty) $
+              filter (\(_, arg, ty) -> isMarkedSpecializable md arg || isMarkedSpecializable md ty) $
                 zip3 [1 .. argsNum] args' tyargs
 
           getArgIndex :: PragmaSpecialiseArg -> Maybe Int
@@ -124,11 +124,11 @@ convertNode = dmapLRM go
                     filter
                       ( \argNum ->
                           argNum <= argsNum
-                            && isSpecializable tab (args' !! (argNum - 1))
-                            && isArgSpecializable tab _identSymbol argNum
+                            && isSpecializable md (args' !! (argNum - 1))
+                            && isArgSpecializable md _identSymbol argNum
                       )
                       psargs
-                  tyargsNum = length (takeWhile (isTypeConstr tab) tyargs)
+                  tyargsNum = length (takeWhile (isTypeConstr md) tyargs)
                   -- in addition to the arguments explicitly marked for
                   -- specialisation, also specialise all type arguments
                   specargs =
@@ -170,13 +170,13 @@ convertNode = dmapLRM go
                       eassert (length args' == argsNum)
                       eassert (argsNum <= length tyargs)
                       -- assumption: all type variables are at the front
-                      eassert (not $ any (isTypeConstr tab) (drop tyargsNum tyargs))
+                      eassert (not $ any (isTypeConstr md) (drop tyargsNum tyargs))
                       -- the specialisation signature: the values we specialise the arguments by
                       let specSigArgs = selectSpecargs specargs args'
                           specSig = (specSigArgs, specargs)
                       if
                           | all isClosed specSigArgs ->
-                              case find ((== specSig) . (^. specSignature)) (lookupSpecialisationInfo tab _identSymbol) of
+                              case find ((== specSig) . (^. specSignature)) (lookupSpecialisationInfo md _identSymbol) of
                                 Just SpecialisationInfo {..} ->
                                   return $
                                     End $
@@ -336,5 +336,5 @@ convertNode = dmapLRM go
               argNum = argsNum - argIdx
           _ -> node
 
-specializeArgs :: InfoTable -> InfoTable
-specializeArgs tab = run $ mapT' (const convertNode) tab
+specializeArgs :: Module -> Module
+specializeArgs = run . mapT' (const convertNode)

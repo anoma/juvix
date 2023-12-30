@@ -7,7 +7,7 @@ import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Transformation.Base
 import Juvix.Compiler.Core.Transformation.NaiveMatchToCase.Data
 
-matchToCase :: InfoTable -> InfoTable
+matchToCase :: Module -> Module
 matchToCase = run . mapT' (const (umapM matchToCaseNode))
 
 mkShiftedPis' :: [Type] -> Type -> Type

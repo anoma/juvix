@@ -14,8 +14,8 @@ runCommand opts@EvalOptions {..} = do
         run $
           runReader (project gopts) $
             runError @JuvixError $
-              (Core.toEval' _coreResultTable :: Sem '[Error JuvixError, Reader Core.CoreOptions] Core.InfoTable)
-  tab <- getRight r
+              (Core.toStored' _coreResultModule :: Sem '[Error JuvixError, Reader Core.CoreOptions] Core.Module)
+  tab <- Core.computeCombinedInfoTable <$> getRight r
   let mevalNode =
         if
             | isJust _evalSymbolName -> getNode tab (selInfo tab)

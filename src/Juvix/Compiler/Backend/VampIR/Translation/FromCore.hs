@@ -3,6 +3,7 @@ module Juvix.Compiler.Backend.VampIR.Translation.FromCore where
 import Data.Text qualified as T
 import Juvix.Compiler.Backend.VampIR.Extra (getVampIRInputs)
 import Juvix.Compiler.Backend.VampIR.Language as VampIR
+import Juvix.Compiler.Core.Data (emptyModule)
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info.NameInfo (getInfoName)
@@ -13,12 +14,12 @@ fromCore :: InfoTable -> Program
 fromCore tab = fromCoreNode ii node
   where
     sym = fromJust (tab ^. infoMain)
-    node = lookupIdentifierNode tab sym
-    ii = lookupIdentifierInfo tab sym
+    node = lookupTabIdentifierNode tab sym
+    ii = lookupTabIdentifierInfo tab sym
 
 fromCoreNode :: IdentifierInfo -> Node -> Program
 fromCoreNode ii node =
-  let (lams, body) = unfoldLambdas (disambiguateNodeNames' disambiguate emptyInfoTable node)
+  let (lams, body) = unfoldLambdas (disambiguateNodeNames' disambiguate emptyModule node)
       (defs, expr) = convertLets body
       n = length lams
       args = getVampIRInputs n (ii ^. identifierArgNames)

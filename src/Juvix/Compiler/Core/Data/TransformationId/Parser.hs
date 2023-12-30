@@ -50,7 +50,7 @@ transformationLike =
 
 pipelineText :: PipelineId -> Text
 pipelineText = \case
-  PipelineEval -> strEvalPipeline
+  PipelineStored -> strStoredPipeline
   PipelineNormalize -> strNormalizePipeline
   PipelineGeb -> strGebPipeline
   PipelineVampIR -> strVampIRPipeline
@@ -78,6 +78,7 @@ transformationText = \case
   ComputeTypeInfo -> strComputeTypeInfo
   UnrollRecursion -> strUnrollRecursion
   DisambiguateNames -> strDisambiguateNames
+  CombineInfoTables -> strCombineInfoTables
   CheckGeb -> strCheckGeb
   CheckExec -> strCheckExec
   CheckVampIR -> strCheckVampIR
@@ -113,8 +114,8 @@ allStrings = map transformationLikeText allTransformationLikeIds
 strLetHoisting :: Text
 strLetHoisting = "let-hoisting"
 
-strEvalPipeline :: Text
-strEvalPipeline = "pipeline-eval"
+strStoredPipeline :: Text
+strStoredPipeline = "pipeline-stored"
 
 strNormalizePipeline :: Text
 strNormalizePipeline = "pipeline-normalize"
@@ -172,6 +173,9 @@ strUnrollRecursion = "unroll-recursion"
 
 strDisambiguateNames :: Text
 strDisambiguateNames = "disambiguate-names"
+
+strCombineInfoTables :: Text
+strCombineInfoTables = "combine-info-tables"
 
 strCheckGeb :: Text
 strCheckGeb = "check-geb"

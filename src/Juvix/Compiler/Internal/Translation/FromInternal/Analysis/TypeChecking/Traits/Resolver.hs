@@ -24,7 +24,7 @@ subsIToE = fmap paramToExpression
 type CoercionChain = [(CoercionInfo, SubsI)]
 
 isTrait :: InfoTable -> Name -> Bool
-isTrait tab name = maybe False (^. inductiveInfoDef . inductiveTrait) (HashMap.lookup name (tab ^. infoInductives))
+isTrait tab name = maybe False (^. inductiveInfoTrait) (HashMap.lookup name (tab ^. infoInductives))
 
 resolveTraitInstance ::
   (Members '[Error TypeCheckerError, NameIdGen, Inference, Reader InfoTable] r) =>

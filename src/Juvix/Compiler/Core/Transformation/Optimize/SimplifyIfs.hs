@@ -3,10 +3,10 @@ module Juvix.Compiler.Core.Transformation.Optimize.SimplifyIfs (simplifyIfs, sim
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Transformation.Base
 
-convertNode :: Bool -> InfoTable -> Node -> Node
-convertNode bFast tab = umap go
+convertNode :: Bool -> Module -> Node -> Node
+convertNode bFast md = umap go
   where
-    boolSym = lookupConstructorInfo tab (BuiltinTag TagTrue) ^. constructorInductive
+    boolSym = lookupConstructorInfo md (BuiltinTag TagTrue) ^. constructorInductive
 
     go :: Node -> Node
     go node = case node of
@@ -23,8 +23,8 @@ convertNode bFast tab = umap go
       | not bFast && b1 == b2 = b1
       | otherwise = mkIf' boolSym v b1 b2
 
-simplifyIfs' :: Bool -> InfoTable -> InfoTable
-simplifyIfs' bFast tab = mapAllNodes (convertNode bFast tab) tab
+simplifyIfs' :: Bool -> Module -> Module
+simplifyIfs' bFast md = mapAllNodes (convertNode bFast md) md
 
-simplifyIfs :: InfoTable -> InfoTable
+simplifyIfs :: Module -> Module
 simplifyIfs = simplifyIfs' False

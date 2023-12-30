@@ -1,7 +1,5 @@
 module Juvix.Compiler.Internal.Translation.FromConcrete.NamedArguments
   ( runNamedArguments,
-    NameSignatures,
-    ConstructorNameSignatures,
     DesugaredNamedApplication,
     dnamedAppIdentifier,
     dnamedAppArgs,
@@ -23,9 +21,7 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Compiler.Internal.Extra.Base qualified as Internal
 import Juvix.Prelude
 
-type NameSignatures = HashMap NameId (NameSignature 'Scoped)
-
-type ConstructorNameSignatures = HashMap NameId (RecordNameSignature 'Scoped)
+type NameSignatures = HashMap S.NameId (NameSignature 'Scoped)
 
 data BuilderState = BuilderState
   { _stateRemainingArgs :: [ArgumentBlock 'Scoped],

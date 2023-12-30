@@ -23,7 +23,7 @@ type CheckPositivityEffects r =
     r
 
 data CheckPositivityArgs = CheckPositivityArgs
-  { _checkPositivityArgsInductive :: InductiveDef,
+  { _checkPositivityArgsInductive :: InductiveInfo,
     _checkPositivityArgsConstructorName :: Name,
     _checkPositivityArgsInductiveName :: Name,
     _checkPositivityArgsRecursionLimit :: Int,
@@ -36,22 +36,22 @@ makeLenses ''CheckPositivityArgs
 checkPositivity ::
   forall r.
   (CheckPositivityEffects r) =>
-  InductiveDef ->
+  InductiveInfo ->
   Sem r ()
-checkPositivity ty = do
+checkPositivity indInfo = do
   unlessM (asks (^. E.entryPointNoPositivity)) $
-    forM_ (ty ^. inductiveConstructors) $ \ctor -> do
-      unless (ty ^. inductivePositive) $ do
+    forM_ (indInfo ^. inductiveInfoConstructors) $ \ctorName -> do
+      ctor <- asks (fromJust . HashMap.lookup ctorName . (^. infoConstructors))
+      unless (indInfo ^. inductiveInfoPositive) $ do
         numInductives <- HashMap.size <$> asks (^. infoInductives)
         forM_
-          (constructorArgs (ctor ^. inductiveConstructorType))
+          (constructorArgs (ctor ^. constructorInfoType))
           $ \typeOfConstr ->
             checkStrictlyPositiveOccurrences
               ( CheckPositivityArgs
-                  { _checkPositivityArgsInductive = ty,
-                    _checkPositivityArgsConstructorName =
-                      ctor ^. inductiveConstructorName,
-                    _checkPositivityArgsInductiveName = ty ^. inductiveName,
+                  { _checkPositivityArgsInductive = indInfo,
+                    _checkPositivityArgsConstructorName = ctorName,
+                    _checkPositivityArgsInductiveName = indInfo ^. inductiveInfoName,
                     _checkPositivityArgsRecursionLimit = numInductives,
                     _checkPositivityArgsErrorReference = Nothing,
                     _checkPositivityArgsTypeOfConstructor = typeOfConstr
@@ -67,14 +67,14 @@ checkStrictlyPositiveOccurrences p = do
   typeOfConstr <- strongNormalize (p ^. checkPositivityArgsTypeOfConstructor)
   go False typeOfConstr
   where
-    ty = p ^. checkPositivityArgsInductive
+    indInfo = p ^. checkPositivityArgsInductive
     ctorName = p ^. checkPositivityArgsConstructorName
     name = p ^. checkPositivityArgsInductiveName
     recLimit = p ^. checkPositivityArgsRecursionLimit
     ref = p ^. checkPositivityArgsErrorReference
 
     indName :: Name
-    indName = ty ^. inductiveName
+    indName = indInfo ^. inductiveInfoName
 
     {- The following `go` function determines if there is any negative
      occurence of the symbol `name` in the given expression. The `inside` flag
@@ -139,7 +139,8 @@ checkStrictlyPositiveOccurrences p = do
           IdenVar name'
             | not inside -> return ()
             | name == name' -> throwNegativePositonError expr
-            | name' `elem` ty ^.. inductiveParameters . each . inductiveParamName -> modify (HashSet.insert name')
+            | name' `elem` indInfo ^.. inductiveInfoParameters . each . inductiveParamName -> modify (HashSet.insert name')
+            | otherwise -> return ()
           _ -> return ()
 
         goApp :: Application -> Sem r ()
@@ -154,19 +155,19 @@ checkStrictlyPositiveOccurrences p = do
                 throwTypeAsArgumentOfBoundVarError var
             ExpressionIden (IdenInductive ty') -> do
               when (inside && name == ty') (throwNegativePositonError expr)
-              InductiveInfo indType' <- lookupInductive ty'
+              indInfo' <- lookupInductive ty'
 
               {- We now need to know whether `name` negatively occurs at
                `indTy'` or not. The way to know is by checking that the type ty'
                preserves the positivity condition, i.e., its type parameters are
                no negative.
               -}
-              let paramsTy' = indType' ^. inductiveParameters
-              goInductiveApp indType' (zip paramsTy' (toList args))
+              let paramsTy' = indInfo' ^. inductiveInfoParameters
+              goInductiveApp indInfo' (zip paramsTy' (toList args))
             _ -> return ()
 
-        goInductiveApp :: InductiveDef -> [(InductiveParameter, Expression)] -> Sem r ()
-        goInductiveApp indType' = \case
+        goInductiveApp :: InductiveInfo -> [(InductiveParameter, Expression)] -> Sem r ()
+        goInductiveApp indInfo' = \case
           [] -> return ()
           (InductiveParameter pName' _ty', tyArg) : ps -> do
             negParms :: NegativeTypeParameters <- get
@@ -175,15 +176,15 @@ checkStrictlyPositiveOccurrences p = do
                 (HashSet.member pName' negParms)
                 (throwNegativePositonError tyArg)
               when (recLimit > 0) $
-                forM_ (indType' ^. inductiveConstructors) $ \ctor' -> do
-                  let ctorName' = ctor' ^. inductiveConstructorName
-                      errorRef = fromMaybe tyArg ref
-                      args = constructorArgs (ctor' ^. inductiveConstructorType)
+                forM_ (indInfo' ^. inductiveInfoConstructors) $ \ctorName' -> do
+                  ctorType' <- lookupConstructorType ctorName'
+                  let errorRef = fromMaybe tyArg ref
+                      args = constructorArgs ctorType'
                   mapM_
                     ( \tyConstr' ->
                         checkStrictlyPositiveOccurrences
                           CheckPositivityArgs
-                            { _checkPositivityArgsInductive = indType',
+                            { _checkPositivityArgsInductive = indInfo',
                               _checkPositivityArgsConstructorName = ctorName',
                               _checkPositivityArgsInductiveName = pName',
                               _checkPositivityArgsRecursionLimit = recLimit - 1,
@@ -192,7 +193,7 @@ checkStrictlyPositiveOccurrences p = do
                             }
                     )
                     args
-            goInductiveApp indType' ps
+            goInductiveApp indInfo' ps
 
     throwNegativePositonError :: Expression -> Sem r ()
     throwNegativePositonError expr = do

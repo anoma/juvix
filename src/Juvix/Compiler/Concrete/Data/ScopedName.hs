@@ -13,6 +13,7 @@ import Juvix.Data.Fixity qualified as C
 import Juvix.Data.IteratorInfo
 import Juvix.Data.NameId
 import Juvix.Data.NameKind
+import Juvix.Extra.Serialize
 import Juvix.Prelude
 import Juvix.Prelude.Pretty
 
@@ -21,6 +22,8 @@ data AbsModulePath = AbsModulePath
     _absLocalPath :: [C.Symbol]
   }
   deriving stock (Show, Eq, Generic)
+
+instance Serialize AbsModulePath
 
 makeLenses ''AbsModulePath
 
@@ -54,15 +57,15 @@ data WhyInScope
     BecauseImportedOpened
   | -- | Defined in this module.
     BecauseDefined
-  deriving stock (Eq, Show)
+  deriving stock (Eq, Show, Generic)
+
+instance Serialize WhyInScope
 
 type Name = Name' C.Name
 
 type Symbol = Name' C.Symbol
 
 type TopModulePath = Name' C.TopModulePath
-
-type ModuleNameId = NameId
 
 data Name' n = Name'
   { _nameConcrete :: n,
@@ -77,7 +80,13 @@ data Name' n = Name'
     -- | The textual representation of the name at the binding site
     _nameVerbatim :: Text
   }
-  deriving stock (Show)
+  deriving stock (Show, Generic)
+
+instance Serialize Name
+
+instance Serialize Symbol
+
+instance Serialize TopModulePath
 
 -- | For highlighting
 data AName = AName
@@ -87,6 +96,9 @@ data AName = AName
     _anameDocId :: NameId,
     _anameVerbatim :: Text
   }
+  deriving stock (Generic)
+
+instance Serialize AName
 
 makeLenses ''Name'
 makeLenses ''AName
@@ -134,9 +146,6 @@ topModulePathSymbol = over nameConcrete (^. C.modulePathName)
 
 topModulePathName :: TopModulePath -> Name
 topModulePathName = over nameConcrete C.topModulePathToName
-
-unConcrete :: Name' a -> Name' ()
-unConcrete = set nameConcrete ()
 
 symbolText :: Symbol -> Text
 symbolText s = s ^. nameConcrete . C.symbolText

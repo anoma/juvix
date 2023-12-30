@@ -6,6 +6,7 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Er
   )
 where
 
+import Juvix.Compiler.Builtins.Error (NotDefined)
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Error
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.Error
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error.Pretty
@@ -35,6 +36,7 @@ data TypeCheckerError
   | ErrSubsumedInstance SubsumedInstance
   | ErrExplicitInstanceArgument ExplicitInstanceArgument
   | ErrTraitNotTerminating TraitNotTerminating
+  | ErrBuiltinNotDefined NotDefined
   | ErrArityCheckerError ArityCheckerError
   | ErrDefaultArgLoop DefaultArgLoop
 
@@ -62,6 +64,7 @@ instance ToGenericError TypeCheckerError where
     ErrSubsumedInstance e -> genericError e
     ErrExplicitInstanceArgument e -> genericError e
     ErrTraitNotTerminating e -> genericError e
+    ErrBuiltinNotDefined e -> genericError e
     ErrArityCheckerError e -> genericError e
     ErrDefaultArgLoop e -> genericError e
 
@@ -90,3 +93,4 @@ instance Show TypeCheckerError where
     ErrTraitNotTerminating {} -> "ErrTraitNotTerminating"
     ErrArityCheckerError {} -> "ErrArityCheckerError"
     ErrDefaultArgLoop {} -> "ErrDefaultArgLoop"
+    ErrBuiltinNotDefined {} -> "ErrBuiltinNotDefined"

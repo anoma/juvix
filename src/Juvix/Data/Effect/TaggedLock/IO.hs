@@ -1,8 +1,10 @@
 module Juvix.Data.Effect.TaggedLock.IO where
 
 import Juvix.Data.Effect.FileLock
+import Juvix.Data.Effect.Files
 import Juvix.Data.Effect.TaggedLock.Base
-import Juvix.Prelude
+import Juvix.Prelude.Base
+import Juvix.Prelude.Path
 
 -- | Interpret `TaggedLock` using `FileLock`.
 --

@@ -6,6 +6,7 @@ import Data.List qualified as List
 import Juvix.Compiler.Internal.Data.InstanceInfo
 import Juvix.Compiler.Internal.Extra.Base
 import Juvix.Compiler.Internal.Language
+import Juvix.Extra.Serialize
 import Juvix.Prelude
 
 data CoercionInfo = CoercionInfo
@@ -15,15 +16,20 @@ data CoercionInfo = CoercionInfo
     _coercionInfoResult :: Expression,
     _coercionInfoArgs :: [FunctionParameter]
   }
-  deriving stock (Eq)
+  deriving stock (Eq, Generic)
 
 instance Hashable CoercionInfo where
   hashWithSalt salt CoercionInfo {..} = hashWithSalt salt _coercionInfoResult
+
+instance Serialize CoercionInfo
 
 -- | Maps trait names to available coercions
 newtype CoercionTable = CoercionTable
   { _coercionTableMap :: HashMap InductiveName [CoercionInfo]
   }
+  deriving stock (Eq, Generic)
+
+instance Serialize CoercionTable
 
 makeLenses ''CoercionInfo
 makeLenses ''CoercionTable

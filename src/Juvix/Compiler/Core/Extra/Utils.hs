@@ -17,6 +17,7 @@ import Data.HashSet qualified as HashSet
 import Data.Set qualified as Set
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Core.Data.InfoTable
+import Juvix.Compiler.Core.Data.Module
 import Juvix.Compiler.Core.Extra.Base
 import Juvix.Compiler.Core.Extra.Equality
 import Juvix.Compiler.Core.Extra.Info
@@ -42,25 +43,25 @@ isClosed = not . has freeVars
 mkAxiom :: Interval -> Type -> Node
 mkAxiom loc = mkBottom (Info.setInfoLocation loc mempty)
 
-isTypeConstr :: InfoTable -> Type -> Bool
-isTypeConstr tab ty = case typeTarget ty of
+isTypeConstr :: Module -> Type -> Bool
+isTypeConstr md ty = case typeTarget ty of
   NUniv {} ->
     True
   NIdt Ident {..} ->
-    isTypeConstr tab (lookupIdentifierNode tab _identSymbol)
+    isTypeConstr md (lookupIdentifierNode md _identSymbol)
   _ -> False
 
-getTypeParams :: InfoTable -> Type -> [Type]
-getTypeParams tab ty = filter (isTypeConstr tab) (typeArgs ty)
+getTypeParams :: Module -> Type -> [Type]
+getTypeParams md ty = filter (isTypeConstr md) (typeArgs ty)
 
-getTypeParamsNum :: InfoTable -> Type -> Int
-getTypeParamsNum tab ty = length $ getTypeParams tab ty
+getTypeParamsNum :: Module -> Type -> Int
+getTypeParamsNum md ty = length $ getTypeParams md ty
 
-filterOutTypeSynonyms :: InfoTable -> InfoTable
-filterOutTypeSynonyms tab = pruneInfoTable tab'
+filterOutTypeSynonyms :: Module -> Module
+filterOutTypeSynonyms md = pruneInfoTable md'
   where
-    tab' = tab {_infoIdentifiers = idents'}
-    idents' = HashMap.filter (\ii -> not (isTypeConstr tab (ii ^. identifierType))) (tab ^. infoIdentifiers)
+    md' = set (moduleInfoTable . infoIdentifiers) idents' md
+    idents' = HashMap.filter (\ii -> not (isTypeConstr md (ii ^. identifierType))) (md ^. moduleInfoTable . infoIdentifiers)
 
 isType' :: Node -> Bool
 isType' = \case
@@ -83,77 +84,77 @@ isType' = \case
   NMatch {} -> False
   Closure {} -> False
 
-isType :: InfoTable -> BinderList Binder -> Node -> Bool
-isType tab bl node = case node of
+isType :: Module -> BinderList Binder -> Node -> Bool
+isType md bl node = case node of
   NVar Var {..}
     | Just Binder {..} <- BL.lookupMay _varIndex bl ->
-        isTypeConstr tab _binderType
+        isTypeConstr md _binderType
   NIdt Ident {..}
-    | Just ii <- lookupIdentifierInfo' tab _identSymbol ->
-        isTypeConstr tab (ii ^. identifierType)
+    | Just ii <- lookupIdentifierInfo' md _identSymbol ->
+        isTypeConstr md (ii ^. identifierType)
   _ -> isType' node
 
-isZeroOrderType' :: HashSet Symbol -> InfoTable -> Type -> Bool
-isZeroOrderType' foinds tab = \case
+isZeroOrderType' :: HashSet Symbol -> Module -> Type -> Bool
+isZeroOrderType' foinds md = \case
   NPi {} -> False
   NDyn {} -> False
   NTyp TypeConstr {..} ->
-    isFirstOrderInductive' foinds tab _typeConstrSymbol
-      && all (isZeroOrderType' foinds tab) _typeConstrArgs
+    isFirstOrderInductive' foinds md _typeConstrSymbol
+      && all (isZeroOrderType' foinds md) _typeConstrArgs
   ty -> isType' ty
 
-isFirstOrderType' :: HashSet Symbol -> InfoTable -> Type -> Bool
-isFirstOrderType' foinds tab ty = case ty of
+isFirstOrderType' :: HashSet Symbol -> Module -> Type -> Bool
+isFirstOrderType' foinds md ty = case ty of
   NVar {} -> True
   NPi Pi {..} ->
-    isZeroOrderType' foinds tab (_piBinder ^. binderType)
-      && isFirstOrderType' foinds tab _piBody
+    isZeroOrderType' foinds md (_piBinder ^. binderType)
+      && isFirstOrderType' foinds md _piBody
   NUniv {} -> True
   NPrim {} -> True
-  NTyp {} -> isZeroOrderType' foinds tab ty
+  NTyp {} -> isZeroOrderType' foinds md ty
   NDyn {} -> False
   _ -> assert (not (isType' ty)) False
 
-isFirstOrderInductive' :: HashSet Symbol -> InfoTable -> Symbol -> Bool
-isFirstOrderInductive' foinds tab sym
+isFirstOrderInductive' :: HashSet Symbol -> Module -> Symbol -> Bool
+isFirstOrderInductive' foinds md sym
   | HashSet.member sym foinds = True
-  | otherwise = case lookupInductiveInfo' tab sym of
+  | otherwise = case lookupInductiveInfo' md sym of
       Nothing -> False
       Just ii ->
         all
-          (isFirstOrderType' (HashSet.insert sym foinds) tab . (^. constructorType) . lookupConstructorInfo tab)
+          (isFirstOrderType' (HashSet.insert sym foinds) md . (^. constructorType) . lookupConstructorInfo md)
           (ii ^. inductiveConstructors)
 
-isFirstOrderType :: InfoTable -> Type -> Bool
+isFirstOrderType :: Module -> Type -> Bool
 isFirstOrderType = isFirstOrderType' mempty
 
-isZeroOrderType :: InfoTable -> Type -> Bool
+isZeroOrderType :: Module -> Type -> Bool
 isZeroOrderType = isZeroOrderType' mempty
 
 -- | True for nodes whose evaluation immediately returns a value, i.e.,
 -- no reduction or memory allocation in the runtime is required.
-isImmediate :: InfoTable -> Node -> Bool
-isImmediate tab = \case
+isImmediate :: Module -> Node -> Bool
+isImmediate md = \case
   NVar {} -> True
   NIdt {} -> True
   NCst {} -> True
   NCtr Constr {..}
-    | Just ci <- lookupConstructorInfo' tab _constrTag ->
-        let paramsNum = length (takeWhile (isTypeConstr tab) (typeArgs (ci ^. constructorType)))
+    | Just ci <- lookupConstructorInfo' md _constrTag ->
+        let paramsNum = length (takeWhile (isTypeConstr md) (typeArgs (ci ^. constructorType)))
          in length _constrArgs <= paramsNum
-    | otherwise -> all (isType tab mempty) _constrArgs
+    | otherwise -> all (isType md mempty) _constrArgs
   node@(NApp {}) ->
     let (h, args) = unfoldApps' node
      in case h of
           NIdt Ident {..}
-            | Just ii <- lookupIdentifierInfo' tab _identSymbol ->
-                let paramsNum = length (takeWhile (isTypeConstr tab) (typeArgs (ii ^. identifierType)))
+            | Just ii <- lookupIdentifierInfo' md _identSymbol ->
+                let paramsNum = length (takeWhile (isTypeConstr md) (typeArgs (ii ^. identifierType)))
                  in length args <= paramsNum
-          _ -> all (isType tab mempty) args
-  node -> isType tab mempty node
+          _ -> all (isType md mempty) args
+  node -> isType md mempty node
 
 isImmediate' :: Node -> Bool
-isImmediate' = isImmediate emptyInfoTable
+isImmediate' = isImmediate emptyModule
 
 -- | True if the argument is fully evaluated first-order data
 isDataValue :: Node -> Bool
@@ -206,8 +207,8 @@ nodeInductives f = ufoldA reassemble go
       NTyp ty -> NTyp <$> traverseOf typeConstrSymbol f ty
       n -> pure n
 
-getSymbols :: InfoTable -> Node -> HashSet Symbol
-getSymbols tab = gather go mempty
+getSymbols :: Module -> Node -> HashSet Symbol
+getSymbols md = gather go mempty
   where
     go :: HashSet Symbol -> Node -> HashSet Symbol
     go acc = \case
@@ -215,9 +216,12 @@ getSymbols tab = gather go mempty
       NIdt Ident {..} -> HashSet.insert _identSymbol acc
       NCase Case {..} -> HashSet.insert _caseInductive acc
       NCtr Constr {..}
-        | Just ci <- lookupConstructorInfo' tab _constrTag ->
+        | Just ci <- lookupConstructorInfo' md _constrTag ->
             HashSet.insert (ci ^. constructorInductive) acc
       _ -> acc
+
+getSymbols' :: InfoTable -> Node -> HashSet Symbol
+getSymbols' tab = getSymbols emptyModule {_moduleInfoTable = tab}
 
 -- | Prism for NRec
 _NRec :: SimpleFold Node LetRec
@@ -439,17 +443,17 @@ translateCase translateIfFun dflt Case {..} = case _caseBranches of
 translateCaseIf :: (Node -> Node -> Node -> a) -> Case -> a
 translateCaseIf f = translateCase f impossible
 
-checkDepth :: InfoTable -> BinderList Binder -> Int -> Node -> Bool
-checkDepth tab bl 0 node = isType tab bl node
-checkDepth tab bl d node = case node of
+checkDepth :: Module -> BinderList Binder -> Int -> Node -> Bool
+checkDepth md bl 0 node = isType md bl node
+checkDepth md bl d node = case node of
   NApp App {..} ->
-    checkDepth tab bl d _appLeft && checkDepth tab bl (d - 1) _appRight
+    checkDepth md bl d _appLeft && checkDepth md bl (d - 1) _appRight
   _ ->
     all go (children node)
     where
       go :: NodeChild -> Bool
       go NodeChild {..} =
-        checkDepth tab (BL.prependRev _childBinders bl) (d - 1) _childNode
+        checkDepth md (BL.prependRev _childBinders bl) (d - 1) _childNode
 
 isCaseBoolean :: [CaseBranch] -> Bool
 isCaseBoolean = \case

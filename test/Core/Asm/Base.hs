@@ -6,6 +6,7 @@ import Core.Eval.Base
 import Core.Eval.Positive qualified as Eval
 import Data.Text.IO qualified as TIO
 import Juvix.Compiler.Asm.Translation.FromCore qualified as Asm
+import Juvix.Compiler.Core.Data.Module (computeCombinedInfoTable, moduleFromInfoTable)
 import Juvix.Compiler.Core.Options
 import Juvix.Compiler.Core.Pipeline
 import Juvix.Compiler.Core.Translation.FromSource
@@ -50,8 +51,8 @@ coreAsmAssertion mainFile expectedFile step = do
       assertEqDiffText ("Check: EVAL output = " <> toFilePath expectedFile) "" expected
     Right (tabIni, Just node) -> do
       step "Translate"
-      case run $ runReader defaultCoreOptions $ runError $ toStripped' $ setupMainFunction tabIni node of
+      case run $ runReader defaultCoreOptions $ runError $ toStored' >=> toStripped' $ moduleFromInfoTable $ setupMainFunction defaultModuleId tabIni node of
         Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
-        Right tab' -> do
-          let tab = Asm.fromCore $ Stripped.fromCore $ tab'
+        Right m -> do
+          let tab = Asm.fromCore $ Stripped.fromCore $ computeCombinedInfoTable m
           Asm.asmRunAssertion' tab expectedFile step

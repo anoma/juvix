@@ -6,14 +6,14 @@ import Juvix.Compiler.Core.Transformation.Base
 import Juvix.Compiler.Core.Transformation.Check.Base
 import Juvix.Data.PPOutput
 
-checkVampIR :: forall r. (Member (Error CoreError) r) => InfoTable -> Sem r InfoTable
-checkVampIR tab =
-  checkMainExists tab
+checkVampIR :: forall r. (Member (Error CoreError) r) => Module -> Sem r Module
+checkVampIR md =
+  checkMainExists md
     >> checkMainType
     >> checkPublicInputs
-    >> checkNoAxioms tab
-    >> mapAllNodesM checkNoIO tab
-    >> mapAllNodesM (checkBuiltins True) tab
+    >> checkNoAxioms md
+    >> mapAllNodesM checkNoIO md
+    >> mapAllNodesM (checkBuiltins True) md
   where
     checkMainType :: Sem r ()
     checkMainType =
@@ -25,7 +25,7 @@ checkVampIR tab =
               _coreErrorNode = Nothing
             }
       where
-        ii = lookupIdentifierInfo tab (fromJust (tab ^. infoMain))
+        ii = lookupIdentifierInfo md (fromJust (getInfoMain md))
 
     checkType :: Node -> Bool
     checkType ty =
@@ -45,5 +45,5 @@ checkVampIR tab =
               _coreErrorNode = Nothing
             }
       where
-        ii = lookupIdentifierInfo tab (fromJust (tab ^. infoMain))
+        ii = lookupIdentifierInfo md (fromJust (getInfoMain md))
         argnames = map (fromMaybe "") (ii ^. identifierArgNames)

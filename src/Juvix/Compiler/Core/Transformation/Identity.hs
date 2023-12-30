@@ -7,5 +7,5 @@ where
 import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation.Base
 
-identity :: InfoTable -> InfoTable
+identity :: Module -> Module
 identity = run . mapT' (const return)

@@ -9,13 +9,13 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.List.NonEmpty.Extra qualified as NonEmpty
-import Juvix.Compiler.Concrete.Data.InfoTable
 import Juvix.Compiler.Concrete.Data.Scope.Base
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra qualified as Concrete
 import Juvix.Compiler.Concrete.Keywords qualified as Kw
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty.Options
+import Juvix.Compiler.Store.Scoped.Language (Alias, ModuleSymbolEntry, PreSymbolEntry (..), ScopedModule, SymbolEntry, aliasName, moduleEntry, scopedModuleName, symbolEntry)
 import Juvix.Data.Ape.Base
 import Juvix.Data.Ape.Print
 import Juvix.Data.CodeAnn (Ann, CodeAnn (..), ppStringLit)
@@ -91,18 +91,13 @@ ppSymbolType = case sing :: SStage s of
   SParsed -> ppCode
   SScoped -> ppCode
 
+ppModuleNameType :: forall s. (SingI s) => PrettyPrinting (ModuleNameType s)
+ppModuleNameType = case sing :: SStage s of
+  SParsed -> ppCode
+  SScoped -> ppCode
+
 ppIdentifierType :: forall s. (SingI s) => PrettyPrinting (IdentifierType s)
 ppIdentifierType = case sing :: SStage s of
-  SParsed -> ppCode
-  SScoped -> ppCode
-
-ppModuleRefType :: forall s. (SingI s) => PrettyPrinting (ModuleRefType s)
-ppModuleRefType = case sing :: SStage s of
-  SParsed -> ppCode
-  SScoped -> ppCode
-
-ppImportType :: forall s. (SingI s) => PrettyPrinting (ImportType s)
-ppImportType = case sing :: SStage s of
   SParsed -> ppCode
   SScoped -> ppCode
 
@@ -263,10 +258,6 @@ instance (SingI s) => PrettyPrint (Iterator s) where
 instance PrettyPrint S.AName where
   ppCode n = annotated (AnnKind (S.getNameKind n)) (noLoc (pretty (n ^. S.anameVerbatim)))
 
-instance PrettyPrint FunctionInfo where
-  ppCode = \case
-    FunctionInfo f -> ppCode f
-
 instance (SingI s) => PrettyPrint (List s) where
   ppCode List {..} = do
     let l = ppCode _listBracketL
@@ -383,7 +374,7 @@ withNameIdSuffix nid a = do
   when showNameId (noLoc "@" <> ppCode nid)
 
 instance PrettyPrint S.NameId where
-  ppCode (S.NameId k) = noLoc (pretty k)
+  ppCode = noLoc . pretty
 
 ppModuleHeader :: (SingI t, SingI s) => PrettyPrinting (Module s t)
 ppModuleHeader Module {..} = do
@@ -466,11 +457,8 @@ instance PrettyPrint QualifiedName where
     let symbols = _qualifiedPath ^. pathParts NonEmpty.|> _qualifiedSymbol
     dotted (ppSymbolType <$> symbols)
 
-instance (SingI t) => PrettyPrint (ModuleRef'' 'S.NotConcrete t) where
-  ppCode = ppCode @(ModuleRef' 'S.NotConcrete) . project
-
-instance PrettyPrint (ModuleRef'' 'S.Concrete t) where
-  ppCode m = ppCode (m ^. moduleRefName)
+instance PrettyPrint ScopedModule where
+  ppCode m = ppCode (m ^. scopedModuleName)
 
 instance PrettyPrint ScopedIden where
   ppCode = ppCode . (^. scopedIdenName)
@@ -1072,23 +1060,12 @@ instance (SingI s) => PrettyPrint (UsingItem s) where
         kwmodule = ppCode <$> (ui ^. usingModuleKw)
     kwmodule <?+> (sym' <+?> kwAs' <+?> alias')
 
-instance PrettyPrint (ModuleRef' 'S.NotConcrete) where
-  ppCode (ModuleRef' (t :&: m)) =
-    let path = m ^. moduleRefModule . modulePath
-        txt = case t of
-          SModuleTop -> annotate (AnnKind KNameTopModule) (pretty path)
-          SModuleLocal -> annotate (AnnKind KNameLocalModule) (pretty path)
-     in noLoc txt
-
-instance PrettyPrint ModuleRef where
-  ppCode (ModuleRef' (_ :&: ModuleRef'' {..})) = ppCode _moduleRefName
-
 instance (SingI s) => PrettyPrint (Import s) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => Import s -> Sem r ()
   ppCode i = do
     let open' = ppOpenModuleHelper Nothing <$> (i ^. importOpen)
     ppCode (i ^. importKw)
-      <+> ppImportType (i ^. importModule)
+      <+> ppModulePathType (i ^. importModulePath)
       <+?> ppAlias
       <+?> open'
     where
@@ -1097,9 +1074,9 @@ instance (SingI s) => PrettyPrint (Import s) where
         Nothing -> Nothing
         Just as -> Just (ppCode Kw.kwAs <+> ppModulePathType as)
 
-ppOpenModuleHelper :: (SingI s) => Maybe (ModuleRefType s) -> PrettyPrinting (OpenModuleParams s)
+ppOpenModuleHelper :: (SingI s) => Maybe (ModuleNameType s) -> PrettyPrinting (OpenModuleParams s)
 ppOpenModuleHelper modName OpenModuleParams {..} = do
-  let name' = ppModuleRefType <$> modName
+  let name' = ppModuleNameType <$> modName
       usingHiding' = ppCode <$> _openUsingHiding
       openkw = ppCode _openModuleKw
       public' = ppCode <$> _openPublicKw ^. unIrrelevant

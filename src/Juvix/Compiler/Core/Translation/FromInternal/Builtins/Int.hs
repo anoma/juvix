@@ -9,11 +9,11 @@ import Juvix.Compiler.Core.Language
 -- integers to builtin Int.
 literalIntToIntNode :: (Member InfoTableBuilder r) => Sem r Node
 literalIntToIntNode = do
-  tab <- getInfoTable
-  let intToNatSymM = tab ^. infoLiteralIntToNat
-      tagOfNatM = (^. constructorTag) <$> lookupBuiltinConstructor tab BuiltinIntOfNat
-      tagNegSucM = (^. constructorTag) <$> lookupBuiltinConstructor tab BuiltinIntNegSuc
-      boolSymM = (^. inductiveSymbol) <$> lookupBuiltinInductive tab BuiltinBool
+  md <- getModule
+  let intToNatSymM = getInfoLiteralIntToNat md
+      tagOfNatM = (^. constructorTag) <$> lookupBuiltinConstructor md BuiltinIntOfNat
+      tagNegSucM = (^. constructorTag) <$> lookupBuiltinConstructor md BuiltinIntNegSuc
+      boolSymM = (^. inductiveSymbol) <$> lookupBuiltinInductive md BuiltinBool
   return $
     case (tagOfNatM, tagNegSucM, boolSymM, intToNatSymM) of
       (Just tagOfNat, Just tagNegSuc, Just boolSym, Just intToNatSym) ->

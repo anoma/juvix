@@ -1,6 +1,7 @@
 module Juvix.Data.Irrelevant where
 
 import Juvix.Data.Loc
+import Juvix.Extra.Serialize as S
 import Juvix.Prelude.Base
 import Juvix.Prelude.Pretty
 import Prelude (show)
@@ -10,6 +11,11 @@ import Prelude (show)
 newtype Irrelevant a = Irrelevant
   { _unIrrelevant :: a
   }
+  deriving newtype (Generic)
+
+instance (Serialize a) => Serialize (Irrelevant a) where
+  put (Irrelevant x) = S.put x
+  get = Irrelevant <$> S.get
 
 instance Show (Irrelevant a) where
   show = const "Irrelevant {}"

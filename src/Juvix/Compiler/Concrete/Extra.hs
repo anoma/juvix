@@ -1,7 +1,5 @@
 module Juvix.Compiler.Concrete.Extra
   ( module Juvix.Prelude.Parsing,
-    mkScopedModule,
-    getAllModules,
     getModuleFilePath,
     unfoldApplication,
     groupStatements,
@@ -14,7 +12,6 @@ module Juvix.Compiler.Concrete.Extra
   )
 where
 
-import Data.HashMap.Strict qualified as HashMap
 import Data.IntMap.Strict qualified as IntMap
 import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
@@ -22,42 +19,7 @@ import Juvix.Compiler.Concrete.Language
 import Juvix.Prelude hiding (some)
 import Juvix.Prelude.Parsing
 
-data ScopedModule = forall t. MkScopedModule (SModuleIsTop t) (Module 'Scoped t)
-
-mkScopedModule :: forall t. (SingI t) => Module 'Scoped t -> ScopedModule
-mkScopedModule = MkScopedModule sing
-
-getAllModules :: Module 'Scoped 'ModuleTop -> HashMap S.NameId (Module 'Scoped 'ModuleTop)
-getAllModules m = HashMap.fromList (fst (run (runOutputList (getAllModules' m))))
-
-getAllModules' ::
-  forall r.
-  (Member (Output (S.NameId, Module 'Scoped 'ModuleTop)) r) =>
-  Module 'Scoped 'ModuleTop ->
-  Sem r ()
-getAllModules' m = recordModule m
-  where
-    recordModule :: Module 'Scoped 'ModuleTop -> Sem r ()
-    recordModule n = do
-      output (n ^. modulePath . S.nameId, n)
-      processModule (mkScopedModule n)
-
-    processModule :: ScopedModule -> Sem r ()
-    processModule (MkScopedModule _ w) = forM_ (w ^. moduleBody) processStatement
-
-    processStatement :: Statement 'Scoped -> Sem r ()
-    processStatement = \case
-      StatementImport i -> recordModule (i ^. importModule . moduleRefModule)
-      StatementModule n -> processModule (mkScopedModule n)
-      StatementOpenModule n -> forM_ (getModuleRefTopModule (n ^. openModuleName)) recordModule
-      _ -> return ()
-
-    getModuleRefTopModule :: ModuleRef' c -> Maybe (Module 'Scoped 'ModuleTop)
-    getModuleRefTopModule (ModuleRef' (isTop :&: ModuleRef'' {..})) = case isTop of
-      SModuleLocal -> Nothing
-      SModuleTop -> Just _moduleRefModule
-
-getModuleFilePath :: Module s 'ModuleTop -> Path Abs File
+getModuleFilePath :: Module s r -> Path Abs File
 getModuleFilePath m = getLoc (m ^. moduleKw) ^. intervalFile
 
 unfoldApplication :: Application -> (Expression, [Expression])
@@ -92,13 +54,7 @@ groupStatements = \case
       (StatementImport _, StatementImport _) -> True
       (StatementImport i, StatementOpenModule o) -> case sing :: SStage s of
         SParsed -> True
-        SScoped ->
-          i
-            ^. importModule
-              . moduleRefModule
-              . modulePath
-              . S.nameId
-            == getModuleRefNameId (o ^. openModuleName)
+        SScoped -> i ^. importModulePath . S.nameId == o ^. openModuleName . S.nameId
       (StatementImport _, _) -> False
       (StatementOpenModule {}, StatementOpenModule {}) -> True
       (StatementOpenModule {}, _) -> False

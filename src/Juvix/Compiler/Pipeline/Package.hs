@@ -1,11 +1,7 @@
 module Juvix.Compiler.Pipeline.Package
   ( module Juvix.Compiler.Pipeline.Package.Base,
     readPackage,
-    readPackageIO,
-    readPackageRootIO,
-    readGlobalPackageIO,
     readGlobalPackage,
-    loadPackageFileIO,
     packageBasePackage,
     ensureGlobalPackage,
   )
@@ -20,9 +16,6 @@ import Juvix.Compiler.Pipeline.Package.Base
 import Juvix.Compiler.Pipeline.Package.Loader
 import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
-import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
-import Juvix.Compiler.Pipeline.Root.Base
-import Juvix.Compiler.Pipeline.Root.Base qualified as Root
 import Juvix.Data.Effect.TaggedLock
 import Juvix.Extra.Paths
 import Juvix.Prelude
@@ -129,32 +122,6 @@ readPackageFile root buildDir f = mapError (JuvixError @PackageLoaderError) $ do
   mLockfile <- mayReadLockfile root
   checkNoDuplicateDepNames f (pkg ^. packageDependencies)
   return (pkg {_packageLockfile = mLockfile})
-
-loadPackageFileIO :: (Members '[TaggedLock, Error JuvixError, Embed IO] r) => Path Abs Dir -> BuildDir -> Sem r Package
-loadPackageFileIO root buildDir =
-  runFilesIO
-    . mapError (JuvixError @PackageLoaderError)
-    . runEvalFileEffIO
-    $ loadPackage buildDir (mkPackagePath root)
-
-readPackageRootIO :: (Members '[TaggedLock, Embed IO] r) => Root -> Sem r Package
-readPackageRootIO root = readPackageIO (root ^. rootRootDir) (root ^. Root.rootBuildDir)
-
-readPackageIO :: (Members '[TaggedLock, Embed IO] r) => Path Abs Dir -> BuildDir -> Sem r Package
-readPackageIO root buildDir =
-  runFilesIO
-    . runErrorIO' @JuvixError
-    . mapError (JuvixError @PackageLoaderError)
-    . runEvalFileEffIO
-    $ readPackage root buildDir
-
-readGlobalPackageIO :: (Members '[Embed IO, TaggedLock] r) => Sem r Package
-readGlobalPackageIO =
-  runFilesIO
-    . runErrorIO' @JuvixError
-    . mapError (JuvixError @PackageLoaderError)
-    . runEvalFileEffIO
-    $ readGlobalPackage
 
 ensureGlobalPackage :: (Members '[TaggedLock, Files] r) => Sem r (Path Abs File)
 ensureGlobalPackage = do

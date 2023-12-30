@@ -31,10 +31,11 @@ HTML=$(count src/Juvix/Compiler/Backend/Html/)
 EXTRA=$(count src/Juvix/Extra/)
 DATA=$(count src/Juvix/Data/)
 PRELUDE=$(count src/Juvix/Prelude/)
+STORE=$(count src/Juvix/Compiler/Store/)
 
 FRONT=$((CONCRETE + INTERNAL + BUILTINS + PIPELINE))
 BACK=$((BACKENDC + GEB + VAMPIR + REG + ASM + CORE))
-OTHER=$((APP + HTML + EXTRA + DATA + PRELUDE))
+OTHER=$((APP + STORE + HTML + EXTRA + DATA + PRELUDE))
 TESTS=$(count test/)
 
 TOTAL=$((FRONT+BACK+OTHER+TESTS))
@@ -57,6 +58,7 @@ echo "   JuvixAsm runtime: $RUNTIME_JVA LOC"
 echo "   VampIR runtime: $RUNTIME_VAMPIR LOC"
 echo "Other: $OTHER LOC"
 echo "   Application: $APP LOC"
+echo "   Store: $STORE LOC"
 echo "   Html: $HTML LOC"
 echo "   Extra: $EXTRA LOC"
 echo "   Data: $DATA LOC"

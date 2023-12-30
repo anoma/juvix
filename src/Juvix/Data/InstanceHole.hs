@@ -5,6 +5,7 @@ import Juvix.Data.Keyword
 import Juvix.Data.Keyword.All (kwWildcard)
 import Juvix.Data.Loc
 import Juvix.Data.NameId
+import Juvix.Extra.Serialize
 import Juvix.Prelude.Base
 import Prettyprinter
 
@@ -15,7 +16,9 @@ data InstanceHole = InstanceHole
   { _iholeId :: NameId,
     _iholeKw :: KeywordRef
   }
-  deriving stock (Show, Data)
+  deriving stock (Show, Data, Generic)
+
+instance Serialize InstanceHole
 
 mkInstanceHole :: Interval -> NameId -> InstanceHole
 mkInstanceHole loc uid =

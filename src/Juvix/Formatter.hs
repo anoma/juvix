@@ -1,10 +1,8 @@
 module Juvix.Formatter where
 
-import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Print (docDefault)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
-import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Data.CodeAnn
 import Juvix.Extra.Paths
@@ -18,7 +16,7 @@ data FormattedFileInfo = FormattedFileInfo
 
 data ScopeEff m a where
   ScopeFile :: Path Abs File -> ScopeEff m Scoper.ScoperResult
-  ScopeStdin :: ScopeEff m Scoper.ScoperResult
+  ScopeStdin :: EntryPoint -> ScopeEff m Scoper.ScoperResult
 
 makeLenses ''FormattedFileInfo
 makeSem ''ScopeEff
@@ -102,11 +100,12 @@ formatPath p = do
 
 formatStdin ::
   forall r.
-  (Members '[ScopeEff, Files, Output FormattedFileInfo] r) =>
+  (Members '[Reader EntryPoint, ScopeEff, Files, Output FormattedFileInfo] r) =>
   Sem r FormatResult
 formatStdin = do
-  res <- scopeStdin
-  let originalContents = fromMaybe "" (res ^. Scoper.resultParserResult . resultEntry . entryPointStdin)
+  entry <- ask
+  res <- scopeStdin entry
+  let originalContents = fromMaybe "" (entry ^. entryPointStdin)
   runReader originalContents $ do
     formattedContents :: Text <- formatScoperResult False res
     formatResultFromContents formattedContents formatStdinPath
@@ -145,14 +144,13 @@ formatScoperResult ::
   Scoper.ScoperResult ->
   Sem r Text
 formatScoperResult force res = do
-  let cs = res ^. Scoper.comments
-  formattedModules <-
+  let cs = Scoper.getScoperResultComments res
+  formattedModule <-
     runReader cs
-      . mapM formatTopModule
+      . formatTopModule
       $ res
-        ^. Scoper.resultModules
-  let txt :: Text = toPlainTextTrim . mconcat . NonEmpty.toList $ formattedModules
-
+        ^. Scoper.resultModule
+  let txt :: Text = toPlainTextTrim formattedModule
   case res ^. Scoper.mainModule . modulePragmas of
     Just pragmas ->
       case pragmas ^. withLocParam . withSourceValue . pragmasFormat of

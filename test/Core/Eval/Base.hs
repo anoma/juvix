@@ -65,7 +65,7 @@ coreEvalAssertion' mode tab mainFile expectedFile step =
                   let outputFile = dirPath <//> $(mkRelFile "out.out")
                   hout <- openFile (toFilePath outputFile) WriteMode
                   step "Evaluate"
-                  let tyargs = typeArgs (lookupIdentifierInfo tab sym ^. identifierType)
+                  let tyargs = typeArgs (lookupIdentifierInfo m sym ^. identifierType)
                       args = zipWith mkArg (tyargs ++ repeat mkDynamic') (map snd _evalDataInput)
                       node' = mkApps' node args
                   r' <- doEval' opts mainFile hout tab node'
@@ -85,7 +85,8 @@ coreEvalAssertion' mode tab mainFile expectedFile step =
       Nothing -> assertFailure ("No main function registered in: " <> toFilePath mainFile)
   where
     sym = fromJust (tab ^. infoMain)
-    ii = lookupIdentifierInfo tab sym
+    ii = lookupIdentifierInfo m sym
+    m = moduleFromInfoTable tab
 
     opts = case mode of
       EvalModePlain -> defaultEvalOptions
@@ -150,9 +151,10 @@ coreEvalAssertion mainFile expectedFile trans testTrans step = do
       expected <- TIO.readFile (toFilePath expectedFile)
       assertEqDiffText ("Check: EVAL output = " <> toFilePath expectedFile) "" expected
     Right (tabIni, Just node) ->
-      case run $ runReader defaultCoreOptions $ runError $ applyTransformations trans (setupMainFunction tabIni node) of
+      case run $ runReader defaultCoreOptions $ runError $ applyTransformations trans $ moduleFromInfoTable $ setupMainFunction defaultModuleId tabIni node of
         Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
-        Right tab -> do
+        Right m -> do
+          let tab = computeCombinedInfoTable m
           assertBool "Check info table" (checkInfoTable tab)
           testTrans tab
           coreEvalAssertion' EvalModePlain tab mainFile expectedFile step
@@ -181,7 +183,7 @@ parseFile :: Path Abs File -> IO (Either MegaparsecError (InfoTable, Maybe Node)
 parseFile f = do
   let f' = toFilePath f
   s <- readFile f'
-  return $ runParser f emptyInfoTable s
+  return $ runParser f defaultModuleId mempty s
 
 doEval' ::
   EvalOptions ->

@@ -1,5 +1,6 @@
 module Juvix.Compiler.Concrete.Data.Builtins where
 
+import Data.Serialize
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
 import Juvix.Prelude.Pretty
@@ -28,6 +29,8 @@ data BuiltinPrim
 
 instance Hashable BuiltinPrim
 
+instance Serialize BuiltinPrim
+
 instance Pretty BuiltinPrim where
   pretty = \case
     BuiltinsInductive i -> pretty i
@@ -50,6 +53,8 @@ data BuiltinInductive
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic, Data)
 
 instance Hashable BuiltinInductive
+
+instance Serialize BuiltinInductive
 
 instance Pretty BuiltinInductive where
   pretty = \case
@@ -82,6 +87,8 @@ data BuiltinConstructor
 
 instance Hashable BuiltinConstructor
 
+instance Serialize BuiltinConstructor
+
 data BuiltinFunction
   = BuiltinNatPlus
   | BuiltinNatSub
@@ -113,6 +120,8 @@ data BuiltinFunction
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic, Data)
 
 instance Hashable BuiltinFunction
+
+instance Serialize BuiltinFunction
 
 instance Pretty BuiltinFunction where
   pretty = \case
@@ -164,6 +173,8 @@ data BuiltinAxiom
 
 instance Hashable BuiltinAxiom
 
+instance Serialize BuiltinAxiom
+
 instance Pretty BuiltinAxiom where
   pretty = \case
     BuiltinNatPrint -> Str.natPrint
@@ -188,6 +199,8 @@ data BuiltinType
   deriving stock (Show, Eq, Ord, Generic, Data)
 
 instance Hashable BuiltinType
+
+instance Serialize BuiltinType
 
 instance Pretty BuiltinType where
   pretty = \case

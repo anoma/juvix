@@ -1,156 +1,73 @@
 module Juvix.Compiler.Core.Data.InfoTable
   ( module Juvix.Compiler.Core.Data.InfoTable,
     module Juvix.Compiler.Concrete.Data.Builtins,
+    module Juvix.Compiler.Core.Data.InfoTable.Base,
   )
 where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Concrete.Data.Builtins
+import Juvix.Compiler.Core.Data.InfoTable.Base
 import Juvix.Compiler.Core.Language
 
 type IdentContext = HashMap Symbol Node
 
-data InfoTable = InfoTable
-  { _identContext :: IdentContext,
-    _identMap :: HashMap Text IdentKind,
-    _infoMain :: Maybe Symbol,
-    _infoIdentifiers :: HashMap Symbol IdentifierInfo,
-    _infoInductives :: HashMap Symbol InductiveInfo,
-    _infoConstructors :: HashMap Tag ConstructorInfo,
-    _infoAxioms :: HashMap Text AxiomInfo,
-    _infoSpecialisations :: HashMap Symbol [SpecialisationInfo],
-    _infoLiteralIntToNat :: Maybe Symbol,
-    _infoLiteralIntToInt :: Maybe Symbol,
-    _infoNextSymbol :: Word,
-    _infoNextTag :: Word,
-    _infoBuiltins :: HashMap BuiltinPrim IdentKind
-  }
+type InfoTable = InfoTable' Node
 
-emptyInfoTable :: InfoTable
-emptyInfoTable =
-  InfoTable
-    { _identContext = mempty,
-      _identMap = mempty,
-      _infoMain = Nothing,
-      _infoIdentifiers = mempty,
-      _infoInductives = mempty,
-      _infoConstructors = mempty,
-      _infoAxioms = mempty,
-      _infoSpecialisations = mempty,
-      _infoLiteralIntToNat = Nothing,
-      _infoLiteralIntToInt = Nothing,
-      _infoNextSymbol = 1,
-      _infoNextTag = 0,
-      _infoBuiltins = mempty
-    }
+type IdentifierInfo = IdentifierInfo' Node
 
-emptyInfoTable' :: Node -> InfoTable
-emptyInfoTable' mainNode =
-  emptyInfoTable
-    { _identContext = HashMap.singleton 0 mainNode,
-      _infoMain = Just 0
-    }
+type InductiveInfo = InductiveInfo' Node
 
-data IdentKind
-  = IdentFun Symbol
-  | IdentInd Symbol
-  | IdentConstr Tag
+type ConstructorInfo = ConstructorInfo' Node
 
-data IdentifierInfo = IdentifierInfo
-  { _identifierName :: Text,
-    _identifierLocation :: Maybe Location,
-    _identifierSymbol :: Symbol,
-    _identifierType :: Type,
-    -- | The number of lambdas in the identifier body
-    _identifierArgsNum :: Int,
-    _identifierIsExported :: Bool,
-    _identifierBuiltin :: Maybe BuiltinFunction,
-    _identifierPragmas :: Pragmas,
-    _identifierArgNames :: [Maybe Text]
-  }
+type AxiomInfo = AxiomInfo' Node
 
-data InductiveInfo = InductiveInfo
-  { _inductiveName :: Text,
-    _inductiveLocation :: Maybe Location,
-    _inductiveSymbol :: Symbol,
-    _inductiveKind :: Type,
-    _inductiveConstructors :: [Tag],
-    _inductiveParams :: [ParameterInfo],
-    _inductivePositive :: Bool,
-    _inductiveBuiltin :: Maybe BuiltinType,
-    _inductivePragmas :: Pragmas
-  }
+type ParameterInfo = ParameterInfo' Node
 
-data ConstructorInfo = ConstructorInfo
-  { _constructorName :: Text,
-    _constructorLocation :: Maybe Location,
-    _constructorTag :: Tag,
-    _constructorType :: Type,
-    _constructorArgsNum :: Int,
-    _constructorArgNames :: [Maybe Text],
-    _constructorInductive :: Symbol,
-    _constructorFixity :: Maybe Fixity,
-    _constructorBuiltin :: Maybe BuiltinConstructor,
-    _constructorPragmas :: Pragmas
-  }
+type SpecialisationInfo = SpecialisationInfo' Node
 
-data ParameterInfo = ParameterInfo
-  { _paramName :: Text,
-    _paramLocation :: Maybe Location,
-    _paramKind :: Type,
-    _paramIsImplicit :: Bool
-  }
+nextSymbolId :: InfoTable -> Word
+nextSymbolId tab =
+  maximum (0 : map (^. symbolId) (HashMap.keys (tab ^. infoIdentifiers)) ++ map (^. symbolId) (HashMap.keys (tab ^. infoInductives)))
+    + 1
 
-data AxiomInfo = AxiomInfo
-  { _axiomName :: Text,
-    _axiomLocation :: Maybe Location,
-    _axiomType :: Type,
-    _axiomPragmas :: Pragmas
-  }
+nextTagId :: InfoTable -> Word
+nextTagId tab =
+  maximum (0 : mapMaybe getUserTagId (HashMap.keys (tab ^. infoConstructors))) + 1
 
-data SpecialisationInfo = SpecialisationInfo
-  { _specSignature :: ([Node], [Int]),
-    _specSymbol :: Symbol
-  }
+lookupTabInductiveInfo' :: InfoTable -> Symbol -> Maybe InductiveInfo
+lookupTabInductiveInfo' tab sym = HashMap.lookup sym (tab ^. infoInductives)
 
-makeLenses ''InfoTable
-makeLenses ''IdentifierInfo
-makeLenses ''InductiveInfo
-makeLenses ''ConstructorInfo
-makeLenses ''ParameterInfo
-makeLenses ''AxiomInfo
-makeLenses ''SpecialisationInfo
+lookupTabConstructorInfo' :: InfoTable -> Tag -> Maybe ConstructorInfo
+lookupTabConstructorInfo' tab tag = HashMap.lookup tag (tab ^. infoConstructors)
 
-lookupInductiveInfo' :: InfoTable -> Symbol -> Maybe InductiveInfo
-lookupInductiveInfo' tab sym = HashMap.lookup sym (tab ^. infoInductives)
+lookupTabIdentifierInfo' :: InfoTable -> Symbol -> Maybe IdentifierInfo
+lookupTabIdentifierInfo' tab sym = HashMap.lookup sym (tab ^. infoIdentifiers)
 
-lookupConstructorInfo' :: InfoTable -> Tag -> Maybe ConstructorInfo
-lookupConstructorInfo' tab tag = HashMap.lookup tag (tab ^. infoConstructors)
+lookupTabIdentifierNode' :: InfoTable -> Symbol -> Maybe Node
+lookupTabIdentifierNode' tab sym = HashMap.lookup sym (tab ^. identContext)
 
-lookupIdentifierInfo' :: InfoTable -> Symbol -> Maybe IdentifierInfo
-lookupIdentifierInfo' tab sym = HashMap.lookup sym (tab ^. infoIdentifiers)
+lookupTabSpecialisationInfo' :: InfoTable -> Symbol -> Maybe [SpecialisationInfo]
+lookupTabSpecialisationInfo' tab sym = HashMap.lookup sym (tab ^. infoSpecialisations)
 
-lookupIdentifierNode' :: InfoTable -> Symbol -> Maybe Node
-lookupIdentifierNode' tab sym = HashMap.lookup sym (tab ^. identContext)
+lookupTabSpecialisationInfo :: InfoTable -> Symbol -> [SpecialisationInfo]
+lookupTabSpecialisationInfo tab sym = fromMaybe [] $ lookupTabSpecialisationInfo' tab sym
 
-lookupSpecialisationInfo :: InfoTable -> Symbol -> [SpecialisationInfo]
-lookupSpecialisationInfo tab sym = fromMaybe [] $ HashMap.lookup sym (tab ^. infoSpecialisations)
+lookupTabInductiveInfo :: InfoTable -> Symbol -> InductiveInfo
+lookupTabInductiveInfo tab sym = fromJust $ lookupTabInductiveInfo' tab sym
 
-lookupInductiveInfo :: InfoTable -> Symbol -> InductiveInfo
-lookupInductiveInfo tab sym = fromJust $ lookupInductiveInfo' tab sym
+lookupTabConstructorInfo :: InfoTable -> Tag -> ConstructorInfo
+lookupTabConstructorInfo tab tag = fromMaybe (error ("tag: " <> show tag)) $ lookupTabConstructorInfo' tab tag
 
-lookupConstructorInfo :: InfoTable -> Tag -> ConstructorInfo
-lookupConstructorInfo tab tag = fromMaybe (error ("tag: " <> show tag)) $ lookupConstructorInfo' tab tag
+lookupTabIdentifierInfo :: InfoTable -> Symbol -> IdentifierInfo
+lookupTabIdentifierInfo tab sym = fromJust $ lookupTabIdentifierInfo' tab sym
 
-lookupIdentifierInfo :: InfoTable -> Symbol -> IdentifierInfo
-lookupIdentifierInfo tab sym = fromJust $ lookupIdentifierInfo' tab sym
+lookupTabIdentifierNode :: InfoTable -> Symbol -> Node
+lookupTabIdentifierNode tab sym = fromJust $ lookupTabIdentifierNode' tab sym
 
-lookupIdentifierNode :: InfoTable -> Symbol -> Node
-lookupIdentifierNode tab sym = fromJust $ lookupIdentifierNode' tab sym
-
-lookupBuiltinInductive :: InfoTable -> BuiltinInductive -> Maybe InductiveInfo
-lookupBuiltinInductive tab b = (HashMap.!) (tab ^. infoInductives) . indSym <$> idenKind
+lookupTabBuiltinInductive :: InfoTable -> BuiltinInductive -> Maybe InductiveInfo
+lookupTabBuiltinInductive tab b = (HashMap.!) (tab ^. infoInductives) . indSym <$> idenKind
   where
     idenKind :: Maybe IdentKind
     idenKind = HashMap.lookup (BuiltinsInductive b) (tab ^. infoBuiltins)
@@ -160,8 +77,8 @@ lookupBuiltinInductive tab b = (HashMap.!) (tab ^. infoInductives) . indSym <$> 
       IdentInd s -> s
       _ -> error "core infotable: expected inductive identifier"
 
-lookupBuiltinConstructor :: InfoTable -> BuiltinConstructor -> Maybe ConstructorInfo
-lookupBuiltinConstructor tab b = (HashMap.!) (tab ^. infoConstructors) . ctorTag <$> idenKind
+lookupTabBuiltinConstructor :: InfoTable -> BuiltinConstructor -> Maybe ConstructorInfo
+lookupTabBuiltinConstructor tab b = (HashMap.!) (tab ^. infoConstructors) . ctorTag <$> idenKind
   where
     idenKind :: Maybe IdentKind
     idenKind = HashMap.lookup (BuiltinsConstructor b) (tab ^. infoBuiltins)
@@ -171,8 +88,8 @@ lookupBuiltinConstructor tab b = (HashMap.!) (tab ^. infoConstructors) . ctorTag
       IdentConstr t -> t
       _ -> error "core infotable: expected constructor identifier"
 
-lookupBuiltinFunction :: InfoTable -> BuiltinFunction -> Maybe IdentifierInfo
-lookupBuiltinFunction tab b = (HashMap.!) (tab ^. infoIdentifiers) . funSym <$> idenKind
+lookupTabBuiltinFunction :: InfoTable -> BuiltinFunction -> Maybe IdentifierInfo
+lookupTabBuiltinFunction tab b = (HashMap.!) (tab ^. infoIdentifiers) . funSym <$> idenKind
   where
     idenKind :: Maybe IdentKind
     idenKind = HashMap.lookup (BuiltinsFunction b) (tab ^. infoBuiltins)
@@ -182,45 +99,34 @@ lookupBuiltinFunction tab b = (HashMap.!) (tab ^. infoIdentifiers) . funSym <$> 
       IdentFun s -> s
       _ -> error "core infotable: expected function identifier"
 
-identName :: InfoTable -> Symbol -> Text
-identName tab sym = lookupIdentifierInfo tab sym ^. identifierName
+identName' :: InfoTable -> Symbol -> Text
+identName' tab sym = lookupTabIdentifierInfo tab sym ^. identifierName
 
-typeName :: InfoTable -> Symbol -> Text
-typeName tab sym = lookupInductiveInfo tab sym ^. inductiveName
+typeName' :: InfoTable -> Symbol -> Text
+typeName' tab sym = lookupTabInductiveInfo tab sym ^. inductiveName
 
-identNames :: InfoTable -> HashSet Text
-identNames tab =
+identNames' :: InfoTable -> HashSet Text
+identNames' tab =
   HashSet.fromList $
     map (^. identifierName) (HashMap.elems (tab ^. infoIdentifiers))
       ++ map (^. constructorName) (HashMap.elems (tab ^. infoConstructors))
       ++ map (^. inductiveName) (HashMap.elems (tab ^. infoInductives))
 
-freshIdentName :: InfoTable -> Text -> Text
-freshIdentName tab = freshName (identNames tab)
-
-filterByFile :: Path Abs File -> InfoTable -> InfoTable
-filterByFile f t =
-  t
-    { _infoIdentifiers = HashMap.filter (^. identifierLocation . to matchesLocation) (t ^. infoIdentifiers),
-      _infoAxioms = HashMap.filter (^. axiomLocation . to matchesLocation) (t ^. infoAxioms),
-      _infoConstructors = HashMap.filter (^. constructorLocation . to matchesLocation) (t ^. infoConstructors),
-      _infoInductives = HashMap.filter (^. inductiveLocation . to matchesLocation) (t ^. infoInductives)
-    }
-  where
-    matchesLocation :: Maybe Location -> Bool
-    matchesLocation l = l ^? _Just . intervalFile == Just f
+freshIdentName' :: InfoTable -> Text -> Text
+freshIdentName' tab = freshName (identNames' tab)
 
 -- | Prunes the orphaned entries of identMap, indentContext and
 -- infoConstructors, i.e., ones that have no corresponding entries in
 -- infoIdentifiers or infoInductives
-pruneInfoTable :: InfoTable -> InfoTable
-pruneInfoTable tab =
+pruneInfoTable' :: InfoTable -> InfoTable
+pruneInfoTable' tab =
   pruneIdentMap
     $ over
       infoConstructors
       ( HashMap.filter
           ( \ConstructorInfo {..} ->
-              HashMap.member _constructorInductive (tab ^. infoInductives)
+              isBuiltinTag _constructorTag
+                || HashMap.member _constructorInductive (tab ^. infoInductives)
           )
       )
     $ over
@@ -240,3 +146,13 @@ pruneInfoTable tab =
             )
         )
         tab'
+
+tableIsFragile :: InfoTable -> Bool
+tableIsFragile tab = any isFragile (HashMap.elems $ tab ^. infoIdentifiers)
+  where
+    isFragile :: IdentifierInfo -> Bool
+    isFragile IdentifierInfo {..} =
+      case _identifierPragmas ^. pragmasInline of
+        Just InlineAlways -> True
+        Just InlineCase -> True
+        _ -> False

@@ -9,15 +9,16 @@ import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.NoDisplayInfo
 import Juvix.Compiler.Core.Pretty
-import Juvix.Compiler.Core.Transformation (etaExpansionApps)
-import Juvix.Compiler.Core.Translation.FromInternal.Data as Core
+import Juvix.Compiler.Core.Transformation (computeCombinedInfoTable, etaExpansionApps)
+import Juvix.Compiler.Core.Translation.FromInternal.Data.Context qualified as Core
 
 internalCoreAssertion :: Path Abs Dir -> Path Abs File -> Path Abs File -> (String -> IO ()) -> Assertion
 internalCoreAssertion root' mainFile expectedFile step = do
   step "Translate to Core"
   entryPoint <- testDefaultEntryPointIO root' mainFile
-  tab0 <- (^. Core.coreResultTable) . snd <$> testRunIO entryPoint upToCore
-  let tab = etaExpansionApps tab0
+  PipelineResult {..} <- snd <$> testRunIO entryPoint upToStoredCore
+  let m = etaExpansionApps (_pipelineResult ^. Core.coreResultModule)
+      tab = computeCombinedInfoTable m
   case (tab ^. infoMain) >>= ((tab ^. identContext) HashMap.!?) of
     Just node -> do
       withTempDir'

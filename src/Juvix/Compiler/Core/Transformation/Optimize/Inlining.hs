@@ -7,17 +7,17 @@ import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Options
 import Juvix.Compiler.Core.Transformation.Base
 
-isInlineableLambda :: Int -> InfoTable -> BinderList Binder -> Node -> Bool
-isInlineableLambda inlineDepth tab bl node = case node of
+isInlineableLambda :: Int -> Module -> BinderList Binder -> Node -> Bool
+isInlineableLambda inlineDepth md bl node = case node of
   NLam {} ->
     let (lams, body) = unfoldLambdas node
         binders = map (^. lambdaLhsBinder) lams
-     in checkDepth tab (BL.prependRev binders bl) inlineDepth body
+     in checkDepth md (BL.prependRev binders bl) inlineDepth body
   _ ->
     False
 
-convertNode :: Int -> HashSet Symbol -> InfoTable -> Node -> Node
-convertNode inlineDepth recSyms tab = dmapL go
+convertNode :: Int -> HashSet Symbol -> Module -> Node -> Node
+convertNode inlineDepth recSyms md = dmapL go
   where
     go :: BinderList Binder -> Node -> Node
     go bl node = case node of
@@ -38,16 +38,16 @@ convertNode inlineDepth recSyms tab = dmapL go
                     node
                   _
                     | not (HashSet.member _identSymbol recSyms)
-                        && isInlineableLambda inlineDepth tab bl def
+                        && isInlineableLambda inlineDepth md bl def
                         && length args >= argsNum ->
                         mkApps def args
                   _ ->
                     node
                 where
-                  ii = lookupIdentifierInfo tab _identSymbol
+                  ii = lookupIdentifierInfo md _identSymbol
                   pi = ii ^. identifierPragmas . pragmasInline
                   argsNum = ii ^. identifierArgsNum
-                  def = lookupIdentifierNode tab _identSymbol
+                  def = lookupIdentifierNode md _identSymbol
               _ ->
                 node
       NIdt Ident {..} ->
@@ -57,10 +57,10 @@ convertNode inlineDepth recSyms tab = dmapL go
           Just InlineAlways -> def
           _ -> node
         where
-          ii = lookupIdentifierInfo tab _identSymbol
+          ii = lookupIdentifierInfo md _identSymbol
           pi = ii ^. identifierPragmas . pragmasInline
           argsNum = ii ^. identifierArgsNum
-          def = lookupIdentifierNode tab _identSymbol
+          def = lookupIdentifierNode md _identSymbol
       -- inline zero-argument definitions (automatically) if inlining would result
       -- in case reduction
       NCase cs@Case {..} ->
@@ -72,23 +72,23 @@ convertNode inlineDepth recSyms tab = dmapL go
                 Nothing
                   | not (HashSet.member _identSymbol recSyms)
                       && isConstructorApp def
-                      && checkDepth tab bl inlineDepth def ->
+                      && checkDepth md bl inlineDepth def ->
                       NCase cs {_caseValue = mkApps def args}
                 _ ->
                   node
                 where
-                  ii = lookupIdentifierInfo tab _identSymbol
+                  ii = lookupIdentifierInfo md _identSymbol
                   pi = ii ^. identifierPragmas . pragmasInline
-                  def = lookupIdentifierNode tab _identSymbol
+                  def = lookupIdentifierNode md _identSymbol
               _ ->
                 node
       _ ->
         node
 
-inlining' :: Int -> HashSet Symbol -> InfoTable -> InfoTable
-inlining' inliningDepth recSyms tab = mapT (const (convertNode inliningDepth recSyms tab)) tab
+inlining' :: Int -> HashSet Symbol -> Module -> Module
+inlining' inliningDepth recSyms md = mapT (const (convertNode inliningDepth recSyms md)) md
 
-inlining :: (Member (Reader CoreOptions) r) => InfoTable -> Sem r InfoTable
-inlining tab = do
+inlining :: (Member (Reader CoreOptions) r) => Module -> Sem r Module
+inlining md = do
   d <- asks (^. optInliningDepth)
-  return $ inlining' d (recursiveIdents tab) tab
+  return $ inlining' d (recursiveIdents md) md

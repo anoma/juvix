@@ -60,5 +60,5 @@ convertNode = dmap go
             x
       _ -> node
 
-simplifyArithmetic :: InfoTable -> InfoTable
+simplifyArithmetic :: Module -> Module
 simplifyArithmetic = mapAllNodes convertNode

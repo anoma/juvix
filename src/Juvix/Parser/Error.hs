@@ -4,8 +4,8 @@ import Commonmark qualified as MK
 import Juvix.Compiler.Backend.Markdown.Error
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty.Options (fromGenericOptions)
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Error
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Pretty
+import Juvix.Compiler.Pipeline.Loader.PathResolver.Error
 import Juvix.Extra.Paths
 import Juvix.Prelude
 import Text.Megaparsec qualified as M
@@ -16,7 +16,6 @@ import Text.Parsec.Pos qualified as P
 data ParserError
   = ErrMegaparsec MegaparsecError
   | ErrCommonmark CommonmarkError
-  | ErrTopModulePath TopModulePathError
   | ErrWrongTopModuleName WrongTopModuleName
   | ErrWrongTopModuleNameOrphan WrongTopModuleNameOrphan
   | ErrStdinOrFile StdinOrFileError
@@ -28,7 +27,6 @@ instance ToGenericError ParserError where
   genericError = \case
     ErrMegaparsec e -> genericError e
     ErrCommonmark e -> genericError e
-    ErrTopModulePath e -> genericError e
     ErrWrongTopModuleName e -> genericError e
     ErrWrongTopModuleNameOrphan e -> genericError e
     ErrStdinOrFile e -> genericError e

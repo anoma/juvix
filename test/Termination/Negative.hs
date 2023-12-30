@@ -21,7 +21,7 @@ testDescr NegTest {..} =
           _testRoot = tRoot,
           _testAssertion = Single $ do
             entryPoint <- set entryPointNoStdlib True <$> testDefaultEntryPointIO tRoot file'
-            result <- snd <$> testRunIOEither entryPoint upToInternalTyped
+            result <- testRunIOEither entryPoint upToInternalTyped
             case mapLeft fromJuvixError result of
               Left (Just lexError) -> whenJust (_checkErr lexError) assertFailure
               Left Nothing -> assertFailure "The termination checker did not find an error."

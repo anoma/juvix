@@ -2,6 +2,7 @@ module Juvix.Data.WithLoc where
 
 import Juvix.Data.Fixity
 import Juvix.Data.Loc
+import Juvix.Extra.Serialize
 import Juvix.Prelude.Base
 import Juvix.Prelude.Pretty
 
@@ -9,9 +10,11 @@ data WithLoc a = WithLoc
   { _withLocInt :: Interval,
     _withLocParam :: a
   }
-  deriving stock (Show, Data)
+  deriving stock (Show, Data, Generic)
 
 makeLenses ''WithLoc
+
+instance (Serialize a) => Serialize (WithLoc a)
 
 instance HasLoc (WithLoc a) where
   getLoc = (^. withLocInt)

@@ -7,8 +7,8 @@ where
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Transformation.Base
 
-convertNode :: InfoTable -> Node -> Node
-convertNode tab = umap go
+convertNode :: Module -> Node -> Node
+convertNode md = umap go
   where
     go :: Node -> Node
     go node = case node of
@@ -20,9 +20,9 @@ convertNode tab = umap go
           Just (BuiltinTypeAxiom BuiltinString) -> mkTypeString'
           _ -> node
         where
-          ii = fromJust $ tab ^. infoInductives . at _typeConstrSymbol
+          ii = lookupInductiveInfo md _typeConstrSymbol
       _ -> node
 
-convertBuiltinTypes :: InfoTable -> InfoTable
-convertBuiltinTypes tab =
-  mapAllNodes (convertNode tab) tab
+convertBuiltinTypes :: Module -> Module
+convertBuiltinTypes md =
+  mapAllNodes (convertNode md) md

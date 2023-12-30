@@ -19,11 +19,11 @@ import Juvix.Compiler.Internal.Pretty (ppTrace)
 import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Compiler.Internal.Translation.Extra qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qualified as InternalTyped
+import Juvix.Compiler.Store.Extra qualified as Store
+import Juvix.Compiler.Store.Language qualified as Store
 import Juvix.Data.Loc qualified as Loc
 import Juvix.Data.PPOutput
 import Juvix.Extra.Strings qualified as Str
-
-type MVisit = Visit Internal.ModuleIndex
 
 data PreInductiveDef = PreInductiveDef
   { _preInductiveInternal :: Internal.InductiveDef,
@@ -43,69 +43,70 @@ data PreMutual = PreMutual
 
 makeLenses ''PreMutual
 
-unsupported :: Text -> a
-unsupported thing = error ("Internal to Core: Not yet supported: " <> thing)
-
 -- | Translation of a Name into the identifier index used in the Core InfoTable
 mkIdentIndex :: Name -> Text
-mkIdentIndex = show . (^. Internal.nameId . Internal.unNameId)
+mkIdentIndex = show . (^. Internal.nameId)
 
-fromInternal :: (Member NameIdGen k) => Internal.InternalTypedResult -> Sem k CoreResult
+fromInternal :: (Members '[NameIdGen, Reader Store.ModuleTable] k) => Internal.InternalTypedResult -> Sem k CoreResult
 fromInternal i = do
+  importTab <- asks Store.getInternalModuleTable
+  coreImportsTab <- asks Store.computeCombinedCoreInfoTable
+  let md =
+        Module
+          { _moduleId = i ^. InternalTyped.resultInternalModule . Internal.internalModuleId,
+            _moduleInfoTable = mempty,
+            _moduleImportsTable = coreImportsTab
+          }
   res <-
-    execInfoTableBuilder emptyInfoTable
+    execInfoTableBuilder md
       . evalState (i ^. InternalTyped.resultFunctions)
       . runReader (i ^. InternalTyped.resultIdenTypes)
-      $ f
+      $ do
+        when
+          (isNothing (coreImportsTab ^. infoLiteralIntToNat))
+          reserveLiteralIntToNatSymbol
+        when
+          (isNothing (coreImportsTab ^. infoLiteralIntToInt))
+          reserveLiteralIntToIntSymbol
+        let resultModule = i ^. InternalTyped.resultModule
+            resultTable =
+              Internal.computeCombinedInfoTable importTab
+                <> i ^. InternalTyped.resultInternalModule . Internal.internalModuleInfoTable
+        runReader resultTable $
+          goModule resultModule
+        tab <- getModule
+        when
+          (isNothing (lookupBuiltinInductive tab BuiltinBool))
+          declareBoolBuiltins
+        when (isNothing (coreImportsTab ^. infoLiteralIntToNat)) $
+          setupLiteralIntToNat literalIntToNatNode
+        when (isNothing (coreImportsTab ^. infoLiteralIntToInt)) $
+          setupLiteralIntToInt literalIntToIntNode
   return $
     CoreResult
-      { _coreResultTable = res,
+      { _coreResultModule = res,
         _coreResultInternalTypedResult = i
       }
-  where
-    f :: (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, State InternalTyped.FunctionsTable, NameIdGen] r) => Sem r ()
-    f = do
-      reserveLiteralIntToNatSymbol
-      reserveLiteralIntToIntSymbol
-      let resultModules = toList (i ^. InternalTyped.resultModules)
-      runReader (Internal.buildTable resultModules)
-        . evalVisitEmpty goModuleNoVisit
-        $ mapM_ goModule resultModules
-      tab <- getInfoTable
-      when
-        (isNothing (lookupBuiltinInductive tab BuiltinBool))
-        declareBoolBuiltins
-      setupLiteralIntToNat literalIntToNatNode
-      setupLiteralIntToInt literalIntToIntNode
 
-fromInternalExpression :: (Member NameIdGen r) => CoreResult -> Internal.Expression -> Sem r Node
-fromInternalExpression res exp = do
-  let modules = res ^. coreResultInternalTypedResult . InternalTyped.resultModules
+fromInternalExpression :: (Member NameIdGen r) => Internal.InternalModuleTable -> CoreResult -> Internal.Expression -> Sem r Node
+fromInternalExpression importTab res exp = do
+  let mtab =
+        res ^. coreResultInternalTypedResult . InternalTyped.resultInternalModule . Internal.internalModuleInfoTable
+          <> Internal.computeCombinedInfoTable importTab
   fmap snd
-    . runReader (Internal.buildTable modules)
-    . runInfoTableBuilder (res ^. coreResultTable)
+    . runReader mtab
+    . runInfoTableBuilder (res ^. coreResultModule)
     . evalState (res ^. coreResultInternalTypedResult . InternalTyped.resultFunctions)
     . runReader (res ^. coreResultInternalTypedResult . InternalTyped.resultIdenTypes)
     $ fromTopIndex (goExpression exp)
 
 goModule ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, MVisit] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, NameIdGen] r) =>
   Internal.Module ->
   Sem r ()
-goModule = visit . Internal.ModuleIndex
-
-goModuleNoVisit ::
-  forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, NameIdGen, MVisit] r) =>
-  Internal.ModuleIndex ->
-  Sem r ()
-goModuleNoVisit (Internal.ModuleIndex m) = do
-  mapM_ goImport (m ^. Internal.moduleBody . Internal.moduleImports)
+goModule m = do
   mapM_ goMutualBlock (m ^. Internal.moduleBody . Internal.moduleStatements)
-  where
-    goImport :: Internal.Import -> Sem r ()
-    goImport (Internal.Import i) = visit i
 
 -- | predefine an inductive definition
 preInductiveDef ::
@@ -715,7 +716,7 @@ fromPatternArg pa = case pa ^. Internal.patternArgName of
 
     getPatternType :: Name -> Sem r Type
     getPatternType n = do
-      ty <- asks (fromJust . HashMap.lookup (n ^. nameId))
+      ty <- asks (fromJust . HashMap.lookup (n ^. nameId) . (^. InternalTyped.typesTable))
       idt :: IndexTable <- get
       runReader idt (goType ty)
 
@@ -846,15 +847,18 @@ goIden ::
   Internal.Iden ->
   Sem r Node
 goIden i = do
-  infoTableDebug <- Core.ppTrace <$> getInfoTable
+  importsTableDebug <- Core.ppTrace . (^. moduleImportsTable) <$> getModule
+  infoTableDebug <- Core.ppTrace . (^. moduleInfoTable) <$> getModule
   let undeclared =
         error
           ( "internal to core: undeclared identifier: "
               <> txt
               <> "\nat "
               <> Internal.ppTrace (getLoc i)
-              <> "\n"
+              <> "\nModule:\n-------\n\n"
               <> infoTableDebug
+              <> "\nImports:\n--------\n\n"
+              <> importsTableDebug
           )
   case i of
     Internal.IdenVar n -> do
@@ -924,8 +928,8 @@ goExpression ::
 goExpression = \case
   Internal.ExpressionLet l -> goLet l
   Internal.ExpressionLiteral l -> do
-    tab <- getInfoTable
-    return (goLiteral (fromJust $ tab ^. infoLiteralIntToNat) (fromJust $ tab ^. infoLiteralIntToInt) l)
+    md <- getModule
+    return (goLiteral (fromJust $ getInfoLiteralIntToNat md) (fromJust $ getInfoLiteralIntToInt md) l)
   Internal.ExpressionIden i -> goIden i
   Internal.ExpressionApplication a -> goApplication a
   Internal.ExpressionSimpleLambda l -> goSimpleLambda l

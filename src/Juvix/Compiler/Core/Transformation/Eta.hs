@@ -47,8 +47,8 @@ etaExpandTypeConstrs getArgtys = umap go
           argtys = getArgtys _typeConstrSymbol
       _ -> n
 
-etaExpandApps :: InfoTable -> Node -> Node
-etaExpandApps tab =
+etaExpandApps :: Module -> Node -> Node
+etaExpandApps md =
   squashApps
     . etaExpandTypeConstrs typeConstrArgtys
     . etaExpandConstrs constrArgtys
@@ -57,15 +57,15 @@ etaExpandApps tab =
   where
     constrArgtys :: Tag -> [Type]
     constrArgtys tag =
-      case lookupConstructorInfo' tab tag of
+      case lookupConstructorInfo' md tag of
         Just ci -> typeArgs (ci ^. constructorType)
         Nothing -> []
 
     typeConstrArgtys :: Symbol -> [Type]
     typeConstrArgtys sym =
-      case lookupInductiveInfo' tab sym of
+      case lookupInductiveInfo' md sym of
         Just ci -> map (^. paramKind) (ci ^. inductiveParams)
         Nothing -> []
 
-etaExpansionApps :: InfoTable -> InfoTable
-etaExpansionApps tab = mapAllNodes (etaExpandApps tab) tab
+etaExpansionApps :: Module -> Module
+etaExpansionApps md = mapAllNodes (etaExpandApps md) md

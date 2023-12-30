@@ -2,6 +2,7 @@ module Juvix.Data.Pragmas where
 
 import Data.Aeson.BetterErrors qualified as Aeson
 import Juvix.Data.Yaml
+import Juvix.Extra.Serialize
 import Juvix.Prelude.Base
 
 data PragmaInline
@@ -100,6 +101,28 @@ instance Hashable PragmaSpecialiseBy
 instance Hashable PragmaEval
 
 instance Hashable Pragmas
+
+instance Serialize PragmaInline
+
+instance Serialize PragmaUnroll
+
+instance Serialize PragmaArgNames
+
+instance Serialize PragmaPublic
+
+instance Serialize PragmaFormat
+
+instance Serialize PragmaSpecialiseArg
+
+instance Serialize PragmaSpecialiseArgs
+
+instance Serialize PragmaSpecialise
+
+instance Serialize PragmaSpecialiseBy
+
+instance Serialize PragmaEval
+
+instance Serialize Pragmas
 
 instance FromJSON Pragmas where
   parseJSON = toAesonParser id parsePragmas

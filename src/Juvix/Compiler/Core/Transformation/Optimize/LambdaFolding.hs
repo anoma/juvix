@@ -41,5 +41,5 @@ convertNode = rmap go
       _ ->
         recur [] node
 
-lambdaFolding :: InfoTable -> InfoTable
+lambdaFolding :: Module -> Module
 lambdaFolding = mapAllNodes convertNode

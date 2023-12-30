@@ -8,6 +8,7 @@ module Juvix.Compiler.Core.Transformation
   )
 where
 
+import Juvix.Compiler.Core.Data.Module
 import Juvix.Compiler.Core.Data.TransformationId
 import Juvix.Compiler.Core.Error
 import Juvix.Compiler.Core.Options
@@ -15,6 +16,7 @@ import Juvix.Compiler.Core.Transformation.Base
 import Juvix.Compiler.Core.Transformation.Check.Exec
 import Juvix.Compiler.Core.Transformation.Check.Geb
 import Juvix.Compiler.Core.Transformation.Check.VampIR
+import Juvix.Compiler.Core.Transformation.CombineInfoTables (combineInfoTables)
 import Juvix.Compiler.Core.Transformation.ComputeTypeInfo
 import Juvix.Compiler.Core.Transformation.ConvertBuiltinTypes
 import Juvix.Compiler.Core.Transformation.DisambiguateNames
@@ -49,10 +51,10 @@ import Juvix.Compiler.Core.Transformation.RemoveTypeArgs
 import Juvix.Compiler.Core.Transformation.TopEtaExpand
 import Juvix.Compiler.Core.Transformation.UnrollRecursion
 
-applyTransformations :: forall r. (Members '[Error JuvixError, Reader CoreOptions] r) => [TransformationId] -> InfoTable -> Sem r InfoTable
+applyTransformations :: forall r. (Members '[Error JuvixError, Reader CoreOptions] r) => [TransformationId] -> Module -> Sem r Module
 applyTransformations ts tbl = foldM (flip appTrans) tbl ts
   where
-    appTrans :: TransformationId -> InfoTable -> Sem r InfoTable
+    appTrans :: TransformationId -> Module -> Sem r Module
     appTrans = \case
       LambdaLetRecLifting -> return . lambdaLetRecLifting
       LetRecLifting -> return . letRecLifting
@@ -69,6 +71,7 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
       NaiveMatchToCase -> return . Naive.matchToCase
       EtaExpandApps -> return . etaExpansionApps
       DisambiguateNames -> return . disambiguateNames
+      CombineInfoTables -> return . combineInfoTables
       CheckGeb -> mapError (JuvixError @CoreError) . checkGeb
       CheckExec -> mapError (JuvixError @CoreError) . checkExec
       CheckVampIR -> mapError (JuvixError @CoreError) . checkVampIR

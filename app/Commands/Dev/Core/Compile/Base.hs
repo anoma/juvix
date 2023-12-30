@@ -9,13 +9,13 @@ import Juvix.Compiler.Backend qualified as Backend
 import Juvix.Compiler.Backend.C qualified as C
 import Juvix.Compiler.Backend.Geb qualified as Geb
 import Juvix.Compiler.Backend.VampIR.Translation qualified as VampIR
-import Juvix.Compiler.Core.Data.InfoTable qualified as Core
+import Juvix.Compiler.Core.Data.Module qualified as Core
 import System.FilePath (takeBaseName)
 
 data PipelineArg = PipelineArg
   { _pipelineArgOptions :: CompileOptions,
     _pipelineArgFile :: Path Abs File,
-    _pipelineArgInfoTable :: Core.InfoTable
+    _pipelineArgModule :: Core.Module
   }
 
 getEntry :: (Members '[Embed IO, App, TaggedLock] r) => PipelineArg -> Sem r EntryPoint
@@ -51,7 +51,7 @@ runCPipeline ::
   Sem r ()
 runCPipeline pa@PipelineArg {..} = do
   entryPoint <- getEntry pa
-  C.MiniCResult {..} <- getRight (run (runReader entryPoint (runError (coreToMiniC _pipelineArgInfoTable :: Sem '[Error JuvixError, Reader EntryPoint] C.MiniCResult))))
+  C.MiniCResult {..} <- getRight (run (runReader entryPoint (runError (coreToMiniC _pipelineArgModule :: Sem '[Error JuvixError, Reader EntryPoint] C.MiniCResult))))
   cFile <- inputCFile _pipelineArgFile
   embed $ TIO.writeFile (toFilePath cFile) _resultCCode
   outfile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
@@ -84,7 +84,7 @@ runGebPipeline pa@PipelineArg {..} = do
                     { _lispPackageName = fromString $ takeBaseName $ toFilePath gebFile,
                       _lispPackageEntry = "*entry*"
                     }
-  Geb.Result {..} <- getRight (run (runReader entryPoint (runError (coreToGeb spec _pipelineArgInfoTable :: Sem '[Error JuvixError, Reader EntryPoint] Geb.Result))))
+  Geb.Result {..} <- getRight (run (runReader entryPoint (runError (coreToGeb spec _pipelineArgModule :: Sem '[Error JuvixError, Reader EntryPoint] Geb.Result))))
   embed $ TIO.writeFile (toFilePath gebFile) _resultCode
 
 runVampIRPipeline ::
@@ -95,14 +95,14 @@ runVampIRPipeline ::
 runVampIRPipeline pa@PipelineArg {..} = do
   entryPoint <- getEntry pa
   vampirFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
-  VampIR.Result {..} <- getRight (run (runReader entryPoint (runError (coreToVampIR _pipelineArgInfoTable :: Sem '[Error JuvixError, Reader EntryPoint] VampIR.Result))))
+  VampIR.Result {..} <- getRight (run (runReader entryPoint (runError (coreToVampIR _pipelineArgModule :: Sem '[Error JuvixError, Reader EntryPoint] VampIR.Result))))
   embed $ TIO.writeFile (toFilePath vampirFile) _resultCode
 
 runAsmPipeline :: (Members '[Embed IO, App, TaggedLock] r) => PipelineArg -> Sem r ()
 runAsmPipeline pa@PipelineArg {..} = do
   entryPoint <- getEntry pa
   asmFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
-  r <- runReader entryPoint $ runError @JuvixError (coreToAsm _pipelineArgInfoTable)
+  r <- runReader entryPoint $ runError @JuvixError (coreToAsm _pipelineArgModule)
   tab' <- getRight r
   let code = Asm.ppPrint tab' tab'
   embed $ TIO.writeFile (toFilePath asmFile) code

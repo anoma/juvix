@@ -24,34 +24,34 @@ import Text.Megaparsec qualified as P
 
 -- | Note: only new symbols and tags that are not in the InfoTable already will be
 -- generated during parsing
-runParser :: Path Abs File -> InfoTable -> Text -> Either MegaparsecError (InfoTable, Maybe Node)
-runParser fileName tab input =
+runParser :: Path Abs File -> ModuleId -> InfoTable -> Text -> Either MegaparsecError (InfoTable, Maybe Node)
+runParser fileName mid tab input =
   case run $
-    runInfoTableBuilder tab $
+    runInfoTableBuilder (Module mid tab mempty) $
       P.runParserT parseToplevel (fromAbsFile fileName) input of
     (_, Left err) -> Left (MegaparsecError err)
-    (tbl, Right r) -> Right (tbl, r)
+    (md, Right r) -> Right (md ^. moduleInfoTable, r)
 
-runParserMain :: Path Abs File -> InfoTable -> Text -> Either MegaparsecError InfoTable
-runParserMain fileName tab input =
-  case runParser fileName tab input of
+runParserMain :: Path Abs File -> ModuleId -> InfoTable -> Text -> Either MegaparsecError InfoTable
+runParserMain fileName mid tab input =
+  case runParser fileName mid tab input of
     Left err -> Left err
     Right (tab', Nothing) -> Right tab'
-    Right (tab', Just node) -> Right $ setupMainFunction tab' node
+    Right (tab', Just node) -> Right $ setupMainFunction mid tab' node
 
-setupMainFunction :: InfoTable -> Node -> InfoTable
-setupMainFunction tab node =
+setupMainFunction :: ModuleId -> InfoTable -> Node -> InfoTable
+setupMainFunction mid tab node =
   tab
     { _infoMain = Just sym,
       _identContext = HashMap.insert sym node (tab ^. identContext),
-      _infoIdentifiers = HashMap.insert sym info (tab ^. infoIdentifiers),
-      _infoNextSymbol = tab ^. infoNextSymbol + 1
+      _infoIdentifiers = HashMap.insert sym info (tab ^. infoIdentifiers)
     }
   where
-    sym = tab ^. infoNextSymbol
+    symId = nextSymbolId tab
+    sym = Symbol mid symId
     info =
       IdentifierInfo
-        { _identifierName = freshIdentName tab "main",
+        { _identifierName = freshIdentName' tab "main",
           _identifierLocation = Nothing,
           _identifierSymbol = sym,
           _identifierArgsNum = 0,
@@ -131,7 +131,7 @@ statementDef = do
       guardSymbolNotDefined
         sym
         (parseFailure off ("duplicate definition of: " ++ fromText txt))
-      tab <- lift getInfoTable
+      tab <- (^. moduleInfoTable) <$> lift getModule
       mty <- optional typeAnnotation
       let fi = fromMaybe impossible $ HashMap.lookup sym (tab ^. infoIdentifiers)
           ty = fromMaybe (fi ^. identifierType) mty
@@ -250,8 +250,8 @@ expression ::
   ParsecS r Node
 expression = do
   node <- expr 0 mempty
-  tab <- lift getInfoTable
-  return $ etaExpandApps tab node
+  md <- lift getModule
+  return $ etaExpandApps md node
 
 expr ::
   (Member InfoTableBuilder r) =>

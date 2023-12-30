@@ -12,10 +12,10 @@ import Juvix.Compiler.Concrete.Data.Highlight.Input
 import Juvix.Compiler.Concrete.Data.Highlight.PrettyJudoc
 import Juvix.Compiler.Concrete.Data.Highlight.Properties
 import Juvix.Compiler.Concrete.Data.Highlight.RenderEmacs
-import Juvix.Compiler.Concrete.Data.InfoTable qualified as Scoped
 import Juvix.Compiler.Concrete.Data.ScopedName
 import Juvix.Compiler.Internal.Language qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as Internal
+import Juvix.Compiler.Store.Scoped.Data.InfoTable qualified as Scoped
 import Juvix.Data.CodeAnn
 import Juvix.Data.Emacs
 import Juvix.Prelude as Prelude hiding (show)
@@ -75,7 +75,7 @@ goGotoProperty n = WithLoc (getLoc n) PropertyGoto {..}
 
 goDocProperty :: Scoped.DocTable -> Internal.TypesTable -> AName -> Maybe (WithLoc PropertyDoc)
 goDocProperty doctbl tbl a = do
-  let ty :: Maybe Internal.Expression = tbl ^. at (a ^. anameDocId)
+  let ty :: Maybe Internal.Expression = tbl ^. Internal.typesTable . at (a ^. anameDocId)
   d <- ppDocDefault a ty (doctbl ^. at (a ^. anameDocId))
   let (_docText, _docSExp) = renderEmacs (layoutPretty defaultLayoutOptions d)
   return (WithLoc (getLoc a) PropertyDoc {..})
