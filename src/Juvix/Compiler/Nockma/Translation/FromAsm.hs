@@ -84,11 +84,14 @@ indexStack idx = replicate idx R ++ [L]
 indexInPath :: Path -> Natural -> Path
 indexInPath p idx = p ++ indexStack idx
 
+headOfStack :: StackId -> Path
+headOfStack s = indexInStack s 0
+
 indexInStack :: StackId -> Natural -> Path
 indexInStack s idx = stackPath s ++ indexStack idx
 
 pathToArgumentsArea :: Path
-pathToArgumentsArea = indexInStack CurrentFunction 0 ++ [R]
+pathToArgumentsArea = headOfStack CurrentFunction ++ [R]
 
 pathToArg :: Natural -> Path
 pathToArg = indexInPath pathToArgumentsArea
@@ -101,24 +104,25 @@ makeSem ''Compiler
 makeLenses ''CompilerFunction
 
 fromAsm :: Asm.Symbol -> Asm.InfoTable -> ([Term Natural], Term Natural)
-fromAsm mainSym Asm.InfoTable {..} = let
-  funs = map compileFunction allFunctions
-  in run (execCompilerWith funs (compile mainCode))
+fromAsm mainSym Asm.InfoTable {..} =
+  let funs = map compileFunction allFunctions
+   in run (execCompilerWith funs (compile mainCode))
   where
-  mainCode :: Asm.Code
-  mainCode = _infoFunctions ^?! at mainSym . _Just . Asm.functionCode
+    mainCode :: Asm.Code
+    mainCode = _infoFunctions ^?! at mainSym . _Just . Asm.functionCode
 
-  allFunctions :: [Asm.FunctionInfo]
-  allFunctions = filter notMain (toList _infoFunctions)
-    where
-    notMain :: Asm.FunctionInfo -> Bool
-    notMain Asm.FunctionInfo {..} = _functionSymbol /= mainSym
+    allFunctions :: [Asm.FunctionInfo]
+    allFunctions = filter notMain (toList _infoFunctions)
+      where
+        notMain :: Asm.FunctionInfo -> Bool
+        notMain Asm.FunctionInfo {..} = _functionSymbol /= mainSym
 
-  compileFunction :: Asm.FunctionInfo -> CompilerFunction
-  compileFunction Asm.FunctionInfo {..} = CompilerFunction {
-    _compilerFunctionName = _functionSymbol,
-    _compilerFunction = compile _functionCode
-                                                           }
+    compileFunction :: Asm.FunctionInfo -> CompilerFunction
+    compileFunction Asm.FunctionInfo {..} =
+      CompilerFunction
+        { _compilerFunctionName = _functionSymbol,
+          _compilerFunction = compile _functionCode
+        }
 
 compile :: forall r. (Members '[Compiler] r) => Asm.Code -> Sem r ()
 compile = mapM_ goCommand
@@ -185,7 +189,9 @@ compile = mapM_ goCommand
     goExtendClosure = undefined
 
     goCall :: Asm.InstrCall -> Sem r ()
-    goCall = undefined
+    goCall Asm.InstrCall {..} = case _callType of
+      Asm.CallFun fun -> call fun (fromIntegral _callArgsNum)
+      Asm.CallClosure -> undefined
 
     goTailCall :: Asm.InstrCall -> Sem r ()
     goTailCall = undefined
@@ -286,38 +292,35 @@ call' funName funArgsNum = do
   -- 2.
   --   i. Take a copy of the value stack without the arguments to the function
   --   ii. Push this copy to the call stack
-  output (pushOnStack CallStack (OpAddress # pathInStack ValueStack (replicate funArgsNum R)))
+  output (pushOnStack CallStack (stackPop ValueStack funArgsNum))
 
   -- 3.
   --  i. Take a copy of the function from the function library
   --  ii. Replace its argument area with the arguments from the value stack
   --  iii. Push this copy to the current function stack
+
+  -- Setup function to call with its arguments
+  let funWithArgs = OpReplace # ([R] # stackTake ValueStack funArgsNum) # OpAddress # funPath
+
+  -- Push it to the current function stack
+  output (pushOnStack CurrentFunction (funWithArgs))
+
   -- 4. Replace the value stack with nil
-  -- 5. Evaluate the function in the context of the whole nock stack
-  --    The return instruction in the function compiles to:
-  --      i. Restore the previous value stack (created in 2.). i.e copy the previous value stack
-  --         from the call stack and push the result (the head of the current value stack) to it.
-  --      i. Pop the call stack and the current function stack.
-
-  -- Setup function to call with it arguments
-  output
-    ( pushOnStack
-        CurrentFunction
-        ( OpReplace
-            #
-            -- TODO: copy funArgs elements from the value stack
-            ( ([R] # stackTake ValueStack funArgsNum)
-                # OpAddress
-                # funPath
-            )
-        )
-    )
-
-  -- Init 'activation frame'
   output (resetStack ValueStack)
 
-  -- call the function
-  output (OpCall # ((indexInStack CurrentFunction 0 ++ [L]) # (OpAddress # emptyPath)))
+  -- 5. Evaluate the function in the context of the whole nock stack
+  -- 6. See documentation for asmReturn'
+  output (OpCall # ((headOfStack CurrentFunction ++ [L]) # (OpAddress # emptyPath)))
+
+asmReturn' :: (Members '[Output (Term Natural), Reader FunctionPaths] r) => Sem r ()
+asmReturn' = do
+  -- Restore the previous value stack (created in call'.2.). i.e copy the previous value stack
+  -- from the call stack and push the result (the head of the current value stack) to it.
+  output (replaceStack ValueStack ((OpAddress # headOfStack ValueStack) # (OpAddress # headOfStack CallStack)))
+
+  -- discard the 'activation' frame
+  output (popStack CallStack)
+  output (popStack CurrentFunction)
 
 testEq :: (Members '[Compiler] r) => Sem r ()
 testEq = testEqOn ValueStack
@@ -342,13 +345,6 @@ callStdlib' f = do
   where
     stdlibStackTake :: StackId -> Natural -> Term Natural
     stdlibStackTake sn n = foldr1 (#) (take (fromIntegral n) [OpAddress # indexInStack sn i | i <- [0 ..]])
-
-asmReturn' :: (Members '[Output (Term Natural), Reader FunctionPaths] r) => Sem r ()
-asmReturn' = do
-  output (replaceStack ValueStack ((OpAddress # indexInStack ValueStack 0) # (OpAddress # indexInStack CallStack 0)))
-  -- discard the 'activation' frame
-  output (popStack CallStack)
-  output (popStack CurrentFunction)
 
 branch' ::
   (Functor f, Members '[Output (Term Natural), Reader FunctionPaths] r) =>
@@ -394,6 +390,9 @@ increment = incrementOn ValueStack
 
 pop :: (Members '[Compiler] r) => Sem r ()
 pop = popFrom ValueStack
+
+stackPop :: StackId -> Natural -> Term Natural
+stackPop s n = OpAddress # pathInStack s (replicate n R)
 
 stackTake :: StackId -> Natural -> Term Natural
 stackTake sn n = remakeList (take (fromIntegral n) [OpAddress # indexInStack sn i | i <- [0 ..]])
@@ -492,15 +491,15 @@ evalCompiledNock :: [Term Natural] -> Term Natural -> Term Natural
 evalCompiledNock functionTerms mainTerm =
   let stack = initStack functionTerms
       evalT =
-         run
-        . runError @(ErrNockNatural Natural)
-        . runError @NockEvalError
-        $ eval stack mainTerm
-  in case evalT of
-    Left e -> error (show e)
-    Right ev -> case ev of
-      Left e -> error (show e)
-      Right res -> res
+        run
+          . runError @(ErrNockNatural Natural)
+          . runError @NockEvalError
+          $ eval stack mainTerm
+   in case evalT of
+        Left e -> error (show e)
+        Right ev -> case ev of
+          Left e -> error (show e)
+          Right res -> res
 
 -- | Used in testing and app
 getStack :: StackId -> Term Natural -> Term Natural

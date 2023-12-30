@@ -2,10 +2,10 @@ module Commands.Dev.Nockma.FromAsm where
 
 import Commands.Base hiding (Atom)
 import Commands.Dev.Nockma.FromAsm.Options
-import Juvix.Compiler.Asm.Translation.FromSource qualified as Asm
 import Juvix.Compiler.Asm.Data.InfoTable qualified as Asm
-import Juvix.Compiler.Nockma.Translation.FromAsm
+import Juvix.Compiler.Asm.Translation.FromSource qualified as Asm
 import Juvix.Compiler.Nockma.Pretty
+import Juvix.Compiler.Nockma.Translation.FromAsm
 
 runCommand :: forall r. (Members '[Embed IO, App] r) => NockmaFromAsmOptions -> Sem r ()
 runCommand opts = do

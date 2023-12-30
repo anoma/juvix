@@ -71,7 +71,9 @@ makeLenses ''Field
 makeLenses ''OffsetRef
 
 -- | Function call type
-data CallType = CallFun Symbol | CallClosure
+data CallType
+  = CallFun Symbol
+  | CallClosure
   deriving stock (Eq)
 
 -- | `Instruction` is a single non-branching instruction, i.e., with no control

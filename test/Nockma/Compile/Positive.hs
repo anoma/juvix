@@ -3,11 +3,11 @@
 module Nockma.Compile.Positive where
 
 import Base
+import Juvix.Compiler.Asm.Language qualified as Asm
 import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Translation.FromAsm
 import Juvix.Compiler.Nockma.Translation.FromSource.QQ
-import Juvix.Compiler.Asm.Language qualified as Asm
 
 type Check = Sem '[Reader (Term Natural), Embed IO]
 
@@ -19,13 +19,13 @@ data Test = Test
 
 makeLenses ''Test
 
-data FunctionName =
-  FunIncrement
+data FunctionName
+  = FunIncrement
   | FunConst
   | FunCallInc
   deriving stock (Enum)
 
-sym :: Enum a => a -> Asm.Symbol
+sym :: (Enum a) => a -> Asm.Symbol
 sym = fromIntegral . fromEnum
 
 debugProg :: Sem '[Compiler, Embed IO] () -> IO (Term Natural)
