@@ -1,7 +1,12 @@
-module Juvix.Compiler.Nockma.Language where
+module Juvix.Compiler.Nockma.Language
+  ( module Juvix.Compiler.Nockma.Language,
+    module Juvix.Compiler.Core.Language.Base,
+  )
+where
 
 import Data.HashMap.Strict qualified as HashMap
 import GHC.Base (Type)
+import Juvix.Compiler.Core.Language.Base (Symbol)
 import Juvix.Prelude hiding (Atom, Path)
 import Juvix.Prelude.Pretty
 

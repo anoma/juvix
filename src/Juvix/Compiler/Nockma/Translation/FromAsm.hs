@@ -6,7 +6,7 @@ import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Stdlib
 import Juvix.Prelude hiding (Atom, Path)
 
-type FunctionId = Asm.Symbol
+type FunctionId = Symbol
 
 type FunctionPaths = HashMap FunctionId Path
 
@@ -67,10 +67,8 @@ data Compiler m a where
   PushOnto :: StackId -> Term Natural -> Compiler m ()
   PopFrom :: StackId -> Compiler m ()
   TestEqOn :: StackId -> Compiler m ()
-  Call :: FunctionId -> Natural -> Compiler m ()
+  Call :: Bool -> FunctionId -> Natural -> Compiler m ()
   IncrementOn :: StackId -> Compiler m ()
-  PushArgRef :: Offset -> Compiler m ()
-  PushTempRef :: Offset -> Compiler m ()
   Branch :: m () -> m () -> Compiler m ()
   CallStdlib :: StdlibFunction -> Compiler m ()
   AsmReturn :: Compiler m ()
@@ -134,7 +132,7 @@ compile = mapM_ goCommand
       Asm.Case c -> goCase c
 
     goCase :: Asm.CmdCase -> Sem r ()
-    goCase = undefined
+    goCase = error "TODO"
 
     goBranch :: Asm.CmdBranch -> Sem r ()
     goBranch Asm.CmdBranch {..} = branch (compile _cmdBranchTrue) (compile _cmdBranchFalse)
@@ -158,43 +156,49 @@ compile = mapM_ goCommand
         | otherwise -> pushNat (fromInteger i)
       Asm.ConstBool i -> push (nockBoolLiteral i)
       Asm.ConstString {} -> stringsErr
-      Asm.ConstUnit -> undefined
-      Asm.ConstVoid -> undefined
-      Asm.Ref r -> goPushRef r
+      Asm.ConstUnit -> error "TODO"
+      Asm.ConstVoid -> error "TODO"
+      Asm.Ref r -> pushMemValue r
       where
-        goPushRef :: Asm.MemValue -> Sem r ()
-        goPushRef = \case
-          Asm.DRef r -> goDirectRef r
+        pushMemValue :: Asm.MemValue -> Sem r ()
+        pushMemValue = \case
+          Asm.DRef r -> pushDirectRef r
           Asm.ConstrRef r -> goConstrRef r
 
         goConstrRef :: Asm.Field -> Sem r ()
-        goConstrRef = undefined
+        goConstrRef = error "TODO"
 
-        goDirectRef :: Asm.DirectRef -> Sem r ()
-        goDirectRef = undefined
+        pushDirectRef :: Asm.DirectRef -> Sem r ()
+        pushDirectRef = \case
+          Asm.StackRef -> error "TODO"
+          Asm.ArgRef a -> pushArgRef (fromIntegral a)
+          Asm.TempRef a -> error "TODO"
 
     goPushTemp :: Sem r ()
-    goPushTemp = undefined
+    goPushTemp = error "TODO"
 
     goPrealloc :: Asm.InstrPrealloc -> Sem r ()
-    goPrealloc = undefined
+    goPrealloc = error "TODO"
 
     goAllocConstr :: Asm.Tag -> Sem r ()
-    goAllocConstr = undefined
+    goAllocConstr = error "TODO"
 
     goAllocClosure :: Asm.InstrAllocClosure -> Sem r ()
-    goAllocClosure = undefined
+    goAllocClosure = error "TODO"
 
     goExtendClosure :: Asm.InstrExtendClosure -> Sem r ()
-    goExtendClosure = undefined
+    goExtendClosure = error "TODO"
+
+    goCallHelper :: Bool -> Asm.InstrCall -> Sem r ()
+    goCallHelper isTail Asm.InstrCall {..} = case _callType of
+      Asm.CallFun fun -> call isTail fun (fromIntegral _callArgsNum)
+      Asm.CallClosure -> error "TODO"
 
     goCall :: Asm.InstrCall -> Sem r ()
-    goCall Asm.InstrCall {..} = case _callType of
-      Asm.CallFun fun -> call fun (fromIntegral _callArgsNum)
-      Asm.CallClosure -> undefined
+    goCall = goCallHelper False
 
     goTailCall :: Asm.InstrCall -> Sem r ()
-    goTailCall = undefined
+    goTailCall = goCallHelper True
 
     goCmdInstr :: Asm.CmdInstr -> Sem r ()
     goCmdInstr Asm.CmdInstr {..} = case _cmdInstrInstruction of
@@ -203,7 +207,7 @@ compile = mapM_ goCommand
       Asm.Pop -> pop
       Asm.PopTemp -> popFrom TempStack
       Asm.PushTemp -> goPushTemp
-      Asm.Failure -> undefined
+      Asm.Failure -> error "TODO"
       Asm.Prealloc i -> goPrealloc i
       Asm.AllocConstr i -> goAllocConstr i
       Asm.AllocClosure c -> goAllocClosure c
@@ -282,17 +286,21 @@ runCompilerWith funs sem = do
         ]
 
 callEnum :: (Enum funId, Members '[Compiler] r) => funId -> Natural -> Sem r ()
-callEnum f = call (fromIntegral (fromEnum f))
+callEnum f = call False (fromIntegral (fromEnum f))
 
-call' :: (Members '[Output (Term Natural), Reader FunctionPaths] r) => FunctionId -> Natural -> Sem r ()
-call' funName funArgsNum = do
+call' :: (Members '[Output (Term Natural), Reader FunctionPaths] r) => Bool -> FunctionId -> Natural -> Sem r ()
+call' isTail funName funArgsNum = do
   -- 1. Obtain the path to the function
   funPath <- fromJust <$> asks @FunctionPaths (^. at funName)
 
   -- 2.
   --   i. Take a copy of the value stack without the arguments to the function
   --   ii. Push this copy to the call stack
-  output (pushOnStack CallStack (stackPop ValueStack funArgsNum))
+  let storeOnStack =
+        if
+            | isTail -> replaceOnStack
+            | otherwise -> pushOnStack
+  output (storeOnStack CallStack (stackPop ValueStack funArgsNum))
 
   -- 3.
   --  i. Take a copy of the function from the function library
@@ -303,7 +311,7 @@ call' funName funArgsNum = do
   let funWithArgs = OpReplace # ([R] # stackTake ValueStack funArgsNum) # OpAddress # funPath
 
   -- Push it to the current function stack
-  output (pushOnStack CurrentFunction (funWithArgs))
+  output (storeOnStack CurrentFunction funWithArgs)
 
   -- 4. Replace the value stack with nil
   output (resetStack ValueStack)
@@ -356,20 +364,18 @@ branch' t f = do
   termF <- runT f >>= raise . execCompiler . (pop >>)
   (output >=> pureT) (OpIf # (OpAddress # pathInStack ValueStack [L]) # termT # termF)
 
-pushArgRef' :: (Members '[Output (Term Natural)] r) => Offset -> Sem r ()
-pushArgRef' = undefined
+pushArgRef :: (Members '[Compiler] r) => Offset -> Sem r ()
+pushArgRef n = push (OpAddress # pathToArg n)
 
-pushTempRef' :: (Members '[Output (Term Natural)] r) => Offset -> Sem r ()
-pushTempRef' = undefined
+pushTempRef :: (Members '[Output (Term Natural)] r) => Offset -> Sem r ()
+pushTempRef = error "TODO"
 
 re :: (Member (Reader FunctionPaths) r) => Sem (Compiler ': r) a -> Sem (Output (Term Natural) ': r) a
 re = reinterpretH $ \case
   PushOnto s n -> outputT (pushOnStack s n)
   PopFrom s -> outputT (popStack s)
   Verbatim s -> outputT s
-  Call funName funArgsNum -> call' funName funArgsNum >>= pureT
-  PushArgRef off -> pushArgRef' off >>= pureT
-  PushTempRef off -> pushTempRef' off >>= pureT
+  Call isTail funName funArgsNum -> call' isTail funName funArgsNum >>= pureT
   IncrementOn s -> incrementOn' s >>= pureT
   Branch t f -> branch' t f
   CallStdlib f -> callStdlib' f >>= pureT
