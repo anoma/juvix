@@ -14,13 +14,14 @@ type Check = Sem '[Reader (Term Natural), Embed IO]
 data Test = Test
   { _testName :: Text,
     _testCheck :: Check (),
-    _testProgram :: Sem '[Compiler, Embed IO] ()
+    _testProgram :: Sem '[Compiler] ()
   }
 
 makeLenses ''Test
 
 data FunctionName
-  = FunIncrement
+  = FunMain
+  | FunIncrement
   | FunConst
   | FunCallInc
   deriving stock (Enum)
@@ -28,8 +29,14 @@ data FunctionName
 sym :: (Enum a) => a -> Asm.Symbol
 sym = fromIntegral . fromEnum
 
-debugProg :: Sem '[Compiler, Embed IO] () -> IO (Term Natural)
-debugProg = runM . compileAndRunNock exampleFunctions
+debugProg :: Sem '[Compiler] () -> Term Natural
+debugProg mkMain = compileAndRunNock exampleFunctions mainFun
+  where
+    mainFun =
+      CompilerFunction
+        { _compilerFunctionName = sym FunMain,
+          _compilerFunction = raiseUnder mkMain
+        }
 
 exampleFunctions :: [CompilerFunction]
 exampleFunctions =
@@ -50,7 +57,7 @@ allTests = testGroup "Nockma compile unit positive" (map mk tests)
   where
     mk :: Test -> TestTree
     mk Test {..} = testCase (unpack _testName) $ do
-      n <- debugProg _testProgram
+      let n = debugProg _testProgram
       runM (runReader n _testCheck)
 
 eqStack :: StackId -> Term Natural -> Check ()

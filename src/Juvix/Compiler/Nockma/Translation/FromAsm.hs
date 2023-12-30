@@ -67,7 +67,7 @@ data Compiler m a where
   PushOnto :: StackId -> Term Natural -> Compiler m ()
   PopFrom :: StackId -> Compiler m ()
   TestEqOn :: StackId -> Compiler m ()
-  Call :: Bool -> FunctionId -> Natural -> Compiler m ()
+  CallHelper :: Bool -> FunctionId -> Natural -> Compiler m ()
   IncrementOn :: StackId -> Compiler m ()
   Branch :: m () -> m () -> Compiler m ()
   CallStdlib :: StdlibFunction -> Compiler m ()
@@ -104,8 +104,14 @@ makeLenses ''CompilerFunction
 fromAsm :: Asm.Symbol -> Asm.InfoTable -> ([Term Natural], Term Natural)
 fromAsm mainSym Asm.InfoTable {..} =
   let funs = map compileFunction allFunctions
-   in run (execCompilerWith funs (compile mainCode))
+   in runCompilerWith funs mainFun
   where
+    mainFun :: CompilerFunction
+    mainFun =
+      CompilerFunction
+        { _compilerFunctionName = mainSym,
+          _compilerFunction = compile mainCode
+        }
     mainCode :: Asm.Code
     mainCode = _infoFunctions ^?! at mainSym . _Just . Asm.functionCode
 
@@ -191,7 +197,7 @@ compile = mapM_ goCommand
 
     goCallHelper :: Bool -> Asm.InstrCall -> Sem r ()
     goCallHelper isTail Asm.InstrCall {..} = case _callType of
-      Asm.CallFun fun -> call isTail fun (fromIntegral _callArgsNum)
+      Asm.CallFun fun -> callHelper isTail fun (fromIntegral _callArgsNum)
       Asm.CallClosure -> error "TODO"
 
     goCall :: Asm.InstrCall -> Sem r ()
@@ -266,30 +272,46 @@ runCompiler sem = do
   (ts, a) <- runOutputList (re sem)
   return (seqTerms ts, a)
 
-execCompilerWith :: [CompilerFunction] -> Sem (Compiler ': r) a -> Sem r ([Term Natural], Term Natural)
-execCompilerWith funs sem = fst <$> runCompilerWith funs sem
-
-runCompilerWith :: [CompilerFunction] -> Sem (Compiler ': r) a -> Sem r (([Term Natural], Term Natural), a)
-runCompilerWith funs sem = do
-  (ts, a) <- runReader functionLocations (runOutputList (re (raiseUnder sem)))
-  let compiledFuns :: [Term Natural]
+runCompilerWith :: [CompilerFunction] -> CompilerFunction -> ([Term Natural], Term Natural)
+runCompilerWith libFuns mainFun =
+  let entryCommand :: (Members '[Compiler] r) => Sem r ()
+      entryCommand = call (mainFun ^. compilerFunctionName) 0
+      entryTerm =
+        seqTerms
+          . run
+          . runReader functionLocations
+          . execOutputList
+          . re
+          $ entryCommand
+      compiledFuns :: [Term Natural]
       compiledFuns =
         (# nockNil')
-          <$> (run . runReader functionLocations . mapM (execCompiler . (^. compilerFunction)) $ funs)
-  return ((compiledFuns, seqTerms ts), a)
+          <$> ( run
+                  . runReader functionLocations
+                  . mapM (execCompiler . (^. compilerFunction))
+                  $ allfuns
+              )
+   in (compiledFuns, entryTerm)
   where
+    allfuns = mainFun : libFuns
     functionLocations :: FunctionPaths
     functionLocations =
       hashMap
         [ (_compilerFunctionName, indexInStack FunctionsLibrary i)
-          | (i, CompilerFunction {..}) <- zip [0 ..] funs
+          | (i, CompilerFunction {..}) <- zip [0 ..] allfuns
         ]
 
 callEnum :: (Enum funId, Members '[Compiler] r) => funId -> Natural -> Sem r ()
-callEnum f = call False (fromIntegral (fromEnum f))
+callEnum f = call (fromIntegral (fromEnum f))
 
-call' :: (Members '[Output (Term Natural), Reader FunctionPaths] r) => Bool -> FunctionId -> Natural -> Sem r ()
-call' isTail funName funArgsNum = do
+call :: (Members '[Compiler] r) => FunctionId -> Natural -> Sem r ()
+call = callHelper False
+
+tcall :: (Members '[Compiler] r) => FunctionId -> Natural -> Sem r ()
+tcall = callHelper True
+
+callHelper' :: (Members '[Output (Term Natural), Reader FunctionPaths] r) => Bool -> FunctionId -> Natural -> Sem r ()
+callHelper' isTail funName funArgsNum = do
   -- 1. Obtain the path to the function
   funPath <- fromJust <$> asks @FunctionPaths (^. at funName)
 
@@ -375,7 +397,7 @@ re = reinterpretH $ \case
   PushOnto s n -> outputT (pushOnStack s n)
   PopFrom s -> outputT (popStack s)
   Verbatim s -> outputT s
-  Call isTail funName funArgsNum -> call' isTail funName funArgsNum >>= pureT
+  CallHelper isTail funName funArgsNum -> callHelper' isTail funName funArgsNum >>= pureT
   IncrementOn s -> incrementOn' s >>= pureT
   Branch t f -> branch' t f
   CallStdlib f -> callStdlib' f >>= pureT
@@ -488,10 +510,10 @@ pushNat = pushNatOnto ValueStack
 pushNatOnto :: (Member Compiler r) => StackId -> Natural -> Sem r ()
 pushNatOnto s n = pushOnto s (OpQuote # toNock n)
 
-compileAndRunNock :: [CompilerFunction] -> Sem (Compiler ': r) () -> Sem r (Term Natural)
-compileAndRunNock funs s = do
-  (functionTerms, t) <- execCompilerWith funs s
-  return (evalCompiledNock functionTerms t)
+compileAndRunNock :: [CompilerFunction] -> CompilerFunction -> Term Natural
+compileAndRunNock funs mainfun =
+  let (functionTerms, t) = runCompilerWith funs mainfun
+   in evalCompiledNock functionTerms t
 
 evalCompiledNock :: [Term Natural] -> Term Natural -> Term Natural
 evalCompiledNock functionTerms mainTerm =
