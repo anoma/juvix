@@ -24,7 +24,7 @@ data FunctionName
   | FunIncrement
   | FunConst
   | FunCallInc
-  deriving stock (Enum)
+  deriving stock (Eq, Bounded, Enum)
 
 sym :: (Enum a) => a -> Asm.Symbol
 sym = fromIntegral . fromEnum
@@ -38,18 +38,28 @@ debugProg mkMain = compileAndRunNock exampleFunctions mainFun
           _compilerFunction = raiseUnder mkMain
         }
 
+isMain :: FunctionName -> Bool
+isMain = (== FunMain)
+
+functionCode :: (Members '[Compiler] r) => FunctionName -> Sem r ()
+functionCode = \case
+  FunMain -> impossible
+  FunIncrement -> do
+    push (OpInc # (OpAddress # pathToArg 0))
+    asmReturn
+  FunConst -> do
+    push (OpAddress # pathToArg 0)
+    asmReturn
+  FunCallInc -> do
+    push (OpAddress # pathToArg 0)
+    call (sym FunIncrement) 1
+    asmReturn
+
 exampleFunctions :: [CompilerFunction]
 exampleFunctions =
-  [ CompilerFunction (sym FunIncrement) $ do
-      push (OpInc # (OpAddress # pathToArg 0))
-      asmReturn,
-    CompilerFunction (sym FunConst) $ do
-      push (OpAddress # pathToArg 0)
-      asmReturn,
-    CompilerFunction (sym FunCallInc) $ do
-      push (OpAddress # pathToArg 0)
-      call (sym FunIncrement) 1
-      asmReturn
+  [ CompilerFunction (sym fun) (functionCode fun)
+    | fun <- allElements,
+      not (isMain fun)
   ]
 
 allTests :: TestTree
@@ -68,11 +78,11 @@ eqStack st expected = do
     err :: Term Natural -> Check ()
     err n = do
       let msg =
-            "Expected: "
+            "Expected "
               <> show st
-              <> "\n"
+              <> ":\n"
               <> ppTrace expected
-              <> "But got:\n"
+              <> "\nBut got:\n"
               <> ppTrace n
       assertFailure (unpack msg)
 
@@ -142,6 +152,18 @@ tests =
       pushNat 4
       pushNat 1
       testEq,
+    Test
+      "pusht"
+      ( do
+          eqStack ValueStack [nock| [1 0] |]
+          eqStack TempStack [nock| [2 3 0] |]
+      )
+      $ do
+        pushNat 1
+        pushNat 2
+        pushNat 3
+        pushTemp
+        pushTemp,
     Test "primitive increment" (eqStack ValueStack [nock| [5 0] |]) $ do
       pushNat 3
       increment

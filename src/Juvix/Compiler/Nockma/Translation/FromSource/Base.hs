@@ -7,16 +7,10 @@ import Juvix.Compiler.Nockma.Language qualified as N
 import Juvix.Parser.Error
 import Juvix.Prelude hiding (Atom, many, some)
 import Juvix.Prelude.Parsing hiding (runParser)
-import Juvix.Prelude.Pretty
 import Text.Megaparsec qualified as P
 import Text.Megaparsec.Char.Lexer qualified as L
 
 type Parser = Parsec Void Text
-
-fromMegaParsecError :: Either MegaparsecError a -> a
-fromMegaParsecError = \case
-  Left e -> error (prettyText e)
-  Right a -> a
 
 parseText :: Text -> Either MegaparsecError (N.Term Natural)
 parseText = runParser ""

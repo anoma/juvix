@@ -102,11 +102,6 @@ getProgram = State.gets (^. replStateProgram)
 readProgram :: FilePath -> Repl (Program Natural)
 readProgram s = fromMegaParsecError <$> parseProgramFile s
 
-fromMegaParsecError :: Either MegaparsecError a -> a
-fromMegaParsecError = \case
-  Left e -> error (prettyText e)
-  Right a -> a
-
 direction' :: String -> Repl ()
 direction' s = Repline.dontCrash $ do
   let n = read s :: Natural

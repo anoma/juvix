@@ -65,6 +65,7 @@ numStacks = fromIntegral (length (allElements @StackId))
 data Compiler m a where
   Verbatim :: Term Natural -> Compiler m ()
   PushOnto :: StackId -> Term Natural -> Compiler m ()
+  Crash :: Compiler m ()
   PopFrom :: StackId -> Compiler m ()
   TestEqOn :: StackId -> Compiler m ()
   CallHelper :: Bool -> FunctionId -> Natural -> Compiler m ()
@@ -82,14 +83,14 @@ indexStack idx = replicate idx R ++ [L]
 indexInPath :: Path -> Natural -> Path
 indexInPath p idx = p ++ indexStack idx
 
-headOfStack :: StackId -> Path
-headOfStack s = indexInStack s 0
+topOfStack :: StackId -> Path
+topOfStack s = indexInStack s 0
 
 indexInStack :: StackId -> Natural -> Path
 indexInStack s idx = stackPath s ++ indexStack idx
 
 pathToArgumentsArea :: Path
-pathToArgumentsArea = headOfStack CurrentFunction ++ [R]
+pathToArgumentsArea = topOfStack CurrentFunction ++ [R]
 
 pathToArg :: Natural -> Path
 pathToArg = indexInPath pathToArgumentsArea
@@ -112,6 +113,7 @@ fromAsm mainSym Asm.InfoTable {..} =
         { _compilerFunctionName = mainSym,
           _compilerFunction = compile mainCode
         }
+
     mainCode :: Asm.Code
     mainCode = _infoFunctions ^?! at mainSym . _Just . Asm.functionCode
 
@@ -176,12 +178,9 @@ compile = mapM_ goCommand
 
         pushDirectRef :: Asm.DirectRef -> Sem r ()
         pushDirectRef = \case
-          Asm.StackRef -> error "TODO"
+          Asm.StackRef -> push (OpAddress # topOfStack ValueStack)
           Asm.ArgRef a -> pushArgRef (fromIntegral a)
-          Asm.TempRef a -> error "TODO"
-
-    goPushTemp :: Sem r ()
-    goPushTemp = error "TODO"
+          Asm.TempRef off -> push (OpAddress # indexInStack TempStack (fromIntegral off))
 
     goPrealloc :: Asm.InstrPrealloc -> Sem r ()
     goPrealloc = error "TODO"
@@ -212,8 +211,8 @@ compile = mapM_ goCommand
       Asm.Push p -> goPush p
       Asm.Pop -> pop
       Asm.PopTemp -> popFrom TempStack
-      Asm.PushTemp -> goPushTemp
-      Asm.Failure -> error "TODO"
+      Asm.PushTemp -> pushTemp
+      Asm.Failure -> crash
       Asm.Prealloc i -> goPrealloc i
       Asm.AllocConstr i -> goAllocConstr i
       Asm.AllocClosure c -> goAllocClosure c
@@ -340,13 +339,13 @@ callHelper' isTail funName funArgsNum = do
 
   -- 5. Evaluate the function in the context of the whole nock stack
   -- 6. See documentation for asmReturn'
-  output (OpCall # ((headOfStack CurrentFunction ++ [L]) # (OpAddress # emptyPath)))
+  output (OpCall # ((topOfStack CurrentFunction ++ [L]) # (OpAddress # emptyPath)))
 
 asmReturn' :: (Members '[Output (Term Natural), Reader FunctionPaths] r) => Sem r ()
 asmReturn' = do
   -- Restore the previous value stack (created in call'.2.). i.e copy the previous value stack
   -- from the call stack and push the result (the head of the current value stack) to it.
-  output (replaceStack ValueStack ((OpAddress # headOfStack ValueStack) # (OpAddress # headOfStack CallStack)))
+  output (replaceStack ValueStack ((OpAddress # topOfStack ValueStack) # (OpAddress # topOfStack CallStack)))
 
   -- discard the 'activation' frame
   output (popStack CallStack)
@@ -389,8 +388,10 @@ branch' t f = do
 pushArgRef :: (Members '[Compiler] r) => Offset -> Sem r ()
 pushArgRef n = push (OpAddress # pathToArg n)
 
-pushTempRef :: (Members '[Output (Term Natural)] r) => Offset -> Sem r ()
-pushTempRef = error "TODO"
+pushTemp :: (Members '[Compiler] r) => Sem r ()
+pushTemp = do
+  pushOnto TempStack (OpAddress # topOfStack ValueStack)
+  pop
 
 re :: (Member (Reader FunctionPaths) r) => Sem (Compiler ': r) a -> Sem (Output (Term Natural) ': r) a
 re = reinterpretH $ \case
@@ -403,6 +404,7 @@ re = reinterpretH $ \case
   CallStdlib f -> callStdlib' f >>= pureT
   AsmReturn -> asmReturn' >>= pureT
   TestEqOn s -> testEqOn' s >>= pureT
+  Crash -> outputT (OpAddress # OpAddress # OpAddress)
   where
     outputT :: (Functor f, Member (Output (Term Natural)) r) => Term Natural -> Sem (WithTactics e f m r) (f ())
     outputT = pureT <=< output
