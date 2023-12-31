@@ -27,7 +27,7 @@ data FunctionName
   deriving stock (Eq, Bounded, Enum)
 
 sym :: (Enum a) => a -> Asm.Symbol
-sym = fromIntegral . fromEnum
+sym = Asm.defaultSymbol . fromIntegral . fromEnum
 
 debugProg :: Sem '[Compiler] () -> Term Natural
 debugProg mkMain = compileAndRunNock exampleFunctions mainFun
@@ -153,17 +153,16 @@ tests =
       pushNat 1
       testEq,
     Test
-      "pusht"
+      "save"
       ( do
-          eqStack ValueStack [nock| [1 0] |]
-          eqStack TempStack [nock| [2 3 0] |]
+          eqStack ValueStack [nock| [67 2 0] |]
+          eqStack TempStack [nock| [77 0] |]
       )
       $ do
-        pushNat 1
         pushNat 2
         pushNat 3
-        pushTemp
-        pushTemp,
+        save False (pushNat 77)
+        save True (pushNat 67),
     Test "primitive increment" (eqStack ValueStack [nock| [5 0] |]) $ do
       pushNat 3
       increment

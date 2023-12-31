@@ -71,6 +71,7 @@ data Compiler m a where
   CallHelper :: Bool -> FunctionId -> Natural -> Compiler m ()
   IncrementOn :: StackId -> Compiler m ()
   Branch :: m () -> m () -> Compiler m ()
+  Save :: Bool -> m () -> Compiler m ()
   CallStdlib :: StdlibFunction -> Compiler m ()
   AsmReturn :: Compiler m ()
 
@@ -144,12 +145,7 @@ compile = mapM_ goCommand
       Asm.Save s -> goSave s
 
     goSave :: Asm.CmdSave -> Sem r ()
-    goSave = error "TODO"
-      where
-        pushTemp :: Sem r ()
-        pushTemp = do
-          pushOnto TempStack (OpAddress # topOfStack ValueStack)
-          pop
+    goSave cmd = save (cmd ^. Asm.cmdSaveIsTail) (compile (cmd ^. Asm.cmdSaveCode))
 
     goCase :: Asm.CmdCase -> Sem r ()
     goCase = error "TODO"
@@ -386,6 +382,19 @@ callStdlib' f = do
     stdlibStackTake :: StackId -> Natural -> Term Natural
     stdlibStackTake sn n = foldr1 (#) (take (fromIntegral n) [OpAddress # indexInStack sn i | i <- [0 ..]])
 
+save' ::
+  (Functor f, Members '[Output (Term Natural), Reader FunctionPaths] r) =>
+  Bool ->
+  m () ->
+  Sem (WithTactics Compiler f m r) (f ())
+save' isTail m = do
+  pushOntoH TempStack (OpAddress # topOfStack ValueStack)
+  popFromH ValueStack
+  runT m >>= raise . execCompiler >>= output >>= pureT
+  if
+      | isTail -> pureT ()
+      | otherwise -> popFromH TempStack
+
 branch' ::
   (Functor f, Members '[Output (Term Natural), Reader FunctionPaths] r) =>
   m () ->
@@ -401,19 +410,30 @@ pushArgRef n = push (OpAddress # pathToArg n)
 
 re :: (Member (Reader FunctionPaths) r) => Sem (Compiler ': r) a -> Sem (Output (Term Natural) ': r) a
 re = reinterpretH $ \case
-  PushOnto s n -> outputT (pushOnStack s n)
-  PopFrom s -> outputT (popStack s)
+  PushOnto s n -> pushOntoH s n
+  PopFrom s -> popFromH s
   Verbatim s -> outputT s
   CallHelper isTail funName funArgsNum -> callHelper' isTail funName funArgsNum >>= pureT
   IncrementOn s -> incrementOn' s >>= pureT
   Branch t f -> branch' t f
+  Save isTail m -> save' isTail m
   CallStdlib f -> callStdlib' f >>= pureT
   AsmReturn -> asmReturn' >>= pureT
   TestEqOn s -> testEqOn' s >>= pureT
   Crash -> outputT (OpAddress # OpAddress # OpAddress)
-  where
-    outputT :: (Functor f, Member (Output (Term Natural)) r) => Term Natural -> Sem (WithTactics e f m r) (f ())
-    outputT = pureT <=< output
+
+outputT :: (Functor f, Member (Output (Term Natural)) r) => Term Natural -> Sem (WithTactics e f m r) (f ())
+outputT = output >=> pureT
+
+pushOntoH ::
+  (Functor f, Member (Output (Term Natural)) r) =>
+  StackId ->
+  Term Natural ->
+  Sem (WithTactics e f m r) (f ())
+pushOntoH s n = outputT (pushOnStack s n)
+
+popFromH :: (Functor f, Member (Output (Term Natural)) r) => StackId -> Sem (WithTactics e f m r) (f ())
+popFromH s = outputT (popStack s)
 
 add :: (Members '[Compiler] r) => Sem r ()
 add = callStdlib StdlibAdd
