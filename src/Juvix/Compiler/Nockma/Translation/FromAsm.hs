@@ -138,7 +138,7 @@ makeLenses ''CompilerCtx
 makeLenses ''FunctionInfo
 
 makeClosure :: (ClosurePathId -> Term Natural) -> Term Natural
-makeClosure f = foldTerms (nonEmpty' [f pi | pi <- allElements])
+makeClosure f = makeList [f pi | pi <- allElements]
 
 foldTerms :: NonEmpty (Term Natural) -> Term Natural
 foldTerms = foldr1 (#)
@@ -278,7 +278,31 @@ compile = mapM_ goCommand
       popFrom TempStack
 
     goExtendClosure :: Asm.InstrExtendClosure -> Sem r ()
-    goExtendClosure = error "TODO"
+    goExtendClosure a = do
+      -- encodedPathAppendRightN :: Natural -> EncodedPath -> EncodedPath
+      -- encodedPathAppendRightN n (EncodedPath p) = (EncodedPath (f p))
+      --   where
+      --   -- equivalent to applying 2 * x + 1, n times
+      --   f :: Natural -> Natural
+      --   f x = (2 ^ n) * (x + 1) - 1
+
+      -- A closure has the following structure:
+      -- [code totalArgsNum argsNum args], where
+      -- 1. code is code to run when fully applied.
+      -- 2. totalArgsNum is the number of arguments that the function
+      --     which created the closure expects.
+      -- 3. argsNum is the number of arguments that have been applied to the closure.
+      -- 4. args is the list of args that have been applied.
+      --    The length of the list should be argsNum.
+
+      let extraArgsNum :: Natural = fromIntegral (a ^. Asm.extendClosureArgsNum)
+          extraArgs = stackTake ValueStack extraArgsNum
+          closure = makeClosure $ \case
+            ClosureCode -> OpAddress # topOfStack ValueStack ++ closurePath ClosureCode
+            ClosureTotalArgsNum -> OpAddress # topOfStack ValueStack ++ closurePath ClosureTotalArgsNum
+            ClosureArgsNum -> error "TODO"
+            ClosureArgs -> error "TODO"
+      error "TODO"
 
     goCallHelper :: Bool -> Asm.InstrCall -> Sem r ()
     goCallHelper isTail Asm.InstrCall {..} =
