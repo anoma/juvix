@@ -134,6 +134,22 @@ fromAsm mainSym Asm.InfoTable {..} =
 fromOffsetRef :: Asm.OffsetRef -> Natural
 fromOffsetRef = fromIntegral . (^. Asm.offsetRefOffset)
 
+-- | Generic constructors are encoded as [tag args], where args is a
+-- nil terminated list.
+makeConstructor :: Asm.Tag -> [Term Natural] -> Term Natural
+makeConstructor t args = case t of
+  Asm.BuiltinTag b -> goBuiltinTag b
+  Asm.UserTag _moduleId num -> (fromIntegral num :: Natural) # makeList args
+  where
+    goBuiltinTag :: Asm.BuiltinDataTag -> Term Natural
+    goBuiltinTag = \case
+      Asm.TagTrue -> nockBoolLiteral True
+      Asm.TagFalse -> nockBoolLiteral False
+      Asm.TagReturn -> impossible
+      Asm.TagBind -> impossible
+      Asm.TagWrite -> impossible
+      Asm.TagReadLn -> impossible
+
 compile :: forall r. (Members '[Compiler] r) => Asm.Code -> Sem r ()
 compile = mapM_ goCommand
   where
@@ -179,10 +195,10 @@ compile = mapM_ goCommand
         pushMemValue :: Asm.MemValue -> Sem r ()
         pushMemValue = \case
           Asm.DRef r -> pushDirectRef r
-          Asm.ConstrRef r -> goConstrRef r
+          Asm.ConstrRef r -> pushField r
 
-        goConstrRef :: Asm.Field -> Sem r ()
-        goConstrRef = error "TODO"
+        pushField :: Asm.Field -> Sem r ()
+        pushField f = pushDirectRef (f ^. Asm.fieldRef)
 
         pushDirectRef :: Asm.DirectRef -> Sem r ()
         pushDirectRef = \case
@@ -394,6 +410,28 @@ save' isTail m = do
   if
       | isTail -> pureT ()
       | otherwise -> popFromH TempStack
+
+constructorTagPath :: Path
+constructorTagPath = [L]
+
+tagToTerm :: Asm.Tag -> Term Natural
+tagToTerm = \case
+  Asm.UserTag _ i -> toNock (fromIntegral i :: Natural)
+  Asm.BuiltinTag _ -> error "TODO"
+
+caseCmd ::
+  (Members '[Compiler] r) =>
+  [(Asm.Tag, Sem r ())] ->
+  Maybe (Sem r ()) ->
+  Sem r ()
+caseCmd brs defaultBranch = case brs of
+  [] -> sequence_ defaultBranch
+  (tag, b) : bs -> do
+    -- push the constructor tag at the top
+    push (OpAddress # topOfStack ValueStack ++ constructorTagPath)
+    push (tagToTerm tag)
+    testEq
+    branch b (caseCmd bs defaultBranch)
 
 branch' ::
   (Functor f, Members '[Output (Term Natural), Reader FunctionPaths] r) =>
