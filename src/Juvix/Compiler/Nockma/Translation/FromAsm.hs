@@ -8,13 +8,24 @@ import Juvix.Prelude hiding (Atom, Path)
 
 type FunctionId = Symbol
 
-type FunctionPaths = HashMap FunctionId Path
+data FunctionInfo = FunctionInfo
+  { _functionPath :: Path,
+    _functionArity :: Natural
+  }
+
+data CompilerCtx = CompilerCtx
+  { _compilerFunctionInfos :: HashMap FunctionId FunctionInfo,
+    _compilerConstructorArities :: ConstructorArities
+  }
+
+type ConstructorArities = HashMap Asm.Tag Natural
 
 type Offset = Natural
 
 data CompilerFunction = CompilerFunction
   { _compilerFunctionName :: FunctionId,
-    _compilerFunction :: Sem '[Compiler, Reader FunctionPaths] ()
+    _compilerFunctionArity :: Natural,
+    _compilerFunction :: Sem '[Compiler, Reader CompilerCtx] ()
   }
 
 data StackId
@@ -25,6 +36,24 @@ data StackId
   | FunctionsLibrary
   | StandardLibrary
   deriving stock (Enum, Bounded, Eq, Show)
+
+-- | A closure has the following structure:
+-- [code totalArgsNum argsNum args], where
+-- 1. code is code to run when fully applied.
+-- 2. totalArgsNum is the number of arguments that the function
+--     which created the closure expects.
+-- 3. argsNum is the number of arguments that have been applied to the closure.
+-- 4. args is the list of args that have been applied.
+--    The length of the list should be argsNum.
+data ClosurePathId
+  = ClosureCode
+  | ClosureTotalArgsNum
+  | ClosureArgsNum
+  | ClosureArgs
+  deriving stock (Bounded, Enum)
+
+closurePath :: ClosurePathId -> Path
+closurePath = indexStack . fromIntegral . fromEnum
 
 data StdlibFunction
   = StdlibDec
@@ -66,14 +95,17 @@ data Compiler m a where
   Verbatim :: Term Natural -> Compiler m ()
   PushOnto :: StackId -> Term Natural -> Compiler m ()
   Crash :: Compiler m ()
-  PopFrom :: StackId -> Compiler m ()
+  PopFromN :: Natural -> StackId -> Compiler m ()
   TestEqOn :: StackId -> Compiler m ()
-  CallHelper :: Bool -> FunctionId -> Natural -> Compiler m ()
+  CallHelper :: Bool -> Maybe FunctionId -> Natural -> Compiler m ()
   IncrementOn :: StackId -> Compiler m ()
   Branch :: m () -> m () -> Compiler m ()
   Save :: Bool -> m () -> Compiler m ()
   CallStdlib :: StdlibFunction -> Compiler m ()
   AsmReturn :: Compiler m ()
+  GetConstructorArity :: Asm.Tag -> Compiler m Natural
+  GetFunctionArity :: Symbol -> Compiler m Natural
+  GetFunctionPath :: Symbol -> Compiler m Path
 
 stackPath :: StackId -> Path
 stackPath s = indexStack (fromIntegral (fromEnum s))
@@ -102,16 +134,27 @@ pathInStack s p = stackPath s ++ p
 
 makeSem ''Compiler
 makeLenses ''CompilerFunction
+makeLenses ''CompilerCtx
+makeLenses ''FunctionInfo
+
+makeClosure :: (ClosurePathId -> Term Natural) -> Term Natural
+makeClosure f = foldTerms (nonEmpty' [f pi | pi <- allElements])
+
+foldTerms :: NonEmpty (Term Natural) -> Term Natural
+foldTerms = foldr1 (#)
 
 fromAsm :: Asm.Symbol -> Asm.InfoTable -> ([Term Natural], Term Natural)
 fromAsm mainSym Asm.InfoTable {..} =
   let funs = map compileFunction allFunctions
-   in runCompilerWith funs mainFun
+      constrs :: ConstructorArities
+      constrs = fromIntegral . (^. Asm.constructorArgsNum) <$> _infoConstrs
+   in runCompilerWith constrs funs mainFun
   where
     mainFun :: CompilerFunction
     mainFun =
       CompilerFunction
         { _compilerFunctionName = mainSym,
+          _compilerFunctionArity = 0,
           _compilerFunction = compile mainCode
         }
 
@@ -128,6 +171,7 @@ fromAsm mainSym Asm.InfoTable {..} =
     compileFunction Asm.FunctionInfo {..} =
       CompilerFunction
         { _compilerFunctionName = _functionSymbol,
+          _compilerFunctionArity = fromIntegral _functionArgsNum,
           _compilerFunction = compile _functionCode
         }
 
@@ -139,7 +183,7 @@ fromOffsetRef = fromIntegral . (^. Asm.offsetRefOffset)
 makeConstructor :: Asm.Tag -> [Term Natural] -> Term Natural
 makeConstructor t args = case t of
   Asm.BuiltinTag b -> goBuiltinTag b
-  Asm.UserTag _moduleId num -> (fromIntegral num :: Natural) # makeList args
+  Asm.UserTag _moduleId num -> (OpQuote # (fromIntegral num :: Natural)) # makeList args
   where
     goBuiltinTag :: Asm.BuiltinDataTag -> Term Natural
     goBuiltinTag = \case
@@ -164,7 +208,13 @@ compile = mapM_ goCommand
     goSave cmd = save (cmd ^. Asm.cmdSaveIsTail) (compile (cmd ^. Asm.cmdSaveCode))
 
     goCase :: Asm.CmdCase -> Sem r ()
-    goCase = error "TODO"
+    goCase c = do
+      let def = compile <$> c ^. Asm.cmdCaseDefault
+          branches =
+            [ (b ^. Asm.caseBranchTag, compile (b ^. Asm.caseBranchCode))
+              | b <- c ^. Asm.cmdCaseBranches
+            ]
+      caseCmd branches def
 
     goBranch :: Asm.CmdBranch -> Sem r ()
     goBranch Asm.CmdBranch {..} = branch (compile _cmdBranchTrue) (compile _cmdBranchFalse)
@@ -206,25 +256,44 @@ compile = mapM_ goCommand
           Asm.ArgRef a -> pushArgRef (fromIntegral (a ^. Asm.offsetRefOffset))
           Asm.TempRef off -> push (OpAddress # indexInStack TempStack (fromIntegral (off ^. Asm.offsetRefOffset)))
 
-    goPrealloc :: Asm.InstrPrealloc -> Sem r ()
-    goPrealloc = error "TODO"
-
     goAllocConstr :: Asm.Tag -> Sem r ()
-    goAllocConstr = error "TODO"
+    goAllocConstr tag = do
+      numArgs <- getConstructorArity tag
+      let args = [OpAddress # indexInStack ValueStack (pred i) | i <- [1 .. numArgs]]
+      push (makeConstructor tag args)
 
     goAllocClosure :: Asm.InstrAllocClosure -> Sem r ()
-    goAllocClosure = error "TODO"
+    goAllocClosure a = do
+      funPath <- getFunctionPath (a ^. Asm.allocClosureFunSymbol)
+      funAri <- getFunctionArity (a ^. Asm.allocClosureFunSymbol)
+      let numArgs :: Natural = fromIntegral (a ^. Asm.allocClosureArgsNum) :: Natural
+      pushOnto TempStack (stackTake ValueStack numArgs)
+      popFromN numArgs ValueStack
+      let closure = makeClosure $ \case
+            ClosureCode -> OpAddress # funPath
+            ClosureTotalArgsNum -> toNock funAri
+            ClosureArgs -> OpAddress # topOfStack TempStack
+            ClosureArgsNum -> toNock numArgs
+      push closure
+      popFrom TempStack
 
     goExtendClosure :: Asm.InstrExtendClosure -> Sem r ()
     goExtendClosure = error "TODO"
 
     goCallHelper :: Bool -> Asm.InstrCall -> Sem r ()
-    goCallHelper isTail Asm.InstrCall {..} = case _callType of
-      Asm.CallFun fun -> callHelper isTail fun (fromIntegral _callArgsNum)
-      Asm.CallClosure -> error "TODO"
+    goCallHelper isTail Asm.InstrCall {..} =
+      let funName = case _callType of
+            Asm.CallFun fun -> Just fun
+            Asm.CallClosure -> Nothing
+       in callHelper isTail funName (fromIntegral _callArgsNum)
 
     goCall :: Asm.InstrCall -> Sem r ()
     goCall = goCallHelper False
+
+    goArgsNum :: Sem r ()
+    goArgsNum = do
+      let helper p = OpAddress # topOfStack ValueStack ++ closurePath p
+      sub (helper ClosureTotalArgsNum) (helper ClosureArgsNum)
 
     goTailCall :: Asm.InstrCall -> Sem r ()
     goTailCall = goCallHelper True
@@ -235,7 +304,6 @@ compile = mapM_ goCommand
       Asm.Push p -> goPush p
       Asm.Pop -> pop
       Asm.Failure -> crash
-      Asm.Prealloc i -> goPrealloc i
       Asm.AllocConstr i -> goAllocConstr i
       Asm.AllocClosure c -> goAllocClosure c
       Asm.ExtendClosure c -> goExtendClosure c
@@ -244,9 +312,10 @@ compile = mapM_ goCommand
       Asm.Return -> asmReturn
       Asm.ValShow -> stringsErr
       Asm.StrToInt -> stringsErr
+      Asm.ArgsNum -> goArgsNum
       Asm.Trace -> unsupported "trace"
       Asm.Dump -> unsupported "dump"
-      Asm.ArgsNum {} -> impossible
+      Asm.Prealloc {} -> impossible
       Asm.CallClosures {} -> impossible
       Asm.TailCallClosures {} -> impossible
 
@@ -256,6 +325,13 @@ unsupported thing = error ("The Nockma backend does not support" <> thing)
 stringsErr :: a
 stringsErr = unsupported "strings"
 
+-- | Computes a - b
+sub :: (Members '[Compiler] r) => Term Natural -> Term Natural -> Sem r ()
+sub a b = do
+  push b
+  push a
+  callStdlib StdlibSub
+
 seqTerms :: [Term Natural] -> Term Natural
 seqTerms = foldl' step (OpAddress # emptyPath) . reverse
   where
@@ -263,10 +339,10 @@ seqTerms = foldl' step (OpAddress # emptyPath) . reverse
     step acc t = OpSequence # t # acc
 
 makeList :: [Term Natural] -> Term Natural
-makeList ts = foldr1 (#) (ts ++ [TermAtom nockNil])
+makeList ts = foldTerms (ts `prependList` pure (TermAtom nockNil))
 
 remakeList :: (Foldable l) => l (Term Natural) -> Term Natural
-remakeList ts = foldr1 (#) (toList ts ++ [OpQuote # nockNil'])
+remakeList ts = foldTerms (toList ts `prependList` pure (OpQuote # nockNil'))
 
 nockNil' :: Term Natural
 nockNil' = TermAtom nockNil
@@ -286,22 +362,22 @@ initStack defs = makeList (initSubStack <$> allElements)
 push :: (Members '[Compiler] r) => Term Natural -> Sem r ()
 push = pushOnto ValueStack
 
-execCompiler :: (Member (Reader FunctionPaths) r) => Sem (Compiler ': r) a -> Sem r (Term Natural)
+execCompiler :: (Member (Reader CompilerCtx) r) => Sem (Compiler ': r) a -> Sem r (Term Natural)
 execCompiler = fmap fst . runCompiler
 
-runCompiler :: (Member (Reader FunctionPaths) r) => Sem (Compiler ': r) a -> Sem r (Term Natural, a)
+runCompiler :: (Member (Reader CompilerCtx) r) => Sem (Compiler ': r) a -> Sem r (Term Natural, a)
 runCompiler sem = do
   (ts, a) <- runOutputList (re sem)
   return (seqTerms ts, a)
 
-runCompilerWith :: [CompilerFunction] -> CompilerFunction -> ([Term Natural], Term Natural)
-runCompilerWith libFuns mainFun =
+runCompilerWith :: ConstructorArities -> [CompilerFunction] -> CompilerFunction -> ([Term Natural], Term Natural)
+runCompilerWith constrs libFuns mainFun =
   let entryCommand :: (Members '[Compiler] r) => Sem r ()
-      entryCommand = call (mainFun ^. compilerFunctionName) 0
+      entryCommand = callFun (mainFun ^. compilerFunctionName) 0
       entryTerm =
         seqTerms
           . run
-          . runReader functionLocations
+          . runReader compilerCtx
           . execOutputList
           . re
           $ entryCommand
@@ -309,41 +385,57 @@ runCompilerWith libFuns mainFun =
       compiledFuns =
         (# nockNil')
           <$> ( run
-                  . runReader functionLocations
+                  . runReader compilerCtx
                   . mapM (execCompiler . (^. compilerFunction))
                   $ allfuns
               )
    in (compiledFuns, entryTerm)
   where
     allfuns = mainFun : libFuns
-    functionLocations :: FunctionPaths
-    functionLocations =
+    compilerCtx :: CompilerCtx
+    compilerCtx =
+      CompilerCtx
+        { _compilerFunctionInfos = functionInfos,
+          _compilerConstructorArities = constrs
+        }
+
+    functionInfos :: HashMap FunctionId FunctionInfo
+    functionInfos =
       hashMap
-        [ (_compilerFunctionName, indexInStack FunctionsLibrary i)
+        [ ( _compilerFunctionName,
+            FunctionInfo
+              { _functionPath = indexInStack FunctionsLibrary i,
+                _functionArity = _compilerFunctionArity
+              }
+          )
           | (i, CompilerFunction {..}) <- zip [0 ..] allfuns
         ]
 
 callEnum :: (Enum funId, Members '[Compiler] r) => funId -> Natural -> Sem r ()
-callEnum f = call (Asm.defaultSymbol (fromIntegral (fromEnum f)))
+callEnum f = callFun (Asm.defaultSymbol (fromIntegral (fromEnum f)))
 
-call :: (Members '[Compiler] r) => FunctionId -> Natural -> Sem r ()
-call = callHelper False
+callFun :: (Members '[Compiler] r) => FunctionId -> Natural -> Sem r ()
+callFun = callHelper False . Just
 
-tcall :: (Members '[Compiler] r) => FunctionId -> Natural -> Sem r ()
-tcall = callHelper True
+tcallFun :: (Members '[Compiler] r) => FunctionId -> Natural -> Sem r ()
+tcallFun = callHelper True . Just
 
-callHelper' :: (Members '[Output (Term Natural), Reader FunctionPaths] r) => Bool -> FunctionId -> Natural -> Sem r ()
+getFunctionPath' :: (Members '[Reader CompilerCtx] r) => FunctionId -> Sem r Path
+getFunctionPath' funName = asks (^?! compilerFunctionInfos . at funName . _Just . functionPath)
+
+-- | funName is Nothing when we call a closure at the top of the stack
+callHelper' :: (Members '[Output (Term Natural), Reader CompilerCtx] r) => Bool -> Maybe FunctionId -> Natural -> Sem r ()
 callHelper' isTail funName funArgsNum = do
+  let isClosure = isNothing funName
   -- 1. Obtain the path to the function
-  funPath <- fromJust <$> asks @FunctionPaths (^. at funName)
+  funPath <- maybe (return (topOfStack ValueStack)) getFunctionPath' funName
 
   -- 2.
   --   i. Take a copy of the value stack without the arguments to the function
   --   ii. Push this copy to the call stack
-  let storeOnStack =
-        if
-            | isTail -> replaceOnStack
-            | otherwise -> pushOnStack
+  let storeOnStack
+        | isTail = replaceOnStack
+        | otherwise = pushOnStack
   output (storeOnStack CallStack (stackPop ValueStack funArgsNum))
 
   -- 3.
@@ -352,7 +444,9 @@ callHelper' isTail funName funArgsNum = do
   --  iii. Push this copy to the current function stack
 
   -- Setup function to call with its arguments
-  let funWithArgs = OpReplace # ([R] # stackTake ValueStack funArgsNum) # OpAddress # funPath
+  let funWithArgs
+        | isClosure = error "TODO"
+        | otherwise = OpReplace # ([R] # stackTake ValueStack funArgsNum) # (OpAddress # funPath)
 
   -- Push it to the current function stack
   output (storeOnStack CurrentFunction funWithArgs)
@@ -364,7 +458,7 @@ callHelper' isTail funName funArgsNum = do
   -- 6. See documentation for asmReturn'
   output (OpCall # ((topOfStack CurrentFunction ++ [L]) # (OpAddress # emptyPath)))
 
-asmReturn' :: (Members '[Output (Term Natural), Reader FunctionPaths] r) => Sem r ()
+asmReturn' :: (Members '[Output (Term Natural), Reader CompilerCtx] r) => Sem r ()
 asmReturn' = do
   -- Restore the previous value stack (created in call'.2.). i.e copy the previous value stack
   -- from the call stack and push the result (the head of the current value stack) to it.
@@ -396,10 +490,10 @@ callStdlib' f = do
   output (replaceTopStackN fNumArgs ValueStack)
   where
     stdlibStackTake :: StackId -> Natural -> Term Natural
-    stdlibStackTake sn n = foldr1 (#) (take (fromIntegral n) [OpAddress # indexInStack sn i | i <- [0 ..]])
+    stdlibStackTake sn n = foldTerms (nonEmpty' (take (fromIntegral n) [OpAddress # indexInStack sn i | i <- [0 ..]]))
 
 save' ::
-  (Functor f, Members '[Output (Term Natural), Reader FunctionPaths] r) =>
+  (Functor f, Members '[Output (Term Natural), Reader CompilerCtx] r) =>
   Bool ->
   m () ->
   Sem (WithTactics Compiler f m r) (f ())
@@ -434,7 +528,7 @@ caseCmd brs defaultBranch = case brs of
     branch b (caseCmd bs defaultBranch)
 
 branch' ::
-  (Functor f, Members '[Output (Term Natural), Reader FunctionPaths] r) =>
+  (Functor f, Members '[Output (Term Natural), Reader CompilerCtx] r) =>
   m () ->
   m () ->
   Sem (WithTactics Compiler f m r) (f ())
@@ -446,10 +540,16 @@ branch' t f = do
 pushArgRef :: (Members '[Compiler] r) => Offset -> Sem r ()
 pushArgRef n = push (OpAddress # pathToArg n)
 
-re :: (Member (Reader FunctionPaths) r) => Sem (Compiler ': r) a -> Sem (Output (Term Natural) ': r) a
+getFunctionArity' :: (Members '[Reader CompilerCtx] r) => Symbol -> Sem r Natural
+getFunctionArity' s = asks (^?! compilerFunctionInfos . at s . _Just . functionArity)
+
+getConstructorArity' :: (Members '[Reader CompilerCtx] r) => Asm.Tag -> Sem r Natural
+getConstructorArity' tag = asks (^?! compilerConstructorArities . at tag . _Just)
+
+re :: (Member (Reader CompilerCtx) r) => Sem (Compiler ': r) a -> Sem (Output (Term Natural) ': r) a
 re = reinterpretH $ \case
   PushOnto s n -> pushOntoH s n
-  PopFrom s -> popFromH s
+  PopFromN n s -> popFromNH n s
   Verbatim s -> outputT s
   CallHelper isTail funName funArgsNum -> callHelper' isTail funName funArgsNum >>= pureT
   IncrementOn s -> incrementOn' s >>= pureT
@@ -458,6 +558,9 @@ re = reinterpretH $ \case
   CallStdlib f -> callStdlib' f >>= pureT
   AsmReturn -> asmReturn' >>= pureT
   TestEqOn s -> testEqOn' s >>= pureT
+  GetConstructorArity s -> getConstructorArity' s >>= pureT
+  GetFunctionArity s -> getFunctionArity' s >>= pureT
+  GetFunctionPath s -> getFunctionPath' s >>= pureT
   Crash -> outputT (OpAddress # OpAddress # OpAddress)
 
 outputT :: (Functor f, Member (Output (Term Natural)) r) => Term Natural -> Sem (WithTactics e f m r) (f ())
@@ -470,8 +573,18 @@ pushOntoH ::
   Sem (WithTactics e f m r) (f ())
 pushOntoH s n = outputT (pushOnStack s n)
 
-popFromH :: (Functor f, Member (Output (Term Natural)) r) => StackId -> Sem (WithTactics e f m r) (f ())
+popFromH ::
+  (Functor f, Member (Output (Term Natural)) r) =>
+  StackId ->
+  Sem (WithTactics e f m r) (f ())
 popFromH s = outputT (popStack s)
+
+popFromNH ::
+  (Functor f, Member (Output (Term Natural)) r) =>
+  Natural ->
+  StackId ->
+  Sem (WithTactics e f m r) (f ())
+popFromNH n s = outputT (popStackN n s)
 
 add :: (Members '[Compiler] r) => Sem r ()
 add = callStdlib StdlibAdd
@@ -481,6 +594,9 @@ dec = callStdlib StdlibDec
 
 increment :: (Members '[Compiler] r) => Sem r ()
 increment = incrementOn ValueStack
+
+popFrom :: (Members '[Compiler] r) => StackId -> Sem r ()
+popFrom = popFromN 1
 
 pop :: (Members '[Compiler] r) => Sem r ()
 pop = popFrom ValueStack
@@ -501,7 +617,7 @@ stackSliceHelper sn fromIx toIx = fromMaybe err (nonEmpty [OpAddress # indexInSt
       | otherwise = impossible
 
 stackSliceAsCell :: StackId -> Natural -> Natural -> Term Natural
-stackSliceAsCell sn a b = foldr1 (#) (stackSliceHelper sn a b)
+stackSliceAsCell sn a b = foldTerms (stackSliceHelper sn a b)
 
 -- | Takes a slice of a stack. Both indices are inclusive
 stackSliceAsList :: StackId -> Natural -> Natural -> Term Natural
@@ -576,9 +692,9 @@ pushNat = pushNatOnto ValueStack
 pushNatOnto :: (Member Compiler r) => StackId -> Natural -> Sem r ()
 pushNatOnto s n = pushOnto s (OpQuote # toNock n)
 
-compileAndRunNock :: [CompilerFunction] -> CompilerFunction -> Term Natural
-compileAndRunNock funs mainfun =
-  let (functionTerms, t) = runCompilerWith funs mainfun
+compileAndRunNock :: ConstructorArities -> [CompilerFunction] -> CompilerFunction -> Term Natural
+compileAndRunNock constrs funs mainfun =
+  let (functionTerms, t) = runCompilerWith constrs funs mainfun
    in evalCompiledNock functionTerms t
 
 evalCompiledNock :: [Term Natural] -> Term Natural -> Term Natural

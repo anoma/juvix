@@ -102,7 +102,7 @@ import Data.Char qualified as Char
 import Data.Data
 import Data.Either.Extra
 import Data.Eq
-import Data.Foldable hiding (minimum, minimumBy)
+import Data.Foldable hiding (foldr1, minimum, minimumBy)
 import Data.Function
 import Data.Functor
 import Data.Graph (Graph, SCC (..), Vertex, stronglyConnComp)
@@ -115,7 +115,7 @@ import Data.Int
 import Data.IntMap.Strict (IntMap)
 import Data.IntMap.Strict qualified as IntMap
 import Data.IntSet (IntSet)
-import Data.List.Extra hiding (allSame, groupSortOn, head, last, mconcatMap, replicate)
+import Data.List.Extra hiding (allSame, foldr1, groupSortOn, head, last, mconcatMap, replicate)
 import Data.List.Extra qualified as List
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.List.NonEmpty.Extra
@@ -127,7 +127,6 @@ import Data.List.NonEmpty.Extra
     maximumOn1,
     minimum1,
     minimumOn1,
-    nonEmpty,
     prependList,
     some1,
     (|:),
@@ -280,12 +279,15 @@ allDifferent :: forall a. (Ord a) => [a] -> Bool
 allDifferent = null . findRepeated
 
 allSame :: forall t a. (Eq a, Foldable t) => t a -> Bool
-allSame t
-  | null t = True
-  | otherwise = all (== h) t
-  where
-    h :: a
-    h = foldr1 const t
+allSame t = case nonEmpty t of
+  Nothing -> True
+  Just (a :| as) -> all (== a) as
+
+nonEmpty :: (Foldable l) => l a -> Maybe (NonEmpty a)
+nonEmpty = NonEmpty.nonEmpty . toList
+
+foldr1 :: (a -> a -> a) -> NonEmpty a -> a
+foldr1 = List.foldr1
 
 sconcatMap :: (Semigroup c) => (a -> c) -> NonEmpty a -> c
 sconcatMap f = sconcat . fmap f
@@ -297,9 +299,9 @@ mconcatMapM :: (Monad m, Monoid c, Foldable t) => (a -> m c) -> t a -> m c
 mconcatMapM f = Monad.mconcatMapM f . toList
 
 concatWith :: (Foldable t, Monoid a) => (a -> a -> a) -> t a -> a
-concatWith f ds
-  | null ds = mempty
-  | otherwise = foldr1 f ds
+concatWith f ds = case nonEmpty ds of
+  Nothing -> mempty
+  Just ds' -> foldr1 f ds'
 {-# INLINE concatWith #-}
 
 --------------------------------------------------------------------------------

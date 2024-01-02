@@ -30,7 +30,7 @@ sym :: (Enum a) => a -> Asm.Symbol
 sym = Asm.defaultSymbol . fromIntegral . fromEnum
 
 debugProg :: Sem '[Compiler] () -> Term Natural
-debugProg mkMain = compileAndRunNock exampleFunctions mainFun
+debugProg mkMain = compileAndRunNock exampleConstructors exampleFunctions mainFun
   where
     mainFun =
       CompilerFunction
@@ -52,8 +52,11 @@ functionCode = \case
     asmReturn
   FunCallInc -> do
     push (OpAddress # pathToArg 0)
-    call (sym FunIncrement) 1
+    callFun (sym FunIncrement) 1
     asmReturn
+
+exampleConstructors :: ConstructorArities
+exampleConstructors = mempty
 
 exampleFunctions :: [CompilerFunction]
 exampleFunctions =
