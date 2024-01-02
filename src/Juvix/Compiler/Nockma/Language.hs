@@ -121,9 +121,9 @@ newtype EncodedPath = EncodedPath
 encodedPathAppendRightN :: Natural -> EncodedPath -> EncodedPath
 encodedPathAppendRightN n (EncodedPath p) = (EncodedPath (f p))
   where
-  -- equivalent to applying 2 * x + 1, n times
-  f :: Natural -> Natural
-  f x = (2 ^ n) * (x + 1) - 1
+    -- equivalent to applying 2 * x + 1, n times
+    f :: Natural -> Natural
+    f x = (2 ^ n) * (x + 1) - 1
 
 data Direction
   = L

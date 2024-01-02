@@ -101,7 +101,7 @@ data Compiler m a where
   IncrementOn :: StackId -> Compiler m ()
   Branch :: m () -> m () -> Compiler m ()
   Save :: Bool -> m () -> Compiler m ()
-  CallStdlib :: StdlibFunction -> Compiler m ()
+  CallStdlibOn :: StackId -> StdlibFunction -> Compiler m ()
   AsmReturn :: Compiler m ()
   GetConstructorArity :: Asm.Tag -> Compiler m Natural
   GetFunctionArity :: Symbol -> Compiler m Natural
@@ -351,10 +351,14 @@ stringsErr = unsupported "strings"
 
 -- | Computes a - b
 sub :: (Members '[Compiler] r) => Term Natural -> Term Natural -> Sem r ()
-sub a b = do
-  push b
-  push a
-  callStdlib StdlibSub
+sub = subOn ValueStack
+
+-- | Computes a - b
+subOn :: (Members '[Compiler] r) => StackId -> Term Natural -> Term Natural -> Sem r ()
+subOn s a b = do
+  pushOnto s b
+  pushOnto s a
+  callStdlibOn s StdlibSub
 
 seqTerms :: [Term Natural] -> Term Natural
 seqTerms = foldl' step (OpAddress # emptyPath) . reverse
@@ -501,20 +505,27 @@ testEqOn' s = output (replaceOnStackN 2 s (OpEq # stackSliceAsCell s 0 1))
 incrementOn' :: (Members '[Output (Term Natural)] r) => StackId -> Sem r ()
 incrementOn' s = output (replaceOnStack s (OpInc # stackSliceAsCell s 0 0))
 
-callStdlib' :: (Members '[Output (Term Natural)] r) => StdlibFunction -> Sem r ()
-callStdlib' f = do
+callStdlib :: (Members '[Compiler] r) => StdlibFunction -> Sem r ()
+callStdlib = callStdlibOn ValueStack
+
+callStdlibOn' :: (Members '[Output (Term Natural)] r) => StackId -> StdlibFunction -> Sem r ()
+callStdlibOn' s f = do
   let fNumArgs = stdlibNumArgs f
       fPath = stdlibPath f
       decodeFn = OpCall # (fPath # (OpAddress # stackPath StandardLibrary))
-      arguments = OpSequence # (OpAddress # [R]) # stdlibStackTake ValueStack fNumArgs
+      arguments = OpSequence # (OpAddress # [R]) # stdlibStackTake s fNumArgs
       extractResult = (OpAddress # [L]) # (OpAddress # [R, R])
       callFn = OpPush # (OpCall # [L] # (OpReplace # ([R, L] # arguments) # (OpAddress # [L]))) # extractResult
 
   output (OpPush # decodeFn # callFn)
-  output (replaceTopStackN fNumArgs ValueStack)
+  output (replaceTopStackN fNumArgs s)
   where
     stdlibStackTake :: StackId -> Natural -> Term Natural
-    stdlibStackTake sn n = foldTerms (nonEmpty' (take (fromIntegral n) [OpAddress # indexInStack sn i | i <- [0 ..]]))
+    stdlibStackTake sn n =
+      foldTerms
+        ( nonEmpty'
+            (take (fromIntegral n) [OpAddress # indexInStack sn i | i <- [0 ..]])
+        )
 
 save' ::
   (Functor f, Members '[Output (Term Natural), Reader CompilerCtx] r) =>
@@ -579,7 +590,7 @@ re = reinterpretH $ \case
   IncrementOn s -> incrementOn' s >>= pureT
   Branch t f -> branch' t f
   Save isTail m -> save' isTail m
-  CallStdlib f -> callStdlib' f >>= pureT
+  CallStdlibOn s f -> callStdlibOn' s f >>= pureT
   AsmReturn -> asmReturn' >>= pureT
   TestEqOn s -> testEqOn' s >>= pureT
   GetConstructorArity s -> getConstructorArity' s >>= pureT
