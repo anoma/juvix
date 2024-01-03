@@ -119,7 +119,7 @@ newtype EncodedPath = EncodedPath
 
 -- | appends n R
 encodedPathAppendRightN :: Natural -> EncodedPath -> EncodedPath
-encodedPathAppendRightN n (EncodedPath p) = (EncodedPath (f p))
+encodedPathAppendRightN n (EncodedPath p) = EncodedPath (f p)
   where
     -- equivalent to applying 2 * x + 1, n times
     f :: Natural -> Natural

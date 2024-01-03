@@ -35,11 +35,19 @@ debugProg mkMain = compileAndRunNock exampleConstructors exampleFunctions mainFu
     mainFun =
       CompilerFunction
         { _compilerFunctionName = sym FunMain,
+          _compilerFunctionArity = 0,
           _compilerFunction = raiseUnder mkMain
         }
 
 isMain :: FunctionName -> Bool
 isMain = (== FunMain)
+
+functionArity' :: FunctionName -> Natural
+functionArity' = \case
+  FunMain -> 0
+  FunIncrement -> 1
+  FunConst -> 2
+  FunCallInc -> 1
 
 functionCode :: (Members '[Compiler] r) => FunctionName -> Sem r ()
 functionCode = \case
@@ -60,7 +68,7 @@ exampleConstructors = mempty
 
 exampleFunctions :: [CompilerFunction]
 exampleFunctions =
-  [ CompilerFunction (sym fun) (functionCode fun)
+  [ CompilerFunction (sym fun) (functionArity' fun) (functionCode fun)
     | fun <- allElements,
       not (isMain fun)
   ]

@@ -52,8 +52,19 @@ data ClosurePathId
   | ClosureArgs
   deriving stock (Bounded, Enum)
 
+pathFromEnum :: (Enum a) => a -> Path
+pathFromEnum = indexStack . fromIntegral . fromEnum
+
 closurePath :: ClosurePathId -> Path
-closurePath = indexStack . fromIntegral . fromEnum
+closurePath = pathFromEnum
+
+data ConstructorPathId
+  = ConstructorTag
+  | ConstructorArgs
+  deriving stock (Bounded, Enum)
+
+constructorPath :: ConstructorPathId -> Path
+constructorPath = pathFromEnum
 
 data StdlibFunction
   = StdlibDec
@@ -137,8 +148,14 @@ makeLenses ''CompilerFunction
 makeLenses ''CompilerCtx
 makeLenses ''FunctionInfo
 
+termFromParts :: (Bounded p, Enum p) => (p -> Term Natural) -> Term Natural
+termFromParts f = makeList [f pi | pi <- allElements]
+
 makeClosure :: (ClosurePathId -> Term Natural) -> Term Natural
-makeClosure f = makeList [f pi | pi <- allElements]
+makeClosure = termFromParts
+
+makeConstructor :: (ConstructorPathId -> Term Natural) -> Term Natural
+makeConstructor = termFromParts
 
 foldTerms :: NonEmpty (Term Natural) -> Term Natural
 foldTerms = foldr1 (#)
@@ -180,8 +197,8 @@ fromOffsetRef = fromIntegral . (^. Asm.offsetRefOffset)
 
 -- | Generic constructors are encoded as [tag args], where args is a
 -- nil terminated list.
-makeConstructor :: Asm.Tag -> [Term Natural] -> Term Natural
-makeConstructor t args = case t of
+goConstructor :: Asm.Tag -> [Term Natural] -> Term Natural
+goConstructor t args = case t of
   Asm.BuiltinTag b -> goBuiltinTag b
   Asm.UserTag _moduleId num -> (OpQuote # (fromIntegral num :: Natural)) # makeList args
   where
@@ -238,10 +255,18 @@ compile = mapM_ goCommand
         | otherwise -> pushNat (fromInteger i)
       Asm.ConstBool i -> push (nockBoolLiteral i)
       Asm.ConstString {} -> stringsErr
-      Asm.ConstUnit -> error "TODO"
-      Asm.ConstVoid -> error "TODO"
+      Asm.ConstUnit -> push constUnit
+      Asm.ConstVoid -> push constVoid
       Asm.Ref r -> pushMemValue r
       where
+        constUnit :: Term Natural
+        constUnit = constVoid
+
+        constVoid :: Term Natural
+        constVoid = makeConstructor $ \case
+          ConstructorTag -> OpQuote # (0 :: Natural)
+          ConstructorArgs -> makeList []
+
         pushMemValue :: Asm.MemValue -> Sem r ()
         pushMemValue = \case
           Asm.DRef r -> pushDirectRef r
@@ -260,7 +285,7 @@ compile = mapM_ goCommand
     goAllocConstr tag = do
       numArgs <- getConstructorArity tag
       let args = [OpAddress # indexInStack ValueStack (pred i) | i <- [1 .. numArgs]]
-      push (makeConstructor tag args)
+      push (goConstructor tag args)
 
     goAllocClosure :: Asm.InstrAllocClosure -> Sem r ()
     goAllocClosure a = do
@@ -280,7 +305,7 @@ compile = mapM_ goCommand
     goExtendClosure :: Asm.InstrExtendClosure -> Sem r ()
     goExtendClosure a = do
       -- encodedPathAppendRightN :: Natural -> EncodedPath -> EncodedPath
-      -- encodedPathAppendRightN n (EncodedPath p) = (EncodedPath (f p))
+      -- encodedPathAppendRightN n (EncodedPath p) = EncodedPath (f p)
       --   where
       --   -- equivalent to applying 2 * x + 1, n times
       --   f :: Natural -> Natural
@@ -294,14 +319,20 @@ compile = mapM_ goCommand
       -- 3. argsNum is the number of arguments that have been applied to the closure.
       -- 4. args is the list of args that have been applied.
       --    The length of the list should be argsNum.
-
-      let extraArgsNum :: Natural = fromIntegral (a ^. Asm.extendClosureArgsNum)
+      let curArgsNum = OpAddress # topOfStack ValueStack ++ closurePath ClosureTotalArgsNum
+          extraArgsNum :: Natural = fromIntegral (a ^. Asm.extendClosureArgsNum)
           extraArgs = stackTake ValueStack extraArgsNum
           closure = makeClosure $ \case
             ClosureCode -> OpAddress # topOfStack ValueStack ++ closurePath ClosureCode
-            ClosureTotalArgsNum -> OpAddress # topOfStack ValueStack ++ closurePath ClosureTotalArgsNum
-            ClosureArgsNum -> error "TODO"
+            ClosureTotalArgsNum -> curArgsNum
+            ClosureArgsNum -> OpAddress # indexInStack TempStack (error "TODO index in tempstack")
             ClosureArgs -> error "TODO"
+      pushOnto TempStack curArgsNum
+      pushOnto TempStack (toNock extraArgsNum)
+      addOn TempStack
+      pushOnto TempStack extraArgs
+
+      push closure
       error "TODO"
 
     goCallHelper :: Bool -> Asm.InstrCall -> Sem r ()
@@ -365,6 +396,9 @@ seqTerms = foldl' step (OpAddress # emptyPath) . reverse
   where
     step :: Term Natural -> Term Natural -> Term Natural
     step acc t = OpSequence # t # acc
+
+makeEmptyList :: Term Natural
+makeEmptyList = makeList []
 
 makeList :: [Term Natural] -> Term Natural
 makeList ts = foldTerms (ts `prependList` pure (TermAtom nockNil))
@@ -451,6 +485,11 @@ tcallFun = callHelper True . Just
 getFunctionPath' :: (Members '[Reader CompilerCtx] r) => FunctionId -> Sem r Path
 getFunctionPath' funName = asks (^?! compilerFunctionInfos . at funName . _Just . functionPath)
 
+-- | obj[relPath ↦ by]
+-- relPath is relative to obj
+simpleReplace :: Term Natural -> Path -> Term Natural -> Term Natural
+simpleReplace obj relPath by = OpReplace # (relPath # by) # obj
+
 -- | funName is Nothing when we call a closure at the top of the stack
 callHelper' :: (Members '[Output (Term Natural), Reader CompilerCtx] r) => Bool -> Maybe FunctionId -> Natural -> Sem r ()
 callHelper' isTail funName funArgsNum = do
@@ -474,7 +513,7 @@ callHelper' isTail funName funArgsNum = do
   -- Setup function to call with its arguments
   let funWithArgs
         | isClosure = error "TODO"
-        | otherwise = OpReplace # ([R] # stackTake ValueStack funArgsNum) # (OpAddress # funPath)
+        | otherwise = simpleReplace (OpAddress # funPath) [R] (stackTake ValueStack funArgsNum)
 
   -- Push it to the current function stack
   output (storeOnStack CurrentFunction funWithArgs)
@@ -540,13 +579,16 @@ save' isTail m = do
       | isTail -> pureT ()
       | otherwise -> popFromH TempStack
 
-constructorTagPath :: Path
-constructorTagPath = [L]
-
-tagToTerm :: Asm.Tag -> Term Natural
-tagToTerm = \case
+constructorTagToTerm :: Asm.Tag -> Term Natural
+constructorTagToTerm = \case
   Asm.UserTag _ i -> toNock (fromIntegral i :: Natural)
-  Asm.BuiltinTag _ -> error "TODO"
+  Asm.BuiltinTag b -> case b of
+    Asm.TagTrue -> error "TODO"
+    Asm.TagFalse -> error "TODO"
+    Asm.TagReturn -> impossible
+    Asm.TagBind -> impossible
+    Asm.TagWrite -> impossible
+    Asm.TagReadLn -> impossible
 
 caseCmd ::
   (Members '[Compiler] r) =>
@@ -557,8 +599,8 @@ caseCmd brs defaultBranch = case brs of
   [] -> sequence_ defaultBranch
   (tag, b) : bs -> do
     -- push the constructor tag at the top
-    push (OpAddress # topOfStack ValueStack ++ constructorTagPath)
-    push (tagToTerm tag)
+    push (OpAddress # topOfStack ValueStack ++ constructorPath ConstructorTag)
+    push (constructorTagToTerm tag)
     testEq
     branch b (caseCmd bs defaultBranch)
 
@@ -621,8 +663,11 @@ popFromNH ::
   Sem (WithTactics e f m r) (f ())
 popFromNH n s = outputT (popStackN n s)
 
+addOn :: (Members '[Compiler] r) => StackId -> Sem r ()
+addOn s = callStdlibOn s StdlibAdd
+
 add :: (Members '[Compiler] r) => Sem r ()
-add = callStdlib StdlibAdd
+add = addOn ValueStack
 
 dec :: (Members '[Compiler] r) => Sem r ()
 dec = callStdlib StdlibDec
