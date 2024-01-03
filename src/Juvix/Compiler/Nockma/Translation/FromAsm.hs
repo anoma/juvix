@@ -354,7 +354,7 @@ constVoid = makeConstructor $ \case
   ConstructorTag -> OpQuote # toNock (0 :: Natural)
   ConstructorArgs -> remakeList []
 
-allocClosure :: Members '[Compiler] r => Symbol -> Natural -> Sem r ()
+allocClosure :: (Members '[Compiler] r) => Symbol -> Natural -> Sem r ()
 allocClosure funSym numArgs = do
   funPath <- getFunctionPath funSym
   funAri <- getFunctionArity funSym
@@ -368,7 +368,7 @@ allocClosure funSym numArgs = do
   push closure
   popFrom TempStack
 
-closureArgsNum :: Members '[Compiler] r => Sem r ()
+closureArgsNum :: (Members '[Compiler] r) => Sem r ()
 closureArgsNum = do
   let helper p = OpAddress # topOfStack ValueStack ++ closurePath p
   sub (helper ClosureTotalArgsNum) (helper ClosureArgsNum)

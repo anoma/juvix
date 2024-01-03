@@ -2,8 +2,9 @@
 
 module Nockma.Compile.Positive where
 
-import Base
+import Base hiding (Path)
 import Juvix.Compiler.Asm.Language qualified as Asm
+import Juvix.Compiler.Nockma.Evaluator
 import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Translation.FromAsm
@@ -109,10 +110,12 @@ allTests = testGroup "Nockma compile unit positive" (map mk tests)
       let n = debugProg _testProgram
       runM (runReader n _testCheck)
 
-eqStack :: StackId -> Term Natural -> Check ()
-eqStack st expected = do
-  n <- getStack st <$> ask
-  unless (n == expected) (err n)
+eqSubStack :: StackId -> Path -> Term Natural -> Check ()
+eqSubStack st subp expected = do
+  s <- getStack st <$> ask
+  case run (runError @NockEvalError (subTerm s subp)) of
+    Left {} -> assertFailure "Subterm path is not valid"
+    Right n -> unless (n == expected) (err n)
   where
     err :: Term Natural -> Check ()
     err n = do
@@ -124,6 +127,9 @@ eqStack st expected = do
               <> "\nBut got:\n"
               <> ppTrace n
       assertFailure (unpack msg)
+
+eqStack :: StackId -> Term Natural -> Check ()
+eqStack st = eqSubStack st []
 
 tests :: [Test]
 tests =
@@ -225,14 +231,22 @@ tests =
     Test "alloc unary constructor" (eqStack ValueStack [nock| [[2 [[55 66] nil] nil] nil]|]) $ do
       push (OpQuote # (55 :: Natural) # (66 :: Natural))
       allocConstr (constructorTag ConstructorWrapper),
-    -- Test "alloc closure and compute argsNum" (eqStack ValueStack [nock| [[0 nil] nil] |]) $ do
-    --   pushNat 7
-    --   pushNat 8
-    --   pushNat 9
-    --   pushNat 10
-    --   allocClosure (sym FunConst5) 3,
     Test "alloc binary constructor" (eqStack ValueStack [nock| [[3 [9 7 nil] nil] nil] |]) $ do
       pushNat 7
       pushNat 9
-      allocConstr (constructorTag ConstructorPair)
+      allocConstr (constructorTag ConstructorPair),
+    Test
+      "alloc closure"
+      ( do
+          eqSubStack ValueStack (indexStack 0 ++ closurePath ClosureTotalArgsNum) [nock| 5 |]
+          eqSubStack ValueStack (indexStack 0 ++ closurePath ClosureArgsNum) [nock| 3 |]
+          eqSubStack ValueStack (indexStack 0 ++ closurePath ClosureArgs) [nock| [10 9 8 nil] |]
+          eqSubStack ValueStack (indexStack 1) [nock| 7 |]
+      )
+      $ do
+        pushNat 7
+        pushNat 8
+        pushNat 9
+        pushNat 10
+        allocClosure (sym FunConst5) 3
   ]
