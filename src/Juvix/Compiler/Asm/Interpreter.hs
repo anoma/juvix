@@ -219,19 +219,21 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
       ConstVoid -> return ValVoid
       Ref r -> getMemVal r
 
-    getMemVal :: (Member Runtime r) => MemValue -> Sem r Val
+    getMemVal :: forall r. (Member Runtime r) => MemValue -> Sem r Val
     getMemVal = \case
       DRef dr -> getDirectRef dr
       ConstrRef cr -> do
-        v <- getDirectRef (cr ^. fieldRef)
-        case v of
-          ValConstr ctr ->
-            if
-                | cr ^. fieldOffset < length (ctr ^. constrArgs) ->
-                    return $ (ctr ^. constrArgs) !! (cr ^. fieldOffset)
-                | otherwise ->
-                    runtimeError "invalid constructor field access"
-          _ -> runtimeError "invalid memory access: expected a constructor"
+        ctr <- getDirectRef (cr ^. fieldRef) >>= getConstr
+        if
+            | cr ^. fieldOffset < length (ctr ^. constrArgs) ->
+                return $ (ctr ^. constrArgs) !! (cr ^. fieldOffset)
+            | otherwise ->
+                runtimeError "invalid constructor field access"
+        where
+          getConstr :: Val -> Sem r Constr
+          getConstr = \case
+            ValConstr ctr -> return ctr
+            _ -> runtimeError "invalid memory access: expected a constructor"
 
     getDirectRef :: (Member Runtime r) => DirectRef -> Sem r Val
     getDirectRef = \case

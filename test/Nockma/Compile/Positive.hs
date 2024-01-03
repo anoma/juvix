@@ -271,8 +271,7 @@ tests =
           pushNatOnto TempStack 7
           addOn TempStack
           moveTopFromTo TempStack ValueStack
-          pushNatOnto TempStack 9
-          ,
+          pushNatOnto TempStack 9,
     Test
       "save tail"
       ( do
@@ -285,5 +284,46 @@ tests =
           pushNatOnto TempStack 7
           addOn TempStack
           moveTopFromTo TempStack ValueStack
-          pushNatOnto TempStack 9
+          pushNatOnto TempStack 9,
+    Test
+      "cmdCase: single branch"
+      (eqStack ValueStack [nock| [777 [2 [123 nil] nil] nil] |])
+      $ do
+        pushNat 123
+        allocConstr (constructorTag ConstructorWrapper)
+        caseCmd
+          Nothing
+          [ (constructorTag ConstructorWrapper, pushNat 777)
+          ],
+    Test
+      "cmdCase: default branch"
+      (eqStack ValueStack [nock| [5 nil] |])
+      $ do
+        pushNat 123
+        allocConstr (constructorTag ConstructorWrapper)
+        caseCmd
+          (Just (pop >> pushNat 5))
+          [ (constructorTag ConstructorFalse, pushNat 777)
+          ],
+    Test
+      "cmdCase: second branch"
+      (eqStack ValueStack [nock| [5 nil] |])
+      $ do
+        pushNat 123
+        allocConstr (constructorTag ConstructorWrapper)
+        caseCmd
+          (Just (pushNat 0))
+          [ (constructorTag ConstructorFalse, pushNat 0),
+            (constructorTag ConstructorWrapper, pop >> pushNat 5)
+          ],
+    Test
+      "push constructor field"
+      (eqStack TempStack [nock| [30 nil] |])
+      $ do
+        pushNat 10
+        pushNat 20
+        allocConstr (constructorTag ConstructorPair)
+        pushConstructorFieldOnto TempStack Asm.StackRef 0
+        pushConstructorFieldOnto TempStack Asm.StackRef 1
+        addOn TempStack
   ]

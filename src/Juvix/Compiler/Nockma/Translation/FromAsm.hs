@@ -234,7 +234,7 @@ compile = mapM_ goCommand
             [ (b ^. Asm.caseBranchTag, compile (b ^. Asm.caseBranchCode))
               | b <- c ^. Asm.cmdCaseBranches
             ]
-      caseCmd branches def
+      caseCmd def branches
 
     goBranch :: Asm.CmdBranch -> Sem r ()
     goBranch Asm.CmdBranch {..} = branch (compile _cmdBranchTrue) (compile _cmdBranchFalse)
@@ -265,16 +265,10 @@ compile = mapM_ goCommand
         pushMemValue :: Asm.MemValue -> Sem r ()
         pushMemValue = \case
           Asm.DRef r -> pushDirectRef r
-          Asm.ConstrRef r -> pushField r
-
-        pushField :: Asm.Field -> Sem r ()
-        pushField f = pushDirectRef (f ^. Asm.fieldRef)
-
-        pushDirectRef :: Asm.DirectRef -> Sem r ()
-        pushDirectRef = \case
-          Asm.StackRef -> push (OpAddress # topOfStack ValueStack)
-          Asm.ArgRef a -> pushArgRef (fromIntegral (a ^. Asm.offsetRefOffset))
-          Asm.TempRef off -> push (OpAddress # indexInStack TempStack (fromIntegral (off ^. Asm.offsetRefOffset)))
+          Asm.ConstrRef r ->
+            pushConstructorField
+              (r ^. Asm.fieldRef)
+              (fromIntegral (r ^. Asm.fieldOffset))
 
     goAllocClosure :: Asm.InstrAllocClosure -> Sem r ()
     goAllocClosure a = allocClosure (a ^. Asm.allocClosureFunSymbol) (fromIntegral (a ^. Asm.allocClosureArgsNum))
@@ -353,6 +347,23 @@ constVoid :: Term Natural
 constVoid = makeConstructor $ \case
   ConstructorTag -> OpQuote # toNock (0 :: Natural)
   ConstructorArgs -> remakeList []
+
+pushConstructorFieldOnto :: (Members '[Compiler] r) => StackId -> Asm.DirectRef -> Natural -> Sem r ()
+pushConstructorFieldOnto s refToConstr argIx =
+  let path = directRefPath refToConstr ++ constructorPath ConstructorArgs ++ indexStack argIx
+   in pushOnto s (OpAddress # path)
+
+pushConstructorField :: (Members '[Compiler] r) => Asm.DirectRef -> Natural -> Sem r ()
+pushConstructorField = pushConstructorFieldOnto ValueStack
+
+directRefPath :: Asm.DirectRef -> Path
+directRefPath = \case
+  Asm.StackRef -> topOfStack ValueStack
+  Asm.ArgRef a -> pathToArg (fromOffsetRef a)
+  Asm.TempRef off -> indexInStack TempStack (fromOffsetRef off)
+
+pushDirectRef :: (Members '[Compiler] r) => Asm.DirectRef -> Sem r ()
+pushDirectRef = push . (OpAddress #) . directRefPath
 
 allocClosure :: (Members '[Compiler] r) => Symbol -> Natural -> Sem r ()
 allocClosure funSym numArgs = do
@@ -592,7 +603,7 @@ save' isTail m = do
 
 constructorTagToTerm :: Asm.Tag -> Term Natural
 constructorTagToTerm = \case
-  Asm.UserTag _ i -> toNock (fromIntegral i :: Natural)
+  Asm.UserTag _ i -> OpQuote # toNock (fromIntegral i :: Natural)
   Asm.BuiltinTag b -> case b of
     Asm.TagTrue -> error "TODO"
     Asm.TagFalse -> error "TODO"
@@ -603,17 +614,17 @@ constructorTagToTerm = \case
 
 caseCmd ::
   (Members '[Compiler] r) =>
-  [(Asm.Tag, Sem r ())] ->
   Maybe (Sem r ()) ->
+  [(Asm.Tag, Sem r ())] ->
   Sem r ()
-caseCmd brs defaultBranch = case brs of
+caseCmd defaultBranch = \case
   [] -> sequence_ defaultBranch
   (tag, b) : bs -> do
     -- push the constructor tag at the top
     push (OpAddress # topOfStack ValueStack ++ constructorPath ConstructorTag)
     push (constructorTagToTerm tag)
     testEq
-    branch b (caseCmd bs defaultBranch)
+    branch b (caseCmd defaultBranch bs)
 
 branch' ::
   (Functor f, Members '[Output (Term Natural), Reader CompilerCtx] r) =>
@@ -624,9 +635,6 @@ branch' t f = do
   termT <- runT t >>= raise . execCompiler . (pop >>)
   termF <- runT f >>= raise . execCompiler . (pop >>)
   (output >=> pureT) (OpIf # (OpAddress # pathInStack ValueStack [L]) # termT # termF)
-
-pushArgRef :: (Members '[Compiler] r) => Offset -> Sem r ()
-pushArgRef n = push (OpAddress # pathToArg n)
 
 getFunctionArity' :: (Members '[Reader CompilerCtx] r) => Symbol -> Sem r Natural
 getFunctionArity' s = asks (^?! compilerFunctionInfos . at s . _Just . functionArity)
