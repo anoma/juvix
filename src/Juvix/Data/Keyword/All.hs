@@ -214,6 +214,12 @@ kwMod = asciiKw Str.mod
 kwEq :: Keyword
 kwEq = asciiKw Str.equal
 
+kwNotEq :: Keyword
+kwNotEq = asciiKw Str.notequal
+
+kwPlusEq :: Keyword
+kwPlusEq = asciiKw Str.plusequal
+
 kwLt :: Keyword
 kwLt = asciiKw Str.less
 
@@ -291,6 +297,27 @@ kwBracketL = asciiKw Str.bracketL
 
 kwBracketR :: Keyword
 kwBracketR = asciiKw Str.bracketR
+
+kwAP :: Keyword
+kwAP = asciiKw Str.ap
+
+kwFP :: Keyword
+kwFP = asciiKw Str.fp
+
+kwRel :: Keyword
+kwRel = asciiKw Str.rel
+
+kwAbs :: Keyword
+kwAbs = asciiKw Str.abs
+
+kwJmp :: Keyword
+kwJmp = asciiKw Str.jmp
+
+kwCall :: Keyword
+kwCall = asciiKw Str.call
+
+kwRet :: Keyword
+kwRet = asciiKw Str.ret
 
 delimBraceL :: Keyword
 delimBraceL = mkDelim Str.braceL
