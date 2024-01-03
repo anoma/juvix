@@ -258,5 +258,32 @@ tests =
         pushNat 9
         pushNat 10
         allocClosure (sym FunConst5) 3
-        closureArgsNum
+        closureArgsNum,
+    Test
+      "save not tail"
+      ( do
+          eqStack ValueStack [nock| [17 nil] |]
+          eqStack TempStack [nock| nil |]
+      )
+      $ do
+        pushNat 10
+        save False $ do
+          pushNatOnto TempStack 7
+          addOn TempStack
+          moveTopFromTo TempStack ValueStack
+          pushNatOnto TempStack 9
+          ,
+    Test
+      "save tail"
+      ( do
+          eqStack ValueStack [nock| [17 nil] |]
+          eqStack TempStack [nock| [9 nil] |]
+      )
+      $ do
+        pushNat 10
+        save True $ do
+          pushNatOnto TempStack 7
+          addOn TempStack
+          moveTopFromTo TempStack ValueStack
+          pushNatOnto TempStack 9
   ]

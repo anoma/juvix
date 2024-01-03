@@ -337,9 +337,9 @@ compile = mapM_ goCommand
       Asm.Call c -> goCall c
       Asm.TailCall c -> goTailCall c
       Asm.Return -> asmReturn
+      Asm.ArgsNum -> closureArgsNum
       Asm.ValShow -> stringsErr
       Asm.StrToInt -> stringsErr
-      Asm.ArgsNum -> closureArgsNum
       Asm.Trace -> unsupported "trace"
       Asm.Dump -> unsupported "dump"
       Asm.Prealloc {} -> impossible
@@ -395,10 +395,10 @@ stringsErr = unsupported "strings"
 
 -- | Computes a - b
 sub :: (Members '[Compiler] r) => Term Natural -> Term Natural -> Sem r () -> Sem r ()
-sub a b clean = do
+sub a b aux = do
   pushOnto TempStack b
   pushOnto TempStack a
-  clean
+  aux
   callStdlibOn TempStack StdlibSub
   moveTopFromTo TempStack ValueStack
 
