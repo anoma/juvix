@@ -9,6 +9,7 @@ data LabelInfoBuilder m a where
   RegisterLabelName :: Symbol -> Text -> LabelInfoBuilder m ()
   RegisterLabelOffset :: Symbol -> Offset -> LabelInfoBuilder m ()
   GetIdent :: Text -> LabelInfoBuilder m (Maybe Symbol)
+  HasOffset :: Symbol -> LabelInfoBuilder m Bool
 
 makeSem ''LabelInfoBuilder
 
@@ -49,3 +50,6 @@ runLabelInfoBuilder' bs =
       GetIdent n -> do
         tab <- gets (^. stateIdents)
         return $ HashMap.lookup n tab
+      HasOffset sym -> do
+        tab <- gets (^. stateLabelInfo . labelInfoTable)
+        return $ HashMap.member sym tab

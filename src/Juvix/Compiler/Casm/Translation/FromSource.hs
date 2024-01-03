@@ -48,8 +48,11 @@ label off = P.try $ do
       sym <- lift freshSymbol
       lift $ registerLabelName sym txt
       lift $ registerLabelOffset sym off
-    Just {} -> do
-      parseFailure off' "duplicate label"
+    Just sym -> do
+      b <- lift $ hasOffset sym
+      if
+          | b -> parseFailure off' "duplicate label"
+          | otherwise -> lift $ registerLabelOffset sym off
 
 instruction :: (Member LabelInfoBuilder r) => ParsecS r Instruction
 instruction =
