@@ -151,11 +151,12 @@ makeLenses ''FunctionInfo
 termFromParts :: (Bounded p, Enum p) => (p -> Term Natural) -> Term Natural
 termFromParts f = makeList [f pi | pi <- allElements]
 
+-- TODO quote?
 makeClosure :: (ClosurePathId -> Term Natural) -> Term Natural
 makeClosure = termFromParts
 
 makeConstructor :: (ConstructorPathId -> Term Natural) -> Term Natural
-makeConstructor = termFromParts
+makeConstructor b = OpQuote # termFromParts b
 
 foldTerms :: NonEmpty (Term Natural) -> Term Natural
 foldTerms = foldr1 (#)
@@ -200,7 +201,7 @@ fromOffsetRef = fromIntegral . (^. Asm.offsetRefOffset)
 goConstructor :: Asm.Tag -> [Term Natural] -> Term Natural
 goConstructor t args = case t of
   Asm.BuiltinTag b -> goBuiltinTag b
-  Asm.UserTag _moduleId num -> (OpQuote # (fromIntegral num :: Natural)) # makeList args
+  Asm.UserTag _moduleId num -> (OpQuote # (fromIntegral num :: Natural)) # remakeList args
   where
     goBuiltinTag :: Asm.BuiltinDataTag -> Term Natural
     goBuiltinTag = \case
@@ -264,7 +265,7 @@ compile = mapM_ goCommand
 
         constVoid :: Term Natural
         constVoid = makeConstructor $ \case
-          ConstructorTag -> OpQuote # (0 :: Natural)
+          ConstructorTag -> toNock (0 :: Natural)
           ConstructorArgs -> makeList []
 
         pushMemValue :: Asm.MemValue -> Sem r ()
@@ -280,12 +281,6 @@ compile = mapM_ goCommand
           Asm.StackRef -> push (OpAddress # topOfStack ValueStack)
           Asm.ArgRef a -> pushArgRef (fromIntegral (a ^. Asm.offsetRefOffset))
           Asm.TempRef off -> push (OpAddress # indexInStack TempStack (fromIntegral (off ^. Asm.offsetRefOffset)))
-
-    goAllocConstr :: Asm.Tag -> Sem r ()
-    goAllocConstr tag = do
-      numArgs <- getConstructorArity tag
-      let args = [OpAddress # indexInStack ValueStack (pred i) | i <- [1 .. numArgs]]
-      push (goConstructor tag args)
 
     goAllocClosure :: Asm.InstrAllocClosure -> Sem r ()
     goAllocClosure a = do
@@ -359,7 +354,7 @@ compile = mapM_ goCommand
       Asm.Push p -> goPush p
       Asm.Pop -> pop
       Asm.Failure -> crash
-      Asm.AllocConstr i -> goAllocConstr i
+      Asm.AllocConstr i -> allocConstr i
       Asm.AllocClosure c -> goAllocClosure c
       Asm.ExtendClosure c -> goExtendClosure c
       Asm.Call c -> goCall c
@@ -373,6 +368,22 @@ compile = mapM_ goCommand
       Asm.Prealloc {} -> impossible
       Asm.CallClosures {} -> impossible
       Asm.TailCallClosures {} -> impossible
+
+allocConstr :: (Members '[Compiler] r) => Asm.Tag -> Sem r ()
+allocConstr tag = do
+  numArgs <- getConstructorArity tag
+  let args = [OpAddress # indexInStack ValueStack (pred i) | i <- [1 .. numArgs]]
+  traceM ("length args = " <> show (length args))
+  let constr = goConstructor tag args
+  traceM ("constr = " <> ppTrace constr)
+  pushOnto TempStack constr
+  popN numArgs
+  moveTopFromTo TempStack ValueStack
+
+moveTopFromTo :: (Members '[Compiler] r) => StackId -> StackId -> Sem r ()
+moveTopFromTo from toStack = do
+  pushOnto toStack (OpAddress # topOfStack from)
+  popFrom from
 
 unsupported :: Text -> a
 unsupported thing = error ("The Nockma backend does not support" <> thing)
@@ -677,6 +688,9 @@ increment = incrementOn ValueStack
 
 popFrom :: (Members '[Compiler] r) => StackId -> Sem r ()
 popFrom = popFromN 1
+
+popN :: (Members '[Compiler] r) => Natural -> Sem r ()
+popN n = popFromN n ValueStack
 
 pop :: (Members '[Compiler] r) => Sem r ()
 pop = popFrom ValueStack
