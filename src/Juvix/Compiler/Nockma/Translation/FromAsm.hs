@@ -371,7 +371,7 @@ allocClosure funSym numArgs = do
 closureArgsNum :: (Members '[Compiler] r) => Sem r ()
 closureArgsNum = do
   let helper p = OpAddress # topOfStack ValueStack ++ closurePath p
-  sub (helper ClosureTotalArgsNum) (helper ClosureArgsNum)
+  sub (helper ClosureTotalArgsNum) (helper ClosureArgsNum) pop
 
 allocConstr :: (Members '[Compiler] r) => Asm.Tag -> Sem r ()
 allocConstr tag = do
@@ -394,15 +394,13 @@ stringsErr :: a
 stringsErr = unsupported "strings"
 
 -- | Computes a - b
-sub :: (Members '[Compiler] r) => Term Natural -> Term Natural -> Sem r ()
-sub = subOn ValueStack
-
--- | Computes a - b
-subOn :: (Members '[Compiler] r) => StackId -> Term Natural -> Term Natural -> Sem r ()
-subOn s a b = do
-  pushOnto s b
-  pushOnto s a
-  callStdlibOn s StdlibSub
+sub :: (Members '[Compiler] r) => Term Natural -> Term Natural -> Sem r () -> Sem r ()
+sub a b clean = do
+  pushOnto TempStack b
+  pushOnto TempStack a
+  clean
+  callStdlibOn TempStack StdlibSub
+  moveTopFromTo TempStack ValueStack
 
 seqTerms :: [Term Natural] -> Term Natural
 seqTerms = foldl' step (OpAddress # emptyPath) . reverse

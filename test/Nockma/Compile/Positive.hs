@@ -248,5 +248,15 @@ tests =
         pushNat 8
         pushNat 9
         pushNat 10
+        allocClosure (sym FunConst5) 3,
+    Test
+      "compute argsNum of a closure"
+      (eqStack ValueStack [nock| [2 7 nil] |])
+      $ do
+        pushNat 7
+        pushNat 8
+        pushNat 9
+        pushNat 10
         allocClosure (sym FunConst5) 3
+        closureArgsNum
   ]
