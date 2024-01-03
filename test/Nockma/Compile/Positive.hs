@@ -23,6 +23,7 @@ data FunctionName
   = FunMain
   | FunIncrement
   | FunConst
+  | FunConst5
   | FunCallInc
   deriving stock (Eq, Bounded, Enum)
 
@@ -48,12 +49,16 @@ functionArity' = \case
   FunIncrement -> 1
   FunConst -> 2
   FunCallInc -> 1
+  FunConst5 -> 5
 
 functionCode :: (Members '[Compiler] r) => FunctionName -> Sem r ()
 functionCode = \case
   FunMain -> impossible
   FunIncrement -> do
     push (OpInc # (OpAddress # pathToArg 0))
+    asmReturn
+  FunConst5 -> do
+    push (OpAddress # pathToArg 0)
     asmReturn
   FunConst -> do
     push (OpAddress # pathToArg 0)
@@ -213,12 +218,20 @@ tests =
       callEnum FunIncrement 1,
     Test "push cell" (eqStack ValueStack [nock| [[1 2] nil] |]) $ do
       push (OpQuote # (1 :: Natural) # (2 :: Natural)),
-    Test "alloc nullary constructor" (eqStack ValueStack [nock| [[0 nil] nil] |]) $ do
+    Test "push unit" (eqStack ValueStack [nock| [[0 nil nil] nil] |]) $ do
+      push constUnit,
+    Test "alloc nullary constructor" (eqStack ValueStack [nock| [[0 nil nil] nil] |]) $ do
       allocConstr (constructorTag ConstructorFalse),
-    Test "alloc unary constructor" (eqStack ValueStack [nock| [[2 [55 66] nil] nil]|]) $ do
+    Test "alloc unary constructor" (eqStack ValueStack [nock| [[2 [[55 66] nil] nil] nil]|]) $ do
       push (OpQuote # (55 :: Natural) # (66 :: Natural))
       allocConstr (constructorTag ConstructorWrapper),
-    Test "alloc binary constructor" (eqStack ValueStack [nock| [[3 9 7 nil] nil] |]) $ do
+    -- Test "alloc closure and compute argsNum" (eqStack ValueStack [nock| [[0 nil] nil] |]) $ do
+    --   pushNat 7
+    --   pushNat 8
+    --   pushNat 9
+    --   pushNat 10
+    --   allocClosure (sym FunConst5) 3,
+    Test "alloc binary constructor" (eqStack ValueStack [nock| [[3 [9 7 nil] nil] nil] |]) $ do
       pushNat 7
       pushNat 9
       allocConstr (constructorTag ConstructorPair)

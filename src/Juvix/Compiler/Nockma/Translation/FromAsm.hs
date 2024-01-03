@@ -149,14 +149,13 @@ makeLenses ''CompilerCtx
 makeLenses ''FunctionInfo
 
 termFromParts :: (Bounded p, Enum p) => (p -> Term Natural) -> Term Natural
-termFromParts f = makeList [f pi | pi <- allElements]
+termFromParts f = remakeList [f pi | pi <- allElements]
 
--- TODO quote?
 makeClosure :: (ClosurePathId -> Term Natural) -> Term Natural
 makeClosure = termFromParts
 
 makeConstructor :: (ConstructorPathId -> Term Natural) -> Term Natural
-makeConstructor b = OpQuote # termFromParts b
+makeConstructor = termFromParts
 
 foldTerms :: NonEmpty (Term Natural) -> Term Natural
 foldTerms = foldr1 (#)
@@ -201,7 +200,10 @@ fromOffsetRef = fromIntegral . (^. Asm.offsetRefOffset)
 goConstructor :: Asm.Tag -> [Term Natural] -> Term Natural
 goConstructor t args = case t of
   Asm.BuiltinTag b -> goBuiltinTag b
-  Asm.UserTag _moduleId num -> (OpQuote # (fromIntegral num :: Natural)) # remakeList args
+  Asm.UserTag _moduleId num ->
+    makeConstructor $ \case
+      ConstructorTag -> OpQuote # (fromIntegral num :: Natural)
+      ConstructorArgs -> remakeList args
   where
     goBuiltinTag :: Asm.BuiltinDataTag -> Term Natural
     goBuiltinTag = \case
@@ -260,14 +262,6 @@ compile = mapM_ goCommand
       Asm.ConstVoid -> push constVoid
       Asm.Ref r -> pushMemValue r
       where
-        constUnit :: Term Natural
-        constUnit = constVoid
-
-        constVoid :: Term Natural
-        constVoid = makeConstructor $ \case
-          ConstructorTag -> toNock (0 :: Natural)
-          ConstructorArgs -> makeList []
-
         pushMemValue :: Asm.MemValue -> Sem r ()
         pushMemValue = \case
           Asm.DRef r -> pushDirectRef r
@@ -283,19 +277,7 @@ compile = mapM_ goCommand
           Asm.TempRef off -> push (OpAddress # indexInStack TempStack (fromIntegral (off ^. Asm.offsetRefOffset)))
 
     goAllocClosure :: Asm.InstrAllocClosure -> Sem r ()
-    goAllocClosure a = do
-      funPath <- getFunctionPath (a ^. Asm.allocClosureFunSymbol)
-      funAri <- getFunctionArity (a ^. Asm.allocClosureFunSymbol)
-      let numArgs :: Natural = fromIntegral (a ^. Asm.allocClosureArgsNum) :: Natural
-      pushOnto TempStack (stackTake ValueStack numArgs)
-      popFromN numArgs ValueStack
-      let closure = makeClosure $ \case
-            ClosureCode -> OpAddress # funPath
-            ClosureTotalArgsNum -> toNock funAri
-            ClosureArgs -> OpAddress # topOfStack TempStack
-            ClosureArgsNum -> toNock numArgs
-      push closure
-      popFrom TempStack
+    goAllocClosure a = allocClosure (a ^. Asm.allocClosureFunSymbol) (fromIntegral (a ^. Asm.allocClosureArgsNum))
 
     goExtendClosure :: Asm.InstrExtendClosure -> Sem r ()
     goExtendClosure a = do
@@ -340,11 +322,6 @@ compile = mapM_ goCommand
     goCall :: Asm.InstrCall -> Sem r ()
     goCall = goCallHelper False
 
-    goArgsNum :: Sem r ()
-    goArgsNum = do
-      let helper p = OpAddress # topOfStack ValueStack ++ closurePath p
-      sub (helper ClosureTotalArgsNum) (helper ClosureArgsNum)
-
     goTailCall :: Asm.InstrCall -> Sem r ()
     goTailCall = goCallHelper True
 
@@ -362,20 +339,45 @@ compile = mapM_ goCommand
       Asm.Return -> asmReturn
       Asm.ValShow -> stringsErr
       Asm.StrToInt -> stringsErr
-      Asm.ArgsNum -> goArgsNum
+      Asm.ArgsNum -> closureArgsNum
       Asm.Trace -> unsupported "trace"
       Asm.Dump -> unsupported "dump"
       Asm.Prealloc {} -> impossible
       Asm.CallClosures {} -> impossible
       Asm.TailCallClosures {} -> impossible
 
+constUnit :: Term Natural
+constUnit = constVoid
+
+constVoid :: Term Natural
+constVoid = makeConstructor $ \case
+  ConstructorTag -> OpQuote # toNock (0 :: Natural)
+  ConstructorArgs -> remakeList []
+
+allocClosure :: Members '[Compiler] r => Symbol -> Natural -> Sem r ()
+allocClosure funSym numArgs = do
+  funPath <- getFunctionPath funSym
+  funAri <- getFunctionArity funSym
+  pushOnto TempStack (stackTake ValueStack numArgs)
+  popFromN numArgs ValueStack
+  let closure = makeClosure $ \case
+        ClosureCode -> OpAddress # funPath
+        ClosureTotalArgsNum -> OpQuote # toNock funAri
+        ClosureArgsNum -> OpQuote # toNock numArgs
+        ClosureArgs -> OpAddress # topOfStack TempStack
+  push closure
+  popFrom TempStack
+
+closureArgsNum :: Members '[Compiler] r => Sem r ()
+closureArgsNum = do
+  let helper p = OpAddress # topOfStack ValueStack ++ closurePath p
+  sub (helper ClosureTotalArgsNum) (helper ClosureArgsNum)
+
 allocConstr :: (Members '[Compiler] r) => Asm.Tag -> Sem r ()
 allocConstr tag = do
   numArgs <- getConstructorArity tag
   let args = [OpAddress # indexInStack ValueStack (pred i) | i <- [1 .. numArgs]]
-  traceM ("length args = " <> show (length args))
-  let constr = goConstructor tag args
-  traceM ("constr = " <> ppTrace constr)
+      constr = goConstructor tag args
   pushOnto TempStack constr
   popN numArgs
   moveTopFromTo TempStack ValueStack
