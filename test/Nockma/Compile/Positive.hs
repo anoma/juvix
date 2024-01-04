@@ -28,8 +28,8 @@ data FunctionName
   | FunCallInc
   deriving stock (Eq, Bounded, Enum)
 
-sym :: (Enum a) => a -> Asm.Symbol
-sym = Asm.defaultSymbol . fromIntegral . fromEnum
+sym :: (Enum a) => a -> FunctionId
+sym = UserFunction . Asm.defaultSymbol . fromIntegral . fromEnum
 
 debugProg :: Sem '[Compiler] () -> Term Natural
 debugProg mkMain = compileAndRunNock exampleConstructors exampleFunctions mainFun

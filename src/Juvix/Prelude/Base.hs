@@ -71,6 +71,7 @@ module Juvix.Prelude.Base
     module System.IO,
     module Text.Show,
     module Control.Monad.Catch,
+    module Control.Monad.Zip,
     Data,
     Text,
     pack,
@@ -89,10 +90,11 @@ where
 
 import Control.Applicative
 import Control.Monad.Catch (MonadMask, MonadThrow, throwM)
-import Control.Monad.Extra hiding (fail, mconcatMapM, whileJustM)
+import Control.Monad.Extra hiding (fail, forM, mconcatMapM, whileJustM)
 import Control.Monad.Extra qualified as Monad
 import Control.Monad.Fix
 import Control.Monad.IO.Class (MonadIO (..))
+import Control.Monad.Zip
 import Data.Bifunctor hiding (first, second)
 import Data.Bitraversable
 import Data.Bool
@@ -141,6 +143,7 @@ import Data.Singletons hiding ((@@))
 import Data.Singletons.Sigma
 import Data.Singletons.TH (genSingletons, promoteOrdInstances, singOrdInstances)
 import Data.Stream (Stream)
+import Data.Stream qualified as Stream
 import Data.String
 import Data.Text (Text, pack, strip, unpack)
 import Data.Text qualified as Text
@@ -573,3 +576,14 @@ indexedByHash getIx l = HashMap.fromList [(getIx i, i) | i <- toList l]
 
 hashMap :: (Foldable f, Hashable k) => f (k, v) -> HashMap k v
 hashMap = HashMap.fromList . toList
+
+runInputInfinite :: Stream i -> Sem (Input i ': r) a -> Sem r a
+runInputInfinite s =
+  evalState s
+    . reinterpret
+      ( \case
+          Input -> do
+            Stream.Cons i is <- get
+            put is
+            return i
+      )

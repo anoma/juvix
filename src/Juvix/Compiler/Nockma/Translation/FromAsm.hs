@@ -6,7 +6,20 @@ import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Stdlib
 import Juvix.Prelude hiding (Atom, Path)
 
-type FunctionId = Symbol
+type UserFunctionId = Symbol
+
+data FunctionId
+  = UserFunction UserFunctionId
+  | BuiltinFunction BuiltinFunctionId
+  deriving stock (Generic, Eq)
+
+instance Hashable FunctionId
+
+data BuiltinFunctionId
+  = Pow2
+  deriving stock (Eq, Enum, Bounded, Generic)
+
+instance Hashable BuiltinFunctionId
 
 data FunctionInfo = FunctionInfo
   { _functionPath :: Path,
@@ -31,10 +44,10 @@ data CompilerFunction = CompilerFunction
 data StackId
   = CurrentFunction
   | ValueStack
-  | CallStack
   | TempStack
-  | FunctionsLibrary
+  | CallStack
   | StandardLibrary
+  | FunctionsLibrary
   deriving stock (Enum, Bounded, Eq, Show)
 
 -- | A closure has the following structure:
@@ -115,8 +128,8 @@ data Compiler m a where
   CallStdlibOn :: StackId -> StdlibFunction -> Compiler m ()
   AsmReturn :: Compiler m ()
   GetConstructorArity :: Asm.Tag -> Compiler m Natural
-  GetFunctionArity :: Symbol -> Compiler m Natural
-  GetFunctionPath :: Symbol -> Compiler m Path
+  GetFunctionArity :: FunctionId -> Compiler m Natural
+  GetFunctionPath :: FunctionId -> Compiler m Path
 
 stackPath :: StackId -> Path
 stackPath s = indexStack (fromIntegral (fromEnum s))
@@ -160,7 +173,7 @@ makeConstructor = termFromParts
 foldTerms :: NonEmpty (Term Natural) -> Term Natural
 foldTerms = foldr1 (#)
 
-fromAsm :: Asm.Symbol -> Asm.InfoTable -> ([Term Natural], Term Natural)
+fromAsm :: Asm.Symbol -> Asm.InfoTable -> (NonEmpty (Term Natural), Term Natural)
 fromAsm mainSym Asm.InfoTable {..} =
   let funs = map compileFunction allFunctions
       constrs :: ConstructorArities
@@ -170,7 +183,7 @@ fromAsm mainSym Asm.InfoTable {..} =
     mainFun :: CompilerFunction
     mainFun =
       CompilerFunction
-        { _compilerFunctionName = mainSym,
+        { _compilerFunctionName = UserFunction mainSym,
           _compilerFunctionArity = 0,
           _compilerFunction = compile mainCode
         }
@@ -187,7 +200,7 @@ fromAsm mainSym Asm.InfoTable {..} =
     compileFunction :: Asm.FunctionInfo -> CompilerFunction
     compileFunction Asm.FunctionInfo {..} =
       CompilerFunction
-        { _compilerFunctionName = _functionSymbol,
+        { _compilerFunctionName = UserFunction _functionSymbol,
           _compilerFunctionArity = fromIntegral _functionArgsNum,
           _compilerFunction = compile _functionCode
         }
@@ -271,7 +284,7 @@ compile = mapM_ goCommand
               (fromIntegral (r ^. Asm.fieldOffset))
 
     goAllocClosure :: Asm.InstrAllocClosure -> Sem r ()
-    goAllocClosure a = allocClosure (a ^. Asm.allocClosureFunSymbol) (fromIntegral (a ^. Asm.allocClosureArgsNum))
+    goAllocClosure a = allocClosure (UserFunction (a ^. Asm.allocClosureFunSymbol)) (fromIntegral (a ^. Asm.allocClosureArgsNum))
 
     goExtendClosure :: Asm.InstrExtendClosure -> Sem r ()
     goExtendClosure a = do
@@ -311,7 +324,7 @@ compile = mapM_ goCommand
       let funName = case _callType of
             Asm.CallFun fun -> Just fun
             Asm.CallClosure -> Nothing
-       in callHelper isTail funName (fromIntegral _callArgsNum)
+       in callHelper isTail (UserFunction <$> funName) (fromIntegral _callArgsNum)
 
     goCall :: Asm.InstrCall -> Sem r ()
     goCall = goCallHelper False
@@ -365,7 +378,7 @@ directRefPath = \case
 pushDirectRef :: (Members '[Compiler] r) => Asm.DirectRef -> Sem r ()
 pushDirectRef = push . (OpAddress #) . directRefPath
 
-allocClosure :: (Members '[Compiler] r) => Symbol -> Natural -> Sem r ()
+allocClosure :: (Members '[Compiler] r) => FunctionId -> Natural -> Sem r ()
 allocClosure funSym numArgs = do
   funPath <- getFunctionPath funSym
   funAri <- getFunctionArity funSym
@@ -454,7 +467,7 @@ runCompiler sem = do
   (ts, a) <- runOutputList (re sem)
   return (seqTerms ts, a)
 
-runCompilerWith :: ConstructorArities -> [CompilerFunction] -> CompilerFunction -> ([Term Natural], Term Natural)
+runCompilerWith :: ConstructorArities -> [CompilerFunction] -> CompilerFunction -> (NonEmpty (Term Natural), Term Natural)
 runCompilerWith constrs libFuns mainFun =
   let entryCommand :: (Members '[Compiler] r) => Sem r ()
       entryCommand = callFun (mainFun ^. compilerFunctionName) 0
@@ -465,17 +478,22 @@ runCompilerWith constrs libFuns mainFun =
           . execOutputList
           . re
           $ entryCommand
-      compiledFuns :: [Term Natural]
+      compiledFuns :: NonEmpty (Term Natural)
       compiledFuns =
         (# nockNil')
           <$> ( run
                   . runReader compilerCtx
                   . mapM (execCompiler . (^. compilerFunction))
-                  $ allfuns
+                  $ allFuns
               )
    in (compiledFuns, entryTerm)
   where
-    allfuns = mainFun : libFuns
+    allFuns :: NonEmpty CompilerFunction
+    allFuns = mainFun :| libFuns ++ (builtinFunction <$> allElements)
+
+    builtinFunction :: BuiltinFunctionId -> CompilerFunction
+    builtinFunction = error "TODO"
+
     compilerCtx :: CompilerCtx
     compilerCtx =
       CompilerCtx
@@ -484,19 +502,21 @@ runCompilerWith constrs libFuns mainFun =
         }
 
     functionInfos :: HashMap FunctionId FunctionInfo
-    functionInfos =
-      hashMap
-        [ ( _compilerFunctionName,
-            FunctionInfo
-              { _functionPath = indexInStack FunctionsLibrary i,
-                _functionArity = _compilerFunctionArity
-              }
-          )
-          | (i, CompilerFunction {..}) <- zip [0 ..] allfuns
-        ]
+    functionInfos = hashMap (run (runInputNaturals (toList <$> userFunctions)))
+
+    userFunctions :: (Members '[Input Natural] r) => Sem r (NonEmpty (FunctionId, FunctionInfo))
+    userFunctions = forM allFuns $ \CompilerFunction {..} -> do
+      i <- input
+      return
+        ( _compilerFunctionName,
+          FunctionInfo
+            { _functionPath = indexInStack FunctionsLibrary i,
+              _functionArity = _compilerFunctionArity
+            }
+        )
 
 callEnum :: (Enum funId, Members '[Compiler] r) => funId -> Natural -> Sem r ()
-callEnum f = callFun (Asm.defaultSymbol (fromIntegral (fromEnum f)))
+callEnum = callFun . UserFunction . Asm.defaultSymbol . fromIntegral . fromEnum
 
 callFun :: (Members '[Compiler] r) => FunctionId -> Natural -> Sem r ()
 callFun = callHelper False . Just
@@ -636,7 +656,7 @@ branch' t f = do
   termF <- runT f >>= raise . execCompiler . (pop >>)
   (output >=> pureT) (OpIf # (OpAddress # pathInStack ValueStack [L]) # termT # termF)
 
-getFunctionArity' :: (Members '[Reader CompilerCtx] r) => Symbol -> Sem r Natural
+getFunctionArity' :: (Members '[Reader CompilerCtx] r) => FunctionId -> Sem r Natural
 getFunctionArity' s = asks (^?! compilerFunctionInfos . at s . _Just . functionArity)
 
 getConstructorArity' :: (Members '[Reader CompilerCtx] r) => Asm.Tag -> Sem r Natural
@@ -797,7 +817,7 @@ pushNatOnto s n = pushOnto s (OpQuote # toNock n)
 compileAndRunNock :: ConstructorArities -> [CompilerFunction] -> CompilerFunction -> Term Natural
 compileAndRunNock constrs funs mainfun =
   let (functionTerms, t) = runCompilerWith constrs funs mainfun
-   in evalCompiledNock functionTerms t
+   in evalCompiledNock (toList functionTerms) t
 
 evalCompiledNock :: [Term Natural] -> Term Natural -> Term Natural
 evalCompiledNock functionTerms mainTerm =

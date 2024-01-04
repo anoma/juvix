@@ -16,7 +16,7 @@ runCommand opts = do
     Right tab -> do
       mainSym <- getMain tab
       let (nockFuns, nockMain) = fromAsm mainSym tab
-          res = evalCompiledNock nockFuns nockMain
+          res = evalCompiledNock (toList nockFuns) nockMain
           valStack = getStack ValueStack res
       putStrLn (ppPrint valStack)
   where
