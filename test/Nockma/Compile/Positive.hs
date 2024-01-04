@@ -182,6 +182,13 @@ tests =
       pow2
       pushNat 0
       pow2,
+    Test "append rights" (eqStack ValueStack [nock| [95 3 nil] |]) $ do
+      push (OpQuote # toNock ([] :: Path))
+      pushNat 1
+      appendRights
+      push (OpQuote # toNock [L])
+      pushNat 5
+      appendRights,
     Test "le less" (eqStack ValueStack [nock| [1 nil] |]) $ do
       pushNat 2
       pushNat 3

@@ -18,6 +18,7 @@ instance Hashable FunctionId
 data BuiltinFunctionId
   = BuiltinPow2Go
   | BuiltinPow2
+  | BuiltinAppendRights
   deriving stock (Eq, Enum, Bounded, Generic)
 
 instance Hashable BuiltinFunctionId
@@ -289,13 +290,6 @@ compile = mapM_ goCommand
 
     goExtendClosure :: Asm.InstrExtendClosure -> Sem r ()
     goExtendClosure a = do
-      -- encodedPathAppendRightN :: Natural -> EncodedPath -> EncodedPath
-      -- encodedPathAppendRightN n (EncodedPath p) = EncodedPath (f p)
-      --   where
-      --   -- equivalent to applying 2 * x + 1, n times
-      --   f :: Natural -> Natural
-      --   f x = (2 ^ n) * (x + 1) - 1
-
       -- A closure has the following structure:
       -- [code totalArgsNum argsNum args], where
       -- 1. code is code to run when fully applied.
@@ -495,40 +489,6 @@ runCompilerWith constrs libFuns mainFun =
     allFuns :: NonEmpty CompilerFunction
     allFuns = mainFun :| libFuns ++ (builtinFunction <$> allElements)
 
-    builtinFunction :: BuiltinFunctionId -> CompilerFunction
-    builtinFunction = \case
-      BuiltinPow2 ->
-        CompilerFunction
-          { _compilerFunctionName = BuiltinFunction BuiltinPow2,
-            _compilerFunctionArity = 1,
-            _compilerFunction = do
-              pushNat 1 -- acc
-              push (OpAddress # pathToArg 0)
-              callHelper False (Just (BuiltinFunction BuiltinPow2Go)) 2
-              asmReturn
-          }
-      BuiltinPow2Go ->
-        CompilerFunction
-          { _compilerFunctionName = BuiltinFunction BuiltinPow2Go,
-            _compilerFunctionArity = 2, -- args: n acc
-            _compilerFunction = do
-              push (OpAddress # pathToArg 1)
-              push (OpAddress # pathToArg 0)
-              copyTopFromTo ValueStack TempStack
-              pushNat 0
-              testEq
-              let baseCase :: (Members '[Compiler] r) => Sem r ()
-                  baseCase = popFrom TempStack
-                  recCase :: (Members '[Compiler] r) => Sem r ()
-                  recCase = do
-                    pushNat 2
-                    mul
-                    moveTopFromTo TempStack ValueStack
-                    dec
-                    callHelper True (Just (BuiltinFunction BuiltinPow2Go)) 2
-              branch baseCase recCase
-          }
-
     compilerCtx :: CompilerCtx
     compilerCtx =
       CompilerCtx
@@ -549,6 +509,60 @@ runCompilerWith constrs libFuns mainFun =
               _functionArity = _compilerFunctionArity
             }
         )
+
+builtinFunction :: BuiltinFunctionId -> CompilerFunction
+builtinFunction = \case
+    -- encodedPathAppendRightN :: Natural -> EncodedPath -> EncodedPath
+    -- encodedPathAppendRightN n (EncodedPath p) = EncodedPath (f p)
+    --   where
+    --   -- equivalent to applying 2 * x + 1, n times
+    --   f :: Natural -> Natural
+    --   f x = (2 ^ n) * (x + 1) - 1
+  BuiltinAppendRights ->
+    CompilerFunction
+      { _compilerFunctionName = BuiltinFunction BuiltinAppendRights,
+        _compilerFunctionArity = 2, -- args: n pos
+        _compilerFunction = do
+          push (OpAddress # pathToArg 0)
+          pow2
+          push (OpAddress # pathToArg 1)
+          pushNat 1
+          add
+          mul
+          dec
+          asmReturn
+      }
+  BuiltinPow2 ->
+    CompilerFunction
+      { _compilerFunctionName = BuiltinFunction BuiltinPow2,
+        _compilerFunctionArity = 1,
+        _compilerFunction = do
+          pushNat 1 -- acc
+          push (OpAddress # pathToArg 0)
+          callFun (BuiltinFunction BuiltinPow2Go) 2
+          asmReturn
+      }
+  BuiltinPow2Go ->
+    CompilerFunction
+      { _compilerFunctionName = BuiltinFunction BuiltinPow2Go,
+        _compilerFunctionArity = 2, -- args: n acc
+        _compilerFunction = do
+          push (OpAddress # pathToArg 1)
+          push (OpAddress # pathToArg 0)
+          copyTopFromTo ValueStack TempStack
+          pushNat 0
+          testEq
+          let baseCase :: (Members '[Compiler] r) => Sem r ()
+              baseCase = popFrom TempStack >> asmReturn
+              recCase :: (Members '[Compiler] r) => Sem r ()
+              recCase = do
+                pushNat 2
+                mul
+                moveTopFromTo TempStack ValueStack
+                dec
+                callHelper True (Just (BuiltinFunction BuiltinPow2Go)) 2
+          branch baseCase recCase
+      }
 
 callEnum :: (Enum funId, Members '[Compiler] r) => funId -> Natural -> Sem r ()
 callEnum = callFun . UserFunction . Asm.defaultSymbol . fromIntegral . fromEnum
@@ -746,10 +760,11 @@ mulOn s = callStdlibOn s StdlibMul
 addOn :: (Members '[Compiler] r) => StackId -> Sem r ()
 addOn s = callStdlibOn s StdlibAdd
 
+appendRights :: (Members '[Compiler] r) => Sem r ()
+appendRights = callFun (BuiltinFunction BuiltinAppendRights) 2
+
 pow2 :: (Members '[Compiler] r) => Sem r ()
-pow2 = do
-  callHelper False (Just (BuiltinFunction BuiltinPow2)) 1
-  asmReturn
+pow2 = callFun (BuiltinFunction BuiltinPow2) 1
 
 add :: (Members '[Compiler] r) => Sem r ()
 add = addOn ValueStack
