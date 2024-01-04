@@ -35,9 +35,11 @@ statement' addr = do
   (i :) <$> statements (addr + 1)
 
 label' :: (Member LabelInfoBuilder r) => Address -> ParsecS r [Instruction]
-label' addr = label addr >> statements (addr + 1)
+label' addr = do
+  l <- label addr
+  (l :) <$> statements (addr + 1)
 
-label :: (Member LabelInfoBuilder r) => Address -> ParsecS r ()
+label :: (Member LabelInfoBuilder r) => Address -> ParsecS r Instruction
 label addr = P.try $ do
   off' <- P.getOffset
   txt <- identifier
@@ -48,11 +50,14 @@ label addr = P.try $ do
       sym <- lift freshSymbol
       lift $ registerLabelName sym txt
       lift $ registerLabelAddress sym addr
+      return $ Label $ LabelRef {_labelRefSymbol = sym, _labelRefName = Just txt}
     Just sym -> do
       b <- lift $ hasOffset sym
       if
           | b -> parseFailure off' "duplicate label"
-          | otherwise -> lift $ registerLabelAddress sym addr
+          | otherwise -> do
+              lift $ registerLabelAddress sym addr
+              return $ Label $ LabelRef {_labelRefSymbol = sym, _labelRefName = Just txt}
 
 instruction :: (Member LabelInfoBuilder r) => ParsecS r Instruction
 instruction =
@@ -70,17 +75,22 @@ parseAlloc = do
         }
 
 parseValue :: (Member LabelInfoBuilder r) => ParsecS r Value
-parseValue = (Imm <$> parseImm) <|> (Ref <$> parseMemRef) <|> (Label <$> parseLabel)
+parseValue = (Imm <$> parseImm) <|> (Ref <$> parseMemRef) <|> (Lab <$> parseLabel)
 
 parseImm :: ParsecS r Immediate
 parseImm = fst <$> integer
+
+parseOffset :: ParsecS r Offset
+parseOffset =
+  (kw kwPlus >> offset)
+    <|> (kw kwMinus >> (negate <$> offset))
+    <|> return 0
 
 parseMemRef :: ParsecS r MemRef
 parseMemRef = do
   lbracket
   r <- register
-  kw kwPlus
-  off <- offset
+  off <- parseOffset
   rbracket
   return $ MemRef {_memRefReg = r, _memRefOff = off}
 

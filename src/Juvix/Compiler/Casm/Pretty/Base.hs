@@ -31,8 +31,15 @@ instance PrettyCode Reg where
 instance PrettyCode MemRef where
   ppCode MemRef {..} = do
     r <- ppCode _memRefReg
-    off <- ppOffset _memRefOff
-    return $ brackets (r <+> Str.plus <+> off)
+    if
+        | _memRefOff == 0 ->
+            return $ brackets r
+        | _memRefOff > 0 -> do
+            off <- ppOffset _memRefOff
+            return $ brackets (r <+> Str.plus <+> off)
+        | otherwise -> do
+            off <- ppOffset (-_memRefOff)
+            return $ brackets (r <+> Str.minus <+> off)
 
 instance PrettyCode LabelRef where
   ppCode LabelRef {..} = case _labelRefName of
@@ -43,7 +50,7 @@ instance PrettyCode Value where
   ppCode = \case
     Imm i -> return $ annotate AnnLiteralInteger $ pretty i
     Ref r -> ppCode r
-    Label l -> ppCode l
+    Lab l -> ppCode l
 
 instance PrettyCode InstrAssign where
   ppCode InstrAssign {..} = do
@@ -103,3 +110,4 @@ instance PrettyCode Instruction where
     Call x -> ppCode x
     Return -> return Str.ret
     Alloc x -> ppCode x
+    Label x -> (<> colon) <$> ppCode x

@@ -32,7 +32,7 @@ data Value
   | -- | Indirect memory reference
     Ref MemRef
   | -- | Label reference (translated to immediate in Cairo bytecode)
-    Label LabelRef
+    Lab LabelRef
 
 data Instruction
   = Assign InstrAssign
@@ -43,6 +43,7 @@ data Instruction
   | Call InstrCall
   | Return
   | Alloc InstrAlloc
+  | Label LabelRef
 
 data InstrAssign = InstrAssign
   { _instrAssignValue :: Value,

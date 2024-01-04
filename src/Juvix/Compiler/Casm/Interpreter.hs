@@ -41,6 +41,7 @@ runCode (LabelInfo labelInfo) instrs0 = runST goCode
             Call x -> goCall x pc ap fp mem
             Return -> goReturn pc ap fp mem
             Alloc x -> goAlloc x pc ap fp mem
+            Label {} -> go (pc + 1) ap fp mem
 
     readReg :: Address -> Address -> Reg -> Address
     readReg ap fp = \case
@@ -79,7 +80,7 @@ runCode (LabelInfo labelInfo) instrs0 = runST goCode
     readValue ap fp mem = \case
       Imm v -> return v
       Ref r -> readMemRef ap fp mem r
-      Label l -> return $ readLabel l
+      Lab l -> return $ readLabel l
 
     goAssign :: InstrAssign -> Address -> Address -> Address -> MV.MVector s Integer -> ST s Integer
     goAssign InstrAssign {..} pc ap fp mem = do
