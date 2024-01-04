@@ -74,7 +74,7 @@ runCode (LabelInfo labelInfo) instrs0 = runST goCode
 
     readLabel :: LabelRef -> Integer
     readLabel LabelRef {..} =
-      fromIntegral $ fromJust $ HashMap.lookup _labelRefSymbol labelInfo
+      fromIntegral $ fromMaybe (error "invalid label") $ HashMap.lookup _labelRefSymbol labelInfo
 
     readValue :: Address -> Address -> MV.MVector s Integer -> Value -> ST s Integer
     readValue ap fp mem = \case

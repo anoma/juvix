@@ -156,8 +156,7 @@ parseAssign = do
     load res = P.try $ do
       lbracket
       src <- parseMemRef
-      kw kwPlus
-      off <- offset
+      off <- parseOffset
       rbracket
       incAp <- parseIncAp
       return $

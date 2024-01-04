@@ -28,18 +28,22 @@ instance PrettyCode Reg where
     Ap -> return Str.ap
     Fp -> return Str.fp
 
+ppWithOffset :: Offset -> Doc Ann -> Sem r (Doc Ann)
+ppWithOffset off r
+  | off == 0 =
+      return r
+  | off > 0 = do
+      off' <- ppOffset off
+      return $ r <+> Str.plus <+> off'
+  | otherwise = do
+      off' <- ppOffset (-off)
+      return $ r <+> Str.minus <+> off'
+
 instance PrettyCode MemRef where
   ppCode MemRef {..} = do
     r <- ppCode _memRefReg
-    if
-        | _memRefOff == 0 ->
-            return $ brackets r
-        | _memRefOff > 0 -> do
-            off <- ppOffset _memRefOff
-            return $ brackets (r <+> Str.plus <+> off)
-        | otherwise -> do
-            off <- ppOffset (-_memRefOff)
-            return $ brackets (r <+> Str.minus <+> off)
+    r' <- ppWithOffset _memRefOff r
+    return $ brackets r'
 
 instance PrettyCode LabelRef where
   ppCode LabelRef {..} = case _labelRefName of
@@ -78,9 +82,9 @@ instance PrettyCode InstrLoad where
   ppCode InstrLoad {..} = do
     r <- ppCode _instrLoadResult
     src <- ppCode _instrLoadSrc
-    off <- ppOffset _instrLoadOff
+    src' <- ppWithOffset _instrLoadOff src
     incAp <- ppIncAp _instrLoadIncAp
-    return $ r <+> Str.equal <+> brackets (src <+> Str.plus <+> off) <> incAp
+    return $ r <+> Str.equal <+> brackets src' <> incAp
 
 instance PrettyCode InstrJump where
   ppCode InstrJump {..} = do
