@@ -263,7 +263,7 @@ compile = mapM_ goCommand
       Asm.IntMod -> callStdlib StdlibMod
       Asm.IntLt -> callStdlib StdlibLt
       Asm.IntLe -> callStdlib StdlibLe
-      Asm.ValEq -> testEqOn ValueStack
+      Asm.ValEq -> testEq
       Asm.StrConcat -> stringsErr
 
     goPush :: Asm.Value -> Sem r ()
@@ -289,30 +289,7 @@ compile = mapM_ goCommand
     goAllocClosure a = allocClosure (UserFunction (a ^. Asm.allocClosureFunSymbol)) (fromIntegral (a ^. Asm.allocClosureArgsNum))
 
     goExtendClosure :: Asm.InstrExtendClosure -> Sem r ()
-    goExtendClosure a = do
-      -- A closure has the following structure:
-      -- [code totalArgsNum argsNum args], where
-      -- 1. code is code to run when fully applied.
-      -- 2. totalArgsNum is the number of arguments that the function
-      --     which created the closure expects.
-      -- 3. argsNum is the number of arguments that have been applied to the closure.
-      -- 4. args is the list of args that have been applied.
-      --    The length of the list should be argsNum.
-      let curArgsNum = OpAddress # topOfStack ValueStack ++ closurePath ClosureTotalArgsNum
-          extraArgsNum :: Natural = fromIntegral (a ^. Asm.extendClosureArgsNum)
-          extraArgs = stackTake ValueStack extraArgsNum
-          closure = makeClosure $ \case
-            ClosureCode -> OpAddress # topOfStack ValueStack ++ closurePath ClosureCode
-            ClosureTotalArgsNum -> curArgsNum
-            ClosureArgsNum -> OpAddress # indexInStack TempStack (error "TODO index in tempstack")
-            ClosureArgs -> error "TODO"
-      pushOnto TempStack curArgsNum
-      pushOnto TempStack (toNock extraArgsNum)
-      addOn TempStack
-      pushOnto TempStack extraArgs
-
-      push closure
-      error "TODO"
+    goExtendClosure a = extendClosure (fromIntegral (a ^. Asm.extendClosureArgsNum))
 
     goCallHelper :: Bool -> Asm.InstrCall -> Sem r ()
     goCallHelper isTail Asm.InstrCall {..} =
@@ -347,6 +324,37 @@ compile = mapM_ goCommand
       Asm.Prealloc {} -> impossible
       Asm.CallClosures {} -> impossible
       Asm.TailCallClosures {} -> impossible
+
+extendClosure :: (Members '[Compiler] r) => Natural -> Sem r ()
+extendClosure extraArgsNum = do
+  let pathToOldClosure = topOfStack ValueStack
+      oldArgs = OpAddress # pathToOldClosure ++ closurePath ClosureArgs
+      curArgsNum = OpAddress # pathToOldClosure ++ closurePath ClosureArgsNum
+      extraArgs = stackSliceAsList ValueStack 1 (1 + extraArgsNum)
+  push (toNock ([] :: Path))
+  push (OpAddress # indexInStack ValueStack 1 ++ closurePath ClosureArgsNum)
+  appendRights
+  moveTopFromTo ValueStack TempStack
+  -- valueStack: [oldclosure ..]
+  -- tempstack: [posOfArgsNil ..]
+  pushOnto TempStack curArgsNum
+  pushNatOnto TempStack extraArgsNum
+  addOn TempStack
+  pushOnto TempStack extraArgs
+  -- valueStack: [oldclosure ..]
+  -- tempstack: [xtraArgsList newArgsNum posOfArgsNil ..]
+  let xtraArgs = OpAddress # topOfStack TempStack
+      newArgsNum = OpAddress # indexInStack TempStack 1
+      posOfArgsNil = OpAddress # indexInStack TempStack 2
+      newClosure = makeClosure $ \case
+        ClosureCode -> OpAddress # pathToOldClosure ++ closurePath ClosureCode
+        ClosureTotalArgsNum -> OpAddress # pathToOldClosure ++ closurePath ClosureTotalArgsNum
+        ClosureArgsNum -> newArgsNum
+        ClosureArgs -> replaceSubterm oldArgs posOfArgsNil xtraArgs
+  pushOnto TempStack newClosure
+  popN extraArgsNum
+  moveTopFromTo TempStack ValueStack
+  popFromN 3 TempStack
 
 constUnit :: Term Natural
 constUnit = constVoid
@@ -512,12 +520,12 @@ runCompilerWith constrs libFuns mainFun =
 
 builtinFunction :: BuiltinFunctionId -> CompilerFunction
 builtinFunction = \case
-    -- encodedPathAppendRightN :: Natural -> EncodedPath -> EncodedPath
-    -- encodedPathAppendRightN n (EncodedPath p) = EncodedPath (f p)
-    --   where
-    --   -- equivalent to applying 2 * x + 1, n times
-    --   f :: Natural -> Natural
-    --   f x = (2 ^ n) * (x + 1) - 1
+  -- encodedPathAppendRightN :: Natural -> EncodedPath -> EncodedPath
+  -- encodedPathAppendRightN n (EncodedPath p) = EncodedPath (f p)
+  --   where
+  --   -- equivalent to applying 2 * x + 1, n times
+  --   f :: Natural -> Natural
+  --   f x = (2 ^ n) * (x + 1) - 1
   BuiltinAppendRights ->
     CompilerFunction
       { _compilerFunctionName = BuiltinFunction BuiltinAppendRights,
@@ -576,10 +584,10 @@ tcallFun = callHelper True . Just
 getFunctionPath' :: (Members '[Reader CompilerCtx] r) => FunctionId -> Sem r Path
 getFunctionPath' funName = asks (^?! compilerFunctionInfos . at funName . _Just . functionPath)
 
--- | obj[relPath ↦ by]
+-- | obj[relPath] := newVal
 -- relPath is relative to obj
-simpleReplace :: Term Natural -> Path -> Term Natural -> Term Natural
-simpleReplace obj relPath by = OpReplace # (relPath # by) # obj
+replaceSubterm :: (IsNock path) => Term Natural -> path -> Term Natural -> Term Natural
+replaceSubterm obj relPath newVal = OpReplace # (relPath # newVal) # obj
 
 -- | funName is Nothing when we call a closure at the top of the stack
 callHelper' :: (Members '[Output (Term Natural), Reader CompilerCtx] r) => Bool -> Maybe FunctionId -> Natural -> Sem r ()
@@ -604,7 +612,7 @@ callHelper' isTail funName funArgsNum = do
   -- Setup function to call with its arguments
   let funWithArgs
         | isClosure = error "TODO"
-        | otherwise = simpleReplace (OpAddress # funPath) [R] (stackTake ValueStack funArgsNum)
+        | otherwise = replaceSubterm (OpAddress # funPath) [R] (stackTake ValueStack funArgsNum)
 
   -- Push it to the current function stack
   output (storeOnStack CurrentFunction funWithArgs)
@@ -760,6 +768,7 @@ mulOn s = callStdlibOn s StdlibMul
 addOn :: (Members '[Compiler] r) => StackId -> Sem r ()
 addOn s = callStdlibOn s StdlibAdd
 
+-- | arg order: push path >> push n
 appendRights :: (Members '[Compiler] r) => Sem r ()
 appendRights = callFun (BuiltinFunction BuiltinAppendRights) 2
 
