@@ -13,6 +13,7 @@ module Commands.Dev.Options
 where
 
 import Commands.Dev.Asm.Options hiding (Compile)
+import Commands.Dev.Casm.Options
 import Commands.Dev.Core.Options
 import Commands.Dev.DisplayRoot.Options
 import Commands.Dev.Geb.Options
@@ -34,6 +35,7 @@ data DevCommand
   | Core CoreCommand
   | Geb GebCommand
   | Asm AsmCommand
+  | Casm CasmCommand
   | Runtime RuntimeCommand
   | Parse ParseOptions
   | Scope ScopeOptions
@@ -51,6 +53,7 @@ parseDevCommand =
           commandCore,
           commandGeb,
           commandAsm,
+          commandCasm,
           commandRuntime,
           commandParse,
           commandScope,
@@ -95,6 +98,13 @@ commandAsm =
     info
       (Asm <$> parseAsmCommand)
       (progDesc "Subcommands related to JuvixAsm")
+
+commandCasm :: Mod CommandFields DevCommand
+commandCasm =
+  command "casm" $
+    info
+      (Casm <$> parseCasmCommand)
+      (progDesc "Subcommands related to Cairo Assembly")
 
 commandRuntime :: Mod CommandFields DevCommand
 commandRuntime =

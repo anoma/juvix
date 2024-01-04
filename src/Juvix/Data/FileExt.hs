@@ -13,6 +13,7 @@ data FileExt
   | FileExtJuvixGeb
   | FileExtJuvixCore
   | FileExtJuvixAsm
+  | FileExtCasm
   | FileExtVampIR
   | FileExtVampIRParams
   | FileExtPlonk
@@ -38,6 +39,9 @@ juvixCoreFileExt = ".jvc"
 
 juvixAsmFileExt :: (IsString a) => a
 juvixAsmFileExt = ".jva"
+
+casmFileExt :: (IsString a) => a
+casmFileExt = ".casm"
 
 vampIRFileExt :: (IsString a) => a
 vampIRFileExt = ".pir"
@@ -73,6 +77,7 @@ fileExtToText = \case
   FileExtJuvixGeb -> juvixGebFileExt
   FileExtJuvixCore -> juvixCoreFileExt
   FileExtJuvixAsm -> juvixAsmFileExt
+  FileExtCasm -> casmFileExt
   FileExtVampIR -> vampIRFileExt
   FileExtVampIRParams -> vampIRParamsFileExt
   FileExtPlonk -> plonkFileExt
@@ -90,6 +95,7 @@ toMetavar = \case
   FileExtJuvixGeb -> "JUVIX_GEB_FILE"
   FileExtJuvixCore -> "JUVIX_CORE_FILE"
   FileExtJuvixAsm -> "JUVIX_ASM_FILE"
+  FileExtCasm -> "CASM_FILE"
   FileExtVampIR -> "VAMPIR_FILE"
   FileExtVampIRParams -> "VAMPIR_PARAMS_FILE"
   FileExtPlonk -> "PLONK_FILE"
@@ -135,6 +141,9 @@ isHaloFile = (== Just haloFileExt) . fileExtension
 isJuvixAsmFile :: Path b File -> Bool
 isJuvixAsmFile = (== Just juvixAsmFileExt) . fileExtension
 
+isCasmFile :: Path b File -> Bool
+isCasmFile = (== Just casmFileExt) . fileExtension
+
 isLispFile :: Path b File -> Bool
 isLispFile = (== Just lispFileExt) . fileExtension
 
@@ -157,6 +166,7 @@ toFileExt p
   | isJuvixGebFile p = Just FileExtJuvixGeb
   | isJuvixCoreFile p = Just FileExtJuvixCore
   | isJuvixAsmFile p = Just FileExtJuvixAsm
+  | isCasmFile p = Just FileExtCasm
   | isVampIRFile p = Just FileExtVampIR
   | isVampIRParamsFile p = Just FileExtVampIRParams
   | isPlonkFile p = Just FileExtPlonk
