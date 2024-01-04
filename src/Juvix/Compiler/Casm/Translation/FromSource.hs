@@ -5,7 +5,7 @@ import Juvix.Compiler.Casm.Data.LabelInfo
 import Juvix.Compiler.Casm.Data.LabelInfoBuilder
 import Juvix.Compiler.Casm.Language
 import Juvix.Compiler.Casm.Translation.FromSource.Lexer
-import Juvix.Data.Keyword.All (kwAP, kwCall, kwEq, kwFP, kwIf, kwJmp, kwMinus, kwMul, kwNotEq, kwPlus, kwPlusEq, kwRet)
+import Juvix.Data.Keyword.All (kwAp, kwApPlusPlus, kwCall, kwEq, kwFp, kwIf, kwJmp, kwMinus, kwMul, kwNotEq, kwPlus, kwPlusEq, kwRet)
 import Juvix.Parser.Error
 import Text.Megaparsec qualified as P
 
@@ -65,7 +65,7 @@ instruction =
 
 parseAlloc :: ParsecS r Instruction
 parseAlloc = do
-  kw kwAP
+  kw kwAp
   kw kwPlusEq
   i <- int
   return $
@@ -106,20 +106,25 @@ parseLabel = do
     Just sym ->
       return $ LabelRef {_labelRefName = Just txt, _labelRefSymbol = sym}
 
+parseIncAp :: ParsecS r Bool
+parseIncAp = (kw delimSemicolon >> kw kwApPlusPlus >> return True) <|> return False
+
 parseJump :: forall r. (Member LabelInfoBuilder r) => ParsecS r Instruction
 parseJump = do
   kw kwJmp
   tgt <- parseValue
   mv <- optional if_
+  incAp <- parseIncAp
   case mv of
     Nothing ->
-      return $ Jump $ InstrJump {_instrJumpTarget = tgt}
+      return $ Jump $ InstrJump {_instrJumpTarget = tgt, _instrJumpIncAp = incAp}
     Just v ->
       return $
         JumpIf $
           InstrJumpIf
             { _instrJumpIfTarget = tgt,
-              _instrJumpIfValue = v
+              _instrJumpIfValue = v,
+              _instrJumpIfIncAp = incAp
             }
   where
     if_ :: ParsecS r Value
@@ -154,12 +159,14 @@ parseAssign = do
       kw kwPlus
       off <- offset
       rbracket
+      incAp <- parseIncAp
       return $
         Load $
           InstrLoad
             { _instrLoadResult = res,
               _instrLoadSrc = src,
-              _instrLoadOff = off
+              _instrLoadOff = off,
+              _instrLoadIncAp = incAp
             }
 
     binop :: MemRef -> ParsecS r Instruction
@@ -167,28 +174,37 @@ parseAssign = do
       arg1 <- parseMemRef
       op <- opcode
       arg2 <- parseValue
+      incAp <- parseIncAp
       return $
         Binop $
           InstrBinop
             { _instrBinopOpcode = op,
               _instrBinopResult = res,
               _instrBinopArg1 = arg1,
-              _instrBinopArg2 = arg2
+              _instrBinopArg2 = arg2,
+              _instrBinopIncAp = incAp
             }
 
     asn :: MemRef -> ParsecS r Instruction
     asn res = do
       v <- parseValue
-      return $ Assign $ InstrAssign {_instrAssignValue = v, _instrAssignResult = res}
+      incAp <- parseIncAp
+      return $
+        Assign $
+          InstrAssign
+            { _instrAssignValue = v,
+              _instrAssignResult = res,
+              _instrAssignIncAp = incAp
+            }
 
 registerAP :: ParsecS r Reg
 registerAP = do
-  kw kwAP
+  kw kwAp
   return Ap
 
 registerFP :: ParsecS r Reg
 registerFP = do
-  kw kwFP
+  kw kwFp
   return Fp
 
 register :: ParsecS r Reg

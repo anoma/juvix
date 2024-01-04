@@ -479,6 +479,9 @@ ap = "ap"
 fp :: (IsString s) => s
 fp = "fp"
 
+apPlusPlus :: (IsString s) => s
+apPlusPlus = "ap++"
+
 ret :: (IsString s) => s
 ret = "ret"
 

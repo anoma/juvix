@@ -1,5 +1,6 @@
+-- sum of numbers 1 to 1000
 start:
-   [ap] = 10
+   [ap] = 1000
    [ap + 1] = 0
    ap += 2
 loop:

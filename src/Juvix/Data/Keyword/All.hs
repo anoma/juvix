@@ -298,11 +298,14 @@ kwBracketL = asciiKw Str.bracketL
 kwBracketR :: Keyword
 kwBracketR = asciiKw Str.bracketR
 
-kwAP :: Keyword
-kwAP = asciiKw Str.ap
+kwAp :: Keyword
+kwAp = asciiKw Str.ap
 
-kwFP :: Keyword
-kwFP = asciiKw Str.fp
+kwFp :: Keyword
+kwFp = asciiKw Str.fp
+
+kwApPlusPlus :: Keyword
+kwApPlusPlus = asciiKw Str.apPlusPlus
 
 kwRel :: Keyword
 kwRel = asciiKw Str.rel

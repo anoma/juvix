@@ -27,4 +27,11 @@ ppPrint :: (PrettyCode c) => c -> Text
 ppPrint = show . ppOutDefault
 
 ppProgram :: Code -> AnsiText
-ppProgram = mkAnsiText . mconcatMap ((<> line) . doc Options)
+ppProgram = mkAnsiText . mconcatMap ppInstr
+  where
+    ppInstr :: Instruction -> Doc Ann
+    ppInstr instr = ind (doc Options instr) <> line
+      where
+        ind = case instr of
+          Label {} -> id
+          _ -> indent'

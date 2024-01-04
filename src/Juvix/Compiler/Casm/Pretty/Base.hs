@@ -18,10 +18,10 @@ class PrettyCode c where
 ppOffset :: Offset -> Sem r (Doc Ann)
 ppOffset off = return $ annotate AnnLiteralInteger $ pretty off
 
-ppRel :: Bool -> Sem r (Doc Ann)
-ppRel = \case
-  True -> return Str.rel
-  False -> return Str.abs
+ppIncAp :: Bool -> Sem r (Doc Ann)
+ppIncAp = \case
+  True -> return $ Str.semicolon <+> Str.apPlusPlus
+  False -> mempty
 
 instance PrettyCode Reg where
   ppCode = \case
@@ -56,7 +56,8 @@ instance PrettyCode InstrAssign where
   ppCode InstrAssign {..} = do
     v <- ppCode _instrAssignValue
     r <- ppCode _instrAssignResult
-    return $ r <+> Str.equal <+> v
+    incAp <- ppIncAp _instrAssignIncAp
+    return $ r <+> Str.equal <+> v <> incAp
 
 instance PrettyCode Opcode where
   ppCode = \case
@@ -70,25 +71,29 @@ instance PrettyCode InstrBinop where
     v2 <- ppCode _instrBinopArg2
     r <- ppCode _instrBinopResult
     op <- ppCode _instrBinopOpcode
-    return $ r <+> Str.equal <+> v1 <+> op <+> v2
+    incAp <- ppIncAp _instrBinopIncAp
+    return $ r <+> Str.equal <+> v1 <+> op <+> v2 <> incAp
 
 instance PrettyCode InstrLoad where
   ppCode InstrLoad {..} = do
     r <- ppCode _instrLoadResult
     src <- ppCode _instrLoadSrc
     off <- ppOffset _instrLoadOff
-    return $ r <+> Str.equal <+> brackets (src <+> Str.plus <+> off)
+    incAp <- ppIncAp _instrLoadIncAp
+    return $ r <+> Str.equal <+> brackets (src <+> Str.plus <+> off) <> incAp
 
 instance PrettyCode InstrJump where
   ppCode InstrJump {..} = do
     tgt <- ppCode _instrJumpTarget
-    return $ Str.jmp <+> tgt
+    incAp <- ppIncAp _instrJumpIncAp
+    return $ Str.jmp <+> tgt <> incAp
 
 instance PrettyCode InstrJumpIf where
   ppCode InstrJumpIf {..} = do
     tgt <- ppCode _instrJumpIfTarget
     v <- ppCode _instrJumpIfValue
-    return $ Str.jmp <+> tgt <+> Str.if_ <+> v <+> Str.notequal <+> annotate AnnLiteralInteger "0"
+    incAp <- ppIncAp _instrJumpIfIncAp
+    return $ Str.jmp <+> tgt <+> Str.if_ <+> v <+> Str.notequal <+> annotate AnnLiteralInteger "0" <> incAp
 
 instance PrettyCode InstrCall where
   ppCode InstrCall {..} = do

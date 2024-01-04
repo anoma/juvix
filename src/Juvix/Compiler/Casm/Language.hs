@@ -47,7 +47,8 @@ data Instruction
 
 data InstrAssign = InstrAssign
   { _instrAssignValue :: Value,
-    _instrAssignResult :: MemRef
+    _instrAssignResult :: MemRef,
+    _instrAssignIncAp :: Bool
   }
 
 data Opcode
@@ -59,23 +60,27 @@ data InstrBinop = InstrBinop
   { _instrBinopOpcode :: Opcode,
     _instrBinopResult :: MemRef,
     _instrBinopArg1 :: MemRef,
-    _instrBinopArg2 :: Value
+    _instrBinopArg2 :: Value,
+    _instrBinopIncAp :: Bool
   }
 
 data InstrLoad = InstrLoad
   { _instrLoadResult :: MemRef,
     _instrLoadSrc :: MemRef,
-    _instrLoadOff :: Offset
+    _instrLoadOff :: Offset,
+    _instrLoadIncAp :: Bool
   }
 
-newtype InstrJump = InstrJump
-  { _instrJumpTarget :: Value
+data InstrJump = InstrJump
+  { _instrJumpTarget :: Value,
+    _instrJumpIncAp :: Bool
   }
 
 -- | Jump if value is nonzero
 data InstrJumpIf = InstrJumpIf
   { _instrJumpIfTarget :: Value,
-    _instrJumpIfValue :: Value
+    _instrJumpIfValue :: Value,
+    _instrJumpIfIncAp :: Bool
   }
 
 newtype InstrCall = InstrCall

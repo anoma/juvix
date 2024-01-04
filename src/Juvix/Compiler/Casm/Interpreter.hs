@@ -86,7 +86,7 @@ runCode (LabelInfo labelInfo) instrs0 = runST goCode
     goAssign InstrAssign {..} pc ap fp mem = do
       v <- readValue ap fp mem _instrAssignValue
       mem' <- writeMemRef ap fp mem _instrAssignResult v
-      go (pc + 1) ap fp mem'
+      go (pc + 1) (ap + fromEnum _instrAssignIncAp) fp mem'
 
     goBinop :: InstrBinop -> Address -> Address -> Address -> MV.MVector s Integer -> ST s Integer
     goBinop InstrBinop {..} pc ap fp mem = do
@@ -94,7 +94,7 @@ runCode (LabelInfo labelInfo) instrs0 = runST goCode
       v2 <- readValue ap fp mem _instrBinopArg2
       let v = goOp v1 v2 _instrBinopOpcode
       mem' <- writeMemRef ap fp mem _instrBinopResult v
-      go (pc + 1) ap fp mem'
+      go (pc + 1) (ap + fromEnum _instrBinopIncAp) fp mem'
       where
         goOp :: Integer -> Integer -> Opcode -> Integer
         goOp x y = \case
@@ -109,18 +109,18 @@ runCode (LabelInfo labelInfo) instrs0 = runST goCode
           addr :: Int = fromInteger src + off
       v <- MV.read mem addr
       mem' <- writeMemRef ap fp mem _instrLoadResult v
-      go (pc + 1) ap fp mem'
+      go (pc + 1) (ap + fromEnum _instrLoadIncAp) fp mem'
 
     goJump :: InstrJump -> Address -> Address -> Address -> MV.MVector s Integer -> ST s Integer
     goJump InstrJump {..} _ ap fp mem = do
       tgt <- readValue ap fp mem _instrJumpTarget
-      go (fromInteger tgt) ap fp mem
+      go (fromInteger tgt) (ap + fromEnum _instrJumpIncAp) fp mem
 
     goJumpIf :: InstrJumpIf -> Address -> Address -> Address -> MV.MVector s Integer -> ST s Integer
     goJumpIf InstrJumpIf {..} pc ap fp mem = do
       tgt <- readValue ap fp mem _instrJumpIfTarget
       v <- readValue ap fp mem _instrJumpIfValue
-      go (if v /= 0 then fromInteger tgt else pc + 1) ap fp mem
+      go (if v /= 0 then fromInteger tgt else pc + 1) (ap + fromEnum _instrJumpIfIncAp) fp mem
 
     goCall :: InstrCall -> Address -> Address -> Address -> MV.MVector s Integer -> ST s Integer
     goCall InstrCall {..} pc ap fp mem = do
