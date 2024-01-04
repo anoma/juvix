@@ -190,18 +190,17 @@ runPipeline input_ p = do
     Right res -> return (snd res ^. pipelineResult)
 
 runPipelineHtml :: (Members '[App, Embed IO, TaggedLock] r) => Bool -> AppPath File -> Sem r (InternalTypedResult, [InternalTypedResult])
-runPipelineHtml bNonRecursive input_ =
-  if
-      | bNonRecursive -> do
-          r <- runPipeline input_ upToInternalTyped
-          return (r, [])
-      | otherwise -> do
-          args <- askArgs
-          entry <- getEntryPoint' args input_
-          r <- runPipelineHtmlEither entry
-          case r of
-            Left err -> exitJuvixError err
-            Right res -> return res
+runPipelineHtml bNonRecursive input_
+  | bNonRecursive = do
+      r <- runPipeline input_ upToInternalTyped
+      return (r, [])
+  | otherwise = do
+      args <- askArgs
+      entry <- getEntryPoint' args input_
+      r <- runPipelineHtmlEither entry
+      case r of
+        Left err -> exitJuvixError err
+        Right res -> return res
 
 runPipelineEntry :: (Members '[App, Embed IO, TaggedLock] r) => EntryPoint -> Sem (PipelineEff r) a -> Sem r a
 runPipelineEntry entry p = do

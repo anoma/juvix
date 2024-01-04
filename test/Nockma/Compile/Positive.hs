@@ -173,6 +173,15 @@ tests =
       pushNat 2
       pushNat 3
       add,
+    Test "pow2" (eqStack ValueStack [nock| [1 2 8 32 nil] |]) $ do
+      pushNat 5
+      pow2
+      pushNat 3
+      pow2
+      pushNat 1
+      pow2
+      pushNat 0
+      pow2,
     Test "le less" (eqStack ValueStack [nock| [1 nil] |]) $ do
       pushNat 2
       pushNat 3

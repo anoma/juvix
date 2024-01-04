@@ -16,7 +16,8 @@ data FunctionId
 instance Hashable FunctionId
 
 data BuiltinFunctionId
-  = Pow2
+  = BuiltinPow2Go
+  | BuiltinPow2
   deriving stock (Eq, Enum, Bounded, Generic)
 
 instance Hashable BuiltinFunctionId
@@ -406,6 +407,9 @@ allocConstr tag = do
   popN numArgs
   moveTopFromTo TempStack ValueStack
 
+copyTopFromTo :: (Members '[Compiler] r) => StackId -> StackId -> Sem r ()
+copyTopFromTo from toStack = pushOnto toStack (OpAddress # topOfStack from)
+
 moveTopFromTo :: (Members '[Compiler] r) => StackId -> StackId -> Sem r ()
 moveTopFromTo from toStack = do
   pushOnto toStack (OpAddress # topOfStack from)
@@ -492,7 +496,38 @@ runCompilerWith constrs libFuns mainFun =
     allFuns = mainFun :| libFuns ++ (builtinFunction <$> allElements)
 
     builtinFunction :: BuiltinFunctionId -> CompilerFunction
-    builtinFunction = error "TODO"
+    builtinFunction = \case
+      BuiltinPow2 ->
+        CompilerFunction
+          { _compilerFunctionName = BuiltinFunction BuiltinPow2,
+            _compilerFunctionArity = 1,
+            _compilerFunction = do
+              pushNat 1 -- acc
+              push (OpAddress # pathToArg 0)
+              callHelper False (Just (BuiltinFunction BuiltinPow2Go)) 2
+              asmReturn
+          }
+      BuiltinPow2Go ->
+        CompilerFunction
+          { _compilerFunctionName = BuiltinFunction BuiltinPow2Go,
+            _compilerFunctionArity = 2, -- args: n acc
+            _compilerFunction = do
+              push (OpAddress # pathToArg 1)
+              push (OpAddress # pathToArg 0)
+              copyTopFromTo ValueStack TempStack
+              pushNat 0
+              testEq
+              let baseCase :: (Members '[Compiler] r) => Sem r ()
+                  baseCase = popFrom TempStack
+                  recCase :: (Members '[Compiler] r) => Sem r ()
+                  recCase = do
+                    pushNat 2
+                    mul
+                    moveTopFromTo TempStack ValueStack
+                    dec
+                    callHelper True (Just (BuiltinFunction BuiltinPow2Go)) 2
+              branch baseCase recCase
+          }
 
     compilerCtx :: CompilerCtx
     compilerCtx =
@@ -702,8 +737,19 @@ popFromNH ::
   Sem (WithTactics e f m r) (f ())
 popFromNH n s = outputT (popStackN n s)
 
+mul :: (Members '[Compiler] r) => Sem r ()
+mul = mulOn ValueStack
+
+mulOn :: (Members '[Compiler] r) => StackId -> Sem r ()
+mulOn s = callStdlibOn s StdlibMul
+
 addOn :: (Members '[Compiler] r) => StackId -> Sem r ()
 addOn s = callStdlibOn s StdlibAdd
+
+pow2 :: (Members '[Compiler] r) => Sem r ()
+pow2 = do
+  callHelper False (Just (BuiltinFunction BuiltinPow2)) 1
+  asmReturn
 
 add :: (Members '[Compiler] r) => Sem r ()
 add = addOn ValueStack
