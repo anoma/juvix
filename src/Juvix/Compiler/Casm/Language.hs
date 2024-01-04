@@ -8,6 +8,8 @@ import Juvix.Compiler.Casm.Language.Base
 
 type Offset = Int16
 
+type Address = Int
+
 data Reg
   = Ap
   | Fp
@@ -65,21 +67,18 @@ data InstrLoad = InstrLoad
     _instrLoadOff :: Offset
   }
 
-data InstrJump = InstrJump
-  { _instrJumpTarget :: Value,
-    _instrJumpIsRel :: Bool
+newtype InstrJump = InstrJump
+  { _instrJumpTarget :: Value
   }
 
 -- | Jump if value is nonzero
 data InstrJumpIf = InstrJumpIf
   { _instrJumpIfTarget :: Value,
-    _instrJumpIfIsRel :: Bool,
     _instrJumpIfValue :: Value
   }
 
-data InstrCall = InstrCall
-  { _instrCallTarget :: Value,
-    _instrCallIsRel :: Bool
+newtype InstrCall = InstrCall
+  { _instrCallTarget :: Value
   }
 
 newtype InstrAlloc = InstrAlloc

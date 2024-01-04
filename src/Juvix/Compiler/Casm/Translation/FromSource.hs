@@ -5,7 +5,7 @@ import Juvix.Compiler.Casm.Data.LabelInfo
 import Juvix.Compiler.Casm.Data.LabelInfoBuilder
 import Juvix.Compiler.Casm.Language
 import Juvix.Compiler.Casm.Translation.FromSource.Lexer
-import Juvix.Data.Keyword.All (kwAP, kwAbs, kwCall, kwEq, kwFP, kwIf, kwJmp, kwMinus, kwMul, kwNotEq, kwPlus, kwPlusEq, kwRel, kwRet)
+import Juvix.Data.Keyword.All (kwAP, kwCall, kwEq, kwFP, kwIf, kwJmp, kwMinus, kwMul, kwNotEq, kwPlus, kwPlusEq, kwRet)
 import Juvix.Parser.Error
 import Text.Megaparsec qualified as P
 
@@ -24,21 +24,21 @@ parseToplevel = do
   P.eof
   return instrs
 
-statements :: (Member LabelInfoBuilder r) => Offset -> ParsecS r [Instruction]
-statements off = do
+statements :: (Member LabelInfoBuilder r) => Address -> ParsecS r [Instruction]
+statements addr = do
   space
-  label' off <|> statement' off <|> return []
+  label' addr <|> statement' addr <|> return []
 
-statement' :: (Member LabelInfoBuilder r) => Offset -> ParsecS r [Instruction]
-statement' off = do
+statement' :: (Member LabelInfoBuilder r) => Address -> ParsecS r [Instruction]
+statement' addr = do
   i <- instruction
-  (i :) <$> statements (off + 1)
+  (i :) <$> statements (addr + 1)
 
-label' :: (Member LabelInfoBuilder r) => Offset -> ParsecS r [Instruction]
-label' off = label off >> statements (off + 1)
+label' :: (Member LabelInfoBuilder r) => Address -> ParsecS r [Instruction]
+label' addr = label addr >> statements (addr + 1)
 
-label :: (Member LabelInfoBuilder r) => Offset -> ParsecS r ()
-label off = P.try $ do
+label :: (Member LabelInfoBuilder r) => Address -> ParsecS r ()
+label addr = P.try $ do
   off' <- P.getOffset
   txt <- identifier
   kw kwColon
@@ -47,12 +47,12 @@ label off = P.try $ do
     Nothing -> do
       sym <- lift freshSymbol
       lift $ registerLabelName sym txt
-      lift $ registerLabelOffset sym off
+      lift $ registerLabelAddress sym addr
     Just sym -> do
       b <- lift $ hasOffset sym
       if
           | b -> parseFailure off' "duplicate label"
-          | otherwise -> lift $ registerLabelOffset sym off
+          | otherwise -> lift $ registerLabelAddress sym addr
 
 instruction :: (Member LabelInfoBuilder r) => ParsecS r Instruction
 instruction =
@@ -68,9 +68,6 @@ parseAlloc = do
       InstrAlloc
         { _instrAllocSize = i
         }
-
-parseIsRel :: ParsecS r Bool
-parseIsRel = (kw kwRel >> return True) <|> (kw kwAbs >> return False)
 
 parseValue :: (Member LabelInfoBuilder r) => ParsecS r Value
 parseValue = (Imm <$> parseImm) <|> (Ref <$> parseMemRef) <|> (Label <$> parseLabel)
@@ -102,18 +99,16 @@ parseLabel = do
 parseJump :: forall r. (Member LabelInfoBuilder r) => ParsecS r Instruction
 parseJump = do
   kw kwJmp
-  isRel <- parseIsRel
   tgt <- parseValue
   mv <- optional if_
   case mv of
     Nothing ->
-      return $ Jump $ InstrJump {_instrJumpTarget = tgt, _instrJumpIsRel = isRel}
+      return $ Jump $ InstrJump {_instrJumpTarget = tgt}
     Just v ->
       return $
         JumpIf $
           InstrJumpIf
             { _instrJumpIfTarget = tgt,
-              _instrJumpIfIsRel = isRel,
               _instrJumpIfValue = v
             }
   where
@@ -128,9 +123,8 @@ parseJump = do
 parseCall :: (Member LabelInfoBuilder r) => ParsecS r Instruction
 parseCall = do
   kw kwCall
-  isRel <- parseIsRel
   v <- parseValue
-  return $ Call $ InstrCall {_instrCallTarget = v, _instrCallIsRel = isRel}
+  return $ Call $ InstrCall {_instrCallTarget = v}
 
 parseReturn :: ParsecS r Instruction
 parseReturn = do

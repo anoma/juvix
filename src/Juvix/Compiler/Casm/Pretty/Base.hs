@@ -75,21 +75,18 @@ instance PrettyCode InstrLoad where
 instance PrettyCode InstrJump where
   ppCode InstrJump {..} = do
     tgt <- ppCode _instrJumpTarget
-    rel <- ppRel _instrJumpIsRel
-    return $ Str.jmp <+> rel <+> tgt
+    return $ Str.jmp <+> tgt
 
 instance PrettyCode InstrJumpIf where
   ppCode InstrJumpIf {..} = do
     tgt <- ppCode _instrJumpIfTarget
-    rel <- ppRel _instrJumpIfIsRel
     v <- ppCode _instrJumpIfValue
-    return $ Str.jmp <+> rel <+> tgt <+> Str.if_ <+> v <+> Str.notequal <+> annotate AnnLiteralInteger "0"
+    return $ Str.jmp <+> tgt <+> Str.if_ <+> v <+> Str.notequal <+> annotate AnnLiteralInteger "0"
 
 instance PrettyCode InstrCall where
   ppCode InstrCall {..} = do
     tgt <- ppCode _instrCallTarget
-    rel <- ppRel _instrCallIsRel
-    return $ Str.call <+> rel <+> tgt
+    return $ Str.call <+> tgt
 
 instance PrettyCode InstrAlloc where
   ppCode InstrAlloc {..} = do

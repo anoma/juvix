@@ -7,7 +7,7 @@ import Juvix.Compiler.Casm.Language
 data LabelInfoBuilder m a where
   FreshSymbol :: LabelInfoBuilder m Symbol
   RegisterLabelName :: Symbol -> Text -> LabelInfoBuilder m ()
-  RegisterLabelOffset :: Symbol -> Offset -> LabelInfoBuilder m ()
+  RegisterLabelAddress :: Symbol -> Int -> LabelInfoBuilder m ()
   GetIdent :: Text -> LabelInfoBuilder m (Maybe Symbol)
   HasOffset :: Symbol -> LabelInfoBuilder m Bool
 
@@ -45,8 +45,8 @@ runLabelInfoBuilder' bs =
         return $ Symbol defaultModuleId i
       RegisterLabelName sym n ->
         modify' (over stateIdents (HashMap.insert n sym))
-      RegisterLabelOffset sym off ->
-        modify' (over (stateLabelInfo . labelInfoTable) (HashMap.insert sym off))
+      RegisterLabelAddress sym addr ->
+        modify' (over (stateLabelInfo . labelInfoTable) (HashMap.insert sym addr))
       GetIdent n -> do
         tab <- gets (^. stateIdents)
         return $ HashMap.lookup n tab
