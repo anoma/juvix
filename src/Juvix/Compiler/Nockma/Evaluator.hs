@@ -164,11 +164,11 @@ eval stack = \case
 
         goOpReplace :: Sem r (Term a)
         goOpReplace = do
-          cellTerm <- asCell (c ^. operatorCellTerm)
-          Cell r0 t1 <- asCell (cellTerm ^. cellLeft)
-          r <- asPath r0
+          Cell rot1 t2 <- asCell (c ^. operatorCellTerm)
+          Cell ro t1 <- asCell rot1
+          r <- asPath ro
           t1' <- eval stack t1
-          t2' <- eval stack (cellTerm ^. cellRight)
+          t2' <- eval stack t2
           setSubTerm t2' r t1'
 
         goOpApply :: Sem r (Term a)

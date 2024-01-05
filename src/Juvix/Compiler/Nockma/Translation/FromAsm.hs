@@ -330,8 +330,8 @@ extendClosure extraArgsNum = do
   let pathToOldClosure = topOfStack ValueStack
       oldArgs = OpAddress # pathToOldClosure ++ closurePath ClosureArgs
       curArgsNum = OpAddress # pathToOldClosure ++ closurePath ClosureArgsNum
-      extraArgs = stackSliceAsList ValueStack 1 (1 + extraArgsNum)
-  push (toNock ([] :: Path))
+      extraArgs = stackSliceAsList ValueStack 1 extraArgsNum
+  push (OpQuote # toNock ([] :: Path))
   push (OpAddress # indexInStack ValueStack 1 ++ closurePath ClosureArgsNum)
   appendRights
   moveTopFromTo ValueStack TempStack
@@ -350,9 +350,9 @@ extendClosure extraArgsNum = do
         ClosureCode -> OpAddress # pathToOldClosure ++ closurePath ClosureCode
         ClosureTotalArgsNum -> OpAddress # pathToOldClosure ++ closurePath ClosureTotalArgsNum
         ClosureArgsNum -> newArgsNum
-        ClosureArgs -> replaceSubterm oldArgs posOfArgsNil xtraArgs
+        ClosureArgs -> replaceSubterm' oldArgs posOfArgsNil xtraArgs
   pushOnto TempStack newClosure
-  popN extraArgsNum
+  popN (1 + extraArgsNum)
   moveTopFromTo TempStack ValueStack
   popFromN 3 TempStack
 
@@ -586,8 +586,14 @@ getFunctionPath' funName = asks (^?! compilerFunctionInfos . at funName . _Just 
 
 -- | obj[relPath] := newVal
 -- relPath is relative to obj
-replaceSubterm :: (IsNock path) => Term Natural -> path -> Term Natural -> Term Natural
+replaceSubterm :: Term Natural -> Path -> Term Natural -> Term Natural
 replaceSubterm obj relPath newVal = OpReplace # (relPath # newVal) # obj
+
+-- | The same as replaceSubterm but the path is a cell that is evaluated.
+-- i.e. replaceSubterm a p b = replaceSubterm' a (quote p) b
+replaceSubterm' :: Term Natural -> Term Natural -> Term Natural -> Term Natural
+replaceSubterm' obj relPath newVal =
+  OpApply # (OpAddress # emptyPath) # (OpQuote # OpReplace) # ((relPath # (OpQuote # newVal)) # (OpQuote # obj))
 
 -- | funName is Nothing when we call a closure at the top of the stack
 callHelper' :: (Members '[Output (Term Natural), Reader CompilerCtx] r) => Bool -> Maybe FunctionId -> Natural -> Sem r ()
