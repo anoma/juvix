@@ -127,10 +127,10 @@ parseJump = do
               _instrJumpIfIncAp = incAp
             }
   where
-    if_ :: ParsecS r Value
+    if_ :: ParsecS r MemRef
     if_ = do
       kw kwIf
-      v <- parseValue
+      v <- parseMemRef
       kw kwNotEq
       symbol "0"
       return v

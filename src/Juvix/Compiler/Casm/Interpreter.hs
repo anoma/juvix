@@ -119,7 +119,7 @@ runCode (LabelInfo labelInfo) instrs0 = runST goCode
     goJumpIf :: InstrJumpIf -> Address -> Address -> Address -> MV.MVector s Integer -> ST s Integer
     goJumpIf InstrJumpIf {..} pc ap fp mem = do
       tgt <- readValue ap fp mem _instrJumpIfTarget
-      v <- readValue ap fp mem _instrJumpIfValue
+      v <- readMemRef ap fp mem _instrJumpIfValue
       go (if v /= 0 then fromInteger tgt else pc + 1) (ap + fromEnum _instrJumpIfIncAp) fp mem
 
     goCall :: InstrCall -> Address -> Address -> Address -> MV.MVector s Integer -> ST s Integer

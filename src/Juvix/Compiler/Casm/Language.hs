@@ -79,7 +79,7 @@ data InstrJump = InstrJump
 -- | Jump if value is nonzero
 data InstrJumpIf = InstrJumpIf
   { _instrJumpIfTarget :: Value,
-    _instrJumpIfValue :: Value,
+    _instrJumpIfValue :: MemRef,
     _instrJumpIfIncAp :: Bool
   }
 
