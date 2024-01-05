@@ -34,6 +34,7 @@ runCode (LabelInfo labelInfo) instrs0 = runST goCode
       | otherwise =
           case instrs Vec.! pc of
             Assign x -> goAssign x pc ap fp mem
+            ExtraBinop x -> goExtraBinop x pc ap fp mem
             Jump x -> goJump x pc ap fp mem
             JumpIf x -> goJumpIf x pc ap fp mem
             Call x -> goCall x pc ap fp mem
@@ -96,7 +97,6 @@ runCode (LabelInfo labelInfo) instrs0 = runST goCode
         goOp :: Integer -> Integer -> Opcode -> Integer
         goOp x y = \case
           FieldAdd -> x + y
-          FieldSub -> x - y
           FieldMul -> x * y
 
     readRValue :: Address -> Address -> MV.MVector s Integer -> RValue -> ST s Integer
@@ -110,6 +110,18 @@ runCode (LabelInfo labelInfo) instrs0 = runST goCode
       v <- readRValue ap fp mem _instrAssignValue
       mem' <- writeMemRef ap fp mem _instrAssignResult v
       go (pc + 1) (ap + fromEnum _instrAssignIncAp) fp mem'
+
+    goExtraBinop :: InstrExtraBinop -> Address -> Address -> Address -> MV.MVector s Integer -> ST s Integer
+    goExtraBinop InstrExtraBinop {..} pc ap fp mem = do
+      v1 <- readMemRef ap fp mem _instrExtraBinopArg1
+      v2 <- readValue ap fp mem _instrExtraBinopArg2
+      let v = goOp v1 v2 _instrExtraBinopOpcode
+      mem' <- writeMemRef ap fp mem _instrExtraBinopResult v
+      go (pc + 1) (ap + fromEnum _instrExtraBinopIncAp) fp mem'
+      where
+        goOp :: Integer -> Integer -> ExtraOpcode -> Integer
+        goOp x y = \case
+          FieldSub -> x - y
 
     goJump :: InstrJump -> Address -> Address -> Address -> MV.MVector s Integer -> ST s Integer
     goJump InstrJump {..} _ ap fp mem = do

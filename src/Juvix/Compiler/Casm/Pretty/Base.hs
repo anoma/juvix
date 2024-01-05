@@ -65,15 +65,24 @@ instance PrettyCode RValue where
 instance PrettyCode Opcode where
   ppCode = \case
     FieldAdd -> return Str.plus
-    FieldSub -> return Str.minus
     FieldMul -> return Str.mul
+
+instance PrettyCode ExtraOpcode where
+  ppCode = \case
+    FieldSub -> return Str.minus
 
 instance PrettyCode BinopValue where
   ppCode BinopValue {..} = do
     v1 <- ppCode _binopValueArg1
-    v2 <- ppCode _binopValueArg2
-    op <- ppCode _binopValueOpcode
-    return $ v1 <+> op <+> v2
+    case (_binopValueOpcode, _binopValueArg2) of
+      (FieldAdd, Imm v) | v < 0 -> do
+        v2 <- ppCode (Imm (-v))
+        op <- ppCode FieldSub
+        return $ v1 <+> op <+> v2
+      _ -> do
+        v2 <- ppCode _binopValueArg2
+        op <- ppCode _binopValueOpcode
+        return $ v1 <+> op <+> v2
 
 instance PrettyCode LoadValue where
   ppCode LoadValue {..} = do
@@ -87,6 +96,15 @@ instance PrettyCode InstrAssign where
     r <- ppCode _instrAssignResult
     incAp <- ppIncAp _instrAssignIncAp
     return $ r <+> Str.equal <+> v <> incAp
+
+instance PrettyCode InstrExtraBinop where
+  ppCode InstrExtraBinop {..} = do
+    v1 <- ppCode _instrExtraBinopArg1
+    v2 <- ppCode _instrExtraBinopArg2
+    op <- ppCode _instrExtraBinopOpcode
+    r <- ppCode _instrExtraBinopResult
+    incAp <- ppIncAp _instrExtraBinopIncAp
+    return $ r <+> Str.equal <+> v1 <+> op <+> v2 <> incAp
 
 instance PrettyCode InstrJump where
   ppCode InstrJump {..} = do
@@ -114,6 +132,7 @@ instance PrettyCode InstrAlloc where
 instance PrettyCode Instruction where
   ppCode = \case
     Assign x -> ppCode x
+    ExtraBinop x -> ppCode x
     Jump x -> ppCode x
     JumpIf x -> ppCode x
     Call x -> ppCode x

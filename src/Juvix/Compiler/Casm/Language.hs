@@ -41,8 +41,10 @@ data RValue
 
 data Opcode
   = FieldAdd
-  | FieldSub
   | FieldMul
+
+data ExtraOpcode
+  = FieldSub
 
 data BinopValue = BinopValue
   { _binopValueOpcode :: Opcode,
@@ -57,6 +59,7 @@ data LoadValue = LoadValue
 
 data Instruction
   = Assign InstrAssign
+  | ExtraBinop InstrExtraBinop
   | Jump InstrJump
   | JumpIf InstrJumpIf
   | Call InstrCall
@@ -68,6 +71,14 @@ data InstrAssign = InstrAssign
   { _instrAssignValue :: RValue,
     _instrAssignResult :: MemRef,
     _instrAssignIncAp :: Bool
+  }
+
+data InstrExtraBinop = InstrExtraBinop
+  { _instrExtraBinopArg1 :: MemRef,
+    _instrExtraBinopArg2 :: Value,
+    _instrExtraBinopResult :: MemRef,
+    _instrExtraBinopOpcode :: ExtraOpcode,
+    _instrExtraBinopIncAp :: Bool
   }
 
 data InstrJump = InstrJump

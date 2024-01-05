@@ -165,15 +165,31 @@ parseRValue = load <|> binop <|> val
     binop :: ParsecS r RValue
     binop = P.try $ do
       arg1 <- parseMemRef
-      op <- opcode
-      arg2 <- parseValue
-      return $
-        Binop $
-          BinopValue
-            { _binopValueOpcode = op,
-              _binopValueArg1 = arg1,
-              _binopValueArg2 = arg2
-            }
+      subconst arg1 <|> oper arg1
+      where
+        subconst :: MemRef -> ParsecS r RValue
+        subconst arg1 = do
+          kw kwMinus
+          v <- parseImm
+          return $
+            Binop $
+              BinopValue
+                { _binopValueOpcode = FieldAdd,
+                  _binopValueArg1 = arg1,
+                  _binopValueArg2 = Imm (-v)
+                }
+
+        oper :: MemRef -> ParsecS r RValue
+        oper arg1 = do
+          op <- opcode
+          arg2 <- parseValue
+          return $
+            Binop $
+              BinopValue
+                { _binopValueOpcode = op,
+                  _binopValueArg1 = arg1,
+                  _binopValueArg2 = arg2
+                }
 
     val :: ParsecS r RValue
     val = Val <$> parseValue
@@ -182,15 +198,35 @@ parseAssign :: forall r. (Member LabelInfoBuilder r) => ParsecS r Instruction
 parseAssign = do
   res <- parseMemRef
   kw kwEq
-  v <- parseRValue
-  incAp <- parseIncAp
-  return $
-    Assign $
-      InstrAssign
-        { _instrAssignValue = v,
-          _instrAssignResult = res,
-          _instrAssignIncAp = incAp
-        }
+  asn res <|> extraBinop res
+  where
+    asn :: MemRef -> ParsecS r Instruction
+    asn res = P.try $ do
+      v <- parseRValue
+      incAp <- parseIncAp
+      return $
+        Assign $
+          InstrAssign
+            { _instrAssignValue = v,
+              _instrAssignResult = res,
+              _instrAssignIncAp = incAp
+            }
+
+    extraBinop :: MemRef -> ParsecS r Instruction
+    extraBinop res = do
+      arg1 <- parseMemRef
+      op <- extraOpcode
+      arg2 <- parseValue
+      incAp <- parseIncAp
+      return $
+        ExtraBinop $
+          InstrExtraBinop
+            { _instrExtraBinopArg1 = arg1,
+              _instrExtraBinopArg2 = arg2,
+              _instrExtraBinopOpcode = op,
+              _instrExtraBinopResult = res,
+              _instrExtraBinopIncAp = incAp
+            }
 
 registerAP :: ParsecS r Reg
 registerAP = do
@@ -208,5 +244,8 @@ register = registerAP <|> registerFP
 opcode :: ParsecS r Opcode
 opcode =
   (kw kwPlus >> return FieldAdd)
-    <|> (kw kwMinus >> return FieldSub)
     <|> (kw kwMul >> return FieldMul)
+
+extraOpcode :: ParsecS r ExtraOpcode
+extraOpcode =
+  kw kwMinus >> return FieldSub
