@@ -37,6 +37,7 @@ runCode (LabelInfo labelInfo) instrs0 = runST goCode
             ExtraBinop x -> goExtraBinop x pc ap fp mem
             Jump x -> goJump x pc ap fp mem
             JumpIf x -> goJumpIf x pc ap fp mem
+            JumpRel x -> goJumpRel x pc ap fp mem
             Call x -> goCall x pc ap fp mem
             Return -> goReturn pc ap fp mem
             Alloc x -> goAlloc x pc ap fp mem
@@ -134,6 +135,11 @@ runCode (LabelInfo labelInfo) instrs0 = runST goCode
       v <- readMemRef ap fp mem _instrJumpIfValue
       go (if v /= 0 then fromInteger tgt else pc + 1) (ap + fromEnum _instrJumpIfIncAp) fp mem
 
+    goJumpRel :: InstrJumpRel -> Address -> Address -> Address -> MV.MVector s Integer -> ST s Integer
+    goJumpRel InstrJumpRel {..} pc ap fp mem = do
+      tgt <- readRValue ap fp mem _instrJumpRelTarget
+      go (pc + fromInteger tgt) (ap + fromEnum _instrJumpRelIncAp) fp mem
+
     goCall :: InstrCall -> Address -> Address -> Address -> MV.MVector s Integer -> ST s Integer
     goCall InstrCall {..} pc ap fp mem = do
       tgt <- readValue ap fp mem _instrCallTarget
@@ -148,5 +154,6 @@ runCode (LabelInfo labelInfo) instrs0 = runST goCode
       go (fromInteger pc') ap (fromInteger fp') mem
 
     goAlloc :: InstrAlloc -> Address -> Address -> Address -> MV.MVector s Integer -> ST s Integer
-    goAlloc InstrAlloc {..} pc ap fp mem =
-      go (pc + 1) (ap + _instrAllocSize) fp mem
+    goAlloc InstrAlloc {..} pc ap fp mem = do
+      v <- readRValue ap fp mem _instrAllocSize
+      go (pc + 1) (ap + fromInteger v) fp mem

@@ -59,9 +59,12 @@ data LoadValue = LoadValue
 
 data Instruction
   = Assign InstrAssign
-  | ExtraBinop InstrExtraBinop
+  | -- | Extra binary operation not directly available in Cairo Assembly bytecode,
+    -- but easily encodable.
+    ExtraBinop InstrExtraBinop
   | Jump InstrJump
   | JumpIf InstrJumpIf
+  | JumpRel InstrJumpRel
   | Call InstrCall
   | Return
   | Alloc InstrAlloc
@@ -93,12 +96,17 @@ data InstrJumpIf = InstrJumpIf
     _instrJumpIfIncAp :: Bool
   }
 
+data InstrJumpRel = InstrJumpRel
+  { _instrJumpRelTarget :: RValue,
+    _instrJumpRelIncAp :: Bool
+  }
+
 newtype InstrCall = InstrCall
   { _instrCallTarget :: Value
   }
 
 newtype InstrAlloc = InstrAlloc
-  { _instrAllocSize :: Int
+  { _instrAllocSize :: RValue
   }
 
 type Code = [Instruction]
@@ -108,7 +116,9 @@ makeLenses ''LabelRef
 makeLenses ''BinopValue
 makeLenses ''LoadValue
 makeLenses ''InstrAssign
+makeLenses ''InstrExtraBinop
 makeLenses ''InstrJump
 makeLenses ''InstrJumpIf
+makeLenses ''InstrJumpRel
 makeLenses ''InstrCall
 makeLenses ''InstrAlloc

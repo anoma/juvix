@@ -5,7 +5,7 @@ import Juvix.Compiler.Casm.Data.LabelInfo
 import Juvix.Compiler.Casm.Data.LabelInfoBuilder
 import Juvix.Compiler.Casm.Language
 import Juvix.Compiler.Casm.Translation.FromSource.Lexer
-import Juvix.Data.Keyword.All (kwAp, kwApPlusPlus, kwCall, kwEq, kwFp, kwIf, kwJmp, kwMinus, kwMul, kwNotEq, kwPlus, kwPlusEq, kwRet)
+import Juvix.Data.Keyword.All (kwAp, kwApPlusPlus, kwCall, kwEq, kwFp, kwIf, kwJmp, kwMinus, kwMul, kwNotEq, kwPlus, kwPlusEq, kwRel, kwRet)
 import Juvix.Parser.Error
 import Text.Megaparsec qualified as P
 
@@ -63,11 +63,11 @@ instruction :: (Member LabelInfoBuilder r) => ParsecS r Instruction
 instruction =
   parseAlloc <|> parseJump <|> parseCall <|> parseReturn <|> parseAssign
 
-parseAlloc :: ParsecS r Instruction
+parseAlloc :: (Member LabelInfoBuilder r) => ParsecS r Instruction
 parseAlloc = do
   kw kwAp
   kw kwPlusEq
-  i <- int
+  i <- parseRValue
   return $
     Alloc $
       InstrAlloc
@@ -112,28 +112,44 @@ parseIncAp = (kw delimSemicolon >> kw kwApPlusPlus >> return True) <|> return Fa
 parseJump :: forall r. (Member LabelInfoBuilder r) => ParsecS r Instruction
 parseJump = do
   kw kwJmp
-  tgt <- parseValue
-  mv <- optional if_
-  incAp <- parseIncAp
-  case mv of
-    Nothing ->
-      return $ Jump $ InstrJump {_instrJumpTarget = tgt, _instrJumpIncAp = incAp}
-    Just v ->
-      return $
-        JumpIf $
-          InstrJumpIf
-            { _instrJumpIfTarget = tgt,
-              _instrJumpIfValue = v,
-              _instrJumpIfIncAp = incAp
-            }
+  relJmp <|> jmp
   where
-    if_ :: ParsecS r MemRef
-    if_ = do
-      kw kwIf
-      v <- parseMemRef
-      kw kwNotEq
-      symbol "0"
-      return v
+    relJmp :: ParsecS r Instruction
+    relJmp = do
+      kw kwRel
+      tgt <- parseRValue
+      incAp <- parseIncAp
+      return $
+        JumpRel $
+          InstrJumpRel
+            { _instrJumpRelTarget = tgt,
+              _instrJumpRelIncAp = incAp
+            }
+
+    jmp :: ParsecS r Instruction
+    jmp = do
+      tgt <- parseValue
+      mv <- optional if_
+      incAp <- parseIncAp
+      case mv of
+        Nothing ->
+          return $ Jump $ InstrJump {_instrJumpTarget = tgt, _instrJumpIncAp = incAp}
+        Just v ->
+          return $
+            JumpIf $
+              InstrJumpIf
+                { _instrJumpIfTarget = tgt,
+                  _instrJumpIfValue = v,
+                  _instrJumpIfIncAp = incAp
+                }
+      where
+        if_ :: ParsecS r MemRef
+        if_ = do
+          kw kwIf
+          v <- parseMemRef
+          kw kwNotEq
+          symbol "0"
+          return v
 
 parseCall :: (Member LabelInfoBuilder r) => ParsecS r Instruction
 parseCall = do

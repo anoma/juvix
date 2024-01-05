@@ -119,6 +119,12 @@ instance PrettyCode InstrJumpIf where
     incAp <- ppIncAp _instrJumpIfIncAp
     return $ Str.jmp <+> tgt <+> Str.if_ <+> v <+> Str.notequal <+> annotate AnnLiteralInteger "0" <> incAp
 
+instance PrettyCode InstrJumpRel where
+  ppCode InstrJumpRel {..} = do
+    tgt <- ppCode _instrJumpRelTarget
+    incAp <- ppIncAp _instrJumpRelIncAp
+    return $ Str.jmp <+> Str.rel <+> tgt <> incAp
+
 instance PrettyCode InstrCall where
   ppCode InstrCall {..} = do
     tgt <- ppCode _instrCallTarget
@@ -126,7 +132,7 @@ instance PrettyCode InstrCall where
 
 instance PrettyCode InstrAlloc where
   ppCode InstrAlloc {..} = do
-    let s = annotate AnnLiteralInteger $ pretty _instrAllocSize
+    s <- ppCode _instrAllocSize
     return $ Str.ap <+> Str.plusequal <+> s
 
 instance PrettyCode Instruction where
@@ -135,6 +141,7 @@ instance PrettyCode Instruction where
     ExtraBinop x -> ppCode x
     Jump x -> ppCode x
     JumpIf x -> ppCode x
+    JumpRel x -> ppCode x
     Call x -> ppCode x
     Return -> return Str.ret
     Alloc x -> ppCode x
