@@ -34,10 +34,29 @@ data Value
   | -- | Label reference (translated to immediate in Cairo bytecode)
     Lab LabelRef
 
+data RValue
+  = Val Value
+  | Load LoadValue
+  | Binop BinopValue
+
+data Opcode
+  = FieldAdd
+  | FieldSub
+  | FieldMul
+
+data BinopValue = BinopValue
+  { _binopValueOpcode :: Opcode,
+    _binopValueArg1 :: MemRef,
+    _binopValueArg2 :: Value
+  }
+
+data LoadValue = LoadValue
+  { _loadValueSrc :: MemRef,
+    _loadValueOff :: Offset
+  }
+
 data Instruction
   = Assign InstrAssign
-  | Binop InstrBinop
-  | Load InstrLoad
   | Jump InstrJump
   | JumpIf InstrJumpIf
   | Call InstrCall
@@ -46,29 +65,9 @@ data Instruction
   | Label LabelRef
 
 data InstrAssign = InstrAssign
-  { _instrAssignValue :: Value,
+  { _instrAssignValue :: RValue,
     _instrAssignResult :: MemRef,
     _instrAssignIncAp :: Bool
-  }
-
-data Opcode
-  = FieldAdd
-  | FieldSub
-  | FieldMul
-
-data InstrBinop = InstrBinop
-  { _instrBinopOpcode :: Opcode,
-    _instrBinopResult :: MemRef,
-    _instrBinopArg1 :: MemRef,
-    _instrBinopArg2 :: Value,
-    _instrBinopIncAp :: Bool
-  }
-
-data InstrLoad = InstrLoad
-  { _instrLoadResult :: MemRef,
-    _instrLoadSrc :: MemRef,
-    _instrLoadOff :: Offset,
-    _instrLoadIncAp :: Bool
   }
 
 data InstrJump = InstrJump
@@ -95,9 +94,9 @@ type Code = [Instruction]
 
 makeLenses ''MemRef
 makeLenses ''LabelRef
+makeLenses ''BinopValue
+makeLenses ''LoadValue
 makeLenses ''InstrAssign
-makeLenses ''InstrBinop
-makeLenses ''InstrLoad
 makeLenses ''InstrJump
 makeLenses ''InstrJumpIf
 makeLenses ''InstrCall

@@ -146,55 +146,51 @@ parseReturn = do
   kw kwRet
   return Return
 
-parseAssign :: forall r. (Member LabelInfoBuilder r) => ParsecS r Instruction
-parseAssign = do
-  res <- parseMemRef
-  kw kwEq
-  load res <|> binop res <|> asn res
+parseRValue :: forall r. (Member LabelInfoBuilder r) => ParsecS r RValue
+parseRValue = load <|> binop <|> val
   where
-    load :: MemRef -> ParsecS r Instruction
-    load res = P.try $ do
+    load :: ParsecS r RValue
+    load = P.try $ do
       lbracket
       src <- parseMemRef
       off <- parseOffset
       rbracket
-      incAp <- parseIncAp
       return $
         Load $
-          InstrLoad
-            { _instrLoadResult = res,
-              _instrLoadSrc = src,
-              _instrLoadOff = off,
-              _instrLoadIncAp = incAp
+          LoadValue
+            { _loadValueSrc = src,
+              _loadValueOff = off
             }
 
-    binop :: MemRef -> ParsecS r Instruction
-    binop res = P.try $ do
+    binop :: ParsecS r RValue
+    binop = P.try $ do
       arg1 <- parseMemRef
       op <- opcode
       arg2 <- parseValue
-      incAp <- parseIncAp
       return $
         Binop $
-          InstrBinop
-            { _instrBinopOpcode = op,
-              _instrBinopResult = res,
-              _instrBinopArg1 = arg1,
-              _instrBinopArg2 = arg2,
-              _instrBinopIncAp = incAp
+          BinopValue
+            { _binopValueOpcode = op,
+              _binopValueArg1 = arg1,
+              _binopValueArg2 = arg2
             }
 
-    asn :: MemRef -> ParsecS r Instruction
-    asn res = do
-      v <- parseValue
-      incAp <- parseIncAp
-      return $
-        Assign $
-          InstrAssign
-            { _instrAssignValue = v,
-              _instrAssignResult = res,
-              _instrAssignIncAp = incAp
-            }
+    val :: ParsecS r RValue
+    val = Val <$> parseValue
+
+parseAssign :: forall r. (Member LabelInfoBuilder r) => ParsecS r Instruction
+parseAssign = do
+  res <- parseMemRef
+  kw kwEq
+  v <- parseRValue
+  incAp <- parseIncAp
+  return $
+    Assign $
+      InstrAssign
+        { _instrAssignValue = v,
+          _instrAssignResult = res,
+          _instrAssignIncAp = incAp
+        }
 
 registerAP :: ParsecS r Reg
 registerAP = do

@@ -34,8 +34,6 @@ runCode (LabelInfo labelInfo) instrs0 = runST goCode
       | otherwise =
           case instrs Vec.! pc of
             Assign x -> goAssign x pc ap fp mem
-            Binop x -> goBinop x pc ap fp mem
-            Load x -> goLoad x pc ap fp mem
             Jump x -> goJump x pc ap fp mem
             JumpIf x -> goJumpIf x pc ap fp mem
             Call x -> goCall x pc ap fp mem
@@ -82,19 +80,18 @@ runCode (LabelInfo labelInfo) instrs0 = runST goCode
       Ref r -> readMemRef ap fp mem r
       Lab l -> return $ readLabel l
 
-    goAssign :: InstrAssign -> Address -> Address -> Address -> MV.MVector s Integer -> ST s Integer
-    goAssign InstrAssign {..} pc ap fp mem = do
-      v <- readValue ap fp mem _instrAssignValue
-      mem' <- writeMemRef ap fp mem _instrAssignResult v
-      go (pc + 1) (ap + fromEnum _instrAssignIncAp) fp mem'
+    readLoadValue :: Address -> Address -> MV.MVector s Integer -> LoadValue -> ST s Integer
+    readLoadValue ap fp mem LoadValue {..} = do
+      src <- readMemRef ap fp mem _loadValueSrc
+      let off :: Int = fromIntegral _loadValueOff
+          addr :: Int = fromInteger src + off
+      MV.read mem addr
 
-    goBinop :: InstrBinop -> Address -> Address -> Address -> MV.MVector s Integer -> ST s Integer
-    goBinop InstrBinop {..} pc ap fp mem = do
-      v1 <- readMemRef ap fp mem _instrBinopArg1
-      v2 <- readValue ap fp mem _instrBinopArg2
-      let v = goOp v1 v2 _instrBinopOpcode
-      mem' <- writeMemRef ap fp mem _instrBinopResult v
-      go (pc + 1) (ap + fromEnum _instrBinopIncAp) fp mem'
+    readBinopValue :: Address -> Address -> MV.MVector s Integer -> BinopValue -> ST s Integer
+    readBinopValue ap fp mem BinopValue {..} = do
+      v1 <- readMemRef ap fp mem _binopValueArg1
+      v2 <- readValue ap fp mem _binopValueArg2
+      return $ goOp v1 v2 _binopValueOpcode
       where
         goOp :: Integer -> Integer -> Opcode -> Integer
         goOp x y = \case
@@ -102,14 +99,17 @@ runCode (LabelInfo labelInfo) instrs0 = runST goCode
           FieldSub -> x - y
           FieldMul -> x * y
 
-    goLoad :: InstrLoad -> Address -> Address -> Address -> MV.MVector s Integer -> ST s Integer
-    goLoad InstrLoad {..} pc ap fp mem = do
-      src <- readMemRef ap fp mem _instrLoadSrc
-      let off :: Int = fromIntegral _instrLoadOff
-          addr :: Int = fromInteger src + off
-      v <- MV.read mem addr
-      mem' <- writeMemRef ap fp mem _instrLoadResult v
-      go (pc + 1) (ap + fromEnum _instrLoadIncAp) fp mem'
+    readRValue :: Address -> Address -> MV.MVector s Integer -> RValue -> ST s Integer
+    readRValue ap fp mem = \case
+      Val x -> readValue ap fp mem x
+      Load x -> readLoadValue ap fp mem x
+      Binop x -> readBinopValue ap fp mem x
+
+    goAssign :: InstrAssign -> Address -> Address -> Address -> MV.MVector s Integer -> ST s Integer
+    goAssign InstrAssign {..} pc ap fp mem = do
+      v <- readRValue ap fp mem _instrAssignValue
+      mem' <- writeMemRef ap fp mem _instrAssignResult v
+      go (pc + 1) (ap + fromEnum _instrAssignIncAp) fp mem'
 
     goJump :: InstrJump -> Address -> Address -> Address -> MV.MVector s Integer -> ST s Integer
     goJump InstrJump {..} _ ap fp mem = do

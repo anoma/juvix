@@ -56,12 +56,11 @@ instance PrettyCode Value where
     Ref r -> ppCode r
     Lab l -> ppCode l
 
-instance PrettyCode InstrAssign where
-  ppCode InstrAssign {..} = do
-    v <- ppCode _instrAssignValue
-    r <- ppCode _instrAssignResult
-    incAp <- ppIncAp _instrAssignIncAp
-    return $ r <+> Str.equal <+> v <> incAp
+instance PrettyCode RValue where
+  ppCode = \case
+    Val x -> ppCode x
+    Load x -> ppCode x
+    Binop x -> ppCode x
 
 instance PrettyCode Opcode where
   ppCode = \case
@@ -69,22 +68,25 @@ instance PrettyCode Opcode where
     FieldSub -> return Str.minus
     FieldMul -> return Str.mul
 
-instance PrettyCode InstrBinop where
-  ppCode InstrBinop {..} = do
-    v1 <- ppCode _instrBinopArg1
-    v2 <- ppCode _instrBinopArg2
-    r <- ppCode _instrBinopResult
-    op <- ppCode _instrBinopOpcode
-    incAp <- ppIncAp _instrBinopIncAp
-    return $ r <+> Str.equal <+> v1 <+> op <+> v2 <> incAp
+instance PrettyCode BinopValue where
+  ppCode BinopValue {..} = do
+    v1 <- ppCode _binopValueArg1
+    v2 <- ppCode _binopValueArg2
+    op <- ppCode _binopValueOpcode
+    return $ v1 <+> op <+> v2
 
-instance PrettyCode InstrLoad where
-  ppCode InstrLoad {..} = do
-    r <- ppCode _instrLoadResult
-    src <- ppCode _instrLoadSrc
-    src' <- ppWithOffset _instrLoadOff src
-    incAp <- ppIncAp _instrLoadIncAp
-    return $ r <+> Str.equal <+> brackets src' <> incAp
+instance PrettyCode LoadValue where
+  ppCode LoadValue {..} = do
+    src <- ppCode _loadValueSrc
+    src' <- ppWithOffset _loadValueOff src
+    return $ brackets src'
+
+instance PrettyCode InstrAssign where
+  ppCode InstrAssign {..} = do
+    v <- ppCode _instrAssignValue
+    r <- ppCode _instrAssignResult
+    incAp <- ppIncAp _instrAssignIncAp
+    return $ r <+> Str.equal <+> v <> incAp
 
 instance PrettyCode InstrJump where
   ppCode InstrJump {..} = do
@@ -112,8 +114,6 @@ instance PrettyCode InstrAlloc where
 instance PrettyCode Instruction where
   ppCode = \case
     Assign x -> ppCode x
-    Binop x -> ppCode x
-    Load x -> ppCode x
     Jump x -> ppCode x
     JumpIf x -> ppCode x
     Call x -> ppCode x
