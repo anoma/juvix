@@ -4,6 +4,7 @@ import Control.Monad.ST
 import Data.HashMap.Strict qualified as HashMap
 import Data.Vector qualified as Vec
 import Data.Vector.Mutable qualified as MV
+import GHC.IO qualified as GHC
 import Juvix.Compiler.Casm.Data.LabelInfo
 import Juvix.Compiler.Casm.Language hiding (ap)
 
@@ -41,6 +42,7 @@ runCode (LabelInfo labelInfo) instrs0 = runST goCode
             Call x -> goCall x pc ap fp mem
             Return -> goReturn pc ap fp mem
             Alloc x -> goAlloc x pc ap fp mem
+            Trace x -> goTrace x pc ap fp mem
             Label {} -> go (pc + 1) ap fp mem
 
     readReg :: Address -> Address -> Reg -> Address
@@ -157,3 +159,9 @@ runCode (LabelInfo labelInfo) instrs0 = runST goCode
     goAlloc InstrAlloc {..} pc ap fp mem = do
       v <- readRValue ap fp mem _instrAllocSize
       go (pc + 1) (ap + fromInteger v) fp mem
+
+    goTrace :: InstrTrace -> Address -> Address -> Address -> MV.MVector s Integer -> ST s Integer
+    goTrace InstrTrace {..} pc ap fp mem = do
+      v <- readRValue ap fp mem _instrTraceValue
+      GHC.unsafePerformIO (print v >> return (pure ()))
+      go (pc + 1) ap fp mem

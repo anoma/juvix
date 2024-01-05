@@ -5,7 +5,7 @@ import Juvix.Compiler.Casm.Data.LabelInfo
 import Juvix.Compiler.Casm.Data.LabelInfoBuilder
 import Juvix.Compiler.Casm.Language
 import Juvix.Compiler.Casm.Translation.FromSource.Lexer
-import Juvix.Data.Keyword.All (kwAp, kwApPlusPlus, kwCall, kwEq, kwFp, kwIf, kwJmp, kwMinus, kwMul, kwNotEq, kwPlus, kwPlusEq, kwRel, kwRet)
+import Juvix.Data.Keyword.All (kwAp, kwApPlusPlus, kwCall, kwEq, kwFp, kwIf, kwJmp, kwMinus, kwMul, kwNotEq, kwPlus, kwPlusEq, kwRel, kwRet, kwTrace)
 import Juvix.Parser.Error
 import Text.Megaparsec qualified as P
 
@@ -61,7 +61,7 @@ label addr = P.try $ do
 
 instruction :: (Member LabelInfoBuilder r) => ParsecS r Instruction
 instruction =
-  parseAlloc <|> parseJump <|> parseCall <|> parseReturn <|> parseAssign
+  parseAlloc <|> parseJump <|> parseCall <|> parseReturn <|> parseTrace <|> parseAssign
 
 parseAlloc :: (Member LabelInfoBuilder r) => ParsecS r Instruction
 parseAlloc = do
@@ -73,6 +73,54 @@ parseAlloc = do
       InstrAlloc
         { _instrAllocSize = i
         }
+
+parseRValue :: forall r. (Member LabelInfoBuilder r) => ParsecS r RValue
+parseRValue = load <|> binop <|> val
+  where
+    load :: ParsecS r RValue
+    load = P.try $ do
+      lbracket
+      src <- parseMemRef
+      off <- parseOffset
+      rbracket
+      return $
+        Load $
+          LoadValue
+            { _loadValueSrc = src,
+              _loadValueOff = off
+            }
+
+    binop :: ParsecS r RValue
+    binop = P.try $ do
+      arg1 <- parseMemRef
+      subconst arg1 <|> oper arg1
+      where
+        subconst :: MemRef -> ParsecS r RValue
+        subconst arg1 = do
+          kw kwMinus
+          v <- parseImm
+          return $
+            Binop $
+              BinopValue
+                { _binopValueOpcode = FieldAdd,
+                  _binopValueArg1 = arg1,
+                  _binopValueArg2 = Imm (-v)
+                }
+
+        oper :: MemRef -> ParsecS r RValue
+        oper arg1 = do
+          op <- opcode
+          arg2 <- parseValue
+          return $
+            Binop $
+              BinopValue
+                { _binopValueOpcode = op,
+                  _binopValueArg1 = arg1,
+                  _binopValueArg2 = arg2
+                }
+
+    val :: ParsecS r RValue
+    val = Val <$> parseValue
 
 parseValue :: (Member LabelInfoBuilder r) => ParsecS r Value
 parseValue = (Imm <$> parseImm) <|> (Ref <$> parseMemRef) <|> (Lab <$> parseLabel)
@@ -162,53 +210,11 @@ parseReturn = do
   kw kwRet
   return Return
 
-parseRValue :: forall r. (Member LabelInfoBuilder r) => ParsecS r RValue
-parseRValue = load <|> binop <|> val
-  where
-    load :: ParsecS r RValue
-    load = P.try $ do
-      lbracket
-      src <- parseMemRef
-      off <- parseOffset
-      rbracket
-      return $
-        Load $
-          LoadValue
-            { _loadValueSrc = src,
-              _loadValueOff = off
-            }
-
-    binop :: ParsecS r RValue
-    binop = P.try $ do
-      arg1 <- parseMemRef
-      subconst arg1 <|> oper arg1
-      where
-        subconst :: MemRef -> ParsecS r RValue
-        subconst arg1 = do
-          kw kwMinus
-          v <- parseImm
-          return $
-            Binop $
-              BinopValue
-                { _binopValueOpcode = FieldAdd,
-                  _binopValueArg1 = arg1,
-                  _binopValueArg2 = Imm (-v)
-                }
-
-        oper :: MemRef -> ParsecS r RValue
-        oper arg1 = do
-          op <- opcode
-          arg2 <- parseValue
-          return $
-            Binop $
-              BinopValue
-                { _binopValueOpcode = op,
-                  _binopValueArg1 = arg1,
-                  _binopValueArg2 = arg2
-                }
-
-    val :: ParsecS r RValue
-    val = Val <$> parseValue
+parseTrace :: (Member LabelInfoBuilder r) => ParsecS r Instruction
+parseTrace = do
+  kw kwTrace
+  v <- parseRValue
+  return $ Trace $ InstrTrace {_instrTraceValue = v}
 
 parseAssign :: forall r. (Member LabelInfoBuilder r) => ParsecS r Instruction
 parseAssign = do

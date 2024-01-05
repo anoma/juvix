@@ -68,6 +68,7 @@ data Instruction
   | Call InstrCall
   | Return
   | Alloc InstrAlloc
+  | Trace InstrTrace
   | Label LabelRef
 
 data InstrAssign = InstrAssign
@@ -109,6 +110,10 @@ newtype InstrAlloc = InstrAlloc
   { _instrAllocSize :: RValue
   }
 
+newtype InstrTrace = InstrTrace
+  { _instrTraceValue :: RValue
+  }
+
 type Code = [Instruction]
 
 makeLenses ''MemRef
@@ -122,3 +127,4 @@ makeLenses ''InstrJumpIf
 makeLenses ''InstrJumpRel
 makeLenses ''InstrCall
 makeLenses ''InstrAlloc
+makeLenses ''InstrTrace
