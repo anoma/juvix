@@ -25,7 +25,7 @@ testDescr NegTest {..} =
             case mapLeft fromJuvixError result of
               Left (Just lexError) -> whenJust (_checkErr lexError) assertFailure
               Left Nothing -> assertFailure "The termination checker did not find an error."
-              Right _ -> assertFailure "An error ocurred but it was not by the termination checker."
+              Right _ -> assertFailure "An error occurred but it was not by the termination checker."
         }
 
 allTests :: TestTree

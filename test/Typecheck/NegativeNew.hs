@@ -33,7 +33,7 @@ testDescr Old.NegTest {..} =
             result <- testRunIOEither entryPoint upToCore
             case mapLeft fromJuvixError result of
               Left (Just tyError) -> whenJust (_checkErr tyError) assertFailure
-              Left Nothing -> assertFailure "An error ocurred but it was not in the type checker."
+              Left Nothing -> assertFailure "An error occurred but it was not in the type checker."
               Right _ -> assertFailure "The type checker did not find an error."
         }
 

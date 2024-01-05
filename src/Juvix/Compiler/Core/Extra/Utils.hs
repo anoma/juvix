@@ -353,13 +353,13 @@ substs t = umapN go
       _ -> n
 
 -- | substitute a term t for the free variable with de Bruijn index 0, avoiding
--- variable capture; shifts all free variabes with de Bruijn index > 0 by -1 (as
+-- variable capture; shifts all free variables with de Bruijn index > 0 by -1 (as
 -- if the topmost binder was removed)
 subst :: Node -> Node -> Node
 subst t = substs [t]
 
 -- | substitute a term t for the free variable with de Bruijn index idx, avoiding
--- variable capture; shifts all free variabes with de Bruijn index > idx by -1 (as
+-- variable capture; shifts all free variables with de Bruijn index > idx by -1 (as
 -- if the binder idx was removed)
 substVar :: Index -> Node -> Node -> Node
 substVar idx t = umapN go

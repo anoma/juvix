@@ -27,7 +27,7 @@ testDescr NegTest {..} =
             res <- testRunIOEitherTermination entryPoint upToInternal
             case mapLeft fromJuvixError res of
               Left (Just err) -> whenJust (_checkErr err) assertFailure
-              Left Nothing -> assertFailure "An error ocurred but it was not in the scoper."
+              Left Nothing -> assertFailure "An error occurred but it was not in the scoper."
               Right {} -> assertFailure "The scope checker did not find an error."
         }
 
@@ -219,14 +219,14 @@ scoperErrorTests =
         ErrModuleDoesNotExportSymbol {} -> Nothing
         _ -> wrongError,
     NegTest
-      "Wrong number of interator initializers"
+      "Wrong number of iterator initializers"
       $(mkRelDir ".")
       $(mkRelFile "Iterators1.juvix")
       $ \case
         ErrIteratorInitializer {} -> Nothing
         _ -> wrongError,
     NegTest
-      "Wrong number of interator ranges"
+      "Wrong number of iterator ranges"
       $(mkRelDir ".")
       $(mkRelFile "Iterators2.juvix")
       $ \case

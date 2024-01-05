@@ -693,7 +693,7 @@ matchExpressions = go
       (ExpressionInstanceHole {}, _) -> err
 
     err :: Sem r a
-    err = throw @Text "Expression missmatch"
+    err = throw @Text "Expression mismatch"
 
     matchVars :: Name -> Name -> Sem r Bool
     matchVars va vb = do

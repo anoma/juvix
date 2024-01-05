@@ -30,7 +30,7 @@ infixr 5 <//>
 
 infixr 5 <///>
 
--- | Appens a relative path to some directory
+-- | Appends a relative path to some directory
 (<///>) :: SomeBase Dir -> Path Rel t -> SomeBase t
 (<///>) s r = mapSomeBase (<//> r) s
 

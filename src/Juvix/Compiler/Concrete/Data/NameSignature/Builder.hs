@@ -4,7 +4,7 @@ module Juvix.Compiler.Concrete.Data.NameSignature.Builder
   ( mkNameSignature,
     mkRecordNameSignature,
     HasNameSignature,
-    -- to supress unused warning
+    -- to suppress unused warning
     getBuilder,
   )
 where

@@ -1,4 +1,4 @@
--- | An effect similar to Polysemy Fail but wihout an error message
+-- | An effect similar to Polysemy Fail but without an error message
 module Juvix.Data.Effect.Fail where
 
 import Control.Exception qualified as X

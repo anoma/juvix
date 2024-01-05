@@ -507,7 +507,7 @@ addIdens idens = do
 
 -- | Assumes the given function has been type checked. Does *not* register the
 -- function.
--- Conditons:
+-- Conditions:
 -- 1. Only one clause.
 -- 2. No pattern matching.
 -- 3. Terminates.

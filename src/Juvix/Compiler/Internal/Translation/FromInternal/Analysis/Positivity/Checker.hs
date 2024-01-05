@@ -77,7 +77,7 @@ checkStrictlyPositiveOccurrences p = do
     indName = indInfo ^. inductiveInfoName
 
     {- The following `go` function determines if there is any negative
-     occurence of the symbol `name` in the given expression. The `inside` flag
+     occurrence of the symbol `name` in the given expression. The `inside` flag
      used below indicates whether the current search is performed on the left of
      an inner arrow or not.
     -}
