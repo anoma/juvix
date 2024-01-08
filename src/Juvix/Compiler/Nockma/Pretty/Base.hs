@@ -77,3 +77,8 @@ instance (PrettyCode a, NockNatural a) => PrettyCode (Term a) where
   ppCode = \case
     TermAtom t -> ppCode t
     TermCell c -> ppCode c
+
+instance (PrettyCode a, NockNatural a) => PrettyCode [Term a] where
+  ppCode ts = do
+    ts' <- mapM ppCode ts
+    return (braces (commaSep ts'))

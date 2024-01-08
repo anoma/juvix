@@ -135,6 +135,20 @@ eqSubStack st subp expected = subStackPred st subp $
               <> ppTrace n
       assertFailure (unpack msg)
 
+eqTraces :: [Term Natural] -> Check ()
+eqTraces expected = do
+  ts <- ask
+  unless (ts == expected) (err ts)
+  where
+    err :: [Term Natural] -> Check ()
+    err ts = do
+      let msg =
+            "Expected traces:\n"
+              <> ppTrace expected
+              <> "\nBut got:\n"
+              <> ppTrace ts
+      assertFailure (unpack msg)
+
 subStackPred :: StackId -> Path -> (Term Natural -> Check ()) -> Check ()
 subStackPred st subp p = do
   s <- getStack st <$> ask
@@ -415,5 +429,14 @@ tests =
         allocConstr (constructorTag ConstructorPair)
         pushConstructorFieldOnto TempStack Asm.StackRef 0
         pushConstructorFieldOnto TempStack Asm.StackRef 1
-        addOn TempStack
+        addOn TempStack,
+    Test
+      "trace"
+      ( do
+          eqStack ValueStack [nock| [10 nil] |]
+          eqTraces [[nock| 10 |]]
+      )
+      $ do
+        pushNat 10
+        traceTerm (OpAddress # topOfStack ValueStack)
   ]
