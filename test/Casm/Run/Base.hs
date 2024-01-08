@@ -2,6 +2,7 @@ module Casm.Run.Base where
 
 import Base
 import Data.Text.IO qualified as TIO
+import Juvix.Compiler.Casm.Error
 import Juvix.Compiler.Casm.Interpreter
 import Juvix.Compiler.Casm.Translation.FromSource
 import Juvix.Data.PPOutput
@@ -44,5 +45,5 @@ parseFile f = do
 doRun ::
   LabelInfo ->
   Code ->
-  IO (Either () Integer)
-doRun labi instrs = return $ Right $ runCode labi instrs
+  IO (Either CasmError Integer)
+doRun labi instrs = catchRunErrorIO (runCode labi instrs)
