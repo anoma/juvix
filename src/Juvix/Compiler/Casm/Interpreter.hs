@@ -40,7 +40,8 @@ runCode (LabelInfo labelInfo) instrs0 = runST goCode
       Memory s ->
       ST s Integer
     go pc ap fp mem
-      | Vec.length instrs <= pc =
+      | Vec.length instrs <= pc = do
+          checkGaps mem
           readMem mem (ap - 1)
       | otherwise =
           case instrs Vec.! pc of
@@ -54,6 +55,24 @@ runCode (LabelInfo labelInfo) instrs0 = runST goCode
             Alloc x -> goAlloc x pc ap fp mem
             Trace x -> goTrace x pc ap fp mem
             Label {} -> go (pc + 1) ap fp mem
+
+    checkGaps :: forall s. Memory s -> ST s ()
+    checkGaps mem = goGaps False 0
+      where
+        len :: Int = MV.length mem
+
+        goGaps :: Bool -> Int -> ST s ()
+        goGaps wasNothing i
+          | i < len = do
+              mv <- MV.read mem i
+              case mv of
+                Nothing -> goGaps True (i + 1)
+                Just {}
+                  | wasNothing ->
+                      throwRunError ("non-continuous memory use at address " <> show i)
+                  | otherwise ->
+                      goGaps False (i + 1)
+          | otherwise = return ()
 
     readReg :: Address -> Address -> Reg -> Address
     readReg ap fp = \case
@@ -72,8 +91,10 @@ runCode (LabelInfo labelInfo) instrs0 = runST goCode
       let len = MV.length mem
       mem' <-
         if
-            | addr >= len ->
-                MV.grow mem (max (addr + initialMemSize - len) len)
+            | addr >= len -> do
+                mem' <- MV.grow mem (max (addr + initialMemSize - len) len)
+                mapM_ (\i -> MV.write mem' i Nothing) [len .. MV.length mem' - 1]
+                return mem'
             | otherwise ->
                 return mem
       MV.write mem' addr (Just v)

@@ -1,0 +1,7 @@
+-- Non-continuous memory use
+
+start:
+  [ap] = 7; ap++
+  ap += 3
+  [ap] = 2; ap++
+  [ap - 2] = 4
