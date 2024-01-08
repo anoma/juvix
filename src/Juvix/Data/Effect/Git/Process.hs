@@ -13,7 +13,7 @@ newtype CloneEnv = CloneEnv
 
 makeLenses ''CloneEnv
 
--- | Run a git command in the current working direcotory of the parent process.
+-- | Run a git command in the current working directory of the parent process.
 runGitCmd :: (Members '[Process, Error GitProcessError] r) => [Text] -> Sem r Text
 runGitCmd args = do
   mcmd <- findExecutable' $(mkRelFile "git")

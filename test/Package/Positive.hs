@@ -41,7 +41,7 @@ testDescr root PosTest {..} =
                   $ buildDir
               case res of
                 Right p -> whenJust (_checkPackage p buildDir) assertFailure
-                Left {} -> assertFailure "An error ocurred when reading the package."
+                Left {} -> assertFailure "An error occurred when reading the package."
         }
 
 allTests :: TestTree

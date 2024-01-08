@@ -9,7 +9,7 @@ import Juvix.Compiler.Pipeline.Package.Base
 import Juvix.Compiler.Pipeline.Root.Base
 import Juvix.Prelude
 
--- | An option specifiying how symbols should be pruned in the Internal to Core translation
+-- | An option specifying how symbols should be pruned in the Internal to Core translation
 data SymbolPruningMode
   = FilterUnreachable
   | KeepAll

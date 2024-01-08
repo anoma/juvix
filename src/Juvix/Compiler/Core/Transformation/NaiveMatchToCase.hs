@@ -58,7 +58,7 @@ shiftEmbedded wrappingLevel m = umapN go
 --            * The number of let bindings added in step 1, equal to the total
 --              number of pattern binders in the matchbranch.
 --
---            * The auxillary bindings added in the translation (i.e bindings
+--            * The auxiliary bindings added in the translation (i.e bindings
 --              not present in the original match bindings, added for nested
 --              cases and case bindings).
 --
@@ -111,7 +111,7 @@ shiftEmbedded wrappingLevel m = umapN go
 -- correct variables above.
 --
 -- The index for the free variable @x@ in the body has increased from 4 to 15.
--- This is because we have added 3 binders around the body, 6 auxillary binders,
+-- This is because we have added 3 binders around the body, 6 auxiliary binders,
 -- 1 binder for the lambda surrounding the case and 1 binder for the fail
 -- branch.
 compileMatchBranch :: forall r. (Members '[InfoTableBuilder] r) => Indexed MatchBranch -> Sem r Node

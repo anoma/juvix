@@ -7,7 +7,7 @@ import Juvix.Compiler.Core.Language
 
 -- | Returns the node representing a function Int -> Nat that is used to transform
 -- literal integers to builtin Nat. The symbol representing the literalIntToNat function is passed
--- so that it can be called recusively.
+-- so that it can be called recursively.
 literalIntToNatNode :: (Member InfoTableBuilder r) => Symbol -> Sem r Node
 literalIntToNatNode sym = do
   md <- getModule

@@ -26,7 +26,7 @@ testDescr NegTest {..} =
             res <- testRunIOEither entryPoint upToParsedSource
             case mapLeft fromJuvixError res of
               Left (Just parErr) -> whenJust (_checkErr parErr) assertFailure
-              Left Nothing -> assertFailure "An error ocurred but it was not in the path resolver."
+              Left Nothing -> assertFailure "An error occurred but it was not in the path resolver."
               Right _ -> assertFailure "The path resolver did not find an error."
         }
 

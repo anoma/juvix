@@ -39,7 +39,7 @@ testDescr NegTest {..} =
                 )
             case mapLeft fromJuvixError res of
               Left (Just err) -> whenJust (_checkErr err) assertFailure
-              Left Nothing -> assertFailure "An error ocurred but it was not when reading the package."
+              Left Nothing -> assertFailure "An error occurred but it was not when reading the package."
               Right {} -> assertFailure "There was no error when reading the package"
         }
 

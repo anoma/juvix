@@ -9,7 +9,7 @@ void io_flush();
 void io_trace(word_t x);
 void io_print_toplevel(word_t x);
 
-// If the returned value is true, `ret` constains a closure and `arg` an
+// If the returned value is true, `ret` contains a closure and `arg` an
 // argument that should be supplied to this closure. If the returned value is
 // false, `ret` contains the value in the monad.
 bool io_interpret(word_t x, word_t *ret, word_t *arg);

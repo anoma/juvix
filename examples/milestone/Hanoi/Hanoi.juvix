@@ -1,5 +1,5 @@
---- Towers of Hanoi is a puzzle with three rods and n disks of decresing size.
---- The disks are stacked ontop of each other through the first rod.
+--- Towers of Hanoi is a puzzle with three rods and n disks of decreasing size.
+--- The disks are stacked on top of each other through the first rod.
 --- The aim of the game is to move the stack of disks to another rod while
 --- following these rules:
 ---

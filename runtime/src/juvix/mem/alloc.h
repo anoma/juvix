@@ -33,7 +33,7 @@ static inline void alloc_save_memory_pointer(word_t *ptr) {
 #define RESTORE_MEMORY_POINTERS juvix_memory_pointer = alloc_memory_pointer();
 
 // Preallocate n words. `SAVE` and `RESTORE` should save and restore live local
-// variables on the global stack (can lauch GC which needs access to these
+// variables on the global stack (can launch GC which needs access to these
 // variables).
 #define PREALLOC(n, SAVE, RESTORE)                                            \
     if (unlikely(is_next_page(juvix_memory_pointer, n))) {                    \

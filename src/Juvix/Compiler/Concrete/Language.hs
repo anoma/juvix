@@ -140,7 +140,7 @@ instance Serialize (NameItem 'Scoped)
 instance Serialize (NameItem 'Parsed)
 
 data NameBlock (s :: Stage) = NameBlock
-  { -- | Symbols map to themselves so we can retrive the location
+  { -- | Symbols map to themselves so we can retrieve the location
     -- | NOTE the index is wrt to the block, not the whole signature.
     _nameBlock :: HashMap Symbol (NameItem s),
     _nameImplicit :: IsImplicit

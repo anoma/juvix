@@ -56,7 +56,7 @@ void *memset(void *dest, int c, size_t n) {
     u32 c32 = ((u32)-1) / 255 * (unsigned char)c;
 
     /* In preparation to copy 32 bytes at a time, aligned on
-     * an 8-byte bounary, fill head/tail up to 28 bytes each.
+     * an 8-byte boundary, fill head/tail up to 28 bytes each.
      * As in the initial byte-based head/tail fill, each
      * conditional below ensures that the subsequent offsets
      * are valid (e.g. !(n<=24) implies n>=28). */

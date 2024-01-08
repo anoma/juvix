@@ -21,7 +21,7 @@ instance Pretty GitCmdErrorDetails where
   pretty d = pretty msg
     where
       msg :: Text
-      msg = "Error ocurred when executing the git command with arguments: " <> show (d ^. gitCmdErrorDetailsArgs)
+      msg = "Error occurred when executing the git command with arguments: " <> show (d ^. gitCmdErrorDetailsArgs)
 
 instance Pretty GitProcessError where
   pretty = \case

@@ -279,7 +279,7 @@ runExpressionParser fpath input = do
     (_, Left err) -> return (Left (ErrMegaparsec (MegaparsecError err)))
     (_, Right r) -> return (Right r)
 
--- | The first pipe is optional, and thus we need a `Maybe`. The rest of the elements are guaranted to be given a `Just`.
+-- | The first pipe is optional, and thus we need a `Maybe`. The rest of the elements are guaranteed to be given a `Just`.
 pipeSep1 :: (Member ParserResultBuilder r) => (Irrelevant (Maybe KeywordRef) -> ParsecS r a) -> ParsecS r (NonEmpty a)
 pipeSep1 e = do
   p <- Irrelevant <$> optional (kw kwPipe)

@@ -142,7 +142,7 @@ exampleFunction1
 
 axiom undefined : {A : Type} -> A;
 
--- 200 in the body is idented with respect to the start of the chain
+-- 200 in the body is indented with respect to the start of the chain
 -- (at {A : Type})
 exampleFunction2
   : {A : Type}
