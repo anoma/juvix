@@ -9,6 +9,7 @@ import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Translation.FromAsm
 import Juvix.Compiler.Nockma.Translation.FromSource.QQ
+import Data.List.NonEmpty qualified as NonEmpty
 
 type Check = Sem '[Reader (Term Natural), Embed IO]
 
@@ -120,11 +121,8 @@ allTests = testGroup "Nockma compile unit positive" (map mk tests)
       runM (runReader n _testCheck)
 
 eqSubStack :: StackId -> Path -> Term Natural -> Check ()
-eqSubStack st subp expected = do
-  s <- getStack st <$> ask
-  case run (runError @NockEvalError (subTerm s subp)) of
-    Left {} -> assertFailure "Subterm path is not valid"
-    Right n -> unless (n == expected) (err n)
+eqSubStack st subp expected = subStackPred st subp $
+  \n -> unless (n == expected) (err n)
   where
     err :: Term Natural -> Check ()
     err n = do
@@ -137,8 +135,37 @@ eqSubStack st subp expected = do
               <> ppTrace n
       assertFailure (unpack msg)
 
+subStackPred :: StackId -> Path -> (Term Natural -> Check ()) -> Check ()
+subStackPred st subp p = do
+  s <- getStack st <$> ask
+  case run (runError @NockEvalError (subTerm s subp)) of
+    Left {} -> assertFailure "Subterm path is not valid"
+    Right n -> p n
+
 eqStack :: StackId -> Term Natural -> Check ()
 eqStack st = eqSubStack st []
+
+unfoldTerm :: Term Natural -> NonEmpty (Term Natural)
+unfoldTerm t = case t of
+  TermAtom {} -> t :| []
+  TermCell Cell {..} -> _cellLeft NonEmpty.<| unfoldTerm _cellRight
+
+checkStackSize :: StackId -> Natural -> Check ()
+checkStackSize st stSize = subStackPred st ([] :: Path) $ \s -> do
+  let sl = NonEmpty.init (unfoldTerm s)
+      lenSl = fromIntegral (length sl)
+  unless (stSize == lenSl) (err lenSl)
+  where
+    err :: Natural -> Check ()
+    err n = do
+      let msg :: Text =
+            "Expected "
+              <> show st
+              <> "\nto have size: "
+              <> show stSize
+              <> "\nbut has size: "
+              <> show n
+      assertFailure (unpack msg)
 
 tests :: [Test]
 tests =
@@ -274,6 +301,15 @@ tests =
         pushNat 9
         pushNat 10
         allocClosure (sym FunConst5) 3,
+    Test
+      "alloc closure no args from value stack"
+      ( do
+          eqSubStack ValueStack (indexStack 0 ++ closurePath ClosureTotalArgsNum) [nock| 3 |]
+          eqSubStack ValueStack (indexStack 0 ++ closurePath ClosureArgsNum) [nock| 0 |]
+          eqSubStack ValueStack (indexStack 0 ++ closurePath ClosureArgs) [nock| nil |]
+          checkStackSize ValueStack 1
+      )
+      $ allocClosure (sym FunAdd3) 0,
     Test
       "extend closure"
       ( do
