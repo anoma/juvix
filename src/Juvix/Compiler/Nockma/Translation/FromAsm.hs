@@ -121,6 +121,7 @@ data Compiler m a where
   Verbatim :: Term Natural -> Compiler m ()
   PushOnto :: StackId -> Term Natural -> Compiler m ()
   Crash :: Compiler m ()
+  PopNAndPushOnto :: StackId -> Natural -> Term Natural -> Compiler m ()
   PopFromN :: Natural -> StackId -> Compiler m ()
   TestEqOn :: StackId -> Compiler m ()
   CallHelper :: Bool -> Maybe FunctionId -> Natural -> Compiler m ()
@@ -386,13 +387,12 @@ allocClosure funSym numArgs = do
   funPath <- getFunctionPath funSym
   funAri <- getFunctionArity funSym
   pushOnto TempStack (stackTake ValueStack numArgs)
-  popFromN numArgs ValueStack
   let closure = makeClosure $ \case
         ClosureCode -> OpAddress # funPath
         ClosureTotalArgsNum -> OpQuote # toNock funAri
         ClosureArgsNum -> OpQuote # toNock numArgs
         ClosureArgs -> OpAddress # topOfStack TempStack
-  push closure
+  popNAndPushOnto ValueStack numArgs closure
   popFrom TempStack
 
 closureArgsNum :: (Members '[Compiler] r) => Sem r ()
@@ -520,12 +520,6 @@ runCompilerWith constrs libFuns mainFun =
 
 builtinFunction :: BuiltinFunctionId -> CompilerFunction
 builtinFunction = \case
-  -- encodedPathAppendRightN :: Natural -> EncodedPath -> EncodedPath
-  -- encodedPathAppendRightN n (EncodedPath p) = EncodedPath (f p)
-  --   where
-  --   -- equivalent to applying 2 * x + 1, n times
-  --   f :: Natural -> Natural
-  --   f x = (2 ^ n) * (x + 1) - 1
   BuiltinAppendRights ->
     CompilerFunction
       { _compilerFunctionName = BuiltinFunction BuiltinAppendRights,
@@ -589,11 +583,17 @@ getFunctionPath' funName = asks (^?! compilerFunctionInfos . at funName . _Just 
 replaceSubterm :: Term Natural -> Path -> Term Natural -> Term Natural
 replaceSubterm obj relPath newVal = OpReplace # (relPath # newVal) # obj
 
+evaluated :: Term Natural -> Term Natural
+evaluated t = OpApply # (OpAddress # emptyPath) # t
+
 -- | The same as replaceSubterm but the path is a cell that is evaluated.
 -- i.e. replaceSubterm a p b = replaceSubterm' a (quote p) b
 replaceSubterm' :: Term Natural -> Term Natural -> Term Natural -> Term Natural
 replaceSubterm' obj relPath newVal =
-  OpApply # (OpAddress # emptyPath) # (OpQuote # OpReplace) # ((relPath # (OpQuote # newVal)) # (OpQuote # obj))
+  evaluated $ (OpQuote # OpReplace) # ((relPath # (OpQuote # newVal)) # (OpQuote # obj))
+
+sre :: (Members '[Output (Term Natural), Reader CompilerCtx] r) => Sem (Compiler ': r) x -> Sem r x
+sre = subsume . re
 
 -- | funName is Nothing when we call a closure at the top of the stack
 callHelper' :: (Members '[Output (Term Natural), Reader CompilerCtx] r) => Bool -> Maybe FunctionId -> Natural -> Sem r ()
@@ -608,7 +608,10 @@ callHelper' isTail funName funArgsNum = do
   let storeOnStack
         | isTail = replaceOnStack
         | otherwise = pushOnStack
-  output (storeOnStack CallStack (stackPop ValueStack funArgsNum))
+      numToPop
+        | isClosure = 1 + funArgsNum
+        | otherwise = funArgsNum
+  output (storeOnStack CallStack (stackPop ValueStack numToPop))
 
   -- 3.
   --  i. Take a copy of the function from the function library
@@ -616,12 +619,23 @@ callHelper' isTail funName funArgsNum = do
   --  iii. Push this copy to the current function stack
 
   -- Setup function to call with its arguments
-  let funWithArgs
-        | isClosure = error "TODO"
-        | otherwise = replaceSubterm (OpAddress # funPath) [R] (stackTake ValueStack funArgsNum)
-
-  -- Push it to the current function stack
-  output (storeOnStack CurrentFunction funWithArgs)
+  if
+      | isClosure -> sre $ do
+          push (OpQuote # toNock ([] :: Path))
+          push (OpAddress # indexInStack ValueStack 1 ++ closurePath ClosureArgsNum)
+          appendRights
+          moveTopFromTo ValueStack TempStack
+          let closurepath = topOfStack ValueStack
+              posOfArgsNil = OpAddress # topOfStack TempStack
+              oldArgs = OpAddress # closurepath ++ closurePath ClosureArgs
+              xtraArgs = stackSliceAsList ValueStack 1 funArgsNum
+              allArgs = replaceSubterm' oldArgs posOfArgsNil xtraArgs
+              funWithArgs = (OpAddress # closurepath ++ closurePath ClosureCode) # allArgs
+          output (storeOnStack CurrentFunction funWithArgs)
+          popFrom TempStack
+      | otherwise -> do
+          let funWithArgs = replaceSubterm (OpAddress # funPath) [R] (stackTake ValueStack funArgsNum)
+          output (storeOnStack CurrentFunction funWithArgs)
 
   -- 4. Replace the value stack with nil
   output (resetStack ValueStack)
@@ -637,8 +651,9 @@ asmReturn' = do
   output (replaceStack ValueStack ((OpAddress # topOfStack ValueStack) # (OpAddress # topOfStack CallStack)))
 
   -- discard the 'activation' frame
-  output (popStack CallStack)
-  output (popStack CurrentFunction)
+  sre $ do
+    popFrom CallStack
+    popFrom CurrentFunction
 
 testEq :: (Members '[Compiler] r) => Sem r ()
 testEq = testEqOn ValueStack
@@ -729,6 +744,7 @@ re :: (Member (Reader CompilerCtx) r) => Sem (Compiler ': r) a -> Sem (Output (T
 re = reinterpretH $ \case
   PushOnto s n -> pushOntoH s n
   PopFromN n s -> popFromNH n s
+  PopNAndPushOnto s n t -> popNAndPushOnto' s n t >>= pureT
   Verbatim s -> outputT s
   CallHelper isTail funName funArgsNum -> callHelper' isTail funName funArgsNum >>= pureT
   IncrementOn s -> incrementOn' s >>= pureT
@@ -823,6 +839,9 @@ stackSliceAsList sn fromIx toIx = remakeList (stackSliceHelper sn fromIx toIx)
 
 pushOnStack :: StackId -> Term Natural -> Term Natural
 pushOnStack s t = OpPush # t # topStack s
+
+popNAndPushOnto' :: (Member (Output (Term Natural)) r) => StackId -> Natural -> Term Natural -> Sem r ()
+popNAndPushOnto' s num t = output (replaceOnStackN num s t)
 
 replaceOnStackN :: Natural -> StackId -> Term Natural -> Term Natural
 replaceOnStackN numToReplace s t = OpPush # t # replaceTopStackN numToReplace s

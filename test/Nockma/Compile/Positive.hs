@@ -281,6 +281,22 @@ tests =
         allocClosure (sym FunConst5) 1
         extendClosure 2,
     Test
+      "call closure"
+      ( do
+          eqSubStack ValueStack (indexStack 0 ++ closurePath ClosureTotalArgsNum) [nock| 5 |]
+          eqSubStack ValueStack (indexStack 0 ++ closurePath ClosureArgsNum) [nock| 3 |]
+          eqSubStack ValueStack (indexStack 0 ++ closurePath ClosureArgs) [nock| [10 9 8 nil] |]
+          eqSubStack ValueStack (indexStack 1) [nock| 7 |]
+      )
+      $ do
+        pushNat 7
+        pushNat 8
+        pushNat 9
+        pushNat 10
+        pushNat 11
+        allocClosure (sym FunConst5) 1
+        callHelper False Nothing 4,
+    Test
       "compute argsNum of a closure"
       (eqStack ValueStack [nock| [2 7 nil] |])
       $ do
