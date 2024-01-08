@@ -1,3 +1,5 @@
+-- Exp function
+
 start:
   jmp main
 

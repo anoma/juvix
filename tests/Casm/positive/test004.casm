@@ -48,7 +48,7 @@ call_closure:
   [ap] = [fp - 6]; ap++
   [ap] = [fp - 5]; ap++
   [ap] = [fp - 4]; ap++
-  -- jmp rel (9 - sarg)
+  -- jmp rel (9 - sargs)
   jmp rel [[fp - 3] + 1]
   [ap] = [[fp - 3] + 10]; ap++
   [ap] = [[fp - 3] + 9]; ap++

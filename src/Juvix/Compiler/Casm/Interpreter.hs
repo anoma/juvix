@@ -1,4 +1,9 @@
-module Juvix.Compiler.Casm.Interpreter where
+module Juvix.Compiler.Casm.Interpreter
+  ( module Juvix.Compiler.Casm.Interpreter,
+    module Juvix.Compiler.Casm.Language,
+    module Juvix.Compiler.Casm.Data.LabelInfo,
+  )
+where
 
 import Control.Monad.ST
 import Data.HashMap.Strict qualified as HashMap
