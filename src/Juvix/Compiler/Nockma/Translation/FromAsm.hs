@@ -50,7 +50,6 @@ data StackId
   | CallStack
   | StandardLibrary
   | FunctionsLibrary
-  | TraceStack
   deriving stock (Enum, Bounded, Eq, Show)
 
 -- | A closure has the following structure:
@@ -218,8 +217,8 @@ fromOffsetRef = fromIntegral . (^. Asm.offsetRefOffset)
 goConstructor :: Asm.Tag -> [Term Natural] -> Term Natural
 goConstructor t args = case t of
   Asm.BuiltinTag b -> makeConstructor $ \case
-      ConstructorTag -> goBuiltinTag b
-      ConstructorArgs -> remakeList []
+    ConstructorTag -> goBuiltinTag b
+    ConstructorArgs -> remakeList []
   Asm.UserTag _moduleId num ->
     makeConstructor $ \case
       ConstructorTag -> OpQuote # (fromIntegral num :: Natural)
@@ -310,7 +309,7 @@ compile = mapM_ goCommand
     goTailCall = goCallHelper True
 
     goTrace :: Sem r ()
-    goTrace = copyTopFromTo ValueStack TraceStack >> traceTerm (OpAddress # topOfStack TraceStack)
+    goTrace = traceTerm (OpAddress # topOfStack ValueStack)
 
     goCmdInstr :: Asm.CmdInstr -> Sem r ()
     goCmdInstr Asm.CmdInstr {..} = case _cmdInstrInstruction of
@@ -468,7 +467,6 @@ initStack defs = makeList (initSubStack <$> allElements)
       TempStack -> nockNil'
       StandardLibrary -> stdlib
       FunctionsLibrary -> makeList defs
-      TraceStack -> nockNil'
 
 push :: (Members '[Compiler] r) => Term Natural -> Sem r ()
 push = pushOnto ValueStack
@@ -926,22 +924,27 @@ pushNatOnto :: (Member Compiler r) => StackId -> Natural -> Sem r ()
 pushNatOnto s n = pushOnto s (OpQuote # toNock n)
 
 compileAndRunNock :: ConstructorArities -> [CompilerFunction] -> CompilerFunction -> Term Natural
-compileAndRunNock constrs funs mainfun =
+compileAndRunNock constrs funs = run . ignoreOutput @(Term Natural) . compileAndRunNock' constrs funs
+
+compileAndRunNock' :: (Member (Output (Term Natural)) r) => ConstructorArities -> [CompilerFunction] -> CompilerFunction -> Sem r (Term Natural)
+compileAndRunNock' constrs funs mainfun =
   let (nockSubject, t) = runCompilerWith constrs funs mainfun
-   in evalCompiledNock nockSubject t
+   in evalCompiledNock' nockSubject t
 
 evalCompiledNock :: Term Natural -> Term Natural -> Term Natural
-evalCompiledNock stack mainTerm =
-  let evalT =
-        run
-          . runError @(ErrNockNatural Natural)
-          . runError @NockEvalError
-          $ eval stack mainTerm
-   in case evalT of
-        Left e -> error (show e)
-        Right ev -> case ev of
-          Left e -> error (show e)
-          Right res -> res
+evalCompiledNock stack = run . ignoreOutput @(Term Natural) . evalCompiledNock' stack
+
+evalCompiledNock' :: (Member (Output (Term Natural)) r) => Term Natural -> Term Natural -> Sem r (Term Natural)
+evalCompiledNock' stack mainTerm = do
+  evalT <-
+    runError @(ErrNockNatural Natural)
+      . runError @NockEvalError
+      $ eval stack mainTerm
+  case evalT of
+    Left e -> error (show e)
+    Right ev -> case ev of
+      Left e -> error (show e)
+      Right res -> return res
 
 -- | Used in testing and app
 getStack :: StackId -> Term Natural -> Term Natural

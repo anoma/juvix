@@ -3,15 +3,15 @@
 module Nockma.Compile.Positive where
 
 import Base hiding (Path)
+import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Asm.Language qualified as Asm
 import Juvix.Compiler.Nockma.Evaluator
 import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Translation.FromAsm
 import Juvix.Compiler.Nockma.Translation.FromSource.QQ
-import Data.List.NonEmpty qualified as NonEmpty
 
-type Check = Sem '[Reader (Term Natural), Embed IO]
+type Check = Sem '[Reader [Term Natural], Reader (Term Natural), Embed IO]
 
 data Test = Test
   { _testName :: Text,
@@ -33,8 +33,8 @@ data FunctionName
 sym :: (Enum a) => a -> FunctionId
 sym = UserFunction . Asm.defaultSymbol . fromIntegral . fromEnum
 
-debugProg :: Sem '[Compiler] () -> Term Natural
-debugProg mkMain = compileAndRunNock exampleConstructors exampleFunctions mainFun
+debugProg :: Sem '[Compiler] () -> ([Term Natural], Term Natural)
+debugProg mkMain = run . runOutputList $ compileAndRunNock' exampleConstructors exampleFunctions mainFun
   where
     mainFun =
       CompilerFunction
@@ -117,8 +117,8 @@ allTests = testGroup "Nockma compile unit positive" (map mk tests)
   where
     mk :: Test -> TestTree
     mk Test {..} = testCase (unpack _testName) $ do
-      let n = debugProg _testProgram
-      runM (runReader n _testCheck)
+      let (traces, n) = debugProg _testProgram
+      runM (runReader n (runReader traces _testCheck))
 
 eqSubStack :: StackId -> Path -> Term Natural -> Check ()
 eqSubStack st subp expected = subStackPred st subp $

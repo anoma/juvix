@@ -96,7 +96,7 @@ evalRepl mprog defaultStack expr = do
       t' <- fromReplTerm namedTerms (w ^. withStackStack)
       return (Just t', w ^. withStackTerm)
   stack <- maybe errNoStack return mstack
-  fromReplTerm namedTerms t >>= eval stack
+  fromReplTerm namedTerms t >>= runOutputSem @(Term a) (traceM . ppTrace) . eval stack
   where
     errNoStack :: Sem r x
     errNoStack = throw NoStack
@@ -104,12 +104,7 @@ evalRepl mprog defaultStack expr = do
     namedTerms :: HashMap Text (Term a)
     namedTerms = programAssignments mprog
 
-eval ::
-  forall r a.
-  (PrettyCode a, Members '[Error NockEvalError, Error (ErrNockNatural a)] r, NockNatural a) =>
-  Term a ->
-  Term a ->
-  Sem r (Term a)
+eval :: forall r a. (PrettyCode a, Members '[Output (Term a), Error NockEvalError, Error (ErrNockNatural a)] r, NockNatural a) => Term a -> Term a -> Sem r (Term a)
 eval stack = \case
   TermAtom a -> throw (ExpectedCell ("eval " <> ppTrace a))
   TermCell c -> do
@@ -153,10 +148,9 @@ eval stack = \case
 
         goOpTrace :: Sem r (Term a)
         goOpTrace = do
-          -- Ignore the hint and evaluate
           Cell tr a <- asCell "OpTrace" (c ^. operatorCellTerm)
           tr' <- eval stack tr
-          traceM (ppTrace tr')
+          output tr'
           eval stack a
 
         goOpHint :: Sem r (Term a)

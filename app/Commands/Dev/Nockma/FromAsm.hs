@@ -3,12 +3,11 @@ module Commands.Dev.Nockma.FromAsm where
 import Commands.Base hiding (Atom)
 import Commands.Dev.Nockma.FromAsm.Options
 import Juvix.Compiler.Asm.Data.InfoTable qualified as Asm
+import Juvix.Compiler.Asm.Error
+import Juvix.Compiler.Asm.Transformation.Apply
 import Juvix.Compiler.Asm.Translation.FromSource qualified as Asm
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Translation.FromAsm
-import Juvix.Compiler.Asm.Transformation.Apply
-import Juvix.Compiler.Asm.Error
-
 
 runCommand :: forall r. (Members '[Embed IO, App] r) => NockmaFromAsmOptions -> Sem r ()
 runCommand opts = do
@@ -20,8 +19,8 @@ runCommand opts = do
       tab <- runErrorIO' @AsmError (computeApply tab')
       mainSym <- getMain tab
       let (nockSubject, nockMain) = fromAsm mainSym tab
-          res = evalCompiledNock nockSubject nockMain
-          valStack = getStack ValueStack res
+      res <- runOutputSem @(Term Natural) (say . ppTrace) (evalCompiledNock' nockSubject nockMain)
+      let valStack = getStack ValueStack res
       putStrLn (ppPrint valStack)
   where
     file :: AppPath File
