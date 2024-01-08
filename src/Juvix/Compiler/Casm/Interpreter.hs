@@ -97,6 +97,8 @@ runCode (LabelInfo labelInfo) instrs0 = runST goCode
                 return mem'
             | otherwise ->
                 return mem
+      whenJustM (MV.read mem' addr) $
+        throwRunError ("double memory write at address " <> show addr)
       MV.write mem' addr (Just v)
       return mem'
 

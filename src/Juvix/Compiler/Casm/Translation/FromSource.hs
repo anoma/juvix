@@ -220,10 +220,10 @@ parseAssign :: forall r. (Member LabelInfoBuilder r) => ParsecS r Instruction
 parseAssign = do
   res <- parseMemRef
   kw kwEq
-  asn res <|> extraBinop res
+  extraBinop res <|> asn res
   where
     asn :: MemRef -> ParsecS r Instruction
-    asn res = P.try $ do
+    asn res = do
       v <- parseRValue
       incAp <- parseIncAp
       return $
@@ -235,10 +235,10 @@ parseAssign = do
             }
 
     extraBinop :: MemRef -> ParsecS r Instruction
-    extraBinop res = do
+    extraBinop res = P.try $ do
       arg1 <- parseMemRef
       op <- extraOpcode
-      arg2 <- parseValue
+      arg2 <- parseExtraValue op
       incAp <- parseIncAp
       return $
         ExtraBinop $
@@ -249,6 +249,10 @@ parseAssign = do
               _instrExtraBinopResult = res,
               _instrExtraBinopIncAp = incAp
             }
+
+    parseExtraValue :: ExtraOpcode -> ParsecS r Value
+    parseExtraValue = \case
+      FieldSub -> Ref <$> parseMemRef
 
 registerAP :: ParsecS r Reg
 registerAP = do

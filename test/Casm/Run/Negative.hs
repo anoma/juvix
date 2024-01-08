@@ -41,5 +41,9 @@ tests =
     NegTest
       "Test003: Non-continuous memory use"
       $(mkRelDir ".")
-      $(mkRelFile "test003.casm")
+      $(mkRelFile "test003.casm"),
+    NegTest
+      "Test004: Double memory write"
+      $(mkRelDir ".")
+      $(mkRelFile "test004.casm")
   ]

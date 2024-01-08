@@ -1,0 +1,5 @@
+-- double write
+
+start:
+  [ap] = 0
+  [fp] = 7

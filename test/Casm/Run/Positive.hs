@@ -59,5 +59,15 @@ tests =
       "Test005: Exp function"
       $(mkRelDir ".")
       $(mkRelFile "test005.casm")
-      $(mkRelFile "out/test005.out")
+      $(mkRelFile "out/test005.out"),
+    PosTest
+      "Test006: Branch"
+      $(mkRelDir ".")
+      $(mkRelFile "test006.casm")
+      $(mkRelFile "out/test006.out"),
+    PosTest
+      "Test007: Closure extension"
+      $(mkRelDir ".")
+      $(mkRelFile "test007.casm")
+      $(mkRelFile "out/test007.out")
   ]
