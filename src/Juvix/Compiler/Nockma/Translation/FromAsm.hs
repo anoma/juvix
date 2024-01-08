@@ -50,6 +50,7 @@ data StackId
   | CallStack
   | StandardLibrary
   | FunctionsLibrary
+  | TraceStack
   deriving stock (Enum, Bounded, Eq, Show)
 
 -- | A closure has the following structure:
@@ -177,7 +178,7 @@ makeConstructor = termFromParts
 foldTerms :: NonEmpty (Term Natural) -> Term Natural
 foldTerms = foldr1 (#)
 
-fromAsm :: Asm.Symbol -> Asm.InfoTable -> (NonEmpty (Term Natural), Term Natural)
+fromAsm :: Asm.Symbol -> Asm.InfoTable -> (Term Natural, Term Natural)
 fromAsm mainSym Asm.InfoTable {..} =
   let funs = map compileFunction allFunctions
       constrs :: ConstructorArities
@@ -216,7 +217,9 @@ fromOffsetRef = fromIntegral . (^. Asm.offsetRefOffset)
 -- nil terminated list.
 goConstructor :: Asm.Tag -> [Term Natural] -> Term Natural
 goConstructor t args = case t of
-  Asm.BuiltinTag b -> goBuiltinTag b
+  Asm.BuiltinTag b -> makeConstructor $ \case
+      ConstructorTag -> goBuiltinTag b
+      ConstructorArgs -> remakeList []
   Asm.UserTag _moduleId num ->
     makeConstructor $ \case
       ConstructorTag -> OpQuote # (fromIntegral num :: Natural)
@@ -306,6 +309,9 @@ compile = mapM_ goCommand
     goTailCall :: Asm.InstrCall -> Sem r ()
     goTailCall = goCallHelper True
 
+    goTrace :: Sem r ()
+    goTrace = copyTopFromTo ValueStack TraceStack >> traceTerm (OpAddress # topOfStack TraceStack)
+
     goCmdInstr :: Asm.CmdInstr -> Sem r ()
     goCmdInstr Asm.CmdInstr {..} = case _cmdInstrInstruction of
       Asm.Binop op -> goBinop op
@@ -321,7 +327,7 @@ compile = mapM_ goCommand
       Asm.ArgsNum -> closureArgsNum
       Asm.ValShow -> stringsErr
       Asm.StrToInt -> stringsErr
-      Asm.Trace -> unsupported "trace"
+      Asm.Trace -> goTrace
       Asm.Dump -> unsupported "dump"
       Asm.Prealloc {} -> impossible
       Asm.CallClosures {} -> impossible
@@ -383,9 +389,6 @@ directRefPath = \case
 pushDirectRef :: (Members '[Compiler] r) => Asm.DirectRef -> Sem r ()
 pushDirectRef = push . (OpAddress #) . directRefPath
 
--- closure = [code totalArgsNum argsNum args nil]
--- function = [code args]
-
 allocClosure :: (Members '[Compiler] r) => FunctionId -> Natural -> Sem r ()
 allocClosure funSym numArgs = do
   funPath <- getFunctionPath funSym
@@ -422,7 +425,7 @@ moveTopFromTo from toStack = do
   popFrom from
 
 unsupported :: Text -> a
-unsupported thing = error ("The Nockma backend does not support" <> thing)
+unsupported thing = error ("The Nockma backend does not support " <> thing)
 
 stringsErr :: a
 stringsErr = unsupported "strings"
@@ -465,6 +468,7 @@ initStack defs = makeList (initSubStack <$> allElements)
       TempStack -> nockNil'
       StandardLibrary -> stdlib
       FunctionsLibrary -> makeList defs
+      TraceStack -> nockNil'
 
 push :: (Members '[Compiler] r) => Term Natural -> Sem r ()
 push = pushOnto ValueStack
@@ -477,7 +481,7 @@ runCompiler sem = do
   (ts, a) <- runOutputList (re sem)
   return (seqTerms ts, a)
 
-runCompilerWith :: ConstructorArities -> [CompilerFunction] -> CompilerFunction -> (NonEmpty (Term Natural), Term Natural)
+runCompilerWith :: ConstructorArities -> [CompilerFunction] -> CompilerFunction -> (Term Natural, Term Natural)
 runCompilerWith constrs libFuns mainFun =
   let entryCommand :: (Members '[Compiler] r) => Sem r ()
       entryCommand = callFun (mainFun ^. compilerFunctionName) 0
@@ -496,7 +500,7 @@ runCompilerWith constrs libFuns mainFun =
                   . mapM (execCompiler . (^. compilerFunction))
                   $ allFuns
               )
-   in (compiledFuns, entryTerm)
+   in (initStack (toList compiledFuns), entryTerm)
   where
     allFuns :: NonEmpty CompilerFunction
     allFuns = mainFun :| libFuns ++ (builtinFunction <$> allElements)
@@ -923,13 +927,12 @@ pushNatOnto s n = pushOnto s (OpQuote # toNock n)
 
 compileAndRunNock :: ConstructorArities -> [CompilerFunction] -> CompilerFunction -> Term Natural
 compileAndRunNock constrs funs mainfun =
-  let (functionTerms, t) = runCompilerWith constrs funs mainfun
-   in evalCompiledNock (toList functionTerms) t
+  let (nockSubject, t) = runCompilerWith constrs funs mainfun
+   in evalCompiledNock nockSubject t
 
-evalCompiledNock :: [Term Natural] -> Term Natural -> Term Natural
-evalCompiledNock functionTerms mainTerm =
-  let stack = initStack functionTerms
-      evalT =
+evalCompiledNock :: Term Natural -> Term Natural -> Term Natural
+evalCompiledNock stack mainTerm =
+  let evalT =
         run
           . runError @(ErrNockNatural Natural)
           . runError @NockEvalError

@@ -6,6 +6,9 @@ import Juvix.Compiler.Asm.Data.InfoTable qualified as Asm
 import Juvix.Compiler.Asm.Translation.FromSource qualified as Asm
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Translation.FromAsm
+import Juvix.Compiler.Asm.Transformation.Apply
+import Juvix.Compiler.Asm.Error
+
 
 runCommand :: forall r. (Members '[Embed IO, App] r) => NockmaFromAsmOptions -> Sem r ()
 runCommand opts = do
@@ -13,10 +16,11 @@ runCommand opts = do
   s <- readFile (toFilePath afile)
   case Asm.runParser (toFilePath afile) s of
     Left err -> exitJuvixError (JuvixError err)
-    Right tab -> do
+    Right tab' -> do
+      tab <- runErrorIO' @AsmError (computeApply tab')
       mainSym <- getMain tab
-      let (nockFuns, nockMain) = fromAsm mainSym tab
-          res = evalCompiledNock (toList nockFuns) nockMain
+      let (nockSubject, nockMain) = fromAsm mainSym tab
+          res = evalCompiledNock nockSubject nockMain
           valStack = getStack ValueStack res
       putStrLn (ppPrint valStack)
   where
