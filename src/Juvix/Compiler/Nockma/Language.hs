@@ -77,6 +77,7 @@ data NockOp
   | OpCall
   | OpReplace
   | OpHint
+  | OpTrace
   deriving stock (Bounded, Enum, Eq, Generic)
 
 instance Hashable NockOp
@@ -95,6 +96,7 @@ instance Pretty NockOp where
     OpCall -> "call"
     OpReplace -> "replace"
     OpHint -> "hint"
+    OpTrace -> "trace"
 
 atomOps :: HashMap Text NockOp
 atomOps = HashMap.fromList [(prettyText op, op) | op <- allElements]
@@ -167,6 +169,7 @@ serializeOp = \case
   OpCall -> 9
   OpReplace -> 10
   OpHint -> 11
+  OpTrace -> 100
 
 decodePath :: forall r. (Member Fail r) => EncodedPath -> Sem r Path
 decodePath ep = execOutputList (go (ep ^. encodedPath))

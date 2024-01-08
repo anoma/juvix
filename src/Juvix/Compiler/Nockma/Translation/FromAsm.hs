@@ -119,6 +119,7 @@ numStacks = fromIntegral (length (allElements @StackId))
 
 data Compiler m a where
   Verbatim :: Term Natural -> Compiler m ()
+  TraceTerm :: Term Natural -> Compiler m ()
   PushOnto :: StackId -> Term Natural -> Compiler m ()
   Crash :: Compiler m ()
   PopNAndPushOnto :: StackId -> Natural -> Term Natural -> Compiler m ()
@@ -382,6 +383,9 @@ directRefPath = \case
 pushDirectRef :: (Members '[Compiler] r) => Asm.DirectRef -> Sem r ()
 pushDirectRef = push . (OpAddress #) . directRefPath
 
+-- closure = [code totalArgsNum argsNum args nil]
+-- function = [code args]
+
 allocClosure :: (Members '[Compiler] r) => FunctionId -> Natural -> Sem r ()
 allocClosure funSym numArgs = do
   funPath <- getFunctionPath funSym
@@ -619,6 +623,7 @@ callHelper' isTail funName funArgsNum = do
   --  iii. Push this copy to the current function stack
 
   -- Setup function to call with its arguments
+  -- given n, we compute [R..R] of length n
   if
       | isClosure -> sre $ do
           push (OpQuote # toNock ([] :: Path))
@@ -630,7 +635,8 @@ callHelper' isTail funName funArgsNum = do
               oldArgs = OpAddress # closurepath ++ closurePath ClosureArgs
               xtraArgs = stackSliceAsList ValueStack 1 funArgsNum
               allArgs = replaceSubterm' oldArgs posOfArgsNil xtraArgs
-              funWithArgs = (OpAddress # closurepath ++ closurePath ClosureCode) # allArgs
+              funCode = OpAddress # closurepath ++ closurePath ClosureCode
+              funWithArgs = replaceSubterm funCode [R] allArgs
           output (storeOnStack CurrentFunction funWithArgs)
           popFrom TempStack
       | otherwise -> do
@@ -660,6 +666,11 @@ testEq = testEqOn ValueStack
 
 testEqOn' :: (Members '[Output (Term Natural)] r) => StackId -> Sem r ()
 testEqOn' s = output (replaceOnStackN 2 s (OpEq # stackSliceAsCell s 0 1))
+
+traceTerm' :: (Members '[Output (Term Natural)] r) => Term Natural -> Sem r ()
+traceTerm' t =
+  let iden = OpAddress # ([] :: Path)
+   in output (OpTrace # t # iden)
 
 incrementOn' :: (Members '[Output (Term Natural)] r) => StackId -> Sem r ()
 incrementOn' s = output (replaceOnStack s (OpInc # stackSliceAsCell s 0 0))
@@ -746,6 +757,7 @@ re = reinterpretH $ \case
   PopFromN n s -> popFromNH n s
   PopNAndPushOnto s n t -> popNAndPushOnto' s n t >>= pureT
   Verbatim s -> outputT s
+  TraceTerm s -> traceTerm' s >>= pureT
   CallHelper isTail funName funArgsNum -> callHelper' isTail funName funArgsNum >>= pureT
   IncrementOn s -> incrementOn' s >>= pureT
   Branch t f -> branch' t f

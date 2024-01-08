@@ -26,6 +26,7 @@ data FunctionName
   | FunConst
   | FunConst5
   | FunCallInc
+  | FunAdd3
   deriving stock (Eq, Bounded, Enum)
 
 sym :: (Enum a) => a -> FunctionId
@@ -51,6 +52,7 @@ functionArity' = \case
   FunConst -> 2
   FunCallInc -> 1
   FunConst5 -> 5
+  FunAdd3 -> 3
 
 functionCode :: (Members '[Compiler] r) => FunctionName -> Sem r ()
 functionCode = \case
@@ -67,6 +69,13 @@ functionCode = \case
   FunCallInc -> do
     push (OpAddress # pathToArg 0)
     callFun (sym FunIncrement) 1
+    asmReturn
+  FunAdd3 -> do
+    push (OpAddress # pathToArg 0)
+    push (OpAddress # pathToArg 1)
+    push (OpAddress # pathToArg 2)
+    add
+    add
     asmReturn
 
 -- | NOTE that new constructors should be added to the end of the list or else
@@ -280,22 +289,20 @@ tests =
         pushNat 10
         allocClosure (sym FunConst5) 1
         extendClosure 2,
-    Test
-      "call closure"
-      ( do
-          eqSubStack ValueStack (indexStack 0 ++ closurePath ClosureTotalArgsNum) [nock| 5 |]
-          eqSubStack ValueStack (indexStack 0 ++ closurePath ClosureArgsNum) [nock| 3 |]
-          eqSubStack ValueStack (indexStack 0 ++ closurePath ClosureArgs) [nock| [10 9 8 nil] |]
-          eqSubStack ValueStack (indexStack 1) [nock| 7 |]
-      )
-      $ do
-        pushNat 7
-        pushNat 8
-        pushNat 9
-        pushNat 10
-        pushNat 11
-        allocClosure (sym FunConst5) 1
-        callHelper False Nothing 4,
+    Test "alloc, extend and call closure" (eqStack ValueStack [nock| [6 nil] |]) $
+      do
+        pushNat 1
+        pushNat 2
+        pushNat 3
+        allocClosure (sym FunAdd3) 1
+        extendClosure 1
+        callHelper False Nothing 1,
+    Test "call closure" (eqStack ValueStack [nock| [110 nil] |]) $
+      do
+        pushNat 100
+        pushNat 110
+        allocClosure (sym FunConst) 1
+        callHelper False Nothing 1,
     Test
       "compute argsNum of a closure"
       (eqStack ValueStack [nock| [2 7 nil] |])

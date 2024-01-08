@@ -6,7 +6,7 @@ import Juvix.Prelude.Pretty
 data NockEvalError
   = InvalidPath
   | ExpectedAtom
-  | ExpectedCell
+  | ExpectedCell Text
   | NoStack
   | AssignmentNotFound Text
   deriving stock (Show)
