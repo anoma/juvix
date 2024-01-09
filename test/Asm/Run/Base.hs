@@ -9,8 +9,23 @@ import Juvix.Compiler.Asm.Transformation.Validate
 import Juvix.Compiler.Asm.Translation.FromSource
 import Juvix.Data.PPOutput
 
+runAssertion :: Handle -> Symbol -> InfoTable -> IO ()
+runAssertion hout sym tab = do
+  r' <- doRun hout tab (lookupFunInfo tab sym)
+  case r' of
+    Left err -> do
+      hClose hout
+      assertFailure (show (pretty err))
+    Right value' -> do
+      case value' of
+        ValVoid -> return ()
+        _ -> hPutStrLn hout (ppPrint tab value')
+
 asmRunAssertion' :: InfoTable -> Path Abs File -> (String -> IO ()) -> Assertion
-asmRunAssertion' tab expectedFile step = do
+asmRunAssertion' = asmRunAssertionParam' runAssertion
+
+asmRunAssertionParam' :: (Handle -> Symbol -> InfoTable -> IO ()) -> InfoTable -> Path Abs File -> (String -> IO ()) -> Assertion
+asmRunAssertionParam' interpretFun tab expectedFile step = do
   step "Validate"
   case validate' tab of
     Just err -> assertFailure (show (pretty err))
@@ -22,25 +37,20 @@ asmRunAssertion' tab expectedFile step = do
                 let outputFile = dirPath <//> $(mkRelFile "out.out")
                 hout <- openFile (toFilePath outputFile) WriteMode
                 step "Interpret"
-                r' <- doRun hout tab (lookupFunInfo tab sym)
-                case r' of
-                  Left err -> do
-                    hClose hout
-                    assertFailure (show (pretty err))
-                  Right value' -> do
-                    case value' of
-                      ValVoid -> return ()
-                      _ -> hPutStrLn hout (ppPrint tab value')
-                    hClose hout
-                    actualOutput <- readFile (toFilePath outputFile)
-                    step "Compare expected and actual program output"
-                    expected <- readFile (toFilePath expectedFile)
-                    assertEqDiffText ("Check: RUN output = " <> toFilePath expectedFile) actualOutput expected
+                interpretFun hout sym tab
+                hClose hout
+                actualOutput <- TIO.readFile (toFilePath outputFile)
+                step "Compare expected and actual program output"
+                expected <- TIO.readFile (toFilePath expectedFile)
+                assertEqDiffText ("Check: RUN output = " <> toFilePath expectedFile) actualOutput expected
             )
         Nothing -> assertFailure "no 'main' function"
 
 asmRunAssertion :: Path Abs File -> Path Abs File -> (InfoTable -> Either AsmError InfoTable) -> (InfoTable -> Assertion) -> (String -> IO ()) -> Assertion
-asmRunAssertion mainFile expectedFile trans testTrans step = do
+asmRunAssertion = asmRunAssertionParam runAssertion
+
+asmRunAssertionParam :: (Handle -> Symbol -> InfoTable -> IO ()) -> Path Abs File -> Path Abs File -> (InfoTable -> Either AsmError InfoTable) -> (InfoTable -> Assertion) -> (String -> IO ()) -> Assertion
+asmRunAssertionParam interpretFun mainFile expectedFile trans testTrans step = do
   step "Parse"
   r <- parseFile mainFile
   case r of
@@ -50,7 +60,7 @@ asmRunAssertion mainFile expectedFile trans testTrans step = do
         Left err -> assertFailure (show (pretty err))
         Right tab -> do
           testTrans tab
-          asmRunAssertion' tab expectedFile step
+          asmRunAssertionParam' interpretFun tab expectedFile step
 
 asmRunErrorAssertion :: Path Abs File -> (String -> IO ()) -> Assertion
 asmRunErrorAssertion mainFile step = do
