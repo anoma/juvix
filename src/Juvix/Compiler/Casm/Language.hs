@@ -4,6 +4,19 @@ module Juvix.Compiler.Casm.Language
   )
 where
 
+{-
+
+This module defines data structures for an extended subset of the Cairo Assembly
+language, following Section 5 of [1]. Except the `ExtraBinop` instruction, all
+instructions correspond to the instructions from [1]. The parser and pretty
+printer implemented in `Juvix.Compiler.Casm.Translation.FromSource` and
+`Juvix.Compiler.Casm.Pretty` follow the syntax of [1, Section 5].
+
+[1] Goldberg, Papini, Riabzev: "Cairo – a Turing-complete STARK-friendly CPU
+    architecture" (https://ia.cr/2021/1063)
+
+-}
+
 import Juvix.Compiler.Casm.Language.Base
 
 type Offset = Int16
