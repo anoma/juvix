@@ -41,6 +41,8 @@ runCode (LabelInfo labelInfo) instrs0 = runST goCode
       ST s Integer
     go pc ap fp mem
       | Vec.length instrs <= pc = do
+          when (Vec.length instrs < pc) $
+            throwRunError ("invalid program counter: " <> show pc)
           checkGaps mem
           readMem mem (ap - 1)
       | otherwise =

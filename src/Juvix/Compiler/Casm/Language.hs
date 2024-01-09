@@ -34,14 +34,25 @@ data Value
   | -- | Label reference (translated to immediate in Cairo bytecode)
     Lab LabelRef
 
-data RValue
-  = Val Value
-  | Load LoadValue
-  | Binop BinopValue
+data LoadValue = LoadValue
+  { _loadValueSrc :: MemRef,
+    _loadValueOff :: Offset
+  }
 
 data Opcode
   = FieldAdd
   | FieldMul
+
+data BinopValue = BinopValue
+  { _binopValueOpcode :: Opcode,
+    _binopValueArg1 :: MemRef,
+    _binopValueArg2 :: Value
+  }
+
+data RValue
+  = Val Value
+  | Load LoadValue
+  | Binop BinopValue
 
 -- | Extra opcodes that are not directly present in Cairo Assembly bytecode, but
 -- can be implemented. The extra operations, except `FieldSub`, can increase
@@ -55,17 +66,6 @@ data ExtraOpcode
   | IntMod
   | -- | Sets the result to 1 if arg1 < arg2, or to 0 otherwise
     IntLt
-
-data BinopValue = BinopValue
-  { _binopValueOpcode :: Opcode,
-    _binopValueArg1 :: MemRef,
-    _binopValueArg2 :: Value
-  }
-
-data LoadValue = LoadValue
-  { _loadValueSrc :: MemRef,
-    _loadValueOff :: Offset
-  }
 
 data Instruction
   = Assign InstrAssign

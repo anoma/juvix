@@ -5,7 +5,6 @@ import Juvix.Compiler.Casm.Data.LabelInfo
 import Juvix.Compiler.Casm.Data.LabelInfoBuilder
 import Juvix.Compiler.Casm.Language
 import Juvix.Compiler.Casm.Translation.FromSource.Lexer
-import Juvix.Data.Keyword.All (kwAp, kwApPlusPlus, kwCall, kwEq, kwFp, kwIf, kwIntAdd, kwIntDiv, kwIntLt, kwIntMod, kwIntMul, kwIntSub, kwJmp, kwMinus, kwMul, kwNotEq, kwPlus, kwPlusEq, kwRel, kwRet, kwTrace)
 import Juvix.Parser.Error
 import Text.Megaparsec qualified as P
 

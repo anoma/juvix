@@ -1,0 +1,4 @@
+-- Invalid register use
+
+start:
+  [ap] = fp

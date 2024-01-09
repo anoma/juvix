@@ -74,5 +74,10 @@ tests =
       "Test008: Integer arithmetic"
       $(mkRelDir ".")
       $(mkRelFile "test008.casm")
-      $(mkRelFile "out/test008.out")
+      $(mkRelFile "out/test008.out"),
+    PosTest
+      "Test009: Recursion"
+      $(mkRelDir ".")
+      $(mkRelFile "test009.casm")
+      $(mkRelFile "out/test009.out")
   ]

@@ -45,5 +45,9 @@ tests =
     NegTest
       "Test004: Double memory write"
       $(mkRelDir ".")
-      $(mkRelFile "test004.casm")
+      $(mkRelFile "test004.casm"),
+    NegTest
+      "Test005: Invalid register use"
+      $(mkRelDir ".")
+      $(mkRelFile "test005.casm")
   ]
