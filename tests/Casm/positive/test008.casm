@@ -1,0 +1,29 @@
+-- integer arithmetic
+
+start:
+  call main
+  jmp end
+
+func:
+  [ap] = [fp - 3] isub 4; ap++
+  ret
+
+main:
+  ap += 2
+  [ap] = 5; ap++
+  [ap] = 17; ap++
+  [ap] = [ap - 1] idiv [ap - 2]; ap++
+  call func
+  [fp] = [ap - 1] -- -1
+  [ap] = 5; ap++
+  [ap] = 0; ap++
+  [ap] = [ap - 1] imul [ap - 2]; ap++
+  [fp + 1] = [ap - 1] ilt 1 -- 1
+  [ap] = [fp] imul 7; ap++
+  [ap] = [ap - 1] idiv 3; ap++
+  [ap] = [ap - 1] iadd 2; ap++
+  [ap] = [ap - 1] iadd [fp]; ap++
+  [ap] = [ap - 1] iadd [fp + 1]; ap++
+  ret
+
+end:
