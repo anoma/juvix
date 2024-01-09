@@ -2,7 +2,7 @@ module Nockma.Parse.Positive where
 
 import Base
 import Data.ByteString qualified as BS
-import Juvix.Compiler.Nockma.Language
+import Juvix.Compiler.Nockma.Language hiding (Path)
 import Juvix.Compiler.Nockma.Pretty (ppPrint)
 import Juvix.Compiler.Nockma.Translation.FromSource (parseText)
 import Juvix.Parser.Error

@@ -103,7 +103,12 @@ evalRepl mprog defaultStack expr = do
     namedTerms :: HashMap Text (Term a)
     namedTerms = programAssignments mprog
 
-eval :: forall r a. (Members '[Error NockEvalError, Error (ErrNockNatural a)] r, NockNatural a) => Term a -> Term a -> Sem r (Term a)
+eval ::
+  forall r a.
+  (Members '[Error NockEvalError, Error (ErrNockNatural a)] r, NockNatural a) =>
+  Term a ->
+  Term a ->
+  Sem r (Term a)
 eval stack = \case
   TermAtom {} -> throw ExpectedCell
   TermCell c -> do

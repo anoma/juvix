@@ -22,7 +22,8 @@ import Juvix.Extra.Paths hiding (rootBuildDir)
 import Juvix.Prelude hiding (assert)
 import Juvix.Prelude.Env
 import Test.Tasty
-import Test.Tasty.HUnit
+import Test.Tasty.HUnit hiding (assertFailure)
+import Test.Tasty.HUnit qualified as HUnit
 
 data AssertionDescr
   = Single Assertion
@@ -111,3 +112,6 @@ testRunIOEitherTermination ::
 testRunIOEitherTermination entry =
   testRunIOEither entry
     . evalTermination iniTerminationState
+
+assertFailure :: (MonadIO m) => String -> m a
+assertFailure = liftIO . HUnit.assertFailure
