@@ -1,12 +1,12 @@
 module Commands.Dev.Nockma.Options where
 
-import Commands.Dev.Nockma.FromAsm.Options
+import Commands.Dev.Nockma.Eval.Options
 import Commands.Dev.Nockma.Repl.Options
 import CommonOptions
 
 data NockmaCommand
   = NockmaRepl NockmaReplOptions
-  | NockmaFromAsm NockmaFromAsmOptions
+  | NockmaEval NockmaEvalOptions
   deriving stock (Data)
 
 parseNockmaCommand :: Parser NockmaCommand
@@ -18,13 +18,13 @@ parseNockmaCommand =
       ]
   where
     commandFromAsm :: Mod CommandFields NockmaCommand
-    commandFromAsm = command "from-asm" fromAsmInfo
+    commandFromAsm = command "eval" fromAsmInfo
       where
         fromAsmInfo :: ParserInfo NockmaCommand
         fromAsmInfo =
           info
-            (NockmaFromAsm <$> parseNockmaFromAsmOptions)
-            (progDesc "Read juvix asm and translate it to nockma")
+            (NockmaEval <$> parseNockmaEvalOptions)
+            (progDesc "Evaluate a nockma file. The file should contain a single nockma cell: [subject formula]")
 
     commandRepl :: Mod CommandFields NockmaCommand
     commandRepl = command "repl" replInfo

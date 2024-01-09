@@ -10,6 +10,7 @@ import Data.String.Interpolate (__i)
 import Juvix.Compiler.Nockma.Evaluator (NockEvalError, evalRepl, fromReplTerm, programAssignments)
 import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Pretty (ppPrint)
+import Juvix.Compiler.Nockma.Pretty qualified as Nockma
 import Juvix.Compiler.Nockma.Translation.FromSource (parseProgramFile, parseReplStatement, parseReplText, parseText)
 import Juvix.Parser.Error
 import System.Console.Haskeline
@@ -130,11 +131,12 @@ evalStatement = \case
   ReplStatementExpression t -> do
     s <- getStack
     prog <- getProgram
-    let et =
-          run
-            . runError @(ErrNockNatural Natural)
-            . runError @NockEvalError
-            $ evalRepl prog s t
+    et <-
+      liftIO
+        $ runM
+          . runError @(ErrNockNatural Natural)
+          . runError @NockEvalError
+        $ evalRepl (putStrLn . Nockma.ppTrace) prog s t
     case et of
       Left e -> error (show e)
       Right ev -> case ev of

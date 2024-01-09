@@ -85,18 +85,19 @@ programAssignments mprog =
 evalRepl ::
   forall r a.
   (PrettyCode a, Members '[Error NockEvalError, Error (ErrNockNatural a)] r, NockNatural a) =>
+  (Term a -> Sem r ()) ->
   Maybe (Program a) ->
   Maybe (Term a) ->
   ReplExpression a ->
   Sem r (Term a)
-evalRepl mprog defaultStack expr = do
+evalRepl handleTrace mprog defaultStack expr = do
   (mstack, t) <- case expr of
     ReplExpressionTerm tm -> return (defaultStack, tm)
     ReplExpressionWithStack w -> do
       t' <- fromReplTerm namedTerms (w ^. withStackStack)
       return (Just t', w ^. withStackTerm)
   stack <- maybe errNoStack return mstack
-  fromReplTerm namedTerms t >>= runOutputSem @(Term a) (traceM . ppTrace) . eval stack
+  fromReplTerm namedTerms t >>= runOutputSem @(Term a) handleTrace . eval stack
   where
     errNoStack :: Sem r x
     errNoStack = throw NoStack

@@ -35,7 +35,8 @@ data CompileOptions = CompileOptions
     _compileTarget :: CompileTarget,
     _compileInputFile :: Maybe (AppPath File),
     _compileOptimizationLevel :: Maybe Int,
-    _compileInliningDepth :: Int
+    _compileInliningDepth :: Int,
+    _compileNockmaUsePrettySymbols :: Bool
   }
   deriving stock (Data)
 
@@ -113,6 +114,11 @@ parseCompileOptions supportedTargets parserFile = do
   _compileTarget <- optCompileTarget supportedTargets
   _compileOutputFile <- optional parseGenericOutputFile
   _compileInputFile <- optional parserFile
+  _compileNockmaUsePrettySymbols <-
+    switch
+      ( long "nockma-pretty"
+          <> help "Use names for op codes and paths in Nockma output (for target: nockma)"
+      )
   pure CompileOptions {..}
 
 optCompileTarget :: SupportedTargets -> Parser CompileTarget

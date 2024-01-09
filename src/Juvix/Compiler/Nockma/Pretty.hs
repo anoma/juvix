@@ -26,3 +26,6 @@ ppTrace =
 
 ppPrint :: (PrettyCode c) => c -> Text
 ppPrint = renderStrict . toTextStream . ppOutDefault
+
+ppPrintOpts :: (PrettyCode c) => Options -> c -> Text
+ppPrintOpts opts = renderStrict . toTextStream . ppOut opts

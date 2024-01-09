@@ -18,6 +18,11 @@ parseText = runParser ""
 parseReplText :: Text -> Either MegaparsecError (N.ReplTerm Natural)
 parseReplText = runParserFor replTerm ""
 
+parseTermFile :: (MonadIO m) => FilePath -> m (Either MegaparsecError (N.Term Natural))
+parseTermFile fp = do
+  txt <- readFile fp
+  return (runParser fp txt)
+
 parseProgramFile :: (MonadIO m) => FilePath -> m (Either MegaparsecError (N.Program Natural))
 parseProgramFile fp = do
   txt <- readFile fp

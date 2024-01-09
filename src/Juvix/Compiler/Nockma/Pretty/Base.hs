@@ -26,6 +26,7 @@ instance (PrettyCode a, NockNatural a) => PrettyCode (Atom a) where
   ppCode atm@(Atom k h) = runFailDefaultM (annotate (AnnKind KNameFunction) <$> ppCode k)
     . failFromError @(ErrNockNatural a)
     $ do
+      whenM (asks (^. optIgnoreHints)) fail
       h' <- failMaybe (h ^. unIrrelevant)
       case h' of
         AtomHintOp -> nockOp atm >>= ppCode

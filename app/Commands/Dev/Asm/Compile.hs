@@ -5,7 +5,6 @@ import Commands.Dev.Asm.Compile.Options
 import Commands.Extra.Compile qualified as Compile
 import Juvix.Compiler.Asm.Data.InfoTable
 import Juvix.Compiler.Asm.Error
-import Juvix.Compiler.Asm.Language
 import Juvix.Compiler.Asm.Transformation.Apply
 import Juvix.Compiler.Asm.Translation.FromSource qualified as Asm
 import Juvix.Compiler.Backend qualified as Backend
@@ -26,8 +25,8 @@ runCommand opts = do
           mainSym <- getMain tab
           let (nockSubject, nockMain) = Nockma.fromAsm mainSym tab'
               outputCell = Nockma.TermCell (Nockma.Cell nockSubject nockMain)
-              outputText = Nockma.ppPrint outputCell
-          embed $ TIO.writeFile (toFilePath (replaceExtension' ".nockma" file)) outputText
+              outputText = Nockma.ppPrintOpts nockmaOpts outputCell
+          embed @IO $ writeFileEnsureLn (toFilePath (replaceExtension' ".nockma" file)) outputText
         _ -> do
           ep <- getEntryPoint (AppPath (preFileFromAbs file) True)
           tgt <- getTarget (opts ^. compileTarget)
@@ -43,7 +42,7 @@ runCommand opts = do
               buildDir <- askBuildDir
               ensureDir buildDir
               cFile <- inputCFile file
-              embed @IO (writeFile (toFilePath cFile) _resultCCode)
+              embed @IO $ writeFileEnsureLn (toFilePath cFile) _resultCCode
               outfile <- Compile.outputFile opts file
               Compile.runCommand
                 opts
@@ -53,6 +52,9 @@ runCommand opts = do
   where
     getFile :: Sem r (Path Abs File)
     getFile = getMainFile (opts ^. compileInputFile)
+
+    nockmaOpts :: Nockma.Options
+    nockmaOpts = Nockma.defaultOptions {Nockma._optIgnoreHints = not (opts ^. compileNockmaUsePrettySymbols)}
 
     getTarget :: CompileTarget -> Sem r Backend.Target
     getTarget = \case

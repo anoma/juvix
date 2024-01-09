@@ -587,3 +587,12 @@ runInputInfinite s =
             put is
             return i
       )
+
+writeFileEnsureLn :: (MonadMask m, MonadIO m) => FilePath -> Text -> m ()
+writeFileEnsureLn p t =
+  let t' = case Text.unsnoc t of
+        Nothing -> t
+        Just (_, y) -> case y of
+          '\n' -> t
+          _ -> Text.snoc t '\n'
+   in writeFile p t'
