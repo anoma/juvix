@@ -79,5 +79,25 @@ tests =
       "Test009: Recursion"
       $(mkRelDir ".")
       $(mkRelFile "test009.casm")
-      $(mkRelFile "out/test009.out")
+      $(mkRelFile "out/test009.out"),
+    PosTest
+      "Test010: Functions returning functions"
+      $(mkRelDir ".")
+      $(mkRelFile "test010.casm")
+      $(mkRelFile "out/test010.out"),
+    PosTest
+      "Test011: Lists"
+      $(mkRelDir ".")
+      $(mkRelFile "test011.casm")
+      $(mkRelFile "out/test011.out"),
+    PosTest
+      "Test012: Recursion through higher-order functions"
+      $(mkRelDir ".")
+      $(mkRelFile "test012.casm")
+      $(mkRelFile "out/test012.out"),
+    PosTest
+      "Test013: Currying and uncurrying"
+      $(mkRelDir ".")
+      $(mkRelFile "test013.casm")
+      $(mkRelFile "out/test013.out")
   ]

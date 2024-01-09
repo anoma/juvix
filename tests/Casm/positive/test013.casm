@@ -1,0 +1,177 @@
+-- currying and uncurrying
+
+start:
+  call main
+  jmp end
+
+app:
+  [ap] = [fp - 4]; ap++
+  [ap] = [fp - 3]; ap++
+  call call_closure
+  ret
+
+app':
+  [ap] = [fp - 5]; ap++
+  [ap] = [fp - 4]; ap++
+  [ap] = [fp - 3]; ap++
+  call call_closure
+  ret
+
+inc:
+  [ap] = [fp - 3] + 1; ap++
+  ret
+
+h:
+  call get_regs
+  [ap] = inc; ap++
+  [ap] = 9; ap++
+  [ap] = 8; ap++
+  [ap] = [ap - 5] + 2; ap++
+  [ap] = [fp - 3]; ap++
+  call extend_closure_1
+  ret
+
+capp:
+  [ap] = [fp - 4]; ap++
+  [ap] = [fp - 3]; ap++
+  call extend_closure_1
+  ret
+
+curry:
+  call get_regs
+  [ap] = capp; ap++
+  [ap] = 8; ap++
+  [ap] = 8; ap++
+  [ap] = [fp - 3]; ap++
+  [ap] = [ap - 6] + 2; ap++
+  ret
+
+uapp:
+  [ap] = [fp - 4]; ap++
+  [ap] = [fp - 3]; ap++
+  call call_closure
+  [ap] = [fp - 5]; ap++
+  [ap] = [ap - 2]; ap++
+  call call_closure
+  ret
+
+uncurry:
+  call get_regs
+  [ap] = uapp; ap++
+  [ap] = 8; ap++
+  [ap] = 7; ap++
+  [ap] = [fp - 3]; ap++
+  [ap] = [ap - 6] + 2; ap++
+  ret
+
+main:
+  ap += 4
+
+  call get_regs
+  [fp] = [ap - 2] + 2
+  [ap] = inc; ap++
+  [ap] = 9; ap++
+  [ap] = 8; ap++
+  call get_regs
+  [ap] = app; ap++
+  [ap] = 9; ap++
+  [ap] = 7; ap++
+  [ap] = 5; ap++
+  [ap] = [fp]; ap++
+  [ap] = [ap - 7] + 2; ap++
+  call app'
+  [fp + 2] = [ap - 1]
+
+  call get_regs
+  [ap] = app; ap++
+  [ap] = 9; ap++
+  [ap] = 7; ap++
+  [ap] = [ap - 5] + 2; ap++
+  call h
+  [ap] = 4; ap++
+  [ap] = [ap - 2]; ap++
+  call call_closure
+  [fp + 3] = [fp + 2] + [ap - 1]
+
+  -- uncurry (curry app) inc 7
+  call get_regs
+  [ap] = app; ap++
+  [ap] = 9; ap++
+  [ap] = 7; ap++
+  [ap] = [ap - 5] + 2; ap++
+  call curry
+  call uncurry
+  [fp + 1] = [ap - 1]
+  call get_regs
+  [ap] = inc; ap++
+  [ap] = 9; ap++
+  [ap] = 8; ap++
+  [ap] = 7; ap++
+  [ap] = [ap - 6] + 2; ap++
+  [ap] = [fp + 1]; ap++
+  call call_closure
+  [ap] = [fp + 3] + [ap - 1]; ap++
+  ret
+
+get_regs:
+  call get_ap_reg
+  ret
+get_ap_reg:
+  ret
+
+-- [fp - 3]: closure; [fp - 3 - k]: argument k to closure call
+call_closure:
+  ap += 1
+  -- closure addr
+  [fp] = [[fp - 3]]
+  -- jmp rel (9 - argsnum)
+  jmp rel [[fp - 3] + 2]
+  [ap] = [fp - 11]; ap++
+  [ap] = [fp - 10]; ap++
+  [ap] = [fp - 9]; ap++
+  [ap] = [fp - 8]; ap++
+  [ap] = [fp - 7]; ap++
+  [ap] = [fp - 6]; ap++
+  [ap] = [fp - 5]; ap++
+  [ap] = [fp - 4]; ap++
+  -- jmp rel (9 - sargs)
+  jmp rel [[fp - 3] + 1]
+  [ap] = [[fp - 3] + 10]; ap++
+  [ap] = [[fp - 3] + 9]; ap++
+  [ap] = [[fp - 3] + 8]; ap++
+  [ap] = [[fp - 3] + 7]; ap++
+  [ap] = [[fp - 3] + 6]; ap++
+  [ap] = [[fp - 3] + 5]; ap++
+  [ap] = [[fp - 3] + 4]; ap++
+  [ap] = [[fp - 3] + 3]; ap++
+  call [fp]
+  ret
+
+-- [fp - 3]: closure; [fp - 4]: argument
+extend_closure_1:
+  ap += 3
+  call get_regs
+  [fp] = [ap - 2] + 2
+  -- 9 - sargs
+  [fp + 1] = [[fp - 3] + 1]
+  -- 9 - argsnum (expected)
+  [fp + 2] = [[fp - 3] + 2]
+  [ap] = [[fp - 3]]; ap++
+  [ap] = [fp + 1] - 1; ap++
+  [ap] = [fp + 2] + 1; ap++
+  -- jmp rel (9 - sargs)
+  jmp rel [fp + 1]
+  [ap] = [[fp - 3] + 10]; ap++
+  [ap] = [[fp - 3] + 9]; ap++
+  [ap] = [[fp - 3] + 8]; ap++
+  [ap] = [[fp - 3] + 7]; ap++
+  [ap] = [[fp - 3] + 6]; ap++
+  [ap] = [[fp - 3] + 5]; ap++
+  [ap] = [[fp - 3] + 4]; ap++
+  [ap] = [[fp - 3] + 3]; ap++
+  -- extra args
+  [ap] = [fp - 4]; ap++
+  [ap] = [fp]; ap++
+  ret
+
+end:
