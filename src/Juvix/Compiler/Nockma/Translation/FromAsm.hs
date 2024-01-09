@@ -217,21 +217,12 @@ fromOffsetRef = fromIntegral . (^. Asm.offsetRefOffset)
 goConstructor :: Asm.Tag -> [Term Natural] -> Term Natural
 goConstructor t args = case t of
   Asm.BuiltinTag b -> makeConstructor $ \case
-    ConstructorTag -> goBuiltinTag b
+    ConstructorTag -> builtinTagToTerm b
     ConstructorArgs -> remakeList []
-  Asm.UserTag _moduleId num ->
+  Asm.UserTag tag ->
     makeConstructor $ \case
-      ConstructorTag -> OpQuote # (fromIntegral num :: Natural)
+      ConstructorTag -> OpQuote # (fromIntegral (tag ^. Asm.tagUserWord) :: Natural)
       ConstructorArgs -> remakeList args
-  where
-    goBuiltinTag :: Asm.BuiltinDataTag -> Term Natural
-    goBuiltinTag = \case
-      Asm.TagTrue -> nockBoolLiteral True
-      Asm.TagFalse -> nockBoolLiteral False
-      Asm.TagReturn -> impossible
-      Asm.TagBind -> impossible
-      Asm.TagWrite -> impossible
-      Asm.TagReadLn -> impossible
 
 compile :: forall r. (Members '[Compiler] r) => Asm.Code -> Sem r ()
 compile = mapM_ goCommand
@@ -712,16 +703,19 @@ save' isTail m = do
       | isTail -> pureT ()
       | otherwise -> popFromH TempStack
 
+builtinTagToTerm :: Asm.BuiltinDataTag -> Term Natural
+builtinTagToTerm = \case
+  Asm.TagTrue -> nockBoolLiteral True
+  Asm.TagFalse -> nockBoolLiteral False
+  Asm.TagReturn -> impossible
+  Asm.TagBind -> impossible
+  Asm.TagWrite -> impossible
+  Asm.TagReadLn -> impossible
+
 constructorTagToTerm :: Asm.Tag -> Term Natural
 constructorTagToTerm = \case
-  Asm.UserTag _ i -> OpQuote # toNock (fromIntegral i :: Natural)
-  Asm.BuiltinTag b -> case b of
-    Asm.TagTrue -> error "TODO"
-    Asm.TagFalse -> error "TODO"
-    Asm.TagReturn -> impossible
-    Asm.TagBind -> impossible
-    Asm.TagWrite -> impossible
-    Asm.TagReadLn -> impossible
+  Asm.UserTag t -> OpQuote # toNock (fromIntegral (t ^. Asm.tagUserWord) :: Natural)
+  Asm.BuiltinTag b -> builtinTagToTerm b
 
 caseCmd ::
   (Members '[Compiler] r) =>

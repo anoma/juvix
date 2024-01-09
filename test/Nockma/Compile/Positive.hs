@@ -89,7 +89,7 @@ data ConstructorName
   deriving stock (Eq, Bounded, Enum)
 
 constructorTag :: ConstructorName -> Asm.Tag
-constructorTag n = Asm.UserTag defaultModuleId (fromIntegral (fromEnum n))
+constructorTag n = Asm.UserTag (Asm.TagUser defaultModuleId (fromIntegral (fromEnum n)))
 
 constructorArity :: ConstructorName -> Natural
 constructorArity = \case
@@ -100,10 +100,13 @@ constructorArity = \case
 
 exampleConstructors :: ConstructorArities
 exampleConstructors =
-  hashMap
+  hashMap $
     [ (constructorTag n, constructorArity n)
       | n <- allElements
     ]
+      ++ [ (Asm.BuiltinTag Asm.TagTrue, 0),
+           (Asm.BuiltinTag Asm.TagFalse, 0)
+         ]
 
 exampleFunctions :: [CompilerFunction]
 exampleFunctions =
@@ -419,6 +422,26 @@ tests =
           (Just (pushNat 0))
           [ (constructorTag ConstructorFalse, pushNat 0),
             (constructorTag ConstructorWrapper, pop >> pushNat 5)
+          ],
+    Test
+      "cmdCase: case on builtin true"
+      (eqStack ValueStack [nock| [5 nil] |])
+      $ do
+        allocConstr (Asm.BuiltinTag Asm.TagTrue)
+        caseCmd
+          (Just (pushNat 0))
+          [ (Asm.BuiltinTag Asm.TagTrue, pop >> pushNat 5),
+            (Asm.BuiltinTag Asm.TagFalse, pushNat 0)
+          ],
+    Test
+      "cmdCase: case on builtin false"
+      (eqStack ValueStack [nock| [5 nil] |])
+      $ do
+        allocConstr (Asm.BuiltinTag Asm.TagFalse)
+        caseCmd
+          (Just (pushNat 0))
+          [ (Asm.BuiltinTag Asm.TagTrue, pushNat 0),
+            (Asm.BuiltinTag Asm.TagFalse, pop >> pushNat 5)
           ],
     Test
       "push constructor field"

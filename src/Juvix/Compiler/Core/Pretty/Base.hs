@@ -59,7 +59,7 @@ instance PrettyCode BuiltinDataTag where
 instance PrettyCode Tag where
   ppCode = \case
     BuiltinTag tag -> ppCode tag
-    UserTag mid tag -> return $ kwUnnamedConstr <> pretty tag <> "@" <> pretty mid
+    UserTag (TagUser mid tag) -> return $ kwUnnamedConstr <> pretty tag <> "@" <> pretty mid
 
 instance PrettyCode Primitive where
   ppCode = \case

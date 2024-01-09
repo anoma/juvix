@@ -398,7 +398,7 @@ instance PrettyCode InfoTable where
         HashMap.filter
           ( \ii -> case ii ^. inductiveConstructors of
               BuiltinTag _ : _ -> False
-              UserTag _ _ : _ -> True
+              UserTag {} : _ -> True
               [] -> True
           )
 
