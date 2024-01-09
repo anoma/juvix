@@ -43,8 +43,18 @@ data Opcode
   = FieldAdd
   | FieldMul
 
+-- | Extra opcodes that are not directly present in Cairo Assembly bytecode, but
+-- can be implemented. The extra operations, except `FieldSub`, can increase
+-- `ap` arbitrarily.
 data ExtraOpcode
   = FieldSub
+  | IntAdd
+  | IntSub
+  | IntMul
+  | IntDiv
+  | IntMod
+  | -- | Sets the result to 1 if arg1 < arg2, or to 0 otherwise
+    IntLt
 
 data BinopValue = BinopValue
   { _binopValueOpcode :: Opcode,

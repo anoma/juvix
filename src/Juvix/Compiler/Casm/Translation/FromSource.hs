@@ -5,7 +5,7 @@ import Juvix.Compiler.Casm.Data.LabelInfo
 import Juvix.Compiler.Casm.Data.LabelInfoBuilder
 import Juvix.Compiler.Casm.Language
 import Juvix.Compiler.Casm.Translation.FromSource.Lexer
-import Juvix.Data.Keyword.All (kwAp, kwApPlusPlus, kwCall, kwEq, kwFp, kwIf, kwJmp, kwMinus, kwMul, kwNotEq, kwPlus, kwPlusEq, kwRel, kwRet, kwTrace)
+import Juvix.Data.Keyword.All (kwAp, kwApPlusPlus, kwCall, kwEq, kwFp, kwIf, kwIntAdd, kwIntDiv, kwIntLt, kwIntMod, kwIntMul, kwIntSub, kwJmp, kwMinus, kwMul, kwNotEq, kwPlus, kwPlusEq, kwRel, kwRet, kwTrace)
 import Juvix.Parser.Error
 import Text.Megaparsec qualified as P
 
@@ -253,6 +253,7 @@ parseAssign = do
     parseExtraValue :: ExtraOpcode -> ParsecS r Value
     parseExtraValue = \case
       FieldSub -> Ref <$> parseMemRef
+      _ -> parseValue
 
 registerAP :: ParsecS r Reg
 registerAP = do
@@ -274,4 +275,10 @@ opcode =
 
 extraOpcode :: ParsecS r ExtraOpcode
 extraOpcode =
-  kw kwMinus >> return FieldSub
+  (kw kwMinus >> return FieldSub)
+    <|> (kw kwIntAdd >> return IntAdd)
+    <|> (kw kwIntSub >> return IntSub)
+    <|> (kw kwIntMul >> return IntMul)
+    <|> (kw kwIntDiv >> return IntDiv)
+    <|> (kw kwIntMod >> return IntMod)
+    <|> (kw kwIntLt >> return IntLt)

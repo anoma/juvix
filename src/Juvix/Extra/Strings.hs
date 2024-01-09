@@ -482,6 +482,24 @@ fp = "fp"
 apPlusPlus :: (IsString s) => s
 apPlusPlus = "ap++"
 
+iadd :: (IsString s) => s
+iadd = "iadd"
+
+isub :: (IsString s) => s
+isub = "isub"
+
+imul :: (IsString s) => s
+imul = "imul"
+
+idiv :: (IsString s) => s
+idiv = "idiv"
+
+imod :: (IsString s) => s
+imod = "imod"
+
+ilt :: (IsString s) => s
+ilt = "ilt"
+
 ret :: (IsString s) => s
 ret = "ret"
 

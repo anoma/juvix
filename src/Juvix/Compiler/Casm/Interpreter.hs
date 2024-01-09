@@ -165,6 +165,12 @@ runCode (LabelInfo labelInfo) instrs0 = runST goCode
         goOp :: Integer -> Integer -> ExtraOpcode -> Integer
         goOp x y = \case
           FieldSub -> x - y
+          IntAdd -> x + y
+          IntSub -> x - y
+          IntMul -> x * y
+          IntDiv -> x `quot` y
+          IntMod -> x `rem` y
+          IntLt -> if x < y then 1 else 0
 
     goJump :: InstrJump -> Address -> Address -> Address -> Memory s -> ST s Integer
     goJump InstrJump {..} _ ap fp mem = do

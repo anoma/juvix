@@ -70,6 +70,12 @@ instance PrettyCode Opcode where
 instance PrettyCode ExtraOpcode where
   ppCode = \case
     FieldSub -> return Str.minus
+    IntAdd -> return Str.iadd
+    IntSub -> return Str.isub
+    IntMul -> return Str.imul
+    IntDiv -> return Str.idiv
+    IntMod -> return Str.imod
+    IntLt -> return Str.ilt
 
 instance PrettyCode BinopValue where
   ppCode BinopValue {..} = do

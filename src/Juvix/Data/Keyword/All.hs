@@ -256,6 +256,24 @@ kwTrace = asciiKw Str.trace_
 kwFail :: Keyword
 kwFail = asciiKw Str.fail_
 
+kwIntAdd :: Keyword
+kwIntAdd = asciiKw Str.iadd
+
+kwIntSub :: Keyword
+kwIntSub = asciiKw Str.isub
+
+kwIntMul :: Keyword
+kwIntMul = asciiKw Str.imul
+
+kwIntDiv :: Keyword
+kwIntDiv = asciiKw Str.idiv
+
+kwIntMod :: Keyword
+kwIntMod = asciiKw Str.imod
+
+kwIntLt :: Keyword
+kwIntLt = asciiKw Str.ilt
+
 kwErr :: Keyword
 kwErr = asciiKw Str.err
 

@@ -69,5 +69,10 @@ tests =
       "Test007: Closure extension"
       $(mkRelDir ".")
       $(mkRelFile "test007.casm")
-      $(mkRelFile "out/test007.out")
+      $(mkRelFile "out/test007.out"),
+    PosTest
+      "Test008: Integer arithmetic"
+      $(mkRelDir ".")
+      $(mkRelFile "test008.casm")
+      $(mkRelFile "out/test008.out")
   ]
