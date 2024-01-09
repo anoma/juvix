@@ -1,14 +1,14 @@
 module Nockma.Compile.Asm.Positive where
 
+import Asm.Run.Base
 import Asm.Run.Positive qualified as Asm
 import Base
-import Asm.Run.Base
-import Juvix.Compiler.Core.Language.Base
 import Juvix.Compiler.Asm
-import Juvix.Compiler.Nockma.Translation.FromAsm qualified as Nockma
+import Juvix.Compiler.Core.Language.Base
 import Juvix.Compiler.Nockma.Language
-import Juvix.Compiler.Nockma.Translation.FromAsm
 import Juvix.Compiler.Nockma.Pretty qualified as Nockma
+import Juvix.Compiler.Nockma.Translation.FromAsm
+import Juvix.Compiler.Nockma.Translation.FromAsm qualified as Nockma
 
 runNockmaAssertion :: Handle -> Symbol -> InfoTable -> IO ()
 runNockmaAssertion hout sym tab = do
@@ -38,8 +38,7 @@ testDescr Asm.PosTest {..} =
 
 testsToRun :: [String]
 testsToRun =
-  [
-    "Test001: Arithmetic opcodes",
+  [ "Test001: Arithmetic opcodes",
     "Test002: Direct call",
     "Test003: Indirect call",
     "Test004: Tail calls"
