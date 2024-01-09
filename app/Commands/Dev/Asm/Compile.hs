@@ -3,38 +3,53 @@ module Commands.Dev.Asm.Compile where
 import Commands.Base
 import Commands.Dev.Asm.Compile.Options
 import Commands.Extra.Compile qualified as Compile
+import Juvix.Compiler.Asm.Data.InfoTable
+import Juvix.Compiler.Asm.Error
+import Juvix.Compiler.Asm.Language
+import Juvix.Compiler.Asm.Transformation.Apply
 import Juvix.Compiler.Asm.Translation.FromSource qualified as Asm
 import Juvix.Compiler.Backend qualified as Backend
 import Juvix.Compiler.Backend.C qualified as C
+import Juvix.Compiler.Nockma.Pretty qualified as Nockma
+import Juvix.Compiler.Nockma.Translation.FromAsm qualified as Nockma
 
 runCommand :: forall r. (Members '[Embed IO, App, TaggedLock] r) => AsmCompileOptions -> Sem r ()
 runCommand opts = do
   file <- getFile
-  ep <- getEntryPoint (AppPath (preFileFromAbs file) True)
-  tgt <- getTarget (opts ^. compileTarget)
-  let entryPoint :: EntryPoint
-      entryPoint =
-        ep
-          { _entryPointTarget = tgt,
-            _entryPointDebug = opts ^. compileDebug
-          }
   s <- readFile (toFilePath file)
   case Asm.runParser (toFilePath file) s of
     Left err -> exitJuvixError (JuvixError err)
     Right tab -> do
-      case run $ runReader entryPoint $ runError $ asmToMiniC tab of
-        Left err -> exitJuvixError err
-        Right C.MiniCResult {..} -> do
-          buildDir <- askBuildDir
-          ensureDir buildDir
-          cFile <- inputCFile file
-          embed @IO (writeFile (toFilePath cFile) _resultCCode)
-          outfile <- Compile.outputFile opts file
-          Compile.runCommand
-            opts
-              { _compileInputFile = Just (AppPath (preFileFromAbs cFile) False),
-                _compileOutputFile = Just (AppPath (preFileFromAbs outfile) False)
-              }
+      case opts ^. compileTarget of
+        TargetNockma -> do
+          tab' <- runErrorIO' @AsmError (computeApply tab)
+          mainSym <- getMain tab
+          let (nockSubject, nockMain) = Nockma.fromAsm mainSym tab'
+              outputCell = Nockma.TermCell (Nockma.Cell nockSubject nockMain)
+              outputText = Nockma.ppPrint outputCell
+          embed $ TIO.writeFile (toFilePath (replaceExtension' ".nockma" file)) outputText
+        _ -> do
+          ep <- getEntryPoint (AppPath (preFileFromAbs file) True)
+          tgt <- getTarget (opts ^. compileTarget)
+          let entryPoint :: EntryPoint
+              entryPoint =
+                ep
+                  { _entryPointTarget = tgt,
+                    _entryPointDebug = opts ^. compileDebug
+                  }
+          case run $ runReader entryPoint $ runError $ asmToMiniC tab of
+            Left err -> exitJuvixError err
+            Right C.MiniCResult {..} -> do
+              buildDir <- askBuildDir
+              ensureDir buildDir
+              cFile <- inputCFile file
+              embed @IO (writeFile (toFilePath cFile) _resultCCode)
+              outfile <- Compile.outputFile opts file
+              Compile.runCommand
+                opts
+                  { _compileInputFile = Just (AppPath (preFileFromAbs cFile) False),
+                    _compileOutputFile = Just (AppPath (preFileFromAbs outfile) False)
+                  }
   where
     getFile :: Sem r (Path Abs File)
     getFile = getMainFile (opts ^. compileInputFile)
@@ -43,10 +58,18 @@ runCommand opts = do
     getTarget = \case
       TargetWasm32Wasi -> return Backend.TargetCWasm32Wasi
       TargetNative64 -> return Backend.TargetCNative64
+      TargetNockma -> return Backend.TargetNockma
       TargetGeb -> exitMsg (ExitFailure 1) "error: GEB target not supported for JuvixAsm"
       TargetVampIR -> exitMsg (ExitFailure 1) "error: VampIR target not supported for JuvixAsm"
       TargetCore -> exitMsg (ExitFailure 1) "error: JuvixCore target not supported for JuvixAsm"
       TargetAsm -> exitMsg (ExitFailure 1) "error: JuvixAsm target not supported for JuvixAsm"
+
+    getMain :: InfoTable -> Sem r Symbol
+    getMain InfoTable {..} = case _infoMainFunction of
+      Just m -> return m
+      Nothing -> do
+        putStrLn "Missing `main` function"
+        liftIO exitFailure
 
 inputCFile :: (Members '[App] r) => Path Abs File -> Sem r (Path Abs File)
 inputCFile inputFileCompile = do
