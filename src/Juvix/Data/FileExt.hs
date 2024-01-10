@@ -23,7 +23,7 @@ data FileExt
   | FileExtMarkdown
   | FileExtHtml
   | FileExtCss
-  | FileExtNock
+  | FileExtNockma
   deriving stock (Eq)
 
 juvixFileExt :: (IsString a) => a
@@ -91,7 +91,7 @@ fileExtToText = \case
   FileExtMarkdown -> markdownFileExt
   FileExtHtml -> htmlFileExt
   FileExtCss -> cssFileExt
-  FileExtNock -> nockmaFileExt
+  FileExtNockma -> nockmaFileExt
 
 toMetavar :: FileExt -> String
 toMetavar = \case
@@ -110,7 +110,7 @@ toMetavar = \case
   FileExtMarkdown -> "MARKDOWN_FILE"
   FileExtHtml -> "HTML_FILE"
   FileExtCss -> "CSS_FILE"
-  FileExtNock -> "NOCK_FILE"
+  FileExtNockma -> "NOCKMA_FILE"
 
 instance Show FileExt where
   show = Text.unpack . fileExtToText
@@ -185,7 +185,7 @@ toFileExt p
   | isMarkdownFile p = Just FileExtMarkdown
   | isHtmlFile p = Just FileExtHtml
   | isCssFile p = Just FileExtCss
-  | isNockmaFile p = Just FileExtNock
+  | isNockmaFile p = Just FileExtNockma
   | otherwise = Nothing
 
 fileExtension' :: Path b File -> String

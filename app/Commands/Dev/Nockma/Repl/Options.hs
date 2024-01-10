@@ -9,5 +9,5 @@ newtype NockmaReplOptions = NockmaReplOptions
 
 parseNockmaReplOptions :: Parser NockmaReplOptions
 parseNockmaReplOptions = do
-  _nockmaReplOptionsStackFile <- optional (parseInputFile FileExtNock)
+  _nockmaReplOptionsStackFile <- optional (parseInputFile FileExtNockma)
   pure NockmaReplOptions {..}

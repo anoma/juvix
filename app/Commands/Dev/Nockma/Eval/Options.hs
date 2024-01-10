@@ -11,5 +11,5 @@ makeLenses ''NockmaEvalOptions
 
 parseNockmaEvalOptions :: Parser NockmaEvalOptions
 parseNockmaEvalOptions = do
-  _nockmaEvalFile <- parseInputFile FileExtJuvixAsm
+  _nockmaEvalFile <- parseInputFile FileExtNockma
   pure NockmaEvalOptions {..}
