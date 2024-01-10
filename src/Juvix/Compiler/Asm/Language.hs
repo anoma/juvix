@@ -50,7 +50,15 @@ data DirectRef
   | -- | TempRef references a value in the temporary stack (0-based offsets,
     --   counted from the *bottom* of the temporary stack). JVA code:
     --   'tmp[<offset>]'.
-    TempRef OffsetRef
+    TempRef RefTemp
+
+mkTempRef :: OffsetRef -> DirectRef
+mkTempRef o = TempRef (RefTemp o Nothing)
+
+data RefTemp = RefTemp
+  { _refTempOffsetRef :: OffsetRef,
+    _refTempTempHeight :: Maybe Int
+  }
 
 data OffsetRef = OffsetRef
   { _offsetRefOffset :: Offset,
@@ -67,6 +75,7 @@ data Field = Field
     _fieldOffset :: Offset
   }
 
+makeLenses ''RefTemp
 makeLenses ''Field
 makeLenses ''OffsetRef
 

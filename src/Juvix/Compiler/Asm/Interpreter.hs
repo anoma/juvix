@@ -239,7 +239,7 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
     getDirectRef = \case
       StackRef -> topValueStack
       ArgRef OffsetRef {..} -> readArg _offsetRefOffset
-      TempRef OffsetRef {..} -> readTemp _offsetRefOffset
+      TempRef r -> readTemp r
 
     popLastValueStack :: (Member Runtime r) => Sem r Val
     popLastValueStack = do

@@ -45,14 +45,15 @@ subTermT = go
 subTerm :: (Member (Error NockEvalError) r) => Term a -> Path -> Sem r (Term a)
 subTerm term pos = do
   case term ^? subTermT pos of
-    Nothing -> throw InvalidPath
+    -- Nothing -> throw (InvalidPath "subterm")
+    Nothing -> throw @NockEvalError (error "")
     Just t -> return t
 
 setSubTerm :: (Member (Error NockEvalError) r) => Term a -> Path -> Term a -> Sem r (Term a)
 setSubTerm term pos repTerm =
   let (old, new) = setAndRemember (subTermT' pos) repTerm term
    in if
-          | isNothing (getFirst old) -> throw InvalidPath
+          | isNothing (getFirst old) -> throw @NockEvalError (error "")
           | otherwise -> return new
 
 parseCell :: forall r a. (Members '[Error NockEvalError, Error (ErrNockNatural a)] r, NockNatural a) => Cell a -> Sem r (ParsedCell a)

@@ -43,8 +43,55 @@ testsToRun =
     "Test004: Tail calls"
   ]
 
+testsSlow :: [Int]
+testsSlow = [10, 13, 17, 20, 23, 27, 28, 30, 33, 34, 36]
+
+testsAdt :: [Int]
+testsAdt = [15, 18, 26, 29, 35]
+
+testsHopeless :: [Int]
+testsHopeless =
+  [ 5,
+    6,
+    9,
+    11,
+    14,
+    24,
+    37
+  ]
+
+testsBugged :: [Int]
+testsBugged =
+  [ 12,
+    7,
+    16,
+    21,
+    22,
+    25,
+    31,
+    32,
+    38
+  ]
+
+testsToIgnore :: [Int]
+testsToIgnore = testsHopeless ++ testsBugged ++ testsSlow ++ testsAdt
+
+shouldRun :: Asm.PosTest -> Bool
+shouldRun Asm.PosTest {..} = testNum `notElem` map to3DigitString testsToIgnore
+  where
+    testNum :: String
+    testNum = take 3 (drop 4 _name)
+    to3DigitString :: Int -> String
+    to3DigitString n
+      | n < 10 = "00" ++ show n
+      | n < 100 = "0" ++ show n
+      | n < 1000 = show n
+      | otherwise = impossible
+
 allTests :: TestTree
 allTests =
   testGroup
     "Nockma Asm eval positive tests"
-    (map (mkTest . testDescr) (Asm.filterTests testsToRun Asm.tests))
+    -- (map (mkTest . testDescr) (Asm.filterTests testsToRun Asm.tests))
+    -- (map (mkTest . testDescr) (Asm.tests))
+    (map (mkTest . testDescr) (filter shouldRun Asm.tests))

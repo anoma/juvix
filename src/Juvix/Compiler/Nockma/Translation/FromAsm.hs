@@ -379,10 +379,16 @@ directRefPath :: Asm.DirectRef -> Path
 directRefPath = \case
   Asm.StackRef -> topOfStack ValueStack
   Asm.ArgRef a -> pathToArg (fromOffsetRef a)
-  Asm.TempRef off -> indexInStack TempStack (fromOffsetRef off)
+  Asm.TempRef Asm.RefTemp {..} -> tempRefPath (fromIntegral (fromJust _refTempTempHeight)) (fromOffsetRef _refTempOffsetRef)
 
 pushDirectRef :: (Members '[Compiler] r) => Asm.DirectRef -> Sem r ()
 pushDirectRef = push . (OpAddress #) . directRefPath
+
+tempRefPath :: Natural -> Natural -> Path
+tempRefPath tempHeight off = indexInStack TempStack (tempHeight - off - 1)
+
+pushTempRef :: (Members '[Compiler] r) => Natural -> Natural -> Sem r ()
+pushTempRef tempHeight = push . (OpAddress #) . tempRefPath tempHeight
 
 allocClosure :: (Members '[Compiler] r) => FunctionId -> Natural -> Sem r ()
 allocClosure funSym numArgs = do
@@ -466,6 +472,14 @@ initStack defs = makeList (initSubStack <$> allElements)
 
 push :: (Members '[Compiler] r) => Term Natural -> Sem r ()
 push = pushOnto ValueStack
+
+execCompilerList :: (Member (Reader CompilerCtx) r) => Sem (Compiler ': r) a -> Sem r [Term Natural]
+execCompilerList = fmap fst . runCompilerList
+
+runCompilerList :: (Member (Reader CompilerCtx) r) => Sem (Compiler ': r) a -> Sem r ([Term Natural], a)
+runCompilerList sem = do
+  (ts, a) <- runOutputList (re sem)
+  return (ts, a)
 
 execCompiler :: (Member (Reader CompilerCtx) r) => Sem (Compiler ': r) a -> Sem r (Term Natural)
 execCompiler = fmap fst . runCompiler
@@ -695,6 +709,9 @@ callStdlibOn' s f = do
             (take (fromIntegral n) [OpAddress # indexInStack sn i | i <- [0 ..]])
         )
 
+-- seq [a b c d] = x
+-- seq [a b (seq [c d])] = x
+
 save' ::
   (Functor f, Members '[Output (Term Natural), Reader CompilerCtx] r) =>
   Bool ->
@@ -703,7 +720,7 @@ save' ::
 save' isTail m = do
   pushOntoH TempStack (OpAddress # topOfStack ValueStack)
   popFromH ValueStack
-  runT m >>= raise . execCompiler >>= output >>= pureT
+  runT m >>= raise . execCompilerList >>= mapM_ output >>= pureT
   if
       | isTail -> pureT ()
       | otherwise -> popFromH TempStack

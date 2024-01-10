@@ -190,7 +190,7 @@ genCode infoTable fi =
             CmdSave
               { _cmdSaveInfo = emptyInfo,
                 _cmdSaveIsTail = isTail,
-                _cmdSaveCode = DL.toList $ go isTail (tempSize + 1) (BL.cons (Ref (DRef (TempRef nameRef))) refs) _letBody,
+                _cmdSaveCode = DL.toList $ go isTail (tempSize + 1) (BL.cons (Ref (DRef (mkTempRef nameRef))) refs) _letBody,
                 _cmdSaveName = Just name
               }
         )
@@ -248,7 +248,7 @@ genCode infoTable fi =
                           (tempSize + 1)
                           ( BL.prepend
                               ( map
-                                  (Ref . ConstrRef . Field Nothing tag (TempRef (OffsetRef tempSize Nothing)))
+                                  (Ref . ConstrRef . Field Nothing tag (mkTempRef (OffsetRef tempSize Nothing)))
                                   (reverse [0 .. bindersNum - 1])
                               )
                               refs

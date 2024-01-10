@@ -291,6 +291,17 @@ tests =
       callEnum FunIncrement 1
       callEnum FunCallInc 1
       callEnum FunIncrement 1,
+    Test
+      "push temp"
+      ( do
+          eqStack ValueStack [nock| [5 6 nil] |]
+          eqStack TempStack [nock| [6 5 nil] |]
+      )
+      $ do
+        pushNatOnto TempStack 5
+        pushNatOnto TempStack 6
+        pushTempRef 2 1
+        pushTempRef 2 0,
     Test "push cell" (eqStack ValueStack [nock| [[1 2] nil] |]) $ do
       push (OpQuote # (1 :: Natural) # (2 :: Natural)),
     Test "push unit" (eqStack ValueStack [nock| [[0 nil nil] nil] |]) $ do

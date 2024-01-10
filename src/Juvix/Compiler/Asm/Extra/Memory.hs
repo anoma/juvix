@@ -99,8 +99,8 @@ getDirectRefType dr mem = case dr of
     topValueStack 0 mem
   ArgRef OffsetRef {..} ->
     getArgumentType _offsetRefOffset mem
-  TempRef OffsetRef {..} ->
-    bottomTempStack _offsetRefOffset mem
+  TempRef RefTemp {..} ->
+    bottomTempStack (_refTempOffsetRef ^. offsetRefOffset) mem
 
 getValueType' :: (Member (Error AsmError) r) => Maybe Location -> InfoTable -> Memory -> Value -> Sem r Type
 getValueType' loc tab mem = \case

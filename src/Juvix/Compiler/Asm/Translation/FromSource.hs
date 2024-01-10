@@ -383,7 +383,7 @@ parseSave loc isTail = do
   mn <- optional identifier
   tmpNum <- lift get
   let updateNames :: LocalNameMap -> LocalNameMap
-      updateNames mp = maybe mp (\n -> HashMap.insert n (TempRef (OffsetRef tmpNum (Just n))) mp) mn
+      updateNames mp = maybe mp (\n -> HashMap.insert n (mkTempRef (OffsetRef tmpNum (Just n))) mp) mn
   c <- braces (localS @Index (+ 1) $ localS updateNames parseCode)
   return $
     Save
@@ -444,7 +444,7 @@ tempRef :: ParsecS r DirectRef
 tempRef = do
   kw kwTmp
   (off, _) <- brackets integer
-  return $ TempRef (OffsetRef (fromInteger off) Nothing)
+  return $ mkTempRef (OffsetRef (fromInteger off) Nothing)
 
 namedRef :: (Member (State LocalNameMap) r) => ParsecS r DirectRef
 namedRef = do
