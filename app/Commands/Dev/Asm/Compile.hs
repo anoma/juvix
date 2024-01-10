@@ -23,10 +23,10 @@ runCommand opts = do
         TargetNockma -> do
           tab' <- runErrorIO' @AsmError (computeApply tab)
           mainSym <- getMain tab
-          let (nockSubject, nockMain) = Nockma.fromAsm mainSym tab'
-              outputCell = Nockma.TermCell (Nockma.Cell nockSubject nockMain)
+          let c = Nockma.fromAsm mainSym tab'
+              outputCell = Nockma.TermCell c
               outputText = Nockma.ppPrintOpts nockmaOpts outputCell
-          embed @IO $ writeFileEnsureLn (toFilePath (replaceExtension' ".nockma" file)) outputText
+          embed @IO (writeFileEnsureLn (toFilePath (replaceExtension' ".nockma" file)) outputText)
         _ -> do
           ep <- getEntryPoint (AppPath (preFileFromAbs file) True)
           tgt <- getTarget (opts ^. compileTarget)

@@ -12,7 +12,7 @@ import Juvix.Compiler.Nockma.Translation.FromAsm qualified as Nockma
 runNockmaAssertion :: Handle -> Symbol -> InfoTable -> IO ()
 runNockmaAssertion hout sym tab = do
   tab' <- runM $ runErrorIO' @AsmError (computeApply tab)
-  let (nockSubject, nockMain) = Nockma.fromAsm sym tab'
+  let Nockma.Cell nockSubject nockMain = Nockma.fromAsm sym tab'
   res <- runM $ runOutputSem @(Term Natural) (embed . hPutStrLn hout . Nockma.ppPrint) (evalCompiledNock' nockSubject nockMain)
   let ret = getReturn res
   hPutStrLn hout (Nockma.ppPrint ret)

@@ -19,6 +19,13 @@ data Options = Options
     _optIgnoreHints :: Bool
   }
 
+serializeOptions :: Options
+serializeOptions =
+  Options
+    { _optPrettyMode = MinimizeDelimiters,
+      _optIgnoreHints = True
+    }
+
 traceOptions :: Options
 traceOptions =
   Options

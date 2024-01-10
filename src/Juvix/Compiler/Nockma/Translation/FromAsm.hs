@@ -177,7 +177,12 @@ makeConstructor = termFromParts
 foldTerms :: NonEmpty (Term Natural) -> Term Natural
 foldTerms = foldr1 (#)
 
-fromAsm :: Asm.Symbol -> Asm.InfoTable -> (Term Natural, Term Natural)
+fromAsmTable :: (Members '[Error JuvixError] r) => Asm.InfoTable -> Sem r (Cell Natural)
+fromAsmTable t = case t ^. Asm.infoMainFunction of
+  Just mainFun -> return (fromAsm mainFun t)
+  Nothing -> throw @JuvixError (error "TODO")
+
+fromAsm :: Asm.Symbol -> Asm.InfoTable -> Cell Natural
 fromAsm mainSym Asm.InfoTable {..} =
   let funs = map compileFunction allFunctions
       constrs :: ConstructorArities
@@ -470,7 +475,7 @@ runCompiler sem = do
   (ts, a) <- runOutputList (re sem)
   return (seqTerms ts, a)
 
-runCompilerWith :: ConstructorArities -> [CompilerFunction] -> CompilerFunction -> (Term Natural, Term Natural)
+runCompilerWith :: ConstructorArities -> [CompilerFunction] -> CompilerFunction -> Cell Natural
 runCompilerWith constrs libFuns mainFun =
   let entryCommand :: (Members '[Compiler] r) => Sem r ()
       entryCommand = callFun (mainFun ^. compilerFunctionName) 0
@@ -489,7 +494,7 @@ runCompilerWith constrs libFuns mainFun =
                   . mapM (execCompiler . (^. compilerFunction))
                   $ allFuns
               )
-   in (initStack (toList compiledFuns), entryTerm)
+   in Cell (initStack (toList compiledFuns)) entryTerm
   where
     allFuns :: NonEmpty CompilerFunction
     allFuns = mainFun :| libFuns ++ (builtinFunction <$> allElements)
@@ -922,7 +927,7 @@ compileAndRunNock constrs funs = run . ignoreOutput @(Term Natural) . compileAnd
 
 compileAndRunNock' :: (Member (Output (Term Natural)) r) => ConstructorArities -> [CompilerFunction] -> CompilerFunction -> Sem r (Term Natural)
 compileAndRunNock' constrs funs mainfun =
-  let (nockSubject, t) = runCompilerWith constrs funs mainfun
+  let Cell nockSubject t = runCompilerWith constrs funs mainfun
    in evalCompiledNock' nockSubject t
 
 evalCompiledNock :: Term Natural -> Term Natural -> Term Natural

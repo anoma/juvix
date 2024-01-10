@@ -24,8 +24,11 @@ ppTrace :: (PrettyCode c) => c -> Text
 ppTrace =
   Ansi.renderStrict . reAnnotateS stylize . layoutPretty defaultLayoutOptions . doc defaultOptions
 
+ppSerialize :: (PrettyCode c) => c -> Text
+ppSerialize = ppPrintOpts serializeOptions
+
 ppPrint :: (PrettyCode c) => c -> Text
-ppPrint = renderStrict . toTextStream . ppOutDefault
+ppPrint = ppPrintOpts defaultOptions
 
 ppPrintOpts :: (PrettyCode c) => Options -> c -> Text
 ppPrintOpts opts = renderStrict . toTextStream . ppOut opts
