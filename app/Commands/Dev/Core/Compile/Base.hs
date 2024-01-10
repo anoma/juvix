@@ -37,6 +37,7 @@ getEntry PipelineArg {..} = do
       TargetVampIR -> Backend.TargetVampIR
       TargetCore -> Backend.TargetCore
       TargetAsm -> Backend.TargetAsm
+      TargetNockma -> Backend.TargetNockma
 
     defaultOptLevel :: Int
     defaultOptLevel
@@ -74,15 +75,14 @@ runGebPipeline ::
 runGebPipeline pa@PipelineArg {..} = do
   entryPoint <- getEntry pa
   gebFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
-  let spec =
-        if
-            | _pipelineArgOptions ^. compileTerm -> Geb.OnlyTerm
-            | otherwise ->
-                Geb.LispPackage
-                  Geb.LispPackageSpec
-                    { _lispPackageName = fromString $ takeBaseName $ toFilePath gebFile,
-                      _lispPackageEntry = "*entry*"
-                    }
+  let spec
+        | _pipelineArgOptions ^. compileTerm = Geb.OnlyTerm
+        | otherwise =
+            Geb.LispPackage
+              Geb.LispPackageSpec
+                { _lispPackageName = fromString $ takeBaseName $ toFilePath gebFile,
+                  _lispPackageEntry = "*entry*"
+                }
   Geb.Result {..} <- getRight (run (runReader entryPoint (runError (coreToGeb spec _pipelineArgModule :: Sem '[Error JuvixError, Reader EntryPoint] Geb.Result))))
   embed @IO (writeFile (toFilePath gebFile) _resultCode)
 

@@ -4,7 +4,6 @@ import Asm.Run.Base
 import Asm.Run.Positive qualified as Asm
 import Base
 import Juvix.Compiler.Asm
-import Juvix.Compiler.Core.Language.Base
 import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Pretty qualified as Nockma
 import Juvix.Compiler.Nockma.Translation.FromAsm

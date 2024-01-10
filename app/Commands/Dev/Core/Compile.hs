@@ -19,6 +19,7 @@ runCommand opts = do
     TargetVampIR -> runVampIRPipeline arg
     TargetCore -> return ()
     TargetAsm -> runAsmPipeline arg
+    TargetNockma -> undefined
   where
     getFile :: Sem r (Path Abs File)
     getFile = getMainFile (opts ^. compileInputFile)

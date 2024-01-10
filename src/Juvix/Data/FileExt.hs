@@ -71,8 +71,8 @@ cFileExt = ".c"
 cssFileExt :: (IsString a) => a
 cssFileExt = ".css"
 
-nockFileExt :: (IsString a) => a
-nockFileExt = ".nock"
+nockmaFileExt :: (IsString a) => a
+nockmaFileExt = ".nockma"
 
 fileExtToText :: FileExt -> Text
 fileExtToText = \case
@@ -91,7 +91,7 @@ fileExtToText = \case
   FileExtMarkdown -> markdownFileExt
   FileExtHtml -> htmlFileExt
   FileExtCss -> cssFileExt
-  FileExtNock -> nockFileExt
+  FileExtNock -> nockmaFileExt
 
 toMetavar :: FileExt -> String
 toMetavar = \case
@@ -165,8 +165,8 @@ isHtmlFile = (== Just htmlFileExt) . fileExtension
 isCssFile :: Path b File -> Bool
 isCssFile = (== Just cssFileExt) . fileExtension
 
-isNockFile :: Path b File -> Bool
-isNockFile = (== Just nockFileExt) . fileExtension
+isNockmaFile :: Path b File -> Bool
+isNockmaFile = (== Just nockmaFileExt) . fileExtension
 
 toFileExt :: Path b File -> Maybe FileExt
 toFileExt p
@@ -185,7 +185,7 @@ toFileExt p
   | isMarkdownFile p = Just FileExtMarkdown
   | isHtmlFile p = Just FileExtHtml
   | isCssFile p = Just FileExtCss
-  | isNockFile p = Just FileExtNock
+  | isNockmaFile p = Just FileExtNock
   | otherwise = Nothing
 
 fileExtension' :: Path b File -> String
