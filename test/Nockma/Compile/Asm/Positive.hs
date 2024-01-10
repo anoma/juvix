@@ -10,9 +10,8 @@ import Juvix.Compiler.Nockma.Translation.FromAsm
 import Juvix.Compiler.Nockma.Translation.FromAsm qualified as Nockma
 
 runNockmaAssertion :: Handle -> Symbol -> InfoTable -> IO ()
-runNockmaAssertion hout sym tab = do
-  tab' <- runM $ runErrorIO' @AsmError (computeApply tab)
-  let Nockma.Cell nockSubject nockMain = Nockma.fromAsm sym tab'
+runNockmaAssertion hout _main tab = do
+  Nockma.Cell nockSubject nockMain <- runM (runErrorIO' @JuvixError (Nockma.fromAsmTable tab))
   res <- runM $ runOutputSem @(Term Natural) (embed . hPutStrLn hout . Nockma.ppPrint) (evalCompiledNock' nockSubject nockMain)
   let ret = getReturn res
   hPutStrLn hout (Nockma.ppPrint ret)
@@ -47,7 +46,7 @@ testsSlow :: [Int]
 testsSlow = [10, 13, 17, 20, 23, 27, 28, 30, 33, 34, 36]
 
 testsAdt :: [Int]
-testsAdt = [15, 18, 26, 29, 35]
+testsAdt = [15, 18, 25, 26, 29, 35]
 
 testsHopeless :: [Int]
 testsHopeless =
@@ -62,15 +61,9 @@ testsHopeless =
 
 testsBugged :: [Int]
 testsBugged =
-  [ 12,
-    7,
-    16,
-    21,
-    22,
-    25,
+  [ 16,
     31,
-    32,
-    38
+    32
   ]
 
 testsToIgnore :: [Int]

@@ -1,6 +1,8 @@
 module Juvix.Compiler.Nockma.Translation.FromAsm where
 
 import Juvix.Compiler.Asm.Data.InfoTable qualified as Asm
+import Juvix.Compiler.Asm.Error qualified as Asm
+import Juvix.Compiler.Asm.Transformation (computeApply, computeTempHeight)
 import Juvix.Compiler.Nockma.Evaluator
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Stdlib
@@ -177,42 +179,54 @@ makeConstructor = termFromParts
 foldTerms :: NonEmpty (Term Natural) -> Term Natural
 foldTerms = foldr1 (#)
 
+asmToNockmaTransformations ::
+  (Members '[Error JuvixError] r) =>
+  Asm.InfoTable ->
+  Sem r (Asm.InfoTable)
+asmToNockmaTransformations =
+  mapError (JuvixError @Asm.AsmError)
+    . computeApply
+    >=> mapError (JuvixError @Asm.AsmError) . computeTempHeight
+
+-- | No transformations are required to be applied before calling this
 fromAsmTable :: (Members '[Error JuvixError] r) => Asm.InfoTable -> Sem r (Cell Natural)
 fromAsmTable t = case t ^. Asm.infoMainFunction of
-  Just mainFun -> return (fromAsm mainFun t)
+  Just mainFun -> do
+    t' <- asmToNockmaTransformations t
+    return (fromAsm mainFun t')
   Nothing -> throw @JuvixError (error "TODO")
-
-fromAsm :: Asm.Symbol -> Asm.InfoTable -> Cell Natural
-fromAsm mainSym Asm.InfoTable {..} =
-  let funs = map compileFunction allFunctions
-      constrs :: ConstructorArities
-      constrs = fromIntegral . (^. Asm.constructorArgsNum) <$> _infoConstrs
-   in runCompilerWith constrs funs mainFun
   where
-    mainFun :: CompilerFunction
-    mainFun =
-      CompilerFunction
-        { _compilerFunctionName = UserFunction mainSym,
-          _compilerFunctionArity = 0,
-          _compilerFunction = compile mainCode
-        }
-
-    mainCode :: Asm.Code
-    mainCode = _infoFunctions ^?! at mainSym . _Just . Asm.functionCode
-
-    allFunctions :: [Asm.FunctionInfo]
-    allFunctions = filter notMain (toList _infoFunctions)
+    fromAsm :: Asm.Symbol -> Asm.InfoTable -> Cell Natural
+    fromAsm mainSym Asm.InfoTable {..} =
+      let funs = map compileFunction allFunctions
+          constrs :: ConstructorArities
+          constrs = fromIntegral . (^. Asm.constructorArgsNum) <$> _infoConstrs
+       in runCompilerWith constrs funs mainFun
       where
-        notMain :: Asm.FunctionInfo -> Bool
-        notMain Asm.FunctionInfo {..} = _functionSymbol /= mainSym
+        mainFun :: CompilerFunction
+        mainFun =
+          CompilerFunction
+            { _compilerFunctionName = UserFunction mainSym,
+              _compilerFunctionArity = 0,
+              _compilerFunction = compile mainCode
+            }
 
-    compileFunction :: Asm.FunctionInfo -> CompilerFunction
-    compileFunction Asm.FunctionInfo {..} =
-      CompilerFunction
-        { _compilerFunctionName = UserFunction _functionSymbol,
-          _compilerFunctionArity = fromIntegral _functionArgsNum,
-          _compilerFunction = compile _functionCode
-        }
+        mainCode :: Asm.Code
+        mainCode = _infoFunctions ^?! at mainSym . _Just . Asm.functionCode
+
+        allFunctions :: [Asm.FunctionInfo]
+        allFunctions = filter notMain (toList _infoFunctions)
+          where
+            notMain :: Asm.FunctionInfo -> Bool
+            notMain Asm.FunctionInfo {..} = _functionSymbol /= mainSym
+
+        compileFunction :: Asm.FunctionInfo -> CompilerFunction
+        compileFunction Asm.FunctionInfo {..} =
+          CompilerFunction
+            { _compilerFunctionName = UserFunction _functionSymbol,
+              _compilerFunctionArity = fromIntegral _functionArgsNum,
+              _compilerFunction = compile _functionCode
+            }
 
 fromOffsetRef :: Asm.OffsetRef -> Natural
 fromOffsetRef = fromIntegral . (^. Asm.offsetRefOffset)
@@ -304,6 +318,12 @@ compile = mapM_ goCommand
     goTailCall :: Asm.InstrCall -> Sem r ()
     goTailCall = goCallHelper True
 
+    goDump :: Sem r ()
+    goDump = do
+      dumpStack ValueStack
+      dumpStack TempStack
+      dumpStack CallStack
+
     goTrace :: Sem r ()
     goTrace = traceTerm (OpAddress # topOfStack ValueStack)
 
@@ -323,7 +343,7 @@ compile = mapM_ goCommand
       Asm.ValShow -> stringsErr
       Asm.StrToInt -> stringsErr
       Asm.Trace -> goTrace
-      Asm.Dump -> unsupported "dump"
+      Asm.Dump -> goDump
       Asm.Prealloc {} -> impossible
       Asm.CallClosures {} -> impossible
       Asm.TailCallClosures {} -> impossible
@@ -612,7 +632,12 @@ sre :: (Members '[Output (Term Natural), Reader CompilerCtx] r) => Sem (Compiler
 sre = subsume . re
 
 -- | funName is Nothing when we call a closure at the top of the stack
-callHelper' :: (Members '[Output (Term Natural), Reader CompilerCtx] r) => Bool -> Maybe FunctionId -> Natural -> Sem r ()
+callHelper' ::
+  (Members '[Output (Term Natural), Reader CompilerCtx] r) =>
+  Bool ->
+  Maybe FunctionId ->
+  Natural ->
+  Sem r ()
 callHelper' isTail funName funArgsNum = do
   let isClosure = isNothing funName
   -- 1. Obtain the path to the function
@@ -627,7 +652,8 @@ callHelper' isTail funName funArgsNum = do
       numToPop
         | isClosure = 1 + funArgsNum
         | otherwise = funArgsNum
-  output (storeOnStack CallStack (stackPop ValueStack numToPop))
+
+  unless isTail (output (pushOnStack CallStack (stackPop ValueStack numToPop)))
 
   -- 3.
   --  i. Take a copy of the function from the function library
@@ -666,7 +692,13 @@ asmReturn' :: (Members '[Output (Term Natural), Reader CompilerCtx] r) => Sem r 
 asmReturn' = do
   -- Restore the previous value stack (created in call'.2.). i.e copy the previous value stack
   -- from the call stack and push the result (the head of the current value stack) to it.
-  output (replaceStack ValueStack ((OpAddress # topOfStack ValueStack) # (OpAddress # topOfStack CallStack)))
+  output
+    ( replaceStack
+        ValueStack
+        ( (OpAddress # topOfStack ValueStack)
+            # (OpAddress # topOfStack CallStack)
+        )
+    )
 
   -- discard the 'activation' frame
   sre $ do
@@ -678,6 +710,9 @@ testEq = testEqOn ValueStack
 
 testEqOn' :: (Members '[Output (Term Natural)] r) => StackId -> Sem r ()
 testEqOn' s = output (replaceOnStackN 2 s (OpEq # stackSliceAsCell s 0 1))
+
+dumpStack :: (Members '[Compiler] r) => StackId -> Sem r ()
+dumpStack t = traceTerm (OpAddress # stackPath t)
 
 traceTerm' :: (Members '[Output (Term Natural)] r) => Term Natural -> Sem r ()
 traceTerm' t =

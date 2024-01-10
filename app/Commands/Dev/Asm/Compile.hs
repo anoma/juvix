@@ -3,9 +3,6 @@ module Commands.Dev.Asm.Compile where
 import Commands.Base
 import Commands.Dev.Asm.Compile.Options
 import Commands.Extra.Compile qualified as Compile
-import Juvix.Compiler.Asm.Data.InfoTable
-import Juvix.Compiler.Asm.Error
-import Juvix.Compiler.Asm.Transformation.Apply
 import Juvix.Compiler.Asm.Translation.FromSource qualified as Asm
 import Juvix.Compiler.Backend qualified as Backend
 import Juvix.Compiler.Backend.C qualified as C
@@ -21,10 +18,8 @@ runCommand opts = do
     Right tab -> do
       case opts ^. compileTarget of
         TargetNockma -> do
-          tab' <- runErrorIO' @AsmError (computeApply tab)
-          mainSym <- getMain tab
-          let c = Nockma.fromAsm mainSym tab'
-              outputCell = Nockma.TermCell c
+          c <- runError (Nockma.fromAsmTable tab) >>= either exitJuvixError return
+          let outputCell = Nockma.TermCell c
               outputText = Nockma.ppPrintOpts nockmaOpts outputCell
           embed @IO (writeFileEnsureLn (toFilePath (replaceExtension' ".nockma" file)) outputText)
         _ -> do
@@ -65,13 +60,6 @@ runCommand opts = do
       TargetVampIR -> exitMsg (ExitFailure 1) "error: VampIR target not supported for JuvixAsm"
       TargetCore -> exitMsg (ExitFailure 1) "error: JuvixCore target not supported for JuvixAsm"
       TargetAsm -> exitMsg (ExitFailure 1) "error: JuvixAsm target not supported for JuvixAsm"
-
-    getMain :: InfoTable -> Sem r Symbol
-    getMain InfoTable {..} = case _infoMainFunction of
-      Just m -> return m
-      Nothing -> do
-        putStrLn "Missing `main` function"
-        liftIO exitFailure
 
 inputCFile :: (Members '[App] r) => Path Abs File -> Sem r (Path Abs File)
 inputCFile inputFileCompile = do

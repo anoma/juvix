@@ -529,7 +529,9 @@ instrCall = do
 parseCallType ::
   (Members '[InfoTableBuilder, State LocalNameMap, State Index] r) =>
   ParsecS r CallType
-parseCallType = (kw kwDollar $> CallClosure) <|> (CallFun <$> funSymbol)
+parseCallType =
+  kw kwDollar $> CallClosure
+    <|> CallFun <$> funSymbol
 
 instrCallClosures :: ParsecS r InstrCallClosures
 instrCallClosures = do

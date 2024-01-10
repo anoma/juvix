@@ -29,6 +29,19 @@ computeFunctionTempHeight tab fi = do
             r' = set refTempTempHeight (Just h) r
             instr' = Push (Ref (DRef (TempRef r')))
          in return (Instr (set cmdInstrInstruction instr' cmd))
+      Push (Ref (ConstrRef field@Field {_fieldRef = TempRef r})) ->
+        let h = mem ^. memoryTempStack . stackHeight
+            r' = set refTempTempHeight (Just h) r
+            instr' =
+              Push
+                ( Ref
+                    ( ConstrRef
+                        field
+                          { _fieldRef = TempRef r'
+                          }
+                    )
+                )
+         in return (Instr (set cmdInstrInstruction instr' cmd))
       _ -> return (Instr cmd)
 
     goCase :: Memory -> CmdCase -> [Code] -> Maybe Code -> Sem r Command
