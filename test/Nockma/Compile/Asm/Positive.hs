@@ -48,6 +48,9 @@ testsSlow = [10, 13, 17, 20, 23, 27, 28, 30, 33, 34, 36]
 testsAdt :: [Int]
 testsAdt = [15, 18, 25, 26, 29, 35]
 
+testsNegativeInteger :: [Int]
+testsNegativeInteger = [16, 31]
+
 testsHopeless :: [Int]
 testsHopeless =
   [ 5,
@@ -61,13 +64,12 @@ testsHopeless =
 
 testsBugged :: [Int]
 testsBugged =
-  [ 16,
-    31,
+  [
     32
   ]
 
 testsToIgnore :: [Int]
-testsToIgnore = testsHopeless ++ testsBugged ++ testsSlow ++ testsAdt
+testsToIgnore = testsHopeless ++ testsBugged ++ testsSlow ++ testsAdt ++ testsNegativeInteger
 
 shouldRun :: Asm.PosTest -> Bool
 shouldRun Asm.PosTest {..} = testNum `notElem` map to3DigitString testsToIgnore

@@ -164,7 +164,9 @@ function fib((* -> *, *) -> *) : (* -> *, *) -> * {
       call pred;
       tsave {
         push tmp[0];
+        -- trace;
         call isZero;
+        -- trace;
         br {
           true: {
             calloc zero 0;
@@ -174,6 +176,8 @@ function fib((* -> *, *) -> *) : (* -> *, *) -> * {
           };
           false: {
             push tmp[0];
+
+            dump;
             call pred;
             call fib;
             push tmp[0];
@@ -189,56 +193,57 @@ function fib((* -> *, *) -> *) : (* -> *, *) -> * {
 }
 
 function main() {
-  push 7;
-  calloc num 1;
-  call toInt;
-  trace;
-  pop;
+  -- push 7;
+  -- calloc num 1;
+  -- call toInt;
+  -- trace; -- 7
+  -- pop;
 
-  push 3;
-  calloc num 1;
-  push 7;
-  calloc num 1;
-  calloc mul 2;
-  calloc uncurry 1;
-  call toInt;
-  trace;
-  pop;
+  -- push 3;
+  -- calloc num 1;
+  -- push 7;
+  -- calloc num 1;
+  -- calloc mul 2;
+  -- calloc uncurry 1;
+  -- call toInt;
+  -- trace; -- 21
+  -- pop;
 
-  push 7;
-  calloc num 1;
-  call pred;
-  call toInt;
-  trace;
-  pop;
+  -- push 7;
+  -- calloc num 1;
+  -- call pred;
+  -- call toInt;
+  -- trace; -- 6
+  -- pop;
 
   push 5;
   calloc num 1;
   call fib;
+  trace; -- ?
   call toInt;
   trace;
   pop;
 
-  push 6;
-  calloc num 1;
-  call fib;
-  call toInt;
-  trace;
-  pop;
+  -- push 6;
+  -- calloc num 1;
+  -- call fib;
+  -- call toInt;
+  -- trace;
+  -- pop;
 
-  push 7;
-  calloc num 1;
-  call fib;
-  call toInt;
-  trace;
-  pop;
+  -- push 7;
+  -- calloc num 1;
+  -- call fib;
+  -- call toInt;
+  -- trace;
+  -- pop;
 
-  push 8;
-  calloc num 1;
-  call fib;
-  call toInt;
-  trace;
-  pop;
+  -- push 8;
+  -- calloc num 1;
+  -- call fib;
+  -- call toInt;
+  -- trace;
+  -- pop;
 
   push void;
   ret;

@@ -49,6 +49,7 @@ data StackId
   = CurrentFunction
   | ValueStack
   | TempStack
+  | AuxStack
   | CallStack
   | StandardLibrary
   | FunctionsLibrary
@@ -321,6 +322,7 @@ compile = mapM_ goCommand
     goDump :: Sem r ()
     goDump = do
       dumpStack ValueStack
+      dumpStack AuxStack
       dumpStack TempStack
       dumpStack CallStack
 
@@ -357,27 +359,27 @@ extendClosure extraArgsNum = do
   push (OpQuote # toNock ([] :: Path))
   push (OpAddress # indexInStack ValueStack 1 ++ closurePath ClosureArgsNum)
   appendRights
-  moveTopFromTo ValueStack TempStack
+  moveTopFromTo ValueStack AuxStack
   -- valueStack: [oldclosure ..]
   -- tempstack: [posOfArgsNil ..]
-  pushOnto TempStack curArgsNum
-  pushNatOnto TempStack extraArgsNum
-  addOn TempStack
-  pushOnto TempStack extraArgs
+  pushOnto AuxStack curArgsNum
+  pushNatOnto AuxStack extraArgsNum
+  addOn AuxStack
+  pushOnto AuxStack extraArgs
   -- valueStack: [oldclosure ..]
   -- tempstack: [xtraArgsList newArgsNum posOfArgsNil ..]
-  let xtraArgs = OpAddress # topOfStack TempStack
-      newArgsNum = OpAddress # indexInStack TempStack 1
-      posOfArgsNil = OpAddress # indexInStack TempStack 2
+  let xtraArgs = OpAddress # topOfStack AuxStack
+      newArgsNum = OpAddress # indexInStack AuxStack 1
+      posOfArgsNil = OpAddress # indexInStack AuxStack 2
       newClosure = makeClosure $ \case
         ClosureCode -> OpAddress # pathToOldClosure ++ closurePath ClosureCode
         ClosureTotalArgsNum -> OpAddress # pathToOldClosure ++ closurePath ClosureTotalArgsNum
         ClosureArgsNum -> newArgsNum
         ClosureArgs -> replaceSubterm' oldArgs posOfArgsNil xtraArgs
-  pushOnto TempStack newClosure
+  pushOnto AuxStack newClosure
   popN (1 + extraArgsNum)
-  moveTopFromTo TempStack ValueStack
-  popFromN 3 TempStack
+  moveTopFromTo AuxStack ValueStack
+  popFromN 3 AuxStack
 
 constUnit :: Term Natural
 constUnit = constVoid
@@ -414,14 +416,14 @@ allocClosure :: (Members '[Compiler] r) => FunctionId -> Natural -> Sem r ()
 allocClosure funSym numArgs = do
   funPath <- getFunctionPath funSym
   funAri <- getFunctionArity funSym
-  pushOnto TempStack (stackTake ValueStack numArgs)
+  pushOnto AuxStack (stackTake ValueStack numArgs)
   let closure = makeClosure $ \case
         ClosureCode -> OpAddress # funPath
         ClosureTotalArgsNum -> OpQuote # toNock funAri
         ClosureArgsNum -> OpQuote # toNock numArgs
-        ClosureArgs -> OpAddress # topOfStack TempStack
+        ClosureArgs -> OpAddress # topOfStack AuxStack
   popNAndPushOnto ValueStack numArgs closure
-  popFrom TempStack
+  popFrom AuxStack
 
 closureArgsNum :: (Members '[Compiler] r) => Sem r ()
 closureArgsNum = do
@@ -433,9 +435,9 @@ allocConstr tag = do
   numArgs <- getConstructorArity tag
   let args = [OpAddress # indexInStack ValueStack (pred i) | i <- [1 .. numArgs]]
       constr = goConstructor tag args
-  pushOnto TempStack constr
+  pushOnto AuxStack constr
   popN numArgs
-  moveTopFromTo TempStack ValueStack
+  moveTopFromTo AuxStack ValueStack
 
 copyTopFromTo :: (Members '[Compiler] r) => StackId -> StackId -> Sem r ()
 copyTopFromTo from toStack = pushOnto toStack (OpAddress # topOfStack from)
@@ -454,11 +456,11 @@ stringsErr = unsupported "strings"
 -- | Computes a - b
 sub :: (Members '[Compiler] r) => Term Natural -> Term Natural -> Sem r () -> Sem r ()
 sub a b aux = do
-  pushOnto TempStack b
-  pushOnto TempStack a
+  pushOnto AuxStack b
+  pushOnto AuxStack a
   aux
-  callStdlibOn TempStack StdlibSub
-  moveTopFromTo TempStack ValueStack
+  callStdlibOn AuxStack StdlibSub
+  moveTopFromTo AuxStack ValueStack
 
 seqTerms :: [Term Natural] -> Term Natural
 seqTerms = foldl' step (OpAddress # emptyPath) . reverse
@@ -487,6 +489,7 @@ initStack defs = makeList (initSubStack <$> allElements)
       ValueStack -> nockNil'
       CallStack -> nockNil'
       TempStack -> nockNil'
+      AuxStack -> nockNil'
       StandardLibrary -> stdlib
       FunctionsLibrary -> makeList defs
 
@@ -587,16 +590,16 @@ builtinFunction = \case
         _compilerFunction = do
           push (OpAddress # pathToArg 1)
           push (OpAddress # pathToArg 0)
-          copyTopFromTo ValueStack TempStack
+          copyTopFromTo ValueStack AuxStack
           pushNat 0
           testEq
           let baseCase :: (Members '[Compiler] r) => Sem r ()
-              baseCase = popFrom TempStack >> asmReturn
+              baseCase = popFrom AuxStack >> asmReturn
               recCase :: (Members '[Compiler] r) => Sem r ()
               recCase = do
                 pushNat 2
                 mul
-                moveTopFromTo TempStack ValueStack
+                moveTopFromTo AuxStack ValueStack
                 dec
                 callHelper True (Just (BuiltinFunction BuiltinPow2Go)) 2
           branch baseCase recCase
@@ -667,22 +670,24 @@ callHelper' isTail funName funArgsNum = do
           push (OpQuote # toNock ([] :: Path))
           push (OpAddress # indexInStack ValueStack 1 ++ closurePath ClosureArgsNum)
           appendRights
-          moveTopFromTo ValueStack TempStack
+          moveTopFromTo ValueStack AuxStack
           let closurepath = topOfStack ValueStack
-              posOfArgsNil = OpAddress # topOfStack TempStack
+              posOfArgsNil = OpAddress # topOfStack AuxStack
               oldArgs = OpAddress # closurepath ++ closurePath ClosureArgs
               xtraArgs = stackSliceAsList ValueStack 1 funArgsNum
               allArgs = replaceSubterm' oldArgs posOfArgsNil xtraArgs
               funCode = OpAddress # closurepath ++ closurePath ClosureCode
               funWithArgs = replaceSubterm funCode [R] allArgs
           output (storeOnStack CurrentFunction funWithArgs)
-          popFrom TempStack
+          popFrom AuxStack
       | otherwise -> do
           let funWithArgs = replaceSubterm (OpAddress # funPath) [R] (stackTake ValueStack funArgsNum)
           output (storeOnStack CurrentFunction funWithArgs)
 
   -- 4. Replace the value stack with nil
   output (resetStack ValueStack)
+  output (resetStack TempStack)
+  output (resetStack AuxStack)
 
   -- 5. Evaluate the function in the context of the whole nock stack
   -- 6. See documentation for asmReturn'
@@ -744,9 +749,6 @@ callStdlibOn' s f = do
             (take (fromIntegral n) [OpAddress # indexInStack sn i | i <- [0 ..]])
         )
 
--- seq [a b c d] = x
--- seq [a b (seq [c d])] = x
-
 save' ::
   (Functor f, Members '[Output (Term Natural), Reader CompilerCtx] r) =>
   Bool ->
@@ -796,7 +798,7 @@ branch' ::
 branch' t f = do
   termT <- runT t >>= raise . execCompiler . (pop >>)
   termF <- runT f >>= raise . execCompiler . (pop >>)
-  (output >=> pureT) (OpIf # (OpAddress # pathInStack ValueStack [L]) # termT # termF)
+  (output >=> pureT) (OpIf # (OpAddress # topOfStack ValueStack) # termT # termF)
 
 getFunctionArity' :: (Members '[Reader CompilerCtx] r) => FunctionId -> Sem r Natural
 getFunctionArity' s = asks (^?! compilerFunctionInfos . at s . _Just . functionArity)
