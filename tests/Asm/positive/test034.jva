@@ -21,7 +21,7 @@ function iterate(* -> *, integer) : * -> * {
     true: {
       calloc id 0;
       ret;
-    }
+    };
     false: {
       push 1;
       push arg[1];
@@ -31,7 +31,7 @@ function iterate(* -> *, integer) : * -> * {
       push arg[0];
       calloc compose 2;
       ret;
-    }
+    };
   };
 }
 

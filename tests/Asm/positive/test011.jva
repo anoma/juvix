@@ -5,7 +5,7 @@ function sum'(integer, integer) : integer {
   push 0;
   eq;
   br {
-    true: { push arg[1]; ret; }
+    true: { push arg[1]; ret; };
     false: {
       push arg[1];
       push arg[0];
@@ -14,7 +14,7 @@ function sum'(integer, integer) : integer {
       push arg[0];
       sub;
       tcall sum';
-    }
+    };
   };
 }
 
@@ -29,7 +29,7 @@ function fact'(integer, integer) : integer {
   push 0;
   eq;
   br {
-    true: { push arg[1]; ret; }
+    true: { push arg[1]; ret; };
     false: {
       push arg[0];
       push arg[1];
@@ -38,7 +38,7 @@ function fact'(integer, integer) : integer {
       push arg[0];
       sub;
       tcall fact';
-    }
+    };
   };
 }
 

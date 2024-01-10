@@ -3,8 +3,8 @@
 function main() {
   push true;
   br {
-    true: { push "a"; }
-    false: { push 1; }
+    true: { push "a"; };
+    false: { push 1; };
   };
   ret;
 }

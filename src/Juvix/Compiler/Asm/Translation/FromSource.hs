@@ -547,14 +547,18 @@ trueBranch ::
   ParsecS r Code
 trueBranch = do
   symbol "true:"
-  branchCode
+  c <- branchCode
+  kw delimSemicolon
+  return c
 
 falseBranch ::
   (Members '[InfoTableBuilder, State LocalNameMap, State Index] r) =>
   ParsecS r Code
 falseBranch = do
   symbol "false:"
-  branchCode
+  c <- branchCode
+  kw delimSemicolon
+  return c
 
 caseBranch ::
   (Members '[InfoTableBuilder, State LocalNameMap, State Index] r) =>
@@ -562,9 +566,15 @@ caseBranch ::
 caseBranch = do
   tag <- P.try constrTag
   kw kwColon
-  CaseBranch tag <$> branchCode
+  c <- CaseBranch tag <$> branchCode
+  kw delimSemicolon
+  return c
 
 defaultBranch ::
   (Members '[InfoTableBuilder, State LocalNameMap, State Index] r) =>
   ParsecS r Code
-defaultBranch = symbol "default:" >> branchCode
+defaultBranch = do
+  symbol "default:"
+  c <- branchCode
+  kw delimSemicolon
+  return c

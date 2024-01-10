@@ -12,7 +12,7 @@ function gen(integer) : tree {
   push 0;
   eq;
   br {
-    true: { alloc leaf; ret; }
+    true: { alloc leaf; ret; };
     false: {
       push 3;
       push arg[0];
@@ -29,7 +29,7 @@ function gen(integer) : tree {
             call gen;
             alloc node1;
             ret;
-          }
+          };
           false: {
             push tmp[0];
             push 1;
@@ -47,7 +47,7 @@ function gen(integer) : tree {
                   alloc node2;
                   ret;
                 };
-              }
+              };
               false: {
                 push 1;
                 push arg[0];
@@ -62,12 +62,12 @@ function gen(integer) : tree {
                   alloc node3;
                   ret;
                 };
-              }
+              };
             };
-          }
+          };
         };
       };
-    }
+    };
   };
 }
 
@@ -81,7 +81,7 @@ function preorder(tree) {
       pop;
       push arg[0].node1[0];
       tcall preorder;
-    }
+    };
     node2: {
       pop;
       push 2;
@@ -92,7 +92,7 @@ function preorder(tree) {
       pop;
       push arg[0].node2[1];
       tcall preorder;
-    }
+    };
     node3: {
       pop;
       push 3;
@@ -106,7 +106,7 @@ function preorder(tree) {
       pop;
       push arg[0].node3[2];
       tcall preorder;
-    }
+    };
     leaf: {
       pop;
       push 0;
@@ -114,7 +114,7 @@ function preorder(tree) {
       pop;
       push void;
       ret;
-    }
+    };
   };
 }
 

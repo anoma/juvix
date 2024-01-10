@@ -8,14 +8,14 @@ function g(integer -> integer, integer) : integer {
     true: {
       push 0;
       ret;
-    }
+    };
     false: {
       push 1;
       push arg[1];
       sub;
       push arg[0];
       tcall $ 1;
-    }
+    };
   };
 }
 
