@@ -50,7 +50,7 @@ data StackId
   | ValueStack
   | TempStack
   | AuxStack
-  | CallStack
+  | FrameStack
   | StandardLibrary
   | FunctionsLibrary
   deriving stock (Enum, Bounded, Eq, Show)
@@ -83,6 +83,15 @@ data ConstructorPathId
 
 constructorPath :: ConstructorPathId -> Path
 constructorPath = pathFromEnum
+
+data ActivationFramePathId
+ = ActivationFrameValueStack
+ | ActivationFrameTempStack
+ | ActivationFrameAuxStack
+  deriving stock (Bounded, Enum)
+
+activationFramePath :: ActivationFramePathId -> Path
+activationFramePath = pathFromEnum
 
 data StdlibFunction
   = StdlibDec
@@ -176,6 +185,9 @@ makeClosure = termFromParts
 
 makeConstructor :: (ConstructorPathId -> Term Natural) -> Term Natural
 makeConstructor = termFromParts
+
+makeActivationFrame :: (ActivationFramePathId -> Term Natural) -> Term Natural
+makeActivationFrame = termFromParts
 
 foldTerms :: NonEmpty (Term Natural) -> Term Natural
 foldTerms = foldr1 (#)
@@ -324,7 +336,7 @@ compile = mapM_ goCommand
       dumpStack ValueStack
       dumpStack AuxStack
       dumpStack TempStack
-      dumpStack CallStack
+      dumpStack FrameStack
 
     goTrace :: Sem r ()
     goTrace = traceTerm (OpAddress # topOfStack ValueStack)
@@ -487,7 +499,7 @@ initStack defs = makeList (initSubStack <$> allElements)
     initSubStack = \case
       CurrentFunction -> nockNil'
       ValueStack -> nockNil'
-      CallStack -> nockNil'
+      FrameStack -> nockNil'
       TempStack -> nockNil'
       AuxStack -> nockNil'
       StandardLibrary -> stdlib
@@ -656,7 +668,12 @@ callHelper' isTail funName funArgsNum = do
         | isClosure = 1 + funArgsNum
         | otherwise = funArgsNum
 
-  unless isTail (output (pushOnStack CallStack (stackPop ValueStack numToPop)))
+  unless isTail $ do
+    let frame = makeActivationFrame $ \case
+          ActivationFrameValueStack -> stackPop ValueStack numToPop
+          ActivationFrameTempStack -> OpAddress # stackPath TempStack
+          ActivationFrameAuxStack -> OpAddress # stackPath AuxStack
+    output (pushOnStack FrameStack frame)
 
   -- 3.
   --  i. Take a copy of the function from the function library
@@ -697,17 +714,31 @@ asmReturn' :: (Members '[Output (Term Natural), Reader CompilerCtx] r) => Sem r 
 asmReturn' = do
   -- Restore the previous value stack (created in call'.2.). i.e copy the previous value stack
   -- from the call stack and push the result (the head of the current value stack) to it.
+
   output
     ( replaceStack
         ValueStack
         ( (OpAddress # topOfStack ValueStack)
-            # (OpAddress # topOfStack CallStack)
+            # (OpAddress # topOfStack FrameStack ++ activationFramePath ActivationFrameValueStack)
         )
+    )
+
+  output
+    ( replaceStack
+        TempStack
+        (OpAddress # topOfStack FrameStack ++ activationFramePath ActivationFrameTempStack)
+    )
+
+  output
+    ( replaceStack
+        AuxStack
+        (OpAddress # topOfStack FrameStack ++ activationFramePath ActivationFrameAuxStack)
+
     )
 
   -- discard the 'activation' frame
   sre $ do
-    popFrom CallStack
+    popFrom FrameStack
     popFrom CurrentFunction
 
 testEq :: (Members '[Compiler] r) => Sem r ()
