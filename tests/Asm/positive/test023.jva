@@ -10,14 +10,14 @@ function f91(integer) : integer {
       push arg[0];
       sub;
       ret;
-    }
+    };
     false: {
       push 11;
       push arg[0];
       add;
       call f91;
       tcall f91;
-    }
+    };
   };
 }
 

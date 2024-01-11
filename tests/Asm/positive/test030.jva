@@ -10,7 +10,7 @@ function f(integer) : integer {
     true: {
       push 1;
       ret;
-    }
+    };
     false: {
       push 268435456;
       push 1;
@@ -23,7 +23,7 @@ function f(integer) : integer {
       add;
       mod;
       ret;
-    }
+    };
   };
 }
 
@@ -37,7 +37,7 @@ function g(integer) : integer {
     true: {
       push 1;
       ret;
-    }
+    };
     false: {
       push 268435456;
       push 1;
@@ -48,7 +48,7 @@ function g(integer) : integer {
       add;
       mod;
       ret;
-    }
+    };
   };
 }
 
@@ -60,7 +60,7 @@ function h(integer) : integer {
     true: {
       push 1;
       ret;
-    }
+    };
     false: {
       push 268435456;
       push 1;
@@ -71,7 +71,7 @@ function h(integer) : integer {
       mul;
       mod;
       ret;
-    }
+    };
   };
 }
 

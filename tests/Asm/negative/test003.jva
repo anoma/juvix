@@ -8,7 +8,7 @@ type list {
 function f(list) {
   push arg[0];
   case list {
-    cons: ret
+    cons: ret;
   };
 }
 

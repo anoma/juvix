@@ -12,7 +12,7 @@ function head(list) {
       pop;
       push arg[0].cons[0];
       ret;
-    }
+    };
   };
 }
 
@@ -23,7 +23,7 @@ function tail(list) : list {
       pop;
       push arg[0].cons[1];
       ret;
-    }
+    };
   };
 }
 
@@ -34,12 +34,12 @@ function null(list) {
       pop;
       push true;
       ret;
-    }
+    };
     cons: {
       pop;
       push false;
       ret;
-    }
+    };
   };
 }
 
@@ -48,7 +48,7 @@ function map(* -> *, list) : list {
   case list {
     nil: {
       ret;
-    }
+    };
     cons: {
       pop;
       push arg[1].cons[1];
@@ -59,7 +59,7 @@ function map(* -> *, list) : list {
       call $ 1;
       alloc cons;
       ret;
-    }
+    };
   };
 }
 
@@ -70,7 +70,7 @@ function foldl((*, *) -> *, *, list) : * {
       pop;
       push arg[1];
       ret;
-    }
+    };
     cons: {
       pop;
       push arg[2].cons[1];
@@ -80,7 +80,7 @@ function foldl((*, *) -> *, *, list) : * {
       call $ 2;
       push arg[0];
       tcall foldl;
-    }
+    };
   };
 }
 
@@ -91,7 +91,7 @@ function foldr((*, *) -> *, *, list) {
       pop;
       push arg[1];
       ret;
-    }
+    };
     cons: {
       pop;
       push arg[2].cons[1];
@@ -101,14 +101,14 @@ function foldr((*, *) -> *, *, list) {
       push arg[2].cons[0];
       push arg[0];
       tcall $ 2;
-    }
+    };
   };
 }
 
 function filter(* -> bool, list) : list {
   push arg[1];
   case list {
-    nil: ret
+    nil: ret;
     cons: {
       pop;
       push arg[1].cons[0];
@@ -122,14 +122,14 @@ function filter(* -> bool, list) : list {
           push arg[1].cons[0];
           alloc cons;
           ret;
-        }
+        };
         false: {
           push arg[1].cons[1];
           push arg[0];
           tcall filter;
-        }
+        };
       };
-    }
+    };
   };
 }
 
@@ -155,7 +155,7 @@ function gen(integer) : list {
     true: {
       alloc nil;
       ret;
-    }
+    };
     false: {
       push 1;
       push arg[0];
@@ -164,7 +164,7 @@ function gen(integer) : list {
       push arg[0];
       alloc cons;
       ret;
-    }
+    };
   };
 }
 
@@ -198,7 +198,7 @@ function foldl'((*, *) -> *, *, list) {
     true: {
       push arg[1];
       ret;
-    }
+    };
     false: {
       push arg[2];
       call tail;
@@ -209,7 +209,7 @@ function foldl'((*, *) -> *, *, list) {
       call $ 2;
       push arg[0];
       tcall foldl';
-    }
+    };
   };
 }
 

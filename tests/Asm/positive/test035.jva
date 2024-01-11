@@ -13,7 +13,7 @@ function mklst(integer) : list {
     true: {
       alloc nil;
       ret;
-    }
+    };
     false: {
       push 1;
       push arg[0];
@@ -22,7 +22,7 @@ function mklst(integer) : list {
       push arg[0];
       alloc cons;
       ret;
-    }
+    };
   };
 }
 
@@ -34,7 +34,7 @@ function mklst2(integer) : list {
     true: {
       alloc nil;
       ret;
-    }
+    };
     false: {
       push 1;
       push arg[0];
@@ -44,14 +44,14 @@ function mklst2(integer) : list {
       call mklst;
       alloc cons;
       ret;
-    }
+    };
   };
 }
 
 function append(list, list) : list {
   push arg[0];
   case list {
-    nil: { pop; push arg[1]; ret; }
+    nil: { pop; push arg[1]; ret; };
     cons: {
       pop;
       push arg[1];
@@ -60,21 +60,21 @@ function append(list, list) : list {
       push arg[0].cons[0];
       alloc cons;
       ret;
-    }
+    };
   };
 }
 
 function flatten(list) : list {
   push arg[0];
   case list {
-    nil: ret
+    nil: ret;
     cons: {
       pop;
       push arg[0].cons[1];
       call flatten;
       push arg[0].cons[0];
       tcall append;
-    }
+    };
   };
 }
 

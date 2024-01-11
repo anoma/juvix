@@ -10,13 +10,13 @@ function apply_1(*, *) : * {
             push arg[1];
             push arg[0];
             tcall $ 1;
-        }
+        };
         false: { -- argsnum > 1
             push arg[1];
             push arg[0];
             cextend 1;
             ret;
-        }
+        };
     };
 }
 
@@ -33,7 +33,7 @@ function apply_2(*, *, *) : * {
                 push arg[1];
                 push arg[0];
                 tcall $ 2;
-            }
+            };
             false: {
                 push n;
                 push 1;
@@ -45,16 +45,16 @@ function apply_2(*, *, *) : * {
                         push arg[0];
                         call $ 1;
                         tcall apply_1;
-                    }
+                    };
                     false: { -- argsnum > 2
                         push arg[2];
                         push arg[1];
                         push arg[0];
                         cextend 2;
                         ret;
-                    }
+                    };
                 };
-            }
+            };
         };
     };
 }
@@ -73,7 +73,7 @@ function apply_3(*, *, *, *) : * {
                 push arg[1];
                 push arg[0];
                 tcall $ 3;
-            }
+            };
             false: {
                 push n;
                 push 3;
@@ -86,7 +86,7 @@ function apply_3(*, *, *, *) : * {
                         push arg[0];
                         cextend 3;
                         ret;
-                    }
+                    };
                     false: { -- argsnum <= 2
                         push n;
                         push 2;
@@ -99,7 +99,7 @@ function apply_3(*, *, *, *) : * {
                                 push arg[0];
                                 call $ 2;
                                 tcall apply_1;
-                            }
+                            };
                             false: { -- argsnum = 1
                                 push arg[3];
                                 push arg[2];
@@ -107,11 +107,11 @@ function apply_3(*, *, *, *) : * {
                                 push arg[0];
                                 call $ 1;
                                 tcall apply_2;
-                            }
+                            };
                         };
-                    }
+                    };
                 };
-            }
+            };
         };
     };
 }
@@ -131,7 +131,7 @@ function apply_4(*, *, *, *, *) : * {
                 push arg[1];
                 push arg[0];
                 tcall $ 4;
-            }
+            };
             false: {
                 push n;
                 push 4;
@@ -145,7 +145,7 @@ function apply_4(*, *, *, *, *) : * {
                         push arg[0];
                         cextend 4;
                         ret;
-                    }
+                    };
                     false: { -- argsnum <= 3
                         push n;
                         push 3;
@@ -159,7 +159,7 @@ function apply_4(*, *, *, *, *) : * {
                                 push arg[0];
                                 call $ 3;
                                 tcall apply_1;
-                            }
+                            };
                             false: {
                                 push n;
                                 push 2;
@@ -173,7 +173,7 @@ function apply_4(*, *, *, *, *) : * {
                                         push arg[0];
                                         call $ 2;
                                         tcall apply_2;
-                                    }
+                                    };
                                     false: { -- argsnum = 1
                                         push arg[4];
                                         push arg[3];
@@ -182,13 +182,13 @@ function apply_4(*, *, *, *, *) : * {
                                         push arg[0];
                                         call $ 1;
                                         tcall apply_3;
-                                    }
+                                    };
                                 };
-                            }
+                            };
                         };
-                    }
+                    };
                 };
-            }
+            };
         };
     };
 }

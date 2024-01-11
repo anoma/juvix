@@ -5,7 +5,7 @@ function sum(integer) : integer {
   push 0;
   eq;
   br {
-    true: push 0
+    true: push 0;
     false: {
       push 1;
       push arg[0];
@@ -13,7 +13,7 @@ function sum(integer) : integer {
       call sum;
       push arg[0];
       add;
-    }
+    };
   };
   ret;
 }

@@ -8,8 +8,8 @@ type list {
 function main() {
   alloc nil;
   case list {
-    nil: { pop; push "a"; }
-    cons: { pop; push 1; }
+    nil: { pop; push "a"; };
+    cons: { pop; push 1; };
   };
   ret;
 }

@@ -25,13 +25,13 @@ function filter(f : integer -> bool, s : unit -> stream, unit) : stream {
         push s1.cons[0];
         alloc cons;
         ret;
-      }
+      };
       false: {
         push unit;
         push s1.cons[1];
         push f;
         tcall filter;
-      }
+      };
     };
   };
 }
@@ -44,14 +44,14 @@ function nth(n : integer, s : unit -> stream) : integer {
     push 0;
     eq;
     br {
-      true: { push s1.cons[0]; ret; }
+      true: { push s1.cons[0]; ret; };
       false: {
         push s1.cons[1];
         push 1;
         push n;
         sub;
         tcall nth;
-      }
+      };
     };
   };
 }
@@ -73,8 +73,8 @@ function indivisible(n : integer, m : integer) : bool {
   push 0;
   eq;
   br {
-    true: { push false; ret; }
-    false: { push true; ret; }
+    true: { push false; ret; };
+    false: { push true; ret; };
   };
 }
 

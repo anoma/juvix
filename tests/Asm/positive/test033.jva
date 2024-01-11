@@ -10,7 +10,7 @@ function ack(integer, integer) : integer {
       push arg[1];
       add;
       ret;
-    }
+    };
     false: {
       push 0;
       push arg[1];
@@ -22,7 +22,7 @@ function ack(integer, integer) : integer {
           push arg[0];
           sub;
           tcall ack;
-        }
+        };
         false: {
           push 1;
           push arg[1];
@@ -33,9 +33,9 @@ function ack(integer, integer) : integer {
           push arg[0];
           sub;
           tcall ack;
-        }
+        };
       };
-    }
+    };
   };
 }
 

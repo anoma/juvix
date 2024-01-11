@@ -18,15 +18,15 @@ function tl(list) : list {
 function null(list) : bool {
   push arg[0];
   case list {
-    nil: { pop; push true; ret; }
-    default: { pop; push false; ret; }
+    nil: { pop; push true; ret; };
+    default: { pop; push false; ret; };
   };
 }
 
 function map(* -> *, list) : list {
   push arg[1];
   case list {
-    nil: ret
+    nil: ret;
     cons: {
       tsave {
         push tmp[0].cons[1];
@@ -38,7 +38,7 @@ function map(* -> *, list) : list {
         alloc cons;
         ret;
       };
-    }
+    };
   };
 }
 
@@ -49,7 +49,7 @@ function map'(* -> *, list) : list {
     true: {
       alloc nil;
       ret;
-    }
+    };
     false: {
       push arg[1];
       call tl;
@@ -61,7 +61,7 @@ function map'(* -> *, list) : list {
       call $ 1;
       alloc cons;
       ret;
-    }
+    };
   };
 }
 

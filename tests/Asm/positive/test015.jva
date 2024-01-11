@@ -24,7 +24,7 @@ function f(integer) : integer -> integer {
       push 0;
       calloc const 1;
       ret;
-    }
+    };
     false: {
       push arg[0];
       push 5;
@@ -34,7 +34,7 @@ function f(integer) : integer -> integer {
           push 1;
           calloc const 1;
           ret;
-        }
+        };
         false: {
           push arg[0];
           push 10;
@@ -43,15 +43,15 @@ function f(integer) : integer -> integer {
             true: {
               calloc g 0;
               ret;
-            }
+            };
             false: {
               calloc id 0;
               ret;
-            }
+            };
           };
-        }
+        };
       };
-    }
+    };
   };
 }
 

@@ -20,7 +20,7 @@ function f((*, integer -> integer, integer) -> *, integer -> integer, integer) {
       pop;
       push void;
       ret;
-    }
+    };
     false: {
       push 9;
       trace;
@@ -32,7 +32,7 @@ function f((*, integer -> integer, integer) -> *, integer -> integer, integer) {
       push arg[0];
       push $;
       tcall $ 3;
-    }
+    };
   };
 }
 

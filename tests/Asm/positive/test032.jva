@@ -36,7 +36,7 @@ function num(integer, * -> *, *) {
       push arg[2];
       push arg[1];
       tcall zero;
-    }
+    };
     false: {
       push arg[2];
       push arg[1];
@@ -46,7 +46,7 @@ function num(integer, * -> *, *) {
       calloc num 2;
       push arg[1];
       tcall compose;
-    }
+    };
   };
 }
 
@@ -110,7 +110,7 @@ function pred_step(Pair) : (* -> *, *) -> * {
       push arg[0].pair[0];
       alloc pair;
       ret;
-    }
+    };
     false: {
       push arg[0].pair[1];
       calloc succ 1;
@@ -120,7 +120,7 @@ function pred_step(Pair) : (* -> *, *) -> * {
       calloc uncurry 1;
       alloc pair;
       ret;
-    }
+    };
   };
 }
 
@@ -158,7 +158,7 @@ function fib((* -> *, *) -> *) : (* -> *, *) -> * {
     true: {
       calloc zero 0;
       ret;
-    }
+    };
     false: {
       push arg[0];
       call pred;
@@ -171,7 +171,7 @@ function fib((* -> *, *) -> *) : (* -> *, *) -> * {
             calloc succ 1;
             calloc uncurry 1;
             ret;
-          }
+          };
           false: {
             push tmp[0];
             call pred;
@@ -181,10 +181,10 @@ function fib((* -> *, *) -> *) : (* -> *, *) -> * {
             calloc add 2;
             calloc uncurry 1;
             ret;
-          }
+          };
         };
       };
-    }
+    };
   };
 }
 

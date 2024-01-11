@@ -26,7 +26,7 @@ function f(integer) : integer -> integer {
       true: {
         push 10;
         tcall f;
-      }
+      };
       false: {
         push 10;
         push arg[0];
@@ -40,13 +40,13 @@ function f(integer) : integer -> integer {
             push tmp[0];
             calloc h 2;
             ret;
-          }
+          };
           false: {
             push tmp[0];
             ret;
-          }
+          };
         };
-      }
+      };
     };
   };
 }
@@ -68,14 +68,14 @@ function h'(integer) : integer {
     true: {
       push 0;
       ret;
-    }
+    };
     false: {
       calloc h' 0;
       push 1;
       push arg[0];
       sub;
       tcall g';
-    }
+    };
   };
 }
 

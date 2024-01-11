@@ -13,7 +13,7 @@ function gen(integer) : tree {
     true: {
       alloc leaf;
       ret;
-    }
+    };
     false: {
       push 1;
       push arg[0];
@@ -25,7 +25,7 @@ function gen(integer) : tree {
       call gen;
       alloc node;
       ret;
-    }
+    };
   };
 }
 
@@ -38,7 +38,7 @@ function f(tree) : integer {
       pop;
       push 1;
       ret;
-    }
+    };
     node: {
       tsave {
         push tmp[0].node[0];
@@ -54,7 +54,7 @@ function f(tree) : integer {
                 push 3;
                 push 0;
                 sub;
-              }
+              };
               node: {
                 save {
                   push 32768;
@@ -65,7 +65,7 @@ function f(tree) : integer {
                   add;
                   mod;
                 };
-              }
+              };
             };
             tsave {
               push tmp[2];
@@ -80,11 +80,11 @@ function f(tree) : integer {
                     add;
                     mod;
                   };
-                }
+                };
                 default: {
                   pop;
                   push 2;
-                }
+                };
               };
               tsave {
                 push 32768;
@@ -98,23 +98,23 @@ function f(tree) : integer {
           };
         };
       };
-    }
+    };
   };
 }
 
 function isNode(tree) : bool {
   push arg[0];
   case tree {
-    node: { pop; push true; ret; }
-    default: { pop; push false; ret; }
+    node: { pop; push true; ret; };
+    default: { pop; push false; ret; };
   };
 }
 
 function isLeaf(tree) : bool {
   push arg[0];
   case tree {
-    leaf: { pop; push true; ret; }
-    default: { pop; push false; ret; }
+    leaf: { pop; push true; ret; };
+    default: { pop; push false; ret; };
   };
 }
 
@@ -125,7 +125,7 @@ function g(tree) : tree {
     true: {
       push arg[0];
       ret;
-    }
+    };
     false: {
       push arg[0];
       case tree {
@@ -137,18 +137,18 @@ function g(tree) : tree {
               true: {
                 push tmp[0].node[1];
                 ret;
-              }
+              };
               false: {
                 push tmp[0].node[1];
                 push tmp[0].node[0];
                 alloc node;
                 ret;
-              }
+              };
             };
           };
-        }
+        };
       };
-    }
+    };
   };
 }
 
