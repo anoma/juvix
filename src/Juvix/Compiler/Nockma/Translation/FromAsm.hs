@@ -25,6 +25,9 @@ data BuiltinFunctionId
 
 instance Hashable BuiltinFunctionId
 
+newtype CompilerOptions = CompilerOptions
+  {_compilerOptionsEnableTrace :: Bool}
+
 data FunctionInfo = FunctionInfo
   { _functionInfoPath :: Path,
     _functionInfoArity :: Natural
@@ -32,7 +35,8 @@ data FunctionInfo = FunctionInfo
 
 data CompilerCtx = CompilerCtx
   { _compilerFunctionInfos :: HashMap FunctionId FunctionInfo,
-    _compilerConstructorArities :: ConstructorArities
+    _compilerConstructorArities :: ConstructorArities,
+    _compilerOptions :: CompilerOptions
   }
 
 type ConstructorArities = HashMap Asm.Tag Natural
@@ -183,6 +187,7 @@ pathInStack :: StackId -> Path -> Path
 pathInStack s p = stackPath s ++ p
 
 makeSem ''Compiler
+makeLenses ''CompilerOptions
 makeLenses ''CompilerFunction
 makeLenses ''CompilerCtx
 makeLenses ''FunctionInfo
@@ -215,19 +220,20 @@ asmToNockmaTransformations =
     >=> mapError (JuvixError @Asm.AsmError) . computeTempHeight
 
 -- | No transformations are required to be applied before calling this
-fromAsmTable :: (Members '[Error JuvixError] r) => Asm.InfoTable -> Sem r (Cell Natural)
+fromAsmTable :: (Members '[Error JuvixError, Reader CompilerOptions] r) => Asm.InfoTable -> Sem r (Cell Natural)
 fromAsmTable t = case t ^. Asm.infoMainFunction of
   Just mainFun -> do
     t' <- asmToNockmaTransformations t
-    return (fromAsm mainFun t')
+    opts <- ask
+    return (fromAsm opts mainFun t')
   Nothing -> throw @JuvixError (error "TODO")
   where
-    fromAsm :: Asm.Symbol -> Asm.InfoTable -> Cell Natural
-    fromAsm mainSym Asm.InfoTable {..} =
+    fromAsm :: CompilerOptions -> Asm.Symbol -> Asm.InfoTable -> Cell Natural
+    fromAsm opts mainSym Asm.InfoTable {..} =
       let funs = map compileFunction allFunctions
           constrs :: ConstructorArities
           constrs = fromIntegral . (^. Asm.constructorArgsNum) <$> _infoConstrs
-       in runCompilerWith constrs funs mainFun
+       in runCompilerWith opts constrs funs mainFun
       where
         mainFun :: CompilerFunction
         mainFun =
@@ -537,8 +543,8 @@ runCompiler sem = do
   (ts, a) <- runOutputList (re sem)
   return (seqTerms ts, a)
 
-runCompilerWith :: ConstructorArities -> [CompilerFunction] -> CompilerFunction -> Cell Natural
-runCompilerWith constrs libFuns mainFun =
+runCompilerWith :: CompilerOptions -> ConstructorArities -> [CompilerFunction] -> CompilerFunction -> Cell Natural
+runCompilerWith opts constrs libFuns mainFun =
   let entryCommand :: (Members '[Compiler] r) => Sem r ()
       entryCommand = callFun (mainFun ^. compilerFunctionName) 0
       entryTerm =
@@ -569,7 +575,8 @@ runCompilerWith constrs libFuns mainFun =
     compilerCtx =
       CompilerCtx
         { _compilerFunctionInfos = functionInfos,
-          _compilerConstructorArities = constrs
+          _compilerConstructorArities = constrs,
+          _compilerOptions = opts
         }
 
     functionInfos :: HashMap FunctionId FunctionInfo
@@ -859,7 +866,7 @@ re = reinterpretH $ \case
   PopFromN n s -> popFromNH n s
   PopNAndPushOnto s n t -> popNAndPushOnto' s n t >>= pureT
   Verbatim s -> outputT s
-  TraceTerm s -> traceTerm' s >>= pureT
+  TraceTerm s -> whenM (asks (^. compilerOptions . compilerOptionsEnableTrace)) (traceTerm' s) >>= pureT
   CallHelper isTail funName funArgsNum -> callHelper' isTail funName funArgsNum >>= pureT
   IncrementOn s -> incrementOn' s >>= pureT
   Branch t f -> branch' t f
@@ -1018,12 +1025,12 @@ pushNat = pushNatOnto ValueStack
 pushNatOnto :: (Member Compiler r) => StackId -> Natural -> Sem r ()
 pushNatOnto s n = pushOnto s (OpQuote # toNock n)
 
-compileAndRunNock :: ConstructorArities -> [CompilerFunction] -> CompilerFunction -> Term Natural
-compileAndRunNock constrs funs = run . ignoreOutput @(Term Natural) . compileAndRunNock' constrs funs
+compileAndRunNock :: CompilerOptions -> ConstructorArities -> [CompilerFunction] -> CompilerFunction -> Term Natural
+compileAndRunNock opts constrs funs = run . ignoreOutput @(Term Natural) . compileAndRunNock' opts constrs funs
 
-compileAndRunNock' :: (Member (Output (Term Natural)) r) => ConstructorArities -> [CompilerFunction] -> CompilerFunction -> Sem r (Term Natural)
-compileAndRunNock' constrs funs mainfun =
-  let Cell nockSubject t = runCompilerWith constrs funs mainfun
+compileAndRunNock' :: (Member (Output (Term Natural)) r) => CompilerOptions -> ConstructorArities -> [CompilerFunction] -> CompilerFunction -> Sem r (Term Natural)
+compileAndRunNock' opts constrs funs mainfun =
+  let Cell nockSubject t = runCompilerWith opts constrs funs mainfun
    in evalCompiledNock' nockSubject t
 
 evalCompiledNock :: Term Natural -> Term Natural -> Term Natural

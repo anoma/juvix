@@ -34,7 +34,7 @@ sym :: (Enum a) => a -> FunctionId
 sym = UserFunction . Asm.defaultSymbol . fromIntegral . fromEnum
 
 debugProg :: Sem '[Compiler] () -> ([Term Natural], Term Natural)
-debugProg mkMain = run . runOutputList $ compileAndRunNock' exampleConstructors exampleFunctions mainFun
+debugProg mkMain = run . runOutputList $ compileAndRunNock' opts exampleConstructors exampleFunctions mainFun
   where
     mainFun =
       CompilerFunction
@@ -42,6 +42,8 @@ debugProg mkMain = run . runOutputList $ compileAndRunNock' exampleConstructors 
           _compilerFunctionArity = 0,
           _compilerFunction = raiseUnder mkMain
         }
+
+    opts = CompilerOptions {_compilerOptionsEnableTrace = True}
 
 isMain :: FunctionName -> Bool
 isMain = (== FunMain)

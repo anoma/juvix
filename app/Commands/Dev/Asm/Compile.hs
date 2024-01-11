@@ -18,7 +18,11 @@ runCommand opts = do
     Right tab -> do
       case opts ^. compileTarget of
         TargetNockma -> do
-          c <- runError (Nockma.fromAsmTable tab) >>= either exitJuvixError return
+          c <-
+            runReader
+              (Nockma.CompilerOptions {_compilerOptionsEnableTrace = opts ^. compileNockmaDebug})
+              (runError (Nockma.fromAsmTable tab))
+              >>= either exitJuvixError return
           let outputCell = Nockma.TermCell c
               outputText = Nockma.ppPrintOpts nockmaOpts outputCell
           embed @IO (writeFileEnsureLn (toFilePath (replaceExtension' ".nockma" file)) outputText)

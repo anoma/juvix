@@ -10,6 +10,7 @@ import Juvix.Compiler.Backend.Geb qualified as Geb
 import Juvix.Compiler.Backend.VampIR.Translation qualified as VampIR
 import Juvix.Compiler.Core.Data.Module qualified as Core
 import Juvix.Compiler.Nockma.Pretty qualified as Nockma
+import Juvix.Compiler.Nockma.Translation.FromAsm qualified as Nockma
 import System.FilePath (takeBaseName)
 
 data PipelineArg = PipelineArg
@@ -117,6 +118,7 @@ runNockmaPipeline pa@PipelineArg {..} = do
   nockmaFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
   r <-
     runReader entryPoint
+      . runReader (Nockma.CompilerOptions (_pipelineArgOptions ^. compileNockmaDebug))
       . runError @JuvixError
       . coreToNockma
       $ _pipelineArgModule

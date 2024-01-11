@@ -150,7 +150,7 @@ storedCoreToVampIR' = Core.toVampIR' >=> return . VampIR.fromCore' False . Core.
 coreToAsm :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Asm.InfoTable
 coreToAsm = Core.toStored >=> storedCoreToAsm
 
-coreToNockma :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r (Nockma.Cell Natural)
+coreToNockma :: (Members '[Error JuvixError, Reader EntryPoint, Reader Nockma.CompilerOptions] r) => Core.Module -> Sem r (Nockma.Cell Natural)
 coreToNockma = coreToAsm >=> Nockma.fromAsmTable
 
 coreToMiniC :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r C.MiniCResult
