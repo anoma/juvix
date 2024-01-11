@@ -11,6 +11,7 @@ import Examples qualified
 import Format qualified
 import Formatter qualified
 import Internal qualified
+import Nockma qualified
 import Package qualified
 import Parsing qualified
 import Resolver qualified
@@ -47,7 +48,8 @@ fastTests =
       Format.allTests,
       Formatter.allTests,
       Package.allTests,
-      BackendMarkdown.allTests
+      BackendMarkdown.allTests,
+      Nockma.allTests
     ]
 
 main :: IO ()

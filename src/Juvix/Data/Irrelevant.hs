@@ -11,7 +11,7 @@ import Prelude (show)
 newtype Irrelevant a = Irrelevant
   { _unIrrelevant :: a
   }
-  deriving newtype (Generic)
+  deriving stock (Generic, Data, Lift)
 
 instance (Serialize a) => Serialize (Irrelevant a) where
   put (Irrelevant x) = S.put x

@@ -20,6 +20,7 @@ import Commands.Dev.Geb.Options
 import Commands.Dev.Highlight.Options
 import Commands.Dev.Internal.Options
 import Commands.Dev.MigrateJuvixYaml.Options
+import Commands.Dev.Nockma.Options
 import Commands.Dev.Parse.Options
 import Commands.Dev.Repl.Options
 import Commands.Dev.Runtime.Options
@@ -42,6 +43,7 @@ data DevCommand
   | Termination TerminationCommand
   | JuvixDevRepl ReplOptions
   | MigrateJuvixYaml MigrateJuvixYamlOptions
+  | Nockma NockmaCommand
   deriving stock (Data)
 
 parseDevCommand :: Parser DevCommand
@@ -60,7 +62,8 @@ parseDevCommand =
           commandShowRoot,
           commandTermination,
           commandJuvixDevRepl,
-          commandMigrateJuvixYaml
+          commandMigrateJuvixYaml,
+          commandNockma
         ]
     )
 
@@ -156,3 +159,10 @@ commandMigrateJuvixYaml =
     info
       (MigrateJuvixYaml <$> parseMigrateJuvixYaml)
       (progDesc "Migrate juvix.yaml to Package.juvix in the current project")
+
+commandNockma :: Mod CommandFields DevCommand
+commandNockma =
+  command "nockma" $
+    info
+      (Nockma <$> parseNockmaCommand)
+      (progDesc "Subcommands related to the nockma backend")

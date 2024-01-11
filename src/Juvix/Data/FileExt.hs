@@ -23,6 +23,7 @@ data FileExt
   | FileExtMarkdown
   | FileExtHtml
   | FileExtCss
+  | FileExtNock
   deriving stock (Eq)
 
 juvixFileExt :: (IsString a) => a
@@ -70,6 +71,9 @@ cFileExt = ".c"
 cssFileExt :: (IsString a) => a
 cssFileExt = ".css"
 
+nockFileExt :: (IsString a) => a
+nockFileExt = ".nock"
+
 fileExtToText :: FileExt -> Text
 fileExtToText = \case
   FileExtJuvix -> juvixFileExt
@@ -87,6 +91,7 @@ fileExtToText = \case
   FileExtMarkdown -> markdownFileExt
   FileExtHtml -> htmlFileExt
   FileExtCss -> cssFileExt
+  FileExtNock -> nockFileExt
 
 toMetavar :: FileExt -> String
 toMetavar = \case
@@ -105,6 +110,7 @@ toMetavar = \case
   FileExtMarkdown -> "MARKDOWN_FILE"
   FileExtHtml -> "HTML_FILE"
   FileExtCss -> "CSS_FILE"
+  FileExtNock -> "NOCK_FILE"
 
 instance Show FileExt where
   show = Text.unpack . fileExtToText
@@ -159,6 +165,9 @@ isHtmlFile = (== Just htmlFileExt) . fileExtension
 isCssFile :: Path b File -> Bool
 isCssFile = (== Just cssFileExt) . fileExtension
 
+isNockFile :: Path b File -> Bool
+isNockFile = (== Just nockFileExt) . fileExtension
+
 toFileExt :: Path b File -> Maybe FileExt
 toFileExt p
   | isJuvixFile p = Just FileExtJuvix
@@ -176,6 +185,7 @@ toFileExt p
   | isMarkdownFile p = Just FileExtMarkdown
   | isHtmlFile p = Just FileExtHtml
   | isCssFile p = Just FileExtCss
+  | isNockFile p = Just FileExtNock
   | otherwise = Nothing
 
 fileExtension' :: Path b File -> String

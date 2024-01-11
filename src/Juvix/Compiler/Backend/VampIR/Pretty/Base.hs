@@ -6,7 +6,6 @@ import Juvix.Compiler.Backend.VampIR.Language
 import Juvix.Compiler.Backend.VampIR.Pretty.Keywords
 import Juvix.Compiler.Backend.VampIR.Pretty.Options
 import Juvix.Data.CodeAnn
-import Juvix.Data.NameKind
 
 class PrettyCode c where
   ppCode :: (Member (Reader Options) r) => c -> Sem r (Doc Ann)

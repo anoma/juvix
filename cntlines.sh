@@ -19,6 +19,7 @@ CAIRO=$(count src/Juvix/Compiler/Backend/Cairo/)
 GEB=$(count src/Juvix/Compiler/Backend/Geb/)
 VAMPIR=$(count src/Juvix/Compiler/Backend/VampIR/)
 CASM=$(count src/Juvix/Compiler/Casm/)
+NOCK=$(count src/Juvix/Compiler/Nockma)
 REG=$(count src/Juvix/Compiler/Reg/)
 ASM=$(count src/Juvix/Compiler/Asm/)
 CORE=$(count src/Juvix/Compiler/Core/)
@@ -36,7 +37,7 @@ PRELUDE=$(count src/Juvix/Prelude/)
 STORE=$(count src/Juvix/Compiler/Store/)
 
 FRONT=$((CONCRETE + INTERNAL + BUILTINS + PIPELINE))
-BACK=$((BACKENDC + GEB + VAMPIR + REG + ASM + CORE + CASM + CAIRO))
+BACK=$((BACKENDC + GEB + VAMPIR + NOCK + REG + ASM + CORE + CASM + CAIRO))
 OTHER=$((APP + STORE + HTML + EXTRA + DATA + PRELUDE))
 TESTS=$(count test/)
 
@@ -52,6 +53,7 @@ echo "   VampIR backend: $VAMPIR LOC"
 echo "   GEB backend: $GEB LOC"
 echo "   C backend: $BACKENDC LOC"
 echo "   Cairo backend: $((CASM + CAIRO)) LOC"
+echo "   Nockma backend: $NOCK LOC"
 echo "   JuvixReg: $REG LOC"
 echo "   JuvixAsm: $ASM LOC"
 echo "   JuvixCore: $CORE LOC"

@@ -1,5 +1,6 @@
 module Juvix.Data.CodeAnn
   ( module Juvix.Data.CodeAnn,
+    module Juvix.Data.NameKind,
     module Juvix.Prelude.Pretty,
   )
 where
@@ -9,7 +10,7 @@ import Juvix.Data.Keyword
 import Juvix.Data.NameKind
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
-import Juvix.Prelude.Pretty hiding (braces, group, list, parens)
+import Juvix.Prelude.Pretty hiding (braces, brackets, group, list, parens)
 import Prettyprinter.Render.Terminal (Color (..), bold, colorDull)
 
 type Ann = CodeAnn
@@ -227,6 +228,9 @@ kwAt = delimiter Str.at_
 
 code :: Doc Ann -> Doc Ann
 code = annotate AnnCode
+
+brackets :: Doc Ann -> Doc Ann
+brackets = enclose kwBracketL kwBracketR
 
 braces :: Doc Ann -> Doc Ann
 braces = enclose kwBraceL kwBraceR

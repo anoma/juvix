@@ -2,7 +2,6 @@ module Juvix.Data.Emacs.SExp where
 
 import Juvix.Prelude
 import Juvix.Prelude.Pretty
-import Prettyprinter.Render.Text
 
 class ToSExp a where
   toSExp :: a -> SExp
