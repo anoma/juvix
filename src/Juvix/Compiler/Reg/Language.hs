@@ -28,7 +28,7 @@ data ConstrField = ConstrField
     _constrFieldIndex :: Index
   }
 
-data VarGroup = VarGroupArgs | VarGroupStack | VarGroupTemp
+data VarGroup = VarGroupArgs | VarGroupLocal
 
 data VarRef = VarRef
   { _varRefGroup :: VarGroup,

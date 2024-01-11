@@ -39,13 +39,9 @@
     IO_INTERPRET;      \
     io_print_toplevel(juvix_result);
 
-// Temporary vars
+// Temporary / local vars
 #define DECL_TMP(k) UNUSED word_t juvix_tmp_##k
 #define TMP(k) juvix_tmp_##k
-
-// Value stack temporary vars
-#define DECL_STMP(k) word_t juvix_stmp_##k
-#define STMP(k) juvix_stmp_##k
 
 // Begin a function definition. `max_stack` is the maximum stack allocation in
 // the function.
