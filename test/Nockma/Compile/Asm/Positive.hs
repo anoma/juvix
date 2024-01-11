@@ -43,7 +43,7 @@ testsToRun =
   ]
 
 testsSlow :: [Int]
-testsSlow = [10, 13, 17, 20, 23, 27, 28, 30, 33, 34, 36]
+testsSlow = [10, 13, 17, 20, 23, 27, 28, 30, 33, 34, 36, 32]
 
 testsAdt :: [Int]
 testsAdt = [15, 18, 25, 26, 29, 35]
@@ -64,9 +64,7 @@ testsHopeless =
 
 testsBugged :: [Int]
 testsBugged =
-  [
-    32
-  ]
+  []
 
 testsToIgnore :: [Int]
 testsToIgnore = testsHopeless ++ testsBugged ++ testsSlow ++ testsAdt ++ testsNegativeInteger

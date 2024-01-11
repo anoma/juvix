@@ -26,8 +26,8 @@ data BuiltinFunctionId
 instance Hashable BuiltinFunctionId
 
 data FunctionInfo = FunctionInfo
-  { _functionPath :: Path,
-    _functionArity :: Natural
+  { _functionInfoPath :: Path,
+    _functionInfoArity :: Natural
   }
 
 data CompilerCtx = CompilerCtx
@@ -85,13 +85,22 @@ constructorPath :: ConstructorPathId -> Path
 constructorPath = pathFromEnum
 
 data ActivationFramePathId
- = ActivationFrameValueStack
- | ActivationFrameTempStack
- | ActivationFrameAuxStack
+  = ActivationFrameValueStack
+  | ActivationFrameTempStack
+  | ActivationFrameAuxStack
   deriving stock (Bounded, Enum)
 
 activationFramePath :: ActivationFramePathId -> Path
 activationFramePath = pathFromEnum
+
+data FunctionPathId
+  = FunctionCode
+  | FunctionArgs
+
+functionPath :: FunctionPathId -> Path
+functionPath = \case
+  FunctionCode -> [L]
+  FunctionArgs -> [R]
 
 data StdlibFunction
   = StdlibDec
@@ -114,6 +123,7 @@ stdlibNumArgs = \case
   StdlibLe -> 2
   StdlibLt -> 2
 
+-- | The stdlib paths are obtained using scripts/nockma-stdlib-parser.sh
 stdlibPath :: StdlibFunction -> Path
 stdlibPath =
   decodePath' . EncodedPath . \case
@@ -163,7 +173,7 @@ indexInStack :: StackId -> Natural -> Path
 indexInStack s idx = stackPath s ++ indexStack idx
 
 pathToArgumentsArea :: Path
-pathToArgumentsArea = topOfStack CurrentFunction ++ [R]
+pathToArgumentsArea = topOfStack CurrentFunction ++ functionPath FunctionArgs
 
 pathToArg :: Natural -> Path
 pathToArg = indexInPath pathToArgumentsArea
@@ -188,6 +198,9 @@ makeConstructor = termFromParts
 
 makeActivationFrame :: (ActivationFramePathId -> Term Natural) -> Term Natural
 makeActivationFrame = termFromParts
+
+makeFunction :: (FunctionPathId -> Term Natural) -> Term Natural
+makeFunction f = f FunctionCode # f FunctionArgs
 
 foldTerms :: NonEmpty (Term Natural) -> Term Natural
 foldTerms = foldr1 (#)
@@ -537,12 +550,16 @@ runCompilerWith constrs libFuns mainFun =
           $ entryCommand
       compiledFuns :: NonEmpty (Term Natural)
       compiledFuns =
-        (# nockNil')
+        makeFunction'
           <$> ( run
                   . runReader compilerCtx
                   . mapM (execCompiler . (^. compilerFunction))
                   $ allFuns
               )
+      makeFunction' :: Term Natural -> Term Natural
+      makeFunction' c = makeFunction $ \case
+        FunctionCode -> c
+        FunctionArgs -> nockNil'
    in Cell (initStack (toList compiledFuns)) entryTerm
   where
     allFuns :: NonEmpty CompilerFunction
@@ -564,8 +581,8 @@ runCompilerWith constrs libFuns mainFun =
       return
         ( _compilerFunctionName,
           FunctionInfo
-            { _functionPath = indexInStack FunctionsLibrary i,
-              _functionArity = _compilerFunctionArity
+            { _functionInfoPath = indexInStack FunctionsLibrary i,
+              _functionInfoArity = _compilerFunctionArity
             }
         )
 
@@ -627,7 +644,7 @@ tcallFun :: (Members '[Compiler] r) => FunctionId -> Natural -> Sem r ()
 tcallFun = callHelper True . Just
 
 getFunctionPath' :: (Members '[Reader CompilerCtx] r) => FunctionId -> Sem r Path
-getFunctionPath' funName = asks (^?! compilerFunctionInfos . at funName . _Just . functionPath)
+getFunctionPath' funName = asks (^?! compilerFunctionInfos . at funName . _Just . functionInfoPath)
 
 -- | obj[relPath] := newVal
 -- relPath is relative to obj
@@ -694,11 +711,11 @@ callHelper' isTail funName funArgsNum = do
               xtraArgs = stackSliceAsList ValueStack 1 funArgsNum
               allArgs = replaceSubterm' oldArgs posOfArgsNil xtraArgs
               funCode = OpAddress # closurepath ++ closurePath ClosureCode
-              funWithArgs = replaceSubterm funCode [R] allArgs
+              funWithArgs = replaceSubterm funCode (functionPath FunctionArgs) allArgs
           output (storeOnStack CurrentFunction funWithArgs)
           popFrom AuxStack
       | otherwise -> do
-          let funWithArgs = replaceSubterm (OpAddress # funPath) [R] (stackTake ValueStack funArgsNum)
+          let funWithArgs = replaceSubterm (OpAddress # funPath) (functionPath FunctionArgs) (stackTake ValueStack funArgsNum)
           output (storeOnStack CurrentFunction funWithArgs)
 
   -- 4. Replace the value stack with nil
@@ -708,7 +725,7 @@ callHelper' isTail funName funArgsNum = do
 
   -- 5. Evaluate the function in the context of the whole nock stack
   -- 6. See documentation for asmReturn'
-  output (OpCall # ((topOfStack CurrentFunction ++ [L]) # (OpAddress # emptyPath)))
+  output (OpCall # ((topOfStack CurrentFunction ++ functionPath FunctionCode) # (OpAddress # emptyPath)))
 
 asmReturn' :: (Members '[Output (Term Natural), Reader CompilerCtx] r) => Sem r ()
 asmReturn' = do
@@ -733,7 +750,6 @@ asmReturn' = do
     ( replaceStack
         AuxStack
         (OpAddress # topOfStack FrameStack ++ activationFramePath ActivationFrameAuxStack)
-
     )
 
   -- discard the 'activation' frame
@@ -832,7 +848,7 @@ branch' t f = do
   (output >=> pureT) (OpIf # (OpAddress # topOfStack ValueStack) # termT # termF)
 
 getFunctionArity' :: (Members '[Reader CompilerCtx] r) => FunctionId -> Sem r Natural
-getFunctionArity' s = asks (^?! compilerFunctionInfos . at s . _Just . functionArity)
+getFunctionArity' s = asks (^?! compilerFunctionInfos . at s . _Just . functionInfoArity)
 
 getConstructorArity' :: (Members '[Reader CompilerCtx] r) => Asm.Tag -> Sem r Natural
 getConstructorArity' tag = asks (^?! compilerConstructorArities . at tag . _Just)
@@ -936,7 +952,17 @@ stackSliceAsList :: StackId -> Natural -> Natural -> Term Natural
 stackSliceAsList sn fromIx toIx = remakeList (stackSliceHelper sn fromIx toIx)
 
 pushOnStack :: StackId -> Term Natural -> Term Natural
-pushOnStack s t = OpPush # t # topStack s
+pushOnStack sn t = OpPush # t # moveTopToStack
+  where
+    moveTopToStack :: Term Natural
+    moveTopToStack =
+      remakeList
+        [ let p = OpAddress # (R : stackPath s)
+           in if
+                  | sn == s -> (OpAddress # indexStack 0) # p
+                  | otherwise -> p
+          | s <- allElements
+        ]
 
 popNAndPushOnto' :: (Member (Output (Term Natural)) r) => StackId -> Natural -> Term Natural -> Sem r ()
 popNAndPushOnto' s num t = output (replaceOnStackN num s t)
@@ -973,27 +999,12 @@ replaceStack sn t =
 resetStack :: StackId -> Term Natural
 resetStack sn = replaceStack sn (OpQuote # nockNil')
 
--- | Reconstruct the value-stack / call-stack cell by moving the global head to the
--- respective stack head.
-
---- [h [s1 s1 s3 nil]]
---- [ s1 .. [h si] ... sn nil]
-topStack :: StackId -> Term Natural
-topStack sn =
-  remakeList
-    [ let p = OpAddress # (R : stackPath s)
-       in if
-              | sn == s -> (OpAddress # [L]) # p
-              | otherwise -> p
-      | s <- allElements
-    ]
-
 replaceTopStackN :: Natural -> StackId -> Term Natural
 replaceTopStackN n sn =
   remakeList
     [ let p = R : stackPath s
        in if
-              | sn == s -> (OpAddress # [L]) # (OpAddress # p ++ replicate n R)
+              | sn == s -> (OpAddress # indexStack 0) # (OpAddress # p ++ replicate n R)
               | otherwise -> OpAddress # p
       | s <- allElements
     ]
