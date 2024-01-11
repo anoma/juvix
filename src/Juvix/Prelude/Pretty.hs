@@ -3,6 +3,7 @@ module Juvix.Prelude.Pretty
     module Prettyprinter,
     module Prettyprinter.Render.Terminal,
     module Prettyprinter.Util,
+    module Prettyprinter.Render.Text,
   )
 where
 
@@ -12,6 +13,7 @@ import Prettyprinter hiding (concatWith, defaultLayoutOptions, hsep, sep, vsep)
 import Prettyprinter qualified as PP
 import Prettyprinter.Render.Terminal (AnsiStyle)
 import Prettyprinter.Render.Terminal qualified as Ansi
+import Prettyprinter.Render.Text (renderStrict)
 import Prettyprinter.Render.Text qualified as Text
 import Prettyprinter.Util (reflow)
 import Prelude
@@ -183,14 +185,20 @@ spaceOrEmpty = flatAlt (pretty ' ') mempty
 oneLineOrNext :: Doc a -> Doc a
 oneLineOrNext x = PP.group (flatAlt (line <> indent' x) (space <> x))
 
+oneLineOrNextBrackets :: Doc a -> Doc a
+oneLineOrNextBrackets = oneLineOrNextDelims lbracket rbracket
+
 oneLineOrNextNoIndent :: Doc a -> Doc a
 oneLineOrNextNoIndent x = PP.group (flatAlt (line <> x) (space <> x))
 
 oneLineOrNextBlock :: Doc a -> Doc a
 oneLineOrNextBlock x = PP.group (flatAlt (line <> indent' x <> line) (space <> x <> space))
 
+oneLineOrNextDelims :: Doc a -> Doc a -> Doc a -> Doc a
+oneLineOrNextDelims l r x = PP.group (flatAlt (l <> line <> indent' x <> line <> r) (l <> x <> r))
+
 oneLineOrNextBraces :: Doc a -> Doc a
-oneLineOrNextBraces x = PP.group (flatAlt (lbrace <> line <> indent' x <> line <> rbrace) (lbrace <> x <> rbrace))
+oneLineOrNextBraces = oneLineOrNextDelims lbrace rbrace
 
 nextLine :: Doc a -> Doc a
 nextLine x = PP.group (line <> x)

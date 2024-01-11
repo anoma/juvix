@@ -7,7 +7,6 @@ import Juvix.Data.Loc
 import Juvix.Prelude.Base
 import Juvix.Prelude.Pretty
 import Prettyprinter.Render.Terminal qualified as Ansi
-import Prettyprinter.Render.Text
 import System.Console.ANSI qualified as Ansi
 
 data GenericError = GenericError

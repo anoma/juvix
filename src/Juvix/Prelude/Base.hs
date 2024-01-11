@@ -160,7 +160,7 @@ import GHC.Generics (Generic)
 import GHC.Num
 import GHC.Real
 import GHC.Stack.Types
-import Language.Haskell.TH.Syntax (Lift)
+import Language.Haskell.TH.Syntax (Exp, Lift, Q)
 import Lens.Micro.Platform
 import Path
 import Path.IO qualified as Path hiding (getCurrentDir, setCurrentDir, withCurrentDir)
@@ -556,3 +556,6 @@ indexedByInt getIx l = IntMap.fromList [(getIx i, i) | i <- toList l]
 
 indexedByHash :: (Foldable f, Hashable k) => (a -> k) -> f a -> HashMap k a
 indexedByHash getIx l = HashMap.fromList [(getIx i, i) | i <- toList l]
+
+hashMap :: (Foldable f, Hashable k) => f (k, v) -> HashMap k v
+hashMap = HashMap.fromList . toList
