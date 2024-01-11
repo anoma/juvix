@@ -45,11 +45,17 @@ data Term a
   | TermCell (Cell a)
   deriving stock (Show, Eq, Lift)
 
-data Cell a = Cell
+data Cell a = Cell'
   { _cellLeft :: Term a,
-    _cellRight :: Term a
+    _cellRight :: Term a,
+    _cellInfo :: Irrelevant ()
   }
   deriving stock (Show, Eq, Lift)
+
+{-# COMPLETE Cell #-}
+pattern Cell :: Term a -> Term a -> Cell a
+pattern Cell {_cellLeft', _cellRight'} <- Cell' _cellLeft' _cellRight' _ where
+  Cell a b = Cell' a b (Irrelevant ())
 
 data Atom a = Atom
   { _atom :: a,
@@ -280,13 +286,47 @@ instance IsNock Path where
 instance IsNock EncodedPath where
   toNock = toNock . decodePath'
 
-infixr 5 #
-
-(#) :: (IsNock x, IsNock y) => x -> y -> Term Natural
-a # b = TermCell (Cell (toNock a) (toNock b))
-
 instance Semigroup EncodedPath where
   a <> b = encodePath (decodePath' a <> decodePath' b)
 
 instance Monoid EncodedPath where
   mempty = encodePath []
+
+infixr 5 #.
+
+(#.) :: (IsNock x, IsNock y) => x -> y -> Cell Natural
+a #. b = Cell (toNock a) (toNock b)
+
+infixr 5 #
+
+(#) :: (IsNock x, IsNock y) => x -> y -> Term Natural
+a # b = TermCell (a #. b)
+
+infixl 1 >>#.
+(>>#.) :: (IsNock x, IsNock y) => x -> y -> Cell Natural
+a >>#. b = OpSequence #. a # b
+
+infixl 1 >>#
+(>>#) :: (IsNock x, IsNock y) => x -> y -> Term Natural
+a >># b = TermCell (a >>#. b)
+
+data StdlibFunction
+  = StdlibDec
+  | StdlibAdd
+  | StdlibSub
+  | StdlibMul
+  | StdlibDiv
+  | StdlibMod
+  | StdlibLt
+  | StdlibLe
+
+stdlibNumArgs :: StdlibFunction -> Natural
+stdlibNumArgs = \case
+  StdlibDec -> 1
+  StdlibAdd -> 2
+  StdlibSub -> 2
+  StdlibMul -> 2
+  StdlibMod -> 2
+  StdlibDiv -> 2
+  StdlibLe -> 2
+  StdlibLt -> 2

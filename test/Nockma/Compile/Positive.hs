@@ -167,7 +167,7 @@ eqStack st = eqSubStack st []
 unfoldTerm :: Term Natural -> NonEmpty (Term Natural)
 unfoldTerm t = case t of
   TermAtom {} -> t :| []
-  TermCell Cell {..} -> _cellLeft NonEmpty.<| unfoldTerm _cellRight
+  TermCell (Cell l r) -> l NonEmpty.<| unfoldTerm r
 
 checkStackSize :: StackId -> Natural -> Check ()
 checkStackSize st stSize = subStackPred st ([] :: Path) $ \s -> do

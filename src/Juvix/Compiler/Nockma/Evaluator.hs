@@ -116,9 +116,9 @@ eval stack = \case
   where
     goAutoConsCell :: AutoConsCell a -> Sem r (Term a)
     goAutoConsCell c = do
-      _cellLeft <- eval stack (TermCell (c ^. autoConsCellLeft))
-      _cellRight <- eval stack (c ^. autoConsCellRight)
-      return (TermCell Cell {..})
+      l' <- eval stack (TermCell (c ^. autoConsCellLeft))
+      r' <- eval stack (c ^. autoConsCellRight)
+      return (TermCell (Cell l' r'))
 
     goOperatorCell :: OperatorCell a -> Sem r (Term a)
     goOperatorCell c = case c ^. operatorCellOp of
@@ -149,7 +149,7 @@ eval stack = \case
 
         goOpTrace :: Sem r (Term a)
         goOpTrace = do
-          Cell tr a <- asCell "OpTrace" (c ^. operatorCellTerm)
+          Cell' tr a _ <- asCell "OpTrace" (c ^. operatorCellTerm)
           tr' <- eval stack tr
           output tr'
           eval stack a
@@ -164,13 +164,13 @@ eval stack = \case
         goOpPush = do
           cellTerm <- asCell "OpPush" (c ^. operatorCellTerm)
           l <- eval stack (cellTerm ^. cellLeft)
-          let s = TermCell Cell {_cellLeft = l, _cellRight = stack}
+          let s = TermCell (Cell l stack)
           eval s (cellTerm ^. cellRight)
 
         goOpReplace :: Sem r (Term a)
         goOpReplace = do
-          Cell rot1 t2 <- asCell "OpReplace 1" (c ^. operatorCellTerm)
-          Cell ro t1 <- asCell "OpReplace 2" rot1
+          Cell' rot1 t2 _ <- asCell "OpReplace 1" (c ^. operatorCellTerm)
+          Cell' ro t1 _ <- asCell "OpReplace 2" rot1
           r <- asPath ro
           t1' <- eval stack t1
           t2' <- eval stack t2
@@ -187,7 +187,7 @@ eval stack = \case
         goOpIf = do
           cellTerm <- asCell "OpIf 1" (c ^. operatorCellTerm)
           let t0 = cellTerm ^. cellLeft
-          Cell t1 t2 <- asCell "OpIf 2" (cellTerm ^. cellRight)
+          Cell' t1 t2 _ <- asCell "OpIf 2" (cellTerm ^. cellRight)
           cond <- eval stack t0 >>= asBool
           if
               | cond -> eval stack t1

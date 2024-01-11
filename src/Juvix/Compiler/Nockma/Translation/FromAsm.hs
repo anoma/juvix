@@ -112,27 +112,6 @@ functionPath = \case
   FunctionCode -> [L]
   FunctionArgs -> [R]
 
-data StdlibFunction
-  = StdlibDec
-  | StdlibAdd
-  | StdlibSub
-  | StdlibMul
-  | StdlibDiv
-  | StdlibMod
-  | StdlibLt
-  | StdlibLe
-
-stdlibNumArgs :: StdlibFunction -> Natural
-stdlibNumArgs = \case
-  StdlibDec -> 1
-  StdlibAdd -> 2
-  StdlibSub -> 2
-  StdlibMul -> 2
-  StdlibMod -> 2
-  StdlibDiv -> 2
-  StdlibLe -> 2
-  StdlibLt -> 2
-
 -- | The stdlib paths are obtained using scripts/nockma-stdlib-parser.sh
 stdlibPath :: StdlibFunction -> Path
 stdlibPath =
@@ -490,10 +469,7 @@ sub a b aux = do
   moveTopFromTo AuxStack ValueStack
 
 seqTerms :: [Term Natural] -> Term Natural
-seqTerms = foldl' step (OpAddress # emptyPath) . reverse
-  where
-    step :: Term Natural -> Term Natural -> Term Natural
-    step acc t = OpSequence # t # acc
+seqTerms = foldl' (flip (>>#)) (OpAddress # emptyPath) . reverse
 
 makeEmptyList :: Term Natural
 makeEmptyList = makeList []
@@ -788,8 +764,9 @@ callStdlibOn' s f = do
       arguments = OpSequence # (OpAddress # [R]) # stdlibStackTake s fNumArgs
       extractResult = (OpAddress # [L]) # (OpAddress # [R, R])
       callFn = OpPush # (OpCall # [L] # (OpReplace # ([R, L] # arguments) # (OpAddress # [L]))) # extractResult
+      callCell = OpPush #. (decodeFn # callFn)
 
-  output (OpPush # decodeFn # callFn)
+  output (toNock callCell)
   output (replaceTopStackN fNumArgs s)
   where
     stdlibStackTake :: StackId -> Natural -> Term Natural
