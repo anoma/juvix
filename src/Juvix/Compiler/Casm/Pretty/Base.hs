@@ -3,7 +3,6 @@ module Juvix.Compiler.Casm.Pretty.Base where
 import Juvix.Compiler.Casm.Language
 import Juvix.Compiler.Casm.Pretty.Options
 import Juvix.Data.CodeAnn
-import Juvix.Data.NameKind
 import Juvix.Extra.Strings qualified as Str
 
 doc :: (PrettyCode c) => Options -> c -> Doc Ann
