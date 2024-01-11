@@ -486,7 +486,18 @@ recurseS' sig = go
     dropTempStack :: StackInfo -> StackInfo
     dropTempStack si = si {_stackInfoTempStackHeight = 0}
 
--- | Fold signature. Contains read-only fold parameters.
+-- | Fold signature. Contains read-only fold parameters. A fold (`foldS`) goes
+-- through the code from right to left (from end to beginning) accumulating
+-- values. The `a` is the type of the accumulated values. The last argument to
+-- the `_fold*` functions below is the accumulator. The `_foldAdjust` function
+-- adjusts the accumulator when entering a block (in `CmdBranch`, `CmdCase`,
+-- `CmdSave`). For example, for `save { P1 }; P2` let `a2` be the accumulator
+-- value after folding `P2`. Then `P1` is folded with the initial accumulator
+-- `_foldAdjust a2`. However, `_foldSave` is called with `_foldSave m c a1 a2`,
+-- i.e., with the original `a2`, where `a1` is the result of folding `P1` with
+-- initial accumulator `_foldAdjust a2`. In most simple cases, one can set
+-- `_foldAdjust` to `const empty` where `empty` is the empty accumulator value
+-- (e.g. `mempty` for a monoid).
 data FoldSig m r a = FoldSig
   { _foldInfoTable :: InfoTable,
     _foldAdjust :: a -> a,

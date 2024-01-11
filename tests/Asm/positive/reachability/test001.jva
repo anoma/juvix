@@ -1,0 +1,44 @@
+function h(integer) : integer {
+  push arg[0];
+  ret;
+}
+
+function h'(integer) : integer {
+  push arg[0];
+  ret;
+}
+
+function f(integer) : integer {
+  push 1;
+  push arg[0];
+  call h;
+  add;
+  ret;
+}
+
+function f'(integer) : integer {
+  push 1;
+  push arg[0];
+  call h';
+  add;
+  ret;
+}
+
+function g(integer) : integer {
+  push 2;
+  push arg[0];
+  call f;
+  add;
+  ret;
+}
+
+function g'(integer) : integer {
+  push arg[0];
+  tcall f';
+}
+
+function main() : integer {
+  push 7;
+  call f;
+  tcall g';
+}
