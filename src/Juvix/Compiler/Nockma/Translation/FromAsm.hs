@@ -761,10 +761,17 @@ callStdlibOn' s f = do
   let fNumArgs = stdlibNumArgs f
       fPath = stdlibPath f
       decodeFn = OpCall # (fPath # (OpAddress # stackPath StandardLibrary))
-      arguments = OpSequence # (OpAddress # [R]) # stdlibStackTake s fNumArgs
+      preargs = stdlibStackTake s fNumArgs
+      arguments = OpSequence # (OpAddress # [R]) # preargs
       extractResult = (OpAddress # [L]) # (OpAddress # [R, R])
       callFn = OpPush # (OpCall # [L] # (OpReplace # ([R, L] # arguments) # (OpAddress # [L]))) # extractResult
-      callCell = OpPush #. (decodeFn # callFn)
+      meta =
+        StdlibCall
+          { _stdlibCallArgs = preargs,
+            _stdlibCallFunction = f
+          }
+
+      callCell = (OpPush #. (decodeFn # callFn)) {_cellInfo = Irrelevant (Just meta)}
 
   output (toNock callCell)
   output (replaceTopStackN fNumArgs s)

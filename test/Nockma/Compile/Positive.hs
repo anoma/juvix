@@ -228,6 +228,10 @@ tests =
       pushNat 2
       pushNat 3
       add,
+    Test "add big" (eqStack ValueStack [nock| [55555 nil] |]) $ do
+      pushNat 33333
+      pushNat 22222
+      add,
     Test "pow2" (eqStack ValueStack [nock| [1 2 8 32 nil] |]) $ do
       pushNat 5
       pow2
