@@ -42,19 +42,11 @@ testDescr Asm.PosTest {..} =
           _testAssertion = Steps $ asmRunAssertionParam runNockmaAssertion file' expected' return (const (return ()))
         }
 
-testsToRun :: [String]
-testsToRun =
-  [ "Test001: Arithmetic opcodes",
-    "Test002: Direct call",
-    "Test003: Indirect call",
-    "Test004: Tail calls"
-  ]
-
 testsSlow :: [Int]
-testsSlow = [10, 13, 17, 20, 23, 27, 28, 30, 33, 34, 36, 32]
+testsSlow = [10, 11, 13, 17, 20, 23, 27, 28, 30, 32, 33, 34, 36]
 
 testsAdt :: [Int]
-testsAdt = [15, 18, 25, 26, 29, 35]
+testsAdt = [9, 15, 18, 25, 26, 29, 35]
 
 testsNegativeInteger :: [Int]
 testsNegativeInteger = [16, 31]
@@ -63,8 +55,6 @@ testsHopeless :: [Int]
 testsHopeless =
   [ 5,
     6,
-    9,
-    11,
     14,
     24,
     37
