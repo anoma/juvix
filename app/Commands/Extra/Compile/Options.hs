@@ -36,8 +36,7 @@ data CompileOptions = CompileOptions
     _compileInputFile :: Maybe (AppPath File),
     _compileOptimizationLevel :: Maybe Int,
     _compileInliningDepth :: Int,
-    _compileNockmaUsePrettySymbols :: Bool,
-    _compileNockmaDebug :: Bool
+    _compileNockmaUsePrettySymbols :: Bool
   }
   deriving stock (Data)
 
@@ -87,6 +86,11 @@ parseCompileOptions supportedTargets parserFile = do
               )
         | otherwise ->
             pure False
+  _compileNockmaUsePrettySymbols <-
+    switch
+      ( long "nockma-pretty"
+          <> help "Use names for op codes and paths in Nockma output (for target: nockma)"
+      )
   _compileUnsafe <-
     if
         | elem TargetVampIR supportedTargets ->
@@ -115,16 +119,6 @@ parseCompileOptions supportedTargets parserFile = do
   _compileTarget <- optCompileTarget supportedTargets
   _compileOutputFile <- optional parseGenericOutputFile
   _compileInputFile <- optional parserFile
-  _compileNockmaUsePrettySymbols <-
-    switch
-      ( long "nockma-pretty"
-          <> help "Use names for op codes and paths in Nockma output (for target: nockma)"
-      )
-  _compileNockmaDebug <-
-    switch
-      ( long "nockma-debug"
-          <> help "Emit trace op codes used by the Juvix nockma evaluator (for target: nockma)"
-      )
   pure CompileOptions {..}
 
 optCompileTarget :: SupportedTargets -> Parser CompileTarget

@@ -4,6 +4,7 @@ import Asm.Run.Base
 import Asm.Run.Positive qualified as Asm
 import Base
 import Juvix.Compiler.Asm
+import Juvix.Compiler.Asm.Options qualified as Asm
 import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Pretty qualified as Nockma
 import Juvix.Compiler.Nockma.Translation.FromAsm
@@ -14,8 +15,10 @@ runNockmaAssertion hout _main tab = do
   Nockma.Cell nockSubject nockMain <-
     runM
       ( runReader
-          (CompilerOptions {_compilerOptionsEnableTrace = True})
-          (runErrorIO' @JuvixError (Nockma.fromAsmTable tab))
+          (Asm.makeOptions TargetNockma True)
+          $ runReader
+            (Nockma.CompilerOptions {_compilerOptionsEnableTrace = True})
+            (runErrorIO' @JuvixError (asmToNockma' tab))
       )
   res <- runM $ runOutputSem @(Term Natural) (embed . hPutStrLn hout . Nockma.ppPrint) (evalCompiledNock' nockSubject nockMain)
   let ret = getReturn res
@@ -89,7 +92,5 @@ shouldRun Asm.PosTest {..} = testNum `notElem` map to3DigitString testsToIgnore
 allTests :: TestTree
 allTests =
   testGroup
-    "Nockma Asm eval positive tests"
-    -- (map (mkTest . testDescr) (Asm.filterTests testsToRun Asm.tests))
-    -- (map (mkTest . testDescr) (Asm.tests))
+    "Nockma Asm compile positive tests"
     (map (mkTest . testDescr) (filter shouldRun Asm.tests))

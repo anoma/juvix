@@ -7,7 +7,6 @@ import Juvix.Compiler.Asm.Translation.FromSource qualified as Asm
 import Juvix.Compiler.Backend qualified as Backend
 import Juvix.Compiler.Backend.C qualified as C
 import Juvix.Compiler.Nockma.Pretty qualified as Nockma
-import Juvix.Compiler.Nockma.Translation.FromAsm qualified as Nockma
 
 runCommand :: forall r. (Members '[Embed IO, App, TaggedLock] r) => AsmCompileOptions -> Sem r ()
 runCommand opts = do
@@ -16,25 +15,24 @@ runCommand opts = do
   case Asm.runParser (toFilePath file) s of
     Left err -> exitJuvixError (JuvixError err)
     Right tab -> do
+      ep <- getEntryPoint (AppPath (preFileFromAbs file) True)
+      tgt <- getTarget (opts ^. compileTarget)
+      let entryPoint :: EntryPoint
+          entryPoint =
+            ep
+              { _entryPointTarget = tgt,
+                _entryPointDebug = opts ^. compileDebug
+              }
       case opts ^. compileTarget of
         TargetNockma -> do
           c <-
-            runReader
-              (Nockma.CompilerOptions {_compilerOptionsEnableTrace = opts ^. compileNockmaDebug})
-              (runError (Nockma.fromAsmTable tab))
+            runReader entryPoint (runError (asmToNockma tab))
               >>= either exitJuvixError return
           let outputCell = Nockma.TermCell c
               outputText = Nockma.ppPrintOpts nockmaOpts outputCell
-          embed @IO (writeFileEnsureLn (toFilePath (replaceExtension' ".nockma" file)) outputText)
+          outfile <- Compile.outputFile opts file
+          embed @IO (writeFileEnsureLn (toFilePath outfile) outputText)
         _ -> do
-          ep <- getEntryPoint (AppPath (preFileFromAbs file) True)
-          tgt <- getTarget (opts ^. compileTarget)
-          let entryPoint :: EntryPoint
-              entryPoint =
-                ep
-                  { _entryPointTarget = tgt,
-                    _entryPointDebug = opts ^. compileDebug
-                  }
           case run $ runReader entryPoint $ runError $ asmToMiniC tab of
             Left err -> exitJuvixError err
             Right C.MiniCResult {..} -> do

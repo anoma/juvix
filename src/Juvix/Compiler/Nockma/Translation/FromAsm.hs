@@ -1,11 +1,10 @@
 module Juvix.Compiler.Nockma.Translation.FromAsm where
 
 import Juvix.Compiler.Asm.Data.InfoTable qualified as Asm
-import Juvix.Compiler.Asm.Error qualified as Asm
-import Juvix.Compiler.Asm.Transformation (computeApply, computeTempHeight)
 import Juvix.Compiler.Nockma.Evaluator
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Stdlib
+import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Prelude hiding (Atom, Path)
 
 type UserFunctionId = Symbol
@@ -27,6 +26,12 @@ instance Hashable BuiltinFunctionId
 
 newtype CompilerOptions = CompilerOptions
   {_compilerOptionsEnableTrace :: Bool}
+
+fromEntryPoint :: EntryPoint -> CompilerOptions
+fromEntryPoint EntryPoint {..} =
+  CompilerOptions
+    { _compilerOptionsEnableTrace = _entryPointDebug
+    }
 
 data FunctionInfo = FunctionInfo
   { _functionInfoPath :: Path,
@@ -210,22 +215,12 @@ makeFunction f = f FunctionCode # f FunctionArgs
 foldTerms :: NonEmpty (Term Natural) -> Term Natural
 foldTerms = foldr1 (#)
 
-asmToNockmaTransformations ::
-  (Members '[Error JuvixError] r) =>
-  Asm.InfoTable ->
-  Sem r (Asm.InfoTable)
-asmToNockmaTransformations =
-  mapError (JuvixError @Asm.AsmError)
-    . computeApply
-    >=> mapError (JuvixError @Asm.AsmError) . computeTempHeight
-
--- | No transformations are required to be applied before calling this
+-- | Use `Asm.toNockma` before calling this function
 fromAsmTable :: (Members '[Error JuvixError, Reader CompilerOptions] r) => Asm.InfoTable -> Sem r (Cell Natural)
 fromAsmTable t = case t ^. Asm.infoMainFunction of
   Just mainFun -> do
-    t' <- asmToNockmaTransformations t
     opts <- ask
-    return (fromAsm opts mainFun t')
+    return (fromAsm opts mainFun t)
   Nothing -> throw @JuvixError (error "TODO")
   where
     fromAsm :: CompilerOptions -> Asm.Symbol -> Asm.InfoTable -> Cell Natural

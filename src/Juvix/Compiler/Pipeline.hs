@@ -150,8 +150,8 @@ storedCoreToVampIR' = Core.toVampIR' >=> return . VampIR.fromCore' False . Core.
 coreToAsm :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Asm.InfoTable
 coreToAsm = Core.toStored >=> storedCoreToAsm
 
-coreToNockma :: (Members '[Error JuvixError, Reader EntryPoint, Reader Nockma.CompilerOptions] r) => Core.Module -> Sem r (Nockma.Cell Natural)
-coreToNockma = coreToAsm >=> Nockma.fromAsmTable
+coreToNockma :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r (Nockma.Cell Natural)
+coreToNockma = coreToAsm >=> asmToNockma
 
 coreToMiniC :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r C.MiniCResult
 coreToMiniC = coreToAsm >=> asmToMiniC
@@ -169,6 +169,9 @@ coreToVampIR' = Core.toStored' >=> storedCoreToVampIR'
 -- Other workflows
 --------------------------------------------------------------------------------
 
+asmToNockma :: (Members '[Error JuvixError, Reader EntryPoint] r) => Asm.InfoTable -> Sem r (Nockma.Cell Natural)
+asmToNockma = Asm.toNockma >=> mapReader Nockma.fromEntryPoint . Nockma.fromAsmTable
+
 asmToMiniC :: (Members '[Error JuvixError, Reader EntryPoint] r) => Asm.InfoTable -> Sem r C.MiniCResult
 asmToMiniC = Asm.toReg >=> regToMiniC . Reg.fromAsm
 
@@ -176,6 +179,9 @@ regToMiniC :: (Member (Reader EntryPoint) r) => Reg.InfoTable -> Sem r C.MiniCRe
 regToMiniC tab = do
   e <- ask
   return $ C.fromReg (Backend.getLimits (e ^. entryPointTarget) (e ^. entryPointDebug)) tab
+
+asmToNockma' :: (Members '[Error JuvixError, Reader Asm.Options, Reader Nockma.CompilerOptions] r) => Asm.InfoTable -> Sem r (Nockma.Cell Natural)
+asmToNockma' = mapError (JuvixError @Asm.AsmError) . Asm.toNockma' >=> Nockma.fromAsmTable
 
 asmToMiniC' :: (Members '[Error JuvixError, Reader Asm.Options] r) => Asm.InfoTable -> Sem r C.MiniCResult
 asmToMiniC' = mapError (JuvixError @Asm.AsmError) . Asm.toReg' >=> regToMiniC' . Reg.fromAsm
