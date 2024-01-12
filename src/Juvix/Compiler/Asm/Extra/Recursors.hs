@@ -23,6 +23,8 @@ data RecursorSig m r a = RecursorSig
 
 makeLenses ''RecursorSig
 
+-- | General recursor function. For most uses it is probably an overkill.
+-- Consider using `recurseS` if you only need stack height information.
 recurseFun :: (Member (Error AsmError) r) => RecursorSig Memory r a -> FunctionInfo -> Sem r [a]
 recurseFun sig fi = recurse sig (argumentsFromFunctionInfo fi) (fi ^. functionCode)
 
