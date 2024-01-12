@@ -16,7 +16,8 @@ import Juvix.Compiler.Core.Language.Base
 
 -- In what follows, when referring to the stack we mean the current local value
 -- stack, unless otherwise stated. By stack[n] we denote the n-th cell from the
--- top in the value stack (0-based).
+
+-- * top* in the value stack (0-based).
 
 -- | Offset of a data field or an argument
 type Offset = Int
@@ -46,8 +47,9 @@ data DirectRef
   | -- | ArgRef references an argument in the argument area (0-based offsets).
     --   JVA code: 'arg[<offset>]'.
     ArgRef OffsetRef
-  | -- | TempRef references a value in the temporary area (0-based offsets). JVA
-    --   code: 'tmp[<offset>]'.
+  | -- | TempRef references a value in the temporary stack (0-based offsets,
+    --   counted from the *bottom* of the temporary stack). JVA code:
+    --   'tmp[<offset>]'.
     TempRef OffsetRef
 
 data OffsetRef = OffsetRef
