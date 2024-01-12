@@ -1,0 +1,58 @@
+function f(*, integer) : integer {
+  push arg[1];
+  push arg[0];
+  tcall $ 1;
+}
+
+function id(integer) : integer {
+  push arg[0];
+  ret;
+}
+
+function g(integer) : integer {
+  push 1;
+  push arg[0];
+  calloc id 0;
+  call f;
+  add;
+  ret;
+}
+
+function sum(integer) : integer {
+  push arg[0];
+  push 0;
+  eq;
+  br {
+    true: {
+      push 0;
+      tcall g;
+    };
+    false: {
+      push 1;
+      push arg[0];
+      sub;
+      call sum;
+      push arg[0];
+      add;
+      ret;
+    };
+  };
+}
+
+function g'(integer) : integer {
+  push 2;
+  push arg[0];
+  call id;
+  add;
+  ret;
+}
+
+function g''(integer) : integer {
+  push arg[0];
+  tcall sum;
+}
+
+function main() : integer {
+  push 100;
+  tcall sum;
+}
