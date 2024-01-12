@@ -1,0 +1,131 @@
+-- closure extension
+
+start:
+  call main
+  jmp end
+
+ext_10:
+  [ap] = 10; ap++
+  [ap] = [fp - 3]; ap++
+  call extend_closure_1
+  ret
+
+app_1:
+  [ap] = 1; ap++
+  [ap] = [fp - 3]; ap++
+  call call_closure
+  ret
+
+f:
+  [ap] = [fp - 3]; ap++
+  call ext_10
+  call app_1
+  ret
+
+plus:
+  [ap] = [fp - 3] + [fp - 4]; ap++
+  ret
+
+minus:
+  [ap] = [fp - 3] - [fp - 4]; ap++
+  ret
+
+mult:
+  [ap] = [fp - 3] * [fp - 4]; ap++
+  ret
+
+main:
+  ap += 2
+  -- calloc plus 0
+  call get_regs
+  [ap] = plus; ap++
+  [ap] = 9; ap++
+  [ap] = 7; ap++
+  [ap] = [ap - 5] + 2; ap++
+  call f
+  -- 11
+  [fp] = [ap - 1]
+  -- calloc minus 0
+  call get_regs
+  [ap] = minus; ap++
+  [ap] = 9; ap++
+  [ap] = 7; ap++
+  [ap] = [ap - 5] + 2; ap++
+  call f
+  -- 9
+  [fp + 1] = [ap - 1]
+  -- calloc mult 0
+  call get_regs
+  [ap] = mult; ap++
+  [ap] = 9; ap++
+  [ap] = 7; ap++
+  [ap] = [ap - 5] + 2; ap++
+  call f
+  -- 10
+  [ap] = [ap - 1] + [fp]; ap++
+  [ap] = [ap - 1] + [fp + 1]; ap++
+  ret
+  -- result: 30
+
+get_regs:
+  call get_ap_reg
+  ret
+get_ap_reg:
+  ret
+
+-- [fp - 3]: closure; [fp - 3 - k]: argument k to closure call
+call_closure:
+  ap += 1
+  -- closure addr
+  [fp] = [[fp - 3]]
+  -- jmp rel (9 - argsnum)
+  jmp rel [[fp - 3] + 2]
+  [ap] = [fp - 11]; ap++
+  [ap] = [fp - 10]; ap++
+  [ap] = [fp - 9]; ap++
+  [ap] = [fp - 8]; ap++
+  [ap] = [fp - 7]; ap++
+  [ap] = [fp - 6]; ap++
+  [ap] = [fp - 5]; ap++
+  [ap] = [fp - 4]; ap++
+  -- jmp rel (9 - sargs)
+  jmp rel [[fp - 3] + 1]
+  [ap] = [[fp - 3] + 10]; ap++
+  [ap] = [[fp - 3] + 9]; ap++
+  [ap] = [[fp - 3] + 8]; ap++
+  [ap] = [[fp - 3] + 7]; ap++
+  [ap] = [[fp - 3] + 6]; ap++
+  [ap] = [[fp - 3] + 5]; ap++
+  [ap] = [[fp - 3] + 4]; ap++
+  [ap] = [[fp - 3] + 3]; ap++
+  call [fp]
+  ret
+
+-- [fp - 3]: closure; [fp - 4]: argument
+extend_closure_1:
+  ap += 3
+  call get_regs
+  [fp] = [ap - 2] + 2
+  -- 9 - sargs
+  [fp + 1] = [[fp - 3] + 1]
+  -- 9 - argsnum (expected)
+  [fp + 2] = [[fp - 3] + 2]
+  [ap] = [[fp - 3]]; ap++
+  [ap] = [fp + 1] - 1; ap++
+  [ap] = [fp + 2] + 1; ap++
+  -- jmp rel (9 - sargs)
+  jmp rel [fp + 1]
+  [ap] = [[fp - 3] + 10]; ap++
+  [ap] = [[fp - 3] + 9]; ap++
+  [ap] = [[fp - 3] + 8]; ap++
+  [ap] = [[fp - 3] + 7]; ap++
+  [ap] = [[fp - 3] + 6]; ap++
+  [ap] = [[fp - 3] + 5]; ap++
+  [ap] = [[fp - 3] + 4]; ap++
+  [ap] = [[fp - 3] + 3]; ap++
+  -- extra args
+  [ap] = [fp - 4]; ap++
+  [ap] = [fp]; ap++
+  ret
+
+end:

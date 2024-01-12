@@ -1,0 +1,4 @@
+-- Invalid memory access
+
+start:
+  [ap] = [ap] + 1; ap++

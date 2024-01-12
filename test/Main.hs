@@ -4,6 +4,7 @@ import Asm qualified
 import BackendGeb qualified
 import BackendMarkdown qualified
 import Base
+import Casm qualified
 import Compilation qualified
 import Core qualified
 import Examples qualified
@@ -31,6 +32,7 @@ slowTests =
       Internal.allTests,
       Compilation.allTests,
       Examples.allTests,
+      Casm.allTests,
       VampIR.allTests
     ]
 

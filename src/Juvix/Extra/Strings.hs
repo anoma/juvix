@@ -323,6 +323,12 @@ pipe = "|"
 equal :: (IsString s) => s
 equal = "="
 
+notequal :: (IsString s) => s
+notequal = "!="
+
+plusequal :: (IsString s) => s
+plusequal = "+="
+
 less :: (IsString s) => s
 less = "<"
 
@@ -352,6 +358,18 @@ fail_ = "fail"
 
 err :: (IsString s) => s
 err = "err"
+
+jmp :: (IsString s) => s
+jmp = "jmp"
+
+call :: (IsString s) => s
+call = "call"
+
+rel :: (IsString s) => s
+rel = "rel"
+
+abs :: (IsString s) => s
+abs = "abs"
 
 show_ :: (IsString s) => s
 show_ = "show"
@@ -454,6 +472,36 @@ div = "/"
 
 mod :: (IsString s) => s
 mod = "%"
+
+ap :: (IsString s) => s
+ap = "ap"
+
+fp :: (IsString s) => s
+fp = "fp"
+
+apPlusPlus :: (IsString s) => s
+apPlusPlus = "ap++"
+
+iadd :: (IsString s) => s
+iadd = "iadd"
+
+isub :: (IsString s) => s
+isub = "isub"
+
+imul :: (IsString s) => s
+imul = "imul"
+
+idiv :: (IsString s) => s
+idiv = "idiv"
+
+imod :: (IsString s) => s
+imod = "imod"
+
+ilt :: (IsString s) => s
+ilt = "ilt"
+
+ret :: (IsString s) => s
+ret = "ret"
 
 dollar :: (IsString s) => s
 dollar = "$"

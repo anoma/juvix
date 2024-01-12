@@ -1,0 +1,67 @@
+-- recursion through higher-order functions
+
+start:
+  call main
+  jmp end
+
+g:
+  jmp g_label_1 if [fp - 4] != 0
+  [ap] = 0; ap++
+  ret
+g_label_1:
+  [ap] = [fp - 4] - 1; ap++
+  [ap] = [fp - 3]; ap++
+  call call_closure
+  ret
+
+f:
+  call get_regs
+  [ap] = f; ap++
+  [ap] = 9; ap++
+  [ap] = 8; ap++
+  [ap] = [fp - 3]; ap++
+  [ap] = [ap - 6] + 2; ap++
+  call g
+  [ap] = [ap - 1] + [fp - 3]; ap++
+  ret
+
+main:
+  [ap] = 100; ap++
+  call f
+  ret
+
+get_regs:
+  call get_ap_reg
+  ret
+get_ap_reg:
+  ret
+
+-- [fp - 3]: closure; [fp - 3 - k]: argument k to closure call
+call_closure:
+  ap += 1
+  -- closure addr
+  [fp] = [[fp - 3]]
+  -- jmp rel (9 - argsnum)
+  jmp rel [[fp - 3] + 2]
+  [ap] = [fp - 11]; ap++
+  [ap] = [fp - 10]; ap++
+  [ap] = [fp - 9]; ap++
+  [ap] = [fp - 8]; ap++
+  [ap] = [fp - 7]; ap++
+  [ap] = [fp - 6]; ap++
+  [ap] = [fp - 5]; ap++
+  [ap] = [fp - 4]; ap++
+  -- jmp rel (9 - sargs)
+  jmp rel [[fp - 3] + 1]
+  [ap] = [[fp - 3] + 10]; ap++
+  [ap] = [[fp - 3] + 9]; ap++
+  [ap] = [[fp - 3] + 8]; ap++
+  [ap] = [[fp - 3] + 7]; ap++
+  [ap] = [[fp - 3] + 6]; ap++
+  [ap] = [[fp - 3] + 5]; ap++
+  [ap] = [[fp - 3] + 4]; ap++
+  [ap] = [[fp - 3] + 3]; ap++
+  call [fp]
+  ret
+
+end:

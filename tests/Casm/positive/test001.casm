@@ -1,0 +1,10 @@
+-- sum of numbers 1 to 1000
+start:
+   [ap] = 1000
+   [ap + 1] = 0
+   ap += 2
+loop:
+   [ap] = [ap - 2] - 1
+   [ap + 1] = [ap - 1] + [ap - 2]
+   ap += 2
+   jmp loop if [ap - 2] != 0

@@ -1,0 +1,16 @@
+-- branch
+
+start:
+  jmp main
+
+loop:
+  jmp loop
+
+main:
+  [ap] = 3; ap++
+  jmp label1 if [ap - 1] != 0
+  jmp loop
+label1:
+  [ap] = 0; ap++
+  jmp label1 if [ap - 1] != 0
+  [ap] = [ap - 2]; ap++

@@ -1,0 +1,25 @@
+-- Exp function
+
+start:
+  jmp main
+
+exp:
+  -- [fp - 5], [fp - 4], [fp - 3] are x, a, n, respectively.
+  jmp body if [fp - 3] != 0
+  -- n == 0. Return x.
+  [ap] = [fp - 5]; ap++
+  ret
+body:
+  -- Return exp(x * a, a, n - 1).
+  [ap] = [fp - 5] * [fp - 4]; ap++
+  [ap] = [fp - 4]; ap++
+  [ap] = [fp - 3] - 1; ap++
+  call exp
+  ret
+
+main:
+  [ap] = 3; ap++
+  [ap] = 2; ap++
+  [ap] = 4; ap++
+  call exp
+  -- result: 48

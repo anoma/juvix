@@ -1,0 +1,4 @@
+-- Undefined label
+
+start:
+  [ap] = label; ap++

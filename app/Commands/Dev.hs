@@ -6,6 +6,7 @@ where
 
 import Commands.Base
 import Commands.Dev.Asm qualified as Asm
+import Commands.Dev.Casm qualified as Casm
 import Commands.Dev.Core qualified as Core
 import Commands.Dev.DisplayRoot qualified as DisplayRoot
 import Commands.Dev.Geb qualified as Geb
@@ -30,6 +31,7 @@ runCommand = \case
   Core opts -> Core.runCommand opts
   Geb opts -> Geb.runCommand opts
   Asm opts -> Asm.runCommand opts
+  Casm opts -> Casm.runCommand opts
   Runtime opts -> Runtime.runCommand opts
   DisplayRoot opts -> DisplayRoot.runCommand opts
   JuvixDevRepl opts -> Repl.runCommand opts
