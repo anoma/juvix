@@ -344,8 +344,9 @@ stdlibNumArgs = \case
   StdlibLe -> 2
   StdlibLt -> 2
 
--- Does not play well with ormolu :(
 {-# COMPLETE Cell #-}
+
 pattern Cell :: Term a -> Term a -> Cell a
-pattern Cell {_cellLeft', _cellRight'} <- Cell' _cellLeft' _cellRight' _ where
-  Cell a b = Cell' a b (Irrelevant Nothing)
+pattern Cell {_cellLeft', _cellRight'} <- Cell' _cellLeft' _cellRight' _
+  where
+    Cell a b = Cell' a b (Irrelevant Nothing)
