@@ -21,6 +21,6 @@ runCommand opts = do
         Left err -> exitJuvixError (JuvixError err)
         Right ty -> do
           renderStdOut (ppOutDefault ty)
-          embed (putStrLn "")
+          putStrLn ""
     Right _ -> exitJuvixError (error @JuvixError "Not a morphism")
     Left err -> exitJuvixError (JuvixError err)

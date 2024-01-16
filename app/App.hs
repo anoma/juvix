@@ -78,7 +78,7 @@ reAppIO args@RunAppIOArgs {..} =
     AskBuildDir -> return (resolveAbsBuildDir (_runAppIOArgsRoot ^. rootRootDir) (_runAppIOArgsRoot ^. rootBuildDir))
     Say t
       | g ^. globalOnlyErrors -> return ()
-      | otherwise -> embed (putStrLn t)
+      | otherwise -> putStrLn t
     PrintJuvixError e -> do
       printErr e
     ExitJuvixError e -> do
