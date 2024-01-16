@@ -50,7 +50,7 @@ testDescr PosTest {..} = helper renderCodeNew
                 entryPoint <- testDefaultEntryPointIO tRoot file'
 
                 let evalHelper :: Text -> Sem (PipelineEff PipelineAppEffects) a -> IO (PipelineResult a)
-                    evalHelper input m = snd <$> testRunIO entryPoint {_entryPointStdin = Just input} m
+                    evalHelper input_ m = snd <$> testRunIO entryPoint {_entryPointStdin = Just input_} m
 
                 step "Parsing & Scoping"
                 PipelineResult s _ _ <- snd <$> testRunIO entryPoint upToScoping

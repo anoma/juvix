@@ -25,8 +25,8 @@ fromSource ::
   Path Abs File ->
   Text ->
   Sem r Geb.Expression
-fromSource fileName input =
-  case runParser fileName input of
+fromSource fileName input_ =
+  case runParser fileName input_ of
     Left err -> throw (JuvixError err)
     Right gebTerm -> pure gebTerm
 
@@ -34,14 +34,14 @@ runParser ::
   Path Abs File ->
   Text ->
   Either MegaparsecError Geb.Expression
-runParser fileName input = do
+runParser fileName input_ = do
   let parser :: ParsecS r Geb.Expression
       parser
         | isJuvixGebFile fileName = parseGeb
         | isLispFile fileName = parseGebLisp
         | otherwise = error "unknown file extension"
   case run $
-    P.runParserT parser (fromAbsFile fileName) input of
+    P.runParserT parser (fromAbsFile fileName) input_ of
     Left err -> Left (MegaparsecError err)
     Right gebTerm -> Right gebTerm
 

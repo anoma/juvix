@@ -25,16 +25,16 @@ import Text.Megaparsec qualified as P
 -- | Note: only new symbols and tags that are not in the InfoTable already will be
 -- generated during parsing
 runParser :: Path Abs File -> ModuleId -> InfoTable -> Text -> Either MegaparsecError (InfoTable, Maybe Node)
-runParser fileName mid tab input =
+runParser fileName mid tab input_ =
   case run $
     runInfoTableBuilder (Module mid tab mempty) $
-      P.runParserT parseToplevel (fromAbsFile fileName) input of
+      P.runParserT parseToplevel (fromAbsFile fileName) input_ of
     (_, Left err) -> Left (MegaparsecError err)
     (md, Right r) -> Right (md ^. moduleInfoTable, r)
 
 runParserMain :: Path Abs File -> ModuleId -> InfoTable -> Text -> Either MegaparsecError InfoTable
-runParserMain fileName mid tab input =
-  case runParser fileName mid tab input of
+runParserMain fileName mid tab input_ =
+  case runParser fileName mid tab input_ of
     Left err -> Left err
     Right (tab', Nothing) -> Right tab'
     Right (tab', Just node) -> Right $ setupMainFunction mid tab' node

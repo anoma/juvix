@@ -1,7 +1,6 @@
 module BackendGeb.Eval.Base where
 
 import Base
-import Data.Text.IO qualified as TIO
 import Juvix.Compiler.Backend.Geb qualified as Geb
 import Juvix.Prelude.Pretty
 
@@ -12,8 +11,8 @@ gebEvalAssertion ::
   Assertion
 gebEvalAssertion mainFile expectedFile step = do
   step "Parse"
-  input <- readFile (toFilePath mainFile)
-  case Geb.runParser mainFile input of
+  input_ <- readFile (toFilePath mainFile)
+  case Geb.runParser mainFile input_ of
     Left err -> assertFailure (show (pretty err))
     Right (Geb.ExpressionObject _) -> do
       step "No evaluation for objects"
@@ -52,8 +51,8 @@ gebEvalAssertion' _mainFile expectedFile step gebMorphism = do
         Right value -> do
           hPutStrLn hout (Geb.ppPrint value)
           hClose hout
-          actualOutput <- TIO.readFile (toFilePath outputFile)
-          expected <- TIO.readFile (toFilePath expectedFile)
+          actualOutput <- readFile (toFilePath outputFile)
+          expected <- readFile (toFilePath expectedFile)
           step "Compare expected and actual program output"
           assertEqDiffText
             ("Check: EVAL output = " <> toFilePath expectedFile)
@@ -63,8 +62,8 @@ gebEvalAssertion' _mainFile expectedFile step gebMorphism = do
 gebEvalErrorAssertion :: Path Abs File -> (String -> IO ()) -> Assertion
 gebEvalErrorAssertion mainFile step = do
   step "Parse"
-  input <- readFile (toFilePath mainFile)
-  case Geb.runParser mainFile input of
+  input_ <- readFile (toFilePath mainFile)
+  case Geb.runParser mainFile input_ of
     Left _ -> assertBool "" True
     Right (Geb.ExpressionObject _) -> assertFailure "no error"
     Right morph' -> do

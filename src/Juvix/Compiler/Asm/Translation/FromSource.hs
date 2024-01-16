@@ -34,16 +34,16 @@ parseText' :: BuilderState -> Text -> Either MegaparsecError BuilderState
 parseText' bs = runParser' bs ""
 
 runParser :: FilePath -> Text -> Either MegaparsecError InfoTable
-runParser fileName input = (^. stateInfoTable) <$> runParser' emptyBuilderState fileName input
+runParser fileName input_ = (^. stateInfoTable) <$> runParser' emptyBuilderState fileName input_
 
 runParser' :: BuilderState -> FilePath -> Text -> Either MegaparsecError BuilderState
-runParser' bs fileName input =
+runParser' bs fileName input_ =
   case run $
     evalState @Index 0 $
       evalState @LocalNameMap mempty $
         runInfoTableBuilder' bs $
           evalTopNameIdGen defaultModuleId $
-            P.runParserT parseToplevel fileName input of
+            P.runParserT parseToplevel fileName input_ of
     (_, Left err) -> Left (MegaparsecError err)
     (bs', Right ()) -> Right bs'
 

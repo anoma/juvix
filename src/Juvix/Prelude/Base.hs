@@ -56,6 +56,7 @@ module Juvix.Prelude.Base
     module Polysemy,
     module Polysemy.Embed,
     module Polysemy.Error,
+    module Polysemy.Input,
     module Polysemy.Fixpoint,
     module Polysemy.Output,
     module Polysemy.Reader,
@@ -145,7 +146,8 @@ import Data.String
 import Data.Text (Text, pack, strip, unpack)
 import Data.Text qualified as Text
 import Data.Text.Encoding
-import Data.Text.IO hiding (appendFile, readFile, writeFile)
+import Data.Text.IO hiding (appendFile, putStr, putStrLn, readFile, writeFile)
+import Data.Text.IO qualified as Text
 import Data.Text.IO.Utf8
 import Data.Traversable
 import Data.Tuple.Extra hiding (both)
@@ -168,6 +170,7 @@ import Polysemy
 import Polysemy.Embed
 import Polysemy.Error hiding (fromEither)
 import Polysemy.Fixpoint
+import Polysemy.Input
 import Polysemy.Output
 import Polysemy.Reader
 import Polysemy.Resource
@@ -443,14 +446,20 @@ filterIndexed f = filter (f . (^. indexedThing))
 fromText :: (IsString a) => Text -> a
 fromText = fromString . unpack
 
-fromRightIO' :: (e -> IO ()) -> IO (Either e r) -> IO r
+fromRightIO' :: (MonadIO m) => (e -> m ()) -> m (Either e r) -> m r
 fromRightIO' pp = do
   eitherM ifLeft return
   where
-    ifLeft e = pp e >> exitFailure
+    ifLeft e = pp e >> liftIO exitFailure
 
-fromRightIO :: (e -> Text) -> IO (Either e r) -> IO r
+fromRightIO :: (MonadIO m) => (e -> Text) -> m (Either e r) -> m r
 fromRightIO pp = fromRightIO' (putStrLn . pp)
+
+putStr :: (MonadIO m) => Text -> m ()
+putStr = liftIO . Text.putStr
+
+putStrLn :: (MonadIO m) => Text -> m ()
+putStrLn = liftIO . Text.putStrLn
 
 optional_ :: (Alternative m) => m a -> m ()
 optional_ = void . optional
@@ -549,7 +558,7 @@ popFirstJust f = \case
     Just x -> (Just x, hs)
 
 uncurryF :: (Functor f) => (a -> b -> c) -> f (a, b) -> f c
-uncurryF g input = uncurry g <$> input
+uncurryF g input_ = uncurry g <$> input_
 
 indexedByInt :: (Foldable f) => (a -> Int) -> f a -> IntMap a
 indexedByInt getIx l = IntMap.fromList [(getIx i, i) | i <- toList l]

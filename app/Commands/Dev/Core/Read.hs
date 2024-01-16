@@ -36,14 +36,14 @@ runCommand opts = do
     doEval tab' node =
       if
           | project opts ^. coreReadEval -> do
-              embed (putStrLn "--------------------------------")
-              embed (putStrLn "|            Eval              |")
-              embed (putStrLn "--------------------------------")
+              putStrLn "--------------------------------"
+              putStrLn "|            Eval              |"
+              putStrLn "--------------------------------"
               Eval.evalAndPrint opts tab' node
           | project opts ^. coreReadNormalize -> do
-              embed (putStrLn "--------------------------------")
-              embed (putStrLn "|         Normalize            |")
-              embed (putStrLn "--------------------------------")
+              putStrLn "--------------------------------"
+              putStrLn "|         Normalize            |"
+              putStrLn "--------------------------------"
               Eval.normalizeAndPrint opts tab' node
           | otherwise -> return ()
     sinputFile :: AppPath File

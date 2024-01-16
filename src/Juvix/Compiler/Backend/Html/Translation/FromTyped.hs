@@ -288,7 +288,7 @@ goTopModule cs m = do
   htmlOpts <- ask @HtmlOptions
   runReader (htmlOpts {_htmlOptionsKind = HtmlDoc}) $ do
     fpath <- moduleDocPath m
-    Prelude.embed (putStrLn ("Writing " <> pack (toFilePath fpath)))
+    putStrLn ("Writing " <> pack (toFilePath fpath))
     docHtml >>= writeHtml fpath
 
   runReader (htmlOpts {_htmlOptionsKind = HtmlSrc}) $ do
