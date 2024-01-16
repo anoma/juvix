@@ -39,9 +39,9 @@ asmRunAssertionParam' interpretFun tab expectedFile step = do
                 step "Interpret"
                 interpretFun hout sym tab
                 hClose hout
-                actualOutput <- TIO.readFile (toFilePath outputFile)
+                actualOutput <- readFile (toFilePath outputFile)
                 step "Compare expected and actual program output"
-                expected <- TIO.readFile (toFilePath expectedFile)
+                expected <- readFile (toFilePath expectedFile)
                 assertEqDiffText ("Check: RUN output = " <> toFilePath expectedFile) actualOutput expected
             )
         Nothing -> assertFailure "no 'main' function"
