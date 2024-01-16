@@ -3,4 +3,4 @@ module Juvix.Compiler.Casm.Language.Base
   )
 where
 
-import Juvix.Compiler.Core.Language.Base hiding (Ap, BuiltinOp (..), Index)
+import Juvix.Compiler.Core.Language.Base hiding (Ap, Index)

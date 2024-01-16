@@ -238,17 +238,17 @@ instance PrettyCode MemValue where
 instance PrettyCode Value where
   ppCode :: (Member (Reader Options) r) => Value -> Sem r (Doc Ann)
   ppCode = \case
-    ConstInt v ->
+    Constant (ConstInt v) ->
       return $ annotate AnnLiteralInteger (pretty v)
-    ConstBool True ->
+    Constant (ConstBool True) ->
       return $ annotate (AnnKind KNameConstructor) (pretty (Str.true_ :: String))
-    ConstBool False ->
+    Constant (ConstBool False) ->
       return $ annotate (AnnKind KNameConstructor) (pretty (Str.false_ :: String))
-    ConstString txt ->
+    Constant (ConstString txt) ->
       return $ annotate AnnLiteralString (pretty (show txt :: String))
-    ConstUnit {} ->
+    Constant ConstUnit {} ->
       return $ annotate (AnnKind KNameConstructor) (pretty (Str.unit :: String))
-    ConstVoid {} ->
+    Constant ConstVoid {} ->
       return $ annotate (AnnKind KNameConstructor) (pretty (Str.void :: String))
     Ref mval ->
       ppCode mval

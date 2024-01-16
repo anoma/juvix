@@ -1,49 +1,15 @@
-module Juvix.Compiler.Asm.Extra.Type where
+module Juvix.Compiler.Asm.Extra.Type
+  ( module Juvix.Compiler.Asm.Extra.Type,
+    module Juvix.Compiler.Tree.Extra.Type,
+  )
+where
 
 import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Asm.Data.InfoTable
 import Juvix.Compiler.Asm.Error
 import Juvix.Compiler.Asm.Language
 import Juvix.Compiler.Asm.Pretty
-
-mkTypeInteger :: Type
-mkTypeInteger = TyInteger (TypeInteger Nothing Nothing)
-
-mkTypeBool :: Type
-mkTypeBool = TyBool (TypeBool (BuiltinTag TagTrue) (BuiltinTag TagFalse))
-
-mkTypeConstr :: Symbol -> Tag -> [Type] -> Type
-mkTypeConstr ind tag argTypes = TyConstr (TypeConstr ind tag argTypes)
-
-mkTypeInductive :: Symbol -> Type
-mkTypeInductive ind = TyInductive (TypeInductive ind)
-
-mkTypeFun :: [Type] -> Type -> Type
-mkTypeFun args tgt = case args of
-  [] -> tgt
-  a : args' -> TyFun (TypeFun (a :| args') tgt)
-
-unfoldType :: Type -> ([Type], Type)
-unfoldType ty = (typeArgs ty, typeTarget ty)
-
--- converts e.g. `A -> B -> C -> D` to `(A, B, C) -> D` where `D` is an atom
-uncurryType :: Type -> Type
-uncurryType ty = case typeArgs ty of
-  [] ->
-    ty
-  tyargs ->
-    let ty' = uncurryType (typeTarget ty)
-     in mkTypeFun (tyargs ++ typeArgs ty') (typeTarget ty')
-
--- converts e.g. `(A, B, C) -> (D, E) -> F` to `A -> B -> C -> D -> E -> F`
--- where `F` is an atom
-curryType :: Type -> Type
-curryType ty = case typeArgs ty of
-  [] ->
-    ty
-  tyargs ->
-    let ty' = curryType (typeTarget ty)
-     in foldr (\tyarg ty'' -> mkTypeFun [tyarg] ty'') (typeTarget ty') tyargs
+import Juvix.Compiler.Tree.Extra.Type
 
 unifyTypes :: forall r. (Members '[Error AsmError, Reader (Maybe Location), Reader InfoTable] r) => Type -> Type -> Sem r Type
 unifyTypes ty1 ty2 = case (ty1, ty2) of

@@ -1,4 +1,4 @@
-module Juvix.Compiler.Asm.Language.Type where
+module Juvix.Compiler.Tree.Language.Type where
 
 import Juvix.Compiler.Core.Language.Base
 

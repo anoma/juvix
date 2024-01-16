@@ -7,10 +7,14 @@ computeFunctionStackUsage tab fi = do
   ps <- recurseS sig (fi ^. functionCode)
   let maxValueStack = maximum (map fst ps)
       maxTempStack = maximum (map snd ps)
+      extra =
+        FunctionInfoExtra
+          { _functionMaxValueStackHeight = maxValueStack,
+            _functionMaxTempStackHeight = maxTempStack
+          }
   return
     fi
-      { _functionMaxValueStackHeight = maxValueStack,
-        _functionMaxTempStackHeight = maxTempStack
+      { _functionExtra = Just extra
       }
   where
     sig :: RecursorSig StackInfo r (Int, Int)

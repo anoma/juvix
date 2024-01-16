@@ -212,11 +212,11 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
 
     getVal :: (Member Runtime r) => Value -> Sem r Val
     getVal = \case
-      ConstInt i -> return (ValInteger i)
-      ConstBool b -> return (ValBool b)
-      ConstString s -> return (ValString s)
-      ConstUnit -> return ValUnit
-      ConstVoid -> return ValVoid
+      Constant (ConstInt i) -> return (ValInteger i)
+      Constant (ConstBool b) -> return (ValBool b)
+      Constant (ConstString s) -> return (ValString s)
+      Constant ConstUnit -> return ValUnit
+      Constant ConstVoid -> return ValVoid
       Ref r -> getMemVal r
 
     getMemVal :: (Member Runtime r) => MemValue -> Sem r Val

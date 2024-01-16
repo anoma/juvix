@@ -24,8 +24,8 @@ fromAsm tab =
           _functionLocation = fi ^. Asm.functionLocation,
           _functionSymbol = fi ^. Asm.functionSymbol,
           _functionArgsNum = fi ^. Asm.functionArgsNum,
-          _functionStackVarsNum = fi ^. Asm.functionMaxValueStackHeight,
-          _functionTempVarsNum = fi ^. Asm.functionMaxTempStackHeight,
+          _functionStackVarsNum = fromJust (fi ^. Asm.functionExtra) ^. Asm.functionMaxValueStackHeight,
+          _functionTempVarsNum = fromJust (fi ^. Asm.functionExtra) ^. Asm.functionMaxTempStackHeight,
           _functionCode = fromAsmFun tab fi
         }
 
@@ -152,11 +152,11 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
 
     mkValue :: Asm.Value -> Value
     mkValue = \case
-      Asm.ConstInt v -> ConstInt v
-      Asm.ConstBool v -> ConstBool v
-      Asm.ConstString v -> ConstString v
-      Asm.ConstUnit -> ConstUnit
-      Asm.ConstVoid -> ConstVoid
+      Asm.Constant (Asm.ConstInt v) -> ConstInt v
+      Asm.Constant (Asm.ConstBool v) -> ConstBool v
+      Asm.Constant (Asm.ConstString v) -> ConstString v
+      Asm.Constant Asm.ConstUnit -> ConstUnit
+      Asm.Constant Asm.ConstVoid -> ConstVoid
       Asm.Ref mv -> case mv of
         Asm.DRef dref -> VRef $ mkVar dref
         Asm.ConstrRef Asm.Field {..} ->

@@ -105,11 +105,11 @@ getDirectRefType dr mem = case dr of
 
 getValueType' :: (Member (Error AsmError) r) => Maybe Location -> InfoTable -> Memory -> Value -> Sem r Type
 getValueType' loc tab mem = \case
-  ConstInt _ -> return mkTypeInteger
-  ConstBool _ -> return mkTypeBool
-  ConstString _ -> return TyString
-  ConstUnit -> return TyUnit
-  ConstVoid -> return TyVoid
+  Constant ConstInt {} -> return mkTypeInteger
+  Constant ConstBool {} -> return mkTypeBool
+  Constant ConstString {} -> return TyString
+  Constant ConstUnit -> return TyUnit
+  Constant ConstVoid -> return TyVoid
   Ref val -> case getMemValueType tab val mem of
     Just ty -> return ty
     Nothing -> throw $ AsmError loc "invalid memory reference"
