@@ -429,10 +429,7 @@ memValue = do
   parseField r <|> return (Ref (DRef r))
 
 directRef :: (Member (State LocalNameMap) r) => ParsecS r DirectRef
-directRef = stackRef <|> argRef <|> tempRef <|> namedRef
-
-stackRef :: ParsecS r DirectRef
-stackRef = kw kwDollar $> StackRef
+directRef = argRef <|> tempRef <|> namedRef
 
 argRef :: ParsecS r DirectRef
 argRef = do

@@ -172,7 +172,6 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
 
     mkVar :: Asm.DirectRef -> VarRef
     mkVar = \case
-      Asm.StackRef -> VarRef VarGroupStack n
       Asm.ArgRef Asm.OffsetRef {..} -> VarRef VarGroupArgs _offsetRefOffset
       Asm.TempRef Asm.OffsetRef {..} -> VarRef VarGroupTemp _offsetRefOffset
 

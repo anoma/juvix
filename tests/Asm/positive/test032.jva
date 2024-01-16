@@ -126,7 +126,7 @@ function pred_step(Pair) : (* -> *, *) -> * {
 
 function pred((* -> *, *) -> *) : (* -> *, *) -> * {
   calloc zero 0;
-  push $;
+  calloc zero 0;
   alloc pair;
   calloc pred_step 0;
   push arg[0];

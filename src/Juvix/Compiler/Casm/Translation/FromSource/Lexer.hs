@@ -1,12 +1,12 @@
 module Juvix.Compiler.Casm.Translation.FromSource.Lexer
-  ( module Juvix.Compiler.Asm.Translation.FromSource.Lexer,
+  ( module Juvix.Compiler.Tree.Translation.FromSource.Lexer.Base,
     module Juvix.Compiler.Casm.Translation.FromSource.Lexer,
     module Juvix.Compiler.Casm.Keywords,
   )
 where
 
-import Juvix.Compiler.Asm.Translation.FromSource.Lexer hiding (allKeywordStrings, allKeywords, bareIdentifier, identifier)
 import Juvix.Compiler.Casm.Keywords
+import Juvix.Compiler.Tree.Translation.FromSource.Lexer.Base
 import Juvix.Prelude
 
 offset :: ParsecS r Int16

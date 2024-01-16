@@ -82,12 +82,7 @@ genCode fi =
     goMemRef isTail ref =
       snocReturn isTail $
         DL.singleton $
-          mkInstr $
-            Push $
-              Ref $
-                case ref of
-                  Tree.DRef r -> DRef $ goDirectRef r
-                  Tree.ConstrRef r -> ConstrRef $ goFieldRef r
+          mkInstr (Push (Ref ref))
 
     goAllocConstr :: Bool -> Tree.NodeAllocConstr -> Code'
     goAllocConstr isTail Tree.NodeAllocConstr {..} =
@@ -220,14 +215,6 @@ genCode fi =
 
     goArgs :: [Tree.Node] -> Code'
     goArgs args = DL.concat (map (go False) (reverse args))
-
-    goDirectRef :: Tree.DirectRef -> DirectRef
-    goDirectRef = \case
-      Tree.ArgRef off -> ArgRef off
-      Tree.TempRef off -> TempRef off
-
-    goFieldRef :: Tree.Field -> Field
-    goFieldRef = fmap goDirectRef
 
     genBinOp :: Tree.BinaryOpcode -> Command
     genBinOp = \case

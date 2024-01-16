@@ -218,7 +218,6 @@ ppOffsetRef str OffsetRef {..} =
 instance PrettyCode DirectRef where
   ppCode :: DirectRef -> Sem r (Doc Ann)
   ppCode = \case
-    StackRef -> return $ variable Str.dollar
     ArgRef roff -> ppOffsetRef Str.arg roff
     TempRef roff -> ppOffsetRef Str.tmp roff
 
@@ -229,8 +228,8 @@ instance PrettyCode Field where
     ctr <- ppConstrName _fieldTag
     return $ dr <> dot <> ctr <> lbracket <> integer _fieldOffset <> rbracket
 
-instance PrettyCode MemValue where
-  ppCode :: (Member (Reader Options) r) => MemValue -> Sem r (Doc Ann)
+instance PrettyCode MemRef where
+  ppCode :: (Member (Reader Options) r) => MemRef -> Sem r (Doc Ann)
   ppCode = \case
     DRef dr -> ppCode dr
     ConstrRef fld -> ppCode fld

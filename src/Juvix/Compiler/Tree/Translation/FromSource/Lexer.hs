@@ -1,11 +1,11 @@
-module Juvix.Compiler.Asm.Translation.FromSource.Lexer
-  ( module Juvix.Compiler.Asm.Translation.FromSource.Lexer,
+module Juvix.Compiler.Tree.Translation.FromSource.Lexer
+  ( module Juvix.Compiler.Tree.Translation.FromSource.Lexer,
     module Juvix.Compiler.Tree.Translation.FromSource.Lexer.Base,
-    module Juvix.Compiler.Asm.Keywords,
+    module Juvix.Compiler.Tree.Keywords,
   )
 where
 
-import Juvix.Compiler.Asm.Keywords
+import Juvix.Compiler.Tree.Keywords
 import Juvix.Compiler.Tree.Translation.FromSource.Lexer.Base
 import Juvix.Prelude
 
