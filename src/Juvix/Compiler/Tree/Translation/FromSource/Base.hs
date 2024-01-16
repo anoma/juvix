@@ -36,17 +36,17 @@ parseTextS' :: (Monoid e) => ParserSig t -> BuilderState' t e -> Text -> Either 
 parseTextS' sig bs = runParserS' sig bs ""
 
 runParserS :: (Monoid e) => ParserSig t -> FilePath -> Text -> Either MegaparsecError (InfoTable' t e)
-runParserS sig fileName input = (^. stateInfoTable) <$> runParserS' sig emptyBuilderState fileName input
+runParserS sig fileName input_ = (^. stateInfoTable) <$> runParserS' sig emptyBuilderState fileName input_
 
 runParserS' :: forall t e. (Monoid e) => ParserSig t -> BuilderState' t e -> FilePath -> Text -> Either MegaparsecError (BuilderState' t e)
-runParserS' sig bs fileName input =
+runParserS' sig bs fileName input_ =
   case run $
     evalState @Index 0 $
       evalState @LocalNameMap mempty $
         runReader sig $
           runInfoTableBuilder' bs $
             evalTopNameIdGen defaultModuleId $
-              P.runParserT (parseToplevel @t @e) fileName input of
+              P.runParserT (parseToplevel @t @e) fileName input_ of
     (_, Left err) -> Left (MegaparsecError err)
     (bs', Right ()) -> Right bs'
 
