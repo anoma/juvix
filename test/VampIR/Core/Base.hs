@@ -1,7 +1,6 @@
 module VampIR.Core.Base where
 
 import Base
-import Data.Text.IO qualified as TIO
 import Juvix.Compiler.Backend.VampIR.Translation qualified as VampIR
 import Juvix.Compiler.Core
 import Juvix.Prelude.Pretty
@@ -26,7 +25,7 @@ vampirAssertion' backend tab dataFile step = do
         case run (runReader defaultCoreOptions (runError @JuvixError (coreToVampIR' (moduleFromInfoTable tab)))) of
           Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
           Right VampIR.Result {..} -> do
-            TIO.writeFile (toFilePath vampirFile) _resultCode
+            writeFile (toFilePath vampirFile) _resultCode
 
             step "Check vamp-ir on path"
             assertCmdExists $(mkRelFile "vamp-ir")

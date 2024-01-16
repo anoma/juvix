@@ -5,7 +5,6 @@ import Data.Aeson
 import Data.Aeson.BetterErrors
 import Data.ByteString.Lazy qualified as B
 import Data.HashMap.Strict qualified as HashMap
-import Data.Text.IO qualified as TIO
 import Data.Text.Read
 import GHC.Base (seq)
 import Juvix.Compiler.Core.Data.InfoTable
@@ -78,7 +77,7 @@ coreEvalAssertion' mode tab mainFile expectedFile step =
                         (Info.member kNoDisplayInfo (getInfo value))
                         (hPutStrLn hout (ppPrint (toValue tab value)))
                       hClose hout
-                      actualOutput <- TIO.readFile (toFilePath outputFile)
+                      actualOutput <- readFile (toFilePath outputFile)
                       step "Compare expected and actual program output"
                       assertEqDiffText ("Check: EVAL output = " <> toFilePath expectedFile) actualOutput _evalDataOutput
               )
@@ -103,7 +102,7 @@ coreEvalAssertion' mode tab mainFile expectedFile step =
     readEvalData :: [Maybe Text] -> IO (Either String EvalData)
     readEvalData argnames = case mode of
       EvalModePlain -> do
-        expected <- TIO.readFile (toFilePath expectedFile)
+        expected <- readFile (toFilePath expectedFile)
         return $
           Right $
             EvalData
@@ -148,7 +147,7 @@ coreEvalAssertion mainFile expectedFile trans testTrans step = do
     Left err -> assertFailure (show (pretty err))
     Right (_, Nothing) -> do
       step "Compare expected and actual program output"
-      expected <- TIO.readFile (toFilePath expectedFile)
+      expected <- readFile (toFilePath expectedFile)
       assertEqDiffText ("Check: EVAL output = " <> toFilePath expectedFile) "" expected
     Right (tabIni, Just node) ->
       case run $ runReader defaultCoreOptions $ runError $ applyTransformations trans $ moduleFromInfoTable $ setupMainFunction defaultModuleId tabIni node of

@@ -148,8 +148,8 @@ evalStatement = \case
         Right res -> liftIO (putStrLn (ppPrint res))
 
 replCommand :: String -> Repl ()
-replCommand input = Repline.dontCrash $ do
-  readStatement input >>= evalStatement
+replCommand input_ = Repline.dontCrash $ do
+  readStatement input_ >>= evalStatement
 
 replAction :: ReplS ()
 replAction =

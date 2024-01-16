@@ -130,7 +130,7 @@ getProjName = do
               go
 
 say :: (Members '[Embed IO] r) => Text -> Sem r ()
-say = embed . putStrLn
+say = putStrLn
 
 tryAgain :: (Members '[Embed IO] r) => Sem r ()
 tryAgain = say "Please, try again:"

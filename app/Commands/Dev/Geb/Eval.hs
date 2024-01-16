@@ -24,7 +24,7 @@ runCommand opts = do
     Left err -> exitJuvixError (JuvixError err)
     Right gebTerm -> do
       evalAndPrint opts gebTerm
-      embed (putStrLn "")
+      putStrLn ""
 
 evalAndPrint ::
   forall r a.

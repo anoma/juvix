@@ -35,8 +35,6 @@ import Juvix.Prelude.Pretty
   ( Pretty,
     prettyText,
   )
-import Polysemy.Input (Input)
-import Polysemy.Input qualified as Input
 
 data MdModuleBuilder = MdModuleBuilder
   { _mdModuleBuilder :: Module 'Parsed 'ModuleTop,
@@ -82,8 +80,8 @@ fromSource e = mapError (JuvixError @ParserError) $ do
       Path Abs File ->
       Sem r (Module 'Parsed 'ModuleTop)
     goFile fileName = do
-      input <- getFileContents fileName
-      mp <- runModuleParser fileName input
+      input_ <- getFileContents fileName
+      mp <- runModuleParser fileName input_
       case mp of
         Left er -> throw er
         Right m -> return m
@@ -123,11 +121,11 @@ runReplInputParser ::
   Path Abs File ->
   Text ->
   Sem r ReplInput
-runReplInputParser fileName input = do
+runReplInputParser fileName input_ = do
   m <-
     evalState (Nothing @ParsedPragmas) $
       evalState (Nothing @(Judoc 'Parsed)) $
-        P.runParserT replInput (toFilePath fileName) input
+        P.runParserT replInput (toFilePath fileName) input_
   case m of
     Left err -> throw (ErrMegaparsec (MegaparsecError err))
     Right r -> return r
@@ -137,9 +135,9 @@ runModuleParser ::
   Path Abs File ->
   Text ->
   Sem r (Either ParserError (Module 'Parsed 'ModuleTop))
-runModuleParser fileName input
+runModuleParser fileName input_
   | isJuvixMarkdownFile fileName = do
-      res <- P.runParserT juvixCodeBlockParser (toFilePath fileName) input
+      res <- P.runParserT juvixCodeBlockParser (toFilePath fileName) input_
       case res of
         Left err -> return . Left . ErrMegaparsec . MegaparsecError $ err
         Right r
@@ -151,7 +149,7 @@ runModuleParser fileName input
       m <-
         evalState (Nothing @ParsedPragmas)
           . evalState (Nothing @(Judoc 'Parsed))
-          $ P.runParserT topModuleDef (toFilePath fileName) input
+          $ P.runParserT topModuleDef (toFilePath fileName) input_
       case m of
         Left err -> return . Left . ErrMegaparsec . MegaparsecError $ err
         Right r -> return $ Right r
@@ -178,7 +176,7 @@ runMarkdownModuleParser fpath mk =
               { _mdModuleBuilder = m0,
                 _mdModuleBuilderBlocksLengths = [length (m0 ^. moduleBody)]
               }
-      res <- Input.runInputList restBlocks (execState iniBuilder parseRestBlocks)
+      res <- runInputList restBlocks (execState iniBuilder parseRestBlocks)
       let m =
             set
               moduleMarkdownInfo
@@ -244,7 +242,7 @@ runMarkdownModuleParser fpath mk =
       forall r'.
       (Members '[Reader EntryPoint, ParserResultBuilder, Error ParserError, Input (Maybe MK.JuvixCodeBlock), State MdModuleBuilder, Files, PathResolver, NameIdGen] r') =>
       Sem r' ()
-    parseRestBlocks = whenJustM Input.input $ \x -> do
+    parseRestBlocks = whenJustM input $ \x -> do
       stmts <- parseHelper parseTopStatements x
       modify' (over (mdModuleBuilder . moduleBody) (<> stmts))
       modify' (over mdModuleBuilderBlocksLengths (length stmts :))
@@ -254,11 +252,11 @@ runModuleStdinParser ::
   (Members '[Reader EntryPoint, Error ParserError, Files, PathResolver, NameIdGen, ParserResultBuilder] r) =>
   Text ->
   Sem r (Either ParserError (Module 'Parsed 'ModuleTop))
-runModuleStdinParser input = do
+runModuleStdinParser input_ = do
   m <-
     evalState (Nothing @ParsedPragmas)
       . evalState (Nothing @(Judoc 'Parsed))
-      $ P.runParserT topModuleDefStdin (toFilePath formatStdinPath) input
+      $ P.runParserT topModuleDefStdin (toFilePath formatStdinPath) input_
   case m of
     Left err -> return (Left (ErrMegaparsec (MegaparsecError err)))
     Right r -> return $ Right r
@@ -268,13 +266,13 @@ runExpressionParser ::
   Path Abs File ->
   Text ->
   Sem r (Either ParserError (ExpressionAtoms 'Parsed))
-runExpressionParser fpath input = do
+runExpressionParser fpath input_ = do
   m <-
     ignoreHighlightBuilder
       $ runParserResultBuilder mempty
         . evalState (Nothing @ParsedPragmas)
         . evalState (Nothing @(Judoc 'Parsed))
-      $ P.runParserT parseExpressionAtoms (toFilePath fpath) input
+      $ P.runParserT parseExpressionAtoms (toFilePath fpath) input_
   case m of
     (_, Left err) -> return (Left (ErrMegaparsec (MegaparsecError err)))
     (_, Right r) -> return (Right r)
@@ -393,8 +391,8 @@ commanMarkParser ::
   Path Abs File ->
   Text ->
   Sem r (Either ParserError (Module 'Parsed 'ModuleTop))
-commanMarkParser fileName input = do
-  res <- MK.commonmarkWith MK.defaultSyntaxSpec (toFilePath fileName) input
+commanMarkParser fileName input_ = do
+  res <- MK.commonmarkWith MK.defaultSyntaxSpec (toFilePath fileName) input_
   case res of
     Right (r :: Mk) -> runMarkdownModuleParser fileName r
     Left r -> return . Left . ErrCommonmark . CommonmarkError $ r

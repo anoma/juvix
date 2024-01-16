@@ -72,4 +72,4 @@ normalizeAndPrint opts tab node =
           | otherwise -> do
               let node'' = if project opts ^. evalNoDisambiguate then node' else Core.disambiguateNodeNames (Core.moduleFromInfoTable tab) node'
               renderStdOut (Core.ppOut opts node'')
-              embed (putStrLn "")
+              putStrLn ""

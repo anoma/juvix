@@ -3,7 +3,6 @@ module Commands.Dev.Core.Compile.Base where
 import Commands.Base
 import Commands.Dev.Core.Compile.Options
 import Commands.Extra.Compile qualified as Compile
-import Data.Text.IO qualified as TIO
 import Juvix.Compiler.Asm.Pretty qualified as Asm
 import Juvix.Compiler.Backend qualified as Backend
 import Juvix.Compiler.Backend.C qualified as C
@@ -53,7 +52,7 @@ runCPipeline pa@PipelineArg {..} = do
   entryPoint <- getEntry pa
   C.MiniCResult {..} <- getRight (run (runReader entryPoint (runError (coreToMiniC _pipelineArgModule :: Sem '[Error JuvixError, Reader EntryPoint] C.MiniCResult))))
   cFile <- inputCFile _pipelineArgFile
-  embed $ TIO.writeFile (toFilePath cFile) _resultCCode
+  embed @IO (writeFile (toFilePath cFile) _resultCCode)
   outfile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
   Compile.runCommand
     _pipelineArgOptions
@@ -85,7 +84,7 @@ runGebPipeline pa@PipelineArg {..} = do
                       _lispPackageEntry = "*entry*"
                     }
   Geb.Result {..} <- getRight (run (runReader entryPoint (runError (coreToGeb spec _pipelineArgModule :: Sem '[Error JuvixError, Reader EntryPoint] Geb.Result))))
-  embed $ TIO.writeFile (toFilePath gebFile) _resultCode
+  embed @IO (writeFile (toFilePath gebFile) _resultCode)
 
 runVampIRPipeline ::
   forall r.
@@ -96,7 +95,7 @@ runVampIRPipeline pa@PipelineArg {..} = do
   entryPoint <- getEntry pa
   vampirFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
   VampIR.Result {..} <- getRight (run (runReader entryPoint (runError (coreToVampIR _pipelineArgModule :: Sem '[Error JuvixError, Reader EntryPoint] VampIR.Result))))
-  embed $ TIO.writeFile (toFilePath vampirFile) _resultCode
+  embed @IO (writeFile (toFilePath vampirFile) _resultCode)
 
 runAsmPipeline :: (Members '[Embed IO, App, TaggedLock] r) => PipelineArg -> Sem r ()
 runAsmPipeline pa@PipelineArg {..} = do
@@ -105,4 +104,4 @@ runAsmPipeline pa@PipelineArg {..} = do
   r <- runReader entryPoint $ runError @JuvixError (coreToAsm _pipelineArgModule)
   tab' <- getRight r
   let code = Asm.ppPrint tab' tab'
-  embed $ TIO.writeFile (toFilePath asmFile) code
+  embed @IO (writeFile (toFilePath asmFile) code)

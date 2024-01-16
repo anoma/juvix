@@ -36,7 +36,7 @@ runParserProgram :: FilePath -> Text -> Either MegaparsecError (N.Program Natura
 runParserProgram = runParserFor program
 
 runParserFor :: Parser a -> FilePath -> Text -> Either MegaparsecError a
-runParserFor p f input = case P.runParser (spaceConsumer >> p <* eof) f input of
+runParserFor p f input_ = case P.runParser (spaceConsumer >> p <* eof) f input_ of
   Left err -> Left (MegaparsecError err)
   Right t -> Right t
 
