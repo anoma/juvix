@@ -17,6 +17,7 @@ import System.Console.ANSI qualified as Ansi
 
 data App m a where
   ExitMsg :: ExitCode -> Text -> App m a
+  ExitFailMsg :: Text -> App m a
   ExitJuvixError :: JuvixError -> App m a
   PrintJuvixError :: JuvixError -> App m ()
   AskRoot :: App m Root
@@ -84,14 +85,15 @@ reAppIO args@RunAppIOArgs {..} =
     ExitJuvixError e -> do
       printErr e
       embed exitFailure
-    ExitMsg exitCode t -> exitMsg' exitCode t
+    ExitMsg exitCode t -> exitMsg' (exitWith exitCode) t
+    ExitFailMsg t -> exitMsg' exitFailure t
     SayRaw b -> embed (ByteString.putStr b)
   where
     getPkg :: (Members '[SCache Package] r') => Sem r' Package
     getPkg = cacheSingletonGet
 
-    exitMsg' :: (Members '[Embed IO] r') => ExitCode -> Text -> Sem r' x
-    exitMsg' exitCode t = liftIO (putStrLn t >> hFlush stdout >> exitWith exitCode)
+    exitMsg' :: (Members '[Embed IO] r') => IO x -> Text -> Sem r' x
+    exitMsg' onExit t = liftIO (putStrLn t >> hFlush stdout >> onExit)
 
     getMainFile' :: (Members '[SCache Package, Embed IO] r') => Maybe (AppPath File) -> Sem r' (Path Abs File)
     getMainFile' = \case
@@ -105,7 +107,7 @@ reAppIO args@RunAppIOArgs {..} =
     missingMainErr :: (Members '[Embed IO] r') => Sem r' x
     missingMainErr =
       exitMsg'
-        (ExitFailure 1)
+        exitFailure
         ( "A path to the main file must be given in the CLI or specified in the `main` field of the "
             <> pack (toFilePath juvixYamlFile)
             <> " file"
