@@ -3,7 +3,6 @@ module Commands.Dev.Asm.Compile where
 import Commands.Base
 import Commands.Dev.Asm.Compile.Options
 import Commands.Extra.Compile qualified as Compile
-import Data.Text.IO qualified as TIO
 import Juvix.Compiler.Asm.Translation.FromSource qualified as Asm
 import Juvix.Compiler.Backend qualified as Backend
 import Juvix.Compiler.Backend.C qualified as C
@@ -29,7 +28,7 @@ runCommand opts = do
           buildDir <- askBuildDir
           ensureDir buildDir
           cFile <- inputCFile file
-          embed $ TIO.writeFile (toFilePath cFile) _resultCCode
+          embed @IO (writeFile (toFilePath cFile) _resultCCode)
           outfile <- Compile.outputFile opts file
           Compile.runCommand
             opts

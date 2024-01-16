@@ -1,7 +1,6 @@
 module Asm.Compile.Base where
 
 import Base
-import Data.Text.IO qualified as TIO
 import Juvix.Compiler.Asm.Data.InfoTable
 import Juvix.Compiler.Asm.Error
 import Juvix.Compiler.Asm.Options
@@ -22,7 +21,7 @@ asmCompileAssertion' optLevel tab mainFile expectedFile stdinText step = do
       withTempDir'
         ( \dirPath -> do
             let cFile = dirPath <//> replaceExtension' ".c" (filename mainFile)
-            TIO.writeFile (toFilePath cFile) _resultCCode
+            writeFile (toFilePath cFile) _resultCCode
             Runtime.clangAssertion optLevel cFile expectedFile stdinText step
         )
   where

@@ -1,7 +1,6 @@
 module BackendGeb.Eval.Base where
 
 import Base
-import Data.Text.IO qualified as TIO
 import Juvix.Compiler.Backend.Geb qualified as Geb
 import Juvix.Prelude.Pretty
 
@@ -52,8 +51,8 @@ gebEvalAssertion' _mainFile expectedFile step gebMorphism = do
         Right value -> do
           hPutStrLn hout (Geb.ppPrint value)
           hClose hout
-          actualOutput <- TIO.readFile (toFilePath outputFile)
-          expected <- TIO.readFile (toFilePath expectedFile)
+          actualOutput <- readFile (toFilePath outputFile)
+          expected <- readFile (toFilePath expectedFile)
           step "Compare expected and actual program output"
           assertEqDiffText
             ("Check: EVAL output = " <> toFilePath expectedFile)
