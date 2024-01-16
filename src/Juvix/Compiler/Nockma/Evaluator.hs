@@ -45,7 +45,6 @@ subTermT = go
 subTerm :: (Member (Error NockEvalError) r) => Term a -> Path -> Sem r (Term a)
 subTerm term pos = do
   case term ^? subTermT pos of
-    -- Nothing -> throw (InvalidPath "subterm")
     Nothing -> throw @NockEvalError (error "")
     Just t -> return t
 
