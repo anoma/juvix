@@ -155,10 +155,10 @@ displayVersion :: String -> Repl ()
 displayVersion _ = liftIO (putStrLn versionTag)
 
 replCommand :: ReplOptions -> String -> Repl ()
-replCommand opts input = catchAll $ do
+replCommand opts input_ = catchAll $ do
   ctx <- replGetContext
   let tab = Core.computeCombinedInfoTable $ ctx ^. replContextArtifacts . artifactCoreModule
-  evalRes <- compileThenEval ctx input
+  evalRes <- compileThenEval ctx input_
   whenJust evalRes $ \n ->
     if
         | Info.member Info.kNoDisplayInfo (Core.getInfo n) -> return ()
@@ -200,22 +200,22 @@ replCommand opts input = catchAll $ do
           return res'
 
 core :: String -> Repl ()
-core input = do
+core input_ = do
   ctx <- replGetContext
   opts <- Reader.asks (^. replOptions)
-  compileRes <- liftIO (compileReplInputIO' ctx (strip (pack input))) >>= replFromEither . snd
+  compileRes <- liftIO (compileReplInputIO' ctx (strip (pack input_))) >>= replFromEither . snd
   whenJust compileRes (renderOutLn . Core.ppOut opts)
 
 dev :: String -> Repl ()
-dev input = do
+dev input_ = do
   ctx <- replGetContext
   if
-      | input == scoperStateCmd -> do
+      | input_ == scoperStateCmd -> do
           renderOutLn (Concrete.ppTrace (ctx ^. replContextArtifacts . artifactScoperState))
       | otherwise ->
           renderOutLn
             ( "Unrecognized command "
-                <> input
+                <> input_
                 <> "\nAvailable commands: "
                 <> unwords cmds
             )
@@ -238,8 +238,8 @@ printConcreteLn :: (Concrete.PrettyPrint a) => a -> Repl ()
 printConcreteLn = ppConcrete >=> renderOutLn
 
 replParseIdentifiers :: String -> Repl (NonEmpty Concrete.ScopedIden)
-replParseIdentifiers input =
-  replExpressionUpToScopedAtoms (strip (pack input))
+replParseIdentifiers input_ =
+  replExpressionUpToScopedAtoms (strip (pack input_))
     >>= getIdentifiers
   where
     getIdentifiers :: Concrete.ExpressionAtoms 'Concrete.Scoped -> Repl (NonEmpty Concrete.ScopedIden)
@@ -375,9 +375,9 @@ printDefinition = replParseIdentifiers >=> printIdentifiers
               printInductive (ind ^. Scoped.nameId)
 
 inferType :: String -> Repl ()
-inferType input = do
+inferType input_ = do
   gopts <- State.gets (^. replStateGlobalOptions)
-  n <- replExpressionUpToTyped (strip (pack input))
+  n <- replExpressionUpToTyped (strip (pack input_))
   renderOutLn (Internal.ppOut (project' @GenericOptions gopts) (n ^. Internal.typedType))
 
 replCommands :: ReplOptions -> [(String, String -> Repl ())]

@@ -12,8 +12,8 @@ parseText :: Text -> Either MegaparsecError (LabelInfo, [Instruction])
 parseText = runParser ""
 
 runParser :: FilePath -> Text -> Either MegaparsecError (LabelInfo, [Instruction])
-runParser fileName input =
-  case run $ runLabelInfoBuilder $ P.runParserT parseToplevel fileName input of
+runParser fileName input_ =
+  case run $ runLabelInfoBuilder $ P.runParserT parseToplevel fileName input_ of
     (_, Left err) -> Left (MegaparsecError err)
     (li, Right instrs) -> Right (li, instrs)
 

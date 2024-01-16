@@ -127,9 +127,9 @@ getEntryPoint' RunAppIOArgs {..} inputFile = do
   set entryPointStdin estdin <$> entryPointFromGlobalOptionsPre root (inputFile ^. pathPath) opts
 
 runPipelineEither :: (Members '[Embed IO, TaggedLock, App] r) => AppPath File -> Sem (PipelineEff r) a -> Sem r (Either JuvixError (ResolverState, PipelineResult a))
-runPipelineEither input p = do
+runPipelineEither input_ p = do
   args <- askArgs
-  entry <- getEntryPoint' args input
+  entry <- getEntryPoint' args input_
   runIOEither entry p
 
 runPipelineSetupEither :: (Members '[Embed IO, TaggedLock, App] r) => Sem (PipelineEff' r) a -> Sem r (Either JuvixError (ResolverState, a))
@@ -174,28 +174,28 @@ getEntryPointStdin = do
   getEntryPointStdin' (RunAppIOArgs {..})
 
 runPipelineTermination :: (Members '[Embed IO, App, TaggedLock] r) => AppPath File -> Sem (Termination ': PipelineEff r) a -> Sem r (PipelineResult a)
-runPipelineTermination input p = do
-  r <- runPipelineEither input (evalTermination iniTerminationState p)
+runPipelineTermination input_ p = do
+  r <- runPipelineEither input_ (evalTermination iniTerminationState p)
   case r of
     Left err -> exitJuvixError err
     Right res -> return (snd res)
 
 runPipeline :: (Members '[App, Embed IO, TaggedLock] r) => AppPath File -> Sem (PipelineEff r) a -> Sem r a
-runPipeline input p = do
-  r <- runPipelineEither input p
+runPipeline input_ p = do
+  r <- runPipelineEither input_ p
   case r of
     Left err -> exitJuvixError err
     Right res -> return (snd res ^. pipelineResult)
 
 runPipelineHtml :: (Members '[App, Embed IO, TaggedLock] r) => Bool -> AppPath File -> Sem r (InternalTypedResult, [InternalTypedResult])
-runPipelineHtml bNonRecursive input =
+runPipelineHtml bNonRecursive input_ =
   if
       | bNonRecursive -> do
-          r <- runPipeline input upToInternalTyped
+          r <- runPipeline input_ upToInternalTyped
           return (r, [])
       | otherwise -> do
           args <- askArgs
-          entry <- getEntryPoint' args input
+          entry <- getEntryPoint' args input_
           r <- runPipelineHtmlEither entry
           case r of
             Left err -> exitJuvixError err

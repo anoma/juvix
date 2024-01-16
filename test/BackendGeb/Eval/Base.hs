@@ -12,8 +12,8 @@ gebEvalAssertion ::
   Assertion
 gebEvalAssertion mainFile expectedFile step = do
   step "Parse"
-  input <- readFile (toFilePath mainFile)
-  case Geb.runParser mainFile input of
+  input_ <- readFile (toFilePath mainFile)
+  case Geb.runParser mainFile input_ of
     Left err -> assertFailure (show (pretty err))
     Right (Geb.ExpressionObject _) -> do
       step "No evaluation for objects"
@@ -63,8 +63,8 @@ gebEvalAssertion' _mainFile expectedFile step gebMorphism = do
 gebEvalErrorAssertion :: Path Abs File -> (String -> IO ()) -> Assertion
 gebEvalErrorAssertion mainFile step = do
   step "Parse"
-  input <- readFile (toFilePath mainFile)
-  case Geb.runParser mainFile input of
+  input_ <- readFile (toFilePath mainFile)
+  case Geb.runParser mainFile input_ of
     Left _ -> assertBool "" True
     Right (Geb.ExpressionObject _) -> assertFailure "no error"
     Right morph' -> do

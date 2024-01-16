@@ -56,6 +56,7 @@ module Juvix.Prelude.Base
     module Polysemy,
     module Polysemy.Embed,
     module Polysemy.Error,
+    module Polysemy.Input,
     module Polysemy.Fixpoint,
     module Polysemy.Output,
     module Polysemy.Reader,
@@ -168,6 +169,7 @@ import Polysemy
 import Polysemy.Embed
 import Polysemy.Error hiding (fromEither)
 import Polysemy.Fixpoint
+import Polysemy.Input
 import Polysemy.Output
 import Polysemy.Reader
 import Polysemy.Resource
@@ -549,7 +551,7 @@ popFirstJust f = \case
     Just x -> (Just x, hs)
 
 uncurryF :: (Functor f) => (a -> b -> c) -> f (a, b) -> f c
-uncurryF g input = uncurry g <$> input
+uncurryF g input_ = uncurry g <$> input_
 
 indexedByInt :: (Foldable f) => (a -> Int) -> f a -> IntMap a
 indexedByInt getIx l = IntMap.fromList [(getIx i, i) | i <- toList l]
