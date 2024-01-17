@@ -4,7 +4,14 @@
 {-# HLINT ignore "Avoid restricted extensions" #-}
 {-# HLINT ignore "Avoid restricted flags" #-}
 
-module Juvix.Compiler.Tree.Translation.FromSource.Base where
+module Juvix.Compiler.Tree.Translation.FromSource.Base
+  ( module Juvix.Compiler.Tree.Translation.FromSource.Base,
+    LocalNameMap,
+    LocalParams (..),
+    localParamsNameMap,
+    localParamsTempIndex,
+  )
+where
 
 import Control.Monad.Trans.Class (lift)
 import Data.HashMap.Strict qualified as HashMap
@@ -19,8 +26,9 @@ import Juvix.Compiler.Tree.Translation.FromSource.Sig
 import Juvix.Parser.Error
 import Text.Megaparsec qualified as P
 
-type LocalNameMap = HashMap Text DirectRef
-
+-- | Because the effects are inside the parser monad, it is difficult to use
+-- `local` with the `Reader` effect. Hence, we use the `State` effect instead
+-- with this `localS` function.
 localS :: (Member (State s) r) => (s -> s) -> ParsecS r a -> ParsecS r a
 localS update a = do
   s <- lift get
@@ -29,26 +37,31 @@ localS update a = do
   lift $ put s
   return a'
 
-parseTextS :: (Monoid e) => ParserSig t -> Text -> Either MegaparsecError (InfoTable' t e)
+parseTextS :: ParserSig t e -> Text -> Either MegaparsecError (InfoTable' t e)
 parseTextS sig = runParserS sig ""
 
-parseTextS' :: (Monoid e) => ParserSig t -> BuilderState' t e -> Text -> Either MegaparsecError (BuilderState' t e)
+parseTextS' :: ParserSig t e -> BuilderState' t e -> Text -> Either MegaparsecError (BuilderState' t e)
 parseTextS' sig bs = runParserS' sig bs ""
 
-runParserS :: (Monoid e) => ParserSig t -> FilePath -> Text -> Either MegaparsecError (InfoTable' t e)
+runParserS :: ParserSig t e -> FilePath -> Text -> Either MegaparsecError (InfoTable' t e)
 runParserS sig fileName input_ = (^. stateInfoTable) <$> runParserS' sig emptyBuilderState fileName input_
 
-runParserS' :: forall t e. (Monoid e) => ParserSig t -> BuilderState' t e -> FilePath -> Text -> Either MegaparsecError (BuilderState' t e)
+runParserS' :: forall t e. ParserSig t e -> BuilderState' t e -> FilePath -> Text -> Either MegaparsecError (BuilderState' t e)
 runParserS' sig bs fileName input_ =
   case run $
-    evalState @Index 0 $
-      evalState @LocalNameMap mempty $
-        runReader sig $
-          runInfoTableBuilder' bs $
-            evalTopNameIdGen defaultModuleId $
-              P.runParserT (parseToplevel @t @e) fileName input_ of
+    evalState params $
+      runReader sig $
+        runInfoTableBuilder' bs $
+          evalTopNameIdGen defaultModuleId $
+            P.runParserT (parseToplevel @t @e) fileName input_ of
     (_, Left err) -> Left (MegaparsecError err)
     (bs', Right ()) -> Right bs'
+  where
+    params =
+      LocalParams
+        { _localParamsNameMap = mempty,
+          _localParamsTempIndex = 0
+        }
 
 createBuiltinConstr ::
   Symbol ->
@@ -98,8 +111,7 @@ declareBuiltins = do
 
 parseToplevel ::
   forall t e r.
-  (Monoid e) =>
-  (Members '[Reader (ParserSig t), InfoTableBuilder' t e, State LocalNameMap, State Index] r) =>
+  (Members '[Reader (ParserSig t e), InfoTableBuilder' t e, State LocalParams] r) =>
   ParsecS r ()
 parseToplevel = do
   declareBuiltins @t @e
@@ -109,20 +121,18 @@ parseToplevel = do
 
 statement ::
   forall t e r.
-  (Monoid e) =>
-  (Members '[Reader (ParserSig t), InfoTableBuilder' t e, State LocalNameMap, State Index] r) =>
+  (Members '[Reader (ParserSig t e), InfoTableBuilder' t e, State LocalParams] r) =>
   ParsecS r ()
 statement = statementFunction @t @e <|> statementInductive @t @e
 
 statementFunction ::
   forall t e r.
-  (Monoid e) =>
-  (Members '[Reader (ParserSig t), InfoTableBuilder' t e, State LocalNameMap, State Index] r) =>
+  (Members '[Reader (ParserSig t e), InfoTableBuilder' t e, State LocalParams] r) =>
   ParsecS r ()
 statementFunction = do
   kw kwFun
   off <- P.getOffset
-  (txt, i) <- identifierL @t
+  (txt, i) <- identifierL @t @e
   idt <- lift $ getIdent' @t @e txt
   sym <- case idt of
     Nothing -> lift $ freshSymbol' @t @e
@@ -136,7 +146,8 @@ statementFunction = do
   when (txt == "main" && not (null argtys)) $
     parseFailure off "the 'main' function must take zero arguments"
   mrty <- optional $ typeAnnotation @t @e
-  ec <- lift $ emptyCode @t
+  ec <- lift $ emptyCode @t @e
+  ee <- lift $ emptyExtra @t @e
   let fi0 =
         FunctionInfo
           { _functionName = txt,
@@ -146,7 +157,7 @@ statementFunction = do
             _functionArgsNum = length argtys,
             _functionArgNames = argnames,
             _functionType = mkTypeFun argtys (fromMaybe TyDynamic mrty),
-            _functionExtra = mempty
+            _functionExtra = ee
           }
   lift $ registerFunction' @t @e fi0
   let updateNames :: LocalNameMap -> LocalNameMap
@@ -157,7 +168,7 @@ statementFunction = do
           (zip argnames [0 ..])
   mcode <-
     (kw delimSemicolon $> Nothing)
-      <|> optional (braces (localS updateNames $ parseCode @t))
+      <|> optional (braces (localS (over localParamsNameMap updateNames) $ parseCode @t @e))
   let fi = fi0 {_functionCode = fromMaybe ec mcode}
   case idt of
     Just (IdentFwd _) -> do
@@ -177,12 +188,12 @@ statementFunction = do
 
 statementInductive ::
   forall t e r.
-  (Members '[Reader (ParserSig t), InfoTableBuilder' t e, State LocalNameMap, State Index] r) =>
+  (Members '[Reader (ParserSig t e), InfoTableBuilder' t e] r) =>
   ParsecS r ()
 statementInductive = do
   kw kwInductive
   off <- P.getOffset
-  (txt, i) <- identifierL @t
+  (txt, i) <- identifierL @t @e
   idt <- lift $ getIdent' @t @e txt
   when (isJust idt) $
     parseFailure off ("duplicate identifier: " ++ fromText txt)
@@ -202,7 +213,7 @@ statementInductive = do
 
 functionArguments ::
   forall t e r.
-  (Members '[Reader (ParserSig t), InfoTableBuilder' t e, State LocalNameMap, State Index] r) =>
+  (Members '[Reader (ParserSig t e), InfoTableBuilder' t e] r) =>
   ParsecS r [(Maybe Text, Type)]
 functionArguments = do
   lparen
@@ -212,12 +223,12 @@ functionArguments = do
 
 constrDecl ::
   forall t e r.
-  (Members '[Reader (ParserSig t), InfoTableBuilder' t e, State LocalNameMap, State Index] r) =>
+  (Members '[Reader (ParserSig t e), InfoTableBuilder' t e] r) =>
   Symbol ->
   ParsecS r ConstructorInfo
 constrDecl symInd = do
   off <- P.getOffset
-  (txt, i) <- identifierL @t
+  (txt, i) <- identifierL @t @e
   idt <- lift $ getIdent' @t @e txt
   when (isJust idt) $
     parseFailure off ("duplicate identifier: " ++ fromText txt)
@@ -242,7 +253,7 @@ constrDecl symInd = do
 
 typeAnnotation ::
   forall t e r.
-  (Members '[Reader (ParserSig t), InfoTableBuilder' t e, State LocalNameMap, State Index] r) =>
+  (Members '[Reader (ParserSig t e), InfoTableBuilder' t e] r) =>
   ParsecS r Type
 typeAnnotation = do
   kw kwColon
@@ -250,11 +261,11 @@ typeAnnotation = do
 
 parseArgument ::
   forall t e r.
-  (Members '[Reader (ParserSig t), InfoTableBuilder' t e, State LocalNameMap, State Index] r) =>
+  (Members '[Reader (ParserSig t e), InfoTableBuilder' t e] r) =>
   ParsecS r (Maybe Text, Type)
 parseArgument = do
   n <- optional $ P.try $ do
-    txt <- identifier @t
+    txt <- identifier @t @e
     kw kwColon
     return txt
   ty <- parseType @t @e
@@ -262,7 +273,7 @@ parseArgument = do
 
 parseType ::
   forall t e r.
-  (Members '[Reader (ParserSig t), InfoTableBuilder' t e, State LocalNameMap, State Index] r) =>
+  (Members '[Reader (ParserSig t e), InfoTableBuilder' t e] r) =>
   ParsecS r Type
 parseType = do
   tys <- typeArguments @t @e
@@ -275,7 +286,7 @@ parseType = do
 
 typeFun' ::
   forall t e r.
-  (Members '[Reader (ParserSig t), InfoTableBuilder' t e, State LocalNameMap, State Index] r) =>
+  (Members '[Reader (ParserSig t e), InfoTableBuilder' t e] r) =>
   NonEmpty Type ->
   ParsecS r Type
 typeFun' tyargs = do
@@ -284,7 +295,7 @@ typeFun' tyargs = do
 
 typeArguments ::
   forall t e r.
-  (Members '[Reader (ParserSig t), InfoTableBuilder' t e, State LocalNameMap, State Index] r) =>
+  (Members '[Reader (ParserSig t e), InfoTableBuilder' t e] r) =>
   ParsecS r (NonEmpty Type)
 typeArguments = do
   parens (P.sepBy1 (parseType @t @e) comma <&> NonEmpty.fromList)
@@ -296,11 +307,11 @@ typeDynamic = kw kwStar $> TyDynamic
 
 typeNamed ::
   forall t e r.
-  (Members '[Reader (ParserSig t), InfoTableBuilder' t e, State LocalNameMap, State Index] r) =>
+  (Members '[Reader (ParserSig t e), InfoTableBuilder' t e] r) =>
   ParsecS r Type
 typeNamed = do
   off <- P.getOffset
-  txt <- identifier @t
+  txt <- identifier @t @e
   case txt of
     "integer" -> return mkTypeInteger
     "bool" -> return mkTypeBool
@@ -311,3 +322,107 @@ typeNamed = do
       case idt of
         Just (IdentInd sym) -> return (mkTypeInductive sym)
         _ -> parseFailure off ("not a type: " ++ fromText txt)
+
+constant :: ParsecS r Constant
+constant = integerValue <|> boolValue <|> stringValue <|> unitValue <|> voidValue
+
+integerValue :: ParsecS r Constant
+integerValue = do
+  (i, _) <- integer
+  return $ ConstInt i
+
+boolValue :: ParsecS r Constant
+boolValue =
+  (kw kwTrue $> ConstBool True)
+    <|> (kw kwFalse $> ConstBool False)
+
+stringValue :: ParsecS r Constant
+stringValue = do
+  (s, _) <- string
+  return $ ConstString s
+
+unitValue :: ParsecS r Constant
+unitValue = kw kwUnit $> ConstUnit
+
+voidValue :: ParsecS r Constant
+voidValue = kw kwVoid $> ConstVoid
+
+memRef ::
+  forall t e r.
+  (Members '[Reader (ParserSig t e), InfoTableBuilder' t e, State LocalParams] r) =>
+  ParsecS r MemRef
+memRef = do
+  r <- directRef @t @e
+  parseField @t @e r <|> return (DRef r)
+
+directRef :: forall t e r. (Members '[Reader (ParserSig t e), State LocalParams] r) => ParsecS r DirectRef
+directRef = argRef <|> tempRef <|> namedRef @t @e
+
+argRef :: ParsecS r DirectRef
+argRef = do
+  kw kwArg
+  (off, _) <- brackets integer
+  return $ ArgRef (OffsetRef (fromInteger off) Nothing)
+
+tempRef :: ParsecS r DirectRef
+tempRef = do
+  kw kwTmp
+  (off, _) <- brackets integer
+  return $ TempRef (OffsetRef (fromInteger off) Nothing)
+
+namedRef :: forall t e r. (Members '[Reader (ParserSig t e), State LocalParams] r) => ParsecS r DirectRef
+namedRef = do
+  off <- P.getOffset
+  txt <- identifier @t @e
+  mr <- lift $ gets (HashMap.lookup txt . (^. localParamsNameMap))
+  case mr of
+    Just r -> return r
+    Nothing -> parseFailure off "undeclared identifier"
+
+parseField ::
+  forall t e r.
+  (Members '[Reader (ParserSig t e), InfoTableBuilder' t e] r) =>
+  DirectRef ->
+  ParsecS r MemRef
+parseField dref = do
+  dot
+  tag <- constrTag @t @e
+  (off, _) <- brackets integer
+  return $ ConstrRef (Field Nothing tag dref (fromInteger off))
+
+constrTag ::
+  forall t e r.
+  (Members '[Reader (ParserSig t e), InfoTableBuilder' t e] r) =>
+  ParsecS r Tag
+constrTag = do
+  off <- P.getOffset
+  txt <- identifier @t @e
+  idt <- lift $ getIdent' @t @e txt
+  case idt of
+    Just (IdentConstr tag) -> return tag
+    _ -> parseFailure off "expected a constructor"
+
+indSymbol ::
+  forall t e r.
+  (Members '[Reader (ParserSig t e), InfoTableBuilder' t e] r) =>
+  ParsecS r Symbol
+indSymbol = do
+  off <- P.getOffset
+  txt <- identifier @t @e
+  idt <- lift $ getIdent' @t @e txt
+  case idt of
+    Just (IdentInd sym) -> return sym
+    _ -> parseFailure off "expected an inductive type"
+
+funSymbol ::
+  forall t e r.
+  (Members '[Reader (ParserSig t e), InfoTableBuilder' t e] r) =>
+  ParsecS r Symbol
+funSymbol = do
+  off <- P.getOffset
+  txt <- identifier @t @e
+  idt <- lift $ getIdent' @t @e txt
+  case idt of
+    Just (IdentFwd sym) -> return sym
+    Just (IdentFun sym) -> return sym
+    _ -> parseFailure off "expected a function"
