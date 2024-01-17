@@ -10,17 +10,27 @@ data PrettyMode
 defaultOptions :: Options
 defaultOptions =
   Options
-    { _optPrettyMode = MinimizeDelimiters
+    { _optPrettyMode = MinimizeDelimiters,
+      _optIgnoreHints = False
     }
 
-newtype Options = Options
-  { _optPrettyMode :: PrettyMode
+data Options = Options
+  { _optPrettyMode :: PrettyMode,
+    _optIgnoreHints :: Bool
   }
+
+serializeOptions :: Options
+serializeOptions =
+  Options
+    { _optPrettyMode = MinimizeDelimiters,
+      _optIgnoreHints = True
+    }
 
 traceOptions :: Options
 traceOptions =
   Options
-    { _optPrettyMode = AllDelimiters
+    { _optPrettyMode = MinimizeDelimiters,
+      _optIgnoreHints = False
     }
 
 makeLenses ''Options

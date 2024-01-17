@@ -1,6 +1,7 @@
 module Juvix.Compiler.Asm.Data.InfoTable
   ( module Juvix.Compiler.Asm.Data.InfoTable,
     module Juvix.Compiler.Asm.Language.Rep,
+    module Juvix.Compiler.Asm.Language,
     module Juvix.Compiler.Asm.Language.Type,
   )
 where

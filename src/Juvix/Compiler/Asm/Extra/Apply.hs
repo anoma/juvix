@@ -5,7 +5,6 @@ import Data.HashMap.Strict qualified as HashMap
 import Data.Text.Encoding
 import Juvix.Compiler.Asm.Data.InfoTable
 import Juvix.Compiler.Asm.Data.InfoTableBuilder
-import Juvix.Compiler.Asm.Language
 import Juvix.Compiler.Asm.Translation.FromSource
 
 data ApplyBuiltins = ApplyBuiltins

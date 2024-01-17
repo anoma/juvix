@@ -12,7 +12,6 @@ import Juvix.Compiler.Asm.Data.InfoTable
 import Juvix.Compiler.Asm.Data.InfoTableBuilder
 import Juvix.Compiler.Asm.Extra.Base
 import Juvix.Compiler.Asm.Extra.Type
-import Juvix.Compiler.Asm.Language
 import Juvix.Compiler.Asm.Translation.FromSource.Lexer
 import Juvix.Parser.Error
 import Text.Megaparsec qualified as P
@@ -384,7 +383,7 @@ parseSave loc isTail = do
   mn <- optional identifier
   tmpNum <- lift get
   let updateNames :: LocalNameMap -> LocalNameMap
-      updateNames mp = maybe mp (\n -> HashMap.insert n (TempRef (OffsetRef tmpNum (Just n))) mp) mn
+      updateNames mp = maybe mp (\n -> HashMap.insert n (mkTempRef (OffsetRef tmpNum (Just n))) mp) mn
   c <- braces (localS @Index (+ 1) $ localS updateNames parseCode)
   return $
     Save
@@ -445,7 +444,7 @@ tempRef :: ParsecS r DirectRef
 tempRef = do
   kw kwTmp
   (off, _) <- brackets integer
-  return $ TempRef (OffsetRef (fromInteger off) Nothing)
+  return $ mkTempRef (OffsetRef (fromInteger off) Nothing)
 
 namedRef :: (Member (State LocalNameMap) r) => ParsecS r DirectRef
 namedRef = do
@@ -530,7 +529,9 @@ instrCall = do
 parseCallType ::
   (Members '[InfoTableBuilder, State LocalNameMap, State Index] r) =>
   ParsecS r CallType
-parseCallType = (kw kwDollar $> CallClosure) <|> (CallFun <$> funSymbol)
+parseCallType =
+  kw kwDollar $> CallClosure
+    <|> CallFun <$> funSymbol
 
 instrCallClosures :: ParsecS r InstrCallClosures
 instrCallClosures = do

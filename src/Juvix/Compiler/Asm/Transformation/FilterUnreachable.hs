@@ -4,7 +4,6 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Asm.Data.CallGraph
 import Juvix.Compiler.Asm.Data.InfoTable
 import Juvix.Compiler.Asm.Error
-import Juvix.Compiler.Asm.Language
 
 filterUnreachable :: (Member (Error AsmError) r) => InfoTable -> Sem r InfoTable
 filterUnreachable tab = do

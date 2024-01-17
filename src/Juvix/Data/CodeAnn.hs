@@ -282,3 +282,6 @@ bracesIndent = braces . blockIndent
 
 blockIndent :: Doc Ann -> Doc Ann
 blockIndent d = hardline <> indent' d <> line
+
+commaSep :: (Foldable f) => f (Doc Ann) -> Doc Ann
+commaSep ts = mconcat (intersperse (delimiter "," <> " ") (toList ts))
