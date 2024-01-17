@@ -43,13 +43,12 @@ juvix_closure_calculate:
 
     JUVIX_FUNCTION(juvix_function_main, 0);
     {
-        DECL_STMP(0);
-        ALLOC_CLOSURE(STMP(0), 1, LABEL_ADDR(juvix_closure_calculate), 2, 1);
-        CLOSURE_ARG(STMP(0), 0) = make_smallint(5);
-        CLOSURE_ARG(STMP(0), 1) = make_smallint(3);
-        ASSIGN_CARGS(STMP(0),
-                     { CARG(juvix_closure_nargs) = make_smallint(2); });
-        TAIL_CALL_CLOSURE(STMP(0));
+        DECL_TMP(0);
+        ALLOC_CLOSURE(TMP(0), 1, LABEL_ADDR(juvix_closure_calculate), 2, 1);
+        CLOSURE_ARG(TMP(0), 0) = make_smallint(5);
+        CLOSURE_ARG(TMP(0), 1) = make_smallint(3);
+        ASSIGN_CARGS(TMP(0), { CARG(juvix_closure_nargs) = make_smallint(2); });
+        TAIL_CALL_CLOSURE(TMP(0));
     }
 
     JUVIX_EPILOGUE;

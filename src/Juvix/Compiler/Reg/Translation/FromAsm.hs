@@ -23,8 +23,7 @@ fromAsm tab =
           _functionLocation = fi ^. Asm.functionLocation,
           _functionSymbol = fi ^. Asm.functionSymbol,
           _functionArgsNum = fi ^. Asm.functionArgsNum,
-          _functionStackVarsNum = fi ^. Asm.functionMaxValueStackHeight,
-          _functionTempVarsNum = fi ^. Asm.functionMaxTempStackHeight,
+          _functionLocalVarsNum = fi ^. Asm.functionMaxTempStackHeight + fi ^. Asm.functionMaxValueStackHeight,
           _functionCode = fromAsmFun tab fi
         }
 
@@ -64,9 +63,9 @@ fromAsmFun tab fi =
       Asm.RecursorSig
         { _recursorInfoTable = tab,
           _recurseInstr = fromAsmInstr fi tab,
-          _recurseBranch = fromAsmBranch,
-          _recurseCase = fromAsmCase tab,
-          _recurseSave = fromAsmSave
+          _recurseBranch = fromAsmBranch fi,
+          _recurseCase = fromAsmCase fi tab,
+          _recurseSave = fromAsmSave fi
         }
 
 fromAsmInstr ::
@@ -78,14 +77,14 @@ fromAsmInstr ::
 fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
   case _cmdInstrInstruction of
     Asm.Binop op -> return $ mkBinop (mkOpcode op)
-    Asm.ValShow -> return $ mkShow (VarRef VarGroupStack n) (VRef $ VarRef VarGroupStack n)
-    Asm.StrToInt -> return $ mkStrToInt (VarRef VarGroupStack n) (VRef $ VarRef VarGroupStack n)
-    Asm.Push val -> return $ mkAssign (VarRef VarGroupStack (n + 1)) (mkValue val)
+    Asm.ValShow -> return $ mkShow (VarRef VarGroupLocal (ntmps + n)) (VRef $ VarRef VarGroupLocal (ntmps + n))
+    Asm.StrToInt -> return $ mkStrToInt (VarRef VarGroupLocal (ntmps + n)) (VRef $ VarRef VarGroupLocal (ntmps + n))
+    Asm.Push val -> return $ mkAssign (VarRef VarGroupLocal (ntmps + n + 1)) (mkValue val)
     Asm.Pop -> return Nop
-    Asm.Trace -> return $ Trace $ InstrTrace (VRef $ VarRef VarGroupStack n)
+    Asm.Trace -> return $ Trace $ InstrTrace (VRef $ VarRef VarGroupLocal (ntmps + n))
     Asm.Dump -> return Dump
-    Asm.Failure -> return $ Failure $ InstrFailure (VRef $ VarRef VarGroupStack n)
-    Asm.ArgsNum -> return $ mkArgsNum (VarRef VarGroupStack n) (VRef $ VarRef VarGroupStack n)
+    Asm.Failure -> return $ Failure $ InstrFailure (VRef $ VarRef VarGroupLocal (ntmps + n))
+    Asm.ArgsNum -> return $ mkArgsNum (VarRef VarGroupLocal (ntmps + n)) (VRef $ VarRef VarGroupLocal (ntmps + n))
     Asm.Prealloc x -> return $ mkPrealloc x
     Asm.AllocConstr tag -> return $ mkAlloc tag
     Asm.AllocClosure x -> return $ mkAllocClosure x
@@ -95,33 +94,37 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
     Asm.CallClosures x -> return $ mkCallClosures False x
     Asm.TailCallClosures x -> return $ mkCallClosures True x
     Asm.Return ->
-      return $ Return InstrReturn {_instrReturnValue = VRef $ VarRef VarGroupStack 0}
+      return $ Return InstrReturn {_instrReturnValue = VRef $ VarRef VarGroupLocal ntmps}
   where
     -- `n` is the index of the top of the value stack *before* executing the
     -- instruction
     n :: Int
     n = si ^. Asm.stackInfoValueStackHeight - 1
 
+    -- `ntmps` is the number of temporary variables (= max temporary stack height)
+    ntmps :: Int
+    ntmps = funInfo ^. Asm.functionMaxTempStackHeight
+
     -- Live variables *after* executing the instruction. `k` is the number of
     -- value stack cells that will be popped by the instruction. TODO: proper
     -- liveness analysis in JuvixAsm.
     liveVars :: Int -> [VarRef]
     liveVars k =
-      map (VarRef VarGroupStack) [0 .. n - k]
-        ++ map (VarRef VarGroupTemp) [0 .. si ^. Asm.stackInfoTempStackHeight - 1]
+      map (VarRef VarGroupLocal) [0 .. si ^. Asm.stackInfoTempStackHeight - 1]
+        ++ map (VarRef VarGroupLocal) [ntmps .. ntmps + n - k]
         ++ map (VarRef VarGroupArgs) [0 .. funInfo ^. Asm.functionArgsNum - 1]
 
     getArgs :: Int -> Int -> [Value]
-    getArgs s k = map (\i -> VRef $ VarRef VarGroupStack (n - i)) [s .. (s + k - 1)]
+    getArgs s k = map (\i -> VRef $ VarRef VarGroupLocal (ntmps + n - i)) [s .. (s + k - 1)]
 
     mkBinop :: Opcode -> Instruction
     mkBinop op =
       Binop
         ( BinaryOp
             { _binaryOpCode = op,
-              _binaryOpResult = VarRef VarGroupStack (n - 1),
-              _binaryOpArg1 = VRef $ VarRef VarGroupStack n,
-              _binaryOpArg2 = VRef $ VarRef VarGroupStack (n - 1)
+              _binaryOpResult = VarRef VarGroupLocal (ntmps + n - 1),
+              _binaryOpArg1 = VRef $ VarRef VarGroupLocal (ntmps + n),
+              _binaryOpArg2 = VRef $ VarRef VarGroupLocal (ntmps + n - 1)
             }
         )
 
@@ -171,9 +174,9 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
 
     mkVar :: Asm.DirectRef -> VarRef
     mkVar = \case
-      Asm.StackRef -> VarRef VarGroupStack n
+      Asm.StackRef -> VarRef VarGroupLocal (ntmps + n)
       Asm.ArgRef Asm.OffsetRef {..} -> VarRef VarGroupArgs _offsetRefOffset
-      Asm.TempRef Asm.RefTemp {..} -> VarRef VarGroupTemp (_refTempOffsetRef ^. Asm.offsetRefOffset)
+      Asm.TempRef Asm.RefTemp {..} -> VarRef VarGroupLocal (_refTempOffsetRef ^. Asm.offsetRefOffset)
 
     mkPrealloc :: Asm.InstrPrealloc -> Instruction
     mkPrealloc Asm.InstrPrealloc {..} =
@@ -188,7 +191,7 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
       Alloc $
         InstrAlloc
           { _instrAllocTag = tag,
-            _instrAllocResult = VarRef VarGroupStack m,
+            _instrAllocResult = VarRef VarGroupLocal (ntmps + m),
             _instrAllocArgs = getArgs 0 (ci ^. Asm.constructorArgsNum),
             _instrAllocMemRep = ci ^. Asm.constructorRepresentation
           }
@@ -201,7 +204,7 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
       AllocClosure $
         InstrAllocClosure
           { _instrAllocClosureSymbol = fi ^. Asm.functionSymbol,
-            _instrAllocClosureResult = VarRef VarGroupStack m,
+            _instrAllocClosureResult = VarRef VarGroupLocal (ntmps + m),
             _instrAllocClosureExpectedArgsNum = fi ^. Asm.functionArgsNum,
             _instrAllocClosureArgs = getArgs 0 _allocClosureArgsNum
           }
@@ -213,8 +216,8 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
     mkExtendClosure Asm.InstrExtendClosure {..} =
       ExtendClosure $
         InstrExtendClosure
-          { _instrExtendClosureResult = VarRef VarGroupStack m,
-            _instrExtendClosureValue = VarRef VarGroupStack n,
+          { _instrExtendClosureResult = VarRef VarGroupLocal (ntmps + m),
+            _instrExtendClosureValue = VarRef VarGroupLocal (ntmps + n),
             _instrExtendClosureArgs = getArgs 1 _extendClosureArgsNum
           }
       where
@@ -224,7 +227,7 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
     mkCall isTail Asm.InstrCall {..} =
       Call $
         InstrCall
-          { _instrCallResult = VarRef VarGroupStack m,
+          { _instrCallResult = VarRef VarGroupLocal (ntmps + m),
             _instrCallType = ct,
             _instrCallIsTail = isTail,
             _instrCallArgs = getArgs s _callArgsNum,
@@ -234,7 +237,7 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
         m = n - _callArgsNum - s + 1
         ct = case _callType of
           Asm.CallFun f -> CallFun f
-          Asm.CallClosure -> CallClosure (VarRef VarGroupStack n)
+          Asm.CallClosure -> CallClosure (VarRef VarGroupLocal (ntmps + n))
         s = case _callType of
           Asm.CallFun {} -> 0
           Asm.CallClosure -> 1
@@ -243,8 +246,8 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
     mkCallClosures isTail Asm.InstrCallClosures {..} =
       CallClosures $
         InstrCallClosures
-          { _instrCallClosuresResult = VarRef VarGroupStack m,
-            _instrCallClosuresValue = VarRef VarGroupStack n,
+          { _instrCallClosuresResult = VarRef VarGroupLocal (ntmps + m),
+            _instrCallClosuresValue = VarRef VarGroupLocal (ntmps + n),
             _instrCallClosuresIsTail = isTail,
             _instrCallClosuresArgs = getArgs 1 _callClosuresArgsNum,
             _instrCallClosuresLiveVars = liveVars (_callClosuresArgsNum + 1)
@@ -254,32 +257,34 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
         m = n - _callClosuresArgsNum
 
 fromAsmBranch ::
+  Asm.FunctionInfo ->
   Asm.StackInfo ->
   Asm.CmdBranch ->
   Code ->
   Code ->
   Sem r Instruction
-fromAsmBranch si Asm.CmdBranch {} codeTrue codeFalse =
+fromAsmBranch fi si Asm.CmdBranch {} codeTrue codeFalse =
   return $
     Branch $
       InstrBranch
-        { _instrBranchValue = VRef $ VarRef VarGroupStack (si ^. Asm.stackInfoValueStackHeight - 1),
+        { _instrBranchValue = VRef $ VarRef VarGroupLocal (fi ^. Asm.functionMaxTempStackHeight + si ^. Asm.stackInfoValueStackHeight - 1),
           _instrBranchTrue = codeTrue,
           _instrBranchFalse = codeFalse
         }
 
 fromAsmCase ::
+  Asm.FunctionInfo ->
   Asm.InfoTable ->
   Asm.StackInfo ->
   Asm.CmdCase ->
   [Code] ->
   Maybe Code ->
   Sem r Instruction
-fromAsmCase tab si Asm.CmdCase {..} brs def =
+fromAsmCase fi tab si Asm.CmdCase {..} brs def =
   return $
     Case $
       InstrCase
-        { _instrCaseValue = VRef $ VarRef VarGroupStack (si ^. Asm.stackInfoValueStackHeight - 1),
+        { _instrCaseValue = VRef $ VarRef VarGroupLocal (fi ^. Asm.functionMaxTempStackHeight + si ^. Asm.stackInfoValueStackHeight - 1),
           _instrCaseInductive = _cmdCaseInductive,
           _instrCaseIndRep = ii ^. Asm.inductiveRepresentation,
           _instrCaseBranches =
@@ -306,19 +311,20 @@ fromAsmCase tab si Asm.CmdCase {..} brs def =
         HashMap.lookup _cmdCaseInductive (tab ^. Asm.infoInductives)
 
 fromAsmSave ::
+  Asm.FunctionInfo ->
   Asm.StackInfo ->
   Asm.CmdSave ->
   Code ->
   Sem r Instruction
-fromAsmSave si Asm.CmdSave {} block =
+fromAsmSave fi si Asm.CmdSave {} block =
   return $
     Block $
       InstrBlock
         { _instrBlockCode =
             Assign
               ( InstrAssign
-                  (VarRef VarGroupTemp (si ^. Asm.stackInfoTempStackHeight))
-                  (VRef $ VarRef VarGroupStack (si ^. Asm.stackInfoValueStackHeight - 1))
+                  (VarRef VarGroupLocal (si ^. Asm.stackInfoTempStackHeight))
+                  (VRef $ VarRef VarGroupLocal (fi ^. Asm.functionMaxTempStackHeight + si ^. Asm.stackInfoValueStackHeight - 1))
               )
               : block
         }
