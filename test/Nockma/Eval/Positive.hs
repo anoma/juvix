@@ -26,6 +26,7 @@ allTests = testGroup "Nockma eval unit positive" (map mk tests)
     mk Test {..} = testCase (unpack _testName) $ do
       let evalResult =
             run
+              . ignoreOutput @(Term Natural)
               . runError @(ErrNockNatural Natural)
               . runError @NockEvalError
               $ eval _testProgramSubject _testProgramFormula

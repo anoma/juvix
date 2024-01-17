@@ -71,6 +71,7 @@ module Juvix.Prelude.Base
     module System.IO,
     module Text.Show,
     module Control.Monad.Catch,
+    module Control.Monad.Zip,
     Data,
     Text,
     pack,
@@ -89,10 +90,11 @@ where
 
 import Control.Applicative
 import Control.Monad.Catch (MonadMask, MonadThrow, throwM)
-import Control.Monad.Extra hiding (fail, mconcatMapM, whileJustM)
+import Control.Monad.Extra hiding (fail, forM, mconcatMapM, whileJustM)
 import Control.Monad.Extra qualified as Monad
 import Control.Monad.Fix
 import Control.Monad.IO.Class (MonadIO (..))
+import Control.Monad.Zip
 import Data.Bifunctor hiding (first, second)
 import Data.Bitraversable
 import Data.Bool
@@ -102,7 +104,7 @@ import Data.Char qualified as Char
 import Data.Data
 import Data.Either.Extra
 import Data.Eq
-import Data.Foldable hiding (minimum, minimumBy)
+import Data.Foldable hiding (foldr1, minimum, minimumBy)
 import Data.Function
 import Data.Functor
 import Data.Graph (Graph, SCC (..), Vertex, stronglyConnComp)
@@ -115,7 +117,7 @@ import Data.Int
 import Data.IntMap.Strict (IntMap)
 import Data.IntMap.Strict qualified as IntMap
 import Data.IntSet (IntSet)
-import Data.List.Extra hiding (allSame, groupSortOn, head, last, mconcatMap)
+import Data.List.Extra hiding (allSame, foldr1, groupSortOn, head, last, mconcatMap, replicate)
 import Data.List.Extra qualified as List
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.List.NonEmpty.Extra
@@ -127,7 +129,6 @@ import Data.List.NonEmpty.Extra
     maximumOn1,
     minimum1,
     minimumOn1,
-    nonEmpty,
     prependList,
     some1,
     (|:),
@@ -142,6 +143,7 @@ import Data.Singletons hiding ((@@))
 import Data.Singletons.Sigma
 import Data.Singletons.TH (genSingletons, promoteOrdInstances, singOrdInstances)
 import Data.Stream (Stream)
+import Data.Stream qualified as Stream
 import Data.String
 import Data.Text (Text, pack, strip, unpack)
 import Data.Text qualified as Text
@@ -280,12 +282,15 @@ allDifferent :: forall a. (Ord a) => [a] -> Bool
 allDifferent = null . findRepeated
 
 allSame :: forall t a. (Eq a, Foldable t) => t a -> Bool
-allSame t
-  | null t = True
-  | otherwise = all (== h) t
-  where
-    h :: a
-    h = foldr1 const t
+allSame t = case nonEmpty t of
+  Nothing -> True
+  Just (a :| as) -> all (== a) as
+
+nonEmpty :: (Foldable l) => l a -> Maybe (NonEmpty a)
+nonEmpty = NonEmpty.nonEmpty . toList
+
+foldr1 :: (a -> a -> a) -> NonEmpty a -> a
+foldr1 = List.foldr1
 
 sconcatMap :: (Semigroup c) => (a -> c) -> NonEmpty a -> c
 sconcatMap f = sconcat . fmap f
@@ -297,9 +302,9 @@ mconcatMapM :: (Monad m, Monoid c, Foldable t) => (a -> m c) -> t a -> m c
 mconcatMapM f = Monad.mconcatMapM f . toList
 
 concatWith :: (Foldable t, Monoid a) => (a -> a -> a) -> t a -> a
-concatWith f ds
-  | null ds = mempty
-  | otherwise = foldr1 f ds
+concatWith f ds = case nonEmpty ds of
+  Nothing -> mempty
+  Just ds' -> foldr1 f ds'
 {-# INLINE concatWith #-}
 
 --------------------------------------------------------------------------------
@@ -478,6 +483,9 @@ nubHashable = HashSet.toList . HashSet.fromList
 allElements :: (Bounded a, Enum a) => [a]
 allElements = [minBound .. maxBound]
 
+replicate :: (Integral n) => n -> a -> [a]
+replicate n a = List.replicate (fromIntegral n) a
+
 infixr 3 .&&.
 
 (.&&.) :: (a -> Bool) -> (a -> Bool) -> a -> Bool
@@ -568,3 +576,23 @@ indexedByHash getIx l = HashMap.fromList [(getIx i, i) | i <- toList l]
 
 hashMap :: (Foldable f, Hashable k) => f (k, v) -> HashMap k v
 hashMap = HashMap.fromList . toList
+
+runInputInfinite :: Stream i -> Sem (Input i ': r) a -> Sem r a
+runInputInfinite s =
+  evalState s
+    . reinterpret
+      ( \case
+          Input -> do
+            Stream.Cons i is <- get
+            put is
+            return i
+      )
+
+writeFileEnsureLn :: (MonadMask m, MonadIO m) => FilePath -> Text -> m ()
+writeFileEnsureLn p t =
+  let t' = case Text.unsnoc t of
+        Nothing -> t
+        Just (_, y) -> case y of
+          '\n' -> t
+          _ -> Text.snoc t '\n'
+   in writeFile p t'

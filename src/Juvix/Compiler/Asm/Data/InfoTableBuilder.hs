@@ -2,7 +2,6 @@ module Juvix.Compiler.Asm.Data.InfoTableBuilder where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Asm.Data.InfoTable
-import Juvix.Compiler.Asm.Language
 
 data IdentKind
   = IdentFun Symbol
@@ -58,7 +57,7 @@ runInfoTableBuilder' bs =
       FreshTag -> do
         modify' (over stateNextUserTag (+ 1))
         s <- get
-        return (UserTag defaultModuleId (s ^. stateNextUserTag - 1))
+        return (UserTag (TagUser defaultModuleId (s ^. stateNextUserTag - 1)))
       RegisterFunction fi -> do
         modify' (over (stateInfoTable . infoFunctions) (HashMap.insert (fi ^. functionSymbol) fi))
         modify' (over stateIdents (HashMap.insert (fi ^. functionName) (IdentFun (fi ^. functionSymbol))))

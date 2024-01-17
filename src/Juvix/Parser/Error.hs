@@ -64,6 +64,12 @@ instance ToGenericError MegaparsecError where
     where
       i = getLoc e
 
+-- | Use only for debugging
+fromMegaParsecError :: Either MegaparsecError a -> a
+fromMegaParsecError = \case
+  Left e -> error (prettyText e)
+  Right a -> a
+
 newtype CommonmarkError = CommonmarkError
   { _commonMarkError :: MK.ParseError
   }
