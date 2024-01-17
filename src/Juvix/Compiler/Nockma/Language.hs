@@ -1,7 +1,12 @@
-module Juvix.Compiler.Nockma.Language where
+module Juvix.Compiler.Nockma.Language
+  ( module Juvix.Compiler.Nockma.Language,
+    module Juvix.Compiler.Core.Language.Base,
+  )
+where
 
 import Data.HashMap.Strict qualified as HashMap
 import GHC.Base (Type)
+import Juvix.Compiler.Core.Language.Base (Symbol)
 import Juvix.Prelude hiding (Atom, Path)
 import Juvix.Prelude.Pretty
 
@@ -72,6 +77,7 @@ data NockOp
   | OpCall
   | OpReplace
   | OpHint
+  | OpTrace
   deriving stock (Bounded, Enum, Eq, Generic)
 
 instance Hashable NockOp
@@ -90,6 +96,7 @@ instance Pretty NockOp where
     OpCall -> "call"
     OpReplace -> "replace"
     OpHint -> "hint"
+    OpTrace -> "trace"
 
 atomOps :: HashMap Text NockOp
 atomOps = HashMap.fromList [(prettyText op, op) | op <- allElements]
@@ -111,6 +118,14 @@ data ParsedCell a
 newtype EncodedPath = EncodedPath
   { _encodedPath :: Natural
   }
+
+-- | appends n R
+encodedPathAppendRightN :: Natural -> EncodedPath -> EncodedPath
+encodedPathAppendRightN n (EncodedPath p) = EncodedPath (f p)
+  where
+    -- equivalent to applying 2 * x + 1, n times
+    f :: Natural -> Natural
+    f x = (2 ^ n) * (x + 1) - 1
 
 data Direction
   = L
@@ -154,6 +169,7 @@ serializeOp = \case
   OpCall -> 9
   OpReplace -> 10
   OpHint -> 11
+  OpTrace -> 100
 
 decodePath :: forall r. (Member Fail r) => EncodedPath -> Sem r Path
 decodePath ep = execOutputList (go (ep ^. encodedPath))
@@ -212,6 +228,17 @@ data NockNaturalNaturalError
   | NaturalInvalidOp (Atom Natural)
   deriving stock (Show)
 
+nockTrueLiteral :: Term Natural
+nockTrueLiteral = OpQuote # (TermAtom (nockTrue @Natural))
+
+nockFalseLiteral :: Term Natural
+nockFalseLiteral = OpQuote # (TermAtom (nockFalse @Natural))
+
+nockBoolLiteral :: Bool -> Term Natural
+nockBoolLiteral b
+  | b = nockTrueLiteral
+  | otherwise = nockFalseLiteral
+
 instance NockNatural Natural where
   type ErrNockNatural Natural = NockNaturalNaturalError
   nockNatural a = return (a ^. atom)
@@ -257,3 +284,9 @@ infixr 5 #
 
 (#) :: (IsNock x, IsNock y) => x -> y -> Term Natural
 a # b = TermCell (Cell (toNock a) (toNock b))
+
+instance Semigroup EncodedPath where
+  a <> b = encodePath (decodePath' a <> decodePath' b)
+
+instance Monoid EncodedPath where
+  mempty = encodePath []

@@ -37,13 +37,25 @@ data DirectRef
   | -- | TempRef references a value in the temporary stack (0-based offsets,
     --   counted from the _bottom_ of the temporary stack). JVA code:
     --   'tmp[<offset>]'.
-    TempRef OffsetRef
+    TempRef RefTemp
+
+mkTempRef :: OffsetRef -> DirectRef
+mkTempRef o = TempRef (RefTemp o Nothing)
+
+data RefTemp = RefTemp
+  { _refTempOffsetRef :: OffsetRef,
+    _refTempTempHeight :: Maybe Int
+  }
+
+makeLenses ''RefTemp
 
 -- | Constructor field reference. JVA code: '<dref>.<tag>[<offset>]'
 type Field = Field' DirectRef
 
 -- | Function call type
-data CallType = CallFun Symbol | CallClosure
+data CallType
+  = CallFun Symbol
+  | CallClosure
   deriving stock (Eq)
 
 -- | `Instruction` is a single non-branching instruction, i.e., with no control
@@ -128,6 +140,7 @@ data Instruction
   | -- | Pushes the top of the current value stack on top of the calling function
     -- value stack, discards the current activation frame, transfers control to
     -- the address at the top of the global call stack, and pops the call stack.
+    -- The return instruction can only appear in tail position in a function.
     -- JVA opcode: 'ret'.
     Return
 

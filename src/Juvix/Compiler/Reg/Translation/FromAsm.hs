@@ -4,7 +4,6 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Asm.Data.InfoTable qualified as Asm
 import Juvix.Compiler.Asm.Error qualified as Asm
 import Juvix.Compiler.Asm.Extra.Recursors qualified as Asm
-import Juvix.Compiler.Asm.Language qualified as Asm
 import Juvix.Compiler.Reg.Data.InfoTable
 import Juvix.Compiler.Reg.Language
 
@@ -174,7 +173,7 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
     mkVar = \case
       Asm.StackRef -> VarRef VarGroupStack n
       Asm.ArgRef Asm.OffsetRef {..} -> VarRef VarGroupArgs _offsetRefOffset
-      Asm.TempRef Asm.OffsetRef {..} -> VarRef VarGroupTemp _offsetRefOffset
+      Asm.TempRef Asm.RefTemp {..} -> VarRef VarGroupTemp (_refTempOffsetRef ^. Asm.offsetRefOffset)
 
     mkPrealloc :: Asm.InstrPrealloc -> Instruction
     mkPrealloc Asm.InstrPrealloc {..} =

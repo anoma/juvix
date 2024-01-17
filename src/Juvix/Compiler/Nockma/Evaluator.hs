@@ -6,6 +6,7 @@ where
 
 import Juvix.Compiler.Nockma.Evaluator.Error
 import Juvix.Compiler.Nockma.Language
+import Juvix.Compiler.Nockma.Pretty
 import Juvix.Prelude hiding (Atom, Path)
 
 asAtom :: (Member (Error NockEvalError) r) => Term a -> Sem r (Atom a)
@@ -13,9 +14,9 @@ asAtom = \case
   TermAtom a -> return a
   TermCell {} -> throw ExpectedAtom
 
-asCell :: (Member (Error NockEvalError) r) => Term a -> Sem r (Cell a)
-asCell = \case
-  TermAtom {} -> throw ExpectedCell
+asCell :: (Member (Error NockEvalError) r) => Text -> Term a -> Sem r (Cell a)
+asCell msg = \case
+  TermAtom {} -> throw (ExpectedCell msg)
   TermCell c -> return c
 
 asBool :: (Member (Error NockEvalError) r, NockNatural a) => Term a -> Sem r Bool
@@ -44,14 +45,14 @@ subTermT = go
 subTerm :: (Member (Error NockEvalError) r) => Term a -> Path -> Sem r (Term a)
 subTerm term pos = do
   case term ^? subTermT pos of
-    Nothing -> throw InvalidPath
+    Nothing -> throw @NockEvalError (error "")
     Just t -> return t
 
 setSubTerm :: (Member (Error NockEvalError) r) => Term a -> Path -> Term a -> Sem r (Term a)
 setSubTerm term pos repTerm =
   let (old, new) = setAndRemember (subTermT' pos) repTerm term
    in if
-          | isNothing (getFirst old) -> throw InvalidPath
+          | isNothing (getFirst old) -> throw @NockEvalError (error "")
           | otherwise -> return new
 
 parseCell :: forall r a. (Members '[Error NockEvalError, Error (ErrNockNatural a)] r, NockNatural a) => Cell a -> Sem r (ParsedCell a)
@@ -83,19 +84,20 @@ programAssignments mprog =
 -- | The stack provided in the replExpression has priority
 evalRepl ::
   forall r a.
-  (Members '[Error NockEvalError, Error (ErrNockNatural a)] r, NockNatural a) =>
+  (PrettyCode a, Members '[Error NockEvalError, Error (ErrNockNatural a)] r, NockNatural a) =>
+  (Term a -> Sem r ()) ->
   Maybe (Program a) ->
   Maybe (Term a) ->
   ReplExpression a ->
   Sem r (Term a)
-evalRepl mprog defaultStack expr = do
+evalRepl handleTrace mprog defaultStack expr = do
   (mstack, t) <- case expr of
     ReplExpressionTerm tm -> return (defaultStack, tm)
     ReplExpressionWithStack w -> do
       t' <- fromReplTerm namedTerms (w ^. withStackStack)
       return (Just t', w ^. withStackTerm)
   stack <- maybe errNoStack return mstack
-  fromReplTerm namedTerms t >>= eval stack
+  fromReplTerm namedTerms t >>= runOutputSem @(Term a) handleTrace . eval stack
   where
     errNoStack :: Sem r x
     errNoStack = throw NoStack
@@ -103,14 +105,9 @@ evalRepl mprog defaultStack expr = do
     namedTerms :: HashMap Text (Term a)
     namedTerms = programAssignments mprog
 
-eval ::
-  forall r a.
-  (Members '[Error NockEvalError, Error (ErrNockNatural a)] r, NockNatural a) =>
-  Term a ->
-  Term a ->
-  Sem r (Term a)
+eval :: forall r a. (PrettyCode a, Members '[Output (Term a), Error NockEvalError, Error (ErrNockNatural a)] r, NockNatural a) => Term a -> Term a -> Sem r (Term a)
 eval stack = \case
-  TermAtom {} -> throw ExpectedCell
+  TermAtom a -> throw (ExpectedCell ("eval " <> ppTrace a))
   TermCell c -> do
     pc <- parseCell c
     case pc of
@@ -137,6 +134,7 @@ eval stack = \case
       OpCall -> goOpCall
       OpReplace -> goOpReplace
       OpHint -> goOpHint
+      OpTrace -> goOpTrace
       where
         goOpAddress :: Sem r (Term a)
         goOpAddress = asPath (c ^. operatorCellTerm) >>= subTerm stack
@@ -149,41 +147,47 @@ eval stack = \case
           TermCell {} -> nockTrue
           TermAtom {} -> nockFalse
 
+        goOpTrace :: Sem r (Term a)
+        goOpTrace = do
+          Cell tr a <- asCell "OpTrace" (c ^. operatorCellTerm)
+          tr' <- eval stack tr
+          output tr'
+          eval stack a
+
         goOpHint :: Sem r (Term a)
         goOpHint = do
           -- Ignore the hint and evaluate
-          h <- asCell (c ^. operatorCellTerm)
+          h <- asCell "OpHint" (c ^. operatorCellTerm)
           eval stack (h ^. cellRight)
 
         goOpPush :: Sem r (Term a)
         goOpPush = do
-          cellTerm <- asCell (c ^. operatorCellTerm)
+          cellTerm <- asCell "OpPush" (c ^. operatorCellTerm)
           l <- eval stack (cellTerm ^. cellLeft)
           let s = TermCell Cell {_cellLeft = l, _cellRight = stack}
           eval s (cellTerm ^. cellRight)
 
         goOpReplace :: Sem r (Term a)
         goOpReplace = do
-          cellTerm <- asCell (c ^. operatorCellTerm)
-          rt1 <- asCell (cellTerm ^. cellLeft)
-          r <- asPath (rt1 ^. cellLeft)
-          let t1 = rt1 ^. cellRight
+          Cell rot1 t2 <- asCell "OpReplace 1" (c ^. operatorCellTerm)
+          Cell ro t1 <- asCell "OpReplace 2" rot1
+          r <- asPath ro
           t1' <- eval stack t1
-          t2' <- eval stack (cellTerm ^. cellRight)
+          t2' <- eval stack t2
           setSubTerm t2' r t1'
 
         goOpApply :: Sem r (Term a)
         goOpApply = do
-          cellTerm <- asCell (c ^. operatorCellTerm)
+          cellTerm <- asCell "OpApply" (c ^. operatorCellTerm)
           t1' <- eval stack (cellTerm ^. cellLeft)
           t2' <- eval stack (cellTerm ^. cellRight)
           eval t1' t2'
 
         goOpIf :: Sem r (Term a)
         goOpIf = do
-          cellTerm <- asCell (c ^. operatorCellTerm)
+          cellTerm <- asCell "OpIf 1" (c ^. operatorCellTerm)
           let t0 = cellTerm ^. cellLeft
-          Cell t1 t2 <- asCell (cellTerm ^. cellRight)
+          Cell t1 t2 <- asCell "OpIf 2" (cellTerm ^. cellRight)
           cond <- eval stack t0 >>= asBool
           if
               | cond -> eval stack t1
@@ -194,7 +198,7 @@ eval stack = \case
 
         goOpEq :: Sem r (Term a)
         goOpEq = do
-          cellTerm <- asCell (c ^. operatorCellTerm)
+          cellTerm <- asCell "OpEq" (c ^. operatorCellTerm)
           l <- eval stack (cellTerm ^. cellLeft)
           r <- eval stack (cellTerm ^. cellRight)
           return . TermAtom $
@@ -204,13 +208,13 @@ eval stack = \case
 
         goOpCall :: Sem r (Term a)
         goOpCall = do
-          cellTerm <- asCell (c ^. operatorCellTerm)
+          cellTerm <- asCell "OpCall" (c ^. operatorCellTerm)
           r <- asPath (cellTerm ^. cellLeft)
           t' <- eval stack (cellTerm ^. cellRight)
           subTerm t' r >>= eval t'
 
         goOpSequence :: Sem r (Term a)
         goOpSequence = do
-          cellTerm <- asCell (c ^. operatorCellTerm)
+          cellTerm <- asCell "OpSequence" (c ^. operatorCellTerm)
           t1' <- eval stack (cellTerm ^. cellLeft)
           eval t1' (cellTerm ^. cellRight)

@@ -6,7 +6,6 @@ import Juvix.Compiler.Asm.Data.Stack (Stack)
 import Juvix.Compiler.Asm.Data.Stack qualified as Stack
 import Juvix.Compiler.Asm.Error
 import Juvix.Compiler.Asm.Extra.Type
-import Juvix.Compiler.Asm.Language
 import Juvix.Compiler.Asm.Pretty
 import Safe (atMay)
 
@@ -100,8 +99,8 @@ getDirectRefType dr mem = case dr of
     topValueStack 0 mem
   ArgRef OffsetRef {..} ->
     getArgumentType _offsetRefOffset mem
-  TempRef OffsetRef {..} ->
-    bottomTempStack _offsetRefOffset mem
+  TempRef RefTemp {..} ->
+    bottomTempStack (_refTempOffsetRef ^. offsetRefOffset) mem
 
 getValueType' :: (Member (Error AsmError) r) => Maybe Location -> InfoTable -> Memory -> Value -> Sem r Type
 getValueType' loc tab mem = \case
