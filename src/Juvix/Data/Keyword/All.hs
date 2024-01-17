@@ -241,6 +241,9 @@ kwStrConcat = asciiKw Str.strConcat
 kwStrToInt :: Keyword
 kwStrToInt = asciiKw Str.strToInt
 
+kwAtoi :: Keyword
+kwAtoi = asciiKw Str.instrStrToInt
+
 kwBind :: Keyword
 kwBind = asciiKw Str.bind
 
@@ -250,11 +253,35 @@ kwSeq = asciiKw Str.seq_
 kwSeqq :: Keyword
 kwSeqq = asciiKw Str.seqq_
 
+kwSSeq :: Keyword
+kwSSeq = asciiKw Str.sseq_
+
 kwTrace :: Keyword
 kwTrace = asciiKw Str.trace_
 
 kwFail :: Keyword
 kwFail = asciiKw Str.fail_
+
+kwArgsNum :: Keyword
+kwArgsNum = asciiKw Str.instrArgsNum
+
+kwAlloc :: Keyword
+kwAlloc = asciiKw Str.instrAlloc
+
+kwCAlloc :: Keyword
+kwCAlloc = asciiKw Str.instrCalloc
+
+kwCExtend :: Keyword
+kwCExtend = asciiKw Str.instrCextend
+
+kwCCall :: Keyword
+kwCCall = asciiKw Str.instrCcall
+
+kwBr :: Keyword
+kwBr = asciiKw Str.instrBr
+
+kwSave :: Keyword
+kwSave = asciiKw Str.save
 
 kwIntAdd :: Keyword
 kwIntAdd = asciiKw Str.iadd
@@ -273,6 +300,36 @@ kwIntMod = asciiKw Str.imod
 
 kwIntLt :: Keyword
 kwIntLt = asciiKw Str.ilt
+
+kwIntLe :: Keyword
+kwIntLe = asciiKw Str.ile
+
+kwAdd_ :: Keyword
+kwAdd_ = asciiKw Str.add_
+
+kwSub_ :: Keyword
+kwSub_ = asciiKw Str.sub_
+
+kwMul_ :: Keyword
+kwMul_ = asciiKw Str.mul_
+
+kwDiv_ :: Keyword
+kwDiv_ = asciiKw Str.div_
+
+kwMod_ :: Keyword
+kwMod_ = asciiKw Str.mod_
+
+kwLt_ :: Keyword
+kwLt_ = asciiKw Str.lt_
+
+kwLe_ :: Keyword
+kwLe_ = asciiKw Str.le_
+
+kwSeq_ :: Keyword
+kwSeq_ = asciiKw Str.sseq_
+
+kwEq_ :: Keyword
+kwEq_ = asciiKw Str.eq
 
 kwErr :: Keyword
 kwErr = asciiKw Str.err

@@ -37,12 +37,6 @@ localS update a = do
   lift $ put s
   return a'
 
-parseTextS :: ParserSig t e -> Text -> Either MegaparsecError (InfoTable' t e)
-parseTextS sig = runParserS sig ""
-
-parseTextS' :: ParserSig t e -> BuilderState' t e -> Text -> Either MegaparsecError (BuilderState' t e)
-parseTextS' sig bs = runParserS' sig bs ""
-
 runParserS :: ParserSig t e -> FilePath -> Text -> Either MegaparsecError (InfoTable' t e)
 runParserS sig fileName input_ = (^. stateInfoTable) <$> runParserS' sig emptyBuilderState fileName input_
 

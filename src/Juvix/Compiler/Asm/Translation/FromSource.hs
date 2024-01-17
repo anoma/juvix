@@ -35,7 +35,7 @@ parseText' :: BuilderState -> Text -> Either MegaparsecError BuilderState
 parseText' bs = runParser' bs ""
 
 runParser :: FilePath -> Text -> Either MegaparsecError InfoTable
-runParser fileName input_ = (^. stateInfoTable) <$> runParser' emptyBuilderState fileName input_
+runParser = runParserS parseAsmSig
 
 runParser' :: BuilderState -> FilePath -> Text -> Either MegaparsecError BuilderState
 runParser' = runParserS' parseAsmSig
