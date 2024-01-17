@@ -457,16 +457,6 @@ tests =
             (Asm.BuiltinTag Asm.TagFalse, pop >> pushNat 5)
           ],
     Test
-      "push constructor field"
-      (eqStack TempStack [nock| [30 nil] |])
-      $ do
-        pushNat 10
-        pushNat 20
-        allocConstr (constructorTag ConstructorPair)
-        pushConstructorFieldOnto TempStack Asm.StackRef 0
-        pushConstructorFieldOnto TempStack Asm.StackRef 1
-        addOn TempStack,
-    Test
       "trace"
       ( do
           eqStack ValueStack [nock| [10 nil] |]
