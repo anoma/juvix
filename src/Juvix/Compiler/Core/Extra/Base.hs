@@ -10,7 +10,6 @@ import Juvix.Compiler.Core.Data.BinderList (BinderList)
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.NameInfo (setInfoName)
 import Juvix.Compiler.Core.Language
-import Polysemy.Input
 
 {------------------------------------------------------------------------}
 {- Node constructors -}

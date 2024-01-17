@@ -1,7 +1,6 @@
 module Asm.Run.Base where
 
 import Base
-import Data.Text.IO qualified as TIO
 import Juvix.Compiler.Asm.Data.InfoTable
 import Juvix.Compiler.Asm.Error
 import Juvix.Compiler.Asm.Interpreter
@@ -33,9 +32,9 @@ asmRunAssertion' tab expectedFile step = do
                       ValVoid -> return ()
                       _ -> hPutStrLn hout (ppPrint tab value')
                     hClose hout
-                    actualOutput <- TIO.readFile (toFilePath outputFile)
+                    actualOutput <- readFile (toFilePath outputFile)
                     step "Compare expected and actual program output"
-                    expected <- TIO.readFile (toFilePath expectedFile)
+                    expected <- readFile (toFilePath expectedFile)
                     assertEqDiffText ("Check: RUN output = " <> toFilePath expectedFile) actualOutput expected
             )
         Nothing -> assertFailure "no 'main' function"

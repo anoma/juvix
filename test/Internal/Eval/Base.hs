@@ -3,7 +3,6 @@ module Internal.Eval.Base where
 import Base
 import Core.Eval.Base
 import Data.HashMap.Strict qualified as HashMap
-import Data.Text.IO qualified as TIO
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info qualified as Info
@@ -36,9 +35,9 @@ internalCoreAssertion root' mainFile expectedFile step = do
                   (Info.member kNoDisplayInfo (getInfo value))
                   (hPutStrLn hout (ppPrint value))
                 hClose hout
-                actualOutput <- TIO.readFile (toFilePath outputFile)
+                actualOutput <- readFile (toFilePath outputFile)
                 step "Compare expected and actual program output"
-                expected <- TIO.readFile (toFilePath expectedFile)
+                expected <- readFile (toFilePath expectedFile)
                 assertEqDiffText ("Check: EVAL output = " <> toFilePath expectedFile) actualOutput expected
         )
     Nothing -> assertFailure ("No main function registered in: " <> toFilePath mainFile)

@@ -25,7 +25,7 @@ runAsm bValidate tab =
                   return ()
                 Right val -> do
                   renderStdOut (Asm.ppOut (Asm.defaultOptions tab) val)
-                  embed (putStrLn "")
+                  putStrLn ""
             Nothing ->
               exitMsg (ExitFailure 1) "no 'main' function"
   where

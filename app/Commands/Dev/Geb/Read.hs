@@ -19,4 +19,4 @@ runCommand opts = do
     Left err -> exitJuvixError (JuvixError err)
     Right gebTerm -> do
       renderStdOut (Geb.ppOut opts gebTerm)
-      embed (putStrLn "")
+      putStrLn ""

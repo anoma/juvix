@@ -26,7 +26,7 @@ parseText = Core.runParser replPath defaultModuleId
 
 runRepl :: forall r. (Members '[Embed IO, App] r) => CoreReplOptions -> Core.InfoTable -> Sem r ()
 runRepl opts tab = do
-  embed (putStr "> ")
+  putStr "> "
   embed (hFlush stdout)
   done <- embed isEOF
   unless done $ do
@@ -43,7 +43,7 @@ runRepl opts tab = do
             runRepl opts tab
           Right (tab', Just node) -> do
             renderStdOut (Core.ppOut opts node)
-            embed (putStrLn "")
+            putStrLn ""
             runRepl opts tab'
           Right (tab', Nothing) ->
             runRepl opts tab'
@@ -107,7 +107,7 @@ runRepl opts tab = do
           | Info.member Info.kNoDisplayInfo (Core.getInfo node') -> runRepl opts tab'
           | otherwise -> do
               renderStdOut (Core.ppOut opts (Core.disambiguateNodeNames (Core.moduleFromInfoTable tab') node'))
-              embed (putStrLn "")
+              putStrLn ""
               runRepl opts tab'
       where
         defaultLoc = singletonInterval (mkInitialLoc replPath)
@@ -121,7 +121,7 @@ runRepl opts tab = do
                   runRepl opts tab'
               | otherwise -> do
                   renderStdOut (Core.ppOut opts (Core.disambiguateNodeNames md' node'))
-                  embed (putStrLn "")
+                  putStrLn ""
                   runRepl opts tab'
 
     replType :: Core.InfoTable -> Core.Node -> Sem r ()
@@ -129,11 +129,11 @@ runRepl opts tab = do
       let md' = Core.moduleFromInfoTable tab'
           ty = Core.disambiguateNodeNames md' (Core.computeNodeType md' node)
       renderStdOut (Core.ppOut opts ty)
-      embed (putStrLn "")
+      putStrLn ""
       runRepl opts tab'
 
 showReplWelcome :: (Members '[Embed IO, App] r) => Sem r ()
-showReplWelcome = embed $ do
+showReplWelcome = do
   putStrLn "JuvixCore REPL"
   putStrLn ""
   putStrLn "Type \":h\" for help."

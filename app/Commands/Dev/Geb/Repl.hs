@@ -114,25 +114,25 @@ checkTypedMorphism gebMorphism = Repline.dontCrash $ do
     Right _ -> printError (error "Checking only works on typed Geb morphisms.")
 
 runReplCommand :: String -> Repl ()
-runReplCommand input =
+runReplCommand input_ =
   Repline.dontCrash $
     do
       let evalRes =
             Geb.runEval $
               Geb.RunEvalArgs
-                { _runEvalArgsContent = pack input,
+                { _runEvalArgsContent = pack input_,
                   _runEvalArgsInputFile = gebReplPath,
                   _runEvalArgsEvaluatorOptions = Geb.defaultEvaluatorOptions
                 }
       printEvalResult evalRes
 
 evalAndOutputMorphism :: String -> Repl ()
-evalAndOutputMorphism input =
+evalAndOutputMorphism input_ =
   Repline.dontCrash $ do
     let evalRes =
           Geb.runEval $
             Geb.RunEvalArgs
-              { _runEvalArgsContent = pack input,
+              { _runEvalArgsContent = pack input_,
                 _runEvalArgsInputFile = gebReplPath,
                 _runEvalArgsEvaluatorOptions =
                   Geb.defaultEvaluatorOptions

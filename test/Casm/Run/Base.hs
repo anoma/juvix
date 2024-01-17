@@ -1,7 +1,6 @@
 module Casm.Run.Base where
 
 import Base
-import Data.Text.IO qualified as TIO
 import Juvix.Compiler.Casm.Error
 import Juvix.Compiler.Casm.Interpreter
 import Juvix.Compiler.Casm.Translation.FromSource
@@ -27,9 +26,9 @@ casmRunAssertion' labi instrs expectedFile step =
                 hout <- openFile (toFilePath outputFile) WriteMode
                 hPrint hout value'
                 hClose hout
-                actualOutput <- TIO.readFile (toFilePath outputFile)
+                actualOutput <- readFile (toFilePath outputFile)
                 step "Compare expected and actual program output"
-                expected <- TIO.readFile (toFilePath expectedFile)
+                expected <- readFile (toFilePath expectedFile)
                 assertEqDiffText ("Check: RUN output = " <> toFilePath expectedFile) actualOutput expected
         )
 

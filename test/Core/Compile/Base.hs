@@ -4,7 +4,6 @@ import Asm.Compile.Base qualified as Asm
 import Base
 import Core.Eval.Base
 import Core.Eval.Positive qualified as Eval
-import Data.Text.IO qualified as TIO
 import GHC.Base (seq)
 import Juvix.Compiler.Asm.Pretty qualified as Asm
 import Juvix.Compiler.Asm.Translation.FromTree qualified as Asm
@@ -73,7 +72,7 @@ coreCompileAssertion mainFile expectedFile stdinText step = do
     Left err -> assertFailure (show (pretty err))
     Right (_, Nothing) -> do
       step "Empty program: compare expected and actual program output"
-      expected <- TIO.readFile (toFilePath expectedFile)
+      expected <- readFile (toFilePath expectedFile)
       assertEqDiffText ("Check: EVAL output = " <> toFilePath expectedFile) "" expected
     Right (tabIni, Just node) ->
       coreCompileAssertion' 3 (setupMainFunction defaultModuleId tabIni node) mainFile expectedFile stdinText step

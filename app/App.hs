@@ -17,6 +17,7 @@ import System.Console.ANSI qualified as Ansi
 
 data App m a where
   ExitMsg :: ExitCode -> Text -> App m a
+  ExitFailMsg :: Text -> App m a
   ExitJuvixError :: JuvixError -> App m a
   PrintJuvixError :: JuvixError -> App m ()
   AskRoot :: App m Root
@@ -78,20 +79,21 @@ reAppIO args@RunAppIOArgs {..} =
     AskBuildDir -> return (resolveAbsBuildDir (_runAppIOArgsRoot ^. rootRootDir) (_runAppIOArgsRoot ^. rootBuildDir))
     Say t
       | g ^. globalOnlyErrors -> return ()
-      | otherwise -> embed (putStrLn t)
+      | otherwise -> putStrLn t
     PrintJuvixError e -> do
       printErr e
     ExitJuvixError e -> do
       printErr e
       embed exitFailure
-    ExitMsg exitCode t -> exitMsg' exitCode t
+    ExitMsg exitCode t -> exitMsg' (exitWith exitCode) t
+    ExitFailMsg t -> exitMsg' exitFailure t
     SayRaw b -> embed (ByteString.putStr b)
   where
     getPkg :: (Members '[SCache Package] r') => Sem r' Package
     getPkg = cacheSingletonGet
 
-    exitMsg' :: (Members '[Embed IO] r') => ExitCode -> Text -> Sem r' x
-    exitMsg' exitCode t = liftIO (putStrLn t >> hFlush stdout >> exitWith exitCode)
+    exitMsg' :: (Members '[Embed IO] r') => IO x -> Text -> Sem r' x
+    exitMsg' onExit t = liftIO (putStrLn t >> hFlush stdout >> onExit)
 
     getMainFile' :: (Members '[SCache Package, Embed IO] r') => Maybe (AppPath File) -> Sem r' (Path Abs File)
     getMainFile' = \case
@@ -105,7 +107,7 @@ reAppIO args@RunAppIOArgs {..} =
     missingMainErr :: (Members '[Embed IO] r') => Sem r' x
     missingMainErr =
       exitMsg'
-        (ExitFailure 1)
+        exitFailure
         ( "A path to the main file must be given in the CLI or specified in the `main` field of the "
             <> pack (toFilePath juvixYamlFile)
             <> " file"
@@ -127,9 +129,9 @@ getEntryPoint' RunAppIOArgs {..} inputFile = do
   set entryPointStdin estdin <$> entryPointFromGlobalOptionsPre root (inputFile ^. pathPath) opts
 
 runPipelineEither :: (Members '[Embed IO, TaggedLock, App] r) => AppPath File -> Sem (PipelineEff r) a -> Sem r (Either JuvixError (ResolverState, PipelineResult a))
-runPipelineEither input p = do
+runPipelineEither input_ p = do
   args <- askArgs
-  entry <- getEntryPoint' args input
+  entry <- getEntryPoint' args input_
   runIOEither entry p
 
 runPipelineSetupEither :: (Members '[Embed IO, TaggedLock, App] r) => Sem (PipelineEff' r) a -> Sem r (Either JuvixError (ResolverState, a))
@@ -174,28 +176,28 @@ getEntryPointStdin = do
   getEntryPointStdin' (RunAppIOArgs {..})
 
 runPipelineTermination :: (Members '[Embed IO, App, TaggedLock] r) => AppPath File -> Sem (Termination ': PipelineEff r) a -> Sem r (PipelineResult a)
-runPipelineTermination input p = do
-  r <- runPipelineEither input (evalTermination iniTerminationState p)
+runPipelineTermination input_ p = do
+  r <- runPipelineEither input_ (evalTermination iniTerminationState p)
   case r of
     Left err -> exitJuvixError err
     Right res -> return (snd res)
 
 runPipeline :: (Members '[App, Embed IO, TaggedLock] r) => AppPath File -> Sem (PipelineEff r) a -> Sem r a
-runPipeline input p = do
-  r <- runPipelineEither input p
+runPipeline input_ p = do
+  r <- runPipelineEither input_ p
   case r of
     Left err -> exitJuvixError err
     Right res -> return (snd res ^. pipelineResult)
 
 runPipelineHtml :: (Members '[App, Embed IO, TaggedLock] r) => Bool -> AppPath File -> Sem r (InternalTypedResult, [InternalTypedResult])
-runPipelineHtml bNonRecursive input =
+runPipelineHtml bNonRecursive input_ =
   if
       | bNonRecursive -> do
-          r <- runPipeline input upToInternalTyped
+          r <- runPipeline input_ upToInternalTyped
           return (r, [])
       | otherwise -> do
           args <- askArgs
-          entry <- getEntryPoint' args input
+          entry <- getEntryPoint' args input_
           r <- runPipelineHtmlEither entry
           case r of
             Left err -> exitJuvixError err

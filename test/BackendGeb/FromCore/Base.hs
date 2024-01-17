@@ -1,7 +1,6 @@
 module BackendGeb.FromCore.Base where
 
 import Base
-import Data.Text.IO qualified as TIO
 import GHC.Base (seq)
 import Juvix.Compiler.Backend (Target (TargetGeb))
 import Juvix.Compiler.Backend.Geb qualified as Geb
@@ -17,9 +16,9 @@ coreToGebTranslationAssertion ::
   Assertion
 coreToGebTranslationAssertion root mainFile expectedFile step = do
   step "Parse Juvix Core file"
-  input <- readFile . toFilePath $ mainFile
+  input_ <- readFile . toFilePath $ mainFile
   entryPoint <- set entryPointTarget TargetGeb <$> testDefaultEntryPointIO root mainFile
-  case Core.runParserMain mainFile defaultModuleId mempty input of
+  case Core.runParserMain mainFile defaultModuleId mempty input_ of
     Left err -> assertFailure . show . pretty $ err
     Right coreInfoTable -> coreToGebTranslationAssertion' coreInfoTable entryPoint expectedFile step
 
@@ -74,7 +73,7 @@ coreToGebTranslationAssertion' coreInfoTable entryPoint expectedFile step = do
                               assertFailure "The evaluation for the Core node and the Geb node are not equal"
                           | otherwise -> do
                               let fpath = toFilePath expectedFile
-                              expectedInput <- TIO.readFile fpath
+                              expectedInput <- readFile fpath
                               step "Compare expected and actual program output"
                               let compareEvalOutput morph =
                                     if

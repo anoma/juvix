@@ -4,7 +4,6 @@ import Commands.Base
 import Commands.Compile.Options
 import Commands.Dev.Core.Compile.Base qualified as Compile
 import Commands.Extra.Compile qualified as Compile
-import Data.Text.IO qualified as TIO
 import Juvix.Compiler.Core qualified as Core
 import Juvix.Compiler.Core.Pretty qualified as Core
 import Juvix.Compiler.Core.Transformation.DisambiguateNames qualified as Core
@@ -35,4 +34,4 @@ writeCoreFile pa@Compile.PipelineArg {..} = do
   case r of
     Left e -> exitJuvixError e
     Right md ->
-      embed $ TIO.writeFile (toFilePath coreFile) (show $ Core.ppOutDefault (Core.disambiguateNames md ^. Core.moduleInfoTable))
+      embed @IO (writeFile (toFilePath coreFile) (show $ Core.ppOutDefault (Core.disambiguateNames md ^. Core.moduleInfoTable)))

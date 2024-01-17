@@ -2,7 +2,6 @@ module Runtime.Base where
 
 import Base
 import Data.FileEmbed
-import Data.Text.IO qualified as TIO
 import System.Process qualified as P
 
 clangCompile ::
@@ -59,7 +58,7 @@ clangAssertion optLevel inputFile expectedFile stdinText step = do
   step "Lookup WASI_SYSROOT_PATH"
   sysrootPath :: Path Abs Dir <- getWasiSysrootPath
 
-  expected <- TIO.readFile (toFilePath expectedFile)
+  expected <- readFile (toFilePath expectedFile)
 
   let executeWasm :: Path Abs File -> IO Text
       executeWasm outputFile = readProcess "wasmer" [toFilePath outputFile] stdinText

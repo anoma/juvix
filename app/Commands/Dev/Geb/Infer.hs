@@ -27,7 +27,7 @@ runCommand opts = do
             Geb.ppOut
               opts
               (tyMorph ^. Geb.typedMorphismObject)
-          embed $ putStrLn ""
+          putStrLn ""
     Right (Geb.ExpressionObject _) ->
       exitJuvixError (error @JuvixError "No inference for objects")
     Left err -> exitJuvixError (JuvixError err)
