@@ -219,24 +219,26 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
       Constant ConstVoid -> return ValVoid
       Ref r -> getMemVal r
 
-    getMemVal :: (Member Runtime r) => MemRef -> Sem r Val
+    getMemVal :: forall r. (Member Runtime r) => MemRef -> Sem r Val
     getMemVal = \case
       DRef dr -> getDirectRef dr
       ConstrRef cr -> do
-        v <- getDirectRef (cr ^. fieldRef)
-        case v of
-          ValConstr ctr ->
-            if
-                | cr ^. fieldOffset < length (ctr ^. constrArgs) ->
-                    return $ (ctr ^. constrArgs) !! (cr ^. fieldOffset)
-                | otherwise ->
-                    runtimeError "invalid constructor field access"
-          _ -> runtimeError "invalid memory access: expected a constructor"
+        ctr <- getDirectRef (cr ^. fieldRef) >>= getConstr
+        if
+            | cr ^. fieldOffset < length (ctr ^. constrArgs) ->
+                return $ (ctr ^. constrArgs) !! (cr ^. fieldOffset)
+            | otherwise ->
+                runtimeError "invalid constructor field access"
+        where
+          getConstr :: Val -> Sem r Constr
+          getConstr = \case
+            ValConstr ctr -> return ctr
+            _ -> runtimeError "invalid memory access: expected a constructor"
 
     getDirectRef :: (Member Runtime r) => DirectRef -> Sem r Val
     getDirectRef = \case
       ArgRef OffsetRef {..} -> readArg _offsetRefOffset
-      TempRef OffsetRef {..} -> readTemp _offsetRefOffset
+      TempRef r -> readTemp r
 
     popLastValueStack :: (Member Runtime r) => Sem r Val
     popLastValueStack = do
@@ -247,30 +249,32 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
         (runtimeError "value stack not empty on function return")
       return v
 
-    getCallDetails :: (Member Runtime r) => Maybe Location -> InstrCall -> Sem r (Code, Frame)
+    getCallDetails :: forall r. (Member Runtime r) => Maybe Location -> InstrCall -> Sem r (Code, Frame)
     getCallDetails loc InstrCall {..} = case _callType of
       CallFun sym -> do
         let fi = lookupFunInfo infoTable sym
-        when
-          (_callArgsNum /= fi ^. functionArgsNum)
+        unless
+          (_callArgsNum == fi ^. functionArgsNum)
           (runtimeError "invalid direct call: supplied arguments number not equal to expected arguments number")
         args <- replicateM (fi ^. functionArgsNum) popValueStack
         return (fi ^. functionCode, frameFromFunctionInfo loc fi args)
       CallClosure -> do
-        v <- popValueStack
-        case v of
-          ValClosure cl -> do
-            let fi = lookupFunInfo infoTable (cl ^. closureSymbol)
-                n = length (cl ^. closureArgs)
-            when
-              (n >= fi ^. functionArgsNum)
-              (runtimeError "invalid closure: too many arguments")
-            when
-              (_callArgsNum /= fi ^. functionArgsNum - n)
-              (runtimeError "invalid indirect call: supplied arguments number not equal to expected arguments number")
-            frm <- getCallFrame loc cl fi _callArgsNum
-            return (fi ^. functionCode, frm)
-          _ -> runtimeError "invalid indirect call: expected closure on top of value stack"
+        cl <- popValueStack >>= closureFromValue
+        let fi = lookupFunInfo infoTable (cl ^. closureSymbol)
+            clArgs = length (cl ^. closureArgs)
+        unless
+          (clArgs < fi ^. functionArgsNum)
+          (runtimeError "invalid closure: too many arguments")
+        unless
+          (clArgs + _callArgsNum == fi ^. functionArgsNum)
+          (runtimeError "invalid indirect call: supplied arguments number not equal to expected arguments number")
+        frm <- getCallFrame loc cl fi _callArgsNum
+        return (fi ^. functionCode, frm)
+        where
+          closureFromValue :: Val -> Sem r Closure
+          closureFromValue = \case
+            ValClosure cl -> return cl
+            _ -> runtimeError "invalid indirect call: expected closure on top of value stack"
 
     getCallFrame :: (Member Runtime r) => Maybe Location -> Closure -> FunctionInfo -> Int -> Sem r Frame
     getCallFrame loc cl fi argsNum = do

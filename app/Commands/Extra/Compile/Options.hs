@@ -11,6 +11,7 @@ data CompileTarget
   | TargetVampIR
   | TargetCore
   | TargetAsm
+  | TargetNockma
   deriving stock (Eq, Data, Bounded, Enum)
 
 instance Show CompileTarget where
@@ -21,6 +22,7 @@ instance Show CompileTarget where
     TargetVampIR -> "vampir"
     TargetCore -> "core"
     TargetAsm -> "asm"
+    TargetNockma -> "nockma"
 
 data CompileOptions = CompileOptions
   { _compileDebug :: Bool,
@@ -33,7 +35,8 @@ data CompileOptions = CompileOptions
     _compileTarget :: CompileTarget,
     _compileInputFile :: Maybe (AppPath File),
     _compileOptimizationLevel :: Maybe Int,
-    _compileInliningDepth :: Int
+    _compileInliningDepth :: Int,
+    _compileNockmaUsePrettySymbols :: Bool
   }
   deriving stock (Data)
 
@@ -83,6 +86,11 @@ parseCompileOptions supportedTargets parserFile = do
               )
         | otherwise ->
             pure False
+  _compileNockmaUsePrettySymbols <-
+    switch
+      ( long "nockma-pretty"
+          <> help "Use names for op codes and paths in Nockma output (for target: nockma)"
+      )
   _compileUnsafe <-
     if
         | elem TargetVampIR supportedTargets ->

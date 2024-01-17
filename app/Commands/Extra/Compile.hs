@@ -29,23 +29,27 @@ runCompile inputFile o = do
   case o ^. compileTarget of
     TargetWasm32Wasi -> runError (clangWasmWasiCompile inputFile o)
     TargetNative64 -> runError (clangNativeCompile inputFile o)
-    TargetGeb -> return $ Right ()
-    TargetVampIR -> return $ Right ()
-    TargetCore -> return $ Right ()
-    TargetAsm -> return $ Right ()
+    TargetGeb -> return (Right ())
+    TargetVampIR -> return (Right ())
+    TargetCore -> return (Right ())
+    TargetAsm -> return (Right ())
+    TargetNockma -> return (Right ())
 
 prepareRuntime :: forall r. (Members '[App, Embed IO] r) => Path Abs Dir -> CompileOptions -> Sem r ()
 prepareRuntime buildDir o = do
   mapM_ writeHeader headersDir
   case o ^. compileTarget of
-    TargetWasm32Wasi | o ^. compileDebug -> writeRuntime wasiDebugRuntime
+    TargetWasm32Wasi
+      | o ^. compileDebug -> writeRuntime wasiDebugRuntime
     TargetWasm32Wasi -> writeRuntime wasiReleaseRuntime
-    TargetNative64 | o ^. compileDebug -> writeRuntime nativeDebugRuntime
+    TargetNative64
+      | o ^. compileDebug -> writeRuntime nativeDebugRuntime
     TargetNative64 -> writeRuntime nativeReleaseRuntime
     TargetGeb -> return ()
     TargetVampIR -> return ()
     TargetCore -> return ()
     TargetAsm -> return ()
+    TargetNockma -> return ()
   where
     wasiReleaseRuntime :: BS.ByteString
     wasiReleaseRuntime = $(FE.makeRelativeToProject "runtime/_build.wasm32-wasi/libjuvix.a" >>= FE.embedFile)
@@ -84,28 +88,27 @@ outputFile opts inputFile =
       invokeDir <- askInvokeDir
       let baseOutputFile = invokeDir <//> filename inputFile
       return $ case opts ^. compileTarget of
-        TargetNative64 ->
-          if
-              | opts ^. compileCOutput -> replaceExtension' cFileExt inputFile
-              | opts ^. compilePreprocess -> addExtension' cFileExt (addExtension' ".out" (removeExtension' inputFile))
-              | opts ^. compileAssembly -> replaceExtension' ".s" inputFile
-              | otherwise -> removeExtension' baseOutputFile
-        TargetWasm32Wasi ->
-          if
-              | opts ^. compileCOutput -> replaceExtension' cFileExt inputFile
-              | opts ^. compilePreprocess -> addExtension' cFileExt (addExtension' ".out" (removeExtension' inputFile))
-              | opts ^. compileAssembly -> replaceExtension' ".wat" inputFile
-              | otherwise -> replaceExtension' ".wasm" baseOutputFile
-        TargetGeb ->
-          if
-              | opts ^. compileTerm -> replaceExtension' juvixGebFileExt inputFile
-              | otherwise -> replaceExtension' lispFileExt baseOutputFile
+        TargetNative64
+          | opts ^. compileCOutput -> replaceExtension' cFileExt inputFile
+          | opts ^. compilePreprocess -> addExtension' cFileExt (addExtension' ".out" (removeExtension' inputFile))
+          | opts ^. compileAssembly -> replaceExtension' ".s" inputFile
+          | otherwise -> removeExtension' baseOutputFile
+        TargetWasm32Wasi
+          | opts ^. compileCOutput -> replaceExtension' cFileExt inputFile
+          | opts ^. compilePreprocess -> addExtension' cFileExt (addExtension' ".out" (removeExtension' inputFile))
+          | opts ^. compileAssembly -> replaceExtension' ".wat" inputFile
+          | otherwise -> replaceExtension' ".wasm" baseOutputFile
+        TargetGeb
+          | opts ^. compileTerm -> replaceExtension' juvixGebFileExt inputFile
+          | otherwise -> replaceExtension' lispFileExt baseOutputFile
         TargetVampIR ->
           replaceExtension' vampIRFileExt baseOutputFile
         TargetCore ->
           replaceExtension' juvixCoreFileExt baseOutputFile
         TargetAsm ->
           replaceExtension' juvixAsmFileExt baseOutputFile
+        TargetNockma ->
+          replaceExtension' nockmaFileExt baseOutputFile
 
 clangNativeCompile ::
   forall r.

@@ -25,7 +25,9 @@ data Value
   | Ref MemRef
 
 -- | Function call type
-data CallType = CallFun Symbol | CallClosure
+data CallType
+  = CallFun Symbol
+  | CallClosure
   deriving stock (Eq)
 
 -- | `Instruction` is a single non-branching instruction, i.e., with no control
@@ -110,6 +112,7 @@ data Instruction
   | -- | Pushes the top of the current value stack on top of the calling function
     -- value stack, discards the current activation frame, transfers control to
     -- the address at the top of the global call stack, and pops the call stack.
+    -- The return instruction can only appear in tail position in a function.
     -- JVA opcode: 'ret'.
     Return
 

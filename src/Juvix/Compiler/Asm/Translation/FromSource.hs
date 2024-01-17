@@ -132,7 +132,7 @@ parseSave loc isTail = do
   mn <- optional identifier
   tmpNum <- lift $ gets (^. localParamsTempIndex)
   let updateNames :: LocalNameMap -> LocalNameMap
-      updateNames mp = maybe mp (\n -> HashMap.insert n (TempRef (OffsetRef tmpNum (Just n))) mp) mn
+      updateNames mp = maybe mp (\n -> HashMap.insert n (mkTempRef (OffsetRef tmpNum (Just n))) mp) mn
   c <- braces (localS (over localParamsTempIndex (+ 1)) $ localS (over localParamsNameMap updateNames) parseCode)
   return $
     Save

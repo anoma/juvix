@@ -173,7 +173,7 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
     mkVar :: Asm.DirectRef -> VarRef
     mkVar = \case
       Asm.ArgRef Asm.OffsetRef {..} -> VarRef VarGroupArgs _offsetRefOffset
-      Asm.TempRef Asm.OffsetRef {..} -> VarRef VarGroupTemp _offsetRefOffset
+      Asm.TempRef Asm.RefTemp {..} -> VarRef VarGroupTemp (_refTempOffsetRef ^. Asm.offsetRefOffset)
 
     mkPrealloc :: Asm.InstrPrealloc -> Instruction
     mkPrealloc Asm.InstrPrealloc {..} =

@@ -4,9 +4,9 @@ import Juvix.Prelude hiding (Atom)
 import Juvix.Prelude.Pretty
 
 data NockEvalError
-  = InvalidPath
+  = InvalidPath Text
   | ExpectedAtom
-  | ExpectedCell
+  | ExpectedCell Text
   | NoStack
   | AssignmentNotFound Text
   deriving stock (Show)

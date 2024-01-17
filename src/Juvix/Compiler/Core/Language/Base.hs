@@ -34,8 +34,21 @@ instance Pretty Symbol where
 instance Show Symbol where
   show = show . pretty
 
+defaultSymbol :: Word -> Symbol
+defaultSymbol = Symbol defaultModuleId
+
 uniqueName :: Text -> Symbol -> Text
 uniqueName txt sym = txt <> "_" <> show sym
+
+data TagUser = TagUser
+  { _tagUserModuleId :: ModuleId,
+    _tagUserWord :: Word
+  }
+  deriving stock (Eq, Generic, Ord, Show)
+
+instance Hashable TagUser
+
+instance Serialize TagUser
 
 -- | Tag of a constructor, uniquely identifying it. Tag values are consecutive
 -- and separate from symbol IDs. We might need fixed special tags in Core for
@@ -43,7 +56,7 @@ uniqueName txt sym = txt <> "_" <> show sym
 -- can treat them specially.
 data Tag
   = BuiltinTag BuiltinDataTag
-  | UserTag ModuleId Word
+  | UserTag TagUser
   deriving stock (Eq, Generic, Ord, Show)
 
 instance Hashable Tag
@@ -63,7 +76,7 @@ type Level = Int
 
 getUserTagId :: Tag -> Maybe Word
 getUserTagId = \case
-  UserTag _ u -> Just u
+  UserTag TagUser {..} -> Just _tagUserWord
   BuiltinTag {} -> Nothing
 
 -- | The first argument `bl` is the current binder level (the number of binders
@@ -77,3 +90,4 @@ getBinderIndex :: Level -> Level -> Index
 getBinderIndex bl lvl = bl - lvl - 1
 
 makeLenses ''Symbol
+makeLenses ''TagUser

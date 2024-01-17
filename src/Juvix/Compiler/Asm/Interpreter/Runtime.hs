@@ -25,7 +25,7 @@ data Runtime m a where
   ReplaceFrame :: Frame -> Runtime m ()
   ReplaceTailFrame :: Frame -> Runtime m ()
   ReadArg :: Offset -> Runtime m Val
-  ReadTemp :: Offset -> Runtime m Val
+  ReadTemp :: RefTemp -> Runtime m Val
   PushTempStack :: Val -> Runtime m ()
   PopTempStack :: Runtime m ()
   LogMessage :: Text -> Runtime m ()
@@ -79,13 +79,13 @@ runRuntime tab = runState (RuntimeState (CallStack []) emptyFrame [] Nothing tab
         return $
           fromMaybe
             (throwRuntimeError s "invalid argument area read")
-            (HashMap.lookup off (s ^. (runtimeFrame . frameArgs . argumentArea)))
-      ReadTemp off -> do
+            (HashMap.lookup off (s ^. runtimeFrame . frameArgs . argumentArea))
+      ReadTemp r -> do
         s <- get
         return $
           fromMaybe
             (throwRuntimeError s "invalid temporary stack read")
-            (Stack.nthFromBottom off (s ^. (runtimeFrame . frameTemp . temporaryStack)))
+            (Stack.nthFromBottom (r ^. refTempOffsetRef . offsetRefOffset) (s ^. runtimeFrame . frameTemp . temporaryStack))
       PushTempStack val ->
         modify' (over (runtimeFrame . frameTemp) (over temporaryStack (Stack.push val)))
       PopTempStack ->

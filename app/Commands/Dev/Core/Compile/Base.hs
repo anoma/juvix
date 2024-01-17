@@ -9,6 +9,7 @@ import Juvix.Compiler.Backend.C qualified as C
 import Juvix.Compiler.Backend.Geb qualified as Geb
 import Juvix.Compiler.Backend.VampIR.Translation qualified as VampIR
 import Juvix.Compiler.Core.Data.Module qualified as Core
+import Juvix.Compiler.Nockma.Pretty qualified as Nockma
 import System.FilePath (takeBaseName)
 
 data PipelineArg = PipelineArg
@@ -37,6 +38,7 @@ getEntry PipelineArg {..} = do
       TargetVampIR -> Backend.TargetVampIR
       TargetCore -> Backend.TargetCore
       TargetAsm -> Backend.TargetAsm
+      TargetNockma -> Backend.TargetNockma
 
     defaultOptLevel :: Int
     defaultOptLevel
@@ -74,15 +76,14 @@ runGebPipeline ::
 runGebPipeline pa@PipelineArg {..} = do
   entryPoint <- getEntry pa
   gebFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
-  let spec =
-        if
-            | _pipelineArgOptions ^. compileTerm -> Geb.OnlyTerm
-            | otherwise ->
-                Geb.LispPackage
-                  Geb.LispPackageSpec
-                    { _lispPackageName = fromString $ takeBaseName $ toFilePath gebFile,
-                      _lispPackageEntry = "*entry*"
-                    }
+  let spec
+        | _pipelineArgOptions ^. compileTerm = Geb.OnlyTerm
+        | otherwise =
+            Geb.LispPackage
+              Geb.LispPackageSpec
+                { _lispPackageName = fromString $ takeBaseName $ toFilePath gebFile,
+                  _lispPackageEntry = "*entry*"
+                }
   Geb.Result {..} <- getRight (run (runReader entryPoint (runError (coreToGeb spec _pipelineArgModule :: Sem '[Error JuvixError, Reader EntryPoint] Geb.Result))))
   embed @IO (writeFile (toFilePath gebFile) _resultCode)
 
@@ -101,7 +102,24 @@ runAsmPipeline :: (Members '[Embed IO, App, TaggedLock] r) => PipelineArg -> Sem
 runAsmPipeline pa@PipelineArg {..} = do
   entryPoint <- getEntry pa
   asmFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
-  r <- runReader entryPoint $ runError @JuvixError (coreToAsm _pipelineArgModule)
+  r <-
+    runReader entryPoint
+      . runError @JuvixError
+      . coreToAsm
+      $ _pipelineArgModule
   tab' <- getRight r
   let code = Asm.ppPrint tab' tab'
   embed @IO (writeFile (toFilePath asmFile) code)
+
+runNockmaPipeline :: (Members '[Embed IO, App, TaggedLock] r) => PipelineArg -> Sem r ()
+runNockmaPipeline pa@PipelineArg {..} = do
+  entryPoint <- getEntry pa
+  nockmaFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
+  r <-
+    runReader entryPoint
+      . runError @JuvixError
+      . coreToNockma
+      $ _pipelineArgModule
+  tab' <- getRight r
+  let code = Nockma.ppSerialize tab'
+  embed @IO (writeFile (toFilePath nockmaFile) code)

@@ -368,7 +368,7 @@ tempRef :: ParsecS r DirectRef
 tempRef = do
   kw kwTmp
   (off, _) <- brackets integer
-  return $ TempRef (OffsetRef (fromInteger off) Nothing)
+  return $ mkTempRef (OffsetRef (fromInteger off) Nothing)
 
 namedRef :: forall t e r. (Members '[Reader (ParserSig t e), State LocalParams] r) => ParsecS r DirectRef
 namedRef = do

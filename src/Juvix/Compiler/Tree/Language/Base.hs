@@ -38,7 +38,15 @@ data DirectRef
   | -- | TempRef references a value in the temporary stack (0-based offsets,
     --   counted from the _bottom_ of the temporary stack). JVT/JVA code:
     --   'tmp[<offset>]'.
-    TempRef OffsetRef
+    TempRef RefTemp
+
+mkTempRef :: OffsetRef -> DirectRef
+mkTempRef o = TempRef (RefTemp o Nothing)
+
+data RefTemp = RefTemp
+  { _refTempOffsetRef :: OffsetRef,
+    _refTempTempHeight :: Maybe Int
+  }
 
 -- | Constructor field reference. JVT/JVA code: '<dref>.<tag>[<offset>]'
 data Field = Field
@@ -53,3 +61,4 @@ data Field = Field
 makeLenses ''Field
 makeLenses ''OffsetRef
 makeLenses ''DirectRef
+makeLenses ''RefTemp

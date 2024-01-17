@@ -215,11 +215,13 @@ ppOffsetRef :: Text -> OffsetRef -> Sem r (Doc Ann)
 ppOffsetRef str OffsetRef {..} =
   return $ maybe (variable str <> lbracket <> integer _offsetRefOffset <> rbracket) variable _offsetRefName
 
+instance PrettyCode RefTemp where
+  ppCode = ppOffsetRef Str.tmp . (^. refTempOffsetRef)
+
 instance PrettyCode DirectRef where
-  ppCode :: DirectRef -> Sem r (Doc Ann)
   ppCode = \case
     ArgRef roff -> ppOffsetRef Str.arg roff
-    TempRef roff -> ppOffsetRef Str.tmp roff
+    TempRef roff -> ppCode roff
 
 instance PrettyCode Field where
   ppCode :: (Member (Reader Options) r) => Field -> Sem r (Doc Ann)
@@ -397,7 +399,7 @@ instance PrettyCode InfoTable where
         HashMap.filter
           ( \ii -> case ii ^. inductiveConstructors of
               BuiltinTag _ : _ -> False
-              UserTag _ _ : _ -> True
+              UserTag {} : _ -> True
               [] -> True
           )
 
