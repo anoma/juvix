@@ -9,6 +9,7 @@ import Juvix.Compiler.Asm.Data.InfoTable
 import Juvix.Compiler.Asm.Pretty.Base
 import Juvix.Compiler.Asm.Pretty.Options
 import Juvix.Data.PPOutput
+import Juvix.Prelude
 import Prettyprinter.Render.Terminal qualified as Ansi
 
 ppOutDefault :: (PrettyCode c) => InfoTable -> c -> AnsiText

@@ -10,6 +10,7 @@ import Juvix.Compiler.Asm.Extra
 import Juvix.Compiler.Asm.Options
 import Juvix.Compiler.Asm.Transformation
 import Juvix.Compiler.Pipeline.EntryPoint
+import Juvix.Prelude
 
 -- | Perform transformations on JuvixAsm necessary before the translation to
 -- JuvixReg

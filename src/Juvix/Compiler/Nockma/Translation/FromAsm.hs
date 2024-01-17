@@ -1,6 +1,7 @@
 module Juvix.Compiler.Nockma.Translation.FromAsm where
 
 import Juvix.Compiler.Asm.Data.InfoTable qualified as Asm
+import Juvix.Compiler.Asm.Language qualified as Asm
 import Juvix.Compiler.Nockma.Evaluator
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Stdlib
@@ -309,13 +310,13 @@ compile = mapM_ goCommand
 
     goPush :: Asm.Value -> Sem r ()
     goPush = \case
-      Asm.ConstInt i
+      Asm.Constant (Asm.ConstInt i)
         | i < 0 -> unsupported "negative numbers"
         | otherwise -> pushNat (fromInteger i)
-      Asm.ConstBool i -> push (nockBoolLiteral i)
-      Asm.ConstString {} -> stringsErr
-      Asm.ConstUnit -> push constUnit
-      Asm.ConstVoid -> push constVoid
+      Asm.Constant (Asm.ConstBool i) -> push (nockBoolLiteral i)
+      Asm.Constant Asm.ConstString {} -> stringsErr
+      Asm.Constant Asm.ConstUnit -> push constUnit
+      Asm.Constant Asm.ConstVoid -> push constVoid
       Asm.Ref r -> pushMemValue r
       where
         pushMemValue :: Asm.MemValue -> Sem r ()

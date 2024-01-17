@@ -12,6 +12,7 @@ import Juvix.Compiler.Asm.Data.InfoTable
 import Juvix.Compiler.Asm.Data.InfoTableBuilder
 import Juvix.Compiler.Asm.Extra.Base
 import Juvix.Compiler.Asm.Extra.Type
+import Juvix.Compiler.Asm.Language
 import Juvix.Compiler.Asm.Translation.FromSource.Lexer
 import Juvix.Parser.Error
 import Text.Megaparsec qualified as P

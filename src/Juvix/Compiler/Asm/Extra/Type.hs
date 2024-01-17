@@ -7,6 +7,7 @@ where
 import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Asm.Data.InfoTable
 import Juvix.Compiler.Asm.Error
+import Juvix.Compiler.Asm.Language
 import Juvix.Compiler.Asm.Pretty
 import Juvix.Compiler.Tree.Extra.Type
 

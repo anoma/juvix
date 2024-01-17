@@ -224,7 +224,7 @@ genCode fi =
     goDirectRef :: Tree.DirectRef -> DirectRef
     goDirectRef = \case
       Tree.ArgRef off -> ArgRef off
-      Tree.TempRef off -> TempRef off
+      Tree.TempRef off -> mkTempRef off
 
     goFieldRef :: Tree.Field -> Field
     goFieldRef = fmap goDirectRef
