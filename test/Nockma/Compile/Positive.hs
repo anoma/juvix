@@ -198,6 +198,16 @@ defTest _testName _testCheck _testProgram =
       ..
     }
 
+defTestNoJets :: Text -> Check () -> Sem '[Compiler] () -> Test
+defTestNoJets _testName _testCheck _testProgram =
+  Test
+    { _testEvalOptions =
+        EvalOptions
+          { _evalIgnoreStdlibCalls = True
+          },
+      ..
+    }
+
 tests :: [Test]
 tests =
   [ defTest "push" (eqStack ValueStack [nock| [1 5 nil] |]) $ do
@@ -233,6 +243,18 @@ tests =
       pushNat 15
       callStdlib StdlibDiv,
     defTest "mod" (eqStack ValueStack [nock| [5 nil] |]) $ do
+      pushNat 10
+      pushNat 15
+      callStdlib StdlibMod,
+    defTestNoJets "mul no jets" (eqStack ValueStack [nock| [24 nil] |]) $ do
+      pushNat 8
+      pushNat 3
+      callStdlib StdlibMul,
+    defTestNoJets "div no jets" (eqStack ValueStack [nock| [3 nil] |]) $ do
+      pushNat 5
+      pushNat 15
+      callStdlib StdlibDiv,
+    defTestNoJets "mod no jets" (eqStack ValueStack [nock| [5 nil] |]) $ do
       pushNat 10
       pushNat 15
       callStdlib StdlibMod,
