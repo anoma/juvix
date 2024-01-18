@@ -140,7 +140,6 @@ parseStdlibFunction t = textToStdlibFunctionMap ^. at t
 atomOps :: HashMap Text NockOp
 atomOps = HashMap.fromList [(prettyText op, op) | op <- allElements]
 
--- TODO better field names
 data StdlibCallCell a = StdlibCallCell
   { _stdlibCallCell :: StdlibCall a,
     _stdlibCallRaw :: OperatorCell a
