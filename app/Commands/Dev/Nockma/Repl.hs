@@ -8,6 +8,7 @@ import Control.Exception (throwIO)
 import Control.Monad.State.Strict qualified as State
 import Data.String.Interpolate (__i)
 import Juvix.Compiler.Nockma.Evaluator (NockEvalError, evalRepl, fromReplTerm, programAssignments)
+import Juvix.Compiler.Nockma.Evaluator.Options
 import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Pretty (ppPrint)
 import Juvix.Compiler.Nockma.Pretty qualified as Nockma
@@ -16,7 +17,6 @@ import Juvix.Parser.Error
 import System.Console.Haskeline
 import System.Console.Repline qualified as Repline
 import Prelude (read)
-import Juvix.Compiler.Nockma.Evaluator.Options
 
 type ReplS = State.StateT ReplState IO
 
