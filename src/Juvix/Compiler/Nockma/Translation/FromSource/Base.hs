@@ -6,6 +6,7 @@ import Data.Text qualified as Text
 import Juvix.Compiler.Nockma.Language
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Parser.Error
+import Juvix.Parser.Lexer (withLoc)
 import Juvix.Prelude hiding (Atom, many, some)
 import Juvix.Prelude.Parsing hiding (runParser)
 import Text.Megaparsec qualified as P
@@ -74,18 +75,29 @@ dottedNatural = lexeme $ do
 
 atomOp :: Parser (Atom Natural)
 atomOp = do
-  op' <- choice [symbol opName $> op | (opName, op) <- HashMap.toList atomOps]
-  return (Atom (serializeNockOp op') (Irrelevant (Just AtomHintOp)))
+  WithLoc loc op' <- withLoc (choice [symbol opName $> op | (opName, op) <- HashMap.toList atomOps])
+  let info =
+        AtomInfo
+          { _atomInfoHint = Just AtomHintOp,
+            _atomInfoLoc = Just loc
+          }
+  return (Atom (serializeNockOp op') (Irrelevant info))
 
 atomDirection :: Parser (Atom Natural)
 atomDirection = do
-  dirs <-
-    symbol "S" $> []
-      <|> NonEmpty.toList <$> some (choice [symbol "L" $> L, symbol "R" $> R])
-  return (Atom (serializePath dirs) (Irrelevant (Just AtomHintPath)))
+  WithLoc loc dirs <-
+    withLoc $
+      symbol "S" $> []
+        <|> NonEmpty.toList <$> some (choice [symbol "L" $> L, symbol "R" $> R])
+  let info =
+        AtomInfo
+          { _atomInfoHint = Just AtomHintOp,
+            _atomInfoLoc = Just loc
+          }
+  return (Atom (serializePath dirs) (Irrelevant info))
 
 atomNat :: Parser (Atom Natural)
-atomNat = (\n -> Atom n (Irrelevant Nothing)) <$> dottedNatural
+atomNat = (\n -> Atom n (Irrelevant emptyAtomInfo)) <$> dottedNatural
 
 atomBool :: Parser (Atom Natural)
 atomBool =

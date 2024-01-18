@@ -59,9 +59,15 @@ data Cell a = Cell'
   }
   deriving stock (Show, Eq, Lift)
 
+data AtomInfo = AtomInfo
+  { _atomInfoHint :: Maybe AtomHint,
+    _atomInfoLoc :: Maybe Interval
+  }
+  deriving stock (Show, Eq, Lift)
+
 data Atom a = Atom
   { _atom :: a,
-    _atomInfo :: Irrelevant (Maybe AtomHint)
+    _atomInfo :: Irrelevant AtomInfo
   }
   deriving stock (Show, Eq, Lift)
 
@@ -192,6 +198,13 @@ makeLenses ''Program
 makeLenses ''Assignment
 makeLenses ''WithStack
 makeLenses ''EncodedPath
+makeLenses ''AtomInfo
+
+atomHint :: Lens' (Atom a) (Maybe AtomHint)
+atomHint = atomInfo . unIrrelevant . atomInfoHint
+
+atomLoc :: Lens' (Atom a) (Maybe Interval)
+atomLoc = atomInfo . unIrrelevant . atomInfoLoc
 
 naturalNockOps :: HashMap Natural NockOp
 naturalNockOps = HashMap.fromList [(serializeOp op, op) | op <- allElements]
@@ -294,14 +307,20 @@ nockBoolLiteral b
 instance NockNatural Natural where
   type ErrNockNatural Natural = NockNaturalNaturalError
   nockNatural a = return (a ^. atom)
-  nockTrue = Atom 0 (Irrelevant (Just AtomHintBool))
-  nockFalse = Atom 1 (Irrelevant (Just AtomHintBool))
-  nockNil = Atom 0 (Irrelevant (Just AtomHintNil))
+  nockTrue = Atom 0 (Irrelevant (atomHintInfo AtomHintBool))
+  nockFalse = Atom 1 (Irrelevant (atomHintInfo AtomHintBool))
+  nockNil = Atom 0 (Irrelevant (atomHintInfo AtomHintNil))
   nockSucc = over atom succ
   errInvalidOp atm = NaturalInvalidOp atm
   errInvalidPath atm = NaturalInvalidPath atm
   serializeNockOp = serializeOp
   serializePath = (^. encodedPath) . encodePath
+
+atomHintInfo :: AtomHint -> AtomInfo
+atomHintInfo h =
+  emptyAtomInfo
+    { _atomInfoHint = Just h
+    }
 
 class IsNock nock where
   toNock :: nock -> Term Natural
@@ -316,10 +335,10 @@ instance IsNock (Cell Natural) where
   toNock = TermCell
 
 instance IsNock Natural where
-  toNock n = TermAtom (Atom n (Irrelevant Nothing))
+  toNock = TAtom
 
 instance IsNock NockOp where
-  toNock op = toNock (Atom (serializeOp op) (Irrelevant (Just AtomHintOp)))
+  toNock op = toNock (Atom (serializeOp op) (Irrelevant (atomHintInfo AtomHintOp)))
 
 instance IsNock Bool where
   toNock = \case
@@ -327,7 +346,7 @@ instance IsNock Bool where
     True -> toNock (nockTrue @Natural)
 
 instance IsNock Path where
-  toNock pos = TermAtom (Atom (encodePath pos ^. encodedPath) (Irrelevant (Just AtomHintPath)))
+  toNock pos = TermAtom (Atom (encodePath pos ^. encodedPath) (Irrelevant (atomHintInfo AtomHintPath)))
 
 instance IsNock EncodedPath where
   toNock = toNock . decodePath'
@@ -386,4 +405,11 @@ pattern TCell l r <- TermCell (Cell' l r _)
 pattern TAtom :: a -> Term a
 pattern TAtom a <- TermAtom (Atom a _)
   where
-    TAtom a = TermAtom (Atom a (Irrelevant Nothing))
+    TAtom a = TermAtom (Atom a (Irrelevant emptyAtomInfo))
+
+emptyAtomInfo :: AtomInfo
+emptyAtomInfo =
+  AtomInfo
+    { _atomInfoHint = Nothing,
+      _atomInfoLoc = Nothing
+    }

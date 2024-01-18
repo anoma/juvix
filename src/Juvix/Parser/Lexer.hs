@@ -215,7 +215,7 @@ interval ma = do
   end <- curLoc
   return (res, mkInterval start end)
 
-withLoc :: ParsecS r a -> ParsecS r (WithLoc a)
+withLoc :: (MonadParsec e Text m) => m a -> m (WithLoc a)
 withLoc ma = do
   (a, i) <- interval ma
   return (WithLoc i a)

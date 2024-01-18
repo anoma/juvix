@@ -28,7 +28,7 @@ instance (PrettyCode a, NockNatural a) => PrettyCode (Atom a) where
     . failFromError @(ErrNockNatural a)
     $ do
       whenM (asks (^. optIgnoreHints)) fail
-      h' <- failMaybe (h ^. unIrrelevant)
+      h' <- failMaybe (atm ^. atomHint)
       case h' of
         AtomHintOp -> nockOp atm >>= ppCode
         AtomHintPath -> nockPath atm >>= ppCode
