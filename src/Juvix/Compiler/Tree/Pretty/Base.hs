@@ -16,19 +16,6 @@ import Juvix.Compiler.Tree.Pretty.Options
 import Juvix.Data.CodeAnn
 import Juvix.Extra.Strings qualified as Str
 
-defaultOptions :: InfoTable -> Options
-defaultOptions tab =
-  Options
-    { _optSymbolNames =
-        fmap (^. functionName) (tab ^. infoFunctions)
-          <> fmap (^. inductiveName) (tab ^. infoInductives),
-      _optTagNames =
-        fmap (^. constructorName) (tab ^. infoConstrs)
-    }
-
-toCoreOptions :: Options -> Core.Options
-toCoreOptions Options {} = Core.defaultOptions
-
 doc :: (PrettyCode c) => Options -> c -> Doc Ann
 doc opts =
   run
@@ -326,20 +313,20 @@ instance (PrettyCode a) => PrettyCode [a] where
     cs <- mapM ppCode x
     return $ encloseSep "[" "]" ", " cs
 
-instance (PrettyCode t) => PrettyCode (FunctionInfo' t e) where
-  ppCode FunctionInfo {..} = do
-    argtys <- mapM ppCode (take _functionArgsNum (typeArgs _functionType))
-    let argnames = map (fmap variable) _functionArgNames
-        args = zipWithExact (\mn ty -> maybe mempty (\n -> n <+> colon <> space) mn <> ty) argnames argtys
-    targetty <- ppCode (if _functionArgsNum == 0 then _functionType else typeTarget _functionType)
-    c <- ppCode _functionCode
-    return $
-      keyword Str.function
-        <+> annotate (AnnKind KNameFunction) (pretty (quoteFunName $ quoteName _functionName))
-          <> encloseSep lparen rparen ", " args
-        <+> colon
-        <+> targetty
-        <+> braces' c
+ppFunInfo :: (Member (Reader Options) r) => (t -> Sem r (Doc Ann)) -> FunctionInfo' t e -> Sem r (Doc Ann)
+ppFunInfo ppCode' FunctionInfo {..} = do
+  argtys <- mapM ppCode (take _functionArgsNum (typeArgs _functionType))
+  let argnames = map (fmap variable) _functionArgNames
+      args = zipWithExact (\mn ty -> maybe mempty (\n -> n <+> colon <> space) mn <> ty) argnames argtys
+  targetty <- ppCode (if _functionArgsNum == 0 then _functionType else typeTarget _functionType)
+  c <- ppCode' _functionCode
+  return $
+    keyword Str.function
+      <+> annotate (AnnKind KNameFunction) (pretty (quoteFunName $ quoteName _functionName))
+        <> encloseSep lparen rparen ", " args
+      <+> colon
+      <+> targetty
+      <+> braces' c
 
 ppFunSig :: (Member (Reader Options) r) => FunctionInfo' t e -> Sem r (Doc Ann)
 ppFunSig FunctionInfo {..} = do
@@ -363,21 +350,21 @@ ppInductive tab InductiveInfo {..} = do
   ctrs <- mapM (ppCode . lookupConstrInfo tab) _inductiveConstructors
   return $ kwInductive <+> annotate (AnnKind KNameInductive) (pretty (quoteName _inductiveName)) <+> braces' (vcat (map (<> semi) ctrs))
 
-instance (PrettyCode t) => PrettyCode (InfoTable' t e) where
-  ppCode tab@InfoTable {..} = do
-    inds <- mapM (ppInductive tab) (HashMap.elems (filterOutBuiltins _infoInductives))
-    funsigs <- mapM ppFunSig (HashMap.elems _infoFunctions)
-    funs <- mapM ppCode (HashMap.elems _infoFunctions)
-    return $ vcat (map (<> line) inds) <> line <> vcat funsigs <> line <> line <> vcat (map (<> line) funs)
-    where
-      filterOutBuiltins :: HashMap Symbol InductiveInfo -> HashMap Symbol InductiveInfo
-      filterOutBuiltins =
-        HashMap.filter
-          ( \ii -> case ii ^. inductiveConstructors of
-              BuiltinTag _ : _ -> False
-              UserTag {} : _ -> True
-              [] -> True
-          )
+ppInfoTable :: (Member (Reader Options) r) => (t -> Sem r (Doc Ann)) -> InfoTable' t e -> Sem r (Doc Ann)
+ppInfoTable ppCode' tab@InfoTable {..} = do
+  inds <- mapM (ppInductive tab) (HashMap.elems (filterOutBuiltins _infoInductives))
+  funsigs <- mapM ppFunSig (HashMap.elems _infoFunctions)
+  funs <- mapM (ppFunInfo ppCode') (HashMap.elems _infoFunctions)
+  return $ vcat (map (<> line) inds) <> line <> vcat funsigs <> line <> line <> vcat (map (<> line) funs)
+  where
+    filterOutBuiltins :: HashMap Symbol InductiveInfo -> HashMap Symbol InductiveInfo
+    filterOutBuiltins =
+      HashMap.filter
+        ( \ii -> case ii ^. inductiveConstructors of
+            BuiltinTag _ : _ -> False
+            UserTag {} : _ -> True
+            [] -> True
+        )
 
 {--------------------------------------------------------------------------------}
 {- helper functions -}
