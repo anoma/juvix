@@ -8,6 +8,7 @@ where
 import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Pretty.Options
 import Juvix.Data.CodeAnn
+import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude hiding (Atom, Path)
 
 doc :: (PrettyCode c) => Options -> c -> Doc Ann
@@ -55,15 +56,28 @@ instance PrettyCode NockOp where
   ppCode =
     return . annotate (AnnKind KNameFunction) . pretty
 
+instance PrettyCode StdlibFunction where
+  ppCode = return . pretty
+
+instance (PrettyCode a, NockNatural a) => PrettyCode (StdlibCall a) where
+  ppCode c = do
+    fun <- ppCode (c ^. stdlibCallFunction)
+    args <- ppCode (c ^. stdlibCallArgs)
+    return (Str.stdlibTag <> fun <+> Str.argsTag <> args)
+
 instance (PrettyCode a, NockNatural a) => PrettyCode (Cell a) where
   ppCode c = do
     m <- asks (^. optPrettyMode)
-    inside <- case m of
+    stdlibCall <- runFail $ do
+      failWhenM (asks (^. optIgnoreHints))
+      failMaybe (c ^. cellInfo . unIrrelevant) >>= ppCode
+    components <- case m of
       AllDelimiters -> do
         l' <- ppCode (c ^. cellLeft)
         r' <- ppCode (c ^. cellRight)
         return (l' <+> r')
       MinimizeDelimiters -> sep <$> mapM ppCode (unfoldCell c)
+    let inside = stdlibCall <?+> components
     return (oneLineOrNextBrackets inside)
 
 unfoldCell :: Cell a -> NonEmpty (Term a)

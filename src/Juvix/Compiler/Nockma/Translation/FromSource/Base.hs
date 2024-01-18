@@ -4,6 +4,7 @@ import Data.HashMap.Internal.Strict qualified as HashMap
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.Text qualified as Text
 import Juvix.Compiler.Nockma.Language qualified as N
+import Juvix.Extra.Strings qualified as Str
 import Juvix.Parser.Error
 import Juvix.Prelude hiding (Atom, many, some)
 import Juvix.Prelude.Parsing hiding (runParser)
@@ -119,9 +120,9 @@ cell = do
   where
     stdlibCall :: Parser (N.StdlibCall Natural)
     stdlibCall = do
-      chunk "stdlib@"
+      chunk Str.stdlibTag
       f <- stdlibFun
-      chunk "args@"
+      chunk Str.argsTag
       args <- term
       return
         N.StdlibCall
