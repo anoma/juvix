@@ -10,6 +10,7 @@ import Juvix.Compiler.Backend.Geb qualified as Geb
 import Juvix.Compiler.Backend.VampIR.Translation qualified as VampIR
 import Juvix.Compiler.Core.Data.Module qualified as Core
 import Juvix.Compiler.Nockma.Pretty qualified as Nockma
+import Juvix.Compiler.Tree.Pretty qualified as Tree
 import System.FilePath (takeBaseName)
 
 data PipelineArg = PipelineArg
@@ -38,6 +39,7 @@ getEntry PipelineArg {..} = do
       TargetVampIR -> Backend.TargetVampIR
       TargetCore -> Backend.TargetCore
       TargetAsm -> Backend.TargetAsm
+      TargetTree -> Backend.TargetTree
       TargetNockma -> Backend.TargetNockma
 
     defaultOptLevel :: Int
@@ -110,6 +112,19 @@ runAsmPipeline pa@PipelineArg {..} = do
   tab' <- getRight r
   let code = Asm.ppPrint tab' tab'
   embed @IO (writeFile (toFilePath asmFile) code)
+
+runTreePipeline :: (Members '[Embed IO, App, TaggedLock] r) => PipelineArg -> Sem r ()
+runTreePipeline pa@PipelineArg {..} = do
+  entryPoint <- getEntry pa
+  treeFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
+  r <-
+    runReader entryPoint
+      . runError @JuvixError
+      . coreToTree
+      $ _pipelineArgModule
+  tab' <- getRight r
+  let code = Tree.ppPrint tab' tab'
+  embed @IO (writeFile (toFilePath treeFile) code)
 
 runNockmaPipeline :: (Members '[Embed IO, App, TaggedLock] r) => PipelineArg -> Sem r ()
 runNockmaPipeline pa@PipelineArg {..} = do

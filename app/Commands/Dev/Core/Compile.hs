@@ -19,6 +19,7 @@ runCommand opts = do
     TargetVampIR -> runVampIRPipeline arg
     TargetCore -> return ()
     TargetAsm -> runAsmPipeline arg
+    TargetTree -> runTreePipeline arg
     TargetNockma -> runNockmaPipeline arg
   where
     getFile :: Sem r (Path Abs File)

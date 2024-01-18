@@ -41,7 +41,10 @@ quoteName txt =
     (uncurry Text.replace)
     txt
     [ ("$", "__dollar__"),
-      (":", "__colon__")
+      (":", "__colon__"),
+      ("@", "__at__"),
+      ("arg", "__arg__"),
+      ("tmp", "__tmp__")
     ]
 
 quoteFunName :: Text -> Text
@@ -139,7 +142,7 @@ instance PrettyCode Type where
 
 ppOffsetRef :: Text -> OffsetRef -> Sem r (Doc Ann)
 ppOffsetRef str OffsetRef {..} =
-  return $ maybe (variable str <> lbracket <> integer _offsetRefOffset <> rbracket) variable _offsetRefName
+  return $ maybe (variable str <> lbracket <> integer _offsetRefOffset <> rbracket) (variable . quoteName) _offsetRefName
 
 instance PrettyCode RefTemp where
   ppCode = ppOffsetRef Str.tmp . (^. refTempOffsetRef)
@@ -258,14 +261,14 @@ instance PrettyCode NodeBranch where
     return $
       primitive Str.instrBr
         <> parens arg
-        <+> braces' (true_ <> colon <+> br1 <> semi <> false_ <> colon <+> br2)
+        <+> braces' (true_ <> colon <+> br1 <> line <> false_ <> colon <+> br2)
 
 instance PrettyCode CaseBranch where
   ppCode :: (Member (Reader Options) r) => CaseBranch -> Sem r (Doc Ann)
   ppCode CaseBranch {..} = do
     name <- ppConstrName _caseBranchTag
     br <- ppCode _caseBranchBody
-    let br' = if _caseBranchSave then primitive Str.save <+> braces (space <> br <> space) else br
+    let br' = if _caseBranchSave then primitive Str.save <+> braces' br else br
     return $ name <> colon <+> br'
 
 ppDefaultBranch :: (Member (Reader Options) r) => Node -> Sem r (Doc Ann)
@@ -279,7 +282,7 @@ instance PrettyCode NodeCase where
     arg <- ppCode _nodeCaseArg
     brs <- mapM ppCode _nodeCaseBranches
     def <- maybe (return Nothing) (fmap Just . ppDefaultBranch) _nodeCaseDefault
-    let args' = hsep $ punctuate semi (brs <> (maybeToList def))
+    let args' = vsep (brs <> (maybeToList def))
     return $ primitive Str.case_ <> brackets ind <> parens arg <+> braces' args'
 
 instance PrettyCode NodeSave where
@@ -289,7 +292,7 @@ instance PrettyCode NodeSave where
     body <- ppCode _nodeSaveBody
     let name =
           case _nodeSaveName of
-            Just n -> brackets (pretty (quoteName n))
+            Just n -> brackets (variable (quoteName n))
             Nothing -> mempty
     return $ primitive Str.save <> name <> parens arg <+> braces' body
 
@@ -365,6 +368,9 @@ ppInfoTable ppCode' tab@InfoTable {..} = do
             UserTag {} : _ -> True
             [] -> True
         )
+
+instance PrettyCode InfoTable where
+  ppCode = ppInfoTable ppCode
 
 {--------------------------------------------------------------------------------}
 {- helper functions -}
