@@ -101,13 +101,17 @@ getDirectRefType dr mem = case dr of
   TempRef RefTemp {..} ->
     bottomTempStack (_refTempOffsetRef ^. offsetRefOffset) mem
 
+getConstantType :: Constant -> Type
+getConstantType = \case
+  ConstInt {} -> mkTypeInteger
+  ConstBool {} -> mkTypeBool
+  ConstString {} -> TyString
+  ConstUnit -> TyUnit
+  ConstVoid -> TyVoid
+
 getValueType' :: (Member (Error AsmError) r) => Maybe Location -> InfoTable -> Memory -> Value -> Sem r Type
 getValueType' loc tab mem = \case
-  Constant ConstInt {} -> return mkTypeInteger
-  Constant ConstBool {} -> return mkTypeBool
-  Constant ConstString {} -> return TyString
-  Constant ConstUnit -> return TyUnit
-  Constant ConstVoid -> return TyVoid
+  Constant c -> return (getConstantType c)
   Ref val -> case getMemValueType tab val mem of
     Just ty -> return ty
     Nothing -> throw $ AsmError loc "invalid memory reference"

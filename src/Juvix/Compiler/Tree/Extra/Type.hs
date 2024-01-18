@@ -23,7 +23,7 @@ mkTypeFun args tgt = case args of
 unfoldType :: Type -> ([Type], Type)
 unfoldType ty = (typeArgs ty, typeTarget ty)
 
--- converts e.g. `A -> B -> C -> D` to `(A, B, C) -> D` where `D` is an atom
+-- | Converts e.g. `A -> B -> C -> D` to `(A, B, C) -> D` where `D` is an atom
 uncurryType :: Type -> Type
 uncurryType ty = case typeArgs ty of
   [] ->
@@ -32,7 +32,7 @@ uncurryType ty = case typeArgs ty of
     let ty' = uncurryType (typeTarget ty)
      in mkTypeFun (tyargs ++ typeArgs ty') (typeTarget ty')
 
--- converts e.g. `(A, B, C) -> (D, E) -> F` to `A -> B -> C -> D -> E -> F`
+-- | Converts e.g. `(A, B, C) -> (D, E) -> F` to `A -> B -> C -> D -> E -> F`
 -- where `F` is an atom
 curryType :: Type -> Type
 curryType ty = case typeArgs ty of

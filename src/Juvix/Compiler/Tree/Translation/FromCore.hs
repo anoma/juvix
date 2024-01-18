@@ -23,21 +23,14 @@ fromCore tab =
 genCode :: Core.InfoTable -> Core.FunctionInfo -> FunctionInfo
 genCode infoTable fi =
   let argnames = map (Just . (^. Core.argumentName)) (fi ^. Core.functionArgsInfo)
-      code =
-        go
-          0
-          ( BL.fromList $
-              reverse
-                ( map
-                    (DRef . ArgRef)
-                    ( zipWithExact
-                        OffsetRef
-                        [0 .. fi ^. Core.functionArgsNum - 1]
-                        argnames
-                    )
-                )
+      bl =
+        BL.fromList . reverse $
+          ( zipWithExact
+              (\x y -> DRef $ ArgRef $ OffsetRef x y)
+              [0 .. fi ^. Core.functionArgsNum - 1]
+              argnames
           )
-          (fi ^. Core.functionBody)
+      code = go 0 bl (fi ^. Core.functionBody)
    in FunctionInfo
         { _functionName = fi ^. Core.functionName,
           _functionLocation = fi ^. Core.functionLocation,
@@ -66,20 +59,19 @@ genCode infoTable fi =
       MemRef (BL.lookup _varIndex refs)
 
     goIdent :: Core.Ident -> Node
-    goIdent Core.Ident {..} =
-      if
-          | getArgsNum _identSymbol == 0 ->
-              Call $
-                NodeCall
-                  { _nodeCallType = CallFun _identSymbol,
-                    _nodeCallArgs = []
-                  }
-          | otherwise ->
-              AllocClosure $
-                NodeAllocClosure
-                  { _nodeAllocClosureFunSymbol = _identSymbol,
-                    _nodeAllocClosureArgs = []
-                  }
+    goIdent Core.Ident {..}
+      | getArgsNum _identSymbol == 0 =
+          Call $
+            NodeCall
+              { _nodeCallType = CallFun _identSymbol,
+                _nodeCallArgs = []
+              }
+      | otherwise =
+          AllocClosure $
+            NodeAllocClosure
+              { _nodeAllocClosureFunSymbol = _identSymbol,
+                _nodeAllocClosureArgs = []
+              }
 
     goConstant :: Core.Constant -> Node
     goConstant = \case
@@ -89,11 +81,11 @@ genCode infoTable fi =
         Const (ConstString s)
 
     goApps :: Int -> BinderList MemRef -> Core.Apps -> Node
-    goApps tempSize refs (Core.Apps {..}) =
+    goApps tempSize refs Core.Apps {..} =
       let suppliedArgs = map (go tempSize refs) _appsArgs
           suppliedArgsNum = length suppliedArgs
        in case _appsFun of
-            Core.FunIdent (Core.Ident {..}) ->
+            Core.FunIdent Core.Ident {..} ->
               if
                   | argsNum > suppliedArgsNum ->
                       AllocClosure $
@@ -133,7 +125,7 @@ genCode infoTable fi =
                   }
 
     goBuiltinApp :: Int -> BinderList MemRef -> Core.BuiltinApp -> Node
-    goBuiltinApp tempSize refs (Core.BuiltinApp {..}) =
+    goBuiltinApp tempSize refs Core.BuiltinApp {..} =
       case args of
         [arg] ->
           Unop $
@@ -183,7 +175,7 @@ genCode infoTable fi =
         body = go (tempSize + 1) (BL.cons (DRef (mkTempRef nameRef)) refs) _letBody
 
     goCase :: Int -> BinderList MemRef -> Core.Case -> Node
-    goCase tempSize refs (Core.Case {..}) =
+    goCase tempSize refs Core.Case {..} =
       Case $
         NodeCase
           { _nodeCaseArg = go tempSize refs _caseValue,
@@ -195,7 +187,7 @@ genCode infoTable fi =
         compileCaseBranches :: [Core.CaseBranch] -> [CaseBranch]
         compileCaseBranches branches =
           map
-            ( \(Core.CaseBranch {..}) ->
+            ( \Core.CaseBranch {..} ->
                 if
                     | _caseBranchBindersNum == 0 ->
                         compileCaseBranchNoBinders _caseBranchTag _caseBranchBody
@@ -241,7 +233,7 @@ genCode infoTable fi =
         compileCaseDefault = go tempSize refs
 
     goIf :: Int -> BinderList MemRef -> Core.If -> Node
-    goIf tempSize refs (Core.If {..}) =
+    goIf tempSize refs Core.If {..} =
       Branch $
         NodeBranch
           { _nodeBranchArg = go tempSize refs _ifValue,

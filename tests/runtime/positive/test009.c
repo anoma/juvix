@@ -16,10 +16,10 @@ int main() {
 
     JUVIX_FUNCTION_NS(juvix_function_calculate);
     {
-        DECL_STMP(0);
-        JUVIX_INT_MUL(STMP(0), ARG(2), ARG(1));
-        JUVIX_INT_ADD(STMP(0), STMP(0), ARG(0));
-        juvix_result = STMP(0);
+        DECL_TMP(0);
+        JUVIX_INT_MUL(TMP(0), ARG(2), ARG(1));
+        JUVIX_INT_ADD(TMP(0), TMP(0), ARG(0));
+        juvix_result = TMP(0);
         RETURN_NS;
     }
 

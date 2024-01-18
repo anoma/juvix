@@ -14,8 +14,7 @@ data FunctionInfo = FunctionInfo
     _functionLocation :: Maybe Location,
     _functionSymbol :: Symbol,
     _functionArgsNum :: Int,
-    _functionStackVarsNum :: Int,
-    _functionTempVarsNum :: Int,
+    _functionLocalVarsNum :: Int,
     _functionCode :: Code
   }
 
