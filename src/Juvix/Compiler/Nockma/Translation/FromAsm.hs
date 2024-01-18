@@ -113,7 +113,7 @@ functionPath = \case
   FunctionArgs -> [R]
 
 -- | The stdlib paths are obtained using scripts/nockma-stdlib-parser.sh
-stdlibPath :: StdlibFunction -> Path
+stdlibPath :: StdlibFunction nat ty -> Path
 stdlibPath =
   decodePath' . EncodedPath . \case
     StdlibDec -> 342
@@ -140,7 +140,7 @@ data Compiler m a where
   IncrementOn :: StackId -> Compiler m ()
   Branch :: m () -> m () -> Compiler m ()
   Save :: Bool -> m () -> Compiler m ()
-  CallStdlibOn :: StackId -> StdlibFunction -> Compiler m ()
+  CallStdlibOn :: StackId -> StdlibFunction Natural ty -> Compiler m ()
   AsmReturn :: Compiler m ()
   GetConstructorArity :: Asm.Tag -> Compiler m Natural
   GetFunctionArity :: FunctionId -> Compiler m Natural
@@ -753,10 +753,10 @@ traceTerm' t =
 incrementOn' :: (Members '[Output (Term Natural)] r) => StackId -> Sem r ()
 incrementOn' s = output (replaceOnStack s (OpInc # stackSliceAsCell s 0 0))
 
-callStdlib :: (Members '[Compiler] r) => StdlibFunction -> Sem r ()
+callStdlib :: (Members '[Compiler] r) => StdlibFunction Natural ty -> Sem r ()
 callStdlib = callStdlibOn ValueStack
 
-callStdlibOn' :: (Members '[Output (Term Natural)] r) => StackId -> StdlibFunction -> Sem r ()
+callStdlibOn' :: (Members '[Output (Term Natural)] r) => StackId -> StdlibFunction Natural ty -> Sem r ()
 callStdlibOn' s f = do
   let fNumArgs = stdlibNumArgs f
       fPath = stdlibPath f

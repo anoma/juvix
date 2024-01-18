@@ -232,6 +232,18 @@ tests =
       pushNat 33333
       pushNat 22222
       add,
+    Test "mul big" (eqStack ValueStack [nock| [1111088889 nil] |]) $ do
+      pushNat 33333
+      pushNat 33333
+      mul,
+    Test "sub big" (eqStack ValueStack [nock| [66666 nil] |]) $ do
+      pushNat 33333
+      pushNat 99999
+      callStdlib StdlibSub,
+    Test "le big" (eqStack ValueStack [nock| [true nil] |]) $ do
+      pushNat 99999
+      pushNat 999
+      callStdlib StdlibLe,
     Test "pow2" (eqStack ValueStack [nock| [1 2 8 32 nil] |]) $ do
       pushNat 5
       pow2

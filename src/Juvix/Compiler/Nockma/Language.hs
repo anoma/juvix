@@ -5,6 +5,7 @@ module Juvix.Compiler.Nockma.Language
 where
 
 import Data.HashMap.Strict qualified as HashMap
+import Data.Kind qualified as GHC
 import GHC.Base (Type)
 import Juvix.Compiler.Core.Language.Base (Symbol)
 import Juvix.Prelude hiding (Atom, Path)
@@ -45,11 +46,13 @@ data Term a
   | TermCell (Cell a)
   deriving stock (Show, Eq, Lift)
 
-data StdlibCall a = StdlibCall
+data StdlibCall a = forall ty.
+  StdlibCall
   { _stdlibCallArgs :: Term a,
-    _stdlibCallFunction :: StdlibFunction
+    _stdlibCallFunction :: StdlibFunction a ty
   }
-  deriving stock (Show, Lift)
+
+deriving stock instance (Lift a) => Lift (StdlibCall a)
 
 data Cell a = Cell'
   { _cellLeft :: Term a,
@@ -105,16 +108,18 @@ instance Pretty NockOp where
     OpHint -> "hint"
     OpTrace -> "trace"
 
-data StdlibFunction
-  = StdlibDec
-  | StdlibAdd
-  | StdlibSub
-  | StdlibMul
-  | StdlibDiv
-  | StdlibMod
-  | StdlibLt
-  | StdlibLe
-  deriving stock (Show, Lift)
+-- is the Gadt justified?
+data StdlibFunction nat :: GHC.Type -> GHC.Type where
+  StdlibDec :: StdlibFunction nat (nat -> nat)
+  StdlibAdd :: StdlibFunction nat (nat -> nat -> nat)
+  StdlibSub :: StdlibFunction nat (nat -> nat -> nat)
+  StdlibMul :: StdlibFunction nat (nat -> nat -> nat)
+  StdlibDiv :: StdlibFunction nat (nat -> nat -> nat)
+  StdlibMod :: StdlibFunction nat (nat -> nat -> nat)
+  StdlibLt :: StdlibFunction nat (nat -> nat -> Bool)
+  StdlibLe :: StdlibFunction nat (nat -> nat -> Bool)
+
+deriving stock instance Lift (StdlibFunction nat ty)
 
 atomOps :: HashMap Text NockOp
 atomOps = HashMap.fromList [(prettyText op, op) | op <- allElements]
@@ -250,6 +255,11 @@ class (Eq a) => NockNatural a where
   nockSucc :: Atom a -> Atom a
   nockNil :: Atom a
 
+nockBool :: (NockNatural a) => Bool -> Atom a
+nockBool = \case
+  True -> nockTrue
+  False -> nockFalse
+
 data NockNaturalNaturalError
   = NaturalInvalidPath (Atom Natural)
   | NaturalInvalidOp (Atom Natural)
@@ -333,7 +343,7 @@ infixl 1 >>#
 (>>#) :: (IsNock x, IsNock y) => x -> y -> Term Natural
 a >># b = TermCell (a >>#. b)
 
-stdlibNumArgs :: StdlibFunction -> Natural
+stdlibNumArgs :: StdlibFunction a ty -> Natural
 stdlibNumArgs = \case
   StdlibDec -> 1
   StdlibAdd -> 2
@@ -350,3 +360,15 @@ pattern Cell :: Term a -> Term a -> Cell a
 pattern Cell {_cellLeft', _cellRight'} <- Cell' _cellLeft' _cellRight' _
   where
     Cell a b = Cell' a b (Irrelevant Nothing)
+
+{-# COMPLETE TCell, TAtom #-}
+
+pattern TCell :: Term a -> Term a -> Term a
+pattern TCell l r <- TermCell (Cell' l r _)
+  where
+    TCell a b = TermCell (Cell' a b (Irrelevant Nothing))
+
+pattern TAtom :: a -> Term a
+pattern TAtom a <- TermAtom (Atom a _)
+  where
+    TAtom a = TermAtom (Atom a (Irrelevant Nothing))

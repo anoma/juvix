@@ -98,7 +98,7 @@ programAssignments mprog =
 -- | The stack provided in the replExpression has priority
 evalRepl ::
   forall r a.
-  (PrettyCode a, Num a, Members '[Error NockEvalError, Error (ErrNockNatural a)] r, NockNatural a) =>
+  (PrettyCode a, Integral a, Members '[Error NockEvalError, Error (ErrNockNatural a)] r, NockNatural a) =>
   (Term a -> Sem r ()) ->
   Maybe (Program a) ->
   Maybe (Term a) ->
@@ -119,11 +119,27 @@ evalRepl handleTrace mprog defaultStack expr = do
     namedTerms :: HashMap Text (Term a)
     namedTerms = programAssignments mprog
 
+interpretStdlibFunction :: (Integral a) => StdlibFunction a ty -> ty
+interpretStdlibFunction = \case
+  StdlibDec -> pred
+  StdlibAdd -> (+)
+  StdlibSub -> (-)
+  StdlibMul -> (*)
+  StdlibDiv -> div
+  StdlibMod -> mod
+  StdlibLt -> (<)
+  StdlibLe -> (<=)
+
 -- | TODO make this an argument
 ignoreStdlibJets :: Bool
 ignoreStdlibJets = False
 
-eval :: forall r a. (PrettyCode a, Num a, Members '[Output (Term a), Error NockEvalError, Error (ErrNockNatural a)] r, NockNatural a) => Term a -> Term a -> Sem r (Term a)
+eval ::
+  forall r a.
+  (PrettyCode a, Integral a, Members '[Output (Term a), Error NockEvalError, Error (ErrNockNatural a)] r, NockNatural a) =>
+  Term a ->
+  Term a ->
+  Sem r (Term a)
 eval stack = \case
   TermAtom a -> throw (ExpectedCell ("eval " <> ppTrace a))
   TermCell c ->
@@ -137,14 +153,32 @@ eval stack = \case
     goStdlibCall :: StdlibCall a -> Sem r (Term a)
     goStdlibCall StdlibCall {..} = do
       args' <- eval stack _stdlibCallArgs
+      let op = interpretStdlibFunction _stdlibCallFunction
+
+          binArith :: (a -> a -> a) -> Sem r (Term a)
+          binArith f = case args' of
+            TCell (TAtom l) (TAtom r) -> return (TCell (TAtom (f l r)) stack)
+            _ -> error "expected a cell with two atoms"
+
+          unaArith :: (a -> a) -> Sem r (Term a)
+          unaArith f = case args' of
+            TAtom n -> return (TCell (TAtom (f n)) stack)
+            _ -> error "expected an atom"
+
+          binCmp :: (a -> a -> Bool) -> Sem r (Term a)
+          binCmp f = case args' of
+            TCell (TAtom l) (TAtom r) -> return (TCell (TermAtom (nockBool (f l r))) stack)
+            _ -> error "expected a cell with two atoms"
+
       case _stdlibCallFunction of
-        StdlibAdd -> case args' of
-          TermCell (Cell (TermAtom (Atom l _)) (TermAtom (Atom r _))) -> do
-            let binOpRes = TermAtom (Atom (l + r) (Irrelevant Nothing))
-                ret = TermCell (Cell binOpRes stack)
-            return ret
-          _ -> error "expected a cell with two atoms"
-        _ -> error "TODO"
+        StdlibDec -> unaArith op
+        StdlibAdd -> binArith op
+        StdlibMul -> binArith op
+        StdlibSub -> binArith op
+        StdlibDiv -> binArith op
+        StdlibMod -> binArith op
+        StdlibLt -> binCmp op
+        StdlibLe -> binCmp op
 
     goAutoConsCell :: AutoConsCell a -> Sem r (Term a)
     goAutoConsCell c = do
