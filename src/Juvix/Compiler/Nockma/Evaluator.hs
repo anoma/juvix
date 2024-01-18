@@ -63,7 +63,7 @@ parseCell ::
   Cell a ->
   Sem r (ParsedCell a)
 parseCell c = case c ^. cellLeft of
-  TermAtom a -> operatorOrStdlibCall a (c ^. cellRight) (c ^. cellInfo . unIrrelevant)
+  TermAtom a -> operatorOrStdlibCall a (c ^. cellRight) (c ^. cellCall)
   TermCell l -> return (ParsedAutoConsCell (AutoConsCell l (c ^. cellRight)))
   where
     operatorOrStdlibCall :: Atom a -> Term a -> Maybe (StdlibCall a) -> Sem r (ParsedCell a)

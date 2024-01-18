@@ -24,7 +24,7 @@ runPrettyCode :: (PrettyCode c) => Options -> c -> Doc Ann
 runPrettyCode opts = run . runReader opts . ppCode
 
 instance (PrettyCode a, NockNatural a) => PrettyCode (Atom a) where
-  ppCode atm@(Atom k h) = runFailDefaultM (annotate (AnnKind KNameFunction) <$> ppCode k)
+  ppCode atm = runFailDefaultM (annotate (AnnKind KNameFunction) <$> ppCode (atm ^. atom))
     . failFromError @(ErrNockNatural a)
     $ do
       whenM (asks (^. optIgnoreHints)) fail
@@ -70,7 +70,7 @@ instance (PrettyCode a, NockNatural a) => PrettyCode (Cell a) where
     m <- asks (^. optPrettyMode)
     stdlibCall <- runFail $ do
       failWhenM (asks (^. optIgnoreHints))
-      failMaybe (c ^. cellInfo . unIrrelevant) >>= ppCode
+      failMaybe (c ^. cellCall) >>= ppCode
     components <- case m of
       AllDelimiters -> do
         l' <- ppCode (c ^. cellLeft)

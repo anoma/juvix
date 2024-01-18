@@ -6,7 +6,7 @@ import Data.Text qualified as Text
 import Juvix.Compiler.Nockma.Language
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Parser.Error
-import Juvix.Parser.Lexer (withLoc)
+import Juvix.Parser.Lexer (onlyInterval, withLoc)
 import Juvix.Prelude hiding (Atom, many, some)
 import Juvix.Prelude.Parsing hiding (runParser)
 import Text.Megaparsec qualified as P
@@ -15,10 +15,10 @@ import Text.Megaparsec.Char.Lexer qualified as L
 type Parser = Parsec Void Text
 
 parseText :: Text -> Either MegaparsecError (Term Natural)
-parseText = runParser ""
+parseText = runParser noFile
 
 parseReplText :: Text -> Either MegaparsecError (ReplTerm Natural)
-parseReplText = runParserFor replTerm ""
+parseReplText = runParserFor replTerm noFile
 
 parseTermFile :: (MonadIO m) => FilePath -> m (Either MegaparsecError (Term Natural))
 parseTermFile fp = do
@@ -31,7 +31,10 @@ parseProgramFile fp = do
   return (runParserProgram fp txt)
 
 parseReplStatement :: Text -> Either MegaparsecError (ReplStatement Natural)
-parseReplStatement = runParserFor replStatement ""
+parseReplStatement = runParserFor replStatement noFile
+
+noFile :: FilePath
+noFile = "/<text>"
 
 runParserProgram :: FilePath -> Text -> Either MegaparsecError (Program Natural)
 runParserProgram = runParserFor program
@@ -97,7 +100,14 @@ atomDirection = do
   return (Atom (serializePath dirs) (Irrelevant info))
 
 atomNat :: Parser (Atom Natural)
-atomNat = (\n -> Atom n (Irrelevant emptyAtomInfo)) <$> dottedNatural
+atomNat = do
+  WithLoc loc n <- withLoc dottedNatural
+  let info =
+        AtomInfo
+          { _atomInfoHint = Nothing,
+            _atomInfoLoc = Just loc
+          }
+  return (Atom n (Irrelevant info))
 
 atomBool :: Parser (Atom Natural)
 atomBool =
@@ -105,6 +115,11 @@ atomBool =
     [ symbol "true" $> nockTrue,
       symbol "false" $> nockFalse
     ]
+
+atomWithLoc :: Parser a -> Atom Natural -> Parser (Atom Natural)
+atomWithLoc p n = do
+  loc <- onlyInterval p
+  return (set atomLoc (Just loc) n)
 
 atomNil :: Parser (Atom Natural)
 atomNil = symbol "nil" $> nockNil
@@ -122,13 +137,18 @@ iden = lexeme (takeWhile1P (Just "<iden>") isAlphaNum)
 
 cell :: Parser (Cell Natural)
 cell = do
-  lsbracket
+  lloc <- onlyInterval lsbracket
   c <- optional stdlibCall
   firstTerm <- term
   restTerms <- some term
-  rsbracket
+  rloc <- onlyInterval rsbracket
   let r = buildCell firstTerm restTerms
-  return (set cellInfo (Irrelevant c) r)
+      info =
+        CellInfo
+          { _cellInfoCall = c,
+            _cellInfoLoc = Just (lloc <> rloc)
+          }
+  return (set cellInfo (Irrelevant info) r)
   where
     stdlibCall :: Parser (StdlibCall Natural)
     stdlibCall = do

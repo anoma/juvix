@@ -771,7 +771,7 @@ callStdlibOn' s f = do
             _stdlibCallFunction = f
           }
 
-      callCell = (OpPush #. (decodeFn # callFn)) {_cellInfo = Irrelevant (Just meta)}
+      callCell = set cellCall (Just meta) (OpPush #. (decodeFn # callFn))
 
   output (toNock callCell)
   output (replaceTopStackN fNumArgs s)

@@ -52,10 +52,16 @@ data StdlibCall a = StdlibCall
 
 deriving stock instance (Lift a) => Lift (StdlibCall a)
 
+data CellInfo a = CellInfo
+  { _cellInfoLoc :: Maybe Interval,
+    _cellInfoCall :: Maybe (StdlibCall a)
+  }
+  deriving stock (Lift)
+
 data Cell a = Cell'
   { _cellLeft :: Term a,
     _cellRight :: Term a,
-    _cellInfo :: Irrelevant (Maybe (StdlibCall a))
+    _cellInfo :: Irrelevant (CellInfo a)
   }
   deriving stock (Show, Eq, Lift)
 
@@ -199,9 +205,19 @@ makeLenses ''Assignment
 makeLenses ''WithStack
 makeLenses ''EncodedPath
 makeLenses ''AtomInfo
+makeLenses ''CellInfo
 
 atomHint :: Lens' (Atom a) (Maybe AtomHint)
 atomHint = atomInfo . unIrrelevant . atomInfoHint
+
+termLoc :: Lens' (Term a) (Maybe Interval)
+termLoc = undefined
+
+cellLoc :: Lens' (Cell a) (Maybe Interval)
+cellLoc = cellInfo . unIrrelevant . cellInfoLoc
+
+cellCall :: Lens' (Cell a) (Maybe (StdlibCall a))
+cellCall = cellInfo . unIrrelevant . cellInfoCall
 
 atomLoc :: Lens' (Atom a) (Maybe Interval)
 atomLoc = atomInfo . unIrrelevant . atomInfoLoc
@@ -393,19 +409,26 @@ stdlibNumArgs = \case
 pattern Cell :: Term a -> Term a -> Cell a
 pattern Cell {_cellLeft', _cellRight'} <- Cell' _cellLeft' _cellRight' _
   where
-    Cell a b = Cell' a b (Irrelevant Nothing)
+    Cell a b = Cell' a b (Irrelevant emptyCellInfo)
 
 {-# COMPLETE TCell, TAtom #-}
 
 pattern TCell :: Term a -> Term a -> Term a
 pattern TCell l r <- TermCell (Cell' l r _)
   where
-    TCell a b = TermCell (Cell' a b (Irrelevant Nothing))
+    TCell a b = TermCell (Cell a b)
 
 pattern TAtom :: a -> Term a
 pattern TAtom a <- TermAtom (Atom a _)
   where
     TAtom a = TermAtom (Atom a (Irrelevant emptyAtomInfo))
+
+emptyCellInfo :: CellInfo a
+emptyCellInfo =
+  CellInfo
+    { _cellInfoCall = Nothing,
+      _cellInfoLoc = Nothing
+    }
 
 emptyAtomInfo :: AtomInfo
 emptyAtomInfo =
