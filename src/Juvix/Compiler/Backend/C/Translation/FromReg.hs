@@ -172,10 +172,9 @@ fromReg lims tab =
 fromRegFunction :: (Member CBuilder r) => Reg.ExtraInfo -> Reg.FunctionInfo -> Sem r [Statement]
 fromRegFunction info funInfo = do
   body <- fromRegCode bNoStack info (funInfo ^. Reg.functionCode)
-  let stmpDecls = mkDecls "DECL_STMP" (funInfo ^. Reg.functionStackVarsNum)
-      tmpDecls = mkDecls "DECL_TMP" (funInfo ^. Reg.functionTempVarsNum)
+  let tmpDecls = mkDecls "DECL_TMP" (funInfo ^. Reg.functionLocalVarsNum)
   return
-    [closureDecl, functionDecl, StatementCompound (stmpDecls ++ tmpDecls ++ body)]
+    [closureDecl, functionDecl, StatementCompound (tmpDecls ++ body)]
   where
     mkDecls :: Text -> Int -> [Statement]
     mkDecls decl n = map (\i -> StatementExpr (macroCall decl [integer i])) [0 .. n - 1]
@@ -290,8 +289,7 @@ fromRegInstr bNoStack info = \case
         g =
           case _varRefGroup of
             Reg.VarGroupArgs -> "ARG"
-            Reg.VarGroupStack -> "STMP"
-            Reg.VarGroupTemp -> "TMP"
+            Reg.VarGroupLocal -> "TMP"
 
     fromValue :: Reg.Value -> Expression
     fromValue = \case
