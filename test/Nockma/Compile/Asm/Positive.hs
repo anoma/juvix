@@ -5,6 +5,7 @@ import Asm.Run.Positive qualified as Asm
 import Base
 import Juvix.Compiler.Asm
 import Juvix.Compiler.Asm.Options qualified as Asm
+import Juvix.Compiler.Nockma.Evaluator qualified as NockmaEval
 import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Pretty qualified as Nockma
 import Juvix.Compiler.Nockma.Translation.FromAsm
@@ -14,13 +15,19 @@ runNockmaAssertion :: Handle -> Symbol -> InfoTable -> IO ()
 runNockmaAssertion hout _main tab = do
   Nockma.Cell nockSubject nockMain <-
     runM
-      ( runReader
-          (Asm.makeOptions TargetNockma True)
-          $ runReader
-            (Nockma.CompilerOptions {_compilerOptionsEnableTrace = True})
-            (runErrorIO' @JuvixError (asmToNockma' tab))
-      )
-  res <- runM $ runOutputSem @(Term Natural) (embed . hPutStrLn hout . Nockma.ppPrint) (evalCompiledNock' nockSubject nockMain)
+      . runReader
+        (Asm.makeOptions TargetNockma True)
+      . runReader
+        (Nockma.CompilerOptions {_compilerOptionsEnableTrace = True})
+      . runErrorIO' @JuvixError
+      $ asmToNockma' tab
+  res <-
+    runM
+      . runOutputSem @(Term Natural)
+        (embed . hPutStrLn hout . Nockma.ppPrint)
+      . runReader NockmaEval.defaultEvalOptions
+      . evalCompiledNock' nockSubject
+      $ nockMain
   let ret = getReturn res
   hPutStrLn hout (Nockma.ppPrint ret)
   where

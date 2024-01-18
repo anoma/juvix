@@ -16,6 +16,7 @@ import Juvix.Parser.Error
 import System.Console.Haskeline
 import System.Console.Repline qualified as Repline
 import Prelude (read)
+import Juvix.Compiler.Nockma.Evaluator.Options
 
 type ReplS = State.StateT ReplState IO
 
@@ -133,9 +134,10 @@ evalStatement = \case
     prog <- getProgram
     et <-
       liftIO
-        $ runM
-          . runError @(ErrNockNatural Natural)
-          . runError @NockEvalError
+        . runM
+        . runReader defaultEvalOptions
+        . runError @(ErrNockNatural Natural)
+        . runError @NockEvalError
         $ evalRepl (putStrLn . Nockma.ppTrace) prog s t
     case et of
       Left e -> error (show e)

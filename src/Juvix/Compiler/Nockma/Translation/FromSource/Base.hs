@@ -43,7 +43,9 @@ runParser :: FilePath -> Text -> Either MegaparsecError (N.Term Natural)
 runParser = runParserFor term
 
 spaceConsumer :: Parser ()
-spaceConsumer = L.space space1 empty empty
+spaceConsumer = L.space space1 lineComment empty
+  where
+    lineComment :: Parser () = L.skipLineComment "--"
 
 lexeme :: Parser a -> Parser a
 lexeme = L.lexeme spaceConsumer
@@ -102,14 +104,37 @@ patom =
     <|> atomBool
     <|> atomNil
 
+iden :: Parser Text
+iden = lexeme (takeWhile1P (Just "<iden>") isAlphaNum)
+
 cell :: Parser (N.Cell Natural)
 cell = do
   lsbracket
+  c <- optional stdlibCall
   firstTerm <- term
   restTerms <- some term
   rsbracket
-  return (buildCell firstTerm restTerms)
+  let r = buildCell firstTerm restTerms
+  return (set N.cellInfo (Irrelevant c) r)
   where
+    stdlibCall :: Parser (N.StdlibCall Natural)
+    stdlibCall = do
+      chunk "stdlib@"
+      f <- stdlibFun
+      chunk "args@"
+      args <- term
+      return
+        N.StdlibCall
+          { _stdlibCallArgs = args,
+            _stdlibCallFunction = f
+          }
+
+    stdlibFun :: Parser N.StdlibFunction
+    stdlibFun = do
+      i <- iden
+      let err = error ("invalid stdlib function identifier: " <> i)
+      maybe err return (N.parseStdlibFunction i)
+
     buildCell :: N.Term Natural -> NonEmpty (N.Term Natural) -> N.Cell Natural
     buildCell h = \case
       x :| [] -> N.Cell h x

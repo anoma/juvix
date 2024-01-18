@@ -1,10 +1,12 @@
 module Juvix.Compiler.Nockma.Evaluator
   ( module Juvix.Compiler.Nockma.Evaluator,
     module Juvix.Compiler.Nockma.Evaluator.Error,
+    module Juvix.Compiler.Nockma.Evaluator.Options,
   )
 where
 
 import Juvix.Compiler.Nockma.Evaluator.Error
+import Juvix.Compiler.Nockma.Evaluator.Options
 import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Prelude hiding (Atom, Path)
@@ -98,7 +100,7 @@ programAssignments mprog =
 -- | The stack provided in the replExpression has priority
 evalRepl ::
   forall r a.
-  (PrettyCode a, Integral a, Members '[Error NockEvalError, Error (ErrNockNatural a)] r, NockNatural a) =>
+  (PrettyCode a, Integral a, Members '[Reader EvalOptions, Error NockEvalError, Error (ErrNockNatural a)] r, NockNatural a) =>
   (Term a -> Sem r ()) ->
   Maybe (Program a) ->
   Maybe (Term a) ->
@@ -119,24 +121,9 @@ evalRepl handleTrace mprog defaultStack expr = do
     namedTerms :: HashMap Text (Term a)
     namedTerms = programAssignments mprog
 
-interpretStdlibFunction :: (Integral a) => StdlibFunction a ty -> ty
-interpretStdlibFunction = \case
-  StdlibDec -> pred
-  StdlibAdd -> (+)
-  StdlibSub -> (-)
-  StdlibMul -> (*)
-  StdlibDiv -> div
-  StdlibMod -> mod
-  StdlibLt -> (<)
-  StdlibLe -> (<=)
-
--- | TODO make this an argument
-ignoreStdlibJets :: Bool
-ignoreStdlibJets = False
-
 eval ::
   forall r a.
-  (PrettyCode a, Integral a, Members '[Output (Term a), Error NockEvalError, Error (ErrNockNatural a)] r, NockNatural a) =>
+  (PrettyCode a, Integral a, Members '[Reader EvalOptions, Output (Term a), Error NockEvalError, Error (ErrNockNatural a)] r, NockNatural a) =>
   Term a ->
   Term a ->
   Sem r (Term a)
@@ -146,16 +133,16 @@ eval stack = \case
     parseCell c >>= \case
       ParsedAutoConsCell a -> goAutoConsCell a
       ParsedOperatorCell o -> goOperatorCell o
-      ParsedStdlibCallCell o
-        | ignoreStdlibJets -> goOperatorCell (o ^. stdlibCallRaw)
-        | otherwise -> goStdlibCall (o ^. stdlibCallCell)
+      ParsedStdlibCallCell o -> do
+        ignore <- asks (^. evalIgnoreStdlibCalls)
+        if
+            | ignore -> goOperatorCell (o ^. stdlibCallRaw)
+            | otherwise -> goStdlibCall (o ^. stdlibCallCell)
   where
     goStdlibCall :: StdlibCall a -> Sem r (Term a)
     goStdlibCall StdlibCall {..} = do
       args' <- eval stack _stdlibCallArgs
-      let op = interpretStdlibFunction _stdlibCallFunction
-
-          binArith :: (a -> a -> a) -> Sem r (Term a)
+      let binArith :: (a -> a -> a) -> Sem r (Term a)
           binArith f = case args' of
             TCell (TAtom l) (TAtom r) -> return (TCell (TAtom (f l r)) stack)
             _ -> error "expected a cell with two atoms"
@@ -171,14 +158,14 @@ eval stack = \case
             _ -> error "expected a cell with two atoms"
 
       case _stdlibCallFunction of
-        StdlibDec -> unaArith op
-        StdlibAdd -> binArith op
-        StdlibMul -> binArith op
-        StdlibSub -> binArith op
-        StdlibDiv -> binArith op
-        StdlibMod -> binArith op
-        StdlibLt -> binCmp op
-        StdlibLe -> binCmp op
+        StdlibDec -> unaArith pred
+        StdlibAdd -> binArith (+)
+        StdlibMul -> binArith (*)
+        StdlibSub -> binArith (-)
+        StdlibDiv -> binArith div
+        StdlibMod -> binArith mod
+        StdlibLt -> binCmp (<)
+        StdlibLe -> binCmp (<=)
 
     goAutoConsCell :: AutoConsCell a -> Sem r (Term a)
     goAutoConsCell c = do

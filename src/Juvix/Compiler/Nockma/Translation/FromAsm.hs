@@ -113,7 +113,7 @@ functionPath = \case
   FunctionArgs -> [R]
 
 -- | The stdlib paths are obtained using scripts/nockma-stdlib-parser.sh
-stdlibPath :: StdlibFunction nat ty -> Path
+stdlibPath :: StdlibFunction -> Path
 stdlibPath =
   decodePath' . EncodedPath . \case
     StdlibDec -> 342
@@ -140,7 +140,7 @@ data Compiler m a where
   IncrementOn :: StackId -> Compiler m ()
   Branch :: m () -> m () -> Compiler m ()
   Save :: Bool -> m () -> Compiler m ()
-  CallStdlibOn :: StackId -> StdlibFunction Natural ty -> Compiler m ()
+  CallStdlibOn :: StackId -> StdlibFunction -> Compiler m ()
   AsmReturn :: Compiler m ()
   GetConstructorArity :: Asm.Tag -> Compiler m Natural
   GetFunctionArity :: FunctionId -> Compiler m Natural
@@ -753,10 +753,10 @@ traceTerm' t =
 incrementOn' :: (Members '[Output (Term Natural)] r) => StackId -> Sem r ()
 incrementOn' s = output (replaceOnStack s (OpInc # stackSliceAsCell s 0 0))
 
-callStdlib :: (Members '[Compiler] r) => StdlibFunction Natural ty -> Sem r ()
+callStdlib :: (Members '[Compiler] r) => StdlibFunction -> Sem r ()
 callStdlib = callStdlibOn ValueStack
 
-callStdlibOn' :: (Members '[Output (Term Natural)] r) => StackId -> StdlibFunction Natural ty -> Sem r ()
+callStdlibOn' :: (Members '[Output (Term Natural)] r) => StackId -> StdlibFunction -> Sem r ()
 callStdlibOn' s f = do
   let fNumArgs = stdlibNumArgs f
       fPath = stdlibPath f
@@ -1005,18 +1005,12 @@ pushNat = pushNatOnto ValueStack
 pushNatOnto :: (Member Compiler r) => StackId -> Natural -> Sem r ()
 pushNatOnto s n = pushOnto s (OpQuote # toNock n)
 
-compileAndRunNock :: CompilerOptions -> ConstructorArities -> [CompilerFunction] -> CompilerFunction -> Term Natural
-compileAndRunNock opts constrs funs = run . ignoreOutput @(Term Natural) . compileAndRunNock' opts constrs funs
-
-compileAndRunNock' :: (Member (Output (Term Natural)) r) => CompilerOptions -> ConstructorArities -> [CompilerFunction] -> CompilerFunction -> Sem r (Term Natural)
+compileAndRunNock' :: (Members '[Reader EvalOptions, Output (Term Natural)] r) => CompilerOptions -> ConstructorArities -> [CompilerFunction] -> CompilerFunction -> Sem r (Term Natural)
 compileAndRunNock' opts constrs funs mainfun =
   let Cell nockSubject t = runCompilerWith opts constrs funs mainfun
    in evalCompiledNock' nockSubject t
 
-evalCompiledNock :: Term Natural -> Term Natural -> Term Natural
-evalCompiledNock stack = run . ignoreOutput @(Term Natural) . evalCompiledNock' stack
-
-evalCompiledNock' :: (Member (Output (Term Natural)) r) => Term Natural -> Term Natural -> Sem r (Term Natural)
+evalCompiledNock' :: (Members '[Reader EvalOptions, Output (Term Natural)] r) => Term Natural -> Term Natural -> Sem r (Term Natural)
 evalCompiledNock' stack mainTerm = do
   evalT <-
     runError @(ErrNockNatural Natural)

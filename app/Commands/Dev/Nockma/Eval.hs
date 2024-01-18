@@ -2,6 +2,7 @@ module Commands.Dev.Nockma.Eval where
 
 import Commands.Base hiding (Atom)
 import Commands.Dev.Nockma.Eval.Options
+import Juvix.Compiler.Nockma.Evaluator.Options
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Translation.FromAsm
 import Juvix.Compiler.Nockma.Translation.FromSource qualified as Nockma
@@ -13,7 +14,10 @@ runCommand opts = do
   case parsedTerm of
     Left err -> exitJuvixError (JuvixError err)
     Right (TermCell c) -> do
-      res <- runOutputSem @(Term Natural) (say . ppTrace) (evalCompiledNock' (c ^. cellLeft) (c ^. cellRight))
+      res <-
+        runReader defaultEvalOptions
+          . runOutputSem @(Term Natural) (say . ppTrace)
+          $ evalCompiledNock' (c ^. cellLeft) (c ^. cellRight)
       ret <- getReturn res
       putStrLn (ppPrint ret)
     Right TermAtom {} -> exitFailMsg "Expected nockma input to be a cell"

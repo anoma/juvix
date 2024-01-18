@@ -1,0 +1,2 @@
+-- It only tests parsing and printing. It cannot be evaluated
+[stdlib@add args@[0 1] 123 [0 1]]

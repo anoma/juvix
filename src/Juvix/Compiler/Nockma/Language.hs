@@ -5,7 +5,6 @@ module Juvix.Compiler.Nockma.Language
 where
 
 import Data.HashMap.Strict qualified as HashMap
-import Data.Kind qualified as GHC
 import GHC.Base (Type)
 import Juvix.Compiler.Core.Language.Base (Symbol)
 import Juvix.Prelude hiding (Atom, Path)
@@ -46,10 +45,9 @@ data Term a
   | TermCell (Cell a)
   deriving stock (Show, Eq, Lift)
 
-data StdlibCall a = forall ty.
-  StdlibCall
-  { _stdlibCallArgs :: Term a,
-    _stdlibCallFunction :: StdlibFunction a ty
+data StdlibCall a = StdlibCall
+  { _stdlibCallFunction :: StdlibFunction,
+    _stdlibCallArgs :: Term a
   }
 
 deriving stock instance (Lift a) => Lift (StdlibCall a)
@@ -108,18 +106,36 @@ instance Pretty NockOp where
     OpHint -> "hint"
     OpTrace -> "trace"
 
--- is the Gadt justified?
-data StdlibFunction nat :: GHC.Type -> GHC.Type where
-  StdlibDec :: StdlibFunction nat (nat -> nat)
-  StdlibAdd :: StdlibFunction nat (nat -> nat -> nat)
-  StdlibSub :: StdlibFunction nat (nat -> nat -> nat)
-  StdlibMul :: StdlibFunction nat (nat -> nat -> nat)
-  StdlibDiv :: StdlibFunction nat (nat -> nat -> nat)
-  StdlibMod :: StdlibFunction nat (nat -> nat -> nat)
-  StdlibLt :: StdlibFunction nat (nat -> nat -> Bool)
-  StdlibLe :: StdlibFunction nat (nat -> nat -> Bool)
+instance Pretty StdlibFunction where
+  pretty = \case
+    StdlibDec -> "dec"
+    StdlibAdd -> "add"
+    StdlibSub -> "sub"
+    StdlibMul -> "mul"
+    StdlibDiv -> "div"
+    StdlibMod -> "mod"
+    StdlibLt -> "<"
+    StdlibLe -> "<="
 
-deriving stock instance Lift (StdlibFunction nat ty)
+data StdlibFunction
+  = StdlibDec
+  | StdlibAdd
+  | StdlibSub
+  | StdlibMul
+  | StdlibDiv
+  | StdlibMod
+  | StdlibLt
+  | StdlibLe
+  deriving stock (Show, Lift, Eq, Bounded, Enum)
+
+textToStdlibFunctionMap :: HashMap Text StdlibFunction
+textToStdlibFunctionMap =
+  hashMap
+    [ (prettyText f, f) | f <- allElements
+    ]
+
+parseStdlibFunction :: Text -> Maybe StdlibFunction
+parseStdlibFunction t = textToStdlibFunctionMap ^. at t
 
 atomOps :: HashMap Text NockOp
 atomOps = HashMap.fromList [(prettyText op, op) | op <- allElements]
@@ -343,7 +359,7 @@ infixl 1 >>#
 (>>#) :: (IsNock x, IsNock y) => x -> y -> Term Natural
 a >># b = TermCell (a >>#. b)
 
-stdlibNumArgs :: StdlibFunction a ty -> Natural
+stdlibNumArgs :: StdlibFunction -> Natural
 stdlibNumArgs = \case
   StdlibDec -> 1
   StdlibAdd -> 2
