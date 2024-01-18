@@ -6,13 +6,14 @@ import Core.Eval.Base
 import Core.Eval.Positive qualified as Eval
 import GHC.Base (seq)
 import Juvix.Compiler.Asm.Pretty qualified as Asm
-import Juvix.Compiler.Asm.Translation.FromCore qualified as Asm
+import Juvix.Compiler.Asm.Translation.FromTree qualified as Asm
 import Juvix.Compiler.Core.Data.Module
 import Juvix.Compiler.Core.Extra.Utils
 import Juvix.Compiler.Core.Options
 import Juvix.Compiler.Core.Pipeline
 import Juvix.Compiler.Core.Translation.FromSource
 import Juvix.Compiler.Core.Translation.Stripped.FromCore qualified as Stripped
+import Juvix.Compiler.Tree.Translation.FromCore qualified as Tree
 import Juvix.Data.PPOutput
 
 newtype Test = Test
@@ -52,7 +53,7 @@ coreCompileAssertion' optLevel tab mainFile expectedFile stdinText step = do
     Right m -> do
       let tab0 = computeCombinedInfoTable m
       assertBool "Check info table" (checkInfoTable tab0)
-      let tab' = Asm.fromCore $ Stripped.fromCore tab0
+      let tab' = Asm.fromTree $ Tree.fromCore $ Stripped.fromCore tab0
       length (fromText (Asm.ppPrint tab' tab') :: String) `seq`
         Asm.asmCompileAssertion' optLevel tab' mainFile expectedFile stdinText step
   where

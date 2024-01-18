@@ -2,12 +2,14 @@
 module Juvix.Compiler.Core.Language.Nodes
   ( module Juvix.Compiler.Core.Language.Base,
     module Juvix.Compiler.Core.Language.Primitives,
+    module Juvix.Compiler.Core.Language.Builtins,
     module Juvix.Compiler.Core.Language.Nodes,
   )
 where
 
 import Data.Serialize
 import Juvix.Compiler.Core.Language.Base
+import Juvix.Compiler.Core.Language.Builtins
 import Juvix.Compiler.Core.Language.Primitives
 
 -- | De Bruijn index of a locally bound variable.

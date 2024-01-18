@@ -10,9 +10,9 @@ where
 
 import GHC.Show qualified as Show
 import Juvix.Compiler.Core.Info (Info, IsInfo, Key)
-import Juvix.Compiler.Core.Language.Builtins
+import Juvix.Compiler.Core.Language.Builtins (BuiltinDataTag (..), builtinConstrArgsNum)
 import Juvix.Extra.Serialize
-import Juvix.Prelude
+import Juvix.Prelude hiding (Const)
 import Prettyprinter
 
 type Location = Interval

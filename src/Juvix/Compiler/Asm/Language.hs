@@ -8,37 +8,24 @@
 -- and memory layout.
 module Juvix.Compiler.Asm.Language
   ( module Juvix.Compiler.Asm.Language,
-    module Juvix.Compiler.Core.Language.Base,
+    module Juvix.Compiler.Tree.Language.Base,
   )
 where
 
-import Juvix.Compiler.Core.Language.Base
+import Juvix.Compiler.Tree.Language.Base
 
 -- In what follows, when referring to the stack we mean the current local value
 -- stack, unless otherwise stated. By stack[n] we denote the n-th cell from the
-
--- * top* in the value stack (0-based).
-
--- | Offset of a data field or an argument
-type Offset = Int
+-- top in the value stack (0-based).
 
 -- | Values reference readable values (constant or value stored in memory). Void
 -- is an unprintable unit.
 data Value
-  = ConstInt Integer
-  | ConstBool Bool
-  | ConstString Text
-  | ConstUnit
-  | ConstVoid
+  = Constant Constant
   | Ref MemValue
 
 -- | MemValues are references to values stored in random-access memory.
-data MemValue
-  = -- | A direct memory reference.
-    DRef DirectRef
-  | -- | ConstrRef is an indirect reference to a field (argument) of
-    --  a constructor: field k holds the (k+1)th argument.
-    ConstrRef Field
+type MemValue = MemRef' DirectRef
 
 -- | DirectRef is a direct memory reference.
 data DirectRef
@@ -48,7 +35,7 @@ data DirectRef
     --   JVA code: 'arg[<offset>]'.
     ArgRef OffsetRef
   | -- | TempRef references a value in the temporary stack (0-based offsets,
-    --   counted from the *bottom* of the temporary stack). JVA code:
+    --   counted from the _bottom_ of the temporary stack). JVA code:
     --   'tmp[<offset>]'.
     TempRef RefTemp
 
@@ -60,24 +47,10 @@ data RefTemp = RefTemp
     _refTempTempHeight :: Maybe Int
   }
 
-data OffsetRef = OffsetRef
-  { _offsetRefOffset :: Offset,
-    _offsetRefName :: Maybe Text
-  }
+makeLenses ''RefTemp
 
 -- | Constructor field reference. JVA code: '<dref>.<tag>[<offset>]'
-data Field = Field
-  { _fieldName :: Maybe Text,
-    -- | tag of the constructor being referenced
-    _fieldTag :: Tag,
-    -- | location where the data is stored
-    _fieldRef :: DirectRef,
-    _fieldOffset :: Offset
-  }
-
-makeLenses ''RefTemp
-makeLenses ''Field
-makeLenses ''OffsetRef
+type Field = Field' DirectRef
 
 -- | Function call type
 data CallType
@@ -91,7 +64,7 @@ data Instruction
   = -- | An instruction which takes its operands from the two top stack cells,
     -- pops the stack by two, and then pushes the result.
     Binop Opcode
-  | -- | Convert the top stack cell to a string. JAV opcode: 'show'.
+  | -- | Convert the top stack cell to a string. JVA opcode: 'show'.
     ValShow
   | -- | Convert a string on top of the stack into an integer. JVA opcode:
     -- 'atoi'.
@@ -234,12 +207,11 @@ data Command
   = -- | A single non-branching instruction.
     Instr CmdInstr
   | -- | Branch based on a boolean value on top of the stack, pop the stack. JVA
-    -- code: 'br { true: {<code>} false: {<code>} }'.
+    -- code: 'br { true: {<code>}; false: {<code>}; }'.
     Branch CmdBranch
-  | -- | Branch based on the tag of the constructor data on top of the stack. Does
-    -- _not_ pop the stack. The second argument is the optional default branch.
-    -- JVA code: 'case <ind> { <tag>: {<code>} ... <tag>: {<code>} default: {<code>} }'
-    -- (any branch may be omitted).
+  | -- | Branch based on the tag of the constructor data on top of the stack.
+    -- Does _not_ pop the stack. JVA code: 'case <ind> { <tag>: {<code>}; ...
+    -- <tag>: {<code>}; default: {<code>}; }' (any branch may be omitted).
     Case CmdCase
   | -- | Push the top of the value stack onto the temporary stack, pop the value
     -- stack, execute the nested code, and if not tail recursive then pop the

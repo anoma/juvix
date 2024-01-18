@@ -3,6 +3,7 @@ module Juvix.Compiler.Asm.Data.CallGraph where
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Asm.Data.InfoTable
 import Juvix.Compiler.Asm.Extra
+import Juvix.Compiler.Asm.Language
 
 -- | Call graph type
 type CallGraph = DependencyInfo Symbol

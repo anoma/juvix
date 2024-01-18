@@ -210,13 +210,17 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
     goStrBinOp :: (Member Runtime r) => (Text -> Text -> Val) -> Sem r ()
     goStrBinOp op = goStrBinOp' (\v1 v2 -> return (op v1 v2))
 
+    getConstantVal :: Constant -> Val
+    getConstantVal = \case
+      ConstInt i -> ValInteger i
+      ConstBool b -> ValBool b
+      ConstString s -> ValString s
+      ConstUnit -> ValUnit
+      ConstVoid -> ValVoid
+
     getVal :: (Member Runtime r) => Value -> Sem r Val
     getVal = \case
-      ConstInt i -> return (ValInteger i)
-      ConstBool b -> return (ValBool b)
-      ConstString s -> return (ValString s)
-      ConstUnit -> return ValUnit
-      ConstVoid -> return ValVoid
+      Constant c -> return (getConstantVal c)
       Ref r -> getMemVal r
 
     getMemVal :: forall r. (Member Runtime r) => MemValue -> Sem r Val

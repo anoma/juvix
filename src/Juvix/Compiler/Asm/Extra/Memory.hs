@@ -6,6 +6,7 @@ import Juvix.Compiler.Asm.Data.Stack (Stack)
 import Juvix.Compiler.Asm.Data.Stack qualified as Stack
 import Juvix.Compiler.Asm.Error
 import Juvix.Compiler.Asm.Extra.Type
+import Juvix.Compiler.Asm.Language
 import Juvix.Compiler.Asm.Pretty
 import Safe (atMay)
 
@@ -102,13 +103,17 @@ getDirectRefType dr mem = case dr of
   TempRef RefTemp {..} ->
     bottomTempStack (_refTempOffsetRef ^. offsetRefOffset) mem
 
+getConstantType :: Constant -> Type
+getConstantType = \case
+  ConstInt {} -> mkTypeInteger
+  ConstBool {} -> mkTypeBool
+  ConstString {} -> TyString
+  ConstUnit -> TyUnit
+  ConstVoid -> TyVoid
+
 getValueType' :: (Member (Error AsmError) r) => Maybe Location -> InfoTable -> Memory -> Value -> Sem r Type
 getValueType' loc tab mem = \case
-  ConstInt _ -> return mkTypeInteger
-  ConstBool _ -> return mkTypeBool
-  ConstString _ -> return TyString
-  ConstUnit -> return TyUnit
-  ConstVoid -> return TyVoid
+  Constant c -> return (getConstantType c)
   Ref val -> case getMemValueType tab val mem of
     Just ty -> return ty
     Nothing -> throw $ AsmError loc "invalid memory reference"

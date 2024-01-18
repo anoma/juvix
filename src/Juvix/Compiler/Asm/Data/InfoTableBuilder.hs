@@ -2,6 +2,7 @@ module Juvix.Compiler.Asm.Data.InfoTableBuilder where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Asm.Data.InfoTable
+import Juvix.Compiler.Asm.Language
 
 data IdentKind
   = IdentFun Symbol

@@ -4,6 +4,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Asm.Data.InfoTable qualified as Asm
 import Juvix.Compiler.Asm.Error qualified as Asm
 import Juvix.Compiler.Asm.Extra.Recursors qualified as Asm
+import Juvix.Compiler.Asm.Language qualified as Asm
 import Juvix.Compiler.Reg.Data.InfoTable
 import Juvix.Compiler.Reg.Language
 
@@ -23,9 +24,11 @@ fromAsm tab =
           _functionLocation = fi ^. Asm.functionLocation,
           _functionSymbol = fi ^. Asm.functionSymbol,
           _functionArgsNum = fi ^. Asm.functionArgsNum,
-          _functionLocalVarsNum = fi ^. Asm.functionMaxTempStackHeight + fi ^. Asm.functionMaxValueStackHeight,
+          _functionLocalVarsNum = extra ^. Asm.functionMaxTempStackHeight + extra ^. Asm.functionMaxValueStackHeight,
           _functionCode = fromAsmFun tab fi
         }
+      where
+        extra = fromJust (fi ^. Asm.functionExtra)
 
     convertConstr :: Asm.ConstructorInfo -> ConstructorInfo
     convertConstr ci =
@@ -96,6 +99,9 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
     Asm.Return ->
       return $ Return InstrReturn {_instrReturnValue = VRef $ VarRef VarGroupLocal ntmps}
   where
+    extraInfo :: Asm.FunctionInfoExtra
+    extraInfo = fromJust (funInfo ^. Asm.functionExtra)
+
     -- `n` is the index of the top of the value stack *before* executing the
     -- instruction
     n :: Int
@@ -103,7 +109,7 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
 
     -- `ntmps` is the number of temporary variables (= max temporary stack height)
     ntmps :: Int
-    ntmps = funInfo ^. Asm.functionMaxTempStackHeight
+    ntmps = extraInfo ^. Asm.functionMaxTempStackHeight
 
     -- Live variables *after* executing the instruction. `k` is the number of
     -- value stack cells that will be popped by the instruction. TODO: proper
@@ -154,11 +160,11 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
 
     mkValue :: Asm.Value -> Value
     mkValue = \case
-      Asm.ConstInt v -> ConstInt v
-      Asm.ConstBool v -> ConstBool v
-      Asm.ConstString v -> ConstString v
-      Asm.ConstUnit -> ConstUnit
-      Asm.ConstVoid -> ConstVoid
+      Asm.Constant (Asm.ConstInt v) -> ConstInt v
+      Asm.Constant (Asm.ConstBool v) -> ConstBool v
+      Asm.Constant (Asm.ConstString v) -> ConstString v
+      Asm.Constant Asm.ConstUnit -> ConstUnit
+      Asm.Constant Asm.ConstVoid -> ConstVoid
       Asm.Ref mv -> case mv of
         Asm.DRef dref -> VRef $ mkVar dref
         Asm.ConstrRef Asm.Field {..} ->
@@ -267,7 +273,7 @@ fromAsmBranch fi si Asm.CmdBranch {} codeTrue codeFalse =
   return $
     Branch $
       InstrBranch
-        { _instrBranchValue = VRef $ VarRef VarGroupLocal (fi ^. Asm.functionMaxTempStackHeight + si ^. Asm.stackInfoValueStackHeight - 1),
+        { _instrBranchValue = VRef $ VarRef VarGroupLocal (fromJust (fi ^. Asm.functionExtra) ^. Asm.functionMaxTempStackHeight + si ^. Asm.stackInfoValueStackHeight - 1),
           _instrBranchTrue = codeTrue,
           _instrBranchFalse = codeFalse
         }
@@ -284,7 +290,7 @@ fromAsmCase fi tab si Asm.CmdCase {..} brs def =
   return $
     Case $
       InstrCase
-        { _instrCaseValue = VRef $ VarRef VarGroupLocal (fi ^. Asm.functionMaxTempStackHeight + si ^. Asm.stackInfoValueStackHeight - 1),
+        { _instrCaseValue = VRef $ VarRef VarGroupLocal (fromJust (fi ^. Asm.functionExtra) ^. Asm.functionMaxTempStackHeight + si ^. Asm.stackInfoValueStackHeight - 1),
           _instrCaseInductive = _cmdCaseInductive,
           _instrCaseIndRep = ii ^. Asm.inductiveRepresentation,
           _instrCaseBranches =
@@ -324,7 +330,7 @@ fromAsmSave fi si Asm.CmdSave {} block =
             Assign
               ( InstrAssign
                   (VarRef VarGroupLocal (si ^. Asm.stackInfoTempStackHeight))
-                  (VRef $ VarRef VarGroupLocal (fi ^. Asm.functionMaxTempStackHeight + si ^. Asm.stackInfoValueStackHeight - 1))
+                  (VRef $ VarRef VarGroupLocal (fromJust (fi ^. Asm.functionExtra) ^. Asm.functionMaxTempStackHeight + si ^. Asm.stackInfoValueStackHeight - 1))
               )
               : block
         }

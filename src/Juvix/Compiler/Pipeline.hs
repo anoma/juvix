@@ -11,7 +11,7 @@ import Data.List.Singletons
 import Juvix.Compiler.Asm.Error qualified as Asm
 import Juvix.Compiler.Asm.Options qualified as Asm
 import Juvix.Compiler.Asm.Pipeline qualified as Asm
-import Juvix.Compiler.Asm.Translation.FromCore qualified as Asm
+import Juvix.Compiler.Asm.Translation.FromTree qualified as Asm
 import Juvix.Compiler.Backend qualified as Backend
 import Juvix.Compiler.Backend.C qualified as C
 import Juvix.Compiler.Backend.Geb qualified as Geb
@@ -37,6 +37,7 @@ import Juvix.Compiler.Pipeline.Root.Base
 import Juvix.Compiler.Reg.Data.InfoTable qualified as Reg
 import Juvix.Compiler.Reg.Translation.FromAsm qualified as Reg
 import Juvix.Compiler.Store.Language qualified as Store
+import Juvix.Compiler.Tree qualified as Tree
 import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process
 import Juvix.Data.Effect.TaggedLock
@@ -128,8 +129,11 @@ upToCoreTypecheck =
 -- Workflows from stored Core
 --------------------------------------------------------------------------------
 
+storedCoreToTree :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Tree.InfoTable
+storedCoreToTree = Core.toStripped >=> return . Tree.fromCore . Stripped.fromCore . Core.computeCombinedInfoTable
+
 storedCoreToAsm :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Asm.InfoTable
-storedCoreToAsm = Core.toStripped >=> return . Asm.fromCore . Stripped.fromCore . Core.computeCombinedInfoTable
+storedCoreToAsm = storedCoreToTree >=> treeToAsm
 
 storedCoreToMiniC :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r C.MiniCResult
 storedCoreToMiniC = storedCoreToAsm >=> asmToMiniC
@@ -146,6 +150,9 @@ storedCoreToVampIR' = Core.toVampIR' >=> return . VampIR.fromCore' False . Core.
 --------------------------------------------------------------------------------
 -- Workflows from Core
 --------------------------------------------------------------------------------
+
+coreToTree :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Tree.InfoTable
+coreToTree = Core.toStored >=> storedCoreToTree
 
 coreToAsm :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Asm.InfoTable
 coreToAsm = Core.toStored >=> storedCoreToAsm
@@ -168,6 +175,9 @@ coreToVampIR' = Core.toStored' >=> storedCoreToVampIR'
 --------------------------------------------------------------------------------
 -- Other workflows
 --------------------------------------------------------------------------------
+
+treeToAsm :: Tree.InfoTable -> Sem r Asm.InfoTable
+treeToAsm = return . Asm.fromTree
 
 asmToNockma :: (Members '[Error JuvixError, Reader EntryPoint] r) => Asm.InfoTable -> Sem r (Nockma.Cell Natural)
 asmToNockma = Asm.toNockma >=> mapReader Nockma.fromEntryPoint . Nockma.fromAsmTable

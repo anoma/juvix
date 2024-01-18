@@ -4,12 +4,13 @@ import Asm.Run.Base qualified as Asm
 import Base
 import Core.Eval.Base
 import Core.Eval.Positive qualified as Eval
-import Juvix.Compiler.Asm.Translation.FromCore qualified as Asm
+import Juvix.Compiler.Asm.Translation.FromTree qualified as Asm
 import Juvix.Compiler.Core.Data.Module (computeCombinedInfoTable, moduleFromInfoTable)
 import Juvix.Compiler.Core.Options
 import Juvix.Compiler.Core.Pipeline
 import Juvix.Compiler.Core.Translation.FromSource
 import Juvix.Compiler.Core.Translation.Stripped.FromCore qualified as Stripped
+import Juvix.Compiler.Tree.Translation.FromCore qualified as Tree
 import Juvix.Data.PPOutput
 
 newtype Test = Test
@@ -53,5 +54,5 @@ coreAsmAssertion mainFile expectedFile step = do
       case run $ runReader defaultCoreOptions $ runError $ toStored' >=> toStripped' $ moduleFromInfoTable $ setupMainFunction defaultModuleId tabIni node of
         Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
         Right m -> do
-          let tab = Asm.fromCore $ Stripped.fromCore $ computeCombinedInfoTable m
+          let tab = Asm.fromTree $ Tree.fromCore $ Stripped.fromCore $ computeCombinedInfoTable m
           Asm.asmRunAssertion' tab expectedFile step

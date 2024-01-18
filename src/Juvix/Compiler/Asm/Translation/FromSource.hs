@@ -12,6 +12,7 @@ import Juvix.Compiler.Asm.Data.InfoTable
 import Juvix.Compiler.Asm.Data.InfoTableBuilder
 import Juvix.Compiler.Asm.Extra.Base
 import Juvix.Compiler.Asm.Extra.Type
+import Juvix.Compiler.Asm.Language
 import Juvix.Compiler.Asm.Translation.FromSource.Lexer
 import Juvix.Parser.Error
 import Text.Megaparsec qualified as P
@@ -135,8 +136,7 @@ statementFunction = do
             _functionArgsNum = length argtys,
             _functionArgNames = argnames,
             _functionType = mkTypeFun argtys (fromMaybe TyDynamic mrty),
-            _functionMaxValueStackHeight = -1, -- computed later
-            _functionMaxTempStackHeight = -1
+            _functionExtra = Nothing -- computed later
           }
   lift $ registerFunction fi0
   let updateNames :: LocalNameMap -> LocalNameMap
@@ -403,23 +403,23 @@ value = integerValue <|> boolValue <|> stringValue <|> unitValue <|> voidValue <
 integerValue :: ParsecS r Value
 integerValue = do
   (i, _) <- integer
-  return $ ConstInt i
+  return $ Constant $ ConstInt i
 
 boolValue :: ParsecS r Value
 boolValue =
-  (kw kwTrue $> ConstBool True)
-    <|> (kw kwFalse $> ConstBool False)
+  (kw kwTrue $> Constant (ConstBool True))
+    <|> (kw kwFalse $> Constant (ConstBool False))
 
 stringValue :: ParsecS r Value
 stringValue = do
   (s, _) <- string
-  return $ ConstString s
+  return $ Constant $ ConstString s
 
 unitValue :: ParsecS r Value
-unitValue = kw kwUnit $> ConstUnit
+unitValue = kw kwUnit $> (Constant ConstUnit)
 
 voidValue :: ParsecS r Value
-voidValue = kw kwVoid $> ConstVoid
+voidValue = kw kwVoid $> (Constant ConstVoid)
 
 memValue ::
   (Members '[InfoTableBuilder, State LocalNameMap, State Index] r) =>

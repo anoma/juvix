@@ -1,4 +1,4 @@
-module Juvix.Compiler.Asm.Language.Rep where
+module Juvix.Compiler.Tree.Language.Rep where
 
 -- | Memory representation of a constructor.
 data MemRep
