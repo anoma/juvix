@@ -1,15 +1,20 @@
-module Juvix.Compiler.Nockma.Evaluator.Error where
+module Juvix.Compiler.Nockma.Evaluator.Error
+  ( module Juvix.Compiler.Nockma.Evaluator.Error,
+    module Juvix.Compiler.Nockma.Evaluator.Crumbs,
+  )
+where
 
+import Juvix.Compiler.Nockma.Evaluator.Crumbs
+import Juvix.Compiler.Nockma.Pretty.Base
 import Juvix.Prelude hiding (Atom)
 import Juvix.Prelude.Pretty
 
 data NockEvalError
-  = InvalidPath Text
+  = InvalidPath EvalCtx
   | ExpectedAtom
   | ExpectedCell Text
   | NoStack
   | AssignmentNotFound Text
-  deriving stock (Show)
 
 newtype GenericNockEvalError = GenericNockEvalError
   { _genericNockEvalErrorMessage :: AnsiText
@@ -17,3 +22,7 @@ newtype GenericNockEvalError = GenericNockEvalError
 
 class ToGenericNockEvalError a where
   toGenericNockEvalError :: a -> GenericNockEvalError
+
+instance PrettyCode NockEvalError where
+  ppCode = \case
+    InvalidPath ctx -> ppCode ctx

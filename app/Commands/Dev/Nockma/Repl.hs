@@ -10,13 +10,13 @@ import Data.String.Interpolate (__i)
 import Juvix.Compiler.Nockma.Evaluator (NockEvalError, evalRepl, fromReplTerm, programAssignments)
 import Juvix.Compiler.Nockma.Evaluator.Options
 import Juvix.Compiler.Nockma.Language
-import Juvix.Compiler.Nockma.Pretty (ppPrint)
 import Juvix.Compiler.Nockma.Pretty qualified as Nockma
 import Juvix.Compiler.Nockma.Translation.FromSource (parseProgramFile, parseReplStatement, parseReplText, parseText)
 import Juvix.Parser.Error
 import System.Console.Haskeline
 import System.Console.Repline qualified as Repline
 import Prelude (read)
+import Juvix.Compiler.Nockma.Pretty
 
 type ReplS = State.StateT ReplState IO
 
@@ -110,14 +110,20 @@ direction' s = Repline.dontCrash $ do
   liftIO (putStrLn (ppPrint p))
 
 readTerm :: String -> Repl (Term Natural)
-readTerm s = return (fromMegaParsecError (parseText (strip (pack s))))
+readTerm = return . fromMegaParsecError . parseText . strip . pack
 
 readReplTerm :: String -> Repl (Term Natural)
 readReplTerm s = do
   mprog <- getProgram
-  let t = run $ runError @NockEvalError (fromReplTerm (programAssignments mprog) (fromMegaParsecError (parseReplText (strip (pack s)))))
+  let t =
+        run
+          . runError @NockEvalError
+          . fromReplTerm (programAssignments mprog)
+          . fromMegaParsecError
+          . parseReplText
+          $ strip (pack s)
   case t of
-    Left e -> error (show e)
+    Left e -> error (ppTrace e)
     Right tv -> return tv
 
 readStatement :: String -> Repl (ReplStatement Natural)
@@ -142,7 +148,7 @@ evalStatement = \case
     case et of
       Left e -> error (show e)
       Right ev -> case ev of
-        Left e -> error (show e)
+        Left e -> error (ppTrace e)
         Right res -> liftIO (putStrLn (ppPrint res))
 
 replCommand :: String -> Repl ()
