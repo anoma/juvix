@@ -164,7 +164,7 @@ subStackPred st subp p = do
   s <- getStack st <$> ask
   let res =
         run
-          . runError @NockEvalError
+          . runError @(NockEvalError Natural)
           . topEvalCtx
           $ subTerm s subp
   case res of

@@ -8,25 +8,27 @@ where
 import Juvix.Compiler.Nockma.Evaluator.Error
 import Juvix.Compiler.Nockma.Evaluator.Options
 import Juvix.Compiler.Nockma.Language
-import Juvix.Compiler.Nockma.Pretty
 import Juvix.Prelude hiding (Atom, Path)
 
-asAtom :: (Member (Error NockEvalError) r) => Term a -> Sem r (Atom a)
+asAtom :: (Members '[Reader EvalCtx, Error (NockEvalError a)] r) => Term a -> Sem r (Atom a)
 asAtom = \case
   TermAtom a -> return a
-  TermCell {} -> throw ExpectedAtom
+  TermCell c -> throwExpectedAtom c
 
-asCell :: (Member (Error NockEvalError) r) => Text -> Term a -> Sem r (Cell a)
-asCell msg = \case
-  TermAtom {} -> throw (ExpectedCell msg)
+asCell :: (Members '[Reader EvalCtx, Error (NockEvalError a)] r) => Term a -> Sem r (Cell a)
+asCell = \case
+  TermAtom a -> throwExpectedCell a
   TermCell c -> return c
 
-asBool :: (Member (Error NockEvalError) r, NockNatural a) => Term a -> Sem r Bool
+asBool :: (Members '[Reader EvalCtx, Error (NockEvalError a)] r, NockNatural a) => Term a -> Sem r Bool
 asBool t = do
   a <- asAtom t
   return (a == nockTrue)
 
-asPath :: (Members '[Error NockEvalError, Error (ErrNockNatural a)] r, NockNatural a) => Term a -> Sem r Path
+asPath ::
+  (Members '[Reader EvalCtx, Error (NockEvalError a), Error (ErrNockNatural a)] r, NockNatural a) =>
+  Term a ->
+  Sem r Path
 asPath = asAtom >=> nockPath
 
 subTermT' :: Path -> Traversal (Term a) (Term a) (First (Term a)) (Term a)
@@ -44,23 +46,22 @@ subTermT = go
           L -> (\l' -> TermCell (set cellLeft l' c)) <$> go ds g (c ^. cellLeft)
           R -> (\r' -> TermCell (set cellRight r' c)) <$> go ds g (c ^. cellRight)
 
-subTerm :: (Members '[Reader EvalCtx, Error NockEvalError] r) => Term a -> Path -> Sem r (Term a)
-subTerm term pos = do
-  ctx <- ask
+subTerm :: (Members '[Reader EvalCtx, Error (NockEvalError a)] r) => Term a -> Path -> Sem r (Term a)
+subTerm term pos =
   case term ^? subTermT pos of
-    Nothing -> throw (InvalidPath ctx)
+    Nothing -> throwInvalidPath term pos
     Just t -> return t
 
-setSubTerm :: (Members '[Error NockEvalError] r) => Term a -> Path -> Term a -> Sem r (Term a)
+setSubTerm :: forall a r. (Members '[Error (NockEvalError a)] r) => Term a -> Path -> Term a -> Sem r (Term a)
 setSubTerm term pos repTerm =
   let (old, new) = setAndRemember (subTermT' pos) repTerm term
    in if
-          | isNothing (getFirst old) -> throw @NockEvalError (error "")
+          | isNothing (getFirst old) -> throw @(NockEvalError a) (error "")
           | otherwise -> return new
 
 parseCell ::
   forall r a.
-  (Members '[Error NockEvalError, Error (ErrNockNatural a)] r, NockNatural a) =>
+  (Members '[Error (NockEvalError a), Error (ErrNockNatural a)] r, NockNatural a) =>
   Cell a ->
   Sem r (ParsedCell a)
 parseCell c = case c ^. cellLeft of
@@ -86,9 +87,9 @@ parseCell c = case c ^. cellLeft of
             _operatorCellTerm = t
           }
 
-fromReplTerm :: (Members '[Error NockEvalError] r) => HashMap Text (Term a) -> ReplTerm a -> Sem r (Term a)
+fromReplTerm :: forall a r. (Members '[Error (NockEvalError a)] r) => HashMap Text (Term a) -> ReplTerm a -> Sem r (Term a)
 fromReplTerm namedTerms = \case
-  ReplName n -> maybe (throw (AssignmentNotFound n)) return (namedTerms ^. at n)
+  ReplName n -> maybe (throw @(NockEvalError a) (ErrAssignmentNotFound n)) return (namedTerms ^. at n)
   ReplTerm t -> return t
 
 programAssignments :: Maybe (Program a) -> HashMap Text (Term a)
@@ -101,7 +102,7 @@ programAssignments mprog =
 -- | The stack provided in the replExpression has priority
 evalRepl ::
   forall r a.
-  (PrettyCode a, Integral a, Members '[Reader EvalOptions, Error NockEvalError, Error (ErrNockNatural a)] r, NockNatural a) =>
+  (Integral a, Members '[Reader EvalOptions, Error (NockEvalError a), Error (ErrNockNatural a)] r, NockNatural a) =>
   (Term a -> Sem r ()) ->
   Maybe (Program a) ->
   Maybe (Term a) ->
@@ -117,14 +118,14 @@ evalRepl handleTrace mprog defaultStack expr = do
   fromReplTerm namedTerms t >>= runOutputSem @(Term a) handleTrace . eval stack
   where
     errNoStack :: Sem r x
-    errNoStack = throw NoStack
+    errNoStack = throw @(NockEvalError a) (ErrNoStack NoStack)
 
     namedTerms :: HashMap Text (Term a)
     namedTerms = programAssignments mprog
 
 eval ::
   forall s a.
-  (PrettyCode a, Integral a, Members '[Reader EvalOptions, Output (Term a), Error NockEvalError, Error (ErrNockNatural a)] s, NockNatural a) =>
+  (Integral a, Members '[Reader EvalOptions, Output (Term a), Error (NockEvalError a), Error (ErrNockNatural a)] s, NockNatural a) =>
   Term a ->
   Term a ->
   Sem s (Term a)
@@ -139,7 +140,7 @@ eval inistack initerm =
       Term a ->
       Sem r (Term a)
     recEval stack term = case term of
-      TermAtom a -> throw (ExpectedCell ("eval " <> ppTrace a))
+      TermAtom a -> throwExpectedCell a
       TermCell c ->
         parseCell c >>= \case
           ParsedAutoConsCell a -> goAutoConsCell a
@@ -187,11 +188,11 @@ eval inistack initerm =
           let w a =
                 EvalCrumbAutoCons
                   CrumbAutoCons
-                    { _crumbAutoConsArgName = a,
+                    { _crumbAutoConsTag = a,
                       _crumbAutoConsLoc = loc
                     }
-          l' <- withCrumb (w FirstArg) (recEval stack (TermCell (c ^. autoConsCellLeft)))
-          r' <- withCrumb (w SecondArg) (recEval stack (c ^. autoConsCellRight))
+          l' <- withCrumb (w crumbEvalFirst) (recEval stack (TermCell (c ^. autoConsCellLeft)))
+          r' <- withCrumb (w crumbEvalSecond) (recEval stack (c ^. autoConsCellRight))
           return (TermCell (Cell l' r'))
 
         goOperatorCell :: OperatorCell a -> Sem r (Term a)
@@ -210,20 +211,22 @@ eval inistack initerm =
           OpHint -> goOpHint
           OpTrace -> goOpTrace
           where
-            crumb argName =
+            crumb crumbTag =
               EvalCrumbOperator $
                 CrumbOperator
                   { _crumbOperatorOp = c ^. operatorCellOp,
-                    _crumbOperatorArgName = argName,
+                    _crumbOperatorTag = crumbTag,
                     _crumbOperatorLoc = loc
                   }
 
-            evalArg :: ArgName -> Term a -> Term a -> Sem r (Term a)
-            evalArg argName stack' arg = do
-              withCrumb (crumb argName) (recEval stack' arg)
+            evalArg :: CrumbTag -> Term a -> Term a -> Sem r (Term a)
+            evalArg crumbTag stack' arg = do
+              withCrumb (crumb crumbTag) (recEval stack' arg)
 
             goOpAddress :: Sem r (Term a)
-            goOpAddress = withCrumb (crumb Itself) (asPath (c ^. operatorCellTerm) >>= subTerm stack)
+            goOpAddress = do
+              cr <- withCrumb (crumb crumbDecodeFirst) (asPath (c ^. operatorCellTerm))
+              withCrumb (crumb crumbEval) (subTerm stack cr)
 
             goOpQuote :: Term a
             goOpQuote = c ^. operatorCellTerm
@@ -235,63 +238,62 @@ eval inistack initerm =
 
             goOpTrace :: Sem r (Term a)
             goOpTrace = do
-              Cell' tr a _ <- withCrumb (crumb Itself) (asCell "OpTrace" (c ^. operatorCellTerm))
-              tr' <- evalArg FirstArg stack tr
+              Cell' tr a _ <- withCrumb (crumb crumbDecodeFirst) (asCell (c ^. operatorCellTerm))
+              tr' <- evalArg crumbEvalFirst stack tr
               output tr'
-              evalArg SecondArg stack a
+              evalArg crumbEvalSecond stack a
 
             goOpHint :: Sem r (Term a)
             goOpHint = do
               -- Ignore the hint and evaluate
-              h <- withCrumb (crumb Itself) (asCell "OpHint" (c ^. operatorCellTerm))
-              evalArg FirstArg stack (h ^. cellRight)
+              h <- withCrumb (crumb crumbDecodeFirst) (asCell (c ^. operatorCellTerm))
+              evalArg crumbEvalFirst stack (h ^. cellRight)
 
             goOpPush :: Sem r (Term a)
             goOpPush = do
-              cellTerm <- withCrumb (crumb Itself) (asCell "OpPush" (c ^. operatorCellTerm))
-              l <- evalArg FirstArg stack (cellTerm ^. cellLeft)
+              cellTerm <- withCrumb (crumb crumbDecodeFirst) (asCell (c ^. operatorCellTerm))
+              l <- evalArg crumbEvalFirst stack (cellTerm ^. cellLeft)
               let s = TermCell (Cell l stack)
-              evalArg SecondArg s (cellTerm ^. cellRight)
+              evalArg crumbEvalSecond s (cellTerm ^. cellRight)
 
             goOpReplace :: Sem r (Term a)
             goOpReplace = do
-              Cell' rot1 t2 _ <- withCrumb (crumb Itself) (asCell "OpReplace 1" (c ^. operatorCellTerm))
-              Cell' ro t1 _ <- withCrumb (crumb Itself) (asCell "OpReplace 2" rot1)
-              r <- withCrumb (crumb Itself) (asPath ro)
-              t1' <- evalArg FirstArg stack t1
-              t2' <- evalArg SecondArg stack t2
+              Cell' rot1 t2 _ <- withCrumb (crumb crumbDecodeFirst) (asCell (c ^. operatorCellTerm))
+              Cell' ro t1 _ <- withCrumb (crumb crumbDecodeSecond) (asCell rot1)
+              r <- withCrumb (crumb crumbDecodeThird) (asPath ro)
+              t1' <- evalArg crumbEvalFirst stack t1
+              t2' <- evalArg crumbEvalSecond stack t2
               setSubTerm t2' r t1'
 
             goOpApply :: Sem r (Term a)
             goOpApply = do
-              cellTerm <- withCrumb (crumb Itself) (asCell "OpApply" (c ^. operatorCellTerm))
-              t1' <- evalArg FirstArg stack (cellTerm ^. cellLeft)
-              t2' <- evalArg SecondArg stack (cellTerm ^. cellRight)
-              evalArg SecondArg t1' t2'
+              cellTerm <- withCrumb (crumb crumbDecodeFirst) (asCell (c ^. operatorCellTerm))
+              t1' <- evalArg crumbEvalFirst stack (cellTerm ^. cellLeft)
+              t2' <- evalArg crumbEvalSecond stack (cellTerm ^. cellRight)
+              evalArg crumbEvalSecond t1' t2'
 
             goOpIf :: Sem r (Term a)
             goOpIf = do
-              cellTerm <- withCrumb (crumb Itself) (asCell "OpIf 1" (c ^. operatorCellTerm))
+              cellTerm <- withCrumb (crumb crumbDecodeFirst) (asCell (c ^. operatorCellTerm))
               let t0 = cellTerm ^. cellLeft
-              Cell' t1 t2 _ <- withCrumb (crumb Itself) (asCell "OpIf 2" (cellTerm ^. cellRight))
-              cond <- evalArg FirstArg stack t0 >>= asBool
+              Cell' t1 t2 _ <- withCrumb (crumb crumbDecodeSecond) (asCell (cellTerm ^. cellRight))
+              cond <- evalArg crumbEvalFirst stack t0 >>= asBool
               if
-                  | cond -> evalArg TrueBranch stack t1
-                  | otherwise -> evalArg FalseBranch stack t2
+                  | cond -> evalArg crumbTrueBranch stack t1
+                  | otherwise -> evalArg crumbFalseBranch stack t2
 
             goOpInc :: Sem r (Term a)
             goOpInc =
-              withCrumb
-                (crumb Itself)
-                ( TermAtom . nockSucc
-                    <$> (evalArg FirstArg stack (c ^. operatorCellTerm) >>= asAtom)
-                )
+              TermAtom . nockSucc
+                <$> ( evalArg crumbEvalFirst stack (c ^. operatorCellTerm)
+                        >>= withCrumb (crumb crumbDecodeFirst) . asAtom
+                    )
 
             goOpEq :: Sem r (Term a)
             goOpEq = do
-              cellTerm <- withCrumb (crumb Itself) (asCell "OpEq" (c ^. operatorCellTerm))
-              l <- evalArg FirstArg stack (cellTerm ^. cellLeft)
-              r <- evalArg SecondArg stack (cellTerm ^. cellRight)
+              cellTerm <- withCrumb (crumb crumbDecodeFirst) (asCell (c ^. operatorCellTerm))
+              l <- evalArg crumbEvalFirst stack (cellTerm ^. cellLeft)
+              r <- evalArg crumbEvalSecond stack (cellTerm ^. cellRight)
               return . TermAtom $
                 if
                     | l == r -> nockTrue
@@ -299,13 +301,13 @@ eval inistack initerm =
 
             goOpCall :: Sem r (Term a)
             goOpCall = do
-              cellTerm <- withCrumb (crumb Itself) (asCell "OpCall" (c ^. operatorCellTerm))
-              r <- withCrumb (crumb Itself) (asPath (cellTerm ^. cellLeft))
-              t' <- evalArg FirstArg stack (cellTerm ^. cellRight)
-              subTerm t' r >>= evalArg SecondArg t'
+              cellTerm <- withCrumb (crumb crumbDecodeFirst) (asCell (c ^. operatorCellTerm))
+              r <- withCrumb (crumb crumbDecodeSecond) (asPath (cellTerm ^. cellLeft))
+              t' <- evalArg crumbEvalFirst stack (cellTerm ^. cellRight)
+              subTerm t' r >>= evalArg crumbEvalSecond t'
 
             goOpSequence :: Sem r (Term a)
             goOpSequence = do
-              cellTerm <- withCrumb (crumb Itself) (asCell "OpSequence" (c ^. operatorCellTerm))
-              t1' <- evalArg FirstArg stack (cellTerm ^. cellLeft)
-              evalArg SecondArg t1' (cellTerm ^. cellRight)
+              cellTerm <- withCrumb (crumb crumbDecodeFirst) (asCell (c ^. operatorCellTerm))
+              t1' <- evalArg crumbEvalFirst stack (cellTerm ^. cellLeft)
+              evalArg crumbEvalSecond t1' (cellTerm ^. cellRight)

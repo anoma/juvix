@@ -10,13 +10,13 @@ import Data.String.Interpolate (__i)
 import Juvix.Compiler.Nockma.Evaluator (NockEvalError, evalRepl, fromReplTerm, programAssignments)
 import Juvix.Compiler.Nockma.Evaluator.Options
 import Juvix.Compiler.Nockma.Language
+import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Pretty qualified as Nockma
 import Juvix.Compiler.Nockma.Translation.FromSource (parseProgramFile, parseReplStatement, parseReplText, parseText)
 import Juvix.Parser.Error
 import System.Console.Haskeline
 import System.Console.Repline qualified as Repline
 import Prelude (read)
-import Juvix.Compiler.Nockma.Pretty
 
 type ReplS = State.StateT ReplState IO
 
@@ -117,7 +117,7 @@ readReplTerm s = do
   mprog <- getProgram
   let t =
         run
-          . runError @NockEvalError
+          . runError @(NockEvalError Natural)
           . fromReplTerm (programAssignments mprog)
           . fromMegaParsecError
           . parseReplText
@@ -143,7 +143,7 @@ evalStatement = \case
         . runM
         . runReader defaultEvalOptions
         . runError @(ErrNockNatural Natural)
-        . runError @NockEvalError
+        . runError @(NockEvalError Natural)
         $ evalRepl (putStrLn . Nockma.ppTrace) prog s t
     case et of
       Left e -> error (show e)

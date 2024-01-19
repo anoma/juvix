@@ -211,7 +211,9 @@ atomHint :: Lens' (Atom a) (Maybe AtomHint)
 atomHint = atomInfo . unIrrelevant . atomInfoHint
 
 termLoc :: Lens' (Term a) (Maybe Interval)
-termLoc = undefined
+termLoc f = \case
+  TermAtom a -> TermAtom <$> atomLoc f a
+  TermCell a -> TermCell <$> cellLoc f a
 
 cellLoc :: Lens' (Cell a) (Maybe Interval)
 cellLoc = cellInfo . unIrrelevant . cellInfoLoc

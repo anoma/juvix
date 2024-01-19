@@ -764,6 +764,7 @@ callStdlibOn' s f = do
       preargs = stdlibStackTake s fNumArgs
       arguments = OpSequence # (OpAddress # [R]) # preargs
       extractResult = (OpAddress # [L]) # (OpAddress # [R, R])
+      -- callFn = OpPush # (OpCall # [L] # (OpReplace # ([R, L] # arguments) # (OpAddress # [L]))) # extractResult
       callFn = OpPush # (OpCall # [L] # (OpReplace # ([R, L] # arguments) # (OpAddress # [L]))) # extractResult
       meta =
         StdlibCall
@@ -1014,7 +1015,7 @@ evalCompiledNock' :: (Members '[Reader EvalOptions, Output (Term Natural)] r) =>
 evalCompiledNock' stack mainTerm = do
   evalT <-
     runError @(ErrNockNatural Natural)
-      . runError @NockEvalError
+      . runError @(NockEvalError Natural)
       $ eval stack mainTerm
   case evalT of
     Left e -> error (show e)
@@ -1027,7 +1028,7 @@ getStack :: StackId -> Term Natural -> Term Natural
 getStack st m =
   fromRight'
     . run
-    . runError @NockEvalError
+    . runError @(NockEvalError Natural)
     . topEvalCtx
     . subTerm m
     $ stackPath st
