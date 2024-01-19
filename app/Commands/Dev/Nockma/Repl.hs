@@ -8,6 +8,7 @@ import Control.Exception (throwIO)
 import Control.Monad.State.Strict qualified as State
 import Data.String.Interpolate (__i)
 import Juvix.Compiler.Nockma.Evaluator (NockEvalError, evalRepl, fromReplTerm, programAssignments)
+import Juvix.Compiler.Nockma.Evaluator.Options
 import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Pretty (ppPrint)
 import Juvix.Compiler.Nockma.Pretty qualified as Nockma
@@ -133,9 +134,10 @@ evalStatement = \case
     prog <- getProgram
     et <-
       liftIO
-        $ runM
-          . runError @(ErrNockNatural Natural)
-          . runError @NockEvalError
+        . runM
+        . runReader defaultEvalOptions
+        . runError @(ErrNockNatural Natural)
+        . runError @NockEvalError
         $ evalRepl (putStrLn . Nockma.ppTrace) prog s t
     case et of
       Left e -> error (show e)
