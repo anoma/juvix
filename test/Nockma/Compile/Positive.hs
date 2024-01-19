@@ -16,6 +16,7 @@ type Check = Sem '[Reader [Term Natural], Reader (Term Natural), Embed IO]
 data Test = Test
   { _testName :: Text,
     _testCheck :: Check (),
+    _testEvalOptions :: EvalOptions,
     _testProgram :: Sem '[Compiler] ()
   }
 
@@ -33,8 +34,12 @@ data FunctionName
 sym :: (Enum a) => a -> FunctionId
 sym = UserFunction . Asm.defaultSymbol . fromIntegral . fromEnum
 
-debugProg :: Sem '[Compiler] () -> ([Term Natural], Term Natural)
-debugProg mkMain = run . runOutputList $ compileAndRunNock' opts exampleConstructors exampleFunctions mainFun
+debugProg :: EvalOptions -> Sem '[Compiler] () -> ([Term Natural], Term Natural)
+debugProg evalOpts mkMain =
+  run
+    . runReader evalOpts
+    . runOutputList
+    $ compileAndRunNock' opts exampleConstructors exampleFunctions mainFun
   where
     mainFun =
       CompilerFunction
@@ -122,7 +127,7 @@ allTests = testGroup "Nockma compile unit positive" (map mk tests)
   where
     mk :: Test -> TestTree
     mk Test {..} = testCase (unpack _testName) $ do
-      let (traces, n) = debugProg _testProgram
+      let (traces, n) = debugProg _testEvalOptions _testProgram
       runM (runReader n (runReader traces _testCheck))
 
 eqSubStack :: StackId -> Path -> Term Natural -> Check ()
@@ -167,7 +172,7 @@ eqStack st = eqSubStack st []
 unfoldTerm :: Term Natural -> NonEmpty (Term Natural)
 unfoldTerm t = case t of
   TermAtom {} -> t :| []
-  TermCell Cell {..} -> _cellLeft NonEmpty.<| unfoldTerm _cellRight
+  TermCell (Cell l r) -> l NonEmpty.<| unfoldTerm r
 
 checkStackSize :: StackId -> Natural -> Check ()
 checkStackSize st stSize = subStackPred st ([] :: Path) $ \s -> do
@@ -186,49 +191,94 @@ checkStackSize st stSize = subStackPred st ([] :: Path) $ \s -> do
               <> show n
       assertFailure (unpack msg)
 
+defTest :: Text -> Check () -> Sem '[Compiler] () -> Test
+defTest _testName _testCheck _testProgram =
+  Test
+    { _testEvalOptions = defaultEvalOptions,
+      ..
+    }
+
+defTestNoJets :: Text -> Check () -> Sem '[Compiler] () -> Test
+defTestNoJets _testName _testCheck _testProgram =
+  Test
+    { _testEvalOptions =
+        EvalOptions
+          { _evalIgnoreStdlibCalls = True
+          },
+      ..
+    }
+
 tests :: [Test]
 tests =
-  [ Test "push" (eqStack ValueStack [nock| [1 5 nil] |]) $ do
+  [ defTest "push" (eqStack ValueStack [nock| [1 5 nil] |]) $ do
       pushNat 5
       pushNat 1,
-    Test "pop" (eqStack ValueStack [nock| [1 nil] |]) $ do
+    defTest "pop" (eqStack ValueStack [nock| [1 nil] |]) $ do
       pushNat 1
       pushNat 33
       pop,
-    Test "increment" (eqStack ValueStack [nock| [3 nil] |]) $ do
+    defTest "increment" (eqStack ValueStack [nock| [3 nil] |]) $ do
       pushNat 1
       increment
       increment,
-    Test "dec" (eqStack ValueStack [nock| [5 nil] |]) $ do
+    defTest "dec" (eqStack ValueStack [nock| [5 nil] |]) $ do
       pushNat 6
       dec,
-    Test "branch true" (eqStack ValueStack [nock| [5 nil] |]) $ do
+    defTest "branch true" (eqStack ValueStack [nock| [5 nil] |]) $ do
       push (nockBoolLiteral True)
       branch (pushNat 5) (pushNat 666),
-    Test "branch false" (eqStack ValueStack [nock| [666 nil] |]) $ do
+    defTest "branch false" (eqStack ValueStack [nock| [666 nil] |]) $ do
       push (nockBoolLiteral False)
       branch (pushNat 5) (pushNat 666),
-    Test "sub" (eqStack ValueStack [nock| [5 nil] |]) $ do
+    defTest "sub" (eqStack ValueStack [nock| [5 nil] |]) $ do
       pushNat 3
       pushNat 8
       callStdlib StdlibSub,
-    Test "mul" (eqStack ValueStack [nock| [24 nil] |]) $ do
+    defTest "mul" (eqStack ValueStack [nock| [24 nil] |]) $ do
       pushNat 8
       pushNat 3
       callStdlib StdlibMul,
-    Test "div" (eqStack ValueStack [nock| [3 nil] |]) $ do
+    defTest "div" (eqStack ValueStack [nock| [3 nil] |]) $ do
       pushNat 5
       pushNat 15
       callStdlib StdlibDiv,
-    Test "mod" (eqStack ValueStack [nock| [5 nil] |]) $ do
+    defTest "mod" (eqStack ValueStack [nock| [5 nil] |]) $ do
       pushNat 10
       pushNat 15
       callStdlib StdlibMod,
-    Test "add" (eqStack ValueStack [nock| [5 nil] |]) $ do
+    defTestNoJets "mul no jets" (eqStack ValueStack [nock| [24 nil] |]) $ do
+      pushNat 8
+      pushNat 3
+      callStdlib StdlibMul,
+    defTestNoJets "div no jets" (eqStack ValueStack [nock| [3 nil] |]) $ do
+      pushNat 5
+      pushNat 15
+      callStdlib StdlibDiv,
+    defTestNoJets "mod no jets" (eqStack ValueStack [nock| [5 nil] |]) $ do
+      pushNat 10
+      pushNat 15
+      callStdlib StdlibMod,
+    defTest "add" (eqStack ValueStack [nock| [5 nil] |]) $ do
       pushNat 2
       pushNat 3
       add,
-    Test "pow2" (eqStack ValueStack [nock| [1 2 8 32 nil] |]) $ do
+    defTest "add big" (eqStack ValueStack [nock| [55555 nil] |]) $ do
+      pushNat 33333
+      pushNat 22222
+      add,
+    defTest "mul big" (eqStack ValueStack [nock| [1111088889 nil] |]) $ do
+      pushNat 33333
+      pushNat 33333
+      mul,
+    defTest "sub big" (eqStack ValueStack [nock| [66666 nil] |]) $ do
+      pushNat 33333
+      pushNat 99999
+      callStdlib StdlibSub,
+    defTest "le big" (eqStack ValueStack [nock| [true nil] |]) $ do
+      pushNat 99999
+      pushNat 999
+      callStdlib StdlibLe,
+    defTest "pow2" (eqStack ValueStack [nock| [1 2 8 32 nil] |]) $ do
       pushNat 5
       pow2
       pushNat 3
@@ -237,38 +287,38 @@ tests =
       pow2
       pushNat 0
       pow2,
-    Test "append rights" (eqStack ValueStack [nock| [95 3 nil] |]) $ do
+    defTest "append rights" (eqStack ValueStack [nock| [95 3 nil] |]) $ do
       push (OpQuote # toNock ([] :: Path))
       pushNat 1
       appendRights
       push (OpQuote # toNock [L])
       pushNat 5
       appendRights,
-    Test "le less" (eqStack ValueStack [nock| [1 nil] |]) $ do
+    defTest "le less" (eqStack ValueStack [nock| [1 nil] |]) $ do
       pushNat 2
       pushNat 3
       callStdlib StdlibLe,
-    Test "lt true" (eqStack ValueStack [nock| [0 nil] |]) $ do
+    defTest "lt true" (eqStack ValueStack [nock| [0 nil] |]) $ do
       pushNat 4
       pushNat 3
       callStdlib StdlibLt,
-    Test "lt eq" (eqStack ValueStack [nock| [1 nil] |]) $ do
+    defTest "lt eq" (eqStack ValueStack [nock| [1 nil] |]) $ do
       pushNat 3
       pushNat 3
       callStdlib StdlibLt,
-    Test "le eq" (eqStack ValueStack [nock| [0 nil] |]) $ do
+    defTest "le eq" (eqStack ValueStack [nock| [0 nil] |]) $ do
       pushNat 3
       pushNat 3
       callStdlib StdlibLe,
-    Test "primitive eq true" (eqStack ValueStack [nock| [0 nil] |]) $ do
+    defTest "primitive eq true" (eqStack ValueStack [nock| [0 nil] |]) $ do
       pushNat 4
       pushNat 4
       testEq,
-    Test "primitive eq false" (eqStack ValueStack [nock| [1 nil] |]) $ do
+    defTest "primitive eq false" (eqStack ValueStack [nock| [1 nil] |]) $ do
       pushNat 4
       pushNat 1
       testEq,
-    Test
+    defTest
       "save"
       ( do
           eqStack ValueStack [nock| [67 2 nil] |]
@@ -279,21 +329,21 @@ tests =
         pushNat 3
         save False (pushNat 77)
         save True (pushNat 67),
-    Test "primitive increment" (eqStack ValueStack [nock| [5 nil] |]) $ do
+    defTest "primitive increment" (eqStack ValueStack [nock| [5 nil] |]) $ do
       pushNat 3
       increment
       increment,
-    Test "call increment" (eqStack ValueStack [nock| [5 nil] |]) $ do
+    defTest "call increment" (eqStack ValueStack [nock| [5 nil] |]) $ do
       pushNat 2
       callEnum FunIncrement 1
       callEnum FunIncrement 1
       callEnum FunIncrement 1,
-    Test "call increment indirectly" (eqStack ValueStack [nock| [5 nil] |]) $ do
+    defTest "call increment indirectly" (eqStack ValueStack [nock| [5 nil] |]) $ do
       pushNat 2
       callEnum FunIncrement 1
       callEnum FunCallInc 1
       callEnum FunIncrement 1,
-    Test
+    defTest
       "push temp"
       ( do
           eqStack ValueStack [nock| [5 6 nil] |]
@@ -304,20 +354,20 @@ tests =
         pushNatOnto TempStack 6
         pushTempRef 2 1
         pushTempRef 2 0,
-    Test "push cell" (eqStack ValueStack [nock| [[1 2] nil] |]) $ do
+    defTest "push cell" (eqStack ValueStack [nock| [[1 2] nil] |]) $ do
       push (OpQuote # (1 :: Natural) # (2 :: Natural)),
-    Test "push unit" (eqStack ValueStack [nock| [[0 nil nil] nil] |]) $ do
+    defTest "push unit" (eqStack ValueStack [nock| [[0 nil nil] nil] |]) $ do
       push constUnit,
-    Test "alloc nullary constructor" (eqStack ValueStack [nock| [[0 nil nil] nil] |]) $ do
+    defTest "alloc nullary constructor" (eqStack ValueStack [nock| [[0 nil nil] nil] |]) $ do
       allocConstr (constructorTag ConstructorFalse),
-    Test "alloc unary constructor" (eqStack ValueStack [nock| [[2 [[55 66] nil] nil] nil]|]) $ do
+    defTest "alloc unary constructor" (eqStack ValueStack [nock| [[2 [[55 66] nil] nil] nil]|]) $ do
       push (OpQuote # (55 :: Natural) # (66 :: Natural))
       allocConstr (constructorTag ConstructorWrapper),
-    Test "alloc binary constructor" (eqStack ValueStack [nock| [[3 [9 7 nil] nil] nil] |]) $ do
+    defTest "alloc binary constructor" (eqStack ValueStack [nock| [[3 [9 7 nil] nil] nil] |]) $ do
       pushNat 7
       pushNat 9
       allocConstr (constructorTag ConstructorPair),
-    Test
+    defTest
       "alloc closure"
       ( do
           eqSubStack ValueStack (indexStack 0 ++ closurePath ClosureTotalArgsNum) [nock| 5 |]
@@ -331,7 +381,7 @@ tests =
         pushNat 9
         pushNat 10
         allocClosure (sym FunConst5) 3,
-    Test
+    defTest
       "alloc closure no args from value stack"
       ( do
           eqSubStack ValueStack (indexStack 0 ++ closurePath ClosureTotalArgsNum) [nock| 3 |]
@@ -340,7 +390,7 @@ tests =
           checkStackSize ValueStack 1
       )
       $ allocClosure (sym FunAdd3) 0,
-    Test
+    defTest
       "extend closure"
       ( do
           eqSubStack ValueStack (indexStack 0 ++ closurePath ClosureTotalArgsNum) [nock| 5 |]
@@ -355,7 +405,7 @@ tests =
         pushNat 10
         allocClosure (sym FunConst5) 1
         extendClosure 2,
-    Test "alloc, extend and call closure" (eqStack ValueStack [nock| [6 nil] |]) $
+    defTest "alloc, extend and call closure" (eqStack ValueStack [nock| [6 nil] |]) $
       do
         pushNat 1
         pushNat 2
@@ -363,13 +413,13 @@ tests =
         allocClosure (sym FunAdd3) 1
         extendClosure 1
         callHelper False Nothing 1,
-    Test "call closure" (eqStack ValueStack [nock| [110 nil] |]) $
+    defTest "call closure" (eqStack ValueStack [nock| [110 nil] |]) $
       do
         pushNat 100
         pushNat 110
         allocClosure (sym FunConst) 1
         callHelper False Nothing 1,
-    Test
+    defTest
       "compute argsNum of a closure"
       (eqStack ValueStack [nock| [2 7 nil] |])
       $ do
@@ -379,7 +429,7 @@ tests =
         pushNat 10
         allocClosure (sym FunConst5) 3
         closureArgsNum,
-    Test
+    defTest
       "save not tail"
       ( do
           eqStack ValueStack [nock| [17 nil] |]
@@ -392,7 +442,7 @@ tests =
           addOn TempStack
           moveTopFromTo TempStack ValueStack
           pushNatOnto TempStack 9,
-    Test
+    defTest
       "save tail"
       ( do
           eqStack ValueStack [nock| [17 nil] |]
@@ -405,7 +455,7 @@ tests =
           addOn TempStack
           moveTopFromTo TempStack ValueStack
           pushNatOnto TempStack 9,
-    Test
+    defTest
       "cmdCase: single branch"
       (eqStack ValueStack [nock| [777 [2 [123 nil] nil] nil] |])
       $ do
@@ -415,7 +465,7 @@ tests =
           Nothing
           [ (constructorTag ConstructorWrapper, pushNat 777)
           ],
-    Test
+    defTest
       "cmdCase: default branch"
       (eqStack ValueStack [nock| [5 nil] |])
       $ do
@@ -425,7 +475,7 @@ tests =
           (Just (pop >> pushNat 5))
           [ (constructorTag ConstructorFalse, pushNat 777)
           ],
-    Test
+    defTest
       "cmdCase: second branch"
       (eqStack ValueStack [nock| [5 nil] |])
       $ do
@@ -436,7 +486,7 @@ tests =
           [ (constructorTag ConstructorFalse, pushNat 0),
             (constructorTag ConstructorWrapper, pop >> pushNat 5)
           ],
-    Test
+    defTest
       "cmdCase: case on builtin true"
       (eqStack ValueStack [nock| [5 nil] |])
       $ do
@@ -446,7 +496,7 @@ tests =
           [ (Asm.BuiltinTag Asm.TagTrue, pop >> pushNat 5),
             (Asm.BuiltinTag Asm.TagFalse, pushNat 0)
           ],
-    Test
+    defTest
       "cmdCase: case on builtin false"
       (eqStack ValueStack [nock| [5 nil] |])
       $ do
@@ -456,7 +506,7 @@ tests =
           [ (Asm.BuiltinTag Asm.TagTrue, pushNat 0),
             (Asm.BuiltinTag Asm.TagFalse, pop >> pushNat 5)
           ],
-    Test
+    defTest
       "push constructor field"
       (eqStack TempStack [nock| [30 nil] |])
       $ do
@@ -466,7 +516,7 @@ tests =
         pushConstructorFieldOnto TempStack Asm.StackRef 0
         pushConstructorFieldOnto TempStack Asm.StackRef 1
         addOn TempStack,
-    Test
+    defTest
       "trace"
       ( do
           eqStack ValueStack [nock| [10 nil] |]

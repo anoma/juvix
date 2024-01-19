@@ -112,27 +112,6 @@ functionPath = \case
   FunctionCode -> [L]
   FunctionArgs -> [R]
 
-data StdlibFunction
-  = StdlibDec
-  | StdlibAdd
-  | StdlibSub
-  | StdlibMul
-  | StdlibDiv
-  | StdlibMod
-  | StdlibLt
-  | StdlibLe
-
-stdlibNumArgs :: StdlibFunction -> Natural
-stdlibNumArgs = \case
-  StdlibDec -> 1
-  StdlibAdd -> 2
-  StdlibSub -> 2
-  StdlibMul -> 2
-  StdlibMod -> 2
-  StdlibDiv -> 2
-  StdlibLe -> 2
-  StdlibLt -> 2
-
 -- | The stdlib paths are obtained using scripts/nockma-stdlib-parser.sh
 stdlibPath :: StdlibFunction -> Path
 stdlibPath =
@@ -490,10 +469,7 @@ sub a b aux = do
   moveTopFromTo AuxStack ValueStack
 
 seqTerms :: [Term Natural] -> Term Natural
-seqTerms = foldl' step (OpAddress # emptyPath) . reverse
-  where
-    step :: Term Natural -> Term Natural -> Term Natural
-    step acc t = OpSequence # t # acc
+seqTerms = foldl' (flip (>>#)) (OpAddress # emptyPath) . reverse
 
 makeEmptyList :: Term Natural
 makeEmptyList = makeList []
@@ -785,11 +761,19 @@ callStdlibOn' s f = do
   let fNumArgs = stdlibNumArgs f
       fPath = stdlibPath f
       decodeFn = OpCall # (fPath # (OpAddress # stackPath StandardLibrary))
-      arguments = OpSequence # (OpAddress # [R]) # stdlibStackTake s fNumArgs
+      preargs = stdlibStackTake s fNumArgs
+      arguments = OpSequence # (OpAddress # [R]) # preargs
       extractResult = (OpAddress # [L]) # (OpAddress # [R, R])
       callFn = OpPush # (OpCall # [L] # (OpReplace # ([R, L] # arguments) # (OpAddress # [L]))) # extractResult
+      meta =
+        StdlibCall
+          { _stdlibCallArgs = preargs,
+            _stdlibCallFunction = f
+          }
 
-  output (OpPush # decodeFn # callFn)
+      callCell = (OpPush #. (decodeFn # callFn)) {_cellInfo = Irrelevant (Just meta)}
+
+  output (toNock callCell)
   output (replaceTopStackN fNumArgs s)
   where
     stdlibStackTake :: StackId -> Natural -> Term Natural
@@ -1021,18 +1005,12 @@ pushNat = pushNatOnto ValueStack
 pushNatOnto :: (Member Compiler r) => StackId -> Natural -> Sem r ()
 pushNatOnto s n = pushOnto s (OpQuote # toNock n)
 
-compileAndRunNock :: CompilerOptions -> ConstructorArities -> [CompilerFunction] -> CompilerFunction -> Term Natural
-compileAndRunNock opts constrs funs = run . ignoreOutput @(Term Natural) . compileAndRunNock' opts constrs funs
-
-compileAndRunNock' :: (Member (Output (Term Natural)) r) => CompilerOptions -> ConstructorArities -> [CompilerFunction] -> CompilerFunction -> Sem r (Term Natural)
+compileAndRunNock' :: (Members '[Reader EvalOptions, Output (Term Natural)] r) => CompilerOptions -> ConstructorArities -> [CompilerFunction] -> CompilerFunction -> Sem r (Term Natural)
 compileAndRunNock' opts constrs funs mainfun =
   let Cell nockSubject t = runCompilerWith opts constrs funs mainfun
    in evalCompiledNock' nockSubject t
 
-evalCompiledNock :: Term Natural -> Term Natural -> Term Natural
-evalCompiledNock stack = run . ignoreOutput @(Term Natural) . evalCompiledNock' stack
-
-evalCompiledNock' :: (Member (Output (Term Natural)) r) => Term Natural -> Term Natural -> Sem r (Term Natural)
+evalCompiledNock' :: (Members '[Reader EvalOptions, Output (Term Natural)] r) => Term Natural -> Term Natural -> Sem r (Term Natural)
 evalCompiledNock' stack mainTerm = do
   evalT <-
     runError @(ErrNockNatural Natural)

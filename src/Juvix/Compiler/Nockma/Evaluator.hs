@@ -1,10 +1,12 @@
 module Juvix.Compiler.Nockma.Evaluator
   ( module Juvix.Compiler.Nockma.Evaluator,
     module Juvix.Compiler.Nockma.Evaluator.Error,
+    module Juvix.Compiler.Nockma.Evaluator.Options,
   )
 where
 
 import Juvix.Compiler.Nockma.Evaluator.Error
+import Juvix.Compiler.Nockma.Evaluator.Options
 import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Prelude hiding (Atom, Path)
@@ -45,7 +47,7 @@ subTermT = go
 subTerm :: (Member (Error NockEvalError) r) => Term a -> Path -> Sem r (Term a)
 subTerm term pos = do
   case term ^? subTermT pos of
-    Nothing -> throw @NockEvalError (error "")
+    Nothing -> throw (InvalidPath "subterm")
     Just t -> return t
 
 setSubTerm :: (Member (Error NockEvalError) r) => Term a -> Path -> Term a -> Sem r (Term a)
@@ -55,11 +57,25 @@ setSubTerm term pos repTerm =
           | isNothing (getFirst old) -> throw @NockEvalError (error "")
           | otherwise -> return new
 
-parseCell :: forall r a. (Members '[Error NockEvalError, Error (ErrNockNatural a)] r, NockNatural a) => Cell a -> Sem r (ParsedCell a)
+parseCell ::
+  forall r a.
+  (Members '[Error NockEvalError, Error (ErrNockNatural a)] r, NockNatural a) =>
+  Cell a ->
+  Sem r (ParsedCell a)
 parseCell c = case c ^. cellLeft of
-  TermAtom a -> ParsedOperatorCell <$> parseOperatorCell a (c ^. cellRight)
+  TermAtom a -> operatorOrStdlibCall a (c ^. cellRight) (c ^. cellInfo . unIrrelevant)
   TermCell l -> return (ParsedAutoConsCell (AutoConsCell l (c ^. cellRight)))
   where
+    operatorOrStdlibCall :: Atom a -> Term a -> Maybe (StdlibCall a) -> Sem r (ParsedCell a)
+    operatorOrStdlibCall a t mcall = do
+      opCell <- parseOperatorCell a t
+      return $ case mcall of
+        Nothing -> ParsedOperatorCell opCell
+        Just call -> ParsedStdlibCallCell (parseStdlibCall opCell call)
+
+    parseStdlibCall :: OperatorCell a -> StdlibCall a -> StdlibCallCell a
+    parseStdlibCall op call = StdlibCallCell call op
+
     parseOperatorCell :: Atom a -> Term a -> Sem r (OperatorCell a)
     parseOperatorCell a t = do
       op <- nockOp a
@@ -84,7 +100,7 @@ programAssignments mprog =
 -- | The stack provided in the replExpression has priority
 evalRepl ::
   forall r a.
-  (PrettyCode a, Members '[Error NockEvalError, Error (ErrNockNatural a)] r, NockNatural a) =>
+  (PrettyCode a, Integral a, Members '[Reader EvalOptions, Error NockEvalError, Error (ErrNockNatural a)] r, NockNatural a) =>
   (Term a -> Sem r ()) ->
   Maybe (Program a) ->
   Maybe (Term a) ->
@@ -105,20 +121,57 @@ evalRepl handleTrace mprog defaultStack expr = do
     namedTerms :: HashMap Text (Term a)
     namedTerms = programAssignments mprog
 
-eval :: forall r a. (PrettyCode a, Members '[Output (Term a), Error NockEvalError, Error (ErrNockNatural a)] r, NockNatural a) => Term a -> Term a -> Sem r (Term a)
+eval ::
+  forall r a.
+  (PrettyCode a, Integral a, Members '[Reader EvalOptions, Output (Term a), Error NockEvalError, Error (ErrNockNatural a)] r, NockNatural a) =>
+  Term a ->
+  Term a ->
+  Sem r (Term a)
 eval stack = \case
   TermAtom a -> throw (ExpectedCell ("eval " <> ppTrace a))
-  TermCell c -> do
-    pc <- parseCell c
-    case pc of
+  TermCell c ->
+    parseCell c >>= \case
       ParsedAutoConsCell a -> goAutoConsCell a
       ParsedOperatorCell o -> goOperatorCell o
+      ParsedStdlibCallCell o -> do
+        ignore <- asks (^. evalIgnoreStdlibCalls)
+        if
+            | ignore -> goOperatorCell (o ^. stdlibCallRaw)
+            | otherwise -> goStdlibCall (o ^. stdlibCallCell)
   where
+    goStdlibCall :: StdlibCall a -> Sem r (Term a)
+    goStdlibCall StdlibCall {..} = do
+      args' <- eval stack _stdlibCallArgs
+      let binArith :: (a -> a -> a) -> Sem r (Term a)
+          binArith f = case args' of
+            TCell (TAtom l) (TAtom r) -> return (TCell (TAtom (f l r)) stack)
+            _ -> error "expected a cell with two atoms"
+
+          unaArith :: (a -> a) -> Sem r (Term a)
+          unaArith f = case args' of
+            TAtom n -> return (TCell (TAtom (f n)) stack)
+            _ -> error "expected an atom"
+
+          binCmp :: (a -> a -> Bool) -> Sem r (Term a)
+          binCmp f = case args' of
+            TCell (TAtom l) (TAtom r) -> return (TCell (TermAtom (nockBool (f l r))) stack)
+            _ -> error "expected a cell with two atoms"
+
+      case _stdlibCallFunction of
+        StdlibDec -> unaArith pred
+        StdlibAdd -> binArith (+)
+        StdlibMul -> binArith (*)
+        StdlibSub -> binArith (-)
+        StdlibDiv -> binArith div
+        StdlibMod -> binArith mod
+        StdlibLt -> binCmp (<)
+        StdlibLe -> binCmp (<=)
+
     goAutoConsCell :: AutoConsCell a -> Sem r (Term a)
     goAutoConsCell c = do
-      _cellLeft <- eval stack (TermCell (c ^. autoConsCellLeft))
-      _cellRight <- eval stack (c ^. autoConsCellRight)
-      return (TermCell Cell {..})
+      l' <- eval stack (TermCell (c ^. autoConsCellLeft))
+      r' <- eval stack (c ^. autoConsCellRight)
+      return (TermCell (Cell l' r'))
 
     goOperatorCell :: OperatorCell a -> Sem r (Term a)
     goOperatorCell c = case c ^. operatorCellOp of
@@ -149,7 +202,7 @@ eval stack = \case
 
         goOpTrace :: Sem r (Term a)
         goOpTrace = do
-          Cell tr a <- asCell "OpTrace" (c ^. operatorCellTerm)
+          Cell' tr a _ <- asCell "OpTrace" (c ^. operatorCellTerm)
           tr' <- eval stack tr
           output tr'
           eval stack a
@@ -164,13 +217,13 @@ eval stack = \case
         goOpPush = do
           cellTerm <- asCell "OpPush" (c ^. operatorCellTerm)
           l <- eval stack (cellTerm ^. cellLeft)
-          let s = TermCell Cell {_cellLeft = l, _cellRight = stack}
+          let s = TermCell (Cell l stack)
           eval s (cellTerm ^. cellRight)
 
         goOpReplace :: Sem r (Term a)
         goOpReplace = do
-          Cell rot1 t2 <- asCell "OpReplace 1" (c ^. operatorCellTerm)
-          Cell ro t1 <- asCell "OpReplace 2" rot1
+          Cell' rot1 t2 _ <- asCell "OpReplace 1" (c ^. operatorCellTerm)
+          Cell' ro t1 _ <- asCell "OpReplace 2" rot1
           r <- asPath ro
           t1' <- eval stack t1
           t2' <- eval stack t2
@@ -187,7 +240,7 @@ eval stack = \case
         goOpIf = do
           cellTerm <- asCell "OpIf 1" (c ^. operatorCellTerm)
           let t0 = cellTerm ^. cellLeft
-          Cell t1 t2 <- asCell "OpIf 2" (cellTerm ^. cellRight)
+          Cell' t1 t2 _ <- asCell "OpIf 2" (cellTerm ^. cellRight)
           cond <- eval stack t0 >>= asBool
           if
               | cond -> eval stack t1

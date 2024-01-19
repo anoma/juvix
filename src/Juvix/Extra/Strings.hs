@@ -581,6 +581,12 @@ tmp = "tmp"
 instrAdd :: (IsString s) => s
 instrAdd = "add"
 
+argsTag :: (IsString s) => s
+argsTag = "args@"
+
+stdlibTag :: (IsString s) => s
+stdlibTag = "stdlib@"
+
 instrSub :: (IsString s) => s
 instrSub = "sub"
 
