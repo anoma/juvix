@@ -108,4 +108,4 @@ instance PrettyCode EvalCrumb where
 
 instance PrettyCode EvalCtx where
   ppCode (EvalCtx l) =
-    vsep <$> mapM (fmap nest' . ppCode) (reverse l)
+    itemize <$> mapM (fmap nest' . ppCode) (reverse l)
