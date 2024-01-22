@@ -15,9 +15,19 @@ fromCore tab =
   InfoTable
     { _infoMainFunction = tab ^. Core.infoMain,
       _infoFunctions = genCode tab <$> tab ^. Core.infoFunctions,
-      _infoInductives = translateInductiveInfo <$> tab ^. Core.infoInductives,
-      _infoConstrs = translateConstructorInfo <$> tab ^. Core.infoConstructors
+      _infoInductives = inductiveInfos,
+      _infoConstrs = transConstructor <$> tab ^. Core.infoConstructors
     }
+  where
+    inductiveInfos = translateInductiveInfo <$> tab ^. Core.infoInductives
+
+    transConstructor :: Core.ConstructorInfo -> ConstructorInfo
+    transConstructor c =
+      let i = getInductiveInfo (c ^. Core.constructorInductive)
+       in translateConstructorInfo i c
+
+    getInductiveInfo :: Symbol -> InductiveInfo
+    getInductiveInfo s = inductiveInfos ^?! at s . _Just
 
 -- Generate code for a single function.
 genCode :: Core.InfoTable -> Core.FunctionInfo -> FunctionInfo
@@ -323,18 +333,25 @@ translateInductiveInfo ii =
       _inductiveRepresentation = IndRepStandard
     }
 
-translateConstructorInfo :: Core.ConstructorInfo -> ConstructorInfo
-translateConstructorInfo ci =
+translateConstructorInfo :: InductiveInfo -> Core.ConstructorInfo -> ConstructorInfo
+translateConstructorInfo ind ci =
   ConstructorInfo
     { _constructorName = ci ^. Core.constructorName,
       _constructorLocation = ci ^. Core.constructorLocation,
       _constructorTag = ci ^. Core.constructorTag,
-      _constructorArgsNum = length (typeArgs ty),
       _constructorArgNames = ci ^. Core.constructorArgNames,
+      _constructorArgsNum = numArgs,
       _constructorType = ty,
       _constructorInductive = ci ^. Core.constructorInductive,
-      _constructorRepresentation = MemRepConstr,
+      _constructorRepresentation = rep,
       _constructorFixity = ci ^. Core.constructorFixity
     }
   where
+    numConstrs = length (ind ^. inductiveConstructors)
+    numArgs = ci ^. Core.constructorArgsNum
+    rep :: MemRep
+    rep
+      | numArgs >= 1 && numConstrs == 1 = MemRepTuple
+      | otherwise = MemRepConstr
+
     ty = convertType 0 (ci ^. Core.constructorType)

@@ -6,7 +6,20 @@ import Juvix.Compiler.Nockma.Evaluator
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Stdlib
 import Juvix.Compiler.Pipeline.EntryPoint
+import Juvix.Compiler.Tree.Language.Rep
 import Juvix.Prelude hiding (Atom, Path)
+
+nockmaMemRep :: MemRep -> NockmaMemRep
+nockmaMemRep = \case
+  MemRepTuple -> NockmaMemRepTuple
+  MemRepConstr -> NockmaMemRepConstr
+  MemRepTag -> NockmaMemRepConstr
+  MemRepUnit -> NockmaMemRepConstr
+  MemRepUnpacked {} -> NockmaMemRepConstr
+
+data NockmaMemRep
+  = NockmaMemRepConstr
+  | NockmaMemRepTuple
 
 type UserFunctionId = Symbol
 
@@ -41,11 +54,16 @@ data FunctionInfo = FunctionInfo
 
 data CompilerCtx = CompilerCtx
   { _compilerFunctionInfos :: HashMap FunctionId FunctionInfo,
-    _compilerConstructorArities :: ConstructorArities,
+    _compilerConstructorInfos :: ConstructorInfos,
     _compilerOptions :: CompilerOptions
   }
 
-type ConstructorArities = HashMap Asm.Tag Natural
+data ConstructorInfo = ConstructorInfo
+  { _constructorInfoArity :: Natural,
+    _constructorInfoMemRep :: NockmaMemRep
+  }
+
+type ConstructorInfos = HashMap Asm.Tag ConstructorInfo
 
 type Offset = Natural
 
@@ -142,12 +160,19 @@ data Compiler m a where
   Save :: Bool -> m () -> Compiler m ()
   CallStdlibOn :: StackId -> StdlibFunction -> Compiler m ()
   AsmReturn :: Compiler m ()
-  GetConstructorArity :: Asm.Tag -> Compiler m Natural
+  GetConstructorInfo :: Asm.Tag -> Compiler m ConstructorInfo
   GetFunctionArity :: FunctionId -> Compiler m Natural
   GetFunctionPath :: FunctionId -> Compiler m Path
 
 stackPath :: StackId -> Path
 stackPath s = indexStack (fromIntegral (fromEnum s))
+
+indexTuple :: Natural -> Natural -> Path
+indexTuple len idx =
+  let lastL
+        | idx == len - 1 = []
+        | otherwise = [L]
+   in replicate idx R ++ lastL
 
 indexStack :: Natural -> Path
 indexStack idx = replicate idx R ++ [L]
@@ -175,6 +200,7 @@ makeSem ''Compiler
 makeLenses ''CompilerOptions
 makeLenses ''CompilerFunction
 makeLenses ''CompilerCtx
+makeLenses ''ConstructorInfo
 makeLenses ''FunctionInfo
 
 termFromParts :: (Bounded p, Enum p) => (p -> Term Natural) -> Term Natural
@@ -206,8 +232,14 @@ fromAsmTable t = case t ^. Asm.infoMainFunction of
     fromAsm :: CompilerOptions -> Asm.Symbol -> Asm.InfoTable -> Cell Natural
     fromAsm opts mainSym Asm.InfoTable {..} =
       let funs = map compileFunction allFunctions
-          constrs :: ConstructorArities
-          constrs = fromIntegral . (^. Asm.constructorArgsNum) <$> _infoConstrs
+          mkConstructorInfo :: Asm.ConstructorInfo -> ConstructorInfo
+          mkConstructorInfo Asm.ConstructorInfo {..} =
+            ConstructorInfo
+              { _constructorInfoArity = fromIntegral _constructorArgsNum,
+                _constructorInfoMemRep = nockmaMemRep _constructorRepresentation
+              }
+          constrs :: ConstructorInfos
+          constrs = mkConstructorInfo <$> _infoConstrs
        in runCompilerWith opts constrs funs mainFun
       where
         mainFun :: CompilerFunction
@@ -240,15 +272,17 @@ fromOffsetRef = fromIntegral . (^. Asm.offsetRefOffset)
 
 -- | Generic constructors are encoded as [tag args], where args is a
 -- nil terminated list.
-goConstructor :: Asm.Tag -> [Term Natural] -> Term Natural
-goConstructor t args = case t of
+goConstructor :: NockmaMemRep -> Asm.Tag -> [Term Natural] -> Term Natural
+goConstructor mr t args = case t of
   Asm.BuiltinTag b -> makeConstructor $ \case
     ConstructorTag -> builtinTagToTerm b
     ConstructorArgs -> remakeList []
-  Asm.UserTag tag ->
-    makeConstructor $ \case
-      ConstructorTag -> OpQuote # (fromIntegral (tag ^. Asm.tagUserWord) :: Natural)
-      ConstructorArgs -> remakeList args
+  Asm.UserTag tag -> case mr of
+    NockmaMemRepConstr ->
+      makeConstructor $ \case
+        ConstructorTag -> OpQuote # (fromIntegral (tag ^. Asm.tagUserWord) :: Natural)
+        ConstructorArgs -> remakeList args
+    NockmaMemRepTuple -> foldTerms (nonEmpty' args)
 
 compile :: forall r. (Members '[Compiler] r) => Asm.Code -> Sem r ()
 compile = mapM_ goCommand
@@ -303,6 +337,7 @@ compile = mapM_ goCommand
           Asm.DRef r -> pushDirectRef r
           Asm.ConstrRef r ->
             pushConstructorField
+              (r ^. Asm.fieldTag)
               (r ^. Asm.fieldRef)
               (fromIntegral (r ^. Asm.fieldOffset))
 
@@ -395,12 +430,28 @@ constVoid = makeConstructor $ \case
   ConstructorTag -> OpQuote # toNock (0 :: Natural)
   ConstructorArgs -> remakeList []
 
-pushConstructorFieldOnto :: (Members '[Compiler] r) => StackId -> Asm.DirectRef -> Natural -> Sem r ()
-pushConstructorFieldOnto s refToConstr argIx =
-  let path = directRefPath refToConstr ++ constructorPath ConstructorArgs ++ indexStack argIx
-   in pushOnto s (OpAddress # path)
+pushConstructorFieldOnto ::
+  (Members '[Compiler] r) =>
+  StackId ->
+  Asm.Tag ->
+  Asm.DirectRef ->
+  Natural ->
+  Sem r ()
+pushConstructorFieldOnto s tag refToConstr argIx = do
+  info <- getConstructorInfo tag
+  let memrep = info ^. constructorInfoMemRep
+      arity = info ^. constructorInfoArity
+      path = case memrep of
+        NockmaMemRepConstr ->
+          directRefPath refToConstr
+            ++ constructorPath ConstructorArgs
+            ++ indexStack argIx
+        NockmaMemRepTuple ->
+          directRefPath refToConstr
+            ++ indexTuple arity argIx
+  pushOnto s (OpAddress # path)
 
-pushConstructorField :: (Members '[Compiler] r) => Asm.DirectRef -> Natural -> Sem r ()
+pushConstructorField :: (Members '[Compiler] r) => Asm.Tag -> Asm.DirectRef -> Natural -> Sem r ()
 pushConstructorField = pushConstructorFieldOnto ValueStack
 
 directRefPath :: Asm.DirectRef -> Path
@@ -438,9 +489,11 @@ closureArgsNum = do
 
 allocConstr :: (Members '[Compiler] r) => Asm.Tag -> Sem r ()
 allocConstr tag = do
-  numArgs <- getConstructorArity tag
-  let args = [OpAddress # indexInStack ValueStack (pred i) | i <- [1 .. numArgs]]
-      constr = goConstructor tag args
+  info <- getConstructorInfo tag
+  let numArgs = info ^. constructorInfoArity
+      memrep = info ^. constructorInfoMemRep
+      args = [OpAddress # indexInStack ValueStack (pred i) | i <- [1 .. numArgs]]
+      constr = goConstructor memrep tag args
   pushOnto AuxStack constr
   popN numArgs
   moveTopFromTo AuxStack ValueStack
@@ -515,7 +568,7 @@ runCompiler sem = do
   (ts, a) <- runOutputList (re sem)
   return (seqTerms ts, a)
 
-runCompilerWith :: CompilerOptions -> ConstructorArities -> [CompilerFunction] -> CompilerFunction -> Cell Natural
+runCompilerWith :: CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> Cell Natural
 runCompilerWith opts constrs libFuns mainFun =
   let entryCommand :: (Members '[Compiler] r) => Sem r ()
       entryCommand = callFun (mainFun ^. compilerFunctionName) 0
@@ -547,7 +600,7 @@ runCompilerWith opts constrs libFuns mainFun =
     compilerCtx =
       CompilerCtx
         { _compilerFunctionInfos = functionInfos,
-          _compilerConstructorArities = constrs,
+          _compilerConstructorInfos = constrs,
           _compilerOptions = opts
         }
 
@@ -811,6 +864,7 @@ constructorTagToTerm = \case
   Asm.BuiltinTag b -> builtinTagToTerm b
 
 caseCmd ::
+  forall r.
   (Members '[Compiler] r) =>
   Maybe (Sem r ()) ->
   [(Asm.Tag, Sem r ())] ->
@@ -818,11 +872,20 @@ caseCmd ::
 caseCmd defaultBranch = \case
   [] -> sequence_ defaultBranch
   (tag, b) : bs -> do
-    -- push the constructor tag at the top
-    push (OpAddress # topOfStack ValueStack ++ constructorPath ConstructorTag)
-    push (constructorTagToTerm tag)
-    testEq
-    branch b (caseCmd defaultBranch bs)
+    rep <- getConstructorMemRep tag
+    case rep of
+      NockmaMemRepConstr -> goRepConstr tag b bs
+      NockmaMemRepTuple
+        | null bs, isNothing defaultBranch -> b
+        | otherwise -> error "redundant branch. Impossible?"
+  where
+    goRepConstr :: Asm.Tag -> Sem r () -> [(Asm.Tag, Sem r ())] -> Sem r ()
+    goRepConstr tag b bs = do
+      -- push the constructor tag at the top
+      push (OpAddress # topOfStack ValueStack ++ constructorPath ConstructorTag)
+      push (constructorTagToTerm tag)
+      testEq
+      branch b (caseCmd defaultBranch bs)
 
 branch' ::
   (Functor f, Members '[Output (Term Natural), Reader CompilerCtx] r) =>
@@ -837,8 +900,14 @@ branch' t f = do
 getFunctionArity' :: (Members '[Reader CompilerCtx] r) => FunctionId -> Sem r Natural
 getFunctionArity' s = asks (^?! compilerFunctionInfos . at s . _Just . functionInfoArity)
 
-getConstructorArity' :: (Members '[Reader CompilerCtx] r) => Asm.Tag -> Sem r Natural
-getConstructorArity' tag = asks (^?! compilerConstructorArities . at tag . _Just)
+getConstructorInfo' :: (Members '[Reader CompilerCtx] r) => Asm.Tag -> Sem r ConstructorInfo
+getConstructorInfo' tag = asks (^?! compilerConstructorInfos . at tag . _Just)
+
+getConstructorMemRep :: (Members '[Compiler] r) => Asm.Tag -> Sem r NockmaMemRep
+getConstructorMemRep tag = (^. constructorInfoMemRep) <$> getConstructorInfo tag
+
+getConstructorArity :: (Members '[Compiler] r) => Asm.Tag -> Sem r Natural
+getConstructorArity tag = (^. constructorInfoArity) <$> getConstructorInfo tag
 
 re :: (Member (Reader CompilerCtx) r) => Sem (Compiler ': r) a -> Sem (Output (Term Natural) ': r) a
 re = reinterpretH $ \case
@@ -854,7 +923,7 @@ re = reinterpretH $ \case
   CallStdlibOn s f -> callStdlibOn' s f >>= pureT
   AsmReturn -> asmReturn' >>= pureT
   TestEqOn s -> testEqOn' s >>= pureT
-  GetConstructorArity s -> getConstructorArity' s >>= pureT
+  GetConstructorInfo s -> getConstructorInfo' s >>= pureT
   GetFunctionArity s -> getFunctionArity' s >>= pureT
   GetFunctionPath s -> getFunctionPath' s >>= pureT
   Crash -> outputT (OpAddress # OpAddress # OpAddress)
@@ -1005,7 +1074,13 @@ pushNat = pushNatOnto ValueStack
 pushNatOnto :: (Member Compiler r) => StackId -> Natural -> Sem r ()
 pushNatOnto s n = pushOnto s (OpQuote # toNock n)
 
-compileAndRunNock' :: (Members '[Reader EvalOptions, Output (Term Natural)] r) => CompilerOptions -> ConstructorArities -> [CompilerFunction] -> CompilerFunction -> Sem r (Term Natural)
+compileAndRunNock' ::
+  (Members '[Reader EvalOptions, Output (Term Natural)] r) =>
+  CompilerOptions ->
+  ConstructorInfos ->
+  [CompilerFunction] ->
+  CompilerFunction ->
+  Sem r (Term Natural)
 compileAndRunNock' opts constrs funs mainfun =
   let Cell nockSubject t = runCompilerWith opts constrs funs mainfun
    in evalCompiledNock' nockSubject t
