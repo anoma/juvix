@@ -1,0 +1,11 @@
+
+function calculate(integer, integer, integer) : integer;
+function main() : *;
+
+function calculate(integer, integer, integer) : integer {
+  add(mul(arg[2], arg[1]), arg[0])
+}
+
+function main() : * {
+  call(calloc[calculate](5, 3), 2)
+}

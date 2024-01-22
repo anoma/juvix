@@ -1,0 +1,35 @@
+
+function f((*, integer → integer, integer) → *
+, integer → integer
+, integer) : *;
+function g(integer) : integer;
+function main() : *;
+
+function f((*, integer → integer, integer) → *
+, integer → integer
+, integer) : * {
+  seq(seq(seq(save(6) {
+    seq(trace(tmp[0]), tmp[0])
+  }, save(arg[2]) {
+    seq(trace(tmp[0]), tmp[0])
+  }), save(7) {
+    seq(trace(tmp[0]), tmp[0])
+  }), br(eq(0, arg[2])) {
+    true: seq(save("end") {
+      seq(trace(tmp[0]), tmp[0])
+    }, void)
+    false: seq(save(9) {
+      seq(trace(tmp[0]), tmp[0])
+    }, call(arg[0], arg[0], arg[1], call(arg[1], arg[2])))
+  })
+}
+
+function g(integer) : integer {
+  seq(save(mul(10, arg[0])) {
+    seq(trace(tmp[0]), tmp[0])
+  }, sub(arg[0], 1))
+}
+
+function main() : * {
+  call[f](calloc[f](), calloc[g](), 4)
+}

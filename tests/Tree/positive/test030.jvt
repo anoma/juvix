@@ -1,0 +1,36 @@
+
+function g(integer) : integer;
+function f(integer) : integer;
+function h(integer) : integer;
+function main() : *;
+
+function g(integer) : integer {
+  br(lt(arg[0], 1)) {
+    true: 1
+    false: mod(add(arg[0], call[h](sub(arg[0], 1))), 268435456)
+  }
+}
+
+function f(integer) : integer {
+  br(lt(arg[0], 1)) {
+    true: 1
+    false: mod(add(mul(2, arg[0]), call[g](sub(arg[0], 1))), 268435456)
+  }
+}
+
+function h(integer) : integer {
+  br(lt(arg[0], 1)) {
+    true: 1
+    false: mod(mul(arg[0], call[f](sub(arg[0], 1))), 268435456)
+  }
+}
+
+function main() : * {
+  seq(seq(seq(save(call[f](5)) {
+    seq(trace(tmp[0]), tmp[0])
+  }, save(call[f](10)) {
+    seq(trace(tmp[0]), tmp[0])
+  }), save(call[f](100)) {
+    seq(trace(tmp[0]), tmp[0])
+  }), void)
+}

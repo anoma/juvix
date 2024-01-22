@@ -1,0 +1,6 @@
+
+function main() : *;
+
+function main() : * {
+  alloc[write](strcat(show(add(atoi("123"), 20)), ".\n"))
+}

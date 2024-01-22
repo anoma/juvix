@@ -88,8 +88,8 @@ goFunction infoTab fi = do
           Asm.StrToInt -> goUnop OpStrToInt
           Asm.Push (Asm.Constant c) -> return (Const c)
           Asm.Push (Asm.Ref r) -> return (MemRef r)
-          Asm.Pop -> goBinop OpSeq
-          Asm.Trace -> goUnop OpTrace
+          Asm.Pop -> goPop
+          Asm.Trace -> goTrace
           Asm.Dump -> unsupported (_cmdInstrInfo ^. Asm.commandInfoLocation)
           Asm.Failure -> goUnop OpFail
           Asm.ArgsNum -> goUnop OpArgsNum
@@ -220,6 +220,42 @@ goFunction infoTab fi = do
               NodeUnop
                 { _nodeUnopArg = arg,
                   _nodeUnopOpcode = op
+                }
+
+        goPop :: Sem r Node
+        goPop = do
+          arg2 <- goCode
+          arg1 <- goCode
+          return $
+            Binop
+              NodeBinop
+                { _nodeBinopOpcode = OpSeq,
+                  _nodeBinopArg1 = arg1,
+                  _nodeBinopArg2 = arg2
+                }
+
+        goTrace :: Sem r Node
+        goTrace = do
+          arg <- goCode
+          off <- asks (^. tempSize)
+          let ref = MemRef $ DRef $ mkTempRef $ OffsetRef off Nothing
+          return $
+            Save
+              NodeSave
+                { _nodeSaveArg = arg,
+                  _nodeSaveName = Nothing,
+                  _nodeSaveBody =
+                    Binop
+                      NodeBinop
+                        { _nodeBinopOpcode = OpSeq,
+                          _nodeBinopArg1 =
+                            Unop
+                              NodeUnop
+                                { _nodeUnopOpcode = OpTrace,
+                                  _nodeUnopArg = ref
+                                },
+                          _nodeBinopArg2 = ref
+                        }
                 }
 
         goArgs :: Int -> Sem r [Node]

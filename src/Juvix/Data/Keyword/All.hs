@@ -244,6 +244,9 @@ kwStrToInt = asciiKw Str.strToInt
 kwAtoi :: Keyword
 kwAtoi = asciiKw Str.instrStrToInt
 
+kwStrcat :: Keyword
+kwStrcat = asciiKw Str.instrStrConcat
+
 kwBind :: Keyword
 kwBind = asciiKw Str.bind
 

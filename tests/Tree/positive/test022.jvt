@@ -1,0 +1,16 @@
+
+function sapp(* → *) : *;
+function id(*) : *;
+function main() : *;
+
+function sapp(* → *) : * {
+  call(arg[0], arg[0])
+}
+
+function id(*) : * {
+  arg[0]
+}
+
+function main() : * {
+  ccall(calloc[sapp](), calloc[id](), 7)
+}

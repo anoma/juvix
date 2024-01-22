@@ -1,0 +1,21 @@
+
+function f(integer → integer) : integer;
+function h(integer, integer) : integer;
+function u(integer) : integer;
+function main() : *;
+
+function f(integer → integer) : integer {
+  call(arg[0], 5)
+}
+
+function h(integer, integer) : integer {
+  add(arg[0], arg[1])
+}
+
+function u(integer) : integer {
+  add(call[f](calloc[h](4)), arg[0])
+}
+
+function main() : * {
+  call[u](2)
+}

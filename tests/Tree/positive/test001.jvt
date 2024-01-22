@@ -1,0 +1,6 @@
+
+function main() : *;
+
+function main() : * {
+  mod(sub(25, mul(7, div(9, sub(15, add(mul(2, 3), 5))))), 12)
+}

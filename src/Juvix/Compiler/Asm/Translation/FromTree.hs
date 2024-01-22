@@ -107,13 +107,16 @@ genCode fi =
     goExtendClosure :: Bool -> Tree.NodeExtendClosure -> Code'
     goExtendClosure isTail Tree.NodeExtendClosure {..} =
       snocReturn isTail $
-        DL.snoc
+        DL.append
           (goArgs (toList _nodeExtendClosureArgs))
-          ( mkInstr $
-              ExtendClosure $
-                InstrExtendClosure
-                  { _extendClosureArgsNum = length _nodeExtendClosureArgs
-                  }
+          ( DL.snoc
+              (go False _nodeExtendClosureFun)
+              ( mkInstr $
+                  ExtendClosure $
+                    InstrExtendClosure
+                      { _extendClosureArgsNum = length _nodeExtendClosureArgs
+                      }
+              )
           )
 
     goCall :: Bool -> Tree.NodeCall -> Code'
@@ -131,13 +134,15 @@ genCode fi =
       Tree.CallClosure arg ->
         DL.append
           (goArgs _nodeCallArgs)
-          ( DL.snoc (go False arg) $
-              mkInstr $
-                (if isTail then TailCall else Call) $
-                  InstrCall
-                    { _callType = CallClosure,
-                      _callArgsNum = length _nodeCallArgs
-                    }
+          ( DL.snoc
+              (go False arg)
+              ( mkInstr $
+                  (if isTail then TailCall else Call) $
+                    InstrCall
+                      { _callType = CallClosure,
+                        _callArgsNum = length _nodeCallArgs
+                      }
+              )
           )
 
     goCallClosures :: Bool -> Tree.NodeCallClosures -> Code'

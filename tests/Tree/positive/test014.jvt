@@ -1,0 +1,52 @@
+type tree {
+  node1 : tree → tree;
+  node2 : (tree, tree) → tree;
+  node3 : (tree, tree, tree) → tree;
+  leaf : tree;
+}
+
+function gen(integer) : tree;
+function preorder(tree) : *;
+function main() : *;
+
+function gen(integer) : tree {
+  br(eq(0, arg[0])) {
+    true: alloc[leaf]()
+    false: save(mod(arg[0], 3)) {
+      br(eq(0, tmp[0])) {
+        true: alloc[node1](call[gen](sub(arg[0], 1)))
+        false: br(eq(1, tmp[0])) {
+          true: save(sub(arg[0], 1)) {
+            alloc[node2](call[gen](tmp[1]), call[gen](tmp[1]))
+          }
+          false: save(sub(arg[0], 1)) {
+            alloc[node3](call[gen](tmp[1]), call[gen](tmp[1]), call[gen](tmp[1]))
+          }
+        }
+      }
+    }
+  }
+}
+
+function preorder(tree) : * {
+  case[tree](arg[0]) {
+    node1: seq(save(1) {
+      seq(trace(tmp[0]), tmp[0])
+    }, call[preorder](arg[0].node1[0]))
+    node2: seq(seq(save(2) {
+      seq(trace(tmp[0]), tmp[0])
+    }, call[preorder](arg[0].node2[0])), call[preorder](arg[0].node2[1]))
+    node3: seq(seq(seq(save(3) {
+      seq(trace(tmp[0]), tmp[0])
+    }, call[preorder](arg[0].node3[0])), call[preorder](arg[0].node3[1])), call[preorder](arg[0].node3[2]))
+    leaf: seq(save(0) {
+      seq(trace(tmp[0]), tmp[0])
+    }, void)
+  }
+}
+
+function main() : * {
+  seq(seq(call[preorder](call[gen](3)), save("X") {
+    seq(trace(tmp[0]), tmp[0])
+  }), call[preorder](call[gen](7)))
+}

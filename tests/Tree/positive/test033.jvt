@@ -1,0 +1,29 @@
+
+function ack(integer, integer) : integer;
+function main() : *;
+
+function ack(integer, integer) : integer {
+  br(eq(arg[0], 0)) {
+    true: add(arg[1], 1)
+    false: br(eq(arg[1], 0)) {
+      true: call[ack](sub(arg[0], 1), 1)
+      false: call[ack](sub(arg[0], 1), call[ack](arg[0], sub(arg[1], 1)))
+    }
+  }
+}
+
+function main() : * {
+  seq(seq(seq(seq(seq(seq(save(call[ack](0, 7)) {
+    seq(trace(tmp[0]), tmp[0])
+  }, save(call[ack](1, 7)) {
+    seq(trace(tmp[0]), tmp[0])
+  }), save(call[ack](1, 13)) {
+    seq(trace(tmp[0]), tmp[0])
+  }), save(call[ack](2, 7)) {
+    seq(trace(tmp[0]), tmp[0])
+  }), save(call[ack](2, 13)) {
+    seq(trace(tmp[0]), tmp[0])
+  }), save(call[ack](3, 4)) {
+    seq(trace(tmp[0]), tmp[0])
+  }), void)
+}

@@ -1,0 +1,56 @@
+
+function app(* → *, *) : *;
+function app'((integer → integer, integer) → integer
+, integer → integer
+, integer) : integer;
+function inc(integer) : integer;
+function h((* → *, *) → *) : *;
+function capp((*, *) → *, *) : * → *;
+function curry((*, *) → *) : * → * → *;
+function uapp(* → * → *, *, *) : *;
+function uncurry(* → * → *) : (*, *) → *;
+function main() : *;
+
+function app(* → *, *) : * {
+  call(arg[0], arg[1])
+}
+
+function app'((integer → integer, integer) → integer
+, integer → integer
+, integer) : integer {
+  call(arg[0], arg[1], arg[2])
+}
+
+function inc(integer) : integer {
+  add(1, arg[0])
+}
+
+function h((* → *, *) → *) : * {
+  cextend(arg[0], calloc[inc]())
+}
+
+function capp((*, *) → *, *) : * → * {
+  cextend(arg[0], arg[1])
+}
+
+function curry((*, *) → *) : * → * → * {
+  calloc[capp](arg[0])
+}
+
+function uapp(* → * → *, *, *) : * {
+  call(call(arg[0], arg[1]), arg[2])
+}
+
+function uncurry(* → * → *) : (*, *) → * {
+  calloc[uapp](arg[0])
+}
+
+function main() : * {
+  seq(seq(seq(save(call[app'](calloc[app](), calloc[inc](), 5)) {
+    seq(trace(tmp[0]), tmp[0])
+  }, save(call(call[h](calloc[app]()), 4)) {
+    seq(trace(tmp[0]), tmp[0])
+  }), save(call(call[uncurry](call[curry](calloc[app]())), calloc[inc](), 7)) {
+    seq(trace(tmp[0]), tmp[0])
+  }), void)
+}

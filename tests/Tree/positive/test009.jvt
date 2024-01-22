@@ -1,0 +1,67 @@
+type list {
+  nil : list;
+  cons : (*, list) → list;
+}
+
+function hd(list) : *;
+function tl(list) : list;
+function null(list) : bool;
+function map(* → *, list) : list;
+function map'(* → *, list) : list;
+function add_one(integer) : integer;
+function main() : *;
+
+function hd(list) : * {
+  arg[0].cons[0]
+}
+
+function tl(list) : list {
+  arg[0].cons[1]
+}
+
+function null(list) : bool {
+  case[list](arg[0]) {
+    nil: true
+    default: false
+  }
+}
+
+function map(* → *, list) : list {
+  case[list](arg[1]) {
+    nil: save {
+      tmp[0]
+    }
+    cons: save {
+      alloc[cons](call(arg[0], tmp[0].cons[0]), call[map](arg[0], tmp[0].cons[1]))
+    }
+  }
+}
+
+function map'(* → *, list) : list {
+  br(call[null](arg[1])) {
+    true: alloc[nil]()
+    false: alloc[cons](call(arg[0], call[hd](arg[1])), call[map'](arg[0], call[tl](arg[1])))
+  }
+}
+
+function add_one(integer) : integer {
+  add(1, arg[0])
+}
+
+function main() : * {
+  save(alloc[cons](0, alloc[cons](1, alloc[nil]()))) {
+    seq(seq(seq(seq(seq(seq(save(call[null](tmp[0])) {
+      seq(trace(tmp[1]), tmp[1])
+    }, save(call[null](alloc[nil]())) {
+      seq(trace(tmp[1]), tmp[1])
+    }), save(call[hd](tmp[0])) {
+      seq(trace(tmp[1]), tmp[1])
+    }), save(call[tl](tmp[0])) {
+      seq(trace(tmp[1]), tmp[1])
+    }), save(call[hd](call[tl](tmp[0]))) {
+      seq(trace(tmp[1]), tmp[1])
+    }), save(call[map](calloc[add_one](), tmp[0])) {
+      seq(trace(tmp[1]), tmp[1])
+    }), call[map'](calloc[add_one](), tmp[0]))
+  }
+}

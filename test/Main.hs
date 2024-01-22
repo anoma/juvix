@@ -18,6 +18,7 @@ import Resolver qualified
 import Runtime qualified
 import Scope qualified
 import Termination qualified
+import Tree qualified
 import Typecheck qualified
 import VampIR qualified
 
@@ -28,6 +29,7 @@ slowTests =
     [ BackendGeb.allTests,
       Runtime.allTests,
       Asm.allTests,
+      Tree.allTests,
       Core.allTests,
       Internal.allTests,
       Compilation.allTests,

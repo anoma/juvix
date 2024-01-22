@@ -1,0 +1,48 @@
+type list {
+  nil : list;
+  cons : (*, list) → list;
+}
+
+function mklst(integer) : list;
+function mklst2(integer) : list;
+function append(list, list) : list;
+function flatten(list) : list;
+function main() : *;
+
+function mklst(integer) : list {
+  br(eq(arg[0], 0)) {
+    true: alloc[nil]()
+    false: alloc[cons](arg[0], call[mklst](sub(arg[0], 1)))
+  }
+}
+
+function mklst2(integer) : list {
+  br(eq(arg[0], 0)) {
+    true: alloc[nil]()
+    false: alloc[cons](call[mklst](arg[0]), call[mklst2](sub(arg[0], 1)))
+  }
+}
+
+function append(list, list) : list {
+  case[list](arg[0]) {
+    nil: arg[1]
+    cons: alloc[cons](arg[0].cons[0], call[append](arg[0].cons[1], arg[1]))
+  }
+}
+
+function flatten(list) : list {
+  case[list](arg[0]) {
+    nil: save {
+      tmp[0]
+    }
+    cons: call[append](arg[0].cons[0], call[flatten](arg[0].cons[1]))
+  }
+}
+
+function main() : * {
+  seq(save(call[flatten](save(call[mklst2](4)) {
+    seq(trace(tmp[0]), tmp[0])
+  })) {
+    seq(trace(tmp[0]), tmp[0])
+  }, void)
+}

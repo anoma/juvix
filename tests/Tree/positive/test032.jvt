@@ -1,0 +1,119 @@
+type Pair {
+  pair : (*, *) → Pair;
+}
+
+function toInt((* → *, *) → *) : integer;
+function fib((* → *, *) → *) : (* → *, *) → *;
+function main() : *;
+function fst(Pair) : *;
+function snd(Pair) : *;
+function compose(* → *, * → *, *) : *;
+function zero(* → *, *) : *;
+function num(integer, * → *, *) : *;
+function succ((* → *, *) → *, * → *) : * → *;
+function cadd((* → *, *) → *, (* → *, *) → *, * → *) : * → *;
+function cmul((* → *, *) → *, (* → *, *) → *, * → *) : * → *;
+function const(*, *) : *;
+function isZero((* → *, *) → *) : bool;
+function uncurry(*, * → *, *) : *;
+function pred_step(Pair) : (* → *, *) → *;
+function pred((* → *, *) → *) : (* → *, *) → *;
+function inc(integer) : integer;
+
+function toInt((* → *, *) → *) : integer {
+  call(arg[0], calloc[inc](), 0)
+}
+
+function fib((* → *, *) → *) : (* → *, *) → * {
+  br(call[isZero](arg[0])) {
+    true: calloc[zero]()
+    false: save(call[pred](arg[0])) {
+      br(call[isZero](tmp[0])) {
+        true: calloc[uncurry](calloc[succ](calloc[zero]()))
+        false: calloc[uncurry](calloc[cadd](call[fib](tmp[0]), call[fib](call[pred](tmp[0]))))
+      }
+    }
+  }
+}
+
+function main() : * {
+  seq(seq(seq(seq(seq(seq(seq(save(call[toInt](calloc[num](7))) {
+    seq(trace(tmp[0]), tmp[0])
+  }, save(call[toInt](calloc[uncurry](calloc[cmul](calloc[num](7), calloc[num](3))))) {
+    seq(trace(tmp[0]), tmp[0])
+  }), save(call[toInt](call[pred](calloc[num](7)))) {
+    seq(trace(tmp[0]), tmp[0])
+  }), save(call[toInt](call[fib](calloc[num](5)))) {
+    seq(trace(tmp[0]), tmp[0])
+  }), save(call[toInt](call[fib](calloc[num](6)))) {
+    seq(trace(tmp[0]), tmp[0])
+  }), save(call[toInt](call[fib](calloc[num](7)))) {
+    seq(trace(tmp[0]), tmp[0])
+  }), save(call[toInt](call[fib](calloc[num](8)))) {
+    seq(trace(tmp[0]), tmp[0])
+  }), void)
+}
+
+function fst(Pair) : * {
+  arg[0].pair[0]
+}
+
+function snd(Pair) : * {
+  arg[0].pair[1]
+}
+
+function compose(* → *, * → *, *) : * {
+  call(arg[0], call(arg[1], arg[2]))
+}
+
+function zero(* → *, *) : * {
+  arg[1]
+}
+
+function num(integer, * → *, *) : * {
+  br(eq(0, arg[0])) {
+    true: call[zero](arg[1], arg[2])
+    false: call[compose](arg[1], calloc[num](sub(arg[0], 1), arg[1]), arg[2])
+  }
+}
+
+function succ((* → *, *) → *, * → *) : * → * {
+  calloc[compose](arg[1], cextend(arg[0], arg[1]))
+}
+
+function cadd((* → *, *) → *, (* → *, *) → *, * → *) : * → * {
+  calloc[compose](cextend(arg[0], arg[2]), cextend(arg[1], arg[2]))
+}
+
+function cmul((* → *, *) → *, (* → *, *) → *, * → *) : * → * {
+  cextend(arg[0], cextend(arg[1], arg[2]))
+}
+
+function const(*, *) : * {
+  arg[0]
+}
+
+function isZero((* → *, *) → *) : bool {
+  call(arg[0], calloc[const](false), true)
+}
+
+function uncurry(*, * → *, *) : * {
+  ccall(arg[0], arg[1], arg[2])
+}
+
+function pred_step(Pair) : (* → *, *) → * {
+  br(call[isZero](arg[0].pair[1])) {
+    true: alloc[pair](arg[0].pair[0], calloc[uncurry](calloc[succ](arg[0].pair[1])))
+    false: alloc[pair](calloc[uncurry](calloc[succ](arg[0].pair[0])), calloc[uncurry](calloc[succ](arg[0].pair[1])))
+  }
+}
+
+function pred((* → *, *) → *) : (* → *, *) → * {
+  save(call(arg[0], calloc[pred_step](), alloc[pair](calloc[zero](), calloc[zero]()))) {
+    tmp[0].pair[0]
+  }
+}
+
+function inc(integer) : integer {
+  add(1, arg[0])
+}

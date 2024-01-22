@@ -1,0 +1,21 @@
+
+function S(*, *, *) : *;
+function K(*, *) : *;
+function I(*) : *;
+function main() : *;
+
+function S(*, *, *) : * {
+  ccall(arg[0], arg[2], ccall(arg[1], arg[2]))
+}
+
+function K(*, *) : * {
+  arg[0]
+}
+
+function I(*) : * {
+  call[S](calloc[K](), calloc[K](), arg[0])
+}
+
+function main() : * {
+  add(ccall(call[I](calloc[I]()), calloc[I](), calloc[I](), calloc[I](), calloc[I](), calloc[I](), calloc[I](), calloc[I](), calloc[I](), 1), add(call(call(call(call(call[I](calloc[I]()), calloc[I]()), calloc[I]()), calloc[I]()), 1), add(call(call[I](calloc[I]()), 1), call[I](1))))
+}

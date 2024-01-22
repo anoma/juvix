@@ -1,0 +1,82 @@
+
+function apply_1(*, *) : *;
+function apply_2(*, *, *) : *;
+function apply_3(*, *, *, *) : *;
+function apply_4(*, *, *, *, *) : *;
+function S(*, *, *) : *;
+function K(*, *) : *;
+function I(*) : *;
+function f3(integer, integer, integer) : integer;
+function main() : *;
+
+function apply_1(*, *) : * {
+  br(eq(1, argsnum(arg[0]))) {
+    true: call(arg[0], arg[1])
+    false: cextend(arg[0], arg[1])
+  }
+}
+
+function apply_2(*, *, *) : * {
+  save[n](argsnum(arg[0])) {
+    br(eq(2, n)) {
+      true: call(arg[0], arg[1], arg[2])
+      false: br(eq(1, n)) {
+        true: call[apply_1](call(arg[0], arg[1]), arg[2])
+        false: cextend(arg[0], arg[1], arg[2])
+      }
+    }
+  }
+}
+
+function apply_3(*, *, *, *) : * {
+  save[n](argsnum(arg[0])) {
+    br(eq(3, n)) {
+      true: call(arg[0], arg[1], arg[2], arg[3])
+      false: br(lt(3, n)) {
+        true: cextend(arg[0], arg[1], arg[2], arg[3])
+        false: br(eq(2, n)) {
+          true: call[apply_1](call(arg[0], arg[1], arg[2]), arg[3])
+          false: call[apply_2](call(arg[0], arg[1]), arg[2], arg[3])
+        }
+      }
+    }
+  }
+}
+
+function apply_4(*, *, *, *, *) : * {
+  save[n](argsnum(arg[0])) {
+    br(eq(4, n)) {
+      true: call(arg[0], arg[1], arg[2], arg[3], arg[4])
+      false: br(lt(4, n)) {
+        true: cextend(arg[0], arg[1], arg[2], arg[3], arg[4])
+        false: br(eq(3, n)) {
+          true: call[apply_1](call(arg[0], arg[1], arg[2], arg[3]), arg[4])
+          false: br(eq(2, n)) {
+            true: call[apply_2](call(arg[0], arg[1], arg[2]), arg[3], arg[4])
+            false: call[apply_3](call(arg[0], arg[1]), arg[2], arg[3], arg[4])
+          }
+        }
+      }
+    }
+  }
+}
+
+function S(*, *, *) : * {
+  call[apply_2](arg[0], arg[2], call[apply_1](arg[1], arg[2]))
+}
+
+function K(*, *) : * {
+  arg[0]
+}
+
+function I(*) : * {
+  call[S](calloc[K](), calloc[K](), arg[0])
+}
+
+function f3(integer, integer, integer) : integer {
+  mul(add(arg[0], arg[1]), arg[2])
+}
+
+function main() : * {
+  call[apply_2](calloc[K](), call[apply_3](calloc[f3](), call[apply_3](calloc[I](), calloc[I](), calloc[I](), 3), call[apply_3](calloc[I](), calloc[I](), calloc[I](), 2), call[apply_3](call[apply_4](calloc[I](), calloc[I](), calloc[I](), calloc[I](), calloc[I]()), calloc[I](), calloc[I](), 1)), 7)
+}

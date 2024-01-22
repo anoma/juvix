@@ -27,7 +27,7 @@ import Juvix.Data.Keyword.All
     kwSave,
     kwSeq_,
     kwShow,
-    kwStrConcat,
+    kwStrcat,
     kwSub_,
     kwTrace,
   )
@@ -47,7 +47,7 @@ allKeywords =
          kwLe_,
          kwSeq_,
          kwEq_,
-         kwStrConcat,
+         kwStrcat,
          kwShow,
          kwAtoi,
          kwTrace,

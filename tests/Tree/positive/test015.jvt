@@ -1,0 +1,43 @@
+
+function id(*) : *;
+function const(*, *) : *;
+function g(*) : integer;
+function f(integer) : integer → integer;
+function main() : *;
+
+function id(*) : * {
+  arg[0]
+}
+
+function const(*, *) : * {
+  arg[0]
+}
+
+function g(*) : integer {
+  call[id](2)
+}
+
+function f(integer) : integer → integer {
+  br(eq(6, arg[0])) {
+    true: calloc[const](0)
+    false: br(eq(5, arg[0])) {
+      true: calloc[const](1)
+      false: br(eq(10, arg[0])) {
+        true: calloc[g]()
+        false: calloc[id]()
+      }
+    }
+  }
+}
+
+function main() : * {
+  seq(seq(seq(seq(save(call(call[f](5), 6)) {
+    seq(trace(tmp[0]), tmp[0])
+  }, save(call(call[f](6), 5)) {
+    seq(trace(tmp[0]), tmp[0])
+  }), save(call(call[f](10), 5)) {
+    seq(trace(tmp[0]), tmp[0])
+  }), save(call(call[f](11), 5)) {
+    seq(trace(tmp[0]), tmp[0])
+  }), void)
+}

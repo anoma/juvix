@@ -69,7 +69,7 @@ parseBinop =
     <|> parseBinaryOp kwLt_ IntLt
     <|> parseBinaryOp kwLe_ IntLe
     <|> parseBinaryOp kwEq_ ValEq
-    <|> parseBinaryOp kwStrConcat StrConcat
+    <|> parseBinaryOp kwStrcat StrConcat
     <|> parseBinaryOp kwSeq_ OpSeq
 
 parseBinaryOp ::

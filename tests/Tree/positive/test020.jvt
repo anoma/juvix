@@ -1,0 +1,28 @@
+
+function sumb((integer, integer) → integer
+, integer
+, integer) : integer;
+function sum'(integer, integer) : integer;
+function sum(integer) : integer;
+function main() : *;
+
+function sumb((integer, integer) → integer
+, integer
+, integer) : integer {
+  br(eq(0, arg[1])) {
+    true: arg[2]
+    false: call(arg[0], sub(arg[1], 1), arg[2])
+  }
+}
+
+function sum'(integer, integer) : integer {
+  call[sumb](calloc[sum'](), arg[0], add(arg[0], arg[1]))
+}
+
+function sum(integer) : integer {
+  call[sum'](arg[0], 0)
+}
+
+function main() : * {
+  call[sum](1000)
+}

@@ -1,0 +1,18 @@
+
+function main() : *;
+
+function main() : * {
+  save(1) {
+    save(add(tmp[0], save(2) {
+      tmp[1]
+    })) {
+      save(mul(tmp[1], tmp[1])) {
+        save(add(2, tmp[2])) {
+          save(add(tmp[3], tmp[2])) {
+            add(add(tmp[4], tmp[3]), tmp[2])
+          }
+        }
+      }
+    }
+  }
+}
