@@ -233,13 +233,16 @@ fromAsmTable t = case t ^. Asm.infoMainFunction of
     fromAsm opts mainSym Asm.InfoTable {..} =
       let funs = map compileFunction allFunctions
           mkConstructorInfo :: Asm.ConstructorInfo -> ConstructorInfo
-          mkConstructorInfo Asm.ConstructorInfo {..} =
+          mkConstructorInfo ci@Asm.ConstructorInfo {..} =
             ConstructorInfo
               { _constructorInfoArity = fromIntegral _constructorArgsNum,
-                _constructorInfoMemRep = nockmaMemRep _constructorRepresentation
+                _constructorInfoMemRep = nockmaMemRep (memRep ci (getInductiveInfo (ci ^. Asm.constructorInductive)))
               }
           constrs :: ConstructorInfos
           constrs = mkConstructorInfo <$> _infoConstrs
+
+          getInductiveInfo :: Symbol -> Asm.InductiveInfo
+          getInductiveInfo s = _infoInductives ^?! at s . _Just
        in runCompilerWith opts constrs funs mainFun
       where
         mainFun :: CompilerFunction
@@ -266,6 +269,14 @@ fromAsmTable t = case t ^. Asm.infoMainFunction of
               _compilerFunctionArity = fromIntegral _functionArgsNum,
               _compilerFunction = compile _functionCode
             }
+
+        memRep :: Asm.ConstructorInfo -> Asm.InductiveInfo -> Asm.MemRep
+        memRep ci ind
+          | numArgs >= 1 && numConstrs == 1 = MemRepTuple
+          | otherwise = MemRepConstr
+          where
+            numConstrs = length (ind ^. Asm.inductiveConstructors)
+            numArgs = ci ^. Asm.constructorArgsNum
 
 fromOffsetRef :: Asm.OffsetRef -> Natural
 fromOffsetRef = fromIntegral . (^. Asm.offsetRefOffset)
