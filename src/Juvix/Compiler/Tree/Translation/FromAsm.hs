@@ -1,11 +1,18 @@
 module Juvix.Compiler.Tree.Translation.FromAsm where
 
 import Juvix.Compiler.Asm.Data.InfoTable qualified as Asm
+import Juvix.Compiler.Asm.Extra.Base qualified as Asm
 import Juvix.Compiler.Asm.Language qualified as Asm
 import Juvix.Compiler.Tree.Data.InfoTable
 import Juvix.Compiler.Tree.Error
 import Juvix.Compiler.Tree.Language
 import Juvix.Compiler.Tree.Translation.FromAsm.Translator
+
+newtype TempSize = TempSize
+  { _tempSize :: Int
+  }
+
+makeLenses ''TempSize
 
 fromAsm :: (Member (Error TreeError) r) => Asm.InfoTable -> Sem r InfoTable
 fromAsm tab = do
@@ -20,7 +27,7 @@ fromAsm tab = do
 
 goFunction :: (Member (Error TreeError) r') => Asm.InfoTable -> Asm.FunctionInfo -> Sem r' FunctionInfo
 goFunction infoTab fi = do
-  node' <- goCodeBlock (fi ^. Asm.functionCode)
+  node' <- runReader (TempSize 0) $ goCodeBlock (fi ^. Asm.functionCode)
   return $
     FunctionInfo
       { _functionName = fi ^. Asm.functionName,
@@ -36,10 +43,36 @@ goFunction infoTab fi = do
     unsupported :: (Member (Error TreeError) r) => Maybe Location -> Sem r a
     unsupported loc = throw $ TreeError loc "unsupported"
 
-    goCodeBlock :: forall r. (Member (Error TreeError) r) => Asm.Code -> Sem r Node
-    goCodeBlock cmds = runTranslator (reverse cmds) goCode
+    goCodeBlock :: forall r. (Members '[Error TreeError, Reader TempSize] r) => Asm.Code -> Sem r Node
+    goCodeBlock cmds = runTranslator (reverse cmds) go
+      where
+        go :: Sem (Translator ': r) Node
+        go = do
+          node <- goCode
+          hasMore <- hasNextCommand
+          if
+              | hasMore -> do
+                  cmd <- nextCommand
+                  case cmd of
+                    Asm.Instr (Asm.CmdInstr _ Asm.Pop) -> do
+                      node' <- go
+                      return $
+                        Binop
+                          NodeBinop
+                            { _nodeBinopOpcode = OpSeq,
+                              _nodeBinopArg1 = node',
+                              _nodeBinopArg2 = node
+                            }
+                    _ ->
+                      throw $
+                        TreeError
+                          { _treeErrorLoc = Asm.getCommandLocation cmd,
+                            _treeErrorMsg = "extra instructions"
+                          }
+              | otherwise ->
+                  return node
 
-    goCode :: forall r. (Members '[Error TreeError, Translator] r) => Sem r Node
+    goCode :: forall r. (Members '[Error TreeError, Translator, Reader TempSize] r) => Sem r Node
     goCode = do
       cmd <- nextCommand
       case cmd of
@@ -86,8 +119,8 @@ goFunction infoTab fi = do
         goCase :: Asm.CmdCase -> Sem r Node
         goCase Asm.CmdCase {..} = do
           arg <- goCode
-          brs <- mapM (goCaseBranch (_cmdCaseInfo ^. Asm.commandInfoLocation)) _cmdCaseBranches
-          def <- maybe (return Nothing) (fmap Just . goCodeBlock) _cmdCaseDefault
+          brs <- mapM (goCaseBranch loc) _cmdCaseBranches
+          def <- maybe (return Nothing) (fmap Just . goDefaultBranch loc) _cmdCaseDefault
           return $
             Case
               NodeCase
@@ -96,11 +129,13 @@ goFunction infoTab fi = do
                   _nodeCaseBranches = brs,
                   _nodeCaseDefault = def
                 }
+          where
+            loc = _cmdCaseInfo ^. Asm.commandInfoLocation
 
         goCaseBranch :: Maybe Location -> Asm.CaseBranch -> Sem r CaseBranch
         goCaseBranch loc Asm.CaseBranch {..} = case _caseBranchCode of
           [Asm.Save Asm.CmdSave {..}] -> do
-            body <- goCodeBlock _cmdSaveCode
+            body <- pushTempStack $ goCodeBlock _cmdSaveCode
             return $
               CaseBranch
                 { _caseBranchTag,
@@ -115,6 +150,14 @@ goFunction infoTab fi = do
                   _caseBranchBody = body,
                   _caseBranchSave = False
                 }
+          [Asm.Instr (Asm.CmdInstr _ Asm.Return)] -> do
+            off <- asks (^. tempSize)
+            return $
+              CaseBranch
+                { _caseBranchTag,
+                  _caseBranchBody = MemRef $ DRef $ mkTempRef $ OffsetRef off Nothing,
+                  _caseBranchSave = True
+                }
           _ ->
             throw
               TreeError
@@ -122,10 +165,21 @@ goFunction infoTab fi = do
                   _treeErrorLoc = loc
                 }
 
+        goDefaultBranch :: Maybe Location -> Asm.Code -> Sem r Node
+        goDefaultBranch loc = \case
+          Asm.Instr (Asm.CmdInstr _ Asm.Pop) : cmds ->
+            goCodeBlock cmds
+          _ ->
+            throw $
+              TreeError
+                { _treeErrorMsg = "expected 'pop' at the beginning of default case branch code",
+                  _treeErrorLoc = loc
+                }
+
         goSave :: Asm.CmdSave -> Sem r Node
         goSave Asm.CmdSave {..} = do
           arg <- goCode
-          body <- goCodeBlock _cmdSaveCode
+          body <- pushTempStack $ goCodeBlock _cmdSaveCode
           return $
             Save
               NodeSave
@@ -234,3 +288,6 @@ goFunction infoTab fi = do
                 { _nodeCallClosuresFun = cl,
                   _nodeCallClosuresArgs = args
                 }
+
+        pushTempStack :: Sem r a -> Sem r a
+        pushTempStack = local (over tempSize (+ 1))

@@ -7,17 +7,19 @@ import Juvix.Compiler.Tree.Error
 
 data Translator m a where
   NextCommand :: Translator m Command
+  HasNextCommand :: Translator m Bool
 
 makeSem ''Translator
 
-newtype TranslatorState = TranslatorState
-  { _stateCode :: Code
+data TranslatorState = TranslatorState
+  { _stateCode :: Code,
+    _statePrevLoc :: Maybe Location
   }
 
 makeLenses ''TranslatorState
 
 runTranslator :: (Member (Error TreeError) r) => Code -> Sem (Translator ': r) a -> Sem r a
-runTranslator cs = runTranslator' (TranslatorState cs)
+runTranslator cs = runTranslator' (TranslatorState cs Nothing)
 
 runTranslator' :: forall r a. (Member (Error TreeError) r) => TranslatorState -> Sem (Translator ': r) a -> Sem r a
 runTranslator' st m = do
@@ -33,12 +35,16 @@ runTranslator' st m = do
     interp :: Translator m a' -> Sem (State TranslatorState ': r) a'
     interp = \case
       NextCommand -> do
-        whenM (null <$> gets (^. stateCode)) $
+        s <- get
+        when (null (s ^. stateCode)) $
           throw
             TreeError
-              { _treeErrorLoc = Nothing,
+              { _treeErrorLoc = s ^. statePrevLoc,
                 _treeErrorMsg = "expected instruction"
               }
         cmd <- gets (List.head . (^. stateCode))
         modify' (over stateCode tail)
+        modify' (set statePrevLoc (getCommandLocation cmd))
         return cmd
+      HasNextCommand -> do
+        not . null <$> gets (^. stateCode)
