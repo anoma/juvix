@@ -30,3 +30,13 @@ getConstrSize rep argsNum = case rep of
   MemRepTuple -> argsNum
   MemRepUnit -> 0
   MemRepUnpacked {} -> 0
+
+getCommandInfo :: Command -> CommandInfo
+getCommandInfo = \case
+  Instr CmdInstr {..} -> _cmdInstrInfo
+  Branch CmdBranch {..} -> _cmdBranchInfo
+  Case CmdCase {..} -> _cmdCaseInfo
+  Save CmdSave {..} -> _cmdSaveInfo
+
+getCommandLocation :: Command -> Maybe Location
+getCommandLocation = (^. commandInfoLocation) . getCommandInfo
