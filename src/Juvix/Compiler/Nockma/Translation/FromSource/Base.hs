@@ -3,7 +3,7 @@ module Juvix.Compiler.Nockma.Translation.FromSource.Base where
 import Data.HashMap.Internal.Strict qualified as HashMap
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.Text qualified as Text
-import Juvix.Compiler.Nockma.Language qualified as N
+import Juvix.Compiler.Nockma.Language
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Parser.Error
 import Juvix.Prelude hiding (Atom, many, some)
@@ -13,26 +13,26 @@ import Text.Megaparsec.Char.Lexer qualified as L
 
 type Parser = Parsec Void Text
 
-parseText :: Text -> Either MegaparsecError (N.Term Natural)
+parseText :: Text -> Either MegaparsecError (Term Natural)
 parseText = runParser ""
 
-parseReplText :: Text -> Either MegaparsecError (N.ReplTerm Natural)
+parseReplText :: Text -> Either MegaparsecError (ReplTerm Natural)
 parseReplText = runParserFor replTerm ""
 
-parseTermFile :: (MonadIO m) => FilePath -> m (Either MegaparsecError (N.Term Natural))
+parseTermFile :: (MonadIO m) => FilePath -> m (Either MegaparsecError (Term Natural))
 parseTermFile fp = do
   txt <- readFile fp
   return (runParser fp txt)
 
-parseProgramFile :: (MonadIO m) => FilePath -> m (Either MegaparsecError (N.Program Natural))
+parseProgramFile :: (MonadIO m) => FilePath -> m (Either MegaparsecError (Program Natural))
 parseProgramFile fp = do
   txt <- readFile fp
   return (runParserProgram fp txt)
 
-parseReplStatement :: Text -> Either MegaparsecError (N.ReplStatement Natural)
+parseReplStatement :: Text -> Either MegaparsecError (ReplStatement Natural)
 parseReplStatement = runParserFor replStatement ""
 
-runParserProgram :: FilePath -> Text -> Either MegaparsecError (N.Program Natural)
+runParserProgram :: FilePath -> Text -> Either MegaparsecError (Program Natural)
 runParserProgram = runParserFor program
 
 runParserFor :: Parser a -> FilePath -> Text -> Either MegaparsecError a
@@ -40,7 +40,7 @@ runParserFor p f input_ = case P.runParser (spaceConsumer >> p <* eof) f input_ 
   Left err -> Left (MegaparsecError err)
   Right t -> Right t
 
-runParser :: FilePath -> Text -> Either MegaparsecError (N.Term Natural)
+runParser :: FilePath -> Text -> Either MegaparsecError (Term Natural)
 runParser = runParserFor term
 
 spaceConsumer :: Parser ()
@@ -72,32 +72,32 @@ dottedNatural = lexeme $ do
     digit :: Parser Char
     digit = satisfy isDigit
 
-atomOp :: Parser (N.Atom Natural)
+atomOp :: Parser (Atom Natural)
 atomOp = do
-  op' <- choice [symbol opName $> op | (opName, op) <- HashMap.toList N.atomOps]
-  return (N.Atom (N.serializeNockOp op') (Irrelevant (Just N.AtomHintOp)))
+  op' <- choice [symbol opName $> op | (opName, op) <- HashMap.toList atomOps]
+  return (Atom (serializeNockOp op') (Irrelevant (Just AtomHintOp)))
 
-atomDirection :: Parser (N.Atom Natural)
+atomDirection :: Parser (Atom Natural)
 atomDirection = do
   dirs <-
     symbol "S" $> []
-      <|> NonEmpty.toList <$> some (choice [symbol "L" $> N.L, symbol "R" $> N.R])
-  return (N.Atom (N.serializePath dirs) (Irrelevant (Just N.AtomHintPath)))
+      <|> NonEmpty.toList <$> some (choice [symbol "L" $> L, symbol "R" $> R])
+  return (Atom (serializePath dirs) (Irrelevant (Just AtomHintPath)))
 
-atomNat :: Parser (N.Atom Natural)
-atomNat = (\n -> N.Atom n (Irrelevant Nothing)) <$> dottedNatural
+atomNat :: Parser (Atom Natural)
+atomNat = (\n -> Atom n (Irrelevant Nothing)) <$> dottedNatural
 
-atomBool :: Parser (N.Atom Natural)
+atomBool :: Parser (Atom Natural)
 atomBool =
   choice
-    [ symbol "true" $> N.nockTrue,
-      symbol "false" $> N.nockFalse
+    [ symbol "true" $> nockTrue,
+      symbol "false" $> nockFalse
     ]
 
-atomNil :: Parser (N.Atom Natural)
-atomNil = symbol "nil" $> N.nockNil
+atomNil :: Parser (Atom Natural)
+atomNil = symbol "nil" $> nockNil
 
-patom :: Parser (N.Atom Natural)
+patom :: Parser (Atom Natural)
 patom =
   atomOp
     <|> atomNat
@@ -108,7 +108,7 @@ patom =
 iden :: Parser Text
 iden = lexeme (takeWhile1P (Just "<iden>") isAlphaNum)
 
-cell :: Parser (N.Cell Natural)
+cell :: Parser (Cell Natural)
 cell = do
   lsbracket
   c <- optional stdlibCall
@@ -116,54 +116,54 @@ cell = do
   restTerms <- some term
   rsbracket
   let r = buildCell firstTerm restTerms
-  return (set N.cellInfo (Irrelevant c) r)
+  return (set cellInfo (Irrelevant c) r)
   where
-    stdlibCall :: Parser (N.StdlibCall Natural)
+    stdlibCall :: Parser (StdlibCall Natural)
     stdlibCall = do
       chunk Str.stdlibTag
       f <- stdlibFun
       chunk Str.argsTag
       args <- term
       return
-        N.StdlibCall
+        StdlibCall
           { _stdlibCallArgs = args,
             _stdlibCallFunction = f
           }
 
-    stdlibFun :: Parser N.StdlibFunction
+    stdlibFun :: Parser StdlibFunction
     stdlibFun = do
       i <- iden
       let err = error ("invalid stdlib function identifier: " <> i)
-      maybe err return (N.parseStdlibFunction i)
+      maybe err return (parseStdlibFunction i)
 
-    buildCell :: N.Term Natural -> NonEmpty (N.Term Natural) -> N.Cell Natural
+    buildCell :: Term Natural -> NonEmpty (Term Natural) -> Cell Natural
     buildCell h = \case
-      x :| [] -> N.Cell h x
-      y :| (w : ws) -> N.Cell h (N.TermCell (buildCell y (w :| ws)))
+      x :| [] -> Cell h x
+      y :| (w : ws) -> Cell h (TermCell (buildCell y (w :| ws)))
 
-term :: Parser (N.Term Natural)
+term :: Parser (Term Natural)
 term =
-  N.TermAtom <$> patom
-    <|> N.TermCell <$> cell
+  TermAtom <$> patom
+    <|> TermCell <$> cell
 
-assig :: Parser (N.Assignment Natural)
+assig :: Parser (Assignment Natural)
 assig = do
   n <- name
   symbol ":="
   t <- term
   return
-    N.Assignment
+    Assignment
       { _assignmentName = n,
         _assignmentBody = t
       }
 
-program :: Parser (N.Program Natural)
-program = N.Program <$> many statement <* eof
+program :: Parser (Program Natural)
+program = Program <$> many statement <* eof
   where
-    statement :: Parser (N.Statement Natural)
+    statement :: Parser (Statement Natural)
     statement =
-      P.try (N.StatementAssignment <$> assig)
-        <|> N.StatementStandalone <$> term
+      P.try (StatementAssignment <$> assig)
+        <|> StatementStandalone <$> term
 
 name :: Parser Text
 name = lexeme $ do
@@ -171,28 +171,28 @@ name = lexeme $ do
   hs <- P.takeWhileP Nothing isAlphaNum
   return (Text.cons h hs)
 
-withStack :: Parser (N.WithStack Natural)
+withStack :: Parser (WithStack Natural)
 withStack = do
   st <- replTerm
   symbol "/"
   tm <- replTerm
   return
-    N.WithStack
+    WithStack
       { _withStackStack = st,
         _withStackTerm = tm
       }
 
-replExpression :: Parser (N.ReplExpression Natural)
+replExpression :: Parser (ReplExpression Natural)
 replExpression =
-  N.ReplExpressionWithStack <$> P.try withStack
-    <|> N.ReplExpressionTerm <$> replTerm
+  ReplExpressionWithStack <$> P.try withStack
+    <|> ReplExpressionTerm <$> replTerm
 
-replStatement :: Parser (N.ReplStatement Natural)
+replStatement :: Parser (ReplStatement Natural)
 replStatement =
-  N.ReplStatementAssignment <$> P.try assig
-    <|> N.ReplStatementExpression <$> replExpression
+  ReplStatementAssignment <$> P.try assig
+    <|> ReplStatementExpression <$> replExpression
 
-replTerm :: Parser (N.ReplTerm Natural)
+replTerm :: Parser (ReplTerm Natural)
 replTerm =
-  N.ReplName <$> name
-    <|> N.ReplTerm <$> term
+  ReplName <$> name
+    <|> ReplTerm <$> term
