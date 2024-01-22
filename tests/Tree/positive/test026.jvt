@@ -1,8 +1,6 @@
 
 function app(* → *, *) : *;
-function app'((integer → integer, integer) → integer
-, integer → integer
-, integer) : integer;
+function app'((integer → integer, integer) → integer, integer → integer, integer) : integer;
 function inc(integer) : integer;
 function h((* → *, *) → *) : *;
 function capp((*, *) → *, *) : * → *;
@@ -15,9 +13,7 @@ function app(* → *, *) : * {
   call(arg[0], arg[1])
 }
 
-function app'((integer → integer, integer) → integer
-, integer → integer
-, integer) : integer {
+function app'((integer → integer, integer) → integer, integer → integer, integer) : integer {
   call(arg[0], arg[1], arg[2])
 }
 

@@ -1,8 +1,6 @@
 
 function g(integer, integer) : integer;
-function h(integer → integer
-, integer → integer
-, integer) : integer;
+function h(integer → integer, integer → integer, integer) : integer;
 function f(integer) : integer → integer;
 function g'(integer, integer → integer) : integer;
 function h'(integer) : integer;
@@ -12,9 +10,7 @@ function g(integer, integer) : integer {
   add(arg[1], arg[0])
 }
 
-function h(integer → integer
-, integer → integer
-, integer) : integer {
+function h(integer → integer, integer → integer, integer) : integer {
   call(arg[0], call(arg[1], arg[2]))
 }
 

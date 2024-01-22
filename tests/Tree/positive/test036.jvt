@@ -3,9 +3,7 @@ type stream {
 }
 
 function force(unit → stream) : stream;
-function filter(integer → bool
-, unit → stream
-, unit) : stream;
+function filter(integer → bool, unit → stream, unit) : stream;
 function nth(integer, unit → stream) : integer;
 function numbers(integer, unit) : stream;
 function indivisible(integer, integer) : bool;
@@ -17,9 +15,7 @@ function force(f : unit → stream) : stream {
   call(f, unit)
 }
 
-function filter(f : integer → bool
-, s : unit → stream
-, unit) : stream {
+function filter(f : integer → bool, s : unit → stream, unit) : stream {
   save[s1](call[force](s)) {
     br(call(f, s1.cons[0])) {
       true: alloc[cons](s1.cons[0], calloc[filter](f, s1.cons[1]))

@@ -103,7 +103,7 @@ instance PrettyCode TypeConstr where
     let ctrname = fromJust (HashMap.lookup _typeConstrTag tagNames)
     let cname = annotate (AnnKind KNameConstructor) (pretty ctrname)
     args <- mapM ppCode _typeConstrFields
-    return $ iname <> kwColon <> cname <> encloseSep "(" ")" ", " args
+    return $ iname <> kwColon <> cname <> parens (hsep (punctuate comma args))
 
 instance PrettyCode TypeFun where
   ppCode :: (Member (Reader Options) r) => TypeFun -> Sem r (Doc Ann)
@@ -114,7 +114,7 @@ instance PrettyCode TypeFun where
               ppLeftExpression funFixity (head _typeFunArgs)
           | otherwise -> do
               args <- mapM ppCode _typeFunArgs
-              return $ encloseSep "(" ")" ", " (toList args)
+              return $ parens $ hsep $ punctuate comma (toList args)
     r <- ppRightExpression funFixity _typeFunTarget
     return $ l <+> kwArrow <+> r
 
@@ -326,7 +326,7 @@ ppFunInfo ppCode' FunctionInfo {..} = do
   return $
     keyword Str.function
       <+> annotate (AnnKind KNameFunction) (pretty (quoteFunName $ quoteName _functionName))
-        <> encloseSep lparen rparen ", " args
+        <> parens (hsep (punctuate comma args))
       <+> colon
       <+> targetty
       <+> braces' c
@@ -338,7 +338,7 @@ ppFunSig FunctionInfo {..} = do
   return $
     keyword Str.function
       <+> annotate (AnnKind KNameFunction) (pretty (quoteFunName $ quoteName _functionName))
-        <> encloseSep lparen rparen ", " argtys
+        <> parens (hsep (punctuate comma argtys))
       <+> colon
       <+> targetty
         <> semi

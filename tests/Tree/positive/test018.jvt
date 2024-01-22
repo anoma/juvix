@@ -1,6 +1,5 @@
 
-function ext_10((integer
-, integer) → integer) : integer → integer;
+function ext_10((integer, integer) → integer) : integer → integer;
 function app_0(integer → integer) : integer;
 function f((integer, integer) → integer) : integer;
 function plus(integer, integer) : integer;
@@ -8,8 +7,7 @@ function minus(integer, integer) : integer;
 function mult(integer, integer) : integer;
 function main() : *;
 
-function ext_10((integer
-, integer) → integer) : integer → integer {
+function ext_10((integer, integer) → integer) : integer → integer {
   cextend(arg[0], 10)
 }
 

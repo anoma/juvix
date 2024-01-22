@@ -1,9 +1,7 @@
 
 function f(integer, integer) : *;
 function g(integer, integer) : integer;
-function h((integer, integer) → integer
-, integer
-, integer) : integer;
+function h((integer, integer) → integer, integer, integer) : integer;
 function func(integer) : integer;
 function main() : *;
 
@@ -17,9 +15,7 @@ function g(integer, integer) : integer {
   sub(add(1, arg[0]), mul(7, arg[1]))
 }
 
-function h((integer, integer) → integer
-, integer
-, integer) : integer {
+function h((integer, integer) → integer, integer, integer) : integer {
   mul(call(arg[0], arg[1], arg[1]), arg[2])
 }
 

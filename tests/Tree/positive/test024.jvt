@@ -1,13 +1,9 @@
 
-function f((*, integer → integer, integer) → *
-, integer → integer
-, integer) : *;
+function f((*, integer → integer, integer) → *, integer → integer, integer) : *;
 function g(integer) : integer;
 function main() : *;
 
-function f((*, integer → integer, integer) → *
-, integer → integer
-, integer) : * {
+function f((*, integer → integer, integer) → *, integer → integer, integer) : * {
   seq(seq(seq(save(6) {
     seq(trace(tmp[0]), tmp[0])
   }, save(arg[2]) {

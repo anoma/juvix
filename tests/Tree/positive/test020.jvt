@@ -1,14 +1,10 @@
 
-function sumb((integer, integer) → integer
-, integer
-, integer) : integer;
+function sumb((integer, integer) → integer, integer, integer) : integer;
 function sum'(integer, integer) : integer;
 function sum(integer) : integer;
 function main() : *;
 
-function sumb((integer, integer) → integer
-, integer
-, integer) : integer {
+function sumb((integer, integer) → integer, integer, integer) : integer {
   br(eq(0, arg[1])) {
     true: arg[2]
     false: call(arg[0], sub(arg[1], 1), arg[2])

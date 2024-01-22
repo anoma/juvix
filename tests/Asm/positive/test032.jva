@@ -59,7 +59,7 @@ function succ((* -> *, *) -> *, * -> *) : * -> * {
   ret;
 }
 
-function add((* -> *, *) -> *, (* -> *, *) -> *, * -> *) : * -> * {
+function cadd((* -> *, *) -> *, (* -> *, *) -> *, * -> *) : * -> * {
   push arg[2];
   push arg[1];
   cextend 1;
@@ -70,7 +70,7 @@ function add((* -> *, *) -> *, (* -> *, *) -> *, * -> *) : * -> * {
   ret;
 }
 
-function mul((* -> *, *) -> *, (* -> *, *) -> *, * -> *) : * -> * {
+function cmul((* -> *, *) -> *, (* -> *, *) -> *, * -> *) : * -> * {
   push arg[2];
   push arg[1];
   cextend 1;
@@ -178,7 +178,7 @@ function fib((* -> *, *) -> *) : (* -> *, *) -> * {
             call fib;
             push tmp[0];
             call fib;
-            calloc add 2;
+            calloc cadd 2;
             calloc uncurry 1;
             ret;
           };
@@ -199,7 +199,7 @@ function main() {
   calloc num 1;
   push 7;
   calloc num 1;
-  calloc mul 2;
+  calloc cmul 2;
   calloc uncurry 1;
   call toInt;
   trace;
