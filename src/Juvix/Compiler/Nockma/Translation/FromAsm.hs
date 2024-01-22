@@ -764,7 +764,6 @@ callStdlibOn' s f = do
       preargs = stdlibStackTake s fNumArgs
       arguments = OpSequence # (OpAddress # [R]) # preargs
       extractResult = (OpAddress # [L]) # (OpAddress # [R, R])
-      -- callFn = OpPush # (OpCall # [L] # (OpReplace # ([R, L] # arguments) # (OpAddress # [L]))) # extractResult
       callFn = OpPush # (OpCall # [L] # (OpReplace # ([R, L] # arguments) # (OpAddress # [L]))) # extractResult
       meta =
         StdlibCall
