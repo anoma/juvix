@@ -17,9 +17,15 @@ nockmaMemRep = \case
   MemRepUnit -> NockmaMemRepConstr
   MemRepUnpacked {} -> NockmaMemRepConstr
 
+data NockmaMemRepListConstr
+  = NockmaMemRepListConstrNil
+  | NockmaMemRepListConstrCons
+  deriving stock (Eq)
+
 data NockmaMemRep
   = NockmaMemRepConstr
   | NockmaMemRepTuple
+  | NockmaMemRepList NockmaMemRepListConstr
 
 newtype NockmaBuiltinTag
   = NockmaBuiltinBool Bool
@@ -180,11 +186,13 @@ stackPath :: StackId -> Path
 stackPath s = indexStack (fromIntegral (fromEnum s))
 
 indexTuple :: Natural -> Natural -> Path
-indexTuple len idx =
-  let lastL
-        | idx == len - 1 = []
-        | otherwise = [L]
-   in replicate idx R ++ lastL
+indexTuple len idx
+  | idx >= len = impossible
+  | otherwise =
+      let lastL
+            | idx == len - 1 = []
+            | otherwise = [L]
+       in replicate idx R ++ lastL
 
 indexStack :: Natural -> Path
 indexStack idx = replicate idx R ++ [L]
@@ -233,23 +241,50 @@ makeFunction f = f FunctionCode # f FunctionArgs
 foldTerms :: NonEmpty (Term Natural) -> Term Natural
 foldTerms = foldr1 (#)
 
+allConstructors :: Asm.InfoTable -> Asm.ConstructorInfo -> NonEmpty Asm.ConstructorInfo
+allConstructors Asm.InfoTable {..} ci =
+  let indInfo = getInductiveInfo (ci ^. Asm.constructorInductive)
+   in nonEmpty' (getConstructorInfo'' <$> indInfo ^. Asm.inductiveConstructors)
+  where
+    getInductiveInfo :: Symbol -> Asm.InductiveInfo
+    getInductiveInfo s = _infoInductives ^?! at s . _Just
+
+    getConstructorInfo'' :: Asm.Tag -> Asm.ConstructorInfo
+    getConstructorInfo'' t = _infoConstrs ^?! at t . _Just
+
+supportsListNockmaRep :: Asm.InfoTable -> Asm.ConstructorInfo -> Maybe NockmaMemRepListConstr
+supportsListNockmaRep tab ci = case allConstructors tab ci of
+  c1 :| [c2]
+    | [0, 2] `elem` permutations ((^. Asm.constructorArgsNum) <$> [c1, c2]) -> Just $ case ci ^. Asm.constructorArgsNum of
+        0 -> NockmaMemRepListConstrNil
+        2 -> NockmaMemRepListConstrCons
+        _ -> impossible
+    | otherwise -> Nothing
+  _ -> Nothing
+
 -- | Use `Asm.toNockma` before calling this function
 fromAsmTable :: (Members '[Error JuvixError, Reader CompilerOptions] r) => Asm.InfoTable -> Sem r (Cell Natural)
 fromAsmTable t = case t ^. Asm.infoMainFunction of
   Just mainFun -> do
     opts <- ask
     return (fromAsm opts mainFun t)
-  Nothing -> throw @JuvixError (error "TODO")
+  Nothing -> throw @JuvixError (error "TODO missing main")
   where
     fromAsm :: CompilerOptions -> Asm.Symbol -> Asm.InfoTable -> Cell Natural
-    fromAsm opts mainSym Asm.InfoTable {..} =
+    fromAsm opts mainSym tab@Asm.InfoTable {..} =
       let funs = map compileFunction allFunctions
           mkConstructorInfo :: Asm.ConstructorInfo -> ConstructorInfo
           mkConstructorInfo ci@Asm.ConstructorInfo {..} =
             ConstructorInfo
               { _constructorInfoArity = fromIntegral _constructorArgsNum,
-                _constructorInfoMemRep = nockmaMemRep (memRep ci (getInductiveInfo (ci ^. Asm.constructorInductive)))
+                _constructorInfoMemRep = rep
               }
+            where
+              rep :: NockmaMemRep
+              rep = maybe r NockmaMemRepList (supportsListNockmaRep tab ci)
+                where
+                  r = nockmaMemRep (memRep ci (getInductiveInfo (ci ^. Asm.constructorInductive)))
+
           constrs :: ConstructorInfos
           constrs = mkConstructorInfo <$> _infoConstrs
 
@@ -305,6 +340,13 @@ goConstructor mr t args = case t of
         ConstructorTag -> OpQuote # (fromIntegral (tag ^. Asm.tagUserWord) :: Natural)
         ConstructorArgs -> remakeList args
     NockmaMemRepTuple -> foldTerms (nonEmpty' args)
+    NockmaMemRepList constr -> case constr of
+      NockmaMemRepListConstrNil
+        | null args -> remakeList []
+        | otherwise -> impossible
+      NockmaMemRepListConstrCons -> case args of
+        [l, r] -> TCell l r
+        _ -> impossible
 
 compile :: forall r. (Members '[Compiler] r) => Asm.Code -> Sem r ()
 compile = mapM_ goCommand
@@ -471,6 +513,9 @@ pushConstructorFieldOnto s tag refToConstr argIx = do
         NockmaMemRepTuple ->
           directRefPath refToConstr
             ++ indexTuple arity argIx
+        NockmaMemRepList constr -> case constr of
+          NockmaMemRepListConstrNil -> impossible
+          NockmaMemRepListConstrCons -> directRefPath refToConstr ++ indexTuple 2 argIx
   pushOnto s (OpAddress # path)
 
 pushConstructorField :: (Members '[Compiler] r) => Asm.Tag -> Asm.DirectRef -> Natural -> Sem r ()
@@ -714,6 +759,10 @@ replaceSubterm obj relPath newVal = OpReplace # (relPath # newVal) # obj
 evaluated :: Term Natural -> Term Natural
 evaluated t = OpApply # (OpAddress # emptyPath) # t
 
+-- | The IsCell op but the argument is evaluated first.
+isCell' :: Term Natural -> Term Natural
+isCell' t = evaluated $ (OpQuote # OpIsCell) # t
+
 -- | The same as replaceSubterm but the path is a cell that is evaluated.
 -- i.e. replaceSubterm a p b = replaceSubterm' a (quote p) b
 replaceSubterm' :: Term Natural -> Term Natural -> Term Natural -> Term Natural
@@ -904,6 +953,9 @@ caseCmd defaultBranch = \case
         NockmaMemRepTuple
           | null bs, isNothing defaultBranch -> b
           | otherwise -> error "redundant branch. Impossible?"
+        NockmaMemRepList constr -> do
+          bs' <- mapM (firstM asNockmaMemRepListConstr) bs
+          goRepList ((constr, b) :| bs')
   where
     goRepConstr :: Asm.Tag -> Sem r () -> [(Asm.Tag, Sem r ())] -> Sem r ()
     goRepConstr tag b bs = do
@@ -912,6 +964,15 @@ caseCmd defaultBranch = \case
       push (constructorTagToTerm tag)
       testEq
       branch b (caseCmd defaultBranch bs)
+
+    asNockmaMemRepListConstr :: Asm.Tag -> Sem r NockmaMemRepListConstr
+    asNockmaMemRepListConstr tag = case tag of
+      Asm.UserTag {} -> do
+        rep <- getConstructorMemRep tag
+        case rep of
+          NockmaMemRepList constr -> return constr
+          _ -> impossible
+      Asm.BuiltinTag {} -> impossible
 
     goBoolTag :: Bool -> Sem r () -> [(Asm.Tag, Sem r ())] -> Sem r ()
     goBoolTag v b bs = do
@@ -926,6 +987,17 @@ caseCmd defaultBranch = \case
           Asm.UserTag {} -> impossible
           Asm.BuiltinTag tag -> case nockmaBuiltinTag tag of
             NockmaBuiltinBool v' -> guard (v /= v') $> br
+
+    goRepList :: NonEmpty (NockmaMemRepListConstr, Sem r ()) -> Sem r ()
+    goRepList ((c, b) :| bs) = do
+      push (isCell' (OpAddress # topOfStack ValueStack))
+      let otherBranch = fromJust (firstJust f bs <|> defaultBranch)
+      case c of
+        NockmaMemRepListConstrCons -> branch b otherBranch
+        NockmaMemRepListConstrNil -> branch otherBranch b
+      where
+        f :: (NockmaMemRepListConstr, Sem r ()) -> Maybe (Sem r ())
+        f (c', br) = guard (c /= c') $> br
 
 branch' ::
   (Functor f, Members '[Output (Term Natural), Reader CompilerCtx] r) =>

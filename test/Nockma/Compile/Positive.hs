@@ -94,6 +94,8 @@ data ConstructorName
   | ConstructorTagged
   | ConstructorPair
   | ConstructorTuple
+  | ConstructorListNil
+  | ConstructorListCons
   deriving stock (Eq, Bounded, Enum)
 
 constructorTag :: ConstructorName -> Asm.Tag
@@ -115,6 +117,16 @@ constructorInfo = \case
     ConstructorInfo
       { _constructorInfoArity = 2,
         _constructorInfoMemRep = NockmaMemRepTuple
+      }
+  ConstructorListNil ->
+    ConstructorInfo
+      { _constructorInfoArity = 0,
+        _constructorInfoMemRep = NockmaMemRepList NockmaMemRepListConstrNil
+      }
+  ConstructorListCons ->
+    ConstructorInfo
+      { _constructorInfoArity = 2,
+        _constructorInfoMemRep = NockmaMemRepList NockmaMemRepListConstrCons
       }
 
 defaultInfo :: Natural -> ConstructorInfo
@@ -572,5 +584,12 @@ tests =
       )
       $ do
         pushNat 10
-        traceTerm (OpAddress # topOfStack ValueStack)
+        traceTerm (OpAddress # topOfStack ValueStack),
+    defTest
+      "allocate listy constructors"
+      (eqStack ValueStack [nock| [[500 nil] nil] |])
+      $ do
+        allocConstr (constructorTag ConstructorListNil)
+        pushNat 500
+        allocConstr (constructorTag ConstructorListCons)
   ]
