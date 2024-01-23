@@ -179,6 +179,12 @@ coreToVampIR' = Core.toStored' >=> storedCoreToVampIR'
 treeToAsm :: Tree.InfoTable -> Sem r Asm.InfoTable
 treeToAsm = return . Asm.fromTree
 
+treeToNockma :: (Members '[Error JuvixError, Reader EntryPoint] r) => Tree.InfoTable -> Sem r (Nockma.Cell Natural)
+treeToNockma = treeToAsm >=> asmToNockma
+
+treeToMiniC :: (Members '[Error JuvixError, Reader EntryPoint] r) => Tree.InfoTable -> Sem r C.MiniCResult
+treeToMiniC = treeToAsm >=> asmToMiniC
+
 asmToNockma :: (Members '[Error JuvixError, Reader EntryPoint] r) => Asm.InfoTable -> Sem r (Nockma.Cell Natural)
 asmToNockma = Asm.toNockma >=> mapReader Nockma.fromEntryPoint . Nockma.fromAsmTable
 
