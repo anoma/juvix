@@ -162,7 +162,12 @@ eqTraces expected = do
 subStackPred :: StackId -> Path -> (Term Natural -> Check ()) -> Check ()
 subStackPred st subp p = do
   s <- getStack st <$> ask
-  case run (runError @NockEvalError (subTerm s subp)) of
+  let res =
+        run
+          . runError @(NockEvalError Natural)
+          . topEvalCtx
+          $ subTerm s subp
+  case res of
     Left {} -> assertFailure "Subterm path is not valid"
     Right n -> p n
 

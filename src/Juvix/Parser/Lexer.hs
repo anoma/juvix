@@ -205,7 +205,7 @@ curLoc = do
   offset <- getOffset
   return (mkLoc offset sp)
 
-onlyInterval :: ParsecS r a -> ParsecS r Interval
+onlyInterval :: (MonadParsec e Text m) => m a -> m Interval
 onlyInterval = fmap snd . interval
 
 interval :: (MonadParsec e Text m) => m a -> m (a, Interval)
@@ -215,7 +215,7 @@ interval ma = do
   end <- curLoc
   return (res, mkInterval start end)
 
-withLoc :: ParsecS r a -> ParsecS r (WithLoc a)
+withLoc :: (MonadParsec e Text m) => m a -> m (WithLoc a)
 withLoc ma = do
   (a, i) <- interval ma
   return (WithLoc i a)

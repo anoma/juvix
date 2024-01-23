@@ -7,7 +7,7 @@ import Prettyprinter
 import Text.Megaparsec qualified as M
 
 newtype Pos = Pos {_unPos :: Word64}
-  deriving stock (Show, Eq, Ord, Data, Generic)
+  deriving stock (Show, Eq, Ord, Data, Generic, Lift)
   deriving newtype (Hashable, Num, Enum, Real, Integral)
 
 instance Serialize Pos
@@ -26,7 +26,7 @@ data FileLoc = FileLoc
     -- | Offset wrt the start of the input. Used for syntax highlighting.
     _locOffset :: !Pos
   }
-  deriving stock (Show, Eq, Generic, Data)
+  deriving stock (Show, Eq, Generic, Data, Lift)
 
 instance Hashable FileLoc
 
@@ -72,7 +72,7 @@ data Interval = Interval
     _intervalStart :: FileLoc,
     _intervalEnd :: FileLoc
   }
-  deriving stock (Show, Ord, Eq, Generic, Data)
+  deriving stock (Show, Ord, Eq, Generic, Data, Lift)
 
 instance Hashable Interval
 
