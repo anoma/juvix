@@ -29,12 +29,12 @@ allTests = testGroup "Nockma eval unit positive" (map mk tests)
               . runReader defaultEvalOptions
               . ignoreOutput @(Term Natural)
               . runError @(ErrNockNatural Natural)
-              . runError @NockEvalError
+              . runError @(NockEvalError Natural)
               $ eval _testProgramSubject _testProgramFormula
       case evalResult of
         Left natErr -> assertFailure ("Evaluation error: " <> show natErr)
         Right r -> case r of
-          Left evalErr -> assertFailure ("Evaluation error: " <> show evalErr)
+          Left evalErr -> assertFailure ("Evaluation error: " <> unpack (ppTrace evalErr))
           Right res -> runM (runReader res _testCheck)
 
 eqNock :: Term Natural -> Check ()

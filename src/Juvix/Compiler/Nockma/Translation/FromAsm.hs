@@ -771,7 +771,7 @@ callStdlibOn' s f = do
             _stdlibCallFunction = f
           }
 
-      callCell = (OpPush #. (decodeFn # callFn)) {_cellInfo = Irrelevant (Just meta)}
+      callCell = set cellCall (Just meta) (OpPush #. (decodeFn # callFn))
 
   output (toNock callCell)
   output (replaceTopStackN fNumArgs s)
@@ -1014,14 +1014,20 @@ evalCompiledNock' :: (Members '[Reader EvalOptions, Output (Term Natural)] r) =>
 evalCompiledNock' stack mainTerm = do
   evalT <-
     runError @(ErrNockNatural Natural)
-      . runError @NockEvalError
+      . runError @(NockEvalError Natural)
       $ eval stack mainTerm
   case evalT of
     Left e -> error (show e)
     Right ev -> case ev of
-      Left e -> error (show e)
+      Left e -> error (ppTrace e)
       Right res -> return res
 
 -- | Used in testing and app
 getStack :: StackId -> Term Natural -> Term Natural
-getStack st m = fromRight' (run (runError @NockEvalError (subTerm m (stackPath st))))
+getStack st m =
+  fromRight'
+    . run
+    . runError @(NockEvalError Natural)
+    . topEvalCtx
+    . subTerm m
+    $ stackPath st
