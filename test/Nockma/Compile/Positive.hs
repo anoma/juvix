@@ -511,12 +511,10 @@ tests =
           Nothing
           [ ( t,
               do
-                pushConstructorFieldOnto AuxStack t Asm.StackRef 0
-                pushConstructorFieldOnto AuxStack t Asm.StackRef 1
-                pushConstructorFieldOnto AuxStack t Asm.StackRef 1
-                moveTopFromTo AuxStack ValueStack
-                moveTopFromTo AuxStack ValueStack
-                moveTopFromTo AuxStack ValueStack
+                copyTopFromTo ValueStack TempStack
+                pushConstructorFieldOnto ValueStack t (Asm.mkTempRef' 1 0) 0
+                pushConstructorFieldOnto ValueStack t (Asm.mkTempRef' 1 0) 1
+                pushConstructorFieldOnto ValueStack t (Asm.mkTempRef' 1 0) 1
                 add
                 add
                 allocConstr t
@@ -557,14 +555,15 @@ tests =
           ],
     defTest
       "push constructor field"
-      (eqStack TempStack [nock| [30 nil] |])
+      (eqStack AuxStack [nock| [30 nil] |])
       $ do
         pushNat 10
         pushNat 20
         allocConstr (constructorTag ConstructorPair)
-        pushConstructorFieldOnto TempStack (constructorTag ConstructorPair) Asm.StackRef 0
-        pushConstructorFieldOnto TempStack (constructorTag ConstructorPair) Asm.StackRef 1
-        addOn TempStack,
+        copyTopFromTo ValueStack TempStack
+        pushConstructorFieldOnto AuxStack (constructorTag ConstructorPair) (Asm.mkTempRef' 1 0) 0
+        pushConstructorFieldOnto AuxStack (constructorTag ConstructorPair) (Asm.mkTempRef' 1 0) 1
+        addOn AuxStack,
     defTest
       "trace"
       ( do
