@@ -548,6 +548,17 @@ tests =
             (Asm.BuiltinTag Asm.TagFalse, pop >> pushNat 5)
           ],
     defTest
+      "push constructor field"
+      (eqStack AuxStack [nock| [30 nil] |])
+      $ do
+        pushNat 10
+        pushNat 20
+        allocConstr (constructorTag ConstructorPair)
+        copyTopFromTo ValueStack TempStack
+        pushConstructorFieldOnto AuxStack (Asm.mkTempRef' 1 0) 0
+        pushConstructorFieldOnto AuxStack (Asm.mkTempRef' 1 0) 1
+        addOn AuxStack,
+    defTest
       "trace"
       ( do
           eqStack ValueStack [nock| [10 nil] |]
