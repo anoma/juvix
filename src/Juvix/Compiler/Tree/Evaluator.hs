@@ -31,7 +31,10 @@ instance Show EvalError where
 instance Exception.Exception EvalError
 
 eval :: InfoTable -> Node -> Value
-eval tab = eval' [] mempty
+eval = hEval stdout
+
+hEval :: Handle -> InfoTable -> Node -> Value
+hEval hout tab = eval' [] mempty
   where
     eval' :: [Value] -> BL.BinderList Value -> Node -> Value
     eval' args temps node = case node of
@@ -54,21 +57,22 @@ eval tab = eval' [] mempty
 
         goBinop :: NodeBinop -> Value
         goBinop NodeBinop {..} =
+          -- keeping the lets separate ensures that `arg1` is evaluated before `arg2`
           let !arg1 = eval' args temps _nodeBinopArg1
-              !arg2 = eval' args temps _nodeBinopArg2
-           in case _nodeBinopOpcode of
-                IntAdd -> goIntBinop (+) arg1 arg2
-                IntSub -> goIntBinop (-) arg1 arg2
-                IntMul -> goIntBinop (*) arg1 arg2
-                IntDiv -> goIntBinop quot arg1 arg2
-                IntMod -> goIntBinop rem arg1 arg2
-                IntLe -> goIntCmpBinop (<=) arg1 arg2
-                IntLt -> goIntCmpBinop (<) arg1 arg2
-                ValEq
-                  | arg1 == arg2 -> ValBool True
-                  | otherwise -> ValBool False
-                StrConcat -> goStrConcat arg1 arg2
-                OpSeq -> arg2
+           in let !arg2 = eval' args temps _nodeBinopArg2
+               in case _nodeBinopOpcode of
+                    IntAdd -> goIntBinop (+) arg1 arg2
+                    IntSub -> goIntBinop (-) arg1 arg2
+                    IntMul -> goIntBinop (*) arg1 arg2
+                    IntDiv -> goIntBinop quot arg1 arg2
+                    IntMod -> goIntBinop rem arg1 arg2
+                    IntLe -> goIntCmpBinop (<=) arg1 arg2
+                    IntLt -> goIntCmpBinop (<) arg1 arg2
+                    ValEq
+                      | arg1 == arg2 -> ValBool True
+                      | otherwise -> ValBool False
+                    StrConcat -> goStrConcat arg1 arg2
+                    OpSeq -> arg2
 
         goIntBinop :: (Integer -> Integer -> Integer) -> Value -> Value -> Value
         goIntBinop f v1 v2 = case (v1, v2) of
@@ -89,7 +93,7 @@ eval tab = eval' [] mempty
         goUnop NodeUnop {..} =
           let !v = eval' args temps _nodeUnopArg
            in case _nodeUnopOpcode of
-                OpShow -> ValString (ppTrace tab v)
+                OpShow -> ValString (printValue v)
                 OpStrToInt -> goStringUnop strToInt v
                 OpTrace -> goTrace v
                 OpFail -> goFail v
@@ -108,7 +112,7 @@ eval tab = eval' [] mempty
           _ -> evalError "expected a string argument"
 
         goFail :: Value -> Value
-        goFail v = evalError ("failure: " <> ppPrint tab v)
+        goFail v = evalError ("failure: " <> printValue v)
 
         goArgsNum :: Value -> Value
         goArgsNum = \case
@@ -121,7 +125,7 @@ eval tab = eval' [] mempty
             evalError "expected a closure"
 
         goTrace :: Value -> Value
-        goTrace v = unsafePerformIO (putStrLn (ppPrint tab v) >> return v)
+        goTrace v = unsafePerformIO (hPutStrLn hout (printValue v) >> return v)
 
         goConstant :: Constant -> Value
         goConstant = \case
@@ -255,13 +259,69 @@ eval tab = eval' [] mempty
           let !v = eval' args temps _nodeSaveArg
            in eval' args (BL.cons v temps) _nodeSaveBody
 
+        printValue :: Value -> Text
+        printValue = \case
+          ValString s -> s
+          v -> ppPrint tab v
+
+valueToNode :: Value -> Node
+valueToNode = \case
+  ValInteger i -> Const $ ConstInt i
+  ValBool b -> Const $ ConstBool b
+  ValString s -> Const $ ConstString s
+  ValUnit -> Const ConstUnit
+  ValVoid -> Const ConstVoid
+  ValConstr Constr {..} ->
+    AllocConstr
+      NodeAllocConstr
+        { _nodeAllocConstrTag = _constrTag,
+          _nodeAllocConstrArgs = map valueToNode _constrArgs
+        }
+  ValClosure Closure {..} ->
+    AllocClosure
+      NodeAllocClosure
+        { _nodeAllocClosureFunSymbol = _closureSymbol,
+          _nodeAllocClosureArgs = map valueToNode _closureArgs
+        }
+
+hEvalIO :: Handle -> Handle -> InfoTable -> FunctionInfo -> IO Value
+hEvalIO hin hout infoTable funInfo = do
+  let !v = hEval hout infoTable (funInfo ^. functionCode)
+  hRunIO hin hout infoTable v
+
+-- | Interpret IO actions.
+hRunIO :: Handle -> Handle -> InfoTable -> Value -> IO Value
+hRunIO hin hout infoTable = \case
+  ValConstr (Constr (BuiltinTag TagReturn) [x]) -> return x
+  ValConstr (Constr (BuiltinTag TagBind) [x, f]) -> do
+    x' <- hRunIO hin hout infoTable x
+    let code =
+          CallClosures
+            NodeCallClosures
+              { _nodeCallClosuresFun = valueToNode f,
+                _nodeCallClosuresArgs = [valueToNode x']
+              }
+        !x'' = hEval hout infoTable code
+    hRunIO hin hout infoTable x''
+  ValConstr (Constr (BuiltinTag TagWrite) [ValString s]) -> do
+    hPutStr hout s
+    return ValVoid
+  ValConstr (Constr (BuiltinTag TagWrite) [arg]) -> do
+    hPutStr hout (ppPrint infoTable arg)
+    return ValVoid
+  ValConstr (Constr (BuiltinTag TagReadLn) []) -> do
+    hFlush hout
+    s <- hGetLine hin
+    return (ValString s)
+  val ->
+    return val
+
 -- | Catch EvalError and convert it to TreeError.
-catchEvalError :: (MonadIO m) => a -> m (Either TreeError a)
-catchEvalError a =
-  liftIO $
-    Exception.catch
-      (Exception.evaluate a <&> Right)
-      (\(ex :: EvalError) -> return (Left (toTreeError ex)))
+catchEvalErrorIO :: IO a -> IO (Either TreeError a)
+catchEvalErrorIO ma =
+  Exception.catch
+    (Exception.evaluate ma >>= \ma' -> ma' <&> Right)
+    (\(ex :: EvalError) -> return (Left (toTreeError ex)))
 
 toTreeError :: EvalError -> TreeError
 toTreeError EvalError {..} =

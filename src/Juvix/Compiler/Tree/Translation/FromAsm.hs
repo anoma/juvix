@@ -161,7 +161,7 @@ goFunction infoTab fi = do
           _ ->
             throw
               TreeError
-                { _treeErrorMsg = "expected 'save' or 'pop' at the beginning of case branch code",
+                { _treeErrorMsg = "expected 'save', 'pop' or 'ret' at the beginning of case branch code",
                   _treeErrorLoc = loc
                 }
 
