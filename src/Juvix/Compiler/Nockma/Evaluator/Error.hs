@@ -96,7 +96,7 @@ instance (PrettyCode a, NockNatural a) => PrettyCode (ExpectedCell a) where
     atm <- ppCode _expectedCellAtom
     ctx <- ppCtx _expectedCellCtx
     let cell = annotate AnnImportant "cell"
-    return (ctx <> "Expected an" <+> atm <+> "but got:" <> line <> cell)
+    return (ctx <> "Expected a" <+> cell <+> "but got:" <> line <> atm)
 
 instance (PrettyCode a, NockNatural a) => PrettyCode (NockEvalError a) where
   ppCode = \case
