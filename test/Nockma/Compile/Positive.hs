@@ -91,28 +91,41 @@ functionCode = \case
 data ConstructorName
   = ConstructorFalse
   | ConstructorTrue
-  | ConstructorWrapper
+  | ConstructorTagged
   | ConstructorPair
+  | ConstructorTuple
   deriving stock (Eq, Bounded, Enum)
 
 constructorTag :: ConstructorName -> Asm.Tag
 constructorTag n = Asm.UserTag (Asm.TagUser defaultModuleId (fromIntegral (fromEnum n)))
 
-constructorArity :: ConstructorName -> Natural
-constructorArity = \case
-  ConstructorFalse -> 0
-  ConstructorTrue -> 0
-  ConstructorWrapper -> 1
-  ConstructorPair -> 2
+constructorInfo :: ConstructorName -> ConstructorInfo
+constructorInfo = \case
+  ConstructorFalse -> defaultInfo 0
+  ConstructorTrue -> defaultInfo 0
+  ConstructorTagged -> defaultInfo 1
+  ConstructorPair -> defaultInfo 2
+  ConstructorTuple ->
+    ConstructorInfo
+      { _constructorInfoArity = 2,
+        _constructorInfoMemRep = NockmaMemRepTuple
+      }
 
-exampleConstructors :: ConstructorArities
+defaultInfo :: Natural -> ConstructorInfo
+defaultInfo ari =
+  ConstructorInfo
+    { _constructorInfoArity = ari,
+      _constructorInfoMemRep = NockmaMemRepConstr
+    }
+
+exampleConstructors :: ConstructorInfos
 exampleConstructors =
   hashMap $
-    [ (constructorTag n, constructorArity n)
+    [ (constructorTag n, constructorInfo n)
       | n <- allElements
     ]
-      ++ [ (Asm.BuiltinTag Asm.TagTrue, 0),
-           (Asm.BuiltinTag Asm.TagFalse, 0)
+      ++ [ (Asm.BuiltinTag Asm.TagTrue, defaultInfo 0),
+           (Asm.BuiltinTag Asm.TagFalse, defaultInfo 0)
          ]
 
 exampleFunctions :: [CompilerFunction]
@@ -367,7 +380,7 @@ tests =
       allocConstr (constructorTag ConstructorFalse),
     defTest "alloc unary constructor" (eqStack ValueStack [nock| [[2 [[55 66] nil] nil] nil]|]) $ do
       push (OpQuote # (55 :: Natural) # (66 :: Natural))
-      allocConstr (constructorTag ConstructorWrapper),
+      allocConstr (constructorTag ConstructorTagged),
     defTest "alloc binary constructor" (eqStack ValueStack [nock| [[3 [9 7 nil] nil] nil] |]) $ do
       pushNat 7
       pushNat 9
@@ -465,31 +478,54 @@ tests =
       (eqStack ValueStack [nock| [777 [2 [123 nil] nil] nil] |])
       $ do
         pushNat 123
-        allocConstr (constructorTag ConstructorWrapper)
+        allocConstr (constructorTag ConstructorTagged)
         caseCmd
           Nothing
-          [ (constructorTag ConstructorWrapper, pushNat 777)
+          [ (constructorTag ConstructorTagged, pushNat 777)
           ],
     defTest
       "cmdCase: default branch"
       (eqStack ValueStack [nock| [5 nil] |])
       $ do
         pushNat 123
-        allocConstr (constructorTag ConstructorWrapper)
+        allocConstr (constructorTag ConstructorTagged)
         caseCmd
           (Just (pop >> pushNat 5))
           [ (constructorTag ConstructorFalse, pushNat 777)
+          ],
+    defTest
+      "cmdCase: case on pair (NockmaMemRepTuple)"
+      (eqStack ValueStack [nock| [[70 50 10] nil] |])
+      $ do
+        let t = constructorTag ConstructorTuple
+        pushNat 10
+        pushNat 50
+        allocConstr t
+        caseCmd
+          Nothing
+          [ ( t,
+              do
+                pushConstructorFieldOnto AuxStack t Asm.StackRef 0
+                pushConstructorFieldOnto AuxStack t Asm.StackRef 1
+                pushConstructorFieldOnto AuxStack t Asm.StackRef 1
+                moveTopFromTo AuxStack ValueStack
+                moveTopFromTo AuxStack ValueStack
+                moveTopFromTo AuxStack ValueStack
+                add
+                add
+                allocConstr t
+            )
           ],
     defTest
       "cmdCase: second branch"
       (eqStack ValueStack [nock| [5 nil] |])
       $ do
         pushNat 123
-        allocConstr (constructorTag ConstructorWrapper)
+        allocConstr (constructorTag ConstructorTagged)
         caseCmd
           (Just (pushNat 0))
           [ (constructorTag ConstructorFalse, pushNat 0),
-            (constructorTag ConstructorWrapper, pop >> pushNat 5)
+            (constructorTag ConstructorTagged, pop >> pushNat 5)
           ],
     defTest
       "cmdCase: case on builtin true"
@@ -518,8 +554,8 @@ tests =
         pushNat 10
         pushNat 20
         allocConstr (constructorTag ConstructorPair)
-        pushConstructorFieldOnto TempStack Asm.StackRef 0
-        pushConstructorFieldOnto TempStack Asm.StackRef 1
+        pushConstructorFieldOnto TempStack (constructorTag ConstructorPair) Asm.StackRef 0
+        pushConstructorFieldOnto TempStack (constructorTag ConstructorPair) Asm.StackRef 1
         addOn TempStack,
     defTest
       "trace"

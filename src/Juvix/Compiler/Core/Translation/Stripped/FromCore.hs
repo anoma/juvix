@@ -144,6 +144,7 @@ translateConstructorInfo ConstructorInfo {..} =
       _constructorTag = _constructorTag,
       _constructorType = translateType _constructorType,
       _constructorArgNames,
+      _constructorArgsNum,
       _constructorFixity
     }
 
