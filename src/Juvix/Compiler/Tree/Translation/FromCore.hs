@@ -15,11 +15,9 @@ fromCore tab =
   InfoTable
     { _infoMainFunction = tab ^. Core.infoMain,
       _infoFunctions = genCode tab <$> tab ^. Core.infoFunctions,
-      _infoInductives = inductiveInfos,
+      _infoInductives = translateInductiveInfo <$> tab ^. Core.infoInductives,
       _infoConstrs = translateConstructorInfo <$> tab ^. Core.infoConstructors
     }
-  where
-    inductiveInfos = translateInductiveInfo <$> tab ^. Core.infoInductives
 
 -- Generate code for a single function.
 genCode :: Core.InfoTable -> Core.FunctionInfo -> FunctionInfo
@@ -332,13 +330,11 @@ translateConstructorInfo ci =
       _constructorLocation = ci ^. Core.constructorLocation,
       _constructorTag = ci ^. Core.constructorTag,
       _constructorArgNames = ci ^. Core.constructorArgNames,
-      _constructorArgsNum = numArgs,
+      _constructorArgsNum = ci ^. Core.constructorArgsNum,
       _constructorType = ty,
       _constructorInductive = ci ^. Core.constructorInductive,
       _constructorRepresentation = MemRepConstr,
       _constructorFixity = ci ^. Core.constructorFixity
     }
   where
-    numArgs = ci ^. Core.constructorArgsNum
-
     ty = convertType 0 (ci ^. Core.constructorType)
