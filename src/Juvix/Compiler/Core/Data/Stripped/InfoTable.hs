@@ -46,6 +46,8 @@ data ConstructorInfo = ConstructorInfo
     _constructorTag :: Tag,
     _constructorType :: Type,
     _constructorArgNames :: [Maybe Text],
+    -- | _constructorArgsNum == length _constructorArgNames == length (typeArgs _constructorType)
+    _constructorArgsNum :: Int,
     _constructorFixity :: Maybe Fixity
   }
 
