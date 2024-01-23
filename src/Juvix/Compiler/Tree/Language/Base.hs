@@ -43,6 +43,15 @@ data DirectRef
 mkTempRef :: OffsetRef -> DirectRef
 mkTempRef o = TempRef (RefTemp o Nothing)
 
+mkTempRef' :: Int -> Int -> DirectRef
+mkTempRef' height idx =
+  TempRef
+    ( RefTemp
+        { _refTempOffsetRef = OffsetRef {_offsetRefOffset = idx, _offsetRefName = Nothing},
+          _refTempTempHeight = Just height
+        }
+    )
+
 data RefTemp = RefTemp
   { _refTempOffsetRef :: OffsetRef,
     _refTempTempHeight :: Maybe Int
