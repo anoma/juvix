@@ -99,6 +99,12 @@ data ConstructorName
 constructorTag :: ConstructorName -> Asm.Tag
 constructorTag n = Asm.UserTag (Asm.TagUser defaultModuleId (fromIntegral (fromEnum n)))
 
+builtinTrue :: Asm.Tag
+builtinTrue = Asm.BuiltinTag Asm.TagTrue
+
+builtinFalse :: Asm.Tag
+builtinFalse = Asm.BuiltinTag Asm.TagFalse
+
 constructorInfo :: ConstructorName -> ConstructorInfo
 constructorInfo = \case
   ConstructorFalse -> defaultInfo 0
@@ -531,21 +537,23 @@ tests =
       "cmdCase: case on builtin true"
       (eqStack ValueStack [nock| [5 nil] |])
       $ do
-        allocConstr (Asm.BuiltinTag Asm.TagTrue)
+        allocConstr builtinTrue
         caseCmd
           (Just (pushNat 0))
-          [ (Asm.BuiltinTag Asm.TagTrue, pop >> pushNat 5),
-            (Asm.BuiltinTag Asm.TagFalse, pushNat 0)
+          [ (builtinTrue, pop >> pushNat 5),
+            (builtinTrue, crash),
+            (builtinFalse, pushNat 0)
           ],
     defTest
       "cmdCase: case on builtin false"
       (eqStack ValueStack [nock| [5 nil] |])
       $ do
-        allocConstr (Asm.BuiltinTag Asm.TagFalse)
+        allocConstr builtinFalse
         caseCmd
           (Just (pushNat 0))
-          [ (Asm.BuiltinTag Asm.TagTrue, pushNat 0),
-            (Asm.BuiltinTag Asm.TagFalse, pop >> pushNat 5)
+          [ (builtinTrue, pushNat 0),
+            (builtinFalse, pop >> pushNat 5),
+            (builtinFalse, crash)
           ],
     defTest
       "push constructor field"

@@ -21,6 +21,18 @@ data NockmaMemRep
   = NockmaMemRepConstr
   | NockmaMemRepTuple
 
+newtype NockmaBuiltinTag
+  = NockmaBuiltinBool Bool
+
+nockmaBuiltinTag :: Asm.BuiltinDataTag -> NockmaBuiltinTag
+nockmaBuiltinTag = \case
+  Asm.TagTrue -> NockmaBuiltinBool True
+  Asm.TagFalse -> NockmaBuiltinBool False
+  Asm.TagReturn -> impossible
+  Asm.TagBind -> impossible
+  Asm.TagWrite -> impossible
+  Asm.TagReadLn -> impossible
+
 type UserFunctionId = Symbol
 
 data FunctionId
@@ -285,9 +297,8 @@ fromOffsetRef = fromIntegral . (^. Asm.offsetRefOffset)
 -- nil terminated list.
 goConstructor :: NockmaMemRep -> Asm.Tag -> [Term Natural] -> Term Natural
 goConstructor mr t args = case t of
-  Asm.BuiltinTag b -> makeConstructor $ \case
-    ConstructorTag -> builtinTagToTerm b
-    ConstructorArgs -> remakeList []
+  Asm.BuiltinTag b -> case nockmaBuiltinTag b of
+    NockmaBuiltinBool v -> nockBoolLiteral v
   Asm.UserTag tag -> case mr of
     NockmaMemRepConstr ->
       makeConstructor $ \case
@@ -562,6 +573,12 @@ initStack defs = makeList (initSubStack <$> allElements)
 
 push :: (Members '[Compiler] r) => Term Natural -> Sem r ()
 push = pushOnto ValueStack
+
+dupOnto :: (Members '[Compiler] r) => StackId -> Sem r ()
+dupOnto stackId = pushOnto stackId (OpAddress # topOfStack stackId)
+
+dup :: (Members '[Compiler] r) => Sem r ()
+dup = dupOnto ValueStack
 
 execCompilerList :: (Member (Reader CompilerCtx) r) => Sem (Compiler ': r) a -> Sem r [Term Natural]
 execCompilerList = fmap fst . runCompilerList
@@ -860,19 +877,14 @@ save' isTail m = do
       | isTail -> pureT ()
       | otherwise -> popFromH TempStack
 
-builtinTagToTerm :: Asm.BuiltinDataTag -> Term Natural
+builtinTagToTerm :: NockmaBuiltinTag -> Term Natural
 builtinTagToTerm = \case
-  Asm.TagTrue -> nockBoolLiteral True
-  Asm.TagFalse -> nockBoolLiteral False
-  Asm.TagReturn -> impossible
-  Asm.TagBind -> impossible
-  Asm.TagWrite -> impossible
-  Asm.TagReadLn -> impossible
+  NockmaBuiltinBool v -> nockBoolLiteral v
 
 constructorTagToTerm :: Asm.Tag -> Term Natural
 constructorTagToTerm = \case
   Asm.UserTag t -> OpQuote # toNock (fromIntegral (t ^. Asm.tagUserWord) :: Natural)
-  Asm.BuiltinTag b -> builtinTagToTerm b
+  Asm.BuiltinTag b -> builtinTagToTerm (nockmaBuiltinTag b)
 
 caseCmd ::
   forall r.
@@ -882,13 +894,16 @@ caseCmd ::
   Sem r ()
 caseCmd defaultBranch = \case
   [] -> sequence_ defaultBranch
-  (tag, b) : bs -> do
-    rep <- getConstructorMemRep tag
-    case rep of
-      NockmaMemRepConstr -> goRepConstr tag b bs
-      NockmaMemRepTuple
-        | null bs, isNothing defaultBranch -> b
-        | otherwise -> error "redundant branch. Impossible?"
+  (tag, b) : bs -> case tag of
+    Asm.BuiltinTag t -> case nockmaBuiltinTag t of
+      NockmaBuiltinBool v -> goBoolTag v b bs
+    Asm.UserTag {} -> do
+      rep <- getConstructorMemRep tag
+      case rep of
+        NockmaMemRepConstr -> goRepConstr tag b bs
+        NockmaMemRepTuple
+          | null bs, isNothing defaultBranch -> b
+          | otherwise -> error "redundant branch. Impossible?"
   where
     goRepConstr :: Asm.Tag -> Sem r () -> [(Asm.Tag, Sem r ())] -> Sem r ()
     goRepConstr tag b bs = do
@@ -897,6 +912,20 @@ caseCmd defaultBranch = \case
       push (constructorTagToTerm tag)
       testEq
       branch b (caseCmd defaultBranch bs)
+
+    goBoolTag :: Bool -> Sem r () -> [(Asm.Tag, Sem r ())] -> Sem r ()
+    goBoolTag v b bs = do
+      let otherBranch = fromJust (firstJust f bs <|> defaultBranch)
+      dup
+      if
+          | v -> branch b otherBranch
+          | otherwise -> branch otherBranch b
+      where
+        f :: (Asm.Tag, Sem r ()) -> Maybe (Sem r ())
+        f (tag', br) = case tag' of
+          Asm.UserTag {} -> impossible
+          Asm.BuiltinTag tag -> case nockmaBuiltinTag tag of
+            NockmaBuiltinBool v' -> guard (v /= v') $> br
 
 branch' ::
   (Functor f, Members '[Output (Term Natural), Reader CompilerCtx] r) =>
