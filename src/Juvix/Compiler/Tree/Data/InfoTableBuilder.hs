@@ -13,28 +13,28 @@ type InfoTableBuilder = InfoTableBuilder' Node ()
 type BuilderState = BuilderState' Node ()
 
 freshSymbol :: (Member InfoTableBuilder r) => Sem r Symbol
-freshSymbol = send @InfoTableBuilder FreshSymbol
+freshSymbol = freshSymbol' @Node @()
 
 freshTag :: (Member InfoTableBuilder r) => Sem r Tag
-freshTag = send @InfoTableBuilder FreshTag
+freshTag = freshTag' @Node @()
 
 registerFunction :: (Member InfoTableBuilder r) => FunctionInfo -> Sem r ()
-registerFunction fi = send @InfoTableBuilder (RegisterFunction fi)
+registerFunction = registerFunction' @Node @()
 
 registerConstr :: (Member InfoTableBuilder r) => ConstructorInfo -> Sem r ()
-registerConstr ci = send @InfoTableBuilder (RegisterConstr ci)
+registerConstr = registerConstr' @Node @()
 
 registerInductive :: (Member InfoTableBuilder r) => InductiveInfo -> Sem r ()
-registerInductive ii = send @InfoTableBuilder (RegisterInductive ii)
+registerInductive = registerInductive' @Node @()
 
 registerForward :: (Member InfoTableBuilder r) => Text -> Symbol -> Sem r ()
-registerForward name sym = send @InfoTableBuilder (RegisterForward name sym)
+registerForward = registerForward' @Node @()
 
 registerMain :: (Member InfoTableBuilder r) => Symbol -> Sem r ()
-registerMain sym = send @InfoTableBuilder (RegisterMain sym)
+registerMain = registerMain' @Node @()
 
 getIdent :: (Member InfoTableBuilder r) => Text -> Sem r (Maybe IdentKind)
-getIdent name = send @InfoTableBuilder (GetIdent name)
+getIdent = getIdent' @Node @()
 
 getFunctionInfo :: (Member InfoTableBuilder r) => Symbol -> Sem r FunctionInfo
-getFunctionInfo sym = send @InfoTableBuilder (GetFunctionInfo sym)
+getFunctionInfo = getFunctionInfo' @Node @()
