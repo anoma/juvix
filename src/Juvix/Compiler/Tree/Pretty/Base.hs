@@ -12,6 +12,7 @@ import Juvix.Compiler.Core.Pretty.Base qualified as Core
 import Juvix.Compiler.Internal.Data.Name
 import Juvix.Compiler.Tree.Data.InfoTable
 import Juvix.Compiler.Tree.Language
+import Juvix.Compiler.Tree.Language.Value
 import Juvix.Compiler.Tree.Pretty.Options
 import Juvix.Data.CodeAnn
 import Juvix.Extra.Strings qualified as Str
@@ -85,6 +86,37 @@ instance PrettyCode BuiltinDataTag where
 
 instance PrettyCode Tag where
   ppCode = ppConstrName
+
+instance PrettyCode Constr where
+  ppCode (Constr tag args) = do
+    n' <- ppConstrName tag
+    args' <- mapM (ppRightExpression appFixity) args
+    return $ foldl' (<+>) n' args'
+
+instance PrettyCode Closure where
+  ppCode (Closure sym args) = do
+    n' <- ppFunName sym
+    args' <- mapM (ppRightExpression appFixity) args
+    return $ foldl' (<+>) n' args'
+
+instance PrettyCode Value where
+  ppCode = \case
+    ValInteger i ->
+      return $ integer i
+    ValBool True ->
+      return $ annotate (AnnKind KNameConstructor) (pretty (Str.true_ :: String))
+    ValBool False ->
+      return $ annotate (AnnKind KNameConstructor) (pretty (Str.false_ :: String))
+    ValString txt ->
+      return $ annotate AnnLiteralString (pretty (show txt :: String))
+    ValUnit ->
+      return $ annotate (AnnKind KNameConstructor) (pretty (Str.unit :: String))
+    ValVoid ->
+      return $ annotate (AnnKind KNameConstructor) (pretty (Str.void :: String))
+    ValConstr c ->
+      ppCode c
+    ValClosure cl ->
+      ppCode cl
 
 instance PrettyCode TypeInductive where
   ppCode :: (Member (Reader Options) r) => TypeInductive -> Sem r (Doc Ann)

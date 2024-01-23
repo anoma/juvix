@@ -7,7 +7,6 @@ where
 import Data.Foldable
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Asm.Data.InfoTable
-import Juvix.Compiler.Asm.Interpreter.Base
 import Juvix.Compiler.Asm.Interpreter.RuntimeState
 import Juvix.Compiler.Asm.Pretty.Options
 import Juvix.Compiler.Internal.Data.Name
@@ -25,35 +24,13 @@ class PrettyCode c where
   ppCode :: (Member (Reader Options) r) => c -> Sem r (Doc Ann)
 
 instance PrettyCode Constr where
-  ppCode (Constr tag args) = do
-    n' <- Tree.ppConstrName tag
-    args' <- mapM (ppRightExpression appFixity) args
-    return $ foldl' (<+>) n' args'
+  ppCode = Tree.ppCode
 
 instance PrettyCode Closure where
-  ppCode (Closure sym args) = do
-    n' <- Tree.ppFunName sym
-    args' <- mapM (ppRightExpression appFixity) args
-    return $ foldl' (<+>) n' args'
+  ppCode = Tree.ppCode
 
 instance PrettyCode Val where
-  ppCode = \case
-    ValInteger i ->
-      return $ integer i
-    ValBool True ->
-      return $ annotate (AnnKind KNameConstructor) (pretty (Str.true_ :: String))
-    ValBool False ->
-      return $ annotate (AnnKind KNameConstructor) (pretty (Str.false_ :: String))
-    ValString txt ->
-      return $ annotate AnnLiteralString (pretty (show txt :: String))
-    ValUnit ->
-      return $ annotate (AnnKind KNameConstructor) (pretty (Str.unit :: String))
-    ValVoid ->
-      return $ annotate (AnnKind KNameConstructor) (pretty (Str.void :: String))
-    ValConstr c ->
-      ppCode c
-    ValClosure cl ->
-      ppCode cl
+  ppCode = Tree.ppCode
 
 instance PrettyCode ArgumentArea where
   ppCode ArgumentArea {..} =
