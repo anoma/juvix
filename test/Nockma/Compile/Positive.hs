@@ -285,6 +285,9 @@ tests =
       pushNat 10
       pushNat 15
       callStdlib StdlibMod,
+    defTestNoJets "dec no jets" (eqStack ValueStack [nock| [5 nil] |]) $ do
+      pushNat 6
+      dec,
     defTestNoJets "mul no jets" (eqStack ValueStack [nock| [24 nil] |]) $ do
       pushNat 8
       pushNat 3
@@ -334,6 +337,10 @@ tests =
       pushNat 5
       appendRights,
     defTest "le less" (eqStack ValueStack [nock| [1 nil] |]) $ do
+      pushNat 2
+      pushNat 3
+      callStdlib StdlibLe,
+    defTestNoJets "le less no jets" (eqStack ValueStack [nock| [1 nil] |]) $ do
       pushNat 2
       pushNat 3
       callStdlib StdlibLe,
