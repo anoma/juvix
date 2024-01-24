@@ -26,6 +26,7 @@ import Commands.Dev.Repl.Options
 import Commands.Dev.Runtime.Options
 import Commands.Dev.Scope.Options
 import Commands.Dev.Termination.Options
+import Commands.Dev.Tree.Options
 import Commands.Repl.Options
 import CommonOptions
 
@@ -36,6 +37,7 @@ data DevCommand
   | Core CoreCommand
   | Geb GebCommand
   | Asm AsmCommand
+  | Tree TreeCommand
   | Casm CasmCommand
   | Runtime RuntimeCommand
   | Parse ParseOptions
@@ -55,6 +57,7 @@ parseDevCommand =
           commandCore,
           commandGeb,
           commandAsm,
+          commandTree,
           commandCasm,
           commandRuntime,
           commandParse,
@@ -101,6 +104,13 @@ commandAsm =
     info
       (Asm <$> parseAsmCommand)
       (progDesc "Subcommands related to JuvixAsm")
+
+commandTree :: Mod CommandFields DevCommand
+commandTree =
+  command "tree" $
+    info
+      (Tree <$> parseTreeCommand)
+      (progDesc "Subcommands related to JuvixTree")
 
 commandCasm :: Mod CommandFields DevCommand
 commandCasm =

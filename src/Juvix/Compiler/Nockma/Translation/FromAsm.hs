@@ -343,7 +343,7 @@ compile = mapM_ goCommand
       Asm.Constant Asm.ConstVoid -> push constVoid
       Asm.Ref r -> pushMemValue r
       where
-        pushMemValue :: Asm.MemValue -> Sem r ()
+        pushMemValue :: Asm.MemRef -> Sem r ()
         pushMemValue = \case
           Asm.DRef r -> pushDirectRef r
           Asm.ConstrRef r ->
@@ -467,7 +467,6 @@ pushConstructorField = pushConstructorFieldOnto ValueStack
 
 directRefPath :: Asm.DirectRef -> Path
 directRefPath = \case
-  Asm.StackRef -> topOfStack ValueStack
   Asm.ArgRef a -> pathToArg (fromOffsetRef a)
   Asm.TempRef Asm.RefTemp {..} -> tempRefPath (fromIntegral (fromJust _refTempTempHeight)) (fromOffsetRef _refTempOffsetRef)
 

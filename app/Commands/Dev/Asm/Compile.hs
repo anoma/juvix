@@ -58,10 +58,14 @@ runCommand opts = do
       TargetWasm32Wasi -> return Backend.TargetCWasm32Wasi
       TargetNative64 -> return Backend.TargetCNative64
       TargetNockma -> return Backend.TargetNockma
-      TargetGeb -> exitMsg (ExitFailure 1) "error: GEB target not supported for JuvixAsm"
-      TargetVampIR -> exitMsg (ExitFailure 1) "error: VampIR target not supported for JuvixAsm"
-      TargetCore -> exitMsg (ExitFailure 1) "error: JuvixCore target not supported for JuvixAsm"
-      TargetAsm -> exitMsg (ExitFailure 1) "error: JuvixAsm target not supported for JuvixAsm"
+      TargetTree -> err "JuvixTree"
+      TargetGeb -> err "GEB"
+      TargetVampIR -> err "VampIR"
+      TargetCore -> err "JuvixCore"
+      TargetAsm -> err "JuvixAsm"
+      where
+        err :: Text -> Sem r a
+        err tgt = exitMsg (ExitFailure 1) ("error: " <> tgt <> " target not supported for JuvixAsm")
 
 inputCFile :: (Members '[App] r) => Path Abs File -> Sem r (Path Abs File)
 inputCFile inputFileCompile = do

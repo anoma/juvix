@@ -350,11 +350,20 @@ seq_ = ">>"
 seqq_ :: (IsString s) => s
 seqq_ = ">>>"
 
+sseq_ :: (IsString s) => s
+sseq_ = "seq"
+
+eq :: (IsString s) => s
+eq = "eq"
+
 trace_ :: (IsString s) => s
 trace_ = "trace"
 
 fail_ :: (IsString s) => s
 fail_ = "fail"
+
+argsnum :: (IsString s) => s
+argsnum = "argsnum"
 
 err :: (IsString s) => s
 err = "err"
@@ -500,6 +509,30 @@ imod = "imod"
 ilt :: (IsString s) => s
 ilt = "ilt"
 
+ile :: (IsString s) => s
+ile = "ile"
+
+add_ :: (IsString s) => s
+add_ = "add"
+
+sub_ :: (IsString s) => s
+sub_ = "sub"
+
+mul_ :: (IsString s) => s
+mul_ = "mul"
+
+div_ :: (IsString s) => s
+div_ = "div"
+
+mod_ :: (IsString s) => s
+mod_ = "mod"
+
+lt_ :: (IsString s) => s
+lt_ = "lt"
+
+le_ :: (IsString s) => s
+le_ = "le"
+
 ret :: (IsString s) => s
 ret = "ret"
 
@@ -547,6 +580,21 @@ tsave = "tsave"
 
 caseOn :: (IsString s) => s
 caseOn = "case-on"
+
+alloc :: (IsString s) => s
+alloc = "alloc"
+
+calloc :: (IsString s) => s
+calloc = "calloc"
+
+cextend :: (IsString s) => s
+cextend = "cextend"
+
+ccall :: (IsString s) => s
+ccall = "ccall"
+
+br :: (IsString s) => s
+br = "br"
 
 of_ :: (IsString s) => s
 of_ = "of"

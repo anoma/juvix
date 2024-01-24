@@ -18,28 +18,56 @@ data Constant
   | ConstVoid
 
 -- | MemRefs are references to values stored in memory.
-data MemRef' r
+data MemRef
   = -- | A direct memory reference.
-    DRef r
+    DRef DirectRef
   | -- | ConstrRef is an indirect reference to a field (argument) of
     --  a constructor: field k holds the (k+1)th argument.
-    ConstrRef (Field' r)
+    ConstrRef Field
 
 data OffsetRef = OffsetRef
   { _offsetRefOffset :: Offset,
     _offsetRefName :: Maybe Text
   }
 
--- | Constructor field reference.
-data Field' r = Field
+-- | DirectRef is a direct memory reference.
+data DirectRef
+  = -- | ArgRef references an argument in the argument area (0-based offsets).
+    --   JVT/JVA code: 'arg[<offset>]'.
+    ArgRef OffsetRef
+  | -- | TempRef references a value in the temporary stack (0-based offsets,
+    --   counted from the _bottom_ of the temporary stack). JVT/JVA code:
+    --   'tmp[<offset>]'.
+    TempRef RefTemp
+
+mkTempRef :: OffsetRef -> DirectRef
+mkTempRef o = TempRef (RefTemp o Nothing)
+
+mkTempRef' :: Int -> Int -> DirectRef
+mkTempRef' height idx =
+  TempRef
+    ( RefTemp
+        { _refTempOffsetRef = OffsetRef {_offsetRefOffset = idx, _offsetRefName = Nothing},
+          _refTempTempHeight = Just height
+        }
+    )
+
+data RefTemp = RefTemp
+  { _refTempOffsetRef :: OffsetRef,
+    _refTempTempHeight :: Maybe Int
+  }
+
+-- | Constructor field reference. JVT/JVA code: '<dref>.<tag>[<offset>]'
+data Field = Field
   { _fieldName :: Maybe Text,
     -- | tag of the constructor being referenced
     _fieldTag :: Tag,
     -- | location where the data is stored
-    _fieldRef :: r,
+    _fieldRef :: DirectRef,
     _fieldOffset :: Offset
   }
-  deriving stock (Functor)
 
-makeLenses ''Field'
+makeLenses ''Field
 makeLenses ''OffsetRef
+makeLenses ''DirectRef
+makeLenses ''RefTemp

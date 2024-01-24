@@ -22,35 +22,7 @@ import Juvix.Compiler.Tree.Language.Base
 -- is an unprintable unit.
 data Value
   = Constant Constant
-  | Ref MemValue
-
--- | MemValues are references to values stored in random-access memory.
-type MemValue = MemRef' DirectRef
-
--- | DirectRef is a direct memory reference.
-data DirectRef
-  = -- | StackRef references the top of the stack. JVA code: '$'.
-    StackRef
-  | -- | ArgRef references an argument in the argument area (0-based offsets).
-    --   JVA code: 'arg[<offset>]'.
-    ArgRef OffsetRef
-  | -- | TempRef references a value in the temporary stack (0-based offsets,
-    --   counted from the _bottom_ of the temporary stack). JVA code:
-    --   'tmp[<offset>]'.
-    TempRef RefTemp
-
-mkTempRef :: OffsetRef -> DirectRef
-mkTempRef o = TempRef (RefTemp o Nothing)
-
-data RefTemp = RefTemp
-  { _refTempOffsetRef :: OffsetRef,
-    _refTempTempHeight :: Maybe Int
-  }
-
-makeLenses ''RefTemp
-
--- | Constructor field reference. JVA code: '<dref>.<tag>[<offset>]'
-type Field = Field' DirectRef
+  | Ref MemRef
 
 -- | Function call type
 data CallType

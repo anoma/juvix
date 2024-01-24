@@ -6,22 +6,6 @@ where
 
 import Juvix.Compiler.Tree.Language.Base
 
--- | MemRefs are references to values stored in memory.
-type MemRef = MemRef' DirectRef
-
--- | DirectRef is a direct memory reference.
-data DirectRef
-  = -- | ArgRef references an argument in the argument area (0-based offsets).
-    --   JVT code: 'arg[<offset>]'.
-    ArgRef OffsetRef
-  | -- | TempRef references a value in the temporary stack (0-based offsets,
-    --   counted from the _bottom_ of the temporary stack). JVT code:
-    --   'tmp[<offset>]'.
-    TempRef OffsetRef
-
--- | Constructor field reference. JVT code: '<dref>.<tag>[<offset>]'
-type Field = Field' DirectRef
-
 -- | Function call type
 data CallType = CallFun Symbol | CallClosure Node
 
@@ -32,14 +16,14 @@ data Node
     Const Constant
   | -- | A memory reference.
     MemRef MemRef
-  | -- | Allocate constructor data. JVT code: 'alloc(<tag>, x1, .., xn)'.
+  | -- | Allocate constructor data. JVT code: 'alloc[<tag>](x1, .., xn)'.
     AllocConstr NodeAllocConstr
-  | -- | Allocate a closure. JVT code: 'calloc(<fun>, x1, .., xn)'.
+  | -- | Allocate a closure. JVT code: 'calloc[<fun>](x1, .., xn)'.
     AllocClosure NodeAllocClosure
   | -- | Extend a closure with more arguments. JVT code: 'cextend(cl, x1, .., xn)'.
     ExtendClosure NodeExtendClosure
   | -- | Call a function given by an immediate constant Symbol or a closure. JVT
-    -- code: 'call(<fun>, x1, .., xn)' or 'call(cl, x1, .., xn)'
+    -- code: 'call[<fun>](x1, .., xn)' or 'call(cl, x1, .., xn)'
     Call NodeCall
   | -- | 'CallClosures' is like 'Call' with 'CallClosure' call type, except that
     -- (1) it either calls or extends the closure depending on the number of
@@ -53,12 +37,12 @@ data Node
     -- false: <code> }'.
     Branch NodeBranch
   | -- | Branch based on the tag of constructor data.
-    -- JVT code: 'case(<ind>, x) { <tag>: <code>; ... <tag>: <code>; default: <code> }'
+    -- JVT code: 'case[<ind>](x) { <tag>: <code>; ... <tag>: <code>; default: <code> }'
     -- (any branch may be omitted).
     Case NodeCase
   | -- | Execute nested code with temporary stack extended with a given value.
     -- Used to implement Core.Let and Core.Case. JVT codes: 'save(x) {<code>}',
-    -- 'save(<name>, x) {<code>}'.
+    -- 'save[<name>](x) {<code>}'.
     Save NodeSave
 
 data BinaryOpcode

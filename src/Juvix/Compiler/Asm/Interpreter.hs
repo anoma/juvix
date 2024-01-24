@@ -223,7 +223,7 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
       Constant c -> return (getConstantVal c)
       Ref r -> getMemVal r
 
-    getMemVal :: forall r. (Member Runtime r) => MemValue -> Sem r Val
+    getMemVal :: forall r. (Member Runtime r) => MemRef -> Sem r Val
     getMemVal = \case
       DRef dr -> getDirectRef dr
       ConstrRef cr -> do
@@ -241,7 +241,6 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
 
     getDirectRef :: (Member Runtime r) => DirectRef -> Sem r Val
     getDirectRef = \case
-      StackRef -> topValueStack
       ArgRef OffsetRef {..} -> readArg _offsetRefOffset
       TempRef r -> readTemp r
 

@@ -2,7 +2,7 @@
 
 function sapp(* -> *) {
   push arg[0];
-  push $;
+  push arg[0];
   tcall $ 1;
 }
 

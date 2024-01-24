@@ -22,6 +22,7 @@ CASM=$(count src/Juvix/Compiler/Casm/)
 NOCK=$(count src/Juvix/Compiler/Nockma)
 REG=$(count src/Juvix/Compiler/Reg/)
 ASM=$(count src/Juvix/Compiler/Asm/)
+TREE=$(count src/Juvix/Compiler/Tree/)
 CORE=$(count src/Juvix/Compiler/Core/)
 
 CONCRETE=$(count src/Juvix/Compiler/Concrete/)
@@ -37,7 +38,7 @@ PRELUDE=$(count src/Juvix/Prelude/)
 STORE=$(count src/Juvix/Compiler/Store/)
 
 FRONT=$((CONCRETE + INTERNAL + BUILTINS + PIPELINE))
-BACK=$((BACKENDC + GEB + VAMPIR + NOCK + REG + ASM + CORE + CASM + CAIRO))
+BACK=$((BACKENDC + GEB + VAMPIR + NOCK + REG + ASM + TREE + CORE + CASM + CAIRO))
 OTHER=$((APP + STORE + HTML + EXTRA + DATA + PRELUDE))
 TESTS=$(count test/)
 
@@ -56,6 +57,7 @@ echo "   Cairo backend: $((CASM + CAIRO)) LOC"
 echo "   Nockma backend: $NOCK LOC"
 echo "   JuvixReg: $REG LOC"
 echo "   JuvixAsm: $ASM LOC"
+echo "   JuvixTree: $TREE LOC"
 echo "   JuvixCore: $CORE LOC"
 echo "Runtime: $RUNTIME LOC"
 echo "   C runtime: $RUNTIME_C LOC"
