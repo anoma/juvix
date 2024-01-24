@@ -566,6 +566,39 @@ tests =
             (builtinFalse, crash)
           ],
     defTest
+      "cmdCase: case on listy nil"
+      (eqStack ValueStack [nock| [5 nil] |])
+      $ do
+        allocConstr (constructorTag ConstructorListNil)
+        caseCmd
+          (Just (pushNat 0))
+          [ (constructorTag ConstructorListCons, pushNat 0),
+            (constructorTag ConstructorListNil, pop >> pushNat 5),
+            (constructorTag ConstructorListCons, crash)
+          ],
+    defTest
+      "cmdCase: case on listy cons and field accessor"
+      (eqStack ValueStack [nock| [[60 30 nil] nil] |])
+      $ do
+        let tagCons = constructorTag ConstructorListCons
+            tagNil = constructorTag ConstructorListNil
+        allocConstr tagNil
+        pushNat 30
+        allocConstr tagCons
+        caseCmd
+          Nothing
+          [ ( tagCons,
+              do
+                copyTopFromTo ValueStack TempStack
+                pushConstructorFieldOnto ValueStack tagCons (Asm.mkTempRef' 1 0) 0
+                pushConstructorFieldOnto ValueStack tagCons (Asm.mkTempRef' 1 0) 0
+                add
+                allocConstr tagCons
+            ),
+            (tagNil, pop >> pushNat 5),
+            (tagCons, crash)
+          ],
+    defTest
       "push constructor field"
       (eqStack AuxStack [nock| [30 nil] |])
       $ do
