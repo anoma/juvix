@@ -731,10 +731,10 @@ runCompilerWith opts constrs libFuns mainFun =
       exportSetup = OpPush # (OpQuote # iniStack) # (moveTailToStack ExternalStack)
 
       exportReturn :: Term Natural
-      exportReturn = (OpAddress # (topOfStack ValueStack)) # (OpAddress # (topOfStack ExternalStack))
+      exportReturn = OpAddress # topOfStack ValueStack
 
       exportTerm :: Term Natural
-      exportTerm = exportSetup >># (mkTerm exportCommand)
+      exportTerm = exportSetup >># mkTerm exportCommand
 
       makeFunction' :: Term Natural -> Term Natural
       makeFunction' c = makeFunction $ \case
