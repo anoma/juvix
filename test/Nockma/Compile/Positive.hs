@@ -190,6 +190,9 @@ eqTraces expected = do
               <> ppTrace ts
       assertFailure (unpack msg)
 
+printTraces :: Check ()
+printTraces = ppPrint <$> ask @([Term Natural]) >>= putStrLn
+
 subStackPred :: StackId -> Path -> (Term Natural -> Check ()) -> Check ()
 subStackPred st subp p = do
   s <- getStack st <$> ask
