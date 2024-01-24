@@ -1,0 +1,37 @@
+module Resource;
+
+import Stdlib.Prelude open;
+
+syntax alias Commitment := Nat;
+syntax alias Nullifier := Nat;
+syntax alias Proof := Resource;
+
+Delta : Type := List DeltaComponent;
+
+type DeltaComponent := mkDeltaComponent {
+  denom : Nat;
+  sign : Bool;
+  amount : Nat;
+};
+
+type Transaction := mkTransaction {
+     roots : List Nat;
+     commitments : List Commitment;
+     nullifiers : List Nullifier;
+     proofs : List Proof;
+     delta : Delta;
+     extra : Nat;
+};
+
+type Resource := mkResource {
+     logic : Transaction -> Bool;
+     label : List Nat;
+     quantity : Nat;
+     data : Nat;
+     eph : Bool;
+     nonce : Nat;
+     npk : Nat;
+     rseed : Nat;
+};
+
+main : Transaction -> Bool := const true;
