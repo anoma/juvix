@@ -30,7 +30,6 @@ import Juvix.Compiler.Core.Extra.Utils.Base
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.ExpansionInfo
 import Juvix.Compiler.Core.Info.LocationInfo qualified as Info
-import Juvix.Compiler.Core.Language
 
 substEnvInBranch :: Env -> CaseBranch -> CaseBranch
 substEnvInBranch env br = over caseBranchBody (substEnv env') br

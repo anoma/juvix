@@ -17,7 +17,6 @@ import Juvix.Compiler.Core.Error (CoreError (..))
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.NoDisplayInfo
-import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Pretty
 import Text.Read qualified as T
 

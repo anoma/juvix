@@ -16,7 +16,6 @@ import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Core.Data.InfoTableBuilder
 import Juvix.Compiler.Core.Extra.Recursors.Map.Named
 import Juvix.Compiler.Core.Extra.Utils
-import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation.Base
 
 data LItem = LItem

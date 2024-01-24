@@ -8,7 +8,6 @@ import Juvix.Compiler.Core.Error
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info.LocationInfo (getInfoLocation, getNodeLocation)
 import Juvix.Compiler.Core.Info.TypeInfo qualified as Info
-import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Transformation.Base (mapT')
 import Juvix.Data.NameKind
 import Juvix.Data.PPOutput

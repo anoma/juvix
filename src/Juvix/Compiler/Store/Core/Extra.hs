@@ -2,7 +2,6 @@ module Juvix.Compiler.Store.Core.Extra where
 
 import Juvix.Compiler.Core.Data.InfoTable qualified as Core
 import Juvix.Compiler.Core.Extra qualified as Core
-import Juvix.Compiler.Core.Language qualified as Core
 import Juvix.Compiler.Store.Core.Data.InfoTable
 import Juvix.Compiler.Store.Core.Language
 

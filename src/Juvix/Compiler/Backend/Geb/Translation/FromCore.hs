@@ -9,7 +9,6 @@ import Juvix.Compiler.Core.Data.InfoTable qualified as Core
 import Juvix.Compiler.Core.Extra qualified as Core
 import Juvix.Compiler.Core.Info.TypeInfo qualified as Info
 import Juvix.Compiler.Core.Language (Index, Level, Symbol)
-import Juvix.Compiler.Core.Language qualified as Core
 
 data Env = Env
   { _envIdentMap :: HashMap Symbol Level,

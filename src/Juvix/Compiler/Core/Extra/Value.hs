@@ -5,7 +5,6 @@ import Juvix.Compiler.Core.Extra.Base
 import Juvix.Compiler.Core.Extra.Utils
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.ExpansionInfo (kExpansionInfo)
-import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Language.Value
 
 toValue :: InfoTable -> Node -> Value

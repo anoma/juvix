@@ -39,3 +39,21 @@ instance (EmbedIdentity' b) => EmbedIdentity (BinderList b', b) where
 
 instance (EmbedIdentity' b) => EmbedIdentity (a -> b) where
   embedIden a = embedIden' a
+
+embedIden1 :: (a -> b) -> a -> Identity b
+embedIden1 f = Identity . f
+
+embedIden2 :: (a -> b -> c) -> a -> b -> Identity c
+embedIden2 f = embedIden1 . f
+
+embedIden3 :: (a -> b -> c -> d) -> a -> b -> c -> Identity d
+embedIden3 f = embedIden2 . f
+
+embedIdenP1 :: (p, a -> b) -> (p, a -> Identity b)
+embedIdenP1 = second embedIden1
+
+embedIdenP2 :: (p, a -> b -> c) -> (p, a -> b -> Identity c)
+embedIdenP2 = second embedIden2
+
+embedIdenP3 :: (p, a -> b -> c -> d) -> (p, a -> b -> c -> Identity d)
+embedIdenP3 = second embedIden3

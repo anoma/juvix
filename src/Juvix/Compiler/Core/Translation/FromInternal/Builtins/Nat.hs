@@ -3,7 +3,6 @@ module Juvix.Compiler.Core.Translation.FromInternal.Builtins.Nat where
 import Juvix.Compiler.Core.Data
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info.NameInfo
-import Juvix.Compiler.Core.Language
 
 -- | Returns the node representing a function Int -> Nat that is used to transform
 -- literal integers to builtin Nat. The symbol representing the literalIntToNat function is passed

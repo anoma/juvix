@@ -3,7 +3,6 @@ module Juvix.Compiler.Core.Translation.FromInternal.Builtins.Int where
 import Juvix.Compiler.Core.Data
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info.NameInfo
-import Juvix.Compiler.Core.Language
 
 -- | Returns the node representing a function Int -> Int that transforms literal
 -- integers to builtin Int.
