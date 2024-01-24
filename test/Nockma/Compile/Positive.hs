@@ -94,10 +94,18 @@ data ConstructorName
   | ConstructorTagged
   | ConstructorPair
   | ConstructorTuple
+  | ConstructorListNil
+  | ConstructorListCons
   deriving stock (Eq, Bounded, Enum)
 
 constructorTag :: ConstructorName -> Asm.Tag
 constructorTag n = Asm.UserTag (Asm.TagUser defaultModuleId (fromIntegral (fromEnum n)))
+
+builtinTrue :: Asm.Tag
+builtinTrue = Asm.BuiltinTag Asm.TagTrue
+
+builtinFalse :: Asm.Tag
+builtinFalse = Asm.BuiltinTag Asm.TagFalse
 
 constructorInfo :: ConstructorName -> ConstructorInfo
 constructorInfo = \case
@@ -109,6 +117,16 @@ constructorInfo = \case
     ConstructorInfo
       { _constructorInfoArity = 2,
         _constructorInfoMemRep = NockmaMemRepTuple
+      }
+  ConstructorListNil ->
+    ConstructorInfo
+      { _constructorInfoArity = 0,
+        _constructorInfoMemRep = NockmaMemRepList NockmaMemRepListConstrNil
+      }
+  ConstructorListCons ->
+    ConstructorInfo
+      { _constructorInfoArity = 2,
+        _constructorInfoMemRep = NockmaMemRepList NockmaMemRepListConstrCons
       }
 
 defaultInfo :: Natural -> ConstructorInfo
@@ -532,21 +550,56 @@ tests =
       "cmdCase: case on builtin true"
       (eqStack ValueStack [nock| [5 nil] |])
       $ do
-        allocConstr (Asm.BuiltinTag Asm.TagTrue)
+        allocConstr builtinTrue
         caseCmd
           (Just (pushNat 0))
-          [ (Asm.BuiltinTag Asm.TagTrue, pop >> pushNat 5),
-            (Asm.BuiltinTag Asm.TagFalse, pushNat 0)
+          [ (builtinTrue, pop >> pushNat 5),
+            (builtinTrue, crash),
+            (builtinFalse, pushNat 0)
           ],
     defTest
       "cmdCase: case on builtin false"
       (eqStack ValueStack [nock| [5 nil] |])
       $ do
-        allocConstr (Asm.BuiltinTag Asm.TagFalse)
+        allocConstr builtinFalse
         caseCmd
           (Just (pushNat 0))
-          [ (Asm.BuiltinTag Asm.TagTrue, pushNat 0),
-            (Asm.BuiltinTag Asm.TagFalse, pop >> pushNat 5)
+          [ (builtinTrue, pushNat 0),
+            (builtinFalse, pop >> pushNat 5),
+            (builtinFalse, crash)
+          ],
+    defTest
+      "cmdCase: case on listy nil"
+      (eqStack ValueStack [nock| [5 nil] |])
+      $ do
+        allocConstr (constructorTag ConstructorListNil)
+        caseCmd
+          (Just (pushNat 0))
+          [ (constructorTag ConstructorListCons, pushNat 0),
+            (constructorTag ConstructorListNil, pop >> pushNat 5),
+            (constructorTag ConstructorListCons, crash)
+          ],
+    defTest
+      "cmdCase: case on listy cons and field accessor"
+      (eqStack ValueStack [nock| [[60 30 nil] nil] |])
+      $ do
+        let tagCons = constructorTag ConstructorListCons
+            tagNil = constructorTag ConstructorListNil
+        allocConstr tagNil
+        pushNat 30
+        allocConstr tagCons
+        caseCmd
+          Nothing
+          [ ( tagCons,
+              do
+                copyTopFromTo ValueStack TempStack
+                pushConstructorFieldOnto ValueStack tagCons (Asm.mkTempRef' 1 0) 0
+                pushConstructorFieldOnto ValueStack tagCons (Asm.mkTempRef' 1 0) 0
+                add
+                allocConstr tagCons
+            ),
+            (tagNil, pop >> pushNat 5),
+            (tagCons, crash)
           ],
     defTest
       "push constructor field"
@@ -567,5 +620,12 @@ tests =
       )
       $ do
         pushNat 10
-        traceTerm (OpAddress # topOfStack ValueStack)
+        traceTerm (OpAddress # topOfStack ValueStack),
+    defTest
+      "allocate listy constructors"
+      (eqStack ValueStack [nock| [[500 nil] nil] |])
+      $ do
+        allocConstr (constructorTag ConstructorListNil)
+        pushNat 500
+        allocConstr (constructorTag ConstructorListCons)
   ]
