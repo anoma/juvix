@@ -1,80 +1,40 @@
-module Juvix.Compiler.Asm.Data.InfoTableBuilder where
+module Juvix.Compiler.Asm.Data.InfoTableBuilder
+  ( module Juvix.Compiler.Asm.Data.InfoTableBuilder,
+    module Juvix.Compiler.Tree.Data.InfoTableBuilder.Base,
+  )
+where
 
-import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Asm.Data.InfoTable
 import Juvix.Compiler.Asm.Language
+import Juvix.Compiler.Tree.Data.InfoTableBuilder.Base
 
-data IdentKind
-  = IdentFun Symbol
-  | IdentFwd Symbol
-  | IdentInd Symbol
-  | IdentConstr Tag
+type InfoTableBuilder = InfoTableBuilder' Code (Maybe FunctionInfoExtra)
 
-data InfoTableBuilder m a where
-  FreshSymbol :: InfoTableBuilder m Symbol
-  FreshTag :: InfoTableBuilder m Tag
-  RegisterFunction :: FunctionInfo -> InfoTableBuilder m ()
-  RegisterConstr :: ConstructorInfo -> InfoTableBuilder m ()
-  RegisterInductive :: InductiveInfo -> InfoTableBuilder m ()
-  RegisterForward :: Text -> Symbol -> InfoTableBuilder m ()
-  RegisterMain :: Symbol -> InfoTableBuilder m ()
-  GetIdent :: Text -> InfoTableBuilder m (Maybe IdentKind)
-  GetFunctionInfo :: Symbol -> InfoTableBuilder m FunctionInfo
+type BuilderState = BuilderState' Code (Maybe FunctionInfoExtra)
 
-makeSem ''InfoTableBuilder
+freshSymbol :: (Member InfoTableBuilder r) => Sem r Symbol
+freshSymbol = freshSymbol' @Code @(Maybe FunctionInfoExtra)
 
-data BuilderState = BuilderState
-  { _stateNextSymbolId :: Word,
-    _stateNextUserTag :: Word,
-    _stateInfoTable :: InfoTable,
-    _stateIdents :: HashMap Text IdentKind
-  }
+freshTag :: (Member InfoTableBuilder r) => Sem r Tag
+freshTag = freshTag' @Code @(Maybe FunctionInfoExtra)
 
-makeLenses ''BuilderState
+registerFunction :: (Member InfoTableBuilder r) => FunctionInfo -> Sem r ()
+registerFunction = registerFunction' @Code @(Maybe FunctionInfoExtra)
 
-emptyBuilderState :: BuilderState
-emptyBuilderState =
-  BuilderState
-    { _stateNextSymbolId = 0,
-      _stateNextUserTag = 0,
-      _stateInfoTable = emptyInfoTable,
-      _stateIdents = mempty
-    }
+registerConstr :: (Member InfoTableBuilder r) => ConstructorInfo -> Sem r ()
+registerConstr = registerConstr' @Code @(Maybe FunctionInfoExtra)
 
-runInfoTableBuilder :: Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
-runInfoTableBuilder = fmap (first (^. stateInfoTable)) . runInfoTableBuilder' emptyBuilderState
+registerInductive :: (Member InfoTableBuilder r) => InductiveInfo -> Sem r ()
+registerInductive = registerInductive' @Code @(Maybe FunctionInfoExtra)
 
-runInfoTableBuilder' :: BuilderState -> Sem (InfoTableBuilder ': r) a -> Sem r (BuilderState, a)
-runInfoTableBuilder' bs =
-  runState bs
-    . reinterpret interp
-  where
-    interp :: InfoTableBuilder m a -> Sem (State BuilderState ': r) a
-    interp = \case
-      FreshSymbol -> do
-        s <- get
-        modify' (over stateNextSymbolId (+ 1))
-        return (Symbol defaultModuleId (s ^. stateNextSymbolId))
-      FreshTag -> do
-        modify' (over stateNextUserTag (+ 1))
-        s <- get
-        return (UserTag (TagUser defaultModuleId (s ^. stateNextUserTag - 1)))
-      RegisterFunction fi -> do
-        modify' (over (stateInfoTable . infoFunctions) (HashMap.insert (fi ^. functionSymbol) fi))
-        modify' (over stateIdents (HashMap.insert (fi ^. functionName) (IdentFun (fi ^. functionSymbol))))
-      RegisterConstr ci -> do
-        modify' (over (stateInfoTable . infoConstrs) (HashMap.insert (ci ^. constructorTag) ci))
-        modify' (over stateIdents (HashMap.insert (ci ^. constructorName) (IdentConstr (ci ^. constructorTag))))
-      RegisterInductive ii -> do
-        modify' (over (stateInfoTable . infoInductives) (HashMap.insert (ii ^. inductiveSymbol) ii))
-        modify' (over stateIdents (HashMap.insert (ii ^. inductiveName) (IdentInd (ii ^. inductiveSymbol))))
-      RegisterForward txt sym ->
-        modify' (over stateIdents (HashMap.insert txt (IdentFwd sym)))
-      RegisterMain sym ->
-        modify' (over stateInfoTable (set infoMainFunction (Just sym)))
-      GetIdent txt -> do
-        s <- get
-        return $ HashMap.lookup txt (s ^. stateIdents)
-      GetFunctionInfo sym -> do
-        s <- get
-        return (lookupFunInfo (s ^. stateInfoTable) sym)
+registerForward :: (Member InfoTableBuilder r) => Text -> Symbol -> Sem r ()
+registerForward = registerForward' @Code @(Maybe FunctionInfoExtra)
+
+registerMain :: (Member InfoTableBuilder r) => Symbol -> Sem r ()
+registerMain = registerMain' @Code @(Maybe FunctionInfoExtra)
+
+getIdent :: (Member InfoTableBuilder r) => Text -> Sem r (Maybe IdentKind)
+getIdent = getIdent' @Code @(Maybe FunctionInfoExtra)
+
+getFunctionInfo :: (Member InfoTableBuilder r) => Symbol -> Sem r FunctionInfo
+getFunctionInfo = getFunctionInfo' @Code @(Maybe FunctionInfoExtra)

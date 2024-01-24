@@ -172,7 +172,7 @@ genCode infoTable fi =
         name = _letItem ^. Core.letItemBinder . Core.binderName
         nameRef = OffsetRef tempSize (Just name)
         arg = go tempSize refs (_letItem ^. Core.letItemValue)
-        body = go (tempSize + 1) (BL.cons (DRef (TempRef nameRef)) refs) _letBody
+        body = go (tempSize + 1) (BL.cons (DRef (mkTempRef nameRef)) refs) _letBody
 
     goCase :: Int -> BinderList MemRef -> Core.Case -> Node
     goCase tempSize refs Core.Case {..} =
@@ -225,7 +225,7 @@ genCode infoTable fi =
                 Field
                   { _fieldName = Nothing,
                     _fieldTag = tag,
-                    _fieldRef = TempRef (OffsetRef tempSize Nothing),
+                    _fieldRef = mkTempRef (OffsetRef tempSize Nothing),
                     _fieldOffset = off
                   }
 

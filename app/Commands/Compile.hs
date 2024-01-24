@@ -24,6 +24,7 @@ runCommand opts@CompileOptions {..} = do
     TargetGeb -> Compile.runGebPipeline arg
     TargetVampIR -> Compile.runVampIRPipeline arg
     TargetCore -> writeCoreFile arg
+    TargetTree -> Compile.runTreePipeline arg
     TargetAsm -> Compile.runAsmPipeline arg
     TargetNockma -> Compile.runNockmaPipeline arg
 

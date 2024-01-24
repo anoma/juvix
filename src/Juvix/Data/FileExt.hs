@@ -13,6 +13,7 @@ data FileExt
   | FileExtJuvixGeb
   | FileExtJuvixCore
   | FileExtJuvixAsm
+  | FileExtJuvixTree
   | FileExtCasm
   | FileExtVampIR
   | FileExtVampIRParams
@@ -40,6 +41,9 @@ juvixCoreFileExt = ".jvc"
 
 juvixAsmFileExt :: (IsString a) => a
 juvixAsmFileExt = ".jva"
+
+juvixTreeFileExt :: (IsString a) => a
+juvixTreeFileExt = ".jvt"
 
 casmFileExt :: (IsString a) => a
 casmFileExt = ".casm"
@@ -81,6 +85,7 @@ fileExtToText = \case
   FileExtJuvixGeb -> juvixGebFileExt
   FileExtJuvixCore -> juvixCoreFileExt
   FileExtJuvixAsm -> juvixAsmFileExt
+  FileExtJuvixTree -> juvixTreeFileExt
   FileExtCasm -> casmFileExt
   FileExtVampIR -> vampIRFileExt
   FileExtVampIRParams -> vampIRParamsFileExt
@@ -100,6 +105,7 @@ toMetavar = \case
   FileExtJuvixGeb -> "JUVIX_GEB_FILE"
   FileExtJuvixCore -> "JUVIX_CORE_FILE"
   FileExtJuvixAsm -> "JUVIX_ASM_FILE"
+  FileExtJuvixTree -> "JUVIX_TREE_FILE"
   FileExtCasm -> "CASM_FILE"
   FileExtVampIR -> "VAMPIR_FILE"
   FileExtVampIRParams -> "VAMPIR_PARAMS_FILE"

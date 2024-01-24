@@ -86,7 +86,7 @@ bottomTempStack' n mem =
 getArgumentType :: Offset -> Memory -> Maybe Type
 getArgumentType off mem = HashMap.lookup off (mem ^. memoryArgumentArea)
 
-getMemValueType :: InfoTable -> MemValue -> Memory -> Maybe Type
+getMemValueType :: InfoTable -> MemRef -> Memory -> Maybe Type
 getMemValueType tab val mem = case val of
   DRef dr -> getDirectRefType dr mem
   ConstrRef fld ->
@@ -96,8 +96,6 @@ getMemValueType tab val mem = case val of
 
 getDirectRefType :: DirectRef -> Memory -> Maybe Type
 getDirectRefType dr mem = case dr of
-  StackRef ->
-    topValueStack 0 mem
   ArgRef OffsetRef {..} ->
     getArgumentType _offsetRefOffset mem
   TempRef RefTemp {..} ->

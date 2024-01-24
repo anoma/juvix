@@ -17,7 +17,7 @@ function K(*, *) {
 function I(*) {
   push arg[0];
   calloc K 0;
-  push $;
+  calloc K 0;
   tcall S;
 }
 
@@ -31,9 +31,9 @@ function main() {
   add;
   push 1;
   calloc I 0;
-  push $;
-  push $;
-  push $;
+  calloc I 0;
+  calloc I 0;
+  calloc I 0;
   call I;
   call $ 1;
   call $ 1;
@@ -42,14 +42,14 @@ function main() {
   add;
   push 1;
   calloc I 0;
-  push $;
   calloc I 0;
-  push $;
-  push $;
-  push $;
-  push $;
-  push $;
-  push $;
+  calloc I 0;
+  calloc I 0;
+  calloc I 0;
+  calloc I 0;
+  calloc I 0;
+  calloc I 0;
+  calloc I 0;
   call I;
   ccall 9;
   add;

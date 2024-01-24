@@ -524,9 +524,12 @@ tests =
           [ ( t,
               do
                 copyTopFromTo ValueStack TempStack
-                pushConstructorFieldOnto ValueStack t (Asm.mkTempRef' 1 0) 0
-                pushConstructorFieldOnto ValueStack t (Asm.mkTempRef' 1 0) 1
-                pushConstructorFieldOnto ValueStack t (Asm.mkTempRef' 1 0) 1
+                pushConstructorFieldOnto AuxStack t (Asm.mkTempRef' 1 0) 0
+                pushConstructorFieldOnto AuxStack t (Asm.mkTempRef' 1 0) 1
+                pushConstructorFieldOnto AuxStack t (Asm.mkTempRef' 1 0) 1
+                moveTopFromTo AuxStack ValueStack
+                moveTopFromTo AuxStack ValueStack
+                moveTopFromTo AuxStack ValueStack
                 add
                 add
                 allocConstr t

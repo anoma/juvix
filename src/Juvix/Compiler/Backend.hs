@@ -10,6 +10,7 @@ data Target
   | TargetVampIR
   | TargetCore
   | TargetAsm
+  | TargetTree
   | TargetNockma
   deriving stock (Data, Eq, Show)
 
@@ -72,6 +73,8 @@ getLimits tgt debug = case tgt of
   TargetCore ->
     defaultLimits
   TargetAsm ->
+    defaultLimits
+  TargetTree ->
     defaultLimits
   TargetNockma ->
     defaultLimits

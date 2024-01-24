@@ -17,3 +17,10 @@ data FunctionInfoExtra = FunctionInfoExtra
   }
 
 makeLenses ''FunctionInfoExtra
+
+instance Semigroup FunctionInfoExtra where
+  fi1 <> fi2 =
+    FunctionInfoExtra
+      { _functionMaxValueStackHeight = max (fi1 ^. functionMaxValueStackHeight) (fi2 ^. functionMaxValueStackHeight),
+        _functionMaxTempStackHeight = max (fi1 ^. functionMaxTempStackHeight) (fi2 ^. functionMaxTempStackHeight)
+      }

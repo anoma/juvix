@@ -30,7 +30,7 @@ function f((*, integer -> integer, integer) -> *, integer -> integer, integer) {
       call $ 1;
       push arg[1];
       push arg[0];
-      push $;
+      push arg[0];
       tcall $ 3;
     };
   };

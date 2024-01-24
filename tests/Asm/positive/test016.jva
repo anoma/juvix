@@ -22,7 +22,7 @@ function g(integer, integer) : integer {
 function h((integer, integer) -> integer, integer, integer) : integer {
   push arg[2];
   push arg[1];
-  push $;
+  push arg[1];
   push arg[0];
   call $ 2;
   mul;

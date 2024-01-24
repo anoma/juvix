@@ -22,7 +22,7 @@ function power'(integer, integer, integer) : integer {
           push arg[1];
           div;
           push arg[0];
-          push $;
+          push arg[0];
           mul;
           tcall power';
         };
@@ -34,7 +34,7 @@ function power'(integer, integer, integer) : integer {
           push arg[1];
           div;
           push arg[0];
-          push $;
+          push arg[0];
           mul;
           tcall power';
         };
