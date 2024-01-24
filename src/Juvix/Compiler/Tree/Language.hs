@@ -130,8 +130,13 @@ data CaseBranch = CaseBranch
     _caseBranchSave :: Bool
   }
 
+data TempVarInfo = TempVarInfo
+  { _tempVarInfoName :: Maybe Text,
+    _tempVarInfoLocation :: Maybe Location
+  }
+
 data NodeSave = NodeSave
-  { _nodeSaveName :: Maybe Text,
+  { _nodeSaveTempVarInfo :: TempVarInfo,
     _nodeSaveArg :: Node,
     _nodeSaveBody :: Node
   }
@@ -143,3 +148,5 @@ makeLenses ''NodeCallClosures
 makeLenses ''NodeBranch
 makeLenses ''NodeCase
 makeLenses ''NodeSave
+makeLenses ''TempVarInfo
+makeLenses ''CaseBranch

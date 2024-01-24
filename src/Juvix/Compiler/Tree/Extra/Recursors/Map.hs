@@ -1,16 +1,14 @@
-{-# LANGUAGE UndecidableInstances #-}
+module Juvix.Compiler.Tree.Extra.Recursors.Map where
 
-module Juvix.Compiler.Core.Extra.Recursors.Map where
-
-import Juvix.Compiler.Core.Extra.Base
-import Juvix.Compiler.Core.Extra.Recursors.Base
+import Juvix.Compiler.Tree.Extra.Base
+import Juvix.Compiler.Tree.Extra.Recursors.Base
 
 -- | `umapG` maps the nodes bottom-up, i.e., when invoking the mapper function the
 -- recursive subnodes have already been mapped
 umapG ::
   forall c m.
   (Monad m) =>
-  Collector (Int, [Binder]) c ->
+  Collector (Int, [TempVarInfo]) c ->
   (c -> Node -> m Node) ->
   Node ->
   m Node
@@ -20,13 +18,13 @@ umapG coll f = go (coll ^. cEmpty)
     go c n =
       let ni = destruct n
        in do
-            ns <- mapM (\n' -> go ((coll ^. cCollect) (n' ^. childBindersNum, n' ^. childBinders) c) (n' ^. childNode)) (ni ^. nodeChildren)
+            ns <- mapM (\n' -> go ((coll ^. cCollect) (fromEnum (isJust (n' ^. childTempVarInfo)), toList (n' ^. childTempVarInfo)) c) (n' ^. childNode)) (ni ^. nodeChildren)
             f c (reassembleDetails ni ns)
 
 dmapG ::
   forall c m.
   (Monad m) =>
-  Collector (Int, [Binder]) c ->
+  Collector (Int, [TempVarInfo]) c ->
   (c -> Node -> m (Recur' c)) ->
   Node ->
   m Node
@@ -42,7 +40,7 @@ dmapG coll f = go (coll ^. cEmpty)
            in reassembleDetails ni <$> mapM goChild (ni ^. nodeChildren)
           where
             goChild :: NodeChild -> m Node
-            goChild ch = go ((coll ^. cCollect) (ch ^. childBindersNum, ch ^. childBinders) c') (ch ^. childNode)
+            goChild ch = go ((coll ^. cCollect) (fromEnum (isJust (ch ^. childTempVarInfo)), toList (ch ^. childTempVarInfo)) c') (ch ^. childNode)
 
 fromSimple :: (Functor g) => c -> g Node -> g (Recur' c)
 fromSimple c = fmap (\x -> Recur' (c, x))

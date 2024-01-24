@@ -166,10 +166,11 @@ genCode infoTable fi =
         NodeSave
           { _nodeSaveArg = arg,
             _nodeSaveBody = body,
-            _nodeSaveName = Just name
+            _nodeSaveTempVarInfo = TempVarInfo (Just name) loc
           }
       where
         name = _letItem ^. Core.letItemBinder . Core.binderName
+        loc = _letItem ^. Core.letItemBinder . Core.binderLocation
         nameRef = OffsetRef tempSize (Just name)
         arg = go tempSize refs (_letItem ^. Core.letItemValue)
         body = go (tempSize + 1) (BL.cons (DRef (mkTempRef nameRef)) refs) _letBody

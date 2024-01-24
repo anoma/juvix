@@ -323,7 +323,7 @@ instance PrettyCode NodeSave where
     arg <- ppCode _nodeSaveArg
     body <- ppCode _nodeSaveBody
     let name =
-          case _nodeSaveName of
+          case _nodeSaveTempVarInfo ^. tempVarInfoName of
             Just n -> brackets (variable (quoteName n))
             Nothing -> mempty
     return $ primitive Str.save <> name <> parens arg <+> braces' body

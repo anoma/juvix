@@ -2,7 +2,7 @@ module Juvix.Compiler.Core.Extra.Recursors.Collector where
 
 import Juvix.Compiler.Core.Data.BinderList (BinderList)
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
-import Juvix.Compiler.Core.Language
+import Juvix.Compiler.Core.Language.Base
 
 -- | a collector collects information top-down on a single path in the program
 -- tree
@@ -16,21 +16,21 @@ makeLenses ''Collector
 unitCollector :: Collector a ()
 unitCollector = Collector () (\_ _ -> ())
 
-binderInfoCollector' :: BinderList Binder -> Collector (Int, [Binder]) (BinderList Binder)
+binderInfoCollector' :: BinderList b -> Collector (Int, [b]) (BinderList b)
 binderInfoCollector' ini = Collector ini collect
   where
-    collect :: (Int, [Binder]) -> BinderList Binder -> BinderList Binder
+    collect :: (Int, [b]) -> BinderList b -> BinderList b
     collect (k, bi) c
       | k == 0 = c
       | otherwise = BL.prependRev bi c
 
-binderInfoCollector :: Collector (Int, [Binder]) (BinderList Binder)
+binderInfoCollector :: Collector (Int, [b]) (BinderList b)
 binderInfoCollector = binderInfoCollector' mempty
 
-binderNumCollector' :: Int -> Collector (Int, [Binder]) Index
+binderNumCollector' :: Int -> Collector (Int, [b]) Index
 binderNumCollector' ini = Collector ini (\(k, _) c -> c + k)
 
-binderNumCollector :: Collector (Int, [Binder]) Index
+binderNumCollector :: Collector (Int, [b]) Index
 binderNumCollector = binderNumCollector' 0
 
 pairCollector :: Collector a b -> Collector a c -> Collector a (b, c)

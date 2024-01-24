@@ -2,12 +2,11 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Avoid restricted flags" #-}
-
-module Juvix.Compiler.Core.Extra.Recursors.Recur where
+module Juvix.Compiler.Tree.Extra.Recursors.Recur where
 
 import Data.Functor.Identity
 import Juvix.Compiler.Core.Extra.Recursors.Classes
-import Juvix.Compiler.Core.Language
+import Juvix.Compiler.Tree.Language
 
 data Recur' c
   = End' Node
