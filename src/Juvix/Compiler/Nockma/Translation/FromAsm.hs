@@ -99,6 +99,7 @@ data StackId
   | FrameStack
   | StandardLibrary
   | FunctionsLibrary
+  | ExternalStack
   deriving stock (Enum, Bounded, Eq, Show)
 
 -- | A closure has the following structure:
@@ -565,7 +566,10 @@ allocConstr tag = do
   moveTopFromTo AuxStack ValueStack
 
 copyTopFromTo :: (Members '[Compiler] r) => StackId -> StackId -> Sem r ()
-copyTopFromTo from toStack = pushOnto toStack (OpAddress # topOfStack from)
+copyTopFromTo from toStack = copyPathTo (topOfStack from) toStack
+
+copyPathTo :: (Members '[Compiler] r) => Path -> StackId -> Sem r ()
+copyPathTo path toStack = pushOnto toStack (OpAddress # toNock path)
 
 moveTopFromTo :: (Members '[Compiler] r) => StackId -> StackId -> Sem r ()
 moveTopFromTo from toStack = do
@@ -614,6 +618,7 @@ initStack defs = makeList (initSubStack <$> allElements)
       AuxStack -> nockNil'
       StandardLibrary -> stdlib
       FunctionsLibrary -> makeList defs
+      ExternalStack -> nockNil'
 
 push :: (Members '[Compiler] r) => Term Natural -> Sem r ()
 push = pushOnto ValueStack
@@ -640,8 +645,8 @@ runCompiler sem = do
   (ts, a) <- runOutputList (re sem)
   return (seqTerms ts, a)
 
-runCompilerWith :: CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> Cell Natural
-runCompilerWith opts constrs libFuns mainFun =
+runCompilerWithMain :: CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> Cell Natural
+runCompilerWithMain opts constrs libFuns mainFun =
   let entryCommand :: (Members '[Compiler] r) => Sem r ()
       entryCommand = callFun (mainFun ^. compilerFunctionName) 0
       entryTerm =
@@ -663,7 +668,102 @@ runCompilerWith opts constrs libFuns mainFun =
       makeFunction' c = makeFunction $ \case
         FunctionCode -> c
         FunctionArgs -> nockNil'
+
    in Cell (initStack (toList compiledFuns)) entryTerm
+  where
+    allFuns :: NonEmpty CompilerFunction
+    allFuns = mainFun :| libFuns ++ (builtinFunction <$> allElements)
+
+    compilerCtx :: CompilerCtx
+    compilerCtx =
+      CompilerCtx
+        { _compilerFunctionInfos = functionInfos,
+          _compilerConstructorInfos = constrs,
+          _compilerOptions = opts
+        }
+
+    functionInfos :: HashMap FunctionId FunctionInfo
+    functionInfos = hashMap (run (runInputNaturals (toList <$> userFunctions)))
+
+    userFunctions :: (Members '[Input Natural] r) => Sem r (NonEmpty (FunctionId, FunctionInfo))
+    userFunctions = forM allFuns $ \CompilerFunction {..} -> do
+      i <- input
+      return
+        ( _compilerFunctionName,
+          FunctionInfo
+            { _functionInfoPath = indexInStack FunctionsLibrary i,
+              _functionInfoArity = _compilerFunctionArity
+            }
+        )
+
+runCompilerWith :: CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> Cell Natural
+runCompilerWith opts constrs libFuns mainFun =
+  let entryCommand :: (Members '[Compiler] r) => Sem r ()
+      entryCommand = callFun (mainFun ^. compilerFunctionName) 1
+
+      mkTerm cmd =
+        seqTerms
+          . run
+          . runReader compilerCtx
+          . execOutputList
+          . re
+          $ cmd
+
+      compiledFuns :: NonEmpty (Term Natural)
+      compiledFuns =
+        makeFunction'
+          <$> ( run
+                  . runReader compilerCtx
+                  . mapM (execCompiler . (^. compilerFunction))
+                  $ allFuns
+              )
+
+      iniStack :: Term Natural
+      iniStack = initStack (toList compiledFuns)
+
+      exportCommand :: forall r. (Members '[Compiler] r) => Sem r ()
+      exportCommand = do
+        copyPathTo (topOfStack ExternalStack ++ [R, L]) ValueStack
+        entryCommand
+        verbatim exportReturn
+
+      exportSetup :: Term Natural
+      exportSetup = OpPush # (OpQuote # iniStack) # (moveTailToStack ExternalStack)
+
+      exportReturn :: Term Natural
+      exportReturn = (OpAddress # (topOfStack ValueStack)) # (OpAddress # (topOfStack ExternalStack))
+
+      exportTerm :: Term Natural
+      exportTerm = exportSetup >># (mkTerm exportCommand)
+
+      makeFunction' :: Term Natural -> Term Natural
+      makeFunction' c = makeFunction $ \case
+        FunctionCode -> c
+        FunctionArgs -> nockNil'
+
+      moveTailToStack :: StackId -> Term Natural
+      moveTailToStack sn =
+        remakeList
+          [ let p = OpAddress # (L : stackPath s)
+            in if
+                    | sn == s -> (OpAddress # [R]) # p
+                    | otherwise -> p
+            | s <- allElements
+          ]
+
+      argsPlaceholder :: Term Natural
+      argsPlaceholder = nockNil'
+
+      contextPlaceholder :: Term Natural
+      contextPlaceholder = nockNil'
+
+   --- [ code [ args stuff] ]
+   -- Function cell: [ (push (quote iniStack) t2) [transaction 0] ]
+   -- t2: seq of 1. move caller's stack inside Juvix stack (somewhere)
+   --            2. move the function argument (where is that?) to the head of the value stack
+   --            3. entryCommand
+   --            4. 'return' [topOfValueStack caller'sStack]
+   in Cell exportTerm (TCell argsPlaceholder contextPlaceholder)
   where
     allFuns :: NonEmpty CompilerFunction
     allFuns = mainFun :| libFuns ++ (builtinFunction <$> allElements)
@@ -1123,6 +1223,19 @@ pushOnStack sn t = OpPush # t # moveTopToStack
         [ let p = OpAddress # (R : stackPath s)
            in if
                   | sn == s -> (OpAddress # indexStack 0) # p
+                  | otherwise -> p
+          | s <- allElements
+        ]
+
+pullOnStack :: StackId -> Term Natural -> Term Natural
+pullOnStack sn t = OpPush # t # moveTailToStack
+  where
+    moveTailToStack :: Term Natural
+    moveTailToStack =
+      remakeList
+        [ let p = OpAddress # (L : stackPath s)
+           in if
+                  | sn == s -> (OpAddress # [R]) # p
                   | otherwise -> p
           | s <- allElements
         ]

@@ -83,7 +83,7 @@ toVampIRTransformations = [CombineInfoTables, FilterUnreachable, CheckVampIR, Le
 
 toStrippedTransformations :: [TransformationId]
 toStrippedTransformations =
-  [CombineInfoTables, FilterUnreachable, CheckExec, LambdaLetRecLifting, TopEtaExpand, OptPhaseExec, MoveApps, RemoveTypeArgs]
+  [CombineInfoTables, FilterUnreachable, LambdaLetRecLifting, TopEtaExpand, OptPhaseExec, MoveApps, RemoveTypeArgs]
 
 toGebTransformations :: [TransformationId]
 toGebTransformations = [CombineInfoTables, FilterUnreachable, CheckGeb, LetRecLifting, OptPhaseGeb, UnrollRecursion, FoldTypeSynonyms, ComputeTypeInfo]
