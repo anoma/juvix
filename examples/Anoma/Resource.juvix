@@ -23,7 +23,10 @@ type Transaction :=
     proofs : List Proof;
     delta : Delta;
     extra : Nat;
-    preference : Nat;
+    -- preference : Nat;
+    junk1 : List Nat;
+    junk2 : Nat;
+    junk3 : Nat;
   };
 
 type Resource :=
@@ -67,4 +70,6 @@ fib' : Nat → Nat → Nat → Nat
 fib : Nat → Nat := fib' 0 1;
 
 main (t : Transaction) : Bool :=
-  fib 10 == 55;
+  case roots t of {
+   [] := true
+   | _ := false};

@@ -14,6 +14,9 @@ import Text.Megaparsec.Char.Lexer qualified as L
 
 type Parser = Parsec Void Text
 
+parseOrCrash :: Text -> Term Natural
+parseOrCrash = fromMegaParsecError . runParser noFile
+
 parseText :: Text -> Either MegaparsecError (Term Natural)
 parseText = runParser noFile
 

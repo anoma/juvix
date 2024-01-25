@@ -10,6 +10,7 @@ import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Translation.FromAsm
 import Juvix.Compiler.Nockma.Translation.FromSource.QQ
+import Nockma.Compile.T1
 
 type Check = Sem '[Reader [Term Natural], Reader (Term Natural), Embed IO]
 
@@ -29,6 +30,7 @@ data FunctionName
   | FunConst5
   | FunCallInc
   | FunAdd3
+  | FunLogic
   deriving stock (Eq, Bounded, Enum)
 
 sym :: (Enum a) => a -> FunctionId
@@ -61,6 +63,7 @@ functionArity' = \case
   FunCallInc -> 1
   FunConst5 -> 5
   FunAdd3 -> 3
+  FunLogic -> 1
 
 functionCode :: (Members '[Compiler] r) => FunctionName -> Sem r ()
 functionCode = \case
@@ -85,6 +88,22 @@ functionCode = \case
     add
     add
     asmReturn
+  FunLogic -> do
+    pushOnto TempStack (OpAddress # pathToArg 0)
+    pushConstructorFieldOnto ValueStack (constructorTag ConstructorTransaction) (Asm.mkTempRef' 1 0) 0
+    pushConstructorFieldOnto ValueStack (constructorTag ConstructorTransaction) (Asm.mkTempRef' 1 0) 8
+    allocConstr (constructorTag ConstructorTuple)
+    -- pushConstructorFieldOnto AuxStack (constructorTag ConstructorTransaction) (Asm.mkTempRef' 1 0) 2
+    -- pushConstructorFieldOnto AuxStack (constructorTag ConstructorTransaction) (Asm.mkTempRef' 1 0) 3
+    -- pushConstructorFieldOnto AuxStack (constructorTag ConstructorTransaction) (Asm.mkTempRef' 1 0) 4
+    -- pushConstructorFieldOnto AuxStack (constructorTag ConstructorTransaction) (Asm.mkTempRef' 1 0) 5
+    -- pushConstructorFieldOnto AuxStack (constructorTag ConstructorTransaction) (Asm.mkTempRef' 1 0) 6
+    -- allocConstr (constructorTag ConstructorPair)
+    -- copyTopFromTo ValueStack TempStack
+    -- pushConstructorFieldOnto AuxStack (constructorTag ConstructorPair) (Asm.mkTempRef' 1 0) 0
+    -- pushConstructorFieldOnto AuxStack (constructorTag ConstructorPair) (Asm.mkTempRef' 1 0) 1
+
+    asmReturn
 
 -- | NOTE that new constructors should be added to the end of the list or else
 -- the tests will fail.
@@ -96,6 +115,7 @@ data ConstructorName
   | ConstructorTuple
   | ConstructorListNil
   | ConstructorListCons
+  | ConstructorTransaction
   deriving stock (Eq, Bounded, Enum)
 
 constructorTag :: ConstructorName -> Asm.Tag
@@ -113,6 +133,11 @@ constructorInfo = \case
   ConstructorTrue -> defaultInfo 0
   ConstructorTagged -> defaultInfo 1
   ConstructorPair -> defaultInfo 2
+  ConstructorTransaction ->
+    ConstructorInfo
+      { _constructorInfoArity = 9,
+        _constructorInfoMemRep = NockmaMemRepTuple
+      }
   ConstructorTuple ->
     ConstructorInfo
       { _constructorInfoArity = 2,
@@ -637,5 +662,11 @@ tests =
       $ do
         allocConstr (constructorTag ConstructorListNil)
         pushNat 500
-        allocConstr (constructorTag ConstructorListCons)
+        allocConstr (constructorTag ConstructorListCons),
+    defTest
+      "transaction"
+      (eqStack ValueStack [nock| [[0 0] nil] |])
+      $ do
+        push (OpQuote # t1)
+        callFun (sym FunLogic) 1
   ]

@@ -645,8 +645,8 @@ runCompiler sem = do
   (ts, a) <- runOutputList (re sem)
   return (seqTerms ts, a)
 
-runCompilerWithMain :: CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> Cell Natural
-runCompilerWithMain opts constrs libFuns mainFun =
+runCompilerWith :: CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> Cell Natural
+runCompilerWith opts constrs libFuns mainFun =
   let entryCommand :: (Members '[Compiler] r) => Sem r ()
       entryCommand = callFun (mainFun ^. compilerFunctionName) 0
       entryTerm =
@@ -668,7 +668,6 @@ runCompilerWithMain opts constrs libFuns mainFun =
       makeFunction' c = makeFunction $ \case
         FunctionCode -> c
         FunctionArgs -> nockNil'
-
    in Cell (initStack (toList compiledFuns)) entryTerm
   where
     allFuns :: NonEmpty CompilerFunction
@@ -696,11 +695,12 @@ runCompilerWithMain opts constrs libFuns mainFun =
             }
         )
 
-runCompilerWith :: CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> Cell Natural
-runCompilerWith opts constrs libFuns mainFun =
+runCompilerWithAnoma :: CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> Cell Natural
+runCompilerWithAnoma opts constrs libFuns mainFun =
   let entryCommand :: (Members '[Compiler] r) => Sem r ()
       entryCommand = callFun (mainFun ^. compilerFunctionName) 1
 
+      mkTerm :: Sem '[Compiler, Reader CompilerCtx] () -> Term Natural
       mkTerm cmd =
         seqTerms
           . run
@@ -745,7 +745,7 @@ runCompilerWith opts constrs libFuns mainFun =
       moveTailToStack sn =
         remakeList
           [ let p = OpAddress # (L : stackPath s)
-            in if
+             in if
                     | sn == s -> (OpAddress # [R]) # p
                     | otherwise -> p
             | s <- allElements
@@ -756,14 +756,13 @@ runCompilerWith opts constrs libFuns mainFun =
 
       contextPlaceholder :: Term Natural
       contextPlaceholder = nockNil'
-
-   --- [ code [ args stuff] ]
-   -- Function cell: [ (push (quote iniStack) t2) [transaction 0] ]
-   -- t2: seq of 1. move caller's stack inside Juvix stack (somewhere)
-   --            2. move the function argument (where is that?) to the head of the value stack
-   --            3. entryCommand
-   --            4. 'return' [topOfValueStack caller'sStack]
-   in Cell exportTerm (TCell argsPlaceholder contextPlaceholder)
+   in --- [ code [ args stuff] ]
+      -- Function cell: [ (push (quote iniStack) t2) [transaction 0] ]
+      -- t2: seq of 1. move caller's stack inside Juvix stack (somewhere)
+      --            2. move the function argument (where is that?) to the head of the value stack
+      --            3. entryCommand
+      --            4. 'return' [topOfValueStack caller'sStack]
+      Cell exportTerm (TCell argsPlaceholder contextPlaceholder)
   where
     allFuns :: NonEmpty CompilerFunction
     allFuns = mainFun :| libFuns ++ (builtinFunction <$> allElements)
