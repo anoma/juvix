@@ -196,6 +196,9 @@ regToMiniC tab = do
   e <- ask
   return $ C.fromReg (Backend.getLimits (e ^. entryPointTarget) (e ^. entryPointDebug)) tab
 
+treeToNockma' :: (Members '[Error JuvixError, Reader Asm.Options, Reader Nockma.CompilerOptions] r) => Tree.InfoTable -> Sem r (Nockma.Cell Natural)
+treeToNockma' = Tree.toNockma >=> treeToAsm >=> asmToNockma'
+
 asmToNockma' :: (Members '[Error JuvixError, Reader Asm.Options, Reader Nockma.CompilerOptions] r) => Asm.InfoTable -> Sem r (Nockma.Cell Natural)
 asmToNockma' = mapError (JuvixError @Asm.AsmError) . Asm.toNockma' >=> Nockma.fromAsmTable
 

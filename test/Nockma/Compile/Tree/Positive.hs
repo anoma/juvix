@@ -1,15 +1,16 @@
-module Nockma.Compile.Asm.Positive where
+module Nockma.Compile.Tree.Positive where
 
-import Asm.Run.Base
-import Asm.Run.Positive qualified as Asm
 import Base
-import Juvix.Compiler.Asm
 import Juvix.Compiler.Asm.Options qualified as Asm
+import Juvix.Compiler.Backend
+import Juvix.Compiler.Nockma.EvalCompiled
 import Juvix.Compiler.Nockma.Evaluator qualified as NockmaEval
 import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Pretty qualified as Nockma
-import Juvix.Compiler.Nockma.Translation.FromAsm
 import Juvix.Compiler.Nockma.Translation.FromAsm qualified as Nockma
+import Juvix.Compiler.Tree
+import Tree.Eval.Base
+import Tree.Eval.Positive qualified as Tree
 
 runNockmaAssertion :: Handle -> Symbol -> InfoTable -> IO ()
 runNockmaAssertion hout _main tab = do
@@ -20,7 +21,7 @@ runNockmaAssertion hout _main tab = do
       . runReader
         (Nockma.CompilerOptions {_compilerOptionsEnableTrace = True})
       . runErrorIO' @JuvixError
-      $ asmToNockma' tab
+      $ treeToNockma' tab
   res <-
     runM
       . runOutputSem @(Term Natural)
@@ -33,20 +34,20 @@ runNockmaAssertion hout _main tab = do
   where
     getReturn :: Term Natural -> Term Natural
     getReturn res =
-      let valStack = getStack ValueStack res
+      let valStack = getStack Nockma.ValueStack res
        in case valStack of
             TermCell c -> c ^. cellLeft
             TermAtom {} -> error "should be a cell"
 
-testDescr :: Asm.PosTest -> TestDescr
-testDescr Asm.PosTest {..} =
-  let tRoot = Asm.root <//> _relDir
+testDescr :: Tree.PosTest -> TestDescr
+testDescr Tree.PosTest {..} =
+  let tRoot = Tree.root <//> _relDir
       file' = tRoot <//> _file
       expected' = tRoot <//> _expectedFile
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
-          _testAssertion = Steps $ asmRunAssertionParam runNockmaAssertion file' expected' return (const (return ()))
+          _testAssertion = Steps $ treeEvalAssertionParam runNockmaAssertion file' expected' [] (const (return ()))
         }
 
 testsSlow :: [Int]
@@ -74,8 +75,8 @@ testsBugged =
 testsToIgnore :: [Int]
 testsToIgnore = testsHopeless ++ testsBugged ++ testsSlow ++ testsAdt ++ testsNegativeInteger
 
-shouldRun :: Asm.PosTest -> Bool
-shouldRun Asm.PosTest {..} = testNum `notElem` map to3DigitString testsToIgnore
+shouldRun :: Tree.PosTest -> Bool
+shouldRun Tree.PosTest {..} = testNum `notElem` map to3DigitString testsToIgnore
   where
     testNum :: String
     testNum = take 3 (drop 4 _name)
@@ -90,4 +91,4 @@ allTests :: TestTree
 allTests =
   testGroup
     "Nockma Asm compile positive tests"
-    (map (mkTest . testDescr) (filter shouldRun Asm.tests))
+    (map (mkTest . testDescr) (filter shouldRun Tree.tests))

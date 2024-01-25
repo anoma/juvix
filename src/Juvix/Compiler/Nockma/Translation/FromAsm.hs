@@ -2,7 +2,6 @@ module Juvix.Compiler.Nockma.Translation.FromAsm where
 
 import Juvix.Compiler.Asm.Data.InfoTable qualified as Asm
 import Juvix.Compiler.Asm.Language qualified as Asm
-import Juvix.Compiler.Nockma.Evaluator
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Stdlib
 import Juvix.Compiler.Pipeline.EntryPoint
@@ -1180,36 +1179,3 @@ pushNat = pushNatOnto ValueStack
 
 pushNatOnto :: (Member Compiler r) => StackId -> Natural -> Sem r ()
 pushNatOnto s n = pushOnto s (OpQuote # toNock n)
-
-compileAndRunNock' ::
-  (Members '[Reader EvalOptions, Output (Term Natural)] r) =>
-  CompilerOptions ->
-  ConstructorInfos ->
-  [CompilerFunction] ->
-  CompilerFunction ->
-  Sem r (Term Natural)
-compileAndRunNock' opts constrs funs mainfun =
-  let Cell nockSubject t = runCompilerWith opts constrs funs mainfun
-   in evalCompiledNock' nockSubject t
-
-evalCompiledNock' :: (Members '[Reader EvalOptions, Output (Term Natural)] r) => Term Natural -> Term Natural -> Sem r (Term Natural)
-evalCompiledNock' stack mainTerm = do
-  evalT <-
-    runError @(ErrNockNatural Natural)
-      . runError @(NockEvalError Natural)
-      $ eval stack mainTerm
-  case evalT of
-    Left e -> error (show e)
-    Right ev -> case ev of
-      Left e -> error (ppTrace e)
-      Right res -> return res
-
--- | Used in testing and app
-getStack :: StackId -> Term Natural -> Term Natural
-getStack st m =
-  fromRight'
-    . run
-    . runError @(NockEvalError Natural)
-    . topEvalCtx
-    . subTerm m
-    $ stackPath st

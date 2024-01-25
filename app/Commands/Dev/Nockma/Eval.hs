@@ -2,6 +2,7 @@ module Commands.Dev.Nockma.Eval where
 
 import Commands.Base hiding (Atom)
 import Commands.Dev.Nockma.Eval.Options
+import Juvix.Compiler.Nockma.EvalCompiled
 import Juvix.Compiler.Nockma.Evaluator.Options
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Translation.FromAsm

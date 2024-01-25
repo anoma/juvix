@@ -3,6 +3,7 @@ module Nockma.Compile.Positive where
 import Base hiding (Path)
 import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Asm.Language qualified as Asm
+import Juvix.Compiler.Nockma.EvalCompiled
 import Juvix.Compiler.Nockma.Evaluator
 import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Pretty

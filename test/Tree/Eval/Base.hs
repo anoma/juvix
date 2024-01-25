@@ -19,7 +19,17 @@ treeEvalAssertion ::
   (InfoTable -> Assertion) ->
   (String -> IO ()) ->
   Assertion
-treeEvalAssertion mainFile expectedFile trans testTrans step = do
+treeEvalAssertion = treeEvalAssertionParam evalAssertion
+
+treeEvalAssertionParam ::
+  (Handle -> Symbol -> InfoTable -> IO ()) ->
+  Path Abs File ->
+  Path Abs File ->
+  [TransformationId] ->
+  (InfoTable -> Assertion) ->
+  (String -> IO ()) ->
+  Assertion
+treeEvalAssertionParam evalParam mainFile expectedFile trans testTrans step = do
   step "Parse"
   s <- readFile (toFilePath mainFile)
   case runParser (toFilePath mainFile) s of
@@ -36,7 +46,7 @@ treeEvalAssertion mainFile expectedFile trans testTrans step = do
                 let outputFile = dirPath <//> $(mkRelFile "out.out")
                 hout <- openFile (toFilePath outputFile) WriteMode
                 step "Evaluate"
-                evalAssertion hout sym tab
+                evalParam hout sym tab
                 hClose hout
                 actualOutput <- readFile (toFilePath outputFile)
                 step "Compare expected and actual program output"
