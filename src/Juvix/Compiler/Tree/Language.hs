@@ -45,8 +45,6 @@ data Node
     -- 'save[<name>](x) {<code>}'.
     Save NodeSave
 
--- TODO: CallClosures arguments should be non-empty
-
 data BinaryOpcode
   = IntAdd
   | IntSub
@@ -108,7 +106,7 @@ data NodeCall = NodeCall
 
 data NodeCallClosures = NodeCallClosures
   { _nodeCallClosuresFun :: Node,
-    _nodeCallClosuresArgs :: [Node]
+    _nodeCallClosuresArgs :: NonEmpty Node
   }
 
 data NodeBranch = NodeBranch

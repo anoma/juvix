@@ -280,7 +280,7 @@ instance PrettyCode NodeCall where
 
 instance PrettyCode NodeCallClosures where
   ppCode NodeCallClosures {..} = do
-    args <- ppCodeArgs (_nodeCallClosuresFun : _nodeCallClosuresArgs)
+    args <- ppCodeArgs (_nodeCallClosuresFun : toList _nodeCallClosuresArgs)
     return $ primitive Str.instrCcall <> parens args
 
 instance PrettyCode NodeBranch where

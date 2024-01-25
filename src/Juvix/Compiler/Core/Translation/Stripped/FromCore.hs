@@ -175,8 +175,8 @@ translateNode node = case node of
     let (tgt, args) = unfoldApps' node
         args' = map translateNode args
      in case tgt of
-          NVar v -> Stripped.mkApps (Stripped.FunVar $ translateVar v) args'
-          NIdt idt -> Stripped.mkApps (Stripped.FunIdent $ translateIdent idt) args'
+          NVar v -> Stripped.mkApps (Stripped.FunVar $ translateVar v) (nonEmpty' args')
+          NIdt idt -> Stripped.mkApps (Stripped.FunIdent $ translateIdent idt) (nonEmpty' args')
           _ -> unsupported
   NBlt BuiltinApp {..} ->
     Stripped.mkBuiltinApp _builtinAppOp (map translateNode _builtinAppArgs)

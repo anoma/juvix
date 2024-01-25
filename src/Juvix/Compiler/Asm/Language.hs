@@ -163,13 +163,13 @@ newtype InstrExtendClosure = InstrExtendClosure
 
 data InstrCall = InstrCall
   { _callType :: CallType,
-    -- | The number of arguments supplied to the call.
+    -- | The number of arguments supplied to the call. Can be 0.
     _callArgsNum :: Int
   }
 
 newtype InstrCallClosures = InstrCallClosures
-  { -- | The number of arguments supplied to the call. This does not include the
-    -- called closure on top of the stack.
+  { -- | The number of arguments supplied to the call. Should be greater than 0.
+    -- This does not include the called closure on top of the stack.
     _callClosuresArgsNum :: Int
   }
 

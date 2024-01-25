@@ -322,7 +322,7 @@ goFunction infoTab fi = do
             CallClosures
               NodeCallClosures
                 { _nodeCallClosuresFun = cl,
-                  _nodeCallClosuresArgs = args
+                  _nodeCallClosuresArgs = nonEmpty' args
                 }
 
         pushTempStack :: Sem r a -> Sem r a

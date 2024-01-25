@@ -13,21 +13,21 @@ computeFunctionApply blts = umap go
       CallClosures NodeCallClosures {..} -> goApply _nodeCallClosuresFun _nodeCallClosuresArgs
       node -> node
 
-    -- TODO: NonEmpty instead of list
-    goApply :: Node -> [Node] -> Node
+    goApply :: Node -> NonEmpty Node -> Node
     goApply cl args
       | n <= m = mkApply cl args
-      | otherwise = goApply (mkApply cl (take m args)) (drop m args)
+      | otherwise = goApply (mkApply cl (nonEmpty' $ take m args')) (nonEmpty' $ drop m args')
       where
+        args' = toList args
         n = length args
         m = blts ^. applyBuiltinsNum
 
-    mkApply :: Node -> [Node] -> Node
+    mkApply :: Node -> NonEmpty Node -> Node
     mkApply cl args =
       Call
         NodeCall
           { _nodeCallType = CallFun sym,
-            _nodeCallArgs = cl : args
+            _nodeCallArgs = cl : toList args
           }
       where
         sym = fromJust $ HashMap.lookup (length args) (blts ^. applyBuiltinsMap)

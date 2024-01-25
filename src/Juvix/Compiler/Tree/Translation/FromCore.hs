@@ -82,7 +82,8 @@ genCode infoTable fi =
 
     goApps :: Int -> BinderList MemRef -> Core.Apps -> Node
     goApps tempSize refs Core.Apps {..} =
-      let suppliedArgs = map (go tempSize refs) _appsArgs
+      let suppliedArgs' = fmap (go tempSize refs) _appsArgs
+          suppliedArgs = toList suppliedArgs'
           suppliedArgsNum = length suppliedArgs
        in case _appsFun of
             Core.FunIdent Core.Ident {..} ->
@@ -113,7 +114,7 @@ genCode infoTable fi =
                                   { _nodeCallType = CallFun _identSymbol,
                                     _nodeCallArgs = take argsNum suppliedArgs
                                   },
-                            _nodeCallClosuresArgs = drop argsNum suppliedArgs
+                            _nodeCallClosuresArgs = nonEmpty' $ drop argsNum suppliedArgs
                           }
               where
                 argsNum = getArgsNum _identSymbol
@@ -121,7 +122,7 @@ genCode infoTable fi =
               CallClosures $
                 NodeCallClosures
                   { _nodeCallClosuresFun = MemRef $ BL.lookup _varIndex refs,
-                    _nodeCallClosuresArgs = suppliedArgs
+                    _nodeCallClosuresArgs = suppliedArgs'
                   }
 
     goBuiltinApp :: Int -> BinderList MemRef -> Core.BuiltinApp -> Node

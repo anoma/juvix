@@ -207,7 +207,7 @@ hEval hout tab = eval' [] mempty
 
         goCallClosures :: NodeCallClosures -> Value
         goCallClosures NodeCallClosures {..} =
-          let !vs = map' (eval' args temps) _nodeCallClosuresArgs
+          let !vs = map' (eval' args temps) (toList _nodeCallClosuresArgs)
            in go (eval' args temps _nodeCallClosuresFun) vs
           where
             go :: Value -> [Value] -> Value
@@ -299,7 +299,7 @@ hRunIO hin hout infoTable = \case
           CallClosures
             NodeCallClosures
               { _nodeCallClosuresFun = valueToNode f,
-                _nodeCallClosuresArgs = [valueToNode x']
+                _nodeCallClosuresArgs = valueToNode x' :| []
               }
         !x'' = hEval hout infoTable code
     hRunIO hin hout infoTable x''

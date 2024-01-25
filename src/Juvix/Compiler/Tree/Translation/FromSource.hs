@@ -197,14 +197,16 @@ parseCCall = do
   off <- P.getOffset
   args <- parseArgs
   case args of
+    [_] ->
+      parseFailure off "expected at least two arguments"
     arg : args' ->
       return
         NodeCallClosures
           { _nodeCallClosuresFun = arg,
-            _nodeCallClosuresArgs = args'
+            _nodeCallClosuresArgs = nonEmpty' args'
           }
     [] ->
-      parseFailure off "expected at least one argument"
+      parseFailure off "expected at least two arguments"
 
 parseBranch ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
