@@ -19,3 +19,6 @@ strIdentityD = "identity-dmap"
 
 strApply :: Text
 strApply = "apply"
+
+strTempHeight :: Text
+strTempHeight = "temp-height"
