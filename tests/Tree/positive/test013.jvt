@@ -1,0 +1,25 @@
+
+function fib'(integer, integer, integer) : integer;
+function fib(integer) : integer;
+function main() : *;
+
+function fib'(integer, integer, integer) : integer {
+  br(eq(0, arg[0])) {
+    true: arg[1]
+    false: call[fib'](sub(arg[0], 1), arg[2], mod(add(arg[1], arg[2]), 16777216))
+  }
+}
+
+function fib(integer) : integer {
+  call[fib'](arg[0], 0, 1)
+}
+
+function main() : * {
+  seq(seq(seq(save(call[fib](10)) {
+    seq(trace(tmp[0]), tmp[0])
+  }, save(call[fib](100)) {
+    seq(trace(tmp[0]), tmp[0])
+  }), save(call[fib](1000)) {
+    seq(trace(tmp[0]), tmp[0])
+  }), void)
+}

@@ -1,0 +1,54 @@
+
+function g(integer, integer) : integer;
+function h(integer → integer, integer → integer, integer) : integer;
+function f(integer) : integer → integer;
+function g'(integer, integer → integer) : integer;
+function h'(integer) : integer;
+function main() : *;
+
+function g(integer, integer) : integer {
+  add(arg[1], arg[0])
+}
+
+function h(integer → integer, integer → integer, integer) : integer {
+  call(arg[0], call(arg[1], arg[2]))
+}
+
+function f(integer) : integer → integer {
+  save(calloc[g](arg[0])) {
+    br(eq(0, arg[0])) {
+      true: call[f](10)
+      false: br(lt(arg[0], 10)) {
+        true: calloc[h](tmp[0], call[f](sub(arg[0], 1)))
+        false: tmp[0]
+      }
+    }
+  }
+}
+
+function g'(integer, integer → integer) : integer {
+  add(arg[0], call(arg[1], arg[0]))
+}
+
+function h'(integer) : integer {
+  br(eq(0, arg[0])) {
+    true: 0
+    false: call[g'](sub(arg[0], 1), calloc[h']())
+  }
+}
+
+function main() : * {
+  seq(seq(seq(seq(seq(seq(save(call(call[f](100), 500)) {
+    seq(trace(tmp[0]), tmp[0])
+  }, save(call(call[f](5), 0)) {
+    seq(trace(tmp[0]), tmp[0])
+  }), save(call(call[f](5), 5)) {
+    seq(trace(tmp[0]), tmp[0])
+  }), save(call[h'](10)) {
+    seq(trace(tmp[0]), tmp[0])
+  }), save(call[g'](10, calloc[h']())) {
+    seq(trace(tmp[0]), tmp[0])
+  }), save(call[g'](3, call[f](10))) {
+    seq(trace(tmp[0]), tmp[0])
+  }), void)
+}

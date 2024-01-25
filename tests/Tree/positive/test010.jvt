@@ -1,0 +1,14 @@
+
+function sum(integer) : integer;
+function main() : *;
+
+function sum(integer) : integer {
+  br(eq(0, arg[0])) {
+    true: 0
+    false: add(arg[0], call[sum](sub(arg[0], 1)))
+  }
+}
+
+function main() : * {
+  call[sum](1000)
+}

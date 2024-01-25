@@ -1,0 +1,21 @@
+
+function multiply(integer, integer) : integer;
+function plus(integer, integer) : integer;
+function calculate(integer, integer, integer) : integer;
+function main() : *;
+
+function multiply(integer, integer) : integer {
+  mul(arg[1], arg[0])
+}
+
+function plus(integer, integer) : integer {
+  add(arg[1], arg[0])
+}
+
+function calculate(integer, integer, integer) : integer {
+  call[plus](call[multiply](arg[2], arg[1]), arg[0])
+}
+
+function main() : * {
+  call(calloc[calculate](5, 3), 2)
+}

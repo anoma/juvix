@@ -1,0 +1,42 @@
+
+function ext_10((integer, integer) → integer) : integer → integer;
+function app_0(integer → integer) : integer;
+function f((integer, integer) → integer) : integer;
+function plus(integer, integer) : integer;
+function minus(integer, integer) : integer;
+function mult(integer, integer) : integer;
+function main() : *;
+
+function ext_10((integer, integer) → integer) : integer → integer {
+  cextend(arg[0], 10)
+}
+
+function app_0(integer → integer) : integer {
+  call(arg[0], 1)
+}
+
+function f((integer, integer) → integer) : integer {
+  call[app_0](call[ext_10](arg[0]))
+}
+
+function plus(integer, integer) : integer {
+  add(arg[0], arg[1])
+}
+
+function minus(integer, integer) : integer {
+  sub(arg[0], arg[1])
+}
+
+function mult(integer, integer) : integer {
+  mul(arg[0], arg[1])
+}
+
+function main() : * {
+  seq(seq(seq(save(call[f](calloc[plus]())) {
+    seq(trace(tmp[0]), tmp[0])
+  }, save(call[f](calloc[minus]())) {
+    seq(trace(tmp[0]), tmp[0])
+  }), save(call[f](calloc[mult]())) {
+    seq(trace(tmp[0]), tmp[0])
+  }), void)
+}

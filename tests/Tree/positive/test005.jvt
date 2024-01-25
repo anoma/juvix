@@ -1,0 +1,18 @@
+
+function main() : *;
+
+function main() : * {
+  seq(seq(seq(save(1) {
+    seq(trace(tmp[0]), tmp[0])
+  }, seq(save(save(2) {
+    seq(trace(tmp[0]), tmp[0])
+  }) {
+    seq(trace(tmp[0]), tmp[0])
+  }, save("seven") {
+    seq(trace(tmp[0]), tmp[0])
+  })), save(unit) {
+    seq(trace(tmp[0]), tmp[0])
+  }), save(void) {
+    seq(trace(tmp[0]), tmp[0])
+  })
+}

@@ -1,0 +1,21 @@
+
+function const(*, *) : *;
+function print(*) : IO;
+function sequence(IO, IO) : IO;
+function main() : *;
+
+function const(*, *) : * {
+  arg[0]
+}
+
+function print(*) : IO {
+  alloc[write](arg[0])
+}
+
+function sequence(IO, IO) : IO {
+  alloc[bind](arg[0], calloc[const](arg[1]))
+}
+
+function main() : * {
+  call[sequence](call[sequence](alloc[bind](alloc[return](1), calloc[print]()), call[sequence](alloc[bind](alloc[return](2), calloc[print]()), alloc[bind](alloc[return]("\n"), calloc[print]()))), call[sequence](call[sequence](call[sequence](call[sequence](alloc[write](1), alloc[write](2)), alloc[write](3)), call[sequence](alloc[write](4), alloc[write](5))), alloc[write]("\n")))
+}

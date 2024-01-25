@@ -1,0 +1,19 @@
+
+function g(integer → integer, integer) : integer;
+function f(integer) : integer;
+function main() : *;
+
+function g(integer → integer, integer) : integer {
+  br(eq(0, arg[1])) {
+    true: 0
+    false: call(arg[0], sub(arg[1], 1))
+  }
+}
+
+function f(integer) : integer {
+  add(arg[0], call[g](calloc[f](), arg[0]))
+}
+
+function main() : * {
+  call[f](10)
+}

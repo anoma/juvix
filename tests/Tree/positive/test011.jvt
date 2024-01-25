@@ -1,0 +1,38 @@
+
+function sum'(integer, integer) : integer;
+function sum(integer) : integer;
+function fact'(integer, integer) : integer;
+function fact(integer) : integer;
+function main() : *;
+
+function sum'(integer, integer) : integer {
+  br(eq(0, arg[0])) {
+    true: arg[1]
+    false: call[sum'](sub(arg[0], 1), add(arg[0], arg[1]))
+  }
+}
+
+function sum(integer) : integer {
+  call[sum'](arg[0], 0)
+}
+
+function fact'(integer, integer) : integer {
+  br(eq(0, arg[0])) {
+    true: arg[1]
+    false: call[fact'](sub(arg[0], 1), mul(arg[1], arg[0]))
+  }
+}
+
+function fact(integer) : integer {
+  call[fact'](arg[0], 1)
+}
+
+function main() : * {
+  seq(seq(seq(save(call[sum](1000)) {
+    seq(trace(tmp[0]), tmp[0])
+  }, save(call[fact](5)) {
+    seq(trace(tmp[0]), tmp[0])
+  }), save(call[fact](10)) {
+    seq(trace(tmp[0]), tmp[0])
+  }), call[fact](12))
+}

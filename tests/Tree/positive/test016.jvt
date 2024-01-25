@@ -1,0 +1,36 @@
+
+function f(integer, integer) : *;
+function g(integer, integer) : integer;
+function h((integer, integer) → integer, integer, integer) : integer;
+function func(integer) : integer;
+function main() : *;
+
+function f(integer, integer) : * {
+  save(add(arg[1], arg[0])) {
+    seq(trace(tmp[0]), tmp[0])
+  }
+}
+
+function g(integer, integer) : integer {
+  sub(add(1, arg[0]), mul(7, arg[1]))
+}
+
+function h((integer, integer) → integer, integer, integer) : integer {
+  mul(call(arg[0], arg[1], arg[1]), arg[2])
+}
+
+function func(integer) : integer {
+  add(arg[0], 4)
+}
+
+function main() : * {
+  seq(seq(seq(seq(save(call[func](div(17, 5))) {
+    seq(trace(tmp[0]), tmp[0])
+  }, save(add(mul(0, 5), 17)) {
+    seq(trace(tmp[0]), tmp[0])
+  }), save(add(30, mul(7, add(0, 1)))) {
+    seq(trace(tmp[0]), tmp[0])
+  }), save(call[f](call[h](calloc[g](), 2, 3), 4)) {
+    seq(trace(tmp[0]), tmp[0])
+  }), void)
+}

@@ -1,0 +1,28 @@
+
+function power'(integer, integer, integer) : integer;
+function power(integer, integer) : integer;
+function main() : *;
+
+function power'(integer, integer, integer) : integer {
+  br(eq(0, arg[1])) {
+    true: arg[2]
+    false: br(eq(0, mod(arg[1], 2))) {
+      true: call[power'](mul(arg[0], arg[0]), div(arg[1], 2), arg[2])
+      false: call[power'](mul(arg[0], arg[0]), div(arg[1], 2), mul(arg[0], arg[2]))
+    }
+  }
+}
+
+function power(integer, integer) : integer {
+  call[power'](arg[0], arg[1], 1)
+}
+
+function main() : * {
+  seq(seq(seq(save(call[power](2, 3)) {
+    seq(trace(tmp[0]), tmp[0])
+  }, save(call[power](3, 7)) {
+    seq(trace(tmp[0]), tmp[0])
+  }), save(call[power](5, 11)) {
+    seq(trace(tmp[0]), tmp[0])
+  }), void)
+}

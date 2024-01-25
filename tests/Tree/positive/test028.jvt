@@ -1,0 +1,141 @@
+type list {
+  nil : list;
+  cons : (*, list) → list;
+}
+
+function sum''(integer) : integer;
+function gt5(integer) : bool;
+function dec(integer) : integer;
+function main() : *;
+function head(list) : *;
+function tail(list) : list;
+function null(list) : *;
+function map(* → *, list) : list;
+function foldl((*, *) → *, *, list) : *;
+function foldr((*, *) → *, *, list) : *;
+function filter(* → bool, list) : list;
+function flip_cons(list, *) : list;
+function rev(list) : list;
+function gen(integer) : list;
+function plus(integer, integer) : integer;
+function sum(integer) : integer;
+function sum'(integer) : integer;
+function foldl'((*, *) → *, *, list) : *;
+
+function sum''(integer) : integer {
+  call[foldl'](calloc[plus](), 0, call[gen](arg[0]))
+}
+
+function gt5(integer) : bool {
+  lt(5, arg[0])
+}
+
+function dec(integer) : integer {
+  sub(arg[0], 1)
+}
+
+function main() : * {
+  seq(seq(seq(seq(seq(seq(seq(save(call[gen](10)) {
+    seq(trace(tmp[0]), tmp[0])
+  }, save(call[rev](call[gen](10))) {
+    seq(trace(tmp[0]), tmp[0])
+  }), save(call[filter](calloc[gt5](), call[gen](10))) {
+    seq(trace(tmp[0]), tmp[0])
+  }), save(call[rev](call[map](calloc[dec](), call[gen](10)))) {
+    seq(trace(tmp[0]), tmp[0])
+  }), save(call[sum](1000)) {
+    seq(trace(tmp[0]), tmp[0])
+  }), save(call[sum'](1000)) {
+    seq(trace(tmp[0]), tmp[0])
+  }), save(call[sum''](1000)) {
+    seq(trace(tmp[0]), tmp[0])
+  }), void)
+}
+
+function head(list) : * {
+  case[list](arg[0]) {
+    cons: arg[0].cons[0]
+  }
+}
+
+function tail(list) : list {
+  case[list](arg[0]) {
+    cons: arg[0].cons[1]
+  }
+}
+
+function null(list) : * {
+  case[list](arg[0]) {
+    nil: true
+    cons: false
+  }
+}
+
+function map(* → *, list) : list {
+  case[list](arg[1]) {
+    nil: save {
+      tmp[0]
+    }
+    cons: alloc[cons](call(arg[0], arg[1].cons[0]), call[map](arg[0], arg[1].cons[1]))
+  }
+}
+
+function foldl((*, *) → *, *, list) : * {
+  case[list](arg[2]) {
+    nil: arg[1]
+    cons: call[foldl](arg[0], call(arg[0], arg[1], arg[2].cons[0]), arg[2].cons[1])
+  }
+}
+
+function foldr((*, *) → *, *, list) : * {
+  case[list](arg[2]) {
+    nil: arg[1]
+    cons: call(arg[0], arg[2].cons[0], call[foldr](arg[0], arg[1], arg[2].cons[1]))
+  }
+}
+
+function filter(* → bool, list) : list {
+  case[list](arg[1]) {
+    nil: save {
+      tmp[0]
+    }
+    cons: br(call(arg[0], arg[1].cons[0])) {
+      true: alloc[cons](arg[1].cons[0], call[filter](arg[0], arg[1].cons[1]))
+      false: call[filter](arg[0], arg[1].cons[1])
+    }
+  }
+}
+
+function flip_cons(list, *) : list {
+  alloc[cons](arg[1], arg[0])
+}
+
+function rev(list) : list {
+  call[foldl](calloc[flip_cons](), alloc[nil](), arg[0])
+}
+
+function gen(integer) : list {
+  br(eq(0, arg[0])) {
+    true: alloc[nil]()
+    false: alloc[cons](arg[0], call[gen](sub(arg[0], 1)))
+  }
+}
+
+function plus(integer, integer) : integer {
+  add(arg[0], arg[1])
+}
+
+function sum(integer) : integer {
+  call[foldl](calloc[plus](), 0, call[gen](arg[0]))
+}
+
+function sum'(integer) : integer {
+  call[foldr](calloc[plus](), 0, call[gen](arg[0]))
+}
+
+function foldl'((*, *) → *, *, list) : * {
+  br(call[null](arg[2])) {
+    true: arg[1]
+    false: call[foldl'](arg[0], call(arg[0], arg[1], call[head](arg[2])), call[tail](arg[2]))
+  }
+}

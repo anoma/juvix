@@ -1,0 +1,37 @@
+
+function f(integer, integer, integer) : integer;
+function app(integer → integer, integer) : integer;
+function g(*) : *;
+function h(*, *) : *;
+function inc(integer) : integer;
+function main() : *;
+
+function f(integer, integer, integer) : integer {
+  mul(add(arg[2], arg[1]), arg[0])
+}
+
+function app(integer → integer, integer) : integer {
+  call(arg[0], arg[1])
+}
+
+function g(*) : * {
+  ccall(arg[0], 2, 1)
+}
+
+function h(*, *) : * {
+  ccall(arg[0], arg[1])
+}
+
+function inc(integer) : integer {
+  add(1, arg[0])
+}
+
+function main() : * {
+  seq(seq(seq(save(ccall(calloc[app](), ccall(calloc[f](), 3, 2), 10)) {
+    seq(trace(tmp[0]), tmp[0])
+  }, save(ccall(calloc[g](), calloc[f](), 10)) {
+    seq(trace(tmp[0]), tmp[0])
+  }), save(ccall(call[h](calloc[app](), calloc[inc]()), 7)) {
+    seq(trace(tmp[0]), tmp[0])
+  }), void)
+}

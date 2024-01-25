@@ -1,0 +1,63 @@
+type stream {
+  cons : (integer, unit → stream) → stream;
+}
+
+function force(unit → stream) : stream;
+function filter(integer → bool, unit → stream, unit) : stream;
+function nth(integer, unit → stream) : integer;
+function numbers(integer, unit) : stream;
+function indivisible(integer, integer) : bool;
+function eratostenes(unit → stream, unit) : stream;
+function primes(unit) : stream;
+function main() : *;
+
+function force(f : unit → stream) : stream {
+  call(f, unit)
+}
+
+function filter(f : integer → bool, s : unit → stream, unit) : stream {
+  save[s1](call[force](s)) {
+    br(call(f, s1.cons[0])) {
+      true: alloc[cons](s1.cons[0], calloc[filter](f, s1.cons[1]))
+      false: call[filter](f, s1.cons[1], unit)
+    }
+  }
+}
+
+function nth(n : integer, s : unit → stream) : integer {
+  save[s1](call[force](s)) {
+    br(eq(0, n)) {
+      true: s1.cons[0]
+      false: call[nth](sub(n, 1), s1.cons[1])
+    }
+  }
+}
+
+function numbers(n : integer, unit) : stream {
+  alloc[cons](n, calloc[numbers](add(1, n)))
+}
+
+function indivisible(n : integer, m : integer) : bool {
+  br(eq(0, mod(m, n))) {
+    true: false
+    false: true
+  }
+}
+
+function eratostenes(s : unit → stream, unit) : stream {
+  save[s1](call[force](s)) {
+    alloc[cons](s1.cons[0], calloc[eratostenes](calloc[filter](calloc[indivisible](s1.cons[0]), s1.cons[1])))
+  }
+}
+
+function primes() : unit → stream {
+  calloc[eratostenes](calloc[numbers](2))
+}
+
+function main() : * {
+  seq(seq(save(call[nth](10, call[primes]())) {
+    seq(trace(tmp[0]), tmp[0])
+  }, save(call[nth](50, call[primes]())) {
+    seq(trace(tmp[0]), tmp[0])
+  }), void)
+}

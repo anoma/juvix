@@ -1,0 +1,24 @@
+type list {
+  nil : list;
+  cons : (*, list) → list;
+}
+
+function main() : *;
+
+function main() : * {
+  seq(seq(seq(seq(seq(seq(seq(save(eq(1, 1)) {
+    seq(trace(tmp[0]), tmp[0])
+  }, save(eq(0, 1)) {
+    seq(trace(tmp[0]), tmp[0])
+  }), save(eq(alloc[nil](), alloc[nil]())) {
+    seq(trace(tmp[0]), tmp[0])
+  }), save(eq(alloc[cons](1, alloc[nil]()), alloc[nil]())) {
+    seq(trace(tmp[0]), tmp[0])
+  }), save(eq(alloc[cons](1, alloc[nil]()), alloc[cons](2, alloc[nil]()))) {
+    seq(trace(tmp[0]), tmp[0])
+  }), save(eq(alloc[cons](1, alloc[nil]()), alloc[cons](1, alloc[cons](2, alloc[nil]())))) {
+    seq(trace(tmp[0]), tmp[0])
+  }), save(eq(alloc[cons](1, alloc[cons](2, alloc[nil]())), alloc[cons](1, alloc[cons](2, alloc[nil]())))) {
+    seq(trace(tmp[0]), tmp[0])
+  }), void)
+}
