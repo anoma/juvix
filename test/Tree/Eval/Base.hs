@@ -2,25 +2,33 @@ module Tree.Eval.Base where
 
 import Base
 import Juvix.Compiler.Tree.Data.InfoTable
+import Juvix.Compiler.Tree.Data.TransformationId
 import Juvix.Compiler.Tree.Error
 import Juvix.Compiler.Tree.Evaluator
 import Juvix.Compiler.Tree.Language.Base
 import Juvix.Compiler.Tree.Language.Value
 import Juvix.Compiler.Tree.Pretty
+import Juvix.Compiler.Tree.Transformation
 import Juvix.Compiler.Tree.Translation.FromSource
 import Juvix.Data.PPOutput
 
 treeEvalAssertion ::
   Path Abs File ->
   Path Abs File ->
+  [TransformationId] ->
+  (InfoTable -> Assertion) ->
   (String -> IO ()) ->
   Assertion
-treeEvalAssertion mainFile expectedFile step = do
+treeEvalAssertion mainFile expectedFile trans testTrans step = do
   step "Parse"
   s <- readFile (toFilePath mainFile)
   case runParser (toFilePath mainFile) s of
     Left err -> assertFailure (show (pretty err))
-    Right tab -> do
+    Right tab0 -> do
+      unless (null trans) $
+        step "Transform"
+      let tab = run $ applyTransformations trans tab0
+      testTrans tab
       case tab ^. infoMainFunction of
         Just sym -> do
           withTempDir'

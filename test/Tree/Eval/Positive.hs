@@ -23,7 +23,7 @@ testDescr PosTest {..} =
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
-          _testAssertion = Steps $ treeEvalAssertion file' expected'
+          _testAssertion = Steps $ treeEvalAssertion file' expected' [] (const (return ()))
         }
 
 filterOutTests :: [String] -> [PosTest] -> [PosTest]
