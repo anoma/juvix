@@ -177,10 +177,10 @@ coreToVampIR' = Core.toStored' >=> storedCoreToVampIR'
 --------------------------------------------------------------------------------
 
 treeToAsm :: Tree.InfoTable -> Sem r Asm.InfoTable
-treeToAsm = return . Asm.fromTree
+treeToAsm = Tree.toAsm >=> return . Asm.fromTree
 
 treeToNockma :: (Members '[Error JuvixError, Reader EntryPoint] r) => Tree.InfoTable -> Sem r (Nockma.Cell Natural)
-treeToNockma = treeToAsm >=> asmToNockma
+treeToNockma = Tree.toNockma >=> treeToAsm >=> asmToNockma
 
 treeToMiniC :: (Members '[Error JuvixError, Reader EntryPoint] r) => Tree.InfoTable -> Sem r C.MiniCResult
 treeToMiniC = treeToAsm >=> asmToMiniC
