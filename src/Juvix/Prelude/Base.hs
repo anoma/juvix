@@ -342,6 +342,7 @@ revAppend :: [a] -> [a] -> [a]
 revAppend [] !ys = ys
 revAppend (x : xs) !ys = revAppend xs (x : ys)
 
+-- | strict map
 map' :: (a -> b) -> [a] -> [b]
 map' _ [] = []
 map' f (h : t) =

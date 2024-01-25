@@ -1,63 +1,12 @@
 module Juvix.Compiler.Asm.Interpreter.Base
-  ( module Juvix.Compiler.Asm.Interpreter.Base,
+  ( module Juvix.Compiler.Tree.Language.Value,
     module Juvix.Compiler.Asm.Language,
+    Val,
   )
 where
 
 import Juvix.Compiler.Asm.Language
+import Juvix.Compiler.Tree.Language.Value hiding (Value)
+import Juvix.Compiler.Tree.Language.Value qualified as Tree
 
-{-
-  The following types of values may be stored in the heap or an activation
-  frame.
-
-  - Integer (arbitrary precision)
-  - Boolean
-  - String
-  - Constructor data
-  - Closure
--}
-
-data Val
-  = ValInteger Integer
-  | ValBool Bool
-  | ValString Text
-  | ValUnit
-  | ValVoid
-  | ValConstr Constr
-  | ValClosure Closure
-  deriving stock (Eq)
-
-data Constr = Constr
-  { _constrTag :: Tag,
-    _constrArgs :: [Val]
-  }
-  deriving stock (Eq)
-
-data Closure = Closure
-  { _closureSymbol :: Symbol,
-    _closureArgs :: [Val]
-  }
-  deriving stock (Eq)
-
-makeLenses ''Constr
-makeLenses ''Closure
-
-instance HasAtomicity Constr where
-  atomicity Constr {..}
-    | null _constrArgs = Atom
-    | otherwise = Aggregate appFixity
-
-instance HasAtomicity Closure where
-  atomicity Closure {..}
-    | null _closureArgs = Atom
-    | otherwise = Aggregate appFixity
-
-instance HasAtomicity Val where
-  atomicity = \case
-    ValInteger {} -> Atom
-    ValBool {} -> Atom
-    ValString {} -> Atom
-    ValUnit -> Atom
-    ValVoid -> Atom
-    ValConstr c -> atomicity c
-    ValClosure cl -> atomicity cl
+type Val = Tree.Value

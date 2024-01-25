@@ -1,11 +1,13 @@
 module Commands.Dev.Tree.Options where
 
+import Commands.Dev.Tree.Eval.Options
 import Commands.Dev.Tree.FromAsm.Options
 import Commands.Dev.Tree.Read.Options
 import CommonOptions
 
 data TreeCommand
-  = Read TreeReadOptions
+  = Eval TreeEvalOptions
+  | Read TreeReadOptions
   | FromAsm TreeFromAsmOptions
   deriving stock (Data)
 
@@ -13,15 +15,25 @@ parseTreeCommand :: Parser TreeCommand
 parseTreeCommand =
   hsubparser $
     mconcat
-      [ commandRead,
+      [ commandEval,
+        commandRead,
         commandFromAsm
       ]
   where
+    commandEval :: Mod CommandFields TreeCommand
+    commandEval = command "eval" evalInfo
+
     commandRead :: Mod CommandFields TreeCommand
     commandRead = command "read" readInfo
 
     commandFromAsm :: Mod CommandFields TreeCommand
     commandFromAsm = command "from-asm" fromAsmInfo
+
+    evalInfo :: ParserInfo TreeCommand
+    evalInfo =
+      info
+        (Eval <$> parseTreeEvalOptions)
+        (progDesc "Evaluate a JuvixTree file")
 
     readInfo :: ParserInfo TreeCommand
     readInfo =
