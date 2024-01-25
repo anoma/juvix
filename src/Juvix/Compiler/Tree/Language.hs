@@ -41,9 +41,11 @@ data Node
     -- (any branch may be omitted).
     Case NodeCase
   | -- | Execute nested code with temporary stack extended with a given value.
-    -- Used to implement Core.Let and Core.Case. JVT codes: 'save(x) {<code>}',
+    -- Used to implement Core.Let. JVT codes: 'save(x) {<code>}',
     -- 'save[<name>](x) {<code>}'.
     Save NodeSave
+
+-- TODO: CallClosures arguments should be non-empty
 
 data BinaryOpcode
   = IntAdd

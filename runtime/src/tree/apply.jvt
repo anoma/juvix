@@ -1,0 +1,57 @@
+
+function juvix_apply_1(*, *) : *;
+function juvix_apply_2(*, *, *) : *;
+function juvix_apply_3(*, *, *, *) : *;
+function juvix_apply_4(*, *, *, *, *) : *;
+
+function juvix_apply_1(*, *) : * {
+  br(eq(1, argsnum(arg[0]))) {
+    true: call(arg[0], arg[1])
+    false: cextend(arg[0], arg[1])
+  }
+}
+
+function juvix_apply_2(*, *, *) : * {
+  save[n](argsnum(arg[0])) {
+    br(eq(2, n)) {
+      true: call(arg[0], arg[1], arg[2])
+      false: br(eq(1, n)) {
+        true: call[juvix_apply_1](call(arg[0], arg[1]), arg[2])
+        false: cextend(arg[0], arg[1], arg[2])
+      }
+    }
+  }
+}
+
+function juvix_apply_3(*, *, *, *) : * {
+  save[n](argsnum(arg[0])) {
+    br(eq(3, n)) {
+      true: call(arg[0], arg[1], arg[2], arg[3])
+      false: br(lt(3, n)) {
+        true: cextend(arg[0], arg[1], arg[2], arg[3])
+        false: br(eq(2, n)) {
+          true: call[juvix_apply_1](call(arg[0], arg[1], arg[2]), arg[3])
+          false: call[juvix_apply_2](call(arg[0], arg[1]), arg[2], arg[3])
+        }
+      }
+    }
+  }
+}
+
+function juvix_apply_4(*, *, *, *, *) : * {
+  save[n](argsnum(arg[0])) {
+    br(eq(4, n)) {
+      true: call(arg[0], arg[1], arg[2], arg[3], arg[4])
+      false: br(lt(4, n)) {
+        true: cextend(arg[0], arg[1], arg[2], arg[3], arg[4])
+        false: br(eq(3, n)) {
+          true: call[juvix_apply_1](call(arg[0], arg[1], arg[2], arg[3]), arg[4])
+          false: br(eq(2, n)) {
+            true: call[juvix_apply_2](call(arg[0], arg[1], arg[2]), arg[3], arg[4])
+            false: call[juvix_apply_3](call(arg[0], arg[1]), arg[2], arg[3], arg[4])
+          }
+        }
+      }
+    }
+  }
+}

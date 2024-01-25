@@ -16,3 +16,6 @@ strIdentityU = "identity-umap"
 
 strIdentityD :: Text
 strIdentityD = "identity-dmap"
+
+strApply :: Text
+strApply = "apply"

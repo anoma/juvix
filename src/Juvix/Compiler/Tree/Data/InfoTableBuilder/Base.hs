@@ -47,20 +47,21 @@ emptyBuilderState =
       _stateIdents = mempty
     }
 
-runInfoTableBuilderWithTab :: InfoTable' t e -> Sem (InfoTableBuilder' t e ': r) b -> Sem r (InfoTable' t e, b)
-runInfoTableBuilderWithTab tab = fmap (first (^. stateInfoTable)) . runInfoTableBuilder' st
-  where
-    st =
-      BuilderState
-        { _stateNextSymbolId = maximum (0 : map (^. symbolId) (HashMap.keys (tab ^. infoFunctions) ++ HashMap.keys (tab ^. infoInductives))),
-          _stateNextUserTag = maximum (0 : mapMaybe getUserTagId (HashMap.keys (tab ^. infoConstrs))),
-          _stateInfoTable = tab,
-          _stateIdents =
-            HashMap.fromList $
-              map (\fi -> (fi ^. functionName, IdentFun (fi ^. functionSymbol))) (HashMap.elems (tab ^. infoFunctions))
-                ++ map (\ii -> (ii ^. inductiveName, IdentInd (ii ^. inductiveSymbol))) (HashMap.elems (tab ^. infoInductives))
-                ++ map (\ci -> (ci ^. constructorName, IdentConstr (ci ^. constructorTag))) (HashMap.elems (tab ^. infoConstrs))
-        }
+builderStateFromInfoTable :: InfoTable' t e -> BuilderState' t e
+builderStateFromInfoTable tab =
+  BuilderState
+    { _stateNextSymbolId = getNextSymbolId tab,
+      _stateNextUserTag = getNextUserTag tab,
+      _stateInfoTable = tab,
+      _stateIdents =
+        HashMap.fromList $
+          map (\fi -> (fi ^. functionName, IdentFun (fi ^. functionSymbol))) (HashMap.elems (tab ^. infoFunctions))
+            ++ map (\ii -> (ii ^. inductiveName, IdentInd (ii ^. inductiveSymbol))) (HashMap.elems (tab ^. infoInductives))
+            ++ map (\ci -> (ci ^. constructorName, IdentConstr (ci ^. constructorTag))) (HashMap.elems (tab ^. infoConstrs))
+    }
+
+runInfoTableBuilderWithInfoTable :: InfoTable' t e -> Sem (InfoTableBuilder' t e ': r) b -> Sem r (InfoTable' t e, b)
+runInfoTableBuilderWithInfoTable tab = fmap (first (^. stateInfoTable)) . runInfoTableBuilder' (builderStateFromInfoTable tab)
 
 runInfoTableBuilder :: Sem (InfoTableBuilder' t e ': r) b -> Sem r (InfoTable' t e, b)
 runInfoTableBuilder = fmap (first (^. stateInfoTable)) . runInfoTableBuilder' emptyBuilderState
