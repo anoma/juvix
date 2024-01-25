@@ -1,7 +1,7 @@
-module Juvix.Compiler.Core.Data.TransformationId.Parser (parseTransformations, TransformationId (..), completions, completionsString) where
+module Juvix.Compiler.Tree.Data.TransformationId.Parser (parseTransformations, TransformationId (..), completions, completionsString) where
 
-import Juvix.Compiler.Core.Data.TransformationId
 import Juvix.Compiler.Core.Data.TransformationId.Parser.Base
+import Juvix.Compiler.Tree.Data.TransformationId
 import Juvix.Prelude
 
 parseTransformations :: Text -> Either Text [TransformationId]
