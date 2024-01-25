@@ -646,7 +646,10 @@ runCompiler sem = do
   return (seqTerms ts, a)
 
 runCompilerWith :: CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> Cell Natural
-runCompilerWith opts constrs libFuns mainFun =
+runCompilerWith = runCompilerWithAnoma
+
+runCompilerWithMain :: CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> Cell Natural
+runCompilerWithMain opts constrs libFuns mainFun =
   let entryCommand :: (Members '[Compiler] r) => Sem r ()
       entryCommand = callFun (mainFun ^. compilerFunctionName) 0
       entryTerm =
