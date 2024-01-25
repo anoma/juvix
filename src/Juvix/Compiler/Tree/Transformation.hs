@@ -8,6 +8,7 @@ where
 import Juvix.Compiler.Tree.Data.TransformationId
 import Juvix.Compiler.Tree.Transformation.Apply
 import Juvix.Compiler.Tree.Transformation.Base
+import Juvix.Compiler.Tree.Transformation.FilterUnreachable
 import Juvix.Compiler.Tree.Transformation.Identity
 import Juvix.Compiler.Tree.Transformation.TempHeight
 
@@ -21,3 +22,4 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
       IdentityD -> return . identityD
       Apply -> return . computeApply
       TempHeight -> return . computeTempHeight
+      FilterUnreachable -> return . filterUnreachable

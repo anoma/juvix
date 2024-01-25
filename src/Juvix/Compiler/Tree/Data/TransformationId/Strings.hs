@@ -22,3 +22,6 @@ strApply = "apply"
 
 strTempHeight :: Text
 strTempHeight = "temp-height"
+
+strFilterUnreachable :: Text
+strFilterUnreachable = "filter-unreachable"

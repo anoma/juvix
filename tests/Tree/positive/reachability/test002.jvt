@@ -1,0 +1,39 @@
+
+function f(*, integer) : integer;
+function id(integer) : integer;
+function g(integer) : integer;
+function sum(integer) : integer;
+function g'(integer) : integer;
+function g''(integer) : integer;
+function main() : integer;
+
+function f(*, integer) : integer {
+  call(arg[0], arg[1])
+}
+
+function id(integer) : integer {
+  arg[0]
+}
+
+function g(integer) : integer {
+  add(call[f](calloc[id](), arg[0]), 1)
+}
+
+function sum(integer) : integer {
+  br(eq(0, arg[0])) {
+    true: call[g](0)
+    false: add(arg[0], call[sum](sub(arg[0], 1)))
+  }
+}
+
+function g'(integer) : integer {
+  add(call[id](arg[0]), 2)
+}
+
+function g''(integer) : integer {
+  call[sum](arg[0])
+}
+
+function main() : integer {
+  call[sum](100)
+}
