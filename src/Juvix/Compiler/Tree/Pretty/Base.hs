@@ -246,6 +246,12 @@ instance PrettyCode NodeUnop where
     arg <- ppCode _nodeUnopArg
     return $ op <> parens arg
 
+instance PrettyCode NodeConstant where
+  ppCode NodeConstant {..} = ppCode _nodeConstant
+
+instance PrettyCode NodeMemRef where
+  ppCode NodeMemRef {..} = ppCode _nodeMemRef
+
 ppCodeArgs :: (Member (Reader Options) r) => [Node] -> Sem r (Doc Ann)
 ppCodeArgs args = do
   args' <- mapM ppCode args
@@ -323,7 +329,7 @@ instance PrettyCode NodeSave where
     arg <- ppCode _nodeSaveArg
     body <- ppCode _nodeSaveBody
     let name =
-          case _nodeSaveTempVarInfo ^. tempVarInfoName of
+          case _nodeSaveTempVar ^. tempVarName of
             Just n -> brackets (variable (quoteName n))
             Nothing -> mempty
     return $ primitive Str.save <> name <> parens arg <+> braces' body

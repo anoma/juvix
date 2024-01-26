@@ -2,6 +2,7 @@ module Juvix.Compiler.Tree.Transformation.Apply where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Tree.Extra.Apply
+import Juvix.Compiler.Tree.Extra.Base
 import Juvix.Compiler.Tree.Extra.Recursors
 import Juvix.Compiler.Tree.Transformation.Base
 
@@ -26,7 +27,8 @@ computeFunctionApply blts = umap go
     mkApply cl args =
       Call
         NodeCall
-          { _nodeCallType = CallFun sym,
+          { _nodeCallInfo = getNodeInfo cl,
+            _nodeCallType = CallFun sym,
             _nodeCallArgs = cl : toList args
           }
       where

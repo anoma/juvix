@@ -17,14 +17,14 @@ import Juvix.Compiler.Tree.Extra.Base
 import Juvix.Compiler.Tree.Extra.Recursors.Recur
 import Juvix.Compiler.Tree.Language
 
-instance IsNodeChild NodeChild TempVarInfo where
-  gBindersNum = fromEnum . isJust . (^. childTempVarInfo)
-  gBinders = toList . (^. childTempVarInfo)
+instance IsNodeChild NodeChild TempVar where
+  gBindersNum = fromEnum . isJust . (^. childTempVar)
+  gBinders = toList . (^. childTempVar)
 
 instance IsNodeDetails NodeDetails NodeChild where
   gChildren = (^. nodeChildren)
 
-instance IsNode Node NodeDetails NodeChild TempVarInfo where
+instance IsNode Node NodeDetails NodeChild TempVar where
   gDestruct = destruct
   gReassemble = reassembleDetails
   gChild = (^. childNode)

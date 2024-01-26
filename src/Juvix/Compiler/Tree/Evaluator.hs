@@ -11,13 +11,15 @@ import GHC.Show qualified as S
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Tree.Data.InfoTable
 import Juvix.Compiler.Tree.Error
+import Juvix.Compiler.Tree.Extra.Base
 import Juvix.Compiler.Tree.Language
 import Juvix.Compiler.Tree.Language.Value
 import Juvix.Compiler.Tree.Pretty
 import Text.Read qualified as T
 
-newtype EvalError = EvalError
-  { _evalErrorMsg :: Text
+data EvalError = EvalError
+  { _evalErrorLocation :: Maybe Location,
+    _evalErrorMsg :: Text
   }
 
 makeLenses ''EvalError
@@ -53,7 +55,7 @@ hEval hout tab = eval' [] mempty
       where
         evalError :: Text -> a
         evalError msg =
-          Exception.throw (EvalError (msg <> ": " <> ppTrace tab node))
+          Exception.throw (EvalError (getNodeLocation node) msg)
 
         goBinop :: NodeBinop -> Value
         goBinop NodeBinop {..} =
@@ -127,16 +129,16 @@ hEval hout tab = eval' [] mempty
         goTrace :: Value -> Value
         goTrace v = unsafePerformIO (hPutStrLn hout (printValue v) >> return v)
 
-        goConstant :: Constant -> Value
-        goConstant = \case
+        goConstant :: NodeConstant -> Value
+        goConstant NodeConstant {..} = case _nodeConstant of
           ConstInt i -> ValInteger i
           ConstBool b -> ValBool b
           ConstString s -> ValString s
           ConstUnit -> ValUnit
           ConstVoid -> ValVoid
 
-        goMemRef :: MemRef -> Value
-        goMemRef = \case
+        goMemRef :: NodeMemRef -> Value
+        goMemRef NodeMemRef {..} = case _nodeMemRef of
           DRef r -> goDirectRef r
           ConstrRef r -> goField r
 
@@ -266,21 +268,23 @@ hEval hout tab = eval' [] mempty
 
 valueToNode :: Value -> Node
 valueToNode = \case
-  ValInteger i -> Const $ ConstInt i
-  ValBool b -> Const $ ConstBool b
-  ValString s -> Const $ ConstString s
-  ValUnit -> Const ConstUnit
-  ValVoid -> Const ConstVoid
+  ValInteger i -> mkConst $ ConstInt i
+  ValBool b -> mkConst $ ConstBool b
+  ValString s -> mkConst $ ConstString s
+  ValUnit -> mkConst ConstUnit
+  ValVoid -> mkConst ConstVoid
   ValConstr Constr {..} ->
     AllocConstr
       NodeAllocConstr
-        { _nodeAllocConstrTag = _constrTag,
+        { _nodeAllocConstrInfo = mempty,
+          _nodeAllocConstrTag = _constrTag,
           _nodeAllocConstrArgs = map valueToNode _constrArgs
         }
   ValClosure Closure {..} ->
     AllocClosure
       NodeAllocClosure
-        { _nodeAllocClosureFunSymbol = _closureSymbol,
+        { _nodeAllocClosureInfo = mempty,
+          _nodeAllocClosureFunSymbol = _closureSymbol,
           _nodeAllocClosureArgs = map valueToNode _closureArgs
         }
 
@@ -298,7 +302,8 @@ hRunIO hin hout infoTable = \case
     let code =
           CallClosures
             NodeCallClosures
-              { _nodeCallClosuresFun = valueToNode f,
+              { _nodeCallClosuresInfo = mempty,
+                _nodeCallClosuresFun = valueToNode f,
                 _nodeCallClosuresArgs = valueToNode x' :| []
               }
         !x'' = hEval hout infoTable code
@@ -327,5 +332,5 @@ toTreeError :: EvalError -> TreeError
 toTreeError EvalError {..} =
   TreeError
     { _treeErrorMsg = "evaluation error: " <> _evalErrorMsg,
-      _treeErrorLoc = Nothing
+      _treeErrorLoc = _evalErrorLocation
     }
