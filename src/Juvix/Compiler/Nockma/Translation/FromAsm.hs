@@ -646,7 +646,7 @@ runCompiler sem = do
   return (seqTerms ts, a)
 
 runCompilerWith :: CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> Cell Natural
-runCompilerWith = runCompilerWithAnoma
+runCompilerWith = runCompilerWithMain
 
 runCompilerWithMain :: CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> Cell Natural
 runCompilerWithMain opts constrs libFuns mainFun =
@@ -1302,10 +1302,10 @@ compileAndRunNock' ::
   ConstructorInfos ->
   [CompilerFunction] ->
   CompilerFunction ->
-  Sem r (Term Natural)
+  Sem r (Cell Natural, Term Natural)
 compileAndRunNock' opts constrs funs mainfun =
-  let Cell nockSubject t = runCompilerWith opts constrs funs mainfun
-   in evalCompiledNock' nockSubject t
+  let compiled@(Cell nockSubject t) = runCompilerWith opts constrs funs mainfun
+   in (compiled,) <$> evalCompiledNock' nockSubject t
 
 evalCompiledNock' :: (Members '[Reader EvalOptions, Output (Term Natural)] r) => Term Natural -> Term Natural -> Sem r (Term Natural)
 evalCompiledNock' stack mainTerm = do

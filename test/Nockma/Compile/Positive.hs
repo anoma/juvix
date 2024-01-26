@@ -12,7 +12,7 @@ import Juvix.Compiler.Nockma.Translation.FromAsm
 import Juvix.Compiler.Nockma.Translation.FromSource.QQ
 import Nockma.Compile.T1
 
-type Check = Sem '[Reader [Term Natural], Reader (Term Natural), Embed IO]
+type Check = Sem '[Reader [Term Natural], Reader (Term Natural), Reader (Cell Natural), Embed IO]
 
 data Test = Test
   { _testName :: Text,
@@ -21,7 +21,14 @@ data Test = Test
     _testProgram :: Sem '[Compiler] ()
   }
 
+data TestOutput = TestOutput
+  { _testOutputTraces :: [Term Natural],
+    _testOutputResult :: Term Natural,
+    _testOutputCompiled :: Cell Natural
+  }
+
 makeLenses ''Test
+makeLenses ''TestOutput
 
 data FunctionName
   = FunMain
@@ -36,12 +43,14 @@ data FunctionName
 sym :: (Enum a) => a -> FunctionId
 sym = UserFunction . Asm.defaultSymbol . fromIntegral . fromEnum
 
-debugProg :: EvalOptions -> Sem '[Compiler] () -> ([Term Natural], Term Natural)
+debugProg :: EvalOptions -> Sem '[Compiler] () -> TestOutput
 debugProg evalOpts mkMain =
-  run
-    . runReader evalOpts
-    . runOutputList
-    $ compileAndRunNock' opts exampleConstructors exampleFunctions mainFun
+  let (_testOutputTraces :: [Term Natural], (_testOutputCompiled, _testOutputResult)) =
+        run
+          . runReader evalOpts
+          . runOutputList
+          $ compileAndRunNock' opts exampleConstructors exampleFunctions mainFun
+   in TestOutput {..}
   where
     mainFun =
       CompilerFunction
@@ -50,7 +59,7 @@ debugProg evalOpts mkMain =
           _compilerFunction = raiseUnder mkMain
         }
 
-    opts = CompilerOptions {_compilerOptionsEnableTrace = True}
+    opts = CompilerOptions {_compilerOptionsEnableTrace = False}
 
 isMain :: FunctionName -> Bool
 isMain = (== FunMain)
@@ -183,8 +192,12 @@ allTests = testGroup "Nockma compile unit positive" (map mk tests)
   where
     mk :: Test -> TestTree
     mk Test {..} = testCase (unpack _testName) $ do
-      let (traces, n) = debugProg _testEvalOptions _testProgram
-      runM (runReader n (runReader traces _testCheck))
+      let TestOutput {..} = debugProg _testEvalOptions _testProgram
+      runM
+        . runReader _testOutputCompiled
+        . runReader _testOutputResult
+        . runReader _testOutputTraces
+        $ _testCheck
 
 eqSubStack :: StackId -> Path -> Term Natural -> Check ()
 eqSubStack st subp expected = subStackPred st subp $
@@ -668,5 +681,36 @@ tests =
       (eqStack ValueStack [nock| [[0 0] nil] |])
       $ do
         push (OpQuote # t1)
-        callFun (sym FunLogic) 1
+        callFun (sym FunLogic) 1,
+    defTest
+      "project list from transaction and check null"
+      (do
+          cell <- ask @(Cell Natural)
+          embed @IO (writeFile "test-output.nockma" (ppSerialize cell))
+          eqStack ValueStack [nock| [0 nil] |])
+      $ do
+        let t = constructorTag ConstructorTransaction
+        push (OpQuote # t1)
+        caseCmd
+          Nothing
+          [ ( t,
+              do
+                save False $ do
+                  pushConstructorField t (Asm.mkTempRef' 1 0) 0
+            )
+          ]
+
+        let defaultc :: Sem '[Compiler] () = do
+              pop
+              push (nockBoolLiteral False)
+              asmReturn
+        caseCmd
+          (Just defaultc)
+          [ ( constructorTag ConstructorListNil,
+              do
+                pop
+                push (nockBoolLiteral True)
+                asmReturn
+            )
+          ]
   ]
