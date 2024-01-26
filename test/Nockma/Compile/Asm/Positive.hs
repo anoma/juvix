@@ -18,7 +18,11 @@ runNockmaAssertion hout _main tab = do
       . runReader
         (Asm.makeOptions TargetNockma True)
       . runReader
-        (Nockma.CompilerOptions {_compilerOptionsEnableTrace = True})
+        ( Nockma.CompilerOptions
+            { _compilerOptionsEnableTrace = True,
+              _compilerOptionsAnomaExport = False
+            }
+        )
       . runErrorIO' @JuvixError
       $ asmToNockma' tab
   res <-

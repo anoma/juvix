@@ -59,7 +59,11 @@ debugProg evalOpts mkMain =
           _compilerFunction = raiseUnder mkMain
         }
 
-    opts = CompilerOptions {_compilerOptionsEnableTrace = False}
+    opts =
+      CompilerOptions
+        { _compilerOptionsEnableTrace = True,
+          _compilerOptionsAnomaExport = False
+        }
 
 isMain :: FunctionName -> Bool
 isMain = (== FunMain)
@@ -684,10 +688,11 @@ tests =
         callFun (sym FunLogic) 1,
     defTest
       "project list from transaction and check null"
-      (do
+      ( do
           cell <- ask @(Cell Natural)
           embed @IO (writeFile "test-output.nockma" (ppSerialize cell))
-          eqStack ValueStack [nock| [0 nil] |])
+          eqStack ValueStack [nock| [0 nil] |]
+      )
       $ do
         let t = constructorTag ConstructorTransaction
         push (OpQuote # t1)

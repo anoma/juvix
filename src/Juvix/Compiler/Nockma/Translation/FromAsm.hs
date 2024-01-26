@@ -2,6 +2,7 @@ module Juvix.Compiler.Nockma.Translation.FromAsm where
 
 import Juvix.Compiler.Asm.Data.InfoTable qualified as Asm
 import Juvix.Compiler.Asm.Language qualified as Asm
+import Juvix.Compiler.Backend
 import Juvix.Compiler.Nockma.Evaluator
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Stdlib
@@ -56,13 +57,16 @@ data BuiltinFunctionId
 
 instance Hashable BuiltinFunctionId
 
-newtype CompilerOptions = CompilerOptions
-  {_compilerOptionsEnableTrace :: Bool}
+data CompilerOptions = CompilerOptions
+  { _compilerOptionsEnableTrace :: Bool,
+    _compilerOptionsAnomaExport :: Bool
+  }
 
 fromEntryPoint :: EntryPoint -> CompilerOptions
 fromEntryPoint EntryPoint {..} =
   CompilerOptions
-    { _compilerOptionsEnableTrace = _entryPointDebug
+    { _compilerOptionsEnableTrace = _entryPointDebug,
+      _compilerOptionsAnomaExport = _entryPointTarget == TargetAnoma
     }
 
 data FunctionInfo = FunctionInfo
@@ -646,7 +650,9 @@ runCompiler sem = do
   return (seqTerms ts, a)
 
 runCompilerWith :: CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> Cell Natural
-runCompilerWith = runCompilerWithMain
+runCompilerWith opts
+  | opts ^. compilerOptionsAnomaExport = runCompilerWithAnoma opts
+  | otherwise = runCompilerWithMain opts
 
 runCompilerWithMain :: CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> Cell Natural
 runCompilerWithMain opts constrs libFuns mainFun =

@@ -21,6 +21,7 @@ import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromParsed qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Core qualified as Core
+import Juvix.Compiler.Core.Transformation
 import Juvix.Compiler.Core.Translation.Stripped.FromCore qualified as Stripped
 import Juvix.Compiler.Internal qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
@@ -41,7 +42,6 @@ import Juvix.Compiler.Tree qualified as Tree
 import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process
 import Juvix.Data.Effect.TaggedLock
-import Juvix.Prelude
 
 type PipelineAppEffects = '[TaggedLock, Embed IO, Resource, Final IO]
 
@@ -158,10 +158,13 @@ coreToAsm :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -
 coreToAsm = Core.toStored >=> storedCoreToAsm
 
 coreToNockma :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r (Nockma.Cell Natural)
-coreToNockma = coreToAsm >=> asmToNockma
+coreToNockma = (mapReader Core.fromEntryPoint . applyTransformation CheckExec) >=> coreToAsm >=> asmToNockma
+
+coreToAnoma :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r (Nockma.Cell Natural)
+coreToAnoma = coreToAsm >=> asmToNockma
 
 coreToMiniC :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r C.MiniCResult
-coreToMiniC = coreToAsm >=> asmToMiniC
+coreToMiniC = (mapReader Core.fromEntryPoint . applyTransformation CheckExec) >=> coreToAsm >=> asmToMiniC
 
 coreToGeb :: (Members '[Error JuvixError, Reader EntryPoint] r) => Geb.ResultSpec -> Core.Module -> Sem r Geb.Result
 coreToGeb spec = Core.toStored >=> storedCoreToGeb spec

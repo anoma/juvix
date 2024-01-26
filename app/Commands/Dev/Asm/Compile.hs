@@ -58,6 +58,7 @@ runCommand opts = do
       TargetWasm32Wasi -> return Backend.TargetCWasm32Wasi
       TargetNative64 -> return Backend.TargetCNative64
       TargetNockma -> return Backend.TargetNockma
+      TargetAnoma -> return Backend.TargetAnoma
       TargetTree -> err "JuvixTree"
       TargetGeb -> err "GEB"
       TargetVampIR -> err "VampIR"

@@ -51,46 +51,46 @@ import Juvix.Compiler.Core.Transformation.RemoveTypeArgs
 import Juvix.Compiler.Core.Transformation.TopEtaExpand
 import Juvix.Compiler.Core.Transformation.UnrollRecursion
 
-applyTransformations :: forall r. (Members '[Error JuvixError, Reader CoreOptions] r) => [TransformationId] -> Module -> Sem r Module
-applyTransformations ts tbl = foldM (flip appTrans) tbl ts
-  where
-    appTrans :: TransformationId -> Module -> Sem r Module
-    appTrans = \case
-      LambdaLetRecLifting -> return . lambdaLetRecLifting
-      LetRecLifting -> return . letRecLifting
-      Identity -> return . identity
-      TopEtaExpand -> return . topEtaExpand
-      RemoveTypeArgs -> return . removeTypeArgs
-      MoveApps -> return . moveApps
-      NatToPrimInt -> return . natToPrimInt
-      IntToPrimInt -> return . intToPrimInt
-      ConvertBuiltinTypes -> return . convertBuiltinTypes
-      ComputeTypeInfo -> return . computeTypeInfo
-      UnrollRecursion -> unrollRecursion
-      MatchToCase -> mapError (JuvixError @CoreError) . matchToCase
-      NaiveMatchToCase -> return . Naive.matchToCase
-      EtaExpandApps -> return . etaExpansionApps
-      DisambiguateNames -> return . disambiguateNames
-      CombineInfoTables -> return . combineInfoTables
-      CheckGeb -> mapError (JuvixError @CoreError) . checkGeb
-      CheckExec -> mapError (JuvixError @CoreError) . checkExec
-      CheckVampIR -> mapError (JuvixError @CoreError) . checkVampIR
-      Normalize -> return . normalize
-      LetFolding -> return . letFolding
-      LambdaFolding -> return . lambdaFolding
-      LetHoisting -> return . letHoisting
-      Inlining -> inlining
-      MandatoryInlining -> return . mandatoryInlining
-      FoldTypeSynonyms -> return . foldTypeSynonyms
-      CaseCallLifting -> return . caseCallLifting
-      SimplifyIfs -> return . simplifyIfs
-      SimplifyComparisons -> return . simplifyComparisons
-      SpecializeArgs -> return . specializeArgs
-      CaseFolding -> return . caseFolding
-      CasePermutation -> return . casePermutation
-      FilterUnreachable -> return . filterUnreachable
-      OptPhaseEval -> Phase.Eval.optimize
-      OptPhaseExec -> Phase.Exec.optimize
-      OptPhaseGeb -> Phase.Geb.optimize
-      OptPhaseVampIR -> Phase.VampIR.optimize
-      OptPhaseMain -> Phase.Main.optimize
+applyTransformations :: (Members '[Error JuvixError, Reader CoreOptions] r) => [TransformationId] -> Module -> Sem r Module
+applyTransformations ts tbl = foldM (flip applyTransformation) tbl ts
+
+applyTransformation :: (Members '[Error JuvixError, Reader CoreOptions] r) => TransformationId -> Module -> Sem r Module
+applyTransformation = \case
+  LambdaLetRecLifting -> return . lambdaLetRecLifting
+  LetRecLifting -> return . letRecLifting
+  Identity -> return . identity
+  TopEtaExpand -> return . topEtaExpand
+  RemoveTypeArgs -> return . removeTypeArgs
+  MoveApps -> return . moveApps
+  NatToPrimInt -> return . natToPrimInt
+  IntToPrimInt -> return . intToPrimInt
+  ConvertBuiltinTypes -> return . convertBuiltinTypes
+  ComputeTypeInfo -> return . computeTypeInfo
+  UnrollRecursion -> unrollRecursion
+  MatchToCase -> mapError (JuvixError @CoreError) . matchToCase
+  NaiveMatchToCase -> return . Naive.matchToCase
+  EtaExpandApps -> return . etaExpansionApps
+  DisambiguateNames -> return . disambiguateNames
+  CombineInfoTables -> return . combineInfoTables
+  CheckGeb -> mapError (JuvixError @CoreError) . checkGeb
+  CheckExec -> mapError (JuvixError @CoreError) . checkExec
+  CheckVampIR -> mapError (JuvixError @CoreError) . checkVampIR
+  Normalize -> return . normalize
+  LetFolding -> return . letFolding
+  LambdaFolding -> return . lambdaFolding
+  LetHoisting -> return . letHoisting
+  Inlining -> inlining
+  MandatoryInlining -> return . mandatoryInlining
+  FoldTypeSynonyms -> return . foldTypeSynonyms
+  CaseCallLifting -> return . caseCallLifting
+  SimplifyIfs -> return . simplifyIfs
+  SimplifyComparisons -> return . simplifyComparisons
+  SpecializeArgs -> return . specializeArgs
+  CaseFolding -> return . caseFolding
+  CasePermutation -> return . casePermutation
+  FilterUnreachable -> return . filterUnreachable
+  OptPhaseEval -> Phase.Eval.optimize
+  OptPhaseExec -> Phase.Exec.optimize
+  OptPhaseGeb -> Phase.Geb.optimize
+  OptPhaseVampIR -> Phase.VampIR.optimize
+  OptPhaseMain -> Phase.Main.optimize
