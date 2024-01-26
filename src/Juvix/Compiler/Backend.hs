@@ -12,6 +12,7 @@ data Target
   | TargetAsm
   | TargetTree
   | TargetNockma
+  | TargetAnoma
   deriving stock (Data, Eq, Show)
 
 data Limits = Limits
@@ -77,6 +78,8 @@ getLimits tgt debug = case tgt of
   TargetTree ->
     defaultLimits
   TargetNockma ->
+    defaultLimits
+  TargetAnoma ->
     defaultLimits
 
 defaultLimits :: Limits
