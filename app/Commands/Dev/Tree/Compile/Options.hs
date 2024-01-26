@@ -6,11 +6,10 @@ where
 
 import Commands.Extra.Compile.Options
 import CommonOptions
-import Data.List.NonEmpty qualified as NonEmpty
 
 treeSupportedTargets :: NonEmpty CompileTarget
 treeSupportedTargets =
-  NonEmpty.fromList
+  nonEmpty'
     [ TargetWasm32Wasi,
       TargetNative64,
       TargetAsm

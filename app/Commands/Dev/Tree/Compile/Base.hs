@@ -50,7 +50,12 @@ runCPipeline ::
   Sem r ()
 runCPipeline pa@PipelineArg {..} = do
   entryPoint <- getEntry pa
-  C.MiniCResult {..} <- getRight (run (runReader entryPoint (runError (treeToMiniC _pipelineArgTable :: Sem '[Error JuvixError, Reader EntryPoint] C.MiniCResult))))
+  C.MiniCResult {..} <-
+    getRight
+      . run
+      . runReader entryPoint
+      . runError @JuvixError
+      $ treeToMiniC _pipelineArgTable
   cFile <- inputCFile _pipelineArgFile
   embed @IO (writeFile (toFilePath cFile) _resultCCode)
   outfile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
