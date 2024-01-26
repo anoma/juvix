@@ -23,10 +23,8 @@ type Transaction :=
     proofs : List Proof;
     delta : Delta;
     extra : Nat;
-    -- preference : Nat;
-    junk1 : List Nat;
-    junk2 : Nat;
-    junk3 : Nat;
+    -- TODO: Fix encoding of the preference function
+    preference : Nat
   };
 
 type Resource :=
@@ -69,4 +67,6 @@ fib' : Nat → Nat → Nat → Nat
 
 fib : Nat → Nat := fib' 0 1;
 
-main (t : Transaction) : Bool := fib 10 == 55;
+main (t : Transaction) : Bool :=
+  all (d in delta t)
+    amount d == 0;
