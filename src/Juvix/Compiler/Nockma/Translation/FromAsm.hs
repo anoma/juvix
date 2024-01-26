@@ -92,8 +92,8 @@ data CompilerFunction = CompilerFunction
   }
 
 data StackId
-  = CurrentFunction
-  | ValueStack
+  = ValueStack
+  | CurrentFunction
   | TempStack
   | AuxStack
   | FrameStack
@@ -616,7 +616,7 @@ initStack defs = makeList (initSubStack <$> allElements)
       FrameStack -> nockNil'
       TempStack -> nockNil'
       AuxStack -> nockNil'
-      StandardLibrary -> stdlib
+      StandardLibrary -> nockNil'
       FunctionsLibrary -> makeList defs
       ExternalStack -> nockNil'
 
@@ -674,7 +674,7 @@ runCompilerWithMain opts constrs libFuns mainFun =
    in Cell (initStack (toList compiledFuns)) entryTerm
   where
     allFuns :: NonEmpty CompilerFunction
-    allFuns = mainFun :| libFuns ++ (builtinFunction <$> allElements)
+    allFuns = pure mainFun
 
     compilerCtx :: CompilerCtx
     compilerCtx =
@@ -768,7 +768,7 @@ runCompilerWithAnoma opts constrs libFuns mainFun =
       Cell exportTerm (TCell argsPlaceholder contextPlaceholder)
   where
     allFuns :: NonEmpty CompilerFunction
-    allFuns = mainFun :| libFuns ++ (builtinFunction <$> allElements)
+    allFuns = pure mainFun
 
     compilerCtx :: CompilerCtx
     compilerCtx =

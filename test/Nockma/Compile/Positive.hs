@@ -182,10 +182,7 @@ exampleConstructors =
 
 exampleFunctions :: [CompilerFunction]
 exampleFunctions =
-  [ CompilerFunction (sym fun) (functionArity' fun) (functionCode fun)
-    | fun <- allElements,
-      not (isMain fun)
-  ]
+  []
 
 allTests :: TestTree
 allTests = testGroup "Nockma compile unit positive" (map mk tests)
@@ -684,10 +681,11 @@ tests =
         callFun (sym FunLogic) 1,
     defTest
       "project list from transaction and check null"
-      (do
+      ( do
           cell <- ask @(Cell Natural)
           embed @IO (writeFile "test-output.nockma" (ppSerialize cell))
-          eqStack ValueStack [nock| [0 nil] |])
+          eqStack ValueStack [nock| [0 nil] |]
+      )
       $ do
         let t = constructorTag ConstructorTransaction
         push (OpQuote # t1)
@@ -699,7 +697,6 @@ tests =
                   pushConstructorField t (Asm.mkTempRef' 1 0) 0
             )
           ]
-
         let defaultc :: Sem '[Compiler] () = do
               pop
               push (nockBoolLiteral False)
