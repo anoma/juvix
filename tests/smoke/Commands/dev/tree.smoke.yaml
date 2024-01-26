@@ -1,0 +1,70 @@
+working-directory: ./../../../../tests
+
+tests:
+  - name: tree-eval
+    command:
+      - juvix
+      - dev
+      - tree
+      - eval
+    args:
+      - Tree/positive/test001.jvt
+    stdout: |
+      11
+    exit-status: 0
+
+  - name: tree-read
+    command:
+      - juvix
+      - dev
+      - tree
+      - read
+    args:
+      - Tree/positive/test001.jvt
+    stdout:
+      contains: |
+        function main() : * {
+          mod(sub(25, mul(7, div(9, sub(15, add(mul(2, 3), 5))))), 12)
+        }
+    exit-status: 0
+
+  - name: tree-from-asm
+    command:
+      - juvix
+      - dev
+      - tree
+      - from-asm
+    args:
+      - Asm/positive/test001.jva
+    stdout:
+      contains: |
+        function main() : * {
+          mod(sub(25, mul(7, div(9, sub(15, add(mul(2, 3), 5))))), 12)
+        }
+    exit-status: 0
+
+  - name: tree-compile
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        juvix dev tree compile -o $temp/test001 Tree/positive/test001.jvt
+        $temp/test001
+    stdout: |
+      11
+    exit-status: 0
+
+  - name: tree-compile-asm
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        juvix dev tree compile -t asm -o $temp/test001.jva Tree/positive/test001.jvt
+        juvix dev asm run $temp/test001.jva
+    stdout: |
+      11
+    exit-status: 0

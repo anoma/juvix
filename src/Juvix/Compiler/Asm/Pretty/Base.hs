@@ -178,13 +178,13 @@ instance (PrettyCode a) => PrettyCode [a] where
     return $ encloseSep "[" "]" ", " cs
 
 instance PrettyCode FunctionInfo where
-  ppCode = Tree.ppFunInfo ppCode
+  ppCode = Tree.ppFunInfo ppCodeCode
 
 instance PrettyCode ConstructorInfo where
   ppCode = Tree.ppCode
 
 instance PrettyCode InfoTable where
-  ppCode = Tree.ppInfoTable ppCode
+  ppCode = Tree.ppInfoTable ppCodeCode
 
 {--------------------------------------------------------------------------------}
 {- helper functions -}
