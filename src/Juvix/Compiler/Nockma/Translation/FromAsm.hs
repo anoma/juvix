@@ -758,10 +758,6 @@ replaceSubterm obj relPath newVal = OpReplace # (relPath # newVal) # obj
 evaluated :: Term Natural -> Term Natural
 evaluated t = OpApply # (OpAddress # emptyPath) # t
 
--- | The IsCell op but the argument is evaluated first.
-isCell' :: Term Natural -> Term Natural
-isCell' t = evaluated $ (OpQuote # OpIsCell) # t
-
 -- | The same as replaceSubterm but the path is a cell that is evaluated.
 -- i.e. replaceSubterm a p b = replaceSubterm' a (quote p) b
 replaceSubterm' :: Term Natural -> Term Natural -> Term Natural -> Term Natural
@@ -989,7 +985,7 @@ caseCmd defaultBranch = \case
 
     goRepList :: NonEmpty (NockmaMemRepListConstr, Sem r ()) -> Sem r ()
     goRepList ((c, b) :| bs) = do
-      push (isCell' (OpAddress # topOfStack ValueStack))
+      push (OpIsCell # (OpAddress # topOfStack ValueStack))
       let otherBranch = fromJust (firstJust f bs <|> defaultBranch)
       case c of
         NockmaMemRepListConstrCons -> branch b otherBranch

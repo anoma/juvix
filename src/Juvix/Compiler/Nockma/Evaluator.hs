@@ -200,7 +200,7 @@ eval inistack initerm =
           OpAddress -> goOpAddress
           OpQuote -> return goOpQuote
           OpApply -> goOpApply
-          OpIsCell -> return goOpIsCell
+          OpIsCell -> goOpIsCell
           OpInc -> goOpInc
           OpEq -> goOpEq
           OpIf -> goOpIf
@@ -231,10 +231,12 @@ eval inistack initerm =
             goOpQuote :: Term a
             goOpQuote = c ^. operatorCellTerm
 
-            goOpIsCell :: Term a
-            goOpIsCell = TermAtom $ case c ^. operatorCellTerm of
-              TermCell {} -> nockTrue
-              TermAtom {} -> nockFalse
+            goOpIsCell :: Sem r (Term a)
+            goOpIsCell = do
+              cr <- evalArg crumbEvalFirst stack (c ^. operatorCellTerm)
+              return . TermAtom $ case cr of
+                TermCell {} -> nockTrue
+                TermAtom {} -> nockFalse
 
             goOpTrace :: Sem r (Term a)
             goOpTrace = do
