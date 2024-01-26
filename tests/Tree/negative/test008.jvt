@@ -1,0 +1,9 @@
+-- closure call: wrong number of arguments
+
+function f(x : *) : * {
+  x
+}
+
+function main() : * {
+  call(calloc[f](), 10, 11)
+}

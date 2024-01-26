@@ -73,3 +73,25 @@ doEval ::
   FunctionInfo ->
   IO (Either TreeError Value)
 doEval hout tab funInfo = catchEvalErrorIO (hEvalIO stdin hout tab funInfo)
+
+treeEvalErrorAssertion :: Path Abs File -> (String -> IO ()) -> Assertion
+treeEvalErrorAssertion mainFile step = do
+  step "Parse"
+  s <- readFile (toFilePath mainFile)
+  case runParser (toFilePath mainFile) s of
+    Left err -> assertFailure (show (pretty err))
+    Right tab ->
+      case tab ^. infoMainFunction of
+        Just sym -> do
+          withTempDir'
+            ( \dirPath -> do
+                let outputFile = dirPath <//> $(mkRelFile "out.out")
+                hout <- openFile (toFilePath outputFile) WriteMode
+                step "Evaluate"
+                r' <- doEval hout tab (lookupFunInfo tab sym)
+                hClose hout
+                case r' of
+                  Left _ -> assertBool "" True
+                  Right _ -> assertFailure "no error"
+            )
+        Nothing -> assertFailure "no main function"

@@ -1,0 +1,13 @@
+-- case on non-data
+
+type list {
+  nil : list;
+  cons : * -> list -> list;
+}
+
+function main() : * {
+  case[list](3) {
+    nil: 0
+    cons: 1
+  }
+}
