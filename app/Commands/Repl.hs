@@ -1,5 +1,3 @@
-{-# LANGUAGE QuasiQuotes #-}
-
 module Commands.Repl where
 
 import Commands.Base hiding
