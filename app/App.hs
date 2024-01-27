@@ -14,11 +14,13 @@ import Juvix.Prelude.Pretty hiding
   ( Doc,
   )
 import System.Console.ANSI qualified as Ansi
+import Juvix.Prelude.Base qualified as Prelude
 
 data App m a where
   ExitMsg :: ExitCode -> Text -> App m a
   ExitFailMsg :: Text -> App m a
   ExitJuvixError :: JuvixError -> App m a
+  WriteFileEnsureLn :: FilePath -> Text -> App m ()
   PrintJuvixError :: JuvixError -> App m ()
   AskRoot :: App m Root
   AskArgs :: App m RunAppIOArgs
@@ -65,6 +67,7 @@ reAppIO args@RunAppIOArgs {..} =
     FromAppPathFile p -> embed (prepathToAbsFile invDir (p ^. pathPath))
     GetMainFile m -> getMainFile' m
     FromAppPathDir p -> liftIO (prepathToAbsDir invDir (p ^. pathPath))
+    WriteFileEnsureLn p txt -> embed @IO (Prelude.writeFileEnsureLn p txt)
     RenderStdOut t
       | _runAppIOArgsGlobalOptions ^. globalOnlyErrors -> return ()
       | otherwise -> embed $ do

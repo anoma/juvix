@@ -38,7 +38,7 @@ traceToFile fpath t a =
   traceLabel (pack ("[" <> fpath <> "]")) t $
     unsafePerformIO $
       do
-        writeFile fpath t
+        writeFileEnsureLn fpath t
         return a
 {-# WARNING traceToFile "Using traceToFile" #-}
 
