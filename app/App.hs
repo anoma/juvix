@@ -10,17 +10,17 @@ import Juvix.Compiler.Pipeline.Root
 import Juvix.Compiler.Pipeline.Run
 import Juvix.Data.Error qualified as Error
 import Juvix.Extra.Paths.Base hiding (rootBuildDir)
+import Juvix.Prelude.Base qualified as Prelude
 import Juvix.Prelude.Pretty hiding
   ( Doc,
   )
 import System.Console.ANSI qualified as Ansi
-import Juvix.Prelude.Base qualified as Prelude
 
 data App m a where
   ExitMsg :: ExitCode -> Text -> App m a
   ExitFailMsg :: Text -> App m a
   ExitJuvixError :: JuvixError -> App m a
-  WriteFileEnsureLn :: FilePath -> Text -> App m ()
+  WriteFileEnsureLn :: Path Abs File -> Text -> App m ()
   PrintJuvixError :: JuvixError -> App m ()
   AskRoot :: App m Root
   AskArgs :: App m RunAppIOArgs

@@ -31,7 +31,7 @@ runCommand opts = do
           let outputCell = Nockma.TermCell c
               outputText = Nockma.ppPrintOpts nockmaOpts outputCell
           outfile <- Compile.outputFile opts file
-          writeFileEnsureLn (toFilePath outfile) outputText
+          writeFileEnsureLn outfile outputText
         _ -> do
           case run $ runReader entryPoint $ runError $ asmToMiniC tab of
             Left err -> exitJuvixError err
@@ -39,7 +39,7 @@ runCommand opts = do
               buildDir <- askBuildDir
               ensureDir buildDir
               cFile <- inputCFile file
-              writeFileEnsureLn (toFilePath cFile) _resultCCode
+              writeFileEnsureLn cFile _resultCCode
               outfile <- Compile.outputFile opts file
               Compile.runCommand
                 opts

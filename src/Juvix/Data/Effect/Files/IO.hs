@@ -32,7 +32,7 @@ runFilesIO = interpret helper
     helper' = \case
       ReadFile' f -> readFile (toFilePath f)
       WriteFileBS p bs -> ByteString.writeFile (toFilePath p) bs
-      WriteFileEnsureLn' f txt -> writeFileEnsureLn (toFilePath f) txt
+      WriteFileEnsureLn' f txt -> writeFileEnsureLn f txt
       EnsureDir' p -> Path.ensureDir p
       DirectoryExists' p -> Path.doesDirExist p
       ReadFileBS' f -> ByteString.readFile (toFilePath f)

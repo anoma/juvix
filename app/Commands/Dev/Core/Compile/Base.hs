@@ -56,7 +56,7 @@ runCPipeline pa@PipelineArg {..} = do
   entryPoint <- getEntry pa
   C.MiniCResult {..} <- getRight (run (runReader entryPoint (runError (coreToMiniC _pipelineArgModule :: Sem '[Error JuvixError, Reader EntryPoint] C.MiniCResult))))
   cFile <- inputCFile _pipelineArgFile
-  writeFileEnsureLn (toFilePath cFile) _resultCCode
+  writeFileEnsureLn cFile _resultCCode
   outfile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
   Compile.runCommand
     _pipelineArgOptions
@@ -87,7 +87,7 @@ runGebPipeline pa@PipelineArg {..} = do
                   _lispPackageEntry = "*entry*"
                 }
   Geb.Result {..} <- getRight (run (runReader entryPoint (runError (coreToGeb spec _pipelineArgModule :: Sem '[Error JuvixError, Reader EntryPoint] Geb.Result))))
-  writeFileEnsureLn (toFilePath gebFile) _resultCode
+  writeFileEnsureLn gebFile _resultCode
 
 runVampIRPipeline ::
   forall r.
@@ -98,7 +98,7 @@ runVampIRPipeline pa@PipelineArg {..} = do
   entryPoint <- getEntry pa
   vampirFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
   VampIR.Result {..} <- getRight (run (runReader entryPoint (runError (coreToVampIR _pipelineArgModule :: Sem '[Error JuvixError, Reader EntryPoint] VampIR.Result))))
-  writeFileEnsureLn (toFilePath vampirFile) _resultCode
+  writeFileEnsureLn vampirFile _resultCode
 
 runAsmPipeline :: (Members '[Embed IO, App, TaggedLock] r) => PipelineArg -> Sem r ()
 runAsmPipeline pa@PipelineArg {..} = do
@@ -111,7 +111,7 @@ runAsmPipeline pa@PipelineArg {..} = do
       $ _pipelineArgModule
   tab' <- getRight r
   let code = Asm.ppPrint tab' tab'
-  writeFileEnsureLn (toFilePath asmFile) code
+  writeFileEnsureLn asmFile code
 
 runTreePipeline :: (Members '[Embed IO, App, TaggedLock] r) => PipelineArg -> Sem r ()
 runTreePipeline pa@PipelineArg {..} = do
@@ -124,7 +124,7 @@ runTreePipeline pa@PipelineArg {..} = do
       $ _pipelineArgModule
   tab' <- getRight r
   let code = Tree.ppPrint tab' tab'
-  writeFileEnsureLn (toFilePath treeFile) code
+  writeFileEnsureLn treeFile code
 
 runNockmaPipeline :: (Members '[Embed IO, App, TaggedLock] r) => PipelineArg -> Sem r ()
 runNockmaPipeline pa@PipelineArg {..} = do
@@ -137,4 +137,4 @@ runNockmaPipeline pa@PipelineArg {..} = do
       $ _pipelineArgModule
   tab' <- getRight r
   let code = Nockma.ppSerialize tab'
-  writeFileEnsureLn (toFilePath nockmaFile) code
+  writeFileEnsureLn nockmaFile code

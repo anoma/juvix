@@ -37,4 +37,4 @@ writeCoreFile pa@Compile.PipelineArg {..} = do
     Left e -> exitJuvixError e
     Right md -> do
       let txt = show (Core.ppOutDefault (Core.disambiguateNames md ^. Core.moduleInfoTable))
-      writeFileEnsureLn (toFilePath coreFile) txt
+      writeFileEnsureLn coreFile txt
