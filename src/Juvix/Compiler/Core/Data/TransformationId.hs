@@ -85,6 +85,9 @@ toStrippedTransformations :: [TransformationId]
 toStrippedTransformations =
   [CombineInfoTables, FilterUnreachable, LambdaLetRecLifting, TopEtaExpand, OptPhaseExec, MoveApps, RemoveTypeArgs]
 
+toExec :: [TransformationId]
+toExec = [CheckExec]
+
 toGebTransformations :: [TransformationId]
 toGebTransformations = [CombineInfoTables, FilterUnreachable, CheckGeb, LetRecLifting, OptPhaseGeb, UnrollRecursion, FoldTypeSynonyms, ComputeTypeInfo]
 

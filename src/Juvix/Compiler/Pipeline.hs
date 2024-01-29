@@ -158,13 +158,13 @@ coreToAsm :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -
 coreToAsm = Core.toStored >=> storedCoreToAsm
 
 coreToNockma :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r (Nockma.Cell Natural)
-coreToNockma = (mapReader Core.fromEntryPoint . applyTransformation CheckExec) >=> coreToAsm >=> asmToNockma
+coreToNockma = mapReader Core.fromEntryPoint . applyTransformations toExec >=> coreToAsm >=> asmToNockma
 
 coreToAnoma :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r (Nockma.Cell Natural)
 coreToAnoma = coreToAsm >=> asmToNockma
 
 coreToMiniC :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r C.MiniCResult
-coreToMiniC = (mapReader Core.fromEntryPoint . applyTransformation CheckExec) >=> coreToAsm >=> asmToMiniC
+coreToMiniC = mapReader Core.fromEntryPoint . applyTransformations toExec >=> coreToAsm >=> asmToMiniC
 
 coreToGeb :: (Members '[Error JuvixError, Reader EntryPoint] r) => Geb.ResultSpec -> Core.Module -> Sem r Geb.Result
 coreToGeb spec = Core.toStored >=> storedCoreToGeb spec
