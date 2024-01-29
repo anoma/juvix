@@ -56,7 +56,7 @@ setSubTerm :: forall a r. (Members '[Error (NockEvalError a)] r) => Term a -> Pa
 setSubTerm term pos repTerm =
   let (old, new) = setAndRemember (subTermT' pos) repTerm term
    in if
-          | isNothing (getFirst old) -> throw @(NockEvalError a) (error "")
+          | isNothing (getFirst old) -> throw @(NockEvalError a) (error "setting invalid subterm")
           | otherwise -> return new
 
 parseCell ::
