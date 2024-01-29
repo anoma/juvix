@@ -4,6 +4,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
+import Juvix.Compiler.Store.Scoped.Data.SymbolEntry
 import Juvix.Extra.Serialize
 import Juvix.Prelude
 
@@ -24,7 +25,8 @@ data InfoTable = InfoTable
     _infoFunctions :: HashMap NameId (FunctionDef 'Scoped),
     _infoInductives :: HashMap NameId (InductiveDef 'Scoped),
     _infoConstructors :: HashMap NameId (ConstructorDef 'Scoped),
-    _infoAxioms :: HashMap NameId (AxiomDef 'Scoped)
+    _infoAxioms :: HashMap NameId (AxiomDef 'Scoped),
+    _infoScoperAlias :: HashMap S.NameId PreSymbolEntry
   }
   deriving stock (Generic)
 
@@ -47,7 +49,8 @@ instance Semigroup InfoTable where
         _infoFunctions = tab1 ^. infoFunctions <> tab2 ^. infoFunctions,
         _infoInductives = tab1 ^. infoInductives <> tab2 ^. infoInductives,
         _infoConstructors = tab1 ^. infoConstructors <> tab2 ^. infoConstructors,
-        _infoAxioms = tab1 ^. infoAxioms <> tab2 ^. infoAxioms
+        _infoAxioms = tab1 ^. infoAxioms <> tab2 ^. infoAxioms,
+        _infoScoperAlias = tab1 ^. infoScoperAlias <> tab2 ^. infoScoperAlias
       }
 
 instance Monoid InfoTable where
@@ -65,7 +68,8 @@ instance Monoid InfoTable where
         _infoFunctions = mempty,
         _infoInductives = mempty,
         _infoConstructors = mempty,
-        _infoAxioms = mempty
+        _infoAxioms = mempty,
+        _infoScoperAlias = mempty
       }
 
 combinePrecedenceGraphs :: PrecedenceGraph -> PrecedenceGraph -> PrecedenceGraph
