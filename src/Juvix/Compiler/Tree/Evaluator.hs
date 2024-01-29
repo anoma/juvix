@@ -292,13 +292,13 @@ valueToNode = \case
           _nodeAllocClosureArgs = map valueToNode _closureArgs
         }
 
-hEvalIO :: Handle -> Handle -> InfoTable -> FunctionInfo -> IO Value
+hEvalIO :: (MonadIO m) => Handle -> Handle -> InfoTable -> FunctionInfo -> m Value
 hEvalIO hin hout infoTable funInfo = do
   let !v = hEval hout infoTable (funInfo ^. functionCode)
   hRunIO hin hout infoTable v
 
 -- | Interpret IO actions.
-hRunIO :: Handle -> Handle -> InfoTable -> Value -> IO Value
+hRunIO :: (MonadIO m) => Handle -> Handle -> InfoTable -> Value -> m Value
 hRunIO hin hout infoTable = \case
   ValConstr (Constr (BuiltinTag TagReturn) [x]) -> return x
   ValConstr (Constr (BuiltinTag TagBind) [x, f]) -> do
@@ -313,14 +313,14 @@ hRunIO hin hout infoTable = \case
         !x'' = hEval hout infoTable code
     hRunIO hin hout infoTable x''
   ValConstr (Constr (BuiltinTag TagWrite) [ValString s]) -> do
-    hPutStr hout s
+    liftIO $ hPutStr hout s
     return ValVoid
   ValConstr (Constr (BuiltinTag TagWrite) [arg]) -> do
-    hPutStr hout (ppPrint infoTable arg)
+    liftIO $ hPutStr hout (ppPrint infoTable arg)
     return ValVoid
   ValConstr (Constr (BuiltinTag TagReadLn) []) -> do
-    hFlush hout
-    s <- hGetLine hin
+    liftIO $ hFlush hout
+    s <- liftIO $ hGetLine hin
     return (ValString s)
   val ->
     return val
@@ -329,7 +329,7 @@ hRunIO hin hout infoTable = \case
 catchEvalErrorIO :: IO a -> IO (Either TreeError a)
 catchEvalErrorIO ma =
   Exception.catch
-    (Exception.evaluate ma >>= \ma' -> ma' <&> Right)
+    (Exception.evaluate ma >>= \ma' -> Right <$> ma')
     (\(ex :: EvalError) -> return (Left (toTreeError ex)))
 
 toTreeError :: EvalError -> TreeError

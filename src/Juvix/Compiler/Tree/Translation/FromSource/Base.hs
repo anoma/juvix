@@ -41,15 +41,27 @@ runParserS :: ParserSig t e -> FilePath -> Text -> Either MegaparsecError (InfoT
 runParserS sig fileName input_ = (^. stateInfoTable) <$> runParserS' sig emptyBuilderState fileName input_
 
 runParserS' :: forall t e. ParserSig t e -> BuilderState' t e -> FilePath -> Text -> Either MegaparsecError (BuilderState' t e)
-runParserS' sig bs fileName input_ =
+runParserS' sig bs fileName input_ = case runParserS'' (parseToplevel @t @e) sig bs fileName input_ of
+  Left e -> Left e
+  Right (bs', ()) -> Right bs'
+
+runParserS'' ::
+  forall t e a.
+  ParsecS '[NameIdGen, InfoTableBuilder' t e, Reader (ParserSig t e), State LocalParams] a ->
+  ParserSig t e ->
+  BuilderState' t e ->
+  FilePath ->
+  Text ->
+  Either MegaparsecError (BuilderState' t e, a)
+runParserS'' parser sig bs fileName input_ =
   case run $
     evalState params $
       runReader sig $
         runInfoTableBuilder' bs $
           evalTopNameIdGen defaultModuleId $
-            P.runParserT (parseToplevel @t @e) fileName input_ of
+            P.runParserT parser fileName input_ of
     (_, Left err) -> Left (MegaparsecError err)
-    (bs', Right ()) -> Right bs'
+    (bs', Right x) -> Right (bs', x)
   where
     params =
       LocalParams
