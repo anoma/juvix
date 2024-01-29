@@ -650,34 +650,9 @@ runCompiler sem = do
   return (seqTerms ts, a)
 
 runCompilerWith :: CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> Cell Natural
-runCompilerWith opts
-  | opts ^. compilerOptionsAnomaExport = runCompilerWithAnoma opts
-  | otherwise = runCompilerWithMain opts
-
-runCompilerWithMain :: CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> Cell Natural
-runCompilerWithMain opts constrs libFuns mainFun =
-  let entryCommand :: (Members '[Compiler] r) => Sem r ()
-      entryCommand = callFun (mainFun ^. compilerFunctionName) 0
-      entryTerm =
-        seqTerms
-          . run
-          . runReader compilerCtx
-          . execOutputList
-          . re
-          $ entryCommand
-      compiledFuns :: NonEmpty (Term Natural)
-      compiledFuns =
-        makeFunction'
-          <$> ( run
-                  . runReader compilerCtx
-                  . mapM (execCompiler . (^. compilerFunction))
-                  $ allFuns
-              )
-      makeFunction' :: Term Natural -> Term Natural
-      makeFunction' c = makeFunction $ \case
-        FunctionCode -> c
-        FunctionArgs -> nockNil'
-   in Cell (initStack (toList compiledFuns)) entryTerm
+runCompilerWith opts constrs libFuns mainFun
+  | opts ^. compilerOptionsAnomaExport = runCompilerWithAnoma compilerCtx compiledFuns mainFun
+  | otherwise = runCompilerWithMain compilerCtx compiledFuns mainFun
   where
     allFuns :: NonEmpty CompilerFunction
     allFuns = mainFun :| libFuns ++ (builtinFunction <$> allElements)
@@ -704,28 +679,38 @@ runCompilerWithMain opts constrs libFuns mainFun =
             }
         )
 
-runCompilerWithAnoma :: CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> Cell Natural
-runCompilerWithAnoma opts constrs libFuns mainFun =
+    compiledFuns :: NonEmpty (Term Natural)
+    compiledFuns =
+      makeFunction'
+        <$> ( run
+                . runReader compilerCtx
+                . mapM (execCompiler . (^. compilerFunction))
+                $ allFuns
+            )
+
+    makeFunction' :: Term Natural -> Term Natural
+    makeFunction' c = makeFunction $ \case
+      FunctionCode -> c
+      FunctionArgs -> nockNil'
+
+runCompilerWithMain :: CompilerCtx -> NonEmpty (Term Natural) -> CompilerFunction -> Cell Natural
+runCompilerWithMain compilerCtx compiledFuns mainFun =
+  let entryCommand :: (Members '[Compiler] r) => Sem r ()
+      entryCommand = callFun (mainFun ^. compilerFunctionName) 0
+   in Cell (initStack (toList compiledFuns)) (assembleProgram compilerCtx entryCommand)
+
+assembleProgram :: CompilerCtx -> Sem '[Compiler, Reader CompilerCtx] () -> Term Natural
+assembleProgram compilerCtx =
+  seqTerms
+    . run
+    . runReader compilerCtx
+    . execOutputList
+    . re
+
+runCompilerWithAnoma :: CompilerCtx -> NonEmpty (Term Natural) -> CompilerFunction -> Cell Natural
+runCompilerWithAnoma compilerCtx compiledFuns mainFun =
   let entryCommand :: (Members '[Compiler] r) => Sem r ()
       entryCommand = callFun (mainFun ^. compilerFunctionName) 1
-
-      mkTerm :: Sem '[Compiler, Reader CompilerCtx] () -> Term Natural
-      mkTerm cmd =
-        seqTerms
-          . run
-          . runReader compilerCtx
-          . execOutputList
-          . re
-          $ cmd
-
-      compiledFuns :: NonEmpty (Term Natural)
-      compiledFuns =
-        makeFunction'
-          <$> ( run
-                  . runReader compilerCtx
-                  . mapM (execCompiler . (^. compilerFunction))
-                  $ allFuns
-              )
 
       iniStack :: Term Natural
       iniStack = initStack (toList compiledFuns)
@@ -743,12 +728,7 @@ runCompilerWithAnoma opts constrs libFuns mainFun =
       exportReturn = OpAddress # topOfStack ValueStack
 
       exportTerm :: Term Natural
-      exportTerm = exportSetup >># mkTerm exportCommand
-
-      makeFunction' :: Term Natural -> Term Natural
-      makeFunction' c = makeFunction $ \case
-        FunctionCode -> c
-        FunctionArgs -> nockNil'
+      exportTerm = exportSetup >># assembleProgram compilerCtx exportCommand
 
       moveTailToStack :: StackId -> Term Natural
       moveTailToStack sn =
@@ -772,31 +752,6 @@ runCompilerWithAnoma opts constrs libFuns mainFun =
       --            3. entryCommand
       --            4. 'return' [topOfValueStack caller'sStack]
       Cell exportTerm (TCell argsPlaceholder contextPlaceholder)
-  where
-    allFuns :: NonEmpty CompilerFunction
-    allFuns = mainFun :| libFuns ++ (builtinFunction <$> allElements)
-
-    compilerCtx :: CompilerCtx
-    compilerCtx =
-      CompilerCtx
-        { _compilerFunctionInfos = functionInfos,
-          _compilerConstructorInfos = constrs,
-          _compilerOptions = opts
-        }
-
-    functionInfos :: HashMap FunctionId FunctionInfo
-    functionInfos = hashMap (run (runInputNaturals (toList <$> userFunctions)))
-
-    userFunctions :: (Members '[Input Natural] r) => Sem r (NonEmpty (FunctionId, FunctionInfo))
-    userFunctions = forM allFuns $ \CompilerFunction {..} -> do
-      i <- input
-      return
-        ( _compilerFunctionName,
-          FunctionInfo
-            { _functionInfoPath = indexInStack FunctionsLibrary i,
-              _functionInfoArity = _compilerFunctionArity
-            }
-        )
 
 builtinFunction :: BuiltinFunctionId -> CompilerFunction
 builtinFunction = \case
