@@ -3,7 +3,6 @@ module Juvix.Compiler.Core.Transformation.NaiveMatchToCase where
 import Juvix.Compiler.Core.Data.InfoTableBuilder
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info.NameInfo (setInfoName)
-import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Transformation.Base
 import Juvix.Compiler.Core.Transformation.NaiveMatchToCase.Data
 

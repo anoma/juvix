@@ -15,7 +15,6 @@ import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.LocationInfo as LocationInfo
 import Juvix.Compiler.Core.Info.NameInfo as NameInfo
-import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Transformation.Eta
 import Juvix.Compiler.Core.Translation.FromSource.Lexer
 import Juvix.Extra.Strings qualified as Str

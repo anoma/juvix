@@ -4,7 +4,6 @@ import Juvix.Compiler.Core.Extra.Base
 import Juvix.Compiler.Core.Extra.Recursors
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.LocationInfo
-import Juvix.Compiler.Core.Language
 
 mapInfo :: (Info -> Info) -> Node -> Node
 mapInfo f = umap (modifyInfo f)

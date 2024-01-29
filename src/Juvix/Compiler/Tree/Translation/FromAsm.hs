@@ -183,7 +183,7 @@ goFunction infoTab fi = do
           return $
             Save
               NodeSave
-                { _nodeSaveName = _cmdSaveName,
+                { _nodeSaveTempVarInfo = TempVarInfo _cmdSaveName (_cmdSaveInfo ^. Asm.commandInfoLocation),
                   _nodeSaveArg = arg,
                   _nodeSaveBody = body
                 }
@@ -243,7 +243,7 @@ goFunction infoTab fi = do
             Save
               NodeSave
                 { _nodeSaveArg = arg,
-                  _nodeSaveName = Nothing,
+                  _nodeSaveTempVarInfo = TempVarInfo Nothing Nothing,
                   _nodeSaveBody =
                     Binop
                       NodeBinop

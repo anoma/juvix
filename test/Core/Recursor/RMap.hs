@@ -3,7 +3,6 @@ module Core.Recursor.RMap where
 import Base
 import Core.Recursor.Base
 import Juvix.Compiler.Core.Extra
-import Juvix.Compiler.Core.Language
 
 allTests :: TestTree
 allTests =

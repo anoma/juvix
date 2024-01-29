@@ -212,7 +212,7 @@ genCode fi =
         ( Save
             CmdSave
               { _cmdSaveInfo = emptyInfo,
-                _cmdSaveName = _nodeSaveName,
+                _cmdSaveName = _nodeSaveTempVarInfo ^. Tree.tempVarInfoName,
                 _cmdSaveIsTail = isTail,
                 _cmdSaveCode = DL.toList $ go isTail _nodeSaveBody
               }

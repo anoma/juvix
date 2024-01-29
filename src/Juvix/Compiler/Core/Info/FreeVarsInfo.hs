@@ -3,7 +3,6 @@ module Juvix.Compiler.Core.Info.FreeVarsInfo where
 import Data.Map qualified as Map
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info qualified as Info
-import Juvix.Compiler.Core.Language
 
 newtype FreeVarsInfo = FreeVarsInfo
   { -- map free variables to the number of their occurrences

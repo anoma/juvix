@@ -304,7 +304,7 @@ parseSave ::
   ParsecS r NodeSave
 parseSave = do
   kw kwSave
-  mname <- optional (brackets identifier)
+  (mname, loc) <- interval $ optional (brackets identifier)
   arg <- parens parseNode
   tmpNum <- lift $ gets (^. localParamsTempIndex)
   let updateNames :: LocalNameMap -> LocalNameMap
@@ -314,5 +314,5 @@ parseSave = do
     NodeSave
       { _nodeSaveArg = arg,
         _nodeSaveBody = body,
-        _nodeSaveName = mname
+        _nodeSaveTempVarInfo = TempVarInfo mname (Just loc)
       }

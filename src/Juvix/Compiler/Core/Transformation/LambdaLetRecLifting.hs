@@ -9,7 +9,6 @@ import Juvix.Compiler.Core.Data.InfoTableBuilder
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info.NameInfo
 import Juvix.Compiler.Core.Info.PragmaInfo
-import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation.Base
 import Juvix.Compiler.Core.Transformation.ComputeTypeInfo (computeNodeType)
 
