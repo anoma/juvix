@@ -10,6 +10,7 @@ data TransformationId
   | IdentityD
   | Apply
   | TempHeight
+  | FilterUnreachable
   deriving stock (Data, Bounded, Enum, Show)
 
 data PipelineId
@@ -20,7 +21,7 @@ data PipelineId
 type TransformationLikeId = TransformationLikeId' TransformationId PipelineId
 
 toNockmaTransformations :: [TransformationId]
-toNockmaTransformations = [Apply, TempHeight]
+toNockmaTransformations = [Apply, FilterUnreachable, TempHeight]
 
 toAsmTransformations :: [TransformationId]
 toAsmTransformations = []
@@ -33,6 +34,7 @@ instance TransformationId' TransformationId where
     IdentityD -> strIdentityD
     Apply -> strApply
     TempHeight -> strTempHeight
+    FilterUnreachable -> strFilterUnreachable
 
 instance PipelineId' TransformationId PipelineId where
   pipelineText :: PipelineId -> Text

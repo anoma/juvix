@@ -1,0 +1,36 @@
+
+function h(integer) : integer;
+function h'(integer) : integer;
+function f(integer) : integer;
+function f'(integer) : integer;
+function g(integer) : integer;
+function g'(integer) : integer;
+function main() : integer;
+
+function h(integer) : integer {
+  arg[0]
+}
+
+function h'(integer) : integer {
+  arg[0]
+}
+
+function f(integer) : integer {
+  add(call[h](arg[0]), 1)
+}
+
+function f'(integer) : integer {
+  add(call[h'](arg[0]), 1)
+}
+
+function g(integer) : integer {
+  add(call[f](arg[0]), 2)
+}
+
+function g'(integer) : integer {
+  call[f'](arg[0])
+}
+
+function main() : integer {
+  call[g'](call[f](7))
+}
