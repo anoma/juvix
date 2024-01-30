@@ -36,7 +36,8 @@ data FunctionName
   | FunConst5
   | FunCallInc
   | FunAdd3
-  | FunLogic
+  | FunAnoma
+  | FunAnoma2
   deriving stock (Eq, Bounded, Enum)
 
 sym :: (Enum a) => a -> FunctionId
@@ -76,7 +77,8 @@ functionArity' = \case
   FunCallInc -> 1
   FunConst5 -> 5
   FunAdd3 -> 3
-  FunLogic -> 1
+  FunAnoma -> 1
+  FunAnoma2 -> 2
 
 functionCallingConvention :: FunctionName -> CallingConvention
 functionCallingConvention = \case
@@ -86,7 +88,8 @@ functionCallingConvention = \case
   FunCallInc -> CallingConventionJuvix
   FunConst5 -> CallingConventionJuvix
   FunAdd3 -> CallingConventionJuvix
-  FunLogic -> CallingConventionAnoma
+  FunAnoma -> CallingConventionAnoma
+  FunAnoma2 -> CallingConventionAnoma
 
 functionCode :: (Members '[Compiler] r) => FunctionName -> Sem r ()
 functionCode = \case
@@ -111,12 +114,10 @@ functionCode = \case
     add
     add
     asmReturn
-  FunLogic -> do
+  FunAnoma -> do
     verbatim (OpAddress # pathToArgAnoma 1 0)
-    -- pushOnto TempStack (OpAddress # pathToArgAnoma 1 0)
-    -- pushConstructorFieldOnto ValueStack (constructorTag ConstructorTuple) (Asm.mkTempRef' 1 0) 0
-    -- pushConstructorFieldOnto ValueStack (constructorTag ConstructorTuple) (Asm.mkTempRef' 1 0) 1
-    -- add
+  FunAnoma2 -> do
+    verbatim ((OpAddress # pathToArgAnoma 2 0) # (OpAddress # pathToArgAnoma 2 1))
 
 -- | NOTE that new constructors should be added to the end of the list or else
 -- the tests will fail.
@@ -180,10 +181,12 @@ exampleConstructors =
 
 exampleFunctions :: [CompilerFunction]
 exampleFunctions =
-  [ CompilerFunction {_compilerFunctionCallingConvention=functionCallingConvention fun,
-                      _compilerFunctionName=sym fun,
-                      _compilerFunctionArity = functionArity' fun,
-                      _compilerFunction=functionCode fun}
+  [ CompilerFunction
+      { _compilerFunctionCallingConvention = functionCallingConvention fun,
+        _compilerFunctionName = sym fun,
+        _compilerFunctionArity = functionArity' fun,
+        _compilerFunction = functionCode fun
+      }
     | fun <- allElements,
       not (isMain fun)
   ]
@@ -678,12 +681,24 @@ tests =
         pushNat 500
         allocConstr (constructorTag ConstructorListCons),
     defTest
-      "call function with anoma calling convention"
-      (eqStack ValueStack [nock| [[3 nil] nil] |])
+      "call function with anoma calling convention - one argument"
+      (eqStack ValueStack [nock| [[1 2] nil] |])
       $ do
         pushNat 2
         pushNat 1
-        allocConstr (constructorTag ConstructorPair)
-        fPath <- getFunctionPath (sym FunLogic)
-        callAnoma Nothing (OpAddress # fPath) 1
+        allocConstr (constructorTag ConstructorTuple)
+        fPath <- getFunctionPath (sym FunAnoma)
+        callAnoma Nothing (OpAddress # fPath) 1,
+    defTest
+      "call function with anoma calling convention - two arguments"
+      (eqStack ValueStack [nock| [[[3 4] 1 2] nil] |])
+      $ do
+        pushNat 2
+        pushNat 1
+        allocConstr (constructorTag ConstructorTuple)
+        pushNat 4
+        pushNat 3
+        allocConstr (constructorTag ConstructorTuple)
+        fPath <- getFunctionPath (sym FunAnoma2)
+        callAnoma Nothing (OpAddress # fPath) 2
   ]
