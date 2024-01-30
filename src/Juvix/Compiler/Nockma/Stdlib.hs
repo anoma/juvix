@@ -1,5 +1,3 @@
-{-# LANGUAGE QuasiQuotes #-}
-
 module Juvix.Compiler.Nockma.Stdlib where
 
 import Juvix.Compiler.Nockma.Translation.FromSource.QQ

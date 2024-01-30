@@ -1,5 +1,3 @@
-{-# LANGUAGE QuasiQuotes #-}
-
 module Nockma.Eval.Positive where
 
 import Base hiding (Path)

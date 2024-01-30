@@ -1,5 +1,3 @@
-{-# LANGUAGE QuasiQuotes #-}
-
 module Commands.Dev.Nockma.Repl where
 
 import Commands.Base hiding (Atom)

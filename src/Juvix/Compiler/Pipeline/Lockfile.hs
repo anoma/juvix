@@ -1,5 +1,3 @@
-{-# LANGUAGE QuasiQuotes #-}
-
 module Juvix.Compiler.Pipeline.Lockfile where
 
 import Data.Aeson.BetterErrors
