@@ -10,7 +10,6 @@ import Juvix.Compiler.Pipeline.Root
 import Juvix.Compiler.Pipeline.Run
 import Juvix.Data.Error qualified as Error
 import Juvix.Extra.Paths.Base hiding (rootBuildDir)
-import Juvix.Prelude.Base qualified as Prelude
 import Juvix.Prelude.Pretty hiding
   ( Doc,
   )
@@ -20,7 +19,6 @@ data App m a where
   ExitMsg :: ExitCode -> Text -> App m a
   ExitFailMsg :: Text -> App m a
   ExitJuvixError :: JuvixError -> App m a
-  WriteFileEnsureLn :: Path Abs File -> Text -> App m ()
   PrintJuvixError :: JuvixError -> App m ()
   AskRoot :: App m Root
   AskArgs :: App m RunAppIOArgs
@@ -67,7 +65,6 @@ reAppIO args@RunAppIOArgs {..} =
     FromAppPathFile p -> embed (prepathToAbsFile invDir (p ^. pathPath))
     GetMainFile m -> getMainFile' m
     FromAppPathDir p -> liftIO (prepathToAbsDir invDir (p ^. pathPath))
-    WriteFileEnsureLn p txt -> embed @IO (Prelude.writeFileEnsureLn p txt)
     RenderStdOut t
       | _runAppIOArgsGlobalOptions ^. globalOnlyErrors -> return ()
       | otherwise -> embed $ do

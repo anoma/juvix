@@ -599,4 +599,5 @@ ensureLn t =
       _ -> Text.snoc t '\n'
 
 writeFileEnsureLn :: (MonadMask m, MonadIO m) => Path Abs File -> Text -> m ()
-writeFileEnsureLn p = Utf8.writeFile (toFilePath p) . ensureLn
+writeFileEnsureLn p = Utf8.writeFile (toFilePath p)
+{-# INLINE writeFileEnsureLn #-}
