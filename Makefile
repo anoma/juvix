@@ -84,6 +84,7 @@ haddock :
 
 ORMOLU?=${STACK} exec -- ormolu
 ORMOLUFILES = $(shell git ls-files '*.hs' '*.hs-boot' | grep -v '^contrib/')
+ORMOLU_CHANGED_FILES = $(shell git --no-pager diff --name-only --diff-filter=AM | grep '\.hs$$')
 ORMOLUFLAGS?=--no-cabal
 ORMOLUMODE?=inplace
 
@@ -99,6 +100,19 @@ ormolu:
 		--ghc-opt -XImportQualifiedPost \
 			--mode ${ORMOLUMODE} \
 		$(ORMOLUFILES)
+
+.PHONY: ormolu-changed
+ormolu-changed:
+	@${ORMOLU} ${ORMOLUFLAGS} \
+		--ghc-opt -XStandaloneDeriving \
+		--ghc-opt -XUnicodeSyntax \
+		--ghc-opt -XDerivingStrategies \
+		--ghc-opt -XPatternSynonyms \
+		--ghc-opt -XMultiParamTypeClasses  \
+		--ghc-opt -XTemplateHaskell \
+		--ghc-opt -XImportQualifiedPost \
+			--mode ${ORMOLUMODE} \
+		$(ORMOLU_CHANGED_FILES)
 
 .PHONY: format
 format:
