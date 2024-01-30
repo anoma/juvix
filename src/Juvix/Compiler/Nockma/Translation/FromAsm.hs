@@ -89,10 +89,15 @@ type ConstructorInfos = HashMap Asm.Tag ConstructorInfo
 
 type Offset = Natural
 
+data CallingConvention
+  = CallingConventionJuvix
+  | CallingConventionAnoma
+
 data CompilerFunction = CompilerFunction
   { _compilerFunctionName :: FunctionId,
     _compilerFunctionArity :: Natural,
-    _compilerFunction :: Sem '[Compiler, Reader CompilerCtx] ()
+    _compilerFunction :: Sem '[Compiler, Reader CompilerCtx] (), -- Member (Read..) r => Sem '[compiler] r
+    _compilerFunctionCallingConvention :: CallingConvention
   }
 
 data StackId
@@ -181,7 +186,7 @@ data Compiler m a where
   IncrementOn :: StackId -> Compiler m ()
   Branch :: m () -> m () -> Compiler m ()
   Save :: Bool -> m () -> Compiler m ()
-  CallStdlibOn :: StackId -> StdlibFunction -> Compiler m ()
+  CallAnomaOn :: StackId -> Maybe (Term Natural -> StdlibCall Natural) -> Term Natural -> Natural -> Compiler m ()
   AsmReturn :: Compiler m ()
   GetConstructorInfo :: Asm.Tag -> Compiler m ConstructorInfo
   GetFunctionArity :: FunctionId -> Compiler m Natural
@@ -214,8 +219,17 @@ indexInStack s idx = stackPath s ++ indexStack idx
 pathToArgumentsArea :: Path
 pathToArgumentsArea = topOfStack CurrentFunction ++ functionPath FunctionArgs
 
+pathToAnomaArgumentsArea :: Path
+pathToAnomaArgumentsArea = [R, L]
+
 pathToArg :: Natural -> Path
 pathToArg = indexInPath pathToArgumentsArea
+
+pathToArgAnoma :: Natural -> Natural -> Path
+pathToArgAnoma len idx
+  | len == 0 = impossible
+  | len == 1 = pathToAnomaArgumentsArea
+  | otherwise = pathToAnomaArgumentsArea ++ indexTuple len idx
 
 -- | Construct a path rooted at he head of a named stack
 pathInStack :: StackId -> Path -> Path
@@ -302,6 +316,7 @@ fromAsmTable t = case t ^. Asm.infoMainFunction of
           CompilerFunction
             { _compilerFunctionName = UserFunction mainSym,
               _compilerFunctionArity = 0,
+              _compilerFunctionCallingConvention = CallingConventionJuvix,
               _compilerFunction = compile mainCode
             }
 
@@ -319,6 +334,7 @@ fromAsmTable t = case t ^. Asm.infoMainFunction of
           CompilerFunction
             { _compilerFunctionName = UserFunction _functionSymbol,
               _compilerFunctionArity = fromIntegral _functionArgsNum,
+              _compilerFunctionCallingConvention = CallingConventionJuvix,
               _compilerFunction = compile _functionCode
             }
 
@@ -681,17 +697,27 @@ runCompilerWith opts constrs libFuns mainFun
 
     compiledFuns :: NonEmpty (Term Natural)
     compiledFuns =
-      makeFunction'
-        <$> ( run
-                . runReader compilerCtx
-                . mapM (execCompiler . (^. compilerFunction))
-                $ allFuns
-            )
+      run
+        . runReader compilerCtx
+        . mapM compileFunction
+        $ allFuns
 
-    makeFunction' :: Term Natural -> Term Natural
-    makeFunction' c = makeFunction $ \case
+    compileFunction :: CompilerFunction -> Sem '[Reader CompilerCtx] (Term Natural)
+    compileFunction CompilerFunction {..} = do
+      let mkFun = case _compilerFunctionCallingConvention of
+            CallingConventionJuvix -> makeJuvixFunction'
+            CallingConventionAnoma -> makeAnomaFunction'
+      mkFun <$> execCompiler _compilerFunction
+
+    makeJuvixFunction' :: Term Natural -> Term Natural
+    makeJuvixFunction' c = makeFunction $ \case
       FunctionCode -> c
       FunctionArgs -> nockNil'
+
+    makeAnomaFunction' :: Term Natural -> Term Natural
+    makeAnomaFunction' c = makeFunction $ \case
+      FunctionCode -> c
+      FunctionArgs -> nockNil' # nockNil'
 
 runCompilerWithMain :: CompilerCtx -> NonEmpty (Term Natural) -> CompilerFunction -> Cell Natural
 runCompilerWithMain compilerCtx compiledFuns mainFun =
@@ -759,6 +785,7 @@ builtinFunction = \case
     CompilerFunction
       { _compilerFunctionName = BuiltinFunction BuiltinAppendRights,
         _compilerFunctionArity = 2, -- args: n pos
+        _compilerFunctionCallingConvention = CallingConventionJuvix,
         _compilerFunction = do
           push (OpAddress # pathToArg 0)
           pow2
@@ -773,6 +800,7 @@ builtinFunction = \case
     CompilerFunction
       { _compilerFunctionName = BuiltinFunction BuiltinPow2,
         _compilerFunctionArity = 1,
+        _compilerFunctionCallingConvention = CallingConventionJuvix,
         _compilerFunction = do
           pushNat 1 -- acc
           push (OpAddress # pathToArg 0)
@@ -783,6 +811,7 @@ builtinFunction = \case
     CompilerFunction
       { _compilerFunctionName = BuiltinFunction BuiltinPow2Go,
         _compilerFunctionArity = 2, -- args: n acc
+        _compilerFunctionCallingConvention = CallingConventionJuvix,
         _compilerFunction = do
           push (OpAddress # pathToArg 1)
           push (OpAddress # pathToArg 0)
@@ -944,28 +973,41 @@ incrementOn' s = output (replaceOnStack s (OpInc # stackSliceAsCell s 0 0))
 callStdlib :: (Members '[Compiler] r) => StdlibFunction -> Sem r ()
 callStdlib = callStdlibOn ValueStack
 
-callStdlibOn' :: (Members '[Output (Term Natural)] r) => StackId -> StdlibFunction -> Sem r ()
-callStdlibOn' s f = do
-  let fNumArgs = stdlibNumArgs f
-      fPath = stdlibPath f
-      decodeFn = OpCall # (fPath # (OpAddress # stackPath StandardLibrary))
-      preargs = stdlibStackTake s fNumArgs
+callStdlibOn :: (Members '[Compiler] r) => StackId -> StdlibFunction -> Sem r ()
+callStdlibOn s f = callAnomaOn s (Just meta) getFunPath fNumArgs
+  where
+    fNumArgs :: Natural
+    fNumArgs = stdlibNumArgs f
+
+    fRelPath :: Path
+    fRelPath = stdlibPath f
+
+    getFunPath :: Term Natural
+    getFunPath = OpCall # (fRelPath # (OpAddress # stackPath StandardLibrary))
+
+    meta :: Term Natural -> StdlibCall Natural
+    meta preargs =
+      StdlibCall
+        { _stdlibCallArgs = preargs,
+          _stdlibCallFunction = f
+        }
+
+callAnoma :: (Members '[Compiler] r) => Maybe (Term Natural -> StdlibCall Natural) -> Term Natural -> Natural -> Sem r ()
+callAnoma = callAnomaOn ValueStack
+
+callAnomaOn' :: (Members '[Output (Term Natural)] r) => StackId -> Maybe (Term Natural -> StdlibCall Natural) -> Term Natural -> Natural -> Sem r ()
+callAnomaOn' s stdlibMeta getFunPath fNumArgs = do
+  let preargs = stdlibStackTakeTuple s fNumArgs
       arguments = OpSequence # (OpAddress # [R]) # preargs
       extractResult = (OpAddress # [L]) # (OpAddress # [R, R])
       callFn = OpPush # (OpCall # [L] # (OpReplace # ([R, L] # arguments) # (OpAddress # [L]))) # extractResult
-      meta =
-        StdlibCall
-          { _stdlibCallArgs = preargs,
-            _stdlibCallFunction = f
-          }
-
-      callCell = set cellCall (Just meta) (OpPush #. (decodeFn # callFn))
+      callCell = set cellCall ((\meta -> meta preargs) <$> stdlibMeta) (OpPush #. (getFunPath # callFn))
 
   output (toNock callCell)
   output (replaceTopStackN fNumArgs s)
   where
-    stdlibStackTake :: StackId -> Natural -> Term Natural
-    stdlibStackTake sn n =
+    stdlibStackTakeTuple :: StackId -> Natural -> Term Natural
+    stdlibStackTakeTuple sn n =
       foldTerms
         ( nonEmpty'
             (take (fromIntegral n) [OpAddress # indexInStack sn i | i <- [0 ..]])
@@ -1090,7 +1132,7 @@ re = reinterpretH $ \case
   IncrementOn s -> incrementOn' s >>= pureT
   Branch t f -> branch' t f
   Save isTail m -> save' isTail m
-  CallStdlibOn s f -> callStdlibOn' s f >>= pureT
+  CallAnomaOn s stdlibMeta getFunPath arity -> callAnomaOn' s stdlibMeta getFunPath arity >>= pureT
   AsmReturn -> asmReturn' >>= pureT
   TestEqOn s -> testEqOn' s >>= pureT
   GetConstructorInfo s -> getConstructorInfo' s >>= pureT

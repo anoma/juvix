@@ -10,7 +10,6 @@ import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Translation.FromAsm
 import Juvix.Compiler.Nockma.Translation.FromSource.QQ
-import Nockma.Compile.T1
 
 type Check = Sem '[Reader [Term Natural], Reader (Term Natural), Reader (Cell Natural), Embed IO]
 
@@ -56,7 +55,8 @@ debugProg evalOpts mkMain =
       CompilerFunction
         { _compilerFunctionName = sym FunMain,
           _compilerFunctionArity = 0,
-          _compilerFunction = raiseUnder mkMain
+          _compilerFunction = raiseUnder mkMain,
+          _compilerFunctionCallingConvention = CallingConventionJuvix
         }
 
     opts =
@@ -77,6 +77,16 @@ functionArity' = \case
   FunConst5 -> 5
   FunAdd3 -> 3
   FunLogic -> 1
+
+functionCallingConvention :: FunctionName -> CallingConvention
+functionCallingConvention = \case
+  FunMain -> CallingConventionJuvix
+  FunIncrement -> CallingConventionJuvix
+  FunConst -> CallingConventionJuvix
+  FunCallInc -> CallingConventionJuvix
+  FunConst5 -> CallingConventionJuvix
+  FunAdd3 -> CallingConventionAnoma
+  FunLogic -> CallingConventionAnoma
 
 functionCode :: (Members '[Compiler] r) => FunctionName -> Sem r ()
 functionCode = \case
@@ -102,21 +112,10 @@ functionCode = \case
     add
     asmReturn
   FunLogic -> do
-    pushOnto TempStack (OpAddress # pathToArg 0)
-    pushConstructorFieldOnto ValueStack (constructorTag ConstructorTransaction) (Asm.mkTempRef' 1 0) 0
-    pushConstructorFieldOnto ValueStack (constructorTag ConstructorTransaction) (Asm.mkTempRef' 1 0) 8
-    allocConstr (constructorTag ConstructorTuple)
-    -- pushConstructorFieldOnto AuxStack (constructorTag ConstructorTransaction) (Asm.mkTempRef' 1 0) 2
-    -- pushConstructorFieldOnto AuxStack (constructorTag ConstructorTransaction) (Asm.mkTempRef' 1 0) 3
-    -- pushConstructorFieldOnto AuxStack (constructorTag ConstructorTransaction) (Asm.mkTempRef' 1 0) 4
-    -- pushConstructorFieldOnto AuxStack (constructorTag ConstructorTransaction) (Asm.mkTempRef' 1 0) 5
-    -- pushConstructorFieldOnto AuxStack (constructorTag ConstructorTransaction) (Asm.mkTempRef' 1 0) 6
-    -- allocConstr (constructorTag ConstructorPair)
-    -- copyTopFromTo ValueStack TempStack
-    -- pushConstructorFieldOnto AuxStack (constructorTag ConstructorPair) (Asm.mkTempRef' 1 0) 0
-    -- pushConstructorFieldOnto AuxStack (constructorTag ConstructorPair) (Asm.mkTempRef' 1 0) 1
-
-    asmReturn
+    pushOnto TempStack (OpAddress # pathToArgAnoma 1 0)
+    pushConstructorFieldOnto ValueStack (constructorTag ConstructorTuple) (Asm.mkTempRef' 1 0) 0
+    pushConstructorFieldOnto ValueStack (constructorTag ConstructorTuple) (Asm.mkTempRef' 1 0) 1
+    add
 
 -- | NOTE that new constructors should be added to the end of the list or else
 -- the tests will fail.
@@ -128,7 +127,6 @@ data ConstructorName
   | ConstructorTuple
   | ConstructorListNil
   | ConstructorListCons
-  | ConstructorTransaction
   deriving stock (Eq, Bounded, Enum)
 
 constructorTag :: ConstructorName -> Asm.Tag
@@ -146,11 +144,6 @@ constructorInfo = \case
   ConstructorTrue -> defaultInfo 0
   ConstructorTagged -> defaultInfo 1
   ConstructorPair -> defaultInfo 2
-  ConstructorTransaction ->
-    ConstructorInfo
-      { _constructorInfoArity = 9,
-        _constructorInfoMemRep = NockmaMemRepTuple
-      }
   ConstructorTuple ->
     ConstructorInfo
       { _constructorInfoArity = 2,
@@ -186,7 +179,10 @@ exampleConstructors =
 
 exampleFunctions :: [CompilerFunction]
 exampleFunctions =
-  [ CompilerFunction (sym fun) (functionArity' fun) (functionCode fun)
+  [ CompilerFunction {_compilerFunctionCallingConvention=functionCallingConvention fun,
+                      _compilerFunctionName=sym fun,
+                      _compilerFunctionArity = functionArity' fun,
+                      _compilerFunction=functionCode fun}
     | fun <- allElements,
       not (isMain fun)
   ]
@@ -681,41 +677,12 @@ tests =
         pushNat 500
         allocConstr (constructorTag ConstructorListCons),
     defTest
-      "transaction"
-      (eqStack ValueStack [nock| [[0 0] nil] |])
+      "call function with anoma calling convention"
+      (eqStack ValueStack [nock| [[3 nil] nil] |])
       $ do
-        push (OpQuote # t1)
-        callFun (sym FunLogic) 1,
-    defTest
-      "project list from transaction and check null"
-      ( do
-          cell <- ask @(Cell Natural)
-          embed @IO (writeFile "test-output.nockma" (ppSerialize cell))
-          eqStack ValueStack [nock| [0 nil] |]
-      )
-      $ do
-        let t = constructorTag ConstructorTransaction
-        push (OpQuote # t1)
-        caseCmd
-          Nothing
-          [ ( t,
-              do
-                save False $ do
-                  pushConstructorField t (Asm.mkTempRef' 1 0) 0
-            )
-          ]
-
-        let defaultc :: Sem '[Compiler] () = do
-              pop
-              push (nockBoolLiteral False)
-              asmReturn
-        caseCmd
-          (Just defaultc)
-          [ ( constructorTag ConstructorListNil,
-              do
-                pop
-                push (nockBoolLiteral True)
-                asmReturn
-            )
-          ]
+        pushNat 2
+        pushNat 1
+        allocConstr (constructorTag ConstructorPair)
+        fPath <- getFunctionPath (sym FunLogic)
+        callAnoma Nothing (OpAddress # fPath) 1
   ]
