@@ -20,7 +20,7 @@ toReg' = validate >=> filterUnreachable >=> computeStackUsage >=> computePreallo
 -- | Perform transformations on JuvixAsm necessary before the translation to
 -- Nockma
 toNockma' :: (Members '[Error AsmError, Reader Options] r) => InfoTable -> Sem r InfoTable
-toNockma' = validate >=> filterUnreachable >=> computeTempHeight
+toNockma' = validate >=> filterUnreachable
 
 toReg :: (Members '[Error JuvixError, Reader EntryPoint] r) => InfoTable -> Sem r InfoTable
 toReg = mapReader fromEntryPoint . mapError (JuvixError @AsmError) . toReg'

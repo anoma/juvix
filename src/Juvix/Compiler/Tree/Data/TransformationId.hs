@@ -9,6 +9,7 @@ data TransformationId
   | IdentityU
   | IdentityD
   | Apply
+  | TempHeight
   deriving stock (Data, Bounded, Enum, Show)
 
 data PipelineId
@@ -19,7 +20,7 @@ data PipelineId
 type TransformationLikeId = TransformationLikeId' TransformationId PipelineId
 
 toNockmaTransformations :: [TransformationId]
-toNockmaTransformations = [Apply]
+toNockmaTransformations = [Apply, TempHeight]
 
 toAsmTransformations :: [TransformationId]
 toAsmTransformations = []
@@ -31,6 +32,7 @@ instance TransformationId' TransformationId where
     IdentityU -> strIdentityU
     IdentityD -> strIdentityD
     Apply -> strApply
+    TempHeight -> strTempHeight
 
 instance PipelineId' TransformationId PipelineId where
   pipelineText :: PipelineId -> Text
