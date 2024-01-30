@@ -85,7 +85,7 @@ functionCallingConvention = \case
   FunConst -> CallingConventionJuvix
   FunCallInc -> CallingConventionJuvix
   FunConst5 -> CallingConventionJuvix
-  FunAdd3 -> CallingConventionAnoma
+  FunAdd3 -> CallingConventionJuvix
   FunLogic -> CallingConventionAnoma
 
 functionCode :: (Members '[Compiler] r) => FunctionName -> Sem r ()
@@ -112,10 +112,11 @@ functionCode = \case
     add
     asmReturn
   FunLogic -> do
-    pushOnto TempStack (OpAddress # pathToArgAnoma 1 0)
-    pushConstructorFieldOnto ValueStack (constructorTag ConstructorTuple) (Asm.mkTempRef' 1 0) 0
-    pushConstructorFieldOnto ValueStack (constructorTag ConstructorTuple) (Asm.mkTempRef' 1 0) 1
-    add
+    verbatim (OpAddress # pathToArgAnoma 1 0)
+    -- pushOnto TempStack (OpAddress # pathToArgAnoma 1 0)
+    -- pushConstructorFieldOnto ValueStack (constructorTag ConstructorTuple) (Asm.mkTempRef' 1 0) 0
+    -- pushConstructorFieldOnto ValueStack (constructorTag ConstructorTuple) (Asm.mkTempRef' 1 0) 1
+    -- add
 
 -- | NOTE that new constructors should be added to the end of the list or else
 -- the tests will fail.
