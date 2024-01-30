@@ -1,15 +1,11 @@
-module Juvix.Compiler.Nockma.Translation.FromAsm
-  ( module Juvix.Compiler.Nockma.Translation.FromAsm,
-    module Juvix.Compiler.Nockma.StdlibFunction,
-  )
-where
+module Juvix.Compiler.Nockma.Translation.FromTree where
 
-import Juvix.Compiler.Asm.Data.InfoTable qualified as Asm
-import Juvix.Compiler.Asm.Language qualified as Asm
+import Juvix.Compiler.Nockma.Language.Path
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Stdlib
-import Juvix.Compiler.Nockma.StdlibFunction
 import Juvix.Compiler.Pipeline.EntryPoint
+import Juvix.Compiler.Tree.Data.InfoTable qualified as Tree
+import Juvix.Compiler.Tree.Language qualified as Tree
 import Juvix.Compiler.Tree.Language.Rep
 import Juvix.Prelude hiding (Atom, Path)
 
@@ -33,15 +29,6 @@ data NockmaMemRep
 
 newtype NockmaBuiltinTag
   = NockmaBuiltinBool Bool
-
-nockmaBuiltinTag :: Asm.BuiltinDataTag -> NockmaBuiltinTag
-nockmaBuiltinTag = \case
-  Asm.TagTrue -> NockmaBuiltinBool True
-  Asm.TagFalse -> NockmaBuiltinBool False
-  Asm.TagReturn -> impossible
-  Asm.TagBind -> impossible
-  Asm.TagWrite -> impossible
-  Asm.TagReadLn -> impossible
 
 type UserFunctionId = Symbol
 
@@ -85,7 +72,7 @@ data ConstructorInfo = ConstructorInfo
     _constructorInfoMemRep :: NockmaMemRep
   }
 
-type ConstructorInfos = HashMap Asm.Tag ConstructorInfo
+type ConstructorInfos = HashMap Tree.Tag ConstructorInfo
 
 type Offset = Natural
 
@@ -168,8 +155,8 @@ data Compiler m a where
   Branch :: m () -> m () -> Compiler m ()
   Save :: Bool -> m () -> Compiler m ()
   CallStdlibOn :: StackId -> StdlibFunction -> Compiler m ()
-  AsmReturn :: Compiler m ()
-  GetConstructorInfo :: Asm.Tag -> Compiler m ConstructorInfo
+  TreeReturn :: Compiler m ()
+  GetConstructorInfo :: Tree.Tag -> Compiler m ConstructorInfo
   GetFunctionArity :: FunctionId -> Compiler m Natural
   GetFunctionPath :: FunctionId -> Compiler m Path
 
@@ -232,40 +219,40 @@ makeFunction f = f FunctionCode # f FunctionArgs
 foldTerms :: NonEmpty (Term Natural) -> Term Natural
 foldTerms = foldr1 (#)
 
-allConstructors :: Asm.InfoTable -> Asm.ConstructorInfo -> NonEmpty Asm.ConstructorInfo
-allConstructors Asm.InfoTable {..} ci =
-  let indInfo = getInductiveInfo (ci ^. Asm.constructorInductive)
-   in nonEmpty' (getConstructorInfo'' <$> indInfo ^. Asm.inductiveConstructors)
+allConstructors :: Tree.InfoTable -> Tree.ConstructorInfo -> NonEmpty Tree.ConstructorInfo
+allConstructors Tree.InfoTable {..} ci =
+  let indInfo = getInductiveInfo (ci ^. Tree.constructorInductive)
+   in nonEmpty' (getConstructorInfo'' <$> indInfo ^. Tree.inductiveConstructors)
   where
-    getInductiveInfo :: Symbol -> Asm.InductiveInfo
+    getInductiveInfo :: Symbol -> Tree.InductiveInfo
     getInductiveInfo s = _infoInductives ^?! at s . _Just
 
-    getConstructorInfo'' :: Asm.Tag -> Asm.ConstructorInfo
+    getConstructorInfo'' :: Tree.Tag -> Tree.ConstructorInfo
     getConstructorInfo'' t = _infoConstrs ^?! at t . _Just
 
-supportsListNockmaRep :: Asm.InfoTable -> Asm.ConstructorInfo -> Maybe NockmaMemRepListConstr
+supportsListNockmaRep :: Tree.InfoTable -> Tree.ConstructorInfo -> Maybe NockmaMemRepListConstr
 supportsListNockmaRep tab ci = case allConstructors tab ci of
   c1 :| [c2]
-    | [0, 2] `elem` permutations ((^. Asm.constructorArgsNum) <$> [c1, c2]) -> Just $ case ci ^. Asm.constructorArgsNum of
+    | [0, 2] `elem` permutations ((^. Tree.constructorArgsNum) <$> [c1, c2]) -> Just $ case ci ^. Tree.constructorArgsNum of
         0 -> NockmaMemRepListConstrNil
         2 -> NockmaMemRepListConstrCons
         _ -> impossible
     | otherwise -> Nothing
   _ -> Nothing
 
--- | Use `Asm.toNockma` before calling this function
-fromAsmTable :: (Members '[Error JuvixError, Reader CompilerOptions] r) => Asm.InfoTable -> Sem r (Cell Natural)
-fromAsmTable t = case t ^. Asm.infoMainFunction of
+-- | Use `Tree.toNockma` before calling this function
+fromTreeTable :: (Members '[Error JuvixError, Reader CompilerOptions] r) => Tree.InfoTable -> Sem r (Cell Natural)
+fromTreeTable t = case t ^. Tree.infoMainFunction of
   Just mainFun -> do
     opts <- ask
-    return (fromAsm opts mainFun t)
+    return (fromTree opts mainFun t)
   Nothing -> throw @JuvixError (error "TODO missing main")
   where
-    fromAsm :: CompilerOptions -> Asm.Symbol -> Asm.InfoTable -> Cell Natural
-    fromAsm opts mainSym tab@Asm.InfoTable {..} =
+    fromTree :: CompilerOptions -> Tree.Symbol -> Tree.InfoTable -> Cell Natural
+    fromTree opts mainSym tab@Tree.InfoTable {..} =
       let funs = map compileFunction allFunctions
-          mkConstructorInfo :: Asm.ConstructorInfo -> ConstructorInfo
-          mkConstructorInfo ci@Asm.ConstructorInfo {..} =
+          mkConstructorInfo :: Tree.ConstructorInfo -> ConstructorInfo
+          mkConstructorInfo ci@Tree.ConstructorInfo {..} =
             ConstructorInfo
               { _constructorInfoArity = fromIntegral _constructorArgsNum,
                 _constructorInfoMemRep = rep
@@ -274,12 +261,12 @@ fromAsmTable t = case t ^. Asm.infoMainFunction of
               rep :: NockmaMemRep
               rep = maybe r NockmaMemRepList (supportsListNockmaRep tab ci)
                 where
-                  r = nockmaMemRep (memRep ci (getInductiveInfo (ci ^. Asm.constructorInductive)))
+                  r = nockmaMemRep (memRep ci (getInductiveInfo (ci ^. Tree.constructorInductive)))
 
           constrs :: ConstructorInfos
           constrs = mkConstructorInfo <$> _infoConstrs
 
-          getInductiveInfo :: Symbol -> Asm.InductiveInfo
+          getInductiveInfo :: Symbol -> Tree.InductiveInfo
           getInductiveInfo s = _infoInductives ^?! at s . _Just
        in runCompilerWith opts constrs funs mainFun
       where
@@ -291,128 +278,77 @@ fromAsmTable t = case t ^. Asm.infoMainFunction of
               _compilerFunction = compile mainCode
             }
 
-        mainCode :: Asm.Code
-        mainCode = _infoFunctions ^?! at mainSym . _Just . Asm.functionCode
+        mainCode :: Tree.Node
+        mainCode = _infoFunctions ^?! at mainSym . _Just . Tree.functionCode
 
-        allFunctions :: [Asm.FunctionInfo]
+        allFunctions :: [Tree.FunctionInfo]
         allFunctions = filter notMain (toList _infoFunctions)
           where
-            notMain :: Asm.FunctionInfo -> Bool
-            notMain Asm.FunctionInfo {..} = _functionSymbol /= mainSym
+            notMain :: Tree.FunctionInfo -> Bool
+            notMain Tree.FunctionInfo {..} = _functionSymbol /= mainSym
 
-        compileFunction :: Asm.FunctionInfo -> CompilerFunction
-        compileFunction Asm.FunctionInfo {..} =
+        compileFunction :: Tree.FunctionInfo -> CompilerFunction
+        compileFunction Tree.FunctionInfo {..} =
           CompilerFunction
             { _compilerFunctionName = UserFunction _functionSymbol,
               _compilerFunctionArity = fromIntegral _functionArgsNum,
               _compilerFunction = compile _functionCode
             }
 
-        memRep :: Asm.ConstructorInfo -> Asm.InductiveInfo -> Asm.MemRep
+        memRep :: Tree.ConstructorInfo -> Tree.InductiveInfo -> Tree.MemRep
         memRep ci ind
           | numArgs >= 1 && numConstrs == 1 = MemRepTuple
           | otherwise = MemRepConstr
           where
-            numConstrs = length (ind ^. Asm.inductiveConstructors)
-            numArgs = ci ^. Asm.constructorArgsNum
+            numConstrs = length (ind ^. Tree.inductiveConstructors)
+            numArgs = ci ^. Tree.constructorArgsNum
 
-fromOffsetRef :: Asm.OffsetRef -> Natural
-fromOffsetRef = fromIntegral . (^. Asm.offsetRefOffset)
+fromOffsetRef :: Tree.OffsetRef -> Natural
+fromOffsetRef = fromIntegral . (^. Tree.offsetRefOffset)
 
--- | Generic constructors are encoded as [tag args], where args is a
--- nil terminated list.
-goConstructor :: NockmaMemRep -> Asm.Tag -> [Term Natural] -> Term Natural
-goConstructor mr t args = case t of
-  Asm.BuiltinTag b -> case nockmaBuiltinTag b of
-    NockmaBuiltinBool v -> nockBoolLiteral v
-  Asm.UserTag tag -> case mr of
-    NockmaMemRepConstr ->
-      makeConstructor $ \case
-        ConstructorTag -> OpQuote # (fromIntegral (tag ^. Asm.tagUserWord) :: Natural)
-        ConstructorArgs -> remakeList args
-    NockmaMemRepTuple -> foldTerms (nonEmpty' args)
-    NockmaMemRepList constr -> case constr of
-      NockmaMemRepListConstrNil
-        | null args -> remakeList []
-        | otherwise -> impossible
-      NockmaMemRepListConstrCons -> case args of
-        [l, r] -> TCell l r
-        _ -> impossible
-
-compile :: forall r. (Members '[Compiler] r) => Asm.Code -> Sem r ()
-compile = mapM_ goCommand
+compile :: forall r. (Members '[Compiler] r) => Tree.Node -> Sem r ()
+compile = \case {}
   where
-    goCommand :: Asm.Command -> Sem r ()
-    goCommand = \case
-      Asm.Instr i -> goCmdInstr i
-      Asm.Branch b -> goBranch b
-      Asm.Case c -> goCase c
-      Asm.Save s -> goSave s
+    goSave :: Tree.NodeSave -> Sem r ()
+    goSave = undefined
 
-    goSave :: Asm.CmdSave -> Sem r ()
-    goSave cmd = save (cmd ^. Asm.cmdSaveIsTail) (compile (cmd ^. Asm.cmdSaveCode))
-
-    goCase :: Asm.CmdCase -> Sem r ()
+    goCase :: Tree.NodeCase -> Sem r ()
     goCase c = do
-      let def = compile <$> c ^. Asm.cmdCaseDefault
+      let def = compile <$> c ^. Tree.nodeCaseDefault
           branches =
-            [ (b ^. Asm.caseBranchTag, compile (b ^. Asm.caseBranchCode))
-              | b <- c ^. Asm.cmdCaseBranches
+            [ (b ^. Tree.caseBranchTag, compile (b ^. Tree.caseBranchBody))
+              | b <- c ^. Tree.nodeCaseBranches
             ]
       caseCmd def branches
 
-    goBranch :: Asm.CmdBranch -> Sem r ()
-    goBranch Asm.CmdBranch {..} = branch (compile _cmdBranchTrue) (compile _cmdBranchFalse)
+    goBranch :: Tree.NodeBranch -> Sem r ()
+    goBranch Tree.NodeBranch {..} = branch (compile _nodeBranchTrue) (compile _nodeBranchFalse)
 
-    goBinop :: Asm.Opcode -> Sem r ()
+    goBinop :: Tree.BinaryOpcode -> Sem r ()
     goBinop o = case o of
-      Asm.IntAdd -> callStdlib StdlibAdd
-      Asm.IntSub -> callStdlib StdlibSub
-      Asm.IntMul -> callStdlib StdlibMul
-      Asm.IntDiv -> callStdlib StdlibDiv
-      Asm.IntMod -> callStdlib StdlibMod
-      Asm.IntLt -> callStdlib StdlibLt
-      Asm.IntLe -> callStdlib StdlibLe
-      Asm.ValEq -> testEq
-      Asm.StrConcat -> stringsErr
+      Tree.IntAdd -> callStdlib StdlibAdd
+      Tree.IntSub -> callStdlib StdlibSub
+      Tree.IntMul -> callStdlib StdlibMul
+      Tree.IntDiv -> callStdlib StdlibDiv
+      Tree.IntMod -> callStdlib StdlibMod
+      Tree.IntLt -> callStdlib StdlibLt
+      Tree.IntLe -> callStdlib StdlibLe
+      Tree.ValEq -> testEq
+      Tree.StrConcat -> stringsErr
 
-    goPush :: Asm.Value -> Sem r ()
-    goPush = \case
-      Asm.Constant (Asm.ConstInt i)
-        | i < 0 -> unsupported "negative numbers"
-        | otherwise -> pushNat (fromInteger i)
-      Asm.Constant (Asm.ConstBool i) -> push (nockBoolLiteral i)
-      Asm.Constant Asm.ConstString {} -> stringsErr
-      Asm.Constant Asm.ConstUnit -> push constUnit
-      Asm.Constant Asm.ConstVoid -> push constVoid
-      Asm.Ref r -> pushMemValue r
-      where
-        pushMemValue :: Asm.MemRef -> Sem r ()
-        pushMemValue = \case
-          Asm.DRef r -> pushDirectRef r
-          Asm.ConstrRef r ->
-            pushConstructorField
-              (r ^. Asm.fieldTag)
-              (r ^. Asm.fieldRef)
-              (fromIntegral (r ^. Asm.fieldOffset))
+    goAllocClosure :: Tree.NodeAllocClosure -> Sem r ()
+    goAllocClosure = undefined
 
-    goAllocClosure :: Asm.InstrAllocClosure -> Sem r ()
-    goAllocClosure a = allocClosure (UserFunction (a ^. Asm.allocClosureFunSymbol)) (fromIntegral (a ^. Asm.allocClosureArgsNum))
+    goExtendClosure :: Tree.NodeExtendClosure -> Sem r ()
+    goExtendClosure a = undefined
 
-    goExtendClosure :: Asm.InstrExtendClosure -> Sem r ()
-    goExtendClosure a = extendClosure (fromIntegral (a ^. Asm.extendClosureArgsNum))
+    goCallHelper :: Bool -> Tree.NodeCall -> Sem r ()
+    goCallHelper isTail Tree.NodeCall {..} = undefined
 
-    goCallHelper :: Bool -> Asm.InstrCall -> Sem r ()
-    goCallHelper isTail Asm.InstrCall {..} =
-      let funName = case _callType of
-            Asm.CallFun fun -> Just fun
-            Asm.CallClosure -> Nothing
-       in callHelper isTail (UserFunction <$> funName) (fromIntegral _callArgsNum)
-
-    goCall :: Asm.InstrCall -> Sem r ()
+    goCall :: Tree.NodeCall -> Sem r ()
     goCall = goCallHelper False
 
-    goTailCall :: Asm.InstrCall -> Sem r ()
+    goTailCall :: Tree.NodeCall -> Sem r ()
     goTailCall = goCallHelper True
 
     goDump :: Sem r ()
@@ -424,27 +360,6 @@ compile = mapM_ goCommand
 
     goTrace :: Sem r ()
     goTrace = traceTerm (OpAddress # topOfStack ValueStack)
-
-    goCmdInstr :: Asm.CmdInstr -> Sem r ()
-    goCmdInstr Asm.CmdInstr {..} = case _cmdInstrInstruction of
-      Asm.Binop op -> goBinop op
-      Asm.Push p -> goPush p
-      Asm.Pop -> pop
-      Asm.Failure -> crash
-      Asm.AllocConstr i -> allocConstr i
-      Asm.AllocClosure c -> goAllocClosure c
-      Asm.ExtendClosure c -> goExtendClosure c
-      Asm.Call c -> goCall c
-      Asm.TailCall c -> goTailCall c
-      Asm.Return -> asmReturn
-      Asm.ArgsNum -> closureArgsNum
-      Asm.ValShow -> stringsErr
-      Asm.StrToInt -> stringsErr
-      Asm.Trace -> goTrace
-      Asm.Dump -> goDump
-      Asm.Prealloc {} -> impossible
-      Asm.CallClosures {} -> impossible
-      Asm.TailCallClosures {} -> impossible
 
 extendClosure :: (Members '[Compiler] r) => Natural -> Sem r ()
 extendClosure extraArgsNum = do
@@ -488,8 +403,8 @@ constVoid = makeConstructor $ \case
 pushConstructorFieldOnto ::
   (Members '[Compiler] r) =>
   StackId ->
-  Asm.Tag ->
-  Asm.DirectRef ->
+  Tree.Tag ->
+  Tree.DirectRef ->
   Natural ->
   Sem r ()
 pushConstructorFieldOnto s tag refToConstr argIx = do
@@ -509,15 +424,15 @@ pushConstructorFieldOnto s tag refToConstr argIx = do
           NockmaMemRepListConstrCons -> directRefPath refToConstr ++ indexTuple 2 argIx
   pushOnto s (OpAddress # path)
 
-pushConstructorField :: (Members '[Compiler] r) => Asm.Tag -> Asm.DirectRef -> Natural -> Sem r ()
+pushConstructorField :: (Members '[Compiler] r) => Tree.Tag -> Tree.DirectRef -> Natural -> Sem r ()
 pushConstructorField = pushConstructorFieldOnto ValueStack
 
-directRefPath :: Asm.DirectRef -> Path
+directRefPath :: Tree.DirectRef -> Path
 directRefPath = \case
-  Asm.ArgRef a -> pathToArg (fromOffsetRef a)
-  Asm.TempRef Asm.RefTemp {..} -> tempRefPath (fromIntegral (fromJust _refTempTempHeight)) (fromOffsetRef _refTempOffsetRef)
+  Tree.ArgRef a -> pathToArg (fromOffsetRef a)
+  Tree.TempRef Tree.RefTemp {..} -> tempRefPath (fromIntegral (fromJust _refTempTempHeight)) (fromOffsetRef _refTempOffsetRef)
 
-pushDirectRef :: (Members '[Compiler] r) => Asm.DirectRef -> Sem r ()
+pushDirectRef :: (Members '[Compiler] r) => Tree.DirectRef -> Sem r ()
 pushDirectRef = push . (OpAddress #) . directRefPath
 
 tempRefPath :: Natural -> Natural -> Path
@@ -544,7 +459,36 @@ closureArgsNum = do
   let helper p = OpAddress # topOfStack ValueStack ++ closurePath p
   sub (helper ClosureTotalArgsNum) (helper ClosureArgsNum) pop
 
-allocConstr :: (Members '[Compiler] r) => Asm.Tag -> Sem r ()
+nockmaBuiltinTag :: Tree.BuiltinDataTag -> NockmaBuiltinTag
+nockmaBuiltinTag = \case
+  Tree.TagTrue -> NockmaBuiltinBool True
+  Tree.TagFalse -> NockmaBuiltinBool False
+  Tree.TagReturn -> impossible
+  Tree.TagBind -> impossible
+  Tree.TagWrite -> impossible
+  Tree.TagReadLn -> impossible
+
+-- | Generic constructors are encoded as [tag args], where args is a
+-- nil terminated list.
+goConstructor :: NockmaMemRep -> Tree.Tag -> [Term Natural] -> Term Natural
+goConstructor mr t args = case t of
+  Tree.BuiltinTag b -> case nockmaBuiltinTag b of
+    NockmaBuiltinBool v -> nockBoolLiteral v
+  Tree.UserTag tag -> case mr of
+    NockmaMemRepConstr ->
+      makeConstructor $ \case
+        ConstructorTag -> OpQuote # (fromIntegral (tag ^. Tree.tagUserWord) :: Natural)
+        ConstructorArgs -> remakeList args
+    NockmaMemRepTuple -> foldTerms (nonEmpty' args)
+    NockmaMemRepList constr -> case constr of
+      NockmaMemRepListConstrNil
+        | null args -> remakeList []
+        | otherwise -> impossible
+      NockmaMemRepListConstrCons -> case args of
+        [l, r] -> TCell l r
+        _ -> impossible
+
+allocConstr :: (Members '[Compiler] r) => Tree.Tag -> Sem r ()
 allocConstr tag = do
   info <- getConstructorInfo tag
   let numArgs = info ^. constructorInfoArity
@@ -730,7 +674,7 @@ builtinFunction = \case
       }
 
 callEnum :: (Enum funId, Members '[Compiler] r) => funId -> Natural -> Sem r ()
-callEnum = callFun . UserFunction . Asm.defaultSymbol . fromIntegral . fromEnum
+callEnum = callFun . UserFunction . Tree.defaultSymbol . fromIntegral . fromEnum
 
 callFun :: (Members '[Compiler] r) => FunctionId -> Natural -> Sem r ()
 callFun = callHelper False . Just
@@ -916,23 +860,23 @@ builtinTagToTerm :: NockmaBuiltinTag -> Term Natural
 builtinTagToTerm = \case
   NockmaBuiltinBool v -> nockBoolLiteral v
 
-constructorTagToTerm :: Asm.Tag -> Term Natural
+constructorTagToTerm :: Tree.Tag -> Term Natural
 constructorTagToTerm = \case
-  Asm.UserTag t -> OpQuote # toNock (fromIntegral (t ^. Asm.tagUserWord) :: Natural)
-  Asm.BuiltinTag b -> builtinTagToTerm (nockmaBuiltinTag b)
+  Tree.UserTag t -> OpQuote # toNock (fromIntegral (t ^. Tree.tagUserWord) :: Natural)
+  Tree.BuiltinTag b -> builtinTagToTerm (nockmaBuiltinTag b)
 
 caseCmd ::
   forall r.
   (Members '[Compiler] r) =>
   Maybe (Sem r ()) ->
-  [(Asm.Tag, Sem r ())] ->
+  [(Tree.Tag, Sem r ())] ->
   Sem r ()
 caseCmd defaultBranch = \case
   [] -> sequence_ defaultBranch
   (tag, b) : bs -> case tag of
-    Asm.BuiltinTag t -> case nockmaBuiltinTag t of
+    Tree.BuiltinTag t -> case nockmaBuiltinTag t of
       NockmaBuiltinBool v -> goBoolTag v b bs
-    Asm.UserTag {} -> do
+    Tree.UserTag {} -> do
       rep <- getConstructorMemRep tag
       case rep of
         NockmaMemRepConstr -> goRepConstr tag b bs
@@ -943,7 +887,7 @@ caseCmd defaultBranch = \case
           bs' <- mapM (firstM asNockmaMemRepListConstr) bs
           goRepList ((constr, b) :| bs')
   where
-    goRepConstr :: Asm.Tag -> Sem r () -> [(Asm.Tag, Sem r ())] -> Sem r ()
+    goRepConstr :: Tree.Tag -> Sem r () -> [(Tree.Tag, Sem r ())] -> Sem r ()
     goRepConstr tag b bs = do
       -- push the constructor tag at the top
       push (OpAddress # topOfStack ValueStack ++ constructorPath ConstructorTag)
@@ -951,16 +895,16 @@ caseCmd defaultBranch = \case
       testEq
       branch b (caseCmd defaultBranch bs)
 
-    asNockmaMemRepListConstr :: Asm.Tag -> Sem r NockmaMemRepListConstr
+    asNockmaMemRepListConstr :: Tree.Tag -> Sem r NockmaMemRepListConstr
     asNockmaMemRepListConstr tag = case tag of
-      Asm.UserTag {} -> do
+      Tree.UserTag {} -> do
         rep <- getConstructorMemRep tag
         case rep of
           NockmaMemRepList constr -> return constr
           _ -> impossible
-      Asm.BuiltinTag {} -> impossible
+      Tree.BuiltinTag {} -> impossible
 
-    goBoolTag :: Bool -> Sem r () -> [(Asm.Tag, Sem r ())] -> Sem r ()
+    goBoolTag :: Bool -> Sem r () -> [(Tree.Tag, Sem r ())] -> Sem r ()
     goBoolTag v b bs = do
       let otherBranch = fromJust (firstJust f bs <|> defaultBranch)
       dup
@@ -968,10 +912,10 @@ caseCmd defaultBranch = \case
           | v -> branch b otherBranch
           | otherwise -> branch otherBranch b
       where
-        f :: (Asm.Tag, Sem r ()) -> Maybe (Sem r ())
+        f :: (Tree.Tag, Sem r ()) -> Maybe (Sem r ())
         f (tag', br) = case tag' of
-          Asm.UserTag {} -> impossible
-          Asm.BuiltinTag tag -> case nockmaBuiltinTag tag of
+          Tree.UserTag {} -> impossible
+          Tree.BuiltinTag tag -> case nockmaBuiltinTag tag of
             NockmaBuiltinBool v' -> guard (v /= v') $> br
 
     goRepList :: NonEmpty (NockmaMemRepListConstr, Sem r ()) -> Sem r ()
@@ -998,13 +942,13 @@ branch' t f = do
 getFunctionArity' :: (Members '[Reader CompilerCtx] r) => FunctionId -> Sem r Natural
 getFunctionArity' s = asks (^?! compilerFunctionInfos . at s . _Just . functionInfoArity)
 
-getConstructorInfo' :: (Members '[Reader CompilerCtx] r) => Asm.Tag -> Sem r ConstructorInfo
+getConstructorInfo' :: (Members '[Reader CompilerCtx] r) => Tree.Tag -> Sem r ConstructorInfo
 getConstructorInfo' tag = asks (^?! compilerConstructorInfos . at tag . _Just)
 
-getConstructorMemRep :: (Members '[Compiler] r) => Asm.Tag -> Sem r NockmaMemRep
+getConstructorMemRep :: (Members '[Compiler] r) => Tree.Tag -> Sem r NockmaMemRep
 getConstructorMemRep tag = (^. constructorInfoMemRep) <$> getConstructorInfo tag
 
-getConstructorArity :: (Members '[Compiler] r) => Asm.Tag -> Sem r Natural
+getConstructorArity :: (Members '[Compiler] r) => Tree.Tag -> Sem r Natural
 getConstructorArity tag = (^. constructorInfoArity) <$> getConstructorInfo tag
 
 re :: (Member (Reader CompilerCtx) r) => Sem (Compiler ': r) a -> Sem (Output (Term Natural) ': r) a
@@ -1019,7 +963,6 @@ re = reinterpretH $ \case
   Branch t f -> branch' t f
   Save isTail m -> save' isTail m
   CallStdlibOn s f -> callStdlibOn' s f >>= pureT
-  AsmReturn -> asmReturn' >>= pureT
   TestEqOn s -> testEqOn' s >>= pureT
   GetConstructorInfo s -> getConstructorInfo' s >>= pureT
   GetFunctionArity s -> getFunctionArity' s >>= pureT

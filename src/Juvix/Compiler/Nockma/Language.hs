@@ -1,12 +1,16 @@
 module Juvix.Compiler.Nockma.Language
   ( module Juvix.Compiler.Nockma.Language,
     module Juvix.Compiler.Core.Language.Base,
+    module Juvix.Compiler.Nockma.StdlibFunction,
+    module Juvix.Compiler.Nockma.Language.Path,
   )
 where
 
 import Data.HashMap.Strict qualified as HashMap
 import GHC.Base (Type)
 import Juvix.Compiler.Core.Language.Base (Symbol)
+import Juvix.Compiler.Nockma.Language.Path
+import Juvix.Compiler.Nockma.StdlibFunction
 import Juvix.Prelude hiding (Atom, Path)
 import Juvix.Prelude.Pretty
 
@@ -118,28 +122,6 @@ instance Pretty NockOp where
     OpHint -> "hint"
     OpTrace -> "trace"
 
-instance Pretty StdlibFunction where
-  pretty = \case
-    StdlibDec -> "dec"
-    StdlibAdd -> "add"
-    StdlibSub -> "sub"
-    StdlibMul -> "mul"
-    StdlibDiv -> "div"
-    StdlibMod -> "mod"
-    StdlibLt -> "<"
-    StdlibLe -> "<="
-
-data StdlibFunction
-  = StdlibDec
-  | StdlibAdd
-  | StdlibSub
-  | StdlibMul
-  | StdlibDiv
-  | StdlibMod
-  | StdlibLt
-  | StdlibLe
-  deriving stock (Show, Lift, Eq, Bounded, Enum)
-
 textToStdlibFunctionMap :: HashMap Text StdlibFunction
 textToStdlibFunctionMap =
   hashMap
@@ -172,10 +154,6 @@ data ParsedCell a
   | ParsedAutoConsCell (AutoConsCell a)
   | ParsedStdlibCallCell (StdlibCallCell a)
 
-newtype EncodedPath = EncodedPath
-  { _encodedPath :: Natural
-  }
-
 -- | appends n R
 encodedPathAppendRightN :: Natural -> EncodedPath -> EncodedPath
 encodedPathAppendRightN n (EncodedPath p) = EncodedPath (f p)
@@ -183,16 +161,6 @@ encodedPathAppendRightN n (EncodedPath p) = EncodedPath (f p)
     -- equivalent to applying 2 * x + 1, n times
     f :: Natural -> Natural
     f x = (2 ^ n) * (x + 1) - 1
-
-data Direction
-  = L
-  | R
-  deriving stock (Show)
-
-type Path = [Direction]
-
-emptyPath :: Path
-emptyPath = []
 
 makeLenses ''Cell
 makeLenses ''StdlibCallCell
@@ -203,7 +171,6 @@ makeLenses ''AutoConsCell
 makeLenses ''Program
 makeLenses ''Assignment
 makeLenses ''WithStack
-makeLenses ''EncodedPath
 makeLenses ''AtomInfo
 makeLenses ''CellInfo
 
@@ -248,33 +215,6 @@ serializeOp = \case
   OpReplace -> 10
   OpHint -> 11
   OpTrace -> 100
-
-decodePath :: forall r. (Member Fail r) => EncodedPath -> Sem r Path
-decodePath ep = execOutputList (go (ep ^. encodedPath))
-  where
-    go :: Natural -> Sem (Output Direction ': r) ()
-    go = \case
-      0 -> fail
-      1 -> return ()
-      x ->
-        if
-            | even x -> do
-                go (x `div` 2)
-                output L
-            | otherwise -> do
-                go ((x - 1) `div` 2)
-                output R
-
-decodePath' :: EncodedPath -> Path
-decodePath' = run . runFailDefault (error "encoded path cannot be 0") . decodePath
-
-encodePath :: Path -> EncodedPath
-encodePath = EncodedPath . foldl' step 1
-  where
-    step :: Natural -> Direction -> Natural
-    step n = \case
-      R -> 2 * n + 1
-      L -> 2 * n
 
 class (Eq a) => NockNatural a where
   type ErrNockNatural a :: Type
@@ -368,12 +308,6 @@ instance IsNock Path where
 
 instance IsNock EncodedPath where
   toNock = toNock . decodePath'
-
-instance Semigroup EncodedPath where
-  a <> b = encodePath (decodePath' a <> decodePath' b)
-
-instance Monoid EncodedPath where
-  mempty = encodePath []
 
 infixr 5 #.
 
