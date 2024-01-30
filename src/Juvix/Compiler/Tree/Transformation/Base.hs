@@ -34,7 +34,7 @@ mapT f = over infoFunctions (HashMap.mapWithKey (over functionCode . f))
 mapT' :: (Symbol -> Node -> Sem (InfoTableBuilder ': r) Node) -> InfoTable -> Sem r InfoTable
 mapT' f tab =
   fmap fst $
-    runInfoTableBuilderWithTab tab $
+    runInfoTableBuilderWithInfoTable tab $
       mapM_
         (\(sym, fi) -> overM functionCode (f sym) fi >>= registerFunction)
         (HashMap.toList (tab ^. infoFunctions))

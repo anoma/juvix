@@ -177,11 +177,11 @@ destruct = \case
         }
   CallClosures NodeCallClosures {..} ->
     NodeDetails
-      { _nodeChildren = map noTempVar (_nodeCallClosuresFun : _nodeCallClosuresArgs),
+      { _nodeChildren = map noTempVar (_nodeCallClosuresFun : toList _nodeCallClosuresArgs),
         _nodeReassemble = someChildren $ \(arg :| args) ->
           CallClosures
             NodeCallClosures
-              { _nodeCallClosuresArgs = args,
+              { _nodeCallClosuresArgs = nonEmpty' args,
                 _nodeCallClosuresFun = arg
               }
       }

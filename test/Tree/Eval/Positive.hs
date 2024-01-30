@@ -26,6 +26,9 @@ testDescr PosTest {..} =
           _testAssertion = Steps $ treeEvalAssertion file' expected' [] (const (return ()))
         }
 
+filterTests :: [String] -> [PosTest] -> [PosTest]
+filterTests names = filter (\PosTest {..} -> _name `elem` names)
+
 filterOutTests :: [String] -> [PosTest] -> [PosTest]
 filterOutTests out = filter (\PosTest {..} -> _name `notElem` out)
 

@@ -2,8 +2,8 @@ module Juvix.Compiler.Tree.Data.TransformationId.Strings where
 
 import Juvix.Prelude
 
-strNockPipeline :: Text
-strNockPipeline = "pipeline-nock"
+strNockmaPipeline :: Text
+strNockmaPipeline = "pipeline-nockma"
 
 strAsmPipeline :: Text
 strAsmPipeline = "pipeline-asm"
@@ -16,3 +16,6 @@ strIdentityU = "identity-umap"
 
 strIdentityD :: Text
 strIdentityD = "identity-dmap"
+
+strApply :: Text
+strApply = "apply"

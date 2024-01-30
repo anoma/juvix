@@ -6,6 +6,7 @@ module Juvix.Compiler.Tree.Transformation
 where
 
 import Juvix.Compiler.Tree.Data.TransformationId
+import Juvix.Compiler.Tree.Transformation.Apply
 import Juvix.Compiler.Tree.Transformation.Base
 import Juvix.Compiler.Tree.Transformation.Identity
 
@@ -17,3 +18,4 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
       Identity -> return . identity
       IdentityU -> return . identityU
       IdentityD -> return . identityD
+      Apply -> return . computeApply

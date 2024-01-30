@@ -41,7 +41,7 @@ data Node
     -- (any branch may be omitted).
     Case NodeCase
   | -- | Execute nested code with temporary stack extended with a given value.
-    -- Used to implement Core.Let and Core.Case. JVT codes: 'save(x) {<code>}',
+    -- Used to implement Core.Let. JVT codes: 'save(x) {<code>}',
     -- 'save[<name>](x) {<code>}'.
     Save NodeSave
 
@@ -106,7 +106,7 @@ data NodeCall = NodeCall
 
 data NodeCallClosures = NodeCallClosures
   { _nodeCallClosuresFun :: Node,
-    _nodeCallClosuresArgs :: [Node]
+    _nodeCallClosuresArgs :: NonEmpty Node
   }
 
 data NodeBranch = NodeBranch

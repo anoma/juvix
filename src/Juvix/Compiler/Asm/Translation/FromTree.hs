@@ -148,7 +148,7 @@ genCode fi =
     goCallClosures :: Bool -> Tree.NodeCallClosures -> Code'
     goCallClosures isTail Tree.NodeCallClosures {..} =
       DL.append
-        (goArgs _nodeCallClosuresArgs)
+        (goArgs (toList _nodeCallClosuresArgs))
         ( DL.snoc (go False _nodeCallClosuresFun) $
             mkInstr $
               (if isTail then TailCallClosures else CallClosures) $

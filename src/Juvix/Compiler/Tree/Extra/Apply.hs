@@ -1,12 +1,12 @@
-module Juvix.Compiler.Asm.Extra.Apply where
+module Juvix.Compiler.Tree.Extra.Apply where
 
 import Data.FileEmbed qualified as FE
 import Data.HashMap.Strict qualified as HashMap
 import Data.Text.Encoding
-import Juvix.Compiler.Asm.Data.InfoTable
-import Juvix.Compiler.Asm.Data.InfoTableBuilder
-import Juvix.Compiler.Asm.Language
-import Juvix.Compiler.Asm.Translation.FromSource
+import Juvix.Compiler.Tree.Data.InfoTable
+import Juvix.Compiler.Tree.Data.InfoTableBuilder
+import Juvix.Compiler.Tree.Language
+import Juvix.Compiler.Tree.Translation.FromSource
 
 data ApplyBuiltins = ApplyBuiltins
   { -- | The number of `juvix_apply_n` functions.
@@ -20,23 +20,14 @@ makeLenses ''ApplyBuiltins
 addApplyBuiltins :: InfoTable -> (ApplyBuiltins, InfoTable)
 addApplyBuiltins tab = (blts, bs' ^. stateInfoTable)
   where
-    nextSymbolId = maximum (0 : map (^. symbolId) (HashMap.keys (tab ^. infoFunctions) ++ HashMap.keys (tab ^. infoInductives))) + 1
-    nextUserId = maximum (0 : mapMaybe getUserTagId (HashMap.keys (tab ^. infoConstrs))) + 1
-
     bs :: BuilderState
-    bs =
-      BuilderState
-        { _stateNextSymbolId = nextSymbolId,
-          _stateNextUserTag = nextUserId,
-          _stateInfoTable = tab,
-          _stateIdents = mempty
-        }
+    bs = builderStateFromInfoTable tab
 
     bs' :: BuilderState
     bs' =
       fromRight impossible $
         parseText' bs $
-          decodeUtf8 $(FE.makeRelativeToProject "runtime/src/asm/apply.jva" >>= FE.embedFile)
+          decodeUtf8 $(FE.makeRelativeToProject "runtime/src/tree/apply.jvt" >>= FE.embedFile)
 
     blts :: ApplyBuiltins
     blts =

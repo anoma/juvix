@@ -59,7 +59,7 @@ data App' i a = App
 data Apps' i f a = Apps
   { _appsInfo :: i,
     _appsFun :: !f,
-    _appsArgs :: ![a]
+    _appsArgs :: !(NonEmpty a)
   }
   deriving stock (Generic)
 

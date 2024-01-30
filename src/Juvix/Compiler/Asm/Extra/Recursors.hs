@@ -197,6 +197,9 @@ recurse' sig = go True
 
         fixMemCallClosures :: Memory -> InstrCallClosures -> Sem r Memory
         fixMemCallClosures mem InstrCallClosures {..} = do
+          when (_callClosuresArgsNum < 1) $
+            throw $
+              AsmError loc "invalid closure call: expected at least one supplied argument"
           when (null (mem ^. memoryValueStack)) $
             throw $
               AsmError loc "invalid closure call: value stack is empty"

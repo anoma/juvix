@@ -177,10 +177,10 @@ coreToVampIR' = Core.toStored' >=> storedCoreToVampIR'
 --------------------------------------------------------------------------------
 
 treeToAsm :: Tree.InfoTable -> Sem r Asm.InfoTable
-treeToAsm = return . Asm.fromTree
+treeToAsm = Tree.toAsm >=> return . Asm.fromTree
 
 treeToNockma :: (Members '[Error JuvixError, Reader EntryPoint] r) => Tree.InfoTable -> Sem r (Nockma.Cell Natural)
-treeToNockma = treeToAsm >=> asmToNockma
+treeToNockma = Tree.toNockma >=> treeToAsm >=> asmToNockma
 
 treeToMiniC :: (Members '[Error JuvixError, Reader EntryPoint] r) => Tree.InfoTable -> Sem r C.MiniCResult
 treeToMiniC = treeToAsm >=> asmToMiniC
@@ -195,6 +195,9 @@ regToMiniC :: (Member (Reader EntryPoint) r) => Reg.InfoTable -> Sem r C.MiniCRe
 regToMiniC tab = do
   e <- ask
   return $ C.fromReg (Backend.getLimits (e ^. entryPointTarget) (e ^. entryPointDebug)) tab
+
+treeToNockma' :: (Members '[Error JuvixError, Reader Asm.Options, Reader Nockma.CompilerOptions] r) => Tree.InfoTable -> Sem r (Nockma.Cell Natural)
+treeToNockma' = Tree.toNockma >=> treeToAsm >=> asmToNockma'
 
 asmToNockma' :: (Members '[Error JuvixError, Reader Asm.Options, Reader Nockma.CompilerOptions] r) => Asm.InfoTable -> Sem r (Nockma.Cell Natural)
 asmToNockma' = mapError (JuvixError @Asm.AsmError) . Asm.toNockma' >=> Nockma.fromAsmTable

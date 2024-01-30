@@ -20,7 +20,7 @@ mkIdent' = mkIdent (IdentInfo "" Nothing TyDynamic)
 mkConstant :: ConstantValue -> Node
 mkConstant cv = NCst (Constant () cv)
 
-mkApps :: Fun -> [Node] -> Node
+mkApps :: Fun -> NonEmpty Node -> Node
 mkApps l r = NApp (Apps () l r)
 
 mkBuiltinApp :: BuiltinOp -> [Node] -> Node
