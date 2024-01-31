@@ -79,15 +79,12 @@ type Offset = Natural
 data CompilerFunction = CompilerFunction
   { _compilerFunctionName :: FunctionId,
     _compilerFunctionArity :: Natural,
-    _compilerFunction :: Sem '[Compiler, Reader CompilerCtx] ()
+    _compilerFunction :: Sem '[Compiler, Reader CompilerCtx] (Term Natural)
   }
 
 data StackId
-  = CurrentFunction
-  | ValueStack
+  = Args
   | TempStack
-  | AuxStack
-  | FrameStack
   | StandardLibrary
   | FunctionsLibrary
   deriving stock (Enum, Bounded, Eq, Show)
@@ -146,16 +143,13 @@ data Compiler m a where
   Verbatim :: Term Natural -> Compiler m ()
   TraceTerm :: Term Natural -> Compiler m ()
   PushOnto :: StackId -> Term Natural -> Compiler m ()
-  Crash :: Compiler m ()
   PopNAndPushOnto :: StackId -> Natural -> Term Natural -> Compiler m ()
   PopFromN :: Natural -> StackId -> Compiler m ()
   TestEqOn :: StackId -> Compiler m ()
   CallHelper :: Bool -> Maybe FunctionId -> Natural -> Compiler m ()
   IncrementOn :: StackId -> Compiler m ()
-  Branch :: m () -> m () -> Compiler m ()
   Save :: Bool -> m () -> Compiler m ()
   CallStdlibOn :: StackId -> StdlibFunction -> Compiler m ()
-  TreeReturn :: Compiler m ()
   GetConstructorInfo :: Tree.Tag -> Compiler m ConstructorInfo
   GetFunctionArity :: FunctionId -> Compiler m Natural
   GetFunctionPath :: FunctionId -> Compiler m Path
@@ -185,7 +179,7 @@ indexInStack :: StackId -> Natural -> Path
 indexInStack s idx = stackPath s ++ indexStack idx
 
 pathToArgumentsArea :: Path
-pathToArgumentsArea = topOfStack CurrentFunction ++ functionPath FunctionArgs
+pathToArgumentsArea = topOfStack Args
 
 pathToArg :: Natural -> Path
 pathToArg = indexInPath pathToArgumentsArea
@@ -306,91 +300,196 @@ fromTreeTable t = case t ^. Tree.infoMainFunction of
 fromOffsetRef :: Tree.OffsetRef -> Natural
 fromOffsetRef = fromIntegral . (^. Tree.offsetRefOffset)
 
-compile :: forall r. (Members '[Compiler] r) => Tree.Node -> Sem r ()
-compile = \case {}
+compile :: forall r. (Members '[Compiler] r) => Tree.Node -> Sem r (Term Natural)
+compile = \case
+  Tree.Binop b -> goBinop b
+  Tree.Unop b -> goUnop b
+  Tree.Const c -> return (goConst c)
+  Tree.MemRef c -> goMemRef c
+  Tree.AllocConstr c -> goAllocConstr c
+  Tree.AllocClosure c -> goAllocClosure c
+  Tree.ExtendClosure c -> goExtendClosure c
+  Tree.Call c -> goCall c
+  Tree.Branch b -> goBranch b
+  Tree.Case c -> goCase c
+  Tree.Save s -> goSave s
+  Tree.CallClosures {} -> impossible
   where
-    goSave :: Tree.NodeSave -> Sem r ()
-    goSave = undefined
+    goAllocConstr :: Tree.NodeAllocConstr -> Sem r (Term Natural)
+    goAllocConstr Tree.NodeAllocConstr {..} = do
+      args <- mapM compile _nodeAllocConstrArgs
+      return $ case _nodeAllocConstrTag of
+        Tree.UserTag tag ->
+          makeConstructor $ \case
+            ConstructorTag -> OpQuote # (fromIntegral (tag ^. Tree.tagUserWord) :: Natural)
+            ConstructorArgs -> remakeList args
+        Tree.BuiltinTag tag -> case nockmaBuiltinTag tag of
+          NockmaBuiltinBool b -> nockBoolLiteral b
 
-    goCase :: Tree.NodeCase -> Sem r ()
+    goMemRef :: Tree.MemRef -> Sem r (Term Natural)
+    goMemRef = \case
+      Tree.DRef d -> goDirectRef d
+      Tree.ConstrRef {} -> error "TODO"
+      where
+        goDirectRef :: Tree.DirectRef -> Sem r (Term Natural)
+        goDirectRef = \case
+          Tree.ArgRef {} -> error "TODO"
+          Tree.TempRef {} -> error "TODO"
+
+    goConst :: Tree.Constant -> Term Natural
+    goConst = \case
+      Tree.ConstInt i
+        | i < 0 -> error "negative integer"
+        | otherwise -> toNock @Natural (fromIntegral i)
+      Tree.ConstBool i -> nockBoolLiteral i
+      Tree.ConstString {} -> stringsErr
+      Tree.ConstUnit -> constUnit
+      Tree.ConstVoid -> constVoid
+
+    goSave :: Tree.NodeSave -> Sem r (Term Natural)
+    goSave Tree.NodeSave {..} = do
+      arg <- compile _nodeSaveArg
+      body <- compile _nodeSaveBody
+      return (withTemp arg body)
+
+    goCase :: Tree.NodeCase -> Sem r (Term Natural)
     goCase c = do
-      let def = compile <$> c ^. Tree.nodeCaseDefault
-          branches =
-            [ (b ^. Tree.caseBranchTag, compile (b ^. Tree.caseBranchBody))
-              | b <- c ^. Tree.nodeCaseBranches
-            ]
-      caseCmd def branches
+      def <- mapM compile (c ^. Tree.nodeCaseDefault)
+      branches <-
+        sequence
+          [ do
+              body' <- compile (b ^. Tree.caseBranchBody)
+              return (b ^. Tree.caseBranchTag, body')
+            | b <- c ^. Tree.nodeCaseBranches
+          ]
+      arg <- compile (c ^. Tree.nodeCaseArg)
+      caseCmd arg def branches
 
-    goBranch :: Tree.NodeBranch -> Sem r ()
-    goBranch Tree.NodeBranch {..} = branch (compile _nodeBranchTrue) (compile _nodeBranchFalse)
+    goBranch :: Tree.NodeBranch -> Sem r (Term Natural)
+    goBranch Tree.NodeBranch {..} = do
+      arg <- compile _nodeBranchArg
+      iftrue <- compile _nodeBranchTrue
+      iffalse <- compile _nodeBranchFalse
+      return (branch arg iftrue iffalse)
 
-    goBinop :: Tree.BinaryOpcode -> Sem r ()
-    goBinop o = case o of
-      Tree.IntAdd -> callStdlib StdlibAdd
-      Tree.IntSub -> callStdlib StdlibSub
-      Tree.IntMul -> callStdlib StdlibMul
-      Tree.IntDiv -> callStdlib StdlibDiv
-      Tree.IntMod -> callStdlib StdlibMod
-      Tree.IntLt -> callStdlib StdlibLt
-      Tree.IntLe -> callStdlib StdlibLe
-      Tree.ValEq -> testEq
-      Tree.StrConcat -> stringsErr
+    goUnop :: Tree.NodeUnop -> Sem r (Term Natural)
+    goUnop Tree.NodeUnop {..} = goUnaryOpcode _nodeUnopOpcode
+      where
+        goUnaryOpcode :: Tree.UnaryOpcode -> Sem r (Term Natural)
+        goUnaryOpcode = \case
+          Tree.OpShow -> stringsErr
+          Tree.OpStrToInt -> stringsErr
+          Tree.OpFail -> return crash
+          Tree.OpTrace -> error "TODO"
+          Tree.OpArgsNum -> error "TODO"
 
-    goAllocClosure :: Tree.NodeAllocClosure -> Sem r ()
-    goAllocClosure = undefined
+    goBinop :: Tree.NodeBinop -> Sem r (Term Natural)
+    goBinop Tree.NodeBinop {..} = do
+      arg1 <- compile _nodeBinopArg1
+      arg2 <- compile _nodeBinopArg2
+      let args = [arg1, arg2]
+      case _nodeBinopOpcode of
+        Tree.IntAdd -> return (callStdlib StdlibAdd args)
+        Tree.IntSub -> return (callStdlib StdlibSub args)
+        Tree.IntMul -> return (callStdlib StdlibMul args)
+        Tree.IntDiv -> return (callStdlib StdlibDiv args)
+        Tree.IntMod -> return (callStdlib StdlibMod args)
+        Tree.IntLt -> return (callStdlib StdlibLt args)
+        Tree.IntLe -> return (callStdlib StdlibLe args)
+        Tree.OpSeq -> error "TODO"
+        Tree.ValEq -> testEq _nodeBinopArg1 _nodeBinopArg2
+        Tree.StrConcat -> stringsErr
 
-    goExtendClosure :: Tree.NodeExtendClosure -> Sem r ()
-    goExtendClosure a = undefined
+    goAllocClosure :: Tree.NodeAllocClosure -> Sem r (Term Natural)
+    goAllocClosure = error "TODO"
 
-    goCallHelper :: Bool -> Tree.NodeCall -> Sem r ()
-    goCallHelper isTail Tree.NodeCall {..} = undefined
+    goExtendClosure :: Tree.NodeExtendClosure -> Sem r (Term Natural)
+    goExtendClosure = extendClosure
 
-    goCall :: Tree.NodeCall -> Sem r ()
+    goCallHelper :: Bool -> Tree.NodeCall -> Sem r (Term Natural)
+    goCallHelper _isTail Tree.NodeCall {..} = do
+      args <- mapM compile _nodeCallArgs
+      case _nodeCallType of
+        Tree.CallFun fun -> callFun (UserFunction fun) args
+        Tree.CallClosure f -> do
+          f' <- compile f
+          let argsNum = getClosureField ClosureArgsNum f'
+              oldArgs = getClosureField ClosureArgs f'
+              fcode = getClosureField ClosureCode f'
+          posOfArgsNil <- appendRights (toNock emptyPath) argsNum
+          let allArgs = replaceSubterm' oldArgs posOfArgsNil (remakeList args)
+          return (replaceArgsWithTerm allArgs >># fcode)
+
+    goCall :: Tree.NodeCall -> Sem r (Term Natural)
     goCall = goCallHelper False
 
-    goTailCall :: Tree.NodeCall -> Sem r ()
-    goTailCall = goCallHelper True
+-- | arg order: push path >> push n
+appendRights ::
+  (Members '[Compiler] r) =>
+  Term Natural ->
+  Term Natural ->
+  Sem r (Term Natural)
+appendRights path n = callFun (BuiltinFunction BuiltinAppendRights) [path, n]
 
-    goDump :: Sem r ()
-    goDump = do
-      dumpStack ValueStack
-      dumpStack AuxStack
-      dumpStack TempStack
-      dumpStack FrameStack
+pushTemp :: Term Natural -> Term Natural
+pushTemp toBePushed =
+  remakeList
+    [ let p = OpAddress # stackPath s
+       in if
+              | TempStack == s -> toBePushed # p
+              | otherwise -> p
+      | s <- allElements
+    ]
 
-    goTrace :: Sem r ()
-    goTrace = traceTerm (OpAddress # topOfStack ValueStack)
+withTemp :: Term Natural -> Term Natural -> Term Natural
+withTemp toBePushed body =
+  OpSequence # pushTemp toBePushed # body
 
-extendClosure :: (Members '[Compiler] r) => Natural -> Sem r ()
-extendClosure extraArgsNum = do
-  let pathToOldClosure = topOfStack ValueStack
-      oldArgs = OpAddress # pathToOldClosure ++ closurePath ClosureArgs
-      curArgsNum = OpAddress # pathToOldClosure ++ closurePath ClosureArgsNum
-      extraArgs = stackSliceAsList ValueStack 1 extraArgsNum
-  push (OpQuote # toNock ([] :: Path))
-  push (OpAddress # indexInStack ValueStack 1 ++ closurePath ClosureArgsNum)
-  appendRights
-  moveTopFromTo ValueStack AuxStack
-  -- valueStack: [oldclosure ..]
-  -- tempstack: [posOfArgsNil ..]
-  pushOnto AuxStack curArgsNum
-  pushNatOnto AuxStack extraArgsNum
-  addOn AuxStack
-  pushOnto AuxStack extraArgs
-  -- valueStack: [oldclosure ..]
-  -- tempstack: [xtraArgsList newArgsNum posOfArgsNil ..]
-  let xtraArgs = OpAddress # topOfStack AuxStack
-      newArgsNum = OpAddress # indexInStack AuxStack 1
-      posOfArgsNil = OpAddress # indexInStack AuxStack 2
-      newClosure = makeClosure $ \case
-        ClosureCode -> OpAddress # pathToOldClosure ++ closurePath ClosureCode
-        ClosureTotalArgsNum -> OpAddress # pathToOldClosure ++ closurePath ClosureTotalArgsNum
-        ClosureArgsNum -> newArgsNum
-        ClosureArgs -> replaceSubterm' oldArgs posOfArgsNil xtraArgs
-  pushOnto AuxStack newClosure
-  popN (1 + extraArgsNum)
-  moveTopFromTo AuxStack ValueStack
-  popFromN 3 AuxStack
+testEq :: (Members '[Compiler] r) => Tree.Node -> Tree.Node -> Sem r (Term Natural)
+testEq a b = do
+  a' <- compile a
+  b' <- compile b
+  return (OpEq # a' # b')
+
+nockIntegralLiteral :: (Integral a) => a -> Term Natural
+nockIntegralLiteral = (OpQuote #) . toNock @Natural . fromIntegral
+
+extendClosure ::
+  (Members '[Compiler] r) =>
+  Tree.NodeExtendClosure ->
+  Sem r (Term Natural)
+extendClosure Tree.NodeExtendClosure {..} = do
+  args <- mapM compile _nodeExtendClosureArgs
+  closure <- compile _nodeExtendClosureFun
+  let argsNum = getClosureField ClosureArgsNum closure
+      oldArgs = getClosureField ClosureArgs closure
+      fcode = getClosureField ClosureCode closure
+  posOfArgsNil <- appendRights (toNock emptyPath) argsNum
+  let allArgs = replaceSubterm' oldArgs posOfArgsNil (remakeList args)
+  let newArgsNum = add argsNum (nockIntegralLiteral (length _nodeExtendClosureArgs))
+  return . makeClosure $ \case
+    ClosureCode -> fcode
+    ClosureTotalArgsNum -> getClosureField ClosureTotalArgsNum closure
+    ClosureArgsNum -> newArgsNum
+    ClosureArgs -> allArgs
+
+callStdlib :: StdlibFunction -> [Term Natural] -> Term Natural
+callStdlib fun args =
+  let fPath = stdlibPath fun
+      getFunCode = OpCall # fPath # (OpAddress # stackPath StandardLibrary)
+      adjustArgs = case nonEmpty args of
+        Just args' -> OpReplace # ([R, L] # foldTerms args')
+        Nothing -> OpAddress # emptyPath
+      callFn = OpCall # [L] # adjustArgs
+      callCell = set cellCall (Just meta) (OpPush #. (getFunCode # callFn))
+      meta =
+        StdlibCall
+          { _stdlibCallArgs = case nonEmpty args of
+              Just args' -> OpQuote # foldTerms args'
+              Nothing -> nockNil',
+            _stdlibCallFunction = fun
+          }
+   in TermCell callCell
 
 constUnit :: Term Natural
 constUnit = constVoid
@@ -424,40 +523,19 @@ pushConstructorFieldOnto s tag refToConstr argIx = do
           NockmaMemRepListConstrCons -> directRefPath refToConstr ++ indexTuple 2 argIx
   pushOnto s (OpAddress # path)
 
-pushConstructorField :: (Members '[Compiler] r) => Tree.Tag -> Tree.DirectRef -> Natural -> Sem r ()
-pushConstructorField = pushConstructorFieldOnto ValueStack
-
 directRefPath :: Tree.DirectRef -> Path
 directRefPath = \case
   Tree.ArgRef a -> pathToArg (fromOffsetRef a)
   Tree.TempRef Tree.RefTemp {..} -> tempRefPath (fromIntegral (fromJust _refTempTempHeight)) (fromOffsetRef _refTempOffsetRef)
 
-pushDirectRef :: (Members '[Compiler] r) => Tree.DirectRef -> Sem r ()
-pushDirectRef = push . (OpAddress #) . directRefPath
-
 tempRefPath :: Natural -> Natural -> Path
 tempRefPath tempHeight off = indexInStack TempStack (tempHeight - off - 1)
 
-pushTempRef :: (Members '[Compiler] r) => Natural -> Natural -> Sem r ()
-pushTempRef tempHeight = push . (OpAddress #) . tempRefPath tempHeight
+allocClosure :: Tree.NodeAllocClosure -> Sem r ()
+allocClosure = error "TODO"
 
-allocClosure :: (Members '[Compiler] r) => FunctionId -> Natural -> Sem r ()
-allocClosure funSym numArgs = do
-  funPath <- getFunctionPath funSym
-  funAri <- getFunctionArity funSym
-  pushOnto AuxStack (stackTake ValueStack numArgs)
-  let closure = makeClosure $ \case
-        ClosureCode -> OpAddress # funPath
-        ClosureTotalArgsNum -> OpQuote # toNock funAri
-        ClosureArgsNum -> OpQuote # toNock numArgs
-        ClosureArgs -> OpAddress # topOfStack AuxStack
-  popNAndPushOnto ValueStack numArgs closure
-  popFrom AuxStack
-
-closureArgsNum :: (Members '[Compiler] r) => Sem r ()
-closureArgsNum = do
-  let helper p = OpAddress # topOfStack ValueStack ++ closurePath p
-  sub (helper ClosureTotalArgsNum) (helper ClosureArgsNum) pop
+closureArgsNum :: Sem r ()
+closureArgsNum = error "TODO"
 
 nockmaBuiltinTag :: Tree.BuiltinDataTag -> NockmaBuiltinTag
 nockmaBuiltinTag = \case
@@ -488,16 +566,8 @@ goConstructor mr t args = case t of
         [l, r] -> TCell l r
         _ -> impossible
 
-allocConstr :: (Members '[Compiler] r) => Tree.Tag -> Sem r ()
-allocConstr tag = do
-  info <- getConstructorInfo tag
-  let numArgs = info ^. constructorInfoArity
-      memrep = info ^. constructorInfoMemRep
-      args = [OpAddress # indexInStack ValueStack (pred i) | i <- [1 .. numArgs]]
-      constr = goConstructor memrep tag args
-  pushOnto AuxStack constr
-  popN numArgs
-  moveTopFromTo AuxStack ValueStack
+allocConstr :: Tree.NodeAllocConstr -> Sem r ()
+allocConstr = error "TODO"
 
 copyTopFromTo :: (Members '[Compiler] r) => StackId -> StackId -> Sem r ()
 copyTopFromTo from toStack = pushOnto toStack (OpAddress # topOfStack from)
@@ -514,13 +584,8 @@ stringsErr :: a
 stringsErr = unsupported "strings"
 
 -- | Computes a - b
-sub :: (Members '[Compiler] r) => Term Natural -> Term Natural -> Sem r () -> Sem r ()
-sub a b aux = do
-  pushOnto AuxStack b
-  pushOnto AuxStack a
-  aux
-  callStdlibOn AuxStack StdlibSub
-  moveTopFromTo AuxStack ValueStack
+sub :: Term Natural -> Term Natural -> Sem r () -> Sem r ()
+sub _a _b _aux = error "TODO"
 
 seqTerms :: [Term Natural] -> Term Natural
 seqTerms = foldl' (flip (>>#)) (OpAddress # emptyPath) . reverse
@@ -542,22 +607,13 @@ initStack defs = makeList (initSubStack <$> allElements)
   where
     initSubStack :: StackId -> Term Natural
     initSubStack = \case
-      CurrentFunction -> nockNil'
-      ValueStack -> nockNil'
-      FrameStack -> nockNil'
+      Args -> nockNil'
       TempStack -> nockNil'
-      AuxStack -> nockNil'
       StandardLibrary -> stdlib
       FunctionsLibrary -> makeList defs
 
-push :: (Members '[Compiler] r) => Term Natural -> Sem r ()
-push = pushOnto ValueStack
-
 dupOnto :: (Members '[Compiler] r) => StackId -> Sem r ()
 dupOnto stackId = pushOnto stackId (OpAddress # topOfStack stackId)
-
-dup :: (Members '[Compiler] r) => Sem r ()
-dup = dupOnto ValueStack
 
 execCompilerList :: (Member (Reader CompilerCtx) r) => Sem (Compiler ': r) a -> Sem r [Term Natural]
 execCompilerList = fmap fst . runCompilerList
@@ -577,8 +633,8 @@ runCompiler sem = do
 
 runCompilerWith :: CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> Cell Natural
 runCompilerWith opts constrs libFuns mainFun =
-  let entryCommand :: (Members '[Compiler] r) => Sem r ()
-      entryCommand = callFun (mainFun ^. compilerFunctionName) 0
+  let entryCommand :: (Members '[Compiler] r) => Sem r (Term Natural)
+      entryCommand = callFun (mainFun ^. compilerFunctionName) []
       entryTerm =
         seqTerms
           . run
@@ -625,59 +681,59 @@ runCompilerWith opts constrs libFuns mainFun =
             }
         )
 
+asmReturn :: Sem r ()
+asmReturn = return ()
+
 builtinFunction :: BuiltinFunctionId -> CompilerFunction
 builtinFunction = \case
   BuiltinAppendRights ->
     CompilerFunction
       { _compilerFunctionName = BuiltinFunction BuiltinAppendRights,
         _compilerFunctionArity = 2, -- args: n pos
-        _compilerFunction = do
-          push (OpAddress # pathToArg 0)
-          pow2
-          push (OpAddress # pathToArg 1)
-          pushNat 1
-          add
-          mul
-          dec
-          asmReturn
+        _compilerFunction = error "TODO"
       }
   BuiltinPow2 ->
     CompilerFunction
       { _compilerFunctionName = BuiltinFunction BuiltinPow2,
         _compilerFunctionArity = 1,
-        _compilerFunction = do
-          pushNat 1 -- acc
-          push (OpAddress # pathToArg 0)
-          callFun (BuiltinFunction BuiltinPow2Go) 2
-          asmReturn
+        _compilerFunction = error "TODO"
       }
   BuiltinPow2Go ->
     CompilerFunction
       { _compilerFunctionName = BuiltinFunction BuiltinPow2Go,
         _compilerFunctionArity = 2, -- args: n acc
-        _compilerFunction = do
-          push (OpAddress # pathToArg 1)
-          push (OpAddress # pathToArg 0)
-          copyTopFromTo ValueStack AuxStack
-          pushNat 0
-          testEq
-          let baseCase :: (Members '[Compiler] r) => Sem r ()
-              baseCase = popFrom AuxStack >> asmReturn
-              recCase :: (Members '[Compiler] r) => Sem r ()
-              recCase = do
-                pushNat 2
-                mul
-                moveTopFromTo AuxStack ValueStack
-                dec
-                callHelper True (Just (BuiltinFunction BuiltinPow2Go)) 2
-          branch baseCase recCase
+        _compilerFunction = error "TODO"
       }
 
-callEnum :: (Enum funId, Members '[Compiler] r) => funId -> Natural -> Sem r ()
-callEnum = callFun . UserFunction . Tree.defaultSymbol . fromIntegral . fromEnum
+-- callEnum :: (Enum funId, Members '[Compiler] r) => funId -> Natural -> Sem r ()
+-- callEnum = callFun . UserFunction . Tree.defaultSymbol . fromIntegral . fromEnum
 
-callFun :: (Members '[Compiler] r) => FunctionId -> Natural -> Sem r ()
-callFun = callHelper False . Just
+callFun ::
+  (Members '[Compiler] r) =>
+  FunctionId ->
+  [Term Natural] ->
+  Sem r (Term Natural)
+callFun fun args = do
+  fpath <- getFunctionPath fun
+  return (OpCall # fpath # replaceArgs args)
+
+replaceArgsWithTerm :: Term Natural -> Term Natural
+replaceArgsWithTerm term =
+  remakeList
+    [ if
+          | Args == s -> term
+          | otherwise -> OpAddress # stackPath s
+      | s <- allElements
+    ]
+
+replaceArgs :: [Term Natural] -> Term Natural
+replaceArgs args =
+  remakeList
+    [ if
+          | Args == s -> remakeList args
+          | otherwise -> OpAddress # stackPath s
+      | s <- allElements
+    ]
 
 tcallFun :: (Members '[Compiler] r) => FunctionId -> Natural -> Sem r ()
 tcallFun = callHelper True . Just
@@ -704,100 +760,14 @@ sre = subsume . re
 
 -- | funName is Nothing when we call a closure at the top of the stack
 callHelper' ::
-  (Members '[Output (Term Natural), Reader CompilerCtx] r) =>
   Bool ->
   Maybe FunctionId ->
   Natural ->
   Sem r ()
-callHelper' isTail funName funArgsNum = do
-  let isClosure = isNothing funName
-  -- 1. Obtain the path to the function
-  funPath <- maybe (return (topOfStack ValueStack)) getFunctionPath' funName
+callHelper' _isTail _funName _funArgsNum = error "TODO"
 
-  -- 2.
-  --   i. Take a copy of the value stack without the arguments to the function
-  --   ii. Push this copy to the call stack
-  let storeOnStack
-        | isTail = replaceOnStack
-        | otherwise = pushOnStack
-      numToPop
-        | isClosure = 1 + funArgsNum
-        | otherwise = funArgsNum
-
-  unless isTail $ do
-    let frame = makeActivationFrame $ \case
-          ActivationFrameValueStack -> stackPop ValueStack numToPop
-          ActivationFrameTempStack -> OpAddress # stackPath TempStack
-          ActivationFrameAuxStack -> OpAddress # stackPath AuxStack
-    output (pushOnStack FrameStack frame)
-
-  -- 3.
-  --  i. Take a copy of the function from the function library
-  --  ii. Replace its argument area with the arguments from the value stack
-  --  iii. Push this copy to the current function stack
-
-  -- Setup function to call with its arguments
-  -- given n, we compute [R..R] of length n
-  if
-      | isClosure -> sre $ do
-          push (OpQuote # toNock ([] :: Path))
-          push (OpAddress # indexInStack ValueStack 1 ++ closurePath ClosureArgsNum)
-          appendRights
-          moveTopFromTo ValueStack AuxStack
-          let closurepath = topOfStack ValueStack
-              posOfArgsNil = OpAddress # topOfStack AuxStack
-              oldArgs = OpAddress # closurepath ++ closurePath ClosureArgs
-              xtraArgs = stackSliceAsList ValueStack 1 funArgsNum
-              allArgs = replaceSubterm' oldArgs posOfArgsNil xtraArgs
-              funCode = OpAddress # closurepath ++ closurePath ClosureCode
-              funWithArgs = replaceSubterm funCode (functionPath FunctionArgs) allArgs
-          output (storeOnStack CurrentFunction funWithArgs)
-          popFrom AuxStack
-      | otherwise -> do
-          let funWithArgs = replaceSubterm (OpAddress # funPath) (functionPath FunctionArgs) (stackTake ValueStack funArgsNum)
-          output (storeOnStack CurrentFunction funWithArgs)
-
-  -- 4. Replace the value stack with nil
-  output (resetStack ValueStack)
-  output (resetStack TempStack)
-  output (resetStack AuxStack)
-
-  -- 5. Evaluate the function in the context of the whole nock stack
-  -- 6. See documentation for asmReturn'
-  output (OpCall # ((topOfStack CurrentFunction ++ functionPath FunctionCode) # (OpAddress # emptyPath)))
-
-asmReturn' :: (Members '[Output (Term Natural), Reader CompilerCtx] r) => Sem r ()
-asmReturn' = do
-  -- Restore the previous value stack (created in call'.2.). i.e copy the previous value stack
-  -- from the call stack and push the result (the head of the current value stack) to it.
-
-  output
-    ( replaceStack
-        ValueStack
-        ( (OpAddress # topOfStack ValueStack)
-            # (OpAddress # topOfStack FrameStack ++ activationFramePath ActivationFrameValueStack)
-        )
-    )
-
-  output
-    ( replaceStack
-        TempStack
-        (OpAddress # topOfStack FrameStack ++ activationFramePath ActivationFrameTempStack)
-    )
-
-  output
-    ( replaceStack
-        AuxStack
-        (OpAddress # topOfStack FrameStack ++ activationFramePath ActivationFrameAuxStack)
-    )
-
-  -- discard the 'activation' frame
-  sre $ do
-    popFrom FrameStack
-    popFrom CurrentFunction
-
-testEq :: (Members '[Compiler] r) => Sem r ()
-testEq = testEqOn ValueStack
+asmReturn' :: Sem r ()
+asmReturn' = error "TODO"
 
 testEqOn' :: (Members '[Output (Term Natural)] r) => StackId -> Sem r ()
 testEqOn' s = output (replaceOnStackN 2 s (OpEq # stackSliceAsCell s 0 1))
@@ -812,9 +782,6 @@ traceTerm' t =
 
 incrementOn' :: (Members '[Output (Term Natural)] r) => StackId -> Sem r ()
 incrementOn' s = output (replaceOnStack s (OpInc # stackSliceAsCell s 0 0))
-
-callStdlib :: (Members '[Compiler] r) => StdlibFunction -> Sem r ()
-callStdlib = callStdlibOn ValueStack
 
 callStdlibOn' :: (Members '[Output (Term Natural)] r) => StackId -> StdlibFunction -> Sem r ()
 callStdlibOn' s f = do
@@ -844,17 +811,10 @@ callStdlibOn' s f = do
         )
 
 save' ::
-  (Functor f, Members '[Output (Term Natural), Reader CompilerCtx] r) =>
   Bool ->
   m () ->
   Sem (WithTactics Compiler f m r) (f ())
-save' isTail m = do
-  pushOntoH TempStack (OpAddress # topOfStack ValueStack)
-  popFromH ValueStack
-  runT m >>= raise . execCompilerList >>= mapM_ output >>= pureT
-  if
-      | isTail -> pureT ()
-      | otherwise -> popFromH TempStack
+save' _isTail = error "TODO"
 
 builtinTagToTerm :: NockmaBuiltinTag -> Term Natural
 builtinTagToTerm = \case
@@ -868,32 +828,38 @@ constructorTagToTerm = \case
 caseCmd ::
   forall r.
   (Members '[Compiler] r) =>
-  Maybe (Sem r ()) ->
-  [(Tree.Tag, Sem r ())] ->
-  Sem r ()
-caseCmd defaultBranch = \case
-  [] -> sequence_ defaultBranch
+  Term Natural ->
+  Maybe (Term Natural) ->
+  [(Tree.Tag, Term Natural)] ->
+  Sem r (Term Natural)
+caseCmd arg defaultBranch = \case
+  [] -> return (fromJust defaultBranch)
   (tag, b) : bs -> case tag of
     Tree.BuiltinTag t -> case nockmaBuiltinTag t of
-      NockmaBuiltinBool v -> goBoolTag v b bs
+      NockmaBuiltinBool v -> return (goBoolTag v b bs)
     Tree.UserTag {} -> do
       rep <- getConstructorMemRep tag
       case rep of
         NockmaMemRepConstr -> goRepConstr tag b bs
         NockmaMemRepTuple
-          | null bs, isNothing defaultBranch -> b
+          | null bs, isNothing defaultBranch -> return b
           | otherwise -> error "redundant branch. Impossible?"
         NockmaMemRepList constr -> do
           bs' <- mapM (firstM asNockmaMemRepListConstr) bs
           goRepList ((constr, b) :| bs')
   where
-    goRepConstr :: Tree.Tag -> Sem r () -> [(Tree.Tag, Sem r ())] -> Sem r ()
+    goRepConstr ::
+      Tree.Tag ->
+      Term Natural ->
+      [(Tree.Tag, Term Natural)] ->
+      Sem r (Term Natural)
     goRepConstr tag b bs = do
-      -- push the constructor tag at the top
-      push (OpAddress # topOfStack ValueStack ++ constructorPath ConstructorTag)
-      push (constructorTagToTerm tag)
-      testEq
-      branch b (caseCmd defaultBranch bs)
+      let cond :: Term Natural =
+            OpEq
+              # constructorTagToTerm tag
+              # (getConstructorField ConstructorTag arg)
+      elseBr <- caseCmd arg defaultBranch bs
+      return (branch cond b elseBr)
 
     asNockmaMemRepListConstr :: Tree.Tag -> Sem r NockmaMemRepListConstr
     asNockmaMemRepListConstr tag = case tag of
@@ -904,46 +870,47 @@ caseCmd defaultBranch = \case
           _ -> impossible
       Tree.BuiltinTag {} -> impossible
 
-    goBoolTag :: Bool -> Sem r () -> [(Tree.Tag, Sem r ())] -> Sem r ()
-    goBoolTag v b bs = do
+    goBoolTag ::
+      Bool ->
+      Term Natural ->
+      [(Tree.Tag, Term Natural)] ->
+      (Term Natural)
+    goBoolTag v b bs =
       let otherBranch = fromJust (firstJust f bs <|> defaultBranch)
-      dup
-      if
-          | v -> branch b otherBranch
-          | otherwise -> branch otherBranch b
+       in if
+              | v -> branch arg b otherBranch
+              | otherwise -> branch arg otherBranch b
       where
-        f :: (Tree.Tag, Sem r ()) -> Maybe (Sem r ())
+        f :: (Tree.Tag, Term Natural) -> Maybe (Term Natural)
         f (tag', br) = case tag' of
           Tree.UserTag {} -> impossible
           Tree.BuiltinTag tag -> case nockmaBuiltinTag tag of
             NockmaBuiltinBool v' -> guard (v /= v') $> br
 
-    goRepList :: NonEmpty (NockmaMemRepListConstr, Sem r ()) -> Sem r ()
-    goRepList ((c, b) :| bs) = do
-      push (OpIsCell # (OpAddress # topOfStack ValueStack))
-      let otherBranch = fromJust (firstJust f bs <|> defaultBranch)
-      case c of
-        NockmaMemRepListConstrCons -> branch b otherBranch
-        NockmaMemRepListConstrNil -> branch otherBranch b
-      where
-        f :: (NockmaMemRepListConstr, Sem r ()) -> Maybe (Sem r ())
-        f (c', br) = guard (c /= c') $> br
+    goRepList :: NonEmpty (NockmaMemRepListConstr, Term Natural) -> Sem r (Term Natural)
+    goRepList ((_c, _b) :| _bs) = error "TODO"
 
-branch' ::
-  (Functor f, Members '[Output (Term Natural), Reader CompilerCtx] r) =>
-  m () ->
-  m () ->
-  Sem (WithTactics Compiler f m r) (f ())
-branch' t f = do
-  termT <- runT t >>= raise . execCompiler . (pop >>)
-  termF <- runT f >>= raise . execCompiler . (pop >>)
-  (output >=> pureT) (OpIf # (OpAddress # topOfStack ValueStack) # termT # termF)
+branch ::
+  Term Natural ->
+  Term Natural ->
+  Term Natural ->
+  Term Natural
+branch cond t f = OpIf # cond # t # f
 
 getFunctionArity' :: (Members '[Reader CompilerCtx] r) => FunctionId -> Sem r Natural
 getFunctionArity' s = asks (^?! compilerFunctionInfos . at s . _Just . functionInfoArity)
 
 getConstructorInfo' :: (Members '[Reader CompilerCtx] r) => Tree.Tag -> Sem r ConstructorInfo
 getConstructorInfo' tag = asks (^?! compilerConstructorInfos . at tag . _Just)
+
+getClosureField :: ClosurePathId -> Term Natural -> Term Natural
+getClosureField = getField
+
+getConstructorField :: ConstructorPathId -> Term Natural -> Term Natural
+getConstructorField = getField
+
+getField :: (Enum field) => field -> Term Natural -> Term Natural
+getField field t = (OpQuote # t) >># (OpAddress # pathFromEnum field)
 
 getConstructorMemRep :: (Members '[Compiler] r) => Tree.Tag -> Sem r NockmaMemRep
 getConstructorMemRep tag = (^. constructorInfoMemRep) <$> getConstructorInfo tag
@@ -960,14 +927,15 @@ re = reinterpretH $ \case
   TraceTerm s -> whenM (asks (^. compilerOptions . compilerOptionsEnableTrace)) (traceTerm' s) >>= pureT
   CallHelper isTail funName funArgsNum -> callHelper' isTail funName funArgsNum >>= pureT
   IncrementOn s -> incrementOn' s >>= pureT
-  Branch t f -> branch' t f
   Save isTail m -> save' isTail m
   CallStdlibOn s f -> callStdlibOn' s f >>= pureT
   TestEqOn s -> testEqOn' s >>= pureT
   GetConstructorInfo s -> getConstructorInfo' s >>= pureT
   GetFunctionArity s -> getFunctionArity' s >>= pureT
   GetFunctionPath s -> getFunctionPath' s >>= pureT
-  Crash -> outputT (OpAddress # OpAddress # OpAddress)
+
+crash :: Term Natural
+crash = (OpAddress # OpAddress # OpAddress)
 
 outputT :: (Functor f, Member (Output (Term Natural)) r) => Term Natural -> Sem (WithTactics e f m r) (f ())
 outputT = output >=> pureT
@@ -992,8 +960,8 @@ popFromNH ::
   Sem (WithTactics e f m r) (f ())
 popFromNH n s = outputT (popStackN n s)
 
-mul :: (Members '[Compiler] r) => Sem r ()
-mul = mulOn ValueStack
+mul :: Sem r ()
+mul = error "TODO"
 
 mulOn :: (Members '[Compiler] r) => StackId -> Sem r ()
 mulOn s = callStdlibOn s StdlibMul
@@ -1001,30 +969,26 @@ mulOn s = callStdlibOn s StdlibMul
 addOn :: (Members '[Compiler] r) => StackId -> Sem r ()
 addOn s = callStdlibOn s StdlibAdd
 
--- | arg order: push path >> push n
-appendRights :: (Members '[Compiler] r) => Sem r ()
-appendRights = callFun (BuiltinFunction BuiltinAppendRights) 2
+pow2 :: (Members '[Compiler] r) => Term Natural -> Sem r (Term Natural)
+pow2 = callFun (BuiltinFunction BuiltinPow2) . pure
 
-pow2 :: (Members '[Compiler] r) => Sem r ()
-pow2 = callFun (BuiltinFunction BuiltinPow2) 1
+add :: Term Natural -> Term Natural -> Term Natural
+add a b = callStdlib StdlibAdd [a, b]
 
-add :: (Members '[Compiler] r) => Sem r ()
-add = addOn ValueStack
+dec :: Term Natural -> Term Natural
+dec = callStdlib StdlibDec . pure
 
-dec :: (Members '[Compiler] r) => Sem r ()
-dec = callStdlib StdlibDec
-
-increment :: (Members '[Compiler] r) => Sem r ()
-increment = incrementOn ValueStack
+increment :: Sem r ()
+increment = error "TODO"
 
 popFrom :: (Members '[Compiler] r) => StackId -> Sem r ()
 popFrom = popFromN 1
 
-popN :: (Members '[Compiler] r) => Natural -> Sem r ()
-popN n = popFromN n ValueStack
+popN :: Natural -> Sem r ()
+popN = error "TODO"
 
-pop :: (Members '[Compiler] r) => Sem r ()
-pop = popFrom ValueStack
+pop :: Sem r ()
+pop = error "TODO"
 
 stackPop :: StackId -> Natural -> Term Natural
 stackPop s n = OpAddress # pathInStack s (replicate n R)
@@ -1109,8 +1073,8 @@ replaceTopStackN n sn =
 replaceTopStack :: StackId -> Term Natural
 replaceTopStack = replaceTopStackN 1
 
-pushNat :: (Member Compiler r) => Natural -> Sem r ()
-pushNat = pushNatOnto ValueStack
+pushNat :: Natural -> Sem r ()
+pushNat = error "TODO"
 
 pushNatOnto :: (Member Compiler r) => StackId -> Natural -> Sem r ()
 pushNatOnto s n = pushOnto s (OpQuote # toNock n)

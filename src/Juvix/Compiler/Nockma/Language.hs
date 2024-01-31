@@ -252,10 +252,10 @@ data NockNaturalNaturalError
   deriving stock (Show)
 
 nockTrueLiteral :: Term Natural
-nockTrueLiteral = OpQuote # (TermAtom (nockTrue @Natural))
+nockTrueLiteral = OpQuote # TermAtom (nockTrue @Natural)
 
 nockFalseLiteral :: Term Natural
-nockFalseLiteral = OpQuote # (TermAtom (nockFalse @Natural))
+nockFalseLiteral = OpQuote # TermAtom (nockFalse @Natural)
 
 nockBoolLiteral :: Bool -> Term Natural
 nockBoolLiteral b
