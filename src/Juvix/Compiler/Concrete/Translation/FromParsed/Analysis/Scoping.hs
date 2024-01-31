@@ -51,7 +51,7 @@ iniScoperState tab =
       _scoperSignatures = tab ^. infoParsedNameSigs,
       _scoperScopedSignatures = tab ^. infoNameSigs,
       _scoperRecordFields = tab ^. infoRecords,
-      _scoperAlias = mempty,
+      _scoperAlias = tab ^. infoScoperAlias,
       _scoperConstructorFields = tab ^. infoParsedConstructorSigs,
       _scoperScopedConstructorFields = tab ^. infoConstructorSigs
     }
@@ -1244,6 +1244,7 @@ checkSections sec = do
               asName <- checkName (a ^. aliasDefAsName)
               modify' (set (scoperAlias . at aliasId) (Just asName))
               checkLoop aliasId
+              registerAlias aliasId asName
               where
                 checkLoop :: NameId -> Sem r' ()
                 checkLoop = evalState (mempty :: HashSet NameId) . go

@@ -435,5 +435,10 @@ tests =
         "Test072: Monad transformers (ReaderT + StateT + Identity)"
         $(mkRelDir "test072")
         $(mkRelFile "ReaderT.juvix")
-        $(mkRelFile "out/test072.out")
+        $(mkRelFile "out/test072.out"),
+      posTest
+        "Test073: Import and use a syntax alias"
+        $(mkRelDir "test073")
+        $(mkRelFile "test073.juvix")
+        $(mkRelFile "out/test073.out")
     ]
