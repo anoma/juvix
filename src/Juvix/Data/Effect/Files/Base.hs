@@ -36,7 +36,7 @@ data Files m a where
   ReadFile' :: Path Abs File -> Files m Text
   ReadFileBS' :: Path Abs File -> Files m ByteString
   RemoveDirectoryRecursive' :: Path Abs Dir -> Files m ()
-  WriteFile' :: Path Abs File -> Text -> Files m ()
+  WriteFileEnsureLn' :: Path Abs File -> Text -> Files m ()
   WriteFileBS :: Path Abs File -> ByteString -> Files m ()
   RemoveFile' :: Path Abs File -> Files m ()
   RenameFile' :: Path Abs File -> Path Abs File -> Files m ()

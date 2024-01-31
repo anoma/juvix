@@ -150,7 +150,8 @@ import Data.Text qualified as Text
 import Data.Text.Encoding
 import Data.Text.IO hiding (appendFile, putStr, putStrLn, readFile, writeFile)
 import Data.Text.IO qualified as Text
-import Data.Text.IO.Utf8
+import Data.Text.IO.Utf8 hiding (writeFile)
+import Data.Text.IO.Utf8 qualified as Utf8
 import Data.Traversable
 import Data.Tuple.Extra hiding (both)
 import Data.Type.Equality (type (~))
@@ -589,11 +590,14 @@ runInputInfinite s =
             return i
       )
 
-writeFileEnsureLn :: (MonadMask m, MonadIO m) => FilePath -> Text -> m ()
-writeFileEnsureLn p t =
-  let t' = case Text.unsnoc t of
-        Nothing -> t
-        Just (_, y) -> case y of
-          '\n' -> t
-          _ -> Text.snoc t '\n'
-   in writeFile p t'
+ensureLn :: Text -> Text
+ensureLn t =
+  case Text.unsnoc t of
+    Nothing -> t
+    Just (_, y) -> case y of
+      '\n' -> t
+      _ -> Text.snoc t '\n'
+
+writeFileEnsureLn :: (MonadMask m, MonadIO m) => Path Abs File -> Text -> m ()
+writeFileEnsureLn p = Utf8.writeFile (toFilePath p)
+{-# INLINE writeFileEnsureLn #-}

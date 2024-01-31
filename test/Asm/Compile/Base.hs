@@ -21,7 +21,7 @@ asmCompileAssertion' optLevel tab mainFile expectedFile stdinText step = do
       withTempDir'
         ( \dirPath -> do
             let cFile = dirPath <//> replaceExtension' ".c" (filename mainFile)
-            writeFile (toFilePath cFile) _resultCCode
+            writeFileEnsureLn cFile _resultCCode
             Runtime.clangAssertion optLevel cFile expectedFile stdinText step
         )
   where

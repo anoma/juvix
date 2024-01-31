@@ -48,12 +48,12 @@ coreCompileAssertion' ::
   Assertion
 coreCompileAssertion' optLevel tab mainFile expectedFile stdinText step = do
   step "Translate to JuvixAsm"
-  case run $ runReader opts $ runError $ toStored' (moduleFromInfoTable tab) >>= toStripped' of
+  case run . runReader opts . runError $ toStored' (moduleFromInfoTable tab) >>= toStripped' of
     Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
     Right m -> do
       let tab0 = computeCombinedInfoTable m
       assertBool "Check info table" (checkInfoTable tab0)
-      let tab' = Asm.fromTree $ Tree.fromCore $ Stripped.fromCore tab0
+      let tab' = Asm.fromTree . Tree.fromCore $ Stripped.fromCore tab0
       length (fromText (Asm.ppPrint tab' tab') :: String) `seq`
         Asm.asmCompileAssertion' optLevel tab' mainFile expectedFile stdinText step
   where

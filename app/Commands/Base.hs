@@ -8,7 +8,7 @@ module Commands.Base
 where
 
 import App
-import CommonOptions
+import CommonOptions hiding (ensureLn, writeFileEnsureLn)
 import GlobalOptions
 import Juvix.Compiler.Pipeline
 import Juvix.Prelude

@@ -9,6 +9,7 @@ import Debug.Trace hiding (trace, traceM, traceShow)
 import Debug.Trace qualified as T
 import GHC.IO (unsafePerformIO)
 import Juvix.Prelude.Base
+import Juvix.Prelude.Path
 
 setDebugMsg :: Text -> Text
 setDebugMsg msg = "[debug] " <> fmsg <> "\n"
@@ -33,19 +34,15 @@ traceShow :: (Show b) => b -> b
 traceShow b = traceLabel "" (pack . show $ b) b
 {-# WARNING traceShow "Using traceShow" #-}
 
-traceToFile :: FilePath -> Text -> a -> a
+traceToFile :: Path Abs File -> Text -> a -> a
 traceToFile fpath t a =
-  traceLabel (pack ("[" <> fpath <> "]")) t $
+  traceLabel (pack ("[" <> toFilePath fpath <> "]")) t $
     unsafePerformIO $
       do
-        writeFile fpath t
+        writeFileEnsureLn fpath t
         return a
 {-# WARNING traceToFile "Using traceToFile" #-}
 
-traceToFile' :: Text -> a -> a
-traceToFile' = traceToFile "./juvix.log"
-{-# WARNING traceToFile' "Using traceToFile'" #-}
-
-traceToFileM :: (Applicative m) => FilePath -> Text -> a -> m ()
+traceToFileM :: (Applicative m) => Path Abs File -> Text -> a -> m ()
 traceToFileM fpath t a = pure (traceToFile fpath t a) $> ()
 {-# WARNING traceToFileM "Using traceFileM" #-}

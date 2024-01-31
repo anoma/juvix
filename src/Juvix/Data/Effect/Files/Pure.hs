@@ -74,7 +74,7 @@ re cwd = reinterpret $ \case
   ReadFileBS' f -> encodeUtf8 <$> lookupFile' f
   EnsureDir' p -> ensureDirHelper p
   DirectoryExists' p -> isJust <$> lookupDir p
-  WriteFile' p t -> writeFileHelper p t
+  WriteFileEnsureLn' p t -> writeFileHelper p t
   WriteFileBS p t -> writeFileHelper p (decodeUtf8 t)
   RemoveDirectoryRecursive' p -> removeDirRecurHelper p
   ListDirRel p -> do
@@ -163,7 +163,7 @@ writeFileHelper p contents = do
     (r, dirs, f) = destructAbsFile p
     go :: [Path Rel Dir] -> FSNode -> FSNode
     go = \case
-      [] -> set (dirFiles . at f) (Just contents)
+      [] -> set (dirFiles . at f) (Just (ensureLn contents))
       (d : ds) -> over dirDirs (HashMap.alter (Just . helper) d)
         where
           helper :: Maybe FSNode -> FSNode
