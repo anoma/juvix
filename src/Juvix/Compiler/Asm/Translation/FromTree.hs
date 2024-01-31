@@ -71,18 +71,18 @@ genCode fi =
       snocReturn isTail $
         DL.snoc (go False _nodeUnopArg) (genUnOp _nodeUnopOpcode)
 
-    goConstant :: Bool -> Tree.Constant -> Code'
-    goConstant isTail c =
+    goConstant :: Bool -> Tree.NodeConstant -> Code'
+    goConstant isTail Tree.NodeConstant {..} =
       snocReturn isTail $
         DL.singleton $
           mkInstr $
-            Push (Constant c)
+            Push (Constant _nodeConstant)
 
-    goMemRef :: Bool -> Tree.MemRef -> Code'
-    goMemRef isTail ref =
+    goMemRef :: Bool -> Tree.NodeMemRef -> Code'
+    goMemRef isTail Tree.NodeMemRef {..} =
       snocReturn isTail $
         DL.singleton $
-          mkInstr (Push (Ref ref))
+          mkInstr (Push (Ref _nodeMemRef))
 
     goAllocConstr :: Bool -> Tree.NodeAllocConstr -> Code'
     goAllocConstr isTail Tree.NodeAllocConstr {..} =
@@ -212,7 +212,7 @@ genCode fi =
         ( Save
             CmdSave
               { _cmdSaveInfo = emptyInfo,
-                _cmdSaveName = _nodeSaveTempVarInfo ^. Tree.tempVarInfoName,
+                _cmdSaveName = _nodeSaveTempVar ^. Tree.tempVarName,
                 _cmdSaveIsTail = isTail,
                 _cmdSaveCode = DL.toList $ go isTail _nodeSaveBody
               }

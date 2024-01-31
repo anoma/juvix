@@ -8,17 +8,19 @@ computeFunctionTempHeight = umapN go
   where
     go :: Int -> Node -> Node
     go k = \case
-      MemRef (DRef (TempRef r)) ->
+      MemRef (NodeMemRef i (DRef (TempRef r))) ->
         let r' = set refTempTempHeight (Just k) r
-         in MemRef $ DRef (TempRef r')
-      MemRef (ConstrRef field@Field {_fieldRef = TempRef r}) ->
+         in MemRef $ NodeMemRef i $ DRef (TempRef r')
+      MemRef (NodeMemRef i (ConstrRef field@Field {_fieldRef = TempRef r})) ->
         let r' = set refTempTempHeight (Just k) r
-         in MemRef
-              ( ConstrRef
-                  field
-                    { _fieldRef = TempRef r'
-                    }
-              )
+         in MemRef $
+              NodeMemRef
+                i
+                ( ConstrRef
+                    field
+                      { _fieldRef = TempRef r'
+                      }
+                )
       node -> node
 
 computeTempHeight :: InfoTable -> InfoTable

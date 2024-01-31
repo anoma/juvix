@@ -5,6 +5,7 @@ import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Core.Data.Stripped.InfoTable qualified as Core
 import Juvix.Compiler.Core.Language.Stripped qualified as Core
 import Juvix.Compiler.Tree.Data.InfoTable
+import Juvix.Compiler.Tree.Extra.Base
 import Juvix.Compiler.Tree.Extra.Type
 import Juvix.Compiler.Tree.Language
 
@@ -56,29 +57,31 @@ genCode infoTable fi =
 
     goVar :: BinderList MemRef -> Core.Var -> Node
     goVar refs Core.Var {..} =
-      MemRef (BL.lookup _varIndex refs)
+      mkMemRef (BL.lookup _varIndex refs)
 
     goIdent :: Core.Ident -> Node
     goIdent Core.Ident {..}
       | getArgsNum _identSymbol == 0 =
           Call $
             NodeCall
-              { _nodeCallType = CallFun _identSymbol,
+              { _nodeCallInfo = mempty,
+                _nodeCallType = CallFun _identSymbol,
                 _nodeCallArgs = []
               }
       | otherwise =
           AllocClosure $
             NodeAllocClosure
-              { _nodeAllocClosureFunSymbol = _identSymbol,
+              { _nodeAllocClosureInfo = mempty,
+                _nodeAllocClosureFunSymbol = _identSymbol,
                 _nodeAllocClosureArgs = []
               }
 
     goConstant :: Core.Constant -> Node
     goConstant = \case
       Core.Constant _ (Core.ConstInteger i) ->
-        Const (ConstInt i)
+        mkConst (ConstInt i)
       Core.Constant _ (Core.ConstString s) ->
-        Const (ConstString s)
+        mkConst (ConstString s)
 
     goApps :: Int -> BinderList MemRef -> Core.Apps -> Node
     goApps tempSize refs Core.Apps {..} =
@@ -91,13 +94,15 @@ genCode infoTable fi =
                   | argsNum > suppliedArgsNum ->
                       AllocClosure $
                         NodeAllocClosure
-                          { _nodeAllocClosureFunSymbol = _identSymbol,
+                          { _nodeAllocClosureInfo = mempty,
+                            _nodeAllocClosureFunSymbol = _identSymbol,
                             _nodeAllocClosureArgs = suppliedArgs
                           }
                   | argsNum == suppliedArgsNum ->
                       Call $
                         NodeCall
-                          { _nodeCallType = CallFun _identSymbol,
+                          { _nodeCallInfo = mempty,
+                            _nodeCallType = CallFun _identSymbol,
                             _nodeCallArgs = suppliedArgs
                           }
                   | otherwise ->
@@ -108,10 +113,12 @@ genCode infoTable fi =
                       -- with the remaining arguments.
                       CallClosures $
                         NodeCallClosures
-                          { _nodeCallClosuresFun =
+                          { _nodeCallClosuresInfo = mempty,
+                            _nodeCallClosuresFun =
                               Call $
                                 NodeCall
-                                  { _nodeCallType = CallFun _identSymbol,
+                                  { _nodeCallInfo = mempty,
+                                    _nodeCallType = CallFun _identSymbol,
                                     _nodeCallArgs = take argsNum suppliedArgs
                                   },
                             _nodeCallClosuresArgs = nonEmpty' $ drop argsNum suppliedArgs
@@ -121,7 +128,8 @@ genCode infoTable fi =
             Core.FunVar Core.Var {..} ->
               CallClosures $
                 NodeCallClosures
-                  { _nodeCallClosuresFun = MemRef $ BL.lookup _varIndex refs,
+                  { _nodeCallClosuresInfo = mempty,
+                    _nodeCallClosuresFun = mkMemRef $ BL.lookup _varIndex refs,
                     _nodeCallClosuresArgs = suppliedArgs'
                   }
 
@@ -131,13 +139,15 @@ genCode infoTable fi =
         [arg] ->
           Unop $
             NodeUnop
-              { _nodeUnopOpcode = genUnOp _builtinAppOp,
+              { _nodeUnopInfo = mempty,
+                _nodeUnopOpcode = genUnOp _builtinAppOp,
                 _nodeUnopArg = arg
               }
         [arg1, arg2] ->
           Binop $
             NodeBinop
-              { _nodeBinopOpcode = genBinOp _builtinAppOp,
+              { _nodeBinopInfo = mempty,
+                _nodeBinopOpcode = genBinOp _builtinAppOp,
                 _nodeBinopArg1 = arg1,
                 _nodeBinopArg2 = arg2
               }
@@ -149,13 +159,14 @@ genCode infoTable fi =
     goConstr :: Int -> BinderList MemRef -> Core.Constr -> Node
     goConstr tempSize refs = \case
       Core.Constr _ (Core.BuiltinTag Core.TagTrue) _ ->
-        Const (ConstBool True)
+        mkConst (ConstBool True)
       Core.Constr _ (Core.BuiltinTag Core.TagFalse) _ ->
-        Const (ConstBool False)
+        mkConst (ConstBool False)
       Core.Constr {..} ->
         AllocConstr $
           NodeAllocConstr
-            { _nodeAllocConstrTag = _constrTag,
+            { _nodeAllocConstrInfo = mempty,
+              _nodeAllocConstrTag = _constrTag,
               _nodeAllocConstrArgs = args
             }
         where
@@ -165,9 +176,10 @@ genCode infoTable fi =
     goLet tempSize refs (Core.Let {..}) =
       Save $
         NodeSave
-          { _nodeSaveArg = arg,
+          { _nodeSaveInfo = mempty,
+            _nodeSaveArg = arg,
             _nodeSaveBody = body,
-            _nodeSaveTempVarInfo = TempVarInfo (Just name) loc
+            _nodeSaveTempVar = TempVar (Just name) loc
           }
       where
         name = _letItem ^. Core.letItemBinder . Core.binderName
@@ -180,7 +192,8 @@ genCode infoTable fi =
     goCase tempSize refs Core.Case {..} =
       Case $
         NodeCase
-          { _nodeCaseArg = go tempSize refs _caseValue,
+          { _nodeCaseInfo = mempty,
+            _nodeCaseArg = go tempSize refs _caseValue,
             _nodeCaseInductive = _caseInductive,
             _nodeCaseBranches = compileCaseBranches _caseBranches,
             _nodeCaseDefault = fmap compileCaseDefault _caseDefault
@@ -201,7 +214,8 @@ genCode infoTable fi =
         compileCaseBranchNoBinders :: Tag -> Core.Node -> CaseBranch
         compileCaseBranchNoBinders tag body =
           CaseBranch
-            { _caseBranchTag = tag,
+            { _caseBranchLocation = Nothing,
+              _caseBranchTag = tag,
               _caseBranchBody = go tempSize refs body,
               _caseBranchSave = False
             }
@@ -209,7 +223,8 @@ genCode infoTable fi =
         compileCaseBranch :: Int -> Tag -> Core.Node -> CaseBranch
         compileCaseBranch bindersNum tag body =
           CaseBranch
-            { _caseBranchTag = tag,
+            { _caseBranchLocation = Nothing,
+              _caseBranchTag = tag,
               _caseBranchBody =
                 go
                   (tempSize + 1)
@@ -238,7 +253,8 @@ genCode infoTable fi =
     goIf tempSize refs Core.If {..} =
       Branch $
         NodeBranch
-          { _nodeBranchArg = go tempSize refs _ifValue,
+          { _nodeBranchInfo = mempty,
+            _nodeBranchArg = go tempSize refs _ifValue,
             _nodeBranchTrue = go tempSize refs _ifTrue,
             _nodeBranchFalse = go tempSize refs _ifFalse
           }

@@ -3,10 +3,34 @@ module Juvix.Compiler.Tree.Extra.Base where
 import Juvix.Compiler.Tree.Language
 
 mkBinop :: BinaryOpcode -> Node -> Node -> Node
-mkBinop op arg1 arg2 = Binop (NodeBinop op arg1 arg2)
+mkBinop op arg1 arg2 = Binop (NodeBinop mempty op arg1 arg2)
 
 mkUnop :: UnaryOpcode -> Node -> Node
-mkUnop op arg = Unop (NodeUnop op arg)
+mkUnop op arg = Unop (NodeUnop mempty op arg)
+
+mkConst :: Constant -> Node
+mkConst c = Const $ NodeConstant mempty c
+
+mkMemRef :: MemRef -> Node
+mkMemRef r = MemRef $ NodeMemRef mempty r
+
+getNodeInfo :: Node -> NodeInfo
+getNodeInfo = \case
+  Binop NodeBinop {..} -> _nodeBinopInfo
+  Unop NodeUnop {..} -> _nodeUnopInfo
+  Const NodeConstant {..} -> _nodeConstantInfo
+  MemRef NodeMemRef {..} -> _nodeMemRefInfo
+  AllocConstr NodeAllocConstr {..} -> _nodeAllocConstrInfo
+  AllocClosure NodeAllocClosure {..} -> _nodeAllocClosureInfo
+  ExtendClosure NodeExtendClosure {..} -> _nodeExtendClosureInfo
+  Call NodeCall {..} -> _nodeCallInfo
+  CallClosures NodeCallClosures {..} -> _nodeCallClosuresInfo
+  Branch NodeBranch {..} -> _nodeBranchInfo
+  Case NodeCase {..} -> _nodeCaseInfo
+  Save NodeSave {..} -> _nodeSaveInfo
+
+getNodeLocation :: Node -> Maybe Location
+getNodeLocation = (^. nodeInfoLocation) . getNodeInfo
 
 {------------------------------------------------------------------------}
 {- generic Node destruction -}
@@ -15,7 +39,7 @@ data NodeChild = NodeChild
   { -- | immediate child of some node
     _childNode :: Node,
     -- | `Just i` if the child introduces a temporary variable
-    _childTempVarInfo :: Maybe TempVarInfo
+    _childTempVar :: Maybe TempVar
   }
 
 makeLenses ''NodeChild
@@ -38,15 +62,15 @@ noTempVar :: Node -> NodeChild
 noTempVar n =
   NodeChild
     { _childNode = n,
-      _childTempVarInfo = Nothing
+      _childTempVar = Nothing
     }
 
 {-# INLINE oneTempVar #-}
-oneTempVar :: TempVarInfo -> Node -> NodeChild
+oneTempVar :: TempVar -> Node -> NodeChild
 oneTempVar i n =
   NodeChild
     { _childNode = n,
-      _childTempVarInfo = Just i
+      _childTempVar = Just i
     }
 
 type Reassemble = [Node] -> Node
@@ -101,7 +125,8 @@ destruct = \case
             NodeBinop
               { _nodeBinopArg1 = arg1,
                 _nodeBinopArg2 = arg2,
-                _nodeBinopOpcode
+                _nodeBinopOpcode,
+                _nodeBinopInfo
               }
       }
   Unop NodeUnop {..} ->
@@ -111,7 +136,8 @@ destruct = \case
           Unop
             NodeUnop
               { _nodeUnopArg = arg,
-                _nodeUnopOpcode
+                _nodeUnopOpcode,
+                _nodeUnopInfo
               }
       }
   Const c ->
@@ -131,7 +157,8 @@ destruct = \case
           AllocConstr
             NodeAllocConstr
               { _nodeAllocConstrArgs = args,
-                _nodeAllocConstrTag
+                _nodeAllocConstrTag,
+                _nodeAllocConstrInfo
               }
       }
   AllocClosure NodeAllocClosure {..} ->
@@ -141,7 +168,8 @@ destruct = \case
           AllocClosure
             NodeAllocClosure
               { _nodeAllocClosureArgs = args,
-                _nodeAllocClosureFunSymbol
+                _nodeAllocClosureFunSymbol,
+                _nodeAllocClosureInfo
               }
       }
   ExtendClosure NodeExtendClosure {..} ->
@@ -151,7 +179,8 @@ destruct = \case
           ExtendClosure
             NodeExtendClosure
               { _nodeExtendClosureArgs = nonEmpty' args,
-                _nodeExtendClosureFun = arg
+                _nodeExtendClosureFun = arg,
+                _nodeExtendClosureInfo
               }
       }
   Call NodeCall {..} -> case _nodeCallType of
@@ -162,7 +191,8 @@ destruct = \case
             Call
               NodeCall
                 { _nodeCallArgs = args,
-                  _nodeCallType = CallFun sym
+                  _nodeCallType = CallFun sym,
+                  _nodeCallInfo
                 }
         }
     CallClosure cl ->
@@ -172,7 +202,8 @@ destruct = \case
             Call
               NodeCall
                 { _nodeCallArgs = args,
-                  _nodeCallType = CallClosure arg
+                  _nodeCallType = CallClosure arg,
+                  _nodeCallInfo
                 }
         }
   CallClosures NodeCallClosures {..} ->
@@ -182,7 +213,8 @@ destruct = \case
           CallClosures
             NodeCallClosures
               { _nodeCallClosuresArgs = nonEmpty' args,
-                _nodeCallClosuresFun = arg
+                _nodeCallClosuresFun = arg,
+                _nodeCallClosuresInfo
               }
       }
   Branch NodeBranch {..} ->
@@ -193,7 +225,8 @@ destruct = \case
             NodeBranch
               { _nodeBranchArg = arg,
                 _nodeBranchTrue = br1,
-                _nodeBranchFalse = br2
+                _nodeBranchFalse = br2,
+                _nodeBranchInfo
               }
       }
   Case NodeCase {..} ->
@@ -207,7 +240,8 @@ destruct = \case
                   { _nodeCaseArg = v',
                     _nodeCaseBranches = mkBranches _nodeCaseBranches bodies',
                     _nodeCaseDefault = Nothing,
-                    _nodeCaseInductive
+                    _nodeCaseInductive,
+                    _nodeCaseInfo
                   }
           }
       Just def ->
@@ -219,7 +253,8 @@ destruct = \case
                   { _nodeCaseArg = v',
                     _nodeCaseBranches = mkBranches _nodeCaseBranches bodies',
                     _nodeCaseDefault = Just def',
-                    _nodeCaseInductive
+                    _nodeCaseInductive,
+                    _nodeCaseInfo
                   }
           }
     where
@@ -227,19 +262,20 @@ destruct = \case
 
       mkBranchChild :: CaseBranch -> NodeChild
       mkBranchChild CaseBranch {..} =
-        (if _caseBranchSave then oneTempVar (TempVarInfo Nothing Nothing) else noTempVar) _caseBranchBody
+        (if _caseBranchSave then oneTempVar (TempVar Nothing Nothing) else noTempVar) _caseBranchBody
 
       mkBranches :: [CaseBranch] -> [Node] -> [CaseBranch]
       mkBranches = zipWithExact (flip (set caseBranchBody))
   Save NodeSave {..} ->
     NodeDetails
-      { _nodeChildren = [noTempVar _nodeSaveArg, oneTempVar _nodeSaveTempVarInfo _nodeSaveBody],
+      { _nodeChildren = [noTempVar _nodeSaveArg, oneTempVar _nodeSaveTempVar _nodeSaveBody],
         _nodeReassemble = twoChildren $ \arg body ->
           Save
             NodeSave
               { _nodeSaveArg = arg,
                 _nodeSaveBody = body,
-                _nodeSaveTempVarInfo
+                _nodeSaveTempVar,
+                _nodeSaveInfo
               }
       }
 
