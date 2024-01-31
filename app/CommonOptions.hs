@@ -8,7 +8,8 @@ where
 
 import Control.Exception qualified as GHC
 import Data.List.NonEmpty qualified as NonEmpty
-import Juvix.Compiler.Core.Data.TransformationId.Parser
+import Juvix.Compiler.Core.Data.TransformationId.Parser qualified as Core
+import Juvix.Compiler.Tree.Data.TransformationId.Parser qualified as Tree
 import Juvix.Data.FileExt
 import Juvix.Prelude
 import Options.Applicative
@@ -216,17 +217,32 @@ optNoDisambiguate =
         <> help "Don't disambiguate the names of bound variables"
     )
 
-optTransformationIds :: Parser [TransformationId]
-optTransformationIds =
+optCoreTransformationIds :: Parser [Core.TransformationId]
+optCoreTransformationIds =
   option
     (eitherReader parseTransf)
     ( long "transforms"
         <> short 't'
         <> value []
         <> metavar "[Transform]"
-        <> completer (mkCompleter (return . completionsString))
+        <> completer (mkCompleter (return . Core.completionsString))
         <> help "hint: use autocomplete"
     )
   where
-    parseTransf :: String -> Either String [TransformationId]
-    parseTransf = mapLeft unpack . parseTransformations . pack
+    parseTransf :: String -> Either String [Core.TransformationId]
+    parseTransf = mapLeft unpack . Core.parseTransformations . pack
+
+optTreeTransformationIds :: Parser [Tree.TransformationId]
+optTreeTransformationIds =
+  option
+    (eitherReader parseTransf)
+    ( long "transforms"
+        <> short 't'
+        <> value []
+        <> metavar "[Transform]"
+        <> completer (mkCompleter (return . Tree.completionsString))
+        <> help "hint: use autocomplete"
+    )
+  where
+    parseTransf :: String -> Either String [Tree.TransformationId]
+    parseTransf = mapLeft unpack . Tree.parseTransformations . pack

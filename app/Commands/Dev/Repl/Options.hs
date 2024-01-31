@@ -10,7 +10,7 @@ parseDevRepl = do
       _replIsDev = True
   _replInputFile <- optional (parseInputFile FileExtJuvix)
   _replTransformations <- do
-    ts <- optTransformationIds
+    ts <- optCoreTransformationIds
     pure $
       if
           | null ts -> toStoredTransformations
