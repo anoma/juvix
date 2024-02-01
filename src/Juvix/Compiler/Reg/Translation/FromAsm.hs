@@ -24,33 +24,19 @@ fromAsm tab =
           _functionLocation = fi ^. Asm.functionLocation,
           _functionSymbol = fi ^. Asm.functionSymbol,
           _functionArgsNum = fi ^. Asm.functionArgsNum,
-          _functionLocalVarsNum = extra ^. Asm.functionMaxTempStackHeight + extra ^. Asm.functionMaxValueStackHeight,
+          _functionArgNames = fi ^. Asm.functionArgNames,
+          _functionType = fi ^. Asm.functionType,
+          _functionExtra = FunctionInfoExtra $ extra ^. Asm.functionMaxTempStackHeight + extra ^. Asm.functionMaxValueStackHeight,
           _functionCode = fromAsmFun tab fi
         }
       where
         extra = fromJust (fi ^. Asm.functionExtra)
 
     convertConstr :: Asm.ConstructorInfo -> ConstructorInfo
-    convertConstr ci =
-      ConstructorInfo
-        { _constructorName = ci ^. Asm.constructorName,
-          _constructorLocation = ci ^. Asm.constructorLocation,
-          _constructorTag = ci ^. Asm.constructorTag,
-          _constructorArgsNum = ci ^. Asm.constructorArgsNum,
-          _constructorInductive = ci ^. Asm.constructorInductive,
-          _constructorRepresentation = ci ^. Asm.constructorRepresentation,
-          _constructorFixity = ci ^. Asm.constructorFixity
-        }
+    convertConstr ci = ci
 
     convertInductive :: Asm.InductiveInfo -> InductiveInfo
-    convertInductive ii =
-      InductiveInfo
-        { _inductiveName = ii ^. Asm.inductiveName,
-          _inductiveLocation = ii ^. Asm.inductiveLocation,
-          _inductiveSymbol = ii ^. Asm.inductiveSymbol,
-          _inductiveConstructors = ii ^. Asm.inductiveConstructors,
-          _inductiveRepresentation = ii ^. Asm.inductiveRepresentation
-        }
+    convertInductive ii = ii
 
 fromAsmFun ::
   Asm.InfoTable ->
