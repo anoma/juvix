@@ -66,8 +66,12 @@ hEval hout tab = eval' [] mempty
                     IntAdd -> goIntBinop (+) arg1 arg2
                     IntSub -> goIntBinop (-) arg1 arg2
                     IntMul -> goIntBinop (*) arg1 arg2
-                    IntDiv -> goIntBinop quot arg1 arg2
-                    IntMod -> goIntBinop rem arg1 arg2
+                    IntDiv
+                      | arg2 == ValInteger 0 -> evalError "division by zero"
+                      | otherwise -> goIntBinop quot arg1 arg2
+                    IntMod
+                      | arg2 == ValInteger 0 -> evalError "division by zero"
+                      | otherwise -> goIntBinop rem arg1 arg2
                     IntLe -> goIntCmpBinop (<=) arg1 arg2
                     IntLt -> goIntCmpBinop (<) arg1 arg2
                     ValEq

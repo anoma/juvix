@@ -1,0 +1,9 @@
+-- call: wrong number of arguments
+
+function f(x : *) : * {
+  x
+}
+
+function main() : * {
+  call[f](10, 11)
+}

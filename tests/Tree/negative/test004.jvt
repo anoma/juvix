@@ -1,0 +1,8 @@
+-- if on non-boolean
+
+function main() : * {
+  br(3) {
+    true: 0
+    false: 1
+  }
+}

@@ -1,0 +1,9 @@
+-- division by zero
+
+function f(x : integer) : integer {
+  div(2, x)
+}
+
+function main() : * {
+  call[f](0)
+}
