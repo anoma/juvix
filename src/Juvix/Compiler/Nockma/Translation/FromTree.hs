@@ -129,12 +129,10 @@ activationFramePath = pathFromEnum
 
 data FunctionPathId
   = FunctionCode
-  | FunctionArgs
 
 functionPath :: FunctionPathId -> Path
 functionPath = \case
-  FunctionCode -> [L]
-  FunctionArgs -> [R]
+  FunctionCode -> []
 
 numStacks :: (Integral a) => a
 numStacks = fromIntegral (length (allElements @StackId))
@@ -192,7 +190,7 @@ makeActivationFrame :: (ActivationFramePathId -> Term Natural) -> Term Natural
 makeActivationFrame = termFromParts
 
 makeFunction :: (FunctionPathId -> Term Natural) -> Term Natural
-makeFunction f = f FunctionCode # f FunctionArgs
+makeFunction f = f FunctionCode
 
 foldTerms :: NonEmpty (Term Natural) -> Term Natural
 foldTerms = foldr1 (#)
@@ -403,7 +401,7 @@ compile = \case
       args <- mapM compile _nodeAllocClosureArgs
       return . makeClosure $ \case
         ClosureCode -> OpAddress # fpath
-        ClosureTotalArgsNum -> nockIntegralLiteral farity
+        ClosureTotalArgsNum -> nockNatLiteral farity
         ClosureArgsNum -> nockIntegralLiteral (length args)
         ClosureArgs -> remakeList args
 
@@ -412,17 +410,17 @@ compile = \case
 
     goCallHelper :: Bool -> Tree.NodeCall -> Sem r (Term Natural)
     goCallHelper _isTail Tree.NodeCall {..} = do
-      args <- mapM compile _nodeCallArgs
+      newargs <- mapM compile _nodeCallArgs
       case _nodeCallType of
-        Tree.CallFun fun -> callFun (UserFunction fun) args
+        Tree.CallFun fun -> callFun (UserFunction fun) newargs
         Tree.CallClosure f -> do
           f' <- compile f
           let argsNum = getClosureField ClosureArgsNum f'
               oldArgs = getClosureField ClosureArgs f'
               fcode = getClosureField ClosureCode f'
-          posOfArgsNil <- appendRights (toNock emptyPath) argsNum
-          let allArgs = replaceSubterm' oldArgs posOfArgsNil (remakeList args)
-          return (replaceArgsWithTerm allArgs >># fcode)
+          posOfArgsNil <- appendRights emptyPath argsNum
+          let allArgs = replaceSubterm' oldArgs posOfArgsNil (remakeList newargs)
+          return (OpApply # replaceArgsWithTerm allArgs # fcode)
 
     goCall :: Tree.NodeCall -> Sem r (Term Natural)
     goCall = goCallHelper False
@@ -430,10 +428,11 @@ compile = \case
 -- | arg order: push path >> push n
 appendRights ::
   (Members '[Reader CompilerCtx] r) =>
-  Term Natural ->
+  Path ->
   Term Natural ->
   Sem r (Term Natural)
-appendRights path n = callFun (BuiltinFunction BuiltinAppendRights) [path, n]
+appendRights path n =
+   callFun (BuiltinFunction BuiltinAppendRights) [n, toNock path]
 
 pushTemp :: Term Natural -> Term Natural
 pushTemp toBePushed =
@@ -471,7 +470,7 @@ extendClosure Tree.NodeExtendClosure {..} = do
   let argsNum = getClosureField ClosureArgsNum closure
       oldArgs = getClosureField ClosureArgs closure
       fcode = getClosureField ClosureCode closure
-  posOfArgsNil <- appendRights (toNock emptyPath) argsNum
+  posOfArgsNil <- appendRights emptyPath argsNum
   let allArgs = replaceSubterm' oldArgs posOfArgsNil (remakeList args)
   let newArgsNum = add argsNum (nockIntegralLiteral (length _nodeExtendClosureArgs))
   return . makeClosure $ \case
@@ -596,10 +595,9 @@ runCompilerWith opts constrs libFuns mainFun =
       makeFunction' :: Term Natural -> Term Natural
       makeFunction' c = makeFunction $ \case
         FunctionCode -> c
-        FunctionArgs -> nockNil'
 
       ret = Cell (initStack (toList compiledFuns)) entryTerm
-   in trace ("RETURN = " <> ppTrace ret <> "\nEND RETURN\n") ret
+   in ret
   where
     allFuns :: NonEmpty CompilerFunction
     allFuns = mainFun :| libFuns ++ (builtinFunction <$> allElements)
@@ -631,20 +629,33 @@ builtinFunction = \case
   BuiltinAppendRights ->
     CompilerFunction
       { _compilerFunctionName = BuiltinFunction BuiltinAppendRights,
-        _compilerFunctionArity = 2, -- args: n pos
-        _compilerFunction = return (nockNatLiteral 1)
+        _compilerFunctionArity = 2, -- args: n path
+        _compilerFunction = do
+          let n = OpAddress # pathToArg 0
+              pos = OpAddress # pathToArg 1 -- eval(pos) == 1 == emptyPath
+          twoToTheN <- pow2 n
+          return (dec (mul twoToTheN (OpInc # pos)))
       }
   BuiltinPow2 ->
     CompilerFunction
       { _compilerFunctionName = BuiltinFunction BuiltinPow2,
         _compilerFunctionArity = 1,
-        _compilerFunction = return (nockNatLiteral 1)
+        _compilerFunction = do
+          let n = OpAddress # pathToArg 0
+          callFun (BuiltinFunction BuiltinPow2Go) [n, nockNatLiteral 1]
       }
   BuiltinPow2Go ->
     CompilerFunction
       { _compilerFunctionName = BuiltinFunction BuiltinPow2Go,
         _compilerFunctionArity = 2, -- args: n acc
-        _compilerFunction = return (nockNatLiteral 1)
+        _compilerFunction = do
+          let n = OpAddress # pathToArg 0
+              acc = OpAddress # pathToArg 1
+              cond = OpEq # n # nockNatLiteral 0
+              baseCase = acc
+          recCase <-
+            callFun (BuiltinFunction BuiltinPow2Go) [dec n, mul (nockNatLiteral 2) acc]
+          return (branch cond baseCase recCase)
       }
 
 callEnum ::
@@ -801,7 +812,7 @@ getConstructorField :: ConstructorPathId -> Term Natural -> Term Natural
 getConstructorField = getField
 
 getField :: (Enum field) => field -> Term Natural -> Term Natural
-getField field t = (OpQuote # t) >># (OpAddress # pathFromEnum field)
+getField field t = t >># (OpAddress # pathFromEnum field)
 
 getConstructorMemRep :: (Members '[Reader CompilerCtx] r) => Tree.Tag -> Sem r NockmaMemRep
 getConstructorMemRep tag = (^. constructorInfoMemRep) <$> getConstructorInfo tag

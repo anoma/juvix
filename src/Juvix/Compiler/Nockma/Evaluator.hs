@@ -170,7 +170,7 @@ eval inistack initerm =
 
               binCmp :: (a -> a -> Bool) -> Sem r (Term a)
               binCmp f = case args' of
-                TCell (TAtom l) (TAtom r) -> return (TermAtom (nockBool (f l r)) )
+                TCell (TAtom l) (TAtom r) -> return (TermAtom (nockBool (f l r)))
                 _ -> error "expected a cell with two atoms"
 
           case _stdlibCallFunction of

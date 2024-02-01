@@ -5,6 +5,7 @@ import Juvix.Compiler.Nockma.EvalCompiled
 import Juvix.Compiler.Nockma.Evaluator qualified as NockmaEval
 import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Pretty qualified as Nockma
+import Juvix.Compiler.Nockma.Translation.FromTree
 import Juvix.Compiler.Tree
 import Tree.Eval.Base
 import Tree.Eval.Positive qualified as Tree
@@ -14,19 +15,25 @@ runNockmaAssertion hout _main tab = do
   compiled@(Nockma.Cell nockSubject nockMain) <-
     runM
       . runErrorIO' @JuvixError
+      . runReader opts
       $ treeToNockma' tab
   writeFileEnsureLn (relToProject $(mkRelFile "compiled.nockma")) (Nockma.ppPrint compiled)
   res <-
     runM
       . runOutputSem @(Term Natural)
-        -- (embed . hPutStrLn hout . Nockma.ppPrint)
-        (return (return ()))
+        (embed . hPutStrLn hout . Nockma.ppPrint)
       . runReader NockmaEval.defaultEvalOptions
       . evalCompiledNock' nockSubject
       $ nockMain
   let ret = getReturn res
   hPutStrLn hout (Nockma.ppPrint ret)
   where
+    opts :: CompilerOptions
+    opts =
+      CompilerOptions
+        { _compilerOptionsEnableTrace = True
+        }
+
     getReturn :: Term Natural -> Term Natural
     getReturn = id
 
