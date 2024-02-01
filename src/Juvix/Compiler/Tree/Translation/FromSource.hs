@@ -40,6 +40,9 @@ runParser = runParserS parseTreeSig
 runParser' :: BuilderState -> FilePath -> Text -> Either MegaparsecError BuilderState
 runParser' = runParserS' parseTreeSig
 
+parseNodeText' :: BuilderState -> FilePath -> Text -> Either MegaparsecError (BuilderState, Node)
+parseNodeText' bs file txt = runParserS'' parseNode parseTreeSig bs file txt
+
 parseNode ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r Node

@@ -6,6 +6,7 @@ import Commands.Dev.Tree.Eval as Eval
 import Commands.Dev.Tree.FromAsm as FromAsm
 import Commands.Dev.Tree.Options
 import Commands.Dev.Tree.Read as Read
+import Commands.Dev.Tree.Repl as Repl
 
 runCommand :: forall r. (Members '[Embed IO, App, TaggedLock] r) => TreeCommand -> Sem r ()
 runCommand = \case
@@ -13,3 +14,4 @@ runCommand = \case
   Compile opts -> Compile.runCommand opts
   Read opts -> Read.runCommand opts
   FromAsm opts -> FromAsm.runCommand opts
+  Repl opts -> Repl.runCommand opts
