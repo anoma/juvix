@@ -11,7 +11,7 @@ import Juvix.Compiler.Tree.Error
 import Juvix.Compiler.Tree.Extra.Type
 
 unifyTypes'' :: forall t e r. (Member (Error AsmError) r) => Maybe Location -> InfoTable' t e -> Type -> Type -> Sem r Type
-unifyTypes'' loc tab ty1 ty2 = mapError toAsmError $ unifyTypes'' loc tab ty1 ty2
+unifyTypes'' loc tab ty1 ty2 = mapError toAsmError $ unifyTypes' loc tab ty1 ty2
   where
     toAsmError :: TreeError -> AsmError
     toAsmError TreeError {..} =

@@ -143,16 +143,22 @@ inferType tab funInfo = goInfer mempty
     goExtendClosure bl NodeExtendClosure {..} = do
       ty <- goInfer bl _nodeExtendClosureFun
       let tys = typeArgs ty
+          m = length tys
           n = length _nodeExtendClosureArgs
-      when (length tys <= n && typeTarget ty /= TyDynamic) $
-        throw $
-          TreeError
-            { _treeErrorLoc = _nodeExtendClosureInfo ^. nodeInfoLocation,
-              _treeErrorMsg = "Too many arguments"
-            }
-      let tys' = take n tys ++ replicate (length tys - n) TyDynamic
-      forM_ (zipExact (toList _nodeExtendClosureArgs) tys') (uncurry (checkType bl))
-      return $ mkTypeFun (drop n tys) (typeTarget ty)
+      if
+          | n < m -> do
+              forM_ (zipExact (toList _nodeExtendClosureArgs) (take n tys)) (uncurry (checkType bl))
+              return $ mkTypeFun (drop n tys) (typeTarget ty)
+          | typeTarget ty == TyDynamic -> do
+              let tys' = tys ++ replicate (n - m) TyDynamic
+              forM_ (zipExact (toList _nodeExtendClosureArgs) tys') (uncurry (checkType bl))
+              return $ typeTarget ty
+          | otherwise ->
+              throw $
+                TreeError
+                  { _treeErrorLoc = _nodeExtendClosureInfo ^. nodeInfoLocation,
+                    _treeErrorMsg = "Too many arguments"
+                  }
 
     goCall :: BinderList Type -> NodeCall -> Sem r Type
     goCall bl NodeCall {..} = case _nodeCallType of
@@ -175,13 +181,19 @@ inferType tab funInfo = goInfer mempty
         ty <- goInfer bl cl
         let tys = typeArgs ty
             n = length _nodeCallArgs
-        when (length tys /= n && typeTarget ty /= TyDynamic) $
+        when (length tys > n) $
           throw $
             TreeError
               { _treeErrorLoc = _nodeCallInfo ^. nodeInfoLocation,
-                _treeErrorMsg = "Wrong number of arguments"
+                _treeErrorMsg = "Too few arguments"
               }
-        let tys' = take n tys ++ replicate (length tys - n) TyDynamic
+        when (length tys < n && typeTarget ty /= TyDynamic) $
+          throw $
+            TreeError
+              { _treeErrorLoc = _nodeCallInfo ^. nodeInfoLocation,
+                _treeErrorMsg = "Too many arguments"
+              }
+        let tys' = tys ++ replicate (n - length tys) TyDynamic
         forM_ (zipExact _nodeCallArgs tys') (uncurry (checkType bl))
         return $ typeTarget ty
 
@@ -247,7 +259,8 @@ inferType tab funInfo = goInfer mempty
 validateFunction :: (Member (Error TreeError) r) => InfoTable -> FunctionInfo -> Sem r FunctionInfo
 validateFunction tab funInfo = do
   ty <- inferType tab funInfo (funInfo ^. functionCode)
-  _ <- unifyTypes' (funInfo ^. functionLocation) tab ty (typeTarget (funInfo ^. functionType))
+  let ty' = if funInfo ^. functionArgsNum == 0 then funInfo ^. functionType else typeTarget (funInfo ^. functionType)
+  _ <- unifyTypes' (funInfo ^. functionLocation) tab ty ty'
   return funInfo
 
 validate :: (Member (Error TreeError) r) => InfoTable -> Sem r InfoTable
