@@ -247,9 +247,12 @@ eval inistack initerm =
 
             goOpHint :: Sem r (Term a)
             goOpHint = do
-              -- Ignore the hint and evaluate
-              h <- withCrumb (crumb crumbDecodeFirst) (asCell (c ^. operatorCellTerm))
-              evalArg crumbEvalFirst stack (h ^. cellRight)
+              Cell' l r _ <- withCrumb (crumb crumbDecodeFirst) (asCell (c ^. operatorCellTerm))
+              case l of
+                TAtom {} -> evalArg crumbEvalFirst stack r
+                TCell _t1 t2 -> do
+                  void (evalArg crumbEvalFirst stack t2)
+                  evalArg crumbEvalSecond stack r
 
             goOpPush :: Sem r (Term a)
             goOpPush = do

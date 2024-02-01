@@ -389,7 +389,7 @@ compile = \case
         Tree.IntMod -> return (callStdlib StdlibMod args)
         Tree.IntLt -> return (callStdlib StdlibLt args)
         Tree.IntLe -> return (callStdlib StdlibLe args)
-        Tree.OpSeq -> error "OpSeq is not supported"
+        Tree.OpSeq -> return (OpHint # (nockNil' # arg1) # arg2)
         Tree.ValEq -> testEq _nodeBinopArg1 _nodeBinopArg2
         Tree.StrConcat -> stringsErr
 
@@ -432,7 +432,7 @@ appendRights ::
   Term Natural ->
   Sem r (Term Natural)
 appendRights path n =
-   callFun (BuiltinFunction BuiltinAppendRights) [n, toNock path]
+  callFun (BuiltinFunction BuiltinAppendRights) [n, toNock path]
 
 pushTemp :: Term Natural -> Term Natural
 pushTemp toBePushed =

@@ -49,7 +49,7 @@ testDescr Tree.PosTest {..} =
         }
 
 testsSlow :: [Int]
-testsSlow = [10, 11, 13, 17, 20, 23, 27, 28, 30, 32, 33, 34, 36]
+testsSlow = []
 
 testsAdt :: [Int]
 testsAdt = [9, 15, 18, 25, 26, 29, 35]
