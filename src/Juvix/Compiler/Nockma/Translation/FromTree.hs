@@ -146,10 +146,6 @@ data Compiler m a where
   PopNAndPushOnto :: StackId -> Natural -> Term Natural -> Compiler m ()
   PopFromN :: Natural -> StackId -> Compiler m ()
   TestEqOn :: StackId -> Compiler m ()
-  CallHelper :: Bool -> Maybe FunctionId -> Natural -> Compiler m ()
-  IncrementOn :: StackId -> Compiler m ()
-  Save :: Bool -> m () -> Compiler m ()
-  CallStdlibOn :: StackId -> StdlibFunction -> Compiler m ()
   GetConstructorInfo :: Tree.Tag -> Compiler m ConstructorInfo
   GetFunctionArity :: FunctionId -> Compiler m Natural
   GetFunctionPath :: FunctionId -> Compiler m Path
@@ -178,11 +174,11 @@ topOfStack s = indexInStack s 0
 indexInStack :: StackId -> Natural -> Path
 indexInStack s idx = stackPath s ++ indexStack idx
 
+pathToArg :: Natural -> Path
+pathToArg = indexInStack Args
+
 pathToArgumentsArea :: Path
 pathToArgumentsArea = topOfStack Args
-
-pathToArg :: Natural -> Path
-pathToArg = indexInPath pathToArgumentsArea
 
 -- | Construct a path rooted at he head of a named stack
 pathInStack :: StackId -> Path -> Path
@@ -305,7 +301,7 @@ compile = \case
   Tree.Binop b -> goBinop b
   Tree.Unop b -> goUnop b
   Tree.Const c -> return (goConst c)
-  Tree.MemRef c -> goMemRef c
+  Tree.MemRef c -> return (goMemRef c)
   Tree.AllocConstr c -> goAllocConstr c
   Tree.AllocClosure c -> goAllocClosure c
   Tree.ExtendClosure c -> goExtendClosure c
@@ -326,15 +322,25 @@ compile = \case
         Tree.BuiltinTag tag -> case nockmaBuiltinTag tag of
           NockmaBuiltinBool b -> nockBoolLiteral b
 
-    goMemRef :: Tree.MemRef -> Sem r (Term Natural)
+    goMemRef :: Tree.MemRef -> Term Natural
     goMemRef = \case
       Tree.DRef d -> goDirectRef d
-      Tree.ConstrRef {} -> error "TODO"
+      --       { _fieldName :: Maybe Text,
+      --   -- | tag of the constructor being referenced
+      --   _fieldTag :: Tag,
+      --   -- | location where the data is stored
+      --   _fieldRef :: DirectRef,
+      --   _fieldOffset :: Offset
+      -- }
+      Tree.ConstrRef Tree.Field {..} ->
+        let fieldpath =
+              directRefPath _fieldRef
+                ++ constructorPath ConstructorArgs
+                ++ indexStack (fromIntegral _fieldOffset)
+         in OpAddress # fieldpath
       where
-        goDirectRef :: Tree.DirectRef -> Sem r (Term Natural)
-        goDirectRef = \case
-          Tree.ArgRef {} -> error "TODO"
-          Tree.TempRef {} -> error "TODO"
+        goDirectRef :: Tree.DirectRef -> Term Natural
+        goDirectRef dr = OpAddress # directRefPath dr
 
     goConst :: Tree.Constant -> Term Natural
     goConst = \case
@@ -373,15 +379,16 @@ compile = \case
       return (branch arg iftrue iffalse)
 
     goUnop :: Tree.NodeUnop -> Sem r (Term Natural)
-    goUnop Tree.NodeUnop {..} = goUnaryOpcode _nodeUnopOpcode
-      where
-        goUnaryOpcode :: Tree.UnaryOpcode -> Sem r (Term Natural)
-        goUnaryOpcode = \case
-          Tree.OpShow -> stringsErr
-          Tree.OpStrToInt -> stringsErr
-          Tree.OpFail -> return crash
-          Tree.OpTrace -> error "TODO"
-          Tree.OpArgsNum -> error "TODO"
+    goUnop Tree.NodeUnop {..} = do
+      arg <- compile _nodeUnopArg
+      return $ case _nodeUnopOpcode of
+        Tree.OpShow -> stringsErr
+        Tree.OpStrToInt -> stringsErr
+        Tree.OpFail -> crash
+        Tree.OpTrace -> OpTrace # arg # arg
+        Tree.OpArgsNum ->
+          let getF f = getClosureField f arg
+           in sub (getF ClosureTotalArgsNum) (getF ClosureArgsNum)
 
     goBinop :: Tree.NodeBinop -> Sem r (Term Natural)
     goBinop Tree.NodeBinop {..} = do
@@ -396,12 +403,21 @@ compile = \case
         Tree.IntMod -> return (callStdlib StdlibMod args)
         Tree.IntLt -> return (callStdlib StdlibLt args)
         Tree.IntLe -> return (callStdlib StdlibLe args)
-        Tree.OpSeq -> error "TODO"
+        Tree.OpSeq -> error "OpSeq is not supported"
         Tree.ValEq -> testEq _nodeBinopArg1 _nodeBinopArg2
         Tree.StrConcat -> stringsErr
 
     goAllocClosure :: Tree.NodeAllocClosure -> Sem r (Term Natural)
-    goAllocClosure = error "TODO"
+    goAllocClosure Tree.NodeAllocClosure {..} = do
+      let fun = UserFunction _nodeAllocClosureFunSymbol
+      fpath <- getFunctionPath fun
+      farity <- getFunctionArity fun
+      args <- mapM compile _nodeAllocClosureArgs
+      return . makeClosure $ \case
+        ClosureCode -> OpAddress # fpath
+        ClosureTotalArgsNum -> nockIntegralLiteral farity
+        ClosureArgsNum -> nockIntegralLiteral (length args)
+        ClosureArgs -> remakeList args
 
     goExtendClosure :: Tree.NodeExtendClosure -> Sem r (Term Natural)
     goExtendClosure = extendClosure
@@ -450,6 +466,9 @@ testEq a b = do
   a' <- compile a
   b' <- compile b
   return (OpEq # a' # b')
+
+nockNatLiteral :: Natural -> Term Natural
+nockNatLiteral = nockIntegralLiteral
 
 nockIntegralLiteral :: (Integral a) => a -> Term Natural
 nockIntegralLiteral = (OpQuote #) . toNock @Natural . fromIntegral
@@ -526,16 +545,13 @@ pushConstructorFieldOnto s tag refToConstr argIx = do
 directRefPath :: Tree.DirectRef -> Path
 directRefPath = \case
   Tree.ArgRef a -> pathToArg (fromOffsetRef a)
-  Tree.TempRef Tree.RefTemp {..} -> tempRefPath (fromIntegral (fromJust _refTempTempHeight)) (fromOffsetRef _refTempOffsetRef)
+  Tree.TempRef Tree.RefTemp {..} ->
+    tempRefPath
+      (fromIntegral (fromJust _refTempTempHeight))
+      (fromOffsetRef _refTempOffsetRef)
 
 tempRefPath :: Natural -> Natural -> Path
 tempRefPath tempHeight off = indexInStack TempStack (tempHeight - off - 1)
-
-allocClosure :: Tree.NodeAllocClosure -> Sem r ()
-allocClosure = error "TODO"
-
-closureArgsNum :: Sem r ()
-closureArgsNum = error "TODO"
 
 nockmaBuiltinTag :: Tree.BuiltinDataTag -> NockmaBuiltinTag
 nockmaBuiltinTag = \case
@@ -566,9 +582,6 @@ goConstructor mr t args = case t of
         [l, r] -> TCell l r
         _ -> impossible
 
-allocConstr :: Tree.NodeAllocConstr -> Sem r ()
-allocConstr = error "TODO"
-
 copyTopFromTo :: (Members '[Compiler] r) => StackId -> StackId -> Sem r ()
 copyTopFromTo from toStack = pushOnto toStack (OpAddress # topOfStack from)
 
@@ -584,8 +597,8 @@ stringsErr :: a
 stringsErr = unsupported "strings"
 
 -- | Computes a - b
-sub :: Term Natural -> Term Natural -> Sem r () -> Sem r ()
-sub _a _b _aux = error "TODO"
+sub :: Term Natural -> Term Natural -> Term Natural
+sub a b = callStdlib StdlibSub [a, b]
 
 seqTerms :: [Term Natural] -> Term Natural
 seqTerms = foldl' (flip (>>#)) (OpAddress # emptyPath) . reverse
@@ -681,32 +694,46 @@ runCompilerWith opts constrs libFuns mainFun =
             }
         )
 
-asmReturn :: Sem r ()
-asmReturn = return ()
-
 builtinFunction :: BuiltinFunctionId -> CompilerFunction
 builtinFunction = \case
   BuiltinAppendRights ->
     CompilerFunction
       { _compilerFunctionName = BuiltinFunction BuiltinAppendRights,
         _compilerFunctionArity = 2, -- args: n pos
-        _compilerFunction = error "TODO"
+        _compilerFunction = do
+          let n = OpAddress # pathToArg 0
+              pos = OpAddress # pathToArg 1
+          twoToTheN <- pow2 n
+          return (dec (mul twoToTheN (OpInc # pos)))
       }
   BuiltinPow2 ->
     CompilerFunction
       { _compilerFunctionName = BuiltinFunction BuiltinPow2,
         _compilerFunctionArity = 1,
-        _compilerFunction = error "TODO"
+        _compilerFunction = do
+          let n = OpAddress # pathToArg 0
+          callFun (BuiltinFunction BuiltinPow2Go) [n, nockNatLiteral 1]
       }
   BuiltinPow2Go ->
     CompilerFunction
       { _compilerFunctionName = BuiltinFunction BuiltinPow2Go,
         _compilerFunctionArity = 2, -- args: n acc
-        _compilerFunction = error "TODO"
+        _compilerFunction = do
+          let n = OpAddress # pathToArg 0
+              acc = OpAddress # pathToArg 1
+              cond = OpEq # n # nockNatLiteral 0
+              baseCase = acc
+          recCase <-
+            callFun (BuiltinFunction BuiltinPow2Go) [dec n, mul (nockNatLiteral 2) acc]
+          return (branch cond baseCase recCase)
       }
 
--- callEnum :: (Enum funId, Members '[Compiler] r) => funId -> Natural -> Sem r ()
--- callEnum = callFun . UserFunction . Tree.defaultSymbol . fromIntegral . fromEnum
+callEnum ::
+  (Enum funId, Members '[Compiler] r) =>
+  funId ->
+  [Term Natural] ->
+  Sem r (Term Natural)
+callEnum = callFun . UserFunction . Tree.defaultSymbol . fromIntegral . fromEnum
 
 callFun ::
   (Members '[Compiler] r) =>
@@ -735,9 +762,6 @@ replaceArgs args =
       | s <- allElements
     ]
 
-tcallFun :: (Members '[Compiler] r) => FunctionId -> Natural -> Sem r ()
-tcallFun = callHelper True . Just
-
 getFunctionPath' :: (Members '[Reader CompilerCtx] r) => FunctionId -> Sem r Path
 getFunctionPath' funName = asks (^?! compilerFunctionInfos . at funName . _Just . functionInfoPath)
 
@@ -758,17 +782,6 @@ replaceSubterm' obj relPath newVal =
 sre :: (Members '[Output (Term Natural), Reader CompilerCtx] r) => Sem (Compiler ': r) x -> Sem r x
 sre = subsume . re
 
--- | funName is Nothing when we call a closure at the top of the stack
-callHelper' ::
-  Bool ->
-  Maybe FunctionId ->
-  Natural ->
-  Sem r ()
-callHelper' _isTail _funName _funArgsNum = error "TODO"
-
-asmReturn' :: Sem r ()
-asmReturn' = error "TODO"
-
 testEqOn' :: (Members '[Output (Term Natural)] r) => StackId -> Sem r ()
 testEqOn' s = output (replaceOnStackN 2 s (OpEq # stackSliceAsCell s 0 1))
 
@@ -779,42 +792,6 @@ traceTerm' :: (Members '[Output (Term Natural)] r) => Term Natural -> Sem r ()
 traceTerm' t =
   let iden = OpAddress # ([] :: Path)
    in output (OpTrace # t # iden)
-
-incrementOn' :: (Members '[Output (Term Natural)] r) => StackId -> Sem r ()
-incrementOn' s = output (replaceOnStack s (OpInc # stackSliceAsCell s 0 0))
-
-callStdlibOn' :: (Members '[Output (Term Natural)] r) => StackId -> StdlibFunction -> Sem r ()
-callStdlibOn' s f = do
-  let fNumArgs = stdlibNumArgs f
-      fPath = stdlibPath f
-      decodeFn = OpCall # (fPath # (OpAddress # stackPath StandardLibrary))
-      preargs = stdlibStackTake s fNumArgs
-      arguments = OpSequence # (OpAddress # [R]) # preargs
-      extractResult = (OpAddress # [L]) # (OpAddress # [R, R])
-      callFn = OpPush # (OpCall # [L] # (OpReplace # ([R, L] # arguments) # (OpAddress # [L]))) # extractResult
-      meta =
-        StdlibCall
-          { _stdlibCallArgs = preargs,
-            _stdlibCallFunction = f
-          }
-
-      callCell = set cellCall (Just meta) (OpPush #. (decodeFn # callFn))
-
-  output (toNock callCell)
-  output (replaceTopStackN fNumArgs s)
-  where
-    stdlibStackTake :: StackId -> Natural -> Term Natural
-    stdlibStackTake sn n =
-      foldTerms
-        ( nonEmpty'
-            (take (fromIntegral n) [OpAddress # indexInStack sn i | i <- [0 ..]])
-        )
-
-save' ::
-  Bool ->
-  m () ->
-  Sem (WithTactics Compiler f m r) (f ())
-save' _isTail = error "TODO"
 
 builtinTagToTerm :: NockmaBuiltinTag -> Term Natural
 builtinTagToTerm = \case
@@ -846,7 +823,7 @@ caseCmd arg defaultBranch = \case
           | otherwise -> error "redundant branch. Impossible?"
         NockmaMemRepList constr -> do
           bs' <- mapM (firstM asNockmaMemRepListConstr) bs
-          goRepList ((constr, b) :| bs')
+          return (goRepList ((constr, b) :| bs'))
   where
     goRepConstr ::
       Tree.Tag ->
@@ -887,8 +864,16 @@ caseCmd arg defaultBranch = \case
           Tree.BuiltinTag tag -> case nockmaBuiltinTag tag of
             NockmaBuiltinBool v' -> guard (v /= v') $> br
 
-    goRepList :: NonEmpty (NockmaMemRepListConstr, Term Natural) -> Sem r (Term Natural)
-    goRepList ((_c, _b) :| _bs) = error "TODO"
+    goRepList :: NonEmpty (NockmaMemRepListConstr, Term Natural) -> Term Natural
+    goRepList ((c, b) :| bs) =
+      let cond = OpIsCell # arg
+          otherBranch = fromJust (firstJust f bs <|> defaultBranch)
+       in case c of
+            NockmaMemRepListConstrCons -> branch cond b otherBranch
+            NockmaMemRepListConstrNil -> branch cond otherBranch b
+      where
+        f :: (NockmaMemRepListConstr, Term Natural) -> Maybe (Term Natural)
+        f (c', br) = guard (c /= c') $> br
 
 branch ::
   Term Natural ->
@@ -925,10 +910,6 @@ re = reinterpretH $ \case
   PopNAndPushOnto s n t -> popNAndPushOnto' s n t >>= pureT
   Verbatim s -> outputT s
   TraceTerm s -> whenM (asks (^. compilerOptions . compilerOptionsEnableTrace)) (traceTerm' s) >>= pureT
-  CallHelper isTail funName funArgsNum -> callHelper' isTail funName funArgsNum >>= pureT
-  IncrementOn s -> incrementOn' s >>= pureT
-  Save isTail m -> save' isTail m
-  CallStdlibOn s f -> callStdlibOn' s f >>= pureT
   TestEqOn s -> testEqOn' s >>= pureT
   GetConstructorInfo s -> getConstructorInfo' s >>= pureT
   GetFunctionArity s -> getFunctionArity' s >>= pureT
@@ -960,14 +941,8 @@ popFromNH ::
   Sem (WithTactics e f m r) (f ())
 popFromNH n s = outputT (popStackN n s)
 
-mul :: Sem r ()
-mul = error "TODO"
-
-mulOn :: (Members '[Compiler] r) => StackId -> Sem r ()
-mulOn s = callStdlibOn s StdlibMul
-
-addOn :: (Members '[Compiler] r) => StackId -> Sem r ()
-addOn s = callStdlibOn s StdlibAdd
+mul :: Term Natural -> Term Natural -> Term Natural
+mul a b = callStdlib StdlibMul [a, b]
 
 pow2 :: (Members '[Compiler] r) => Term Natural -> Sem r (Term Natural)
 pow2 = callFun (BuiltinFunction BuiltinPow2) . pure
@@ -978,17 +953,8 @@ add a b = callStdlib StdlibAdd [a, b]
 dec :: Term Natural -> Term Natural
 dec = callStdlib StdlibDec . pure
 
-increment :: Sem r ()
-increment = error "TODO"
-
 popFrom :: (Members '[Compiler] r) => StackId -> Sem r ()
 popFrom = popFromN 1
-
-popN :: Natural -> Sem r ()
-popN = error "TODO"
-
-pop :: Sem r ()
-pop = error "TODO"
 
 stackPop :: StackId -> Natural -> Term Natural
 stackPop s n = OpAddress # pathInStack s (replicate n R)
@@ -1072,9 +1038,3 @@ replaceTopStackN n sn =
 
 replaceTopStack :: StackId -> Term Natural
 replaceTopStack = replaceTopStackN 1
-
-pushNat :: Natural -> Sem r ()
-pushNat = error "TODO"
-
-pushNatOnto :: (Member Compiler r) => StackId -> Natural -> Sem r ()
-pushNatOnto s n = pushOnto s (OpQuote # toNock n)
