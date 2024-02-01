@@ -79,7 +79,7 @@ type Offset = Natural
 data CompilerFunction = CompilerFunction
   { _compilerFunctionName :: FunctionId,
     _compilerFunctionArity :: Natural,
-    _compilerFunction :: Sem '[Compiler, Reader CompilerCtx] (Term Natural)
+    _compilerFunction :: Sem '[Reader CompilerCtx] (Term Natural)
   }
 
 data StackId
@@ -139,17 +139,6 @@ functionPath = \case
 numStacks :: (Integral a) => a
 numStacks = fromIntegral (length (allElements @StackId))
 
-data Compiler m a where
-  Verbatim :: Term Natural -> Compiler m ()
-  TraceTerm :: Term Natural -> Compiler m ()
-  PushOnto :: StackId -> Term Natural -> Compiler m ()
-  PopNAndPushOnto :: StackId -> Natural -> Term Natural -> Compiler m ()
-  PopFromN :: Natural -> StackId -> Compiler m ()
-  TestEqOn :: StackId -> Compiler m ()
-  GetConstructorInfo :: Tree.Tag -> Compiler m ConstructorInfo
-  GetFunctionArity :: FunctionId -> Compiler m Natural
-  GetFunctionPath :: FunctionId -> Compiler m Path
-
 stackPath :: StackId -> Path
 stackPath s = indexStack (fromIntegral (fromEnum s))
 
@@ -184,7 +173,6 @@ pathToArgumentsArea = topOfStack Args
 pathInStack :: StackId -> Path -> Path
 pathInStack s p = stackPath s ++ p
 
-makeSem ''Compiler
 makeLenses ''CompilerOptions
 makeLenses ''CompilerFunction
 makeLenses ''CompilerCtx
@@ -296,7 +284,7 @@ fromTreeTable t = case t ^. Tree.infoMainFunction of
 fromOffsetRef :: Tree.OffsetRef -> Natural
 fromOffsetRef = fromIntegral . (^. Tree.offsetRefOffset)
 
-compile :: forall r. (Members '[Compiler] r) => Tree.Node -> Sem r (Term Natural)
+compile :: forall r. (Members '[Reader CompilerCtx] r) => Tree.Node -> Sem r (Term Natural)
 compile = \case
   Tree.Binop b -> goBinop b
   Tree.Unop b -> goUnop b
@@ -346,7 +334,7 @@ compile = \case
     goConst = \case
       Tree.ConstInt i
         | i < 0 -> error "negative integer"
-        | otherwise -> toNock @Natural (fromIntegral i)
+        | otherwise -> nockIntegralLiteral i
       Tree.ConstBool i -> nockBoolLiteral i
       Tree.ConstString {} -> stringsErr
       Tree.ConstUnit -> constUnit
@@ -441,7 +429,7 @@ compile = \case
 
 -- | arg order: push path >> push n
 appendRights ::
-  (Members '[Compiler] r) =>
+  (Members '[Reader CompilerCtx] r) =>
   Term Natural ->
   Term Natural ->
   Sem r (Term Natural)
@@ -461,7 +449,7 @@ withTemp :: Term Natural -> Term Natural -> Term Natural
 withTemp toBePushed body =
   OpSequence # pushTemp toBePushed # body
 
-testEq :: (Members '[Compiler] r) => Tree.Node -> Tree.Node -> Sem r (Term Natural)
+testEq :: (Members '[Reader CompilerCtx] r) => Tree.Node -> Tree.Node -> Sem r (Term Natural)
 testEq a b = do
   a' <- compile a
   b' <- compile b
@@ -474,7 +462,7 @@ nockIntegralLiteral :: (Integral a) => a -> Term Natural
 nockIntegralLiteral = (OpQuote #) . toNock @Natural . fromIntegral
 
 extendClosure ::
-  (Members '[Compiler] r) =>
+  (Members '[Reader CompilerCtx] r) =>
   Tree.NodeExtendClosure ->
   Sem r (Term Natural)
 extendClosure Tree.NodeExtendClosure {..} = do
@@ -518,30 +506,6 @@ constVoid = makeConstructor $ \case
   ConstructorTag -> OpQuote # toNock (0 :: Natural)
   ConstructorArgs -> remakeList []
 
-pushConstructorFieldOnto ::
-  (Members '[Compiler] r) =>
-  StackId ->
-  Tree.Tag ->
-  Tree.DirectRef ->
-  Natural ->
-  Sem r ()
-pushConstructorFieldOnto s tag refToConstr argIx = do
-  info <- getConstructorInfo tag
-  let memrep = info ^. constructorInfoMemRep
-      arity = info ^. constructorInfoArity
-      path = case memrep of
-        NockmaMemRepConstr ->
-          directRefPath refToConstr
-            ++ constructorPath ConstructorArgs
-            ++ indexStack argIx
-        NockmaMemRepTuple ->
-          directRefPath refToConstr
-            ++ indexTuple arity argIx
-        NockmaMemRepList constr -> case constr of
-          NockmaMemRepListConstrNil -> impossible
-          NockmaMemRepListConstrCons -> directRefPath refToConstr ++ indexTuple 2 argIx
-  pushOnto s (OpAddress # path)
-
 directRefPath :: Tree.DirectRef -> Path
 directRefPath = \case
   Tree.ArgRef a -> pathToArg (fromOffsetRef a)
@@ -582,14 +546,6 @@ goConstructor mr t args = case t of
         [l, r] -> TCell l r
         _ -> impossible
 
-copyTopFromTo :: (Members '[Compiler] r) => StackId -> StackId -> Sem r ()
-copyTopFromTo from toStack = pushOnto toStack (OpAddress # topOfStack from)
-
-moveTopFromTo :: (Members '[Compiler] r) => StackId -> StackId -> Sem r ()
-moveTopFromTo from toStack = do
-  pushOnto toStack (OpAddress # topOfStack from)
-  popFrom from
-
 unsupported :: Text -> a
 unsupported thing = error ("The Nockma backend does not support " <> thing)
 
@@ -599,9 +555,6 @@ stringsErr = unsupported "strings"
 -- | Computes a - b
 sub :: Term Natural -> Term Natural -> Term Natural
 sub a b = callStdlib StdlibSub [a, b]
-
-seqTerms :: [Term Natural] -> Term Natural
-seqTerms = foldl' (flip (>>#)) (OpAddress # emptyPath) . reverse
 
 makeEmptyList :: Term Natural
 makeEmptyList = makeList []
@@ -625,49 +578,30 @@ initStack defs = makeList (initSubStack <$> allElements)
       StandardLibrary -> stdlib
       FunctionsLibrary -> makeList defs
 
-dupOnto :: (Members '[Compiler] r) => StackId -> Sem r ()
-dupOnto stackId = pushOnto stackId (OpAddress # topOfStack stackId)
-
-execCompilerList :: (Member (Reader CompilerCtx) r) => Sem (Compiler ': r) a -> Sem r [Term Natural]
-execCompilerList = fmap fst . runCompilerList
-
-runCompilerList :: (Member (Reader CompilerCtx) r) => Sem (Compiler ': r) a -> Sem r ([Term Natural], a)
-runCompilerList sem = do
-  (ts, a) <- runOutputList (re sem)
-  return (ts, a)
-
-execCompiler :: (Member (Reader CompilerCtx) r) => Sem (Compiler ': r) a -> Sem r (Term Natural)
-execCompiler = fmap fst . runCompiler
-
-runCompiler :: (Member (Reader CompilerCtx) r) => Sem (Compiler ': r) a -> Sem r (Term Natural, a)
-runCompiler sem = do
-  (ts, a) <- runOutputList (re sem)
-  return (seqTerms ts, a)
-
 runCompilerWith :: CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> Cell Natural
 runCompilerWith opts constrs libFuns mainFun =
-  let entryCommand :: (Members '[Compiler] r) => Sem r (Term Natural)
+  let entryCommand :: (Members '[Reader CompilerCtx] r) => Sem r (Term Natural)
       entryCommand = callFun (mainFun ^. compilerFunctionName) []
+
       entryTerm =
-        seqTerms
-          . run
+          run
           . runReader compilerCtx
-          . execOutputList
-          . re
           $ entryCommand
+
       compiledFuns :: NonEmpty (Term Natural)
       compiledFuns =
         makeFunction'
-          <$> ( run
-                  . runReader compilerCtx
-                  . mapM (execCompiler . (^. compilerFunction))
-                  $ allFuns
+          <$> (run . runReader compilerCtx . (^. compilerFunction)
+                  <$> allFuns
               )
+
       makeFunction' :: Term Natural -> Term Natural
       makeFunction' c = makeFunction $ \case
         FunctionCode -> c
         FunctionArgs -> nockNil'
-   in Cell (initStack (toList compiledFuns)) entryTerm
+
+      ret = Cell (initStack (toList compiledFuns)) entryTerm
+   in trace ("RETURN = " <> ppTrace ret <> "\nEND RETURN\n") ret
   where
     allFuns :: NonEmpty CompilerFunction
     allFuns = mainFun :| libFuns ++ (builtinFunction <$> allElements)
@@ -729,14 +663,14 @@ builtinFunction = \case
       }
 
 callEnum ::
-  (Enum funId, Members '[Compiler] r) =>
+  (Enum funId, Members '[Reader CompilerCtx] r) =>
   funId ->
   [Term Natural] ->
   Sem r (Term Natural)
 callEnum = callFun . UserFunction . Tree.defaultSymbol . fromIntegral . fromEnum
 
 callFun ::
-  (Members '[Compiler] r) =>
+  (Members '[Reader CompilerCtx] r) =>
   FunctionId ->
   [Term Natural] ->
   Sem r (Term Natural)
@@ -762,8 +696,8 @@ replaceArgs args =
       | s <- allElements
     ]
 
-getFunctionPath' :: (Members '[Reader CompilerCtx] r) => FunctionId -> Sem r Path
-getFunctionPath' funName = asks (^?! compilerFunctionInfos . at funName . _Just . functionInfoPath)
+getFunctionPath :: (Members '[Reader CompilerCtx] r) => FunctionId -> Sem r Path
+getFunctionPath funName = asks (^?! compilerFunctionInfos . at funName . _Just . functionInfoPath)
 
 -- | obj[relPath] := newVal
 -- relPath is relative to obj
@@ -779,20 +713,6 @@ replaceSubterm' :: Term Natural -> Term Natural -> Term Natural -> Term Natural
 replaceSubterm' obj relPath newVal =
   evaluated $ (OpQuote # OpReplace) # ((relPath # (OpQuote # newVal)) # (OpQuote # obj))
 
-sre :: (Members '[Output (Term Natural), Reader CompilerCtx] r) => Sem (Compiler ': r) x -> Sem r x
-sre = subsume . re
-
-testEqOn' :: (Members '[Output (Term Natural)] r) => StackId -> Sem r ()
-testEqOn' s = output (replaceOnStackN 2 s (OpEq # stackSliceAsCell s 0 1))
-
-dumpStack :: (Members '[Compiler] r) => StackId -> Sem r ()
-dumpStack t = traceTerm (OpAddress # stackPath t)
-
-traceTerm' :: (Members '[Output (Term Natural)] r) => Term Natural -> Sem r ()
-traceTerm' t =
-  let iden = OpAddress # ([] :: Path)
-   in output (OpTrace # t # iden)
-
 builtinTagToTerm :: NockmaBuiltinTag -> Term Natural
 builtinTagToTerm = \case
   NockmaBuiltinBool v -> nockBoolLiteral v
@@ -804,7 +724,7 @@ constructorTagToTerm = \case
 
 caseCmd ::
   forall r.
-  (Members '[Compiler] r) =>
+  (Members '[Reader CompilerCtx] r) =>
   Term Natural ->
   Maybe (Term Natural) ->
   [(Tree.Tag, Term Natural)] ->
@@ -882,11 +802,11 @@ branch ::
   Term Natural
 branch cond t f = OpIf # cond # t # f
 
-getFunctionArity' :: (Members '[Reader CompilerCtx] r) => FunctionId -> Sem r Natural
-getFunctionArity' s = asks (^?! compilerFunctionInfos . at s . _Just . functionInfoArity)
+getFunctionArity :: (Members '[Reader CompilerCtx] r) => FunctionId -> Sem r Natural
+getFunctionArity s = asks (^?! compilerFunctionInfos . at s . _Just . functionInfoArity)
 
-getConstructorInfo' :: (Members '[Reader CompilerCtx] r) => Tree.Tag -> Sem r ConstructorInfo
-getConstructorInfo' tag = asks (^?! compilerConstructorInfos . at tag . _Just)
+getConstructorInfo :: (Members '[Reader CompilerCtx] r) => Tree.Tag -> Sem r ConstructorInfo
+getConstructorInfo tag = asks (^?! compilerConstructorInfos . at tag . _Just)
 
 getClosureField :: ClosurePathId -> Term Natural -> Term Natural
 getClosureField = getField
@@ -897,23 +817,11 @@ getConstructorField = getField
 getField :: (Enum field) => field -> Term Natural -> Term Natural
 getField field t = (OpQuote # t) >># (OpAddress # pathFromEnum field)
 
-getConstructorMemRep :: (Members '[Compiler] r) => Tree.Tag -> Sem r NockmaMemRep
+getConstructorMemRep :: (Members '[Reader CompilerCtx] r) => Tree.Tag -> Sem r NockmaMemRep
 getConstructorMemRep tag = (^. constructorInfoMemRep) <$> getConstructorInfo tag
 
-getConstructorArity :: (Members '[Compiler] r) => Tree.Tag -> Sem r Natural
+getConstructorArity :: (Members '[Reader CompilerCtx] r) => Tree.Tag -> Sem r Natural
 getConstructorArity tag = (^. constructorInfoArity) <$> getConstructorInfo tag
-
-re :: (Member (Reader CompilerCtx) r) => Sem (Compiler ': r) a -> Sem (Output (Term Natural) ': r) a
-re = reinterpretH $ \case
-  PushOnto s n -> pushOntoH s n
-  PopFromN n s -> popFromNH n s
-  PopNAndPushOnto s n t -> popNAndPushOnto' s n t >>= pureT
-  Verbatim s -> outputT s
-  TraceTerm s -> whenM (asks (^. compilerOptions . compilerOptionsEnableTrace)) (traceTerm' s) >>= pureT
-  TestEqOn s -> testEqOn' s >>= pureT
-  GetConstructorInfo s -> getConstructorInfo' s >>= pureT
-  GetFunctionArity s -> getFunctionArity' s >>= pureT
-  GetFunctionPath s -> getFunctionPath' s >>= pureT
 
 crash :: Term Natural
 crash = (OpAddress # OpAddress # OpAddress)
@@ -944,7 +852,7 @@ popFromNH n s = outputT (popStackN n s)
 mul :: Term Natural -> Term Natural -> Term Natural
 mul a b = callStdlib StdlibMul [a, b]
 
-pow2 :: (Members '[Compiler] r) => Term Natural -> Sem r (Term Natural)
+pow2 :: (Members '[Reader CompilerCtx] r) => Term Natural -> Sem r (Term Natural)
 pow2 = callFun (BuiltinFunction BuiltinPow2) . pure
 
 add :: Term Natural -> Term Natural -> Term Natural
@@ -952,9 +860,6 @@ add a b = callStdlib StdlibAdd [a, b]
 
 dec :: Term Natural -> Term Natural
 dec = callStdlib StdlibDec . pure
-
-popFrom :: (Members '[Compiler] r) => StackId -> Sem r ()
-popFrom = popFromN 1
 
 stackPop :: StackId -> Natural -> Term Natural
 stackPop s n = OpAddress # pathInStack s (replicate n R)

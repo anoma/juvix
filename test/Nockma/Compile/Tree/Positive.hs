@@ -1,13 +1,10 @@
 module Nockma.Compile.Tree.Positive where
 
 import Base
-import Juvix.Compiler.Asm.Options qualified as Asm
-import Juvix.Compiler.Backend
 import Juvix.Compiler.Nockma.EvalCompiled
 import Juvix.Compiler.Nockma.Evaluator qualified as NockmaEval
 import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Pretty qualified as Nockma
-import Juvix.Compiler.Nockma.Translation.FromAsm qualified as Nockma
 import Juvix.Compiler.Tree
 import Tree.Eval.Base
 import Tree.Eval.Positive qualified as Tree
@@ -16,16 +13,13 @@ runNockmaAssertion :: Handle -> Symbol -> InfoTable -> IO ()
 runNockmaAssertion hout _main tab = do
   Nockma.Cell nockSubject nockMain <-
     runM
-      . runReader
-        (Asm.makeOptions TargetNockma True)
-      . runReader
-        (Nockma.CompilerOptions {_compilerOptionsEnableTrace = True})
       . runErrorIO' @JuvixError
       $ treeToNockma' tab
   res <-
     runM
       . runOutputSem @(Term Natural)
-        (embed . hPutStrLn hout . Nockma.ppPrint)
+        -- (embed . hPutStrLn hout . Nockma.ppPrint)
+        (return (return ()))
       . runReader NockmaEval.defaultEvalOptions
       . evalCompiledNock' nockSubject
       $ nockMain
@@ -33,11 +27,9 @@ runNockmaAssertion hout _main tab = do
   hPutStrLn hout (Nockma.ppPrint ret)
   where
     getReturn :: Term Natural -> Term Natural
-    getReturn res =
-      let valStack = getStack Nockma.ValueStack res
-       in case valStack of
-            TermCell c -> c ^. cellLeft
-            TermAtom {} -> error "should be a cell"
+    getReturn t = case t of
+      TermCell c -> t
+      TermAtom {} -> error "should be a cell"
 
 testDescr :: Tree.PosTest -> TestDescr
 testDescr Tree.PosTest {..} =
@@ -90,5 +82,5 @@ shouldRun Tree.PosTest {..} = testNum `notElem` map to3DigitString testsToIgnore
 allTests :: TestTree
 allTests =
   testGroup
-    "Nockma Asm compile positive tests"
+    "Nockma Tree compile positive tests"
     (map (mkTest . testDescr) (filter shouldRun Tree.tests))
