@@ -176,7 +176,7 @@ coreToVampIR' = Core.toStored' >=> storedCoreToVampIR'
 -- Other workflows
 --------------------------------------------------------------------------------
 
-treeToAsm :: Tree.InfoTable -> Sem r Asm.InfoTable
+treeToAsm :: (Member (Error JuvixError) r) => Tree.InfoTable -> Sem r Asm.InfoTable
 treeToAsm = Tree.toAsm >=> return . Asm.fromTree
 
 treeToNockma :: (Members '[Error JuvixError, Reader EntryPoint] r) => Tree.InfoTable -> Sem r (Nockma.Cell Natural)

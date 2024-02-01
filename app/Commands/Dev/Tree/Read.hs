@@ -15,10 +15,13 @@ runCommand opts = do
   case Tree.runParser (toFilePath afile) s of
     Left err -> exitJuvixError (JuvixError err)
     Right tab -> do
-      tab' <- Tree.applyTransformations (project opts ^. treeReadTransformations) tab
-      unless (project opts ^. treeReadNoPrint) $
-        renderStdOut (Tree.ppOutDefault tab' tab')
-      doEval tab'
+      r <- runError @JuvixError (Tree.applyTransformations (project opts ^. treeReadTransformations) tab)
+      case r of
+        Left err -> exitJuvixError (JuvixError err)
+        Right tab' -> do
+          unless (project opts ^. treeReadNoPrint) $
+            renderStdOut (Tree.ppOutDefault tab' tab')
+          doEval tab'
   where
     file :: AppPath File
     file = opts ^. treeReadInputFile

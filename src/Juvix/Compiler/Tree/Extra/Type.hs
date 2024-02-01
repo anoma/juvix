@@ -1,4 +1,8 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Avoid restricted extensions" #-}
+{-# HLINT ignore "Avoid restricted flags" #-}
 
 module Juvix.Compiler.Tree.Extra.Type where
 
