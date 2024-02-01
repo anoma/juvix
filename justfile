@@ -77,6 +77,10 @@ test *filter:
     fi
     {{ stack }} test {{ stackArgs }} --ta "{{ testArgs }} {{ rtsFlag }} $filter"
 
+# Run a juvix command and profile it
+run-profile +cmd:
+    cabal run --enable-profiling juvix -- {{ cmd }} +RTS -p
+
 # Build the juvix runtime
 _buildRuntime:
     cd runtime && make -j 4 -s
