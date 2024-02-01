@@ -160,17 +160,17 @@ eval inistack initerm =
           args' <- withCrumb w (recEval stack _stdlibCallArgs)
           let binArith :: (a -> a -> a) -> Sem r (Term a)
               binArith f = case args' of
-                TCell (TAtom l) (TAtom r) -> return (TCell (TAtom (f l r)) stack)
+                TCell (TAtom l) (TAtom r) -> return (TAtom (f l r))
                 _ -> error "expected a cell with two atoms"
 
               unaArith :: (a -> a) -> Sem r (Term a)
               unaArith f = case args' of
-                TAtom n -> return (TCell (TAtom (f n)) stack)
+                TAtom n -> return (TAtom (f n))
                 _ -> error "expected an atom"
 
               binCmp :: (a -> a -> Bool) -> Sem r (Term a)
               binCmp f = case args' of
-                TCell (TAtom l) (TAtom r) -> return (TCell (TermAtom (nockBool (f l r))) stack)
+                TCell (TAtom l) (TAtom r) -> return (TermAtom (nockBool (f l r)) )
                 _ -> error "expected a cell with two atoms"
 
           case _stdlibCallFunction of

@@ -27,8 +27,9 @@ runCommand opts = do
     file = opts ^. nockmaEvalFile
 
     getReturn :: Term Natural -> Sem r (Term Natural)
-    getReturn res =
-      let valStack = getStack ValueStack res
-       in case valStack of
-            TermCell c -> return (c ^. cellLeft)
-            TermAtom {} -> exitFailMsg "Program does not return a value"
+    getReturn res = return res
+
+-- let valStack = getStack ValueStack res
+--  in case valStack of
+--       TermCell c -> return (c ^. cellLeft)
+--       TermAtom {} -> exitFailMsg "Program does not return a value"

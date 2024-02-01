@@ -491,9 +491,7 @@ callStdlib fun args =
       callCell = set cellCall (Just meta) (OpPush #. (getFunCode # callFn))
       meta =
         StdlibCall
-          { _stdlibCallArgs = case nonEmpty args of
-              Just args' -> OpQuote # foldTerms args'
-              Nothing -> nockNil',
+          { _stdlibCallArgs = maybe nockNil' foldTerms (nonEmpty args),
             _stdlibCallFunction = fun
           }
    in TermCell callCell
@@ -584,14 +582,14 @@ runCompilerWith opts constrs libFuns mainFun =
       entryCommand = callFun (mainFun ^. compilerFunctionName) []
 
       entryTerm =
-          run
+        run
           . runReader compilerCtx
           $ entryCommand
 
       compiledFuns :: NonEmpty (Term Natural)
       compiledFuns =
         makeFunction'
-          <$> (run . runReader compilerCtx . (^. compilerFunction)
+          <$> ( run . runReader compilerCtx . (^. compilerFunction)
                   <$> allFuns
               )
 
@@ -634,32 +632,19 @@ builtinFunction = \case
     CompilerFunction
       { _compilerFunctionName = BuiltinFunction BuiltinAppendRights,
         _compilerFunctionArity = 2, -- args: n pos
-        _compilerFunction = do
-          let n = OpAddress # pathToArg 0
-              pos = OpAddress # pathToArg 1
-          twoToTheN <- pow2 n
-          return (dec (mul twoToTheN (OpInc # pos)))
+        _compilerFunction = return (nockNatLiteral 1)
       }
   BuiltinPow2 ->
     CompilerFunction
       { _compilerFunctionName = BuiltinFunction BuiltinPow2,
         _compilerFunctionArity = 1,
-        _compilerFunction = do
-          let n = OpAddress # pathToArg 0
-          callFun (BuiltinFunction BuiltinPow2Go) [n, nockNatLiteral 1]
+        _compilerFunction = return (nockNatLiteral 1)
       }
   BuiltinPow2Go ->
     CompilerFunction
       { _compilerFunctionName = BuiltinFunction BuiltinPow2Go,
         _compilerFunctionArity = 2, -- args: n acc
-        _compilerFunction = do
-          let n = OpAddress # pathToArg 0
-              acc = OpAddress # pathToArg 1
-              cond = OpEq # n # nockNatLiteral 0
-              baseCase = acc
-          recCase <-
-            callFun (BuiltinFunction BuiltinPow2Go) [dec n, mul (nockNatLiteral 2) acc]
-          return (branch cond baseCase recCase)
+        _compilerFunction = return (nockNatLiteral 1)
       }
 
 callEnum ::
@@ -676,7 +661,8 @@ callFun ::
   Sem r (Term Natural)
 callFun fun args = do
   fpath <- getFunctionPath fun
-  return (OpCall # fpath # replaceArgs args)
+  let p' = fpath ++ functionPath FunctionCode
+  return (OpCall # p' # replaceArgs args)
 
 replaceArgsWithTerm :: Term Natural -> Term Natural
 replaceArgsWithTerm term =

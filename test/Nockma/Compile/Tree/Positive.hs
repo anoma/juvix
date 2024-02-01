@@ -11,10 +11,11 @@ import Tree.Eval.Positive qualified as Tree
 
 runNockmaAssertion :: Handle -> Symbol -> InfoTable -> IO ()
 runNockmaAssertion hout _main tab = do
-  Nockma.Cell nockSubject nockMain <-
+  compiled@(Nockma.Cell nockSubject nockMain) <-
     runM
       . runErrorIO' @JuvixError
       $ treeToNockma' tab
+  writeFileEnsureLn (relToProject $(mkRelFile "compiled.nockma")) (Nockma.ppPrint compiled)
   res <-
     runM
       . runOutputSem @(Term Natural)
@@ -27,9 +28,7 @@ runNockmaAssertion hout _main tab = do
   hPutStrLn hout (Nockma.ppPrint ret)
   where
     getReturn :: Term Natural -> Term Natural
-    getReturn t = case t of
-      TermCell c -> t
-      TermAtom {} -> error "should be a cell"
+    getReturn = id
 
 testDescr :: Tree.PosTest -> TestDescr
 testDescr Tree.PosTest {..} =
