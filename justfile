@@ -36,7 +36,7 @@ default:
 
 @_ormoluCmd filesCmd:
     {{ trim(filesCmd) }} \
-     | xargs {{ ormolu }} --no-cabal \
+     | xargs -r {{ ormolu }} --no-cabal \
      --ghc-opt -XStandaloneDeriving \
      --ghc-opt -XUnicodeSyntax \
      --ghc-opt -XDerivingStrategies \
