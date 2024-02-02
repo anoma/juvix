@@ -307,13 +307,6 @@ compile = \case
     goMemRef :: Tree.MemRef -> Sem r (Term Natural)
     goMemRef = \case
       Tree.DRef d -> return (goDirectRef d)
-      --       { _fieldName :: Maybe Text,
-      --   -- | tag of the constructor being referenced
-      --   _fieldTag :: Tag,
-      --   -- | location where the data is stored
-      --   _fieldRef :: DirectRef,
-      --   _fieldOffset :: Offset
-      -- }
       Tree.ConstrRef Tree.Field {..} -> do
         info <- getConstructorInfo _fieldTag
         let memrep = info ^. constructorInfoMemRep
