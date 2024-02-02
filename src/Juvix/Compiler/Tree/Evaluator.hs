@@ -35,8 +35,6 @@ instance Exception.Exception EvalError
 eval :: InfoTable -> Node -> Value
 eval = hEval stdout
 
--- (args, temp, stdlib, functionslib, node)
-
 hEval :: Handle -> InfoTable -> Node -> Value
 hEval hout tab = eval' [] mempty
   where
