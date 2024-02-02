@@ -55,7 +55,7 @@ testsConstr :: [Int]
 testsConstr = [9, 28, 35]
 
 testsNegativeInteger :: [Int]
-testsNegativeInteger = [16, 31]
+testsNegativeInteger = [16]
 
 -- Tests involving Strings and IO
 testsUnsupported :: [Int]
