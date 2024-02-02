@@ -6,7 +6,7 @@ import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Translation.FromSource.QQ
 
-type Check = Sem '[Reader (Term Natural), Embed IO]
+type Check = Sem '[Reader [Term Natural], Reader (Term Natural), Embed IO]
 
 data Test = Test
   { _testName :: Text,
@@ -22,10 +22,10 @@ allTests = testGroup "Nockma eval unit positive" (map mk tests)
   where
     mk :: Test -> TestTree
     mk Test {..} = testCase (unpack _testName) $ do
-      let evalResult =
+      let (traces, evalResult) =
             run
               . runReader defaultEvalOptions
-              . ignoreOutput @(Term Natural)
+              . runOutputList @(Term Natural)
               . runError @(ErrNockNatural Natural)
               . runError @(NockEvalError Natural)
               $ eval _testProgramSubject _testProgramFormula
@@ -33,7 +33,7 @@ allTests = testGroup "Nockma eval unit positive" (map mk tests)
         Left natErr -> assertFailure ("Evaluation error: " <> show natErr)
         Right r -> case r of
           Left evalErr -> assertFailure ("Evaluation error: " <> unpack (ppTrace evalErr))
-          Right res -> runM (runReader res _testCheck)
+          Right res -> runM (runReader res (runReader traces _testCheck))
 
 eqNock :: Term Natural -> Check ()
 eqNock expected = do
@@ -47,6 +47,20 @@ eqNock expected = do
               <> ppTrace expected
               <> "\nBut got:\n"
               <> ppTrace actual
+      assertFailure (unpack msg)
+
+eqTraces :: [Term Natural] -> Check ()
+eqTraces expected = do
+  ts <- ask
+  unless (ts == expected) (err ts)
+  where
+    err :: [Term Natural] -> Check ()
+    err ts = do
+      let msg =
+            "Expected traces:\n"
+              <> ppTrace expected
+              <> "\nBut got:\n"
+              <> ppTrace ts
       assertFailure (unpack msg)
 
 tests :: [Test]
@@ -66,5 +80,5 @@ tests =
     Test "push" [nock| [0 1] |] [nock| [push [[suc [@ L]] [@ S]]] |] (eqNock [nock| [1 0 1] |]),
     Test "call" [nock| [quote 1] |] [nock| [call [S [@ S]]] |] (eqNock [nock| 1 |]),
     Test "replace" [nock| [0 1] |] [nock| [replace [[L [quote 1]] [@ S]]] |] (eqNock [nock| [1 1] |]),
-    Test "hint" [nock| [0 1] |] [nock| [hint [@ LLLL] [quote 1]] |] (eqNock [nock| 1 |])
+    Test "hint" [nock| [0 1] |] [nock| [hint [nil [trace [quote 2] [quote 3]]] [quote 1]] |] (eqTraces [[nock| 2 |]] >> eqNock [nock| 1 |])
   ]
