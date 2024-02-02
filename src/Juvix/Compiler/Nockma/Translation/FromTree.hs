@@ -768,7 +768,7 @@ caseCmd arg defaultBranch = \case
       [(Tree.Tag, Term Natural)] ->
       (Term Natural)
     goBoolTag v b bs =
-      let otherBranch = fromJust (firstJust f bs <|> defaultBranch)
+      let otherBranch = fromMaybe crash (firstJust f bs <|> defaultBranch)
        in if
               | v -> branch arg b otherBranch
               | otherwise -> branch arg otherBranch b
@@ -782,7 +782,7 @@ caseCmd arg defaultBranch = \case
     goRepList :: NonEmpty (NockmaMemRepListConstr, Term Natural) -> Term Natural
     goRepList ((c, b) :| bs) =
       let cond = OpIsCell # arg
-          otherBranch = fromJust (firstJust f bs <|> defaultBranch)
+          otherBranch = fromMaybe crash (firstJust f bs <|> defaultBranch)
        in case c of
             NockmaMemRepListConstrCons -> branch cond b otherBranch
             NockmaMemRepListConstrNil -> branch cond otherBranch b
