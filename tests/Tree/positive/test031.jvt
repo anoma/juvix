@@ -10,10 +10,17 @@ function isNode(tree) : bool;
 function isLeaf(tree) : bool;
 function main() : *;
 
+function sub'(integer, integer) : integer {
+   br(le(arg[0], arg[1])) {
+      true: 0
+      false: sub(arg[0], arg[1])
+   }
+}
+
 function gen(integer) : tree {
   br(le(arg[0], 0)) {
     true: alloc[leaf]()
-    false: alloc[node](call[gen](sub(arg[0], 2)), call[gen](sub(arg[0], 1)))
+    false: alloc[node](call[gen](call[sub'](arg[0], 2)), call[gen](call[sub'](arg[0], 1)))
   }
 }
 
@@ -38,7 +45,7 @@ function f(tree) : integer {
       save(call[g](tmp[0].node[0])) {
         save(call[g](tmp[0].node[1])) {
           save(case[tree](tmp[1]) {
-            leaf: sub(0, 3)
+            leaf: call[sub'](0, 3)
             node: save {
               mod(add(call[f](tmp[3].node[0]), call[f](tmp[3].node[1])), 32768)
             }
