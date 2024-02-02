@@ -13,12 +13,11 @@ import Tree.Eval.Positive qualified as Tree
 
 runNockmaAssertion :: Handle -> Symbol -> InfoTable -> IO ()
 runNockmaAssertion hout _main tab = do
-  compiled@(Nockma.Cell nockSubject nockMain) <-
+  Nockma.Cell nockSubject nockMain <-
     runM
       . runErrorIO' @JuvixError
       . runReader opts
       $ treeToNockma' tab
-  writeFileEnsureLn (relToProject $(mkRelFile "compiled.nockma")) (Nockma.ppPrint compiled)
   res <-
     runM
       . runOutputSem @(Term Natural)
