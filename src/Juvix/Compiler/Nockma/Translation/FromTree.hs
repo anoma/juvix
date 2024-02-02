@@ -335,8 +335,8 @@ compile = \case
         | otherwise -> nockIntegralLiteral i
       Tree.ConstBool i -> nockBoolLiteral i
       Tree.ConstString {} -> stringsErr
-      Tree.ConstUnit -> constUnit
-      Tree.ConstVoid -> constVoid
+      Tree.ConstUnit -> OpQuote # constUnit
+      Tree.ConstVoid -> OpQuote # constVoid
 
     goSave :: Tree.NodeSave -> Sem r (Term Natural)
     goSave Tree.NodeSave {..} = do
@@ -499,9 +499,7 @@ constUnit :: Term Natural
 constUnit = constVoid
 
 constVoid :: Term Natural
-constVoid = makeConstructor $ \case
-  ConstructorTag -> OpQuote # toNock (0 :: Natural)
-  ConstructorArgs -> remakeList []
+constVoid = TermAtom nockVoid
 
 directRefPath :: Tree.DirectRef -> Path
 directRefPath = \case

@@ -4,6 +4,7 @@ import Base
 import Juvix.Compiler.Nockma.EvalCompiled
 import Juvix.Compiler.Nockma.Evaluator qualified as NockmaEval
 import Juvix.Compiler.Nockma.Language
+import Juvix.Compiler.Nockma.Language qualified as Nockma
 import Juvix.Compiler.Nockma.Pretty qualified as Nockma
 import Juvix.Compiler.Nockma.Translation.FromTree
 import Juvix.Compiler.Tree
@@ -26,7 +27,7 @@ runNockmaAssertion hout _main tab = do
       . evalCompiledNock' nockSubject
       $ nockMain
   let ret = getReturn res
-  hPutStrLn hout (Nockma.ppPrint ret)
+  whenJust ret (hPutStrLn hout . Nockma.ppPrint)
   where
     opts :: CompilerOptions
     opts =
@@ -34,8 +35,11 @@ runNockmaAssertion hout _main tab = do
         { _compilerOptionsEnableTrace = True
         }
 
-    getReturn :: Term Natural -> Term Natural
-    getReturn = id
+    getReturn :: Term Natural -> Maybe (Term Natural)
+    getReturn = \case
+      TermAtom Nockma.Atom {..}
+        | _atomInfo ^. unIrrelevant . atomInfoHint == Just AtomHintVoid -> Nothing
+      t -> Just t
 
 testDescr :: Tree.PosTest -> TestDescr
 testDescr Tree.PosTest {..} =

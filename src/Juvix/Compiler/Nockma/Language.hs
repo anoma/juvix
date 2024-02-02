@@ -86,6 +86,7 @@ data AtomHint
   | AtomHintPath
   | AtomHintBool
   | AtomHintNil
+  | AtomHintVoid
   deriving stock (Show, Eq, Lift)
 
 data NockOp
@@ -240,6 +241,7 @@ class (Eq a) => NockNatural a where
   nockFalse :: Atom a
   nockSucc :: Atom a -> Atom a
   nockNil :: Atom a
+  nockVoid :: Atom a
 
 nockBool :: (NockNatural a) => Bool -> Atom a
 nockBool = \case
@@ -269,6 +271,7 @@ instance NockNatural Natural where
   nockFalse = Atom 1 (Irrelevant (atomHintInfo AtomHintBool))
   nockNil = Atom 0 (Irrelevant (atomHintInfo AtomHintNil))
   nockSucc = over atom succ
+  nockVoid = Atom 0 (Irrelevant (atomHintInfo AtomHintVoid))
   errInvalidOp atm = NaturalInvalidOp atm
   errInvalidPath atm = NaturalInvalidPath atm
   serializeNockOp = serializeOp
