@@ -253,8 +253,8 @@ compile :: forall r. (Members '[Reader CompilerCtx] r) => Tree.Node -> Sem r (Te
 compile = \case
   Tree.Binop b -> goBinop b
   Tree.Unop b -> goUnop b
-  Tree.Const c -> return (goConst c)
-  Tree.MemRef c -> goMemRef c
+  Tree.Const c -> return (goConst (c ^. Tree.nodeConstant))
+  Tree.MemRef c -> goMemRef (c ^. Tree.nodeMemRef)
   Tree.AllocConstr c -> goAllocConstr c
   Tree.AllocClosure c -> goAllocClosure c
   Tree.ExtendClosure c -> goExtendClosure c
