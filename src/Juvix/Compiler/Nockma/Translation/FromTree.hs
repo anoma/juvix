@@ -287,7 +287,7 @@ compile = \case
   Tree.Binop b -> goBinop b
   Tree.Unop b -> goUnop b
   Tree.Const c -> return (goConst c)
-  Tree.MemRef c -> return (goMemRef c)
+  Tree.MemRef c -> goMemRef c
   Tree.AllocConstr c -> goAllocConstr c
   Tree.AllocClosure c -> goAllocClosure c
   Tree.ExtendClosure c -> goExtendClosure c
@@ -300,17 +300,13 @@ compile = \case
     goAllocConstr :: Tree.NodeAllocConstr -> Sem r (Term Natural)
     goAllocConstr Tree.NodeAllocConstr {..} = do
       args <- mapM compile _nodeAllocConstrArgs
-      return $ case _nodeAllocConstrTag of
-        Tree.UserTag tag ->
-          makeConstructor $ \case
-            ConstructorTag -> OpQuote # (fromIntegral (tag ^. Tree.tagUserWord) :: Natural)
-            ConstructorArgs -> remakeList args
-        Tree.BuiltinTag tag -> case nockmaBuiltinTag tag of
-          NockmaBuiltinBool b -> nockBoolLiteral b
+      info <- getConstructorInfo _nodeAllocConstrTag
+      let memrep = info ^. constructorInfoMemRep
+      return $ goConstructor memrep _nodeAllocConstrTag args
 
-    goMemRef :: Tree.MemRef -> Term Natural
+    goMemRef :: Tree.MemRef -> Sem r (Term Natural)
     goMemRef = \case
-      Tree.DRef d -> goDirectRef d
+      Tree.DRef d -> return (goDirectRef d)
       --       { _fieldName :: Maybe Text,
       --   -- | tag of the constructor being referenced
       --   _fieldTag :: Tag,
@@ -318,12 +314,23 @@ compile = \case
       --   _fieldRef :: DirectRef,
       --   _fieldOffset :: Offset
       -- }
-      Tree.ConstrRef Tree.Field {..} ->
-        let fieldpath =
-              directRefPath _fieldRef
-                ++ constructorPath ConstructorArgs
-                ++ indexStack (fromIntegral _fieldOffset)
-         in OpAddress # fieldpath
+      Tree.ConstrRef Tree.Field {..} -> do
+        info <- getConstructorInfo _fieldTag
+        let memrep = info ^. constructorInfoMemRep
+            argIx = fromIntegral _fieldOffset
+            arity = info ^. constructorInfoArity
+            path = case memrep of
+              NockmaMemRepConstr ->
+                directRefPath _fieldRef
+                  ++ constructorPath ConstructorArgs
+                  ++ indexStack argIx
+              NockmaMemRepTuple ->
+                directRefPath _fieldRef
+                  ++ indexTuple arity argIx
+              NockmaMemRepList constr -> case constr of
+                NockmaMemRepListConstrNil -> impossible
+                NockmaMemRepListConstrCons -> directRefPath _fieldRef ++ indexTuple 2 argIx
+        return (OpAddress # path)
       where
         goDirectRef :: Tree.DirectRef -> Term Natural
         goDirectRef dr = OpAddress # directRefPath dr
