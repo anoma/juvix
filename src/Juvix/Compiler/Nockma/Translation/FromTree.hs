@@ -347,14 +347,18 @@ compile = \case
     goCase :: Tree.NodeCase -> Sem r (Term Natural)
     goCase c = do
       def <- mapM compile (c ^. Tree.nodeCaseDefault)
+      arg <- compile (c ^. Tree.nodeCaseArg)
       branches <-
         sequence
           [ do
-              body' <- compile (b ^. Tree.caseBranchBody)
+              let withTemp' t
+                    | b ^. Tree.caseBranchSave = withTemp arg t
+                    | otherwise = t
+
+              body' <- withTemp' <$> compile (b ^. Tree.caseBranchBody)
               return (b ^. Tree.caseBranchTag, body')
             | b <- c ^. Tree.nodeCaseBranches
           ]
-      arg <- compile (c ^. Tree.nodeCaseArg)
       caseCmd arg def branches
 
     goBranch :: Tree.NodeBranch -> Sem r (Term Natural)
