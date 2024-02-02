@@ -103,6 +103,9 @@ kwAssoc = asciiKw Str.assoc
 kwNone :: Keyword
 kwNone = asciiKw Str.none
 
+kwNop :: Keyword
+kwNop = asciiKw Str.nop
+
 kwRight :: Keyword
 kwRight = asciiKw Str.right
 

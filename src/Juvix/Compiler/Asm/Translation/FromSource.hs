@@ -17,13 +17,16 @@ import Juvix.Compiler.Tree.Translation.FromSource.Sig qualified as S
 import Juvix.Parser.Error
 import Text.Megaparsec qualified as P
 
-type ParserSig = S.ParserSig Code (Maybe FunctionInfoExtra)
+type ParserSig = S.ParserSig Code (Maybe FunctionInfoExtra) DirectRef
+
+type LocalParams = LocalParams' DirectRef
 
 parseAsmSig :: ParserSig
 parseAsmSig =
   S.ParserSig
     { _parserSigBareIdentifier = bareIdentifier,
       _parserSigParseCode = parseCode,
+      _parserSigArgRef = \x y -> ArgRef (OffsetRef x y),
       _parserSigEmptyCode = [],
       _parserSigEmptyExtra = mempty
     }
@@ -88,7 +91,7 @@ command = do
     "argsnum" ->
       return $ mkInstr' loc ArgsNum
     "alloc" ->
-      mkInstr' loc . AllocConstr <$> constrTag @Code @(Maybe FunctionInfoExtra)
+      mkInstr' loc . AllocConstr <$> constrTag @Code @(Maybe FunctionInfoExtra) @DirectRef
     "calloc" ->
       mkInstr' loc . AllocClosure <$> instrAllocClosure
     "cextend" ->
@@ -110,7 +113,7 @@ command = do
       rbrace
       return $ Branch $ CmdBranch (CommandInfo loc) br1 br2
     "case" -> do
-      sym <- indSymbol @Code @(Maybe FunctionInfoExtra)
+      sym <- indSymbol @Code @(Maybe FunctionInfoExtra) @DirectRef
       lbrace
       brs <- P.many caseBranch
       def <- optional defaultBranch
@@ -130,10 +133,10 @@ parseSave ::
   ParsecS r Command
 parseSave loc isTail = do
   mn <- optional identifier
-  tmpNum <- lift $ gets (^. localParamsTempIndex)
-  let updateNames :: LocalNameMap -> LocalNameMap
+  tmpNum <- lift $ gets @LocalParams (^. localParamsTempIndex)
+  let updateNames :: LocalNameMap DirectRef -> LocalNameMap DirectRef
       updateNames mp = maybe mp (\n -> HashMap.insert n (mkTempRef (OffsetRef tmpNum (Just n))) mp) mn
-  c <- braces (localS (over localParamsTempIndex (+ 1)) $ localS (over localParamsNameMap updateNames) parseCode)
+  c <- braces (localS @LocalParams (over localParamsTempIndex (+ 1)) $ localS @LocalParams (over localParamsNameMap updateNames) parseCode)
   return $
     Save
       ( CmdSave
@@ -153,7 +156,7 @@ instrAllocClosure ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r InstrAllocClosure
 instrAllocClosure = do
-  sym <- funSymbol @Code @(Maybe FunctionInfoExtra)
+  sym <- funSymbol @Code @(Maybe FunctionInfoExtra) @DirectRef
   (argsNum, _) <- integer
   return $ InstrAllocClosure sym (fromInteger argsNum)
 
@@ -179,7 +182,7 @@ instrCall = do
 parseCallType ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r CallType
-parseCallType = (kw kwDollar $> CallClosure) <|> (CallFun <$> funSymbol @Code @(Maybe FunctionInfoExtra))
+parseCallType = (kw kwDollar $> CallClosure) <|> (CallFun <$> funSymbol @Code @(Maybe FunctionInfoExtra) @DirectRef)
 
 instrCallClosures :: ParsecS r InstrCallClosures
 instrCallClosures = do
@@ -213,7 +216,7 @@ caseBranch ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r CaseBranch
 caseBranch = do
-  tag <- P.try $ constrTag @Code @(Maybe FunctionInfoExtra)
+  tag <- P.try $ constrTag @Code @(Maybe FunctionInfoExtra) @DirectRef
   kw kwColon
   c <- CaseBranch tag <$> branchCode
   kw delimSemicolon

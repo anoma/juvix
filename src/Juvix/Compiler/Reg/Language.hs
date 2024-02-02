@@ -7,11 +7,7 @@ where
 import Juvix.Compiler.Reg.Language.Base
 
 data Value
-  = ConstInt Integer
-  | ConstBool Bool
-  | ConstString Text
-  | ConstUnit
-  | ConstVoid
+  = Const Constant
   | CRef ConstrField
   | VRef VarRef
 
@@ -32,7 +28,8 @@ data VarGroup = VarGroupArgs | VarGroupLocal
 
 data VarRef = VarRef
   { _varRefGroup :: VarGroup,
-    _varRefIndex :: Index
+    _varRefIndex :: Index,
+    _varRefName :: Maybe Text
   }
 
 data Instruction
@@ -195,3 +192,11 @@ makeLenses ''InstrBranch
 makeLenses ''InstrCase
 makeLenses ''CaseBranch
 makeLenses ''InstrReturn
+
+mkVarRef :: VarGroup -> Index -> VarRef
+mkVarRef g i =
+  VarRef
+    { _varRefGroup = g,
+      _varRefIndex = i,
+      _varRefName = Nothing
+    }

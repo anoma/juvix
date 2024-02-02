@@ -293,12 +293,7 @@ fromRegInstr bNoStack info = \case
 
     fromValue :: Reg.Value -> Expression
     fromValue = \case
-      Reg.ConstInt x -> macroCall "make_smallint" [integer x]
-      Reg.ConstBool True -> macroVar "BOOL_TRUE"
-      Reg.ConstBool False -> macroVar "BOOL_FALSE"
-      Reg.ConstString x -> macroCall "GET_CONST_CSTRING" [integer (getStringId info x)]
-      Reg.ConstUnit -> macroVar "OBJ_UNIT"
-      Reg.ConstVoid -> macroVar "OBJ_VOID"
+      Reg.Const c -> fromConst c
       Reg.CRef Reg.ConstrField {..} ->
         case _constrFieldMemRep of
           Reg.MemRepConstr ->
@@ -312,6 +307,15 @@ fromRegInstr bNoStack info = \case
           Reg.MemRepUnpacked {} ->
             fromVarRef _constrFieldRef
       Reg.VRef x -> fromVarRef x
+
+    fromConst :: Reg.Constant -> Expression
+    fromConst = \case
+      Reg.ConstInt x -> macroCall "make_smallint" [integer x]
+      Reg.ConstBool True -> macroVar "BOOL_TRUE"
+      Reg.ConstBool False -> macroVar "BOOL_FALSE"
+      Reg.ConstString x -> macroCall "GET_CONST_CSTRING" [integer (getStringId info x)]
+      Reg.ConstUnit -> macroVar "OBJ_UNIT"
+      Reg.ConstVoid -> macroVar "OBJ_VOID"
 
     fromPrealloc :: Reg.InstrPrealloc -> Statement
     fromPrealloc Reg.InstrPrealloc {..} =

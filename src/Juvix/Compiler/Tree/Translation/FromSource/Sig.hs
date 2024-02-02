@@ -10,44 +10,52 @@ import Juvix.Compiler.Tree.Data.InfoTableBuilder.Base
 import Juvix.Compiler.Tree.Language.Base
 import Juvix.Compiler.Tree.Translation.FromSource.Lexer.Base
 
-type LocalNameMap = HashMap Text DirectRef
+type LocalNameMap d = HashMap Text d
 
-data LocalParams = LocalParams
-  { _localParamsNameMap :: LocalNameMap,
+data LocalParams' d = LocalParams
+  { _localParamsNameMap :: LocalNameMap d,
     _localParamsTempIndex :: Index
   }
 
-data ParserSig t e = ParserSig
+emptyLocalParams :: LocalParams' d
+emptyLocalParams =
+  LocalParams
+    { _localParamsNameMap = mempty,
+      _localParamsTempIndex = 0
+    }
+
+data ParserSig t e d = ParserSig
   { _parserSigBareIdentifier :: forall r. ParsecS r Text,
-    _parserSigParseCode :: forall r. (Members '[Reader (ParserSig t e), InfoTableBuilder' t e, State LocalParams] r) => ParsecS r t,
+    _parserSigParseCode :: forall r. (Members '[Reader (ParserSig t e d), InfoTableBuilder' t e, State (LocalParams' d)] r) => ParsecS r t,
+    _parserSigArgRef :: Index -> Maybe Text -> d,
     _parserSigEmptyCode :: t,
     _parserSigEmptyExtra :: e
   }
 
 makeLenses ''ParserSig
-makeLenses ''LocalParams
+makeLenses ''LocalParams'
 
-identifier :: forall t e r. (Member (Reader (ParserSig t e)) r) => ParsecS r Text
+identifier :: forall t e d r. (Member (Reader (ParserSig t e d)) r) => ParsecS r Text
 identifier = do
-  sig <- lift $ ask @(ParserSig t e)
+  sig <- lift $ ask @(ParserSig t e d)
   lexeme (sig ^. parserSigBareIdentifier)
 
-identifierL :: forall t e r. (Member (Reader (ParserSig t e)) r) => ParsecS r (Text, Interval)
+identifierL :: forall t e d r. (Member (Reader (ParserSig t e d)) r) => ParsecS r (Text, Interval)
 identifierL = do
-  sig <- lift $ ask @(ParserSig t e)
+  sig <- lift $ ask @(ParserSig t e d)
   lexemeInterval (sig ^. parserSigBareIdentifier)
 
-parseCode :: forall t e r. (Members '[Reader (ParserSig t e), InfoTableBuilder' t e, State LocalParams] r) => ParsecS r t
+parseCode :: forall t e d r. (Members '[Reader (ParserSig t e d), InfoTableBuilder' t e, State (LocalParams' d)] r) => ParsecS r t
 parseCode = do
-  sig <- lift $ ask @(ParserSig t e)
+  sig <- lift $ ask @(ParserSig t e d)
   sig ^. parserSigParseCode
 
-emptyCode :: forall t e r. (Member (Reader (ParserSig t e)) r) => Sem r t
+emptyCode :: forall t e d r. (Member (Reader (ParserSig t e d)) r) => Sem r t
 emptyCode = do
-  sig <- ask @(ParserSig t e)
+  sig <- ask @(ParserSig t e d)
   return $ sig ^. parserSigEmptyCode
 
-emptyExtra :: forall t e r. (Member (Reader (ParserSig t e)) r) => Sem r e
+emptyExtra :: forall t e d r. (Member (Reader (ParserSig t e d)) r) => Sem r e
 emptyExtra = do
-  sig <- ask @(ParserSig t e)
+  sig <- ask @(ParserSig t e d)
   return $ sig ^. parserSigEmptyExtra

@@ -148,7 +148,7 @@ computeStringMap strs = snd . run . execState (HashMap.size strs, strs) . mapM g
 
     goVal :: (Member (State (Int, HashMap Text Int)) r) => Value -> Sem r ()
     goVal = \case
-      ConstString str ->
+      Const (ConstString str) ->
         modify'
           ( \(sid :: Int, sstrs) ->
               if

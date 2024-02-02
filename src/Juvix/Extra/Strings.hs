@@ -896,6 +896,9 @@ same = "same"
 none :: (IsString s) => s
 none = "none"
 
+nop :: (IsString s) => s
+nop = "nop"
+
 init :: (IsString s) => s
 init = "init"
 
