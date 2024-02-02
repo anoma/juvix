@@ -52,17 +52,15 @@ testDescr Tree.PosTest {..} =
           _testAssertion = Steps $ treeEvalAssertionParam runNockmaAssertion file' expected' [] (const (return ()))
         }
 
-testsSlow :: [Int]
-testsSlow = []
-
 testsAdt :: [Int]
-testsAdt = [9, 15, 18, 25, 26, 29, 35]
+testsAdt = [9, 15, 18, 25, 26, 28, 29, 35]
 
 testsNegativeInteger :: [Int]
 testsNegativeInteger = [16, 31]
 
-testsHopeless :: [Int]
-testsHopeless =
+-- Tests involving Strings and IO
+testsUnsupported :: [Int]
+testsUnsupported =
   [ 5,
     6,
     14,
@@ -75,7 +73,7 @@ testsBugged =
   []
 
 testsToIgnore :: [Int]
-testsToIgnore = testsHopeless ++ testsBugged ++ testsSlow ++ testsAdt ++ testsNegativeInteger
+testsToIgnore = testsUnsupported ++ testsBugged ++ testsAdt ++ testsNegativeInteger
 
 shouldRun :: Tree.PosTest -> Bool
 shouldRun Tree.PosTest {..} = testNum `notElem` map to3DigitString testsToIgnore
