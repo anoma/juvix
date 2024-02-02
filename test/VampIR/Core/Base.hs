@@ -25,7 +25,7 @@ vampirAssertion' backend tab dataFile step = do
         case run (runReader defaultCoreOptions (runError @JuvixError (coreToVampIR' (moduleFromInfoTable tab)))) of
           Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
           Right VampIR.Result {..} -> do
-            writeFile (toFilePath vampirFile) _resultCode
+            writeFileEnsureLn vampirFile _resultCode
 
             step "Check vamp-ir on path"
             assertCmdExists $(mkRelFile "vamp-ir")

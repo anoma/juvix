@@ -5,6 +5,7 @@ import Juvix.Compiler.Asm.Extra.Base qualified as Asm
 import Juvix.Compiler.Asm.Language qualified as Asm
 import Juvix.Compiler.Tree.Data.InfoTable
 import Juvix.Compiler.Tree.Error
+import Juvix.Compiler.Tree.Extra.Base
 import Juvix.Compiler.Tree.Language
 import Juvix.Compiler.Tree.Translation.FromAsm.Translator
 
@@ -59,7 +60,8 @@ goFunction infoTab fi = do
                       return $
                         Binop
                           NodeBinop
-                            { _nodeBinopOpcode = OpSeq,
+                            { _nodeBinopInfo = mempty,
+                              _nodeBinopOpcode = OpSeq,
                               _nodeBinopArg1 = node',
                               _nodeBinopArg2 = node
                             }
@@ -86,8 +88,8 @@ goFunction infoTab fi = do
           Asm.Binop op -> goBinop (translateBinop op)
           Asm.ValShow -> goUnop OpShow
           Asm.StrToInt -> goUnop OpStrToInt
-          Asm.Push (Asm.Constant c) -> return (Const c)
-          Asm.Push (Asm.Ref r) -> return (MemRef r)
+          Asm.Push (Asm.Constant c) -> return (mkConst c)
+          Asm.Push (Asm.Ref r) -> return (mkMemRef r)
           Asm.Pop -> goPop
           Asm.Trace -> goTrace
           Asm.Dump -> unsupported (_cmdInstrInfo ^. Asm.commandInfoLocation)
@@ -111,7 +113,8 @@ goFunction infoTab fi = do
           return $
             Branch
               NodeBranch
-                { _nodeBranchArg = arg,
+                { _nodeBranchInfo = mempty,
+                  _nodeBranchArg = arg,
                   _nodeBranchTrue = br1,
                   _nodeBranchFalse = br2
                 }
@@ -124,7 +127,8 @@ goFunction infoTab fi = do
           return $
             Case
               NodeCase
-                { _nodeCaseInductive = _cmdCaseInductive,
+                { _nodeCaseInfo = mempty,
+                  _nodeCaseInductive = _cmdCaseInductive,
                   _nodeCaseArg = arg,
                   _nodeCaseBranches = brs,
                   _nodeCaseDefault = def
@@ -138,7 +142,8 @@ goFunction infoTab fi = do
             body <- pushTempStack $ goCodeBlock _cmdSaveCode
             return $
               CaseBranch
-                { _caseBranchTag,
+                { _caseBranchLocation = Nothing,
+                  _caseBranchTag,
                   _caseBranchBody = body,
                   _caseBranchSave = True
                 }
@@ -146,7 +151,8 @@ goFunction infoTab fi = do
             body <- goCodeBlock cmds
             return $
               CaseBranch
-                { _caseBranchTag,
+                { _caseBranchLocation = Nothing,
+                  _caseBranchTag,
                   _caseBranchBody = body,
                   _caseBranchSave = False
                 }
@@ -154,8 +160,9 @@ goFunction infoTab fi = do
             off <- asks (^. tempSize)
             return $
               CaseBranch
-                { _caseBranchTag,
-                  _caseBranchBody = MemRef $ DRef $ mkTempRef $ OffsetRef off Nothing,
+                { _caseBranchLocation = Nothing,
+                  _caseBranchTag,
+                  _caseBranchBody = mkMemRef $ DRef $ mkTempRef $ OffsetRef off Nothing,
                   _caseBranchSave = True
                 }
           _ ->
@@ -183,7 +190,8 @@ goFunction infoTab fi = do
           return $
             Save
               NodeSave
-                { _nodeSaveName = _cmdSaveName,
+                { _nodeSaveInfo = mempty,
+                  _nodeSaveTempVar = TempVar _cmdSaveName (_cmdSaveInfo ^. Asm.commandInfoLocation),
                   _nodeSaveArg = arg,
                   _nodeSaveBody = body
                 }
@@ -207,7 +215,8 @@ goFunction infoTab fi = do
           return $
             Binop
               NodeBinop
-                { _nodeBinopOpcode = op,
+                { _nodeBinopInfo = mempty,
+                  _nodeBinopOpcode = op,
                   _nodeBinopArg1 = arg1,
                   _nodeBinopArg2 = arg2
                 }
@@ -218,7 +227,8 @@ goFunction infoTab fi = do
           return $
             Unop
               NodeUnop
-                { _nodeUnopArg = arg,
+                { _nodeUnopInfo = mempty,
+                  _nodeUnopArg = arg,
                   _nodeUnopOpcode = op
                 }
 
@@ -229,7 +239,8 @@ goFunction infoTab fi = do
           return $
             Binop
               NodeBinop
-                { _nodeBinopOpcode = OpSeq,
+                { _nodeBinopInfo = mempty,
+                  _nodeBinopOpcode = OpSeq,
                   _nodeBinopArg1 = arg1,
                   _nodeBinopArg2 = arg2
                 }
@@ -238,20 +249,23 @@ goFunction infoTab fi = do
         goTrace = do
           arg <- goCode
           off <- asks (^. tempSize)
-          let ref = MemRef $ DRef $ mkTempRef $ OffsetRef off Nothing
+          let ref = mkMemRef $ DRef $ mkTempRef $ OffsetRef off Nothing
           return $
             Save
               NodeSave
-                { _nodeSaveArg = arg,
-                  _nodeSaveName = Nothing,
+                { _nodeSaveInfo = mempty,
+                  _nodeSaveArg = arg,
+                  _nodeSaveTempVar = TempVar Nothing Nothing,
                   _nodeSaveBody =
                     Binop
                       NodeBinop
-                        { _nodeBinopOpcode = OpSeq,
+                        { _nodeBinopInfo = mempty,
+                          _nodeBinopOpcode = OpSeq,
                           _nodeBinopArg1 =
                             Unop
                               NodeUnop
-                                { _nodeUnopOpcode = OpTrace,
+                                { _nodeUnopInfo = mempty,
+                                  _nodeUnopOpcode = OpTrace,
                                   _nodeUnopArg = ref
                                 },
                           _nodeBinopArg2 = ref
@@ -267,7 +281,8 @@ goFunction infoTab fi = do
           return $
             AllocConstr
               NodeAllocConstr
-                { _nodeAllocConstrTag = tag,
+                { _nodeAllocConstrInfo = mempty,
+                  _nodeAllocConstrTag = tag,
                   _nodeAllocConstrArgs = args
                 }
           where
@@ -279,7 +294,8 @@ goFunction infoTab fi = do
           return $
             AllocClosure
               NodeAllocClosure
-                { _nodeAllocClosureArgs = args,
+                { _nodeAllocClosureInfo = mempty,
+                  _nodeAllocClosureArgs = args,
                   _nodeAllocClosureFunSymbol = _allocClosureFunSymbol
                 }
 
@@ -290,7 +306,8 @@ goFunction infoTab fi = do
           return $
             ExtendClosure
               NodeExtendClosure
-                { _nodeExtendClosureArgs = nonEmpty' args,
+                { _nodeExtendClosureInfo = mempty,
+                  _nodeExtendClosureArgs = nonEmpty' args,
                   _nodeExtendClosureFun = cl
                 }
 
@@ -301,7 +318,8 @@ goFunction infoTab fi = do
             return $
               Call
                 NodeCall
-                  { _nodeCallType = CallFun sym,
+                  { _nodeCallInfo = mempty,
+                    _nodeCallType = CallFun sym,
                     _nodeCallArgs = args
                   }
           Asm.CallClosure -> do
@@ -310,7 +328,8 @@ goFunction infoTab fi = do
             return $
               Call
                 NodeCall
-                  { _nodeCallType = CallClosure cl,
+                  { _nodeCallInfo = mempty,
+                    _nodeCallType = CallClosure cl,
                     _nodeCallArgs = args
                   }
 
@@ -321,8 +340,9 @@ goFunction infoTab fi = do
           return $
             CallClosures
               NodeCallClosures
-                { _nodeCallClosuresFun = cl,
-                  _nodeCallClosuresArgs = args
+                { _nodeCallClosuresInfo = mempty,
+                  _nodeCallClosuresFun = cl,
+                  _nodeCallClosuresArgs = nonEmpty' args
                 }
 
         pushTempStack :: Sem r a -> Sem r a

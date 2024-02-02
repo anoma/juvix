@@ -41,7 +41,7 @@ instance CanonicalProjection CoreFromConcreteOptions Eval.EvalOptions where
 
 parseCoreFromConcreteOptions :: Parser CoreFromConcreteOptions
 parseCoreFromConcreteOptions = do
-  _coreFromConcreteTransformations <- optTransformationIds
+  _coreFromConcreteTransformations <- optCoreTransformationIds
   _coreFromConcreteShowDeBruijn <- optDeBruijn
   _coreFromConcreteShowIdentIds <- optIdentIds
   _coreFromConcreteShowArgsNum <- optArgsNum

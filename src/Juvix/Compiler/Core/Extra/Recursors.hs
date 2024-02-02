@@ -9,14 +9,14 @@ module Juvix.Compiler.Core.Extra.Recursors
     module Juvix.Compiler.Core.Extra.Recursors.RMap,
     module Juvix.Compiler.Core.Extra.Recursors.RMap.Named,
     module Juvix.Compiler.Core.Extra.Recursors.Recur,
-    module Juvix.Compiler.Core.Extra.Recursors.Collector,
+    module Juvix.Compiler.Core.Extra.Recursors.Generic.Collector,
   )
 where
 
 import Juvix.Compiler.Core.Extra.Recursors.Base
-import Juvix.Compiler.Core.Extra.Recursors.Collector
 import Juvix.Compiler.Core.Extra.Recursors.Fold
 import Juvix.Compiler.Core.Extra.Recursors.Fold.Named
+import Juvix.Compiler.Core.Extra.Recursors.Generic.Collector
 import Juvix.Compiler.Core.Extra.Recursors.Map
 import Juvix.Compiler.Core.Extra.Recursors.Map.Named
 import Juvix.Compiler.Core.Extra.Recursors.RMap

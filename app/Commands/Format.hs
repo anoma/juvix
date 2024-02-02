@@ -92,7 +92,7 @@ renderFormattedOutput target opts fInfo = do
       EditInPlace i@FormattedFileInfo {..} ->
         runTempFileIO
           . restoreFileOnError _formattedFileInfoPath
-          $ writeFile' _formattedFileInfoPath (i ^. formattedFileInfoContents)
+          $ writeFileEnsureLn' _formattedFileInfoPath (i ^. formattedFileInfoContents)
       NoEdit m -> case m of
         ReformattedFile ts -> renderStdOut ts
         InputPath p -> say (pack (toFilePath p))

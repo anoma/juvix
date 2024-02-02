@@ -4,7 +4,6 @@ module Juvix.Compiler.Core.Transformation.Identity
   )
 where
 
-import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation.Base
 
 identity :: Module -> Module

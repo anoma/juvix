@@ -14,7 +14,6 @@ import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Extra.Value
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.NoDisplayInfo
-import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Options
 import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation

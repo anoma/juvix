@@ -8,7 +8,6 @@ import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.LocationInfo
 import Juvix.Compiler.Core.Info.NameInfo
 import Juvix.Compiler.Core.Info.PragmaInfo
-import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Pretty qualified as Core
 import Juvix.Compiler.Core.Translation.FromInternal.Builtins.Int
 import Juvix.Compiler.Core.Translation.FromInternal.Builtins.Nat

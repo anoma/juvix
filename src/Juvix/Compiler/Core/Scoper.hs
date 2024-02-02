@@ -2,7 +2,6 @@ module Juvix.Compiler.Core.Scoper where
 
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Extra
-import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation.Base
 

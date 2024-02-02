@@ -42,7 +42,7 @@ writeVersion :: forall r. (Members '[Reader OutputRoot, Files] r) => Sem r ()
 writeVersion = do
   vf <- versionFile
   ensureDir' (parent vf)
-  writeFile' vf versionTag
+  writeFileEnsureLn' vf versionTag
 
 readVersion :: (Members '[Reader OutputRoot, Files] r) => Sem r (Maybe Text)
 readVersion = do

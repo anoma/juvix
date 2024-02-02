@@ -13,9 +13,9 @@ data Node
   = Binop NodeBinop
   | Unop NodeUnop
   | -- | A constant value.
-    Const Constant
+    Const NodeConstant
   | -- | A memory reference.
-    MemRef MemRef
+    MemRef NodeMemRef
   | -- | Allocate constructor data. JVT code: 'alloc[<tag>](x1, .., xn)'.
     AllocConstr NodeAllocConstr
   | -- | Allocate a closure. JVT code: 'calloc[<fun>](x1, .., xn)'.
@@ -41,9 +41,14 @@ data Node
     -- (any branch may be omitted).
     Case NodeCase
   | -- | Execute nested code with temporary stack extended with a given value.
-    -- Used to implement Core.Let and Core.Case. JVT codes: 'save(x) {<code>}',
+    -- Used to implement Core.Let. JVT codes: 'save(x) {<code>}',
     -- 'save[<name>](x) {<code>}'.
     Save NodeSave
+
+newtype NodeInfo = NodeInfo
+  { _nodeInfoLocation :: Maybe Location
+  }
+  deriving newtype (Semigroup, Monoid)
 
 data BinaryOpcode
   = IntAdd
@@ -74,68 +79,98 @@ data UnaryOpcode
     OpArgsNum
 
 data NodeBinop = NodeBinop
-  { _nodeBinopOpcode :: BinaryOpcode,
+  { _nodeBinopInfo :: NodeInfo,
+    _nodeBinopOpcode :: BinaryOpcode,
     _nodeBinopArg1 :: Node,
     _nodeBinopArg2 :: Node
   }
 
 data NodeUnop = NodeUnop
-  { _nodeUnopOpcode :: UnaryOpcode,
+  { _nodeUnopInfo :: NodeInfo,
+    _nodeUnopOpcode :: UnaryOpcode,
     _nodeUnopArg :: Node
   }
 
+data NodeConstant = NodeConstant
+  { _nodeConstantInfo :: NodeInfo,
+    _nodeConstant :: Constant
+  }
+
+data NodeMemRef = NodeMemRef
+  { _nodeMemRefInfo :: NodeInfo,
+    _nodeMemRef :: MemRef
+  }
+
 data NodeAllocConstr = NodeAllocConstr
-  { _nodeAllocConstrTag :: Tag,
+  { _nodeAllocConstrInfo :: NodeInfo,
+    _nodeAllocConstrTag :: Tag,
     _nodeAllocConstrArgs :: [Node]
   }
 
 data NodeAllocClosure = NodeAllocClosure
-  { _nodeAllocClosureFunSymbol :: Symbol,
+  { _nodeAllocClosureInfo :: NodeInfo,
+    _nodeAllocClosureFunSymbol :: Symbol,
     _nodeAllocClosureArgs :: [Node]
   }
 
 data NodeExtendClosure = NodeExtendClosure
-  { _nodeExtendClosureFun :: Node,
+  { _nodeExtendClosureInfo :: NodeInfo,
+    _nodeExtendClosureFun :: Node,
     _nodeExtendClosureArgs :: NonEmpty Node
   }
 
 data NodeCall = NodeCall
-  { _nodeCallType :: CallType,
+  { _nodeCallInfo :: NodeInfo,
+    _nodeCallType :: CallType,
     _nodeCallArgs :: [Node]
   }
 
 data NodeCallClosures = NodeCallClosures
-  { _nodeCallClosuresFun :: Node,
-    _nodeCallClosuresArgs :: [Node]
+  { _nodeCallClosuresInfo :: NodeInfo,
+    _nodeCallClosuresFun :: Node,
+    _nodeCallClosuresArgs :: NonEmpty Node
   }
 
 data NodeBranch = NodeBranch
-  { _nodeBranchArg :: Node,
+  { _nodeBranchInfo :: NodeInfo,
+    _nodeBranchArg :: Node,
     _nodeBranchTrue :: Node,
     _nodeBranchFalse :: Node
   }
 
 data NodeCase = NodeCase
-  { _nodeCaseInductive :: Symbol,
+  { _nodeCaseInfo :: NodeInfo,
+    _nodeCaseInductive :: Symbol,
     _nodeCaseArg :: Node,
     _nodeCaseBranches :: [CaseBranch],
     _nodeCaseDefault :: Maybe Node
   }
 
 data CaseBranch = CaseBranch
-  { _caseBranchTag :: Tag,
+  { _caseBranchLocation :: Maybe Location,
+    _caseBranchTag :: Tag,
     _caseBranchBody :: Node,
     -- | Indicates whether the evaluated case argument should be pushed onto the
     -- temporary stack in this branch.
     _caseBranchSave :: Bool
   }
 
+data TempVar = TempVar
+  { _tempVarName :: Maybe Text,
+    _tempVarLocation :: Maybe Location
+  }
+
 data NodeSave = NodeSave
-  { _nodeSaveName :: Maybe Text,
+  { _nodeSaveInfo :: NodeInfo,
+    _nodeSaveTempVar :: TempVar,
     _nodeSaveArg :: Node,
     _nodeSaveBody :: Node
   }
 
+makeLenses ''NodeBinop
+makeLenses ''NodeUnop
+makeLenses ''NodeConstant
+makeLenses ''NodeMemRef
 makeLenses ''NodeAllocClosure
 makeLenses ''NodeExtendClosure
 makeLenses ''NodeCall
@@ -143,3 +178,6 @@ makeLenses ''NodeCallClosures
 makeLenses ''NodeBranch
 makeLenses ''NodeCase
 makeLenses ''NodeSave
+makeLenses ''TempVar
+makeLenses ''CaseBranch
+makeLenses ''NodeInfo

@@ -58,18 +58,18 @@ parseCoreReadOptions = do
   _coreReadNoPrint <-
     switch
       ( long "no-print"
-          <> help "do not print the transformed code"
+          <> help "Do not print the transformed code"
       )
   _coreReadEval <-
     switch
       ( long "eval"
-          <> help "evaluate after the transformation"
+          <> help "Evaluate after the transformation"
       )
   _coreReadNormalize <-
     switch
       ( long "normalize"
-          <> help "normalize after the transformation"
+          <> help "Normalize after the transformation"
       )
-  _coreReadTransformations <- optTransformationIds
+  _coreReadTransformations <- optCoreTransformationIds
   _coreReadInputFile <- parseInputFile FileExtJuvixCore
   pure CoreReadOptions {..}

@@ -1,7 +1,6 @@
 module Juvix.Compiler.Core.Transformation.NaiveMatchToCase.Data where
 
 import Juvix.Compiler.Core.Extra
-import Juvix.Compiler.Core.Language
 
 -- | A CompiledBinder is either a binder that was present in the original match (OriginalBinder)
 -- or an additional binder that was added during the compilation (AuxiliaryBinder)

@@ -1,7 +1,6 @@
 module Juvix.Compiler.Core.Extra.Recursors.Utils where
 
 import Juvix.Compiler.Core.Extra.Recursors.Map.Named
-import Juvix.Compiler.Core.Language
 
 shiftVar :: Index -> Var -> Var
 shiftVar m = over varIndex (+ m)

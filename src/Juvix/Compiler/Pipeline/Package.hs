@@ -138,7 +138,7 @@ writeGlobalPackage :: (Members '[Files] r) => Sem r ()
 writeGlobalPackage = do
   packagePath <- globalPackageJuvix
   ensureDir' (parent packagePath)
-  writeFile' packagePath (renderPackageVersion currentPackageVersion (globalPackage packagePath))
+  writeFileEnsureLn' packagePath (renderPackageVersion currentPackageVersion (globalPackage packagePath))
 
 packageBasePackage :: Package
 packageBasePackage =

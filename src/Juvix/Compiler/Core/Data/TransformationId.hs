@@ -1,5 +1,7 @@
 module Juvix.Compiler.Core.Data.TransformationId where
 
+import Juvix.Compiler.Core.Data.TransformationId.Base
+import Juvix.Compiler.Core.Data.TransformationId.Strings
 import Juvix.Prelude
 
 data TransformationId
@@ -51,23 +53,7 @@ data PipelineId
   | PipelineStripped
   deriving stock (Data, Bounded, Enum)
 
-data TransformationLikeId
-  = TransformationId TransformationId
-  | PipelineId PipelineId
-  deriving stock (Data)
-
-allTransformationLikeIds :: [TransformationLikeId]
-allTransformationLikeIds =
-  map TransformationId allElements
-    ++ map PipelineId allElements
-
-fromTransformationLike :: TransformationLikeId -> [TransformationId]
-fromTransformationLike = \case
-  TransformationId i -> [i]
-  PipelineId p -> pipeline p
-
-fromTransformationLikes :: [TransformationLikeId] -> [TransformationId]
-fromTransformationLikes = concatMap fromTransformationLike
+type TransformationLikeId = TransformationLikeId' TransformationId PipelineId
 
 toTypecheckTransformations :: [TransformationId]
 toTypecheckTransformations = [MatchToCase]
@@ -88,10 +74,61 @@ toStrippedTransformations =
 toGebTransformations :: [TransformationId]
 toGebTransformations = [CombineInfoTables, FilterUnreachable, CheckGeb, LetRecLifting, OptPhaseGeb, UnrollRecursion, FoldTypeSynonyms, ComputeTypeInfo]
 
-pipeline :: PipelineId -> [TransformationId]
-pipeline = \case
-  PipelineStored -> toStoredTransformations
-  PipelineNormalize -> toNormalizeTransformations
-  PipelineGeb -> toGebTransformations
-  PipelineVampIR -> toVampIRTransformations
-  PipelineStripped -> toStrippedTransformations
+instance TransformationId' TransformationId where
+  transformationText :: TransformationId -> Text
+  transformationText = \case
+    LambdaLetRecLifting -> strLifting
+    LetRecLifting -> strLetRecLifting
+    TopEtaExpand -> strTopEtaExpand
+    MatchToCase -> strMatchToCase
+    NaiveMatchToCase -> strNaiveMatchToCase
+    EtaExpandApps -> strEtaExpandApps
+    Identity -> strIdentity
+    RemoveTypeArgs -> strRemoveTypeArgs
+    MoveApps -> strMoveApps
+    NatToPrimInt -> strNatToPrimInt
+    IntToPrimInt -> strIntToPrimInt
+    ConvertBuiltinTypes -> strConvertBuiltinTypes
+    ComputeTypeInfo -> strComputeTypeInfo
+    UnrollRecursion -> strUnrollRecursion
+    DisambiguateNames -> strDisambiguateNames
+    CombineInfoTables -> strCombineInfoTables
+    CheckGeb -> strCheckGeb
+    CheckExec -> strCheckExec
+    CheckVampIR -> strCheckVampIR
+    Normalize -> strNormalize
+    LetFolding -> strLetFolding
+    LambdaFolding -> strLambdaFolding
+    LetHoisting -> strLetHoisting
+    Inlining -> strInlining
+    MandatoryInlining -> strMandatoryInlining
+    FoldTypeSynonyms -> strFoldTypeSynonyms
+    CaseCallLifting -> strCaseCallLifting
+    SimplifyIfs -> strSimplifyIfs
+    SimplifyComparisons -> strSimplifyComparisons
+    SpecializeArgs -> strSpecializeArgs
+    CaseFolding -> strCaseFolding
+    CasePermutation -> strCasePermutation
+    FilterUnreachable -> strFilterUnreachable
+    OptPhaseEval -> strOptPhaseEval
+    OptPhaseExec -> strOptPhaseExec
+    OptPhaseGeb -> strOptPhaseGeb
+    OptPhaseVampIR -> strOptPhaseVampIR
+    OptPhaseMain -> strOptPhaseMain
+
+instance PipelineId' TransformationId PipelineId where
+  pipelineText :: PipelineId -> Text
+  pipelineText = \case
+    PipelineStored -> strStoredPipeline
+    PipelineNormalize -> strNormalizePipeline
+    PipelineGeb -> strGebPipeline
+    PipelineVampIR -> strVampIRPipeline
+    PipelineStripped -> strStrippedPipeline
+
+  pipeline :: PipelineId -> [TransformationId]
+  pipeline = \case
+    PipelineStored -> toStoredTransformations
+    PipelineNormalize -> toNormalizeTransformations
+    PipelineGeb -> toGebTransformations
+    PipelineVampIR -> toVampIRTransformations
+    PipelineStripped -> toStrippedTransformations

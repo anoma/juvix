@@ -81,3 +81,9 @@ lookupConstrInfo infoTable tag = fromMaybe (error "invalid constructor tag") (Ha
 
 lookupInductiveInfo :: InfoTable' a e -> Symbol -> InductiveInfo
 lookupInductiveInfo infoTable sym = fromMaybe (error "invalid inductive symbol") (HashMap.lookup sym (infoTable ^. infoInductives))
+
+getNextSymbolId :: InfoTable' a e -> Word
+getNextSymbolId tab = maximum (0 : map (^. symbolId) (HashMap.keys (tab ^. infoFunctions) ++ HashMap.keys (tab ^. infoInductives))) + 1
+
+getNextUserTag :: InfoTable' a e -> Word
+getNextUserTag tab = maximum (0 : mapMaybe getUserTagId (HashMap.keys (tab ^. infoConstrs))) + 1

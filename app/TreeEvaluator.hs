@@ -12,7 +12,7 @@ evalTree :: forall r. (Members '[Embed IO, App] r) => Tree.InfoTable -> Sem r ()
 evalTree tab =
   case tab ^. Tree.infoMainFunction of
     Just sym -> do
-      r <- doEval tab (Tree.lookupFunInfo tab sym)
+      r <- liftIO $ doEval tab (Tree.lookupFunInfo tab sym)
       case r of
         Left err ->
           exitJuvixError (JuvixError err)
@@ -23,10 +23,11 @@ evalTree tab =
           putStrLn ""
     Nothing ->
       exitMsg (ExitFailure 1) "no 'main' function"
-  where
-    doEval ::
-      Tree.InfoTable ->
-      Tree.FunctionInfo ->
-      Sem r (Either Tree.TreeError Tree.Value)
-    doEval tab' funInfo =
-      embed $ Tree.catchEvalErrorIO (Tree.hEvalIO stdin stdout tab' funInfo)
+
+doEval ::
+  (MonadIO m) =>
+  Tree.InfoTable ->
+  Tree.FunctionInfo ->
+  m (Either Tree.TreeError Tree.Value)
+doEval tab' funInfo =
+  liftIO $ Tree.catchEvalErrorIO (liftIO $ Tree.hEvalIO stdin stdout tab' funInfo)

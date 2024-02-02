@@ -57,7 +57,7 @@ runCPipeline pa@PipelineArg {..} = do
       . runError @JuvixError
       $ treeToMiniC _pipelineArgTable
   cFile <- inputCFile _pipelineArgFile
-  embed @IO (writeFile (toFilePath cFile) _resultCCode)
+  embed @IO $ writeFileEnsureLn cFile _resultCCode
   outfile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
   Compile.runCommand
     _pipelineArgOptions
@@ -82,7 +82,7 @@ runAsmPipeline pa@PipelineArg {..} = do
       $ _pipelineArgTable
   tab' <- getRight r
   let code = Asm.ppPrint tab' tab'
-  embed @IO (writeFile (toFilePath asmFile) code)
+  embed @IO $ writeFileEnsureLn asmFile code
 
 runNockmaPipeline :: (Members '[Embed IO, App, TaggedLock] r) => PipelineArg -> Sem r ()
 runNockmaPipeline pa@PipelineArg {..} = do
@@ -95,4 +95,4 @@ runNockmaPipeline pa@PipelineArg {..} = do
       $ _pipelineArgTable
   tab' <- getRight r
   let code = Nockma.ppSerialize tab'
-  embed @IO (writeFile (toFilePath nockmaFile) code)
+  embed @IO $ writeFileEnsureLn nockmaFile code

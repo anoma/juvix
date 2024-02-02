@@ -27,7 +27,7 @@ parseTreeSig =
     { _parserSigBareIdentifier = bareIdentifier,
       _parserSigParseCode = parseNode,
       _parserSigArgRef = \x y -> ArgRef (OffsetRef x y),
-      _parserSigEmptyCode = mkUnop OpFail (Const (ConstString "fail")),
+      _parserSigEmptyCode = mkUnop OpFail (mkConst (ConstString "fail")),
       _parserSigEmptyExtra = ()
     }
 
@@ -43,13 +43,16 @@ runParser = runParserS parseTreeSig
 runParser' :: BuilderState -> FilePath -> Text -> Either MegaparsecError BuilderState
 runParser' = runParserS' parseTreeSig
 
+parseNodeText' :: BuilderState -> FilePath -> Text -> Either MegaparsecError (BuilderState, Node)
+parseNodeText' bs file txt = runParserS'' parseNode parseTreeSig bs file txt
+
 parseNode ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r Node
 parseNode =
   (Binop <$> parseBinop)
     <|> (Unop <$> parseUnop)
-    <|> (Const <$> constant)
+    <|> (Const <$> parseConst)
     <|> (AllocConstr <$> parseAlloc)
     <|> (AllocClosure <$> parseCAlloc)
     <|> (ExtendClosure <$> parseCExtend)
@@ -58,7 +61,7 @@ parseNode =
     <|> (Branch <$> parseBranch)
     <|> (Case <$> parseCase)
     <|> (Save <$> parseSave)
-    <|> (MemRef <$> memRef @Node @())
+    <|> (MemRef <$> parseMemRef)
 
 parseBinop ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
@@ -81,13 +84,13 @@ parseBinaryOp ::
   BinaryOpcode ->
   ParsecS r NodeBinop
 parseBinaryOp kwd op = do
-  kw kwd
+  loc <- onlyInterval (kw kwd)
   lparen
   arg1 <- parseNode
   comma
   arg2 <- parseNode
   rparen
-  return $ NodeBinop op arg1 arg2
+  return $ NodeBinop (NodeInfo (Just loc)) op arg1 arg2
 
 parseUnop ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
@@ -105,9 +108,21 @@ parseUnaryOp ::
   UnaryOpcode ->
   ParsecS r NodeUnop
 parseUnaryOp kwd op = do
-  kw kwd
+  loc <- onlyInterval (kw kwd)
   arg <- parens parseNode
-  return $ NodeUnop op arg
+  return $ NodeUnop (NodeInfo (Just loc)) op arg
+
+parseConst :: ParsecS r NodeConstant
+parseConst = do
+  (c, loc) <- interval constant
+  return $ NodeConstant (NodeInfo (Just loc)) c
+
+parseMemRef ::
+  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  ParsecS r NodeMemRef
+parseMemRef = do
+  (r, loc) <- interval (memRef @Node @())
+  return $ NodeMemRef (NodeInfo (Just loc)) r
 
 parseArgs ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
@@ -118,12 +133,13 @@ parseAlloc ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r NodeAllocConstr
 parseAlloc = do
-  kw kwAlloc
+  loc <- onlyInterval (kw kwAlloc)
   tag <- brackets (constrTag @Node @() @DirectRef)
   args <- parseArgs
   return
     NodeAllocConstr
-      { _nodeAllocConstrTag = tag,
+      { _nodeAllocConstrInfo = NodeInfo (Just loc),
+        _nodeAllocConstrTag = tag,
         _nodeAllocConstrArgs = args
       }
 
@@ -131,12 +147,13 @@ parseCAlloc ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r NodeAllocClosure
 parseCAlloc = do
-  kw kwCAlloc
+  loc <- onlyInterval (kw kwCAlloc)
   sym <- brackets (funSymbol @Node @() @DirectRef)
   args <- parseArgs
   return
     NodeAllocClosure
-      { _nodeAllocClosureFunSymbol = sym,
+      { _nodeAllocClosureInfo = NodeInfo (Just loc),
+        _nodeAllocClosureFunSymbol = sym,
         _nodeAllocClosureArgs = args
       }
 
@@ -144,14 +161,15 @@ parseCExtend ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r NodeExtendClosure
 parseCExtend = do
-  kw kwCExtend
+  loc <- onlyInterval (kw kwCExtend)
   off <- P.getOffset
   args <- parseArgs
   case args of
     arg1 : arg2 : args' ->
       return
         NodeExtendClosure
-          { _nodeExtendClosureFun = arg1,
+          { _nodeExtendClosureInfo = NodeInfo (Just loc),
+            _nodeExtendClosureFun = arg1,
             _nodeExtendClosureArgs = arg2 :| args'
           }
     _ ->
@@ -162,30 +180,32 @@ parseCall ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r NodeCall
 parseCall = do
-  kw kwCall
-  callDirect <|> callClosure
+  loc <- onlyInterval (kw kwCall)
+  callDirect loc <|> callClosure loc
   where
-    callDirect :: ParsecS r NodeCall
-    callDirect = do
+    callDirect :: Location -> ParsecS r NodeCall
+    callDirect loc = do
       lbracket
       sym <- funSymbol @Node @() @DirectRef
       rbracket
       args <- parseArgs
       return
         NodeCall
-          { _nodeCallType = CallFun sym,
+          { _nodeCallInfo = NodeInfo (Just loc),
+            _nodeCallType = CallFun sym,
             _nodeCallArgs = args
           }
 
-    callClosure :: ParsecS r NodeCall
-    callClosure = do
+    callClosure :: Location -> ParsecS r NodeCall
+    callClosure loc = do
       off <- P.getOffset
       args <- parseArgs
       case args of
         arg : args' ->
           return
             NodeCall
-              { _nodeCallType = CallClosure arg,
+              { _nodeCallInfo = NodeInfo (Just loc),
+                _nodeCallType = CallClosure arg,
                 _nodeCallArgs = args'
               }
         [] ->
@@ -196,24 +216,27 @@ parseCCall ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r NodeCallClosures
 parseCCall = do
-  kw kwCCall
+  loc <- onlyInterval (kw kwCCall)
   off <- P.getOffset
   args <- parseArgs
   case args of
+    [_] ->
+      parseFailure off "expected at least two arguments"
     arg : args' ->
       return
         NodeCallClosures
-          { _nodeCallClosuresFun = arg,
-            _nodeCallClosuresArgs = args'
+          { _nodeCallClosuresInfo = NodeInfo (Just loc),
+            _nodeCallClosuresFun = arg,
+            _nodeCallClosuresArgs = nonEmpty' args'
           }
     [] ->
-      parseFailure off "expected at least one argument"
+      parseFailure off "expected at least two arguments"
 
 parseBranch ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r NodeBranch
 parseBranch = do
-  kw kwBr
+  loc <- onlyInterval (kw kwBr)
   arg <- parens parseNode
   lbrace
   br1 <- trueBranch
@@ -221,7 +244,8 @@ parseBranch = do
   rbrace
   return
     NodeBranch
-      { _nodeBranchArg = arg,
+      { _nodeBranchInfo = NodeInfo (Just loc),
+        _nodeBranchArg = arg,
         _nodeBranchTrue = br1,
         _nodeBranchFalse = br2
       }
@@ -253,7 +277,7 @@ parseCase ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r NodeCase
 parseCase = do
-  kw kwCase
+  loc <- onlyInterval (kw kwCase)
   sym <- brackets (indSymbol @Node @() @DirectRef)
   arg <- parens parseNode
   lbrace
@@ -262,7 +286,8 @@ parseCase = do
   rbrace
   return
     NodeCase
-      { _nodeCaseInductive = sym,
+      { _nodeCaseInfo = NodeInfo (Just loc),
+        _nodeCaseInductive = sym,
         _nodeCaseArg = arg,
         _nodeCaseBranches = brs,
         _nodeCaseDefault = def
@@ -273,13 +298,14 @@ caseBranch ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r CaseBranch
 caseBranch = do
-  tag <- P.try $ constrTag @Node @() @DirectRef
+  (tag, loc) <- P.try $ interval (constrTag @Node @() @DirectRef)
   kw kwColon
   (bSave, body) <- saveBranch <|> discardBranch
   optional (kw delimSemicolon)
   return
     CaseBranch
-      { _caseBranchTag = tag,
+      { _caseBranchLocation = Just loc,
+        _caseBranchTag = tag,
         _caseBranchBody = body,
         _caseBranchSave = bSave
       }
@@ -306,8 +332,8 @@ parseSave ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r NodeSave
 parseSave = do
-  kw kwSave
-  mname <- optional (brackets identifier)
+  loc' <- onlyInterval (kw kwSave)
+  (mname, loc) <- interval $ optional (brackets identifier)
   arg <- parens parseNode
   tmpNum <- lift $ gets @LocalParams (^. localParamsTempIndex)
   let updateNames :: LocalNameMap DirectRef -> LocalNameMap DirectRef
@@ -315,7 +341,8 @@ parseSave = do
   body <- braces (localS @LocalParams (over localParamsTempIndex (+ 1)) $ localS @LocalParams (over localParamsNameMap updateNames) parseNode)
   return
     NodeSave
-      { _nodeSaveArg = arg,
+      { _nodeSaveInfo = NodeInfo (Just loc'),
+        _nodeSaveArg = arg,
         _nodeSaveBody = body,
-        _nodeSaveName = mname
+        _nodeSaveTempVar = TempVar mname (Just loc)
       }

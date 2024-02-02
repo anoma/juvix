@@ -7,6 +7,7 @@ import Juvix.Compiler.Concrete.Data.Scope
 import Juvix.Compiler.Concrete.Data.ScopedName
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
+import Juvix.Compiler.Store.Scoped.Language
 import Juvix.Prelude
 
 data InfoTableBuilder m a where
@@ -25,6 +26,7 @@ data InfoTableBuilder m a where
   RegisterParsedNameSig :: S.NameId -> NameSignature 'Parsed -> InfoTableBuilder m ()
   RegisterParsedConstructorSig :: S.NameId -> RecordNameSignature 'Parsed -> InfoTableBuilder m ()
   RegisterRecordInfo :: S.NameId -> RecordInfo -> InfoTableBuilder m ()
+  RegisterAlias :: S.NameId -> PreSymbolEntry -> InfoTableBuilder m ()
   GetInfoTable :: InfoTableBuilder m InfoTable
 
 makeSem ''InfoTableBuilder
@@ -84,6 +86,8 @@ toState = reinterpret $ \case
     modify (over infoParsedConstructorSigs (HashMap.insert uid sig))
   RegisterRecordInfo uid recInfo ->
     modify (over infoRecords (HashMap.insert uid recInfo))
+  RegisterAlias uid a ->
+    modify (over infoScoperAlias (HashMap.insert uid a))
   GetInfoTable ->
     get
 

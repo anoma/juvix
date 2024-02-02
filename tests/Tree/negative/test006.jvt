@@ -1,0 +1,5 @@
+-- invalid closure call
+
+function main() : * {
+  call(2, 1)
+}
