@@ -412,8 +412,8 @@ compile = \case
     goExtendClosure :: Tree.NodeExtendClosure -> Sem r (Term Natural)
     goExtendClosure = extendClosure
 
-    goCallHelper :: Bool -> Tree.NodeCall -> Sem r (Term Natural)
-    goCallHelper _isTail Tree.NodeCall {..} = do
+    goCall :: Tree.NodeCall -> Sem r (Term Natural)
+    goCall Tree.NodeCall {..} = do
       newargs <- mapM compile _nodeCallArgs
       case _nodeCallType of
         Tree.CallFun fun -> callFun (UserFunction fun) newargs
@@ -425,9 +425,6 @@ compile = \case
           posOfArgsNil <- appendRights emptyPath argsNum
           let allArgs = replaceSubterm' oldArgs posOfArgsNil (remakeList newargs)
           return (OpApply # replaceArgsWithTerm allArgs # fcode)
-
-    goCall :: Tree.NodeCall -> Sem r (Term Natural)
-    goCall = goCallHelper False
 
 -- | arg order: push path >> push n
 appendRights ::
