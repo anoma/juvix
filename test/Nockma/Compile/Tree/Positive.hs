@@ -51,8 +51,8 @@ testDescr Tree.PosTest {..} =
           _testAssertion = Steps $ treeEvalAssertionParam runNockmaAssertion file' expected' [] (const (return ()))
         }
 
-testsAdt :: [Int]
-testsAdt = [9, 15, 18, 25, 26, 28, 29, 35]
+testsConstr :: [Int]
+testsConstr = [9, 28, 35]
 
 testsNegativeInteger :: [Int]
 testsNegativeInteger = [16, 31]
@@ -72,13 +72,21 @@ testsBugged =
   []
 
 testsToIgnore :: [Int]
-testsToIgnore = testsUnsupported ++ testsBugged ++ testsAdt ++ testsNegativeInteger
+testsToIgnore = testsUnsupported ++ testsBugged ++ testsNegativeInteger
 
-shouldRun :: Tree.PosTest -> Bool
-shouldRun Tree.PosTest {..} = testNum `notElem` map to3DigitString testsToIgnore
+convertTest :: Tree.PosTest -> Maybe (Tree.PosTest)
+convertTest p = do
+  guard (testNum `notElem` map to3DigitString testsToIgnore)
+  return $
+    if
+        | testNum `elem` map to3DigitString testsConstr -> over Tree.expectedFile go p
+        | otherwise -> p
   where
+    go :: Base.Path Rel File -> Base.Path Rel File
+    go = replaceExtensions' [".nockma", ".out"]
+
     testNum :: String
-    testNum = take 3 (drop 4 _name)
+    testNum = take 3 (drop 4 (p ^. Tree.name))
     to3DigitString :: Int -> String
     to3DigitString n
       | n < 10 = "00" ++ show n
@@ -90,4 +98,4 @@ allTests :: TestTree
 allTests =
   testGroup
     "Nockma Tree compile positive tests"
-    (map (mkTest . testDescr) (filter shouldRun Tree.tests))
+    (map (mkTest . testDescr) (mapMaybe convertTest Tree.tests))
