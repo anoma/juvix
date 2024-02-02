@@ -22,13 +22,3 @@ evalCompiledNock' stack mainTerm = do
     Right ev -> case ev of
       Left e -> error (ppTrace e)
       Right res -> return res
-
--- | Used in testing and app
-getStack :: StackId -> Term Natural -> Term Natural
-getStack st m =
-  fromRight'
-    . run
-    . runError @(NockEvalError Natural)
-    . topEvalCtx
-    . subTerm m
-    $ stackPath st

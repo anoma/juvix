@@ -74,8 +74,6 @@ data ConstructorInfo = ConstructorInfo
 
 type ConstructorInfos = HashMap Tree.Tag ConstructorInfo
 
-type Offset = Natural
-
 data CompilerFunction = CompilerFunction
   { _compilerFunctionName :: FunctionId,
     _compilerFunctionArity :: Natural,
@@ -107,9 +105,6 @@ data ClosurePathId
 pathFromEnum :: (Enum a) => a -> Path
 pathFromEnum = indexStack . fromIntegral . fromEnum
 
-closurePath :: ClosurePathId -> Path
-closurePath = pathFromEnum
-
 data ConstructorPathId
   = ConstructorTag
   | ConstructorArgs
@@ -118,24 +113,12 @@ data ConstructorPathId
 constructorPath :: ConstructorPathId -> Path
 constructorPath = pathFromEnum
 
-data ActivationFramePathId
-  = ActivationFrameValueStack
-  | ActivationFrameTempStack
-  | ActivationFrameAuxStack
-  deriving stock (Bounded, Enum)
-
-activationFramePath :: ActivationFramePathId -> Path
-activationFramePath = pathFromEnum
-
 data FunctionPathId
   = FunctionCode
 
 functionPath :: FunctionPathId -> Path
 functionPath = \case
   FunctionCode -> []
-
-numStacks :: (Integral a) => a
-numStacks = fromIntegral (length (allElements @StackId))
 
 stackPath :: StackId -> Path
 stackPath s = indexStack (fromIntegral (fromEnum s))
@@ -152,24 +135,11 @@ indexTuple len idx
 indexStack :: Natural -> Path
 indexStack idx = replicate idx R ++ [L]
 
-indexInPath :: Path -> Natural -> Path
-indexInPath p idx = p ++ indexStack idx
-
-topOfStack :: StackId -> Path
-topOfStack s = indexInStack s 0
-
 indexInStack :: StackId -> Natural -> Path
 indexInStack s idx = stackPath s ++ indexStack idx
 
 pathToArg :: Natural -> Path
 pathToArg = indexInStack Args
-
-pathToArgumentsArea :: Path
-pathToArgumentsArea = topOfStack Args
-
--- | Construct a path rooted at he head of a named stack
-pathInStack :: StackId -> Path -> Path
-pathInStack s p = stackPath s ++ p
 
 makeLenses ''CompilerOptions
 makeLenses ''CompilerFunction
@@ -185,9 +155,6 @@ makeClosure = termFromParts
 
 makeConstructor :: (ConstructorPathId -> Term Natural) -> Term Natural
 makeConstructor = termFromParts
-
-makeActivationFrame :: (ActivationFramePathId -> Term Natural) -> Term Natural
-makeActivationFrame = termFromParts
 
 makeFunction :: (FunctionPathId -> Term Natural) -> Term Natural
 makeFunction f = f FunctionCode
@@ -426,7 +393,6 @@ compile = \case
           let allArgs = replaceSubterm' oldArgs posOfArgsNil (remakeList newargs)
           return (OpApply # replaceArgsWithTerm allArgs # fcode)
 
--- | arg order: push path >> push n
 appendRights ::
   (Members '[Reader CompilerCtx] r) =>
   Path ->
@@ -552,9 +518,6 @@ stringsErr = unsupported "strings"
 sub :: Term Natural -> Term Natural -> Term Natural
 sub a b = callStdlib StdlibSub [a, b]
 
-makeEmptyList :: Term Natural
-makeEmptyList = makeList []
-
 makeList :: [Term Natural] -> Term Natural
 makeList ts = foldTerms (ts `prependList` pure (TermAtom nockNil))
 
@@ -631,7 +594,7 @@ builtinFunction = \case
         _compilerFunctionArity = 2, -- args: n path
         _compilerFunction = do
           let n = OpAddress # pathToArg 0
-              pos = OpAddress # pathToArg 1 -- eval(pos) == 1 == emptyPath
+              pos = OpAddress # pathToArg 1
           twoToTheN <- pow2 n
           return (dec (mul twoToTheN (OpInc # pos)))
       }
@@ -656,13 +619,6 @@ builtinFunction = \case
             callFun (BuiltinFunction BuiltinPow2Go) [dec n, mul (nockNatLiteral 2) acc]
           return (branch cond baseCase recCase)
       }
-
-callEnum ::
-  (Enum funId, Members '[Reader CompilerCtx] r) =>
-  funId ->
-  [Term Natural] ->
-  Sem r (Term Natural)
-callEnum = callFun . UserFunction . Tree.defaultSymbol . fromIntegral . fromEnum
 
 callFun ::
   (Members '[Reader CompilerCtx] r) =>
@@ -695,16 +651,11 @@ replaceArgs args =
 getFunctionPath :: (Members '[Reader CompilerCtx] r) => FunctionId -> Sem r Path
 getFunctionPath funName = asks (^?! compilerFunctionInfos . at funName . _Just . functionInfoPath)
 
--- | obj[relPath] := newVal
--- relPath is relative to obj
-replaceSubterm :: Term Natural -> Path -> Term Natural -> Term Natural
-replaceSubterm obj relPath newVal = OpReplace # (relPath # newVal) # obj
-
 evaluated :: Term Natural -> Term Natural
 evaluated t = OpApply # (OpAddress # emptyPath) # t
 
--- | The same as replaceSubterm but the path is a cell that is evaluated.
--- i.e. replaceSubterm a p b = replaceSubterm' a (quote p) b
+-- | obj[eval(relPath)] := newVal
+-- relPath is relative to obj
 replaceSubterm' :: Term Natural -> Term Natural -> Term Natural -> Term Natural
 replaceSubterm' obj relPath newVal =
   evaluated $ (OpQuote # OpReplace) # ((relPath # (OpQuote # newVal)) # (OpQuote # obj))
@@ -816,34 +767,8 @@ getField field t = t >># (OpAddress # pathFromEnum field)
 getConstructorMemRep :: (Members '[Reader CompilerCtx] r) => Tree.Tag -> Sem r NockmaMemRep
 getConstructorMemRep tag = (^. constructorInfoMemRep) <$> getConstructorInfo tag
 
-getConstructorArity :: (Members '[Reader CompilerCtx] r) => Tree.Tag -> Sem r Natural
-getConstructorArity tag = (^. constructorInfoArity) <$> getConstructorInfo tag
-
 crash :: Term Natural
 crash = (OpAddress # OpAddress # OpAddress)
-
-outputT :: (Functor f, Member (Output (Term Natural)) r) => Term Natural -> Sem (WithTactics e f m r) (f ())
-outputT = output >=> pureT
-
-pushOntoH ::
-  (Functor f, Member (Output (Term Natural)) r) =>
-  StackId ->
-  Term Natural ->
-  Sem (WithTactics e f m r) (f ())
-pushOntoH s n = outputT (pushOnStack s n)
-
-popFromH ::
-  (Functor f, Member (Output (Term Natural)) r) =>
-  StackId ->
-  Sem (WithTactics e f m r) (f ())
-popFromH s = outputT (popStack s)
-
-popFromNH ::
-  (Functor f, Member (Output (Term Natural)) r) =>
-  Natural ->
-  StackId ->
-  Sem (WithTactics e f m r) (f ())
-popFromNH n s = outputT (popStackN n s)
 
 mul :: Term Natural -> Term Natural -> Term Natural
 mul a b = callStdlib StdlibMul [a, b]
@@ -856,86 +781,3 @@ add a b = callStdlib StdlibAdd [a, b]
 
 dec :: Term Natural -> Term Natural
 dec = callStdlib StdlibDec . pure
-
-stackPop :: StackId -> Natural -> Term Natural
-stackPop s n = OpAddress # pathInStack s (replicate n R)
-
-stackTake :: StackId -> Natural -> Term Natural
-stackTake sn n = remakeList (take (fromIntegral n) [OpAddress # indexInStack sn i | i <- [0 ..]])
-
-stackSliceHelper :: StackId -> Natural -> Natural -> NonEmpty (Term Natural)
-stackSliceHelper sn fromIx toIx = fromMaybe err (nonEmpty [OpAddress # indexInStack sn i | i <- indices])
-  where
-    err :: a
-    err = error "impossible: empty slice"
-    indices
-      | fromIx <= toIx = [fromIx .. toIx]
-      | otherwise = impossible
-
-stackSliceAsCell :: StackId -> Natural -> Natural -> Term Natural
-stackSliceAsCell sn a b = foldTerms (stackSliceHelper sn a b)
-
--- | Takes a slice of a stack. Both indices are inclusive
-stackSliceAsList :: StackId -> Natural -> Natural -> Term Natural
-stackSliceAsList sn fromIx toIx = remakeList (stackSliceHelper sn fromIx toIx)
-
-pushOnStack :: StackId -> Term Natural -> Term Natural
-pushOnStack sn t = OpPush # t # moveTopToStack
-  where
-    moveTopToStack :: Term Natural
-    moveTopToStack =
-      remakeList
-        [ let p = OpAddress # (R : stackPath s)
-           in if
-                  | sn == s -> (OpAddress # indexStack 0) # p
-                  | otherwise -> p
-          | s <- allElements
-        ]
-
-popNAndPushOnto' :: (Member (Output (Term Natural)) r) => StackId -> Natural -> Term Natural -> Sem r ()
-popNAndPushOnto' s num t = output (replaceOnStackN num s t)
-
-replaceOnStackN :: Natural -> StackId -> Term Natural -> Term Natural
-replaceOnStackN numToReplace s t = OpPush # t # replaceTopStackN numToReplace s
-
-replaceOnStack :: StackId -> Term Natural -> Term Natural
-replaceOnStack = replaceOnStackN 1
-
-popStack :: StackId -> Term Natural
-popStack = popStackN 1
-
-popStackN :: Natural -> StackId -> Term Natural
-popStackN n sn =
-  remakeList
-    [ let p = stackPath s
-          a
-            | sn == s = p ++ replicate n R
-            | otherwise = p
-       in OpAddress # a
-      | s <- allElements
-    ]
-
-replaceStack :: StackId -> Term Natural -> Term Natural
-replaceStack sn t =
-  remakeList
-    [ if
-          | sn == s -> t
-          | otherwise -> OpAddress # (stackPath s)
-      | s <- allElements
-    ]
-
-resetStack :: StackId -> Term Natural
-resetStack sn = replaceStack sn (OpQuote # nockNil')
-
-replaceTopStackN :: Natural -> StackId -> Term Natural
-replaceTopStackN n sn =
-  remakeList
-    [ let p = R : stackPath s
-       in if
-              | sn == s -> (OpAddress # indexStack 0) # (OpAddress # p ++ replicate n R)
-              | otherwise -> OpAddress # p
-      | s <- allElements
-    ]
-
-replaceTopStack :: StackId -> Term Natural
-replaceTopStack = replaceTopStackN 1
