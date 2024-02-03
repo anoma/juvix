@@ -80,10 +80,10 @@ parseReplInput ::
   Text ->
   Sem r Parser.ReplInput
 parseReplInput fp txt =
-  ignoreHighlightBuilder $
-    runNameIdGenArtifacts $
-      runStateLikeArtifacts runParserResultBuilder artifactParsing $
-        Parser.replInputFromTextSource fp txt
+  ignoreHighlightBuilder
+    . runNameIdGenArtifacts
+    . runStateLikeArtifacts runParserResultBuilder artifactParsing
+    $ Parser.replInputFromTextSource fp txt
 
 expressionUpToTyped ::
   (Members '[Reader EntryPoint, Error JuvixError, State Artifacts] r) =>

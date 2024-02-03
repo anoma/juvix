@@ -1,5 +1,11 @@
 module Juvix.Data.Effect.NameIdGen
-  ( module Juvix.Data.Effect.NameIdGen,
+  ( runNameIdGen,
+    runTopNameIdGen,
+    evalTopNameIdGen,
+    freshNameId,
+    genNameIdState,
+    NameIdGen,
+    NameIdGenState,
     module Juvix.Data.NameId,
   )
 where
@@ -8,13 +14,19 @@ import Data.Stream (Stream (Cons))
 import Juvix.Data.NameId
 import Juvix.Prelude.Base
 
-data NameIdGenState = NameIdGenState
-  { _nameIdGenStateModuleId :: ModuleId,
-    _nameIdGenStateStream :: Stream Word64
+newtype NameIdGenState = NameIdGenState
+  { _nameIdGenStateStream :: Stream Word64
   }
 
-genNameIdState :: ModuleId -> NameIdGenState
-genNameIdState mid = NameIdGenState mid ids
+newtype NameIdGenCtx = NameIdGenCtx
+  { _nameIdGenCtxModuleId :: ModuleId
+  }
+
+makeLenses ''NameIdGenState
+makeLenses ''NameIdGenCtx
+
+genNameIdState :: NameIdGenState
+genNameIdState = NameIdGenState ids
   where
     ids :: Stream Word64
     ids = aux minBound
@@ -26,18 +38,19 @@ data NameIdGen m a where
 
 makeSem ''NameIdGen
 
-toState :: Sem (NameIdGen ': r) a -> Sem (State NameIdGenState ': r) a
-toState = reinterpret $ \case
+re :: Sem (NameIdGen ': r) a -> Sem (State NameIdGenState ': Reader NameIdGenCtx ': r) a
+re = reinterpret2 $ \case
   FreshNameId -> do
-    NameIdGenState mid (Cons fresh rest) <- get
-    put (NameIdGenState mid rest)
+    mid <- asks (^. nameIdGenCtxModuleId)
+    Cons fresh rest <- gets (^. nameIdGenStateStream)
+    put (NameIdGenState rest)
     return (NameId fresh mid)
 
-runNameIdGen :: NameIdGenState -> Sem (NameIdGen ': r) a -> Sem r (NameIdGenState, a)
-runNameIdGen s = runState s . toState
+runNameIdGen :: NameIdGenState -> ModuleId -> Sem (NameIdGen ': r) a -> Sem r (NameIdGenState, a)
+runNameIdGen s c = runReader (NameIdGenCtx c) . runState s . re
 
 runTopNameIdGen :: ModuleId -> Sem (NameIdGen ': r) a -> Sem r (NameIdGenState, a)
-runTopNameIdGen mid = runNameIdGen (genNameIdState mid)
+runTopNameIdGen = runNameIdGen genNameIdState
 
 evalTopNameIdGen :: ModuleId -> Sem (NameIdGen ': r) a -> Sem r a
 evalTopNameIdGen mid = fmap snd . runTopNameIdGen mid
