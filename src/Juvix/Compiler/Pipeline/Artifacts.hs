@@ -63,7 +63,7 @@ runNameIdGenArtifacts ::
   (Members '[State Artifacts] r) =>
   Sem (NameIdGen ': r) a ->
   Sem r a
-runNameIdGenArtifacts = runStateLikeArtifacts (`runNameIdGen` defaultModuleId) artifactNameIdState
+runNameIdGenArtifacts = runStateLikeArtifacts runNameIdGenDefaultModule artifactNameIdState
 
 runFunctionsTableArtifacts :: (Members '[State Artifacts] r) => Sem (State FunctionsTable ': r) a -> Sem r a
 runFunctionsTableArtifacts = runStateArtifacts artifactFunctions

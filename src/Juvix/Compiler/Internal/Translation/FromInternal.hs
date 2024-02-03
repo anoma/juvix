@@ -1,8 +1,7 @@
 module Juvix.Compiler.Internal.Translation.FromInternal
   ( typeCheckingNew,
-    typeCheckExpression,
-    typeCheckExpressionType,
-    typeCheckImport,
+    typeCheckExpressionRepl,
+    typeCheckExpressionTypeRepl,
   )
 where
 
@@ -20,12 +19,12 @@ import Juvix.Compiler.Store.Language
 import Juvix.Data.Effect.NameIdGen
 import Juvix.Prelude hiding (fromEither)
 
-typeCheckExpressionType ::
+typeCheckExpressionTypeRepl ::
   forall r.
   (Members '[Error JuvixError, State Artifacts, Termination] r) =>
   Expression ->
   Sem r TypedExpression
-typeCheckExpressionType exp = do
+typeCheckExpressionTypeRepl exp = do
   -- TODO: refactor: modules outside of REPL should not refer to Artifacts
   table <- extendedTableReplArtifacts exp
   runTypesTableArtifacts
@@ -42,14 +41,11 @@ typeCheckExpressionType exp = do
     $ inferExpression Nothing exp
       >>= traverseOf typedType strongNormalize
 
-typeCheckExpression ::
+typeCheckExpressionRepl ::
   (Members '[Error JuvixError, State Artifacts, Termination] r) =>
   Expression ->
   Sem r Expression
-typeCheckExpression exp = (^. typedExpression) <$> typeCheckExpressionType exp
-
-typeCheckImport :: Import -> Sem r Import
-typeCheckImport = return
+typeCheckExpressionRepl exp = (^. typedExpression) <$> typeCheckExpressionTypeRepl exp
 
 typeCheckingNew ::
   forall r.

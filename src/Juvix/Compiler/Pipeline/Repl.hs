@@ -94,7 +94,7 @@ expressionUpToTyped fp txt = do
   p <- expressionUpToAtomsParsed fp txt
   runTerminationArtifacts
     ( upToInternalExpression p
-        >>= Internal.typeCheckExpressionType
+        >>= Internal.typeCheckExpressionTypeRepl
     )
 
 compileExpression ::
@@ -104,7 +104,7 @@ compileExpression ::
 compileExpression p =
   runTerminationArtifacts
     ( upToInternalExpression p
-        >>= Internal.typeCheckExpression
+        >>= Internal.typeCheckExpressionRepl
     )
     >>= fromInternalExpression
 
