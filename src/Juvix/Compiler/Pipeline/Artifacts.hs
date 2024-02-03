@@ -63,7 +63,7 @@ runNameIdGenArtifacts ::
   (Members '[State Artifacts] r) =>
   Sem (NameIdGen ': r) a ->
   Sem r a
-runNameIdGenArtifacts = runStateLikeArtifacts (`runNameIdGen` (error "TODO" :: ModuleId)) artifactNameIdState
+runNameIdGenArtifacts = runStateLikeArtifacts (`runNameIdGen` defaultModuleId) artifactNameIdState
 
 runFunctionsTableArtifacts :: (Members '[State Artifacts] r) => Sem (State FunctionsTable ': r) a -> Sem r a
 runFunctionsTableArtifacts = runStateArtifacts artifactFunctions
