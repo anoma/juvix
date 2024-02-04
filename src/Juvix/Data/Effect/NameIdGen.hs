@@ -4,7 +4,7 @@ module Juvix.Data.Effect.NameIdGen
     runTopNameIdGen,
     evalTopNameIdGen,
     freshNameId,
-    genNameIdState,
+    iniNameIdState,
     NameIdGen,
     NameIdGenState,
     module Juvix.Data.NameId,
@@ -31,8 +31,8 @@ newtype NameIdGenCtx = NameIdGenCtx
 makeLenses ''NameIdGenState
 makeLenses ''NameIdGenCtx
 
-genNameIdState :: NameIdGenState
-genNameIdState = NameIdGenState ids
+iniNameIdState :: NameIdGenState
+iniNameIdState = NameIdGenState ids
   where
     ids :: Stream Word64
     ids = aux minBound
@@ -54,7 +54,7 @@ runNameIdGen :: NameIdGenState -> ModuleId -> Sem (NameIdGen ': r) a -> Sem r (N
 runNameIdGen s c = runReader (NameIdGenCtx c) . runState s . re
 
 runTopNameIdGen :: ModuleId -> Sem (NameIdGen ': r) a -> Sem r (NameIdGenState, a)
-runTopNameIdGen = runNameIdGen genNameIdState
+runTopNameIdGen = runNameIdGen iniNameIdState
 
 evalTopNameIdGen :: ModuleId -> Sem (NameIdGen ': r) a -> Sem r a
 evalTopNameIdGen mid = fmap snd . runTopNameIdGen mid
