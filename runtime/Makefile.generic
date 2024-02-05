@@ -154,22 +154,22 @@ ALLOBJECTS  := $(strip $(COBJECTS) $(ALLCPPOBJECTS))
 
 # object files which contain the "main" function
 ifneq ($(strip $(CSOURCES)),)
-   CMAINOBJECTS := $(patsubst %.c,$(BUILDDIR)%.o,$(shell egrep -l '\bint[[:space:]]+main\b' $(CSOURCES)))
+   CMAINOBJECTS := $(patsubst %.c,$(BUILDDIR)%.o,$(shell grep -E -l '\bint[[:space:]]+main\b' $(CSOURCES)))
 else
    CMAINOBJECTS :=
 endif
 ifneq ($(strip $(CPPSOURCES)),)
-   CPPMAINOBJECTS := $(patsubst %.cpp,$(BUILDDIR)%.o,$(shell egrep -l '\bint[[:space:]]+main\b' $(CPPSOURCES)))
+   CPPMAINOBJECTS := $(patsubst %.cpp,$(BUILDDIR)%.o,$(shell grep -E -l '\bint[[:space:]]+main\b' $(CPPSOURCES)))
 else
    CPPMAINOBJECTS :=
 endif
 ifneq ($(strip $(CXXSOURCES)),)
-   CXXMAINOBJECTS := $(patsubst %.cxx,$(BUILDDIR)%.o,$(shell egrep -l 'int[[:space:]]+main\b' $(CXXSOURCES)))
+   CXXMAINOBJECTS := $(patsubst %.cxx,$(BUILDDIR)%.o,$(shell grep -E -l 'int[[:space:]]+main\b' $(CXXSOURCES)))
 else
    CXXMAINOBJECTS :=
 endif
 ifneq ($(strip $(CCSOURCES)),)
-   CCMAINOBJECTS := $(patsubst %.cxx,$(BUILDDIR)%.o,$(shell egrep -l 'int[[:space:]]+main\b' $(CCSOURCES)))
+   CCMAINOBJECTS := $(patsubst %.cxx,$(BUILDDIR)%.o,$(shell grep -E -l 'int[[:space:]]+main\b' $(CCSOURCES)))
 else
    CCMAINOBJECTS :=
 endif
