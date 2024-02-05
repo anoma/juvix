@@ -20,24 +20,21 @@ qLookupUnitId pkg_name = do
   comp_id :: UnitId <- case lookupPackageName uniState (PackageName (fsLit pkg_name)) of
     Just comp_id -> pure comp_id
     _ -> error (pack ("Package not found: " ++ pkg_name))
-  pure comp_id
+  return comp_id
 
 qLookupPkgName :: String -> Q PkgName
 qLookupPkgName pkg_name = do
   unit_id <- qLookupUnitId pkg_name
-  pure (PkgName (unitIdString unit_id))
-
-importHidden :: String -> String -> String -> Q Exp
-importHidden = importHiddenName VarE
+  return (PkgName (unitIdString unit_id))
 
 importHiddenName :: (Name -> Exp) -> String -> String -> String -> Q Exp
-importHiddenName mkExp pkg_name mod_name val_name = do
-  pkg_name' <- qLookupPkgName pkg_name
-  pure $
-    mkExp $
-      Name
-        (OccName val_name)
-        (NameG VarName pkg_name' (ModName mod_name))
+importHiddenName mkExp pkgName modName valName = do
+  pkgName' <- qLookupPkgName pkgName
+  let name = Name (OccName valName) (NameG VarName pkgName' (ModName modName))
+  return (mkExp name)
 
 importHiddenCon :: String -> String -> String -> Q Exp
 importHiddenCon = importHiddenName ConE
+
+importHidden :: String -> String -> String -> Q Exp
+importHidden = importHiddenName VarE

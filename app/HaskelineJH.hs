@@ -9,7 +9,7 @@ import System.Console.Repline
 import Unsafe.Coerce
 
 coerceMany :: (a %1 -> b) -> a -> b
-coerceMany f = f
+coerceMany = unsafeCoerce
 
 unInputT :: InputT m a -> _
 unInputT = $(importHidden "haskeline" "System.Console.Haskeline.InputT" "unInputT")
