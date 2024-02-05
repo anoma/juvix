@@ -1,20 +1,15 @@
 module Juvix.Compiler.Tree.SemEvaluator where
 
 import Control.Exception qualified as Exception
-import GHC.Show qualified as S
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Tree.Data.InfoTable
 import Juvix.Compiler.Tree.Error
+import Juvix.Compiler.Tree.Evaluator (EvalError (..))
 import Juvix.Compiler.Tree.Extra.Base
 import Juvix.Compiler.Tree.Language
 import Juvix.Compiler.Tree.Language.Value
 import Juvix.Compiler.Tree.Pretty
 import Text.Read qualified as T
-
-data EvalError = EvalError
-  { _evalErrorLocation :: Maybe Location,
-    _evalErrorMsg :: Text
-  }
 
 data EvalCtx = EvalCtx
   { _evalCtxArgs :: [Value],
@@ -22,15 +17,6 @@ data EvalCtx = EvalCtx
   }
 
 makeLenses ''EvalCtx
-makeLenses ''EvalError
-
-instance Show EvalError where
-  show :: EvalError -> String
-  show EvalError {..} =
-    "evaluation error: "
-      ++ fromText _evalErrorMsg
-
-instance Exception.Exception EvalError
 
 emptyEvalCtx :: EvalCtx
 emptyEvalCtx =
@@ -340,13 +326,28 @@ valueToNode = \case
           _nodeAllocClosureArgs = map valueToNode _closureArgs
         }
 
--- hEvalIO :: (MonadIO m) => Handle -> Handle -> InfoTable -> FunctionInfo -> m Value
--- hEvalIO hin hout infoTable funInfo = do
---   let !v = hEval hout infoTable (funInfo ^. functionCode)
---   hRunIO hin hout infoTable v
+hEvalIOEither ::
+  forall m.
+  (MonadIO m) =>
+  Handle ->
+  Handle ->
+  InfoTable ->
+  FunctionInfo ->
+  m (Either TreeError Value)
+hEvalIOEither hin hout infoTable funInfo = do
+  let x = do
+        v <- eval infoTable (funInfo ^. functionCode)
+        hRunIO hin hout infoTable v
+  let handleTrace = liftIO . hPutStrLn hout . printValue infoTable
+  liftIO
+    . runM
+    . runError @TreeError
+    . mapError toTreeError
+    . runOutputSem handleTrace
+    $ x
 
 -- | Interpret IO actions.
-hRunIO :: forall m. (MonadIO m) => Handle -> Handle -> InfoTable -> Value -> m Value
+hRunIO :: forall r. (Members '[Embed IO, Error EvalError, Output Value] r) => Handle -> Handle -> InfoTable -> Value -> Sem r Value
 hRunIO hin hout infoTable = \case
   ValConstr (Constr (BuiltinTag TagReturn) [x]) -> return x
   ValConstr (Constr (BuiltinTag TagBind) [x, f]) -> do
@@ -358,18 +359,8 @@ hRunIO hin hout infoTable = \case
                 _nodeCallClosuresFun = valueToNode f,
                 _nodeCallClosuresArgs = valueToNode x' :| []
               }
-    let handleTrace = embed @m . liftIO . hPutStrLn hout . printValue infoTable
-    res <-
-      runM
-        . runError @EvalError
-        . runOutputSem handleTrace
-        $ eval infoTable code
-    let err :: EvalError -> m a
-        err e = do
-          liftIO (hPrint @Text stderr (show e))
-          liftIO exitFailure
-    x'' <- either err return res
-    hRunIO hin hout infoTable x''
+    res <- eval infoTable code
+    hRunIO hin hout infoTable res
   ValConstr (Constr (BuiltinTag TagWrite) [ValString s]) -> do
     liftIO $ hPutStr hout s
     return ValVoid
