@@ -362,6 +362,12 @@ trace_ = "trace"
 fail_ :: (IsString s) => s
 fail_ = "fail"
 
+dump :: (IsString s) => s
+dump = "dump"
+
+prealloc :: (IsString s) => s
+prealloc = "prealloc"
+
 argsnum :: (IsString s) => s
 argsnum = "argsnum"
 
@@ -373,6 +379,9 @@ jmp = "jmp"
 
 call :: (IsString s) => s
 call = "call"
+
+tcall :: (IsString s) => s
+tcall = "tcall"
 
 rel :: (IsString s) => s
 rel = "rel"
@@ -535,6 +544,9 @@ le_ = "le"
 
 ret :: (IsString s) => s
 ret = "ret"
+
+live :: (IsString s) => s
+live = "live"
 
 dollar :: (IsString s) => s
 dollar = "$"

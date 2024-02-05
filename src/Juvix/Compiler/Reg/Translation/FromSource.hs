@@ -5,6 +5,7 @@ module Juvix.Compiler.Reg.Translation.FromSource
   )
 where
 
+import Control.Monad.Trans.Class (lift)
 import Juvix.Compiler.Reg.Data.InfoTable
 import Juvix.Compiler.Reg.Data.InfoTableBuilder
 import Juvix.Compiler.Reg.Language
@@ -118,95 +119,260 @@ instrShow ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   VarRef ->
   ParsecS r InstrShow
-instrShow = undefined
+instrShow vref = do
+  kw kwShow
+  val <- value
+  return
+    InstrShow
+      { _instrShowResult = vref,
+        _instrShowValue = val
+      }
 
 instrStrToInt ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   VarRef ->
   ParsecS r InstrStrToInt
-instrStrToInt = undefined
+instrStrToInt vref = do
+  kw kwStrToInt
+  val <- value
+  return
+    InstrStrToInt
+      { _instrStrToIntResult = vref,
+        _instrStrToIntValue = val
+      }
 
 instrAssign ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   VarRef ->
   ParsecS r InstrAssign
-instrAssign = undefined
+instrAssign vref = do
+  val <- value
+  return
+    InstrAssign
+      { _instrAssignResult = vref,
+        _instrAssignValue = val
+      }
 
 instrTrace ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r InstrTrace
-instrTrace = undefined
+instrTrace = do
+  kw kwTrace
+  val <- value
+  return
+    InstrTrace
+      { _instrTraceValue = val
+      }
 
-instrDump ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
-  ParsecS r ()
-instrDump = undefined
+instrDump :: ParsecS r ()
+instrDump = kw kwDump
 
 instrFailure ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r InstrFailure
-instrFailure = undefined
+instrFailure = do
+  val <- value
+  return
+    InstrFailure
+      { _instrFailureValue = val
+      }
 
 instrArgsNum ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   VarRef ->
   ParsecS r InstrArgsNum
-instrArgsNum = undefined
+instrArgsNum vref = do
+  val <- value
+  return
+    InstrArgsNum
+      { _instrArgsNumResult = vref,
+        _instrArgsNumValue = val
+      }
 
 instrPrealloc ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r InstrPrealloc
-instrPrealloc = undefined
+instrPrealloc = do
+  kw kwPrealloc
+  n <- int
+  refs <- brackets (P.sepBy varRef comma)
+  return
+    InstrPrealloc
+      { _instrPreallocWordsNum = n,
+        _instrPreallocLiveVars = refs
+      }
 
 instrAlloc ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   VarRef ->
   ParsecS r InstrAlloc
-instrAlloc = undefined
+instrAlloc vref = do
+  kw kwAlloc
+  tag <- constrTag @Code @FunctionInfoExtra @VarRef
+  args <- brackets (P.sepBy value comma)
+  return
+    InstrAlloc
+      { _instrAllocResult = vref,
+        _instrAllocTag = tag,
+        _instrAllocArgs = args,
+        _instrAllocMemRep = MemRepConstr
+      }
 
 instrAllocClosure ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   VarRef ->
   ParsecS r InstrAllocClosure
-instrAllocClosure = undefined
+instrAllocClosure vref = do
+  kw kwCAlloc
+  sym <- funSymbol @Code @FunctionInfoExtra @VarRef
+  args <- brackets (P.sepBy value comma)
+  fi <- lift $ getFunctionInfo sym
+  return
+    InstrAllocClosure
+      { _instrAllocClosureResult = vref,
+        _instrAllocClosureSymbol = sym,
+        _instrAllocClosureExpectedArgsNum = fi ^. functionArgsNum,
+        _instrAllocClosureArgs = args
+      }
 
 instrExtendClosure ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   VarRef ->
   ParsecS r InstrExtendClosure
-instrExtendClosure = undefined
+instrExtendClosure vref = do
+  kw kwCExtend
+  cl <- varRef
+  args <- brackets (P.sepBy value comma)
+  return
+    InstrExtendClosure
+      { _instrExtendClosureResult = vref,
+        _instrExtendClosureValue = cl,
+        _instrExtendClosureArgs = args
+      }
+
+liveVars ::
+  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  ParsecS r [VarRef]
+liveVars = do
+  P.try (comma >> kw kwLive >> kw kwColon)
+  brackets (P.sepBy varRef comma)
+
+parseCallType ::
+  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  ParsecS r CallType
+parseCallType =
+  (CallFun <$> funSymbol @Code @FunctionInfoExtra @VarRef)
+    <|> (CallClosure <$> varRef)
 
 instrCall ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   VarRef ->
   ParsecS r InstrCall
-instrCall = undefined
+instrCall vref = do
+  isTail <- (kw kwCall >> return False) <|> (kw kwCallTail >> return True)
+  ct <- parseCallType
+  args <- brackets (P.sepBy value comma)
+  vars <- fromMaybe [] <$> optional liveVars
+  return
+    InstrCall
+      { _instrCallResult = vref,
+        _instrCallType = ct,
+        _instrCallIsTail = isTail,
+        _instrCallArgs = args,
+        _instrCallLiveVars = vars
+      }
 
 instrCallClosures ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   VarRef ->
   ParsecS r InstrCallClosures
-instrCallClosures = undefined
+instrCallClosures vref = do
+  isTail <- (kw kwCCall >> return False) <|> (kw kwCCallTail >> return True)
+  val <- varRef
+  args <- brackets (P.sepBy value comma)
+  vars <- fromMaybe [] <$> optional liveVars
+  return
+    InstrCallClosures
+      { _instrCallClosuresResult = vref,
+        _instrCallClosuresIsTail = isTail,
+        _instrCallClosuresValue = val,
+        _instrCallClosuresArgs = args,
+        _instrCallClosuresLiveVars = vars
+      }
 
 instrReturn ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r InstrReturn
-instrReturn = undefined
+instrReturn = do
+  kw kwRet
+  val <- value
+  return
+    InstrReturn
+      { _instrReturnValue = val
+      }
 
 instrBranch ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r InstrBranch
-instrBranch = undefined
+instrBranch = do
+  kw kwBr
+  val <- value
+  br1 <- braces parseCode
+  br2 <- braces parseCode
+  return
+    InstrBranch
+      { _instrBranchValue = val,
+        _instrBranchTrue = br1,
+        _instrBranchFalse = br2
+      }
 
 instrCase ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r InstrCase
-instrCase = undefined
+instrCase = do
+  kw kwCase
+  sym <- brackets (indSymbol @Code @FunctionInfoExtra @VarRef)
+  val <- value
+  lbrace
+  brs <- many caseBranch
+  def <- optional defaultBranch
+  rbrace
+  return
+    InstrCase
+      { _instrCaseValue = val,
+        _instrCaseInductive = sym,
+        _instrCaseIndRep = IndRepStandard,
+        _instrCaseBranches = brs,
+        _instrCaseDefault = def
+      }
+
+caseBranch ::
+  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  ParsecS r CaseBranch
+caseBranch = do
+  tag <- constrTag @Code @FunctionInfoExtra @VarRef
+  kw kwColon
+  body <- braces parseCode
+  ci <- lift $ getConstructorInfo tag
+  return
+    CaseBranch
+      { _caseBranchTag = tag,
+        _caseBranchArgsNum = ci ^. constructorArgsNum,
+        _caseBranchCode = body,
+        _caseBranchMemRep = MemRepConstr
+      }
+
+defaultBranch ::
+  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  ParsecS r Code
+defaultBranch = do
+  symbol "default:"
+  braces parseCode
 
 instrBlock ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r InstrBlock
-instrBlock = undefined
+instrBlock = InstrBlock <$> braces parseCode
 
 varRef ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>

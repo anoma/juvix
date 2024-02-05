@@ -38,3 +38,6 @@ getIdent = getIdent' @Code @FunctionInfoExtra
 
 getFunctionInfo :: (Member InfoTableBuilder r) => Symbol -> Sem r FunctionInfo
 getFunctionInfo = getFunctionInfo' @Code @FunctionInfoExtra
+
+getConstructorInfo :: (Member InfoTableBuilder r) => Tag -> Sem r ConstructorInfo
+getConstructorInfo = getConstructorInfo' @Code @FunctionInfoExtra

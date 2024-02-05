@@ -12,6 +12,9 @@ import Juvix.Prelude
 int :: ParsecS r Int
 int = fst <$> number (-(2 ^ (31 :: Int))) (2 ^ (31 :: Int))
 
+smallnat :: ParsecS r Int
+smallnat = fst <$> number 0 256
+
 identifier :: ParsecS r Text
 identifier = lexeme bareIdentifier
 

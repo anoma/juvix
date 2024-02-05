@@ -40,15 +40,15 @@ localS update a = do
 runParserS :: ParserSig t e d -> FilePath -> Text -> Either MegaparsecError (InfoTable' t e)
 runParserS sig fileName input_ = (^. stateInfoTable) <$> runParserS' sig emptyBuilderState fileName input_
 
-runParserS' :: forall t e. ParserSig t e -> BuilderState' t e -> FilePath -> Text -> Either MegaparsecError (BuilderState' t e)
-runParserS' sig bs fileName input_ = case runParserS'' (parseToplevel @t @e) sig bs fileName input_ of
+runParserS' :: forall t e d. ParserSig t e d -> BuilderState' t e -> FilePath -> Text -> Either MegaparsecError (BuilderState' t e)
+runParserS' sig bs fileName input_ = case runParserS'' (parseToplevel @t @e @d) sig bs fileName input_ of
   Left e -> Left e
   Right (bs', ()) -> Right bs'
 
 runParserS'' ::
-  forall t e a.
-  ParsecS '[NameIdGen, InfoTableBuilder' t e, Reader (ParserSig t e), State LocalParams] a ->
-  ParserSig t e ->
+  forall t e d a.
+  ParsecS '[Reader (ParserSig t e d), InfoTableBuilder' t e, State (LocalParams' d)] a ->
+  ParserSig t e d ->
   BuilderState' t e ->
   FilePath ->
   Text ->
@@ -58,15 +58,9 @@ runParserS'' parser sig bs fileName input_ =
     evalState emptyLocalParams $
       runInfoTableBuilder' bs $
         runReader sig $
-          P.runParserT (parseToplevel @t @e @d) fileName input_ of
+          P.runParserT parser fileName input_ of
     (_, Left err) -> Left (MegaparsecError err)
     (bs', Right x) -> Right (bs', x)
-  where
-    params =
-      LocalParams
-        { _localParamsNameMap = mempty,
-          _localParamsTempIndex = 0
-        }
 
 createBuiltinConstr ::
   Symbol ->
