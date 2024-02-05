@@ -51,6 +51,7 @@ testDescr Tree.PosTest {..} =
           _testAssertion = Steps $ treeEvalAssertionParam runNockmaAssertion file' expected' [] (const (return ()))
         }
 
+-- | Tests which require Nockma-specific expected output files
 testsConstr :: [Int]
 testsConstr = [9, 28, 35]
 
@@ -62,17 +63,11 @@ testsUnsupported :: [Int]
 testsUnsupported =
   [ 5,
     6,
-    14,
-    24,
     37
   ]
 
-testsBugged :: [Int]
-testsBugged =
-  []
-
 testsToIgnore :: [Int]
-testsToIgnore = testsUnsupported ++ testsBugged ++ testsNegativeInteger
+testsToIgnore = testsUnsupported ++ testsNegativeInteger
 
 convertTest :: Tree.PosTest -> Maybe (Tree.PosTest)
 convertTest p = do
