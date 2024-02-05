@@ -45,7 +45,7 @@ function f(tree) : integer {
       save(call[g](tmp[0].node[0])) {
         save(call[g](tmp[0].node[1])) {
           save(case[tree](tmp[1]) {
-            leaf: call[sub'](0, 3)
+            leaf: 3
             node: save {
               mod(add(call[f](tmp[3].node[0]), call[f](tmp[3].node[1])), 32768)
             }
