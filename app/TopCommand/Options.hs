@@ -240,4 +240,4 @@ descr =
     )
   where
     foot :: Doc
-    foot = bold "maintainers: " <> "The Juvix Team"
+    foot = annotate bold "maintainers: " <> "The Juvix Team"
