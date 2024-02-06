@@ -19,8 +19,8 @@ type ParserSig = S.ParserSig Code FunctionInfoExtra VarRef
 
 type LocalParams = LocalParams' VarRef
 
-parseAsmSig :: ParserSig
-parseAsmSig =
+parseRegSig :: ParserSig
+parseRegSig =
   S.ParserSig
     { _parserSigBareIdentifier = bareIdentifier,
       _parserSigParseCode = parseCode,
@@ -36,10 +36,10 @@ parseText' :: BuilderState -> Text -> Either MegaparsecError BuilderState
 parseText' bs = runParser' bs ""
 
 runParser :: FilePath -> Text -> Either MegaparsecError InfoTable
-runParser = runParserS parseAsmSig
+runParser = runParserS parseRegSig
 
 runParser' :: BuilderState -> FilePath -> Text -> Either MegaparsecError BuilderState
-runParser' = runParserS' parseAsmSig
+runParser' = runParserS' parseRegSig
 
 parseCode ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
