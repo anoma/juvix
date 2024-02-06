@@ -1,5 +1,7 @@
 module Juvix.Compiler.Tree.Language.Rep where
 
+import Juvix.Prelude
+
 -- | Memory representation of a constructor.
 data MemRep
   = -- | Standard representation of a constructor: [tag, field 0, .., field n]
@@ -23,6 +25,7 @@ data MemRep
     -- representing constructors of different inductive types because they have
     -- no tag). The argument is the representation of the wrapped value.
     MemRepUnpacked ValRep
+  deriving stock (Eq)
 
 -- | Representation of values.
 data ValRep
@@ -36,6 +39,7 @@ data ValRep
     ValRepWord
   | -- | Constructor of an inductive type with a given representation.
     ValRepInd IndRep
+  deriving stock (Eq)
 
 -- | Representation of an inductive type.
 data IndRep
@@ -64,3 +68,4 @@ data IndRep
   | -- | The constructors can have any representation as long as there is no
     -- ambiguity arising from unpacking.
     IndRepMixed
+  deriving stock (Eq)
