@@ -133,7 +133,7 @@ instrStrToInt ::
   VarRef ->
   ParsecS r InstrStrToInt
 instrStrToInt vref = do
-  kw kwStrToInt
+  kw kwAtoi
   val <- value
   return
     InstrStrToInt
@@ -195,11 +195,11 @@ instrPrealloc ::
 instrPrealloc = do
   kw kwPrealloc
   n <- int
-  refs <- brackets (P.sepBy varRef comma)
+  vars <- fromMaybe [] <$> optional liveVars
   return
     InstrPrealloc
       { _instrPreallocWordsNum = n,
-        _instrPreallocLiveVars = refs
+        _instrPreallocLiveVars = vars
       }
 
 instrAlloc ::
@@ -317,8 +317,12 @@ instrBranch ::
 instrBranch = do
   kw kwBr
   val <- value
-  br1 <- braces parseCode
-  br2 <- braces parseCode
+  (br1, br2) <- braces $ do
+    symbol "true:"
+    br1 <- braces parseCode
+    symbol "false:"
+    br2 <- braces parseCode
+    return (br1, br2)
   return
     InstrBranch
       { _instrBranchValue = val,

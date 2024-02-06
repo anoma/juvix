@@ -7,12 +7,12 @@ where
 import Data.Foldable
 import Data.HashMap.Strict qualified as HashMap
 import Data.List.NonEmpty qualified as NonEmpty
-import Data.Text qualified as Text
 import Juvix.Compiler.Core.Pretty.Base qualified as Core
 import Juvix.Compiler.Internal.Data.Name
 import Juvix.Compiler.Tree.Data.InfoTable
 import Juvix.Compiler.Tree.Language
 import Juvix.Compiler.Tree.Language.Value
+import Juvix.Compiler.Tree.Pretty.Extra
 import Juvix.Compiler.Tree.Pretty.Options
 import Juvix.Data.CodeAnn
 import Juvix.Extra.Strings qualified as Str
@@ -35,26 +35,6 @@ wrapCore ::
 wrapCore f c = do
   opts <- ask
   return $ run $ runReader (toCoreOptions opts) $ f c
-
-quoteName :: Text -> Text
-quoteName txt =
-  foldr
-    (uncurry Text.replace)
-    txt
-    [ ("$", "__dollar__"),
-      (":", "__colon__"),
-      ("@", "__at__"),
-      ("arg", "__arg__"),
-      ("tmp", "__tmp__")
-    ]
-
-quoteFunName :: Text -> Text
-quoteFunName txt =
-  foldr
-    (uncurry Text.replace)
-    txt
-    [ ("readLn", "__readLn__")
-    ]
 
 ppConstrName :: (Member (Reader Options) r) => Tag -> Sem r (Doc Ann)
 ppConstrName tag = do
@@ -412,18 +392,6 @@ instance PrettyCode InfoTable where
 
 {--------------------------------------------------------------------------------}
 {- helper functions -}
-
-braces' :: Doc Ann -> Doc Ann
-braces' d = braces (line <> indent' d <> line)
-
-integer :: (Pretty a) => a -> Doc Ann
-integer i = annotate AnnLiteralInteger (pretty i)
-
-constr :: Text -> Doc Ann
-constr a = annotate (AnnKind KNameConstructor) (pretty a)
-
-variable :: Text -> Doc Ann
-variable a = annotate (AnnKind KNameLocal) (pretty a)
 
 ppRightExpression ::
   (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>

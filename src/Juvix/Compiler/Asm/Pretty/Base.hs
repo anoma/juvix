@@ -11,6 +11,7 @@ import Juvix.Compiler.Asm.Interpreter.RuntimeState
 import Juvix.Compiler.Asm.Pretty.Options
 import Juvix.Compiler.Internal.Data.Name
 import Juvix.Compiler.Tree.Pretty.Base qualified as Tree
+import Juvix.Compiler.Tree.Pretty.Extra
 import Juvix.Data.CodeAnn
 import Juvix.Extra.Strings qualified as Str
 
@@ -188,18 +189,6 @@ instance PrettyCode InfoTable where
 
 {--------------------------------------------------------------------------------}
 {- helper functions -}
-
-braces' :: Doc Ann -> Doc Ann
-braces' d = braces (line <> indent' d <> line)
-
-integer :: (Pretty a) => a -> Doc Ann
-integer i = annotate AnnLiteralInteger (pretty i)
-
-constr :: Text -> Doc Ann
-constr a = annotate (AnnKind KNameConstructor) (pretty a)
-
-variable :: Text -> Doc Ann
-variable a = annotate (AnnKind KNameLocal) (pretty a)
 
 ppRightExpression ::
   (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>

@@ -6,7 +6,7 @@ module Juvix.Compiler.Reg.Keywords
 where
 
 import Juvix.Compiler.Tree.Keywords.Base
-import Juvix.Data.Keyword.All (kwAdd_, kwAlloc, kwBr, kwCAlloc, kwCCall, kwCCallTail, kwCExtend, kwCall, kwCallTail, kwCase, kwDefault, kwDiv_, kwDollar, kwDump, kwEq, kwEq_, kwLe_, kwLive, kwLt_, kwMod_, kwMul_, kwNop, kwPrealloc, kwRet, kwShow, kwStrToInt, kwStrcat, kwSub_, kwTrace)
+import Juvix.Data.Keyword.All (kwAdd_, kwAlloc, kwAtoi, kwBr, kwCAlloc, kwCCall, kwCCallTail, kwCExtend, kwCall, kwCallTail, kwCase, kwDefault, kwDiv_, kwDollar, kwDump, kwEq, kwEq_, kwLe_, kwLive, kwLt_, kwMod_, kwMul_, kwNop, kwPrealloc, kwRet, kwShow, kwStrcat, kwSub_, kwTrace)
 import Juvix.Prelude
 
 allKeywordStrings :: HashSet Text
@@ -27,7 +27,7 @@ allKeywords =
          kwStrcat,
          kwEq,
          kwShow,
-         kwStrToInt,
+         kwAtoi,
          kwTrace,
          kwDump,
          kwPrealloc,
