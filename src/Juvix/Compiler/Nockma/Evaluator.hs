@@ -160,17 +160,17 @@ eval inistack initerm =
           args' <- withCrumb w (recEval stack _stdlibCallArgs)
           let binArith :: (a -> a -> a) -> Sem r (Term a)
               binArith f = case args' of
-                TCell (TAtom l) (TAtom r) -> return (TCell (TAtom (f l r)) stack)
+                TCell (TAtom l) (TAtom r) -> return (TAtom (f l r))
                 _ -> error "expected a cell with two atoms"
 
               unaArith :: (a -> a) -> Sem r (Term a)
               unaArith f = case args' of
-                TAtom n -> return (TCell (TAtom (f n)) stack)
+                TAtom n -> return (TAtom (f n))
                 _ -> error "expected an atom"
 
               binCmp :: (a -> a -> Bool) -> Sem r (Term a)
               binCmp f = case args' of
-                TCell (TAtom l) (TAtom r) -> return (TCell (TermAtom (nockBool (f l r))) stack)
+                TCell (TAtom l) (TAtom r) -> return (TermAtom (nockBool (f l r)))
                 _ -> error "expected a cell with two atoms"
 
           case _stdlibCallFunction of
@@ -247,9 +247,12 @@ eval inistack initerm =
 
             goOpHint :: Sem r (Term a)
             goOpHint = do
-              -- Ignore the hint and evaluate
-              h <- withCrumb (crumb crumbDecodeFirst) (asCell (c ^. operatorCellTerm))
-              evalArg crumbEvalFirst stack (h ^. cellRight)
+              Cell' l r _ <- withCrumb (crumb crumbDecodeFirst) (asCell (c ^. operatorCellTerm))
+              case l of
+                TAtom {} -> evalArg crumbEvalFirst stack r
+                TCell _t1 t2 -> do
+                  void (evalArg crumbEvalFirst stack t2)
+                  evalArg crumbEvalSecond stack r
 
             goOpPush :: Sem r (Term a)
             goOpPush = do

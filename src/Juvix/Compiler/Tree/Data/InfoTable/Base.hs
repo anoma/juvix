@@ -10,14 +10,14 @@ import Juvix.Compiler.Tree.Language
 import Juvix.Compiler.Tree.Language.Rep
 import Juvix.Compiler.Tree.Language.Type
 
-data InfoTable' a e = InfoTable
-  { _infoFunctions :: HashMap Symbol (FunctionInfo' a e),
+data InfoTable' code extra = InfoTable
+  { _infoFunctions :: HashMap Symbol (FunctionInfo' code extra),
     _infoConstrs :: HashMap Tag ConstructorInfo,
     _infoInductives :: HashMap Symbol InductiveInfo,
     _infoMainFunction :: Maybe Symbol
   }
 
-data FunctionInfo' a e = FunctionInfo
+data FunctionInfo' code extra = FunctionInfo
   { _functionName :: Text,
     _functionLocation :: Maybe Location,
     _functionSymbol :: Symbol,
@@ -28,8 +28,8 @@ data FunctionInfo' a e = FunctionInfo
     -- | length _functionArgNames == _functionArgsNum
     _functionArgNames :: [Maybe Text],
     _functionType :: Type,
-    _functionExtra :: e,
-    _functionCode :: a
+    _functionExtra :: extra,
+    _functionCode :: code
   }
 
 data ConstructorInfo = ConstructorInfo
