@@ -99,7 +99,7 @@ function uncurry(*, * -> *, *) {
   tccall 2;
 }
 
-function pred_step(Pair) : (* -> *, *) -> * {
+function pred_step(Pair) : Pair {
   push arg[0].pair[1];
   call isZero;
   br {

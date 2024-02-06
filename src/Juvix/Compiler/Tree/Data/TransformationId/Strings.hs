@@ -25,3 +25,6 @@ strTempHeight = "temp-height"
 
 strFilterUnreachable :: Text
 strFilterUnreachable = "filter-unreachable"
+
+strValidate :: Text
+strValidate = "validate"

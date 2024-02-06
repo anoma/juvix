@@ -37,6 +37,7 @@ instance (PrettyCode a, NockNatural a) => PrettyCode (Atom a) where
           | atm == nockFalse -> return (annotate (AnnKind KNameAxiom) "false")
           | otherwise -> fail
         AtomHintNil -> return (annotate (AnnKind KNameConstructor) "nil")
+        AtomHintVoid -> return (annotate (AnnKind KNameAxiom) "void")
 
 instance PrettyCode Interval where
   ppCode = return . pretty

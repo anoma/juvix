@@ -7,7 +7,9 @@ where
 import Juvix.Compiler.Tree.Language.Base
 
 -- | Function call type
-data CallType = CallFun Symbol | CallClosure Node
+data CallType
+  = CallFun Symbol
+  | CallClosure Node
 
 data Node
   = Binop NodeBinop

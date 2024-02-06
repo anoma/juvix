@@ -46,7 +46,7 @@ function preorder(tree) : * {
 }
 
 function main() : * {
-  seq(seq(call[preorder](call[gen](3)), save("X") {
+  seq(seq(call[preorder](call[gen](3)), save(100) {
     seq(trace(tmp[0]), tmp[0])
   }), call[preorder](call[gen](7)))
 }

@@ -1,4 +1,3 @@
-
 function f((*, integer → integer, integer) → *, integer → integer, integer) : *;
 function g(integer) : integer;
 function main() : *;
@@ -11,7 +10,7 @@ function f((*, integer → integer, integer) → *, integer → integer, integer
   }), save(7) {
     seq(trace(tmp[0]), tmp[0])
   }), br(eq(0, arg[2])) {
-    true: seq(save("end") {
+    true: seq(save(666) {
       seq(trace(tmp[0]), tmp[0])
     }, void)
     false: seq(save(9) {
