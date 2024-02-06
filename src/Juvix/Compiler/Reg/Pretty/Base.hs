@@ -62,7 +62,7 @@ instance PrettyCode BinaryOp where
     arg1 <- ppCode _binaryOpArg1
     arg2 <- ppCode _binaryOpArg2
     op <- ppCode _binaryOpCode
-    return $ res <+> primitive Str.equal <+> op <+> arg1 <> comma <+> arg2
+    return $ res <+> primitive Str.equal <+> op <+> arg1 <+> arg2
 
 instance PrettyCode InstrShow where
   ppCode InstrShow {..} = do
@@ -103,7 +103,7 @@ ppLiveVars vars
   | null vars = return mempty
   | otherwise = do
       vars' <- mapM ppCode vars
-      return $ comma <+> primitive "live:" <+> brackets (hsep (punctuate comma vars'))
+      return $ primitive "live:" <+> brackets (hsep vars')
 
 instance PrettyCode InstrPrealloc where
   ppCode InstrPrealloc {..} = do
@@ -120,7 +120,7 @@ instance PrettyCode InstrAlloc where
         <+> primitive Str.equal
         <+> primitive Str.alloc
         <+> tag
-        <+> brackets (hsep (punctuate comma args))
+        <+> brackets (hsep args)
 
 instance PrettyCode InstrAllocClosure where
   ppCode InstrAllocClosure {..} = do
@@ -132,7 +132,7 @@ instance PrettyCode InstrAllocClosure where
         <+> primitive Str.equal
         <+> primitive Str.calloc
         <+> fn
-        <+> brackets (hsep (punctuate comma args))
+        <+> brackets (hsep args)
 
 instance PrettyCode InstrExtendClosure where
   ppCode InstrExtendClosure {..} = do
@@ -144,7 +144,7 @@ instance PrettyCode InstrExtendClosure where
         <+> primitive Str.equal
         <+> primitive Str.cextend
         <+> fn
-        <+> brackets (hsep (punctuate comma args))
+        <+> brackets (hsep args)
 
 instance PrettyCode CallType where
   ppCode = \case
@@ -162,7 +162,7 @@ instance PrettyCode InstrCall where
         <+> primitive Str.equal
         <+> primitive cl
         <+> fn
-        <+> brackets (hsep (punctuate comma args))
+        <+> brackets (hsep args)
 
 instance PrettyCode InstrCallClosures where
   ppCode InstrCallClosures {..} = do
@@ -175,7 +175,7 @@ instance PrettyCode InstrCallClosures where
         <+> primitive Str.equal
         <+> primitive cl
         <+> fn
-        <+> brackets (hsep (punctuate comma args))
+        <+> brackets (hsep args)
 
 instance PrettyCode InstrReturn where
   ppCode InstrReturn {..} = do

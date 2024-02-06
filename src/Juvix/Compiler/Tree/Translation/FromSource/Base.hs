@@ -378,14 +378,17 @@ tempRef = do
   (off, _) <- brackets integer
   return $ mkTempRef (OffsetRef (fromInteger off) Nothing)
 
-namedRef :: forall t e d r. (Members '[Reader (ParserSig t e d), State (LocalParams' d)] r) => ParsecS r d
-namedRef = do
+namedRef' :: forall t e d r. (Members '[Reader (ParserSig t e d), State (LocalParams' d)] r) => (Int -> Text -> ParsecS r d) -> ParsecS r d
+namedRef' f = do
   off <- P.getOffset
   txt <- identifier @t @e @d
   mr <- lift $ gets (HashMap.lookup txt . (^. localParamsNameMap))
   case mr of
     Just r -> return r
-    Nothing -> parseFailure off "undeclared identifier"
+    Nothing -> f off txt
+
+namedRef :: forall t e d r. (Members '[Reader (ParserSig t e d), State (LocalParams' d)] r) => ParsecS r d
+namedRef = namedRef' @t @e @d (\off _ -> parseFailure off "undeclared identifier")
 
 parseField ::
   forall t e d r.

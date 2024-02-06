@@ -6,6 +6,7 @@ module Juvix.Compiler.Reg.Translation.FromSource
 where
 
 import Control.Monad.Trans.Class (lift)
+import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Reg.Data.InfoTable
 import Juvix.Compiler.Reg.Data.InfoTableBuilder
 import Juvix.Compiler.Reg.Language
@@ -65,7 +66,7 @@ instrWithResult ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r Instruction
 instrWithResult = do
-  vref <- varRef
+  vref <- declVarRef
   kw kwEq
   (Binop <$> instrBinop vref)
     <|> (Show <$> instrShow vref)
@@ -105,7 +106,6 @@ parseBinaryOp ::
 parseBinaryOp kwd op vref = do
   kw kwd
   arg1 <- value
-  comma
   arg2 <- value
   return $
     BinaryOp
@@ -171,6 +171,7 @@ instrFailure ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r InstrFailure
 instrFailure = do
+  kw kwFail
   val <- value
   return
     InstrFailure
@@ -182,6 +183,7 @@ instrArgsNum ::
   VarRef ->
   ParsecS r InstrArgsNum
 instrArgsNum vref = do
+  kw kwArgsNum
   val <- value
   return
     InstrArgsNum
@@ -209,7 +211,7 @@ instrAlloc ::
 instrAlloc vref = do
   kw kwAlloc
   tag <- constrTag @Code @FunctionInfoExtra @VarRef
-  args <- brackets (P.sepBy value comma)
+  args <- parseArgs
   return
     InstrAlloc
       { _instrAllocResult = vref,
@@ -225,7 +227,7 @@ instrAllocClosure ::
 instrAllocClosure vref = do
   kw kwCAlloc
   sym <- funSymbol @Code @FunctionInfoExtra @VarRef
-  args <- brackets (P.sepBy value comma)
+  args <- parseArgs
   fi <- lift $ getFunctionInfo sym
   return
     InstrAllocClosure
@@ -242,7 +244,7 @@ instrExtendClosure ::
 instrExtendClosure vref = do
   kw kwCExtend
   cl <- varRef
-  args <- brackets (P.sepBy value comma)
+  args <- parseArgs
   return
     InstrExtendClosure
       { _instrExtendClosureResult = vref,
@@ -254,8 +256,14 @@ liveVars ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r [VarRef]
 liveVars = do
-  P.try (comma >> kw kwLive >> kw kwColon)
-  brackets (P.sepBy varRef comma)
+  P.try (kw kwLive >> kw kwColon)
+  brackets (many varRef)
+
+parseArgs ::
+  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  ParsecS r [Value]
+parseArgs = do
+  brackets (many value)
 
 parseCallType ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
@@ -271,7 +279,7 @@ instrCall ::
 instrCall vref = do
   isTail <- (kw kwCall >> return False) <|> (kw kwCallTail >> return True)
   ct <- parseCallType
-  args <- brackets (P.sepBy value comma)
+  args <- parseArgs
   vars <- fromMaybe [] <$> optional liveVars
   return
     InstrCall
@@ -289,7 +297,7 @@ instrCallClosures ::
 instrCallClosures vref = do
   isTail <- (kw kwCCall >> return False) <|> (kw kwCCallTail >> return True)
   val <- varRef
-  args <- brackets (P.sepBy value comma)
+  args <- parseArgs
   vars <- fromMaybe [] <$> optional liveVars
   return
     InstrCallClosures
@@ -382,6 +390,20 @@ varRef ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r VarRef
 varRef = varArg <|> varTmp <|> namedRef @Code @FunctionInfoExtra @VarRef
+
+declVarRef ::
+  forall r.
+  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  ParsecS r VarRef
+declVarRef = varArg <|> varTmp <|> namedRef' @Code @FunctionInfoExtra @VarRef decl
+  where
+    decl :: Int -> Text -> ParsecS r VarRef
+    decl _ txt = do
+      idx <- lift $ gets @LocalParams (^. localParamsTempIndex)
+      lift $ modify' @LocalParams (over localParamsTempIndex (+ 1))
+      let vref = VarRef VarGroupLocal idx (Just txt)
+      lift $ modify' (over localParamsNameMap (HashMap.insert txt vref))
+      return vref
 
 varArg :: ParsecS r VarRef
 varArg = do
