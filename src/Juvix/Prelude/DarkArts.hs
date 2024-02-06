@@ -27,14 +27,17 @@ qLookupPkgName pkg_name = do
   unit_id <- qLookupUnitId pkg_name
   return (PkgName (unitIdString unit_id))
 
-importHiddenName :: (Name -> Exp) -> String -> String -> String -> Q Exp
-importHiddenName mkExp pkgName modName valName = do
+importHiddenName :: (Name -> a) -> NameSpace -> String -> String -> String -> Q a
+importHiddenName mkExp namespace pkgName modName valName = do
   pkgName' <- qLookupPkgName pkgName
-  let name = Name (OccName valName) (NameG VarName pkgName' (ModName modName))
+  let name = Name (OccName valName) (NameG namespace pkgName' (ModName modName))
   return (mkExp name)
 
+importHiddenConT :: String -> String -> String -> Q Type
+importHiddenConT = importHiddenName ConT TcClsName
+
 importHiddenCon :: String -> String -> String -> Q Exp
-importHiddenCon = importHiddenName ConE
+importHiddenCon = importHiddenName ConE DataName
 
 importHidden :: String -> String -> String -> Q Exp
-importHidden = importHiddenName VarE
+importHidden = importHiddenName VarE VarName

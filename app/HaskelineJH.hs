@@ -1,24 +1,40 @@
-{-# LANGUAGE LinearTypes #-}
-{-# LANGUAGE PartialTypeSignatures #-}
-
 module HaskelineJH where
 
+import Control.Monad.Trans.Reader
+import GHC.IORef
 import Juvix.Prelude.DarkArts
 import System.Console.Haskeline
 import System.Console.Repline
-import Unsafe.Coerce
 
-coerceMany :: (a %1 -> b) -> a -> b
-coerceMany = unsafeCoerce
+type InputTArg m a =
+  ReaderT
+    RunTerm
+    ( ReaderT
+        (IORef History)
+        ( ReaderT
+            (IORef KillRing)
+            ( ReaderT
+                Prefs
+                (ReaderT (Settings m) m)
+            )
+        )
+    )
+    a
 
-unInputT :: InputT m a -> _
+type KillRing = $(importHiddenConT "haskeline" "System.Console.Haskeline.Command.KillRing" "KillRing")
+
+type RunTerm = $(importHiddenConT "haskeline" "System.Console.Haskeline.Term" "RunTerm")
+
+type History = $(importHiddenConT "haskeline" "System.Console.Haskeline.History" "History")
+
+unInputT :: InputT m a -> InputTArg m a
 unInputT = $(importHidden "haskeline" "System.Console.Haskeline.InputT" "unInputT")
 
-mkInputT :: _ -> InputT m a
-mkInputT = coerceMany $(importHiddenCon "haskeline" "System.Console.Haskeline.InputT" "InputT")
+mkInputT :: InputTArg m a -> InputT m a
+mkInputT = $(importHiddenCon "haskeline" "System.Console.Haskeline.InputT" "InputT")
 
 unHaskelineT :: HaskelineT m a -> InputT m a
 unHaskelineT = $(importHidden "repline" "System.Console.Repline" "unHaskeline")
 
 mkHaskelineT :: InputT m a -> HaskelineT m a
-mkHaskelineT = coerceMany $(importHiddenCon "repline" "System.Console.Repline" "HaskelineT")
+mkHaskelineT = $(importHiddenCon "repline" "System.Console.Repline" "HaskelineT")
