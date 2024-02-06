@@ -1,4 +1,9 @@
-module Juvix.Compiler.Tree.Evaluator where
+{-# LANGUAGE BangPatterns #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Avoid restricted extensions" #-}
+{-# HLINT ignore "Avoid restricted flags" #-}
+module Juvix.Compiler.Tree.EvaluatorBangs where
 
 import Control.Exception qualified as Exception
 import GHC.IO (unsafePerformIO)
@@ -55,8 +60,8 @@ hEval hout tab = eval' [] mempty
         goBinop :: NodeBinop -> Value
         goBinop NodeBinop {..} =
           -- keeping the lets separate ensures that `arg1` is evaluated before `arg2`
-          let arg1 = eval' args temps _nodeBinopArg1
-           in let arg2 = eval' args temps _nodeBinopArg2
+          let !arg1 = eval' args temps _nodeBinopArg1
+           in let !arg2 = eval' args temps _nodeBinopArg2
                in case _nodeBinopOpcode of
                     IntAdd -> goIntBinop (+) arg1 arg2
                     IntSub -> goIntBinop (-) arg1 arg2
@@ -92,7 +97,7 @@ hEval hout tab = eval' [] mempty
 
         goUnop :: NodeUnop -> Value
         goUnop NodeUnop {..} =
-          let v = eval' args temps _nodeUnopArg
+          let !v = eval' args temps _nodeUnopArg
            in case _nodeUnopOpcode of
                 OpShow -> ValString (printValue v)
                 OpStrToInt -> goStringUnop strToInt v
@@ -155,7 +160,7 @@ hEval hout tab = eval' [] mempty
 
         goAllocConstr :: NodeAllocConstr -> Value
         goAllocConstr NodeAllocConstr {..} =
-          let vs = map (eval' args temps) _nodeAllocConstrArgs
+          let !vs = map' (eval' args temps) _nodeAllocConstrArgs
            in ValConstr
                 Constr
                   { _constrTag = _nodeAllocConstrTag,
@@ -164,7 +169,7 @@ hEval hout tab = eval' [] mempty
 
         goAllocClosure :: NodeAllocClosure -> Value
         goAllocClosure NodeAllocClosure {..} =
-          let vs = map (eval' args temps) _nodeAllocClosureArgs
+          let !vs = map' (eval' args temps) _nodeAllocClosureArgs
            in ValClosure
                 Closure
                   { _closureSymbol = _nodeAllocClosureFunSymbol,
@@ -175,7 +180,7 @@ hEval hout tab = eval' [] mempty
         goExtendClosure NodeExtendClosure {..} =
           case eval' args temps _nodeExtendClosureFun of
             ValClosure Closure {..} ->
-              let vs = map (eval' args temps) (toList _nodeExtendClosureArgs)
+              let !vs = map' (eval' args temps) (toList _nodeExtendClosureArgs)
                in ValClosure
                     Closure
                       { _closureSymbol,
@@ -190,7 +195,7 @@ hEval hout tab = eval' [] mempty
 
         doCall :: Symbol -> [Value] -> [Node] -> Value
         doCall sym vs0 as =
-          let vs = map (eval' args temps) as
+          let !vs = map' (eval' args temps) as
               fi = lookupFunInfo tab sym
               vs' = vs0 ++ vs
            in if
@@ -208,7 +213,7 @@ hEval hout tab = eval' [] mempty
 
         goCallClosures :: NodeCallClosures -> Value
         goCallClosures NodeCallClosures {..} =
-          let vs = map (eval' args temps) (toList _nodeCallClosuresArgs)
+          let !vs = map' (eval' args temps) (toList _nodeCallClosuresArgs)
            in go (eval' args temps _nodeCallClosuresFun) vs
           where
             go :: Value -> [Value] -> Value
@@ -257,7 +262,7 @@ hEval hout tab = eval' [] mempty
 
         goSave :: NodeSave -> Value
         goSave NodeSave {..} =
-          let v = eval' args temps _nodeSaveArg
+          let !v = eval' args temps _nodeSaveArg
            in eval' args (BL.cons v temps) _nodeSaveBody
 
         printValue :: Value -> Text
@@ -289,7 +294,7 @@ valueToNode = \case
 
 hEvalIO :: (MonadIO m) => Handle -> Handle -> InfoTable -> FunctionInfo -> m Value
 hEvalIO hin hout infoTable funInfo = do
-  let v = hEval hout infoTable (funInfo ^. functionCode)
+  let !v = hEval hout infoTable (funInfo ^. functionCode)
   hRunIO hin hout infoTable v
 
 -- | Interpret IO actions.
@@ -305,7 +310,7 @@ hRunIO hin hout infoTable = \case
                 _nodeCallClosuresFun = valueToNode f,
                 _nodeCallClosuresArgs = valueToNode x' :| []
               }
-        x'' = hEval hout infoTable code
+        !x'' = hEval hout infoTable code
     hRunIO hin hout infoTable x''
   ValConstr (Constr (BuiltinTag TagWrite) [ValString s]) -> do
     liftIO $ hPutStr hout s
