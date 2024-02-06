@@ -35,25 +35,31 @@ treeEvalAssertionParam evalParam mainFile expectedFile trans testTrans step = do
   case runParser (toFilePath mainFile) s of
     Left err -> assertFailure (show (pretty err))
     Right tab0 -> do
-      unless (null trans) $
-        step "Transform"
-      let tab = run $ applyTransformations trans tab0
-      testTrans tab
-      case tab ^. infoMainFunction of
-        Just sym -> do
-          withTempDir'
-            ( \dirPath -> do
-                let outputFile = dirPath <//> $(mkRelFile "out.out")
-                hout <- openFile (toFilePath outputFile) WriteMode
-                step "Evaluate"
-                evalParam hout sym tab
-                hClose hout
-                actualOutput <- readFile (toFilePath outputFile)
-                step "Compare expected and actual program output"
-                expected <- readFile (toFilePath expectedFile)
-                assertEqDiffText ("Check: RUN output = " <> toFilePath expectedFile) actualOutput expected
-            )
-        Nothing -> assertFailure "no 'main' function"
+      step "Validate"
+      case run $ runError @JuvixError $ applyTransformations [Validate] tab0 of
+        Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
+        Right tab1 -> do
+          unless (null trans) $
+            step "Transform"
+          case run $ runError @JuvixError $ applyTransformations trans tab1 of
+            Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
+            Right tab -> do
+              testTrans tab
+              case tab ^. infoMainFunction of
+                Just sym -> do
+                  withTempDir'
+                    ( \dirPath -> do
+                        let outputFile = dirPath <//> $(mkRelFile "out.out")
+                        hout <- openFile (toFilePath outputFile) WriteMode
+                        step "Evaluate"
+                        evalParam hout sym tab
+                        hClose hout
+                        actualOutput <- readFile (toFilePath outputFile)
+                        step "Compare expected and actual program output"
+                        expected <- readFile (toFilePath expectedFile)
+                        assertEqDiffText ("Check: RUN output = " <> toFilePath expectedFile) actualOutput expected
+                    )
+                Nothing -> assertFailure "no 'main' function"
 
 evalAssertion :: Handle -> Symbol -> InfoTable -> IO ()
 evalAssertion hout sym tab = do

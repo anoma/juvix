@@ -130,7 +130,7 @@ recurse' sig = go True
               checkValueStack' loc (sig ^. recursorInfoTable) tyargs mem
               tys <-
                 zipWithM
-                  (\ty idx -> unifyTypes' loc (sig ^. recursorInfoTable) ty (topValueStack' idx mem))
+                  (\ty idx -> unifyTypes'' loc (sig ^. recursorInfoTable) ty (topValueStack' idx mem))
                   tyargs
                   [0 ..]
               return $
@@ -226,7 +226,7 @@ recurse' sig = go True
             checkValueStack' loc (sig ^. recursorInfoTable) (take argsNum (typeArgs ty)) mem'
           let tyargs = topValuesFromValueStack' argsNum mem'
           -- `typeArgs ty` may be shorter than `tyargs` only if `ty` is dynamic
-          zipWithM_ (unifyTypes' loc (sig ^. recursorInfoTable)) tyargs (typeArgs ty)
+          zipWithM_ (unifyTypes'' loc (sig ^. recursorInfoTable)) tyargs (typeArgs ty)
           return $
             pushValueStack (mkTypeFun (drop argsNum (typeArgs ty)) (typeTarget ty)) $
               popValueStack argsNum mem'

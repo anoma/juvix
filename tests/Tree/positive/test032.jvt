@@ -101,7 +101,7 @@ function uncurry(*, * → *, *) : * {
   ccall(arg[0], arg[1], arg[2])
 }
 
-function pred_step(Pair) : (* → *, *) → * {
+function pred_step(Pair) : Pair {
   br(call[isZero](arg[0].pair[1])) {
     true: alloc[pair](arg[0].pair[0], calloc[uncurry](calloc[succ](arg[0].pair[1])))
     false: alloc[pair](calloc[uncurry](calloc[succ](arg[0].pair[0])), calloc[uncurry](calloc[succ](arg[0].pair[1])))
