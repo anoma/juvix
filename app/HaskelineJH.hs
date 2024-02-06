@@ -28,13 +28,13 @@ type RunTerm = $(importHiddenConT "haskeline" "System.Console.Haskeline.Term" "R
 type History = $(importHiddenConT "haskeline" "System.Console.Haskeline.History" "History")
 
 unInputT :: InputT m a -> InputTArg m a
-unInputT = $(importHidden "haskeline" "System.Console.Haskeline.InputT" "unInputT")
+unInputT = $(importHiddenField "InputT" "haskeline" "System.Console.Haskeline.InputT" "unInputT")
 
 mkInputT :: InputTArg m a -> InputT m a
 mkInputT = $(importHiddenCon "haskeline" "System.Console.Haskeline.InputT" "InputT")
 
 unHaskelineT :: HaskelineT m a -> InputT m a
-unHaskelineT = $(importHidden "repline" "System.Console.Repline" "unHaskeline")
+unHaskelineT = $(importHiddenField "HaskelineT" "repline" "System.Console.Repline" "unHaskeline")
 
 mkHaskelineT :: InputT m a -> HaskelineT m a
 mkHaskelineT = $(importHiddenCon "repline" "System.Console.Repline" "HaskelineT")

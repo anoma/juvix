@@ -41,3 +41,6 @@ importHiddenCon = importHiddenName ConE DataName
 
 importHidden :: String -> String -> String -> Q Exp
 importHidden = importHiddenName VarE VarName
+
+importHiddenField :: String -> String -> String -> String -> Q Exp
+importHiddenField constructorName = importHiddenName VarE (FldName constructorName)

@@ -97,7 +97,6 @@ dependencies:
   - utf8-string == 1.0.*
   - vector == 0.13.*
   - versions == 6.0.*
-  - with-utf8 == 1.1.*
   - xdg-basedir == 0.2.*
   - yaml == 0.11.*
 
@@ -123,6 +122,8 @@ ghc-options:
   - -Wno-missing-import-lists
   - -Wno-missing-kind-signatures
   - -Wno-missing-safe-haskell-mode
+  - -Wno-missing-role-annotations
+  - -Wno-missing-poly-kind-signatures
   - -Wno-safe
   - -Wno-unsafe
   - -Wno-unused-packages

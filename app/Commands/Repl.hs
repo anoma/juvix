@@ -339,7 +339,7 @@ printDefinition = replParseIdentifiers >=> printIdentifiers
                 KNameFixity -> impossible
                 KNameAlias -> impossible
           where
-            printLocation :: (HasLoc s) => s -> Repl ()
+            printLocation :: (HasLoc c) => c -> Repl ()
             printLocation def = do
               s' <- ppConcrete s
               let txt :: Text = " is " <> prettyText (nameKindWithArticle (getNameKind s)) <> " defined at " <> prettyText (getLoc def)

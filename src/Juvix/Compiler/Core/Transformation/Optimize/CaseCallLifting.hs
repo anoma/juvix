@@ -1,7 +1,6 @@
 module Juvix.Compiler.Core.Transformation.Optimize.CaseCallLifting (caseCallLifting) where
 
 import Data.HashSet qualified as HashSet
-import Data.List qualified as List
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Transformation.Base
 
@@ -55,17 +54,17 @@ convertNode md = umap go
 
           computeArgs :: [[Node]] -> Maybe [Node] -> [Node]
           computeArgs args dargs
-            | null (List.head args) = []
+            | null (head' args) = []
             | otherwise =
                 shift
                   (-idx - 1)
                   (mkCase' ind (shift (lvl + 1) val) (zipWithExact (set caseBranchBody) hbs brs) hdef)
                   : computeArgs args' dargs'
             where
-              hbs = map List.head args
-              hdef = fmap List.head dargs
-              args' = map List.tail args
-              dargs' = fmap List.tail dargs
+              hbs = map head' args
+              hdef = fmap head' dargs
+              args' = map tail' args
+              dargs' = fmap tail' dargs
 
     gatherIdents :: HashSet Symbol -> Node -> HashSet Symbol
     gatherIdents = sgather go'
