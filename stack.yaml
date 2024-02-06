@@ -1,6 +1,6 @@
 ghc-options:
   "$locals": -optP-Wno-nonportable-include-path
-resolver: lts-22.9
+resolver: nightly-2024-02-06
 extra-deps:
   - git: https://github.com/Vekhir/aeson-better-errors.git
     commit: 1ec49ab7d1472046b680b5a64ae2930515b47714
