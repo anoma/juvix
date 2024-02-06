@@ -46,8 +46,8 @@ inferType tab funInfo = goInfer mempty
         checkBinop ty1' ty2' rty = do
           ty1 <- goInfer bl _nodeBinopArg1
           ty2 <- goInfer bl _nodeBinopArg2
-          _ <- unifyTypes' loc tab ty1 ty1'
-          _ <- unifyTypes' loc tab ty2 ty2'
+          void $ unifyTypes' loc tab ty1 ty1'
+          void $ unifyTypes' loc tab ty2 ty2'
           return rty
 
     goUnop :: BinderList Type -> NodeUnop -> Sem r Type
@@ -63,7 +63,7 @@ inferType tab funInfo = goInfer mempty
         checkUnop :: Type -> Type -> Sem r Type
         checkUnop ty rty = do
           ty' <- goInfer bl _nodeUnopArg
-          _ <- unifyTypes' loc tab ty ty'
+          void $ unifyTypes' loc tab ty ty'
           return rty
 
     goConst :: BinderList Type -> NodeConstant -> Sem r Type
@@ -253,14 +253,13 @@ inferType tab funInfo = goInfer mempty
     checkType :: BinderList Type -> Node -> Type -> Sem r ()
     checkType bl node ty = do
       ty' <- goInfer bl node
-      _ <- unifyTypes' (getNodeLocation node) tab ty ty'
-      return ()
+      void $ unifyTypes' (getNodeLocation node) tab ty ty'
 
 validateFunction :: (Member (Error TreeError) r) => InfoTable -> FunctionInfo -> Sem r FunctionInfo
 validateFunction tab funInfo = do
   ty <- inferType tab funInfo (funInfo ^. functionCode)
   let ty' = if funInfo ^. functionArgsNum == 0 then funInfo ^. functionType else typeTarget (funInfo ^. functionType)
-  _ <- unifyTypes' (funInfo ^. functionLocation) tab ty ty'
+  void $ unifyTypes' (funInfo ^. functionLocation) tab ty ty'
   return funInfo
 
 validate :: (Member (Error TreeError) r) => InfoTable -> Sem r InfoTable
