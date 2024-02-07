@@ -40,11 +40,9 @@ runOutputEff handle m = do
   mapM_ handle l
   pure a
 
--- eval :: (Members '[Output Value, Error EvalError] r) => InfoTable -> Node -> Sem r Value
 eval :: (Output Value :> r, E.Error EvalError :> r) => InfoTable -> Node -> Eff r Value
 eval tab = E.runReader emptyEvalCtx . eval'
   where
-    -- eval' :: forall r'. (Members '[Output Value, Reader EvalCtx, Error EvalError] r') => Node -> Sem r' Value
     eval' :: forall r'. (Output Value :> r', E.Reader EvalCtx :> r', E.Error EvalError :> r') => Node -> Eff r' Value
     eval' node = case node of
       Binop x -> goBinop x
