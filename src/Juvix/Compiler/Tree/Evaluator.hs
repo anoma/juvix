@@ -94,7 +94,7 @@ hEval hout tab = eval' [] mempty
         goUnop NodeUnop {..} =
           let !v = eval' args temps _nodeUnopArg
            in case _nodeUnopOpcode of
-                OpShow -> ValString (printValue v)
+                OpShow -> ValString (printValue tab v)
                 OpStrToInt -> goStringUnop strToInt v
                 OpTrace -> goTrace v
                 OpFail -> goFail v
@@ -113,7 +113,7 @@ hEval hout tab = eval' [] mempty
           _ -> evalError "expected a string argument"
 
         goFail :: Value -> Value
-        goFail v = evalError ("failure: " <> printValue v)
+        goFail v = evalError ("failure: " <> printValue tab v)
 
         goArgsNum :: Value -> Value
         goArgsNum = \case
@@ -126,7 +126,7 @@ hEval hout tab = eval' [] mempty
             evalError "expected a closure"
 
         goTrace :: Value -> Value
-        goTrace v = unsafePerformIO (hPutStrLn hout (printValue v) >> return v)
+        goTrace v = unsafePerformIO (hPutStrLn hout (printValue tab v) >> return v)
 
         goConstant :: NodeConstant -> Value
         goConstant NodeConstant {..} = case _nodeConstant of
@@ -260,10 +260,10 @@ hEval hout tab = eval' [] mempty
           let !v = eval' args temps _nodeSaveArg
            in eval' args (BL.cons v temps) _nodeSaveBody
 
-        printValue :: Value -> Text
-        printValue = \case
-          ValString s -> s
-          v -> ppPrint tab v
+printValue :: InfoTable -> Value -> Text
+printValue tab = \case
+  ValString s -> s
+  v -> ppPrint tab v
 
 valueToNode :: Value -> Node
 valueToNode = \case

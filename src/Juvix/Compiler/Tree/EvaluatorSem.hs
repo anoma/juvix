@@ -1,10 +1,10 @@
-module Juvix.Compiler.Tree.EvaluatorSem where
+module Juvix.Compiler.Tree.EvaluatorSem (eval, hEvalIOEither) where
 
 import Control.Exception qualified as Exception
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Tree.Data.InfoTable
 import Juvix.Compiler.Tree.Error
-import Juvix.Compiler.Tree.Evaluator (EvalError (..))
+import Juvix.Compiler.Tree.Evaluator (EvalError (..), printValue, valueToNode, toTreeError)
 import Juvix.Compiler.Tree.Extra.Base
 import Juvix.Compiler.Tree.Language
 import Juvix.Compiler.Tree.Language.Value
@@ -299,33 +299,6 @@ eval tab = runReader emptyEvalCtx . eval'
           v <- eval' _nodeSaveArg
           withExtendedTemp v (eval' _nodeSaveBody)
 
-printValue :: InfoTable -> Value -> Text
-printValue tab = \case
-  ValString s -> s
-  v -> ppPrint tab v
-
-valueToNode :: Value -> Node
-valueToNode = \case
-  ValInteger i -> mkConst $ ConstInt i
-  ValBool b -> mkConst $ ConstBool b
-  ValString s -> mkConst $ ConstString s
-  ValUnit -> mkConst ConstUnit
-  ValVoid -> mkConst ConstVoid
-  ValConstr Constr {..} ->
-    AllocConstr
-      NodeAllocConstr
-        { _nodeAllocConstrInfo = mempty,
-          _nodeAllocConstrTag = _constrTag,
-          _nodeAllocConstrArgs = map valueToNode _constrArgs
-        }
-  ValClosure Closure {..} ->
-    AllocClosure
-      NodeAllocClosure
-        { _nodeAllocClosureInfo = mempty,
-          _nodeAllocClosureFunSymbol = _closureSymbol,
-          _nodeAllocClosureArgs = map valueToNode _closureArgs
-        }
-
 hEvalIOEither ::
   forall m.
   (MonadIO m) =>
@@ -373,17 +346,3 @@ hRunIO hin hout infoTable = \case
     return (ValString s)
   val ->
     return val
-
--- | Catch EvalError and convert it to TreeError.
-catchEvalErrorIO :: IO a -> IO (Either TreeError a)
-catchEvalErrorIO ma =
-  Exception.catch
-    (Exception.evaluate ma >>= \ma' -> Right <$> ma')
-    (\(ex :: EvalError) -> return (Left (toTreeError ex)))
-
-toTreeError :: EvalError -> TreeError
-toTreeError EvalError {..} =
-  TreeError
-    { _treeErrorMsg = "evaluation error: " <> _evalErrorMsg,
-      _treeErrorLoc = _evalErrorLocation
-    }
