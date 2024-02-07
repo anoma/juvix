@@ -1,8 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-
-{-# HLINT ignore "Avoid restricted extensions" #-}
-{-# HLINT ignore "Avoid restricted flags" #-}
 module Juvix.Compiler.Tree.Evaluator where
 
 import Control.Exception qualified as Exception
