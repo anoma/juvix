@@ -5,7 +5,6 @@ import CommonOptions
 import Juvix.Compiler.Tree.Data.InfoTable qualified as Tree
 import Juvix.Compiler.Tree.Error qualified as Tree
 import Juvix.Compiler.Tree.Evaluator qualified as Tree
-import Juvix.Compiler.Tree.EvaluatorBangs qualified as TreeBang
 import Juvix.Compiler.Tree.EvaluatorEff qualified as Eff
 import Juvix.Compiler.Tree.Language.Value qualified as Tree
 import Juvix.Compiler.Tree.Pretty qualified as Tree
@@ -48,11 +47,3 @@ doEvalSem ::
   Tree.FunctionInfo ->
   m (Either Tree.TreeError Tree.Value)
 doEvalSem tab' funInfo = TreeSem.hEvalIOEither stdin stdout tab' funInfo
-
-doEvalBang ::
-  (MonadIO m) =>
-  Tree.InfoTable ->
-  Tree.FunctionInfo ->
-  m (Either Tree.TreeError Tree.Value)
-doEvalBang tab' funInfo =
-  liftIO $ TreeBang.catchEvalErrorIO (liftIO $ TreeBang.hEvalIO stdin stdout tab' funInfo)
