@@ -256,14 +256,14 @@ liveVars ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r [VarRef]
 liveVars = do
-  P.try (comma >> kw kwLive >> kw kwColon)
-  brackets (P.sepBy varRef comma)
+  P.try (comma >> symbol "live:")
+  parens (P.sepBy varRef comma)
 
 parseArgs ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r [Value]
 parseArgs = do
-  brackets (P.sepBy value comma)
+  parens (P.sepBy value comma)
 
 parseCallType ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
@@ -362,8 +362,10 @@ caseBranch ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r CaseBranch
 caseBranch = do
-  tag <- constrTag @Code @FunctionInfoExtra @VarRef
-  kw kwColon
+  tag <- P.try $ do
+    tag <- constrTag @Code @FunctionInfoExtra @VarRef
+    kw kwColon
+    return tag
   body <- braces parseCode
   ci <- lift $ getConstructorInfo tag
   return

@@ -156,6 +156,7 @@ instance PrettyCode InstrCall where
     res <- ppCode _instrCallResult
     fn <- ppCode _instrCallType
     args <- mapM ppCode _instrCallArgs
+    vars <- ppLiveVars _instrCallLiveVars
     let cl = if _instrCallIsTail then Str.tcall else Str.call
     return $
       res
@@ -163,12 +164,14 @@ instance PrettyCode InstrCall where
         <+> primitive cl
         <+> fn
         <+> arglist args
+          <> vars
 
 instance PrettyCode InstrCallClosures where
   ppCode InstrCallClosures {..} = do
     res <- ppCode _instrCallClosuresResult
     fn <- ppCode _instrCallClosuresValue
     args <- mapM ppCode _instrCallClosuresArgs
+    vars <- ppLiveVars _instrCallClosuresLiveVars
     let cl = if _instrCallClosuresIsTail then Str.instrTccall else Str.ccall
     return $
       res
@@ -176,6 +179,7 @@ instance PrettyCode InstrCallClosures where
         <+> primitive cl
         <+> fn
         <+> arglist args
+          <> vars
 
 instance PrettyCode InstrReturn where
   ppCode InstrReturn {..} = do
@@ -205,12 +209,17 @@ instance PrettyCode CaseBranch where
     body <- ppCodeCode _caseBranchCode
     return $ tag <> colon <+> braces' body
 
+ppDefaultBranch :: (Member (Reader Options) r) => Code -> Sem r (Doc Ann)
+ppDefaultBranch cs = do
+  body <- ppCodeCode cs
+  return $ constr Str.default_ <> colon <+> braces' body
+
 instance PrettyCode InstrCase where
   ppCode InstrCase {..} = do
     ind <- Tree.ppIndName _instrCaseInductive
     val <- ppCode _instrCaseValue
     brs <- mapM ppCode _instrCaseBranches
-    def <- maybe (return Nothing) (fmap Just . ppCodeCode) _instrCaseDefault
+    def <- maybe (return Nothing) (fmap Just . ppDefaultBranch) _instrCaseDefault
     let brs' = brs ++ catMaybes [def]
     return $ primitive Str.case_ <> brackets ind <+> val <+> braces' (vsep brs')
 
@@ -254,4 +263,4 @@ instance PrettyCode InfoTable where
   ppCode = Tree.ppInfoTable ppCodeCode
 
 arglist :: [Doc Ann] -> Doc Ann
-arglist args = brackets (hsep (punctuate comma args))
+arglist args = parens (hsep (punctuate comma args))
