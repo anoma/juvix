@@ -13,7 +13,7 @@ function compose(* → *, * → *, *) : * {
   tmp[1] = arg[1];
   tmp[0] = call tmp[1] (tmp[0]), live: (arg[0], arg[1], arg[2]);
   tmp[1] = arg[0];
-  tmp[0] = tcall tmp[1] (tmp[0]), live: (arg[0], arg[1], arg[2]);
+  tcall tmp[1] (tmp[0]);
 }
 
 function id(*) : * {
@@ -58,7 +58,7 @@ function plus(integer, integer) : integer {
   tmp[1] = arg[0];
   tmp[2] = calloc inc ();
   tmp[1] = call iterate (tmp[2], tmp[1]), live: (tmp[0], arg[0], arg[1]);
-  tmp[0] = tcall tmp[1] (tmp[0]), live: (arg[0], arg[1]);
+  tcall tmp[1] (tmp[0]);
 }
 
 function mult(integer, integer) : integer {
@@ -68,7 +68,7 @@ function mult(integer, integer) : integer {
   tmp[2] = arg[1];
   tmp[2] = calloc plus (tmp[2]);
   tmp[1] = call iterate (tmp[2], tmp[1]), live: (tmp[0], arg[0], arg[1]);
-  tmp[0] = tcall tmp[1] (tmp[0]), live: (arg[0], arg[1]);
+  tcall tmp[1] (tmp[0]);
 }
 
 function exp(integer, integer) : integer {
@@ -78,7 +78,7 @@ function exp(integer, integer) : integer {
   tmp[2] = arg[0];
   tmp[2] = calloc mult (tmp[2]);
   tmp[1] = call iterate (tmp[2], tmp[1]), live: (tmp[0], arg[0], arg[1]);
-  tmp[0] = tcall tmp[1] (tmp[0]), live: (arg[0], arg[1]);
+  tcall tmp[1] (tmp[0]);
 }
 
 function main() : * {

@@ -6,7 +6,7 @@ function main() : *;
 function sapp(* → *) : * {
   tmp[0] = arg[0];
   tmp[1] = arg[0];
-  tmp[0] = tcall tmp[1] (tmp[0]), live: (arg[0]);
+  tcall tmp[1] (tmp[0]);
 }
 
 function id(*) : * {
@@ -19,5 +19,5 @@ function main() : * {
   tmp[0] = 7;
   tmp[1] = calloc id ();
   tmp[2] = calloc sapp ();
-  tmp[0] = tccall tmp[2] (tmp[1], tmp[0]);
+  tccall tmp[2] (tmp[1], tmp[0]);
 }

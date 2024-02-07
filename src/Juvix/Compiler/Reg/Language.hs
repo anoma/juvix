@@ -53,7 +53,9 @@ data Instruction
   | AllocClosure InstrAllocClosure
   | ExtendClosure InstrExtendClosure
   | Call InstrCall
+  | TailCall InstrTailCall
   | CallClosures InstrCallClosures
+  | TailCallClosures InstrTailCallClosures
   | Return InstrReturn
   | Branch InstrBranch
   | Case InstrCase
@@ -153,21 +155,30 @@ data CallType
 data InstrCall = InstrCall
   { _instrCallResult :: VarRef,
     _instrCallType :: CallType,
-    _instrCallIsTail :: Bool,
     _instrCallArgs :: [Value],
-    -- | Variables live at the point of the call. If the call is not
-    -- tail-recursive, live variables need to be saved before the call and
-    -- restored after it.
+    -- | Variables live at the point of the call. Live variables need to be
+    -- saved before the call and restored after it.
     _instrCallLiveVars :: [VarRef]
+  }
+  deriving stock (Eq)
+
+data InstrTailCall = InstrTailCall
+  { _instrTailCallType :: CallType,
+    _instrTailCallArgs :: [Value]
   }
   deriving stock (Eq)
 
 data InstrCallClosures = InstrCallClosures
   { _instrCallClosuresResult :: VarRef,
-    _instrCallClosuresIsTail :: Bool,
     _instrCallClosuresValue :: VarRef,
     _instrCallClosuresArgs :: [Value],
     _instrCallClosuresLiveVars :: [VarRef]
+  }
+  deriving stock (Eq)
+
+data InstrTailCallClosures = InstrTailCallClosures
+  { _instrTailCallClosuresValue :: VarRef,
+    _instrTailCallClosuresArgs :: [Value]
   }
   deriving stock (Eq)
 

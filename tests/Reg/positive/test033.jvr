@@ -23,7 +23,7 @@ function ack(integer, integer) : integer {
           tmp[1] = 1;
           tmp[2] = arg[0];
           tmp[1] = sub tmp[2] tmp[1];
-          tmp[0] = tcall ack (tmp[1], tmp[0]), live: (arg[0], arg[1]);
+          tcall ack (tmp[1], tmp[0]);
         };
         false: {
           tmp[0] = 1;
@@ -34,7 +34,7 @@ function ack(integer, integer) : integer {
           tmp[1] = 1;
           tmp[2] = arg[0];
           tmp[1] = sub tmp[2] tmp[1];
-          tmp[0] = tcall ack (tmp[1], tmp[0]), live: (arg[0], arg[1]);
+          tcall ack (tmp[1], tmp[0]);
         };
       };
     };

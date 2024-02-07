@@ -21,7 +21,7 @@ function sum'(integer, integer) : integer {
       tmp[1] = 1;
       tmp[2] = arg[0];
       tmp[1] = sub tmp[2] tmp[1];
-      tmp[0] = tcall sum' (tmp[1], tmp[0]), live: (arg[0], arg[1]);
+      tcall sum' (tmp[1], tmp[0]);
     };
   };
 }
@@ -29,7 +29,7 @@ function sum'(integer, integer) : integer {
 function sum(integer) : integer {
   tmp[0] = 0;
   tmp[1] = arg[0];
-  tmp[0] = tcall sum' (tmp[1], tmp[0]), live: (arg[0]);
+  tcall sum' (tmp[1], tmp[0]);
 }
 
 function fact'(integer, integer) : integer {
@@ -48,7 +48,7 @@ function fact'(integer, integer) : integer {
       tmp[1] = 1;
       tmp[2] = arg[0];
       tmp[1] = sub tmp[2] tmp[1];
-      tmp[0] = tcall fact' (tmp[1], tmp[0]), live: (arg[0], arg[1]);
+      tcall fact' (tmp[1], tmp[0]);
     };
   };
 }
@@ -56,7 +56,7 @@ function fact'(integer, integer) : integer {
 function fact(integer) : integer {
   tmp[0] = 1;
   tmp[1] = arg[0];
-  tmp[0] = tcall fact' (tmp[1], tmp[0]), live: (arg[0]);
+  tcall fact' (tmp[1], tmp[0]);
 }
 
 function main() : * {
@@ -73,5 +73,5 @@ function main() : * {
   trace tmp[0];
   nop;
   tmp[0] = 12;
-  tmp[0] = tcall fact (tmp[0]);
+  tcall fact (tmp[0]);
 }

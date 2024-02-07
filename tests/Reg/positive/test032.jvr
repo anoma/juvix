@@ -23,7 +23,7 @@ function compose(* → *, * → *, *) : * {
   tmp[1] = arg[1];
   tmp[0] = call tmp[1] (tmp[0]), live: (arg[0], arg[1], arg[2]);
   tmp[1] = arg[0];
-  tmp[0] = tcall tmp[1] (tmp[0]), live: (arg[0], arg[1], arg[2]);
+  tcall tmp[1] (tmp[0]);
 }
 
 function zero(* → *, *) : * {
@@ -39,7 +39,7 @@ function num(integer, * → *, *) : * {
     true: {
       tmp[0] = arg[2];
       tmp[1] = arg[1];
-      tmp[0] = tcall zero (tmp[1], tmp[0]), live: (arg[0], arg[1], arg[2]);
+      tcall zero (tmp[1], tmp[0]);
     };
     false: {
       prealloc 4, live: (arg[0], arg[1], arg[2]);
@@ -50,7 +50,7 @@ function num(integer, * → *, *) : * {
       tmp[2] = sub tmp[3] tmp[2];
       tmp[1] = calloc num (tmp[2], tmp[1]);
       tmp[2] = arg[1];
-      tmp[0] = tcall compose (tmp[2], tmp[1], tmp[0]), live: (arg[0], arg[1], arg[2]);
+      tcall compose (tmp[2], tmp[1], tmp[0]);
     };
   };
 }
@@ -98,14 +98,14 @@ function isZero((* → *, *) → *) : bool {
   tmp[1] = false;
   tmp[1] = calloc const (tmp[1]);
   tmp[2] = arg[0];
-  tmp[0] = tcall tmp[2] (tmp[1], tmp[0]), live: (arg[0]);
+  tcall tmp[2] (tmp[1], tmp[0]);
 }
 
 function uncurry(*, * → *, *) : * {
   tmp[0] = arg[2];
   tmp[1] = arg[1];
   tmp[2] = arg[0];
-  tmp[0] = tccall tmp[2] (tmp[1], tmp[0]), live: (arg[0], arg[1], arg[2]);
+  tccall tmp[2] (tmp[1], tmp[0]);
 }
 
 function pred_step(Pair) : Pair {
@@ -162,7 +162,7 @@ function toInt((* → *, *) → *) : integer {
   tmp[0] = 0;
   tmp[1] = calloc inc ();
   tmp[2] = arg[0];
-  tmp[0] = tcall tmp[2] (tmp[1], tmp[0]), live: (arg[0]);
+  tcall tmp[2] (tmp[1], tmp[0]);
 }
 
 function fib((* → *, *) → *) : (* → *, *) → * {

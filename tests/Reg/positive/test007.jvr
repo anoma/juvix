@@ -10,7 +10,7 @@ function S(*, *, *) : * {
   tmp[0] = ccall tmp[1] (tmp[0]), live: (arg[0], arg[1], arg[2]);
   tmp[1] = arg[2];
   tmp[2] = arg[0];
-  tmp[0] = tccall tmp[2] (tmp[1], tmp[0]), live: (arg[0], arg[1], arg[2]);
+  tccall tmp[2] (tmp[1], tmp[0]);
 }
 
 function K(*, *) : * {
@@ -23,7 +23,7 @@ function I(*) : * {
   tmp[0] = arg[0];
   tmp[1] = calloc K ();
   tmp[2] = calloc K ();
-  tmp[0] = tcall S (tmp[2], tmp[1], tmp[0]), live: (arg[0]);
+  tcall S (tmp[2], tmp[1], tmp[0]);
 }
 
 function main() : * {

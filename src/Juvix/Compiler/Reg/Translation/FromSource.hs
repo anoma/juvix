@@ -56,6 +56,8 @@ instruction =
     <|> (instrDump >> return Dump)
     <|> (Failure <$> instrFailure)
     <|> (Prealloc <$> instrPrealloc)
+    <|> (TailCall <$> instrTailCall)
+    <|> (TailCallClosures <$> instrTailCallClosures)
     <|> (Return <$> instrReturn)
     <|> (Branch <$> instrBranch)
     <|> (Case <$> instrCase)
@@ -277,7 +279,7 @@ instrCall ::
   VarRef ->
   ParsecS r InstrCall
 instrCall vref = do
-  isTail <- (kw kwCall >> return False) <|> (kw kwCallTail >> return True)
+  kw kwCall
   ct <- parseCallType
   args <- parseArgs
   vars <- fromMaybe [] <$> optional liveVars
@@ -285,7 +287,6 @@ instrCall vref = do
     InstrCall
       { _instrCallResult = vref,
         _instrCallType = ct,
-        _instrCallIsTail = isTail,
         _instrCallArgs = args,
         _instrCallLiveVars = vars
       }
@@ -295,17 +296,42 @@ instrCallClosures ::
   VarRef ->
   ParsecS r InstrCallClosures
 instrCallClosures vref = do
-  isTail <- (kw kwCCall >> return False) <|> (kw kwCCallTail >> return True)
+  kw kwCCall
   val <- varRef
   args <- parseArgs
   vars <- fromMaybe [] <$> optional liveVars
   return
     InstrCallClosures
       { _instrCallClosuresResult = vref,
-        _instrCallClosuresIsTail = isTail,
         _instrCallClosuresValue = val,
         _instrCallClosuresArgs = args,
         _instrCallClosuresLiveVars = vars
+      }
+
+instrTailCall ::
+  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  ParsecS r InstrTailCall
+instrTailCall = do
+  kw kwCallTail
+  ct <- parseCallType
+  args <- parseArgs
+  return
+    InstrTailCall
+      { _instrTailCallType = ct,
+        _instrTailCallArgs = args
+      }
+
+instrTailCallClosures ::
+  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  ParsecS r InstrTailCallClosures
+instrTailCallClosures = do
+  kw kwCCallTail
+  val <- varRef
+  args <- parseArgs
+  return
+    InstrTailCallClosures
+      { _instrTailCallClosuresValue = val,
+        _instrTailCallClosuresArgs = args
       }
 
 instrReturn ::

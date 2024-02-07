@@ -17,7 +17,7 @@ function g(integer → integer, integer) : integer {
       tmp[1] = arg[1];
       tmp[0] = sub tmp[1] tmp[0];
       tmp[1] = arg[0];
-      tmp[0] = tcall tmp[1] (tmp[0]), live: (arg[0], arg[1]);
+      tcall tmp[1] (tmp[0]);
     };
   };
 }
@@ -34,5 +34,5 @@ function f(integer) : integer {
 
 function main() : * {
   tmp[0] = 10;
-  tmp[0] = tcall f (tmp[0]);
+  tcall f (tmp[0]);
 }

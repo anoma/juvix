@@ -61,5 +61,5 @@ function main() : * {
   tmp[3] = alloc return (tmp[3]);
   tmp[2] = alloc bind (tmp[3], tmp[2]);
   tmp[1] = call sequence (tmp[2], tmp[1]), live: (tmp[0]);
-  tmp[0] = tcall sequence (tmp[1], tmp[0]);
+  tcall sequence (tmp[1], tmp[0]);
 }

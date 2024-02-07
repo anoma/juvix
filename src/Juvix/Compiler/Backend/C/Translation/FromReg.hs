@@ -244,14 +244,12 @@ fromRegInstr bNoStack info = \case
     return $ fromAllocClosure x
   Reg.ExtendClosure x ->
     return $ fromExtendClosure x
-  Reg.Call x@Reg.InstrCall {..}
-    | _instrCallIsTail ->
-        return $ fromTailCall x
+  Reg.TailCall x ->
+    return $ fromTailCall x
   Reg.Call x ->
     fromCall x
-  Reg.CallClosures x@Reg.InstrCallClosures {..}
-    | _instrCallClosuresIsTail ->
-        return $ fromTailCallClosures x
+  Reg.TailCallClosures x ->
+    return $ fromTailCallClosures x
   Reg.CallClosures x ->
     fromCallClosures x
   Reg.Return x ->
@@ -390,18 +388,18 @@ fromRegInstr bNoStack info = \case
         )
         : stmtsAssign (fromVarRef _instrExtendClosureResult) (ExpressionVar "juvix_temp_var")
 
-    fromTailCall :: Reg.InstrCall -> [Statement]
-    fromTailCall Reg.InstrCall {..} =
-      case _instrCallType of
+    fromTailCall :: Reg.InstrTailCall -> [Statement]
+    fromTailCall Reg.InstrTailCall {..} =
+      case _instrTailCallType of
         Reg.CallFun sym ->
-          stmtsAssignFunArgs _instrCallArgs
+          stmtsAssignFunArgs _instrTailCallArgs
             ++ [ StatementExpr $
                    macroCall
                      (if bNoStack then "TAIL_CALL_NS" else "TAIL_CALL")
                      [integer (getFUID info sym), exprLabel info sym]
                ]
         Reg.CallClosure vr ->
-          stmtsAssignCArgs vr _instrCallArgs
+          stmtsAssignCArgs vr _instrTailCallArgs
             ++ [ StatementExpr $
                    macroCall
                      (if bNoStack then "TAIL_CALL_CLOSURE_NS" else "TAIL_CALL_CLOSURE")
@@ -434,26 +432,26 @@ fromRegInstr bNoStack info = \case
                  ]
               ++ stmtsPopVars _instrCallLiveVars
 
-    fromTailCallClosures :: Reg.InstrCallClosures -> [Statement]
-    fromTailCallClosures Reg.InstrCallClosures {..}
-      | argsNum <= 3 =
-          stmtsAssignCArgs _instrCallClosuresValue _instrCallClosuresArgs
+    fromTailCallClosures :: Reg.InstrTailCallClosures -> [Statement]
+    fromTailCallClosures Reg.InstrTailCallClosures {..}
+      | argsNum <= info ^. Reg.extraInfoSpecialisedApply =
+          stmtsAssignCArgs _instrTailCallClosuresValue _instrTailCallClosuresArgs
             ++ [ StatementExpr $
                    macroCall
                      ("TAIL_APPLY_" <> show argsNum)
-                     [fromVarRef _instrCallClosuresValue]
+                     [fromVarRef _instrTailCallClosuresValue]
                ]
       | otherwise =
-          stmtsAssignCArgs _instrCallClosuresValue _instrCallClosuresArgs
+          stmtsAssignCArgs _instrTailCallClosuresValue _instrTailCallClosuresArgs
             ++ [ StatementExpr $
                    macroCall
                      "TAIL_APPLY"
-                     [ fromVarRef _instrCallClosuresValue,
+                     [ fromVarRef _instrTailCallClosuresValue,
                        integer argsNum
                      ]
                ]
       where
-        argsNum = length _instrCallClosuresArgs
+        argsNum = length _instrTailCallClosuresArgs
 
     fromCallClosures :: Reg.InstrCallClosures -> Sem r [Statement]
     fromCallClosures Reg.InstrCallClosures {..} = do
@@ -469,7 +467,7 @@ fromRegInstr bNoStack info = \case
         argsNum = length _instrCallClosuresArgs
         call lab =
           if
-              | argsNum <= 3 ->
+              | argsNum <= info ^. Reg.extraInfoSpecialisedApply ->
                   StatementExpr $
                     macroCall
                       ("APPLY_" <> show argsNum)

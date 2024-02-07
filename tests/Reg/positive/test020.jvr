@@ -19,7 +19,7 @@ function sumb((integer, integer) → integer, integer, integer) : integer {
       tmp[2] = arg[1];
       tmp[1] = sub tmp[2] tmp[1];
       tmp[2] = arg[0];
-      tmp[0] = tcall tmp[2] (tmp[1], tmp[0]), live: (arg[0], arg[1], arg[2]);
+      tcall tmp[2] (tmp[1], tmp[0]);
     };
   };
 }
@@ -31,16 +31,16 @@ function sum'(integer, integer) : integer {
   tmp[0] = add tmp[1] tmp[0];
   tmp[1] = arg[0];
   tmp[2] = calloc sum' ();
-  tmp[0] = tcall sumb (tmp[2], tmp[1], tmp[0]), live: (arg[0], arg[1]);
+  tcall sumb (tmp[2], tmp[1], tmp[0]);
 }
 
 function sum(integer) : integer {
   tmp[0] = 0;
   tmp[1] = arg[0];
-  tmp[0] = tcall sum' (tmp[1], tmp[0]), live: (arg[0]);
+  tcall sum' (tmp[1], tmp[0]);
 }
 
 function main() : * {
   tmp[0] = 1000;
-  tmp[0] = tcall sum (tmp[0]);
+  tcall sum (tmp[0]);
 }

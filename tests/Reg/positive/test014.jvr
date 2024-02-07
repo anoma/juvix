@@ -92,7 +92,7 @@ function preorder(tree) : * {
       trace tmp[0];
       nop;
       tmp[0] = arg[0].node1[0];
-      tmp[0] = tcall preorder (tmp[0]), live: (arg[0]);
+      tcall preorder (tmp[0]);
     };
     node2: {
       nop;
@@ -103,7 +103,7 @@ function preorder(tree) : * {
       tmp[0] = call preorder (tmp[0]), live: (arg[0]);
       nop;
       tmp[0] = arg[0].node2[1];
-      tmp[0] = tcall preorder (tmp[0]), live: (arg[0]);
+      tcall preorder (tmp[0]);
     };
     node3: {
       nop;
@@ -117,7 +117,7 @@ function preorder(tree) : * {
       tmp[0] = call preorder (tmp[0]), live: (arg[0]);
       nop;
       tmp[0] = arg[0].node3[2];
-      tmp[0] = tcall preorder (tmp[0]), live: (arg[0]);
+      tcall preorder (tmp[0]);
     };
     leaf: {
       nop;
@@ -140,5 +140,5 @@ function main() : * {
   nop;
   tmp[0] = 7;
   tmp[0] = call gen (tmp[0]);
-  tmp[0] = tcall preorder (tmp[0]);
+  tcall preorder (tmp[0]);
 }

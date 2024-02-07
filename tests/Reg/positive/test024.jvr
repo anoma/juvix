@@ -34,7 +34,7 @@ function f((*, integer → integer, integer) → *, integer → integer, integer
       tmp[1] = arg[1];
       tmp[2] = arg[0];
       tmp[3] = arg[0];
-      tmp[0] = tcall tmp[3] (tmp[2], tmp[1], tmp[0]), live: (arg[0], arg[1], arg[2]);
+      tcall tmp[3] (tmp[2], tmp[1], tmp[0]);
     };
   };
 }
@@ -56,5 +56,5 @@ function main() : * {
   tmp[0] = 4;
   tmp[1] = calloc g ();
   tmp[2] = calloc f ();
-  tmp[0] = tcall f (tmp[2], tmp[1], tmp[0]);
+  tcall f (tmp[2], tmp[1], tmp[0]);
 }

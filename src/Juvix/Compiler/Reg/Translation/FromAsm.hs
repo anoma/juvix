@@ -209,15 +209,21 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
         m = n - _extendClosureArgsNum
 
     mkCall :: Bool -> Asm.InstrCall -> Instruction
-    mkCall isTail Asm.InstrCall {..} =
-      Call $
-        InstrCall
-          { _instrCallResult = mkVarRef VarGroupLocal (ntmps + m),
-            _instrCallType = ct,
-            _instrCallIsTail = isTail,
-            _instrCallArgs = getArgs s _callArgsNum,
-            _instrCallLiveVars = liveVars (_callArgsNum + s)
-          }
+    mkCall isTail Asm.InstrCall {..}
+      | not isTail =
+          Call $
+            InstrCall
+              { _instrCallResult = mkVarRef VarGroupLocal (ntmps + m),
+                _instrCallType = ct,
+                _instrCallArgs = getArgs s _callArgsNum,
+                _instrCallLiveVars = liveVars (_callArgsNum + s)
+              }
+      | otherwise =
+          TailCall $
+            InstrTailCall
+              { _instrTailCallType = ct,
+                _instrTailCallArgs = getArgs s _callArgsNum
+              }
       where
         m = n - _callArgsNum - s + 1
         ct = case _callType of
@@ -228,15 +234,21 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
           Asm.CallClosure -> 1
 
     mkCallClosures :: Bool -> Asm.InstrCallClosures -> Instruction
-    mkCallClosures isTail Asm.InstrCallClosures {..} =
-      CallClosures $
-        InstrCallClosures
-          { _instrCallClosuresResult = mkVarRef VarGroupLocal (ntmps + m),
-            _instrCallClosuresValue = mkVarRef VarGroupLocal (ntmps + n),
-            _instrCallClosuresIsTail = isTail,
-            _instrCallClosuresArgs = getArgs 1 _callClosuresArgsNum,
-            _instrCallClosuresLiveVars = liveVars (_callClosuresArgsNum + 1)
-          }
+    mkCallClosures isTail Asm.InstrCallClosures {..}
+      | not isTail =
+          CallClosures $
+            InstrCallClosures
+              { _instrCallClosuresResult = mkVarRef VarGroupLocal (ntmps + m),
+                _instrCallClosuresValue = mkVarRef VarGroupLocal (ntmps + n),
+                _instrCallClosuresArgs = getArgs 1 _callClosuresArgsNum,
+                _instrCallClosuresLiveVars = liveVars (_callClosuresArgsNum + 1)
+              }
+      | otherwise =
+          TailCallClosures $
+            InstrTailCallClosures
+              { _instrTailCallClosuresValue = mkVarRef VarGroupLocal (ntmps + n),
+                _instrTailCallClosuresArgs = getArgs 1 _callClosuresArgsNum
+              }
       where
         -- note: the value (closure) is also on the stack
         m = n - _callClosuresArgsNum

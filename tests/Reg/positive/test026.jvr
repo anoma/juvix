@@ -12,14 +12,14 @@ function main() : *;
 function app(* → *, *) : * {
   tmp[0] = arg[1];
   tmp[1] = arg[0];
-  tmp[0] = tcall tmp[1] (tmp[0]), live: (arg[0], arg[1]);
+  tcall tmp[1] (tmp[0]);
 }
 
 function app'((integer → integer, integer) → integer, integer → integer, integer) : integer {
   tmp[0] = arg[2];
   tmp[1] = arg[1];
   tmp[2] = arg[0];
-  tmp[0] = tcall tmp[2] (tmp[1], tmp[0]), live: (arg[0], arg[1], arg[2]);
+  tcall tmp[2] (tmp[1], tmp[0]);
 }
 
 function inc(integer) : integer {
@@ -57,7 +57,7 @@ function uapp(* → * → *, *, *) : * {
   tmp[1] = arg[1];
   tmp[2] = arg[0];
   tmp[1] = call tmp[2] (tmp[1]), live: (tmp[0], arg[0], arg[1], arg[2]);
-  tmp[0] = tcall tmp[1] (tmp[0]), live: (arg[0], arg[1], arg[2]);
+  tcall tmp[1] (tmp[0]);
 }
 
 function uncurry(* → * → *) : (*, *) → * {

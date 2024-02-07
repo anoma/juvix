@@ -97,7 +97,7 @@ function foldl((*, *) → *, *, list) : * {
       tmp[3] = arg[0];
       tmp[1] = call tmp[3] (tmp[2], tmp[1]), live: (tmp[0], arg[0], arg[1], arg[2]);
       tmp[2] = arg[0];
-      tmp[0] = tcall foldl (tmp[2], tmp[1], tmp[0]), live: (arg[0], arg[1], arg[2]);
+      tcall foldl (tmp[2], tmp[1], tmp[0]);
     };
   };
 }
@@ -118,7 +118,7 @@ function foldr((*, *) → *, *, list) : * {
       tmp[0] = call foldr (tmp[2], tmp[1], tmp[0]), live: (arg[0], arg[1], arg[2]);
       tmp[1] = arg[2].cons[0];
       tmp[2] = arg[0];
-      tmp[0] = tcall tmp[2] (tmp[1], tmp[0]), live: (arg[0], arg[1], arg[2]);
+      tcall tmp[2] (tmp[1], tmp[0]);
     };
   };
 }
@@ -147,7 +147,7 @@ function filter(* → bool, list) : list {
         false: {
           tmp[0] = arg[1].cons[1];
           tmp[1] = arg[0];
-          tmp[0] = tcall filter (tmp[1], tmp[0]), live: (arg[0], arg[1]);
+          tcall filter (tmp[1], tmp[0]);
         };
       };
     };
@@ -167,7 +167,7 @@ function rev(list) : list {
   tmp[0] = arg[0];
   tmp[1] = alloc nil ();
   tmp[2] = calloc flip_cons ();
-  tmp[0] = tcall foldl (tmp[2], tmp[1], tmp[0]), live: (arg[0]);
+  tcall foldl (tmp[2], tmp[1], tmp[0]);
 }
 
 function gen(integer) : list {
@@ -206,7 +206,7 @@ function sum(integer) : integer {
   prealloc 2, live: (tmp[0], arg[0]);
   tmp[1] = 0;
   tmp[2] = calloc plus ();
-  tmp[0] = tcall foldl (tmp[2], tmp[1], tmp[0]), live: (arg[0]);
+  tcall foldl (tmp[2], tmp[1], tmp[0]);
 }
 
 function sum'(integer) : integer {
@@ -215,7 +215,7 @@ function sum'(integer) : integer {
   prealloc 2, live: (tmp[0], arg[0]);
   tmp[1] = 0;
   tmp[2] = calloc plus ();
-  tmp[0] = tcall foldr (tmp[2], tmp[1], tmp[0]), live: (arg[0]);
+  tcall foldr (tmp[2], tmp[1], tmp[0]);
 }
 
 function foldl'((*, *) → *, *, list) : * {
@@ -235,7 +235,7 @@ function foldl'((*, *) → *, *, list) : * {
       tmp[3] = arg[0];
       tmp[1] = call tmp[3] (tmp[2], tmp[1]), live: (tmp[0], arg[0], arg[1], arg[2]);
       tmp[2] = arg[0];
-      tmp[0] = tcall foldl' (tmp[2], tmp[1], tmp[0]), live: (arg[0], arg[1], arg[2]);
+      tcall foldl' (tmp[2], tmp[1], tmp[0]);
     };
   };
 }
@@ -246,7 +246,7 @@ function sum''(integer) : integer {
   prealloc 2, live: (tmp[0], arg[0]);
   tmp[1] = 0;
   tmp[2] = calloc plus ();
-  tmp[0] = tcall foldl' (tmp[2], tmp[1], tmp[0]), live: (arg[0]);
+  tcall foldl' (tmp[2], tmp[1], tmp[0]);
 }
 
 function gt5(integer) : bool {

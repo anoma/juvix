@@ -22,7 +22,7 @@ function fib'(integer, integer, integer) : integer {
       tmp[2] = 1;
       tmp[3] = arg[0];
       tmp[2] = sub tmp[3] tmp[2];
-      tmp[0] = tcall fib' (tmp[2], tmp[1], tmp[0]), live: (arg[0], arg[1], arg[2]);
+      tcall fib' (tmp[2], tmp[1], tmp[0]);
     };
   };
 }
@@ -31,7 +31,7 @@ function fib(integer) : integer {
   tmp[0] = 1;
   tmp[1] = 0;
   tmp[2] = arg[0];
-  tmp[0] = tcall fib' (tmp[2], tmp[1], tmp[0]), live: (arg[0]);
+  tcall fib' (tmp[2], tmp[1], tmp[0]);
 }
 
 function main() : * {

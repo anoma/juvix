@@ -27,7 +27,7 @@ function power'(integer, integer, integer) : integer {
           tmp[2] = arg[0];
           tmp[3] = arg[0];
           tmp[2] = mul tmp[3] tmp[2];
-          tmp[0] = tcall power' (tmp[2], tmp[1], tmp[0]), live: (arg[0], arg[1], arg[2]);
+          tcall power' (tmp[2], tmp[1], tmp[0]);
         };
         false: {
           tmp[0] = arg[2];
@@ -39,7 +39,7 @@ function power'(integer, integer, integer) : integer {
           tmp[2] = arg[0];
           tmp[3] = arg[0];
           tmp[2] = mul tmp[3] tmp[2];
-          tmp[0] = tcall power' (tmp[2], tmp[1], tmp[0]), live: (arg[0], arg[1], arg[2]);
+          tcall power' (tmp[2], tmp[1], tmp[0]);
         };
       };
     };
@@ -50,7 +50,7 @@ function power(integer, integer) : integer {
   tmp[0] = 1;
   tmp[1] = arg[1];
   tmp[2] = arg[0];
-  tmp[0] = tcall power' (tmp[2], tmp[1], tmp[0]), live: (arg[0], arg[1]);
+  tcall power' (tmp[2], tmp[1], tmp[0]);
 }
 
 function main() : * {

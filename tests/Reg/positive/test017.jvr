@@ -18,7 +18,7 @@ function h(integer → integer, integer → integer, integer) : integer {
   tmp[1] = arg[1];
   tmp[0] = call tmp[1] (tmp[0]), live: (arg[0], arg[1], arg[2]);
   tmp[1] = arg[0];
-  tmp[0] = tcall tmp[1] (tmp[0]), live: (arg[0], arg[1], arg[2]);
+  tcall tmp[1] (tmp[0]);
 }
 
 function f(integer) : integer → integer {
@@ -33,7 +33,7 @@ function f(integer) : integer → integer {
     br tmp[1] {
       true: {
         tmp[1] = 10;
-        tmp[1] = tcall f (tmp[1]), live: (tmp[0], arg[0]);
+        tcall f (tmp[1]);
       };
       false: {
         tmp[1] = 10;
@@ -84,7 +84,7 @@ function h'(integer) : integer {
       tmp[1] = 1;
       tmp[2] = arg[0];
       tmp[1] = sub tmp[2] tmp[1];
-      tmp[0] = tcall g' (tmp[1], tmp[0]), live: (arg[0]);
+      tcall g' (tmp[1], tmp[0]);
     };
   };
 }

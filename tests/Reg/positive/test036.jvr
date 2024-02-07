@@ -14,7 +14,7 @@ function main() : *;
 function force(f : unit → stream) : stream {
   tmp[0] = unit;
   tmp[1] = f;
-  tmp[0] = tcall tmp[1] (tmp[0]), live: (arg[0]);
+  tcall tmp[1] (tmp[0]);
 }
 
 function filter(f : integer → bool, s : unit → stream, unit) : stream {
@@ -39,7 +39,7 @@ function filter(f : integer → bool, s : unit → stream, unit) : stream {
         tmp[1] = unit;
         tmp[2] = s1.cons[1];
         tmp[3] = f;
-        tmp[1] = tcall filter (tmp[3], tmp[2], tmp[1]), live: (tmp[0], arg[0], arg[1], arg[2]);
+        tcall filter (tmp[3], tmp[2], tmp[1]);
       };
     };
   };
@@ -63,7 +63,7 @@ function nth(n : integer, s : unit → stream) : integer {
         tmp[2] = 1;
         tmp[3] = n;
         tmp[2] = sub tmp[3] tmp[2];
-        tmp[1] = tcall nth (tmp[2], tmp[1]), live: (tmp[0], arg[0], arg[1]);
+        tcall nth (tmp[2], tmp[1]);
       };
     };
   };

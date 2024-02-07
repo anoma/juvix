@@ -17,7 +17,7 @@ function const(*, *) : * {
 
 function g(*) : integer {
   tmp[0] = 2;
-  tmp[0] = tcall id (tmp[0]), live: (arg[0]);
+  tcall id (tmp[0]);
 }
 
 function f(integer) : integer → integer {

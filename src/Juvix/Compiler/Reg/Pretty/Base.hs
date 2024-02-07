@@ -157,14 +157,22 @@ instance PrettyCode InstrCall where
     fn <- ppCode _instrCallType
     args <- mapM ppCode _instrCallArgs
     vars <- ppLiveVars _instrCallLiveVars
-    let cl = if _instrCallIsTail then Str.tcall else Str.call
     return $
       res
         <+> primitive Str.equal
-        <+> primitive cl
+        <+> primitive Str.call
         <+> fn
         <+> arglist args
           <> vars
+
+instance PrettyCode InstrTailCall where
+  ppCode InstrTailCall {..} = do
+    fn <- ppCode _instrTailCallType
+    args <- mapM ppCode _instrTailCallArgs
+    return $
+      primitive Str.tcall
+        <+> fn
+        <+> arglist args
 
 instance PrettyCode InstrCallClosures where
   ppCode InstrCallClosures {..} = do
@@ -172,14 +180,22 @@ instance PrettyCode InstrCallClosures where
     fn <- ppCode _instrCallClosuresValue
     args <- mapM ppCode _instrCallClosuresArgs
     vars <- ppLiveVars _instrCallClosuresLiveVars
-    let cl = if _instrCallClosuresIsTail then Str.instrTccall else Str.ccall
     return $
       res
         <+> primitive Str.equal
-        <+> primitive cl
+        <+> primitive Str.ccall
         <+> fn
         <+> arglist args
           <> vars
+
+instance PrettyCode InstrTailCallClosures where
+  ppCode InstrTailCallClosures {..} = do
+    fn <- ppCode _instrTailCallClosuresValue
+    args <- mapM ppCode _instrTailCallClosuresArgs
+    return $
+      primitive Str.instrTccall
+        <+> fn
+        <+> arglist args
 
 instance PrettyCode InstrReturn where
   ppCode InstrReturn {..} = do
@@ -243,7 +259,9 @@ instance PrettyCode Instruction where
     AllocClosure x -> ppCode x
     ExtendClosure x -> ppCode x
     Call x -> ppCode x
+    TailCall x -> ppCode x
     CallClosures x -> ppCode x
+    TailCallClosures x -> ppCode x
     Return x -> ppCode x
     Branch x -> ppCode x
     Case x -> ppCode x

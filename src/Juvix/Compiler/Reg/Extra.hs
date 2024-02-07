@@ -30,15 +30,14 @@ computeMaxStackHeight lims = maximum . map go
       Alloc {} -> 0
       AllocClosure {} -> 0
       ExtendClosure {} -> 0
-      Call InstrCall {..} | _instrCallIsTail -> 0
+      TailCall {} -> 0
       Call InstrCall {..} ->
         length _instrCallLiveVars + 1
-      CallClosures InstrCallClosures {..}
-        | _instrCallClosuresIsTail ->
-            length _instrCallClosuresArgs
-              + 1
-              + lims
-                ^. limitsDispatchStackSize
+      TailCallClosures InstrTailCallClosures {..} ->
+        length _instrTailCallClosuresArgs
+          + 1
+          + lims
+            ^. limitsDispatchStackSize
       CallClosures InstrCallClosures {..} ->
         length _instrCallClosuresLiveVars
           + length _instrCallClosuresArgs
@@ -80,9 +79,12 @@ computeMaxCallClosuresArgsNum = maximum . map go
       Alloc {} -> 0
       AllocClosure {} -> 0
       ExtendClosure {} -> 0
-      Call InstrCall {} -> 0
+      Call {} -> 0
+      TailCall {} -> 0
       CallClosures InstrCallClosures {..} ->
         length _instrCallClosuresArgs
+      TailCallClosures InstrTailCallClosures {..} ->
+        length _instrTailCallClosuresArgs
       Return {} -> 0
       Branch InstrBranch {..} ->
         max
@@ -131,8 +133,12 @@ computeStringMap strs = snd . run . execState (HashMap.size strs, strs) . mapM g
         mapM_ goVal _instrExtendClosureArgs
       Call InstrCall {..} ->
         mapM_ goVal _instrCallArgs
+      TailCall InstrTailCall {..} ->
+        mapM_ goVal _instrTailCallArgs
       CallClosures InstrCallClosures {..} ->
         mapM_ goVal _instrCallClosuresArgs
+      TailCallClosures InstrTailCallClosures {..} ->
+        mapM_ goVal _instrTailCallClosuresArgs
       Return InstrReturn {..} ->
         goVal _instrReturnValue
       Branch InstrBranch {..} -> do
@@ -176,7 +182,9 @@ computeLocalVarsNum = maximum . map go
       AllocClosure InstrAllocClosure {..} -> goVarRef _instrAllocClosureResult
       ExtendClosure InstrExtendClosure {..} -> goVarRef _instrExtendClosureResult
       Call InstrCall {..} -> goVarRef _instrCallResult
+      TailCall {} -> 0
       CallClosures InstrCallClosures {..} -> goVarRef _instrCallClosuresResult
+      TailCallClosures {} -> 0
       Return {} -> 0
       Branch InstrBranch {..} ->
         max
@@ -209,7 +217,8 @@ data ExtraInfo = ExtraInfo
     _extraInfoMaxArgsNum :: Int,
     _extraInfoMaxCallClosuresArgsNum :: Int,
     _extraInfoConstrsNum :: Int,
-    _extraInfoFunctionsNum :: Int
+    _extraInfoFunctionsNum :: Int,
+    _extraInfoSpecialisedApply :: Int
   }
 
 makeLenses ''ExtraInfo
@@ -259,5 +268,6 @@ computeExtraInfo lims tab =
       _extraInfoConstrsNum =
         length (userConstrs tab) + lims ^. limitsBuiltinUIDsNum,
       _extraInfoFunctionsNum =
-        HashMap.size (tab ^. infoFunctions)
+        HashMap.size (tab ^. infoFunctions),
+      _extraInfoSpecialisedApply = lims ^. limitsSpecialisedApply
     }

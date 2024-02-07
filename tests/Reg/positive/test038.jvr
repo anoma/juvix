@@ -18,7 +18,7 @@ function apply_1(*, *) : * {
     true: {
       tmp[0] = arg[1];
       tmp[1] = arg[0];
-      tmp[0] = tcall tmp[1] (tmp[0]), live: (arg[0], arg[1]);
+      tcall tmp[1] (tmp[0]);
     };
     false: {
       prealloc 7, live: (arg[0], arg[1]);
@@ -43,7 +43,7 @@ function apply_2(*, *, *) : * {
         tmp[1] = arg[2];
         tmp[2] = arg[1];
         tmp[3] = arg[0];
-        tmp[1] = tcall tmp[3] (tmp[2], tmp[1]), live: (tmp[0], arg[0], arg[1], arg[2]);
+        tcall tmp[3] (tmp[2], tmp[1]);
       };
       false: {
         tmp[1] = n;
@@ -55,7 +55,7 @@ function apply_2(*, *, *) : * {
             tmp[2] = arg[1];
             tmp[3] = arg[0];
             tmp[2] = call tmp[3] (tmp[2]), live: (tmp[0], tmp[1], arg[0], arg[1], arg[2]);
-            tmp[1] = tcall apply_1 (tmp[2], tmp[1]), live: (tmp[0], arg[0], arg[1], arg[2]);
+            tcall apply_1 (tmp[2], tmp[1]);
           };
           false: {
             prealloc 7, live: (tmp[0], arg[0], arg[1], arg[2]);
@@ -85,7 +85,7 @@ function apply_3(*, *, *, *) : * {
         tmp[2] = arg[2];
         tmp[3] = arg[1];
         tmp[4] = arg[0];
-        tmp[1] = tcall tmp[4] (tmp[3], tmp[2], tmp[1]), live: (tmp[0], arg[0], arg[1], arg[2], arg[3]);
+        tcall tmp[4] (tmp[3], tmp[2], tmp[1]);
       };
       false: {
         tmp[1] = n;
@@ -112,7 +112,7 @@ function apply_3(*, *, *, *) : * {
                 tmp[3] = arg[1];
                 tmp[4] = arg[0];
                 tmp[2] = call tmp[4] (tmp[3], tmp[2]), live: (tmp[0], tmp[1], arg[0], arg[1], arg[2], arg[3]);
-                tmp[1] = tcall apply_1 (tmp[2], tmp[1]), live: (tmp[0], arg[0], arg[1], arg[2], arg[3]);
+                tcall apply_1 (tmp[2], tmp[1]);
               };
               false: {
                 tmp[1] = arg[3];
@@ -120,7 +120,7 @@ function apply_3(*, *, *, *) : * {
                 tmp[3] = arg[1];
                 tmp[4] = arg[0];
                 tmp[3] = call tmp[4] (tmp[3]), live: (tmp[0], tmp[1], tmp[2], arg[0], arg[1], arg[2], arg[3]);
-                tmp[1] = tcall apply_2 (tmp[3], tmp[2], tmp[1]), live: (tmp[0], arg[0], arg[1], arg[2], arg[3]);
+                tcall apply_2 (tmp[3], tmp[2], tmp[1]);
               };
             };
           };
@@ -145,7 +145,7 @@ function apply_4(*, *, *, *, *) : * {
         tmp[3] = arg[2];
         tmp[4] = arg[1];
         tmp[5] = arg[0];
-        tmp[1] = tcall tmp[5] (tmp[4], tmp[3], tmp[2], tmp[1]), live: (tmp[0], arg[0], arg[1], arg[2], arg[3], arg[4]);
+        tcall tmp[5] (tmp[4], tmp[3], tmp[2], tmp[1]);
       };
       false: {
         tmp[1] = n;
@@ -174,7 +174,7 @@ function apply_4(*, *, *, *, *) : * {
                 tmp[4] = arg[1];
                 tmp[5] = arg[0];
                 tmp[2] = call tmp[5] (tmp[4], tmp[3], tmp[2]), live: (tmp[0], tmp[1], arg[0], arg[1], arg[2], arg[3], arg[4]);
-                tmp[1] = tcall apply_1 (tmp[2], tmp[1]), live: (tmp[0], arg[0], arg[1], arg[2], arg[3], arg[4]);
+                tcall apply_1 (tmp[2], tmp[1]);
               };
               false: {
                 tmp[1] = n;
@@ -188,7 +188,7 @@ function apply_4(*, *, *, *, *) : * {
                     tmp[4] = arg[1];
                     tmp[5] = arg[0];
                     tmp[3] = call tmp[5] (tmp[4], tmp[3]), live: (tmp[0], tmp[1], tmp[2], arg[0], arg[1], arg[2], arg[3], arg[4]);
-                    tmp[1] = tcall apply_2 (tmp[3], tmp[2], tmp[1]), live: (tmp[0], arg[0], arg[1], arg[2], arg[3], arg[4]);
+                    tcall apply_2 (tmp[3], tmp[2], tmp[1]);
                   };
                   false: {
                     tmp[1] = arg[4];
@@ -197,7 +197,7 @@ function apply_4(*, *, *, *, *) : * {
                     tmp[4] = arg[1];
                     tmp[5] = arg[0];
                     tmp[4] = call tmp[5] (tmp[4]), live: (tmp[0], tmp[1], tmp[2], tmp[3], arg[0], arg[1], arg[2], arg[3], arg[4]);
-                    tmp[1] = tcall apply_3 (tmp[4], tmp[3], tmp[2], tmp[1]), live: (tmp[0], arg[0], arg[1], arg[2], arg[3], arg[4]);
+                    tcall apply_3 (tmp[4], tmp[3], tmp[2], tmp[1]);
                   };
                 };
               };
@@ -215,7 +215,7 @@ function S(*, *, *) : * {
   tmp[0] = call apply_1 (tmp[1], tmp[0]), live: (arg[0], arg[1], arg[2]);
   tmp[1] = arg[2];
   tmp[2] = arg[0];
-  tmp[0] = tcall apply_2 (tmp[2], tmp[1], tmp[0]), live: (arg[0], arg[1], arg[2]);
+  tcall apply_2 (tmp[2], tmp[1], tmp[0]);
 }
 
 function K(*, *) : * {
@@ -228,7 +228,7 @@ function I(*) : * {
   tmp[0] = arg[0];
   tmp[1] = calloc K ();
   tmp[2] = calloc K ();
-  tmp[0] = tcall S (tmp[2], tmp[1], tmp[0]), live: (arg[0]);
+  tcall S (tmp[2], tmp[1], tmp[0]);
 }
 
 function f3(integer, integer, integer) : integer {
@@ -270,5 +270,5 @@ function main() : * {
   tmp[1] = call apply_3 (tmp[4], tmp[3], tmp[2], tmp[1]), live: (tmp[0]);
   prealloc 2, live: (tmp[0], tmp[1]);
   tmp[2] = calloc K ();
-  tmp[0] = tcall apply_2 (tmp[2], tmp[1], tmp[0]);
+  tcall apply_2 (tmp[2], tmp[1], tmp[0]);
 }

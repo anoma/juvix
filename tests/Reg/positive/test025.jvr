@@ -18,20 +18,20 @@ function f(integer, integer, integer) : integer {
 function app(integer → integer, integer) : integer {
   tmp[0] = arg[1];
   tmp[1] = arg[0];
-  tmp[0] = tcall tmp[1] (tmp[0]), live: (arg[0], arg[1]);
+  tcall tmp[1] (tmp[0]);
 }
 
 function g(*) : * {
   tmp[0] = 1;
   tmp[1] = 2;
   tmp[2] = arg[0];
-  tmp[0] = tccall tmp[2] (tmp[1], tmp[0]), live: (arg[0]);
+  tccall tmp[2] (tmp[1], tmp[0]);
 }
 
 function h(*, *) : * {
   tmp[0] = arg[1];
   tmp[1] = arg[0];
-  tmp[0] = tccall tmp[1] (tmp[0]), live: (arg[0], arg[1]);
+  tccall tmp[1] (tmp[0]);
 }
 
 function inc(integer) : integer {

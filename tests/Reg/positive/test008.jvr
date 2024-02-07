@@ -3,7 +3,7 @@ function loop() : *;
 function main() : *;
 
 function loop() : * {
-  tmp[0] = tcall loop ();
+  tcall loop ();
 }
 
 function main() : * {

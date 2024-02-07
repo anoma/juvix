@@ -88,7 +88,7 @@ function flatten(list) : list {
       tmp[0] = arg[0].cons[1];
       tmp[0] = call flatten (tmp[0]), live: (arg[0]);
       tmp[1] = arg[0].cons[0];
-      tmp[0] = tcall append (tmp[1], tmp[0]), live: (arg[0]);
+      tcall append (tmp[1], tmp[0]);
     };
   };
 }
