@@ -15,7 +15,6 @@ import Path hiding ((<.>), (</>))
 import Path qualified
 import Path.IO hiding (listDirRel, walkDirRel)
 import Path.Internal
-import System.FilePath qualified as FilePath
 
 data FileOrDir
 
@@ -124,23 +123,6 @@ withTempDir' = withSystemTempDir "tmp"
 -- | 'pure True' if the file exists and is executable, 'pure False' otherwise
 isExecutable :: (MonadIO m) => Path b File -> m Bool
 isExecutable f = doesFileExist f &&^ (executable <$> getPermissions f)
-
--- | Split an absolute path into a drive and, perhaps, a path. On POSIX, @/@ is
--- a drive.
--- Remove when we upgrade to path-0.9.5
-splitDrive :: Path Abs t -> (Path Abs Dir, Maybe (Path Rel t))
-splitDrive (Path fp) =
-  let (d, rest) = FilePath.splitDrive fp
-      mRest = if null rest then Nothing else Just (Path rest)
-   in (Path d, mRest)
-
--- | Drop the drive from an absolute path. May result in 'Nothing' if the path
--- is just a drive.
---
--- > dropDrive x = snd (splitDrive x)
--- Remove when we upgrade to path-0.9.5
-dropDrive :: Path Abs t -> Maybe (Path Rel t)
-dropDrive = snd . splitDrive
 
 isPathPrefix :: Path b Dir -> Path b t -> Bool
 isPathPrefix p1 p2 = case L.stripPrefix (toFilePath p1) (toFilePath p2) of

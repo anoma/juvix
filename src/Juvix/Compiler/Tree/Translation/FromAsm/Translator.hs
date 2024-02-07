@@ -1,6 +1,5 @@
 module Juvix.Compiler.Tree.Translation.FromAsm.Translator where
 
-import Data.List qualified as List
 import Juvix.Compiler.Asm.Extra.Base (getCommandLocation)
 import Juvix.Compiler.Asm.Language
 import Juvix.Compiler.Tree.Error
@@ -27,12 +26,12 @@ runTranslator' st m = do
   unless (null (st' ^. stateCode)) $
     throw
       TreeError
-        { _treeErrorLoc = getCommandLocation $ List.head (st' ^. stateCode),
+        { _treeErrorLoc = getCommandLocation $ head' (st' ^. stateCode),
           _treeErrorMsg = "extra instructions"
         }
   return a
   where
-    interp :: Translator m a' -> Sem (State TranslatorState ': r) a'
+    interp :: Translator w a' -> Sem (State TranslatorState ': r) a'
     interp = \case
       NextCommand -> do
         s <- get
@@ -42,8 +41,8 @@ runTranslator' st m = do
               { _treeErrorLoc = s ^. statePrevLoc,
                 _treeErrorMsg = "expected instruction"
               }
-        cmd <- gets (List.head . (^. stateCode))
-        modify' (over stateCode tail)
+        cmd <- gets (head' . (^. stateCode))
+        modify' (over stateCode tail')
         modify' (set statePrevLoc (getCommandLocation cmd))
         return cmd
       HasNextCommand -> do

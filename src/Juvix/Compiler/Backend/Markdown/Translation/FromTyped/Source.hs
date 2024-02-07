@@ -166,7 +166,10 @@ go = do
           modify @ProcessingState $ const newState
           return _processingStateMk
 
-goRender :: (Concrete.PrettyPrint a, Members '[Reader HtmlRender.HtmlOptions, Reader ProcessJuvixBlocksArgs] r) => a -> Sem r Html
+goRender ::
+  (Concrete.PrettyPrint c, Members '[Reader HtmlRender.HtmlOptions, Reader ProcessJuvixBlocksArgs] r) =>
+  c ->
+  Sem r Html
 goRender xs = do
   concreteOpts <- asks @ProcessJuvixBlocksArgs (^. processJuvixBlocksArgsConcreteOpts)
   HtmlRender.ppCodeHtml concreteOpts xs

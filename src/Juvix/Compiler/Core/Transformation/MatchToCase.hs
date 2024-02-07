@@ -1,7 +1,6 @@
 module Juvix.Compiler.Core.Transformation.MatchToCase where
 
 import Data.HashSet qualified as HashSet
-import Data.List qualified as List
 import Juvix.Compiler.Core.Error
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info.LocationInfo
@@ -102,7 +101,7 @@ goMatchToCase recur node = case node of
         where
           pat = err (replicate (length vs) ValueWildcard)
           seq = if length pat == 1 then "" else "sequence "
-          pat' = if length pat == 1 then doc defaultOptions (List.head pat) else docValueSequence pat
+          pat' = if length pat == 1 then doc defaultOptions (head' pat) else docValueSequence pat
           mockFile = $(mkAbsFile "/match-to-case")
           defaultLoc = singletonInterval (mkInitialLoc mockFile)
       r@PatternRow {..} : _
@@ -113,8 +112,8 @@ goMatchToCase recur node = case node of
         -- Section 4, case 3
         -- Select the first column
         tab <- ask
-        let vl = List.head vs
-            vs' = List.tail vs
+        let vl = head' vs
+            vs' = tail' vs
             val = mkVal bindersNum vl
             (col, matrix') = decompose val matrix
             tagsSet = getPatTags col
@@ -125,7 +124,7 @@ goMatchToCase recur node = case node of
                     compileDefault Nothing err bindersNum vs' col matrix'
                 | otherwise -> do
                     -- Section 4, case 3(a)
-                    let ind = lookupConstructorInfo tab (List.head tags) ^. constructorInductive
+                    let ind = lookupConstructorInfo tab (head' tags) ^. constructorInductive
                         ctrsNum = length (lookupInductiveInfo tab ind ^. inductiveConstructors)
                     branches <- mapM (compileBranch err bindersNum vs' col matrix') tags
                     defaultBranch <-
@@ -150,14 +149,14 @@ goMatchToCase recur node = case node of
     decompose :: Node -> PatternMatrix -> ([Pattern], PatternMatrix)
     decompose val matrix = (col, matrix')
       where
-        col = map (List.head . (^. patternRowPatterns)) matrix
+        col = map (head' . (^. patternRowPatterns)) matrix
         matrix' = map updateRow matrix
-        binder = getPatternBinder (List.head col)
+        binder = getPatternBinder (head' col)
 
         updateRow :: PatternRow -> PatternRow
         updateRow row =
           row
-            { _patternRowPatterns = List.tail (row ^. patternRowPatterns),
+            { _patternRowPatterns = tail' (row ^. patternRowPatterns),
               _patternRowIgnoredPatternsNum = max 0 (nIgnored - 1),
               _patternRowBinderChangesRev =
                 if

@@ -1,7 +1,6 @@
 module Juvix.Compiler.Backend.Geb.Translation.FromCore where
 
 import Data.HashMap.Strict qualified as HashMap
-import Data.List qualified as List
 import Juvix.Compiler.Backend.Geb.Extra
 import Juvix.Compiler.Backend.Geb.Language
 import Juvix.Compiler.Core.Data.IdentDependencyInfo qualified as Core
@@ -408,7 +407,7 @@ fromCore tab = case tab ^. Core.infoMain of
         -- `_caseDefault` is the body of those branches which were not present in
         -- `_caseBranches`.
         branches = sortOn (^. Core.caseBranchTag) (_caseBranches ++ ctrBrs)
-        codomainType = convertType (Info.getNodeType (List.head branches ^. Core.caseBranchBody))
+        codomainType = convertType (Info.getNodeType (head' branches ^. Core.caseBranchBody))
 
         mkCtrBranch :: Core.ConstructorInfo -> Core.CaseBranch
         mkCtrBranch ci =

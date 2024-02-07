@@ -1,7 +1,6 @@
 module Juvix.Compiler.Backend.C.Translation.FromReg where
 
 import Data.HashMap.Strict qualified as HashMap
-import Data.List qualified as List
 import Juvix.Compiler.Backend
 import Juvix.Compiler.Backend.C.Data.CBuilder
 import Juvix.Compiler.Backend.C.Data.Types
@@ -348,7 +347,7 @@ fromRegInstr bNoStack info = \case
         Reg.MemRepUnit ->
           stmtsAssign (fromVarRef _instrAllocResult) (macroVar "OBJ_UNIT")
         Reg.MemRepUnpacked {} ->
-          stmtsAssign (fromVarRef _instrAllocResult) (fromValue (List.head _instrAllocArgs))
+          stmtsAssign (fromVarRef _instrAllocResult) (fromValue (head' _instrAllocArgs))
 
     fromAllocClosure :: Reg.InstrAllocClosure -> [Statement]
     fromAllocClosure Reg.InstrAllocClosure {..} =

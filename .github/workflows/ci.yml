@@ -52,6 +52,7 @@ jobs:
             --ghc-opt -XStandaloneDeriving
             --ghc-opt -XTemplateHaskell
             --ghc-opt -XUnicodeSyntax
+            --ghc-opt -XBangPatterns
 
   build-and-test-linux:
     runs-on: ubuntu-22.04

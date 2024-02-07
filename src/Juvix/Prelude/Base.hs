@@ -1,9 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-
-{-# HLINT ignore "Avoid restricted extensions" #-}
-{-# HLINT ignore "Avoid restricted flags" #-}
-
 module Juvix.Prelude.Base
   ( module Juvix.Prelude.Base,
     module Control.Applicative,
@@ -117,7 +111,7 @@ import Data.Int
 import Data.IntMap.Strict (IntMap)
 import Data.IntMap.Strict qualified as IntMap
 import Data.IntSet (IntSet)
-import Data.List.Extra hiding (allSame, foldr1, groupSortOn, head, last, mconcatMap, replicate)
+import Data.List.Extra hiding (allSame, foldr1, groupSortOn, head, last, mconcatMap, replicate, unzip)
 import Data.List.Extra qualified as List
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.List.NonEmpty.Extra
@@ -148,9 +142,9 @@ import Data.String
 import Data.Text (Text, pack, strip, unpack)
 import Data.Text qualified as Text
 import Data.Text.Encoding
-import Data.Text.IO hiding (appendFile, putStr, putStrLn, readFile, writeFile)
+import Data.Text.IO hiding (appendFile, getContents, getLine, hGetContents, hGetLine, hPutStr, hPutStrLn, interact, putStr, putStrLn, readFile, writeFile)
 import Data.Text.IO qualified as Text
-import Data.Text.IO.Utf8 hiding (writeFile)
+import Data.Text.IO.Utf8 hiding (putStr, putStrLn, readFile, writeFile)
 import Data.Text.IO.Utf8 qualified as Utf8
 import Data.Traversable
 import Data.Tuple.Extra hiding (both)
@@ -373,6 +367,16 @@ zip4Exact _ _ _ _ = error "zip4Exact"
 
 nonEmptyUnsnoc :: NonEmpty a -> (Maybe (NonEmpty a), a)
 nonEmptyUnsnoc e = (NonEmpty.nonEmpty (NonEmpty.init e), NonEmpty.last e)
+
+tail' :: (HasCallStack) => [a] -> [a]
+tail' = \case
+  [] -> impossible
+  _ : xs -> xs
+
+head' :: (HasCallStack) => [a] -> a
+head' = \case
+  [] -> impossible
+  x : _ -> x
 
 nonEmpty' :: (HasCallStack) => [a] -> NonEmpty a
 nonEmpty' = fromJust . nonEmpty
@@ -598,6 +602,10 @@ ensureLn t =
       '\n' -> t
       _ -> Text.snoc t '\n'
 
-writeFileEnsureLn :: (MonadMask m, MonadIO m) => Path Abs File -> Text -> m ()
-writeFileEnsureLn p = Utf8.writeFile (toFilePath p)
+writeFileEnsureLn :: (MonadIO m) => Path Abs File -> Text -> m ()
+writeFileEnsureLn p = liftIO . Utf8.writeFile (toFilePath p)
 {-# INLINE writeFileEnsureLn #-}
+
+-- TODO: change FilePath to Path Abs File
+readFile :: (MonadIO m) => FilePath -> m Text
+readFile = liftIO . Utf8.readFile

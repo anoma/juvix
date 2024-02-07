@@ -10,8 +10,10 @@ import Control.Monad.Except qualified as Except
 import Control.Monad.Reader qualified as Reader
 import Control.Monad.State.Strict qualified as State
 import Control.Monad.Trans.Class (lift)
+import Control.Monad.Trans.Reader (mapReaderT)
 import Data.String.Interpolate (i, __i)
 import Evaluator
+import HaskelineJB
 import Juvix.Compiler.Concrete.Data.Scope (scopePath)
 import Juvix.Compiler.Concrete.Data.Scope qualified as Scoped
 import Juvix.Compiler.Concrete.Data.ScopedName (absTopModulePath)
@@ -337,7 +339,7 @@ printDefinition = replParseIdentifiers >=> printIdentifiers
                 KNameFixity -> impossible
                 KNameAlias -> impossible
           where
-            printLocation :: (HasLoc s) => s -> Repl ()
+            printLocation :: (HasLoc c) => c -> Repl ()
             printLocation def = do
               s' <- ppConcrete s
               let txt :: Text = " is " <> prettyText (nameKindWithArticle (getNameKind s)) <> " defined at " <> prettyText (getLoc def)
@@ -404,12 +406,33 @@ replCommands opts = catchable ++ nonCatchable
           ("dev", dev)
         ]
 
+mapInputT_ :: (m () -> m ()) -> InputT m () -> InputT m ()
+mapInputT_ f =
+  mkInputT
+    . mapReaderT
+      ( mapReaderT
+          ( mapReaderT
+              (mapReaderT (mapReaderT f))
+          )
+      )
+    . unInputT
+
 catchAll :: Repl () -> Repl ()
 catchAll = Repline.dontCrash . catchJuvixError
   where
     catchJuvixError :: Repl () -> Repl ()
-    catchJuvixError (HaskelineT m) = HaskelineT (mapInputT_ catchErrorS m)
+    catchJuvixError = mkHaskelineT . mapInputT_ catchErrorS . unHaskelineT
       where
+        printErrorS :: JuvixError -> ReplS ()
+        printErrorS e = do
+          opts <- State.gets (^. replStateGlobalOptions)
+          hasAnsi <- liftIO (Ansi.hSupportsANSIColor stderr)
+          liftIO
+            . hPutStrLn stderr
+            . run
+            . runReader (project' @GenericOptions opts)
+            $ Error.render (not (opts ^. globalNoColors) && hasAnsi) False e
+
         catchErrorS :: ReplS () -> ReplS ()
         catchErrorS = (`Except.catchError` printErrorS)
 
@@ -582,12 +605,6 @@ renderOut = render'
 
 renderOutLn :: (P.HasAnsiBackend a, P.HasTextBackend a) => a -> Repl ()
 renderOutLn t = renderOut t >> replNewline
-
-printErrorS :: JuvixError -> ReplS ()
-printErrorS e = do
-  opts <- State.gets (^. replStateGlobalOptions)
-  hasAnsi <- liftIO (Ansi.hSupportsANSIColor stderr)
-  liftIO $ hPutStrLn stderr $ run (runReader (project' @GenericOptions opts) (Error.render (not (opts ^. globalNoColors) && hasAnsi) False e))
 
 runTransformations ::
   forall r.

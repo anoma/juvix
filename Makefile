@@ -97,6 +97,7 @@ ormolu:
 		--ghc-opt -XMultiParamTypeClasses  \
 		--ghc-opt -XTemplateHaskell \
 		--ghc-opt -XImportQualifiedPost \
+		--ghc-opt -XBangPatterns \
 			--mode ${ORMOLUMODE} \
 		$(ORMOLUFILES)
 
