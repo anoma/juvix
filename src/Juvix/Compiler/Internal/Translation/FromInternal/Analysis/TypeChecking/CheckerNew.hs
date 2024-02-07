@@ -1120,7 +1120,7 @@ holesHelper mhint expr = do
     extendCtx funParam arg' = whenJust (funParam ^. paramName) $ \nm -> do
       modify' (over appBuilderTypeCtx (set (at nm) (Just arg')))
 
-    applyCtx :: (Members '[State AppBuilder, NameIdGen] r', HasExpressions expr) => expr -> Sem r' expr
+    applyCtx :: (Members '[State AppBuilder, NameIdGen] r', HasExpressions exp) => exp -> Sem r' exp
     applyCtx x = do
       s <- gets (^. appBuilderTypeCtx)
       substitutionE s x

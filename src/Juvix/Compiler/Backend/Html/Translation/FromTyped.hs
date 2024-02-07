@@ -632,8 +632,8 @@ sourceAndSelfLink tmp name = do
              $ "#"
          )
 
-tagIden :: (IsString a) => NameId -> a
-tagIden x = fromText $ prettyText x
+tagIden :: (IsString c) => NameId -> c
+tagIden = fromText . prettyText
 
-selfLinkName :: (IsString a) => NameId -> a
+selfLinkName :: (IsString c) => NameId -> c
 selfLinkName x = fromText $ "#" <> tagIden x

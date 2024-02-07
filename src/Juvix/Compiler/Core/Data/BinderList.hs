@@ -66,9 +66,9 @@ lookupsSortedRev bl = go [] 0 bl
         let skipped = v ^. varIndex - off
             off' = off + skipped
             ctx' = drop skipped ctx
-         in go ((v, head' ctx') : acc) off' ctx' vs
-    head' :: BinderList a -> a
-    head' = lookup 0
+         in go ((v, bhead' ctx') : acc) off' ctx' vs
+    bhead' :: BinderList a -> a
+    bhead' = lookup 0
 
 lookupMay :: Index -> BinderList a -> Maybe a
 lookupMay idx bl

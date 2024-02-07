@@ -214,9 +214,9 @@ renderTree = go
 
 -- | printed without comments
 ppCodeHtml ::
-  (PrettyPrint a, Members '[Reader HtmlOptions] r) =>
+  (PrettyPrint c, Members '[Reader HtmlOptions] r) =>
   Options ->
-  a ->
+  c ->
   Sem r Html
 ppCodeHtml opts = ppCodeHtmlHelper opts Nothing
 
@@ -238,29 +238,29 @@ docToHtml d = ppCodeHtml' <$> ask
         docStream' = layoutPretty defaultLayoutOptions d
 
 ppCodeHtmlHelper ::
-  (PrettyPrint a, Members '[Reader HtmlOptions] r) =>
+  (PrettyPrint c, Members '[Reader HtmlOptions] r) =>
   Options ->
   Maybe FileComments ->
-  a ->
+  c ->
   Sem r Html
 ppCodeHtmlHelper opts cs = docToHtml . docHelper cs opts
 
 ppCodeHtmlComments ::
-  (HasLoc a, PrettyPrint a, Members '[Reader HtmlOptions] r) =>
+  (HasLoc c, PrettyPrint c, Members '[Reader HtmlOptions] r) =>
   Options ->
   Comments ->
-  a ->
+  c ->
   Sem r Html
 ppCodeHtmlComments opts cs x = ppCodeHtmlHelper opts (Just (fileComments (getLoc x ^. intervalFile) cs)) x
 
-ppCodeHtmlInternal :: (Members '[Reader HtmlOptions] r, Internal.PrettyCode a) => a -> Sem r Html
+ppCodeHtmlInternal :: (Members '[Reader HtmlOptions] r, Internal.PrettyCode c) => c -> Sem r Html
 ppCodeHtmlInternal x = do
   o <- ask
   return (ppCodeHtmlInternal' o Internal.defaultOptions x)
   where
-    ppCodeHtmlInternal' :: (Internal.PrettyCode a) => HtmlOptions -> Internal.Options -> a -> Html
+    ppCodeHtmlInternal' :: (Internal.PrettyCode c) => HtmlOptions -> Internal.Options -> c -> Html
     ppCodeHtmlInternal' htmlOpts opts = run . runReader htmlOpts . renderTree . treeForm . docStreamInternal' opts
-    docStreamInternal' :: (Internal.PrettyCode a) => Internal.Options -> a -> SimpleDocStream Ann
+    docStreamInternal' :: (Internal.PrettyCode c) => Internal.Options -> c -> SimpleDocStream Ann
     docStreamInternal' opts m = layoutPretty defaultLayoutOptions (Internal.runPrettyCode opts m)
 
 go :: (Members '[Reader HtmlOptions] r) => SimpleDocTree Ann -> Sem r Html

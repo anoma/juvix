@@ -1,7 +1,6 @@
 module Juvix.Compiler.Core.Transformation.NatToPrimInt (natToPrimInt) where
 
 import Data.HashMap.Strict qualified as HashMap
-import Data.List qualified as List
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.NameInfo
@@ -84,7 +83,7 @@ convertNode md = rmap go
                         (go (recur . (BCAdd 1 :)) br)
                         (go (recur . ([BCAdd 1, BCRemove (BinderRemove binder subNode)] ++)) _caseBranchBody)
                     where
-                      binder = List.head _caseBranchBinders
+                      binder = head' _caseBranchBinders
                       name = binder ^. binderName
                       binder' = over binderType (go recur) binder
                       subNode = mkBuiltinApp' OpIntSub [mkVar (Info.singleton (NameInfo name)) 0, mkConstant' (ConstInteger 1)]
