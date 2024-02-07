@@ -8,7 +8,7 @@ import Effectful.Writer.Static.Local qualified as E
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Tree.Data.InfoTable
 import Juvix.Compiler.Tree.Error
-import Juvix.Compiler.Tree.Evaluator (EvalError (..), printValue, valueToNode, toTreeError)
+import Juvix.Compiler.Tree.Evaluator (EvalError (..), printValue, toTreeError, valueToNode)
 import Juvix.Compiler.Tree.Extra.Base
 import Juvix.Compiler.Tree.Language hiding (Output, ask, asks, mapError, output, runError)
 import Juvix.Compiler.Tree.Language.Value
