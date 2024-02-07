@@ -146,10 +146,10 @@ eval inistack initerm =
           ParsedAutoConsCell a -> goAutoConsCell a
           ParsedOperatorCell o -> goOperatorCell o
           ParsedStdlibCallCell o -> do
-            ignore <- asks (^. evalIgnoreStdlibCalls)
+            intercept' <- asks (^. evalInterceptStdlibCalls)
             if
-                | ignore -> goOperatorCell (o ^. stdlibCallRaw)
-                | otherwise -> goStdlibCall (o ^. stdlibCallCell)
+                | intercept' -> goStdlibCall (o ^. stdlibCallCell)
+                | otherwise -> goOperatorCell (o ^. stdlibCallRaw)
       where
         loc :: Maybe Interval
         loc = term ^. termLoc

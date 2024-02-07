@@ -3,6 +3,7 @@ module Juvix.Compiler.Nockma.Translation.FromTree where
 import Juvix.Compiler.Nockma.Language.Path
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Stdlib
+import Juvix.Compiler.Nockma.StdlibFunction
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Tree.Data.InfoTable qualified as Tree
 import Juvix.Compiler.Tree.Language qualified as Tree
@@ -448,13 +449,13 @@ extendClosure Tree.NodeExtendClosure {..} = do
 
 callStdlib :: StdlibFunction -> [Term Natural] -> Term Natural
 callStdlib fun args =
-  let fPath = stdlibPath fun
+  let fPath = reallyoldstdlibPath fun
       getFunCode = OpCall # fPath # (OpAddress # stackPath StandardLibrary)
       adjustArgs = case nonEmpty args of
-        Just args' -> OpReplace # ([R, L] # foldTerms args')
-        Nothing -> OpAddress # emptyPath
+        Just args' -> OpReplace # ([R, L] # foldTerms args') # (OpAddress # [L])
+        Nothing -> OpAddress # [L]
       callFn = OpCall # [L] # adjustArgs
-      callCell = set cellCall (Just meta) (OpPush #. (getFunCode # callFn))
+      callCell = set cellCall (Just meta) (OpPush #. (getFunCode # callFn))   -- [fun ... ]
       meta =
         StdlibCall
           { _stdlibCallArgs = maybe nockNil' foldTerms (nonEmpty args),
@@ -534,7 +535,7 @@ initStack defs = makeList (initSubStack <$> allElements)
     initSubStack = \case
       Args -> nockNil'
       TempStack -> nockNil'
-      StandardLibrary -> stdlib
+      StandardLibrary -> oldstdlib
       FunctionsLibrary -> makeList defs
 
 runCompilerWith :: CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> Cell Natural
