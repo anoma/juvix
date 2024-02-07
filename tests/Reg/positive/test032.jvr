@@ -1,0 +1,263 @@
+type Pair {
+  pair : (*, *) → Pair;
+}
+
+function toInt((* → *, *) → *) : integer;
+function fib((* → *, *) → *) : (* → *, *) → *;
+function main() : *;
+function compose(* → *, * → *, *) : *;
+function zero(* → *, *) : *;
+function num(integer, * → *, *) : *;
+function succ((* → *, *) → *, * → *) : * → *;
+function cadd((* → *, *) → *, (* → *, *) → *, * → *) : * → *;
+function cmul((* → *, *) → *, (* → *, *) → *, * → *) : * → *;
+function const(*, *) : *;
+function isZero((* → *, *) → *) : bool;
+function uncurry(*, * → *, *) : *;
+function pred_step(Pair) : Pair;
+function pred((* → *, *) → *) : (* → *, *) → *;
+function inc(integer) : integer;
+
+function toInt((* → *, *) → *) : integer {
+  prealloc 2, live: (arg[0]);
+  tmp[0] = 0;
+  tmp[1] = calloc inc ();
+  tmp[2] = arg[0];
+  tmp[0] = tcall tmp[2] (tmp[1], tmp[0]), live: (arg[0]);
+}
+
+function fib((* → *, *) → *) : (* → *, *) → * {
+  tmp[1] = arg[0];
+  tmp[1] = call isZero (tmp[1]), live: (arg[0]);
+  br tmp[1] {
+    true: {
+      prealloc 2, live: (arg[0]);
+      tmp[1] = calloc zero ();
+      ret tmp[1];
+    }
+    false: {
+      tmp[1] = arg[0];
+      tmp[1] = call pred (tmp[1]), live: (arg[0]);
+      {
+        tmp[0] = tmp[1];
+        tmp[1] = tmp[0];
+        tmp[1] = call isZero (tmp[1]), live: (tmp[0], arg[0]);
+        br tmp[1] {
+          true: {
+            prealloc 8, live: (tmp[0], arg[0]);
+            tmp[1] = calloc zero ();
+            tmp[1] = calloc succ (tmp[1]);
+            tmp[1] = calloc uncurry (tmp[1]);
+            ret tmp[1];
+          }
+          false: {
+            tmp[1] = tmp[0];
+            tmp[1] = call pred (tmp[1]), live: (tmp[0], arg[0]);
+            tmp[1] = call fib (tmp[1]), live: (tmp[0], arg[0]);
+            tmp[2] = tmp[0];
+            tmp[2] = call fib (tmp[2]), live: (tmp[0], tmp[1], arg[0]);
+            prealloc 7, live: (tmp[0], tmp[1], tmp[2], arg[0]);
+            tmp[1] = calloc cadd (tmp[2], tmp[1]);
+            tmp[1] = calloc uncurry (tmp[1]);
+            ret tmp[1];
+          }
+        };
+      };
+    }
+  };
+}
+
+function main() : * {
+  prealloc 3;
+  tmp[0] = 7;
+  tmp[0] = calloc num (tmp[0]);
+  tmp[0] = call toInt (tmp[0]);
+  prealloc 13, live: (tmp[0]);
+  trace tmp[0];
+  nop;
+  tmp[0] = 3;
+  tmp[0] = calloc num (tmp[0]);
+  tmp[1] = 7;
+  tmp[1] = calloc num (tmp[1]);
+  tmp[0] = calloc cmul (tmp[1], tmp[0]);
+  tmp[0] = calloc uncurry (tmp[0]);
+  tmp[0] = call toInt (tmp[0]);
+  prealloc 3, live: (tmp[0]);
+  trace tmp[0];
+  nop;
+  tmp[0] = 7;
+  tmp[0] = calloc num (tmp[0]);
+  tmp[0] = call pred (tmp[0]);
+  tmp[0] = call toInt (tmp[0]);
+  prealloc 3, live: (tmp[0]);
+  trace tmp[0];
+  nop;
+  tmp[0] = 5;
+  tmp[0] = calloc num (tmp[0]);
+  tmp[0] = call fib (tmp[0]);
+  tmp[0] = call toInt (tmp[0]);
+  prealloc 3, live: (tmp[0]);
+  trace tmp[0];
+  nop;
+  tmp[0] = 6;
+  tmp[0] = calloc num (tmp[0]);
+  tmp[0] = call fib (tmp[0]);
+  tmp[0] = call toInt (tmp[0]);
+  prealloc 3, live: (tmp[0]);
+  trace tmp[0];
+  nop;
+  tmp[0] = 7;
+  tmp[0] = calloc num (tmp[0]);
+  tmp[0] = call fib (tmp[0]);
+  tmp[0] = call toInt (tmp[0]);
+  prealloc 3, live: (tmp[0]);
+  trace tmp[0];
+  nop;
+  tmp[0] = 8;
+  tmp[0] = calloc num (tmp[0]);
+  tmp[0] = call fib (tmp[0]);
+  tmp[0] = call toInt (tmp[0]);
+  trace tmp[0];
+  nop;
+  tmp[0] = void;
+  ret tmp[0];
+}
+
+function compose(* → *, * → *, *) : * {
+  tmp[0] = arg[2];
+  tmp[1] = arg[1];
+  tmp[0] = call tmp[1] (tmp[0]), live: (arg[0], arg[1], arg[2]);
+  tmp[1] = arg[0];
+  tmp[0] = tcall tmp[1] (tmp[0]), live: (arg[0], arg[1], arg[2]);
+}
+
+function zero(* → *, *) : * {
+  tmp[0] = arg[1];
+  ret tmp[0];
+}
+
+function num(integer, * → *, *) : * {
+  tmp[0] = arg[0];
+  tmp[1] = 0;
+  tmp[0] = eq tmp[1] tmp[0];
+  br tmp[0] {
+    true: {
+      tmp[0] = arg[2];
+      tmp[1] = arg[1];
+      tmp[0] = tcall zero (tmp[1], tmp[0]), live: (arg[0], arg[1], arg[2]);
+    }
+    false: {
+      prealloc 4, live: (arg[0], arg[1], arg[2]);
+      tmp[0] = arg[2];
+      tmp[1] = arg[1];
+      tmp[2] = 1;
+      tmp[3] = arg[0];
+      tmp[2] = sub tmp[3] tmp[2];
+      tmp[1] = calloc num (tmp[2], tmp[1]);
+      tmp[2] = arg[1];
+      tmp[0] = tcall compose (tmp[2], tmp[1], tmp[0]), live: (arg[0], arg[1], arg[2]);
+    }
+  };
+}
+
+function succ((* → *, *) → *, * → *) : * → * {
+  prealloc 9, live: (arg[0], arg[1]);
+  tmp[0] = arg[1];
+  tmp[1] = arg[0];
+  tmp[0] = cextend tmp[1] (tmp[0]);
+  tmp[1] = arg[1];
+  tmp[0] = calloc compose (tmp[1], tmp[0]);
+  ret tmp[0];
+}
+
+function cadd((* → *, *) → *, (* → *, *) → *, * → *) : * → * {
+  prealloc 14, live: (arg[0], arg[1], arg[2]);
+  tmp[0] = arg[2];
+  tmp[1] = arg[1];
+  tmp[0] = cextend tmp[1] (tmp[0]);
+  tmp[1] = arg[2];
+  tmp[2] = arg[0];
+  tmp[1] = cextend tmp[2] (tmp[1]);
+  tmp[0] = calloc compose (tmp[1], tmp[0]);
+  ret tmp[0];
+}
+
+function cmul((* → *, *) → *, (* → *, *) → *, * → *) : * → * {
+  prealloc 10, live: (arg[0], arg[1], arg[2]);
+  tmp[0] = arg[2];
+  tmp[1] = arg[1];
+  tmp[0] = cextend tmp[1] (tmp[0]);
+  tmp[1] = arg[0];
+  tmp[0] = cextend tmp[1] (tmp[0]);
+  ret tmp[0];
+}
+
+function const(*, *) : * {
+  tmp[0] = arg[0];
+  ret tmp[0];
+}
+
+function isZero((* → *, *) → *) : bool {
+  prealloc 3, live: (arg[0]);
+  tmp[0] = true;
+  tmp[1] = false;
+  tmp[1] = calloc const (tmp[1]);
+  tmp[2] = arg[0];
+  tmp[0] = tcall tmp[2] (tmp[1], tmp[0]), live: (arg[0]);
+}
+
+function uncurry(*, * → *, *) : * {
+  tmp[0] = arg[2];
+  tmp[1] = arg[1];
+  tmp[2] = arg[0];
+  tmp[0] = tccall tmp[2] (tmp[1], tmp[0]), live: (arg[0], arg[1], arg[2]);
+}
+
+function pred_step(Pair) : Pair {
+  tmp[0] = arg[0].pair[1];
+  tmp[0] = call isZero (tmp[0]), live: (arg[0]);
+  br tmp[0] {
+    true: {
+      prealloc 9, live: (arg[0]);
+      tmp[0] = arg[0].pair[1];
+      tmp[0] = calloc succ (tmp[0]);
+      tmp[0] = calloc uncurry (tmp[0]);
+      tmp[1] = arg[0].pair[0];
+      tmp[0] = alloc pair (tmp[1], tmp[0]);
+      ret tmp[0];
+    }
+    false: {
+      prealloc 15, live: (arg[0]);
+      tmp[0] = arg[0].pair[1];
+      tmp[0] = calloc succ (tmp[0]);
+      tmp[0] = calloc uncurry (tmp[0]);
+      tmp[1] = arg[0].pair[0];
+      tmp[1] = calloc succ (tmp[1]);
+      tmp[1] = calloc uncurry (tmp[1]);
+      tmp[0] = alloc pair (tmp[1], tmp[0]);
+      ret tmp[0];
+    }
+  };
+}
+
+function pred((* → *, *) → *) : (* → *, *) → * {
+  prealloc 9, live: (arg[0]);
+  tmp[1] = calloc zero ();
+  tmp[2] = calloc zero ();
+  tmp[1] = alloc pair (tmp[2], tmp[1]);
+  tmp[2] = calloc pred_step ();
+  tmp[3] = arg[0];
+  tmp[1] = call tmp[3] (tmp[2], tmp[1]), live: (arg[0]);
+  {
+    tmp[0] = tmp[1];
+    tmp[1] = tmp[0].pair[0];
+  };
+  ret tmp[1];
+}
+
+function inc(integer) : integer {
+  tmp[0] = arg[0];
+  tmp[1] = 1;
+  tmp[0] = add tmp[1] tmp[0];
+  ret tmp[0];
+}

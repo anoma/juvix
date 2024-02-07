@@ -1,0 +1,28 @@
+
+function sum(integer) : integer;
+function main() : *;
+
+function sum(integer) : integer {
+  tmp[0] = arg[0];
+  tmp[1] = 0;
+  tmp[0] = eq tmp[1] tmp[0];
+  br tmp[0] {
+    true: {
+      tmp[0] = 0;
+    }
+    false: {
+      tmp[0] = 1;
+      tmp[1] = arg[0];
+      tmp[0] = sub tmp[1] tmp[0];
+      tmp[0] = call sum (tmp[0]), live: (arg[0]);
+      tmp[1] = arg[0];
+      tmp[0] = add tmp[1] tmp[0];
+    }
+  };
+  ret tmp[0];
+}
+
+function main() : * {
+  tmp[0] = 1000;
+  tmp[0] = tcall sum (tmp[0]);
+}

@@ -1,0 +1,36 @@
+
+function multiply(integer, integer) : integer;
+function plus(integer, integer) : integer;
+function calculate(integer, integer, integer) : integer;
+function main() : *;
+
+function multiply(integer, integer) : integer {
+  tmp[0] = arg[0];
+  tmp[1] = arg[1];
+  tmp[0] = mul tmp[1] tmp[0];
+  ret tmp[0];
+}
+
+function plus(integer, integer) : integer {
+  tmp[0] = arg[0];
+  tmp[1] = arg[1];
+  tmp[0] = add tmp[1] tmp[0];
+  ret tmp[0];
+}
+
+function calculate(integer, integer, integer) : integer {
+  tmp[0] = arg[0];
+  tmp[1] = arg[1];
+  tmp[2] = arg[2];
+  tmp[1] = call multiply (tmp[2], tmp[1]), live: (tmp[0], arg[0], arg[1], arg[2]);
+  tmp[0] = tcall plus (tmp[1], tmp[0]), live: (arg[0], arg[1], arg[2]);
+}
+
+function main() : * {
+  prealloc 4;
+  tmp[0] = 2;
+  tmp[1] = 3;
+  tmp[2] = 5;
+  tmp[1] = calloc calculate (tmp[2], tmp[1]);
+  tmp[0] = tcall tmp[1] (tmp[0]);
+}

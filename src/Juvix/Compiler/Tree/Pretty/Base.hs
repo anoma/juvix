@@ -373,9 +373,9 @@ ppInductive tab InductiveInfo {..} = do
 
 ppInfoTable :: (Member (Reader Options) r) => (t -> Sem r (Doc Ann)) -> InfoTable' t e -> Sem r (Doc Ann)
 ppInfoTable ppCode' tab@InfoTable {..} = do
-  inds <- mapM (ppInductive tab) (HashMap.elems (filterOutBuiltins _infoInductives))
-  funsigs <- mapM ppFunSig (HashMap.elems _infoFunctions)
-  funs <- mapM (ppFunInfo ppCode') (HashMap.elems _infoFunctions)
+  inds <- mapM (ppInductive tab) (sortOn (^. inductiveLocation) $ HashMap.elems (filterOutBuiltins _infoInductives))
+  funsigs <- mapM ppFunSig (sortOn (^. functionLocation) $ HashMap.elems _infoFunctions)
+  funs <- mapM (ppFunInfo ppCode') (sortOn (^. functionLocation) $ HashMap.elems _infoFunctions)
   return $ vcat (map (<> line) inds) <> line <> vcat funsigs <> line <> line <> vcat (map (<> line) funs)
   where
     filterOutBuiltins :: HashMap Symbol InductiveInfo -> HashMap Symbol InductiveInfo

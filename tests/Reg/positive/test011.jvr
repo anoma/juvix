@@ -1,0 +1,77 @@
+
+function sum'(integer, integer) : integer;
+function sum(integer) : integer;
+function fact'(integer, integer) : integer;
+function fact(integer) : integer;
+function main() : *;
+
+function sum'(integer, integer) : integer {
+  tmp[0] = arg[0];
+  tmp[1] = 0;
+  tmp[0] = eq tmp[1] tmp[0];
+  br tmp[0] {
+    true: {
+      tmp[0] = arg[1];
+      ret tmp[0];
+    }
+    false: {
+      tmp[0] = arg[1];
+      tmp[1] = arg[0];
+      tmp[0] = add tmp[1] tmp[0];
+      tmp[1] = 1;
+      tmp[2] = arg[0];
+      tmp[1] = sub tmp[2] tmp[1];
+      tmp[0] = tcall sum' (tmp[1], tmp[0]), live: (arg[0], arg[1]);
+    }
+  };
+}
+
+function sum(integer) : integer {
+  tmp[0] = 0;
+  tmp[1] = arg[0];
+  tmp[0] = tcall sum' (tmp[1], tmp[0]), live: (arg[0]);
+}
+
+function fact'(integer, integer) : integer {
+  tmp[0] = arg[0];
+  tmp[1] = 0;
+  tmp[0] = eq tmp[1] tmp[0];
+  br tmp[0] {
+    true: {
+      tmp[0] = arg[1];
+      ret tmp[0];
+    }
+    false: {
+      tmp[0] = arg[0];
+      tmp[1] = arg[1];
+      tmp[0] = mul tmp[1] tmp[0];
+      tmp[1] = 1;
+      tmp[2] = arg[0];
+      tmp[1] = sub tmp[2] tmp[1];
+      tmp[0] = tcall fact' (tmp[1], tmp[0]), live: (arg[0], arg[1]);
+    }
+  };
+}
+
+function fact(integer) : integer {
+  tmp[0] = 1;
+  tmp[1] = arg[0];
+  tmp[0] = tcall fact' (tmp[1], tmp[0]), live: (arg[0]);
+}
+
+function main() : * {
+  tmp[0] = 1000;
+  tmp[0] = call sum (tmp[0]);
+  trace tmp[0];
+  nop;
+  tmp[0] = 5;
+  tmp[0] = call fact (tmp[0]);
+  trace tmp[0];
+  nop;
+  tmp[0] = 10;
+  tmp[0] = call fact (tmp[0]);
+  trace tmp[0];
+  nop;
+  tmp[0] = 12;
+  tmp[0] = tcall fact (tmp[0]);
+}

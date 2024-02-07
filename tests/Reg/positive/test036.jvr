@@ -1,0 +1,139 @@
+type stream {
+  cons : (integer, unit → stream) → stream;
+}
+
+function force(unit → stream) : stream;
+function filter(integer → bool, unit → stream, unit) : stream;
+function nth(integer, unit → stream) : integer;
+function numbers(integer, unit) : stream;
+function indivisible(integer, integer) : bool;
+function eratostenes(unit → stream, unit) : stream;
+function primes(unit) : stream;
+function main() : *;
+
+function force(f : unit → stream) : stream {
+  tmp[0] = unit;
+  tmp[1] = f;
+  tmp[0] = tcall tmp[1] (tmp[0]), live: (arg[0]);
+}
+
+function filter(f : integer → bool, s : unit → stream, unit) : stream {
+  tmp[1] = s;
+  tmp[1] = call force (tmp[1]), live: (arg[0], arg[1], arg[2]);
+  {
+    s1 = tmp[1];
+    tmp[1] = s1.cons[0];
+    tmp[2] = f;
+    tmp[1] = call tmp[2] (tmp[1]), live: (tmp[0], arg[0], arg[1], arg[2]);
+    br tmp[1] {
+      true: {
+        prealloc 7, live: (tmp[0], arg[0], arg[1], arg[2]);
+        tmp[1] = s1.cons[1];
+        tmp[2] = f;
+        tmp[1] = calloc filter (tmp[2], tmp[1]);
+        tmp[2] = s1.cons[0];
+        tmp[1] = alloc cons (tmp[2], tmp[1]);
+        ret tmp[1];
+      }
+      false: {
+        tmp[1] = unit;
+        tmp[2] = s1.cons[1];
+        tmp[3] = f;
+        tmp[1] = tcall filter (tmp[3], tmp[2], tmp[1]), live: (tmp[0], arg[0], arg[1], arg[2]);
+      }
+    };
+  };
+}
+
+function nth(n : integer, s : unit → stream) : integer {
+  tmp[1] = s;
+  tmp[1] = call force (tmp[1]), live: (arg[0], arg[1]);
+  {
+    s1 = tmp[1];
+    tmp[1] = n;
+    tmp[2] = 0;
+    tmp[1] = eq tmp[2] tmp[1];
+    br tmp[1] {
+      true: {
+        tmp[1] = s1.cons[0];
+        ret tmp[1];
+      }
+      false: {
+        tmp[1] = s1.cons[1];
+        tmp[2] = 1;
+        tmp[3] = n;
+        tmp[2] = sub tmp[3] tmp[2];
+        tmp[1] = tcall nth (tmp[2], tmp[1]), live: (tmp[0], arg[0], arg[1]);
+      }
+    };
+  };
+}
+
+function numbers(n : integer, unit) : stream {
+  prealloc 6, live: (arg[0], arg[1]);
+  tmp[0] = n;
+  tmp[1] = 1;
+  tmp[0] = add tmp[1] tmp[0];
+  tmp[0] = calloc numbers (tmp[0]);
+  tmp[1] = n;
+  tmp[0] = alloc cons (tmp[1], tmp[0]);
+  ret tmp[0];
+}
+
+function indivisible(n : integer, m : integer) : bool {
+  tmp[0] = n;
+  tmp[1] = m;
+  tmp[0] = mod tmp[1] tmp[0];
+  tmp[1] = 0;
+  tmp[0] = eq tmp[1] tmp[0];
+  br tmp[0] {
+    true: {
+      tmp[0] = false;
+      ret tmp[0];
+    }
+    false: {
+      tmp[0] = true;
+      ret tmp[0];
+    }
+  };
+}
+
+function eratostenes(s : unit → stream, unit) : stream {
+  tmp[1] = s;
+  tmp[1] = call force (tmp[1]), live: (arg[0], arg[1]);
+  prealloc 13, live: (tmp[1], arg[0], arg[1]);
+  {
+    s1 = tmp[1];
+    tmp[1] = s1.cons[1];
+    tmp[2] = s1.cons[0];
+    tmp[2] = calloc indivisible (tmp[2]);
+    tmp[1] = calloc filter (tmp[2], tmp[1]);
+    tmp[1] = calloc eratostenes (tmp[1]);
+    tmp[2] = s1.cons[0];
+    tmp[1] = alloc cons (tmp[2], tmp[1]);
+    ret tmp[1];
+  };
+}
+
+function primes() : unit → stream {
+  prealloc 6;
+  tmp[0] = 2;
+  tmp[0] = calloc numbers (tmp[0]);
+  tmp[0] = calloc eratostenes (tmp[0]);
+  ret tmp[0];
+}
+
+function main() : * {
+  tmp[0] = call primes ();
+  tmp[1] = 10;
+  tmp[0] = call nth (tmp[1], tmp[0]);
+  trace tmp[0];
+  nop;
+  tmp[0] = call primes ();
+  tmp[1] = 50;
+  tmp[0] = call nth (tmp[1], tmp[0]);
+  trace tmp[0];
+  nop;
+  tmp[0] = void;
+  ret tmp[0];
+}

@@ -1,0 +1,43 @@
+
+function main() : *;
+
+function main() : * {
+  tmp[5] = 1;
+  {
+    tmp[0] = tmp[5];
+    tmp[5] = 2;
+    {
+      tmp[1] = tmp[5];
+      tmp[5] = tmp[1];
+    };
+    tmp[6] = tmp[0];
+    tmp[5] = add tmp[6] tmp[5];
+    {
+      tmp[1] = tmp[5];
+      tmp[5] = tmp[1];
+      tmp[6] = tmp[1];
+      tmp[5] = mul tmp[6] tmp[5];
+      {
+        tmp[2] = tmp[5];
+        tmp[5] = tmp[2];
+        tmp[6] = 2;
+        tmp[5] = add tmp[6] tmp[5];
+        {
+          tmp[3] = tmp[5];
+          tmp[5] = tmp[2];
+          tmp[6] = tmp[3];
+          tmp[5] = add tmp[6] tmp[5];
+          {
+            tmp[4] = tmp[5];
+            tmp[5] = tmp[2];
+            tmp[6] = tmp[3];
+            tmp[7] = tmp[4];
+            tmp[6] = add tmp[7] tmp[6];
+            tmp[5] = add tmp[6] tmp[5];
+            ret tmp[5];
+          };
+        };
+      };
+    };
+  };
+}

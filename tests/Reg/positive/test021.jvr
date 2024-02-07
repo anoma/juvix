@@ -1,0 +1,33 @@
+
+function f(integer → integer) : integer;
+function h(integer, integer) : integer;
+function u(integer) : integer;
+function main() : *;
+
+function f(integer → integer) : integer {
+  tmp[0] = 5;
+  tmp[1] = arg[0];
+  tmp[0] = tcall tmp[1] (tmp[0]), live: (arg[0]);
+}
+
+function h(integer, integer) : integer {
+  tmp[0] = arg[1];
+  tmp[1] = arg[0];
+  tmp[0] = add tmp[1] tmp[0];
+  ret tmp[0];
+}
+
+function u(integer) : integer {
+  prealloc 3, live: (arg[0]);
+  tmp[0] = arg[0];
+  tmp[1] = 4;
+  tmp[1] = calloc h (tmp[1]);
+  tmp[1] = call f (tmp[1]), live: (tmp[0], arg[0]);
+  tmp[0] = add tmp[1] tmp[0];
+  ret tmp[0];
+}
+
+function main() : * {
+  tmp[0] = 2;
+  tmp[0] = tcall u (tmp[0]);
+}

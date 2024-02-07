@@ -1,0 +1,45 @@
+
+function f91(integer) : integer;
+function main() : *;
+
+function f91(integer) : integer {
+  tmp[0] = arg[0];
+  tmp[1] = 100;
+  tmp[0] = lt tmp[1] tmp[0];
+  br tmp[0] {
+    true: {
+      tmp[0] = 10;
+      tmp[1] = arg[0];
+      tmp[0] = sub tmp[1] tmp[0];
+      ret tmp[0];
+    }
+    false: {
+      tmp[0] = 11;
+      tmp[1] = arg[0];
+      tmp[0] = add tmp[1] tmp[0];
+      tmp[0] = call f91 (tmp[0]), live: (arg[0]);
+      tmp[0] = tcall f91 (tmp[0]), live: (arg[0]);
+    }
+  };
+}
+
+function main() : * {
+  tmp[0] = 101;
+  tmp[0] = call f91 (tmp[0]);
+  trace tmp[0];
+  nop;
+  tmp[0] = 95;
+  tmp[0] = call f91 (tmp[0]);
+  trace tmp[0];
+  nop;
+  tmp[0] = 16;
+  tmp[0] = call f91 (tmp[0]);
+  trace tmp[0];
+  nop;
+  tmp[0] = 5;
+  tmp[0] = call f91 (tmp[0]);
+  trace tmp[0];
+  nop;
+  tmp[0] = void;
+  ret tmp[0];
+}

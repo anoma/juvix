@@ -1,0 +1,46 @@
+
+function sumb((integer, integer) → integer, integer, integer) : integer;
+function sum'(integer, integer) : integer;
+function sum(integer) : integer;
+function main() : *;
+
+function sumb((integer, integer) → integer, integer, integer) : integer {
+  tmp[0] = arg[1];
+  tmp[1] = 0;
+  tmp[0] = eq tmp[1] tmp[0];
+  br tmp[0] {
+    true: {
+      tmp[0] = arg[2];
+      ret tmp[0];
+    }
+    false: {
+      tmp[0] = arg[2];
+      tmp[1] = 1;
+      tmp[2] = arg[1];
+      tmp[1] = sub tmp[2] tmp[1];
+      tmp[2] = arg[0];
+      tmp[0] = tcall tmp[2] (tmp[1], tmp[0]), live: (arg[0], arg[1], arg[2]);
+    }
+  };
+}
+
+function sum'(integer, integer) : integer {
+  prealloc 2, live: (arg[0], arg[1]);
+  tmp[0] = arg[1];
+  tmp[1] = arg[0];
+  tmp[0] = add tmp[1] tmp[0];
+  tmp[1] = arg[0];
+  tmp[2] = calloc sum' ();
+  tmp[0] = tcall sumb (tmp[2], tmp[1], tmp[0]), live: (arg[0], arg[1]);
+}
+
+function sum(integer) : integer {
+  tmp[0] = 0;
+  tmp[1] = arg[0];
+  tmp[0] = tcall sum' (tmp[1], tmp[0]), live: (arg[0]);
+}
+
+function main() : * {
+  tmp[0] = 1000;
+  tmp[0] = tcall sum (tmp[0]);
+}

@@ -49,7 +49,6 @@ data ConstructorInfo = ConstructorInfo
     _constructorRepresentation :: MemRep,
     _constructorFixity :: Maybe Fixity
   }
-  deriving stock (Eq)
 
 data InductiveInfo = InductiveInfo
   { _inductiveName :: Text,
@@ -59,11 +58,6 @@ data InductiveInfo = InductiveInfo
     _inductiveConstructors :: [Tag],
     _inductiveRepresentation :: IndRep
   }
-  deriving stock (Eq)
-
-deriving stock instance (Eq code, Eq extra) => Eq (InfoTable' code extra)
-
-deriving stock instance (Eq code, Eq extra) => Eq (FunctionInfo' code extra)
 
 makeLenses ''InfoTable'
 makeLenses ''FunctionInfo'
