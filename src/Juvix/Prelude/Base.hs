@@ -1,9 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-
-{-# HLINT ignore "Avoid restricted extensions" #-}
-{-# HLINT ignore "Avoid restricted flags" #-}
-
 module Juvix.Prelude.Base
   ( module Juvix.Prelude.Base,
     module Control.Applicative,
