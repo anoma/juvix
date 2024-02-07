@@ -33,6 +33,7 @@ runCompile inputFile o = do
     TargetVampIR -> return (Right ())
     TargetCore -> return (Right ())
     TargetAsm -> return (Right ())
+    TargetReg -> return (Right ())
     TargetTree -> return (Right ())
     TargetNockma -> return (Right ())
 
@@ -50,6 +51,7 @@ prepareRuntime buildDir o = do
     TargetVampIR -> return ()
     TargetCore -> return ()
     TargetAsm -> return ()
+    TargetReg -> return ()
     TargetTree -> return ()
     TargetNockma -> return ()
   where
@@ -109,6 +111,8 @@ outputFile opts inputFile =
           replaceExtension' juvixCoreFileExt baseOutputFile
         TargetAsm ->
           replaceExtension' juvixAsmFileExt baseOutputFile
+        TargetReg ->
+          replaceExtension' juvixRegFileExt baseOutputFile
         TargetTree ->
           replaceExtension' juvixTreeFileExt baseOutputFile
         TargetNockma ->
