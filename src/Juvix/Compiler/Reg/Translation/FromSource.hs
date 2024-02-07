@@ -256,14 +256,14 @@ liveVars ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r [VarRef]
 liveVars = do
-  P.try (kw kwLive >> kw kwColon)
-  brackets (many varRef)
+  P.try (comma >> kw kwLive >> kw kwColon)
+  brackets (P.sepBy varRef comma)
 
 parseArgs ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r [Value]
 parseArgs = do
-  brackets (many value)
+  brackets (P.sepBy value comma)
 
 parseCallType ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>

@@ -14,40 +14,40 @@ runCommand opts = do
   s <- readFile (toFilePath file)
   case Asm.runParser (toFilePath file) s of
     Left err -> exitJuvixError (JuvixError err)
-    Right tab -> case opts ^. compileTarget of
-      TargetReg -> do
-        ep <- getEntryPoint (AppPath (preFileFromAbs file) True)
-        regFile <- Compile.outputFile opts file
-        r <-
-          runReader ep
-            . runError @JuvixError
-            . asmToReg
-            $ tab
-        tab' <- getRight r
-        let code = Reg.ppPrint tab' tab'
-        embed @IO $ writeFileEnsureLn regFile code
-      _ -> do
-        ep <- getEntryPoint (AppPath (preFileFromAbs file) True)
-        tgt <- getTarget (opts ^. compileTarget)
-        let entryPoint :: EntryPoint
-            entryPoint =
-              ep
-                { _entryPointTarget = tgt,
-                  _entryPointDebug = opts ^. compileDebug
-                }
-        case run $ runReader entryPoint $ runError $ asmToMiniC tab of
-          Left err -> exitJuvixError err
-          Right C.MiniCResult {..} -> do
-            buildDir <- askBuildDir
-            ensureDir buildDir
-            cFile <- inputCFile file
-            embed @IO $ writeFileEnsureLn cFile _resultCCode
-            outfile <- Compile.outputFile opts file
-            Compile.runCommand
-              opts
-                { _compileInputFile = Just (AppPath (preFileFromAbs cFile) False),
-                  _compileOutputFile = Just (AppPath (preFileFromAbs outfile) False)
-                }
+    Right tab -> do
+      ep <- getEntryPoint (AppPath (preFileFromAbs file) True)
+      tgt <- getTarget (opts ^. compileTarget)
+      let entryPoint :: EntryPoint
+          entryPoint =
+            ep
+              { _entryPointTarget = tgt,
+                _entryPointDebug = opts ^. compileDebug
+              }
+      case opts ^. compileTarget of
+        TargetReg -> do
+          regFile <- Compile.outputFile opts file
+          r <-
+            runReader entryPoint
+              . runError @JuvixError
+              . asmToReg
+              $ tab
+          tab' <- getRight r
+          let code = Reg.ppPrint tab' tab'
+          embed @IO $ writeFileEnsureLn regFile code
+        _ ->
+          case run $ runReader entryPoint $ runError $ asmToMiniC tab of
+            Left err -> exitJuvixError err
+            Right C.MiniCResult {..} -> do
+              buildDir <- askBuildDir
+              ensureDir buildDir
+              cFile <- inputCFile file
+              embed @IO $ writeFileEnsureLn cFile _resultCCode
+              outfile <- Compile.outputFile opts file
+              Compile.runCommand
+                opts
+                  { _compileInputFile = Just (AppPath (preFileFromAbs cFile) False),
+                    _compileOutputFile = Just (AppPath (preFileFromAbs outfile) False)
+                  }
   where
     getFile :: Sem r (Path Abs File)
     getFile = getMainFile (opts ^. compileInputFile)

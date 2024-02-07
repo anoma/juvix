@@ -103,7 +103,7 @@ ppLiveVars vars
   | null vars = return mempty
   | otherwise = do
       vars' <- mapM ppCode vars
-      return $ primitive "live:" <+> brackets (hsep vars')
+      return $ comma <+> primitive "live:" <+> arglist vars'
 
 instance PrettyCode InstrPrealloc where
   ppCode InstrPrealloc {..} = do
@@ -120,7 +120,7 @@ instance PrettyCode InstrAlloc where
         <+> primitive Str.equal
         <+> primitive Str.alloc
         <+> tag
-        <+> brackets (hsep args)
+        <+> arglist args
 
 instance PrettyCode InstrAllocClosure where
   ppCode InstrAllocClosure {..} = do
@@ -132,7 +132,7 @@ instance PrettyCode InstrAllocClosure where
         <+> primitive Str.equal
         <+> primitive Str.calloc
         <+> fn
-        <+> brackets (hsep args)
+        <+> arglist args
 
 instance PrettyCode InstrExtendClosure where
   ppCode InstrExtendClosure {..} = do
@@ -144,7 +144,7 @@ instance PrettyCode InstrExtendClosure where
         <+> primitive Str.equal
         <+> primitive Str.cextend
         <+> fn
-        <+> brackets (hsep args)
+        <+> arglist args
 
 instance PrettyCode CallType where
   ppCode = \case
@@ -162,7 +162,7 @@ instance PrettyCode InstrCall where
         <+> primitive Str.equal
         <+> primitive cl
         <+> fn
-        <+> brackets (hsep args)
+        <+> arglist args
 
 instance PrettyCode InstrCallClosures where
   ppCode InstrCallClosures {..} = do
@@ -175,7 +175,7 @@ instance PrettyCode InstrCallClosures where
         <+> primitive Str.equal
         <+> primitive cl
         <+> fn
-        <+> brackets (hsep args)
+        <+> arglist args
 
 instance PrettyCode InstrReturn where
   ppCode InstrReturn {..} = do
@@ -252,3 +252,6 @@ instance PrettyCode ConstructorInfo where
 
 instance PrettyCode InfoTable where
   ppCode = Tree.ppInfoTable ppCodeCode
+
+arglist :: [Doc Ann] -> Doc Ann
+arglist args = brackets (hsep (punctuate comma args))
