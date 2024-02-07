@@ -1,28 +1,39 @@
 module Juvix.Prelude.Effects.Output where
 
 import Data.Kind qualified as GHC
-import Juvix.Prelude.Base (fst, mapM_, return, reverse, (<$>))
+import Effectful.Dispatch.Dynamic
+import Juvix.Prelude.Base hiding (Effect, Output, interpret, output, reinterpret, runOutputList)
+import Juvix.Prelude.Effects.Accum
 import Juvix.Prelude.Effects.Base
+import System.Time.Extra
 
-data Output (o :: GHC.Type) :: Effect
+data Output (o :: GHC.Type) :: Effect where
+  Output :: o -> Output o m ()
 
-type instance DispatchOf (Output _) = 'Static 'NoSideEffects
-
-newtype instance StaticRep (Output o) = Output [o]
+makeEffect ''Output
 
 runOutputEff :: (o -> Eff r ()) -> Eff (Output o ': r) a -> Eff r a
-runOutputEff handle m = do
-  (ls, a) <- runOutputList m
-  mapM_ handle ls
-  return a
+runOutputEff handle =
+  interpret $ \_ -> \case
+    Output x -> handle x
 
 runOutputList :: Eff (Output o ': r) a -> Eff r ([o], a)
-runOutputList m = do
-  (a, Output s) <- runStaticRep (Output []) m
-  return (reverse s, a)
+runOutputList = reinterpret runAccumList $ \_ -> \case
+  Output x -> accum x
 
-ignoreOutput :: Eff (Output o ': r) a -> Eff r (a)
-ignoreOutput m = fst <$> runStaticRep (Output []) m
+ignoreOutput :: Eff (Output o ': r) a -> Eff r a
+ignoreOutput = interpret $ \_ -> \case
+  Output {} -> return ()
 
-output :: (Output o :> r) => o -> Eff r ()
-output o = overStaticRep (\(Output l) -> Output (o : l))
+example1 :: IO ()
+example1 =
+  runEff $
+    runOutputEff (\n -> putStrLn ("hey " <> show @Natural n)) (go 3)
+
+go :: (Output Natural :> r, IOE :> r) => Natural -> Eff r ()
+go = \case
+  0 -> return ()
+  n -> do
+    output n
+    liftIO (sleep 1)
+    go (pred n)
