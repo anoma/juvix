@@ -44,6 +44,7 @@ default:
      --ghc-opt -XMultiParamTypeClasses  \
      --ghc-opt -XTemplateHaskell \
      --ghc-opt -XImportQualifiedPost \
+     --ghc-opt -XBangPatterns \
      --mode inplace
 
 # Formats all Haskell files in the project. `format changed` formats only changed files. `format FILES` formats individual files.
