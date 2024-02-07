@@ -30,7 +30,7 @@ function iterate(* → *, integer) : * → * {
       prealloc 2, live: (arg[0], arg[1]);
       tmp[0] = calloc id ();
       ret tmp[0];
-    }
+    };
     false: {
       tmp[0] = 1;
       tmp[1] = arg[1];
@@ -41,7 +41,7 @@ function iterate(* → *, integer) : * → * {
       tmp[1] = arg[0];
       tmp[0] = calloc compose (tmp[1], tmp[0]);
       ret tmp[0];
-    }
+    };
   };
 }
 

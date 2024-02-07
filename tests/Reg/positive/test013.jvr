@@ -11,7 +11,7 @@ function fib'(integer, integer, integer) : integer {
     true: {
       tmp[0] = arg[1];
       ret tmp[0];
-    }
+    };
     false: {
       tmp[0] = 16777216;
       tmp[1] = arg[2];
@@ -23,7 +23,7 @@ function fib'(integer, integer, integer) : integer {
       tmp[3] = arg[0];
       tmp[2] = sub tmp[3] tmp[2];
       tmp[0] = tcall fib' (tmp[2], tmp[1], tmp[0]), live: (arg[0], arg[1], arg[2]);
-    }
+    };
   };
 }
 

@@ -197,22 +197,23 @@ instance PrettyCode InstrBranch where
         <+> braces'
           ( constr Str.true_ <> colon
               <+> braces' br1
+                <> semi
                 <> line
                 <> constr Str.false_
                 <> colon
-              <+> braces' br2
+              <+> braces' br2 <> semi
           )
 
 instance PrettyCode CaseBranch where
   ppCode CaseBranch {..} = do
     tag <- Tree.ppConstrName _caseBranchTag
     body <- ppCodeCode _caseBranchCode
-    return $ tag <> colon <+> braces' body
+    return $ tag <> colon <+> braces' body <> semi
 
 ppDefaultBranch :: (Member (Reader Options) r) => Code -> Sem r (Doc Ann)
 ppDefaultBranch cs = do
   body <- ppCodeCode cs
-  return $ constr Str.default_ <> colon <+> braces' body
+  return $ constr Str.default_ <> colon <+> braces' body <> semi
 
 instance PrettyCode InstrCase where
   ppCode InstrCase {..} = do

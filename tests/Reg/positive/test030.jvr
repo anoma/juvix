@@ -1,31 +1,8 @@
 
-function g(integer) : integer;
 function f(integer) : integer;
+function g(integer) : integer;
 function h(integer) : integer;
 function main() : *;
-
-function g(integer) : integer {
-  tmp[0] = 1;
-  tmp[1] = arg[0];
-  tmp[0] = lt tmp[1] tmp[0];
-  br tmp[0] {
-    true: {
-      tmp[0] = 1;
-      ret tmp[0];
-    }
-    false: {
-      tmp[0] = 268435456;
-      tmp[1] = 1;
-      tmp[2] = arg[0];
-      tmp[1] = sub tmp[2] tmp[1];
-      tmp[1] = call h (tmp[1]), live: (tmp[0], arg[0]);
-      tmp[2] = arg[0];
-      tmp[1] = add tmp[2] tmp[1];
-      tmp[0] = mod tmp[1] tmp[0];
-      ret tmp[0];
-    }
-  };
-}
 
 function f(integer) : integer {
   tmp[0] = 1;
@@ -35,7 +12,7 @@ function f(integer) : integer {
     true: {
       tmp[0] = 1;
       ret tmp[0];
-    }
+    };
     false: {
       tmp[0] = 268435456;
       tmp[1] = 1;
@@ -48,7 +25,30 @@ function f(integer) : integer {
       tmp[1] = add tmp[2] tmp[1];
       tmp[0] = mod tmp[1] tmp[0];
       ret tmp[0];
-    }
+    };
+  };
+}
+
+function g(integer) : integer {
+  tmp[0] = 1;
+  tmp[1] = arg[0];
+  tmp[0] = lt tmp[1] tmp[0];
+  br tmp[0] {
+    true: {
+      tmp[0] = 1;
+      ret tmp[0];
+    };
+    false: {
+      tmp[0] = 268435456;
+      tmp[1] = 1;
+      tmp[2] = arg[0];
+      tmp[1] = sub tmp[2] tmp[1];
+      tmp[1] = call h (tmp[1]), live: (tmp[0], arg[0]);
+      tmp[2] = arg[0];
+      tmp[1] = add tmp[2] tmp[1];
+      tmp[0] = mod tmp[1] tmp[0];
+      ret tmp[0];
+    };
   };
 }
 
@@ -60,7 +60,7 @@ function h(integer) : integer {
     true: {
       tmp[0] = 1;
       ret tmp[0];
-    }
+    };
     false: {
       tmp[0] = 268435456;
       tmp[1] = 1;
@@ -71,7 +71,7 @@ function h(integer) : integer {
       tmp[1] = mul tmp[2] tmp[1];
       tmp[0] = mod tmp[1] tmp[0];
       ret tmp[0];
-    }
+    };
   };
 }
 

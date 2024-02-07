@@ -328,8 +328,10 @@ instrBranch = do
   (br1, br2) <- braces $ do
     symbol "true:"
     br1 <- braces parseCode
+    kw delimSemicolon
     symbol "false:"
     br2 <- braces parseCode
+    kw delimSemicolon
     return (br1, br2)
   return
     InstrBranch
@@ -367,6 +369,7 @@ caseBranch = do
     kw kwColon
     return tag
   body <- braces parseCode
+  kw delimSemicolon
   ci <- lift $ getConstructorInfo tag
   return
     CaseBranch
@@ -381,7 +384,9 @@ defaultBranch ::
   ParsecS r Code
 defaultBranch = do
   symbol "default:"
-  braces parseCode
+  c <- braces parseCode
+  kw delimSemicolon
+  return c
 
 instrBlock ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>

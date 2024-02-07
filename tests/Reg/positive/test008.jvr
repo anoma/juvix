@@ -13,10 +13,10 @@ function main() : * {
   br tmp[0] {
     true: {
       tmp[0] = 1;
-    }
+    };
     false: {
       tmp[0] = call loop ();
-    }
+    };
   };
   tmp[1] = 1;
   tmp[2] = 2;
@@ -24,7 +24,7 @@ function main() : * {
   br tmp[1] {
     true: {
       tmp[1] = call loop (), live: (tmp[0]);
-    }
+    };
     false: {
       tmp[1] = 7;
       tmp[2] = 8;
@@ -32,12 +32,12 @@ function main() : * {
       br tmp[1] {
         true: {
           tmp[1] = call loop (), live: (tmp[0]);
-        }
+        };
         false: {
           tmp[1] = 1;
-        }
+        };
       };
-    }
+    };
   };
   tmp[0] = add tmp[1] tmp[0];
   ret tmp[0];

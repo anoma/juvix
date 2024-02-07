@@ -12,7 +12,7 @@ function ack(integer, integer) : integer {
       tmp[1] = arg[1];
       tmp[0] = add tmp[1] tmp[0];
       ret tmp[0];
-    }
+    };
     false: {
       tmp[0] = 0;
       tmp[1] = arg[1];
@@ -24,7 +24,7 @@ function ack(integer, integer) : integer {
           tmp[2] = arg[0];
           tmp[1] = sub tmp[2] tmp[1];
           tmp[0] = tcall ack (tmp[1], tmp[0]), live: (arg[0], arg[1]);
-        }
+        };
         false: {
           tmp[0] = 1;
           tmp[1] = arg[1];
@@ -35,9 +35,9 @@ function ack(integer, integer) : integer {
           tmp[2] = arg[0];
           tmp[1] = sub tmp[2] tmp[1];
           tmp[0] = tcall ack (tmp[1], tmp[0]), live: (arg[0], arg[1]);
-        }
+        };
       };
-    }
+    };
   };
 }
 

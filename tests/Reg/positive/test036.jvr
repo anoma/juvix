@@ -34,13 +34,13 @@ function filter(f : integer → bool, s : unit → stream, unit) : stream {
         tmp[2] = s1.cons[0];
         tmp[1] = alloc cons (tmp[2], tmp[1]);
         ret tmp[1];
-      }
+      };
       false: {
         tmp[1] = unit;
         tmp[2] = s1.cons[1];
         tmp[3] = f;
         tmp[1] = tcall filter (tmp[3], tmp[2], tmp[1]), live: (tmp[0], arg[0], arg[1], arg[2]);
-      }
+      };
     };
   };
 }
@@ -57,14 +57,14 @@ function nth(n : integer, s : unit → stream) : integer {
       true: {
         tmp[1] = s1.cons[0];
         ret tmp[1];
-      }
+      };
       false: {
         tmp[1] = s1.cons[1];
         tmp[2] = 1;
         tmp[3] = n;
         tmp[2] = sub tmp[3] tmp[2];
         tmp[1] = tcall nth (tmp[2], tmp[1]), live: (tmp[0], arg[0], arg[1]);
-      }
+      };
     };
   };
 }
@@ -90,11 +90,11 @@ function indivisible(n : integer, m : integer) : bool {
     true: {
       tmp[0] = false;
       ret tmp[0];
-    }
+    };
     false: {
       tmp[0] = true;
       ret tmp[0];
-    }
+    };
   };
 }
 

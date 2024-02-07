@@ -18,7 +18,7 @@ function gen(integer) : tree {
       prealloc 1, live: (arg[0]);
       tmp[2] = alloc leaf ();
       ret tmp[2];
-    }
+    };
     false: {
       tmp[2] = 3;
       tmp[3] = arg[0];
@@ -37,7 +37,7 @@ function gen(integer) : tree {
             prealloc 2, live: (tmp[0], tmp[2], arg[0]);
             tmp[2] = alloc node1 (tmp[2]);
             ret tmp[2];
-          }
+          };
           false: {
             tmp[2] = tmp[0];
             tmp[3] = 1;
@@ -57,7 +57,7 @@ function gen(integer) : tree {
                   tmp[2] = alloc node2 (tmp[3], tmp[2]);
                   ret tmp[2];
                 };
-              }
+              };
               false: {
                 tmp[2] = 1;
                 tmp[3] = arg[0];
@@ -74,12 +74,12 @@ function gen(integer) : tree {
                   tmp[2] = alloc node3 (tmp[4], tmp[3], tmp[2]);
                   ret tmp[2];
                 };
-              }
+              };
             };
-          }
+          };
         };
       };
-    }
+    };
   };
 }
 
@@ -93,7 +93,7 @@ function preorder(tree) : * {
       nop;
       tmp[0] = arg[0].node1[0];
       tmp[0] = tcall preorder (tmp[0]), live: (arg[0]);
-    }
+    };
     node2: {
       nop;
       tmp[0] = 2;
@@ -104,7 +104,7 @@ function preorder(tree) : * {
       nop;
       tmp[0] = arg[0].node2[1];
       tmp[0] = tcall preorder (tmp[0]), live: (arg[0]);
-    }
+    };
     node3: {
       nop;
       tmp[0] = 3;
@@ -118,7 +118,7 @@ function preorder(tree) : * {
       nop;
       tmp[0] = arg[0].node3[2];
       tmp[0] = tcall preorder (tmp[0]), live: (arg[0]);
-    }
+    };
     leaf: {
       nop;
       tmp[0] = 0;
@@ -126,7 +126,7 @@ function preorder(tree) : * {
       nop;
       tmp[0] = void;
       ret tmp[0];
-    }
+    };
   };
 }
 

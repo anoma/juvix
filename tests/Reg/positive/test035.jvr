@@ -18,7 +18,7 @@ function mklst(integer) : list {
       prealloc 1, live: (arg[0]);
       tmp[0] = alloc nil ();
       ret tmp[0];
-    }
+    };
     false: {
       tmp[0] = 1;
       tmp[1] = arg[0];
@@ -28,7 +28,7 @@ function mklst(integer) : list {
       tmp[1] = arg[0];
       tmp[0] = alloc cons (tmp[1], tmp[0]);
       ret tmp[0];
-    }
+    };
   };
 }
 
@@ -41,7 +41,7 @@ function mklst2(integer) : list {
       prealloc 1, live: (arg[0]);
       tmp[0] = alloc nil ();
       ret tmp[0];
-    }
+    };
     false: {
       tmp[0] = 1;
       tmp[1] = arg[0];
@@ -52,7 +52,7 @@ function mklst2(integer) : list {
       prealloc 3, live: (tmp[0], tmp[1], arg[0]);
       tmp[0] = alloc cons (tmp[1], tmp[0]);
       ret tmp[0];
-    }
+    };
   };
 }
 
@@ -63,7 +63,7 @@ function append(list, list) : list {
       nop;
       tmp[0] = arg[1];
       ret tmp[0];
-    }
+    };
     cons: {
       nop;
       tmp[0] = arg[1];
@@ -73,7 +73,7 @@ function append(list, list) : list {
       tmp[1] = arg[0].cons[0];
       tmp[0] = alloc cons (tmp[1], tmp[0]);
       ret tmp[0];
-    }
+    };
   };
 }
 
@@ -82,14 +82,14 @@ function flatten(list) : list {
   case[list] tmp[0] {
     nil: {
       ret tmp[0];
-    }
+    };
     cons: {
       nop;
       tmp[0] = arg[0].cons[1];
       tmp[0] = call flatten (tmp[0]), live: (arg[0]);
       tmp[1] = arg[0].cons[0];
       tmp[0] = tcall append (tmp[1], tmp[0]), live: (arg[0]);
-    }
+    };
   };
 }
 

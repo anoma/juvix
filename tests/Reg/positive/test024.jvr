@@ -23,7 +23,7 @@ function f((*, integer → integer, integer) → *, integer → integer, integer
       nop;
       tmp[0] = void;
       ret tmp[0];
-    }
+    };
     false: {
       tmp[0] = 9;
       trace tmp[0];
@@ -35,7 +35,7 @@ function f((*, integer → integer, integer) → *, integer → integer, integer
       tmp[2] = arg[0];
       tmp[3] = arg[0];
       tmp[0] = tcall tmp[3] (tmp[2], tmp[1], tmp[0]), live: (arg[0], arg[1], arg[2]);
-    }
+    };
   };
 }
 

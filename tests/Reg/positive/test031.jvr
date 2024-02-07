@@ -4,10 +4,10 @@ type tree {
 }
 
 function gen(integer) : tree;
-function g(tree) : tree;
 function f(tree) : integer;
 function isNode(tree) : bool;
 function isLeaf(tree) : bool;
+function g(tree) : tree;
 function main() : *;
 
 function gen(integer) : tree {
@@ -19,7 +19,7 @@ function gen(integer) : tree {
       prealloc 1, live: (arg[0]);
       tmp[0] = alloc leaf ();
       ret tmp[0];
-    }
+    };
     false: {
       tmp[0] = 1;
       tmp[1] = arg[0];
@@ -32,43 +32,7 @@ function gen(integer) : tree {
       prealloc 3, live: (tmp[0], tmp[1], arg[0]);
       tmp[0] = alloc node (tmp[1], tmp[0]);
       ret tmp[0];
-    }
-  };
-}
-
-function g(tree) : tree {
-  tmp[1] = arg[0];
-  tmp[1] = call isLeaf (tmp[1]), live: (arg[0]);
-  br tmp[1] {
-    true: {
-      tmp[1] = arg[0];
-      ret tmp[1];
-    }
-    false: {
-      tmp[1] = arg[0];
-      case[tree] tmp[1] {
-        node: {
-          {
-            tmp[0] = tmp[1];
-            tmp[1] = tmp[0].node[0];
-            tmp[1] = call isNode (tmp[1]), live: (tmp[0], arg[0]);
-            br tmp[1] {
-              true: {
-                tmp[1] = tmp[0].node[1];
-                ret tmp[1];
-              }
-              false: {
-                prealloc 3, live: (tmp[0], arg[0]);
-                tmp[1] = tmp[0].node[1];
-                tmp[2] = tmp[0].node[0];
-                tmp[1] = alloc node (tmp[2], tmp[1]);
-                ret tmp[1];
-              }
-            };
-          };
-        }
-      };
-    }
+    };
   };
 }
 
@@ -79,7 +43,7 @@ function f(tree) : integer {
       nop;
       tmp[5] = 1;
       ret tmp[5];
-    }
+    };
     node: {
       {
         tmp[0] = tmp[5];
@@ -98,7 +62,7 @@ function f(tree) : integer {
                 tmp[5] = 3;
                 tmp[6] = 0;
                 tmp[5] = sub tmp[6] tmp[5];
-              }
+              };
               node: {
                 {
                   tmp[3] = tmp[5];
@@ -110,7 +74,7 @@ function f(tree) : integer {
                   tmp[6] = add tmp[7] tmp[6];
                   tmp[5] = mod tmp[6] tmp[5];
                 };
-              }
+              };
             };
             {
               tmp[3] = tmp[5];
@@ -127,11 +91,11 @@ function f(tree) : integer {
                     tmp[6] = add tmp[7] tmp[6];
                     tmp[5] = mod tmp[6] tmp[5];
                   };
-                }
+                };
                 default: {
                   nop;
                   tmp[5] = 2;
-                }
+                };
               };
               {
                 tmp[4] = tmp[5];
@@ -146,7 +110,7 @@ function f(tree) : integer {
           };
         };
       };
-    }
+    };
   };
 }
 
@@ -157,12 +121,12 @@ function isNode(tree) : bool {
       nop;
       tmp[0] = true;
       ret tmp[0];
-    }
+    };
     default: {
       nop;
       tmp[0] = false;
       ret tmp[0];
-    }
+    };
   };
 }
 
@@ -173,12 +137,48 @@ function isLeaf(tree) : bool {
       nop;
       tmp[0] = true;
       ret tmp[0];
-    }
+    };
     default: {
       nop;
       tmp[0] = false;
       ret tmp[0];
-    }
+    };
+  };
+}
+
+function g(tree) : tree {
+  tmp[1] = arg[0];
+  tmp[1] = call isLeaf (tmp[1]), live: (arg[0]);
+  br tmp[1] {
+    true: {
+      tmp[1] = arg[0];
+      ret tmp[1];
+    };
+    false: {
+      tmp[1] = arg[0];
+      case[tree] tmp[1] {
+        node: {
+          {
+            tmp[0] = tmp[1];
+            tmp[1] = tmp[0].node[0];
+            tmp[1] = call isNode (tmp[1]), live: (tmp[0], arg[0]);
+            br tmp[1] {
+              true: {
+                tmp[1] = tmp[0].node[1];
+                ret tmp[1];
+              };
+              false: {
+                prealloc 3, live: (tmp[0], arg[0]);
+                tmp[1] = tmp[0].node[1];
+                tmp[2] = tmp[0].node[0];
+                tmp[1] = alloc node (tmp[2], tmp[1]);
+                ret tmp[1];
+              };
+            };
+          };
+        };
+      };
+    };
   };
 }
 

@@ -3,10 +3,6 @@ type list {
   cons : (*, list) → list;
 }
 
-function sum''(integer) : integer;
-function gt5(integer) : bool;
-function dec(integer) : integer;
-function main() : *;
 function head(list) : *;
 function tail(list) : list;
 function null(list) : *;
@@ -21,6 +17,228 @@ function plus(integer, integer) : integer;
 function sum(integer) : integer;
 function sum'(integer) : integer;
 function foldl'((*, *) → *, *, list) : *;
+function sum''(integer) : integer;
+function gt5(integer) : bool;
+function dec(integer) : integer;
+function main() : *;
+
+function head(list) : * {
+  tmp[0] = arg[0];
+  case[list] tmp[0] {
+    cons: {
+      nop;
+      tmp[0] = arg[0].cons[0];
+      ret tmp[0];
+    };
+  };
+}
+
+function tail(list) : list {
+  tmp[0] = arg[0];
+  case[list] tmp[0] {
+    cons: {
+      nop;
+      tmp[0] = arg[0].cons[1];
+      ret tmp[0];
+    };
+  };
+}
+
+function null(list) : * {
+  tmp[0] = arg[0];
+  case[list] tmp[0] {
+    nil: {
+      nop;
+      tmp[0] = true;
+      ret tmp[0];
+    };
+    cons: {
+      nop;
+      tmp[0] = false;
+      ret tmp[0];
+    };
+  };
+}
+
+function map(* → *, list) : list {
+  tmp[0] = arg[1];
+  case[list] tmp[0] {
+    nil: {
+      ret tmp[0];
+    };
+    cons: {
+      nop;
+      tmp[0] = arg[1].cons[1];
+      tmp[1] = arg[0];
+      tmp[0] = call map (tmp[1], tmp[0]), live: (arg[0], arg[1]);
+      tmp[1] = arg[1].cons[0];
+      tmp[2] = arg[0];
+      tmp[1] = call tmp[2] (tmp[1]), live: (tmp[0], arg[0], arg[1]);
+      prealloc 3, live: (tmp[0], tmp[1], arg[0], arg[1]);
+      tmp[0] = alloc cons (tmp[1], tmp[0]);
+      ret tmp[0];
+    };
+  };
+}
+
+function foldl((*, *) → *, *, list) : * {
+  tmp[0] = arg[2];
+  case[list] tmp[0] {
+    nil: {
+      nop;
+      tmp[0] = arg[1];
+      ret tmp[0];
+    };
+    cons: {
+      nop;
+      tmp[0] = arg[2].cons[1];
+      tmp[1] = arg[2].cons[0];
+      tmp[2] = arg[1];
+      tmp[3] = arg[0];
+      tmp[1] = call tmp[3] (tmp[2], tmp[1]), live: (tmp[0], arg[0], arg[1], arg[2]);
+      tmp[2] = arg[0];
+      tmp[0] = tcall foldl (tmp[2], tmp[1], tmp[0]), live: (arg[0], arg[1], arg[2]);
+    };
+  };
+}
+
+function foldr((*, *) → *, *, list) : * {
+  tmp[0] = arg[2];
+  case[list] tmp[0] {
+    nil: {
+      nop;
+      tmp[0] = arg[1];
+      ret tmp[0];
+    };
+    cons: {
+      nop;
+      tmp[0] = arg[2].cons[1];
+      tmp[1] = arg[1];
+      tmp[2] = arg[0];
+      tmp[0] = call foldr (tmp[2], tmp[1], tmp[0]), live: (arg[0], arg[1], arg[2]);
+      tmp[1] = arg[2].cons[0];
+      tmp[2] = arg[0];
+      tmp[0] = tcall tmp[2] (tmp[1], tmp[0]), live: (arg[0], arg[1], arg[2]);
+    };
+  };
+}
+
+function filter(* → bool, list) : list {
+  tmp[0] = arg[1];
+  case[list] tmp[0] {
+    nil: {
+      ret tmp[0];
+    };
+    cons: {
+      nop;
+      tmp[0] = arg[1].cons[0];
+      tmp[1] = arg[0];
+      tmp[0] = call tmp[1] (tmp[0]), live: (arg[0], arg[1]);
+      br tmp[0] {
+        true: {
+          tmp[0] = arg[1].cons[1];
+          tmp[1] = arg[0];
+          tmp[0] = call filter (tmp[1], tmp[0]), live: (arg[0], arg[1]);
+          prealloc 3, live: (tmp[0], arg[0], arg[1]);
+          tmp[1] = arg[1].cons[0];
+          tmp[0] = alloc cons (tmp[1], tmp[0]);
+          ret tmp[0];
+        };
+        false: {
+          tmp[0] = arg[1].cons[1];
+          tmp[1] = arg[0];
+          tmp[0] = tcall filter (tmp[1], tmp[0]), live: (arg[0], arg[1]);
+        };
+      };
+    };
+  };
+}
+
+function flip_cons(list, *) : list {
+  prealloc 3, live: (arg[0], arg[1]);
+  tmp[0] = arg[0];
+  tmp[1] = arg[1];
+  tmp[0] = alloc cons (tmp[1], tmp[0]);
+  ret tmp[0];
+}
+
+function rev(list) : list {
+  prealloc 3, live: (arg[0]);
+  tmp[0] = arg[0];
+  tmp[1] = alloc nil ();
+  tmp[2] = calloc flip_cons ();
+  tmp[0] = tcall foldl (tmp[2], tmp[1], tmp[0]), live: (arg[0]);
+}
+
+function gen(integer) : list {
+  tmp[0] = arg[0];
+  tmp[1] = 0;
+  tmp[0] = eq tmp[1] tmp[0];
+  br tmp[0] {
+    true: {
+      prealloc 1, live: (arg[0]);
+      tmp[0] = alloc nil ();
+      ret tmp[0];
+    };
+    false: {
+      tmp[0] = 1;
+      tmp[1] = arg[0];
+      tmp[0] = sub tmp[1] tmp[0];
+      tmp[0] = call gen (tmp[0]), live: (arg[0]);
+      prealloc 3, live: (tmp[0], arg[0]);
+      tmp[1] = arg[0];
+      tmp[0] = alloc cons (tmp[1], tmp[0]);
+      ret tmp[0];
+    };
+  };
+}
+
+function plus(integer, integer) : integer {
+  tmp[0] = arg[1];
+  tmp[1] = arg[0];
+  tmp[0] = add tmp[1] tmp[0];
+  ret tmp[0];
+}
+
+function sum(integer) : integer {
+  tmp[0] = arg[0];
+  tmp[0] = call gen (tmp[0]), live: (arg[0]);
+  prealloc 2, live: (tmp[0], arg[0]);
+  tmp[1] = 0;
+  tmp[2] = calloc plus ();
+  tmp[0] = tcall foldl (tmp[2], tmp[1], tmp[0]), live: (arg[0]);
+}
+
+function sum'(integer) : integer {
+  tmp[0] = arg[0];
+  tmp[0] = call gen (tmp[0]), live: (arg[0]);
+  prealloc 2, live: (tmp[0], arg[0]);
+  tmp[1] = 0;
+  tmp[2] = calloc plus ();
+  tmp[0] = tcall foldr (tmp[2], tmp[1], tmp[0]), live: (arg[0]);
+}
+
+function foldl'((*, *) → *, *, list) : * {
+  tmp[0] = arg[2];
+  tmp[0] = call null (tmp[0]), live: (arg[0], arg[1], arg[2]);
+  br tmp[0] {
+    true: {
+      tmp[0] = arg[1];
+      ret tmp[0];
+    };
+    false: {
+      tmp[0] = arg[2];
+      tmp[0] = call tail (tmp[0]), live: (arg[0], arg[1], arg[2]);
+      tmp[1] = arg[2];
+      tmp[1] = call head (tmp[1]), live: (tmp[0], arg[0], arg[1], arg[2]);
+      tmp[2] = arg[1];
+      tmp[3] = arg[0];
+      tmp[1] = call tmp[3] (tmp[2], tmp[1]), live: (tmp[0], arg[0], arg[1], arg[2]);
+      tmp[2] = arg[0];
+      tmp[0] = tcall foldl' (tmp[2], tmp[1], tmp[0]), live: (arg[0], arg[1], arg[2]);
+    };
+  };
+}
 
 function sum''(integer) : integer {
   tmp[0] = arg[0];
@@ -84,222 +302,4 @@ function main() : * {
   nop;
   tmp[0] = void;
   ret tmp[0];
-}
-
-function head(list) : * {
-  tmp[0] = arg[0];
-  case[list] tmp[0] {
-    cons: {
-      nop;
-      tmp[0] = arg[0].cons[0];
-      ret tmp[0];
-    }
-  };
-}
-
-function tail(list) : list {
-  tmp[0] = arg[0];
-  case[list] tmp[0] {
-    cons: {
-      nop;
-      tmp[0] = arg[0].cons[1];
-      ret tmp[0];
-    }
-  };
-}
-
-function null(list) : * {
-  tmp[0] = arg[0];
-  case[list] tmp[0] {
-    nil: {
-      nop;
-      tmp[0] = true;
-      ret tmp[0];
-    }
-    cons: {
-      nop;
-      tmp[0] = false;
-      ret tmp[0];
-    }
-  };
-}
-
-function map(* → *, list) : list {
-  tmp[0] = arg[1];
-  case[list] tmp[0] {
-    nil: {
-      ret tmp[0];
-    }
-    cons: {
-      nop;
-      tmp[0] = arg[1].cons[1];
-      tmp[1] = arg[0];
-      tmp[0] = call map (tmp[1], tmp[0]), live: (arg[0], arg[1]);
-      tmp[1] = arg[1].cons[0];
-      tmp[2] = arg[0];
-      tmp[1] = call tmp[2] (tmp[1]), live: (tmp[0], arg[0], arg[1]);
-      prealloc 3, live: (tmp[0], tmp[1], arg[0], arg[1]);
-      tmp[0] = alloc cons (tmp[1], tmp[0]);
-      ret tmp[0];
-    }
-  };
-}
-
-function foldl((*, *) → *, *, list) : * {
-  tmp[0] = arg[2];
-  case[list] tmp[0] {
-    nil: {
-      nop;
-      tmp[0] = arg[1];
-      ret tmp[0];
-    }
-    cons: {
-      nop;
-      tmp[0] = arg[2].cons[1];
-      tmp[1] = arg[2].cons[0];
-      tmp[2] = arg[1];
-      tmp[3] = arg[0];
-      tmp[1] = call tmp[3] (tmp[2], tmp[1]), live: (tmp[0], arg[0], arg[1], arg[2]);
-      tmp[2] = arg[0];
-      tmp[0] = tcall foldl (tmp[2], tmp[1], tmp[0]), live: (arg[0], arg[1], arg[2]);
-    }
-  };
-}
-
-function foldr((*, *) → *, *, list) : * {
-  tmp[0] = arg[2];
-  case[list] tmp[0] {
-    nil: {
-      nop;
-      tmp[0] = arg[1];
-      ret tmp[0];
-    }
-    cons: {
-      nop;
-      tmp[0] = arg[2].cons[1];
-      tmp[1] = arg[1];
-      tmp[2] = arg[0];
-      tmp[0] = call foldr (tmp[2], tmp[1], tmp[0]), live: (arg[0], arg[1], arg[2]);
-      tmp[1] = arg[2].cons[0];
-      tmp[2] = arg[0];
-      tmp[0] = tcall tmp[2] (tmp[1], tmp[0]), live: (arg[0], arg[1], arg[2]);
-    }
-  };
-}
-
-function filter(* → bool, list) : list {
-  tmp[0] = arg[1];
-  case[list] tmp[0] {
-    nil: {
-      ret tmp[0];
-    }
-    cons: {
-      nop;
-      tmp[0] = arg[1].cons[0];
-      tmp[1] = arg[0];
-      tmp[0] = call tmp[1] (tmp[0]), live: (arg[0], arg[1]);
-      br tmp[0] {
-        true: {
-          tmp[0] = arg[1].cons[1];
-          tmp[1] = arg[0];
-          tmp[0] = call filter (tmp[1], tmp[0]), live: (arg[0], arg[1]);
-          prealloc 3, live: (tmp[0], arg[0], arg[1]);
-          tmp[1] = arg[1].cons[0];
-          tmp[0] = alloc cons (tmp[1], tmp[0]);
-          ret tmp[0];
-        }
-        false: {
-          tmp[0] = arg[1].cons[1];
-          tmp[1] = arg[0];
-          tmp[0] = tcall filter (tmp[1], tmp[0]), live: (arg[0], arg[1]);
-        }
-      };
-    }
-  };
-}
-
-function flip_cons(list, *) : list {
-  prealloc 3, live: (arg[0], arg[1]);
-  tmp[0] = arg[0];
-  tmp[1] = arg[1];
-  tmp[0] = alloc cons (tmp[1], tmp[0]);
-  ret tmp[0];
-}
-
-function rev(list) : list {
-  prealloc 3, live: (arg[0]);
-  tmp[0] = arg[0];
-  tmp[1] = alloc nil ();
-  tmp[2] = calloc flip_cons ();
-  tmp[0] = tcall foldl (tmp[2], tmp[1], tmp[0]), live: (arg[0]);
-}
-
-function gen(integer) : list {
-  tmp[0] = arg[0];
-  tmp[1] = 0;
-  tmp[0] = eq tmp[1] tmp[0];
-  br tmp[0] {
-    true: {
-      prealloc 1, live: (arg[0]);
-      tmp[0] = alloc nil ();
-      ret tmp[0];
-    }
-    false: {
-      tmp[0] = 1;
-      tmp[1] = arg[0];
-      tmp[0] = sub tmp[1] tmp[0];
-      tmp[0] = call gen (tmp[0]), live: (arg[0]);
-      prealloc 3, live: (tmp[0], arg[0]);
-      tmp[1] = arg[0];
-      tmp[0] = alloc cons (tmp[1], tmp[0]);
-      ret tmp[0];
-    }
-  };
-}
-
-function plus(integer, integer) : integer {
-  tmp[0] = arg[1];
-  tmp[1] = arg[0];
-  tmp[0] = add tmp[1] tmp[0];
-  ret tmp[0];
-}
-
-function sum(integer) : integer {
-  tmp[0] = arg[0];
-  tmp[0] = call gen (tmp[0]), live: (arg[0]);
-  prealloc 2, live: (tmp[0], arg[0]);
-  tmp[1] = 0;
-  tmp[2] = calloc plus ();
-  tmp[0] = tcall foldl (tmp[2], tmp[1], tmp[0]), live: (arg[0]);
-}
-
-function sum'(integer) : integer {
-  tmp[0] = arg[0];
-  tmp[0] = call gen (tmp[0]), live: (arg[0]);
-  prealloc 2, live: (tmp[0], arg[0]);
-  tmp[1] = 0;
-  tmp[2] = calloc plus ();
-  tmp[0] = tcall foldr (tmp[2], tmp[1], tmp[0]), live: (arg[0]);
-}
-
-function foldl'((*, *) → *, *, list) : * {
-  tmp[0] = arg[2];
-  tmp[0] = call null (tmp[0]), live: (arg[0], arg[1], arg[2]);
-  br tmp[0] {
-    true: {
-      tmp[0] = arg[1];
-      ret tmp[0];
-    }
-    false: {
-      tmp[0] = arg[2];
-      tmp[0] = call tail (tmp[0]), live: (arg[0], arg[1], arg[2]);
-      tmp[1] = arg[2];
-      tmp[1] = call head (tmp[1]), live: (tmp[0], arg[0], arg[1], arg[2]);
-      tmp[2] = arg[1];
-      tmp[3] = arg[0];
-      tmp[1] = call tmp[3] (tmp[2], tmp[1]), live: (tmp[0], arg[0], arg[1], arg[2]);
-      tmp[2] = arg[0];
-      tmp[0] = tcall foldl' (tmp[2], tmp[1], tmp[0]), live: (arg[0], arg[1], arg[2]);
-    }
-  };
 }

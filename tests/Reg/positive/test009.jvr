@@ -28,12 +28,12 @@ function null(list) : bool {
       nop;
       tmp[0] = true;
       ret tmp[0];
-    }
+    };
     default: {
       nop;
       tmp[0] = false;
       ret tmp[0];
-    }
+    };
   };
 }
 
@@ -42,7 +42,7 @@ function map(* → *, list) : list {
   case[list] tmp[1] {
     nil: {
       ret tmp[1];
-    }
+    };
     cons: {
       {
         tmp[0] = tmp[1];
@@ -56,7 +56,7 @@ function map(* → *, list) : list {
         tmp[1] = alloc cons (tmp[2], tmp[1]);
         ret tmp[1];
       };
-    }
+    };
   };
 }
 
@@ -68,7 +68,7 @@ function map'(* → *, list) : list {
       prealloc 1, live: (arg[0], arg[1]);
       tmp[0] = alloc nil ();
       ret tmp[0];
-    }
+    };
     false: {
       tmp[0] = arg[1];
       tmp[0] = call tl (tmp[0]), live: (arg[0], arg[1]);
@@ -81,7 +81,7 @@ function map'(* → *, list) : list {
       prealloc 3, live: (tmp[0], tmp[1], arg[0], arg[1]);
       tmp[0] = alloc cons (tmp[1], tmp[0]);
       ret tmp[0];
-    }
+    };
   };
 }
 

@@ -11,14 +11,14 @@ function g(integer → integer, integer) : integer {
     true: {
       tmp[0] = 0;
       ret tmp[0];
-    }
+    };
     false: {
       tmp[0] = 1;
       tmp[1] = arg[1];
       tmp[0] = sub tmp[1] tmp[0];
       tmp[1] = arg[0];
       tmp[0] = tcall tmp[1] (tmp[0]), live: (arg[0], arg[1]);
-    }
+    };
   };
 }
 
