@@ -1,4 +1,4 @@
-module Juvix.Compiler.Tree.SemEvaluator where
+module Juvix.Compiler.Tree.EvaluatorSem where
 
 import Control.Exception qualified as Exception
 import Juvix.Compiler.Core.Data.BinderList qualified as BL

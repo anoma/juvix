@@ -11,9 +11,9 @@ import Juvix.Compiler.Tree.Data.InfoTable qualified as Tree
 import Juvix.Compiler.Tree.Error qualified as Tree
 import Juvix.Compiler.Tree.Evaluator qualified as Tree
 import Juvix.Compiler.Tree.EvaluatorEff qualified as Eff
+import Juvix.Compiler.Tree.EvaluatorSem qualified as TreeSem
 import Juvix.Compiler.Tree.Language.Value qualified as Tree
 import Juvix.Compiler.Tree.Pretty qualified as Tree
-import Juvix.Compiler.Tree.SemEvaluator qualified as TreeSem
 
 evalTree :: forall r. (Members '[Embed IO, App] r) => Evaluator -> Tree.InfoTable -> Sem r ()
 evalTree ev tab =
