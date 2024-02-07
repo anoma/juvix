@@ -1,4 +1,4 @@
-module HaskelineJH where
+module HaskelineJB where
 
 import Control.Monad.Trans.Reader
 import GHC.IORef

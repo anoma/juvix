@@ -13,7 +13,7 @@ import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (mapReaderT)
 import Data.String.Interpolate (i, __i)
 import Evaluator
-import HaskelineJH
+import HaskelineJB
 import Juvix.Compiler.Concrete.Data.Scope (scopePath)
 import Juvix.Compiler.Concrete.Data.Scope qualified as Scoped
 import Juvix.Compiler.Concrete.Data.ScopedName (absTopModulePath)
