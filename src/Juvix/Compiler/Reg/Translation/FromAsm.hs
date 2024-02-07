@@ -303,14 +303,14 @@ fromAsmSave ::
   Asm.CmdSave ->
   Code ->
   Sem r Instruction
-fromAsmSave fi si Asm.CmdSave {} block =
+fromAsmSave fi si Asm.CmdSave {..} block =
   return $
     Block $
       InstrBlock
         { _instrBlockCode =
             Assign
               ( InstrAssign
-                  (mkVarRef VarGroupLocal (si ^. Asm.stackInfoTempStackHeight))
+                  (VarRef VarGroupLocal (si ^. Asm.stackInfoTempStackHeight) _cmdSaveName)
                   (VRef $ mkVarRef VarGroupLocal (fromJust (fi ^. Asm.functionExtra) ^. Asm.functionMaxTempStackHeight + si ^. Asm.stackInfoValueStackHeight - 1))
               )
               : block

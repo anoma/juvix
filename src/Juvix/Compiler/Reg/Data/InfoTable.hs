@@ -10,6 +10,7 @@ import Juvix.Compiler.Tree.Data.InfoTable.Base
 newtype FunctionInfoExtra = FunctionInfoExtra
   { _functionLocalVarsNum :: Int
   }
+  deriving stock (Eq)
 
 makeLenses ''FunctionInfoExtra
 

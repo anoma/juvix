@@ -14,6 +14,7 @@ import Internal qualified
 import Nockma qualified
 import Package qualified
 import Parsing qualified
+import Reg qualified
 import Resolver qualified
 import Runtime qualified
 import Scope qualified
@@ -28,6 +29,7 @@ slowTests =
     "Juvix slow tests"
     [ BackendGeb.allTests,
       Runtime.allTests,
+      Reg.allTests,
       Asm.allTests,
       Tree.allTests,
       Core.allTests,
