@@ -157,12 +157,55 @@ computeStringMap strs = snd . run . execState (HashMap.size strs, strs) . mapM g
           )
       _ -> return ()
 
+computeLocalVarsNum :: Code -> Int
+computeLocalVarsNum = maximum . map go
+  where
+    go :: Instruction -> Int
+    go = \case
+      Nop -> 0
+      Binop BinaryOp {..} -> goVarRef _binaryOpResult
+      Show InstrShow {..} -> goVarRef _instrShowResult
+      StrToInt InstrStrToInt {..} -> goVarRef _instrStrToIntResult
+      Assign InstrAssign {..} -> goVarRef _instrAssignResult
+      Trace {} -> 0
+      Dump -> 0
+      Failure {} -> 0
+      ArgsNum InstrArgsNum {..} -> goVarRef _instrArgsNumResult
+      Prealloc InstrPrealloc {} -> 0
+      Alloc InstrAlloc {..} -> goVarRef _instrAllocResult
+      AllocClosure InstrAllocClosure {..} -> goVarRef _instrAllocClosureResult
+      ExtendClosure InstrExtendClosure {..} -> goVarRef _instrExtendClosureResult
+      Call InstrCall {..} -> goVarRef _instrCallResult
+      CallClosures InstrCallClosures {..} -> goVarRef _instrCallClosuresResult
+      Return {} -> 0
+      Branch InstrBranch {..} ->
+        max
+          (computeLocalVarsNum _instrBranchTrue)
+          (computeLocalVarsNum _instrBranchFalse)
+      Case InstrCase {..} ->
+        max
+          ( maximum
+              ( map
+                  (computeLocalVarsNum . (^. caseBranchCode))
+                  _instrCaseBranches
+              )
+          )
+          (maybe 0 computeLocalVarsNum _instrCaseDefault)
+      Block InstrBlock {..} ->
+        computeLocalVarsNum _instrBlockCode
+
+    goVarRef :: VarRef -> Int
+    goVarRef VarRef {..} = case _varRefGroup of
+      VarGroupArgs -> 0
+      VarGroupLocal -> _varRefIndex + 1
+
 data ExtraInfo = ExtraInfo
   { _extraInfoTable :: InfoTable,
     _extraInfoUIDs :: HashMap Tag Int,
     _extraInfoFUIDs :: HashMap Symbol Int,
     _extraInfoStringMap :: HashMap Text Int,
     _extraInfoMaxStackHeight :: HashMap Symbol Int,
+    _extraInfoLocalVarsNum :: HashMap Symbol Int,
     _extraInfoMaxArgsNum :: Int,
     _extraInfoMaxCallClosuresArgsNum :: Int,
     _extraInfoConstrsNum :: Int,
@@ -201,6 +244,10 @@ computeExtraInfo lims tab =
       _extraInfoMaxStackHeight =
         HashMap.map
           (computeMaxStackHeight lims . (^. functionCode))
+          (tab ^. infoFunctions),
+      _extraInfoLocalVarsNum =
+        HashMap.map
+          (computeLocalVarsNum . (^. functionCode))
           (tab ^. infoFunctions),
       _extraInfoMaxArgsNum =
         maximum (map (^. functionArgsNum) (HashMap.elems (tab ^. infoFunctions))),

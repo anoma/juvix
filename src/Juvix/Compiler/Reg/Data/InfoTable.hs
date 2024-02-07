@@ -7,13 +7,6 @@ where
 import Juvix.Compiler.Reg.Language
 import Juvix.Compiler.Tree.Data.InfoTable.Base
 
-newtype FunctionInfoExtra = FunctionInfoExtra
-  { _functionLocalVarsNum :: Int
-  }
-  deriving stock (Eq)
+type InfoTable = InfoTable' Code ()
 
-makeLenses ''FunctionInfoExtra
-
-type InfoTable = InfoTable' Code FunctionInfoExtra
-
-type FunctionInfo = FunctionInfo' Code FunctionInfoExtra
+type FunctionInfo = FunctionInfo' Code ()

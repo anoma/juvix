@@ -16,7 +16,7 @@ import Juvix.Compiler.Tree.Translation.FromSource.Sig qualified as S
 import Juvix.Parser.Error
 import Text.Megaparsec qualified as P
 
-type ParserSig = S.ParserSig Code FunctionInfoExtra VarRef
+type ParserSig = S.ParserSig Code () VarRef
 
 type LocalParams = LocalParams' VarRef
 
@@ -27,7 +27,7 @@ parseRegSig =
       _parserSigParseCode = parseCode,
       _parserSigArgRef = VarRef VarGroupArgs,
       _parserSigEmptyCode = [],
-      _parserSigEmptyExtra = FunctionInfoExtra 0
+      _parserSigEmptyExtra = ()
     }
 
 parseText :: Text -> Either MegaparsecError InfoTable
@@ -210,7 +210,7 @@ instrAlloc ::
   ParsecS r InstrAlloc
 instrAlloc vref = do
   kw kwAlloc
-  tag <- constrTag @Code @FunctionInfoExtra @VarRef
+  tag <- constrTag @Code @() @VarRef
   args <- parseArgs
   return
     InstrAlloc
@@ -226,7 +226,7 @@ instrAllocClosure ::
   ParsecS r InstrAllocClosure
 instrAllocClosure vref = do
   kw kwCAlloc
-  sym <- funSymbol @Code @FunctionInfoExtra @VarRef
+  sym <- funSymbol @Code @() @VarRef
   args <- parseArgs
   fi <- lift $ getFunctionInfo sym
   return
@@ -269,7 +269,7 @@ parseCallType ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r CallType
 parseCallType =
-  (CallFun <$> funSymbol @Code @FunctionInfoExtra @VarRef)
+  (CallFun <$> funSymbol @Code @() @VarRef)
     <|> (CallClosure <$> varRef)
 
 instrCall ::
@@ -343,7 +343,7 @@ instrCase ::
   ParsecS r InstrCase
 instrCase = do
   kw kwCase
-  sym <- brackets (indSymbol @Code @FunctionInfoExtra @VarRef)
+  sym <- brackets (indSymbol @Code @() @VarRef)
   val <- value
   lbrace
   brs <- many caseBranch
@@ -363,7 +363,7 @@ caseBranch ::
   ParsecS r CaseBranch
 caseBranch = do
   tag <- P.try $ do
-    tag <- constrTag @Code @FunctionInfoExtra @VarRef
+    tag <- constrTag @Code @() @VarRef
     kw kwColon
     return tag
   body <- braces parseCode
@@ -391,13 +391,13 @@ instrBlock = InstrBlock <$> braces parseCode
 varRef ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r VarRef
-varRef = varArg <|> varTmp <|> namedRef @Code @FunctionInfoExtra @VarRef
+varRef = varArg <|> varTmp <|> namedRef @Code @() @VarRef
 
 declVarRef ::
   forall r.
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r VarRef
-declVarRef = varArg <|> varTmp <|> namedRef' @Code @FunctionInfoExtra @VarRef decl
+declVarRef = varArg <|> varTmp <|> namedRef' @Code @() @VarRef decl
   where
     decl :: Int -> Text -> ParsecS r VarRef
     decl _ txt = do
@@ -447,7 +447,7 @@ constrField ::
   ParsecS r ConstrField
 constrField ref = do
   dot
-  tag <- constrTag @Code @FunctionInfoExtra @VarRef
+  tag <- constrTag @Code @() @VarRef
   off <- brackets int
   return
     ConstrField

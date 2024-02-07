@@ -26,11 +26,9 @@ fromAsm tab =
           _functionArgsNum = fi ^. Asm.functionArgsNum,
           _functionArgNames = fi ^. Asm.functionArgNames,
           _functionType = fi ^. Asm.functionType,
-          _functionExtra = FunctionInfoExtra $ extra ^. Asm.functionMaxTempStackHeight + extra ^. Asm.functionMaxValueStackHeight,
+          _functionExtra = (),
           _functionCode = fromAsmFun tab fi
         }
-      where
-        extra = fromJust (fi ^. Asm.functionExtra)
 
     convertConstr :: Asm.ConstructorInfo -> ConstructorInfo
     convertConstr ci = ci

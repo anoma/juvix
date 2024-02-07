@@ -172,7 +172,7 @@ fromReg lims tab =
 fromRegFunction :: (Member CBuilder r) => Reg.ExtraInfo -> Reg.FunctionInfo -> Sem r [Statement]
 fromRegFunction info funInfo = do
   body <- fromRegCode bNoStack info (funInfo ^. Reg.functionCode)
-  let tmpDecls = mkDecls "DECL_TMP" (funInfo ^. Reg.functionExtra . Reg.functionLocalVarsNum)
+  let tmpDecls = mkDecls "DECL_TMP" localVarsNum
   return
     [closureDecl, functionDecl, StatementCompound (tmpDecls ++ body)]
   where
@@ -184,6 +184,9 @@ fromRegFunction info funInfo = do
 
     maxStackHeight :: Int
     maxStackHeight = getMaxStackHeight info sym
+
+    localVarsNum :: Int
+    localVarsNum = getLocalVarsNum info sym
 
     bNoStack :: Bool
     bNoStack = maxStackHeight == 0
