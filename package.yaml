@@ -38,6 +38,7 @@ extra-source-files:
   - include/package-base/**/*.juvix
   - runtime/include/**/*.h
   - runtime/**/*.a
+  - runtime/src/tree/*.jvt
   - runtime/src/vampir/*.pir
 
 dependencies:
