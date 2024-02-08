@@ -370,15 +370,15 @@ class NockmaEq a where
 instance NockmaEq Natural where
   nockmaEq a b = a == b
 
-instance NockmaEq a => NockmaEq (Atom a) where
-  nockmaEq = nockmaEq `on` ( ^. atom )
+instance (NockmaEq a) => NockmaEq (Atom a) where
+  nockmaEq = nockmaEq `on` (^. atom)
 
-instance NockmaEq a => NockmaEq (Term a) where
+instance (NockmaEq a) => NockmaEq (Term a) where
   nockmaEq = \cases
     (TermAtom a) (TermAtom b) -> nockmaEq a b
     (TermCell a) (TermCell b) -> nockmaEq a b
     TermCell {} TermAtom {} -> False
     TermAtom {} TermCell {} -> False
 
-instance NockmaEq a => NockmaEq (Cell a) where
+instance (NockmaEq a) => NockmaEq (Cell a) where
   nockmaEq (Cell l r) (Cell l' r') = nockmaEq l l' && nockmaEq r r'
