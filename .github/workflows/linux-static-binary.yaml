@@ -47,11 +47,14 @@ jobs:
       - name: Git permissions workaround
         run: "chown -R $(id -un):$(id -gn) ."
 
-      - name: Install clang14
-        run: apk add --update clang14
+      - name: Install clang
+        run: apk add --update clang
+
+      - name: Install llvm
+        run: apk add --update llvm
 
       - name: Runtime build
-        run: make runtime LIBTOOL=llvm14-ar
+        run: make runtime LIBTOOL=llvm-ar
 
       - name: build Juvix
         run: stack install --allow-different-user --system-ghc --ghc-options='-split-sections' --flag juvix:static
