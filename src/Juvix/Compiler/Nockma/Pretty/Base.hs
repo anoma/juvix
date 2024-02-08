@@ -85,12 +85,14 @@ instance (PrettyCode a, NockNatural a) => PrettyCode (Cell a) where
     return (oneLineOrNextBrackets inside)
 
 unfoldCell :: Cell a -> NonEmpty (Term a)
-unfoldCell c = c ^. cellLeft :| go [] (c ^. cellRight)
+unfoldCell c = c ^. cellLeft :| reverse (go [] (c ^. cellRight))
   where
     go :: [Term a] -> Term a -> [Term a]
-    go acc = \case
-      t@TermAtom {} -> reverse (t : acc)
-      TermCell (Cell l r) -> go (l : acc) r
+    go acc t = case t of
+      TermAtom {} -> t : acc
+      TermCell (Cell' l r (Irrelevant i)) -> case i ^. cellInfoCall of
+        Nothing -> go (l : acc) r
+        Just {} -> t : acc
 
 instance (PrettyCode a, NockNatural a) => PrettyCode (Term a) where
   ppCode = \case

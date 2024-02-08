@@ -53,5 +53,6 @@ tests =
   [ PosTest "Identity" $(mkRelDir ".") $(mkRelFile "Identity.nock"),
     PosTest "Identity Pretty" $(mkRelDir ".") $(mkRelFile "IdentityPretty.pnock"),
     PosTest "StdlibCall" $(mkRelDir ".") $(mkRelFile "StdlibCall.pnock"),
-    PosTest "Stdlib" $(mkRelDir ".") $(mkRelFile "Stdlib.nock")
+    PosTest "Stdlib" $(mkRelDir ".") $(mkRelFile "Stdlib.nock"),
+    PosTest "Compiled Tree program" $(mkRelDir ".") $(mkRelFile "Compiled.pnock")
   ]
