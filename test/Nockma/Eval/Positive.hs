@@ -42,7 +42,7 @@ allTests = testGroup "Nockma eval unit positive" (map mk tests)
 eqNock :: Term Natural -> Check ()
 eqNock expected = do
   actual <- ask
-  unless (expected == actual) (err actual)
+  unless (nockmaEq expected actual) (err actual)
   where
     err :: Term Natural -> Check ()
     err actual = do
@@ -56,7 +56,7 @@ eqNock expected = do
 eqTraces :: [Term Natural] -> Check ()
 eqTraces expected = do
   ts <- ask
-  unless (ts == expected) (err ts)
+  unless (nockmaEq ts expected) (err ts)
   where
     err :: [Term Natural] -> Check ()
     err ts = do
