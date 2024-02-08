@@ -1,4 +1,9 @@
-module Juvix.Compiler.Reg.Interpreter where
+module Juvix.Compiler.Reg.Interpreter
+  ( module Juvix.Compiler.Reg.Interpreter,
+    module Juvix.Compiler.Reg.Interpreter.Base,
+    module Juvix.Compiler.Reg.Error,
+  )
+where
 
 import Control.Monad.ST
 import Data.Vector qualified as Vec
