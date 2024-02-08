@@ -122,6 +122,7 @@ ghc-options:
   # Warnings
   - -Weverything
   - -Wno-all-missed-specialisations
+  - -Wno-missed-specialisations
   - -Wno-missing-export-lists
   - -Wno-missing-import-lists
   - -Wno-missing-kind-signatures
