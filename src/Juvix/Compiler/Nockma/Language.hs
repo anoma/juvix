@@ -1,7 +1,7 @@
 module Juvix.Compiler.Nockma.Language
   ( module Juvix.Compiler.Nockma.Language,
     module Juvix.Compiler.Core.Language.Base,
-    module Juvix.Compiler.Nockma.StdlibFunction,
+    module Juvix.Compiler.Nockma.StdlibFunction.Base,
     module Juvix.Compiler.Nockma.Language.Path,
   )
 where
@@ -10,7 +10,7 @@ import Data.HashMap.Strict qualified as HashMap
 import GHC.Base (Type)
 import Juvix.Compiler.Core.Language.Base (Symbol)
 import Juvix.Compiler.Nockma.Language.Path
-import Juvix.Compiler.Nockma.StdlibFunction
+import Juvix.Compiler.Nockma.StdlibFunction.Base
 import Juvix.Prelude hiding (Atom, Path)
 import Juvix.Prelude.Pretty
 
@@ -331,17 +331,6 @@ infixl 1 >>#
 
 (>>#) :: (IsNock x, IsNock y) => x -> y -> Term Natural
 a >># b = TermCell (a >>#. b)
-
-stdlibNumArgs :: StdlibFunction -> Natural
-stdlibNumArgs = \case
-  StdlibDec -> 1
-  StdlibAdd -> 2
-  StdlibSub -> 2
-  StdlibMul -> 2
-  StdlibMod -> 2
-  StdlibDiv -> 2
-  StdlibLe -> 2
-  StdlibLt -> 2
 
 {-# COMPLETE Cell #-}
 

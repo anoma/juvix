@@ -3,10 +3,13 @@ module Juvix.Compiler.Nockma.Evaluator.Options where
 import Juvix.Prelude.Base
 
 newtype EvalOptions = EvalOptions
-  { _evalIgnoreStdlibCalls :: Bool
+  { _evalInterceptStdlibCalls :: Bool
   }
 
 defaultEvalOptions :: EvalOptions
-defaultEvalOptions = EvalOptions False
+defaultEvalOptions =
+  EvalOptions
+    { _evalInterceptStdlibCalls = True
+    }
 
 makeLenses ''EvalOptions
