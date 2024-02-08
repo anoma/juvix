@@ -84,7 +84,7 @@ atomOp = do
           { _atomInfoHint = Just AtomHintOp,
             _atomInfoLoc = Just loc
           }
-  return (Atom (serializeNockOp op') (Irrelevant info))
+  return (Atom (serializeNockOp op') info)
 
 atomDirection :: Parser (Atom Natural)
 atomDirection = do
@@ -97,7 +97,7 @@ atomDirection = do
           { _atomInfoHint = Just AtomHintOp,
             _atomInfoLoc = Just loc
           }
-  return (Atom (serializePath dirs) (Irrelevant info))
+  return (Atom (serializePath dirs) info)
 
 atomNat :: Parser (Atom Natural)
 atomNat = do
@@ -107,7 +107,7 @@ atomNat = do
           { _atomInfoHint = Nothing,
             _atomInfoLoc = Just loc
           }
-  return (Atom n (Irrelevant info))
+  return (Atom n info)
 
 atomBool :: Parser (Atom Natural)
 atomBool =
@@ -152,7 +152,7 @@ cell = do
           { _cellInfoCall = c,
             _cellInfoLoc = Just (lloc <> rloc)
           }
-  return (set cellInfo (Irrelevant info) r)
+  return (set cellInfo info r)
   where
     stdlibCall :: Parser (StdlibCall Natural)
     stdlibCall = do

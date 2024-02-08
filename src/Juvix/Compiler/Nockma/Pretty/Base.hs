@@ -33,8 +33,8 @@ instance (PrettyCode a, NockNatural a) => PrettyCode (Atom a) where
         AtomHintOp -> nockOp atm >>= ppCode
         AtomHintPath -> nockPath atm >>= ppCode
         AtomHintBool
-          | atm == nockTrue -> return (annotate (AnnKind KNameInductive) "true")
-          | atm == nockFalse -> return (annotate (AnnKind KNameAxiom) "false")
+          | nockmaEq atm nockTrue -> return (annotate (AnnKind KNameInductive) "true")
+          | nockmaEq atm nockFalse -> return (annotate (AnnKind KNameAxiom) "false")
           | otherwise -> fail
         AtomHintNil -> return (annotate (AnnKind KNameConstructor) "nil")
         AtomHintVoid -> return (annotate (AnnKind KNameAxiom) "void")
@@ -90,7 +90,7 @@ unfoldCell c = c ^. cellLeft :| reverse (go [] (c ^. cellRight))
     go :: [Term a] -> Term a -> [Term a]
     go acc t = case t of
       TermAtom {} -> t : acc
-      TermCell (Cell' l r (Irrelevant i)) -> case i ^. cellInfoCall of
+      TermCell (Cell' l r i) -> case i ^. cellInfoCall of
         Nothing -> go (l : acc) r
         Just {} -> t : acc
 

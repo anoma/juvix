@@ -23,7 +23,7 @@ asCell = \case
 asBool :: (Members '[Reader EvalCtx, Error (NockEvalError a)] r, NockNatural a) => Term a -> Sem r Bool
 asBool t = do
   a <- asAtom t
-  return (a == nockTrue)
+  return (nockmaEq a nockTrue)
 
 asPath ::
   (Members '[Reader EvalCtx, Error (NockEvalError a), Error (ErrNockNatural a)] r, NockNatural a) =>
@@ -302,7 +302,7 @@ eval inistack initerm =
               r <- evalArg crumbEvalSecond stack (cellTerm ^. cellRight)
               return . TermAtom $
                 if
-                    | l == r -> nockTrue
+                    | nockmaEq l r -> nockTrue
                     | otherwise -> nockFalse
 
             goOpCall :: Sem r (Term a)

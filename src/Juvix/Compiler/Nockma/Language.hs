@@ -47,27 +47,26 @@ data Assignment a = Assignment
 data Term a
   = TermAtom (Atom a)
   | TermCell (Cell a)
-  deriving stock (Show, Eq, Lift)
+  deriving stock (Show, Lift)
 
 data StdlibCall a = StdlibCall
   { _stdlibCallFunction :: StdlibFunction,
     _stdlibCallArgs :: Term a
   }
-
-deriving stock instance (Lift a) => Lift (StdlibCall a)
+  deriving stock (Show, Lift)
 
 data CellInfo a = CellInfo
   { _cellInfoLoc :: Maybe Interval,
     _cellInfoCall :: Maybe (StdlibCall a)
   }
-  deriving stock (Lift)
+  deriving stock (Show, Lift)
 
 data Cell a = Cell'
   { _cellLeft :: Term a,
     _cellRight :: Term a,
-    _cellInfo :: Irrelevant (CellInfo a)
+    _cellInfo :: CellInfo a
   }
-  deriving stock (Show, Eq, Lift)
+  deriving stock (Show, Lift)
 
 data AtomInfo = AtomInfo
   { _atomInfoHint :: Maybe AtomHint,
@@ -77,9 +76,9 @@ data AtomInfo = AtomInfo
 
 data Atom a = Atom
   { _atom :: a,
-    _atomInfo :: Irrelevant AtomInfo
+    _atomInfo :: AtomInfo
   }
-  deriving stock (Show, Eq, Lift)
+  deriving stock (Show, Lift)
 
 data AtomHint
   = AtomHintOp
@@ -176,7 +175,7 @@ makeLenses ''AtomInfo
 makeLenses ''CellInfo
 
 atomHint :: Lens' (Atom a) (Maybe AtomHint)
-atomHint = atomInfo . unIrrelevant . atomInfoHint
+atomHint = atomInfo . atomInfoHint
 
 termLoc :: Lens' (Term a) (Maybe Interval)
 termLoc f = \case
@@ -184,13 +183,13 @@ termLoc f = \case
   TermCell a -> TermCell <$> cellLoc f a
 
 cellLoc :: Lens' (Cell a) (Maybe Interval)
-cellLoc = cellInfo . unIrrelevant . cellInfoLoc
+cellLoc = cellInfo . cellInfoLoc
 
 cellCall :: Lens' (Cell a) (Maybe (StdlibCall a))
-cellCall = cellInfo . unIrrelevant . cellInfoCall
+cellCall = cellInfo . cellInfoCall
 
 atomLoc :: Lens' (Atom a) (Maybe Interval)
-atomLoc = atomInfo . unIrrelevant . atomInfoLoc
+atomLoc = atomInfo . atomInfoLoc
 
 naturalNockOps :: HashMap Natural NockOp
 naturalNockOps = HashMap.fromList [(serializeOp op, op) | op <- allElements]
@@ -217,7 +216,7 @@ serializeOp = \case
   OpHint -> 11
   OpTrace -> 100
 
-class (Eq a) => NockNatural a where
+class (NockmaEq a) => NockNatural a where
   type ErrNockNatural a :: Type
   nockNatural :: (Member (Error (ErrNockNatural a)) r) => Atom a -> Sem r Natural
   serializeNockOp :: NockOp -> a
@@ -267,11 +266,11 @@ nockBoolLiteral b
 instance NockNatural Natural where
   type ErrNockNatural Natural = NockNaturalNaturalError
   nockNatural a = return (a ^. atom)
-  nockTrue = Atom 0 (Irrelevant (atomHintInfo AtomHintBool))
-  nockFalse = Atom 1 (Irrelevant (atomHintInfo AtomHintBool))
-  nockNil = Atom 0 (Irrelevant (atomHintInfo AtomHintNil))
+  nockTrue = Atom 0 (atomHintInfo AtomHintBool)
+  nockFalse = Atom 1 (atomHintInfo AtomHintBool)
+  nockNil = Atom 0 (atomHintInfo AtomHintNil)
   nockSucc = over atom succ
-  nockVoid = Atom 0 (Irrelevant (atomHintInfo AtomHintVoid))
+  nockVoid = Atom 0 (atomHintInfo AtomHintVoid)
   errInvalidOp atm = NaturalInvalidOp atm
   errInvalidPath atm = NaturalInvalidPath atm
   serializeNockOp = serializeOp
@@ -299,7 +298,7 @@ instance IsNock Natural where
   toNock = TAtom
 
 instance IsNock NockOp where
-  toNock op = toNock (Atom (serializeOp op) (Irrelevant (atomHintInfo AtomHintOp)))
+  toNock op = toNock (Atom (serializeOp op) (atomHintInfo AtomHintOp))
 
 instance IsNock Bool where
   toNock = \case
@@ -307,7 +306,7 @@ instance IsNock Bool where
     True -> toNock (nockTrue @Natural)
 
 instance IsNock Path where
-  toNock pos = TermAtom (Atom (encodePath pos ^. encodedPath) (Irrelevant (atomHintInfo AtomHintPath)))
+  toNock pos = TermAtom (Atom (encodePath pos ^. encodedPath) (atomHintInfo AtomHintPath))
 
 instance IsNock EncodedPath where
   toNock = toNock . decodePath'
@@ -337,7 +336,7 @@ a >># b = TermCell (a >>#. b)
 pattern Cell :: Term a -> Term a -> Cell a
 pattern Cell {_cellLeft', _cellRight'} <- Cell' _cellLeft' _cellRight' _
   where
-    Cell a b = Cell' a b (Irrelevant emptyCellInfo)
+    Cell a b = Cell' a b emptyCellInfo
 
 {-# COMPLETE TCell, TAtom #-}
 
@@ -349,7 +348,7 @@ pattern TCell l r <- TermCell (Cell' l r _)
 pattern TAtom :: a -> Term a
 pattern TAtom a <- TermAtom (Atom a _)
   where
-    TAtom a = TermAtom (Atom a (Irrelevant emptyAtomInfo))
+    TAtom a = TermAtom (Atom a emptyAtomInfo)
 
 emptyCellInfo :: CellInfo a
 emptyCellInfo =
@@ -364,3 +363,22 @@ emptyAtomInfo =
     { _atomInfoHint = Nothing,
       _atomInfoLoc = Nothing
     }
+
+class NockmaEq a where
+  nockmaEq :: a -> a -> Bool
+
+instance NockmaEq Natural where
+  nockmaEq a b = a == b
+
+instance NockmaEq a => NockmaEq (Atom a) where
+  nockmaEq = nockmaEq `on` ( ^. atom )
+
+instance NockmaEq a => NockmaEq (Term a) where
+  nockmaEq = \cases
+    (TermAtom a) (TermAtom b) -> nockmaEq a b
+    (TermCell a) (TermCell b) -> nockmaEq a b
+    TermCell {} TermAtom {} -> False
+    TermAtom {} TermCell {} -> False
+
+instance NockmaEq a => NockmaEq (Cell a) where
+  nockmaEq (Cell l r) (Cell l' r') = nockmaEq l l' && nockmaEq r r'
