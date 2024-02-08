@@ -112,8 +112,8 @@ atomNat = do
 atomBool :: Parser (Atom Natural)
 atomBool =
   choice
-    [ symbol "true" $> nockTrue,
-      symbol "false" $> nockFalse
+    [ symbol Str.true $> nockTrue,
+      symbol Str.false $> nockFalse
     ]
 
 atomWithLoc :: Parser a -> Atom Natural -> Parser (Atom Natural)
@@ -122,7 +122,10 @@ atomWithLoc p n = do
   return (set atomLoc (Just loc) n)
 
 atomNil :: Parser (Atom Natural)
-atomNil = symbol "nil" $> nockNil
+atomNil = symbol Str.nil $> nockNil
+
+atomVoid :: Parser (Atom Natural)
+atomVoid = symbol Str.void $> nockVoid
 
 patom :: Parser (Atom Natural)
 patom =
@@ -131,6 +134,7 @@ patom =
     <|> atomDirection
     <|> atomBool
     <|> atomNil
+    <|> atomVoid
 
 iden :: Parser Text
 iden = lexeme (takeWhile1P (Just "<iden>") isAlphaNum)
