@@ -47,26 +47,26 @@ data Assignment a = Assignment
 data Term a
   = TermAtom (Atom a)
   | TermCell (Cell a)
-  deriving stock (Show, Lift)
+  deriving stock (Show, Eq, Lift)
 
 data StdlibCall a = StdlibCall
   { _stdlibCallFunction :: StdlibFunction,
     _stdlibCallArgs :: Term a
   }
-  deriving stock (Show, Lift)
+  deriving stock (Show, Eq, Lift)
 
 data CellInfo a = CellInfo
   { _cellInfoLoc :: Maybe Interval,
     _cellInfoCall :: Maybe (StdlibCall a)
   }
-  deriving stock (Show, Lift)
+  deriving stock (Show, Eq, Lift)
 
 data Cell a = Cell'
   { _cellLeft :: Term a,
     _cellRight :: Term a,
     _cellInfo :: CellInfo a
   }
-  deriving stock (Show, Lift)
+  deriving stock (Show, Eq, Lift)
 
 data AtomInfo = AtomInfo
   { _atomInfoHint :: Maybe AtomHint,
@@ -78,7 +78,7 @@ data Atom a = Atom
   { _atom :: a,
     _atomInfo :: AtomInfo
   }
-  deriving stock (Show, Lift)
+  deriving stock (Show, Eq, Lift)
 
 data AtomHint
   = AtomHintOp
@@ -369,6 +369,12 @@ class NockmaEq a where
 
 instance NockmaEq Natural where
   nockmaEq a b = a == b
+
+instance (NockmaEq a) => NockmaEq [a] where
+  nockmaEq a b =
+    case zipExactMay a b of
+      Nothing -> False
+      Just z -> all (uncurry nockmaEq) z
 
 instance (NockmaEq a) => NockmaEq (Atom a) where
   nockmaEq = nockmaEq `on` (^. atom)
