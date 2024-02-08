@@ -1,9 +1,11 @@
 module Juvix.Compiler.Store.Extra where
 
 import Data.HashMap.Strict qualified as HashMap
+import Juvix.Compiler.Concrete.Data.Builtins
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language (TopModulePath)
 import Juvix.Compiler.Core.Data.InfoTable qualified as Core
+import Juvix.Compiler.Internal.Data.Name
 import Juvix.Compiler.Store.Core.Extra
 import Juvix.Compiler.Store.Internal.Language
 import Juvix.Compiler.Store.Language
@@ -42,3 +44,9 @@ computeCombinedScopedInfoTable mtab =
 computeCombinedCoreInfoTable :: ModuleTable -> Core.InfoTable
 computeCombinedCoreInfoTable mtab =
   mconcatMap (toCore . (^. moduleInfoCoreTable)) (HashMap.elems (mtab ^. moduleTable))
+
+computeCombinedBuiltins :: ModuleTable -> HashMap BuiltinPrim Name
+computeCombinedBuiltins mtab =
+  mconcatMap
+    (^. moduleInfoInternalModule . internalModuleInfoTable . infoBuiltins)
+    (HashMap.elems (mtab ^. moduleTable))

@@ -10,6 +10,7 @@ module Juvix.Compiler.Pipeline.Artifacts
 where
 
 import Juvix.Compiler.Builtins
+import Juvix.Compiler.Builtins.Effect qualified as Builtins
 import Juvix.Compiler.Concrete.Data.InfoTableBuilder qualified as Scoped
 import Juvix.Compiler.Concrete.Data.Scope qualified as S
 import Juvix.Compiler.Core.Data.InfoTableBuilder qualified as Core
@@ -26,6 +27,7 @@ import Juvix.Prelude
 appendArtifactsModuleTable :: ModuleTable -> Artifacts -> Artifacts
 appendArtifactsModuleTable mtab =
   over artifactInternalTypedTable (computeCombinedInfoTable importTab <>)
+    . over (artifactBuiltins . Builtins.builtinsTable) (computeCombinedBuiltins mtab <>)
     . over (artifactCoreModule . Core.moduleImportsTable) (computeCombinedCoreInfoTable mtab <>)
     . over artifactModuleTable (mtab <>)
   where
