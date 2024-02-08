@@ -84,7 +84,7 @@ runAsmPipeline pa@PipelineArg {..} = do
       $ _pipelineArgTable
   tab' <- getRight r
   let code = Asm.ppPrint tab' tab'
-  embed @IO $ writeFileEnsureLn asmFile code
+  writeFileEnsureLn asmFile code
 
 runRegPipeline :: (Members '[Embed IO, App, TaggedLock] r) => PipelineArg -> Sem r ()
 runRegPipeline pa@PipelineArg {..} = do
@@ -97,7 +97,7 @@ runRegPipeline pa@PipelineArg {..} = do
       $ _pipelineArgTable
   tab' <- getRight r
   let code = Reg.ppPrint tab' tab'
-  embed @IO $ writeFileEnsureLn regFile code
+  writeFileEnsureLn regFile code
 
 runNockmaPipeline :: (Members '[Embed IO, App, TaggedLock] r) => PipelineArg -> Sem r ()
 runNockmaPipeline pa@PipelineArg {..} = do
@@ -110,4 +110,4 @@ runNockmaPipeline pa@PipelineArg {..} = do
       $ _pipelineArgTable
   tab' <- getRight r
   let code = Nockma.ppSerialize tab'
-  embed @IO $ writeFileEnsureLn nockmaFile code
+  writeFileEnsureLn nockmaFile code
