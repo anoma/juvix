@@ -7,7 +7,7 @@ import Juvix.Compiler.Nockma.Language
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Parser.Error
 import Juvix.Parser.Lexer (onlyInterval, withLoc)
-import Juvix.Prelude hiding (Atom, many, some)
+import Juvix.Prelude hiding (Atom, Path, many, some)
 import Juvix.Prelude.Parsing hiding (runParser)
 import Text.Megaparsec qualified as P
 import Text.Megaparsec.Char.Lexer qualified as L
@@ -86,18 +86,25 @@ atomOp = do
           }
   return (Atom (serializeNockOp op') info)
 
-atomDirection :: Parser (Atom Natural)
-atomDirection = do
-  WithLoc loc dirs <-
-    withLoc $
-      symbol "S" $> []
-        <|> NonEmpty.toList <$> some (choice [symbol "L" $> L, symbol "R" $> R])
+atomPath :: Parser (Atom Natural)
+atomPath = do
+  WithLoc loc path <- withLoc pPath
   let info =
         AtomInfo
-          { _atomInfoHint = Just AtomHintOp,
+          { _atomInfoHint = Just AtomHintPath,
             _atomInfoLoc = Irrelevant (Just loc)
           }
-  return (Atom (serializePath dirs) info)
+  return (Atom (serializePath path) info)
+
+direction :: Parser Direction
+direction =
+  symbol "L" $> L
+    <|> symbol "R" $> R
+
+pPath :: Parser Path
+pPath =
+  symbol "S" $> []
+    <|> NonEmpty.toList <$> some direction
 
 atomNat :: Parser (Atom Natural)
 atomNat = do
@@ -131,7 +138,7 @@ patom :: Parser (Atom Natural)
 patom =
   atomOp
     <|> atomNat
-    <|> atomDirection
+    <|> atomPath
     <|> atomBool
     <|> atomNil
     <|> atomVoid
