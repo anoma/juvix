@@ -56,7 +56,7 @@ data StdlibCall a = StdlibCall
   deriving stock (Show, Eq, Lift)
 
 data CellInfo a = CellInfo
-  { _cellInfoLoc :: Maybe Interval,
+  { _cellInfoLoc :: Irrelevant (Maybe Interval),
     _cellInfoCall :: Maybe (StdlibCall a)
   }
   deriving stock (Show, Eq, Lift)
@@ -70,7 +70,7 @@ data Cell a = Cell'
 
 data AtomInfo = AtomInfo
   { _atomInfoHint :: Maybe AtomHint,
-    _atomInfoLoc :: Maybe Interval
+    _atomInfoLoc :: Irrelevant (Maybe Interval)
   }
   deriving stock (Show, Eq, Lift)
 
@@ -183,13 +183,13 @@ termLoc f = \case
   TermCell a -> TermCell <$> cellLoc f a
 
 cellLoc :: Lens' (Cell a) (Maybe Interval)
-cellLoc = cellInfo . cellInfoLoc
+cellLoc = cellInfo . cellInfoLoc . unIrrelevant
 
 cellCall :: Lens' (Cell a) (Maybe (StdlibCall a))
 cellCall = cellInfo . cellInfoCall
 
 atomLoc :: Lens' (Atom a) (Maybe Interval)
-atomLoc = atomInfo . atomInfoLoc
+atomLoc = atomInfo . atomInfoLoc . unIrrelevant
 
 naturalNockOps :: HashMap Natural NockOp
 naturalNockOps = HashMap.fromList [(serializeOp op, op) | op <- allElements]
@@ -354,14 +354,14 @@ emptyCellInfo :: CellInfo a
 emptyCellInfo =
   CellInfo
     { _cellInfoCall = Nothing,
-      _cellInfoLoc = Nothing
+      _cellInfoLoc = Irrelevant Nothing
     }
 
 emptyAtomInfo :: AtomInfo
 emptyAtomInfo =
   AtomInfo
     { _atomInfoHint = Nothing,
-      _atomInfoLoc = Nothing
+      _atomInfoLoc = Irrelevant Nothing
     }
 
 class NockmaEq a where

@@ -82,7 +82,7 @@ atomOp = do
   let info =
         AtomInfo
           { _atomInfoHint = Just AtomHintOp,
-            _atomInfoLoc = Just loc
+            _atomInfoLoc = Irrelevant (Just loc)
           }
   return (Atom (serializeNockOp op') info)
 
@@ -95,7 +95,7 @@ atomDirection = do
   let info =
         AtomInfo
           { _atomInfoHint = Just AtomHintOp,
-            _atomInfoLoc = Just loc
+            _atomInfoLoc = Irrelevant (Just loc)
           }
   return (Atom (serializePath dirs) info)
 
@@ -105,7 +105,7 @@ atomNat = do
   let info =
         AtomInfo
           { _atomInfoHint = Nothing,
-            _atomInfoLoc = Just loc
+            _atomInfoLoc = Irrelevant (Just loc)
           }
   return (Atom n info)
 
@@ -150,7 +150,7 @@ cell = do
       info =
         CellInfo
           { _cellInfoCall = c,
-            _cellInfoLoc = Just (lloc <> rloc)
+            _cellInfoLoc = Irrelevant (Just (lloc <> rloc))
           }
   return (set cellInfo info r)
   where
