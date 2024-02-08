@@ -11,7 +11,7 @@ runCommand opts = do
   s <- readFile (toFilePath afile)
   case Tree.runParser (toFilePath afile) s of
     Left err -> exitJuvixError (JuvixError err)
-    Right tab -> evalTree tab
+    Right tab -> evalTree (opts ^. treeEvalEvaluator) tab
   where
     file :: AppPath File
     file = opts ^. treeEvalInputFile

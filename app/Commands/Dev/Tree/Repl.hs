@@ -102,7 +102,7 @@ evalNode node = do
             _functionArgNames = [],
             _functionType = TyDynamic
           }
-  et <- Eval.doEval tab fi
+  et <- Eval.doEvalDefault tab fi
   case et of
     Left e -> error (show e)
     Right v ->

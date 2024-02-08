@@ -32,5 +32,5 @@ runCommand opts = do
           putStrLn "--------------------------------"
           putStrLn "|            Eval              |"
           putStrLn "--------------------------------"
-          Eval.evalTree tab'
+          Eval.evalTree Eval.defaultEvaluator tab'
       | otherwise = return ()
