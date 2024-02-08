@@ -41,9 +41,8 @@ data FunctionId
 instance Hashable FunctionId
 
 data BuiltinFunctionId
-  = BuiltinPow2Go
-  | BuiltinPow2
-  | BuiltinAppendRights
+  = -- | Not intended to be used, it exists only so the Enum and Bounded instances can be derived.
+    BuiltinPlaceholder
   deriving stock (Eq, Enum, Bounded, Generic)
 
 instance Hashable BuiltinFunctionId
@@ -390,17 +389,12 @@ compile = \case
           let argsNum = getClosureField ClosureArgsNum f'
               oldArgs = getClosureField ClosureArgs f'
               fcode = getClosureField ClosureCode f'
-          posOfArgsNil <- appendRights emptyPath argsNum
-          let allArgs = replaceSubterm' oldArgs posOfArgsNil (remakeList newargs)
+              posOfArgsNil = appendRights emptyPath argsNum
+              allArgs = replaceSubterm' oldArgs posOfArgsNil (remakeList newargs)
           return (OpApply # replaceArgsWithTerm allArgs # fcode)
 
-appendRights ::
-  (Members '[Reader CompilerCtx] r) =>
-  Path ->
-  Term Natural ->
-  Sem r (Term Natural)
-appendRights path n =
-  callFun (BuiltinFunction BuiltinAppendRights) [n, toNock path]
+appendRights :: Path -> Term Natural -> Term Natural
+appendRights path n = dec (mul (pow2 n) (OpInc # OpQuote # path))
 
 pushTemp :: Term Natural -> Term Natural
 pushTemp toBePushed =
@@ -438,24 +432,37 @@ extendClosure Tree.NodeExtendClosure {..} = do
   let argsNum = getClosureField ClosureArgsNum closure
       oldArgs = getClosureField ClosureArgs closure
       fcode = getClosureField ClosureCode closure
-  posOfArgsNil <- appendRights emptyPath argsNum
-  let allArgs = replaceSubterm' oldArgs posOfArgsNil (remakeList args)
-  let newArgsNum = add argsNum (nockIntegralLiteral (length _nodeExtendClosureArgs))
+      posOfArgsNil = appendRights emptyPath argsNum
+      allArgs = replaceSubterm' oldArgs posOfArgsNil (remakeList args)
+      newArgsNum = add argsNum (nockIntegralLiteral (length _nodeExtendClosureArgs))
   return . makeClosure $ \case
     ClosureCode -> fcode
     ClosureTotalArgsNum -> getClosureField ClosureTotalArgsNum closure
     ClosureArgsNum -> newArgsNum
     ClosureArgs -> allArgs
 
+-- Calling convention for Anoma stdlib
+--
+-- [push
+--   [seq [@ locStdlib] getF]     ::  Obtain the function f within the stdlib.
+--                                ::       locStdlib is the location of the stdlib in the subject
+--                                ::       getF is a term that fetches f relative to the stdlib
+--   [call L                      ::  eval formula @ L of the following
+--     [replace [RL               ::  edit at axis RL
+--          [seq [@ R]            ::  evaluate the a formula in the original context without f on it
+--           a]]                  ::  the formula giving a goes here
+--      @ L]                      ::  this whole replace is editing what's at axis L, i.e. what was
+--   ]
+-- ]
 callStdlib :: StdlibFunction -> [Term Natural] -> Term Natural
 callStdlib fun args =
-  let fPath = reallyoldstdlibPath fun
-      getFunCode = OpCall # fPath # (OpAddress # stackPath StandardLibrary)
+  let fPath = stdlibPath fun
+      getFunCode = OpAddress # stackPath StandardLibrary >># fPath
       adjustArgs = case nonEmpty args of
-        Just args' -> OpReplace # ([R, L] # foldTerms args') # (OpAddress # [L])
+        Just args' -> OpReplace # ([R, L] # ((OpAddress # [R]) >># foldTerms args')) # (OpAddress # [L])
         Nothing -> OpAddress # [L]
       callFn = OpCall # [L] # adjustArgs
-      callCell = set cellCall (Just meta) (OpPush #. (getFunCode # callFn))   -- [fun ... ]
+      callCell = set cellCall (Just meta) (OpPush #. (getFunCode # callFn))
       meta =
         StdlibCall
           { _stdlibCallArgs = maybe nockNil' foldTerms (nonEmpty args),
@@ -535,7 +542,7 @@ initStack defs = makeList (initSubStack <$> allElements)
     initSubStack = \case
       Args -> nockNil'
       TempStack -> nockNil'
-      StandardLibrary -> oldstdlib
+      StandardLibrary -> stdlib
       FunctionsLibrary -> makeList defs
 
 runCompilerWith :: CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> Cell Natural
@@ -589,36 +596,11 @@ runCompilerWith opts constrs libFuns mainFun =
 
 builtinFunction :: BuiltinFunctionId -> CompilerFunction
 builtinFunction = \case
-  BuiltinAppendRights ->
+  BuiltinPlaceholder ->
     CompilerFunction
-      { _compilerFunctionName = BuiltinFunction BuiltinAppendRights,
-        _compilerFunctionArity = 2, -- args: n path
-        _compilerFunction = do
-          let n = OpAddress # pathToArg 0
-              pos = OpAddress # pathToArg 1
-          twoToTheN <- pow2 n
-          return (dec (mul twoToTheN (OpInc # pos)))
-      }
-  BuiltinPow2 ->
-    CompilerFunction
-      { _compilerFunctionName = BuiltinFunction BuiltinPow2,
-        _compilerFunctionArity = 1,
-        _compilerFunction = do
-          let n = OpAddress # pathToArg 0
-          callFun (BuiltinFunction BuiltinPow2Go) [n, nockNatLiteral 1]
-      }
-  BuiltinPow2Go ->
-    CompilerFunction
-      { _compilerFunctionName = BuiltinFunction BuiltinPow2Go,
-        _compilerFunctionArity = 2, -- args: n acc
-        _compilerFunction = do
-          let n = OpAddress # pathToArg 0
-              acc = OpAddress # pathToArg 1
-              cond = OpEq # n # nockNatLiteral 0
-              baseCase = acc
-          recCase <-
-            callFun (BuiltinFunction BuiltinPow2Go) [dec n, mul (nockNatLiteral 2) acc]
-          return (branch cond baseCase recCase)
+      { _compilerFunctionName = BuiltinFunction BuiltinPlaceholder,
+        _compilerFunctionArity = 0,
+        _compilerFunction = return crash
       }
 
 callFun ::
@@ -774,8 +756,8 @@ crash = (OpAddress # OpAddress # OpAddress)
 mul :: Term Natural -> Term Natural -> Term Natural
 mul a b = callStdlib StdlibMul [a, b]
 
-pow2 :: (Members '[Reader CompilerCtx] r) => Term Natural -> Sem r (Term Natural)
-pow2 = callFun (BuiltinFunction BuiltinPow2) . pure
+pow2 :: Term Natural -> Term Natural
+pow2 = callStdlib StdlibPow2 . pure
 
 add :: Term Natural -> Term Natural -> Term Natural
 add a b = callStdlib StdlibAdd [a, b]

@@ -32,6 +32,7 @@ allTests = testGroup "Nockma eval unit positive" (map mk tests)
               . runError @(ErrNockNatural Natural)
               . runError @(NockEvalError Natural)
               $ eval _testProgramSubject _testProgramFormula
+
       case evalResult of
         Left natErr -> assertFailure ("Evaluation error: " <> show natErr)
         Right r -> case r of
@@ -66,14 +67,17 @@ eqTraces expected = do
               <> ppTrace ts
       assertFailure (unpack msg)
 
-compilerTest :: Text -> Bool -> Term Natural -> Check () -> Test
-compilerTest _testName _evalInterceptStdlibCalls mainFun _testCheck =
+compilerTest :: Text -> Term Natural -> Check () -> Bool -> Test
+compilerTest n mainFun _testCheck _evalInterceptStdlibCalls =
   let f =
         CompilerFunction
           { _compilerFunctionName = UserFunction (defaultSymbol 0),
             _compilerFunctionArity = 0,
             _compilerFunction = return mainFun
           }
+      _testName :: Text
+        | _evalInterceptStdlibCalls = n <> " - intercept stdlib"
+        | otherwise = n
       opts = CompilerOptions {_compilerOptionsEnableTrace = False}
       Cell _testProgramSubject _testProgramFormula = runCompilerWith opts mempty [] f
       _testEvalOptions = EvalOptions {..}
@@ -81,6 +85,24 @@ compilerTest _testName _evalInterceptStdlibCalls mainFun _testCheck =
 
 test :: Text -> Term Natural -> Term Natural -> Check () -> Test
 test = Test defaultEvalOptions
+
+compilerTests :: [Test]
+compilerTests =
+  concatMap
+    (\mkT -> [mkT True, mkT False])
+    [ compilerTest "stdlib add" (add (nockNatLiteral 1) (nockNatLiteral 2)) (eqNock [nock| 3 |]),
+      compilerTest "stdlib dec" (dec (nockNatLiteral 1)) (eqNock [nock| 0 |]),
+      compilerTest "stdlib mul" (mul (nockNatLiteral 2) (nockNatLiteral 3)) (eqNock [nock| 6 |]),
+      compilerTest "stdlib sub" (sub (nockNatLiteral 2) (nockNatLiteral 1)) (eqNock [nock| 1 |]),
+      compilerTest "stdlib div" (callStdlib StdlibDiv [nockNatLiteral 10, nockNatLiteral 3]) (eqNock [nock| 3 |]),
+      compilerTest "stdlib mod" (callStdlib StdlibMod [nockNatLiteral 3, nockNatLiteral 2]) (eqNock [nock| 1 |]),
+      compilerTest "stdlib le" (callStdlib StdlibLe [nockNatLiteral 3, nockNatLiteral 3]) (eqNock [nock| true |]),
+      compilerTest "stdlib lt" (callStdlib StdlibLt [nockNatLiteral 3, nockNatLiteral 3]) (eqNock [nock| false |]),
+      compilerTest "stdlib pow2" (pow2 (nockNatLiteral 3)) (eqNock [nock| 8 |]),
+      compilerTest "stdlib nested" (dec (dec (nockNatLiteral 20))) (eqNock [nock| 18 |]),
+      compilerTest "append rights - empty" (appendRights emptyPath (nockNatLiteral 3)) (eqNock (toNock [R, R, R])),
+      compilerTest "append rights" (appendRights [L, L] (nockNatLiteral 3)) (eqNock (toNock [L, L, R, R, R]))
+    ]
 
 tests :: [Test]
 tests =
@@ -99,6 +121,6 @@ tests =
     test "push" [nock| [0 1] |] [nock| [push [[suc [@ L]] [@ S]]] |] (eqNock [nock| [1 0 1] |]),
     test "call" [nock| [quote 1] |] [nock| [call [S [@ S]]] |] (eqNock [nock| 1 |]),
     test "replace" [nock| [0 1] |] [nock| [replace [[L [quote 1]] [@ S]]] |] (eqNock [nock| [1 1] |]),
-    test "hint" [nock| [0 1] |] [nock| [hint [nil [trace [quote 2] [quote 3]]] [quote 1]] |] (eqTraces [[nock| 2 |]] >> eqNock [nock| 1 |]),
-    compilerTest "stdlib add" False (add (nockNatLiteral 1) (nockNatLiteral 2)) (eqNock [nock| 3 |])
+    test "hint" [nock| [0 1] |] [nock| [hint [nil [trace [quote 2] [quote 3]]] [quote 1]] |] (eqTraces [[nock| 2 |]] >> eqNock [nock| 1 |])
   ]
+    ++ compilerTests

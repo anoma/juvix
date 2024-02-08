@@ -332,17 +332,6 @@ infixl 1 >>#
 (>>#) :: (IsNock x, IsNock y) => x -> y -> Term Natural
 a >># b = TermCell (a >>#. b)
 
-stdlibNumArgs :: StdlibFunction -> Natural
-stdlibNumArgs = \case
-  StdlibDec -> 1
-  StdlibAdd -> 2
-  StdlibSub -> 2
-  StdlibMul -> 2
-  StdlibMod -> 2
-  StdlibDiv -> 2
-  StdlibLe -> 2
-  StdlibLt -> 2
-
 {-# COMPLETE Cell #-}
 
 pattern Cell :: Term a -> Term a -> Cell a

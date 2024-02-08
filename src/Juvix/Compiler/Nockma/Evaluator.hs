@@ -182,6 +182,7 @@ eval inistack initerm =
             StdlibMod -> binArith mod
             StdlibLt -> binCmp (<)
             StdlibLe -> binCmp (<=)
+            StdlibPow2 -> unaArith (2 ^)
 
         goAutoConsCell :: AutoConsCell a -> Sem r (Term a)
         goAutoConsCell c = do
