@@ -8,12 +8,12 @@ where
 import Control.Monad.ST
 import Data.Vector qualified as Vec
 import Data.Vector.Mutable qualified as MV
-import Debug.Trace qualified as Debug
 import Juvix.Compiler.Reg.Data.InfoTable
 import Juvix.Compiler.Reg.Error
 import Juvix.Compiler.Reg.Interpreter.Base
 import Juvix.Compiler.Reg.Interpreter.Error
 import Juvix.Compiler.Reg.Pretty
+import System.IO.Unsafe (unsafePerformIO)
 import Text.Read (readMaybe)
 
 type Vars s = MV.MVector s (Maybe Val)
@@ -160,13 +160,17 @@ runFunction infoTable args0 info0 = do
     goTrace :: Args -> Vars s -> Code -> InstrTrace -> ST s Val
     goTrace args tmps instrs InstrTrace {..} = do
       val <- readValue args tmps _instrTraceValue
-      Debug.trace (fromText $ printVal val) $
-        go args tmps instrs
+      void $ unsafePerformIO $ do
+        putStrLn (printVal val)
+        return (pure ValVoid)
+      go args tmps instrs
 
     goDump :: Args -> Vars s -> Code -> ST s Val
-    goDump args tmps instrs =
-      Debug.trace "<dump>" $
-        go args tmps instrs
+    goDump args tmps instrs = do
+      void $ unsafePerformIO $ do
+        putStrLn "<dump>"
+        return (pure ValVoid)
+      go args tmps instrs
 
     goFailure :: Args -> Vars s -> Code -> InstrFailure -> ST s Val
     goFailure args tmps _ InstrFailure {..} = do
