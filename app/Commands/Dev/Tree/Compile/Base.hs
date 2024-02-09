@@ -7,6 +7,7 @@ import Juvix.Compiler.Asm.Pretty qualified as Asm
 import Juvix.Compiler.Backend qualified as Backend
 import Juvix.Compiler.Backend.C qualified as C
 import Juvix.Compiler.Nockma.Pretty qualified as Nockma
+import Juvix.Compiler.Reg.Pretty qualified as Reg
 import Juvix.Compiler.Tree.Data.InfoTable qualified as Tree
 
 data PipelineArg = PipelineArg
@@ -35,6 +36,7 @@ getEntry PipelineArg {..} = do
       TargetVampIR -> Backend.TargetVampIR
       TargetCore -> Backend.TargetCore
       TargetAsm -> Backend.TargetAsm
+      TargetReg -> Backend.TargetReg
       TargetTree -> Backend.TargetTree
       TargetNockma -> Backend.TargetNockma
 
@@ -83,6 +85,19 @@ runAsmPipeline pa@PipelineArg {..} = do
   tab' <- getRight r
   let code = Asm.ppPrint tab' tab'
   embed @IO $ writeFileEnsureLn asmFile code
+
+runRegPipeline :: (Members '[Embed IO, App, TaggedLock] r) => PipelineArg -> Sem r ()
+runRegPipeline pa@PipelineArg {..} = do
+  entryPoint <- getEntry pa
+  regFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
+  r <-
+    runReader entryPoint
+      . runError @JuvixError
+      . treeToReg
+      $ _pipelineArgTable
+  tab' <- getRight r
+  let code = Reg.ppPrint tab' tab'
+  embed @IO $ writeFileEnsureLn regFile code
 
 runNockmaPipeline :: (Members '[Embed IO, App, TaggedLock] r) => PipelineArg -> Sem r ()
 runNockmaPipeline pa@PipelineArg {..} = do

@@ -19,6 +19,7 @@ runCommand opts = do
     TargetVampIR -> runVampIRPipeline arg
     TargetCore -> return ()
     TargetAsm -> runAsmPipeline arg
+    TargetReg -> runRegPipeline arg
     TargetTree -> runTreePipeline arg
     TargetNockma -> runNockmaPipeline arg
   where

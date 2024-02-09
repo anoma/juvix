@@ -1,0 +1,105 @@
+type list {
+  nil : list;
+  cons : (*, list) → list;
+}
+
+function mklst(integer) : list;
+function mklst2(integer) : list;
+function append(list, list) : list;
+function flatten(list) : list;
+function main() : *;
+
+function mklst(integer) : list {
+  tmp[0] = 0;
+  tmp[1] = arg[0];
+  tmp[0] = eq tmp[1] tmp[0];
+  br tmp[0] {
+    true: {
+      prealloc 1, live: (arg[0]);
+      tmp[0] = alloc nil ();
+      ret tmp[0];
+    };
+    false: {
+      tmp[0] = 1;
+      tmp[1] = arg[0];
+      tmp[0] = sub tmp[1] tmp[0];
+      tmp[0] = call mklst (tmp[0]), live: (arg[0]);
+      prealloc 3, live: (tmp[0], arg[0]);
+      tmp[1] = arg[0];
+      tmp[0] = alloc cons (tmp[1], tmp[0]);
+      ret tmp[0];
+    };
+  };
+}
+
+function mklst2(integer) : list {
+  tmp[0] = 0;
+  tmp[1] = arg[0];
+  tmp[0] = eq tmp[1] tmp[0];
+  br tmp[0] {
+    true: {
+      prealloc 1, live: (arg[0]);
+      tmp[0] = alloc nil ();
+      ret tmp[0];
+    };
+    false: {
+      tmp[0] = 1;
+      tmp[1] = arg[0];
+      tmp[0] = sub tmp[1] tmp[0];
+      tmp[0] = call mklst2 (tmp[0]), live: (arg[0]);
+      tmp[1] = arg[0];
+      tmp[1] = call mklst (tmp[1]), live: (tmp[0], arg[0]);
+      prealloc 3, live: (tmp[0], tmp[1], arg[0]);
+      tmp[0] = alloc cons (tmp[1], tmp[0]);
+      ret tmp[0];
+    };
+  };
+}
+
+function append(list, list) : list {
+  tmp[0] = arg[0];
+  case[list] tmp[0] {
+    nil: {
+      nop;
+      tmp[0] = arg[1];
+      ret tmp[0];
+    };
+    cons: {
+      nop;
+      tmp[0] = arg[1];
+      tmp[1] = arg[0].cons[1];
+      tmp[0] = call append (tmp[1], tmp[0]), live: (arg[0], arg[1]);
+      prealloc 3, live: (tmp[0], arg[0], arg[1]);
+      tmp[1] = arg[0].cons[0];
+      tmp[0] = alloc cons (tmp[1], tmp[0]);
+      ret tmp[0];
+    };
+  };
+}
+
+function flatten(list) : list {
+  tmp[0] = arg[0];
+  case[list] tmp[0] {
+    nil: {
+      ret tmp[0];
+    };
+    cons: {
+      nop;
+      tmp[0] = arg[0].cons[1];
+      tmp[0] = call flatten (tmp[0]), live: (arg[0]);
+      tmp[1] = arg[0].cons[0];
+      tcall append (tmp[1], tmp[0]);
+    };
+  };
+}
+
+function main() : * {
+  tmp[0] = 4;
+  tmp[0] = call mklst2 (tmp[0]);
+  trace tmp[0];
+  tmp[0] = call flatten (tmp[0]);
+  trace tmp[0];
+  nop;
+  tmp[0] = void;
+  ret tmp[0];
+}

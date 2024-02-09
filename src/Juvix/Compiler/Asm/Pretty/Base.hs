@@ -11,6 +11,7 @@ import Juvix.Compiler.Asm.Interpreter.RuntimeState
 import Juvix.Compiler.Asm.Pretty.Options
 import Juvix.Compiler.Internal.Data.Name
 import Juvix.Compiler.Tree.Pretty.Base qualified as Tree
+import Juvix.Compiler.Tree.Pretty.Extra
 import Juvix.Data.CodeAnn
 import Juvix.Extra.Strings qualified as Str
 
@@ -135,7 +136,7 @@ instance PrettyCode CaseBranch where
   ppCode CaseBranch {..} = do
     name <- Tree.ppConstrName _caseBranchTag
     br <- ppCodeCode _caseBranchCode
-    return $ name <> colon <+> braces' br
+    return $ name <> colon <+> braces' br <> semi
 
 instance PrettyCode Command where
   ppCode :: (Member (Reader Options) r) => Command -> Sem r (Doc Ann)
@@ -149,10 +150,11 @@ instance PrettyCode Command where
           <+> braces'
             ( constr Str.true_ <> colon
                 <+> braces' br1
+                  <> semi
                   <> line
                   <> constr Str.false_
                   <> colon
-                <+> braces' br2
+                <+> braces' br2 <> semi
             )
     Case CmdCase {..} -> do
       name <- Tree.ppIndName _cmdCaseInductive
@@ -161,7 +163,7 @@ instance PrettyCode Command where
         Just def -> do
           d <-
             ( ppCodeCode
-                >=> (\x -> return $ primitive Str.default_ <> colon <+> braces' x)
+                >=> (\x -> return $ primitive Str.default_ <> colon <+> braces' x <> semi)
               )
               def
           return $ brs ++ [d]
@@ -185,42 +187,3 @@ instance PrettyCode ConstructorInfo where
 
 instance PrettyCode InfoTable where
   ppCode = Tree.ppInfoTable ppCodeCode
-
-{--------------------------------------------------------------------------------}
-{- helper functions -}
-
-braces' :: Doc Ann -> Doc Ann
-braces' d = braces (line <> indent' d <> line)
-
-integer :: (Pretty a) => a -> Doc Ann
-integer i = annotate AnnLiteralInteger (pretty i)
-
-constr :: Text -> Doc Ann
-constr a = annotate (AnnKind KNameConstructor) (pretty a)
-
-variable :: Text -> Doc Ann
-variable a = annotate (AnnKind KNameLocal) (pretty a)
-
-ppRightExpression ::
-  (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>
-  Fixity ->
-  a ->
-  Sem r (Doc Ann)
-ppRightExpression = ppLRExpression isRightAssoc
-
-ppLeftExpression ::
-  (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>
-  Fixity ->
-  a ->
-  Sem r (Doc Ann)
-ppLeftExpression = ppLRExpression isLeftAssoc
-
-ppLRExpression ::
-  (HasAtomicity a, PrettyCode a, Member (Reader Options) r) =>
-  (Fixity -> Bool) ->
-  Fixity ->
-  a ->
-  Sem r (Doc Ann)
-ppLRExpression associates fixlr e =
-  parensIf (atomParens associates (atomicity e) fixlr)
-    <$> ppCode e

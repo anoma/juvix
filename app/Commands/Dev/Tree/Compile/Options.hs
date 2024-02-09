@@ -13,6 +13,7 @@ treeSupportedTargets =
     [ TargetWasm32Wasi,
       TargetNative64,
       TargetAsm,
+      TargetReg,
       TargetNockma
     ]
 

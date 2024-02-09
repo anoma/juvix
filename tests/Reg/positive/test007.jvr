@@ -1,0 +1,65 @@
+
+function S(*, *, *) : *;
+function K(*, *) : *;
+function I(*) : *;
+function main() : *;
+
+function S(*, *, *) : * {
+  tmp[0] = arg[2];
+  tmp[1] = arg[1];
+  tmp[0] = ccall tmp[1] (tmp[0]), live: (arg[0], arg[1], arg[2]);
+  tmp[1] = arg[2];
+  tmp[2] = arg[0];
+  tccall tmp[2] (tmp[1], tmp[0]);
+}
+
+function K(*, *) : * {
+  tmp[0] = arg[0];
+  ret tmp[0];
+}
+
+function I(*) : * {
+  prealloc 4, live: (arg[0]);
+  tmp[0] = arg[0];
+  tmp[1] = calloc K ();
+  tmp[2] = calloc K ();
+  tcall S (tmp[2], tmp[1], tmp[0]);
+}
+
+function main() : * {
+  tmp[0] = 1;
+  tmp[0] = call I (tmp[0]);
+  prealloc 2, live: (tmp[0]);
+  tmp[1] = 1;
+  tmp[2] = calloc I ();
+  tmp[2] = call I (tmp[2]), live: (tmp[0], tmp[1]);
+  tmp[1] = call tmp[2] (tmp[1]), live: (tmp[0]);
+  prealloc 8, live: (tmp[0], tmp[1]);
+  tmp[0] = add tmp[1] tmp[0];
+  tmp[1] = 1;
+  tmp[2] = calloc I ();
+  tmp[3] = calloc I ();
+  tmp[4] = calloc I ();
+  tmp[5] = calloc I ();
+  tmp[5] = call I (tmp[5]), live: (tmp[0], tmp[1], tmp[2], tmp[3], tmp[4]);
+  tmp[4] = call tmp[5] (tmp[4]), live: (tmp[0], tmp[1], tmp[2], tmp[3]);
+  tmp[3] = call tmp[4] (tmp[3]), live: (tmp[0], tmp[1], tmp[2]);
+  tmp[2] = call tmp[3] (tmp[2]), live: (tmp[0], tmp[1]);
+  tmp[1] = call tmp[2] (tmp[1]), live: (tmp[0]);
+  prealloc 18, live: (tmp[0], tmp[1]);
+  tmp[0] = add tmp[1] tmp[0];
+  tmp[1] = 1;
+  tmp[2] = calloc I ();
+  tmp[3] = calloc I ();
+  tmp[4] = calloc I ();
+  tmp[5] = calloc I ();
+  tmp[6] = calloc I ();
+  tmp[7] = calloc I ();
+  tmp[8] = calloc I ();
+  tmp[9] = calloc I ();
+  tmp[10] = calloc I ();
+  tmp[10] = call I (tmp[10]), live: (tmp[0], tmp[1], tmp[2], tmp[3], tmp[4], tmp[5], tmp[6], tmp[7], tmp[8], tmp[9]);
+  tmp[1] = ccall tmp[10] (tmp[9], tmp[8], tmp[7], tmp[6], tmp[5], tmp[4], tmp[3], tmp[2], tmp[1]), live: (tmp[0]);
+  tmp[0] = add tmp[1] tmp[0];
+  ret tmp[0];
+}

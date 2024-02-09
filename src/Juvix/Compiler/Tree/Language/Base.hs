@@ -16,6 +16,7 @@ data Constant
   | ConstString Text
   | ConstUnit
   | ConstVoid
+  deriving stock (Eq)
 
 -- | MemRefs are references to values stored in memory.
 data MemRef
@@ -24,11 +25,13 @@ data MemRef
   | -- | ConstrRef is an indirect reference to a field (argument) of
     --  a constructor: field k holds the (k+1)th argument.
     ConstrRef Field
+  deriving stock (Eq)
 
 data OffsetRef = OffsetRef
   { _offsetRefOffset :: Offset,
     _offsetRefName :: Maybe Text
   }
+  deriving stock (Eq)
 
 -- | DirectRef is a direct memory reference.
 data DirectRef
@@ -39,6 +42,7 @@ data DirectRef
     --   counted from the _bottom_ of the temporary stack). JVT/JVA code:
     --   'tmp[<offset>]'.
     TempRef RefTemp
+  deriving stock (Eq)
 
 mkTempRef :: OffsetRef -> DirectRef
 mkTempRef o = TempRef (RefTemp o Nothing)
@@ -56,6 +60,7 @@ data RefTemp = RefTemp
   { _refTempOffsetRef :: OffsetRef,
     _refTempTempHeight :: Maybe Int
   }
+  deriving stock (Eq)
 
 -- | Constructor field reference. JVT/JVA code: '<dref>.<tag>[<offset>]'
 data Field = Field
@@ -66,6 +71,7 @@ data Field = Field
     _fieldRef :: DirectRef,
     _fieldOffset :: Offset
   }
+  deriving stock (Eq)
 
 makeLenses ''Field
 makeLenses ''OffsetRef

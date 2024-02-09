@@ -1,0 +1,67 @@
+type list {
+  nil : list;
+  cons : (*, list) → list;
+}
+
+function main() : *;
+
+function main() : * {
+  prealloc 40;
+  tmp[0] = 1;
+  tmp[1] = 1;
+  tmp[0] = eq tmp[1] tmp[0];
+  trace tmp[0];
+  nop;
+  tmp[0] = 1;
+  tmp[1] = 0;
+  tmp[0] = eq tmp[1] tmp[0];
+  trace tmp[0];
+  nop;
+  tmp[0] = alloc nil ();
+  tmp[1] = alloc nil ();
+  tmp[0] = eq tmp[1] tmp[0];
+  trace tmp[0];
+  nop;
+  tmp[0] = alloc nil ();
+  tmp[1] = alloc nil ();
+  tmp[2] = 1;
+  tmp[1] = alloc cons (tmp[2], tmp[1]);
+  tmp[0] = eq tmp[1] tmp[0];
+  trace tmp[0];
+  nop;
+  tmp[0] = alloc nil ();
+  tmp[1] = 2;
+  tmp[0] = alloc cons (tmp[1], tmp[0]);
+  tmp[1] = alloc nil ();
+  tmp[2] = 1;
+  tmp[1] = alloc cons (tmp[2], tmp[1]);
+  tmp[0] = eq tmp[1] tmp[0];
+  trace tmp[0];
+  nop;
+  tmp[0] = alloc nil ();
+  tmp[1] = 2;
+  tmp[0] = alloc cons (tmp[1], tmp[0]);
+  tmp[1] = 1;
+  tmp[0] = alloc cons (tmp[1], tmp[0]);
+  tmp[1] = alloc nil ();
+  tmp[2] = 1;
+  tmp[1] = alloc cons (tmp[2], tmp[1]);
+  tmp[0] = eq tmp[1] tmp[0];
+  trace tmp[0];
+  nop;
+  tmp[0] = alloc nil ();
+  tmp[1] = 2;
+  tmp[0] = alloc cons (tmp[1], tmp[0]);
+  tmp[1] = 1;
+  tmp[0] = alloc cons (tmp[1], tmp[0]);
+  tmp[1] = alloc nil ();
+  tmp[2] = 2;
+  tmp[1] = alloc cons (tmp[2], tmp[1]);
+  tmp[2] = 1;
+  tmp[1] = alloc cons (tmp[2], tmp[1]);
+  tmp[0] = eq tmp[1] tmp[0];
+  trace tmp[0];
+  nop;
+  tmp[0] = void;
+  ret tmp[0];
+}

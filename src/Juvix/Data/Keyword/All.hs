@@ -103,6 +103,9 @@ kwAssoc = asciiKw Str.assoc
 kwNone :: Keyword
 kwNone = asciiKw Str.none
 
+kwNop :: Keyword
+kwNop = asciiKw Str.nop
+
 kwRight :: Keyword
 kwRight = asciiKw Str.right
 
@@ -265,6 +268,12 @@ kwTrace = asciiKw Str.trace_
 kwFail :: Keyword
 kwFail = asciiKw Str.fail_
 
+kwDump :: Keyword
+kwDump = asciiKw Str.dump
+
+kwPrealloc :: Keyword
+kwPrealloc = asciiKw Str.prealloc
+
 kwArgsNum :: Keyword
 kwArgsNum = asciiKw Str.instrArgsNum
 
@@ -280,11 +289,17 @@ kwCExtend = asciiKw Str.instrCextend
 kwCCall :: Keyword
 kwCCall = asciiKw Str.instrCcall
 
+kwCCallTail :: Keyword
+kwCCallTail = asciiKw Str.instrTccall
+
 kwBr :: Keyword
 kwBr = asciiKw Str.instrBr
 
 kwSave :: Keyword
 kwSave = asciiKw Str.save
+
+kwDefault :: Keyword
+kwDefault = asciiKw Str.default_
 
 kwIntAdd :: Keyword
 kwIntAdd = asciiKw Str.iadd
@@ -397,8 +412,14 @@ kwJmp = asciiKw Str.jmp
 kwCall :: Keyword
 kwCall = asciiKw Str.call
 
+kwCallTail :: Keyword
+kwCallTail = asciiKw Str.tcall
+
 kwRet :: Keyword
 kwRet = asciiKw Str.ret
+
+kwLive :: Keyword
+kwLive = asciiKw Str.live
 
 delimBraceL :: Keyword
 delimBraceL = mkDelim Str.braceL

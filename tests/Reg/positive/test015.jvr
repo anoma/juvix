@@ -1,0 +1,94 @@
+
+function id(*) : *;
+function const(*, *) : *;
+function g(*) : integer;
+function f(integer) : integer → integer;
+function main() : *;
+
+function id(*) : * {
+  tmp[0] = arg[0];
+  ret tmp[0];
+}
+
+function const(*, *) : * {
+  tmp[0] = arg[0];
+  ret tmp[0];
+}
+
+function g(*) : integer {
+  tmp[0] = 2;
+  tcall id (tmp[0]);
+}
+
+function f(integer) : integer → integer {
+  tmp[0] = arg[0];
+  tmp[1] = 6;
+  tmp[0] = eq tmp[1] tmp[0];
+  br tmp[0] {
+    true: {
+      prealloc 3, live: (arg[0]);
+      tmp[0] = 0;
+      tmp[0] = calloc const (tmp[0]);
+      ret tmp[0];
+    };
+    false: {
+      tmp[0] = arg[0];
+      tmp[1] = 5;
+      tmp[0] = eq tmp[1] tmp[0];
+      br tmp[0] {
+        true: {
+          prealloc 3, live: (arg[0]);
+          tmp[0] = 1;
+          tmp[0] = calloc const (tmp[0]);
+          ret tmp[0];
+        };
+        false: {
+          tmp[0] = arg[0];
+          tmp[1] = 10;
+          tmp[0] = eq tmp[1] tmp[0];
+          br tmp[0] {
+            true: {
+              prealloc 2, live: (arg[0]);
+              tmp[0] = calloc g ();
+              ret tmp[0];
+            };
+            false: {
+              prealloc 2, live: (arg[0]);
+              tmp[0] = calloc id ();
+              ret tmp[0];
+            };
+          };
+        };
+      };
+    };
+  };
+}
+
+function main() : * {
+  tmp[0] = 6;
+  tmp[1] = 5;
+  tmp[1] = call f (tmp[1]), live: (tmp[0]);
+  tmp[0] = call tmp[1] (tmp[0]);
+  trace tmp[0];
+  nop;
+  tmp[0] = 5;
+  tmp[1] = 6;
+  tmp[1] = call f (tmp[1]), live: (tmp[0]);
+  tmp[0] = call tmp[1] (tmp[0]);
+  trace tmp[0];
+  nop;
+  tmp[0] = 5;
+  tmp[1] = 10;
+  tmp[1] = call f (tmp[1]), live: (tmp[0]);
+  tmp[0] = call tmp[1] (tmp[0]);
+  trace tmp[0];
+  nop;
+  tmp[0] = 5;
+  tmp[1] = 11;
+  tmp[1] = call f (tmp[1]), live: (tmp[0]);
+  tmp[0] = call tmp[1] (tmp[0]);
+  trace tmp[0];
+  nop;
+  tmp[0] = void;
+  ret tmp[0];
+}

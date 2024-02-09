@@ -1,0 +1,21 @@
+
+function main() : *;
+
+function main() : * {
+  tmp[0] = 1;
+  trace tmp[0];
+  tmp[1] = 2;
+  trace tmp[1];
+  trace tmp[1];
+  tmp[2] = "seven";
+  trace tmp[2];
+  nop;
+  nop;
+  nop;
+  tmp[0] = unit;
+  trace tmp[0];
+  nop;
+  tmp[0] = void;
+  trace tmp[0];
+  ret tmp[0];
+}

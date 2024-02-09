@@ -1,0 +1,15 @@
+
+function main() : *;
+
+function main() : * {
+  prealloc 514;
+  tmp[0] = ".\n";
+  tmp[1] = 20;
+  tmp[2] = "123";
+  tmp[2] = atoi tmp[2];
+  tmp[1] = add tmp[2] tmp[1];
+  tmp[1] = show tmp[1];
+  tmp[0] = strcat tmp[1] tmp[0];
+  tmp[0] = alloc write (tmp[0]);
+  ret tmp[0];
+}

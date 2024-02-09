@@ -10,6 +10,7 @@ data Target
   | TargetVampIR
   | TargetCore
   | TargetAsm
+  | TargetReg
   | TargetTree
   | TargetNockma
   deriving stock (Data, Eq, Show)
@@ -74,6 +75,21 @@ getLimits tgt debug = case tgt of
     defaultLimits
   TargetAsm ->
     defaultLimits
+  TargetReg ->
+    Limits
+      { _limitsMaxConstrs = 1048568,
+        _limitsMaxConstrArgs = 255,
+        _limitsMaxFunctionArgs = 253,
+        _limitsMaxLocalVars = 2048,
+        _limitsMaxClosureSize = 253 + 3,
+        _limitsClosureHeadSize = 2,
+        _limitsMaxStringSize = 255 + 1,
+        _limitsMaxStackDelta = 16368,
+        _limitsMaxFunctionAlloc = 16368,
+        _limitsDispatchStackSize = 4,
+        _limitsBuiltinUIDsNum = 8,
+        _limitsSpecialisedApply = 3
+      }
   TargetTree ->
     defaultLimits
   TargetNockma ->

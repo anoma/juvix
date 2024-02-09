@@ -11,6 +11,7 @@ data CompileTarget
   | TargetVampIR
   | TargetCore
   | TargetAsm
+  | TargetReg
   | TargetTree
   | TargetNockma
   deriving stock (Eq, Data, Bounded, Enum)
@@ -23,6 +24,7 @@ instance Show CompileTarget where
     TargetVampIR -> "vampir"
     TargetCore -> "core"
     TargetAsm -> "asm"
+    TargetReg -> "reg"
     TargetTree -> "tree"
     TargetNockma -> "nockma"
 

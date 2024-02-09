@@ -17,13 +17,16 @@ import Juvix.Compiler.Tree.Translation.FromSource.Sig qualified as S
 import Juvix.Parser.Error
 import Text.Megaparsec qualified as P
 
-type ParserSig = S.ParserSig Node ()
+type ParserSig = S.ParserSig Node () DirectRef
+
+type LocalParams = LocalParams' DirectRef
 
 parseTreeSig :: ParserSig
 parseTreeSig =
   S.ParserSig
     { _parserSigBareIdentifier = bareIdentifier,
       _parserSigParseCode = parseNode,
+      _parserSigArgRef = \x y -> ArgRef (OffsetRef x y),
       _parserSigEmptyCode = mkUnop OpFail (mkConst (ConstString "fail")),
       _parserSigEmptyExtra = ()
     }
@@ -131,7 +134,7 @@ parseAlloc ::
   ParsecS r NodeAllocConstr
 parseAlloc = do
   loc <- onlyInterval (kw kwAlloc)
-  tag <- brackets (constrTag @Node @())
+  tag <- brackets (constrTag @Node @() @DirectRef)
   args <- parseArgs
   return
     NodeAllocConstr
@@ -145,7 +148,7 @@ parseCAlloc ::
   ParsecS r NodeAllocClosure
 parseCAlloc = do
   loc <- onlyInterval (kw kwCAlloc)
-  sym <- brackets (funSymbol @Node @())
+  sym <- brackets (funSymbol @Node @() @DirectRef)
   args <- parseArgs
   return
     NodeAllocClosure
@@ -183,7 +186,7 @@ parseCall = do
     callDirect :: Location -> ParsecS r NodeCall
     callDirect loc = do
       lbracket
-      sym <- funSymbol @Node @()
+      sym <- funSymbol @Node @() @DirectRef
       rbracket
       args <- parseArgs
       return
@@ -275,7 +278,7 @@ parseCase ::
   ParsecS r NodeCase
 parseCase = do
   loc <- onlyInterval (kw kwCase)
-  sym <- brackets (indSymbol @Node @())
+  sym <- brackets (indSymbol @Node @() @DirectRef)
   arg <- parens parseNode
   lbrace
   brs <- P.many caseBranch
@@ -295,7 +298,7 @@ caseBranch ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r CaseBranch
 caseBranch = do
-  (tag, loc) <- P.try $ interval (constrTag @Node @())
+  (tag, loc) <- P.try $ interval (constrTag @Node @() @DirectRef)
   kw kwColon
   (bSave, body) <- saveBranch <|> discardBranch
   optional (kw delimSemicolon)
@@ -332,10 +335,10 @@ parseSave = do
   loc' <- onlyInterval (kw kwSave)
   (mname, loc) <- interval $ optional (brackets identifier)
   arg <- parens parseNode
-  tmpNum <- lift $ gets (^. localParamsTempIndex)
-  let updateNames :: LocalNameMap -> LocalNameMap
+  tmpNum <- lift $ gets @LocalParams (^. localParamsTempIndex)
+  let updateNames :: LocalNameMap DirectRef -> LocalNameMap DirectRef
       updateNames mp = maybe mp (\n -> HashMap.insert n (mkTempRef (OffsetRef tmpNum (Just n))) mp) mname
-  body <- braces (localS (over localParamsTempIndex (+ 1)) $ localS (over localParamsNameMap updateNames) parseNode)
+  body <- braces (localS @LocalParams (over localParamsTempIndex (+ 1)) $ localS @LocalParams (over localParamsNameMap updateNames) parseNode)
   return
     NodeSave
       { _nodeSaveInfo = NodeInfo (Just loc'),

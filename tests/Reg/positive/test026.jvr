@@ -1,0 +1,96 @@
+
+function app(* → *, *) : *;
+function app'((integer → integer, integer) → integer, integer → integer, integer) : integer;
+function inc(integer) : integer;
+function h((* → *, *) → *) : *;
+function capp((*, *) → *, *) : * → *;
+function curry((*, *) → *) : * → * → *;
+function uapp(* → * → *, *, *) : *;
+function uncurry(* → * → *) : (*, *) → *;
+function main() : *;
+
+function app(* → *, *) : * {
+  tmp[0] = arg[1];
+  tmp[1] = arg[0];
+  tcall tmp[1] (tmp[0]);
+}
+
+function app'((integer → integer, integer) → integer, integer → integer, integer) : integer {
+  tmp[0] = arg[2];
+  tmp[1] = arg[1];
+  tmp[2] = arg[0];
+  tcall tmp[2] (tmp[1], tmp[0]);
+}
+
+function inc(integer) : integer {
+  tmp[0] = arg[0];
+  tmp[1] = 1;
+  tmp[0] = add tmp[1] tmp[0];
+  ret tmp[0];
+}
+
+function h((* → *, *) → *) : * {
+  prealloc 7, live: (arg[0]);
+  tmp[0] = calloc inc ();
+  tmp[1] = arg[0];
+  tmp[0] = cextend tmp[1] (tmp[0]);
+  ret tmp[0];
+}
+
+function capp((*, *) → *, *) : * → * {
+  prealloc 5, live: (arg[0], arg[1]);
+  tmp[0] = arg[1];
+  tmp[1] = arg[0];
+  tmp[0] = cextend tmp[1] (tmp[0]);
+  ret tmp[0];
+}
+
+function curry((*, *) → *) : * → * → * {
+  prealloc 3, live: (arg[0]);
+  tmp[0] = arg[0];
+  tmp[0] = calloc capp (tmp[0]);
+  ret tmp[0];
+}
+
+function uapp(* → * → *, *, *) : * {
+  tmp[0] = arg[2];
+  tmp[1] = arg[1];
+  tmp[2] = arg[0];
+  tmp[1] = call tmp[2] (tmp[1]), live: (tmp[0], arg[0], arg[1], arg[2]);
+  tcall tmp[1] (tmp[0]);
+}
+
+function uncurry(* → * → *) : (*, *) → * {
+  prealloc 3, live: (arg[0]);
+  tmp[0] = arg[0];
+  tmp[0] = calloc uapp (tmp[0]);
+  ret tmp[0];
+}
+
+function main() : * {
+  prealloc 4;
+  tmp[0] = 5;
+  tmp[1] = calloc inc ();
+  tmp[2] = calloc app ();
+  tmp[0] = call app' (tmp[2], tmp[1], tmp[0]);
+  prealloc 2, live: (tmp[0]);
+  trace tmp[0];
+  nop;
+  tmp[0] = 4;
+  tmp[1] = calloc app ();
+  tmp[1] = call h (tmp[1]), live: (tmp[0]);
+  tmp[0] = call tmp[1] (tmp[0]);
+  prealloc 4, live: (tmp[0]);
+  trace tmp[0];
+  nop;
+  tmp[0] = 7;
+  tmp[1] = calloc inc ();
+  tmp[2] = calloc app ();
+  tmp[2] = call curry (tmp[2]), live: (tmp[0], tmp[1]);
+  tmp[2] = call uncurry (tmp[2]), live: (tmp[0], tmp[1]);
+  tmp[0] = call tmp[2] (tmp[1], tmp[0]);
+  trace tmp[0];
+  nop;
+  tmp[0] = void;
+  ret tmp[0];
+}

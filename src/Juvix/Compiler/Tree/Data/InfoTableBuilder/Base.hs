@@ -26,6 +26,7 @@ data InfoTableBuilder' t e m a where
   RegisterMain' :: Symbol -> InfoTableBuilder' t e m ()
   GetIdent' :: Text -> InfoTableBuilder' t e m (Maybe IdentKind)
   GetFunctionInfo' :: Symbol -> InfoTableBuilder' t e m (FunctionInfo' t e)
+  GetConstructorInfo' :: Tag -> InfoTableBuilder' t e m ConstructorInfo
 
 makeSem ''InfoTableBuilder'
 
@@ -100,3 +101,6 @@ runInfoTableBuilder' bs =
       GetFunctionInfo' sym -> do
         s <- get
         return (lookupFunInfo (s ^. stateInfoTable) sym)
+      GetConstructorInfo' tag -> do
+        s <- get @(BuilderState' t e)
+        return (lookupConstrInfo (s ^. stateInfoTable) tag)

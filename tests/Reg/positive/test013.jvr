@@ -1,0 +1,52 @@
+
+function fib'(integer, integer, integer) : integer;
+function fib(integer) : integer;
+function main() : *;
+
+function fib'(integer, integer, integer) : integer {
+  tmp[0] = arg[0];
+  tmp[1] = 0;
+  tmp[0] = eq tmp[1] tmp[0];
+  br tmp[0] {
+    true: {
+      tmp[0] = arg[1];
+      ret tmp[0];
+    };
+    false: {
+      tmp[0] = 16777216;
+      tmp[1] = arg[2];
+      tmp[2] = arg[1];
+      tmp[1] = add tmp[2] tmp[1];
+      tmp[0] = mod tmp[1] tmp[0];
+      tmp[1] = arg[2];
+      tmp[2] = 1;
+      tmp[3] = arg[0];
+      tmp[2] = sub tmp[3] tmp[2];
+      tcall fib' (tmp[2], tmp[1], tmp[0]);
+    };
+  };
+}
+
+function fib(integer) : integer {
+  tmp[0] = 1;
+  tmp[1] = 0;
+  tmp[2] = arg[0];
+  tcall fib' (tmp[2], tmp[1], tmp[0]);
+}
+
+function main() : * {
+  tmp[0] = 10;
+  tmp[0] = call fib (tmp[0]);
+  trace tmp[0];
+  nop;
+  tmp[0] = 100;
+  tmp[0] = call fib (tmp[0]);
+  trace tmp[0];
+  nop;
+  tmp[0] = 1000;
+  tmp[0] = call fib (tmp[0]);
+  trace tmp[0];
+  nop;
+  tmp[0] = void;
+  ret tmp[0];
+}

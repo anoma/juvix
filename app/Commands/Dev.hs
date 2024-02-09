@@ -16,6 +16,7 @@ import Commands.Dev.MigrateJuvixYaml qualified as MigrateJuvixYaml
 import Commands.Dev.Nockma qualified as Nockma
 import Commands.Dev.Options
 import Commands.Dev.Parse qualified as Parse
+import Commands.Dev.Reg qualified as Reg
 import Commands.Dev.Runtime qualified as Runtime
 import Commands.Dev.Scope qualified as Scope
 import Commands.Dev.Termination qualified as Termination
@@ -32,6 +33,7 @@ runCommand = \case
   Core opts -> Core.runCommand opts
   Geb opts -> Geb.runCommand opts
   Asm opts -> Asm.runCommand opts
+  Reg opts -> Reg.runCommand opts
   Tree opts -> Tree.runCommand opts
   Casm opts -> Casm.runCommand opts
   Runtime opts -> Runtime.runCommand opts

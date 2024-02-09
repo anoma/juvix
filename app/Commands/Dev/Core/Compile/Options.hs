@@ -17,8 +17,9 @@ coreSupportedTargets =
       TargetNative64,
       TargetGeb,
       TargetVampIR,
+      TargetTree,
       TargetAsm,
-      TargetTree
+      TargetReg
     ]
 
 parseCoreCompileOptions :: Parser CoreCompileOptions

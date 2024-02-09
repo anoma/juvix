@@ -1,0 +1,73 @@
+
+function f(integer, integer, integer) : integer;
+function app(integer → integer, integer) : integer;
+function g(*) : *;
+function h(*, *) : *;
+function inc(integer) : integer;
+function main() : *;
+
+function f(integer, integer, integer) : integer {
+  tmp[0] = arg[0];
+  tmp[1] = arg[1];
+  tmp[2] = arg[2];
+  tmp[1] = add tmp[2] tmp[1];
+  tmp[0] = mul tmp[1] tmp[0];
+  ret tmp[0];
+}
+
+function app(integer → integer, integer) : integer {
+  tmp[0] = arg[1];
+  tmp[1] = arg[0];
+  tcall tmp[1] (tmp[0]);
+}
+
+function g(*) : * {
+  tmp[0] = 1;
+  tmp[1] = 2;
+  tmp[2] = arg[0];
+  tccall tmp[2] (tmp[1], tmp[0]);
+}
+
+function h(*, *) : * {
+  tmp[0] = arg[1];
+  tmp[1] = arg[0];
+  tccall tmp[1] (tmp[0]);
+}
+
+function inc(integer) : integer {
+  tmp[0] = arg[0];
+  tmp[1] = 1;
+  tmp[0] = add tmp[1] tmp[0];
+  ret tmp[0];
+}
+
+function main() : * {
+  prealloc 2;
+  tmp[0] = 10;
+  tmp[1] = 2;
+  tmp[2] = 3;
+  tmp[3] = calloc f ();
+  tmp[1] = ccall tmp[3] (tmp[2], tmp[1]), live: (tmp[0]);
+  prealloc 2, live: (tmp[0], tmp[1]);
+  tmp[2] = calloc app ();
+  tmp[0] = ccall tmp[2] (tmp[1], tmp[0]);
+  prealloc 4, live: (tmp[0]);
+  trace tmp[0];
+  nop;
+  tmp[0] = 10;
+  tmp[1] = calloc f ();
+  tmp[2] = calloc g ();
+  tmp[0] = ccall tmp[2] (tmp[1], tmp[0]);
+  prealloc 4, live: (tmp[0]);
+  trace tmp[0];
+  nop;
+  tmp[0] = 7;
+  tmp[1] = calloc inc ();
+  tmp[2] = calloc app ();
+  tmp[1] = call h (tmp[2], tmp[1]), live: (tmp[0]);
+  tmp[0] = ccall tmp[1] (tmp[0]);
+  trace tmp[0];
+  nop;
+  tmp[0] = void;
+  ret tmp[0];
+}

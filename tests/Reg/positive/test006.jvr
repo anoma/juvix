@@ -1,0 +1,65 @@
+
+function const(*, *) : *;
+function print(*) : IO;
+function sequence(IO, IO) : IO;
+function main() : *;
+
+function const(*, *) : * {
+  tmp[0] = arg[0];
+  ret tmp[0];
+}
+
+function print(*) : IO {
+  prealloc 2, live: (arg[0]);
+  tmp[0] = arg[0];
+  tmp[0] = alloc write (tmp[0]);
+  ret tmp[0];
+}
+
+function sequence(IO, IO) : IO {
+  prealloc 6, live: (arg[0], arg[1]);
+  tmp[0] = arg[1];
+  tmp[0] = calloc const (tmp[0]);
+  tmp[1] = arg[0];
+  tmp[0] = alloc bind (tmp[1], tmp[0]);
+  ret tmp[0];
+}
+
+function main() : * {
+  prealloc 6;
+  tmp[0] = "\n";
+  tmp[0] = alloc write (tmp[0]);
+  tmp[1] = 5;
+  tmp[1] = alloc write (tmp[1]);
+  tmp[2] = 4;
+  tmp[2] = alloc write (tmp[2]);
+  tmp[1] = call sequence (tmp[2], tmp[1]), live: (tmp[0]);
+  prealloc 6, live: (tmp[0], tmp[1]);
+  tmp[2] = 3;
+  tmp[2] = alloc write (tmp[2]);
+  tmp[3] = 2;
+  tmp[3] = alloc write (tmp[3]);
+  tmp[4] = 1;
+  tmp[4] = alloc write (tmp[4]);
+  tmp[3] = call sequence (tmp[4], tmp[3]), live: (tmp[0], tmp[1], tmp[2]);
+  tmp[2] = call sequence (tmp[3], tmp[2]), live: (tmp[0], tmp[1]);
+  tmp[1] = call sequence (tmp[2], tmp[1]), live: (tmp[0]);
+  tmp[0] = call sequence (tmp[1], tmp[0]);
+  prealloc 14, live: (tmp[0]);
+  tmp[1] = calloc print ();
+  tmp[2] = "\n";
+  tmp[2] = alloc return (tmp[2]);
+  tmp[1] = alloc bind (tmp[2], tmp[1]);
+  tmp[2] = calloc print ();
+  tmp[3] = 2;
+  tmp[3] = alloc return (tmp[3]);
+  tmp[2] = alloc bind (tmp[3], tmp[2]);
+  tmp[1] = call sequence (tmp[2], tmp[1]), live: (tmp[0]);
+  prealloc 7, live: (tmp[0], tmp[1]);
+  tmp[2] = calloc print ();
+  tmp[3] = 1;
+  tmp[3] = alloc return (tmp[3]);
+  tmp[2] = alloc bind (tmp[3], tmp[2]);
+  tmp[1] = call sequence (tmp[2], tmp[1]), live: (tmp[0]);
+  tcall sequence (tmp[1], tmp[0]);
+}

@@ -135,6 +135,9 @@ storedCoreToTree = Core.toStripped >=> return . Tree.fromCore . Stripped.fromCor
 storedCoreToAsm :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Asm.InfoTable
 storedCoreToAsm = storedCoreToTree >=> treeToAsm
 
+storedCoreToReg :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Reg.InfoTable
+storedCoreToReg = storedCoreToAsm >=> asmToReg
+
 storedCoreToMiniC :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r C.MiniCResult
 storedCoreToMiniC = storedCoreToAsm >=> asmToMiniC
 
@@ -156,6 +159,9 @@ coreToTree = Core.toStored >=> storedCoreToTree
 
 coreToAsm :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Asm.InfoTable
 coreToAsm = Core.toStored >=> storedCoreToAsm
+
+coreToReg :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Reg.InfoTable
+coreToReg = Core.toStored >=> storedCoreToReg
 
 coreToNockma :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r (Nockma.Cell Natural)
 coreToNockma = coreToTree >=> treeToNockma
@@ -179,14 +185,20 @@ coreToVampIR' = Core.toStored' >=> storedCoreToVampIR'
 treeToAsm :: (Member (Error JuvixError) r) => Tree.InfoTable -> Sem r Asm.InfoTable
 treeToAsm = Tree.toAsm >=> return . Asm.fromTree
 
+treeToReg :: (Members '[Error JuvixError, Reader EntryPoint] r) => Tree.InfoTable -> Sem r Reg.InfoTable
+treeToReg = treeToAsm >=> asmToReg
+
 treeToNockma :: (Members '[Error JuvixError, Reader EntryPoint] r) => Tree.InfoTable -> Sem r (Nockma.Cell Natural)
 treeToNockma = Tree.toNockma >=> mapReader NockmaTree.fromEntryPoint . NockmaTree.fromTreeTable
 
 treeToMiniC :: (Members '[Error JuvixError, Reader EntryPoint] r) => Tree.InfoTable -> Sem r C.MiniCResult
 treeToMiniC = treeToAsm >=> asmToMiniC
 
+asmToReg :: (Members '[Error JuvixError, Reader EntryPoint] r) => Asm.InfoTable -> Sem r Reg.InfoTable
+asmToReg = Asm.toReg >=> return . Reg.fromAsm
+
 asmToMiniC :: (Members '[Error JuvixError, Reader EntryPoint] r) => Asm.InfoTable -> Sem r C.MiniCResult
-asmToMiniC = Asm.toReg >=> regToMiniC . Reg.fromAsm
+asmToMiniC = asmToReg >=> regToMiniC
 
 regToMiniC :: (Member (Reader EntryPoint) r) => Reg.InfoTable -> Sem r C.MiniCResult
 regToMiniC tab = do

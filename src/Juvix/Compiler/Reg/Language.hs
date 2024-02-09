@@ -7,13 +7,10 @@ where
 import Juvix.Compiler.Reg.Language.Base
 
 data Value
-  = ConstInt Integer
-  | ConstBool Bool
-  | ConstString Text
-  | ConstUnit
-  | ConstVoid
+  = Const Constant
   | CRef ConstrField
   | VRef VarRef
+  deriving stock (Eq)
 
 type Index = Int
 
@@ -27,13 +24,19 @@ data ConstrField = ConstrField
     _constrFieldRef :: VarRef,
     _constrFieldIndex :: Index
   }
+  deriving stock (Eq)
 
-data VarGroup = VarGroupArgs | VarGroupLocal
+data VarGroup
+  = VarGroupArgs
+  | VarGroupLocal
+  deriving stock (Eq)
 
 data VarRef = VarRef
   { _varRefGroup :: VarGroup,
-    _varRefIndex :: Index
+    _varRefIndex :: Index,
+    _varRefName :: Maybe Text
   }
+  deriving stock (Eq)
 
 data Instruction
   = Nop -- no operation
@@ -50,11 +53,14 @@ data Instruction
   | AllocClosure InstrAllocClosure
   | ExtendClosure InstrExtendClosure
   | Call InstrCall
+  | TailCall InstrTailCall
   | CallClosures InstrCallClosures
+  | TailCallClosures InstrTailCallClosures
   | Return InstrReturn
   | Branch InstrBranch
   | Case InstrCase
   | Block InstrBlock
+  deriving stock (Eq)
 
 type Code = [Instruction]
 
@@ -64,6 +70,7 @@ data BinaryOp = BinaryOp
     _binaryOpArg1 :: Value,
     _binaryOpArg2 :: Value
   }
+  deriving stock (Eq)
 
 data Opcode
   = OpIntAdd
@@ -75,39 +82,47 @@ data Opcode
   | OpIntLe
   | OpEq
   | OpStrConcat
+  deriving stock (Eq)
 
 data InstrShow = InstrShow
   { _instrShowResult :: VarRef,
     _instrShowValue :: Value
   }
+  deriving stock (Eq)
 
 data InstrStrToInt = InstrStrToInt
   { _instrStrToIntResult :: VarRef,
     _instrStrToIntValue :: Value
   }
+  deriving stock (Eq)
 
 data InstrAssign = InstrAssign
   { _instrAssignResult :: VarRef,
     _instrAssignValue :: Value
   }
+  deriving stock (Eq)
 
 newtype InstrTrace = InstrTrace
   { _instrTraceValue :: Value
   }
+  deriving stock (Eq)
 
 newtype InstrFailure = InstrFailure
   { _instrFailureValue :: Value
   }
+  deriving stock (Eq)
 
 data InstrArgsNum = InstrArgsNum
   { _instrArgsNumResult :: VarRef,
     _instrArgsNumValue :: Value
   }
+  deriving stock (Eq)
 
 data InstrPrealloc = InstrPrealloc
   { _instrPreallocWordsNum :: Int,
     _instrPreallocLiveVars :: [VarRef]
   }
+  deriving stock (Eq)
 
 data InstrAlloc = InstrAlloc
   { _instrAllocResult :: VarRef,
@@ -115,6 +130,7 @@ data InstrAlloc = InstrAlloc
     _instrAllocMemRep :: MemRep,
     _instrAllocArgs :: [Value]
   }
+  deriving stock (Eq)
 
 data InstrAllocClosure = InstrAllocClosure
   { _instrAllocClosureResult :: VarRef,
@@ -122,43 +138,61 @@ data InstrAllocClosure = InstrAllocClosure
     _instrAllocClosureExpectedArgsNum :: Int,
     _instrAllocClosureArgs :: [Value]
   }
+  deriving stock (Eq)
 
 data InstrExtendClosure = InstrExtendClosure
   { _instrExtendClosureResult :: VarRef,
     _instrExtendClosureValue :: VarRef,
     _instrExtendClosureArgs :: [Value]
   }
+  deriving stock (Eq)
 
-data CallType = CallFun Symbol | CallClosure VarRef
+data CallType
+  = CallFun Symbol
+  | CallClosure VarRef
+  deriving stock (Eq)
 
 data InstrCall = InstrCall
   { _instrCallResult :: VarRef,
     _instrCallType :: CallType,
-    _instrCallIsTail :: Bool,
     _instrCallArgs :: [Value],
-    -- | Variables live at the point of the call. If the call is not
-    -- tail-recursive, live variables need to be saved before the call and
-    -- restored after it.
+    -- | Variables live at the point of the call. Live variables need to be
+    -- saved before the call and restored after it.
     _instrCallLiveVars :: [VarRef]
   }
+  deriving stock (Eq)
+
+data InstrTailCall = InstrTailCall
+  { _instrTailCallType :: CallType,
+    _instrTailCallArgs :: [Value]
+  }
+  deriving stock (Eq)
 
 data InstrCallClosures = InstrCallClosures
   { _instrCallClosuresResult :: VarRef,
-    _instrCallClosuresIsTail :: Bool,
     _instrCallClosuresValue :: VarRef,
     _instrCallClosuresArgs :: [Value],
     _instrCallClosuresLiveVars :: [VarRef]
   }
+  deriving stock (Eq)
+
+data InstrTailCallClosures = InstrTailCallClosures
+  { _instrTailCallClosuresValue :: VarRef,
+    _instrTailCallClosuresArgs :: [Value]
+  }
+  deriving stock (Eq)
 
 newtype InstrReturn = InstrReturn
   { _instrReturnValue :: Value
   }
+  deriving stock (Eq)
 
 data InstrBranch = InstrBranch
   { _instrBranchValue :: Value,
     _instrBranchTrue :: Code,
     _instrBranchFalse :: Code
   }
+  deriving stock (Eq)
 
 data InstrCase = InstrCase
   { _instrCaseValue :: Value,
@@ -167,6 +201,7 @@ data InstrCase = InstrCase
     _instrCaseBranches :: [CaseBranch],
     _instrCaseDefault :: Maybe Code
   }
+  deriving stock (Eq)
 
 data CaseBranch = CaseBranch
   { _caseBranchTag :: Tag,
@@ -175,10 +210,12 @@ data CaseBranch = CaseBranch
     _caseBranchArgsNum :: Int,
     _caseBranchCode :: Code
   }
+  deriving stock (Eq)
 
 newtype InstrBlock = InstrBlock
   { _instrBlockCode :: Code
   }
+  deriving stock (Eq)
 
 makeLenses ''ConstrField
 makeLenses ''BinaryOp
@@ -195,3 +232,11 @@ makeLenses ''InstrBranch
 makeLenses ''InstrCase
 makeLenses ''CaseBranch
 makeLenses ''InstrReturn
+
+mkVarRef :: VarGroup -> Index -> VarRef
+mkVarRef g i =
+  VarRef
+    { _varRefGroup = g,
+      _varRefIndex = i,
+      _varRefName = Nothing
+    }

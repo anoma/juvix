@@ -1,0 +1,102 @@
+
+function compose(* → *, * → *, *) : *;
+function id(*) : *;
+function iterate(* → *, integer) : * → *;
+function inc(integer) : integer;
+function plus(integer, integer) : integer;
+function mult(integer, integer) : integer;
+function exp(integer, integer) : integer;
+function main() : *;
+
+function compose(* → *, * → *, *) : * {
+  tmp[0] = arg[2];
+  tmp[1] = arg[1];
+  tmp[0] = call tmp[1] (tmp[0]), live: (arg[0], arg[1], arg[2]);
+  tmp[1] = arg[0];
+  tcall tmp[1] (tmp[0]);
+}
+
+function id(*) : * {
+  tmp[0] = arg[0];
+  ret tmp[0];
+}
+
+function iterate(* → *, integer) : * → * {
+  tmp[0] = 0;
+  tmp[1] = arg[1];
+  tmp[0] = eq tmp[1] tmp[0];
+  br tmp[0] {
+    true: {
+      prealloc 2, live: (arg[0], arg[1]);
+      tmp[0] = calloc id ();
+      ret tmp[0];
+    };
+    false: {
+      tmp[0] = 1;
+      tmp[1] = arg[1];
+      tmp[0] = sub tmp[1] tmp[0];
+      tmp[1] = arg[0];
+      tmp[0] = call iterate (tmp[1], tmp[0]), live: (arg[0], arg[1]);
+      prealloc 4, live: (tmp[0], arg[0], arg[1]);
+      tmp[1] = arg[0];
+      tmp[0] = calloc compose (tmp[1], tmp[0]);
+      ret tmp[0];
+    };
+  };
+}
+
+function inc(integer) : integer {
+  tmp[0] = 1;
+  tmp[1] = arg[0];
+  tmp[0] = add tmp[1] tmp[0];
+  ret tmp[0];
+}
+
+function plus(integer, integer) : integer {
+  prealloc 2, live: (arg[0], arg[1]);
+  tmp[0] = arg[1];
+  tmp[1] = arg[0];
+  tmp[2] = calloc inc ();
+  tmp[1] = call iterate (tmp[2], tmp[1]), live: (tmp[0], arg[0], arg[1]);
+  tcall tmp[1] (tmp[0]);
+}
+
+function mult(integer, integer) : integer {
+  prealloc 3, live: (arg[0], arg[1]);
+  tmp[0] = 0;
+  tmp[1] = arg[0];
+  tmp[2] = arg[1];
+  tmp[2] = calloc plus (tmp[2]);
+  tmp[1] = call iterate (tmp[2], tmp[1]), live: (tmp[0], arg[0], arg[1]);
+  tcall tmp[1] (tmp[0]);
+}
+
+function exp(integer, integer) : integer {
+  prealloc 3, live: (arg[0], arg[1]);
+  tmp[0] = 1;
+  tmp[1] = arg[1];
+  tmp[2] = arg[0];
+  tmp[2] = calloc mult (tmp[2]);
+  tmp[1] = call iterate (tmp[2], tmp[1]), live: (tmp[0], arg[0], arg[1]);
+  tcall tmp[1] (tmp[0]);
+}
+
+function main() : * {
+  tmp[0] = 7;
+  tmp[1] = 3;
+  tmp[0] = call plus (tmp[1], tmp[0]);
+  trace tmp[0];
+  nop;
+  tmp[0] = 7;
+  tmp[1] = 3;
+  tmp[0] = call mult (tmp[1], tmp[0]);
+  trace tmp[0];
+  nop;
+  tmp[0] = 7;
+  tmp[1] = 3;
+  tmp[0] = call exp (tmp[1], tmp[0]);
+  trace tmp[0];
+  nop;
+  tmp[0] = void;
+  ret tmp[0];
+}

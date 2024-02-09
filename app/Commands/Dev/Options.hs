@@ -22,6 +22,7 @@ import Commands.Dev.Internal.Options
 import Commands.Dev.MigrateJuvixYaml.Options
 import Commands.Dev.Nockma.Options
 import Commands.Dev.Parse.Options
+import Commands.Dev.Reg.Options
 import Commands.Dev.Repl.Options
 import Commands.Dev.Runtime.Options
 import Commands.Dev.Scope.Options
@@ -37,6 +38,7 @@ data DevCommand
   | Core CoreCommand
   | Geb GebCommand
   | Asm AsmCommand
+  | Reg RegCommand
   | Tree TreeCommand
   | Casm CasmCommand
   | Runtime RuntimeCommand
@@ -57,6 +59,7 @@ parseDevCommand =
           commandCore,
           commandGeb,
           commandAsm,
+          commandReg,
           commandTree,
           commandCasm,
           commandRuntime,
@@ -104,6 +107,13 @@ commandAsm =
     info
       (Asm <$> parseAsmCommand)
       (progDesc "Subcommands related to JuvixAsm")
+
+commandReg :: Mod CommandFields DevCommand
+commandReg =
+  command "reg" $
+    info
+      (Reg <$> parseRegCommand)
+      (progDesc "Subcommands related to JuvixReg")
 
 commandTree :: Mod CommandFields DevCommand
 commandTree =

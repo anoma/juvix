@@ -1,0 +1,21 @@
+
+function main() : *;
+
+function main() : * {
+  tmp[0] = 12;
+  tmp[1] = 5;
+  tmp[2] = 3;
+  tmp[3] = 2;
+  tmp[2] = mul tmp[3] tmp[2];
+  tmp[1] = add tmp[2] tmp[1];
+  tmp[2] = 15;
+  tmp[1] = sub tmp[2] tmp[1];
+  tmp[2] = 9;
+  tmp[1] = div tmp[2] tmp[1];
+  tmp[2] = 7;
+  tmp[1] = mul tmp[2] tmp[1];
+  tmp[2] = 25;
+  tmp[1] = sub tmp[2] tmp[1];
+  tmp[0] = mod tmp[1] tmp[0];
+  ret tmp[0];
+}

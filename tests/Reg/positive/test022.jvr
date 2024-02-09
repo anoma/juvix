@@ -1,0 +1,23 @@
+
+function sapp(* → *) : *;
+function id(*) : *;
+function main() : *;
+
+function sapp(* → *) : * {
+  tmp[0] = arg[0];
+  tmp[1] = arg[0];
+  tcall tmp[1] (tmp[0]);
+}
+
+function id(*) : * {
+  tmp[0] = arg[0];
+  ret tmp[0];
+}
+
+function main() : * {
+  prealloc 4;
+  tmp[0] = 7;
+  tmp[1] = calloc id ();
+  tmp[2] = calloc sapp ();
+  tccall tmp[2] (tmp[1], tmp[0]);
+}

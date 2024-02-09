@@ -1,0 +1,138 @@
+type list {
+  nil : list;
+  cons : (*, list) → list;
+}
+
+function hd(list) : *;
+function tl(list) : list;
+function null(list) : bool;
+function map(* → *, list) : list;
+function map'(* → *, list) : list;
+function add_one(integer) : integer;
+function main() : *;
+
+function hd(list) : * {
+  tmp[0] = arg[0].cons[0];
+  ret tmp[0];
+}
+
+function tl(list) : list {
+  tmp[0] = arg[0].cons[1];
+  ret tmp[0];
+}
+
+function null(list) : bool {
+  tmp[0] = arg[0];
+  case[list] tmp[0] {
+    nil: {
+      nop;
+      tmp[0] = true;
+      ret tmp[0];
+    };
+    default: {
+      nop;
+      tmp[0] = false;
+      ret tmp[0];
+    };
+  };
+}
+
+function map(* → *, list) : list {
+  tmp[1] = arg[1];
+  case[list] tmp[1] {
+    nil: {
+      ret tmp[1];
+    };
+    cons: {
+      {
+        tmp[0] = tmp[1];
+        tmp[1] = tmp[0].cons[1];
+        tmp[2] = arg[0];
+        tmp[1] = call map (tmp[2], tmp[1]), live: (tmp[0], arg[0], arg[1]);
+        tmp[2] = tmp[0].cons[0];
+        tmp[3] = arg[0];
+        tmp[2] = call tmp[3] (tmp[2]), live: (tmp[0], tmp[1], arg[0], arg[1]);
+        prealloc 3, live: (tmp[0], tmp[1], tmp[2], arg[0], arg[1]);
+        tmp[1] = alloc cons (tmp[2], tmp[1]);
+        ret tmp[1];
+      };
+    };
+  };
+}
+
+function map'(* → *, list) : list {
+  tmp[0] = arg[1];
+  tmp[0] = call null (tmp[0]), live: (arg[0], arg[1]);
+  br tmp[0] {
+    true: {
+      prealloc 1, live: (arg[0], arg[1]);
+      tmp[0] = alloc nil ();
+      ret tmp[0];
+    };
+    false: {
+      tmp[0] = arg[1];
+      tmp[0] = call tl (tmp[0]), live: (arg[0], arg[1]);
+      tmp[1] = arg[0];
+      tmp[0] = call map' (tmp[1], tmp[0]), live: (arg[0], arg[1]);
+      tmp[1] = arg[1];
+      tmp[1] = call hd (tmp[1]), live: (tmp[0], arg[0], arg[1]);
+      tmp[2] = arg[0];
+      tmp[1] = call tmp[2] (tmp[1]), live: (tmp[0], arg[0], arg[1]);
+      prealloc 3, live: (tmp[0], tmp[1], arg[0], arg[1]);
+      tmp[0] = alloc cons (tmp[1], tmp[0]);
+      ret tmp[0];
+    };
+  };
+}
+
+function add_one(integer) : integer {
+  tmp[0] = arg[0];
+  tmp[1] = 1;
+  tmp[0] = add tmp[1] tmp[0];
+  ret tmp[0];
+}
+
+function main() : * {
+  prealloc 7;
+  tmp[1] = alloc nil ();
+  tmp[2] = 1;
+  tmp[1] = alloc cons (tmp[2], tmp[1]);
+  tmp[2] = 0;
+  tmp[1] = alloc cons (tmp[2], tmp[1]);
+  {
+    tmp[0] = tmp[1];
+    tmp[1] = tmp[0];
+    tmp[1] = call null (tmp[1]), live: (tmp[0]);
+    prealloc 1, live: (tmp[0], tmp[1]);
+    trace tmp[1];
+    nop;
+    tmp[1] = alloc nil ();
+    tmp[1] = call null (tmp[1]), live: (tmp[0]);
+    trace tmp[1];
+    nop;
+    tmp[1] = tmp[0];
+    tmp[1] = call hd (tmp[1]), live: (tmp[0]);
+    trace tmp[1];
+    nop;
+    tmp[1] = tmp[0];
+    tmp[1] = call tl (tmp[1]), live: (tmp[0]);
+    trace tmp[1];
+    nop;
+    tmp[1] = tmp[0];
+    tmp[1] = call tl (tmp[1]), live: (tmp[0]);
+    tmp[1] = call hd (tmp[1]), live: (tmp[0]);
+    prealloc 2, live: (tmp[0], tmp[1]);
+    trace tmp[1];
+    nop;
+    tmp[1] = tmp[0];
+    tmp[2] = calloc add_one ();
+    tmp[1] = call map (tmp[2], tmp[1]), live: (tmp[0]);
+    prealloc 2, live: (tmp[0], tmp[1]);
+    trace tmp[1];
+    nop;
+    tmp[1] = tmp[0];
+    tmp[2] = calloc add_one ();
+    tmp[1] = call map' (tmp[2], tmp[1]), live: (tmp[0]);
+  };
+  ret tmp[1];
+}

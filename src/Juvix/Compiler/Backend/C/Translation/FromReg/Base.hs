@@ -38,6 +38,9 @@ getStringId info txt = fromJust $ HashMap.lookup txt (info ^. Reg.extraInfoStrin
 getMaxStackHeight :: Reg.ExtraInfo -> Reg.Symbol -> Int
 getMaxStackHeight info sym = fromJust $ HashMap.lookup sym (info ^. Reg.extraInfoMaxStackHeight)
 
+getLocalVarsNum :: Reg.ExtraInfo -> Reg.Symbol -> Int
+getLocalVarsNum info sym = fromJust $ HashMap.lookup sym (info ^. Reg.extraInfoLocalVarsNum)
+
 getLabel :: Reg.ExtraInfo -> Reg.Symbol -> Text
 getLabel info sym = mkCIdent $ "juvix_function_" <> getFunctionName info sym <> "_" <> show (getFUID info sym)
 
