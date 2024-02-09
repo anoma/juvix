@@ -20,8 +20,8 @@ type Vars s = MV.MVector s (Maybe Val)
 
 type Args = Vec.Vector Val
 
-runFunction :: forall r. (Members '[Error RegError, Embed IO] r) => InfoTable -> [Val] -> FunctionInfo -> Sem r Val
-runFunction infoTable args0 info0 = do
+runFunction :: forall r. (Members '[Error RegError, Embed IO] r) => Handle -> InfoTable -> [Val] -> FunctionInfo -> Sem r Val
+runFunction hout infoTable args0 info0 = do
   r <- catchRunError (runST (goFun args0 info0))
   case r of
     Left err -> throw err
@@ -161,14 +161,14 @@ runFunction infoTable args0 info0 = do
     goTrace args tmps instrs InstrTrace {..} = do
       val <- readValue args tmps _instrTraceValue
       void $ unsafePerformIO $ do
-        putStrLn (printVal val)
+        hPutStrLn hout (printVal val)
         return (pure ValVoid)
       go args tmps instrs
 
     goDump :: Args -> Vars s -> Code -> ST s Val
     goDump args tmps instrs = do
       void $ unsafePerformIO $ do
-        putStrLn "<dump>"
+        hPutStrLn hout "<dump>"
         return (pure ValVoid)
       go args tmps instrs
 
@@ -354,3 +354,38 @@ runFunction infoTable args0 info0 = do
           Nothing -> throwRunError "string to integer conversion error" Nothing
       ValInteger i -> i
       _ -> throwRunError "integer conversion error" Nothing
+
+runIO :: forall r. (Members '[Error RegError, Embed IO] r) => Handle -> Handle -> InfoTable -> Val -> Sem r Val
+runIO hin hout infoTable = \case
+  ValConstr (Constr (BuiltinTag TagReturn) [x]) ->
+    return x
+  ValConstr (Constr (BuiltinTag TagBind) [x, f]) -> do
+    x' <- runIO hin hout infoTable x
+    case f of
+      ValClosure (Closure sym args) -> do
+        let fi = lookupFunInfo infoTable sym
+        x'' <- runFunction hout infoTable (args ++ [x']) fi
+        runIO hin hout infoTable x''
+      _ ->
+        throw $
+          RegError
+            { _regErrorMsg = "expected a closure",
+              _regErrorLoc = Nothing
+            }
+  ValConstr (Constr (BuiltinTag TagWrite) [ValString s]) -> do
+    embed $ hPutStr hout s
+    return ValVoid
+  ValConstr (Constr (BuiltinTag TagWrite) [arg]) -> do
+    embed $ hPutStr hout (ppPrint infoTable arg)
+    return ValVoid
+  ValConstr (Constr (BuiltinTag TagReadLn) []) -> do
+    embed $ hFlush hout
+    s <- embed $ hGetLine hin
+    return (ValString s)
+  val ->
+    return val
+
+runFunctionIO :: forall r. (Members '[Error RegError, Embed IO] r) => Handle -> Handle -> InfoTable -> [Val] -> FunctionInfo -> Sem r Val
+runFunctionIO hin hout tab args funInfo = do
+  val <- runFunction hout tab args funInfo
+  runIO hin hout tab val

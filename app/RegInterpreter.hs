@@ -26,4 +26,4 @@ runReg tab =
       Reg.InfoTable ->
       Reg.FunctionInfo ->
       Sem r (Either Reg.RegError Reg.Val)
-    doRun tab' funInfo = runError $ Reg.runFunction tab' [] funInfo
+    doRun tab' funInfo = runError $ Reg.runFunctionIO stdin stdout tab' [] funInfo
