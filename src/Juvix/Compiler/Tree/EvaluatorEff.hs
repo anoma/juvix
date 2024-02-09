@@ -30,7 +30,7 @@ emptyEvalCtx =
 eval :: (E.Output Value :> r, E.Error EvalError :> r) => InfoTable -> Node -> Eff r Value
 eval tab = E.runReader emptyEvalCtx . eval'
   where
-    eval' :: forall r'. (E.Output Value :> r', E.Reader EvalCtx :> r', E.Error EvalError :> r') => Node -> Eff r' Value
+    eval' :: forall r'. (E.Subset '[E.Output Value, E.Reader EvalCtx, E.Error EvalError] r') => Node -> Eff r' Value
     eval' node = case node of
       Binop x -> goBinop x
       Unop x -> goUnop x
