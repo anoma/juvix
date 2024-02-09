@@ -25,7 +25,6 @@ regRunAssertion' = regRunAssertionParam' runAssertion
 
 regRunAssertionParam' :: (Handle -> Symbol -> InfoTable -> IO ()) -> InfoTable -> Path Abs File -> (String -> IO ()) -> Assertion
 regRunAssertionParam' interpretFun tab expectedFile step = do
-  step "Validate"
   case tab ^. infoMainFunction of
     Just sym -> do
       withTempDir'

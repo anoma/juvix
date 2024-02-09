@@ -6,10 +6,12 @@ module Juvix.Compiler.Reg.Interpreter
 where
 
 import Control.Monad.ST
+import Data.HashMap.Strict qualified as HashMap
 import Data.Vector qualified as Vec
 import Data.Vector.Mutable qualified as MV
 import Juvix.Compiler.Reg.Data.InfoTable
 import Juvix.Compiler.Reg.Error
+import Juvix.Compiler.Reg.Extra
 import Juvix.Compiler.Reg.Interpreter.Base
 import Juvix.Compiler.Reg.Interpreter.Error
 import Juvix.Compiler.Reg.Pretty
@@ -27,14 +29,16 @@ runFunction hout infoTable args0 info0 = do
     Left err -> throw err
     Right v -> return v
   where
+    localVarsNum :: HashMap Symbol Int
+    localVarsNum = HashMap.map (computeLocalVarsNum . (^. functionCode)) (infoTable ^. infoFunctions)
+
     goFun :: [Val] -> FunctionInfo -> ST s Val
     goFun args info = do
       tmps <- MV.replicate localsNum Nothing
       go (Vec.fromList args) tmps (info ^. functionCode)
       where
-        -- TODO: count exact
         localsNum :: Int
-        localsNum = 128
+        localsNum = fromJust $ HashMap.lookup (info ^. functionSymbol) localVarsNum
 
     go :: Args -> Vars s -> Code -> ST s Val
     go args tmps = \case
