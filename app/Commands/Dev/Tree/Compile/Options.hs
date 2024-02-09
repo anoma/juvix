@@ -13,7 +13,8 @@ treeSupportedTargets =
     [ TargetWasm32Wasi,
       TargetNative64,
       TargetAsm,
-      TargetReg
+      TargetReg,
+      TargetNockma
     ]
 
 parseTreeCompileOptions :: Parser CompileOptions
