@@ -1,4 +1,4 @@
-module Juvix.Compiler.Reg.Extra where
+module Juvix.Compiler.Reg.Extra.Info where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Backend

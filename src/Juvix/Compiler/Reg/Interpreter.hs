@@ -11,7 +11,7 @@ import Data.Vector qualified as Vec
 import Data.Vector.Mutable qualified as MV
 import Juvix.Compiler.Reg.Data.InfoTable
 import Juvix.Compiler.Reg.Error
-import Juvix.Compiler.Reg.Extra
+import Juvix.Compiler.Reg.Extra.Info
 import Juvix.Compiler.Reg.Interpreter.Base
 import Juvix.Compiler.Reg.Interpreter.Error
 import Juvix.Compiler.Reg.Pretty

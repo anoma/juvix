@@ -8,7 +8,7 @@ import Juvix.Compiler.Backend.C.Extra.Serialization
 import Juvix.Compiler.Backend.C.Language as C
 import Juvix.Compiler.Backend.C.Translation.FromReg.Base
 import Juvix.Compiler.Reg.Data.InfoTable qualified as Reg
-import Juvix.Compiler.Reg.Extra qualified as Reg
+import Juvix.Compiler.Reg.Extra.Info qualified as Reg
 import Juvix.Compiler.Reg.Language qualified as Reg
 import Juvix.Data.Fixity qualified as Fixity
 import Juvix.Prelude
