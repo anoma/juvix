@@ -162,6 +162,15 @@ library:
     default-language: GHC2021
 
 executables:
+  juvixbench:
+    main: Main.hs
+    source-dirs: bench2
+    dependencies:
+      - juvix
+      - tasty-bench == 0.3.*
+    verbatim:
+      default-language: GHC2021
+
   juvix:
     main: Main.hs
     source-dirs: app

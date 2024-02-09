@@ -17,6 +17,9 @@ runAccumList m = do
   (a, Accum s) <- runStaticRep (Accum mempty) m
   return (reverse s, a)
 
+execAccumList :: Eff (Accum o ': r) a -> Eff r [o]
+execAccumList = fmap fst . runAccumList
+
 ignoreAccum :: Eff (Accum o ': r) a -> Eff r a
 ignoreAccum m = snd <$> runAccumList m
 
