@@ -1,4 +1,4 @@
-module Benchmark.State where
+module Benchmark.Effect.State where
 
 import Juvix.Prelude
 import Juvix.Prelude.Effects (Eff, (:>))

@@ -1,13 +1,11 @@
 module Main where
 
-import Benchmark.Output qualified as Output
-import Benchmark.State qualified as State
+import Benchmark.Effect qualified as Effect
 import Juvix.Prelude
 import Test.Tasty.Bench
 
 main :: IO ()
 main =
   defaultMain
-    [ Output.bm,
-      State.bm
+    [ Effect.bm
     ]

@@ -1,4 +1,4 @@
-module Benchmark.Output where
+module Benchmark.Effect.Output where
 
 import Juvix.Prelude
 import Juvix.Prelude.Effects (Eff, (:>))
