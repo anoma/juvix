@@ -7,7 +7,7 @@ import Juvix.Compiler.Nockma.Language
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Parser.Error
 import Juvix.Parser.Lexer (onlyInterval, withLoc)
-import Juvix.Prelude hiding (Atom, many, some)
+import Juvix.Prelude hiding (Atom, Path, many, some)
 import Juvix.Prelude.Parsing hiding (runParser)
 import Text.Megaparsec qualified as P
 import Text.Megaparsec.Char.Lexer qualified as L
@@ -82,22 +82,29 @@ atomOp = do
   let info =
         AtomInfo
           { _atomInfoHint = Just AtomHintOp,
-            _atomInfoLoc = Just loc
+            _atomInfoLoc = Irrelevant (Just loc)
           }
-  return (Atom (serializeNockOp op') (Irrelevant info))
+  return (Atom (serializeNockOp op') info)
 
-atomDirection :: Parser (Atom Natural)
-atomDirection = do
-  WithLoc loc dirs <-
-    withLoc $
-      symbol "S" $> []
-        <|> NonEmpty.toList <$> some (choice [symbol "L" $> L, symbol "R" $> R])
+atomPath :: Parser (Atom Natural)
+atomPath = do
+  WithLoc loc path <- withLoc pPath
   let info =
         AtomInfo
-          { _atomInfoHint = Just AtomHintOp,
-            _atomInfoLoc = Just loc
+          { _atomInfoHint = Just AtomHintPath,
+            _atomInfoLoc = Irrelevant (Just loc)
           }
-  return (Atom (serializePath dirs) (Irrelevant info))
+  return (Atom (serializePath path) info)
+
+direction :: Parser Direction
+direction =
+  symbol "L" $> L
+    <|> symbol "R" $> R
+
+pPath :: Parser Path
+pPath =
+  symbol "S" $> []
+    <|> NonEmpty.toList <$> some direction
 
 atomNat :: Parser (Atom Natural)
 atomNat = do
@@ -105,9 +112,9 @@ atomNat = do
   let info =
         AtomInfo
           { _atomInfoHint = Nothing,
-            _atomInfoLoc = Just loc
+            _atomInfoLoc = Irrelevant (Just loc)
           }
-  return (Atom n (Irrelevant info))
+  return (Atom n info)
 
 atomBool :: Parser (Atom Natural)
 atomBool =
@@ -131,7 +138,7 @@ patom :: Parser (Atom Natural)
 patom =
   atomOp
     <|> atomNat
-    <|> atomDirection
+    <|> atomPath
     <|> atomBool
     <|> atomNil
     <|> atomVoid
@@ -150,9 +157,9 @@ cell = do
       info =
         CellInfo
           { _cellInfoCall = c,
-            _cellInfoLoc = Just (lloc <> rloc)
+            _cellInfoLoc = Irrelevant (Just (lloc <> rloc))
           }
-  return (set cellInfo (Irrelevant info) r)
+  return (set cellInfo info r)
   where
     stdlibCall :: Parser (StdlibCall Natural)
     stdlibCall = do

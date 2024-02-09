@@ -37,7 +37,7 @@ runNockmaAssertion hout _main tab = do
     getReturn :: Term Natural -> Maybe (Term Natural)
     getReturn = \case
       TermAtom Nockma.Atom {..}
-        | _atomInfo ^. unIrrelevant . atomInfoHint == Just AtomHintVoid -> Nothing
+        | _atomInfo ^. atomInfoHint == Just AtomHintVoid -> Nothing
       t -> Just t
 
 testDescr :: Tree.PosTest -> TestDescr
