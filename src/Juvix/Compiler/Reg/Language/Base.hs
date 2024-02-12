@@ -5,6 +5,6 @@ module Juvix.Compiler.Reg.Language.Base
   )
 where
 
-import Juvix.Compiler.Core.Language.Base hiding (Index)
+import Juvix.Compiler.Core.Language.Base
 import Juvix.Compiler.Tree.Language.Base (Constant (..))
 import Juvix.Compiler.Tree.Language.Rep

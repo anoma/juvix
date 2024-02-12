@@ -12,8 +12,6 @@ data Value
   | VRef VarRef
   deriving stock (Eq)
 
-type Index = Int
-
 -- | Reference to a constructor field (argument).
 data ConstrField = ConstrField
   { -- | Tag of the constructor being referenced.
@@ -29,7 +27,9 @@ data ConstrField = ConstrField
 data VarGroup
   = VarGroupArgs
   | VarGroupLocal
-  deriving stock (Eq)
+  deriving stock (Eq, Generic)
+
+instance Hashable VarGroup
 
 data VarRef = VarRef
   { _varRefGroup :: VarGroup,
@@ -38,27 +38,33 @@ data VarRef = VarRef
   }
   deriving stock (Eq)
 
+instance Hashable VarRef where
+  hashWithSalt salt VarRef {..} = hashWithSalt salt (_varRefGroup, _varRefIndex)
+
 data Instruction
-  = Nop -- no operation
-  | Binop BinaryOp
+  = Binop BinaryOp
   | Show InstrShow
   | StrToInt InstrStrToInt
   | Assign InstrAssign
-  | Trace InstrTrace
-  | Dump
-  | Failure InstrFailure
   | ArgsNum InstrArgsNum
-  | Prealloc InstrPrealloc
   | Alloc InstrAlloc
   | AllocClosure InstrAllocClosure
   | ExtendClosure InstrExtendClosure
   | Call InstrCall
-  | TailCall InstrTailCall
   | CallClosures InstrCallClosures
+  | ----
+    TailCall InstrTailCall
   | TailCallClosures InstrTailCallClosures
   | Return InstrReturn
-  | Branch InstrBranch
+  | ----
+    Branch InstrBranch
   | Case InstrCase
+  | ----
+    Trace InstrTrace
+  | Dump
+  | Failure InstrFailure
+  | Prealloc InstrPrealloc
+  | Nop -- no operation
   | Block InstrBlock
   deriving stock (Eq)
 
@@ -236,6 +242,10 @@ makeLenses ''InstrBranch
 makeLenses ''InstrCase
 makeLenses ''CaseBranch
 makeLenses ''InstrReturn
+makeLenses ''InstrShow
+makeLenses ''InstrStrToInt
+makeLenses ''InstrArgsNum
+makeLenses ''InstrTailCall
 
 mkVarRef :: VarGroup -> Index -> VarRef
 mkVarRef g i =
