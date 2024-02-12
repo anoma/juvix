@@ -1,6 +1,7 @@
 module Juvix.Compiler.Tree.Transformation.Apply where
 
 import Data.HashMap.Strict qualified as HashMap
+import Juvix.Compiler.Tree.Data.InfoTable
 import Juvix.Compiler.Tree.Extra.Apply
 import Juvix.Compiler.Tree.Extra.Base
 import Juvix.Compiler.Tree.Extra.Recursors

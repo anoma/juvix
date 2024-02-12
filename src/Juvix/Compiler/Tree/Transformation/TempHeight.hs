@@ -1,5 +1,6 @@
 module Juvix.Compiler.Tree.Transformation.TempHeight where
 
+import Juvix.Compiler.Tree.Data.InfoTable
 import Juvix.Compiler.Tree.Extra.Recursors
 import Juvix.Compiler.Tree.Transformation.Base
 
