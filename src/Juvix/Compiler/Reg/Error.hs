@@ -34,7 +34,7 @@ instance Show RegError where
   show RegError {..} = fromText _regErrorMsg
 
 instance HasLoc RegError where
-  getLoc (RegError {..}) = fromMaybe defaultLoc _regErrorLoc
+  getLoc RegError {..} = fromMaybe defaultLoc _regErrorLoc
     where
       defaultLoc :: Interval
       defaultLoc = singletonInterval (mkInitialLoc sourcePath)
