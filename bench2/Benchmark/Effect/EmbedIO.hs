@@ -21,16 +21,13 @@ c :: Char
 c = 'x'
 
 countRaw :: Natural -> IO ()
-countRaw = countHelper
-
-countHelper :: forall m. (MonadMask m, MonadIO m) => Natural -> m ()
-countHelper n =
+countRaw n =
   withSystemTempFile "tmp" $ \_ h -> go h n
   where
-    go :: Handle -> Natural -> m ()
+    go :: Handle -> Natural -> IO ()
     go h = \case
       0 -> return ()
-      a -> liftIO (hPutChar h c) >> go h (pred a)
+      a -> hPutChar h c >> go h (pred a)
 
 countSem :: Natural -> IO ()
 countSem n = withSystemTempFile "tmp" $ \_ h -> runM (go h n)
