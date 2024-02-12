@@ -1,19 +1,23 @@
 module Repl.Positive where
 
 import Base
-import Juvix.Data.Effect.TaggedLock
-import Juvix.Extra.Stdlib
-import Juvix.Compiler.Pipeline.Root
 import Juvix.Compiler.Core qualified as Core
+import Juvix.Compiler.Core.Extra.Value qualified as Core
+import Juvix.Compiler.Core.Language.Value qualified as Core
+import Juvix.Compiler.Core.Transformation
 import Juvix.Compiler.Pipeline.Repl
+import Juvix.Compiler.Pipeline.Root
+import Juvix.Data.Effect.TaggedLock
 import Juvix.Extra.Paths qualified as P
+import Juvix.Extra.Stdlib
+import Juvix.Extra.Strings qualified as Str
+import Repl.Assertions
 
-runTaggedLockIO' :: Sem '[TaggedLock, Files, Embed IO, Resource, Final IO] a -> IO a
-runTaggedLockIO' = runFinal
-       . resourceToIOFinal
-       . embedToFinal @IO
-       . runFilesIO
-       . runTaggedLock LockModePermissive
+runTaggedLockIO' :: Sem '[Files, TaggedLock, Embed IO] a -> IO a
+runTaggedLockIO' =
+  runM
+    . runTaggedLockPermissive
+    . runFilesIO
 
 loadPrelude :: Path Abs Dir -> IO (Artifacts, EntryPoint)
 loadPrelude rootDir = runTaggedLockIO' $ do
@@ -22,24 +26,33 @@ loadPrelude rootDir = runTaggedLockIO' $ do
   let ep = defaultEntryPoint pkg root (rootDir <//> preludePath)
   artif <- embed (runReplPipelineIO ep)
   return (artif, ep)
-
   where
     root :: Root
-    root = Root {_rootRootDir=rootDir,
-                 _rootPackageType=LocalPackage,
-                 _rootInvokeDir=rootDir,
-                 _rootBuildDir=DefaultBuildDir}
+    root =
+      Root
+        { _rootRootDir = rootDir,
+          _rootPackageType = LocalPackage,
+          _rootInvokeDir = rootDir,
+          _rootBuildDir = DefaultBuildDir
+        }
 
-data TestCtx = TestCtx {
-  _testCtxRootDir :: Path Abs Dir,
-  _testCtxEntryPoint :: EntryPoint,
-  _testCtxArtifacts :: Artifacts
-                       }
+data TestCtx = TestCtx
+  { _testCtxRootDir :: Path Abs Dir,
+    _testCtxEntryPoint :: EntryPoint,
+    _testCtxArtifacts :: Artifacts
+  }
+
+data PosTest = PosTest
+  { _posTestName :: Text,
+    _posTestInput :: Text,
+    _posTestExpected :: Core.Value
+  }
 
 makeLenses ''TestCtx
+makeLenses ''PosTest
 
-assertNodeEqual :: Core.Node -> Core.Node -> Assertion
-assertNodeEqual n1 n2 = undefined
+mkPreludeTest :: IO TestCtx -> PosTest -> TestTree
+mkPreludeTest getCtx p = testCase (unpack (p ^. posTestName)) (replTest (p ^. posTestInput) (p ^. posTestExpected) getCtx)
 
 replSetup :: IO TestCtx
 replSetup = do
@@ -52,22 +65,57 @@ replSetup = do
 replTeardown :: TestCtx -> IO ()
 replTeardown = removeDirRecur . (^. testCtxRootDir)
 
-replTest :: IO TestCtx -> IO ()
-replTest getTestCtx = do
+replTest :: Text -> Core.Value -> IO TestCtx -> IO ()
+replTest input' expectedNode getTestCtx = do
   ctx <- getTestCtx
-  (_, res) <- compileReplInputIO' ctx "1 + 1"
-  case res of
-    Left err -> assertFailure "err"
-    Right Nothing -> assertFailure "nothing"
-    Right n -> assertBool "expected equal" (n  == (Just (Core.mkConstant' (Core.ConstInteger 2))))
+  (artif, res) <- compileReplInputIO' ctx input'
+  res' <- assertNoJuvixError res
+  case res' of
+    Nothing -> assertFailure "Compilation did not return a node"
+    Just n -> do
+      let ep = ctx ^. testCtxEntryPoint
+      n' <- evalRepl artif ep n
+      assertValueEqual expectedNode n'
 
+mkInteger :: Integer -> Core.Value
+mkInteger = Core.ValueConstant . Core.ConstInteger
+
+mkBool :: Bool -> Core.Value
+mkBool b =
+  Core.ValueConstrApp
+    ( Core.ConstrApp
+        { _constrAppName = name,
+          _constrAppFixity = Nothing,
+          _constrAppArgs = []
+        }
+    )
+  where
+    name :: Text
+    name = case b of
+      True -> Str.true
+      False -> Str.false
 
 allTests :: TestTree
-allTests = withResource
-  replSetup
-  replTeardown
-  (\getTestCtx -> testGroup "REPL positive tests"
-     (map (\f -> f getTestCtx ) [testCase "repl test" . replTest]))
+allTests =
+  testGroup
+    "REPL positive tests"
+    [ withResource
+        replSetup
+        replTeardown
+        ( \getCtx ->
+            testGroup
+              "Loading Stdlib.Prelude"
+              ( map
+                  (mkPreludeTest getCtx)
+                  [ PosTest "Arithmetic" "3 * (1 + 1)" (mkInteger 6),
+                    PosTest "Logic And" "true && false" (mkBool False),
+                    PosTest "Let" "let x : Nat := 2 + 1 in x" (mkInteger 3),
+                    PosTest "Literal comparison" "1 == 1" (mkBool True),
+                    PosTest "List literal in call" "head 0 [1;2;3]" (mkInteger 1)
+                  ]
+              )
+        )
+    ]
 
 compileReplInputIO' :: TestCtx -> Text -> IO (Artifacts, (Either JuvixError (Maybe Core.Node)))
 compileReplInputIO' ctx txt =
@@ -83,3 +131,27 @@ compileReplInputIO' ctx txt =
       ReplPipelineResultNode n -> Just n
       ReplPipelineResultImport {} -> Nothing
       ReplPipelineResultOpen {} -> Nothing
+
+evalRepl :: Artifacts -> EntryPoint -> Core.Node -> IO Core.Value
+evalRepl artif ep n = do
+  (artif', n') <-
+    assertNoJuvixError
+      . run
+      . runReader ep
+      . runError @JuvixError
+      . runState artif
+      . runTransformations True toStoredTransformations
+      $ n
+  doEvalIO' artif' n' >>= assertNoJuvixError
+  where
+    doEvalIO' :: Artifacts -> Core.Node -> IO (Either JuvixError Core.Value)
+    doEvalIO' artif' n' =
+      mapRight (Core.toValue tab)
+        . mapLeft (JuvixError @Core.CoreError)
+        <$> (Core.doEvalIO False replDefaultLoc tab n')
+      where
+        tab :: Core.InfoTable
+        tab = Core.computeCombinedInfoTable $ artif' ^. artifactCoreModule
+
+    replDefaultLoc :: Interval
+    replDefaultLoc = singletonInterval (mkInitialLoc P.replPath)
