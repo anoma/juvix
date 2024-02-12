@@ -19,14 +19,6 @@ data EvalOptions = EvalOptions
 
 makeLenses ''EvalOptions
 
-doEvalIO ::
-  Bool ->
-  Interval ->
-  Core.InfoTable ->
-  Core.Node ->
-  IO (Either Core.CoreError Core.Node)
-doEvalIO noIO i tab node = runM (Core.doEval noIO i tab node)
-
 evalAndPrint ::
   forall r a.
   (Members '[EmbedIO, App] r, CanonicalProjection a EvalOptions, CanonicalProjection a Core.Options) =>

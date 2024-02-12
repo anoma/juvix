@@ -12,7 +12,6 @@ import Control.Monad.State.Strict qualified as State
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (mapReaderT)
 import Data.String.Interpolate (i, __i)
-import Evaluator
 import HaskelineJB
 import Juvix.Compiler.Concrete.Data.Scope (scopePath)
 import Juvix.Compiler.Concrete.Data.Scope qualified as Scoped
@@ -25,8 +24,6 @@ import Juvix.Compiler.Core.Extra.Value
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.NoDisplayInfo qualified as Info
 import Juvix.Compiler.Core.Pretty qualified as Core
-import Juvix.Compiler.Core.Transformation qualified as Core
-import Juvix.Compiler.Core.Transformation.DisambiguateNames (disambiguateNames)
 import Juvix.Compiler.Internal.Language qualified as Internal
 import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Compiler.Pipeline.Repl
@@ -190,7 +187,7 @@ replCommand opts input_ = catchAll $ do
         doEvalIO' :: Artifacts -> Core.Node -> IO (Either JuvixError Core.Node)
         doEvalIO' artif' n =
           mapLeft (JuvixError @Core.CoreError)
-            <$> doEvalIO False replDefaultLoc (Core.computeCombinedInfoTable $ artif' ^. artifactCoreModule) n
+            <$> Core.doEvalIO False replDefaultLoc (Core.computeCombinedInfoTable $ artif' ^. artifactCoreModule) n
 
         compileString :: Repl (Maybe Core.Node)
         compileString = do
@@ -605,51 +602,3 @@ renderOut = render'
 
 renderOutLn :: (P.HasAnsiBackend a, P.HasTextBackend a) => a -> Repl ()
 renderOutLn t = renderOut t >> replNewline
-
-runTransformations ::
-  forall r.
-  (Members '[State Artifacts, Error JuvixError, Reader EntryPoint] r) =>
-  Bool ->
-  [Core.TransformationId] ->
-  Core.Node ->
-  Sem r Core.Node
-runTransformations shouldDisambiguate ts n = runCoreInfoTableBuilderArtifacts $ do
-  sym <- addNode n
-  applyTransforms shouldDisambiguate ts
-  getNode sym
-  where
-    addNode :: Core.Node -> Sem (Core.InfoTableBuilder ': r) Core.Symbol
-    addNode node = do
-      sym <- Core.freshSymbol
-      Core.registerIdentNode sym node
-      -- `n` will get filtered out by the transformations unless it has a
-      -- corresponding entry in `infoIdentifiers`
-      md <- Core.getModule
-      let name = Core.freshIdentName md "_repl"
-          idenInfo =
-            Core.IdentifierInfo
-              { _identifierName = name,
-                _identifierSymbol = sym,
-                _identifierLocation = Nothing,
-                _identifierArgsNum = 0,
-                _identifierType = Core.mkDynamic',
-                _identifierIsExported = False,
-                _identifierBuiltin = Nothing,
-                _identifierPragmas = mempty,
-                _identifierArgNames = []
-              }
-      Core.registerIdent name idenInfo
-      return sym
-
-    applyTransforms :: Bool -> [Core.TransformationId] -> Sem (Core.InfoTableBuilder ': r) ()
-    applyTransforms shouldDisambiguate' ts' = do
-      md <- Core.getModule
-      md' <- mapReader Core.fromEntryPoint $ Core.applyTransformations ts' md
-      let md'' =
-            if
-                | shouldDisambiguate' -> disambiguateNames md'
-                | otherwise -> md'
-      Core.setModule md''
-
-    getNode :: Core.Symbol -> Sem (Core.InfoTableBuilder ': r) Core.Node
-    getNode sym = fromMaybe impossible . flip Core.lookupIdentifierNode' sym <$> Core.getModule

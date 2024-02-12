@@ -6,6 +6,8 @@ import Juvix.Compiler.Concrete.Translation.FromParsed qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Concrete.Translation.FromSource.ParserResultBuilder (runParserResultBuilder)
 import Juvix.Compiler.Core qualified as Core
+import Juvix.Compiler.Core.Transformation qualified as Core
+import Juvix.Compiler.Core.Transformation.DisambiguateNames (disambiguateNames)
 import Juvix.Compiler.Internal qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 import Juvix.Compiler.Pipeline.Artifacts
@@ -167,3 +169,51 @@ compileReplInputIO fp txt = do
         Parser.ReplExpression e -> ReplPipelineResultNode <$> compileExpression e
         Parser.ReplImport i -> registerImport i $> ReplPipelineResultImport (i ^. importModulePath)
         Parser.ReplOpenImport i -> return (ReplPipelineResultOpen (i ^. openModuleName))
+
+runTransformations ::
+  forall r.
+  (Members '[State Artifacts, Error JuvixError, Reader EntryPoint] r) =>
+  Bool ->
+  [Core.TransformationId] ->
+  Core.Node ->
+  Sem r Core.Node
+runTransformations shouldDisambiguate ts n = runCoreInfoTableBuilderArtifacts $ do
+  sym <- addNode n
+  applyTransforms shouldDisambiguate ts
+  getNode sym
+  where
+    addNode :: Core.Node -> Sem (Core.InfoTableBuilder ': r) Core.Symbol
+    addNode node = do
+      sym <- Core.freshSymbol
+      Core.registerIdentNode sym node
+      -- `n` will get filtered out by the transformations unless it has a
+      -- corresponding entry in `infoIdentifiers`
+      md <- Core.getModule
+      let name = Core.freshIdentName md "_repl"
+          idenInfo =
+            Core.IdentifierInfo
+              { _identifierName = name,
+                _identifierSymbol = sym,
+                _identifierLocation = Nothing,
+                _identifierArgsNum = 0,
+                _identifierType = Core.mkDynamic',
+                _identifierIsExported = False,
+                _identifierBuiltin = Nothing,
+                _identifierPragmas = mempty,
+                _identifierArgNames = []
+              }
+      Core.registerIdent name idenInfo
+      return sym
+
+    applyTransforms :: Bool -> [Core.TransformationId] -> Sem (Core.InfoTableBuilder ': r) ()
+    applyTransforms shouldDisambiguate' ts' = do
+      md <- Core.getModule
+      md' <- mapReader Core.fromEntryPoint $ Core.applyTransformations ts' md
+      let md'' =
+            if
+                | shouldDisambiguate' -> disambiguateNames md'
+                | otherwise -> md'
+      Core.setModule md''
+
+    getNode :: Core.Symbol -> Sem (Core.InfoTableBuilder ': r) Core.Node
+    getNode sym = fromMaybe impossible . flip Core.lookupIdentifierNode' sym <$> Core.getModule
