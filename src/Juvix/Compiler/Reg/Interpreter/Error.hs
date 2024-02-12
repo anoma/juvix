@@ -14,7 +14,7 @@ makeLenses ''RunError
 
 instance Show RunError where
   show :: RunError -> String
-  show (RunError {..}) =
+  show RunError {..} =
     "runtime error: "
       ++ fromText _runErrorMsg
 
