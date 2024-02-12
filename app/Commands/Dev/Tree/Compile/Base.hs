@@ -59,7 +59,7 @@ runCPipeline pa@PipelineArg {..} = do
       . runError @JuvixError
       $ treeToMiniC _pipelineArgTable
   cFile <- inputCFile _pipelineArgFile
-  embed @IO $ writeFileEnsureLn cFile _resultCCode
+  writeFileEnsureLn cFile _resultCCode
   outfile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
   Compile.runCommand
     _pipelineArgOptions

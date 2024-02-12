@@ -50,14 +50,13 @@ computeMaxStackHeight lims = maximum . map go
           (computeMaxStackHeight lims _instrBranchTrue)
           (computeMaxStackHeight lims _instrBranchFalse)
       Case InstrCase {..} ->
-        max
-          ( maximum
-              ( map
-                  (computeMaxStackHeight lims . (^. caseBranchCode))
-                  _instrCaseBranches
-              )
+        maximum1
+          ( maybe 0 (computeMaxStackHeight lims) _instrCaseDefault
+              :| ( map
+                     (computeMaxStackHeight lims . (^. caseBranchCode))
+                     _instrCaseBranches
+                 )
           )
-          (maybe 0 (computeMaxStackHeight lims) _instrCaseDefault)
       Block InstrBlock {..} ->
         computeMaxStackHeight lims _instrBlockCode
 
@@ -91,14 +90,13 @@ computeMaxCallClosuresArgsNum = maximum . map go
           (computeMaxCallClosuresArgsNum _instrBranchTrue)
           (computeMaxCallClosuresArgsNum _instrBranchFalse)
       Case InstrCase {..} ->
-        max
-          ( maximum
-              ( map
-                  (computeMaxCallClosuresArgsNum . (^. caseBranchCode))
-                  _instrCaseBranches
-              )
+        maximum1
+          ( maybe 0 computeMaxCallClosuresArgsNum _instrCaseDefault
+              :| ( map
+                     (computeMaxCallClosuresArgsNum . (^. caseBranchCode))
+                     _instrCaseBranches
+                 )
           )
-          (maybe 0 computeMaxCallClosuresArgsNum _instrCaseDefault)
       Block InstrBlock {..} ->
         computeMaxCallClosuresArgsNum _instrBlockCode
 
@@ -191,14 +189,13 @@ computeLocalVarsNum = maximum . map go
           (computeLocalVarsNum _instrBranchTrue)
           (computeLocalVarsNum _instrBranchFalse)
       Case InstrCase {..} ->
-        max
-          ( maximum
-              ( map
-                  (computeLocalVarsNum . (^. caseBranchCode))
-                  _instrCaseBranches
-              )
+        maximum1
+          ( maybe 0 computeLocalVarsNum _instrCaseDefault
+              :| ( map
+                     (computeLocalVarsNum . (^. caseBranchCode))
+                     _instrCaseBranches
+                 )
           )
-          (maybe 0 computeLocalVarsNum _instrCaseDefault)
       Block InstrBlock {..} ->
         computeLocalVarsNum _instrBlockCode
 
@@ -261,9 +258,9 @@ computeExtraInfo lims tab =
       _extraInfoMaxArgsNum =
         maximum (map (^. functionArgsNum) (HashMap.elems (tab ^. infoFunctions))),
       _extraInfoMaxCallClosuresArgsNum =
-        maximum
+        maximum1
           ( lims ^. limitsSpecialisedApply
-              : map (computeMaxCallClosuresArgsNum . (^. functionCode)) (HashMap.elems (tab ^. infoFunctions))
+              :| map (computeMaxCallClosuresArgsNum . (^. functionCode)) (HashMap.elems (tab ^. infoFunctions))
           ),
       _extraInfoConstrsNum =
         length (userConstrs tab) + lims ^. limitsBuiltinUIDsNum,
