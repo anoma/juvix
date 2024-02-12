@@ -31,7 +31,7 @@ instance Pretty RegError where
   pretty RegError {..} = pretty _regErrorMsg
 
 instance Show RegError where
-  show (RegError {..}) = fromText _regErrorMsg
+  show RegError {..} = fromText _regErrorMsg
 
 instance HasLoc RegError where
   getLoc (RegError {..}) = fromMaybe defaultLoc _regErrorLoc
