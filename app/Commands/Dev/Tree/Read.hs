@@ -8,7 +8,7 @@ import Juvix.Compiler.Tree.Transformation qualified as Tree
 import Juvix.Compiler.Tree.Translation.FromSource qualified as Tree
 import TreeEvaluator qualified as Eval
 
-runCommand :: forall r. (Members '[Embed IO, App] r) => TreeReadOptions -> Sem r ()
+runCommand :: forall r. (Members '[EmbedIO, App] r) => TreeReadOptions -> Sem r ()
 runCommand opts = do
   afile :: Path Abs File <- fromAppPathFile file
   s <- readFile (toFilePath afile)

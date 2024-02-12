@@ -78,14 +78,14 @@ renderText = render False False
 renderAnsiText :: (ToGenericError e, Member (Reader GenericOptions) r) => e -> Sem r Text
 renderAnsiText = render True False
 
-printErrorAnsi :: (ToGenericError e, Members '[Embed IO, Reader GenericOptions] r) => e -> Sem r ()
+printErrorAnsi :: (ToGenericError e, Members '[EmbedIO, Reader GenericOptions] r) => e -> Sem r ()
 printErrorAnsi e = renderAnsiText e >>= \txt -> embed (hPutStrLn stderr txt)
 
 -- | Print the error to stderr without formatting.
-printErrorText :: (ToGenericError e, Members '[Embed IO, Reader GenericOptions] r) => e -> Sem r ()
+printErrorText :: (ToGenericError e, Members '[EmbedIO, Reader GenericOptions] r) => e -> Sem r ()
 printErrorText e = renderText e >>= \txt -> embed (hPutStrLn stderr txt)
 
-printErrorAnsiSafe :: (ToGenericError e, Members '[Embed IO, Reader GenericOptions] r) => e -> Sem r ()
+printErrorAnsiSafe :: (ToGenericError e, Members '[EmbedIO, Reader GenericOptions] r) => e -> Sem r ()
 printErrorAnsiSafe e =
   ifM
     (embed (Ansi.hSupportsANSIColor stderr))
@@ -93,7 +93,7 @@ printErrorAnsiSafe e =
     (printErrorText e)
 
 runErrorIO ::
-  (ToGenericError a, Members '[Embed IO, Reader GenericOptions] r) =>
+  (ToGenericError a, Members '[EmbedIO, Reader GenericOptions] r) =>
   Sem (Error a ': r) b ->
   Sem r b
 runErrorIO =
@@ -102,7 +102,7 @@ runErrorIO =
     Right a -> return a
 
 runErrorIO' ::
-  (ToGenericError a, Member (Embed IO) r) =>
+  (ToGenericError a, Member EmbedIO r) =>
   Sem (Error a ': r) b ->
   Sem r b
 runErrorIO' = runReader defaultGenericOptions . runErrorIO . raiseUnder

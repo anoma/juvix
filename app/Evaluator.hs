@@ -29,7 +29,7 @@ doEvalIO noIO i tab node = runM (Core.doEval noIO i tab node)
 
 evalAndPrint ::
   forall r a.
-  (Members '[Embed IO, App] r, CanonicalProjection a EvalOptions, CanonicalProjection a Core.Options) =>
+  (Members '[EmbedIO, App] r, CanonicalProjection a EvalOptions, CanonicalProjection a Core.Options) =>
   a ->
   Core.InfoTable ->
   Core.Node ->
@@ -59,7 +59,7 @@ evalAndPrint opts tab node = do
 
 normalizeAndPrint ::
   forall r a.
-  (Members '[Embed IO, App] r, CanonicalProjection a EvalOptions, CanonicalProjection a Core.Options) =>
+  (Members '[EmbedIO, App] r, CanonicalProjection a EvalOptions, CanonicalProjection a Core.Options) =>
   a ->
   Core.InfoTable ->
   Core.Node ->

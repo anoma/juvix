@@ -12,7 +12,7 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified
 import Juvix.Extra.Assets (writeAssets)
 
 runCommand ::
-  (Members '[Embed IO, TaggedLock, App] r) =>
+  (Members '[EmbedIO, TaggedLock, App] r) =>
   MarkdownOptions ->
   Sem r ()
 runCommand opts = do

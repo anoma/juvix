@@ -12,12 +12,12 @@ import Juvix.Data.Effect.TaggedLock
 import Juvix.Extra.Paths qualified as Paths
 import Juvix.Prelude
 
-readPackageRootIO :: (Members '[TaggedLock, Embed IO] r) => Root -> Sem r Package
+readPackageRootIO :: (Members '[TaggedLock, EmbedIO] r) => Root -> Sem r Package
 readPackageRootIO root = readPackageIO (root ^. rootRootDir) (root ^. rootBuildDir)
 
 findRootAndChangeDir ::
   forall r.
-  (Members '[TaggedLock, Embed IO, Final IO] r) =>
+  (Members '[TaggedLock, EmbedIO, Final IO] r) =>
   Maybe (Path Abs Dir) ->
   Maybe (Path Abs Dir) ->
   Path Abs Dir ->
@@ -35,7 +35,7 @@ findRootAndChangeDir minputFileDir mbuildDir _rootInvokeDir = do
     possiblePaths :: Path Abs Dir -> [Path Abs Dir]
     possiblePaths p = p : toList (parents p)
 
-    findPackageFile :: (Members '[Embed IO] r') => Sem r' (Maybe (Path Abs File))
+    findPackageFile :: (Members '[EmbedIO] r') => Sem r' (Maybe (Path Abs File))
     findPackageFile = do
       let cwd = fromMaybe _rootInvokeDir minputFileDir
           findPackageFile' = findFile (possiblePaths cwd)

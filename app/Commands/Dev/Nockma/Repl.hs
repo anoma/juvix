@@ -167,7 +167,7 @@ replAction =
         banner
       }
 
-runCommand :: forall r. (Members '[Embed IO, App] r) => NockmaReplOptions -> Sem r ()
+runCommand :: forall r. (Members '[EmbedIO, App] r) => NockmaReplOptions -> Sem r ()
 runCommand _ = embed . (`State.evalStateT` iniState) $ replAction
   where
     iniState :: ReplState

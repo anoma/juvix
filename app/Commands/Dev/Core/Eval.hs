@@ -5,7 +5,7 @@ import Commands.Dev.Core.Eval.Options
 import Evaluator
 import Juvix.Compiler.Core.Translation.FromSource qualified as Core
 
-runCommand :: forall r. (Members '[Embed IO, App] r) => CoreEvalOptions -> Sem r ()
+runCommand :: forall r. (Members '[EmbedIO, App] r) => CoreEvalOptions -> Sem r ()
 runCommand opts = do
   f :: Path Abs File <- fromAppPathFile b
   s <- readFile (toFilePath f)

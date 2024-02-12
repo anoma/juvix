@@ -96,7 +96,7 @@ indexFileName = $(mkRelFile "index.html")
 
 createIndexFile ::
   forall r.
-  (Members '[Embed IO, Reader HtmlOptions, Reader EntryPoint] r) =>
+  (Members '[EmbedIO, Reader HtmlOptions, Reader EntryPoint] r) =>
   [TopModulePath] ->
   Sem r ()
 createIndexFile ps = do
@@ -168,7 +168,7 @@ createIndexFile ps = do
                     $ summary row'
                       <> ul (mconcatMap li c')
 
-writeHtml :: (Members '[Embed IO] r) => Path Abs File -> Html -> Sem r ()
+writeHtml :: (Members '[EmbedIO] r) => Path Abs File -> Html -> Sem r ()
 writeHtml f h = Prelude.embed $ do
   ensureDir dir
   Builder.writeFile (toFilePath f) (Html.renderHtmlBuilder h)
@@ -176,7 +176,7 @@ writeHtml f h = Prelude.embed $ do
     dir :: Path Abs Dir
     dir = parent f
 
-genJudocHtml :: (Members '[Embed IO] r) => EntryPoint -> JudocArgs -> Sem r ()
+genJudocHtml :: (Members '[EmbedIO] r) => EntryPoint -> JudocArgs -> Sem r ()
 genJudocHtml entry JudocArgs {..} =
   runReader htmlOpts . runReader normTable . runReader entry $ do
     Prelude.embed (writeAssets _judocArgsOutputDir)
@@ -280,7 +280,7 @@ template rightMenu' content' = do
 -- | This function compiles a module into Html documentation.
 goTopModule ::
   forall r.
-  (Members '[Reader HtmlOptions, Embed IO, Reader EntryPoint, Reader NormalizedTable] r) =>
+  (Members '[Reader HtmlOptions, EmbedIO, Reader EntryPoint, Reader NormalizedTable] r) =>
   Comments ->
   Module 'Scoped 'ModuleTop ->
   Sem r ()
@@ -298,7 +298,7 @@ goTopModule cs m = do
     tmp :: TopModulePath
     tmp = m ^. modulePath . S.nameConcrete
 
-    srcHtml :: forall s. (Members '[Reader HtmlOptions, Embed IO] s) => Sem s Html
+    srcHtml :: forall s. (Members '[Reader HtmlOptions, EmbedIO] s) => Sem s Html
     srcHtml = do
       utc <- Prelude.embed getCurrentTime
       genModuleHtml

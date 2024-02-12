@@ -143,7 +143,7 @@ data ReplPipelineResult
   | ReplPipelineResultOpen Name
 
 compileReplInputIO ::
-  (Members '[Reader EntryPoint, State Artifacts, Embed IO] r) =>
+  (Members '[Reader EntryPoint, State Artifacts, EmbedIO] r) =>
   Path Abs File ->
   Text ->
   Sem r (Either JuvixError ReplPipelineResult)

@@ -5,7 +5,7 @@ import Commands.Dev.MigrateJuvixYaml.Options
 import Commands.Extra.Package
 import Juvix.Extra.Paths
 
-runCommand :: forall r. (Members '[Embed IO, Files, App] r) => MigrateJuvixYamlOptions -> Sem r ()
+runCommand :: forall r. (Members '[EmbedIO, Files, App] r) => MigrateJuvixYamlOptions -> Sem r ()
 runCommand MigrateJuvixYamlOptions {..} = do
   pkgDir <- askPkgDir
   isGlobalPackage <- askPackageGlobal

@@ -20,7 +20,7 @@ import System.PosixCompat.Files qualified as P
 
 runFilesIO ::
   forall r a.
-  (Members '[Embed IO] r) =>
+  (Members '[EmbedIO] r) =>
   Sem (Files ': r) a ->
   Sem r a
 runFilesIO = interpret helper
@@ -58,7 +58,7 @@ juvixConfigDirIO = (<//> versionDir) . absDir <$> getUserConfigDir "juvix"
 
 runTempFileIO ::
   forall r a.
-  (Members '[Embed IO] r) =>
+  (Members '[EmbedIO] r) =>
   Sem (TempFile ': r) a ->
   Sem r a
 runTempFileIO = interpret $ \case

@@ -36,7 +36,7 @@ data LockMode
   = LockModePermissive
   | LockModeExclusive
 
-runTaggedLock :: (Members '[Resource, Embed IO] r) => LockMode -> Sem (TaggedLock ': r) a -> Sem r a
+runTaggedLock :: (Members '[Resource, EmbedIO] r) => LockMode -> Sem (TaggedLock ': r) a -> Sem r a
 runTaggedLock = \case
   LockModePermissive -> runTaggedLockPermissive
   LockModeExclusive -> runTaggedLockIO

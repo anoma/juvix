@@ -45,7 +45,7 @@ makeLenses ''RunAppIOArgs
 
 runAppIO ::
   forall r a.
-  (Members '[Embed IO, TaggedLock] r) =>
+  (Members '[EmbedIO, TaggedLock] r) =>
   RunAppIOArgs ->
   Sem (App ': r) a ->
   Sem r a
@@ -55,7 +55,7 @@ runAppIO args = evalSingletonCache (readPackageRootIO root) . reAppIO args
 
 reAppIO ::
   forall r a.
-  (Members '[Embed IO, TaggedLock] r) =>
+  (Members '[EmbedIO, TaggedLock] r) =>
   RunAppIOArgs ->
   Sem (App ': r) a ->
   Sem (SCache Package ': r) a
@@ -92,10 +92,10 @@ reAppIO args@RunAppIOArgs {..} =
     getPkg :: (Members '[SCache Package] r') => Sem r' Package
     getPkg = cacheSingletonGet
 
-    exitMsg' :: (Members '[Embed IO] r') => IO x -> Text -> Sem r' x
+    exitMsg' :: (Members '[EmbedIO] r') => IO x -> Text -> Sem r' x
     exitMsg' onExit t = liftIO (putStrLn t >> hFlush stdout >> onExit)
 
-    getMainFile' :: (Members '[SCache Package, Embed IO] r') => Maybe (AppPath File) -> Sem r' (Path Abs File)
+    getMainFile' :: (Members '[SCache Package, EmbedIO] r') => Maybe (AppPath File) -> Sem r' (Path Abs File)
     getMainFile' = \case
       Just p -> embed (prepathToAbsFile invDir (p ^. pathPath))
       Nothing -> do
@@ -104,7 +104,7 @@ reAppIO args@RunAppIOArgs {..} =
           Just p -> embed (prepathToAbsFile invDir p)
           Nothing -> missingMainErr
 
-    missingMainErr :: (Members '[Embed IO] r') => Sem r' x
+    missingMainErr :: (Members '[EmbedIO] r') => Sem r' x
     missingMainErr =
       exitMsg'
         exitFailure
@@ -118,7 +118,7 @@ reAppIO args@RunAppIOArgs {..} =
     printErr e =
       embed $ hPutStrLn stderr $ run $ runReader (project' @GenericOptions g) $ Error.render (not (_runAppIOArgsGlobalOptions ^. globalNoColors)) (g ^. globalOnlyErrors) e
 
-getEntryPoint' :: (Members '[Embed IO, TaggedLock] r) => RunAppIOArgs -> AppPath File -> Sem r EntryPoint
+getEntryPoint' :: (Members '[EmbedIO, TaggedLock] r) => RunAppIOArgs -> AppPath File -> Sem r EntryPoint
 getEntryPoint' RunAppIOArgs {..} inputFile = do
   let opts = _runAppIOArgsGlobalOptions
       root = _runAppIOArgsRoot
@@ -128,19 +128,19 @@ getEntryPoint' RunAppIOArgs {..} inputFile = do
         | otherwise -> return Nothing
   set entryPointStdin estdin <$> entryPointFromGlobalOptionsPre root (inputFile ^. pathPath) opts
 
-runPipelineEither :: (Members '[Embed IO, TaggedLock, App] r) => AppPath File -> Sem (PipelineEff r) a -> Sem r (Either JuvixError (ResolverState, PipelineResult a))
+runPipelineEither :: (Members '[EmbedIO, TaggedLock, App] r) => AppPath File -> Sem (PipelineEff r) a -> Sem r (Either JuvixError (ResolverState, PipelineResult a))
 runPipelineEither input_ p = do
   args <- askArgs
   entry <- getEntryPoint' args input_
   runIOEither entry p
 
-runPipelineSetupEither :: (Members '[Embed IO, TaggedLock, App] r) => Sem (PipelineEff' r) a -> Sem r (Either JuvixError (ResolverState, a))
+runPipelineSetupEither :: (Members '[EmbedIO, TaggedLock, App] r) => Sem (PipelineEff' r) a -> Sem r (Either JuvixError (ResolverState, a))
 runPipelineSetupEither p = do
   args <- askArgs
   entry <- getEntryPointStdin' args
   runIOEitherPipeline entry p
 
-getEntryPointStdin' :: (Members '[Embed IO, TaggedLock] r) => RunAppIOArgs -> Sem r EntryPoint
+getEntryPointStdin' :: (Members '[EmbedIO, TaggedLock] r) => RunAppIOArgs -> Sem r EntryPoint
 getEntryPointStdin' RunAppIOArgs {..} = do
   let opts = _runAppIOArgsGlobalOptions
       root = _runAppIOArgsRoot
@@ -155,7 +155,7 @@ someBaseToAbs' f = do
   r <- askInvokeDir
   return (someBaseToAbs r f)
 
-filePathToAbs :: (Members '[Embed IO, App] r) => Prepath FileOrDir -> Sem r (Either (Path Abs File) (Path Abs Dir))
+filePathToAbs :: (Members '[EmbedIO, App] r) => Prepath FileOrDir -> Sem r (Either (Path Abs File) (Path Abs Dir))
 filePathToAbs fp = do
   invokeDir <- askInvokeDir
   embed (fromPreFileOrDir invokeDir fp)
@@ -163,33 +163,33 @@ filePathToAbs fp = do
 askGenericOptions :: (Members '[App] r) => Sem r GenericOptions
 askGenericOptions = project <$> askGlobalOptions
 
-getEntryPoint :: (Members '[Embed IO, App, TaggedLock] r) => AppPath File -> Sem r EntryPoint
+getEntryPoint :: (Members '[EmbedIO, App, TaggedLock] r) => AppPath File -> Sem r EntryPoint
 getEntryPoint inputFile = do
   _runAppIOArgsGlobalOptions <- askGlobalOptions
   _runAppIOArgsRoot <- askRoot
   getEntryPoint' (RunAppIOArgs {..}) inputFile
 
-getEntryPointStdin :: (Members '[Embed IO, App, TaggedLock] r) => Sem r EntryPoint
+getEntryPointStdin :: (Members '[EmbedIO, App, TaggedLock] r) => Sem r EntryPoint
 getEntryPointStdin = do
   _runAppIOArgsGlobalOptions <- askGlobalOptions
   _runAppIOArgsRoot <- askRoot
   getEntryPointStdin' (RunAppIOArgs {..})
 
-runPipelineTermination :: (Members '[Embed IO, App, TaggedLock] r) => AppPath File -> Sem (Termination ': PipelineEff r) a -> Sem r (PipelineResult a)
+runPipelineTermination :: (Members '[EmbedIO, App, TaggedLock] r) => AppPath File -> Sem (Termination ': PipelineEff r) a -> Sem r (PipelineResult a)
 runPipelineTermination input_ p = do
   r <- runPipelineEither input_ (evalTermination iniTerminationState p)
   case r of
     Left err -> exitJuvixError err
     Right res -> return (snd res)
 
-runPipeline :: (Members '[App, Embed IO, TaggedLock] r) => AppPath File -> Sem (PipelineEff r) a -> Sem r a
+runPipeline :: (Members '[App, EmbedIO, TaggedLock] r) => AppPath File -> Sem (PipelineEff r) a -> Sem r a
 runPipeline input_ p = do
   r <- runPipelineEither input_ p
   case r of
     Left err -> exitJuvixError err
     Right res -> return (snd res ^. pipelineResult)
 
-runPipelineHtml :: (Members '[App, Embed IO, TaggedLock] r) => Bool -> AppPath File -> Sem r (InternalTypedResult, [InternalTypedResult])
+runPipelineHtml :: (Members '[App, EmbedIO, TaggedLock] r) => Bool -> AppPath File -> Sem r (InternalTypedResult, [InternalTypedResult])
 runPipelineHtml bNonRecursive input_
   | bNonRecursive = do
       r <- runPipeline input_ upToInternalTyped
@@ -202,14 +202,14 @@ runPipelineHtml bNonRecursive input_
         Left err -> exitJuvixError err
         Right res -> return res
 
-runPipelineEntry :: (Members '[App, Embed IO, TaggedLock] r) => EntryPoint -> Sem (PipelineEff r) a -> Sem r a
+runPipelineEntry :: (Members '[App, EmbedIO, TaggedLock] r) => EntryPoint -> Sem (PipelineEff r) a -> Sem r a
 runPipelineEntry entry p = do
   r <- runIOEither entry p
   case r of
     Left err -> exitJuvixError err
     Right res -> return (snd res ^. pipelineResult)
 
-runPipelineSetup :: (Members '[App, Embed IO, TaggedLock] r) => Sem (PipelineEff' r) a -> Sem r a
+runPipelineSetup :: (Members '[App, EmbedIO, TaggedLock] r) => Sem (PipelineEff' r) a -> Sem r a
 runPipelineSetup p = do
   r <- runPipelineSetupEither p
   case r of

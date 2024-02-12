@@ -48,7 +48,6 @@ module Juvix.Prelude.Base
     module GHC.Real,
     module Lens.Micro.Platform,
     module Polysemy,
-    module Polysemy.Embed,
     module Polysemy.Error,
     module Polysemy.Input,
     module Polysemy.Fixpoint,
@@ -163,8 +162,8 @@ import Language.Haskell.TH.Syntax (Exp, Lift, Q)
 import Lens.Micro.Platform
 import Path
 import Path.IO qualified as Path hiding (getCurrentDir, setCurrentDir, withCurrentDir)
-import Polysemy
-import Polysemy.Embed
+import Polysemy hiding (embed)
+import Polysemy.Embed qualified as Embed
 import Polysemy.Error hiding (fromEither)
 import Polysemy.Fixpoint
 import Polysemy.Input
@@ -202,6 +201,11 @@ import Text.Show (Show)
 import Text.Show qualified as Show
 import Text.Show.Unicode (urecover, ushow)
 import Prelude (Double)
+
+type EmbedIO = Embed.Embed IO
+
+embed :: (Member EmbedIO r) => IO a -> Sem r a
+embed = Embed.embed
 
 traverseM ::
   (Monad m, Traversable m, Applicative f) =>

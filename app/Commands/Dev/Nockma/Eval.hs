@@ -7,7 +7,7 @@ import Juvix.Compiler.Nockma.Evaluator.Options
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Translation.FromSource qualified as Nockma
 
-runCommand :: forall r. (Members '[Embed IO, App] r) => NockmaEvalOptions -> Sem r ()
+runCommand :: forall r. (Members '[EmbedIO, App] r) => NockmaEvalOptions -> Sem r ()
 runCommand opts = do
   afile <- fromAppPathFile file
   parsedTerm <- Nockma.parseTermFile (toFilePath afile)

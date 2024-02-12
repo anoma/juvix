@@ -9,7 +9,7 @@ import Juvix.Compiler.Backend.Geb.Translation.FromSource qualified as Geb
 
 runCommand ::
   forall r a.
-  ( Members '[App, Embed IO] r,
+  ( Members '[App, EmbedIO] r,
     CanonicalProjection a Geb.EvaluatorOptions,
     CanonicalProjection a GebEvalOptions
   ) =>
@@ -28,7 +28,7 @@ runCommand opts = do
 
 evalAndPrint ::
   forall r a.
-  ( Members '[App, Embed IO] r,
+  ( Members '[App, EmbedIO] r,
     CanonicalProjection a Geb.EvaluatorOptions
   ) =>
   a ->

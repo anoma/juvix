@@ -15,7 +15,7 @@ import Juvix.Compiler.Tree.EvaluatorSem qualified as TreeSem
 import Juvix.Compiler.Tree.Language.Value qualified as Tree
 import Juvix.Compiler.Tree.Pretty qualified as Tree
 
-evalTree :: forall r. (Members '[Embed IO, App] r) => Evaluator -> Tree.InfoTable -> Sem r ()
+evalTree :: forall r. (Members '[EmbedIO, App] r) => Evaluator -> Tree.InfoTable -> Sem r ()
 evalTree ev tab =
   case tab ^. Tree.infoMainFunction of
     Just sym -> do

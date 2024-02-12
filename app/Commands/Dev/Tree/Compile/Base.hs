@@ -16,7 +16,7 @@ data PipelineArg = PipelineArg
     _pipelineArgTable :: Tree.InfoTable
   }
 
-getEntry :: (Members '[Embed IO, App, TaggedLock] r) => PipelineArg -> Sem r EntryPoint
+getEntry :: (Members '[EmbedIO, App, TaggedLock] r) => PipelineArg -> Sem r EntryPoint
 getEntry PipelineArg {..} = do
   ep <- getEntryPoint (AppPath (preFileFromAbs _pipelineArgFile) True)
   return $
@@ -47,7 +47,7 @@ getEntry PipelineArg {..} = do
 
 runCPipeline ::
   forall r.
-  (Members '[Embed IO, App, TaggedLock] r) =>
+  (Members '[EmbedIO, App, TaggedLock] r) =>
   PipelineArg ->
   Sem r ()
 runCPipeline pa@PipelineArg {..} = do
@@ -73,7 +73,7 @@ runCPipeline pa@PipelineArg {..} = do
       ensureDir buildDir
       return (buildDir <//> replaceExtension' ".c" (filename inputFileCompile))
 
-runAsmPipeline :: (Members '[Embed IO, App, TaggedLock] r) => PipelineArg -> Sem r ()
+runAsmPipeline :: (Members '[EmbedIO, App, TaggedLock] r) => PipelineArg -> Sem r ()
 runAsmPipeline pa@PipelineArg {..} = do
   entryPoint <- getEntry pa
   asmFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
@@ -86,7 +86,7 @@ runAsmPipeline pa@PipelineArg {..} = do
   let code = Asm.ppPrint tab' tab'
   writeFileEnsureLn asmFile code
 
-runRegPipeline :: (Members '[Embed IO, App, TaggedLock] r) => PipelineArg -> Sem r ()
+runRegPipeline :: (Members '[EmbedIO, App, TaggedLock] r) => PipelineArg -> Sem r ()
 runRegPipeline pa@PipelineArg {..} = do
   entryPoint <- getEntry pa
   regFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
@@ -99,7 +99,7 @@ runRegPipeline pa@PipelineArg {..} = do
   let code = Reg.ppPrint tab' tab'
   writeFileEnsureLn regFile code
 
-runNockmaPipeline :: (Members '[Embed IO, App, TaggedLock] r) => PipelineArg -> Sem r ()
+runNockmaPipeline :: (Members '[EmbedIO, App, TaggedLock] r) => PipelineArg -> Sem r ()
 runNockmaPipeline pa@PipelineArg {..} = do
   entryPoint <- getEntry pa
   nockmaFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile

@@ -9,7 +9,7 @@ import System.Process.Typed qualified as P
 
 runProcessIO ::
   forall r a.
-  (Members '[Embed IO] r) =>
+  (Members '[EmbedIO] r) =>
   Sem (Process ': r) a ->
   Sem r a
 runProcessIO = interpret $ \case

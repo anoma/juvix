@@ -43,7 +43,7 @@ import Juvix.Data.Effect.Process
 import Juvix.Data.Effect.TaggedLock
 import Juvix.Prelude
 
-type PipelineAppEffects = '[TaggedLock, Embed IO, Resource, Final IO]
+type PipelineAppEffects = '[TaggedLock, EmbedIO, Resource, Final IO]
 
 type PipelineLocalEff = '[PathResolver, EvalFileEff, Error PackageLoaderError, Error DependencyError, GitClone, Error GitProcessError, Process, Log, Reader EntryPoint, Files, Error JuvixError, HighlightBuilder, Internet]
 

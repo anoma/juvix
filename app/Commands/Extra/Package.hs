@@ -8,14 +8,14 @@ import Juvix.Prelude
 renderPackage :: Package -> Text
 renderPackage = renderPackageVersion currentPackageVersion
 
-writePackageFile' :: (Member (Embed IO) r) => PackageVersion -> Path Abs Dir -> Package -> Sem r ()
+writePackageFile' :: (Member EmbedIO r) => PackageVersion -> Path Abs Dir -> Package -> Sem r ()
 writePackageFile' v root pkg =
   writeFileEnsureLn
     (root <//> packageFilePath)
     (renderPackageVersion v pkg)
 
-writePackageFile :: (Member (Embed IO) r) => Path Abs Dir -> Package -> Sem r ()
+writePackageFile :: (Member EmbedIO r) => Path Abs Dir -> Package -> Sem r ()
 writePackageFile = writePackageFile' currentPackageVersion
 
-writeBasicPackage :: (Member (Embed IO) r) => Path Abs Dir -> Sem r ()
+writeBasicPackage :: (Member EmbedIO r) => Path Abs Dir -> Sem r ()
 writeBasicPackage root = writePackageFile' PackageBasic root (emptyPackage DefaultBuildDir (root <//> packageFilePath))

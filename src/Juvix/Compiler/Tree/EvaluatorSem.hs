@@ -320,7 +320,7 @@ hEvalIOEither hin hout infoTable funInfo = do
     $ x
 
 -- | Interpret IO actions.
-hRunIO :: forall r. (Members '[Embed IO, Error EvalError, Output Value] r) => Handle -> Handle -> InfoTable -> Value -> Sem r Value
+hRunIO :: forall r. (Members '[EmbedIO, Error EvalError, Output Value] r) => Handle -> Handle -> InfoTable -> Value -> Sem r Value
 hRunIO hin hout infoTable = \case
   ValConstr (Constr (BuiltinTag TagReturn) [x]) -> return x
   ValConstr (Constr (BuiltinTag TagBind) [x, f]) -> do

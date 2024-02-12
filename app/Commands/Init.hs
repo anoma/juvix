@@ -23,7 +23,7 @@ parse p t = mapLeft ppErr (P.runParser p "<stdin>" t)
 ppErr :: P.ParseErrorBundle Text Void -> Text
 ppErr = pack . errorBundlePretty
 
-init :: forall r. (Members '[Embed IO] r) => InitOptions -> Sem r ()
+init :: forall r. (Members '[EmbedIO] r) => InitOptions -> Sem r ()
 init opts = do
   checkNotInProject
   cwd <- getCurrentDir
@@ -50,7 +50,7 @@ init opts = do
     isInteractive :: Bool
     isInteractive = not (opts ^. initOptionsNonInteractive) && not (opts ^. initOptionsBasic)
 
-checkNotInProject :: forall r. (Members '[Embed IO] r) => Sem r ()
+checkNotInProject :: forall r. (Members '[EmbedIO] r) => Sem r ()
 checkNotInProject =
   whenM (orM [doesFileExist juvixYamlFile, doesFileExist packageFilePath]) err
   where
@@ -59,7 +59,7 @@ checkNotInProject =
       say "You are already in a Juvix project"
       embed exitFailure
 
-checkPackage :: forall r. (Members '[Embed IO] r) => Sem r ()
+checkPackage :: forall r. (Members '[EmbedIO] r) => Sem r ()
 checkPackage = do
   cwd <- getCurrentDir
   ep <- runError @JuvixError (runTaggedLockPermissive (loadPackageFileIO cwd DefaultBuildDir))
@@ -69,7 +69,7 @@ checkPackage = do
       embed exitFailure
     Right {} -> return ()
 
-getPackage :: forall r. (Members '[Embed IO] r) => Sem r Package
+getPackage :: forall r. (Members '[EmbedIO] r) => Sem r Package
 getPackage = do
   tproj <- getProjName
   say "Write the version of your project [leave empty for 0.0.0]"
@@ -86,12 +86,12 @@ getPackage = do
         _packageLockfile = Nothing
       }
 
-getDefaultProjectName :: (Member (Embed IO) r) => Sem r (Maybe Text)
+getDefaultProjectName :: (Member EmbedIO r) => Sem r (Maybe Text)
 getDefaultProjectName = runFail $ do
   dir <- map toLower . dropTrailingPathSeparator . toFilePath . dirname <$> getCurrentDir
   Fail.fromRight (parse projectNameParser (pack dir))
 
-getProjName :: forall r. (Members '[Embed IO] r) => Sem r Text
+getProjName :: forall r. (Members '[EmbedIO] r) => Sem r Text
 getProjName = do
   d <- getDefaultProjectName
   let defMsg :: Text
@@ -129,13 +129,13 @@ getProjName = do
               tryAgain
               go
 
-say :: (Members '[Embed IO] r) => Text -> Sem r ()
+say :: (Members '[EmbedIO] r) => Text -> Sem r ()
 say = putStrLn
 
-tryAgain :: (Members '[Embed IO] r) => Sem r ()
+tryAgain :: (Members '[EmbedIO] r) => Sem r ()
 tryAgain = say "Please, try again:"
 
-getVersion :: forall r. (Members '[Embed IO] r) => Sem r SemVer
+getVersion :: forall r. (Members '[EmbedIO] r) => Sem r SemVer
 getVersion = do
   txt <- embed getLine
   if

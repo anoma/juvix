@@ -5,7 +5,7 @@ import Commands.Dev.Tree.Compile.Base
 import Commands.Dev.Tree.Compile.Options
 import Juvix.Compiler.Tree.Translation.FromSource qualified as Tree
 
-runCommand :: forall r. (Members '[Embed IO, App, TaggedLock] r) => CompileOptions -> Sem r ()
+runCommand :: forall r. (Members '[EmbedIO, App, TaggedLock] r) => CompileOptions -> Sem r ()
 runCommand opts = do
   file <- getFile
   s <- readFile (toFilePath file)
