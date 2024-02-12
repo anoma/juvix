@@ -25,4 +25,4 @@ ppTrace :: (PrettyCode c) => InfoTable -> c -> Text
 ppTrace tab = ppTrace' (defaultOptions tab)
 
 ppPrint :: (PrettyCode c) => InfoTable -> c -> Text
-ppPrint tab = show . ppOutDefault tab
+ppPrint tab = toPlainText . ppOutDefault tab

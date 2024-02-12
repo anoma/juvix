@@ -89,7 +89,7 @@ runGebPipeline pa@PipelineArg {..} = do
                   _lispPackageEntry = "*entry*"
                 }
   Geb.Result {..} <- getRight (run (runReader entryPoint (runError (coreToGeb spec _pipelineArgModule :: Sem '[Error JuvixError, Reader EntryPoint] Geb.Result))))
-  embed @IO $ writeFileEnsureLn gebFile _resultCode
+  writeFileEnsureLn gebFile _resultCode
 
 runVampIRPipeline ::
   forall r.

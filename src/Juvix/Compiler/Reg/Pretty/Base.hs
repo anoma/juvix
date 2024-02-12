@@ -25,9 +25,9 @@ class PrettyCode c where
 instance PrettyCode VarRef where
   ppCode VarRef {..} = case _varRefName of
     Just n -> return $ variable (quoteName n)
-    Nothing -> case _varRefGroup of
-      VarGroupArgs -> return $ ppRef Str.arg _varRefIndex
-      VarGroupLocal -> return $ ppRef Str.tmp _varRefIndex
+    Nothing -> return $ case _varRefGroup of
+      VarGroupArgs -> ppRef Str.arg _varRefIndex
+      VarGroupLocal -> ppRef Str.tmp _varRefIndex
     where
       ppRef :: Text -> Index -> Doc Ann
       ppRef str off = variable str <> brackets (integer off)
@@ -45,16 +45,16 @@ instance PrettyCode Value where
     VRef x -> ppCode x
 
 instance PrettyCode Opcode where
-  ppCode = \case
-    OpIntAdd -> return $ primitive Str.add_
-    OpIntSub -> return $ primitive Str.sub_
-    OpIntMul -> return $ primitive Str.mul_
-    OpIntDiv -> return $ primitive Str.div_
-    OpIntMod -> return $ primitive Str.mod_
-    OpIntLt -> return $ primitive Str.lt_
-    OpIntLe -> return $ primitive Str.le_
-    OpEq -> return $ primitive Str.eq
-    OpStrConcat -> return $ primitive Str.instrStrConcat
+  ppCode op = return $ case op of
+    OpIntAdd -> primitive Str.add_
+    OpIntSub -> primitive Str.sub_
+    OpIntMul -> primitive Str.mul_
+    OpIntDiv -> primitive Str.div_
+    OpIntMod -> primitive Str.mod_
+    OpIntLt -> primitive Str.lt_
+    OpIntLe -> primitive Str.le_
+    OpEq -> primitive Str.eq
+    OpStrConcat -> primitive Str.instrStrConcat
 
 instance PrettyCode BinaryOp where
   ppCode BinaryOp {..} = do

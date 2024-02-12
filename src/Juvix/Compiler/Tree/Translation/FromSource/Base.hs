@@ -350,9 +350,11 @@ functionBody parseCode' argnames = do
   let updateNames :: LocalNameMap d -> LocalNameMap d
       updateNames names =
         foldr
-          (\(mn, idx) h -> maybe h (\n -> HashMap.insert n ((sig ^. parserSigArgRef) idx (Just n)) h) mn)
+          (\(mname, idx) names' -> maybe names' (updateWithArgRef names' idx) mname)
           names
           (zip argnames [0 ..])
+      updateWithArgRef :: LocalNameMap d -> Int -> Text -> LocalNameMap d
+      updateWithArgRef names idx name = HashMap.insert name ((sig ^. parserSigArgRef) idx (Just name)) names
   localS (over localParamsNameMap updateNames) parseCode'
 
 memRef ::

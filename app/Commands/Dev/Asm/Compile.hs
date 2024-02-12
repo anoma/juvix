@@ -33,7 +33,7 @@ runCommand opts = do
               $ tab
           tab' <- getRight r
           let code = Reg.ppPrint tab' tab'
-          embed @IO $ writeFileEnsureLn regFile code
+          writeFileEnsureLn regFile code
         _ ->
           case run $ runReader entryPoint $ runError $ asmToMiniC tab of
             Left err -> exitJuvixError err
@@ -41,7 +41,7 @@ runCommand opts = do
               buildDir <- askBuildDir
               ensureDir buildDir
               cFile <- inputCFile file
-              embed @IO $ writeFileEnsureLn cFile _resultCCode
+              writeFileEnsureLn cFile _resultCCode
               outfile <- Compile.outputFile opts file
               Compile.runCommand
                 opts
