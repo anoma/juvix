@@ -1,5 +1,6 @@
 module Benchmark.Effect where
 
+import Benchmark.Effect.EmbedIO qualified as EmbedIO
 import Benchmark.Effect.Output qualified as Output
 import Benchmark.Effect.Reader qualified as Reader
 import Benchmark.Effect.ReaderH qualified as ReaderH
@@ -13,5 +14,6 @@ bm =
     [ Output.bm,
       State.bm,
       ReaderH.bm,
+      EmbedIO.bm,
       Reader.bm
     ]
