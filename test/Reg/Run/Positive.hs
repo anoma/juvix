@@ -14,7 +14,7 @@ testDescr Parse.PosTest {..} =
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
-          _testAssertion = Steps $ regRunAssertion file' expected' return (const (return ()))
+          _testAssertion = Steps $ regRunAssertion file' expected' [] (const (return ()))
         }
 
 allTests :: TestTree
