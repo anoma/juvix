@@ -2,7 +2,6 @@ module Repl.Assertions where
 
 import Base
 import Juvix.Compiler.Core qualified as Core
-import Juvix.Compiler.Core.Extra.Value qualified as Core
 import Juvix.Compiler.Core.Language.Value qualified as Core
 import Juvix.Compiler.Core.Pretty qualified as Core
 
