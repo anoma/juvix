@@ -7,7 +7,6 @@ import Effectful.Dispatch.Dynamic
 import Juvix.Prelude.Base hiding (Effect, Output, interpret, output, reinterpret, runOutputList)
 import Juvix.Prelude.Effects.Accum
 import Juvix.Prelude.Effects.Base
-import System.Time.Extra
 
 data Output (o :: GHC.Type) :: Effect where
   Output :: o -> Output o m ()
@@ -26,16 +25,3 @@ runOutputList = reinterpret runAccumList $ \_ -> \case
 ignoreOutput :: Eff (Output o ': r) a -> Eff r a
 ignoreOutput = interpret $ \_ -> \case
   Output {} -> return ()
-
-example1 :: IO ()
-example1 =
-  runEff $
-    runOutputEff (\n -> putStrLn ("hey " <> show @Natural n)) (go 3)
-
-go :: (Output Natural :> r, IOE :> r) => Natural -> Eff r ()
-go = \case
-  0 -> return ()
-  n -> do
-    output n
-    liftIO (sleep 1)
-    go (pred n)
