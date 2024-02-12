@@ -10,8 +10,8 @@ import Juvix.Compiler.Pipeline.Root
 import Juvix.Data.Effect.TaggedLock
 import Juvix.Extra.Paths qualified as P
 import Juvix.Extra.Stdlib
-import Juvix.Extra.Strings qualified as Str
 import Repl.Assertions
+import Repl.Value
 
 runTaggedLockIO' :: Sem '[Files, TaggedLock, Embed IO] a -> IO a
 runTaggedLockIO' =
@@ -76,24 +76,6 @@ replTest input' expectedNode getTestCtx = do
       let ep = ctx ^. testCtxEntryPoint
       n' <- evalRepl artif ep n
       assertValueEqual expectedNode n'
-
-mkInteger :: Integer -> Core.Value
-mkInteger = Core.ValueConstant . Core.ConstInteger
-
-mkBool :: Bool -> Core.Value
-mkBool b =
-  Core.ValueConstrApp
-    ( Core.ConstrApp
-        { _constrAppName = name,
-          _constrAppFixity = Nothing,
-          _constrAppArgs = []
-        }
-    )
-  where
-    name :: Text
-    name = case b of
-      True -> Str.true
-      False -> Str.false
 
 allTests :: TestTree
 allTests =
