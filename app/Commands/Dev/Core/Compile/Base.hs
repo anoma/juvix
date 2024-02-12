@@ -58,7 +58,7 @@ runCPipeline pa@PipelineArg {..} = do
   entryPoint <- getEntry pa
   C.MiniCResult {..} <- getRight (run (runReader entryPoint (runError (coreToMiniC _pipelineArgModule :: Sem '[Error JuvixError, Reader EntryPoint] C.MiniCResult))))
   cFile <- inputCFile _pipelineArgFile
-  embed @IO $ writeFileEnsureLn cFile _resultCCode
+  writeFileEnsureLn cFile _resultCCode
   outfile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
   Compile.runCommand
     _pipelineArgOptions
@@ -100,7 +100,7 @@ runVampIRPipeline pa@PipelineArg {..} = do
   entryPoint <- getEntry pa
   vampirFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
   VampIR.Result {..} <- getRight (run (runReader entryPoint (runError (coreToVampIR _pipelineArgModule :: Sem '[Error JuvixError, Reader EntryPoint] VampIR.Result))))
-  embed @IO $ writeFileEnsureLn vampirFile _resultCode
+  writeFileEnsureLn vampirFile _resultCode
 
 runAsmPipeline :: (Members '[Embed IO, App, TaggedLock] r) => PipelineArg -> Sem r ()
 runAsmPipeline pa@PipelineArg {..} = do
@@ -113,7 +113,7 @@ runAsmPipeline pa@PipelineArg {..} = do
       $ _pipelineArgModule
   tab' <- getRight r
   let code = Asm.ppPrint tab' tab'
-  embed @IO $ writeFileEnsureLn asmFile code
+  writeFileEnsureLn asmFile code
 
 runRegPipeline :: (Members '[Embed IO, App, TaggedLock] r) => PipelineArg -> Sem r ()
 runRegPipeline pa@PipelineArg {..} = do
@@ -126,7 +126,7 @@ runRegPipeline pa@PipelineArg {..} = do
       $ _pipelineArgModule
   tab' <- getRight r
   let code = Reg.ppPrint tab' tab'
-  embed @IO $ writeFileEnsureLn regFile code
+  writeFileEnsureLn regFile code
 
 runTreePipeline :: (Members '[Embed IO, App, TaggedLock] r) => PipelineArg -> Sem r ()
 runTreePipeline pa@PipelineArg {..} = do
@@ -139,7 +139,7 @@ runTreePipeline pa@PipelineArg {..} = do
       $ _pipelineArgModule
   tab' <- getRight r
   let code = Tree.ppPrint tab' tab'
-  embed @IO $ writeFileEnsureLn treeFile code
+  writeFileEnsureLn treeFile code
 
 runNockmaPipeline :: (Members '[Embed IO, App, TaggedLock] r) => PipelineArg -> Sem r ()
 runNockmaPipeline pa@PipelineArg {..} = do
@@ -152,4 +152,4 @@ runNockmaPipeline pa@PipelineArg {..} = do
       $ _pipelineArgModule
   tab' <- getRight r
   let code = Nockma.ppSerialize tab'
-  embed @IO $ writeFileEnsureLn nockmaFile code
+  writeFileEnsureLn nockmaFile code
