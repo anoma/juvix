@@ -97,7 +97,7 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
 
     -- Live variables *after* executing the instruction. `k` is the number of
     -- value stack cells that will be popped by the instruction. TODO: proper
-    -- liveness analysis in JuvixAsm.
+    -- liveness analysis.
     liveVars :: Int -> [VarRef]
     liveVars k =
       map (mkVarRef VarGroupLocal) [0 .. si ^. Asm.stackInfoTempStackHeight - 1]
@@ -264,10 +264,14 @@ fromAsmBranch fi si Asm.CmdBranch {} codeTrue codeFalse =
   return $
     Branch $
       InstrBranch
-        { _instrBranchValue = VRef $ mkVarRef VarGroupLocal (fromJust (fi ^. Asm.functionExtra) ^. Asm.functionMaxTempStackHeight + si ^. Asm.stackInfoValueStackHeight - 1),
+        { _instrBranchValue = VRef $ mkVarRef VarGroupLocal topIdx,
           _instrBranchTrue = codeTrue,
-          _instrBranchFalse = codeFalse
+          _instrBranchFalse = codeFalse,
+          _instrBranchVar = Just $ mkVarRef VarGroupLocal topIdx
         }
+  where
+    topIdx :: Int
+    topIdx = fromJust (fi ^. Asm.functionExtra) ^. Asm.functionMaxTempStackHeight + si ^. Asm.stackInfoValueStackHeight - 1
 
 fromAsmCase ::
   Asm.FunctionInfo ->
@@ -281,7 +285,7 @@ fromAsmCase fi tab si Asm.CmdCase {..} brs def =
   return $
     Case $
       InstrCase
-        { _instrCaseValue = VRef $ mkVarRef VarGroupLocal (fromJust (fi ^. Asm.functionExtra) ^. Asm.functionMaxTempStackHeight + si ^. Asm.stackInfoValueStackHeight - 1),
+        { _instrCaseValue = VRef $ mkVarRef VarGroupLocal topIdx,
           _instrCaseInductive = _cmdCaseInductive,
           _instrCaseIndRep = ii ^. Asm.inductiveRepresentation,
           _instrCaseBranches =
@@ -300,9 +304,11 @@ fromAsmCase fi tab si Asm.CmdCase {..} brs def =
               )
               _cmdCaseBranches
               brs,
-          _instrCaseDefault = def
+          _instrCaseDefault = def,
+          _instrCaseVar = Just $ mkVarRef VarGroupLocal topIdx
         }
   where
+    topIdx = fromJust (fi ^. Asm.functionExtra) ^. Asm.functionMaxTempStackHeight + si ^. Asm.stackInfoValueStackHeight - 1
     ii =
       fromMaybe impossible $
         HashMap.lookup _cmdCaseInductive (tab ^. Asm.infoInductives)

@@ -156,7 +156,7 @@ data InstrCall = InstrCall
   { _instrCallResult :: VarRef,
     _instrCallType :: CallType,
     _instrCallArgs :: [Value],
-    -- | Variables live at the point of the call. Live variables need to be
+    -- | Variables live after the call. Live variables need to be
     -- saved before the call and restored after it.
     _instrCallLiveVars :: [VarRef]
   }
@@ -190,7 +190,10 @@ newtype InstrReturn = InstrReturn
 data InstrBranch = InstrBranch
   { _instrBranchValue :: Value,
     _instrBranchTrue :: Code,
-    _instrBranchFalse :: Code
+    _instrBranchFalse :: Code,
+    -- | Live variable storing the result (corresponds to the top of the value
+    -- stack in JuvixAsm after executing the branches)
+    _instrBranchVar :: Maybe VarRef
   }
   deriving stock (Eq)
 
@@ -199,7 +202,8 @@ data InstrCase = InstrCase
     _instrCaseInductive :: Symbol,
     _instrCaseIndRep :: IndRep,
     _instrCaseBranches :: [CaseBranch],
-    _instrCaseDefault :: Maybe Code
+    _instrCaseDefault :: Maybe Code,
+    _instrCaseVar :: Maybe VarRef
   }
   deriving stock (Eq)
 
