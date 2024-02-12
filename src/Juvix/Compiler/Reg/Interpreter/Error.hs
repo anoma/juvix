@@ -31,7 +31,7 @@ catchRunError a =
       (\(ex :: RunError) -> return $ Left (toRegError ex))
 
 toRegError :: RunError -> RegError
-toRegError (RunError {..}) =
+toRegError RunError {..} =
   RegError
     { _regErrorMsg = "runtime error: " <> _runErrorMsg,
       _regErrorLoc = _runErrorLoc
