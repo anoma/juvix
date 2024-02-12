@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-unused-type-patterns #-}
 module Juvix.Prelude.Effects.Output where
 
 import Data.Kind qualified as GHC
