@@ -5,13 +5,6 @@ import Juvix.Prelude.Effects (Eff, (:>))
 import Juvix.Prelude.Effects qualified as E
 import Test.Tasty.Bench
 
-data St = St
-  { _stA :: Natural,
-    _stB :: Natural
-  }
-
-makeLenses ''St
-
 bm :: Benchmark
 bm =
   bgroup
@@ -22,39 +15,28 @@ bm =
     ]
 
 k :: Natural
-k = 2 ^ (21 :: Natural)
-
-addSt :: St -> Natural
-addSt (St a b) = a + b
-
-emptySt :: St
-emptySt = St 0 0
-
-l :: Bool -> Lens' St Natural
-l b
-  | b = stA
-  | otherwise = stB
+k = 2 ^ (22 :: Natural)
 
 countRaw :: Natural -> Natural
-countRaw = addSt . go emptySt
+countRaw = go 0
   where
-    go :: St -> Natural -> St
+    go :: Natural -> Natural -> Natural
     go acc = \case
       0 -> acc
-      m -> go (over (l (even m)) (+ m) acc) (pred m)
+      m -> go (acc + m) (pred m)
 
 countEff :: Natural -> Natural
-countEff = addSt . E.runPureEff . E.execState emptySt . go
+countEff = E.runPureEff . E.execState 0 . go
   where
-    go :: (E.State St :> r) => Natural -> Eff r ()
+    go :: (E.State Natural :> r) => Natural -> Eff r ()
     go = \case
       0 -> return ()
-      m -> E.modify (over (l (even m)) (+ m)) >> go (pred m)
+      m -> E.modify (+ m) >> go (pred m)
 
 countSem :: Natural -> Natural
-countSem = addSt . run . execState emptySt . go
+countSem = run . execState 0 . go
   where
-    go :: (Members '[State St] r) => Natural -> Sem r ()
+    go :: (Members '[State Natural] r) => Natural -> Sem r ()
     go = \case
       0 -> return ()
-      m -> modify (over (l (even m)) (+ m)) >> go (pred m)
+      m -> modify (+ m) >> go (pred m)
