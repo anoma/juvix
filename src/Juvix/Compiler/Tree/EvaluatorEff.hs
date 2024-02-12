@@ -1,10 +1,6 @@
 module Juvix.Compiler.Tree.EvaluatorEff (eval, hEvalIOEither) where
 
 import Control.Exception qualified as Exception
-import Effectful (Eff, IOE, runEff, (:>))
-import Effectful.Error.Static qualified as E
-import Effectful.Reader.Static qualified as E
-import Effectful.Writer.Static.Local qualified as E
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Tree.Data.InfoTable
 import Juvix.Compiler.Tree.Error
@@ -13,6 +9,8 @@ import Juvix.Compiler.Tree.Extra.Base
 import Juvix.Compiler.Tree.Language hiding (Output, ask, asks, mapError, output, runError)
 import Juvix.Compiler.Tree.Language.Value
 import Juvix.Compiler.Tree.Pretty
+import Juvix.Prelude.Effects (Eff, IOE, runEff, (:>))
+import Juvix.Prelude.Effects qualified as E
 import Text.Read qualified as T
 
 data EvalCtx = EvalCtx
@@ -29,21 +27,10 @@ emptyEvalCtx =
       _evalCtxTemp = mempty
     }
 
-type Output w = E.Writer [w]
-
-output :: (Output Value :> r) => Value -> Eff r ()
-output = E.tell . pure @[]
-
-runOutputEff :: (w -> Eff r ()) -> Eff (Output w ': r) a -> Eff r a
-runOutputEff handle m = do
-  (a, l) <- E.runWriter m
-  mapM_ handle l
-  pure a
-
-eval :: (Output Value :> r, E.Error EvalError :> r) => InfoTable -> Node -> Eff r Value
+eval :: (E.Output Value :> r, E.Error EvalError :> r) => InfoTable -> Node -> Eff r Value
 eval tab = E.runReader emptyEvalCtx . eval'
   where
-    eval' :: forall r'. (Output Value :> r', E.Reader EvalCtx :> r', E.Error EvalError :> r') => Node -> Eff r' Value
+    eval' :: forall r'. (E.Output Value :> r', E.Reader EvalCtx :> r', E.Error EvalError :> r') => Node -> Eff r' Value
     eval' node = case node of
       Binop x -> goBinop x
       Unop x -> goUnop x
@@ -130,7 +117,7 @@ eval tab = E.runReader emptyEvalCtx . eval'
             evalError "expected a closure"
 
         goTrace :: Value -> Eff r' Value
-        goTrace v = output v $> v
+        goTrace v = E.output v $> v
 
         goConstant :: NodeConstant -> Value
         goConstant NodeConstant {..} = case _nodeConstant of
@@ -329,7 +316,7 @@ hEvalIOEither ::
   FunctionInfo ->
   m (Either TreeError Value)
 hEvalIOEither hin hout infoTable funInfo = do
-  let x :: Eff '[Output Value, E.Error EvalError, E.Error TreeError, IOE] Value
+  let x :: Eff '[E.Output Value, E.Error EvalError, E.Error TreeError, IOE] Value
       x = do
         v <- eval infoTable (funInfo ^. functionCode)
         hRunIO hin hout infoTable v
@@ -339,11 +326,11 @@ hEvalIOEither hin hout infoTable funInfo = do
     . runEff
     . runError @TreeError
     . mapError toTreeError
-    . runOutputEff handleTrace
+    . E.runOutputEff handleTrace
     $ x
 
 -- | Interpret IO actions.
-hRunIO :: forall r. (IOE :> r, E.Error EvalError :> r, Output Value :> r) => Handle -> Handle -> InfoTable -> Value -> Eff r Value
+hRunIO :: forall r. (IOE :> r, E.Error EvalError :> r, E.Output Value :> r) => Handle -> Handle -> InfoTable -> Value -> Eff r Value
 hRunIO hin hout infoTable = \case
   ValConstr (Constr (BuiltinTag TagReturn) [x]) -> return x
   ValConstr (Constr (BuiltinTag TagBind) [x, f]) -> do
