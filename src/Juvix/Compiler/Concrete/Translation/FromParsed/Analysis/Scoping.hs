@@ -2698,43 +2698,39 @@ parseExpressionAtoms a@(ExpressionAtoms atoms _) = do
     Right r -> return r
   where
     parser :: Parse Expression
-    parser = runM (mkExpressionParser tbl) <* P.eof
+    parser = mkExpressionParser tbl <* P.eof
     res = P.parse parser filePath (toList atoms)
     tbl = makeExpressionTable a
     filePath :: FilePath
     filePath = ""
 
 -- | Monad for parsing expression sections.
-type Parse = P.Parsec () [ExpressionAtom 'Scoped]
+type Parse = P.Parsec Void [ExpressionAtom 'Scoped]
 
 mkExpressionParser ::
   [[P.Operator Parse Expression]] ->
-  Sem '[Embed Parse] Expression
-mkExpressionParser table = embed @Parse pExpression
-  where
-    pExpression :: Parse Expression
-    pExpression = P.makeExprParser (runM parseTerm) table
+  Parse Expression
+mkExpressionParser = P.makeExprParser parseTerm
 
-parseTerm :: (Members '[Embed Parse] r) => Sem r Expression
+parseTerm :: Parse Expression
 parseTerm =
-  embed @Parse $
-    parseUniverse
-      <|> parseNoInfixIdentifier
-      <|> parseParens
-      <|> parseHole
-      <|> parseInstanceHole
-      <|> parseFunction
-      <|> parseLambda
-      <|> parseCase
-      <|> parseNewCase
-      <|> parseList
-      <|> parseLiteral
-      <|> parseLet
-      <|> parseIterator
-      <|> parseDoubleBraces
-      <|> parseBraces
-      <|> parseNamedApplication
-      <|> parseNamedApplicationNew
+  parseUniverse
+    <|> parseNoInfixIdentifier
+    <|> parseParens
+    <|> parseHole
+    <|> parseInstanceHole
+    <|> parseFunction
+    <|> parseLambda
+    <|> parseCase
+    <|> parseNewCase
+    <|> parseList
+    <|> parseLiteral
+    <|> parseLet
+    <|> parseIterator
+    <|> parseDoubleBraces
+    <|> parseBraces
+    <|> parseNamedApplication
+    <|> parseNamedApplicationNew
   where
     parseHole :: Parse Expression
     parseHole = ExpressionHole <$> P.token lit mempty
@@ -2876,7 +2872,7 @@ parseTerm =
 -- Infix Patterns
 -------------------------------------------------------------------------------
 
-type ParsePat = P.ParsecT () [PatternAtom 'Scoped] (Sem '[Error ScoperError])
+type ParsePat = P.ParsecT Void [PatternAtom 'Scoped] (Sem '[Error ScoperError])
 
 makePatternTable ::
   PatternAtoms 'Scoped -> [[P.Operator ParsePat PatternArg]]
@@ -2944,23 +2940,19 @@ explicitP _patternArgPattern =
       _patternArgPattern
     }
 
-parsePatternTerm ::
-  forall r.
-  (Members '[Embed ParsePat] r) =>
-  Sem r PatternArg
+parsePatternTerm :: ParsePat PatternArg
 parsePatternTerm = do
-  embed @ParsePat $
-    parseNoInfixConstructor
-      <|> parseVariable
-      <|> parseDoubleBraces
-      <|> parseParens
-      <|> parseBraces
-      <|> parseWildcard
-      <|> parseWildcardConstructor
-      <|> parseEmpty
-      <|> parseAt
-      <|> parseList
-      <|> parseRecord
+  parseNoInfixConstructor
+    <|> parseVariable
+    <|> parseDoubleBraces
+    <|> parseParens
+    <|> parseBraces
+    <|> parseWildcard
+    <|> parseWildcardConstructor
+    <|> parseEmpty
+    <|> parseAt
+    <|> parseList
+    <|> parseRecord
   where
     parseNoInfixConstructor :: ParsePat PatternArg
     parseNoInfixConstructor =
@@ -3079,19 +3071,12 @@ parsePatternTerm = do
           _ -> Nothing
 
 mkPatternParser ::
-  forall r.
-  (Members '[Embed ParsePat] r) =>
   [[P.Operator ParsePat PatternArg]] ->
-  Sem r PatternArg
-mkPatternParser table = embed @ParsePat pPattern
+  ParsePat PatternArg
+mkPatternParser table = pPattern
   where
     pPattern :: ParsePat PatternArg
-    pPattern = P.makeExprParser pTerm table
-    pTerm :: ParsePat PatternArg
-    pTerm = runM parseTermRec
-      where
-        parseTermRec :: Sem '[Embed ParsePat] PatternArg
-        parseTermRec = runReader pPattern parsePatternTerm
+    pPattern = P.makeExprParser parsePatternTerm table
 
 parsePatternAtom ::
   (Members '[Error ScoperError, State Scope, InfoTableBuilder, Reader InfoTable] r) =>
@@ -3106,17 +3091,17 @@ parsePatternAtoms ::
   (Members '[Error ScoperError, State Scope, InfoTableBuilder, Reader InfoTable] r) =>
   PatternAtoms 'Scoped ->
   Sem r PatternArg
-parsePatternAtoms atoms@(PatternAtoms sec' _) = do
+parsePatternAtoms atoms = do
   checkPatternPrecedences atoms
   case run (runError res) of
     Left e -> throw e -- Scoper effect error
     Right Left {} -> throw (ErrInfixPattern (InfixErrorP atoms)) -- Megaparsec error
     Right (Right r) -> return r
   where
-    sec = toList sec'
+    sec = toList (atoms ^. patternAtoms)
     tbl = makePatternTable atoms
     parser :: ParsePat PatternArg
-    parser = runM (mkPatternParser tbl) <* P.eof
+    parser = mkPatternParser tbl <* P.eof
     res = P.runParserT parser filePath sec
 
     filePath :: FilePath
