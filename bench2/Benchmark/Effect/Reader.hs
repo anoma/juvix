@@ -23,11 +23,10 @@ c = 5
 countRaw :: Natural -> Natural
 countRaw = sum' . go []
   where
-    i :: Natural = 5
     go :: [Natural] -> Natural -> [Natural]
     go acc = \case
       0 -> acc
-      m -> go (i : acc) (pred m)
+      m -> go (c : acc) (pred m)
 
 countEff :: Natural -> Natural
 countEff = sum' . E.runPureEff . E.runReader c . go []
