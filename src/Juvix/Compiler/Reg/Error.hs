@@ -28,7 +28,7 @@ instance ToGenericError RegError where
           msg = pretty (e ^. regErrorMsg)
 
 instance Pretty RegError where
-  pretty (RegError {..}) = pretty _regErrorMsg
+  pretty RegError {..} = pretty _regErrorMsg
 
 instance Show RegError where
   show (RegError {..}) = fromText _regErrorMsg
