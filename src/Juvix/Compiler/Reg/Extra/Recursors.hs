@@ -109,3 +109,19 @@ imapM f = cmapM $ \case
 
 imap :: (Instruction -> Instruction) -> Code -> Code
 imap f is = runIdentity (imapM (return . f) is)
+
+ifoldFM :: (Monad m, Monoid a) => (a -> Instruction -> m a) -> a -> Code -> m a
+ifoldFM f a0 is0 =
+  fst
+    <$> recurseF
+      ForwardRecursorSig
+        { _forwardFun = \i a -> do
+            a' <- f a i
+            return (a', i),
+          _forwardCombine = mconcat . toList
+        }
+      a0
+      is0
+
+ifoldF :: (Monoid a) => (a -> Instruction -> a) -> a -> Code -> a
+ifoldF f a is = runIdentity (ifoldFM (\a' -> return . f a') a is)

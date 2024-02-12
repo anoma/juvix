@@ -1,9 +1,13 @@
 module Commands.Dev.Reg.Read.Options where
 
 import CommonOptions
+import Juvix.Compiler.Reg.Data.TransformationId
 
-newtype RegReadOptions = RegReadOptions
-  { _regReadInputFile :: AppPath File
+data RegReadOptions = RegReadOptions
+  { _regReadTransformations :: [TransformationId],
+    _regReadRun :: Bool,
+    _regReadNoPrint :: Bool,
+    _regReadInputFile :: AppPath File
   }
   deriving stock (Data)
 
@@ -11,5 +15,16 @@ makeLenses ''RegReadOptions
 
 parseRegReadOptions :: Parser RegReadOptions
 parseRegReadOptions = do
-  _regReadInputFile <- parseInputFile FileExtJuvixAsm
+  _regReadNoPrint <-
+    switch
+      ( long "no-print"
+          <> help "Do not print the transformed code"
+      )
+  _regReadRun <-
+    switch
+      ( long "run"
+          <> help "Run the code after the transformation"
+      )
+  _regReadTransformations <- optRegTransformationIds
+  _regReadInputFile <- parseInputFile FileExtJuvixReg
   pure RegReadOptions {..}

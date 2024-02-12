@@ -9,6 +9,7 @@ where
 import Control.Exception qualified as GHC
 import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Core.Data.TransformationId.Parser qualified as Core
+import Juvix.Compiler.Reg.Data.TransformationId.Parser qualified as Reg
 import Juvix.Compiler.Tree.Data.TransformationId.Parser qualified as Tree
 import Juvix.Data.FileExt
 import Juvix.Prelude
@@ -217,32 +218,26 @@ optNoDisambiguate =
         <> help "Don't disambiguate the names of bound variables"
     )
 
-optCoreTransformationIds :: Parser [Core.TransformationId]
-optCoreTransformationIds =
+optTransformationIds :: forall a. (Text -> Either Text [a]) -> (String -> [String]) -> Parser [a]
+optTransformationIds parseIds completions =
   option
     (eitherReader parseTransf)
     ( long "transforms"
         <> short 't'
         <> value []
         <> metavar "[Transform]"
-        <> completer (mkCompleter (return . Core.completionsString))
+        <> completer (mkCompleter (return . completions))
         <> help "hint: use autocomplete"
     )
   where
-    parseTransf :: String -> Either String [Core.TransformationId]
-    parseTransf = mapLeft unpack . Core.parseTransformations . pack
+    parseTransf :: String -> Either String [a]
+    parseTransf = mapLeft unpack . parseIds . pack
+
+optCoreTransformationIds :: Parser [Core.TransformationId]
+optCoreTransformationIds = optTransformationIds Core.parseTransformations Core.completionsString
 
 optTreeTransformationIds :: Parser [Tree.TransformationId]
-optTreeTransformationIds =
-  option
-    (eitherReader parseTransf)
-    ( long "transforms"
-        <> short 't'
-        <> value []
-        <> metavar "[Transform]"
-        <> completer (mkCompleter (return . Tree.completionsString))
-        <> help "hint: use autocomplete"
-    )
-  where
-    parseTransf :: String -> Either String [Tree.TransformationId]
-    parseTransf = mapLeft unpack . Tree.parseTransformations . pack
+optTreeTransformationIds = optTransformationIds Tree.parseTransformations Tree.completionsString
+
+optRegTransformationIds :: Parser [Reg.TransformationId]
+optRegTransformationIds = optTransformationIds Reg.parseTransformations Reg.completionsString
