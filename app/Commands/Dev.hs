@@ -23,7 +23,7 @@ import Commands.Dev.Termination qualified as Termination
 import Commands.Dev.Tree qualified as Tree
 import Commands.Repl qualified as Repl
 
-runCommand :: (Members '[Embed IO, App, TaggedLock] r) => DevCommand -> Sem r ()
+runCommand :: (Members '[EmbedIO, App, TaggedLock] r) => DevCommand -> Sem r ()
 runCommand = \case
   Highlight opts -> Highlight.runCommand opts
   Parse opts -> Parse.runCommand opts

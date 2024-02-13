@@ -9,7 +9,7 @@ data Log m a where
 makeSem ''Log
 
 runLogIO ::
-  (Member (Embed IO) r) =>
+  (Member EmbedIO r) =>
   InterpreterFor Log r
 runLogIO sem = do
   embed (hSetBuffering stdout LineBuffering)

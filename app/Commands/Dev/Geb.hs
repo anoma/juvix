@@ -12,7 +12,7 @@ import Commands.Dev.Geb.Options
 import Commands.Dev.Geb.Read as Read
 import Commands.Dev.Geb.Repl as Repl
 
-runCommand :: forall r. (Members '[Embed IO, App] r) => GebCommand -> Sem r ()
+runCommand :: forall r. (Members '[EmbedIO, App] r) => GebCommand -> Sem r ()
 runCommand = \case
   GebCommandRepl opts -> Repl.runCommand opts
   GebCommandEval opts -> Eval.runCommand opts

@@ -64,7 +64,7 @@ failMaybe = \case
 {-# INLINE failMaybe #-}
 
 failFromException ::
-  (Members '[Fail, Embed IO] r) =>
+  (Members '[Fail, EmbedIO] r) =>
   IO a ->
   Sem r a
 failFromException m = do

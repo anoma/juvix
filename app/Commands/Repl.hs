@@ -490,7 +490,7 @@ printRoot _ = do
   r <- State.gets (^. replStateRoot . rootRootDir)
   liftIO $ putStrLn (pack (toFilePath r))
 
-runCommand :: (Members '[Embed IO, App, TaggedLock] r) => ReplOptions -> Sem r ()
+runCommand :: (Members '[EmbedIO, App, TaggedLock] r) => ReplOptions -> Sem r ()
 runCommand opts = do
   root <- askRoot
   pkg <- askPackage

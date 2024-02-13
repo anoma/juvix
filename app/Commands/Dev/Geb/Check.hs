@@ -7,7 +7,7 @@ import Juvix.Compiler.Backend.Geb.Pretty
 
 runCommand ::
   forall r.
-  (Member App r, Member (Embed IO) r) =>
+  (Member App r, Member EmbedIO r) =>
   GebInferOptions ->
   Sem r ()
 runCommand opts = do

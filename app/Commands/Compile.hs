@@ -8,7 +8,7 @@ import Juvix.Compiler.Core qualified as Core
 import Juvix.Compiler.Core.Pretty qualified as Core
 import Juvix.Compiler.Core.Transformation.DisambiguateNames qualified as Core
 
-runCommand :: (Members '[Embed IO, App, TaggedLock] r) => CompileOptions -> Sem r ()
+runCommand :: (Members '[EmbedIO, App, TaggedLock] r) => CompileOptions -> Sem r ()
 runCommand opts@CompileOptions {..} = do
   inputFile <- getMainFile _compileInputFile
   Core.CoreResult {..} <- runPipeline (AppPath (preFileFromAbs inputFile) True) upToCore
@@ -29,7 +29,7 @@ runCommand opts@CompileOptions {..} = do
     TargetReg -> Compile.runRegPipeline arg
     TargetNockma -> Compile.runNockmaPipeline arg
 
-writeCoreFile :: (Members '[Embed IO, App, TaggedLock] r) => Compile.PipelineArg -> Sem r ()
+writeCoreFile :: (Members '[EmbedIO, App, TaggedLock] r) => Compile.PipelineArg -> Sem r ()
 writeCoreFile pa@Compile.PipelineArg {..} = do
   entryPoint <- Compile.getEntry pa
   coreFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile

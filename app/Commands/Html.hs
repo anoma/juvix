@@ -14,7 +14,7 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Da
 import Juvix.Extra.Process
 import System.Process qualified as Process
 
-runGenOnlySourceHtml :: (Members '[Embed IO, TaggedLock, App] r) => HtmlOptions -> Sem r ()
+runGenOnlySourceHtml :: (Members '[EmbedIO, TaggedLock, App] r) => HtmlOptions -> Sem r ()
 runGenOnlySourceHtml HtmlOptions {..} = do
   res <- runPipeline _htmlInputFile upToScoping
   let m = res ^. Scoper.resultModule
@@ -48,7 +48,7 @@ resultToJudocCtx res =
   where
     sres = res ^. resultInternal . resultScoper
 
-runCommand :: forall r. (Members '[Embed IO, TaggedLock, App] r) => HtmlOptions -> Sem r ()
+runCommand :: forall r. (Members '[EmbedIO, TaggedLock, App] r) => HtmlOptions -> Sem r ()
 runCommand HtmlOptions {..}
   | _htmlOnlySource = runGenOnlySourceHtml HtmlOptions {..}
   | otherwise = do

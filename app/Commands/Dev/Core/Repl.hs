@@ -16,7 +16,7 @@ import Juvix.Compiler.Core.Transformation.DisambiguateNames qualified as Core
 import Juvix.Compiler.Core.Translation.FromSource qualified as Core
 import Juvix.Extra.Paths
 
-runCommand :: forall r. (Members '[Embed IO, App] r) => CoreReplOptions -> Sem r ()
+runCommand :: forall r. (Members '[EmbedIO, App] r) => CoreReplOptions -> Sem r ()
 runCommand opts = do
   showReplWelcome
   runRepl opts mempty
@@ -24,7 +24,7 @@ runCommand opts = do
 parseText :: Core.InfoTable -> Text -> Either Core.MegaparsecError (Core.InfoTable, Maybe Core.Node)
 parseText = Core.runParser replPath defaultModuleId
 
-runRepl :: forall r. (Members '[Embed IO, App] r) => CoreReplOptions -> Core.InfoTable -> Sem r ()
+runRepl :: forall r. (Members '[EmbedIO, App] r) => CoreReplOptions -> Core.InfoTable -> Sem r ()
 runRepl opts tab = do
   putStr "> "
   embed (hFlush stdout)
@@ -132,7 +132,7 @@ runRepl opts tab = do
       putStrLn ""
       runRepl opts tab'
 
-showReplWelcome :: (Members '[Embed IO, App] r) => Sem r ()
+showReplWelcome :: (Members '[EmbedIO, App] r) => Sem r ()
 showReplWelcome = do
   putStrLn "JuvixCore REPL"
   putStrLn ""

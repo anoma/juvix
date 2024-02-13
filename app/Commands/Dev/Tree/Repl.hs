@@ -127,7 +127,7 @@ replAction =
         banner
       }
 
-runCommand :: forall r. (Members '[Embed IO, App] r) => TreeReplOptions -> Sem r ()
+runCommand :: forall r. (Members '[EmbedIO, App] r) => TreeReplOptions -> Sem r ()
 runCommand _ = embed . (`State.evalStateT` iniState) $ replAction
   where
     iniState :: ReplState

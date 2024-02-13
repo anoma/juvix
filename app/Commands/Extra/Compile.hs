@@ -8,7 +8,7 @@ import Juvix.Extra.Paths
 import System.Environment
 import System.Process qualified as P
 
-runCommand :: forall r. (Members '[Embed IO, App] r) => CompileOptions -> Sem r ()
+runCommand :: forall r. (Members '[EmbedIO, App] r) => CompileOptions -> Sem r ()
 runCommand opts = do
   inputFile <- getMainFile (opts ^. compileInputFile)
   result <- runCompile inputFile opts
@@ -17,7 +17,7 @@ runCommand opts = do
     _ -> return ()
 
 runCompile ::
-  (Members '[App, Embed IO] r) =>
+  (Members '[App, EmbedIO] r) =>
   Path Abs File ->
   CompileOptions ->
   Sem r (Either Text ())
@@ -37,7 +37,7 @@ runCompile inputFile o = do
     TargetTree -> return (Right ())
     TargetNockma -> return (Right ())
 
-prepareRuntime :: forall r. (Members '[App, Embed IO] r) => Path Abs Dir -> CompileOptions -> Sem r ()
+prepareRuntime :: forall r. (Members '[App, EmbedIO] r) => Path Abs Dir -> CompileOptions -> Sem r ()
 prepareRuntime buildDir o = do
   mapM_ writeHeader headersDir
   case o ^. compileTarget of
@@ -120,7 +120,7 @@ outputFile opts inputFile =
 
 clangNativeCompile ::
   forall r.
-  (Members '[App, Embed IO, Error Text] r) =>
+  (Members '[App, EmbedIO, Error Text] r) =>
   Path Abs File ->
   CompileOptions ->
   Sem r ()
@@ -135,7 +135,7 @@ clangNativeCompile inputFile o = do
 
 clangWasmWasiCompile ::
   forall r.
-  (Members '[App, Embed IO, Error Text] r) =>
+  (Members '[App, EmbedIO, Error Text] r) =>
   Path Abs File ->
   CompileOptions ->
   Sem r ()
@@ -223,16 +223,16 @@ wasiArgs buildDir o outfile inputFile sysrootPath =
              | otherwise -> []
        )
 
-findClangOnPath :: (Member (Embed IO) r) => Sem r (Maybe (Path Abs File))
+findClangOnPath :: (Member EmbedIO r) => Sem r (Maybe (Path Abs File))
 findClangOnPath = findExecutable $(mkRelFile "clang")
 
-findClangUsingEnvVar :: forall r. (Member (Embed IO) r) => Sem r (Maybe (Path Abs File))
+findClangUsingEnvVar :: forall r. (Member EmbedIO r) => Sem r (Maybe (Path Abs File))
 findClangUsingEnvVar = do
   p <- clangBinPath
   join <$> mapM checkExecutable p
   where
     checkExecutable :: Path Abs File -> Sem r (Maybe (Path Abs File))
-    checkExecutable p = whenMaybeM (embed @IO (isExecutable p)) (return p)
+    checkExecutable p = whenMaybeM (embed (isExecutable p)) (return p)
 
     clangBinPath :: Sem r (Maybe (Path Abs File))
     clangBinPath = fmap (<//> $(mkRelFile "bin/clang")) <$> llvmDistPath
@@ -240,7 +240,7 @@ findClangUsingEnvVar = do
     llvmDistPath :: Sem r (Maybe (Path Abs Dir))
     llvmDistPath = do
       p <- embed (lookupEnv llvmDistEnvironmentVar)
-      embed @IO (mapM parseAbsDir p)
+      embed (mapM parseAbsDir p)
 
 data ClangPath
   = ClangSystemPath (Path Abs File)
@@ -252,7 +252,7 @@ extractClangPath = \case
   ClangEnvVarPath p -> p
 
 --- Try searching clang JUVIX_LLVM_DIST_PATH. Otherwise use the PATH
-findClang :: (Member (Embed IO) r) => Sem r (Maybe ClangPath)
+findClang :: (Member EmbedIO r) => Sem r (Maybe ClangPath)
 findClang = do
   envVarPath <- findClangUsingEnvVar
   case envVarPath of
@@ -261,7 +261,7 @@ findClang = do
 
 runClang ::
   forall r.
-  (Members '[Embed IO, Error Text] r) =>
+  (Members '[EmbedIO, Error Text] r) =>
   [String] ->
   Sem r ()
 runClang args = do

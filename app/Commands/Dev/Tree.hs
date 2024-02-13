@@ -8,7 +8,7 @@ import Commands.Dev.Tree.Options
 import Commands.Dev.Tree.Read as Read
 import Commands.Dev.Tree.Repl as Repl
 
-runCommand :: forall r. (Members '[Embed IO, App, TaggedLock] r) => TreeCommand -> Sem r ()
+runCommand :: forall r. (Members '[EmbedIO, App, TaggedLock] r) => TreeCommand -> Sem r ()
 runCommand = \case
   Eval opts -> Eval.runCommand opts
   Compile opts -> Compile.runCommand opts

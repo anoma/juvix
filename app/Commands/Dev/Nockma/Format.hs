@@ -5,7 +5,7 @@ import Commands.Dev.Nockma.Format.Options
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Translation.FromSource qualified as Nockma
 
-runCommand :: forall r. (Members '[Embed IO, App] r) => NockmaFormatOptions -> Sem r ()
+runCommand :: forall r. (Members '[EmbedIO, App] r) => NockmaFormatOptions -> Sem r ()
 runCommand opts = do
   afile <- fromAppPathFile file
   parsedTerm <- Nockma.parseTermFile (toFilePath afile)

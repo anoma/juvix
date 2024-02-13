@@ -31,28 +31,28 @@ import Juvix.Prelude
 
 -- | It returns `ResolverState` so that we can retrieve the `juvix.yaml` files,
 -- which we require for `Scope` tests.
-runIOEither :: forall a r. (Members '[TaggedLock, Embed IO] r) => EntryPoint -> Sem (PipelineEff r) a -> Sem r (Either JuvixError (ResolverState, PipelineResult a))
+runIOEither :: forall a r. (Members '[TaggedLock, EmbedIO] r) => EntryPoint -> Sem (PipelineEff r) a -> Sem r (Either JuvixError (ResolverState, PipelineResult a))
 runIOEither entry = fmap snd . runIOEitherHelper entry
 
-runIOEither' :: forall a r. (Members '[TaggedLock, Embed IO] r) => EntryPoint -> Sem (PipelineEff r) a -> Sem r (Either JuvixError (ResolverState, PipelineResult a))
+runIOEither' :: forall a r. (Members '[TaggedLock, EmbedIO] r) => EntryPoint -> Sem (PipelineEff r) a -> Sem r (Either JuvixError (ResolverState, PipelineResult a))
 runIOEither' entry = fmap snd . runIOEitherHelper entry
 
-runPipelineHighlight :: forall a r. (Members '[TaggedLock, Embed IO] r) => EntryPoint -> Sem (PipelineEff r) a -> Sem r HighlightInput
+runPipelineHighlight :: forall a r. (Members '[TaggedLock, EmbedIO] r) => EntryPoint -> Sem (PipelineEff r) a -> Sem r HighlightInput
 runPipelineHighlight entry = fmap fst . runIOEitherHelper entry
 
-runPipelineHtmlEither :: forall r. (Members '[TaggedLock, Embed IO] r) => EntryPoint -> Sem r (Either JuvixError (Typed.InternalTypedResult, [Typed.InternalTypedResult]))
+runPipelineHtmlEither :: forall r. (Members '[TaggedLock, EmbedIO] r) => EntryPoint -> Sem r (Either JuvixError (Typed.InternalTypedResult, [Typed.InternalTypedResult]))
 runPipelineHtmlEither entry = do
   x <- runIOEitherPipeline' entry $ entrySetup defaultDependenciesConfig >> processRecursiveUpToTyped
   return $ mapRight snd $ snd x
 
-runIOEitherHelper :: forall a r. (Members '[TaggedLock, Embed IO] r) => EntryPoint -> Sem (PipelineEff r) a -> Sem r (HighlightInput, (Either JuvixError (ResolverState, PipelineResult a)))
+runIOEitherHelper :: forall a r. (Members '[TaggedLock, EmbedIO] r) => EntryPoint -> Sem (PipelineEff r) a -> Sem r (HighlightInput, (Either JuvixError (ResolverState, PipelineResult a)))
 runIOEitherHelper entry a = do
   runIOEitherPipeline' entry $
     entrySetup defaultDependenciesConfig >> processFileUpTo a
 
 runIOEitherPipeline ::
   forall a r.
-  (Members '[TaggedLock, Embed IO] r) =>
+  (Members '[TaggedLock, EmbedIO] r) =>
   EntryPoint ->
   Sem (PipelineEff' r) a ->
   Sem r (Either JuvixError (ResolverState, a))
@@ -60,7 +60,7 @@ runIOEitherPipeline entry = fmap snd . runIOEitherPipeline' entry
 
 runIOEitherPipeline' ::
   forall a r.
-  (Members '[TaggedLock, Embed IO] r) =>
+  (Members '[TaggedLock, EmbedIO] r) =>
   EntryPoint ->
   Sem (PipelineEff' r) a ->
   Sem r (HighlightInput, (Either JuvixError (ResolverState, a)))
@@ -91,14 +91,14 @@ mainIsPackageFile entry = case entry ^. entryPointModulePath of
 
 runIO ::
   forall a r.
-  (Members '[TaggedLock, Embed IO] r) =>
+  (Members '[TaggedLock, EmbedIO] r) =>
   GenericOptions ->
   EntryPoint ->
   Sem (PipelineEff r) a ->
   Sem r (ResolverState, PipelineResult a)
 runIO opts entry = runIOEither entry >=> mayThrow
   where
-    mayThrow :: (Members '[Embed IO] r') => Either JuvixError x -> Sem r' x
+    mayThrow :: (Members '[EmbedIO] r') => Either JuvixError x -> Sem r' x
     mayThrow = \case
       Left err -> runReader opts $ printErrorAnsiSafe err >> embed exitFailure
       Right r -> return r

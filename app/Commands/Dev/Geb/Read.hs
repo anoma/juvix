@@ -7,7 +7,7 @@ import Juvix.Compiler.Backend.Geb.Translation.FromSource qualified as Geb
 
 runCommand ::
   forall r.
-  (Member App r, Member (Embed IO) r) =>
+  (Member App r, Member EmbedIO r) =>
   GebReadOptions ->
   Sem r ()
 runCommand opts = do

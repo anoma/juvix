@@ -5,7 +5,7 @@ import Commands.Dev.Tree.Eval.Options
 import Juvix.Compiler.Tree.Translation.FromSource qualified as Tree
 import TreeEvaluator
 
-runCommand :: forall r. (Members '[Embed IO, App] r) => TreeEvalOptions -> Sem r ()
+runCommand :: forall r. (Members '[EmbedIO, App] r) => TreeEvalOptions -> Sem r ()
 runCommand opts = do
   afile :: Path Abs File <- fromAppPathFile file
   s <- readFile (toFilePath afile)

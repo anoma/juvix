@@ -31,7 +31,7 @@ data ReplState = ReplState
 
 makeLenses ''ReplState
 
-runCommand :: (Members '[Embed IO, App] r) => GebReplOptions -> Sem r ()
+runCommand :: (Members '[EmbedIO, App] r) => GebReplOptions -> Sem r ()
 runCommand replOpts = do
   invokeDir <- askInvokeDir
   root <- askRoot

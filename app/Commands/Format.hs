@@ -24,7 +24,7 @@ isTargetProject = \case
   TargetProject {} -> True
   _ -> False
 
-targetFromOptions :: (Members '[Embed IO, App] r) => FormatOptions -> Sem r FormatTarget
+targetFromOptions :: (Members '[EmbedIO, App] r) => FormatOptions -> Sem r FormatTarget
 targetFromOptions opts = do
   globalOpts <- askGlobalOptions
   let isStdin = globalOpts ^. globalStdin
@@ -45,7 +45,7 @@ targetFromOptions opts = do
                     "Use the --help option to display more usage information."
                   ]
 
-runCommand :: forall r. (Members '[Embed IO, App, TaggedLock, Resource, Files] r) => FormatOptions -> Sem r ()
+runCommand :: forall r. (Members '[EmbedIO, App, TaggedLock, Resource, Files] r) => FormatOptions -> Sem r ()
 runCommand opts = do
   target <- targetFromOptions opts
   runOutputSem (renderFormattedOutput target opts) $ runScopeFileApp $ do
@@ -82,7 +82,7 @@ renderModeFromOptions target opts formattedInfo
       | formattedInfo ^. formattedFileInfoContentsModified = res
       | otherwise = NoEdit Silent
 
-renderFormattedOutput :: forall r. (Members '[Embed IO, App, Resource, Files] r) => FormatTarget -> FormatOptions -> FormattedFileInfo -> Sem r ()
+renderFormattedOutput :: forall r. (Members '[EmbedIO, App, Resource, Files] r) => FormatTarget -> FormatOptions -> FormattedFileInfo -> Sem r ()
 renderFormattedOutput target opts fInfo = do
   let renderMode = renderModeFromOptions target opts fInfo
   outputResult renderMode
@@ -98,7 +98,7 @@ renderFormattedOutput target opts fInfo = do
         InputPath p -> say (pack (toFilePath p))
         Silent -> return ()
 
-runScopeFileApp :: (Members '[App, Embed IO, TaggedLock] r) => Sem (ScopeEff ': r) a -> Sem r a
+runScopeFileApp :: (Members '[App, EmbedIO, TaggedLock] r) => Sem (ScopeEff ': r) a -> Sem r a
 runScopeFileApp = interpret $ \case
   ScopeFile p -> do
     let appFile =

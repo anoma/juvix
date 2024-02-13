@@ -12,7 +12,7 @@ import Juvix.Compiler.Core.Translation.FromSource qualified as Core
 
 runCommand ::
   forall r a.
-  ( Members '[Embed IO, App] r,
+  ( Members '[EmbedIO, App] r,
     CanonicalProjection a Eval.EvalOptions,
     CanonicalProjection a Pretty.Options,
     CanonicalProjection a CoreReadOptions

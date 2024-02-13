@@ -6,7 +6,7 @@ import Juvix.Compiler.Casm.Pretty qualified as Casm
 import Juvix.Compiler.Casm.Translation.FromSource qualified as Casm
 import Juvix.Compiler.Casm.Validate qualified as Casm
 
-runCommand :: forall r. (Members '[Embed IO, App] r) => CasmReadOptions -> Sem r ()
+runCommand :: forall r. (Members '[EmbedIO, App] r) => CasmReadOptions -> Sem r ()
 runCommand opts = do
   afile :: Path Abs File <- fromAppPathFile file
   s <- readFile (toFilePath afile)

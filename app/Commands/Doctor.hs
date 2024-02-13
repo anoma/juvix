@@ -68,7 +68,7 @@ warning = log . ("  ! " <>)
 info :: (Member Log r) => Text -> Sem r ()
 info = log . ("  | " <>)
 
-type DoctorEff = '[Log, Embed IO, App]
+type DoctorEff = '[Log, EmbedIO, App]
 
 checkCmdOnPath :: (Members DoctorEff r) => String -> [Text] -> Sem r ()
 checkCmdOnPath cmd errMsg =
@@ -101,7 +101,7 @@ checkEnvVarSet :: (Members DoctorEff r) => String -> [Text] -> Sem r ()
 checkEnvVarSet var errMsg = do
   whenM (isNothing <$> embed (E.lookupEnv var)) (mapM_ warning errMsg)
 
-getLatestRelease :: (Members '[Embed IO, Fail] r) => Sem r GithubRelease
+getLatestRelease :: (Members '[EmbedIO, Fail] r) => Sem r GithubRelease
 getLatestRelease = do
   request' <- failFromException (parseRequest "https://api.github.com/repos/anoma/juvix/releases/latest")
   let request = setRequestHeaders [("user-agent", "curl/7.79.1"), ("Accept", "application/vnd.github+json")] request'

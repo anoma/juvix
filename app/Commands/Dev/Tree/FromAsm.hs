@@ -8,7 +8,7 @@ import Juvix.Compiler.Tree.Error (TreeError)
 import Juvix.Compiler.Tree.Pretty qualified as Tree
 import Juvix.Compiler.Tree.Translation.FromAsm qualified as Tree
 
-runCommand :: forall r. (Members '[Embed IO, App] r) => TreeFromAsmOptions -> Sem r ()
+runCommand :: forall r. (Members '[EmbedIO, App] r) => TreeFromAsmOptions -> Sem r ()
 runCommand opts = do
   afile :: Path Abs File <- fromAppPathFile file
   s <- readFile (toFilePath afile)

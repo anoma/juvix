@@ -6,7 +6,7 @@ import Juvix.Compiler.Core qualified as Core
 import Juvix.Compiler.Core.Pretty qualified as Core
 import Juvix.Compiler.Core.Translation.Stripped.FromCore qualified as Stripped
 
-runCommand :: forall r a. (Members '[Embed IO, App] r, CanonicalProjection a Core.Options, CanonicalProjection a CoreStripOptions) => a -> Sem r ()
+runCommand :: forall r a. (Members '[EmbedIO, App] r, CanonicalProjection a Core.Options, CanonicalProjection a CoreStripOptions) => a -> Sem r ()
 runCommand opts = do
   gopts <- askGlobalOptions
   inputFile :: Path Abs File <- fromAppPathFile sinputFile

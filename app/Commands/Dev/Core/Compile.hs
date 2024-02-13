@@ -6,7 +6,7 @@ import Commands.Dev.Core.Compile.Options
 import Juvix.Compiler.Core.Data.Module qualified as Core
 import Juvix.Compiler.Core.Translation.FromSource qualified as Core
 
-runCommand :: forall r. (Members '[Embed IO, App, TaggedLock] r) => CompileOptions -> Sem r ()
+runCommand :: forall r. (Members '[EmbedIO, App, TaggedLock] r) => CompileOptions -> Sem r ()
 runCommand opts = do
   file <- getFile
   s <- readFile (toFilePath file)
