@@ -4,7 +4,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Reg.Language.Base hiding (lookup)
 
 data IndexMap k = IndexMap
-  { _indexMapSize :: Int,
+  { _indexMapFirstFree :: Int,
     _indexMapTable :: HashMap k Index
   }
 
@@ -13,25 +13,23 @@ makeLenses ''IndexMap
 instance (Hashable k) => Semigroup (IndexMap k) where
   m1 <> m2 =
     IndexMap
-      { _indexMapTable = m,
-        _indexMapSize = HashMap.size m
+      { _indexMapTable = m1 ^. indexMapTable <> m2 ^. indexMapTable,
+        _indexMapFirstFree = max (m1 ^. indexMapFirstFree) (m2 ^. indexMapFirstFree)
       }
-    where
-      m = m1 ^. indexMapTable <> m2 ^. indexMapTable
 
 instance (Hashable k) => Monoid (IndexMap k) where
   mempty =
     IndexMap
-      { _indexMapSize = 0,
+      { _indexMapFirstFree = 0,
         _indexMapTable = mempty
       }
 
 assign :: (Hashable k) => IndexMap k -> k -> (Index, IndexMap k)
 assign IndexMap {..} k =
-  ( _indexMapSize,
+  ( _indexMapFirstFree,
     IndexMap
-      { _indexMapSize = _indexMapSize + 1,
-        _indexMapTable = HashMap.insert k _indexMapSize _indexMapTable
+      { _indexMapFirstFree = _indexMapFirstFree + 1,
+        _indexMapTable = HashMap.insert k _indexMapFirstFree _indexMapTable
       }
   )
 
@@ -41,7 +39,7 @@ lookup IndexMap {..} k = fromJust $ HashMap.lookup k _indexMapTable
 combine :: forall k. (Hashable k) => IndexMap k -> IndexMap k -> IndexMap k
 combine mp1 mp2 =
   IndexMap
-    { _indexMapSize = HashMap.size mp,
+    { _indexMapFirstFree = max (mp1 ^. indexMapFirstFree) (mp2 ^. indexMapFirstFree),
       _indexMapTable = mp
     }
   where

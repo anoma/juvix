@@ -10,3 +10,6 @@ strCairoPipeline = "pipeline-cairo"
 
 strIdentity :: Text
 strIdentity = "identity"
+
+strSSA :: Text
+strSSA = "ssa"

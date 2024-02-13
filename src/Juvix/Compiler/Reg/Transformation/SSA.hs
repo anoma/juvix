@@ -1,7 +1,9 @@
 module Juvix.Compiler.Reg.Transformation.SSA where
 
 import Data.Functor.Identity
+import Data.HashSet qualified as HashSet
 import Data.List.NonEmpty qualified as NonEmpty
+import Data.Monoid
 import Juvix.Compiler.Reg.Data.IndexMap (IndexMap)
 import Juvix.Compiler.Reg.Data.IndexMap qualified as IndexMap
 import Juvix.Compiler.Reg.Extra
@@ -93,3 +95,14 @@ computeFunctionSSA =
 
 computeSSA :: InfoTable -> InfoTable
 computeSSA = mapT (const computeFunctionSSA)
+
+checkSSA :: InfoTable -> Bool
+checkSSA tab = all (checkFun . (^. functionCode)) (tab ^. infoFunctions)
+  where
+    checkFun :: Code -> Bool
+    checkFun is = getAll $ snd $ ifoldF check (mempty, All True) is
+      where
+        check :: (HashSet VarRef, All) -> Instruction -> (HashSet VarRef, All)
+        check (refs, b) instr = case getResultVar instr of
+          Just var -> (HashSet.insert var refs, b <> All (not (HashSet.member var refs)))
+          Nothing -> (refs, b)
