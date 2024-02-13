@@ -22,12 +22,19 @@ computeFunctionSSA =
   where
     go :: Instruction -> IndexMap VarRef -> (IndexMap VarRef, Instruction)
     go instr mp = case getResultVar instr' of
-      Just vref -> (mp', setResultVar instr' (mkVarRef VarGroupLocal idx))
+      Just vref -> (mp', updateLiveVars mp' (setResultVar instr' (mkVarRef VarGroupLocal idx)))
         where
           (idx, mp') = IndexMap.assign mp vref
-      Nothing -> (mp, instr')
+      Nothing -> (mp, updateLiveVars mp instr')
       where
         instr' = overValueRefs (adjustVarRef mp) instr
+
+    updateLiveVars :: IndexMap VarRef -> Instruction -> Instruction
+    updateLiveVars mp = \case
+      Prealloc x -> Prealloc $ over instrPreallocLiveVars (mapMaybe (adjustVarRef' mp)) x
+      Call x -> Call $ over instrCallLiveVars (mapMaybe (adjustVarRef' mp)) x
+      CallClosures x -> CallClosures $ over instrCallClosuresLiveVars (mapMaybe (adjustVarRef' mp)) x
+      instr -> instr
 
     -- For branches, when necessary we insert assignments unifying the renamed
     -- output variables into a single output variable for both branches.
@@ -102,6 +109,13 @@ computeFunctionSSA =
     adjustVarRef mpv vref@VarRef {..} = case _varRefGroup of
       VarGroupArgs -> vref
       VarGroupLocal -> mkVarRef VarGroupLocal (IndexMap.lookup mpv vref)
+
+    adjustVarRef' :: IndexMap VarRef -> VarRef -> Maybe VarRef
+    adjustVarRef' mpv vref = case IndexMap.lookup' mpv vref of
+      Just idx -> Just $ mkVarRef VarGroupLocal idx
+      Nothing -> case vref ^. varRefGroup of
+        VarGroupArgs -> Just vref
+        VarGroupLocal -> Nothing
 
     assignInBranch :: Code -> Index -> Index -> Code
     assignInBranch is idx idx' =

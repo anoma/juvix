@@ -33,8 +33,11 @@ assign IndexMap {..} k =
       }
   )
 
+lookup' :: (Hashable k) => IndexMap k -> k -> Maybe Index
+lookup' IndexMap {..} k = HashMap.lookup k _indexMapTable
+
 lookup :: (Hashable k) => IndexMap k -> k -> Index
-lookup IndexMap {..} k = fromJust $ HashMap.lookup k _indexMapTable
+lookup mp = fromJust . lookup' mp
 
 combine :: forall k. (Hashable k) => IndexMap k -> IndexMap k -> IndexMap k
 combine mp1 mp2 =
