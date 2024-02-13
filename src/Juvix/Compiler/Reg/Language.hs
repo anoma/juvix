@@ -10,7 +10,6 @@ data Value
   = Const Constant
   | CRef ConstrField
   | VRef VarRef
-  deriving stock (Eq)
 
 -- | Reference to a constructor field (argument).
 data ConstrField = ConstrField
@@ -22,7 +21,6 @@ data ConstrField = ConstrField
     _constrFieldRef :: VarRef,
     _constrFieldIndex :: Index
   }
-  deriving stock (Eq)
 
 data VarGroup
   = VarGroupArgs
@@ -36,10 +34,21 @@ data VarRef = VarRef
     _varRefIndex :: Index,
     _varRefName :: Maybe Text
   }
-  deriving stock (Eq)
+
+makeLenses ''VarRef
+makeLenses ''ConstrField
 
 instance Hashable VarRef where
   hashWithSalt salt VarRef {..} = hashWithSalt salt (_varRefGroup, _varRefIndex)
+
+instance Eq VarRef where
+  vr1 == vr2 =
+    vr1 ^. varRefGroup == vr2 ^. varRefGroup
+      && vr1 ^. varRefIndex == vr2 ^. varRefIndex
+
+deriving stock instance (Eq ConstrField)
+
+deriving stock instance (Eq Value)
 
 data Instruction
   = Binop BinaryOp
@@ -227,7 +236,6 @@ newtype InstrBlock = InstrBlock
   }
   deriving stock (Eq)
 
-makeLenses ''ConstrField
 makeLenses ''BinaryOp
 makeLenses ''InstrAssign
 makeLenses ''InstrTrace

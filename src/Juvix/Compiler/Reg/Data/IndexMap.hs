@@ -1,7 +1,7 @@
 module Juvix.Compiler.Reg.Data.IndexMap where
 
 import Data.HashMap.Strict qualified as HashMap
-import Juvix.Compiler.Reg.Language.Base
+import Juvix.Compiler.Reg.Language.Base hiding (lookup)
 
 data IndexMap k = IndexMap
   { _indexMapSize :: Int,
@@ -37,3 +37,21 @@ assign IndexMap {..} k =
 
 lookup :: (Hashable k) => IndexMap k -> k -> Index
 lookup IndexMap {..} k = fromJust $ HashMap.lookup k _indexMapTable
+
+combine :: forall k. (Hashable k) => IndexMap k -> IndexMap k -> IndexMap k
+combine mp1 mp2 =
+  IndexMap
+    { _indexMapSize = HashMap.size mp,
+      _indexMapTable = mp
+    }
+  where
+    mp =
+      foldr
+        (\k -> HashMap.update (checkVal k) k)
+        (HashMap.intersection (mp1 ^. indexMapTable) (mp2 ^. indexMapTable))
+        (HashMap.keys (mp2 ^. indexMapTable))
+
+    checkVal :: k -> Index -> Maybe Index
+    checkVal k idx
+      | lookup mp2 k == idx = Just idx
+      | otherwise = Nothing
