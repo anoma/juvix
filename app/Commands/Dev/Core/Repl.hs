@@ -75,7 +75,7 @@ runRepl opts tab = do
           Right (tab', Nothing) ->
             runRepl opts tab'
       ':' : 'l' : ' ' : f -> do
-        s' <- readFile f
+        s' <- readFile (absFile f)
         sf <- someBaseToAbs' (someFile f)
         case Core.runParser sf defaultModuleId mempty s' of
           Left err -> do

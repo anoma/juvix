@@ -31,19 +31,22 @@ parseTreeSig =
       _parserSigEmptyExtra = ()
     }
 
+noFile :: Path Abs File
+noFile = $(mkAbsFile "/<text")
+
 parseText :: Text -> Either MegaparsecError InfoTable
-parseText = runParser ""
+parseText = runParser noFile
 
 parseText' :: BuilderState -> Text -> Either MegaparsecError BuilderState
-parseText' bs = runParser' bs ""
+parseText' bs = runParser' bs noFile
 
-runParser :: FilePath -> Text -> Either MegaparsecError InfoTable
+runParser :: Path Abs File -> Text -> Either MegaparsecError InfoTable
 runParser = runParserS parseTreeSig
 
-runParser' :: BuilderState -> FilePath -> Text -> Either MegaparsecError BuilderState
+runParser' :: BuilderState -> Path Abs File -> Text -> Either MegaparsecError BuilderState
 runParser' = runParserS' parseTreeSig
 
-parseNodeText' :: BuilderState -> FilePath -> Text -> Either MegaparsecError (BuilderState, Node)
+parseNodeText' :: BuilderState -> Path Abs File -> Text -> Either MegaparsecError (BuilderState, Node)
 parseNodeText' bs file txt = runParserS'' parseNode parseTreeSig bs file txt
 
 parseNode ::

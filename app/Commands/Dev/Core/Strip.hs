@@ -10,7 +10,7 @@ runCommand :: forall r a. (Members '[EmbedIO, App] r, CanonicalProjection a Core
 runCommand opts = do
   gopts <- askGlobalOptions
   inputFile :: Path Abs File <- fromAppPathFile sinputFile
-  s' <- readFile $ toFilePath inputFile
+  s' <- readFile inputFile
   (tab, _) <- getRight (mapLeft JuvixError (Core.runParser inputFile defaultModuleId mempty s'))
   let r =
         run $

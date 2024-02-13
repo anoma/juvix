@@ -8,6 +8,7 @@ import Juvix.Extra.Strings qualified as Str
 import Juvix.Parser.Error
 import Juvix.Parser.Lexer (onlyInterval, withLoc)
 import Juvix.Prelude hiding (Atom, Path, many, some)
+import Juvix.Prelude qualified as Prelude
 import Juvix.Prelude.Parsing hiding (runParser)
 import Text.Megaparsec qualified as P
 import Text.Megaparsec.Char.Lexer qualified as L
@@ -20,12 +21,12 @@ parseText = runParser noFile
 parseReplText :: Text -> Either MegaparsecError (ReplTerm Natural)
 parseReplText = runParserFor replTerm noFile
 
-parseTermFile :: (MonadIO m) => FilePath -> m (Either MegaparsecError (Term Natural))
+parseTermFile :: (MonadIO m) => Prelude.Path Abs File -> m (Either MegaparsecError (Term Natural))
 parseTermFile fp = do
   txt <- readFile fp
   return (runParser fp txt)
 
-parseProgramFile :: (MonadIO m) => FilePath -> m (Either MegaparsecError (Program Natural))
+parseProgramFile :: (MonadIO m) => Prelude.Path Abs File -> m (Either MegaparsecError (Program Natural))
 parseProgramFile fp = do
   txt <- readFile fp
   return (runParserProgram fp txt)
@@ -33,18 +34,18 @@ parseProgramFile fp = do
 parseReplStatement :: Text -> Either MegaparsecError (ReplStatement Natural)
 parseReplStatement = runParserFor replStatement noFile
 
-noFile :: FilePath
-noFile = "/<text>"
+noFile :: Prelude.Path Abs File
+noFile = $(mkAbsFile "/<text>")
 
-runParserProgram :: FilePath -> Text -> Either MegaparsecError (Program Natural)
+runParserProgram :: Prelude.Path Abs File -> Text -> Either MegaparsecError (Program Natural)
 runParserProgram = runParserFor program
 
-runParserFor :: Parser a -> FilePath -> Text -> Either MegaparsecError a
-runParserFor p f input_ = case P.runParser (spaceConsumer >> p <* eof) f input_ of
+runParserFor :: Parser a -> Prelude.Path Abs File -> Text -> Either MegaparsecError a
+runParserFor p f input_ = case P.runParser (spaceConsumer >> p <* eof) (toFilePath f) input_ of
   Left err -> Left (MegaparsecError err)
   Right t -> Right t
 
-runParser :: FilePath -> Text -> Either MegaparsecError (Term Natural)
+runParser :: Prelude.Path Abs File -> Text -> Either MegaparsecError (Term Natural)
 runParser = runParserFor term
 
 spaceConsumer :: Parser ()

@@ -10,7 +10,7 @@ import Juvix.Compiler.Nockma.Translation.FromSource qualified as Nockma
 runCommand :: forall r. (Members '[EmbedIO, App] r) => NockmaEvalOptions -> Sem r ()
 runCommand opts = do
   afile <- fromAppPathFile file
-  parsedTerm <- Nockma.parseTermFile (toFilePath afile)
+  parsedTerm <- Nockma.parseTermFile afile
   case parsedTerm of
     Left err -> exitJuvixError (JuvixError err)
     Right (TermCell c) -> do

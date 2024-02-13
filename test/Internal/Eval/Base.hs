@@ -35,9 +35,9 @@ internalCoreAssertion root' mainFile expectedFile step = do
                   (Info.member kNoDisplayInfo (getInfo value))
                   (hPutStrLn hout (ppPrint value))
                 hClose hout
-                actualOutput <- readFile (toFilePath outputFile)
+                actualOutput <- readFile outputFile
                 step "Compare expected and actual program output"
-                expected <- readFile (toFilePath expectedFile)
+                expected <- readFile expectedFile
                 assertEqDiffText ("Check: EVAL output = " <> toFilePath expectedFile) actualOutput expected
         )
     Nothing -> assertFailure ("No main function registered in: " <> toFilePath mainFile)

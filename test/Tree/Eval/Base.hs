@@ -31,8 +31,8 @@ treeEvalAssertionParam ::
   Assertion
 treeEvalAssertionParam evalParam mainFile expectedFile trans testTrans step = do
   step "Parse"
-  s <- readFile (toFilePath mainFile)
-  case runParser (toFilePath mainFile) s of
+  s <- readFile mainFile
+  case runParser mainFile s of
     Left err -> assertFailure (show (pretty err))
     Right tab0 -> do
       step "Validate"
@@ -54,9 +54,9 @@ treeEvalAssertionParam evalParam mainFile expectedFile trans testTrans step = do
                         step "Evaluate"
                         evalParam hout sym tab
                         hClose hout
-                        actualOutput <- readFile (toFilePath outputFile)
+                        actualOutput <- readFile outputFile
                         step "Compare expected and actual program output"
-                        expected <- readFile (toFilePath expectedFile)
+                        expected <- readFile expectedFile
                         assertEqDiffText ("Check: RUN output = " <> toFilePath expectedFile) actualOutput expected
                     )
                 Nothing -> assertFailure "no 'main' function"
@@ -83,8 +83,8 @@ doEval hout tab funInfo = catchEvalErrorIO (hEvalIO stdin hout tab funInfo)
 treeEvalErrorAssertion :: Path Abs File -> (String -> IO ()) -> Assertion
 treeEvalErrorAssertion mainFile step = do
   step "Parse"
-  s <- readFile (toFilePath mainFile)
-  case runParser (toFilePath mainFile) s of
+  s <- readFile mainFile
+  case runParser mainFile s of
     Left err -> assertFailure (show (pretty err))
     Right tab ->
       case tab ^. infoMainFunction of

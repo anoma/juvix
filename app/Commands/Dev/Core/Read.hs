@@ -22,7 +22,7 @@ runCommand ::
 runCommand opts = do
   gopts <- askGlobalOptions
   inputFile :: Path Abs File <- fromAppPathFile sinputFile
-  s' <- readFile . toFilePath $ inputFile
+  s' <- readFile inputFile
   tab <- getRight (mapLeft JuvixError (Core.runParserMain inputFile defaultModuleId mempty s'))
   let r = run $ runReader (project @GlobalOptions @Core.CoreOptions gopts) $ runError @JuvixError $ Core.applyTransformations (project opts ^. coreReadTransformations) (Core.moduleFromInfoTable tab)
   tab0 <- getRight $ mapLeft JuvixError r

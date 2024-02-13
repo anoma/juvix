@@ -30,7 +30,7 @@ runFilesIO = interpret helper
 
     helper' :: forall rInitial x. Files (Sem rInitial) x -> IO x
     helper' = \case
-      ReadFile' f -> readFile (toFilePath f)
+      ReadFile' f -> readFile f
       WriteFileBS p bs -> ByteString.writeFile (toFilePath p) bs
       WriteFileEnsureLn' f txt -> writeFileEnsureLn f txt
       EnsureDir' p -> Path.ensureDir p

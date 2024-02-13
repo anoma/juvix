@@ -30,16 +30,19 @@ parseRegSig =
       _parserSigEmptyExtra = ()
     }
 
+noFile :: Path Abs File
+noFile = $(mkAbsFile "/<text>")
+
 parseText :: Text -> Either MegaparsecError InfoTable
-parseText = runParser ""
+parseText = runParser noFile
 
 parseText' :: BuilderState -> Text -> Either MegaparsecError BuilderState
-parseText' bs = runParser' bs ""
+parseText' bs = runParser' bs noFile
 
-runParser :: FilePath -> Text -> Either MegaparsecError InfoTable
+runParser :: Path Abs File -> Text -> Either MegaparsecError InfoTable
 runParser = runParserS parseRegSig
 
-runParser' :: BuilderState -> FilePath -> Text -> Either MegaparsecError BuilderState
+runParser' :: BuilderState -> Path Abs File -> Text -> Either MegaparsecError BuilderState
 runParser' = runParserS' parseRegSig
 
 parseCode ::

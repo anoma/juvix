@@ -10,8 +10,8 @@ import RegInterpreter
 runCommand :: forall r. (Members '[EmbedIO, App] r) => RegReadOptions -> Sem r ()
 runCommand opts = do
   afile :: Path Abs File <- fromAppPathFile file
-  s <- readFile (toFilePath afile)
-  case Reg.runParser (toFilePath afile) s of
+  s <- readFile afile
+  case Reg.runParser afile s of
     Left err ->
       exitJuvixError (JuvixError err)
     Right tab -> do

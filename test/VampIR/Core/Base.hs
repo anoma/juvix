@@ -11,7 +11,7 @@ data VampirBackend = VampirHalo2 | VampirPlonk
 vampirAssertion :: VampirBackend -> Path Abs File -> Path Abs File -> (String -> IO ()) -> Assertion
 vampirAssertion backend mainFile dataFile step = do
   step "Parse"
-  s <- readFile (toFilePath mainFile)
+  s <- readFile mainFile
   case runParserMain mainFile defaultModuleId mempty s of
     Left err -> assertFailure (show err)
     Right tab -> vampirAssertion' backend tab dataFile step

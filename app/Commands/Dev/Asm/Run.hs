@@ -8,8 +8,8 @@ import Juvix.Compiler.Asm.Translation.FromSource qualified as Asm
 runCommand :: forall r. (Members '[EmbedIO, App] r) => AsmRunOptions -> Sem r ()
 runCommand opts = do
   afile :: Path Abs File <- fromAppPathFile file
-  s <- readFile (toFilePath afile)
-  case Asm.runParser (toFilePath afile) s of
+  s <- readFile afile
+  case Asm.runParser afile s of
     Left err -> exitJuvixError (JuvixError err)
     Right tab -> runAsm (not (opts ^. asmRunNoValidate)) tab
   where
