@@ -17,8 +17,8 @@ import Juvix.Compiler.Asm.Pretty
 data RecursorSig m r a = RecursorSig
   { _recursorInfoTable :: InfoTable,
     _recurseInstr :: m -> CmdInstr -> Sem r a,
-    _recurseBranch :: m -> CmdBranch -> [a] -> [a] -> Sem r a,
-    _recurseCase :: m -> CmdCase -> [[a]] -> Maybe [a] -> Sem r a,
+    _recurseBranch :: Bool -> m -> CmdBranch -> [a] -> [a] -> Sem r a,
+    _recurseCase :: Bool -> m -> CmdCase -> [[a]] -> Maybe [a] -> Sem r a,
     _recurseSave :: m -> CmdSave -> [a] -> Sem r a
   }
 
@@ -252,7 +252,7 @@ recurse' sig = go True
       let mem0 = popValueStack 1 mem
       (mem1, as1) <- go isTail mem0 _cmdBranchTrue
       (mem2, as2) <- go isTail mem0 _cmdBranchFalse
-      a' <- (sig ^. recurseBranch) mem cmd as1 as2
+      a' <- (sig ^. recurseBranch) isTail mem cmd as1 as2
       mem' <- unifyMemory' loc (sig ^. recursorInfoTable) mem1 mem2
       checkBranchInvariant 1 loc mem0 mem'
       return (mem', a')
@@ -268,7 +268,7 @@ recurse' sig = go True
       rd <- maybe (return Nothing) (fmap Just . go isTail mem) _cmdCaseDefault
       let md = fmap fst rd
           ad = fmap snd rd
-      a' <- (sig ^. recurseCase) mem cmd ass ad
+      a' <- (sig ^. recurseCase) isTail mem cmd ass ad
       case mems of
         [] -> return (fromMaybe mem md, a')
         mem0 : mems' -> do
@@ -333,25 +333,25 @@ recurseS :: forall r a. (Member (Error AsmError) r) => RecursorSig StackInfo r a
 recurseS sig code = snd <$> recurseS' sig initialStackInfo code
 
 recurseS' :: forall r a. (Member (Error AsmError) r) => RecursorSig StackInfo r a -> StackInfo -> Code -> Sem r (StackInfo, [a])
-recurseS' sig = go
+recurseS' sig = go True
   where
-    go :: StackInfo -> Code -> Sem r (StackInfo, [a])
-    go si = \case
+    go :: Bool -> StackInfo -> Code -> Sem r (StackInfo, [a])
+    go isTail si = \case
       [] -> return (si, [])
       h : t -> case h of
         Instr x -> do
-          goNextCmd (goInstr si x) t
+          goNextCmd isTail (goInstr si x) t
         Branch x ->
-          goNextCmd (goBranch si x) t
+          goNextCmd isTail (goBranch (isTail && null t) si x) t
         Case x ->
-          goNextCmd (goCase si x) t
+          goNextCmd isTail (goCase (isTail && null t) si x) t
         Save x ->
-          goNextCmd (goSave si x) t
+          goNextCmd isTail (goSave si x) t
 
-    goNextCmd :: Sem r (StackInfo, a) -> Code -> Sem r (StackInfo, [a])
-    goNextCmd mp t = do
+    goNextCmd :: Bool -> Sem r (StackInfo, a) -> Code -> Sem r (StackInfo, [a])
+    goNextCmd isTail mp t = do
       (si', r) <- mp
-      (si'', rs) <- go si' t
+      (si'', rs) <- go isTail si' t
       return (si'', r : rs)
 
     goInstr :: StackInfo -> CmdInstr -> Sem r (StackInfo, a)
@@ -433,26 +433,26 @@ recurseS' sig = go
         fixStackCallClosures si InstrCallClosures {..} = do
           return $ stackInfoPopValueStack _callClosuresArgsNum si
 
-    goBranch :: StackInfo -> CmdBranch -> Sem r (StackInfo, a)
-    goBranch si cmd@CmdBranch {..} = do
+    goBranch :: Bool -> StackInfo -> CmdBranch -> Sem r (StackInfo, a)
+    goBranch isTail si cmd@CmdBranch {..} = do
       let si0 = stackInfoPopValueStack 1 si
-      (si1, as1) <- go si0 _cmdBranchTrue
-      (si2, as2) <- go si0 _cmdBranchFalse
-      a' <- (sig ^. recurseBranch) si cmd as1 as2
+      (si1, as1) <- go isTail si0 _cmdBranchTrue
+      (si2, as2) <- go isTail si0 _cmdBranchFalse
+      a' <- (sig ^. recurseBranch) isTail si cmd as1 as2
       checkStackInfo loc si1 si2
       return (si1, a')
       where
         loc = cmd ^. cmdBranchInfo . commandInfoLocation
 
-    goCase :: StackInfo -> CmdCase -> Sem r (StackInfo, a)
-    goCase si cmd@CmdCase {..} = do
-      rs <- mapM (go si . (^. caseBranchCode)) _cmdCaseBranches
+    goCase :: Bool -> StackInfo -> CmdCase -> Sem r (StackInfo, a)
+    goCase isTail si cmd@CmdCase {..} = do
+      rs <- mapM (go isTail si . (^. caseBranchCode)) _cmdCaseBranches
       let sis = map fst rs
           ass = map snd rs
-      rd <- maybe (return Nothing) (fmap Just . go si) _cmdCaseDefault
+      rd <- maybe (return Nothing) (fmap Just . go isTail si) _cmdCaseDefault
       let sd = fmap fst rd
           ad = fmap snd rd
-      a' <- (sig ^. recurseCase) si cmd ass ad
+      a' <- (sig ^. recurseCase) isTail si cmd ass ad
       case sis of
         [] -> return (fromMaybe si sd, a')
         si0 : sis' -> do
@@ -465,7 +465,7 @@ recurseS' sig = go
     goSave :: StackInfo -> CmdSave -> Sem r (StackInfo, a)
     goSave si cmd@CmdSave {..} = do
       let si1 = stackInfoPushTempStack 1 (stackInfoPopValueStack 1 si)
-      (si2, c) <- go si1 _cmdSaveCode
+      (si2, c) <- go _cmdSaveIsTail si1 _cmdSaveCode
       c' <- (sig ^. recurseSave) si cmd c
       let si' = if _cmdSaveIsTail then si2 else stackInfoPopTempStack 1 si2
       return (si', c')
@@ -528,7 +528,7 @@ foldS' sig si code acc = do
       RecursorSig
         { _recursorInfoTable = sig ^. foldInfoTable,
           _recurseInstr = \s cmd -> return ((sig ^. foldInstr) s cmd),
-          _recurseBranch = \s cmd br1 br2 ->
+          _recurseBranch = \_ s cmd br1 br2 ->
             return
               ( \a -> do
                   let a' = (sig ^. foldAdjust) a
@@ -536,7 +536,7 @@ foldS' sig si code acc = do
                   a2 <- compose' br2 a'
                   (sig ^. foldBranch) s cmd a1 a2 a
               ),
-          _recurseCase = \s cmd brs md ->
+          _recurseCase = \_ s cmd brs md ->
             return
               ( \a -> do
                   let a' = (sig ^. foldAdjust) a

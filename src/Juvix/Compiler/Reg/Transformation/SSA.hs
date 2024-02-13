@@ -31,7 +31,8 @@ computeFunctionSSA =
     combine instr mps = case instr of
       Branch InstrBranch {..} -> case mps of
         mp1 :| mp2 : []
-          | idx1 == idx2 -> (mp, instr)
+          | isNothing _instrBranchVar || idx1 == idx2 ->
+              (mp, instr)
           | otherwise ->
               ( mp',
                 Branch
@@ -50,7 +51,8 @@ computeFunctionSSA =
         _ -> impossible
       Case InstrCase {..} -> case mps of
         mp0 :| mps'
-          | all (== head idxs) (NonEmpty.tail idxs) -> (mp, instr)
+          | isNothing _instrCaseVar || all (== head idxs) (NonEmpty.tail idxs) ->
+              (mp, instr)
           | otherwise ->
               ( mp',
                 Case

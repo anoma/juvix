@@ -6,7 +6,7 @@ function sum(integer) : integer {
   tmp[0] = arg[0];
   tmp[1] = 0;
   tmp[0] = eq tmp[1] tmp[0];
-  br tmp[0] {
+  br tmp[0], var: tmp[0] {
     true: {
       tmp[0] = 0;
     };

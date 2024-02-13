@@ -22,12 +22,12 @@ computeFunctionStackUsage tab fi = do
       RecursorSig
         { _recursorInfoTable = tab,
           _recurseInstr = \si _ -> return (si ^. stackInfoValueStackHeight, si ^. stackInfoTempStackHeight),
-          _recurseBranch = \si _ l r ->
+          _recurseBranch = \_ si _ l r ->
             return
               ( max (si ^. stackInfoValueStackHeight) (max (maximum (map fst l)) (maximum (map fst r))),
                 max (si ^. stackInfoTempStackHeight) (max (maximum (map snd l)) (maximum (map snd r)))
               ),
-          _recurseCase = \si _ cs md ->
+          _recurseCase = \_ si _ cs md ->
             return
               ( max (si ^. stackInfoValueStackHeight) (max (maximum (map (maximum . map fst) cs)) (maybe 0 (maximum . map fst) md)),
                 max (si ^. stackInfoTempStackHeight) (max (maximum (map (maximum . map snd) cs)) (maybe 0 (maximum . map snd) md))

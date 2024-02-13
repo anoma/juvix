@@ -255,19 +255,20 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
 
 fromAsmBranch ::
   Asm.FunctionInfo ->
+  Bool ->
   Asm.StackInfo ->
   Asm.CmdBranch ->
   Code ->
   Code ->
   Sem r Instruction
-fromAsmBranch fi si Asm.CmdBranch {} codeTrue codeFalse =
+fromAsmBranch fi isTail si Asm.CmdBranch {} codeTrue codeFalse =
   return $
     Branch $
       InstrBranch
         { _instrBranchValue = VRef $ mkVarRef VarGroupLocal topIdx,
           _instrBranchTrue = codeTrue,
           _instrBranchFalse = codeFalse,
-          _instrBranchVar = Just $ mkVarRef VarGroupLocal topIdx
+          _instrBranchVar = if isTail then Nothing else Just $ mkVarRef VarGroupLocal topIdx
         }
   where
     topIdx :: Int
@@ -276,12 +277,13 @@ fromAsmBranch fi si Asm.CmdBranch {} codeTrue codeFalse =
 fromAsmCase ::
   Asm.FunctionInfo ->
   Asm.InfoTable ->
+  Bool ->
   Asm.StackInfo ->
   Asm.CmdCase ->
   [Code] ->
   Maybe Code ->
   Sem r Instruction
-fromAsmCase fi tab si Asm.CmdCase {..} brs def =
+fromAsmCase fi tab isTail si Asm.CmdCase {..} brs def =
   return $
     Case $
       InstrCase
@@ -305,7 +307,7 @@ fromAsmCase fi tab si Asm.CmdCase {..} brs def =
               _cmdCaseBranches
               brs,
           _instrCaseDefault = def,
-          _instrCaseVar = Just $ mkVarRef VarGroupLocal topIdx
+          _instrCaseVar = if isTail then Nothing else Just $ mkVarRef VarGroupLocal topIdx
         }
   where
     topIdx = fromJust (fi ^. Asm.functionExtra) ^. Asm.functionMaxTempStackHeight + si ^. Asm.stackInfoValueStackHeight - 1
