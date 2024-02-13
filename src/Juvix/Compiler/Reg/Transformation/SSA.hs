@@ -29,23 +29,34 @@ computeFunctionSSA =
       where
         instr' = overValueRefs (adjustVarRef mp) instr
 
+    -- For branches, when necessary we insert assignments unifying the renamed
+    -- output variables into a single output variable for both branches.
     combine :: Instruction -> NonEmpty (IndexMap VarRef) -> (IndexMap VarRef, Instruction)
     combine instr mps = case instr of
       Branch InstrBranch {..} -> case mps of
         mp1 :| mp2 : []
-          | isNothing _instrBranchVar || idx1 == idx2 ->
+          | isNothing _instrBranchOutVar ->
               (mp, instr)
+          | idx1 == idx2 ->
+              ( mp,
+                Branch
+                  InstrBranch
+                    { _instrBranchOutVar = Just $ mkVarRef VarGroupLocal idx1,
+                      ..
+                    }
+              )
           | otherwise ->
               ( mp',
                 Branch
                   InstrBranch
                     { _instrBranchTrue = assignInBranch _instrBranchTrue idx' idx1,
                       _instrBranchFalse = assignInBranch _instrBranchFalse idx' idx2,
+                      _instrBranchOutVar = Just $ mkVarRef VarGroupLocal idx',
                       ..
                     }
               )
           where
-            var = fromJust _instrBranchVar
+            var = fromJust _instrBranchOutVar
             idx1 = IndexMap.lookup mp1 var
             idx2 = IndexMap.lookup mp2 var
             mp = IndexMap.combine mp1 mp2
@@ -53,19 +64,28 @@ computeFunctionSSA =
         _ -> impossible
       Case InstrCase {..} -> case mps of
         mp0 :| mps'
-          | isNothing _instrCaseVar || all (== head idxs) (NonEmpty.tail idxs) ->
+          | isNothing _instrCaseOutVar ->
               (mp, instr)
+          | all (== head idxs) (NonEmpty.tail idxs) ->
+              ( mp,
+                Case
+                  InstrCase
+                    { _instrCaseOutVar = Just $ mkVarRef VarGroupLocal (head idxs),
+                      ..
+                    }
+              )
           | otherwise ->
               ( mp',
                 Case
                   InstrCase
                     { _instrCaseBranches = brs',
                       _instrCaseDefault = def',
+                      _instrCaseOutVar = Just $ mkVarRef VarGroupLocal idx',
                       ..
                     }
               )
           where
-            var = fromJust _instrCaseVar
+            var = fromJust _instrCaseOutVar
             idxs = fmap (flip IndexMap.lookup var) mps
             mp = foldr IndexMap.combine mp0 mps'
             (idx', mp') = IndexMap.assign mp var

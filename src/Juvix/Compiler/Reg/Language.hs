@@ -206,9 +206,9 @@ data InstrBranch = InstrBranch
   { _instrBranchValue :: Value,
     _instrBranchTrue :: Code,
     _instrBranchFalse :: Code,
-    -- | Live variable storing the result (corresponds to the top of the value
+    -- | Output variable storing the result (corresponds to the top of the value
     -- stack in JuvixAsm after executing the branches)
-    _instrBranchVar :: Maybe VarRef
+    _instrBranchOutVar :: Maybe VarRef
   }
   deriving stock (Eq)
 
@@ -218,7 +218,7 @@ data InstrCase = InstrCase
     _instrCaseIndRep :: IndRep,
     _instrCaseBranches :: [CaseBranch],
     _instrCaseDefault :: Maybe Code,
-    _instrCaseVar :: Maybe VarRef
+    _instrCaseOutVar :: Maybe VarRef
   }
   deriving stock (Eq)
 

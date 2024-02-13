@@ -268,7 +268,7 @@ fromAsmBranch fi isTail si Asm.CmdBranch {} codeTrue codeFalse =
         { _instrBranchValue = VRef $ mkVarRef VarGroupLocal topIdx,
           _instrBranchTrue = codeTrue,
           _instrBranchFalse = codeFalse,
-          _instrBranchVar = if isTail then Nothing else Just $ mkVarRef VarGroupLocal topIdx
+          _instrBranchOutVar = if isTail then Nothing else Just $ mkVarRef VarGroupLocal topIdx
         }
   where
     topIdx :: Int
@@ -307,7 +307,7 @@ fromAsmCase fi tab isTail si Asm.CmdCase {..} brs def =
               _cmdCaseBranches
               brs,
           _instrCaseDefault = def,
-          _instrCaseVar = if isTail then Nothing else Just $ mkVarRef VarGroupLocal topIdx
+          _instrCaseOutVar = if isTail then Nothing else Just $ mkVarRef VarGroupLocal topIdx
         }
   where
     topIdx = fromJust (fi ^. Asm.functionExtra) ^. Asm.functionMaxTempStackHeight + si ^. Asm.stackInfoValueStackHeight - 1
