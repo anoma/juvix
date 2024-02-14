@@ -599,15 +599,24 @@ runInputInfinite s =
       )
 
 ensureLn :: Text -> Text
-ensureLn t =
+ensureLn t
+  | requiresLn t = Text.snoc t '\n'
+  | otherwise = t
+
+requiresLn :: Text -> Bool
+requiresLn t =
   case Text.unsnoc t of
-    Nothing -> t
+    Nothing -> False
     Just (_, y) -> case y of
-      '\n' -> t
-      _ -> Text.snoc t '\n'
+      '\n' -> False
+      _ -> True
 
 writeFileEnsureLn :: (MonadIO m) => Path Abs File -> Text -> m ()
-writeFileEnsureLn p !txt = liftIO (Utf8.writeFile (toFilePath p) $! (ensureLn txt))
+writeFileEnsureLn p txt = do
+  let b = requiresLn txt
+      path = toFilePath p
+  -- We need the inline `if` to avoid lazy IO problems.
+  liftIO (Utf8.writeFile path (if b then txt else txt <> "\n"))
 
 -- TODO: change FilePath to Path Abs File
 readFile :: (MonadIO m) => FilePath -> m Text
