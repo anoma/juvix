@@ -1,0 +1,66 @@
+module Resource;
+
+import Stdlib.Prelude open;
+
+syntax alias Commitment := Nat;
+syntax alias Nullifier := Nat;
+syntax alias Proof := Resource;
+
+Delta : Type := List DeltaComponent;
+
+type DeltaComponent :=
+  mkDeltaComponent {
+    denom : Nat;
+    sign : Bool;
+    amount : Nat
+  };
+
+type Transaction :=
+  mkTransaction {
+    roots : List Nat;
+    commitments : List Commitment;
+    nullifiers : List Nullifier;
+    proofs : List Proof;
+    delta : Delta;
+    extra : Nat;
+    -- TODO: Fix encoding of the preference function
+    preference : Nat
+  };
+
+type Resource :=
+  mkResource {
+    logic : Transaction -> Bool;
+    label : List Nat;
+    quantity : Nat;
+    data : Nat;
+    eph : Bool;
+    nonce : Nat;
+    npk : Nat;
+    rseed : Nat
+  };
+
+open Transaction;
+open DeltaComponent;
+
+zeroDeltaComponent : DeltaComponent :=
+  mkDeltaComponent@{
+    denom := 0;
+    sign := true;
+    amount := 0
+  };
+
+headDelta (d : Delta) : DeltaComponent :=
+  case d of {
+    | [] := zeroDeltaComponent
+    | h :: _ := h
+  };
+
+headCommitment (d : List Commitment) : Commitment :=
+  case d of {
+    | [] := 333
+    | h :: _ := h
+  };
+
+main (t : Transaction) : Bool :=
+  all (d in delta t)
+    amount d == 0;
