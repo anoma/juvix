@@ -11,6 +11,7 @@ import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Pretty qualified as Nockma
 import Juvix.Compiler.Nockma.Translation.FromSource (parseProgramFile, parseReplStatement, parseReplText, parseText)
+import Juvix.Compiler.Nockma.Translation.FromSource qualified as Nockma
 import Juvix.Parser.Error
 import Juvix.Prelude qualified as Prelude
 import System.Console.Haskeline
@@ -170,12 +171,22 @@ replAction =
       }
 
 runCommand :: forall r. (Members '[EmbedIO, App] r) => NockmaReplOptions -> Sem r ()
-runCommand _ = embed . (`State.evalStateT` iniState) $ replAction
+runCommand opts = do
+  mt :: Maybe (Term Natural) <- mapM iniStack (opts ^. nockmaReplOptionsStackFile)
+  embed . (`State.evalStateT` (iniState mt)) $ replAction
   where
-    iniState :: ReplState
-    iniState =
+    iniStack :: AppPath File -> Sem r (Term Natural)
+    iniStack af = do
+      afile <- fromAppPathFile af
+      parsedTerm <- Nockma.parseTermFile (toFilePath afile)
+      case parsedTerm of
+        Left err -> exitJuvixError (JuvixError err)
+        Right t -> return t
+
+    iniState :: Maybe (Term Natural) -> ReplState
+    iniState mt =
       ReplState
-        { _replStateStack = Nothing,
+        { _replStateStack = mt,
           _replStateProgram = Nothing,
           _replStateLoadedFile = Nothing
         }
