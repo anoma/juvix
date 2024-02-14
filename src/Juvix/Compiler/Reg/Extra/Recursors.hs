@@ -9,7 +9,17 @@ data ForwardRecursorSig m c = ForwardRecursorSig
   }
 
 data BackwardRecursorSig m a = BackwardRecursorSig
-  { _backwardFun :: Code -> a -> [a] -> m (a, Code),
+  { -- | In `_backwardFun is a as`: `is = i : is'` is the instruction list
+    -- currently being processed (the head `i` is the processed instruction, the
+    -- tail `is'` contains the instructions after it); `a` is the accumulator
+    -- for `is'`; `as` contains the accumulator values for the branches (for
+    -- `Branch` and `Case` instructions, otherwise empty). For the `Case`
+    -- instruction, the accumulator for the default branch (if present) is the
+    -- last element of `as`.
+    _backwardFun :: Code -> a -> [a] -> m (a, Code),
+    -- | `backwardAdjust a` adjusts the accumulator value when going backwards
+    -- into a branch. See also `FoldSig` in `Asm.Extra.Recursors` for more
+    -- explanations.
     _backwardAdjust :: a -> a
   }
 

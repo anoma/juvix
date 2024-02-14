@@ -6,8 +6,9 @@ import Juvix.Prelude
 
 data TransformationId
   = Identity
-  | SSA
   | Cleanup
+  | SSA
+  | InitBranchVars
   deriving stock (Data, Bounded, Enum, Show)
 
 data PipelineId
@@ -21,14 +22,15 @@ toCTransformations :: [TransformationId]
 toCTransformations = [Cleanup]
 
 toCairoTransformations :: [TransformationId]
-toCairoTransformations = [Cleanup, SSA]
+toCairoTransformations = [Cleanup, SSA, InitBranchVars]
 
 instance TransformationId' TransformationId where
   transformationText :: TransformationId -> Text
   transformationText = \case
     Identity -> strIdentity
-    SSA -> strSSA
     Cleanup -> strCleanup
+    SSA -> strSSA
+    InitBranchVars -> strInitBranchVars
 
 instance PipelineId' TransformationId PipelineId where
   pipelineText :: PipelineId -> Text

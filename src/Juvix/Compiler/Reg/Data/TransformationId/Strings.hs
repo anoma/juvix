@@ -11,8 +11,11 @@ strCairoPipeline = "pipeline-cairo"
 strIdentity :: Text
 strIdentity = "identity"
 
+strCleanup :: Text
+strCleanup = "cleanup"
+
 strSSA :: Text
 strSSA = "ssa"
 
-strCleanup :: Text
-strCleanup = "cleanup"
+strInitBranchVars :: Text
+strInitBranchVars = "init-branch-vars"
