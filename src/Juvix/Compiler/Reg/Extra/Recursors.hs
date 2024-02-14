@@ -135,3 +135,25 @@ ifoldFM f a0 is0 =
 
 ifoldF :: (Monoid a) => (a -> Instruction -> a) -> a -> Code -> a
 ifoldF f a is = runIdentity (ifoldFM (\a' -> return . f a') a is)
+
+ifoldBM :: forall a m. (Monad m) => (a -> [a] -> Instruction -> m a) -> a -> Code -> m a
+ifoldBM f a0 is0 =
+  fst
+    <$> recurseB
+      BackwardRecursorSig
+        { _backwardFun = go,
+          _backwardAdjust = id
+        }
+      a0
+      is0
+  where
+    go :: Code -> a -> [a] -> m (a, Code)
+    go is a as = case is of
+      i : _ -> do
+        a' <- f a as i
+        return (a', is)
+      [] ->
+        return (a, is)
+
+ifoldB :: (a -> [a] -> Instruction -> a) -> a -> Code -> a
+ifoldB f a is = runIdentity (ifoldBM (\a' as' -> return . f a' as') a is)

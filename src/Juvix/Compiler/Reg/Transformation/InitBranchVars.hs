@@ -6,6 +6,8 @@ import Data.List qualified as List
 import Juvix.Compiler.Reg.Extra
 import Juvix.Compiler.Reg.Transformation.Base
 
+-- | Inserts assignments to initialize variables assigned in other branches.
+-- Assumes the input is in SSA form (which is preserved).
 initBranchVars :: InfoTable -> InfoTable
 initBranchVars = mapT (const goFun)
   where
@@ -64,7 +66,7 @@ initBranchVars = mapT (const goFun)
         (a <> mconcat as, is)
 
     addInits :: HashSet VarRef -> Code -> Code
-    addInits vars is = is ++ map mk (toList vars)
+    addInits vars is = map mk (toList vars) ++ is
       where
         mk :: VarRef -> Instruction
         mk vref =
@@ -73,3 +75,17 @@ initBranchVars = mapT (const goFun)
               { _instrAssignResult = vref,
                 _instrAssignValue = Const ConstVoid
               }
+
+checkInitialized :: InfoTable -> Bool
+checkInitialized tab = all (goFun . (^. functionCode)) (tab ^. infoFunctions)
+  where
+    goFun :: Code -> Bool
+    goFun = snd . ifoldB go (mempty, True)
+      where
+        go :: (HashSet VarRef, Bool) -> [(HashSet VarRef, Bool)] -> Instruction -> (HashSet VarRef, Bool)
+        go (v, b) ls i = case getResultVar i of
+          Just vref -> (HashSet.insert vref v', b')
+          Nothing -> (v', b')
+          where
+            v' = v <> mconcat (map fst ls)
+            b' = b && allEqual (map fst ls) && and (map snd ls)
