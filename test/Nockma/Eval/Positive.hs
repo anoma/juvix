@@ -79,7 +79,7 @@ compilerTest n mainFun _testCheck _evalInterceptStdlibCalls =
         | _evalInterceptStdlibCalls = n <> " - intercept stdlib"
         | otherwise = n
       opts = CompilerOptions {_compilerOptionsEnableTrace = False}
-      Cell _testProgramSubject _testProgramFormula = runCompilerWith opts mempty [] f
+      Cell _testProgramSubject _testProgramFormula = runCompilerWithJuvix opts mempty [] f
       _testEvalOptions = EvalOptions {..}
    in Test {..}
 
