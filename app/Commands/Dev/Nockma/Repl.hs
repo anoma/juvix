@@ -85,7 +85,8 @@ options =
     ("set-stack", setStack),
     ("load", loadFile . Prelude.absFile),
     ("reload", const reloadFile),
-    ("dir", direction')
+    ("dir", direction'),
+    ("help", const printHelpTxt)
   ]
 
 banner :: Repline.MultiLine -> Repl String
