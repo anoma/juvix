@@ -15,6 +15,8 @@ module Juvix.Compiler.Nockma.Translation.FromTree
     nockNatLiteral,
     callStdlib,
     appendRights,
+    foldTerms,
+    pathToArg,
   )
 where
 

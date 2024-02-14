@@ -21,10 +21,16 @@ data Test = Test
 makeLenses ''Test
 
 allTests :: TestTree
-allTests = testGroup "Nockma eval unit positive" (map mk tests)
+allTests =
+  testGroup
+    "Nockma eval positive"
+    [ testGroup "Unit" (map mkNockmaTest unitTests),
+      testGroup "Juvix calling convention" (map mkNockmaTest juvixCallingConventionTests),
+      testGroup "Anoma calling convention" (map mkNockmaTest anomaCallingConventionTests)
+    ]
   where
-    mk :: Test -> TestTree
-    mk Test {..} = testCase (unpack _testName) $ do
+    mkNockmaTest :: Test -> TestTree
+    mkNockmaTest Test {..} = testCase (unpack _testName) $ do
       let (traces, evalResult) =
             run
               . runReader _testEvalOptions
@@ -83,29 +89,58 @@ compilerTest n mainFun _testCheck _evalInterceptStdlibCalls =
       _testEvalOptions = EvalOptions {..}
    in Test {..}
 
+anomaTest :: Text -> Term Natural -> [Term Natural] -> Check () -> Bool -> Test
+anomaTest n mainFun args _testCheck _evalInterceptStdlibCalls =
+  let f =
+        CompilerFunction
+          { _compilerFunctionName = UserFunction (defaultSymbol 0),
+            _compilerFunctionArity = fromIntegral (length args),
+            _compilerFunction = return mainFun
+          }
+      _testName :: Text
+        | _evalInterceptStdlibCalls = n <> " - intercept stdlib"
+        | otherwise = n
+
+      opts = CompilerOptions {_compilerOptionsEnableTrace = False}
+
+      _testProgramSubject = TermCell (runCompilerWithAnoma opts mempty [] f)
+
+      _testProgramFormula = case nonEmpty args of
+        Just args' -> OpCall # [L] # OpReplace # ([R, L] # foldTerms args') # (OpAddress # emptyPath)
+        Nothing -> OpCall # [L] # (OpAddress # emptyPath)
+      _testEvalOptions = EvalOptions {..}
+   in Test {..}
+
 test :: Text -> Term Natural -> Term Natural -> Check () -> Test
 test = Test defaultEvalOptions
 
-compilerTests :: [Test]
-compilerTests =
-  concatMap
-    (\mkT -> [mkT True, mkT False])
-    [ compilerTest "stdlib add" (add (nockNatLiteral 1) (nockNatLiteral 2)) (eqNock [nock| 3 |]),
-      compilerTest "stdlib dec" (dec (nockNatLiteral 1)) (eqNock [nock| 0 |]),
-      compilerTest "stdlib mul" (mul (nockNatLiteral 2) (nockNatLiteral 3)) (eqNock [nock| 6 |]),
-      compilerTest "stdlib sub" (sub (nockNatLiteral 2) (nockNatLiteral 1)) (eqNock [nock| 1 |]),
-      compilerTest "stdlib div" (callStdlib StdlibDiv [nockNatLiteral 10, nockNatLiteral 3]) (eqNock [nock| 3 |]),
-      compilerTest "stdlib mod" (callStdlib StdlibMod [nockNatLiteral 3, nockNatLiteral 2]) (eqNock [nock| 1 |]),
-      compilerTest "stdlib le" (callStdlib StdlibLe [nockNatLiteral 3, nockNatLiteral 3]) (eqNock [nock| true |]),
-      compilerTest "stdlib lt" (callStdlib StdlibLt [nockNatLiteral 3, nockNatLiteral 3]) (eqNock [nock| false |]),
-      compilerTest "stdlib pow2" (pow2 (nockNatLiteral 3)) (eqNock [nock| 8 |]),
-      compilerTest "stdlib nested" (dec (dec (nockNatLiteral 20))) (eqNock [nock| 18 |]),
-      compilerTest "append rights - empty" (appendRights emptyPath (nockNatLiteral 3)) (eqNock (toNock [R, R, R])),
-      compilerTest "append rights" (appendRights [L, L] (nockNatLiteral 3)) (eqNock (toNock [L, L, R, R, R]))
-    ]
+anomaCallingConventionTests :: [Test]
+anomaCallingConventionTests =
+  [True, False]
+    <**> [ anomaTest "stdlib add" (add (nockNatLiteral 1) (nockNatLiteral 2)) [] (eqNock [nock| 3 |]),
+           anomaTest "stdlib add with arg" (add (nockNatLiteral 1) (nockNatLiteral 2)) [nockNatLiteral 1] (eqNock [nock| 3 |]),
+           anomaTest "stdlib sub args" (sub (OpAddress # pathToArg 0) (OpAddress # pathToArg 1)) [nockNatLiteral 3, nockNatLiteral 1] (eqNock [nock| 2 |])
+         ]
 
-tests :: [Test]
-tests =
+juvixCallingConventionTests :: [Test]
+juvixCallingConventionTests =
+  [True, False]
+    <**> [ compilerTest "stdlib add" (add (nockNatLiteral 1) (nockNatLiteral 2)) (eqNock [nock| 3 |]),
+           compilerTest "stdlib dec" (dec (nockNatLiteral 1)) (eqNock [nock| 0 |]),
+           compilerTest "stdlib mul" (mul (nockNatLiteral 2) (nockNatLiteral 3)) (eqNock [nock| 6 |]),
+           compilerTest "stdlib sub" (sub (nockNatLiteral 2) (nockNatLiteral 1)) (eqNock [nock| 1 |]),
+           compilerTest "stdlib div" (callStdlib StdlibDiv [nockNatLiteral 10, nockNatLiteral 3]) (eqNock [nock| 3 |]),
+           compilerTest "stdlib mod" (callStdlib StdlibMod [nockNatLiteral 3, nockNatLiteral 2]) (eqNock [nock| 1 |]),
+           compilerTest "stdlib le" (callStdlib StdlibLe [nockNatLiteral 3, nockNatLiteral 3]) (eqNock [nock| true |]),
+           compilerTest "stdlib lt" (callStdlib StdlibLt [nockNatLiteral 3, nockNatLiteral 3]) (eqNock [nock| false |]),
+           compilerTest "stdlib pow2" (pow2 (nockNatLiteral 3)) (eqNock [nock| 8 |]),
+           compilerTest "stdlib nested" (dec (dec (nockNatLiteral 20))) (eqNock [nock| 18 |]),
+           compilerTest "append rights - empty" (appendRights emptyPath (nockNatLiteral 3)) (eqNock (toNock [R, R, R])),
+           compilerTest "append rights" (appendRights [L, L] (nockNatLiteral 3)) (eqNock (toNock [L, L, R, R, R]))
+         ]
+
+unitTests :: [Test]
+unitTests =
   [ test "address" [nock| [0 1] |] [nock| [[@ R] [@ L]] |] (eqNock [nock| [1 0] |]),
     test "address nested" [nock| [0 1 2 3 4 5] |] [nock| [@ RRRRR] |] (eqNock [nock| 5 |]),
     test "quote" [nock| [0 1] |] [nock| [quote [1 0]] |] (eqNock [nock| [1 0] |]),
@@ -123,4 +158,3 @@ tests =
     test "replace" [nock| [0 1] |] [nock| [replace [[L [quote 1]] [@ S]]] |] (eqNock [nock| [1 1] |]),
     test "hint" [nock| [0 1] |] [nock| [hint [nil [trace [quote 2] [quote 3]]] [quote 1]] |] (eqTraces [[nock| 2 |]] >> eqNock [nock| 1 |])
   ]
-    ++ compilerTests
