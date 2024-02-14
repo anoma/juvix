@@ -200,7 +200,7 @@ import Text.Read qualified as Text
 import Text.Show (Show)
 import Text.Show qualified as Show
 import Text.Show.Unicode (urecover, ushow)
-import Prelude (Double)
+import Prelude (Double, ($!))
 
 type EmbedIO = Embed.Embed IO
 
@@ -607,8 +607,7 @@ ensureLn t =
       _ -> Text.snoc t '\n'
 
 writeFileEnsureLn :: (MonadIO m) => Path Abs File -> Text -> m ()
-writeFileEnsureLn p = liftIO . Utf8.writeFile (toFilePath p) . ensureLn
-{-# INLINE writeFileEnsureLn #-}
+writeFileEnsureLn p !txt = liftIO (Utf8.writeFile (toFilePath p) $! (ensureLn txt))
 
 -- TODO: change FilePath to Path Abs File
 readFile :: (MonadIO m) => FilePath -> m Text
