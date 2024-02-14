@@ -156,6 +156,24 @@ tests:
     stdout: ""
     exit-status: 0
 
+  - name: target-anoma
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        testdir=$PWD/tests/Anoma/positive/Compilation
+        cd $temp
+        juvix compile -t anoma $testdir/test001.juvix
+        [ -f test001.nockma ]
+        juvix dev nockma repl test001.nockma
+    stdout:
+      contains:
+        "true"
+    stdin: "[call [L [replace [RL [quote 0]] [@ S]]]]"
+    exit-status: 0
+
   - name: target-vampir
     command:
       shell:
