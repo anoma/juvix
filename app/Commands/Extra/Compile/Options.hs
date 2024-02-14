@@ -14,6 +14,7 @@ data CompileTarget
   | TargetReg
   | TargetTree
   | TargetNockma
+  | TargetAnoma
   deriving stock (Eq, Data, Bounded, Enum)
 
 instance Show CompileTarget where
@@ -27,6 +28,7 @@ instance Show CompileTarget where
     TargetReg -> "reg"
     TargetTree -> "tree"
     TargetNockma -> "nockma"
+    TargetAnoma -> "anoma"
 
 data CompileOptions = CompileOptions
   { _compileDebug :: Bool,

@@ -21,6 +21,8 @@ import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromParsed qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Core qualified as Core
+import Juvix.Compiler.Core.Data.TransformationId
+import Juvix.Compiler.Core.Transformation
 import Juvix.Compiler.Core.Translation.Stripped.FromCore qualified as Stripped
 import Juvix.Compiler.Internal qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
@@ -41,7 +43,6 @@ import Juvix.Compiler.Tree qualified as Tree
 import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process
 import Juvix.Data.Effect.TaggedLock
-import Juvix.Prelude
 
 type PipelineAppEffects = '[TaggedLock, EmbedIO, Resource, Final IO]
 
@@ -164,10 +165,13 @@ coreToReg :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -
 coreToReg = Core.toStored >=> storedCoreToReg
 
 coreToNockma :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r (Nockma.Cell Natural)
-coreToNockma = coreToTree >=> treeToNockma
+coreToNockma = mapReader Core.fromEntryPoint . applyTransformations toExec >=> coreToTree >=> treeToNockma
+
+coreToAnoma :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r (Nockma.Cell Natural)
+coreToAnoma = coreToTree >=> treeToAnoma
 
 coreToMiniC :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r C.MiniCResult
-coreToMiniC = coreToAsm >=> asmToMiniC
+coreToMiniC = mapReader Core.fromEntryPoint . applyTransformations toExec >=> coreToAsm >=> asmToMiniC
 
 coreToGeb :: (Members '[Error JuvixError, Reader EntryPoint] r) => Geb.ResultSpec -> Core.Module -> Sem r Geb.Result
 coreToGeb spec = Core.toStored >=> storedCoreToGeb spec
@@ -191,6 +195,9 @@ treeToReg = treeToAsm >=> asmToReg
 treeToNockma :: (Members '[Error JuvixError, Reader EntryPoint] r) => Tree.InfoTable -> Sem r (Nockma.Cell Natural)
 treeToNockma = Tree.toNockma >=> mapReader NockmaTree.fromEntryPoint . NockmaTree.fromTreeTable NockmaTree.ProgramCallingConventionJuvix
 
+treeToAnoma :: (Members '[Error JuvixError, Reader EntryPoint] r) => Tree.InfoTable -> Sem r (Nockma.Cell Natural)
+treeToAnoma = Tree.toNockma >=> mapReader NockmaTree.fromEntryPoint . NockmaTree.fromTreeTable NockmaTree.ProgramCallingConventionAnoma
+
 treeToMiniC :: (Members '[Error JuvixError, Reader EntryPoint] r) => Tree.InfoTable -> Sem r C.MiniCResult
 treeToMiniC = treeToAsm >=> asmToMiniC
 
@@ -208,6 +215,9 @@ regToMiniC tab = do
 
 treeToNockma' :: (Members '[Error JuvixError, Reader NockmaTree.CompilerOptions] r) => Tree.InfoTable -> Sem r (Nockma.Cell Natural)
 treeToNockma' = Tree.toNockma >=> NockmaTree.fromTreeTable NockmaTree.ProgramCallingConventionJuvix
+
+treeToAnoma' :: (Members '[Error JuvixError, Reader NockmaTree.CompilerOptions] r) => Tree.InfoTable -> Sem r (Nockma.Cell Natural)
+treeToAnoma' = Tree.toNockma >=> NockmaTree.fromTreeTable NockmaTree.ProgramCallingConventionAnoma
 
 asmToMiniC' :: (Members '[Error JuvixError, Reader Asm.Options] r) => Asm.InfoTable -> Sem r C.MiniCResult
 asmToMiniC' = mapError (JuvixError @Asm.AsmError) . Asm.toReg' >=> regToMiniC' . Reg.fromAsm

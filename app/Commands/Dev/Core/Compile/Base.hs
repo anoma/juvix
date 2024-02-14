@@ -43,6 +43,7 @@ getEntry PipelineArg {..} = do
       TargetReg -> Backend.TargetReg
       TargetTree -> Backend.TargetTree
       TargetNockma -> Backend.TargetNockma
+      TargetAnoma -> Backend.TargetAnoma
 
     defaultOptLevel :: Int
     defaultOptLevel
@@ -149,6 +150,19 @@ runNockmaPipeline pa@PipelineArg {..} = do
     runReader entryPoint
       . runError @JuvixError
       . coreToNockma
+      $ _pipelineArgModule
+  tab' <- getRight r
+  let code = Nockma.ppSerialize tab'
+  writeFileEnsureLn nockmaFile code
+
+runAnomaPipeline :: (Members '[Embed IO, App, TaggedLock] r) => PipelineArg -> Sem r ()
+runAnomaPipeline pa@PipelineArg {..} = do
+  entryPoint <- getEntry pa
+  nockmaFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
+  r <-
+    runReader entryPoint
+      . runError @JuvixError
+      . coreToAnoma
       $ _pipelineArgModule
   tab' <- getRight r
   let code = Nockma.ppSerialize tab'
