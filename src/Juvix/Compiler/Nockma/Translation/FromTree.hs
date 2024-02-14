@@ -554,9 +554,6 @@ makeList ts = foldTerms (ts `prependList` pure (TermAtom nockNil))
 remakeList :: (Foldable l) => l (Term Natural) -> Term Natural
 remakeList ts = foldTerms (toList ts `prependList` pure (OpQuote # nockNil'))
 
-nockNil' :: Term Natural
-nockNil' = TermAtom nockNil
-
 -- | Initialize the stack. The resulting term is intended to be evaulated
 -- against a subject that contains function arguments.
 initStackWithArgs :: [Term Natural] -> [Term Natural] -> Term Natural
