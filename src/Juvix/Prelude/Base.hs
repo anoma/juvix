@@ -200,7 +200,7 @@ import Text.Read qualified as Text
 import Text.Show (Show)
 import Text.Show qualified as Show
 import Text.Show.Unicode (urecover, ushow)
-import Prelude (Double, ($!))
+import Prelude (Double)
 
 type EmbedIO = Embed.Embed IO
 
