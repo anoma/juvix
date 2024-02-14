@@ -105,7 +105,7 @@ csvRules s =
               | (v, r) <- zipExact (s ^. suiteVariants) rows
             ]
           header' = "Color," <> header
-      writeFile (toFilePath csv) (Text.unlines (header' : rows'))
+      writeFileEnsureLn csv (Text.unlines (header' : rows'))
 
 fromSuite :: Suite -> [Benchmark]
 fromSuite s = map go (s ^. suiteVariants)
