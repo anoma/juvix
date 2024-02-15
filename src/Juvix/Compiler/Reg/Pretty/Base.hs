@@ -6,7 +6,7 @@ where
 
 import Data.Foldable
 import Juvix.Compiler.Reg.Data.InfoTable
-import Juvix.Compiler.Reg.Language
+import Juvix.Compiler.Reg.Interpreter.Base
 import Juvix.Compiler.Reg.Pretty.Options
 import Juvix.Compiler.Tree.Pretty.Base qualified as Tree
 import Juvix.Compiler.Tree.Pretty.Extra
@@ -21,6 +21,9 @@ doc opts =
 
 class PrettyCode c where
   ppCode :: (Member (Reader Options) r) => c -> Sem r (Doc Ann)
+
+instance PrettyCode Val where
+  ppCode = Tree.ppCode
 
 instance PrettyCode VarRef where
   ppCode VarRef {..} = case _varRefName of
