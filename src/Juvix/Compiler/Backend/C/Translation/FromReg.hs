@@ -221,10 +221,8 @@ fromRegInstr bNoStack info = \case
     return []
   Reg.Binop x ->
     return [fromBinaryOp x]
-  Reg.Show Reg.InstrShow {..} ->
-    return [StatementExpr $ macroCall "JUVIX_SHOW" [fromVarRef _instrShowResult, fromValue _instrShowValue]]
-  Reg.StrToInt Reg.InstrStrToInt {..} ->
-    return [StatementExpr $ macroCall "JUVIX_STR_TO_INT" [fromVarRef _instrStrToIntResult, fromValue _instrStrToIntValue]]
+  Reg.Unop x ->
+    return [fromUnaryOp x]
   Reg.Assign Reg.InstrAssign {..} ->
     return $ stmtsAssign (fromVarRef _instrAssignResult) (fromValue _instrAssignValue)
   Reg.Trace Reg.InstrTrace {..} ->
@@ -233,8 +231,6 @@ fromRegInstr bNoStack info = \case
     return [StatementExpr $ macroVar "JUVIX_DUMP"]
   Reg.Failure Reg.InstrFailure {..} ->
     return [StatementExpr $ macroCall "JUVIX_FAILURE" [fromValue _instrFailureValue]]
-  Reg.ArgsNum Reg.InstrArgsNum {..} ->
-    return [StatementExpr $ macroCall "JUVIX_ARGS_NUM" [fromVarRef _instrArgsNumResult, fromValue _instrArgsNumValue]]
   Reg.Prealloc x ->
     return [fromPrealloc x]
   Reg.Alloc x ->
@@ -260,18 +256,18 @@ fromRegInstr bNoStack info = \case
   Reg.Block Reg.InstrBlock {..} ->
     fromRegCode bNoStack info _instrBlockCode
   where
-    fromBinaryOp :: Reg.BinaryOp -> Statement
-    fromBinaryOp Reg.BinaryOp {..} =
+    fromBinaryOp :: Reg.InstrBinop -> Statement
+    fromBinaryOp Reg.InstrBinop {..} =
       StatementExpr $
         macroCall
-          (getOpcodeMacro _binaryOpCode)
-          [ fromVarRef _binaryOpResult,
-            fromValue _binaryOpArg1,
-            fromValue _binaryOpArg2
+          (getBinaryOpMacro _instrBinopOpcode)
+          [ fromVarRef _instrBinopResult,
+            fromValue _instrBinopArg1,
+            fromValue _instrBinopArg2
           ]
 
-    getOpcodeMacro :: Reg.Opcode -> Text
-    getOpcodeMacro = \case
+    getBinaryOpMacro :: Reg.BinaryOp -> Text
+    getBinaryOpMacro = \case
       Reg.OpIntAdd -> "JUVIX_INT_ADD"
       Reg.OpIntSub -> "JUVIX_INT_SUB"
       Reg.OpIntMul -> "JUVIX_INT_MUL"
@@ -281,6 +277,21 @@ fromRegInstr bNoStack info = \case
       Reg.OpIntLe -> "JUVIX_INT_LE"
       Reg.OpEq -> "JUVIX_VAL_EQ"
       Reg.OpStrConcat -> "JUVIX_STR_CONCAT"
+
+    fromUnaryOp :: Reg.InstrUnop -> Statement
+    fromUnaryOp Reg.InstrUnop {..} =
+      StatementExpr $
+        macroCall
+          (getUnaryOpMacro _instrUnopOpcode)
+          [ fromVarRef _instrUnopResult,
+            fromValue _instrUnopArg
+          ]
+
+    getUnaryOpMacro :: Reg.UnaryOp -> Text
+    getUnaryOpMacro = \case
+      Reg.OpShow -> "JUVIX_SHOW"
+      Reg.OpStrToInt -> "JUVIX_STR_TO_INT"
+      Reg.OpArgsNum -> "JUVIX_ARGS_NUM"
 
     fromVarRef :: Reg.VarRef -> Expression
     fromVarRef Reg.VarRef {..} =

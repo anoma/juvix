@@ -47,37 +47,20 @@ instance PrettyCode Value where
     CRef x -> ppCode x
     VRef x -> ppCode x
 
-instance PrettyCode Opcode where
-  ppCode op = return $ case op of
-    OpIntAdd -> primitive Str.add_
-    OpIntSub -> primitive Str.sub_
-    OpIntMul -> primitive Str.mul_
-    OpIntDiv -> primitive Str.div_
-    OpIntMod -> primitive Str.mod_
-    OpIntLt -> primitive Str.lt_
-    OpIntLe -> primitive Str.le_
-    OpEq -> primitive Str.eq
-    OpStrConcat -> primitive Str.instrStrConcat
-
-instance PrettyCode BinaryOp where
-  ppCode BinaryOp {..} = do
-    res <- ppCode _binaryOpResult
-    arg1 <- ppCode _binaryOpArg1
-    arg2 <- ppCode _binaryOpArg2
-    op <- ppCode _binaryOpCode
+instance PrettyCode InstrBinop where
+  ppCode InstrBinop {..} = do
+    res <- ppCode _instrBinopResult
+    arg1 <- ppCode _instrBinopArg1
+    arg2 <- ppCode _instrBinopArg2
+    op <- Tree.ppCode _instrBinopOpcode
     return $ res <+> primitive Str.equal <+> op <+> arg1 <+> arg2
 
-instance PrettyCode InstrShow where
-  ppCode InstrShow {..} = do
-    res <- ppCode _instrShowResult
-    val <- ppCode _instrShowValue
-    return $ res <+> primitive Str.equal <+> primitive Str.show_ <+> val
-
-instance PrettyCode InstrStrToInt where
-  ppCode InstrStrToInt {..} = do
-    res <- ppCode _instrStrToIntResult
-    val <- ppCode _instrStrToIntValue
-    return $ res <+> primitive Str.equal <+> primitive Str.instrStrToInt <+> val
+instance PrettyCode InstrUnop where
+  ppCode InstrUnop {..} = do
+    op <- Tree.ppCode _instrUnopOpcode
+    res <- ppCode _instrUnopResult
+    val <- ppCode _instrUnopArg
+    return $ res <+> primitive Str.equal <+> op <+> val
 
 instance PrettyCode InstrAssign where
   ppCode InstrAssign {..} = do
@@ -94,12 +77,6 @@ instance PrettyCode InstrFailure where
   ppCode InstrFailure {..} = do
     val <- ppCode _instrFailureValue
     return $ primitive Str.fail_ <+> val
-
-instance PrettyCode InstrArgsNum where
-  ppCode InstrArgsNum {..} = do
-    res <- ppCode _instrArgsNumResult
-    val <- ppCode _instrArgsNumValue
-    return $ res <+> primitive Str.equal <+> primitive Str.argsnum <+> val
 
 ppLiveVars :: (Member (Reader Options) r) => [VarRef] -> Sem r (Doc Ann)
 ppLiveVars vars
@@ -260,13 +237,11 @@ instance PrettyCode Instruction where
   ppCode = \case
     Nop -> return $ primitive Str.nop
     Binop x -> ppCode x
-    Show x -> ppCode x
-    StrToInt x -> ppCode x
+    Unop x -> ppCode x
     Assign x -> ppCode x
     Trace x -> ppCode x
     Dump -> return $ primitive Str.dump
     Failure x -> ppCode x
-    ArgsNum x -> ppCode x
     Prealloc x -> ppCode x
     Alloc x -> ppCode x
     AllocClosure x -> ppCode x

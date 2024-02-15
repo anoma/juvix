@@ -9,10 +9,12 @@
 module Juvix.Compiler.Asm.Language
   ( module Juvix.Compiler.Asm.Language,
     module Juvix.Compiler.Tree.Language.Base,
+    module Juvix.Compiler.Tree.Language.Builtins,
   )
 where
 
 import Juvix.Compiler.Tree.Language.Base
+import Juvix.Compiler.Tree.Language.Builtins
 
 -- In what follows, when referring to the stack we mean the current local value
 -- stack, unless otherwise stated. By stack[n] we denote the n-th cell from the
@@ -35,12 +37,10 @@ data CallType
 data Instruction
   = -- | An instruction which takes its operands from the two top stack cells,
     -- pops the stack by two, and then pushes the result.
-    Binop Opcode
-  | -- | Convert the top stack cell to a string. JVA opcode: 'show'.
-    ValShow
-  | -- | Convert a string on top of the stack into an integer. JVA opcode:
-    -- 'atoi'.
-    StrToInt
+    Binop BinaryOp
+  | -- | An instruction which on the top of the value stack, replacing it with
+    -- the result of a unary operation.
+    Unop UnaryOp
   | -- | Push a value on top of the stack. JVA opcode: 'push <val>'.
     Push Value
   | -- | Pop the stack. JVA opcode: 'pop'.
@@ -53,10 +53,6 @@ data Instruction
   | -- | Interrupt execution with a runtime error printing the value on top of
     -- the stack. JVA opcode: 'fail'.
     Failure
-  | -- | Computes the number of expected arguments for the closure on top of the
-    -- stack, pops the stack and pushes the result on top of the stack. JVA
-    -- opcode: 'argsnum'.
-    ArgsNum
   | -- | Preallocate memory. This instruction is inserted automatically before
     -- translation to JuvixReg. It does not occur in JVA files.
     Prealloc InstrPrealloc
@@ -115,35 +111,6 @@ data Instruction
     -- The return instruction can only appear in tail position in a function.
     -- JVA opcode: 'ret'.
     Return
-
-data Opcode
-  = -- | Add stack[0] + stack[1], pop the stack by two, and push the result. JVA
-    -- opcode: 'add'.
-    IntAdd
-  | -- | Subtract stack[0] - stack[1], pop the stack by two, and push the
-    -- result. JVA opcode: 'sub'.
-    IntSub
-  | -- | Multiply stack[0] * stack[1], pop the stack by two, and push the
-    -- result. JVA opcode 'mul'.
-    IntMul
-  | -- | Divide stack[0] / stack[1], pop the stack by two, and push the result.
-    -- JVA opcode: 'div'.
-    IntDiv
-  | -- | Calculate modulus stack[0] % stack[1], pop the stack by two, and push
-    -- the result. JVA opcode: 'mod'.
-    IntMod
-  | -- | Compare stack[0] < stack[1], pop the stack by two, and push the result.
-    -- JVA opcode: 'lt'.
-    IntLt
-  | -- | Compare stack[0] <= stack[1], pop the stack by two, and push the
-    -- result. JVA opcode: 'le'.
-    IntLe
-  | -- | Compare the two top stack cells with structural equality, pop the stack
-    -- by two, and push the result. JVA opcode: 'eq'.
-    ValEq
-  | -- | Concatenate two string on top of the stack, pop the stack by two, and
-    -- push the result. JVA opcode: 'strcat'.
-    StrConcat
 
 newtype InstrPrealloc = InstrPrealloc
   { -- | How many words to preallocate?

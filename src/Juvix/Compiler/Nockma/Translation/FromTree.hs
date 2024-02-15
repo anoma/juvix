@@ -339,30 +339,37 @@ compile = \case
     goUnop Tree.NodeUnop {..} = do
       arg <- compile _nodeUnopArg
       return $ case _nodeUnopOpcode of
-        Tree.OpShow -> stringsErr
-        Tree.OpStrToInt -> stringsErr
+        Tree.PrimUnop op -> goPrimUnop op arg
         Tree.OpFail -> crash
         Tree.OpTrace -> OpTrace # arg # arg
-        Tree.OpArgsNum ->
-          let getF f = getClosureField f arg
-           in sub (getF ClosureTotalArgsNum) (getF ClosureArgsNum)
+
+    goPrimUnop :: Tree.UnaryOp -> Term Natural -> Term Natural
+    goPrimUnop op arg = case op of
+      Tree.OpShow -> stringsErr
+      Tree.OpStrToInt -> stringsErr
+      Tree.OpArgsNum ->
+        let getF f = getClosureField f arg
+         in sub (getF ClosureTotalArgsNum) (getF ClosureArgsNum)
 
     goBinop :: Tree.NodeBinop -> Sem r (Term Natural)
     goBinop Tree.NodeBinop {..} = do
       arg1 <- compile _nodeBinopArg1
       arg2 <- compile _nodeBinopArg2
-      let args = [arg1, arg2]
       case _nodeBinopOpcode of
-        Tree.IntAdd -> return (callStdlib StdlibAdd args)
-        Tree.IntSub -> return (callStdlib StdlibSub args)
-        Tree.IntMul -> return (callStdlib StdlibMul args)
-        Tree.IntDiv -> return (callStdlib StdlibDiv args)
-        Tree.IntMod -> return (callStdlib StdlibMod args)
-        Tree.IntLt -> return (callStdlib StdlibLt args)
-        Tree.IntLe -> return (callStdlib StdlibLe args)
+        Tree.PrimBinop op -> goPrimBinop op [arg1, arg2]
         Tree.OpSeq -> return (OpHint # (nockNil' # arg1) # arg2)
-        Tree.ValEq -> testEq _nodeBinopArg1 _nodeBinopArg2
-        Tree.StrConcat -> stringsErr
+      where
+        goPrimBinop :: Tree.BinaryOp -> [Term Natural] -> Sem r (Term Natural)
+        goPrimBinop op args = case op of
+          Tree.OpIntAdd -> return (callStdlib StdlibAdd args)
+          Tree.OpIntSub -> return (callStdlib StdlibSub args)
+          Tree.OpIntMul -> return (callStdlib StdlibMul args)
+          Tree.OpIntDiv -> return (callStdlib StdlibDiv args)
+          Tree.OpIntMod -> return (callStdlib StdlibMod args)
+          Tree.OpIntLt -> return (callStdlib StdlibLt args)
+          Tree.OpIntLe -> return (callStdlib StdlibLe args)
+          Tree.OpEq -> testEq _nodeBinopArg1 _nodeBinopArg2
+          Tree.OpStrConcat -> stringsErr
 
     goAllocClosure :: Tree.NodeAllocClosure -> Sem r (Term Natural)
     goAllocClosure Tree.NodeAllocClosure {..} = do

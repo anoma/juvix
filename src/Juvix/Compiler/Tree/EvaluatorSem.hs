@@ -4,12 +4,12 @@ import Control.Exception qualified as Exception
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Tree.Data.InfoTable
 import Juvix.Compiler.Tree.Error
-import Juvix.Compiler.Tree.Evaluator (EvalError (..), printValue, toTreeError, valueToNode)
+import Juvix.Compiler.Tree.Evaluator (EvalError (..), toTreeError, valueToNode)
+import Juvix.Compiler.Tree.Evaluator.Builtins
 import Juvix.Compiler.Tree.Extra.Base
 import Juvix.Compiler.Tree.Language
 import Juvix.Compiler.Tree.Language.Value
 import Juvix.Compiler.Tree.Pretty
-import Text.Read qualified as T
 
 data EvalCtx = EvalCtx
   { _evalCtxArgs :: [Value],
@@ -47,72 +47,29 @@ eval tab = runReader emptyEvalCtx . eval'
         evalError msg =
           Exception.throw (EvalError (getNodeLocation node) msg)
 
+        eitherToError :: Either Text Value -> Sem r' Value
+        eitherToError = \case
+          Left err -> evalError err
+          Right v -> return v
+
         goBinop :: NodeBinop -> Sem r' Value
         goBinop NodeBinop {..} = do
           arg1 <- eval' _nodeBinopArg1
           arg2 <- eval' _nodeBinopArg2
           case _nodeBinopOpcode of
-            IntAdd -> goIntBinop (+) arg1 arg2
-            IntSub -> goIntBinop (-) arg1 arg2
-            IntMul -> goIntBinop (*) arg1 arg2
-            IntDiv
-              | arg2 == ValInteger 0 -> evalError "division by zero"
-              | otherwise -> goIntBinop quot arg1 arg2
-            IntMod
-              | arg2 == ValInteger 0 -> evalError "division by zero"
-              | otherwise -> goIntBinop rem arg1 arg2
-            IntLe -> goIntCmpBinop (<=) arg1 arg2
-            IntLt -> goIntCmpBinop (<) arg1 arg2
-            ValEq -> return (ValBool (arg1 == arg2))
-            StrConcat -> goStrConcat arg1 arg2
+            PrimBinop op -> eitherToError $ evalBinop op arg1 arg2
             OpSeq -> return arg2
-
-        goIntBinop :: (Integer -> Integer -> Integer) -> Value -> Value -> Sem r' Value
-        goIntBinop f v1 v2 = case (v1, v2) of
-          (ValInteger i1, ValInteger i2) -> return (ValInteger (f i1 i2))
-          _ -> evalError "expected two integer arguments"
-
-        goIntCmpBinop :: (Integer -> Integer -> Bool) -> Value -> Value -> Sem r' Value
-        goIntCmpBinop f v1 v2 = case (v1, v2) of
-          (ValInteger i1, ValInteger i2) -> return (ValBool (f i1 i2))
-          _ -> evalError "expected two integer arguments"
-
-        goStrConcat :: Value -> Value -> Sem r' Value
-        goStrConcat v1 v2 = case (v1, v2) of
-          (ValString s1, ValString s2) -> return (ValString (s1 <> s2))
-          _ -> evalError "expected two string arguments"
 
         goUnop :: NodeUnop -> Sem r' Value
         goUnop NodeUnop {..} = do
           v <- eval' _nodeUnopArg
           case _nodeUnopOpcode of
-            OpShow -> return (ValString (printValue tab v))
-            OpStrToInt -> goStringUnop strToInt v
+            PrimUnop op -> eitherToError $ evalUnop tab op v
             OpTrace -> goTrace v
             OpFail -> goFail v
-            OpArgsNum -> goArgsNum v
-
-        strToInt :: Text -> Sem r' Value
-        strToInt s = case T.readMaybe (fromText s) of
-          Just i -> return (ValInteger i)
-          Nothing -> evalError "string to integer: not an integer"
-
-        goStringUnop :: (Text -> Sem r' Value) -> Value -> Sem r' Value
-        goStringUnop f = \case
-          ValString s -> f s
-          _ -> evalError "expected a string argument"
 
         goFail :: Value -> Sem r' Value
         goFail v = evalError ("failure: " <> printValue tab v)
-
-        goArgsNum :: Value -> Sem r' Value
-        goArgsNum = \case
-          ValClosure Closure {..} -> return (ValInteger (fromIntegral argsNum))
-            where
-              fi = lookupFunInfo tab _closureSymbol
-              argsNum = fi ^. functionArgsNum - length _closureArgs
-          _ ->
-            evalError "expected a closure"
 
         goTrace :: Value -> Sem r' Value
         goTrace v = output v $> v

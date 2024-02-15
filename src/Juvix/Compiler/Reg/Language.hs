@@ -51,11 +51,9 @@ deriving stock instance (Eq ConstrField)
 deriving stock instance (Eq Value)
 
 data Instruction
-  = Binop BinaryOp
-  | Show InstrShow
-  | StrToInt InstrStrToInt
+  = Binop InstrBinop
+  | Unop InstrUnop
   | Assign InstrAssign
-  | ArgsNum InstrArgsNum
   | Alloc InstrAlloc
   | AllocClosure InstrAllocClosure
   | ExtendClosure InstrExtendClosure
@@ -79,35 +77,18 @@ data Instruction
 
 type Code = [Instruction]
 
-data BinaryOp = BinaryOp
-  { _binaryOpCode :: Opcode,
-    _binaryOpResult :: VarRef,
-    _binaryOpArg1 :: Value,
-    _binaryOpArg2 :: Value
+data InstrBinop = InstrBinop
+  { _instrBinopOpcode :: BinaryOp,
+    _instrBinopResult :: VarRef,
+    _instrBinopArg1 :: Value,
+    _instrBinopArg2 :: Value
   }
   deriving stock (Eq)
 
-data Opcode
-  = OpIntAdd
-  | OpIntSub
-  | OpIntMul
-  | OpIntDiv
-  | OpIntMod
-  | OpIntLt
-  | OpIntLe
-  | OpEq
-  | OpStrConcat
-  deriving stock (Eq)
-
-data InstrShow = InstrShow
-  { _instrShowResult :: VarRef,
-    _instrShowValue :: Value
-  }
-  deriving stock (Eq)
-
-data InstrStrToInt = InstrStrToInt
-  { _instrStrToIntResult :: VarRef,
-    _instrStrToIntValue :: Value
+data InstrUnop = InstrUnop
+  { _instrUnopOpcode :: UnaryOp,
+    _instrUnopResult :: VarRef,
+    _instrUnopArg :: Value
   }
   deriving stock (Eq)
 
@@ -124,12 +105,6 @@ newtype InstrTrace = InstrTrace
 
 newtype InstrFailure = InstrFailure
   { _instrFailureValue :: Value
-  }
-  deriving stock (Eq)
-
-data InstrArgsNum = InstrArgsNum
-  { _instrArgsNumResult :: VarRef,
-    _instrArgsNumValue :: Value
   }
   deriving stock (Eq)
 
@@ -236,7 +211,8 @@ newtype InstrBlock = InstrBlock
   }
   deriving stock (Eq)
 
-makeLenses ''BinaryOp
+makeLenses ''InstrBinop
+makeLenses ''InstrUnop
 makeLenses ''InstrAssign
 makeLenses ''InstrTrace
 makeLenses ''InstrFailure
@@ -250,9 +226,6 @@ makeLenses ''InstrBranch
 makeLenses ''InstrCase
 makeLenses ''CaseBranch
 makeLenses ''InstrReturn
-makeLenses ''InstrShow
-makeLenses ''InstrStrToInt
-makeLenses ''InstrArgsNum
 makeLenses ''InstrTailCall
 
 mkVarRef :: VarGroup -> Index -> VarRef

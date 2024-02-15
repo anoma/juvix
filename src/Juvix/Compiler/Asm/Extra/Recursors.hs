@@ -78,29 +78,10 @@ recurse' sig = go True
         fixMemInstr :: Memory -> Instruction -> Sem r Memory
         fixMemInstr mem instr =
           case instr of
-            Binop IntAdd ->
-              fixMemIntOp mem
-            Binop IntSub ->
-              fixMemIntOp mem
-            Binop IntMul ->
-              fixMemIntOp mem
-            Binop IntDiv ->
-              fixMemIntOp mem
-            Binop IntMod ->
-              fixMemIntOp mem
-            Binop IntLt ->
-              fixMemBinOp mem mkTypeInteger mkTypeInteger mkTypeBool
-            Binop IntLe ->
-              fixMemBinOp mem mkTypeInteger mkTypeInteger mkTypeBool
-            Binop ValEq ->
-              fixMemBinOp mem TyDynamic TyDynamic mkTypeBool
-            Binop StrConcat ->
-              fixMemBinOp mem TyString TyString TyString
-            ValShow ->
-              return (pushValueStack TyString (popValueStack 1 mem))
-            StrToInt -> do
-              checkValueStack' loc (sig ^. recursorInfoTable) [TyString] mem
-              return (pushValueStack mkTypeInteger (popValueStack 1 mem))
+            Binop op ->
+              fixMemBinop mem op
+            Unop op ->
+              fixMemUnop mem op
             Push val -> do
               ty <- getValueType' loc (sig ^. recursorInfoTable) mem val
               return (pushValueStack ty mem)
@@ -115,12 +96,6 @@ recurse' sig = go True
               return mem
             Failure ->
               return $ pushValueStack TyDynamic (popValueStack 1 mem)
-            ArgsNum -> do
-              when (null (mem ^. memoryValueStack)) $
-                throw $
-                  AsmError loc "empty value stack"
-              checkFunType (topValueStack' 0 mem)
-              return $ pushValueStack mkTypeInteger (popValueStack 1 mem)
             Prealloc {} ->
               return mem
             AllocConstr tag -> do
@@ -157,12 +132,47 @@ recurse' sig = go True
               return (dropTempStack mem)
 
         fixMemIntOp :: Memory -> Sem r Memory
-        fixMemIntOp mem = fixMemBinOp mem mkTypeInteger mkTypeInteger mkTypeInteger
+        fixMemIntOp mem = fixMemBinOp' mem mkTypeInteger mkTypeInteger mkTypeInteger
 
-        fixMemBinOp :: Memory -> Type -> Type -> Type -> Sem r Memory
-        fixMemBinOp mem ty0 ty1 rty = do
+        fixMemBinOp' :: Memory -> Type -> Type -> Type -> Sem r Memory
+        fixMemBinOp' mem ty0 ty1 rty = do
           checkValueStack' loc (sig ^. recursorInfoTable) [ty0, ty1] mem
           return $ pushValueStack rty (popValueStack 2 mem)
+
+        fixMemBinop :: Memory -> BinaryOp -> Sem r Memory
+        fixMemBinop mem op = case op of
+          OpIntAdd ->
+            fixMemIntOp mem
+          OpIntSub ->
+            fixMemIntOp mem
+          OpIntMul ->
+            fixMemIntOp mem
+          OpIntDiv ->
+            fixMemIntOp mem
+          OpIntMod ->
+            fixMemIntOp mem
+          OpIntLt ->
+            fixMemBinOp' mem mkTypeInteger mkTypeInteger mkTypeBool
+          OpIntLe ->
+            fixMemBinOp' mem mkTypeInteger mkTypeInteger mkTypeBool
+          OpEq ->
+            fixMemBinOp' mem TyDynamic TyDynamic mkTypeBool
+          OpStrConcat ->
+            fixMemBinOp' mem TyString TyString TyString
+
+        fixMemUnop :: Memory -> UnaryOp -> Sem r Memory
+        fixMemUnop mem op = case op of
+          OpShow ->
+            return (pushValueStack TyString (popValueStack 1 mem))
+          OpStrToInt -> do
+            checkValueStack' loc (sig ^. recursorInfoTable) [TyString] mem
+            return (pushValueStack mkTypeInteger (popValueStack 1 mem))
+          OpArgsNum -> do
+            when (null (mem ^. memoryValueStack)) $
+              throw $
+                AsmError loc "empty value stack"
+            checkFunType (topValueStack' 0 mem)
+            return $ pushValueStack mkTypeInteger (popValueStack 1 mem)
 
         fixMemExtendClosure :: Memory -> InstrExtendClosure -> Sem r Memory
         fixMemExtendClosure mem InstrExtendClosure {..} = do
@@ -363,27 +373,9 @@ recurseS' sig = go True
         fixStackInstr :: StackInfo -> Instruction -> Sem r StackInfo
         fixStackInstr si instr =
           case instr of
-            Binop IntAdd ->
+            Binop {} ->
               fixStackBinOp si
-            Binop IntSub ->
-              fixStackBinOp si
-            Binop IntMul ->
-              fixStackBinOp si
-            Binop IntDiv ->
-              fixStackBinOp si
-            Binop IntMod ->
-              fixStackBinOp si
-            Binop IntLt ->
-              fixStackBinOp si
-            Binop IntLe ->
-              fixStackBinOp si
-            Binop ValEq ->
-              fixStackBinOp si
-            Binop StrConcat ->
-              fixStackBinOp si
-            ValShow ->
-              return si
-            StrToInt ->
+            Unop {} ->
               return si
             Push {} -> do
               return (stackInfoPushValueStack 1 si)
@@ -394,9 +386,6 @@ recurseS' sig = go True
             Dump ->
               return si
             Failure ->
-              return si
-            ArgsNum ->
-              -- push + pop = nop
               return si
             Prealloc {} ->
               return si

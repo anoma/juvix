@@ -68,15 +68,15 @@ parseBinop ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r NodeBinop
 parseBinop =
-  parseBinaryOp kwAdd_ IntAdd
-    <|> parseBinaryOp kwSub_ IntSub
-    <|> parseBinaryOp kwMul_ IntMul
-    <|> parseBinaryOp kwDiv_ IntDiv
-    <|> parseBinaryOp kwMod_ IntMod
-    <|> parseBinaryOp kwLt_ IntLt
-    <|> parseBinaryOp kwLe_ IntLe
-    <|> parseBinaryOp kwEq_ ValEq
-    <|> parseBinaryOp kwStrcat StrConcat
+  parseBinaryOp kwAdd_ (PrimBinop OpIntAdd)
+    <|> parseBinaryOp kwSub_ (PrimBinop OpIntSub)
+    <|> parseBinaryOp kwMul_ (PrimBinop OpIntMul)
+    <|> parseBinaryOp kwDiv_ (PrimBinop OpIntDiv)
+    <|> parseBinaryOp kwMod_ (PrimBinop OpIntMod)
+    <|> parseBinaryOp kwLt_ (PrimBinop OpIntLt)
+    <|> parseBinaryOp kwLe_ (PrimBinop OpIntLe)
+    <|> parseBinaryOp kwEq_ (PrimBinop OpEq)
+    <|> parseBinaryOp kwStrcat (PrimBinop OpStrConcat)
     <|> parseBinaryOp kwSeq_ OpSeq
 
 parseBinaryOp ::
@@ -97,11 +97,11 @@ parseUnop ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r NodeUnop
 parseUnop =
-  parseUnaryOp kwShow OpShow
-    <|> parseUnaryOp kwAtoi OpStrToInt
+  parseUnaryOp kwShow (PrimUnop OpShow)
+    <|> parseUnaryOp kwAtoi (PrimUnop OpStrToInt)
     <|> parseUnaryOp kwTrace OpTrace
     <|> parseUnaryOp kwFail OpFail
-    <|> parseUnaryOp kwArgsNum OpArgsNum
+    <|> parseUnaryOp kwArgsNum (PrimUnop OpArgsNum)
 
 parseUnaryOp ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>

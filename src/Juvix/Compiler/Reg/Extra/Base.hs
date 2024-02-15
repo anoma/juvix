@@ -4,11 +4,9 @@ import Juvix.Compiler.Reg.Language
 
 getResultVar :: Instruction -> Maybe VarRef
 getResultVar = \case
-  Binop x -> Just $ x ^. binaryOpResult
-  Show x -> Just $ x ^. instrShowResult
-  StrToInt x -> Just $ x ^. instrStrToIntResult
+  Binop x -> Just $ x ^. instrBinopResult
+  Unop x -> Just $ x ^. instrUnopResult
   Assign x -> Just $ x ^. instrAssignResult
-  ArgsNum x -> Just $ x ^. instrArgsNumResult
   Alloc x -> Just $ x ^. instrAllocResult
   AllocClosure x -> Just $ x ^. instrAllocClosureResult
   ExtendClosure x -> Just $ x ^. instrExtendClosureResult
@@ -18,11 +16,9 @@ getResultVar = \case
 
 setResultVar :: Instruction -> VarRef -> Instruction
 setResultVar instr vref = case instr of
-  Binop x -> Binop $ set binaryOpResult vref x
-  Show x -> Show $ set instrShowResult vref x
-  StrToInt x -> StrToInt $ set instrStrToIntResult vref x
+  Binop x -> Binop $ set instrBinopResult vref x
+  Unop x -> Unop $ set instrUnopResult vref x
   Assign x -> Assign $ set instrAssignResult vref x
-  ArgsNum x -> ArgsNum $ set instrArgsNumResult vref x
   Alloc x -> Alloc $ set instrAllocResult vref x
   AllocClosure x -> AllocClosure $ set instrAllocClosureResult vref x
   ExtendClosure x -> ExtendClosure $ set instrExtendClosureResult vref x
@@ -33,10 +29,8 @@ setResultVar instr vref = case instr of
 overValueRefs :: (VarRef -> VarRef) -> Instruction -> Instruction
 overValueRefs f = \case
   Binop x -> Binop $ goBinop x
-  Show x -> Show $ goShow x
-  StrToInt x -> StrToInt $ goStrToInt x
+  Unop x -> Unop $ goUnop x
   Assign x -> Assign $ goAssign x
-  ArgsNum x -> ArgsNum $ goArgsNum x
   Alloc x -> Alloc $ goAlloc x
   AllocClosure x -> AllocClosure $ goAllocClosure x
   ExtendClosure x -> ExtendClosure $ goExtendClosure x
@@ -63,25 +57,19 @@ overValueRefs f = \case
       CRef x -> CRef $ goConstrField x
       VRef x -> VRef $ f x
 
-    goBinop :: BinaryOp -> BinaryOp
-    goBinop BinaryOp {..} =
-      BinaryOp
-        { _binaryOpArg1 = goValue _binaryOpArg1,
-          _binaryOpArg2 = goValue _binaryOpArg2,
+    goBinop :: InstrBinop -> InstrBinop
+    goBinop InstrBinop {..} =
+      InstrBinop
+        { _instrBinopArg1 = goValue _instrBinopArg1,
+          _instrBinopArg2 = goValue _instrBinopArg2,
           ..
         }
 
-    goShow :: InstrShow -> InstrShow
-    goShow = over instrShowValue goValue
-
-    goStrToInt :: InstrStrToInt -> InstrStrToInt
-    goStrToInt = over instrStrToIntValue goValue
+    goUnop :: InstrUnop -> InstrUnop
+    goUnop = over instrUnopArg goValue
 
     goAssign :: InstrAssign -> InstrAssign
     goAssign = over instrAssignValue goValue
-
-    goArgsNum :: InstrArgsNum -> InstrArgsNum
-    goArgsNum = over instrArgsNumValue goValue
 
     goAlloc :: InstrAlloc -> InstrAlloc
     goAlloc = over instrAllocArgs (map goValue)

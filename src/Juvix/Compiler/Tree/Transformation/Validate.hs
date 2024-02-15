@@ -28,15 +28,7 @@ inferType tab funInfo = goInfer mempty
 
     goBinop :: BinderList Type -> NodeBinop -> Sem r Type
     goBinop bl NodeBinop {..} = case _nodeBinopOpcode of
-      IntAdd -> checkBinop mkTypeInteger mkTypeInteger mkTypeInteger
-      IntSub -> checkBinop mkTypeInteger mkTypeInteger mkTypeInteger
-      IntMul -> checkBinop mkTypeInteger mkTypeInteger mkTypeInteger
-      IntDiv -> checkBinop mkTypeInteger mkTypeInteger mkTypeInteger
-      IntMod -> checkBinop mkTypeInteger mkTypeInteger mkTypeInteger
-      IntLt -> checkBinop mkTypeInteger mkTypeInteger mkTypeBool
-      IntLe -> checkBinop mkTypeInteger mkTypeInteger mkTypeBool
-      ValEq -> checkBinop TyDynamic TyDynamic mkTypeBool
-      StrConcat -> checkBinop TyString TyString TyString
+      PrimBinop x -> checkPrimBinop x
       OpSeq -> do
         checkType bl _nodeBinopArg1 TyDynamic
         goInfer bl _nodeBinopArg2
@@ -51,13 +43,23 @@ inferType tab funInfo = goInfer mempty
           void $ unifyTypes' loc tab ty2 ty2'
           return rty
 
+        checkPrimBinop :: BinaryOp -> Sem r Type
+        checkPrimBinop = \case
+          OpIntAdd -> checkBinop mkTypeInteger mkTypeInteger mkTypeInteger
+          OpIntSub -> checkBinop mkTypeInteger mkTypeInteger mkTypeInteger
+          OpIntMul -> checkBinop mkTypeInteger mkTypeInteger mkTypeInteger
+          OpIntDiv -> checkBinop mkTypeInteger mkTypeInteger mkTypeInteger
+          OpIntMod -> checkBinop mkTypeInteger mkTypeInteger mkTypeInteger
+          OpIntLt -> checkBinop mkTypeInteger mkTypeInteger mkTypeBool
+          OpIntLe -> checkBinop mkTypeInteger mkTypeInteger mkTypeBool
+          OpEq -> checkBinop TyDynamic TyDynamic mkTypeBool
+          OpStrConcat -> checkBinop TyString TyString TyString
+
     goUnop :: BinderList Type -> NodeUnop -> Sem r Type
     goUnop bl NodeUnop {..} = case _nodeUnopOpcode of
-      OpShow -> checkUnop TyDynamic TyString
-      OpStrToInt -> checkUnop TyString mkTypeInteger
+      PrimUnop x -> checkPrimUnop x
       OpTrace -> goInfer bl _nodeUnopArg
       OpFail -> checkUnop TyDynamic TyDynamic
-      OpArgsNum -> checkUnop TyDynamic mkTypeInteger
       where
         loc = _nodeUnopInfo ^. nodeInfoLocation
 
@@ -66,6 +68,12 @@ inferType tab funInfo = goInfer mempty
           ty' <- goInfer bl _nodeUnopArg
           void $ unifyTypes' loc tab ty ty'
           return rty
+
+        checkPrimUnop :: UnaryOp -> Sem r Type
+        checkPrimUnop = \case
+          OpShow -> checkUnop TyDynamic TyString
+          OpStrToInt -> checkUnop TyString mkTypeInteger
+          OpArgsNum -> checkUnop TyDynamic mkTypeInteger
 
     goConst :: BinderList Type -> NodeConstant -> Sem r Type
     goConst _ NodeConstant {..} = case _nodeConstant of
