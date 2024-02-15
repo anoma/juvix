@@ -613,10 +613,9 @@ requiresLn t =
 
 writeFileEnsureLn :: (MonadIO m) => Path Abs File -> Text -> m ()
 writeFileEnsureLn p txt = do
-  let b = requiresLn txt
-      path = toFilePath p
+  let path = toFilePath p
   -- We need the inline `if` to avoid lazy IO problems.
-  liftIO (Utf8.writeFile path (if b then txt else txt <> "\n"))
+  liftIO (Utf8.writeFile path (if requiresLn txt then txt <> "\n" else txt))
 
 -- TODO: change FilePath to Path Abs File
 readFile :: (MonadIO m) => FilePath -> m Text

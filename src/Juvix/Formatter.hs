@@ -125,12 +125,11 @@ formatResultFromContents formattedContents filepath = do
     mkResult :: FormatResult -> Sem r FormatResult
     mkResult res = do
       output
-        ( FormattedFileInfo
-            { _formattedFileInfoPath = filepath,
-              _formattedFileInfoContents = formattedContents,
-              _formattedFileInfoContentsModified = res == FormatResultNotFormatted
-            }
-        )
+        FormattedFileInfo
+          { _formattedFileInfoPath = filepath,
+            _formattedFileInfoContents = formattedContents,
+            _formattedFileInfoContentsModified = res == FormatResultNotFormatted
+          }
       return res
 
 formatScoperResult' ::
