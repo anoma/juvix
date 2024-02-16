@@ -260,7 +260,8 @@ reserveSymbolOf k nameSig s = do
       u =
         Entry
           { _entryName = S.unqualifiedSymbol s',
-            _entryVisibility = VisPublic
+            _entryVisibility = VisPublic,
+            _entryWhyInScope = S.BecauseDefined
           }
       entry :: NameSpaceEntryType (NameKindNameSpace nameKind)
       entry =
@@ -504,7 +505,8 @@ lookupSymbolAux modules final = do
         mkModuleEntry m =
           Entry
             { _entryName = m ^. scopedModuleName,
-              _entryVisibility = VisPublic
+              _entryVisibility = VisPublic,
+              _entryWhyInScope = S.BecauseImportedOpened
             }
 
 lookInExport ::
@@ -1509,11 +1511,10 @@ checkLocalModule md@Module {..} = do
         inheritSymbol :: forall ns. (SingI ns) => SymbolInfo ns -> SymbolInfo ns
         inheritSymbol (SymbolInfo s) = SymbolInfo (inheritEntry <$> s)
           where
-            -- TODO revise
             inheritEntry :: NameSpaceEntryType ns -> NameSpaceEntryType ns
-            -- over (nsEntry . S.nameWhyInScope) S.BecauseInherited
-            --   . set (nsEntry . S.nameVisibilityAnn) VisPrivate
-            inheritEntry = set nsEntryVisibility VisPrivate
+            inheritEntry =
+              over nsEntryWhyInScope S.BecauseInherited
+                . set nsEntryVisibility VisPrivate
 
 checkOrphanOperators :: forall r. (Members '[Error ScoperError, State ScoperSyntax] r) => Sem r ()
 checkOrphanOperators = do
@@ -1698,17 +1699,10 @@ checkOpenModuleHelper importModuleHint OpenModule {..} = do
               _exportModuleSymbols = alterEntry <$> nfo ^. exportModuleSymbols,
               _exportFixitySymbols = alterEntry <$> nfo ^. exportFixitySymbols
             }
-        -- TODO revise
-        -- alterEntry :: (SingI ns) => NameSpaceEntryType ns -> NameSpaceEntryType ns
-        -- alterEntry =
-        --   over
-        --     nsEntry
-        --     ( set S.nameWhyInScope S.BecauseImportedOpened
-        --         . set S.nameVisibilityAnn (publicAnnToVis (_openModuleParams ^. openPublic))
-        --     )
         alterEntry :: (SingI ns) => NameSpaceEntryType ns -> NameSpaceEntryType ns
         alterEntry =
-          set nsEntryVisibility (publicAnnToVis (_openModuleParams ^. openPublic))
+          set nsEntryWhyInScope S.BecauseImportedOpened
+            . set nsEntryVisibility (publicAnnToVis (_openModuleParams ^. openPublic))
 
         publicAnnToVis :: PublicAnn -> VisibilityAnn
         publicAnnToVis = \case
@@ -2053,7 +2047,7 @@ checkFixitySymbol s = do
 -- module with the same name as a symbol defined in the inner module will be
 -- removed.
 resolveShadowing :: forall ns. (SingI ns) => [NameSpaceEntryType ns] -> [NameSpaceEntryType ns]
-resolveShadowing es = go [(e, e ^. nsEntry . S.nameWhyInScope) | e <- es]
+resolveShadowing es = go [(e, e ^. nsEntryWhyInScope) | e <- es]
   where
     go :: [(NameSpaceEntryType ns, S.WhyInScope)] -> [NameSpaceEntryType ns]
     go itms

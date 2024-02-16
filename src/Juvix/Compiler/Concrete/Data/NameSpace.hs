@@ -55,9 +55,11 @@ resolveNameSpaceEntry = case sing :: SNameSpace ns of
 
     resolveEntry :: Entry k -> Entry k -> Entry k
     resolveEntry e1 e2
-      | e1 ^. entryName == e2 ^. entryName =
+      | e1 ^. entryName == e2 ^. entryName,
+        e1 ^. entryWhyInScope == e2 ^. entryWhyInScope =
           Entry
             { _entryName = e1 ^. entryName,
-              _entryVisibility = resolveVisibility (e1 ^. entryVisibility) (e2 ^. entryVisibility)
+              _entryVisibility = resolveVisibility (e1 ^. entryVisibility) (e2 ^. entryVisibility),
+              _entryWhyInScope = e1 ^. entryWhyInScope
             }
       | otherwise = impossible

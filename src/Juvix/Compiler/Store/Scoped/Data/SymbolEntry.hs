@@ -48,7 +48,8 @@ data SomeEntry = forall (k :: EntryKind).
 
 data Entry (k :: EntryKind) = Entry
   { _entryVisibility :: VisibilityAnn,
-    _entryName :: S.Name
+    _entryName :: S.Name,
+    _entryWhyInScope :: S.WhyInScope
   }
   deriving stock (Show, Eq, Ord, Generic)
 
@@ -82,6 +83,16 @@ preSymbolName :: Lens' PreSymbolEntry S.Name
 preSymbolName f = \case
   PreSymbolAlias a -> PreSymbolAlias <$> (aliasEntry . entryName) f a
   PreSymbolFinal a -> PreSymbolFinal <$> entryName f a
+
+-- preSymbolEntryLens :: Lens' SomeEntry a -> Lens' PreSymbolEntry a
+-- preSymbolEntryLens l f = \case
+--   PreSymbolAlias a -> PreSymbolAlias <$> (aliasEntry . entryWhyInScope) f a
+--   PreSymbolFinal a -> PreSymbolFinal <$> entryWhyInScope f a
+
+preSymbolEntryWhyInScope :: Lens' PreSymbolEntry S.WhyInScope
+preSymbolEntryWhyInScope f = \case
+  PreSymbolAlias a -> PreSymbolAlias <$> (aliasEntry . entryWhyInScope) f a
+  PreSymbolFinal a -> PreSymbolFinal <$> entryWhyInScope f a
 
 preSymbolEntryVisibility :: Lens' PreSymbolEntry VisibilityAnn
 preSymbolEntryVisibility f = \case

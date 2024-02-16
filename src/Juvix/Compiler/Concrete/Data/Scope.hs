@@ -14,6 +14,12 @@ import Juvix.Compiler.Store.Scoped.Data.InfoTable
 import Juvix.Compiler.Store.Scoped.Language
 import Juvix.Prelude
 
+nsEntryWhyInScope :: forall ns. (SingI ns) => Lens' (NameSpaceEntryType ns) S.WhyInScope
+nsEntryWhyInScope = case sing :: SNameSpace ns of
+  SNameSpaceModules -> entryWhyInScope
+  SNameSpaceSymbols -> preSymbolEntryWhyInScope
+  SNameSpaceFixities -> entryWhyInScope
+
 nsEntryVisibility :: forall ns. (SingI ns) => Lens' (NameSpaceEntryType ns) VisibilityAnn
 nsEntryVisibility = case sing :: SNameSpace ns of
   SNameSpaceModules -> entryVisibility
