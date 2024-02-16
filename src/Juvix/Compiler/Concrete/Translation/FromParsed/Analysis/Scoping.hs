@@ -405,7 +405,6 @@ checkImport import_@Import {..} = do
   smodule <- readScopeModule import_
   let sname :: S.TopModulePath = smodule ^. scopedModulePath
       sname' :: S.Name = set S.nameConcrete (topModulePathToName _importModulePath) sname
-      mid = sname ^. S.nameId
       cmodule = set scopedModuleName sname' smodule
       importName :: S.TopModulePath = set S.nameConcrete _importModulePath sname
       synonymName :: Maybe S.TopModulePath = do
@@ -418,9 +417,7 @@ checkImport import_@Import {..} = do
   addModuleToScope cmodule
   registerName importName
   whenJust synonymName registerName
-  modify (over scoperModules (HashMap.insert mid cmodule))
-  -- TODO: this needs to be transitive
-  modify (over scoperModules (HashMap.union (cmodule ^. scopedModuleLocalModules)))
+  registerScoperModules cmodule
   importOpen' <- mapM (checkImportOpenParams cmodule) _importOpen
   return
     Import
@@ -436,6 +433,11 @@ checkImport import_@Import {..} = do
           uid :: S.NameId = smod ^. scopedModuleName . S.nameId
           singTbl = HashMap.singleton uid smod
       modify (over (scopeTopModules . at mpath) (Just . maybe singTbl (HashMap.insert uid smod)))
+
+    registerScoperModules :: ScopedModule -> Sem r ()
+    registerScoperModules m = do
+      modify (over scoperModules (HashMap.insert (m ^. scopedModulePath . S.nameId) m))
+      forM_ (m ^. scopedModuleLocalModules) registerScoperModules
 
 getTopModulePath :: Module 'Parsed 'ModuleTop -> S.AbsModulePath
 getTopModulePath Module {..} =

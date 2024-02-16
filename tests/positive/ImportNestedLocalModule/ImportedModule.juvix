@@ -1,0 +1,11 @@
+module ImportedModule;
+
+import Stdlib.Prelude open;
+
+module A;
+
+  module B;
+    x : Nat := 1;
+  end;
+
+end;
