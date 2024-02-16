@@ -240,6 +240,6 @@ tests =
       $(mkRelFile "ImportNestedLocalModule.juvix"),
     posTest
       "Visibility precedence"
-      $(mkRelDir "VisibilityPrecedence")
+      $(mkRelDir "VisibilityPrecendence")
       $(mkRelFile "VisibilityPrecedence.juvix")
   ]
