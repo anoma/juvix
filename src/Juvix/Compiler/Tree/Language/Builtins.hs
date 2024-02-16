@@ -10,6 +10,10 @@ data BinaryOp
   | OpIntMod
   | OpIntLt
   | OpIntLe
+  | OpFieldAdd
+  | OpFieldSub
+  | OpFieldMul
+  | OpFieldDiv
   | OpEq
   | OpStrConcat
   deriving stock (Eq)

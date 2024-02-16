@@ -188,6 +188,12 @@ mkTypeString i = mkTypePrim i PrimString
 mkTypeString' :: Type
 mkTypeString' = mkTypeString Info.empty
 
+mkTypeField :: Info -> Type
+mkTypeField i = mkTypePrim i PrimField
+
+mkTypeField' :: Type
+mkTypeField' = mkTypeField Info.empty
+
 mkDynamic :: Info -> Type
 mkDynamic i = NDyn (Dynamic i)
 

@@ -159,6 +159,7 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
     getConstantVal :: Constant -> Val
     getConstantVal = \case
       ConstInt i -> ValInteger i
+      ConstField f -> ValField f
       ConstBool b -> ValBool b
       ConstString s -> ValString s
       ConstUnit -> ValUnit

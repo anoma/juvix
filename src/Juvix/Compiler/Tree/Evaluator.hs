@@ -83,6 +83,7 @@ hEval hout tab = eval' [] mempty
         goConstant :: NodeConstant -> Value
         goConstant NodeConstant {..} = case _nodeConstant of
           ConstInt i -> ValInteger i
+          ConstField f -> ValField f
           ConstBool b -> ValBool b
           ConstString s -> ValString s
           ConstUnit -> ValUnit
@@ -215,6 +216,7 @@ hEval hout tab = eval' [] mempty
 valueToNode :: Value -> Node
 valueToNode = \case
   ValInteger i -> mkConst $ ConstInt i
+  ValField f -> mkConst $ ConstField f
   ValBool b -> mkConst $ ConstBool b
   ValString s -> mkConst $ ConstString s
   ValUnit -> mkConst ConstUnit

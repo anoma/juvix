@@ -7,6 +7,7 @@ data Type
   | TyInteger TypeInteger
   | TyBool TypeBool
   | TyString
+  | TyField
   | TyUnit
   | TyVoid
   | TyInductive TypeInductive
@@ -77,6 +78,7 @@ instance HasAtomicity Type where
     TyInteger x -> atomicity x
     TyBool x -> atomicity x
     TyString -> Atom
+    TyField -> Atom
     TyUnit -> Atom
     TyVoid -> Atom
     TyInductive x -> atomicity x

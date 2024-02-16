@@ -321,6 +321,7 @@ compile = \case
       Tree.ConstString {} -> stringsErr
       Tree.ConstUnit -> OpQuote # constUnit
       Tree.ConstVoid -> OpQuote # constVoid
+      Tree.ConstField {} -> error "fields not supported"
 
     goSave :: Tree.NodeSave -> Sem r (Term Natural)
     goSave Tree.NodeSave {..} = do
@@ -395,6 +396,10 @@ compile = \case
           Tree.OpIntLe -> return (callStdlib StdlibLe args)
           Tree.OpEq -> testEq _nodeBinopArg1 _nodeBinopArg2
           Tree.OpStrConcat -> stringsErr
+          Tree.OpFieldAdd -> error "fields not supported"
+          Tree.OpFieldSub -> error "fields not supported"
+          Tree.OpFieldMul -> error "fields not supported"
+          Tree.OpFieldDiv -> error "fields not supported"
 
     goAllocClosure :: Tree.NodeAllocClosure -> Sem r (Term Natural)
     goAllocClosure Tree.NodeAllocClosure {..} = do

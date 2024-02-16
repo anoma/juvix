@@ -17,6 +17,7 @@ import Juvix.Compiler.Core.Info.LocationInfo as LocationInfo
 import Juvix.Compiler.Core.Info.NameInfo as NameInfo
 import Juvix.Compiler.Core.Transformation.Eta
 import Juvix.Compiler.Core.Translation.FromSource.Lexer
+import Juvix.Data.Field
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Parser.Error
 import Text.Megaparsec qualified as P
@@ -608,6 +609,11 @@ exprConstString :: ParsecS r Node
 exprConstString = P.try $ do
   (s, i) <- string
   return $ mkConstant (Info.singleton (LocationInfo i)) (ConstString s)
+
+exprConstField :: ParsecS r Node
+exprConstField = P.try $ do
+  (n, i) <- field
+  return $ mkConstant (Info.singleton (LocationInfo i)) (ConstField (fieldFromInteger (maximum allowedFieldSizes) n))
 
 exprUniverse :: ParsecS r Type
 exprUniverse = do

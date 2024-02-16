@@ -52,6 +52,10 @@ inferType tab funInfo = goInfer mempty
           OpIntMod -> checkBinop mkTypeInteger mkTypeInteger mkTypeInteger
           OpIntLt -> checkBinop mkTypeInteger mkTypeInteger mkTypeBool
           OpIntLe -> checkBinop mkTypeInteger mkTypeInteger mkTypeBool
+          OpFieldAdd -> checkBinop TyField TyField TyField
+          OpFieldSub -> checkBinop TyField TyField TyField
+          OpFieldMul -> checkBinop TyField TyField TyField
+          OpFieldDiv -> checkBinop TyField TyField TyField
           OpEq -> checkBinop TyDynamic TyDynamic mkTypeBool
           OpStrConcat -> checkBinop TyString TyString TyString
 
@@ -80,6 +84,7 @@ inferType tab funInfo = goInfer mempty
       ConstInt {} -> return mkTypeInteger
       ConstBool {} -> return mkTypeBool
       ConstString {} -> return TyString
+      ConstField {} -> return TyField
       ConstUnit {} -> return TyUnit
       ConstVoid {} -> return TyVoid
 

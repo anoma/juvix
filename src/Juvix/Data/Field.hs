@@ -1,5 +1,6 @@
 module Juvix.Data.Field where
 
+import Data.Serialize as S
 import Data.Singletons.Decide
 import GHC.TypeLits.Singletons ()
 import Juvix.Data.FiniteField.PrimeField
@@ -8,8 +9,19 @@ import Juvix.Prelude hiding (toInteger)
 newtype FField = FField
   { _unFField :: Sigma Natural (TyCon1 PrimeField)
   }
+  deriving stock (Generic)
 
 makeLenses ''FField
+
+allowedFieldSizes :: [Natural]
+allowedFieldSizes = [2147483647]
+
+instance Serialize FField where
+  put f = S.put (fieldSize f, fieldToInteger f)
+
+  get = do
+    (n, f) <- S.get
+    return $ fieldFromInteger n f
 
 fieldAdd :: FField -> FField -> FField
 fieldAdd
@@ -60,3 +72,18 @@ fieldToInteger :: FField -> Integer
 fieldToInteger
   (FField ((_ :: Sing (p :: Natural)) :&: (f1 :: PrimeField p))) =
     toInteger f1
+
+fieldResize :: Natural -> FField -> FField
+fieldResize n f = fieldFromInteger n (fieldToInteger f)
+
+fieldEq :: FField -> FField -> Bool
+fieldEq
+  (FField ((n1 :: Sing (p :: Natural)) :&: (f1 :: PrimeField p)))
+  (FField ((n2 :: Sing (r :: Natural)) :&: (f2 :: PrimeField r))) =
+    let x = decideEquality n1 n2
+     in case x :: Maybe (p :~: r) of
+          Just Refl -> f1 == f2
+          Nothing -> False
+
+instance Eq FField where
+  (==) = fieldEq

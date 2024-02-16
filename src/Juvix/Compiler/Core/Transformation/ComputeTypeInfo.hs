@@ -32,6 +32,7 @@ computeNodeTypeInfo md = umapL go
       NCst Constant {..} ->
         case _constantValue of
           ConstInteger {} -> mkTypeInteger'
+          ConstField {} -> mkTypeField'
           ConstString {} -> mkTypeString'
       NApp {} ->
         let (fn, args) = unfoldApps' node
@@ -48,6 +49,10 @@ computeNodeTypeInfo md = umapL go
           OpIntMod -> mkTypeInteger'
           OpIntLt -> mkTypeBool'
           OpIntLe -> mkTypeBool'
+          OpFieldAdd -> mkTypeField'
+          OpFieldSub -> mkTypeField'
+          OpFieldMul -> mkTypeField'
+          OpFieldDiv -> mkTypeField'
           OpEq -> mkTypeBool'
           OpShow -> mkTypeString'
           OpStrConcat -> mkTypeString'

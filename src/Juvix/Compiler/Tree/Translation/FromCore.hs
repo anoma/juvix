@@ -82,6 +82,8 @@ genCode infoTable fi =
         mkConst (ConstInt i)
       Core.Constant _ (Core.ConstString s) ->
         mkConst (ConstString s)
+      Core.Constant _ (Core.ConstField fld) ->
+        mkConst (ConstField fld)
 
     goApps :: Int -> BinderList MemRef -> Core.Apps -> Node
     goApps tempSize refs Core.Apps {..} =
@@ -314,6 +316,8 @@ convertPrimitiveType = \case
     TyBool (TypeBool _infoTrueTag _infoFalseTag)
   Core.PrimString ->
     TyString
+  Core.PrimField ->
+    TyField
 
 -- | `convertNestedType` ensures that the conversion of a type with Dynamic in the
 -- target is curried. The result of `convertType 0 ty` is always uncurried.

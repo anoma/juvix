@@ -19,6 +19,7 @@ import Juvix.Compiler.Core.Language.Value
 import Juvix.Compiler.Core.Pretty.Options
 import Juvix.Compiler.Internal.Data.Name
 import Juvix.Data.CodeAnn
+import Juvix.Data.Field
 import Juvix.Extra.Strings qualified as Str
 
 doc :: (PrettyCode c) => Options -> c -> Doc Ann
@@ -39,6 +40,10 @@ instance PrettyCode BuiltinOp where
     OpIntMod -> return primMod
     OpIntLt -> return primLess
     OpIntLe -> return primLessEquals
+    OpFieldAdd -> return primFieldAdd
+    OpFieldSub -> return primFieldSub
+    OpFieldMul -> return primFieldMul
+    OpFieldDiv -> return primFieldDiv
     OpEq -> return primEquals
     OpShow -> return primShow
     OpStrConcat -> return primStrConcat
@@ -66,6 +71,7 @@ instance PrettyCode Primitive where
     PrimInteger _ -> return $ annotate (AnnKind KNameInductive) (pretty ("Int" :: String))
     PrimBool _ -> return $ annotate (AnnKind KNameInductive) (pretty ("Bool" :: String))
     PrimString -> return $ annotate (AnnKind KNameInductive) (pretty ("String" :: String))
+    PrimField -> return $ annotate (AnnKind KNameInductive) (pretty ("Field" :: String))
 
 ppName :: NameKind -> Text -> Sem r (Doc Ann)
 ppName kind name = return $ annotate (AnnKind kind) (pretty name)
@@ -88,6 +94,8 @@ instance PrettyCode ConstantValue where
   ppCode = \case
     ConstInteger int ->
       return $ annotate AnnLiteralInteger (pretty int)
+    ConstField fld ->
+      return $ annotate AnnLiteralInteger (pretty (fieldToInteger fld) <> "F")
     ConstString txt ->
       return $ annotate AnnLiteralString (pretty (show txt :: String))
 
@@ -694,6 +702,18 @@ kwUnnamedConstr = keyword Str.exclamation
 
 kwQuestion :: Doc Ann
 kwQuestion = keyword Str.questionMark
+
+primFieldAdd :: Doc Ann
+primFieldAdd = primitive Str.fadd
+
+primFieldSub :: Doc Ann
+primFieldSub = primitive Str.fsub
+
+primFieldMul :: Doc Ann
+primFieldMul = primitive Str.fmul
+
+primFieldDiv :: Doc Ann
+primFieldDiv = primitive Str.fdiv
 
 primLess :: Doc Ann
 primLess = primitive Str.less

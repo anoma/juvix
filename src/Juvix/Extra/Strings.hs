@@ -179,6 +179,24 @@ int_ = "int"
 boolPrint :: (IsString s) => s
 boolPrint = "bool-print"
 
+fieldEq :: (IsString s) => s
+fieldEq = "field-eq"
+
+fieldAdd :: (IsString s) => s
+fieldAdd = "field-add"
+
+fieldSub :: (IsString s) => s
+fieldSub = "field-sub"
+
+fieldMul :: (IsString s) => s
+fieldMul = "field-mul"
+
+fieldDiv :: (IsString s) => s
+fieldDiv = "field-div"
+
+field :: (IsString s) => s
+field = "field"
+
 io :: (IsString s) => s
 io = "IO"
 
@@ -301,6 +319,18 @@ any = "Any"
 
 questionMark :: (IsString s) => s
 questionMark = "?"
+
+fadd :: (IsString s) => s
+fadd = "fadd"
+
+fsub :: (IsString s) => s
+fsub = "fsub"
+
+fmul :: (IsString s) => s
+fmul = "fmul"
+
+fdiv :: (IsString s) => s
+fdiv = "fdiv"
 
 delimiter :: (IsString s) => s
 delimiter = "delimiter"

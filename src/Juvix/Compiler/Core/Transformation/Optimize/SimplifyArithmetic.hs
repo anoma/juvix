@@ -2,6 +2,7 @@ module Juvix.Compiler.Core.Transformation.Optimize.SimplifyArithmetic (simplifyA
 
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Transformation.Base
+import Juvix.Data.Field
 
 convertNode :: Node -> Node
 convertNode = dmap go
@@ -57,6 +58,67 @@ convertNode = dmap go
       NBlt BuiltinApp {..}
         | _builtinAppOp == OpIntMul,
           [NCst (Constant _ (ConstInteger 1)), x] <- _builtinAppArgs ->
+            x
+      NBlt BuiltinApp {..}
+        | _builtinAppOp == OpFieldAdd,
+          [NBlt blt', n] <- _builtinAppArgs,
+          blt' ^. builtinAppOp == OpFieldSub,
+          [x, m] <- blt' ^. builtinAppArgs,
+          m == n ->
+            x
+      NBlt BuiltinApp {..}
+        | _builtinAppOp == OpFieldSub,
+          [NBlt blt', n] <- _builtinAppArgs,
+          blt' ^. builtinAppOp == OpFieldAdd,
+          [x, m] <- blt' ^. builtinAppArgs ->
+            if
+                | m == n ->
+                    x
+                | x == n ->
+                    m
+                | otherwise ->
+                    node
+      NBlt BuiltinApp {..}
+        | _builtinAppOp == OpFieldAdd,
+          [n, NBlt blt'] <- _builtinAppArgs,
+          blt' ^. builtinAppOp == OpFieldSub,
+          [x, m] <- blt' ^. builtinAppArgs,
+          m == n ->
+            x
+      NBlt BuiltinApp {..}
+        | _builtinAppOp == OpFieldAdd || _builtinAppOp == OpFieldSub,
+          [x, NCst (Constant _ (ConstField f))] <- _builtinAppArgs,
+          fieldToInteger f == 0 ->
+            x
+      NBlt BuiltinApp {..}
+        | _builtinAppOp == OpFieldAdd,
+          [NCst (Constant _ (ConstField f)), x] <- _builtinAppArgs,
+          fieldToInteger f == 0 ->
+            x
+      NBlt BuiltinApp {..}
+        | _builtinAppOp == OpFieldMul,
+          [_, c@(NCst (Constant _ (ConstField f)))] <- _builtinAppArgs,
+          fieldToInteger f == 0 ->
+            c
+      NBlt BuiltinApp {..}
+        | _builtinAppOp == OpFieldMul,
+          [c@(NCst (Constant _ (ConstField f))), _] <- _builtinAppArgs,
+          fieldToInteger f == 0 ->
+            c
+      NBlt BuiltinApp {..}
+        | _builtinAppOp == OpFieldMul,
+          [x, NCst (Constant _ (ConstField f))] <- _builtinAppArgs,
+          fieldToInteger f == 1 ->
+            x
+      NBlt BuiltinApp {..}
+        | _builtinAppOp == OpFieldMul,
+          [NCst (Constant _ (ConstField f)), x] <- _builtinAppArgs,
+          fieldToInteger f == 1 ->
+            x
+      NBlt BuiltinApp {..}
+        | _builtinAppOp == OpFieldDiv,
+          [x, NCst (Constant _ (ConstField f))] <- _builtinAppArgs,
+          fieldToInteger f == 1 ->
             x
       _ -> node
 

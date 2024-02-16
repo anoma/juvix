@@ -12,6 +12,7 @@ import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.NoDisplayInfo
 import Juvix.Compiler.Core.Pretty
+import Juvix.Data.Field
 import Text.Read qualified as T
 
 data EvalOptions = EvalOptions
@@ -169,6 +170,10 @@ geval opts herr ctx env0 = eval' env0
       OpIntMul -> binNumOp (*)
       OpIntLt -> binNumCmpOp (<)
       OpIntLe -> binNumCmpOp (<=)
+      OpFieldAdd -> binFieldOp fieldAdd
+      OpFieldSub -> binFieldOp fieldSub
+      OpFieldMul -> binFieldOp fieldMul
+      OpFieldDiv -> binFieldOp fieldDiv
       OpEq -> eqOp
       OpIntDiv -> divOp quot
       OpIntMod -> divOp rem
@@ -222,6 +227,10 @@ geval opts herr ctx env0 = eval' env0
         binNumOp :: (Integer -> Integer -> Integer) -> [Node] -> Node
         binNumOp = binOp nodeFromInteger integerFromNode
         {-# INLINE binNumOp #-}
+
+        binFieldOp :: (FField -> FField -> FField) -> [Node] -> Node
+        binFieldOp = binOp nodeFromField fieldFromNode
+        {-# INLINE binFieldOp #-}
 
         eqOp :: [Node] -> Node
         eqOp
@@ -285,6 +294,10 @@ geval opts herr ctx env0 = eval' env0
     nodeFromInteger !int = mkConstant' (ConstInteger int)
     {-# INLINE nodeFromInteger #-}
 
+    nodeFromField :: FField -> Node
+    nodeFromField !fld = mkConstant' (ConstField fld)
+    {-# INLINE nodeFromField #-}
+
     nodeFromBool :: Bool -> Node
     nodeFromBool b = mkConstr' (BuiltinTag tag) []
       where
@@ -298,6 +311,12 @@ geval opts herr ctx env0 = eval' env0
       NCst (Constant _ (ConstInteger int)) -> Just int
       _ -> Nothing
     {-# INLINE integerFromNode #-}
+
+    fieldFromNode :: Node -> Maybe FField
+    fieldFromNode = \case
+      NCst (Constant _ (ConstField fld)) -> Just fld
+      _ -> Nothing
+    {-# INLINE fieldFromNode #-}
 
     printNode :: Node -> Text
     printNode = \case
