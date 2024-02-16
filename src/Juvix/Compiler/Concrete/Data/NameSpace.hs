@@ -2,7 +2,6 @@ module Juvix.Compiler.Concrete.Data.NameSpace where
 
 import Data.Kind qualified as GHC
 import Juvix.Compiler.Concrete.Data.Name qualified as C
-import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Data.VisibilityAnn
 import Juvix.Compiler.Store.Scoped.Language
 import Juvix.Data.NameKind
@@ -45,23 +44,20 @@ exportNameSpace = case sing :: SNameSpace ns of
 resolveNameSpaceEntry :: forall ns. (SingI ns) => NameSpaceEntryType ns -> NameSpaceEntryType ns -> NameSpaceEntryType ns
 resolveNameSpaceEntry = case sing :: SNameSpace ns of
   SNameSpaceSymbols -> resolvePreSymbolEntry
-  SNameSpaceModules -> resolveModuleSymbolEntry
-  SNameSpaceFixities -> resolveFixitySymbolEntry
+  SNameSpaceModules -> resolveEntry
+  SNameSpaceFixities -> resolveEntry
   where
     resolvePreSymbolEntry :: PreSymbolEntry -> PreSymbolEntry -> PreSymbolEntry
     resolvePreSymbolEntry = \cases
-      (PreSymbolAlias (Alias n1)) (PreSymbolAlias (Alias n2)) -> PreSymbolAlias (Alias (resolveName n1 n2))
-      (PreSymbolFinal (SymbolEntry n1)) (PreSymbolFinal (SymbolEntry n2)) -> PreSymbolFinal (SymbolEntry (resolveName n1 n2))
+      (PreSymbolAlias (Alias n1)) (PreSymbolAlias (Alias n2)) -> PreSymbolAlias (Alias (resolveEntry n1 n2))
+      (PreSymbolFinal n1) (PreSymbolFinal n2) -> PreSymbolFinal (resolveEntry n1 n2)
       _ _ -> impossible
 
-    resolveModuleSymbolEntry :: ModuleSymbolEntry -> ModuleSymbolEntry -> ModuleSymbolEntry
-    resolveModuleSymbolEntry (ModuleSymbolEntry n1) (ModuleSymbolEntry n2) = ModuleSymbolEntry (resolveName n1 n2)
-
-    resolveFixitySymbolEntry :: FixitySymbolEntry -> FixitySymbolEntry -> FixitySymbolEntry
-    resolveFixitySymbolEntry (FixitySymbolEntry n1) (FixitySymbolEntry n2) = FixitySymbolEntry (resolveName n1 n2)
-
-    resolveName :: S.Name -> S.Name -> S.Name
-    resolveName n1 n2
-      | n1 ^. S.nameId == n2 ^. S.nameId =
-          over S.nameVisibilityAnn (resolveVisibility (n2 ^. S.nameVisibilityAnn)) n1
+    resolveEntry :: Entry k -> Entry k -> Entry k
+    resolveEntry e1 e2
+      | e1 ^. entryName == e2 ^. entryName =
+          Entry
+            { _entryName = e1 ^. entryName,
+              _entryVisibility = resolveVisibility (e1 ^. entryVisibility) (e2 ^. entryVisibility)
+            }
       | otherwise = impossible

@@ -8,7 +8,6 @@ where
 
 import Juvix.Compiler.Concrete.Data.IsConcrete
 import Juvix.Compiler.Concrete.Data.Name qualified as C
-import Juvix.Compiler.Concrete.Data.VisibilityAnn
 import Juvix.Data.Fixity qualified as C
 import Juvix.Data.IteratorInfo
 import Juvix.Data.NameId
@@ -76,7 +75,6 @@ data Name' n = Name'
     _nameFixity :: Maybe C.Fixity,
     _nameIterator :: Maybe IteratorInfo,
     _nameWhyInScope :: WhyInScope,
-    _nameVisibilityAnn :: VisibilityAnn,
     -- | The textual representation of the name at the binding site
     _nameVerbatim :: Text
   }

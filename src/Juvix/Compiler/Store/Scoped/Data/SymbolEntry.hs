@@ -1,12 +1,17 @@
-module Juvix.Compiler.Store.Scoped.Data.SymbolEntry where
+module Juvix.Compiler.Store.Scoped.Data.SymbolEntry
+  ( module Juvix.Compiler.Store.Scoped.Data.SymbolEntry,
+    module Juvix.Compiler.Concrete.Data.VisibilityAnn,
+  )
+where
 
 import Juvix.Compiler.Concrete.Data.ScopedName (HasNameKind)
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
+import Juvix.Compiler.Concrete.Data.VisibilityAnn
 import Juvix.Extra.Serialize
 import Juvix.Prelude
 
 newtype Alias = Alias
-  { _aliasName :: S.Name
+  { _aliasEntry :: AliasEntry
   }
   deriving stock (Show, Eq, Ord, Generic)
 
@@ -20,59 +25,73 @@ data PreSymbolEntry
 
 instance Serialize PreSymbolEntry
 
--- | A symbol which is not an alias.
-newtype SymbolEntry = SymbolEntry
-  { _symbolEntry :: S.Name
+data EntryKind
+  = -- | An alias for a symbol in the symbols name space
+    EntryKindSymbolAlias
+  | -- | A symbol which is not an alias.
+    EntryKindSymbol
+  | EntryKindModule
+  | EntryKindFixity
+
+type SymbolEntry = Entry 'EntryKindSymbol
+
+type AliasEntry = Entry 'EntryKindSymbolAlias
+
+type ModuleSymbolEntry = Entry 'EntryKindModule
+
+type FixitySymbolEntry = Entry 'EntryKindFixity
+
+data SomeEntry = forall (k :: EntryKind).
+  SomeEntry
+  { _someEntry :: Entry k
+  }
+
+data Entry (k :: EntryKind) = Entry
+  { _entryVisibility :: VisibilityAnn,
+    _entryName :: S.Name
   }
   deriving stock (Show, Eq, Ord, Generic)
 
-instance Hashable SymbolEntry
-
-instance Serialize SymbolEntry
-
-newtype ModuleSymbolEntry = ModuleSymbolEntry
-  { _moduleEntry :: S.Name
-  }
-  deriving stock (Show, Eq, Ord, Generic)
-
-instance Serialize ModuleSymbolEntry
-
-newtype FixitySymbolEntry = FixitySymbolEntry
-  { _fixityEntry :: S.Name
-  }
-  deriving stock (Show, Eq, Ord, Generic)
-
-instance Serialize FixitySymbolEntry
+instance Serialize (Entry k)
 
 makeLenses ''Alias
-makeLenses ''SymbolEntry
-makeLenses ''ModuleSymbolEntry
-makeLenses ''FixitySymbolEntry
+makeLenses ''SomeEntry
+makeLenses ''Entry
+
+instance HasLoc SomeEntry where
+  getLoc (SomeEntry e) = getLoc e
 
 instance HasLoc Alias where
-  getLoc = (^. aliasName . S.nameDefined)
+  getLoc = (^. aliasEntry . entryName . S.nameDefined)
 
 instance HasLoc PreSymbolEntry where
   getLoc = \case
     PreSymbolAlias a -> getLoc a
     PreSymbolFinal a -> getLoc a
 
-instance HasLoc SymbolEntry where
-  getLoc = (^. symbolEntry . S.nameDefined)
+instance HasLoc (Entry k) where
+  getLoc = (^. entryName . S.nameDefined)
 
-instance HasNameKind ModuleSymbolEntry where
-  getNameKind (ModuleSymbolEntry s) = S.getNameKind s
+instance HasNameKind (Entry k) where
+  getNameKind Entry {..} = S.getNameKind _entryName
 
-instance HasLoc ModuleSymbolEntry where
-  getLoc (ModuleSymbolEntry s) = s ^. S.nameDefined
-
-symbolEntryNameId :: SymbolEntry -> NameId
-symbolEntryNameId = (^. symbolEntry . S.nameId)
-
-instance HasNameKind SymbolEntry where
-  getNameKind = S.getNameKind . (^. symbolEntry)
+symbolEntryNameId :: Entry k -> NameId
+symbolEntryNameId = (^. entryName . S.nameId)
 
 preSymbolName :: Lens' PreSymbolEntry S.Name
 preSymbolName f = \case
-  PreSymbolAlias a -> PreSymbolAlias <$> traverseOf aliasName f a
-  PreSymbolFinal a -> PreSymbolFinal <$> traverseOf symbolEntry f a
+  PreSymbolAlias a -> PreSymbolAlias <$> (aliasEntry . entryName) f a
+  PreSymbolFinal a -> PreSymbolFinal <$> entryName f a
+
+preSymbolEntryVisibility :: Lens' PreSymbolEntry VisibilityAnn
+preSymbolEntryVisibility f = \case
+  PreSymbolAlias a -> PreSymbolAlias <$> (aliasEntry . entryVisibility) f a
+  PreSymbolFinal a -> PreSymbolFinal <$> entryVisibility f a
+
+preSymbolEntryToSomeEntry :: PreSymbolEntry -> SomeEntry
+preSymbolEntryToSomeEntry = \case
+  PreSymbolAlias (Alias a) -> SomeEntry a
+  PreSymbolFinal a -> SomeEntry a
+
+someEntryVisibility :: Lens' SomeEntry VisibilityAnn
+someEntryVisibility f (SomeEntry e) = SomeEntry <$> entryVisibility f e

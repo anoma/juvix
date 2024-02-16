@@ -14,11 +14,23 @@ import Juvix.Compiler.Store.Scoped.Data.InfoTable
 import Juvix.Compiler.Store.Scoped.Language
 import Juvix.Prelude
 
+nsEntryVisibility :: forall ns. (SingI ns) => Lens' (NameSpaceEntryType ns) VisibilityAnn
+nsEntryVisibility = case sing :: SNameSpace ns of
+  SNameSpaceModules -> entryVisibility
+  SNameSpaceSymbols -> preSymbolEntryVisibility
+  SNameSpaceFixities -> entryVisibility
+
+nsEntry' :: forall ns. (SingI ns) => NameSpaceEntryType ns -> SomeEntry
+nsEntry' = case sing :: SNameSpace ns of
+  SNameSpaceModules -> SomeEntry
+  SNameSpaceSymbols -> preSymbolEntryToSomeEntry
+  SNameSpaceFixities -> SomeEntry
+
 nsEntry :: forall ns. (SingI ns) => Lens' (NameSpaceEntryType ns) S.Name
 nsEntry = case sing :: SNameSpace ns of
-  SNameSpaceModules -> moduleEntry
+  SNameSpaceModules -> entryName
   SNameSpaceSymbols -> preSymbolName
-  SNameSpaceFixities -> fixityEntry
+  SNameSpaceFixities -> entryName
 
 scopeNameSpace :: forall (ns :: NameSpace). (SingI ns) => Lens' Scope (HashMap Symbol (SymbolInfo ns))
 scopeNameSpace = case sing :: SNameSpace ns of

@@ -180,7 +180,6 @@ freshSymbol _nameKind _nameConcrete = do
   _nameDefinedIn <- gets (^. scopePath)
   let _nameDefined = getLoc _nameConcrete
       _nameWhyInScope = S.BecauseDefined
-      _nameVisibilityAnn = VisPublic
       _nameVerbatim = _nameConcrete ^. symbolText
   _nameFixity <- fixity
   _nameIterator <- iter
@@ -257,14 +256,21 @@ reserveSymbolOf k nameSig s = do
   whenJust nameSig (registerParsedNameSig (s' ^. S.nameId))
   modify (set (scopeNameSpaceLocal sns . at s) (Just s'))
   registerName s'
-  let u = S.unqualifiedSymbol s'
+  let u :: forall (k :: EntryKind). Entry k
+      u =
+        Entry
+          { _entryName = S.unqualifiedSymbol s',
+            _entryVisibility = VisPublic
+          }
       entry :: NameSpaceEntryType (NameKindNameSpace nameKind)
       entry =
         let symE
               | isAlias = PreSymbolAlias (Alias u)
-              | otherwise = PreSymbolFinal (SymbolEntry u)
-            modE = ModuleSymbolEntry u
-            fixE = FixitySymbolEntry u
+              | otherwise = PreSymbolFinal u
+            modE :: ModuleSymbolEntry
+            modE = u
+            fixE :: FixitySymbolEntry
+            fixE = u
          in case k of
               SKNameConstructor -> symE
               SKNameAlias -> symE
@@ -447,7 +453,7 @@ getTopModulePath Module {..} =
     }
 
 getModuleExportInfo :: forall r. (Members '[State ScoperState] r) => ModuleSymbolEntry -> Sem r ExportInfo
-getModuleExportInfo m = fromMaybeM err (gets (^? scoperModules . at (m ^. moduleEntry . S.nameId) . _Just . scopedModuleExportInfo))
+getModuleExportInfo m = fromMaybeM err (gets (^? scoperModules . at (m ^. entryName . S.nameId) . _Just . scopedModuleExportInfo))
   where
     err :: Sem r a
     err = do
@@ -486,6 +492,7 @@ lookupSymbolAux modules final = do
         p : ps ->
           gets (^.. scopeModuleSymbols . at p . _Just . symbolInfo . each)
             >>= mapM_ (getModuleExportInfo >=> lookInExport final ps)
+
     importedTopModule :: Sem r ()
     importedTopModule = do
       tbl <- gets (^. scopeTopModules)
@@ -493,8 +500,12 @@ lookupSymbolAux modules final = do
       where
         path = TopModulePath modules final
 
-mkModuleEntry :: ScopedModule -> ModuleSymbolEntry
-mkModuleEntry m = ModuleSymbolEntry (m ^. scopedModuleName)
+        mkModuleEntry :: ScopedModule -> ModuleSymbolEntry
+        mkModuleEntry m =
+          Entry
+            { _entryName = m ^. scopedModuleName,
+              _entryVisibility = VisPublic
+            }
 
 lookInExport ::
   forall r.
@@ -564,7 +575,7 @@ lookupQualifiedSymbol sms = do
 normalizePreSymbolEntry :: (Members '[State ScoperState] r) => PreSymbolEntry -> Sem r SymbolEntry
 normalizePreSymbolEntry = \case
   PreSymbolFinal a -> return a
-  PreSymbolAlias a -> gets (^?! scoperAlias . at (a ^. aliasName . S.nameId) . _Just) >>= normalizePreSymbolEntry
+  PreSymbolAlias a -> gets (^?! scoperAlias . at (a ^. aliasEntry . entryName . S.nameId) . _Just) >>= normalizePreSymbolEntry
 
 checkQualifiedName ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable] r) =>
@@ -575,7 +586,7 @@ checkQualifiedName q@(QualifiedName (SymbolPath p) sym) = do
   case es of
     [] -> notInScope
     [e] -> return e
-    _ -> throw (ErrAmbiguousSym (AmbiguousSym q' es))
+    _ -> throw (ErrAmbiguousSym (AmbiguousSym q' (map preSymbolEntryToSomeEntry es)))
   where
     q' = NameQualified q
     notInScope = throw (ErrQualSymNotInScope (QualSymNotInScope q))
@@ -600,12 +611,12 @@ entryToScopedIden name e = do
     PreSymbolAlias {} -> do
       e' <- normalizePreSymbolEntry e
       let scopedName' =
-            over S.nameFixity (maybe (e' ^. symbolEntry . S.nameFixity) Just) $
+            over S.nameFixity (maybe (e' ^. entryName . S.nameFixity) Just) $
               set S.nameKind (getNameKind e') scopedName
       return
         ScopedIden
           { _scopedIdenAlias = Just scopedName',
-            _scopedIdenFinal = helper (e' ^. symbolEntry)
+            _scopedIdenFinal = helper (e' ^. entryName)
           }
   registerScopedIden si
   return si
@@ -634,7 +645,7 @@ exportScope Scope {..} = do
         e : es -> err (e :| es)
       where
         shouldExport :: NameSpaceEntryType ns -> Bool
-        shouldExport ent = ent ^. nsEntry . S.nameVisibilityAnn == VisPublic
+        shouldExport ent = nsEntry' ent ^. someEntryVisibility == VisPublic
 
         err :: NonEmpty (NameSpaceEntryType ns) -> Sem r a
         err es =
@@ -654,12 +665,12 @@ exportScope Scope {..} = do
 getLocalModules :: (Member (State ScoperState) r) => ExportInfo -> Sem r (HashMap S.NameId ScopedModule)
 getLocalModules ExportInfo {..} = do
   mds <- gets (^. scoperModules)
-  return $ HashMap.fromList $ map (fetch mds) $ HashMap.elems _exportModuleSymbols
+  return . HashMap.fromList . map (fetch mds) $ HashMap.elems _exportModuleSymbols
   where
     fetch :: HashMap NameId ScopedModule -> ModuleSymbolEntry -> (NameId, ScopedModule)
-    fetch mds ModuleSymbolEntry {..} = (n, fromJust $ HashMap.lookup n mds)
+    fetch mds Entry {..} = (n, fromJust (HashMap.lookup n mds))
       where
-        n = _moduleEntry ^. S.nameId
+        n = _entryName ^. S.nameId
 
 readScopeModule ::
   (Members '[Error ScoperError, Reader ScopeParameters, NameIdGen, State ScoperState, InfoTableBuilder, Reader InfoTable] r) =>
@@ -1498,10 +1509,11 @@ checkLocalModule md@Module {..} = do
         inheritSymbol :: forall ns. (SingI ns) => SymbolInfo ns -> SymbolInfo ns
         inheritSymbol (SymbolInfo s) = SymbolInfo (inheritEntry <$> s)
           where
+            -- TODO revise
             inheritEntry :: NameSpaceEntryType ns -> NameSpaceEntryType ns
-            inheritEntry =
-              over (nsEntry . S.nameWhyInScope) S.BecauseInherited
-                . set (nsEntry . S.nameVisibilityAnn) VisPrivate
+            -- over (nsEntry . S.nameWhyInScope) S.BecauseInherited
+            --   . set (nsEntry . S.nameVisibilityAnn) VisPrivate
+            inheritEntry = set nsEntryVisibility VisPrivate
 
 checkOrphanOperators :: forall r. (Members '[Error ScoperError, State ScoperSyntax] r) => Sem r ()
 checkOrphanOperators = do
@@ -1529,7 +1541,7 @@ getModule ::
   Sem r ScopedModule
 getModule e n =
   set (scopedModuleName . S.nameConcrete) n
-    <$> gets (^?! scoperModules . at (e ^. moduleEntry . S.nameId) . _Just)
+    <$> gets (^?! scoperModules . at (e ^. entryName . S.nameId) . _Just)
 
 lookupModuleSymbol ::
   (Members '[Error ScoperError, State Scope, State ScoperState] r) =>
@@ -1686,14 +1698,17 @@ checkOpenModuleHelper importModuleHint OpenModule {..} = do
               _exportModuleSymbols = alterEntry <$> nfo ^. exportModuleSymbols,
               _exportFixitySymbols = alterEntry <$> nfo ^. exportFixitySymbols
             }
-
+        -- TODO revise
+        -- alterEntry :: (SingI ns) => NameSpaceEntryType ns -> NameSpaceEntryType ns
+        -- alterEntry =
+        --   over
+        --     nsEntry
+        --     ( set S.nameWhyInScope S.BecauseImportedOpened
+        --         . set S.nameVisibilityAnn (publicAnnToVis (_openModuleParams ^. openPublic))
+        --     )
         alterEntry :: (SingI ns) => NameSpaceEntryType ns -> NameSpaceEntryType ns
         alterEntry =
-          over
-            nsEntry
-            ( set S.nameWhyInScope S.BecauseImportedOpened
-                . set S.nameVisibilityAnn (publicAnnToVis (_openModuleParams ^. openPublic))
-            )
+          set nsEntryVisibility (publicAnnToVis (_openModuleParams ^. openPublic))
 
         publicAnnToVis :: PublicAnn -> VisibilityAnn
         publicAnnToVis = \case
@@ -2011,7 +2026,7 @@ checkUnqualifiedName s = do
   case resolveShadowing entries of
     [] -> throw (ErrSymNotInScope (NotInScope s scope))
     [x] -> return x
-    es -> throw (ErrAmbiguousSym (AmbiguousSym n es))
+    es -> throw (ErrAmbiguousSym (AmbiguousSym n (map preSymbolEntryToSomeEntry es)))
   where
     n = NameUnqualified s
 
@@ -2029,7 +2044,7 @@ checkFixitySymbol s = do
       let res = entryToSymbol x s
       registerName res
       return res
-    es -> throw (ErrAmbiguousSym (AmbiguousSym n (map (PreSymbolFinal . SymbolEntry . (^. fixityEntry)) es)))
+    es -> throw (ErrAmbiguousSym (AmbiguousSym n (map SomeEntry es)))
   where
     n = NameUnqualified s
 
@@ -2101,7 +2116,7 @@ lookupNameOfKind nameKind n = do
   case entries of
     [] -> return Nothing
     [(_, s)] -> return (Just s) -- There is one constructor with such a name
-    es -> throw (ErrAmbiguousSym (AmbiguousSym n (map fst es)))
+    es -> throw (ErrAmbiguousSym (AmbiguousSym n (map (preSymbolEntryToSomeEntry . fst) es)))
   where
     (path, sym) = splitName n
     filterEntry :: PreSymbolEntry -> Sem r (Maybe (PreSymbolEntry, ScopedIden))

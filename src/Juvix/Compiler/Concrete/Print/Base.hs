@@ -15,7 +15,7 @@ import Juvix.Compiler.Concrete.Extra qualified as Concrete
 import Juvix.Compiler.Concrete.Keywords qualified as Kw
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty.Options
-import Juvix.Compiler.Store.Scoped.Language (Alias, ModuleSymbolEntry, PreSymbolEntry (..), ScopedModule, SymbolEntry, aliasName, moduleEntry, scopedModuleName, symbolEntry)
+import Juvix.Compiler.Store.Scoped.Language
 import Juvix.Data.Ape.Base
 import Juvix.Data.Ape.Print
 import Juvix.Data.CodeAnn (Ann, CodeAnn (..), ppStringLit)
@@ -1255,18 +1255,21 @@ instance PrettyPrint Alias where
   ppCode a =
     noLoc
       ( kindWord
-          P.<+> C.code ((pretty (a ^. aliasName . S.nameVerbatim)))
+          P.<+> C.code ((pretty (a ^. aliasEntry . entryName . S.nameVerbatim)))
           P.<+> "defined at"
           P.<+> pretty (getLoc a)
       )
     where
       kindWord :: Doc Ann = "Alias"
 
-instance PrettyPrint SymbolEntry where
+instance PrettyPrint SomeEntry where
+  ppCode (SomeEntry e) = ppCode e
+
+instance PrettyPrint (Entry k) where
   ppCode ent =
     noLoc
       ( kindWord
-          P.<+> C.code (kindAnn (pretty (ent ^. symbolEntry . S.nameVerbatim)))
+          P.<+> C.code (kindAnn (pretty (ent ^. entryName . S.nameVerbatim)))
           P.<+> "defined at"
           P.<+> pretty (getLoc ent)
       )
@@ -1276,19 +1279,6 @@ instance PrettyPrint SymbolEntry where
       (kindAnn :: Doc Ann -> Doc Ann, kindWord :: Doc Ann) =
         let k = getNameKind ent
          in (annotate (AnnKind k), pretty' (nameKindText k))
-
-instance PrettyPrint ModuleSymbolEntry where
-  ppCode ent = do
-    let mname = ppCode (ent ^. moduleEntry . S.nameVerbatim)
-    noLoc
-      kindWord
-      <+> mname
-      <+> noLoc "defined at"
-      <+> noLoc (pretty (getLoc ent))
-    where
-      kindWord :: Doc Ann =
-        let k = getNameKind ent
-         in (pretty (nameKindText k))
 
 header :: (Members '[ExactPrint] r) => Text -> Sem r ()
 header txt = annotated AnnImportant (noLoc (pretty (txt <> "\n")))
