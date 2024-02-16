@@ -1,5 +1,6 @@
 module Juvix.Compiler.Concrete.Data.Scope.Base where
 
+import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Concrete.Data.NameSpace
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
@@ -12,7 +13,13 @@ newtype SymbolInfo (n :: NameSpace) = SymbolInfo
     -- different places
     _symbolInfo :: HashMap S.AbsModulePath (NameSpaceEntryType n)
   }
-  deriving newtype (Semigroup, Monoid)
+
+instance (SingI n) => Semigroup (SymbolInfo n) where
+  SymbolInfo s1 <> SymbolInfo s2 =
+    SymbolInfo (HashMap.unionWith resolveNameSpaceEntry s1 s2)
+
+instance (SingI n) => Monoid (SymbolInfo n) where
+  mempty = SymbolInfo mempty
 
 data BindingStrategy
   = -- | Local binding allows shadowing
