@@ -1,4 +1,4 @@
-module ImportNestedLocalModule;
+module ImportedModule;
 
 import Stdlib.Prelude open;
 

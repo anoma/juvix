@@ -440,10 +440,5 @@ tests =
         "Test073: Import and use a syntax alias"
         $(mkRelDir "test073")
         $(mkRelFile "test073.juvix")
-        $(mkRelFile "out/test073.out"),
-      posTest
-        "Test074: Import nested local module"
-        $(mkRelDir "test074")
-        $(mkRelFile "test074.juvix")
-        $(mkRelFile "out/test074.out")
+        $(mkRelFile "out/test073.out")
     ]

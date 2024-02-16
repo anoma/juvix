@@ -1,6 +1,0 @@
-module test074;
-
-import Stdlib.Prelude open;
-import ImportNestedLocalModule open;
-
-main : Nat := ImportNestedLocalModule.A.B.x;

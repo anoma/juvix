@@ -233,5 +233,9 @@ tests =
       "Package file"
       $(mkRelDir "package")
       $(mkRelFile "Package.juvix")
-      PackagePathResolver
+      PackagePathResolver,
+    posTest
+      "Import nested local module"
+      $(mkRelDir "ImportNestedLocalModule")
+      $(mkRelFile "ImportNestedLocalModule.juvix")
   ]
