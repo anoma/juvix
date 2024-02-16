@@ -1,0 +1,5 @@
+module VisibilityPrecedence;
+
+import NestedLocalModuleViaExport as M;
+
+main : M.T := M.A.t;

@@ -237,5 +237,9 @@ tests =
     posTest
       "Import nested local module"
       $(mkRelDir "ImportNestedLocalModule")
-      $(mkRelFile "ImportNestedLocalModule.juvix")
+      $(mkRelFile "ImportNestedLocalModule.juvix"),
+    posTest
+      "Visibility precedence"
+      $(mkRelDir "VisibilityPrecedence")
+      $(mkRelFile "VisibilityPrecedence.juvix")
   ]
