@@ -35,9 +35,9 @@ regRunAssertionParam' interpretFun tab expectedFile step = do
             step "Interpret"
             interpretFun hout sym tab
             hClose hout
-            actualOutput <- readFile (toFilePath outputFile)
+            actualOutput <- readFile outputFile
             step "Compare expected and actual program output"
-            expected <- readFile (toFilePath expectedFile)
+            expected <- readFile expectedFile
             assertEqDiffText ("Check: RUN output = " <> toFilePath expectedFile) actualOutput expected
         )
     Nothing -> assertFailure "no 'main' function"
@@ -84,9 +84,8 @@ regRunErrorAssertion mainFile step = do
 
 parseFile :: Path Abs File -> IO (Either MegaparsecError InfoTable)
 parseFile f = do
-  let f' = toFilePath f
-  s <- readFile f'
-  return $ runParser f' s
+  s <- readFile f
+  return (runParser f s)
 
 doRun ::
   Handle ->
