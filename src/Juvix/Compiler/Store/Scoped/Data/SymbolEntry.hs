@@ -84,11 +84,6 @@ preSymbolName f = \case
   PreSymbolAlias a -> PreSymbolAlias <$> (aliasEntry . entryName) f a
   PreSymbolFinal a -> PreSymbolFinal <$> entryName f a
 
--- preSymbolEntryLens :: Lens' SomeEntry a -> Lens' PreSymbolEntry a
--- preSymbolEntryLens l f = \case
---   PreSymbolAlias a -> PreSymbolAlias <$> (aliasEntry . entryWhyInScope) f a
---   PreSymbolFinal a -> PreSymbolFinal <$> entryWhyInScope f a
-
 preSymbolEntryWhyInScope :: Lens' PreSymbolEntry S.WhyInScope
 preSymbolEntryWhyInScope f = \case
   PreSymbolAlias a -> PreSymbolAlias <$> (aliasEntry . entryWhyInScope) f a
