@@ -270,6 +270,10 @@ genCode infoTable fi =
       Core.OpIntMod -> PrimBinop OpIntMod
       Core.OpIntLt -> PrimBinop OpIntLt
       Core.OpIntLe -> PrimBinop OpIntLe
+      Core.OpFieldAdd -> PrimBinop OpFieldAdd
+      Core.OpFieldSub -> PrimBinop OpFieldSub
+      Core.OpFieldMul -> PrimBinop OpFieldMul
+      Core.OpFieldDiv -> PrimBinop OpFieldDiv
       Core.OpEq -> PrimBinop OpEq
       Core.OpStrConcat -> PrimBinop OpStrConcat
       Core.OpSeq -> OpSeq

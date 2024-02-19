@@ -560,6 +560,10 @@ builtinAppExpr varsNum vars = do
       <|> (kw kwDiv $> OpIntDiv)
       <|> (kw kwMul $> OpIntMul)
       <|> (kw kwMod $> OpIntMod)
+      <|> (kw kwFieldAdd $> OpFieldAdd)
+      <|> (kw kwFieldSub $> OpFieldSub)
+      <|> (kw kwFieldMul $> OpFieldMul)
+      <|> (kw kwFieldDiv $> OpFieldDiv)
       <|> (kw kwShow $> OpShow)
       <|> (kw kwStrConcat $> OpStrConcat)
       <|> (kw kwStrToInt $> OpStrToInt)
@@ -584,7 +588,8 @@ atom ::
   HashMap Text Level ->
   ParsecS r Node
 atom varsNum vars =
-  exprConstInt
+  exprConstField
+    <|> exprConstInt
     <|> exprConstString
     <|> exprUniverse
     <|> exprDynamic
@@ -1096,6 +1101,7 @@ exprNamed varsNum vars = do
   (txt, i) <- identifierL
   case txt of
     "Int" -> return mkTypeInteger'
+    "Field" -> return mkTypeField'
     "String" -> return mkTypeString'
     _ ->
       case HashMap.lookup txt vars of

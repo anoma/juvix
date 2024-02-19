@@ -19,7 +19,6 @@ import Juvix.Compiler.Core.Language.Value
 import Juvix.Compiler.Core.Pretty.Options
 import Juvix.Compiler.Internal.Data.Name
 import Juvix.Data.CodeAnn
-import Juvix.Data.Field
 import Juvix.Extra.Strings qualified as Str
 
 doc :: (PrettyCode c) => Options -> c -> Doc Ann
@@ -69,9 +68,9 @@ instance PrettyCode Tag where
 instance PrettyCode Primitive where
   ppCode = \case
     PrimInteger _ -> return $ annotate (AnnKind KNameInductive) (pretty ("Int" :: String))
+    PrimField -> return $ annotate (AnnKind KNameInductive) (pretty ("Field" :: String))
     PrimBool _ -> return $ annotate (AnnKind KNameInductive) (pretty ("Bool" :: String))
     PrimString -> return $ annotate (AnnKind KNameInductive) (pretty ("String" :: String))
-    PrimField -> return $ annotate (AnnKind KNameInductive) (pretty ("Field" :: String))
 
 ppName :: NameKind -> Text -> Sem r (Doc Ann)
 ppName kind name = return $ annotate (AnnKind kind) (pretty name)
@@ -95,12 +94,15 @@ instance PrettyCode ConstantValue where
     ConstInteger int ->
       return $ annotate AnnLiteralInteger (pretty int)
     ConstField fld ->
-      return $ annotate AnnLiteralInteger (pretty (fieldToInteger fld) <> "F")
+      return $ annotate AnnLiteralInteger (pretty fld)
     ConstString txt ->
       return $ annotate AnnLiteralString (pretty (show txt :: String))
 
 instance PrettyCode (Constant' i) where
-  ppCode Constant {..} = ppCode _constantValue
+  ppCode Constant {..} = case _constantValue of
+    ConstField fld ->
+      return $ annotate AnnLiteralInteger (pretty fld <> "F")
+    _ -> ppCode _constantValue
 
 instance (PrettyCode a, HasAtomicity a) => PrettyCode (App' i a) where
   ppCode App {..} = do

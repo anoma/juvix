@@ -1,0 +1,5 @@
+-- Fields
+
+def f := \x \y fsub 0F (fadd x (fmul y (fdiv 1F x)));
+
+f 10F 7F

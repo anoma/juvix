@@ -11,6 +11,7 @@ import Juvix.Compiler.Pipeline
 import Juvix.Compiler.Pipeline.Root
 import Juvix.Data.Effect.TaggedLock
 import Juvix.Data.Error.GenericError qualified as E
+import Juvix.Data.Field
 
 data GlobalOptions = GlobalOptions
   { _globalNoColors :: Bool,
@@ -23,6 +24,7 @@ data GlobalOptions = GlobalOptions
     _globalNoCoverage :: Bool,
     _globalNoStdlib :: Bool,
     _globalUnrollLimit :: Int,
+    _globalFieldSize :: Natural,
     _globalOffline :: Bool
   }
   deriving stock (Eq, Show)
@@ -46,6 +48,7 @@ instance CanonicalProjection GlobalOptions Core.CoreOptions where
     Core.CoreOptions
       { Core._optCheckCoverage = not _globalNoCoverage,
         Core._optUnrollLimit = _globalUnrollLimit,
+        Core._optFieldSize = _globalFieldSize,
         Core._optOptimizationLevel = defaultOptimizationLevel,
         Core._optInliningDepth = defaultInliningDepth
       }
@@ -63,6 +66,7 @@ defaultGlobalOptions =
       _globalNoCoverage = False,
       _globalNoStdlib = False,
       _globalUnrollLimit = defaultUnrollLimit,
+      _globalFieldSize = defaultFieldSize,
       _globalOffline = False
     }
 
@@ -111,6 +115,13 @@ parseGlobalFlags = do
     switch
       ( long "no-stdlib"
           <> help "Do not use the standard library"
+      )
+  _globalFieldSize <-
+    option
+      (numberInOpt allowedFieldSizes)
+      ( long "field-size"
+          <> value defaultFieldSize
+          <> help ("Field type size (default: " <> show defaultFieldSize <> ")")
       )
   _globalUnrollLimit <-
     option
@@ -162,7 +173,8 @@ entryPointFromGlobalOptions root mainFile opts = do
         _entryPointUnrollLimit = opts ^. globalUnrollLimit,
         _entryPointGenericOptions = project opts,
         _entryPointBuildDir = maybe (def ^. entryPointBuildDir) (CustomBuildDir . Abs) mabsBuildDir,
-        _entryPointOffline = opts ^. globalOffline
+        _entryPointOffline = opts ^. globalOffline,
+        _entryPointFieldSize = opts ^. globalFieldSize
       }
   where
     optBuildDir :: Maybe (Prepath Dir)
@@ -184,7 +196,8 @@ entryPointFromGlobalOptionsNoFile root opts = do
         _entryPointUnrollLimit = opts ^. globalUnrollLimit,
         _entryPointGenericOptions = project opts,
         _entryPointBuildDir = maybe (def ^. entryPointBuildDir) (CustomBuildDir . Abs) mabsBuildDir,
-        _entryPointOffline = opts ^. globalOffline
+        _entryPointOffline = opts ^. globalOffline,
+        _entryPointFieldSize = opts ^. globalFieldSize
       }
   where
     optBuildDir :: Maybe (Prepath Dir)

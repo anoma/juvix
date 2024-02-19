@@ -275,6 +275,10 @@ fromRegInstr bNoStack info = \case
       Reg.OpIntMod -> "JUVIX_INT_MOD"
       Reg.OpIntLt -> "JUVIX_INT_LT"
       Reg.OpIntLe -> "JUVIX_INT_LE"
+      Reg.OpFieldAdd -> impossible
+      Reg.OpFieldSub -> impossible
+      Reg.OpFieldMul -> impossible
+      Reg.OpFieldDiv -> impossible
       Reg.OpEq -> "JUVIX_VAL_EQ"
       Reg.OpStrConcat -> "JUVIX_STR_CONCAT"
 
@@ -322,6 +326,7 @@ fromRegInstr bNoStack info = \case
     fromConst :: Reg.Constant -> Expression
     fromConst = \case
       Reg.ConstInt x -> macroCall "make_smallint" [integer x]
+      Reg.ConstField {} -> impossible
       Reg.ConstBool True -> macroVar "BOOL_TRUE"
       Reg.ConstBool False -> macroVar "BOOL_FALSE"
       Reg.ConstString x -> macroCall "GET_CONST_CSTRING" [integer (getStringId info x)]

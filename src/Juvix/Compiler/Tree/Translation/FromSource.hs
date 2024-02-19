@@ -75,6 +75,10 @@ parseBinop =
     <|> parseBinaryOp kwMod_ (PrimBinop OpIntMod)
     <|> parseBinaryOp kwLt_ (PrimBinop OpIntLt)
     <|> parseBinaryOp kwLe_ (PrimBinop OpIntLe)
+    <|> parseBinaryOp kwFieldAdd (PrimBinop OpFieldAdd)
+    <|> parseBinaryOp kwFieldSub (PrimBinop OpFieldSub)
+    <|> parseBinaryOp kwFieldMul (PrimBinop OpFieldMul)
+    <|> parseBinaryOp kwFieldDiv (PrimBinop OpFieldDiv)
     <|> parseBinaryOp kwEq_ (PrimBinop OpEq)
     <|> parseBinaryOp kwStrcat (PrimBinop OpStrConcat)
     <|> parseBinaryOp kwSeq_ OpSeq

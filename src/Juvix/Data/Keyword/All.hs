@@ -343,6 +343,18 @@ kwLt_ = asciiKw Str.lt_
 kwLe_ :: Keyword
 kwLe_ = asciiKw Str.le_
 
+kwFieldAdd :: Keyword
+kwFieldAdd = asciiKw Str.fadd
+
+kwFieldSub :: Keyword
+kwFieldSub = asciiKw Str.fsub
+
+kwFieldMul :: Keyword
+kwFieldMul = asciiKw Str.fmul
+
+kwFieldDiv :: Keyword
+kwFieldDiv = asciiKw Str.fdiv
+
 kwSeq_ :: Keyword
 kwSeq_ = asciiKw Str.sseq_
 

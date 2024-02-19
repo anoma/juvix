@@ -5,6 +5,7 @@ import Data.Singletons.Decide
 import GHC.TypeLits.Singletons ()
 import Juvix.Data.FiniteField.PrimeField
 import Juvix.Prelude hiding (toInteger)
+import Juvix.Prelude.Pretty
 
 newtype FField = FField
   { _unFField :: Sigma Natural (TyCon1 PrimeField)
@@ -14,7 +15,7 @@ newtype FField = FField
 makeLenses ''FField
 
 allowedFieldSizes :: [Natural]
-allowedFieldSizes = [2147483647]
+allowedFieldSizes = [11, 2147483647]
 
 instance Serialize FField where
   put f = S.put (fieldSize f, fieldToInteger f)
@@ -22,6 +23,9 @@ instance Serialize FField where
   get = do
     (n, f) <- S.get
     return $ fieldFromInteger n f
+
+instance Pretty FField where
+  pretty (FField (_ :&: f)) = pretty (toInteger f)
 
 fieldAdd :: FField -> FField -> FField
 fieldAdd

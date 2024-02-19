@@ -104,6 +104,7 @@ getDirectRefType dr mem = case dr of
 getConstantType :: Constant -> Type
 getConstantType = \case
   ConstInt {} -> mkTypeInteger
+  ConstField {} -> TyField
   ConstBool {} -> mkTypeBool
   ConstString {} -> TyString
   ConstUnit -> TyUnit

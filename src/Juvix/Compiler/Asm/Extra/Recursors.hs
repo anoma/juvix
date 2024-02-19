@@ -131,13 +131,16 @@ recurse' sig = go True
             Return ->
               return (dropTempStack mem)
 
-        fixMemIntOp :: Memory -> Sem r Memory
-        fixMemIntOp mem = fixMemBinOp' mem mkTypeInteger mkTypeInteger mkTypeInteger
-
         fixMemBinOp' :: Memory -> Type -> Type -> Type -> Sem r Memory
         fixMemBinOp' mem ty0 ty1 rty = do
           checkValueStack' loc (sig ^. recursorInfoTable) [ty0, ty1] mem
           return $ pushValueStack rty (popValueStack 2 mem)
+
+        fixMemIntOp :: Memory -> Sem r Memory
+        fixMemIntOp mem = fixMemBinOp' mem mkTypeInteger mkTypeInteger mkTypeInteger
+
+        fixMemFieldOp :: Memory -> Sem r Memory
+        fixMemFieldOp mem = fixMemBinOp' mem TyField TyField TyField
 
         fixMemBinop :: Memory -> BinaryOp -> Sem r Memory
         fixMemBinop mem op = case op of
@@ -155,6 +158,14 @@ recurse' sig = go True
             fixMemBinOp' mem mkTypeInteger mkTypeInteger mkTypeBool
           OpIntLe ->
             fixMemBinOp' mem mkTypeInteger mkTypeInteger mkTypeBool
+          OpFieldAdd ->
+            fixMemFieldOp mem
+          OpFieldSub ->
+            fixMemFieldOp mem
+          OpFieldMul ->
+            fixMemFieldOp mem
+          OpFieldDiv ->
+            fixMemFieldOp mem
           OpEq ->
             fixMemBinOp' mem TyDynamic TyDynamic mkTypeBool
           OpStrConcat ->

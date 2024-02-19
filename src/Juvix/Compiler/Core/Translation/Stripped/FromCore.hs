@@ -78,6 +78,12 @@ fromCore tab =
         BuiltinStringToNat -> False
         BuiltinBoolPrint -> False
         BuiltinString -> False
+        BuiltinField -> False
+        BuiltinFieldEq -> False
+        BuiltinFieldAdd -> False
+        BuiltinFieldSub -> False
+        BuiltinFieldMul -> False
+        BuiltinFieldDiv -> False
         BuiltinIOSequence -> False
         BuiltinIOReadline -> False
         BuiltinTrace -> False

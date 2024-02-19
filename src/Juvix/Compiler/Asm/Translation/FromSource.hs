@@ -73,6 +73,14 @@ command = do
       return $ mkBinop' loc OpIntLe
     "eq" ->
       return $ mkBinop' loc OpEq
+    "fadd" ->
+      return $ mkBinop' loc OpFieldAdd
+    "fsub" ->
+      return $ mkBinop' loc OpFieldSub
+    "fmul" ->
+      return $ mkBinop' loc OpFieldMul
+    "fdiv" ->
+      return $ mkBinop' loc OpFieldDiv
     "strcat" ->
       return $ mkBinop' loc OpStrConcat
     "show" ->

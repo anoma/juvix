@@ -342,5 +342,10 @@ tests =
       "Test060: Bottom"
       $(mkRelDir ".")
       $(mkRelFile "test060.jvc")
-      $(mkRelFile "out/test060.out")
+      $(mkRelFile "out/test060.out"),
+    PosTest
+      "Test061: Fields"
+      $(mkRelDir ".")
+      $(mkRelFile "test061.jvc")
+      $(mkRelFile "out/test061.out")
   ]

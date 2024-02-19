@@ -83,6 +83,8 @@ instance PrettyCode Value where
   ppCode = \case
     ValInteger i ->
       return $ integer i
+    ValField i ->
+      return $ integer i
     ValBool True ->
       return $ annotate (AnnKind KNameConstructor) (pretty (Str.true_ :: String))
     ValBool False ->
@@ -137,6 +139,8 @@ instance PrettyCode Type where
       return $ annotate (AnnKind KNameInductive) Str.mul
     TyInteger {} ->
       return $ annotate (AnnKind KNameInductive) Str.integer
+    TyField {} ->
+      return $ annotate (AnnKind KNameInductive) Str.field
     TyBool {} ->
       return $ annotate (AnnKind KNameInductive) Str.bool
     TyString ->
@@ -181,6 +185,8 @@ instance PrettyCode Constant where
   ppCode = \case
     ConstInt v ->
       return $ annotate AnnLiteralInteger (pretty v)
+    ConstField v ->
+      return $ annotate AnnLiteralInteger (pretty v <> "F")
     ConstBool True ->
       return $ annotate (AnnKind KNameConstructor) Str.true_
     ConstBool False ->
@@ -201,6 +207,10 @@ instance PrettyCode BinaryOp where
     OpIntMod -> Str.instrMod
     OpIntLt -> Str.instrLt
     OpIntLe -> Str.instrLe
+    OpFieldAdd -> Str.fadd
+    OpFieldSub -> Str.fsub
+    OpFieldMul -> Str.fmul
+    OpFieldDiv -> Str.fdiv
     OpEq -> Str.instrEq
     OpStrConcat -> Str.instrStrConcat
 

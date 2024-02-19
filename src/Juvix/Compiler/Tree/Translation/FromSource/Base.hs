@@ -23,6 +23,7 @@ import Juvix.Compiler.Tree.Keywords.Base
 import Juvix.Compiler.Tree.Language.Base
 import Juvix.Compiler.Tree.Translation.FromSource.Lexer.Base
 import Juvix.Compiler.Tree.Translation.FromSource.Sig
+import Juvix.Data.Field
 import Juvix.Parser.Error
 import Text.Megaparsec qualified as P
 
@@ -306,6 +307,7 @@ typeNamed = do
   txt <- identifier @t @e @d
   case txt of
     "integer" -> return mkTypeInteger
+    "field" -> return TyField
     "bool" -> return mkTypeBool
     "string" -> return TyString
     "unit" -> return TyUnit
@@ -316,7 +318,12 @@ typeNamed = do
         _ -> parseFailure off ("not a type: " ++ fromText txt)
 
 constant :: ParsecS r Constant
-constant = integerValue <|> boolValue <|> stringValue <|> unitValue <|> voidValue
+constant = fieldValue <|> integerValue <|> boolValue <|> stringValue <|> unitValue <|> voidValue
+
+fieldValue :: ParsecS r Constant
+fieldValue = P.try $ do
+  (i, _) <- field
+  return $ ConstField (fieldFromInteger (maximum allowedFieldSizes) i)
 
 integerValue :: ParsecS r Constant
 integerValue = do

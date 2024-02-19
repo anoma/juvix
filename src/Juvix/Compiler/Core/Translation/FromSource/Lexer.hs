@@ -31,10 +31,7 @@ decimal :: (Num n) => ParsecS r (n, Interval)
 decimal = lexemeInterval L.decimal
 
 field :: ParsecS r (Integer, Interval)
-field = lexemeInterval $ do
-  d <- L.decimal
-  P.chunk "F"
-  return d
+field = lexemeInterval field'
 
 integer :: ParsecS r (Integer, Interval)
 integer = integer' decimal

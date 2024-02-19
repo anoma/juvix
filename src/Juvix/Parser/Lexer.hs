@@ -136,6 +136,12 @@ number' int mn mx = do
 string' :: ParsecS r Text
 string' = pack <$> (char '"' >> manyTill L.charLiteral (char '"'))
 
+field' :: ParsecS r Integer
+field' = do
+  d <- L.decimal
+  P.chunk "F"
+  return d
+
 -- | The caller is responsible of consuming space after it.
 delim' :: Text -> ParsecS r Interval
 delim' d = P.label (unpack d) . fmap snd . interval $ chunk d

@@ -111,6 +111,19 @@ naturalNumberOpt = eitherReader aux
     aux :: String -> Either String Word
     aux s = maybe (Left $ s <> " is not a nonnegative number") Right (readMaybe s :: Maybe Word)
 
+numberInOpt :: [Natural] -> ReadM Natural
+numberInOpt lst = eitherReader aux
+  where
+    aux :: String -> Either String Natural
+    aux s =
+      either Left checkInList $
+        maybe (Left $ s <> " is not a nonnegative number") Right (readMaybe s :: Maybe Natural)
+
+    checkInList :: Natural -> Either String Natural
+    checkInList n
+      | n `elem` lst = Right n
+      | otherwise = Left $ Prelude.show n <> " is not a recognized field size"
+
 extCompleter :: FileExt -> Completer
 extCompleter ext = mkCompleter $ \word -> do
   let cmd = unwords ["compgen", "-o", "plusdirs", "-f", "-X", "!*" <> Prelude.show ext, "--", requote word]
