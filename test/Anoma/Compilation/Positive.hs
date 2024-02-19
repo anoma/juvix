@@ -3,20 +3,21 @@ module Anoma.Compilation.Positive where
 import Base
 import Juvix.Compiler.Backend (Target (TargetAnoma))
 import Juvix.Compiler.Nockma.Evaluator
-import Juvix.Compiler.Nockma.Language hiding (Path)
-import Juvix.Compiler.Nockma.Translation.FromSource.QQ hiding (Path)
-import Juvix.Compiler.Nockma.Translation.FromTree hiding (Path)
+import Juvix.Compiler.Nockma.Language
+import Juvix.Compiler.Nockma.Translation.FromSource.QQ
+import Juvix.Compiler.Nockma.Translation.FromTree
+import Juvix.Prelude qualified as Prelude
 import Nockma.Base
 import Nockma.Eval.Positive
 
-root :: Path Abs Dir
+root :: Prelude.Path Abs Dir
 root = relToProject $(mkRelDir "tests/Anoma/positive/Compilation")
 
-mkAnomaCallTest :: Text -> Path Rel Dir -> Path Rel File -> [Term Natural] -> Check () -> TestTree
+mkAnomaCallTest :: Text -> Prelude.Path Rel Dir -> Prelude.Path Rel File -> [Term Natural] -> Check () -> TestTree
 mkAnomaCallTest _testName relRoot mainFile args _testCheck =
   testCase (unpack _testName) (mkTestIO >>= mkNockmaAssertion)
   where
-    rootDir' :: Path Abs Dir
+    rootDir' :: Prelude.Path Abs Dir
     rootDir' = root <//> relRoot
 
     mkTestIO :: IO Test
