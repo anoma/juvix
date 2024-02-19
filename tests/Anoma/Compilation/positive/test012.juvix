@@ -1,0 +1,38 @@
+-- trees
+module test012;
+
+import Stdlib.Prelude open;
+import Stdlib.Debug.Trace open;
+
+type Tree :=
+  | leaf : Tree
+  | node1 : Tree → Tree
+  | node2 : Tree → Tree → Tree
+  | node3 : Tree → Tree → Tree → Tree;
+
+terminating
+gen : Nat → Tree
+  | zero := leaf
+  | n :=
+    if
+      (mod n 3 == 0)
+      (node1 (gen (sub n 1)))
+      (if
+        (mod n 3 == 1)
+        (node2 (gen (sub n 1)) (gen (sub n 1)))
+        (node3 (gen (sub n 1)) (gen (sub n 1)) (gen (sub n 1))));
+
+preorder : Tree → List Nat
+  | leaf := 0 :: nil
+  | (node1 c) :=  1 :: preorder c
+  | (node2 l r) :=  2 :: preorder l ++ preorder r
+  | (node3 l m r) := 3 :: preorder l ++ preorder m ++ preorder r;
+
+combineDigits (xs : List Nat) : Nat := for (acc := 0) (x in xs) acc * 10 + x;
+
+main : Nat :=
+  trace (combineDigits (preorder (gen 3)))
+    >>> trace (combineDigits (preorder (gen 4)))
+    >>> trace (combineDigits (preorder (gen 5)))
+    >>> trace (combineDigits (preorder (gen 6)))
+    >>> combineDigits (preorder (gen 7));
