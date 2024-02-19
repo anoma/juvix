@@ -606,10 +606,9 @@ ensureLn t =
       '\n' -> t
       _ -> Text.snoc t '\n'
 
+readFile :: (MonadIO m) => Path Abs File -> m Text
+readFile = liftIO . Utf8.readFile . toFilePath
+
 writeFileEnsureLn :: (MonadIO m) => Path Abs File -> Text -> m ()
 writeFileEnsureLn p = liftIO . Utf8.writeFile (toFilePath p)
 {-# INLINE writeFileEnsureLn #-}
-
--- TODO: change FilePath to Path Abs File
-readFile :: (MonadIO m) => FilePath -> m Text
-readFile = liftIO . Utf8.readFile

@@ -11,8 +11,8 @@ import Juvix.Compiler.Tree.Translation.FromAsm qualified as Tree
 runCommand :: forall r. (Members '[EmbedIO, App] r) => TreeFromAsmOptions -> Sem r ()
 runCommand opts = do
   afile :: Path Abs File <- fromAppPathFile file
-  s <- readFile (toFilePath afile)
-  case Asm.runParser (toFilePath afile) s of
+  s <- readFile afile
+  case Asm.runParser afile s of
     Left err -> exitJuvixError (JuvixError err)
     Right tab -> do
       r :: Either JuvixError Tree.InfoTable <- runError $ mapError (JuvixError @TreeError) $ Tree.fromAsm tab

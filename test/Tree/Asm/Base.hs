@@ -13,8 +13,8 @@ treeAsmAssertion ::
   Assertion
 treeAsmAssertion mainFile expectedFile step = do
   step "Parse"
-  s <- readFile (toFilePath mainFile)
-  case runParser (toFilePath mainFile) s of
+  s <- readFile mainFile
+  case runParser mainFile s of
     Left err -> assertFailure (show (pretty err))
     Right tabIni -> do
       step "Translate"

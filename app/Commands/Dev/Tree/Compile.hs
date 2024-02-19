@@ -8,8 +8,8 @@ import Juvix.Compiler.Tree.Translation.FromSource qualified as Tree
 runCommand :: forall r. (Members '[EmbedIO, App, TaggedLock] r) => CompileOptions -> Sem r ()
 runCommand opts = do
   file <- getFile
-  s <- readFile (toFilePath file)
-  tab <- getRight (mapLeft JuvixError (Tree.runParser (toFilePath file) s))
+  s <- readFile file
+  tab <- getRight (mapLeft JuvixError (Tree.runParser file s))
   let arg = PipelineArg opts file tab
   case opts ^. compileTarget of
     TargetWasm32Wasi -> runCPipeline arg

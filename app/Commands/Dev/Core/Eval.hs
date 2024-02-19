@@ -8,7 +8,7 @@ import Juvix.Compiler.Core.Translation.FromSource qualified as Core
 runCommand :: forall r. (Members '[EmbedIO, App] r) => CoreEvalOptions -> Sem r ()
 runCommand opts = do
   f :: Path Abs File <- fromAppPathFile b
-  s <- readFile (toFilePath f)
+  s <- readFile f
   case Core.runParser f defaultModuleId mempty s of
     Left err -> exitJuvixError (JuvixError err)
     Right (tab, Just node) -> do evalAndPrint opts tab node

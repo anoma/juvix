@@ -9,8 +9,8 @@ import Juvix.Compiler.Casm.Validate qualified as Casm
 runCommand :: forall r. (Members '[EmbedIO, App] r) => CasmReadOptions -> Sem r ()
 runCommand opts = do
   afile :: Path Abs File <- fromAppPathFile file
-  s <- readFile (toFilePath afile)
-  case Casm.runParser (toFilePath afile) s of
+  s <- readFile afile
+  case Casm.runParser afile s of
     Left err -> exitJuvixError (JuvixError err)
     Right (labi, code) ->
       case Casm.validate labi code of

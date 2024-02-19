@@ -9,7 +9,7 @@ import Juvix.Compiler.Core.Translation.FromSource qualified as Core
 runCommand :: forall r. (Members '[EmbedIO, App, TaggedLock] r) => CompileOptions -> Sem r ()
 runCommand opts = do
   file <- getFile
-  s <- readFile (toFilePath file)
+  s <- readFile file
   tab <- getRight (mapLeft JuvixError (Core.runParserMain file defaultModuleId mempty s))
   let arg = PipelineArg opts file (Core.moduleFromInfoTable tab)
   case opts ^. compileTarget of

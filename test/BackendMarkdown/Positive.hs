@@ -55,7 +55,7 @@ testDescr PosTest {..} =
           Left err -> assertFailure (show err)
           Right md -> do
             step "Checking against expected output file"
-            expFile :: Text <- readFile (toFilePath _expectedFile)
+            expFile :: Text <- readFile _expectedFile
             assertEqDiffText "Compare to expected output" md expFile
     }
 

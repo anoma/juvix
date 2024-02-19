@@ -58,7 +58,7 @@ clangAssertion optLevel inputFile expectedFile stdinText step = do
   step "Lookup WASI_SYSROOT_PATH"
   sysrootPath :: Path Abs Dir <- getWasiSysrootPath
 
-  expected <- readFile (toFilePath expectedFile)
+  expected <- readFile expectedFile
 
   let executeWasm :: Path Abs File -> IO Text
       executeWasm outputFile = readProcess "wasmer" [toFilePath outputFile] stdinText

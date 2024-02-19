@@ -37,10 +37,10 @@ localS update a = do
   lift $ put s
   return a'
 
-runParserS :: ParserSig t e d -> FilePath -> Text -> Either MegaparsecError (InfoTable' t e)
+runParserS :: ParserSig t e d -> Path Abs File -> Text -> Either MegaparsecError (InfoTable' t e)
 runParserS sig fileName input_ = (^. stateInfoTable) <$> runParserS' sig emptyBuilderState fileName input_
 
-runParserS' :: forall t e d. ParserSig t e d -> BuilderState' t e -> FilePath -> Text -> Either MegaparsecError (BuilderState' t e)
+runParserS' :: forall t e d. ParserSig t e d -> BuilderState' t e -> Path Abs File -> Text -> Either MegaparsecError (BuilderState' t e)
 runParserS' sig bs fileName input_ = case runParserS'' (parseToplevel @t @e @d) sig bs fileName input_ of
   Left e -> Left e
   Right (bs', ()) -> Right bs'
@@ -50,15 +50,15 @@ runParserS'' ::
   ParsecS '[Reader (ParserSig t e d), InfoTableBuilder' t e, State (LocalParams' d)] a ->
   ParserSig t e d ->
   BuilderState' t e ->
-  FilePath ->
+  Path Abs File ->
   Text ->
   Either MegaparsecError (BuilderState' t e, a)
 runParserS'' parser sig bs fileName input_ =
-  case run $
-    evalState emptyLocalParams $
-      runInfoTableBuilder' bs $
-        runReader sig $
-          P.runParserT parser fileName input_ of
+  case run
+    . evalState emptyLocalParams
+    . runInfoTableBuilder' bs
+    . runReader sig
+    $ P.runParserT parser (toFilePath fileName) input_ of
     (_, Left err) -> Left (MegaparsecError err)
     (bs', Right x) -> Right (bs', x)
 

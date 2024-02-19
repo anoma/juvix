@@ -33,7 +33,7 @@ testDescr PosTest {..} =
         let maybeFile = entryPoint ^. entryPointModulePath
         f <- fromMaybeM (assertFailure "Not a module") (return maybeFile)
 
-        original :: Text <- readFile (toFilePath f)
+        original :: Text <- readFile f
 
         step "Parsing & scoping"
         PipelineResult {..} <- snd <$> testRunIO entryPoint upToScoping
@@ -45,7 +45,7 @@ testDescr PosTest {..} =
             assertEqDiffText "check: pretty . scope . parse = id" original formatted
           Just eFile -> do
             step "Checking against expected output file"
-            expFile :: Text <- readFile (toFilePath eFile)
+            expFile :: Text <- readFile eFile
             assertEqDiffText "Compare to expected output" formatted expFile
     }
 

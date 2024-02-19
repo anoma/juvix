@@ -16,7 +16,7 @@ coreToGebTranslationAssertion ::
   Assertion
 coreToGebTranslationAssertion root mainFile expectedFile step = do
   step "Parse Juvix Core file"
-  input_ <- readFile . toFilePath $ mainFile
+  input_ <- readFile mainFile
   entryPoint <- set entryPointTarget TargetGeb <$> testDefaultEntryPointIO root mainFile
   case Core.runParserMain mainFile defaultModuleId mempty input_ of
     Left err -> assertFailure . show . pretty $ err
@@ -72,8 +72,7 @@ coreToGebTranslationAssertion' coreInfoTable entryPoint expectedFile step = do
                           | resEvalTranslatedMorph /= resEvalGebCoreEvalResult ->
                               assertFailure "The evaluation for the Core node and the Geb node are not equal"
                           | otherwise -> do
-                              let fpath = toFilePath expectedFile
-                              expectedInput <- readFile fpath
+                              expectedInput <- readFile expectedFile
                               step "Compare expected and actual program output"
                               let compareEvalOutput morph =
                                     if

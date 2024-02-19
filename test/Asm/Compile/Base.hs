@@ -35,7 +35,7 @@ asmCompileAssertion' optLevel tab mainFile expectedFile stdinText step = do
 asmCompileAssertion :: Path Abs File -> Path Abs File -> Text -> (String -> IO ()) -> Assertion
 asmCompileAssertion mainFile expectedFile stdinText step = do
   step "Parse"
-  s <- readFile (toFilePath mainFile)
-  case runParser (toFilePath mainFile) s of
+  s <- readFile mainFile
+  case runParser mainFile s of
     Left err -> assertFailure (show err)
     Right tab -> asmCompileAssertion' 3 tab mainFile expectedFile stdinText step

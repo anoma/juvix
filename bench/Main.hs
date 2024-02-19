@@ -99,7 +99,7 @@ csvRules s =
     csv :: Path Abs File = suiteCsvFile s
     addColorColumn :: IO ()
     addColorColumn = do
-      header :| rows <- nonEmpty' . Text.lines <$> readFile (toFilePath csv)
+      header :| rows <- nonEmpty' . Text.lines <$> readFile csv
       let rows' =
             [ showColour (v ^. variantColor) <> "," <> r
               | (v, r) <- zipExact (s ^. suiteVariants) rows

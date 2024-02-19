@@ -9,11 +9,11 @@ import Juvix.Parser.Error
 import Text.Megaparsec qualified as P
 
 parseText :: Text -> Either MegaparsecError (LabelInfo, [Instruction])
-parseText = runParser ""
+parseText = runParser $(mkAbsFile "/<text>")
 
-runParser :: FilePath -> Text -> Either MegaparsecError (LabelInfo, [Instruction])
+runParser :: Path Abs File -> Text -> Either MegaparsecError (LabelInfo, [Instruction])
 runParser fileName input_ =
-  case run $ runLabelInfoBuilder $ P.runParserT parseToplevel fileName input_ of
+  case run . runLabelInfoBuilder $ P.runParserT parseToplevel (toFilePath fileName) input_ of
     (_, Left err) -> Left (MegaparsecError err)
     (li, Right instrs) -> Right (li, instrs)
 

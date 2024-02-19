@@ -12,6 +12,7 @@ import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Pretty qualified as Nockma
 import Juvix.Compiler.Nockma.Translation.FromSource (parseProgramFile, parseReplStatement, parseReplText, parseText)
 import Juvix.Parser.Error
+import Juvix.Prelude qualified as Prelude
 import System.Console.Haskeline
 import System.Console.Repline qualified as Repline
 import Prelude (read)
@@ -21,7 +22,7 @@ type ReplS = State.StateT ReplState IO
 data ReplState = ReplState
   { _replStateProgram :: Maybe (Program Natural),
     _replStateStack :: Maybe (Term Natural),
-    _replStateLoadedFile :: Maybe (FilePath)
+    _replStateLoadedFile :: Maybe (Prelude.Path Abs File)
   }
 
 type Repl a = Repline.HaskelineT ReplS a
@@ -62,7 +63,7 @@ setStack s = Repline.dontCrash $ do
   newStack <- readReplTerm s
   State.modify (set replStateStack (Just newStack))
 
-loadFile :: String -> Repl ()
+loadFile :: Prelude.Path Abs File -> Repl ()
 loadFile s = Repline.dontCrash $ do
   State.modify (set replStateLoadedFile (Just s))
   prog <- readProgram s
@@ -82,7 +83,7 @@ options =
   [ ("quit", quit),
     ("get-stack", printStack),
     ("set-stack", setStack),
-    ("load", loadFile),
+    ("load", loadFile . Prelude.absFile),
     ("reload", const reloadFile),
     ("dir", direction')
   ]
@@ -98,7 +99,7 @@ getStack = State.gets (^. replStateStack)
 getProgram :: Repl (Maybe (Program Natural))
 getProgram = State.gets (^. replStateProgram)
 
-readProgram :: FilePath -> Repl (Program Natural)
+readProgram :: Prelude.Path Abs File -> Repl (Program Natural)
 readProgram s = fromMegaParsecError <$> parseProgramFile s
 
 direction' :: String -> Repl ()

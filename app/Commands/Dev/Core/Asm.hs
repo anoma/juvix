@@ -10,7 +10,7 @@ runCommand :: forall r a. (Members '[EmbedIO, App, TaggedLock] r, CanonicalProje
 runCommand opts = do
   inputFile :: Path Abs File <- fromAppPathFile sinputFile
   ep <- getEntryPoint sinputFile
-  s' <- readFile $ toFilePath inputFile
+  s' <- readFile inputFile
   tab <- getRight (mapLeft JuvixError (Core.runParserMain inputFile defaultModuleId mempty s'))
   r <- runReader ep . runError @JuvixError $ coreToAsm (Core.moduleFromInfoTable tab)
   tab' <- getRight r

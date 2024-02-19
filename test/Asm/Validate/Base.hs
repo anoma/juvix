@@ -19,5 +19,5 @@ asmValidateErrorAssertion mainFile step = do
 
 parseFile :: Path Abs File -> IO (Either MegaparsecError InfoTable)
 parseFile f = do
-  s <- readFile (toFilePath f)
-  return $ runParser (toFilePath f) s
+  s <- readFile f
+  return (runParser f s)

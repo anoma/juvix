@@ -47,7 +47,7 @@ coreAsmAssertion mainFile expectedFile step = do
     Left err -> assertFailure (show (pretty err))
     Right (_, Nothing) -> do
       step "Empty program: compare expected and actual program output"
-      expected <- readFile (toFilePath expectedFile)
+      expected <- readFile expectedFile
       assertEqDiffText ("Check: EVAL output = " <> toFilePath expectedFile) "" expected
     Right (tabIni, Just node) -> do
       step "Translate"

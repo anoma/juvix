@@ -11,8 +11,8 @@ import Juvix.Compiler.Reg.Pretty qualified as Reg
 runCommand :: forall r. (Members '[EmbedIO, App, TaggedLock] r) => AsmCompileOptions -> Sem r ()
 runCommand opts = do
   file <- getFile
-  s <- readFile (toFilePath file)
-  case Asm.runParser (toFilePath file) s of
+  s <- readFile file
+  case Asm.runParser file s of
     Left err -> exitJuvixError (JuvixError err)
     Right tab -> do
       ep <- getEntryPoint (AppPath (preFileFromAbs file) True)

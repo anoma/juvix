@@ -18,7 +18,7 @@ type ReplS = State.StateT ReplState IO
 
 data ReplState = ReplState
   { _replStateBuilderState :: Tree.BuilderState,
-    _replStateLoadedFile :: Maybe FilePath
+    _replStateLoadedFile :: Maybe (Path Abs File)
   }
 
 type Repl a = Repline.HaskelineT ReplS a
@@ -40,7 +40,7 @@ printHelpTxt = liftIO $ putStrLn helpTxt
 quit :: String -> Repl ()
 quit _ = liftIO (throwIO Interrupt)
 
-loadFile :: String -> Repl ()
+loadFile :: Path Abs File -> Repl ()
 loadFile s = Repline.dontCrash $ do
   State.modify (set replStateLoadedFile (Just s))
   readProgram s
@@ -52,7 +52,7 @@ reloadFile = Repline.dontCrash $ do
     Nothing -> error "no file loaded"
     Just f -> readProgram f
 
-readProgram :: FilePath -> Repl ()
+readProgram :: Path Abs File -> Repl ()
 readProgram f = do
   bs <- State.gets (^. replStateBuilderState)
   txt <- readFile f
@@ -65,7 +65,7 @@ options :: [(String, String -> Repl ())]
 options =
   [ ("help", Repline.dontCrash . const printHelpTxt),
     ("quit", quit),
-    ("load", loadFile),
+    ("load", loadFile . absFile),
     ("reload", const reloadFile)
   ]
 
@@ -83,8 +83,8 @@ readNode s = do
       State.modify (set replStateBuilderState bs')
       return n
   where
-    replFile :: FilePath
-    replFile = "<file>"
+    replFile :: Path Abs File
+    replFile = $(mkAbsFile "/<repl>")
 
 evalNode :: Node -> Repl ()
 evalNode node = do
