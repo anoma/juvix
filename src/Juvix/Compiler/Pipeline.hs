@@ -119,6 +119,11 @@ upToGeb ::
 upToGeb spec =
   upToStoredCore >>= \Core.CoreResult {..} -> storedCoreToGeb spec _coreResultModule
 
+upToAnoma ::
+  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, GitClone, PathResolver] r) =>
+  Sem r (Nockma.Term Natural)
+upToAnoma = upToStoredCore >>= \Core.CoreResult {..} -> Nockma.TermCell <$> coreToAnoma _coreResultModule
+
 upToCoreTypecheck ::
   (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, GitClone, PathResolver] r) =>
   Sem r Core.CoreResult

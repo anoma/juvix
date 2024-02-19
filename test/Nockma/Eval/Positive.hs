@@ -1,12 +1,13 @@
 module Nockma.Eval.Positive where
 
-import Base hiding (Path)
+import Base hiding (Path, testName)
 import Juvix.Compiler.Core.Language.Base (defaultSymbol)
 import Juvix.Compiler.Nockma.Evaluator
 import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Translation.FromSource.QQ
 import Juvix.Compiler.Nockma.Translation.FromTree
+import Nockma.Base
 
 type Check = Sem '[Reader [Term Natural], Reader (Term Natural), EmbedIO]
 
@@ -20,6 +21,22 @@ data Test = Test
 
 makeLenses ''Test
 
+mkNockmaAssertion :: Test -> Assertion
+mkNockmaAssertion Test {..} = do
+  let (traces, evalResult) =
+        run
+          . runReader _testEvalOptions
+          . runOutputList @(Term Natural)
+          . runError @(ErrNockNatural Natural)
+          . runError @(NockEvalError Natural)
+          $ eval _testProgramSubject _testProgramFormula
+
+  case evalResult of
+    Left natErr -> assertFailure ("Evaluation error: " <> show natErr)
+    Right r -> case r of
+      Left evalErr -> assertFailure ("Evaluation error: " <> unpack (ppTrace evalErr))
+      Right res -> runM (runReader res (runReader traces _testCheck))
+
 allTests :: TestTree
 allTests =
   testGroup
@@ -30,20 +47,7 @@ allTests =
     ]
   where
     mkNockmaTest :: Test -> TestTree
-    mkNockmaTest Test {..} = testCase (unpack _testName) $ do
-      let (traces, evalResult) =
-            run
-              . runReader _testEvalOptions
-              . runOutputList @(Term Natural)
-              . runError @(ErrNockNatural Natural)
-              . runError @(NockEvalError Natural)
-              $ eval _testProgramSubject _testProgramFormula
-
-      case evalResult of
-        Left natErr -> assertFailure ("Evaluation error: " <> show natErr)
-        Right r -> case r of
-          Left evalErr -> assertFailure ("Evaluation error: " <> unpack (ppTrace evalErr))
-          Right res -> runM (runReader res (runReader traces _testCheck))
+    mkNockmaTest t = testCase (unpack (t ^. testName)) (mkNockmaAssertion t)
 
 eqNock :: Term Natural -> Check ()
 eqNock expected = do
@@ -105,9 +109,7 @@ anomaTest n mainFun args _testCheck _evalInterceptStdlibCalls =
 
       _testProgramSubject = TermCell (runCompilerWithAnoma opts mempty [] f)
 
-      _testProgramFormula = case nonEmpty args of
-        Just args' -> OpCall # [L] # OpReplace # ([R, L] # foldTerms args') # (OpAddress # emptyPath)
-        Nothing -> OpCall # [L] # (OpAddress # emptyPath)
+      _testProgramFormula = anomaCall args
       _testEvalOptions = EvalOptions {..}
    in Test {..}
 
