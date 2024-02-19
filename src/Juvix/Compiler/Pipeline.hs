@@ -21,7 +21,6 @@ import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromParsed qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Core qualified as Core
-import Juvix.Compiler.Core.Data.TransformationId
 import Juvix.Compiler.Core.Transformation
 import Juvix.Compiler.Core.Translation.Stripped.FromCore qualified as Stripped
 import Juvix.Compiler.Internal qualified as Internal
@@ -165,13 +164,13 @@ coreToReg :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -
 coreToReg = Core.toStored >=> storedCoreToReg
 
 coreToNockma :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r (Nockma.Cell Natural)
-coreToNockma = mapReader Core.fromEntryPoint . applyTransformations toExec >=> coreToTree >=> treeToNockma
+coreToNockma = Core.toExec >=> coreToTree >=> treeToNockma
 
 coreToAnoma :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r (Nockma.Cell Natural)
 coreToAnoma = coreToTree >=> treeToAnoma
 
 coreToMiniC :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r C.MiniCResult
-coreToMiniC = mapReader Core.fromEntryPoint . applyTransformations toExec >=> coreToAsm >=> asmToMiniC
+coreToMiniC = Core.toExec >=> coreToAsm >=> asmToMiniC
 
 coreToGeb :: (Members '[Error JuvixError, Reader EntryPoint] r) => Geb.ResultSpec -> Core.Module -> Sem r Geb.Result
 coreToGeb spec = Core.toStored >=> storedCoreToGeb spec

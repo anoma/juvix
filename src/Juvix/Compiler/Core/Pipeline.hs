@@ -27,6 +27,14 @@ toStripped' = applyTransformations toStrippedTransformations
 toStripped :: (Members '[Error JuvixError, Reader EntryPoint] r) => Module -> Sem r Module
 toStripped = mapReader fromEntryPoint . applyTransformations toStrippedTransformations
 
+-- | Perform transformations on stored Core necessary before translation to
+-- Core.Stripped of programs intended to be executable
+toExec' :: (Members '[Error JuvixError, Reader CoreOptions] r) => Module -> Sem r Module
+toExec' = applyTransformations toExecTransformations
+
+toExec :: (Members '[Error JuvixError, Reader EntryPoint] r) => Module -> Sem r Module
+toExec = mapReader fromEntryPoint . toExec'
+
 -- | Perform transformations on stored Core necessary before the translation to GEB
 toGeb' :: (Members '[Error JuvixError, Reader CoreOptions] r) => Module -> Sem r Module
 toGeb' = applyTransformations toGebTransformations
