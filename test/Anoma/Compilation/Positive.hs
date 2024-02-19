@@ -11,7 +11,7 @@ import Nockma.Base
 import Nockma.Eval.Positive
 
 root :: Prelude.Path Abs Dir
-root = relToProject $(mkRelDir "tests/Anoma/positive/Compilation")
+root = relToProject $(mkRelDir "tests/Anoma/Compilation/positive")
 
 mkAnomaCallTest :: Text -> Prelude.Path Rel Dir -> Prelude.Path Rel File -> [Term Natural] -> Check () -> TestTree
 mkAnomaCallTest _testName relRoot mainFile args _testCheck =

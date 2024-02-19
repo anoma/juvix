@@ -163,7 +163,7 @@ tests:
       script: |
         temp=$(mktemp -d)
         trap 'rm -rf -- "$temp"' EXIT
-        testdir=$PWD/tests/Anoma/positive/Compilation
+        testdir=$PWD/tests/Anoma/Compilation/positive
         cd $temp
         juvix compile -t anoma $testdir/test001.juvix
         [ -f test001.nockma ]
