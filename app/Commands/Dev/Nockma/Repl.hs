@@ -178,7 +178,7 @@ runCommand opts = do
     iniStack :: AppPath File -> Sem r (Term Natural)
     iniStack af = do
       afile <- fromAppPathFile af
-      parsedTerm <- Nockma.parseTermFile (toFilePath afile)
+      parsedTerm <- Nockma.parseTermFile afile
       case parsedTerm of
         Left err -> exitJuvixError (JuvixError err)
         Right t -> return t
