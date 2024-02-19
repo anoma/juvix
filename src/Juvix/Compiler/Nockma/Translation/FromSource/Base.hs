@@ -4,6 +4,7 @@ import Data.HashMap.Internal.Strict qualified as HashMap
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.Text qualified as Text
 import Juvix.Compiler.Nockma.Language
+import Juvix.Extra.Paths
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Parser.Error
 import Juvix.Parser.Lexer (onlyInterval, withLoc)
@@ -33,9 +34,6 @@ parseProgramFile fp = do
 
 parseReplStatement :: Text -> Either MegaparsecError (ReplStatement Natural)
 parseReplStatement = runParserFor replStatement noFile
-
-noFile :: Prelude.Path Abs File
-noFile = $(mkAbsFile "/<text>")
 
 runParserProgram :: Prelude.Path Abs File -> Text -> Either MegaparsecError (Program Natural)
 runParserProgram = runParserFor program

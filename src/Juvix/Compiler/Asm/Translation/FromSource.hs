@@ -14,6 +14,7 @@ import Juvix.Compiler.Asm.Language
 import Juvix.Compiler.Asm.Translation.FromSource.Lexer
 import Juvix.Compiler.Tree.Translation.FromSource.Base
 import Juvix.Compiler.Tree.Translation.FromSource.Sig qualified as S
+import Juvix.Extra.Paths
 import Juvix.Parser.Error
 import Text.Megaparsec qualified as P
 
@@ -30,9 +31,6 @@ parseAsmSig =
       _parserSigEmptyCode = [],
       _parserSigEmptyExtra = mempty
     }
-
-noFile :: Path Abs File
-noFile = $(mkAbsFile "/<text>")
 
 parseText :: Text -> Either MegaparsecError InfoTable
 parseText = runParser noFile
