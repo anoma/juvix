@@ -170,7 +170,7 @@ tests:
         juvix dev nockma repl test001.nockma
     stdout:
       contains:
-        "true"
+        "6"
     stdin: "[call [L [replace [RL [quote 0]] [@ S]]]]"
     exit-status: 0
 

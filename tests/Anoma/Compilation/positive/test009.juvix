@@ -1,0 +1,23 @@
+-- tail recursion
+module test009;
+
+import Stdlib.Prelude open;
+import Stdlib.Debug open;
+
+sum' (acc : Nat) : Nat → Nat
+  | zero := acc
+  | (suc x) := sum' (suc x + acc) x;
+
+sum : Nat → Nat := sum' 0;
+
+fact' (acc : Nat) : Nat → Nat
+  | zero := acc
+  | (suc x) := fact' (acc * suc x) x;
+
+fact : Nat → Nat := fact' 1;
+
+main (n : Nat) : Nat :=
+  trace (sum n)
+    >>> trace (fact 5)
+    >>> trace (fact 10)
+    >>> fact 12;

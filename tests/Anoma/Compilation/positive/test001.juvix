@@ -2,4 +2,4 @@ module test001;
 
 import Stdlib.Prelude open;
 
-main (x : Nat) : Bool := if (x == 0) true false;
+main (x : Nat) : Nat := x + 2 * 3;
