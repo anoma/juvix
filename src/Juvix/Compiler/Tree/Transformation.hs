@@ -5,6 +5,7 @@ module Juvix.Compiler.Tree.Transformation
   )
 where
 
+import Juvix.Compiler.Tree.Data.InfoTable
 import Juvix.Compiler.Tree.Data.TransformationId
 import Juvix.Compiler.Tree.Error
 import Juvix.Compiler.Tree.Transformation.Apply

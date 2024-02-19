@@ -1,6 +1,7 @@
 module Juvix.Compiler.Tree.Transformation.Validate where
 
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
+import Juvix.Compiler.Tree.Data.InfoTable
 import Juvix.Compiler.Tree.Error
 import Juvix.Compiler.Tree.Extra.Base (getNodeLocation)
 import Juvix.Compiler.Tree.Extra.Recursors

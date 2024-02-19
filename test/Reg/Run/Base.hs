@@ -5,6 +5,7 @@ import Juvix.Compiler.Reg.Data.InfoTable
 import Juvix.Compiler.Reg.Error
 import Juvix.Compiler.Reg.Interpreter
 import Juvix.Compiler.Reg.Pretty
+import Juvix.Compiler.Reg.Transformation
 import Juvix.Compiler.Reg.Translation.FromSource
 import Juvix.Data.PPOutput
 
@@ -41,18 +42,20 @@ regRunAssertionParam' interpretFun tab expectedFile step = do
         )
     Nothing -> assertFailure "no 'main' function"
 
-regRunAssertion :: Path Abs File -> Path Abs File -> (InfoTable -> Either RegError InfoTable) -> (InfoTable -> Assertion) -> (String -> IO ()) -> Assertion
+regRunAssertion :: Path Abs File -> Path Abs File -> [TransformationId] -> (InfoTable -> Assertion) -> (String -> IO ()) -> Assertion
 regRunAssertion = regRunAssertionParam runAssertion
 
-regRunAssertionParam :: (Handle -> Symbol -> InfoTable -> IO ()) -> Path Abs File -> Path Abs File -> (InfoTable -> Either RegError InfoTable) -> (InfoTable -> Assertion) -> (String -> IO ()) -> Assertion
+regRunAssertionParam :: (Handle -> Symbol -> InfoTable -> IO ()) -> Path Abs File -> Path Abs File -> [TransformationId] -> (InfoTable -> Assertion) -> (String -> IO ()) -> Assertion
 regRunAssertionParam interpretFun mainFile expectedFile trans testTrans step = do
   step "Parse"
   r <- parseFile mainFile
   case r of
     Left err -> assertFailure (show (pretty err))
     Right tab0 -> do
-      case trans tab0 of
-        Left err -> assertFailure (show (pretty err))
+      unless (null trans) $
+        step "Transform"
+      case run $ runError @JuvixError $ applyTransformations trans tab0 of
+        Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
         Right tab -> do
           testTrans tab
           regRunAssertionParam' interpretFun tab expectedFile step

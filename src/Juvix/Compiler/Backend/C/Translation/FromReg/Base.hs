@@ -4,7 +4,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Data.Text qualified as T
 import Juvix.Compiler.Backend.C.Language
 import Juvix.Compiler.Reg.Data.InfoTable qualified as Reg
-import Juvix.Compiler.Reg.Extra qualified as Reg
+import Juvix.Compiler.Reg.Extra.Info qualified as Reg
 import Juvix.Compiler.Reg.Language qualified as Reg
 import Juvix.Prelude
 
