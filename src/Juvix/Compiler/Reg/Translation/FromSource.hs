@@ -13,6 +13,7 @@ import Juvix.Compiler.Reg.Language
 import Juvix.Compiler.Reg.Translation.FromSource.Lexer
 import Juvix.Compiler.Tree.Translation.FromSource.Base
 import Juvix.Compiler.Tree.Translation.FromSource.Sig qualified as S
+import Juvix.Extra.Paths
 import Juvix.Parser.Error
 import Text.Megaparsec qualified as P
 
@@ -29,9 +30,6 @@ parseRegSig =
       _parserSigEmptyCode = [],
       _parserSigEmptyExtra = ()
     }
-
-noFile :: Path Abs File
-noFile = $(mkAbsFile "/<text>")
 
 parseText :: Text -> Either MegaparsecError InfoTable
 parseText = runParser noFile

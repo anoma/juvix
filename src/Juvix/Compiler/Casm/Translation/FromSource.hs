@@ -5,11 +5,12 @@ import Juvix.Compiler.Casm.Data.LabelInfo
 import Juvix.Compiler.Casm.Data.LabelInfoBuilder
 import Juvix.Compiler.Casm.Language
 import Juvix.Compiler.Casm.Translation.FromSource.Lexer
+import Juvix.Extra.Paths
 import Juvix.Parser.Error
 import Text.Megaparsec qualified as P
 
 parseText :: Text -> Either MegaparsecError (LabelInfo, [Instruction])
-parseText = runParser $(mkAbsFile "/<text>")
+parseText = runParser noFile
 
 runParser :: Path Abs File -> Text -> Either MegaparsecError (LabelInfo, [Instruction])
 runParser fileName input_ =

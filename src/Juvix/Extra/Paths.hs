@@ -42,3 +42,6 @@ formatStdinPath = $(mkAbsFile "/format-stdin")
 
 gebReplPath :: Path Abs File
 gebReplPath = $(mkAbsFile ("/repl" <> juvixGebFileExt))
+
+noFile :: Path Abs File
+noFile = $(mkAbsFile "/<text>")
