@@ -97,7 +97,7 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
 
     -- Live variables *after* executing the instruction. `k` is the number of
     -- value stack cells that will be popped by the instruction. TODO: proper
-    -- liveness analysis in JuvixAsm.
+    -- liveness analysis.
     liveVars :: Int -> [VarRef]
     liveVars k =
       map (mkVarRef VarGroupLocal) [0 .. si ^. Asm.stackInfoTempStackHeight - 1]
@@ -255,33 +255,39 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
 
 fromAsmBranch ::
   Asm.FunctionInfo ->
+  Bool ->
   Asm.StackInfo ->
   Asm.CmdBranch ->
   Code ->
   Code ->
   Sem r Instruction
-fromAsmBranch fi si Asm.CmdBranch {} codeTrue codeFalse =
+fromAsmBranch fi isTail si Asm.CmdBranch {} codeTrue codeFalse =
   return $
     Branch $
       InstrBranch
-        { _instrBranchValue = VRef $ mkVarRef VarGroupLocal (fromJust (fi ^. Asm.functionExtra) ^. Asm.functionMaxTempStackHeight + si ^. Asm.stackInfoValueStackHeight - 1),
+        { _instrBranchValue = VRef $ mkVarRef VarGroupLocal topIdx,
           _instrBranchTrue = codeTrue,
-          _instrBranchFalse = codeFalse
+          _instrBranchFalse = codeFalse,
+          _instrBranchOutVar = if isTail then Nothing else Just $ mkVarRef VarGroupLocal topIdx
         }
+  where
+    topIdx :: Int
+    topIdx = fromJust (fi ^. Asm.functionExtra) ^. Asm.functionMaxTempStackHeight + si ^. Asm.stackInfoValueStackHeight - 1
 
 fromAsmCase ::
   Asm.FunctionInfo ->
   Asm.InfoTable ->
+  Bool ->
   Asm.StackInfo ->
   Asm.CmdCase ->
   [Code] ->
   Maybe Code ->
   Sem r Instruction
-fromAsmCase fi tab si Asm.CmdCase {..} brs def =
+fromAsmCase fi tab isTail si Asm.CmdCase {..} brs def =
   return $
     Case $
       InstrCase
-        { _instrCaseValue = VRef $ mkVarRef VarGroupLocal (fromJust (fi ^. Asm.functionExtra) ^. Asm.functionMaxTempStackHeight + si ^. Asm.stackInfoValueStackHeight - 1),
+        { _instrCaseValue = VRef $ mkVarRef VarGroupLocal topIdx,
           _instrCaseInductive = _cmdCaseInductive,
           _instrCaseIndRep = ii ^. Asm.inductiveRepresentation,
           _instrCaseBranches =
@@ -300,9 +306,11 @@ fromAsmCase fi tab si Asm.CmdCase {..} brs def =
               )
               _cmdCaseBranches
               brs,
-          _instrCaseDefault = def
+          _instrCaseDefault = def,
+          _instrCaseOutVar = if isTail then Nothing else Just $ mkVarRef VarGroupLocal topIdx
         }
   where
+    topIdx = fromJust (fi ^. Asm.functionExtra) ^. Asm.functionMaxTempStackHeight + si ^. Asm.stackInfoValueStackHeight - 1
     ii =
       fromMaybe impossible $
         HashMap.lookup _cmdCaseInductive (tab ^. Asm.infoInductives)

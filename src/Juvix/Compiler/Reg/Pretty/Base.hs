@@ -108,6 +108,13 @@ ppLiveVars vars
       vars' <- mapM ppCode vars
       return $ comma <+> primitive "live:" <+> arglist vars'
 
+ppOutVar :: (Member (Reader Options) r) => Maybe VarRef -> Sem r (Doc Ann)
+ppOutVar = \case
+  Nothing -> return mempty
+  Just var -> do
+    var' <- ppCode var
+    return $ comma <+> primitive "out:" <+> var'
+
 instance PrettyCode InstrPrealloc where
   ppCode InstrPrealloc {..} = do
     vars <- ppLiveVars _instrPreallocLiveVars
@@ -210,9 +217,11 @@ instance PrettyCode InstrBranch where
     val <- ppCode _instrBranchValue
     br1 <- ppCodeCode _instrBranchTrue
     br2 <- ppCodeCode _instrBranchFalse
+    var <- ppOutVar _instrBranchOutVar
     return $
       primitive Str.br
         <+> val
+          <> var
         <+> braces'
           ( constr Str.true_ <> colon
               <+> braces' br1
@@ -240,8 +249,9 @@ instance PrettyCode InstrCase where
     val <- ppCode _instrCaseValue
     brs <- mapM ppCode _instrCaseBranches
     def <- maybe (return Nothing) (fmap Just . ppDefaultBranch) _instrCaseDefault
+    var <- ppOutVar _instrCaseOutVar
     let brs' = brs ++ catMaybes [def]
-    return $ primitive Str.case_ <> brackets ind <+> val <+> braces' (vsep brs')
+    return $ primitive Str.case_ <> brackets ind <+> val <> var <+> braces' (vsep brs')
 
 instance PrettyCode InstrBlock where
   ppCode InstrBlock {..} = braces' <$> ppCodeCode _instrBlockCode

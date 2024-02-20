@@ -262,6 +262,13 @@ liveVars = do
   P.try (comma >> symbol "live:")
   parens (P.sepBy varRef comma)
 
+outVar ::
+  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  ParsecS r VarRef
+outVar = do
+  P.try (comma >> symbol "out:")
+  varRef
+
 parseArgs ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r [Value]
@@ -352,6 +359,7 @@ instrBranch ::
 instrBranch = do
   kw kwBr
   val <- value
+  var <- optional outVar
   (br1, br2) <- braces $ do
     symbol "true:"
     br1 <- braces parseCode
@@ -364,7 +372,8 @@ instrBranch = do
     InstrBranch
       { _instrBranchValue = val,
         _instrBranchTrue = br1,
-        _instrBranchFalse = br2
+        _instrBranchFalse = br2,
+        _instrBranchOutVar = var
       }
 
 instrCase ::
@@ -374,6 +383,7 @@ instrCase = do
   kw kwCase
   sym <- brackets (indSymbol @Code @() @VarRef)
   val <- value
+  var <- optional outVar
   lbrace
   brs <- many caseBranch
   def <- optional defaultBranch
@@ -384,7 +394,8 @@ instrCase = do
         _instrCaseInductive = sym,
         _instrCaseIndRep = IndRepStandard,
         _instrCaseBranches = brs,
-        _instrCaseDefault = def
+        _instrCaseDefault = def,
+        _instrCaseOutVar = var
       }
 
 caseBranch ::

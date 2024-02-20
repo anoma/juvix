@@ -56,7 +56,7 @@ function f(tree) : integer {
           {
             tmp[2] = tmp[5];
             tmp[5] = tmp[1];
-            case[tree] tmp[5] {
+            case[tree] tmp[5], out: tmp[5] {
               leaf: {
                 nop;
                 tmp[5] = 3;
@@ -79,7 +79,7 @@ function f(tree) : integer {
             {
               tmp[3] = tmp[5];
               tmp[5] = tmp[2];
-              case[tree] tmp[5] {
+              case[tree] tmp[5], out: tmp[5] {
                 node: {
                   {
                     tmp[4] = tmp[5];

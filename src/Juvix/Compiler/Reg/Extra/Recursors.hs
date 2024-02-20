@@ -5,7 +5,7 @@ import Juvix.Compiler.Reg.Language
 
 data ForwardRecursorSig m c = ForwardRecursorSig
   { _forwardFun :: Instruction -> c -> m (c, Instruction),
-    _forwardCombine :: NonEmpty c -> c
+    _forwardCombine :: Instruction -> NonEmpty c -> (c, Instruction)
   }
 
 data BackwardRecursorSig m a = BackwardRecursorSig
@@ -25,16 +25,16 @@ recurseF sig c = \case
         Branch x@InstrBranch {..} -> do
           (c1, is1) <- recurseF sig c0 _instrBranchTrue
           (c2, is2) <- recurseF sig c0 _instrBranchFalse
-          let c' = (sig ^. forwardCombine) (c1 :| [c2])
-          return (c', Branch x {_instrBranchTrue = is1, _instrBranchFalse = is2})
+          let i' = Branch x {_instrBranchTrue = is1, _instrBranchFalse = is2}
+          return $ (sig ^. forwardCombine) i' (c1 :| [c2])
         Case x@InstrCase {..} -> do
           brs' <- mapM goBranch _instrCaseBranches
           def' <- maybe (return Nothing) (\is -> Just <$> recurseF sig c0 is) _instrCaseDefault
           let cs = map fst brs' ++ maybe [] (\md -> [fst md]) def'
               brs = map snd brs'
               def = maybe Nothing (Just . snd) def'
-              c' = (sig ^. forwardCombine) (nonEmpty' cs)
-          return (c', Case x {_instrCaseBranches = brs, _instrCaseDefault = def})
+              i' = Case x {_instrCaseBranches = brs, _instrCaseDefault = def}
+          return $ (sig ^. forwardCombine) i' (nonEmpty' cs)
           where
             goBranch :: CaseBranch -> m (c, CaseBranch)
             goBranch br@CaseBranch {..} = do
@@ -118,7 +118,7 @@ ifoldFM f a0 is0 =
         { _forwardFun = \i a -> do
             a' <- f a i
             return (a', i),
-          _forwardCombine = mconcat . toList
+          _forwardCombine = \i a -> (mconcat (toList a), i)
         }
       a0
       is0

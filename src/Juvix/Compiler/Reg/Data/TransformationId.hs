@@ -6,6 +6,7 @@ import Juvix.Prelude
 
 data TransformationId
   = Identity
+  | SSA
   deriving stock (Data, Bounded, Enum, Show)
 
 data PipelineId
@@ -19,12 +20,13 @@ toCTransformations :: [TransformationId]
 toCTransformations = []
 
 toCairoTransformations :: [TransformationId]
-toCairoTransformations = []
+toCairoTransformations = [SSA]
 
 instance TransformationId' TransformationId where
   transformationText :: TransformationId -> Text
   transformationText = \case
     Identity -> strIdentity
+    SSA -> strSSA
 
 instance PipelineId' TransformationId PipelineId where
   pipelineText :: PipelineId -> Text

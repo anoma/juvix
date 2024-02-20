@@ -10,9 +10,6 @@ data Value
   = Const Constant
   | CRef ConstrField
   | VRef VarRef
-  deriving stock (Eq)
-
-type Index = Int
 
 -- | Reference to a constructor field (argument).
 data ConstrField = ConstrField
@@ -24,41 +21,59 @@ data ConstrField = ConstrField
     _constrFieldRef :: VarRef,
     _constrFieldIndex :: Index
   }
-  deriving stock (Eq)
 
 data VarGroup
   = VarGroupArgs
   | VarGroupLocal
-  deriving stock (Eq)
+  deriving stock (Eq, Generic)
+
+instance Hashable VarGroup
 
 data VarRef = VarRef
   { _varRefGroup :: VarGroup,
     _varRefIndex :: Index,
     _varRefName :: Maybe Text
   }
-  deriving stock (Eq)
+
+makeLenses ''VarRef
+makeLenses ''ConstrField
+
+instance Hashable VarRef where
+  hashWithSalt salt VarRef {..} = hashWithSalt salt (_varRefGroup, _varRefIndex)
+
+instance Eq VarRef where
+  vr1 == vr2 =
+    vr1 ^. varRefGroup == vr2 ^. varRefGroup
+      && vr1 ^. varRefIndex == vr2 ^. varRefIndex
+
+deriving stock instance (Eq ConstrField)
+
+deriving stock instance (Eq Value)
 
 data Instruction
-  = Nop -- no operation
-  | Binop BinaryOp
+  = Binop BinaryOp
   | Show InstrShow
   | StrToInt InstrStrToInt
   | Assign InstrAssign
-  | Trace InstrTrace
-  | Dump
-  | Failure InstrFailure
   | ArgsNum InstrArgsNum
-  | Prealloc InstrPrealloc
   | Alloc InstrAlloc
   | AllocClosure InstrAllocClosure
   | ExtendClosure InstrExtendClosure
   | Call InstrCall
-  | TailCall InstrTailCall
   | CallClosures InstrCallClosures
+  | ----
+    TailCall InstrTailCall
   | TailCallClosures InstrTailCallClosures
   | Return InstrReturn
-  | Branch InstrBranch
+  | ----
+    Branch InstrBranch
   | Case InstrCase
+  | ----
+    Trace InstrTrace
+  | Dump
+  | Failure InstrFailure
+  | Prealloc InstrPrealloc
+  | Nop -- no operation
   | Block InstrBlock
   deriving stock (Eq)
 
@@ -156,7 +171,7 @@ data InstrCall = InstrCall
   { _instrCallResult :: VarRef,
     _instrCallType :: CallType,
     _instrCallArgs :: [Value],
-    -- | Variables live at the point of the call. Live variables need to be
+    -- | Variables live after the call. Live variables need to be
     -- saved before the call and restored after it.
     _instrCallLiveVars :: [VarRef]
   }
@@ -190,7 +205,10 @@ newtype InstrReturn = InstrReturn
 data InstrBranch = InstrBranch
   { _instrBranchValue :: Value,
     _instrBranchTrue :: Code,
-    _instrBranchFalse :: Code
+    _instrBranchFalse :: Code,
+    -- | Output variable storing the result (corresponds to the top of the value
+    -- stack in JuvixAsm after executing the branches)
+    _instrBranchOutVar :: Maybe VarRef
   }
   deriving stock (Eq)
 
@@ -199,7 +217,8 @@ data InstrCase = InstrCase
     _instrCaseInductive :: Symbol,
     _instrCaseIndRep :: IndRep,
     _instrCaseBranches :: [CaseBranch],
-    _instrCaseDefault :: Maybe Code
+    _instrCaseDefault :: Maybe Code,
+    _instrCaseOutVar :: Maybe VarRef
   }
   deriving stock (Eq)
 
@@ -217,7 +236,6 @@ newtype InstrBlock = InstrBlock
   }
   deriving stock (Eq)
 
-makeLenses ''ConstrField
 makeLenses ''BinaryOp
 makeLenses ''InstrAssign
 makeLenses ''InstrTrace
@@ -232,6 +250,10 @@ makeLenses ''InstrBranch
 makeLenses ''InstrCase
 makeLenses ''CaseBranch
 makeLenses ''InstrReturn
+makeLenses ''InstrShow
+makeLenses ''InstrStrToInt
+makeLenses ''InstrArgsNum
+makeLenses ''InstrTailCall
 
 mkVarRef :: VarGroup -> Index -> VarRef
 mkVarRef g i =
