@@ -17,6 +17,7 @@ module Juvix.Compiler.Nockma.Translation.FromTree
     appendRights,
     foldTerms,
     pathToArg,
+    makeList,
   )
 where
 

@@ -1,0 +1,48 @@
+-- streams without memoization
+module test028;
+
+import Stdlib.Prelude open;
+import Stdlib.Debug.Trace open;
+
+type Stream :=
+  | cons : Nat → (Unit → Stream) → Stream;
+
+force : (Unit → Stream) → Stream
+  | f := f unit;
+
+terminating
+sfilter : (Nat → Bool) → (Unit → Stream) → Unit → Stream
+  | p s unit :=
+    case force s
+      | cons h t :=
+        if (p h) (cons h (sfilter p t)) (force (sfilter p t));
+
+shead : Stream → Nat
+  | (cons h _) := h;
+
+stail : Stream → Unit → Stream
+  | (cons _ t) := t;
+
+snth : Nat → (Unit → Stream) → Nat
+  | zero s := shead (force s)
+  | (suc n) s := snth n (stail (force s));
+
+terminating
+numbers : Nat → Unit → Stream
+  | n unit := cons n (numbers (suc n));
+
+indivisible : Nat → Nat → Bool
+  | n x := not (mod x n == 0);
+
+terminating
+eratostenes : (Unit → Stream) → Unit → Stream
+  | s unit :=
+    case force s
+      | cons n t :=
+        cons n (eratostenes (sfilter (indivisible n) t));
+
+primes : Unit → Stream := eratostenes (numbers 2);
+
+main (n1 n2 : Nat) : Nat :=
+  trace (snth n1 primes)
+    >>> snth n2 primes;

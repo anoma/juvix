@@ -1,0 +1,13 @@
+-- pattern matching nullary constructor
+module test040;
+
+import Stdlib.Data.Bool open;
+
+type Unit := unit : Unit;
+
+type Foo (A : Type) := foo : Unit -> A -> Foo A;
+
+f : {A : Type} -> Foo A -> A
+  | (foo unit a) := a;
+
+main : Bool := f (foo unit true);

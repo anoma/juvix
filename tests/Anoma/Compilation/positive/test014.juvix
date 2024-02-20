@@ -1,0 +1,37 @@
+-- arithmetic
+module test014;
+
+import Stdlib.Prelude open;
+import Stdlib.Debug.Trace open;
+
+f (x y : Nat) : Nat := x + y;
+
+g (x y : Nat) : Nat := sub (x + 21) (y * 7);
+
+h (f : Nat → Nat → Nat) (y z : Nat) : Nat := f y y * z;
+
+x : Nat := 5;
+
+y : Nat := 17;
+
+func (x : Nat) : Nat := x + 4;
+
+z : Nat := 0;
+
+vx : Nat := 30;
+
+vy : Nat := 7;
+
+main : Nat :=
+  trace (func (div y x))
+    >>> -- 17 div 5 + 4 = 7
+      trace
+      (y + x * z)
+    >>> -- 17
+      trace
+      (vx + vy * (z + 1))
+    >>> -- 37
+      f
+      (h g 2 3)
+      4;
+-- (g 2 2) * 3 + 4 = (2+21-2*7)*3 + 4 = 9*3 + 4 = 27+4 = 31

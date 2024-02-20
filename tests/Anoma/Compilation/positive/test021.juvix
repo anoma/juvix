@@ -1,0 +1,21 @@
+-- fast exponentiation
+module test021;
+
+import Stdlib.Prelude open;
+import Stdlib.Debug.Trace open;
+
+terminating
+power' : Nat → Nat → Nat → Nat
+  | acc a b :=
+    if
+      (b == 0)
+      acc
+      (if
+        (mod b 2 == 0)
+        (power' acc (a * a) (div b 2))
+        (power' (acc * a) (a * a) (div b 2)));
+
+power : Nat → Nat → Nat := power' 1;
+
+main : Nat :=
+  trace (power 2 3) >>> trace (power 3 7) >>> power 5 11;

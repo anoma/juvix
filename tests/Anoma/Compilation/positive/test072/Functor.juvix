@@ -1,0 +1,10 @@
+module Functor;
+
+syntax fixity fmap := binary {assoc := left};
+
+trait
+type Functor (f : Type -> Type) :=
+  mkFunctor {
+    syntax operator <$> fmap;
+    <$> : {A B : Type} -> (A -> B) -> f A -> f B
+  };
