@@ -580,6 +580,8 @@ registerBuiltinAxiom d = \case
   BuiltinFieldSub -> registerFieldSub d
   BuiltinFieldMul -> registerFieldMul d
   BuiltinFieldDiv -> registerFieldDiv d
+  BuiltinFieldFromInt -> registerFieldFromInt d
+  BuiltinFieldToInt -> registerFieldToInt d
   BuiltinBoolPrint -> registerBoolPrint d
   BuiltinTrace -> registerTrace d
   BuiltinFail -> registerFail d

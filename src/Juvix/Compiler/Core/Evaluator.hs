@@ -18,7 +18,8 @@ import Text.Read qualified as T
 data EvalOptions = EvalOptions
   { _evalOptionsNormalize :: Bool,
     _evalOptionsNoFailure :: Bool,
-    _evalOptionsSilent :: Bool
+    _evalOptionsSilent :: Bool,
+    _evalOptionsFieldSize :: Natural
   }
 
 makeLenses ''EvalOptions
@@ -28,7 +29,8 @@ defaultEvalOptions =
   EvalOptions
     { _evalOptionsNormalize = False,
       _evalOptionsNoFailure = False,
-      _evalOptionsSilent = False
+      _evalOptionsSilent = False,
+      _evalOptionsFieldSize = maximum allowedFieldSizes
     }
 
 data EvalError = EvalError
@@ -174,6 +176,8 @@ geval opts herr ctx env0 = eval' env0
       OpFieldSub -> binFieldOp fieldSub
       OpFieldMul -> binFieldOp fieldMul
       OpFieldDiv -> binFieldOp fieldDiv
+      OpFieldFromInt -> fieldFromIntOp
+      OpFieldToInt -> fieldToIntOp
       OpEq -> eqOp
       OpIntDiv -> divOp quot
       OpIntMod -> divOp rem
@@ -231,6 +235,24 @@ geval opts herr ctx env0 = eval' env0
         binFieldOp :: (FField -> FField -> FField) -> [Node] -> Node
         binFieldOp = binOp nodeFromField fieldFromNode
         {-# INLINE binFieldOp #-}
+
+        fieldFromIntOp :: [Node] -> Node
+        fieldFromIntOp =
+          unary $ \node ->
+            nodeFromField $
+              fieldFromInteger (opts ^. evalOptionsFieldSize) $
+                fromMaybe (evalError "expected integer" node) $
+                  integerFromNode node
+        {-# INLINE fieldFromIntOp #-}
+
+        fieldToIntOp :: [Node] -> Node
+        fieldToIntOp =
+          unary $ \node ->
+            nodeFromInteger $
+              fieldToInteger $
+                fromMaybe (evalError "expected field element" node) $
+                  fieldFromNode node
+        {-# INLINE fieldToIntOp #-}
 
         eqOp :: [Node] -> Node
         eqOp
@@ -414,14 +436,21 @@ evalIO = hEvalIO stderr stdin stdout
 doEval ::
   forall r.
   (MonadIO (Sem r)) =>
+  Maybe Natural ->
   Bool ->
   Interval ->
   InfoTable ->
   Node ->
   Sem r (Either CoreError Node)
-doEval noIO loc tab node
+doEval mfsize noIO loc tab node
   | noIO = catchEvalError loc (eval stderr (tab ^. identContext) [] node)
-  | otherwise = liftIO (catchEvalErrorIO loc (evalIO (tab ^. identContext) [] node))
+  | otherwise = liftIO (catchEvalErrorIO loc (hEvalIO' opts stderr stdin stdout (tab ^. identContext) [] node))
+  where
+    opts =
+      maybe
+        defaultEvalOptions
+        (\fsize -> defaultEvalOptions {_evalOptionsFieldSize = fsize})
+        mfsize
 
 -- | Catch EvalError and convert it to CoreError. Needs a default location in case
 -- no location is available in EvalError.

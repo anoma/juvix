@@ -230,6 +230,8 @@ instance PrettyCode UnaryOp where
   ppCode op = return $ primitive $ case op of
     OpShow -> Str.instrShow
     OpStrToInt -> Str.instrStrToInt
+    OpFieldToInt -> Str.instrFieldToInt
+    OpIntToField -> Str.instrIntToField
     OpArgsNum -> Str.instrArgsNum
 
 instance PrettyCode UnaryOpcode where

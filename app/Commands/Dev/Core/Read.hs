@@ -30,21 +30,21 @@ runCommand opts = do
   embed (Scoper.scopeTrace tab')
   unless (project opts ^. coreReadNoPrint) $ do
     renderStdOut (Pretty.ppOut opts tab')
-  whenJust (tab' ^. Core.infoMain) $ \sym -> doEval tab' (fromJust $ tab' ^. Core.identContext . at sym)
+  whenJust (tab' ^. Core.infoMain) $ \sym -> doEval gopts tab' (fromJust $ tab' ^. Core.identContext . at sym)
   where
-    doEval :: Core.InfoTable -> Core.Node -> Sem r ()
-    doEval tab' node =
+    doEval :: GlobalOptions -> Core.InfoTable -> Core.Node -> Sem r ()
+    doEval gopts tab' node =
       if
           | project opts ^. coreReadEval -> do
               putStrLn "--------------------------------"
               putStrLn "|            Eval              |"
               putStrLn "--------------------------------"
-              Eval.evalAndPrint opts tab' node
+              Eval.evalAndPrint gopts opts tab' node
           | project opts ^. coreReadNormalize -> do
               putStrLn "--------------------------------"
               putStrLn "|         Normalize            |"
               putStrLn "--------------------------------"
-              Eval.normalizeAndPrint opts tab' node
+              Eval.normalizeAndPrint gopts opts tab' node
           | otherwise -> return ()
     sinputFile :: AppPath File
     sinputFile = project opts ^. coreReadInputFile

@@ -16,7 +16,7 @@ import Juvix.Compiler.Core.Transformation.Optimize.SimplifyIfs
 import Juvix.Compiler.Core.Transformation.Optimize.SpecializeArgs
 
 optimize' :: CoreOptions -> Module -> Module
-optimize' CoreOptions {..} md =
+optimize' opts@CoreOptions {..} md =
   filterUnreachable
     . compose
       (4 * _optOptimizationLevel)
@@ -40,7 +40,7 @@ optimize' CoreOptions {..} md =
     nonRecs = nonRecursiveIdents' tab
 
     doConstantFolding :: Module -> Module
-    doConstantFolding md' = constantFolding' nonRecs' tab' md'
+    doConstantFolding md' = constantFolding' opts nonRecs' tab' md'
       where
         tab' = computeCombinedInfoTable md'
         nonRecs'

@@ -22,7 +22,7 @@ runCommand opts@EvalOptions {..} = do
             | otherwise -> getNode tab (mainInfo tab)
   case mevalNode of
     Just evalNode ->
-      Eval.evalAndPrint opts tab evalNode
+      Eval.evalAndPrint gopts opts tab evalNode
     Nothing -> do
       let name = fromMaybe Str.main _evalSymbolName
       printFailureExit ("function not found: " <> name)

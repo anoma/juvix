@@ -60,6 +60,8 @@ evalUnop :: InfoTable' t e -> UnaryOp -> Value -> Either ErrorMsg Value
 evalUnop tab op v = case op of
   OpShow -> Right $ ValString (printValue tab v)
   OpStrToInt -> goStringUnop strToInt v
+  OpFieldToInt -> goFieldToInt v
+  OpIntToField -> goIntToField v
   OpArgsNum -> goArgsNum v
   where
     strToInt :: Text -> Either ErrorMsg Value
@@ -83,6 +85,20 @@ evalUnop tab op v = case op of
           argsNum = fi ^. functionArgsNum - length _closureArgs
       _ ->
         Left "expected a closure"
+
+    goFieldToInt :: Value -> Either ErrorMsg Value
+    goFieldToInt = \case
+      ValField f ->
+        Right $ ValInteger $ fieldToInteger f
+      _ ->
+        Left "expected a field element"
+
+    goIntToField :: Value -> Either ErrorMsg Value
+    goIntToField = \case
+      ValInteger i ->
+        Right $ ValField $ fieldFromInteger (tab ^. infoFieldSize) i
+      _ ->
+        Left "expected an integer"
 
 printValue :: InfoTable' t e -> Value -> Text
 printValue tab = \case

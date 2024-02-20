@@ -17,7 +17,8 @@ fromCore tab =
     { _infoMainFunction = tab ^. Core.infoMain,
       _infoFunctions = genCode tab <$> tab ^. Core.infoFunctions,
       _infoInductives = translateInductiveInfo <$> tab ^. Core.infoInductives,
-      _infoConstrs = translateConstructorInfo <$> tab ^. Core.infoConstructors
+      _infoConstrs = translateConstructorInfo <$> tab ^. Core.infoConstructors,
+      _infoFieldSize = tab ^. Core.infoFieldSize
     }
 
 -- Generate code for a single function.
@@ -283,6 +284,8 @@ genCode infoTable fi =
     genUnOp = \case
       Core.OpShow -> PrimUnop OpShow
       Core.OpStrToInt -> PrimUnop OpStrToInt
+      Core.OpFieldFromInt -> PrimUnop OpIntToField
+      Core.OpFieldToInt -> PrimUnop OpFieldToInt
       Core.OpTrace -> OpTrace
       Core.OpFail -> OpFail
       _ -> impossible

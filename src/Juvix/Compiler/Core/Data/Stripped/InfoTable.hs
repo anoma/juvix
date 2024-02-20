@@ -7,7 +7,8 @@ data InfoTable = InfoTable
   { _infoMain :: Maybe Symbol,
     _infoFunctions :: HashMap Symbol FunctionInfo,
     _infoInductives :: HashMap Symbol InductiveInfo,
-    _infoConstructors :: HashMap Tag ConstructorInfo
+    _infoConstructors :: HashMap Tag ConstructorInfo,
+    _infoFieldSize :: Natural
   }
 
 data FunctionInfo = FunctionInfo

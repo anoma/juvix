@@ -39,3 +39,17 @@ registerFieldDiv f = do
   field_ <- getBuiltinName (getLoc f) BuiltinField
   unless (f ^. axiomType === (field_ --> field_ --> field_)) (error "field division has the wrong type signature")
   registerBuiltin BuiltinFieldDiv (f ^. axiomName)
+
+registerFieldFromInt :: (Member Builtins r) => AxiomDef -> Sem r ()
+registerFieldFromInt f = do
+  field_ <- getBuiltinName (getLoc f) BuiltinField
+  int_ <- getBuiltinName (getLoc f) BuiltinInt
+  unless (f ^. axiomType === (int_ --> field_)) (error "integer to field conversion has the wrong type signature")
+  registerBuiltin BuiltinFieldFromInt (f ^. axiomName)
+
+registerFieldToInt :: (Member Builtins r) => AxiomDef -> Sem r ()
+registerFieldToInt f = do
+  field_ <- getBuiltinName (getLoc f) BuiltinField
+  int_ <- getBuiltinName (getLoc f) BuiltinInt
+  unless (f ^. axiomType === (field_ --> int_)) (error "field to integer conversion has the wrong type signature")
+  registerBuiltin BuiltinFieldToInt (f ^. axiomName)

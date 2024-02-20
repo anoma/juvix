@@ -77,7 +77,7 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
       CheckExec -> mapError (JuvixError @CoreError) . checkExec
       CheckVampIR -> mapError (JuvixError @CoreError) . checkVampIR
       CheckAnoma -> mapError (JuvixError @CoreError) . checkAnoma
-      Normalize -> return . normalize
+      Normalize -> normalize
       LetFolding -> return . letFolding
       LambdaFolding -> return . lambdaFolding
       LetHoisting -> return . letHoisting

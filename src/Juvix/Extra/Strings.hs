@@ -197,6 +197,12 @@ fieldDiv = "field-div"
 field :: (IsString s) => s
 field = "field"
 
+fieldFromInt :: (IsString s) => s
+fieldFromInt = "field-from-int"
+
+fieldToInt :: (IsString s) => s
+fieldToInt = "field-to-int"
+
 io :: (IsString s) => s
 io = "IO"
 
@@ -703,6 +709,12 @@ instrStrConcat = "strcat"
 
 instrStrToInt :: (IsString s) => s
 instrStrToInt = "atoi"
+
+instrFieldToInt :: (IsString s) => s
+instrFieldToInt = "ftoi"
+
+instrIntToField :: (IsString s) => s
+instrIntToField = "itof"
 
 instrShow :: (IsString s) => s
 instrShow = "show"

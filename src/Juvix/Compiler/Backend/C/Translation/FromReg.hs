@@ -256,6 +256,9 @@ fromRegInstr bNoStack info = \case
   Reg.Block Reg.InstrBlock {..} ->
     fromRegCode bNoStack info _instrBlockCode
   where
+    unsupported :: Text -> a
+    unsupported x = error ("unsupported: " <> x)
+
     fromBinaryOp :: Reg.InstrBinop -> Statement
     fromBinaryOp Reg.InstrBinop {..} =
       StatementExpr $
@@ -275,12 +278,12 @@ fromRegInstr bNoStack info = \case
       Reg.OpIntMod -> "JUVIX_INT_MOD"
       Reg.OpIntLt -> "JUVIX_INT_LT"
       Reg.OpIntLe -> "JUVIX_INT_LE"
-      Reg.OpFieldAdd -> impossible
-      Reg.OpFieldSub -> impossible
-      Reg.OpFieldMul -> impossible
-      Reg.OpFieldDiv -> impossible
       Reg.OpEq -> "JUVIX_VAL_EQ"
       Reg.OpStrConcat -> "JUVIX_STR_CONCAT"
+      Reg.OpFieldAdd -> unsupported "field type"
+      Reg.OpFieldSub -> unsupported "field type"
+      Reg.OpFieldMul -> unsupported "field type"
+      Reg.OpFieldDiv -> unsupported "field type"
 
     fromUnaryOp :: Reg.InstrUnop -> Statement
     fromUnaryOp Reg.InstrUnop {..} =
@@ -296,6 +299,8 @@ fromRegInstr bNoStack info = \case
       Reg.OpShow -> "JUVIX_SHOW"
       Reg.OpStrToInt -> "JUVIX_STR_TO_INT"
       Reg.OpArgsNum -> "JUVIX_ARGS_NUM"
+      Reg.OpFieldToInt -> unsupported "field type"
+      Reg.OpIntToField -> unsupported "field type"
 
     fromVarRef :: Reg.VarRef -> Expression
     fromVarRef Reg.VarRef {..} =
