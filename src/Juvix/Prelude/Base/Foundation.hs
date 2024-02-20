@@ -100,6 +100,7 @@ import Data.Int
 import Data.IntMap.Strict (IntMap)
 import Data.IntMap.Strict qualified as IntMap
 import Data.IntSet (IntSet)
+import Data.Kind qualified as GHC
 import Data.List.Extra hiding (allSame, foldr1, groupSortOn, head, last, mconcatMap, replicate, unzip)
 import Data.List.Extra qualified as List
 import Data.List.NonEmpty qualified as NonEmpty
@@ -182,6 +183,10 @@ import Text.Show (Show)
 import Text.Show qualified as Show
 import Text.Show.Unicode (urecover, ushow)
 import Prelude (Double)
+
+type GHCType = GHC.Type
+
+type GHCConstraint = GHC.Constraint
 
 traverseM ::
   (Monad m, Traversable m, Applicative f) =>

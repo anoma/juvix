@@ -1,8 +1,8 @@
 module Juvix.Prelude.Base
   ( module Juvix.Prelude.Base.Foundation,
-    module Juvix.Prelude.Base.Polysemy,
+    module Juvix.Prelude.Effects,
   )
 where
 
 import Juvix.Prelude.Base.Foundation
-import Juvix.Prelude.Base.Polysemy
+import Juvix.Prelude.Effects

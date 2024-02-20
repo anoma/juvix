@@ -10,9 +10,10 @@ module Juvix.Data.Effect.Visit
 where
 
 import Data.HashSet qualified as HashSet
+import Data.Kind qualified as GHC
 import Juvix.Prelude.Base
 
-data Visit k m a where
+data Visit k (m :: GHC.Type -> GHC.Type) a where
   Visit :: k -> Visit k m ()
 
 makeSem ''Visit
