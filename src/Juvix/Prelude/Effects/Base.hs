@@ -56,6 +56,9 @@ modify' = State.modify
 mapError :: (Member (Error b) r) => (a -> b) -> Sem (Error a ': r) x -> Sem r x
 mapError f = runErrorWith (\_ e -> throwError (f e))
 
+throw :: Member (Error err) r => err -> Sem r a
+throw = throwError
+
 runError :: Sem (Error err ': r) x -> Sem r (Either err x)
 runError = runErrorNoCallStack
 
