@@ -88,4 +88,4 @@ checkInitialized tab = all (goFun . (^. functionCode)) (tab ^. infoFunctions)
           Nothing -> (v', b')
           where
             v' = v <> mconcat (map fst ls)
-            b' = b && allEqual (map fst ls) && and (map snd ls)
+            b' = b && allSame (map fst ls) && and (map snd ls)
