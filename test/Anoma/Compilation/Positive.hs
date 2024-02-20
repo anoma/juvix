@@ -17,16 +17,25 @@ mkAnomaCallTest' :: Bool -> Text -> Prelude.Path Rel Dir -> Prelude.Path Rel Fil
 mkAnomaCallTest' enableDebug _testName relRoot mainFile args _testCheck =
   testCase (unpack _testName) (mkTestIO >>= mkNockmaAssertion)
   where
-    rootDir' :: Prelude.Path Abs Dir
-    rootDir' = root <//> relRoot
-
     mkTestIO :: IO Test
     mkTestIO = do
-      entryPoint <- set entryPointTarget TargetAnoma . set entryPointDebug enableDebug <$> testDefaultEntryPointIO rootDir' (rootDir' <//> mainFile)
-      _testProgramSubject <- (^. pipelineResult) . snd <$> testRunIO entryPoint upToAnoma
+      _testProgramSubject <- withRootCopy compileMain
       let _testProgramFormula = anomaCall args
           _testEvalOptions = defaultEvalOptions
       return Test {..}
+
+    withRootCopy :: (Prelude.Path Abs Dir -> IO a) -> IO a
+    withRootCopy action = withSystemTempDir "test" $ \tmpRootDir -> do
+      copyDirRecur root tmpRootDir
+      action tmpRootDir
+
+    compileMain :: Prelude.Path Abs Dir -> IO (Term Natural)
+    compileMain rootCopyDir = do
+      let testRootDir = rootCopyDir <//> relRoot
+      entryPoint <-
+        set entryPointTarget TargetAnoma . set entryPointDebug enableDebug
+          <$> testDefaultEntryPointIO testRootDir (testRootDir <//> mainFile)
+      (^. pipelineResult) . snd <$> testRunIO entryPoint upToAnoma
 
 mkAnomaCallTestNoTrace :: Text -> Prelude.Path Rel Dir -> Prelude.Path Rel File -> [Term Natural] -> Check () -> TestTree
 mkAnomaCallTestNoTrace = mkAnomaCallTest' False
