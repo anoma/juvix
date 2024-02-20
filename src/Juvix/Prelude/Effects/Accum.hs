@@ -12,16 +12,16 @@ newtype instance StaticRep (Accum o) = Accum
   { _unAccum :: [o]
   }
 
-runAccumList :: Eff (Accum o ': r) a -> Eff r ([o], a)
+runAccumList :: Sem (Accum o ': r) a -> Sem r ([o], a)
 runAccumList m = do
   (a, Accum s) <- runStaticRep (Accum mempty) m
   return (reverse s, a)
 
-execAccumList :: Eff (Accum o ': r) a -> Eff r [o]
+execAccumList :: Sem (Accum o ': r) a -> Sem r [o]
 execAccumList = fmap fst . runAccumList
 
-ignoreAccum :: Eff (Accum o ': r) a -> Eff r a
+ignoreAccum :: Sem (Accum o ': r) a -> Sem r a
 ignoreAccum m = snd <$> runAccumList m
 
-accum :: (Accum o :> r) => o -> Eff r ()
+accum :: (Member (Accum o) r) => o -> Sem r ()
 accum o = overStaticRep (\(Accum l) -> Accum (o : l))

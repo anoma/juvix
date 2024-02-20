@@ -7,11 +7,11 @@ import Juvix.Compiler.Tree.Error
 import Juvix.Compiler.Tree.Evaluator (EvalError (..), toTreeError, valueToNode)
 import Juvix.Compiler.Tree.Evaluator.Builtins
 import Juvix.Compiler.Tree.Extra.Base
-import Juvix.Compiler.Tree.Language hiding (Output, ask, asks, mapError, output, runError)
+import Juvix.Compiler.Tree.Language hiding (Error, Members, Output, Reader, Sem, ask, asks, local, mapError, output, runError, runReader)
 import Juvix.Compiler.Tree.Language.Value
 import Juvix.Compiler.Tree.Pretty
-import Juvix.Prelude.Effects (Eff, IOE, runEff, (:>))
-import Juvix.Prelude.Effects qualified as E
+import Juvix.Prelude.BaseEffectful
+import Text.Read qualified as T
 
 data EvalCtx = EvalCtx
   { _evalCtxArgs :: [Value],
@@ -27,10 +27,10 @@ emptyEvalCtx =
       _evalCtxTemp = mempty
     }
 
-eval :: (E.Output Value :> r, E.Error EvalError :> r) => InfoTable -> Node -> Eff r Value
-eval tab = E.runReader emptyEvalCtx . eval'
+eval :: (Members '[Output Value, Error EvalError] r) => InfoTable -> Node -> Sem r Value
+eval tab = runReader emptyEvalCtx . eval'
   where
-    eval' :: forall r'. (E.Output Value :> r', E.Reader EvalCtx :> r', E.Error EvalError :> r') => Node -> Eff r' Value
+    eval' :: forall r'. (Members '[Output Value, Reader EvalCtx, Error EvalError] r') => Node -> Sem r' Value
     eval' node = case node of
       Binop x -> goBinop x
       Unop x -> goUnop x
@@ -45,16 +45,16 @@ eval tab = E.runReader emptyEvalCtx . eval'
       Case x -> goCase x
       Save x -> goSave x
       where
-        evalError :: Text -> Eff r' a
+        evalError :: Text -> Sem r' a
         evalError msg =
           Exception.throw (EvalError (getNodeLocation node) msg)
 
-        eitherToError :: Either Text Value -> Eff r' Value
+        eitherToError :: Either Text Value -> Sem r' Value
         eitherToError = \case
           Left err -> evalError err
           Right v -> return v
 
-        goBinop :: NodeBinop -> Eff r' Value
+        goBinop :: NodeBinop -> Sem r' Value
         goBinop NodeBinop {..} = do
           arg1 <- eval' _nodeBinopArg1
           arg2 <- eval' _nodeBinopArg2
@@ -62,7 +62,7 @@ eval tab = E.runReader emptyEvalCtx . eval'
             PrimBinop op -> eitherToError $ evalBinop op arg1 arg2
             OpSeq -> return arg2
 
-        goUnop :: NodeUnop -> Eff r' Value
+        goUnop :: NodeUnop -> Sem r' Value
         goUnop NodeUnop {..} = do
           v <- eval' _nodeUnopArg
           case _nodeUnopOpcode of
@@ -70,41 +70,41 @@ eval tab = E.runReader emptyEvalCtx . eval'
             OpTrace -> goTrace v
             OpFail -> goFail v
 
-        goFail :: Value -> Eff r' Value
+        goFail :: Value -> Sem r' Value
         goFail v = evalError ("failure: " <> printValue tab v)
 
-        goTrace :: Value -> Eff r' Value
+        goTrace :: Value -> Sem r' Value
         goTrace v = E.output v $> v
 
         goConstant :: NodeConstant -> Value
         goConstant NodeConstant {..} = constantToValue _nodeConstant
 
-        askTemp :: Eff r' (BL.BinderList Value)
-        askTemp = E.asks (^. evalCtxTemp)
+        askTemp :: Sem r' (BL.BinderList Value)
+        askTemp = asks (^. evalCtxTemp)
 
-        askArgs :: Eff r' [Value]
-        askArgs = E.asks (^. evalCtxArgs)
+        askArgs :: Sem r' [Value]
+        askArgs = asks (^. evalCtxArgs)
 
-        goMemRef :: NodeMemRef -> Eff r' Value
+        goMemRef :: NodeMemRef -> Sem r' Value
         goMemRef NodeMemRef {..} = case _nodeMemRef of
           DRef r -> goDirectRef r
           ConstrRef r -> goField r
 
-        goDirectRef :: DirectRef -> Eff r' Value
+        goDirectRef :: DirectRef -> Sem r' Value
         goDirectRef = \case
           ArgRef OffsetRef {..} ->
             (!! _offsetRefOffset) <$> askArgs
           TempRef RefTemp {_refTempOffsetRef = OffsetRef {..}} ->
             BL.lookupLevel _offsetRefOffset <$> askTemp
 
-        goField :: Field -> Eff r' Value
+        goField :: Field -> Sem r' Value
         goField Field {..} = do
           d <- goDirectRef _fieldRef
           case d of
             ValConstr Constr {..} -> return (_constrArgs !! _fieldOffset)
             _ -> evalError "expected a constructor"
 
-        goAllocConstr :: NodeAllocConstr -> Eff r' Value
+        goAllocConstr :: NodeAllocConstr -> Sem r' Value
         goAllocConstr NodeAllocConstr {..} = do
           vs <- mapM eval' _nodeAllocConstrArgs
           return
@@ -115,7 +115,7 @@ eval tab = E.runReader emptyEvalCtx . eval'
                   }
             )
 
-        goAllocClosure :: NodeAllocClosure -> Eff r' Value
+        goAllocClosure :: NodeAllocClosure -> Sem r' Value
         goAllocClosure NodeAllocClosure {..} = do
           vs <- mapM eval' _nodeAllocClosureArgs
           return
@@ -126,7 +126,7 @@ eval tab = E.runReader emptyEvalCtx . eval'
                   }
             )
 
-        goExtendClosure :: NodeExtendClosure -> Eff r' Value
+        goExtendClosure :: NodeExtendClosure -> Sem r' Value
         goExtendClosure NodeExtendClosure {..} = do
           fun <- eval' _nodeExtendClosureFun
           case fun of
@@ -141,15 +141,15 @@ eval tab = E.runReader emptyEvalCtx . eval'
                 )
             _ -> evalError "expected a closure"
 
-        goCall :: NodeCall -> Eff r' Value
+        goCall :: NodeCall -> Sem r' Value
         goCall NodeCall {..} = case _nodeCallType of
           CallFun sym -> doCall sym [] _nodeCallArgs
           CallClosure cl -> doCallClosure cl _nodeCallArgs
 
-        withCtx :: EvalCtx -> Eff r' a -> Eff r' a
-        withCtx = E.local . const
+        withCtx :: EvalCtx -> Sem r' a -> Sem r' a
+        withCtx = local . const
 
-        doCall :: Symbol -> [Value] -> [Node] -> Eff r' Value
+        doCall :: Symbol -> [Value] -> [Node] -> Sem r' Value
         doCall sym clArgs as = do
           vs <- mapM eval' as
           let fi = lookupFunInfo tab sym
@@ -165,7 +165,7 @@ eval tab = E.runReader emptyEvalCtx . eval'
                   | otherwise ->
                       evalError "wrong number of arguments"
 
-        doCallClosure :: Node -> [Node] -> Eff r' Value
+        doCallClosure :: Node -> [Node] -> Sem r' Value
         doCallClosure cl cargs = do
           cl' <- eval' cl
           case cl' of
@@ -174,13 +174,13 @@ eval tab = E.runReader emptyEvalCtx . eval'
             _ ->
               evalError "expected a closure"
 
-        goCallClosures :: NodeCallClosures -> Eff r' Value
+        goCallClosures :: NodeCallClosures -> Sem r' Value
         goCallClosures NodeCallClosures {..} = do
           vs <- mapM eval' (toList _nodeCallClosuresArgs)
           cl' <- eval' _nodeCallClosuresFun
           go cl' vs
           where
-            go :: Value -> [Value] -> Eff r' Value
+            go :: Value -> [Value] -> Sem r' Value
             go cl vs = case cl of
               ValClosure Closure {..}
                 | argsNum == n -> do
@@ -216,7 +216,7 @@ eval tab = E.runReader emptyEvalCtx . eval'
               _ ->
                 evalError "expected a closure"
 
-        goBranch :: NodeBranch -> Eff r' Value
+        goBranch :: NodeBranch -> Sem r' Value
         goBranch NodeBranch {..} = do
           arg' <- eval' _nodeBranchArg
           br <- case arg' of
@@ -225,7 +225,7 @@ eval tab = E.runReader emptyEvalCtx . eval'
             _ -> evalError "expected a boolean"
           eval' br
 
-        goCase :: NodeCase -> Eff r' Value
+        goCase :: NodeCase -> Sem r' Value
         goCase NodeCase {..} = do
           arg' <- eval' _nodeCaseArg
           case arg' of
@@ -238,26 +238,20 @@ eval tab = E.runReader emptyEvalCtx . eval'
             _ ->
               evalError "expected a constructor"
 
-        withExtendedTemp :: Value -> Eff r' a -> Eff r' a
+        withExtendedTemp :: Value -> Sem r' a -> Sem r' a
         withExtendedTemp v m = do
-          ctx <- E.ask
+          ctx <- ask
           withCtx (over evalCtxTemp (BL.cons v) ctx) m
 
-        goCaseBranch :: Value -> Bool -> Node -> Eff r' Value
+        goCaseBranch :: Value -> Bool -> Node -> Sem r' Value
         goCaseBranch v bSave body
           | bSave = withExtendedTemp v (eval' body)
           | otherwise = eval' body
 
-        goSave :: NodeSave -> Eff r' Value
+        goSave :: NodeSave -> Sem r' Value
         goSave NodeSave {..} = do
           v <- eval' _nodeSaveArg
           withExtendedTemp v (eval' _nodeSaveBody)
-
-runError :: Eff (E.Error err ': r) x -> Eff r (Either err x)
-runError = fmap (mapLeft snd) . E.runError
-
-mapError :: (E.Error b :> r) => (a -> b) -> Eff (E.Error a ': r) x -> Eff r x
-mapError f = E.runErrorWith (\_ e -> E.throwError (f e))
 
 hEvalIOEither ::
   forall m.
@@ -268,7 +262,7 @@ hEvalIOEither ::
   FunctionInfo ->
   m (Either TreeError Value)
 hEvalIOEither hin hout infoTable funInfo = do
-  let x :: Eff '[E.Output Value, E.Error EvalError, E.Error TreeError, IOE] Value
+  let x :: Sem '[Output Value, Error EvalError, Error TreeError, IOE] Value
       x = do
         v <- eval infoTable (funInfo ^. functionCode)
         hRunIO hin hout infoTable v
@@ -278,11 +272,11 @@ hEvalIOEither hin hout infoTable funInfo = do
     . runEff
     . runError @TreeError
     . mapError toTreeError
-    . E.runOutputEff handleTrace
+    . runOutputEff handleTrace
     $ x
 
 -- | Interpret IO actions.
-hRunIO :: forall r. (IOE :> r, E.Error EvalError :> r, E.Output Value :> r) => Handle -> Handle -> InfoTable -> Value -> Eff r Value
+hRunIO :: forall r. (Members '[IOE, Error EvalError, Output Value] r) => Handle -> Handle -> InfoTable -> Value -> Sem r Value
 hRunIO hin hout infoTable = \case
   ValConstr (Constr (BuiltinTag TagReturn) [x]) -> return x
   ValConstr (Constr (BuiltinTag TagBind) [x, f]) -> do

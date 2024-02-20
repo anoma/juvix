@@ -4,7 +4,7 @@ module Juvix.Prelude.Effects.Output where
 
 import Data.Kind qualified as GHC
 import Effectful.Dispatch.Dynamic
-import Juvix.Prelude.Base hiding (Effect, Output, State, interpret, modify, output, reinterpret, runOutputList, runState)
+import Juvix.Prelude.Base.Foundation
 import Juvix.Prelude.Effects.Accum
 import Juvix.Prelude.Effects.Base
 
@@ -13,18 +13,18 @@ data Output (o :: GHC.Type) :: Effect where
 
 makeEffect ''Output
 
-runOutputEff :: (o -> Eff r ()) -> Eff (Output o ': r) a -> Eff r a
+runOutputEff :: (o -> Sem r ()) -> Sem (Output o ': r) a -> Sem r a
 runOutputEff handle =
   interpret $ \_ -> \case
     Output x -> handle x
 
-runOutputList :: Eff (Output o ': r) a -> Eff r ([o], a)
+runOutputList :: Sem (Output o ': r) a -> Sem r ([o], a)
 runOutputList = reinterpret runAccumList $ \_ -> \case
   Output x -> accum x
 
-execOutputList :: Eff (Output o ': r) a -> Eff r [o]
+execOutputList :: Sem (Output o ': r) a -> Sem r [o]
 execOutputList = fmap fst . runOutputList
 
-ignoreOutput :: Eff (Output o ': r) a -> Eff r a
+ignoreOutput :: Sem (Output o ': r) a -> Sem r a
 ignoreOutput = interpret $ \_ -> \case
   Output {} -> return ()

@@ -1,7 +1,8 @@
 module Benchmark.Effect.EmbedIO where
 
-import Juvix.Prelude
-import Juvix.Prelude.Effects (Eff)
+import Juvix.Prelude (withSystemTempFile)
+import Juvix.Prelude.Base.Foundation
+import Juvix.Prelude.Base.Polysemy qualified as P
 import Juvix.Prelude.Effects qualified as E
 import Test.Tasty.Bench
 
@@ -30,9 +31,9 @@ countRaw n =
       a -> hPutChar h c >> go h (pred a)
 
 countSem :: Natural -> IO ()
-countSem n = withSystemTempFile "tmp" $ \_ h -> runM (go h n)
+countSem n = withSystemTempFile "tmp" $ \_ h -> P.runM (go h n)
   where
-    go :: Handle -> Natural -> Sem '[Embed IO] ()
+    go :: Handle -> Natural -> P.Sem '[P.EmbedIO] ()
     go h = \case
       0 -> return ()
       a -> liftIO (hPutChar h c) >> go h (pred a)
@@ -40,7 +41,7 @@ countSem n = withSystemTempFile "tmp" $ \_ h -> runM (go h n)
 countEff :: Natural -> IO ()
 countEff n = withSystemTempFile "tmp" $ \_ h -> E.runEff (go h n)
   where
-    go :: Handle -> Natural -> Eff '[E.IOE] ()
+    go :: Handle -> Natural -> E.Sem '[E.IOE] ()
     go h = \case
       0 -> return ()
       a -> liftIO (hPutChar h c) >> go h (pred a)
