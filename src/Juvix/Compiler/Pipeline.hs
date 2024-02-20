@@ -34,7 +34,7 @@ import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
 import Juvix.Compiler.Pipeline.Result
 import Juvix.Compiler.Pipeline.Root.Base
-import Juvix.Compiler.Reg.Data.InfoTable qualified as Reg
+import Juvix.Compiler.Reg.Pipeline qualified as Reg
 import Juvix.Compiler.Reg.Translation.FromAsm qualified as Reg
 import Juvix.Compiler.Store.Language qualified as Store
 import Juvix.Compiler.Tree qualified as Tree
@@ -202,8 +202,9 @@ asmToMiniC = asmToReg >=> regToMiniC
 
 regToMiniC :: (Member (Reader EntryPoint) r) => Reg.InfoTable -> Sem r C.MiniCResult
 regToMiniC tab = do
+  tab' <- Reg.toC tab
   e <- ask
-  return $ C.fromReg (Backend.getLimits (e ^. entryPointTarget) (e ^. entryPointDebug)) tab
+  return $ C.fromReg (Backend.getLimits (e ^. entryPointTarget) (e ^. entryPointDebug)) tab'
 
 treeToNockma' :: (Members '[Error JuvixError, Reader NockmaTree.CompilerOptions] r) => Tree.InfoTable -> Sem r (Nockma.Cell Natural)
 treeToNockma' = Tree.toNockma >=> NockmaTree.fromTreeTable

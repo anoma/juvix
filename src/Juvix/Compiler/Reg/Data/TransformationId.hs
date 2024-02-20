@@ -7,26 +7,28 @@ import Juvix.Prelude
 data TransformationId
   = Identity
   | SSA
+  | Cleanup
   deriving stock (Data, Bounded, Enum, Show)
 
 data PipelineId
-  = PipelineC
-  | PipelineCairo
+  = PipelineCairo
+  | PipelineC
   deriving stock (Data, Bounded, Enum)
 
 type TransformationLikeId = TransformationLikeId' TransformationId PipelineId
 
 toCTransformations :: [TransformationId]
-toCTransformations = []
+toCTransformations = [Cleanup]
 
 toCairoTransformations :: [TransformationId]
-toCairoTransformations = [SSA]
+toCairoTransformations = [Cleanup, SSA]
 
 instance TransformationId' TransformationId where
   transformationText :: TransformationId -> Text
   transformationText = \case
     Identity -> strIdentity
     SSA -> strSSA
+    Cleanup -> strCleanup
 
 instance PipelineId' TransformationId PipelineId where
   pipelineText :: PipelineId -> Text

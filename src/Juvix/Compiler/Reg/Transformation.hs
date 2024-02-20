@@ -7,6 +7,7 @@ where
 
 import Juvix.Compiler.Reg.Data.TransformationId
 import Juvix.Compiler.Reg.Transformation.Base
+import Juvix.Compiler.Reg.Transformation.Cleanup
 import Juvix.Compiler.Reg.Transformation.Identity
 import Juvix.Compiler.Reg.Transformation.SSA
 
@@ -17,3 +18,4 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
     appTrans = \case
       Identity -> return . identity
       SSA -> return . computeSSA
+      Cleanup -> return . cleanup

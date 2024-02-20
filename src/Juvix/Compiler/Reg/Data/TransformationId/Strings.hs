@@ -13,3 +13,6 @@ strIdentity = "identity"
 
 strSSA :: Text
 strSSA = "ssa"
+
+strCleanup :: Text
+strCleanup = "cleanup"
