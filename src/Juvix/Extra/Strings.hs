@@ -338,6 +338,12 @@ fmul = "fmul"
 fdiv :: (IsString s) => s
 fdiv = "fdiv"
 
+ftoi :: (IsString s) => s
+ftoi = "ftoi"
+
+itof :: (IsString s) => s
+itof = "itof"
+
 delimiter :: (IsString s) => s
 delimiter = "delimiter"
 

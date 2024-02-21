@@ -321,7 +321,7 @@ compile = \case
       Tree.ConstString {} -> stringsErr
       Tree.ConstUnit -> OpQuote # constUnit
       Tree.ConstVoid -> OpQuote # constVoid
-      Tree.ConstField {} -> error "fields not supported"
+      Tree.ConstField {} -> fieldErr
 
     goSave :: Tree.NodeSave -> Sem r (Term Natural)
     goSave Tree.NodeSave {..} = do
@@ -368,6 +368,8 @@ compile = \case
       Tree.OpArgsNum ->
         let getF f = getClosureField f arg
          in sub (getF ClosureTotalArgsNum) (getF ClosureArgsNum)
+      Tree.OpIntToField -> fieldErr
+      Tree.OpFieldToInt -> fieldErr
 
     goTrace :: Term Natural -> Sem r (Term Natural)
     goTrace arg = do
@@ -396,10 +398,10 @@ compile = \case
           Tree.OpIntLe -> return (callStdlib StdlibLe args)
           Tree.OpEq -> testEq _nodeBinopArg1 _nodeBinopArg2
           Tree.OpStrConcat -> stringsErr
-          Tree.OpFieldAdd -> error "fields not supported"
-          Tree.OpFieldSub -> error "fields not supported"
-          Tree.OpFieldMul -> error "fields not supported"
-          Tree.OpFieldDiv -> error "fields not supported"
+          Tree.OpFieldAdd -> fieldErr
+          Tree.OpFieldSub -> fieldErr
+          Tree.OpFieldMul -> fieldErr
+          Tree.OpFieldDiv -> fieldErr
 
     goAllocClosure :: Tree.NodeAllocClosure -> Sem r (Term Natural)
     goAllocClosure Tree.NodeAllocClosure {..} = do
@@ -558,6 +560,9 @@ unsupported thing = error ("The Nockma backend does not support " <> thing)
 
 stringsErr :: a
 stringsErr = unsupported "strings"
+
+fieldErr :: a
+fieldErr = unsupported "the field type"
 
 -- | Computes a - b
 sub :: Term Natural -> Term Natural -> Term Natural

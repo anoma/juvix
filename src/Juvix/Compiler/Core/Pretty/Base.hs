@@ -43,6 +43,8 @@ instance PrettyCode BuiltinOp where
     OpFieldSub -> return primFieldSub
     OpFieldMul -> return primFieldMul
     OpFieldDiv -> return primFieldDiv
+    OpFieldFromInt -> return primFieldFromInt
+    OpFieldToInt -> return primFieldToInt
     OpEq -> return primEquals
     OpShow -> return primShow
     OpStrConcat -> return primStrConcat
@@ -716,6 +718,12 @@ primFieldMul = primitive Str.fmul
 
 primFieldDiv :: Doc Ann
 primFieldDiv = primitive Str.fdiv
+
+primFieldFromInt :: Doc Ann
+primFieldFromInt = primitive Str.itof
+
+primFieldToInt :: Doc Ann
+primFieldToInt = primitive Str.ftoi
 
 primLess :: Doc Ann
 primLess = primitive Str.less

@@ -53,6 +53,8 @@ computeNodeTypeInfo md = umapL go
           OpFieldSub -> mkTypeField'
           OpFieldMul -> mkTypeField'
           OpFieldDiv -> mkTypeField'
+          OpFieldFromInt -> mkTypeField'
+          OpFieldToInt -> mkTypeInteger'
           OpEq -> mkTypeBool'
           OpShow -> mkTypeString'
           OpStrConcat -> mkTypeString'

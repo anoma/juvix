@@ -414,6 +414,8 @@ builtinOpArgTypes = \case
   OpFieldSub -> [mkTypeField', mkTypeField']
   OpFieldMul -> [mkTypeField', mkTypeField']
   OpFieldDiv -> [mkTypeField', mkTypeField']
+  OpFieldFromInt -> [mkTypeInteger']
+  OpFieldToInt -> [mkTypeField']
   OpEq -> [mkDynamic', mkDynamic']
   OpShow -> [mkDynamic']
   OpStrConcat -> [mkTypeString', mkTypeString']

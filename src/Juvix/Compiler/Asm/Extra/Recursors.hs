@@ -175,15 +175,23 @@ recurse' sig = go True
         fixMemUnop mem op = case op of
           OpShow ->
             return (pushValueStack TyString (popValueStack 1 mem))
-          OpStrToInt -> do
-            checkValueStack' loc (sig ^. recursorInfoTable) [TyString] mem
-            return (pushValueStack mkTypeInteger (popValueStack 1 mem))
+          OpStrToInt ->
+            checkUnop TyString mkTypeInteger
           OpArgsNum -> do
             when (null (mem ^. memoryValueStack)) $
               throw $
                 AsmError loc "empty value stack"
             checkFunType (topValueStack' 0 mem)
             return $ pushValueStack mkTypeInteger (popValueStack 1 mem)
+          OpIntToField ->
+            checkUnop mkTypeInteger TyField
+          OpFieldToInt ->
+            checkUnop TyField mkTypeInteger
+          where
+            checkUnop :: Type -> Type -> Sem r Memory
+            checkUnop ty1 ty2 = do
+              checkValueStack' loc (sig ^. recursorInfoTable) [ty1] mem
+              return (pushValueStack ty2 (popValueStack 1 mem))
 
         fixMemExtendClosure :: Memory -> InstrExtendClosure -> Sem r Memory
         fixMemExtendClosure mem InstrExtendClosure {..} = do
