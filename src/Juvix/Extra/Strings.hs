@@ -200,8 +200,8 @@ field = "field"
 fieldFromInt :: (IsString s) => s
 fieldFromInt = "field-from-int"
 
-fieldToInt :: (IsString s) => s
-fieldToInt = "field-to-int"
+fieldToNat :: (IsString s) => s
+fieldToNat = "field-to-nat"
 
 io :: (IsString s) => s
 io = "IO"

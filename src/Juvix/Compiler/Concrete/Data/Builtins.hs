@@ -168,7 +168,7 @@ data BuiltinAxiom
   | BuiltinFieldDiv
   | BuiltinField
   | BuiltinFieldFromInt
-  | BuiltinFieldToInt
+  | BuiltinFieldToNat
   | BuiltinString
   | BuiltinIO
   | BuiltinIOSequence
@@ -198,7 +198,7 @@ instance Pretty BuiltinAxiom where
     BuiltinFieldDiv -> Str.fieldDiv
     BuiltinField -> Str.field
     BuiltinFieldFromInt -> Str.fieldFromInt
-    BuiltinFieldToInt -> Str.fieldToInt
+    BuiltinFieldToNat -> Str.fieldToNat
     BuiltinBoolPrint -> Str.boolPrint
     BuiltinIO -> Str.io
     BuiltinString -> Str.string

@@ -86,7 +86,7 @@ fromCore fsize tab =
         BuiltinFieldMul -> False
         BuiltinFieldDiv -> False
         BuiltinFieldFromInt -> False
-        BuiltinFieldToInt -> False
+        BuiltinFieldToNat -> False
         BuiltinIOSequence -> False
         BuiltinIOReadline -> False
         BuiltinTrace -> False

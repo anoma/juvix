@@ -47,9 +47,9 @@ registerFieldFromInt f = do
   unless (f ^. axiomType === (int_ --> field_)) (error "integer to field conversion has the wrong type signature")
   registerBuiltin BuiltinFieldFromInt (f ^. axiomName)
 
-registerFieldToInt :: (Member Builtins r) => AxiomDef -> Sem r ()
-registerFieldToInt f = do
+registerFieldToNat :: (Member Builtins r) => AxiomDef -> Sem r ()
+registerFieldToNat f = do
   field_ <- getBuiltinName (getLoc f) BuiltinField
-  int_ <- getBuiltinName (getLoc f) BuiltinInt
-  unless (f ^. axiomType === (field_ --> int_)) (error "field to integer conversion has the wrong type signature")
-  registerBuiltin BuiltinFieldToInt (f ^. axiomName)
+  nat_ <- getBuiltinName (getLoc f) BuiltinNat
+  unless (f ^. axiomType === (field_ --> nat_)) (error "field to nat conversion has the wrong type signature")
+  registerBuiltin BuiltinFieldToNat (f ^. axiomName)

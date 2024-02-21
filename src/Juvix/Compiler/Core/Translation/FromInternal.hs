@@ -576,7 +576,7 @@ goAxiomInductive a = whenJust (a ^. Internal.axiomBuiltin) builtinInductive
       Internal.BuiltinFieldMul -> return ()
       Internal.BuiltinFieldDiv -> return ()
       Internal.BuiltinFieldFromInt -> return ()
-      Internal.BuiltinFieldToInt -> return ()
+      Internal.BuiltinFieldToNat -> return ()
 
     registerInductiveAxiom :: Maybe BuiltinAxiom -> [(Tag, Text, Type -> Type, Maybe BuiltinConstructor)] -> Sem r ()
     registerInductiveAxiom ax ctrs = do
@@ -670,7 +670,7 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
         registerAxiomDef (mkLambda' mkTypeField' (mkLambda' mkTypeField' (mkBuiltinApp' OpFieldDiv [mkVar' 1, mkVar' 0])))
       Internal.BuiltinFieldFromInt ->
         registerAxiomDef (mkLambda' mkTypeInteger' (mkBuiltinApp' OpFieldFromInt [mkVar' 0]))
-      Internal.BuiltinFieldToInt ->
+      Internal.BuiltinFieldToNat ->
         registerAxiomDef (mkLambda' mkTypeField' (mkBuiltinApp' OpFieldToInt [mkVar' 0]))
       Internal.BuiltinString -> return ()
       Internal.BuiltinIO -> return ()
@@ -1059,7 +1059,7 @@ goApplication a = do
           case as of
             [x] -> return $ mkBuiltinApp' OpFieldFromInt [x]
             _ -> app
-        Just Internal.BuiltinFieldToInt -> app
+        Just Internal.BuiltinFieldToNat -> app
         Nothing -> app
     Internal.ExpressionIden (Internal.IdenFunction n) -> do
       funInfoBuiltin <- Internal.getFunctionBuiltinInfo n
