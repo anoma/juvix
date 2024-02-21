@@ -8,6 +8,7 @@ import Juvix.Compiler.Core.Pipeline
 import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation
 import Juvix.Compiler.Core.Translation.FromSource
+import Juvix.Data.Field
 
 coreNormalizeAssertion ::
   Path Abs File ->
@@ -29,6 +30,6 @@ coreNormalizeAssertion mainFile expectedFile step = do
         Right m -> do
           step "Normalize"
           let tab' = computeCombinedInfoTable m
-              node' = normalize m (lookupIdentifierNode m (fromJust $ tab' ^. infoMain))
+              node' = normalize (maximum allowedFieldSizes) m (lookupIdentifierNode m (fromJust $ tab' ^. infoMain))
               tab'' = setupMainFunction defaultModuleId tab' node'
           coreEvalAssertion' EvalModeJSON tab'' mainFile expectedFile step
