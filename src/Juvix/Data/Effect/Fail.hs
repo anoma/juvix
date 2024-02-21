@@ -13,7 +13,7 @@ makeSem ''Fail
 runFail ::
   Sem (Fail ': r) a ->
   Sem r (Maybe a)
-runFail = fmap (^? _Right) . reinterpret (runError @())  (\_ -> \Fail -> throw ())
+runFail = fmap (^? _Right) . reinterpret (runError @()) (\Fail -> throw ())
 {-# INLINE runFail #-}
 
 -- | Run a 'Fail' effect purely with a default value.

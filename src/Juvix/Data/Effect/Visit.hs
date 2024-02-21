@@ -59,7 +59,7 @@ re ::
   (k -> Sem (Visit k ': r) ()) ->
   Sem (Visit k ': r) a ->
   Sem (State (HashSet k) ': r) a
-re vis = reinterpretTop $ \_ -> \case
+re vis = interpretTop $ \case
   Visit k ->
     unlessM (HashSet.member k <$> get @(HashSet k)) $ do
       modify' (HashSet.insert k)

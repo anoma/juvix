@@ -15,11 +15,11 @@ runLogIO ::
 runLogIO sem = do
   liftIO (hSetBuffering stdout LineBuffering)
   interpret
-    ( \_ -> \case
+    ( \case
         Log txt -> liftIO (Text.hPutStrLn stdout txt)
     )
     sem
 
 ignoreLog :: Sem (Log ': r) a -> Sem r a
-ignoreLog = interpret $ const $ \case
+ignoreLog = interpret $ \case
   Log _ -> return ()

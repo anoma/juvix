@@ -40,9 +40,9 @@ evalInternet hasInternet
   | otherwise = evalInternetOffline
 
 evalInternetOffline :: Sem (Internet ': r) a -> Sem r a
-evalInternetOffline = interpret $ \_ -> \case
+evalInternetOffline = interpret $ \case
   GetInternet -> return Nothing
 
 evalInternetOnline :: Sem (Internet ': r) a -> Sem r a
-evalInternetOnline = interpret $ \_ -> \case
+evalInternetOnline = interpret $ \case
   GetInternet -> return (Just InternetWitness)

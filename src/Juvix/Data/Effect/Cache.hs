@@ -31,7 +31,7 @@ runCache ::
   HashMap k v ->
   Sem (Cache k v ': r) a ->
   Sem r (HashMap k v, a)
-runCache f c = reinterpret (runState c) $ \_ -> \case
+runCache f c = reinterpret (runState c) $ \case
   CacheLookup k -> gets @(HashMap k v) (^. at k)
   CacheGet k -> do
     mv <- gets @(HashMap k v) (^. at k)
@@ -84,8 +84,8 @@ re ::
   Sem (Cache k v ': r) a ->
   Sem (State (HashMap k v) ': r) a
 re f =
-  reinterpretTop $
-    \_ -> \case
+  interpretTop $
+    \case
       CacheLookup k -> gets @(HashMap k v) (^. at k)
       CacheGet k -> do
         mv <- gets @(HashMap k v) (^. at k)

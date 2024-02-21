@@ -13,7 +13,8 @@ where
 import Data.Kind qualified as GHC
 import Effectful hiding (Eff, (:>))
 import Effectful qualified as E
-import Effectful.Dispatch.Dynamic (EffectHandler, interpret)
+import Effectful.Dispatch.Dynamic (EffectHandler)
+import Effectful.Dispatch.Dynamic qualified as E
 import Effectful.Dispatch.Static
 import Effectful.Error.Static hiding (runError)
 import Effectful.Internal.Env (getEnv, putEnv)
@@ -31,10 +32,11 @@ type EmbedIO = IOE
 type Member (e :: Effect) (r :: [Effect]) = e E.:> r
 
 -- | First order effect handler
-type EffectHandlerFO  (e :: Effect) (r :: [Effect]) =
-  forall a localEs. (HasCallStack, Member e localEs)
-  => e (Sem localEs) a
-  -> Sem r a
+type EffectHandlerFO (e :: Effect) (r :: [Effect]) =
+  forall a localEs.
+  (HasCallStack, Member e localEs) =>
+  e (Sem localEs) a ->
+  Sem r a
 
 type Members :: [Effect] -> [Effect] -> GHC.Constraint
 type family Members es r where
@@ -63,6 +65,9 @@ modify' = State.modify
 mapError :: (Member (Error b) r) => (a -> b) -> Sem (Error a ': r) x -> Sem r x
 mapError f = runErrorWith (\_ e -> throwError (f e))
 
+run :: Sem ('[] :: [Effect]) a -> a
+run = E.runPureEff
+
 throw :: (Member (Error err) r) => err -> Sem r a
 throw = throwError
 
@@ -72,11 +77,50 @@ runError = runErrorNoCallStack
 raiseUnder :: forall (e1 :: Effect) (e2 :: Effect) (r :: [Effect]) a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': r) a
 raiseUnder = inject
 
-interpretTopH :: forall (e1 :: Effect) (e2 :: Effect) (r :: [Effect]) a. (DispatchOf e1 ~ 'Dynamic) => EffectHandler e1 (e2 ': r) -> Sem (e1 ': r) a -> E.Eff (e2 ': r) a
-interpretTopH i = interpret i . raiseUnder
+interpretTopH ::
+  forall (e1 :: Effect) (e2 :: Effect) (r :: [Effect]) a.
+  (DispatchOf e1 ~ 'Dynamic) =>
+  EffectHandler e1 (e2 ': r) ->
+  Sem (e1 ': r) a ->
+  E.Eff (e2 ': r) a
+interpretTopH i = E.interpret i . raiseUnder
 
-interpretTop :: forall (e1 :: Effect) (e2 :: Effect) (r :: [Effect]) a. (DispatchOf e1 ~ 'Dynamic) => EffectHandler e1 (e2 ': r) -> Sem (e1 ': r) a -> E.Eff (e2 ': r) a
-interpretTop i = interpret i . raiseUnder
+interpretTop ::
+  forall (e1 :: Effect) (e2 :: Effect) (r :: [Effect]) a.
+  (DispatchOf e1 ~ 'Dynamic) =>
+  EffectHandlerFO e1 (e2 ': r) ->
+  Sem (e1 ': r) a ->
+  E.Eff (e2 ': r) a
+interpretTop i = interpretTopH (const i)
 
--- reinterpretTop :: forall (e1 :: Effect) (e2 :: Effect) (r :: [Effect]) a. (DispatchOf e1 ~ 'Dynamic) => EffectHandler e1 (e2 ': r) -> Sem (e1 ': r) a -> E.Eff (e2 ': r) a
--- reinterpretTop i = interpret i . raiseUnder
+interpret ::
+  forall (e1 :: Effect) (r :: [Effect]) a.
+  (DispatchOf e1 ~ 'Dynamic) =>
+  EffectHandlerFO e1 r ->
+  Sem (e1 ': r) a ->
+  E.Eff r a
+interpret i = E.interpret (const i)
+
+interpretH ::
+  forall (e1 :: Effect) (r :: [Effect]) a.
+  (DispatchOf e1 ~ 'Dynamic) =>
+  EffectHandler e1 r ->
+  Sem (e1 ': r) a ->
+  E.Eff r a
+interpretH = E.interpret
+
+reinterpretH ::
+  (DispatchOf e ~ 'Dynamic) =>
+  (Sem handlerEs a -> Sem r b) ->
+  EffectHandler e handlerEs ->
+  Sem (e ': r) a ->
+  Sem r b
+reinterpretH = E.reinterpret
+
+reinterpret ::
+  (DispatchOf e ~ 'Dynamic) =>
+  (Sem handlerEs a -> Sem r b) ->
+  EffectHandlerFO e handlerEs ->
+  Sem (e ': r) a ->
+  Sem r b
+reinterpret re i = reinterpretH re (const i)

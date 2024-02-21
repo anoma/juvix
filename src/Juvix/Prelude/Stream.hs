@@ -1,7 +1,7 @@
 module Juvix.Prelude.Stream where
 
 import Data.Stream qualified as Stream
-import Juvix.Prelude.Base
+import Juvix.Prelude.Base.Foundation
 
 allNaturals :: Stream Natural
 allNaturals = Stream.iterate succ 0
@@ -25,6 +25,3 @@ allFiniteSequences elems = build 0 []
           seq <- ofLength (n - 1)
           e <- elems
           return (pure e <> seq)
-
-runInputNaturals :: Sem (Input Natural ': r) a -> Sem r a
-runInputNaturals = runInputInfinite allNaturals

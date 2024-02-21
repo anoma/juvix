@@ -26,7 +26,7 @@ runFilesIO ::
 runFilesIO = interpret helper
   where
     helper :: forall rInitial x. Files (Sem rInitial) x -> Sem r x
-    helper = embed . helper'
+    helper = liftIO . helper'
 
     helper' :: forall rInitial x. Files (Sem rInitial) x -> IO x
     helper' = \case
@@ -62,8 +62,8 @@ runTempFileIO ::
   Sem (TempFile ': r) a ->
   Sem r a
 runTempFileIO = interpret $ \case
-  TempFilePath -> embed (emptySystemTempFile "tmp" >>= parseAbsFile)
-  RemoveTempFile p -> embed (ignoringIOErrors (Path.removeFile p))
+  TempFilePath -> liftIO (emptySystemTempFile "tmp" >>= parseAbsFile)
+  RemoveTempFile p -> liftIO (ignoringIOErrors (Path.removeFile p))
     where
       ignoringIOErrors :: IO () -> IO ()
       ignoringIOErrors ioe = MC.catch ioe (\(_ :: IOError) -> return ())
