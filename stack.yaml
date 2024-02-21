@@ -11,3 +11,4 @@ extra-deps:
 allow-newer: true
 allow-newer-deps:
   - aeson-better-errors
+  - effectful-th

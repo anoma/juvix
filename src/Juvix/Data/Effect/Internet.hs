@@ -18,7 +18,7 @@ data InternetWitness = InternetWitness
 
 type Online = Reader InternetWitness
 
-data Internet m a where
+data Internet :: Effect where
   -- | Returns `Nothing` if we are offline
   GetInternet :: Internet m (Maybe InternetWitness)
 
@@ -40,9 +40,9 @@ evalInternet hasInternet
   | otherwise = evalInternetOffline
 
 evalInternetOffline :: Sem (Internet ': r) a -> Sem r a
-evalInternetOffline = interpret $ \case
+evalInternetOffline = interpret $ \_ -> \case
   GetInternet -> return Nothing
 
 evalInternetOnline :: Sem (Internet ': r) a -> Sem r a
-evalInternetOnline = interpret $ \case
+evalInternetOnline = interpret $ \_ -> \case
   GetInternet -> return (Just InternetWitness)

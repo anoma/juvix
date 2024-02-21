@@ -83,17 +83,15 @@ re ::
   (k -> Sem (Cache k v ': r) v) ->
   Sem (Cache k v ': r) a ->
   Sem (State (HashMap k v) ': r) a
-re f m =
-  interpret
-    ( \_ -> \case
-        CacheLookup k -> gets @(HashMap k v) (^. at k)
-        CacheGet k -> do
-          mv <- gets @(HashMap k v) (^. at k)
-          case mv of
-            Nothing -> do
-              x <- re f (f k)
-              modify' @(HashMap k v) (set (at k) (Just x))
-              return x
-            Just v -> return v
-    )
-    (raiseUnder m)
+re f =
+  reinterpretTop $
+    \_ -> \case
+      CacheLookup k -> gets @(HashMap k v) (^. at k)
+      CacheGet k -> do
+        mv <- gets @(HashMap k v) (^. at k)
+        case mv of
+          Nothing -> do
+            x <- re f (f k)
+            modify' @(HashMap k v) (set (at k) (Just x))
+            return x
+          Just v -> return v
