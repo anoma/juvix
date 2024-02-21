@@ -319,6 +319,10 @@ tests =
       "Typecheck constructor wildcard"
       $(mkRelDir ".")
       $(mkRelFile "ConstructorWildcard.juvix"),
+    posTest
+      "Typecheck record constructor alias"
+      $(mkRelDir ".")
+      $(mkRelFile "AliasRecordConstructor.juvix"),
     posTestAbsDir
       "Typecheck orphan file"
       (relToProject $(mkRelDir "tests/WithoutPackageFile"))

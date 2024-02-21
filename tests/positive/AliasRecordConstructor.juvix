@@ -1,0 +1,12 @@
+module AliasRecordConstructor;
+
+type A := a;
+
+type T := mkT {field : A};
+
+syntax alias mkT' := mkT;
+
+t : T :=
+  mkT'@{
+    field := a
+  };
