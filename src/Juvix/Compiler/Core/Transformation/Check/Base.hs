@@ -70,6 +70,22 @@ checkBuiltins allowUntypedFail = dmapRM go
           _ -> return $ Recur node
       _ -> return $ Recur node
 
+checkBuiltins' :: forall r. (Member (Error CoreError) r) => [BuiltinOp] -> [Primitive] -> Node -> Sem r Node
+checkBuiltins' unsupportedOps unsupportedTypes = dmapRM go
+  where
+    go :: Node -> Sem r Recur
+    go node = case node of
+      NPrim TypePrim {..}
+        | _typePrimPrimitive `elem` unsupportedTypes ->
+            throw $ unsupportedError "type" node (getInfoLocation _typePrimInfo)
+      NBlt BuiltinApp {..}
+        | _builtinAppOp `elem` unsupportedOps ->
+            throw $ unsupportedError "operation" node (getInfoLocation _builtinAppInfo)
+        | otherwise -> case _builtinAppOp of
+            OpFail -> return $ End node
+            _ -> return $ Recur node
+      _ -> return $ Recur node
+
 -- | Checks that the root of the node is not `Bottom`. Currently the only way we
 -- create `Bottom` is when translating axioms that are not builtin. Hence it is
 -- enough to check the root only.

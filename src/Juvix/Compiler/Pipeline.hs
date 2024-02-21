@@ -131,14 +131,21 @@ upToCoreTypecheck =
   upToCore >>= \r -> Core.toTypechecked (r ^. Core.coreResultModule) >>= \md -> return r {Core._coreResultModule = md}
 
 --------------------------------------------------------------------------------
+-- Workflows from stripped Core
+--------------------------------------------------------------------------------
+
+strippedCoreToTree :: Core.Module -> Sem r Tree.InfoTable
+strippedCoreToTree = return . Tree.fromCore . Stripped.fromCore . Core.computeCombinedInfoTable
+
+--------------------------------------------------------------------------------
 -- Workflows from stored Core
 --------------------------------------------------------------------------------
 
-storedCoreToTree :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Tree.InfoTable
-storedCoreToTree = Core.toStripped >=> return . Tree.fromCore . Stripped.fromCore . Core.computeCombinedInfoTable
+storedCoreToTree :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.TransformationId -> Core.Module -> Sem r Tree.InfoTable
+storedCoreToTree checkId = Core.toStripped checkId >=> strippedCoreToTree
 
 storedCoreToAsm :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Asm.InfoTable
-storedCoreToAsm = storedCoreToTree >=> treeToAsm
+storedCoreToAsm = storedCoreToTree Core.CheckExec >=> treeToAsm
 
 storedCoreToReg :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Reg.InfoTable
 storedCoreToReg = storedCoreToAsm >=> asmToReg
@@ -159,8 +166,8 @@ storedCoreToVampIR' = Core.toVampIR' >=> return . VampIR.fromCore' False . Core.
 -- Workflows from Core
 --------------------------------------------------------------------------------
 
-coreToTree :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Tree.InfoTable
-coreToTree = Core.toStored >=> storedCoreToTree
+coreToTree :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.TransformationId -> Core.Module -> Sem r Tree.InfoTable
+coreToTree checkId = Core.toStored >=> storedCoreToTree checkId
 
 coreToAsm :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Asm.InfoTable
 coreToAsm = Core.toStored >=> storedCoreToAsm
@@ -169,13 +176,13 @@ coreToReg :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -
 coreToReg = Core.toStored >=> storedCoreToReg
 
 coreToNockma :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r (Nockma.Cell Natural)
-coreToNockma = Core.toExec >=> coreToTree >=> treeToNockma
+coreToNockma = coreToTree Core.CheckAnoma >=> treeToNockma
 
 coreToAnoma :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r (Nockma.Cell Natural)
-coreToAnoma = coreToTree >=> treeToAnoma
+coreToAnoma = coreToTree Core.CheckAnoma >=> treeToAnoma
 
 coreToMiniC :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r C.MiniCResult
-coreToMiniC = Core.toExec >=> coreToAsm >=> asmToMiniC
+coreToMiniC = coreToAsm >=> asmToMiniC
 
 coreToGeb :: (Members '[Error JuvixError, Reader EntryPoint] r) => Geb.ResultSpec -> Core.Module -> Sem r Geb.Result
 coreToGeb spec = Core.toStored >=> storedCoreToGeb spec

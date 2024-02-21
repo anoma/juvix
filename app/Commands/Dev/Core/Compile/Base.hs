@@ -9,6 +9,7 @@ import Juvix.Compiler.Backend.C qualified as C
 import Juvix.Compiler.Backend.Geb qualified as Geb
 import Juvix.Compiler.Backend.VampIR.Translation qualified as VampIR
 import Juvix.Compiler.Core.Data.Module qualified as Core
+import Juvix.Compiler.Core.Data.TransformationId qualified as Core
 import Juvix.Compiler.Nockma.Pretty qualified as Nockma
 import Juvix.Compiler.Reg.Pretty qualified as Reg
 import Juvix.Compiler.Tree.Pretty qualified as Tree
@@ -136,7 +137,7 @@ runTreePipeline pa@PipelineArg {..} = do
   r <-
     runReader entryPoint
       . runError @JuvixError
-      . coreToTree
+      . coreToTree Core.Identity
       $ _pipelineArgModule
   tab' <- getRight r
   let code = Tree.ppPrint tab' tab'

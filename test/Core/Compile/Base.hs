@@ -8,6 +8,7 @@ import GHC.Base (seq)
 import Juvix.Compiler.Asm.Pretty qualified as Asm
 import Juvix.Compiler.Asm.Translation.FromTree qualified as Asm
 import Juvix.Compiler.Core.Data.Module
+import Juvix.Compiler.Core.Data.TransformationId
 import Juvix.Compiler.Core.Extra.Utils
 import Juvix.Compiler.Core.Options
 import Juvix.Compiler.Core.Pipeline
@@ -48,7 +49,7 @@ coreCompileAssertion' ::
   Assertion
 coreCompileAssertion' optLevel tab mainFile expectedFile stdinText step = do
   step "Translate to JuvixAsm"
-  case run . runReader opts . runError $ toStored' (moduleFromInfoTable tab) >>= toStripped' of
+  case run . runReader opts . runError $ toStored' (moduleFromInfoTable tab) >>= toStripped' CheckExec of
     Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
     Right m -> do
       let tab0 = computeCombinedInfoTable m
