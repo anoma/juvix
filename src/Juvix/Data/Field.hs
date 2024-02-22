@@ -15,8 +15,14 @@ newtype FField = FField
 
 makeLenses ''FField
 
+cairoFieldSize :: Natural
+cairoFieldSize = 3618502788666131213697322783095070105623107215331596699973092056135872020481
+
+defaultFieldSize :: Natural
+defaultFieldSize = 2147483647
+
 allowedFieldSizes :: [Natural]
-allowedFieldSizes = [11, 2147483647]
+allowedFieldSizes = [11, defaultFieldSize, cairoFieldSize]
 
 instance Serialize FField where
   put f = S.put (fieldSize f, fieldToInteger f)

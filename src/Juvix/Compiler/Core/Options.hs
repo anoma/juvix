@@ -1,6 +1,7 @@
 module Juvix.Compiler.Core.Options where
 
 import Juvix.Compiler.Pipeline.EntryPoint
+import Juvix.Data.Field
 import Juvix.Prelude
 
 data CoreOptions = CoreOptions

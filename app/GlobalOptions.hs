@@ -24,7 +24,7 @@ data GlobalOptions = GlobalOptions
     _globalNoCoverage :: Bool,
     _globalNoStdlib :: Bool,
     _globalUnrollLimit :: Int,
-    _globalFieldSize :: Natural,
+    _globalFieldSize :: Maybe Natural,
     _globalOffline :: Bool
   }
   deriving stock (Eq, Show)
@@ -48,7 +48,7 @@ instance CanonicalProjection GlobalOptions Core.CoreOptions where
     Core.CoreOptions
       { Core._optCheckCoverage = not _globalNoCoverage,
         Core._optUnrollLimit = _globalUnrollLimit,
-        Core._optFieldSize = _globalFieldSize,
+        Core._optFieldSize = fromMaybe defaultFieldSize _globalFieldSize,
         Core._optOptimizationLevel = defaultOptimizationLevel,
         Core._optInliningDepth = defaultInliningDepth
       }
@@ -66,7 +66,7 @@ defaultGlobalOptions =
       _globalNoCoverage = False,
       _globalNoStdlib = False,
       _globalUnrollLimit = defaultUnrollLimit,
-      _globalFieldSize = defaultFieldSize,
+      _globalFieldSize = Nothing,
       _globalOffline = False
     }
 
@@ -118,10 +118,10 @@ parseGlobalFlags = do
       )
   _globalFieldSize <-
     option
-      (numberInOpt allowedFieldSizes)
+      fieldSizeOpt
       ( long "field-size"
-          <> value defaultFieldSize
-          <> help ("Field type size (default: " <> show defaultFieldSize <> ")")
+          <> value Nothing
+          <> help "Field type size [cairo,small,11]"
       )
   _globalUnrollLimit <-
     option
@@ -174,7 +174,7 @@ entryPointFromGlobalOptions root mainFile opts = do
         _entryPointGenericOptions = project opts,
         _entryPointBuildDir = maybe (def ^. entryPointBuildDir) (CustomBuildDir . Abs) mabsBuildDir,
         _entryPointOffline = opts ^. globalOffline,
-        _entryPointFieldSize = opts ^. globalFieldSize
+        _entryPointFieldSize = fromMaybe defaultFieldSize $ opts ^. globalFieldSize
       }
   where
     optBuildDir :: Maybe (Prepath Dir)
@@ -197,7 +197,7 @@ entryPointFromGlobalOptionsNoFile root opts = do
         _entryPointGenericOptions = project opts,
         _entryPointBuildDir = maybe (def ^. entryPointBuildDir) (CustomBuildDir . Abs) mabsBuildDir,
         _entryPointOffline = opts ^. globalOffline,
-        _entryPointFieldSize = opts ^. globalFieldSize
+        _entryPointFieldSize = fromMaybe defaultFieldSize $ opts ^. globalFieldSize
       }
   where
     optBuildDir :: Maybe (Prepath Dir)

@@ -86,6 +86,3 @@ defaultOptimizationLevel = 1
 
 defaultInliningDepth :: Int
 defaultInliningDepth = 3
-
-defaultFieldSize :: Natural
-defaultFieldSize = maximum allowedFieldSizes

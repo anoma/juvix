@@ -30,7 +30,7 @@ runCode (LabelInfo labelInfo) instrs0 = runST goCode
     initialMemSize = 1024
 
     fsize :: Natural
-    fsize = maximum allowedFieldSizes
+    fsize = cairoFieldSize
 
     goCode :: ST s FField
     goCode = do

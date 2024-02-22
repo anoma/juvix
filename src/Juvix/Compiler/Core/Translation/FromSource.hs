@@ -618,7 +618,7 @@ exprConstString = P.try $ do
 exprConstField :: ParsecS r Node
 exprConstField = P.try $ do
   (n, i) <- field
-  return $ mkConstant (Info.singleton (LocationInfo i)) (ConstField (fieldFromInteger (maximum allowedFieldSizes) n))
+  return $ mkConstant (Info.singleton (LocationInfo i)) (ConstField (fieldFromInteger defaultFieldSize n))
 
 exprUniverse :: ParsecS r Type
 exprUniverse = do

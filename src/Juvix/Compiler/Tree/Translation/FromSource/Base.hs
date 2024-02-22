@@ -323,7 +323,7 @@ constant = fieldValue <|> integerValue <|> boolValue <|> stringValue <|> unitVal
 fieldValue :: ParsecS r Constant
 fieldValue = P.try $ do
   (i, _) <- field
-  return $ ConstField (fieldFromInteger (maximum allowedFieldSizes) i)
+  return $ ConstField (fieldFromInteger defaultFieldSize i)
 
 integerValue :: ParsecS r Constant
 integerValue = do

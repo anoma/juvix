@@ -30,7 +30,7 @@ defaultEvalOptions =
     { _evalOptionsNormalize = False,
       _evalOptionsNoFailure = False,
       _evalOptionsSilent = False,
-      _evalOptionsFieldSize = maximum allowedFieldSizes
+      _evalOptionsFieldSize = defaultFieldSize
     }
 
 data EvalError = EvalError

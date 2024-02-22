@@ -73,7 +73,7 @@ emptyInfoTable =
       _infoConstrs = mempty,
       _infoInductives = mempty,
       _infoMainFunction = Nothing,
-      _infoFieldSize = maximum allowedFieldSizes
+      _infoFieldSize = defaultFieldSize
     }
 
 lookupFunInfo :: InfoTable' a e -> Symbol -> FunctionInfo' a e
