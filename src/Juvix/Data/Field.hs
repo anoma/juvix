@@ -2,6 +2,7 @@ module Juvix.Data.Field where
 
 import Data.Serialize as S
 import Data.Singletons.Decide
+import GHC.Show qualified as S
 import GHC.TypeLits.Singletons ()
 import Juvix.Data.FiniteField.PrimeField
 import Juvix.Prelude hiding (toInteger)
@@ -26,6 +27,9 @@ instance Serialize FField where
 
 instance Pretty FField where
   pretty (FField (_ :&: f)) = pretty (toInteger f)
+
+instance Show FField where
+  show (FField (_ :&: f)) = show (toInteger f)
 
 fieldAdd :: FField -> FField -> FField
 fieldAdd

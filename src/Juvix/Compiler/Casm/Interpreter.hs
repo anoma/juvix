@@ -15,11 +15,12 @@ import Juvix.Compiler.Casm.Data.LabelInfo
 import Juvix.Compiler.Casm.Error
 import Juvix.Compiler.Casm.Interpreter.Error
 import Juvix.Compiler.Casm.Language hiding (ap)
+import Juvix.Data.Field
 
-type Memory s = MV.MVector s (Maybe Integer)
+type Memory s = MV.MVector s (Maybe FField)
 
 -- | Runs Cairo Assembly. Returns the value of `[ap - 1]` at program exit.
-runCode :: LabelInfo -> [Instruction] -> Integer
+runCode :: LabelInfo -> [Instruction] -> FField
 runCode (LabelInfo labelInfo) instrs0 = runST goCode
   where
     instrs :: Vec.Vector Instruction
@@ -28,7 +29,10 @@ runCode (LabelInfo labelInfo) instrs0 = runST goCode
     initialMemSize :: Int
     initialMemSize = 1024
 
-    goCode :: ST s Integer
+    fsize :: Natural
+    fsize = maximum allowedFieldSizes
+
+    goCode :: ST s FField
     goCode = do
       mem <- MV.replicate initialMemSize Nothing
       go 0 0 0 mem
@@ -38,7 +42,7 @@ runCode (LabelInfo labelInfo) instrs0 = runST goCode
       Address ->
       Address ->
       Memory s ->
-      ST s Integer
+      ST s FField
     go pc ap fp mem
       | Vec.length instrs <= pc = do
           when (Vec.length instrs < pc) $
@@ -81,14 +85,14 @@ runCode (LabelInfo labelInfo) instrs0 = runST goCode
       Ap -> ap
       Fp -> fp
 
-    readMem :: Memory s -> Address -> ST s Integer
+    readMem :: Memory s -> Address -> ST s FField
     readMem mem addr = do
       mv <- MV.read mem addr
       case mv of
         Just v -> return v
         Nothing -> throwRunError ("reading uninitialized memory at address " <> show addr)
 
-    writeMem :: Memory s -> Address -> Integer -> ST s (Memory s)
+    writeMem :: Memory s -> Address -> FField -> ST s (Memory s)
     writeMem mem addr v = do
       let len = MV.length mem
       mem' <-
@@ -104,59 +108,62 @@ runCode (LabelInfo labelInfo) instrs0 = runST goCode
       MV.write mem' addr (Just v)
       return mem'
 
-    writeMemRef :: Address -> Address -> Memory s -> MemRef -> Integer -> ST s (Memory s)
+    writeMemRef :: Address -> Address -> Memory s -> MemRef -> FField -> ST s (Memory s)
     writeMemRef ap fp mem MemRef {..} v = do
       let r = readReg ap fp _memRefReg
           off :: Int = fromIntegral _memRefOff
       writeMem mem (r + off) v
 
-    readMemRef :: Address -> Address -> Memory s -> MemRef -> ST s Integer
+    readMemRef :: Address -> Address -> Memory s -> MemRef -> ST s FField
     readMemRef ap fp mem MemRef {..} = do
       let r = readReg ap fp _memRefReg
           off :: Int = fromIntegral _memRefOff
       readMem mem (r + off)
 
-    readLabel :: LabelRef -> Integer
+    readLabel :: LabelRef -> FField
     readLabel LabelRef {..} =
-      fromIntegral $ fromMaybe (throwRunError "invalid label") $ HashMap.lookup _labelRefSymbol labelInfo
+      fieldFromInteger fsize $
+        fromIntegral $
+          fromMaybe (throwRunError "invalid label") $
+            HashMap.lookup _labelRefSymbol labelInfo
 
-    readValue :: Address -> Address -> Memory s -> Value -> ST s Integer
+    readValue :: Address -> Address -> Memory s -> Value -> ST s FField
     readValue ap fp mem = \case
-      Imm v -> return v
+      Imm v -> return $ fieldFromInteger fsize v
       Ref r -> readMemRef ap fp mem r
       Lab l -> return $ readLabel l
 
-    readLoadValue :: Address -> Address -> Memory s -> LoadValue -> ST s Integer
+    readLoadValue :: Address -> Address -> Memory s -> LoadValue -> ST s FField
     readLoadValue ap fp mem LoadValue {..} = do
       src <- readMemRef ap fp mem _loadValueSrc
       let off :: Int = fromIntegral _loadValueOff
-          addr :: Int = fromInteger src + off
+          addr :: Int = fromInteger (fieldToInteger src) + off
       readMem mem addr
 
-    readBinopValue :: Address -> Address -> Memory s -> BinopValue -> ST s Integer
+    readBinopValue :: Address -> Address -> Memory s -> BinopValue -> ST s FField
     readBinopValue ap fp mem BinopValue {..} = do
       v1 <- readMemRef ap fp mem _binopValueArg1
       v2 <- readValue ap fp mem _binopValueArg2
       return $ goOp v1 v2 _binopValueOpcode
       where
-        goOp :: Integer -> Integer -> Opcode -> Integer
+        goOp :: FField -> FField -> Opcode -> FField
         goOp x y = \case
-          FieldAdd -> x + y
-          FieldMul -> x * y
+          FieldAdd -> fieldAdd x y
+          FieldMul -> fieldMul x y
 
-    readRValue :: Address -> Address -> Memory s -> RValue -> ST s Integer
+    readRValue :: Address -> Address -> Memory s -> RValue -> ST s FField
     readRValue ap fp mem = \case
       Val x -> readValue ap fp mem x
       Load x -> readLoadValue ap fp mem x
       Binop x -> readBinopValue ap fp mem x
 
-    goAssign :: InstrAssign -> Address -> Address -> Address -> Memory s -> ST s Integer
+    goAssign :: InstrAssign -> Address -> Address -> Address -> Memory s -> ST s FField
     goAssign InstrAssign {..} pc ap fp mem = do
       v <- readRValue ap fp mem _instrAssignValue
       mem' <- writeMemRef ap fp mem _instrAssignResult v
       go (pc + 1) (ap + fromEnum _instrAssignIncAp) fp mem'
 
-    goExtraBinop :: InstrExtraBinop -> Address -> Address -> Address -> Memory s -> ST s Integer
+    goExtraBinop :: InstrExtraBinop -> Address -> Address -> Address -> Memory s -> ST s FField
     goExtraBinop InstrExtraBinop {..} pc ap fp mem = do
       v1 <- readMemRef ap fp mem _instrExtraBinopArg1
       v2 <- readValue ap fp mem _instrExtraBinopArg2
@@ -164,51 +171,61 @@ runCode (LabelInfo labelInfo) instrs0 = runST goCode
       mem' <- writeMemRef ap fp mem _instrExtraBinopResult v
       go (pc + 1) (ap + fromEnum _instrExtraBinopIncAp) fp mem'
       where
-        goOp :: Integer -> Integer -> ExtraOpcode -> Integer
+        goOp :: FField -> FField -> ExtraOpcode -> FField
         goOp x y = \case
-          FieldSub -> x - y
-          IntAdd -> x + y
-          IntSub -> x - y
-          IntMul -> x * y
-          IntDiv -> x `quot` y
-          IntMod -> x `rem` y
-          IntLt -> if x < y then 1 else 0
+          FieldSub -> fieldSub x y
+          FieldDiv -> fieldDiv x y
+          IntAdd -> fieldAdd x y
+          IntSub -> fieldSub x y
+          IntMul -> fieldMul x y
+          IntDiv -> fieldFromInteger fsize (fieldToInt x `quot` fieldToInt y)
+          IntMod -> fieldFromInteger fsize (fieldToInt x `rem` fieldToInt y)
+          IntLt ->
+            fieldFromInteger fsize $
+              if fieldToInt x < fieldToInt y then 1 else 0
 
-    goJump :: InstrJump -> Address -> Address -> Address -> Memory s -> ST s Integer
+        fieldToInt :: FField -> Integer
+        fieldToInt f
+          | v < fromIntegral fsize `div` 2 = v
+          | otherwise = v - fromIntegral fsize
+          where
+            v = fieldToInteger f
+
+    goJump :: InstrJump -> Address -> Address -> Address -> Memory s -> ST s FField
     goJump InstrJump {..} _ ap fp mem = do
       tgt <- readValue ap fp mem _instrJumpTarget
-      go (fromInteger tgt) (ap + fromEnum _instrJumpIncAp) fp mem
+      go (fromInteger (fieldToInteger tgt)) (ap + fromEnum _instrJumpIncAp) fp mem
 
-    goJumpIf :: InstrJumpIf -> Address -> Address -> Address -> Memory s -> ST s Integer
+    goJumpIf :: InstrJumpIf -> Address -> Address -> Address -> Memory s -> ST s FField
     goJumpIf InstrJumpIf {..} pc ap fp mem = do
       tgt <- readValue ap fp mem _instrJumpIfTarget
       v <- readMemRef ap fp mem _instrJumpIfValue
-      go (if v /= 0 then fromInteger tgt else pc + 1) (ap + fromEnum _instrJumpIfIncAp) fp mem
+      go (if fieldToInteger v /= 0 then fromInteger (fieldToInteger tgt) else pc + 1) (ap + fromEnum _instrJumpIfIncAp) fp mem
 
-    goJumpRel :: InstrJumpRel -> Address -> Address -> Address -> Memory s -> ST s Integer
+    goJumpRel :: InstrJumpRel -> Address -> Address -> Address -> Memory s -> ST s FField
     goJumpRel InstrJumpRel {..} pc ap fp mem = do
       tgt <- readRValue ap fp mem _instrJumpRelTarget
-      go (pc + fromInteger tgt) (ap + fromEnum _instrJumpRelIncAp) fp mem
+      go (pc + fromInteger (fieldToInteger tgt)) (ap + fromEnum _instrJumpRelIncAp) fp mem
 
-    goCall :: InstrCall -> Address -> Address -> Address -> Memory s -> ST s Integer
+    goCall :: InstrCall -> Address -> Address -> Address -> Memory s -> ST s FField
     goCall InstrCall {..} pc ap fp mem = do
       tgt <- readValue ap fp mem _instrCallTarget
-      mem' <- writeMem mem ap (fromIntegral fp)
-      mem'' <- writeMem mem' (ap + 1) (fromIntegral pc + 1)
-      go (fromInteger tgt) (ap + 2) (ap + 2) mem''
+      mem' <- writeMem mem ap (fieldFromInteger fsize (fromIntegral fp))
+      mem'' <- writeMem mem' (ap + 1) (fieldFromInteger fsize (fromIntegral pc + 1))
+      go (fromInteger (fieldToInteger tgt)) (ap + 2) (ap + 2) mem''
 
-    goReturn :: Address -> Address -> Address -> Memory s -> ST s Integer
+    goReturn :: Address -> Address -> Address -> Memory s -> ST s FField
     goReturn _ ap fp mem = do
       pc' <- readMem mem (fp - 1)
       fp' <- readMem mem (fp - 2)
-      go (fromInteger pc') ap (fromInteger fp') mem
+      go (fromInteger (fieldToInteger pc')) ap (fromInteger (fieldToInteger fp')) mem
 
-    goAlloc :: InstrAlloc -> Address -> Address -> Address -> Memory s -> ST s Integer
+    goAlloc :: InstrAlloc -> Address -> Address -> Address -> Memory s -> ST s FField
     goAlloc InstrAlloc {..} pc ap fp mem = do
       v <- readRValue ap fp mem _instrAllocSize
-      go (pc + 1) (ap + fromInteger v) fp mem
+      go (pc + 1) (ap + fromInteger (fieldToInteger v)) fp mem
 
-    goTrace :: InstrTrace -> Address -> Address -> Address -> Memory s -> ST s Integer
+    goTrace :: InstrTrace -> Address -> Address -> Address -> Memory s -> ST s FField
     goTrace InstrTrace {..} pc ap fp mem = do
       v <- readRValue ap fp mem _instrTraceValue
       GHC.unsafePerformIO (print v >> return (pure ()))

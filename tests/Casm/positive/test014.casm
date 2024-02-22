@@ -1,0 +1,22 @@
+-- field arithmetic
+
+start:
+  call main
+  jmp end
+
+func:
+  [ap] = 1; ap++
+  [ap] = [ap - 1] / [fp - 3]; ap++
+  [ap] = [fp - 4] * [ap - 1]; ap++
+  [ap] = [fp - 3] + [ap - 1]; ap++
+  [ap] = 0; ap++
+  [ap] = [ap - 1] - [ap - 2]; ap++
+  ret
+
+main:
+  [ap] = 7; ap++
+  [ap] = 10; ap++
+  call func
+  ret
+
+end:
