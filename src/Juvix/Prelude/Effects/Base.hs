@@ -7,6 +7,7 @@ module Juvix.Prelude.Effects.Base
     module Effectful.Dispatch.Dynamic,
     module Effectful.TH,
     module Effectful.Dispatch.Static,
+    module Effectful.Resource,
   )
 where
 
@@ -19,6 +20,7 @@ import Effectful.Dispatch.Static
 import Effectful.Error.Static hiding (runError)
 import Effectful.Internal.Env (getEnv, putEnv)
 import Effectful.Reader.Static
+import Effectful.Resource
 import Effectful.State.Static.Local hiding (runState)
 import Effectful.State.Static.Local qualified as State
 import Effectful.TH

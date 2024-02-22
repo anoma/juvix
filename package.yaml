@@ -60,6 +60,7 @@ dependencies:
   - effectful-core == 2.3.*
   - effectful-th == 1.0.*
   - exceptions == 0.10.*
+  - resourcet-effectful == 1.0.*
   - extra == 1.7.*
   - file-embed == 0.0.*
   - filelock == 0.1.*
