@@ -239,19 +239,21 @@ geval opts herr ctx env0 = eval' env0
         fieldFromIntOp :: [Node] -> Node
         fieldFromIntOp =
           unary $ \node ->
-            nodeFromField $
-              fieldFromInteger (opts ^. evalOptionsFieldSize) $
-                fromMaybe (evalError "expected integer" node) $
-                  integerFromNode node
+            let !v = eval' env node
+             in nodeFromField $
+                  fieldFromInteger (opts ^. evalOptionsFieldSize) $
+                    fromMaybe (evalError "expected integer" v) $
+                      integerFromNode v
         {-# INLINE fieldFromIntOp #-}
 
         fieldToIntOp :: [Node] -> Node
         fieldToIntOp =
           unary $ \node ->
-            nodeFromInteger $
-              fieldToInteger $
-                fromMaybe (evalError "expected field element" node) $
-                  fieldFromNode node
+            let !v = eval' env node
+             in nodeFromInteger $
+                  fieldToInteger $
+                    fromMaybe (evalError "expected field element" v) $
+                      fieldFromNode v
         {-# INLINE fieldToIntOp #-}
 
         eqOp :: [Node] -> Node
