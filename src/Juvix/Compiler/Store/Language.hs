@@ -17,7 +17,8 @@ data ModuleInfo = ModuleInfo
     -- | True if any module depending on this module requires recompilation
     -- whenever this module is changed
     _moduleInfoFragile :: Bool,
-    _moduleInfoSHA256 :: Text
+    _moduleInfoSHA256 :: Text,
+    _moduleInfoFieldSize :: Natural
   }
   deriving stock (Generic)
 
