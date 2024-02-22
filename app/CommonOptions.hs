@@ -118,7 +118,7 @@ fieldSizeOpt = eitherReader aux
     aux :: String -> Either String (Maybe Natural)
     aux s = case s of
       "cairo" -> Right $ Just cairoFieldSize
-      "small" -> Right $ Just defaultFieldSize
+      "small" -> Right $ Just smallFieldSize
       _ ->
         mapRight Just $
           either Left checkAllowed $

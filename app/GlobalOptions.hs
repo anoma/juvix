@@ -121,7 +121,7 @@ parseGlobalFlags = do
       fieldSizeOpt
       ( long "field-size"
           <> value Nothing
-          <> help "Field type size [cairo,small,11]"
+          <> help "Field type size [cairo,small,11] (default: small)"
       )
   _globalUnrollLimit <-
     option
