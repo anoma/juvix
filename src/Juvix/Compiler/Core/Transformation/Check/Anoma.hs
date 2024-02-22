@@ -10,4 +10,4 @@ checkAnoma md = do
   checkMainExists md
   checkNoAxioms md
   mapAllNodesM checkNoIO md
-  mapAllNodesM (checkBuiltins' [OpStrConcat, OpStrToInt, OpShow] []) md
+  mapAllNodesM (checkBuiltins' [OpStrConcat, OpStrToInt, OpShow] [PrimString]) md
