@@ -29,6 +29,10 @@ instance PrettyCode OpCode where
     OpMul -> return kwMul
     OpDiv -> return kwDiv
     OpMod -> return kwMod
+    OpFieldAdd -> return kwFieldAdd
+    OpFieldSub -> return kwFieldSub
+    OpFieldMul -> return kwFieldMul
+    OpFieldDiv -> return kwFieldDiv
     OpEq -> return kwEqual
     OpLt -> return kwLessThan
     OpLe -> return kwLessOrEqual

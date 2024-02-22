@@ -63,6 +63,19 @@ def mul (x, e1) (y, e2) = {
     (x * y, e1 * e2 * range_check (x * y))
 };
 
+def fadd (x, e1) (y, e2) = {
+    (x + y, e1 * e2)
+};
+def fsub (x, e1) (y, e2) = {
+    (x - y, e1 * e2)
+};
+def fmul (x, e1) (y, e2) = {
+    (x * y, e1 * e2)
+};
+def fdiv (x, e1) (y, e2) = {
+    (x / y, e1 * e2)
+};
+
 def equal (x, e1) (y, e2) = (isZero (x - y), e1 * e2);
 
 def if (b, e) (x, e1) (y, e2) = (b * x + (1 - b) * y, e * (b * e1 + (1 - b) * e2));

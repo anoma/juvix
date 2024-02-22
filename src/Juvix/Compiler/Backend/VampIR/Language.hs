@@ -16,6 +16,10 @@ data OpCode
   | OpMul
   | OpDiv
   | OpMod
+  | OpFieldAdd
+  | OpFieldSub
+  | OpFieldMul
+  | OpFieldDiv
   | OpEq
   | OpLt
   | OpLe

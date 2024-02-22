@@ -31,6 +31,18 @@ kwDiv = keyword Str.vampirDiv
 kwMod :: Doc Ann
 kwMod = keyword Str.vampirMod
 
+kwFieldAdd :: Doc Ann
+kwFieldAdd = keyword Str.fadd
+
+kwFieldSub :: Doc Ann
+kwFieldSub = keyword Str.fsub
+
+kwFieldMul :: Doc Ann
+kwFieldMul = keyword Str.fmul
+
+kwFieldDiv :: Doc Ann
+kwFieldDiv = keyword Str.fdiv
+
 kwEqual :: Doc Ann
 kwEqual = keyword Str.vampirEqual
 

@@ -41,6 +41,11 @@ def add x y = x + y;
 def sub x y = x - y;
 def mul x y = x * y;
 
+def fadd x y = x + y;
+def fsub x y = x - y;
+def fmul x y = x * y;
+def fdiv x y = x / y;
+
 def equal x y = isZero (x - y);
 
 def if b x y = b * x + (1 - b) * y;
