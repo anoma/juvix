@@ -16,7 +16,7 @@ import Effectful.Internal.Env (getEnv, putEnv)
 import Effectful.Reader.Static
 import Effectful.State.Static.Local
 import Effectful.TH
-import Juvix.Prelude.Base (($), (<$>), type (~))
+import Juvix.Prelude.Base.Foundation
 
 overStaticRep :: (DispatchOf e ~ 'Static sideEffects, e :> r) => (StaticRep e -> StaticRep e) -> Eff r ()
 overStaticRep f = unsafeEff $ \r -> do
