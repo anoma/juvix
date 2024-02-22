@@ -145,10 +145,12 @@ double+1 : Expr := Λ (compose # +1 # double # ! 0);
 
 res : Either Error Val := eval (double+1 # num 7);
 
-main : Nat :=
+-- TODO: Use Partial or failwith in left branches when anoma backend supports
+-- strings
+main : List Nat :=
   case res >>= getNat of {
-    | left (ScopeError n ctx) := failwith "Scope error"
-    | left (ExpectedNat e) := failwith "Expected a natural"
-    | left ExpectedLambda := failwith "ExpectedLambda"
-    | right r := r
+    | left (ScopeError n ctx) := []
+    | left (ExpectedNat e) := []
+    | left ExpectedLambda := []
+    | right r := [r]
   };

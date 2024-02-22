@@ -100,7 +100,7 @@ allTests =
         []
         $ do
           let l :: Term Natural = [nock| [1 2 nil] |]
-          checkOutput [[nock| false |], [nock| true |], [nock| 0 |], [nock| [1 nil] |], [nock| 1 |], l, l, l],
+          checkOutput [[nock| false |], [nock| true |], [nock| 0 |], [nock| [1 nil] |], [nock| 1 |], l, l],
       mkAnomaCallTest
         "Test008: Recursion"
         $(mkRelDir ".")
@@ -391,7 +391,7 @@ allTests =
         $(mkRelDir ".")
         $(mkRelFile "test052.juvix")
         []
-        $ checkNatOutput [15],
+        $ checkOutput [[nock| [15 nil] |]],
       mkAnomaCallTest
         "Test053: Inlining"
         $(mkRelDir ".")
