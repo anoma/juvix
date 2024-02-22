@@ -11,8 +11,8 @@ map' {A B} (f : A → B) : List A → List B :=
   };
 
 terminating
-map'' {A B} (f : A → B) (x : List A) : List B :=
-  if (null x) nil (f (head (failwith "head: empty list") x) :: map'' f (tail x));
+map'' {A B} {{Partial}} (f : A → B) (x : List A) : List B :=
+  if (null x) nil (f (phead x) :: map'' f (tail x));
 
 lst : List Nat := 0 :: 1 :: nil;
 
@@ -24,4 +24,4 @@ main : List Nat :=
     >>> trace (head 0 (tail lst))
     >>> trace (map ((+) 1) lst)
     >>> trace (map' ((+) 1) lst)
-    >>> map'' ((+) 1) lst;
+    >>> runPartial λ {{{_}} := map'' ((+) 1) lst};
