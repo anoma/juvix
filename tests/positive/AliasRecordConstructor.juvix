@@ -10,3 +10,14 @@ t : T :=
   mkT'@{
     field := a
   };
+
+t1 : T -> A
+ | mkT'@{ field := x } := x;
+
+syntax iterator it {init := 0; range := 1};
+it : (A → A) → T → A
+  | _ (mkT a) := a;
+
+syntax alias it' := it;
+
+t2 (t : T) : A := it' (a in t) a;
