@@ -19,6 +19,7 @@ data ConstrField = ConstrField
     _constrFieldMemRep :: MemRep,
     -- | Location where the data is stored.
     _constrFieldRef :: VarRef,
+    -- | Index of the constructor argument being referenced.
     _constrFieldIndex :: Index
   }
 
