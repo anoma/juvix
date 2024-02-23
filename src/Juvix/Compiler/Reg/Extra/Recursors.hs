@@ -9,7 +9,17 @@ data ForwardRecursorSig m c = ForwardRecursorSig
   }
 
 data BackwardRecursorSig m a = BackwardRecursorSig
-  { _backwardFun :: Code -> a -> [a] -> m (a, Code),
+  { -- | In `_backwardFun is a as`: `is = i : is'` is the instruction list
+    -- currently being processed (the head `i` is the processed instruction, the
+    -- tail `is'` contains the instructions after it); `a` is the accumulator
+    -- for `is'`; `as` contains the accumulator values for the branches (for
+    -- `Branch` and `Case` instructions, otherwise empty). For the `Case`
+    -- instruction, the accumulator for the default branch (if present) is the
+    -- last element of `as`.
+    _backwardFun :: Code -> a -> [a] -> m (a, Code),
+    -- | `backwardAdjust a` adjusts the accumulator value when going backwards
+    -- into a branch. See also `FoldSig` in `Asm.Extra.Recursors` for more
+    -- explanations.
     _backwardAdjust :: a -> a
   }
 
@@ -125,3 +135,25 @@ ifoldFM f a0 is0 =
 
 ifoldF :: (Monoid a) => (a -> Instruction -> a) -> a -> Code -> a
 ifoldF f a is = runIdentity (ifoldFM (\a' -> return . f a') a is)
+
+ifoldBM :: forall a m. (Monad m) => (a -> [a] -> Instruction -> m a) -> a -> Code -> m a
+ifoldBM f a0 is0 =
+  fst
+    <$> recurseB
+      BackwardRecursorSig
+        { _backwardFun = go,
+          _backwardAdjust = id
+        }
+      a0
+      is0
+  where
+    go :: Code -> a -> [a] -> m (a, Code)
+    go is a as = case is of
+      i : _ -> do
+        a' <- f a as i
+        return (a', is)
+      [] ->
+        return (a, is)
+
+ifoldB :: (a -> [a] -> Instruction -> a) -> a -> Code -> a
+ifoldB f a is = runIdentity (ifoldBM (\a' as' -> return . f a' as') a is)
