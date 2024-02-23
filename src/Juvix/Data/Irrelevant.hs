@@ -45,4 +45,6 @@ instance Applicative Irrelevant where
 instance Monad Irrelevant where
   (Irrelevant mx) >>= f = f mx
 
+instance (NFData a) => NFData (Irrelevant a)
+
 makeLenses ''Irrelevant

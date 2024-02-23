@@ -10,6 +10,8 @@ newtype Pos = Pos {_unPos :: Word64}
   deriving stock (Show, Eq, Ord, Data, Generic, Lift)
   deriving newtype (Hashable, Num, Enum, Real, Integral)
 
+instance NFData Pos
+
 instance Serialize Pos
 
 instance Semigroup Pos where
@@ -27,6 +29,8 @@ data FileLoc = FileLoc
     _locOffset :: !Pos
   }
   deriving stock (Show, Eq, Generic, Data, Lift)
+
+instance NFData FileLoc
 
 instance Hashable FileLoc
 
@@ -73,6 +77,8 @@ data Interval = Interval
     _intervalEnd :: FileLoc
   }
   deriving stock (Show, Ord, Eq, Generic, Data, Lift)
+
+instance NFData Interval
 
 instance Hashable Interval
 

@@ -6,20 +6,32 @@ import Juvix.Compiler.Nockma.Evaluator
 import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Translation.FromSource.QQ
 import Juvix.Compiler.Nockma.Translation.FromTree
+import Juvix.Compiler.Nockma.Pretty
 import Juvix.Prelude qualified as Prelude
 import Nockma.Base
 import Nockma.Eval.Positive
+import Control.DeepSeq
 
 root :: Prelude.Path Abs Dir
 root = relToProject $(mkRelDir "tests/Anoma/Compilation/positive")
 
-mkAnomaCallTest' :: Bool -> Text -> Prelude.Path Rel Dir -> Prelude.Path Rel File -> [Term Natural] -> Check () -> TestTree
-mkAnomaCallTest' enableDebug _testName relRoot mainFile args _testCheck =
+data TestConfig = TestConfig {
+  _testConfigEnableTrace :: Bool,
+  _testConfigOptimization :: Int
+                             }
+
+makeLenses ''TestConfig
+
+mkAnomaCallTest' :: TestConfig -> Text -> Prelude.Path Rel Dir -> Prelude.Path Rel File -> [Term Natural] -> Check () -> TestTree
+mkAnomaCallTest' cfg _testName relRoot mainFile args _testCheck =
   testCase (unpack _testName) (mkTestIO >>= mkNockmaAssertion)
   where
     mkTestIO :: IO Test
     mkTestIO = do
-      _testProgramSubject <- withRootCopy compileMain
+      _testProgramSubject <- withRootCopy $ \tmpDir -> do
+        s <- compileMain tmpDir
+        writeFileEnsureLn (tmpDir <//> $(mkRelFile "test.nockma")) (ppSerialize s)
+        return s
       let _testProgramFormula = anomaCall args
           _testEvalOptions = defaultEvalOptions
       return Test {..}
@@ -33,15 +45,23 @@ mkAnomaCallTest' enableDebug _testName relRoot mainFile args _testCheck =
     compileMain rootCopyDir = do
       let testRootDir = rootCopyDir <//> relRoot
       entryPoint <-
-        set entryPointTarget TargetAnoma . set entryPointDebug enableDebug
+        set entryPointTarget TargetAnoma
+           . set entryPointDebug (cfg ^. testConfigEnableTrace)
+           . set entryPointOptimizationLevel (cfg ^. testConfigOptimization)
           <$> testDefaultEntryPointIO testRootDir (testRootDir <//> mainFile)
       (^. pipelineResult) . snd <$> testRunIO entryPoint upToAnoma
 
 mkAnomaCallTestNoTrace :: Text -> Prelude.Path Rel Dir -> Prelude.Path Rel File -> [Term Natural] -> Check () -> TestTree
-mkAnomaCallTestNoTrace = mkAnomaCallTest' False
+mkAnomaCallTestNoTrace = mkAnomaCallTest' TestConfig {_testConfigEnableTrace=False,
+                                                      _testConfigOptimization=defaultOptimizationLevel}
 
 mkAnomaCallTest :: Text -> Prelude.Path Rel Dir -> Prelude.Path Rel File -> [Term Natural] -> Check () -> TestTree
-mkAnomaCallTest = mkAnomaCallTest' True
+mkAnomaCallTest = mkAnomaCallTest' TestConfig {_testConfigEnableTrace=True,
+                                               _testConfigOptimization=defaultOptimizationLevel}
+
+mkAnomaCallTestNoOptimization :: Text -> Prelude.Path Rel Dir -> Prelude.Path Rel File -> [Term Natural] -> Check () -> TestTree
+mkAnomaCallTestNoOptimization = mkAnomaCallTest' TestConfig {_testConfigEnableTrace=True,
+                                               _testConfigOptimization=0}
 
 checkNatOutput :: [Natural] -> Check ()
 checkNatOutput = checkOutput . fmap toNock
@@ -517,6 +537,12 @@ allTests =
         "Test073: Import and use a syntax alias"
         $(mkRelDir "test073")
         $(mkRelFile "test073.juvix")
+        []
+        $ checkNatOutput [11],
+      mkAnomaCallTestNoOptimization
+        "A case with no default branch for a type with RepConstr memory representation"
+        $(mkRelDir ".")
+        $(mkRelFile "RepConstrCaseNoDefault.juvix")
         []
         $ checkNatOutput [11]
     ]

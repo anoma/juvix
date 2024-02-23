@@ -53,6 +53,7 @@ module Juvix.Prelude.Base.Foundation
     module System.FilePath,
     module System.IO,
     module Text.Show,
+    module Control.DeepSeq,
     module Control.Monad.Catch,
     module Control.Monad.Zip,
     Data,
@@ -72,6 +73,7 @@ module Juvix.Prelude.Base.Foundation
 where
 
 import Control.Applicative
+import Control.DeepSeq
 import Control.Monad.Catch (MonadMask, MonadThrow, throwM)
 import Control.Monad.Extra hiding (fail, forM, mconcatMapM, whileJustM)
 import Control.Monad.Extra qualified as Monad

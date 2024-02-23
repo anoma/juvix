@@ -25,4 +25,6 @@ data StdlibFunction
   | StdlibLt
   | StdlibLe
   | StdlibPow2
-  deriving stock (Show, Lift, Eq, Bounded, Enum)
+  deriving stock (Show, Lift, Eq, Bounded, Enum, Generic)
+
+instance NFData StdlibFunction

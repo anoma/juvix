@@ -1,0 +1,17 @@
+-- A case with no default branch for a type with RepConstr memory representation
+module RepConstrCaseNoDefault;
+
+import Stdlib.Data.Bool open;
+
+--- A self-balancing binary search tree.
+type AVLTree :=
+  | --- An empty AVL tree.
+    empty
+  | --- A node of an AVL tree.
+    node Bool Bool Bool;
+
+isEmpty : AVLTree -> Bool
+  | empty := true
+  | node@{} := false;
+
+main : Bool := isEmpty empty;
