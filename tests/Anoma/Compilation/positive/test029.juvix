@@ -1,0 +1,17 @@
+-- Ackermann function
+module test029;
+
+import Stdlib.Prelude open;
+import Stdlib.Debug.Trace open;
+
+ack : Nat → Nat → Nat
+  | zero n := n + 1
+  | (suc m) zero := ack m 1
+  | (suc m) (suc n) := ack m (ack (suc m) n);
+
+main : Nat :=
+  trace (ack 0 7)
+    >>> trace (ack 1 7)
+    >>> trace (ack 1 13)
+    >>> trace (ack 2 7)
+    >>> ack 2 13;

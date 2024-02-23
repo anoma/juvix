@@ -21,6 +21,7 @@ runCommand opts = do
     TargetReg -> runRegPipeline arg
     TargetTree -> return ()
     TargetNockma -> runNockmaPipeline arg
+    TargetAnoma -> runAnomaPipeline arg
   where
     getFile :: Sem r (Path Abs File)
     getFile = getMainFile (opts ^. compileInputFile)

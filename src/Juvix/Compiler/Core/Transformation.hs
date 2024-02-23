@@ -13,6 +13,7 @@ import Juvix.Compiler.Core.Data.TransformationId
 import Juvix.Compiler.Core.Error
 import Juvix.Compiler.Core.Options
 import Juvix.Compiler.Core.Transformation.Base
+import Juvix.Compiler.Core.Transformation.Check.Anoma
 import Juvix.Compiler.Core.Transformation.Check.Exec
 import Juvix.Compiler.Core.Transformation.Check.Geb
 import Juvix.Compiler.Core.Transformation.Check.VampIR
@@ -75,6 +76,7 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
       CheckGeb -> mapError (JuvixError @CoreError) . checkGeb
       CheckExec -> mapError (JuvixError @CoreError) . checkExec
       CheckVampIR -> mapError (JuvixError @CoreError) . checkVampIR
+      CheckAnoma -> mapError (JuvixError @CoreError) . checkAnoma
       Normalize -> return . normalize
       LetFolding -> return . letFolding
       LambdaFolding -> return . lambdaFolding

@@ -1,0 +1,28 @@
+-- lists
+module test022;
+
+import Stdlib.Prelude open;
+import Stdlib.Debug.Trace open;
+
+gen : Nat → List Nat
+  | zero := nil
+  | n@(suc m) := n :: gen m;
+
+sum : Nat → Nat
+  | n := foldl (+) 0 (gen n);
+
+sum' : Nat → Nat
+  | n := foldr (+) 0 (gen n);
+
+printListNatLn : List Nat → IO
+  | nil := printStringLn "nil"
+  | (h :: t) :=
+    printNat h >> printString " :: " >> printListNatLn t;
+
+main (n : Nat) : Nat :=
+  trace (gen 10)
+    >>> trace (reverse (gen 10))
+    >>> trace (filter ((<) 5) (gen 10))
+    >>> trace (reverse (map (flip sub 1) (gen 10)))
+    >>> trace (sum n)
+    >>> sum' n;

@@ -1,0 +1,16 @@
+-- tail recursion: compute the n-th Fibonacci number in O(n)
+module test011;
+
+import Stdlib.Prelude open;
+import Stdlib.Debug open;
+
+fib' : Nat → Nat → Nat → Nat
+  | x y zero := x
+  | x y (suc n) := fib' y (x + y) n;
+
+fib : Nat → Nat := fib' 0 1;
+
+main : Nat :=
+  trace (fib 10)
+    >>> trace (fib 100)
+    >>> fib 1000;

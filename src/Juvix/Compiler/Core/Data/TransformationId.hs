@@ -24,6 +24,7 @@ data TransformationId
   | CheckGeb
   | CheckExec
   | CheckVampIR
+  | CheckAnoma
   | Normalize
   | LetFolding
   | LambdaFolding
@@ -51,6 +52,7 @@ data PipelineId
   | PipelineGeb
   | PipelineVampIR
   | PipelineStripped
+  | PipelineExec
   deriving stock (Data, Bounded, Enum)
 
 type TransformationLikeId = TransformationLikeId' TransformationId PipelineId
@@ -67,9 +69,9 @@ toNormalizeTransformations = [CombineInfoTables, LetRecLifting, LetFolding, Unro
 toVampIRTransformations :: [TransformationId]
 toVampIRTransformations = [CombineInfoTables, FilterUnreachable, CheckVampIR, LetRecLifting, OptPhaseVampIR, UnrollRecursion, Normalize, LetHoisting]
 
-toStrippedTransformations :: [TransformationId]
-toStrippedTransformations =
-  [CombineInfoTables, FilterUnreachable, CheckExec, LambdaLetRecLifting, TopEtaExpand, OptPhaseExec, MoveApps, RemoveTypeArgs]
+toStrippedTransformations :: TransformationId -> [TransformationId]
+toStrippedTransformations checkId =
+  [CombineInfoTables, FilterUnreachable, checkId, LambdaLetRecLifting, TopEtaExpand, OptPhaseExec, MoveApps, RemoveTypeArgs]
 
 toGebTransformations :: [TransformationId]
 toGebTransformations = [CombineInfoTables, FilterUnreachable, CheckGeb, LetRecLifting, OptPhaseGeb, UnrollRecursion, FoldTypeSynonyms, ComputeTypeInfo]
@@ -96,6 +98,7 @@ instance TransformationId' TransformationId where
     CheckGeb -> strCheckGeb
     CheckExec -> strCheckExec
     CheckVampIR -> strCheckVampIR
+    CheckAnoma -> strCheckAnoma
     Normalize -> strNormalize
     LetFolding -> strLetFolding
     LambdaFolding -> strLambdaFolding
@@ -124,6 +127,7 @@ instance PipelineId' TransformationId PipelineId where
     PipelineGeb -> strGebPipeline
     PipelineVampIR -> strVampIRPipeline
     PipelineStripped -> strStrippedPipeline
+    PipelineExec -> strExecPipeline
 
   pipeline :: PipelineId -> [TransformationId]
   pipeline = \case
@@ -131,4 +135,5 @@ instance PipelineId' TransformationId PipelineId where
     PipelineNormalize -> toNormalizeTransformations
     PipelineGeb -> toGebTransformations
     PipelineVampIR -> toVampIRTransformations
-    PipelineStripped -> toStrippedTransformations
+    PipelineStripped -> toStrippedTransformations Identity
+    PipelineExec -> toStrippedTransformations CheckExec

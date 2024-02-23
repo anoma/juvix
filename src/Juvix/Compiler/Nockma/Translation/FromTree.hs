@@ -1,4 +1,25 @@
-module Juvix.Compiler.Nockma.Translation.FromTree where
+module Juvix.Compiler.Nockma.Translation.FromTree
+  ( runCompilerWithAnoma,
+    runCompilerWithJuvix,
+    fromEntryPoint,
+    fromTreeTable,
+    ProgramCallingConvention (..),
+    CompilerOptions (..),
+    CompilerFunction (..),
+    FunctionId (..),
+    add,
+    dec,
+    mul,
+    sub,
+    pow2,
+    nockNatLiteral,
+    callStdlib,
+    appendRights,
+    foldTerms,
+    pathToArg,
+    makeList,
+  )
+where
 
 import Juvix.Compiler.Nockma.Language.Path
 import Juvix.Compiler.Nockma.Pretty
@@ -9,6 +30,10 @@ import Juvix.Compiler.Tree.Data.InfoTable qualified as Tree
 import Juvix.Compiler.Tree.Language qualified as Tree
 import Juvix.Compiler.Tree.Language.Rep
 import Juvix.Prelude hiding (Atom, Path)
+
+data ProgramCallingConvention
+  = ProgramCallingConventionJuvix
+  | ProgramCallingConventionAnoma
 
 nockmaMemRep :: MemRep -> NockmaMemRep
 nockmaMemRep = \case
@@ -184,8 +209,8 @@ supportsListNockmaRep tab ci = case allConstructors tab ci of
   _ -> Nothing
 
 -- | Use `Tree.toNockma` before calling this function
-fromTreeTable :: (Members '[Error JuvixError, Reader CompilerOptions] r) => Tree.InfoTable -> Sem r (Cell Natural)
-fromTreeTable t = case t ^. Tree.infoMainFunction of
+fromTreeTable :: (Members '[Error JuvixError, Reader CompilerOptions] r) => ProgramCallingConvention -> Tree.InfoTable -> Sem r (Cell Natural)
+fromTreeTable cc t = case t ^. Tree.infoMainFunction of
   Just mainFun -> do
     opts <- ask
     return (fromTree opts mainFun t)
@@ -211,18 +236,10 @@ fromTreeTable t = case t ^. Tree.infoMainFunction of
 
           getInductiveInfo :: Symbol -> Tree.InductiveInfo
           getInductiveInfo s = _infoInductives ^?! at s . _Just
-       in runCompilerWith opts constrs funs mainFun
+       in runCompilerWith cc opts constrs funs mainFun
       where
         mainFun :: CompilerFunction
-        mainFun =
-          CompilerFunction
-            { _compilerFunctionName = UserFunction mainSym,
-              _compilerFunctionArity = 0,
-              _compilerFunction = compile mainCode
-            }
-
-        mainCode :: Tree.Node
-        mainCode = _infoFunctions ^?! at mainSym . _Just . Tree.functionCode
+        mainFun = compileFunction (_infoFunctions ^?! at mainSym . _Just)
 
         allFunctions :: [Tree.FunctionInfo]
         allFunctions = filter notMain (toList _infoFunctions)
@@ -338,14 +355,22 @@ compile = \case
     goUnop :: Tree.NodeUnop -> Sem r (Term Natural)
     goUnop Tree.NodeUnop {..} = do
       arg <- compile _nodeUnopArg
-      return $ case _nodeUnopOpcode of
+      case _nodeUnopOpcode of
         Tree.OpShow -> stringsErr
         Tree.OpStrToInt -> stringsErr
-        Tree.OpFail -> crash
-        Tree.OpTrace -> OpTrace # arg # arg
+        Tree.OpFail -> return crash
+        Tree.OpTrace -> goTrace arg
         Tree.OpArgsNum ->
           let getF f = getClosureField f arg
-           in sub (getF ClosureTotalArgsNum) (getF ClosureArgsNum)
+           in return (sub (getF ClosureTotalArgsNum) (getF ClosureArgsNum))
+
+    goTrace :: Term Natural -> Sem r (Term Natural)
+    goTrace arg = do
+      enabled <- asks (^. compilerOptions . compilerOptionsEnableTrace)
+      return $
+        if
+            | enabled -> OpTrace # arg # arg
+            | otherwise -> arg
 
     goBinop :: Tree.NodeBinop -> Sem r (Term Natural)
     goBinop Tree.NodeBinop {..} = do
@@ -383,7 +408,7 @@ compile = \case
     goCall Tree.NodeCall {..} = do
       newargs <- mapM compile _nodeCallArgs
       case _nodeCallType of
-        Tree.CallFun fun -> callFun (UserFunction fun) newargs
+        Tree.CallFun fun -> callFunWithArgs (UserFunction fun) newargs
         Tree.CallClosure f -> do
           f' <- compile f
           let argsNum = getClosureField ClosureArgsNum f'
@@ -532,9 +557,19 @@ makeList ts = foldTerms (ts `prependList` pure (TermAtom nockNil))
 remakeList :: (Foldable l) => l (Term Natural) -> Term Natural
 remakeList ts = foldTerms (toList ts `prependList` pure (OpQuote # nockNil'))
 
-nockNil' :: Term Natural
-nockNil' = TermAtom nockNil
+-- | Initialize the stack. The resulting term is intended to be evaulated
+-- against a subject that contains function arguments.
+initStackWithArgs :: [Term Natural] -> [Term Natural] -> Term Natural
+initStackWithArgs defs getArgs = remakeList (initSubStack <$> allElements)
+  where
+    initSubStack :: StackId -> Term Natural
+    initSubStack = \case
+      Args -> remakeList getArgs
+      TempStack -> OpQuote # nockNil'
+      StandardLibrary -> OpQuote # stdlib
+      FunctionsLibrary -> OpQuote # makeList defs
 
+-- | Initialize the stack. Populate the FunctionsLibrary with the passed terms.
 initStack :: [Term Natural] -> Term Natural
 initStack defs = makeList (initSubStack <$> allElements)
   where
@@ -545,29 +580,14 @@ initStack defs = makeList (initSubStack <$> allElements)
       StandardLibrary -> stdlib
       FunctionsLibrary -> makeList defs
 
-runCompilerWith :: CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> Cell Natural
-runCompilerWith opts constrs libFuns mainFun =
-  let entryCommand :: (Members '[Reader CompilerCtx] r) => Sem r (Term Natural)
-      entryCommand = callFun (mainFun ^. compilerFunctionName) []
+runCompilerWithAnoma :: CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> Cell Natural
+runCompilerWithAnoma = runCompilerWith ProgramCallingConventionAnoma
 
-      entryTerm =
-        run
-          . runReader compilerCtx
-          $ entryCommand
+runCompilerWithJuvix :: CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> Cell Natural
+runCompilerWithJuvix = runCompilerWith ProgramCallingConventionJuvix
 
-      compiledFuns :: NonEmpty (Term Natural)
-      compiledFuns =
-        makeFunction'
-          <$> ( run . runReader compilerCtx . (^. compilerFunction)
-                  <$> allFuns
-              )
-
-      makeFunction' :: Term Natural -> Term Natural
-      makeFunction' c = makeFunction $ \case
-        FunctionCode -> c
-
-      ret = Cell (initStack (toList compiledFuns)) entryTerm
-   in ret
+runCompilerWith :: ProgramCallingConvention -> CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> Cell Natural
+runCompilerWith callingConvention opts constrs libFuns mainFun = run . runReader compilerCtx $ mkEntryPoint
   where
     allFuns :: NonEmpty CompilerFunction
     allFuns = mainFun :| libFuns ++ (builtinFunction <$> allElements)
@@ -579,6 +599,17 @@ runCompilerWith opts constrs libFuns mainFun =
           _compilerConstructorInfos = constrs,
           _compilerOptions = opts
         }
+
+    compiledFuns :: NonEmpty (Term Natural)
+    compiledFuns =
+      makeFunction'
+        <$> ( run . runReader compilerCtx . (^. compilerFunction)
+                <$> allFuns
+            )
+
+    makeFunction' :: Term Natural -> Term Natural
+    makeFunction' c = makeFunction $ \case
+      FunctionCode -> c
 
     functionInfos :: HashMap FunctionId FunctionInfo
     functionInfos = hashMap (run (runInputNaturals (toList <$> userFunctions)))
@@ -594,6 +625,35 @@ runCompilerWith opts constrs libFuns mainFun =
             }
         )
 
+    makeAnomaFun :: (Members '[Reader CompilerCtx] r) => Sem r (Cell Natural)
+    makeAnomaFun = do
+      entryTerm <- callFun (mainFun ^. compilerFunctionName)
+
+      let mainArity :: Natural
+          mainArity = mainFun ^. compilerFunctionArity
+
+          args :: [Term Natural]
+          args = [OpAddress # [R, L] ++ indexTuple mainArity (pred i) | i <- [1 .. mainArity]]
+
+          wrapperCode :: Term Natural
+          wrapperCode = OpApply # (initStackWithArgs (toList compiledFuns) args) # (OpQuote # entryTerm)
+
+          argsPlaceholder :: Term Natural
+          argsPlaceholder = nockNil'
+
+          env :: Term Natural
+          env = nockNil'
+      return (wrapperCode #. (argsPlaceholder # env))
+
+    makeJuvixFun :: (Members '[Reader CompilerCtx] r) => Sem r (Cell Natural)
+    makeJuvixFun = do
+      entryTerm <- callFunWithArgs (mainFun ^. compilerFunctionName) []
+      return (initStack (toList compiledFuns) #. entryTerm)
+
+    mkEntryPoint = case callingConvention of
+      ProgramCallingConventionAnoma -> makeAnomaFun
+      ProgramCallingConventionJuvix -> makeJuvixFun
+
 builtinFunction :: BuiltinFunctionId -> CompilerFunction
 builtinFunction = \case
   BuiltinPlaceholder ->
@@ -603,15 +663,23 @@ builtinFunction = \case
         _compilerFunction = return crash
       }
 
+-- | Call a function. Arguments to the function are assumed to be in the Args stack
 callFun ::
+  (Members '[Reader CompilerCtx] r) =>
+  FunctionId ->
+  Sem r (Term Natural)
+callFun fun = do
+  fpath <- getFunctionPath fun
+  let p' = fpath ++ functionPath FunctionCode
+  return (OpCall # p' # (OpAddress # emptyPath))
+
+-- | Call a function with the passed arguments
+callFunWithArgs ::
   (Members '[Reader CompilerCtx] r) =>
   FunctionId ->
   [Term Natural] ->
   Sem r (Term Natural)
-callFun fun args = do
-  fpath <- getFunctionPath fun
-  let p' = fpath ++ functionPath FunctionCode
-  return (OpCall # p' # replaceArgs args)
+callFunWithArgs fun args = (replaceArgs args >>#) <$> callFun fun
 
 replaceArgsWithTerm :: Term Natural -> Term Natural
 replaceArgsWithTerm term =

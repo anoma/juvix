@@ -3,7 +3,6 @@ module VampIR.Compilation.Base where
 import Base
 import Core.VampIR.Base (coreVampIRAssertion')
 import Juvix.Compiler.Core
-import Juvix.Compiler.Core.Data.TransformationId
 import VampIR.Core.Base (VampirBackend (..), vampirAssertion')
 
 vampirCompileAssertion :: Path Abs Dir -> Path Abs File -> Path Abs File -> (String -> IO ()) -> Assertion

@@ -3,13 +3,7 @@ module Juvix.Compiler.Nockma.EvalCompiled where
 import Juvix.Compiler.Nockma.Evaluator
 import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Pretty (ppTrace)
-import Juvix.Compiler.Nockma.Translation.FromTree
 import Juvix.Prelude
-
-compileAndRunNock' :: (Members '[Reader EvalOptions, Output (Term Natural)] r) => CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> Sem r (Term Natural)
-compileAndRunNock' opts constrs funs mainfun =
-  let Cell nockSubject t = runCompilerWith opts constrs funs mainfun
-   in evalCompiledNock' nockSubject t
 
 evalCompiledNock' :: (Members '[Reader EvalOptions, Output (Term Natural)] r) => Term Natural -> Term Natural -> Sem r (Term Natural)
 evalCompiledNock' stack mainTerm = do

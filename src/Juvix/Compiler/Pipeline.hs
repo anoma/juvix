@@ -21,6 +21,7 @@ import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromParsed qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Core qualified as Core
+import Juvix.Compiler.Core.Transformation
 import Juvix.Compiler.Core.Translation.Stripped.FromCore qualified as Stripped
 import Juvix.Compiler.Internal qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
@@ -41,7 +42,6 @@ import Juvix.Compiler.Tree qualified as Tree
 import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process
 import Juvix.Data.Effect.TaggedLock
-import Juvix.Prelude
 
 type PipelineAppEffects = '[TaggedLock, EmbedIO, Resource, Final IO]
 
@@ -119,6 +119,11 @@ upToGeb ::
 upToGeb spec =
   upToStoredCore >>= \Core.CoreResult {..} -> storedCoreToGeb spec _coreResultModule
 
+upToAnoma ::
+  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, GitClone, PathResolver] r) =>
+  Sem r (Nockma.Term Natural)
+upToAnoma = upToStoredCore >>= \Core.CoreResult {..} -> Nockma.TermCell <$> storedCoreToAnoma _coreResultModule
+
 upToCoreTypecheck ::
   (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, GitClone, PathResolver] r) =>
   Sem r Core.CoreResult
@@ -126,14 +131,24 @@ upToCoreTypecheck =
   upToCore >>= \r -> Core.toTypechecked (r ^. Core.coreResultModule) >>= \md -> return r {Core._coreResultModule = md}
 
 --------------------------------------------------------------------------------
+-- Workflows from stripped Core
+--------------------------------------------------------------------------------
+
+strippedCoreToTree :: Core.Module -> Sem r Tree.InfoTable
+strippedCoreToTree = return . Tree.fromCore . Stripped.fromCore . Core.computeCombinedInfoTable
+
+--------------------------------------------------------------------------------
 -- Workflows from stored Core
 --------------------------------------------------------------------------------
 
-storedCoreToTree :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Tree.InfoTable
-storedCoreToTree = Core.toStripped >=> return . Tree.fromCore . Stripped.fromCore . Core.computeCombinedInfoTable
+storedCoreToTree :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.TransformationId -> Core.Module -> Sem r Tree.InfoTable
+storedCoreToTree checkId = Core.toStripped checkId >=> strippedCoreToTree
+
+storedCoreToAnoma :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r (Nockma.Cell Natural)
+storedCoreToAnoma = storedCoreToTree Core.CheckAnoma >=> treeToAnoma
 
 storedCoreToAsm :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Asm.InfoTable
-storedCoreToAsm = storedCoreToTree >=> treeToAsm
+storedCoreToAsm = storedCoreToTree Core.CheckExec >=> treeToAsm
 
 storedCoreToReg :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Reg.InfoTable
 storedCoreToReg = storedCoreToAsm >=> asmToReg
@@ -154,8 +169,8 @@ storedCoreToVampIR' = Core.toVampIR' >=> return . VampIR.fromCore' False . Core.
 -- Workflows from Core
 --------------------------------------------------------------------------------
 
-coreToTree :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Tree.InfoTable
-coreToTree = Core.toStored >=> storedCoreToTree
+coreToTree :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.TransformationId -> Core.Module -> Sem r Tree.InfoTable
+coreToTree checkId = Core.toStored >=> storedCoreToTree checkId
 
 coreToAsm :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Asm.InfoTable
 coreToAsm = Core.toStored >=> storedCoreToAsm
@@ -164,7 +179,10 @@ coreToReg :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -
 coreToReg = Core.toStored >=> storedCoreToReg
 
 coreToNockma :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r (Nockma.Cell Natural)
-coreToNockma = coreToTree >=> treeToNockma
+coreToNockma = coreToTree Core.CheckAnoma >=> treeToNockma
+
+coreToAnoma :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r (Nockma.Cell Natural)
+coreToAnoma = coreToTree Core.CheckAnoma >=> treeToAnoma
 
 coreToMiniC :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r C.MiniCResult
 coreToMiniC = coreToAsm >=> asmToMiniC
@@ -189,7 +207,10 @@ treeToReg :: (Members '[Error JuvixError, Reader EntryPoint] r) => Tree.InfoTabl
 treeToReg = treeToAsm >=> asmToReg
 
 treeToNockma :: (Members '[Error JuvixError, Reader EntryPoint] r) => Tree.InfoTable -> Sem r (Nockma.Cell Natural)
-treeToNockma = Tree.toNockma >=> mapReader NockmaTree.fromEntryPoint . NockmaTree.fromTreeTable
+treeToNockma = Tree.toNockma >=> mapReader NockmaTree.fromEntryPoint . NockmaTree.fromTreeTable NockmaTree.ProgramCallingConventionJuvix
+
+treeToAnoma :: (Members '[Error JuvixError, Reader EntryPoint] r) => Tree.InfoTable -> Sem r (Nockma.Cell Natural)
+treeToAnoma = Tree.toNockma >=> mapReader NockmaTree.fromEntryPoint . NockmaTree.fromTreeTable NockmaTree.ProgramCallingConventionAnoma
 
 treeToMiniC :: (Members '[Error JuvixError, Reader EntryPoint] r) => Tree.InfoTable -> Sem r C.MiniCResult
 treeToMiniC = treeToAsm >=> asmToMiniC
@@ -207,7 +228,10 @@ regToMiniC tab = do
   return $ C.fromReg (Backend.getLimits (e ^. entryPointTarget) (e ^. entryPointDebug)) tab'
 
 treeToNockma' :: (Members '[Error JuvixError, Reader NockmaTree.CompilerOptions] r) => Tree.InfoTable -> Sem r (Nockma.Cell Natural)
-treeToNockma' = Tree.toNockma >=> NockmaTree.fromTreeTable
+treeToNockma' = Tree.toNockma >=> NockmaTree.fromTreeTable NockmaTree.ProgramCallingConventionJuvix
+
+treeToAnoma' :: (Members '[Error JuvixError, Reader NockmaTree.CompilerOptions] r) => Tree.InfoTable -> Sem r (Nockma.Cell Natural)
+treeToAnoma' = Tree.toNockma >=> NockmaTree.fromTreeTable NockmaTree.ProgramCallingConventionAnoma
 
 asmToMiniC' :: (Members '[Error JuvixError, Reader Asm.Options] r) => Asm.InfoTable -> Sem r C.MiniCResult
 asmToMiniC' = mapError (JuvixError @Asm.AsmError) . Asm.toReg' >=> regToMiniC' . Reg.fromAsm

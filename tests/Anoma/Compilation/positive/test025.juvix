@@ -1,0 +1,17 @@
+-- Euclid's algorithm
+module test025;
+
+import Stdlib.Prelude open;
+import Stdlib.Debug.Trace open;
+
+terminating
+gcd : Nat → Nat → Nat
+  | a b :=
+    if (a > b) (gcd b a) (if (a == 0) b (gcd (mod b a) a));
+
+main : Nat :=
+  trace (gcd (3 * 7 * 2) (7 * 2 * 11))
+    >>> trace (gcd (3 * 7 * 2 * 11 * 5) (7 * 2 * 5))
+    >>> trace (gcd 3 7)
+    >>> trace (gcd 7 3)
+    >>> gcd (11 * 7 * 3) (2 * 5 * 13);

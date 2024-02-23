@@ -1,0 +1,92 @@
+module ReaderT;
+
+import Monad open;
+import Monad open using {module Monad as MMonad};
+import Functor open;
+import Functor open using {module Functor as MFunctor};
+
+type ReaderT (S : Type) (M : Type → Type) (A : Type) :=
+  mkReaderT {runReaderT : S → M A};
+
+runReader {S A : Type} {M : Type
+  → Type} (r : S) (m : ReaderT S M A) : M A :=
+  ReaderT.runReaderT m r;
+
+instance
+ReaderT-Functor {S : Type} {M : Type
+  → Type} {{func : Functor M}} : Functor (ReaderT S M) :=
+  mkFunctor@{
+    <$> {A B : Type} (f : A → B)
+      : ReaderT S M A → ReaderT S M B
+      | (mkReaderT g) :=
+        -- NOTE we cannot use unqualified <$> or the scoper gets confused
+        let
+          open MFunctor;
+        in mkReaderT λ {s := λ {a := f a} MFunctor.<$> g s}
+  };
+
+instance
+ReaderT-Monad {S : Type} {M : Type → Type} {{mon : Monad M}}
+  : Monad (ReaderT S M) :=
+  mkMonad@{
+    functor :=
+      ReaderT-Functor@{
+        func := MMonad.functor
+      };
+    return {A : Type} (a : A) : ReaderT S M A :=
+      mkReaderT λ {s := MMonad.return a};
+    >>= {A B : Type} (x : ReaderT S M A) (f : A → ReaderT S M B)
+      : ReaderT S M B :=
+      mkReaderT
+        λ {s := runReader s x MMonad.>>= λ {a := runReader s (f a)}}
+  };
+
+import MonadReader open;
+import Stdlib.Data.Unit open;
+import Stdlib.Function open;
+
+instance
+ReaderT-MonadReader {S : Type} {M : Type → Type} {{Monad M}}
+  : MonadReader S (ReaderT S M) :=
+  mkMonadReader@{
+    monad := ReaderT-Monad;
+    ask : ReaderT S M S := mkReaderT λ {s := MMonad.return s};
+    reader {A : Type} (f : S → A) : ReaderT S M A :=
+      mkReaderT (MMonad.return ∘ f)
+  };
+
+import MonadState open;
+import StateT open;
+import Identity open;
+import Stdlib.Data.Product open;
+
+liftReaderT {R A : Type} {M : Type → Type} (m : M A)
+  : ReaderT R M A := mkReaderT (const m);
+
+liftStateT {S A : Type} {M : Type → Type} {{Monad M}} (m : M
+  A) : StateT S M A :=
+  mkStateT
+    λ {s := m MMonad.>>= λ {a := MMonad.return (a, s)}};
+
+import Stdlib.Data.Nat open;
+
+askNat {M : Type → Type} {{Monad M}} : ReaderT Nat M Nat :=
+  ask;
+
+monadic : ReaderT Nat (StateT Nat Identity) Nat :=
+  askNat
+    >>= λ {n :=
+      liftReaderT (modify λ {m := m * n}) >> liftReaderT get};
+
+main : Nat :=
+  runIdentity (evalState 2 (runReader 5 monadic));
+
+-- FIXME fails instance termination
+-- instance
+-- StateT-MonadReader {R S : Type} {M : Type
+--   → Type} {{mreader : MonadReader R M}} : MonadReader R (StateT S M) :=
+--   mkMonadReader@{
+--     monad := StateT-Monad@{mon := MonadReader.monad {{mreader}}};
+--     reader {A : Type} : (R → A) → StateT S M A := liftStateT ∘ MonadReader.reader;
+--     ask : StateT S M R := liftStateT MonadReader.ask;
+--   };

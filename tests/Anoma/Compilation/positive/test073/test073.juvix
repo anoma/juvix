@@ -1,0 +1,5 @@
+module test073;
+
+import SyntaxAlias open;
+
+main : MyNat := 11;

@@ -1,0 +1,10 @@
+-- recursion
+module test008;
+
+import Stdlib.Prelude open;
+
+sum : Nat → Nat
+  | zero := 0
+  | (suc x) := suc x + sum x;
+
+main (x : Nat) : Nat := sum x;

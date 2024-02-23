@@ -1,5 +1,6 @@
 module Main (main) where
 
+import Anoma qualified
 import Asm qualified
 import BackendGeb qualified
 import BackendMarkdown qualified
@@ -37,7 +38,8 @@ slowTests =
       Compilation.allTests,
       Examples.allTests,
       Casm.allTests,
-      VampIR.allTests
+      VampIR.allTests,
+      Anoma.allTests
     ]
 
 fastTests :: TestTree

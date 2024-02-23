@@ -7,6 +7,8 @@ newtype NockmaReplOptions = NockmaReplOptions
   }
   deriving stock (Data)
 
+makeLenses ''NockmaReplOptions
+
 parseNockmaReplOptions :: Parser NockmaReplOptions
 parseNockmaReplOptions = do
   _nockmaReplOptionsStackFile <- optional (parseInputFile FileExtNockma)

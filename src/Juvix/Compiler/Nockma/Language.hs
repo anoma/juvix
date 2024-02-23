@@ -247,6 +247,9 @@ nockBool = \case
   True -> nockTrue
   False -> nockFalse
 
+nockNil' :: Term Natural
+nockNil' = TermAtom nockNil
+
 data NockNaturalNaturalError
   = NaturalInvalidPath (Atom Natural)
   | NaturalInvalidOp (Atom Natural)
