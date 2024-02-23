@@ -122,7 +122,7 @@ upToGeb spec =
 upToAnoma ::
   (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, GitClone, PathResolver] r) =>
   Sem r (Nockma.Term Natural)
-upToAnoma = upToStoredCore >>= \Core.CoreResult {..} -> Nockma.TermCell <$> coreToAnoma _coreResultModule
+upToAnoma = upToStoredCore >>= \Core.CoreResult {..} -> Nockma.TermCell <$> storedCoreToAnoma _coreResultModule
 
 upToCoreTypecheck ::
   (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, GitClone, PathResolver] r) =>
@@ -143,6 +143,9 @@ strippedCoreToTree = return . Tree.fromCore . Stripped.fromCore . Core.computeCo
 
 storedCoreToTree :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.TransformationId -> Core.Module -> Sem r Tree.InfoTable
 storedCoreToTree checkId = Core.toStripped checkId >=> strippedCoreToTree
+
+storedCoreToAnoma :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r (Nockma.Cell Natural)
+storedCoreToAnoma = storedCoreToTree Core.CheckAnoma >=> treeToAnoma
 
 storedCoreToAsm :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Asm.InfoTable
 storedCoreToAsm = storedCoreToTree Core.CheckExec >=> treeToAsm
