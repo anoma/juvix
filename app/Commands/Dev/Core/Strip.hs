@@ -15,7 +15,7 @@ runCommand opts = do
   let r =
         run $
           runReader (project gopts) $
-            runError @JuvixError (Core.toStripped' (Core.moduleFromInfoTable tab) :: Sem '[Error JuvixError, Reader Core.CoreOptions] Core.Module)
+            runError @JuvixError (Core.toStripped' Core.Identity (Core.moduleFromInfoTable tab) :: Sem '[Error JuvixError, Reader Core.CoreOptions] Core.Module)
   tab' <- getRight $ mapLeft JuvixError $ mapRight (Stripped.fromCore . Core.computeCombinedInfoTable) r
   unless (project opts ^. coreStripNoPrint) $ do
     renderStdOut (Core.ppOut opts tab')

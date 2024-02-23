@@ -21,11 +21,11 @@ toStored = mapReader fromEntryPoint . applyTransformations toStoredTransformatio
 
 -- | Perform transformations on stored Core necessary before the translation to
 -- Core.Stripped
-toStripped' :: (Members '[Error JuvixError, Reader CoreOptions] r) => Module -> Sem r Module
-toStripped' = applyTransformations toStrippedTransformations
+toStripped' :: (Members '[Error JuvixError, Reader CoreOptions] r) => TransformationId -> Module -> Sem r Module
+toStripped' checkId = applyTransformations (toStrippedTransformations checkId)
 
-toStripped :: (Members '[Error JuvixError, Reader EntryPoint] r) => Module -> Sem r Module
-toStripped = mapReader fromEntryPoint . applyTransformations toStrippedTransformations
+toStripped :: (Members '[Error JuvixError, Reader EntryPoint] r) => TransformationId -> Module -> Sem r Module
+toStripped checkId = mapReader fromEntryPoint . applyTransformations (toStrippedTransformations checkId)
 
 -- | Perform transformations on stored Core necessary before the translation to GEB
 toGeb' :: (Members '[Error JuvixError, Reader CoreOptions] r) => Module -> Sem r Module

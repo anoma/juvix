@@ -9,6 +9,7 @@ import Juvix.Compiler.Backend.C qualified as C
 import Juvix.Compiler.Backend.Geb qualified as Geb
 import Juvix.Compiler.Backend.VampIR.Translation qualified as VampIR
 import Juvix.Compiler.Core.Data.Module qualified as Core
+import Juvix.Compiler.Core.Data.TransformationId qualified as Core
 import Juvix.Compiler.Nockma.Pretty qualified as Nockma
 import Juvix.Compiler.Reg.Pretty qualified as Reg
 import Juvix.Compiler.Tree.Pretty qualified as Tree
@@ -43,6 +44,7 @@ getEntry PipelineArg {..} = do
       TargetReg -> Backend.TargetReg
       TargetTree -> Backend.TargetTree
       TargetNockma -> Backend.TargetNockma
+      TargetAnoma -> Backend.TargetAnoma
 
     defaultOptLevel :: Int
     defaultOptLevel
@@ -135,7 +137,7 @@ runTreePipeline pa@PipelineArg {..} = do
   r <-
     runReader entryPoint
       . runError @JuvixError
-      . coreToTree
+      . coreToTree Core.Identity
       $ _pipelineArgModule
   tab' <- getRight r
   let code = Tree.ppPrint tab' tab'
@@ -149,6 +151,19 @@ runNockmaPipeline pa@PipelineArg {..} = do
     runReader entryPoint
       . runError @JuvixError
       . coreToNockma
+      $ _pipelineArgModule
+  tab' <- getRight r
+  let code = Nockma.ppSerialize tab'
+  writeFileEnsureLn nockmaFile code
+
+runAnomaPipeline :: (Members '[Embed IO, App, TaggedLock] r) => PipelineArg -> Sem r ()
+runAnomaPipeline pa@PipelineArg {..} = do
+  entryPoint <- getEntry pa
+  nockmaFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
+  r <-
+    runReader entryPoint
+      . runError @JuvixError
+      . coreToAnoma
       $ _pipelineArgModule
   tab' <- getRight r
   let code = Nockma.ppSerialize tab'

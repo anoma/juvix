@@ -1,0 +1,14 @@
+-- nested lists
+module test031;
+
+import Stdlib.Prelude open;
+
+mklst : Nat → List Nat
+  | zero := nil
+  | (suc n) := suc n :: mklst n;
+
+mklst2 : Nat → List (List Nat)
+  | zero := nil
+  | (suc n) := mklst (suc n) :: mklst2 n;
+
+main : List Nat := flatten (mklst2 4);

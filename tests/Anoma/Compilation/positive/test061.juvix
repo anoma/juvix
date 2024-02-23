@@ -1,0 +1,77 @@
+--- Traits
+module test061;
+
+import Stdlib.Prelude open;
+import Stdlib.Debug.Trace open;
+
+trait
+type T A := mkT {toNat : A -> Nat};
+
+instance
+tNatI : T Nat := mkT id;
+
+instance
+tBoolI : T Bool :=
+  mkT@{
+    toNat : Bool -> Nat
+      | true := 1
+      | false := 0
+  };
+
+instance
+tMaybeI {A} {{T A}} : T (Maybe A) :=
+  mkT@{
+    toNat {A} {{T A}} : Maybe A -> Nat
+      | nothing := 0
+      | (just ma) := T.toNat ma
+  };
+
+instance
+tUnitFunI {A} {{T A}} : T (Unit -> A) :=
+  mkT@{
+    toNat {A} {{T A}} (f : Unit -> A) : Nat :=
+      T.toNat (f unit)
+  };
+
+instance
+tListI {A} {{T A}} : T (List A) :=
+  mkT@{
+    toNat {A} {{T A}} (xs : List A) : Nat :=
+      for (acc := 0) (x in xs)
+        acc + T.toNat x
+  };
+
+g : {A : Type} → {{T A}} → Nat := 5;
+
+f {A} {{T A}} : A → Nat
+  | x := T.toNat x;
+
+f' {A} : {{T A}} → A → Nat
+  | {{mkT toNat}} x := toNat x;
+
+f'' {A} : {{T A}} → A → Nat
+  | {{M}} x := T.toNat {{M}} x;
+
+f'3 {A} {{M : T A}} : A -> Nat := T.toNat {{M}};
+
+f'4 {A} {{_ : T A}} : A -> Nat := T.toNat;
+
+f5 {A} {{T A}} (n : Nat) (a : A) : Nat := n + T.toNat a;
+
+main : Nat :=
+  trace (T.toNat true)
+    >>> trace (f false)
+    >>> trace (T.toNat 3)
+    >>> trace (T.toNat (g {Nat}))
+    >>> trace (T.toNat [true; false])
+    >>> trace (T.toNat [1; 2; 3])
+    >>> trace
+      (let
+        f (_ : Unit) : Nat := 5;
+      in T.toNat f)
+    >>> trace (f' [1; 2])
+    >>> trace (f'' [true; false])
+    >>> trace (f'3 [just true; nothing; just false])
+    >>> trace (f'4 [just [1]; nothing; just [2; 3]])
+    >>> trace (f'3 true)
+    >>> f5 1 [0; 1; 1];

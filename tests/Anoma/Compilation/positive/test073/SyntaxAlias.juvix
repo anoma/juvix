@@ -1,0 +1,5 @@
+module SyntaxAlias;
+
+import Stdlib.Prelude open;
+
+syntax alias MyNat := Nat;

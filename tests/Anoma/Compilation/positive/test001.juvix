@@ -1,0 +1,5 @@
+module test001;
+
+import Stdlib.Prelude open;
+
+main (x : Nat) : Nat := x + 2 * 3;

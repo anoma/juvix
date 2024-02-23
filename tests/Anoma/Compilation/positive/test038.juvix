@@ -1,0 +1,11 @@
+-- Simple case expression
+module test038;
+
+import Stdlib.Prelude open;
+
+main : Nat :=
+  case 1, 2 of {
+    | suc _, zero := 0
+    | suc _, suc x := x
+    | _ := 19
+  };

@@ -20,6 +20,9 @@ strVampIRPipeline = "pipeline-vampir"
 strStrippedPipeline :: Text
 strStrippedPipeline = "pipeline-stripped"
 
+strExecPipeline :: Text
+strExecPipeline = "pipeline-exec"
+
 strLifting :: Text
 strLifting = "lifting"
 
@@ -76,6 +79,9 @@ strCheckExec = "check-exec"
 
 strCheckVampIR :: Text
 strCheckVampIR = "check-vampir"
+
+strCheckAnoma :: Text
+strCheckAnoma = "check-anoma"
 
 strNormalize :: Text
 strNormalize = "normalize"

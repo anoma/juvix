@@ -1,0 +1,156 @@
+--- Simple lambda calculus
+module test052;
+
+import Stdlib.Prelude open;
+import Stdlib.Debug.Fail open;
+
+LambdaTy : Type -> Type := Lambda';
+
+AppTy : Type -> Type := App';
+
+syntax operator :+: additive;
+--- An ;Expr'; is an expression in our language.
+type Expr' (v : Type) :=
+  | ! : v -> Expr' v
+  | lam : LambdaTy v -> Expr' v
+  | app : AppTy v -> Expr' v
+  | :+: : Expr' v -> Expr' v -> Expr' v
+  | num : Nat -> Expr' v;
+
+--- A ;Lambda'; is a lambda function.
+type Lambda' (v : Type) := mkLambda : Expr' v -> Lambda' v;
+
+--- An ;App'; is an application of two ;Expr';.
+type App' (v : Type) :=
+  mkApp : Expr' v -> Expr' v -> App' v;
+
+Expr : Type := Expr' Nat;
+
+Lambda : Type := Lambda' Nat;
+
+App : Type := App' Nat;
+
+ValTy : Type -> Type := Val';
+
+--- A ;Closure'; is a context (;List; of ;ValTy;) and an ;Expr'; in that context.
+type Closure' (v : Type) :=
+  mkClosure : List (ValTy v) -> Expr' v -> Closure' v;
+
+--- A ;Val'; is either a ;Closure'; or a ;Nat;.
+type Val' (v : Type) :=
+  | vnum : Nat -> Val' v
+  | closure : Closure' v -> Val' v;
+
+Val : Type := Val' Nat;
+
+Closure : Type := Closure' Nat;
+
+--- Sum type.
+type Either (a : Type) (b : Type) :=
+  | left : a -> Either a b
+  | right : b -> Either a b;
+
+syntax operator >>= seq;
+--- Monadic binding for ;Either;.
+>>=
+  : {e a b : Type}
+    -> Either e a
+    -> (a -> Either e b)
+    -> Either e b
+  | (left e) _ := left e
+  | (right a) f := f a;
+
+--- An evaluation error.
+type Error :=
+  | --- A variable outside of the context was found.
+    ScopeError : Nat -> List Val -> Error
+  | --- A nat was expected.
+    ExpectedNat : Val -> Error
+  | --- A lambda was expected.
+    ExpectedLambda : Error;
+
+--- Returns the first item of a ;List;, if it exists.
+headMay : {a : Type} -> List a -> Maybe a
+  | nil := nothing
+  | (x :: _) := just x;
+
+--- ;List; indexing.
+index : {a : Type} -> List a -> Nat -> Maybe a
+  | l n := headMay (drop n l);
+
+--- Get a ;Nat; from a ;Val; or return an ;Error;.
+getNat : Val -> Either Error Nat
+  | (vnum n) := right n
+  | e := left (ExpectedNat e);
+
+--- Evaluates an ;Expr; and returns a ;Val;.
+--- If an error occurs during evaluation, returns ;Error;.
+eval : Expr -> Either Error Val
+  | topExpr :=
+    let
+      getClosure : Val -> Either Error Closure
+        | (closure l) := right l
+        | _ := left ExpectedLambda;
+      terminating
+      go : List Val -> Expr -> Either Error Val
+        | ctx (! v) :=
+          maybe (left (ScopeError v ctx)) right (index ctx v)
+        | ctx (app (mkApp fun x)) :=
+          let
+            terminating
+            applyClosure : Closure -> Either Error Val
+              | (mkClosure closCtx body) :=
+                go ctx x >>= λ {| x' := go (x' :: closCtx) body};
+          in go ctx fun >>= getClosure >>= applyClosure
+        | ctx (lam (mkLambda body)) :=
+          right (closure (mkClosure ctx body))
+        | _ (num n) := right (vnum n)
+        | ctx (l :+: r) :=
+          go ctx l
+            >>= getNat
+            >>= λ {| l' :=
+              go ctx r
+                >>= getNat
+                >>= λ {| r' := right (vnum (l' + r'))}};
+    in go nil topExpr;
+
+--- Evaluate an ;Expr; and try to extract a ;Nat;.
+terminating
+evalNat : Expr -> Either Error Nat
+  | topExpr := eval topExpr >>= getNat;
+
+--- Syntactical helper for creating a ;lam;.
+Λ : Expr -> Expr
+  | body := lam (mkLambda body);
+
+syntax fixity app := binary {assoc := left; above := [composition]};
+
+syntax operator # app;
+--- Syntactical helper for creating an ;app;.
+# : Expr -> Expr -> Expr
+  | f x := app (mkApp f x);
+
+--- ;Expr; that doubles a number.
+double : Expr := Λ (! 0 :+: ! 0);
+
+--- ;Expr; that adds 1 to a number.
++1 : Expr := Λ (! 0 :+: num 1);
+
+apps : Expr -> List Expr -> Expr := foldl (#);
+
+--- ;Expr; for function composition.
+compose : Expr := Λ (Λ (Λ (! 2 # (! 1 # ! 0))));
+
+double+1 : Expr := Λ (compose # +1 # double # ! 0);
+
+res : Either Error Val := eval (double+1 # num 7);
+
+-- TODO: Use Partial or failwith in left branches when anoma backend supports
+-- strings
+main : List Nat :=
+  case res >>= getNat of {
+    | left (ScopeError n ctx) := []
+    | left (ExpectedNat e) := []
+    | left ExpectedLambda := []
+    | right r := [r]
+  };
