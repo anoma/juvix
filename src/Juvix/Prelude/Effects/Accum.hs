@@ -1,7 +1,7 @@
 module Juvix.Prelude.Effects.Accum where
 
 import Data.Kind qualified as GHC
-import Juvix.Prelude.Base hiding (Effect, Output, output, runOutputList)
+import Juvix.Prelude.Base.Foundation
 import Juvix.Prelude.Effects.Base
 
 data Accum (o :: GHC.Type) :: Effect
