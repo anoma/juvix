@@ -58,10 +58,10 @@ overStaticRep ::
 overStaticRep f = unsafeEff $ \r -> f <$> getEnv r >>= putEnv r
 
 mapReader ::
-  (r1 -> r2) ->
-  Sem (Reader r2 ': r) a ->
-  Sem (Reader r1 ': r) a
-mapReader = withReader
+  (Member (Reader e1) r) => (e1 -> e2) -> Sem (Reader e2 ': r) a -> Sem r a
+mapReader f s = do
+  e <- ask
+  runReader (f e) s
 
 runState :: s -> Sem (State s ': r) a -> Sem r (s, a)
 runState s = fmap swap . State.runState s
@@ -72,6 +72,9 @@ modify' = State.modify
 
 mapError :: (Member (Error b) r) => (a -> b) -> Sem (Error a ': r) x -> Sem r x
 mapError f = runErrorWith (\_ e -> throwError (f e))
+
+runM :: Sem '[EmbedIO] a -> IO a
+runM = E.runEff
 
 run :: Sem ('[] :: [Effect]) a -> a
 run = E.runPureEff

@@ -11,7 +11,6 @@ import Juvix.Compiler.Tree.Language hiding (Error, Members, Output, Reader, Sem,
 import Juvix.Compiler.Tree.Language.Value
 import Juvix.Compiler.Tree.Pretty
 import Juvix.Prelude.BaseEffectful
-import Text.Read qualified as T
 
 data EvalCtx = EvalCtx
   { _evalCtxArgs :: [Value],
@@ -74,7 +73,7 @@ eval tab = runReader emptyEvalCtx . eval'
         goFail v = evalError ("failure: " <> printValue tab v)
 
         goTrace :: Value -> Sem r' Value
-        goTrace v = E.output v $> v
+        goTrace v = output v $> v
 
         goConstant :: NodeConstant -> Value
         goConstant NodeConstant {..} = constantToValue _nodeConstant
