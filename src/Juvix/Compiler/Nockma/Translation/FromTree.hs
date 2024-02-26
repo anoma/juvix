@@ -355,8 +355,8 @@ compile = \case
     goUnop :: Tree.NodeUnop -> Sem r (Term Natural)
     goUnop Tree.NodeUnop {..} = do
       arg <- compile _nodeUnopArg
-      return $ case _nodeUnopOpcode of
-        Tree.PrimUnop op -> goPrimUnop op arg
+      case _nodeUnopOpcode of
+        Tree.PrimUnop op -> return $ goPrimUnop op arg
         Tree.OpFail -> return crash
         Tree.OpTrace -> goTrace arg
 
