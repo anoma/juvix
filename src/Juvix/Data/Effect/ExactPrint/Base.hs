@@ -55,11 +55,10 @@ re = interpretTopH handler
   where
     handler ::
       forall x (localEs :: [Effect]).
-      (Member ExactPrint localEs) =>
       LocalEnv localEs (State Builder ': r) ->
       ExactPrint (Sem localEs) x ->
       Sem (State Builder ': r) x
-    handler _locEnv = \case
+    handler locEnv = \case
       NoLoc p -> noLoc' p
       EnsureEmptyLine -> modify' (set builderEnsureEmptyLine True)
       End -> end'
@@ -67,8 +66,13 @@ re = interpretTopH handler
       PrintCommentsUntil l -> printCommentsUntil' l
       Region regionModif (m :: Sem localEs x) -> do
         st0 :: Builder <- set builderDoc mempty <$> get
-        m' <- runT m
-        (st' :: Builder, fx) <- raise (evalExactPrint' st0 m')
+        let helper :: (forall w. Sem localEs w -> Sem (State Builder ': r) w) -> Sem (State Builder ': r) x
+            helper f = f m
+
+            -- TODO is this really working as expected?
+            haha :: Sem (State Builder ': r) x
+            haha = localSeqUnlift locEnv helper
+        (st' :: Builder, fx) <- raise (runState st0 haha)
         doc' <- gets (^. builderDoc)
         put
           Builder

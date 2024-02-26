@@ -19,7 +19,7 @@ data GitError
   = NotAClone
   | NoSuchRef GitRef
 
-data Git m a where
+data Git :: Effect where
   Fetch :: (GitError -> m ()) -> Git m ()
   Checkout :: (GitError -> m ()) -> GitRef -> Git m ()
   NormalizeRef :: (GitError -> m GitRef) -> GitRef -> Git m GitRef

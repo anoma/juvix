@@ -93,8 +93,8 @@ runStateLikeArtifacts ::
   Lens' Artifacts field ->
   Sem (stateEff ': r) a ->
   Sem r a
-runStateLikeArtifacts runEff l m = do
+runStateLikeArtifacts runner l m = do
   s <- gets (^. l)
-  (s', a) <- runEff s m
+  (s', a) <- runner s m
   modify' (set l s')
   return a

@@ -7,6 +7,7 @@ module Juvix.Prelude.Effects.Base
     module Effectful.Dispatch.Dynamic,
     module Effectful.TH,
     module Effectful.Dispatch.Static,
+    module Effectful.Provider,
     module Effectful.Resource,
   )
 where
@@ -19,6 +20,7 @@ import Effectful.Dispatch.Dynamic qualified as E
 import Effectful.Dispatch.Static
 import Effectful.Error.Static hiding (runError)
 import Effectful.Internal.Env (getEnv, putEnv)
+import Effectful.Provider
 import Effectful.Reader.Static
 import Effectful.Resource
 import Effectful.State.Static.Local hiding (runState)
@@ -121,6 +123,14 @@ onException ::
   Sem r a
 onException act end = bracketOnError (pure ()) (const end) (const act)
 
+interpretTop3H ::
+  forall (e1 :: Effect) (e2 :: Effect) (e3 :: Effect) (e4 :: Effect) (r :: [Effect]) a.
+  (DispatchOf e1 ~ 'Dynamic) =>
+  EffectHandler e1 (e4 ': e3 ': e2 ': r) ->
+  Sem (e1 ': r) a ->
+  E.Eff (e4 ': e3 ': e2 ': r) a
+interpretTop3H i = E.interpret i . inject
+
 interpretTop2H ::
   forall (e1 :: Effect) (e2 :: Effect) (e3 :: Effect) (r :: [Effect]) a.
   (DispatchOf e1 ~ 'Dynamic) =>
@@ -136,6 +146,14 @@ interpretTopH ::
   Sem (e1 ': r) a ->
   E.Eff (e2 ': r) a
 interpretTopH i = E.interpret i . raiseUnder
+
+interpretTop3 ::
+  forall (e1 :: Effect) (e2 :: Effect) (e3 :: Effect) (e4 :: Effect) (r :: [Effect]) a.
+  (DispatchOf e1 ~ 'Dynamic) =>
+  EffectHandlerFO e1 (e4 ': e3 ': e2 ': r) ->
+  Sem (e1 ': r) a ->
+  E.Eff (e4 ': e3 ': e2 ': r) a
+interpretTop3 i = interpretTop3H (const i)
 
 interpretTop ::
   forall (e1 :: Effect) (e2 :: Effect) (r :: [Effect]) a.
@@ -184,6 +202,16 @@ runTSimpleEff ::
   Sem localEs x ->
   Sem r x
 runTSimpleEff locEnv ma =
+  let lifter :: ((forall y. Sem localEs y -> Sem r y) -> Sem r x)
+      lifter f = f ma
+   in localSeqUnlift locEnv lifter
+
+runTEff ::
+  forall (localEs :: [Effect]) (r :: [Effect]) x.
+  LocalEnv localEs r ->
+  Sem localEs x ->
+  Sem r x
+runTEff locEnv ma =
   let lifter :: ((forall y. Sem localEs y -> Sem r y) -> Sem r x)
       lifter f = f ma
    in localSeqUnlift locEnv lifter

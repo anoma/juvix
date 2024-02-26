@@ -11,6 +11,17 @@ data Output (o :: GHCType) :: Effect where
 
 makeEffect ''Output
 
+runOutputFold :: o -> (o -> o -> o) -> Sem (Output o ': r) a -> Sem r (o, a)
+runOutputFold ini f =
+  reinterpret (runState ini) $ \case
+    Output x -> modify (\acc -> f acc x)
+
+runOutputMonoidL :: (Monoid o) => Sem (Output o ': r) a -> Sem r (o, a)
+runOutputMonoidL = runOutputFold mempty (\acc x -> x <> acc)
+
+runOutputMonoidR :: (Monoid o) => Sem (Output o ': r) a -> Sem r (o, a)
+runOutputMonoidR = runOutputFold mempty (\acc x -> acc <> x)
+
 runOutputSem :: (o -> Sem r ()) -> Sem (Output o ': r) a -> Sem r a
 runOutputSem handle =
   interpret $ \case
