@@ -112,6 +112,14 @@ onException ::
   Sem r a
 onException act end = bracketOnError (pure ()) (const end) (const act)
 
+interpretTop2H ::
+  forall (e1 :: Effect) (e2 :: Effect) (e3 :: Effect) (r :: [Effect]) a.
+  (DispatchOf e1 ~ 'Dynamic) =>
+  EffectHandler e1 (e3 ': e2 ': r) ->
+  Sem (e1 ': r) a ->
+  E.Eff (e3 ': e2 ': r) a
+interpretTop2H i = E.interpret i . inject
+
 interpretTopH ::
   forall (e1 :: Effect) (e2 :: Effect) (r :: [Effect]) a.
   (DispatchOf e1 ~ 'Dynamic) =>

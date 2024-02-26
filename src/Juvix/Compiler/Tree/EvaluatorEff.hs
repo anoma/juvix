@@ -272,7 +272,7 @@ hEvalIOEither hin hout infoTable funInfo = do
     . runEff
     . runError @TreeError
     . mapError toTreeError
-    . runOutputEff handleTrace
+    . runOutputSem handleTrace
     $ x
 
 -- | Interpret IO actions.

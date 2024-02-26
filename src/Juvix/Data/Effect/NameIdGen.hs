@@ -21,20 +21,18 @@ genNameIdState mid = NameIdGenState mid ids
     aux :: Word64 -> Stream Word64
     aux i = Cons i (aux (succ i))
 
-data NameIdGen m a where
+data NameIdGen :: Effect where
   FreshNameId :: NameIdGen m NameId
 
 makeSem ''NameIdGen
 
-toState :: Sem (NameIdGen ': r) a -> Sem (State NameIdGenState ': r) a
-toState = reinterpret $ \case
-  FreshNameId -> do
-    NameIdGenState mid (Cons fresh rest) <- get
-    put (NameIdGenState mid rest)
-    return (NameId fresh mid)
-
 runNameIdGen :: NameIdGenState -> Sem (NameIdGen ': r) a -> Sem r (NameIdGenState, a)
-runNameIdGen s = runState s . toState
+runNameIdGen s =
+  reinterpret (runState s) $ \case
+    FreshNameId -> do
+      NameIdGenState mid (Cons fresh rest) <- get
+      put (NameIdGenState mid rest)
+      return (NameId fresh mid)
 
 runTopNameIdGen :: ModuleId -> Sem (NameIdGen ': r) a -> Sem r (NameIdGenState, a)
 runTopNameIdGen mid = runNameIdGen (genNameIdState mid)

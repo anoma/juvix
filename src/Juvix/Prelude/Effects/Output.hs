@@ -11,8 +11,8 @@ data Output (o :: GHCType) :: Effect where
 
 makeEffect ''Output
 
-runOutputEff :: (o -> Sem r ()) -> Sem (Output o ': r) a -> Sem r a
-runOutputEff handle =
+runOutputSem :: (o -> Sem r ()) -> Sem (Output o ': r) a -> Sem r a
+runOutputSem handle =
   interpret $ \case
     Output x -> handle x
 

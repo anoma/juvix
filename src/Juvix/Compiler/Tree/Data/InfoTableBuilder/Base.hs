@@ -16,7 +16,7 @@ data IdentKind
   | IdentInd Symbol
   | IdentConstr Tag
 
-data InfoTableBuilder' t e m a where
+data InfoTableBuilder' (t :: GHCType) (e :: GHCType) :: Effect where
   FreshSymbol' :: InfoTableBuilder' t e m Symbol
   FreshTag' :: InfoTableBuilder' t e m Tag
   RegisterFunction' :: FunctionInfo' t e -> InfoTableBuilder' t e m ()
@@ -67,10 +67,12 @@ runInfoTableBuilderWithInfoTable tab = fmap (first (^. stateInfoTable)) . runInf
 runInfoTableBuilder :: Sem (InfoTableBuilder' t e ': r) b -> Sem r (InfoTable' t e, b)
 runInfoTableBuilder = fmap (first (^. stateInfoTable)) . runInfoTableBuilder' emptyBuilderState
 
-runInfoTableBuilder' :: forall t e b r. BuilderState' t e -> Sem (InfoTableBuilder' t e ': r) b -> Sem r (BuilderState' t e, b)
-runInfoTableBuilder' bs =
-  runState bs
-    . reinterpret interp
+runInfoTableBuilder' ::
+  forall t e b r.
+  BuilderState' t e ->
+  Sem (InfoTableBuilder' t e ': r) b ->
+  Sem r (BuilderState' t e, b)
+runInfoTableBuilder' bs = reinterpret (runState bs) interp
   where
     interp :: forall m b'. InfoTableBuilder' t e m b' -> Sem (State (BuilderState' t e) ': r) b'
     interp = \case

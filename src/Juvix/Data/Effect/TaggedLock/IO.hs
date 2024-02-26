@@ -16,8 +16,8 @@ runTaggedLockIO sem = do
   runFileLockIO (runFilesIO (go rootLockPath sem))
   where
     go :: Path Abs Dir -> Sem (TaggedLock ': r) a -> Sem (Files ': FileLock ': r) a
-    go r = reinterpret2H $ \case
+    go r = interpretTop2H $ \locEnv -> \case
       WithTaggedLock t ma -> do
         p <- normalizeFile (r <//> t)
         ensureDir' (parent p)
-        withFileLock' p (runTSimple ma)
+        withFileLock' p (runTSimpleEff locEnv ma)

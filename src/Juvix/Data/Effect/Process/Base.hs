@@ -13,7 +13,7 @@ data ProcessCall = ProcessCall
     _processCallArgs :: [Text]
   }
 
-data Process m a where
+data Process :: Effect where
   FindExecutable' :: Path Rel File -> Process m (Maybe (Path Abs File))
   ReadProcess' :: ProcessCall -> Process m ProcessResult
 

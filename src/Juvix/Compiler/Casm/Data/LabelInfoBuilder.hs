@@ -4,7 +4,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Casm.Data.LabelInfo
 import Juvix.Compiler.Casm.Language
 
-data LabelInfoBuilder m a where
+data LabelInfoBuilder :: Effect where
   FreshSymbol :: LabelInfoBuilder m Symbol
   RegisterLabelName :: Symbol -> Text -> LabelInfoBuilder m ()
   RegisterLabelAddress :: Symbol -> Int -> LabelInfoBuilder m ()
@@ -38,9 +38,7 @@ runLabelInfoBuilder :: Sem (LabelInfoBuilder ': r) a -> Sem r (LabelInfo, a)
 runLabelInfoBuilder = fmap (first (^. stateLabelInfo)) . runLabelInfoBuilder' emptyBuilderState
 
 runLabelInfoBuilder' :: BuilderState -> Sem (LabelInfoBuilder ': r) a -> Sem r (BuilderState, a)
-runLabelInfoBuilder' bs =
-  runState bs
-    . reinterpret interp
+runLabelInfoBuilder' bs = reinterpret (runState bs) interp
   where
     interp :: LabelInfoBuilder m a -> Sem (State BuilderState ': r) a
     interp = \case
