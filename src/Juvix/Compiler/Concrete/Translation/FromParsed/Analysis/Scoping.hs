@@ -1820,7 +1820,7 @@ checkRecordPattern ::
   Sem r (RecordPattern 'Scoped)
 checkRecordPattern r = do
   c' <- getNameOfKind KNameConstructor (r ^. recordPatternConstructor)
-  fields <- fromMaybeM (return (RecordNameSignature mempty)) (gets (^. scoperConstructorFields . at (c' ^. scopedIdenName . S.nameId)))
+  fields <- fromMaybeM (return (RecordNameSignature mempty)) (gets (^. scoperConstructorFields . at (c' ^. scopedIdenFinal . S.nameId)))
   l' <-
     if
         | null (r ^. recordPatternItems) -> return []
@@ -2339,7 +2339,7 @@ checkIterator ::
   Sem r (Iterator 'Scoped)
 checkIterator iter = do
   _iteratorName <- checkScopedIden (iter ^. iteratorName)
-  case _iteratorName ^. scopedIdenName . S.nameIterator of
+  case _iteratorName ^. scopedIdenFinal . S.nameIterator of
     Just IteratorInfo {..} -> do
       case _iteratorInfoInitNum of
         Just n
@@ -2422,7 +2422,7 @@ checkParens e@(ExpressionAtoms as _) = case as of
   p :| [] -> case p of
     AtomIdentifier s -> do
       scopedId <- checkScopedIden s
-      let scopedIdenNoFix = over scopedIdenName (set S.nameFixity Nothing) scopedId
+      let scopedIdenNoFix = over scopedIdenSrcName (set S.nameFixity Nothing) scopedId
       return (ExpressionParensIdentifier scopedIdenNoFix)
     AtomIterator i -> ExpressionIterator . set iteratorParens True <$> checkIterator i
     AtomCase c -> ExpressionCase . set caseParens True <$> checkCase c
@@ -2617,7 +2617,7 @@ makeExpressionTable (ExpressionAtoms atoms _) = [recordUpdate] : [appOpExplicit]
                 OpNone -> Nothing
           | otherwise = Nothing
           where
-            S.Name' {..} = iden ^. scopedIdenName
+            S.Name' {..} = iden ^. scopedIdenSrcName
 
         parseSymbolId :: S.NameId -> Parse ScopedIden
         parseSymbolId uid = P.token getIdentifierWithId mempty
@@ -2625,7 +2625,7 @@ makeExpressionTable (ExpressionAtoms atoms _) = [recordUpdate] : [appOpExplicit]
             getIdentifierWithId :: ExpressionAtom 'Scoped -> Maybe ScopedIden
             getIdentifierWithId s = case s of
               AtomIdentifier iden
-                | uid == iden ^. scopedIdenName . S.nameId -> Just iden
+                | uid == iden ^. scopedIdenSrcName . S.nameId -> Just iden
               _ -> Nothing
 
     recordUpdate :: P.Operator Parse Expression
@@ -2843,7 +2843,7 @@ parseTerm =
         identifierNoFixity :: ExpressionAtom 'Scoped -> Maybe ScopedIden
         identifierNoFixity s = case s of
           AtomIdentifier iden
-            | not (S.hasFixity (iden ^. scopedIdenName)) -> Just iden
+            | not (S.hasFixity (iden ^. scopedIdenSrcName)) -> Just iden
           _ -> Nothing
 
     parseDoubleBraces :: Parse Expression
@@ -2892,8 +2892,8 @@ makePatternTable (PatternAtoms latoms _) = [appOp] : operators
       where
         unqualifiedSymbolOp :: ScopedIden -> Maybe (Precedence, P.Operator ParsePat PatternArg)
         unqualifiedSymbolOp constr = run . runFail $ do
-          Fixity {..} <- failMaybe (constr ^. scopedIdenName . S.nameFixity)
-          let _nameId = constr ^. scopedIdenName . S.nameId
+          Fixity {..} <- failMaybe (constr ^. scopedIdenSrcName . S.nameFixity)
+          let _nameId = constr ^. scopedIdenSrcName . S.nameId
           case _fixityArity of
             OpUnary u -> return (_fixityPrecedence, P.Postfix (unaryApp <$> parseSymbolId _nameId))
               where
@@ -2916,7 +2916,7 @@ makePatternTable (PatternAtoms latoms _) = [appOp] : operators
             getConstructorRefWithId :: PatternAtom 'Scoped -> Maybe ScopedIden
             getConstructorRefWithId s = do
               ref <- getConstructorRef s
-              guard (ref ^. scopedIdenName . S.nameId == uid)
+              guard (ref ^. scopedIdenSrcName . S.nameId == uid)
               return ref
 
     -- Application by juxtaposition.
@@ -2965,7 +2965,7 @@ parsePatternTerm = do
         constructorNoFixity :: PatternAtom 'Scoped -> Maybe ScopedIden
         constructorNoFixity s = case s of
           PatternAtomIden (PatternScopedConstructor ref)
-            | not (S.hasFixity (n ^. scopedIdenName)) -> Just ref
+            | not (S.hasFixity (n ^. scopedIdenSrcName)) -> Just ref
             where
               n = ref
           _ -> Nothing

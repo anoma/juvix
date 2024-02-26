@@ -106,8 +106,8 @@ anameFromScopedIden s =
     { _anameLoc = getLoc s,
       _anameKind = getNameKind s,
       _anameDocId = s ^. scopedIdenFinal . nameId,
-      _anameDefinedLoc = s ^. scopedIdenName . nameDefined,
-      _anameVerbatim = s ^. scopedIdenName . nameVerbatim
+      _anameDefinedLoc = s ^. scopedIdenSrcName . nameDefined,
+      _anameVerbatim = s ^. scopedIdenSrcName . nameVerbatim
     }
 
 lookupInfo :: (Members '[InfoTableBuilder, Reader InfoTable] r) => (InfoTable -> Maybe a) -> Sem r a

@@ -2285,10 +2285,10 @@ instance (SingI s) => HasAtomicity (FunctionParameters s) where
         SScoped -> atomicity (p ^. paramType)
 
 instance Pretty ScopedIden where
-  pretty = pretty . (^. scopedIdenName)
+  pretty = pretty . (^. scopedIdenSrcName)
 
 instance HasLoc ScopedIden where
-  getLoc = getLoc . (^. scopedIdenName)
+  getLoc = getLoc . (^. scopedIdenSrcName)
 
 instance (SingI s) => HasLoc (InductiveParameters s) where
   getLoc i = getLocSymbolType (i ^. inductiveParametersNames . _head1) <>? (getLocExpressionType <$> (i ^? inductiveParametersRhs . _Just . inductiveParametersType))
@@ -2668,7 +2668,7 @@ instance IsApe PatternInfixApp ApeLeaf where
         { _infixFixity = getFixity i,
           _infixLeft = toApe l,
           _infixRight = toApe r,
-          _infixIsDelimiter = isDelimiterStr (prettyText (op ^. scopedIdenName . S.nameConcrete)),
+          _infixIsDelimiter = isDelimiterStr (prettyText (op ^. scopedIdenSrcName . S.nameConcrete)),
           _infixOp = ApeLeafPattern (PatternConstructor op)
         }
 
@@ -2732,7 +2732,7 @@ instance IsApe InfixApplication ApeLeaf where
         { _infixFixity = getFixity i,
           _infixLeft = toApe l,
           _infixRight = toApe r,
-          _infixIsDelimiter = isDelimiterStr (prettyText (op ^. scopedIdenName . S.nameConcrete)),
+          _infixIsDelimiter = isDelimiterStr (prettyText (op ^. scopedIdenSrcName . S.nameConcrete)),
           _infixOp = ApeLeafExpression (ExpressionIdentifier op)
         }
 
@@ -2856,8 +2856,8 @@ _RecordStatementField f x = case x of
   RecordStatementField p -> RecordStatementField <$> f p
   _ -> pure x
 
-scopedIdenName :: Lens' ScopedIden S.Name
-scopedIdenName f n = case n ^. scopedIdenAlias of
+scopedIdenSrcName :: Lens' ScopedIden S.Name
+scopedIdenSrcName f n = case n ^. scopedIdenAlias of
   Nothing -> scopedIdenFinal f n
   Just a -> do
     a' <- f a
@@ -2871,16 +2871,16 @@ fromParsedIteratorInfo ParsedIteratorInfo {..} =
     }
 
 instance HasFixity PostfixApplication where
-  getFixity (PostfixApplication _ op) = fromMaybe impossible (op ^. scopedIdenName . S.nameFixity)
+  getFixity (PostfixApplication _ op) = fromMaybe impossible (op ^. scopedIdenSrcName . S.nameFixity)
 
 instance HasFixity InfixApplication where
-  getFixity (InfixApplication _ op _) = fromMaybe impossible (op ^. scopedIdenName . S.nameFixity)
+  getFixity (InfixApplication _ op _) = fromMaybe impossible (op ^. scopedIdenSrcName . S.nameFixity)
 
 instance HasFixity PatternInfixApp where
-  getFixity (PatternInfixApp _ op _) = fromMaybe impossible (op ^. scopedIdenName . S.nameFixity)
+  getFixity (PatternInfixApp _ op _) = fromMaybe impossible (op ^. scopedIdenSrcName . S.nameFixity)
 
 instance HasFixity PatternPostfixApp where
-  getFixity (PatternPostfixApp _ op) = fromMaybe impossible (op ^. scopedIdenName . S.nameFixity)
+  getFixity (PatternPostfixApp _ op) = fromMaybe impossible (op ^. scopedIdenSrcName . S.nameFixity)
 
 instance HasAtomicity (ListPattern s) where
   atomicity = const Atom
