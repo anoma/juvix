@@ -28,7 +28,7 @@ import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context qualified as 
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Store.Scoped.Language as Store
 import Juvix.Data.FixityInfo qualified as FI
-import Juvix.Prelude hiding (scoped)
+import Juvix.Prelude
 
 scopeCheck ::
   (Members '[HighlightBuilder, Error JuvixError, NameIdGen] r) =>

@@ -12,7 +12,7 @@ data TypeSpec = TypeSpec
 
 makeLenses ''TypeSpec
 
-data EvalEff m a where
+data EvalEff :: Effect where
   Eval' :: Node -> EvalEff m Value
   LookupIdentifier :: Text -> EvalEff m Node
   -- | Assert that the Node has a type given by one of the 'TypeSpec's
@@ -20,4 +20,4 @@ data EvalEff m a where
 
 makeSem ''EvalEff
 
-type EvalFileEff = Scoped (Path Abs File) EvalEff
+type EvalFileEff = Provider EvalEff (Path Abs File)
