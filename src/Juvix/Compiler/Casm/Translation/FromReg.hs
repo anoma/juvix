@@ -6,34 +6,48 @@ import Juvix.Compiler.Casm.Data.LabelInfoBuilder
 import Juvix.Compiler.Casm.Extra
 import Juvix.Compiler.Casm.Language
 import Juvix.Compiler.Reg.Data.InfoTable qualified as Reg
+import Juvix.Compiler.Reg.Extra.Info qualified as Reg
 import Juvix.Compiler.Reg.Language qualified as Reg
+import Juvix.Compiler.Tree.Evaluator.Builtins qualified as Reg
 import Juvix.Data.Field
 
 fromReg :: Reg.InfoTable -> (LabelInfo, [Instruction])
 fromReg tab = run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolId tab) $ do
   let initialOffset :: Int = 2
   (_, instrs) <- second (concat . reverse) <$> foldM goFun (initialOffset, []) (tab ^. Reg.infoFunctions)
+  let endName :: Text = "__juvix_end"
+  endSym <- freshSymbol
+  registerLabelName endSym endName
+  registerLabelAddress endSym (length instrs + initialOffset)
   let mainSym = fromJust $ tab ^. Reg.infoMainFunction
       mainName = fromJust (HashMap.lookup mainSym (tab ^. Reg.infoFunctions)) ^. Reg.functionName
       callInstr = Call $ InstrCall $ Lab $ LabelRef mainSym (Just mainName)
       jmpInstr =
         Jump $
           InstrJump
-            { _instrJumpTarget = Imm (fromIntegral (length instrs + initialOffset)),
+            { _instrJumpTarget = Lab $ LabelRef endSym (Just endName),
               _instrJumpIncAp = False
             }
   return $ callInstr : jmpInstr : instrs
   where
     goFun :: forall r. (Member LabelInfoBuilder r) => (Address, [[Instruction]]) -> Reg.FunctionInfo -> Sem r (Address, [[Instruction]])
     goFun (addr0, acc) funInfo = do
-      instrs <- goCode addr0 (funInfo ^. Reg.functionCode)
-      return (addr0 + length instrs, instrs : acc)
+      sym <- freshSymbol
+      registerLabelName sym (funInfo ^. Reg.functionName)
+      registerLabelAddress sym addr0
+      let code = funInfo ^. Reg.functionCode
+          n = Reg.computeLocalVarsNum code
+          i1 = Alloc $ InstrAlloc $ Val $ Imm $ fromIntegral n
+          pre = [i1]
+          addr1 = addr0 + length pre
+      instrs <- goCode addr1 code
+      return (addr1 + length instrs, (pre ++ instrs) : acc)
       where
         unsupported :: Text -> a
         unsupported what = error ("Cairo backend: unsupported: " <> what)
 
         goCode :: Address -> Reg.Code -> Sem r [Instruction]
-        goCode = undefined
+        goCode addr = concatMapM (goInstr addr)
 
         goInstr :: Address -> Reg.Instruction -> Sem r [Instruction]
         goInstr addr = \case
@@ -121,7 +135,10 @@ fromReg tab = run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolId tab) $ do
         goBinop :: Address -> Reg.InstrBinop -> Sem r [Instruction]
         goBinop addr x@Reg.InstrBinop {..} = case _instrBinopArg1 of
           Reg.Const c1 -> case _instrBinopArg2 of
-            Reg.Const c2 -> undefined
+            Reg.Const c2 -> case Reg.evalBinop' _instrBinopOpcode c1 c2 of
+              Left err -> error err
+              Right c ->
+                return [mkAssign res (Val $ Imm $ goConst c)]
             _ ->
               goBinop
                 addr
@@ -138,16 +155,33 @@ fromReg tab = run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolId tab) $ do
                 eassert (null is2)
                 let i = goConstrField (MemRef Ap 0) True ctr1
                 return $ i : mkBinop _instrBinopOpcode res (MemRef Ap (-1)) v2
-          Reg.VRef var1 -> undefined
+          Reg.VRef var1 ->
+            return $ is2 ++ mkBinop _instrBinopOpcode res (goVarRef var1) v2
           where
             res = goVarRef _instrBinopResult
             (is2, v2) = goValue _instrBinopArg2
 
         goUnop :: Address -> Reg.InstrUnop -> Sem r [Instruction]
-        goUnop addr Reg.InstrUnop {..} = undefined
+        goUnop _ Reg.InstrUnop {..} = case _instrUnopOpcode of
+          Reg.OpShow -> unsupported "strings"
+          Reg.OpStrToInt -> unsupported "strings"
+          Reg.OpFieldToInt -> return $ is ++ [mkAssign res (Val v)]
+          Reg.OpIntToField -> return $ is ++ [mkAssign res (Val v)]
+          Reg.OpArgsNum -> case v of
+            Ref mr ->
+              return $ is ++ mkOpArgsNum res mr
+            Imm {} -> impossible
+            Lab {} -> impossible
+          where
+            res = goVarRef _instrUnopResult
+            (is, v) = goValue _instrUnopArg
 
         goAssign :: Address -> Reg.InstrAssign -> Sem r [Instruction]
-        goAssign addr Reg.InstrAssign {..} = undefined
+        goAssign _ Reg.InstrAssign {..} =
+          return $ is ++ [mkAssign res (Val v)]
+          where
+            res = goVarRef _instrAssignResult
+            (is, v) = goValue _instrAssignValue
 
         goAlloc :: Address -> Reg.InstrAlloc -> Sem r [Instruction]
         goAlloc addr Reg.InstrAlloc {..} = undefined

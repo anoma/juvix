@@ -1,5 +1,6 @@
 module Juvix.Compiler.Casm.Extra where
 
+import Juvix.Compiler.Casm.Data.Limits
 import Juvix.Compiler.Casm.Language
 
 toOffset :: (Show a, Integral a) => a -> Offset
@@ -43,7 +44,7 @@ mkIntLe res arg1 arg2 = case arg2 of
   Imm v ->
     [mkExtraBinop IntLt res arg1 (Imm (v + 1))]
   Ref mref ->
-    [inc, mkExtraBinop IntLt res (adjustAp arg1) (Ref $ MemRef Ap (-1))]
+    [inc, mkExtraBinop IntLt res (adjustAp 1 arg1) (Ref $ MemRef Ap (-1))]
     where
       inc =
         Assign
@@ -58,9 +59,34 @@ mkIntLe res arg1 arg2 = case arg2 of
                     },
               _instrAssignIncAp = True
             }
-
-      adjustAp :: MemRef -> MemRef
-      adjustAp mr@MemRef {..} = case _memRefReg of
-        Ap -> MemRef Ap (_memRefOff - 1)
-        Fp -> mr
   Lab {} -> impossible
+
+mkAssign :: MemRef -> RValue -> Instruction
+mkAssign mr rv =
+  Assign
+    InstrAssign
+      { _instrAssignResult = mr,
+        _instrAssignValue = rv,
+        _instrAssignIncAp = False
+      }
+
+mkAssignAp :: RValue -> Instruction
+mkAssignAp v =
+  Assign
+    InstrAssign
+      { _instrAssignResult = MemRef Ap 0,
+        _instrAssignValue = v,
+        _instrAssignIncAp = True
+      }
+
+mkOpArgsNum :: MemRef -> MemRef -> [Instruction]
+mkOpArgsNum res v =
+  [ mkAssignAp (Val $ Imm $ fromIntegral casmMaxFunctionArgs + 1),
+    mkAssignAp (Load $ LoadValue (adjustAp 1 v) casmClosureArgsNumOffset),
+    mkExtraBinop FieldSub res (MemRef Ap (-2)) (Ref $ MemRef Ap (-1))
+  ]
+
+adjustAp :: Int16 -> MemRef -> MemRef
+adjustAp idx mr@MemRef {..} = case _memRefReg of
+  Ap -> MemRef Ap (_memRefOff - idx)
+  Fp -> mr

@@ -14,6 +14,7 @@ data Target
   | TargetTree
   | TargetNockma
   | TargetAnoma
+  | TargetCairo
   deriving stock (Data, Eq, Show)
 
 data Limits = Limits
@@ -97,6 +98,21 @@ getLimits tgt debug = case tgt of
     defaultLimits
   TargetAnoma ->
     defaultLimits
+  TargetCairo ->
+    Limits
+      { _limitsMaxConstrs = 1048568,
+        _limitsMaxConstrArgs = 255,
+        _limitsMaxFunctionArgs = 8,
+        _limitsMaxLocalVars = 2048,
+        _limitsMaxClosureSize = 8 + 3,
+        _limitsClosureHeadSize = 3,
+        _limitsMaxStringSize = 0,
+        _limitsMaxStackDelta = 0, -- irrelevant
+        _limitsMaxFunctionAlloc = 0, -- irrelevant
+        _limitsDispatchStackSize = 0, -- irrelevant
+        _limitsBuiltinUIDsNum = 8,
+        _limitsSpecialisedApply = 3
+      }
 
 defaultLimits :: Limits
 defaultLimits =

@@ -75,13 +75,7 @@ eval tab = runReader emptyEvalCtx . eval'
         goTrace v = output v $> v
 
         goConstant :: NodeConstant -> Value
-        goConstant NodeConstant {..} = case _nodeConstant of
-          ConstInt i -> ValInteger i
-          ConstField f -> ValField f
-          ConstBool b -> ValBool b
-          ConstString s -> ValString s
-          ConstUnit -> ValUnit
-          ConstVoid -> ValVoid
+        goConstant NodeConstant {..} = constantToValue _nodeConstant
 
         askTemp :: Sem r' (BL.BinderList Value)
         askTemp = asks (^. evalCtxTemp)
