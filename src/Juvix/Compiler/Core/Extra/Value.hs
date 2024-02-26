@@ -33,7 +33,7 @@ toValue tab = \case
       ValueConstrApp
         ConstrApp
           { _constrAppName = ci ^. constructorName,
-            _constrAppFixity = ci ^. constructorFixity,
+            _constrAppFixity = Irrelevant (ci ^. constructorFixity),
             _constrAppArgs = map (toValue tab) (drop paramsNum _constrArgs)
           }
       where
