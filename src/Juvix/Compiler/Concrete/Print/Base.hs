@@ -461,7 +461,7 @@ instance PrettyPrint ScopedModule where
   ppCode m = ppCode (m ^. scopedModuleName)
 
 instance PrettyPrint ScopedIden where
-  ppCode = ppCode . (^. scopedIdenName)
+  ppCode = ppCode . (^. scopedIdenSrcName)
 
 instance (SingI s) => PrettyPrint (AliasDef s) where
   ppCode AliasDef {..} =

@@ -70,7 +70,7 @@ runNamedArguments napp extraArgs = do
   where
     mkIniBuilderState :: Sem r BuilderState
     mkIniBuilderState = do
-      let name = napp ^. namedAppName . scopedIdenName
+      let name = napp ^. namedAppName . scopedIdenFinal
       msig <- asks @NameSignatures (^. at (name ^. S.nameId))
       let sig = fromMaybe err msig
             where

@@ -757,7 +757,7 @@ goExpression = \case
     goNamedApplicationNew napp extraArgs = case nonEmpty (napp ^. namedApplicationNewArguments) of
       Nothing -> return (goIden (napp ^. namedApplicationNewName))
       Just appargs -> do
-        let name = napp ^. namedApplicationNewName . scopedIdenName
+        let name = napp ^. namedApplicationNewName . scopedIdenFinal
         sig <- fromJust <$> asks (^. S.infoNameSigs . at (name ^. S.nameId))
         cls <- goArgs appargs
         let args :: [Internal.Name] = appargs ^.. each . namedArgumentNewFunDef . signName . to goSymbol

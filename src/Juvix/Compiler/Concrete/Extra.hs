@@ -101,13 +101,13 @@ recordNameSignatureByIndex = IntMap.fromList . (^.. recordNames . each . to mkAs
 
 getExpressionAtomIden :: ExpressionAtom 'Scoped -> Maybe S.Name
 getExpressionAtomIden = \case
-  AtomIdentifier nm -> Just (nm ^. scopedIdenName)
+  AtomIdentifier nm -> Just (nm ^. scopedIdenSrcName)
   _ -> Nothing
 
 getPatternAtomIden :: PatternAtom 'Scoped -> Maybe S.Name
 getPatternAtomIden = \case
   PatternAtomIden i -> case i of
-    PatternScopedConstructor c -> Just (c ^. scopedIdenName)
+    PatternScopedConstructor c -> Just (c ^. scopedIdenSrcName)
     _ -> Nothing
   _ -> Nothing
 
