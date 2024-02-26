@@ -760,8 +760,13 @@ caseCmd arg defaultBranch = \case
             OpEq
               # constructorTagToTerm tag
               # (getConstructorField ConstructorTag arg)
-      elseBr <- caseCmd arg defaultBranch bs
-      return (branch cond b elseBr)
+      case nonEmpty bs of
+        Nothing -> case defaultBranch of
+          Nothing -> return b
+          Just defbr -> return (branch cond b defbr)
+        Just ((t', b') :| bs') -> do
+          elseBr <- goRepConstr t' b' bs'
+          return (branch cond b elseBr)
 
     asNockmaMemRepListConstr :: Tree.Tag -> Sem r NockmaMemRepListConstr
     asNockmaMemRepListConstr tag = case tag of
