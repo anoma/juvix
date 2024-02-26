@@ -53,7 +53,7 @@ Memory consists of:
 -- The heap does not need to be modelled explicitly. Heap values are simply
 -- stored in the `Val` datastructure. Pointers are implicit.
 
-newtype CallStack = CallStack
+newtype AsmCallStack = AsmCallStack
   { _callStack :: [Continuation]
   }
 
@@ -96,7 +96,7 @@ data Continuation = Continuation
 -- | JuvixAsm runtime state
 data RuntimeState = RuntimeState
   { -- | global call stack
-    _runtimeCallStack :: CallStack,
+    _runtimeCallStack :: AsmCallStack,
     -- | current frame
     _runtimeFrame :: Frame,
     -- | debug messages generated so far
@@ -107,7 +107,7 @@ data RuntimeState = RuntimeState
     _runtimeInfoTable :: InfoTable
   }
 
-makeLenses ''CallStack
+makeLenses ''AsmCallStack
 makeLenses ''Continuation
 makeLenses ''ArgumentArea
 makeLenses ''TemporaryStack

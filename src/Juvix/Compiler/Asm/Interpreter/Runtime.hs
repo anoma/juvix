@@ -14,7 +14,7 @@ import Juvix.Compiler.Asm.Interpreter.Error
 import Juvix.Compiler.Asm.Interpreter.RuntimeState
 import Juvix.Compiler.Asm.Pretty
 
-data Runtime m a where
+data Runtime :: Effect where
   HasCaller :: Runtime m Bool -- is the call stack non-empty?
   PushCallStack :: Code -> Runtime m ()
   PopCallStack :: Runtime m Continuation
@@ -37,10 +37,19 @@ data Runtime m a where
 makeSem ''Runtime
 
 runRuntime :: forall r a. InfoTable -> Sem (Runtime ': r) a -> Sem r (RuntimeState, a)
-runRuntime tab = runState (RuntimeState (CallStack []) emptyFrame [] Nothing tab) . interp
+runRuntime tab = interp
   where
-    interp :: Sem (Runtime ': r) a -> Sem (State RuntimeState ': r) a
-    interp = reinterpret $ \case
+    iniState =
+      RuntimeState
+        { _runtimeCallStack = AsmCallStack [],
+          _runtimeFrame = emptyFrame,
+          _runtimeMessages = [],
+          _runtimeLocation = Nothing,
+          _runtimeInfoTable = tab
+        }
+
+    interp :: Sem (Runtime ': r) a -> Sem r (RuntimeState, a)
+    interp = reinterpret (runState iniState) $ \case
       HasCaller ->
         not . null . (^. runtimeCallStack . callStack) <$> get
       PushCallStack code -> do

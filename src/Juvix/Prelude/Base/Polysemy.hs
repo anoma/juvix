@@ -37,9 +37,6 @@ mapReader f s = do
   e <- ask
   runReader (f e) s
 
-eassert :: Bool -> Sem r ()
-eassert b = assert b $ return ()
-
 execOutputList :: Sem (Output o ': r) a -> Sem r [o]
 execOutputList = fmap fst . runOutputList
 

@@ -57,6 +57,12 @@ overStaticRep ::
   Sem r ()
 overStaticRep f = unsafeEff $ \r -> f <$> getEnv r >>= putEnv r
 
+mapReader ::
+  (r1 -> r2) ->
+  Sem (Reader r2 ': r) a ->
+  Sem (Reader r1 ': r) a
+mapReader = withReader
+
 runState :: s -> Sem (State s ': r) a -> Sem r (s, a)
 runState s = fmap swap . State.runState s
 
@@ -169,7 +175,11 @@ reinterpret ::
 reinterpret re i = reinterpretH re (const i)
 
 -- TODO maybe think of a better name
-runTSimpleEff :: forall (localEs :: [Effect]) (r :: [Effect]) x. LocalEnv localEs r -> Sem localEs x -> Sem r x
+runTSimpleEff ::
+  forall (localEs :: [Effect]) (r :: [Effect]) x.
+  LocalEnv localEs r ->
+  Sem localEs x ->
+  Sem r x
 runTSimpleEff locEnv ma =
   let lifter :: ((forall y. Sem localEs y -> Sem r y) -> Sem r x)
       lifter f = f ma

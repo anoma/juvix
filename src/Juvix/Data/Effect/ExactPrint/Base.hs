@@ -51,26 +51,28 @@ execExactPrint :: Maybe FileComments -> Sem (ExactPrint ': r) x -> Sem r (Doc An
 execExactPrint cs = fmap fst . runExactPrint cs
 
 re :: forall r a. Sem (ExactPrint ': r) a -> Sem (State Builder ': r) a
-re = reinterpretH h
+re = interpretTopH handler
   where
-    h ::
-      forall rInitial x.
-      ExactPrint (Sem rInitial) x ->
-      Tactical ExactPrint (Sem rInitial) (State Builder ': r) x
-    h = \case
-      NoLoc p -> noLoc' p >>= pureT
-      EnsureEmptyLine -> modify' (set builderEnsureEmptyLine True) >>= pureT
-      End -> end' >>= pureT
-      Enqueue d -> enqueue' d >>= pureT
-      PrintCommentsUntil l -> printCommentsUntil' l >>= pureT
-      Region f m -> do
+    handler ::
+      forall x (localEs :: [Effect]).
+      (Member ExactPrint localEs) =>
+      LocalEnv localEs (State Builder ': r) ->
+      ExactPrint (Sem localEs) x ->
+      Sem (State Builder ': r) x
+    handler _locEnv = \case
+      NoLoc p -> noLoc' p
+      EnsureEmptyLine -> modify' (set builderEnsureEmptyLine True)
+      End -> end'
+      Enqueue d -> enqueue' d
+      PrintCommentsUntil l -> printCommentsUntil' l
+      Region regionModif (m :: Sem localEs x) -> do
         st0 :: Builder <- set builderDoc mempty <$> get
         m' <- runT m
         (st' :: Builder, fx) <- raise (evalExactPrint' st0 m')
         doc' <- gets (^. builderDoc)
         put
           Builder
-            { _builderDoc = doc' <> f (st' ^. builderDoc),
+            { _builderDoc = doc' <> regionModif (st' ^. builderDoc),
               _builderComments = st' ^. builderComments,
               _builderEnd = st' ^. builderEnd,
               _builderQueue = st' ^. builderQueue,

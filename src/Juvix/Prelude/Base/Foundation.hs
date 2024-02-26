@@ -472,6 +472,9 @@ optional_ = void . optional
 -- Misc
 --------------------------------------------------------------------------------
 
+eassert :: (Applicative f) => Bool -> f ()
+eassert b = assert b (pure ())
+
 -- | applies a function n times
 iterateN :: Int -> (a -> a) -> a -> a
 iterateN n f = (!! n) . iterate f
