@@ -40,7 +40,7 @@ data MatchError = MatchError
 
 makeLenses ''MatchError
 
-data Inference m a where
+data Inference :: Effect where
   MatchTypes :: Expression -> Expression -> Inference m (Maybe MatchError)
   QueryMetavar :: Hole -> Inference m (Maybe Expression)
   RegisterIdenType :: Name -> Expression -> Inference m ()
@@ -294,11 +294,12 @@ queryMetavar' h = do
     Just Fresh -> return Nothing
     Just (Refined e) -> return (Just e)
 
-re ::
+runInferenceState ::
   (Members '[State FunctionsTable, Error TypeCheckerError, NameIdGen] r) =>
+  InferenceState ->
   Sem (Inference ': r) a ->
-  Sem (State InferenceState ': r) a
-re = reinterpret $ \case
+  Sem r (InferenceState, a)
+runInferenceState inis = reinterpret (runState inis) $ \case
   MatchTypes a b -> matchTypes' a b
   QueryMetavar h -> queryMetavar' h
   RememberFunctionDef f -> modify' (over inferenceFunctionsStash (f :))
@@ -487,7 +488,7 @@ runInferenceDefs ::
   Sem (Inference ': r) (NonEmpty funDef) ->
   Sem r (NonEmpty funDef)
 runInferenceDefs a = do
-  (finalState, expr) <- runState iniState (re a)
+  (finalState, expr) <- runInferenceState iniState a
   (subs, idens) <- closeState finalState
   idens' <- mapM (subsHoles subs) (idens ^. typesTable)
   stash' <- mapM (subsHoles subs) (finalState ^. inferenceFunctionsStash)

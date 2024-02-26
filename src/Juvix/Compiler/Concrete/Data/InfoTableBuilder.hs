@@ -10,7 +10,7 @@ import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Store.Scoped.Language
 import Juvix.Prelude
 
-data InfoTableBuilder m a where
+data InfoTableBuilder :: Effect where
   RegisterAxiom :: AxiomDef 'Scoped -> InfoTableBuilder m ()
   RegisterConstructor :: ConstructorDef 'Scoped -> InfoTableBuilder m ()
   RegisterInductive :: InductiveDef 'Scoped -> InfoTableBuilder m ()
@@ -36,8 +36,8 @@ registerDoc k md = do
   modify (set (highlightDoc . at k) md)
   modify (set (infoHighlightDoc . at k) md)
 
-toState :: (Member HighlightBuilder r) => Sem (InfoTableBuilder ': r) a -> Sem (State InfoTable ': r) a
-toState = reinterpret $ \case
+runInfoTableBuilder :: (Member HighlightBuilder r) => InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
+runInfoTableBuilder ini = reinterpret (runState ini) $ \case
   RegisterAxiom d ->
     let j = d ^. axiomDoc
      in do
@@ -94,11 +94,8 @@ toState = reinterpret $ \case
 runInfoTableBuilderRepl :: InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
 runInfoTableBuilderRepl tab = ignoreHighlightBuilder . runInfoTableBuilder tab . raiseUnder
 
-runInfoTableBuilder :: (Member HighlightBuilder r) => InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
-runInfoTableBuilder tab = runState tab . toState
-
 ignoreInfoTableBuilder :: (Member HighlightBuilder r) => Sem (InfoTableBuilder ': r) a -> Sem r a
-ignoreInfoTableBuilder = evalState mempty . toState
+ignoreInfoTableBuilder = fmap snd . runInfoTableBuilder mempty
 
 anameFromScopedIden :: ScopedIden -> AName
 anameFromScopedIden s =

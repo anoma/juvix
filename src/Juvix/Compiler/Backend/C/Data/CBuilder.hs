@@ -2,7 +2,7 @@ module Juvix.Compiler.Backend.C.Data.CBuilder where
 
 import Juvix.Prelude
 
-data CBuilder m a where
+data CBuilder :: Effect where
   FreshLabel :: CBuilder m Text
 
 makeSem ''CBuilder
@@ -20,9 +20,7 @@ emptyCBuilderState =
     }
 
 runCBuilder :: Sem (CBuilder ': r) a -> Sem r a
-runCBuilder =
-  evalState emptyCBuilderState
-    . reinterpret interp
+runCBuilder = reinterpret (evalState emptyCBuilderState) interp
   where
     interp :: CBuilder m a -> Sem (State CBuilderState ': r) a
     interp = \case
