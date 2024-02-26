@@ -14,7 +14,7 @@ where
 import Data.Kind qualified as GHC
 import Effectful hiding (Eff, (:>))
 import Effectful qualified as E
-import Effectful.Dispatch.Dynamic (EffectHandler)
+import Effectful.Dispatch.Dynamic (EffectHandler, LocalEnv, SharedSuffix, localLift, localLiftUnlift, localLiftUnliftIO, localSeqLift, localSeqUnlift, localSeqUnliftIO, localUnlift, localUnliftIO, withLiftMap, withLiftMapIO)
 import Effectful.Dispatch.Dynamic qualified as E
 import Effectful.Dispatch.Static
 import Effectful.Error.Static hiding (runError)
@@ -79,6 +79,39 @@ runError = runErrorNoCallStack
 raiseUnder :: forall (e1 :: Effect) (e2 :: Effect) (r :: [Effect]) a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': r) a
 raiseUnder = inject
 
+bracket :: forall r a c b. (Member Resource r) => Sem r a -> (a -> Sem r c) -> (a -> Sem r b) -> Sem r b
+bracket = undefined
+
+bracketOnError ::
+  (Member Resource r) =>
+  Sem r a ->
+  -- Action to allocate a resource.
+  (a -> Sem r c) ->
+  -- Action to cleanup the resource. This will only be called if the
+  -- "use" block fails.
+  (a -> Sem r b) ->
+  -- Action which uses the resource.
+  Sem r b
+bracketOnError = undefined
+
+finally ::
+  (Member Resource r) =>
+  -- | computation to run first
+  Sem r a ->
+  -- | computation to run afterward (even if an exception was raised)
+  Sem r b ->
+  Sem r a
+finally act end = bracket (pure ()) (const end) (const act)
+
+onException ::
+  (Member Resource r) =>
+  -- | computation to run first
+  Sem r a ->
+  -- | computation to run afterward if an exception was raised
+  Sem r b ->
+  Sem r a
+onException act end = bracketOnError (pure ()) (const end) (const act)
+
 interpretTopH ::
   forall (e1 :: Effect) (e2 :: Effect) (r :: [Effect]) a.
   (DispatchOf e1 ~ 'Dynamic) =>
@@ -126,3 +159,10 @@ reinterpret ::
   Sem (e ': r) a ->
   Sem r b
 reinterpret re i = reinterpretH re (const i)
+
+-- TODO maybe think of a better name
+runTSimpleEff :: forall (localEs :: [Effect]) (r :: [Effect]) x. LocalEnv localEs r -> Sem localEs x -> Sem r x
+runTSimpleEff locEnv ma =
+  let lifter :: ((forall y. Sem localEs y -> Sem r y) -> Sem r x)
+      lifter f = f ma
+   in localSeqUnlift locEnv lifter
