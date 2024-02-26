@@ -1,10 +1,12 @@
 module Juvix.Compiler.Tree.Language
   ( module Juvix.Compiler.Tree.Language,
     module Juvix.Compiler.Tree.Language.Base,
+    module Juvix.Compiler.Tree.Language.Builtins,
   )
 where
 
 import Juvix.Compiler.Tree.Language.Base
+import Juvix.Compiler.Tree.Language.Builtins
 
 -- | Function call type
 data CallType
@@ -53,32 +55,17 @@ newtype NodeInfo = NodeInfo
   deriving newtype (Semigroup, Monoid)
 
 data BinaryOpcode
-  = IntAdd
-  | IntSub
-  | IntMul
-  | IntDiv
-  | IntMod
-  | IntLt
-  | IntLe
-  | ValEq
-  | StrConcat
+  = PrimBinop BinaryOp
   | -- | Sequence: evaluate and ignore fist argument, return evaluated second
     -- argument. JVT code: 'seq(x1, x2)'.
     OpSeq
 
 data UnaryOpcode
-  = -- | Convert the argument to a string. JVT code: 'show(x)'.
-    OpShow
-  | -- | Convert a string to an integer. JVT opcode: 'atoi(x)'.
-    OpStrToInt
-  | -- | Print a debug log of the argument and return it. JVT code: 'trace(x)'.
+  = PrimUnop UnaryOp
+  | -- | Print a debug log of the argument and return it.
     OpTrace
-  | -- | Interrupt execution with a runtime error printing the argument. JVT
-    -- code: 'fail(x)'.
+  | -- | Interrupt execution with a runtime error printing the argument.
     OpFail
-  | -- | Compute the number of expected arguments for the given closure. JVT
-    -- code: 'argsnum(x)'.
-    OpArgsNum
 
 data NodeBinop = NodeBinop
   { _nodeBinopInfo :: NodeInfo,

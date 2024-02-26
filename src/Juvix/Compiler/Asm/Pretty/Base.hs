@@ -93,23 +93,13 @@ instance PrettyCode Type where
 instance PrettyCode Instruction where
   ppCode :: (Member (Reader Options) r) => Instruction -> Sem r (Doc Ann)
   ppCode = \case
-    Binop IntAdd -> return $ primitive Str.instrAdd
-    Binop IntSub -> return $ primitive Str.instrSub
-    Binop IntMul -> return $ primitive Str.instrMul
-    Binop IntDiv -> return $ primitive Str.instrDiv
-    Binop IntMod -> return $ primitive Str.instrMod
-    Binop IntLt -> return $ primitive Str.instrLt
-    Binop IntLe -> return $ primitive Str.instrLe
-    Binop ValEq -> return $ primitive Str.instrEq
-    Binop StrConcat -> return $ primitive Str.instrStrConcat
-    ValShow -> return $ primitive Str.instrShow
-    StrToInt -> return $ primitive Str.instrStrToInt
+    Binop op -> Tree.ppCode op
+    Unop op -> Tree.ppCode op
     Push val -> (primitive Str.instrPush <+>) <$> ppCode val
     Pop -> return $ primitive Str.instrPop
     Trace -> return $ primitive Str.instrTrace
     Dump -> return $ primitive Str.instrDump
     Failure -> return $ primitive Str.instrFailure
-    ArgsNum -> return $ primitive Str.instrArgsNum
     Prealloc InstrPrealloc {..} ->
       return $ primitive Str.instrPrealloc <+> integer _preallocWordsNum
     AllocConstr tag -> (primitive Str.instrAlloc <+>) <$> Tree.ppConstrName tag

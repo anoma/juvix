@@ -58,27 +58,27 @@ command = do
   let loc = Just i
   case txt of
     "add" ->
-      return $ mkBinop' loc IntAdd
+      return $ mkBinop' loc OpIntAdd
     "sub" ->
-      return $ mkBinop' loc IntSub
+      return $ mkBinop' loc OpIntSub
     "mul" ->
-      return $ mkBinop' loc IntMul
+      return $ mkBinop' loc OpIntMul
     "div" ->
-      return $ mkBinop' loc IntDiv
+      return $ mkBinop' loc OpIntDiv
     "mod" ->
-      return $ mkBinop' loc IntMod
+      return $ mkBinop' loc OpIntMod
     "lt" ->
-      return $ mkBinop' loc IntLt
+      return $ mkBinop' loc OpIntLt
     "le" ->
-      return $ mkBinop' loc IntLe
+      return $ mkBinop' loc OpIntLe
     "eq" ->
-      return $ mkBinop' loc ValEq
+      return $ mkBinop' loc OpEq
     "strcat" ->
-      return $ mkBinop' loc StrConcat
+      return $ mkBinop' loc OpStrConcat
     "show" ->
-      return $ mkInstr' loc ValShow
+      return $ mkUnop' loc OpShow
     "atoi" ->
-      return $ mkInstr' loc StrToInt
+      return $ mkUnop' loc OpStrToInt
     "push" ->
       mkInstr' loc . Push <$> value
     "pop" ->
@@ -90,7 +90,7 @@ command = do
     "fail" ->
       return $ mkInstr' loc Failure
     "argsnum" ->
-      return $ mkInstr' loc ArgsNum
+      return $ mkUnop' loc OpArgsNum
     "alloc" ->
       mkInstr' loc . AllocConstr <$> constrTag @Code @(Maybe FunctionInfoExtra) @DirectRef
     "calloc" ->

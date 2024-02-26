@@ -13,7 +13,7 @@ import Juvix.Compiler.Asm.Interpreter.Base
 import Juvix.Compiler.Asm.Interpreter.Extra
 import Juvix.Compiler.Asm.Interpreter.Runtime
 import Juvix.Compiler.Asm.Pretty
-import Text.Read (readMaybe)
+import Juvix.Compiler.Tree.Evaluator.Builtins
 
 -- | Interpret JuvixAsm code for a single function. The returned Val is the
 -- value on top of the value stack at exit, i.e., when executing a toplevel
@@ -73,45 +73,8 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
 
     goInstr :: (Member Runtime r) => Maybe Location -> Instruction -> Code -> Sem r ()
     goInstr loc instr cont = case instr of
-      Binop IntAdd ->
-        goIntBinOp (\x y -> ValInteger (x + y)) >> goCode cont
-      Binop IntSub ->
-        goIntBinOp (\x y -> ValInteger (x - y)) >> goCode cont
-      Binop IntMul ->
-        goIntBinOp (\x y -> ValInteger (x * y)) >> goCode cont
-      Binop IntDiv -> do
-        goIntBinOp'
-          ( \x y ->
-              if
-                  | y == 0 -> runtimeError "division by zero"
-                  | otherwise -> return $ ValInteger (x `quot` y)
-          )
-        goCode cont
-      Binop IntMod -> do
-        goIntBinOp'
-          ( \x y ->
-              if
-                  | y == 0 -> runtimeError "division by zero"
-                  | otherwise -> return $ ValInteger (x `rem` y)
-          )
-        goCode cont
-      Binop IntLt ->
-        goIntBinOp (\x y -> ValBool (x < y)) >> goCode cont
-      Binop IntLe ->
-        goIntBinOp (\x y -> ValBool (x <= y)) >> goCode cont
-      Binop ValEq ->
-        goBinOp (\x y -> ValBool (x == y)) >> goCode cont
-      Binop StrConcat ->
-        goStrBinOp (\x y -> ValString (x <> y)) >> goCode cont
-      ValShow -> do
-        v <- popValueStack
-        pushValueStack (ValString (printVal v))
-        goCode cont
-      StrToInt -> do
-        v <- popValueStack
-        i <- valToInt v
-        pushValueStack (ValInteger i)
-        goCode cont
+      Binop op -> goBinOp (evalBinop op) >> goCode cont
+      Unop op -> goUnop (evalUnop infoTable op) >> goCode cont
       Push ref -> do
         v <- getVal ref
         pushValueStack v
@@ -120,22 +83,14 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
         popValueStack >> goCode cont
       Trace -> do
         v <- topValueStack
-        logMessage (printVal v)
+        logMessage (printValue infoTable v)
         goCode cont
       Dump -> do
         dumpState
         goCode cont
       Failure -> do
         v <- topValueStack
-        runtimeError $ mappend "failure: " (printVal v)
-      ArgsNum -> do
-        v <- popValueStack
-        case v of
-          ValClosure cl -> do
-            let n = lookupFunInfo infoTable (cl ^. closureSymbol) ^. functionArgsNum - length (cl ^. closureArgs)
-            pushValueStack (ValInteger (toInteger n))
-            goCode cont
-          _ -> runtimeError "invalid operation: expected closure on top of value stack"
+        runtimeError $ mappend "failure: " (printValue infoTable v)
       Prealloc {} ->
         goCode cont
       AllocConstr tag -> do
@@ -189,26 +144,17 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
       v <- op v1 v2
       pushValueStack v
 
-    goBinOp :: (Member Runtime r) => (Val -> Val -> Val) -> Sem r ()
-    goBinOp op = goBinOp' (\x y -> return (op x y))
+    goBinOp :: (Member Runtime r) => (Val -> Val -> Either Text Val) -> Sem r ()
+    goBinOp op = goBinOp' (\x y -> eitherToError (op x y))
 
-    goIntBinOp' :: (Member Runtime r) => (Integer -> Integer -> Sem r Val) -> Sem r ()
-    goIntBinOp' op = goBinOp' $ \v1 v2 ->
-      case (v1, v2) of
-        (ValInteger i1, ValInteger i2) -> op i1 i2
-        _ -> runtimeError "invalid operation: expected two integers on value stack"
+    goUnop' :: (Member Runtime r) => (Val -> Sem r Val) -> Sem r ()
+    goUnop' op = do
+      v <- popValueStack
+      v' <- op v
+      pushValueStack v'
 
-    goIntBinOp :: (Member Runtime r) => (Integer -> Integer -> Val) -> Sem r ()
-    goIntBinOp op = goIntBinOp' (\v1 v2 -> return (op v1 v2))
-
-    goStrBinOp' :: (Member Runtime r) => (Text -> Text -> Sem r Val) -> Sem r ()
-    goStrBinOp' op = goBinOp' $ \v1 v2 ->
-      case (v1, v2) of
-        (ValString s1, ValString s2) -> op s1 s2
-        _ -> runtimeError "invalid operation: expected two strings on value stack"
-
-    goStrBinOp :: (Member Runtime r) => (Text -> Text -> Val) -> Sem r ()
-    goStrBinOp op = goStrBinOp' (\v1 v2 -> return (op v1 v2))
+    goUnop :: (Member Runtime r) => (Val -> Either Text Val) -> Sem r ()
+    goUnop op = goUnop' (eitherToError . op)
 
     getConstantVal :: Constant -> Val
     getConstantVal = \case
@@ -331,19 +277,10 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
                   goCode (fi ^. functionCode)
         _ -> runtimeError "invalid indirect call: expected closure on top of value stack"
 
-    printVal :: Val -> Text
-    printVal = \case
-      ValString s -> s
-      v -> ppPrint infoTable v
-
-    valToInt :: (Member Runtime r) => Val -> Sem r Integer
-    valToInt = \case
-      ValString s ->
-        case readMaybe (fromText s) of
-          Just i -> return i
-          Nothing -> runtimeError "string to integer conversion error"
-      ValInteger i -> return i
-      _ -> runtimeError "integer conversion error"
+    eitherToError :: (Member Runtime r) => Either Text Val -> Sem r Val
+    eitherToError = \case
+      Left err -> runtimeError err
+      Right v -> return v
 
 -- | Interpret JuvixAsm code and the resulting IO actions.
 runCodeIO :: InfoTable -> FunctionInfo -> IO Val

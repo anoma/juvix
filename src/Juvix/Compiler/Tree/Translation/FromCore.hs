@@ -261,22 +261,22 @@ genCode infoTable fi =
 
     genBinOp :: Core.BuiltinOp -> BinaryOpcode
     genBinOp = \case
-      Core.OpIntAdd -> IntAdd
-      Core.OpIntSub -> IntSub
-      Core.OpIntMul -> IntMul
-      Core.OpIntDiv -> IntDiv
-      Core.OpIntMod -> IntMod
-      Core.OpIntLt -> IntLt
-      Core.OpIntLe -> IntLe
-      Core.OpEq -> ValEq
-      Core.OpStrConcat -> StrConcat
+      Core.OpIntAdd -> PrimBinop OpIntAdd
+      Core.OpIntSub -> PrimBinop OpIntSub
+      Core.OpIntMul -> PrimBinop OpIntMul
+      Core.OpIntDiv -> PrimBinop OpIntDiv
+      Core.OpIntMod -> PrimBinop OpIntMod
+      Core.OpIntLt -> PrimBinop OpIntLt
+      Core.OpIntLe -> PrimBinop OpIntLe
+      Core.OpEq -> PrimBinop OpEq
+      Core.OpStrConcat -> PrimBinop OpStrConcat
       Core.OpSeq -> OpSeq
       _ -> impossible
 
     genUnOp :: Core.BuiltinOp -> UnaryOpcode
     genUnOp = \case
-      Core.OpShow -> OpShow
-      Core.OpStrToInt -> OpStrToInt
+      Core.OpShow -> PrimUnop OpShow
+      Core.OpStrToInt -> PrimUnop OpStrToInt
       Core.OpTrace -> OpTrace
       Core.OpFail -> OpFail
       _ -> impossible

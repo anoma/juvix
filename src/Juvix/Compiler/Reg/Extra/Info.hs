@@ -18,13 +18,11 @@ computeMaxStackHeight lims = maximum . map go
     go = \case
       Nop -> 0
       Binop {} -> 0
-      Show {} -> 0
-      StrToInt {} -> 0
+      Unop {} -> 0
       Assign {} -> 0
       Trace {} -> 0
       Dump -> 0
       Failure {} -> 0
-      ArgsNum {} -> 0
       Prealloc InstrPrealloc {..} ->
         length _instrPreallocLiveVars
       Alloc {} -> 0
@@ -67,13 +65,11 @@ computeMaxCallClosuresArgsNum = maximum . map go
     go = \case
       Nop -> 0
       Binop {} -> 0
-      Show {} -> 0
-      StrToInt {} -> 0
+      Unop {} -> 0
       Assign {} -> 0
       Trace {} -> 0
       Dump -> 0
       Failure {} -> 0
-      ArgsNum {} -> 0
       Prealloc InstrPrealloc {} -> 0
       Alloc {} -> 0
       AllocClosure {} -> 0
@@ -106,13 +102,11 @@ computeStringMap strs = snd . run . execState (HashMap.size strs, strs) . mapM g
     go :: (Member (State (Int, HashMap Text Int)) r) => Instruction -> Sem r ()
     go = \case
       Nop -> return ()
-      Binop BinaryOp {..} -> do
-        goVal _binaryOpArg1
-        goVal _binaryOpArg2
-      Show InstrShow {..} -> do
-        goVal _instrShowValue
-      StrToInt InstrStrToInt {..} -> do
-        goVal _instrStrToIntValue
+      Binop InstrBinop {..} -> do
+        goVal _instrBinopArg1
+        goVal _instrBinopArg2
+      Unop InstrUnop {..} -> do
+        goVal _instrUnopArg
       Assign InstrAssign {..} ->
         goVal _instrAssignValue
       Trace InstrTrace {..} ->
@@ -120,8 +114,6 @@ computeStringMap strs = snd . run . execState (HashMap.size strs, strs) . mapM g
       Dump -> return ()
       Failure InstrFailure {..} ->
         goVal _instrFailureValue
-      ArgsNum InstrArgsNum {..} ->
-        goVal _instrArgsNumValue
       Prealloc {} -> return ()
       Alloc InstrAlloc {..} ->
         mapM_ goVal _instrAllocArgs
@@ -167,14 +159,12 @@ computeLocalVarsNum = maximum . map go
     go :: Instruction -> Int
     go = \case
       Nop -> 0
-      Binop BinaryOp {..} -> goVarRef _binaryOpResult
-      Show InstrShow {..} -> goVarRef _instrShowResult
-      StrToInt InstrStrToInt {..} -> goVarRef _instrStrToIntResult
+      Binop InstrBinop {..} -> goVarRef _instrBinopResult
+      Unop InstrUnop {..} -> goVarRef _instrUnopResult
       Assign InstrAssign {..} -> goVarRef _instrAssignResult
       Trace {} -> 0
       Dump -> 0
       Failure {} -> 0
-      ArgsNum InstrArgsNum {..} -> goVarRef _instrArgsNumResult
       Prealloc InstrPrealloc {} -> 0
       Alloc InstrAlloc {..} -> goVarRef _instrAllocResult
       AllocClosure InstrAllocClosure {..} -> goVarRef _instrAllocClosureResult

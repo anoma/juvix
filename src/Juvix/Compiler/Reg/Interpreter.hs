@@ -15,8 +15,8 @@ import Juvix.Compiler.Reg.Extra.Info
 import Juvix.Compiler.Reg.Interpreter.Base
 import Juvix.Compiler.Reg.Interpreter.Error
 import Juvix.Compiler.Reg.Pretty
+import Juvix.Compiler.Tree.Evaluator.Builtins
 import System.IO.Unsafe (unsafePerformIO)
-import Text.Read (readMaybe)
 
 type Vars s = MV.MVector s (Maybe Val)
 
@@ -45,13 +45,11 @@ runFunction hout infoTable args0 info0 = do
       instr : instrs -> case instr of
         Nop -> go args tmps instrs
         Binop x -> goBinop args tmps instrs x
-        Show x -> goShow args tmps instrs x
-        StrToInt x -> goStrToInt args tmps instrs x
+        Unop x -> goUnop args tmps instrs x
         Assign x -> goAssign args tmps instrs x
         Trace x -> goTrace args tmps instrs x
         Dump -> goDump args tmps instrs
         Failure x -> goFailure args tmps instrs x
-        ArgsNum x -> goArgsNum args tmps instrs x
         Prealloc x -> goPrealloc args tmps instrs x
         Alloc x -> goAlloc args tmps instrs x
         AllocClosure x -> goAllocClosure args tmps instrs x
@@ -109,51 +107,28 @@ runFunction hout infoTable args0 info0 = do
       VarGroupArgs ->
         throwRunError "function arguments are not writable" Nothing
 
-    goBinop :: Args -> Vars s -> Code -> BinaryOp -> ST s Val
-    goBinop args tmps instrs BinaryOp {..} = do
-      v1 <- readValue args tmps _binaryOpArg1
-      v2 <- readValue args tmps _binaryOpArg2
-      writeVarRef args tmps _binaryOpResult (binop _binaryOpCode v1 v2)
+    goBinop :: Args -> Vars s -> Code -> InstrBinop -> ST s Val
+    goBinop args tmps instrs InstrBinop {..} = do
+      v1 <- readValue args tmps _instrBinopArg1
+      v2 <- readValue args tmps _instrBinopArg2
+      writeVarRef args tmps _instrBinopResult (binop _instrBinopOpcode v1 v2)
       go args tmps instrs
 
-    binop :: Opcode -> Val -> Val -> Val
-    binop op = case op of
-      OpIntAdd -> binopInt (+)
-      OpIntSub -> binopInt (-)
-      OpIntMul -> binopInt (*)
-      OpIntDiv -> binopInt quot
-      OpIntMod -> binopInt rem
-      OpIntLt -> binopCmp (<)
-      OpIntLe -> binopCmp (<=)
-      OpEq -> \v1 v2 -> ValBool (v1 == v2)
-      OpStrConcat -> binopStr (<>)
+    binop :: BinaryOp -> Val -> Val -> Val
+    binop op v1 v2 = case evalBinop op v1 v2 of
+      Left err -> throwRunError err Nothing
+      Right v -> v
 
-    binopInt :: (Integer -> Integer -> Integer) -> Val -> Val -> Val
-    binopInt f v1 v2 = case (v1, v2) of
-      (ValInteger i1, ValInteger i2) -> ValInteger (f i1 i2)
-      _ -> throwRunError "expected integer" Nothing
-
-    binopCmp :: (Integer -> Integer -> Bool) -> Val -> Val -> Val
-    binopCmp f v1 v2 = case (v1, v2) of
-      (ValInteger i1, ValInteger i2) -> ValBool (f i1 i2)
-      _ -> throwRunError "expected integer" Nothing
-
-    binopStr :: (Text -> Text -> Text) -> Val -> Val -> Val
-    binopStr f v1 v2 = case (v1, v2) of
-      (ValString s1, ValString s2) -> ValString (f s1 s2)
-      _ -> throwRunError "expected string" Nothing
-
-    goShow :: Args -> Vars s -> Code -> InstrShow -> ST s Val
-    goShow args tmps instrs InstrShow {..} = do
-      val <- readValue args tmps _instrShowValue
-      writeVarRef args tmps _instrShowResult (ValString (ppPrint infoTable val))
+    goUnop :: Args -> Vars s -> Code -> InstrUnop -> ST s Val
+    goUnop args tmps instrs InstrUnop {..} = do
+      val <- readValue args tmps _instrUnopArg
+      writeVarRef args tmps _instrUnopResult (unop _instrUnopOpcode val)
       go args tmps instrs
 
-    goStrToInt :: Args -> Vars s -> Code -> InstrStrToInt -> ST s Val
-    goStrToInt args tmps instrs InstrStrToInt {..} = do
-      val <- readValue args tmps _instrStrToIntValue
-      writeVarRef args tmps _instrStrToIntResult (ValInteger (valToInt val))
-      go args tmps instrs
+    unop :: UnaryOp -> Val -> Val
+    unop op v = case evalUnop infoTable op v of
+      Left err -> throwRunError err Nothing
+      Right v' -> v'
 
     goAssign :: Args -> Vars s -> Code -> InstrAssign -> ST s Val
     goAssign args tmps instrs InstrAssign {..} = do
@@ -180,18 +155,6 @@ runFunction hout infoTable args0 info0 = do
     goFailure args tmps _ InstrFailure {..} = do
       val <- readValue args tmps _instrFailureValue
       throwRunError ("failure: " <> printVal val) Nothing
-
-    goArgsNum :: Args -> Vars s -> Code -> InstrArgsNum -> ST s Val
-    goArgsNum args tmps instrs InstrArgsNum {..} = do
-      val <- readValue args tmps _instrArgsNumValue
-      case val of
-        ValClosure Closure {..} -> do
-          writeVarRef args tmps _instrArgsNumResult (ValInteger (fromIntegral $ fi ^. functionArgsNum - length _closureArgs))
-          go args tmps instrs
-          where
-            fi = lookupFunInfo infoTable _closureSymbol
-        _ ->
-          throwRunError "expected a closure" Nothing
 
     goPrealloc :: Args -> Vars s -> Code -> InstrPrealloc -> ST s Val
     goPrealloc args tmps instrs InstrPrealloc {} =
@@ -349,15 +312,6 @@ runFunction hout infoTable args0 info0 = do
     printVal = \case
       ValString s -> s
       v -> ppPrint infoTable v
-
-    valToInt :: Val -> Integer
-    valToInt = \case
-      ValString s ->
-        case readMaybe (fromText s) of
-          Just i -> i
-          Nothing -> throwRunError "string to integer conversion error" Nothing
-      ValInteger i -> i
-      _ -> throwRunError "integer conversion error" Nothing
 
 runIO :: forall r. (Members '[Error RegError, Embed IO] r) => Handle -> Handle -> InfoTable -> Val -> Sem r Val
 runIO hin hout infoTable = \case

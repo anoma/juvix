@@ -85,16 +85,14 @@ goFunction infoTab fi = do
       where
         goInstr :: Asm.CmdInstr -> Sem r Node
         goInstr Asm.CmdInstr {..} = case _cmdInstrInstruction of
-          Asm.Binop op -> goBinop (translateBinop op)
-          Asm.ValShow -> goUnop OpShow
-          Asm.StrToInt -> goUnop OpStrToInt
+          Asm.Binop op -> goBinop (PrimBinop op)
+          Asm.Unop op -> goUnop (PrimUnop op)
           Asm.Push (Asm.Constant c) -> return (mkConst c)
           Asm.Push (Asm.Ref r) -> return (mkMemRef r)
           Asm.Pop -> goPop
           Asm.Trace -> goTrace
           Asm.Dump -> unsupported (_cmdInstrInfo ^. Asm.commandInfoLocation)
           Asm.Failure -> goUnop OpFail
-          Asm.ArgsNum -> goUnop OpArgsNum
           Asm.Prealloc {} -> unsupported (_cmdInstrInfo ^. Asm.commandInfoLocation)
           Asm.AllocConstr tag -> goAllocConstr tag
           Asm.AllocClosure x -> goAllocClosure x
@@ -195,18 +193,6 @@ goFunction infoTab fi = do
                   _nodeSaveArg = arg,
                   _nodeSaveBody = body
                 }
-
-        translateBinop :: Asm.Opcode -> BinaryOpcode
-        translateBinop = \case
-          Asm.IntAdd -> IntAdd
-          Asm.IntSub -> IntSub
-          Asm.IntMul -> IntMul
-          Asm.IntDiv -> IntDiv
-          Asm.IntMod -> IntMod
-          Asm.IntLt -> IntLt
-          Asm.IntLe -> IntLe
-          Asm.ValEq -> ValEq
-          Asm.StrConcat -> StrConcat
 
         goBinop :: BinaryOpcode -> Sem r Node
         goBinop op = do

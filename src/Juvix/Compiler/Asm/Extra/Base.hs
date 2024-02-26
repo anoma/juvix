@@ -6,14 +6,20 @@ import Juvix.Compiler.Asm.Language
 mkInstr :: Instruction -> Command
 mkInstr = Instr . CmdInstr emptyInfo
 
-mkBinop :: Opcode -> Command
+mkBinop :: BinaryOp -> Command
 mkBinop = mkInstr . Binop
 
 mkInstr' :: Maybe Location -> Instruction -> Command
 mkInstr' loc = Instr . CmdInstr (CommandInfo loc)
 
-mkBinop' :: Maybe Location -> Opcode -> Command
+mkBinop' :: Maybe Location -> BinaryOp -> Command
 mkBinop' loc = mkInstr' loc . Binop
+
+mkUnop :: UnaryOp -> Command
+mkUnop = mkInstr . Unop
+
+mkUnop' :: Maybe Location -> UnaryOp -> Command
+mkUnop' loc = mkInstr' loc . Unop
 
 isFinalInstr :: Instruction -> Bool
 isFinalInstr = \case

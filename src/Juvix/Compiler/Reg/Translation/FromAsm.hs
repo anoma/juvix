@@ -63,15 +63,13 @@ fromAsmInstr ::
   Sem r Instruction
 fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
   case _cmdInstrInstruction of
-    Asm.Binop op -> return $ mkBinop (mkOpcode op)
-    Asm.ValShow -> return $ mkShow (mkVarRef VarGroupLocal (ntmps + n)) (VRef $ mkVarRef VarGroupLocal (ntmps + n))
-    Asm.StrToInt -> return $ mkStrToInt (mkVarRef VarGroupLocal (ntmps + n)) (VRef $ mkVarRef VarGroupLocal (ntmps + n))
+    Asm.Binop op -> return $ mkBinop op
+    Asm.Unop op -> return $ mkUnop op
     Asm.Push val -> return $ mkAssign (mkVarRef VarGroupLocal (ntmps + n + 1)) (mkValue val)
     Asm.Pop -> return Nop
     Asm.Trace -> return $ Trace $ InstrTrace (VRef $ mkVarRef VarGroupLocal (ntmps + n))
     Asm.Dump -> return Dump
     Asm.Failure -> return $ Failure $ InstrFailure (VRef $ mkVarRef VarGroupLocal (ntmps + n))
-    Asm.ArgsNum -> return $ mkArgsNum (mkVarRef VarGroupLocal (ntmps + n)) (VRef $ mkVarRef VarGroupLocal (ntmps + n))
     Asm.Prealloc x -> return $ mkPrealloc x
     Asm.AllocConstr tag -> return $ mkAlloc tag
     Asm.AllocClosure x -> return $ mkAllocClosure x
@@ -107,40 +105,28 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
     getArgs :: Int -> Int -> [Value]
     getArgs s k = map (\i -> VRef $ mkVarRef VarGroupLocal (ntmps + n - i)) [s .. (s + k - 1)]
 
-    mkBinop :: Opcode -> Instruction
+    mkBinop :: BinaryOp -> Instruction
     mkBinop op =
       Binop
-        ( BinaryOp
-            { _binaryOpCode = op,
-              _binaryOpResult = mkVarRef VarGroupLocal (ntmps + n - 1),
-              _binaryOpArg1 = VRef $ mkVarRef VarGroupLocal (ntmps + n),
-              _binaryOpArg2 = VRef $ mkVarRef VarGroupLocal (ntmps + n - 1)
+        ( InstrBinop
+            { _instrBinopOpcode = op,
+              _instrBinopResult = mkVarRef VarGroupLocal (ntmps + n - 1),
+              _instrBinopArg1 = VRef $ mkVarRef VarGroupLocal (ntmps + n),
+              _instrBinopArg2 = VRef $ mkVarRef VarGroupLocal (ntmps + n - 1)
             }
         )
 
-    mkOpcode :: Asm.Opcode -> Opcode
-    mkOpcode = \case
-      Asm.IntAdd -> OpIntAdd
-      Asm.IntSub -> OpIntSub
-      Asm.IntMul -> OpIntMul
-      Asm.IntDiv -> OpIntDiv
-      Asm.IntMod -> OpIntMod
-      Asm.IntLt -> OpIntLt
-      Asm.IntLe -> OpIntLe
-      Asm.ValEq -> OpEq
-      Asm.StrConcat -> OpStrConcat
-
-    mkShow :: VarRef -> Value -> Instruction
-    mkShow tgt src = Show (InstrShow tgt src)
-
-    mkStrToInt :: VarRef -> Value -> Instruction
-    mkStrToInt tgt src = StrToInt (InstrStrToInt tgt src)
+    mkUnop :: UnaryOp -> Instruction
+    mkUnop op =
+      Unop
+        InstrUnop
+          { _instrUnopOpcode = op,
+            _instrUnopResult = mkVarRef VarGroupLocal (ntmps + n),
+            _instrUnopArg = VRef $ mkVarRef VarGroupLocal (ntmps + n)
+          }
 
     mkAssign :: VarRef -> Value -> Instruction
     mkAssign tgt src = Assign (InstrAssign tgt src)
-
-    mkArgsNum :: VarRef -> Value -> Instruction
-    mkArgsNum tgt src = ArgsNum (InstrArgsNum tgt src)
 
     mkValue :: Asm.Value -> Value
     mkValue = \case

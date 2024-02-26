@@ -192,17 +192,21 @@ instance PrettyCode Constant where
     ConstVoid {} ->
       return $ annotate (AnnKind KNameConstructor) Str.void
 
+instance PrettyCode BinaryOp where
+  ppCode op = return $ primitive $ case op of
+    OpIntAdd -> Str.instrAdd
+    OpIntSub -> Str.instrSub
+    OpIntMul -> Str.instrMul
+    OpIntDiv -> Str.instrDiv
+    OpIntMod -> Str.instrMod
+    OpIntLt -> Str.instrLt
+    OpIntLe -> Str.instrLe
+    OpEq -> Str.instrEq
+    OpStrConcat -> Str.instrStrConcat
+
 instance PrettyCode BinaryOpcode where
   ppCode = \case
-    IntAdd -> return $ primitive Str.instrAdd
-    IntSub -> return $ primitive Str.instrSub
-    IntMul -> return $ primitive Str.instrMul
-    IntDiv -> return $ primitive Str.instrDiv
-    IntMod -> return $ primitive Str.instrMod
-    IntLt -> return $ primitive Str.instrLt
-    IntLe -> return $ primitive Str.instrLe
-    ValEq -> return $ primitive Str.instrEq
-    StrConcat -> return $ primitive Str.instrStrConcat
+    PrimBinop x -> ppCode x
     OpSeq -> return $ primitive Str.sseq_
 
 instance PrettyCode NodeBinop where
@@ -212,13 +216,17 @@ instance PrettyCode NodeBinop where
     arg2 <- ppCode _nodeBinopArg2
     return $ op <> parens (arg1 <> comma <+> arg2)
 
+instance PrettyCode UnaryOp where
+  ppCode op = return $ primitive $ case op of
+    OpShow -> Str.instrShow
+    OpStrToInt -> Str.instrStrToInt
+    OpArgsNum -> Str.instrArgsNum
+
 instance PrettyCode UnaryOpcode where
   ppCode = \case
-    OpShow -> return $ primitive Str.instrShow
-    OpStrToInt -> return $ primitive Str.instrStrToInt
+    PrimUnop x -> ppCode x
     OpTrace -> return $ primitive Str.instrTrace
     OpFail -> return $ primitive Str.instrFailure
-    OpArgsNum -> return $ primitive Str.instrArgsNum
 
 instance PrettyCode NodeUnop where
   ppCode NodeUnop {..} = do

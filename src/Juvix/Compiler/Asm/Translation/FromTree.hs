@@ -57,13 +57,13 @@ genCode fi =
               (mkInstr Pop)
               (go isTail _nodeBinopArg2)
           )
-      _ ->
+      Tree.PrimBinop op ->
         snocReturn isTail $
           DL.append
             (go False _nodeBinopArg2)
             ( DL.snoc
                 (go False _nodeBinopArg1)
-                (genBinOp _nodeBinopOpcode)
+                (mkBinop op)
             )
 
     goUnop :: Bool -> Tree.NodeUnop -> Code'
@@ -221,27 +221,11 @@ genCode fi =
     goArgs :: [Tree.Node] -> Code'
     goArgs args = DL.concat (map (go False) (reverse args))
 
-    genBinOp :: Tree.BinaryOpcode -> Command
-    genBinOp = \case
-      Tree.IntAdd -> mkBinop IntAdd
-      Tree.IntSub -> mkBinop IntSub
-      Tree.IntMul -> mkBinop IntMul
-      Tree.IntDiv -> mkBinop IntDiv
-      Tree.IntMod -> mkBinop IntMod
-      Tree.IntLt -> mkBinop IntLt
-      Tree.IntLe -> mkBinop IntLe
-      Tree.ValEq -> mkBinop ValEq
-      Tree.StrConcat -> mkBinop StrConcat
-      Tree.OpSeq -> impossible
-
     genUnOp :: Tree.UnaryOpcode -> Command
-    genUnOp =
-      mkInstr . \case
-        Tree.OpShow -> ValShow
-        Tree.OpStrToInt -> StrToInt
-        Tree.OpTrace -> Trace
-        Tree.OpFail -> Failure
-        Tree.OpArgsNum -> ArgsNum
+    genUnOp op = case op of
+      Tree.PrimUnop op' -> mkUnop op'
+      Tree.OpTrace -> mkInstr Trace
+      Tree.OpFail -> mkInstr Failure
 
     snocReturn :: Bool -> Code' -> Code'
     snocReturn True code = DL.snoc code (mkInstr Return)

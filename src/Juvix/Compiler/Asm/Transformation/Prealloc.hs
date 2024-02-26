@@ -42,11 +42,11 @@ computeCodePrealloc maxArgsNum tab code = prealloc <$> foldS sig code (0, [])
       TailCall {} -> return (0, cmd : prealloc acc)
       CallClosures {} -> return (0, cmd : prealloc acc)
       TailCallClosures {} -> return (0, cmd : prealloc acc)
-      Binop StrConcat -> do
+      Binop OpStrConcat -> do
         opts <- ask
         let size = opts ^. optLimits . limitsMaxStringSize
         return (k + size, cmd : c)
-      ValShow -> do
+      Unop OpShow -> do
         opts <- ask
         let size = opts ^. optLimits . limitsMaxStringSize
         return (k + size, cmd : c)
@@ -131,11 +131,11 @@ checkCodePrealloc maxArgsNum tab code = do
         opts <- ask
         let size = opts ^. optLimits . limitsClosureHeadSize + maxArgsNum
         return $ \k -> cont (k - size)
-      Binop StrConcat -> do
+      Binop OpStrConcat -> do
         opts <- ask
         let size = opts ^. optLimits . limitsMaxStringSize
         return $ \k -> cont (k - size)
-      ValShow -> do
+      Unop OpShow -> do
         opts <- ask
         let size = opts ^. optLimits . limitsMaxStringSize
         return $ \k -> cont (k - size)

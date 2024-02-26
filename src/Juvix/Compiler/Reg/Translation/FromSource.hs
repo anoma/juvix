@@ -72,9 +72,7 @@ instrWithResult = do
   vref <- declVarRef
   kw kwEq
   (Binop <$> instrBinop vref)
-    <|> (Show <$> instrShow vref)
-    <|> (StrToInt <$> instrStrToInt vref)
-    <|> (ArgsNum <$> instrArgsNum vref)
+    <|> (Unop <$> instrUnop vref)
     <|> (Alloc <$> instrAlloc vref)
     <|> (AllocClosure <$> instrAllocClosure vref)
     <|> (ExtendClosure <$> instrExtendClosure vref)
@@ -88,7 +86,7 @@ instrNop = kw kwNop
 instrBinop ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   VarRef ->
-  ParsecS r BinaryOp
+  ParsecS r InstrBinop
 instrBinop vref =
   parseBinaryOp kwAdd_ OpIntAdd vref
     <|> parseBinaryOp kwSub_ OpIntSub vref
@@ -103,45 +101,44 @@ instrBinop vref =
 parseBinaryOp ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   Keyword ->
-  Opcode ->
+  BinaryOp ->
   VarRef ->
-  ParsecS r BinaryOp
+  ParsecS r InstrBinop
 parseBinaryOp kwd op vref = do
   kw kwd
   arg1 <- value
   arg2 <- value
   return $
-    BinaryOp
-      { _binaryOpCode = op,
-        _binaryOpResult = vref,
-        _binaryOpArg1 = arg1,
-        _binaryOpArg2 = arg2
+    InstrBinop
+      { _instrBinopOpcode = op,
+        _instrBinopResult = vref,
+        _instrBinopArg1 = arg1,
+        _instrBinopArg2 = arg2
       }
 
-instrShow ::
+instrUnop ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   VarRef ->
-  ParsecS r InstrShow
-instrShow vref = do
-  kw kwShow
-  val <- value
-  return
-    InstrShow
-      { _instrShowResult = vref,
-        _instrShowValue = val
-      }
+  ParsecS r InstrUnop
+instrUnop vref =
+  parseUnaryOp kwShow OpShow vref
+    <|> parseUnaryOp kwAtoi OpStrToInt vref
+    <|> parseUnaryOp kwArgsNum OpArgsNum vref
 
-instrStrToInt ::
+parseUnaryOp ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  Keyword ->
+  UnaryOp ->
   VarRef ->
-  ParsecS r InstrStrToInt
-instrStrToInt vref = do
-  kw kwAtoi
-  val <- value
-  return
-    InstrStrToInt
-      { _instrStrToIntResult = vref,
-        _instrStrToIntValue = val
+  ParsecS r InstrUnop
+parseUnaryOp kwd op vref = do
+  kw kwd
+  arg <- value
+  return $
+    InstrUnop
+      { _instrUnopOpcode = op,
+        _instrUnopResult = vref,
+        _instrUnopArg = arg
       }
 
 instrAssign ::
@@ -179,19 +176,6 @@ instrFailure = do
   return
     InstrFailure
       { _instrFailureValue = val
-      }
-
-instrArgsNum ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
-  VarRef ->
-  ParsecS r InstrArgsNum
-instrArgsNum vref = do
-  kw kwArgsNum
-  val <- value
-  return
-    InstrArgsNum
-      { _instrArgsNumResult = vref,
-        _instrArgsNumValue = val
       }
 
 instrPrealloc ::
