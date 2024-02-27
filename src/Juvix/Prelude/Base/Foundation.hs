@@ -158,10 +158,8 @@ import Safe.Foldable
 import System.Exit hiding (exitFailure, exitSuccess)
 import System.Exit qualified as IO
 import System.FilePath (FilePath, dropTrailingPathSeparator, normalise, (<.>), (</>))
-import System.IO qualified as IO
 import System.IO hiding
   ( appendFile,
-    print,
     getContents,
     getLine,
     hGetContents,
