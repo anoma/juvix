@@ -9,7 +9,10 @@ import Juvix.Compiler.Casm.Translation.FromSource
 data StdlibBuiltins = StdlibBuiltins
   { _stdlibGetRegs :: Symbol,
     _stdlibCallClosure :: Symbol,
-    _stdlibExtendClosure :: Symbol
+    _stdlibExtendClosure :: Symbol,
+    _stdlibGetRegsName :: Text,
+    _stdlibCallClosureName :: Text,
+    _stdlibExtendClosureName :: Text
   }
 
 makeLenses ''StdlibBuiltins
@@ -20,7 +23,10 @@ addStdlibBuiltins = do
     fmap (fromRight impossible) $
       runParser' "stdlib.casm" $
         decodeUtf8 $(FE.makeRelativeToProject "runtime/src/casm/stdlib.casm" >>= FE.embedFile)
-  _stdlibGetRegs <- fromJust <$> getIdent "juvix_get_regs"
-  _stdlibCallClosure <- fromJust <$> getIdent "juvix_call_closure"
-  _stdlibExtendClosure <- fromJust <$> getIdent "juvix_extend_closure"
+  let _stdlibGetRegsName :: Text = "juvix_get_regs"
+      _stdlibCallClosureName :: Text = "juvix_call_closure"
+      _stdlibExtendClosureName :: Text = "juvix_extend_closure"
+  _stdlibGetRegs <- fromJust <$> getIdent _stdlibGetRegsName
+  _stdlibCallClosure <- fromJust <$> getIdent _stdlibCallClosureName
+  _stdlibExtendClosure <- fromJust <$> getIdent _stdlibExtendClosureName
   return (StdlibBuiltins {..}, instrs)

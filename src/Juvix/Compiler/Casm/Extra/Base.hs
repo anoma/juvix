@@ -90,3 +90,6 @@ adjustAp :: Int16 -> MemRef -> MemRef
 adjustAp idx mr@MemRef {..} = case _memRefReg of
   Ap -> MemRef Ap (_memRefOff - idx)
   Fp -> mr
+
+mkCall :: Value -> Instruction
+mkCall = Call . InstrCall

@@ -1,6 +1,7 @@
 module Juvix.Compiler.Casm.Translation.FromReg where
 
 import Data.HashMap.Strict qualified as HashMap
+import Juvix.Compiler.Backend
 import Juvix.Compiler.Casm.Data.LabelInfo
 import Juvix.Compiler.Casm.Data.LabelInfoBuilder
 import Juvix.Compiler.Casm.Extra.Base
@@ -16,11 +17,12 @@ fromReg :: Reg.InfoTable -> (LabelInfo, [Instruction])
 fromReg tab = run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolId tab) $ do
   let initialOffset :: Int = 2
   (blts, binstrs) <- addStdlibBuiltins
-  (_, instrs) <- second (concat . reverse) <$> foldM (goFun blts) (initialOffset + length binstrs, []) (tab ^. Reg.infoFunctions)
+  (addr, instrs) <- second (concat . reverse) <$> foldM (goFun blts) (initialOffset + length binstrs, []) (tab ^. Reg.infoFunctions)
+  eassert (addr == length instrs + length binstrs + initialOffset)
   let endName :: Text = "__juvix_end"
   endSym <- freshSymbol
   registerLabelName endSym endName
-  registerLabelAddress endSym (length instrs + length binstrs + initialOffset)
+  registerLabelAddress endSym addr
   let mainSym = fromJust $ tab ^. Reg.infoMainFunction
       mainName = fromJust (HashMap.lookup mainSym (tab ^. Reg.infoFunctions)) ^. Reg.functionName
       callInstr = Call $ InstrCall $ Lab $ LabelRef mainSym (Just mainName)
@@ -32,13 +34,16 @@ fromReg tab = run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolId tab) $ do
             }
   return $ callInstr : jmpInstr : binstrs ++ instrs
   where
+    info :: Reg.ExtraInfo
+    info = Reg.computeExtraInfo (getLimits TargetCairo False) tab
+
     goFun :: forall r. (Member LabelInfoBuilder r) => StdlibBuiltins -> (Address, [[Instruction]]) -> Reg.FunctionInfo -> Sem r (Address, [[Instruction]])
     goFun blts (addr0, acc) funInfo = do
       sym <- freshSymbol
       registerLabelName sym (funInfo ^. Reg.functionName)
       registerLabelAddress sym addr0
       let code = funInfo ^. Reg.functionCode
-          n = Reg.computeLocalVarsNum code
+          n = fromJust $ HashMap.lookup (funInfo ^. Reg.functionSymbol) (info ^. Reg.extraInfoLocalVarsNum)
           i1 = Alloc $ InstrAlloc $ Val $ Imm $ fromIntegral n
           pre = [i1]
           addr1 = addr0 + length pre
@@ -105,6 +110,18 @@ fromReg tab = run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolId tab) $ do
           Reg.CRef x -> ([goConstrField (MemRef Ap 0) True x], Ref $ MemRef Ap (-1))
           Reg.VRef x -> ([], Ref $ goVarRef x)
 
+        goAssignValue :: MemRef -> Reg.Value -> Instruction
+        goAssignValue res = \case
+          Reg.Const c -> mkAssign res (Val $ Imm $ goConst c)
+          Reg.CRef x -> goConstrField res False x
+          Reg.VRef x -> mkAssign res (Val $ Ref $ goVarRef x)
+
+        goAssignApValue :: Reg.Value -> Instruction
+        goAssignApValue = \case
+          Reg.Const c -> mkAssignAp (Val $ Imm $ goConst c)
+          Reg.CRef x -> goConstrField (MemRef Ap 0) True x
+          Reg.VRef x -> mkAssignAp (Val $ Ref $ goVarRef x)
+
         mkBinop :: Reg.BinaryOp -> MemRef -> MemRef -> Value -> [Instruction]
         mkBinop op res arg1 arg2 = case op of
           Reg.OpIntAdd ->
@@ -167,8 +184,8 @@ fromReg tab = run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolId tab) $ do
         goUnop _ Reg.InstrUnop {..} = case _instrUnopOpcode of
           Reg.OpShow -> unsupported "strings"
           Reg.OpStrToInt -> unsupported "strings"
-          Reg.OpFieldToInt -> return $ is ++ [mkAssign res (Val v)]
-          Reg.OpIntToField -> return $ is ++ [mkAssign res (Val v)]
+          Reg.OpFieldToInt -> return [goAssignValue res _instrUnopArg]
+          Reg.OpIntToField -> return [goAssignValue res _instrUnopArg]
           Reg.OpArgsNum -> case v of
             Ref mr ->
               return $ is ++ mkOpArgsNum res mr
@@ -180,13 +197,21 @@ fromReg tab = run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolId tab) $ do
 
         goAssign :: Address -> Reg.InstrAssign -> Sem r [Instruction]
         goAssign _ Reg.InstrAssign {..} =
-          return $ is ++ [mkAssign res (Val v)]
+          return [goAssignValue res _instrAssignValue]
           where
             res = goVarRef _instrAssignResult
-            (is, v) = goValue _instrAssignValue
 
         goAlloc :: Address -> Reg.InstrAlloc -> Sem r [Instruction]
-        goAlloc addr Reg.InstrAlloc {..} = undefined
+        goAlloc _ Reg.InstrAlloc {..} =
+          return $
+            [ mkCall $ Lab $ LabelRef (blts ^. stdlibGetRegs) (Just (blts ^. stdlibGetRegsName)),
+              mkNativeBinop FieldAdd res (MemRef Ap (-2)) (Imm 2),
+              mkAssignAp (Val $ Imm $ fromIntegral tagId)
+            ]
+              ++ map goAssignApValue _instrAllocArgs
+          where
+            res = goVarRef _instrAllocResult
+            tagId = fromJust $ HashMap.lookup _instrAllocTag (info ^. Reg.extraInfoUIDs)
 
         goAllocClosure :: Address -> Reg.InstrAllocClosure -> Sem r [Instruction]
         goAllocClosure addr Reg.InstrAllocClosure {..} = undefined
