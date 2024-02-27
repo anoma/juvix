@@ -34,24 +34,22 @@ runPackagePathResolver rootPath sem = do
   initFiles ds
   fs <- rootInfoFiles ds
   let mkRootInfo' = mkRootInfo ds fs
-  ( interpretH $ \case
-      RegisterDependencies {} -> pureT ()
-      ExpectedPathInfoTopModule m -> do
-        let _pathInfoTopModule = m
-            _pathInfoRootInfo =
-              --  A Package file is a member of a package by definition.
-              fromMaybe (error "runPackagePathResolver: expected root info") $
-                mkRootInfo' (topModulePathToRelativePath' m)
-        pureT PathInfoTopModule {..}
-      WithPath m a -> do
-        let relPath = topModulePathToRelativePath' m
-            x :: Either PathResolverError (Path Abs Dir, Path Rel File)
-            x = case mkRootInfo' relPath of
-              Just p -> Right (p ^. rootInfoPath, relPath)
-              Nothing -> Left (ErrPackageInvalidImport PackageInvalidImport {_packageInvalidImport = m})
-        runTSimple (return x) >>= bindTSimple a
-    )
-    sem
+  (`interpretH` sem) $ \localEnv -> \case
+    RegisterDependencies {} -> return ()
+    ExpectedPathInfoTopModule m -> do
+      let _pathInfoTopModule = m
+          _pathInfoRootInfo =
+            --  A Package file is a member of a package by definition.
+            fromMaybe (error "runPackagePathResolver: expected root info") $
+              mkRootInfo' (topModulePathToRelativePath' m)
+      return PathInfoTopModule {..}
+    WithPath m a -> do
+      let relPath = topModulePathToRelativePath' m
+          x :: Either PathResolverError (Path Abs Dir, Path Rel File)
+          x = case mkRootInfo' relPath of
+            Just p -> Right (p ^. rootInfoPath, relPath)
+            Nothing -> Left (ErrPackageInvalidImport PackageInvalidImport {_packageInvalidImport = m})
+      runTSimpleEff localEnv (a x)
   where
     rootInfoDirs :: Sem r RootInfoDirs
     rootInfoDirs = do

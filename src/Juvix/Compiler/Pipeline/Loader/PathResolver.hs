@@ -142,7 +142,7 @@ resolveDependency i = case i ^. packageDepdendencyInfoDependency of
             { _cloneArgsCloneDir = cloneDir,
               _cloneArgsRepoUrl = g ^. gitDependencyUrl
             }
-    scoped cloneArgs $ do
+    provideWith_ cloneArgs $ do
       fetchOnNoSuchRefAndRetry (errorHandler cloneDir) (`checkout` (g ^. gitDependencyRef))
       resolvedRef <- headRef (errorHandler cloneDir)
       return
@@ -406,25 +406,26 @@ re ::
   (Members '[TaggedLock, Reader EntryPoint, Files, Error JuvixError, Error DependencyError, GitClone, EvalFileEff] r) =>
   Sem (PathResolver ': r) a ->
   Sem (Reader ResolverEnv ': State ResolverState ': r) a
-re = reinterpret2H helper
+re = interpretTop2H helper
   where
     helper ::
-      forall rInitial x.
-      PathResolver (Sem rInitial) x ->
-      Tactical PathResolver (Sem rInitial) (Reader ResolverEnv ': (State ResolverState ': r)) x
-    helper = \case
-      RegisterDependencies forceUpdateLockfile -> registerDependencies' forceUpdateLockfile >>= pureT
-      ExpectedPathInfoTopModule m -> expectedPath' m >>= pureT
+      forall x localEs.
+      LocalEnv localEs (Reader ResolverEnv ': State ResolverState ': r) ->
+      PathResolver (Sem localEs) x ->
+      Sem (Reader ResolverEnv ': State ResolverState ': r) x
+    helper localEnv = \case
+      RegisterDependencies forceUpdateLockfile -> registerDependencies' forceUpdateLockfile
+      ExpectedPathInfoTopModule m -> expectedPath' m
       WithPath m a -> do
         x :: Either PathResolverError (Path Abs Dir, Path Rel File) <- resolvePath' m
         oldroot <- asks (^. envRoot)
-        x' <- pureT x
-        a' <- bindT a
+        -- a' <- bindT a
         st' <- get
         let root' = case x of
               Left {} -> oldroot
               Right (r, _) -> r
-        raise (evalPathResolver' st' root' (a' x'))
+            localEff :: Sem (PathResolver ': State ResolverState ': r) x = runTSimpleEff localEnv (a x)
+        raise (evalPathResolver' st' root' localEff)
 
 evalPathResolver' :: (Members '[TaggedLock, Reader EntryPoint, Files, Error JuvixError, Error DependencyError, GitClone, EvalFileEff] r) => ResolverState -> Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r a
 evalPathResolver' st root = fmap snd . runPathResolver' st root

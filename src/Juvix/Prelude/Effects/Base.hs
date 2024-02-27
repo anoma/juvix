@@ -22,8 +22,8 @@ import Effectful.Error.Static hiding (runError)
 import Effectful.Internal.Env (getEnv, putEnv)
 import Effectful.Provider
 import Effectful.Reader.Static
-import Effectful.Resource
-import Effectful.State.Static.Local hiding (runState)
+import Effectful.Resource hiding (register)
+import Effectful.State.Static.Local hiding (runState, state)
 import Effectful.State.Static.Local qualified as State
 import Effectful.TH
 import Juvix.Prelude.Base.Foundation
@@ -205,8 +205,9 @@ reinterpret re i = reinterpretH re (const i)
 
 -- TODO maybe think of a better name
 runTSimpleEff ::
-  forall (localEs :: [Effect]) (r :: [Effect]) x.
-  LocalEnv localEs r ->
+  forall (handlerEs :: [Effect]) (localEs :: [Effect]) (r :: [Effect]) x.
+  (SharedSuffix r handlerEs) =>
+  LocalEnv localEs handlerEs ->
   Sem localEs x ->
   Sem r x
 runTSimpleEff locEnv ma =

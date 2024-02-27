@@ -40,7 +40,7 @@ renderPackageVersion v pkg = toPlainText (ppOutDefaultNoComments (toConcrete (ge
 -- | Load a package file in the context of the PackageDescription module and the global package stdlib.
 loadPackage :: (Members '[Files, EvalFileEff, Error PackageLoaderError] r) => BuildDir -> Path Abs File -> Sem r Package
 loadPackage buildDir packagePath = do
-  scoped @(Path Abs File) @EvalEff packagePath $ do
+  provideWith_ @EvalEff packagePath $ do
     (v, t) <- getPackageNode
     ((getPackageType (t ^. typeSpecVersion)) ^. packageDescriptionTypeToPackage) buildDir packagePath =<< eval' v
   where

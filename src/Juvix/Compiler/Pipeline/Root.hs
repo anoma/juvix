@@ -17,7 +17,7 @@ readPackageRootIO root = readPackageIO (root ^. rootRootDir) (root ^. rootBuildD
 
 findRootAndChangeDir ::
   forall r.
-  (Members '[TaggedLock, EmbedIO, Final IO] r) =>
+  (Members '[TaggedLock, EmbedIO, EmbedIO] r) =>
   Maybe (Path Abs Dir) ->
   Maybe (Path Abs Dir) ->
   Path Abs Dir ->

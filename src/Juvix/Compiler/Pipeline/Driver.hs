@@ -287,8 +287,7 @@ withPath' ::
   TopModulePath ->
   (Path Abs File -> Sem r a) ->
   Sem r a
-withPath' path a = withPathFile path (either throwError a)
+withPath' path a = withPathFile path (either throwErr a)
   where
-    throwError :: PathResolverError -> Sem r a
-    throwError e =
-      mapError (JuvixError @PathResolverError) $ throw e
+    throwErr :: PathResolverError -> Sem r a
+    throwErr = mapError (JuvixError @PathResolverError) . throw

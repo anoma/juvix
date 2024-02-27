@@ -20,4 +20,4 @@ data EvalEff :: Effect where
 
 makeSem ''EvalEff
 
-type EvalFileEff = Provider EvalEff (Path Abs File)
+type EvalFileEff = Provider_ EvalEff (Path Abs File)
