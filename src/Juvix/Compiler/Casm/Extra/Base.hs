@@ -1,4 +1,4 @@
-module Juvix.Compiler.Casm.Extra where
+module Juvix.Compiler.Casm.Extra.Base where
 
 import Juvix.Compiler.Casm.Data.Limits
 import Juvix.Compiler.Casm.Language

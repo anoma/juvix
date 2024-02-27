@@ -3,7 +3,8 @@ module Juvix.Compiler.Casm.Translation.FromReg where
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Casm.Data.LabelInfo
 import Juvix.Compiler.Casm.Data.LabelInfoBuilder
-import Juvix.Compiler.Casm.Extra
+import Juvix.Compiler.Casm.Extra.Base
+import Juvix.Compiler.Casm.Extra.Stdlib
 import Juvix.Compiler.Casm.Language
 import Juvix.Compiler.Reg.Data.InfoTable qualified as Reg
 import Juvix.Compiler.Reg.Extra.Info qualified as Reg
@@ -14,11 +15,12 @@ import Juvix.Data.Field
 fromReg :: Reg.InfoTable -> (LabelInfo, [Instruction])
 fromReg tab = run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolId tab) $ do
   let initialOffset :: Int = 2
-  (_, instrs) <- second (concat . reverse) <$> foldM goFun (initialOffset, []) (tab ^. Reg.infoFunctions)
+  (blts, binstrs) <- addStdlibBuiltins
+  (_, instrs) <- second (concat . reverse) <$> foldM (goFun blts) (initialOffset + length binstrs, []) (tab ^. Reg.infoFunctions)
   let endName :: Text = "__juvix_end"
   endSym <- freshSymbol
   registerLabelName endSym endName
-  registerLabelAddress endSym (length instrs + initialOffset)
+  registerLabelAddress endSym (length instrs + length binstrs + initialOffset)
   let mainSym = fromJust $ tab ^. Reg.infoMainFunction
       mainName = fromJust (HashMap.lookup mainSym (tab ^. Reg.infoFunctions)) ^. Reg.functionName
       callInstr = Call $ InstrCall $ Lab $ LabelRef mainSym (Just mainName)
@@ -28,10 +30,10 @@ fromReg tab = run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolId tab) $ do
             { _instrJumpTarget = Lab $ LabelRef endSym (Just endName),
               _instrJumpIncAp = False
             }
-  return $ callInstr : jmpInstr : instrs
+  return $ callInstr : jmpInstr : binstrs ++ instrs
   where
-    goFun :: forall r. (Member LabelInfoBuilder r) => (Address, [[Instruction]]) -> Reg.FunctionInfo -> Sem r (Address, [[Instruction]])
-    goFun (addr0, acc) funInfo = do
+    goFun :: forall r. (Member LabelInfoBuilder r) => StdlibBuiltins -> (Address, [[Instruction]]) -> Reg.FunctionInfo -> Sem r (Address, [[Instruction]])
+    goFun blts (addr0, acc) funInfo = do
       sym <- freshSymbol
       registerLabelName sym (funInfo ^. Reg.functionName)
       registerLabelAddress sym addr0

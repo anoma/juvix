@@ -1,11 +1,12 @@
 -- Juvix runtime for Cairo assembly
 
--- Closure layout: [ addr | 9 - argsnum | 9 - sargs ]
+-- Closure layout: [ addr | 9 - sargs | 9 - argsnum | arguments... ]
 --  argsnum -- number of arguments left
 --  sargs -- number of arguments stored in the closure
+-- sargs + argsnum = total numer of arguments for the function
 -- Maximum number of function arguments: 8
 
--- after calling this function:
+-- after calling juvix_get_regs:
 -- [ap - 4] == fp
 -- [ap - 3] == pc
 -- [ap - 2] == ap - 2
@@ -30,7 +31,7 @@ juvix_call_closure:
   [ap] = [fp - 6]; ap++
   [ap] = [fp - 5]; ap++
   [ap] = [fp - 4]; ap++
-  -- jmp rel (17 - sargs)
+  -- jmp rel (9 - sargs)
   jmp rel [[fp - 3] + 1]
   [ap] = [[fp - 3] + 10]; ap++
   [ap] = [[fp - 3] + 9]; ap++
@@ -43,19 +44,19 @@ juvix_call_closure:
   call [fp]
   ret
 
--- [fp - 3]: closure; [fp - 4]: argument
-juvix_extend_closure_1:
-  ap += 3
-  call get_regs
-  [fp] = [ap - 2] + 2
+-- [fp - 3]: closure
+-- [fp - 4]: 9 - n, where 0 < n <= 8 is the number of arguments to extend with
+-- [fp - 5 - k]: argument n - k - 1 (reverse order!)
+juvix_extend_closure:
+  ap += 5
   -- 9 - sargs
   [fp + 1] = [[fp - 3] + 1]
   -- 9 - argsnum (expected)
   [fp + 2] = [[fp - 3] + 2]
-  [ap] = [[fp - 3]]; ap++
-  [ap] = [fp + 1] - 1; ap++
-  [ap] = [fp + 2] + 1; ap++
-  -- jmp rel (9 - sargs)
+  [fp + 3] = 9
+  -- [fp + 4] = sargs
+  [fp + 4] = [fp + 3] - [fp + 1]
+  -- copy stored args reversing them
   jmp rel [fp + 1]
   [ap] = [[fp - 3] + 10]; ap++
   [ap] = [[fp - 3] + 9]; ap++
@@ -65,7 +66,32 @@ juvix_extend_closure_1:
   [ap] = [[fp - 3] + 5]; ap++
   [ap] = [[fp - 3] + 4]; ap++
   [ap] = [[fp - 3] + 3]; ap++
-  -- extra args
-  [ap] = [fp - 4]; ap++
+  call juvix_get_regs
+  [fp] = [ap - 2] + 2
+  -- closure header
+  [ap] = [[fp - 3]]; ap++
+  [ap] = [fp + 1] - 1; ap++
+  [ap] = [fp + 2] + 1; ap++
+  -- copy stored args: jmp rel (9 - sargs)
+  jmp rel [fp + 1]
+  [ap] = [fp + 11]; ap++
+  [ap] = [fp + 10]; ap++
+  [ap] = [fp + 9]; ap++
+  [ap] = [fp + 8]; ap++
+  [ap] = [fp + 8]; ap++
+  [ap] = [fp + 7]; ap++
+  [ap] = [fp + 6]; ap++
+  [ap] = [fp + 5]; ap++
+  -- copy extra args: jmp rel (9 - extra args num)
+  jmp rel [fp - 4]
+  [ap] = [fp - 12]; ap++
+  [ap] = [fp - 11]; ap++
+  [ap] = [fp - 10]; ap++
+  [ap] = [fp - 9]; ap++
+  [ap] = [fp - 8]; ap++
+  [ap] = [fp - 7]; ap++
+  [ap] = [fp - 6]; ap++
+  [ap] = [fp - 5]; ap++
+  -- return value
   [ap] = [fp]; ap++
   ret

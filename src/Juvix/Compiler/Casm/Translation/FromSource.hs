@@ -18,6 +18,13 @@ runParser fileName input_ =
     (_, Left err) -> Left (MegaparsecError err)
     (li, Right instrs) -> Right (li, instrs)
 
+runParser' :: (Member LabelInfoBuilder r) => FilePath -> Text -> Sem r (Either MegaparsecError [Instruction])
+runParser' fileName input_ = do
+  e <- P.runParserT parseToplevel fileName input_
+  return $ case e of
+    Left err -> Left (MegaparsecError err)
+    Right instrs -> Right instrs
+
 parseToplevel :: (Member LabelInfoBuilder r) => ParsecS r [Instruction]
 parseToplevel = do
   instrs <- statements 0

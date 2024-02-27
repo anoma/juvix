@@ -5,6 +5,7 @@ function f((integer, integer) → integer) : integer;
 function plus(integer, integer) : integer;
 function minus(integer, integer) : integer;
 function mult(integer, integer) : integer;
+function g(integer, integer, integer, integer) : integer;
 function main() : *;
 
 function ext_10((integer, integer) → integer) : integer → integer {
@@ -31,12 +32,18 @@ function mult(integer, integer) : integer {
   mul(arg[0], arg[1])
 }
 
+function g(integer, integer, integer, integer) : integer {
+  mul(arg[3], add(arg[2], sub(arg[0], arg[1])))
+}
+
 function main() : * {
-  seq(seq(seq(save(call[f](calloc[plus]())) {
+  seq(seq(seq(seq(save(call[f](calloc[plus]())) {
     seq(trace(tmp[0]), tmp[0])
   }, save(call[f](calloc[minus]())) {
     seq(trace(tmp[0]), tmp[0])
   }), save(call[f](calloc[mult]())) {
+    seq(trace(tmp[0]), tmp[0])
+  }), save(call[f](calloc[g](3, 2))) {
     seq(trace(tmp[0]), tmp[0])
   }), void)
 }
