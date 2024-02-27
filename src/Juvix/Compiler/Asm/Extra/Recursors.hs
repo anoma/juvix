@@ -131,13 +131,16 @@ recurse' sig = go True
             Return ->
               return (dropTempStack mem)
 
-        fixMemIntOp :: Memory -> Sem r Memory
-        fixMemIntOp mem = fixMemBinOp' mem mkTypeInteger mkTypeInteger mkTypeInteger
-
         fixMemBinOp' :: Memory -> Type -> Type -> Type -> Sem r Memory
         fixMemBinOp' mem ty0 ty1 rty = do
           checkValueStack' loc (sig ^. recursorInfoTable) [ty0, ty1] mem
           return $ pushValueStack rty (popValueStack 2 mem)
+
+        fixMemIntOp :: Memory -> Sem r Memory
+        fixMemIntOp mem = fixMemBinOp' mem mkTypeInteger mkTypeInteger mkTypeInteger
+
+        fixMemFieldOp :: Memory -> Sem r Memory
+        fixMemFieldOp mem = fixMemBinOp' mem TyField TyField TyField
 
         fixMemBinop :: Memory -> BinaryOp -> Sem r Memory
         fixMemBinop mem op = case op of
@@ -155,6 +158,14 @@ recurse' sig = go True
             fixMemBinOp' mem mkTypeInteger mkTypeInteger mkTypeBool
           OpIntLe ->
             fixMemBinOp' mem mkTypeInteger mkTypeInteger mkTypeBool
+          OpFieldAdd ->
+            fixMemFieldOp mem
+          OpFieldSub ->
+            fixMemFieldOp mem
+          OpFieldMul ->
+            fixMemFieldOp mem
+          OpFieldDiv ->
+            fixMemFieldOp mem
           OpEq ->
             fixMemBinOp' mem TyDynamic TyDynamic mkTypeBool
           OpStrConcat ->
@@ -164,15 +175,23 @@ recurse' sig = go True
         fixMemUnop mem op = case op of
           OpShow ->
             return (pushValueStack TyString (popValueStack 1 mem))
-          OpStrToInt -> do
-            checkValueStack' loc (sig ^. recursorInfoTable) [TyString] mem
-            return (pushValueStack mkTypeInteger (popValueStack 1 mem))
+          OpStrToInt ->
+            checkUnop TyString mkTypeInteger
           OpArgsNum -> do
             when (null (mem ^. memoryValueStack)) $
               throw $
                 AsmError loc "empty value stack"
             checkFunType (topValueStack' 0 mem)
             return $ pushValueStack mkTypeInteger (popValueStack 1 mem)
+          OpIntToField ->
+            checkUnop mkTypeInteger TyField
+          OpFieldToInt ->
+            checkUnop TyField mkTypeInteger
+          where
+            checkUnop :: Type -> Type -> Sem r Memory
+            checkUnop ty1 ty2 = do
+              checkValueStack' loc (sig ^. recursorInfoTable) [ty1] mem
+              return (pushValueStack ty2 (popValueStack 1 mem))
 
         fixMemExtendClosure :: Memory -> InstrExtendClosure -> Sem r Memory
         fixMemExtendClosure mem InstrExtendClosure {..} = do

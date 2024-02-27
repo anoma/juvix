@@ -5,6 +5,7 @@ import Juvix.Compiler.Casm.Error
 import Juvix.Compiler.Casm.Interpreter
 import Juvix.Compiler.Casm.Translation.FromSource
 import Juvix.Compiler.Casm.Validate
+import Juvix.Data.Field
 import Juvix.Data.PPOutput
 import Juvix.Parser.Error
 
@@ -65,5 +66,5 @@ parseFile f = do
 doRun ::
   LabelInfo ->
   Code ->
-  IO (Either CasmError Integer)
+  IO (Either CasmError FField)
 doRun labi instrs = catchRunErrorIO (runCode labi instrs)

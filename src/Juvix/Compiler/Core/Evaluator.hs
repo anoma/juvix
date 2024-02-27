@@ -12,12 +12,14 @@ import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.NoDisplayInfo
 import Juvix.Compiler.Core.Pretty
+import Juvix.Data.Field
 import Text.Read qualified as T
 
 data EvalOptions = EvalOptions
   { _evalOptionsNormalize :: Bool,
     _evalOptionsNoFailure :: Bool,
-    _evalOptionsSilent :: Bool
+    _evalOptionsSilent :: Bool,
+    _evalOptionsFieldSize :: Natural
   }
 
 makeLenses ''EvalOptions
@@ -27,7 +29,8 @@ defaultEvalOptions =
   EvalOptions
     { _evalOptionsNormalize = False,
       _evalOptionsNoFailure = False,
-      _evalOptionsSilent = False
+      _evalOptionsSilent = False,
+      _evalOptionsFieldSize = defaultFieldSize
     }
 
 data EvalError = EvalError
@@ -169,6 +172,12 @@ geval opts herr ctx env0 = eval' env0
       OpIntMul -> binNumOp (*)
       OpIntLt -> binNumCmpOp (<)
       OpIntLe -> binNumCmpOp (<=)
+      OpFieldAdd -> binFieldOp fieldAdd
+      OpFieldSub -> binFieldOp fieldSub
+      OpFieldMul -> binFieldOp fieldMul
+      OpFieldDiv -> binFieldOp fieldDiv
+      OpFieldFromInt -> fieldFromIntOp
+      OpFieldToInt -> fieldToIntOp
       OpEq -> eqOp
       OpIntDiv -> divOp quot
       OpIntMod -> divOp rem
@@ -222,6 +231,30 @@ geval opts herr ctx env0 = eval' env0
         binNumOp :: (Integer -> Integer -> Integer) -> [Node] -> Node
         binNumOp = binOp nodeFromInteger integerFromNode
         {-# INLINE binNumOp #-}
+
+        binFieldOp :: (FField -> FField -> FField) -> [Node] -> Node
+        binFieldOp = binOp nodeFromField fieldFromNode
+        {-# INLINE binFieldOp #-}
+
+        fieldFromIntOp :: [Node] -> Node
+        fieldFromIntOp =
+          unary $ \node ->
+            let !v = eval' env node
+             in nodeFromField $
+                  fieldFromInteger (opts ^. evalOptionsFieldSize) $
+                    fromMaybe (evalError "expected integer" v) $
+                      integerFromNode v
+        {-# INLINE fieldFromIntOp #-}
+
+        fieldToIntOp :: [Node] -> Node
+        fieldToIntOp =
+          unary $ \node ->
+            let !v = eval' env node
+             in nodeFromInteger $
+                  fieldToInteger $
+                    fromMaybe (evalError "expected field element" v) $
+                      fieldFromNode v
+        {-# INLINE fieldToIntOp #-}
 
         eqOp :: [Node] -> Node
         eqOp
@@ -285,6 +318,10 @@ geval opts herr ctx env0 = eval' env0
     nodeFromInteger !int = mkConstant' (ConstInteger int)
     {-# INLINE nodeFromInteger #-}
 
+    nodeFromField :: FField -> Node
+    nodeFromField !fld = mkConstant' (ConstField fld)
+    {-# INLINE nodeFromField #-}
+
     nodeFromBool :: Bool -> Node
     nodeFromBool b = mkConstr' (BuiltinTag tag) []
       where
@@ -298,6 +335,12 @@ geval opts herr ctx env0 = eval' env0
       NCst (Constant _ (ConstInteger int)) -> Just int
       _ -> Nothing
     {-# INLINE integerFromNode #-}
+
+    fieldFromNode :: Node -> Maybe FField
+    fieldFromNode = \case
+      NCst (Constant _ (ConstField fld)) -> Just fld
+      _ -> Nothing
+    {-# INLINE fieldFromNode #-}
 
     printNode :: Node -> Text
     printNode = \case
@@ -395,22 +438,30 @@ evalIO = hEvalIO stderr stdin stdout
 doEval ::
   forall r.
   (MonadIO (Sem r)) =>
+  Maybe Natural ->
   Bool ->
   Interval ->
   InfoTable ->
   Node ->
   Sem r (Either CoreError Node)
-doEval noIO loc tab node
+doEval mfsize noIO loc tab node
   | noIO = catchEvalError loc (eval stderr (tab ^. identContext) [] node)
-  | otherwise = liftIO (catchEvalErrorIO loc (evalIO (tab ^. identContext) [] node))
+  | otherwise = liftIO (catchEvalErrorIO loc (hEvalIO' opts stderr stdin stdout (tab ^. identContext) [] node))
+  where
+    opts =
+      maybe
+        defaultEvalOptions
+        (\fsize -> defaultEvalOptions {_evalOptionsFieldSize = fsize})
+        mfsize
 
 doEvalIO ::
+  Maybe Natural ->
   Bool ->
   Interval ->
   InfoTable ->
   Node ->
   IO (Either CoreError Node)
-doEvalIO noIO i tab node = runM (doEval noIO i tab node)
+doEvalIO mfsize noIO i tab node = runM (doEval mfsize noIO i tab node)
 
 -- | Catch EvalError and convert it to CoreError. Needs a default location in case
 -- no location is available in EvalError.

@@ -574,6 +574,14 @@ registerBuiltinAxiom d = \case
   BuiltinStringConcat -> registerStringConcat d
   BuiltinStringEq -> registerStringEq d
   BuiltinStringToNat -> registerStringToNat d
+  BuiltinField -> registerField d
+  BuiltinFieldEq -> registerFieldEq d
+  BuiltinFieldAdd -> registerFieldAdd d
+  BuiltinFieldSub -> registerFieldSub d
+  BuiltinFieldMul -> registerFieldMul d
+  BuiltinFieldDiv -> registerFieldDiv d
+  BuiltinFieldFromInt -> registerFieldFromInt d
+  BuiltinFieldToNat -> registerFieldToNat d
   BuiltinBoolPrint -> registerBoolPrint d
   BuiltinTrace -> registerTrace d
   BuiltinFail -> registerFail d

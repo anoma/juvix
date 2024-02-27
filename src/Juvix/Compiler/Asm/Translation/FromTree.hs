@@ -16,7 +16,8 @@ fromTree tab =
     { _infoMainFunction = tab ^. Tree.infoMainFunction,
       _infoFunctions = genCode <$> tab ^. Tree.infoFunctions,
       _infoInductives = tab ^. Tree.infoInductives,
-      _infoConstrs = tab ^. Tree.infoConstrs
+      _infoConstrs = tab ^. Tree.infoConstrs,
+      _infoFieldSize = tab ^. Tree.infoFieldSize
     }
 
 -- Generate code for a single function.

@@ -179,6 +179,30 @@ int_ = "int"
 boolPrint :: (IsString s) => s
 boolPrint = "bool-print"
 
+fieldEq :: (IsString s) => s
+fieldEq = "field-eq"
+
+fieldAdd :: (IsString s) => s
+fieldAdd = "field-add"
+
+fieldSub :: (IsString s) => s
+fieldSub = "field-sub"
+
+fieldMul :: (IsString s) => s
+fieldMul = "field-mul"
+
+fieldDiv :: (IsString s) => s
+fieldDiv = "field-div"
+
+field :: (IsString s) => s
+field = "field"
+
+fieldFromInt :: (IsString s) => s
+fieldFromInt = "field-from-int"
+
+fieldToNat :: (IsString s) => s
+fieldToNat = "field-to-nat"
+
 io :: (IsString s) => s
 io = "IO"
 
@@ -301,6 +325,24 @@ any = "Any"
 
 questionMark :: (IsString s) => s
 questionMark = "?"
+
+fadd :: (IsString s) => s
+fadd = "fadd"
+
+fsub :: (IsString s) => s
+fsub = "fsub"
+
+fmul :: (IsString s) => s
+fmul = "fmul"
+
+fdiv :: (IsString s) => s
+fdiv = "fdiv"
+
+ftoi :: (IsString s) => s
+ftoi = "ftoi"
+
+itof :: (IsString s) => s
+itof = "itof"
 
 delimiter :: (IsString s) => s
 delimiter = "delimiter"
@@ -673,6 +715,12 @@ instrStrConcat = "strcat"
 
 instrStrToInt :: (IsString s) => s
 instrStrToInt = "atoi"
+
+instrFieldToInt :: (IsString s) => s
+instrFieldToInt = "ftoi"
+
+instrIntToField :: (IsString s) => s
+instrIntToField = "itof"
 
 instrShow :: (IsString s) => s
 instrShow = "show"

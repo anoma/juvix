@@ -14,7 +14,8 @@ fromAsm tab =
     { _infoFunctions = HashMap.map convertFun (tab ^. Asm.infoFunctions),
       _infoConstrs = HashMap.map convertConstr (tab ^. Asm.infoConstrs),
       _infoInductives = HashMap.map convertInductive (tab ^. Asm.infoInductives),
-      _infoMainFunction = tab ^. Asm.infoMainFunction
+      _infoMainFunction = tab ^. Asm.infoMainFunction,
+      _infoFieldSize = tab ^. Asm.infoFieldSize
     }
   where
     convertFun :: Asm.FunctionInfo -> FunctionInfo

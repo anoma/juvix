@@ -99,5 +99,10 @@ tests =
       "Test013: Currying and uncurrying"
       $(mkRelDir ".")
       $(mkRelFile "test013.casm")
-      $(mkRelFile "out/test013.out")
+      $(mkRelFile "out/test013.out"),
+    PosTest
+      "Test014: Field arithmetic"
+      $(mkRelDir ".")
+      $(mkRelFile "test014.casm")
+      $(mkRelFile "out/test014.out")
   ]

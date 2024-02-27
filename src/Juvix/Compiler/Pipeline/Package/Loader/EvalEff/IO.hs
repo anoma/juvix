@@ -71,7 +71,7 @@ runEvalFileEffIO = interpretScopedAs allocator handler
 
         evalNode :: Node -> Sem r Node
         evalNode n = do
-          n' <- doEval False packageLoc tab n
+          n' <- doEval Nothing False packageLoc tab n
           case n' of
             Left e -> do
               throw

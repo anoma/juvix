@@ -131,18 +131,15 @@ upToCoreTypecheck =
   upToCore >>= \r -> Core.toTypechecked (r ^. Core.coreResultModule) >>= \md -> return r {Core._coreResultModule = md}
 
 --------------------------------------------------------------------------------
--- Workflows from stripped Core
---------------------------------------------------------------------------------
-
-strippedCoreToTree :: Core.Module -> Sem r Tree.InfoTable
-strippedCoreToTree = return . Tree.fromCore . Stripped.fromCore . Core.computeCombinedInfoTable
-
---------------------------------------------------------------------------------
 -- Workflows from stored Core
 --------------------------------------------------------------------------------
 
 storedCoreToTree :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.TransformationId -> Core.Module -> Sem r Tree.InfoTable
-storedCoreToTree checkId = Core.toStripped checkId >=> strippedCoreToTree
+storedCoreToTree checkId md = do
+  fsize <- asks (^. entryPointFieldSize)
+  Core.toStripped checkId
+    >=> return . Tree.fromCore . Stripped.fromCore fsize . Core.computeCombinedInfoTable
+    $ md
 
 storedCoreToAnoma :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r (Nockma.Cell Natural)
 storedCoreToAnoma = storedCoreToTree Core.CheckAnoma >=> treeToAnoma

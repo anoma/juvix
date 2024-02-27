@@ -72,6 +72,7 @@ data RValue
 -- `ap` arbitrarily.
 data ExtraOpcode
   = FieldSub
+  | FieldDiv
   | IntAdd
   | IntSub
   | IntMul

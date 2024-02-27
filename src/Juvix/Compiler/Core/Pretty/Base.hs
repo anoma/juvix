@@ -39,6 +39,12 @@ instance PrettyCode BuiltinOp where
     OpIntMod -> return primMod
     OpIntLt -> return primLess
     OpIntLe -> return primLessEquals
+    OpFieldAdd -> return primFieldAdd
+    OpFieldSub -> return primFieldSub
+    OpFieldMul -> return primFieldMul
+    OpFieldDiv -> return primFieldDiv
+    OpFieldFromInt -> return primFieldFromInt
+    OpFieldToInt -> return primFieldToInt
     OpEq -> return primEquals
     OpShow -> return primShow
     OpStrConcat -> return primStrConcat
@@ -64,6 +70,7 @@ instance PrettyCode Tag where
 instance PrettyCode Primitive where
   ppCode = \case
     PrimInteger _ -> return $ annotate (AnnKind KNameInductive) (pretty ("Int" :: String))
+    PrimField -> return $ annotate (AnnKind KNameInductive) (pretty ("Field" :: String))
     PrimBool _ -> return $ annotate (AnnKind KNameInductive) (pretty ("Bool" :: String))
     PrimString -> return $ annotate (AnnKind KNameInductive) (pretty ("String" :: String))
 
@@ -88,11 +95,16 @@ instance PrettyCode ConstantValue where
   ppCode = \case
     ConstInteger int ->
       return $ annotate AnnLiteralInteger (pretty int)
+    ConstField fld ->
+      return $ annotate AnnLiteralInteger (pretty fld)
     ConstString txt ->
       return $ annotate AnnLiteralString (pretty (show txt :: String))
 
 instance PrettyCode (Constant' i) where
-  ppCode Constant {..} = ppCode _constantValue
+  ppCode Constant {..} = case _constantValue of
+    ConstField fld ->
+      return $ annotate AnnLiteralInteger (pretty fld <> "F")
+    _ -> ppCode _constantValue
 
 instance (PrettyCode a, HasAtomicity a) => PrettyCode (App' i a) where
   ppCode App {..} = do
@@ -694,6 +706,24 @@ kwUnnamedConstr = keyword Str.exclamation
 
 kwQuestion :: Doc Ann
 kwQuestion = keyword Str.questionMark
+
+primFieldAdd :: Doc Ann
+primFieldAdd = primitive Str.fadd
+
+primFieldSub :: Doc Ann
+primFieldSub = primitive Str.fsub
+
+primFieldMul :: Doc Ann
+primFieldMul = primitive Str.fmul
+
+primFieldDiv :: Doc Ann
+primFieldDiv = primitive Str.fdiv
+
+primFieldFromInt :: Doc Ann
+primFieldFromInt = primitive Str.itof
+
+primFieldToInt :: Doc Ann
+primFieldToInt = primitive Str.ftoi
 
 primLess :: Doc Ann
 primLess = primitive Str.less

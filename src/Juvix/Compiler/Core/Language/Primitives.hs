@@ -14,6 +14,7 @@ data Primitive
   = PrimInteger PrimIntegerInfo
   | PrimBool PrimBoolInfo
   | PrimString
+  | PrimField
   deriving stock (Eq, Generic)
 
 -- | Info about a type represented as an integer.

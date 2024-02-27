@@ -51,14 +51,14 @@ runCommand localOpts = do
             newline
 
       goEval :: Sem r ()
-      goEval = evalAndPrint localOpts tab' evalNode
+      goEval = evalAndPrint gopts localOpts tab' evalNode
         where
           evalNode :: Core.Node
             | isJust (localOpts ^. coreFromConcreteSymbolName) = getNode' selInfo
             | otherwise = getNode' mainInfo
 
       goNormalize :: Sem r ()
-      goNormalize = normalizeAndPrint localOpts tab' evalNode
+      goNormalize = normalizeAndPrint gopts localOpts tab' evalNode
         where
           evalNode :: Core.Node
             | isJust (localOpts ^. coreFromConcreteSymbolName) = getNode' selInfo

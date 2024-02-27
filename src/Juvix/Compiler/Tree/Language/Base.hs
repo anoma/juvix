@@ -5,6 +5,7 @@ module Juvix.Compiler.Tree.Language.Base
 where
 
 import Juvix.Compiler.Core.Language.Base
+import Juvix.Data.Field
 
 -- | Offset of a data field or an argument
 type Offset = Int
@@ -14,6 +15,7 @@ data Constant
   = ConstInt Integer
   | ConstBool Bool
   | ConstString Text
+  | ConstField FField
   | ConstUnit
   | ConstVoid
   deriving stock (Eq)

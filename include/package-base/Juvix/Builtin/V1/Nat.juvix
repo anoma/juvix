@@ -10,7 +10,5 @@ naturalNatI : Natural Nat :=
   mkNatural@{
     + := (Nat.+);
     * := (Nat.*);
-    div := Nat.div;
-    mod := Nat.mod;
     fromNat (x : Nat) : Nat := x
   };

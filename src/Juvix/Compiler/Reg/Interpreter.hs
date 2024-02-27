@@ -68,6 +68,7 @@ runFunction hout infoTable args0 info0 = do
     readConst :: Constant -> Val
     readConst = \case
       ConstInt i -> ValInteger i
+      ConstField f -> ValField f
       ConstBool b -> ValBool b
       ConstString s -> ValString s
       ConstUnit -> ValUnit

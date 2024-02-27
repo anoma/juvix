@@ -253,6 +253,7 @@ parseAssign = do
     parseExtraValue :: ExtraOpcode -> ParsecS r Value
     parseExtraValue = \case
       FieldSub -> Ref <$> parseMemRef
+      FieldDiv -> Ref <$> parseMemRef
       _ -> parseValue
 
 registerAP :: ParsecS r Reg
@@ -276,6 +277,7 @@ opcode =
 extraOpcode :: ParsecS r ExtraOpcode
 extraOpcode =
   (kw kwMinus >> return FieldSub)
+    <|> (kw kwDiv >> return FieldDiv)
     <|> (kw kwIntAdd >> return IntAdd)
     <|> (kw kwIntSub >> return IntSub)
     <|> (kw kwIntMul >> return IntMul)

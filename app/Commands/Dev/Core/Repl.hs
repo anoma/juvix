@@ -14,6 +14,7 @@ import Juvix.Compiler.Core.Pretty qualified as Core
 import Juvix.Compiler.Core.Transformation.ComputeTypeInfo qualified as Core
 import Juvix.Compiler.Core.Transformation.DisambiguateNames qualified as Core
 import Juvix.Compiler.Core.Translation.FromSource qualified as Core
+import Juvix.Data.Field
 import Juvix.Extra.Paths
 
 runCommand :: forall r. (Members '[EmbedIO, App] r) => CoreReplOptions -> Sem r ()
@@ -98,7 +99,7 @@ runRepl opts tab = do
   where
     replEval :: Bool -> Core.InfoTable -> Core.Node -> Sem r ()
     replEval noIO tab' node = do
-      r <- Core.doEval noIO defaultLoc tab' node
+      r <- Core.doEval Nothing noIO defaultLoc tab' node
       case r of
         Left err -> do
           printJuvixError (JuvixError err)
@@ -115,7 +116,7 @@ runRepl opts tab = do
     replNormalize :: Core.InfoTable -> Core.Node -> Sem r ()
     replNormalize tab' node =
       let md' = Core.moduleFromInfoTable tab'
-          node' = normalize md' node
+          node' = normalize (maximum allowedFieldSizes) md' node
        in if
               | Info.member Info.kNoDisplayInfo (Core.getInfo node') ->
                   runRepl opts tab'

@@ -130,7 +130,7 @@ evalRepl artif ep n = do
     doEvalIO' artif' n' =
       mapRight (Core.toValue tab)
         . mapLeft (JuvixError @Core.CoreError)
-        <$> (Core.doEvalIO False replDefaultLoc tab n')
+        <$> (Core.doEvalIO Nothing False replDefaultLoc tab n')
       where
         tab :: Core.InfoTable
         tab = Core.computeCombinedInfoTable $ artif' ^. artifactCoreModule

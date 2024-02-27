@@ -156,6 +156,7 @@ fromCore tab = case tab ^. Core.infoMain of
     convertConstant :: Core.Constant -> Trans Morphism
     convertConstant Core.Constant {..} = case _constantValue of
       Core.ConstInteger n -> return $ MorphismInteger (BitChoice {_bitChoice = n})
+      Core.ConstField {} -> unsupported
       Core.ConstString {} -> unsupported
 
     convertApp :: Core.App -> Trans Morphism
@@ -543,6 +544,7 @@ fromCore tab = case tab ^. Core.infoMain of
       case _typePrimPrimitive of
         Core.PrimInteger {} -> ObjectInteger
         Core.PrimBool {} -> objectBool
+        Core.PrimField {} -> unsupported
         Core.PrimString -> unsupported
 
     convertInductive :: Symbol -> Object

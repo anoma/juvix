@@ -13,6 +13,12 @@ data BuiltinOp
   | OpIntMod
   | OpIntLt
   | OpIntLe
+  | OpFieldAdd
+  | OpFieldSub
+  | OpFieldMul
+  | OpFieldDiv
+  | OpFieldFromInt
+  | OpFieldToInt
   | OpEq
   | OpShow
   | OpStrConcat
@@ -47,6 +53,12 @@ builtinOpArgsNum = \case
   OpIntMod -> 2
   OpIntLt -> 2
   OpIntLe -> 2
+  OpFieldAdd -> 2
+  OpFieldSub -> 2
+  OpFieldMul -> 2
+  OpFieldDiv -> 2
+  OpFieldFromInt -> 1
+  OpFieldToInt -> 1
   OpEq -> 2
   OpShow -> 1
   OpStrConcat -> 2

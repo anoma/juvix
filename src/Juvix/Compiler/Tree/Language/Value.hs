@@ -1,11 +1,13 @@
 module Juvix.Compiler.Tree.Language.Value where
 
 import Juvix.Compiler.Tree.Language.Base
+import Juvix.Data.Field
 
 {-
   A value may be one of:
 
   - Integer (arbitrary precision)
+  - Field element
   - Boolean
   - String
   - Constructor data
@@ -14,6 +16,7 @@ import Juvix.Compiler.Tree.Language.Base
 
 data Value
   = ValInteger Integer
+  | ValField FField
   | ValBool Bool
   | ValString Text
   | ValUnit
@@ -50,6 +53,7 @@ instance HasAtomicity Closure where
 instance HasAtomicity Value where
   atomicity = \case
     ValInteger {} -> Atom
+    ValField {} -> Atom
     ValBool {} -> Atom
     ValString {} -> Atom
     ValUnit -> Atom

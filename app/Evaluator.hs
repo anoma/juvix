@@ -20,15 +20,16 @@ data EvalOptions = EvalOptions
 makeLenses ''EvalOptions
 
 evalAndPrint ::
-  forall r a.
-  (Members '[EmbedIO, App] r, CanonicalProjection a EvalOptions, CanonicalProjection a Core.Options) =>
+  forall r a b.
+  (Members '[EmbedIO, App] r, CanonicalProjection a EvalOptions, CanonicalProjection b Core.CoreOptions, CanonicalProjection a Core.Options) =>
+  b ->
   a ->
   Core.InfoTable ->
   Core.Node ->
   Sem r ()
-evalAndPrint opts tab node = do
+evalAndPrint gopts opts tab node = do
   loc <- defaultLoc
-  r <- Core.doEval (project opts ^. evalNoIO) loc tab node
+  r <- Core.doEval (Just $ project gopts ^. Core.optFieldSize) (project opts ^. evalNoIO) loc tab node
   case r of
     Left err -> exitJuvixError (JuvixError err)
     Right node'
@@ -50,14 +51,15 @@ evalAndPrint opts tab node = do
     f = project opts ^. evalInputFile
 
 normalizeAndPrint ::
-  forall r a.
-  (Members '[EmbedIO, App] r, CanonicalProjection a EvalOptions, CanonicalProjection a Core.Options) =>
+  forall r a b.
+  (Members '[EmbedIO, App] r, CanonicalProjection a EvalOptions, CanonicalProjection b Core.CoreOptions, CanonicalProjection a Core.Options) =>
+  b ->
   a ->
   Core.InfoTable ->
   Core.Node ->
   Sem r ()
-normalizeAndPrint opts tab node =
-  let node' = normalize (Core.moduleFromInfoTable tab) node
+normalizeAndPrint gopts opts tab node =
+  let node' = normalize (project gopts ^. Core.optFieldSize) (Core.moduleFromInfoTable tab) node
    in if
           | Info.member Info.kNoDisplayInfo (Core.getInfo node') ->
               return ()

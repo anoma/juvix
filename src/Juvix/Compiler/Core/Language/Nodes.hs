@@ -11,6 +11,7 @@ import Data.Serialize
 import Juvix.Compiler.Core.Language.Base
 import Juvix.Compiler.Core.Language.Builtins
 import Juvix.Compiler.Core.Language.Primitives
+import Juvix.Data.Field
 
 -- | De Bruijn index of a locally bound variable.
 data Var' i = Var
@@ -35,6 +36,7 @@ data Constant' i = Constant
 
 data ConstantValue
   = ConstInteger !Integer
+  | ConstField !FField
   | ConstString !Text
   deriving stock (Eq, Generic)
 

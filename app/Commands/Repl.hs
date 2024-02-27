@@ -171,6 +171,7 @@ replCommand opts input_ = catchAll $ do
 
         eval :: Core.Node -> Repl Core.Node
         eval n = do
+          gopts <- State.gets (^. replStateGlobalOptions)
           ep <- getReplEntryPointFromPrepath (mkPrepath (toFilePath P.replPath))
           let shouldDisambiguate :: Bool
               shouldDisambiguate = not (opts ^. replNoDisambiguate)
@@ -182,12 +183,12 @@ replCommand opts input_ = catchAll $ do
               . runState artif
               . runTransformations shouldDisambiguate (opts ^. replTransformations)
               $ n
-          liftIO (doEvalIO' artif' n') >>= replFromEither
+          liftIO (doEvalIO' (project gopts ^. Core.optFieldSize) artif' n') >>= replFromEither
 
-        doEvalIO' :: Artifacts -> Core.Node -> IO (Either JuvixError Core.Node)
-        doEvalIO' artif' n =
+        doEvalIO' :: Natural -> Artifacts -> Core.Node -> IO (Either JuvixError Core.Node)
+        doEvalIO' fsize artif' n =
           mapLeft (JuvixError @Core.CoreError)
-            <$> Core.doEvalIO False replDefaultLoc (Core.computeCombinedInfoTable $ artif' ^. artifactCoreModule) n
+            <$> Core.doEvalIO (Just fsize) False replDefaultLoc (Core.computeCombinedInfoTable $ artif' ^. artifactCoreModule) n
 
         compileString :: Repl (Maybe Core.Node)
         compileString = do

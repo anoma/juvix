@@ -7,6 +7,7 @@ where
 import Juvix.Compiler.Backend
 import Juvix.Compiler.Pipeline.Package.Base
 import Juvix.Compiler.Pipeline.Root.Base
+import Juvix.Data.Field
 import Juvix.Prelude
 
 -- | An option specifying how symbols should be pruned in the Internal to Core translation
@@ -38,7 +39,8 @@ data EntryPoint = EntryPoint
     _entryPointGenericOptions :: GenericOptions,
     _entryPointModulePath :: Maybe (Path Abs File),
     _entryPointSymbolPruningMode :: SymbolPruningMode,
-    _entryPointOffline :: Bool
+    _entryPointOffline :: Bool,
+    _entryPointFieldSize :: Natural
   }
   deriving stock (Eq, Show)
 
@@ -72,7 +74,8 @@ defaultEntryPointNoFile pkg root =
       _entryPointInliningDepth = defaultInliningDepth,
       _entryPointModulePath = Nothing,
       _entryPointSymbolPruningMode = FilterUnreachable,
-      _entryPointOffline = False
+      _entryPointOffline = False,
+      _entryPointFieldSize = defaultFieldSize
     }
 
 defaultUnrollLimit :: Int

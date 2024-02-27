@@ -92,11 +92,18 @@ fromCoreNode ii node =
             OpIntMod -> OpMod
             OpIntLt -> OpLt
             OpIntLe -> OpLe
+            Core.OpFieldAdd -> VampIR.OpFieldAdd
+            Core.OpFieldSub -> VampIR.OpFieldSub
+            Core.OpFieldMul -> VampIR.OpFieldMul
+            Core.OpFieldDiv -> VampIR.OpFieldDiv
             Core.OpEq -> VampIR.OpEq
             _ -> impossible
-      _ -> case _builtinAppOp of
+      [x] -> case _builtinAppOp of
         OpFail -> ExpressionFail
+        OpFieldToInt -> convertExpr x
+        OpFieldFromInt -> convertExpr x
         _ -> impossible
+      _ -> impossible
 
     goConstructor :: Constr -> Expression
     goConstructor Constr {..} = case _constrTag of

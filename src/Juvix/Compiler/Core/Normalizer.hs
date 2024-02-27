@@ -20,8 +20,8 @@ makeLenses ''NormEnv
 
 type Norm = Sem '[Reader NormEnv, InfoTableBuilder]
 
-normalize :: Module -> Node -> Node
-normalize md = run . evalInfoTableBuilder md . runReader normEnv . normalize'
+normalize :: Natural -> Module -> Node -> Node
+normalize fsize md = run . evalInfoTableBuilder md . runReader normEnv . normalize'
   where
     normEnv =
       NormEnv
@@ -43,7 +43,8 @@ normalize md = run . evalInfoTableBuilder md . runReader normEnv . normalize'
       where
         opts =
           defaultEvalOptions
-            { _evalOptionsNormalize = True
+            { _evalOptionsNormalize = True,
+              _evalOptionsFieldSize = fsize
             }
 
     go :: Node -> Norm Node

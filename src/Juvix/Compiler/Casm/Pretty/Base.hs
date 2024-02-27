@@ -69,6 +69,7 @@ instance PrettyCode Opcode where
 instance PrettyCode ExtraOpcode where
   ppCode = \case
     FieldSub -> return Str.minus
+    FieldDiv -> return Str.div
     IntAdd -> return Str.iadd
     IntSub -> return Str.isub
     IntMul -> return Str.imul

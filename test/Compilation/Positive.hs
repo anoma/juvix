@@ -440,5 +440,10 @@ tests =
         "Test073: Import and use a syntax alias"
         $(mkRelDir "test073")
         $(mkRelFile "test073.juvix")
-        $(mkRelFile "out/test073.out")
+        $(mkRelFile "out/test073.out"),
+      posTestEval
+        "Test074: Fields"
+        $(mkRelDir ".")
+        $(mkRelFile "test074.juvix")
+        $(mkRelFile "out/test074.out")
     ]

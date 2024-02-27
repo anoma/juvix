@@ -17,6 +17,7 @@ import Juvix.Compiler.Core.Info.LocationInfo as LocationInfo
 import Juvix.Compiler.Core.Info.NameInfo as NameInfo
 import Juvix.Compiler.Core.Transformation.Eta
 import Juvix.Compiler.Core.Translation.FromSource.Lexer
+import Juvix.Data.Field
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Parser.Error
 import Text.Megaparsec qualified as P
@@ -559,6 +560,10 @@ builtinAppExpr varsNum vars = do
       <|> (kw kwDiv $> OpIntDiv)
       <|> (kw kwMul $> OpIntMul)
       <|> (kw kwMod $> OpIntMod)
+      <|> (kw kwFieldAdd $> OpFieldAdd)
+      <|> (kw kwFieldSub $> OpFieldSub)
+      <|> (kw kwFieldMul $> OpFieldMul)
+      <|> (kw kwFieldDiv $> OpFieldDiv)
       <|> (kw kwShow $> OpShow)
       <|> (kw kwStrConcat $> OpStrConcat)
       <|> (kw kwStrToInt $> OpStrToInt)
@@ -583,7 +588,8 @@ atom ::
   HashMap Text Level ->
   ParsecS r Node
 atom varsNum vars =
-  exprConstInt
+  exprConstField
+    <|> exprConstInt
     <|> exprConstString
     <|> exprUniverse
     <|> exprDynamic
@@ -608,6 +614,11 @@ exprConstString :: ParsecS r Node
 exprConstString = P.try $ do
   (s, i) <- string
   return $ mkConstant (Info.singleton (LocationInfo i)) (ConstString s)
+
+exprConstField :: ParsecS r Node
+exprConstField = P.try $ do
+  (n, i) <- field
+  return $ mkConstant (Info.singleton (LocationInfo i)) (ConstField (fieldFromInteger defaultFieldSize n))
 
 exprUniverse :: ParsecS r Type
 exprUniverse = do
@@ -1090,6 +1101,7 @@ exprNamed varsNum vars = do
   (txt, i) <- identifierL
   case txt of
     "Int" -> return mkTypeInteger'
+    "Field" -> return mkTypeField'
     "String" -> return mkTypeString'
     _ ->
       case HashMap.lookup txt vars of

@@ -17,7 +17,8 @@ fromCore tab =
     { _infoMainFunction = tab ^. Core.infoMain,
       _infoFunctions = genCode tab <$> tab ^. Core.infoFunctions,
       _infoInductives = translateInductiveInfo <$> tab ^. Core.infoInductives,
-      _infoConstrs = translateConstructorInfo <$> tab ^. Core.infoConstructors
+      _infoConstrs = translateConstructorInfo <$> tab ^. Core.infoConstructors,
+      _infoFieldSize = tab ^. Core.infoFieldSize
     }
 
 -- Generate code for a single function.
@@ -82,6 +83,8 @@ genCode infoTable fi =
         mkConst (ConstInt i)
       Core.Constant _ (Core.ConstString s) ->
         mkConst (ConstString s)
+      Core.Constant _ (Core.ConstField fld) ->
+        mkConst (ConstField fld)
 
     goApps :: Int -> BinderList MemRef -> Core.Apps -> Node
     goApps tempSize refs Core.Apps {..} =
@@ -268,6 +271,10 @@ genCode infoTable fi =
       Core.OpIntMod -> PrimBinop OpIntMod
       Core.OpIntLt -> PrimBinop OpIntLt
       Core.OpIntLe -> PrimBinop OpIntLe
+      Core.OpFieldAdd -> PrimBinop OpFieldAdd
+      Core.OpFieldSub -> PrimBinop OpFieldSub
+      Core.OpFieldMul -> PrimBinop OpFieldMul
+      Core.OpFieldDiv -> PrimBinop OpFieldDiv
       Core.OpEq -> PrimBinop OpEq
       Core.OpStrConcat -> PrimBinop OpStrConcat
       Core.OpSeq -> OpSeq
@@ -277,6 +284,8 @@ genCode infoTable fi =
     genUnOp = \case
       Core.OpShow -> PrimUnop OpShow
       Core.OpStrToInt -> PrimUnop OpStrToInt
+      Core.OpFieldFromInt -> PrimUnop OpIntToField
+      Core.OpFieldToInt -> PrimUnop OpFieldToInt
       Core.OpTrace -> OpTrace
       Core.OpFail -> OpFail
       _ -> impossible
@@ -314,6 +323,8 @@ convertPrimitiveType = \case
     TyBool (TypeBool _infoTrueTag _infoFalseTag)
   Core.PrimString ->
     TyString
+  Core.PrimField ->
+    TyField
 
 -- | `convertNestedType` ensures that the conversion of a type with Dynamic in the
 -- target is curried. The result of `convertType 0 ty` is always uncurried.

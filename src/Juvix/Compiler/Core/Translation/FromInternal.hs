@@ -559,6 +559,7 @@ goAxiomInductive a = whenJust (a ^. Internal.axiomBuiltin) builtinInductive
       Internal.BuiltinBoolPrint -> return ()
       Internal.BuiltinIOSequence -> return ()
       Internal.BuiltinIOReadline -> return ()
+      Internal.BuiltinField -> registerInductiveAxiom (Just BuiltinField) []
       Internal.BuiltinString -> registerInductiveAxiom (Just BuiltinString) []
       Internal.BuiltinIO -> registerInductiveAxiom (Just BuiltinIO) builtinIOConstrs
       Internal.BuiltinTrace -> return ()
@@ -569,6 +570,13 @@ goAxiomInductive a = whenJust (a ^. Internal.axiomBuiltin) builtinInductive
       Internal.BuiltinNatToString -> return ()
       Internal.BuiltinIntToString -> return ()
       Internal.BuiltinIntPrint -> return ()
+      Internal.BuiltinFieldEq -> return ()
+      Internal.BuiltinFieldAdd -> return ()
+      Internal.BuiltinFieldSub -> return ()
+      Internal.BuiltinFieldMul -> return ()
+      Internal.BuiltinFieldDiv -> return ()
+      Internal.BuiltinFieldFromInt -> return ()
+      Internal.BuiltinFieldToNat -> return ()
 
     registerInductiveAxiom :: Maybe BuiltinAxiom -> [(Tag, Text, Type -> Type, Maybe BuiltinConstructor)] -> Sem r ()
     registerInductiveAxiom ax ctrs = do
@@ -649,6 +657,21 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
         natName <- getNatName
         natSym <- getNatSymbol
         registerAxiomDef (mkLambda' (mkTypeConstr (setInfoName natName mempty) natSym []) (mkBuiltinApp' OpShow [mkVar' 0]))
+      Internal.BuiltinField -> return ()
+      Internal.BuiltinFieldEq ->
+        registerAxiomDef (mkLambda' mkTypeField' (mkLambda' mkTypeField' (mkBuiltinApp' OpEq [mkVar' 1, mkVar' 0])))
+      Internal.BuiltinFieldAdd ->
+        registerAxiomDef (mkLambda' mkTypeField' (mkLambda' mkTypeField' (mkBuiltinApp' OpFieldAdd [mkVar' 1, mkVar' 0])))
+      Internal.BuiltinFieldSub ->
+        registerAxiomDef (mkLambda' mkTypeField' (mkLambda' mkTypeField' (mkBuiltinApp' OpFieldSub [mkVar' 1, mkVar' 0])))
+      Internal.BuiltinFieldMul ->
+        registerAxiomDef (mkLambda' mkTypeField' (mkLambda' mkTypeField' (mkBuiltinApp' OpFieldMul [mkVar' 1, mkVar' 0])))
+      Internal.BuiltinFieldDiv ->
+        registerAxiomDef (mkLambda' mkTypeField' (mkLambda' mkTypeField' (mkBuiltinApp' OpFieldDiv [mkVar' 1, mkVar' 0])))
+      Internal.BuiltinFieldFromInt ->
+        registerAxiomDef (mkLambda' mkTypeInteger' (mkBuiltinApp' OpFieldFromInt [mkVar' 0]))
+      Internal.BuiltinFieldToNat ->
+        registerAxiomDef (mkLambda' mkTypeField' (mkBuiltinApp' OpFieldToInt [mkVar' 0]))
       Internal.BuiltinString -> return ()
       Internal.BuiltinIO -> return ()
       Internal.BuiltinTrace -> return ()
@@ -1025,6 +1048,18 @@ goApplication a = do
         Just Internal.BuiltinFail -> app
         Just Internal.BuiltinIntToString -> app
         Just Internal.BuiltinIntPrint -> app
+        Just Internal.BuiltinField -> app
+        Just Internal.BuiltinFieldEq -> app
+        Just Internal.BuiltinFieldAdd -> app
+        Just Internal.BuiltinFieldSub -> app
+        Just Internal.BuiltinFieldMul -> app
+        Just Internal.BuiltinFieldDiv -> app
+        Just Internal.BuiltinFieldFromInt -> do
+          as <- exprArgs
+          case as of
+            [x] -> return $ mkBuiltinApp' OpFieldFromInt [x]
+            _ -> app
+        Just Internal.BuiltinFieldToNat -> app
         Nothing -> app
     Internal.ExpressionIden (Internal.IdenFunction n) -> do
       funInfoBuiltin <- Internal.getFunctionBuiltinInfo n

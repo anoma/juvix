@@ -161,6 +161,14 @@ data BuiltinAxiom
   | BuiltinStringEq
   | BuiltinStringToNat
   | BuiltinBoolPrint
+  | BuiltinFieldEq
+  | BuiltinFieldAdd
+  | BuiltinFieldSub
+  | BuiltinFieldMul
+  | BuiltinFieldDiv
+  | BuiltinField
+  | BuiltinFieldFromInt
+  | BuiltinFieldToNat
   | BuiltinString
   | BuiltinIO
   | BuiltinIOSequence
@@ -183,6 +191,14 @@ instance Pretty BuiltinAxiom where
     BuiltinStringConcat -> Str.stringConcat
     BuiltinStringEq -> Str.stringEq
     BuiltinStringToNat -> Str.stringToNat
+    BuiltinFieldEq -> Str.fieldEq
+    BuiltinFieldAdd -> Str.fieldAdd
+    BuiltinFieldSub -> Str.fieldSub
+    BuiltinFieldMul -> Str.fieldMul
+    BuiltinFieldDiv -> Str.fieldDiv
+    BuiltinField -> Str.field
+    BuiltinFieldFromInt -> Str.fieldFromInt
+    BuiltinFieldToNat -> Str.fieldToNat
     BuiltinBoolPrint -> Str.boolPrint
     BuiltinIO -> Str.io
     BuiltinString -> Str.string

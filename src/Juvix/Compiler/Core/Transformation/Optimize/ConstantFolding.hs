@@ -5,10 +5,11 @@ import Juvix.Compiler.Core.Data.IdentDependencyInfo
 import Juvix.Compiler.Core.Evaluator
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info.FreeVarsInfo as Info
+import Juvix.Compiler.Core.Options
 import Juvix.Compiler.Core.Transformation.Base
 
-convertNode :: HashSet Symbol -> InfoTable -> Module -> Node -> Node
-convertNode nonRecSyms tab md = umap go
+convertNode :: CoreOptions -> HashSet Symbol -> InfoTable -> Module -> Node -> Node
+convertNode opts nonRecSyms tab md = umap go
   where
     go :: Node -> Node
     go node = case node of
@@ -54,24 +55,27 @@ convertNode nonRecSyms tab md = umap go
       _ -> isType' node
 
     doEval' :: Node -> Node
-    doEval' = removeClosures . geval opts stderr (tab ^. identContext) []
+    doEval' = removeClosures . geval eopts stderr (tab ^. identContext) []
       where
-        opts =
+        eopts =
           defaultEvalOptions
             { _evalOptionsNoFailure = True,
-              _evalOptionsSilent = True
+              _evalOptionsSilent = True,
+              _evalOptionsFieldSize = opts ^. optFieldSize
             }
 
-constantFolding' :: HashSet Symbol -> InfoTable -> Module -> Module
-constantFolding' nonRecSyms tab md =
+constantFolding' :: CoreOptions -> HashSet Symbol -> InfoTable -> Module -> Module
+constantFolding' opts nonRecSyms tab md =
   mapAllNodes
     ( removeInfo kFreeVarsInfo
-        . convertNode nonRecSyms tab md
+        . convertNode opts nonRecSyms tab md
         . computeFreeVarsInfo
     )
     md
 
-constantFolding :: Module -> Module
-constantFolding md = constantFolding' (nonRecursiveIdents' tab) tab md
+constantFolding :: (Member (Reader CoreOptions) r) => Module -> Sem r Module
+constantFolding md = do
+  opts <- ask
+  return $ constantFolding' opts (nonRecursiveIdents' tab) tab md
   where
     tab = computeCombinedInfoTable md

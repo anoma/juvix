@@ -52,6 +52,10 @@ inferType tab funInfo = goInfer mempty
           OpIntMod -> checkBinop mkTypeInteger mkTypeInteger mkTypeInteger
           OpIntLt -> checkBinop mkTypeInteger mkTypeInteger mkTypeBool
           OpIntLe -> checkBinop mkTypeInteger mkTypeInteger mkTypeBool
+          OpFieldAdd -> checkBinop TyField TyField TyField
+          OpFieldSub -> checkBinop TyField TyField TyField
+          OpFieldMul -> checkBinop TyField TyField TyField
+          OpFieldDiv -> checkBinop TyField TyField TyField
           OpEq -> checkBinop TyDynamic TyDynamic mkTypeBool
           OpStrConcat -> checkBinop TyString TyString TyString
 
@@ -74,12 +78,15 @@ inferType tab funInfo = goInfer mempty
           OpShow -> checkUnop TyDynamic TyString
           OpStrToInt -> checkUnop TyString mkTypeInteger
           OpArgsNum -> checkUnop TyDynamic mkTypeInteger
+          OpIntToField -> checkUnop mkTypeInteger TyField
+          OpFieldToInt -> checkUnop TyField mkTypeInteger
 
     goConst :: BinderList Type -> NodeConstant -> Sem r Type
     goConst _ NodeConstant {..} = case _nodeConstant of
       ConstInt {} -> return mkTypeInteger
       ConstBool {} -> return mkTypeBool
       ConstString {} -> return TyString
+      ConstField {} -> return TyField
       ConstUnit {} -> return TyUnit
       ConstVoid {} -> return TyVoid
 

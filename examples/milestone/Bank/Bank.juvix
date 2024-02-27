@@ -12,12 +12,6 @@ Address : Type := Nat;
 
 bankAddress : Address := 1234;
 
---- Some field type.
-axiom Field : Type;
-
---- Equality test for ;Field;.
-axiom eqField : Field -> Field -> Bool;
-
 module Token;
   type Token :=
     --- Arguments are: owner, gates, amount.
@@ -47,7 +41,7 @@ module Balances;
     | f n nil := (f, n) :: nil
     | f n ((b, bn) :: bs) :=
       if
-        (eqField f b)
+        (f == b)
         ((b, bn + n) :: bs)
         ((b, bn) :: increment f n bs);
 
@@ -58,7 +52,7 @@ module Balances;
     | _ _ nil := nil
     | f n ((b, bn) :: bs) :=
       if
-        (eqField f b)
+        (f == b)
         ((b, sub bn n) :: bs)
         ((b, bn) :: decrement f n bs);
 

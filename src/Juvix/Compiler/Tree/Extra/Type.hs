@@ -76,6 +76,7 @@ isSubtype ty1 ty2 = case (ty1, ty2) of
       checkBounds cmp (Just x) (Just y) = cmp x y
   (TyBool {}, TyBool {}) -> True
   (TyString, TyString) -> True
+  (TyField, TyField) -> True
   (TyUnit, TyUnit) -> True
   (TyVoid, TyVoid) -> True
   (TyInductive {}, TyInductive {}) -> ty1 == ty2
@@ -87,6 +88,8 @@ isSubtype ty1 ty2 = case (ty1, ty2) of
   (_, TyInteger {}) -> False
   (TyString, _) -> False
   (_, TyString) -> False
+  (TyField, _) -> False
+  (_, TyField) -> False
   (TyBool {}, _) -> False
   (_, TyBool {}) -> False
   (TyFun {}, _) -> False
@@ -142,6 +145,7 @@ unifyTypes ty1 ty2 = case (ty1, ty2) of
   (TyBool {}, TyBool {})
     | ty1 == ty2 -> return ty1
   (TyString, TyString) -> return TyString
+  (TyField, TyField) -> return TyField
   (TyUnit, TyUnit) -> return TyUnit
   (TyVoid, TyVoid) -> return TyVoid
   (TyInductive {}, TyInductive {})
@@ -154,6 +158,8 @@ unifyTypes ty1 ty2 = case (ty1, ty2) of
   (_, TyInteger {}) -> err
   (TyString, _) -> err
   (_, TyString) -> err
+  (TyField, _) -> err
+  (_, TyField) -> err
   (TyBool {}, _) -> err
   (_, TyBool {}) -> err
   (TyFun {}, _) -> err

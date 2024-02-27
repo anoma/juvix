@@ -9,12 +9,14 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Tree.Language
 import Juvix.Compiler.Tree.Language.Rep
 import Juvix.Compiler.Tree.Language.Type
+import Juvix.Data.Field
 
 data InfoTable' code extra = InfoTable
   { _infoFunctions :: HashMap Symbol (FunctionInfo' code extra),
     _infoConstrs :: HashMap Tag ConstructorInfo,
     _infoInductives :: HashMap Symbol InductiveInfo,
-    _infoMainFunction :: Maybe Symbol
+    _infoMainFunction :: Maybe Symbol,
+    _infoFieldSize :: Natural
   }
 
 data FunctionInfo' code extra = FunctionInfo
@@ -70,7 +72,8 @@ emptyInfoTable =
     { _infoFunctions = mempty,
       _infoConstrs = mempty,
       _infoInductives = mempty,
-      _infoMainFunction = Nothing
+      _infoMainFunction = Nothing,
+      _infoFieldSize = defaultFieldSize
     }
 
 lookupFunInfo :: InfoTable' a e -> Symbol -> FunctionInfo' a e

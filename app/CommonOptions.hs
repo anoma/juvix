@@ -11,6 +11,7 @@ import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Core.Data.TransformationId.Parser qualified as Core
 import Juvix.Compiler.Reg.Data.TransformationId.Parser qualified as Reg
 import Juvix.Compiler.Tree.Data.TransformationId.Parser qualified as Tree
+import Juvix.Data.Field
 import Juvix.Data.FileExt
 import Juvix.Prelude
 import Options.Applicative
@@ -110,6 +111,23 @@ naturalNumberOpt = eitherReader aux
   where
     aux :: String -> Either String Word
     aux s = maybe (Left $ s <> " is not a nonnegative number") Right (readMaybe s :: Maybe Word)
+
+fieldSizeOpt :: ReadM (Maybe Natural)
+fieldSizeOpt = eitherReader aux
+  where
+    aux :: String -> Either String (Maybe Natural)
+    aux s = case s of
+      "cairo" -> Right $ Just cairoFieldSize
+      "small" -> Right $ Just smallFieldSize
+      _ ->
+        mapRight Just $
+          either Left checkAllowed $
+            maybe (Left $ s <> " is not a valid field size") Right (readMaybe s :: Maybe Natural)
+
+    checkAllowed :: Natural -> Either String Natural
+    checkAllowed n
+      | n `elem` allowedFieldSizes = Right n
+      | otherwise = Left $ Prelude.show n <> " is not a recognized field size"
 
 extCompleter :: FileExt -> Completer
 extCompleter ext = mkCompleter $ \word -> do
