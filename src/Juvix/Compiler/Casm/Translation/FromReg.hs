@@ -4,6 +4,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Backend
 import Juvix.Compiler.Casm.Data.LabelInfo
 import Juvix.Compiler.Casm.Data.LabelInfoBuilder
+import Juvix.Compiler.Casm.Data.Limits
 import Juvix.Compiler.Casm.Extra.Base
 import Juvix.Compiler.Casm.Extra.Stdlib
 import Juvix.Compiler.Casm.Language
@@ -39,7 +40,7 @@ fromReg tab = run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolId tab) $ do
 
     goFun :: forall r. (Member LabelInfoBuilder r) => StdlibBuiltins -> (Address, [[Instruction]]) -> Reg.FunctionInfo -> Sem r (Address, [[Instruction]])
     goFun blts (addr0, acc) funInfo = do
-      sym <- freshSymbol
+      let sym = funInfo ^. Reg.functionSymbol
       registerLabelName sym (funInfo ^. Reg.functionName)
       registerLabelAddress sym addr0
       let code = funInfo ^. Reg.functionCode
@@ -65,9 +66,9 @@ fromReg tab = run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolId tab) $ do
           Reg.AllocClosure x -> goAllocClosure addr x
           Reg.ExtendClosure x -> goExtendClosure addr x
           Reg.Call x -> goCall addr x
-          Reg.CallClosures x -> goCallClosures addr x
           Reg.TailCall x -> goTailCall addr x
-          Reg.TailCallClosures x -> goTailCallClosures addr x
+          Reg.CallClosures {} -> impossible
+          Reg.TailCallClosures {} -> impossible
           Reg.Return x -> goReturn addr x
           Reg.Branch x -> goBranch addr x
           Reg.Case x -> goCase addr x
@@ -201,38 +202,90 @@ fromReg tab = run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolId tab) $ do
           where
             res = goVarRef _instrAssignResult
 
+        mkAllocCall :: MemRef -> [Instruction]
+        mkAllocCall res =
+          [ mkCall $ Lab $ LabelRef (blts ^. stdlibGetRegs) (Just (blts ^. stdlibGetRegsName)),
+            mkNativeBinop FieldAdd res (MemRef Ap (-2)) (Imm 2)
+          ]
+
         goAlloc :: Address -> Reg.InstrAlloc -> Sem r [Instruction]
         goAlloc _ Reg.InstrAlloc {..} =
           return $
-            [ mkCall $ Lab $ LabelRef (blts ^. stdlibGetRegs) (Just (blts ^. stdlibGetRegsName)),
-              mkNativeBinop FieldAdd res (MemRef Ap (-2)) (Imm 2),
-              mkAssignAp (Val $ Imm $ fromIntegral tagId)
-            ]
+            mkAllocCall res
+              ++ [ mkAssignAp (Val $ Imm $ fromIntegral tagId)
+                 ]
               ++ map goAssignApValue _instrAllocArgs
           where
             res = goVarRef _instrAllocResult
             tagId = fromJust $ HashMap.lookup _instrAllocTag (info ^. Reg.extraInfoUIDs)
 
         goAllocClosure :: Address -> Reg.InstrAllocClosure -> Sem r [Instruction]
-        goAllocClosure addr Reg.InstrAllocClosure {..} = undefined
+        goAllocClosure _ Reg.InstrAllocClosure {..} =
+          return $
+            mkAllocCall res
+              ++ [ mkAssignAp (Val $ Lab $ LabelRef _instrAllocClosureSymbol (Just funName)),
+                   mkAssignAp (Val $ Imm $ fromIntegral $ casmMaxFunctionArgs + 1 - storedArgsNum),
+                   mkAssignAp (Val $ Imm $ fromIntegral $ casmMaxFunctionArgs + 1 - leftArgsNum)
+                 ]
+              ++ map goAssignApValue _instrAllocClosureArgs
+          where
+            res = goVarRef _instrAllocClosureResult
+            funName = Reg.lookupFunInfo tab _instrAllocClosureSymbol ^. Reg.functionName
+            storedArgsNum = length _instrAllocClosureArgs
+            leftArgsNum = _instrAllocClosureExpectedArgsNum - storedArgsNum
 
         goExtendClosure :: Address -> Reg.InstrExtendClosure -> Sem r [Instruction]
-        goExtendClosure addr Reg.InstrExtendClosure {..} = undefined
+        goExtendClosure _ Reg.InstrExtendClosure {..} =
+          return $
+            map goAssignApValue _instrExtendClosureArgs
+              ++ [ mkAssignAp (Val $ Imm $ fromIntegral $ casmMaxFunctionArgs + 1 - length _instrExtendClosureArgs),
+                   mkAssignAp (Val $ Ref val),
+                   mkCall $ Lab $ LabelRef (blts ^. stdlibExtendClosure) (Just (blts ^. stdlibExtendClosureName)),
+                   mkAssign res (Val $ Ref $ MemRef Ap (-1))
+                 ]
+          where
+            res = goVarRef _instrExtendClosureResult
+            val = goVarRef _instrExtendClosureValue
+
+        goCall' :: Instruction -> Reg.CallType -> [Reg.Value] -> [Instruction]
+        goCall' saveOrRet ct args = case ct of
+          Reg.CallFun sym ->
+            args'
+              ++ [ mkCall $ Lab $ LabelRef sym (Just funName),
+                   saveOrRet
+                 ]
+            where
+              funName = Reg.lookupFunInfo tab sym ^. Reg.functionName
+          Reg.CallClosure cl ->
+            args'
+              ++ [ mkAssignAp (Val $ Ref $ goVarRef cl),
+                   mkCall $ Lab $ LabelRef (blts ^. stdlibCallClosure) (Just (blts ^. stdlibCallClosureName)),
+                   saveOrRet
+                 ]
+          where
+            args' = map goAssignApValue (reverse args)
 
         goCall :: Address -> Reg.InstrCall -> Sem r [Instruction]
-        goCall addr Reg.InstrCall {..} = undefined
+        goCall _ Reg.InstrCall {..} =
+          return $
+            goCall' (mkAssign res (Val $ Ref $ MemRef Ap (-1))) _instrCallType _instrCallArgs
+          where
+            res = goVarRef _instrCallResult
 
+        -- There is no way to make more "proper" tail calls in Cairo, because
+        -- the only way to set the `fp` register is via the `call` instruction.
+        -- So we just translate tail calls into `call` followed by `ret`.
         goTailCall :: Address -> Reg.InstrTailCall -> Sem r [Instruction]
-        goTailCall addr Reg.InstrTailCall {..} = undefined
-
-        goCallClosures :: Address -> Reg.InstrCallClosures -> Sem r [Instruction]
-        goCallClosures addr Reg.InstrCallClosures {..} = undefined
-
-        goTailCallClosures :: Address -> Reg.InstrTailCallClosures -> Sem r [Instruction]
-        goTailCallClosures addr Reg.InstrTailCallClosures {..} = undefined
+        goTailCall _ Reg.InstrTailCall {..} =
+          return $
+            goCall' Return _instrTailCallType _instrTailCallArgs
 
         goReturn :: Address -> Reg.InstrReturn -> Sem r [Instruction]
-        goReturn addr Reg.InstrReturn {..} = undefined
+        goReturn _ Reg.InstrReturn {..} =
+          return $
+            [ goAssignApValue _instrReturnValue,
+              Return
+            ]
 
         goBranch :: Address -> Reg.InstrBranch -> Sem r [Instruction]
         goBranch addr Reg.InstrBranch {..} = undefined

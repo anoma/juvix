@@ -46,7 +46,7 @@ juvix_call_closure:
 
 -- [fp - 3]: closure
 -- [fp - 4]: 9 - n, where 0 < n <= 8 is the number of arguments to extend with
--- [fp - 5 - k]: argument n - k - 1 (reverse order!)
+-- [fp - 4 - k]: argument n - k - 1 (reverse order!)
 juvix_extend_closure:
   ap += 5
   -- 9 - sargs
@@ -70,8 +70,8 @@ juvix_extend_closure:
   [fp] = [ap - 2] + 2
   -- closure header
   [ap] = [[fp - 3]]; ap++
-  [ap] = [fp + 1] - 1; ap++
-  [ap] = [fp + 2] + 1; ap++
+  [ap] = [fp + 1] - [fp - 4]; ap++
+  [ap] = [fp + 2] + [fp - 4]; ap++
   -- copy stored args: jmp rel (9 - sargs)
   jmp rel [fp + 1]
   [ap] = [fp + 11]; ap++

@@ -93,3 +93,6 @@ adjustAp idx mr@MemRef {..} = case _memRefReg of
 
 mkCall :: Value -> Instruction
 mkCall = Call . InstrCall
+
+mkJump :: Value -> Instruction
+mkJump v = Jump (InstrJump v False)
