@@ -41,12 +41,14 @@ fromReg tab = run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolId tab) $ do
     goFun :: forall r. (Member LabelInfoBuilder r) => StdlibBuiltins -> (Address, [[Instruction]]) -> Reg.FunctionInfo -> Sem r (Address, [[Instruction]])
     goFun blts (addr0, acc) funInfo = do
       let sym = funInfo ^. Reg.functionSymbol
-      registerLabelName sym (funInfo ^. Reg.functionName)
+          funName = funInfo ^. Reg.functionName
+      registerLabelName sym funName
       registerLabelAddress sym addr0
-      let code = funInfo ^. Reg.functionCode
+      let lab = Label $ LabelRef sym (Just funName)
+          code = funInfo ^. Reg.functionCode
           n = fromJust $ HashMap.lookup (funInfo ^. Reg.functionSymbol) (info ^. Reg.extraInfoLocalVarsNum)
           i1 = Alloc $ InstrAlloc $ Val $ Imm $ fromIntegral n
-          pre = [i1]
+          pre = [lab, i1]
           addr1 = addr0 + length pre
       instrs <- goCode addr1 code
       return (addr1 + length instrs, (pre ++ instrs) : acc)
@@ -89,14 +91,9 @@ fromReg tab = run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolId tab) $ do
           Reg.ConstVoid -> 0
           Reg.ConstString {} -> unsupported "strings"
 
-        goConstrField :: MemRef -> Bool -> Reg.ConstrField -> Instruction
-        goConstrField mref incAp Reg.ConstrField {..} =
-          Assign
-            InstrAssign
-              { _instrAssignValue = Load $ LoadValue (goVarRef _constrFieldRef) (toOffset _constrFieldIndex),
-                _instrAssignResult = mref,
-                _instrAssignIncAp = incAp
-              }
+        goConstrField :: Reg.ConstrField -> RValue
+        goConstrField Reg.ConstrField {..} =
+          Load $ LoadValue (goVarRef _constrFieldRef) (toOffset _constrFieldIndex)
 
         goVarRef :: Reg.VarRef -> MemRef
         goVarRef Reg.VarRef {..} = case _varRefGroup of
@@ -108,20 +105,20 @@ fromReg tab = run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolId tab) $ do
         goValue :: Reg.Value -> ([Instruction], Value)
         goValue = \case
           Reg.Const c -> ([], Imm $ goConst c)
-          Reg.CRef x -> ([goConstrField (MemRef Ap 0) True x], Ref $ MemRef Ap (-1))
+          Reg.CRef x -> ([mkAssignAp (goConstrField x)], Ref $ MemRef Ap (-1))
           Reg.VRef x -> ([], Ref $ goVarRef x)
 
+        goRValue :: Reg.Value -> RValue
+        goRValue = \case
+          Reg.Const c -> Val $ Imm $ goConst c
+          Reg.CRef x -> goConstrField x
+          Reg.VRef x -> Val $ Ref $ goVarRef x
+
         goAssignValue :: MemRef -> Reg.Value -> Instruction
-        goAssignValue res = \case
-          Reg.Const c -> mkAssign res (Val $ Imm $ goConst c)
-          Reg.CRef x -> goConstrField res False x
-          Reg.VRef x -> mkAssign res (Val $ Ref $ goVarRef x)
+        goAssignValue res = mkAssign res . goRValue
 
         goAssignApValue :: Reg.Value -> Instruction
-        goAssignApValue = \case
-          Reg.Const c -> mkAssignAp (Val $ Imm $ goConst c)
-          Reg.CRef x -> goConstrField (MemRef Ap 0) True x
-          Reg.VRef x -> mkAssignAp (Val $ Ref $ goVarRef x)
+        goAssignApValue = mkAssignAp . goRValue
 
         mkBinop :: Reg.BinaryOp -> MemRef -> MemRef -> Value -> [Instruction]
         mkBinop op res arg1 arg2 = case op of
@@ -168,13 +165,13 @@ fromReg tab = run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolId tab) $ do
                   }
           Reg.CRef ctr1 ->
             case _instrBinopArg2 of
-              Reg.CRef {} -> do
-                let i = goConstrField (MemRef Ap 0) True ctr1
+              Reg.CRef {} ->
                 return $ i : is2 ++ mkBinop _instrBinopOpcode res (MemRef Ap (-2)) (Ref $ MemRef Ap (-1))
               _ -> do
                 eassert (null is2)
-                let i = goConstrField (MemRef Ap 0) True ctr1
                 return $ i : mkBinop _instrBinopOpcode res (MemRef Ap (-1)) v2
+            where
+              i = mkAssignAp (goConstrField ctr1)
           Reg.VRef var1 ->
             return $ is2 ++ mkBinop _instrBinopOpcode res (goVarRef var1) v2
           where
@@ -272,7 +269,7 @@ fromReg tab = run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolId tab) $ do
           where
             res = goVarRef _instrCallResult
 
-        -- There is no way to make more "proper" tail calls in Cairo, because
+        -- There is no way to make "proper" tail calls in Cairo, because
         -- the only way to set the `fp` register is via the `call` instruction.
         -- So we just translate tail calls into `call` followed by `ret`.
         goTailCall :: Address -> Reg.InstrTailCall -> Sem r [Instruction]
@@ -294,7 +291,9 @@ fromReg tab = run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolId tab) $ do
         goCase addr Reg.InstrCase {..} = undefined
 
         goTrace :: Address -> Reg.InstrTrace -> Sem r [Instruction]
-        goTrace addr Reg.InstrTrace {..} = undefined
+        goTrace _ Reg.InstrTrace {..} =
+          return [Trace (InstrTrace (goRValue _instrTraceValue))]
 
         goBlock :: Address -> Reg.InstrBlock -> Sem r [Instruction]
-        goBlock addr Reg.InstrBlock {..} = undefined
+        goBlock addr Reg.InstrBlock {..} =
+          goCode addr _instrBlockCode
