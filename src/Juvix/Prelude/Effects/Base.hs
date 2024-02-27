@@ -87,6 +87,14 @@ throw = throwError
 runError :: Sem (Error err ': r) x -> Sem r (Either err x)
 runError = runErrorNoCallStack
 
+catch ::
+  forall e r a.
+  (Member (Error e) r) =>
+  Sem r a ->
+  (e -> Sem r a) ->
+  Sem r a
+catch m handler = catchError m (const handler)
+
 raiseUnder :: forall (e1 :: Effect) (e2 :: Effect) (r :: [Effect]) a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': r) a
 raiseUnder = inject
 
@@ -128,7 +136,7 @@ interpretTop3H ::
   (DispatchOf e1 ~ 'Dynamic) =>
   EffectHandler e1 (e4 ': e3 ': e2 ': r) ->
   Sem (e1 ': r) a ->
-  E.Eff (e4 ': e3 ': e2 ': r) a
+  Sem (e4 ': e3 ': e2 ': r) a
 interpretTop3H i = E.interpret i . inject
 
 interpretTop2H ::
@@ -136,7 +144,7 @@ interpretTop2H ::
   (DispatchOf e1 ~ 'Dynamic) =>
   EffectHandler e1 (e3 ': e2 ': r) ->
   Sem (e1 ': r) a ->
-  E.Eff (e3 ': e2 ': r) a
+  Sem (e3 ': e2 ': r) a
 interpretTop2H i = E.interpret i . inject
 
 interpretTopH ::
@@ -144,7 +152,7 @@ interpretTopH ::
   (DispatchOf e1 ~ 'Dynamic) =>
   EffectHandler e1 (e2 ': r) ->
   Sem (e1 ': r) a ->
-  E.Eff (e2 ': r) a
+  Sem (e2 ': r) a
 interpretTopH i = E.interpret i . raiseUnder
 
 interpretTop3 ::
@@ -152,7 +160,7 @@ interpretTop3 ::
   (DispatchOf e1 ~ 'Dynamic) =>
   EffectHandlerFO e1 (e4 ': e3 ': e2 ': r) ->
   Sem (e1 ': r) a ->
-  E.Eff (e4 ': e3 ': e2 ': r) a
+  Sem (e4 ': e3 ': e2 ': r) a
 interpretTop3 i = interpretTop3H (const i)
 
 interpretTop ::
@@ -160,7 +168,7 @@ interpretTop ::
   (DispatchOf e1 ~ 'Dynamic) =>
   EffectHandlerFO e1 (e2 ': r) ->
   Sem (e1 ': r) a ->
-  E.Eff (e2 ': r) a
+  Sem (e2 ': r) a
 interpretTop i = interpretTopH (const i)
 
 interpret ::
@@ -168,7 +176,7 @@ interpret ::
   (DispatchOf e1 ~ 'Dynamic) =>
   EffectHandlerFO e1 r ->
   Sem (e1 ': r) a ->
-  E.Eff r a
+  Sem r a
 interpret i = E.interpret (const i)
 
 interpretH ::
@@ -176,7 +184,7 @@ interpretH ::
   (DispatchOf e1 ~ 'Dynamic) =>
   EffectHandler e1 r ->
   Sem (e1 ': r) a ->
-  E.Eff r a
+  Sem r a
 interpretH = E.interpret
 
 reinterpretH ::

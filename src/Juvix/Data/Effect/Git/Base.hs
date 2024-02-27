@@ -26,7 +26,7 @@ data Git :: Effect where
 
 makeSem ''Git
 
-type GitClone = Provider Git CloneArgs
+type GitClone = Provider_ Git CloneArgs
 
 headRef :: (Member Git r) => (GitError -> Sem r GitRef) -> Sem r GitRef
 headRef h = normalizeRef h "HEAD"
