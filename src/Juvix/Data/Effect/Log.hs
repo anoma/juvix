@@ -1,6 +1,5 @@
 module Juvix.Data.Effect.Log where
 
-import Data.Text.IO qualified as Text
 import Juvix.Prelude.Base
 
 data Log :: Effect where
@@ -16,7 +15,7 @@ runLogIO sem = do
   liftIO (hSetBuffering stdout LineBuffering)
   interpret
     ( \case
-        Log txt -> liftIO (Text.hPutStrLn stdout txt)
+        Log txt -> hPutStrLn stdout txt
     )
     sem
 

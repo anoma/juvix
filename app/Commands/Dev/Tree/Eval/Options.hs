@@ -6,7 +6,6 @@ import Prelude (show)
 
 data Evaluator
   = EvalEffectful
-  | EvalSem
   | EvalRaw
   deriving stock (Eq, Bounded, Enum, Data)
 
@@ -16,7 +15,6 @@ defaultEvaluator = EvalEffectful
 instance Show Evaluator where
   show = \case
     EvalEffectful -> "effectful"
-    EvalSem -> "polysemy"
     EvalRaw -> "raw"
 
 instance Pretty Evaluator where

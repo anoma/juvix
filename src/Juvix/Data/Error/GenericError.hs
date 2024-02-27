@@ -82,11 +82,11 @@ renderAnsiText :: (ToGenericError e, Member (Reader GenericOptions) r) => e -> S
 renderAnsiText = render True False
 
 printErrorAnsi :: (ToGenericError e, Members '[EmbedIO, Reader GenericOptions] r) => e -> Sem r ()
-printErrorAnsi e = renderAnsiText e >>= \txt -> liftIO (hPutStrLn stderr txt)
+printErrorAnsi e = renderAnsiText e >>= \txt -> hPutStrLn stderr txt
 
 -- | Print the error to stderr without formatting.
 printErrorText :: (ToGenericError e, Members '[EmbedIO, Reader GenericOptions] r) => e -> Sem r ()
-printErrorText e = renderText e >>= \txt -> liftIO (hPutStrLn stderr txt)
+printErrorText e = renderText e >>= \txt -> hPutStrLn stderr txt
 
 printErrorAnsiSafe :: (ToGenericError e, Members '[EmbedIO, Reader GenericOptions] r) => e -> Sem r ()
 printErrorAnsiSafe e =
@@ -101,7 +101,7 @@ runErrorIO ::
   Sem r b
 runErrorIO =
   runError >=> \case
-    Left err -> printErrorAnsiSafe err >> liftIO exitFailure
+    Left err -> printErrorAnsiSafe err >> exitFailure
     Right a -> return a
 
 runErrorIO' ::

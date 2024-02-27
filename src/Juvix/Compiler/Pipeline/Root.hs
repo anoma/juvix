@@ -4,8 +4,8 @@ module Juvix.Compiler.Pipeline.Root
   )
 where
 
-import Control.Exception (SomeException)
 import Control.Exception qualified as IO
+import Control.Monad.Catch qualified as M
 import Juvix.Compiler.Pipeline.Package.IO
 import Juvix.Compiler.Pipeline.Root.Base
 import Juvix.Data.Effect.TaggedLock
@@ -17,20 +17,20 @@ readPackageRootIO root = readPackageIO (root ^. rootRootDir) (root ^. rootBuildD
 
 findRootAndChangeDir ::
   forall r.
-  (Members '[TaggedLock, EmbedIO, EmbedIO] r) =>
+  (Members '[TaggedLock, EmbedIO] r) =>
   Maybe (Path Abs Dir) ->
   Maybe (Path Abs Dir) ->
   Path Abs Dir ->
   Sem r Root
 findRootAndChangeDir minputFileDir mbuildDir _rootInvokeDir = do
-  r <- runError (fromExceptionSem @SomeException go)
+  let handleErr :: IO.SomeException -> Sem r x
+      handleErr (err :: IO.SomeException) = do
+        putStrLn "Something went wrong when looking for the root of the project"
+        putStrLn (pack (IO.displayException err))
+        exitFailure
+  r <- M.catch go handleErr
   runFilesIO ensureGlobalPackage
-  case r of
-    Left (err :: IO.SomeException) -> liftIO $ do
-      putStrLn "Something went wrong when looking for the root of the project"
-      putStrLn (pack (IO.displayException err))
-      exitFailure
-    Right root -> return root
+  return r
   where
     possiblePaths :: Path Abs Dir -> [Path Abs Dir]
     possiblePaths p = p : toList (parents p)
@@ -43,7 +43,7 @@ findRootAndChangeDir minputFileDir mbuildDir _rootInvokeDir = do
       pFile <- findPackageFile' Paths.packageFilePath
       return (pFile <|> yamlFile)
 
-    go :: Sem (Error SomeException ': r) Root
+    go :: Sem r Root
     go = do
       l <- findPackageFile
       case l of

@@ -82,7 +82,7 @@ checkWasmLd clangPath errMsg =
 checkClangTargetSupported :: (Members DoctorEff r) => Path Abs File -> String -> [Text] -> Sem r ()
 checkClangTargetSupported clangPath target errMsg = do
   (code, _, _) <-
-    embed
+    liftIO
       ( P.readProcessWithExitCode
           (toFilePath clangPath)
           ["-target", target, "--print-supported-cpus"]
@@ -92,14 +92,14 @@ checkClangTargetSupported clangPath target errMsg = do
 
 checkClangVersion :: (Members DoctorEff r) => Path Abs File -> Integer -> [Text] -> Sem r ()
 checkClangVersion clangPath expectedVersion errMsg = do
-  versionString <- embed (P.readProcess (toFilePath clangPath) ["-dumpversion"] "")
+  versionString <- liftIO (P.readProcess (toFilePath clangPath) ["-dumpversion"] "")
   case headMay (splitOn "." versionString) >>= readMaybe of
     Just majorVersion -> unless (majorVersion >= expectedVersion) (mapM_ warning errMsg)
     Nothing -> warning "Could not determine clang version"
 
 checkEnvVarSet :: (Members DoctorEff r) => String -> [Text] -> Sem r ()
 checkEnvVarSet var errMsg = do
-  whenM (isNothing <$> embed (E.lookupEnv var)) (mapM_ warning errMsg)
+  whenM (isNothing <$> liftIO (E.lookupEnv var)) (mapM_ warning errMsg)
 
 getLatestRelease :: (Members '[EmbedIO, Fail] r) => Sem r GithubRelease
 getLatestRelease = do
@@ -114,7 +114,7 @@ checkVersion = do
   let tagName = "v" <> V.versionDoc
   response <- runFail getLatestRelease
   case response of
-    Just release -> case release ^. githubReleaseTagName of
+    Just release' -> case release' ^. githubReleaseTagName of
       Just latestTagName -> unless (tagName == latestTagName) (warning ("Newer Juvix version is available from https://github.com/anoma/juvix/releases/tag/" <> latestTagName))
       Nothing -> warning "Tag name is not present in release JSON from Github API"
     Nothing -> warning "Network error when fetching data from Github API"

@@ -42,16 +42,14 @@ runCommand replOpts = do
         absInputFile :: Path Abs File <- replMakeAbsolute inputFile
         set entryPointTarget Backend.TargetGeb
           <$> liftIO (runM (runTaggedLockPermissive (entryPointFromGlobalOptions root absInputFile gopts)))
-  embed
-    ( State.evalStateT
-        (replAction replOpts getReplEntryPoint)
-        ( ReplState
-            { _replContextEntryPoint = Nothing,
-              _replStateGlobalOptions = globalOptions,
-              _replStateInvokeDir = invokeDir
-            }
-        )
-    )
+  liftIO
+    . State.evalStateT
+      (replAction replOpts getReplEntryPoint)
+    $ ReplState
+      { _replContextEntryPoint = Nothing,
+        _replStateGlobalOptions = globalOptions,
+        _replStateInvokeDir = invokeDir
+      }
 
 loadEntryPoint :: EntryPoint -> Repl ()
 loadEntryPoint ep = do

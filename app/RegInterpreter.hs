@@ -6,7 +6,7 @@ import Juvix.Compiler.Reg.Data.InfoTable qualified as Reg
 import Juvix.Compiler.Reg.Interpreter qualified as Reg
 import Juvix.Compiler.Reg.Pretty qualified as Reg
 
-runReg :: forall r. (Members '[Embed IO, App] r) => Reg.InfoTable -> Sem r ()
+runReg :: forall r. (Members '[EmbedIO, App] r) => Reg.InfoTable -> Sem r ()
 runReg tab =
   case tab ^. Reg.infoMainFunction of
     Just sym -> do

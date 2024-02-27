@@ -214,13 +214,3 @@ runTSimpleEff locEnv ma =
   let lifter :: ((forall y. Sem localEs y -> Sem r y) -> Sem r x)
       lifter f = f ma
    in localSeqUnlift locEnv lifter
-
-runTEff ::
-  forall (localEs :: [Effect]) (r :: [Effect]) x.
-  LocalEnv localEs r ->
-  Sem localEs x ->
-  Sem r x
-runTEff locEnv ma =
-  let lifter :: ((forall y. Sem localEs y -> Sem r y) -> Sem r x)
-      lifter f = f ma
-   in localSeqUnlift locEnv lifter

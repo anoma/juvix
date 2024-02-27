@@ -173,7 +173,7 @@ replAction =
 runCommand :: forall r. (Members '[EmbedIO, App] r) => NockmaReplOptions -> Sem r ()
 runCommand opts = do
   mt :: Maybe (Term Natural) <- mapM iniStack (opts ^. nockmaReplOptionsStackFile)
-  embed . (`State.evalStateT` (iniState mt)) $ replAction
+  liftIO . (`State.evalStateT` (iniState mt)) $ replAction
   where
     iniStack :: AppPath File -> Sem r (Term Natural)
     iniStack af = do

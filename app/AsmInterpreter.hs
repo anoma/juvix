@@ -34,4 +34,4 @@ runAsm bValidate tab =
       Asm.FunctionInfo ->
       Sem r (Either Asm.AsmError Asm.Val)
     doRun tab' funInfo =
-      embed $ Asm.catchRunErrorIO (Asm.runCodeIO tab' funInfo)
+      liftIO $ Asm.catchRunErrorIO (Asm.runCodeIO tab' funInfo)

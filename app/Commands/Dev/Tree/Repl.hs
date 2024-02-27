@@ -128,7 +128,7 @@ replAction =
       }
 
 runCommand :: forall r. (Members '[EmbedIO, App] r) => TreeReplOptions -> Sem r ()
-runCommand _ = embed . (`State.evalStateT` iniState) $ replAction
+runCommand _ = liftIO . (`State.evalStateT` iniState) $ replAction
   where
     iniState :: ReplState
     iniState =

@@ -73,7 +73,7 @@ prepareRuntime buildDir o = do
 
     writeRuntime :: BS.ByteString -> Sem r ()
     writeRuntime =
-      embed
+      liftIO
         . BS.writeFile (toFilePath (buildDir <//> $(mkRelFile "libjuvix.a")))
 
     headersDir :: [(Path Rel File, BS.ByteString)]
@@ -83,7 +83,7 @@ prepareRuntime buildDir o = do
     includeDir = juvixIncludeDir buildDir
 
     writeHeader :: (Path Rel File, BS.ByteString) -> Sem r ()
-    writeHeader (filePath, contents) = embed $ do
+    writeHeader (filePath, contents) = liftIO $ do
       ensureDir (includeDir <//> parent filePath)
       BS.writeFile (toFilePath (includeDir <//> filePath)) contents
 
@@ -160,7 +160,7 @@ clangWasmWasiCompile inputFile o = do
     sysrootEnvVar :: Sem r (Path Abs Dir)
     sysrootEnvVar =
       absDir
-        <$> fromMaybeM (throw msg) (embed (lookupEnv "WASI_SYSROOT_PATH"))
+        <$> fromMaybeM (throw msg) (liftIO (lookupEnv "WASI_SYSROOT_PATH"))
       where
         msg :: Text
         msg = "Missing environment variable WASI_SYSROOT_PATH"
@@ -240,7 +240,7 @@ findClangUsingEnvVar = do
   join <$> mapM checkExecutable p
   where
     checkExecutable :: Path Abs File -> Sem r (Maybe (Path Abs File))
-    checkExecutable p = whenMaybeM (embed (isExecutable p)) (return p)
+    checkExecutable p = whenMaybeM (liftIO (isExecutable p)) (return p)
 
     clangBinPath :: Sem r (Maybe (Path Abs File))
     clangBinPath = fmap (<//> $(mkRelFile "bin/clang")) <$> llvmDistPath
@@ -274,7 +274,7 @@ runClang ::
   Sem r ()
 runClang args = do
   cp <- clangBinPath
-  (exitCode, _, err) <- embed (P.readProcessWithExitCode cp args "")
+  (exitCode, _, err) <- liftIO (P.readProcessWithExitCode cp args "")
   case exitCode of
     ExitSuccess -> return ()
     _ -> throw (pack err)

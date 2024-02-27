@@ -519,7 +519,7 @@ runCommand opts = do
             _replStateGlobalOptions = globalOptions
           }
   e <-
-    embed
+    liftIO
       . Except.runExceptT
       . (`State.evalStateT` iniState)
       . (`Reader.runReaderT` env)

@@ -27,17 +27,22 @@ data LoaderResource = LoaderResource
 
 makeLenses ''LoaderResource
 
-runEvalFileEffIO :: forall r a. (Members '[TaggedLock, Files, EmbedIO, Error PackageLoaderError] r) => Sem (EvalFileEff ': r) a -> Sem r a
-runEvalFileEffIO = interpretScopedAs allocator handler
+runEvalFileEffIO ::
+  forall r a.
+  (Members '[TaggedLock, Files, EmbedIO, Error PackageLoaderError] r) =>
+  Sem (EvalFileEff ': r) a ->
+  Sem r a
+runEvalFileEffIO = runProvider_ helper
   where
-    allocator :: Path Abs File -> Sem r LoaderResource
-    allocator p = do
+    helper :: forall x. Path Abs File -> Sem (EvalEff ': r) x -> Sem r x
+    helper p m = do
       res <- loadPackage' p
-      return
-        LoaderResource
-          { _loaderResourceResult = res,
-            _loaderResourcePackagePath = p
-          }
+      let loaderRes :: LoaderResource =
+            LoaderResource
+              { _loaderResourceResult = res,
+                _loaderResourcePackagePath = p
+              }
+      interpret (handler loaderRes) m
 
     handler :: LoaderResource -> EvalEff m x -> Sem r x
     handler res = \case
@@ -73,6 +78,7 @@ runEvalFileEffIO = interpretScopedAs allocator handler
         evalNode n = do
           n' <- doEval Nothing False packageLoc tab n
           case n' of
+            Right resN -> return resN
             Left e -> do
               throw
                 PackageLoaderError
@@ -83,7 +89,6 @@ runEvalFileEffIO = interpretScopedAs allocator handler
                           { _packageEvaluationErrorError = JuvixError e
                           }
                   }
-            Right resN -> return resN
           where
             packageLoc :: Interval
             packageLoc = singletonInterval (mkInitialLoc packagePath)
