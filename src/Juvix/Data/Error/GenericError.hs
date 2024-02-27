@@ -74,6 +74,9 @@ render ansi endChar err = do
 renderText :: (ToGenericError e, Member (Reader GenericOptions) r) => e -> Sem r Text
 renderText = render False False
 
+renderTextDefault :: (ToGenericError e) => e -> Text
+renderTextDefault = run . runReader defaultGenericOptions . renderText
+
 -- | Render the error with Ansi formatting (if any).
 renderAnsiText :: (ToGenericError e, Member (Reader GenericOptions) r) => e -> Sem r Text
 renderAnsiText = render True False

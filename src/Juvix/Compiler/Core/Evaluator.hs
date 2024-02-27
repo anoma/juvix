@@ -454,6 +454,14 @@ doEval mfsize noIO loc tab node
         (\fsize -> defaultEvalOptions {_evalOptionsFieldSize = fsize})
         mfsize
 
+doEvalIO ::
+  Bool ->
+  Interval ->
+  InfoTable ->
+  Node ->
+  IO (Either CoreError Node)
+doEvalIO noIO i tab node = runM (doEval noIO i tab node)
+
 -- | Catch EvalError and convert it to CoreError. Needs a default location in case
 -- no location is available in EvalError.
 catchEvalError :: (MonadIO m) => Location -> a -> m (Either CoreError a)

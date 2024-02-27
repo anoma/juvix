@@ -227,16 +227,6 @@ tests:
           Nat
     exit-status: 0
 
-  - name: eval-let-expression
-    command:
-      - juvix
-      - repl
-    stdin: "let x : Nat := 2 + 1 in x"
-    stdout:
-      contains:
-        "3"
-    exit-status: 0
-
   - name: load-builtin-bool
     command:
       shell:
@@ -297,16 +287,6 @@ tests:
         Juvix REPL .*
         OK loaded: .*
         Stdlib.Prelude> .*/global-project/
-    exit-status: 0
-
-  - name: eval-adding-two-literal-nats
-    command:
-      - juvix
-      - repl
-    stdin: "1 + 2"
-    stdout:
-      contains: |
-        3
     exit-status: 0
 
   - name: repl-trace
@@ -449,16 +429,6 @@ tests:
       - juvix
       - repl
     stdin: "import Stdlib.Data.Int.Ord as Int open\n1 Int.== 1"
-    stdout:
-      contains: "true"
-    exit-status: 0
-
-  - name: literal-comparison
-    command:
-      - juvix
-      - repl
-    stdin: |
-      1 == 1
     stdout:
       contains: "true"
     exit-status: 0

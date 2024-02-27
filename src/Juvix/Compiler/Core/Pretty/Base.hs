@@ -620,7 +620,7 @@ goUnary fixity name = \case
 instance PrettyCode ConstrApp where
   ppCode ConstrApp {..} = do
     n <- ppName KNameConstructor _constrAppName
-    case _constrAppFixity of
+    case _constrAppFixity ^. unIrrelevant of
       Nothing -> do
         args <- mapM (ppRightExpression appFixity) _constrAppArgs
         return $ hsep (n : args)

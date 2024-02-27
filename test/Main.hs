@@ -16,6 +16,7 @@ import Nockma qualified
 import Package qualified
 import Parsing qualified
 import Reg qualified
+import Repl qualified
 import Resolver qualified
 import Runtime qualified
 import Scope qualified
@@ -39,7 +40,8 @@ slowTests =
       Examples.allTests,
       Casm.allTests,
       VampIR.allTests,
-      Anoma.allTests
+      Anoma.allTests,
+      Repl.allTests
     ]
 
 fastTests :: TestTree

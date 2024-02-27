@@ -215,7 +215,7 @@ goMatchToCase recur node = case node of
                   ValueConstrApp
                     ConstrApp
                       { _constrAppName = ci ^. constructorName,
-                        _constrAppFixity = ci ^. constructorFixity,
+                        _constrAppFixity = Irrelevant (ci ^. constructorFixity),
                         _constrAppArgs = replicate argsNum ValueWildcard
                       }
             Nothing ->
@@ -239,7 +239,7 @@ goMatchToCase recur node = case node of
                 ValueConstrApp
                   ConstrApp
                     { _constrAppName = ci ^. constructorName,
-                      _constrAppFixity = ci ^. constructorFixity,
+                      _constrAppFixity = Irrelevant (ci ^. constructorFixity),
                       _constrAppArgs = drop paramsNum (take argsNum args)
                     }
       binders' <- getBranchBinders col matrix tag
