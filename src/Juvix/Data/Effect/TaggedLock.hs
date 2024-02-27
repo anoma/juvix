@@ -19,9 +19,7 @@ import Juvix.Prelude.Path
 -- Example:
 --
 -- @
---      runFinal
---        . resourceToIOFinal
---        . embedToFinal @IO
+--      runM
 --        . runFilesIO
 --        . runTaggedLockIO
 --        $ withTaggedLockDir $(mkAbsDir "/a/b/c") (embed (putStrLn "Hello" >> hFlush stdout))

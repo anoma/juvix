@@ -75,8 +75,8 @@ modify' = State.modify
 mapError :: (Member (Error b) r) => (a -> b) -> Sem (Error a ': r) x -> Sem r x
 mapError f = runErrorWith (\_ e -> throwError (f e))
 
-runM :: Sem '[EmbedIO] a -> IO a
-runM = E.runEff
+runM :: (MonadIO m) => Sem '[EmbedIO] a -> m a
+runM = liftIO . E.runEff
 
 run :: Sem ('[] :: [Effect]) a -> a
 run = E.runPureEff
