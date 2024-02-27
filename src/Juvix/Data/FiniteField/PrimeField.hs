@@ -26,12 +26,12 @@ module Juvix.Data.FiniteField.PrimeField
   )
 where
 
-import Data.FiniteField.Base
 import Data.Hashable
 import Data.Ratio (denominator, numerator)
 import Data.Singletons
 import GHC.TypeLits
 import GHC.TypeLits.Singletons ()
+import Juvix.Data.FiniteField.Base
 import Language.Haskell.TH qualified as TH
 import Prelude hiding (toInteger)
 

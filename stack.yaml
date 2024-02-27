@@ -4,7 +4,6 @@ resolver: nightly-2024-02-06
 extra-deps:
   - git: https://github.com/Vekhir/aeson-better-errors.git
     commit: 1ec49ab7d1472046b680b5a64ae2930515b47714
-  - finite-field-0.10.0@sha256:f676a7abf829f27fee189036219c0326dce68a435bcdddc26319afff4008d8f4,2164
 allow-newer: true
 allow-newer-deps:
   - aeson-better-errors
