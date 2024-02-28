@@ -5,8 +5,8 @@ import Juvix.Prelude
 strCPipeline :: Text
 strCPipeline = "pipeline-c"
 
-strCairoPipeline :: Text
-strCairoPipeline = "pipeline-cairo"
+strCasmPipeline :: Text
+strCasmPipeline = "pipeline-casm"
 
 strIdentity :: Text
 strIdentity = "identity"

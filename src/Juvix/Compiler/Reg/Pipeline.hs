@@ -11,6 +11,7 @@ import Juvix.Compiler.Reg.Transformation
 toC :: InfoTable -> Sem r InfoTable
 toC = applyTransformations toCTransformations
 
--- | Perform transformations on JuvixReg necessary before the translation to Cairo
-toCairo :: InfoTable -> Sem r InfoTable
-toCairo = applyTransformations toCairoTransformations
+-- | Perform transformations on JuvixReg necessary before the translation to
+-- Cairo assembly
+toCasm :: InfoTable -> Sem r InfoTable
+toCasm = applyTransformations toCasmTransformations

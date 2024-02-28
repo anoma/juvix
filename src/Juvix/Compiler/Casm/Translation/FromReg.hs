@@ -3,9 +3,9 @@ module Juvix.Compiler.Casm.Translation.FromReg where
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Backend
-import Juvix.Compiler.Casm.Data.LabelInfo
 import Juvix.Compiler.Casm.Data.LabelInfoBuilder
 import Juvix.Compiler.Casm.Data.Limits
+import Juvix.Compiler.Casm.Data.Result
 import Juvix.Compiler.Casm.Extra.Base
 import Juvix.Compiler.Casm.Extra.Stdlib
 import Juvix.Compiler.Casm.Language
@@ -15,8 +15,8 @@ import Juvix.Compiler.Reg.Language qualified as Reg
 import Juvix.Compiler.Tree.Evaluator.Builtins qualified as Reg
 import Juvix.Data.Field
 
-fromReg :: Reg.InfoTable -> (LabelInfo, [Instruction])
-fromReg tab = run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolId tab) $ do
+fromReg :: Reg.InfoTable -> Result
+fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolId tab) $ do
   let initialOffset :: Int = 2
   (blts, binstrs) <- addStdlibBuiltins
   (addr, instrs) <- second (concat . reverse) <$> foldM (goFun blts) (initialOffset + length binstrs, []) (tab ^. Reg.infoFunctions)
