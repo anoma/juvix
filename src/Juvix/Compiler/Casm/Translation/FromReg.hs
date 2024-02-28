@@ -27,14 +27,15 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
   registerLabelAddress endSym addr
   let mainSym = fromJust $ tab ^. Reg.infoMainFunction
       mainName = fromJust (HashMap.lookup mainSym (tab ^. Reg.infoFunctions)) ^. Reg.functionName
+      endLab = LabelRef endSym (Just endName)
       callInstr = Call $ InstrCall $ Lab $ LabelRef mainSym (Just mainName)
       jmpInstr =
         Jump $
           InstrJump
-            { _instrJumpTarget = Lab $ LabelRef endSym (Just endName),
+            { _instrJumpTarget = Lab endLab,
               _instrJumpIncAp = False
             }
-  return $ callInstr : jmpInstr : binstrs ++ instrs
+  return $ callInstr : jmpInstr : binstrs ++ instrs ++ [Label endLab]
   where
     info :: Reg.ExtraInfo
     info = Reg.computeExtraInfo (getLimits TargetCairo False) tab
