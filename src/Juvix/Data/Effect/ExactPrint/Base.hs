@@ -11,17 +11,6 @@ import Juvix.Data.Loc
 import Juvix.Prelude.Base
 import Prettyprinter qualified as P
 
-data ExactPrint m a where
-  NoLoc :: Doc Ann -> ExactPrint m ()
-  -- | Used to print parentheses after comments.
-  Enqueue :: Doc Ann -> ExactPrint m ()
-  PrintCommentsUntil :: Interval -> ExactPrint m (Maybe SpaceSpan)
-  EnsureEmptyLine :: ExactPrint m ()
-  Region :: (Doc Ann -> Doc Ann) -> m b -> ExactPrint m b
-  End :: ExactPrint m ()
-
-makeSem ''ExactPrint
-
 data Builder = Builder
   { -- | comments sorted by starting location
     _builderComments :: [SpaceSpan],
@@ -32,32 +21,48 @@ data Builder = Builder
     _builderEnd :: FileLoc
   }
 
+data ExactPrint :: Effect where
+  NoLoc :: Doc Ann -> ExactPrint m ()
+  -- | Used to print parentheses after comments.
+  Enqueue :: Doc Ann -> ExactPrint m ()
+  PrintCommentsUntil :: Interval -> ExactPrint m (Maybe SpaceSpan)
+  EnsureEmptyLine :: ExactPrint m ()
+  Region :: (Doc Ann -> Doc Ann) -> m b -> ExactPrint m b
+  End :: ExactPrint m ()
+
+makeSem ''ExactPrint
+
 makeLenses ''Builder
 
-runExactPrint :: Maybe FileComments -> Sem (ExactPrint ': r) x -> Sem r (Doc Ann, x)
-runExactPrint cs = fmap (first (^. builderDoc)) . runState ini . re
-  where
-    ini :: Builder
-    ini =
-      Builder
-        { _builderComments = fromMaybe [] (cs ^? _Just . fileCommentsSorted),
-          _builderDoc = mempty,
-          _builderQueue = mempty,
-          _builderEnsureEmptyLine = False,
-          _builderEnd = FileLoc 0 0 0
-        }
+initialBuilder :: Maybe FileComments -> Builder
+initialBuilder cs =
+  Builder
+    { _builderComments = fromMaybe [] (cs ^? _Just . fileCommentsSorted),
+      _builderDoc = mempty,
+      _builderQueue = mempty,
+      _builderEnsureEmptyLine = False,
+      _builderEnd = FileLoc 0 0 0
+    }
 
 execExactPrint :: Maybe FileComments -> Sem (ExactPrint ': r) x -> Sem r (Doc Ann)
 execExactPrint cs = fmap fst . runExactPrint cs
 
-re :: forall r a. Sem (ExactPrint ': r) a -> Sem (State Builder ': r) a
-re = interpretTopH handler
+runExactPrint :: forall r a. Maybe FileComments -> Sem (ExactPrint ': r) a -> Sem r (Doc Ann, a)
+runExactPrint cs = reinterpretH (runPrivateStateAsDoc (initialBuilder cs)) handler
   where
+    runPrivateStateAsDoc ::
+      forall b.
+      Builder ->
+      Sem (State Builder ': r) b ->
+      Sem r (Doc Ann, b)
+    runPrivateStateAsDoc b = fmap (first (^. builderDoc)) . runState b
+
     handler ::
-      forall x (localEs :: [Effect]).
-      LocalEnv localEs (State Builder ': r) ->
+      forall x (r' :: [Effect]) (localEs :: [Effect]).
+      (Member ExactPrint localEs) =>
+      LocalEnv localEs (State Builder ': r') ->
       ExactPrint (Sem localEs) x ->
-      Sem (State Builder ': r) x
+      Sem (State Builder ': r') x
     handler locEnv = \case
       NoLoc p -> noLoc' p
       EnsureEmptyLine -> modify' (set builderEnsureEmptyLine True)
@@ -66,13 +71,15 @@ re = interpretTopH handler
       PrintCommentsUntil l -> printCommentsUntil' l
       Region regionModif (m :: Sem localEs x) -> do
         st0 :: Builder <- set builderDoc mempty <$> get
-        let helper :: (forall w. Sem localEs w -> Sem (State Builder ': r) w) -> Sem (State Builder ': r) x
-            helper f = f m
+        let runner :: Sem (State Builder ': localEs) x -> Sem localEs (Builder, x)
+            runner = runState st0
 
-            -- TODO is this really working as expected?
-            haha :: Sem (State Builder ': r) x
-            haha = localSeqUnlift locEnv helper
-        (st' :: Builder, fx) <- raise (runState st0 haha)
+            helper :: (forall w. Sem localEs w -> Sem r' w) -> Sem r' (Builder, x)
+            helper unlift = unlift (impose runner handler m)
+
+            inner :: Sem r' (Builder, x)
+            inner = localSeqUnlift locEnv helper
+        (st' :: Builder, fx) <- raise inner
         doc' <- gets (^. builderDoc)
         put
           Builder
@@ -84,8 +91,15 @@ re = interpretTopH handler
             }
         return fx
 
-evalExactPrint' :: Builder -> Sem (ExactPrint ': r) a -> Sem r (Builder, a)
-evalExactPrint' b = runState b . re
+t :: IO ()
+t = putStrLn . toPlainText . fst . run . runExactPrint Nothing $ do
+  noLoc "hello 1\n"
+  region (\x -> "*" <> x <> "!") $ do
+    noLoc "hello 2\n"
+    noLoc "bye"
+
+-- evalExactPrint' :: Builder -> Sem (ExactPrint ': r) a -> Sem r (Builder, a)
+-- evalExactPrint' b = runState b . re
 
 enqueue' :: forall r. (Members '[State Builder] r) => Doc Ann -> Sem r ()
 enqueue' d = modify (over builderQueue (d :))

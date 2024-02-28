@@ -7,7 +7,7 @@ module Juvix.Compiler.Pipeline
   )
 where
 
-import Data.List.Singletons
+import Data.List.Singletons (type (++))
 import Juvix.Compiler.Asm.Error qualified as Asm
 import Juvix.Compiler.Asm.Options qualified as Asm
 import Juvix.Compiler.Asm.Pipeline qualified as Asm

@@ -14,7 +14,7 @@ where
 import Data.Kind qualified as GHC
 import Effectful hiding (Eff, (:>))
 import Effectful qualified as E
-import Effectful.Dispatch.Dynamic (EffectHandler, LocalEnv, SharedSuffix, localLift, localLiftUnlift, localLiftUnliftIO, localSeqLift, localSeqUnlift, localSeqUnliftIO, localUnlift, localUnliftIO, withLiftMap, withLiftMapIO)
+import Effectful.Dispatch.Dynamic (EffectHandler, LocalEnv, SharedSuffix, impose, interpose, localLift, localLiftUnlift, localLiftUnliftIO, localSeqLift, localSeqUnlift, localSeqUnliftIO, localUnlift, localUnliftIO, withLiftMap, withLiftMapIO)
 import Effectful.Dispatch.Dynamic qualified as E
 import Effectful.Dispatch.Static
 import Effectful.Error.Static hiding (runError)
@@ -63,7 +63,7 @@ mapReader f s = do
   e <- ask
   runReader (f e) s
 
-runState :: s -> Sem (State s ': r) a -> Sem r (s, a)
+runState :: forall a s r. s -> Sem (State s ': r) a -> Sem r (s, a)
 runState s = fmap swap . State.runState s
 
 -- | TODO can we make it strict?
@@ -179,3 +179,25 @@ runTSimpleEff locEnv ma =
   let lifter :: (forall y. Sem localEs y -> Sem r y) -> Sem r x
       lifter f = f ma
    in localSeqUnlift locEnv lifter
+
+imposeCommon ::
+  forall e r e' a b.
+  (DispatchOf e ~ 'Dynamic, Member e r) =>
+  -- | Introduction of effects encapsulated within the handler.
+  (Sem (e' ': r) a -> Sem r b) ->
+  -- | The effect handler.
+  EffectHandler e (e' ': r) ->
+  Sem r a ->
+  Sem r b
+imposeCommon = impose
+
+imposeCommon2 ::
+  forall e r e2 e1 a b.
+  (DispatchOf e ~ 'Dynamic, Member e r) =>
+  -- | Introduction of effects encapsulated within the handler.
+  (Sem (e2 ': e1 ': r) a -> Sem r b) ->
+  -- | The effect handler.
+  EffectHandler e (e2 ': e1 ': r) ->
+  Sem r a ->
+  Sem r b
+imposeCommon2 = impose
