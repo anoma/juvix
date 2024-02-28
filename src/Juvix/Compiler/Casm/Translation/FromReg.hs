@@ -99,7 +99,7 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
 
         goConstrField :: Reg.ConstrField -> RValue
         goConstrField Reg.ConstrField {..} =
-          Load $ LoadValue (goVarRef _constrFieldRef) (toOffset _constrFieldIndex)
+          Load $ LoadValue (goVarRef _constrFieldRef) (toOffset _constrFieldIndex + 1)
 
         goVarRef :: Reg.VarRef -> MemRef
         goVarRef Reg.VarRef {..} = case _varRefGroup of
