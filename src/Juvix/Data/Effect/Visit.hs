@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-unused-type-patterns #-}
 -- | Visit every key at most once
 module Juvix.Data.Effect.Visit
   ( runVisit,
@@ -10,10 +11,9 @@ module Juvix.Data.Effect.Visit
 where
 
 import Data.HashSet qualified as HashSet
-import Data.Kind qualified as GHC
 import Juvix.Prelude.Base
 
-data Visit k (m :: GHC.Type -> GHC.Type) a where
+data Visit (k :: GHCType) :: Effect where
   Visit :: k -> Visit k m ()
 
 makeSem ''Visit
