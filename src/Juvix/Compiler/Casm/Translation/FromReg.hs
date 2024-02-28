@@ -120,6 +120,11 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
           Reg.CRef x -> goConstrField x
           Reg.VRef x -> Val $ Ref $ goVarRef x
 
+        goLoad :: Reg.Value -> Offset -> ([Instruction], RValue)
+        goLoad v off = case goRValue v of
+          Val (Ref r) -> ([], Load $ LoadValue r off)
+          v' -> ([mkAssignAp v'], Load $ LoadValue (MemRef Ap (-1)) off)
+
         goAssignValue :: MemRef -> Reg.Value -> Instruction
         goAssignValue res = mkAssign res . goRValue
 
@@ -327,15 +332,15 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
               labs = map (flip LabelRef Nothing) syms
               labEnd = LabelRef symEnd Nothing
               jmps = map (mkJump . Lab) labs
-              addr1 = addr + length jmps + 1
+              addr1 = addr + length is + 1 + length jmps
           (addr2, instrs) <- second (concat . reverse) <$> foldM (goCaseBranch symMap labEnd) (addr1, []) _instrCaseBranches
           (addr3, instrs') <- second reverse <$> foldM (goDefaultLabel symMap) (addr2, []) defaultTags
           instrs'' <- maybe (return []) (goCode addr3) _instrCaseDefault
           let addr4 = addr3 + length instrs''
           registerLabelAddress symEnd addr4
-          return $ mkJumpRel v : jmps ++ instrs ++ instrs' ++ instrs'' ++ [Label labEnd]
+          return $ is ++ mkJumpRel v : jmps ++ instrs ++ instrs' ++ instrs'' ++ [Label labEnd]
           where
-            v = goRValue _instrCaseValue
+            (is, v) = goLoad _instrCaseValue 0
             tags = Reg.lookupInductiveInfo tab _instrCaseInductive ^. Reg.inductiveConstructors
             ctrTags = HashSet.fromList $ map (^. Reg.caseBranchTag) _instrCaseBranches
             defaultTags = filter (not . flip HashSet.member ctrTags) tags
