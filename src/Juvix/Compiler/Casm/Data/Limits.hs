@@ -4,7 +4,7 @@ import Juvix.Compiler.Backend
 import Juvix.Compiler.Casm.Language
 
 casmMaxFunctionArgs :: Int
-casmMaxFunctionArgs = getLimits TargetCairo False ^. limitsMaxFunctionArgs + 1
+casmMaxFunctionArgs = getLimits TargetCairo False ^. limitsMaxFunctionArgs
 
 casmClosureAddrOffset :: Offset
 casmClosureAddrOffset = 0
