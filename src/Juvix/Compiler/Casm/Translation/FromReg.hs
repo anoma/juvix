@@ -345,7 +345,7 @@ fromReg tab = run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolId tab) $ do
                   lab = LabelRef sym Nothing
               registerLabelAddress sym addr'
               instrs <- goCode (addr' + 1) _caseBranchCode
-              let instrs' = Label lab : instrs ++ [Label labEnd]
+              let instrs' = Label lab : instrs ++ [mkJump (Lab labEnd)]
               return (addr' + length instrs', instrs' : acc')
 
             goDefaultLabel :: HashMap Tag Symbol -> (Address, [Instruction]) -> Reg.Tag -> Sem r (Address, [Instruction])
