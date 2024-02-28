@@ -8,7 +8,6 @@ module Juvix.Prelude.Effects.Base
     module Effectful.TH,
     module Effectful.Dispatch.Static,
     module Effectful.Provider,
-    module Effectful.Resource,
   )
 where
 
@@ -22,7 +21,6 @@ import Effectful.Error.Static hiding (runError)
 import Effectful.Internal.Env (getEnv, putEnv)
 import Effectful.Provider
 import Effectful.Reader.Static
-import Effectful.Resource hiding (register)
 import Effectful.State.Static.Local hiding (runState, state)
 import Effectful.State.Static.Local qualified as State
 import Effectful.TH
@@ -97,39 +95,6 @@ catch m handler = catchError m (const handler)
 
 raiseUnder :: forall (e1 :: Effect) (e2 :: Effect) (r :: [Effect]) a. Sem (e1 ': r) a -> Sem (e1 ': e2 ': r) a
 raiseUnder = inject
-
-bracket :: forall r a c b. (Member Resource r) => Sem r a -> (a -> Sem r c) -> (a -> Sem r b) -> Sem r b
-bracket = undefined
-
-bracketOnError ::
-  (Member Resource r) =>
-  Sem r a ->
-  -- Action to allocate a resource.
-  (a -> Sem r c) ->
-  -- Action to cleanup the resource. This will only be called if the
-  -- "use" block fails.
-  (a -> Sem r b) ->
-  -- Action which uses the resource.
-  Sem r b
-bracketOnError = undefined
-
-finally ::
-  (Member Resource r) =>
-  -- | computation to run first
-  Sem r a ->
-  -- | computation to run afterward (even if an exception was raised)
-  Sem r b ->
-  Sem r a
-finally act end = bracket (pure ()) (const end) (const act)
-
-onException ::
-  (Member Resource r) =>
-  -- | computation to run first
-  Sem r a ->
-  -- | computation to run afterward if an exception was raised
-  Sem r b ->
-  Sem r a
-onException act end = bracketOnError (pure ()) (const end) (const act)
 
 interpretTop3H ::
   forall (e1 :: Effect) (e2 :: Effect) (e3 :: Effect) (e4 :: Effect) (r :: [Effect]) a.
