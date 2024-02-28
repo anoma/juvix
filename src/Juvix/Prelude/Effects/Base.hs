@@ -176,6 +176,6 @@ runTSimpleEff ::
   Sem localEs x ->
   Sem r x
 runTSimpleEff locEnv ma =
-  let lifter :: ((forall y. Sem localEs y -> Sem r y) -> Sem r x)
+  let lifter :: (forall y. Sem localEs y -> Sem r y) -> Sem r x
       lifter f = f ma
    in localSeqUnlift locEnv lifter

@@ -72,7 +72,7 @@ module Juvix.Prelude.Base.Foundation
 where
 
 import Control.Applicative
-import Control.Monad.Catch (MonadMask, MonadThrow, throwM)
+import Control.Monad.Catch (ExitCase (..), MonadMask, MonadThrow, generalBracket, throwM)
 import Control.Monad.Extra hiding (fail, forM, mconcatMapM, whileJustM)
 import Control.Monad.Extra qualified as Monad
 import Control.Monad.Fix
