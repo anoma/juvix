@@ -10,6 +10,11 @@ toOffset x
   where
     v = fromIntegral x
 
+adjustAp :: Int16 -> MemRef -> MemRef
+adjustAp idx mr@MemRef {..} = case _memRefReg of
+  Ap -> MemRef Ap (_memRefOff - idx)
+  Fp -> mr
+
 mkExtraBinop :: ExtraOpcode -> MemRef -> MemRef -> Value -> Instruction
 mkExtraBinop op res arg1 arg2 =
   ExtraBinop
@@ -86,13 +91,11 @@ mkOpArgsNum res v =
     mkExtraBinop FieldSub res (MemRef Ap (-2)) (Ref $ MemRef Ap (-1))
   ]
 
-adjustAp :: Int16 -> MemRef -> MemRef
-adjustAp idx mr@MemRef {..} = case _memRefReg of
-  Ap -> MemRef Ap (_memRefOff - idx)
-  Fp -> mr
-
 mkCall :: Value -> Instruction
 mkCall = Call . InstrCall
 
 mkJump :: Value -> Instruction
-mkJump v = Jump (InstrJump v False)
+mkJump tgt = Jump (InstrJump tgt False)
+
+mkJumpIf :: Value -> MemRef -> Instruction
+mkJumpIf tgt v = JumpIf (InstrJumpIf tgt v False)

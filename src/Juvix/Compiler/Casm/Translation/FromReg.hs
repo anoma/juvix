@@ -285,7 +285,33 @@ fromReg tab = run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolId tab) $ do
             ]
 
         goBranch :: Address -> Reg.InstrBranch -> Sem r [Instruction]
-        goBranch addr Reg.InstrBranch {..} = undefined
+        goBranch addr Reg.InstrBranch {..} = case v of
+          Imm c
+            | c == 0 -> goCode addr _instrBranchFalse
+            | otherwise -> goCode addr _instrBranchTrue
+          Ref r -> do
+            symTrue <- freshSymbol
+            symEnd <- freshSymbol
+            let labTrue = LabelRef symTrue Nothing
+                labEnd = LabelRef symEnd Nothing
+                addr1 = addr + length is + 1
+            codeFalse <- goCode addr1 _instrBranchFalse
+            let addr2 = addr1 + length codeFalse + 1
+            codeTrue <- goCode addr2 _instrBranchTrue
+            registerLabelAddress symTrue addr2
+            registerLabelAddress symEnd (addr2 + length codeTrue + 1)
+            return $
+              is
+                ++ [mkJumpIf (Lab labTrue) r]
+                ++ codeFalse
+                ++ [ mkJump (Lab labEnd),
+                     Label labTrue
+                   ]
+                ++ codeTrue
+                ++ [Label labEnd]
+          Lab {} -> impossible
+          where
+            (is, v) = goValue _instrBranchValue
 
         goCase :: Address -> Reg.InstrCase -> Sem r [Instruction]
         goCase addr Reg.InstrCase {..} = undefined

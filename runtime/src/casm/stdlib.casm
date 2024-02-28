@@ -1,8 +1,8 @@
 -- Juvix runtime for Cairo assembly
 
 -- Closure layout: [ addr | 9 - sargs | 9 - argsnum | arguments... ]
---  argsnum -- number of arguments left
 --  sargs -- number of arguments stored in the closure
+--  argsnum -- number of arguments left
 -- sargs + argsnum = total numer of arguments for the function
 -- Maximum number of function arguments: 8
 

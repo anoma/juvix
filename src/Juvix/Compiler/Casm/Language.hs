@@ -78,7 +78,7 @@ data ExtraOpcode
   | IntMul
   | IntDiv
   | IntMod
-  | -- | Sets the result to 1 if arg1 < arg2, or to 0 otherwise
+  | -- | Sets the result to non-zero if arg1 < arg2, or to zero otherwise
     IntLt
 
 data Instruction
