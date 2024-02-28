@@ -99,3 +99,6 @@ mkJump tgt = Jump (InstrJump tgt False)
 
 mkJumpIf :: Value -> MemRef -> Instruction
 mkJumpIf tgt v = JumpIf (InstrJumpIf tgt v False)
+
+mkJumpRel :: RValue -> Instruction
+mkJumpRel tgt = JumpRel (InstrJumpRel tgt False)

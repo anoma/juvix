@@ -196,8 +196,13 @@ computeLocalVarsNum = maximum . map go
 
 data ExtraInfo = ExtraInfo
   { _extraInfoTable :: InfoTable,
+    -- | Globally unique IDs for constructor tags
     _extraInfoUIDs :: HashMap Tag Int,
+    -- | Globally unique IDs for function symbols
     _extraInfoFUIDs :: HashMap Symbol Int,
+    -- | IDs for constructor tags, consecutive starting from 0 for each
+    -- inductive type separately
+    _extraInfoCIDs :: HashMap Tag Int,
     _extraInfoStringMap :: HashMap Text Int,
     _extraInfoMaxStackHeight :: HashMap Symbol Int,
     _extraInfoLocalVarsNum :: HashMap Symbol Int,
@@ -226,12 +231,19 @@ computeFUIDs tab =
       (HashMap.elems (tab ^. infoFunctions))
       [0 ..]
 
+computeCIDs :: InfoTable -> HashMap Tag Int
+computeCIDs tab = HashMap.fromList $ concatMap go (tab ^. infoInductives)
+  where
+    go :: InductiveInfo -> [(Tag, Int)]
+    go InductiveInfo {..} = zip _inductiveConstructors [0 ..]
+
 computeExtraInfo :: Limits -> InfoTable -> ExtraInfo
 computeExtraInfo lims tab =
   ExtraInfo
     { _extraInfoTable = tab,
       _extraInfoUIDs = computeUIDs lims tab,
       _extraInfoFUIDs = computeFUIDs tab,
+      _extraInfoCIDs = computeCIDs tab,
       _extraInfoStringMap =
         foldr
           (\fi mp -> computeStringMap mp (fi ^. functionCode))

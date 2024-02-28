@@ -1,6 +1,7 @@
 module Juvix.Compiler.Casm.Translation.FromReg where
 
 import Data.HashMap.Strict qualified as HashMap
+import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Backend
 import Juvix.Compiler.Casm.Data.LabelInfo
 import Juvix.Compiler.Casm.Data.LabelInfoBuilder
@@ -37,6 +38,10 @@ fromReg tab = run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolId tab) $ do
   where
     info :: Reg.ExtraInfo
     info = Reg.computeExtraInfo (getLimits TargetCairo False) tab
+
+    getTagId :: Tag -> Int
+    getTagId tag =
+      1 + fromJust (HashMap.lookup tag (info ^. Reg.extraInfoCIDs))
 
     goFun :: forall r. (Member LabelInfoBuilder r) => StdlibBuiltins -> (Address, [[Instruction]]) -> Reg.FunctionInfo -> Sem r (Address, [[Instruction]])
     goFun blts (addr0, acc) funInfo = do
@@ -214,7 +219,7 @@ fromReg tab = run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolId tab) $ do
               ++ map goAssignApValue _instrAllocArgs
           where
             res = goVarRef _instrAllocResult
-            tagId = fromJust $ HashMap.lookup _instrAllocTag (info ^. Reg.extraInfoUIDs)
+            tagId = getTagId _instrAllocTag
 
         goAllocClosure :: Address -> Reg.InstrAllocClosure -> Sem r [Instruction]
         goAllocClosure _ Reg.InstrAllocClosure {..} =
@@ -297,9 +302,9 @@ fromReg tab = run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolId tab) $ do
                 addr1 = addr + length is + 1
             codeFalse <- goCode addr1 _instrBranchFalse
             let addr2 = addr1 + length codeFalse + 1
-            codeTrue <- goCode addr2 _instrBranchTrue
             registerLabelAddress symTrue addr2
-            registerLabelAddress symEnd (addr2 + length codeTrue + 1)
+            codeTrue <- goCode (addr2 + 1) _instrBranchTrue
+            registerLabelAddress symEnd (addr2 + 1 + length codeTrue)
             return $
               is
                 ++ [mkJumpIf (Lab labTrue) r]
@@ -314,7 +319,41 @@ fromReg tab = run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolId tab) $ do
             (is, v) = goValue _instrBranchValue
 
         goCase :: Address -> Reg.InstrCase -> Sem r [Instruction]
-        goCase addr Reg.InstrCase {..} = undefined
+        goCase addr Reg.InstrCase {..} = do
+          syms <- replicateM (length tags) freshSymbol
+          symEnd <- freshSymbol
+          let symMap = HashMap.fromList $ zip tags syms
+              labs = map (flip LabelRef Nothing) syms
+              labEnd = LabelRef symEnd Nothing
+              jmps = map (mkJump . Lab) labs
+              addr1 = addr + length jmps + 1
+          (addr2, instrs) <- second (concat . reverse) <$> foldM (goCaseBranch symMap labEnd) (addr1, []) _instrCaseBranches
+          (addr3, instrs') <- second reverse <$> foldM (goDefaultLabel symMap) (addr2, []) defaultTags
+          instrs'' <- maybe (return []) (goCode addr3) _instrCaseDefault
+          let addr4 = addr3 + length instrs''
+          registerLabelAddress symEnd addr4
+          return $ mkJumpRel v : jmps ++ instrs ++ instrs' ++ instrs'' ++ [Label labEnd]
+          where
+            v = goRValue _instrCaseValue
+            tags = Reg.lookupInductiveInfo tab _instrCaseInductive ^. Reg.inductiveConstructors
+            ctrTags = HashSet.fromList $ map (^. Reg.caseBranchTag) _instrCaseBranches
+            defaultTags = filter (not . flip HashSet.member ctrTags) tags
+
+            goCaseBranch :: HashMap Tag Symbol -> LabelRef -> (Address, [[Instruction]]) -> Reg.CaseBranch -> Sem r (Address, [[Instruction]])
+            goCaseBranch symMap labEnd (addr', acc') Reg.CaseBranch {..} = do
+              let sym = fromJust $ HashMap.lookup _caseBranchTag symMap
+                  lab = LabelRef sym Nothing
+              registerLabelAddress sym addr'
+              instrs <- goCode (addr' + 1) _caseBranchCode
+              let instrs' = Label lab : instrs ++ [Label labEnd]
+              return (addr' + length instrs', instrs' : acc')
+
+            goDefaultLabel :: HashMap Tag Symbol -> (Address, [Instruction]) -> Reg.Tag -> Sem r (Address, [Instruction])
+            goDefaultLabel symMap (addr', acc') tag = do
+              let sym = fromJust $ HashMap.lookup tag symMap
+                  lab = LabelRef sym Nothing
+              registerLabelAddress sym addr'
+              return (addr' + 1, Label lab : acc')
 
         goTrace :: Address -> Reg.InstrTrace -> Sem r [Instruction]
         goTrace _ Reg.InstrTrace {..} =
