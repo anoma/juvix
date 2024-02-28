@@ -19,7 +19,8 @@ coreSupportedTargets =
       TargetVampIR,
       TargetTree,
       TargetAsm,
-      TargetReg
+      TargetReg,
+      TargetCasm
     ]
 
 parseCoreCompileOptions :: Parser CoreCompileOptions

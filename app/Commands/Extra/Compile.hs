@@ -37,6 +37,7 @@ runCompile inputFile o = do
     TargetTree -> return (Right ())
     TargetNockma -> return (Right ())
     TargetAnoma -> return (Right ())
+    TargetCasm -> return (Right ())
 
 prepareRuntime :: forall r. (Members '[App, EmbedIO] r) => Path Abs Dir -> CompileOptions -> Sem r ()
 prepareRuntime buildDir o = do
@@ -56,6 +57,7 @@ prepareRuntime buildDir o = do
     TargetTree -> return ()
     TargetNockma -> return ()
     TargetAnoma -> return ()
+    TargetCasm -> return ()
   where
     wasiReleaseRuntime :: BS.ByteString
     wasiReleaseRuntime = $(FE.makeRelativeToProject "runtime/_build.wasm32-wasi/libjuvix.a" >>= FE.embedFile)
@@ -121,6 +123,8 @@ outputFile opts inputFile =
           replaceExtension' nockmaFileExt baseOutputFile
         TargetAnoma ->
           replaceExtension' nockmaFileExt baseOutputFile
+        TargetCasm ->
+          replaceExtension' casmFileExt baseOutputFile
 
 clangNativeCompile ::
   forall r.
