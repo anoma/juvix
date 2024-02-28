@@ -133,7 +133,6 @@ runReplPipelineIOEither' lockMode entry = do
         | otherwise = runPathResolverArtifacts
   eith <-
     runM
-      . runResource
       . evalInternet hasInternet
       . ignoreHighlightBuilder
       . runError

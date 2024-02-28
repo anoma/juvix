@@ -17,7 +17,6 @@ main = do
   mainFile <- topCommandInputPath cli
   mapM_ checkMainFile mainFile
   runM
-    . runResource
     . runTaggedLockPermissive
     $ do
       _runAppIOArgsRoot <- findRootAndChangeDir (containingDir <$> mainFile) mbuildDir invokeDir

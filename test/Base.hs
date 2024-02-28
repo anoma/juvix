@@ -82,7 +82,6 @@ assertCmdExists cmd =
 testTaggedLockedToIO :: (MonadIO m) => Sem PipelineAppEffects a -> m a
 testTaggedLockedToIO =
   runM
-    . runResource
     . runTaggedLock LockModeExclusive
 
 testRunIO ::

@@ -25,7 +25,7 @@ showHelpText = do
       (msg, _) = renderFailure helpText progn
   putStrLn (pack msg)
 
-runTopCommand :: forall r. (Members '[EmbedIO, App, Resource, TaggedLock] r) => TopCommand -> Sem r ()
+runTopCommand :: forall r. (Members '[EmbedIO, App, TaggedLock] r) => TopCommand -> Sem r ()
 runTopCommand = \case
   DisplayVersion -> runDisplayVersion
   DisplayNumericVersion -> runDisplayNumericVersion

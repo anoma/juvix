@@ -1,26 +1,27 @@
-module Juvix.Prelude.Effects.Resource
-  ( module Juvix.Prelude.Effects.Resource,
-    module Effectful.Resource,
+module Juvix.Prelude.Effects.Bracket
+  ( module Juvix.Prelude.Effects.Bracket,
+    module Juvix.Prelude.Effects.Bracket.Base,
   )
 where
 
-import Effectful.Resource hiding (register)
 import Juvix.Prelude.Base.Foundation
 import Juvix.Prelude.Effects.Base
+import Juvix.Prelude.Effects.Bracket.Base
 
 bracket ::
   forall r a b.
-  (Member Resource r) =>
+  (Member EmbedIO r) =>
   Sem r a ->
   (a -> Sem r ()) ->
   (a -> Sem r b) ->
   Sem r b
-bracket alloc free inside = do
-  (_releaseKey, resource) <- allocateEff alloc free
-  inside resource
+bracket alloc dealloc useRes = fst <$> generalBracketSem alloc dealloc' useRes
+  where
+    dealloc' a = const (dealloc a)
 
 bracketOnError ::
   forall r a b.
+  (Member EmbedIO r) =>
   -- | Action to allocate a resource.
   Sem r a ->
   -- | Action to cleanup the resource. This will only be called if the
@@ -37,18 +38,8 @@ bracketOnError alloc dealloc useRes = fst <$> generalBracketSem alloc dealloc' u
       ExitCaseException {} -> dealloc a
       ExitCaseAbort {} -> dealloc a
 
-generalBracketSem ::
-  -- | aquire
-  Sem r a ->
-  -- | release
-  (a -> ExitCase b -> Sem r c) ->
-  -- | use
-  (a -> Sem r b) ->
-  Sem r (b, c)
-generalBracketSem = generalBracket
-
 finally ::
-  (Member Resource r) =>
+  (Member EmbedIO r) =>
   -- | computation to run first
   Sem r a ->
   -- | computation to run afterward (even if an exception was raised)
@@ -57,6 +48,7 @@ finally ::
 finally act end = bracket (pure ()) (const end) (const act)
 
 onException ::
+  (Member EmbedIO r) =>
   -- | computation to run first
   Sem r a ->
   -- | computation to run afterward if an exception was raised

@@ -45,7 +45,7 @@ targetFromOptions opts = do
                     "Use the --help option to display more usage information."
                   ]
 
-runCommand :: forall r. (Members '[EmbedIO, App, TaggedLock, Resource, Files] r) => FormatOptions -> Sem r ()
+runCommand :: forall r. (Members '[EmbedIO, App, TaggedLock, Files] r) => FormatOptions -> Sem r ()
 runCommand opts = do
   target <- targetFromOptions opts
   runOutputSem (renderFormattedOutput target opts) $ runScopeFileApp $ do
@@ -79,7 +79,7 @@ renderModeFromOptions target opts formattedInfo
       | formattedInfo ^. formattedFileInfoContentsModified = res
       | otherwise = NoEdit Silent
 
-renderFormattedOutput :: forall r. (Members '[EmbedIO, App, Resource, Files] r) => FormatTarget -> FormatOptions -> FormattedFileInfo -> Sem r ()
+renderFormattedOutput :: forall r. (Members '[EmbedIO, App, Files] r) => FormatTarget -> FormatOptions -> FormattedFileInfo -> Sem r ()
 renderFormattedOutput target opts fInfo = do
   let renderMode = renderModeFromOptions target opts fInfo
   outputResult renderMode

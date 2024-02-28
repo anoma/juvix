@@ -26,7 +26,6 @@ testDescr NegTest {..} =
             res <-
               withTempDir'
                 ( runM
-                    . runResource
                     . runError
                     . runFilesIO
                     . mapError (JuvixError @PackageLoaderError)

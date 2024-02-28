@@ -30,7 +30,6 @@ testDescr root PosTest {..} =
               let buildDir = CustomBuildDir (Abs d)
               res <-
                 runM
-                  . runResource
                   . runError @JuvixError
                   . runFilesIO
                   . mapError (JuvixError @PackageLoaderError)
