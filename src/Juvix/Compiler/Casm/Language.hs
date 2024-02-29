@@ -7,10 +7,11 @@ where
 {-
 
 This module defines data structures for an extended subset of the Cairo Assembly
-language, following Section 5 of [1]. Except the `ExtraBinop` instruction, all
-instructions correspond to the instructions from [1]. The parser and pretty
-printer implemented in `Juvix.Compiler.Casm.Translation.FromSource` and
-`Juvix.Compiler.Casm.Pretty` follow the syntax of [1, Section 5].
+language, following Section 5 of [1]. Except for the `ExtraBinop` instruction
+and absolute conditional jumps, all instructions correspond to the instructions
+from [1]. The parser and pretty printer implemented in
+`Juvix.Compiler.Casm.Translation.FromSource` and `Juvix.Compiler.Casm.Pretty`
+follow the syntax of [1, Section 5].
 
 [1] Goldberg, Papini, Riabzev: "Cairo – a Turing-complete STARK-friendly CPU
     architecture" (https://ia.cr/2021/1063)
@@ -78,7 +79,7 @@ data ExtraOpcode
   | IntMul
   | IntDiv
   | IntMod
-  | -- | Sets the result to non-zero if arg1 < arg2, or to zero otherwise
+  | -- | Sets the result to zero if arg1 < arg2, or to non-zero otherwise
     IntLt
 
 data Instruction
@@ -88,7 +89,6 @@ data Instruction
     ExtraBinop InstrExtraBinop
   | Jump InstrJump
   | JumpIf InstrJumpIf
-  | JumpRel InstrJumpRel
   | Call InstrCall
   | Return
   | Alloc InstrAlloc
@@ -110,20 +110,18 @@ data InstrExtraBinop = InstrExtraBinop
   }
 
 data InstrJump = InstrJump
-  { _instrJumpTarget :: Value,
+  { _instrJumpTarget :: RValue,
+    _instrJumpRel :: Bool,
     _instrJumpIncAp :: Bool
   }
 
--- | Jump if value is nonzero
+-- | Jump if value is nonzero. Boolean true is translated to zero, false to
+-- non-zero.
 data InstrJumpIf = InstrJumpIf
   { _instrJumpIfTarget :: Value,
     _instrJumpIfValue :: MemRef,
+    _instrJumpIfRel :: Bool,
     _instrJumpIfIncAp :: Bool
-  }
-
-data InstrJumpRel = InstrJumpRel
-  { _instrJumpRelTarget :: RValue,
-    _instrJumpRelIncAp :: Bool
   }
 
 newtype InstrCall = InstrCall
@@ -148,7 +146,6 @@ makeLenses ''InstrAssign
 makeLenses ''InstrExtraBinop
 makeLenses ''InstrJump
 makeLenses ''InstrJumpIf
-makeLenses ''InstrJumpRel
 makeLenses ''InstrCall
 makeLenses ''InstrAlloc
 makeLenses ''InstrTrace

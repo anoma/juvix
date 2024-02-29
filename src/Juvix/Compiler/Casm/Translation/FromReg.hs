@@ -29,12 +29,7 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
       mainName = fromJust (HashMap.lookup mainSym (tab ^. Reg.infoFunctions)) ^. Reg.functionName
       endLab = LabelRef endSym (Just endName)
       callInstr = Call $ InstrCall $ Lab $ LabelRef mainSym (Just mainName)
-      jmpInstr =
-        Jump $
-          InstrJump
-            { _instrJumpTarget = Lab endLab,
-              _instrJumpIncAp = False
-            }
+      jmpInstr = mkJump (Val $ Lab endLab)
   return $ callInstr : jmpInstr : binstrs ++ instrs ++ [Label endLab]
   where
     info :: Reg.ExtraInfo
@@ -90,8 +85,8 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
         goConst :: Reg.Constant -> Integer
         goConst = \case
           Reg.ConstInt x -> x
-          Reg.ConstBool True -> 1
-          Reg.ConstBool False -> 0
+          Reg.ConstBool True -> 0
+          Reg.ConstBool False -> 1
           Reg.ConstField f -> fieldToInteger f
           Reg.ConstUnit -> 0
           Reg.ConstVoid -> 0
@@ -298,27 +293,27 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
         goBranch :: Address -> Reg.InstrBranch -> Sem r [Instruction]
         goBranch addr Reg.InstrBranch {..} = case v of
           Imm c
-            | c == 0 -> goCode addr _instrBranchFalse
-            | otherwise -> goCode addr _instrBranchTrue
+            | c == 0 -> goCode addr _instrBranchTrue
+            | otherwise -> goCode addr _instrBranchFalse
           Ref r -> do
-            symTrue <- freshSymbol
+            symFalse <- freshSymbol
             symEnd <- freshSymbol
-            let labTrue = LabelRef symTrue Nothing
+            let labFalse = LabelRef symFalse Nothing
                 labEnd = LabelRef symEnd Nothing
                 addr1 = addr + length is + 1
-            codeFalse <- goCode addr1 _instrBranchFalse
-            let addr2 = addr1 + length codeFalse + 1
-            registerLabelAddress symTrue addr2
-            codeTrue <- goCode (addr2 + 1) _instrBranchTrue
-            registerLabelAddress symEnd (addr2 + 1 + length codeTrue)
+            codeTrue <- goCode addr1 _instrBranchTrue
+            let addr2 = addr1 + length codeTrue + 1
+            registerLabelAddress symFalse addr2
+            codeFalse <- goCode (addr2 + 1) _instrBranchFalse
+            registerLabelAddress symEnd (addr2 + 1 + length codeFalse)
             return $
               is
-                ++ [mkJumpIf (Lab labTrue) r]
-                ++ codeFalse
-                ++ [ mkJump (Lab labEnd),
-                     Label labTrue
-                   ]
+                ++ [mkJumpIf (Lab labFalse) r]
                 ++ codeTrue
+                ++ [ mkJump (Val $ Lab labEnd),
+                     Label labFalse
+                   ]
+                ++ codeFalse
                 ++ [Label labEnd]
           Lab {} -> impossible
           where
@@ -331,7 +326,7 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
           let symMap = HashMap.fromList $ zip tags syms
               labs = map (flip LabelRef Nothing) syms
               labEnd = LabelRef symEnd Nothing
-              jmps = map (mkJump . Lab) labs
+              jmps = map (mkJump . Val . Lab) labs
               addr1 = addr + length is + 1 + length jmps
           (addr2, instrs) <- second (concat . reverse) <$> foldM (goCaseBranch symMap labEnd) (addr1, []) _instrCaseBranches
           (addr3, instrs') <- second reverse <$> foldM (goDefaultLabel symMap) (addr2, []) defaultTags
@@ -351,7 +346,7 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
                   lab = LabelRef sym Nothing
               registerLabelAddress sym addr'
               instrs <- goCode (addr' + 1) _caseBranchCode
-              let instrs' = Label lab : instrs ++ [mkJump (Lab labEnd)]
+              let instrs' = Label lab : instrs ++ [mkJump (Val $ Lab labEnd)]
               return (addr' + length instrs', instrs' : acc')
 
             goDefaultLabel :: HashMap Tag Symbol -> (Address, [Instruction]) -> Reg.Tag -> Sem r (Address, [Instruction])

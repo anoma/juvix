@@ -167,44 +167,38 @@ parseIncAp = (kw delimSemicolon >> kw kwApPlusPlus >> return True) <|> return Fa
 parseJump :: forall r. (Member LabelInfoBuilder r) => ParsecS r Instruction
 parseJump = do
   kw kwJmp
-  relJmp <|> jmp
+  P.try jmpIf <|> jmp
   where
-    relJmp :: ParsecS r Instruction
-    relJmp = do
-      kw kwRel
-      tgt <- parseRValue
+    jmpIf :: ParsecS r Instruction
+    jmpIf = do
+      isRel <- isJust <$> optional (kw kwRel)
+      tgt <- parseValue
+      kw kwIf
+      v <- parseMemRef
+      kw kwNotEq
+      symbol "0"
       incAp <- parseIncAp
       return $
-        JumpRel $
-          InstrJumpRel
-            { _instrJumpRelTarget = tgt,
-              _instrJumpRelIncAp = incAp
+        JumpIf $
+          InstrJumpIf
+            { _instrJumpIfTarget = tgt,
+              _instrJumpIfValue = v,
+              _instrJumpIfRel = isRel,
+              _instrJumpIfIncAp = incAp
             }
 
     jmp :: ParsecS r Instruction
     jmp = do
-      tgt <- parseValue
-      mv <- optional if_
+      isRel <- isJust <$> optional (kw kwRel)
+      tgt <- parseRValue
       incAp <- parseIncAp
-      case mv of
-        Nothing ->
-          return $ Jump $ InstrJump {_instrJumpTarget = tgt, _instrJumpIncAp = incAp}
-        Just v ->
-          return $
-            JumpIf $
-              InstrJumpIf
-                { _instrJumpIfTarget = tgt,
-                  _instrJumpIfValue = v,
-                  _instrJumpIfIncAp = incAp
-                }
-      where
-        if_ :: ParsecS r MemRef
-        if_ = do
-          kw kwIf
-          v <- parseMemRef
-          kw kwNotEq
-          symbol "0"
-          return v
+      return $
+        Jump $
+          InstrJump
+            { _instrJumpTarget = tgt,
+              _instrJumpRel = isRel,
+              _instrJumpIncAp = incAp
+            }
 
 parseCall :: (Member LabelInfoBuilder r) => ParsecS r Instruction
 parseCall = do
