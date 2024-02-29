@@ -456,29 +456,19 @@ runPathResolver2 st topEnv arg = do
                 Sem handlerEs x ->
                 Sem q x
               runner = evalState st' . runReader env'
-              -- TaggedLock, Reader EntryPoint, Files, Error JuvixError, Error DependencyError, GitClone, EvalFileEff
-              helper :: (forall w. Sem localEs w -> Sem r w) -> Sem r x
+              helper :: (forall w. Sem localEs w -> Sem t w) -> Sem t x
               helper unlift =
-                localSeqHandle @TaggedLock localEnv $ \(withTaggedLock :: _) ->
-                  localSeqHandle @(Reader EntryPoint) localEnv $ \withEntryPoint ->
-                    localSeqHandle @Files localEnv $ \withFiles ->
-                      localSeqHandle @(Error JuvixError) localEnv $ \withJuvixError ->
-                        localSeqHandle @(Error DependencyError) localEnv $ \withDependencyError ->
-                          localSeqHandle @GitClone localEnv $ \withGitClone ->
-                            localSeqHandle @EvalFileEff localEnv $ \withEvalFileEff -> do
-                              -- unlift . withEvalFileEff . withGitClone . withDependencyError . withJuvixError
-                              --     . withFiles . withEntryPoint . withTaggedLock $ impose runner handler (inject y)
-                              unlift . withEntryPoint . withTaggedLock $ impose runner handler (inject y)
-              -- do
-              -- unlift
-              --   ( do
-              --       impose runner handler y
-              --   )
+                localSeqHandle2 @TaggedLock localEnv $ \env1 withTaggedLockEff ->
+                  localSeqHandle2 @(Reader EntryPoint) env1 $ \env2 withEntryPoint ->
+                    localSeqHandle2 @Files env2 $ \env3 withFiles ->
+                      localSeqHandle2 @(Error JuvixError) env3 $ \env4 withJuvixError ->
+                        localSeqHandle2 @(Error DependencyError) env4 $ \env5 withDependencyError ->
+                          localSeqHandle2 @GitClone env5 $ \env6 withGitClone ->
+                            localSeqHandle @EvalFileEff env6 $ \withEvalFileEff -> do
+                              unlift . withTaggedLockEff . withEntryPoint . withFiles . withJuvixError . withDependencyError . withGitClone . withEvalFileEff $ impose runner handler (inject y)
+              inner :: Sem t x = localSeqUnlift localEnv helper
 
-              inner :: Sem r x
-              inner = localSeqUnlift localEnv helper
-
-          impossible
+          inject inner
 
 runPathResolver :: (Members '[TaggedLock, Reader EntryPoint, Files, Error JuvixError, Error DependencyError, GitClone, EvalFileEff] r) => Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
 runPathResolver = runPathResolver' iniResolverState

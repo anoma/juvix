@@ -10,7 +10,7 @@ import Juvix.Prelude.Base.Foundation
 
 localSeqHandle2 ::
   forall e es localEs handlerEs a.
-  (e :> es) =>
+  (e :> es, SharedSuffix es handlerEs) =>
   LocalEnv localEs handlerEs ->
   -- | Continuation with the local handler in scope.
   (LocalEnv (e ': localEs) handlerEs -> (forall r. Eff (e ': localEs) r -> Eff localEs r) -> Eff es a) ->
@@ -24,7 +24,7 @@ localSeqHandle2 (LocalEnv les) k = unsafeEff $ \es -> do
 -- | copied from module Effectful.Dispatch.Dynamic
 -- Will be available in the next effectful release (current release: 2.3.0.1)
 localSeqHandle ::
-  (e :> es) =>
+  (e :> es, SharedSuffix es handlerEs) =>
   LocalEnv localEs handlerEs ->
   -- | Continuation with the local handler in scope.
   ((forall r. Eff (e ': localEs) r -> Eff localEs r) -> Eff es a) ->
