@@ -82,6 +82,7 @@ dependencies:
   - pretty == 1.1.*
   - prettyprinter == 1.7.*
   - prettyprinter-ansi-terminal == 1.1.*
+  - primitive == 0.8.*
   - process == 1.6.*
   - safe == 0.3.*
   - singletons == 3.0.*

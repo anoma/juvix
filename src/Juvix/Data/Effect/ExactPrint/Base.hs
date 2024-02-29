@@ -78,7 +78,7 @@ runExactPrint cs = reinterpretH (runPrivateStateAsDoc (initialBuilder cs)) handl
             helper unlift = unlift (impose runner handler m)
 
             inner :: Sem r' (Builder, x)
-            inner = localSeqUnlift locEnv helper
+            inner = localSeqUnliftCommon locEnv helper
         (st' :: Builder, fx) <- raise inner
         doc' <- gets (^. builderDoc)
         put

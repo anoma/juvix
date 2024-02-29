@@ -196,9 +196,9 @@ registerPackageBase = do
 
 registerDependencies' ::
   forall r.
-  (Members '[TaggedLock, Reader EntryPoint, State ResolverState, Reader ResolverEnv, Files, Error JuvixError, Error DependencyError, GitClone, EvalFileEff] r) =>
+  (Members '[TaggedLock, Reader EntryPoint, Files, Error JuvixError, Error DependencyError, GitClone, EvalFileEff] r) =>
   DependenciesConfig ->
-  Sem r ()
+  Sem (Reader ResolverEnv ': State ResolverState ': r) ()
 registerDependencies' conf = do
   e <- ask @EntryPoint
   registerPackageBase
@@ -215,7 +215,7 @@ registerDependencies' conf = do
         lockfilePath' <- lockfilePath
         writeLockfile lockfilePath' packageFileChecksum lockfile
   where
-    shouldWriteLockfile :: Sem r Bool
+    shouldWriteLockfile :: Sem ((Reader ResolverEnv ': State ResolverState ': r)) Bool
     shouldWriteLockfile = do
       lockfileExists <- lockfilePath >>= fileExists'
       hasRemoteDependencies <- gets (^. resolverHasRemoteDependencies)
@@ -226,7 +226,7 @@ registerDependencies' conf = do
           shouldUpdateLockfile = lockfileExists && shouldUpdateLockfile'
       return (shouldForce || shouldWriteInitialLockfile || shouldUpdateLockfile)
 
-    lockfilePath :: Sem r (Path Abs File)
+    lockfilePath :: Sem ((Reader ResolverEnv ': State ResolverState ': r)) (Path Abs File)
     lockfilePath = do
       root <- asks (^. envRoot)
       return (mkPackageLockfilePath root)
@@ -401,34 +401,76 @@ expectedPath' m = do
       _pathInfoRootInfo = RootInfo {..}
   return PathInfoTopModule {..}
 
-re ::
+runPathResolver2 ::
   forall r a.
   (Members '[TaggedLock, Reader EntryPoint, Files, Error JuvixError, Error DependencyError, GitClone, EvalFileEff] r) =>
+  ResolverState ->
+  ResolverEnv ->
   Sem (PathResolver ': r) a ->
-  Sem (Reader ResolverEnv ': State ResolverState ': r) a
-re = interpretTop2H helper
+  Sem r (ResolverState, a)
+runPathResolver2 st topEnv arg = do
+  ( reinterpretHCommon2
+      ( runState st
+          . runReader topEnv
+      )
+      handler
+    )
+    arg
   where
-    helper ::
+    handler ::
       forall x localEs.
+      (Member PathResolver localEs) =>
       LocalEnv localEs (Reader ResolverEnv ': State ResolverState ': r) ->
       PathResolver (Sem localEs) x ->
       Sem (Reader ResolverEnv ': State ResolverState ': r) x
-    helper localEnv = \case
+    handler localEnv = \case
       RegisterDependencies forceUpdateLockfile -> registerDependencies' forceUpdateLockfile
       ExpectedPathInfoTopModule m -> expectedPath' m
-      WithPath m a -> do
-        x :: Either PathResolverError (Path Abs Dir, Path Rel File) <- resolvePath' m
-        oldroot <- asks (^. envRoot)
-        -- a' <- bindT a
-        st' <- get
-        let root' = case x of
-              Left {} -> oldroot
-              Right (r, _) -> r
-            localEff :: Sem (PathResolver ': State ResolverState ': r) x = runTSimpleEff localEnv (a x)
-        raise (evalPathResolver' st' root' localEff)
+      WithPath
+        m
+        ( a ::
+            Either PathResolverError (Path Abs Dir, Path Rel File) ->
+            Sem localEs x
+          ) -> do
+          x :: Either PathResolverError (Path Abs Dir, Path Rel File) <- resolvePath' m
+          let y :: Sem localEs x = a x
+          oldroot <- asks (^. envRoot)
+          st' <- get
+          let root' = case x of
+                Left {} -> oldroot
+                Right (r, _) -> r
+          e <- ask
+          let _envSingleFile :: Maybe (Path Abs File)
+              _envSingleFile
+                | e ^. entryPointPackageType == GlobalStdlib = e ^. entryPointModulePath
+                | otherwise = Nothing
+              env' :: ResolverEnv
+              env' =
+                ResolverEnv
+                  { _envRoot = root',
+                    _envLockfileInfo = Nothing,
+                    _envSingleFile
+                  }
 
-evalPathResolver' :: (Members '[TaggedLock, Reader EntryPoint, Files, Error JuvixError, Error DependencyError, GitClone, EvalFileEff] r) => ResolverState -> Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r a
-evalPathResolver' st root = fmap snd . runPathResolver' st root
+          let runner ::
+                forall q handlerEs.
+                (handlerEs ~ (Reader ResolverEnv ': State ResolverState ': q)) =>
+                Sem handlerEs x ->
+                Sem q x
+              runner = evalState st' . runReader env'
+
+              helper :: (forall w. Sem r w -> Sem localEs w) -> (forall w. Sem localEs w -> Sem r w) -> Sem r x
+              helper lift unlift = do
+                unlift
+                  ( do
+                      void $ lift (ask @EntryPoint)
+                      impose runner handler y
+                  )
+
+              inner :: Sem r x
+              inner = localLiftUnlift localEnv SeqUnlift helper
+
+          inject inner
 
 runPathResolver :: (Members '[TaggedLock, Reader EntryPoint, Files, Error JuvixError, Error DependencyError, GitClone, EvalFileEff] r) => Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
 runPathResolver = runPathResolver' iniResolverState
@@ -447,7 +489,7 @@ runPathResolver' st root x = do
             _envLockfileInfo = Nothing,
             _envSingleFile
           }
-  runState st (runReader env (re x))
+  runPathResolver2 st env x
 
 runPathResolverPipe' :: (Members '[TaggedLock, Files, Reader EntryPoint, Error DependencyError, GitClone, Error JuvixError, EvalFileEff] r) => ResolverState -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
 runPathResolverPipe' iniState a = do

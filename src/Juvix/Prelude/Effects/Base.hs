@@ -8,13 +8,14 @@ module Juvix.Prelude.Effects.Base
     module Effectful.TH,
     module Effectful.Dispatch.Static,
     module Effectful.Provider,
+    module Juvix.Prelude.Effects.Base.Internal,
   )
 where
 
 import Data.Kind qualified as GHC
 import Effectful hiding (Eff, (:>))
 import Effectful qualified as E
-import Effectful.Dispatch.Dynamic (EffectHandler, LocalEnv, SharedSuffix, impose, interpose, localLift, localLiftUnlift, localLiftUnliftIO, localSeqLift, localSeqUnlift, localSeqUnliftIO, localUnlift, localUnliftIO, withLiftMap, withLiftMapIO)
+import Effectful.Dispatch.Dynamic (LocalEnv, SharedSuffix, impose, interpose, localLift, localLiftUnlift, localLiftUnliftIO, localSeqLift, localSeqUnlift, localSeqUnliftIO, localUnlift, localUnliftIO, withLiftMap, withLiftMapIO)
 import Effectful.Dispatch.Dynamic qualified as E
 import Effectful.Dispatch.Static
 import Effectful.Error.Static hiding (runError)
@@ -25,6 +26,7 @@ import Effectful.State.Static.Local hiding (runState, state)
 import Effectful.State.Static.Local qualified as State
 import Effectful.TH
 import Juvix.Prelude.Base.Foundation
+import Juvix.Prelude.Effects.Base.Internal
 import Language.Haskell.TH.Syntax qualified as GHC
 
 type Sem = E.Eff
@@ -39,6 +41,17 @@ type EffectHandlerFO (e :: Effect) (r :: [Effect]) =
   (HasCallStack, Member e localEs) =>
   e (Sem localEs) a ->
   Sem r a
+
+-- | Type signature of the effect handler.
+type EffectHandler e es =
+  forall a localEs.
+  (HasCallStack, Member e localEs) =>
+  -- | Capture of the local environment for handling local 'Eff' computations
+  -- when @e@ is a higher order effect.
+  LocalEnv localEs es ->
+  -- | The effect performed in the local environment.
+  e (Sem localEs) a ->
+  Sem es a
 
 type Members :: [Effect] -> [Effect] -> GHC.Constraint
 type family Members es r where
@@ -152,6 +165,23 @@ interpretH ::
   Sem r a
 interpretH = E.interpret
 
+-- | Type signature of the effect handler.
+-- type EffectHandler e es
+--   = forall a localEs. (HasCallStack, Member e localEs)
+--   => LocalEnv localEs es
+--   -- ^ Capture of the local environment for handling local 'Eff' computations
+--   -- when @e@ is a higher order effect.
+--   -> e (Sem localEs) a
+--   -- ^ The effect performed in the local environment.
+--   -> Sem es a
+reinterpretHCommon2 ::
+  (DispatchOf e ~ 'Dynamic) =>
+  (Sem (e2 ': e1 ': r) a -> Sem r b) ->
+  EffectHandler e (e2 ': e1 ': r) ->
+  Sem (e ': r) a ->
+  Sem r b
+reinterpretHCommon2 = E.reinterpret
+
 reinterpretH ::
   (DispatchOf e ~ 'Dynamic) =>
   (Sem handlerEs a -> Sem r b) ->
@@ -201,3 +231,17 @@ imposeCommon2 ::
   Sem r a ->
   Sem r b
 imposeCommon2 = impose
+
+localSeqUnliftCommon ::
+  forall r' e1 localEs b.
+  LocalEnv localEs (e1 ': r') ->
+  ((forall y. Sem localEs y -> Sem r' y) -> Sem r' b) ->
+  Sem r' b
+localSeqUnliftCommon = localSeqUnlift
+
+localSeqUnliftCommon2 ::
+  forall r' e2 e1 localEs b.
+  LocalEnv localEs (e2 ': e1 ': r') ->
+  ((forall y. Sem localEs y -> Sem r' y) -> Sem r' b) ->
+  Sem r' b
+localSeqUnliftCommon2 = localSeqUnlift
