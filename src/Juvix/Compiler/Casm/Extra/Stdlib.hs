@@ -17,11 +17,11 @@ data StdlibBuiltins = StdlibBuiltins
 
 makeLenses ''StdlibBuiltins
 
-addStdlibBuiltins :: (Member LabelInfoBuilder r) => Sem r (StdlibBuiltins, [Instruction])
-addStdlibBuiltins = do
+addStdlibBuiltins :: (Member LabelInfoBuilder r) => Address -> Sem r (StdlibBuiltins, [Instruction])
+addStdlibBuiltins addr = do
   instrs <-
     fmap (fromRight impossible) $
-      runParser' "stdlib.casm" $
+      runParser' addr "stdlib.casm" $
         decodeUtf8 $(FE.makeRelativeToProject "runtime/src/casm/stdlib.casm" >>= FE.embedFile)
   let _stdlibGetRegsName :: Text = "juvix_get_regs"
       _stdlibCallClosureName :: Text = "juvix_call_closure"

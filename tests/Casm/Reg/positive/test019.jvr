@@ -1,0 +1,38 @@
+
+function g(integer → integer, integer) : integer;
+function f(integer) : integer;
+function main() : *;
+
+function g(integer → integer, integer) : integer {
+  tmp[0] = arg[1];
+  tmp[1] = 0;
+  tmp[0] = eq tmp[1] tmp[0];
+  br tmp[0] {
+    true: {
+      tmp[0] = 0;
+      ret tmp[0];
+    };
+    false: {
+      tmp[0] = 1;
+      tmp[1] = arg[1];
+      tmp[0] = sub tmp[1] tmp[0];
+      tmp[1] = arg[0];
+      tcall tmp[1] (tmp[0]);
+    };
+  };
+}
+
+function f(integer) : integer {
+  prealloc 2, live: (arg[0]);
+  tmp[0] = arg[0];
+  tmp[1] = calloc f ();
+  tmp[0] = call g (tmp[1], tmp[0]), live: (arg[0]);
+  tmp[1] = arg[0];
+  tmp[0] = add tmp[1] tmp[0];
+  ret tmp[0];
+}
+
+function main() : * {
+  tmp[0] = 10;
+  tcall f (tmp[0]);
+}

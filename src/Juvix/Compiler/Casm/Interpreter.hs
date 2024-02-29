@@ -19,9 +19,12 @@ import Juvix.Data.Field
 
 type Memory s = MV.MVector s (Maybe FField)
 
--- | Runs Cairo Assembly. Returns the value of `[ap - 1]` at program exit.
 runCode :: LabelInfo -> [Instruction] -> FField
-runCode (LabelInfo labelInfo) instrs0 = runST goCode
+runCode = hRunCode stderr
+
+-- | Runs Cairo Assembly. Returns the value of `[ap - 1]` at program exit.
+hRunCode :: Handle -> LabelInfo -> [Instruction] -> FField
+hRunCode hout (LabelInfo labelInfo) instrs0 = runST goCode
   where
     instrs :: Vec.Vector Instruction
     instrs = Vec.fromList instrs0
@@ -226,7 +229,7 @@ runCode (LabelInfo labelInfo) instrs0 = runST goCode
     goTrace :: InstrTrace -> Address -> Address -> Address -> Memory s -> ST s FField
     goTrace InstrTrace {..} pc ap fp mem = do
       v <- readRValue ap fp mem _instrTraceValue
-      GHC.unsafePerformIO (print v >> return (pure ()))
+      GHC.unsafePerformIO (hPrint hout v >> return (pure ()))
       go (pc + 1) ap fp mem
 
 catchRunErrorIO :: a -> IO (Either CasmError a)

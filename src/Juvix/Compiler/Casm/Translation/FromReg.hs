@@ -18,7 +18,7 @@ import Juvix.Data.Field
 fromReg :: Reg.InfoTable -> Result
 fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolId tab) $ do
   let initialOffset :: Int = 2
-  (blts, binstrs) <- addStdlibBuiltins
+  (blts, binstrs) <- addStdlibBuiltins initialOffset
   (addr, instrs) <- second (concat . reverse) <$> foldM (goFun blts) (initialOffset + length binstrs, []) (tab ^. Reg.infoFunctions)
   eassert (addr == length instrs + length binstrs + initialOffset)
   let endName :: Text = "__juvix_end"
@@ -58,7 +58,12 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
         unsupported what = error ("Cairo backend: unsupported: " <> what)
 
         goCode :: Address -> Reg.Code -> Sem r [Instruction]
-        goCode addr = concatMapM (goInstr addr)
+        goCode addr code = concat . reverse . snd <$> foldM go' (addr, []) code
+          where
+            go' :: (Address, [[Instruction]]) -> Reg.Instruction -> Sem r (Address, [[Instruction]])
+            go' (addr', acc') i = do
+              is <- goInstr addr' i
+              return (addr' + length is, is : acc')
 
         goInstr :: Address -> Reg.Instruction -> Sem r [Instruction]
         goInstr addr = \case

@@ -1,0 +1,78 @@
+
+function ext_10((integer, integer) → integer) : integer → integer;
+function app_0(integer → integer) : integer;
+function f((integer, integer) → integer) : integer;
+function plus(integer, integer) : integer;
+function minus(integer, integer) : integer;
+function mult(integer, integer) : integer;
+function g(integer, integer, integer, integer) : integer;
+function main() : *;
+
+function ext_10((integer, integer) → integer) : integer → integer {
+  tmp[0] = 10;
+  tmp[1] = arg[0];
+  tmp[0] = cextend tmp[1] (tmp[0]);
+  ret tmp[0];
+}
+
+function app_0(integer → integer) : integer {
+  tmp[0] = 1;
+  tmp[1] = arg[0];
+  tcall tmp[1] (tmp[0]);
+}
+
+function f((integer, integer) → integer) : integer {
+  tmp[0] = arg[0];
+  tmp[0] = call ext_10 (tmp[0]), live: (arg[0]);
+  tcall app_0 (tmp[0]);
+}
+
+function plus(integer, integer) : integer {
+  tmp[0] = arg[1];
+  tmp[1] = arg[0];
+  tmp[0] = add tmp[1] tmp[0];
+  ret tmp[0];
+}
+
+function minus(integer, integer) : integer {
+  tmp[0] = arg[1];
+  tmp[1] = arg[0];
+  tmp[0] = sub tmp[1] tmp[0];
+  ret tmp[0];
+}
+
+function mult(integer, integer) : integer {
+  tmp[0] = arg[1];
+  tmp[1] = arg[0];
+  tmp[0] = mul tmp[1] tmp[0];
+  ret tmp[0];
+}
+
+function g(integer, integer, integer, integer) : integer {
+  tmp[0] = arg[1];
+  tmp[1] = arg[0];
+  tmp[0] = sub tmp[1] tmp[0];
+  tmp[1] = arg[2];
+  tmp[0] = add tmp[1] tmp[0];
+  tmp[1] = arg[3];
+  tmp[0] = mul tmp[1] tmp[0];
+  ret tmp[0];
+}
+
+function main() : * {
+  tmp[0] = calloc plus ();
+  tmp[0] = call f (tmp[0]);
+  tmp[2] = tmp[0];
+  tmp[0] = calloc minus ();
+  tmp[0] = call f (tmp[0]);
+  tmp[2] = add tmp[2] tmp[0];
+  tmp[0] = calloc mult ();
+  tmp[0] = call f (tmp[0]);
+  tmp[2] = add tmp[2] tmp[0];
+  tmp[0] = 2;
+  tmp[1] = 3;
+  tmp[0] = calloc g (tmp[1], tmp[0]);
+  tmp[0] = call f (tmp[0]);
+  tmp[2] = add tmp[2] tmp[0];
+  ret tmp[2];
+}

@@ -1,0 +1,142 @@
+type tree {
+  node1 : tree → tree;
+  node2 : (tree, tree) → tree;
+  node3 : (tree, tree, tree) → tree;
+  leaf : tree;
+}
+
+function gen(integer) : tree;
+function preorder(tree) : *;
+function main() : *;
+
+function gen(integer) : tree {
+  tmp[2] = arg[0];
+  tmp[3] = 0;
+  tmp[2] = eq tmp[3] tmp[2];
+  br tmp[2] {
+    true: {
+      prealloc 1, live: (arg[0]);
+      tmp[2] = alloc leaf ();
+      ret tmp[2];
+    };
+    false: {
+      tmp[2] = 3;
+      tmp[3] = arg[0];
+      tmp[2] = mod tmp[3] tmp[2];
+      {
+        tmp[0] = tmp[2];
+        tmp[2] = tmp[0];
+        tmp[3] = 0;
+        tmp[2] = eq tmp[3] tmp[2];
+        br tmp[2] {
+          true: {
+            tmp[2] = 1;
+            tmp[3] = arg[0];
+            tmp[2] = sub tmp[3] tmp[2];
+            tmp[2] = call gen (tmp[2]), live: (tmp[0], arg[0]);
+            prealloc 2, live: (tmp[0], tmp[2], arg[0]);
+            tmp[2] = alloc node1 (tmp[2]);
+            ret tmp[2];
+          };
+          false: {
+            tmp[2] = tmp[0];
+            tmp[3] = 1;
+            tmp[2] = eq tmp[3] tmp[2];
+            br tmp[2] {
+              true: {
+                tmp[2] = 1;
+                tmp[3] = arg[0];
+                tmp[2] = sub tmp[3] tmp[2];
+                {
+                  tmp[1] = tmp[2];
+                  tmp[2] = tmp[1];
+                  tmp[2] = call gen (tmp[2]), live: (tmp[0], tmp[1], arg[0]);
+                  tmp[3] = tmp[1];
+                  tmp[3] = call gen (tmp[3]), live: (tmp[0], tmp[1], tmp[2], arg[0]);
+                  prealloc 3, live: (tmp[0], tmp[1], tmp[2], tmp[3], arg[0]);
+                  tmp[2] = alloc node2 (tmp[3], tmp[2]);
+                  ret tmp[2];
+                };
+              };
+              false: {
+                tmp[2] = 1;
+                tmp[3] = arg[0];
+                tmp[2] = sub tmp[3] tmp[2];
+                {
+                  tmp[1] = tmp[2];
+                  tmp[2] = tmp[1];
+                  tmp[2] = call gen (tmp[2]), live: (tmp[0], tmp[1], arg[0]);
+                  tmp[3] = tmp[1];
+                  tmp[3] = call gen (tmp[3]), live: (tmp[0], tmp[1], tmp[2], arg[0]);
+                  tmp[4] = tmp[1];
+                  tmp[4] = call gen (tmp[4]), live: (tmp[0], tmp[1], tmp[2], tmp[3], arg[0]);
+                  prealloc 4, live: (tmp[0], tmp[1], tmp[2], tmp[3], tmp[4], arg[0]);
+                  tmp[2] = alloc node3 (tmp[4], tmp[3], tmp[2]);
+                  ret tmp[2];
+                };
+              };
+            };
+          };
+        };
+      };
+    };
+  };
+}
+
+function preorder(tree) : * {
+  tmp[0] = arg[0];
+  case[tree] tmp[0] {
+    node1: {
+      nop;
+      tmp[0] = 1;
+      trace tmp[0];
+      nop;
+      tmp[0] = arg[0].node1[0];
+      tcall preorder (tmp[0]);
+    };
+    node2: {
+      nop;
+      tmp[0] = 2;
+      trace tmp[0];
+      nop;
+      tmp[0] = arg[0].node2[0];
+      tmp[0] = call preorder (tmp[0]), live: (arg[0]);
+      nop;
+      tmp[0] = arg[0].node2[1];
+      tcall preorder (tmp[0]);
+    };
+    node3: {
+      nop;
+      tmp[0] = 3;
+      trace tmp[0];
+      nop;
+      tmp[0] = arg[0].node3[0];
+      tmp[0] = call preorder (tmp[0]), live: (arg[0]);
+      nop;
+      tmp[0] = arg[0].node3[1];
+      tmp[0] = call preorder (tmp[0]), live: (arg[0]);
+      nop;
+      tmp[0] = arg[0].node3[2];
+      tcall preorder (tmp[0]);
+    };
+    leaf: {
+      nop;
+      tmp[0] = 0;
+      trace tmp[0];
+      nop;
+      tmp[0] = void;
+      ret tmp[0];
+    };
+  };
+}
+
+function main() : * {
+  tmp[0] = 3;
+  tmp[0] = call gen (tmp[0]);
+  tmp[0] = call preorder (tmp[0]);
+  tmp[0] = 666;
+  trace tmp[0];
+  tmp[0] = 7;
+  tmp[0] = call gen (tmp[0]);
+  tcall preorder (tmp[0]);
+}

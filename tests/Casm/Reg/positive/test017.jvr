@@ -1,0 +1,121 @@
+
+function g(integer, integer) : integer;
+function h(integer → integer, integer → integer, integer) : integer;
+function f(integer) : integer → integer;
+function g'(integer, integer → integer) : integer;
+function h'(integer) : integer;
+function main() : *;
+
+function g(integer, integer) : integer {
+  tmp[0] = arg[0];
+  tmp[1] = arg[1];
+  tmp[0] = add tmp[1] tmp[0];
+  ret tmp[0];
+}
+
+function h(integer → integer, integer → integer, integer) : integer {
+  tmp[0] = arg[2];
+  tmp[1] = arg[1];
+  tmp[0] = call tmp[1] (tmp[0]), live: (arg[0], arg[1], arg[2]);
+  tmp[1] = arg[0];
+  tcall tmp[1] (tmp[0]);
+}
+
+function f(integer) : integer → integer {
+  prealloc 3, live: (arg[0]);
+  tmp[1] = arg[0];
+  tmp[1] = calloc g (tmp[1]);
+  {
+    tmp[0] = tmp[1];
+    tmp[1] = arg[0];
+    tmp[2] = 0;
+    tmp[1] = eq tmp[2] tmp[1];
+    br tmp[1] {
+      true: {
+        tmp[1] = 10;
+        tcall f (tmp[1]);
+      };
+      false: {
+        tmp[1] = 10;
+        tmp[2] = arg[0];
+        tmp[1] = lt tmp[2] tmp[1];
+        br tmp[1] {
+          true: {
+            tmp[1] = 1;
+            tmp[2] = arg[0];
+            tmp[1] = sub tmp[2] tmp[1];
+            tmp[1] = call f (tmp[1]), live: (tmp[0], arg[0]);
+            prealloc 4, live: (tmp[0], tmp[1], arg[0]);
+            tmp[2] = tmp[0];
+            tmp[1] = calloc h (tmp[2], tmp[1]);
+            ret tmp[1];
+          };
+          false: {
+            tmp[1] = tmp[0];
+            ret tmp[1];
+          };
+        };
+      };
+    };
+  };
+}
+
+function g'(integer, integer → integer) : integer {
+  tmp[0] = arg[0];
+  tmp[1] = arg[1];
+  tmp[0] = call tmp[1] (tmp[0]), live: (arg[0], arg[1]);
+  tmp[1] = arg[0];
+  tmp[0] = add tmp[1] tmp[0];
+  ret tmp[0];
+}
+
+function h'(integer) : integer {
+  tmp[0] = arg[0];
+  tmp[1] = 0;
+  tmp[0] = eq tmp[1] tmp[0];
+  br tmp[0] {
+    true: {
+      tmp[0] = 0;
+      ret tmp[0];
+    };
+    false: {
+      prealloc 2, live: (arg[0]);
+      tmp[0] = calloc h' ();
+      tmp[1] = 1;
+      tmp[2] = arg[0];
+      tmp[1] = sub tmp[2] tmp[1];
+      tcall g' (tmp[1], tmp[0]);
+    };
+  };
+}
+
+function main() : * {
+  tmp[0] = 500;
+  tmp[1] = 100;
+  tmp[1] = call f (tmp[1]);
+  tmp[0] = call tmp[1] (tmp[0]);
+  tmp[2] = tmp[0];
+  tmp[0] = 0;
+  tmp[1] = 5;
+  tmp[1] = call f (tmp[1]);
+  tmp[0] = call tmp[1] (tmp[0]);
+  tmp[2] = add tmp[2] tmp[0];
+  tmp[0] = 5;
+  tmp[1] = 5;
+  tmp[1] = call f (tmp[1]);
+  tmp[0] = call tmp[1] (tmp[0]);
+  tmp[2] = add tmp[2] tmp[0];
+  tmp[0] = 10;
+  tmp[0] = call h' (tmp[0]);
+  tmp[2] = add tmp[2] tmp[0];
+  tmp[0] = calloc h' ();
+  tmp[1] = 10;
+  tmp[0] = call g' (tmp[1], tmp[0]);
+  tmp[2] = add tmp[2] tmp[0];
+  tmp[0] = 10;
+  tmp[0] = call f (tmp[0]);
+  tmp[1] = 3;
+  tmp[0] = call g' (tmp[1], tmp[0]);
+  tmp[2] = add tmp[2] tmp[0];
+  ret tmp[2];
+}

@@ -1,0 +1,71 @@
+
+function f(integer, integer) : *;
+function g(integer, integer) : integer;
+function h((integer, integer) → integer, integer, integer) : integer;
+function func(integer) : integer;
+function main() : *;
+
+function f(integer, integer) : * {
+  tmp[0] = arg[0];
+  tmp[1] = arg[1];
+  tmp[0] = add tmp[1] tmp[0];
+  ret tmp[0];
+}
+
+function g(integer, integer) : integer {
+  tmp[0] = arg[1];
+  tmp[1] = 7;
+  tmp[0] = mul tmp[1] tmp[0];
+  tmp[1] = arg[0];
+  tmp[2] = 1;
+  tmp[1] = add tmp[2] tmp[1];
+  tmp[0] = sub tmp[1] tmp[0];
+  ret tmp[0];
+}
+
+function h((integer, integer) → integer, integer, integer) : integer {
+  tmp[0] = arg[2];
+  tmp[1] = arg[1];
+  tmp[2] = arg[1];
+  tmp[3] = arg[0];
+  tmp[1] = call tmp[3] (tmp[2], tmp[1]), live: (tmp[0], arg[0], arg[1], arg[2]);
+  tmp[0] = mul tmp[1] tmp[0];
+  ret tmp[0];
+}
+
+function func(integer) : integer {
+  tmp[0] = 4;
+  tmp[1] = arg[0];
+  tmp[0] = add tmp[1] tmp[0];
+  ret tmp[0];
+}
+
+function main() : * {
+  tmp[0] = 5;
+  tmp[1] = 17;
+  tmp[0] = div tmp[1] tmp[0];
+  tmp[0] = call func (tmp[0]);
+  tmp[4] = tmp[0];
+  tmp[0] = 17;
+  tmp[1] = 5;
+  tmp[2] = 0;
+  tmp[1] = mul tmp[2] tmp[1];
+  tmp[0] = add tmp[1] tmp[0];
+  tmp[4] = add tmp[4] tmp[0];
+  tmp[0] = 1;
+  tmp[1] = 0;
+  tmp[0] = add tmp[1] tmp[0];
+  tmp[1] = 7;
+  tmp[0] = mul tmp[1] tmp[0];
+  tmp[1] = 30;
+  tmp[0] = add tmp[1] tmp[0];
+  tmp[4] = add tmp[4] tmp[0];
+  tmp[0] = 4;
+  tmp[1] = 3;
+  tmp[2] = 2;
+  tmp[3] = calloc g ();
+  tmp[1] = call h (tmp[3], tmp[2], tmp[1]);
+  tmp[0] = call f (tmp[1], tmp[0]);
+  tmp[4] = add tmp[4] tmp[0];
+  ret tmp[4];
+}

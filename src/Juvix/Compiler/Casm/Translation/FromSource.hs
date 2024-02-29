@@ -14,20 +14,20 @@ parseText = runParser noFile
 
 runParser :: Path Abs File -> Text -> Either MegaparsecError (LabelInfo, [Instruction])
 runParser fileName input_ =
-  case run . runLabelInfoBuilder $ P.runParserT parseToplevel (toFilePath fileName) input_ of
-    (_, Left err) -> Left (MegaparsecError err)
+  case run . runLabelInfoBuilder $ runParser' 0 (toFilePath fileName) input_ of
+    (_, Left err) -> Left err
     (li, Right instrs) -> Right (li, instrs)
 
-runParser' :: (Member LabelInfoBuilder r) => FilePath -> Text -> Sem r (Either MegaparsecError [Instruction])
-runParser' fileName input_ = do
-  e <- P.runParserT parseToplevel fileName input_
+runParser' :: (Member LabelInfoBuilder r) => Address -> FilePath -> Text -> Sem r (Either MegaparsecError [Instruction])
+runParser' addr fileName input_ = do
+  e <- P.runParserT (parseToplevel addr) fileName input_
   return $ case e of
     Left err -> Left (MegaparsecError err)
     Right instrs -> Right instrs
 
-parseToplevel :: (Member LabelInfoBuilder r) => ParsecS r [Instruction]
-parseToplevel = do
-  instrs <- statements 0
+parseToplevel :: (Member LabelInfoBuilder r) => Address -> ParsecS r [Instruction]
+parseToplevel addr = do
+  instrs <- statements addr
   P.eof
   return instrs
 
