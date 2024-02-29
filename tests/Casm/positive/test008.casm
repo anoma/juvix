@@ -18,12 +18,13 @@ main:
   [ap] = 5; ap++
   [ap] = 0; ap++
   [ap] = [ap - 1] imul [ap - 2]; ap++
-  [fp + 1] = [ap - 1] ilt 1 -- 1
+  [fp + 1] = [ap - 1] ilt 1 -- true = 0
   [ap] = [fp] imul 7; ap++
   [ap] = [ap - 1] idiv 3; ap++
   [ap] = [ap - 1] iadd 2; ap++
   [ap] = [ap - 1] iadd [fp]; ap++
   [ap] = [ap - 1] iadd [fp + 1]; ap++
+  [ap] = [ap - 1] iadd 1; ap++
   ret
 
 end:
