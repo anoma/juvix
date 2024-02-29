@@ -1,4 +1,4 @@
-module Juvix.Prelude.Effects.Base.Internal (localSeqHandle) where
+module Juvix.Prelude.Effects.Base.Internal (localSeqHandle, localSeqHandle2) where
 
 import Data.Primitive.PrimArray
 import Effectful
@@ -7,6 +7,19 @@ import Effectful.Internal.Effect
 import Effectful.Internal.Env
 import Effectful.Internal.Monad
 import Juvix.Prelude.Base.Foundation
+
+localSeqHandle2 ::
+  forall e es localEs handlerEs a.
+  (e :> es) =>
+  LocalEnv localEs handlerEs ->
+  -- | Continuation with the local handler in scope.
+  (LocalEnv (e ': localEs) handlerEs -> (forall r. Eff (e ': localEs) r -> Eff localEs r) -> Eff es a) ->
+  Eff es a
+localSeqHandle2 (LocalEnv les) k = unsafeEff $ \es -> do
+  eles :: Env (e ': localEs) <- copyRef es les
+  let lenv :: LocalEnv (e ': localEs) handlerEs = LocalEnv eles
+  -- seqUnliftIO eles $ \unlift -> (`unEff` es) $ k $ (unsafeEff_) . unlift
+  seqUnliftIO eles $ \unlift -> (`unEff` es) (k lenv ((unsafeEff_) . unlift))
 
 -- | copied from module Effectful.Dispatch.Dynamic
 -- Will be available in the next effectful release (current release: 2.3.0.1)
