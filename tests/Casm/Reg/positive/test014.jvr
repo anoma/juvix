@@ -124,7 +124,7 @@ function preorder(tree) : * {
       tmp[0] = 0;
       trace tmp[0];
       nop;
-      tmp[0] = void;
+      tmp[0] = 777;
       ret tmp[0];
     };
   };

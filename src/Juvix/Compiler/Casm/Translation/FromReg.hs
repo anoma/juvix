@@ -246,7 +246,7 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
         goExtendClosure _ Reg.InstrExtendClosure {..} =
           return $
             map goAssignApValue _instrExtendClosureArgs
-              ++ [ mkAssignAp (Val $ Imm $ fromIntegral $ casmMaxFunctionArgs + 1 - length _instrExtendClosureArgs),
+              ++ [ mkAssignAp (Val $ Imm $ fromIntegral $ length _instrExtendClosureArgs),
                    mkAssignAp (Val $ Ref val),
                    mkCall $ Lab $ LabelRef (blts ^. stdlibExtendClosure) (Just (blts ^. stdlibExtendClosureName)),
                    mkAssign res (Val $ Ref $ MemRef Ap (-1))
