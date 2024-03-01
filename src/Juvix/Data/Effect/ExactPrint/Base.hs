@@ -91,16 +91,6 @@ runExactPrint cs = reinterpretH (runPrivateStateAsDoc (initialBuilder cs)) handl
             }
         return fx
 
-t :: IO ()
-t = putStrLn . toPlainText . fst . run . runExactPrint Nothing $ do
-  noLoc "hello 1\n"
-  region (\x -> "*" <> x <> "!") $ do
-    noLoc "hello 2\n"
-    noLoc "bye"
-
--- evalExactPrint' :: Builder -> Sem (ExactPrint ': r) a -> Sem r (Builder, a)
--- evalExactPrint' b = runState b . re
-
 enqueue' :: forall r. (Members '[State Builder] r) => Doc Ann -> Sem r ()
 enqueue' d = modify (over builderQueue (d :))
 

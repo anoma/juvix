@@ -8,7 +8,6 @@ module Juvix.Prelude.Effects.Base
     module Effectful.TH,
     module Effectful.Dispatch.Static,
     module Effectful.Provider,
-    module Juvix.Prelude.Effects.Base.Internal,
   )
 where
 
@@ -26,7 +25,6 @@ import Effectful.State.Static.Local hiding (runState, state)
 import Effectful.State.Static.Local qualified as State
 import Effectful.TH
 import Juvix.Prelude.Base.Foundation
-import Juvix.Prelude.Effects.Base.Internal
 import Language.Haskell.TH.Syntax qualified as GHC
 
 type Sem = E.Eff
@@ -76,7 +74,7 @@ mapReader f s = do
   e <- ask
   runReader (f e) s
 
-runState :: forall a s r. s -> Sem (State s ': r) a -> Sem r (s, a)
+runState :: forall s r a. s -> Sem (State s ': r) a -> Sem r (s, a)
 runState s = fmap swap . State.runState s
 
 -- | TODO can we make it strict?

@@ -418,9 +418,11 @@ runPathResolver2 st topEnv arg = do
     arg
   where
     handler ::
-      forall t.
+      forall t localEs x.
       (Members v t) =>
-      EffectHandler PathResolver (Reader ResolverEnv ': State ResolverState ': t)
+      LocalEnv localEs (Reader ResolverEnv ': State ResolverState ': t) ->
+      PathResolver (Sem localEs) x ->
+      Sem (Reader ResolverEnv ': State ResolverState ': t) x
     handler localEnv = \case
       RegisterDependencies forceUpdateLockfile -> registerDependencies' forceUpdateLockfile
       ExpectedPathInfoTopModule m -> expectedPath' m
@@ -433,7 +435,6 @@ runPathResolver2 st topEnv arg = do
           x :: Either PathResolverError (Path Abs Dir, Path Rel File) <- resolvePath' m
           let y :: Sem localEs x = a x
           oldroot <- asks (^. envRoot)
-          st' <- get
           let root' = case x of
                 Left {} -> oldroot
                 Right (r, _) -> r
@@ -449,26 +450,11 @@ runPathResolver2 st topEnv arg = do
                     _envLockfileInfo = Nothing,
                     _envSingleFile
                   }
-
-          let runner ::
-                forall q handlerEs.
-                (handlerEs ~ (Reader ResolverEnv ': State ResolverState ': q)) =>
-                Sem handlerEs x ->
-                Sem q x
-              runner = evalState st' . runReader env'
-              helper :: (forall w. Sem localEs w -> Sem t w) -> Sem t x
-              helper unlift =
-                localSeqHandle2 @TaggedLock localEnv $ \env1 withTaggedLockEff ->
-                  localSeqHandle2 @(Reader EntryPoint) env1 $ \env2 withEntryPoint ->
-                    localSeqHandle2 @Files env2 $ \env3 withFiles ->
-                      localSeqHandle2 @(Error JuvixError) env3 $ \env4 withJuvixError ->
-                        localSeqHandle2 @(Error DependencyError) env4 $ \env5 withDependencyError ->
-                          localSeqHandle2 @GitClone env5 $ \env6 withGitClone ->
-                            localSeqHandle @EvalFileEff env6 $ \withEvalFileEff -> do
-                              unlift . withTaggedLockEff . withEntryPoint . withFiles . withJuvixError . withDependencyError . withGitClone . withEvalFileEff $ impose runner handler (inject y)
-              inner :: Sem t x = localSeqUnlift localEnv helper
-
-          inject inner
+          localSeqUnlift localEnv $ \unlift -> local (const env') $ do
+            oldState <- get @ResolverState
+            res <- unlift y
+            put oldState
+            return res
 
 runPathResolver :: (Members '[TaggedLock, Reader EntryPoint, Files, Error JuvixError, Error DependencyError, GitClone, EvalFileEff] r) => Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
 runPathResolver = runPathResolver' iniResolverState
