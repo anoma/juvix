@@ -1,5 +1,5 @@
-module Juvix.Prelude.Base.Polysemy
-  ( module Juvix.Prelude.Base.Polysemy,
+module PolysemyPrelude
+  ( module PolysemyPrelude,
     module Polysemy,
     module Polysemy.Error,
     module Polysemy.Input,

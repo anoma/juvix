@@ -1,7 +1,7 @@
 module Benchmark.Effect.Output where
 
 import Juvix.Prelude.Base.Foundation
-import Juvix.Prelude.Base.Polysemy qualified as P
+import PolysemyPrelude qualified as P
 import Juvix.Prelude.Effects qualified as E
 import Test.Tasty.Bench
 
