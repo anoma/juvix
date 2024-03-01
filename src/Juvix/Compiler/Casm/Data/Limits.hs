@@ -9,8 +9,8 @@ casmMaxFunctionArgs = getLimits TargetCairo False ^. limitsMaxFunctionArgs
 casmClosureAddrOffset :: Offset
 casmClosureAddrOffset = 0
 
-casmClosureArgsNumOffset :: Offset
-casmClosureArgsNumOffset = 1
-
 casmClosureStoredArgsOffset :: Offset
-casmClosureStoredArgsOffset = 2
+casmClosureStoredArgsOffset = 1
+
+casmClosureArgsNumOffset :: Offset
+casmClosureArgsNumOffset = 2
