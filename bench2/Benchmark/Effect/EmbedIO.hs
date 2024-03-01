@@ -2,8 +2,8 @@ module Benchmark.Effect.EmbedIO where
 
 import Juvix.Prelude (withSystemTempFile)
 import Juvix.Prelude.Base.Foundation
-import PolysemyPrelude qualified as P
 import Juvix.Prelude.Effects qualified as E
+import PolysemyPrelude qualified as P
 import Test.Tasty.Bench
 
 bm :: Benchmark
