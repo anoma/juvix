@@ -19,15 +19,15 @@ fromReg :: Reg.InfoTable -> Result
 fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolId tab) $ do
   let initialOffset :: Int = 2
   (blts, binstrs) <- addStdlibBuiltins initialOffset
-  (addr, instrs) <- second (concat . reverse) <$> foldM (goFun blts) (initialOffset + length binstrs, []) (tab ^. Reg.infoFunctions)
-  eassert (addr == length instrs + length binstrs + initialOffset)
-  let endName :: Text = "__juvix_end"
   endSym <- freshSymbol
+  let endName :: Text = "__juvix_end"
+      endLab = LabelRef endSym (Just endName)
+  (addr, instrs) <- second (concat . reverse) <$> foldM (goFun blts endLab) (initialOffset + length binstrs, []) (tab ^. Reg.infoFunctions)
+  eassert (addr == length instrs + length binstrs + initialOffset)
   registerLabelName endSym endName
   registerLabelAddress endSym addr
   let mainSym = fromJust $ tab ^. Reg.infoMainFunction
       mainName = fromJust (HashMap.lookup mainSym (tab ^. Reg.infoFunctions)) ^. Reg.functionName
-      endLab = LabelRef endSym (Just endName)
       callInstr = Call $ InstrCall $ Lab $ LabelRef mainSym (Just mainName)
       jmpInstr = mkJump (Val $ Lab endLab)
   return $ callInstr : jmpInstr : binstrs ++ instrs ++ [Label endLab]
@@ -39,8 +39,8 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
     getTagId tag =
       1 + fromJust (HashMap.lookup tag (info ^. Reg.extraInfoCIDs))
 
-    goFun :: forall r. (Member LabelInfoBuilder r) => StdlibBuiltins -> (Address, [[Instruction]]) -> Reg.FunctionInfo -> Sem r (Address, [[Instruction]])
-    goFun blts (addr0, acc) funInfo = do
+    goFun :: forall r. (Member LabelInfoBuilder r) => StdlibBuiltins -> LabelRef -> (Address, [[Instruction]]) -> Reg.FunctionInfo -> Sem r (Address, [[Instruction]])
+    goFun blts failLab (addr0, acc) funInfo = do
       let sym = funInfo ^. Reg.functionSymbol
           funName = funInfo ^. Reg.functionName
       registerLabelName sym funName
@@ -82,7 +82,7 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
           Reg.Case x -> goCase addr x
           Reg.Trace x -> goTrace addr x
           Reg.Dump -> unsupported "dump"
-          Reg.Failure {} -> unsupported "fail"
+          Reg.Failure x -> goFail addr x
           Reg.Prealloc {} -> return []
           Reg.Nop -> return []
           Reg.Block x -> goBlock addr x
@@ -364,6 +364,13 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
         goTrace :: Address -> Reg.InstrTrace -> Sem r [Instruction]
         goTrace _ Reg.InstrTrace {..} =
           return [Trace (InstrTrace (goRValue _instrTraceValue))]
+
+        goFail :: Address -> Reg.InstrFailure -> Sem r [Instruction]
+        goFail _ Reg.InstrFailure {..} =
+          return
+            [ Trace (InstrTrace (goRValue _instrFailureValue)),
+              mkJump (Val $ Lab failLab)
+            ]
 
         goBlock :: Address -> Reg.InstrBlock -> Sem r [Instruction]
         goBlock addr Reg.InstrBlock {..} =
