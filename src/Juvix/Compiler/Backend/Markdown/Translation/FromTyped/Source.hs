@@ -20,6 +20,8 @@ data ProcessJuvixBlocksArgs = ProcessJuvixBlocksArgs
     _processJuvixBlocksArgsUrlPrefix :: Text,
     _processJuvixBlocksArgsIdPrefix :: Text,
     _processJuvixBlocksArgsNoPath :: Bool,
+    _processJuvixBlocksArgsExt :: Text,
+    _processJuvixBlocksArgsStripPrefix :: Text,
     _processJuvixBlocksArgsComments :: Comments,
     _processJuvixBlocksArgsOutputDir :: Path Abs Dir,
     _processJuvixBlocksArgsModule :: Concrete.Module 'Concrete.Scoped 'Concrete.ModuleTop
@@ -51,6 +53,8 @@ fromJuvixMarkdown opts = do
             HtmlRender._htmlOptionsUrlPrefix = opts ^. processJuvixBlocksArgsUrlPrefix,
             HtmlRender._htmlOptionsIdPrefix = opts ^. processJuvixBlocksArgsIdPrefix,
             HtmlRender._htmlOptionsNoPath = opts ^. processJuvixBlocksArgsNoPath,
+            HtmlRender._htmlOptionsExt = opts ^. processJuvixBlocksArgsExt,
+            HtmlRender._htmlOptionsStripPrefix = opts ^. processJuvixBlocksArgsStripPrefix,
             HtmlRender._htmlOptionsOutputDir = opts ^. processJuvixBlocksArgsOutputDir
           }
 

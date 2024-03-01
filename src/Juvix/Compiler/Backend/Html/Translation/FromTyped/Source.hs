@@ -55,6 +55,8 @@ data GenSourceHtmlArgs = GenSourceHtmlArgs
     _genSourceHtmlArgsNonRecursive :: Bool,
     _genSourceHtmlArgsNoFooter :: Bool,
     _genSourceHtmlArgsNoPath :: Bool,
+    _genSourceHtmlArgsExt :: Text,
+    _genSourceHtmlArgsStripPrefix :: Text,
     _genSourceHtmlArgsComments :: Comments,
     _genSourceHtmlArgsTheme :: Theme
   }
@@ -99,7 +101,9 @@ genSourceHtml o@GenSourceHtmlArgs {..} = do
           _htmlOptionsParamBase = o ^. genSourceHtmlArgsParamBase,
           _htmlOptionsTheme = o ^. genSourceHtmlArgsTheme,
           _htmlOptionsNoFooter = o ^. genSourceHtmlArgsNoFooter,
-          _htmlOptionsNoPath = o ^. genSourceHtmlArgsNoPath
+          _htmlOptionsNoPath = o ^. genSourceHtmlArgsNoPath,
+          _htmlOptionsExt = o ^. genSourceHtmlArgsExt,
+          _htmlOptionsStripPrefix = o ^. genSourceHtmlArgsStripPrefix
         }
 
     entry = o ^. genSourceHtmlArgsModule
@@ -108,20 +112,20 @@ genSourceHtml o@GenSourceHtmlArgs {..} = do
       | _genSourceHtmlArgsNonRecursive = pure entry
       | otherwise = toList topModules
 
-    -- TODO: top modules
     topModules :: HashMap NameId (Module 'Scoped 'ModuleTop)
     topModules = HashMap.fromList [(entry ^. modulePath . S.nameId, entry)]
 
     outputModule :: Module 'Scoped 'ModuleTop -> IO ()
     outputModule m = do
-      ensureDir (parent htmlFile)
-      let absPath = (htmlOptions ^. htmlOptionsOutputDir) <//> htmlFile
+      ensureDir (parent outputFile)
+      let absPath = (htmlOptions ^. htmlOptionsOutputDir) <//> outputFile
       putStrLn $ "Writing " <> pack (toFilePath absPath)
       utc <- getCurrentTime
       Text.writeFile
-        (toFilePath htmlFile)
-        ( run . runReader htmlOptions $
-            genModuleText
+        (toFilePath outputFile)
+        ( run
+            . runReader htmlOptions
+            $ genModuleText
               GenModuleTextArgs
                 { _genModuleTextArgsConcreteOpts = o ^. genSourceHtmlArgsConcreteOpts,
                   _genModuleTextArgsUTC = utc,
@@ -130,8 +134,10 @@ genSourceHtml o@GenSourceHtmlArgs {..} = do
                 }
         )
       where
-        htmlFile :: Path Rel File
-        htmlFile = relFile (topModulePathToDottedPath (m ^. modulePath . S.nameConcrete) <.> ".html")
+        ext  = Text.unpack (htmlOptions ^. htmlOptionsExt)
+
+        outputFile :: Path Rel File
+        outputFile = relFile (topModulePathToDottedPath (m ^. modulePath . S.nameConcrete) <.> ext)
 
 genModuleText ::
   forall r.
@@ -353,7 +359,17 @@ nameIdAttr nid = do
 moduleDocRelativePath :: (Members '[Reader HtmlOptions] r) => TopModulePath -> Sem r (Path Rel File)
 moduleDocRelativePath m = do
   suff <- kindSuffix <$> asks (^. htmlOptionsKind)
-  return (topModulePathToRelativePathDot ".html" suff m)
+  ext <- Text.unpack <$> asks (^. htmlOptionsExt)
+  fixPrefix <- Text.unpack <$> asks (^. htmlOptionsStripPrefix)
+  let relpath :: Path Rel File = topModulePathToRelativePath ext suff (</>) m
+  if
+    | null fixPrefix -> return (topModulePathToRelativePathDot ext suff m)
+    | otherwise ->
+        return
+          $ maybe
+            relpath
+            id
+            (stripProperPrefix (fromJust (parseRelDir fixPrefix)) relpath)
 
 nameIdAttrRef :: (Members '[Reader HtmlOptions] r) => TopModulePath -> Maybe S.NameId -> Sem r AttributeValue
 nameIdAttrRef tp s = do

@@ -29,6 +29,10 @@ runCommand opts = do
                 opts ^. markdownIdPrefix,
               _processJuvixBlocksArgsNoPath =
                 opts ^. markdownNoPath,
+              _processJuvixBlocksArgsExt =
+                opts ^. markdownExt,
+              _processJuvixBlocksArgsStripPrefix =
+                opts ^. markdownStripPrefix,
               _processJuvixBlocksArgsComments = Scoper.getScoperResultComments scopedM,
               _processJuvixBlocksArgsModule = m,
               _processJuvixBlocksArgsOutputDir = outputDir

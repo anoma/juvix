@@ -13,6 +13,8 @@ data HtmlOptions = HtmlOptions
     _htmlInputFile :: AppPath File,
     _htmlNoFooter :: Bool,
     _htmlNoPath :: Bool,
+    _htmlExt :: Text,
+    _htmlStripPrefix :: Text,
     _htmlAssetsPrefix :: Text,
     _htmlUrlPrefix :: Text,
     _htmlIdPrefix :: Text,
@@ -66,6 +68,20 @@ parseHtml = do
       ( long "no-path"
           <> help "Remove the path from all hyperlinks"
       )
+  _htmlExt <-
+    strOption
+      ( value ".html"
+          <> long "ext"
+          <> showDefault
+          <> help "File extension in hyperlinks for the input file"
+      )
+  _htmlStripPrefix <-
+    strOption
+      ( value ""
+          <> long "strip-prefix"
+          <> showDefault
+          <> help "Strip the given prefix from the input file path for HTML hyperlinks"
+      )
   _htmlAssetsPrefix <-
     strOption
       ( value ""
@@ -78,7 +94,7 @@ parseHtml = do
       ( value ""
           <> long "prefix-url"
           <> showDefault
-          <> help "Prefix used for inner Juvix hyperlinks"
+          <> help "Prefix used for inner Juvix hyperlinks."
       )
   _htmlIdPrefix <-
     strOption
