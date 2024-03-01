@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -Wno-unused-type-patterns #-}
+
 -- | Visit every key at most once
 module Juvix.Data.Effect.Visit
   ( runVisit,
