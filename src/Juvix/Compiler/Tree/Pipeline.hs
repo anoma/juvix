@@ -12,3 +12,6 @@ toNockma = applyTransformations toNockmaTransformations
 
 toAsm :: (Member (Error JuvixError) r) => InfoTable -> Sem r InfoTable
 toAsm = applyTransformations toAsmTransformations
+
+toCairoAsm :: (Member (Error JuvixError) r) => InfoTable -> Sem r InfoTable
+toCairoAsm = applyTransformations toCairoAsmTransformations

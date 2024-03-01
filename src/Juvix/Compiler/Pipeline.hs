@@ -162,7 +162,7 @@ storedCoreToMiniC :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.
 storedCoreToMiniC = storedCoreToAsm >=> asmToMiniC
 
 storedCoreToCasm :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Casm.Result
-storedCoreToCasm = storedCoreToReg >=> regToCasm
+storedCoreToCasm = storedCoreToTree Core.CheckCairo >=> treeToCasm
 
 storedCoreToGeb :: (Members '[Error JuvixError, Reader EntryPoint] r) => Geb.ResultSpec -> Core.Module -> Sem r Geb.Result
 storedCoreToGeb spec = Core.toGeb >=> return . uncurry (Geb.toResult spec) . Geb.fromCore . Core.computeCombinedInfoTable
@@ -214,6 +214,9 @@ coreToVampIR' = Core.toStored' >=> storedCoreToVampIR'
 treeToAsm :: (Member (Error JuvixError) r) => Tree.InfoTable -> Sem r Asm.InfoTable
 treeToAsm = Tree.toAsm >=> return . Asm.fromTree
 
+treeToCairoAsm :: (Member (Error JuvixError) r) => Tree.InfoTable -> Sem r Asm.InfoTable
+treeToCairoAsm = Tree.toCairoAsm >=> return . Asm.fromTree
+
 treeToReg :: (Members '[Error JuvixError, Reader EntryPoint] r) => Tree.InfoTable -> Sem r Reg.InfoTable
 treeToReg = treeToAsm >=> asmToReg
 
@@ -227,7 +230,7 @@ treeToMiniC :: (Members '[Error JuvixError, Reader EntryPoint] r) => Tree.InfoTa
 treeToMiniC = treeToAsm >=> asmToMiniC
 
 treeToCasm :: (Members '[Error JuvixError, Reader EntryPoint] r) => Tree.InfoTable -> Sem r Casm.Result
-treeToCasm = treeToAsm >=> asmToCasm
+treeToCasm = treeToCairoAsm >=> asmToCasm
 
 asmToReg :: (Members '[Error JuvixError, Reader EntryPoint] r) => Asm.InfoTable -> Sem r Reg.InfoTable
 asmToReg = Asm.toReg >=> return . Reg.fromAsm
