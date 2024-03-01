@@ -1,0 +1,43 @@
+-- local modules
+module test047;
+
+import Stdlib.Prelude open;
+
+module Local;
+  t : Nat := 2;
+
+  module Nested;
+    t : Nat := 3;
+
+    -- module shadowing
+    module Nested;
+      t : Nat := 5;
+    end;
+
+    module Nested2;
+      t : Nat := 7;
+
+      -- module shadowing
+      module Nested;
+        t : Nat := 11;
+      end;
+    end;
+  end;
+end;
+
+open Local;
+
+module Public;
+  open Nested public;
+end;
+
+tt : Nat := t;
+
+x : Nat :=
+  t
+    * Local.t
+    * Local.Nested.t
+    * Nested.Nested2.Nested.t
+    * Public.Nested.t;
+
+main : Nat := x;

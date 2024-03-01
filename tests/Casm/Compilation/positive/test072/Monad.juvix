@@ -1,0 +1,21 @@
+module Monad;
+
+import Functor open;
+import Stdlib.Data.Fixity open;
+
+syntax fixity bind := binary {assoc := left};
+
+trait
+type Monad (f : Type -> Type) :=
+  mkMonad {
+    functor : Functor f;
+    return : {A : Type} -> A -> f A;
+    syntax operator >>= bind;
+    >>= : {A B : Type} -> f A -> (A -> f B) -> f B
+  };
+
+open Monad public;
+
+syntax operator >> bind;
+>> {M : Type → Type} {A B : Type} {{Monad M}} (x : M
+  A) (y : M B) : M B := x >>= λ {_ := y};
