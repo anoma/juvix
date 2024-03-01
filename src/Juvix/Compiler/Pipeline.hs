@@ -44,6 +44,7 @@ import Juvix.Compiler.Tree qualified as Tree
 import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process
 import Juvix.Data.Effect.TaggedLock
+import Juvix.Data.Field
 
 type PipelineAppEffects = '[TaggedLock, EmbedIO, Resource, Final IO]
 
@@ -162,7 +163,7 @@ storedCoreToMiniC :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.
 storedCoreToMiniC = storedCoreToAsm >=> asmToMiniC
 
 storedCoreToCasm :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Casm.Result
-storedCoreToCasm = storedCoreToTree Core.CheckCairo >=> treeToCasm
+storedCoreToCasm = local (set entryPointFieldSize cairoFieldSize) . storedCoreToTree Core.CheckCairo >=> treeToCasm
 
 storedCoreToGeb :: (Members '[Error JuvixError, Reader EntryPoint] r) => Geb.ResultSpec -> Core.Module -> Sem r Geb.Result
 storedCoreToGeb spec = Core.toGeb >=> return . uncurry (Geb.toResult spec) . Geb.fromCore . Core.computeCombinedInfoTable
