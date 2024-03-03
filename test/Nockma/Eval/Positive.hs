@@ -1,6 +1,7 @@
 module Nockma.Eval.Positive where
 
 import Base hiding (Path, testName)
+import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Core.Language.Base (defaultSymbol)
 import Juvix.Compiler.Nockma.Evaluator
 import Juvix.Compiler.Nockma.Language
@@ -13,6 +14,7 @@ type Check = Sem '[Reader [Term Natural], Reader (Term Natural), EmbedIO]
 
 data Test = Test
   { _testEvalOptions :: EvalOptions,
+    _testProgramStorage :: Storage Natural,
     _testName :: Text,
     _testProgramSubject :: Term Natural,
     _testProgramFormula :: Term Natural,
@@ -29,6 +31,7 @@ mkNockmaAssertion Test {..} = do
           . runOutputList @(Term Natural)
           . runError @(ErrNockNatural Natural)
           . runError @(NockEvalError Natural)
+          . runReader @(Storage Natural) _testProgramStorage
           $ eval _testProgramSubject _testProgramFormula
 
   case evalResult of
@@ -91,6 +94,7 @@ compilerTest n mainFun _testCheck _evalInterceptStdlibCalls =
       opts = CompilerOptions {_compilerOptionsEnableTrace = False}
       Cell _testProgramSubject _testProgramFormula = runCompilerWithJuvix opts mempty [] f
       _testEvalOptions = EvalOptions {..}
+      _testProgramStorage :: Storage Natural = emptyStorage
    in Test {..}
 
 anomaTest :: Text -> Term Natural -> [Term Natural] -> Check () -> Bool -> Test
@@ -110,11 +114,15 @@ anomaTest n mainFun args _testCheck _evalInterceptStdlibCalls =
       _testProgramSubject = TermCell (runCompilerWithAnoma opts mempty [] f)
 
       _testProgramFormula = anomaCall args
+      _testProgramStorage :: Storage Natural = emptyStorage
       _testEvalOptions = EvalOptions {..}
    in Test {..}
 
+testWithStorage :: [(Term Natural, Term Natural)] -> Text -> Term Natural -> Term Natural -> Check () -> Test
+testWithStorage s = Test defaultEvalOptions (Storage (HashMap.fromList s))
+
 test :: Text -> Term Natural -> Term Natural -> Check () -> Test
-test = Test defaultEvalOptions
+test = testWithStorage []
 
 anomaCallingConventionTests :: [Test]
 anomaCallingConventionTests =
@@ -158,5 +166,6 @@ unitTests =
     test "push" [nock| [0 1] |] [nock| [push [[suc [@ L]] [@ S]]] |] (eqNock [nock| [1 0 1] |]),
     test "call" [nock| [quote 1] |] [nock| [call [S [@ S]]] |] (eqNock [nock| 1 |]),
     test "replace" [nock| [0 1] |] [nock| [replace [[L [quote 1]] [@ S]]] |] (eqNock [nock| [1 1] |]),
-    test "hint" [nock| [0 1] |] [nock| [hint [nil [trace [quote 2] [quote 3]]] [quote 1]] |] (eqTraces [[nock| 2 |]] >> eqNock [nock| 1 |])
+    test "hint" [nock| [0 1] |] [nock| [hint [nil [trace [quote 2] [quote 3]]] [quote 1]] |] (eqTraces [[nock| 2 |]] >> eqNock [nock| 1 |]),
+    testWithStorage [([nock| 111 |], [nock| 222 |])] "scry" [nock| nil |] [nock| [scry [quote nil] [quote 111]] |] (eqNock [nock| 222 |])
   ]

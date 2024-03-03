@@ -2,11 +2,14 @@ module Juvix.Compiler.Nockma.Evaluator
   ( module Juvix.Compiler.Nockma.Evaluator,
     module Juvix.Compiler.Nockma.Evaluator.Error,
     module Juvix.Compiler.Nockma.Evaluator.Options,
+    module Juvix.Compiler.Nockma.Evaluator.Storage,
   )
 where
 
+import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Nockma.Evaluator.Error
 import Juvix.Compiler.Nockma.Evaluator.Options
+import Juvix.Compiler.Nockma.Evaluator.Storage
 import Juvix.Compiler.Nockma.Language
 import Juvix.Prelude hiding (Atom, Path)
 
@@ -102,7 +105,7 @@ programAssignments mprog =
 -- | The stack provided in the replExpression has priority
 evalRepl ::
   forall r a.
-  (Integral a, Members '[Reader EvalOptions, Error (NockEvalError a), Error (ErrNockNatural a)] r, NockNatural a) =>
+  (Hashable a, Integral a, Members '[Reader EvalOptions, Error (NockEvalError a), Error (ErrNockNatural a)] r, NockNatural a) =>
   (Term a -> Sem r ()) ->
   Maybe (Program a) ->
   Maybe (Term a) ->
@@ -115,7 +118,7 @@ evalRepl handleTrace mprog defaultStack expr = do
       t' <- fromReplTerm namedTerms (w ^. withStackStack)
       return (Just t', w ^. withStackTerm)
   stack <- maybe errNoStack return mstack
-  fromReplTerm namedTerms t >>= runOutputSem @(Term a) handleTrace . eval stack
+  fromReplTerm namedTerms t >>= runOutputSem @(Term a) handleTrace . runReader @(Storage a) emptyStorage . eval stack
   where
     errNoStack :: Sem r x
     errNoStack = throw @(NockEvalError a) (ErrNoStack NoStack)
@@ -125,7 +128,7 @@ evalRepl handleTrace mprog defaultStack expr = do
 
 eval ::
   forall s a.
-  (Integral a, Members '[Reader EvalOptions, Output (Term a), Error (NockEvalError a), Error (ErrNockNatural a)] s, NockNatural a) =>
+  (Hashable a, Integral a, Members '[Reader (Storage a), Reader EvalOptions, Output (Term a), Error (NockEvalError a), Error (ErrNockNatural a)] s, NockNatural a) =>
   Term a ->
   Term a ->
   Sem s (Term a)
@@ -210,6 +213,7 @@ eval inistack initerm =
           OpCall -> goOpCall
           OpReplace -> goOpReplace
           OpHint -> goOpHint
+          OpScry -> goOpScry
           OpTrace -> goOpTrace
           where
             crumb crumbTag =
@@ -317,3 +321,10 @@ eval inistack initerm =
               cellTerm <- withCrumb (crumb crumbDecodeFirst) (asCell (c ^. operatorCellTerm))
               t1' <- evalArg crumbEvalFirst stack (cellTerm ^. cellLeft)
               evalArg crumbEvalSecond t1' (cellTerm ^. cellRight)
+
+            goOpScry :: Sem r (Term a)
+            goOpScry = do
+              Cell' typeFormula subFormula _ <- withCrumb (crumb crumbDecodeFirst) (asCell (c ^. operatorCellTerm))
+              void (evalArg crumbEvalFirst stack typeFormula)
+              subResult <- evalArg crumbEvalSecond stack subFormula
+              HashMap.lookupDefault impossible subResult <$> asks (^. storageKeyValueData)

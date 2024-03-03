@@ -27,6 +27,7 @@ mkAnomaCallTest' enableDebug _testName relRoot mainFile args _testCheck =
         return compiledMain
       let _testProgramFormula = anomaCall args
           _testEvalOptions = defaultEvalOptions
+          _testProgramStorage :: Storage Natural = emptyStorage
       return Test {..}
 
     withRootCopy :: (Prelude.Path Abs Dir -> IO a) -> IO a
