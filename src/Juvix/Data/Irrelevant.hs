@@ -45,4 +45,7 @@ instance Applicative Irrelevant where
 instance Monad Irrelevant where
   (Irrelevant mx) >>= f = f mx
 
+instance Hashable (Irrelevant a) where
+  hashWithSalt _ _ = 0
+
 makeLenses ''Irrelevant
