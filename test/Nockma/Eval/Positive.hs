@@ -14,6 +14,7 @@ type Check = Sem '[Reader [Term Natural], Reader (Term Natural), EmbedIO]
 
 data Test = Test
   { _testEvalOptions :: EvalOptions,
+    _testAssertEvalError :: Maybe (NockEvalError Natural -> Assertion),
     _testProgramStorage :: Storage Natural,
     _testName :: Text,
     _testProgramSubject :: Term Natural,
@@ -36,9 +37,13 @@ mkNockmaAssertion Test {..} = do
 
   case evalResult of
     Left natErr -> assertFailure ("Evaluation error: " <> show natErr)
-    Right r -> case r of
-      Left evalErr -> assertFailure ("Evaluation error: " <> unpack (ppTrace evalErr))
-      Right res -> runM (runReader res (runReader traces _testCheck))
+    Right r -> case _testAssertEvalError of
+      Nothing -> case r of
+        Left evalErr -> assertFailure ("Evaluation error: " <> unpack (ppTrace evalErr))
+        Right res -> runM (runReader res (runReader traces _testCheck))
+      Just checkErrFn -> case r of
+        Left evalErr -> checkErrFn evalErr
+        Right {} -> assertFailure "expected error"
 
 allTests :: TestTree
 allTests =
@@ -95,7 +100,18 @@ compilerTest n mainFun _testCheck _evalInterceptStdlibCalls =
       Cell _testProgramSubject _testProgramFormula = runCompilerWithJuvix opts mempty [] f
       _testEvalOptions = EvalOptions {..}
       _testProgramStorage :: Storage Natural = emptyStorage
+      _testAssertEvalError :: Maybe (NockEvalError Natural -> Assertion) = Nothing
    in Test {..}
+
+withAssertErrKeyNotInStorage :: Test -> Test
+withAssertErrKeyNotInStorage Test {..} =
+  let _testAssertEvalError :: Maybe (NockEvalError Natural -> Assertion) = Just f
+   in Test {..}
+  where
+    f :: NockEvalError Natural -> Assertion
+    f = \case
+      ErrKeyNotInStorage {} -> return ()
+      _ -> assertFailure "Expected ErrKeyNotInStorage error"
 
 anomaTest :: Text -> Term Natural -> [Term Natural] -> Check () -> Bool -> Test
 anomaTest n mainFun args _testCheck _evalInterceptStdlibCalls =
@@ -116,10 +132,11 @@ anomaTest n mainFun args _testCheck _evalInterceptStdlibCalls =
       _testProgramFormula = anomaCall args
       _testProgramStorage :: Storage Natural = emptyStorage
       _testEvalOptions = EvalOptions {..}
+      _testAssertEvalError :: Maybe (NockEvalError Natural -> Assertion) = Nothing
    in Test {..}
 
 testWithStorage :: [(Term Natural, Term Natural)] -> Text -> Term Natural -> Term Natural -> Check () -> Test
-testWithStorage s = Test defaultEvalOptions (Storage (HashMap.fromList s))
+testWithStorage s = Test defaultEvalOptions Nothing (Storage (HashMap.fromList s))
 
 test :: Text -> Term Natural -> Term Natural -> Check () -> Test
 test = testWithStorage []
@@ -167,5 +184,6 @@ unitTests =
     test "call" [nock| [quote 1] |] [nock| [call [S [@ S]]] |] (eqNock [nock| 1 |]),
     test "replace" [nock| [0 1] |] [nock| [replace [[L [quote 1]] [@ S]]] |] (eqNock [nock| [1 1] |]),
     test "hint" [nock| [0 1] |] [nock| [hint [nil [trace [quote 2] [quote 3]]] [quote 1]] |] (eqTraces [[nock| 2 |]] >> eqNock [nock| 1 |]),
-    testWithStorage [([nock| 111 |], [nock| 222 |])] "scry" [nock| nil |] [nock| [scry [quote nil] [quote 111]] |] (eqNock [nock| 222 |])
+    testWithStorage [([nock| 111 |], [nock| 222 |])] "scry" [nock| nil |] [nock| [scry [quote nil] [quote 111]] |] (eqNock [nock| 222 |]),
+    withAssertErrKeyNotInStorage $ testWithStorage [([nock| 333 |], [nock| 222 |]), ([nock| 3 |], [nock| 222 |])] "scry" [nock| nil |] [nock| [scry [quote nil] [quote 111]] |] (eqNock [nock| 222 |])
   ]

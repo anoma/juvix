@@ -1,10 +1,13 @@
 module Juvix.Compiler.Nockma.Evaluator.Error
   ( module Juvix.Compiler.Nockma.Evaluator.Error,
     module Juvix.Compiler.Nockma.Evaluator.Crumbs,
+    module Juvix.Compiler.Nockma.Evaluator.Storage,
   )
 where
 
+import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Nockma.Evaluator.Crumbs
+import Juvix.Compiler.Nockma.Evaluator.Storage
 import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Pretty.Base
 import Juvix.Prelude hiding (Atom, Path)
@@ -17,6 +20,7 @@ data NockEvalError a
     ErrNoStack NoStack
   | -- TODO perhaps this should be a repl error type
     ErrAssignmentNotFound Text
+  | ErrKeyNotInStorage (KeyNotInStorage a)
 
 newtype GenericNockEvalError = GenericNockEvalError
   { _genericNockEvalErrorMessage :: AnsiText
@@ -39,6 +43,11 @@ data InvalidPath a = InvalidPath
   { _invalidPathCtx :: EvalCtx,
     _invalidPathTerm :: Term a,
     _invalidPathPath :: Path
+  }
+
+data KeyNotInStorage a = KeyNotInStorage
+  { _keyNotInStorageKey :: Term a,
+    _keyNotInStorageStorage :: Storage a
   }
 
 data NoStack = NoStack
@@ -74,6 +83,16 @@ throwExpectedAtom a = do
           _expectedAtomCell = a
         }
 
+throwKeyNotInStorage :: (Members '[Reader (Storage a), Error (NockEvalError a)] r) => Term a -> Sem r x
+throwKeyNotInStorage k = do
+  s <- ask
+  throw $
+    ErrKeyNotInStorage
+      KeyNotInStorage
+        { _keyNotInStorageKey = k,
+          _keyNotInStorageStorage = s
+        }
+
 instance PrettyCode NoStack where
   ppCode _ = return "Missing stack"
 
@@ -98,6 +117,19 @@ instance (PrettyCode a, NockNatural a) => PrettyCode (ExpectedCell a) where
     let cell = annotate AnnImportant "cell"
     return (ctx <> "Expected a" <+> cell <+> "but got:" <> line <> atm)
 
+instance (PrettyCode a, NockNatural a) => PrettyCode (KeyNotInStorage a) where
+  ppCode :: forall r. (Member (Reader Options) r) => KeyNotInStorage a -> Sem r (Doc Ann)
+  ppCode KeyNotInStorage {..} = do
+    tm <- ppCode _keyNotInStorageKey
+    hashMapKvs <- vsep <$> (mapM combineKeyValue (HashMap.toList (_keyNotInStorageStorage ^. storageKeyValueData)))
+    return ("The key" <+> tm <+> "is not found in the storage." <> line <> "Storage contains the following key value pairs:" <> line <> hashMapKvs)
+    where
+      combineKeyValue :: (Term a, Term a) -> Sem r (Doc Ann)
+      combineKeyValue (t1, t2) = do
+        pt1 <- ppCode t1
+        pt2 <- ppCode t2
+        return (pt1 <+> ":=" <+> pt2)
+
 instance (PrettyCode a, NockNatural a) => PrettyCode (NockEvalError a) where
   ppCode = \case
     ErrInvalidPath e -> ppCode e
@@ -105,3 +137,4 @@ instance (PrettyCode a, NockNatural a) => PrettyCode (NockEvalError a) where
     ErrExpectedCell e -> ppCode e
     ErrNoStack e -> ppCode e
     ErrAssignmentNotFound e -> return (pretty e)
+    ErrKeyNotInStorage e -> ppCode e

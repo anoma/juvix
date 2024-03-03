@@ -28,6 +28,7 @@ mkAnomaCallTest' enableDebug _testName relRoot mainFile args _testCheck =
       let _testProgramFormula = anomaCall args
           _testEvalOptions = defaultEvalOptions
           _testProgramStorage :: Storage Natural = emptyStorage
+          _testAssertEvalError :: Maybe (NockEvalError Natural -> Assertion) = Nothing
       return Test {..}
 
     withRootCopy :: (Prelude.Path Abs Dir -> IO a) -> IO a

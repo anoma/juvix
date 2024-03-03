@@ -326,5 +326,5 @@ eval inistack initerm =
             goOpScry = do
               Cell' typeFormula subFormula _ <- withCrumb (crumb crumbDecodeFirst) (asCell (c ^. operatorCellTerm))
               void (evalArg crumbEvalFirst stack typeFormula)
-              subResult <- evalArg crumbEvalSecond stack subFormula
-              HashMap.lookupDefault impossible subResult <$> asks (^. storageKeyValueData)
+              key <- evalArg crumbEvalSecond stack subFormula
+              fromMaybeM (throwKeyNotInStorage key) (HashMap.lookup key <$> asks (^. storageKeyValueData))
