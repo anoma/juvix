@@ -101,6 +101,7 @@ data NockOp
   | OpCall
   | OpReplace
   | OpHint
+  | OpScry
   | OpTrace
   deriving stock (Bounded, Enum, Eq, Generic)
 
@@ -120,6 +121,7 @@ instance Pretty NockOp where
     OpCall -> "call"
     OpReplace -> "replace"
     OpHint -> "hint"
+    OpScry -> "scry"
     OpTrace -> "trace"
 
 textToStdlibFunctionMap :: HashMap Text StdlibFunction
@@ -214,6 +216,7 @@ serializeOp = \case
   OpCall -> 9
   OpReplace -> 10
   OpHint -> 11
+  OpScry -> 12
   OpTrace -> 100
 
 class (NockmaEq a) => NockNatural a where
