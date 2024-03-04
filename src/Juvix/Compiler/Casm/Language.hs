@@ -20,14 +20,6 @@ follow the syntax of [1, Section 5].
 
 import Juvix.Compiler.Casm.Language.Base
 
-type Offset = Int16
-
-type Address = Int
-
-data Reg
-  = Ap
-  | Fp
-
 data MemRef = MemRef
   { _memRefReg :: Reg,
     _memRefOff :: Offset
