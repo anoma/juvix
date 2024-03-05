@@ -21,31 +21,31 @@ import Juvix.Data.Field
 
 data Element
   = ElementInstruction Instruction
-  | ElementConstant FField
+  | ElementImmediate FField
 
 data Instruction = Instruction
-  { _instrOff0 :: Offset,
-    _instrOff1 :: Offset,
-    _instrOff2 :: Offset,
+  { _instrOffDst :: Offset,
+    _instrOffOp0 :: Offset,
+    _instrOffOp1 :: Offset,
     _instrDstReg :: Reg,
     _instrOp0Reg :: Reg,
     _instrOp1Src :: Op1Src,
     _instrResLogic :: ResLogic,
     _instrPcUpdate :: PcUpdate,
+    _instrApUpdate :: ApUpdate,
     _instrOpcode :: Opcode
   }
 
 data Op1Src
-  = Op1SrcImm
-  | Op1SrcAp
+  = Op1SrcOp0
+  | Op1SrcImm
   | Op1SrcFp
-  | Op1SrcOp0
+  | Op1SrcAp
 
 data ResLogic
   = ResOp1
   | ResAdd
   | ResMul
-  | ResUnconstrained
 
 data PcUpdate
   = PcUpdateRegular
@@ -56,13 +56,27 @@ data PcUpdate
 data ApUpdate
   = ApUpdateRegular
   | ApUpdateAdd
-  | ApUpdateAdd1
-  | ApUpdateAdd2
+  | ApUpdateInc
 
 data Opcode
   = Nop
   | AssertEq
   | Call
   | Ret
+
+defaultInstruction :: Instruction
+defaultInstruction =
+  Instruction
+    { _instrOffDst = -1,
+      _instrOffOp0 = -1,
+      _instrOffOp1 = -1,
+      _instrDstReg = Ap,
+      _instrOp0Reg = Ap,
+      _instrOp1Src = Op1SrcAp,
+      _instrResLogic = ResOp1,
+      _instrPcUpdate = PcUpdateRegular,
+      _instrApUpdate = ApUpdateRegular,
+      _instrOpcode = Nop
+    }
 
 makeLenses ''Instruction

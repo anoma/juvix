@@ -171,7 +171,6 @@ parseJump = do
   where
     jmpIf :: ParsecS r Instruction
     jmpIf = do
-      isRel <- isJust <$> optional (kw kwRel)
       tgt <- parseValue
       kw kwIf
       v <- parseMemRef
@@ -183,7 +182,6 @@ parseJump = do
           InstrJumpIf
             { _instrJumpIfTarget = tgt,
               _instrJumpIfValue = v,
-              _instrJumpIfRel = isRel,
               _instrJumpIfIncAp = incAp
             }
 

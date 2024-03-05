@@ -124,8 +124,7 @@ instance PrettyCode InstrJumpIf where
     tgt <- ppCode _instrJumpIfTarget
     v <- ppCode _instrJumpIfValue
     incAp <- ppIncAp _instrJumpIfIncAp
-    let rel = if _instrJumpIfRel then Str.rel <> space else mempty
-    return $ Str.jmp <+> rel <> tgt <+> Str.if_ <+> v <+> Str.notequal <+> annotate AnnLiteralInteger "0" <> incAp
+    return $ Str.jmp <+> tgt <+> Str.if_ <+> v <+> Str.notequal <+> annotate AnnLiteralInteger "0" <> incAp
 
 instance PrettyCode InstrCall where
   ppCode InstrCall {..} = do

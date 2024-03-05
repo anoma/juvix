@@ -58,7 +58,11 @@ juvix_extend_closure:
   [fp + 4] = [fp + 3] - [fp + 1]
   -- [fp + 5] = 9 - n
   [fp + 5] = [fp + 3] - [fp - 4]
-  -- copy stored args reversing them
+  -- copy stored args reversing them,
+  -- because to copy the stored args to the
+  -- new closure we need to jump forward, so
+  -- the stored args need to be available at
+  -- consecutive memory addresses backwards
   jmp rel [fp + 1]
   [ap] = [[fp - 3] + 10]; ap++
   [ap] = [[fp - 3] + 9]; ap++

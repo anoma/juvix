@@ -112,7 +112,6 @@ data InstrJump = InstrJump
 data InstrJumpIf = InstrJumpIf
   { _instrJumpIfTarget :: Value,
     _instrJumpIfValue :: MemRef,
-    _instrJumpIfRel :: Bool,
     _instrJumpIfIncAp :: Bool
   }
 
