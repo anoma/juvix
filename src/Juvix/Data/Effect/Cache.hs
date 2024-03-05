@@ -33,16 +33,7 @@ runCache ::
   HashMap k v ->
   Sem (Cache k v ': r) a ->
   Sem r (HashMap k v, a)
-runCache f c = reinterpret (runState c) $ \case
-  CacheLookup k -> gets @(HashMap k v) (^. at k)
-  CacheGet k -> do
-    mv <- gets @(HashMap k v) (^. at k)
-    case mv of
-      Just v -> return v
-      Nothing -> do
-        x :: v <- re f (f k)
-        modify' @(HashMap k v) (set (at k) (Just x))
-        return x
+runCache f c = runState c . re f
 
 evalCache ::
   (Hashable k) =>
