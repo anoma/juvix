@@ -60,9 +60,9 @@ data ApUpdate
 
 data Opcode
   = Nop
-  | AssertEq
   | Call
   | Ret
+  | AssertEq
 
 defaultInstruction :: Instruction
 defaultInstruction =

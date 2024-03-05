@@ -90,6 +90,11 @@ fieldToInteger
   (FField ((_ :: Sing (p :: Natural)) :&: (f1 :: PrimeField p))) =
     toInteger f1
 
+fieldToNatural :: FField -> Natural
+fieldToNatural f = (fromIntegral (fieldToInteger f) + s) `mod` s
+  where
+    s = fieldSize f
+
 fieldResize :: Natural -> FField -> FField
 fieldResize n f = fieldFromInteger n (fieldToInteger f)
 
