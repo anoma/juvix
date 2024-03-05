@@ -86,6 +86,7 @@ data Instruction
   | Alloc InstrAlloc
   | Trace InstrTrace
   | Label LabelRef
+  | Nop
 
 data InstrAssign = InstrAssign
   { _instrAssignValue :: RValue,

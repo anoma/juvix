@@ -20,6 +20,7 @@ validate labi instrs = mapM_ go instrs
       Alloc x -> goAlloc x
       Trace x -> goTrace x
       Label {} -> return ()
+      Nop -> return ()
 
     goLabelRef :: LabelRef -> Either CasmError ()
     goLabelRef l@LabelRef {..} = do

@@ -65,6 +65,7 @@ hRunCode hout (LabelInfo labelInfo) instrs0 = runST goCode
             Alloc x -> goAlloc x pc ap fp mem
             Trace x -> goTrace x pc ap fp mem
             Label {} -> go (pc + 1) ap fp mem
+            Nop -> go (pc + 1) ap fp mem
 
     checkGaps :: forall s. Memory s -> ST s ()
     checkGaps mem = goGaps False 0

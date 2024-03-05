@@ -44,6 +44,7 @@ fromCasm instrs0 =
       Casm.Alloc x -> goAlloc x
       Casm.Trace {} -> []
       Casm.Label {} -> []
+      Casm.Nop -> []
       where
         updateDst :: Casm.MemRef -> Instruction -> Instruction
         updateDst Casm.MemRef {..} instr =

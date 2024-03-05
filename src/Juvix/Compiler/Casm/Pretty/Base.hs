@@ -152,3 +152,4 @@ instance PrettyCode Instruction where
     Alloc x -> ppCode x
     Trace x -> ppCode x
     Label x -> (<> colon) <$> ppCode x
+    Nop -> return Str.nop

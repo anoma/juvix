@@ -37,7 +37,7 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
 
     getTagId :: Tag -> Int
     getTagId tag =
-      1 + fromJust (HashMap.lookup tag (info ^. Reg.extraInfoCIDs))
+      1 + 2 * fromJust (HashMap.lookup tag (info ^. Reg.extraInfoCIDs))
 
     goFun :: forall r. (Member LabelInfoBuilder r) => StdlibBuiltins -> LabelRef -> (Address, [[Instruction]]) -> Reg.FunctionInfo -> Sem r (Address, [[Instruction]])
     goFun blts failLab (addr0, acc) funInfo = do
@@ -332,13 +332,17 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
               labs = map (flip LabelRef Nothing) syms
               labEnd = LabelRef symEnd Nothing
               jmps = map (mkJump . Val . Lab) labs
-              addr1 = addr + length is + 1 + length jmps
+              -- we need the Nop instructions to ensure that the relative jump
+              -- offsets in our CASM interpreter correspond to the relative jump
+              -- offsets in the Cairo binary representation
+              jmps' = concatMap (\i -> [i, Nop]) jmps
+              addr1 = addr + length is + 1 + length jmps'
           (addr2, instrs) <- second (concat . reverse) <$> foldM (goCaseBranch symMap labEnd) (addr1, []) _instrCaseBranches
           (addr3, instrs') <- second reverse <$> foldM (goDefaultLabel symMap) (addr2, []) defaultTags
           instrs'' <- maybe (return []) (goCode addr3) _instrCaseDefault
           let addr4 = addr3 + length instrs''
           registerLabelAddress symEnd addr4
-          return $ is ++ mkJumpRel v : jmps ++ instrs ++ instrs' ++ instrs'' ++ [Label labEnd]
+          return $ is ++ mkJumpRel v : jmps' ++ instrs ++ instrs' ++ instrs'' ++ [Label labEnd]
           where
             (is, v) = goLoad _instrCaseValue 0
             tags = Reg.lookupInductiveInfo tab _instrCaseInductive ^. Reg.inductiveConstructors
