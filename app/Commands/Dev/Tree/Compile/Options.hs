@@ -10,12 +10,13 @@ import CommonOptions
 treeSupportedTargets :: NonEmpty CompileTarget
 treeSupportedTargets =
   nonEmpty'
-    [ TargetWasm32Wasi,
-      TargetNative64,
+    [ TargetNative64,
+      TargetWasm32Wasi,
       TargetAsm,
       TargetReg,
       TargetNockma,
-      TargetCasm
+      TargetCasm,
+      TargetCairo
     ]
 
 parseTreeCompileOptions :: Parser CompileOptions

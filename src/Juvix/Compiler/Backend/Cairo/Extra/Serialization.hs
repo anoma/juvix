@@ -1,10 +1,21 @@
 module Juvix.Compiler.Backend.Cairo.Extra.Serialization where
 
 import Data.Bits
+import Juvix.Compiler.Backend.Cairo.Data.Result
 import Juvix.Compiler.Backend.Cairo.Language
+import Numeric
 
-serialize :: [Element] -> [Natural]
-serialize = map goElement
+serialize :: [Element] -> Result
+serialize elems =
+  Result
+    { _resultData = map toHexText (serialize' elems)
+    }
+  where
+    toHexText :: Natural -> Text
+    toHexText n = "0x" <> fromString (showHex n "")
+
+serialize' :: [Element] -> [Natural]
+serialize' = map goElement
   where
     goElement :: Element -> Natural
     goElement = \case

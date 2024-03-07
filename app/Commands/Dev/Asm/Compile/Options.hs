@@ -16,7 +16,8 @@ asmSupportedTargets =
     [ TargetWasm32Wasi,
       TargetNative64,
       TargetReg,
-      TargetCasm
+      TargetCasm,
+      TargetCairo
     ]
 
 parseAsmCompileOptions :: Parser AsmCompileOptions

@@ -14,6 +14,7 @@ import Juvix.Compiler.Asm.Pipeline qualified as Asm
 import Juvix.Compiler.Asm.Translation.FromTree qualified as Asm
 import Juvix.Compiler.Backend qualified as Backend
 import Juvix.Compiler.Backend.C qualified as C
+import Juvix.Compiler.Backend.Cairo qualified as Cairo
 import Juvix.Compiler.Backend.Geb qualified as Geb
 import Juvix.Compiler.Backend.VampIR.Translation qualified as VampIR
 import Juvix.Compiler.Casm.Data.Result qualified as Casm
@@ -110,6 +111,12 @@ upToCasm ::
 upToCasm =
   upToStoredCore >>= \Core.CoreResult {..} -> storedCoreToCasm _coreResultModule
 
+upToCairo ::
+  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, GitClone, PathResolver] r) =>
+  Sem r Cairo.Result
+upToCairo =
+  upToStoredCore >>= \Core.CoreResult {..} -> storedCoreToCairo _coreResultModule
+
 upToMiniC ::
   (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, GitClone, PathResolver] r) =>
   Sem r C.MiniCResult
@@ -165,6 +172,9 @@ storedCoreToMiniC = storedCoreToAsm >=> asmToMiniC
 storedCoreToCasm :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Casm.Result
 storedCoreToCasm = local (set entryPointFieldSize cairoFieldSize) . storedCoreToTree Core.CheckCairo >=> treeToCasm
 
+storedCoreToCairo :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Cairo.Result
+storedCoreToCairo = storedCoreToCasm >=> casmToCairo
+
 storedCoreToGeb :: (Members '[Error JuvixError, Reader EntryPoint] r) => Geb.ResultSpec -> Core.Module -> Sem r Geb.Result
 storedCoreToGeb spec = Core.toGeb >=> return . uncurry (Geb.toResult spec) . Geb.fromCore . Core.computeCombinedInfoTable
 
@@ -189,6 +199,9 @@ coreToReg = Core.toStored >=> storedCoreToReg
 
 coreToCasm :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Casm.Result
 coreToCasm = Core.toStored >=> storedCoreToCasm
+
+coreToCairo :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Cairo.Result
+coreToCairo = Core.toStored >=> storedCoreToCairo
 
 coreToNockma :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r (Nockma.Cell Natural)
 coreToNockma = coreToTree Core.CheckAnoma >=> treeToNockma
@@ -233,11 +246,17 @@ treeToMiniC = treeToAsm >=> asmToMiniC
 treeToCasm :: (Members '[Error JuvixError, Reader EntryPoint] r) => Tree.InfoTable -> Sem r Casm.Result
 treeToCasm = treeToCairoAsm >=> asmToCasm
 
+treeToCairo :: (Members '[Error JuvixError, Reader EntryPoint] r) => Tree.InfoTable -> Sem r Cairo.Result
+treeToCairo = treeToCasm >=> casmToCairo
+
 asmToReg :: (Members '[Error JuvixError, Reader EntryPoint] r) => Asm.InfoTable -> Sem r Reg.InfoTable
 asmToReg = Asm.toReg >=> return . Reg.fromAsm
 
 asmToCasm :: (Members '[Error JuvixError, Reader EntryPoint] r) => Asm.InfoTable -> Sem r Casm.Result
 asmToCasm = asmToReg >=> regToCasm
+
+asmToCairo :: (Members '[Error JuvixError, Reader EntryPoint] r) => Asm.InfoTable -> Sem r Cairo.Result
+asmToCairo = asmToReg >=> regToCairo
 
 asmToMiniC :: (Members '[Error JuvixError, Reader EntryPoint] r) => Asm.InfoTable -> Sem r C.MiniCResult
 asmToMiniC = asmToReg >=> regToMiniC
@@ -250,6 +269,12 @@ regToMiniC tab = do
 
 regToCasm :: Reg.InfoTable -> Sem r Casm.Result
 regToCasm = Reg.toCasm >=> return . Casm.fromReg
+
+casmToCairo :: Casm.Result -> Sem r Cairo.Result
+casmToCairo Casm.Result {..} = return $ Cairo.serialize $ Cairo.fromCasm _resultCode
+
+regToCairo :: Reg.InfoTable -> Sem r Cairo.Result
+regToCairo = regToCasm >=> casmToCairo
 
 treeToNockma' :: (Members '[Error JuvixError, Reader NockmaTree.CompilerOptions] r) => Tree.InfoTable -> Sem r (Nockma.Cell Natural)
 treeToNockma' = Tree.toNockma >=> NockmaTree.fromTreeTable NockmaTree.ProgramCallingConventionJuvix

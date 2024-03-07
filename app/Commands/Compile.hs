@@ -30,6 +30,7 @@ runCommand opts@CompileOptions {..} = do
     TargetNockma -> Compile.runNockmaPipeline arg
     TargetAnoma -> Compile.runAnomaPipeline arg
     TargetCasm -> Compile.runCasmPipeline arg
+    TargetCairo -> Compile.runCairoPipeline arg
 
 writeCoreFile :: (Members '[EmbedIO, App, TaggedLock] r) => Compile.PipelineArg -> Sem r ()
 writeCoreFile pa@Compile.PipelineArg {..} = do

@@ -11,9 +11,10 @@ import Data.List.NonEmpty qualified as NonEmpty
 regSupportedTargets :: NonEmpty CompileTarget
 regSupportedTargets =
   NonEmpty.fromList
-    [ TargetWasm32Wasi,
-      TargetNative64,
-      TargetCasm
+    [ TargetNative64,
+      TargetWasm32Wasi,
+      TargetCasm,
+      TargetCairo
     ]
 
 parseRegCompileOptions :: Parser CompileOptions

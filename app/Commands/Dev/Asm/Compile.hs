@@ -3,6 +3,7 @@ module Commands.Dev.Asm.Compile where
 import Commands.Base
 import Commands.Dev.Asm.Compile.Options
 import Commands.Extra.Compile qualified as Compile
+import Data.Aeson qualified as JSON
 import Juvix.Compiler.Asm.Translation.FromSource qualified as Asm
 import Juvix.Compiler.Backend qualified as Backend
 import Juvix.Compiler.Backend.C qualified as C
@@ -46,6 +47,15 @@ runCommand opts = do
               $ tab
           Casm.Result {..} <- getRight r
           writeFileEnsureLn casmFile (toPlainText $ Casm.ppProgram _resultCode)
+        TargetCairo -> do
+          cairoFile <- Compile.outputFile opts file
+          r <-
+            runReader entryPoint
+              . runError @JuvixError
+              . asmToCairo
+              $ tab
+          res <- getRight r
+          embed $ JSON.encodeFile (toFilePath cairoFile) res
         _ ->
           case run $ runReader entryPoint $ runError $ asmToMiniC tab of
             Left err -> exitJuvixError err
@@ -70,6 +80,7 @@ runCommand opts = do
       TargetNative64 -> return Backend.TargetCNative64
       TargetReg -> return Backend.TargetReg
       TargetCasm -> return Backend.TargetCairo
+      TargetCairo -> return Backend.TargetCairo
       TargetNockma -> err "Nockma"
       TargetAnoma -> err "Anoma"
       TargetTree -> err "JuvixTree"

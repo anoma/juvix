@@ -16,6 +16,7 @@ data FileExt
   | FileExtJuvixReg
   | FileExtJuvixTree
   | FileExtCasm
+  | FileExtJson
   | FileExtVampIR
   | FileExtVampIRParams
   | FileExtPlonk
@@ -51,6 +52,9 @@ juvixTreeFileExt = ".jvt"
 
 casmFileExt :: (IsString a) => a
 casmFileExt = ".casm"
+
+jsonFileExt :: (IsString a) => a
+jsonFileExt = ".json"
 
 vampIRFileExt :: (IsString a) => a
 vampIRFileExt = ".pir"
@@ -92,6 +96,7 @@ fileExtToText = \case
   FileExtJuvixReg -> juvixRegFileExt
   FileExtJuvixTree -> juvixTreeFileExt
   FileExtCasm -> casmFileExt
+  FileExtJson -> jsonFileExt
   FileExtVampIR -> vampIRFileExt
   FileExtVampIRParams -> vampIRParamsFileExt
   FileExtPlonk -> plonkFileExt
@@ -113,6 +118,7 @@ toMetavar = \case
   FileExtJuvixReg -> "JUVIX_REG_FILE"
   FileExtJuvixTree -> "JUVIX_TREE_FILE"
   FileExtCasm -> "CASM_FILE"
+  FileExtJson -> "JSON_FILE"
   FileExtVampIR -> "VAMPIR_FILE"
   FileExtVampIRParams -> "VAMPIR_PARAMS_FILE"
   FileExtPlonk -> "PLONK_FILE"

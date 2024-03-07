@@ -16,6 +16,7 @@ data CompileTarget
   | TargetNockma
   | TargetAnoma
   | TargetCasm
+  | TargetCairo
   deriving stock (Eq, Data, Bounded, Enum)
 
 instance Show CompileTarget where
@@ -31,6 +32,7 @@ instance Show CompileTarget where
     TargetNockma -> "nockma"
     TargetAnoma -> "anoma"
     TargetCasm -> "casm"
+    TargetCairo -> "cairo"
 
 data CompileOptions = CompileOptions
   { _compileDebug :: Bool,
@@ -136,7 +138,7 @@ optCompileTarget supportedTargets =
     ( long "target"
         <> short 't'
         <> metavar "TARGET"
-        <> value TargetNative64
+        <> value (head supportedTargets)
         <> showDefault
         <> help ("select a target: " <> show listTargets)
         <> completeWith (map show listTargets)
