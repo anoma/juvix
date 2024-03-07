@@ -5,8 +5,8 @@ import Juvix.Compiler.Pipeline.EntryPoint
 import Prelude (Show (show))
 
 data CompileTarget
-  = TargetWasm32Wasi
-  | TargetNative64
+  = TargetNative64
+  | TargetWasm32Wasi
   | TargetGeb
   | TargetVampIR
   | TargetCore
