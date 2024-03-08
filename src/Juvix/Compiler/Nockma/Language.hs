@@ -98,6 +98,7 @@ data AtomHint
   | AtomHintBool
   | AtomHintNil
   | AtomHintVoid
+  | AtomHintFunctionsPlaceholder
   deriving stock (Show, Eq, Lift, Generic)
 
 instance Hashable AtomHint

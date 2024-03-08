@@ -105,11 +105,27 @@ data CompilerFunction = CompilerFunction
     _compilerFunction :: Sem '[Reader CompilerCtx] (Term Natural)
   }
 
+-- The Code and Args constructors must be first and second respectively. This is
+-- because the stack must have the structure of a Nock function,
+-- i.e [code args env]
 data StackId
-  = Args
+  = Code
+  | Args
   | TempStack
   | StandardLibrary
   | FunctionsLibrary
+  deriving stock (Enum, Bounded, Eq, Show)
+
+data AnomaCallablePathId
+  = WrapperCode'
+  | Args'
+  | FunctionsLibrary'
+  | RawCode'
+  | TempStack'
+  | StandardLibrary'
+  | ClosureTotalArgsNum
+  | ClosureArgsNum
+  | ClosureArgs
   deriving stock (Enum, Bounded, Eq, Show)
 
 -- | A closure has the following structure:
@@ -120,13 +136,6 @@ data StackId
 -- 3. argsNum is the number of arguments that have been applied to the closure.
 -- 4. args is the list of args that have been applied.
 --    The length of the list should be argsNum.
-data ClosurePathId
-  = ClosureCode
-  | ClosureTotalArgsNum
-  | ClosureArgsNum
-  | ClosureArgs
-  deriving stock (Bounded, Enum)
-
 pathFromEnum :: (Enum a) => a -> Path
 pathFromEnum = indexStack . fromIntegral . fromEnum
 
@@ -175,7 +184,7 @@ makeLenses ''FunctionInfo
 termFromParts :: (Bounded p, Enum p) => (p -> Term Natural) -> Term Natural
 termFromParts f = remakeList [f pi | pi <- allElements]
 
-makeClosure :: (ClosurePathId -> Term Natural) -> Term Natural
+makeClosure :: (AnomaCallablePathId -> Term Natural) -> Term Natural
 makeClosure = termFromParts
 
 makeConstructor :: (ConstructorPathId -> Term Natural) -> Term Natural
@@ -265,6 +274,12 @@ fromTreeTable cc t = case t ^. Tree.infoMainFunction of
 
 fromOffsetRef :: Tree.OffsetRef -> Natural
 fromOffsetRef = fromIntegral . (^. Tree.offsetRefOffset)
+
+anomaCallableClosureWrapper :: Term Natural
+anomaCallableClosureWrapper =
+  -- TODO: Consider avoiding the append in if there are no ClosureArgs.
+  let newArgs = append (getClosureFieldInSubject ClosureArgs) (getClosureFieldInSubject ClosureArgsNum) (getClosureFieldInSubject Args')
+   in OpCall # getClosureFieldInSubject RawCode' # replaceArgsWithTerm newArgs
 
 compile :: forall r. (Members '[Reader CompilerCtx] r) => Tree.Node -> Sem r (Term Natural)
 compile = \case
@@ -414,7 +429,21 @@ compile = \case
       farity <- getFunctionArity fun
       args <- mapM compile _nodeAllocClosureArgs
       return . makeClosure $ \case
-        ClosureCode -> OpAddress # fpath
+        WrapperCode' -> OpQuote # anomaCallableClosureWrapper
+        Args' -> remakeList []
+        RawCode' -> OpAddress # fpath
+        TempStack' -> remakeList []
+        StandardLibrary' -> OpQuote # stdlib
+        FunctionsLibrary' ->
+          TermAtom
+            Atom
+              { _atomInfo =
+                  AtomInfo
+                    { _atomInfoLoc = Irrelevant Nothing,
+                      _atomInfoHint = Just AtomHintFunctionsPlaceholder
+                    },
+                _atom = impossible
+              }
         ClosureTotalArgsNum -> nockNatLiteral farity
         ClosureArgsNum -> nockIntegralLiteral (length args)
         ClosureArgs -> remakeList args
@@ -431,7 +460,7 @@ compile = \case
           f' <- compile f
           let argsNum = getClosureField ClosureArgsNum f'
               oldArgs = getClosureField ClosureArgs f'
-              fcode = getClosureField ClosureCode f'
+              fcode = getClosureField RawCode' f'
               posOfArgsNil = appendRights emptyPath argsNum
               allArgs = replaceSubterm' oldArgs posOfArgsNil (remakeList newargs)
           return (OpApply # replaceArgsWithTerm allArgs # fcode)
@@ -465,6 +494,11 @@ nockNatLiteral = nockIntegralLiteral
 nockIntegralLiteral :: (Integral a) => a -> Term Natural
 nockIntegralLiteral = (OpQuote #) . toNock @Natural . fromIntegral
 
+append :: Term Natural -> Term Natural -> Term Natural -> Term Natural
+append xs lenXs ys =
+  let posOfXsNil = appendRights emptyPath lenXs
+   in replaceSubterm' xs posOfXsNil ys
+
 extendClosure ::
   (Members '[Reader CompilerCtx] r) =>
   Tree.NodeExtendClosure ->
@@ -474,15 +508,16 @@ extendClosure Tree.NodeExtendClosure {..} = do
   closure <- compile _nodeExtendClosureFun
   let argsNum = getClosureField ClosureArgsNum closure
       oldArgs = getClosureField ClosureArgs closure
-      fcode = getClosureField ClosureCode closure
-      posOfArgsNil = appendRights emptyPath argsNum
-      allArgs = replaceSubterm' oldArgs posOfArgsNil (remakeList args)
+      fcode = getClosureField RawCode' closure
+      allArgs = append oldArgs argsNum (remakeList (toList args))
       newArgsNum = add argsNum (nockIntegralLiteral (length _nodeExtendClosureArgs))
   return . makeClosure $ \case
-    ClosureCode -> fcode
+    WrapperCode' -> anomaCallableClosureWrapper
+    RawCode' -> OpQuote # fcode
     ClosureTotalArgsNum -> getClosureField ClosureTotalArgsNum closure
     ClosureArgsNum -> newArgsNum
     ClosureArgs -> allArgs
+    Args' -> undefined
 
 -- Calling convention for Anoma stdlib
 --
@@ -494,7 +529,7 @@ extendClosure Tree.NodeExtendClosure {..} = do
 --     [replace [RL               ::  edit at axis RL
 --          [seq [@ R]            ::  evaluate the a formula in the original context without f on it
 --           a]]                  ::  the formula giving a goes here
---      @ L]                      ::  this whole replace is editing what's at axis L, i.e. what was
+--      @ L]                      ::  this whole replace is editing what's at axis L, i.e. what was pushed
 --   ]
 -- ]
 callStdlib :: StdlibFunction -> [Term Natural] -> Term Natural
@@ -580,22 +615,35 @@ remakeList ts = foldTerms (toList ts `prependList` pure (OpQuote # nockNil'))
 
 -- | Initialize the stack. The resulting term is intended to be evaulated
 -- against a subject that contains function arguments.
-initStackWithArgs :: [Term Natural] -> [Term Natural] -> Term Natural
-initStackWithArgs defs getArgs = remakeList (initSubStack <$> allElements)
+initStackWithArgs :: Term Natural -> [Term Natural] -> [Term Natural] -> Term Natural
+initStackWithArgs funCode defs getArgs = remakeList (initSubStack <$> allElements)
   where
     initSubStack :: StackId -> Term Natural
     initSubStack = \case
+      Code -> OpQuote # funCode
       Args -> remakeList getArgs
       TempStack -> OpQuote # nockNil'
       StandardLibrary -> OpQuote # stdlib
       FunctionsLibrary -> OpQuote # makeList defs
 
--- | Initialize the stack. Populate the FunctionsLibrary with the passed terms.
-initStack :: [Term Natural] -> Term Natural
-initStack defs = makeList (initSubStack <$> allElements)
+makeNockFunction :: Term Natural -> [Term Natural] -> Term Natural
+makeNockFunction funCode defs = remakeList (initSubStack <$> allElements)
   where
     initSubStack :: StackId -> Term Natural
     initSubStack = \case
+      Code -> funCode
+      Args -> nockNil'
+      TempStack -> nockNil'
+      StandardLibrary -> stdlib
+      FunctionsLibrary -> makeList defs
+
+-- | Initialize the stack. Populate the FunctionsLibrary and function code with the passed terms.
+initStack :: Term Natural -> [Term Natural] -> Term Natural
+initStack funCode defs = makeList (initSubStack <$> allElements)
+  where
+    initSubStack :: StackId -> Term Natural
+    initSubStack = \case
+      Code -> funCode
       Args -> nockNil'
       TempStack -> nockNil'
       StandardLibrary -> stdlib
@@ -648,28 +696,19 @@ runCompilerWith callingConvention opts constrs libFuns mainFun = run . runReader
 
     makeAnomaFun :: (Members '[Reader CompilerCtx] r) => Sem r (Cell Natural)
     makeAnomaFun = do
-      entryTerm <- callFun (mainFun ^. compilerFunctionName)
+      let
 
-      let mainArity :: Natural
-          mainArity = mainFun ^. compilerFunctionArity
+          funCode :: Term Natural
+          funCode = head compiledFuns
 
-          args :: [Term Natural]
-          args = [OpAddress # [R, L] ++ indexTuple mainArity (pred i) | i <- [1 .. mainArity]]
-
-          wrapperCode :: Term Natural
-          wrapperCode = OpApply # (initStackWithArgs (toList compiledFuns) args) # (OpQuote # entryTerm)
-
-          argsPlaceholder :: Term Natural
-          argsPlaceholder = nockNil'
-
-          env :: Term Natural
-          env = nockNil'
-      return (wrapperCode #. (argsPlaceholder # env))
+      return $ case makeNockFunction funCode (toList compiledFuns) of
+        TermCell c -> c
+        TermAtom {} -> impossible
 
     makeJuvixFun :: (Members '[Reader CompilerCtx] r) => Sem r (Cell Natural)
     makeJuvixFun = do
       entryTerm <- callFunWithArgs (mainFun ^. compilerFunctionName) []
-      return (initStack (toList compiledFuns) #. entryTerm)
+      return (initStack crash (toList compiledFuns) #. entryTerm)
 
     mkEntryPoint = case callingConvention of
       ProgramCallingConventionAnoma -> makeAnomaFun
@@ -693,6 +732,20 @@ callFun fun = do
   fpath <- getFunctionPath fun
   let p' = fpath ++ functionPath FunctionCode
   return (OpCall # p' # (OpAddress # emptyPath))
+
+-- [f1_code f1_args env] / [call L [@ S]]
+-- [f1_code f1_args env] / f1_code
+
+-- f1: subject: [f1_code f1_args ctx]
+--     formula: f1_code
+
+-- f1_code contains call to f2
+
+-- f2_path: getFunctionPath f2
+--           (replaceFun f2_path >>#) . (replaceArgs args >>#) <$> callFun -- callFun is independent of functionId
+
+-- The layout of the stack will look like this:
+-- [f1_code f1_args tempstack standardlibary functionslibrary]
 
 -- | Call a function with the passed arguments
 callFunWithArgs ::
@@ -832,14 +885,20 @@ getFunctionArity s = asks (^?! compilerFunctionInfos . at s . _Just . functionIn
 getConstructorInfo :: (Members '[Reader CompilerCtx] r) => Tree.Tag -> Sem r ConstructorInfo
 getConstructorInfo tag = asks (^?! compilerConstructorInfos . at tag . _Just)
 
-getClosureField :: ClosurePathId -> Term Natural -> Term Natural
+getClosureField :: AnomaCallablePathId -> Term Natural -> Term Natural
 getClosureField = getField
+
+getClosureFieldInSubject :: AnomaCallablePathId -> Term Natural
+getClosureFieldInSubject = getFieldInSubject
 
 getConstructorField :: ConstructorPathId -> Term Natural -> Term Natural
 getConstructorField = getField
 
 getField :: (Enum field) => field -> Term Natural -> Term Natural
-getField field t = t >># (OpAddress # pathFromEnum field)
+getField field t = t >># getFieldInSubject field
+
+getFieldInSubject :: (Enum field) => field -> Term Natural
+getFieldInSubject field = OpAddress # pathFromEnum field
 
 getConstructorMemRep :: (Members '[Reader CompilerCtx] r) => Tree.Tag -> Sem r NockmaMemRep
 getConstructorMemRep tag = (^. constructorInfoMemRep) <$> getConstructorInfo tag
