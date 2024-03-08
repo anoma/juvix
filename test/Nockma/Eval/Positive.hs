@@ -97,7 +97,8 @@ compilerTest n mainFun _testCheck _evalInterceptStdlibCalls =
         | _evalInterceptStdlibCalls = n <> " - intercept stdlib"
         | otherwise = n
       opts = CompilerOptions {_compilerOptionsEnableTrace = False}
-      Cell _testProgramSubject _testProgramFormula = runCompilerWithJuvix opts mempty [] f
+      _testProgramFormula = runCompilerWithJuvix opts mempty [] f
+      _testProgramSubject = nockNil'
       _testEvalOptions = EvalOptions {..}
       _testProgramStorage :: Storage Natural = emptyStorage
       _testAssertEvalError :: Maybe (NockEvalError Natural -> Assertion) = Nothing
@@ -127,7 +128,7 @@ anomaTest n mainFun args _testCheck _evalInterceptStdlibCalls =
 
       opts = CompilerOptions {_compilerOptionsEnableTrace = False}
 
-      _testProgramSubject = TermCell (runCompilerWithAnoma opts mempty [] f)
+      _testProgramSubject = runCompilerWithAnoma opts mempty [] f
 
       _testProgramFormula = anomaCall args
       _testProgramStorage :: Storage Natural = emptyStorage
@@ -146,7 +147,15 @@ anomaCallingConventionTests =
   [True, False]
     <**> [ anomaTest "stdlib add" (add (nockNatLiteral 1) (nockNatLiteral 2)) [] (eqNock [nock| 3 |]),
            anomaTest "stdlib add with arg" (add (nockNatLiteral 1) (nockNatLiteral 2)) [nockNatLiteral 1] (eqNock [nock| 3 |]),
-           anomaTest "stdlib sub args" (sub (OpAddress # pathToArg 0) (OpAddress # pathToArg 1)) [nockNatLiteral 3, nockNatLiteral 1] (eqNock [nock| 2 |])
+           let args = [nockNatLiteral 3, nockNatLiteral 1]
+               fx =
+                 FunctionCtx
+                   { _functionCtxArity = fromIntegral (length args)
+                   }
+            in run . runReader fx $ do
+                 p0 <- pathToArg 0
+                 p1 <- pathToArg 1
+                 return (anomaTest "stdlib sub args" (sub (OpAddress # p0) (OpAddress # p1)) args (eqNock [nock| 2 |]))
          ]
 
 juvixCallingConventionTests :: [Test]
@@ -163,7 +172,11 @@ juvixCallingConventionTests =
            compilerTest "stdlib pow2" (pow2 (nockNatLiteral 3)) (eqNock [nock| 8 |]),
            compilerTest "stdlib nested" (dec (dec (nockNatLiteral 20))) (eqNock [nock| 18 |]),
            compilerTest "append rights - empty" (appendRights emptyPath (nockNatLiteral 3)) (eqNock (toNock [R, R, R])),
-           compilerTest "append rights" (appendRights [L, L] (nockNatLiteral 3)) (eqNock (toNock [L, L, R, R, R]))
+           compilerTest "append rights" (appendRights [L, L] (nockNatLiteral 3)) (eqNock (toNock [L, L, R, R, R])),
+           compilerTest "opAddress" ((OpQuote # (foldTerms (toNock @Natural <$> (5 :| [6, 1])))) >># opAddress' (appendRights emptyPath (nockNatLiteral 2))) (eqNock (toNock @Natural 1)),
+           let l :: NonEmpty (Term Natural) = toNock <$> nonEmpty' [1 :: Natural .. 3]
+            in compilerTest "list to tuple" (listToTuple (OpQuote # makeList (toList l)) (nockIntegralLiteral (length l)))
+                 $ eqNock (foldTerms l)
          ]
 
 unitTests :: [Test]
