@@ -87,6 +87,10 @@ data FunctionInfo = FunctionInfo
     _functionInfoArity :: Natural
   }
 
+data FunctionCtx = FunctionCtx
+  { _functionCtxArity :: Natural
+  }
+
 data CompilerCtx = CompilerCtx
   { _compilerFunctionInfos :: HashMap FunctionId FunctionInfo,
     _compilerConstructorInfos :: ConstructorInfos,
@@ -103,7 +107,7 @@ type ConstructorInfos = HashMap Tree.Tag ConstructorInfo
 data CompilerFunction = CompilerFunction
   { _compilerFunctionName :: FunctionId,
     _compilerFunctionArity :: Natural,
-    _compilerFunction :: Sem '[Reader CompilerCtx] (Term Natural)
+    _compilerFunction :: Sem '[Reader CompilerCtx, Reader FunctionCtx] (Term Natural)
   }
 
 -- The Code and Args constructors must be first and second respectively. This is
@@ -111,7 +115,7 @@ data CompilerFunction = CompilerFunction
 -- i.e [code args env]
 data AnomaCallablePathId
   = WrapperCode
-  | Args
+  | ArgsTuple
   | FunctionsLibrary
   | RawCode
   | TempStack
@@ -140,13 +144,6 @@ data ConstructorPathId
 constructorPath :: ConstructorPathId -> Path
 constructorPath = pathFromEnum
 
-data FunctionPathId
-  = FunctionCode
-
-functionPath :: FunctionPathId -> Path
-functionPath = \case
-  FunctionCode -> []
-
 stackPath :: AnomaCallablePathId -> Path
 stackPath s = indexStack (fromIntegral (fromEnum s))
 
@@ -165,14 +162,24 @@ indexStack idx = replicate idx R ++ [L]
 indexInStack :: AnomaCallablePathId -> Natural -> Path
 indexInStack s idx = stackPath s ++ indexStack idx
 
-pathToArg :: Natural -> Path
-pathToArg = indexInStack Args
-
 makeLenses ''CompilerOptions
 makeLenses ''CompilerFunction
 makeLenses ''CompilerCtx
+makeLenses ''FunctionCtx
 makeLenses ''ConstructorInfo
 makeLenses ''FunctionInfo
+
+runCompilerFunction :: CompilerCtx -> CompilerFunction -> Term Natural
+runCompilerFunction ctx fun =
+  run
+    . runReader (FunctionCtx (fun ^. compilerFunctionArity))
+    . runReader ctx
+    $ fun ^. compilerFunction
+
+pathToArg :: (Members '[Reader FunctionCtx] r) => Natural -> Sem r Path
+pathToArg n = do
+  ari <- asks (^. functionCtxArity)
+  return (stackPath ArgsTuple <> indexTuple ari n)
 
 termFromParts :: (Bounded p, Enum p) => (p -> Term Natural) -> Term Natural
 termFromParts f = remakeList [f pi | pi <- allElements]
@@ -183,8 +190,8 @@ makeClosure = termFromParts
 makeConstructor :: (ConstructorPathId -> Term Natural) -> Term Natural
 makeConstructor = termFromParts
 
-makeFunction :: (FunctionPathId -> Term Natural) -> Term Natural
-makeFunction f = f FunctionCode
+foldTermsOrNil :: [Term Natural] -> Term Natural
+foldTermsOrNil = maybe nockNil' foldTerms . nonEmpty
 
 foldTerms :: NonEmpty (Term Natural) -> Term Natural
 foldTerms = foldr1 (#)
@@ -270,11 +277,20 @@ fromOffsetRef = fromIntegral . (^. Tree.offsetRefOffset)
 
 anomaCallableClosureWrapper :: Term Natural
 anomaCallableClosureWrapper =
-  -- TODO: Consider avoiding the append in if there are no ClosureArgs.
-  let newArgs = append (getClosureFieldInSubject ClosureArgs) (getClosureFieldInSubject ClosureArgsNum) (getClosureFieldInSubject Args)
-   in OpCall # getClosureFieldInSubject RawCode # replaceArgsWithTerm newArgs
+  let closureArgsNum :: Term Natural = getClosureFieldInSubject ClosureArgsNum
+      closureTotalArgsNum :: Term Natural = getClosureFieldInSubject ClosureTotalArgsNum
+      appendAndReplaceArgsTuple =
+        replaceArgsWithTerm $
+           appendToTuple
+              (getClosureFieldInSubject ClosureArgs)
+              closureArgsNum
+              (getClosureFieldInSubject ArgsTuple)
+              (sub closureTotalArgsNum closureArgsNum)
+      adjustArgs = OpIf # closureArgsIsEmpty # (OpQuote # (OpAddress # emptyPath)) # (OpQuote # appendAndReplaceArgsTuple)
+      closureArgsIsEmpty = OpEq # closureArgsNum # nockNatLiteral 0
+   in OpCall # getClosureFieldInSubject RawCode # adjustArgs
 
-compile :: forall r. (Members '[Reader CompilerCtx] r) => Tree.Node -> Sem r (Term Natural)
+compile :: forall r. (Members '[Reader FunctionCtx, Reader CompilerCtx] r) => Tree.Node -> Sem r (Term Natural)
 compile = \case
   Tree.Binop b -> goBinop b
   Tree.Unop b -> goUnop b
@@ -298,27 +314,32 @@ compile = \case
 
     goMemRef :: Tree.MemRef -> Sem r (Term Natural)
     goMemRef = \case
-      Tree.DRef d -> return (goDirectRef d)
+      Tree.DRef d -> goDirectRef d
       Tree.ConstrRef Tree.Field {..} -> do
         info <- getConstructorInfo _fieldTag
         let memrep = info ^. constructorInfoMemRep
             argIx = fromIntegral _fieldOffset
             arity = info ^. constructorInfoArity
-            path = case memrep of
-              NockmaMemRepConstr ->
-                directRefPath _fieldRef
-                  ++ constructorPath ConstructorArgs
-                  ++ indexStack argIx
-              NockmaMemRepTuple ->
-                directRefPath _fieldRef
-                  ++ indexTuple arity argIx
-              NockmaMemRepList constr -> case constr of
-                NockmaMemRepListConstrNil -> impossible
-                NockmaMemRepListConstrCons -> directRefPath _fieldRef ++ indexTuple 2 argIx
-        return (OpAddress # path)
+            path :: Sem r Path
+            path = do
+              fr <- directRefPath _fieldRef
+              return $ case memrep of
+                NockmaMemRepConstr ->
+                  fr
+                    ++ constructorPath ConstructorArgs
+                    ++ indexStack argIx
+                NockmaMemRepTuple ->
+                  fr
+                    ++ indexTuple arity argIx
+                NockmaMemRepList constr -> case constr of
+                  NockmaMemRepListConstrNil -> impossible
+                  NockmaMemRepListConstrCons -> fr ++ indexTuple 2 argIx
+        (OpAddress #) <$> path
       where
-        goDirectRef :: Tree.DirectRef -> Term Natural
-        goDirectRef dr = OpAddress # directRefPath dr
+        goDirectRef :: Tree.DirectRef -> Sem r (Term Natural)
+        goDirectRef dr = do
+          p <- directRefPath dr
+          return (OpAddress # p)
 
     goConst :: Tree.Constant -> Term Natural
     goConst = \case
@@ -419,7 +440,7 @@ compile = \case
       args <- mapM compile _nodeAllocClosureArgs
       return . makeClosure $ \case
         WrapperCode -> OpQuote # anomaCallableClosureWrapper
-        Args -> remakeList []
+        ArgsTuple -> argsTuplePlaceholder
         RawCode -> OpAddress # fpath
         TempStack -> remakeList []
         StandardLibrary -> OpQuote # stdlib
@@ -451,9 +472,25 @@ compile = \case
           let argsNum = getClosureField ClosureArgsNum f'
               oldArgs = getClosureField ClosureArgs f'
               fcode = getClosureField RawCode f'
-              posOfArgsNil = appendRights emptyPath argsNum
-              allArgs = replaceSubterm' oldArgs posOfArgsNil (remakeList newargs)
+              allArgs = appendToTuple oldArgs argsNum (foldTermsOrNil newargs) (nockIntegralLiteral (length newargs))
           return (OpApply # replaceArgsWithTerm allArgs # fcode)
+
+isZero :: Term Natural -> Term Natural
+isZero a = OpEq # a # nockNatLiteral 0
+
+opAddress' :: Term Natural -> Term Natural
+opAddress' x = evaluated $ (OpQuote # OpAddress) # x
+
+-- [a [b [c 0]]] -> [a [b c]]
+-- len = 3
+listToTuple :: Term Natural -> Term Natural -> Term Natural
+listToTuple lst len =
+  let posOfLast = appendRights emptyPath (dec len)
+      t1 = (OpQuote # lst) >># (opAddress' posOfLast) >># (OpAddress # [L])
+   in OpIf # isZero (OpQuote # len) # (OpQuote # lst) # (replaceSubterm' posOfLast t1 (OpQuote # lst))
+
+argsTuplePlaceholder :: Term Natural
+argsTuplePlaceholder = nockNil'
 
 appendRights :: Path -> Term Natural -> Term Natural
 appendRights path n = dec (mul (pow2 n) (OpInc # OpQuote # path))
@@ -472,7 +509,7 @@ withTemp :: Term Natural -> Term Natural -> Term Natural
 withTemp toBePushed body =
   OpSequence # pushTemp toBePushed # body
 
-testEq :: (Members '[Reader CompilerCtx] r) => Tree.Node -> Tree.Node -> Sem r (Term Natural)
+testEq :: (Members '[Reader FunctionCtx, Reader CompilerCtx] r) => Tree.Node -> Tree.Node -> Sem r (Term Natural)
 testEq a b = do
   a' <- compile a
   b' <- compile b
@@ -484,13 +521,17 @@ nockNatLiteral = nockIntegralLiteral
 nockIntegralLiteral :: (Integral a) => a -> Term Natural
 nockIntegralLiteral = (OpQuote #) . toNock @Natural . fromIntegral
 
+appendToTuple :: Term Natural -> Term Natural -> Term Natural -> Term Natural -> Term Natural
+appendToTuple xs lenXs ys lenYs =
+  OpIf # isZero lenYs # listToTuple xs lenXs # append xs lenXs ys
+
 append :: Term Natural -> Term Natural -> Term Natural -> Term Natural
 append xs lenXs ys =
   let posOfXsNil = appendRights emptyPath lenXs
    in replaceSubterm' xs posOfXsNil ys
 
 extendClosure ::
-  (Members '[Reader CompilerCtx] r) =>
+  (Members '[Reader FunctionCtx, Reader CompilerCtx] r) =>
   Tree.NodeExtendClosure ->
   Sem r (Term Natural)
 extendClosure Tree.NodeExtendClosure {..} = do
@@ -507,7 +548,7 @@ extendClosure Tree.NodeExtendClosure {..} = do
     ClosureTotalArgsNum -> getClosureField ClosureTotalArgsNum closure
     ClosureArgsNum -> newArgsNum
     ClosureArgs -> allArgs
-    Args -> getClosureField Args closure
+    ArgsTuple -> getClosureField ArgsTuple closure
     FunctionsLibrary -> getClosureField FunctionsLibrary closure
     TempStack -> getClosureField TempStack closure
     StandardLibrary -> getClosureField StandardLibrary closure
@@ -547,13 +588,15 @@ constUnit = constVoid
 constVoid :: Term Natural
 constVoid = TermAtom nockVoid
 
-directRefPath :: Tree.DirectRef -> Path
+directRefPath :: forall r. (Members '[Reader FunctionCtx] r) => Tree.DirectRef -> Sem r Path
 directRefPath = \case
   Tree.ArgRef a -> pathToArg (fromOffsetRef a)
   Tree.TempRef Tree.RefTemp {..} ->
-    tempRefPath
-      (fromIntegral (fromJust _refTempTempHeight))
-      (fromOffsetRef _refTempOffsetRef)
+    return
+      ( tempRefPath
+          (fromIntegral (fromJust _refTempTempHeight))
+          (fromOffsetRef _refTempOffsetRef)
+      )
 
 tempRefPath :: Natural -> Natural -> Path
 tempRefPath tempHeight off = indexInStack TempStack (tempHeight - off - 1)
@@ -606,21 +649,6 @@ makeList ts = foldTerms (ts `prependList` pure (TermAtom nockNil))
 remakeList :: (Foldable l) => l (Term Natural) -> Term Natural
 remakeList ts = foldTerms (toList ts `prependList` pure (OpQuote # nockNil'))
 
-makeNockFunction :: Term Natural -> [Term Natural] -> Term Natural
-makeNockFunction funCode defs = remakeList (initSubStack <$> allElements)
-  where
-    initSubStack :: AnomaCallablePathId -> Term Natural
-    initSubStack = \case
-      WrapperCode -> funCode
-      Args -> nockNil'
-      FunctionsLibrary -> makeList defs
-      RawCode -> funCode
-      TempStack -> nockNil'
-      StandardLibrary -> stdlib
-      ClosureTotalArgsNum -> nockNil'
-      ClosureArgsNum -> nockNil'
-      ClosureArgs -> nockNil'
-
 asCell :: Term Natural -> Cell Natural
 asCell = \case
   TermCell c -> c
@@ -650,17 +678,24 @@ runCompilerWith callingConvention opts constrs libFuns mainFun = unsafePerformIO
 
     compiledFuns :: NonEmpty (Term Natural)
     compiledFuns =
-      makeFunction'
-        <$> ( run . runReader compilerCtx . (^. compilerFunction)
-                <$> allFuns
+      makeLibraryFunction
+        <$> ( runCompilerFunction compilerCtx <$> allFuns
             )
 
     exportEnv :: Term Natural
     exportEnv = makeList (toList compiledFuns)
 
-    makeFunction' :: Term Natural -> Term Natural
-    makeFunction' c = makeFunction $ \case
-      FunctionCode -> c
+    makeLibraryFunction :: Term Natural -> Term Natural
+    makeLibraryFunction c = makeClosure $ \case
+      WrapperCode -> c
+      ArgsTuple -> argsTuplePlaceholder
+      FunctionsLibrary -> nockNil'
+      RawCode -> c
+      TempStack -> nockNil'
+      StandardLibrary -> stdlib
+      ClosureTotalArgsNum -> nockNil'
+      ClosureArgsNum -> nockNil'
+      ClosureArgs -> nockNil'
 
     functionInfos :: HashMap FunctionId FunctionInfo
     functionInfos = hashMap (run (runInputNaturals (toList <$> userFunctions)))
@@ -678,12 +713,9 @@ runCompilerWith callingConvention opts constrs libFuns mainFun = unsafePerformIO
 
     makeAnomaFun :: Sem r (Cell Natural)
     makeAnomaFun = do
-      let funCode :: Term Natural
-          funCode = head compiledFuns
-
-      return $ case makeNockFunction funCode (toList compiledFuns) of
-        TermCell c -> c
-        TermAtom {} -> impossible
+      let mainClosure :: Term Natural
+          mainClosure = head compiledFuns
+      return (asCell mainClosure)
 
     makeJuvixFun :: (Members '[Reader CompilerCtx] r) => Sem r (Cell Natural)
     makeJuvixFun = do
@@ -704,6 +736,12 @@ builtinFunction = \case
         _compilerFunction = return crash
       }
 
+closurePath :: AnomaCallablePathId -> Path
+closurePath = stackPath
+
+-- makeNockFunction :: Term Natural -> [Term Natural] -> Term Natural
+-- makeNockFunction funCode defs = callF
+
 -- | Call a function. Arguments to the function are assumed to be in the Args stack
 callFunWithEnv ::
   (Members '[Reader CompilerCtx] r) =>
@@ -712,7 +750,7 @@ callFunWithEnv ::
   Sem r (Term Natural)
 callFunWithEnv fun env = do
   fpath <- getFunctionPath fun
-  let p' = fpath ++ functionPath FunctionCode
+  let p' = fpath ++ closurePath WrapperCode
   return (OpCall # p' # (OpReplace # (stackPath FunctionsLibrary # (OpQuote # env)) # OpAddress # emptyPath))
 
 -- | Call a function. Arguments to the function are assumed to be in the Args stack
@@ -722,7 +760,7 @@ callFun ::
   Sem r (Term Natural)
 callFun fun = do
   fpath <- getFunctionPath fun
-  let p' = fpath ++ functionPath FunctionCode
+  let p' = fpath ++ closurePath WrapperCode
   return (OpCall # p' # (OpAddress # emptyPath))
 
 -- [f1_code f1_args env] / [call L [@ S]]
@@ -751,7 +789,7 @@ replaceArgsWithTerm :: Term Natural -> Term Natural
 replaceArgsWithTerm term =
   remakeList
     [ if
-          | Args == s -> term
+          | ArgsTuple == s -> term
           | otherwise -> OpAddress # stackPath s
       | s <- allElements
     ]
@@ -760,7 +798,7 @@ replaceArgs :: [Term Natural] -> Term Natural
 replaceArgs args =
   remakeList
     [ if
-          | Args == s -> remakeList args
+          | ArgsTuple == s -> foldTermsOrNil args
           | otherwise -> OpAddress # stackPath s
       | s <- allElements
     ]
