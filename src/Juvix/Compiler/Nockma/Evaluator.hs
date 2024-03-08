@@ -55,16 +55,16 @@ subTerm term pos =
     Nothing -> throwInvalidPath term pos
     Just t -> return t
 
-setSubTerm :: forall a r. (Members '[Error (NockEvalError a)] r) => Term a -> Path -> Term a -> Sem r (Term a)
+setSubTerm :: forall a r. (Members '[Error (NockEvalError a), Reader EvalCtx] r) => Term a -> Path -> Term a -> Sem r (Term a)
 setSubTerm term pos repTerm =
   let (old, new) = setAndRemember (subTermT' pos) repTerm term
    in if
-          | isNothing (getFirst old) -> throw @(NockEvalError a) (error "")
+          | isNothing (getFirst old) -> throwInvalidPath term pos
           | otherwise -> return new
 
 parseCell ::
   forall r a.
-  (Members '[Error (NockEvalError a), Error (ErrNockNatural a)] r, NockNatural a) =>
+  (Members '[Reader EvalCtx, Error (NockEvalError a), Error (ErrNockNatural a)] r, NockNatural a) =>
   Cell a ->
   Sem r (ParsedCell a)
 parseCell c = case c ^. cellLeft of
@@ -83,7 +83,9 @@ parseCell c = case c ^. cellLeft of
 
     parseOperatorCell :: Atom a -> Term a -> Sem r (OperatorCell a)
     parseOperatorCell a t = do
-      op <- nockOp a
+      op <- catch @(ErrNockNatural a) (nockOp a) $ \e ->
+        let atm :: Atom a = errGetAtom e
+         in throwInvalidNockOp atm
       return
         OperatorCell
           { _operatorCellOp = op,
