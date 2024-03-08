@@ -23,10 +23,10 @@ makeLenses ''Test
 
 mkNockmaAssertion :: Test -> Assertion
 mkNockmaAssertion Test {..} = do
-  putStrLn (ppTrace _testProgramFormula)
-  writeFileEnsureLn
-    $(mkAbsFile "/home/jan/projects/juvix-effectful/out.nockma")
-    (ppPrint _testProgramSubject <> "\n\n" <> ppPrint _testProgramFormula)
+  -- putStrLn (ppTrace _testProgramFormula)
+  -- writeFileEnsureLn
+  --   $(mkAbsFile "/home/jan/projects/juvix-effectful/out.nockma")
+  --   (ppPrint _testProgramSubject <> "\n\n" <> ppPrint _testProgramFormula)
   let (traces, evalResult) =
         run
           . runReader _testEvalOptions
