@@ -28,7 +28,7 @@ ppSerialize :: (PrettyCode c) => c -> Text
 ppSerialize = ppPrintOpts serializeOptions
 
 ppPrint :: (PrettyCode c) => c -> Text
-ppPrint = ppPrintOpts defaultOptions
+ppPrint = toPlainText . ppOut defaultOptions
 
 ppPrintOpts :: (PrettyCode c) => Options -> c -> Text
 ppPrintOpts opts = renderStrict . toTextStream . ppOut opts

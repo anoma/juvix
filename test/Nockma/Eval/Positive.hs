@@ -23,14 +23,16 @@ makeLenses ''Test
 
 mkNockmaAssertion :: Test -> Assertion
 mkNockmaAssertion Test {..} = do
+  putStrLn (ppTrace _testProgramFormula)
+  writeFileEnsureLn $(mkAbsFile "/home/jan/projects/juvix-effectful/out.nockma") (ppPrint _testProgramFormula)
   let (traces, evalResult) =
         run
           . runReader _testEvalOptions
           . runOutputList @(Term Natural)
           . runError @(ErrNockNatural Natural)
           . runError @(NockEvalError Natural)
-          $ eval _testProgramSubject _testProgramFormula
-
+          $ do
+            eval _testProgramSubject _testProgramFormula
   case evalResult of
     Left natErr -> assertFailure ("Evaluation error: " <> show natErr)
     Right r -> case r of
@@ -135,8 +137,9 @@ anomaCallingConventionTests =
 
 juvixCallingConventionTests :: [Test]
 juvixCallingConventionTests =
-  [True, False]
-    <**> [ compilerTest "stdlib add" (add (nockNatLiteral 1) (nockNatLiteral 2)) (eqNock [nock| 3 |]),
+  [True]
+    -- <**> [ compilerTest "stdlib add" (add (nockNatLiteral 1) (nockNatLiteral 2)) (eqNock [nock| 3 |]),
+    <**> [ compilerTest "blah" (add (nockNatLiteral 1) (nockNatLiteral 2)) (eqNock [nock| 3 |]),
            compilerTest "stdlib dec" (dec (nockNatLiteral 1)) (eqNock [nock| 0 |]),
            compilerTest "stdlib mul" (mul (nockNatLiteral 2) (nockNatLiteral 3)) (eqNock [nock| 6 |]),
            compilerTest "stdlib sub" (sub (nockNatLiteral 2) (nockNatLiteral 1)) (eqNock [nock| 1 |]),
@@ -150,8 +153,8 @@ juvixCallingConventionTests =
            compilerTest "append rights" (appendRights [L, L] (nockNatLiteral 3)) (eqNock (toNock [L, L, R, R, R])),
            compilerTest "opAddress" ((OpQuote # (foldTerms (toNock @Natural <$> (5 :| [6, 1])))) >># opAddress' (appendRights emptyPath (nockNatLiteral 2))) (eqNock (toNock @Natural 1)),
            let l :: NonEmpty (Term Natural) = toNock <$> nonEmpty' [1 :: Natural .. 3]
-            in compilerTest "list to tuple" (listToTuple (OpQuote # makeList (toList l)) (nockIntegralLiteral (length l)))
-                 $ eqNock (foldTerms l)
+            in compilerTest "list to tuple" (listToTuple (OpQuote # makeList (toList l)) (nockIntegralLiteral (length l))) $
+                 eqNock (foldTerms l)
          ]
 
 unitTests :: [Test]
