@@ -24,7 +24,9 @@ makeLenses ''Test
 mkNockmaAssertion :: Test -> Assertion
 mkNockmaAssertion Test {..} = do
   putStrLn (ppTrace _testProgramFormula)
-  writeFileEnsureLn $(mkAbsFile "/home/jan/projects/juvix-effectful/out.nockma") (ppPrint _testProgramFormula)
+  writeFileEnsureLn
+    $(mkAbsFile "/home/jan/projects/juvix-effectful/out.nockma")
+    (ppPrint _testProgramSubject <> "\n\n" <> ppPrint _testProgramFormula)
   let (traces, evalResult) =
         run
           . runReader _testEvalOptions
@@ -81,20 +83,7 @@ eqTraces expected = do
 
 compilerTest :: Text -> Term Natural -> Check () -> Bool -> Test
 compilerTest n mainFun _testCheck _evalInterceptStdlibCalls =
-  let f =
-        CompilerFunction
-          { _compilerFunctionName = UserFunction (defaultSymbol 0),
-            _compilerFunctionArity = 0,
-            _compilerFunction = return mainFun
-          }
-      _testName :: Text
-        | _evalInterceptStdlibCalls = n <> " - intercept stdlib"
-        | otherwise = n
-      opts = CompilerOptions {_compilerOptionsEnableTrace = False}
-      _testProgramFormula = runCompilerWithJuvix opts mempty [] f
-      _testProgramSubject = nockNil'
-      _testEvalOptions = EvalOptions {..}
-   in Test {..}
+  anomaTest n mainFun [] _testCheck _evalInterceptStdlibCalls
 
 anomaTest :: Text -> Term Natural -> [Term Natural] -> Check () -> Bool -> Test
 anomaTest n mainFun args _testCheck _evalInterceptStdlibCalls =

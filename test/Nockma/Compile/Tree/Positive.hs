@@ -8,24 +8,24 @@ import Juvix.Compiler.Nockma.Language qualified as Nockma
 import Juvix.Compiler.Nockma.Pretty qualified as Nockma
 import Juvix.Compiler.Nockma.Translation.FromTree
 import Juvix.Compiler.Tree
+import Nockma.Base
 import Tree.Eval.Base
 import Tree.Eval.Positive qualified as Tree
 
 runNockmaAssertion :: Handle -> Symbol -> InfoTable -> IO ()
 runNockmaAssertion hout _main tab = do
-  nockMain <-
+  anomaClosure <-
     runM
       . runErrorIO' @JuvixError
       . runReader opts
-      $ treeToNockma' tab
-  let nockSubject = nockNil'
+      $ treeToAnoma' tab
   res <-
     runM
       . runOutputSem @(Term Natural)
         (embed . hPutStrLn hout . Nockma.ppPrint)
       . runReader NockmaEval.defaultEvalOptions
-      . evalCompiledNock' nockSubject
-      $ nockMain
+      . evalCompiledNock' anomaClosure
+      $ anomaCall []
   let ret = getReturn res
   whenJust ret (hPutStrLn hout . Nockma.ppPrint)
   where
