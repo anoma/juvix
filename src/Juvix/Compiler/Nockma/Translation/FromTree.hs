@@ -434,7 +434,7 @@ compile = \case
         RawCode' -> OpAddress # fpath
         TempStack' -> remakeList []
         StandardLibrary' -> OpQuote # stdlib
-        FunctionsLibrary' ->
+        FunctionsLibrary' -> OpQuote #
           TermAtom
             Atom
               { _atomInfo =
@@ -442,7 +442,7 @@ compile = \case
                     { _atomInfoLoc = Irrelevant Nothing,
                       _atomInfoHint = Just AtomHintFunctionsPlaceholder
                     },
-                _atom = impossible
+                _atom = 0 :: Natural
               }
         ClosureTotalArgsNum -> nockNatLiteral farity
         ClosureArgsNum -> nockIntegralLiteral (length args)
@@ -517,7 +517,10 @@ extendClosure Tree.NodeExtendClosure {..} = do
     ClosureTotalArgsNum -> getClosureField ClosureTotalArgsNum closure
     ClosureArgsNum -> newArgsNum
     ClosureArgs -> allArgs
-    Args' -> undefined
+    Args' -> getClosureField Args' closure
+    FunctionsLibrary' -> getClosureField FunctionsLibrary' closure
+    TempStack' -> getClosureField TempStack' closure
+    StandardLibrary' -> getClosureField StandardLibrary' closure
 
 -- Calling convention for Anoma stdlib
 --
@@ -615,17 +618,16 @@ remakeList ts = foldTerms (toList ts `prependList` pure (OpQuote # nockNil'))
 
 -- | Initialize the stack. The resulting term is intended to be evaulated
 -- against a subject that contains function arguments.
-initStackWithArgs :: Term Natural -> [Term Natural] -> [Term Natural] -> Term Natural
-initStackWithArgs funCode defs getArgs = remakeList (initSubStack <$> allElements)
-  where
-    initSubStack :: StackId -> Term Natural
-    initSubStack = \case
-      Code -> OpQuote # funCode
-      Args -> remakeList getArgs
-      TempStack -> OpQuote # nockNil'
-      StandardLibrary -> OpQuote # stdlib
-      FunctionsLibrary -> OpQuote # makeList defs
-
+-- initStackWithArgs :: Term Natural -> [Term Natural] -> [Term Natural] -> Term Natural
+-- initStackWithArgs funCode defs getArgs = remakeList (initSubStack <$> allElements)
+--   where
+--     initSubStack :: StackId -> Term Natural
+--     initSubStack = \case
+--       Code -> OpQuote # funCode
+--       Args -> remakeList getArgs
+--       TempStack -> OpQuote # nockNil'
+--       StandardLibrary -> OpQuote # stdlib
+--       FunctionsLibrary -> OpQuote # makeList defs
 makeNockFunction :: Term Natural -> [Term Natural] -> Term Natural
 makeNockFunction funCode defs = remakeList (initSubStack <$> allElements)
   where
@@ -694,11 +696,9 @@ runCompilerWith callingConvention opts constrs libFuns mainFun = run . runReader
             }
         )
 
-    makeAnomaFun :: (Members '[Reader CompilerCtx] r) => Sem r (Cell Natural)
+    makeAnomaFun :: Sem r (Cell Natural)
     makeAnomaFun = do
-      let
-
-          funCode :: Term Natural
+      let funCode :: Term Natural
           funCode = head compiledFuns
 
       return $ case makeNockFunction funCode (toList compiledFuns) of
