@@ -147,19 +147,6 @@ runTreePipeline pa@PipelineArg {..} = do
   let code = Tree.ppPrint tab' tab'
   writeFileEnsureLn treeFile code
 
-runNockmaPipeline :: (Members '[EmbedIO, App, TaggedLock] r) => PipelineArg -> Sem r ()
-runNockmaPipeline pa@PipelineArg {..} = do
-  entryPoint <- getEntry pa
-  nockmaFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
-  r <-
-    runReader entryPoint
-      . runError @JuvixError
-      . coreToNockma
-      $ _pipelineArgModule
-  tab' <- getRight r
-  let code = Nockma.ppSerialize tab'
-  writeFileEnsureLn nockmaFile code
-
 runAnomaPipeline :: (Members '[EmbedIO, App, TaggedLock] r) => PipelineArg -> Sem r ()
 runAnomaPipeline pa@PipelineArg {..} = do
   entryPoint <- getEntry pa

@@ -1,13 +1,14 @@
 module Juvix.Compiler.Nockma.Translation.FromTree
   ( runCompilerWithAnoma,
-    runCompilerWithJuvix,
     fromEntryPoint,
     fromTreeTable,
     ProgramCallingConvention (..),
+    AnomaCallablePathId (..),
     CompilerOptions (..),
     CompilerFunction (..),
     FunctionCtx (..),
     FunctionId (..),
+    closurePath,
     add,
     dec,
     mul,
@@ -37,8 +38,7 @@ import Juvix.Prelude hiding (Atom, Path)
 import System.IO.Unsafe (unsafePerformIO)
 
 data ProgramCallingConvention
-  = ProgramCallingConventionJuvix
-  | ProgramCallingConventionAnoma
+  = ProgramCallingConventionAnoma
 
 nockmaMemRep :: MemRep -> NockmaMemRep
 nockmaMemRep = \case
@@ -496,7 +496,7 @@ listToTuple :: Term Natural -> Term Natural -> Term Natural
 listToTuple lst len =
   let posOfLast = appendRights emptyPath (dec len)
       t1 = lst >># (opAddress' posOfLast) >># (OpAddress # [L])
-   in OpIf # isZero len # lst # (replaceSubterm' posOfLast t1 lst)
+   in OpIf # isZero len # lst # (replaceSubterm' lst posOfLast t1)
 
 argsTuplePlaceholder :: Term Natural
 argsTuplePlaceholder = nockNil'
@@ -661,9 +661,6 @@ remakeList ts = foldTerms (toList ts `prependList` pure (OpQuote # nockNil'))
 runCompilerWithAnoma :: CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> Term Natural
 runCompilerWithAnoma = runCompilerWith ProgramCallingConventionAnoma
 
-runCompilerWithJuvix :: CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> Term Natural
-runCompilerWithJuvix = runCompilerWith ProgramCallingConventionJuvix
-
 runCompilerWith :: ProgramCallingConvention -> CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> Term Natural
 runCompilerWith callingConvention opts constrs libFuns mainFun = unsafePerformIO $ do
   -- writeFileEnsureLn $(mkAbsFile "/home/jan/projects/anoma/JuvixEnv.nockma") (ppSerialize exportEnv)
@@ -721,15 +718,9 @@ runCompilerWith callingConvention opts constrs libFuns mainFun = unsafePerformIO
           mainClosure = head compiledFuns
       return mainClosure
 
-    makeJuvixFun :: (Members '[Reader CompilerCtx] r) => Sem r (Term Natural)
-    makeJuvixFun = do
-      res <- callFunWithEnv (mainFun ^. compilerFunctionName) exportEnv
-      return res
-
-    mkEntryPoint :: (Members '[Reader CompilerCtx] r) => Sem r (Term Natural)
+    mkEntryPoint :: Sem r (Term Natural)
     mkEntryPoint = case callingConvention of
       ProgramCallingConventionAnoma -> makeAnomaFun
-      ProgramCallingConventionJuvix -> makeJuvixFun
 
 builtinFunction :: BuiltinFunctionId -> CompilerFunction
 builtinFunction = \case
@@ -745,17 +736,6 @@ closurePath = stackPath
 
 -- makeNockFunction :: Term Natural -> [Term Natural] -> Term Natural
 -- makeNockFunction funCode defs = callF
-
--- | Call a function. Arguments to the function are assumed to be in the Args stack
-callFunWithEnv ::
-  (Members '[Reader CompilerCtx] r) =>
-  FunctionId ->
-  Term Natural ->
-  Sem r (Term Natural)
-callFunWithEnv fun env = do
-  fpath <- getFunctionPath fun
-  let p' = fpath ++ closurePath WrapperCode
-  return (OpCall # p' # (OpReplace # (stackPath FunctionsLibrary # (OpQuote # env)) # OpAddress # emptyPath))
 
 -- | Call a function. Arguments to the function are assumed to be in the Args stack
 callFun ::

@@ -104,19 +104,6 @@ runRegPipeline pa@PipelineArg {..} = do
   let code = Reg.ppPrint tab' tab'
   writeFileEnsureLn regFile code
 
-runNockmaPipeline :: (Members '[EmbedIO, App, TaggedLock] r) => PipelineArg -> Sem r ()
-runNockmaPipeline pa@PipelineArg {..} = do
-  entryPoint <- getEntry pa
-  nockmaFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
-  r <-
-    runReader entryPoint
-      . runError @JuvixError
-      . treeToNockma
-      $ _pipelineArgTable
-  tab' <- getRight r
-  let code = Nockma.ppSerialize tab'
-  writeFileEnsureLn nockmaFile code
-
 runAnomaPipeline :: (Members '[EmbedIO, App, TaggedLock] r) => PipelineArg -> Sem r ()
 runAnomaPipeline pa@PipelineArg {..} = do
   entryPoint <- getEntry pa
