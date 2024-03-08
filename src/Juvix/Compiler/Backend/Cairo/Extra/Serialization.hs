@@ -8,7 +8,14 @@ import Numeric
 serialize :: [Element] -> Result
 serialize elems =
   Result
-    { _resultData = map toHexText (serialize' elems)
+    { _resultData =
+        map toHexText (serialize' elems)
+          ++ [ "0x10780017fff7fff",
+               "0x0"
+             ],
+      _resultStart = 0,
+      _resultEnd = length elems,
+      _resultMain = 0
     }
   where
     toHexText :: Natural -> Text

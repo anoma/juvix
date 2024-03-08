@@ -4,7 +4,10 @@ import Data.Aeson as Aeson hiding (Result)
 import Juvix.Prelude hiding ((.=))
 
 data Result = Result
-  { _resultData :: [Text]
+  { _resultData :: [Text],
+    _resultStart :: Int,
+    _resultEnd :: Int,
+    _resultMain :: Int
   }
 
 makeLenses ''Result
@@ -20,17 +23,17 @@ instance ToJSON Result where
           .= object
             [ "__main__.__start__"
                 .= object
-                  [ "pc" .= Number 0,
+                  [ "pc" .= Number (fromIntegral _resultStart),
                     "type" .= String "label"
                   ],
               "__main__.__end__"
                 .= object
-                  [ "pc" .= Number (fromIntegral $ length _resultData),
+                  [ "pc" .= Number (fromIntegral _resultEnd),
                     "type" .= String "label"
                   ],
               "__main__.main"
                 .= object
-                  [ "pc" .= Number 0,
+                  [ "pc" .= Number (fromIntegral _resultMain),
                     "decorators" .= Array mempty,
                     "type" .= String "function"
                   ]

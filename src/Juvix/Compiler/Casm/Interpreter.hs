@@ -47,13 +47,10 @@ hRunCode hout (LabelInfo labelInfo) instrs0 = runST goCode
       Memory s ->
       ST s FField
     go pc ap fp mem
-      | Vec.length instrs <= pc = do
-          when (Vec.length instrs < pc) $
-            throwRunError ("invalid program counter: " <> show pc)
-          checkGaps mem
-          when (ap == 0) $
-            throwRunError "nothing to return"
-          readMem mem (ap - 1)
+      | Vec.length instrs == pc =
+          goFinish ap mem
+      | Vec.length instrs < pc =
+          throwRunError ("invalid program counter: " <> show pc)
       | otherwise =
           case instrs Vec.! pc of
             Assign x -> goAssign x pc ap fp mem
@@ -224,10 +221,13 @@ hRunCode hout (LabelInfo labelInfo) instrs0 = runST goCode
       go (fromInteger (fieldToInteger tgt)) (ap + 2) (ap + 2) mem''
 
     goReturn :: Address -> Address -> Address -> Memory s -> ST s FField
-    goReturn _ ap fp mem = do
-      pc' <- readMem mem (fp - 1)
-      fp' <- readMem mem (fp - 2)
-      go (fromInteger (fieldToInteger pc')) ap (fromInteger (fieldToInteger fp')) mem
+    goReturn _ ap fp mem
+      | fp == 0 =
+          goFinish ap mem
+      | otherwise = do
+          pc' <- readMem mem (fp - 1)
+          fp' <- readMem mem (fp - 2)
+          go (fromInteger (fieldToInteger pc')) ap (fromInteger (fieldToInteger fp')) mem
 
     goAlloc :: InstrAlloc -> Address -> Address -> Address -> Memory s -> ST s FField
     goAlloc InstrAlloc {..} pc ap fp mem = do
@@ -239,6 +239,13 @@ hRunCode hout (LabelInfo labelInfo) instrs0 = runST goCode
       v <- readRValue ap fp mem _instrTraceValue
       GHC.unsafePerformIO (hPrint hout v >> return (pure ()))
       go (pc + 1) ap fp mem
+
+    goFinish :: Address -> Memory s -> ST s FField
+    goFinish ap mem = do
+      checkGaps mem
+      when (ap == 0) $
+        throwRunError "nothing to return"
+      readMem mem (ap - 1)
 
 catchRunErrorIO :: a -> IO (Either CasmError a)
 catchRunErrorIO a =
