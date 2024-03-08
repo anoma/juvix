@@ -226,6 +226,7 @@ class (NockmaEq a) => NockNatural a where
   errInvalidOp :: Atom a -> ErrNockNatural a
 
   errInvalidPath :: Atom a -> ErrNockNatural a
+  errGetAtom :: ErrNockNatural a -> Atom a
 
   nockOp :: (Member (Error (ErrNockNatural a)) r) => Atom a -> Sem r NockOp
   nockOp atm = do
@@ -273,6 +274,9 @@ instance NockNatural Natural where
   nockTrue = Atom 0 (atomHintInfo AtomHintBool)
   nockFalse = Atom 1 (atomHintInfo AtomHintBool)
   nockNil = Atom 0 (atomHintInfo AtomHintNil)
+  errGetAtom = \case
+    NaturalInvalidPath a -> a
+    NaturalInvalidOp a -> a
   nockSucc = over atom succ
   nockVoid = Atom 0 (atomHintInfo AtomHintVoid)
   errInvalidOp atm = NaturalInvalidOp atm
