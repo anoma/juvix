@@ -6,6 +6,7 @@ module Juvix.Compiler.Nockma.Translation.FromTree
     ProgramCallingConvention (..),
     CompilerOptions (..),
     CompilerFunction (..),
+    FunctionCtx (..),
     FunctionId (..),
     add,
     dec,
@@ -13,11 +14,14 @@ module Juvix.Compiler.Nockma.Translation.FromTree
     sub,
     pow2,
     nockNatLiteral,
+    nockIntegralLiteral,
     callStdlib,
     appendRights,
     foldTerms,
     pathToArg,
     makeList,
+    listToTuple,
+    opAddress',
   )
 where
 
@@ -218,14 +222,14 @@ supportsListNockmaRep tab ci = case allConstructors tab ci of
   _ -> Nothing
 
 -- | Use `Tree.toNockma` before calling this function
-fromTreeTable :: (Members '[Error JuvixError, Reader CompilerOptions] r) => ProgramCallingConvention -> Tree.InfoTable -> Sem r (Cell Natural)
+fromTreeTable :: (Members '[Error JuvixError, Reader CompilerOptions] r) => ProgramCallingConvention -> Tree.InfoTable -> Sem r (Term Natural)
 fromTreeTable cc t = case t ^. Tree.infoMainFunction of
   Just mainFun -> do
     opts <- ask
     return (fromTree opts mainFun t)
   Nothing -> throw @JuvixError (error "TODO missing main")
   where
-    fromTree :: CompilerOptions -> Tree.Symbol -> Tree.InfoTable -> Cell Natural
+    fromTree :: CompilerOptions -> Tree.Symbol -> Tree.InfoTable -> Term Natural
     fromTree opts mainSym tab@Tree.InfoTable {..} =
       let funs = map compileFunction allFunctions
           mkConstructorInfo :: Tree.ConstructorInfo -> ConstructorInfo
@@ -281,13 +285,13 @@ anomaCallableClosureWrapper =
       closureTotalArgsNum :: Term Natural = getClosureFieldInSubject ClosureTotalArgsNum
       appendAndReplaceArgsTuple =
         replaceArgsWithTerm $
-           appendToTuple
-              (getClosureFieldInSubject ClosureArgs)
-              closureArgsNum
-              (getClosureFieldInSubject ArgsTuple)
-              (sub closureTotalArgsNum closureArgsNum)
+          appendToTuple
+            (getClosureFieldInSubject ClosureArgs)
+            closureArgsNum
+            (getClosureFieldInSubject ArgsTuple)
+            (sub closureTotalArgsNum closureArgsNum)
       adjustArgs = OpIf # closureArgsIsEmpty # (OpQuote # (OpAddress # emptyPath)) # (OpQuote # appendAndReplaceArgsTuple)
-      closureArgsIsEmpty = OpEq # closureArgsNum # nockNatLiteral 0
+      closureArgsIsEmpty = isZero closureArgsNum
    in OpCall # getClosureFieldInSubject RawCode # adjustArgs
 
 compile :: forall r. (Members '[Reader FunctionCtx, Reader CompilerCtx] r) => Tree.Node -> Sem r (Term Natural)
@@ -482,12 +486,13 @@ opAddress' :: Term Natural -> Term Natural
 opAddress' x = evaluated $ (OpQuote # OpAddress) # x
 
 -- [a [b [c 0]]] -> [a [b c]]
--- len = 3
+-- len = quote 3
+-- TODO lst is being evaluated three times!
 listToTuple :: Term Natural -> Term Natural -> Term Natural
 listToTuple lst len =
   let posOfLast = appendRights emptyPath (dec len)
-      t1 = (OpQuote # lst) >># (opAddress' posOfLast) >># (OpAddress # [L])
-   in OpIf # isZero (OpQuote # len) # (OpQuote # lst) # (replaceSubterm' posOfLast t1 (OpQuote # lst))
+      t1 = lst >># (opAddress' posOfLast) >># (OpAddress # [L])
+   in OpIf # isZero len # lst # (replaceSubterm' posOfLast t1 lst)
 
 argsTuplePlaceholder :: Term Natural
 argsTuplePlaceholder = nockNil'
@@ -649,20 +654,15 @@ makeList ts = foldTerms (ts `prependList` pure (TermAtom nockNil))
 remakeList :: (Foldable l) => l (Term Natural) -> Term Natural
 remakeList ts = foldTerms (toList ts `prependList` pure (OpQuote # nockNil'))
 
-asCell :: Term Natural -> Cell Natural
-asCell = \case
-  TermCell c -> c
-  TermAtom {} -> impossible
-
-runCompilerWithAnoma :: CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> Cell Natural
+runCompilerWithAnoma :: CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> Term Natural
 runCompilerWithAnoma = runCompilerWith ProgramCallingConventionAnoma
 
-runCompilerWithJuvix :: CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> Cell Natural
+runCompilerWithJuvix :: CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> Term Natural
 runCompilerWithJuvix = runCompilerWith ProgramCallingConventionJuvix
 
-runCompilerWith :: ProgramCallingConvention -> CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> Cell Natural
+runCompilerWith :: ProgramCallingConvention -> CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> Term Natural
 runCompilerWith callingConvention opts constrs libFuns mainFun = unsafePerformIO $ do
-  writeFileEnsureLn $(mkAbsFile "/home/jan/projects/anoma/JuvixEnv.nockma") (ppSerialize exportEnv)
+  -- writeFileEnsureLn $(mkAbsFile "/home/jan/projects/anoma/JuvixEnv.nockma") (ppSerialize exportEnv)
   return (run . runReader compilerCtx $ mkEntryPoint)
   where
     allFuns :: NonEmpty CompilerFunction
@@ -711,18 +711,18 @@ runCompilerWith callingConvention opts constrs libFuns mainFun = unsafePerformIO
             }
         )
 
-    makeAnomaFun :: Sem r (Cell Natural)
+    makeAnomaFun :: Sem r (Term Natural)
     makeAnomaFun = do
       let mainClosure :: Term Natural
           mainClosure = head compiledFuns
-      return (asCell mainClosure)
+      return mainClosure
 
-    makeJuvixFun :: (Members '[Reader CompilerCtx] r) => Sem r (Cell Natural)
+    makeJuvixFun :: (Members '[Reader CompilerCtx] r) => Sem r (Term Natural)
     makeJuvixFun = do
       res <- callFunWithEnv (mainFun ^. compilerFunctionName) exportEnv
-      return (asCell res)
+      return res
 
-    mkEntryPoint :: (Members '[Reader CompilerCtx] r) => Sem r (Cell Natural)
+    mkEntryPoint :: (Members '[Reader CompilerCtx] r) => Sem r (Term Natural)
     mkEntryPoint = case callingConvention of
       ProgramCallingConventionAnoma -> makeAnomaFun
       ProgramCallingConventionJuvix -> makeJuvixFun
