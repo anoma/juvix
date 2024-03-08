@@ -1,8 +1,9 @@
+#!/usr/bin/python
 #
 # This script generates appropriate Stone prover parameters with the right
 # bounds for the number of execution steps.
 #
-# Invocation: python3 gen_stone_params.py prog_public_input.json
+# Invocation: gen_stone_params.py prog_public_input.json
 #
 
 import json
