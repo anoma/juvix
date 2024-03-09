@@ -44,7 +44,10 @@ data JudocArgs = JudocArgs
     _judocArgsNonRecursive :: Bool,
     _judocArgsNoFooter :: Bool,
     _judocArgsIdPrefix :: Text,
-    _judocArgsNoPath :: Bool
+    _judocArgsNoPath :: Bool,
+    _judocArgsExt :: Text,
+    _judocArgsStripPrefix :: Text,
+    _judocArgsFolderStructure :: Bool
   }
 
 makeLenses ''JudocCtx
@@ -204,7 +207,10 @@ genJudocHtml entry JudocArgs {..} =
           _htmlOptionsTheme = _judocArgsTheme,
           _htmlOptionsNoFooter = _judocArgsNoFooter,
           _htmlOptionsOnlyCode = False,
-          _htmlOptionsNoPath = _judocArgsNoPath
+          _htmlOptionsNoPath = _judocArgsNoPath,
+          _htmlOptionsExt = _judocArgsExt,
+          _htmlOptionsStripPrefix = _judocArgsStripPrefix,
+          _htmlOptionsFolderStructure = _judocArgsFolderStructure
         }
 
     allModules
@@ -322,7 +328,7 @@ goTopModule cs m = do
             $ ul
               ! Attr.id "page-menu"
               ! Attr.class_ "links"
-            $ li (a ! Attr.href sourceRef' $ "Source") -- TODO: review here
+            $ li (a ! Attr.href sourceRef' $ "Source")
               <> li (a ! Attr.href (fromString (toFilePath indexFileName)) $ "Index")
 
         content :: Sem s Html

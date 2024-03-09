@@ -29,6 +29,9 @@ runGenOnlySourceHtml HtmlOptions {..} = do
           _genSourceHtmlArgsUrlPrefix = _htmlUrlPrefix,
           _genSourceHtmlArgsIdPrefix = _htmlIdPrefix,
           _genSourceHtmlArgsNoPath = _htmlNoPath,
+          _genSourceHtmlArgsFolderStructure = _htmlFolderStructure,
+          _genSourceHtmlArgsExt = _htmlExt,
+          _genSourceHtmlArgsStripPrefix = _htmlStripPrefix,
           _genSourceHtmlArgsConcreteOpts = Concrete.defaultOptions,
           _genSourceHtmlArgsModule = m,
           _genSourceHtmlArgsComments = Scoper.getScoperResultComments res,
@@ -69,7 +72,10 @@ runCommand HtmlOptions {..}
             _judocArgsTheme = _htmlTheme,
             _judocArgsNonRecursive = _htmlNonRecursive,
             _judocArgsNoFooter = _htmlNoFooter,
-            _judocArgsNoPath = _htmlNoPath
+            _judocArgsNoPath = _htmlNoPath,
+            _judocArgsExt = _htmlExt,
+            _judocArgsStripPrefix = _htmlStripPrefix,
+            _judocArgsFolderStructure = _htmlFolderStructure
           }
       when _htmlOpen $ case openCmd of
         Nothing -> say "Could not recognize the 'open' command for your OS"

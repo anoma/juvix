@@ -12,7 +12,10 @@ data HtmlOptions = HtmlOptions
     _htmlOutputDir :: AppPath Dir,
     _htmlInputFile :: AppPath File,
     _htmlNoFooter :: Bool,
+    _htmlFolderStructure :: Bool,
     _htmlNoPath :: Bool,
+    _htmlExt :: Text,
+    _htmlStripPrefix :: Text,
     _htmlAssetsPrefix :: Text,
     _htmlUrlPrefix :: Text,
     _htmlIdPrefix :: Text,
@@ -65,6 +68,25 @@ parseHtml = do
     switch
       ( long "no-path"
           <> help "Remove the path from all hyperlinks"
+      )
+  _htmlExt <-
+    strOption
+      ( value ".html"
+          <> long "ext"
+          <> showDefault
+          <> help "File extension for the generated HTML files"
+      )
+  _htmlStripPrefix <-
+    strOption
+      ( value ""
+          <> long "strip-prefix"
+          <> showDefault
+          <> help "Strip the given prefix from the hyperlinks. This has no effect if --no-path is enabled. It has precedence over --prefix-url"
+      )
+  _htmlFolderStructure <-
+    switch
+      ( long "folder-structure"
+          <> help "Generate HTML following the module's folder structure"
       )
   _htmlAssetsPrefix <-
     strOption
