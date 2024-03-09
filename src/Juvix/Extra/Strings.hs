@@ -686,6 +686,9 @@ instrAdd = "add"
 argsTag :: (IsString s) => s
 argsTag = "args@"
 
+tagTag :: (IsString s) => s
+tagTag = "tag@"
+
 stdlibTag :: (IsString s) => s
 stdlibTag = "stdlib@"
 
