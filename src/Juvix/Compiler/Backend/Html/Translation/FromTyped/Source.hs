@@ -367,10 +367,10 @@ moduleDocRelativePath m = do
       pathgen
         | folderStructure = topModulePathToRelativePath ext suff (</>)
         | otherwise = topModulePathToRelativePathDot ext suff
+  let relpath :: Path Rel File = pathgen m
   if
-      | null fixPrefix -> return (pathgen m)
+      | null fixPrefix -> return relpath
       | otherwise -> do
-          let relpath :: Path Rel File = pathgen m
           return $
             maybe
               relpath
