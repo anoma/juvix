@@ -20,12 +20,14 @@ mkAnomaCallTest' enableDebug _testName relRoot mainFile args _testCheck =
   where
     mkTestIO :: IO Test
     mkTestIO = do
-      _testProgramSubject <- withRootCopy $ \tmpDir -> do
-        compiledMain <- compileMain tmpDir
+      anomaRes <- withRootCopy $ \tmpDir -> do
+        compiledMain :: AnomaResult <- compileMain tmpDir
         -- Write out the nockma function to force full evaluation of the compiler
-        writeFileEnsureLn (tmpDir <//> $(mkRelFile "test.nockma")) (ppSerialize compiledMain)
+        let mainClosure = compiledMain ^. anomaClosure
+        writeFileEnsureLn (tmpDir <//> $(mkRelFile "test.nockma")) (ppSerialize mainClosure)
         return compiledMain
-      let _testProgramFormula = anomaCall args
+      let _testProgramFormula = anomaCall (anomaRes ^. anomaEnv) args
+          _testProgramSubject = anomaRes ^. anomaClosure
           _testEvalOptions = defaultEvalOptions
       return Test {..}
 
@@ -34,7 +36,7 @@ mkAnomaCallTest' enableDebug _testName relRoot mainFile args _testCheck =
       copyDirRecur root tmpRootDir
       action tmpRootDir
 
-    compileMain :: Prelude.Path Abs Dir -> IO (Term Natural)
+    compileMain :: Prelude.Path Abs Dir -> IO AnomaResult
     compileMain rootCopyDir = do
       let testRootDir = rootCopyDir <//> relRoot
       entryPoint <-

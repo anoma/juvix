@@ -2,6 +2,10 @@ module Juvix.Compiler.Nockma.Translation.FromTree
   ( runCompilerWithAnoma,
     fromEntryPoint,
     fromTreeTable,
+    AnomaResult (..),
+    anomaEnv,
+    anomaClosure,
+    compilerFunctionName,
     ProgramCallingConvention (..),
     AnomaCallablePathId (..),
     CompilerOptions (..),
@@ -43,6 +47,11 @@ import System.IO.Unsafe (unsafePerformIO)
 
 data ProgramCallingConvention
   = ProgramCallingConventionAnoma
+
+data AnomaResult = AnomaResult
+  { _anomaEnv :: Term Natural,
+    _anomaClosure :: Term Natural
+  }
 
 nockmaMemRep :: MemRep -> NockmaMemRep
 nockmaMemRep = \case
@@ -171,6 +180,7 @@ indexInStack :: AnomaCallablePathId -> Natural -> Path
 indexInStack s idx = stackPath s ++ indexStack idx
 
 makeLenses ''CompilerOptions
+makeLenses ''AnomaResult
 makeLenses ''CompilerFunction
 makeLenses ''CompilerCtx
 makeLenses ''FunctionCtx
@@ -226,14 +236,14 @@ supportsListNockmaRep tab ci = case allConstructors tab ci of
   _ -> Nothing
 
 -- | Use `Tree.toNockma` before calling this function
-fromTreeTable :: (Members '[Error JuvixError, Reader CompilerOptions] r) => ProgramCallingConvention -> Tree.InfoTable -> Sem r (Term Natural)
+fromTreeTable :: (Members '[Error JuvixError, Reader CompilerOptions] r) => ProgramCallingConvention -> Tree.InfoTable -> Sem r AnomaResult
 fromTreeTable cc t = case t ^. Tree.infoMainFunction of
   Just mainFun -> do
     opts <- ask
     return (fromTree opts mainFun t)
   Nothing -> throw @JuvixError (error "TODO missing main")
   where
-    fromTree :: CompilerOptions -> Tree.Symbol -> Tree.InfoTable -> Term Natural
+    fromTree :: CompilerOptions -> Tree.Symbol -> Tree.InfoTable -> AnomaResult
     fromTree opts mainSym tab@Tree.InfoTable {..} =
       let funs = map compileFunction allFunctions
           mkConstructorInfo :: Tree.ConstructorInfo -> ConstructorInfo
@@ -294,9 +304,9 @@ anomaCallableClosureWrapper =
             closureArgsNum
             (getClosureFieldInSubject ArgsTuple)
             (sub closureTotalArgsNum closureArgsNum)
-      adjustArgs = OpIf # closureArgsIsEmpty # (OpQuote # (OpAddress # emptyPath)) # (OpQuote # appendAndReplaceArgsTuple)
       closureArgsIsEmpty = isZero closureArgsNum
-   in OpCall # getClosureFieldInSubject RawCode # adjustArgs
+      adjustArgs = OpIf # closureArgsIsEmpty # (OpAddress # emptyPath) # appendAndReplaceArgsTuple
+   in OpCall # closurePath RawCode # adjustArgs
 
 compile :: forall r. (Members '[Reader FunctionCtx, Reader CompilerCtx] r) => Tree.Node -> Sem r (Term Natural)
 compile = \case
@@ -448,7 +458,7 @@ compile = \case
       args <- mapM compile _nodeAllocClosureArgs
       return . makeClosure $ \case
         WrapperCode -> OpQuote # anomaCallableClosureWrapper
-        ArgsTuple -> argsTuplePlaceholder
+        ArgsTuple -> OpQuote # argsTuplePlaceholder
         RawCode -> OpAddress # fpath
         TempStack -> remakeList []
         StandardLibrary -> OpQuote # stdlib
@@ -476,12 +486,22 @@ compile = \case
       case _nodeCallType of
         Tree.CallFun fun -> callFunWithArgs (UserFunction fun) newargs
         Tree.CallClosure f -> do
-          f' <- compile f
-          let argsNum = getClosureField ClosureArgsNum f'
-              oldArgs = getClosureField ClosureArgs f'
-              fcode = getClosureField RawCode f'
+          closure <- compile f
+          let argsNum = getClosureField ClosureArgsNum closure
+              oldArgs = getClosureField ClosureArgs closure
               allArgs = appendToTuple oldArgs argsNum (foldTermsOrNil newargs) (nockIntegralLiteral (length newargs))
-          return (OpApply # replaceArgsWithTerm allArgs # fcode)
+              newSubject = replaceSubject $ \case
+                WrapperCode -> Just (OpQuote # anomaCallableClosureWrapper)
+                RawCode -> Just (OpQuote # closure)
+                ArgsTuple -> Just allArgs
+                FunctionsLibrary -> Nothing
+                StandardLibrary -> Nothing
+                TempStack -> Nothing
+                -- TODO revise below
+                ClosureArgs -> Nothing
+                ClosureTotalArgsNum -> Nothing
+                ClosureArgsNum -> Nothing
+          return (OpCall # closurePath WrapperCode # newSubject)
 
 isZero :: Term Natural -> Term Natural
 isZero a = OpEq # a # nockNatLiteral 0
@@ -499,7 +519,7 @@ listToTuple lst len =
    in OpIf # isZero len # lst # (replaceSubterm' lst posOfLast t1)
 
 argsTuplePlaceholder :: Term Natural
-argsTuplePlaceholder = OpQuote # nockNil'
+argsTuplePlaceholder = nockNil'
 
 appendRights :: Path -> Term Natural -> Term Natural
 appendRights path n = dec (mul (pow2 n) (OpInc # OpQuote # path))
@@ -551,12 +571,11 @@ extendClosure Tree.NodeExtendClosure {..} = do
   closure <- compile _nodeExtendClosureFun
   let argsNum = getClosureField ClosureArgsNum closure
       oldArgs = getClosureField ClosureArgs closure
-      fcode = getClosureField RawCode closure
       allArgs = append oldArgs argsNum (remakeList args)
       newArgsNum = add argsNum (nockIntegralLiteral (length _nodeExtendClosureArgs))
   return . makeClosure $ \case
-    WrapperCode -> OpQuote # anomaCallableClosureWrapper
-    RawCode -> OpQuote # fcode
+    WrapperCode -> getClosureField WrapperCode closure
+    RawCode -> getClosureField RawCode closure
     ClosureTotalArgsNum -> getClosureField ClosureTotalArgsNum closure
     ClosureArgsNum -> newArgsNum
     ClosureArgs -> allArgs
@@ -589,7 +608,7 @@ callStdlib fun args =
       callCell = set cellCall (Just meta) (OpPush #. (getFunCode # callFn))
       meta =
         StdlibCall
-          { _stdlibCallArgs = maybe nockNil' foldTerms (nonEmpty args),
+          { _stdlibCallArgs = foldTermsOrNil args,
             _stdlibCallFunction = fun
           }
    in TermCell callCell
@@ -661,13 +680,13 @@ makeList ts = foldTerms (toList ts `prependList` pure (TermAtom nockNil))
 remakeList :: (Foldable l) => l (Term Natural) -> Term Natural
 remakeList ts = foldTerms (toList ts `prependList` pure (OpQuote # nockNil'))
 
-runCompilerWithAnoma :: CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> Term Natural
+runCompilerWithAnoma :: CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> AnomaResult
 runCompilerWithAnoma = runCompilerWith ProgramCallingConventionAnoma
 
-runCompilerWith :: ProgramCallingConvention -> CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> Term Natural
+runCompilerWith :: ProgramCallingConvention -> CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> AnomaResult
 runCompilerWith callingConvention opts constrs libFuns mainFun = unsafePerformIO $ do
-  writeFileEnsureLn $(mkAbsFile "/home/jan/projects/anoma/JuvixEnv.nockma") (ppSerialize exportEnv)
-  return (run . runReader compilerCtx $ mkEntryPoint)
+  -- writeFileEnsureLn $(mkAbsFile "/home/jan/projects/anoma/JuvixEnv.nockma") (ppSerialize exportEnv)
+  return mkEntryPoint
   where
     allFuns :: NonEmpty CompilerFunction
     allFuns = mainFun :| libFuns ++ (builtinFunction <$> allElements)
@@ -715,13 +734,16 @@ runCompilerWith callingConvention opts constrs libFuns mainFun = unsafePerformIO
             }
         )
 
-    makeAnomaFun :: Sem r (Term Natural)
-    makeAnomaFun = do
+    makeAnomaFun :: AnomaResult
+    makeAnomaFun =
       let mainClosure :: Term Natural
           mainClosure = head compiledFuns
-      return mainClosure
+       in AnomaResult
+            { _anomaClosure = mainClosure,
+              _anomaEnv = exportEnv
+            }
 
-    mkEntryPoint :: Sem r (Term Natural)
+    mkEntryPoint :: AnomaResult
     mkEntryPoint = case callingConvention of
       ProgramCallingConventionAnoma -> makeAnomaFun
 
@@ -737,10 +759,7 @@ builtinFunction = \case
 closurePath :: AnomaCallablePathId -> Path
 closurePath = stackPath
 
--- makeNockFunction :: Term Natural -> [Term Natural] -> Term Natural
--- makeNockFunction funCode defs = callF
-
--- | Call a function. Arguments to the function are assumed to be in the Args stack
+-- | Call a function. Arguments to the function are assumed to be in the ArgsTuple stack
 callFun ::
   (Members '[Reader CompilerCtx] r) =>
   FunctionId ->
@@ -772,23 +791,23 @@ callFunWithArgs ::
   Sem r (Term Natural)
 callFunWithArgs fun args = (replaceArgs args >>#) <$> callFun fun
 
-replaceArgsWithTerm :: Term Natural -> Term Natural
-replaceArgsWithTerm term =
+replaceSubject :: (AnomaCallablePathId -> Maybe (Term Natural)) -> Term Natural
+replaceSubject f =
   remakeList
-    [ if
-          | ArgsTuple == s -> term
-          | otherwise -> OpAddress # stackPath s
+    [ case f s of
+        Nothing -> OpAddress # closurePath s
+        Just t' -> t'
       | s <- allElements
     ]
 
+replaceArgsWithTerm :: Term Natural -> Term Natural
+replaceArgsWithTerm term =
+  replaceSubject $ \case
+    ArgsTuple -> Just term
+    _ -> Nothing
+
 replaceArgs :: [Term Natural] -> Term Natural
-replaceArgs args =
-  remakeList
-    [ if
-          | ArgsTuple == s -> foldTermsOrNil args
-          | otherwise -> OpAddress # stackPath s
-      | s <- allElements
-    ]
+replaceArgs = replaceArgsWithTerm . foldTermsOrNil
 
 getFunctionPath :: (Members '[Reader CompilerCtx] r) => FunctionId -> Sem r Path
 getFunctionPath funName = asks (^?! compilerFunctionInfos . at funName . _Just . functionInfoPath)
