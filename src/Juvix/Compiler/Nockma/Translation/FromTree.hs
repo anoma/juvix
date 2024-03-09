@@ -503,7 +503,7 @@ listToTuple lst len =
    in OpIf # isZero len # lst # (replaceSubterm' lst posOfLast t1)
 
 argsTuplePlaceholder :: Term Natural
-argsTuplePlaceholder = nockNil'
+argsTuplePlaceholder = OpQuote # nockNil'
 
 appendRights :: Path -> Term Natural -> Term Natural
 appendRights path n = dec (mul (pow2 n) (OpInc # OpQuote # path))
@@ -559,7 +559,7 @@ extendClosure Tree.NodeExtendClosure {..} = do
       allArgs = append oldArgs argsNum (remakeList args)
       newArgsNum = add argsNum (nockIntegralLiteral (length _nodeExtendClosureArgs))
   return . makeClosure $ \case
-    WrapperCode -> anomaCallableClosureWrapper
+    WrapperCode -> OpQuote # anomaCallableClosureWrapper
     RawCode -> OpQuote # fcode
     ClosureTotalArgsNum -> getClosureField ClosureTotalArgsNum closure
     ClosureArgsNum -> newArgsNum
@@ -670,7 +670,7 @@ runCompilerWithAnoma = runCompilerWith ProgramCallingConventionAnoma
 
 runCompilerWith :: ProgramCallingConvention -> CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> Term Natural
 runCompilerWith callingConvention opts constrs libFuns mainFun = unsafePerformIO $ do
-  -- writeFileEnsureLn $(mkAbsFile "/home/jan/projects/anoma/JuvixEnv.nockma") (ppSerialize exportEnv)
+  writeFileEnsureLn $(mkAbsFile "/home/jan/projects/anoma/JuvixEnv.nockma") (ppSerialize exportEnv)
   return (run . runReader compilerCtx $ mkEntryPoint)
   where
     allFuns :: NonEmpty CompilerFunction
