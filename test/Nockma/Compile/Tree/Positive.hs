@@ -14,7 +14,7 @@ import Tree.Eval.Positive qualified as Tree
 
 runNockmaAssertion :: Handle -> Symbol -> InfoTable -> IO ()
 runNockmaAssertion hout _main tab = do
-  anomaClosure <-
+  anomaRes :: AnomaResult <-
     runM
       . runErrorIO' @JuvixError
       . runReader opts
@@ -24,8 +24,7 @@ runNockmaAssertion hout _main tab = do
       . runOutputSem @(Term Natural)
         (hPutStrLn hout . Nockma.ppPrint)
       . runReader NockmaEval.defaultEvalOptions
-      . evalCompiledNock' anomaClosure
-      $ anomaCall []
+      $ evalCompiledNock' (anomaRes ^. anomaClosure) (anomaCall (anomaRes ^. anomaEnv) [])
   let ret = getReturn res
   whenJust ret (hPutStrLn hout . Nockma.ppPrint)
   where
