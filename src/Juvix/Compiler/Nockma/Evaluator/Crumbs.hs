@@ -54,6 +54,7 @@ data CrumbAutoCons = CrumbAutoCons
 data CrumbOperator = CrumbOperator
   { _crumbOperatorOp :: NockOp,
     _crumbOperatorTag :: CrumbTag,
+    _crumbOperatorCellTag :: Maybe Tag,
     _crumbOperatorLoc :: Maybe Interval
   }
 
@@ -91,7 +92,8 @@ instance PrettyCode CrumbOperator where
     tag <- ppCode _crumbOperatorTag
     loc <- ppLoc _crumbOperatorLoc
     op <- ppCode _crumbOperatorOp
-    return (loc <+> tag <+> "for" <+> op)
+    celltag <- mapM ppCode _crumbOperatorCellTag
+    return (loc <+> tag <+> "for" <+> op <+?> celltag)
 
 instance PrettyCode CrumbAutoCons where
   ppCode CrumbAutoCons {..} = do

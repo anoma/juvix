@@ -11,11 +11,13 @@ anomaCall env args = case nonEmpty args of
   Nothing -> helper Nothing
   where
     helper replaceArgs =
-      OpCall
-        # closurePath WrapperCode
-        # OpReplace
-        # (closurePath FunctionsLibrary # OpQuote # env)
-        # (repArgs (OpAddress # emptyPath))
+      opCall
+        "anomaCall"
+        (closurePath WrapperCode)
+        ( OpReplace
+            # (closurePath FunctionsLibrary # OpQuote # env)
+            # (repArgs (OpAddress # emptyPath))
+        )
       where
         repArgs x = case replaceArgs of
           Nothing -> x
