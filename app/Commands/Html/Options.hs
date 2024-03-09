@@ -100,7 +100,7 @@ parseHtml = do
       ( value ""
           <> long "prefix-url"
           <> showDefault
-          <> help "Prefix used for inner Juvix hyperlinks."
+          <> help "Prefix used for inner Juvix hyperlinks"
       )
   _htmlIdPrefix <-
     strOption

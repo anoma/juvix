@@ -35,7 +35,9 @@ runCommand opts = do
                 opts ^. markdownStripPrefix,
               _processJuvixBlocksArgsComments = Scoper.getScoperResultComments scopedM,
               _processJuvixBlocksArgsModule = m,
-              _processJuvixBlocksArgsOutputDir = outputDir
+              _processJuvixBlocksArgsOutputDir = outputDir,
+              _processJuvixBlocksArgsFolderStructure =
+                opts ^. markdownFolderStructure
             }
   case res of
     Left err -> exitJuvixError (JuvixError err)

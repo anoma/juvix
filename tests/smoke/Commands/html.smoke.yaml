@@ -26,6 +26,20 @@ tests:
       contains:
         <!DOCTYPE HTML>
     exit-status: 0
+    
+  - name: html-ext
+    command:
+      shell:
+        - bash
+      script: |
+        cd milestone/HelloWorld
+        rm -rf html
+        juvix html HelloWorld.juvix --only-source --ext=md
+        cat html/HelloWorld.md
+    stdout:
+      contains:
+        <!DOCTYPE HTML>
+    exit-status: 0
 
   - name: output-dir
     command:

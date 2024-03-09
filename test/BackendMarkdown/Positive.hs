@@ -47,6 +47,7 @@ testDescr PosTest {..} =
                   _processJuvixBlocksArgsStripPrefix = "",
                   _processJuvixBlocksArgsComments =
                     Scoper.getScoperResultComments _pipelineResult,
+                  _processJuvixBlocksArgsFolderStructure = False,
                   _processJuvixBlocksArgsModule = m,
                   _processJuvixBlocksArgsOutputDir =
                     root <//> $(mkRelDir "markdown")
