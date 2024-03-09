@@ -22,7 +22,10 @@ module Juvix.Compiler.Nockma.Translation.FromTree
     pathToArg,
     makeList,
     listToTuple,
+    appendToTuple,
+    append,
     opAddress',
+    replaceSubterm',
   )
 where
 
@@ -530,6 +533,9 @@ nockNatLiteral = nockIntegralLiteral
 nockIntegralLiteral :: (Integral a) => a -> Term Natural
 nockIntegralLiteral = (OpQuote #) . toNock @Natural . fromIntegral
 
+-- | xs must be a list.
+-- ys is a (possibly empty) tuple.
+-- the result is a tuple.
 appendToTuple :: Term Natural -> Term Natural -> Term Natural -> Term Natural -> Term Natural
 appendToTuple xs lenXs ys lenYs =
   OpIf # isZero lenYs # listToTuple xs lenXs # append xs lenXs ys
@@ -549,7 +555,7 @@ extendClosure Tree.NodeExtendClosure {..} = do
   let argsNum = getClosureField ClosureArgsNum closure
       oldArgs = getClosureField ClosureArgs closure
       fcode = getClosureField RawCode closure
-      allArgs = append oldArgs argsNum (remakeList (toList args))
+      allArgs = append oldArgs argsNum (remakeList args)
       newArgsNum = add argsNum (nockIntegralLiteral (length _nodeExtendClosureArgs))
   return . makeClosure $ \case
     WrapperCode -> anomaCallableClosureWrapper
@@ -652,8 +658,8 @@ fieldErr = unsupported "the field type"
 sub :: Term Natural -> Term Natural -> Term Natural
 sub a b = callStdlib StdlibSub [a, b]
 
-makeList :: [Term Natural] -> Term Natural
-makeList ts = foldTerms (ts `prependList` pure (TermAtom nockNil))
+makeList :: (Foldable f) => f (Term Natural) -> Term Natural
+makeList ts = foldTerms (toList ts `prependList` pure (TermAtom nockNil))
 
 remakeList :: (Foldable l) => l (Term Natural) -> Term Natural
 remakeList ts = foldTerms (toList ts `prependList` pure (OpQuote # nockNil'))
@@ -684,7 +690,7 @@ runCompilerWith callingConvention opts constrs libFuns mainFun = unsafePerformIO
             )
 
     exportEnv :: Term Natural
-    exportEnv = makeList (toList compiledFuns)
+    exportEnv = makeList compiledFuns
 
     makeLibraryFunction :: Term Natural -> Term Natural
     makeLibraryFunction c = makeClosure $ \case
