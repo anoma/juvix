@@ -10,6 +10,7 @@ data MarkdownOptions = MarkdownOptions
     _markdownNoPath :: Bool,
     _markdownExt :: Text,
     _markdownStripPrefix :: Text,
+    _markdownFolderStructure :: Bool,
     _markdownStdout :: Bool,
     _markdownWriteAssets :: Bool
   }
@@ -51,14 +52,19 @@ parseJuvixMarkdown = do
           <> long
             "suffix-path"
           <> showDefault
-          <> help "Suffix to append to the input file path for generating the HTML hyperlinks"
+          <> help "File extension for the generated HTML files. Also used for the suffix of the path to the input file in the HTML id hyperlinks"
+      )
+  _markdownFolderStructure <-
+    switch
+      ( long "folder-structure"
+          <> help "Generate HTML following the module's folder structure"
       )
   _markdownStripPrefix <-
     strOption
       ( value ""
           <> long "strip-prefix"
           <> showDefault
-          <> help "Strip the given prefix from the input file path for HTML hyperlinks"
+          <> help "Strip the given prefix from the hyperlinks. This has no effect if --no-path is enabled. It has precedence over --prefix-url" 
       )
   _markdownWriteAssets <-
     switch

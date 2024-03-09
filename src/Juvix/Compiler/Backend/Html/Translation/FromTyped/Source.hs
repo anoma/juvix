@@ -103,7 +103,8 @@ genSourceHtml o@GenSourceHtmlArgs {..} = do
           _htmlOptionsNoFooter = o ^. genSourceHtmlArgsNoFooter,
           _htmlOptionsNoPath = o ^. genSourceHtmlArgsNoPath,
           _htmlOptionsExt = o ^. genSourceHtmlArgsExt,
-          _htmlOptionsStripPrefix = o ^. genSourceHtmlArgsStripPrefix
+          _htmlOptionsStripPrefix = o ^. genSourceHtmlArgsStripPrefix,
+          _htmlOptionsFolderStructure = False
         }
 
     entry = o ^. genSourceHtmlArgsModule
@@ -361,10 +362,15 @@ moduleDocRelativePath m = do
   suff <- kindSuffix <$> asks (^. htmlOptionsKind)
   ext <- Text.unpack <$> asks (^. htmlOptionsExt)
   fixPrefix <- Text.unpack <$> asks (^. htmlOptionsStripPrefix)
-  let relpath :: Path Rel File = topModulePathToRelativePath ext suff (</>) m
+  folderStructure <- asks (^. htmlOptionsFolderStructure)
+  let pathgen :: TopModulePath -> Path Rel File
+      pathgen 
+        | folderStructure = topModulePathToRelativePath ext suff (</>)
+        | otherwise = topModulePathToRelativePathDot ext suff
   if
-    | null fixPrefix -> return (topModulePathToRelativePathDot ext suff m)
-    | otherwise ->
+    | null fixPrefix -> return (pathgen m)
+    | otherwise -> do
+        let relpath :: Path Rel File = pathgen m
         return
           $ maybe
             relpath

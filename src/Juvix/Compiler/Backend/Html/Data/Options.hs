@@ -15,7 +15,8 @@ data HtmlOptions = HtmlOptions
     _htmlOptionsOutputDir :: Path Abs Dir,
     _htmlOptionsParamBase :: Text,
     _htmlOptionsTheme :: Theme,
-    _htmlOptionsNoFooter :: Bool
+    _htmlOptionsNoFooter :: Bool,
+    _htmlOptionsFolderStructure :: Bool
   }
 
 defaultHtmlOptions :: HtmlOptions
@@ -32,7 +33,8 @@ defaultHtmlOptions =
       _htmlOptionsOutputDir = $(mkAbsDir "/tmp"),
       _htmlOptionsParamBase = "",
       _htmlOptionsTheme = Nord,
-      _htmlOptionsNoFooter = False
+      _htmlOptionsNoFooter = False,
+      _htmlOptionsFolderStructure = False
     }
 
 data Theme
