@@ -2,6 +2,7 @@ module Commands.Dev.Core.Compile.Base where
 
 import Commands.Base
 import Commands.Dev.Core.Compile.Options
+import Commands.Dev.Tree.Compile.Base (outputAnomaResult)
 import Commands.Extra.Compile qualified as Compile
 import Juvix.Compiler.Asm.Pretty qualified as Asm
 import Juvix.Compiler.Backend qualified as Backend
@@ -10,7 +11,6 @@ import Juvix.Compiler.Backend.Geb qualified as Geb
 import Juvix.Compiler.Backend.VampIR.Translation qualified as VampIR
 import Juvix.Compiler.Core.Data.Module qualified as Core
 import Juvix.Compiler.Core.Data.TransformationId qualified as Core
-import Juvix.Compiler.Nockma.Pretty qualified as Nockma
 import Juvix.Compiler.Reg.Pretty qualified as Reg
 import Juvix.Compiler.Tree.Pretty qualified as Tree
 import System.FilePath (takeBaseName)
@@ -152,6 +152,5 @@ runAnomaPipeline pa@PipelineArg {..} = do
       . runError @JuvixError
       . coreToAnoma
       $ _pipelineArgModule
-  tab' <- getRight r
-  let code = Nockma.ppSerialize tab'
-  writeFileEnsureLn nockmaFile code
+  res <- getRight r
+  outputAnomaResult nockmaFile res

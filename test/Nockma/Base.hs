@@ -5,7 +5,18 @@ import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Translation.FromTree
 
 -- | Call a function at the head of the subject using the Anoma calling convention
-anomaCall :: [Term Natural] -> Term Natural
-anomaCall args = case nonEmpty args of
-  Just args' -> OpCall # closurePath WrapperCode # OpReplace # (closurePath ArgsTuple # foldTerms args') # (OpAddress # emptyPath)
-  Nothing -> OpCall # closurePath WrapperCode # (OpAddress # emptyPath)
+anomaCall :: Term Natural -> [Term Natural] -> Term Natural
+anomaCall env args = case nonEmpty args of
+  Just args' -> helper (Just (OpReplace # (closurePath ArgsTuple # foldTerms args')))
+  Nothing -> helper Nothing
+  where
+    helper replaceArgs =
+      OpCall
+        # closurePath WrapperCode
+        # OpReplace
+        # (closurePath FunctionsLibrary # OpQuote # env)
+        # (repArgs (OpAddress # emptyPath))
+      where
+        repArgs x = case replaceArgs of
+          Nothing -> x
+          Just r -> r # x

@@ -7,6 +7,7 @@ import Juvix.Compiler.Asm.Pretty qualified as Asm
 import Juvix.Compiler.Backend qualified as Backend
 import Juvix.Compiler.Backend.C qualified as C
 import Juvix.Compiler.Nockma.Pretty qualified as Nockma
+import Juvix.Compiler.Nockma.Translation.FromTree qualified as Nockma
 import Juvix.Compiler.Reg.Pretty qualified as Reg
 import Juvix.Compiler.Tree.Data.InfoTable qualified as Tree
 
@@ -109,6 +110,14 @@ runAnomaPipeline pa@PipelineArg {..} = do
       . runError @JuvixError
       . treeToAnoma
       $ _pipelineArgTable
-  tab' <- getRight r
-  let code = Nockma.ppSerialize tab'
+  res <- getRight r
+  outputAnomaResult nockmaFile res
+
+outputAnomaResult :: (Members '[Embed IO, App] r) => Path Abs File -> Nockma.AnomaResult -> Sem r ()
+outputAnomaResult nockmaFile Nockma.AnomaResult {..} = do
+  let envFile = replaceExtension' ".env.nockma" nockmaFile
+      code = Nockma.ppSerialize _anomaClosure
+      prettyNockmaFile = replaceExtension' ".pretty.nockma" nockmaFile
   writeFileEnsureLn nockmaFile code
+  writeFileEnsureLn envFile (Nockma.ppSerialize _anomaEnv)
+  writeFileEnsureLn prettyNockmaFile (Nockma.ppPrint _anomaClosure)
