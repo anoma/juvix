@@ -74,7 +74,6 @@ runCommand HtmlOptions {..}
             _judocArgsNoPath = _htmlNoPath,
             _judocArgsExt = _htmlExt,
             _judocArgsStripPrefix = _htmlStripPrefix
-
           }
       when _htmlOpen $ case openCmd of
         Nothing -> say "Could not recognize the 'open' command for your OS"

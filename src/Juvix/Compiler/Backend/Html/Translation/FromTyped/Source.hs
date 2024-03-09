@@ -135,7 +135,7 @@ genSourceHtml o@GenSourceHtmlArgs {..} = do
                 }
         )
       where
-        ext  = Text.unpack (htmlOptions ^. htmlOptionsExt)
+        ext = Text.unpack (htmlOptions ^. htmlOptionsExt)
 
         outputFile :: Path Rel File
         outputFile = relFile (topModulePathToDottedPath (m ^. modulePath . S.nameConcrete) <.> ext)
@@ -364,18 +364,18 @@ moduleDocRelativePath m = do
   fixPrefix <- Text.unpack <$> asks (^. htmlOptionsStripPrefix)
   folderStructure <- asks (^. htmlOptionsFolderStructure)
   let pathgen :: TopModulePath -> Path Rel File
-      pathgen 
+      pathgen
         | folderStructure = topModulePathToRelativePath ext suff (</>)
         | otherwise = topModulePathToRelativePathDot ext suff
   if
-    | null fixPrefix -> return (pathgen m)
-    | otherwise -> do
-        let relpath :: Path Rel File = pathgen m
-        return
-          $ maybe
-            relpath
-            id
-            (stripProperPrefix (fromJust (parseRelDir fixPrefix)) relpath)
+      | null fixPrefix -> return (pathgen m)
+      | otherwise -> do
+          let relpath :: Path Rel File = pathgen m
+          return $
+            maybe
+              relpath
+              id
+              (stripProperPrefix (fromJust (parseRelDir fixPrefix)) relpath)
 
 nameIdAttrRef :: (Members '[Reader HtmlOptions] r) => TopModulePath -> Maybe S.NameId -> Sem r AttributeValue
 nameIdAttrRef tp s = do

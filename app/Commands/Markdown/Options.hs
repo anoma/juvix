@@ -64,7 +64,7 @@ parseJuvixMarkdown = do
       ( value ""
           <> long "strip-prefix"
           <> showDefault
-          <> help "Strip the given prefix from the hyperlinks. This has no effect if --no-path is enabled. It has precedence over --prefix-url" 
+          <> help "Strip the given prefix from the hyperlinks. This has no effect if --no-path is enabled. It has precedence over --prefix-url"
       )
   _markdownWriteAssets <-
     switch
