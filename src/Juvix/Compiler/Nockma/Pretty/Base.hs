@@ -70,9 +70,15 @@ instance (PrettyCode a, NockNatural a) => PrettyCode (StdlibCall a) where
     args <- ppCode (c ^. stdlibCallArgs)
     return (Str.stdlibTag <> fun <+> Str.argsTag <> args)
 
+instance PrettyCode Tag where
+  ppCode (Tag txt) = return (annotate AnnKeyword Str.tagTag <> pretty txt)
+
 instance (PrettyCode a, NockNatural a) => PrettyCode (Cell a) where
   ppCode c = do
     m <- asks (^. optPrettyMode)
+    label <- runFail $ do
+      failWhenM (asks (^. optIgnoreHints))
+      failMaybe (c ^. cellTag) >>= ppCode
     stdlibCall <- runFail $ do
       failWhenM (asks (^. optIgnoreHints))
       failMaybe (c ^. cellCall) >>= ppCode
@@ -82,7 +88,7 @@ instance (PrettyCode a, NockNatural a) => PrettyCode (Cell a) where
         r' <- ppCode (c ^. cellRight)
         return (l' <+> r')
       MinimizeDelimiters -> sep <$> mapM ppCode (unfoldCell c)
-    let inside = stdlibCall <?+> components
+    let inside = label <?+> stdlibCall <?+> components
     return (oneLineOrNextBrackets inside)
 
 unfoldCell :: Cell a -> NonEmpty (Term a)

@@ -86,6 +86,7 @@ parseCell c = case c ^. cellLeft of
       return
         OperatorCell
           { _operatorCellOp = op,
+            _operatorCellTag = c ^. cellTag,
             _operatorCellTerm = t
           }
 
@@ -218,6 +219,7 @@ eval inistack initerm =
               EvalCrumbOperator $
                 CrumbOperator
                   { _crumbOperatorOp = c ^. operatorCellOp,
+                    _crumbOperatorCellTag = c ^. operatorCellTag,
                     _crumbOperatorTag = crumbTag,
                     _crumbOperatorLoc = loc
                   }

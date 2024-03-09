@@ -148,6 +148,7 @@ iden = lexeme (takeWhile1P (Just "<iden>") isAlphaNum)
 cell :: Parser (Cell Natural)
 cell = do
   lloc <- onlyInterval lsbracket
+  lbl <- optional pTag
   c <- optional stdlibCall
   firstTerm <- term
   restTerms <- some term
@@ -156,10 +157,16 @@ cell = do
       info =
         CellInfo
           { _cellInfoCall = c,
+            _cellInfoTag = lbl,
             _cellInfoLoc = Irrelevant (Just (lloc <> rloc))
           }
   return (set cellInfo info r)
   where
+    pTag :: Parser Tag
+    pTag = do
+      void (chunk Str.tagTag)
+      Tag <$> iden
+
     stdlibCall :: Parser (StdlibCall Natural)
     stdlibCall = do
       chunk Str.stdlibTag

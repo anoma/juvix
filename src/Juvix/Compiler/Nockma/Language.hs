@@ -55,8 +55,14 @@ data StdlibCall a = StdlibCall
   }
   deriving stock (Show, Eq, Lift)
 
+newtype Tag = Tag
+  { _unTag :: Text
+  }
+  deriving stock (Show, Eq, Lift)
+
 data CellInfo a = CellInfo
   { _cellInfoLoc :: Irrelevant (Maybe Interval),
+    _cellInfoTag :: Maybe Tag,
     _cellInfoCall :: Maybe (StdlibCall a)
   }
   deriving stock (Show, Eq, Lift)
@@ -142,6 +148,7 @@ data StdlibCallCell a = StdlibCallCell
 
 data OperatorCell a = OperatorCell
   { _operatorCellOp :: NockOp,
+    _operatorCellTag :: Maybe Tag,
     _operatorCellTerm :: Term a
   }
 
@@ -164,6 +171,7 @@ encodedPathAppendRightN n (EncodedPath p) = EncodedPath (f p)
     f x = (2 ^ n) * (x + 1) - 1
 
 makeLenses ''Cell
+makeLenses ''Tag
 makeLenses ''StdlibCallCell
 makeLenses ''StdlibCall
 makeLenses ''Atom
@@ -185,6 +193,9 @@ termLoc f = \case
 
 cellLoc :: Lens' (Cell a) (Maybe Interval)
 cellLoc = cellInfo . cellInfoLoc . unIrrelevant
+
+cellTag :: Lens' (Cell a) (Maybe Tag)
+cellTag = cellInfo . cellInfoTag
 
 cellCall :: Lens' (Cell a) (Maybe (StdlibCall a))
 cellCall = cellInfo . cellInfoCall
@@ -319,6 +330,16 @@ instance IsNock Path where
 instance IsNock EncodedPath where
   toNock = toNock . decodePath'
 
+infixr 1 @.
+
+(@.) :: Text -> Cell Natural -> Cell Natural
+tag @. c = set cellTag (Just (Tag tag)) c
+
+infixr 1 @
+
+(@) :: Text -> Cell Natural -> Term Natural
+tag @ c = TermCell (set cellTag (Just (Tag tag)) c)
+
 infixr 5 #.
 
 (#.) :: (IsNock x, IsNock y) => x -> y -> Cell Natural
@@ -338,6 +359,15 @@ infixl 1 >>#
 
 (>>#) :: (IsNock x, IsNock y) => x -> y -> Term Natural
 a >># b = TermCell (a >>#. b)
+
+opCall :: Text -> Path -> Term Natural -> Term Natural
+opCall txt p t = txt @ OpCall #. p # t
+
+opAddress :: Text -> Path -> Term Natural
+opAddress txt p = txt @ OpAddress #. p
+
+opQuote :: IsNock x => Text -> x -> Term Natural
+opQuote txt p = txt @ OpQuote #. p
 
 {-# COMPLETE Cell #-}
 
@@ -362,6 +392,7 @@ emptyCellInfo :: CellInfo a
 emptyCellInfo =
   CellInfo
     { _cellInfoCall = Nothing,
+      _cellInfoTag = Nothing,
       _cellInfoLoc = Irrelevant Nothing
     }
 
