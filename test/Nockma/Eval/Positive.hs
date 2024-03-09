@@ -164,6 +164,10 @@ juvixCallingConventionTests =
            compilerTest "append rights - empty" (appendRights emptyPath (nockNatLiteral 3)) (eqNock (toNock [R, R, R])),
            compilerTest "append rights" (appendRights [L, L] (nockNatLiteral 3)) (eqNock (toNock [L, L, R, R, R])),
            compilerTest "opAddress" ((OpQuote # (foldTerms (toNock @Natural <$> (5 :| [6, 1])))) >># opAddress' (appendRights emptyPath (nockNatLiteral 2))) (eqNock (toNock @Natural 1)),
+           compilerTest "foldTermsOrNil (empty)" (foldTermsOrNil []) (eqNock nockNil'),
+           let l :: NonEmpty Natural = 1 :| [2]
+               l' :: NonEmpty (Term Natural) = nockNatLiteral <$> l
+            in compilerTest "foldTermsOrNil (non-empty)" (foldTermsOrNil (toList l')) (eqNock (foldTerms (toNock @Natural <$> l))),
            let l :: NonEmpty (Term Natural) = toNock <$> nonEmpty' [1 :: Natural .. 3]
             in compilerTest "list to tuple" (listToTuple (OpQuote # makeList (toList l)) (nockIntegralLiteral (length l))) $
                  eqNock (foldTerms l),

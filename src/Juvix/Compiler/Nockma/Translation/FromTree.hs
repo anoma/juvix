@@ -9,6 +9,7 @@ module Juvix.Compiler.Nockma.Translation.FromTree
     FunctionCtx (..),
     FunctionId (..),
     closurePath,
+    foldTermsOrNil,
     add,
     dec,
     mul,
@@ -198,7 +199,7 @@ makeConstructor :: (ConstructorPathId -> Term Natural) -> Term Natural
 makeConstructor = termFromParts
 
 foldTermsOrNil :: [Term Natural] -> Term Natural
-foldTermsOrNil = maybe nockNil' foldTerms . nonEmpty
+foldTermsOrNil = maybe (OpQuote # nockNil') foldTerms . nonEmpty
 
 foldTerms :: NonEmpty (Term Natural) -> Term Natural
 foldTerms = foldr1 (#)
