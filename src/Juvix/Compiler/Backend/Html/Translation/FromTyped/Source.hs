@@ -57,6 +57,7 @@ data GenSourceHtmlArgs = GenSourceHtmlArgs
     _genSourceHtmlArgsNoPath :: Bool,
     _genSourceHtmlArgsExt :: Text,
     _genSourceHtmlArgsStripPrefix :: Text,
+    _genSourceHtmlArgsFolderStructure :: Bool,
     _genSourceHtmlArgsComments :: Comments,
     _genSourceHtmlArgsTheme :: Theme
   }

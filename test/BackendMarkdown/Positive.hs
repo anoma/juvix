@@ -43,6 +43,8 @@ testDescr PosTest {..} =
                   _processJuvixBlocksArgsUrlPrefix = _UrlPrefix,
                   _processJuvixBlocksArgsIdPrefix = _IdPrefix,
                   _processJuvixBlocksArgsNoPath = _NoPath,
+                  _processJuvixBlocksArgsExt = ".html",
+                  _processJuvixBlocksArgsStripPrefix = "",
                   _processJuvixBlocksArgsComments =
                     Scoper.getScoperResultComments _pipelineResult,
                   _processJuvixBlocksArgsModule = m,
