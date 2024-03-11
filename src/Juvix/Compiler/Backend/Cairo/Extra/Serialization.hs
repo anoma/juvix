@@ -9,18 +9,37 @@ serialize :: [Element] -> Result
 serialize elems =
   Result
     { _resultData =
-        map toHexText (serialize' elems)
-          ++ [ "0x10780017fff7fff",
-               "0x0"
-             ],
+        initializeOutput
+          ++ map toHexText (serialize' elems)
+          ++ finalizeOutput
+          ++ finalizeJump,
       _resultStart = 0,
-      _resultEnd = length elems,
+      _resultEnd = length initializeOutput + length elems + length finalizeOutput,
       _resultMain = 0,
       _resultBuiltins = ["output"]
     }
   where
     toHexText :: Natural -> Text
     toHexText n = "0x" <> fromString (showHex n "")
+
+    initializeOutput :: [Text]
+    initializeOutput =
+      [ "0x40480017fff7fff",
+        "0x1"
+      ]
+
+    finalizeOutput :: [Text]
+    finalizeOutput =
+      [ "0x4002800080007fff",
+        "0x4826800180008000",
+        "0x1"
+      ]
+
+    finalizeJump :: [Text]
+    finalizeJump =
+      [ "0x10780017fff7fff",
+        "0x0"
+      ]
 
 serialize' :: [Element] -> [Natural]
 serialize' = map goElement

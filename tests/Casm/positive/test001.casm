@@ -1,7 +1,4 @@
 -- sum of numbers 1 to 1000
-   ap += 1
-   call start
-   jmp end
 start:
    [ap] = 1000
    [ap + 1] = 0
@@ -11,7 +8,3 @@ loop:
    [ap + 1] = [ap - 1] + [ap - 2]
    ap += 2
    jmp loop if [ap - 2] != 0
-   [ap - 1] = [[fp - 3]]
-   [ap] = [fp - 3] + 1; ap++
-   ret
-end:
