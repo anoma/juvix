@@ -7,7 +7,8 @@ data Result = Result
   { _resultData :: [Text],
     _resultStart :: Int,
     _resultEnd :: Int,
-    _resultMain :: Int
+    _resultMain :: Int,
+    _resultBuiltins :: [Text]
   }
 
 makeLenses ''Result
@@ -17,7 +18,7 @@ instance ToJSON Result where
     object
       [ "data" .= toJSON _resultData,
         "attributes" .= Array mempty,
-        "builtins" .= Array mempty,
+        "builtins" .= toJSON _resultBuiltins,
         "hints" .= object [],
         "identifiers"
           .= object

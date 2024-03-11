@@ -15,7 +15,8 @@ serialize elems =
              ],
       _resultStart = 0,
       _resultEnd = length elems,
-      _resultMain = 0
+      _resultMain = 0,
+      _resultBuiltins = ["output"]
     }
   where
     toHexText :: Natural -> Text

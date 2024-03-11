@@ -215,10 +215,11 @@ hRunCode hout (LabelInfo labelInfo) instrs0 = runST goCode
 
     goCall :: InstrCall -> Address -> Address -> Address -> Memory s -> ST s FField
     goCall InstrCall {..} pc ap fp mem = do
-      tgt <- readValue ap fp mem _instrCallTarget
+      tgt <- readValue' _instrCallRel pc ap fp mem _instrCallTarget
       mem' <- writeMem mem ap (fieldFromInteger fsize (fromIntegral fp))
       mem'' <- writeMem mem' (ap + 1) (fieldFromInteger fsize (fromIntegral pc + 1))
-      go (fromInteger (fieldToInteger tgt)) (ap + 2) (ap + 2) mem''
+      let off = if _instrCallRel then pc else 0
+      go (off + fromInteger (fieldToInteger tgt)) (ap + 2) (ap + 2) mem''
 
     goReturn :: Address -> Address -> Address -> Memory s -> ST s FField
     goReturn _ ap fp mem

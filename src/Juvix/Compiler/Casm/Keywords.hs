@@ -8,6 +8,7 @@ where
 import Juvix.Data.Keyword
 import Juvix.Data.Keyword.All
   ( delimSemicolon,
+    kwAbs,
     kwAp,
     kwApPlusPlus,
     kwCall,
@@ -41,6 +42,7 @@ allKeywordStrings = keywordsStrings allKeywords
 allKeywords :: [Keyword]
 allKeywords =
   [ delimSemicolon,
+    kwAbs,
     kwAp,
     kwApPlusPlus,
     kwCall,

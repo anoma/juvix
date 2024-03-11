@@ -116,7 +116,7 @@ call_closure:
   [ap] = [[fp - 3] + 5]; ap++
   [ap] = [[fp - 3] + 4]; ap++
   [ap] = [[fp - 3] + 3]; ap++
-  call [fp]
+  call abs [fp]
   ret
 
 -- [fp - 3]: closure; [fp - 4]: argument

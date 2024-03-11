@@ -25,7 +25,6 @@ fri_step_list = [0, 4]
 while n > 3:
     fri_step_list.append(3)
     n -= 3
-
 if n > 0:
     fri_step_list.append(n)
 

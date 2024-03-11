@@ -116,8 +116,9 @@ data InstrJumpIf = InstrJumpIf
     _instrJumpIfIncAp :: Bool
   }
 
-newtype InstrCall = InstrCall
-  { _instrCallTarget :: Value
+data InstrCall = InstrCall
+  { _instrCallTarget :: Value,
+    _instrCallRel :: Bool
   }
 
 newtype InstrAlloc = InstrAlloc

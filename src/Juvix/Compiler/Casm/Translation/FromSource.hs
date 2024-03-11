@@ -169,6 +169,9 @@ parseLabel = do
 parseIncAp :: ParsecS r Bool
 parseIncAp = (kw delimSemicolon >> kw kwApPlusPlus >> return True) <|> return False
 
+parseRel :: ParsecS r Bool
+parseRel = (kw kwRel >> return True) <|> (kw kwAbs >> return False) <|> return True
+
 parseJump :: forall r. (Member LabelInfoBuilder r) => ParsecS r Instruction
 parseJump = do
   kw kwJmp
@@ -192,7 +195,7 @@ parseJump = do
 
     jmp :: ParsecS r Instruction
     jmp = do
-      isRel <- isJust <$> optional (kw kwRel)
+      isRel <- parseRel
       tgt <- parseRValue
       incAp <- parseIncAp
       return $
@@ -206,8 +209,9 @@ parseJump = do
 parseCall :: (Member LabelInfoBuilder r) => ParsecS r Instruction
 parseCall = do
   kw kwCall
+  isRel <- parseRel
   v <- parseValue
-  return $ Call $ InstrCall {_instrCallTarget = v}
+  return $ Call $ InstrCall {_instrCallTarget = v, _instrCallRel = isRel}
 
 parseReturn :: ParsecS r Instruction
 parseReturn = do
