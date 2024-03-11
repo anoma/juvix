@@ -64,7 +64,6 @@ main:
   ap += 3
   [ap] = 5; ap++
   call f
-  ret
   [ap] = 6; ap++
   [ap] = [ap - 2]; ap++
   call call_closure
