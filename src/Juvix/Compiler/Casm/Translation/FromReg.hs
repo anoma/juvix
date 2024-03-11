@@ -19,21 +19,29 @@ fromReg :: Reg.InfoTable -> Result
 fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolId tab) $ do
   let initialOffset :: Int = 2
   (blts, binstrs) <- addStdlibBuiltins initialOffset
+  let cinstrs = concatMap (mkFunCall . fst) $ sortOn snd $ HashMap.toList (info ^. Reg.extraInfoFUIDs)
   endSym <- freshSymbol
   let endName :: Text = "__juvix_end"
       endLab = LabelRef endSym (Just endName)
-  (addr, instrs) <- second (concat . reverse) <$> foldM (goFun blts endLab) (initialOffset + length binstrs, []) (tab ^. Reg.infoFunctions)
-  eassert (addr == length instrs + length binstrs + initialOffset)
+  (addr, instrs) <- second (concat . reverse) <$> foldM (goFun blts endLab) (initialOffset + length binstrs + length cinstrs, []) (tab ^. Reg.infoFunctions)
+  eassert (addr == length instrs + length cinstrs + length binstrs + initialOffset)
   registerLabelName endSym endName
   registerLabelAddress endSym addr
   let mainSym = fromJust $ tab ^. Reg.infoMainFunction
       mainName = fromJust (HashMap.lookup mainSym (tab ^. Reg.infoFunctions)) ^. Reg.functionName
       callInstr = mkCallRel (Lab $ LabelRef mainSym (Just mainName))
       jmpInstr = mkJumpRel (Val $ Lab endLab)
-  return $ callInstr : jmpInstr : binstrs ++ instrs ++ [Label endLab]
+  return $ callInstr : jmpInstr : binstrs ++ cinstrs ++ instrs ++ [Label endLab]
   where
     info :: Reg.ExtraInfo
     info = Reg.computeExtraInfo (getLimits TargetCairo False) tab
+
+    mkFunCall :: Symbol -> [Instruction]
+    mkFunCall sym =
+      [ mkCallRel $ Lab $ LabelRef sym (Just $ Reg.lookupFunInfo tab sym ^. Reg.functionName),
+        Return,
+        Nop
+      ]
 
     getTagId :: Tag -> Int
     getTagId tag =
@@ -231,14 +239,14 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
         goAllocClosure _ Reg.InstrAllocClosure {..} =
           return $
             mkAllocCall res
-              ++ [ mkAssignAp (Val $ Lab $ LabelRef _instrAllocClosureSymbol (Just funName)),
+              ++ [ mkAssignAp (Val $ Imm $ fromIntegral $ 1 + 3 * fuid),
                    mkAssignAp (Val $ Imm $ fromIntegral $ casmMaxFunctionArgs + 1 - storedArgsNum),
                    mkAssignAp (Val $ Imm $ fromIntegral $ casmMaxFunctionArgs + 1 - leftArgsNum)
                  ]
               ++ map goAssignApValue _instrAllocClosureArgs
           where
             res = goVarRef _instrAllocClosureResult
-            funName = Reg.lookupFunInfo tab _instrAllocClosureSymbol ^. Reg.functionName
+            fuid = fromJust $ HashMap.lookup _instrAllocClosureSymbol (info ^. Reg.extraInfoFUIDs)
             storedArgsNum = length _instrAllocClosureArgs
             leftArgsNum = _instrAllocClosureExpectedArgsNum - storedArgsNum
 

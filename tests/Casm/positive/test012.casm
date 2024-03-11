@@ -16,7 +16,8 @@ g_label_1:
 
 f:
   call get_regs
-  [ap] = f; ap++
+  -- calloc f
+  [ap] = 1; ap++
   [ap] = 9; ap++
   [ap] = 8; ap++
   [ap] = [fp - 3]; ap++
@@ -61,7 +62,8 @@ call_closure:
   [ap] = [[fp - 3] + 5]; ap++
   [ap] = [[fp - 3] + 4]; ap++
   [ap] = [[fp - 3] + 3]; ap++
-  call abs [fp]
+  jmp rel [fp]
+  call f
   ret
 
 end:

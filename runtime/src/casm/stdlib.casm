@@ -1,6 +1,8 @@
 -- Juvix runtime for Cairo assembly
 
--- Closure layout: [ addr | 9 - sargs | 9 - argsnum | arguments... ]
+-- Closure layout: [ funid | 9 - sargs | 9 - argsnum | arguments... ]
+--  funid -- function id which also indicates the relative jump
+--           offset for closure call (see juvix_call_closure below)
 --  sargs -- number of arguments stored in the closure
 --  argsnum -- number of arguments left
 -- sargs + argsnum = total numer of arguments for the function
@@ -14,34 +16,6 @@ juvix_get_regs:
   call juvix_get_ap_reg
   ret
 juvix_get_ap_reg:
-  ret
-
--- [fp - 3]: closure; [fp - 3 - k]: argument k to closure call
-juvix_call_closure:
-  ap += 1
-  -- closure addr
-  [fp] = [[fp - 3]]
-  -- jmp rel (9 - argsnum)
-  jmp rel [[fp - 3] + 2]
-  [ap] = [fp - 11]; ap++
-  [ap] = [fp - 10]; ap++
-  [ap] = [fp - 9]; ap++
-  [ap] = [fp - 8]; ap++
-  [ap] = [fp - 7]; ap++
-  [ap] = [fp - 6]; ap++
-  [ap] = [fp - 5]; ap++
-  [ap] = [fp - 4]; ap++
-  -- jmp rel (9 - sargs)
-  jmp rel [[fp - 3] + 1]
-  [ap] = [[fp - 3] + 10]; ap++
-  [ap] = [[fp - 3] + 9]; ap++
-  [ap] = [[fp - 3] + 8]; ap++
-  [ap] = [[fp - 3] + 7]; ap++
-  [ap] = [[fp - 3] + 6]; ap++
-  [ap] = [[fp - 3] + 5]; ap++
-  [ap] = [[fp - 3] + 4]; ap++
-  [ap] = [[fp - 3] + 3]; ap++
-  call abs [fp]
   ret
 
 -- [fp - 3]: closure
@@ -58,11 +32,11 @@ juvix_extend_closure:
   [fp + 4] = [fp + 3] - [fp + 1]
   -- [fp + 5] = 9 - n
   [fp + 5] = [fp + 3] - [fp - 4]
-  -- copy stored args reversing them,
-  -- because to copy the stored args to the
-  -- new closure we need to jump forward, so
-  -- the stored args need to be available at
-  -- consecutive memory addresses backwards
+  -- copy stored args reversing them;
+  -- to copy the stored args to the new closure
+  -- we need to jump forward, so the stored args
+  -- need to be available at consecutive memory
+  -- addresses backwards
   jmp rel [fp + 1]
   [ap] = [[fp - 3] + 10]; ap++
   [ap] = [[fp - 3] + 9]; ap++
@@ -101,3 +75,33 @@ juvix_extend_closure:
   -- return value
   [ap] = [fp]; ap++
   ret
+
+-- [fp - 3]: closure; [fp - 3 - k]: argument k to closure call
+juvix_call_closure:
+  ap += 1
+  -- function id
+  [fp] = [[fp - 3]]
+  -- jmp rel (9 - argsnum)
+  jmp rel [[fp - 3] + 2]
+  [ap] = [fp - 11]; ap++
+  [ap] = [fp - 10]; ap++
+  [ap] = [fp - 9]; ap++
+  [ap] = [fp - 8]; ap++
+  [ap] = [fp - 7]; ap++
+  [ap] = [fp - 6]; ap++
+  [ap] = [fp - 5]; ap++
+  [ap] = [fp - 4]; ap++
+  -- jmp rel (9 - sargs)
+  jmp rel [[fp - 3] + 1]
+  [ap] = [[fp - 3] + 10]; ap++
+  [ap] = [[fp - 3] + 9]; ap++
+  [ap] = [[fp - 3] + 8]; ap++
+  [ap] = [[fp - 3] + 7]; ap++
+  [ap] = [[fp - 3] + 6]; ap++
+  [ap] = [[fp - 3] + 5]; ap++
+  [ap] = [[fp - 3] + 4]; ap++
+  [ap] = [[fp - 3] + 3]; ap++
+  jmp rel [fp]
+-- The above jump needs to be the last instruction in this file.
+-- Calls to all possible functions will be appended here by the
+-- JuvixReg to CASM translation.

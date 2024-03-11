@@ -92,7 +92,8 @@ main:
   call hd
   [fp + 5] = [fp + 4] + [ap - 1]
   call get_regs
-  [ap] = add_one; ap++
+  -- calloc add_one
+  [ap] = 1; ap++
   [ap] = 9; ap++
   [ap] = 8; ap++
   [ap] = [fp + 2]; ap++
@@ -133,7 +134,8 @@ call_closure:
   [ap] = [[fp - 3] + 5]; ap++
   [ap] = [[fp - 3] + 4]; ap++
   [ap] = [[fp - 3] + 3]; ap++
-  call abs [fp]
+  jmp rel [fp]
+  call add_one
   ret
 
 end:

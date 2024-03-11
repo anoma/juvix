@@ -14,7 +14,8 @@ main:
   ap += 1
   call get_regs
   [fp] = [ap - 2] + 2
-  [ap] = calculate; ap++
+  -- FUID(calculate) = 1
+  [ap] = 1; ap++
   -- 9 - stored args num
   [ap] = 7; ap++
   -- 9 - argsnum (remaining expected)
@@ -58,7 +59,8 @@ call_closure:
   [ap] = [[fp - 3] + 5]; ap++
   [ap] = [[fp - 3] + 4]; ap++
   [ap] = [[fp - 3] + 3]; ap++
-  call abs [fp]
+  jmp rel [fp]
+  call calculate
   ret
 
 end:

@@ -20,7 +20,8 @@ f:
   jmp f_label_1 if [ap - 1] != 0
   call get_regs
   [fp] = [ap - 2] + 2
-  [ap] = const; ap++
+  -- calloc const
+  [ap] = 1; ap++
   [ap] = 8; ap++
   [ap] = 8; ap++
   [ap] = 0; ap++
@@ -31,7 +32,8 @@ f_label_1:
   jmp f_label_2 if [ap - 1] != 0
   call get_regs
   [fp] = [ap - 2] + 2
-  [ap] = const; ap++
+  -- calloc const
+  [ap] = 1; ap++
   [ap] = 8; ap++
   [ap] = 8; ap++
   [ap] = 1; ap++
@@ -42,7 +44,8 @@ f_label_2:
   jmp f_label_3 if [ap - 1] != 0
   call get_regs
   [fp] = [ap - 2] + 2
-  [ap] = g; ap++
+  -- calloc g
+  [ap] = 4; ap++
   [ap] = 9; ap++
   [ap] = 8; ap++
   [ap] = [fp]; ap++
@@ -50,7 +53,8 @@ f_label_2:
 f_label_3:
   call get_regs
   [fp] = [ap - 2] + 2
-  [ap] = id; ap++
+  -- calloc id
+  [ap] = 7; ap++
   [ap] = 9; ap++
   [ap] = 8; ap++
   [ap] = [fp]; ap++
@@ -60,6 +64,7 @@ main:
   ap += 3
   [ap] = 5; ap++
   call f
+  ret
   [ap] = 6; ap++
   [ap] = [ap - 2]; ap++
   call call_closure
@@ -93,7 +98,7 @@ get_ap_reg:
 -- [fp - 3]: closure; [fp - 3 - k]: argument k to closure call
 call_closure:
   ap += 1
-  -- closure addr
+  -- fuid
   [fp] = [[fp - 3]]
   -- jmp rel (9 - argsnum)
   jmp rel [[fp - 3] + 2]
@@ -115,7 +120,14 @@ call_closure:
   [ap] = [[fp - 3] + 5]; ap++
   [ap] = [[fp - 3] + 4]; ap++
   [ap] = [[fp - 3] + 3]; ap++
-  call abs [fp]
+  jmp rel [fp]
+  call const
+  ret
+  nop
+  call g
+  ret
+  nop
+  call id
   ret
 
 end:

@@ -193,15 +193,17 @@ fromCasm instrs0 =
         goCall :: Casm.InstrCall -> [Element]
         goCall Casm.InstrCall {..} =
           toElems $
-            updateOp1 True _instrCallTarget $
+            updateOp1 _instrCallRel _instrCallTarget $
               defaultInstruction
                 { _instrOffDst = 0,
                   _instrDstReg = Ap,
                   _instrOffOp0 = 1,
                   _instrOp0Reg = Ap,
-                  _instrPcUpdate = PcUpdateJumpRel,
+                  _instrPcUpdate = pcUpdate,
                   _instrOpcode = Call
                 }
+          where
+            pcUpdate = if _instrCallRel then PcUpdateJumpRel else PcUpdateJump
 
         goReturn :: [Element]
         goReturn =

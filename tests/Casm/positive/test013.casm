@@ -23,7 +23,8 @@ inc:
 
 h:
   call get_regs
-  [ap] = inc; ap++
+  -- calloc inc
+  [ap] = 1; ap++
   [ap] = 9; ap++
   [ap] = 8; ap++
   [ap] = [ap - 5] + 2; ap++
@@ -39,7 +40,8 @@ capp:
 
 curry:
   call get_regs
-  [ap] = capp; ap++
+  -- calloc capp
+  [ap] = 4; ap++
   [ap] = 8; ap++
   [ap] = 8; ap++
   [ap] = [fp - 3]; ap++
@@ -57,7 +59,8 @@ uapp:
 
 uncurry:
   call get_regs
-  [ap] = uapp; ap++
+  -- calloc uapp
+  [ap] = 7; ap++
   [ap] = 8; ap++
   [ap] = 7; ap++
   [ap] = [fp - 3]; ap++
@@ -69,11 +72,13 @@ main:
 
   call get_regs
   [fp] = [ap - 2] + 2
-  [ap] = inc; ap++
+  -- calloc inc
+  [ap] = 1; ap++
   [ap] = 9; ap++
   [ap] = 8; ap++
   call get_regs
-  [ap] = app; ap++
+  -- calloc app
+  [ap] = 10; ap++
   [ap] = 9; ap++
   [ap] = 7; ap++
   [ap] = 5; ap++
@@ -83,7 +88,8 @@ main:
   [fp + 2] = [ap - 1]
 
   call get_regs
-  [ap] = app; ap++
+  -- calloc app
+  [ap] = 10; ap++
   [ap] = 9; ap++
   [ap] = 7; ap++
   [ap] = [ap - 5] + 2; ap++
@@ -95,7 +101,8 @@ main:
 
   -- uncurry (curry app) inc 7
   call get_regs
-  [ap] = app; ap++
+  -- calloc app
+  [ap] = 10; ap++
   [ap] = 9; ap++
   [ap] = 7; ap++
   [ap] = [ap - 5] + 2; ap++
@@ -103,7 +110,8 @@ main:
   call uncurry
   [fp + 1] = [ap - 1]
   call get_regs
-  [ap] = inc; ap++
+  -- calloc inc
+  [ap] = 1; ap++
   [ap] = 9; ap++
   [ap] = 8; ap++
   [ap] = 7; ap++
@@ -144,16 +152,34 @@ call_closure:
   [ap] = [[fp - 3] + 5]; ap++
   [ap] = [[fp - 3] + 4]; ap++
   [ap] = [[fp - 3] + 3]; ap++
-  call abs [fp]
+  jmp rel [fp]
+  call inc
   ret
+  nop
+  call capp
+  ret
+  nop
+  call uapp
+  ret
+  nop
+  call app
+  ret
+  nop
 
 -- [fp - 3]: closure; [fp - 4]: argument
 extend_closure_1:
   ap += 5
+  -- alloc new closure
+  call get_regs
+  [fp] = [ap - 2] + 2
+  [ap] = [[fp - 3]]; ap++
   -- 9 - sargs
   [fp + 1] = [[fp - 3] + 1]
+  [ap] = [fp + 1] - 1; ap++
   -- 9 - argsnum (expected)
   [fp + 2] = [[fp - 3] + 2]
+  [ap] = [fp + 2] + 1; ap++
+  -- end alloc new closure
   [fp + 3] = 9
   -- [fp + 4] = sargs
   [fp + 4] = [fp + 3] - [fp + 1]
@@ -167,11 +193,6 @@ extend_closure_1:
   [ap] = [[fp - 3] + 5]; ap++
   [ap] = [[fp - 3] + 4]; ap++
   [ap] = [[fp - 3] + 3]; ap++
-  call get_regs
-  [fp] = [ap - 2] + 2
-  [ap] = [[fp - 3]]; ap++
-  [ap] = [fp + 1] - 1; ap++
-  [ap] = [fp + 2] + 1; ap++
   -- jmp rel (9 - sargs)
   jmp rel [fp + 1]
   [ap] = [fp + 11]; ap++
