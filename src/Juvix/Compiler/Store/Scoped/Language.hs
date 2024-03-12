@@ -50,10 +50,10 @@ exportAllNames =
     . preSymbolName
     <> exportModuleSymbols
       . each
-      . moduleEntry
+      . entryName
     <> exportFixitySymbols
       . each
-      . fixityEntry
+      . entryName
 
 createExportsTable :: ExportInfo -> HashSet NameId
 createExportsTable = HashSet.fromList . (^.. exportAllNames . S.nameId)

@@ -13,7 +13,8 @@ import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty.Options (Options, fromGenericOptions)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Pretty
-import Juvix.Compiler.Store.Scoped.Language (FixitySymbolEntry, ModuleSymbolEntry, PreSymbolEntry, ScopedModule)
+import Juvix.Compiler.Store.Scoped.Data.SymbolEntry
+import Juvix.Compiler.Store.Scoped.Language
 import Juvix.Data.CodeAnn
 import Juvix.Prelude
 
@@ -411,9 +412,8 @@ instance ToGenericError UnusedIteratorDef where
 
 data AmbiguousSym = AmbiguousSym
   { _ambiguousSymName :: Name,
-    _ambiguousSymEntires :: [PreSymbolEntry]
+    _ambiguousSymEntires :: [SomeEntry]
   }
-  deriving stock (Show)
 
 instance ToGenericError AmbiguousSym where
   genericError AmbiguousSym {..} = ask >>= generr
