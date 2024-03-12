@@ -1,17 +1,17 @@
 -- Juvix runtime for Cairo assembly
 
--- Closure layout: [ funid | 9 - sargs | 9 - argsnum | arguments... ]
---  funid -- function id which also indicates the relative jump
---           offset for closure call (see juvix_call_closure below)
+-- Closure layout: [ fuid | 9 - sargs | 9 - argsnum | arguments... ]
+--  fuid -- function id which also indicates the relative jump
+--          offset for closure call (see juvix_call_closure below)
 --  sargs -- number of arguments stored in the closure
 --  argsnum -- number of arguments left
 -- sargs + argsnum = total numer of arguments for the function
 -- Maximum number of function arguments: 8
 
 -- after calling juvix_get_regs:
--- [ap - 4] == fp
--- [ap - 3] == pc
--- [ap - 2] == ap - 2
+-- [ap - 4] = fp
+-- [ap - 3] = pc
+-- [ap - 2] = ap - 2
 juvix_get_regs:
   call juvix_get_ap_reg
   ret
@@ -95,9 +95,6 @@ juvix_extend_closure:
 
 -- [fp - 3]: closure; [fp - 3 - k]: argument k to closure call
 juvix_call_closure:
-  ap += 1
-  -- function id
-  [fp] = [[fp - 3]]
   -- jmp rel (9 - argsnum)
   jmp rel [[fp - 3] + 2]
   [ap] = [fp - 11]; ap++
@@ -118,7 +115,7 @@ juvix_call_closure:
   [ap] = [[fp - 3] + 5]; ap++
   [ap] = [[fp - 3] + 4]; ap++
   [ap] = [[fp - 3] + 3]; ap++
-  jmp rel [fp]
+  jmp rel [[fp - 3]]
 -- The above jump needs to be the last instruction in this file.
--- Calls to all possible functions will be appended here by the
+-- Calls to all possible functions are appended here by the
 -- JuvixReg to CASM translation.

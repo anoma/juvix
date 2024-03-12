@@ -156,9 +156,6 @@ extend_closure_1:
 
 -- [fp - 3]: closure; [fp - 3 - k]: argument k to closure call
 call_closure:
-  ap += 1
-  -- fuid
-  [fp] = [[fp - 3]]
   -- jmp rel (9 - argsnum)
   jmp rel [[fp - 3] + 2]
   [ap] = [fp - 11]; ap++
@@ -179,7 +176,7 @@ call_closure:
   [ap] = [[fp - 3] + 5]; ap++
   [ap] = [[fp - 3] + 4]; ap++
   [ap] = [[fp - 3] + 3]; ap++
-  jmp rel [fp]
+  jmp rel [[fp - 3]]
   call plus
   ret
   nop
