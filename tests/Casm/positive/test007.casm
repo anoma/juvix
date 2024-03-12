@@ -101,7 +101,6 @@ get_ap_reg:
 
 -- [fp - 3]: closure; [fp - 4]: argument
 extend_closure_1:
-  ap += 5
   -- copy stored args reversing them
   jmp rel [[fp - 3] + 1]
   [ap] = [[fp - 3] + 10]; ap++
@@ -112,33 +111,47 @@ extend_closure_1:
   [ap] = [[fp - 3] + 5]; ap++
   [ap] = [[fp - 3] + 4]; ap++
   [ap] = [[fp - 3] + 3]; ap++
+  [ap] = 10; ap++
+  [ap] = [[fp - 3] + 1]; ap++
+  [ap] = [ap - 2] - [ap - 1]; ap++
+  jmp rel [ap - 1]
+  [ap] = [ap - 1]; ap++
+  [ap] = [ap - 1]; ap++
+  [ap] = [ap - 1]; ap++
+  [ap] = [ap - 1]; ap++
+  [ap] = [ap - 1]; ap++
+  [ap] = [ap - 1]; ap++
+  [ap] = [ap - 1]; ap++
+  [ap] = [ap - 1]; ap++
+  -- now ap = fp + 11
+  ap += 5
   -- alloc closure header
   call get_regs
-  [fp] = [ap - 2] + 2
+  [fp + 11] = [ap - 2] + 2
   [ap] = [[fp - 3]]; ap++
   -- 9 - sargs
-  [fp + 1] = [[fp - 3] + 1]
-  [ap] = [fp + 1] - 1; ap++
+  [fp + 12] = [[fp - 3] + 1]
+  [ap] = [fp + 12] - 1; ap++
   -- 9 - argsnum (expected)
-  [fp + 2] = [[fp - 3] + 2]
-  [ap] = [fp + 2] + 1; ap++
+  [fp + 13] = [[fp - 3] + 2]
+  [ap] = [fp + 13] + 1; ap++
   -- end alloc closure header
-  [fp + 3] = 9
-  -- [fp + 4] = sargs
-  [fp + 4] = [fp + 3] - [fp + 1]
+  [fp + 14] = 9
+  -- [fp + 15] = sargs
+  [fp + 15] = [fp + 14] - [fp + 12]
   -- jmp rel (9 - sargs)
-  jmp rel [fp + 1]
-  [ap] = [fp + 11]; ap++
-  [ap] = [fp + 10]; ap++
-  [ap] = [fp + 9]; ap++
-  [ap] = [fp + 8]; ap++
-  [ap] = [fp + 8]; ap++
+  jmp rel [fp + 12]
   [ap] = [fp + 7]; ap++
   [ap] = [fp + 6]; ap++
   [ap] = [fp + 5]; ap++
+  [ap] = [fp + 4]; ap++
+  [ap] = [fp + 3]; ap++
+  [ap] = [fp + 2]; ap++
+  [ap] = [fp + 1]; ap++
+  [ap] = [fp]; ap++
   -- extra args
   [ap] = [fp - 4]; ap++
-  [ap] = [fp]; ap++
+  [ap] = [fp + 11]; ap++
   ret
 
 -- [fp - 3]: closure; [fp - 3 - k]: argument k to closure call
