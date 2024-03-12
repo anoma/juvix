@@ -82,10 +82,10 @@ parseReplInput ::
   Text ->
   Sem r Parser.ReplInput
 parseReplInput fp txt =
-  ignoreHighlightBuilder $
-    runNameIdGenArtifacts $
-      runStateLikeArtifacts runParserResultBuilder artifactParsing $
-        Parser.replInputFromTextSource fp txt
+  ignoreHighlightBuilder
+    . runNameIdGenArtifacts
+    . runStateLikeArtifacts runParserResultBuilder artifactParsing
+    $ Parser.replInputFromTextSource fp txt
 
 expressionUpToTyped ::
   (Members '[Reader EntryPoint, Error JuvixError, State Artifacts] r) =>
@@ -96,7 +96,7 @@ expressionUpToTyped fp txt = do
   p <- expressionUpToAtomsParsed fp txt
   runTerminationArtifacts
     ( upToInternalExpression p
-        >>= Internal.typeCheckExpressionType
+        >>= Internal.typeCheckExpressionTypeRepl
     )
 
 compileExpression ::
@@ -106,7 +106,7 @@ compileExpression ::
 compileExpression p =
   runTerminationArtifacts
     ( upToInternalExpression p
-        >>= Internal.typeCheckExpression
+        >>= Internal.typeCheckExpressionRepl
     )
     >>= fromInternalExpression
 

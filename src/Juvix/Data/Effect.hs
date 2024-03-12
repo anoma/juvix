@@ -14,5 +14,5 @@ import Juvix.Data.Effect.Fail
 import Juvix.Data.Effect.Files
 import Juvix.Data.Effect.Internet
 import Juvix.Data.Effect.Log
-import Juvix.Data.Effect.NameIdGen hiding (toState)
+import Juvix.Data.Effect.NameIdGen
 import Juvix.Data.Effect.Visit
