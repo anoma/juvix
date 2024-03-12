@@ -30,7 +30,7 @@ filterTests incl = filter (\PosTest {..} -> _name `elem` incl)
 allTests :: TestTree
 allTests =
   testGroup
-    "CASM from JuvixReg translation positive tests"
+    "JuvixReg to CASM translation positive tests"
     (map (mkTest . testDescr) tests)
 
 tests :: [PosTest]

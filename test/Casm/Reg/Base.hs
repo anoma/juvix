@@ -13,7 +13,7 @@ compileAssertion' hout _ tab = do
     Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
     Right Result {..} -> do
       let v = hRunCode hout _resultLabelInfo _resultCode
-      hPutStrLn hout (show v)
+      hPrint hout v
 
 regToCasmAssertion :: Path Abs File -> Path Abs File -> (String -> IO ()) -> Assertion
 regToCasmAssertion mainFile expectedFile step =
