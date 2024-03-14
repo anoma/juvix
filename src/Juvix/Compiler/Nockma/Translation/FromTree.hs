@@ -209,7 +209,7 @@ makeConstructor :: (ConstructorPathId -> Term Natural) -> Term Natural
 makeConstructor = termFromParts
 
 foldTermsOrNil :: [Term Natural] -> Term Natural
-foldTermsOrNil = maybe (OpQuote # nockNil') foldTerms . nonEmpty
+foldTermsOrNil = maybe (OpQuote # nockNilTagged "foldTermsOrNil") foldTerms . nonEmpty
 
 foldTerms :: NonEmpty (Term Natural) -> Term Natural
 foldTerms = foldr1 (#)
@@ -436,7 +436,7 @@ compile = \case
       arg2 <- compile _nodeBinopArg2
       case _nodeBinopOpcode of
         Tree.PrimBinop op -> goPrimBinop op [arg1, arg2]
-        Tree.OpSeq -> return (OpHint # (nockNil' # arg1) # arg2)
+        Tree.OpSeq -> return (OpHint # (nockNilTagged "OpSeq-OpHint-annotation" # arg1) # arg2)
       where
         goPrimBinop :: Tree.BinaryOp -> [Term Natural] -> Sem r (Term Natural)
         goPrimBinop op args = case op of
@@ -462,8 +462,8 @@ compile = \case
       args <- mapM compile _nodeAllocClosureArgs
       return . makeClosure $ \case
         WrapperCode -> OpQuote # anomaCallableClosureWrapper
-        ArgsTuple -> OpQuote # argsTuplePlaceholder
-        RawCode -> opAddress "allocClosureFunPath" fpath
+        ArgsTuple -> OpQuote # argsTuplePlaceholder "goAllocClosure"
+        RawCode -> opAddress "allocClosureFunPath" (fpath <> closurePath RawCode)
         TempStack -> remakeList []
         StandardLibrary -> OpQuote # stdlib
         FunctionsLibrary ->
@@ -496,20 +496,17 @@ compile = \case
               oldArgs = getClosureField ClosureArgs closure
               allArgs = appendToTuple oldArgs argsNum (foldTermsOrNil newargs) (nockIntegralLiteral (length newargs))
               newSubject = replaceSubject $ \case
-                -- WrapperCode -> Just (OpQuote # anomaCallableClosureWrapper)
-                -- WrapperCode -> Just (getClosureField RawCode closure) -- We Want RawCode because we already have all args.
-                -- WrapperCode -> Just (getClosureField RawCode closure) -- We Want RawCode because we already have all args.
                 WrapperCode -> Just (getClosureField RawCode closure) -- We Want RawCode because we already have all args.
-                RawCode -> Just (OpQuote # nockNil')
                 ArgsTuple -> Just allArgs
-                TempStack -> Just (OpQuote # nockNil')
+                RawCode -> Just (OpQuote # nockNilTagged "callClosure-RawCode")
+                TempStack -> Just (OpQuote # nockNilTagged "callClosure-TempStack")
                 FunctionsLibrary -> Nothing
                 StandardLibrary -> Nothing
                 -- TODO revise below
                 ClosureArgs -> Nothing
                 ClosureTotalArgsNum -> Nothing
                 ClosureArgsNum -> Nothing
-          return (opCall "callClosure" (closurePath WrapperCode) newSubject)
+          return $ (opCall "callClosure" (closurePath WrapperCode) newSubject)
 
 isZero :: Term Natural -> Term Natural
 isZero a = OpEq # a # nockNatLiteral 0
@@ -526,8 +523,8 @@ listToTuple lst len =
       t1 = lst >># (opAddress' posOfLast) >># (opAddress "listToTupleLast" [L])
    in OpIf # isZero len # lst # (replaceSubterm' lst posOfLast t1)
 
-argsTuplePlaceholder :: Term Natural
-argsTuplePlaceholder = nockNil'
+argsTuplePlaceholder :: Text -> Term Natural
+argsTuplePlaceholder txt = nockNilTagged ("argsTuplePlaceholder-" <> txt)
 
 appendRights :: Path -> Term Natural -> Term Natural
 appendRights path n = dec (mul (pow2 n) (OpInc # OpQuote # path))
@@ -683,10 +680,10 @@ sub :: Term Natural -> Term Natural -> Term Natural
 sub a b = callStdlib StdlibSub [a, b]
 
 makeList :: (Foldable f) => f (Term Natural) -> Term Natural
-makeList ts = foldTerms (toList ts `prependList` pure (TermAtom nockNil))
+makeList ts = foldTerms (toList ts `prependList` pure (nockNilTagged "makeList"))
 
 remakeList :: (Foldable l) => l (Term Natural) -> Term Natural
-remakeList ts = foldTerms (toList ts `prependList` pure (OpQuote # nockNil'))
+remakeList ts = foldTerms (toList ts `prependList` pure (OpQuote # nockNilTagged "remakeList"))
 
 runCompilerWithAnoma :: CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> AnomaResult
 runCompilerWithAnoma = runCompilerWith ProgramCallingConventionAnoma
@@ -717,16 +714,18 @@ runCompilerWith callingConvention opts constrs libFuns mainFun = unsafePerformIO
     exportEnv = makeList compiledFuns
 
     makeLibraryFunction :: Term Natural -> Term Natural
-    makeLibraryFunction c = makeClosure $ \case
-      WrapperCode -> c
-      ArgsTuple -> argsTuplePlaceholder
-      FunctionsLibrary -> nockNil'
-      RawCode -> c
-      TempStack -> nockNil'
-      StandardLibrary -> stdlib
-      ClosureTotalArgsNum -> nockNil'
-      ClosureArgsNum -> nockNil'
-      ClosureArgs -> nockNil'
+    makeLibraryFunction c = makeClosure $ \p ->
+      let nockNilHere = nockNilTagged ("makeLibraryFunction-" <> show p)
+       in case p of
+            WrapperCode -> c
+            ArgsTuple -> argsTuplePlaceholder "libraryFunction"
+            FunctionsLibrary -> nockNilHere
+            RawCode -> c
+            TempStack -> nockNilHere
+            StandardLibrary -> stdlib
+            ClosureTotalArgsNum -> nockNilHere
+            ClosureArgsNum -> nockNilHere
+            ClosureArgs -> nockNilHere
 
     functionInfos :: HashMap FunctionId FunctionInfo
     functionInfos = hashMap (run (runInputNaturals (toList <$> userFunctions)))
