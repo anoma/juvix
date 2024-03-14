@@ -24,21 +24,23 @@ runPrettyCode :: (PrettyCode c) => Options -> c -> Doc Ann
 runPrettyCode opts = run . runReader opts . ppCode
 
 instance (PrettyCode a, NockNatural a) => PrettyCode (Atom a) where
-  ppCode atm = runFailDefaultM (annotate (AnnKind KNameFunction) <$> ppCode (atm ^. atom))
-    . failFromError @(ErrNockNatural a)
-    $ do
-      whenM (asks (^. optIgnoreHints)) fail
-      h' <- failMaybe (atm ^. atomHint)
-      case h' of
-        AtomHintOp -> nockOp atm >>= ppCode
-        AtomHintPath -> nockPath atm >>= ppCode
-        AtomHintBool
-          | nockmaEq atm nockTrue -> return (annotate (AnnKind KNameInductive) "true")
-          | nockmaEq atm nockFalse -> return (annotate (AnnKind KNameAxiom) "false")
-          | otherwise -> fail
-        AtomHintNil -> return (annotate (AnnKind KNameConstructor) "nil")
-        AtomHintVoid -> return (annotate (AnnKind KNameAxiom) "void")
-        AtomHintFunctionsPlaceholder -> return (annotate (AnnKind KNameAxiom) "functions_placeholder")
+  ppCode atm = do
+    let def = annotate (AnnKind KNameFunction) <$> ppCode (atm ^. atom)
+    t <- mapM ppCode (atm ^. atomTag)
+    fmap (t <?+>) . runFailDefaultM def . failFromError @(ErrNockNatural a)
+      $ do
+        whenM (asks (^. optIgnoreHints)) fail
+        h' <- failMaybe (atm ^. atomHint)
+        case h' of
+          AtomHintOp -> nockOp atm >>= ppCode
+          AtomHintPath -> nockPath atm >>= ppCode
+          AtomHintBool
+            | nockmaEq atm nockTrue -> return (annotate (AnnKind KNameInductive) "true")
+            | nockmaEq atm nockFalse -> return (annotate (AnnKind KNameAxiom) "false")
+            | otherwise -> fail
+          AtomHintNil -> return (annotate (AnnKind KNameConstructor) "nil")
+          AtomHintVoid -> return (annotate (AnnKind KNameAxiom) "void")
+          AtomHintFunctionsPlaceholder -> return (annotate (AnnKind KNameAxiom) "functions_placeholder")
 
 instance PrettyCode Interval where
   ppCode = return . pretty
