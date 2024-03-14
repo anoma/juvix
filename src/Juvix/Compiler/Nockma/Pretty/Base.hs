@@ -25,7 +25,9 @@ runPrettyCode opts = run . runReader opts . ppCode
 
 instance (PrettyCode a, NockNatural a) => PrettyCode (Atom a) where
   ppCode atm = do
-    t <- mapM ppCode (atm ^. atomTag)
+    t <- runFail $ do
+      failWhenM (asks (^. optIgnoreTags))
+      failMaybe (atm ^. atomTag) >>= ppCode
     let def = fmap (t <?+>) (annotate (AnnKind KNameFunction) <$> ppCode (atm ^. atom))
     fmap (t <?+>) . runFailDefaultM def . failFromError @(ErrNockNatural a) $
       do
@@ -79,7 +81,7 @@ instance (PrettyCode a, NockNatural a) => PrettyCode (Cell a) where
   ppCode c = do
     m <- asks (^. optPrettyMode)
     label <- runFail $ do
-      failWhenM (asks (^. optIgnoreHints))
+      failWhenM (asks (^. optIgnoreTags))
       failMaybe (c ^. cellTag) >>= ppCode
     stdlibCall <- runFail $ do
       failWhenM (asks (^. optIgnoreHints))
