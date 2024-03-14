@@ -262,6 +262,10 @@ class (NockmaEq a) => NockNatural a where
 
   nockOp :: (Member (Error (ErrNockNatural a)) r) => Atom a -> Sem r NockOp
   nockOp atm = do
+    case atm ^. atomHint of
+      Just h
+       | h /= AtomHintOp -> throw (errInvalidOp atm)
+      _ -> return ()
     n <- nockNatural atm
     failWithError (errInvalidOp atm) (parseOp n)
 
