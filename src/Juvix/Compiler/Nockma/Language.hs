@@ -247,7 +247,7 @@ class (NockmaEq a) => NockNatural a where
   nockOp atm = do
     case atm ^. atomHint of
       Just h
-       | h /= AtomHintOp -> throw (errInvalidOp atm)
+        | h /= AtomHintOp -> throw (errInvalidOp atm)
       _ -> return ()
     n <- nockNatural atm
     failWithError (errInvalidOp atm) (parseOp n)
@@ -268,8 +268,11 @@ nockBool = \case
   True -> nockTrue
   False -> nockFalse
 
-nockNil' :: Term Natural
-nockNil' = TermAtom nockNil
+nockNilTagged :: Text -> Term Natural
+nockNilTagged txt = TermAtom (set atomTag (Just (Tag txt)) nockNil)
+
+nockNilUntagged :: Term Natural
+nockNilUntagged = TermAtom nockNil
 
 data NockNaturalNaturalError
   = NaturalInvalidPath (Atom Natural)
@@ -369,12 +372,12 @@ infixl 1 >>#
 a >># b = TermCell (a >>#. b)
 
 opCall :: Text -> Path -> Term Natural -> Term Natural
-opCall txt p t = txt @ OpCall #. p # t
+opCall txt p t = txt @ (OpCall #. (p # t))
 
 opAddress :: Text -> Path -> Term Natural
 opAddress txt p = txt @ OpAddress #. p
 
-opQuote :: IsNock x => Text -> x -> Term Natural
+opQuote :: (IsNock x) => Text -> x -> Term Natural
 opQuote txt p = txt @ OpQuote #. p
 
 {-# COMPLETE Cell #-}
