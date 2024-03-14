@@ -84,6 +84,7 @@ instance (Hashable a) => Hashable (Cell a)
 
 data AtomInfo = AtomInfo
   { _atomInfoHint :: Maybe AtomHint,
+    _atomInfoTag :: Maybe Tag,
     _atomInfoLoc :: Irrelevant (Maybe Interval)
   }
   deriving stock (Show, Eq, Lift, Generic)
@@ -215,6 +216,9 @@ cellTag = cellInfo . cellInfoTag
 
 cellCall :: Lens' (Cell a) (Maybe (StdlibCall a))
 cellCall = cellInfo . cellInfoCall
+
+atomTag :: Lens' (Atom a) (Maybe Tag)
+atomTag = atomInfo . atomInfoTag
 
 atomLoc :: Lens' (Atom a) (Maybe Interval)
 atomLoc = atomInfo . atomInfoLoc . unIrrelevant
@@ -417,6 +421,7 @@ emptyAtomInfo :: AtomInfo
 emptyAtomInfo =
   AtomInfo
     { _atomInfoHint = Nothing,
+      _atomInfoTag = Nothing,
       _atomInfoLoc = Irrelevant Nothing
     }
 

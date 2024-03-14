@@ -75,22 +75,24 @@ dottedNatural = lexeme $ do
     digit :: Parser Char
     digit = satisfy isDigit
 
-atomOp :: Parser (Atom Natural)
-atomOp = do
+atomOp :: Maybe Tag -> Parser (Atom Natural)
+atomOp mtag = do
   WithLoc loc op' <- withLoc (choice [symbol opName $> op | (opName, op) <- HashMap.toList atomOps])
   let info =
         AtomInfo
           { _atomInfoHint = Just AtomHintOp,
+            _atomInfoTag = mtag,
             _atomInfoLoc = Irrelevant (Just loc)
           }
   return (Atom (serializeNockOp op') info)
 
-atomPath :: Parser (Atom Natural)
-atomPath = do
+atomPath :: Maybe Tag -> Parser (Atom Natural)
+atomPath mtag = do
   WithLoc loc path <- withLoc pPath
   let info =
         AtomInfo
           { _atomInfoHint = Just AtomHintPath,
+            _atomInfoTag = mtag,
             _atomInfoLoc = Irrelevant (Just loc)
           }
   return (Atom (serializePath path) info)
@@ -105,12 +107,13 @@ pPath =
   symbol "S" $> []
     <|> NonEmpty.toList <$> some direction
 
-atomNat :: Parser (Atom Natural)
-atomNat = do
+atomNat :: Maybe Tag -> Parser (Atom Natural)
+atomNat mtag = do
   WithLoc loc n <- withLoc dottedNatural
   let info =
         AtomInfo
           { _atomInfoHint = Nothing,
+            _atomInfoTag = mtag,
             _atomInfoLoc = Irrelevant (Just loc)
           }
   return (Atom n info)
@@ -134,16 +137,22 @@ atomVoid :: Parser (Atom Natural)
 atomVoid = symbol Str.void $> nockVoid
 
 patom :: Parser (Atom Natural)
-patom =
-  atomOp
-    <|> atomNat
-    <|> atomPath
+patom = do
+  mtag <- optional pTag
+  atomOp mtag
+    <|> atomNat mtag
+    <|> atomPath mtag
     <|> atomBool
     <|> atomNil
     <|> atomVoid
 
 iden :: Parser Text
 iden = lexeme (takeWhile1P (Just "<iden>") isAlphaNum)
+
+pTag :: Parser Tag
+pTag = do
+  void (chunk Str.tagTag)
+  Tag <$> iden
 
 cell :: Parser (Cell Natural)
 cell = do
@@ -162,11 +171,6 @@ cell = do
           }
   return (set cellInfo info r)
   where
-    pTag :: Parser Tag
-    pTag = do
-      void (chunk Str.tagTag)
-      Tag <$> iden
-
     stdlibCall :: Parser (StdlibCall Natural)
     stdlibCall = do
       chunk Str.stdlibTag
