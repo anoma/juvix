@@ -22,11 +22,11 @@ runNockmaAssertion hout _main tab = do
   res <-
     runM
       . runOutputSem @(Term Natural)
-        (hPutStrLn hout . Nockma.ppPrint)
+        (hPutStrLn hout . Nockma.ppTest)
       . runReader NockmaEval.defaultEvalOptions
       $ evalCompiledNock' (anomaRes ^. anomaClosure) (anomaCall (anomaRes ^. anomaEnv) [])
   let ret = getReturn res
-  whenJust ret (hPutStrLn hout . Nockma.ppPrint)
+  whenJust ret (hPutStrLn hout . Nockma.ppTest)
   where
     opts :: CompilerOptions
     opts =

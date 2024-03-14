@@ -502,7 +502,6 @@ compile = \case
                 TempStack -> Just (OpQuote # nockNilTagged "callClosure-TempStack")
                 FunctionsLibrary -> Nothing
                 StandardLibrary -> Nothing
-                -- TODO revise below
                 ClosureArgs -> Nothing
                 ClosureTotalArgsNum -> Nothing
                 ClosureArgsNum -> Nothing
