@@ -25,10 +25,10 @@ runPrettyCode opts = run . runReader opts . ppCode
 
 instance (PrettyCode a, NockNatural a) => PrettyCode (Atom a) where
   ppCode atm = do
-    let def = annotate (AnnKind KNameFunction) <$> ppCode (atm ^. atom)
     t <- mapM ppCode (atm ^. atomTag)
-    fmap (t <?+>) . runFailDefaultM def . failFromError @(ErrNockNatural a)
-      $ do
+    let def = fmap (t <?+>) (annotate (AnnKind KNameFunction) <$> ppCode (atm ^. atom))
+    fmap (t <?+>) . runFailDefaultM def . failFromError @(ErrNockNatural a) $
+      do
         whenM (asks (^. optIgnoreHints)) fail
         h' <- failMaybe (atm ^. atomHint)
         case h' of

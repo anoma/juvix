@@ -142,7 +142,7 @@ juvixCallingConventionTests =
            compilerTest "append rights - empty" (appendRights emptyPath (nockNatLiteral 3)) (eqNock (toNock [R, R, R])),
            compilerTest "append rights" (appendRights [L, L] (nockNatLiteral 3)) (eqNock (toNock [L, L, R, R, R])),
            compilerTest "opAddress" ((OpQuote # (foldTerms (toNock @Natural <$> (5 :| [6, 1])))) >># opAddress' (appendRights emptyPath (nockNatLiteral 2))) (eqNock (toNock @Natural 1)),
-           compilerTest "foldTermsOrNil (empty)" (foldTermsOrNil []) (eqNock nockNil'),
+           compilerTest "foldTermsOrNil (empty)" (foldTermsOrNil []) (eqNock (nockNilTagged "expected-result")),
            let l :: NonEmpty Natural = 1 :| [2]
                l' :: NonEmpty (Term Natural) = nockNatLiteral <$> l
             in compilerTest "foldTermsOrNil (non-empty)" (foldTermsOrNil (toList l')) (eqNock (foldTerms (toNock @Natural <$> l))),
@@ -167,12 +167,12 @@ juvixCallingConventionTests =
                res :: Term Natural = foldTerms (toNock <$> l)
                lenL :: Term Natural = nockIntegralLiteral (length l)
                lstL = OpQuote # makeList (toNock <$> (toList l))
-            in compilerTest "appendToTuple (left non-empty, right empty)" (appendToTuple lstL lenL (OpQuote # nockNil') (nockNatLiteral 0)) (eqNock res),
+            in compilerTest "appendToTuple (left non-empty, right empty)" (appendToTuple lstL lenL (OpQuote # nockNilTagged "appendToTuple") (nockNatLiteral 0)) (eqNock res),
            let r :: NonEmpty Natural = 3 :| [4]
                res :: Term Natural = foldTerms (toNock <$> r)
                lenR :: Term Natural = nockIntegralLiteral (length r)
                tupR = OpQuote # foldTerms (toNock <$> r)
-            in compilerTest "appendToTuple (left empty, right-nonempty)" (appendToTuple (OpQuote # nockNil') (nockNatLiteral 0) tupR lenR) (eqNock res)
+            in compilerTest "appendToTuple (left empty, right-nonempty)" (appendToTuple (OpQuote # nockNilTagged "test-appendtotuple") (nockNatLiteral 0) tupR lenR) (eqNock res)
          ]
 
 unitTests :: [Test]
