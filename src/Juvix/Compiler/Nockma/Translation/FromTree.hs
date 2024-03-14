@@ -469,6 +469,7 @@ compile = \case
                 { _atomInfo =
                     AtomInfo
                       { _atomInfoLoc = Irrelevant Nothing,
+                        _atomInfoTag = Nothing,
                         _atomInfoHint = Just AtomHintFunctionsPlaceholder
                       },
                   _atom = 0 :: Natural
@@ -492,6 +493,8 @@ compile = \case
               allArgs = appendToTuple oldArgs argsNum (foldTermsOrNil newargs) (nockIntegralLiteral (length newargs))
               newSubject = replaceSubject $ \case
                 -- WrapperCode -> Just (OpQuote # anomaCallableClosureWrapper)
+                -- WrapperCode -> Just (getClosureField RawCode closure) -- We Want RawCode because we already have all args.
+                -- WrapperCode -> Just (getClosureField RawCode closure) -- We Want RawCode because we already have all args.
                 WrapperCode -> Just (getClosureField RawCode closure) -- We Want RawCode because we already have all args.
                 RawCode -> Just (OpQuote # nockNil')
                 ArgsTuple -> Just allArgs
@@ -603,7 +606,7 @@ callStdlib fun args =
   let fPath = stdlibPath fun
       getFunCode = opAddress "callStdlibFunCode" (stackPath StandardLibrary) >># fPath
       adjustArgs = case nonEmpty args of
-        Just args' -> OpReplace # ([R, L] # ((OpAddress # [R]) >># foldTerms args')) # (OpAddress # [L])
+        Just args' -> OpReplace # ([R, L] # ((opAddress "stdlibR" [R]) >># foldTerms args')) # (opAddress "stdlibL" [L])
         Nothing -> opAddress "adjustArgsNothing" [L]
       callFn = opCall "callStdlib" [L] adjustArgs
       callCell = set cellCall (Just meta) (OpPush #. (getFunCode # callFn))
