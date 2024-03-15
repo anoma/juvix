@@ -374,6 +374,9 @@ a >># b = TermCell (a >>#. b)
 opCall :: Text -> Path -> Term Natural -> Term Natural
 opCall txt p t = txt @ (OpCall #. (p # t))
 
+opReplace :: Text -> Path -> Term Natural -> Term Natural -> Term Natural
+opReplace txt p t1 t2 = txt @ OpReplace #. ((p #. t1) #. t2)
+
 opAddress :: Text -> Path -> Term Natural
 opAddress txt p = txt @ OpAddress #. p
 

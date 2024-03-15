@@ -602,9 +602,9 @@ callStdlib fun args =
   let fPath = stdlibPath fun
       getFunCode = opAddress "callStdlibFunCode" (stackPath StandardLibrary) >># fPath
       adjustArgs = case nonEmpty args of
-        Just args' -> OpReplace # ([R, L] # ((opAddress "stdlibR" [R]) >># foldTerms args')) # (opAddress "stdlibL" [L])
+        Just args' -> opReplace "callStdlib-args" (closurePath ArgsTuple) ((opAddress "stdlibR" [R]) >># foldTerms args') (opAddress "stdlibL" [L])
         Nothing -> opAddress "adjustArgsNothing" [L]
-      callFn = opCall "callStdlib" [L] adjustArgs
+      callFn = opCall "callStdlib" (closurePath WrapperCode) adjustArgs
       callCell = set cellCall (Just meta) (OpPush #. (getFunCode # callFn))
       meta =
         StdlibCall
