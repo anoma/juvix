@@ -102,7 +102,7 @@ anomaTest n mainFun args _testCheck _evalInterceptStdlibCalls =
       res :: AnomaResult = runCompilerWithAnoma opts mempty [] f
       _testProgramSubject = res ^. anomaClosure
 
-      _testProgramFormula = anomaCall (res ^. anomaEnv) args
+      _testProgramFormula = anomaCall args
       _testEvalOptions = EvalOptions {..}
    in Test {..}
 
