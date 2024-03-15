@@ -2,7 +2,6 @@ module Juvix.Compiler.Nockma.Translation.FromTree
   ( fromEntryPoint,
     fromTreeTable,
     AnomaResult (..),
-    anomaEnv,
     anomaClosure,
     compilerFunctionName,
     AnomaCallablePathId (..),
@@ -43,9 +42,8 @@ import Juvix.Compiler.Tree.Language qualified as Tree
 import Juvix.Compiler.Tree.Language.Rep
 import Juvix.Prelude hiding (Atom, Path)
 
-data AnomaResult = AnomaResult
-  { _anomaEnv :: Term Natural,
-    _anomaClosure :: Term Natural
+newtype AnomaResult = AnomaResult
+  { _anomaClosure :: Term Natural
   }
 
 nockmaMemRep :: MemRep -> NockmaMemRep
@@ -461,18 +459,7 @@ compile = \case
         RawCode -> opAddress "allocClosureFunPath" (fpath <> closurePath RawCode)
         TempStack -> remakeList []
         StandardLibrary -> OpQuote # stdlib
-        FunctionsLibrary ->
-          OpQuote
-            # TermAtom
-              Atom
-                { _atomInfo =
-                    AtomInfo
-                      { _atomInfoLoc = Irrelevant Nothing,
-                        _atomInfoTag = Nothing,
-                        _atomInfoHint = Just AtomHintFunctionsPlaceholder
-                      },
-                  _atom = 0 :: Natural
-                }
+        FunctionsLibrary -> OpQuote # functionsLibraryPlaceHolder
         ClosureTotalArgsNum -> nockNatLiteral farity
         ClosureArgsNum -> nockIntegralLiteral (length args)
         ClosureArgs -> remakeList args
@@ -529,19 +516,19 @@ argsTuplePlaceholder txt = nockNilTagged ("argsTuplePlaceholder-" <> txt)
 appendRights :: Path -> Term Natural -> Term Natural
 appendRights path n = dec (mul (pow2 n) (OpInc # OpQuote # path))
 
-pushTemp :: Term Natural -> Term Natural
-pushTemp toBePushed =
-  remakeList
-    [ let p = opAddress "pushTemp" (stackPath s)
-       in if
-              | TempStack == s -> toBePushed # p
-              | otherwise -> p
-      | s <- allElements
-    ]
-
 withTemp :: Term Natural -> Term Natural -> Term Natural
 withTemp toBePushed body =
-  OpSequence # pushTemp toBePushed # body
+  OpSequence # pushTemp # body
+  where
+    pushTemp :: Term Natural
+    pushTemp =
+      remakeList
+        [ let p = opAddress "pushTemp" (stackPath s)
+           in if
+                  | TempStack == s -> toBePushed # p
+                  | otherwise -> p
+          | s <- allElements
+        ]
 
 testEq :: (Members '[Reader FunctionCtx, Reader CompilerCtx] r) => Tree.Node -> Tree.Node -> Sem r (Term Natural)
 testEq a b = do
@@ -714,7 +701,7 @@ runCompilerWith opts constrs libFuns mainFun = makeAnomaFun
        in case p of
             WrapperCode -> c
             ArgsTuple -> argsTuplePlaceholder "libraryFunction"
-            FunctionsLibrary -> nockNilHere
+            FunctionsLibrary -> functionsLibraryPlaceHolder
             RawCode -> c
             TempStack -> nockNilHere
             StandardLibrary -> stdlib
@@ -741,9 +728,34 @@ runCompilerWith opts constrs libFuns mainFun = makeAnomaFun
       let mainClosure :: Term Natural
           mainClosure = head compiledFuns
        in AnomaResult
-            { _anomaClosure = mainClosure,
-              _anomaEnv = exportEnv
+            { _anomaClosure = substEnv mainClosure
             }
+      where
+        -- Replaces all instances of functionsLibraryPlaceHolder by the actual
+        -- functions library. Note that the functions library will have
+        -- functionsLibraryPlaceHolders, but this is not an issue because they
+        -- are not directly accessible from anoma so they'll never be entrypoints.
+        substEnv :: Term Natural -> Term Natural
+        substEnv = \case
+          TermAtom a
+            | a ^. atomHint == Just AtomHintFunctionsPlaceholder -> exportEnv
+            | otherwise -> TermAtom a
+          TermCell (Cell' l r i) ->
+            -- note that we do not need to recurse into terms inside the CellInfo because those terms will never be an entry point from anoma
+            TermCell (Cell' (substEnv l) (substEnv r) i)
+
+functionsLibraryPlaceHolder :: Term Natural
+functionsLibraryPlaceHolder =
+  TermAtom
+    Atom
+      { _atomInfo =
+          AtomInfo
+            { _atomInfoLoc = Irrelevant Nothing,
+              _atomInfoTag = Nothing,
+              _atomInfoHint = Just AtomHintFunctionsPlaceholder
+            },
+        _atom = 0 :: Natural
+      }
 
 builtinFunction :: BuiltinFunctionId -> CompilerFunction
 builtinFunction = \case

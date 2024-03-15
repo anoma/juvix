@@ -118,12 +118,10 @@ runAnomaPipeline pa@PipelineArg {..} = do
 
 outputAnomaResult :: (Members '[EmbedIO, App] r) => Path Abs File -> Nockma.AnomaResult -> Sem r ()
 outputAnomaResult nockmaFile Nockma.AnomaResult {..} = do
-  let envFile = replaceExtensions' [".env", ".nockma"] nockmaFile
-      code = Nockma.ppSerialize _anomaClosure
+  let code = Nockma.ppSerialize _anomaClosure
       prettyNockmaFile = replaceExtensions' [".pretty", ".nockma"] nockmaFile
       prettyEnvFile = replaceExtensions' [".env", ".pretty", ".nockma"] nockmaFile
   writeFileEnsureLn nockmaFile code
-  writeFileEnsureLn envFile (Nockma.ppSerialize _anomaEnv)
   writeFileEnsureLn prettyNockmaFile (Nockma.ppPrint _anomaClosure)
   writeFileEnsureLn prettyEnvFile (Nockma.ppPrint _anomaEnv)
 

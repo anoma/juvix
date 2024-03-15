@@ -27,7 +27,7 @@ mkAnomaCallTest' enableDebug _testProgramStorage _testName relRoot mainFile args
         let mainClosure = compiledMain ^. anomaClosure
         writeFileEnsureLn (tmpDir <//> $(mkRelFile "test.nockma")) (ppSerialize mainClosure)
         return compiledMain
-      let _testProgramFormula = anomaCall (anomaRes ^. anomaEnv) args
+      let _testProgramFormula = anomaCall args
           _testProgramSubject = anomaRes ^. anomaClosure
           _testEvalOptions = defaultEvalOptions
           _testAssertEvalError :: Maybe (NockEvalError Natural -> Assertion) = Nothing

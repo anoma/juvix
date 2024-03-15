@@ -116,7 +116,7 @@ anomaTest n mainFun args _testCheck _evalInterceptStdlibCalls =
       res :: AnomaResult = runCompilerWith opts mempty [] f
       _testProgramSubject = res ^. anomaClosure
 
-      _testProgramFormula = anomaCall (res ^. anomaEnv) args
+      _testProgramFormula = anomaCall args
       _testProgramStorage :: Storage Natural = emptyStorage
       _testEvalOptions = EvalOptions {..}
       _testAssertEvalError :: Maybe (NockEvalError Natural -> Assertion) = Nothing
