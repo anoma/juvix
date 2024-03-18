@@ -12,12 +12,12 @@ import Juvix.Parser.Error
 runCommand :: forall r. (Members '[EmbedIO, App] r) => NockmaRunOptions -> Sem r ()
 runCommand opts = do
   afile <- fromAppPathFile inputFile
-  envFile <- fromAppPathFile (opts ^. nockmaEnvFile)
-  parsedEnvFile <- Nockma.parseTermFile envFile >>= checkParsed
+  argsFile <- mapM fromAppPathFile (opts ^. nockmaRunArgs)
+  parsedArgs <- mapM (Nockma.parseTermFile >=> checkParsed) argsFile
   parsedTerm <- Nockma.parseTermFile afile >>= checkParsed
   case parsedTerm of
     t@(TermCell {}) -> do
-      let formula = anomaCall parsedEnvFile []
+      let formula = anomaCallTuple parsedArgs
       (counts, res) <-
         runOpCounts
           . runReader defaultEvalOptions
