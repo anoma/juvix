@@ -29,6 +29,7 @@ module Juvix.Compiler.Nockma.Translation.FromTree
     append,
     opAddress',
     replaceSubterm',
+    runCompilerWith,
   )
 where
 
