@@ -2,12 +2,12 @@ module Nockma.Eval.Positive where
 
 import Base hiding (Path, testName)
 import Juvix.Compiler.Core.Language.Base (defaultSymbol)
+import Juvix.Compiler.Nockma.Anoma
 import Juvix.Compiler.Nockma.Evaluator
 import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Translation.FromSource.QQ
 import Juvix.Compiler.Nockma.Translation.FromTree
-import Nockma.Base
 
 type Check = Sem '[Reader [Term Natural], Reader (Term Natural), EmbedIO]
 
@@ -23,10 +23,6 @@ makeLenses ''Test
 
 mkNockmaAssertion :: Test -> Assertion
 mkNockmaAssertion Test {..} = do
-  -- putStrLn (ppTrace _testProgramFormula)
-  -- writeFileEnsureLn
-  --   $(mkAbsFile "/home/jan/projects/juvix-effectful/out.nockma")
-  --   (ppPrint _testProgramSubject <> "\n\n" <> ppPrint _testProgramFormula)
   let (traces, evalResult) =
         run
           . runReader _testEvalOptions

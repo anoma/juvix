@@ -1,8 +1,8 @@
-module Nockma.Base where
+module Juvix.Compiler.Nockma.Anoma where
 
-import Base
 import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Translation.FromTree
+import Juvix.Prelude
 
 -- | Call a function at the head of the subject using the Anoma calling convention
 anomaCall :: Term Natural -> [Term Natural] -> Term Natural
