@@ -218,7 +218,7 @@ treeToReg :: (Members '[Error JuvixError, Reader EntryPoint] r) => Tree.InfoTabl
 treeToReg = treeToAsm >=> asmToReg
 
 treeToAnoma :: (Members '[Error JuvixError, Reader EntryPoint] r) => Tree.InfoTable -> Sem r (NockmaTree.AnomaResult)
-treeToAnoma = Tree.toNockma >=> mapReader NockmaTree.fromEntryPoint . NockmaTree.fromTreeTable NockmaTree.ProgramCallingConventionAnoma
+treeToAnoma = Tree.toNockma >=> mapReader NockmaTree.fromEntryPoint . NockmaTree.fromTreeTable
 
 treeToMiniC :: (Members '[Error JuvixError, Reader EntryPoint] r) => Tree.InfoTable -> Sem r C.MiniCResult
 treeToMiniC = treeToAsm >=> asmToMiniC
@@ -245,7 +245,7 @@ regToCasm :: Reg.InfoTable -> Sem r Casm.Result
 regToCasm = Reg.toCasm >=> return . Casm.fromReg
 
 treeToAnoma' :: (Members '[Error JuvixError, Reader NockmaTree.CompilerOptions] r) => Tree.InfoTable -> Sem r NockmaTree.AnomaResult
-treeToAnoma' = Tree.toNockma >=> NockmaTree.fromTreeTable NockmaTree.ProgramCallingConventionAnoma
+treeToAnoma' = Tree.toNockma >=> NockmaTree.fromTreeTable
 
 asmToMiniC' :: (Members '[Error JuvixError, Reader Asm.Options] r) => Asm.InfoTable -> Sem r C.MiniCResult
 asmToMiniC' = mapError (JuvixError @Asm.AsmError) . Asm.toReg' >=> regToMiniC' . Reg.fromAsm
