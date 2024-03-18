@@ -35,7 +35,6 @@ runCompile inputFile o = do
     TargetAsm -> return (Right ())
     TargetReg -> return (Right ())
     TargetTree -> return (Right ())
-    TargetNockma -> return (Right ())
     TargetAnoma -> return (Right ())
 
 prepareRuntime :: forall r. (Members '[App, EmbedIO] r) => Path Abs Dir -> CompileOptions -> Sem r ()
@@ -54,7 +53,6 @@ prepareRuntime buildDir o = do
     TargetAsm -> return ()
     TargetReg -> return ()
     TargetTree -> return ()
-    TargetNockma -> return ()
     TargetAnoma -> return ()
   where
     wasiReleaseRuntime :: BS.ByteString
@@ -117,8 +115,6 @@ outputFile opts inputFile =
           replaceExtension' juvixRegFileExt baseOutputFile
         TargetTree ->
           replaceExtension' juvixTreeFileExt baseOutputFile
-        TargetNockma ->
-          replaceExtension' nockmaFileExt baseOutputFile
         TargetAnoma ->
           replaceExtension' nockmaFileExt baseOutputFile
 

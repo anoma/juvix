@@ -14,7 +14,7 @@ treeSupportedTargets =
       TargetNative64,
       TargetAsm,
       TargetReg,
-      TargetNockma
+      TargetAnoma
     ]
 
 parseTreeCompileOptions :: Parser CompileOptions
