@@ -1,12 +1,10 @@
 module Juvix.Compiler.Nockma.Translation.FromTree
-  ( runCompilerWithAnoma,
-    fromEntryPoint,
+  ( fromEntryPoint,
     fromTreeTable,
     AnomaResult (..),
     anomaEnv,
     anomaClosure,
     compilerFunctionName,
-    ProgramCallingConvention (..),
     AnomaCallablePathId (..),
     CompilerOptions (..),
     CompilerFunction (..),
@@ -43,9 +41,6 @@ import Juvix.Compiler.Tree.Data.InfoTable qualified as Tree
 import Juvix.Compiler.Tree.Language qualified as Tree
 import Juvix.Compiler.Tree.Language.Rep
 import Juvix.Prelude hiding (Atom, Path)
-
-data ProgramCallingConvention
-  = ProgramCallingConventionAnoma
 
 data AnomaResult = AnomaResult
   { _anomaEnv :: Term Natural,
@@ -235,8 +230,8 @@ supportsListNockmaRep tab ci = case allConstructors tab ci of
   _ -> Nothing
 
 -- | Use `Tree.toNockma` before calling this function
-fromTreeTable :: (Members '[Error JuvixError, Reader CompilerOptions] r) => ProgramCallingConvention -> Tree.InfoTable -> Sem r AnomaResult
-fromTreeTable cc t = case t ^. Tree.infoMainFunction of
+fromTreeTable :: (Members '[Error JuvixError, Reader CompilerOptions] r) => Tree.InfoTable -> Sem r AnomaResult
+fromTreeTable t = case t ^. Tree.infoMainFunction of
   Just mainFun -> do
     opts <- ask
     return (fromTree opts mainFun t)
@@ -262,7 +257,7 @@ fromTreeTable cc t = case t ^. Tree.infoMainFunction of
 
           getInductiveInfo :: Symbol -> Tree.InductiveInfo
           getInductiveInfo s = _infoInductives ^?! at s . _Just
-       in runCompilerWith cc opts constrs funs mainFun
+       in runCompilerWith opts constrs funs mainFun
       where
         mainFun :: CompilerFunction
         mainFun = compileFunction (_infoFunctions ^?! at mainSym . _Just)
@@ -679,11 +674,8 @@ makeList ts = foldTerms (toList ts `prependList` pure (nockNilTagged "makeList")
 remakeList :: (Foldable l) => l (Term Natural) -> Term Natural
 remakeList ts = foldTerms (toList ts `prependList` pure (OpQuote # nockNilTagged "remakeList"))
 
-runCompilerWithAnoma :: CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> AnomaResult
-runCompilerWithAnoma = runCompilerWith ProgramCallingConventionAnoma
-
-runCompilerWith :: ProgramCallingConvention -> CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> AnomaResult
-runCompilerWith callingConvention opts constrs libFuns mainFun = mkEntryPoint
+runCompilerWith :: CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> AnomaResult
+runCompilerWith opts constrs libFuns mainFun = makeAnomaFun
   where
     allFuns :: NonEmpty CompilerFunction
     allFuns = mainFun :| libFuns ++ (builtinFunction <$> allElements)
@@ -741,10 +733,6 @@ runCompilerWith callingConvention opts constrs libFuns mainFun = mkEntryPoint
             { _anomaClosure = mainClosure,
               _anomaEnv = exportEnv
             }
-
-    mkEntryPoint :: AnomaResult
-    mkEntryPoint = case callingConvention of
-      ProgramCallingConventionAnoma -> makeAnomaFun
 
 builtinFunction :: BuiltinFunctionId -> CompilerFunction
 builtinFunction = \case
