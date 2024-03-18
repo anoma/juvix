@@ -20,7 +20,6 @@ runCommand opts = do
     TargetAsm -> runAsmPipeline arg
     TargetReg -> runRegPipeline arg
     TargetTree -> return ()
-    TargetNockma -> impossible
     TargetAnoma -> runAnomaPipeline arg
     TargetCasm -> runCasmPipeline arg
   where

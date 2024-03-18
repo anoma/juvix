@@ -46,7 +46,6 @@ getEntry PipelineArg {..} = do
       TargetAsm -> Backend.TargetAsm
       TargetReg -> Backend.TargetReg
       TargetTree -> Backend.TargetTree
-      TargetNockma -> Backend.TargetNockma
       TargetAnoma -> Backend.TargetAnoma
       TargetCasm -> Backend.TargetCairo
 

@@ -42,7 +42,6 @@ getEntry PipelineArg {..} = do
       TargetAsm -> Backend.TargetAsm
       TargetReg -> Backend.TargetReg
       TargetTree -> Backend.TargetTree
-      TargetNockma -> Backend.TargetNockma
       TargetAnoma -> Backend.TargetAnoma
       TargetCasm -> Backend.TargetCairo
 
@@ -121,7 +120,7 @@ outputAnomaResult :: (Members '[EmbedIO, App] r) => Path Abs File -> Nockma.Anom
 outputAnomaResult nockmaFile Nockma.AnomaResult {..} = do
   let envFile = replaceExtensions' [".env", ".nockma"] nockmaFile
       code = Nockma.ppSerialize _anomaClosure
-      prettyNockmaFile = replaceExtensions' [".pretty",".nockma"] nockmaFile
+      prettyNockmaFile = replaceExtensions' [".pretty", ".nockma"] nockmaFile
   writeFileEnsureLn nockmaFile code
   writeFileEnsureLn envFile (Nockma.ppSerialize _anomaEnv)
   writeFileEnsureLn prettyNockmaFile (Nockma.ppPrint _anomaClosure)

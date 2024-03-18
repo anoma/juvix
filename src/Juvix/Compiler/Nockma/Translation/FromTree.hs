@@ -420,7 +420,7 @@ compile = \case
       Tree.OpFieldToInt -> fieldErr
 
     goAnomaGet :: Term Natural -> Sem r (Term Natural)
-    goAnomaGet arg = return (OpScry # (OpQuote # nockNil') # arg)
+    goAnomaGet arg = return (OpScry # (OpQuote # nockNilTagged "OpScry-typehint") # arg)
 
     goTrace :: Term Natural -> Sem r (Term Natural)
     goTrace arg = do

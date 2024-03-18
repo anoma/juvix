@@ -70,7 +70,6 @@ runCommand opts = do
       TargetNative64 -> return Backend.TargetCNative64
       TargetReg -> return Backend.TargetReg
       TargetCasm -> return Backend.TargetCairo
-      TargetNockma -> err "Nockma"
       TargetAnoma -> err "Anoma"
       TargetTree -> err "JuvixTree"
       TargetGeb -> err "GEB"

@@ -62,7 +62,9 @@ instance (Hashable a) => Hashable (StdlibCall a)
 newtype Tag = Tag
   { _unTag :: Text
   }
-  deriving stock (Show, Eq, Lift)
+  deriving stock (Show, Eq, Lift, Generic)
+
+instance Hashable Tag
 
 data CellInfo a = CellInfo
   { _cellInfoLoc :: Irrelevant (Maybe Interval),
