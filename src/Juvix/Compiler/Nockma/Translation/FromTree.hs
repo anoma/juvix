@@ -43,7 +43,6 @@ import Juvix.Compiler.Tree.Data.InfoTable qualified as Tree
 import Juvix.Compiler.Tree.Language qualified as Tree
 import Juvix.Compiler.Tree.Language.Rep
 import Juvix.Prelude hiding (Atom, Path)
-import System.IO.Unsafe (unsafePerformIO)
 
 data ProgramCallingConvention
   = ProgramCallingConventionAnoma
@@ -684,9 +683,7 @@ runCompilerWithAnoma :: CompilerOptions -> ConstructorInfos -> [CompilerFunction
 runCompilerWithAnoma = runCompilerWith ProgramCallingConventionAnoma
 
 runCompilerWith :: ProgramCallingConvention -> CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> AnomaResult
-runCompilerWith callingConvention opts constrs libFuns mainFun = unsafePerformIO $ do
-  -- writeFileEnsureLn $(mkAbsFile "/home/jan/projects/anoma/JuvixEnv.nockma") (ppSerialize exportEnv)
-  return mkEntryPoint
+runCompilerWith callingConvention opts constrs libFuns mainFun = mkEntryPoint
   where
     allFuns :: NonEmpty CompilerFunction
     allFuns = mainFun :| libFuns ++ (builtinFunction <$> allElements)
