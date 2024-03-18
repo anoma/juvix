@@ -3,13 +3,13 @@ module Anoma.Compilation.Positive where
 import Base
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Backend (Target (TargetAnoma))
+import Juvix.Compiler.Nockma.Anoma
 import Juvix.Compiler.Nockma.Evaluator
 import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Translation.FromSource.QQ
 import Juvix.Compiler.Nockma.Translation.FromTree
 import Juvix.Prelude qualified as Prelude
-import Nockma.Base
 import Nockma.Eval.Positive
 
 root :: Prelude.Path Abs Dir
