@@ -21,7 +21,7 @@ runCommand opts = do
     t@(TermCell {}) -> do
       let formula = anomaCallTuple parsedEnvTerm parsedArgs
       res <-
-          runReader defaultEvalOptions
+        runReader defaultEvalOptions
           . runOutputSem @(Term Natural) (say . ppTrace)
           $ evalCompiledNock' t formula
       putStrLn (ppPrint res)
