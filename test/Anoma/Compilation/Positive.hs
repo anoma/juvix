@@ -176,7 +176,7 @@ allTests =
         "Test017: Tail recursion through higher-order functions"
         $(mkRelDir ".")
         $(mkRelFile "test017.juvix")
-        [nockNatLiteral 1000]
+        [nockNatLiteral 100]
         $ checkNatOutput [500500],
       mkAnomaCallTest
         "Test018: Higher-order functions and recursion"

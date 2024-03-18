@@ -24,7 +24,6 @@ runNockmaAssertion hout _main tab = do
       . runOutputSem @(Term Natural)
         (embed . hPutStrLn hout . Nockma.ppTest)
       . runReader NockmaEval.defaultEvalOptions
-      . NockmaEval.ignoreOpCounts
       $ evalCompiledNock' (anomaRes ^. anomaClosure) (anomaCall (anomaRes ^. anomaEnv) [])
   let ret = getReturn res
   whenJust ret (hPutStrLn hout . Nockma.ppTest)

@@ -5,7 +5,7 @@ import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Pretty (ppTrace)
 import Juvix.Prelude
 
-evalCompiledNock' :: (Members '[State OpCounts, Reader EvalOptions, Output (Term Natural)] r) => Term Natural -> Term Natural -> Sem r (Term Natural)
+evalCompiledNock' :: (Members '[Reader EvalOptions, Output (Term Natural)] r) => Term Natural -> Term Natural -> Sem r (Term Natural)
 evalCompiledNock' stack mainTerm = do
   evalT <-
     runError @(ErrNockNatural Natural)

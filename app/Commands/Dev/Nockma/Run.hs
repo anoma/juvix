@@ -20,14 +20,11 @@ runCommand opts = do
   case parsedTerm of
     t@(TermCell {}) -> do
       let formula = anomaCallTuple parsedEnvTerm parsedArgs
-      (counts, res) <-
-        runOpCounts
-          . runReader defaultEvalOptions
+      res <-
+          runReader defaultEvalOptions
           . runOutputSem @(Term Natural) (say . ppTrace)
           $ evalCompiledNock' t formula
       putStrLn (ppPrint res)
-      let statsFile = replaceExtension' ".profile" afile
-      writeFileEnsureLn statsFile (prettyText counts)
     TermAtom {} -> exitFailMsg "Expected nockma input to be a cell"
   where
     inputFile :: AppPath File
