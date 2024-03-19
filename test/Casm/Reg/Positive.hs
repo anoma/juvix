@@ -24,8 +24,8 @@ testDescr PosTest {..} =
           _testAssertion = Steps $ regToCasmAssertion file' expected'
         }
 
-filterTests :: [String] -> [PosTest] -> [PosTest]
-filterTests incl = filter (\PosTest {..} -> _name `elem` incl)
+filterOutTests :: [String] -> [PosTest] -> [PosTest]
+filterOutTests incl = filter (\PosTest {..} -> not (_name `elem` incl))
 
 allTests :: TestTree
 allTests =
