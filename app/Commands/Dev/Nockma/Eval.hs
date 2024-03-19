@@ -11,7 +11,7 @@ runCommand opts = do
   parsedTerm <- Nockma.parseTermFile afile
   case parsedTerm of
     Left err -> exitJuvixError (JuvixError err)
-    Right (TermCell c) -> impossible
+    Right (TermCell {}) -> impossible
     Right TermAtom {} -> exitFailMsg "Expected nockma input to be a cell"
   where
     file :: AppPath File
