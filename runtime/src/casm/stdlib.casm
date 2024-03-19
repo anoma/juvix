@@ -52,25 +52,27 @@ juvix_extend_closure:
   [ap] = [ap - 1]; ap++
   [ap] = [ap - 1]; ap++
   -- now ap = fp + 11
-  ap += 6
   -- alloc
   call juvix_get_regs
-  [fp + 11] = [ap - 2] + 2
-  -- 9 - sargs
-  [fp + 12] = [[fp - 3] + 1]
-  -- 9 - argsnum (expected)
-  [fp + 13] = [[fp - 3] + 2]
-  [fp + 14] = 9
-  -- [fp + 15] = sargs
-  [fp + 15] = [fp + 14] - [fp + 12]
-  -- [fp + 16] = 9 - n
-  [fp + 16] = [fp + 14] - [fp - 4]
+  -- now ap = fp + 15
+  -- [fp + 15] = pointer to new closure
+  [ap] = [ap - 2] + 8; ap++
+  -- [fp + 16] = 9 - sargs
+  [ap] = [[fp - 3] + 1]; ap++
+  -- [fp + 17] = 9 - argsnum (expected)
+  [ap] = [[fp - 3] + 2]; ap++
+  -- [fp + 18] = 9
+  [ap] = 9; ap++
+  -- [fp + 19] = sargs
+  [ap] = [fp + 18] - [fp + 16]; ap++
+  -- [fp + 20] = 9 - n
+  [ap] = [fp + 18] - [fp - 4]; ap++
   -- closure header
   [ap] = [[fp - 3]]; ap++
-  [ap] = [fp + 12] - [fp - 4]; ap++
-  [ap] = [fp + 13] + [fp - 4]; ap++
+  [ap] = [fp + 16] - [fp - 4]; ap++
+  [ap] = [fp + 17] + [fp - 4]; ap++
   -- copy stored args: jmp rel (9 - sargs)
-  jmp rel [fp + 12]
+  jmp rel [fp + 16]
   [ap] = [fp + 7]; ap++
   [ap] = [fp + 6]; ap++
   [ap] = [fp + 5]; ap++
@@ -80,7 +82,7 @@ juvix_extend_closure:
   [ap] = [fp + 1]; ap++
   [ap] = [fp]; ap++
   -- copy extra args: jmp rel (9 - extra args num)
-  jmp rel [fp + 16]
+  jmp rel [fp + 20]
   [ap] = [fp - 12]; ap++
   [ap] = [fp - 11]; ap++
   [ap] = [fp - 10]; ap++
@@ -90,7 +92,7 @@ juvix_extend_closure:
   [ap] = [fp - 6]; ap++
   [ap] = [fp - 5]; ap++
   -- return value
-  [ap] = [fp + 11]; ap++
+  [ap] = [fp + 15]; ap++
   ret
 
 -- [fp - 3]: closure; [fp - 3 - k]: argument k to closure call

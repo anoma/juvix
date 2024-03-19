@@ -25,26 +25,33 @@ null_cons:
   ret
 
 map:
-  ap += 2
   [ap] = [[fp - 4]]; ap++
   jmp map_cons if [ap - 1] != 0
   [ap] = [fp - 4]; ap++
-  [fp] = 0
-  [fp + 1] = 0
   ret
 map_cons:
   [ap] = [[fp - 4] + 2]; ap++
   [ap] = [fp - 3]; ap++
   call map
-  [fp] = [ap - 1]
+  [ap] = [fp - 4]; ap++
+  [ap] = [fp - 3]; ap++
+  call rel 3
+  ret
+  nop
+  -- [fp - 5] = mapped tail
   [ap] = [[fp - 4] + 1]; ap++
   [ap] = [fp - 3]; ap++
   call call_closure
-  [fp + 1] = [ap - 1]
+  [ap] = [fp - 5]; ap++
+  call rel 3
+  ret
+  nop
+  -- [fp - 4] = mapped head
+  -- [fp - 3] = mapped tail
   call get_regs
   [ap] = 1; ap++
-  [ap] = [fp + 1]; ap++
-  [ap] = [fp]; ap++
+  [ap] = [fp - 4]; ap++
+  [ap] = [fp - 3]; ap++
   [ap] = [ap - 5] + 2; ap++
   ret
 
@@ -65,42 +72,55 @@ sum_label_1:
   ret
 
 main:
-  ap += 6
   call get_regs
-  [fp] = [ap - 2] + 2
+  -- [fp + 4] = nil
+  [ap] = [ap - 2] + 3; ap++
   [ap] = 0; ap++
   call get_regs
-  [fp + 1] = [ap - 2] + 2
+  -- [fp + 10]
+  [ap] = [ap - 2] + 3; ap++
   [ap] = 1; ap++
   [ap] = 1; ap++
-  [ap] = [fp]; ap++
+  [ap] = [fp + 4]; ap++
   call get_regs
-  [fp + 2] = [ap - 2] + 2
+  -- [fp + 18]
+  [ap] = [ap - 2] + 3; ap++
   [ap] = 1; ap++
   [ap] = 0; ap++
-  [ap] = [fp + 1]; ap++
-  -- tmp[0] == [fp + 2]
-  [ap] = [fp + 2]; ap++
+  [ap] = [fp + 10]; ap++
+  -- tmp[0] == [fp + 18]
+  [ap] = [fp + 18]; ap++
   call null
-  [fp + 3] = [ap - 1]
-  [ap] = [fp + 2]; ap++
+  [ap] = [fp + 18]; ap++
+  call rel 3
+  ret
+  nop
+  [ap] = [fp - 3]; ap++
   call tl
   call tl
   call null
-  [fp + 4] = [fp + 3] + [ap - 1]
-  [ap] = [fp + 2]; ap++
+  [ap] = [fp - 4] + [ap - 1]; ap++
+  [ap] = [fp - 3]; ap++
+  call rel 3
+  ret
+  nop
+  [ap] = [fp - 3]; ap++
   call hd
-  [fp + 5] = [fp + 4] + [ap - 1]
+  [ap] = [fp - 4] + [ap - 1]; ap++
+  [ap] = [fp - 3]; ap++
+  call rel 3
+  ret
+  nop
   call get_regs
   -- calloc add_one
   [ap] = 1; ap++
   [ap] = 9; ap++
   [ap] = 8; ap++
-  [ap] = [fp + 2]; ap++
+  [ap] = [fp - 3]; ap++
   [ap] = [ap - 6] + 2; ap++
   call map
   call sum
-  [ap] = [fp + 5] + [ap - 1]; ap++
+  [ap] = [fp - 4] + [ap - 1]; ap++
   ret
 
 get_regs:

@@ -10,10 +10,9 @@ calculate:
   ret
 
 main:
-  -- 1 local variable
-  ap += 1
   call get_regs
-  [fp] = [ap - 2] + 2
+  -- [fp + 4] = closure pointer
+  [ap] = [ap - 2] + 3; ap++
   -- FUID(calculate) = 1
   [ap] = 1; ap++
   -- 9 - stored args num
@@ -24,7 +23,7 @@ main:
   [ap] = 5; ap++
   [ap] = 3; ap++
   [ap] = 2; ap++
-  [ap] = [fp]; ap++
+  [ap] = [fp + 4]; ap++
   call call_closure
   ret
 

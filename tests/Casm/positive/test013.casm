@@ -68,24 +68,28 @@ uncurry:
   ret
 
 main:
-  ap += 4
-
   call get_regs
-  [fp] = [ap - 2] + 2
+  -- [fp + 4]
+  [ap] = [ap - 2] + 3; ap++
   -- calloc inc
   [ap] = 1; ap++
   [ap] = 9; ap++
   [ap] = 8; ap++
   call get_regs
+  -- [fp + 12]
+  [ap] = [ap - 2] + 3; ap++
   -- calloc app
   [ap] = 10; ap++
   [ap] = 9; ap++
   [ap] = 7; ap++
   [ap] = 5; ap++
-  [ap] = [fp]; ap++
-  [ap] = [ap - 7] + 2; ap++
+  [ap] = [fp + 4]; ap++
   call app'
-  [fp + 2] = [ap - 1]
+
+  call rel 3
+  ret
+  nop
+  -- [fp - 3]
 
   call get_regs
   -- calloc app
@@ -97,7 +101,10 @@ main:
   [ap] = 4; ap++
   [ap] = [ap - 2]; ap++
   call call_closure
-  [fp + 3] = [fp + 2] + [ap - 1]
+  [ap] = [fp - 3] + [ap - 1]; ap++
+  call rel 3
+  ret
+  nop
 
   -- uncurry (curry app) inc 7
   call get_regs
@@ -108,7 +115,10 @@ main:
   [ap] = [ap - 5] + 2; ap++
   call curry
   call uncurry
-  [fp + 1] = [ap - 1]
+  [ap] = [fp - 3]; ap++
+  call rel 3
+  ret
+  nop
   call get_regs
   -- calloc inc
   [ap] = 1; ap++
@@ -116,9 +126,9 @@ main:
   [ap] = 8; ap++
   [ap] = 7; ap++
   [ap] = [ap - 6] + 2; ap++
-  [ap] = [fp + 1]; ap++
+  [ap] = [fp - 4]; ap++
   call call_closure
-  [ap] = [fp + 3] + [ap - 1]; ap++
+  [ap] = [fp - 3] + [ap - 1]; ap++
   ret
 
 get_regs:
@@ -163,7 +173,6 @@ call_closure:
   ret
   nop
 
-
 -- [fp - 3]: closure; [fp - 4]: argument
 extend_closure_1:
   -- copy stored args reversing them
@@ -189,23 +198,25 @@ extend_closure_1:
   [ap] = [ap - 1]; ap++
   [ap] = [ap - 1]; ap++
   -- now ap = fp + 11
-  ap += 5
   -- alloc closure header
   call get_regs
-  [fp + 11] = [ap - 2] + 2
+  -- now ap = fp + 15
+  -- [fp + 15] = closure pointer
+  [ap] = [ap - 2] + 7; ap++
+  -- [fp + 16] = 9 - sargs
+  [ap] = [[fp - 3] + 1]; ap++
+  -- [fp + 17] = 9 - argsnum (expected)
+  [ap] = [[fp - 3] + 2]; ap++
+  -- [fp + 18] = 9
+  [ap] = 9; ap++
+  -- [fp + 19] = sargs
+  [ap] = [fp + 18] - [fp + 16]; ap++
   [ap] = [[fp - 3]]; ap++
-  -- 9 - sargs
-  [fp + 12] = [[fp - 3] + 1]
-  [ap] = [fp + 12] - 1; ap++
-  -- 9 - argsnum (expected)
-  [fp + 13] = [[fp - 3] + 2]
-  [ap] = [fp + 13] + 1; ap++
+  [ap] = [fp + 16] - 1; ap++
+  [ap] = [fp + 17] + 1; ap++
   -- end alloc closure header
-  [fp + 14] = 9
-  -- [fp + 15] = sargs
-  [fp + 15] = [fp + 14] - [fp + 12]
   -- jmp rel (9 - sargs)
-  jmp rel [fp + 12]
+  jmp rel [fp + 16]
   [ap] = [fp + 7]; ap++
   [ap] = [fp + 6]; ap++
   [ap] = [fp + 5]; ap++
@@ -216,7 +227,7 @@ extend_closure_1:
   [ap] = [fp]; ap++
   -- extra args
   [ap] = [fp - 4]; ap++
-  [ap] = [fp + 11]; ap++
+  [ap] = [fp + 15]; ap++
   ret
 
 end:

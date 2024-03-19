@@ -49,7 +49,6 @@ g:
   ret
 
 main:
-  ap += 3
   -- calloc plus 0
   call get_regs
   [ap] = 1; ap++
@@ -57,8 +56,10 @@ main:
   [ap] = 7; ap++
   [ap] = [ap - 5] + 2; ap++
   call f
-  -- 11
-  [fp] = [ap - 1]
+  call rel 3
+  nop
+  ret
+  -- [fp - 3] = 11
   -- calloc minus 0
   call get_regs
   [ap] = 4; ap++
@@ -66,8 +67,12 @@ main:
   [ap] = 7; ap++
   [ap] = [ap - 5] + 2; ap++
   call f
-  -- 9
-  [fp + 1] = [ap - 1]
+  [ap] = [fp - 3]; ap++
+  call rel 3
+  nop
+  ret
+  -- [fp - 4] = 9
+  -- [fp - 3] = 11
   -- calloc mult 0
   call get_regs
   [ap] = 7; ap++
@@ -75,10 +80,17 @@ main:
   [ap] = 7; ap++
   [ap] = [ap - 5] + 2; ap++
   call f
-  -- 10
-  [ap] = [ap - 1] + [fp]; ap++
-  [fp + 2] = [ap - 1] + [fp + 1]
-  -- [fp + 2] = 30
+  [ap] = [fp - 4]; ap++
+  [ap] = [fp - 3]; ap++
+  call rel 3
+  nop
+  ret
+  -- [fp - 5] = 10
+  -- [fp - 4] = 9
+  -- [fp - 3] = 11
+  [ap] = [fp - 5] + [fp - 4]; ap++
+  [ap] = [ap - 1] + [fp - 3]; ap++
+  -- [fp + 1] = 30
   -- calloc g 2
   call get_regs
   [ap] = 10; ap++
@@ -89,7 +101,7 @@ main:
   [ap] = [ap - 7] + 2; ap++
   call ff
   -- 11
-  [ap] = [fp + 2] + [ap - 1]; ap++
+  [ap] = [fp + 1] + [ap - 1]; ap++
   ret
   -- result: 41
 
@@ -124,23 +136,25 @@ extend_closure_1:
   [ap] = [ap - 1]; ap++
   [ap] = [ap - 1]; ap++
   -- now ap = fp + 11
-  ap += 5
   -- alloc closure header
   call get_regs
-  [fp + 11] = [ap - 2] + 2
+  -- now ap = fp + 15
+  -- [fp + 15] = closure pointer
+  [ap] = [ap - 2] + 7; ap++
+  -- [fp + 16] = 9 - sargs
+  [ap] = [[fp - 3] + 1]; ap++
+  -- [fp + 17] = 9 - argsnum (expected)
+  [ap] = [[fp - 3] + 2]; ap++
+  -- [fp + 18] = 9
+  [ap] = 9; ap++
+  -- [fp + 19] = sargs
+  [ap] = [fp + 18] - [fp + 16]; ap++
   [ap] = [[fp - 3]]; ap++
-  -- 9 - sargs
-  [fp + 12] = [[fp - 3] + 1]
-  [ap] = [fp + 12] - 1; ap++
-  -- 9 - argsnum (expected)
-  [fp + 13] = [[fp - 3] + 2]
-  [ap] = [fp + 13] + 1; ap++
+  [ap] = [fp + 16] - 1; ap++
+  [ap] = [fp + 17] + 1; ap++
   -- end alloc closure header
-  [fp + 14] = 9
-  -- [fp + 15] = sargs
-  [fp + 15] = [fp + 14] - [fp + 12]
   -- jmp rel (9 - sargs)
-  jmp rel [fp + 12]
+  jmp rel [fp + 16]
   [ap] = [fp + 7]; ap++
   [ap] = [fp + 6]; ap++
   [ap] = [fp + 5]; ap++
@@ -151,7 +165,7 @@ extend_closure_1:
   [ap] = [fp]; ap++
   -- extra args
   [ap] = [fp - 4]; ap++
-  [ap] = [fp + 11]; ap++
+  [ap] = [fp + 15]; ap++
   ret
 
 -- [fp - 3]: closure; [fp - 3 - k]: argument k to closure call

@@ -60,13 +60,13 @@ casmRunAssertion' bRunVM labi instrs expectedFile step =
       when bRunVM $
         casmRunVM labi instrs expectedFile step
 
-casmRunAssertion :: Path Abs File -> Path Abs File -> (String -> IO ()) -> Assertion
-casmRunAssertion mainFile expectedFile step = do
+casmRunAssertion :: Bool -> Path Abs File -> Path Abs File -> (String -> IO ()) -> Assertion
+casmRunAssertion bRunVM mainFile expectedFile step = do
   step "Parse"
   r <- parseFile mainFile
   case r of
     Left err -> assertFailure (show (pretty err))
-    Right (labi, instrs) -> casmRunAssertion' False labi instrs expectedFile step
+    Right (labi, instrs) -> casmRunAssertion' bRunVM labi instrs expectedFile step
 
 casmRunErrorAssertion :: Path Abs File -> (String -> IO ()) -> Assertion
 casmRunErrorAssertion mainFile step = do
