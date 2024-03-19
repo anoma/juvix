@@ -36,20 +36,20 @@ shortHash = projectOrUnknown (take 7 . giHash)
 versionTag :: Text
 versionTag = versionDoc <> "-" <> shortHash
 
-progName :: IO Text
-progName = pack . toUpperFirst <$> getProgName
+progName :: (MonadIO m) => m Text
+progName = pack . toUpperFirst <$> liftIO getProgName
 
-progNameVersion :: IO Text
+progNameVersion :: (MonadIO m) => m Text
 progNameVersion = do
   pName <- progName
   return (pName <> " version " <> versionDoc)
 
-progNameVersionTag :: IO Text
+progNameVersionTag :: (MonadIO m) => m Text
 progNameVersionTag = do
   progNameV <- progNameVersion
   return (progNameV <> "-" <> shortHash)
 
-infoVersionRepo :: IO (Doc a)
+infoVersionRepo :: (MonadIO m) => m (Doc a)
 infoVersionRepo = do
   pNameTag <- progNameVersionTag
   return
@@ -69,10 +69,10 @@ infoVersionRepo = do
           <> line
     )
 
-runDisplayVersion :: IO ()
+runDisplayVersion :: (MonadIO m) => m ()
 runDisplayVersion = do
   v <- layoutPretty defaultLayoutOptions <$> infoVersionRepo
-  renderIO stdout v
+  liftIO (renderIO stdout v)
 
-runDisplayNumericVersion :: IO ()
+runDisplayNumericVersion :: (MonadIO m) => m ()
 runDisplayNumericVersion = putStrLn versionDoc

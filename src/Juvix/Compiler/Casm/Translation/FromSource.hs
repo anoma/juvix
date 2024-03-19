@@ -140,7 +140,7 @@ parseMemRef = do
   r <- register
   off <- parseOffset
   rbracket
-  return $ MemRef {_memRefReg = r, _memRefOff = off}
+  return MemRef {_memRefReg = r, _memRefOff = off}
 
 parseLabel :: (Member LabelInfoBuilder r) => ParsecS r LabelRef
 parseLabel = do

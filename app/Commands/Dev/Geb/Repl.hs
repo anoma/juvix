@@ -296,7 +296,7 @@ printError e = do
             . runReader (project' @GenericOptions opts)
             $ Error.render useAnsi False e
         )
-  liftIO $ hPutStrLn stderr errorText
+  hPutStrLn stderr errorText
 
 printEvalResult :: Either JuvixError Geb.RunEvalResult -> Repl ()
 printEvalResult = \case

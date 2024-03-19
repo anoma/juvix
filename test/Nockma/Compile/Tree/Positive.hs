@@ -21,7 +21,7 @@ runNockmaAssertion hout _main tab = do
   res <-
     runM
       . runOutputSem @(Term Natural)
-        (embed . hPutStrLn hout . Nockma.ppPrint)
+        (hPutStrLn hout . Nockma.ppPrint)
       . runReader NockmaEval.defaultEvalOptions
       . evalCompiledNock' nockSubject
       $ nockMain

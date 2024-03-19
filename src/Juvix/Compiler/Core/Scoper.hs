@@ -26,5 +26,5 @@ scopeErr msg = do
   throw @ScopeError ("Scope error in the definition of " <> show sym <> "\n" <> msg)
 
 -- | prints the scope error without exiting
-scopeTrace :: InfoTable -> IO ()
+scopeTrace :: (MonadIO m) => InfoTable -> m ()
 scopeTrace i = whenJust (scopeCheck i) putStrLn

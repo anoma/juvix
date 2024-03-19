@@ -332,14 +332,14 @@ runIO hin hout infoTable = \case
               _regErrorLoc = Nothing
             }
   ValConstr (Constr (BuiltinTag TagWrite) [ValString s]) -> do
-    embed $ hPutStr hout s
+    hPutStr hout s
     return ValVoid
   ValConstr (Constr (BuiltinTag TagWrite) [arg]) -> do
-    embed $ hPutStr hout (ppPrint infoTable arg)
+    hPutStr hout (ppPrint infoTable arg)
     return ValVoid
   ValConstr (Constr (BuiltinTag TagReadLn) []) -> do
-    embed $ hFlush hout
-    s <- embed $ hGetLine hin
+    liftIO $ hFlush hout
+    s <- liftIO $ hGetLine hin
     return (ValString s)
   val ->
     return val

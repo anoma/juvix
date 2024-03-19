@@ -27,7 +27,7 @@ runCommand opts = do
   let r = run $ runReader (project @GlobalOptions @Core.CoreOptions gopts) $ runError @JuvixError $ Core.applyTransformations (project opts ^. coreReadTransformations) (Core.moduleFromInfoTable tab)
   tab0 <- getRight $ mapLeft JuvixError r
   let tab' = Core.computeCombinedInfoTable $ if project opts ^. coreReadNoDisambiguate then tab0 else Core.disambiguateNames tab0
-  embed (Scoper.scopeTrace tab')
+  Scoper.scopeTrace tab'
   unless (project opts ^. coreReadNoPrint) $ do
     renderStdOut (Pretty.ppOut opts tab')
   whenJust (tab' ^. Core.infoMain) $ \sym -> doEval gopts tab' (fromJust $ tab' ^. Core.identContext . at sym)

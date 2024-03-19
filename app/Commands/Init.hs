@@ -57,7 +57,7 @@ checkNotInProject =
     err :: Sem r ()
     err = do
       say "You are already in a Juvix project"
-      embed exitFailure
+      exitFailure
 
 checkPackage :: forall r. (Members '[EmbedIO] r) => Sem r ()
 checkPackage = do
@@ -66,7 +66,7 @@ checkPackage = do
   case ep of
     Left {} -> do
       say "Package.juvix is invalid. Please raise an issue at https://github.com/anoma/juvix/issues"
-      embed exitFailure
+      exitFailure
     Right {} -> return ()
 
 getPackage :: forall r. (Members '[EmbedIO] r) => Sem r Package
@@ -110,7 +110,7 @@ getProjName = do
       where
         go :: Sem r Text
         go = do
-          txt <- embed getLine
+          txt <- getLine
           if
               | Text.null txt, Just def' <- def -> return def'
               | otherwise ->
@@ -137,7 +137,7 @@ tryAgain = say "Please, try again:"
 
 getVersion :: forall r. (Members '[EmbedIO] r) => Sem r SemVer
 getVersion = do
-  txt <- embed getLine
+  txt <- getLine
   if
       | Text.null txt -> return defaultVersion
       | otherwise -> case parse semver' txt of

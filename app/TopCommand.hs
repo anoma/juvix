@@ -17,19 +17,19 @@ import Juvix.Extra.Version
 import System.Environment (getProgName)
 import TopCommand.Options
 
-showHelpText :: IO ()
+showHelpText :: (MonadIO m) => m ()
 showHelpText = do
   let p = prefs showHelpOnEmpty
-  progn <- getProgName
+  progn <- liftIO getProgName
   let helpText = parserFailure p descr (ShowHelpText Nothing) []
       (msg, _) = renderFailure helpText progn
   putStrLn (pack msg)
 
 runTopCommand :: forall r. (Members '[EmbedIO, App, Resource, TaggedLock] r) => TopCommand -> Sem r ()
 runTopCommand = \case
-  DisplayVersion -> embed runDisplayVersion
-  DisplayNumericVersion -> embed runDisplayNumericVersion
-  DisplayHelp -> embed showHelpText
+  DisplayVersion -> runDisplayVersion
+  DisplayNumericVersion -> runDisplayNumericVersion
+  DisplayHelp -> showHelpText
   Doctor opts -> runLogIO (Doctor.runCommand opts)
   Init opts -> runLogIO (Init.init opts)
   Dev opts -> Dev.runCommand opts

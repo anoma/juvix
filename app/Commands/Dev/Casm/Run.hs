@@ -15,7 +15,7 @@ runCommand opts = do
     Right (labi, code) ->
       case Casm.validate labi code of
         Left err -> exitJuvixError (JuvixError err)
-        Right () -> embed $ print (Casm.runCode labi code)
+        Right () -> print (Casm.runCode labi code)
   where
     file :: AppPath File
     file = opts ^. casmRunInputFile

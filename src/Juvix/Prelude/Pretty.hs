@@ -109,13 +109,13 @@ instance Show AnsiText where
 instance Pretty AnsiText where
   pretty = pretty . ansiTextToText
 
-renderIO :: (HasAnsiBackend a, HasTextBackend a) => Bool -> a -> IO ()
+renderIO :: (MonadIO m, HasAnsiBackend a, HasTextBackend a) => Bool -> a -> m ()
 renderIO useColors = hRenderIO useColors stdout
 
-hRenderIO :: (HasAnsiBackend a, HasTextBackend a) => Bool -> Handle -> a -> IO ()
+hRenderIO :: (MonadIO m, HasAnsiBackend a, HasTextBackend a) => Bool -> Handle -> a -> m ()
 hRenderIO useColors h
-  | useColors = Ansi.renderIO h . toAnsiStream
-  | otherwise = Text.renderIO h . toTextStream
+  | useColors = liftIO . Ansi.renderIO h . toAnsiStream
+  | otherwise = liftIO . Text.renderIO h . toTextStream
 
 toAnsiText :: (HasAnsiBackend a, HasTextBackend a) => Bool -> a -> Text
 toAnsiText useColors

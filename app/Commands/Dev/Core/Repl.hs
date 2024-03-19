@@ -31,11 +31,11 @@ runRepl opts tab = do
   embed (hFlush stdout)
   done <- embed isEOF
   unless done $ do
-    s <- embed getLine
+    s <- getLine
     case fromText (strip s) of
       ":q" -> return ()
       ":h" -> do
-        embed showReplHelp
+        showReplHelp
         runRepl opts tab
       ':' : 'p' : ' ' : s' ->
         case parseText tab (fromString s') of
@@ -133,14 +133,14 @@ runRepl opts tab = do
       putStrLn ""
       runRepl opts tab'
 
-showReplWelcome :: (Members '[EmbedIO, App] r) => Sem r ()
+showReplWelcome :: (MonadIO m) => m ()
 showReplWelcome = do
   putStrLn "JuvixCore REPL"
   putStrLn ""
   putStrLn "Type \":h\" for help."
   putStrLn ""
 
-showReplHelp :: IO ()
+showReplHelp :: (MonadIO m) => m ()
 showReplHelp = do
   putStrLn ""
   putStrLn "JuvixCore REPL"

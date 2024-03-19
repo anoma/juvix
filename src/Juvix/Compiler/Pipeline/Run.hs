@@ -100,36 +100,40 @@ runIO opts entry = runIOEither entry >=> mayThrow
   where
     mayThrow :: (Members '[EmbedIO] r') => Either JuvixError x -> Sem r' x
     mayThrow = \case
-      Left err -> runReader opts $ printErrorAnsiSafe err >> embed exitFailure
+      Left err -> runReader opts $ printErrorAnsiSafe err >> exitFailure
       Right r -> return r
 
-runReplPipelineIO :: EntryPoint -> IO Artifacts
+runReplPipelineIO :: (MonadIO m) => EntryPoint -> m Artifacts
 runReplPipelineIO = runReplPipelineIO' defaultGenericOptions
 
-runReplPipelineIO' :: GenericOptions -> EntryPoint -> IO Artifacts
+runReplPipelineIO' :: forall m. (MonadIO m) => GenericOptions -> EntryPoint -> m Artifacts
 runReplPipelineIO' opts entry = runReplPipelineIOEither entry >>= mayThrow
   where
-    mayThrow :: Either JuvixError r -> IO r
+    mayThrow :: Either JuvixError r -> m r
     mayThrow = \case
-      Left err -> runM . runReader opts $ printErrorAnsiSafe err >> embed exitFailure
+      Left err -> liftIO . runM . runReader opts $ printErrorAnsiSafe err >> exitFailure
       Right r -> return r
 
 runReplPipelineIOEither ::
+  (MonadIO m) =>
   EntryPoint ->
-  IO (Either JuvixError Artifacts)
+  m (Either JuvixError Artifacts)
 runReplPipelineIOEither = runReplPipelineIOEither' LockModePermissive
 
 runReplPipelineIOEither' ::
+  forall m.
+  (MonadIO m) =>
   LockMode ->
   EntryPoint ->
-  IO (Either JuvixError Artifacts)
+  m (Either JuvixError Artifacts)
 runReplPipelineIOEither' lockMode entry = do
   let hasInternet = not (entry ^. entryPointOffline)
       runPathResolver'
         | mainIsPackageFile entry = runPackagePathResolverArtifacts (entry ^. entryPointResolverRoot)
         | otherwise = runPathResolverArtifacts
   eith <-
-    runFinal
+    liftIO
+      . runFinal
       . resourceToIOFinal
       . embedToFinal @IO
       . evalInternet hasInternet
