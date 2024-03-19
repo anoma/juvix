@@ -146,9 +146,8 @@ anomaCallingConventionTests =
 
 juvixCallingConventionTests :: [Test]
 juvixCallingConventionTests =
-  [True]
-    -- <**> [ compilerTest "stdlib add" (add (nockNatLiteral 1) (nockNatLiteral 2)) (eqNock [nock| 3 |]),
-    <**> [ compilerTest "blah" (add (nockNatLiteral 1) (nockNatLiteral 2)) (eqNock [nock| 3 |]),
+  [True, False]
+    <**> [ compilerTest "stdlib add" (add (nockNatLiteral 1) (nockNatLiteral 2)) (eqNock [nock| 3 |]),
            compilerTest "stdlib dec" (dec (nockNatLiteral 1)) (eqNock [nock| 0 |]),
            compilerTest "stdlib mul" (mul (nockNatLiteral 2) (nockNatLiteral 3)) (eqNock [nock| 6 |]),
            compilerTest "stdlib sub" (sub (nockNatLiteral 2) (nockNatLiteral 1)) (eqNock [nock| 1 |]),
@@ -160,7 +159,7 @@ juvixCallingConventionTests =
            compilerTest "stdlib nested" (dec (dec (nockNatLiteral 20))) (eqNock [nock| 18 |]),
            compilerTest "append rights - empty" (appendRights emptyPath (nockNatLiteral 3)) (eqNock (toNock [R, R, R])),
            compilerTest "append rights" (appendRights [L, L] (nockNatLiteral 3)) (eqNock (toNock [L, L, R, R, R])),
-           compilerTest "opAddress" ((OpQuote # (foldTerms (toNock @Natural <$> (5 :| [6, 1])))) >># opAddress' (appendRights emptyPath (nockNatLiteral 2))) (eqNock (toNock @Natural 1)),
+           compilerTest "opAddress" ((OpQuote # (foldTerms (toNock @Natural <$> (5 :| [6, 1])))) >># opAddress' (OpQuote # [R, R])) (eqNock (toNock @Natural 1)),
            compilerTest "foldTermsOrNil (empty)" (foldTermsOrNil []) (eqNock (nockNilTagged "expected-result")),
            let l :: NonEmpty Natural = 1 :| [2]
                l' :: NonEmpty (Term Natural) = nockNatLiteral <$> l

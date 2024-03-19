@@ -513,8 +513,14 @@ opAddress' x = evaluated $ (opQuote "opAddress'" OpAddress) # x
 -- TODO lst is being evaluated three times!
 listToTuple :: Term Natural -> Term Natural -> Term Natural
 listToTuple lst len =
-  let posOfLast = appendRights emptyPath (dec len)
-      t1 = lst >># (opAddress' posOfLast) >># (opAddress "listToTupleLast" [L])
+  -- posOfLast uses stdlib so when it is evaulated the stdlib must be in the
+  -- subject lst must also be evaluated against the standard subject. We achieve
+  -- this by evaluating `lst #. posOfLastOffset` in `t1`. The address that
+  -- posOfLastOffset now points to must be shifted by [L] to make it relative to
+  -- `lst`.
+  let posOfLastOffset = appendRights [L] (dec len)
+      posOfLast = appendRights emptyPath (dec len)
+      t1 = (lst #. posOfLastOffset) >># (opAddress' (OpAddress # [R])) >># (opAddress "listToTupleLast" [L])
    in OpIf # isZero len # lst # (replaceSubterm' lst posOfLast t1)
 
 argsTuplePlaceholder :: Text -> Term Natural
