@@ -66,6 +66,7 @@ computeNodeTypeInfo md = umapL go
             [arg] -> Info.getNodeType arg
             _ -> error "incorrect trace builtin application"
           OpFail -> Info.getNodeType node
+          OpAnomaGet -> Info.getNodeType node
       NCtr Constr {..} ->
         let ci = lookupConstructorInfo md _constrTag
             ii = lookupInductiveInfo md (ci ^. constructorInductive)

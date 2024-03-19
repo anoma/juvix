@@ -52,6 +52,7 @@ instance PrettyCode BuiltinOp where
     OpSeq -> return primSeq
     OpTrace -> return primTrace
     OpFail -> return primFail
+    OpAnomaGet -> return primAnomaGet
 
 instance PrettyCode BuiltinDataTag where
   ppCode = \case
@@ -793,6 +794,9 @@ primSeq = primitive Str.seqq_
 
 primFail :: Doc Ann
 primFail = primitive Str.fail_
+
+primAnomaGet :: Doc Ann
+primAnomaGet = primitive Str.anomaGet
 
 primTrace :: Doc Ann
 primTrace = primitive Str.trace_

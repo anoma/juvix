@@ -93,6 +93,7 @@ fromCore fsize tab =
         BuiltinFail -> False
         BuiltinIntToString -> False
         BuiltinIntPrint -> False
+        BuiltinAnomaGet -> False
       BuiltinTypeInductive i -> case i of
         BuiltinList -> True
         BuiltinNat -> False

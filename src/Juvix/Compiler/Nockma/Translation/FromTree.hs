@@ -360,6 +360,7 @@ compile = \case
         Tree.PrimUnop op -> return $ goPrimUnop op arg
         Tree.OpFail -> return crash
         Tree.OpTrace -> goTrace arg
+        Tree.OpAnomaGet -> goAnomaGet arg
 
     goPrimUnop :: Tree.UnaryOp -> Term Natural -> Term Natural
     goPrimUnop op arg = case op of
@@ -370,6 +371,9 @@ compile = \case
          in sub (getF ClosureTotalArgsNum) (getF ClosureArgsNum)
       Tree.OpIntToField -> fieldErr
       Tree.OpFieldToInt -> fieldErr
+
+    goAnomaGet :: Term Natural -> Sem r (Term Natural)
+    goAnomaGet arg = return (OpScry # (OpQuote # nockNil') # arg)
 
     goTrace :: Term Natural -> Sem r (Term Natural)
     goTrace arg = do

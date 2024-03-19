@@ -587,6 +587,7 @@ registerBuiltinAxiom d = \case
   BuiltinFail -> registerFail d
   BuiltinIntToString -> registerIntToString d
   BuiltinIntPrint -> registerIntPrint d
+  BuiltinAnomaGet -> registerAnomaGet d
 
 goInductive ::
   (Members '[Reader EntryPoint, Reader DefaultArgsStack, NameIdGen, Reader Pragmas, Builtins, Error ScoperError, State ConstructorInfos, Reader S.InfoTable] r) =>

@@ -66,6 +66,8 @@ data UnaryOpcode
     OpTrace
   | -- | Interrupt execution with a runtime error printing the argument.
     OpFail
+  | -- | Get a value by key from Anoma storage
+    OpAnomaGet
 
 data NodeBinop = NodeBinop
   { _nodeBinopInfo :: NodeInfo,

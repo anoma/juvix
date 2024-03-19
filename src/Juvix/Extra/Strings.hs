@@ -308,6 +308,9 @@ fromInt = "from-int"
 intPrint :: (IsString s) => s
 intPrint = "int-print"
 
+anomaGet :: (IsString s) => s
+anomaGet = "anoma-get"
+
 builtinSeq :: (IsString s) => s
 builtinSeq = "seq"
 
