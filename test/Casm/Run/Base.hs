@@ -66,7 +66,7 @@ casmRunAssertion mainFile expectedFile step = do
   r <- parseFile mainFile
   case r of
     Left err -> assertFailure (show (pretty err))
-    Right (labi, instrs) -> casmRunAssertion' True labi instrs expectedFile step
+    Right (labi, instrs) -> casmRunAssertion' False labi instrs expectedFile step
 
 casmRunErrorAssertion :: Path Abs File -> (String -> IO ()) -> Assertion
 casmRunErrorAssertion mainFile step = do
