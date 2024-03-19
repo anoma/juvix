@@ -526,12 +526,22 @@ allTests =
         $(mkRelFile "test073.juvix")
         []
         $ checkNatOutput [11],
-      mkAnomaCallTest'
-        True
-        (Storage (HashMap.fromList [([nock| 333 |], [nock| 222 |])]))
-        "Test074: Builtin anomaGet"
-        $(mkRelDir ".")
-        $(mkRelFile "test074.juvix")
-        [nockNatLiteral 333]
-        $ checkNatOutput [222]
+      let k1 :: Term Natural = [nock| 333 |]
+          v1 :: Term Natural = [nock| 222 |]
+          k2 :: Term Natural = [nock| [1 2 3 nil] |]
+          v2 :: Term Natural = [nock| [4 5 6 nil] |]
+       in mkAnomaCallTest'
+            True
+            ( Storage
+                ( HashMap.fromList
+                    [ (k1, v1),
+                      (k2, v2)
+                    ]
+                )
+            )
+            "Test074: Builtin anomaGet"
+            $(mkRelDir ".")
+            $(mkRelFile "test074.juvix")
+            [OpQuote # k1, OpQuote # k2]
+            $ checkOutput [v1, v2]
     ]
