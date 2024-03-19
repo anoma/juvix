@@ -15,7 +15,7 @@ inferType tab funInfo = goInfer mempty
     goInfer bl = \case
       Binop x -> goBinop bl x
       Unop x -> goUnop bl x
-      Const x -> goConst bl x
+      Constant x -> goConst bl x
       MemRef x -> goMemRef bl x
       AllocConstr x -> goAllocConstr bl x
       AllocClosure x -> goAllocClosure bl x

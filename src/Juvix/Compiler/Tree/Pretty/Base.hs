@@ -338,7 +338,7 @@ instance PrettyCode Node where
   ppCode = \case
     Binop x -> ppCode x
     Unop x -> ppCode x
-    Const x -> ppCode x
+    Constant x -> ppCode x
     MemRef x -> ppCode x
     AllocConstr x -> ppCode x
     AllocClosure x -> ppCode x

@@ -17,7 +17,7 @@ data Node
   = Binop NodeBinop
   | Unop NodeUnop
   | -- | A constant value.
-    Const NodeConstant
+    Constant NodeConstant
   | -- | A memory reference.
     MemRef NodeMemRef
   | -- | Allocate constructor data. JVT code: 'alloc[<tag>](x1, .., xn)'.

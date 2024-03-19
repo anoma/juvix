@@ -34,7 +34,7 @@ eval tab = E.runReader emptyEvalCtx . eval'
     eval' node = case node of
       Binop x -> goBinop x
       Unop x -> goUnop x
-      Const c -> return (goConstant c)
+      Constant c -> return (goConstant c)
       MemRef x -> goMemRef x
       AllocConstr x -> goAllocConstr x
       AllocClosure x -> goAllocClosure x
