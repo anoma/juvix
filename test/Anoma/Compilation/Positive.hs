@@ -6,7 +6,6 @@ import Juvix.Compiler.Backend (Target (TargetAnoma))
 import Juvix.Compiler.Nockma.Anoma
 import Juvix.Compiler.Nockma.Evaluator
 import Juvix.Compiler.Nockma.Language
-import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Translation.FromSource.QQ
 import Juvix.Compiler.Nockma.Translation.FromTree
 import Juvix.Prelude qualified as Prelude
@@ -21,12 +20,7 @@ mkAnomaCallTest' enableDebug _testProgramStorage _testName relRoot mainFile args
   where
     mkTestIO :: IO Test
     mkTestIO = do
-      anomaRes <- withRootCopy $ \tmpDir -> do
-        compiledMain :: AnomaResult <- compileMain tmpDir
-        -- Write out the nockma function to force full evaluation of the compiler
-        let mainClosure = compiledMain ^. anomaClosure
-        writeFileEnsureLn (tmpDir <//> $(mkRelFile "test.nockma")) (ppSerialize mainClosure)
-        return compiledMain
+      anomaRes <- withRootCopy compileMain
       let _testProgramFormula = anomaCall args
           _testProgramSubject = anomaRes ^. anomaClosure
           _testEvalOptions = defaultEvalOptions

@@ -26,6 +26,3 @@ runCommand opts = do
   where
     file :: AppPath File
     file = opts ^. nockmaEvalFile
-
---- run-anoma --env ENV_FILE --profile INPUT_FILE
----
