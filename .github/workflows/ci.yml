@@ -128,6 +128,8 @@ jobs:
           cd cairo-vm
           cargo build --release
           cp target/release/cairo-vm-cli ~/.local/bin/
+          cd -
+          cp main/scripts/run_cairo_vm.sh ~/.local/bin/
 
       - name: Make runtime
         run: |
