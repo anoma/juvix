@@ -104,7 +104,7 @@ instance FromJSON (Prepath d) where
 instance Pretty (Prepath d) where
   pretty (Prepath p) = pretty p
 
-prepathToAbsFile :: Path Abs Dir -> Prepath File -> IO (Path Abs File)
+prepathToAbsFile :: (MonadIO m) => Path Abs Dir -> Prepath File -> m (Path Abs File)
 prepathToAbsFile root = fmap absFile . prepathToFilePath root
 
 prepathToAbsDir :: (MonadIO m) => Path Abs Dir -> Prepath Dir -> m (Path Abs Dir)
@@ -115,10 +115,10 @@ prepathToFilePath root pre = do
   expandedPre <- expandPrepath pre
   liftIO (System.canonicalizePath (toFilePath root </> expandedPre))
 
-fromPreFileOrDir :: Path Abs Dir -> Prepath FileOrDir -> IO (Either (Path Abs File) (Path Abs Dir))
+fromPreFileOrDir :: (MonadIO m, MonadThrow m) => Path Abs Dir -> Prepath FileOrDir -> m (Either (Path Abs File) (Path Abs Dir))
 fromPreFileOrDir cwd fp = do
   absPath <- prepathToFilePath cwd fp
-  isDirectory <- System.doesDirectoryExist absPath
+  isDirectory <- liftIO (System.doesDirectoryExist absPath)
   if
       | isDirectory -> Right <$> parseAbsDir absPath
       | otherwise -> Left <$> parseAbsFile absPath

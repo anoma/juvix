@@ -257,10 +257,10 @@ hRunIO hin hout infoTable = \case
         !x'' = hEval hout infoTable code
     hRunIO hin hout infoTable x''
   ValConstr (Constr (BuiltinTag TagWrite) [ValString s]) -> do
-    liftIO $ hPutStr hout s
+    hPutStr hout s
     return ValVoid
   ValConstr (Constr (BuiltinTag TagWrite) [arg]) -> do
-    liftIO $ hPutStr hout (ppPrint infoTable arg)
+    hPutStr hout (ppPrint infoTable arg)
     return ValVoid
   ValConstr (Constr (BuiltinTag TagReadLn) []) -> do
     liftIO $ hFlush hout

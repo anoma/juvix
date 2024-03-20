@@ -116,7 +116,7 @@ runRuntime tab = runState (RuntimeState (CallStack []) emptyFrame [] Nothing tab
 hEvalRuntime :: forall r a. (Member EmbedIO r) => Handle -> InfoTable -> Sem (Runtime ': r) a -> Sem r a
 hEvalRuntime h tab r = do
   (s, a) <- runRuntime tab r
-  mapM_ (embed . hPutStrLn h) (reverse (s ^. runtimeMessages))
+  mapM_ (hPutStrLn h) (reverse (s ^. runtimeMessages))
   return a
 
 evalRuntime :: forall r a. (Member EmbedIO r) => InfoTable -> Sem (Runtime ': r) a -> Sem r a

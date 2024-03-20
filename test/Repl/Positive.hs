@@ -24,7 +24,7 @@ loadPrelude rootDir = runTaggedLockIO' $ do
   runReader rootDir writeStdlib
   pkg <- readPackageRootIO root
   let ep = defaultEntryPoint pkg root (rootDir <//> preludePath)
-  artif <- embed (runReplPipelineIO ep)
+  artif <- runReplPipelineIO ep
   return (artif, ep)
   where
     root :: Root

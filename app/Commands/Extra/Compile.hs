@@ -242,9 +242,9 @@ findClangUsingEnvVar = do
     clangBinPath = fmap (<//> $(mkRelFile "bin/clang")) <$> llvmDistPath
 
     llvmDistPath :: Sem r (Maybe (Path Abs Dir))
-    llvmDistPath = do
-      p <- embed (lookupEnv llvmDistEnvironmentVar)
-      embed (mapM parseAbsDir p)
+    llvmDistPath = liftIO $ do
+      p <- lookupEnv llvmDistEnvironmentVar
+      mapM parseAbsDir p
 
 data ClangPath
   = ClangSystemPath (Path Abs File)

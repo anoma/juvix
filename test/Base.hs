@@ -79,21 +79,23 @@ assertCmdExists cmd =
     . isJust
     =<< findExecutable cmd
 
-testTaggedLockedToIO :: Sem PipelineAppEffects a -> IO a
+testTaggedLockedToIO :: (MonadIO m) => Sem PipelineAppEffects a -> m a
 testTaggedLockedToIO =
-  runFinal
+  liftIO
+    . runFinal
     . resourceToIOFinal
     . embedToFinal @IO
     . runTaggedLock LockModeExclusive
 
 testRunIO ::
-  forall a.
+  forall a m.
+  (MonadIO m) =>
   EntryPoint ->
   Sem (PipelineEff PipelineAppEffects) a ->
-  IO (ResolverState, PipelineResult a)
+  m (ResolverState, PipelineResult a)
 testRunIO e = testTaggedLockedToIO . runIO defaultGenericOptions e
 
-testDefaultEntryPointIO :: Path Abs Dir -> Path Abs File -> IO EntryPoint
+testDefaultEntryPointIO :: (MonadIO m) => Path Abs Dir -> Path Abs File -> m EntryPoint
 testDefaultEntryPointIO cwd mainFile = testTaggedLockedToIO (defaultEntryPointIO cwd mainFile)
 
 testDefaultEntryPointNoFileIO :: Path Abs Dir -> IO EntryPoint

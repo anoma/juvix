@@ -279,7 +279,7 @@ hEvalIOEither hin hout infoTable funInfo = do
         v <- eval infoTable (funInfo ^. functionCode)
         hRunIO hin hout infoTable v
   let handleTrace :: forall q. (MonadIO q) => Value -> q ()
-      handleTrace = liftIO . hPutStrLn hout . printValue infoTable
+      handleTrace = hPutStrLn hout . printValue infoTable
   liftIO
     . runEff
     . runError @TreeError
@@ -303,10 +303,10 @@ hRunIO hin hout infoTable = \case
     res <- eval infoTable code
     hRunIO hin hout infoTable res
   ValConstr (Constr (BuiltinTag TagWrite) [ValString s]) -> do
-    liftIO $ hPutStr hout s
+    hPutStr hout s
     return ValVoid
   ValConstr (Constr (BuiltinTag TagWrite) [arg]) -> do
-    liftIO $ hPutStr hout (ppPrint infoTable arg)
+    hPutStr hout (ppPrint infoTable arg)
     return ValVoid
   ValConstr (Constr (BuiltinTag TagReadLn) []) -> do
     liftIO $ hFlush hout

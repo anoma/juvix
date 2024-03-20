@@ -132,7 +132,7 @@ import Data.Text qualified as Text
 import Data.Text.Encoding
 import Data.Text.IO hiding (appendFile, getContents, getLine, hGetContents, hGetLine, hPutStr, hPutStrLn, interact, putStr, putStrLn, readFile, writeFile)
 import Data.Text.IO qualified as Text
-import Data.Text.IO.Utf8 hiding (putStr, putStrLn, readFile, writeFile)
+import Data.Text.IO.Utf8 hiding (getLine, hPutStr, hPutStrLn, putStr, putStrLn, readFile, writeFile)
 import Data.Text.IO.Utf8 qualified as Utf8
 import Data.Traversable
 import Data.Tuple.Extra hiding (both)
@@ -154,7 +154,8 @@ import Path.IO qualified as Path hiding (getCurrentDir, setCurrentDir, withCurre
 import Prettyprinter (Doc, (<+>))
 import Safe.Exact
 import Safe.Foldable
-import System.Exit
+import System.Exit hiding (exitFailure, exitSuccess)
+import System.Exit qualified as IO
 import System.FilePath (FilePath, dropTrailingPathSeparator, normalise, (<.>), (</>))
 import System.IO hiding
   ( appendFile,
@@ -167,12 +168,14 @@ import System.IO hiding
     interact,
     openBinaryTempFile,
     openTempFile,
+    print,
     putStr,
     putStrLn,
     readFile,
     readFile',
     writeFile,
   )
+import System.IO qualified as IO
 import System.IO.Error
 import Text.Read qualified as Text
 import Text.Show (Show)
@@ -428,16 +431,34 @@ fromRightIO' :: (MonadIO m) => (e -> m ()) -> m (Either e r) -> m r
 fromRightIO' pp = do
   eitherM ifLeft return
   where
-    ifLeft e = pp e >> liftIO exitFailure
+    ifLeft e = pp e >> exitFailure
 
 fromRightIO :: (MonadIO m) => (e -> Text) -> m (Either e r) -> m r
 fromRightIO pp = fromRightIO' (putStrLn . pp)
+
+exitSuccess :: (MonadIO m) => m x
+exitSuccess = liftIO IO.exitSuccess
+
+exitFailure :: (MonadIO m) => m x
+exitFailure = liftIO IO.exitFailure
+
+print :: (MonadIO m, Show a) => a -> m ()
+print = liftIO . IO.print
 
 putStr :: (MonadIO m) => Text -> m ()
 putStr = liftIO . Text.putStr
 
 putStrLn :: (MonadIO m) => Text -> m ()
 putStrLn = liftIO . Text.putStrLn
+
+getLine :: (MonadIO m) => m Text
+getLine = liftIO Text.getLine
+
+hPutStr :: (MonadIO m) => Handle -> Text -> m ()
+hPutStr h = liftIO . Text.hPutStr h
+
+hPutStrLn :: (MonadIO m) => Handle -> Text -> m ()
+hPutStrLn h = liftIO . Text.hPutStrLn h
 
 optional_ :: (Alternative m) => m a -> m ()
 optional_ = void . optional

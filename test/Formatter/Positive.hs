@@ -8,10 +8,10 @@ import Scope.Positive qualified as Scope
 runScopeEffIO :: (Member EmbedIO r) => Path Abs Dir -> Sem (ScopeEff ': r) a -> Sem r a
 runScopeEffIO root = interpret $ \case
   ScopeFile p -> do
-    entry <- embed (testDefaultEntryPointIO root p)
-    embed ((^. pipelineResult) . snd <$> testRunIO entry upToScoping)
+    entry <- testDefaultEntryPointIO root p
+    ((^. pipelineResult) . snd <$> testRunIO entry upToScoping)
   ScopeStdin entry -> do
-    embed ((^. pipelineResult) . snd <$> testRunIO entry upToScoping)
+    ((^. pipelineResult) . snd <$> testRunIO entry upToScoping)
 
 makeFormatTest' :: Scope.PosTest -> TestDescr
 makeFormatTest' Scope.PosTest {..} =

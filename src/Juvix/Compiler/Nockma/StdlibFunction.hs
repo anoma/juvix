@@ -1,7 +1,7 @@
 module Juvix.Compiler.Nockma.StdlibFunction where
 
 import Juvix.Compiler.Nockma.Translation.FromSource.QQ
-import Juvix.Prelude hiding (Path)
+import Juvix.Prelude.Base
 
 -- | The stdlib paths are obtained from the Urbit dojo
 -- * Load the stdlib file into the Urbit dojo

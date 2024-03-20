@@ -62,7 +62,7 @@ reAppIO ::
 reAppIO args@RunAppIOArgs {..} =
   reinterpret $ \case
     AskPackageGlobal -> return (_runAppIOArgsRoot ^. rootPackageType `elem` [GlobalStdlib, GlobalPackageDescription, GlobalPackageBase])
-    FromAppPathFile p -> embed (prepathToAbsFile invDir (p ^. pathPath))
+    FromAppPathFile p -> prepathToAbsFile invDir (p ^. pathPath)
     GetMainFile m -> getMainFile' m
     FromAppPathDir p -> liftIO (prepathToAbsDir invDir (p ^. pathPath))
     RenderStdOut t
@@ -84,7 +84,7 @@ reAppIO args@RunAppIOArgs {..} =
       printErr e
     ExitJuvixError e -> do
       printErr e
-      embed exitFailure
+      exitFailure
     ExitMsg exitCode t -> exitMsg' (exitWith exitCode) t
     ExitFailMsg t -> exitMsg' exitFailure t
     SayRaw b -> embed (ByteString.putStr b)
@@ -97,11 +97,11 @@ reAppIO args@RunAppIOArgs {..} =
 
     getMainFile' :: (Members '[SCache Package, EmbedIO] r') => Maybe (AppPath File) -> Sem r' (Path Abs File)
     getMainFile' = \case
-      Just p -> embed (prepathToAbsFile invDir (p ^. pathPath))
+      Just p -> prepathToAbsFile invDir (p ^. pathPath)
       Nothing -> do
         pkg <- getPkg
         case pkg ^. packageMain of
-          Just p -> embed (prepathToAbsFile invDir p)
+          Just p -> prepathToAbsFile invDir p
           Nothing -> missingMainErr
 
     missingMainErr :: (Members '[EmbedIO] r') => Sem r' x
@@ -116,7 +116,10 @@ reAppIO args@RunAppIOArgs {..} =
     g :: GlobalOptions
     g = _runAppIOArgsGlobalOptions
     printErr e =
-      embed $ hPutStrLn stderr $ run $ runReader (project' @GenericOptions g) $ Error.render (not (_runAppIOArgsGlobalOptions ^. globalNoColors)) (g ^. globalOnlyErrors) e
+      hPutStrLn stderr
+        . run
+        . runReader (project' @GenericOptions g)
+        $ Error.render (not (_runAppIOArgsGlobalOptions ^. globalNoColors)) (g ^. globalOnlyErrors) e
 
 getEntryPoint' :: (Members '[EmbedIO, TaggedLock] r) => RunAppIOArgs -> AppPath File -> Sem r EntryPoint
 getEntryPoint' RunAppIOArgs {..} inputFile = do
