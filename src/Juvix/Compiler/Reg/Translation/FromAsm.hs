@@ -131,7 +131,7 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
 
     mkValue :: Asm.Value -> Value
     mkValue = \case
-      Asm.Constant c -> Const c
+      Asm.Constant c -> ValConst c
       Asm.Ref mv -> case mv of
         Asm.DRef dref -> VRef $ mkVar dref
         Asm.ConstrRef Asm.Field {..} ->

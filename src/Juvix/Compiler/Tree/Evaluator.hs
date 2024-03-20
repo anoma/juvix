@@ -37,7 +37,7 @@ hEval hout tab = eval' [] mempty
     eval' args temps node = case node of
       Binop x -> goBinop x
       Unop x -> goUnop x
-      Const c -> goConstant c
+      Constant c -> goConstant c
       MemRef x -> goMemRef x
       AllocConstr x -> goAllocConstr x
       AllocClosure x -> goAllocClosure x

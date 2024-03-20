@@ -38,7 +38,7 @@ genCode fi =
     go isTail node = case node of
       Tree.Binop x -> goBinop isTail x
       Tree.Unop x -> goUnop isTail x
-      Tree.Const x -> goConstant isTail x
+      Tree.Constant x -> goConstant isTail x
       Tree.MemRef x -> goMemRef isTail x
       Tree.AllocConstr x -> goAllocConstr isTail x
       Tree.AllocClosure x -> goAllocClosure isTail x

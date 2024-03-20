@@ -9,16 +9,16 @@ mkUnop :: UnaryOpcode -> Node -> Node
 mkUnop op arg = Unop (NodeUnop mempty op arg)
 
 mkConst :: Constant -> Node
-mkConst c = Const $ NodeConstant mempty c
+mkConst c = Constant (NodeConstant mempty c)
 
 mkMemRef :: MemRef -> Node
-mkMemRef r = MemRef $ NodeMemRef mempty r
+mkMemRef r = MemRef (NodeMemRef mempty r)
 
 getNodeInfo :: Node -> NodeInfo
 getNodeInfo = \case
   Binop NodeBinop {..} -> _nodeBinopInfo
   Unop NodeUnop {..} -> _nodeUnopInfo
-  Const NodeConstant {..} -> _nodeConstantInfo
+  Constant NodeConstant {..} -> _nodeConstantInfo
   MemRef NodeMemRef {..} -> _nodeMemRefInfo
   AllocConstr NodeAllocConstr {..} -> _nodeAllocConstrInfo
   AllocClosure NodeAllocClosure {..} -> _nodeAllocClosureInfo
@@ -140,10 +140,10 @@ destruct = \case
                 _nodeUnopInfo
               }
       }
-  Const c ->
+  Constant c ->
     NodeDetails
       { _nodeChildren = [],
-        _nodeReassemble = noChildren (Const c)
+        _nodeReassemble = noChildren (Constant c)
       }
   MemRef r ->
     NodeDetails

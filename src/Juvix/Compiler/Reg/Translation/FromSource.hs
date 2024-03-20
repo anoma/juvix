@@ -463,7 +463,7 @@ varTmp = do
 value ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r Value
-value = (Const <$> constant) <|> varOrConstrRef
+value = (ValConst <$> constant) <|> varOrConstrRef
 
 varOrConstrRef ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>

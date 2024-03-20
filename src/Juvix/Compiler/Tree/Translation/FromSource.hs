@@ -53,7 +53,7 @@ parseNode ::
 parseNode =
   (Binop <$> parseBinop)
     <|> (Unop <$> parseUnop)
-    <|> (Const <$> parseConst)
+    <|> (Constant <$> parseConst)
     <|> (AllocConstr <$> parseAlloc)
     <|> (AllocClosure <$> parseCAlloc)
     <|> (ExtendClosure <$> parseCExtend)

@@ -270,7 +270,7 @@ compile :: forall r. (Members '[Reader CompilerCtx] r) => Tree.Node -> Sem r (Te
 compile = \case
   Tree.Binop b -> goBinop b
   Tree.Unop b -> goUnop b
-  Tree.Const c -> return (goConst (c ^. Tree.nodeConstant))
+  Tree.Constant c -> return (goConstant (c ^. Tree.nodeConstant))
   Tree.MemRef c -> goMemRef (c ^. Tree.nodeMemRef)
   Tree.AllocConstr c -> goAllocConstr c
   Tree.AllocClosure c -> goAllocClosure c
@@ -312,8 +312,8 @@ compile = \case
         goDirectRef :: Tree.DirectRef -> Term Natural
         goDirectRef dr = OpAddress # directRefPath dr
 
-    goConst :: Tree.Constant -> Term Natural
-    goConst = \case
+    goConstant :: Tree.Constant -> Term Natural
+    goConstant = \case
       Tree.ConstInt i
         | i < 0 -> error "negative integer"
         | otherwise -> nockIntegralLiteral i
