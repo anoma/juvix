@@ -80,7 +80,7 @@ toCore InfoTable {..} =
       NUniv Univ {..} -> Core.mkUniv' _univLevel
       NTyp TypeConstr {..} -> Core.mkTypeConstr' _typeConstrSymbol (map goNode _typeConstrArgs)
       NPrim TypePrim {..} -> Core.mkTypePrim' _typePrimPrimitive
-      NDyn Dynamic {} -> Core.mkDynamic'
+      NDyn DynamicTy {} -> Core.mkDynamic'
       NBot Bottom {..} -> Core.mkBottom mempty (goNode _bottomType)
 
     goBinder :: Binder -> Core.Binder
@@ -167,7 +167,7 @@ fromCore Core.InfoTable {..} =
       Core.NUniv Core.Univ {..} -> NUniv $ Univ () _univLevel
       Core.NTyp Core.TypeConstr {..} -> NTyp $ TypeConstr () _typeConstrSymbol (map goNode _typeConstrArgs)
       Core.NPrim Core.TypePrim {..} -> NPrim $ TypePrim () _typePrimPrimitive
-      Core.NDyn Core.Dynamic {} -> NDyn $ Dynamic ()
+      Core.NDyn Core.DynamicTy {} -> NDyn $ DynamicTy ()
       Core.NBot Core.Bottom {..} -> NBot $ Bottom () (goNode _bottomType)
       Core.NMatch {} -> impossible
       Core.Closure {} -> impossible

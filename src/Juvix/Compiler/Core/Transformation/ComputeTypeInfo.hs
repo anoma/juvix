@@ -96,7 +96,7 @@ computeNodeTypeInfo md = umapL go
         mkUniv' 0
       NPrim TypePrim {} ->
         mkUniv' 0
-      NDyn Dynamic {} ->
+      NDyn DynamicTy {} ->
         mkUniv' 0
       NBot Bottom {..} ->
         _bottomType
