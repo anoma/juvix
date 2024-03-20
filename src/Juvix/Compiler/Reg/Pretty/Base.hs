@@ -43,7 +43,7 @@ instance PrettyCode ConstrField where
 
 instance PrettyCode Value where
   ppCode = \case
-    Const x -> Tree.ppCode x
+    ValConst x -> Tree.ppCode x
     CRef x -> ppCode x
     VRef x -> ppCode x
 

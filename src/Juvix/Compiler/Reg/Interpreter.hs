@@ -88,7 +88,7 @@ runFunction hout infoTable args0 info0 = do
 
     readValue :: Args -> Vars s -> Value -> ST s Val
     readValue args tmps = \case
-      Const c -> return $ constantToValue c
+      ValConst c -> return $ constantToValue c
       CRef r -> readConstrRef args tmps r
       VRef r -> readVarRef args tmps r
 

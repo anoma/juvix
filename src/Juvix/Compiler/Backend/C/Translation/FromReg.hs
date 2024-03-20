@@ -313,7 +313,7 @@ fromRegInstr bNoStack info = \case
 
     fromValue :: Reg.Value -> Expression
     fromValue = \case
-      Reg.Const c -> fromConst c
+      Reg.ValConst c -> fromConst c
       Reg.CRef Reg.ConstrField {..} ->
         case _constrFieldMemRep of
           Reg.MemRepConstr ->

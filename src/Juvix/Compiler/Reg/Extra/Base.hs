@@ -53,7 +53,7 @@ overValueRefs f = \case
 
     goValue :: Value -> Value
     goValue = \case
-      Const c -> Const c
+      ValConst c -> ValConst c
       CRef x -> CRef $ goConstrField x
       VRef x -> VRef $ f x
 

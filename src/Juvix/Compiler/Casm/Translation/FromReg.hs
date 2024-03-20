@@ -110,13 +110,13 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
 
         goValue :: Reg.Value -> ([Instruction], Value)
         goValue = \case
-          Reg.Const c -> ([], Imm $ goConst c)
+          Reg.ValConst c -> ([], Imm $ goConst c)
           Reg.CRef x -> ([mkAssignAp (goConstrField x)], Ref $ MemRef Ap (-1))
           Reg.VRef x -> ([], Ref $ goVarRef x)
 
         goRValue :: Reg.Value -> RValue
         goRValue = \case
-          Reg.Const c -> Val $ Imm $ goConst c
+          Reg.ValConst c -> Val $ Imm $ goConst c
           Reg.CRef x -> goConstrField x
           Reg.VRef x -> Val $ Ref $ goVarRef x
 
@@ -162,8 +162,8 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
 
         goBinop :: Address -> Reg.InstrBinop -> Sem r [Instruction]
         goBinop addr x@Reg.InstrBinop {..} = case _instrBinopArg1 of
-          Reg.Const c1 -> case _instrBinopArg2 of
-            Reg.Const c2 -> case Reg.evalBinop' _instrBinopOpcode c1 c2 of
+          Reg.ValConst c1 -> case _instrBinopArg2 of
+            Reg.ValConst c2 -> case Reg.evalBinop' _instrBinopOpcode c1 c2 of
               Left err -> error err
               Right c ->
                 return [mkAssign res (Val $ Imm $ goConst c)]

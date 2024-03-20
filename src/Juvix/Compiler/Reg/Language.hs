@@ -7,7 +7,7 @@ where
 import Juvix.Compiler.Reg.Language.Base
 
 data Value
-  = Const Constant
+  = ValConst Constant
   | CRef ConstrField
   | VRef VarRef
 

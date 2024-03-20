@@ -73,7 +73,7 @@ initBranchVars = mapT (const goFun)
           Assign
             InstrAssign
               { _instrAssignResult = vref,
-                _instrAssignValue = Const ConstVoid
+                _instrAssignValue = ValConst ConstVoid
               }
 
 checkInitialized :: InfoTable -> Bool
