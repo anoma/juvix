@@ -45,7 +45,7 @@ type TypeConstr = TypeConstr' () Node
 
 type TypePrim = TypePrim' ()
 
-type Dynamic = Dynamic' ()
+type Dynamic = DynamicTy' ()
 
 type Bottom = Bottom' () Node
 

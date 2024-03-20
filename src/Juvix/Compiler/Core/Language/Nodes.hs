@@ -243,8 +243,8 @@ data TypePrim' i = TypePrim
 -- | Dynamic type. A Node with a dynamic type has an unknown type. Useful
 -- for transformations that introduce partial type information, e.g., one can
 -- have types `* -> *` and `* -> * -> Nat` where `*` is the dynamic type.
-newtype Dynamic' i = Dynamic
-  { _dynamicInfo :: i
+newtype DynamicTy' i = DynamicTy
+  { _dynamicTyInfo :: i
   }
   deriving stock (Generic)
 
@@ -294,7 +294,7 @@ instance (Serialize i) => Serialize (TypePrim' i)
 
 instance (Serialize i, Serialize a) => Serialize (TypeConstr' i a)
 
-instance (Serialize i) => Serialize (Dynamic' i)
+instance (Serialize i) => Serialize (DynamicTy' i)
 
 instance (Serialize i, Serialize a) => Serialize (Bottom' i a)
 
@@ -366,7 +366,7 @@ instance HasAtomicity (TypePrim' i) where
 instance HasAtomicity (TypeConstr' i a) where
   atomicity _ = Aggregate lambdaFixity
 
-instance HasAtomicity (Dynamic' i) where
+instance HasAtomicity (DynamicTy' i) where
   atomicity _ = Atom
 
 instance HasAtomicity (Bottom' i a) where
@@ -401,7 +401,7 @@ makeLenses ''Pi'
 makeLenses ''Lambda'
 makeLenses ''Univ'
 makeLenses ''TypeConstr'
-makeLenses ''Dynamic'
+makeLenses ''DynamicTy'
 makeLenses ''LetItem'
 
 instance (Eq ty) => Eq (Binder' ty) where
@@ -457,8 +457,8 @@ instance (Eq a) => Eq (TypeConstr' i a) where
 instance Eq (TypePrim' i) where
   (TypePrim _ p1) == (TypePrim _ p2) = p1 == p2
 
-instance Eq (Dynamic' i) where
-  (Dynamic _) == (Dynamic _) = True
+instance Eq (DynamicTy' i) where
+  DynamicTy {} == DynamicTy {} = True
 
 instance Eq (Bottom' i a) where
   Bottom {} == Bottom {} = True

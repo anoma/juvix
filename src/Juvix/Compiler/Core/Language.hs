@@ -59,7 +59,7 @@ type TypeConstr = TypeConstr' Info Node
 
 type TypePrim = TypePrim' Info
 
-type Dynamic = Dynamic' Info
+type DynamicTy = DynamicTy' Info
 
 type Bottom = Bottom' Info Node
 
@@ -83,7 +83,7 @@ data Node
   | NUniv {-# UNPACK #-} !Univ
   | NTyp {-# UNPACK #-} !TypeConstr
   | NPrim {-# UNPACK #-} !TypePrim
-  | NDyn !Dynamic -- Dynamic is already a newtype, so it's unpacked.
+  | NDyn !DynamicTy -- Dynamic is already a newtype, so it's unpacked.
   | NBot {-# UNPACK #-} !Bottom
   | -- Evaluation only: `Closure env node`.
     Closure
@@ -137,5 +137,5 @@ emptyBinder =
   Binder
     { _binderName = "?",
       _binderLocation = Nothing,
-      _binderType = NDyn (Dynamic mempty)
+      _binderType = NDyn (DynamicTy mempty)
     }

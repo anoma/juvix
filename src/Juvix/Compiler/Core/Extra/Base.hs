@@ -195,7 +195,7 @@ mkTypeField' :: Type
 mkTypeField' = mkTypeField Info.empty
 
 mkDynamic :: Info -> Type
-mkDynamic i = NDyn (Dynamic i)
+mkDynamic i = NDyn (DynamicTy i)
 
 mkDynamic' :: Type
 mkDynamic' = mkDynamic Info.empty
@@ -728,7 +728,7 @@ destruct = \case
         _nodeChildren = [],
         _nodeReassemble = noChildren $ \i' -> mkTypePrim i' prim
       }
-  NDyn (Dynamic i) ->
+  NDyn (DynamicTy i) ->
     NodeDetails
       { _nodeInfo = i,
         _nodeSubinfos = [],

@@ -288,7 +288,7 @@ translateType node = case node of
         }
   NPrim TypePrim {..} ->
     Stripped.TyPrim _typePrimPrimitive
-  NDyn Dynamic {} ->
+  NDyn DynamicTy {} ->
     Stripped.TyDynamic
   _ ->
     Stripped.TyDynamic
