@@ -1,14 +1,14 @@
-module Juvix.Compiler.Reg.Extra.Info where
+module Juvix.Compiler.Reg.Extra.Info
+  ( module Juvix.Compiler.Tree.Extra.Info,
+    module Juvix.Compiler.Reg.Extra.Info,
+  )
+where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Backend
 import Juvix.Compiler.Reg.Data.InfoTable
 import Juvix.Compiler.Reg.Language
-
-userConstrs :: InfoTable -> [ConstructorInfo]
-userConstrs tab =
-  filter (\ci -> not (isBuiltinTag (ci ^. constructorTag))) $
-    HashMap.elems (tab ^. infoConstrs)
+import Juvix.Compiler.Tree.Extra.Info
 
 -- | Compute the maximum runtime stack height
 computeMaxStackHeight :: Limits -> Code -> Int
@@ -214,28 +214,6 @@ data ExtraInfo = ExtraInfo
   }
 
 makeLenses ''ExtraInfo
-
-computeUIDs :: Limits -> InfoTable -> HashMap Tag Int
-computeUIDs lims tab =
-  HashMap.fromList $
-    zipWith
-      (\ci uid -> (ci ^. constructorTag, uid))
-      (userConstrs tab)
-      [lims ^. limitsBuiltinUIDsNum ..]
-
-computeFUIDs :: InfoTable -> HashMap Symbol Int
-computeFUIDs tab =
-  HashMap.fromList $
-    zipWith
-      (\fi fuid -> (fi ^. functionSymbol, fuid))
-      (HashMap.elems (tab ^. infoFunctions))
-      [0 ..]
-
-computeCIDs :: InfoTable -> HashMap Tag Int
-computeCIDs tab = HashMap.fromList $ concatMap go (tab ^. infoInductives)
-  where
-    go :: InductiveInfo -> [(Tag, Int)]
-    go InductiveInfo {..} = zip _inductiveConstructors [0 ..]
 
 computeExtraInfo :: Limits -> InfoTable -> ExtraInfo
 computeExtraInfo lims tab =
