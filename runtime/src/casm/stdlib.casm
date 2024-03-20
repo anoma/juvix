@@ -1,0 +1,99 @@
+-- Juvix runtime for Cairo assembly
+
+-- Closure layout: [ addr | 9 - sargs | 9 - argsnum | arguments... ]
+--  sargs -- number of arguments stored in the closure
+--  argsnum -- number of arguments left
+-- sargs + argsnum = total numer of arguments for the function
+-- Maximum number of function arguments: 8
+
+-- after calling juvix_get_regs:
+-- [ap - 4] == fp
+-- [ap - 3] == pc
+-- [ap - 2] == ap - 2
+juvix_get_regs:
+  call juvix_get_ap_reg
+  ret
+juvix_get_ap_reg:
+  ret
+
+-- [fp - 3]: closure; [fp - 3 - k]: argument k to closure call
+juvix_call_closure:
+  ap += 1
+  -- closure addr
+  [fp] = [[fp - 3]]
+  -- jmp rel (9 - argsnum)
+  jmp rel [[fp - 3] + 2]
+  [ap] = [fp - 11]; ap++
+  [ap] = [fp - 10]; ap++
+  [ap] = [fp - 9]; ap++
+  [ap] = [fp - 8]; ap++
+  [ap] = [fp - 7]; ap++
+  [ap] = [fp - 6]; ap++
+  [ap] = [fp - 5]; ap++
+  [ap] = [fp - 4]; ap++
+  -- jmp rel (9 - sargs)
+  jmp rel [[fp - 3] + 1]
+  [ap] = [[fp - 3] + 10]; ap++
+  [ap] = [[fp - 3] + 9]; ap++
+  [ap] = [[fp - 3] + 8]; ap++
+  [ap] = [[fp - 3] + 7]; ap++
+  [ap] = [[fp - 3] + 6]; ap++
+  [ap] = [[fp - 3] + 5]; ap++
+  [ap] = [[fp - 3] + 4]; ap++
+  [ap] = [[fp - 3] + 3]; ap++
+  call [fp]
+  ret
+
+-- [fp - 3]: closure
+-- [fp - 4]: n = the number of arguments to extend with
+-- [fp - 4 - k]: argument n - k - 1 (reverse order!)
+juvix_extend_closure:
+  ap += 6
+  -- 9 - sargs
+  [fp + 1] = [[fp - 3] + 1]
+  -- 9 - argsnum (expected)
+  [fp + 2] = [[fp - 3] + 2]
+  [fp + 3] = 9
+  -- [fp + 4] = sargs
+  [fp + 4] = [fp + 3] - [fp + 1]
+  -- [fp + 5] = 9 - n
+  [fp + 5] = [fp + 3] - [fp - 4]
+  -- copy stored args reversing them
+  jmp rel [fp + 1]
+  [ap] = [[fp - 3] + 10]; ap++
+  [ap] = [[fp - 3] + 9]; ap++
+  [ap] = [[fp - 3] + 8]; ap++
+  [ap] = [[fp - 3] + 7]; ap++
+  [ap] = [[fp - 3] + 6]; ap++
+  [ap] = [[fp - 3] + 5]; ap++
+  [ap] = [[fp - 3] + 4]; ap++
+  [ap] = [[fp - 3] + 3]; ap++
+  call juvix_get_regs
+  [fp] = [ap - 2] + 2
+  -- closure header
+  [ap] = [[fp - 3]]; ap++
+  [ap] = [fp + 1] - [fp - 4]; ap++
+  [ap] = [fp + 2] + [fp - 4]; ap++
+  -- copy stored args: jmp rel (9 - sargs)
+  jmp rel [fp + 1]
+  [ap] = [fp + 13]; ap++
+  [ap] = [fp + 12]; ap++
+  [ap] = [fp + 11]; ap++
+  [ap] = [fp + 10]; ap++
+  [ap] = [fp + 9]; ap++
+  [ap] = [fp + 8]; ap++
+  [ap] = [fp + 7]; ap++
+  [ap] = [fp + 6]; ap++
+  -- copy extra args: jmp rel (9 - extra args num)
+  jmp rel [fp + 5]
+  [ap] = [fp - 12]; ap++
+  [ap] = [fp - 11]; ap++
+  [ap] = [fp - 10]; ap++
+  [ap] = [fp - 9]; ap++
+  [ap] = [fp - 8]; ap++
+  [ap] = [fp - 7]; ap++
+  [ap] = [fp - 6]; ap++
+  [ap] = [fp - 5]; ap++
+  -- return value
+  [ap] = [fp]; ap++
+  ret

@@ -29,6 +29,11 @@ emptyBuilderState =
       _stateIdents = mempty
     }
 
+runLabelInfoBuilderWithNextId :: Word -> Sem (LabelInfoBuilder ': r) a -> Sem r (LabelInfo, a)
+runLabelInfoBuilderWithNextId nextSymId =
+  fmap (first (^. stateLabelInfo))
+    . runLabelInfoBuilder' emptyBuilderState {_stateNextSymbolId = nextSymId}
+
 runLabelInfoBuilder :: Sem (LabelInfoBuilder ': r) a -> Sem r (LabelInfo, a)
 runLabelInfoBuilder = fmap (first (^. stateLabelInfo)) . runLabelInfoBuilder' emptyBuilderState
 

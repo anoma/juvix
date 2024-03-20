@@ -156,18 +156,9 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
     goUnop :: (Member Runtime r) => (Val -> Either Text Val) -> Sem r ()
     goUnop op = goUnop' (eitherToError . op)
 
-    getConstantVal :: Constant -> Val
-    getConstantVal = \case
-      ConstInt i -> ValInteger i
-      ConstField f -> ValField f
-      ConstBool b -> ValBool b
-      ConstString s -> ValString s
-      ConstUnit -> ValUnit
-      ConstVoid -> ValVoid
-
     getVal :: (Member Runtime r) => Value -> Sem r Val
     getVal = \case
-      Constant c -> return (getConstantVal c)
+      Constant c -> return (constantToValue c)
       Ref r -> getMemVal r
 
     getMemVal :: forall r. (Member Runtime r) => MemRef -> Sem r Val

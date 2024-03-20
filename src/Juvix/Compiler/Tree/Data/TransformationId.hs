@@ -17,6 +17,7 @@ data TransformationId
 data PipelineId
   = PipelineNockma
   | PipelineAsm
+  | PipelineCairoAsm
   deriving stock (Data, Bounded, Enum)
 
 type TransformationLikeId = TransformationLikeId' TransformationId PipelineId
@@ -26,6 +27,9 @@ toNockmaTransformations = [Validate, Apply, FilterUnreachable, TempHeight]
 
 toAsmTransformations :: [TransformationId]
 toAsmTransformations = [Validate]
+
+toCairoAsmTransformations :: [TransformationId]
+toCairoAsmTransformations = [Validate, Apply, FilterUnreachable]
 
 instance TransformationId' TransformationId where
   transformationText :: TransformationId -> Text
@@ -43,8 +47,10 @@ instance PipelineId' TransformationId PipelineId where
   pipelineText = \case
     PipelineNockma -> strNockmaPipeline
     PipelineAsm -> strAsmPipeline
+    PipelineCairoAsm -> strCairoAsmPipeline
 
   pipeline :: PipelineId -> [TransformationId]
   pipeline = \case
     PipelineNockma -> toNockmaTransformations
     PipelineAsm -> toAsmTransformations
+    PipelineCairoAsm -> toCairoAsmTransformations

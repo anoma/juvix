@@ -1,12 +1,12 @@
 module Juvix.Compiler.Tree.Evaluator.Builtins where
 
 import Juvix.Compiler.Tree.Data.InfoTable.Base
+import Juvix.Compiler.Tree.Language.Base
 import Juvix.Compiler.Tree.Language.Builtins
 import Juvix.Compiler.Tree.Language.Value
 import Juvix.Compiler.Tree.Pretty.Base
 import Juvix.Data.Field
 import Juvix.Data.PPOutput
-import Juvix.Prelude
 import Text.Read qualified as T
 
 type ErrorMsg = Text
@@ -104,3 +104,32 @@ printValue :: InfoTable' t e -> Value -> Text
 printValue tab = \case
   ValString s -> s
   v -> toPlainText . mkAnsiText . PPOutput . doc (defaultOptions tab) $ v
+
+constantToValue :: Constant -> Value
+constantToValue = \case
+  ConstInt i -> ValInteger i
+  ConstField f -> ValField f
+  ConstBool b -> ValBool b
+  ConstString s -> ValString s
+  ConstUnit -> ValUnit
+  ConstVoid -> ValVoid
+
+valueToConstant :: Value -> Constant
+valueToConstant = \case
+  ValInteger i -> ConstInt i
+  ValField f -> ConstField f
+  ValBool b -> ConstBool b
+  ValString s -> ConstString s
+  ValUnit -> ConstUnit
+  ValVoid -> ConstVoid
+  _ -> impossible
+
+evalBinop' :: BinaryOp -> Constant -> Constant -> Either ErrorMsg Constant
+evalBinop' op arg1 arg2 =
+  mapRight valueToConstant $
+    evalBinop op (constantToValue arg1) (constantToValue arg2)
+
+evalUnop' :: InfoTable' t e -> UnaryOp -> Constant -> Either ErrorMsg Constant
+evalUnop' tab op v =
+  mapRight valueToConstant $
+    evalUnop tab op (constantToValue v)

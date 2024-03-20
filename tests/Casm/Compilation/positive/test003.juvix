@@ -1,0 +1,14 @@
+-- Integer arithmetic
+module test003;
+
+{-
+
+Multiline comment
+
+{- nested comments work -}
+
+-}
+
+import Stdlib.Prelude open;
+
+main : Nat := mod 3 2 + div 18 4 + mod 18 4 + div 16 4 + mod 16 4;

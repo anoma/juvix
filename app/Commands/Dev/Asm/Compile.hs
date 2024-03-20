@@ -6,7 +6,10 @@ import Commands.Extra.Compile qualified as Compile
 import Juvix.Compiler.Asm.Translation.FromSource qualified as Asm
 import Juvix.Compiler.Backend qualified as Backend
 import Juvix.Compiler.Backend.C qualified as C
+import Juvix.Compiler.Casm.Data.Result qualified as Casm
+import Juvix.Compiler.Casm.Pretty qualified as Casm
 import Juvix.Compiler.Reg.Pretty qualified as Reg
+import Juvix.Prelude.Pretty
 
 runCommand :: forall r. (Members '[EmbedIO, App, TaggedLock] r) => AsmCompileOptions -> Sem r ()
 runCommand opts = do
@@ -34,6 +37,15 @@ runCommand opts = do
           tab' <- getRight r
           let code = Reg.ppPrint tab' tab'
           writeFileEnsureLn regFile code
+        TargetCasm -> do
+          casmFile <- Compile.outputFile opts file
+          r <-
+            runReader entryPoint
+              . runError @JuvixError
+              . asmToCasm
+              $ tab
+          Casm.Result {..} <- getRight r
+          writeFileEnsureLn casmFile (toPlainText $ Casm.ppProgram _resultCode)
         _ ->
           case run $ runReader entryPoint $ runError $ asmToMiniC tab of
             Left err -> exitJuvixError err
@@ -57,6 +69,7 @@ runCommand opts = do
       TargetWasm32Wasi -> return Backend.TargetCWasm32Wasi
       TargetNative64 -> return Backend.TargetCNative64
       TargetReg -> return Backend.TargetReg
+      TargetCasm -> return Backend.TargetCairo
       TargetNockma -> err "Nockma"
       TargetAnoma -> err "Anoma"
       TargetTree -> err "JuvixTree"

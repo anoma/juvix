@@ -19,9 +19,12 @@ import Juvix.Data.Field
 
 type Memory s = MV.MVector s (Maybe FField)
 
--- | Runs Cairo Assembly. Returns the value of `[ap - 1]` at program exit.
 runCode :: LabelInfo -> [Instruction] -> FField
-runCode (LabelInfo labelInfo) instrs0 = runST goCode
+runCode = hRunCode stderr
+
+-- | Runs Cairo Assembly. Returns the value of `[ap - 1]` at program exit.
+hRunCode :: Handle -> LabelInfo -> [Instruction] -> FField
+hRunCode hout (LabelInfo labelInfo) instrs0 = runST goCode
   where
     instrs :: Vec.Vector Instruction
     instrs = Vec.fromList instrs0
@@ -48,6 +51,8 @@ runCode (LabelInfo labelInfo) instrs0 = runST goCode
           when (Vec.length instrs < pc) $
             throwRunError ("invalid program counter: " <> show pc)
           checkGaps mem
+          when (ap == 0) $
+            throwRunError "nothing to return"
           readMem mem (ap - 1)
       | otherwise =
           case instrs Vec.! pc of
@@ -55,7 +60,6 @@ runCode (LabelInfo labelInfo) instrs0 = runST goCode
             ExtraBinop x -> goExtraBinop x pc ap fp mem
             Jump x -> goJump x pc ap fp mem
             JumpIf x -> goJumpIf x pc ap fp mem
-            JumpRel x -> goJumpRel x pc ap fp mem
             Call x -> goCall x pc ap fp mem
             Return -> goReturn pc ap fp mem
             Alloc x -> goAlloc x pc ap fp mem
@@ -182,7 +186,7 @@ runCode (LabelInfo labelInfo) instrs0 = runST goCode
           IntMod -> fieldFromInteger fsize (fieldToInt x `rem` fieldToInt y)
           IntLt ->
             fieldFromInteger fsize $
-              if fieldToInt x < fieldToInt y then 1 else 0
+              if fieldToInt x < fieldToInt y then 0 else 1
 
         fieldToInt :: FField -> Integer
         fieldToInt f
@@ -192,20 +196,17 @@ runCode (LabelInfo labelInfo) instrs0 = runST goCode
             v = fieldToInteger f
 
     goJump :: InstrJump -> Address -> Address -> Address -> Memory s -> ST s FField
-    goJump InstrJump {..} _ ap fp mem = do
-      tgt <- readValue ap fp mem _instrJumpTarget
-      go (fromInteger (fieldToInteger tgt)) (ap + fromEnum _instrJumpIncAp) fp mem
+    goJump InstrJump {..} pc ap fp mem = do
+      tgt <- readRValue ap fp mem _instrJumpTarget
+      let off = if _instrJumpRel then pc else 0
+      go (off + fromInteger (fieldToInteger tgt)) (ap + fromEnum _instrJumpIncAp) fp mem
 
     goJumpIf :: InstrJumpIf -> Address -> Address -> Address -> Memory s -> ST s FField
     goJumpIf InstrJumpIf {..} pc ap fp mem = do
       tgt <- readValue ap fp mem _instrJumpIfTarget
       v <- readMemRef ap fp mem _instrJumpIfValue
-      go (if fieldToInteger v /= 0 then fromInteger (fieldToInteger tgt) else pc + 1) (ap + fromEnum _instrJumpIfIncAp) fp mem
-
-    goJumpRel :: InstrJumpRel -> Address -> Address -> Address -> Memory s -> ST s FField
-    goJumpRel InstrJumpRel {..} pc ap fp mem = do
-      tgt <- readRValue ap fp mem _instrJumpRelTarget
-      go (pc + fromInteger (fieldToInteger tgt)) (ap + fromEnum _instrJumpRelIncAp) fp mem
+      let off = if _instrJumpIfRel then pc else 0
+      go (if fieldToInteger v /= 0 then off + fromInteger (fieldToInteger tgt) else pc + 1) (ap + fromEnum _instrJumpIfIncAp) fp mem
 
     goCall :: InstrCall -> Address -> Address -> Address -> Memory s -> ST s FField
     goCall InstrCall {..} pc ap fp mem = do
@@ -228,7 +229,7 @@ runCode (LabelInfo labelInfo) instrs0 = runST goCode
     goTrace :: InstrTrace -> Address -> Address -> Address -> Memory s -> ST s FField
     goTrace InstrTrace {..} pc ap fp mem = do
       v <- readRValue ap fp mem _instrTraceValue
-      GHC.unsafePerformIO (print v >> return (pure ()))
+      GHC.unsafePerformIO (hPrint hout v >> return (pure ()))
       go (pc + 1) ap fp mem
 
 catchRunErrorIO :: a -> IO (Either CasmError a)

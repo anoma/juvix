@@ -22,6 +22,7 @@ runCommand opts = do
     TargetTree -> return ()
     TargetNockma -> runNockmaPipeline arg
     TargetAnoma -> runAnomaPipeline arg
+    TargetCasm -> runCasmPipeline arg
   where
     getFile :: Sem r (Path Abs File)
     getFile = getMainFile (opts ^. compileInputFile)

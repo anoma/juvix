@@ -83,6 +83,9 @@ strCheckVampIR = "check-vampir"
 strCheckAnoma :: Text
 strCheckAnoma = "check-anoma"
 
+strCheckCairo :: Text
+strCheckCairo = "check-cairo"
+
 strNormalize :: Text
 strNormalize = "normalize"
 

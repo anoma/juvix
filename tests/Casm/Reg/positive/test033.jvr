@@ -1,0 +1,70 @@
+
+function ack(integer, integer) : integer;
+function main() : *;
+
+function ack(integer, integer) : integer {
+  tmp[0] = 0;
+  tmp[1] = arg[0];
+  tmp[0] = eq tmp[1] tmp[0];
+  br tmp[0] {
+    true: {
+      tmp[0] = 1;
+      tmp[1] = arg[1];
+      tmp[0] = add tmp[1] tmp[0];
+      ret tmp[0];
+    };
+    false: {
+      tmp[0] = 0;
+      tmp[1] = arg[1];
+      tmp[0] = eq tmp[1] tmp[0];
+      br tmp[0] {
+        true: {
+          tmp[0] = 1;
+          tmp[1] = 1;
+          tmp[2] = arg[0];
+          tmp[1] = sub tmp[2] tmp[1];
+          tcall ack (tmp[1], tmp[0]);
+        };
+        false: {
+          tmp[0] = 1;
+          tmp[1] = arg[1];
+          tmp[0] = sub tmp[1] tmp[0];
+          tmp[1] = arg[0];
+          tmp[0] = call ack (tmp[1], tmp[0]), live: (arg[0], arg[1]);
+          tmp[1] = 1;
+          tmp[2] = arg[0];
+          tmp[1] = sub tmp[2] tmp[1];
+          tcall ack (tmp[1], tmp[0]);
+        };
+      };
+    };
+  };
+}
+
+function main() : * {
+  tmp[0] = 7;
+  tmp[1] = 0;
+  tmp[0] = call ack (tmp[1], tmp[0]);
+  tmp[2] = tmp[0];
+  tmp[0] = 7;
+  tmp[1] = 1;
+  tmp[0] = call ack (tmp[1], tmp[0]);
+  tmp[2] = add tmp[2] tmp[0];
+  tmp[0] = 13;
+  tmp[1] = 1;
+  tmp[0] = call ack (tmp[1], tmp[0]);
+  tmp[2] = add tmp[2] tmp[0];
+  tmp[0] = 7;
+  tmp[1] = 2;
+  tmp[0] = call ack (tmp[1], tmp[0]);
+  tmp[2] = tmp[0];
+  tmp[0] = 13;
+  tmp[1] = 2;
+  tmp[0] = call ack (tmp[1], tmp[0]);
+  tmp[2] = add tmp[2] tmp[0];
+  tmp[0] = 4;
+  tmp[1] = 3;
+  tmp[0] = call ack (tmp[1], tmp[0]);
+  tmp[2] = add tmp[2] tmp[0];
+  ret tmp[2];
+}

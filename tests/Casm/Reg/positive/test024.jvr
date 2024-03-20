@@ -1,0 +1,60 @@
+
+function f((*, integer → integer, integer) → *, integer → integer, integer) : *;
+function g(integer) : integer;
+function main() : *;
+
+function f((*, integer → integer, integer) → *, integer → integer, integer) : * {
+  tmp[0] = 6;
+  trace tmp[0];
+  nop;
+  tmp[0] = arg[2];
+  trace tmp[0];
+  nop;
+  tmp[0] = 7;
+  trace tmp[0];
+  nop;
+  tmp[0] = arg[2];
+  tmp[1] = 0;
+  tmp[0] = eq tmp[1] tmp[0];
+  br tmp[0] {
+    true: {
+      tmp[0] = 666;
+      trace tmp[0];
+      nop;
+      tmp[0] = 0;
+      ret tmp[0];
+    };
+    false: {
+      tmp[0] = 9;
+      trace tmp[0];
+      nop;
+      tmp[0] = arg[2];
+      tmp[1] = arg[1];
+      tmp[0] = call tmp[1] (tmp[0]), live: (arg[0], arg[1], arg[2]);
+      tmp[1] = arg[1];
+      tmp[2] = arg[0];
+      tmp[3] = arg[0];
+      tcall tmp[3] (tmp[2], tmp[1], tmp[0]);
+    };
+  };
+}
+
+function g(integer) : integer {
+  tmp[0] = arg[0];
+  tmp[1] = 10;
+  tmp[0] = mul tmp[1] tmp[0];
+  trace tmp[0];
+  nop;
+  tmp[0] = 1;
+  tmp[1] = arg[0];
+  tmp[0] = sub tmp[1] tmp[0];
+  ret tmp[0];
+}
+
+function main() : * {
+  prealloc 4;
+  tmp[0] = 4;
+  tmp[1] = calloc g ();
+  tmp[2] = calloc f ();
+  tcall f (tmp[2], tmp[1], tmp[0]);
+}

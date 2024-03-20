@@ -1,0 +1,16 @@
+-- lists
+module test022;
+
+import Stdlib.Prelude open;
+
+gen : Nat → List Nat
+  | zero := nil
+  | n@(suc m) := n :: gen m;
+
+sum : Nat → Nat
+  | n := foldl (+) 0 (gen n);
+
+sum' : Nat → Nat
+  | n := foldr (+) 0 (gen n);
+
+main : Nat := sum 10000 + sum' 10000;

@@ -8,6 +8,9 @@ strNockmaPipeline = "pipeline-nockma"
 strAsmPipeline :: Text
 strAsmPipeline = "pipeline-asm"
 
+strCairoAsmPipeline :: Text
+strCairoAsmPipeline = "pipeline-cairo-asm"
+
 strIdentity :: Text
 strIdentity = "identity"
 

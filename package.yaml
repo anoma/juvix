@@ -40,6 +40,7 @@ extra-source-files:
   - runtime/**/*.a
   - runtime/src/tree/*.jvt
   - runtime/src/vampir/*.pir
+  - runtime/src/casm/*.casm
 
 dependencies:
   - aeson-better-errors == 0.9.*

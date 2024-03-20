@@ -40,6 +40,17 @@ function mult(integer, integer) : integer {
   ret;
 }
 
+function g(integer, integer, integer, integer) : integer {
+  push arg[1];
+  push arg[0];
+  sub;
+  push arg[2];
+  add;
+  push arg[3];
+  mul;
+  ret;
+}
+
 function main() {
   calloc plus 0;
   call f;
@@ -52,6 +63,12 @@ function main() {
   calloc mult 0;
   call f;
   trace; -- 10
+  pop;
+  push 2;
+  push 3;
+  calloc g 2;
+  call f;
+  trace; -- 11
   pop;
   push void;
   ret;

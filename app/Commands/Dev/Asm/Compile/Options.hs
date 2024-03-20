@@ -15,7 +15,8 @@ asmSupportedTargets =
   NonEmpty.fromList
     [ TargetWasm32Wasi,
       TargetNative64,
-      TargetReg
+      TargetReg,
+      TargetCasm
     ]
 
 parseAsmCompileOptions :: Parser AsmCompileOptions

@@ -5,10 +5,11 @@ function f((integer, integer) → integer) : integer;
 function plus(integer, integer) : integer;
 function minus(integer, integer) : integer;
 function mult(integer, integer) : integer;
+function g(integer, integer, integer, integer) : integer;
 function main() : *;
 
 function ext_10((integer, integer) → integer) : integer → integer {
-  prealloc 4, live: (arg[0]);
+  prealloc 6, live: (arg[0]);
   tmp[0] = 10;
   tmp[1] = arg[0];
   tmp[0] = cextend tmp[1] (tmp[0]);
@@ -48,6 +49,17 @@ function mult(integer, integer) : integer {
   ret tmp[0];
 }
 
+function g(integer, integer, integer, integer) : integer {
+  tmp[0] = arg[1];
+  tmp[1] = arg[0];
+  tmp[0] = sub tmp[1] tmp[0];
+  tmp[1] = arg[2];
+  tmp[0] = add tmp[1] tmp[0];
+  tmp[1] = arg[3];
+  tmp[0] = mul tmp[1] tmp[0];
+  ret tmp[0];
+}
+
 function main() : * {
   prealloc 2;
   tmp[0] = calloc plus ();
@@ -61,6 +73,13 @@ function main() : * {
   trace tmp[0];
   nop;
   tmp[0] = calloc mult ();
+  tmp[0] = call f (tmp[0]);
+  prealloc 4, live: (tmp[0]);
+  trace tmp[0];
+  nop;
+  tmp[0] = 2;
+  tmp[1] = 3;
+  tmp[0] = calloc g (tmp[1], tmp[0]);
   tmp[0] = call f (tmp[0]);
   trace tmp[0];
   nop;

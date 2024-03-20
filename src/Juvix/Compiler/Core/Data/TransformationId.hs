@@ -25,6 +25,7 @@ data TransformationId
   | CheckExec
   | CheckVampIR
   | CheckAnoma
+  | CheckCairo
   | Normalize
   | LetFolding
   | LambdaFolding
@@ -99,6 +100,7 @@ instance TransformationId' TransformationId where
     CheckExec -> strCheckExec
     CheckVampIR -> strCheckVampIR
     CheckAnoma -> strCheckAnoma
+    CheckCairo -> strCheckCairo
     Normalize -> strNormalize
     LetFolding -> strLetFolding
     LambdaFolding -> strLambdaFolding

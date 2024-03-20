@@ -65,15 +65,6 @@ runFunction hout infoTable args0 info0 = do
       [] ->
         return $ ValVoid
 
-    readConst :: Constant -> Val
-    readConst = \case
-      ConstInt i -> ValInteger i
-      ConstField f -> ValField f
-      ConstBool b -> ValBool b
-      ConstString s -> ValString s
-      ConstUnit -> ValUnit
-      ConstVoid -> ValVoid
-
     readVarRef :: Args -> Vars s -> VarRef -> ST s Val
     readVarRef args tmps VarRef {..} = case _varRefGroup of
       VarGroupArgs -> return $ args Vec.! _varRefIndex
@@ -97,7 +88,7 @@ runFunction hout infoTable args0 info0 = do
 
     readValue :: Args -> Vars s -> Value -> ST s Val
     readValue args tmps = \case
-      Const c -> return $ readConst c
+      Const c -> return $ constantToValue c
       CRef r -> readConstrRef args tmps r
       VRef r -> readVarRef args tmps r
 

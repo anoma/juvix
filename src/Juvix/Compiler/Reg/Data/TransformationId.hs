@@ -12,7 +12,7 @@ data TransformationId
   deriving stock (Data, Bounded, Enum, Show)
 
 data PipelineId
-  = PipelineCairo
+  = PipelineCasm
   | PipelineC
   deriving stock (Data, Bounded, Enum)
 
@@ -21,8 +21,8 @@ type TransformationLikeId = TransformationLikeId' TransformationId PipelineId
 toCTransformations :: [TransformationId]
 toCTransformations = [Cleanup]
 
-toCairoTransformations :: [TransformationId]
-toCairoTransformations = [Cleanup, SSA, InitBranchVars]
+toCasmTransformations :: [TransformationId]
+toCasmTransformations = [Cleanup, SSA, InitBranchVars]
 
 instance TransformationId' TransformationId where
   transformationText :: TransformationId -> Text
@@ -36,9 +36,9 @@ instance PipelineId' TransformationId PipelineId where
   pipelineText :: PipelineId -> Text
   pipelineText = \case
     PipelineC -> strCPipeline
-    PipelineCairo -> strCairoPipeline
+    PipelineCasm -> strCasmPipeline
 
   pipeline :: PipelineId -> [TransformationId]
   pipeline = \case
     PipelineC -> toCTransformations
-    PipelineCairo -> toCairoTransformations
+    PipelineCasm -> toCasmTransformations

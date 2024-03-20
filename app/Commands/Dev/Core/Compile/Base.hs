@@ -8,11 +8,14 @@ import Juvix.Compiler.Backend qualified as Backend
 import Juvix.Compiler.Backend.C qualified as C
 import Juvix.Compiler.Backend.Geb qualified as Geb
 import Juvix.Compiler.Backend.VampIR.Translation qualified as VampIR
+import Juvix.Compiler.Casm.Data.Result qualified as Casm
+import Juvix.Compiler.Casm.Pretty qualified as Casm
 import Juvix.Compiler.Core.Data.Module qualified as Core
 import Juvix.Compiler.Core.Data.TransformationId qualified as Core
 import Juvix.Compiler.Nockma.Pretty qualified as Nockma
 import Juvix.Compiler.Reg.Pretty qualified as Reg
 import Juvix.Compiler.Tree.Pretty qualified as Tree
+import Juvix.Prelude.Pretty
 import System.FilePath (takeBaseName)
 
 data PipelineArg = PipelineArg
@@ -45,6 +48,7 @@ getEntry PipelineArg {..} = do
       TargetTree -> Backend.TargetTree
       TargetNockma -> Backend.TargetNockma
       TargetAnoma -> Backend.TargetAnoma
+      TargetCasm -> Backend.TargetCairo
 
     defaultOptLevel :: Int
     defaultOptLevel
@@ -168,3 +172,15 @@ runAnomaPipeline pa@PipelineArg {..} = do
   tab' <- getRight r
   let code = Nockma.ppSerialize tab'
   writeFileEnsureLn nockmaFile code
+
+runCasmPipeline :: (Members '[Embed IO, App, TaggedLock] r) => PipelineArg -> Sem r ()
+runCasmPipeline pa@PipelineArg {..} = do
+  entryPoint <- getEntry pa
+  casmFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
+  r <-
+    runReader entryPoint
+      . runError @JuvixError
+      . coreToCasm
+      $ _pipelineArgModule
+  Casm.Result {..} <- getRight r
+  writeFileEnsureLn casmFile (toPlainText $ Casm.ppProgram _resultCode)

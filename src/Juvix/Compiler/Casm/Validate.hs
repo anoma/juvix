@@ -15,7 +15,6 @@ validate labi instrs = mapM_ go instrs
       ExtraBinop x -> goExtraBinop x
       Jump x -> goJump x
       JumpIf x -> goJumpIf x
-      JumpRel x -> goJumpRel x
       Call x -> goCall x
       Return -> return ()
       Alloc x -> goAlloc x
@@ -52,13 +51,10 @@ validate labi instrs = mapM_ go instrs
     goExtraBinop InstrExtraBinop {..} = goValue _instrExtraBinopArg2
 
     goJump :: InstrJump -> Either CasmError ()
-    goJump InstrJump {..} = goValue _instrJumpTarget
+    goJump InstrJump {..} = goRValue _instrJumpTarget
 
     goJumpIf :: InstrJumpIf -> Either CasmError ()
     goJumpIf InstrJumpIf {..} = goValue _instrJumpIfTarget
-
-    goJumpRel :: InstrJumpRel -> Either CasmError ()
-    goJumpRel InstrJumpRel {..} = goRValue _instrJumpRelTarget
 
     goCall :: InstrCall -> Either CasmError ()
     goCall InstrCall {..} = goValue _instrCallTarget

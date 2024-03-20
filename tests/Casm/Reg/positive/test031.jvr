@@ -1,0 +1,203 @@
+type tree {
+  leaf : tree;
+  node : (tree, tree) → tree;
+}
+
+function gen(integer) : tree;
+function f(tree) : integer;
+function isNode(tree) : bool;
+function isLeaf(tree) : bool;
+function g(tree) : tree;
+function main() : *;
+
+function gen(integer) : tree {
+  tmp[0] = 0;
+  tmp[1] = arg[0];
+  tmp[0] = le tmp[1] tmp[0];
+  br tmp[0] {
+    true: {
+      prealloc 1, live: (arg[0]);
+      tmp[0] = alloc leaf ();
+      ret tmp[0];
+    };
+    false: {
+      tmp[0] = 1;
+      tmp[1] = arg[0];
+      tmp[0] = sub tmp[1] tmp[0];
+      tmp[0] = call gen (tmp[0]), live: (arg[0]);
+      tmp[1] = 2;
+      tmp[2] = arg[0];
+      tmp[1] = sub tmp[2] tmp[1];
+      tmp[1] = call gen (tmp[1]), live: (tmp[0], arg[0]);
+      prealloc 3, live: (tmp[0], tmp[1], arg[0]);
+      tmp[0] = alloc node (tmp[1], tmp[0]);
+      ret tmp[0];
+    };
+  };
+}
+
+function f(tree) : integer {
+  tmp[5] = arg[0];
+  case[tree] tmp[5] {
+    leaf: {
+      nop;
+      tmp[5] = 1;
+      ret tmp[5];
+    };
+    node: {
+      {
+        tmp[0] = tmp[5];
+        tmp[5] = tmp[0].node[0];
+        tmp[5] = call g (tmp[5]), live: (tmp[0], arg[0]);
+        {
+          tmp[1] = tmp[5];
+          tmp[5] = tmp[0].node[1];
+          tmp[5] = call g (tmp[5]), live: (tmp[0], tmp[1], arg[0]);
+          {
+            tmp[2] = tmp[5];
+            tmp[5] = tmp[1];
+            case[tree] tmp[5], out: tmp[5] {
+              leaf: {
+                nop;
+                tmp[5] = 3;
+                tmp[6] = 0;
+                tmp[5] = sub tmp[6] tmp[5];
+              };
+              node: {
+                {
+                  tmp[3] = tmp[5];
+                  tmp[5] = 32768;
+                  tmp[6] = tmp[3].node[1];
+                  tmp[6] = call f (tmp[6]), live: (tmp[0], tmp[1], tmp[2], tmp[3], tmp[5], arg[0]);
+                  tmp[7] = tmp[3].node[0];
+                  tmp[7] = call f (tmp[7]), live: (tmp[0], tmp[1], tmp[2], tmp[3], tmp[5], tmp[6], arg[0]);
+                  tmp[6] = add tmp[7] tmp[6];
+                  tmp[5] = mod tmp[6] tmp[5];
+                };
+              };
+            };
+            {
+              tmp[3] = tmp[5];
+              tmp[5] = tmp[2];
+              case[tree] tmp[5], out: tmp[5] {
+                node: {
+                  {
+                    tmp[4] = tmp[5];
+                    tmp[5] = 32768;
+                    tmp[6] = tmp[4].node[1];
+                    tmp[6] = call f (tmp[6]), live: (tmp[0], tmp[1], tmp[2], tmp[3], tmp[4], tmp[5], arg[0]);
+                    tmp[7] = tmp[4].node[0];
+                    tmp[7] = call f (tmp[7]), live: (tmp[0], tmp[1], tmp[2], tmp[3], tmp[4], tmp[5], tmp[6], arg[0]);
+                    tmp[6] = add tmp[7] tmp[6];
+                    tmp[5] = mod tmp[6] tmp[5];
+                  };
+                };
+                default: {
+                  nop;
+                  tmp[5] = 2;
+                };
+              };
+              {
+                tmp[4] = tmp[5];
+                tmp[5] = 32768;
+                tmp[6] = tmp[3];
+                tmp[7] = tmp[4];
+                tmp[6] = mul tmp[7] tmp[6];
+                tmp[5] = mod tmp[6] tmp[5];
+                ret tmp[5];
+              };
+            };
+          };
+        };
+      };
+    };
+  };
+}
+
+function isNode(tree) : bool {
+  tmp[0] = arg[0];
+  case[tree] tmp[0] {
+    node: {
+      nop;
+      tmp[0] = true;
+      ret tmp[0];
+    };
+    default: {
+      nop;
+      tmp[0] = false;
+      ret tmp[0];
+    };
+  };
+}
+
+function isLeaf(tree) : bool {
+  tmp[0] = arg[0];
+  case[tree] tmp[0] {
+    leaf: {
+      nop;
+      tmp[0] = true;
+      ret tmp[0];
+    };
+    default: {
+      nop;
+      tmp[0] = false;
+      ret tmp[0];
+    };
+  };
+}
+
+function g(tree) : tree {
+  tmp[1] = arg[0];
+  tmp[1] = call isLeaf (tmp[1]), live: (arg[0]);
+  br tmp[1] {
+    true: {
+      tmp[1] = arg[0];
+      ret tmp[1];
+    };
+    false: {
+      tmp[1] = arg[0];
+      case[tree] tmp[1] {
+        node: {
+          {
+            tmp[0] = tmp[1];
+            tmp[1] = tmp[0].node[0];
+            tmp[1] = call isNode (tmp[1]), live: (tmp[0], arg[0]);
+            br tmp[1] {
+              true: {
+                tmp[1] = tmp[0].node[1];
+                ret tmp[1];
+              };
+              false: {
+                prealloc 3, live: (tmp[0], arg[0]);
+                tmp[1] = tmp[0].node[1];
+                tmp[2] = tmp[0].node[0];
+                tmp[1] = alloc node (tmp[2], tmp[1]);
+                ret tmp[1];
+              };
+            };
+          };
+        };
+      };
+    };
+  };
+}
+
+function main() : * {
+  tmp[0] = 10;
+  tmp[0] = call gen (tmp[0]);
+  tmp[0] = call f (tmp[0]);
+  tmp[1] = tmp[0];
+  tmp[0] = 15;
+  tmp[0] = call gen (tmp[0]);
+  tmp[0] = call f (tmp[0]);
+  tmp[1] = add tmp[1] tmp[0];
+  tmp[0] = 16;
+  tmp[0] = call gen (tmp[0]);
+  tmp[0] = call f (tmp[0]);
+  tmp[1] = add tmp[1] tmp[0];
+  tmp[0] = 17;
+  tmp[0] = call gen (tmp[0]);
+  tmp[0] = call f (tmp[0]);
+  tmp[1] = add tmp[1] tmp[0];
+  ret tmp[1];
+}

@@ -81,13 +81,7 @@ hEval hout tab = eval' [] mempty
         goTrace v = unsafePerformIO (hPutStrLn hout (printValue tab v) >> return v)
 
         goConstant :: NodeConstant -> Value
-        goConstant NodeConstant {..} = case _nodeConstant of
-          ConstInt i -> ValInteger i
-          ConstField f -> ValField f
-          ConstBool b -> ValBool b
-          ConstString s -> ValString s
-          ConstUnit -> ValUnit
-          ConstVoid -> ValVoid
+        goConstant NodeConstant {..} = constantToValue _nodeConstant
 
         goMemRef :: NodeMemRef -> Value
         goMemRef NodeMemRef {..} = case _nodeMemRef of
