@@ -288,6 +288,24 @@ jobs:
           echo "CC=$(brew --prefix llvm@15)/bin/clang" >> $GITHUB_ENV
           echo "LIBTOOL=$(brew --prefix llvm@15)/bin/llvm-ar" >> $GITHUB_ENV
 
+      - name: Add ~/.local/bin to PATH
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Install Cairo VM
+        shell: bash
+        run: |
+          git clone https://github.com/lambdaclass/cairo-vm.git
+          cd cairo-vm
+          cargo build --release
+          cp target/release/cairo-vm-cli $HOME/.local/bin/cairo-vm-cli
+          cd -
+          cp main/scripts/run_cairo_vm.sh $HOME/.local/bin/run_cairo_vm.sh
+
       - name: Make runtime
         run: |
           cd main
