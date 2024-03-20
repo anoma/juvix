@@ -303,8 +303,10 @@ jobs:
           cd cairo-vm
           cargo build --release
           cp target/release/cairo-vm-cli $HOME/.local/bin/cairo-vm-cli
+          chmod a+x $HOME/.local/bin/cairo-vm-cli
           cd -
           cp main/scripts/run_cairo_vm.sh $HOME/.local/bin/run_cairo_vm.sh
+          chmod a+x $HOME/.local/bin/run_cairo_vm.sh
 
       - name: Make runtime
         run: |
@@ -356,10 +358,6 @@ jobs:
           cd main
           make CC=$CC LIBTOOL=$LIBTOOL install
           make CC=$CC LIBTOOL=$LIBTOOL test
-
-      - name: Add ~/.local/bin to PATH
-        run: |
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Typecheck and format Juvix examples
         if: ${{ success() }}
