@@ -124,7 +124,7 @@ jobs:
       - name: Install Cairo VM
         shell: bash
         run: |
-          git clone git@github.com:lambdaclass/cairo-vm.git
+          git clone https://github.com/lambdaclass/cairo-vm.git
           cd cairo-vm
           cargo build --release
           cp target/release/cairo-vm-cli ~/.local/bin/
