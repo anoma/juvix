@@ -1,13 +1,13 @@
 module Casm.Reg.Base where
 
 import Base
+import Casm.Run.Base qualified as Run
 import Data.Aeson
 import Juvix.Compiler.Casm.Data.Result
 import Juvix.Compiler.Casm.Interpreter
 import Juvix.Compiler.Reg.Data.InfoTable qualified as Reg
 import Juvix.Data.PPOutput
 import Reg.Run.Base qualified as Reg
-import Runtime.Base qualified as R
 
 compileAssertion' :: Path Abs Dir -> Path Abs File -> Symbol -> Reg.InfoTable -> (String -> IO ()) -> Assertion
 compileAssertion' _ outputFile _ tab step = do
@@ -26,14 +26,10 @@ cairoAssertion' dirPath outputFile _ tab step = do
   case run $ runError @JuvixError $ regToCairo tab of
     Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
     Right res -> do
-      step "Serialize"
+      step "Serialize to Cairo bytecode"
       encodeFile (toFilePath outputFile) res
-      dir <- getCurrentDir
-      setCurrentDir dirPath
       step "Execute in Cairo VM"
-      out0 <- R.readProcess "run_cairo_vm.sh" [toFilePath outputFile] ""
-      setCurrentDir dir
-      let actualOutput = fromString $ unlines $ drop 1 $ lines (fromText out0)
+      actualOutput <- Run.casmRunVM' dirPath outputFile
       writeFileEnsureLn outputFile actualOutput
 
 regToCasmAssertion :: Path Abs File -> Path Abs File -> (String -> IO ()) -> Assertion

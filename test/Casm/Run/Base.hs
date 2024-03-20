@@ -12,6 +12,14 @@ import Juvix.Data.PPOutput
 import Juvix.Parser.Error
 import Runtime.Base qualified as R
 
+casmRunVM' :: Path Abs Dir -> Path Abs File -> IO Text
+casmRunVM' dirPath outputFile = do
+  dir <- getCurrentDir
+  setCurrentDir dirPath
+  out0 <- R.readProcess "run_cairo_vm.sh" [toFilePath outputFile] ""
+  setCurrentDir dir
+  return $ fromString $ unlines $ drop 1 $ lines (fromText out0)
+
 casmRunVM :: LabelInfo -> Code -> Path Abs File -> (String -> IO ()) -> Assertion
 casmRunVM labi instrs expectedFile step = do
   step "Check run_cairo_vm.sh is on path"
@@ -22,12 +30,8 @@ casmRunVM labi instrs expectedFile step = do
         let res = run $ casmToCairo (Casm.Result labi instrs)
             outputFile = dirPath <//> $(mkRelFile "out.json")
         encodeFile (toFilePath outputFile) res
-        dir <- getCurrentDir
         step "Run Cairo VM"
-        setCurrentDir dirPath
-        out0 <- R.readProcess "run_cairo_vm.sh" [toFilePath outputFile] ""
-        setCurrentDir dir
-        let actualOutput = fromString $ unlines $ drop 1 $ lines (fromText out0)
+        actualOutput <- casmRunVM' dirPath outputFile
         step "Compare expected and actual program output"
         expected <- readFile expectedFile
         assertEqDiffText ("Check: RUN output = " <> toFilePath expectedFile) actualOutput expected
