@@ -7,7 +7,7 @@ where
 import Juvix.Compiler.Reg.Language.Instrs
 
 data Block = Block
-  { _blockLiveVars :: [VarRef],
+  { _blockLiveVars :: HashSet VarRef,
     _blockBody :: [Instruction],
     _blockFinal :: Maybe FinalInstruction,
     _blockNext :: Maybe Block
@@ -41,7 +41,7 @@ makeLenses ''Block
 emptyBlock :: Block
 emptyBlock =
   Block
-    { _blockLiveVars = [],
+    { _blockLiveVars = mempty,
       _blockBody = [],
       _blockFinal = Nothing,
       _blockNext = Nothing
