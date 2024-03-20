@@ -118,6 +118,17 @@ jobs:
         run: |
           vamp-ir --version
 
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Install Cairo VM
+        shell: bash
+        run: |
+          git clone git@github.com:lambdaclass/cairo-vm.git
+          cd cairo-vm
+          cargo build --release
+          cp target/release/cairo-vm-cli ~/.local/bin/
+
       - name: Make runtime
         run: |
           cd main
