@@ -9,6 +9,7 @@ import Juvix.Compiler.Tree.Keywords.Base
 import Juvix.Data.Keyword.All
   ( kwAdd_,
     kwAlloc,
+    kwAnomaGet,
     kwArgsNum,
     kwAtoi,
     kwBr,
@@ -68,5 +69,6 @@ allKeywords =
          kwCCall,
          kwBr,
          kwCase,
-         kwSave
+         kwSave,
+         kwAnomaGet
        ]

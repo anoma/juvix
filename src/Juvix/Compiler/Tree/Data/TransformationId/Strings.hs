@@ -31,3 +31,6 @@ strFilterUnreachable = "filter-unreachable"
 
 strValidate :: Text
 strValidate = "validate"
+
+strCheckNoAnoma :: Text
+strCheckNoAnoma = "check-no-anoma"
