@@ -173,7 +173,7 @@ runAnomaPipeline pa@PipelineArg {..} = do
   let code = Nockma.ppSerialize tab'
   writeFileEnsureLn nockmaFile code
 
-runCasmPipeline :: (Members '[Embed IO, App, TaggedLock] r) => PipelineArg -> Sem r ()
+runCasmPipeline :: (Members '[EmbedIO, App, TaggedLock] r) => PipelineArg -> Sem r ()
 runCasmPipeline pa@PipelineArg {..} = do
   entryPoint <- getEntry pa
   casmFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
