@@ -20,7 +20,8 @@ runAssertion _ outputFile sym tab step = do
       assertFailure (show (pretty err))
     Right value' -> do
       case value' of
-        ValVoid -> return ()
+        ValVoid ->
+          hClose hout
         _ -> do
           hPutStrLn hout (ppPrint tab value')
           hClose hout
