@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/bash
 
 BASE=`basename "$1" .json`
 
