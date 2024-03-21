@@ -239,6 +239,7 @@ instance PrettyCode UnaryOpcode where
     PrimUnop x -> ppCode x
     OpTrace -> return $ primitive Str.instrTrace
     OpFail -> return $ primitive Str.instrFailure
+    OpAnomaGet -> return $ primitive Str.anomaGet
 
 instance PrettyCode NodeUnop where
   ppCode NodeUnop {..} = do

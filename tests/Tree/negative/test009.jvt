@@ -1,0 +1,5 @@
+-- calling unsupported anoma-get
+
+function main() : * {
+  anoma-get(1)
+}

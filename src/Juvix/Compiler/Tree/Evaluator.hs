@@ -73,6 +73,7 @@ hEval hout tab = eval' [] mempty
                 PrimUnop op -> eitherToError $ evalUnop tab op v
                 OpTrace -> goTrace v
                 OpFail -> goFail v
+                OpAnomaGet -> evalError "Unsupported op: OpAnomaGet"
 
         goFail :: Value -> Value
         goFail v = evalError ("failure: " <> printValue tab v)

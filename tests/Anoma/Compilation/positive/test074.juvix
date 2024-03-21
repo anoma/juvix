@@ -1,0 +1,10 @@
+module test074;
+
+import Stdlib.Prelude open;
+import Stdlib.Debug.Trace open;
+
+builtin anoma-get
+axiom anomaGet : {Value Key : Type} -> Key -> Value;
+
+main (k1 : Nat) (k2 : List Nat) : List Nat :=
+  trace (anomaGet {Nat} k1) >>> anomaGet k2;

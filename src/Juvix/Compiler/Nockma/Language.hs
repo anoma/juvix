@@ -47,38 +47,50 @@ data Assignment a = Assignment
 data Term a
   = TermAtom (Atom a)
   | TermCell (Cell a)
-  deriving stock (Show, Eq, Lift)
+  deriving stock (Show, Eq, Lift, Generic)
+
+instance (Hashable a) => Hashable (Term a)
 
 data StdlibCall a = StdlibCall
   { _stdlibCallFunction :: StdlibFunction,
     _stdlibCallArgs :: Term a
   }
-  deriving stock (Show, Eq, Lift)
+  deriving stock (Show, Eq, Lift, Generic)
+
+instance (Hashable a) => Hashable (StdlibCall a)
 
 data CellInfo a = CellInfo
   { _cellInfoLoc :: Irrelevant (Maybe Interval),
     _cellInfoCall :: Maybe (StdlibCall a)
   }
-  deriving stock (Show, Eq, Lift)
+  deriving stock (Show, Eq, Lift, Generic)
+
+instance (Hashable a) => Hashable (CellInfo a)
 
 data Cell a = Cell'
   { _cellLeft :: Term a,
     _cellRight :: Term a,
     _cellInfo :: CellInfo a
   }
-  deriving stock (Show, Eq, Lift)
+  deriving stock (Show, Eq, Lift, Generic)
+
+instance (Hashable a) => Hashable (Cell a)
 
 data AtomInfo = AtomInfo
   { _atomInfoHint :: Maybe AtomHint,
     _atomInfoLoc :: Irrelevant (Maybe Interval)
   }
-  deriving stock (Show, Eq, Lift)
+  deriving stock (Show, Eq, Lift, Generic)
+
+instance Hashable AtomInfo
 
 data Atom a = Atom
   { _atom :: a,
     _atomInfo :: AtomInfo
   }
-  deriving stock (Show, Eq, Lift)
+  deriving stock (Show, Eq, Lift, Generic)
+
+instance (Hashable a) => Hashable (Atom a)
 
 data AtomHint
   = AtomHintOp
@@ -86,7 +98,9 @@ data AtomHint
   | AtomHintBool
   | AtomHintNil
   | AtomHintVoid
-  deriving stock (Show, Eq, Lift)
+  deriving stock (Show, Eq, Lift, Generic)
+
+instance Hashable AtomHint
 
 data NockOp
   = OpAddress
@@ -101,6 +115,7 @@ data NockOp
   | OpCall
   | OpReplace
   | OpHint
+  | OpScry
   | OpTrace
   deriving stock (Bounded, Enum, Eq, Generic)
 
@@ -120,6 +135,7 @@ instance Pretty NockOp where
     OpCall -> "call"
     OpReplace -> "replace"
     OpHint -> "hint"
+    OpScry -> "scry"
     OpTrace -> "trace"
 
 textToStdlibFunctionMap :: HashMap Text StdlibFunction
@@ -214,6 +230,7 @@ serializeOp = \case
   OpCall -> 9
   OpReplace -> 10
   OpHint -> 11
+  OpScry -> 12
   OpTrace -> 100
 
 class (NockmaEq a) => NockNatural a where

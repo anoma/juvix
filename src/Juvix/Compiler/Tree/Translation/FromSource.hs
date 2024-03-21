@@ -106,6 +106,7 @@ parseUnop =
     <|> parseUnaryOp kwTrace OpTrace
     <|> parseUnaryOp kwFail OpFail
     <|> parseUnaryOp kwArgsNum (PrimUnop OpArgsNum)
+    <|> parseUnaryOp kwAnomaGet (OpAnomaGet)
 
 parseUnaryOp ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>

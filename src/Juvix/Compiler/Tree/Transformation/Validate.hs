@@ -64,6 +64,7 @@ inferType tab funInfo = goInfer mempty
       PrimUnop x -> checkPrimUnop x
       OpTrace -> goInfer bl _nodeUnopArg
       OpFail -> checkUnop TyDynamic TyDynamic
+      OpAnomaGet -> checkUnop TyDynamic TyDynamic
       where
         loc = _nodeUnopInfo ^. nodeInfoLocation
 

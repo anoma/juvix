@@ -423,6 +423,7 @@ builtinOpArgTypes = \case
   OpSeq -> [mkDynamic', mkDynamic']
   OpTrace -> [mkDynamic']
   OpFail -> [mkTypeString']
+  OpAnomaGet -> [mkDynamic']
 
 translateCase :: (Node -> Node -> Node -> a) -> a -> Case -> a
 translateCase translateIfFun dflt Case {..} = case _caseBranches of

@@ -10,6 +10,7 @@ evalCompiledNock' stack mainTerm = do
   evalT <-
     runError @(ErrNockNatural Natural)
       . runError @(NockEvalError Natural)
+      . runReader @(Storage Natural) emptyStorage
       $ eval stack mainTerm
   case evalT of
     Left e -> error (show e)

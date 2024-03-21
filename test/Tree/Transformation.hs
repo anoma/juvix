@@ -2,6 +2,7 @@ module Tree.Transformation where
 
 import Base
 import Tree.Transformation.Apply qualified as Apply
+import Tree.Transformation.CheckNoAnoma qualified as CheckNoAnoma
 import Tree.Transformation.Identity qualified as Identity
 import Tree.Transformation.Reachability qualified as Reachability
 
@@ -11,5 +12,6 @@ allTests =
     "JuvixTree transformations"
     [ Identity.allTests,
       Apply.allTests,
-      Reachability.allTests
+      Reachability.allTests,
+      CheckNoAnoma.allTests
     ]

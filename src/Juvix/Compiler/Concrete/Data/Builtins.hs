@@ -177,6 +177,7 @@ data BuiltinAxiom
   | BuiltinFail
   | BuiltinIntToString
   | BuiltinIntPrint
+  | BuiltinAnomaGet
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic, Data)
 
 instance Hashable BuiltinAxiom
@@ -208,6 +209,7 @@ instance Pretty BuiltinAxiom where
     BuiltinFail -> Str.fail_
     BuiltinIntToString -> Str.intToString
     BuiltinIntPrint -> Str.intPrint
+    BuiltinAnomaGet -> Str.anomaGet
 
 data BuiltinType
   = BuiltinTypeInductive BuiltinInductive

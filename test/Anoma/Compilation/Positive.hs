@@ -1,6 +1,7 @@
 module Anoma.Compilation.Positive where
 
 import Base
+import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Backend (Target (TargetAnoma))
 import Juvix.Compiler.Nockma.Evaluator
 import Juvix.Compiler.Nockma.Language
@@ -14,8 +15,8 @@ import Nockma.Eval.Positive
 root :: Prelude.Path Abs Dir
 root = relToProject $(mkRelDir "tests/Anoma/Compilation/positive")
 
-mkAnomaCallTest' :: Bool -> Text -> Prelude.Path Rel Dir -> Prelude.Path Rel File -> [Term Natural] -> Check () -> TestTree
-mkAnomaCallTest' enableDebug _testName relRoot mainFile args _testCheck =
+mkAnomaCallTest' :: Bool -> Storage Natural -> Text -> Prelude.Path Rel Dir -> Prelude.Path Rel File -> [Term Natural] -> Check () -> TestTree
+mkAnomaCallTest' enableDebug _testProgramStorage _testName relRoot mainFile args _testCheck =
   testCase (unpack _testName) (mkTestIO >>= mkNockmaAssertion)
   where
     mkTestIO :: IO Test
@@ -27,6 +28,7 @@ mkAnomaCallTest' enableDebug _testName relRoot mainFile args _testCheck =
         return compiledMain
       let _testProgramFormula = anomaCall args
           _testEvalOptions = defaultEvalOptions
+          _testAssertEvalError :: Maybe (NockEvalError Natural -> Assertion) = Nothing
       return Test {..}
 
     withRootCopy :: (Prelude.Path Abs Dir -> IO a) -> IO a
@@ -43,10 +45,10 @@ mkAnomaCallTest' enableDebug _testName relRoot mainFile args _testCheck =
       (^. pipelineResult) . snd <$> testRunIO entryPoint upToAnoma
 
 mkAnomaCallTestNoTrace :: Text -> Prelude.Path Rel Dir -> Prelude.Path Rel File -> [Term Natural] -> Check () -> TestTree
-mkAnomaCallTestNoTrace = mkAnomaCallTest' False
+mkAnomaCallTestNoTrace = mkAnomaCallTest' False emptyStorage
 
 mkAnomaCallTest :: Text -> Prelude.Path Rel Dir -> Prelude.Path Rel File -> [Term Natural] -> Check () -> TestTree
-mkAnomaCallTest = mkAnomaCallTest' True
+mkAnomaCallTest = mkAnomaCallTest' True emptyStorage
 
 checkNatOutput :: [Natural] -> Check ()
 checkNatOutput = checkOutput . fmap toNock
@@ -523,5 +525,23 @@ allTests =
         $(mkRelDir "test073")
         $(mkRelFile "test073.juvix")
         []
-        $ checkNatOutput [11]
+        $ checkNatOutput [11],
+      let k1 :: Term Natural = [nock| 333 |]
+          v1 :: Term Natural = [nock| 222 |]
+          k2 :: Term Natural = [nock| [1 2 3 nil] |]
+          v2 :: Term Natural = [nock| [4 5 6 nil] |]
+       in mkAnomaCallTest'
+            True
+            ( Storage
+                ( HashMap.fromList
+                    [ (k1, v1),
+                      (k2, v2)
+                    ]
+                )
+            )
+            "Test074: Builtin anomaGet"
+            $(mkRelDir ".")
+            $(mkRelFile "test074.juvix")
+            [OpQuote # k1, OpQuote # k2]
+            $ checkOutput [v1, v2]
     ]

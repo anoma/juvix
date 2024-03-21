@@ -10,6 +10,7 @@ import Juvix.Compiler.Tree.Data.TransformationId
 import Juvix.Compiler.Tree.Error
 import Juvix.Compiler.Tree.Transformation.Apply
 import Juvix.Compiler.Tree.Transformation.Base
+import Juvix.Compiler.Tree.Transformation.CheckNoAnoma
 import Juvix.Compiler.Tree.Transformation.FilterUnreachable
 import Juvix.Compiler.Tree.Transformation.Identity
 import Juvix.Compiler.Tree.Transformation.TempHeight
@@ -27,3 +28,4 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
       TempHeight -> return . computeTempHeight
       FilterUnreachable -> return . filterUnreachable
       Validate -> mapError (JuvixError @TreeError) . validate
+      CheckNoAnoma -> \tbl' -> mapError (JuvixError @TreeError) (checkNoAnoma tbl') $> tbl'

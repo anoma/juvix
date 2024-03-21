@@ -9,9 +9,11 @@ module Juvix.Compiler.Builtins
     module Juvix.Compiler.Builtins.Field,
     module Juvix.Compiler.Builtins.Debug,
     module Juvix.Compiler.Builtins.Control,
+    module Juvix.Compiler.Builtins.Anoma,
   )
 where
 
+import Juvix.Compiler.Builtins.Anoma
 import Juvix.Compiler.Builtins.Bool
 import Juvix.Compiler.Builtins.Control
 import Juvix.Compiler.Builtins.Debug

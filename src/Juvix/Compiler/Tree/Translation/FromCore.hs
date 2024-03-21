@@ -288,6 +288,7 @@ genCode infoTable fi =
       Core.OpFieldToInt -> PrimUnop OpFieldToInt
       Core.OpTrace -> OpTrace
       Core.OpFail -> OpFail
+      Core.OpAnomaGet -> OpAnomaGet
       _ -> impossible
 
     getArgsNum :: Symbol -> Int
