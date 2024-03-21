@@ -4,6 +4,7 @@ module Juvix.Data.Effect.Files.Base
   )
 where
 
+import Data.Time
 import Juvix.Data.Uid
 import Juvix.Prelude.Base
 import Juvix.Prelude.Prepath
@@ -41,6 +42,7 @@ data Files :: Effect where
   RemoveFile' :: Path Abs File -> Files m ()
   RenameFile' :: Path Abs File -> Path Abs File -> Files m ()
   CopyFile' :: Path Abs File -> Path Abs File -> Files m ()
+  GetModificationTime' :: Path Abs File -> Files m UTCTime
   JuvixConfigDir :: Files m (Path Abs Dir)
   CanonicalDir :: Path Abs Dir -> Prepath Dir -> Files m (Path Abs Dir)
   NormalizeDir :: Path b Dir -> Files m (Path Abs Dir)

@@ -47,6 +47,7 @@ runFilesIO = interpret helper
       RemoveFile' f -> Path.removeFile f
       RenameFile' p1 p2 -> Path.renameFile p1 p2
       CopyFile' p1 p2 -> Path.copyFile p1 p2
+      GetModificationTime' p -> getModificationTime p
       JuvixConfigDir -> juvixConfigDirIO
       CanonicalDir root d -> prepathToAbsDir root d
       NormalizeDir p -> canonicalizePath p

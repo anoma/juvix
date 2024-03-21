@@ -12,6 +12,8 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Data.Serialize as S
+import Data.Time
+import Data.Time.Format.ISO8601
 import Juvix.Data.Effect.Files
 import Juvix.Data.Effect.TaggedLock
 import Juvix.Prelude.Base
@@ -25,6 +27,10 @@ instance Serialize Text where
   put txt = S.put (unpack txt)
 
   get = pack <$> S.get
+
+instance Serialize UTCTime where
+  put t = S.put (iso8601Show t)
+  get = S.get >>= iso8601ParseM
 
 instance (Serialize a) => Serialize (NonEmpty a)
 

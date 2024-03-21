@@ -10,6 +10,7 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.List.NonEmpty qualified as NonEmpty
+import Data.Time
 import Juvix.Compiler.Concrete (ImportCycle (ImportCycle), ScoperError (ErrImportCycle))
 import Juvix.Compiler.Concrete.Data.Highlight
 import Juvix.Compiler.Concrete.Language
@@ -201,43 +202,59 @@ processModule' (EntryIndex entry) = do
   let buildDir = resolveAbsBuildDir root (entry ^. entryPointBuildDir)
       relPath = fromJust $ replaceExtension ".jvo" $ fromJust $ stripProperPrefix $(mkAbsDir "/") sourcePath
       absPath = buildDir Path.</> relPath
-  sha256 <- SHA256.digestFile sourcePath
   m :: Maybe Store.ModuleInfo <- loadFromFile absPath
   case m of
     Just info
-      | info ^. Store.moduleInfoSHA256 == sha256
-          && info ^. Store.moduleInfoOptions == opts
+      | info ^. Store.moduleInfoOptions == opts
           && info ^. Store.moduleInfoFieldSize == entry ^. entryPointFieldSize -> do
-          (changed, mtab) <- processImports'' entry (info ^. Store.moduleInfoImports)
-          -- We need to check whether any of the recursive imports is fragile,
-          -- not only the direct ones, because identifiers may be re-exported
-          -- (with `open public`).
-          let fragile = any (^. Store.moduleInfoFragile) (HashMap.elems $ mtab ^. Store.moduleTable)
+          mtime <- getModificationTime' sourcePath
           if
-              | changed && fragile ->
-                  recompile sha256 absPath
-              | otherwise ->
-                  return (PipelineResult info mtab False)
+              | mtime == info ^. Store.moduleInfoModificationTime ->
+                  reload (Just mtime) Nothing info absPath
+              | otherwise -> do
+                  sha256 <- SHA256.digestFile sourcePath
+                  if
+                      | info ^. Store.moduleInfoSHA256 == sha256 ->
+                          reload (Just mtime) (Just sha256) info absPath
+                      | otherwise ->
+                          recompile (Just mtime) (Just sha256) absPath
     _ ->
-      recompile sha256 absPath
+      recompile Nothing Nothing absPath
   where
     root = entry ^. entryPointRoot
     sourcePath = fromJust $ entry ^. entryPointModulePath
     opts = StoredModule.fromEntryPoint entry
 
-    recompile :: Text -> Path Abs File -> Sem r (PipelineResult Store.ModuleInfo)
-    recompile sha256 absPath = do
-      res <- processModule'' sha256 entry
+    reload :: Maybe UTCTime -> Maybe Text -> Store.ModuleInfo -> Path Abs File -> Sem r (PipelineResult Store.ModuleInfo)
+    reload mtime msha256 info absPath = do
+      (changed, mtab) <- processImports'' entry (info ^. Store.moduleInfoImports)
+      -- We need to check whether any of the recursive imports is fragile,
+      -- not only the direct ones, because identifiers may be re-exported
+      -- (with `open public`).
+      let fragile = any (^. Store.moduleInfoFragile) (HashMap.elems $ mtab ^. Store.moduleTable)
+      if
+          | changed && fragile ->
+              -- TODO: we only need to check if the fragile modules changed, not the direct imports
+              recompile mtime msha256 absPath
+          | otherwise ->
+              return (PipelineResult info mtab False)
+
+    recompile :: Maybe UTCTime -> Maybe Text -> Path Abs File -> Sem r (PipelineResult Store.ModuleInfo)
+    recompile mtime msha256 absPath = do
+      time <- maybe (getModificationTime' sourcePath) return mtime
+      sha256 <- maybe (SHA256.digestFile sourcePath) return msha256
+      res <- processModule'' time sha256 entry
       saveToFile absPath (res ^. pipelineResult)
       return res
 
 processModule'' ::
   forall r.
   (Members '[Reader ImportParents, Error JuvixError, Files, GitClone, PathResolver, MCache] r) =>
+  UTCTime ->
   Text ->
   EntryPoint ->
   Sem r (PipelineResult Store.ModuleInfo)
-processModule'' sha256 entry = over pipelineResult mkModuleInfo <$> processFileToStoredCore' entry
+processModule'' time sha256 entry = over pipelineResult mkModuleInfo <$> processFileToStoredCore' entry
   where
     mkModuleInfo :: Core.CoreResult -> Store.ModuleInfo
     mkModuleInfo Core.CoreResult {..} =
@@ -249,6 +266,7 @@ processModule'' sha256 entry = over pipelineResult mkModuleInfo <$> processFileT
           _moduleInfoOptions = StoredOptions.fromEntryPoint entry,
           _moduleInfoFragile = Core.moduleIsFragile _coreResultModule,
           _moduleInfoSHA256 = sha256,
+          _moduleInfoModificationTime = time,
           _moduleInfoFieldSize = entry ^. entryPointFieldSize
         }
       where

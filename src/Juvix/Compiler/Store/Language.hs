@@ -1,5 +1,6 @@
 module Juvix.Compiler.Store.Language where
 
+import Data.Time
 import Juvix.Compiler.Concrete.Language (TopModulePath)
 import Juvix.Compiler.Store.Core.Data.InfoTable qualified as Core
 import Juvix.Compiler.Store.Internal.Language
@@ -12,12 +13,14 @@ data ModuleInfo = ModuleInfo
   { _moduleInfoScopedModule :: ScopedModule,
     _moduleInfoInternalModule :: InternalModule,
     _moduleInfoCoreTable :: Core.InfoTable,
+    -- | Direct imports
     _moduleInfoImports :: [TopModulePath],
     _moduleInfoOptions :: Options,
     -- | True if any module depending on this module requires recompilation
     -- whenever this module is changed
     _moduleInfoFragile :: Bool,
     _moduleInfoSHA256 :: Text,
+    _moduleInfoModificationTime :: UTCTime,
     _moduleInfoFieldSize :: Natural
   }
   deriving stock (Generic)

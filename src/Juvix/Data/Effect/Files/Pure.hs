@@ -1,6 +1,8 @@
 module Juvix.Data.Effect.Files.Pure where
 
 import Data.HashMap.Strict qualified as HashMap
+import Data.Time
+import Data.Time.Calendar.OrdinalDate
 import Data.Tree
 import Juvix.Data.Effect.Files.Base
 import Juvix.Extra.Version
@@ -83,6 +85,7 @@ re cwd = interpretTop $ \case
   RemoveFile' p -> removeFileHelper p
   RenameFile' p1 p2 -> renameFileHelper p1 p2
   CopyFile' p1 p2 -> copyFileHelper p1 p2
+  GetModificationTime' _ -> return $ UTCTime (fromOrdinalDate 0 0) 0
   JuvixConfigDir -> return juvixConfigDirPure
   CanonicalDir root d -> return (canonicalDirPure root d)
   NormalizeDir p -> return (absDir (cwd' </> toFilePath p))
