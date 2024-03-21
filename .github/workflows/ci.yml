@@ -302,10 +302,10 @@ jobs:
           git clone https://github.com/lambdaclass/cairo-vm.git
           cd cairo-vm
           cargo build --release
-          cp target/release/cairo-vm-cli $HOME/.local/bin/cairo-vm-cli
+          cp -a target/release/cairo-vm-cli $HOME/.local/bin/cairo-vm-cli
           chmod a+x $HOME/.local/bin/cairo-vm-cli
           cd -
-          cp main/scripts/run_cairo_vm.sh $HOME/.local/bin/run_cairo_vm.sh
+          cp -a main/scripts/run_cairo_vm.sh $HOME/.local/bin/run_cairo_vm.sh
           chmod a+x $HOME/.local/bin/run_cairo_vm.sh
 
       - name: Make runtime
