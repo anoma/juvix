@@ -187,7 +187,7 @@ runCasmPipeline pa@PipelineArg {..} = do
   Casm.Result {..} <- getRight r
   writeFileEnsureLn casmFile (toPlainText $ Casm.ppProgram _resultCode)
 
-runCairoPipeline :: (Members '[Embed IO, App, TaggedLock] r) => PipelineArg -> Sem r ()
+runCairoPipeline :: (Members '[EmbedIO, App, TaggedLock] r) => PipelineArg -> Sem r ()
 runCairoPipeline pa@PipelineArg {..} = do
   entryPoint <- getEntry pa
   cairoFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
@@ -197,4 +197,4 @@ runCairoPipeline pa@PipelineArg {..} = do
       . coreToCairo
       $ _pipelineArgModule
   res <- getRight r
-  embed $ JSON.encodeFile (toFilePath cairoFile) res
+  liftIO $ JSON.encodeFile (toFilePath cairoFile) res

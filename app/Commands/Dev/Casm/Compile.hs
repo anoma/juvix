@@ -34,7 +34,7 @@ runCommand opts = do
               . casmToCairo
               $ Casm.Result labi code
           res <- getRight r
-          embed $ JSON.encodeFile (toFilePath cairoFile) res
+          liftIO $ JSON.encodeFile (toFilePath cairoFile) res
   where
     getFile :: Sem r (Path Abs File)
     getFile = getMainFile (opts ^. compileInputFile)

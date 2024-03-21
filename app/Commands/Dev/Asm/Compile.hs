@@ -55,7 +55,7 @@ runCommand opts = do
               . asmToCairo
               $ tab
           res <- getRight r
-          embed $ JSON.encodeFile (toFilePath cairoFile) res
+          liftIO $ JSON.encodeFile (toFilePath cairoFile) res
         _ ->
           case run $ runReader entryPoint $ runError $ asmToMiniC tab of
             Left err -> exitJuvixError err
