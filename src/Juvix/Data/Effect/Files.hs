@@ -91,7 +91,7 @@ relFiles root = walkDirRelAccum handler root mempty
     mkRel cd f = fromJust (stripProperPrefix root (cd <//> f))
 
 -- | Restore the original contents of a file if an error occurs in an action.
-restoreFileOnError :: forall r a. (Members '[Resource, Files, TempFile] r) => Path Abs File -> Sem r a -> Sem r a
+restoreFileOnError :: forall r a. (Members '[EmbedIO, Files, TempFile] r) => Path Abs File -> Sem r a -> Sem r a
 restoreFileOnError p action = do
   t <- tempFilePath
   finally (restoreOnErrorAction t) (removeTempFile t)

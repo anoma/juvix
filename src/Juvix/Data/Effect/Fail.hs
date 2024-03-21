@@ -4,7 +4,8 @@ module Juvix.Data.Effect.Fail where
 import Control.Exception qualified as X
 import Juvix.Prelude.Base
 
-data Fail m a = Fail
+data Fail :: Effect where
+  Fail :: Fail m a
 
 makeSem ''Fail
 
@@ -12,7 +13,7 @@ makeSem ''Fail
 runFail ::
   Sem (Fail ': r) a ->
   Sem r (Maybe a)
-runFail = fmap (^? _Right) . runError @() . reinterpret (\Fail -> throw ())
+runFail = fmap (^? _Right) . reinterpret (runError @()) (\Fail -> throw ())
 {-# INLINE runFail #-}
 
 -- | Run a 'Fail' effect purely with a default value.
@@ -28,11 +29,7 @@ runFailDefaultM ::
   Sem r a ->
   Sem (Fail ': r) a ->
   Sem r a
-runFailDefaultM defaultVal s = do
-  x <- runError @() (reinterpret (\Fail -> throw ()) s)
-  case x of
-    Left {} -> defaultVal
-    Right y -> return y
+runFailDefaultM defaultVal s = fromMaybeM defaultVal (runFail s)
 {-# INLINE runFailDefaultM #-}
 
 ignoreFail ::
@@ -68,7 +65,7 @@ failFromException ::
   IO a ->
   Sem r a
 failFromException m = do
-  r <- embed (X.try @X.SomeException m)
+  r <- liftIO (X.try @X.SomeException m)
   case r of
     Left {} -> fail
     Right a -> return a

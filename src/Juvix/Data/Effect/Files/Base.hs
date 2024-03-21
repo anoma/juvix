@@ -21,13 +21,13 @@ data Recurse r
 
 makeLenses ''RecursorArgs
 
-data TempFile m a where
+data TempFile :: Effect where
   TempFilePath :: TempFile m (Path Abs File)
   RemoveTempFile :: Path Abs File -> TempFile m ()
 
 makeSem ''TempFile
 
-data Files m a where
+data Files :: Effect where
   EnsureDir' :: Path Abs Dir -> Files m ()
   DirectoryExists' :: Path Abs Dir -> Files m Bool
   FileExists' :: Path Abs File -> Files m Bool

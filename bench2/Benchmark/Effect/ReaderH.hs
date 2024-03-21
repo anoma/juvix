@@ -1,8 +1,8 @@
 module Benchmark.Effect.ReaderH where
 
-import Juvix.Prelude
-import Juvix.Prelude.Effects (Eff, (:>))
+import Juvix.Prelude.Base.Foundation
 import Juvix.Prelude.Effects qualified as E
+import PolysemyPrelude qualified as P
 import Test.Tasty.Bench
 
 bm :: Benchmark
@@ -28,7 +28,7 @@ countRaw = sum' . go []
 countEff :: Natural -> Natural
 countEff x = sum' . E.runPureEff . E.runReader x $ go []
   where
-    go :: (E.Reader Natural :> r) => [Natural] -> Eff r [Natural]
+    go :: (E.Member (E.Reader Natural) r) => [Natural] -> E.Sem r [Natural]
     go acc = do
       n <- E.ask
       case n of
@@ -36,11 +36,11 @@ countEff x = sum' . E.runPureEff . E.runReader x $ go []
         m -> E.local @Natural pred (go (m : acc))
 
 countSem :: Natural -> Natural
-countSem x = sum . run . runReader x $ go []
+countSem x = sum . P.run . P.runReader x $ go []
   where
-    go :: (Members '[Reader Natural] r) => [Natural] -> Sem r [Natural]
+    go :: (P.Members '[P.Reader Natural] r) => [Natural] -> P.Sem r [Natural]
     go acc = do
-      n :: Natural <- ask
+      n :: Natural <- P.ask
       case n of
         0 -> return acc
-        m -> local @Natural pred (go (m : acc))
+        m -> P.local @Natural pred (go (m : acc))

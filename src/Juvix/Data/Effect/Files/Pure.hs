@@ -67,7 +67,7 @@ runFilesPure :: HashMap (Path Abs File) Text -> Path Abs Dir -> Sem (Files ': r)
 runFilesPure ini cwd a = evalState (mkFS ini) (re cwd a)
 
 re :: Path Abs Dir -> Sem (Files ': r) a -> Sem (State FS ': r) a
-re cwd = reinterpret $ \case
+re cwd = interpretTop $ \case
   ReadFile' f -> lookupFile' f
   FileExists' f -> isJust <$> lookupFile f
   PathUid p -> return (Uid (toFilePath p))

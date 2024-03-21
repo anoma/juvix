@@ -19,9 +19,7 @@ import Juvix.Prelude.Path
 -- Example:
 --
 -- @
---      runFinal
---        . resourceToIOFinal
---        . embedToFinal @IO
+--      runM
 --        . runFilesIO
 --        . runTaggedLockIO
 --        $ withTaggedLockDir $(mkAbsDir "/a/b/c") (embed (putStrLn "Hello" >> hFlush stdout))
@@ -36,7 +34,7 @@ data LockMode
   = LockModePermissive
   | LockModeExclusive
 
-runTaggedLock :: (Members '[Resource, EmbedIO] r) => LockMode -> Sem (TaggedLock ': r) a -> Sem r a
+runTaggedLock :: (Members '[EmbedIO] r) => LockMode -> Sem (TaggedLock ': r) a -> Sem r a
 runTaggedLock = \case
   LockModePermissive -> runTaggedLockPermissive
   LockModeExclusive -> runTaggedLockIO

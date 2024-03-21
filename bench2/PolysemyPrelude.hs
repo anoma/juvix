@@ -1,5 +1,5 @@
-module Juvix.Prelude.Base.Polysemy
-  ( module Juvix.Prelude.Base.Polysemy,
+module PolysemyPrelude
+  ( module PolysemyPrelude,
     module Polysemy,
     module Polysemy.Error,
     module Polysemy.Input,
@@ -36,9 +36,6 @@ mapReader :: (Member (Reader e1) r) => (e1 -> e2) -> Sem (Reader e2 ': r) a -> S
 mapReader f s = do
   e <- ask
   runReader (f e) s
-
-eassert :: Bool -> Sem r ()
-eassert b = assert b $ return ()
 
 execOutputList :: Sem (Output o ': r) a -> Sem r [o]
 execOutputList = fmap fst . runOutputList

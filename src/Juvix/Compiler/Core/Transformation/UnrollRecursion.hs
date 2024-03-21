@@ -11,10 +11,11 @@ import Juvix.Compiler.Core.Transformation.Base
 unrollRecursion :: (Member (Reader CoreOptions) r) => Module -> Sem r Module
 unrollRecursion md = do
   (mp, md') <-
-    runState @(HashMap Symbol Symbol) mempty $
-      execInfoTableBuilder md $
-        forM_ (buildSCCs (createCallGraph (md ^. moduleInfoTable))) goSCC
-  return $ mapIdentSymbols mp $ pruneInfoTable md'
+    runState @(HashMap Symbol Symbol) mempty
+      . execInfoTableBuilder md
+      . forM_ (buildSCCs (createCallGraph (md ^. moduleInfoTable)))
+      $ goSCC
+  return . mapIdentSymbols mp $ pruneInfoTable md'
   where
     mapIdentSymbols :: HashMap Symbol Symbol -> Module -> Module
     mapIdentSymbols mp = over (moduleInfoTable . infoMain) adjustMain . mapAllNodes (umap go)

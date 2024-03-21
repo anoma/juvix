@@ -1,10 +1,16 @@
-module Juvix.Prelude.Effects.Accum where
+module Juvix.Prelude.Effects.Accum
+  ( Accum,
+    runAccumList,
+    execAccumList,
+    ignoreAccum,
+    accum,
+  )
+where
 
-import Data.Kind qualified as GHC
 import Juvix.Prelude.Base.Foundation
 import Juvix.Prelude.Effects.Base
 
-data Accum (o :: GHC.Type) :: Effect
+data Accum (o :: GHCType) :: Effect
 
 type instance DispatchOf (Accum _) = 'Static 'NoSideEffects
 
@@ -12,16 +18,16 @@ newtype instance StaticRep (Accum o) = Accum
   { _unAccum :: [o]
   }
 
-runAccumList :: Eff (Accum o ': r) a -> Eff r ([o], a)
+accum :: (Member (Accum o) r) => o -> Sem r ()
+accum o = overStaticRep (\(Accum l) -> Accum (o : l))
+
+runAccumList :: Sem (Accum o ': r) a -> Sem r ([o], a)
 runAccumList m = do
   (a, Accum s) <- runStaticRep (Accum mempty) m
   return (reverse s, a)
 
-execAccumList :: Eff (Accum o ': r) a -> Eff r [o]
+execAccumList :: Sem (Accum o ': r) a -> Sem r [o]
 execAccumList = fmap fst . runAccumList
 
-ignoreAccum :: Eff (Accum o ': r) a -> Eff r a
+ignoreAccum :: Sem (Accum o ': r) a -> Sem r a
 ignoreAccum m = snd <$> runAccumList m
-
-accum :: (Accum o :> r) => o -> Eff r ()
-accum o = overStaticRep (\(Accum l) -> Accum (o : l))

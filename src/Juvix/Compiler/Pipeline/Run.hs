@@ -111,7 +111,7 @@ runReplPipelineIO' opts entry = runReplPipelineIOEither entry >>= mayThrow
   where
     mayThrow :: Either JuvixError r -> m r
     mayThrow = \case
-      Left err -> liftIO . runM . runReader opts $ printErrorAnsiSafe err >> exitFailure
+      Left err -> runM . runReader opts $ printErrorAnsiSafe err >> exitFailure
       Right r -> return r
 
 runReplPipelineIOEither ::
@@ -132,10 +132,7 @@ runReplPipelineIOEither' lockMode entry = do
         | mainIsPackageFile entry = runPackagePathResolverArtifacts (entry ^. entryPointResolverRoot)
         | otherwise = runPathResolverArtifacts
   eith <-
-    liftIO
-      . runFinal
-      . resourceToIOFinal
-      . embedToFinal @IO
+    runM
       . evalInternet hasInternet
       . ignoreHighlightBuilder
       . runError

@@ -11,15 +11,14 @@ runCommand opts@EvalOptions {..} = do
   gopts <- askGlobalOptions
   Core.CoreResult {..} <- runPipeline _evalInputFile upToCore
   let r =
-        run $
-          runReader (project gopts) $
-            runError @JuvixError $
-              (Core.toStored' _coreResultModule :: Sem '[Error JuvixError, Reader Core.CoreOptions] Core.Module)
+        run
+          . runReader (project gopts)
+          . runError @JuvixError
+          $ (Core.toStored' _coreResultModule :: Sem '[Error JuvixError, Reader Core.CoreOptions] Core.Module)
   tab <- Core.computeCombinedInfoTable <$> getRight r
-  let mevalNode =
-        if
-            | isJust _evalSymbolName -> getNode tab (selInfo tab)
-            | otherwise -> getNode tab (mainInfo tab)
+  let mevalNode
+        | isJust _evalSymbolName = getNode tab (selInfo tab)
+        | otherwise = getNode tab (mainInfo tab)
   case mevalNode of
     Just evalNode ->
       Eval.evalAndPrint gopts opts tab evalNode

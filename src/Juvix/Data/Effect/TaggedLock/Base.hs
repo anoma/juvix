@@ -7,7 +7,7 @@ import Juvix.Prelude.Path
 -- path.
 --
 -- The relative path does not need to exist in the filesystem.
-data TaggedLock m a where
+data TaggedLock :: Effect where
   WithTaggedLock :: Path Rel File -> m a -> TaggedLock m a
 
 makeSem ''TaggedLock

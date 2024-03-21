@@ -26,7 +26,7 @@ data PathInfoTopModule = PathInfoTopModule
   }
   deriving stock (Show)
 
-data PathResolver m a where
+data PathResolver :: Effect where
   RegisterDependencies :: DependenciesConfig -> PathResolver m ()
   ExpectedPathInfoTopModule :: TopModulePath -> PathResolver m PathInfoTopModule
   WithPath ::

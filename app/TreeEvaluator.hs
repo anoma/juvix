@@ -11,7 +11,6 @@ import Juvix.Compiler.Tree.Data.InfoTable qualified as Tree
 import Juvix.Compiler.Tree.Error qualified as Tree
 import Juvix.Compiler.Tree.Evaluator qualified as Tree
 import Juvix.Compiler.Tree.EvaluatorEff qualified as Eff
-import Juvix.Compiler.Tree.EvaluatorSem qualified as TreeSem
 import Juvix.Compiler.Tree.Language.Value qualified as Tree
 import Juvix.Compiler.Tree.Pretty qualified as Tree
 
@@ -47,7 +46,6 @@ doEval ::
 doEval = \case
   EvalEffectful -> doEvalEff
   EvalRaw -> doEvalRaw
-  EvalSem -> doEvalSem
 
 doEvalRaw ::
   (MonadIO m) =>
@@ -62,10 +60,3 @@ doEvalEff ::
   Tree.FunctionInfo ->
   m (Either Tree.TreeError Tree.Value)
 doEvalEff tab' funInfo = Eff.hEvalIOEither stdin stdout tab' funInfo
-
-doEvalSem ::
-  (MonadIO m) =>
-  Tree.InfoTable ->
-  Tree.FunctionInfo ->
-  m (Either Tree.TreeError Tree.Value)
-doEvalSem tab' funInfo = TreeSem.hEvalIOEither stdin stdout tab' funInfo

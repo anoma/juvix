@@ -7,7 +7,7 @@ module Juvix.Compiler.Pipeline
   )
 where
 
-import Data.List.Singletons
+import Data.List.Singletons (type (++))
 import Juvix.Compiler.Asm.Error qualified as Asm
 import Juvix.Compiler.Asm.Options qualified as Asm
 import Juvix.Compiler.Asm.Pipeline qualified as Asm
@@ -46,7 +46,7 @@ import Juvix.Data.Effect.Process
 import Juvix.Data.Effect.TaggedLock
 import Juvix.Data.Field
 
-type PipelineAppEffects = '[TaggedLock, EmbedIO, Resource, Final IO]
+type PipelineAppEffects = '[TaggedLock, EmbedIO]
 
 type PipelineLocalEff = '[PathResolver, EvalFileEff, Error PackageLoaderError, Error DependencyError, GitClone, Error GitProcessError, Process, Log, Reader EntryPoint, Files, Error JuvixError, HighlightBuilder, Internet]
 

@@ -5,7 +5,7 @@ import Commands.Dev.Reg.Run.Options
 import Juvix.Compiler.Reg.Translation.FromSource qualified as Reg
 import RegInterpreter
 
-runCommand :: forall r. (Members '[Embed IO, App] r) => RegRunOptions -> Sem r ()
+runCommand :: forall r. (Members '[EmbedIO, App] r) => RegRunOptions -> Sem r ()
 runCommand opts = do
   afile :: Path Abs File <- fromAppPathFile file
   s <- readFile afile

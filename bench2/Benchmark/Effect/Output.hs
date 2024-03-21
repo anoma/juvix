@@ -1,8 +1,8 @@
 module Benchmark.Effect.Output where
 
-import Juvix.Prelude
-import Juvix.Prelude.Effects (Eff, (:>))
+import Juvix.Prelude.Base.Foundation
 import Juvix.Prelude.Effects qualified as E
+import PolysemyPrelude qualified as P
 import Test.Tasty.Bench
 
 bm :: Benchmark
@@ -29,7 +29,7 @@ countdownRaw = sum' . reverse . go []
 countdownAccum :: Natural -> Natural
 countdownAccum = sum' . E.runPureEff . E.execAccumList . go
   where
-    go :: (E.Accum Natural :> r) => Natural -> Eff r ()
+    go :: (E.Member (E.Accum Natural) r) => Natural -> E.Sem r ()
     go = \case
       0 -> return ()
       m -> E.accum m >> go (pred m)
@@ -37,15 +37,15 @@ countdownAccum = sum' . E.runPureEff . E.execAccumList . go
 countdownEff :: Natural -> Natural
 countdownEff = sum' . E.runPureEff . E.execOutputList . go
   where
-    go :: (E.Output Natural :> r) => Natural -> Eff r ()
+    go :: (E.Member (E.Output Natural) r) => Natural -> E.Sem r ()
     go = \case
       0 -> return ()
       m -> E.output m >> go (pred m)
 
 countdownSem :: Natural -> Natural
-countdownSem = sum' . run . execOutputList . go
+countdownSem = sum' . P.run . P.execOutputList . go
   where
-    go :: (Members '[Output Natural] r) => Natural -> Sem r ()
+    go :: (P.Members '[P.Output Natural] r) => Natural -> P.Sem r ()
     go = \case
       0 -> return ()
-      m -> output m >> go (pred m)
+      m -> P.output m >> go (pred m)

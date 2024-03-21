@@ -22,7 +22,7 @@ import Juvix.Prelude
 class Scannable a where
   buildCallMap :: a -> CallMap
 
-data Termination m a where
+data Termination :: Effect where
   CheckTerminationShallow :: (Scannable a) => a -> Termination m ()
   FunctionTermination :: FunctionRef -> Termination m IsTerminating
 
@@ -33,7 +33,7 @@ functionSafeToNormalize = fmap safeToNormalize . functionTermination
 
 runTermination :: forall r a. (Members '[Error JuvixError] r) => TerminationState -> Sem (Termination ': r) a -> Sem r (TerminationState, a)
 runTermination ini m = do
-  res <- runState ini (re m)
+  res <- runTerminationState ini m
   checkNonTerminating (fst res)
   return res
   where
@@ -60,8 +60,8 @@ instance Scannable Expression where
       . execState emptyCallMap
       . scanTopExpression
 
-re :: Sem (Termination ': r) a -> Sem (State TerminationState ': r) a
-re = reinterpret $ \case
+runTerminationState :: TerminationState -> Sem (Termination ': r) a -> Sem r (TerminationState, a)
+runTerminationState ini = reinterpret (runState ini) $ \case
   CheckTerminationShallow m -> checkTerminationShallow' m
   FunctionTermination m -> functionTermination' m
 

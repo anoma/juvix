@@ -4,7 +4,7 @@ import Juvix.Compiler.Asm.Extra.Base (getCommandLocation)
 import Juvix.Compiler.Asm.Language
 import Juvix.Compiler.Tree.Error
 
-data Translator m a where
+data Translator :: Effect where
   NextCommand :: Translator m Command
   HasNextCommand :: Translator m Bool
 
@@ -22,7 +22,7 @@ runTranslator cs = runTranslator' (TranslatorState cs Nothing)
 
 runTranslator' :: forall r a. (Member (Error TreeError) r) => TranslatorState -> Sem (Translator ': r) a -> Sem r a
 runTranslator' st m = do
-  (st', a) <- runState st $ reinterpret interp m
+  (st', a) <- reinterpret (runState st) interp m
   unless (null (st' ^. stateCode)) $
     throw
       TreeError

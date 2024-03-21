@@ -1,8 +1,8 @@
 module Benchmark.Effect.State where
 
-import Juvix.Prelude
-import Juvix.Prelude.Effects (Eff, (:>))
+import Juvix.Prelude.Base.Foundation
 import Juvix.Prelude.Effects qualified as E
+import PolysemyPrelude qualified as P
 import Test.Tasty.Bench
 
 bm :: Benchmark
@@ -28,15 +28,15 @@ countRaw = go 0
 countEff :: Natural -> Natural
 countEff = E.runPureEff . E.execState 0 . go
   where
-    go :: (E.State Natural :> r) => Natural -> Eff r ()
+    go :: (E.Member (E.State Natural) r) => Natural -> E.Sem r ()
     go = \case
       0 -> return ()
       m -> E.modify (+ m) >> go (pred m)
 
 countSem :: Natural -> Natural
-countSem = run . execState 0 . go
+countSem = P.run . P.execState 0 . go
   where
-    go :: (Members '[State Natural] r) => Natural -> Sem r ()
+    go :: (P.Members '[P.State Natural] r) => Natural -> P.Sem r ()
     go = \case
       0 -> return ()
-      m -> modify (+ m) >> go (pred m)
+      m -> P.modify (+ m) >> go (pred m)

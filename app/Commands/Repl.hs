@@ -519,7 +519,7 @@ runCommand opts = do
             _replStateGlobalOptions = globalOptions
           }
   e <-
-    embed
+    liftIO
       . Except.runExceptT
       . (`State.evalStateT` iniState)
       . (`Reader.runReaderT` env)
@@ -535,7 +535,7 @@ defaultPreludeEntryPoint = do
   let buildRoot = root ^. rootRootDir
       buildDir = resolveAbsBuildDir buildRoot (root ^. rootBuildDir)
   pkg <- Reader.asks (^. replPackage)
-  mstdlibPath <- liftIO (runM (runFilesIO (packageStdlib buildRoot buildDir (pkg ^. packageDependencies))))
+  mstdlibPath <- runM (runFilesIO (packageStdlib buildRoot buildDir (pkg ^. packageDependencies)))
   case mstdlibPath of
     Just stdlibPath ->
       Just
@@ -554,8 +554,7 @@ replExpressionUpToScopedAtoms :: Text -> Repl (Concrete.ExpressionAtoms 'Concret
 replExpressionUpToScopedAtoms txt = do
   ctx <- replGetContext
   x <-
-    liftIO
-      . runM
+    runM
       . runError
       . evalState (ctx ^. replContextArtifacts)
       . runReader (ctx ^. replContextEntryPoint)
@@ -566,8 +565,7 @@ replExpressionUpToTyped :: Text -> Repl Internal.TypedExpression
 replExpressionUpToTyped txt = do
   ctx <- replGetContext
   x <-
-    liftIO
-      . runM
+    runM
       . runError
       . evalState (ctx ^. replContextArtifacts)
       . runReader (ctx ^. replContextEntryPoint)

@@ -1,4 +1,5 @@
 {-# LANGUAGE FunctionalDependencies #-}
+{-# OPTIONS_GHC -Wno-unused-type-patterns #-}
 
 module Juvix.Compiler.Concrete.Data.NameSignature.Builder
   ( mkNameSignature,
@@ -16,7 +17,7 @@ import Juvix.Compiler.Concrete.Gen qualified as Gen
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Prelude
 
-data NameSignatureBuilder s m a where
+data NameSignatureBuilder s :: Effect where
   AddSymbol :: IsImplicit -> Maybe (ArgDefault s) -> SymbolType s -> ExpressionType s -> NameSignatureBuilder s m ()
   EndBuild :: Proxy s -> NameSignatureBuilder s m a
   -- | for debugging
@@ -179,7 +180,7 @@ re ::
   (SingI s) =>
   Sem (NameSignatureBuilder s ': r) a ->
   Sem (Re s r) a
-re = reinterpret3 $ \case
+re = interpretTop3 $ \case
   AddSymbol impl mdef k ty -> addSymbol' impl mdef k ty
   EndBuild {} -> endBuild'
   GetBuilder -> get

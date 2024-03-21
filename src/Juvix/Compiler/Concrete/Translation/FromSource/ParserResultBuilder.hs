@@ -6,7 +6,7 @@ import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromSource.Data.ParserState
 import Juvix.Prelude
 
-data ParserResultBuilder m a where
+data ParserResultBuilder :: Effect where
   RegisterItem :: ParsedItem -> ParserResultBuilder m ()
   RegisterSpaceSpan :: SpaceSpan -> ParserResultBuilder m ()
   RegisterImport :: Import 'Parsed -> ParserResultBuilder m ()
@@ -70,19 +70,16 @@ registerItem' i = modify' (over parserStateParsedItems (i :))
 
 runParserResultBuilder :: (Member HighlightBuilder r) => ParserState -> Sem (ParserResultBuilder ': r) a -> Sem r (ParserState, a)
 runParserResultBuilder s =
-  runState s
-    . reinterpret
-      ( \case
-          RegisterImport i -> modify' (over parserStateImports (i :))
-          RegisterItem i -> do
-            modify' (over highlightParsed (i :))
-            registerItem' i
-          RegisterSpaceSpan g -> do
-            modify' (over parserStateComments (g :))
-            forM_ (g ^.. spaceSpan . each . _SpaceComment) $ \c ->
-              registerItem'
-                ParsedItem
-                  { _parsedLoc = getLoc c,
-                    _parsedTag = ParsedTagComment
-                  }
-      )
+  reinterpret (runState s) $ \case
+    RegisterImport i -> modify' (over parserStateImports (i :))
+    RegisterItem i -> do
+      modify' (over highlightParsed (i :))
+      registerItem' i
+    RegisterSpaceSpan g -> do
+      modify' (over parserStateComments (g :))
+      forM_ (g ^.. spaceSpan . each . _SpaceComment) $ \c ->
+        registerItem'
+          ParsedItem
+            { _parsedLoc = getLoc c,
+              _parsedTag = ParsedTagComment
+            }

@@ -6,7 +6,6 @@ import Juvix.Data.Effect.Git.Process.Error
 import Juvix.Data.Effect.Process
 import Juvix.Data.Effect.TaggedLock
 import Juvix.Prelude
-import Polysemy.Opaque
 
 newtype CloneEnv = CloneEnv
   {_cloneEnvDir :: Path Abs Dir}
@@ -88,14 +87,22 @@ initGitRepo url = do
   withTaggedLockDir' (unlessM (directoryExists' p) (cloneGitRepo url))
   return p
 
-handleNotACloneError :: (Member (Error GitProcessError) r, Monad m) => (GitError -> m x) -> Tactical e m r x -> Tactical e m r x
-handleNotACloneError errorHandler eff = catch @GitProcessError eff $ \case
-  GitCmdError GitCmdErrorDetails {_gitCmdErrorDetailsExitCode = ExitFailure 128} -> runTSimple (return NotAClone) >>= bindTSimple errorHandler
+handleNotACloneError :: (Member (Error GitProcessError) r) => LocalEnv localEs r -> (GitError -> Sem localEs x) -> Sem r x -> Sem r x
+handleNotACloneError localEnv errorHandler eff = catch @GitProcessError eff $ \case
+  GitCmdError
+    GitCmdErrorDetails
+      { _gitCmdErrorDetailsExitCode = ExitFailure 128
+      } ->
+      runTSimpleEff localEnv (errorHandler NotAClone)
   e -> throw e
 
-handleNormalizeRefError :: (Member (Error GitProcessError) r, Monad m) => (GitError -> m x) -> GitRef -> Tactical e m r x -> Tactical e m r x
-handleNormalizeRefError errorHandler ref eff = catch @GitProcessError eff $ \case
-  GitCmdError GitCmdErrorDetails {_gitCmdErrorDetailsExitCode = ExitFailure 128} -> runTSimple (return (NoSuchRef ref)) >>= bindTSimple errorHandler
+handleNormalizeRefError :: (Member (Error GitProcessError) r) => LocalEnv localEs r -> (GitError -> Sem localEs x) -> GitRef -> Sem r x -> Sem r x
+handleNormalizeRefError localEnv errorHandler ref eff = catch @GitProcessError eff $ \case
+  GitCmdError
+    GitCmdErrorDetails
+      { _gitCmdErrorDetailsExitCode = ExitFailure 128
+      } ->
+      runTSimpleEff localEnv (errorHandler (NoSuchRef ref))
   e -> throw e
 
 withTaggedLockDir' :: (Members '[TaggedLock, Reader CloneEnv] r) => Sem r a -> Sem r a
@@ -106,22 +113,19 @@ withTaggedLockDir' ma = do
 runGitProcess ::
   forall r a.
   (Members '[TaggedLock, Log, Files, Process, Error GitProcessError, Internet] r) =>
-  Sem (Scoped CloneArgs Git ': r) a ->
+  Sem (GitClone ': r) a ->
   Sem r a
-runGitProcess = interpretScopedH allocator handler
+runGitProcess = runProvider_ helper
   where
-    allocator :: forall q x. CloneArgs -> (Path Abs Dir -> Sem (Opaque q ': r) x) -> Sem (Opaque q ': r) x
-    allocator a use' = do
-      let env = CloneEnv {_cloneEnvDir = a ^. cloneArgsCloneDir}
-      use' =<< runReader env (initGitRepo (a ^. cloneArgsRepoUrl))
-
-    handler :: forall q r0 x. Path Abs Dir -> Git (Sem r0) x -> Tactical Git (Sem r0) (Opaque q ': r) x
-    handler p eff = case eff of
-      Fetch errorHandler -> handleNotACloneError errorHandler (runReader env gitFetch >>= pureT)
-      Checkout errorHandler ref -> do
-        void (handleNormalizeRefError errorHandler ref (runReader env (void (gitNormalizeRef ref)) >>= pureT))
-        handleNotACloneError errorHandler (runReader env (gitCheckout ref) >>= pureT)
-      NormalizeRef errorHandler ref -> handleNormalizeRefError errorHandler ref (runReader env (gitNormalizeRef ref) >>= pureT)
-      where
-        env :: CloneEnv
-        env = CloneEnv {_cloneEnvDir = p}
+    helper :: forall x. CloneArgs -> Sem (Git ': r) x -> Sem r x
+    helper cloneArgs m = do
+      let env0 = CloneEnv {_cloneEnvDir = cloneArgs ^. cloneArgsCloneDir}
+      clonePath <- runReader env0 (initGitRepo (cloneArgs ^. cloneArgsRepoUrl))
+      let env :: CloneEnv
+          env = CloneEnv {_cloneEnvDir = clonePath}
+      (`interpretH` m) $ \localEnv -> \case
+        Fetch errorHandler -> handleNotACloneError localEnv errorHandler (runReader env gitFetch)
+        NormalizeRef errorHandler ref -> handleNormalizeRefError localEnv errorHandler ref (runReader env (gitNormalizeRef ref))
+        Checkout errorHandler ref -> do
+          void (handleNormalizeRefError localEnv errorHandler ref (runReader env (void (gitNormalizeRef ref))))
+          handleNotACloneError localEnv errorHandler (runReader env (gitCheckout ref))

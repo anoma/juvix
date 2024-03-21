@@ -29,9 +29,7 @@ testDescr root PosTest {..} =
             withTempDir' $ \d -> do
               let buildDir = CustomBuildDir (Abs d)
               res <-
-                runFinal
-                  . resourceToIOFinal
-                  . embedToFinal @IO
+                runM
                   . runError @JuvixError
                   . runFilesIO
                   . mapError (JuvixError @PackageLoaderError)

@@ -72,7 +72,7 @@ module Juvix.Prelude.Base.Foundation
 where
 
 import Control.Applicative
-import Control.Monad.Catch (MonadMask, MonadThrow, throwM)
+import Control.Monad.Catch (ExitCase (..), MonadMask, MonadThrow, generalBracket, throwM)
 import Control.Monad.Extra hiding (fail, forM, mconcatMapM, whileJustM)
 import Control.Monad.Extra qualified as Monad
 import Control.Monad.Fix
@@ -100,6 +100,7 @@ import Data.Int
 import Data.IntMap.Strict (IntMap)
 import Data.IntMap.Strict qualified as IntMap
 import Data.IntSet (IntSet)
+import Data.Kind qualified as GHC
 import Data.List.Extra hiding (allSame, foldr1, groupSortOn, head, last, mconcatMap, replicate, unzip)
 import Data.List.Extra qualified as List
 import Data.List.NonEmpty qualified as NonEmpty
@@ -182,6 +183,10 @@ import Text.Show (Show)
 import Text.Show qualified as Show
 import Text.Show.Unicode (urecover, ushow)
 import Prelude (Double)
+
+type GHCType = GHC.Type
+
+type GHCConstraint = GHC.Constraint
 
 traverseM ::
   (Monad m, Traversable m, Applicative f) =>
@@ -466,6 +471,9 @@ optional_ = void . optional
 --------------------------------------------------------------------------------
 -- Misc
 --------------------------------------------------------------------------------
+
+eassert :: (Applicative f) => Bool -> f ()
+eassert b = assert b (pure ())
 
 -- | applies a function n times
 iterateN :: Int -> (a -> a) -> a -> a

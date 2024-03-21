@@ -18,7 +18,7 @@ data InternetWitness = InternetWitness
 
 type Online = Reader InternetWitness
 
-data Internet m a where
+data Internet :: Effect where
   -- | Returns `Nothing` if we are offline
   GetInternet :: Internet m (Maybe InternetWitness)
 

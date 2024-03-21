@@ -22,7 +22,7 @@ type Vars s = MV.MVector s (Maybe Val)
 
 type Args = Vec.Vector Val
 
-runFunction :: forall r. (Members '[Error RegError, Embed IO] r) => Handle -> InfoTable -> [Val] -> FunctionInfo -> Sem r Val
+runFunction :: forall r. (Members '[Error RegError, EmbedIO] r) => Handle -> InfoTable -> [Val] -> FunctionInfo -> Sem r Val
 runFunction hout infoTable args0 info0 = do
   r <- catchRunError (runST (goFun args0 info0))
   case r of
@@ -305,7 +305,7 @@ runFunction hout infoTable args0 info0 = do
       ValString s -> s
       v -> ppPrint infoTable v
 
-runIO :: forall r. (Members '[Error RegError, Embed IO] r) => Handle -> Handle -> InfoTable -> Val -> Sem r Val
+runIO :: forall r. (Members '[Error RegError, EmbedIO] r) => Handle -> Handle -> InfoTable -> Val -> Sem r Val
 runIO hin hout infoTable = \case
   ValConstr (Constr (BuiltinTag TagReturn) [x]) ->
     return x
@@ -335,7 +335,7 @@ runIO hin hout infoTable = \case
   val ->
     return val
 
-runFunctionIO :: forall r. (Members '[Error RegError, Embed IO] r) => Handle -> Handle -> InfoTable -> [Val] -> FunctionInfo -> Sem r Val
+runFunctionIO :: forall r. (Members '[Error RegError, EmbedIO] r) => Handle -> Handle -> InfoTable -> [Val] -> FunctionInfo -> Sem r Val
 runFunctionIO hin hout tab args funInfo = do
   val <- runFunction hout tab args funInfo
   runIO hin hout tab val

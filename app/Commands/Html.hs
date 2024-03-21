@@ -19,7 +19,7 @@ runGenOnlySourceHtml HtmlOptions {..} = do
   res <- runPipeline _htmlInputFile upToScoping
   let m = res ^. Scoper.resultModule
   outputDir <- fromAppPathDir _htmlOutputDir
-  embed $
+  liftIO $
     Html.genSourceHtml
       GenSourceHtmlArgs
         { _genSourceHtmlArgsAssetsDir = _htmlAssetsPrefix,
@@ -80,13 +80,11 @@ runCommand HtmlOptions {..}
       when _htmlOpen $ case openCmd of
         Nothing -> say "Could not recognize the 'open' command for your OS"
         Just opencmd ->
-          embed
-            ( void
-                ( Process.spawnProcess
-                    opencmd
-                    [ toFilePath
-                        ( outputDir <//> Html.indexFileName
-                        )
-                    ]
-                )
-            )
+          liftIO
+            . void
+            $ Process.spawnProcess
+              opencmd
+              [ toFilePath
+                  ( outputDir <//> Html.indexFileName
+                  )
+              ]

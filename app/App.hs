@@ -15,7 +15,7 @@ import Juvix.Prelude.Pretty hiding
   )
 import System.Console.ANSI qualified as Ansi
 
-data App m a where
+data App :: Effect where
   ExitMsg :: ExitCode -> Text -> App m a
   ExitFailMsg :: Text -> App m a
   ExitJuvixError :: JuvixError -> App m a
@@ -60,15 +60,15 @@ reAppIO ::
   Sem (App ': r) a ->
   Sem (SCache Package ': r) a
 reAppIO args@RunAppIOArgs {..} =
-  reinterpret $ \case
+  interpretTop $ \case
     AskPackageGlobal -> return (_runAppIOArgsRoot ^. rootPackageType `elem` [GlobalStdlib, GlobalPackageDescription, GlobalPackageBase])
     FromAppPathFile p -> prepathToAbsFile invDir (p ^. pathPath)
     GetMainFile m -> getMainFile' m
     FromAppPathDir p -> liftIO (prepathToAbsDir invDir (p ^. pathPath))
     RenderStdOut t
       | _runAppIOArgsGlobalOptions ^. globalOnlyErrors -> return ()
-      | otherwise -> embed $ do
-          sup <- Ansi.hSupportsANSIColor stdout
+      | otherwise -> do
+          sup <- liftIO (Ansi.hSupportsANSIColor stdout)
           renderIO (not (_runAppIOArgsGlobalOptions ^. globalNoColors) && sup) t
     AskGlobalOptions -> return _runAppIOArgsGlobalOptions
     AskPackage -> getPkg
@@ -87,7 +87,7 @@ reAppIO args@RunAppIOArgs {..} =
       exitFailure
     ExitMsg exitCode t -> exitMsg' (exitWith exitCode) t
     ExitFailMsg t -> exitMsg' exitFailure t
-    SayRaw b -> embed (ByteString.putStr b)
+    SayRaw b -> liftIO (ByteString.putStr b)
   where
     getPkg :: (Members '[SCache Package] r') => Sem r' Package
     getPkg = cacheSingletonGet
@@ -161,7 +161,7 @@ someBaseToAbs' f = do
 filePathToAbs :: (Members '[EmbedIO, App] r) => Prepath FileOrDir -> Sem r (Either (Path Abs File) (Path Abs Dir))
 filePathToAbs fp = do
   invokeDir <- askInvokeDir
-  embed (fromPreFileOrDir invokeDir fp)
+  fromPreFileOrDir invokeDir fp
 
 askGenericOptions :: (Members '[App] r) => Sem r GenericOptions
 askGenericOptions = project <$> askGlobalOptions

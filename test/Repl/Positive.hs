@@ -13,7 +13,7 @@ import Juvix.Extra.Stdlib
 import Repl.Assertions
 import Repl.Value
 
-runTaggedLockIO' :: Sem '[Files, TaggedLock, Embed IO] a -> IO a
+runTaggedLockIO' :: Sem '[Files, TaggedLock, EmbedIO] a -> IO a
 runTaggedLockIO' =
   runM
     . runTaggedLockPermissive

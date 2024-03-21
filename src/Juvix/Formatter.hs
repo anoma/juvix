@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-unused-type-patterns #-}
+
 module Juvix.Formatter where
 
 import Juvix.Compiler.Concrete.Language
@@ -14,7 +16,7 @@ data FormattedFileInfo = FormattedFileInfo
     _formattedFileInfoContentsModified :: Bool
   }
 
-data ScopeEff m a where
+data ScopeEff :: Effect where
   ScopeFile :: Path Abs File -> ScopeEff m Scoper.ScoperResult
   ScopeStdin :: EntryPoint -> ScopeEff m Scoper.ScoperResult
 

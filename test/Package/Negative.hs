@@ -25,9 +25,7 @@ testDescr NegTest {..} =
           _testAssertion = Single $ do
             res <-
               withTempDir'
-                ( runFinal
-                    . resourceToIOFinal
-                    . embedToFinal @IO
+                ( runM
                     . runError
                     . runFilesIO
                     . mapError (JuvixError @PackageLoaderError)

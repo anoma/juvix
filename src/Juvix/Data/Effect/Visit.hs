@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-unused-type-patterns #-}
+
 -- | Visit every key at most once
 module Juvix.Data.Effect.Visit
   ( runVisit,
@@ -12,7 +14,7 @@ where
 import Data.HashSet qualified as HashSet
 import Juvix.Prelude.Base
 
-data Visit k m a where
+data Visit (k :: GHCType) :: Effect where
   Visit :: k -> Visit k m ()
 
 makeSem ''Visit
@@ -58,7 +60,7 @@ re ::
   (k -> Sem (Visit k ': r) ()) ->
   Sem (Visit k ': r) a ->
   Sem (State (HashSet k) ': r) a
-re vis = reinterpret $ \case
+re vis = interpretTop $ \case
   Visit k ->
     unlessM (HashSet.member k <$> get @(HashSet k)) $ do
       modify' (HashSet.insert k)

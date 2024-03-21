@@ -93,7 +93,6 @@ doRun ::
   FunctionInfo ->
   IO (Either RegError Val)
 doRun hout tab funInfo =
-  runFinal
-    . embedToFinal @IO
+  runM
     . runError
     $ runFunctionIO stdin hout tab [] funInfo

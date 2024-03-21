@@ -21,7 +21,6 @@ import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Extra.Assets
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
-import Juvix.Prelude qualified as Prelude
 import Juvix.Prelude.Pretty
 import Text.Blaze.Html.Renderer.Utf8 qualified as Html
 import Text.Blaze.Html5 as Html hiding (map)
@@ -172,7 +171,7 @@ createIndexFile ps = do
                       <> ul (mconcatMap li c')
 
 writeHtml :: (Members '[EmbedIO] r) => Path Abs File -> Html -> Sem r ()
-writeHtml f h = Prelude.embed $ do
+writeHtml f h = liftIO $ do
   ensureDir dir
   Builder.writeFile (toFilePath f) (Html.renderHtmlBuilder h)
   where
@@ -182,7 +181,7 @@ writeHtml f h = Prelude.embed $ do
 genJudocHtml :: (Members '[EmbedIO] r) => EntryPoint -> JudocArgs -> Sem r ()
 genJudocHtml entry JudocArgs {..} =
   runReader htmlOpts . runReader normTable . runReader entry $ do
-    Prelude.embed (writeAssets _judocArgsOutputDir)
+    liftIO (writeAssets _judocArgsOutputDir)
     mapM_ (goTopModule cs) allModules
     createIndexFile (map topModulePath (toList allModules))
   where
@@ -306,7 +305,7 @@ goTopModule cs m = do
 
     srcHtml :: forall s. (Members '[Reader HtmlOptions, EmbedIO] s) => Sem s Html
     srcHtml = do
-      utc <- Prelude.embed getCurrentTime
+      utc <- liftIO getCurrentTime
       genModuleHtml
         GenModuleHtmlArgs
           { _genModuleHtmlArgsConcreteOpts = defaultOptions,

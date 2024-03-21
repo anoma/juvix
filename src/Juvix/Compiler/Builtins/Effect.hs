@@ -9,7 +9,7 @@ import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty
 import Juvix.Prelude
 
-data Builtins m a where
+data Builtins :: Effect where
   GetBuiltinName' :: Interval -> BuiltinPrim -> Builtins m Name
   RegisterBuiltin' :: BuiltinPrim -> Name -> Builtins m ()
 
@@ -30,8 +30,8 @@ makeLenses ''BuiltinsState
 iniBuiltins :: BuiltinsState
 iniBuiltins = BuiltinsState mempty
 
-re :: forall r a. (Member (Error JuvixError) r) => Sem (Builtins ': r) a -> Sem (State BuiltinsState ': r) a
-re = reinterpret $ \case
+runBuiltins :: forall r a. (Member (Error JuvixError) r) => BuiltinsState -> Sem (Builtins ': r) a -> Sem r (BuiltinsState, a)
+runBuiltins ini = reinterpret (runState ini) $ \case
   GetBuiltinName' i b -> fromMaybeM notDefined (gets (^. builtinsTable . at b))
     where
       notDefined :: Sem (State BuiltinsState ': r) x
@@ -60,9 +60,6 @@ re = reinterpret $ \case
 
 evalBuiltins :: (Member (Error JuvixError) r) => BuiltinsState -> Sem (Builtins ': r) a -> Sem r a
 evalBuiltins s = fmap snd . runBuiltins s
-
-runBuiltins :: (Member (Error JuvixError) r) => BuiltinsState -> Sem (Builtins ': r) a -> Sem r (BuiltinsState, a)
-runBuiltins s = runState s . re
 
 data FunInfo = FunInfo
   { _funInfoDef :: FunctionDef,

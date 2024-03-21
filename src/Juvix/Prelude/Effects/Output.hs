@@ -2,29 +2,38 @@
 
 module Juvix.Prelude.Effects.Output where
 
-import Data.Kind qualified as GHC
-import Effectful.Dispatch.Dynamic
-import Juvix.Prelude.Base hiding (Effect, Output, State, interpret, modify, output, reinterpret, runOutputList, runState)
+import Juvix.Prelude.Base.Foundation
 import Juvix.Prelude.Effects.Accum
 import Juvix.Prelude.Effects.Base
 
-data Output (o :: GHC.Type) :: Effect where
+data Output (o :: GHCType) :: Effect where
   Output :: o -> Output o m ()
 
 makeEffect ''Output
 
-runOutputEff :: (o -> Eff r ()) -> Eff (Output o ': r) a -> Eff r a
-runOutputEff handle =
-  interpret $ \_ -> \case
+runOutputFold :: o -> (o -> o -> o) -> Sem (Output o ': r) a -> Sem r (o, a)
+runOutputFold ini f =
+  reinterpret (runState ini) $ \case
+    Output x -> modify (\acc -> f acc x)
+
+runOutputMonoidL :: (Monoid o) => Sem (Output o ': r) a -> Sem r (o, a)
+runOutputMonoidL = runOutputFold mempty (\acc x -> x <> acc)
+
+runOutputMonoidR :: (Monoid o) => Sem (Output o ': r) a -> Sem r (o, a)
+runOutputMonoidR = runOutputFold mempty (\acc x -> acc <> x)
+
+runOutputSem :: (o -> Sem r ()) -> Sem (Output o ': r) a -> Sem r a
+runOutputSem handle =
+  interpret $ \case
     Output x -> handle x
 
-runOutputList :: Eff (Output o ': r) a -> Eff r ([o], a)
-runOutputList = reinterpret runAccumList $ \_ -> \case
+runOutputList :: Sem (Output o ': r) a -> Sem r ([o], a)
+runOutputList = reinterpret runAccumList $ \case
   Output x -> accum x
 
-execOutputList :: Eff (Output o ': r) a -> Eff r [o]
+execOutputList :: Sem (Output o ': r) a -> Sem r [o]
 execOutputList = fmap fst . runOutputList
 
-ignoreOutput :: Eff (Output o ': r) a -> Eff r a
-ignoreOutput = interpret $ \_ -> \case
+ignoreOutput :: Sem (Output o ': r) a -> Sem r a
+ignoreOutput = interpret $ \case
   Output {} -> return ()

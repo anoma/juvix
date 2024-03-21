@@ -28,8 +28,8 @@ parseText = Core.runParser replPath defaultModuleId
 runRepl :: forall r. (Members '[EmbedIO, App] r) => CoreReplOptions -> Core.InfoTable -> Sem r ()
 runRepl opts tab = do
   putStr "> "
-  embed (hFlush stdout)
-  done <- embed isEOF
+  liftIO (hFlush stdout)
+  done <- liftIO isEOF
   unless done $ do
     s <- getLine
     case fromText (strip s) of

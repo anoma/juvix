@@ -11,7 +11,7 @@ import Juvix.Compiler.Core.Extra.Base
 import Juvix.Compiler.Core.Info.NameInfo
 import Juvix.Compiler.Core.Language
 
-data InfoTableBuilder m a where
+data InfoTableBuilder :: Effect where
   FreshSymbol :: InfoTableBuilder m Symbol
   FreshTag :: InfoTableBuilder m Tag
   RegisterIdent :: Text -> IdentifierInfo -> InfoTableBuilder m ()
@@ -89,9 +89,7 @@ mkBuilderState m =
     tab = computeCombinedInfoTable m
 
 runInfoTableBuilder' :: BuilderState -> forall r a. Sem (InfoTableBuilder ': r) a -> Sem r (BuilderState, a)
-runInfoTableBuilder' st =
-  runState st
-    . reinterpret interp
+runInfoTableBuilder' st = reinterpret (runState st) interp
   where
     interp :: InfoTableBuilder m b -> Sem (State BuilderState ': r) b
     interp = \case
