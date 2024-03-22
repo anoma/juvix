@@ -37,12 +37,12 @@ instance (PrettyCode a, NockNatural a) => PrettyCode (Atom a) where
           AtomHintOp -> nockOp atm >>= ppCode
           AtomHintPath -> nockPath atm >>= ppCode
           AtomHintBool
-            | nockmaEq atm nockTrue -> return (annotate (AnnKind KNameInductive) "true")
-            | nockmaEq atm nockFalse -> return (annotate (AnnKind KNameAxiom) "false")
+            | nockmaEq atm nockTrue -> return (annotate (AnnKind KNameInductive) Str.true_)
+            | nockmaEq atm nockFalse -> return (annotate (AnnKind KNameAxiom) Str.false_)
             | otherwise -> fail
-          AtomHintNil -> return (annotate (AnnKind KNameConstructor) "nil")
-          AtomHintVoid -> return (annotate (AnnKind KNameAxiom) "void")
-          AtomHintFunctionsPlaceholder -> return (annotate (AnnKind KNameAxiom) "functions_placeholder")
+          AtomHintNil -> return (annotate (AnnKind KNameConstructor) Str.nil)
+          AtomHintVoid -> return (annotate (AnnKind KNameAxiom) Str.void)
+          AtomHintFunctionsPlaceholder -> return (annotate (AnnKind KNameAxiom) Str.functionsPlaceholder)
 
 instance PrettyCode Interval where
   ppCode = return . pretty

@@ -985,3 +985,6 @@ package = "package"
 
 version :: (IsString s) => s
 version = "version"
+
+functionsPlaceholder :: (IsString s) => s
+functionsPlaceholder = "functions_placeholder"

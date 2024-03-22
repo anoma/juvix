@@ -136,6 +136,9 @@ atomNil = symbol Str.nil $> nockNil
 atomVoid :: Parser (Atom Natural)
 atomVoid = symbol Str.void $> nockVoid
 
+atomFunctionsPlaceholder :: Parser (Atom Natural)
+atomFunctionsPlaceholder = symbol Str.functionsPlaceholder $> nockNil
+
 patom :: Parser (Atom Natural)
 patom = do
   mtag <- optional pTag
@@ -145,6 +148,7 @@ patom = do
     <|> atomBool
     <|> atomNil
     <|> atomVoid
+    <|> atomFunctionsPlaceholder
 
 iden :: Parser Text
 iden = lexeme (takeWhile1P (Just "<iden>") (isAscii .&&. not . isWhiteSpace))
