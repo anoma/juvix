@@ -147,15 +147,12 @@ patom = do
     <|> atomVoid
 
 iden :: Parser Text
-iden = lexeme (takeWhile1P (Just "<iden>") isAlphaNum)
+iden = lexeme (takeWhile1P (Just "<iden>") (isAscii .&&. not . isWhiteSpace))
 
 pTag :: Parser Tag
 pTag = do
   void (chunk Str.tagTag)
   Tag <$> iden
-
-stdlibIden :: Parser Text
-stdlibIden = lexeme (takeWhile1P (Just "<stdlibIden>") (isAscii .&&. not . isWhiteSpace))
 
 cell :: Parser (Cell Natural)
 cell = do
@@ -188,7 +185,7 @@ cell = do
 
     stdlibFun :: Parser StdlibFunction
     stdlibFun = do
-      i <- stdlibIden
+      i <- iden
       let err = error ("invalid stdlib function identifier: " <> i)
       maybe err return (parseStdlibFunction i)
 
