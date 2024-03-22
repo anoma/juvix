@@ -15,15 +15,15 @@ parseNockmaRunOptions :: Parser NockmaRunOptions
 parseNockmaRunOptions = do
   _nockmaRunFile <- parseInputFile FileExtNockma
   _nockmaRunArgs <- optional $ do
-          _pathPath <-
-            option
-              somePreFileOpt
-              ( long "args"
-                  <> metavar "ARGS_FILE"
-                  <> help "Path to file containing args"
-                  <> action "file"
-              )
-          pure AppPath {_pathIsInput = True, ..}
+    _pathPath <-
+      option
+        somePreFileOpt
+        ( long "args"
+            <> metavar "ARGS_FILE"
+            <> help "Path to file containing args"
+            <> action "file"
+        )
+    pure AppPath {_pathIsInput = True, ..}
   _nockmaRunProfile <-
     switch
       ( long "profile"
