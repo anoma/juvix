@@ -120,10 +120,8 @@ outputAnomaResult :: (Members '[EmbedIO, App] r) => Path Abs File -> Nockma.Anom
 outputAnomaResult nockmaFile Nockma.AnomaResult {..} = do
   let code = Nockma.ppSerialize _anomaClosure
       prettyNockmaFile = replaceExtensions' [".pretty", ".nockma"] nockmaFile
-      prettyEnvFile = replaceExtensions' [".env", ".pretty", ".nockma"] nockmaFile
   writeFileEnsureLn nockmaFile code
   writeFileEnsureLn prettyNockmaFile (Nockma.ppPrint _anomaClosure)
-  writeFileEnsureLn prettyEnvFile (Nockma.ppPrint _anomaEnv)
 
 runCasmPipeline :: (Members '[EmbedIO, App, TaggedLock] r) => PipelineArg -> Sem r ()
 runCasmPipeline pa@PipelineArg {..} = do
