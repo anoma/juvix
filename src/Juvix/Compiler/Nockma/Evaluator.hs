@@ -170,7 +170,7 @@ eval initstack initterm = ignoreOpCounts (evalProfile initstack initterm)
 
 evalProfile ::
   forall s a.
-  (Integral a, Members '[State OpCounts, Reader EvalOptions, Output (Term a), Error (NockEvalError a), Error (ErrNockNatural a)] s, NockNatural a) =>
+  (Hashable a, Integral a, Members '[Reader (Storage a), State OpCounts, Reader EvalOptions, Output (Term a), Error (NockEvalError a), Error (ErrNockNatural a)] s, NockNatural a) =>
   Term a ->
   Term a ->
   Sem s (Term a)
