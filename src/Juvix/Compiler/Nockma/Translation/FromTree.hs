@@ -780,20 +780,6 @@ callFun fun = do
   let p' = fpath ++ closurePath WrapperCode
   return (opCall "callFun" p' (opAddress "callFunSubject" emptyPath))
 
--- [f1_code f1_args env] / [call L [@ S]]
--- [f1_code f1_args env] / f1_code
-
--- f1: subject: [f1_code f1_args ctx]
---     formula: f1_code
-
--- f1_code contains call to f2
-
--- f2_path: getFunctionPath f2
---           (replaceFun f2_path >>#) . (replaceArgs args >>#) <$> callFun -- callFun is independent of functionId
-
--- The layout of the stack will look like this:
--- [f1_code f1_args tempstack standardlibary functionslibrary]
-
 -- | Call a function with the passed arguments
 callFunWithArgs ::
   (Members '[Reader CompilerCtx] r) =>
