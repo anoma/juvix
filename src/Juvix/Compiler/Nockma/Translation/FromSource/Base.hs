@@ -7,7 +7,7 @@ import Juvix.Compiler.Nockma.Language
 import Juvix.Extra.Paths
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Parser.Error
-import Juvix.Parser.Lexer (onlyInterval, withLoc)
+import Juvix.Parser.Lexer (isWhiteSpace, onlyInterval, withLoc)
 import Juvix.Prelude hiding (Atom, Path, many, some)
 import Juvix.Prelude qualified as Prelude
 import Juvix.Prelude.Parsing hiding (runParser)
@@ -154,6 +154,9 @@ pTag = do
   void (chunk Str.tagTag)
   Tag <$> iden
 
+stdlibIden :: Parser Text
+stdlibIden = lexeme (takeWhile1P (Just "<stdlibIden>") (isAscii .&&. not . isWhiteSpace))
+
 cell :: Parser (Cell Natural)
 cell = do
   lloc <- onlyInterval lsbracket
@@ -185,7 +188,7 @@ cell = do
 
     stdlibFun :: Parser StdlibFunction
     stdlibFun = do
-      i <- iden
+      i <- stdlibIden
       let err = error ("invalid stdlib function identifier: " <> i)
       maybe err return (parseStdlibFunction i)
 
