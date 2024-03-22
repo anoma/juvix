@@ -3,12 +3,14 @@ module Commands.Dev.Nockma.Options where
 import Commands.Dev.Nockma.Eval.Options
 import Commands.Dev.Nockma.Format.Options
 import Commands.Dev.Nockma.Repl.Options
+import Commands.Dev.Nockma.Run.Options
 import CommonOptions
 
 data NockmaCommand
   = NockmaRepl NockmaReplOptions
   | NockmaEval NockmaEvalOptions
   | NockmaFormat NockmaFormatOptions
+  | NockmaRun NockmaRunOptions
   deriving stock (Data)
 
 parseNockmaCommand :: Parser NockmaCommand
@@ -17,9 +19,19 @@ parseNockmaCommand =
     mconcat
       [ commandRepl,
         commandFromAsm,
-        commandFormat
+        commandFormat,
+        commandRun
       ]
   where
+    commandRun :: Mod CommandFields NockmaCommand
+    commandRun = command "run" runInfo
+      where
+        runInfo :: ParserInfo NockmaCommand
+        runInfo =
+          info
+            (NockmaRun <$> parseNockmaRunOptions)
+            (progDesc "Run an Anoma program. It should be used with artefacts obtained from compilation with the anoma target.")
+
     commandFromAsm :: Mod CommandFields NockmaCommand
     commandFromAsm = command "eval" fromAsmInfo
       where

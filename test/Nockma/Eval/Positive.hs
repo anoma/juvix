@@ -3,12 +3,12 @@ module Nockma.Eval.Positive where
 import Base hiding (Path, testName)
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Core.Language.Base (defaultSymbol)
+import Juvix.Compiler.Nockma.Anoma
 import Juvix.Compiler.Nockma.Evaluator
 import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Translation.FromSource.QQ
 import Juvix.Compiler.Nockma.Translation.FromTree
-import Nockma.Base
 
 type Check = Sem '[Reader [Term Natural], Reader (Term Natural), EmbedIO]
 
@@ -87,21 +87,7 @@ eqTraces expected = do
 
 compilerTest :: Text -> Term Natural -> Check () -> Bool -> Test
 compilerTest n mainFun _testCheck _evalInterceptStdlibCalls =
-  let f =
-        CompilerFunction
-          { _compilerFunctionName = UserFunction (defaultSymbol 0),
-            _compilerFunctionArity = 0,
-            _compilerFunction = return mainFun
-          }
-      _testName :: Text
-        | _evalInterceptStdlibCalls = n <> " - intercept stdlib"
-        | otherwise = n
-      opts = CompilerOptions {_compilerOptionsEnableTrace = False}
-      Cell _testProgramSubject _testProgramFormula = runCompilerWithJuvix opts mempty [] f
-      _testEvalOptions = EvalOptions {..}
-      _testProgramStorage :: Storage Natural = emptyStorage
-      _testAssertEvalError :: Maybe (NockEvalError Natural -> Assertion) = Nothing
-   in Test {..}
+  anomaTest n mainFun [] _testCheck _evalInterceptStdlibCalls
 
 withAssertErrKeyNotInStorage :: Test -> Test
 withAssertErrKeyNotInStorage Test {..} =
@@ -127,7 +113,8 @@ anomaTest n mainFun args _testCheck _evalInterceptStdlibCalls =
 
       opts = CompilerOptions {_compilerOptionsEnableTrace = False}
 
-      _testProgramSubject = TermCell (runCompilerWithAnoma opts mempty [] f)
+      res :: AnomaResult = runCompilerWith opts mempty [] f
+      _testProgramSubject = res ^. anomaClosure
 
       _testProgramFormula = anomaCall args
       _testProgramStorage :: Storage Natural = emptyStorage
@@ -146,7 +133,15 @@ anomaCallingConventionTests =
   [True, False]
     <**> [ anomaTest "stdlib add" (add (nockNatLiteral 1) (nockNatLiteral 2)) [] (eqNock [nock| 3 |]),
            anomaTest "stdlib add with arg" (add (nockNatLiteral 1) (nockNatLiteral 2)) [nockNatLiteral 1] (eqNock [nock| 3 |]),
-           anomaTest "stdlib sub args" (sub (OpAddress # pathToArg 0) (OpAddress # pathToArg 1)) [nockNatLiteral 3, nockNatLiteral 1] (eqNock [nock| 2 |])
+           let args = [nockNatLiteral 3, nockNatLiteral 1]
+               fx =
+                 FunctionCtx
+                   { _functionCtxArity = fromIntegral (length args)
+                   }
+            in run . runReader fx $ do
+                 p0 <- pathToArg 0
+                 p1 <- pathToArg 1
+                 return (anomaTest "stdlib sub args" (sub (OpAddress # p0) (OpAddress # p1)) args (eqNock [nock| 2 |]))
          ]
 
 juvixCallingConventionTests :: [Test]
@@ -163,7 +158,39 @@ juvixCallingConventionTests =
            compilerTest "stdlib pow2" (pow2 (nockNatLiteral 3)) (eqNock [nock| 8 |]),
            compilerTest "stdlib nested" (dec (dec (nockNatLiteral 20))) (eqNock [nock| 18 |]),
            compilerTest "append rights - empty" (appendRights emptyPath (nockNatLiteral 3)) (eqNock (toNock [R, R, R])),
-           compilerTest "append rights" (appendRights [L, L] (nockNatLiteral 3)) (eqNock (toNock [L, L, R, R, R]))
+           compilerTest "append rights" (appendRights [L, L] (nockNatLiteral 3)) (eqNock (toNock [L, L, R, R, R])),
+           compilerTest "opAddress" ((OpQuote # (foldTerms (toNock @Natural <$> (5 :| [6, 1])))) >># opAddress' (OpQuote # [R, R])) (eqNock (toNock @Natural 1)),
+           compilerTest "foldTermsOrNil (empty)" (foldTermsOrNil []) (eqNock (nockNilTagged "expected-result")),
+           let l :: NonEmpty Natural = 1 :| [2]
+               l' :: NonEmpty (Term Natural) = nockNatLiteral <$> l
+            in compilerTest "foldTermsOrNil (non-empty)" (foldTermsOrNil (toList l')) (eqNock (foldTerms (toNock @Natural <$> l))),
+           let l :: NonEmpty (Term Natural) = toNock <$> nonEmpty' [1 :: Natural .. 3]
+            in compilerTest "list to tuple" (listToTuple (OpQuote # makeList (toList l)) (nockIntegralLiteral (length l))) $
+                 eqNock (foldTerms l),
+           let l :: Term Natural = OpQuote # foldTerms (toNock @Natural <$> (1 :| [2, 3]))
+            in compilerTest "replaceSubterm'" (replaceSubterm' l (OpQuote # toNock [R]) (OpQuote # (toNock @Natural 999))) (eqNock (toNock @Natural 1 # toNock @Natural 999)),
+           let lst :: [Term Natural] = toNock @Natural <$> [1, 2, 3]
+               len = nockIntegralLiteral (length lst)
+               l :: Term Natural = OpQuote # makeList lst
+            in compilerTest "append" (append l len l) (eqNock (makeList (lst ++ lst))),
+           let l :: [Natural] = [1, 2]
+               r :: NonEmpty Natural = 3 :| [4]
+               res :: Term Natural = foldTerms (toNock <$> prependList l r)
+               lenL :: Term Natural = nockIntegralLiteral (length l)
+               lenR :: Term Natural = nockIntegralLiteral (length r)
+               lstL = OpQuote # makeList (map toNock l)
+               tupR = OpQuote # foldTerms (toNock <$> r)
+            in compilerTest "appendToTuple (left non-empty, right non-empty)" (appendToTuple lstL lenL tupR lenR) (eqNock res),
+           let l :: NonEmpty Natural = 1 :| [2]
+               res :: Term Natural = foldTerms (toNock <$> l)
+               lenL :: Term Natural = nockIntegralLiteral (length l)
+               lstL = OpQuote # makeList (toNock <$> (toList l))
+            in compilerTest "appendToTuple (left non-empty, right empty)" (appendToTuple lstL lenL (OpQuote # nockNilTagged "appendToTuple") (nockNatLiteral 0)) (eqNock res),
+           let r :: NonEmpty Natural = 3 :| [4]
+               res :: Term Natural = foldTerms (toNock <$> r)
+               lenR :: Term Natural = nockIntegralLiteral (length r)
+               tupR = OpQuote # foldTerms (toNock <$> r)
+            in compilerTest "appendToTuple (left empty, right-nonempty)" (appendToTuple (OpQuote # nockNilTagged "test-appendtotuple") (nockNatLiteral 0) tupR lenR) (eqNock res)
          ]
 
 unitTests :: [Test]

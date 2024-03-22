@@ -11,26 +11,38 @@ defaultOptions :: Options
 defaultOptions =
   Options
     { _optPrettyMode = MinimizeDelimiters,
-      _optIgnoreHints = False
+      _optIgnoreHints = False,
+      _optIgnoreTags = False
     }
 
 data Options = Options
   { _optPrettyMode :: PrettyMode,
-    _optIgnoreHints :: Bool
+    _optIgnoreHints :: Bool,
+    _optIgnoreTags :: Bool
   }
 
 serializeOptions :: Options
 serializeOptions =
   Options
     { _optPrettyMode = MinimizeDelimiters,
-      _optIgnoreHints = True
+      _optIgnoreHints = True,
+      _optIgnoreTags = True
+    }
+
+testOptions :: Options
+testOptions =
+  Options
+    { _optPrettyMode = MinimizeDelimiters,
+      _optIgnoreHints = False,
+      _optIgnoreTags = True
     }
 
 traceOptions :: Options
 traceOptions =
   Options
     { _optPrettyMode = MinimizeDelimiters,
-      _optIgnoreHints = False
+      _optIgnoreHints = False,
+      _optIgnoreTags = False
     }
 
 makeLenses ''Options

@@ -14,6 +14,7 @@ import Juvix.Prelude hiding (Atom, Path)
 
 data NockEvalError a
   = ErrInvalidPath (InvalidPath a)
+  | ErrInvalidNockOp (InvalidNockOp a)
   | ErrExpectedAtom (ExpectedAtom a)
   | ErrExpectedCell (ExpectedCell a)
   | -- TODO perhaps this should be a repl error type
@@ -50,7 +51,22 @@ data KeyNotInStorage a = KeyNotInStorage
     _keyNotInStorageStorage :: Storage a
   }
 
+data InvalidNockOp a = InvalidNockOp
+  { _invalidNockOpCtx :: EvalCtx,
+    _invalidNockOp :: Atom a
+  }
+
 data NoStack = NoStack
+
+throwInvalidNockOp :: (Members '[Error (NockEvalError a), Reader EvalCtx] r) => Atom a -> Sem r x
+throwInvalidNockOp a = do
+  ctx <- ask
+  throw $
+    ErrInvalidNockOp
+      InvalidNockOp
+        { _invalidNockOpCtx = ctx,
+          _invalidNockOp = a
+        }
 
 throwInvalidPath :: (Members '[Error (NockEvalError a), Reader EvalCtx] r) => Term a -> Path -> Sem r x
 throwInvalidPath tm p = do
@@ -110,6 +126,12 @@ instance (PrettyCode a, NockNatural a) => PrettyCode (ExpectedAtom a) where
     let atm = annotate AnnImportant "atom"
     return (ctx <> "Expected an" <+> atm <+> "but got:" <> line <> cell)
 
+instance (PrettyCode a, NockNatural a) => PrettyCode (InvalidNockOp a) where
+  ppCode InvalidNockOp {..} = do
+    atm <- ppCode _invalidNockOp
+    ctx <- ppCtx _invalidNockOpCtx
+    return (ctx <> "Invalid nockOp or path: " <+> atm)
+
 instance (PrettyCode a, NockNatural a) => PrettyCode (ExpectedCell a) where
   ppCode ExpectedCell {..} = do
     atm <- ppCode _expectedCellAtom
@@ -133,6 +155,7 @@ instance (PrettyCode a, NockNatural a) => PrettyCode (KeyNotInStorage a) where
 instance (PrettyCode a, NockNatural a) => PrettyCode (NockEvalError a) where
   ppCode = \case
     ErrInvalidPath e -> ppCode e
+    ErrInvalidNockOp e -> ppCode e
     ErrExpectedAtom e -> ppCode e
     ErrExpectedCell e -> ppCode e
     ErrNoStack e -> ppCode e

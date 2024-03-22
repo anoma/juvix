@@ -7,7 +7,7 @@ import Juvix.Compiler.Nockma.Language
 import Juvix.Extra.Paths
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Parser.Error
-import Juvix.Parser.Lexer (onlyInterval, withLoc)
+import Juvix.Parser.Lexer (isWhiteSpace, onlyInterval, withLoc)
 import Juvix.Prelude hiding (Atom, Path, many, some)
 import Juvix.Prelude qualified as Prelude
 import Juvix.Prelude.Parsing hiding (runParser)
@@ -75,22 +75,24 @@ dottedNatural = lexeme $ do
     digit :: Parser Char
     digit = satisfy isDigit
 
-atomOp :: Parser (Atom Natural)
-atomOp = do
+atomOp :: Maybe Tag -> Parser (Atom Natural)
+atomOp mtag = do
   WithLoc loc op' <- withLoc (choice [symbol opName $> op | (opName, op) <- HashMap.toList atomOps])
   let info =
         AtomInfo
           { _atomInfoHint = Just AtomHintOp,
+            _atomInfoTag = mtag,
             _atomInfoLoc = Irrelevant (Just loc)
           }
   return (Atom (serializeNockOp op') info)
 
-atomPath :: Parser (Atom Natural)
-atomPath = do
+atomPath :: Maybe Tag -> Parser (Atom Natural)
+atomPath mtag = do
   WithLoc loc path <- withLoc pPath
   let info =
         AtomInfo
           { _atomInfoHint = Just AtomHintPath,
+            _atomInfoTag = mtag,
             _atomInfoLoc = Irrelevant (Just loc)
           }
   return (Atom (serializePath path) info)
@@ -105,12 +107,13 @@ pPath =
   symbol "S" $> []
     <|> NonEmpty.toList <$> some direction
 
-atomNat :: Parser (Atom Natural)
-atomNat = do
+atomNat :: Maybe Tag -> Parser (Atom Natural)
+atomNat mtag = do
   WithLoc loc n <- withLoc dottedNatural
   let info =
         AtomInfo
           { _atomInfoHint = Nothing,
+            _atomInfoTag = mtag,
             _atomInfoLoc = Irrelevant (Just loc)
           }
   return (Atom n info)
@@ -133,21 +136,32 @@ atomNil = symbol Str.nil $> nockNil
 atomVoid :: Parser (Atom Natural)
 atomVoid = symbol Str.void $> nockVoid
 
+atomFunctionsPlaceholder :: Parser (Atom Natural)
+atomFunctionsPlaceholder = symbol Str.functionsPlaceholder $> nockNil
+
 patom :: Parser (Atom Natural)
-patom =
-  atomOp
-    <|> atomNat
-    <|> atomPath
+patom = do
+  mtag <- optional pTag
+  atomOp mtag
+    <|> atomNat mtag
+    <|> atomPath mtag
     <|> atomBool
     <|> atomNil
     <|> atomVoid
+    <|> atomFunctionsPlaceholder
 
 iden :: Parser Text
-iden = lexeme (takeWhile1P (Just "<iden>") isAlphaNum)
+iden = lexeme (takeWhile1P (Just "<iden>") (isAscii .&&. not . isWhiteSpace))
+
+pTag :: Parser Tag
+pTag = do
+  void (chunk Str.tagTag)
+  Tag <$> iden
 
 cell :: Parser (Cell Natural)
 cell = do
   lloc <- onlyInterval lsbracket
+  lbl <- optional pTag
   c <- optional stdlibCall
   firstTerm <- term
   restTerms <- some term
@@ -156,6 +170,7 @@ cell = do
       info =
         CellInfo
           { _cellInfoCall = c,
+            _cellInfoTag = lbl,
             _cellInfoLoc = Irrelevant (Just (lloc <> rloc))
           }
   return (set cellInfo info r)

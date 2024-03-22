@@ -12,7 +12,6 @@ data Target
   | TargetAsm
   | TargetReg
   | TargetTree
-  | TargetNockma
   | TargetAnoma
   | TargetCairo
   deriving stock (Data, Eq, Show)
@@ -93,8 +92,6 @@ getLimits tgt debug = case tgt of
         _limitsSpecialisedApply = 3
       }
   TargetTree ->
-    defaultLimits
-  TargetNockma ->
     defaultLimits
   TargetAnoma ->
     defaultLimits

@@ -1,0 +1,5 @@
+module String;
+
+import Stdlib.Prelude open;
+
+main : String := "boom";

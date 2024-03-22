@@ -13,7 +13,6 @@ data CompileTarget
   | TargetAsm
   | TargetReg
   | TargetTree
-  | TargetNockma
   | TargetAnoma
   | TargetCasm
   deriving stock (Eq, Data, Bounded, Enum)
@@ -28,7 +27,6 @@ instance Show CompileTarget where
     TargetAsm -> "asm"
     TargetReg -> "reg"
     TargetTree -> "tree"
-    TargetNockma -> "nockma"
     TargetAnoma -> "anoma"
     TargetCasm -> "casm"
 

@@ -9,6 +9,7 @@ import Juvix.Compiler.Backend.C qualified as C
 import Juvix.Compiler.Casm.Data.Result qualified as Casm
 import Juvix.Compiler.Casm.Pretty qualified as Casm
 import Juvix.Compiler.Nockma.Pretty qualified as Nockma
+import Juvix.Compiler.Nockma.Translation.FromTree qualified as Nockma
 import Juvix.Compiler.Reg.Pretty qualified as Reg
 import Juvix.Compiler.Tree.Data.InfoTable qualified as Tree
 import Juvix.Prelude.Pretty
@@ -41,7 +42,6 @@ getEntry PipelineArg {..} = do
       TargetAsm -> Backend.TargetAsm
       TargetReg -> Backend.TargetReg
       TargetTree -> Backend.TargetTree
-      TargetNockma -> Backend.TargetNockma
       TargetAnoma -> Backend.TargetAnoma
       TargetCasm -> Backend.TargetCairo
 
@@ -104,19 +104,6 @@ runRegPipeline pa@PipelineArg {..} = do
   let code = Reg.ppPrint tab' tab'
   writeFileEnsureLn regFile code
 
-runNockmaPipeline :: (Members '[EmbedIO, App, TaggedLock] r) => PipelineArg -> Sem r ()
-runNockmaPipeline pa@PipelineArg {..} = do
-  entryPoint <- getEntry pa
-  nockmaFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
-  r <-
-    runReader entryPoint
-      . runError @JuvixError
-      . treeToNockma
-      $ _pipelineArgTable
-  tab' <- getRight r
-  let code = Nockma.ppSerialize tab'
-  writeFileEnsureLn nockmaFile code
-
 runAnomaPipeline :: (Members '[EmbedIO, App, TaggedLock] r) => PipelineArg -> Sem r ()
 runAnomaPipeline pa@PipelineArg {..} = do
   entryPoint <- getEntry pa
@@ -126,9 +113,15 @@ runAnomaPipeline pa@PipelineArg {..} = do
       . runError @JuvixError
       . treeToAnoma
       $ _pipelineArgTable
-  tab' <- getRight r
-  let code = Nockma.ppSerialize tab'
+  res <- getRight r
+  outputAnomaResult nockmaFile res
+
+outputAnomaResult :: (Members '[EmbedIO, App] r) => Path Abs File -> Nockma.AnomaResult -> Sem r ()
+outputAnomaResult nockmaFile Nockma.AnomaResult {..} = do
+  let code = Nockma.ppSerialize _anomaClosure
+      prettyNockmaFile = replaceExtensions' [".pretty", ".nockma"] nockmaFile
   writeFileEnsureLn nockmaFile code
+  writeFileEnsureLn prettyNockmaFile (Nockma.ppPrint _anomaClosure)
 
 runCasmPipeline :: (Members '[EmbedIO, App, TaggedLock] r) => PipelineArg -> Sem r ()
 runCasmPipeline pa@PipelineArg {..} = do

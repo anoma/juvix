@@ -689,6 +689,9 @@ instrAdd = "add"
 argsTag :: (IsString s) => s
 argsTag = "args@"
 
+tagTag :: (IsString s) => s
+tagTag = "tag@"
+
 stdlibTag :: (IsString s) => s
 stdlibTag = "stdlib@"
 
@@ -982,3 +985,6 @@ package = "package"
 
 version :: (IsString s) => s
 version = "version"
+
+functionsPlaceholder :: (IsString s) => s
+functionsPlaceholder = "functions_placeholder"
