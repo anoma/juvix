@@ -9,6 +9,7 @@ overBlocks f block = block'
 
     goFinal :: FinalInstruction -> FinalInstruction
     goFinal = \case
+      ExtendClosure x -> ExtendClosure x
       Call x -> Call x
       TailCall x -> TailCall x
       Return x -> Return x
@@ -25,6 +26,7 @@ getBlocks block =
   where
     goFinal :: FinalInstruction -> [Block]
     goFinal = \case
+      ExtendClosure {} -> []
       Call {} -> []
       TailCall {} -> []
       Return {} -> []
@@ -41,12 +43,12 @@ getResultVar = \case
   Assign x -> Just $ x ^. instrAssignResult
   Alloc x -> Just $ x ^. instrAllocResult
   AllocClosure x -> Just $ x ^. instrAllocClosureResult
-  ExtendClosure x -> Just $ x ^. instrExtendClosureResult
   _ -> Nothing
 
 getResultVar' :: FinalInstruction -> Maybe VarRef
 getResultVar' = \case
   Call x -> Just $ x ^. instrCallResult
+  ExtendClosure x -> Just $ x ^. instrExtendClosureResult
   _ -> Nothing
 
 getValueRefs'' :: Value -> [VarRef]
@@ -62,7 +64,6 @@ getValueRefs = \case
   Assign x -> goAssign x
   Alloc x -> goAlloc x
   AllocClosure x -> goAllocClosure x
-  ExtendClosure x -> goExtendClosure x
   Trace x -> goTrace x
   Dump -> []
   Failure x -> goFailure x
@@ -84,10 +85,6 @@ getValueRefs = \case
     goAllocClosure :: InstrAllocClosure -> [VarRef]
     goAllocClosure InstrAllocClosure {..} = concatMap getValueRefs'' _instrAllocClosureArgs
 
-    goExtendClosure :: InstrExtendClosure -> [VarRef]
-    goExtendClosure InstrExtendClosure {..} =
-      _instrExtendClosureValue : concatMap getValueRefs'' _instrExtendClosureArgs
-
     goTrace :: InstrTrace -> [VarRef]
     goTrace InstrTrace {..} = getValueRefs'' _instrTraceValue
 
@@ -96,12 +93,17 @@ getValueRefs = \case
 
 getValueRefs' :: FinalInstruction -> [VarRef]
 getValueRefs' = \case
+  ExtendClosure x -> goExtendClosure x
   Call x -> goCall x
   TailCall x -> goTailCall x
   Return x -> goReturn x
   Branch x -> goBranch x
   Case x -> goCase x
   where
+    goExtendClosure :: InstrExtendClosure -> [VarRef]
+    goExtendClosure InstrExtendClosure {..} =
+      _instrExtendClosureValue : concatMap getValueRefs'' _instrExtendClosureArgs
+
     goCallType :: CallType -> [VarRef]
     goCallType = \case
       CallFun {} -> []

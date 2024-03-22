@@ -2,16 +2,16 @@ module Juvix.Compiler.Casm.Translation.FromReg where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
-import Juvix.Compiler.Backend
 import Juvix.Compiler.Casm.Data.LabelInfoBuilder
 import Juvix.Compiler.Casm.Data.Limits
 import Juvix.Compiler.Casm.Data.Result
 import Juvix.Compiler.Casm.Extra.Base
 import Juvix.Compiler.Casm.Extra.Stdlib
 import Juvix.Compiler.Casm.Language
-import Juvix.Compiler.Reg.Data.InfoTable qualified as Reg
-import Juvix.Compiler.Reg.Extra.Info qualified as Reg
-import Juvix.Compiler.Reg.Language qualified as Reg
+import Juvix.Compiler.Casm.Translation.FromReg.CasmBuilder
+import Juvix.Compiler.Reg.Data.Blocks.InfoTable qualified as Reg
+import Juvix.Compiler.Reg.Extra.Blocks.Info qualified as Reg
+import Juvix.Compiler.Reg.Language.Blocks qualified as Reg
 import Juvix.Compiler.Tree.Evaluator.Builtins qualified as Reg
 import Juvix.Data.Field
 
@@ -34,7 +34,7 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
   return $ callInstr : jmpInstr : binstrs ++ cinstrs ++ instrs ++ [Label endLab]
   where
     info :: Reg.ExtraInfo
-    info = Reg.computeExtraInfo (getLimits TargetCairo False) tab
+    info = Reg.computeExtraInfo tab
 
     mkFunCall :: Symbol -> [Instruction]
     mkFunCall sym =
@@ -47,6 +47,9 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
     getTagId tag =
       1 + 2 * fromJust (HashMap.lookup tag (info ^. Reg.extraInfoCIDs))
 
+    unsupported :: Text -> a
+    unsupported what = error ("Cairo backend: unsupported: " <> what)
+
     goFun :: forall r. (Member LabelInfoBuilder r) => StdlibBuiltins -> LabelRef -> (Address, [[Instruction]]) -> Reg.FunctionInfo -> Sem r (Address, [[Instruction]])
     goFun blts failLab (addr0, acc) funInfo = do
       let sym = funInfo ^. Reg.functionSymbol
@@ -54,49 +57,59 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
       registerLabelName sym funName
       registerLabelAddress sym addr0
       let lab = Label $ LabelRef sym (Just funName)
-          code = funInfo ^. Reg.functionCode
-          n = fromJust $ HashMap.lookup (funInfo ^. Reg.functionSymbol) (info ^. Reg.extraInfoLocalVarsNum)
-          i1 = Alloc $ InstrAlloc $ Val $ Imm $ fromIntegral n
-          pre = [lab, i1]
+          block = funInfo ^. Reg.functionCode
+          pre = [lab]
           addr1 = addr0 + length pre
-      instrs <- goCode addr1 code
+      -- TODO: arguments map
+      instrs <-
+        fmap fst
+          . runCasmBuilder addr1 mempty
+          . runOutputList
+          $ goBlock blts failLab Nothing block
       return (addr1 + length instrs, (pre ++ instrs) : acc)
+
+    goLocalBlock :: forall r. (Members '[LabelInfoBuilder, CasmBuilder, Output Instruction] r) => StdlibBuiltins -> LabelRef -> Maybe Reg.VarRef -> Reg.Block -> Sem r ()
+    goLocalBlock blts failLab mout block = do
+      ap0 <- getAP
+      goBlock blts failLab mout block
+      setAP ap0
+
+    goBlock :: forall r. (Members '[LabelInfoBuilder, CasmBuilder, Output Instruction] r) => StdlibBuiltins -> LabelRef -> Maybe Reg.VarRef -> Reg.Block -> Sem r ()
+    goBlock blts failLab mout Reg.Block {..} = do
+      mapM_ goInstr _blockBody
+      whenJust _blockFinal $
+        goFinalInstr
+      case _blockNext of
+        Just block' -> do
+          -- TODO: transfer args
+          output'' (mkCallRel $ Imm 3)
+          output'' Return
+          output'' Nop
+          setAP 0
+          goBlock blts failLab mout block'
+        Nothing -> case mout of
+          Just vr -> do
+            r <- mkMemRef vr
+            goAssignAp (Val $ Ref r)
+          Nothing ->
+            return ()
       where
-        unsupported :: Text -> a
-        unsupported what = error ("Cairo backend: unsupported: " <> what)
+        output'' :: Instruction -> Sem r ()
+        output'' i = do
+          output i
+          incPC 1
 
-        goCode :: Address -> Reg.Code -> Sem r [Instruction]
-        goCode addr code = concat . reverse . snd <$> foldM go' (addr, []) code
-          where
-            go' :: (Address, [[Instruction]]) -> Reg.Instruction -> Sem r (Address, [[Instruction]])
-            go' (addr', acc') i = do
-              is <- goInstr addr' i
-              return (addr' + length is, is : acc')
+        output' :: Int -> Instruction -> Sem r ()
+        output' apOff i = do
+          output'' i
+          incAP apOff
 
-        goInstr :: Address -> Reg.Instruction -> Sem r [Instruction]
-        goInstr addr = \case
-          Reg.Binop x -> goBinop addr x
-          Reg.Unop x -> goUnop addr x
-          Reg.Assign x -> goAssign addr x
-          Reg.Alloc x -> goAlloc addr x
-          Reg.AllocClosure x -> goAllocClosure addr x
-          Reg.ExtendClosure x -> goExtendClosure addr x
-          Reg.Call x -> goCall addr x
-          Reg.TailCall x -> goTailCall addr x
-          Reg.CallClosures {} -> impossible
-          Reg.TailCallClosures {} -> impossible
-          Reg.Return x -> goReturn addr x
-          Reg.Branch x -> goBranch addr x
-          Reg.Case x -> goCase addr x
-          Reg.Trace x -> goTrace addr x
-          Reg.Dump -> unsupported "dump"
-          Reg.Failure x -> goFail addr x
-          Reg.Prealloc {} -> return []
-          Reg.Nop -> return []
-          Reg.Block x -> goBlock addr x
+        ---------------------------------------------------------------------
+        -- The mk* functions don't change the builder state, may only read it
+        ---------------------------------------------------------------------
 
-        goConst :: Reg.Constant -> Integer
-        goConst = \case
+        mkConst :: Reg.Constant -> Integer
+        mkConst = \case
           Reg.ConstInt x -> x
           Reg.ConstBool True -> 0
           Reg.ConstBool False -> 1
@@ -105,235 +118,319 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
           Reg.ConstVoid -> 0
           Reg.ConstString {} -> unsupported "strings"
 
-        goConstrField :: Reg.ConstrField -> RValue
-        goConstrField Reg.ConstrField {..} =
-          Load $ LoadValue (goVarRef _constrFieldRef) (toOffset _constrFieldIndex + 1)
+        mkLoad :: Reg.ConstrField -> Sem r RValue
+        mkLoad Reg.ConstrField {..} = do
+          v <- mkMemRef _constrFieldRef
+          return $ Load $ LoadValue v (toOffset _constrFieldIndex + 1)
 
-        goVarRef :: Reg.VarRef -> MemRef
-        goVarRef Reg.VarRef {..} = case _varRefGroup of
-          Reg.VarGroupArgs ->
-            MemRef Fp (-3 - toOffset _varRefIndex)
-          Reg.VarGroupLocal ->
-            MemRef Fp (toOffset _varRefIndex)
+        mkMemRef :: Reg.VarRef -> Sem r MemRef
+        mkMemRef vr = do
+          v <- lookupVar vr
+          return $ MemRef Fp (toOffset v)
 
-        goValue :: Reg.Value -> ([Instruction], Value)
+        mkRValue :: Reg.Value -> Sem r RValue
+        mkRValue = \case
+          Reg.Const c -> return $ Val $ Imm $ mkConst c
+          Reg.CRef x -> mkLoad x
+          Reg.VRef x -> Val . Ref <$> mkMemRef x
+
+        ---------------------------------------------------------------------
+        -- Instruction
+        ---------------------------------------------------------------------
+
+        goInstr :: Reg.Instruction -> Sem r ()
+        goInstr = \case
+          Reg.Binop x -> goBinop x
+          Reg.Unop x -> goUnop x
+          Reg.Assign x -> goAssign x
+          Reg.Alloc x -> goAlloc x
+          Reg.AllocClosure x -> goAllocClosure x
+          Reg.Trace x -> goTrace x
+          Reg.Dump -> unsupported "dump"
+          Reg.Failure x -> goFail x
+
+        goAssignVar :: Reg.VarRef -> RValue -> Sem r ()
+        goAssignVar vr val = do
+          off <- getAP
+          insertVar vr off
+          goAssignAp val
+
+        goAssignAp :: RValue -> Sem r ()
+        goAssignAp val = do
+          output' 1 (mkAssignAp val)
+
+        goAssignValue :: Reg.VarRef -> Reg.Value -> Sem r ()
+        goAssignValue vr v = mkRValue v >>= goAssignVar vr
+
+        goAssignApValue :: Reg.Value -> Sem r ()
+        goAssignApValue v = mkRValue v >>= goAssignAp
+
+        goValue :: Reg.Value -> Sem r Value
         goValue = \case
-          Reg.ValConst c -> ([], Imm $ goConst c)
-          Reg.CRef x -> ([mkAssignAp (goConstrField x)], Ref $ MemRef Ap (-1))
-          Reg.VRef x -> ([], Ref $ goVarRef x)
+          Reg.ValConst c -> return $ Imm $ mkConst c
+          Reg.CRef x -> do
+            v <- mkLoad x
+            goAssignAp v
+            return $ Ref $ MemRef Ap (-1)
+          Reg.VRef x -> do
+            v <- Ref <$> mkMemRef x
+            return v
 
-        goRValue :: Reg.Value -> RValue
-        goRValue = \case
-          Reg.ValConst c -> Val $ Imm $ goConst c
-          Reg.CRef x -> goConstrField x
-          Reg.VRef x -> Val $ Ref $ goVarRef x
+        goExtraBinop :: ExtraOpcode -> Reg.VarRef -> MemRef -> Value -> Sem r ()
+        goExtraBinop op res arg1 arg2 = do
+          off <- getAP
+          insertVar res off
+          output' 1 $
+            ExtraBinop
+              InstrExtraBinop
+                { _instrExtraBinopOpcode = op,
+                  _instrExtraBinopResult = MemRef Ap 0,
+                  _instrExtraBinopArg1 = arg1,
+                  _instrExtraBinopArg2 = arg2,
+                  _instrExtraBinopIncAp = True
+                }
 
-        goLoad :: Reg.Value -> Offset -> ([Instruction], RValue)
-        goLoad v off = case goRValue v of
-          Val (Ref r) -> ([], Load $ LoadValue r off)
-          v' -> ([mkAssignAp v'], Load $ LoadValue (MemRef Ap (-1)) off)
+        goNativeBinop :: Opcode -> Reg.VarRef -> MemRef -> Value -> Sem r ()
+        goNativeBinop op res arg1 arg2 = goAssignVar res binop
+          where
+            binop =
+              Binop
+                BinopValue
+                  { _binopValueOpcode = op,
+                    _binopValueArg1 = arg1,
+                    _binopValueArg2 = arg2
+                  }
 
-        goAssignValue :: MemRef -> Reg.Value -> Instruction
-        goAssignValue res = mkAssign res . goRValue
+        goEq :: Reg.VarRef -> MemRef -> Value -> Sem r ()
+        goEq res arg1 arg2 = goExtraBinop FieldSub res arg1 arg2
 
-        goAssignApValue :: Reg.Value -> Instruction
-        goAssignApValue = mkAssignAp . goRValue
+        goIntLe :: Reg.VarRef -> MemRef -> Value -> Sem r ()
+        goIntLe res arg1 arg2 = case arg2 of
+          Imm v ->
+            goExtraBinop IntLt res arg1 (Imm (v + 1))
+          Ref mref -> do
+            output' 1 inc
+            goExtraBinop IntLt res (adjustAp 1 arg1) (Ref $ MemRef Ap (-1))
+            where
+              inc =
+                Assign
+                  InstrAssign
+                    { _instrAssignResult = MemRef Ap 0,
+                      _instrAssignValue =
+                        Binop
+                          BinopValue
+                            { _binopValueArg1 = mref,
+                              _binopValueArg2 = Imm 1,
+                              _binopValueOpcode = FieldAdd
+                            },
+                      _instrAssignIncAp = True
+                    }
+          Lab {} -> impossible
 
-        mkBinop :: Reg.BinaryOp -> MemRef -> MemRef -> Value -> [Instruction]
-        mkBinop op res arg1 arg2 = case op of
+        goOpArgsNum :: Reg.VarRef -> MemRef -> Sem r ()
+        goOpArgsNum res v = do
+          goAssignAp (Val $ Imm $ fromIntegral casmMaxFunctionArgs + 1)
+          goAssignAp (Load $ LoadValue (adjustAp 1 v) casmClosureArgsNumOffset)
+          goExtraBinop FieldSub res (MemRef Ap (-2)) (Ref $ MemRef Ap (-1))
+
+        goBinop' :: Reg.BinaryOp -> Reg.VarRef -> MemRef -> Value -> Sem r ()
+        goBinop' op res arg1 arg2 = case op of
           Reg.OpIntAdd ->
-            [mkExtraBinop IntAdd res arg1 arg2]
+            goExtraBinop IntAdd res arg1 arg2
           Reg.OpIntSub ->
-            [mkExtraBinop IntSub res arg1 arg2]
+            goExtraBinop IntSub res arg1 arg2
           Reg.OpIntMul ->
-            [mkExtraBinop IntMul res arg1 arg2]
+            goExtraBinop IntMul res arg1 arg2
           Reg.OpIntDiv ->
-            [mkExtraBinop IntDiv res arg1 arg2]
+            goExtraBinop IntDiv res arg1 arg2
           Reg.OpIntMod ->
-            [mkExtraBinop IntMod res arg1 arg2]
+            goExtraBinop IntMod res arg1 arg2
           Reg.OpIntLt ->
-            [mkExtraBinop IntLt res arg1 arg2]
+            goExtraBinop IntLt res arg1 arg2
           Reg.OpIntLe ->
-            mkIntLe res arg1 arg2
+            goIntLe res arg1 arg2
           Reg.OpFieldAdd ->
-            [mkNativeBinop FieldAdd res arg1 arg2]
+            goNativeBinop FieldAdd res arg1 arg2
           Reg.OpFieldSub ->
-            [mkExtraBinop FieldSub res arg1 arg2]
+            goExtraBinop FieldSub res arg1 arg2
           Reg.OpFieldMul ->
-            [mkNativeBinop FieldMul res arg1 arg2]
+            goNativeBinop FieldMul res arg1 arg2
           Reg.OpFieldDiv ->
-            [mkExtraBinop FieldDiv res arg1 arg2]
+            goExtraBinop FieldDiv res arg1 arg2
           Reg.OpEq ->
-            [mkEq res arg1 arg2]
+            goEq res arg1 arg2
           Reg.OpStrConcat ->
             unsupported "strings"
 
-        goBinop :: Address -> Reg.InstrBinop -> Sem r [Instruction]
-        goBinop addr x@Reg.InstrBinop {..} = case _instrBinopArg1 of
+        goBinop :: Reg.InstrBinop -> Sem r ()
+        goBinop x@Reg.InstrBinop {..} = case _instrBinopArg1 of
           Reg.ValConst c1 -> case _instrBinopArg2 of
             Reg.ValConst c2 -> case Reg.evalBinop' _instrBinopOpcode c1 c2 of
               Left err -> error err
               Right c ->
-                return [mkAssign res (Val $ Imm $ goConst c)]
+                goAssignVar _instrBinopResult (Val $ Imm $ mkConst c)
             _ ->
               goBinop
-                addr
                 x
                   { Reg._instrBinopArg1 = _instrBinopArg2,
                     Reg._instrBinopArg2 = _instrBinopArg1
                   }
-          Reg.CRef ctr1 ->
+          Reg.CRef ctr1 -> do
+            v1 <- mkLoad ctr1
+            goAssignAp v1
+            v2 <- goValue _instrBinopArg2
             case _instrBinopArg2 of
-              Reg.CRef {} ->
-                return $ i : is2 ++ mkBinop _instrBinopOpcode res (MemRef Ap (-2)) (Ref $ MemRef Ap (-1))
+              Reg.CRef {} -> do
+                goBinop' _instrBinopOpcode _instrBinopResult (MemRef Ap (-2)) v2
               _ -> do
-                eassert (null is2)
-                return $ i : mkBinop _instrBinopOpcode res (MemRef Ap (-1)) v2
-            where
-              i = mkAssignAp (goConstrField ctr1)
-          Reg.VRef var1 ->
-            return $ is2 ++ mkBinop _instrBinopOpcode res (goVarRef var1) v2
-          where
-            res = goVarRef _instrBinopResult
-            (is2, v2) = goValue _instrBinopArg2
+                goBinop' _instrBinopOpcode _instrBinopResult (MemRef Ap (-1)) v2
+          Reg.VRef var1 -> do
+            ref <- mkMemRef var1
+            v2 <- goValue _instrBinopArg2
+            goBinop' _instrBinopOpcode _instrBinopResult ref v2
 
-        goUnop :: Address -> Reg.InstrUnop -> Sem r [Instruction]
-        goUnop _ Reg.InstrUnop {..} = case _instrUnopOpcode of
+        goUnop :: Reg.InstrUnop -> Sem r ()
+        goUnop Reg.InstrUnop {..} = case _instrUnopOpcode of
           Reg.OpShow -> unsupported "strings"
           Reg.OpStrToInt -> unsupported "strings"
-          Reg.OpFieldToInt -> return [goAssignValue res _instrUnopArg]
-          Reg.OpIntToField -> return [goAssignValue res _instrUnopArg]
-          Reg.OpArgsNum -> case v of
-            Ref mr ->
-              return $ is ++ mkOpArgsNum res mr
-            Imm {} -> impossible
-            Lab {} -> impossible
-          where
-            res = goVarRef _instrUnopResult
-            (is, v) = goValue _instrUnopArg
+          Reg.OpFieldToInt -> goAssignValue _instrUnopResult _instrUnopArg
+          Reg.OpIntToField -> goAssignValue _instrUnopResult _instrUnopArg
+          Reg.OpArgsNum -> do
+            v <- goValue _instrUnopArg
+            case v of
+              Ref mr -> do
+                goOpArgsNum _instrUnopResult mr
+              Imm {} -> impossible
+              Lab {} -> impossible
 
-        goAssign :: Address -> Reg.InstrAssign -> Sem r [Instruction]
-        goAssign _ Reg.InstrAssign {..} =
-          return [goAssignValue res _instrAssignValue]
-          where
-            res = goVarRef _instrAssignResult
+        goAssign :: Reg.InstrAssign -> Sem r ()
+        goAssign Reg.InstrAssign {..} =
+          goAssignValue _instrAssignResult _instrAssignValue
 
-        mkAllocCall :: MemRef -> [Instruction]
-        mkAllocCall res =
-          [ mkCallRel $ Lab $ LabelRef (blts ^. stdlibGetRegs) (Just (blts ^. stdlibGetRegsName)),
-            mkNativeBinop FieldAdd res (MemRef Ap (-2)) (Imm 2)
-          ]
+        goAllocCall :: Reg.VarRef -> Sem r ()
+        goAllocCall res = do
+          output' 4 $ mkCallRel $ Lab $ LabelRef (blts ^. stdlibGetRegs) (Just (blts ^. stdlibGetRegsName))
+          goNativeBinop FieldAdd res (MemRef Ap (-2)) (Imm 3)
 
-        goAlloc :: Address -> Reg.InstrAlloc -> Sem r [Instruction]
-        goAlloc _ Reg.InstrAlloc {..} =
-          return $
-            mkAllocCall res
-              ++ [ mkAssignAp (Val $ Imm $ fromIntegral tagId)
-                 ]
-              ++ map goAssignApValue _instrAllocArgs
+        goAlloc :: Reg.InstrAlloc -> Sem r ()
+        goAlloc Reg.InstrAlloc {..} = do
+          goAllocCall _instrAllocResult
+          goAssignAp (Val $ Imm $ fromIntegral tagId)
+          mapM_ goAssignApValue _instrAllocArgs
           where
-            res = goVarRef _instrAllocResult
             tagId = getTagId _instrAllocTag
 
-        goAllocClosure :: Address -> Reg.InstrAllocClosure -> Sem r [Instruction]
-        goAllocClosure _ Reg.InstrAllocClosure {..} =
-          return $
-            mkAllocCall res
-              ++ [ mkAssignAp (Val $ Imm $ fromIntegral $ 1 + 3 * fuid),
-                   mkAssignAp (Val $ Imm $ fromIntegral $ casmMaxFunctionArgs + 1 - storedArgsNum),
-                   mkAssignAp (Val $ Imm $ fromIntegral $ casmMaxFunctionArgs + 1 - leftArgsNum)
-                 ]
-              ++ map goAssignApValue _instrAllocClosureArgs
+        goAllocClosure :: Reg.InstrAllocClosure -> Sem r ()
+        goAllocClosure Reg.InstrAllocClosure {..} = do
+          goAllocCall _instrAllocClosureResult
+          goAssignAp (Val $ Imm $ fromIntegral $ 1 + 3 * fuid)
+          goAssignAp (Val $ Imm $ fromIntegral $ casmMaxFunctionArgs + 1 - storedArgsNum)
+          goAssignAp (Val $ Imm $ fromIntegral $ casmMaxFunctionArgs + 1 - leftArgsNum)
+          mapM_ goAssignApValue _instrAllocClosureArgs
           where
-            res = goVarRef _instrAllocClosureResult
             fuid = fromJust $ HashMap.lookup _instrAllocClosureSymbol (info ^. Reg.extraInfoFUIDs)
             storedArgsNum = length _instrAllocClosureArgs
             leftArgsNum = _instrAllocClosureExpectedArgsNum - storedArgsNum
 
-        goExtendClosure :: Address -> Reg.InstrExtendClosure -> Sem r [Instruction]
-        goExtendClosure _ Reg.InstrExtendClosure {..} =
-          return $
-            map goAssignApValue _instrExtendClosureArgs
-              ++ [ mkAssignAp (Val $ Imm $ fromIntegral $ length _instrExtendClosureArgs),
-                   mkAssignAp (Val $ Ref val),
-                   mkCallRel $ Lab $ LabelRef (blts ^. stdlibExtendClosure) (Just (blts ^. stdlibExtendClosureName)),
-                   mkAssign res (Val $ Ref $ MemRef Ap (-1))
-                 ]
-          where
-            res = goVarRef _instrExtendClosureResult
-            val = goVarRef _instrExtendClosureValue
+        goTrace :: Reg.InstrTrace -> Sem r ()
+        goTrace Reg.InstrTrace {..} = do
+          v <- mkRValue _instrTraceValue
+          output' 0 $ Trace (InstrTrace v)
 
-        goCall' :: Instruction -> Reg.CallType -> [Reg.Value] -> [Instruction]
-        goCall' saveOrRet ct args = case ct of
-          Reg.CallFun sym ->
-            args'
-              ++ [ mkCallRel $ Lab $ LabelRef sym (Just funName),
-                   saveOrRet
-                 ]
+        goFail :: Reg.InstrFailure -> Sem r ()
+        goFail Reg.InstrFailure {..} = do
+          v <- mkRValue _instrFailureValue
+          output' 0 $ Trace (InstrTrace v)
+          output' 0 $ mkJumpRel (Val $ Lab failLab)
+
+        ---------------------------------------------------------------------
+        -- FinalInstruction
+        ---------------------------------------------------------------------
+
+        goFinalInstr :: Reg.FinalInstruction -> Sem r ()
+        goFinalInstr = \case
+          Reg.ExtendClosure x -> goExtendClosure x
+          Reg.Call x -> goCall x
+          Reg.TailCall x -> goTailCall x
+          Reg.Return x -> goReturn x
+          Reg.Branch x -> goBranch x
+          Reg.Case x -> goCase x
+
+        goExtendClosure :: Reg.InstrExtendClosure -> Sem r ()
+        goExtendClosure Reg.InstrExtendClosure {..} = do
+          mapM_ goAssignApValue _instrExtendClosureArgs
+          goAssignAp (Val $ Imm $ fromIntegral $ length _instrExtendClosureArgs)
+          val <- mkMemRef _instrExtendClosureValue
+          goAssignAp (Val $ Ref val)
+          output'' $ mkCallRel $ Lab $ LabelRef (blts ^. stdlibExtendClosure) (Just (blts ^. stdlibExtendClosureName))
+
+        goCall' :: Reg.CallType -> [Reg.Value] -> Sem r ()
+        goCall' ct args = case ct of
+          Reg.CallFun sym -> do
+            mapM_ goAssignApValue (reverse args)
+            output'' $ mkCallRel $ Lab $ LabelRef sym (Just funName)
             where
               funName = Reg.lookupFunInfo tab sym ^. Reg.functionName
-          Reg.CallClosure cl ->
-            args'
-              ++ [ mkAssignAp (Val $ Ref $ goVarRef cl),
-                   mkCallRel $ Lab $ LabelRef (blts ^. stdlibCallClosure) (Just (blts ^. stdlibCallClosureName)),
-                   saveOrRet
-                 ]
-          where
-            args' = map goAssignApValue (reverse args)
+          Reg.CallClosure cl -> do
+            mapM_ goAssignApValue (reverse args)
+            r <- mkMemRef cl
+            goAssignAp (Val $ Ref r)
+            output'' $ mkCallRel $ Lab $ LabelRef (blts ^. stdlibCallClosure) (Just (blts ^. stdlibCallClosureName))
 
-        goCall :: Address -> Reg.InstrCall -> Sem r [Instruction]
-        goCall _ Reg.InstrCall {..} =
-          return $
-            goCall' (mkAssign res (Val $ Ref $ MemRef Ap (-1))) _instrCallType _instrCallArgs
-          where
-            res = goVarRef _instrCallResult
+        goCall :: Reg.InstrCall -> Sem r ()
+        goCall Reg.InstrCall {..} =
+          goCall' _instrCallType _instrCallArgs
 
         -- There is no way to make "proper" tail calls in Cairo, because
         -- the only way to set the `fp` register is via the `call` instruction.
         -- So we just translate tail calls into `call` followed by `ret`.
-        goTailCall :: Address -> Reg.InstrTailCall -> Sem r [Instruction]
-        goTailCall _ Reg.InstrTailCall {..} =
-          return $
-            goCall' Return _instrTailCallType _instrTailCallArgs
+        goTailCall :: Reg.InstrTailCall -> Sem r ()
+        goTailCall Reg.InstrTailCall {..} = do
+          goCall' _instrTailCallType _instrTailCallArgs
+          output'' Return
 
-        goReturn :: Address -> Reg.InstrReturn -> Sem r [Instruction]
-        goReturn _ Reg.InstrReturn {..} =
-          return $
-            [ goAssignApValue _instrReturnValue,
-              Return
-            ]
+        goReturn :: Reg.InstrReturn -> Sem r ()
+        goReturn Reg.InstrReturn {..} = do
+          goAssignApValue _instrReturnValue
+          output'' Return
 
-        goBranch :: Address -> Reg.InstrBranch -> Sem r [Instruction]
-        goBranch addr Reg.InstrBranch {..} = case v of
-          Imm c
-            | c == 0 -> goCode addr _instrBranchTrue
-            | otherwise -> goCode addr _instrBranchFalse
-          Ref r -> do
-            symFalse <- freshSymbol
-            symEnd <- freshSymbol
-            let labFalse = LabelRef symFalse Nothing
-                labEnd = LabelRef symEnd Nothing
-                addr1 = addr + length is + 1
-            codeTrue <- goCode addr1 _instrBranchTrue
-            let addr2 = addr1 + length codeTrue + 1
-            registerLabelAddress symFalse addr2
-            codeFalse <- goCode (addr2 + 1) _instrBranchFalse
-            registerLabelAddress symEnd (addr2 + 1 + length codeFalse)
-            return $
-              is
-                ++ [mkJumpIf (Lab labFalse) r]
-                ++ codeTrue
-                ++ [ mkJumpRel (Val $ Lab labEnd),
-                     Label labFalse
-                   ]
-                ++ codeFalse
-                ++ [Label labEnd]
-          Lab {} -> impossible
-          where
-            (is, v) = goValue _instrBranchValue
+        goBranch :: Reg.InstrBranch -> Sem r ()
+        goBranch Reg.InstrBranch {..} = do
+          v <- goValue _instrBranchValue
+          case v of
+            Imm c
+              | c == 0 -> goBlock blts failLab _instrBranchOutVar _instrBranchTrue
+              | otherwise -> goBlock blts failLab _instrBranchOutVar _instrBranchFalse
+            Ref r -> do
+              symFalse <- freshSymbol
+              symEnd <- freshSymbol
+              let labFalse = LabelRef symFalse Nothing
+                  labEnd = LabelRef symEnd Nothing
+              output'' $ mkJumpIf (Lab labFalse) r
+              goLocalBlock blts failLab _instrBranchOutVar _instrBranchTrue
+              -- _instrBranchOutVar is Nothing iff the branch returns
+              when (isJust _instrBranchOutVar) $
+                output'' (mkJumpRel (Val $ Lab labEnd))
+              addrFalse <- getPC
+              registerLabelAddress symFalse addrFalse
+              output'' $ Label labFalse
+              goLocalBlock blts failLab _instrBranchOutVar _instrBranchFalse
+              addrEnd <- getPC
+              registerLabelAddress symEnd addrEnd
+              output'' $ Label labEnd
+            Lab {} -> impossible
 
-        goCase :: Address -> Reg.InstrCase -> Sem r [Instruction]
-        goCase addr Reg.InstrCase {..} = do
+        goLoad :: Reg.Value -> Offset -> Sem r RValue
+        goLoad val off = do
+          v <- mkRValue val
+          case v of
+            Val (Ref r) -> return $ Load $ LoadValue r off
+            _ -> do
+              goAssignAp v
+              return $ Load $ LoadValue (MemRef Ap (-1)) off
+
+        goCase :: Reg.InstrCase -> Sem r ()
+        goCase Reg.InstrCase {..} = do
           syms <- replicateM (length tags) freshSymbol
           symEnd <- freshSymbol
           let symMap = HashMap.fromList $ zip tags syms
@@ -344,46 +441,37 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
               -- offsets in our CASM interpreter correspond to the relative jump
               -- offsets in the Cairo binary representation
               jmps' = concatMap (\i -> [i, Nop]) jmps
-              addr1 = addr + length is + 1 + length jmps'
-          (addr2, instrs) <- second (concat . reverse) <$> foldM (goCaseBranch symMap labEnd) (addr1, []) _instrCaseBranches
-          (addr3, instrs') <- second reverse <$> foldM (goDefaultLabel symMap) (addr2, []) defaultTags
-          instrs'' <- maybe (return []) (goCode addr3) _instrCaseDefault
-          let addr4 = addr3 + length instrs''
-          registerLabelAddress symEnd addr4
-          return $ is ++ mkJumpRel v : jmps' ++ instrs ++ instrs' ++ instrs'' ++ [Label labEnd]
+          v <- goLoad _instrCaseValue 0
+          output'' (mkJumpRel v)
+          mapM_ output'' jmps'
+          mapM_ (goCaseBranch symMap labEnd) _instrCaseBranches
+          mapM_ (goDefaultLabel symMap) defaultTags
+          whenJust _instrCaseDefault $
+            goLocalBlock blts failLab _instrCaseOutVar
+          addrEnd <- getPC
+          registerLabelAddress symEnd addrEnd
+          output'' $ Label labEnd
           where
-            (is, v) = goLoad _instrCaseValue 0
             tags = Reg.lookupInductiveInfo tab _instrCaseInductive ^. Reg.inductiveConstructors
             ctrTags = HashSet.fromList $ map (^. Reg.caseBranchTag) _instrCaseBranches
             defaultTags = filter (not . flip HashSet.member ctrTags) tags
 
-            goCaseBranch :: HashMap Tag Symbol -> LabelRef -> (Address, [[Instruction]]) -> Reg.CaseBranch -> Sem r (Address, [[Instruction]])
-            goCaseBranch symMap labEnd (addr', acc') Reg.CaseBranch {..} = do
+            goCaseBranch :: HashMap Tag Symbol -> LabelRef -> Reg.CaseBranch -> Sem r ()
+            goCaseBranch symMap labEnd Reg.CaseBranch {..} = do
               let sym = fromJust $ HashMap.lookup _caseBranchTag symMap
                   lab = LabelRef sym Nothing
-              registerLabelAddress sym addr'
-              instrs <- goCode (addr' + 1) _caseBranchCode
-              let instrs' = Label lab : instrs ++ [mkJumpRel (Val $ Lab labEnd)]
-              return (addr' + length instrs', instrs' : acc')
+              addr <- getPC
+              registerLabelAddress sym addr
+              output'' $ Label lab
+              goLocalBlock blts failLab _instrCaseOutVar _caseBranchCode
+              -- _instrCaseOutVar is Nothing iff the branch returns
+              when (isJust _instrCaseOutVar) $
+                output'' (mkJumpRel (Val $ Lab labEnd))
 
-            goDefaultLabel :: HashMap Tag Symbol -> (Address, [Instruction]) -> Reg.Tag -> Sem r (Address, [Instruction])
-            goDefaultLabel symMap (addr', acc') tag = do
+            goDefaultLabel :: HashMap Tag Symbol -> Reg.Tag -> Sem r ()
+            goDefaultLabel symMap tag = do
               let sym = fromJust $ HashMap.lookup tag symMap
                   lab = LabelRef sym Nothing
-              registerLabelAddress sym addr'
-              return (addr' + 1, Label lab : acc')
-
-        goTrace :: Address -> Reg.InstrTrace -> Sem r [Instruction]
-        goTrace _ Reg.InstrTrace {..} =
-          return [Trace (InstrTrace (goRValue _instrTraceValue))]
-
-        goFail :: Address -> Reg.InstrFailure -> Sem r [Instruction]
-        goFail _ Reg.InstrFailure {..} =
-          return
-            [ Trace (InstrTrace (goRValue _instrFailureValue)),
-              mkJumpRel (Val $ Lab failLab)
-            ]
-
-        goBlock :: Address -> Reg.InstrBlock -> Sem r [Instruction]
-        goBlock addr Reg.InstrBlock {..} =
-          goCode addr _instrBlockCode
+              addr <- getPC
+              registerLabelAddress sym addr
+              output'' $ Label lab

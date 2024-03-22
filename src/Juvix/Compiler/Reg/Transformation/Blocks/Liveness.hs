@@ -4,6 +4,18 @@ import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Reg.Extra.Blocks
 import Juvix.Compiler.Reg.Transformation.Blocks.Base
 
+-- | The live variables in the `next` block are not considered live in the
+-- case/branch subblocks. For example, in:
+--    br x { y := a } { y := b }; z := c
+-- the variable `c` is not considered live inside the branches. Only `a` is
+-- live in the first branch, and only `b` in the second. Before `br` the live
+-- variables are: x, a, b, c.
+-- The liveness notion here is suited for Cairo compilation, where it indicates
+-- whether a variable should be transferred over a basic block boundary. The
+-- basic block ending with the `br` instruction can transfer to the branches (`y
+-- := a` and `y := b`) and to the `next` block consisting of `z := c`, but the
+-- blocks corresponding to the branches do not directly transfer to the `next`
+-- block.
 computeBlockLiveness :: Block -> Block
 computeBlockLiveness block = block' {_blockLiveVars = vars'}
   where

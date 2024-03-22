@@ -19,14 +19,14 @@ data Instruction
   | Assign InstrAssign
   | Alloc InstrAlloc
   | AllocClosure InstrAllocClosure
-  | ExtendClosure InstrExtendClosure
   | Trace InstrTrace
   | Dump
   | Failure InstrFailure
   deriving stock (Eq)
 
 data FinalInstruction
-  = Call InstrCall
+  = ExtendClosure InstrExtendClosure
+  | Call InstrCall
   | TailCall InstrTailCall
   | Return InstrReturn
   | Branch InstrBranch
@@ -35,6 +35,8 @@ data FinalInstruction
 type InstrBranch = InstrBranch' Block
 
 type InstrCase = InstrCase' Block
+
+type CaseBranch = CaseBranch' Block
 
 makeLenses ''Block
 
