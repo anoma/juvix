@@ -20,7 +20,7 @@ computeBlockLiveness :: Block -> Block
 computeBlockLiveness block = block' {_blockLiveVars = vars'}
   where
     block' = overBlocks computeBlockLiveness block
-    vars0 = HashSet.unions $ map (^. blockLiveVars) (getBlocks block)
+    vars0 = HashSet.unions $ map (^. blockLiveVars) (getBlocks block')
     vars1 = updateByFinalInstr (block ^. blockFinal) vars0
     vars' = foldr updateByInstr vars1 (block ^. blockBody)
 

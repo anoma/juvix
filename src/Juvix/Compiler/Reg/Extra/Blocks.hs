@@ -22,7 +22,7 @@ overBlocks f block = block'
 
 getBlocks :: Block -> [Block]
 getBlocks block =
-  maybeToList (block ^. blockNext) ++ concatMap goFinal (maybeToList (block ^. blockFinal))
+  maybeToList (block ^. blockNext) ++ maybe [] goFinal (block ^. blockFinal)
   where
     goFinal :: FinalInstruction -> [Block]
     goFinal = \case
