@@ -179,5 +179,10 @@ tests =
       "Test038: Apply & argsnum"
       $(mkRelDir ".")
       $(mkRelFile "test038.jvr")
-      $(mkRelFile "out/test038.out")
+      $(mkRelFile "out/test038.out"),
+    PosTest
+      "Test039: Calls in a branch"
+      $(mkRelDir ".")
+      $(mkRelFile "test039.jvr")
+      $(mkRelFile "out/test039.out")
   ]

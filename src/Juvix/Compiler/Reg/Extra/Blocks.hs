@@ -2,10 +2,10 @@ module Juvix.Compiler.Reg.Extra.Blocks where
 
 import Juvix.Compiler.Reg.Language.Blocks
 
-overBlocks :: (Block -> Block) -> Block -> Block
-overBlocks f block = block'
+overSubBlocks :: (Block -> Block) -> Block -> Block
+overSubBlocks f block = block'
   where
-    block' = over blockFinal (fmap goFinal) $ over blockNext (fmap f) block
+    block' = over blockFinal (fmap goFinal) block
 
     goFinal :: FinalInstruction -> FinalInstruction
     goFinal = \case
@@ -20,9 +20,8 @@ overBlocks f block = block'
           over instrCaseDefault (fmap f) $
             over instrCaseBranches (map (over caseBranchCode f)) x
 
-getBlocks :: Block -> [Block]
-getBlocks block =
-  maybeToList (block ^. blockNext) ++ maybe [] goFinal (block ^. blockFinal)
+getSubBlocks :: Block -> [Block]
+getSubBlocks block = maybe [] goFinal (block ^. blockFinal)
   where
     goFinal :: FinalInstruction -> [Block]
     goFinal = \case
