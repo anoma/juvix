@@ -1,9 +1,14 @@
 module Commands.CompileNew.Geb.Options where
 
+import Commands.CompileNew.CommonOptions
 import CommonOptions
 
-data GebOptions
+data GebOptions = GebOptions
+  { _gebCompileCommonOptions :: CompileCommonOptions
+  }
   deriving stock (Data)
 
 parseGeb :: Parser GebOptions
-parseGeb = undefined
+parseGeb = do
+  _gebCompileCommonOptions <- parseCompileCommonOptions
+  pure GebOptions {..}
