@@ -1,9 +1,14 @@
 module Commands.CompileNew.Casm.Options where
 
+import Commands.CompileNew.CommonOptions
 import CommonOptions
 
-data CasmOptions
+data CasmOptions = CasmOptions
+  { _casmCompileCommonOptions :: CompileCommonOptions
+  }
   deriving stock (Data)
 
 parseCasm :: Parser CasmOptions
-parseCasm = undefined
+parseCasm = do
+  _casmCompileCommonOptions <- parseCompileCommonOptions
+  pure CasmOptions {..}
