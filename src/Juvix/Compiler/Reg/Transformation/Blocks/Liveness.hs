@@ -27,7 +27,7 @@ computeBlockLiveness block = block' {_blockLiveVars = vars'}
     updateByFinalInstr :: Maybe FinalInstruction -> HashSet VarRef -> HashSet VarRef
     updateByFinalInstr mi acc = case mi of
       Nothing -> acc
-      Just i -> updateBy (getResultVar' i) (getValueRefs' i) acc
+      Just i -> updateBy (getOutVar i) (getValueRefs' i) acc
 
     updateByInstr :: Instruction -> HashSet VarRef -> HashSet VarRef
     updateByInstr i acc = updateBy (getResultVar i) (getValueRefs i) acc

@@ -11,7 +11,7 @@ data CasmBuilder m a where
   GetAP :: CasmBuilder m Int
   SetAP :: Address -> CasmBuilder m ()
   InsertVar :: VarRef -> Int -> CasmBuilder m ()
-  LookupVar :: VarRef -> CasmBuilder m Int
+  LookupVar :: VarRef -> CasmBuilder m (Maybe Int)
   GetVars :: CasmBuilder m (HashMap VarRef Int)
   SetVars :: HashMap VarRef Int -> CasmBuilder m ()
 
@@ -57,8 +57,14 @@ runCasmBuilder' bs =
         modify' (over stateVarMap (HashMap.insert v i))
       LookupVar v -> do
         mp <- gets (^. stateVarMap)
-        return $ fromJust $ HashMap.lookup v mp
+        return $ HashMap.lookup v mp
       GetVars -> do
         gets (^. stateVarMap)
       SetVars vars -> do
         modify' (set stateVarMap vars)
+
+lookupVar' :: (Member CasmBuilder r) => VarRef -> Sem r Int
+lookupVar' = lookupVar >=> return . fromJust
+
+hasVar :: (Member CasmBuilder r) => VarRef -> Sem r Bool
+hasVar = lookupVar >=> return . isJust

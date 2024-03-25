@@ -103,7 +103,7 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
           setVars vars
           goBlock blts failLab mout block'
         Nothing -> case mout of
-          Just vr -> do
+          Just vr -> whenM (hasVar vr) $ do
             r <- mkMemRef vr
             goAssignAp (Val $ Ref r)
           Nothing ->
@@ -140,7 +140,7 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
 
         mkMemRef :: Reg.VarRef -> Sem r MemRef
         mkMemRef vr = do
-          v <- lookupVar vr
+          v <- lookupVar' vr
           return $ MemRef Fp (toOffset v)
 
         mkRValue :: Reg.Value -> Sem r RValue
