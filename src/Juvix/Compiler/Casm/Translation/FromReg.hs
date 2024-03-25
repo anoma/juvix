@@ -10,6 +10,7 @@ import Juvix.Compiler.Casm.Extra.Stdlib
 import Juvix.Compiler.Casm.Language
 import Juvix.Compiler.Casm.Translation.FromReg.CasmBuilder
 import Juvix.Compiler.Reg.Data.Blocks.InfoTable qualified as Reg
+import Juvix.Compiler.Reg.Extra.Blocks qualified as Reg
 import Juvix.Compiler.Reg.Extra.Blocks.Info qualified as Reg
 import Juvix.Compiler.Reg.Language.Blocks qualified as Reg
 import Juvix.Compiler.Tree.Evaluator.Builtins qualified as Reg
@@ -60,10 +61,13 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
           block = funInfo ^. Reg.functionCode
           pre = [lab]
           addr1 = addr0 + length pre
-      -- TODO: arguments map
+          n = funInfo ^. Reg.functionArgsNum
+      let vars =
+            HashMap.fromList $
+              map (\k -> (Reg.VarRef Reg.VarGroupArgs k Nothing, -3 - k)) [0 .. n - 1]
       instrs <-
         fmap fst
-          . runCasmBuilder addr1 mempty
+          . runCasmBuilder addr1 vars
           . runOutputList
           $ goBlock blts failLab Nothing block
       return (addr1 + length instrs, (pre ++ instrs) : acc)
@@ -71,7 +75,9 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
     goLocalBlock :: forall r. (Members '[LabelInfoBuilder, CasmBuilder, Output Instruction] r) => StdlibBuiltins -> LabelRef -> Maybe Reg.VarRef -> Reg.Block -> Sem r ()
     goLocalBlock blts failLab mout block = do
       ap0 <- getAP
+      vars <- getVars
       goBlock blts failLab mout block
+      setVars vars
       setAP ap0
 
     goBlock :: forall r. (Members '[LabelInfoBuilder, CasmBuilder, Output Instruction] r) => StdlibBuiltins -> LabelRef -> Maybe Reg.VarRef -> Reg.Block -> Sem r ()
@@ -81,11 +87,20 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
         goFinalInstr
       case _blockNext of
         Just block' -> do
-          -- TODO: transfer args
+          let outVar = maybe Nothing Reg.getOutVar _blockFinal
+              liveVars = block' ^. Reg.blockLiveVars
+              liveVars' = toList (maybe liveVars (flip HashSet.delete liveVars) outVar)
+              n = length liveVars'
+              vars =
+                HashMap.fromList $
+                  maybe [] (\var -> [(var, -3 - n)]) outVar
+                    ++ zipWithExact (\var k -> (var, -3 - k)) liveVars' [0 .. n - 1]
+          mapM_ (mkMemRef >=> goAssignAp . Val . Ref) (reverse liveVars')
           output'' (mkCallRel $ Imm 3)
           output'' Return
           output'' Nop
           setAP 0
+          setVars vars
           goBlock blts failLab mout block'
         Nothing -> case mout of
           Just vr -> do

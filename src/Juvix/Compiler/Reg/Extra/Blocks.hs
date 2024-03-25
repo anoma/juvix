@@ -51,6 +51,15 @@ getResultVar' = \case
   ExtendClosure x -> Just $ x ^. instrExtendClosureResult
   _ -> Nothing
 
+getOutVar :: FinalInstruction -> Maybe VarRef
+getOutVar = \case
+  Call x -> Just $ x ^. instrCallResult
+  ExtendClosure x -> Just $ x ^. instrExtendClosureResult
+  Branch x -> x ^. instrBranchOutVar
+  Case x -> x ^. instrCaseOutVar
+  TailCall {} -> Nothing
+  Return {} -> Nothing
+
 getValueRefs'' :: Value -> [VarRef]
 getValueRefs'' = \case
   Const {} -> []

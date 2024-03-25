@@ -12,7 +12,8 @@ data CasmBuilder m a where
   SetAP :: Address -> CasmBuilder m ()
   InsertVar :: VarRef -> Int -> CasmBuilder m ()
   LookupVar :: VarRef -> CasmBuilder m Int
-  ClearVars :: CasmBuilder m ()
+  GetVars :: CasmBuilder m (HashMap VarRef Int)
+  SetVars :: HashMap VarRef Int -> CasmBuilder m ()
 
 makeSem ''CasmBuilder
 
@@ -57,5 +58,7 @@ runCasmBuilder' bs =
       LookupVar v -> do
         mp <- gets (^. stateVarMap)
         return $ fromJust $ HashMap.lookup v mp
-      ClearVars -> do
-        modify' (set stateVarMap mempty)
+      GetVars -> do
+        gets (^. stateVarMap)
+      SetVars vars -> do
+        modify' (set stateVarMap vars)
