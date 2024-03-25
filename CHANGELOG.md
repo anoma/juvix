@@ -4,6 +4,26 @@
 <img align="right" width="300" height="300" alt="Juvix Mascot" src="../assets/images/tara-smiling.svg" />
 </a>
 
+## [v0.6.1](https://github.com/anoma/juvix/tree/v0.6.1) (2024-03-25)
+
+[Full Changelog](https://github.com/anoma/juvix/compare/v0.6.0...v0.6.1)
+
+**Implemented enhancements:**
+
+- Support Nockma/Anoma scry operation [\#2672](https://github.com/anoma/juvix/issues/2672) ([paulcadman](https://github.com/paulcadman))
+- JuvixReg to CASM translation [\#2671](https://github.com/anoma/juvix/pull/2671) ([lukaszcz](https://github.com/lukaszcz))
+
+**Merged pull requests:**
+
+- Rename `Dynamic'` to `DynamicTy'` [\#2696](https://github.com/anoma/juvix/pull/2696) ([janmasrovira](https://github.com/janmasrovira))
+- Rename `Const` constructor in Tree and Reg languages [\#2695](https://github.com/anoma/juvix/pull/2695) ([janmasrovira](https://github.com/janmasrovira))
+- Promote use of `MonadIO` to minimize `embed` occurrences [\#2694](https://github.com/anoma/juvix/pull/2694) ([janmasrovira](https://github.com/janmasrovira))
+- Support compilation of Anoma transactions in nockma backend [\#2693](https://github.com/anoma/juvix/pull/2693) ([paulcadman](https://github.com/paulcadman))
+- Add flags for the markdown and html backend: ` --strip-prefix` and `--ext`. [\#2681](https://github.com/anoma/juvix/pull/2681) ([jonaprieto](https://github.com/jonaprieto))
+- Support nockma scry [\#2678](https://github.com/anoma/juvix/pull/2678) ([paulcadman](https://github.com/paulcadman))
+- JuvixReg to CASM translation [\#2671](https://github.com/anoma/juvix/pull/2671) ([lukaszcz](https://github.com/lukaszcz))
+- Replace `polysemy` by `effectful` [\#2663](https://github.com/anoma/juvix/pull/2663) ([janmasrovira](https://github.com/janmasrovira))
+
 ## [v0.6.0](https://github.com/anoma/juvix/tree/v0.6.0) (2024-03-01)
 
 [Full Changelog](https://github.com/anoma/juvix/compare/v0.5.5...v0.6.0)
