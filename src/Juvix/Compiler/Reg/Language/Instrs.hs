@@ -26,7 +26,7 @@ data ConstrField = ConstrField
 data VarGroup
   = VarGroupArgs
   | VarGroupLocal
-  deriving stock (Eq, Generic)
+  deriving stock (Eq, Generic, Show)
 
 instance Hashable VarGroup
 
@@ -35,6 +35,7 @@ data VarRef = VarRef
     _varRefIndex :: Index,
     _varRefName :: Maybe Text
   }
+  deriving stock (Show)
 
 makeLenses ''VarRef
 makeLenses ''ConstrField

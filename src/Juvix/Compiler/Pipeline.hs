@@ -38,7 +38,6 @@ import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
 import Juvix.Compiler.Pipeline.Result
 import Juvix.Compiler.Pipeline.Root.Base
 import Juvix.Compiler.Reg.Pipeline qualified as Reg
-import Juvix.Compiler.Reg.Translation.Blocks.FromReg qualified as Reg.Blocks
 import Juvix.Compiler.Reg.Translation.FromAsm qualified as Reg
 import Juvix.Compiler.Store.Language qualified as Store
 import Juvix.Compiler.Tree qualified as Tree
@@ -262,7 +261,7 @@ regToMiniC tab = do
   return $ C.fromReg (Backend.getLimits (e ^. entryPointTarget) (e ^. entryPointDebug)) tab'
 
 regToCasm :: Reg.InfoTable -> Sem r Casm.Result
-regToCasm = Reg.toCasm >=> return . Casm.fromReg . Reg.Blocks.fromReg
+regToCasm = Reg.toCasm >=> return . Casm.fromReg
 
 casmToCairo :: Casm.Result -> Sem r Cairo.Result
 casmToCairo Casm.Result {..} = return $ Cairo.serialize $ Cairo.fromCasm _resultCode
