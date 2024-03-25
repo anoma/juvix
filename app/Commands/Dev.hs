@@ -12,6 +12,7 @@ import Commands.Dev.DisplayRoot qualified as DisplayRoot
 import Commands.Dev.Geb qualified as Geb
 import Commands.Dev.Highlight qualified as Highlight
 import Commands.Dev.Internal qualified as Internal
+import Commands.Dev.InternalCompile qualified as InternalCompile
 import Commands.Dev.MigrateJuvixYaml qualified as MigrateJuvixYaml
 import Commands.Dev.Nockma qualified as Nockma
 import Commands.Dev.Options
@@ -26,6 +27,7 @@ import Commands.Repl qualified as Repl
 runCommand :: (Members '[EmbedIO, App, TaggedLock] r) => DevCommand -> Sem r ()
 runCommand = \case
   Highlight opts -> Highlight.runCommand opts
+  InternalCompile opts -> InternalCompile.runCommand opts
   Parse opts -> Parse.runCommand opts
   Scope opts -> Scope.runCommand opts
   Internal opts -> Internal.runCommand opts

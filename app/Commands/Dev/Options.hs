@@ -19,6 +19,7 @@ import Commands.Dev.DisplayRoot.Options
 import Commands.Dev.Geb.Options
 import Commands.Dev.Highlight.Options
 import Commands.Dev.Internal.Options
+import Commands.Dev.InternalCompile.Options (InternalCompileCommand)
 import Commands.Dev.MigrateJuvixYaml.Options
 import Commands.Dev.Nockma.Options
 import Commands.Dev.Parse.Options
@@ -35,6 +36,7 @@ data DevCommand
   = DisplayRoot RootOptions
   | Highlight HighlightOptions
   | Internal InternalCommand
+  | InternalCompile InternalCompileCommand
   | Core CoreCommand
   | Geb GebCommand
   | Asm AsmCommand
