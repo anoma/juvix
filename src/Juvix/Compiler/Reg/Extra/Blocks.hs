@@ -61,7 +61,7 @@ getOutVar = \case
 
 getValueRefs'' :: Value -> [VarRef]
 getValueRefs'' = \case
-  Const {} -> []
+  ValConst {} -> []
   CRef ConstrField {..} -> [_constrFieldRef]
   VRef x -> [x]
 

@@ -144,7 +144,7 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
 
         mkRValue :: Reg.Value -> Sem r RValue
         mkRValue = \case
-          Reg.Const c -> return $ Val $ Imm $ mkConst c
+          Reg.ValConst c -> return $ Val $ Imm $ mkConst c
           Reg.CRef x -> mkLoad x
           Reg.VRef x -> Val . Ref <$> mkMemRef x
 

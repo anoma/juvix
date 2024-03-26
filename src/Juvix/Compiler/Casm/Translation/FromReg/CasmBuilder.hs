@@ -4,7 +4,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Casm.Language
 import Juvix.Compiler.Reg.Language.Instrs (VarRef)
 
-data CasmBuilder m a where
+data CasmBuilder :: Effect where
   IncPC :: Int -> CasmBuilder m ()
   GetPC :: CasmBuilder m Address
   IncAP :: Int -> CasmBuilder m ()
@@ -37,9 +37,7 @@ runCasmBuilder :: Address -> HashMap VarRef Int -> Sem (CasmBuilder ': r) a -> S
 runCasmBuilder addr vars = fmap snd . runCasmBuilder' (mkBuilderState addr vars)
 
 runCasmBuilder' :: BuilderState -> Sem (CasmBuilder ': r) a -> Sem r (BuilderState, a)
-runCasmBuilder' bs =
-  runState bs
-    . reinterpret interp
+runCasmBuilder' bs = reinterpret (runState bs) interp
   where
     interp :: CasmBuilder m a -> Sem (State BuilderState ': r) a
     interp = \case
