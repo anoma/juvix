@@ -46,7 +46,6 @@ runCommand opts = do
       TargetNative64 -> err "native"
       TargetCasm -> err "CASM"
       TargetReg -> err "JuvixReg"
-      TargetNockma -> err "Nockma"
       TargetAnoma -> err "Anoma"
       TargetTree -> err "JuvixTree"
       TargetGeb -> err "GEB"
