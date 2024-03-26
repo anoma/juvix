@@ -1,4 +1,4 @@
-module Commands.CompileNew.Casm.Options where
+module Commands.Dev.DevCompile.Casm.Options where
 
 import Commands.CompileNew.CommonOptions
 import CommonOptions

@@ -1,4 +1,4 @@
-module Commands.Dev.DevCompile.Cairo.Options where
+module Commands.CompileNew.Cairo.Options where
 
 import Commands.CompileNew.CommonOptions
 import CommonOptions

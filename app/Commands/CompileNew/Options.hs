@@ -4,7 +4,7 @@ module Commands.CompileNew.Options
 where
 
 import Commands.CompileNew.Anoma.Options
-import Commands.CompileNew.Casm.Options
+import Commands.CompileNew.Cairo.Options
 import Commands.CompileNew.Geb.Options
 import Commands.CompileNew.Native.Options
 import Commands.CompileNew.Vampir.Options
@@ -17,7 +17,7 @@ data CompileNewCommand
   | Geb GebOptions
   | Vampir VampirOptions
   | Anoma AnomaOptions
-  | Casm CasmOptions
+  | Cairo CairoOptions
   deriving stock (Data)
 
 parseCompileNewCommand :: Parser CompileNewCommand
@@ -29,7 +29,7 @@ parseCompileNewCommand =
           commandGeb,
           commandVampir,
           commandAnoma,
-          commandCasm
+          commandCairo
         ]
     )
 
@@ -68,9 +68,9 @@ commandAnoma =
       (Anoma <$> parseAnoma)
       (progDesc "Compile to Anoma")
 
-commandCasm :: Mod CommandFields CompileNewCommand
-commandCasm =
-  command "casm" $
+commandCairo :: Mod CommandFields CompileNewCommand
+commandCairo =
+  command "cairo" $
     info
-      (Casm <$> parseCasm)
-      (progDesc "Compile to Casm")
+      (Cairo <$> parseCairo)
+      (progDesc "Compile to Cairo")

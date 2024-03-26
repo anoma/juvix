@@ -6,7 +6,7 @@ where
 
 import Commands.Base
 import Commands.CompileNew.Anoma qualified as Anoma
-import Commands.CompileNew.Casm qualified as Casm
+import Commands.CompileNew.Cairo qualified as Cairo
 import Commands.CompileNew.Geb qualified as Geb
 import Commands.CompileNew.Native qualified as Native
 import Commands.CompileNew.Options
@@ -19,5 +19,5 @@ runCommand = \case
   Wasi opts -> Wasi.runCommand opts
   Geb opts -> Geb.runCommand opts
   Anoma opts -> Anoma.runCommand opts
-  Casm opts -> Casm.runCommand opts
+  Cairo opts -> Cairo.runCommand opts
   Vampir opts -> Vampir.runCommand opts

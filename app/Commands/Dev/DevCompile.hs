@@ -2,7 +2,7 @@ module Commands.Dev.DevCompile where
 
 import Commands.Base
 import Commands.Dev.DevCompile.Asm qualified as Asm
-import Commands.Dev.DevCompile.Cairo qualified as Cairo
+import Commands.Dev.DevCompile.Casm qualified as Casm
 import Commands.Dev.DevCompile.Core qualified as Core
 import Commands.Dev.DevCompile.Nockma qualified as Nockma
 import Commands.Dev.DevCompile.Options
@@ -16,4 +16,4 @@ runCommand = \case
   Asm opts -> Asm.runCommand opts
   Tree opts -> Tree.runCommand opts
   Nockma opts -> Nockma.runCommand opts
-  Cairo opts -> Cairo.runCommand opts
+  Casm opts -> Casm.runCommand opts
