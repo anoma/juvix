@@ -1,7 +1,7 @@
 module Commands.Dev.DevCompile.Options where
 
 import Commands.Dev.DevCompile.Asm.Options
-import Commands.Dev.DevCompile.Cairo.Options
+import Commands.Dev.DevCompile.Casm.Options
 import Commands.Dev.DevCompile.Core.Options
 import Commands.Dev.DevCompile.Nockma.Options
 import Commands.Dev.DevCompile.Reg.Options
@@ -14,7 +14,7 @@ data DevCompileCommand
   | Reg RegOptions
   | Tree TreeOptions
   | Nockma NockmaOptions
-  | Cairo CairoOptions
+  | Casm CasmOptions
   deriving stock (Data)
 
 parseDevCompileCommand :: Parser DevCompileCommand
@@ -24,7 +24,7 @@ parseDevCompileCommand =
         [ commandCore,
           commandReg,
           commandTree,
-          commandCairo,
+          commandCasm,
           commandNockma,
           commandAsm
         ]
@@ -51,12 +51,12 @@ commandTree =
       (Tree <$> parseTree)
       (progDesc "Compile to Juvix Tree")
 
-commandCairo :: Mod CommandFields DevCompileCommand
-commandCairo =
-  command "cairo" $
+commandCasm :: Mod CommandFields DevCompileCommand
+commandCasm =
+  command "casm" $
     info
-      (Cairo <$> parseCairo)
-      (progDesc "Compile to Juvix Cairo")
+      (Casm <$> parseCasm)
+      (progDesc "Compile to Juvix Casm")
 
 commandNockma :: Mod CommandFields DevCompileCommand
 commandNockma =
