@@ -3,7 +3,7 @@ module Commands.Dev.Core.Options where
 import Commands.Dev.Core.Asm.Options
 import Commands.Dev.Core.Compile.Options
 import Commands.Dev.Core.Eval.Options
-import Commands.Dev.Core.FromConcrete.Options
+import Commands.Dev.DevCompile.Core.Options
 import Commands.Dev.Core.Normalize.Options
 import Commands.Dev.Core.Read.Options
 import Commands.Dev.Core.Repl.Options
@@ -15,7 +15,7 @@ data CoreCommand
   | Eval CoreEvalOptions
   | Normalize CoreNormalizeOptions
   | Read CoreReadOptions
-  | FromConcrete CoreFromConcreteOptions
+  | FromConcrete CoreOptions
   | Strip CoreStripOptions
   | CoreAsm CoreAsmOptions
   | CoreCompile CompileOptions
@@ -68,8 +68,8 @@ parseCoreCommand =
     fromSourceInfo :: ParserInfo CoreCommand
     fromSourceInfo =
       info
-        (FromConcrete <$> parseCoreFromConcreteOptions)
-        (progDesc "Read a Juvix file and compile it to core")
+        (FromConcrete <$> parseCoreOptions)
+        (progDesc "DEPRECATED: use `juvix dev compile core` instead")
 
     evalInfo :: ParserInfo CoreCommand
     evalInfo =

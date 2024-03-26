@@ -34,7 +34,7 @@ commandCore :: Mod CommandFields DevCompileCommand
 commandCore =
   command "core" $
     info
-      (Core <$> parseCore)
+      (Core <$> parseCoreOptions)
       (progDesc "Compile to Juvix Core")
 
 commandReg :: Mod CommandFields DevCompileCommand
