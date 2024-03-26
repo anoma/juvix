@@ -15,7 +15,16 @@ function main() : integer {
     };
     false: {
       tmp[3] = call f(tmp[1]);
-      tmp[4] = call f(tmp[3]);
+      tmp[4] = eq tmp[3] tmp[3];
+      br tmp[4], out: tmp[4] {
+        true: {
+          tmp[4] = call f(tmp[3]);
+          tmp[4] = call f(tmp[4]);
+        };
+        false: {
+          tmp[4] = 1;
+        };
+      };
     };
   };
   tmp[5] = add tmp[4] tmp[0];

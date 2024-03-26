@@ -10,7 +10,6 @@ import Juvix.Compiler.Casm.Extra.Stdlib
 import Juvix.Compiler.Casm.Language
 import Juvix.Compiler.Casm.Translation.FromReg.CasmBuilder
 import Juvix.Compiler.Reg.Data.Blocks.InfoTable qualified as Reg
-import Juvix.Compiler.Reg.Extra.Blocks qualified as Reg
 import Juvix.Compiler.Reg.Extra.Blocks.Info qualified as Reg
 import Juvix.Compiler.Reg.Language.Blocks qualified as Reg
 import Juvix.Compiler.Tree.Evaluator.Builtins qualified as Reg
@@ -69,45 +68,24 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
         fmap fst
           . runCasmBuilder addr1 vars
           . runOutputList
-          $ goBlock blts failLab Nothing block
+          $ goBlock blts failLab mempty Nothing block
       return (addr1 + length instrs, (pre ++ instrs) : acc)
 
-    goLocalBlock :: forall r. (Members '[LabelInfoBuilder, CasmBuilder, Output Instruction] r) => StdlibBuiltins -> LabelRef -> Maybe Reg.VarRef -> Reg.Block -> Sem r ()
-    goLocalBlock blts failLab mout block = do
-      ap0 <- getAP
-      vars <- getVars
-      goBlock blts failLab mout block
-      setVars vars
-      setAP ap0
-
-    goBlock :: forall r. (Members '[LabelInfoBuilder, CasmBuilder, Output Instruction] r) => StdlibBuiltins -> LabelRef -> Maybe Reg.VarRef -> Reg.Block -> Sem r ()
-    goBlock blts failLab mout Reg.Block {..} = do
+    goBlock :: forall r. (Members '[LabelInfoBuilder, CasmBuilder, Output Instruction] r) => StdlibBuiltins -> LabelRef -> HashSet Reg.VarRef -> Maybe Reg.VarRef -> Reg.Block -> Sem r ()
+    goBlock blts failLab liveVars0 mout Reg.Block {..} = do
       mapM_ goInstr _blockBody
-      whenJust _blockFinal $
-        goFinalInstr
       case _blockNext of
         Just block' -> do
-          let outVar = maybe Nothing Reg.getOutVar _blockFinal
-              liveVars = block' ^. Reg.blockLiveVars
-              liveVars' = toList (maybe liveVars (flip HashSet.delete liveVars) outVar)
-              n = length liveVars'
-              vars =
-                HashMap.fromList $
-                  maybe [] (\var -> [(var, -3 - n)]) outVar
-                    ++ zipWithExact (\var k -> (var, -3 - k)) liveVars' [0 .. n - 1]
-          mapM_ (mkMemRef >=> goAssignAp . Val . Ref) (reverse liveVars')
-          output'' (mkCallRel $ Imm 3)
-          output'' Return
-          output'' Nop
-          setAP 0
-          setVars vars
-          goBlock blts failLab mout block'
-        Nothing -> case mout of
-          Just vr -> whenM (hasVar vr) $ do
-            r <- mkMemRef vr
-            goAssignAp (Val $ Ref r)
-          Nothing ->
-            return ()
+          eassert (isJust _blockFinal)
+          goFinalInstr (block' ^. Reg.blockLiveVars) (fromJust _blockFinal)
+          goBlock blts failLab liveVars0 mout block'
+        Nothing -> case _blockFinal of
+          Just instr ->
+            goFinalInstr liveVars0 instr
+          Nothing -> do
+            eassert (isJust mout)
+            eassert (HashSet.member (fromJust mout) liveVars0)
+            goCallBlock Nothing liveVars0
       where
         output'' :: Instruction -> Sem r ()
         output'' i = do
@@ -119,9 +97,30 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
           output'' i
           incAP apOff
 
-        ---------------------------------------------------------------------
+        goCallBlock :: Maybe Reg.VarRef -> HashSet Reg.VarRef -> Sem r ()
+        goCallBlock outVar liveVars = do
+          let liveVars' = toList (maybe liveVars (flip HashSet.delete liveVars) outVar)
+              n = length liveVars'
+              vars =
+                HashMap.fromList $
+                  maybe [] (\var -> [(var, -3 - n)]) outVar
+                    ++ zipWithExact (\var k -> (var, -3 - k)) liveVars' [0 .. n - 1]
+          mapM_ (mkMemRef >=> goAssignAp . Val . Ref) (reverse liveVars')
+          output'' (mkCallRel $ Imm 3)
+          output'' Return
+          output'' Nop
+          setAP 0
+          setVars vars
+
+        goLocalBlock :: Int -> HashMap Reg.VarRef Int -> HashSet Reg.VarRef -> Maybe Reg.VarRef -> Reg.Block -> Sem r ()
+        goLocalBlock ap0 vars liveVars mout' block = do
+          setAP ap0
+          setVars vars
+          goBlock blts failLab liveVars mout' block
+
+        ----------------------------------------------------------------------
         -- The mk* functions don't change the builder state, may only read it
-        ---------------------------------------------------------------------
+        ----------------------------------------------------------------------
 
         mkConst :: Reg.Constant -> Integer
         mkConst = \case
@@ -362,22 +361,23 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
         -- FinalInstruction
         ---------------------------------------------------------------------
 
-        goFinalInstr :: Reg.FinalInstruction -> Sem r ()
-        goFinalInstr = \case
-          Reg.ExtendClosure x -> goExtendClosure x
-          Reg.Call x -> goCall x
+        goFinalInstr :: HashSet Reg.VarRef -> Reg.FinalInstruction -> Sem r ()
+        goFinalInstr liveVars = \case
+          Reg.ExtendClosure x -> goExtendClosure liveVars x
+          Reg.Call x -> goCall liveVars x
           Reg.TailCall x -> goTailCall x
           Reg.Return x -> goReturn x
-          Reg.Branch x -> goBranch x
-          Reg.Case x -> goCase x
+          Reg.Branch x -> goBranch liveVars x
+          Reg.Case x -> goCase liveVars x
 
-        goExtendClosure :: Reg.InstrExtendClosure -> Sem r ()
-        goExtendClosure Reg.InstrExtendClosure {..} = do
+        goExtendClosure :: HashSet Reg.VarRef -> Reg.InstrExtendClosure -> Sem r ()
+        goExtendClosure liveVars Reg.InstrExtendClosure {..} = do
           mapM_ goAssignApValue _instrExtendClosureArgs
           goAssignAp (Val $ Imm $ fromIntegral $ length _instrExtendClosureArgs)
           val <- mkMemRef _instrExtendClosureValue
           goAssignAp (Val $ Ref val)
           output'' $ mkCallRel $ Lab $ LabelRef (blts ^. stdlibExtendClosure) (Just (blts ^. stdlibExtendClosureName))
+          goCallBlock (Just _instrExtendClosureResult) liveVars
 
         goCall' :: Reg.CallType -> [Reg.Value] -> Sem r ()
         goCall' ct args = case ct of
@@ -392,9 +392,10 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
             goAssignAp (Val $ Ref r)
             output'' $ mkCallRel $ Lab $ LabelRef (blts ^. stdlibCallClosure) (Just (blts ^. stdlibCallClosureName))
 
-        goCall :: Reg.InstrCall -> Sem r ()
-        goCall Reg.InstrCall {..} =
+        goCall :: HashSet Reg.VarRef -> Reg.InstrCall -> Sem r ()
+        goCall liveVars Reg.InstrCall {..} = do
           goCall' _instrCallType _instrCallArgs
+          goCallBlock (Just _instrCallResult) liveVars
 
         -- There is no way to make "proper" tail calls in Cairo, because
         -- the only way to set the `fp` register is via the `call` instruction.
@@ -409,27 +410,29 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
           goAssignApValue _instrReturnValue
           output'' Return
 
-        goBranch :: Reg.InstrBranch -> Sem r ()
-        goBranch Reg.InstrBranch {..} = do
+        goBranch :: HashSet Reg.VarRef -> Reg.InstrBranch -> Sem r ()
+        goBranch liveVars Reg.InstrBranch {..} = do
           v <- goValue _instrBranchValue
           case v of
             Imm c
-              | c == 0 -> goBlock blts failLab _instrBranchOutVar _instrBranchTrue
-              | otherwise -> goBlock blts failLab _instrBranchOutVar _instrBranchFalse
+              | c == 0 -> goBlock blts failLab liveVars _instrBranchOutVar _instrBranchTrue
+              | otherwise -> goBlock blts failLab liveVars _instrBranchOutVar _instrBranchFalse
             Ref r -> do
               symFalse <- freshSymbol
               symEnd <- freshSymbol
               let labFalse = LabelRef symFalse Nothing
                   labEnd = LabelRef symEnd Nothing
               output'' $ mkJumpIf (Lab labFalse) r
-              goLocalBlock blts failLab _instrBranchOutVar _instrBranchTrue
+              ap0 <- getAP
+              vars <- getVars
+              goLocalBlock ap0 vars liveVars _instrBranchOutVar _instrBranchTrue
               -- _instrBranchOutVar is Nothing iff the branch returns
               when (isJust _instrBranchOutVar) $
                 output'' (mkJumpRel (Val $ Lab labEnd))
               addrFalse <- getPC
               registerLabelAddress symFalse addrFalse
               output'' $ Label labFalse
-              goLocalBlock blts failLab _instrBranchOutVar _instrBranchFalse
+              goLocalBlock ap0 vars liveVars _instrBranchOutVar _instrBranchFalse
               addrEnd <- getPC
               registerLabelAddress symEnd addrEnd
               output'' $ Label labEnd
@@ -444,8 +447,8 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
               goAssignAp v
               return $ Load $ LoadValue (MemRef Ap (-1)) off
 
-        goCase :: Reg.InstrCase -> Sem r ()
-        goCase Reg.InstrCase {..} = do
+        goCase :: HashSet Reg.VarRef -> Reg.InstrCase -> Sem r ()
+        goCase liveVars Reg.InstrCase {..} = do
           syms <- replicateM (length tags) freshSymbol
           symEnd <- freshSymbol
           let symMap = HashMap.fromList $ zip tags syms
@@ -459,10 +462,12 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
           v <- goLoad _instrCaseValue 0
           output'' (mkJumpRel v)
           mapM_ output'' jmps'
-          mapM_ (goCaseBranch symMap labEnd) _instrCaseBranches
+          ap0 <- getAP
+          vars <- getVars
+          mapM_ (goCaseBranch ap0 vars symMap labEnd) _instrCaseBranches
           mapM_ (goDefaultLabel symMap) defaultTags
           whenJust _instrCaseDefault $
-            goLocalBlock blts failLab _instrCaseOutVar
+            goLocalBlock ap0 vars liveVars _instrCaseOutVar
           addrEnd <- getPC
           registerLabelAddress symEnd addrEnd
           output'' $ Label labEnd
@@ -471,14 +476,14 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
             ctrTags = HashSet.fromList $ map (^. Reg.caseBranchTag) _instrCaseBranches
             defaultTags = filter (not . flip HashSet.member ctrTags) tags
 
-            goCaseBranch :: HashMap Tag Symbol -> LabelRef -> Reg.CaseBranch -> Sem r ()
-            goCaseBranch symMap labEnd Reg.CaseBranch {..} = do
+            goCaseBranch :: Int -> HashMap Reg.VarRef Int -> HashMap Tag Symbol -> LabelRef -> Reg.CaseBranch -> Sem r ()
+            goCaseBranch ap0 vars symMap labEnd Reg.CaseBranch {..} = do
               let sym = fromJust $ HashMap.lookup _caseBranchTag symMap
                   lab = LabelRef sym Nothing
               addr <- getPC
               registerLabelAddress sym addr
               output'' $ Label lab
-              goLocalBlock blts failLab _instrCaseOutVar _caseBranchCode
+              goLocalBlock ap0 vars liveVars _instrCaseOutVar _caseBranchCode
               -- _instrCaseOutVar is Nothing iff the branch returns
               when (isJust _instrCaseOutVar) $
                 output'' (mkJumpRel (Val $ Lab labEnd))
