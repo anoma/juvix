@@ -8,7 +8,7 @@ function f(integer) : integer {
 function main() : integer {
   tmp[0] = 10;
   tmp[1] = 1;
-  tmp[2] = lt tmp[0] tmp[1];
+  tmp[2] = eq tmp[0] tmp[1];
   br tmp[2], out: tmp[4] {
     true: {
       tmp[4] = 0;
