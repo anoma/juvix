@@ -68,7 +68,12 @@ label addr = P.try $ do
 
 instruction :: (Member LabelInfoBuilder r) => ParsecS r Instruction
 instruction =
-  parseAlloc <|> parseJump <|> parseCall <|> parseReturn <|> parseTrace <|> parseAssign
+  parseNop <|> parseAlloc <|> parseJump <|> parseCall <|> parseReturn <|> parseTrace <|> parseAssign
+
+parseNop :: ParsecS r Instruction
+parseNop = do
+  kw kwNop
+  return Nop
 
 parseAlloc :: (Member LabelInfoBuilder r) => ParsecS r Instruction
 parseAlloc = do
@@ -164,6 +169,9 @@ parseLabel = do
 parseIncAp :: ParsecS r Bool
 parseIncAp = (kw delimSemicolon >> kw kwApPlusPlus >> return True) <|> return False
 
+parseRel :: ParsecS r Bool
+parseRel = (kw kwRel >> return True) <|> (kw kwAbs >> return False) <|> return True
+
 parseJump :: forall r. (Member LabelInfoBuilder r) => ParsecS r Instruction
 parseJump = do
   kw kwJmp
@@ -171,7 +179,6 @@ parseJump = do
   where
     jmpIf :: ParsecS r Instruction
     jmpIf = do
-      isRel <- isJust <$> optional (kw kwRel)
       tgt <- parseValue
       kw kwIf
       v <- parseMemRef
@@ -183,13 +190,12 @@ parseJump = do
           InstrJumpIf
             { _instrJumpIfTarget = tgt,
               _instrJumpIfValue = v,
-              _instrJumpIfRel = isRel,
               _instrJumpIfIncAp = incAp
             }
 
     jmp :: ParsecS r Instruction
     jmp = do
-      isRel <- isJust <$> optional (kw kwRel)
+      isRel <- parseRel
       tgt <- parseRValue
       incAp <- parseIncAp
       return $
@@ -203,8 +209,9 @@ parseJump = do
 parseCall :: (Member LabelInfoBuilder r) => ParsecS r Instruction
 parseCall = do
   kw kwCall
+  isRel <- parseRel
   v <- parseValue
-  return $ Call $ InstrCall {_instrCallTarget = v}
+  return $ Call $ InstrCall {_instrCallTarget = v, _instrCallRel = isRel}
 
 parseReturn :: ParsecS r Instruction
 parseReturn = do

@@ -47,13 +47,10 @@ hRunCode hout (LabelInfo labelInfo) instrs0 = runST goCode
       Memory s ->
       ST s FField
     go pc ap fp mem
-      | Vec.length instrs <= pc = do
-          when (Vec.length instrs < pc) $
-            throwRunError ("invalid program counter: " <> show pc)
-          checkGaps mem
-          when (ap == 0) $
-            throwRunError "nothing to return"
-          readMem mem (ap - 1)
+      | Vec.length instrs == pc =
+          goFinish ap mem
+      | Vec.length instrs < pc =
+          throwRunError ("invalid program counter: " <> show pc)
       | otherwise =
           case instrs Vec.! pc of
             Assign x -> goAssign x pc ap fp mem
@@ -65,6 +62,7 @@ hRunCode hout (LabelInfo labelInfo) instrs0 = runST goCode
             Alloc x -> goAlloc x pc ap fp mem
             Trace x -> goTrace x pc ap fp mem
             Label {} -> go (pc + 1) ap fp mem
+            Nop -> go (pc + 1) ap fp mem
 
     checkGaps :: forall s. Memory s -> ST s ()
     checkGaps mem = goGaps False 0
@@ -131,11 +129,16 @@ hRunCode hout (LabelInfo labelInfo) instrs0 = runST goCode
           fromMaybe (throwRunError "invalid label") $
             HashMap.lookup _labelRefSymbol labelInfo
 
-    readValue :: Address -> Address -> Memory s -> Value -> ST s FField
-    readValue ap fp mem = \case
+    readValue' :: Bool -> Address -> Address -> Address -> Memory s -> Value -> ST s FField
+    readValue' isRel pc ap fp mem = \case
       Imm v -> return $ fieldFromInteger fsize v
       Ref r -> readMemRef ap fp mem r
-      Lab l -> return $ readLabel l
+      Lab l -> return $ if isRel then fieldSub lab (fieldFromInteger fsize (fromIntegral pc)) else lab
+        where
+          lab = readLabel l
+
+    readValue :: Address -> Address -> Memory s -> Value -> ST s FField
+    readValue = readValue' False 0
 
     readLoadValue :: Address -> Address -> Memory s -> LoadValue -> ST s FField
     readLoadValue ap fp mem LoadValue {..} = do
@@ -155,11 +158,14 @@ hRunCode hout (LabelInfo labelInfo) instrs0 = runST goCode
           FieldAdd -> fieldAdd x y
           FieldMul -> fieldMul x y
 
-    readRValue :: Address -> Address -> Memory s -> RValue -> ST s FField
-    readRValue ap fp mem = \case
-      Val x -> readValue ap fp mem x
+    readRValue' :: Bool -> Address -> Address -> Address -> Memory s -> RValue -> ST s FField
+    readRValue' isRel pc ap fp mem = \case
+      Val x -> readValue' isRel pc ap fp mem x
       Load x -> readLoadValue ap fp mem x
       Binop x -> readBinopValue ap fp mem x
+
+    readRValue :: Address -> Address -> Memory s -> RValue -> ST s FField
+    readRValue = readRValue' False 0
 
     goAssign :: InstrAssign -> Address -> Address -> Address -> Memory s -> ST s FField
     goAssign InstrAssign {..} pc ap fp mem = do
@@ -197,29 +203,32 @@ hRunCode hout (LabelInfo labelInfo) instrs0 = runST goCode
 
     goJump :: InstrJump -> Address -> Address -> Address -> Memory s -> ST s FField
     goJump InstrJump {..} pc ap fp mem = do
-      tgt <- readRValue ap fp mem _instrJumpTarget
+      tgt <- readRValue' _instrJumpRel pc ap fp mem _instrJumpTarget
       let off = if _instrJumpRel then pc else 0
       go (off + fromInteger (fieldToInteger tgt)) (ap + fromEnum _instrJumpIncAp) fp mem
 
     goJumpIf :: InstrJumpIf -> Address -> Address -> Address -> Memory s -> ST s FField
     goJumpIf InstrJumpIf {..} pc ap fp mem = do
-      tgt <- readValue ap fp mem _instrJumpIfTarget
+      tgt <- readValue' True pc ap fp mem _instrJumpIfTarget
       v <- readMemRef ap fp mem _instrJumpIfValue
-      let off = if _instrJumpIfRel then pc else 0
-      go (if fieldToInteger v /= 0 then off + fromInteger (fieldToInteger tgt) else pc + 1) (ap + fromEnum _instrJumpIfIncAp) fp mem
+      go (if fieldToInteger v /= 0 then pc + fromInteger (fieldToInteger tgt) else pc + 1) (ap + fromEnum _instrJumpIfIncAp) fp mem
 
     goCall :: InstrCall -> Address -> Address -> Address -> Memory s -> ST s FField
     goCall InstrCall {..} pc ap fp mem = do
-      tgt <- readValue ap fp mem _instrCallTarget
+      tgt <- readValue' _instrCallRel pc ap fp mem _instrCallTarget
       mem' <- writeMem mem ap (fieldFromInteger fsize (fromIntegral fp))
       mem'' <- writeMem mem' (ap + 1) (fieldFromInteger fsize (fromIntegral pc + 1))
-      go (fromInteger (fieldToInteger tgt)) (ap + 2) (ap + 2) mem''
+      let off = if _instrCallRel then pc else 0
+      go (off + fromInteger (fieldToInteger tgt)) (ap + 2) (ap + 2) mem''
 
     goReturn :: Address -> Address -> Address -> Memory s -> ST s FField
-    goReturn _ ap fp mem = do
-      pc' <- readMem mem (fp - 1)
-      fp' <- readMem mem (fp - 2)
-      go (fromInteger (fieldToInteger pc')) ap (fromInteger (fieldToInteger fp')) mem
+    goReturn _ ap fp mem
+      | fp == 0 =
+          goFinish ap mem
+      | otherwise = do
+          pc' <- readMem mem (fp - 1)
+          fp' <- readMem mem (fp - 2)
+          go (fromInteger (fieldToInteger pc')) ap (fromInteger (fieldToInteger fp')) mem
 
     goAlloc :: InstrAlloc -> Address -> Address -> Address -> Memory s -> ST s FField
     goAlloc InstrAlloc {..} pc ap fp mem = do
@@ -231,6 +240,13 @@ hRunCode hout (LabelInfo labelInfo) instrs0 = runST goCode
       v <- readRValue ap fp mem _instrTraceValue
       GHC.unsafePerformIO (hPrint hout v >> return (pure ()))
       go (pc + 1) ap fp mem
+
+    goFinish :: Address -> Memory s -> ST s FField
+    goFinish ap mem = do
+      checkGaps mem
+      when (ap == 0) $
+        throwRunError "nothing to return"
+      readMem mem (ap - 1)
 
 catchRunErrorIO :: a -> IO (Either CasmError a)
 catchRunErrorIO a =

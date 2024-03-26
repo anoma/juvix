@@ -20,14 +20,6 @@ follow the syntax of [1, Section 5].
 
 import Juvix.Compiler.Casm.Language.Base
 
-type Offset = Int16
-
-type Address = Int
-
-data Reg
-  = Ap
-  | Fp
-
 data MemRef = MemRef
   { _memRefReg :: Reg,
     _memRefOff :: Offset
@@ -94,6 +86,7 @@ data Instruction
   | Alloc InstrAlloc
   | Trace InstrTrace
   | Label LabelRef
+  | Nop
 
 data InstrAssign = InstrAssign
   { _instrAssignValue :: RValue,
@@ -120,12 +113,12 @@ data InstrJump = InstrJump
 data InstrJumpIf = InstrJumpIf
   { _instrJumpIfTarget :: Value,
     _instrJumpIfValue :: MemRef,
-    _instrJumpIfRel :: Bool,
     _instrJumpIfIncAp :: Bool
   }
 
-newtype InstrCall = InstrCall
-  { _instrCallTarget :: Value
+data InstrCall = InstrCall
+  { _instrCallTarget :: Value,
+    _instrCallRel :: Bool
   }
 
 newtype InstrAlloc = InstrAlloc

@@ -11,8 +11,8 @@ newtype RuntimeCommand
 runtimeSupportedTargets :: NonEmpty CompileTarget
 runtimeSupportedTargets =
   NonEmpty.fromList
-    [ TargetWasm32Wasi,
-      TargetNative64
+    [ TargetNative64,
+      TargetWasm32Wasi
     ]
 
 parseRuntimeOptions :: Parser CompileOptions

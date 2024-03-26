@@ -5,8 +5,8 @@ import Juvix.Compiler.Pipeline.EntryPoint
 import Prelude (Show (show))
 
 data CompileTarget
-  = TargetWasm32Wasi
-  | TargetNative64
+  = TargetNative64
+  | TargetWasm32Wasi
   | TargetGeb
   | TargetVampIR
   | TargetCore
@@ -15,6 +15,7 @@ data CompileTarget
   | TargetTree
   | TargetAnoma
   | TargetCasm
+  | TargetCairo
   deriving stock (Eq, Data, Bounded, Enum)
 
 instance Show CompileTarget where
@@ -29,6 +30,7 @@ instance Show CompileTarget where
     TargetTree -> "tree"
     TargetAnoma -> "anoma"
     TargetCasm -> "casm"
+    TargetCairo -> "cairo"
 
 data CompileOptions = CompileOptions
   { _compileDebug :: Bool,
@@ -134,7 +136,7 @@ optCompileTarget supportedTargets =
     ( long "target"
         <> short 't'
         <> metavar "TARGET"
-        <> value TargetNative64
+        <> value (head supportedTargets)
         <> showDefault
         <> help ("select a target: " <> show listTargets)
         <> completeWith (map show listTargets)

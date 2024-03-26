@@ -4,6 +4,7 @@ import Commands.Base
 import Commands.Dev.Core.Compile.Options
 import Commands.Dev.Tree.Compile.Base (outputAnomaResult)
 import Commands.Extra.Compile qualified as Compile
+import Data.Aeson qualified as JSON
 import Juvix.Compiler.Asm.Pretty qualified as Asm
 import Juvix.Compiler.Backend qualified as Backend
 import Juvix.Compiler.Backend.C qualified as C
@@ -48,6 +49,7 @@ getEntry PipelineArg {..} = do
       TargetTree -> Backend.TargetTree
       TargetAnoma -> Backend.TargetAnoma
       TargetCasm -> Backend.TargetCairo
+      TargetCairo -> Backend.TargetCairo
 
     defaultOptLevel :: Int
     defaultOptLevel
@@ -169,3 +171,15 @@ runCasmPipeline pa@PipelineArg {..} = do
       $ _pipelineArgModule
   Casm.Result {..} <- getRight r
   writeFileEnsureLn casmFile (toPlainText $ Casm.ppProgram _resultCode)
+
+runCairoPipeline :: (Members '[EmbedIO, App, TaggedLock] r) => PipelineArg -> Sem r ()
+runCairoPipeline pa@PipelineArg {..} = do
+  entryPoint <- getEntry pa
+  cairoFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
+  r <-
+    runReader entryPoint
+      . runError @JuvixError
+      . coreToCairo
+      $ _pipelineArgModule
+  res <- getRight r
+  liftIO $ JSON.encodeFile (toFilePath cairoFile) res

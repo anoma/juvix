@@ -91,17 +91,17 @@ mkOpArgsNum res v =
     mkExtraBinop FieldSub res (MemRef Ap (-2)) (Ref $ MemRef Ap (-1))
   ]
 
-mkCall :: Value -> Instruction
-mkCall = Call . InstrCall
+mkCallRel :: Value -> Instruction
+mkCallRel tgt = Call (InstrCall tgt True)
 
-mkJump :: RValue -> Instruction
-mkJump tgt = Jump (InstrJump tgt False False)
+mkCallAbs :: Value -> Instruction
+mkCallAbs tgt = Call (InstrCall tgt False)
+
+mkJumpAbs :: RValue -> Instruction
+mkJumpAbs tgt = Jump (InstrJump tgt False False)
 
 mkJumpIf :: Value -> MemRef -> Instruction
-mkJumpIf tgt v = JumpIf (InstrJumpIf tgt v False False)
+mkJumpIf tgt v = JumpIf (InstrJumpIf tgt v False)
 
 mkJumpRel :: RValue -> Instruction
 mkJumpRel tgt = Jump (InstrJump tgt True False)
-
-mkJumpRelIf :: Value -> MemRef -> Instruction
-mkJumpRelIf tgt v = JumpIf (InstrJumpIf tgt v True False)

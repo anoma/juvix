@@ -13,14 +13,15 @@ type CoreCompileOptions = CompileOptions
 coreSupportedTargets :: NonEmpty CompileTarget
 coreSupportedTargets =
   NonEmpty.fromList
-    [ TargetWasm32Wasi,
-      TargetNative64,
+    [ TargetNative64,
+      TargetWasm32Wasi,
       TargetGeb,
       TargetVampIR,
       TargetTree,
       TargetAsm,
       TargetReg,
-      TargetCasm
+      TargetCasm,
+      TargetCairo
     ]
 
 parseCoreCompileOptions :: Parser CoreCompileOptions

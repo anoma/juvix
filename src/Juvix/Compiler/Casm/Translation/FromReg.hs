@@ -19,25 +19,33 @@ fromReg :: Reg.InfoTable -> Result
 fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolId tab) $ do
   let initialOffset :: Int = 2
   (blts, binstrs) <- addStdlibBuiltins initialOffset
+  let cinstrs = concatMap (mkFunCall . fst) $ sortOn snd $ HashMap.toList (info ^. Reg.extraInfoFUIDs)
   endSym <- freshSymbol
   let endName :: Text = "__juvix_end"
       endLab = LabelRef endSym (Just endName)
-  (addr, instrs) <- second (concat . reverse) <$> foldM (goFun blts endLab) (initialOffset + length binstrs, []) (tab ^. Reg.infoFunctions)
-  eassert (addr == length instrs + length binstrs + initialOffset)
+  (addr, instrs) <- second (concat . reverse) <$> foldM (goFun blts endLab) (initialOffset + length binstrs + length cinstrs, []) (tab ^. Reg.infoFunctions)
+  eassert (addr == length instrs + length cinstrs + length binstrs + initialOffset)
   registerLabelName endSym endName
   registerLabelAddress endSym addr
   let mainSym = fromJust $ tab ^. Reg.infoMainFunction
       mainName = fromJust (HashMap.lookup mainSym (tab ^. Reg.infoFunctions)) ^. Reg.functionName
-      callInstr = Call $ InstrCall $ Lab $ LabelRef mainSym (Just mainName)
-      jmpInstr = mkJump (Val $ Lab endLab)
-  return $ callInstr : jmpInstr : binstrs ++ instrs ++ [Label endLab]
+      callInstr = mkCallRel (Lab $ LabelRef mainSym (Just mainName))
+      jmpInstr = mkJumpRel (Val $ Lab endLab)
+  return $ callInstr : jmpInstr : binstrs ++ cinstrs ++ instrs ++ [Label endLab]
   where
     info :: Reg.ExtraInfo
     info = Reg.computeExtraInfo (getLimits TargetCairo False) tab
 
+    mkFunCall :: Symbol -> [Instruction]
+    mkFunCall sym =
+      [ mkCallRel $ Lab $ LabelRef sym (Just $ Reg.lookupFunInfo tab sym ^. Reg.functionName),
+        Return,
+        Nop
+      ]
+
     getTagId :: Tag -> Int
     getTagId tag =
-      1 + fromJust (HashMap.lookup tag (info ^. Reg.extraInfoCIDs))
+      1 + 2 * fromJust (HashMap.lookup tag (info ^. Reg.extraInfoCIDs))
 
     goFun :: forall r. (Member LabelInfoBuilder r) => StdlibBuiltins -> LabelRef -> (Address, [[Instruction]]) -> Reg.FunctionInfo -> Sem r (Address, [[Instruction]])
     goFun blts failLab (addr0, acc) funInfo = do
@@ -212,7 +220,7 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
 
         mkAllocCall :: MemRef -> [Instruction]
         mkAllocCall res =
-          [ mkCall $ Lab $ LabelRef (blts ^. stdlibGetRegs) (Just (blts ^. stdlibGetRegsName)),
+          [ mkCallRel $ Lab $ LabelRef (blts ^. stdlibGetRegs) (Just (blts ^. stdlibGetRegsName)),
             mkNativeBinop FieldAdd res (MemRef Ap (-2)) (Imm 2)
           ]
 
@@ -231,14 +239,14 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
         goAllocClosure _ Reg.InstrAllocClosure {..} =
           return $
             mkAllocCall res
-              ++ [ mkAssignAp (Val $ Lab $ LabelRef _instrAllocClosureSymbol (Just funName)),
+              ++ [ mkAssignAp (Val $ Imm $ fromIntegral $ 1 + 3 * fuid),
                    mkAssignAp (Val $ Imm $ fromIntegral $ casmMaxFunctionArgs + 1 - storedArgsNum),
                    mkAssignAp (Val $ Imm $ fromIntegral $ casmMaxFunctionArgs + 1 - leftArgsNum)
                  ]
               ++ map goAssignApValue _instrAllocClosureArgs
           where
             res = goVarRef _instrAllocClosureResult
-            funName = Reg.lookupFunInfo tab _instrAllocClosureSymbol ^. Reg.functionName
+            fuid = fromJust $ HashMap.lookup _instrAllocClosureSymbol (info ^. Reg.extraInfoFUIDs)
             storedArgsNum = length _instrAllocClosureArgs
             leftArgsNum = _instrAllocClosureExpectedArgsNum - storedArgsNum
 
@@ -248,7 +256,7 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
             map goAssignApValue _instrExtendClosureArgs
               ++ [ mkAssignAp (Val $ Imm $ fromIntegral $ length _instrExtendClosureArgs),
                    mkAssignAp (Val $ Ref val),
-                   mkCall $ Lab $ LabelRef (blts ^. stdlibExtendClosure) (Just (blts ^. stdlibExtendClosureName)),
+                   mkCallRel $ Lab $ LabelRef (blts ^. stdlibExtendClosure) (Just (blts ^. stdlibExtendClosureName)),
                    mkAssign res (Val $ Ref $ MemRef Ap (-1))
                  ]
           where
@@ -259,7 +267,7 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
         goCall' saveOrRet ct args = case ct of
           Reg.CallFun sym ->
             args'
-              ++ [ mkCall $ Lab $ LabelRef sym (Just funName),
+              ++ [ mkCallRel $ Lab $ LabelRef sym (Just funName),
                    saveOrRet
                  ]
             where
@@ -267,7 +275,7 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
           Reg.CallClosure cl ->
             args'
               ++ [ mkAssignAp (Val $ Ref $ goVarRef cl),
-                   mkCall $ Lab $ LabelRef (blts ^. stdlibCallClosure) (Just (blts ^. stdlibCallClosureName)),
+                   mkCallRel $ Lab $ LabelRef (blts ^. stdlibCallClosure) (Just (blts ^. stdlibCallClosureName)),
                    saveOrRet
                  ]
           where
@@ -315,7 +323,7 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
               is
                 ++ [mkJumpIf (Lab labFalse) r]
                 ++ codeTrue
-                ++ [ mkJump (Val $ Lab labEnd),
+                ++ [ mkJumpRel (Val $ Lab labEnd),
                      Label labFalse
                    ]
                 ++ codeFalse
@@ -331,14 +339,18 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
           let symMap = HashMap.fromList $ zip tags syms
               labs = map (flip LabelRef Nothing) syms
               labEnd = LabelRef symEnd Nothing
-              jmps = map (mkJump . Val . Lab) labs
-              addr1 = addr + length is + 1 + length jmps
+              jmps = map (mkJumpRel . Val . Lab) labs
+              -- we need the Nop instructions to ensure that the relative jump
+              -- offsets in our CASM interpreter correspond to the relative jump
+              -- offsets in the Cairo binary representation
+              jmps' = concatMap (\i -> [i, Nop]) jmps
+              addr1 = addr + length is + 1 + length jmps'
           (addr2, instrs) <- second (concat . reverse) <$> foldM (goCaseBranch symMap labEnd) (addr1, []) _instrCaseBranches
           (addr3, instrs') <- second reverse <$> foldM (goDefaultLabel symMap) (addr2, []) defaultTags
           instrs'' <- maybe (return []) (goCode addr3) _instrCaseDefault
           let addr4 = addr3 + length instrs''
           registerLabelAddress symEnd addr4
-          return $ is ++ mkJumpRel v : jmps ++ instrs ++ instrs' ++ instrs'' ++ [Label labEnd]
+          return $ is ++ mkJumpRel v : jmps' ++ instrs ++ instrs' ++ instrs'' ++ [Label labEnd]
           where
             (is, v) = goLoad _instrCaseValue 0
             tags = Reg.lookupInductiveInfo tab _instrCaseInductive ^. Reg.inductiveConstructors
@@ -351,7 +363,7 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
                   lab = LabelRef sym Nothing
               registerLabelAddress sym addr'
               instrs <- goCode (addr' + 1) _caseBranchCode
-              let instrs' = Label lab : instrs ++ [mkJump (Val $ Lab labEnd)]
+              let instrs' = Label lab : instrs ++ [mkJumpRel (Val $ Lab labEnd)]
               return (addr' + length instrs', instrs' : acc')
 
             goDefaultLabel :: HashMap Tag Symbol -> (Address, [Instruction]) -> Reg.Tag -> Sem r (Address, [Instruction])
@@ -369,7 +381,7 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
         goFail _ Reg.InstrFailure {..} =
           return
             [ Trace (InstrTrace (goRValue _instrFailureValue)),
-              mkJump (Val $ Lab failLab)
+              mkJumpRel (Val $ Lab failLab)
             ]
 
         goBlock :: Address -> Reg.InstrBlock -> Sem r [Instruction]

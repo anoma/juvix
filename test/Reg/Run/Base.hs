@@ -9,8 +9,10 @@ import Juvix.Compiler.Reg.Transformation
 import Juvix.Compiler.Reg.Translation.FromSource
 import Juvix.Data.PPOutput
 
-runAssertion :: Handle -> Symbol -> InfoTable -> IO ()
-runAssertion hout sym tab = do
+runAssertion :: Path Abs Dir -> Path Abs File -> Symbol -> InfoTable -> (String -> IO ()) -> Assertion
+runAssertion _ outputFile sym tab step = do
+  hout <- openFile (toFilePath outputFile) WriteMode
+  step "Interpret"
   r' <- doRun hout tab (lookupFunInfo tab sym)
   case r' of
     Left err -> do
@@ -18,23 +20,23 @@ runAssertion hout sym tab = do
       assertFailure (show (pretty err))
     Right value' -> do
       case value' of
-        ValVoid -> return ()
-        _ -> hPutStrLn hout (ppPrint tab value')
+        ValVoid ->
+          hClose hout
+        _ -> do
+          hPutStrLn hout (ppPrint tab value')
+          hClose hout
 
 regRunAssertion' :: InfoTable -> Path Abs File -> (String -> IO ()) -> Assertion
 regRunAssertion' = regRunAssertionParam' runAssertion
 
-regRunAssertionParam' :: (Handle -> Symbol -> InfoTable -> IO ()) -> InfoTable -> Path Abs File -> (String -> IO ()) -> Assertion
+regRunAssertionParam' :: (Path Abs Dir -> Path Abs File -> Symbol -> InfoTable -> (String -> IO ()) -> Assertion) -> InfoTable -> Path Abs File -> (String -> IO ()) -> Assertion
 regRunAssertionParam' interpretFun tab expectedFile step = do
   case tab ^. infoMainFunction of
     Just sym -> do
       withTempDir'
         ( \dirPath -> do
             let outputFile = dirPath <//> $(mkRelFile "out.out")
-            hout <- openFile (toFilePath outputFile) WriteMode
-            step "Interpret"
-            interpretFun hout sym tab
-            hClose hout
+            interpretFun dirPath outputFile sym tab step
             actualOutput <- readFile outputFile
             step "Compare expected and actual program output"
             expected <- readFile expectedFile
@@ -45,7 +47,7 @@ regRunAssertionParam' interpretFun tab expectedFile step = do
 regRunAssertion :: Path Abs File -> Path Abs File -> [TransformationId] -> (InfoTable -> Assertion) -> (String -> IO ()) -> Assertion
 regRunAssertion = regRunAssertionParam runAssertion
 
-regRunAssertionParam :: (Handle -> Symbol -> InfoTable -> IO ()) -> Path Abs File -> Path Abs File -> [TransformationId] -> (InfoTable -> Assertion) -> (String -> IO ()) -> Assertion
+regRunAssertionParam :: (Path Abs Dir -> Path Abs File -> Symbol -> InfoTable -> (String -> IO ()) -> Assertion) -> Path Abs File -> Path Abs File -> [TransformationId] -> (InfoTable -> Assertion) -> (String -> IO ()) -> Assertion
 regRunAssertionParam interpretFun mainFile expectedFile trans testTrans step = do
   step "Parse"
   r <- parseFile mainFile

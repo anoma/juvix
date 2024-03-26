@@ -112,11 +112,22 @@ instance PrettyCode InstrExtraBinop where
     incAp <- ppIncAp _instrExtraBinopIncAp
     return $ r <+> Str.equal <+> v1 <+> op <+> v2 <> incAp
 
+ppRel :: Bool -> RValue -> Sem r (Doc Ann)
+ppRel isRel tgt
+  | isLab tgt = return mempty
+  | isRel = return $ Str.rel <> space
+  | otherwise = return $ Str.abs <> space
+  where
+    isLab :: RValue -> Bool
+    isLab = \case
+      Val Lab {} -> True
+      _ -> False
+
 instance PrettyCode InstrJump where
   ppCode InstrJump {..} = do
     tgt <- ppCode _instrJumpTarget
     incAp <- ppIncAp _instrJumpIncAp
-    let rel = if _instrJumpRel then Str.rel <> space else mempty
+    rel <- ppRel _instrJumpRel _instrJumpTarget
     return $ Str.jmp <+> rel <> tgt <> incAp
 
 instance PrettyCode InstrJumpIf where
@@ -124,13 +135,13 @@ instance PrettyCode InstrJumpIf where
     tgt <- ppCode _instrJumpIfTarget
     v <- ppCode _instrJumpIfValue
     incAp <- ppIncAp _instrJumpIfIncAp
-    let rel = if _instrJumpIfRel then Str.rel <> space else mempty
-    return $ Str.jmp <+> rel <> tgt <+> Str.if_ <+> v <+> Str.notequal <+> annotate AnnLiteralInteger "0" <> incAp
+    return $ Str.jmp <+> tgt <+> Str.if_ <+> v <+> Str.notequal <+> annotate AnnLiteralInteger "0" <> incAp
 
 instance PrettyCode InstrCall where
   ppCode InstrCall {..} = do
     tgt <- ppCode _instrCallTarget
-    return $ Str.call <+> tgt
+    rel <- ppRel _instrCallRel (Val _instrCallTarget)
+    return $ Str.call <+> rel <> tgt
 
 instance PrettyCode InstrAlloc where
   ppCode InstrAlloc {..} = do
@@ -153,3 +164,4 @@ instance PrettyCode Instruction where
     Alloc x -> ppCode x
     Trace x -> ppCode x
     Label x -> (<> colon) <$> ppCode x
+    Nop -> return Str.nop

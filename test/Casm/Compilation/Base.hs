@@ -1,8 +1,8 @@
 module Casm.Compilation.Base where
 
 import Base
+import Casm.Run.Base
 import Juvix.Compiler.Casm.Data.Result
-import Juvix.Compiler.Casm.Interpreter
 import Juvix.Compiler.Casm.Pretty
 import Juvix.Compiler.Core qualified as Core
 import Juvix.Data.Field
@@ -36,17 +36,8 @@ compileAssertionEntry adjustEntry root' optLevel mainFile expectedFile step = do
     Right Result {..} -> do
       withTempDir'
         ( \dirPath -> do
-            let outputFile = dirPath <//> $(mkRelFile "out.out")
             let tmpFile = dirPath <//> $(mkRelFile "tmp.out")
             step "Serialize"
             writeFileEnsureLn tmpFile (toPlainText $ ppProgram _resultCode)
-            hout <- openFile (toFilePath outputFile) WriteMode
-            step "Interpret"
-            let v = hRunCode hout _resultLabelInfo _resultCode
-            hPutStrLn hout (show v)
-            hClose hout
-            actualOutput <- readFile outputFile
-            step "Compare expected and actual program output"
-            expected <- readFile expectedFile
-            assertEqDiffText ("Check: RUN output = " <> toFilePath expectedFile) actualOutput expected
         )
+      casmRunAssertion' False _resultLabelInfo _resultCode expectedFile step
