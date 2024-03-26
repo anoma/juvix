@@ -35,7 +35,6 @@ runCompile inputFile o = do
     TargetAsm -> return (Right ())
     TargetReg -> return (Right ())
     TargetTree -> return (Right ())
-    TargetNockma -> return (Right ())
     TargetAnoma -> return (Right ())
     TargetCasm -> return (Right ())
     TargetCairo -> return (Right ())
@@ -56,7 +55,6 @@ prepareRuntime buildDir o = do
     TargetAsm -> return ()
     TargetReg -> return ()
     TargetTree -> return ()
-    TargetNockma -> return ()
     TargetAnoma -> return ()
     TargetCasm -> return ()
     TargetCairo -> return ()
@@ -121,8 +119,6 @@ outputFile opts inputFile =
           replaceExtension' juvixRegFileExt baseOutputFile
         TargetTree ->
           replaceExtension' juvixTreeFileExt baseOutputFile
-        TargetNockma ->
-          replaceExtension' nockmaFileExt baseOutputFile
         TargetAnoma ->
           replaceExtension' nockmaFileExt baseOutputFile
         TargetCasm ->

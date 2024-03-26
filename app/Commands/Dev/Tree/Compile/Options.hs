@@ -14,9 +14,9 @@ treeSupportedTargets =
       TargetWasm32Wasi,
       TargetAsm,
       TargetReg,
-      TargetNockma,
       TargetCasm,
-      TargetCairo
+      TargetCairo,
+      TargetAnoma
     ]
 
 parseTreeCompileOptions :: Parser CompileOptions

@@ -59,8 +59,16 @@ data StdlibCall a = StdlibCall
 
 instance (Hashable a) => Hashable (StdlibCall a)
 
+newtype Tag = Tag
+  { _unTag :: Text
+  }
+  deriving stock (Show, Eq, Lift, Generic)
+
+instance Hashable Tag
+
 data CellInfo a = CellInfo
   { _cellInfoLoc :: Irrelevant (Maybe Interval),
+    _cellInfoTag :: Maybe Tag,
     _cellInfoCall :: Maybe (StdlibCall a)
   }
   deriving stock (Show, Eq, Lift, Generic)
@@ -78,6 +86,7 @@ instance (Hashable a) => Hashable (Cell a)
 
 data AtomInfo = AtomInfo
   { _atomInfoHint :: Maybe AtomHint,
+    _atomInfoTag :: Maybe Tag,
     _atomInfoLoc :: Irrelevant (Maybe Interval)
   }
   deriving stock (Show, Eq, Lift, Generic)
@@ -98,6 +107,7 @@ data AtomHint
   | AtomHintBool
   | AtomHintNil
   | AtomHintVoid
+  | AtomHintFunctionsPlaceholder
   deriving stock (Show, Eq, Lift, Generic)
 
 instance Hashable AtomHint
@@ -157,6 +167,7 @@ data StdlibCallCell a = StdlibCallCell
 
 data OperatorCell a = OperatorCell
   { _operatorCellOp :: NockOp,
+    _operatorCellTag :: Maybe Tag,
     _operatorCellTerm :: Term a
   }
 
@@ -179,6 +190,7 @@ encodedPathAppendRightN n (EncodedPath p) = EncodedPath (f p)
     f x = (2 ^ n) * (x + 1) - 1
 
 makeLenses ''Cell
+makeLenses ''Tag
 makeLenses ''StdlibCallCell
 makeLenses ''StdlibCall
 makeLenses ''Atom
@@ -201,8 +213,14 @@ termLoc f = \case
 cellLoc :: Lens' (Cell a) (Maybe Interval)
 cellLoc = cellInfo . cellInfoLoc . unIrrelevant
 
+cellTag :: Lens' (Cell a) (Maybe Tag)
+cellTag = cellInfo . cellInfoTag
+
 cellCall :: Lens' (Cell a) (Maybe (StdlibCall a))
 cellCall = cellInfo . cellInfoCall
+
+atomTag :: Lens' (Atom a) (Maybe Tag)
+atomTag = atomInfo . atomInfoTag
 
 atomLoc :: Lens' (Atom a) (Maybe Interval)
 atomLoc = atomInfo . atomInfoLoc . unIrrelevant
@@ -242,9 +260,14 @@ class (NockmaEq a) => NockNatural a where
   errInvalidOp :: Atom a -> ErrNockNatural a
 
   errInvalidPath :: Atom a -> ErrNockNatural a
+  errGetAtom :: ErrNockNatural a -> Atom a
 
   nockOp :: (Member (Error (ErrNockNatural a)) r) => Atom a -> Sem r NockOp
   nockOp atm = do
+    case atm ^. atomHint of
+      Just h
+        | h /= AtomHintOp -> throw (errInvalidOp atm)
+      _ -> return ()
     n <- nockNatural atm
     failWithError (errInvalidOp atm) (parseOp n)
 
@@ -264,8 +287,11 @@ nockBool = \case
   True -> nockTrue
   False -> nockFalse
 
-nockNil' :: Term Natural
-nockNil' = TermAtom nockNil
+nockNilTagged :: Text -> Term Natural
+nockNilTagged txt = TermAtom (set atomTag (Just (Tag txt)) nockNil)
+
+nockNilUntagged :: Term Natural
+nockNilUntagged = TermAtom nockNil
 
 data NockNaturalNaturalError
   = NaturalInvalidPath (Atom Natural)
@@ -289,6 +315,9 @@ instance NockNatural Natural where
   nockTrue = Atom 0 (atomHintInfo AtomHintBool)
   nockFalse = Atom 1 (atomHintInfo AtomHintBool)
   nockNil = Atom 0 (atomHintInfo AtomHintNil)
+  errGetAtom = \case
+    NaturalInvalidPath a -> a
+    NaturalInvalidOp a -> a
   nockSucc = over atom succ
   nockVoid = Atom 0 (atomHintInfo AtomHintVoid)
   errInvalidOp atm = NaturalInvalidOp atm
@@ -331,6 +360,16 @@ instance IsNock Path where
 instance IsNock EncodedPath where
   toNock = toNock . decodePath'
 
+infixr 1 @.
+
+(@.) :: Text -> Cell Natural -> Cell Natural
+tag @. c = set cellTag (Just (Tag tag)) c
+
+infixr 1 @
+
+(@) :: Text -> Cell Natural -> Term Natural
+tag @ c = TermCell (set cellTag (Just (Tag tag)) c)
+
 infixr 5 #.
 
 (#.) :: (IsNock x, IsNock y) => x -> y -> Cell Natural
@@ -350,6 +389,18 @@ infixl 1 >>#
 
 (>>#) :: (IsNock x, IsNock y) => x -> y -> Term Natural
 a >># b = TermCell (a >>#. b)
+
+opCall :: Text -> Path -> Term Natural -> Term Natural
+opCall txt p t = txt @ (OpCall #. (p # t))
+
+opReplace :: Text -> Path -> Term Natural -> Term Natural -> Term Natural
+opReplace txt p t1 t2 = txt @ OpReplace #. ((p #. t1) #. t2)
+
+opAddress :: Text -> Path -> Term Natural
+opAddress txt p = txt @ OpAddress #. p
+
+opQuote :: (IsNock x) => Text -> x -> Term Natural
+opQuote txt p = txt @ OpQuote #. p
 
 {-# COMPLETE Cell #-}
 
@@ -374,6 +425,7 @@ emptyCellInfo :: CellInfo a
 emptyCellInfo =
   CellInfo
     { _cellInfoCall = Nothing,
+      _cellInfoTag = Nothing,
       _cellInfoLoc = Irrelevant Nothing
     }
 
@@ -381,6 +433,7 @@ emptyAtomInfo :: AtomInfo
 emptyAtomInfo =
   AtomInfo
     { _atomInfoHint = Nothing,
+      _atomInfoTag = Nothing,
       _atomInfoLoc = Irrelevant Nothing
     }
 

@@ -27,7 +27,6 @@ runCommand opts@CompileOptions {..} = do
     TargetTree -> Compile.runTreePipeline arg
     TargetAsm -> Compile.runAsmPipeline arg
     TargetReg -> Compile.runRegPipeline arg
-    TargetNockma -> Compile.runNockmaPipeline arg
     TargetAnoma -> Compile.runAnomaPipeline arg
     TargetCasm -> Compile.runCasmPipeline arg
     TargetCairo -> Compile.runCairoPipeline arg

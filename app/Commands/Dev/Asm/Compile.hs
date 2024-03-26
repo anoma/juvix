@@ -81,7 +81,6 @@ runCommand opts = do
       TargetReg -> return Backend.TargetReg
       TargetCasm -> return Backend.TargetCairo
       TargetCairo -> return Backend.TargetCairo
-      TargetNockma -> err "Nockma"
       TargetAnoma -> err "Anoma"
       TargetTree -> err "JuvixTree"
       TargetGeb -> err "GEB"

@@ -13,7 +13,6 @@ data CompileTarget
   | TargetAsm
   | TargetReg
   | TargetTree
-  | TargetNockma
   | TargetAnoma
   | TargetCasm
   | TargetCairo
@@ -29,7 +28,6 @@ instance Show CompileTarget where
     TargetAsm -> "asm"
     TargetReg -> "reg"
     TargetTree -> "tree"
-    TargetNockma -> "nockma"
     TargetAnoma -> "anoma"
     TargetCasm -> "casm"
     TargetCairo -> "cairo"

@@ -5,13 +5,13 @@ import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Pretty (ppTrace)
 import Juvix.Prelude
 
-evalCompiledNock' :: (Members '[Reader EvalOptions, Output (Term Natural)] r) => Term Natural -> Term Natural -> Sem r (Term Natural)
+evalCompiledNock' :: (Members '[State OpCounts, Reader EvalOptions, Output (Term Natural)] r) => Term Natural -> Term Natural -> Sem r (Term Natural)
 evalCompiledNock' stack mainTerm = do
   evalT <-
     runError @(ErrNockNatural Natural)
       . runError @(NockEvalError Natural)
       . runReader @(Storage Natural) emptyStorage
-      $ eval stack mainTerm
+      $ evalProfile stack mainTerm
   case evalT of
     Left e -> error (show e)
     Right ev -> case ev of

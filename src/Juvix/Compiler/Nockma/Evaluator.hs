@@ -12,6 +12,37 @@ import Juvix.Compiler.Nockma.Evaluator.Options
 import Juvix.Compiler.Nockma.Evaluator.Storage
 import Juvix.Compiler.Nockma.Language
 import Juvix.Prelude hiding (Atom, Path)
+import Juvix.Prelude.Pretty
+
+newtype OpCounts = OpCounts
+  { _opCountsMap :: HashMap NockOp Int
+  }
+
+makeLenses ''OpCounts
+
+initOpCounts :: OpCounts
+initOpCounts = OpCounts mempty
+
+ignoreOpCounts :: Sem (State OpCounts ': r) a -> Sem r a
+ignoreOpCounts = evalState initOpCounts
+
+countOp :: (Members '[State OpCounts] r) => NockOp -> Sem r ()
+countOp op =
+  modify
+    ( over
+        (opCountsMap . at op)
+        ( \case
+            Nothing -> Just 1
+            Just n -> Just (n + 1)
+        )
+    )
+
+runOpCounts :: Sem (State OpCounts ': r) a -> Sem r (OpCounts, a)
+runOpCounts = runState initOpCounts
+
+instance Pretty OpCounts where
+  pretty :: OpCounts -> Doc a
+  pretty (OpCounts m) = vsepHard [pretty op <+> ":" <+> pretty (fromMaybe 0 (m ^. at op)) | op <- allElements]
 
 asAtom :: (Members '[Reader EvalCtx, Error (NockEvalError a)] r) => Term a -> Sem r (Atom a)
 asAtom = \case
@@ -55,16 +86,16 @@ subTerm term pos =
     Nothing -> throwInvalidPath term pos
     Just t -> return t
 
-setSubTerm :: forall a r. (Members '[Error (NockEvalError a)] r) => Term a -> Path -> Term a -> Sem r (Term a)
+setSubTerm :: forall a r. (Members '[Error (NockEvalError a), Reader EvalCtx] r) => Term a -> Path -> Term a -> Sem r (Term a)
 setSubTerm term pos repTerm =
   let (old, new) = setAndRemember (subTermT' pos) repTerm term
    in if
-          | isNothing (getFirst old) -> throw @(NockEvalError a) (error "")
+          | isNothing (getFirst old) -> throwInvalidPath term pos
           | otherwise -> return new
 
 parseCell ::
   forall r a.
-  (Members '[Error (NockEvalError a), Error (ErrNockNatural a)] r, NockNatural a) =>
+  (Members '[Reader EvalCtx, Error (NockEvalError a), Error (ErrNockNatural a)] r, NockNatural a) =>
   Cell a ->
   Sem r (ParsedCell a)
 parseCell c = case c ^. cellLeft of
@@ -83,10 +114,13 @@ parseCell c = case c ^. cellLeft of
 
     parseOperatorCell :: Atom a -> Term a -> Sem r (OperatorCell a)
     parseOperatorCell a t = do
-      op <- nockOp a
+      op <- catch @(ErrNockNatural a) (nockOp a) $ \e ->
+        let atm :: Atom a = errGetAtom e
+         in throwInvalidNockOp atm
       return
         OperatorCell
           { _operatorCellOp = op,
+            _operatorCellTag = c ^. cellTag,
             _operatorCellTerm = t
           }
 
@@ -132,7 +166,15 @@ eval ::
   Term a ->
   Term a ->
   Sem s (Term a)
-eval inistack initerm =
+eval initstack initterm = ignoreOpCounts (evalProfile initstack initterm)
+
+evalProfile ::
+  forall s a.
+  (Hashable a, Integral a, Members '[Reader (Storage a), State OpCounts, Reader EvalOptions, Output (Term a), Error (NockEvalError a), Error (ErrNockNatural a)] s, NockNatural a) =>
+  Term a ->
+  Term a ->
+  Sem s (Term a)
+evalProfile inistack initerm =
   topEvalCtx $
     recEval inistack initerm
   where
@@ -200,26 +242,29 @@ eval inistack initerm =
           return (TermCell (Cell l' r'))
 
         goOperatorCell :: OperatorCell a -> Sem r (Term a)
-        goOperatorCell c = case c ^. operatorCellOp of
-          OpAddress -> goOpAddress
-          OpQuote -> return goOpQuote
-          OpApply -> goOpApply
-          OpIsCell -> goOpIsCell
-          OpInc -> goOpInc
-          OpEq -> goOpEq
-          OpIf -> goOpIf
-          OpSequence -> goOpSequence
-          OpPush -> goOpPush
-          OpCall -> goOpCall
-          OpReplace -> goOpReplace
-          OpHint -> goOpHint
-          OpScry -> goOpScry
-          OpTrace -> goOpTrace
+        goOperatorCell c = do
+          countOp (c ^. operatorCellOp)
+          case c ^. operatorCellOp of
+            OpAddress -> goOpAddress
+            OpQuote -> return goOpQuote
+            OpApply -> goOpApply
+            OpIsCell -> goOpIsCell
+            OpInc -> goOpInc
+            OpEq -> goOpEq
+            OpIf -> goOpIf
+            OpSequence -> goOpSequence
+            OpPush -> goOpPush
+            OpCall -> goOpCall
+            OpReplace -> goOpReplace
+            OpHint -> goOpHint
+            OpScry -> goOpScry
+            OpTrace -> goOpTrace
           where
             crumb crumbTag =
               EvalCrumbOperator $
                 CrumbOperator
                   { _crumbOperatorOp = c ^. operatorCellOp,
+                    _crumbOperatorCellTag = c ^. operatorCellTag,
                     _crumbOperatorTag = crumbTag,
                     _crumbOperatorLoc = loc
                   }

@@ -24,20 +24,25 @@ runPrettyCode :: (PrettyCode c) => Options -> c -> Doc Ann
 runPrettyCode opts = run . runReader opts . ppCode
 
 instance (PrettyCode a, NockNatural a) => PrettyCode (Atom a) where
-  ppCode atm = runFailDefaultM (annotate (AnnKind KNameFunction) <$> ppCode (atm ^. atom))
-    . failFromError @(ErrNockNatural a)
-    $ do
-      whenM (asks (^. optIgnoreHints)) fail
-      h' <- failMaybe (atm ^. atomHint)
-      case h' of
-        AtomHintOp -> nockOp atm >>= ppCode
-        AtomHintPath -> nockPath atm >>= ppCode
-        AtomHintBool
-          | nockmaEq atm nockTrue -> return (annotate (AnnKind KNameInductive) "true")
-          | nockmaEq atm nockFalse -> return (annotate (AnnKind KNameAxiom) "false")
-          | otherwise -> fail
-        AtomHintNil -> return (annotate (AnnKind KNameConstructor) "nil")
-        AtomHintVoid -> return (annotate (AnnKind KNameAxiom) "void")
+  ppCode atm = do
+    t <- runFail $ do
+      failWhenM (asks (^. optIgnoreTags))
+      failMaybe (atm ^. atomTag) >>= ppCode
+    let def = fmap (t <?+>) (annotate (AnnKind KNameFunction) <$> ppCode (atm ^. atom))
+    fmap (t <?+>) . runFailDefaultM def . failFromError @(ErrNockNatural a) $
+      do
+        whenM (asks (^. optIgnoreHints)) fail
+        h' <- failMaybe (atm ^. atomHint)
+        case h' of
+          AtomHintOp -> nockOp atm >>= ppCode
+          AtomHintPath -> nockPath atm >>= ppCode
+          AtomHintBool
+            | nockmaEq atm nockTrue -> return (annotate (AnnKind KNameInductive) Str.true_)
+            | nockmaEq atm nockFalse -> return (annotate (AnnKind KNameAxiom) Str.false_)
+            | otherwise -> fail
+          AtomHintNil -> return (annotate (AnnKind KNameConstructor) Str.nil)
+          AtomHintVoid -> return (annotate (AnnKind KNameAxiom) Str.void)
+          AtomHintFunctionsPlaceholder -> return (annotate (AnnKind KNameAxiom) Str.functionsPlaceholder)
 
 instance PrettyCode Interval where
   ppCode = return . pretty
@@ -69,9 +74,15 @@ instance (PrettyCode a, NockNatural a) => PrettyCode (StdlibCall a) where
     args <- ppCode (c ^. stdlibCallArgs)
     return (Str.stdlibTag <> fun <+> Str.argsTag <> args)
 
+instance PrettyCode Tag where
+  ppCode (Tag txt) = return (annotate AnnKeyword Str.tagTag <> pretty txt)
+
 instance (PrettyCode a, NockNatural a) => PrettyCode (Cell a) where
   ppCode c = do
     m <- asks (^. optPrettyMode)
+    label <- runFail $ do
+      failWhenM (asks (^. optIgnoreTags))
+      failMaybe (c ^. cellTag) >>= ppCode
     stdlibCall <- runFail $ do
       failWhenM (asks (^. optIgnoreHints))
       failMaybe (c ^. cellCall) >>= ppCode
@@ -81,7 +92,7 @@ instance (PrettyCode a, NockNatural a) => PrettyCode (Cell a) where
         r' <- ppCode (c ^. cellRight)
         return (l' <+> r')
       MinimizeDelimiters -> sep <$> mapM ppCode (unfoldCell c)
-    let inside = stdlibCall <?+> components
+    let inside = label <?+> stdlibCall <?+> components
     return (oneLineOrNextBrackets inside)
 
 unfoldCell :: Cell a -> NonEmpty (Term a)

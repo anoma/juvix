@@ -1,6 +1,7 @@
 module Nockma.Compile.Tree.Positive where
 
 import Base
+import Juvix.Compiler.Nockma.Anoma
 import Juvix.Compiler.Nockma.EvalCompiled
 import Juvix.Compiler.Nockma.Evaluator qualified as NockmaEval
 import Juvix.Compiler.Nockma.Language
@@ -13,20 +14,20 @@ import Tree.Eval.Positive qualified as Tree
 
 runNockmaAssertion :: Handle -> Symbol -> InfoTable -> IO ()
 runNockmaAssertion hout _main tab = do
-  Nockma.Cell nockSubject nockMain <-
+  anomaRes :: AnomaResult <-
     runM
       . runErrorIO' @JuvixError
       . runReader opts
-      $ treeToNockma' tab
+      $ treeToAnoma' tab
   res <-
     runM
       . runOutputSem @(Term Natural)
-        (hPutStrLn hout . Nockma.ppPrint)
+        (hPutStrLn hout . Nockma.ppTest)
       . runReader NockmaEval.defaultEvalOptions
-      . evalCompiledNock' nockSubject
-      $ nockMain
+      . NockmaEval.ignoreOpCounts
+      $ evalCompiledNock' (anomaRes ^. anomaClosure) (anomaCall [])
   let ret = getReturn res
-  whenJust ret (hPutStrLn hout . Nockma.ppPrint)
+  whenJust ret (hPutStrLn hout . Nockma.ppTest)
   where
     opts :: CompilerOptions
     opts =
