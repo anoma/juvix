@@ -2,6 +2,7 @@ module Juvix.Compiler.Casm.Pretty.Base where
 
 import Juvix.Compiler.Casm.Language
 import Juvix.Compiler.Casm.Pretty.Options
+import Juvix.Compiler.Casm.Data.Result
 import Juvix.Data.CodeAnn
 import Juvix.Extra.Strings qualified as Str
 
@@ -37,6 +38,10 @@ ppWithOffset off r
   | otherwise = do
       off' <- ppOffset (-off)
       return $ r <+> Str.minus <+> off'
+
+instance PrettyCode Result where
+  ppCode Result {} = do
+    error "TODO"
 
 instance PrettyCode MemRef where
   ppCode MemRef {..} = do
