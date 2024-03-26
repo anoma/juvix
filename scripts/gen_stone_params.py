@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 #
 # This script generates appropriate Stone prover parameters with the right
 # bounds for the number of execution steps.

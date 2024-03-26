@@ -133,21 +133,21 @@ fromCasm instrs0 =
 
         goAssign :: Casm.InstrAssign -> [Element]
         goAssign Casm.InstrAssign {..} =
-          toElems $
-            updateOps False _instrAssignValue $
-              updateDst _instrAssignResult $
-                updateIncAp _instrAssignIncAp $
-                  set instrOpcode AssertEq $
-                    defaultInstruction
+          toElems
+            . updateOps False _instrAssignValue
+            . updateDst _instrAssignResult
+            . updateIncAp _instrAssignIncAp
+            . set instrOpcode AssertEq
+            $ defaultInstruction
 
         goBinop :: Bool -> Casm.Opcode -> Casm.MemRef -> Casm.MemRef -> Casm.Value -> [Element]
         goBinop incAp op res arg1 arg2 =
-          toElems $
-            updateOps False (Casm.Binop $ Casm.BinopValue op arg1 arg2) $
-              updateDst res $
-                updateIncAp incAp $
-                  set instrOpcode AssertEq $
-                    defaultInstruction
+          toElems
+            . updateOps False (Casm.Binop $ Casm.BinopValue op arg1 arg2)
+            . updateDst res
+            . updateIncAp incAp
+            . set instrOpcode AssertEq
+            $ defaultInstruction
 
         goExtraBinop :: Casm.InstrExtraBinop -> [Element]
         goExtraBinop Casm.InstrExtraBinop {..} = case _instrExtraBinopOpcode of
@@ -173,35 +173,35 @@ fromCasm instrs0 =
 
         goJump :: Casm.InstrJump -> [Element]
         goJump Casm.InstrJump {..} =
-          toElems $
-            updateOps _instrJumpRel _instrJumpTarget $
-              updateIncAp _instrJumpIncAp $
-                set instrPcUpdate pcUpdate $
-                  defaultInstruction
+          toElems
+            . updateOps _instrJumpRel _instrJumpTarget
+            . updateIncAp _instrJumpIncAp
+            . set instrPcUpdate pcUpdate
+            $ defaultInstruction
           where
             pcUpdate = if _instrJumpRel then PcUpdateJumpRel else PcUpdateJump
 
         goJumpIf :: Casm.InstrJumpIf -> [Element]
         goJumpIf Casm.InstrJumpIf {..} =
-          toElems $
-            updateOp1 True _instrJumpIfTarget $
-              updateDst _instrJumpIfValue $
-                updateIncAp _instrJumpIfIncAp $
-                  set instrPcUpdate PcUpdateJnz $
-                    defaultInstruction
+          toElems
+            . updateOp1 True _instrJumpIfTarget
+            . updateDst _instrJumpIfValue
+            . updateIncAp _instrJumpIfIncAp
+            . set instrPcUpdate PcUpdateJnz
+            $ defaultInstruction
 
         goCall :: Casm.InstrCall -> [Element]
         goCall Casm.InstrCall {..} =
-          toElems $
-            updateOp1 _instrCallRel _instrCallTarget $
-              defaultInstruction
-                { _instrOffDst = 0,
-                  _instrDstReg = Ap,
-                  _instrOffOp0 = 1,
-                  _instrOp0Reg = Ap,
-                  _instrPcUpdate = pcUpdate,
-                  _instrOpcode = Call
-                }
+          toElems
+            . updateOp1 _instrCallRel _instrCallTarget
+            $ defaultInstruction
+              { _instrOffDst = 0,
+                _instrDstReg = Ap,
+                _instrOffOp0 = 1,
+                _instrOp0Reg = Ap,
+                _instrPcUpdate = pcUpdate,
+                _instrOpcode = Call
+              }
           where
             pcUpdate = if _instrCallRel then PcUpdateJumpRel else PcUpdateJump
 
@@ -224,7 +224,7 @@ fromCasm instrs0 =
 
         goAlloc :: Casm.InstrAlloc -> [Element]
         goAlloc Casm.InstrAlloc {..} =
-          toElems $
-            updateOps False _instrAllocSize $
-              set instrApUpdate ApUpdateAdd $
-                defaultInstruction
+          toElems
+            . updateOps False _instrAllocSize
+            . set instrApUpdate ApUpdateAdd
+            $ defaultInstruction
