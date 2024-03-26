@@ -31,8 +31,7 @@ allTests =
             "Test027: Fast exponentiation",
             "Test030: Mutual recursion",
             "Test031: Temporary stack with branching",
-            "Test036: Streams without memoization",
-            "Test038: Apply & argsnum"
+            "Test036: Streams without memoization"
           ]
           P.tests
     )
