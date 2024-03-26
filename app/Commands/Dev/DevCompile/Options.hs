@@ -3,7 +3,6 @@ module Commands.Dev.DevCompile.Options where
 import Commands.Dev.DevCompile.Asm.Options
 import Commands.Dev.DevCompile.Casm.Options
 import Commands.Dev.DevCompile.Core.Options
-import Commands.Dev.DevCompile.Nockma.Options
 import Commands.Dev.DevCompile.Reg.Options
 import Commands.Dev.DevCompile.Tree.Options
 import CommonOptions
@@ -13,7 +12,6 @@ data DevCompileCommand
   | Asm AsmOptions
   | Reg RegOptions
   | Tree TreeOptions
-  | Nockma NockmaOptions
   | Casm CasmOptions
   deriving stock (Data)
 
@@ -25,7 +23,6 @@ parseDevCompileCommand =
           commandReg,
           commandTree,
           commandCasm,
-          commandNockma,
           commandAsm
         ]
     )
@@ -57,13 +54,6 @@ commandCasm =
     info
       (Casm <$> parseCasm)
       (progDesc "Compile to Juvix Casm")
-
-commandNockma :: Mod CommandFields DevCompileCommand
-commandNockma =
-  command "nockma" $
-    info
-      (Nockma <$> parseNockma)
-      (progDesc "Compile to Juvix Nockma")
 
 commandAsm :: Mod CommandFields DevCompileCommand
 commandAsm =
