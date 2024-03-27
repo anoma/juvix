@@ -4,7 +4,7 @@ import CommonOptions
 
 data InternalTypeOptions = InternalTypeOptions
   { _internalTypePrint :: Bool,
-    _internalTypeInputFile :: AppPath File
+    _internalTypeInputFile :: Maybe (AppPath File)
   }
   deriving stock (Data)
 
@@ -17,5 +17,5 @@ parseInternalType = do
       ( long "print-result"
           <> help "Print the type checked module if successful"
       )
-  _internalTypeInputFile <- parseInputFile FileExtJuvix
+  _internalTypeInputFile <- optional (parseInputFile FileExtJuvix)
   pure InternalTypeOptions {..}

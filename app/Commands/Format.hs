@@ -103,5 +103,5 @@ runScopeFileApp = interpret $ \case
             { _pathPath = mkPrepath (toFilePath p),
               _pathIsInput = False
             }
-    runPipeline appFile upToScoping
+    runPipeline (Just appFile) upToScoping
   ScopeStdin e -> runPipelineEntry e upToScoping

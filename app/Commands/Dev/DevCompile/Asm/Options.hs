@@ -8,7 +8,7 @@ import Commands.CompileNew.CommonOptions
 import CommonOptions
 
 data AsmOptions = AsmOptions
-  { _asmCompileCommonOptions :: CompileCommonOptions
+  { _asmCompileCommonOptions :: CompileCommonOptionsMain
   }
   deriving stock (Data)
 
@@ -16,5 +16,5 @@ makeLenses ''AsmOptions
 
 parseAsm :: Parser AsmOptions
 parseAsm = do
-  _asmCompileCommonOptions <- parseCompileCommonOptions
+  _asmCompileCommonOptions <- parseCompileCommonOptionsMain
   pure AsmOptions {..}

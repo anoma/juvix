@@ -5,7 +5,7 @@ import Data.Text qualified as Text
 
 data CallGraphOptions = CallGraphOptions
   { _graphFunctionNameFilter :: Maybe (NonEmpty Text),
-    _graphInputFile :: AppPath File
+    _graphInputFile :: Maybe (AppPath File)
   }
   deriving stock (Data)
 
@@ -22,5 +22,5 @@ parseCallGraph = do
               <> short 'f'
               <> help "Only shows the specified function"
           )
-  _graphInputFile <- parseInputFile FileExtJuvix
+  _graphInputFile <- optional (parseInputFile FileExtJuvix)
   pure CallGraphOptions {..}

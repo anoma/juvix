@@ -19,6 +19,4 @@ getOutputFile ext inp mout = do
       return (replaceExtension' (unpack (fileExtToText ext)) mainFile)
 
 compileToCore :: (Members '[App, EmbedIO, TaggedLock] r) => CompileCommonOptions -> Sem r Core.CoreResult
-compileToCore opts = do
-  inputFile <- getMainFile (opts ^. compileInputFile)
-  runPipeline (AppPath (preFileFromAbs inputFile) True) upToCore
+compileToCore opts = runPipeline (Just (opts ^. compileInputFile)) upToCore

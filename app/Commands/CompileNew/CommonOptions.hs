@@ -1,10 +1,17 @@
 module Commands.CompileNew.CommonOptions where
 
+import App
 import CommonOptions
 import Juvix.Compiler.Pipeline.EntryPoint
 
-data CompileCommonOptions = CompileCommonOptions
-  { _compileInputFile :: Maybe (AppPath File),
+-- | If the input file can be defaulted to the `main` in the `package.yaml` file, we
+-- can omit the input file.
+type CompileCommonOptionsMain = CompileCommonOptions' (Maybe (AppPath File))
+
+type CompileCommonOptions = CompileCommonOptions' (AppPath File)
+
+data CompileCommonOptions' inputFile = CompileCommonOptions
+  { _compileInputFile :: inputFile,
     _compileOutputFile :: Maybe (AppPath File),
     _compileDebug :: Bool,
     _compileInliningDepth :: Int,
@@ -12,15 +19,23 @@ data CompileCommonOptions = CompileCommonOptions
   }
   deriving stock (Data)
 
-makeLenses ''CompileCommonOptions
+makeLenses ''CompileCommonOptions'
+
+parseCompileCommonOptionsMain ::
+  Parser CompileCommonOptionsMain
+parseCompileCommonOptionsMain =
+  parseCompileCommonOptionsGeneric
+    (optional (parseInputFile FileExtJuvix))
 
 parseCompileCommonOptions ::
   Parser CompileCommonOptions
-parseCompileCommonOptions = parseCompileCommonOptionsGeneric (parseInputFile FileExtJuvix)
+parseCompileCommonOptions =
+  parseCompileCommonOptionsGeneric
+    (parseInputFile FileExtJuvix)
 
 parseCompileCommonOptionsGeneric ::
-  Parser (AppPath File) ->
-  Parser CompileCommonOptions
+  Parser inputFile ->
+  Parser (CompileCommonOptions' inputFile)
 parseCompileCommonOptionsGeneric parserFile = do
   _compileDebug <-
     switch
@@ -45,5 +60,8 @@ parseCompileCommonOptionsGeneric parserFile = do
           <> help ("Automatic inlining depth limit, logarithmic in the function size (default: " <> show defaultInliningDepth <> ")")
       )
   _compileOutputFile <- optional parseGenericOutputFile
-  _compileInputFile <- optional parserFile
+  _compileInputFile <- parserFile
   pure CompileCommonOptions {..}
+
+fromCompileCommonOptionsMain :: (Members '[App] r) => CompileCommonOptionsMain -> Sem r CompileCommonOptions
+fromCompileCommonOptionsMain = undefined

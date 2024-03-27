@@ -10,7 +10,7 @@ import Commands.CompileNew.CStage
 import Commands.CompileNew.CommonOptions
 
 data NativeOptions = NativeOptions
-  { _nativeCompileCommonOptions :: CompileCommonOptions,
+  { _nativeCompileCommonOptions :: CompileCommonOptionsMain,
     _nativeCStage :: CStage
   }
   deriving stock (Data)
@@ -19,7 +19,7 @@ makeLenses ''NativeOptions
 
 parseNative :: Parser NativeOptions
 parseNative = do
-  _nativeCompileCommonOptions <- parseCompileCommonOptions
+  _nativeCompileCommonOptions <- parseCompileCommonOptionsMain
   _nativeCStage <- parseCStage
   pure NativeOptions {..}
 

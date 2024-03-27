@@ -8,7 +8,7 @@ import Commands.CompileNew.CommonOptions
 import CommonOptions
 
 data TreeOptions = TreeOptions
-  { _treeCompileCommonOptions :: CompileCommonOptions
+  { _treeCompileCommonOptions :: CompileCommonOptionsMain
   }
   deriving stock (Data)
 
@@ -16,5 +16,5 @@ makeLenses ''TreeOptions
 
 parseTree :: Parser TreeOptions
 parseTree = do
-  _treeCompileCommonOptions <- parseCompileCommonOptions
+  _treeCompileCommonOptions <- parseCompileCommonOptionsMain
   pure TreeOptions {..}

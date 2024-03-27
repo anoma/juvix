@@ -9,27 +9,28 @@ import Juvix.Extra.Paths
 import System.Environment
 import System.Process qualified as P
 
+runCommandMain :: forall r. (Members '[EmbedIO, App] r) => CompileOptionsMain -> Sem r ()
+runCommandMain = fromCompileOptionsMain >=> runCommand
+
 runCommand :: forall r. (Members '[EmbedIO, App] r) => CompileOptions -> Sem r ()
 runCommand opts = do
-  inputFile <- getMainFile (opts ^. compileInputFile)
-  result <- runCompile inputFile opts
+  result <- runCompile opts
   case result of
     Left err -> printFailureExit err
     _ -> return ()
 
 runCompile ::
   (Members '[App, EmbedIO] r) =>
-  Path Abs File ->
   CompileOptions ->
   Sem r (Either Text ())
-runCompile inputFile o = do
+runCompile opts = do
   buildDir <- askBuildDir
   ensureDir buildDir
   ensureDir (juvixIncludeDir buildDir)
-  prepareRuntime buildDir o
-  case o ^. compileTarget of
-    TargetWasm32Wasi -> runError (clangWasmWasiCompile inputFile o)
-    TargetNative64 -> runError (clangNativeCompile inputFile o)
+  prepareRuntime buildDir opts
+  case opts ^. compileTarget of
+    TargetWasm32Wasi -> runError (clangWasmWasiCompile opts)
+    TargetNative64 -> runError (clangNativeCompile opts)
     TargetGeb -> return (Right ())
     TargetVampIR -> return (Right ())
     TargetCore -> return (Right ())
@@ -130,10 +131,10 @@ outputFile opts inputFile =
 clangNativeCompile ::
   forall r.
   (Members '[App, EmbedIO, Error Text] r) =>
-  Path Abs File ->
   CompileOptions ->
   Sem r ()
-clangNativeCompile inputFile o = do
+clangNativeCompile o = do
+  inputFile <- getMainFile (Just (o ^. compileInputFile))
   outputFile' <- outputFile o inputFile
   buildDir <- askBuildDir
   if
@@ -145,10 +146,10 @@ clangNativeCompile inputFile o = do
 clangWasmWasiCompile ::
   forall r.
   (Members '[App, EmbedIO, Error Text] r) =>
-  Path Abs File ->
   CompileOptions ->
   Sem r ()
-clangWasmWasiCompile inputFile o = do
+clangWasmWasiCompile o = do
+  inputFile <- getMainFile (Just (o ^. compileInputFile))
   outputFile' <- outputFile o inputFile
   buildDir <- askBuildDir
   if
