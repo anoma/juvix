@@ -10,6 +10,7 @@ import Juvix.Data.PPOutput
 
 compileAssertion ::
   Path Abs Dir ->
+  Bool ->
   Int ->
   Path Abs File ->
   Path Abs File ->
@@ -20,12 +21,13 @@ compileAssertion = compileAssertionEntry (\e -> e {_entryPointFieldSize = cairoF
 compileAssertionEntry ::
   (EntryPoint -> EntryPoint) ->
   Path Abs Dir ->
+  Bool ->
   Int ->
   Path Abs File ->
   Path Abs File ->
   (String -> IO ()) ->
   Assertion
-compileAssertionEntry adjustEntry root' optLevel mainFile expectedFile step = do
+compileAssertionEntry adjustEntry root' bRunVM optLevel mainFile expectedFile step = do
   step "Translate to JuvixCore"
   entryPoint <- adjustEntry <$> testDefaultEntryPointIO root' mainFile
   PipelineResult {..} <- snd <$> testRunIO entryPoint upToStoredCore
@@ -37,7 +39,7 @@ compileAssertionEntry adjustEntry root' optLevel mainFile expectedFile step = do
       withTempDir'
         ( \dirPath -> do
             let tmpFile = dirPath <//> $(mkRelFile "tmp.out")
-            step "Serialize"
+            step "Pretty print"
             writeFileEnsureLn tmpFile (toPlainText $ ppProgram _resultCode)
         )
-      casmRunAssertion' False _resultLabelInfo _resultCode expectedFile step
+      casmRunAssertion' bRunVM _resultLabelInfo _resultCode expectedFile step

@@ -22,7 +22,7 @@ toCTransformations :: [TransformationId]
 toCTransformations = [Cleanup]
 
 toCasmTransformations :: [TransformationId]
-toCasmTransformations = [Cleanup, SSA, InitBranchVars]
+toCasmTransformations = [Cleanup, SSA]
 
 instance TransformationId' TransformationId where
   transformationText :: TransformationId -> Text

@@ -15,6 +15,7 @@ compileAssertion' _ outputFile _ tab step = do
   case run $ runError @JuvixError $ regToCasm tab of
     Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
     Right Result {..} -> do
+      step "Interpret"
       hout <- openFile (toFilePath outputFile) WriteMode
       let v = hRunCode hout _resultLabelInfo _resultCode
       hPrint hout v

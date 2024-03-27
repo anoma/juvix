@@ -10,18 +10,18 @@ function loop() : * {
 function main() : * {
   tmp[0] = 3;
   tmp[1] = 0;
-  tmp[0] = lt tmp[1] tmp[0];
+  tmp[0] = eq tmp[1] tmp[0];
   br tmp[0], out: tmp[0] {
     true: {
-      tmp[0] = 1;
+      tmp[0] = call loop ();
     };
     false: {
-      tmp[0] = call loop ();
+      tmp[0] = 1;
     };
   };
   tmp[1] = 1;
   tmp[2] = 2;
-  tmp[1] = le tmp[2] tmp[1];
+  tmp[1] = eq tmp[2] tmp[1];
   br tmp[1], out: tmp[1] {
     true: {
       tmp[1] = call loop (), live: (tmp[0]);
@@ -29,7 +29,7 @@ function main() : * {
     false: {
       tmp[1] = 7;
       tmp[2] = 8;
-      tmp[1] = le tmp[2] tmp[1];
+      tmp[1] = eq tmp[2] tmp[1];
       br tmp[1], out: tmp[1] {
         true: {
           tmp[1] = call loop (), live: (tmp[0]);
