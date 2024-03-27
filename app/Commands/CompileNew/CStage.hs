@@ -2,6 +2,7 @@
 module Commands.CompileNew.CStage where
 
 import CommonOptions
+import Juvix.Prelude as Juvix
 import Juvix.Prelude.Pretty
 import Prelude (show)
 
@@ -22,6 +23,13 @@ instance Show CStage where
 instance Pretty CStage where
   pretty = pretty . Prelude.show
 
+cstageHelp :: forall str. (IsString str) => CStage -> str
+cstageHelp = \case
+  CSource -> "Produce .c code only"
+  CPreprocess -> "Run the C preprocessor only"
+  CAssembly -> "Produce .s assembly code only"
+  CExecutable -> "Produce an executable"
+
 cstageCompleter :: Completer
 cstageCompleter = enumCompleter (Proxy @CStage)
 
@@ -35,11 +43,11 @@ parseCStage = do
       ( short 'C'
           <> long "only-c"
           <> help
-            ( "DEPRECATED: Produce C output only. Use `--"
+            ( "DEPRECATED: Produce C output only. Use '--"
                 <> cstageStr
                 <> " "
                 <> Prelude.show CSource
-                <> "source` instead"
+                <> "source' instead"
             )
       )
   onlyPreprocess <-
@@ -47,11 +55,11 @@ parseCStage = do
       ( short 'E'
           <> long "only-preprocess"
           <> help
-            ( "DEPRECATED: Run the C preprocessor only. Use `--"
+            ( "DEPRECATED: Run the C preprocessor only. Use '--"
                 <> cstageStr
                 <> " "
                 <> Prelude.show CPreprocess
-                <> "` instead"
+                <> "' instead"
             )
       )
   onlyAssemble <-
@@ -59,11 +67,11 @@ parseCStage = do
       ( short 'S'
           <> long "only-assemble"
           <> help
-            ( "DEPRECATED: Produce assembly output only. Use Use `--"
+            ( "DEPRECATED: Produce assembly output only. Use Use '--"
                 <> cstageStr
                 <> " "
                 <> Prelude.show CAssembly
-                <> "` instead"
+                <> "' instead"
             )
       )
 
@@ -74,7 +82,10 @@ parseCStage = do
           <> metavar "CSTAGE"
           <> value Nothing
           <> completer cstageCompleter
-          <> help "Stop the compilation after the specified stage. Hint: use autocomplete"
+          <> help
+            ( "Select the type of output. Available options:\n"
+                <> toPlainString (itemize ["'" <> Juvix.show s <> "'" <> ": " <> cstageHelp s | s <- allElements @CStage])
+            )
       )
   pure $
     if
