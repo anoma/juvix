@@ -173,27 +173,23 @@ getEntryPoint :: (Members '[EmbedIO, App, TaggedLock] r) => AppPath File -> Sem 
 getEntryPoint inputFile = do
   _runAppIOArgsGlobalOptions <- askGlobalOptions
   _runAppIOArgsRoot <- askRoot
-  getEntryPoint' (RunAppIOArgs {..}) inputFile
+  getEntryPoint' RunAppIOArgs {..} inputFile
 
 getEntryPointStdin :: (Members '[EmbedIO, App, TaggedLock] r) => Sem r EntryPoint
 getEntryPointStdin = do
   _runAppIOArgsGlobalOptions <- askGlobalOptions
   _runAppIOArgsRoot <- askRoot
-  getEntryPointStdin' (RunAppIOArgs {..})
+  getEntryPointStdin' RunAppIOArgs {..}
 
 runPipelineTermination :: (Members '[EmbedIO, App, TaggedLock] r) => AppPath File -> Sem (Termination ': PipelineEff r) a -> Sem r (PipelineResult a)
 runPipelineTermination input_ p = do
-  r <- runPipelineEither input_ (evalTermination iniTerminationState p)
-  case r of
-    Left err -> exitJuvixError err
-    Right res -> return (snd res)
+  r <- runPipelineEither input_ (evalTermination iniTerminationState p) >>= fromRightJuvixError
+  return (snd r)
 
 runPipeline :: (Members '[App, EmbedIO, TaggedLock] r) => AppPath File -> Sem (PipelineEff r) a -> Sem r a
 runPipeline input_ p = do
-  r <- runPipelineEither input_ p
-  case r of
-    Left err -> exitJuvixError err
-    Right res -> return (snd res ^. pipelineResult)
+  r <- runPipelineEither input_ p >>= fromRightJuvixError
+  return (snd r ^. pipelineResult)
 
 runPipelineHtml :: (Members '[App, EmbedIO, TaggedLock] r) => Bool -> AppPath File -> Sem r (InternalTypedResult, [InternalTypedResult])
 runPipelineHtml bNonRecursive input_
@@ -203,24 +199,17 @@ runPipelineHtml bNonRecursive input_
   | otherwise = do
       args <- askArgs
       entry <- getEntryPoint' args input_
-      r <- runPipelineHtmlEither entry
-      case r of
-        Left err -> exitJuvixError err
-        Right res -> return res
+      runPipelineHtmlEither entry >>= fromRightJuvixError
 
 runPipelineEntry :: (Members '[App, EmbedIO, TaggedLock] r) => EntryPoint -> Sem (PipelineEff r) a -> Sem r a
 runPipelineEntry entry p = do
-  r <- runIOEither entry p
-  case r of
-    Left err -> exitJuvixError err
-    Right res -> return (snd res ^. pipelineResult)
+  r <- runIOEither entry p >>= fromRightJuvixError
+  return (snd r ^. pipelineResult)
 
 runPipelineSetup :: (Members '[App, EmbedIO, TaggedLock] r) => Sem (PipelineEff' r) a -> Sem r a
 runPipelineSetup p = do
-  r <- runPipelineSetupEither p
-  case r of
-    Left err -> exitJuvixError err
-    Right res -> return (snd res)
+  r <- runPipelineSetupEither p >>= fromRightJuvixError
+  return (snd r)
 
 newline :: (Member App r) => Sem r ()
 newline = say ""
