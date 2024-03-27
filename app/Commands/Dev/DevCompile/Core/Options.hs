@@ -11,7 +11,8 @@ import Juvix.Compiler.Core.Data.TransformationId
 import Juvix.Compiler.Core.Pretty.Options qualified as Core
 
 data CoreOptions = CoreOptions
-  { _coreTransformations :: [TransformationId],
+  { _coreCompileCommonOptions :: CompileCommonOptionsMain,
+    _coreTransformations :: [TransformationId],
     _coreShowDeBruijn :: Bool,
     _coreShowIdentIds :: Bool,
     _coreShowArgsNum :: Bool,
@@ -20,7 +21,6 @@ data CoreOptions = CoreOptions
     _coreNoIO :: Bool,
     _coreEval :: Bool,
     _coreNormalize :: Bool,
-    _coreCompileCommonOptions :: CompileCommonOptions,
     _coreSymbolName :: Maybe Text
   }
   deriving stock (Data)
@@ -38,7 +38,8 @@ instance CanonicalProjection CoreOptions Core.Options where
 instance CanonicalProjection CoreOptions Eval.EvalOptions where
   project c =
     Eval.EvalOptions
-      { _evalInputFile = c ^. coreCompileCommonOptions . compileInputFile,
+      { -- _evalInputFile = c ^. coreCompileCommonOptions . compileInputFile,
+        _evalInputFile = undefined,
         _evalNoIO = c ^. coreNoIO,
         _evalNoDisambiguate = c ^. coreNoDisambiguate,
         _evalPrintValues = False
@@ -80,5 +81,5 @@ parseCoreOptions = do
             <> help "Print/eval a specific function identifier (default for eval: main)"
             <> metavar "NAME"
         )
-  _coreCompileCommonOptions <- parseCompileCommonOptions
+  _coreCompileCommonOptions <- parseCompileCommonOptionsMain
   pure CoreOptions {..}

@@ -29,6 +29,7 @@ data App :: Effect where
   AskPackageGlobal :: App m Bool
   AskGlobalOptions :: App m GlobalOptions
   FromAppPathFile :: AppPath File -> App m (Path Abs File)
+  GetMainAppFile :: Maybe (AppPath File) -> App m (AppPath File)
   GetMainFile :: Maybe (AppPath File) -> App m (Path Abs File)
   FromAppPathDir :: AppPath Dir -> App m (Path Abs Dir)
   RenderStdOut :: (HasAnsiBackend a, HasTextBackend a) => a -> App m ()
@@ -63,6 +64,7 @@ reAppIO args@RunAppIOArgs {..} =
   interpretTop $ \case
     AskPackageGlobal -> return (_runAppIOArgsRoot ^. rootPackageType `elem` [GlobalStdlib, GlobalPackageDescription, GlobalPackageBase])
     FromAppPathFile p -> prepathToAbsFile invDir (p ^. pathPath)
+    GetMainAppFile m -> getMainAppFile' m
     GetMainFile m -> getMainFile' m
     FromAppPathDir p -> liftIO (prepathToAbsDir invDir (p ^. pathPath))
     RenderStdOut t
@@ -96,12 +98,22 @@ reAppIO args@RunAppIOArgs {..} =
     exitMsg' onExit t = liftIO (putStrLn t >> hFlush stdout >> onExit)
 
     getMainFile' :: (Members '[SCache Package, EmbedIO] r') => Maybe (AppPath File) -> Sem r' (Path Abs File)
-    getMainFile' = \case
-      Just p -> prepathToAbsFile invDir (p ^. pathPath)
+    getMainFile' m = do
+      f <- getMainAppFile' m
+      prepathToAbsFile invDir (f ^. pathPath)
+
+    getMainAppFile' :: (Members '[SCache Package, EmbedIO] r') => Maybe (AppPath File) -> Sem r' (AppPath File)
+    getMainAppFile' = \case
+      Just p -> return p
       Nothing -> do
         pkg <- getPkg
         case pkg ^. packageMain of
-          Just p -> prepathToAbsFile invDir p
+          Just p ->
+            return
+              AppPath
+                { _pathPath = p,
+                  _pathIsInput = True
+                }
           Nothing -> missingMainErr
 
     missingMainErr :: (Members '[EmbedIO] r') => Sem r' x
@@ -121,7 +133,7 @@ reAppIO args@RunAppIOArgs {..} =
         . runReader (project' @GenericOptions g)
         $ Error.render (not (_runAppIOArgsGlobalOptions ^. globalNoColors)) (g ^. globalOnlyErrors) e
 
-getEntryPoint' :: (Members '[EmbedIO, TaggedLock] r) => RunAppIOArgs -> AppPath File -> Sem r EntryPoint
+getEntryPoint' :: (Members '[App, EmbedIO, TaggedLock] r) => RunAppIOArgs -> Maybe (AppPath File) -> Sem r EntryPoint
 getEntryPoint' RunAppIOArgs {..} inputFile = do
   let opts = _runAppIOArgsGlobalOptions
       root = _runAppIOArgsRoot
@@ -129,9 +141,10 @@ getEntryPoint' RunAppIOArgs {..} inputFile = do
     if
         | opts ^. globalStdin -> Just <$> liftIO getContents
         | otherwise -> return Nothing
-  set entryPointStdin estdin <$> entryPointFromGlobalOptionsPre root (inputFile ^. pathPath) opts
+  mainFile <- getMainAppFile inputFile
+  set entryPointStdin estdin <$> entryPointFromGlobalOptionsPre root (mainFile ^. pathPath) opts
 
-runPipelineEither :: (Members '[EmbedIO, TaggedLock, App] r) => AppPath File -> Sem (PipelineEff r) a -> Sem r (Either JuvixError (ResolverState, PipelineResult a))
+runPipelineEither :: (Members '[EmbedIO, TaggedLock, App] r) => Maybe (AppPath File) -> Sem (PipelineEff r) a -> Sem r (Either JuvixError (ResolverState, PipelineResult a))
 runPipelineEither input_ p = do
   args <- askArgs
   entry <- getEntryPoint' args input_
@@ -153,8 +166,11 @@ getEntryPointStdin' RunAppIOArgs {..} = do
         | otherwise -> return Nothing
   set entryPointStdin estdin <$> entryPointFromGlobalOptionsNoFile root opts
 
+fromRightGenericError :: (Members '[App] r, ToGenericError err, Typeable err) => Either err a -> Sem r a
+fromRightGenericError = fromRightJuvixError . mapLeft JuvixError
+
 fromRightJuvixError :: (Members '[App] r) => Either JuvixError a -> Sem r a
-fromRightJuvixError = either exitJuvixError return
+fromRightJuvixError = getRight
 
 someBaseToAbs' :: (Members '[App] r) => SomeBase a -> Sem r (Path Abs a)
 someBaseToAbs' f = do
@@ -169,7 +185,7 @@ filePathToAbs fp = do
 askGenericOptions :: (Members '[App] r) => Sem r GenericOptions
 askGenericOptions = project <$> askGlobalOptions
 
-getEntryPoint :: (Members '[EmbedIO, App, TaggedLock] r) => AppPath File -> Sem r EntryPoint
+getEntryPoint :: (Members '[EmbedIO, App, TaggedLock] r) => Maybe (AppPath File) -> Sem r EntryPoint
 getEntryPoint inputFile = do
   _runAppIOArgsGlobalOptions <- askGlobalOptions
   _runAppIOArgsRoot <- askRoot
@@ -181,17 +197,17 @@ getEntryPointStdin = do
   _runAppIOArgsRoot <- askRoot
   getEntryPointStdin' RunAppIOArgs {..}
 
-runPipelineTermination :: (Members '[EmbedIO, App, TaggedLock] r) => AppPath File -> Sem (Termination ': PipelineEff r) a -> Sem r (PipelineResult a)
+runPipelineTermination :: (Members '[EmbedIO, App, TaggedLock] r) => Maybe (AppPath File) -> Sem (Termination ': PipelineEff r) a -> Sem r (PipelineResult a)
 runPipelineTermination input_ p = do
   r <- runPipelineEither input_ (evalTermination iniTerminationState p) >>= fromRightJuvixError
   return (snd r)
 
-runPipeline :: (Members '[App, EmbedIO, TaggedLock] r) => AppPath File -> Sem (PipelineEff r) a -> Sem r a
+runPipeline :: (Members '[App, EmbedIO, TaggedLock] r) => Maybe (AppPath File) -> Sem (PipelineEff r) a -> Sem r a
 runPipeline input_ p = do
   r <- runPipelineEither input_ p >>= fromRightJuvixError
   return (snd r ^. pipelineResult)
 
-runPipelineHtml :: (Members '[App, EmbedIO, TaggedLock] r) => Bool -> AppPath File -> Sem r (InternalTypedResult, [InternalTypedResult])
+runPipelineHtml :: (Members '[App, EmbedIO, TaggedLock] r) => Bool -> Maybe (AppPath File) -> Sem r (InternalTypedResult, [InternalTypedResult])
 runPipelineHtml bNonRecursive input_
   | bNonRecursive = do
       r <- runPipeline input_ upToInternalTyped
@@ -220,7 +236,7 @@ printSuccessExit = exitMsg ExitSuccess
 printFailureExit :: (Member App r) => Text -> Sem r a
 printFailureExit = exitMsg (ExitFailure 1)
 
-getRight :: (Members '[App] r, AppError e) => Either e a -> Sem r a
+getRight :: forall e a r. (Members '[App] r, AppError e) => Either e a -> Sem r a
 getRight = either appError return
 
 instance AppError Text where

@@ -25,7 +25,6 @@ parseHighlight = do
           <> help "selects a backend. FORMAT = emacs | json"
           <> completeWith (map show allBackends)
       )
-
   _highlightInputFile <- parseInputFile FileExtJuvix
   pure HighlightOptions {..}
   where

@@ -16,7 +16,7 @@ runCommand localOpts = do
   gopts <- askGlobalOptions
   let inputFile = localOpts ^. coreCompileCommonOptions . compileInputFile
   md <- (^. coreResultModule) <$> runPipeline inputFile upToCore
-  path :: Path Abs File <- fromAppPathFile inputFile
+  mainFile :: Path Abs File <- getMainFile inputFile
   let r =
         run
           . runReader (project @GlobalOptions @Core.CoreOptions gopts)
@@ -27,7 +27,7 @@ runCommand localOpts = do
       inInputModule :: IdentifierInfo -> Bool
       inInputModule x
         | not (localOpts ^. coreFilter) = True
-        | otherwise = x ^? identifierLocation . _Just . intervalFile == Just path
+        | otherwise = x ^? identifierLocation . _Just . intervalFile == Just mainFile
 
       mainIdens :: [IdentifierInfo] =
         sortOn

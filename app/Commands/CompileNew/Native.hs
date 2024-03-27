@@ -6,5 +6,5 @@ import Commands.Extra.NewCompile
 
 runCommand :: (Members '[App, TaggedLock, EmbedIO] r) => NativeOptions -> Sem r ()
 runCommand opts = do
-  coreRes <- compileToCore (opts ^. nativeCompileCommonOptions)
+  coreRes <- fromCompileCommonOptionsMain (opts ^. nativeCompileCommonOptions) >>= compileToCore
   undefined

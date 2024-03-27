@@ -8,7 +8,7 @@ import Juvix.Compiler.Internal.Pretty.Options qualified as Internal
 data CallsOptions = CallsOptions
   { _callsFunctionNameFilter :: Maybe (NonEmpty Text),
     _callsShowDecreasingArgs :: Internal.ShowDecrArgs,
-    _callsInputFile :: AppPath File
+    _callsInputFile :: Maybe (AppPath File)
   }
   deriving stock (Data)
 
@@ -34,7 +34,7 @@ parseCalls = do
           <> value Internal.ArgRel
           <> help "possible values: argument, relation, both"
       )
-  _callsInputFile <- parseInputFile FileExtJuvix
+  _callsInputFile <- optional (parseInputFile FileExtJuvix)
   pure CallsOptions {..}
   where
     decrArgsParser :: ReadM Internal.ShowDecrArgs

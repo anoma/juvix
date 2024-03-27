@@ -5,7 +5,7 @@ import GlobalOptions
 import Juvix.Compiler.Concrete.Pretty qualified as Scoper
 
 data ScopeOptions = ScopeOptions
-  { _scopeInputFile :: AppPath File,
+  { _scopeInputFile :: Maybe (AppPath File),
     _scopeWithComments :: Bool,
     _scopeListComments :: Bool
   }
@@ -25,7 +25,7 @@ parseScope = do
       ( long "list-comments"
           <> help "List the user comments"
       )
-  _scopeInputFile <- parseInputFile FileExtJuvix
+  _scopeInputFile <- optional (parseInputFile FileExtJuvix)
   pure ScopeOptions {..}
 
 instance CanonicalProjection (GlobalOptions, ScopeOptions) Scoper.Options where

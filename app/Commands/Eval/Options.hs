@@ -1,12 +1,11 @@
 module Commands.Eval.Options where
 
 import CommonOptions
-import Data.List.NonEmpty qualified as NonEmpty
 import Evaluator qualified as Eval
 import Juvix.Compiler.Core.Pretty.Options qualified as Core
 
 data EvalOptions = EvalOptions
-  { _evalInputFile :: AppPath File,
+  { _evalInputFile :: Maybe (AppPath File),
     _evalSymbolName :: Maybe Text
   }
   deriving stock (Data)
@@ -22,7 +21,8 @@ instance CanonicalProjection EvalOptions Core.Options where
 instance CanonicalProjection EvalOptions Eval.EvalOptions where
   project c =
     Eval.EvalOptions
-      { _evalInputFile = c ^. evalInputFile,
+      { -- _evalInputFile = c ^. evalInputFile,
+        _evalInputFile = undefined,
         _evalNoIO = False,
         _evalNoDisambiguate = False,
         _evalPrintValues = True
@@ -30,7 +30,7 @@ instance CanonicalProjection EvalOptions Eval.EvalOptions where
 
 parseEvalOptions :: Parser EvalOptions
 parseEvalOptions = do
-  _evalInputFile <- parseInputFiles (NonEmpty.fromList [FileExtJuvix, FileExtJuvixMarkdown])
+  _evalInputFile <- optional (parseInputFiles (FileExtJuvix :| [FileExtJuvixMarkdown]))
   _evalSymbolName <-
     optional $
       strOption
