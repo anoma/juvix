@@ -2,6 +2,9 @@ module Commands.CompileNew.Native where
 
 import Commands.Base
 import Commands.CompileNew.Native.Options
+import Commands.Extra.NewCompile
 
-runCommand :: NativeOptions -> Sem r ()
-runCommand = undefined
+runCommand :: (Members '[App, TaggedLock, EmbedIO] r) => NativeOptions -> Sem r ()
+runCommand opts = do
+  coreRes <- compileToCore (opts ^. nativeCompileCommonOptions)
+  undefined

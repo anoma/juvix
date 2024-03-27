@@ -25,7 +25,7 @@ parseNative = do
 
 nativeOutputAppFile :: (Member App r) => NativeOptions -> Sem r (Path Abs File)
 nativeOutputAppFile opts = do
-  inputFile <- fromAppPathFile (opts ^. nativeCompileCommonOptions . compileInputFile)
+  inputFile <- getMainFile (opts ^. nativeCompileCommonOptions . compileInputFile)
   invokeDir <- askInvokeDir
   let baseOutputFile = invokeDir <//> filename inputFile
   return $ case opts ^. nativeCStage of

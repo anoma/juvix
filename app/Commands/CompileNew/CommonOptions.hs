@@ -4,7 +4,7 @@ import CommonOptions
 import Juvix.Compiler.Pipeline.EntryPoint
 
 data CompileCommonOptions = CompileCommonOptions
-  { _compileInputFile :: AppPath File,
+  { _compileInputFile :: Maybe (AppPath File),
     _compileOutputFile :: Maybe (AppPath File),
     _compileDebug :: Bool,
     _compileInliningDepth :: Int,
@@ -45,5 +45,5 @@ parseCompileCommonOptionsGeneric parserFile = do
           <> help ("Automatic inlining depth limit, logarithmic in the function size (default: " <> show defaultInliningDepth <> ")")
       )
   _compileOutputFile <- optional parseGenericOutputFile
-  _compileInputFile <- parserFile
+  _compileInputFile <- optional parserFile
   pure CompileCommonOptions {..}
