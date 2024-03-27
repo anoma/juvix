@@ -1,3 +1,4 @@
+-- DEPRECATED -- TODO remove file
 module Commands.Extra.Compile where
 
 import Commands.Base

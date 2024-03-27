@@ -4,7 +4,7 @@ import CommonOptions
 import Juvix.Compiler.Pipeline.EntryPoint
 
 data CompileCommonOptions = CompileCommonOptions
-  { _compileInputFile :: (AppPath File),
+  { _compileInputFile :: AppPath File,
     _compileOutputFile :: Maybe (AppPath File),
     _compileDebug :: Bool,
     _compileInliningDepth :: Int,
