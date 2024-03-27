@@ -153,6 +153,9 @@ getEntryPointStdin' RunAppIOArgs {..} = do
         | otherwise -> return Nothing
   set entryPointStdin estdin <$> entryPointFromGlobalOptionsNoFile root opts
 
+fromRightJuvixError :: (Members '[App] r) => Either JuvixError a -> Sem r a
+fromRightJuvixError = either exitJuvixError return
+
 someBaseToAbs' :: (Members '[App] r) => SomeBase a -> Sem r (Path Abs a)
 someBaseToAbs' f = do
   r <- askInvokeDir

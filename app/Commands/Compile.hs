@@ -36,8 +36,6 @@ writeCoreFile pa@Compile.PipelineArg {..} = do
   entryPoint <- Compile.getEntry pa
   coreFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
   r <- runReader entryPoint . runError @JuvixError $ Core.toStored _pipelineArgModule
-  case r of
-    Left e -> exitJuvixError e
-    Right md -> do
-      let txt = show (Core.ppOutDefault (Core.disambiguateNames md ^. Core.moduleInfoTable))
-      writeFileEnsureLn coreFile txt
+  md <- fromRightJuvixError r
+  let txt = show (Core.ppOutDefault (Core.disambiguateNames md ^. Core.moduleInfoTable))
+  writeFileEnsureLn coreFile txt
