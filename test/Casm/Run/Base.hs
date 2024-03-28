@@ -14,10 +14,7 @@ import Runtime.Base qualified as R
 
 casmRunVM' :: Path Abs Dir -> Path Abs File -> IO Text
 casmRunVM' dirPath outputFile = do
-  dir <- getCurrentDir
-  setCurrentDir dirPath
-  out0 <- R.readProcess "run_cairo_vm.sh" [toFilePath outputFile] ""
-  setCurrentDir dir
+  out0 <- R.readProcessCwd (toFilePath dirPath) "run_cairo_vm.sh" [toFilePath outputFile] ""
   return $ fromString $ unlines $ drop 1 $ lines (fromText out0)
 
 casmRunVM :: LabelInfo -> Code -> Path Abs File -> (String -> IO ()) -> Assertion

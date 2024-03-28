@@ -26,7 +26,13 @@ clangCompile mkClangArgs inputFile outputFile execute step =
 -- | The same as `P.readProcess` but instead of inheriting `stderr` redirects it
 -- to the child's `stdout`.
 readProcess :: FilePath -> [String] -> Text -> IO Text
-readProcess cmd args stdinText =
+readProcess = readProcessCwd' Nothing
+
+readProcessCwd :: FilePath -> FilePath -> [String] -> Text -> IO Text
+readProcessCwd cwd = readProcessCwd' (Just cwd)
+
+readProcessCwd' :: Maybe FilePath -> FilePath -> [String] -> Text -> IO Text
+readProcessCwd' mcwd cmd args stdinText =
   withTempDir'
     ( \dirPath -> do
         (_, hin) <- openTempFile dirPath "stdin"
@@ -39,7 +45,8 @@ readProcess cmd args stdinText =
             (P.proc cmd args)
               { P.std_in = P.UseHandle hin,
                 P.std_out = P.UseHandle hout,
-                P.std_err = P.UseHandle hout
+                P.std_err = P.UseHandle hout,
+                P.cwd = mcwd
               }
         P.waitForProcess ph
         hSeek hout AbsoluteSeek 0
