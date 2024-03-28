@@ -526,12 +526,16 @@ allTests =
           v1 :: Term Natural = [nock| 222 |]
           k2 :: Term Natural = [nock| [1 2 3 nil] |]
           v2 :: Term Natural = [nock| [4 5 6 nil] |]
+          -- The keys of the storage are of the form [id key nil].
+          -- The id is captured from the arguments tuple of the function.
+          sk1 :: Term Natural = [nock| [[333 1 2 3 nil] 333 nil] |]
+          sk2 :: Term Natural = [nock| [[333 1 2 3 nil] [1 2 3 nil] nil] |]
        in mkAnomaCallTest'
             True
             ( Storage
                 ( HashMap.fromList
-                    [ (k1, v1),
-                      (k2, v2)
+                    [ (sk1, v1),
+                      (sk2, v2)
                     ]
                 )
             )
