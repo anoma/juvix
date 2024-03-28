@@ -10,13 +10,11 @@ import Juvix.Compiler.Core.Transformation.DisambiguateNames qualified as Core
 
 runCommand :: (Members '[EmbedIO, App, TaggedLock] r) => CompileOptionsMain -> Sem r ()
 runCommand opts@CompileOptions {..} = do
-  inputFile <- getMainFile _compileInputFile
   opts' <- fromCompileOptionsMain opts
   Core.CoreResult {..} <- runPipeline _compileInputFile upToCore
   let arg =
         Compile.PipelineArg
-          { _pipelineArgFile = inputFile,
-            _pipelineArgOptions = opts',
+          { _pipelineArgOptions = opts',
             _pipelineArgModule = _coreResultModule
           }
   case _compileTarget of
@@ -35,8 +33,11 @@ runCommand opts@CompileOptions {..} = do
 writeCoreFile :: (Members '[EmbedIO, App, TaggedLock] r) => Compile.PipelineArg -> Sem r ()
 writeCoreFile pa@Compile.PipelineArg {..} = do
   entryPoint <- Compile.getEntry pa
-  coreFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
-  r <- runReader entryPoint . runError @JuvixError $ Core.toStored _pipelineArgModule
+  coreFile <- Compile.outputFile _pipelineArgOptions
+  r <-
+    runReader entryPoint
+      . runError @JuvixError
+      $ Core.toStored _pipelineArgModule
   md <- fromRightJuvixError r
   let txt = show (Core.ppOutDefault (Core.disambiguateNames md ^. Core.moduleInfoTable))
   writeFileEnsureLn coreFile txt

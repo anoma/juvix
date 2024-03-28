@@ -19,12 +19,6 @@ import Juvix.Compiler.Tree.Pretty qualified as Tree
 import Juvix.Prelude.Pretty
 import System.FilePath (takeBaseName)
 
--- data PipelineArgNew = PipelineArgNew
---   { _pipelineArgNewOptions :: CompileCommonOptions,
---     _pipelineArgNewFile :: Path Abs File,
---     _pipelineArgNewModule :: Core.Module
---   }
-
 data PipelineArg = PipelineArg
   { _pipelineArgOptions :: CompileOptions,
     _pipelineArgModule :: Core.Module

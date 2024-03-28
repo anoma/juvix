@@ -24,7 +24,7 @@ runCommand opts@EvalOptions {..} = do
       Eval.evalAndPrint gopts opts tab evalNode
     Nothing -> do
       let name = fromMaybe Str.main _evalSymbolName
-      printFailureExit ("function not found: " <> name)
+      exitFailMsg ("function not found: " <> name)
   where
     mainInfo :: Core.InfoTable -> Maybe Core.IdentifierInfo
     mainInfo tab = do

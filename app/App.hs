@@ -233,14 +233,11 @@ newline = say ""
 printSuccessExit :: (Member App r) => Text -> Sem r a
 printSuccessExit = exitMsg ExitSuccess
 
-printFailureExit :: (Member App r) => Text -> Sem r a
-printFailureExit = exitMsg (ExitFailure 1)
-
 getRight :: forall e a r. (Members '[App] r, AppError e) => Either e a -> Sem r a
 getRight = either appError return
 
 instance AppError Text where
-  appError = printFailureExit
+  appError = exitFailMsg
 
 instance AppError JuvixError where
   appError = exitJuvixError

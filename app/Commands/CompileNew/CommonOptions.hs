@@ -21,6 +21,9 @@ data CompileCommonOptions' inputFile = CompileCommonOptions
 
 makeLenses ''CompileCommonOptions'
 
+fromCompileCommonOptionsMain :: (Members '[App] r) => CompileCommonOptionsMain -> Sem r CompileCommonOptions
+fromCompileCommonOptionsMain = traverseOf compileInputFile getMainAppFile
+
 parseCompileCommonOptionsMain ::
   Parser CompileCommonOptionsMain
 parseCompileCommonOptionsMain =
@@ -62,6 +65,3 @@ parseCompileCommonOptionsGeneric parserFile = do
   _compileOutputFile <- optional parseGenericOutputFile
   _compileInputFile <- parserFile
   pure CompileCommonOptions {..}
-
-fromCompileCommonOptionsMain :: (Members '[App] r) => CompileCommonOptionsMain -> Sem r CompileCommonOptions
-fromCompileCommonOptionsMain = undefined

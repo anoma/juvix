@@ -18,7 +18,7 @@ makeLenses ''ClangArgs
 
 clangNativeCompile ::
   forall r.
-  (Members '[App, EmbedIO, Error Text] r) =>
+  (Members '[App, EmbedIO] r) =>
   ClangArgs ->
   Sem r ()
 clangNativeCompile args@ClangArgs {..} = do
@@ -87,7 +87,7 @@ commonArgs buildDir ClangArgs {..} = run . execAccumList $ do
 
 runClang ::
   forall r.
-  (Members '[EmbedIO, Error Text] r) =>
+  (Members '[App, EmbedIO] r) =>
   [String] ->
   Sem r ()
 runClang args = do
@@ -95,12 +95,12 @@ runClang args = do
   (exitCode, _, err) <- liftIO (P.readProcessWithExitCode cp args "")
   case exitCode of
     ExitSuccess -> return ()
-    _ -> throw (pack err)
+    _ -> exitFailMsg (pack err)
   where
     clangBinPath :: Sem r String
     clangBinPath = do
       p <- findClang
-      maybe (throw clangNotFoundErr) (return . toFilePath . extractClangPath) p
+      maybe (exitFailMsg clangNotFoundErr) (return . toFilePath . extractClangPath) p
 
     clangNotFoundErr :: Text
     clangNotFoundErr = "Error: The clang executable was not found. Please install the LLVM toolchain"

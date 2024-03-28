@@ -13,33 +13,29 @@ runCommandMain :: forall r. (Members '[EmbedIO, App] r) => CompileOptionsMain ->
 runCommandMain = fromCompileOptionsMain >=> runCommand
 
 runCommand :: forall r. (Members '[EmbedIO, App] r) => CompileOptions -> Sem r ()
-runCommand opts = do
-  result <- runCompile opts
-  case result of
-    Left err -> printFailureExit err
-    _ -> return ()
+runCommand = runCompile
 
 runCompile ::
   (Members '[App, EmbedIO] r) =>
   CompileOptions ->
-  Sem r (Either Text ())
+  Sem r ()
 runCompile opts = do
   buildDir <- askBuildDir
   ensureDir buildDir
   ensureDir (juvixIncludeDir buildDir)
   prepareRuntime buildDir opts
   case opts ^. compileTarget of
-    TargetWasm32Wasi -> runError (clangWasmWasiCompile opts)
-    TargetNative64 -> runError (clangNativeCompile opts)
-    TargetGeb -> return (Right ())
-    TargetVampIR -> return (Right ())
-    TargetCore -> return (Right ())
-    TargetAsm -> return (Right ())
-    TargetReg -> return (Right ())
-    TargetTree -> return (Right ())
-    TargetAnoma -> return (Right ())
-    TargetCasm -> return (Right ())
-    TargetCairo -> return (Right ())
+    TargetWasm32Wasi -> clangWasmWasiCompile opts
+    TargetNative64 -> clangNativeCompile opts
+    TargetGeb -> return (())
+    TargetVampIR -> return ()
+    TargetCore -> return ()
+    TargetAsm -> return ()
+    TargetReg -> return ()
+    TargetTree -> return ()
+    TargetAnoma -> return ()
+    TargetCasm -> return ()
+    TargetCairo -> return ()
 
 prepareRuntime :: forall r. (Members '[App, EmbedIO] r) => Path Abs Dir -> CompileOptions -> Sem r ()
 prepareRuntime buildDir o = do
@@ -131,7 +127,7 @@ outputFile opts = do
 
 clangNativeCompile ::
   forall r.
-  (Members '[App, EmbedIO, Error Text] r) =>
+  (Members '[App, EmbedIO] r) =>
   CompileOptions ->
   Sem r ()
 clangNativeCompile o = do
@@ -146,7 +142,7 @@ clangNativeCompile o = do
 
 clangWasmWasiCompile ::
   forall r.
-  (Members '[App, EmbedIO, Error Text] r) =>
+  (Members '[App, EmbedIO] r) =>
   CompileOptions ->
   Sem r ()
 clangWasmWasiCompile o = do
@@ -163,7 +159,7 @@ clangWasmWasiCompile o = do
     sysrootEnvVar :: Sem r (Path Abs Dir)
     sysrootEnvVar =
       absDir
-        <$> fromMaybeM (throw msg) (liftIO (lookupEnv "WASI_SYSROOT_PATH"))
+        <$> fromMaybeM (exitFailMsg msg) (liftIO (lookupEnv "WASI_SYSROOT_PATH"))
       where
         msg :: Text
         msg = "Missing environment variable WASI_SYSROOT_PATH"
@@ -272,7 +268,7 @@ findClang = do
 
 runClang ::
   forall r.
-  (Members '[EmbedIO, Error Text] r) =>
+  (Members '[App, EmbedIO] r) =>
   [String] ->
   Sem r ()
 runClang args = do
@@ -280,12 +276,12 @@ runClang args = do
   (exitCode, _, err) <- liftIO (P.readProcessWithExitCode cp args "")
   case exitCode of
     ExitSuccess -> return ()
-    _ -> throw (pack err)
+    _ -> exitFailMsg (pack err)
   where
     clangBinPath :: Sem r String
     clangBinPath = do
       p <- findClang
-      maybe (throw clangNotFoundErr) (return . toFilePath . extractClangPath) p
+      maybe (exitFailMsg clangNotFoundErr) (return . toFilePath . extractClangPath) p
 
     clangNotFoundErr :: Text
     clangNotFoundErr = "Error: The clang executable was not found. Please install the LLVM toolchain"
