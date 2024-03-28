@@ -133,6 +133,7 @@ data AnomaCallablePathId
   | ClosureTotalArgsNum
   | ClosureArgsNum
   | ClosureArgs
+  | AnomaGetOrder
   deriving stock (Enum, Bounded, Eq, Show)
 
 -- | A closure has the following structure:
@@ -301,6 +302,24 @@ anomaCallableClosureWrapper =
       adjustArgs = OpIf # closureArgsIsEmpty # (opAddress "wrapperSubject" emptyPath) # appendAndReplaceArgsTuple
    in opCall "closureWrapper" (closurePath RawCode) adjustArgs
 
+mainFunctionWrapper :: Term Natural
+mainFunctionWrapper =
+  -- 1. The Anoma system expects to receive a function of type `ScryId -> Transaction`
+  --
+  -- 2. The ScryId is only used to construct the argument to the Scry operation (i.e the anomaGet builtin in the Juvix frontend),
+  --
+  -- 3. When the Juvix developer writes a function to submit to Anoma they use
+  -- type `() -> Transaction`, this wrapper is used to capture the ScryId
+  -- argument into the subject which is then used to construct OpScry arguments
+  -- when anomaGet is compiled.
+  --
+  -- 4. If the Anoma system expectation changes then this code must be changed.
+  let captureAnomaGetOrder :: Term Natural
+      captureAnomaGetOrder = replaceSubject $ \case
+        AnomaGetOrder -> Just (getClosureFieldInSubject ArgsTuple)
+        _ -> Nothing
+   in opCall "mainFunctionWrapper" (closurePath RawCode) captureAnomaGetOrder
+
 compile :: forall r. (Members '[Reader FunctionCtx, Reader CompilerCtx] r) => Tree.Node -> Sem r (Term Natural)
 compile = \case
   Tree.Binop b -> goBinop b
@@ -413,7 +432,9 @@ compile = \case
       Tree.OpFieldToInt -> fieldErr
 
     goAnomaGet :: Term Natural -> Sem r (Term Natural)
-    goAnomaGet arg = return (OpScry # (OpQuote # nockNilTagged "OpScry-typehint") # arg)
+    goAnomaGet key = do
+      let arg = remakeList [getFieldInSubject AnomaGetOrder, key]
+      return (OpScry # (OpQuote # nockNilTagged "OpScry-typehint") # arg)
 
     goTrace :: Term Natural -> Sem r (Term Natural)
     goTrace arg = do
@@ -463,6 +484,7 @@ compile = \case
         ClosureTotalArgsNum -> nockNatLiteral farity
         ClosureArgsNum -> nockIntegralLiteral (length args)
         ClosureArgs -> remakeList args
+        AnomaGetOrder -> OpQuote # nockNilTagged "goAllocClosure-AnomaGetOrder"
 
     goExtendClosure :: Tree.NodeExtendClosure -> Sem r (Term Natural)
     goExtendClosure = extendClosure
@@ -487,6 +509,7 @@ compile = \case
                 ClosureArgs -> Nothing
                 ClosureTotalArgsNum -> Nothing
                 ClosureArgsNum -> Nothing
+                AnomaGetOrder -> Nothing
           return $ (opCall "callClosure" (closurePath WrapperCode) newSubject)
 
 isZero :: Term Natural -> Term Natural
@@ -575,6 +598,7 @@ extendClosure Tree.NodeExtendClosure {..} = do
     FunctionsLibrary -> getClosureField FunctionsLibrary closure
     TempStack -> getClosureField TempStack closure
     StandardLibrary -> getClosureField StandardLibrary closure
+    AnomaGetOrder -> getClosureField AnomaGetOrder closure
 
 -- Calling convention for Anoma stdlib
 --
@@ -673,10 +697,13 @@ remakeList :: (Foldable l) => l (Term Natural) -> Term Natural
 remakeList ts = foldTerms (toList ts `prependList` pure (OpQuote # nockNilTagged "remakeList"))
 
 runCompilerWith :: CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> AnomaResult
-runCompilerWith opts constrs libFuns mainFun = makeAnomaFun
+runCompilerWith opts constrs moduleFuns mainFun = makeAnomaFun
   where
+    libFuns :: [CompilerFunction]
+    libFuns = moduleFuns ++ (builtinFunction <$> allElements)
+
     allFuns :: NonEmpty CompilerFunction
-    allFuns = mainFun :| libFuns ++ (builtinFunction <$> allElements)
+    allFuns = mainFun :| libFuns
 
     compilerCtx :: CompilerCtx
     compilerCtx =
@@ -686,11 +713,16 @@ runCompilerWith opts constrs libFuns mainFun = makeAnomaFun
           _compilerOptions = opts
         }
 
+    mainClosure :: Term Natural
+    mainClosure = makeMainFunction (runCompilerFunction compilerCtx mainFun)
+
     compiledFuns :: NonEmpty (Term Natural)
     compiledFuns =
-      makeLibraryFunction
-        <$> ( runCompilerFunction compilerCtx <$> allFuns
-            )
+      mainClosure
+        :| ( makeLibraryFunction
+               <$> ( runCompilerFunction compilerCtx <$> libFuns
+                   )
+           )
 
     exportEnv :: Term Natural
     exportEnv = makeList compiledFuns
@@ -708,6 +740,22 @@ runCompilerWith opts constrs libFuns mainFun = makeAnomaFun
             ClosureTotalArgsNum -> nockNilHere
             ClosureArgsNum -> nockNilHere
             ClosureArgs -> nockNilHere
+            AnomaGetOrder -> nockNilHere
+
+    makeMainFunction :: Term Natural -> Term Natural
+    makeMainFunction c = makeClosure $ \p ->
+      let nockNilHere = nockNilTagged ("makeMainFunction-" <> show p)
+       in case p of
+            WrapperCode -> mainFunctionWrapper
+            ArgsTuple -> argsTuplePlaceholder "mainFunction"
+            FunctionsLibrary -> functionsLibraryPlaceHolder
+            RawCode -> c
+            TempStack -> nockNilHere
+            StandardLibrary -> stdlib
+            ClosureTotalArgsNum -> nockNilHere
+            ClosureArgsNum -> nockNilHere
+            ClosureArgs -> nockNilHere
+            AnomaGetOrder -> nockNilHere
 
     functionInfos :: HashMap FunctionId FunctionInfo
     functionInfos = hashMap (run (runInputNaturals (toList <$> userFunctions)))
@@ -725,11 +773,9 @@ runCompilerWith opts constrs libFuns mainFun = makeAnomaFun
 
     makeAnomaFun :: AnomaResult
     makeAnomaFun =
-      let mainClosure :: Term Natural
-          mainClosure = head compiledFuns
-       in AnomaResult
-            { _anomaClosure = substEnv mainClosure
-            }
+      AnomaResult
+        { _anomaClosure = substEnv mainClosure
+        }
       where
         -- Replaces all instances of functionsLibraryPlaceHolder by the actual
         -- functions library. Note that the functions library will have
