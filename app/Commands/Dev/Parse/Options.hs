@@ -4,7 +4,7 @@ import CommonOptions
 
 data ParseOptions = ParseOptions
   { _parseOptionsNoPrettyShow :: Bool,
-    _parseOptionsInputFile :: AppPath File
+    _parseOptionsInputFile :: Maybe (AppPath File)
   }
   deriving stock (Data)
 
@@ -17,5 +17,5 @@ parseParse = do
       ( long "no-pretty-show"
           <> help "Disable formatting of the Haskell AST"
       )
-  _parseOptionsInputFile <- parseInputFile FileExtJuvix
+  _parseOptionsInputFile <- optional (parseInputFile FileExtJuvix)
   pure ParseOptions {..}

@@ -13,31 +13,27 @@ runCommand :: forall r. (Members '[EmbedIO, App, TaggedLock] r) => CompileOption
 runCommand opts = do
   file <- getFile
   s <- readFile file
-  case Casm.runParser file s of
-    Left err -> exitJuvixError (JuvixError err)
-    Right (labi, code) ->
-      case Casm.validate labi code of
-        Left err -> exitJuvixError (JuvixError err)
-        Right () -> do
-          ep <- getEntryPoint (AppPath (preFileFromAbs file) True)
-          tgt <- getTarget (opts ^. compileTarget)
-          let entryPoint :: EntryPoint
-              entryPoint =
-                ep
-                  { _entryPointTarget = tgt,
-                    _entryPointDebug = opts ^. compileDebug
-                  }
-          cairoFile <- Compile.outputFile opts file
-          r <-
-            runReader entryPoint
-              . runError @JuvixError
-              . casmToCairo
-              $ Casm.Result labi code
-          res <- getRight r
-          liftIO $ JSON.encodeFile (toFilePath cairoFile) res
+  (labi, code) <- fromRightGenericError (Casm.runParser file s)
+  () <- fromRightGenericError (Casm.validate labi code)
+  ep <- getEntryPoint (Just (opts ^. compileInputFile))
+  tgt <- getTarget (opts ^. compileTarget)
+  let entryPoint :: EntryPoint
+      entryPoint =
+        ep
+          { _entryPointTarget = tgt,
+            _entryPointDebug = opts ^. compileDebug
+          }
+  cairoFile <- Compile.outputFile opts file
+  r <-
+    runReader entryPoint
+      . runError @JuvixError
+      . casmToCairo
+      $ Casm.Result labi code
+  res <- getRight r
+  liftIO $ JSON.encodeFile (toFilePath cairoFile) res
   where
     getFile :: Sem r (Path Abs File)
-    getFile = getMainFile (opts ^. compileInputFile)
+    getFile = getMainFile (Just (opts ^. compileInputFile))
 
     getTarget :: CompileTarget -> Sem r Backend.Target
     getTarget = \case

@@ -8,14 +8,15 @@ import Juvix.Compiler.Core qualified as Core
 import Juvix.Compiler.Core.Pretty qualified as Core
 import Juvix.Compiler.Core.Transformation.DisambiguateNames qualified as Core
 
-runCommand :: (Members '[EmbedIO, App, TaggedLock] r) => CompileOptions -> Sem r ()
+runCommand :: (Members '[EmbedIO, App, TaggedLock] r) => CompileOptionsMain -> Sem r ()
 runCommand opts@CompileOptions {..} = do
   inputFile <- getMainFile _compileInputFile
-  Core.CoreResult {..} <- runPipeline (AppPath (preFileFromAbs inputFile) True) upToCore
+  opts' <- fromCompileOptionsMain opts
+  Core.CoreResult {..} <- runPipeline _compileInputFile upToCore
   let arg =
         Compile.PipelineArg
           { _pipelineArgFile = inputFile,
-            _pipelineArgOptions = opts,
+            _pipelineArgOptions = opts',
             _pipelineArgModule = _coreResultModule
           }
   case _compileTarget of
@@ -36,8 +37,6 @@ writeCoreFile pa@Compile.PipelineArg {..} = do
   entryPoint <- Compile.getEntry pa
   coreFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
   r <- runReader entryPoint . runError @JuvixError $ Core.toStored _pipelineArgModule
-  case r of
-    Left e -> exitJuvixError e
-    Right md -> do
-      let txt = show (Core.ppOutDefault (Core.disambiguateNames md ^. Core.moduleInfoTable))
-      writeFileEnsureLn coreFile txt
+  md <- fromRightJuvixError r
+  let txt = show (Core.ppOutDefault (Core.disambiguateNames md ^. Core.moduleInfoTable))
+  writeFileEnsureLn coreFile txt

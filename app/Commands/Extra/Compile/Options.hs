@@ -1,5 +1,6 @@
 module Commands.Extra.Compile.Options where
 
+import App
 import CommonOptions hiding (show)
 import Juvix.Compiler.Pipeline.EntryPoint
 import Prelude (Show (show))
@@ -32,7 +33,13 @@ instance Show CompileTarget where
     TargetCasm -> "casm"
     TargetCairo -> "cairo"
 
-data CompileOptions = CompileOptions
+-- | If the input file can be defaulted to the `main` in the `package.yaml` file, we
+-- can omit the input file.
+type CompileOptionsMain = CompileOptions' (Maybe (AppPath File))
+
+type CompileOptions = CompileOptions' (AppPath File)
+
+data CompileOptions' inputFile = CompileOptions
   { _compileDebug :: Bool,
     _compileCOutput :: Bool,
     _compilePreprocess :: Bool,
@@ -41,25 +48,42 @@ data CompileOptions = CompileOptions
     _compileUnsafe :: Bool,
     _compileOutputFile :: Maybe (AppPath File),
     _compileTarget :: CompileTarget,
-    _compileInputFile :: Maybe (AppPath File),
+    _compileInputFile :: inputFile,
     _compileOptimizationLevel :: Maybe Int,
     _compileInliningDepth :: Int,
     _compileNockmaUsePrettySymbols :: Bool
   }
   deriving stock (Data)
 
-makeLenses ''CompileOptions
+makeLenses ''CompileOptions'
+
+fromCompileOptionsMain :: (Members '[App] r) => CompileOptionsMain -> Sem r CompileOptions
+fromCompileOptionsMain = traverseOf compileInputFile getMainAppFile
 
 type SupportedTargets = NonEmpty CompileTarget
 
 allTargets :: [CompileTarget]
 allTargets = allElements
 
+parseCompileOptionsMain ::
+  SupportedTargets ->
+  Parser CompileOptionsMain
+parseCompileOptionsMain supportedTargets =
+  parseCompileOptions'
+    supportedTargets
+    (optional (parseInputFiles (FileExtJuvix :| [FileExtJuvixMarkdown])))
+
 parseCompileOptions ::
   SupportedTargets ->
   Parser (AppPath File) ->
   Parser CompileOptions
-parseCompileOptions supportedTargets parserFile = do
+parseCompileOptions = parseCompileOptions'
+
+parseCompileOptions' ::
+  SupportedTargets ->
+  Parser a ->
+  Parser (CompileOptions' a)
+parseCompileOptions' supportedTargets parserFile = do
   _compileDebug <-
     switch
       ( short 'g'
@@ -126,7 +150,7 @@ parseCompileOptions supportedTargets parserFile = do
       )
   _compileTarget <- optCompileTarget supportedTargets
   _compileOutputFile <- optional parseGenericOutputFile
-  _compileInputFile <- optional parserFile
+  _compileInputFile <- parserFile
   pure CompileOptions {..}
 
 optCompileTarget :: SupportedTargets -> Parser CompileTarget

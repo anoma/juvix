@@ -122,6 +122,9 @@ toAnsiText useColors
   | useColors = Ansi.renderStrict . toAnsiStream
   | otherwise = Text.renderStrict . toTextStream
 
+toPlainString :: (HasTextBackend a) => a -> String
+toPlainString = unpack . toPlainText
+
 toPlainText :: (HasTextBackend a) => a -> Text
 toPlainText = Text.renderStrict . toTextStream
 
