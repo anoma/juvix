@@ -123,7 +123,7 @@ anomaTest n mainFun args _testCheck _evalInterceptStdlibCalls =
    in Test {..}
 
 testWithStorage :: [(Term Natural, Term Natural)] -> Text -> Term Natural -> Term Natural -> Check () -> Test
-testWithStorage s = Test defaultEvalOptions Nothing (Storage (HashMap.fromList s))
+testWithStorage s = Test defaultEvalOptions Nothing (Storage (HashMap.fromList (first StorageKey <$> s)))
 
 test :: Text -> Term Natural -> Term Natural -> Check () -> Test
 test = testWithStorage []
