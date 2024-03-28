@@ -20,7 +20,7 @@ runCommand opts = do
   inputfile <- getMainFile (opts' ^. compileInputFile)
   cFile <- inputCFile inputfile
   writeFileEnsureLn cFile _resultCCode
-  outfile <- maybe (defaultOutputFile inputfile) fromAppPathFile (opts' ^. compileOutputFile)
+  outfile <- nativeOutputFile opts
   let carg =
         ClangArgs
           { _clangDebug = opts' ^. compileDebug,
@@ -36,13 +36,3 @@ runCommand opts = do
       buildDir <- askBuildDir
       ensureDir buildDir
       return (buildDir <//> replaceExtension' ".c" (filename inputFileCompile))
-
-    defaultOutputFile :: Path Abs File -> Sem r (Path Abs File)
-    defaultOutputFile inputFile = do
-      invokeDir <- askInvokeDir
-      let baseOutputFile = invokeDir <//> filename inputFile
-      return $ case opts ^. nativeCStage of
-        CSource -> replaceExtension' cFileExt inputFile
-        CPreprocess -> addExtension' cFileExt (addExtension' ".out" (removeExtension' inputFile))
-        CAssembly -> replaceExtension' ".s" inputFile
-        CExecutable -> removeExtension' baseOutputFile

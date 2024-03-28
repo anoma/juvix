@@ -23,13 +23,16 @@ parseNative = do
   _nativeCStage <- parseCStage
   pure NativeOptions {..}
 
-nativeOutputAppFile :: (Member App r) => NativeOptions -> Sem r (Path Abs File)
-nativeOutputAppFile opts = do
-  inputFile <- getMainFile (opts ^. nativeCompileCommonOptions . compileInputFile)
-  invokeDir <- askInvokeDir
-  let baseOutputFile = invokeDir <//> filename inputFile
-  return $ case opts ^. nativeCStage of
-    CSource -> replaceExtension' cFileExt inputFile
-    CPreprocess -> addExtension' cFileExt (addExtension' ".out" (removeExtension' inputFile))
-    CAssembly -> replaceExtension' ".s" inputFile
-    CExecutable -> removeExtension' baseOutputFile
+nativeOutputFile :: (Member App r) => NativeOptions -> Sem r (Path Abs File)
+nativeOutputFile opts =
+  case opts ^. nativeCompileCommonOptions . compileOutputFile of
+    Just f -> fromAppFile f
+    Nothing -> do
+      inputFile <- getMainFile (opts ^. nativeCompileCommonOptions . compileInputFile)
+      invokeDir <- askInvokeDir
+      let baseOutputFile = invokeDir <//> filename inputFile
+      return $ case opts ^. nativeCStage of
+        CSource -> replaceExtension' cFileExt inputFile
+        CPreprocess -> addExtension' cFileExt (addExtension' ".out" (removeExtension' inputFile))
+        CAssembly -> replaceExtension' ".s" inputFile
+        CExecutable -> removeExtension' baseOutputFile

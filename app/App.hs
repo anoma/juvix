@@ -20,6 +20,7 @@ data App :: Effect where
   ExitFailMsg :: Text -> App m a
   ExitJuvixError :: JuvixError -> App m a
   PrintJuvixError :: JuvixError -> App m ()
+  FromAppFile :: AppPath File -> App m (Path Abs File)
   AskRoot :: App m Root
   AskArgs :: App m RunAppIOArgs
   AskInvokeDir :: App m (Path Abs Dir)
@@ -64,6 +65,7 @@ reAppIO args@RunAppIOArgs {..} =
   interpretTop $ \case
     AskPackageGlobal -> return (_runAppIOArgsRoot ^. rootPackageType `elem` [GlobalStdlib, GlobalPackageDescription, GlobalPackageBase])
     FromAppPathFile p -> prepathToAbsFile invDir (p ^. pathPath)
+    FromAppFile m -> fromAppFile' m
     GetMainAppFile m -> getMainAppFile' m
     GetMainFile m -> getMainFile' m
     FromAppPathDir p -> liftIO (prepathToAbsDir invDir (p ^. pathPath))
@@ -82,8 +84,7 @@ reAppIO args@RunAppIOArgs {..} =
     Say t
       | g ^. globalOnlyErrors -> return ()
       | otherwise -> putStrLn t
-    PrintJuvixError e -> do
-      printErr e
+    PrintJuvixError e -> printErr e
     ExitJuvixError e -> do
       printErr e
       exitFailure
@@ -97,10 +98,11 @@ reAppIO args@RunAppIOArgs {..} =
     exitMsg' :: (Members '[EmbedIO] r') => IO x -> Text -> Sem r' x
     exitMsg' onExit t = liftIO (putStrLn t >> hFlush stdout >> onExit)
 
+    fromAppFile' :: (Members '[EmbedIO] r') => AppPath File -> Sem r' (Path Abs File)
+    fromAppFile' f = prepathToAbsFile invDir (f ^. pathPath)
+
     getMainFile' :: (Members '[SCache Package, EmbedIO] r') => Maybe (AppPath File) -> Sem r' (Path Abs File)
-    getMainFile' m = do
-      f <- getMainAppFile' m
-      prepathToAbsFile invDir (f ^. pathPath)
+    getMainFile' = getMainAppFile' >=> fromAppFile'
 
     getMainAppFile' :: (Members '[SCache Package, EmbedIO] r') => Maybe (AppPath File) -> Sem r' (AppPath File)
     getMainAppFile' = \case
@@ -133,7 +135,11 @@ reAppIO args@RunAppIOArgs {..} =
         . runReader (project' @GenericOptions g)
         $ Error.render (not (_runAppIOArgsGlobalOptions ^. globalNoColors)) (g ^. globalOnlyErrors) e
 
-getEntryPoint' :: (Members '[App, EmbedIO, TaggedLock] r) => RunAppIOArgs -> Maybe (AppPath File) -> Sem r EntryPoint
+getEntryPoint' ::
+  (Members '[App, EmbedIO, TaggedLock] r) =>
+  RunAppIOArgs ->
+  Maybe (AppPath File) ->
+  Sem r EntryPoint
 getEntryPoint' RunAppIOArgs {..} inputFile = do
   let opts = _runAppIOArgsGlobalOptions
       root = _runAppIOArgsRoot
