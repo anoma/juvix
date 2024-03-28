@@ -23,7 +23,7 @@ runCommand opts = do
           { _entryPointTarget = tgt,
             _entryPointDebug = opts ^. compileDebug
           }
-  cairoFile <- Compile.outputFile opts file
+  cairoFile <- Compile.outputFile opts
   r <-
     runReader entryPoint
       . runError @JuvixError

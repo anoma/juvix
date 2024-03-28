@@ -89,12 +89,13 @@ prepareRuntime buildDir o = do
       ensureDir (includeDir <//> parent filePath)
       BS.writeFile (toFilePath (includeDir <//> filePath)) contents
 
-outputFile :: forall r. (Member App r) => CompileOptions -> Path Abs File -> Sem r (Path Abs File)
-outputFile opts inputFile =
-  maybe defaultOutputFile fromAppPathFile (opts ^? compileOutputFile . _Just)
+outputFile :: forall r. (Member App r) => CompileOptions -> Sem r (Path Abs File)
+outputFile opts = do
+  inputfile <- getMainFile (Just (opts ^. compileInputFile))
+  maybe (defaultOutputFile inputfile) fromAppPathFile (opts ^? compileOutputFile . _Just)
   where
-    defaultOutputFile :: Sem r (Path Abs File)
-    defaultOutputFile = do
+    defaultOutputFile :: Path Abs File -> Sem r (Path Abs File)
+    defaultOutputFile inputFile = do
       invokeDir <- askInvokeDir
       let baseOutputFile = invokeDir <//> filename inputFile
       return $ case opts ^. compileTarget of
@@ -135,7 +136,7 @@ clangNativeCompile ::
   Sem r ()
 clangNativeCompile o = do
   inputFile <- getMainFile (Just (o ^. compileInputFile))
-  outputFile' <- outputFile o inputFile
+  outputFile' <- outputFile o
   buildDir <- askBuildDir
   if
       | o ^. compileCOutput ->
@@ -150,7 +151,7 @@ clangWasmWasiCompile ::
   Sem r ()
 clangWasmWasiCompile o = do
   inputFile <- getMainFile (Just (o ^. compileInputFile))
-  outputFile' <- outputFile o inputFile
+  outputFile' <- outputFile o
   buildDir <- askBuildDir
   if
       | o ^. compileCOutput ->

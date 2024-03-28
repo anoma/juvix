@@ -26,7 +26,7 @@ runCommand opts = do
           }
   case opts ^. compileTarget of
     TargetCasm -> do
-      casmFile <- Compile.outputFile opts file
+      casmFile <- Compile.outputFile opts
       r <-
         runReader entryPoint
           . runError @JuvixError
@@ -35,7 +35,7 @@ runCommand opts = do
       Casm.Result {..} <- getRight r
       writeFileEnsureLn casmFile (toPlainText $ Casm.ppProgram _resultCode)
     TargetCairo -> do
-      cairoFile <- Compile.outputFile opts file
+      cairoFile <- Compile.outputFile opts
       r <-
         runReader entryPoint
           . runError @JuvixError
@@ -54,7 +54,7 @@ runCommand opts = do
       ensureDir buildDir
       cFile <- inputCFile file
       writeFileEnsureLn cFile _resultCCode
-      outfile <- Compile.outputFile opts file
+      outfile <- Compile.outputFile opts
       Compile.runCommand
         opts
           { _compileInputFile = AppPath (preFileFromAbs cFile) False,
