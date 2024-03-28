@@ -11,8 +11,7 @@ import Data.List.NonEmpty qualified as NonEmpty
 supportedTargets :: NonEmpty CompileTarget
 supportedTargets = NonEmpty.fromList allTargets
 
-parseMainCompileOptions :: Parser CompileOptions
+parseMainCompileOptions :: Parser CompileOptionsMain
 parseMainCompileOptions =
-  parseCompileOptions
+  parseCompileOptionsMain
     supportedTargets
-    (parseInputFiles (NonEmpty.fromList [FileExtJuvix, FileExtJuvixMarkdown]))

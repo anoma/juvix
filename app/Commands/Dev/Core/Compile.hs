@@ -8,7 +8,7 @@ import Juvix.Compiler.Core.Translation.FromSource qualified as Core
 
 runCommand :: forall r. (Members '[EmbedIO, App, TaggedLock] r) => CompileOptions -> Sem r ()
 runCommand opts = do
-  file <- getFile
+  file <- getMainFile (Just (opts ^. compileInputFile))
   s <- readFile file
   tab <- getRight (mapLeft JuvixError (Core.runParserMain file defaultModuleId mempty s))
   let arg = PipelineArg opts file (Core.moduleFromInfoTable tab)
@@ -24,6 +24,3 @@ runCommand opts = do
     TargetAnoma -> runAnomaPipeline arg
     TargetCasm -> runCasmPipeline arg
     TargetCairo -> runCairoPipeline arg
-  where
-    getFile :: Sem r (Path Abs File)
-    getFile = getMainFile (opts ^. compileInputFile)

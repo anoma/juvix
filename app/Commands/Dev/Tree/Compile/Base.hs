@@ -23,7 +23,7 @@ data PipelineArg = PipelineArg
 
 getEntry :: (Members '[EmbedIO, App, TaggedLock] r) => PipelineArg -> Sem r EntryPoint
 getEntry PipelineArg {..} = do
-  ep <- getEntryPoint (AppPath (preFileFromAbs _pipelineArgFile) True)
+  ep <- getEntryPoint (Just (AppPath (preFileFromAbs _pipelineArgFile) True))
   return $
     ep
       { _entryPointTarget = getTarget (_pipelineArgOptions ^. compileTarget),
@@ -70,7 +70,7 @@ runCPipeline pa@PipelineArg {..} = do
   outfile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
   Compile.runCommand
     _pipelineArgOptions
-      { _compileInputFile = Just (AppPath (preFileFromAbs cFile) False),
+      { _compileInputFile = AppPath (preFileFromAbs cFile) False,
         _compileOutputFile = Just (AppPath (preFileFromAbs outfile) False)
       }
   where
