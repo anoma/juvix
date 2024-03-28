@@ -29,7 +29,7 @@ getEntry PipelineArg {..} = do
   ep <- getEntryPoint (Just (_pipelineArgOptions ^. compileInputFile))
   return $
     ep
-      { _entryPointTarget = getTarget (_pipelineArgOptions ^. compileTarget),
+      { _entryPointTarget = Just (getTarget (_pipelineArgOptions ^. compileTarget)),
         _entryPointDebug = _pipelineArgOptions ^. compileDebug,
         _entryPointUnsafe = _pipelineArgOptions ^. compileUnsafe,
         _entryPointOptimizationLevel = fromMaybe defaultOptLevel (_pipelineArgOptions ^. compileOptimizationLevel),

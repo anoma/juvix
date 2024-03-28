@@ -21,7 +21,7 @@ runCommand opts = do
   let entryPoint :: EntryPoint
       entryPoint =
         ep
-          { _entryPointTarget = tgt,
+          { _entryPointTarget = Just tgt,
             _entryPointDebug = opts ^. compileDebug
           }
   case opts ^. compileTarget of

@@ -272,7 +272,7 @@ regToMiniC :: (Member (Reader EntryPoint) r) => Reg.InfoTable -> Sem r C.MiniCRe
 regToMiniC tab = do
   tab' <- Reg.toC tab
   e <- ask
-  return $ C.fromReg (Backend.getLimits (e ^. entryPointTarget) (e ^. entryPointDebug)) tab'
+  return $ C.fromReg (Backend.getLimits (getEntryPointTarget e) (e ^. entryPointDebug)) tab'
 
 regToCasm :: Reg.InfoTable -> Sem r Casm.Result
 regToCasm = Reg.toCasm >=> return . Casm.fromReg

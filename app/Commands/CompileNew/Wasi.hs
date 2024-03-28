@@ -1,39 +1,21 @@
 module Commands.CompileNew.Wasi where
 
 import Commands.Base
+import Commands.CompileNew.NativeWasiHelper as Helper
 import Commands.CompileNew.Wasi.Options
-import Commands.Extra.NewCompile
-import Juvix.Compiler.Backend.C qualified as C
-import Juvix.Compiler.Core.Translation.FromInternal.Data.Context
+import Juvix.Compiler.Backend
 
--- TODO reduce duplication with Native
 runCommand :: forall r. (Members '[App, TaggedLock, EmbedIO] r) => WasiOptions -> Sem r ()
-runCommand opts = do
-  let opts' = opts ^. wasiCompileCommonOptions
-  coreRes <- fromCompileCommonOptionsMain opts' >>= compileToCore
-  entryPoint <- getEntryPoint (opts' ^. compileInputFile)
-  C.MiniCResult {..} <-
-    getRight
-      . run
-      . runReader entryPoint
-      . runError @JuvixError
-      $ coreToMiniC (coreRes ^. coreResultModule)
-  inputfile <- getMainFile (opts' ^. compileInputFile)
-  cFile <- inputCFile inputfile
-  writeFileEnsureLn cFile _resultCCode
-  outfile <- wasiOutputFile opts
-  let carg =
-        ClangArgs
-          { _clangDebug = opts' ^. compileDebug,
-            _clangInputFile = outfile,
-            _clangOptimizationLevel = opts' ^. compileOptimizationLevel,
-            _clangCStage = opts ^. wasiCStage,
-            _clangOutputFile = outfile
-          }
-  clangWasiCompile carg
-  where
-    inputCFile :: Path Abs File -> Sem r (Path Abs File)
-    inputCFile inputFileCompile = do
-      buildDir <- askBuildDir
-      ensureDir buildDir
-      return (buildDir <//> replaceExtension' ".c" (filename inputFileCompile))
+runCommand opts =
+  Helper.runCommand
+    HelperOptions
+      { _helperCStage = opts ^. wasiCStage,
+        _helperTarget = TargetCWasm32Wasi,
+        _helperCompileCommonOptions = opts ^. wasiCompileCommonOptions,
+        _helperDefaultOutputFile = \inputFile baseOutputFile ->
+          case opts ^. wasiCStage of
+            CSource -> replaceExtension' cFileExt inputFile
+            CPreprocess -> addExtension' cFileExt (addExtension' ".out" (removeExtension' inputFile))
+            CAssembly -> replaceExtension' ".wat" inputFile
+            CExecutable -> removeExtension' baseOutputFile
+      }

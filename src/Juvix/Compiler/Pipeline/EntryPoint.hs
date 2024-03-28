@@ -30,7 +30,7 @@ data EntryPoint = EntryPoint
     _entryPointPackage :: Package,
     _entryPointPackageType :: PackageType,
     _entryPointStdin :: Maybe Text,
-    _entryPointTarget :: Target,
+    _entryPointTarget :: Maybe Target,
     _entryPointDebug :: Bool,
     _entryPointUnsafe :: Bool,
     _entryPointUnrollLimit :: Int,
@@ -45,6 +45,12 @@ data EntryPoint = EntryPoint
   deriving stock (Eq, Show)
 
 makeLenses ''EntryPoint
+
+getEntryPointTarget :: EntryPoint -> Target
+getEntryPointTarget e = fromMaybe defaultTarget (e ^. entryPointTarget)
+  where
+    -- TODO is having a default target a good idea?
+    defaultTarget = TargetCore
 
 defaultEntryPoint :: Package -> Root -> Path Abs File -> EntryPoint
 defaultEntryPoint pkg root mainFile =
@@ -66,7 +72,7 @@ defaultEntryPointNoFile pkg root =
       _entryPointPackage = pkg,
       _entryPointPackageType = root ^. rootPackageType,
       _entryPointGenericOptions = defaultGenericOptions,
-      _entryPointTarget = TargetCore,
+      _entryPointTarget = Nothing,
       _entryPointDebug = False,
       _entryPointUnsafe = False,
       _entryPointUnrollLimit = defaultUnrollLimit,

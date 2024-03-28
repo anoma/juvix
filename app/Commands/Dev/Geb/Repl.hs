@@ -40,7 +40,7 @@ runCommand replOpts = do
       getReplEntryPoint inputFile = do
         gopts <- State.gets (^. replStateGlobalOptions)
         absInputFile :: Path Abs File <- replMakeAbsolute inputFile
-        set entryPointTarget Backend.TargetGeb
+        set entryPointTarget (Just Backend.TargetGeb)
           <$> runM (runTaggedLockPermissive (entryPointFromGlobalOptions root absInputFile gopts))
   liftIO
     . State.evalStateT

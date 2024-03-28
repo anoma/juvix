@@ -26,8 +26,8 @@ getClosureSize :: Options -> Int -> Int
 getClosureSize opts argsNum = opts ^. optLimits . limitsClosureHeadSize + argsNum
 
 fromEntryPoint :: EntryPoint -> Options
-fromEntryPoint EntryPoint {..} =
+fromEntryPoint e@EntryPoint {..} =
   Options
     { _optDebug = _entryPointDebug,
-      _optLimits = getLimits _entryPointTarget _entryPointDebug
+      _optLimits = getLimits (getEntryPointTarget e) _entryPointDebug
     }
