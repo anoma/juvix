@@ -23,7 +23,7 @@ data TopCommand
   | DisplayNumericVersion
   | DisplayHelp
   | Typecheck TypecheckOptions
-  | Compile CompileOptions
+  | Compile CompileOptionsMain
   | CompileNew CompileNewCommand
   | Clean CleanOptions
   | Eval EvalOptions

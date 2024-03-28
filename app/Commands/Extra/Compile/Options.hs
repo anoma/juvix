@@ -33,9 +33,6 @@ instance Show CompileTarget where
     TargetCasm -> "casm"
     TargetCairo -> "cairo"
 
-fromCompileOptionsMain :: (Members '[App] r) => CompileOptionsMain -> Sem r CompileOptions
-fromCompileOptionsMain = undefined
-
 -- | If the input file can be defaulted to the `main` in the `package.yaml` file, we
 -- can omit the input file.
 type CompileOptionsMain = CompileOptions' (Maybe (AppPath File))
@@ -60,18 +57,21 @@ data CompileOptions' inputFile = CompileOptions
 
 makeLenses ''CompileOptions'
 
+fromCompileOptionsMain :: (Members '[App] r) => CompileOptionsMain -> Sem r CompileOptions
+fromCompileOptionsMain = traverseOf compileInputFile getMainAppFile
+
 type SupportedTargets = NonEmpty CompileTarget
 
 allTargets :: [CompileTarget]
 allTargets = allElements
 
-parseCompileOptionsJuvix ::
+parseCompileOptionsMain ::
   SupportedTargets ->
-  Parser CompileOptions
-parseCompileOptionsJuvix supportedTargets =
+  Parser CompileOptionsMain
+parseCompileOptionsMain supportedTargets =
   parseCompileOptions'
     supportedTargets
-    (parseInputFiles (FileExtJuvix :| [FileExtJuvixMarkdown]))
+    (optional (parseInputFiles (FileExtJuvix :| [FileExtJuvixMarkdown])))
 
 parseCompileOptions ::
   SupportedTargets ->
