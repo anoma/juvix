@@ -304,6 +304,16 @@ anomaCallableClosureWrapper =
 
 mainFunctionWrapper :: Term Natural
 mainFunctionWrapper =
+  -- 1. The Anoma system expects to receive a function of type `ScryId -> Transaction`
+  --
+  -- 2. The ScryId is only used to construct the argument to the Scry operation (i.e the anomaGet builtin in the Juvix frontend),
+  --
+  -- 3. When the Juvix developer writes a function to submit to Anoma they use
+  -- type `() -> Transaction`, this wrapper is used to capture the ScryId
+  -- argument into the subject which is then used to construct OpScry arguments
+  -- when anomaGet is compiled.
+  --
+  -- 4. If the Anoma system expectation changes then this code must be changed.
   let captureAnomaGetOrder :: Term Natural
       captureAnomaGetOrder = replaceSubject $ \case
         AnomaGetOrder -> Just (getClosureFieldInSubject ArgsTuple)
