@@ -534,8 +534,8 @@ allTests =
             True
             ( Storage
                 ( HashMap.fromList
-                    [ (sk1, v1),
-                      (sk2, v2)
+                    [ (StorageKey sk1, v1),
+                      (StorageKey sk2, v2)
                     ]
                 )
             )

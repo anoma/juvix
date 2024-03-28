@@ -372,4 +372,4 @@ evalProfile inistack initerm =
               Cell' typeFormula subFormula _ <- withCrumb (crumb crumbDecodeFirst) (asCell (c ^. operatorCellTerm))
               void (evalArg crumbEvalFirst stack typeFormula)
               key <- evalArg crumbEvalSecond stack subFormula
-              fromMaybeM (throwKeyNotInStorage key) (HashMap.lookup key <$> asks (^. storageKeyValueData))
+              fromMaybeM (throwKeyNotInStorage key) (HashMap.lookup (StorageKey key) <$> asks (^. storageKeyValueData))

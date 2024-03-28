@@ -146,7 +146,7 @@ instance (PrettyCode a, NockNatural a) => PrettyCode (KeyNotInStorage a) where
     hashMapKvs <- vsep <$> mapM combineKeyValue (HashMap.toList (_keyNotInStorageStorage ^. storageKeyValueData))
     return ("The key" <+> tm <+> "is not found in the storage." <> line <> "Storage contains the following key value pairs:" <> line <> hashMapKvs)
     where
-      combineKeyValue :: (Term a, Term a) -> Sem r (Doc Ann)
+      combineKeyValue :: (StorageKey a, Term a) -> Sem r (Doc Ann)
       combineKeyValue (t1, t2) = do
         pt1 <- ppCode t1
         pt2 <- ppCode t2
