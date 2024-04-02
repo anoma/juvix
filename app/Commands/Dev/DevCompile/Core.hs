@@ -66,7 +66,9 @@ runCommand localOpts = do
             | otherwise = getNode' mainInfo
 
       goNormalize :: Sem r ()
-      goNormalize = normalizeAndPrint gopts localOpts tab' evalNode
+      goNormalize = do
+        evalOpts <- coreOptionsToEvalOptions localOpts
+        normalizeAndPrint' evalOpts gopts localOpts tab' evalNode
         where
           evalNode :: Core.Node
             | isJust (localOpts ^. coreSymbolName) = getNode' selInfo
