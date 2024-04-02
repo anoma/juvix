@@ -21,6 +21,14 @@ data CompileCommonOptions' inputFile = CompileCommonOptions
 
 makeLenses ''CompileCommonOptions'
 
+applyCompileCommonOptions :: CompileCommonOptions' b -> EntryPoint -> EntryPoint
+applyCompileCommonOptions opts e =
+  e
+    { _entryPointDebug = opts ^. compileDebug,
+      _entryPointOptimizationLevel = fromMaybe defaultOptimizationLevel (opts ^. compileOptimizationLevel),
+      _entryPointInliningDepth = opts ^. compileInliningDepth
+    }
+
 fromCompileCommonOptionsMain :: (Members '[App] r) => CompileCommonOptionsMain -> Sem r CompileCommonOptions
 fromCompileCommonOptionsMain = traverseOf compileInputFile getMainAppFile
 

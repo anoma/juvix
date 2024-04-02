@@ -2,13 +2,14 @@
 module Commands.Extra.NewCompile
   ( module Commands.Extra.NewCompile,
     module Commands.Extra.Clang,
+    module Juvix.Compiler.Core.Translation.FromInternal.Data.Context,
   )
 where
 
 import Commands.Base
 import Commands.CompileNew.CommonOptions
 import Commands.Extra.Clang
-import Juvix.Compiler.Core qualified as Core
+import Juvix.Compiler.Core.Translation.FromInternal.Data.Context
 
 getOutputFile :: (Members '[App] r) => FileExt -> Maybe (AppPath File) -> Maybe (AppPath File) -> Sem r (Path Abs File)
 getOutputFile ext inp = \case
@@ -17,5 +18,5 @@ getOutputFile ext inp = \case
     mainFile <- getMainFile inp
     return (replaceExtension' (unpack (fileExtToText ext)) mainFile)
 
-compileToCore :: (Members '[App, EmbedIO, TaggedLock] r) => CompileCommonOptions -> Sem r Core.CoreResult
+compileToCore :: (Members '[App, EmbedIO, TaggedLock] r) => CompileCommonOptions -> Sem r CoreResult
 compileToCore opts = runPipeline (Just (opts ^. compileInputFile)) upToCore

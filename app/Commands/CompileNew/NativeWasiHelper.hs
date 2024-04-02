@@ -6,7 +6,6 @@ import Commands.CompileNew.CommonOptions
 import Commands.Extra.NewCompile
 import Juvix.Compiler.Backend
 import Juvix.Compiler.Backend.C qualified as C
-import Juvix.Compiler.Core.Translation.FromInternal.Data.Context
 
 data HelperOptions = HelperOptions
   { _helperCompileCommonOptions :: CompileCommonOptionsMain,
@@ -34,6 +33,7 @@ runCommand opts = do
   coreRes <- fromCompileCommonOptionsMain opts' >>= compileToCore
   entryPoint <-
     set entryPointTarget (Just (opts ^. helperTarget))
+      . applyCompileCommonOptions opts'
       <$> getEntryPoint (opts' ^. compileInputFile)
   C.MiniCResult {..} <-
     getRight
