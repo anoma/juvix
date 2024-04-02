@@ -3,11 +3,11 @@ module Commands.Dev.Core.Options where
 import Commands.Dev.Core.Asm.Options
 import Commands.Dev.Core.Compile.Options
 import Commands.Dev.Core.Eval.Options
-import Commands.Dev.DevCompile.Core.Options
 import Commands.Dev.Core.Normalize.Options
 import Commands.Dev.Core.Read.Options
 import Commands.Dev.Core.Repl.Options
 import Commands.Dev.Core.Strip.Options
+import Commands.Dev.DevCompile.Core.Options
 import CommonOptions
 
 data CoreCommand

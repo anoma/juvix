@@ -1,8 +1,8 @@
-module Commands.CompileNew.Anoma.Options (
-module Commands.CompileNew.Anoma.Options ,
-
-module Commands.CompileNew.CommonOptions,
-                                         ) where
+module Commands.CompileNew.Anoma.Options
+  ( module Commands.CompileNew.Anoma.Options,
+    module Commands.CompileNew.CommonOptions,
+  )
+where
 
 import Commands.CompileNew.CommonOptions
 import CommonOptions

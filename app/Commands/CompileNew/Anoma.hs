@@ -1,13 +1,13 @@
 module Commands.CompileNew.Anoma where
 
 import Commands.Base
-import Juvix.Compiler.Nockma.Translation.FromTree qualified as Nockma
-import Juvix.Compiler.Nockma.Pretty qualified as Nockma
-import Juvix.Compiler.Backend
 import Commands.CompileNew.Anoma.Options
 import Commands.Extra.NewCompile
+import Juvix.Compiler.Backend
+import Juvix.Compiler.Nockma.Pretty qualified as Nockma
+import Juvix.Compiler.Nockma.Translation.FromTree qualified as Nockma
 
-runCommand :: Members '[App, EmbedIO, TaggedLock] r => AnomaOptions -> Sem r ()
+runCommand :: (Members '[App, EmbedIO, TaggedLock] r) => AnomaOptions -> Sem r ()
 runCommand opts = do
   let opts' = opts ^. anomaCompileCommonOptions
       inputFile = opts' ^. compileInputFile
