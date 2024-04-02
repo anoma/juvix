@@ -4,11 +4,13 @@ import Commands.CompileNew.CommonOptions
 import CommonOptions
 
 data CairoOptions = CairoOptions
-  { _cairoCompileCommonOptions :: CompileCommonOptions
+  { _cairoCompileCommonOptions :: CompileCommonOptionsMain
   }
   deriving stock (Data)
 
+makeLenses ''CairoOptions
+
 parseCairo :: Parser CairoOptions
 parseCairo = do
-  _cairoCompileCommonOptions <- parseCompileCommonOptions
+  _cairoCompileCommonOptions <- parseCompileCommonOptionsMain
   pure CairoOptions {..}
