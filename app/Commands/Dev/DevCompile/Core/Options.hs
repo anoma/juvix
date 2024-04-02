@@ -4,6 +4,7 @@ module Commands.Dev.DevCompile.Core.Options
   )
 where
 
+import App
 import Commands.CompileNew.CommonOptions
 import CommonOptions
 import Evaluator qualified as Eval
@@ -35,11 +36,12 @@ instance CanonicalProjection CoreOptions Core.Options where
         Core._optShowArgsNum = c ^. coreShowArgsNum
       }
 
-instance CanonicalProjection CoreOptions Eval.EvalOptions where
-  project c =
+coreOptionsToEvalOptions :: (Members '[App] r) => CoreOptions -> Sem r Eval.EvalOptions
+coreOptionsToEvalOptions c = do
+  inputFile <- getMainAppFile (c ^. coreCompileCommonOptions . compileInputFile)
+  return
     Eval.EvalOptions
-      { -- _evalInputFile = c ^. coreCompileCommonOptions . compileInputFile,
-        _evalInputFile = undefined,
+      { _evalInputFile = inputFile,
         _evalNoIO = c ^. coreNoIO,
         _evalNoDisambiguate = c ^. coreNoDisambiguate,
         _evalPrintValues = False

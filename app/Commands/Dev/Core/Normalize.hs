@@ -12,7 +12,8 @@ runCommand opts = do
   gopts <- askGlobalOptions
   case Core.runParser f defaultModuleId mempty s of
     Left err -> exitJuvixError (JuvixError err)
-    Right (tab, Just node) -> do normalizeAndPrint gopts opts tab node
+    Right (tab, Just node) -> do
+      normalizeAndPrint gopts opts tab node
     Right (_, Nothing) -> return ()
   where
     b :: AppPath File

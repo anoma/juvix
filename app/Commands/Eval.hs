@@ -20,7 +20,8 @@ runCommand opts@EvalOptions {..} = do
         | isJust _evalSymbolName = getNode tab (selInfo tab)
         | otherwise = getNode tab (mainInfo tab)
   case mevalNode of
-    Just evalNode ->
+    Just evalNode -> do
+      evopts <- evalOptionsToEvalOptions opts
       Eval.evalAndPrint gopts opts tab evalNode
     Nothing -> do
       let name = fromMaybe Str.main _evalSymbolName

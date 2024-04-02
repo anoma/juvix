@@ -57,7 +57,9 @@ runCommand localOpts = do
             newline
 
       goEval :: Sem r ()
-      goEval = evalAndPrint gopts localOpts tab' evalNode
+      goEval = do
+        evalOpts <- coreOptionsToEvalOptions localOpts
+        evalAndPrint' (project gopts) (project localOpts) evalOpts tab' evalNode
         where
           evalNode :: Core.Node
             | isJust (localOpts ^. coreSymbolName) = getNode' selInfo
