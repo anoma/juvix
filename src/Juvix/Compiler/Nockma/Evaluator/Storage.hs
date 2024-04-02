@@ -12,17 +12,21 @@ newtype StorageKey a = StorageKey {_storageKeyTerm :: Term a}
 makeLenses ''Storage
 makeLenses ''StorageKey
 
-stripTags :: Term a -> Term a
-stripTags = \case
-  TermAtom a -> TermAtom (set atomTag Nothing a)
+stripMeta :: Term a -> Term a
+stripMeta = \case
+  TermAtom a ->
+    TermAtom
+      Atom
+        { _atom = a ^. atom,
+          _atomInfo = emptyAtomInfo
+        }
   TermCell c ->
     TermCell
-      ( set cellTag Nothing
-          . over cellLeft stripTags
-          . over cellRight stripTags
-          . over (cellCall . _Just . stdlibCallArgs) stripTags
-          $ c
-      )
+      Cell'
+        { _cellLeft = stripMeta (c ^. cellLeft),
+          _cellRight = stripMeta (c ^. cellRight),
+          _cellInfo = emptyCellInfo
+        }
 
 instance (NockmaEq a) => NockmaEq (StorageKey a) where
   nockmaEq (StorageKey s1) (StorageKey s2) = nockmaEq s1 s2
@@ -45,7 +49,7 @@ instance (NockmaEq a, Hashable a) => Hashable (StorageKey a) where
         TermCell c -> goCell c
 
 instance (PrettyCode a, NockNatural a) => PrettyCode (StorageKey a) where
-  ppCode k = ppCode (stripTags (k ^. storageKeyTerm))
+  ppCode k = ppCode (stripMeta (k ^. storageKeyTerm))
 
 emptyStorage :: (NockmaEq a, Hashable a) => Storage a
 emptyStorage = Storage {_storageKeyValueData = mempty}
