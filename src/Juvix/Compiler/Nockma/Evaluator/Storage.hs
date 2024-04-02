@@ -24,14 +24,28 @@ stripTags = \case
           $ c
       )
 
-instance (Eq a) => Eq (StorageKey a) where
-  s1 == s2 = stripTags (s1 ^. storageKeyTerm) == stripTags (s2 ^. storageKeyTerm)
+instance (NockmaEq a) => NockmaEq (StorageKey a) where
+  nockmaEq (StorageKey s1) (StorageKey s2) = nockmaEq s1 s2
 
-instance (Hashable a) => Hashable (StorageKey a) where
-  hashWithSalt s k = hashWithSalt s (stripTags (k ^. storageKeyTerm))
+instance (NockmaEq a) => Eq (StorageKey a) where
+  (==) = nockmaEq
+
+instance (NockmaEq a, Hashable a) => Hashable (StorageKey a) where
+  hashWithSalt salt k = goTerm salt (k ^. storageKeyTerm)
+    where
+      goCell :: Int -> Cell a -> Int
+      goCell s c = hashWithSalt s (c ^. cellLeft, c ^. cellRight)
+
+      goAtom :: Int -> Atom a -> Int
+      goAtom s a = hashWithSalt s (a ^. atom)
+
+      goTerm :: Int -> Term a -> Int
+      goTerm s = \case
+        TermAtom a -> goAtom s a
+        TermCell c -> goCell s c
 
 instance (PrettyCode a, NockNatural a) => PrettyCode (StorageKey a) where
   ppCode k = ppCode (stripTags (k ^. storageKeyTerm))
 
-emptyStorage :: (Hashable a) => Storage a
+emptyStorage :: (NockmaEq a, Hashable a) => Storage a
 emptyStorage = Storage {_storageKeyValueData = mempty}
