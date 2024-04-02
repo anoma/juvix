@@ -1,14 +1,20 @@
-module Commands.CompileNew.Vampir.Options where
+module Commands.CompileNew.Vampir.Options
+  ( module Commands.CompileNew.Vampir.Options,
+    module Commands.CompileNew.CommonOptions,
+  )
+where
 
 import Commands.CompileNew.CommonOptions
 import CommonOptions
 
 data VampirOptions = VampirOptions
-  { _vampirCompileCommonOptions :: CompileCommonOptions
+  { _vampirCompileCommonOptions :: CompileCommonOptionsMain
   }
   deriving stock (Data)
 
+makeLenses ''VampirOptions
+
 parseVampir :: Parser VampirOptions
 parseVampir = do
-  _vampirCompileCommonOptions <- parseCompileCommonOptions
+  _vampirCompileCommonOptions <- parseCompileCommonOptionsMain
   pure VampirOptions {..}

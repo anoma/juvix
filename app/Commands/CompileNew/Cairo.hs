@@ -1,7 +1,6 @@
 module Commands.CompileNew.Cairo where
 
 import Commands.Base
-import Commands.CompileNew.Anoma.Options
 import Commands.CompileNew.Cairo.Options
 import Commands.Extra.NewCompile
 import Data.Aeson qualified as JSON
@@ -14,7 +13,7 @@ runCommand opts = do
       moutputFile = opts' ^. compileOutputFile
   coreRes <- fromCompileCommonOptionsMain opts' >>= compileToCore
   entryPoint <-
-    set entryPointTarget (Just TargetAnoma)
+    set entryPointTarget (Just TargetCairo)
       . applyCompileCommonOptions opts'
       <$> getEntryPoint (opts' ^. compileInputFile)
   cairoFile :: Path Abs File <- getOutputFile FileExtCasm inputFile moutputFile

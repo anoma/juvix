@@ -1,4 +1,8 @@
-module Commands.CompileNew.Cairo.Options where
+module Commands.CompileNew.Cairo.Options
+  ( module Commands.CompileNew.Cairo.Options,
+    module Commands.CompileNew.CommonOptions,
+  )
+where
 
 import Commands.CompileNew.CommonOptions
 import CommonOptions
