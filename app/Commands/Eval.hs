@@ -22,7 +22,7 @@ runCommand opts@EvalOptions {..} = do
   case mevalNode of
     Just evalNode -> do
       evopts <- evalOptionsToEvalOptions opts
-      Eval.evalAndPrint gopts opts tab evalNode
+      Eval.evalAndPrint' (project gopts) (project opts) evopts tab evalNode
     Nothing -> do
       let name = fromMaybe Str.main _evalSymbolName
       exitFailMsg ("function not found: " <> name)
