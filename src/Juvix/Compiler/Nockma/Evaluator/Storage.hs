@@ -31,18 +31,18 @@ instance (NockmaEq a) => Eq (StorageKey a) where
   (==) = nockmaEq
 
 instance (NockmaEq a, Hashable a) => Hashable (StorageKey a) where
-  hashWithSalt salt k = goTerm salt (k ^. storageKeyTerm)
+  hashWithSalt salt k = goTerm (k ^. storageKeyTerm)
     where
-      goCell :: Int -> Cell a -> Int
-      goCell s c = hashWithSalt s (c ^. cellLeft, c ^. cellRight)
+      goCell :: Cell a -> Int
+      goCell c = hashWithSalt salt (c ^. cellLeft, c ^. cellRight)
 
-      goAtom :: Int -> Atom a -> Int
-      goAtom s a = hashWithSalt s (a ^. atom)
+      goAtom :: Atom a -> Int
+      goAtom a = hashWithSalt salt (a ^. atom)
 
-      goTerm :: Int -> Term a -> Int
-      goTerm s = \case
-        TermAtom a -> goAtom s a
-        TermCell c -> goCell s c
+      goTerm :: Term a -> Int
+      goTerm = \case
+        TermAtom a -> goAtom a
+        TermCell c -> goCell c
 
 instance (PrettyCode a, NockNatural a) => PrettyCode (StorageKey a) where
   ppCode k = ppCode (stripTags (k ^. storageKeyTerm))
