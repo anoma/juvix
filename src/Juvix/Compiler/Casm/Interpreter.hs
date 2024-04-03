@@ -61,6 +61,7 @@ hRunCode hout (LabelInfo labelInfo) instrs0 = runST goCode
             Return -> goReturn pc ap fp mem
             Alloc x -> goAlloc x pc ap fp mem
             Trace x -> goTrace x pc ap fp mem
+            Hint x -> goHint x pc ap fp mem
             Label {} -> go (pc + 1) ap fp mem
             Nop -> go (pc + 1) ap fp mem
 
@@ -240,6 +241,16 @@ hRunCode hout (LabelInfo labelInfo) instrs0 = runST goCode
       v <- readRValue ap fp mem _instrTraceValue
       GHC.unsafePerformIO (hPrint hout v >> return (pure ()))
       go (pc + 1) ap fp mem
+
+    goHint :: Hint -> Address -> Address -> Address -> Memory s -> ST s FField
+    goHint hint pc ap fp mem = case hint of
+      HintInput {} -> do
+        -- TODO: handle input in the interpreter
+        mem' <- writeMem mem ap (fieldFromInteger fsize 0)
+        go (pc + 1) (ap + 1) fp mem'
+      HintAlloc size -> do
+        mem' <- writeMem mem ap (fieldFromInteger fsize (fromIntegral ap + 1))
+        go (pc + 1) (ap + size + 1) fp mem'
 
     goFinish :: Address -> Memory s -> ST s FField
     goFinish ap mem = do

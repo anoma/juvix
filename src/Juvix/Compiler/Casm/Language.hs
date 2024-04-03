@@ -74,6 +74,10 @@ data ExtraOpcode
   | -- | Sets the result to zero if arg1 < arg2, or to non-zero otherwise
     IntLt
 
+data Hint
+  = HintInput Text
+  | HintAlloc Int
+
 data Instruction
   = Assign InstrAssign
   | -- | Extra binary operation not directly available in Cairo Assembly bytecode,
@@ -85,6 +89,7 @@ data Instruction
   | Return
   | Alloc InstrAlloc
   | Trace InstrTrace
+  | Hint Hint
   | Label LabelRef
   | Nop
 

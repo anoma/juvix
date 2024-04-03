@@ -19,6 +19,7 @@ validate labi instrs = mapM_ go instrs
       Return -> return ()
       Alloc x -> goAlloc x
       Trace x -> goTrace x
+      Hint {} -> return ()
       Label {} -> return ()
       Nop -> return ()
 

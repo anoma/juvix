@@ -42,6 +42,7 @@ fromCasm instrs0 =
       Casm.Call x -> goCall x
       Casm.Return -> goReturn
       Casm.Alloc x -> goAlloc x
+      Casm.Hint x -> goHint x
       Casm.Trace {} -> []
       Casm.Label {} -> []
       Casm.Nop -> []
@@ -228,3 +229,8 @@ fromCasm instrs0 =
             . updateOps False _instrAllocSize
             . set instrApUpdate ApUpdateAdd
             $ defaultInstruction
+
+        goHint :: Casm.Hint -> [Element]
+        goHint = \case
+          Casm.HintInput var -> [ElementHint (Hint ("Input(" <> var <> ")") True)]
+          Casm.HintAlloc size -> [ElementHint (Hint ("Alloc(" <> show size <> ")") True)]
