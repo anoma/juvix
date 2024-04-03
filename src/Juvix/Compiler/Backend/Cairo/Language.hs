@@ -22,6 +22,12 @@ import Juvix.Data.Field
 data Element
   = ElementInstruction Instruction
   | ElementImmediate FField
+  | ElementHint Hint
+
+data Hint = Hint
+  { _hintCode :: Text,
+    _hintIncAp :: Bool
+  }
 
 data Instruction = Instruction
   { _instrOffDst :: Offset,
@@ -80,3 +86,4 @@ defaultInstruction =
     }
 
 makeLenses ''Instruction
+makeLenses ''Hint

@@ -1,6 +1,8 @@
 module Juvix.Compiler.Backend.Cairo.Data.Result where
 
 import Data.Aeson as Aeson hiding (Result)
+import Data.Aeson.Types hiding (Result)
+import Data.Vector qualified as V
 import Juvix.Prelude hiding ((.=))
 
 data Result = Result
@@ -8,6 +10,7 @@ data Result = Result
     _resultStart :: Int,
     _resultEnd :: Int,
     _resultMain :: Int,
+    _resultHints :: [(Int, Text)],
     _resultBuiltins :: [Text]
   }
 
@@ -19,7 +22,7 @@ instance ToJSON Result where
       [ "data" .= toJSON _resultData,
         "attributes" .= Array mempty,
         "builtins" .= toJSON _resultBuiltins,
-        "hints" .= object [],
+        "hints" .= object (map mkHint _resultHints),
         "identifiers"
           .= object
             [ "__main__.__start__"
@@ -46,3 +49,21 @@ instance ToJSON Result where
             [ "references" .= Array mempty
             ]
       ]
+    where
+      mkHint :: (Int, Text) -> Pair
+      mkHint (pc, hintCode) = (fromString (show pc), Array $ V.fromList [hint])
+        where
+          hint =
+            object
+              [ "accessible_scopes" .= Array mempty,
+                "code" .= hintCode,
+                "flow_tracking_data"
+                  .= object
+                    [ "ap_tracking"
+                        .= object
+                          [ "group" .= Number 0,
+                            "offset" .= Number 0
+                          ],
+                      "reference_ids" .= object []
+                    ]
+              ]
