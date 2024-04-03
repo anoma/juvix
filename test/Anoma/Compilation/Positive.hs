@@ -36,7 +36,7 @@ mkAnomaCallTest' enableDebug _testProgramStorage _testName relRoot mainFile args
     compileMain rootCopyDir = do
       let testRootDir = rootCopyDir <//> relRoot
       entryPoint <-
-        set entryPointTarget TargetAnoma . set entryPointDebug enableDebug
+        set entryPointTarget (Just TargetAnoma) . set entryPointDebug enableDebug
           <$> testDefaultEntryPointIO testRootDir (testRootDir <//> mainFile)
       (^. pipelineResult) . snd <$> testRunIO entryPoint upToAnoma
 

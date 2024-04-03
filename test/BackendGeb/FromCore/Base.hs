@@ -17,7 +17,7 @@ coreToGebTranslationAssertion ::
 coreToGebTranslationAssertion root mainFile expectedFile step = do
   step "Parse Juvix Core file"
   input_ <- readFile mainFile
-  entryPoint <- set entryPointTarget TargetGeb <$> testDefaultEntryPointIO root mainFile
+  entryPoint <- set entryPointTarget (Just TargetGeb) <$> testDefaultEntryPointIO root mainFile
   case Core.runParserMain mainFile defaultModuleId mempty input_ of
     Left err -> assertFailure . show . pretty $ err
     Right coreInfoTable -> coreToGebTranslationAssertion' coreInfoTable entryPoint expectedFile step
