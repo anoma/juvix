@@ -27,7 +27,7 @@ data PipelineArg = PipelineArg
 getEntry :: (Members '[EmbedIO, App, TaggedLock] r) => PipelineArg -> Sem r EntryPoint
 getEntry PipelineArg {..} = do
   ep <- getEntryPoint (Just (_pipelineArgOptions ^. compileInputFile))
-  return $
+  return
     ep
       { _entryPointTarget = Just (getTarget (_pipelineArgOptions ^. compileTarget)),
         _entryPointDebug = _pipelineArgOptions ^. compileDebug,

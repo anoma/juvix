@@ -1,19 +1,25 @@
-module Commands.CompileNew.NativeWasiHelper where
+module Commands.CompileNew.NativeWasiHelper
+  ( module Commands.CompileNew.NativeWasiHelper,
+    module Commands.CompileNew.NativeWasiHelper.RuntimeWriter,
+  )
+where
 
 import Commands.Base
 import Commands.CompileNew.CStage
 import Commands.CompileNew.CommonOptions
+import Commands.CompileNew.NativeWasiHelper.RuntimeWriter
 import Commands.Extra.NewCompile
 import Juvix.Compiler.Backend
 import Juvix.Compiler.Backend.C qualified as C
+import Juvix.Extra.Paths
 
 data HelperOptions = HelperOptions
   { _helperCompileCommonOptions :: CompileCommonOptionsMain,
     _helperCStage :: CStage,
     _helperTarget :: Target,
-    _helperDefaultOutputFile :: Path Abs File -> Path Abs File -> Path Abs File
+    _helperDefaultOutputFile :: Path Abs File -> Path Abs File -> Path Abs File,
+    _helperPrepareRuntime :: forall r. (Members '[App, EmbedIO] r) => Sem r ()
   }
-  deriving stock (Data)
 
 makeLenses ''HelperOptions
 
@@ -48,11 +54,15 @@ runCommand opts = do
   let carg =
         ClangArgs
           { _clangDebug = opts' ^. compileDebug,
-            _clangInputFile = outfile,
+            _clangInputFile = cFile,
             _clangOptimizationLevel = opts' ^. compileOptimizationLevel,
             _clangCStage = opts ^. helperCStage,
             _clangOutputFile = outfile
           }
+  buildDir <- askBuildDir
+  ensureDir buildDir
+  ensureDir (juvixIncludeDir buildDir)
+  opts ^. helperPrepareRuntime
   clangNativeCompile carg
   where
     inputCFile :: Path Abs File -> Sem r (Path Abs File)

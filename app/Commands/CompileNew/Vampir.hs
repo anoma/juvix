@@ -14,6 +14,7 @@ runCommand opts = do
   coreRes <- fromCompileCommonOptionsMain opts' >>= compileToCore
   entryPoint <-
     set entryPointTarget (Just TargetVampIR)
+      . set entryPointUnsafe (opts ^. vampirUnsafe)
       . applyCompileCommonOptions opts'
       <$> getEntryPoint (opts' ^. compileInputFile)
   vampirFile :: Path Abs File <- getOutputFile FileExtVampIR inputFile moutputFile
