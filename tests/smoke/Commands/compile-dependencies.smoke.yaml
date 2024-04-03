@@ -121,7 +121,7 @@ tests:
         rm HelloWorld
 
         # Compile using the offline clone
-        juvix --offline compile HelloWorld.juvix
+        juvix --offline compile native HelloWorld.juvix
         ./HelloWorld
     stdout:
       contains: Hello from dep
@@ -724,7 +724,7 @@ tests:
         EOF
 
         rm juvix.lock.yaml
-        juvix --offline compile HelloWorld.juvix
+        juvix --offline compile native HelloWorld.juvix
         ./HelloWorld
     stdout:
       contains: This is from the second commit
@@ -864,7 +864,7 @@ tests:
         EOF
 
         # compile project
-        juvix --offline compile HelloWorld.juvix
+        juvix --offline compile native HelloWorld.juvix
     stderr:
       contains: dep1
     stdout:

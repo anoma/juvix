@@ -11,7 +11,7 @@ tests:
           Usage: juvix dev termination COMMAND
       exit-status: 1
 
-    - name: calls-autocompletion-requires-files-arg
+    - name: calls-autocompletion-optional-files-arg
       command: 
         - juvix 
         - dev 
@@ -20,10 +20,10 @@ tests:
         - --help
       stdout:
         contains: |
-            JUVIX_FILE
+            [JUVIX_FILE]
       exit-status: 0
 
-    - name: graph-cmd-autocompletion-requires-files-arg
+    - name: graph-cmd-autocompletion-optional-files-arg
       command: 
         - juvix 
         - dev 
@@ -32,5 +32,5 @@ tests:
         - --help
       stdout:
         contains: |
-            JUVIX_FILE
+            [JUVIX_FILE]
       exit-status: 0

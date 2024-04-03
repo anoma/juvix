@@ -13,10 +13,11 @@ import Juvix.Compiler.Core.Translation
 
 runCommand :: forall r. (Members '[App, TaggedLock, EmbedIO] r) => CoreOptions -> Sem r ()
 runCommand localOpts = do
+  opts' <- fromCompileCommonOptionsMain (localOpts ^. coreCompileCommonOptions)
   gopts <- askGlobalOptions
-  let inputFile = localOpts ^. coreCompileCommonOptions . compileInputFile
-  md <- (^. coreResultModule) <$> runPipeline inputFile upToCore
-  mainFile :: Path Abs File <- getMainFile inputFile
+  let inputFile = opts' ^. compileInputFile
+  md <- (^. coreResultModule) <$> runPipeline (Just inputFile) upToCore
+  mainFile :: Path Abs File <- getMainFile (Just inputFile)
   let r =
         run
           . runReader (project @GlobalOptions @Core.CoreOptions gopts)
