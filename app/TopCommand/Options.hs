@@ -1,7 +1,6 @@
 module TopCommand.Options where
 
 import Commands.Clean.Options
-import Commands.Compile.Options
 import Commands.CompileNew.Options
 import Commands.Dependencies.Options qualified as Dependencies
 import Commands.Dev.Options qualified as Dev
@@ -23,7 +22,6 @@ data TopCommand
   | DisplayNumericVersion
   | DisplayHelp
   | Typecheck TypecheckOptions
-  | Compile CompileOptionsMain
   | CompileNew CompileNewCommand
   | Clean CleanOptions
   | Eval EvalOptions
@@ -179,13 +177,6 @@ commandCompileNew =
       (CompileNew <$> parseCompileNewCommand)
       (progDesc "Compile a Juvix file")
 
-commandCompile :: Mod CommandFields TopCommand
-commandCompile =
-  command "compile-old" $
-    info
-      (Compile <$> parseMainCompileOptions)
-      (progDesc "Compile a Juvix file")
-
 commandEval :: Mod CommandFields TopCommand
 commandEval =
   command "eval" $
@@ -221,7 +212,6 @@ parseCompilerCommand =
         [ commandGroup "Compiler commands:",
           metavar "COMPILER_CMD",
           commandCheck,
-          commandCompile,
           commandCompileNew,
           commandEval,
           commandHtml,
