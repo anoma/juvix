@@ -57,7 +57,7 @@ tests:
         EOF
 
         # compile project
-        juvix compile HelloWorld.juvix
+        juvix compile native HelloWorld.juvix
         if [ ! -f "juvix.lock.yaml" ]; then
           exit 1
         fi
@@ -122,14 +122,14 @@ tests:
         EOF
 
         # compile project
-        juvix compile HelloWorld.juvix
+        juvix compile native HelloWorld.juvix
 
         # Delete the dependency
         rm -rf $temp/dep
         rm HelloWorld
 
         # Compile using the offline clone
-        juvix --offline compile HelloWorld.juvix
+        juvix --offline compile native HelloWorld.juvix
         ./HelloWorld
     stdout:
       contains: Hello from dep
@@ -191,7 +191,7 @@ tests:
         EOF
 
         # compile project the first time
-        juvix compile HelloWorld.juvix
+        juvix compile native HelloWorld.juvix
 
         # update the dependency
         cd $temp/dep
@@ -228,7 +228,7 @@ tests:
 
         # compile with the new hash
         rm juvix.lock.yaml
-        juvix compile HelloWorld.juvix
+        juvix compile native HelloWorld.juvix
         ./HelloWorld
     stdout:
       contains: This is from the second commit
@@ -375,7 +375,7 @@ tests:
         cd $temp/base
 
         # compile with the new hash
-        juvix compile HelloWorld.juvix
+        juvix compile native HelloWorld.juvix
         ./HelloWorld
     stdout:
       contains: "Hello from dep1\nHello from dep2"
@@ -437,7 +437,7 @@ tests:
         EOF
 
         # compile project
-        juvix compile HelloWorld.juvix
+        juvix compile native HelloWorld.juvix
 
         # update dependency
         cd $temp/dep
@@ -456,7 +456,7 @@ tests:
         cd $temp/base
         juvix clean
 
-        juvix compile HelloWorld.juvix
+        juvix compile native HelloWorld.juvix
         ./HelloWorld
     stdout:
       contains: Hello from dep
@@ -532,7 +532,7 @@ tests:
 
         # compile project and generate the lockfile
         # that uses $dep1hash1
-        juvix compile HelloWorld.juvix
+        juvix compile native HelloWorld.juvix
 
         cd $temp/base
 
@@ -556,7 +556,7 @@ tests:
         juvix dependencies update
 
         # compile should now use $dep1hash2
-        juvix compile HelloWorld.juvix
+        juvix compile native HelloWorld.juvix
         ./HelloWorld
     stdout:
       contains: Hello from commit 2
@@ -674,7 +674,7 @@ tests:
         EOF
 
         # compile and run the project
-        juvix compile HelloWorld.juvix
+        juvix compile native HelloWorld.juvix
         ./HelloWorld
     stdout:
       contains: "Hello from dep1\nHello from dep2"
@@ -750,7 +750,7 @@ tests:
 
         # compile project the first time
         # It should use code from the first commit
-        juvix compile HelloWorld.juvix
+        juvix compile native HelloWorld.juvix
         output=$(./HelloWorld)
 
         if [ "$output" != "Hello from dep" ]; then
@@ -776,7 +776,7 @@ tests:
         EOF
 
         rm juvix.lock.yaml
-        juvix --offline compile HelloWorld.juvix
+        juvix --offline compile native HelloWorld.juvix
         ./HelloWorld
     stdout:
       contains: This is from the second commit
@@ -836,7 +836,7 @@ tests:
         EOF
 
         # compile project
-        juvix compile HelloWorld.juvix
+        juvix compile native HelloWorld.juvix
     stderr:
       contains: invalid-ref
     stdout:
@@ -882,7 +882,7 @@ tests:
         EOF
 
         # compile project
-        juvix compile HelloWorld.juvix
+        juvix compile native HelloWorld.juvix
     stderr:
       contains: Error
     stdout:
@@ -928,7 +928,7 @@ tests:
         EOF
 
         # compile project
-        juvix --offline compile HelloWorld.juvix
+        juvix --offline compile native HelloWorld.juvix
     stderr:
       contains: dep1
     stdout:
@@ -996,13 +996,13 @@ tests:
         EOF
 
         # compile project
-        juvix compile HelloWorld.juvix
+        juvix compile native HelloWorld.juvix
 
         # corrupt the clone
         rm -rf ./.juvix-build/deps/dep1/.git
 
         # compile project
-        juvix compile HelloWorld.juvix
+        juvix compile native HelloWorld.juvix
     stderr:
       contains: juvix clean
     stdout:
@@ -1049,7 +1049,7 @@ tests:
         EOF
 
         # compile project
-        juvix compile HelloWorld.juvix
+        juvix compile native HelloWorld.juvix
     stdout:
       contains: ""
     stderr:
@@ -1112,13 +1112,13 @@ tests:
         EOF
 
         # compile project
-        juvix compile HelloWorld.juvix
+        juvix compile native HelloWorld.juvix
 
         # delete the dependency to check that it's not required
         rm -rf $temp/dep
 
         # compile project
-        juvix compile HelloWorld.juvix
+        juvix compile native HelloWorld.juvix
     stderr: ""
     stdout:
       contains: Cloning
