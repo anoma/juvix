@@ -1,8 +1,8 @@
 module Commands.CompileNew.NativeWasiHelper.RuntimeWriter where
 
 import Commands.Base
-import Data.FileEmbed qualified as FE
 import Data.ByteString qualified as BS
+import Data.FileEmbed qualified as FE
 import Juvix.Extra.Paths
 
 writeRuntime ::
@@ -28,5 +28,5 @@ writeRuntime runtime = do
   writeRuntimeFile runtime
   mapM_ (uncurry writeHeader) headersDir
   where
-  headersDir :: [(Path Rel File, BS.ByteString)]
-  headersDir = map (first relFile) $(FE.makeRelativeToProject "runtime/include" >>= FE.embedDir)
+    headersDir :: [(Path Rel File, BS.ByteString)]
+    headersDir = map (first relFile) $(FE.makeRelativeToProject "runtime/include" >>= FE.embedDir)

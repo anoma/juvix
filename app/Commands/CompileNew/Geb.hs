@@ -17,7 +17,11 @@ runCommand opts = do
     set entryPointTarget (Just TargetGeb)
       . applyCompileCommonOptions opts'
       <$> getEntryPoint (opts' ^. compileInputFile)
-  gebFile :: Path Abs File <- getOutputFile FileExtJuvixReg inputFile moutputFile
+  let ext :: FileExt
+      ext
+        | opts ^. gebOnlyTerm = FileExtJuvixGeb
+        | otherwise = FileExtLisp
+  gebFile :: Path Abs File <- getOutputFile ext inputFile moutputFile
   let spec
         | opts ^. gebOnlyTerm = Geb.OnlyTerm
         | otherwise =
