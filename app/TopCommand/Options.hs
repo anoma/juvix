@@ -173,14 +173,14 @@ commandCheck =
 
 commandCompileNew :: Mod CommandFields TopCommand
 commandCompileNew =
-  command "new-compile" $
+  command "compile" $
     info
       (CompileNew <$> parseCompileNewCommand)
       (progDesc "Compile a Juvix file")
 
 commandCompile :: Mod CommandFields TopCommand
 commandCompile =
-  command "compile" $
+  command "compile-old" $
     info
       (Compile <$> parseMainCompileOptions)
       (progDesc "Compile a Juvix file")
