@@ -1,4 +1,4 @@
-module Commands.CompileNew.NativeWasiHelper.RuntimeWriter where
+module Commands.Compile.NativeWasiHelper.RuntimeWriter where
 
 import Commands.Base
 import Data.ByteString qualified as BS

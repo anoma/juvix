@@ -1,13 +1,13 @@
-module Commands.CompileNew.Wasi.Options
-  ( module Commands.CompileNew.Wasi.Options,
-    module Commands.CompileNew.CommonOptions,
-    module Commands.CompileNew.CStage,
+module Commands.Compile.Wasi.Options
+  ( module Commands.Compile.Wasi.Options,
+    module Commands.Compile.CommonOptions,
+    module Commands.Compile.CStage,
   )
 where
 
 import Commands.Base
-import Commands.CompileNew.CStage
-import Commands.CompileNew.CommonOptions
+import Commands.Compile.CStage
+import Commands.Compile.CommonOptions
 
 data WasiOptions = WasiOptions
   { _wasiCompileCommonOptions :: CompileCommonOptionsMain,

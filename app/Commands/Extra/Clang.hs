@@ -5,7 +5,7 @@ module Commands.Extra.Clang
 where
 
 import Commands.Base
-import Commands.CompileNew.CStage
+import Commands.Compile.CStage
 import Commands.Extra.Clang.Backend
 import Juvix.Extra.Paths
 import Juvix.Prelude.Env

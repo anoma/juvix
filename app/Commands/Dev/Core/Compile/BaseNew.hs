@@ -1,6 +1,6 @@
 module Commands.Dev.Core.Compile.BaseNew where
 
-import Commands.CompileNew.CommonOptions
+import Commands.Compile.CommonOptions
 import Juvix.Compiler.Backend qualified as Backend
 import Juvix.Compiler.Core.Data.Module qualified as Core
 

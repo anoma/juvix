@@ -1,11 +1,11 @@
 module Commands.Dev.DevCompile.Core.Options
   ( module Commands.Dev.DevCompile.Core.Options,
-    module Commands.CompileNew.CommonOptions,
+    module Commands.Compile.CommonOptions,
   )
 where
 
 import App
-import Commands.CompileNew.CommonOptions
+import Commands.Compile.CommonOptions
 import CommonOptions
 import Evaluator qualified as Eval
 import Juvix.Compiler.Core.Data.TransformationId

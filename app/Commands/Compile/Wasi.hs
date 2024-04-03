@@ -1,8 +1,8 @@
-module Commands.CompileNew.Wasi where
+module Commands.Compile.Wasi where
 
 import Commands.Base
-import Commands.CompileNew.NativeWasiHelper as Helper
-import Commands.CompileNew.Wasi.Options
+import Commands.Compile.NativeWasiHelper as Helper
+import Commands.Compile.Wasi.Options
 import Data.ByteString qualified as BS
 import Data.FileEmbed qualified as FE
 import Juvix.Compiler.Backend

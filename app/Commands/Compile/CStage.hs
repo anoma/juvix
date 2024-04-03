@@ -1,5 +1,5 @@
 -- | TODO where to name and put this file?
-module Commands.CompileNew.CStage where
+module Commands.Compile.CStage where
 
 import CommonOptions
 import Juvix.Prelude as Juvix

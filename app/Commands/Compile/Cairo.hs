@@ -1,7 +1,7 @@
-module Commands.CompileNew.Cairo where
+module Commands.Compile.Cairo where
 
 import Commands.Base
-import Commands.CompileNew.Cairo.Options
+import Commands.Compile.Cairo.Options
 import Commands.Extra.NewCompile
 import Data.Aeson qualified as JSON
 import Juvix.Compiler.Backend

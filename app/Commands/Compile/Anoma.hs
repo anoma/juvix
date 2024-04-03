@@ -1,7 +1,7 @@
-module Commands.CompileNew.Anoma where
+module Commands.Compile.Anoma where
 
 import Commands.Base
-import Commands.CompileNew.Anoma.Options
+import Commands.Compile.Anoma.Options
 import Commands.Extra.NewCompile
 import Juvix.Compiler.Backend
 import Juvix.Compiler.Nockma.Pretty qualified as Nockma

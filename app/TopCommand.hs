@@ -2,7 +2,7 @@ module TopCommand where
 
 import Commands.Base hiding (Format)
 import Commands.Clean qualified as Clean
-import Commands.CompileNew qualified as CompileNew
+import Commands.Compile qualified as Compile
 import Commands.Dependencies qualified as Dependencies
 import Commands.Dev qualified as Dev
 import Commands.Doctor qualified as Doctor
@@ -38,7 +38,7 @@ runTopCommand = \case
   Init opts -> runLogIO (Init.init opts)
   Dev opts -> Dev.runCommand opts
   Typecheck opts -> Typecheck.runCommand opts
-  CompileNew opts -> CompileNew.runCommand opts
+  Compile opts -> Compile.runCommand opts
   Clean opts -> runFilesIO (Clean.runCommand opts)
   Eval opts -> Eval.runCommand opts
   Html opts -> Html.runCommand opts

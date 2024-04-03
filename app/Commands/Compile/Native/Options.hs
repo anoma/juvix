@@ -1,13 +1,13 @@
-module Commands.CompileNew.Native.Options
-  ( module Commands.CompileNew.Native.Options,
-    module Commands.CompileNew.CommonOptions,
-    module Commands.CompileNew.CStage,
+module Commands.Compile.Native.Options
+  ( module Commands.Compile.Native.Options,
+    module Commands.Compile.CommonOptions,
+    module Commands.Compile.CStage,
   )
 where
 
 import Commands.Base
-import Commands.CompileNew.CStage
-import Commands.CompileNew.CommonOptions
+import Commands.Compile.CStage
+import Commands.Compile.CommonOptions
 
 data NativeOptions = NativeOptions
   { _nativeCompileCommonOptions :: CompileCommonOptionsMain,

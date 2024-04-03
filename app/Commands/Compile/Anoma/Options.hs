@@ -1,10 +1,10 @@
-module Commands.CompileNew.Anoma.Options
-  ( module Commands.CompileNew.Anoma.Options,
-    module Commands.CompileNew.CommonOptions,
+module Commands.Compile.Anoma.Options
+  ( module Commands.Compile.Anoma.Options,
+    module Commands.Compile.CommonOptions,
   )
 where
 
-import Commands.CompileNew.CommonOptions
+import Commands.Compile.CommonOptions
 import CommonOptions
 
 data AnomaOptions = AnomaOptions

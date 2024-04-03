@@ -1,4 +1,4 @@
-module Commands.CompileNew.CommonOptions where
+module Commands.Compile.CommonOptions where
 
 import App
 import CommonOptions

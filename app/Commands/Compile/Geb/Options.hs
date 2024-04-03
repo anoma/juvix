@@ -1,10 +1,10 @@
-module Commands.CompileNew.Geb.Options
-  ( module Commands.CompileNew.Geb.Options,
-    module Commands.CompileNew.CommonOptions,
+module Commands.Compile.Geb.Options
+  ( module Commands.Compile.Geb.Options,
+    module Commands.Compile.CommonOptions,
   )
 where
 
-import Commands.CompileNew.CommonOptions
+import Commands.Compile.CommonOptions
 import CommonOptions
 
 data GebOptions = GebOptions

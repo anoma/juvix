@@ -1,14 +1,14 @@
-module Commands.CompileNew.NativeWasiHelper
-  ( module Commands.CompileNew.NativeWasiHelper,
-    module Commands.CompileNew.NativeWasiHelper.RuntimeWriter,
+module Commands.Compile.NativeWasiHelper
+  ( module Commands.Compile.NativeWasiHelper,
+    module Commands.Compile.NativeWasiHelper.RuntimeWriter,
     module Commands.Extra.Clang.Backend,
   )
 where
 
 import Commands.Base
-import Commands.CompileNew.CStage
-import Commands.CompileNew.CommonOptions
-import Commands.CompileNew.NativeWasiHelper.RuntimeWriter
+import Commands.Compile.CStage
+import Commands.Compile.CommonOptions
+import Commands.Compile.NativeWasiHelper.RuntimeWriter
 import Commands.Extra.Clang
 import Commands.Extra.Clang.Backend
 import Commands.Extra.NewCompile

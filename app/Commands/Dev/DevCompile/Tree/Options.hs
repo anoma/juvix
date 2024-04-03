@@ -1,10 +1,10 @@
 module Commands.Dev.DevCompile.Tree.Options
   ( module Commands.Dev.DevCompile.Tree.Options,
-    module Commands.CompileNew.CommonOptions,
+    module Commands.Compile.CommonOptions,
   )
 where
 
-import Commands.CompileNew.CommonOptions
+import Commands.Compile.CommonOptions
 import CommonOptions
 
 data TreeOptions = TreeOptions

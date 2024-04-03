@@ -7,7 +7,7 @@ module Commands.Extra.NewCompile
 where
 
 import Commands.Base
-import Commands.CompileNew.CommonOptions
+import Commands.Compile.CommonOptions
 import Commands.Extra.Clang
 import Juvix.Compiler.Core.Translation.FromInternal.Data.Context
 

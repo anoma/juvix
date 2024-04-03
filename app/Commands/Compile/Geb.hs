@@ -1,7 +1,7 @@
-module Commands.CompileNew.Geb where
+module Commands.Compile.Geb where
 
 import Commands.Base
-import Commands.CompileNew.Geb.Options
+import Commands.Compile.Geb.Options
 import Commands.Extra.NewCompile
 import Juvix.Compiler.Backend
 import Juvix.Compiler.Backend.Geb qualified as Geb
