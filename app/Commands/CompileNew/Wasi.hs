@@ -14,6 +14,7 @@ runCommand opts =
       { _helperCStage = opts ^. wasiCStage,
         _helperTarget = TargetCWasm32Wasi,
         _helperCompileCommonOptions = opts ^. wasiCompileCommonOptions,
+        _helperClangBackend = ClangWasi,
         _helperPrepareRuntime = prepareRuntime,
         _helperDefaultOutputFile = \inputFile baseOutputFile ->
           case opts ^. wasiCStage of

@@ -14,6 +14,7 @@ runCommand opts =
       { _helperCStage = opts ^. nativeCStage,
         _helperTarget = TargetCNative64,
         _helperCompileCommonOptions = opts ^. nativeCompileCommonOptions,
+        _helperClangBackend = ClangNative,
         _helperDefaultOutputFile = \inputFile baseOutputFile ->
           case opts ^. nativeCStage of
             CSource -> replaceExtension' cFileExt inputFile

@@ -1,8 +1,14 @@
-module Commands.Extra.Clang where
+module Commands.Extra.Clang
+  ( module Commands.Extra.Clang,
+    module Commands.Extra.Clang.Backend,
+  )
+where
 
 import Commands.Base
 import Commands.CompileNew.CStage
+import Commands.Extra.Clang.Backend
 import Juvix.Extra.Paths
+import Juvix.Prelude.Env
 import System.Environment
 import System.Process qualified as P
 
@@ -11,21 +17,46 @@ data ClangArgs = ClangArgs
     _clangInputFile :: Path Abs File,
     _clangOutputFile :: Path Abs File,
     _clangOptimizationLevel :: Maybe Int,
-    _clangCStage :: CStage
+    _clangCStage :: CStage,
+    _clangBackend :: ClangBackend
   }
 
 makeLenses ''ClangArgs
 
-clangNativeCompile ::
+clangCompile ::
   forall r.
   (Members '[App, EmbedIO] r) =>
   ClangArgs ->
   Sem r ()
-clangNativeCompile args@ClangArgs {..} = do
-  buildDir <- askBuildDir
+clangCompile args@ClangArgs {..} = do
   case _clangCStage of
     CSource -> copyFile _clangInputFile _clangOutputFile
-    _ -> runClang (native64Args buildDir args)
+    _ -> getClangCliArgs args >>= runClang
+
+getClangCliArgs :: (Members '[App, EmbedIO] r) => ClangArgs -> Sem r [String]
+getClangCliArgs args@ClangArgs {..} = do
+  buildDir <- askBuildDir
+  case _clangBackend of
+    ClangNative -> return (native64Args buildDir args)
+    ClangWasi -> do
+      sysroot <- getWasiSysrootPath
+      return (wasiArgs buildDir sysroot args)
+
+wasiArgs :: Path Abs Dir -> Path Abs Dir -> ClangArgs -> [String]
+wasiArgs buildDir sysrootPath args@ClangArgs {..} =
+  commonArgs buildDir args ++ extraArgs
+  where
+    extraArgs :: [String]
+    extraArgs = run . execAccumList $ do
+      addArg "-DARCH_WASM32"
+      addArg "-DAPI_WASI"
+      addArg (optimizationOption args)
+      addArg "-nodefaultlibs"
+      addArg "--target=wasm32-wasi"
+      addArg "--sysroot"
+      addArg (toFilePath sysrootPath)
+      addArg (toFilePath _clangInputFile)
+      when (_clangCStage == CExecutable) (addArg "-ljuvix")
 
 native64Args :: Path Abs Dir -> ClangArgs -> [String]
 native64Args buildDir args@ClangArgs {..} =

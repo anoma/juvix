@@ -1,6 +1,7 @@
 module Commands.CompileNew.NativeWasiHelper
   ( module Commands.CompileNew.NativeWasiHelper,
     module Commands.CompileNew.NativeWasiHelper.RuntimeWriter,
+    module Commands.Extra.Clang.Backend,
   )
 where
 
@@ -8,6 +9,8 @@ import Commands.Base
 import Commands.CompileNew.CStage
 import Commands.CompileNew.CommonOptions
 import Commands.CompileNew.NativeWasiHelper.RuntimeWriter
+import Commands.Extra.Clang
+import Commands.Extra.Clang.Backend
 import Commands.Extra.NewCompile
 import Juvix.Compiler.Backend
 import Juvix.Compiler.Backend.C qualified as C
@@ -17,6 +20,7 @@ data HelperOptions = HelperOptions
   { _helperCompileCommonOptions :: CompileCommonOptionsMain,
     _helperCStage :: CStage,
     _helperTarget :: Target,
+    _helperClangBackend :: ClangBackend,
     _helperDefaultOutputFile :: Path Abs File -> Path Abs File -> Path Abs File,
     _helperPrepareRuntime :: forall r. (Members '[App, EmbedIO] r) => Sem r ()
   }
@@ -57,13 +61,14 @@ runCommand opts = do
             _clangInputFile = cFile,
             _clangOptimizationLevel = opts' ^. compileOptimizationLevel,
             _clangCStage = opts ^. helperCStage,
+            _clangBackend = opts ^. helperClangBackend,
             _clangOutputFile = outfile
           }
   buildDir <- askBuildDir
   ensureDir buildDir
   ensureDir (juvixIncludeDir buildDir)
   opts ^. helperPrepareRuntime
-  clangNativeCompile carg
+  clangCompile carg
   where
     inputCFile :: Path Abs File -> Sem r (Path Abs File)
     inputCFile inputFileCompile = do
