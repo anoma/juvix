@@ -12,22 +12,24 @@ import Juvix.Compiler.Core.Transformation.DisambiguateNames (disambiguateNames')
 import Juvix.Compiler.Core.Translation
 
 runCommand :: forall r. (Members '[App, TaggedLock, EmbedIO] r) => CoreOptions -> Sem r ()
-runCommand localOpts = do
-  opts' <- fromCompileCommonOptionsMain (localOpts ^. coreCompileCommonOptions)
+runCommand coreOpts = do
+  opts <- fromCompileCommonOptionsMain (coreOpts ^. coreCompileCommonOptions)
   gopts <- askGlobalOptions
-  let inputFile = opts' ^. compileInputFile
+  let inputFile = opts ^. compileInputFile
   md <- (^. coreResultModule) <$> runPipeline (Just inputFile) upToCore
   mainFile :: Path Abs File <- getMainFile (Just inputFile)
   let r =
         run
           . runReader (project @GlobalOptions @Core.CoreOptions gopts)
           . runError @JuvixError
-          $ Core.applyTransformations (project localOpts ^. coreTransformations) md
+          $ Core.applyTransformations (project coreOpts ^. coreTransformations) md
   tab0 :: InfoTable <- Core.computeCombinedInfoTable <$> getRight r
-  let tab' :: InfoTable = if localOpts ^. coreNoDisambiguate then tab0 else disambiguateNames' tab0
+  let tab' :: InfoTable
+        | coreOpts ^. coreNoDisambiguate = tab0
+        | otherwise = disambiguateNames' tab0
       inInputModule :: IdentifierInfo -> Bool
       inInputModule x
-        | not (localOpts ^. coreFilter) = True
+        | not (coreOpts ^. coreFilter) = True
         | otherwise = x ^? identifierLocation . _Just . intervalFile == Just mainFile
 
       mainIdens :: [IdentifierInfo] =
@@ -42,37 +44,37 @@ runCommand localOpts = do
 
       selInfo :: Maybe IdentifierInfo
       selInfo = do
-        s <- localOpts ^. coreSymbolName
+        s <- coreOpts ^. coreSymbolName
         find (^. identifierName . to (== s)) mainIdens
 
       goPrint :: Sem r ()
-      goPrint = case localOpts ^. coreSymbolName of
+      goPrint = case coreOpts ^. coreSymbolName of
         Just {} -> printNode (fromMaybe err (getDef selInfo))
-        Nothing -> renderStdOut (Core.ppOut localOpts tab')
+        Nothing -> renderStdOut (Core.ppOut coreOpts tab')
         where
           printNode :: (Text, Core.Node) -> Sem r ()
           printNode (name, node) = do
             renderStdOut (name <> " = ")
-            renderStdOut (Core.ppOut localOpts node)
+            renderStdOut (Core.ppOut coreOpts node)
             newline
             newline
 
       goEval :: Sem r ()
       goEval = do
-        evalOpts <- coreOptionsToEvalOptions localOpts
-        evalAndPrint' (project gopts) (project localOpts) evalOpts tab' evalNode
+        evalOpts <- coreOptionsToEvalOptions coreOpts
+        evalAndPrint' (project gopts) (project coreOpts) evalOpts tab' evalNode
         where
           evalNode :: Core.Node
-            | isJust (localOpts ^. coreSymbolName) = getNode' selInfo
+            | isJust (coreOpts ^. coreSymbolName) = getNode' selInfo
             | otherwise = getNode' mainInfo
 
       goNormalize :: Sem r ()
       goNormalize = do
-        evalOpts <- coreOptionsToEvalOptions localOpts
-        normalizeAndPrint' evalOpts gopts localOpts tab' evalNode
+        evalOpts <- coreOptionsToEvalOptions coreOpts
+        normalizeAndPrint' evalOpts gopts coreOpts tab' evalNode
         where
           evalNode :: Core.Node
-            | isJust (localOpts ^. coreSymbolName) = getNode' selInfo
+            | isJust (coreOpts ^. coreSymbolName) = getNode' selInfo
             | otherwise = getNode' mainInfo
 
       getDef :: Maybe IdentifierInfo -> Maybe (Text, Core.Node)
@@ -91,6 +93,6 @@ runCommand localOpts = do
       err = error "function not found"
 
   if
-      | localOpts ^. coreEval -> goEval
-      | localOpts ^. coreNormalize -> goNormalize
+      | coreOpts ^. coreEval -> goEval
+      | coreOpts ^. coreNormalize -> goNormalize
       | otherwise -> goPrint

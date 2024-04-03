@@ -74,7 +74,6 @@ parseCoreOptions = do
       ( long "no-io"
           <> help "Don't interpret the IO effects"
       )
-  _coreInputFile <- parseInputFile FileExtJuvixCore
   _coreSymbolName <-
     optional $
       strOption
