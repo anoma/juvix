@@ -16,7 +16,9 @@ getOutputFile ext inp = \case
   Just out -> fromAppPathFile out
   Nothing -> do
     mainFile <- getMainFile inp
-    return (replaceExtension' (unpack (fileExtToText ext)) mainFile)
+    invokeDir <- askInvokeDir
+    let baseOutputFile = invokeDir <//> filename mainFile
+    return (replaceExtension' (fileExtToString ext) baseOutputFile)
 
 compileToCore :: (Members '[App, EmbedIO, TaggedLock] r) => CompileCommonOptions -> Sem r CoreResult
 compileToCore opts = runPipeline (Just (opts ^. compileInputFile)) upToCore

@@ -86,6 +86,9 @@ cssFileExt = ".css"
 nockmaFileExt :: (IsString a) => a
 nockmaFileExt = ".nockma"
 
+fileExtToString :: FileExt -> String
+fileExtToString = unpack . fileExtToText
+
 fileExtToText :: FileExt -> Text
 fileExtToText = \case
   FileExtJuvix -> juvixFileExt
