@@ -21,7 +21,7 @@ runCommand opts =
             CSource -> replaceExtension' cFileExt inputFile
             CPreprocess -> addExtension' cFileExt (addExtension' ".out" (removeExtension' inputFile))
             CAssembly -> replaceExtension' ".wat" inputFile
-            CExecutable -> removeExtension' baseOutputFile
+            CExecutable -> replaceExtension' ".wasm" baseOutputFile
       }
   where
     prepareRuntime ::
