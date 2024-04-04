@@ -23,9 +23,12 @@ serialize elems =
     hints :: [(Int, Text)]
     hints = catMaybes $ zipWith mkHint elems [0 ..]
 
+    pcShift :: Int
+    pcShift = length initializeOutput
+
     mkHint :: Element -> Int -> Maybe (Int, Text)
     mkHint el pc = case el of
-      ElementHint Hint {..} -> Just (pc, _hintCode)
+      ElementHint Hint {..} -> Just (pc + pcShift, _hintCode)
       _ -> Nothing
 
     toHexText :: Natural -> Text

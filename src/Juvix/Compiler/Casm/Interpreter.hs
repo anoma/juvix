@@ -11,6 +11,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Data.Vector qualified as Vec
 import Data.Vector.Mutable qualified as MV
 import GHC.IO qualified as GHC
+import Juvix.Compiler.Casm.Data.InputInfo
 import Juvix.Compiler.Casm.Data.LabelInfo
 import Juvix.Compiler.Casm.Error
 import Juvix.Compiler.Casm.Interpreter.Error
@@ -20,11 +21,11 @@ import Juvix.Data.Field
 type Memory s = MV.MVector s (Maybe FField)
 
 runCode :: LabelInfo -> [Instruction] -> FField
-runCode = hRunCode stderr
+runCode = hRunCode (InputInfo mempty) stderr
 
 -- | Runs Cairo Assembly. Returns the value of `[ap - 1]` at program exit.
-hRunCode :: Handle -> LabelInfo -> [Instruction] -> FField
-hRunCode hout (LabelInfo labelInfo) instrs0 = runST goCode
+hRunCode :: InputInfo -> Handle -> LabelInfo -> [Instruction] -> FField
+hRunCode inputInfo hout (LabelInfo labelInfo) instrs0 = runST goCode
   where
     instrs :: Vec.Vector Instruction
     instrs = Vec.fromList instrs0
@@ -244,9 +245,11 @@ hRunCode hout (LabelInfo labelInfo) instrs0 = runST goCode
 
     goHint :: Hint -> Address -> Address -> Address -> Memory s -> ST s FField
     goHint hint pc ap fp mem = case hint of
-      HintInput {} -> do
-        -- TODO: handle input in the interpreter
-        mem' <- writeMem mem ap (fieldFromInteger fsize 0)
+      HintInput var -> do
+        let val =
+              fromMaybe (throwRunError "invalid input") $
+                HashMap.lookup var (inputInfo ^. inputInfoMap)
+        mem' <- writeMem mem ap val
         go (pc + 1) (ap + 1) fp mem'
       HintAlloc size -> do
         mem' <- writeMem mem ap (fieldFromInteger fsize (fromIntegral ap + 1))

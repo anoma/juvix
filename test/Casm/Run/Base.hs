@@ -2,6 +2,8 @@ module Casm.Run.Base where
 
 import Base
 import Data.Aeson
+import Data.ByteString.Lazy qualified as BS
+import Juvix.Compiler.Casm.Data.InputInfo
 import Juvix.Compiler.Casm.Data.Result qualified as Casm
 import Juvix.Compiler.Casm.Error
 import Juvix.Compiler.Casm.Interpreter
@@ -34,8 +36,8 @@ casmRunVM labi instrs expectedFile step = do
         assertEqDiffText ("Check: RUN output = " <> toFilePath expectedFile) actualOutput expected
     )
 
-casmRunAssertion' :: Bool -> LabelInfo -> Code -> Path Abs File -> (String -> IO ()) -> Assertion
-casmRunAssertion' bRunVM labi instrs expectedFile step =
+casmRunAssertion' :: Bool -> LabelInfo -> Code -> Maybe (Path Abs File) -> Path Abs File -> (String -> IO ()) -> Assertion
+casmRunAssertion' bRunVM labi instrs inputFile expectedFile step =
   case validate labi instrs of
     Left err -> do
       assertFailure (show (pretty err))
@@ -45,7 +47,7 @@ casmRunAssertion' bRunVM labi instrs expectedFile step =
             let outputFile = dirPath <//> $(mkRelFile "out.out")
             step "Interpret"
             hout <- openFile (toFilePath outputFile) WriteMode
-            r' <- doRun hout labi instrs
+            r' <- doRun hout labi instrs inputFile
             case r' of
               Left err -> do
                 hClose hout
@@ -61,13 +63,13 @@ casmRunAssertion' bRunVM labi instrs expectedFile step =
       when bRunVM $
         casmRunVM labi instrs expectedFile step
 
-casmRunAssertion :: Bool -> Path Abs File -> Path Abs File -> (String -> IO ()) -> Assertion
-casmRunAssertion bRunVM mainFile expectedFile step = do
+casmRunAssertion :: Bool -> Path Abs File -> Maybe (Path Abs File) -> Path Abs File -> (String -> IO ()) -> Assertion
+casmRunAssertion bRunVM mainFile inputFile expectedFile step = do
   step "Parse"
   r <- parseFile mainFile
   case r of
     Left err -> assertFailure (show (pretty err))
-    Right (labi, instrs) -> casmRunAssertion' bRunVM labi instrs expectedFile step
+    Right (labi, instrs) -> casmRunAssertion' bRunVM labi instrs inputFile expectedFile step
 
 casmRunErrorAssertion :: Path Abs File -> (String -> IO ()) -> Assertion
 casmRunErrorAssertion mainFile step = do
@@ -81,7 +83,7 @@ casmRunErrorAssertion mainFile step = do
         Left {} -> assertBool "" True
         Right () -> do
           step "Interpret"
-          r' <- doRun stderr labi instrs
+          r' <- doRun stderr labi instrs Nothing
           case r' of
             Left _ -> assertBool "" True
             Right _ -> assertFailure "no error"
@@ -95,5 +97,13 @@ doRun ::
   Handle ->
   LabelInfo ->
   Code ->
+  Maybe (Path Abs File) ->
   IO (Either CasmError FField)
-doRun hout labi instrs = catchRunErrorIO (hRunCode hout labi instrs)
+doRun hout labi instrs inputFile = do
+  inputInfo <- case inputFile of
+    Just file -> do
+      bs <- BS.readFile (toFilePath file)
+      return $ fromJust $ decode bs
+    Nothing ->
+      return $ InputInfo mempty
+  catchRunErrorIO (hRunCode inputInfo hout labi instrs)

@@ -8,7 +8,8 @@ data PosTest = PosTest
     _runVM :: Bool,
     _relDir :: Path Rel Dir,
     _file :: Path Rel File,
-    _expectedFile :: Path Rel File
+    _expectedFile :: Path Rel File,
+    _inputFile :: Maybe (Path Rel File)
   }
 
 root :: Path Abs Dir
@@ -19,10 +20,11 @@ testDescr PosTest {..} =
   let tRoot = root <//> _relDir
       file' = tRoot <//> _file
       expected' = tRoot <//> _expectedFile
+      input' = fmap (tRoot <//>) _inputFile
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
-          _testAssertion = Steps $ casmRunAssertion _runVM file' expected'
+          _testAssertion = Steps $ casmRunAssertion _runVM file' input' expected'
         }
 
 filterTests :: [String] -> [PosTest] -> [PosTest]
@@ -41,83 +43,97 @@ tests =
       True
       $(mkRelDir ".")
       $(mkRelFile "test001.casm")
-      $(mkRelFile "out/test001.out"),
+      $(mkRelFile "out/test001.out")
+      Nothing,
     PosTest
       "Test002: Factorial"
       True
       $(mkRelDir ".")
       $(mkRelFile "test002.casm")
-      $(mkRelFile "out/test002.out"),
+      $(mkRelFile "out/test002.out")
+      Nothing,
     PosTest
       "Test003: Direct call"
       True
       $(mkRelDir ".")
       $(mkRelFile "test003.casm")
-      $(mkRelFile "out/test003.out"),
+      $(mkRelFile "out/test003.out")
+      Nothing,
     PosTest
       "Test004: Indirect call"
       True
       $(mkRelDir ".")
       $(mkRelFile "test004.casm")
-      $(mkRelFile "out/test004.out"),
+      $(mkRelFile "out/test004.out")
+      Nothing,
     PosTest
       "Test005: Exp function"
       True
       $(mkRelDir ".")
       $(mkRelFile "test005.casm")
-      $(mkRelFile "out/test005.out"),
+      $(mkRelFile "out/test005.out")
+      Nothing,
     PosTest
       "Test006: Branch"
       True
       $(mkRelDir ".")
       $(mkRelFile "test006.casm")
-      $(mkRelFile "out/test006.out"),
+      $(mkRelFile "out/test006.out")
+      Nothing,
     PosTest
       "Test007: Closure extension"
       True
       $(mkRelDir ".")
       $(mkRelFile "test007.casm")
-      $(mkRelFile "out/test007.out"),
+      $(mkRelFile "out/test007.out")
+      Nothing,
     PosTest
       "Test008: Integer arithmetic"
       False -- integer division not yet supported
       $(mkRelDir ".")
       $(mkRelFile "test008.casm")
-      $(mkRelFile "out/test008.out"),
+      $(mkRelFile "out/test008.out")
+      Nothing,
     PosTest
       "Test009: Recursion"
       True
       $(mkRelDir ".")
       $(mkRelFile "test009.casm")
-      $(mkRelFile "out/test009.out"),
+      $(mkRelFile "out/test009.out")
+      Nothing,
     PosTest
       "Test010: Functions returning functions"
       True
       $(mkRelDir ".")
       $(mkRelFile "test010.casm")
-      $(mkRelFile "out/test010.out"),
+      $(mkRelFile "out/test010.out")
+      Nothing,
     PosTest
       "Test011: Lists"
       True
       $(mkRelDir ".")
       $(mkRelFile "test011.casm")
-      $(mkRelFile "out/test011.out"),
+      $(mkRelFile "out/test011.out")
+      Nothing,
     PosTest
       "Test012: Recursion through higher-order functions"
       True
       $(mkRelDir ".")
       $(mkRelFile "test012.casm")
-      $(mkRelFile "out/test012.out"),
+      $(mkRelFile "out/test012.out")
+      Nothing,
     PosTest
       "Test013: Currying and uncurrying"
       True
       $(mkRelDir ".")
       $(mkRelFile "test013.casm")
-      $(mkRelFile "out/test013.out"),
+      $(mkRelFile "out/test013.out")
+      Nothing,
     PosTest
       "Test014: Field arithmetic"
       True
       $(mkRelDir ".")
       $(mkRelFile "test014.casm")
       $(mkRelFile "out/test014.out")
+      Nothing
   ]

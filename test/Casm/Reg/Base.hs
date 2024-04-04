@@ -3,6 +3,7 @@ module Casm.Reg.Base where
 import Base
 import Casm.Run.Base qualified as Run
 import Data.Aeson
+import Juvix.Compiler.Casm.Data.InputInfo
 import Juvix.Compiler.Casm.Data.Result
 import Juvix.Compiler.Casm.Interpreter
 import Juvix.Compiler.Reg.Data.InfoTable qualified as Reg
@@ -17,7 +18,7 @@ compileAssertion' _ outputFile _ tab step = do
     Right Result {..} -> do
       step "Interpret"
       hout <- openFile (toFilePath outputFile) WriteMode
-      let v = hRunCode hout _resultLabelInfo _resultCode
+      let v = hRunCode (InputInfo mempty) hout _resultLabelInfo _resultCode
       hPrint hout v
       hClose hout
 
