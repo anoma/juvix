@@ -106,4 +106,4 @@ doRun hout labi instrs inputFile = do
       return $ fromJust $ decode bs
     Nothing ->
       return $ InputInfo mempty
-  catchRunErrorIO (hRunCode inputInfo hout labi instrs)
+  catchRunErrorIO (hRunCode hout inputInfo labi instrs)

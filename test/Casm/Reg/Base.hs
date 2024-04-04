@@ -18,7 +18,7 @@ compileAssertion' _ outputFile _ tab step = do
     Right Result {..} -> do
       step "Interpret"
       hout <- openFile (toFilePath outputFile) WriteMode
-      let v = hRunCode (InputInfo mempty) hout _resultLabelInfo _resultCode
+      let v = hRunCode hout (InputInfo mempty) _resultLabelInfo _resultCode
       hPrint hout v
       hClose hout
 

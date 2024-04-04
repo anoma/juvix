@@ -1,6 +1,7 @@
 module Juvix.Compiler.Casm.Data.InputInfo where
 
 import Data.Aeson
+import Data.Aeson.Key
 import Data.Aeson.KeyMap qualified as KeyMap
 import Data.Aeson.Types
 import Data.HashMap.Strict qualified as HashMap
@@ -11,7 +12,7 @@ import Juvix.Prelude
 newtype InputInfo = InputInfo
   { _inputInfoMap :: HashMap Text FField
   }
-  deriving stock (Generic)
+  deriving stock (Generic, Show)
 
 makeLenses ''InputInfo
 
@@ -22,7 +23,7 @@ instance FromJSON InputInfo where
         mapM
           ( \(k, v) -> do
               v' <- parseFField v
-              return (show k, v')
+              return (toText k, v')
           )
           (KeyMap.toList obj)
       return

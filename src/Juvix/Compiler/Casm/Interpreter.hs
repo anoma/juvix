@@ -20,12 +20,12 @@ import Juvix.Data.Field
 
 type Memory s = MV.MVector s (Maybe FField)
 
-runCode :: LabelInfo -> [Instruction] -> FField
-runCode = hRunCode (InputInfo mempty) stderr
+runCode :: InputInfo -> LabelInfo -> [Instruction] -> FField
+runCode = hRunCode stderr
 
 -- | Runs Cairo Assembly. Returns the value of `[ap - 1]` at program exit.
-hRunCode :: InputInfo -> Handle -> LabelInfo -> [Instruction] -> FField
-hRunCode inputInfo hout (LabelInfo labelInfo) instrs0 = runST goCode
+hRunCode :: Handle -> InputInfo -> LabelInfo -> [Instruction] -> FField
+hRunCode hout inputInfo (LabelInfo labelInfo) instrs0 = runST goCode
   where
     instrs :: Vec.Vector Instruction
     instrs = Vec.fromList instrs0

@@ -135,5 +135,12 @@ tests =
       $(mkRelDir ".")
       $(mkRelFile "test014.casm")
       $(mkRelFile "out/test014.out")
-      Nothing
+      Nothing,
+    PosTest
+      "Test015: Input"
+      False -- TODO
+      $(mkRelDir ".")
+      $(mkRelFile "test015.casm")
+      $(mkRelFile "out/test015.out")
+      (Just $(mkRelFile "in/test015.json"))
   ]
