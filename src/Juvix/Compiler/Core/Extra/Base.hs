@@ -249,6 +249,11 @@ isTypeInteger = \case
   NPrim (TypePrim _ (PrimInteger _)) -> True
   _ -> False
 
+isTypeField :: Type -> Bool
+isTypeField = \case
+  NPrim (TypePrim _ PrimField) -> True
+  _ -> False
+
 isTypeBool :: Type -> Bool
 isTypeBool = \case
   NPrim (TypePrim _ (PrimBool _)) -> True

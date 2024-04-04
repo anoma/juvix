@@ -19,7 +19,7 @@ checkCairo md = do
       unless (checkType (ii ^. identifierType)) $
         throw
           CoreError
-            { _coreErrorMsg = ppOutput "for this target the arguments and the result of the `main` function must be numbers",
+            { _coreErrorMsg = ppOutput "for this target the arguments and the result of the `main` function must be numbers or field elements",
               _coreErrorLoc = fromMaybe defaultLoc (ii ^. identifierLocation),
               _coreErrorNode = Nothing
             }
@@ -29,7 +29,7 @@ checkCairo md = do
     checkType :: Node -> Bool
     checkType ty =
       let (tyargs, tgt) = unfoldPi' ty
-       in all isPrimInteger (tgt : tyargs)
+       in all isPrimIntegerOrField (tgt : tyargs)
       where
-        isPrimInteger ty' =
-          isTypeInteger ty' || isDynamic ty'
+        isPrimIntegerOrField ty' =
+          isTypeInteger ty' || isTypeField ty' || isDynamic ty'
