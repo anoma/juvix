@@ -138,7 +138,7 @@ tests =
       Nothing,
     PosTest
       "Test015: Input"
-      False -- TODO
+      True
       $(mkRelDir ".")
       $(mkRelFile "test015.casm")
       $(mkRelFile "out/test015.out")

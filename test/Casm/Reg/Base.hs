@@ -31,7 +31,7 @@ cairoAssertion' dirPath outputFile _ tab step = do
       step "Serialize to Cairo bytecode"
       encodeFile (toFilePath outputFile) res
       step "Execute in Cairo VM"
-      actualOutput <- Run.casmRunVM' dirPath outputFile
+      actualOutput <- Run.casmRunVM' dirPath outputFile Nothing
       writeFileEnsureLn outputFile actualOutput
 
 regToCasmAssertion :: Path Abs File -> Path Abs File -> (String -> IO ()) -> Assertion

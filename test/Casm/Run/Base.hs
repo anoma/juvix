@@ -14,13 +14,13 @@ import Juvix.Data.PPOutput
 import Juvix.Parser.Error
 import Runtime.Base qualified as R
 
-casmRunVM' :: Path Abs Dir -> Path Abs File -> IO Text
-casmRunVM' dirPath outputFile = do
-  out0 <- R.readProcessCwd (toFilePath dirPath) "run_cairo_vm.sh" [toFilePath outputFile] ""
-  return $ fromString $ unlines $ drop 1 $ lines (fromText out0)
+casmRunVM' :: Path Abs Dir -> Path Abs File -> Maybe (Path Abs File) -> IO Text
+casmRunVM' dirPath outputFile inputFile = do
+  let args = maybe [] (\f -> ["--program_input", toFilePath f]) inputFile
+  R.readProcessCwd (toFilePath dirPath) "run_cairo_vm.sh" (toFilePath outputFile : args) ""
 
-casmRunVM :: LabelInfo -> Code -> Path Abs File -> (String -> IO ()) -> Assertion
-casmRunVM labi instrs expectedFile step = do
+casmRunVM :: LabelInfo -> Code -> Maybe (Path Abs File) -> Path Abs File -> (String -> IO ()) -> Assertion
+casmRunVM labi instrs inputFile expectedFile step = do
   step "Check run_cairo_vm.sh is on path"
   assertCmdExists $(mkRelFile "run_cairo_vm.sh")
   withTempDir'
@@ -30,7 +30,7 @@ casmRunVM labi instrs expectedFile step = do
             outputFile = dirPath <//> $(mkRelFile "out.json")
         encodeFile (toFilePath outputFile) res
         step "Run Cairo VM"
-        actualOutput <- casmRunVM' dirPath outputFile
+        actualOutput <- casmRunVM' dirPath outputFile inputFile
         step "Compare expected and actual program output"
         expected <- readFile expectedFile
         assertEqDiffText ("Check: RUN output = " <> toFilePath expectedFile) actualOutput expected
@@ -61,7 +61,7 @@ casmRunAssertion' bRunVM labi instrs inputFile expectedFile step =
                 assertEqDiffText ("Check: RUN output = " <> toFilePath expectedFile) actualOutput expected
         )
       when bRunVM $
-        casmRunVM labi instrs expectedFile step
+        casmRunVM labi instrs inputFile expectedFile step
 
 casmRunAssertion :: Bool -> Path Abs File -> Maybe (Path Abs File) -> Path Abs File -> (String -> IO ()) -> Assertion
 casmRunAssertion bRunVM mainFile inputFile expectedFile step = do
