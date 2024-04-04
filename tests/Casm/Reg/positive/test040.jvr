@@ -1,0 +1,6 @@
+-- input
+
+function main(x : field, y : field) : field {
+  tmp[0] = fdiv arg[0] arg[1];
+  ret tmp[0];
+}

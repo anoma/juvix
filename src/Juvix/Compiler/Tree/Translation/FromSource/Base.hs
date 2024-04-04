@@ -142,8 +142,6 @@ statementFunction = do
   args <- functionArguments @t @e @d
   let argtys = map snd args
       argnames = map fst args
-  when (txt == "main" && not (null argtys)) $
-    parseFailure off "the 'main' function must take zero arguments"
   mrty <- optional $ typeAnnotation @t @e @d
   ec <- lift $ emptyCode @t @e @d
   ee <- lift $ emptyExtra @t @e @d

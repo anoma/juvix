@@ -98,7 +98,7 @@ instance PrettyCode LoadValue where
 
 instance PrettyCode Hint where
   ppCode = \case
-    HintInput (var) -> return $ "%{ Input(" <> show var <> ") %}"
+    HintInput (var) -> return $ "%{ Input(" <> pretty var <> ") %}"
     HintAlloc (size) -> return $ "%{ Alloc(" <> show size <> ") %}"
 
 instance PrettyCode InstrAssign where
