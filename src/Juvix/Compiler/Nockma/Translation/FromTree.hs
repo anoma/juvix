@@ -779,24 +779,24 @@ runCompilerWith opts constrs moduleFuns mainFun = makeAnomaFun
             }
         )
 
+    -- Replaces all instances of functionsLibraryPlaceHolder by the actual
+    -- functions library. Note that the functions library will have
+    -- functionsLibraryPlaceHolders, but this is not an issue because they
+    -- are not directly accessible from anoma so they'll never be entrypoints.
+    substEnv :: Term Natural -> Term Natural
+    substEnv = \case
+      TermAtom a
+        | a ^. atomHint == Just AtomHintFunctionsPlaceholder -> exportEnv
+        | otherwise -> TermAtom a
+      TermCell (Cell' l r i) ->
+        -- note that we do not need to recurse into terms inside the CellInfo because those terms will never be an entry point from anoma
+        TermCell (Cell' (substEnv l) (substEnv r) i)
+
     makeAnomaFun :: AnomaResult
     makeAnomaFun =
       AnomaResult
         { _anomaClosure = substEnv mainClosure
         }
-      where
-        -- Replaces all instances of functionsLibraryPlaceHolder by the actual
-        -- functions library. Note that the functions library will have
-        -- functionsLibraryPlaceHolders, but this is not an issue because they
-        -- are not directly accessible from anoma so they'll never be entrypoints.
-        substEnv :: Term Natural -> Term Natural
-        substEnv = \case
-          TermAtom a
-            | a ^. atomHint == Just AtomHintFunctionsPlaceholder -> exportEnv
-            | otherwise -> TermAtom a
-          TermCell (Cell' l r i) ->
-            -- note that we do not need to recurse into terms inside the CellInfo because those terms will never be an entry point from anoma
-            TermCell (Cell' (substEnv l) (substEnv r) i)
 
 functionsLibraryPlaceHolder :: Term Natural
 functionsLibraryPlaceHolder =
