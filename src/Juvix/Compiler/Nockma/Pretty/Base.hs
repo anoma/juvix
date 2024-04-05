@@ -101,9 +101,9 @@ unfoldCell c = c ^. cellLeft :| reverse (go [] (c ^. cellRight))
     go :: [Term a] -> Term a -> [Term a]
     go acc t = case t of
       TermAtom {} -> t : acc
-      TermCell (Cell' l r i) -> case i ^. cellInfoCall of
-        Nothing -> go (l : acc) r
-        Just {} -> t : acc
+      TermCell (Cell' l r i)
+        | isNothing (i ^. cellInfoCall) && isNothing (i ^. cellInfoTag) -> go (l : acc) r
+        | otherwise -> t : acc
 
 instance (PrettyCode a, NockNatural a) => PrettyCode (Term a) where
   ppCode = \case
