@@ -39,9 +39,21 @@ ppWithOffset off r
       off' <- ppOffset (-off)
       return $ r <+> Str.minus <+> off'
 
+instance PrettyCode Code where
+  ppCode :: forall r. (Members '[Reader Options] r) => [Instruction] -> Sem r (Doc Ann)
+  ppCode = mconcatMapM ppInstr
+    where
+      ppInstr :: Instruction -> Sem r (Doc Ann)
+      ppInstr instr = do
+        instr' <- ppCode instr
+        return (ind instr' <> line)
+        where
+          ind = case instr of
+            Label {} -> id
+            _ -> indent'
+
 instance PrettyCode Result where
-  ppCode Result {} = do
-    error "TODO"
+  ppCode Result {..} = ppCode _resultCode
 
 instance PrettyCode MemRef where
   ppCode MemRef {..} = do
