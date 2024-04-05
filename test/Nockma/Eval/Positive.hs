@@ -103,7 +103,7 @@ anomaTest :: Text -> Term Natural -> [Term Natural] -> Check () -> Bool -> Test
 anomaTest n mainFun args _testCheck _evalInterceptStdlibCalls =
   let f =
         CompilerFunction
-          { _compilerFunctionName = UserFunction (defaultSymbol 0),
+          { _compilerFunctionId = UserFunction (defaultSymbol 0),
             _compilerFunctionArity = fromIntegral (length args),
             _compilerFunction = return mainFun
           }
