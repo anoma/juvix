@@ -1,6 +1,23 @@
 -- input
 
+function sum(field) : field {
+  tmp[0] = eq arg[0] 0;
+  br tmp[0] {
+    true: {
+      ret 0;
+    };
+    false: {
+      tmp[1] = fsub arg[0] 1;
+      tmp[2] = call sum (tmp[1]);
+      tmp[3] = fadd tmp[2] arg[0];
+      ret tmp[3];
+    };
+  };
+}
+
 function main(x : field, y : field) : field {
   tmp[0] = fdiv arg[0] arg[1];
-  ret tmp[0];
+  tmp[1] = call sum (arg[0]);
+  tmp[2] = fadd tmp[0] tmp[1];
+  ret tmp[2];
 }
