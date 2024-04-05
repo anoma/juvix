@@ -983,7 +983,7 @@ getConstructorMemRep :: (Members '[Reader CompilerCtx] r) => Tree.Tag -> Sem r N
 getConstructorMemRep tag = (^. constructorInfoMemRep) <$> getConstructorInfo tag
 
 crash :: Term Natural
-crash = ("crash" @ OpAddress #. OpAddress # OpAddress)
+crash = ("crash" @ OpAddress # OpAddress # OpAddress)
 
 mul :: Term Natural -> Term Natural -> Term Natural
 mul a b = callStdlib StdlibMul [a, b]
