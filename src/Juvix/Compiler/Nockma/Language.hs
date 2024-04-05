@@ -290,9 +290,6 @@ nockBool = \case
 nockNilTagged :: Text -> Term Natural
 nockNilTagged txt = TermAtom (set atomTag (Just (Tag txt)) nockNil)
 
-nockNilUntagged :: Term Natural
-nockNilUntagged = TermAtom nockNil
-
 data NockNaturalNaturalError
   = NaturalInvalidPath (Atom Natural)
   | NaturalInvalidOp (Atom Natural)
