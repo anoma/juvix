@@ -10,7 +10,7 @@ runCommand :: (Members '[App, TaggedLock, EmbedIO] r) => AsmOptions -> Sem r ()
 runCommand opts = do
   let inputFile = opts ^. asmCompileCommonOptions . compileInputFile
       moutputFile = opts ^. asmCompileCommonOptions . compileOutputFile
-  outFile :: Path Abs File <- getOutputFile FileExtJuvixReg inputFile moutputFile
+  outFile :: Path Abs File <- getOutputFile FileExtJuvixAsm inputFile moutputFile
   res :: InfoTable <- runPipeline inputFile upToAsm
   let txt = ppPrint res res
   writeFileEnsureLn outFile txt

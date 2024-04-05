@@ -10,7 +10,7 @@ runCommand :: (Members '[App, TaggedLock, EmbedIO] r) => TreeOptions -> Sem r ()
 runCommand opts = do
   let inputFile = opts ^. treeCompileCommonOptions . compileInputFile
       moutputFile = opts ^. treeCompileCommonOptions . compileOutputFile
-  outFile :: Path Abs File <- getOutputFile FileExtJuvixReg inputFile moutputFile
+  outFile :: Path Abs File <- getOutputFile FileExtJuvixTree inputFile moutputFile
   res :: InfoTable <- runPipeline inputFile upToTree
   let txt = ppPrint res res
   writeFileEnsureLn outFile txt
