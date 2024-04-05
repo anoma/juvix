@@ -13,3 +13,4 @@ type Address = Int
 data Reg
   = Ap
   | Fp
+  deriving stock (Eq, Show)
