@@ -357,6 +357,28 @@ instance IsNock Path where
 instance IsNock EncodedPath where
   toNock = toNock . decodePath'
 
+class HasTag a where
+  atTag :: Lens' a (Maybe Tag)
+
+instance (HasTag (Term a)) where
+  atTag = lens getTag setTag
+    where
+      getTag :: Term x -> Maybe Tag
+      getTag = \case
+        TermAtom x -> x ^. atomTag
+        TermCell x -> x ^. cellTag
+
+      setTag :: Term a -> Maybe Tag -> Term a
+      setTag t newTag = case t of
+        TermAtom x -> TermAtom (set atomTag newTag x)
+        TermCell x -> TermCell (set cellTag newTag x)
+
+instance (HasTag (Cell a)) where
+  atTag = cellTag
+
+instance (HasTag (Atom a)) where
+  atTag = atomTag
+
 infixr 1 @.
 
 (@.) :: Text -> Cell Natural -> Cell Natural
@@ -364,8 +386,8 @@ tag @. c = set cellTag (Just (Tag tag)) c
 
 infixr 1 @
 
-(@) :: Text -> Cell Natural -> Term Natural
-tag @ c = TermCell (set cellTag (Just (Tag tag)) c)
+(@) :: (HasTag a) => Text -> a -> a
+tagTxt @ c = set atTag (Just (Tag tagTxt)) c
 
 infixr 5 #.
 
@@ -388,16 +410,16 @@ infixl 1 >>#
 a >># b = TermCell (a >>#. b)
 
 opCall :: Text -> Path -> Term Natural -> Term Natural
-opCall txt p t = txt @ (OpCall #. (p # t))
+opCall txt p t = TermCell (txt @ (OpCall #. (p # t)))
 
 opReplace :: Text -> Path -> Term Natural -> Term Natural -> Term Natural
-opReplace txt p t1 t2 = txt @ OpReplace #. ((p #. t1) #. t2)
+opReplace txt p t1 t2 = TermCell (txt @ OpReplace #. ((p #. t1) #. t2))
 
 opAddress :: Text -> Path -> Term Natural
-opAddress txt p = txt @ OpAddress #. p
+opAddress txt p = TermCell (txt @ OpAddress #. p)
 
 opQuote :: (IsNock x) => Text -> x -> Term Natural
-opQuote txt p = txt @ OpQuote #. p
+opQuote txt p = TermCell (txt @ OpQuote #. p)
 
 {-# COMPLETE Cell #-}
 
