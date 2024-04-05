@@ -292,7 +292,7 @@ anomaCallableClosureWrapper =
   let closureArgsNum :: Term Natural = getClosureFieldInSubject ClosureArgsNum
       closureTotalArgsNum :: Term Natural = getClosureFieldInSubject ClosureTotalArgsNum
       appendAndReplaceArgsTuple =
-        replaceArgsWithTerm $
+        replaceArgsWithTerm "anomaCallableClosureWrapper" $
           appendToTuple
             (getClosureFieldInSubject ClosureArgs)
             closureArgsNum
@@ -835,22 +835,25 @@ callFunWithArgs ::
 callFunWithArgs fun args = (replaceArgs args >>#) <$> callFun fun
 
 replaceSubject :: (AnomaCallablePathId -> Maybe (Term Natural)) -> Term Natural
-replaceSubject f =
+replaceSubject = replaceSubject' "replaceSubject"
+
+replaceSubject' :: Text -> (AnomaCallablePathId -> Maybe (Term Natural)) -> Term Natural
+replaceSubject' tag f =
   remakeList
     [ case f s of
-        Nothing -> opAddress "replaceSubject" (closurePath s)
+        Nothing -> opAddress tag (closurePath s)
         Just t' -> t'
       | s <- allElements
     ]
 
-replaceArgsWithTerm :: Term Natural -> Term Natural
-replaceArgsWithTerm term =
-  replaceSubject $ \case
+replaceArgsWithTerm :: Text -> Term Natural -> Term Natural
+replaceArgsWithTerm tag term =
+  replaceSubject' ("replaceArgsWithTerm-" <> tag) $ \case
     ArgsTuple -> Just term
     _ -> Nothing
 
 replaceArgs :: [Term Natural] -> Term Natural
-replaceArgs = replaceArgsWithTerm . foldTermsOrNil
+replaceArgs = replaceArgsWithTerm "replaceArgs" . foldTermsOrNil
 
 getFunctionPath :: (Members '[Reader CompilerCtx] r) => FunctionId -> Sem r Path
 getFunctionPath funName = asks (^?! compilerFunctionInfos . at funName . _Just . functionInfoPath)
