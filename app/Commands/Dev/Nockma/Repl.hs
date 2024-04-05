@@ -23,7 +23,8 @@ type ReplS = State.StateT ReplState IO
 data ReplState = ReplState
   { _replStateProgram :: Maybe (Program Natural),
     _replStateStack :: Maybe (Term Natural),
-    _replStateLoadedFile :: Maybe (Prelude.Path Abs File)
+    _replStateLoadedFile :: Maybe (Prelude.Path Abs File),
+    _replStateLastResult :: Term Natural
   }
 
 type Repl a = Repline.HaskelineT ReplS a
@@ -42,6 +43,7 @@ printHelpTxt = liftIO $ putStrLn helpTxt
   :help                           Print help text and describe options
   :set-stack EXPRESSION           Set the current stack
   :get-stack                      Print the current stack
+  :dump FILE                      Write the last result to FILE
   :dir       NATURAL              Convert a natural number representing a position into a sequence of L and Rs. S means the empty sequence
   :quit                           Exit the REPL
           |]
@@ -70,6 +72,12 @@ loadFile s = Repline.dontCrash $ do
   prog <- readProgram s
   State.modify (set replStateProgram (Just prog))
 
+dump :: FilePath -> Repl ()
+dump f = Repline.dontCrash $ do
+  p <- Prelude.resolveFile' f
+  t <- State.gets (^. replStateLastResult)
+  writeFileEnsureLn p (ppPrint t)
+
 reloadFile :: Repl ()
 reloadFile = Repline.dontCrash $ do
   fp <- State.gets (^. replStateLoadedFile)
@@ -87,6 +95,7 @@ options =
     ("load", loadFile . Prelude.absFile),
     ("reload", const reloadFile),
     ("dir", direction'),
+    ("dump", dump),
     ("help", const printHelpTxt)
   ]
 
@@ -150,7 +159,9 @@ evalStatement = \case
       Left e -> error (show e)
       Right ev -> case ev of
         Left e -> error (ppTrace e)
-        Right res -> liftIO (putStrLn (ppPrint res))
+        Right res -> do
+          State.modify (set replStateLastResult res)
+          liftIO (putStrLn (ppPrint res))
 
 replCommand :: String -> Repl ()
 replCommand input_ = Repline.dontCrash $ do
@@ -188,5 +199,6 @@ runCommand opts = do
       ReplState
         { _replStateStack = mt,
           _replStateProgram = Nothing,
-          _replStateLoadedFile = Nothing
+          _replStateLoadedFile = Nothing,
+          _replStateLastResult = nockNilTagged "repl-result"
         }
