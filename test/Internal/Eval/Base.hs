@@ -29,7 +29,7 @@ internalCoreAssertion root' mainFile expectedFile step = do
             case r' of
               Left err -> do
                 hClose hout
-                assertFailure (show (pretty err))
+                assertFailure (prettyString err)
               Right value -> do
                 unless
                   (Info.member kNoDisplayInfo (getInfo value))

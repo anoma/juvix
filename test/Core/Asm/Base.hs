@@ -46,7 +46,7 @@ coreAsmAssertion mainFile expectedFile step = do
   step "Parse"
   r <- parseFile mainFile
   case r of
-    Left err -> assertFailure (show (pretty err))
+    Left err -> assertFailure (prettyString err)
     Right (_, Nothing) -> do
       step "Empty program: compare expected and actual program output"
       expected <- readFile expectedFile
@@ -54,7 +54,7 @@ coreAsmAssertion mainFile expectedFile step = do
     Right (tabIni, Just node) -> do
       step "Translate"
       case run $ runReader defaultCoreOptions $ runError $ toStored' >=> toStripped' Identity $ moduleFromInfoTable $ setupMainFunction defaultModuleId tabIni node of
-        Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
+        Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
         Right m -> do
           let tab = Asm.fromTree $ Tree.fromCore $ Stripped.fromCore (maximum allowedFieldSizes) $ computeCombinedInfoTable m
           Asm.asmRunAssertion' tab expectedFile step

@@ -34,7 +34,7 @@ compileAssertionEntry adjustEntry root' bRunVM optLevel mainFile expectedFile st
   step "Translate to CASM"
   let entryPoint' = entryPoint {_entryPointOptimizationLevel = optLevel}
   case run $ runError @JuvixError $ runReader entryPoint' $ storedCoreToCasm (_pipelineResult ^. Core.coreResultModule) of
-    Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
+    Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
     Right Result {..} -> do
       withTempDir'
         ( \dirPath -> do

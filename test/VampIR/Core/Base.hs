@@ -23,7 +23,7 @@ vampirAssertion' backend tab dataFile step = do
         step "Translate to VampIR"
         let vampirFile = dirPath <//> $(mkRelFile "program.pir")
         case run (runReader defaultCoreOptions (runError @JuvixError (coreToVampIR' (moduleFromInfoTable tab)))) of
-          Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
+          Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
           Right VampIR.Result {..} -> do
             writeFileEnsureLn vampirFile _resultCode
 
