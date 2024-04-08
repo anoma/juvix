@@ -13,7 +13,7 @@ deserialize Result {..} = go [] (map (fromHexText . unpack) _resultData)
       | isPrefixOf "0x" s = case readHex (drop 2 s) of
           [(n, "")] -> n
           _ -> error ("error parsing field element: " <> pack s)
-      | otherwise = error "not a hexadecimal number"
+      | otherwise = error ("not a hexadecimal number: " <> pack s)
 
     go :: [Element] -> [Natural] -> [Element]
     go acc = \case
@@ -32,9 +32,9 @@ deserialize Result {..} = go [] (map (fromHexText . unpack) _resultData)
         where
           instr =
             Instruction
-              { _instrOffDst = fromBiasedRepr (e .&. 0xF),
-                _instrOffOp0 = fromBiasedRepr (shiftR e 16 .&. 0xF),
-                _instrOffOp1 = fromBiasedRepr (shiftR e 32 .&. 0xF),
+              { _instrOffDst = fromBiasedRepr (e .&. 0xFFFF),
+                _instrOffOp0 = fromBiasedRepr (shiftR e 16 .&. 0xFFFF),
+                _instrOffOp1 = fromBiasedRepr (shiftR e 32 .&. 0xFFFF),
                 _instrDstReg = goReg (testBit e 48),
                 _instrOp0Reg = goReg (testBit e 49),
                 _instrOp1Src = goOp1Src (shiftR e 50 .&. 0x7),
