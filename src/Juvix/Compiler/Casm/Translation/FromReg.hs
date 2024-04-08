@@ -2,6 +2,7 @@ module Juvix.Compiler.Casm.Translation.FromReg where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
+import Data.Text qualified as Text
 import Juvix.Compiler.Casm.Data.LabelInfoBuilder
 import Juvix.Compiler.Casm.Data.Limits
 import Juvix.Compiler.Casm.Data.Result
@@ -38,7 +39,7 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
 
     mkFunCall :: Symbol -> [Instruction]
     mkFunCall sym =
-      [ mkCallRel $ Lab $ LabelRef sym (Just $ Reg.lookupFunInfo tab sym ^. Reg.functionName),
+      [ mkCallRel $ Lab $ LabelRef sym (Just $ quoteName $ Reg.lookupFunInfo tab sym ^. Reg.functionName),
         Return,
         Nop
       ]
@@ -50,10 +51,22 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
     unsupported :: Text -> a
     unsupported what = error ("Cairo backend: unsupported: " <> what)
 
+    quoteName :: Text -> Text
+    quoteName txt =
+      foldr
+        (uncurry Text.replace)
+        txt
+        [ ("$", "__dollar__"),
+          (":", "__colon__"),
+          ("@", "__at__"),
+          ("ap", "__ap__"),
+          ("fp", "__fp__")
+        ]
+
     goFun :: forall r. (Member LabelInfoBuilder r) => StdlibBuiltins -> LabelRef -> (Address, [[Instruction]]) -> Reg.FunctionInfo -> Sem r (Address, [[Instruction]])
     goFun blts failLab (addr0, acc) funInfo = do
       let sym = funInfo ^. Reg.functionSymbol
-          funName = funInfo ^. Reg.functionName
+          funName = quoteName (funInfo ^. Reg.functionName)
       registerLabelName sym funName
       registerLabelAddress sym addr0
       let lab = Label $ LabelRef sym (Just funName)
@@ -400,7 +413,7 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
             mapM_ goAssignApValue (reverse args)
             output'' $ mkCallRel $ Lab $ LabelRef sym (Just funName)
             where
-              funName = Reg.lookupFunInfo tab sym ^. Reg.functionName
+              funName = quoteName (Reg.lookupFunInfo tab sym ^. Reg.functionName)
           Reg.CallClosure cl -> do
             mapM_ goAssignApValue (reverse args)
             r <- mkMemRef cl
