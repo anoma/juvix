@@ -8,7 +8,6 @@ import Commands.Dev.Core.Normalize.Options
 import Commands.Dev.Core.Read.Options
 import Commands.Dev.Core.Repl.Options
 import Commands.Dev.Core.Strip.Options
-import Commands.Dev.DevCompile.Core.Options
 import CommonOptions
 
 data CoreCommand
