@@ -10,9 +10,9 @@ deserialize Result {..} = go [] (map (fromHexText . unpack) _resultData)
   where
     fromHexText :: String -> Natural
     fromHexText s
-      | isPrefixOf "0x" s = case readHex s of
+      | isPrefixOf "0x" s = case readHex (drop 2 s) of
           [(n, "")] -> n
-          _ -> error "error parsing field element"
+          _ -> error ("error parsing field element: " <> pack s)
       | otherwise = error "not a hexadecimal number"
 
     go :: [Element] -> [Natural] -> [Element]
