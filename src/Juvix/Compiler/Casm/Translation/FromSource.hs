@@ -68,7 +68,14 @@ label addr = P.try $ do
 
 instruction :: (Member LabelInfoBuilder r) => ParsecS r Instruction
 instruction =
-  parseHint <|> parseNop <|> parseAlloc <|> parseJump <|> parseCall <|> parseReturn <|> parseTrace <|> parseAssign
+  parseHint
+    <|> parseNop
+    <|> parseAlloc
+    <|> parseJump
+    <|> parseCall
+    <|> parseReturn
+    <|> parseTrace
+    <|> parseAssign
 
 parseHint :: ParsecS r Instruction
 parseHint = do

@@ -20,12 +20,9 @@ instance FromJSON InputInfo where
   parseJSON = \case
     Object obj -> do
       lst <-
-        mapM
-          ( \(k, v) -> do
-              v' <- parseFField v
-              return (toText k, v')
-          )
-          (KeyMap.toList obj)
+        forM (KeyMap.toList obj) $ \(k, v) -> do
+          v' <- parseFField v
+          return (toText k, v')
       return
         . InputInfo
         . HashMap.fromList

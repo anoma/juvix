@@ -2,10 +2,9 @@ module Casm.Run.Base where
 
 import Base
 import Data.Aeson
-import Data.ByteString.Lazy qualified as BS
-import Juvix.Compiler.Casm.Data.InputInfo
 import Juvix.Compiler.Casm.Data.Result qualified as Casm
 import Juvix.Compiler.Casm.Error
+import Juvix.Compiler.Casm.Extra.InputInfo
 import Juvix.Compiler.Casm.Interpreter
 import Juvix.Compiler.Casm.Translation.FromSource
 import Juvix.Compiler.Casm.Validate
@@ -100,10 +99,5 @@ doRun ::
   Maybe (Path Abs File) ->
   IO (Either CasmError FField)
 doRun hout labi instrs inputFile = do
-  inputInfo <- case inputFile of
-    Just file -> do
-      bs <- BS.readFile (toFilePath file)
-      return $ fromJust $ decode bs
-    Nothing ->
-      return $ InputInfo mempty
+  inputInfo <- readInputInfo inputFile
   catchRunErrorIO (hRunCode hout inputInfo labi instrs)

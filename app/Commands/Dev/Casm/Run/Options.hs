@@ -13,5 +13,5 @@ makeLenses ''CasmRunOptions
 parseCasmRunOptions :: Parser CasmRunOptions
 parseCasmRunOptions = do
   _casmRunInputFile <- parseInputFile FileExtCasm
-  _casmRunDataFile <- optional (parseProgramInputFile)
+  _casmRunDataFile <- optional parseProgramInputFile
   pure CasmRunOptions {..}
