@@ -16,7 +16,7 @@ newtype FField = FField
 makeLenses ''FField
 
 defaultFieldSize :: Natural
-defaultFieldSize = smallFieldSize
+defaultFieldSize = cairoFieldSize
 
 cairoFieldSize :: Natural
 cairoFieldSize = 3618502788666131213697322783095070105623107215331596699973092056135872020481
@@ -35,10 +35,10 @@ instance Serialize FField where
     return $ fieldFromInteger n f
 
 instance Pretty FField where
-  pretty (FField (_ :&: f)) = pretty (toInteger f)
+  pretty f = pretty (fieldToInteger f)
 
 instance Show FField where
-  show (FField (_ :&: f)) = show (toInteger f)
+  show f = show (fieldToInteger f)
 
 fieldAdd :: FField -> FField -> FField
 fieldAdd
@@ -87,11 +87,15 @@ fieldSize
 
 fieldToInteger :: FField -> Integer
 fieldToInteger
-  (FField ((_ :: Sing (p :: Natural)) :&: (f1 :: PrimeField p))) =
-    toInteger f1
+  (FField ((n1 :: Sing (p :: Natural)) :&: (f1 :: PrimeField p)))
+    | i < n `div` 2 = i
+    | otherwise = -(n - i)
+    where
+      i = toInteger f1
+      n = fromIntegral (fromSing n1)
 
 fieldToNatural :: FField -> Natural
-fieldToNatural f = (fromIntegral (fieldToInteger f) + s) `mod` s
+fieldToNatural f = (fromIntegral ((fieldToInteger f) + fromIntegral s)) `mod` s
   where
     s = fieldSize f
 
