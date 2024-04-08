@@ -110,11 +110,11 @@ fromCairo elems0 = Result mempty (go 0 [] elems0)
         goNop :: Cairo.Instruction -> [Cairo.Element] -> (Instruction, Int)
         goNop i@Cairo.Instruction {..} elems =
           case _instrPcUpdate of
-            Cairo.PcUpdateJnz -> undefined
+            Cairo.PcUpdateJnz -> goJumpIf i elems
             Cairo.PcUpdateJump -> goJump False i elems
             Cairo.PcUpdateJumpRel -> goJump True i elems
             Cairo.PcUpdateRegular -> case _instrApUpdate of
-              Cairo.ApUpdateAdd -> undefined
+              Cairo.ApUpdateAdd -> goAlloc i elems
               _ -> errorMsg addr ("cannot disassemble: " <> show i)
 
         goJump :: Bool -> Cairo.Instruction -> [Cairo.Element] -> (Instruction, Int)
@@ -131,4 +131,37 @@ fromCairo elems0 = Result mempty (go 0 [] elems0)
                   { _instrJumpTarget = res,
                     _instrJumpRel = isRel,
                     _instrJumpIncAp = _instrApUpdate == Cairo.ApUpdateInc
+                  }
+
+        goJumpIf :: Cairo.Instruction -> [Cairo.Element] -> (Instruction, Int)
+        goJumpIf i@Cairo.Instruction {..} elems
+          | (_instrApUpdate == Cairo.ApUpdateInc || _instrApUpdate == Cairo.ApUpdateRegular) =
+              case res of
+                Val val ->
+                  (jmp val, delta)
+                _ ->
+                  errorMsg addr ("cannot disassemble conditional jump: " <> show i)
+          | otherwise =
+              errorMsg addr ("invalid conditional jump: " <> show i)
+          where
+            (res, delta) = decodeRes i elems
+            dst = decodeDst i
+
+            jmp :: Value -> Instruction
+            jmp tgt =
+              JumpIf
+                InstrJumpIf
+                  { _instrJumpIfTarget = tgt,
+                    _instrJumpIfValue = dst,
+                    _instrJumpIfIncAp = _instrApUpdate == Cairo.ApUpdateInc
+                  }
+
+        goAlloc :: Cairo.Instruction -> [Cairo.Element] -> (Instruction, Int)
+        goAlloc i elems = (alloc, delta)
+          where
+            (res, delta) = decodeRes i elems
+            alloc =
+              Alloc
+                InstrAlloc
+                  { _instrAllocSize = res
                   }
