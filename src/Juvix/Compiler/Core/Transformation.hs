@@ -53,7 +53,12 @@ import Juvix.Compiler.Core.Transformation.RemoveTypeArgs
 import Juvix.Compiler.Core.Transformation.TopEtaExpand
 import Juvix.Compiler.Core.Transformation.UnrollRecursion
 
-applyTransformations :: forall r. (Members '[Error JuvixError, Reader CoreOptions] r) => [TransformationId] -> Module -> Sem r Module
+applyTransformations ::
+  forall r.
+  (Members '[Error JuvixError, Reader CoreOptions] r) =>
+  [TransformationId] ->
+  Module ->
+  Sem r Module
 applyTransformations ts tbl = foldM (flip appTrans) tbl ts
   where
     appTrans :: TransformationId -> Module -> Sem r Module
