@@ -19,7 +19,7 @@ makeLenses ''WasiOptions
 
 parseWasi :: Parser WasiOptions
 parseWasi = do
-  _wasiCompileCommonOptions <- parseCompileCommonOptionsJuvixMain
+  _wasiCompileCommonOptions <- parseCompileCommonOptions
   _wasiCStage <- parseCStage
   pure WasiOptions {..}
 

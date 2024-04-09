@@ -16,5 +16,5 @@ makeLenses ''CasmOptions
 
 parseCasm :: Parser CasmOptions
 parseCasm = do
-  _casmCompileCommonOptions <- parseCompileCommonOptionsJuvixMain
+  _casmCompileCommonOptions <- parseCompileCommonOptions
   pure CasmOptions {..}

@@ -16,5 +16,5 @@ makeLenses ''RegOptions
 
 parseReg :: Parser RegOptions
 parseReg = do
-  _regCompileCommonOptions <- parseCompileCommonOptionsJuvixMain
+  _regCompileCommonOptions <- parseCompileCommonOptions
   pure RegOptions {..}

@@ -29,6 +29,8 @@ data FileExt
   | FileExtNockma
   deriving stock (Eq)
 
+$(genSingletons [''FileExt])
+
 juvixFileExt :: (IsString a) => a
 juvixFileExt = ".juvix"
 

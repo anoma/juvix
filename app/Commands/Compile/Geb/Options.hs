@@ -17,7 +17,7 @@ makeLenses ''GebOptions
 
 parseGeb :: Parser GebOptions
 parseGeb = do
-  _gebCompileCommonOptions <- parseCompileCommonOptionsJuvixMain
+  _gebCompileCommonOptions <- parseCompileCommonOptions
   _gebOnlyTerm <-
     switch
       ( short 'G' -- TODO I would like to deprecate the short flag

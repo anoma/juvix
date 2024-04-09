@@ -16,5 +16,5 @@ makeLenses ''AnomaOptions
 
 parseAnoma :: Parser AnomaOptions
 parseAnoma = do
-  _anomaCompileCommonOptions <- parseCompileCommonOptionsJuvixMain
+  _anomaCompileCommonOptions <- parseCompileCommonOptions
   pure AnomaOptions {..}
