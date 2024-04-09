@@ -405,8 +405,7 @@ tests =
         $(mkRelFile "out/test073.out"),
       posTest
         "Test074: Fields"
-        -- different textual format for "negative" field elements
-        False
+        True
         $(mkRelDir ".")
         $(mkRelFile "test074.juvix")
         $(mkRelFile "out/test074.out")
