@@ -105,7 +105,8 @@ anomaTest n mainFun args _testCheck _evalInterceptStdlibCalls =
         CompilerFunction
           { _compilerFunctionId = UserFunction (defaultSymbol 0),
             _compilerFunctionArity = fromIntegral (length args),
-            _compilerFunction = return mainFun
+            _compilerFunction = return mainFun,
+            _compilerFunctionName = "main"
           }
       _testName :: Text
         | _evalInterceptStdlibCalls = n <> " - intercept stdlib"
