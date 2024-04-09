@@ -16,5 +16,5 @@ makeLenses ''CairoOptions
 
 parseCairo :: Parser CairoOptions
 parseCairo = do
-  _cairoCompileCommonOptions <- parseCompileCommonOptionsMain
+  _cairoCompileCommonOptions <- parseCompileCommonOptionsJuvixMain
   pure CairoOptions {..}

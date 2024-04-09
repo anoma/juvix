@@ -1,6 +1,7 @@
 module Commands.Dev.Tree.Options where
 
 import Commands.Dev.Tree.Compile.Options
+import Commands.Dev.Tree.CompileOld.Options
 import Commands.Dev.Tree.Eval.Options
 import Commands.Dev.Tree.FromAsm.Options
 import Commands.Dev.Tree.Read.Options
@@ -9,7 +10,8 @@ import CommonOptions
 
 data TreeCommand
   = Eval TreeEvalOptions
-  | Compile CompileOptions
+  | CompileOld CompileOldOptions
+  | Compile CompileCommand
   | Read TreeReadOptions
   | FromAsm TreeFromAsmOptions
   | Repl TreeReplOptions
@@ -21,6 +23,7 @@ parseTreeCommand =
     mconcat
       [ commandRepl,
         commandEval,
+        commandCompileOld,
         commandCompile,
         commandRead,
         commandFromAsm
@@ -28,45 +31,54 @@ parseTreeCommand =
   where
     commandRepl :: Mod CommandFields TreeCommand
     commandRepl = command "repl" replInfo
+      where
+        replInfo :: ParserInfo TreeCommand
+        replInfo =
+          info
+            (Repl <$> parseTreeReplOptions)
+            (progDesc "Launch the JuvixTree REPL")
 
     commandEval :: Mod CommandFields TreeCommand
     commandEval = command "eval" evalInfo
+      where
+        evalInfo :: ParserInfo TreeCommand
+        evalInfo =
+          info
+            (Eval <$> parseTreeEvalOptions)
+            (progDesc "Evaluate a JuvixTree file")
 
     commandCompile :: Mod CommandFields TreeCommand
     commandCompile = command "compile" compileInfo
+      where
+        compileInfo :: ParserInfo TreeCommand
+        compileInfo =
+          info
+            (Compile <$> undefined)
+            (progDesc "Compile a JuvixTree file")
+
+    commandCompileOld :: Mod CommandFields TreeCommand
+    commandCompileOld = command "compile-old" compileInfo
+      where
+        compileInfo :: ParserInfo TreeCommand
+        compileInfo =
+          info
+            (CompileOld <$> parseTreeCompileOptions)
+            (progDesc "Compile a JuvixTree file")
 
     commandRead :: Mod CommandFields TreeCommand
     commandRead = command "read" readInfo
+      where
+        readInfo :: ParserInfo TreeCommand
+        readInfo =
+          info
+            (Read <$> parseTreeReadOptions)
+            (progDesc "Parse a JuvixTree file and pretty print it")
 
     commandFromAsm :: Mod CommandFields TreeCommand
     commandFromAsm = command "from-asm" fromAsmInfo
-
-    replInfo :: ParserInfo TreeCommand
-    replInfo =
-      info
-        (Repl <$> parseTreeReplOptions)
-        (progDesc "Launch the JuvixTree REPL")
-
-    evalInfo :: ParserInfo TreeCommand
-    evalInfo =
-      info
-        (Eval <$> parseTreeEvalOptions)
-        (progDesc "Evaluate a JuvixTree file")
-
-    compileInfo :: ParserInfo TreeCommand
-    compileInfo =
-      info
-        (Compile <$> parseTreeCompileOptions)
-        (progDesc "Compile a JuvixTree file")
-
-    readInfo :: ParserInfo TreeCommand
-    readInfo =
-      info
-        (Read <$> parseTreeReadOptions)
-        (progDesc "Parse a JuvixTree file and pretty print it")
-
-    fromAsmInfo :: ParserInfo TreeCommand
-    fromAsmInfo =
-      info
-        (FromAsm <$> parseTreeFromAsmOptions)
-        (progDesc "Convert a JuvixAsm file to JuvixTree and pretty print it")
+      where
+        fromAsmInfo :: ParserInfo TreeCommand
+        fromAsmInfo =
+          info
+            (FromAsm <$> parseTreeFromAsmOptions)
+            (progDesc "Convert a JuvixAsm file to JuvixTree and pretty print it")

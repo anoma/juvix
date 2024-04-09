@@ -9,6 +9,7 @@ import Commands.Compile.Geb.Options
 import Commands.Compile.Native.Options
 import Commands.Compile.Vampir.Options
 import Commands.Compile.Wasi.Options
+import Commands.Extra.NewCompile
 import CommonOptions
 
 data CompileCommand
@@ -21,56 +22,14 @@ data CompileCommand
   deriving stock (Data)
 
 parseCompileCommand :: Parser CompileCommand
-parseCompileCommand =
-  hsubparser
-    ( mconcat
-        [ commandNative,
-          commandWasi,
-          commandGeb,
-          commandVampir,
-          commandAnoma,
-          commandCairo
-        ]
-    )
+parseCompileCommand = commandTargetsHelper supportedTargets
 
-commandNative :: Mod CommandFields CompileCommand
-commandNative =
-  command "native" $
-    info
-      (Native <$> parseNative)
-      (progDesc "Compile to native code")
-
-commandWasi :: Mod CommandFields CompileCommand
-commandWasi =
-  command "wasi" $
-    info
-      (Wasi <$> parseWasi)
-      (progDesc "Compile to WASI (WebAssembly System Interface)")
-
-commandGeb :: Mod CommandFields CompileCommand
-commandGeb =
-  command "geb" $
-    info
-      (Geb <$> parseGeb)
-      (progDesc "Compile to Geb")
-
-commandVampir :: Mod CommandFields CompileCommand
-commandVampir =
-  command "vampir" $
-    info
-      (Vampir <$> parseVampir)
-      (progDesc "Compile to VampIR")
-
-commandAnoma :: Mod CommandFields CompileCommand
-commandAnoma =
-  command "anoma" $
-    info
-      (Anoma <$> parseAnoma)
-      (progDesc "Compile to Anoma")
-
-commandCairo :: Mod CommandFields CompileCommand
-commandCairo =
-  command "cairo" $
-    info
-      (Cairo <$> parseCairo)
-      (progDesc "Compile to Cairo")
+supportedTargets :: [(CompileTarget, Parser CompileCommand)]
+supportedTargets =
+  [ (AppTargetVampIR, Vampir <$> parseVampir),
+    (AppTargetAnoma, Anoma <$> parseAnoma),
+    (AppTargetCairo, Cairo <$> parseCairo),
+    (AppTargetGeb, Geb <$> parseGeb),
+    (AppTargetWasm32Wasi, Wasi <$> parseWasi),
+    (AppTargetNative64, Native <$> parseNative)
+  ]

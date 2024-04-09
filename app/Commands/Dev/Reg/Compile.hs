@@ -25,7 +25,7 @@ runCommand opts = do
             _entryPointDebug = opts ^. compileDebug
           }
   case opts ^. compileTarget of
-    TargetCasm -> do
+    AppTargetCasm -> do
       casmFile <- Compile.outputFile opts
       r <-
         runReader entryPoint
@@ -34,7 +34,7 @@ runCommand opts = do
           $ tab
       Casm.Result {..} <- getRight r
       writeFileEnsureLn casmFile (toPlainText $ Casm.ppProgram _resultCode)
-    TargetCairo -> do
+    AppTargetCairo -> do
       cairoFile <- Compile.outputFile opts
       r <-
         runReader entryPoint
@@ -63,17 +63,17 @@ runCommand opts = do
   where
     getTarget :: CompileTarget -> Sem r Backend.Target
     getTarget = \case
-      TargetWasm32Wasi -> return Backend.TargetCWasm32Wasi
-      TargetNative64 -> return Backend.TargetCNative64
-      TargetCasm -> return Backend.TargetCairo
-      TargetCairo -> return Backend.TargetCairo
-      TargetReg -> err "JuvixReg"
-      TargetAnoma -> err "Anoma"
-      TargetTree -> err "JuvixTree"
-      TargetGeb -> err "GEB"
-      TargetVampIR -> err "VampIR"
-      TargetCore -> err "JuvixCore"
-      TargetAsm -> err "JuvixAsm"
+      AppTargetWasm32Wasi -> return Backend.TargetCWasm32Wasi
+      AppTargetNative64 -> return Backend.TargetCNative64
+      AppTargetCasm -> return Backend.TargetCairo
+      AppTargetCairo -> return Backend.TargetCairo
+      AppTargetReg -> err "JuvixReg"
+      AppTargetAnoma -> err "Anoma"
+      AppTargetTree -> err "JuvixTree"
+      AppTargetGeb -> err "GEB"
+      AppTargetVampIR -> err "VampIR"
+      AppTargetCore -> err "JuvixCore"
+      AppTargetAsm -> err "JuvixAsm"
       where
         err :: Text -> Sem r a
         err tgt = exitMsg (ExitFailure 1) ("error: " <> tgt <> " target not supported for JuvixReg")
