@@ -728,8 +728,8 @@ runCompilerWith opts constrs moduleFuns mainFun = makeAnomaFun
                <$> [(f ^. compilerFunctionName, runCompilerFunction compilerCtx f) | f <- libFuns]
            )
 
-    exportEnv :: Term Natural
-    exportEnv = Str.theFunctionsLibrary @ makeList compiledFuns
+    funcsLib :: Term Natural
+    funcsLib = Str.theFunctionsLibrary @ makeList compiledFuns
 
     makeLibraryFunction :: (Text, Term Natural) -> Term Natural
     makeLibraryFunction (funName, c) =
@@ -783,19 +783,19 @@ runCompilerWith opts constrs moduleFuns mainFun = makeAnomaFun
     -- functions library. Note that the functions library will have
     -- functionsLibraryPlaceHolders, but this is not an issue because they
     -- are not directly accessible from anoma so they'll never be entrypoints.
-    substEnv :: Term Natural -> Term Natural
-    substEnv = \case
+    substFuncsLib :: Term Natural -> Term Natural
+    substFuncsLib = \case
       TermAtom a
-        | a ^. atomHint == Just AtomHintFunctionsPlaceholder -> exportEnv
+        | a ^. atomHint == Just AtomHintFunctionsPlaceholder -> funcsLib
         | otherwise -> TermAtom a
       TermCell (Cell' l r i) ->
         -- note that we do not need to recurse into terms inside the CellInfo because those terms will never be an entry point from anoma
-        TermCell (Cell' (substEnv l) (substEnv r) i)
+        TermCell (Cell' (substFuncsLib l) (substFuncsLib r) i)
 
     makeAnomaFun :: AnomaResult
     makeAnomaFun =
       AnomaResult
-        { _anomaClosure = substEnv (substEnv mainClosure)
+        { _anomaClosure = substFuncsLib (substFuncsLib mainClosure)
         }
 
 functionsLibraryPlaceHolder :: Term Natural
