@@ -7,7 +7,11 @@ import Data.ByteString qualified as BS
 import Data.FileEmbed qualified as FE
 import Juvix.Compiler.Backend
 
-runCommand :: forall r. (Members '[App, TaggedLock, EmbedIO] r) => NativeOptions -> Sem r ()
+runCommand ::
+  forall r k.
+  (Members '[App, TaggedLock, EmbedIO] r) =>
+  NativeOptions k ->
+  Sem r ()
 runCommand opts =
   Helper.runCommand
     HelperOptions

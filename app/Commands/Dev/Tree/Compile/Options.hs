@@ -15,7 +15,7 @@ import Commands.Extra.NewCompile
 import CommonOptions
 
 data CompileCommand
-  = Native NativeOptions
+  = Native (NativeOptions ('InputExtension 'FileExtJuvixTree))
   | Wasi WasiOptions
   | Asm AsmOptions -- TODO update options to parse .jvt
   | Reg RegOptions -- TODO update options to parse .jvt

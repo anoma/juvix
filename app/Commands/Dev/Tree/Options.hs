@@ -53,7 +53,7 @@ parseTreeCommand =
         compileInfo :: ParserInfo TreeCommand
         compileInfo =
           info
-            (Compile <$> undefined)
+            (Compile <$> parseCompileCommand)
             (progDesc "Compile a JuvixTree file")
 
     commandCompileOld :: Mod CommandFields TreeCommand
