@@ -2,7 +2,6 @@ module Commands.Dev.Runtime.Options where
 
 import Commands.Dev.Runtime.Compile.Options
 import CommonOptions
-import Data.List.NonEmpty qualified as NonEmpty
 
 newtype RuntimeCommand
   = Compile CompileOptions
@@ -10,10 +9,9 @@ newtype RuntimeCommand
 
 runtimeSupportedTargets :: NonEmpty CompileTarget
 runtimeSupportedTargets =
-  NonEmpty.fromList
-    [ TargetNative64,
-      TargetWasm32Wasi
-    ]
+  AppTargetNative64
+    :| [ AppTargetWasm32Wasi
+       ]
 
 parseRuntimeOptions :: Parser CompileOptions
 parseRuntimeOptions =

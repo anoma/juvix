@@ -19,7 +19,7 @@ makeLenses ''NativeOptions
 
 parseNative :: Parser NativeOptions
 parseNative = do
-  _nativeCompileCommonOptions <- parseCompileCommonOptionsMain
+  _nativeCompileCommonOptions <- parseCompileCommonOptionsJuvixMain
   _nativeCStage <- parseCStage
   pure NativeOptions {..}
 

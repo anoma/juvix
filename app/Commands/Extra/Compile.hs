@@ -25,37 +25,37 @@ runCompile opts = do
   ensureDir (juvixIncludeDir buildDir)
   prepareRuntime buildDir opts
   case opts ^. compileTarget of
-    TargetWasm32Wasi -> clangWasmWasiCompile opts
-    TargetNative64 -> clangNativeCompile opts
-    TargetGeb -> return (())
-    TargetVampIR -> return ()
-    TargetCore -> return ()
-    TargetAsm -> return ()
-    TargetReg -> return ()
-    TargetTree -> return ()
-    TargetAnoma -> return ()
-    TargetCasm -> return ()
-    TargetCairo -> return ()
+    AppTargetWasm32Wasi -> clangWasmWasiCompile opts
+    AppTargetNative64 -> clangNativeCompile opts
+    AppTargetGeb -> return (())
+    AppTargetVampIR -> return ()
+    AppTargetCore -> return ()
+    AppTargetAsm -> return ()
+    AppTargetReg -> return ()
+    AppTargetTree -> return ()
+    AppTargetAnoma -> return ()
+    AppTargetCasm -> return ()
+    AppTargetCairo -> return ()
 
 prepareRuntime :: forall r. (Members '[App, EmbedIO] r) => Path Abs Dir -> CompileOptions -> Sem r ()
 prepareRuntime buildDir o = do
   mapM_ writeHeader headersDir
   case o ^. compileTarget of
-    TargetWasm32Wasi
+    AppTargetWasm32Wasi
       | o ^. compileDebug -> writeRuntime wasiDebugRuntime
-    TargetWasm32Wasi -> writeRuntime wasiReleaseRuntime
-    TargetNative64
+    AppTargetWasm32Wasi -> writeRuntime wasiReleaseRuntime
+    AppTargetNative64
       | o ^. compileDebug -> writeRuntime nativeDebugRuntime
-    TargetNative64 -> writeRuntime nativeReleaseRuntime
-    TargetGeb -> return ()
-    TargetVampIR -> return ()
-    TargetCore -> return ()
-    TargetAsm -> return ()
-    TargetReg -> return ()
-    TargetTree -> return ()
-    TargetAnoma -> return ()
-    TargetCasm -> return ()
-    TargetCairo -> return ()
+    AppTargetNative64 -> writeRuntime nativeReleaseRuntime
+    AppTargetGeb -> return ()
+    AppTargetVampIR -> return ()
+    AppTargetCore -> return ()
+    AppTargetAsm -> return ()
+    AppTargetReg -> return ()
+    AppTargetTree -> return ()
+    AppTargetAnoma -> return ()
+    AppTargetCasm -> return ()
+    AppTargetCairo -> return ()
   where
     wasiReleaseRuntime :: BS.ByteString
     wasiReleaseRuntime = $(FE.makeRelativeToProject "runtime/_build.wasm32-wasi/libjuvix.a" >>= FE.embedFile)
@@ -95,34 +95,34 @@ outputFile opts = do
       invokeDir <- askInvokeDir
       let baseOutputFile = invokeDir <//> filename inputFile
       return $ case opts ^. compileTarget of
-        TargetNative64
+        AppTargetNative64
           | opts ^. compileCOutput -> replaceExtension' cFileExt inputFile
           | opts ^. compilePreprocess -> addExtension' cFileExt (addExtension' ".out" (removeExtension' inputFile))
           | opts ^. compileAssembly -> replaceExtension' ".s" inputFile
           | otherwise -> removeExtension' baseOutputFile
-        TargetWasm32Wasi
+        AppTargetWasm32Wasi
           | opts ^. compileCOutput -> replaceExtension' cFileExt inputFile
           | opts ^. compilePreprocess -> addExtension' cFileExt (addExtension' ".out" (removeExtension' inputFile))
           | opts ^. compileAssembly -> replaceExtension' ".wat" inputFile
           | otherwise -> replaceExtension' ".wasm" baseOutputFile
-        TargetGeb
+        AppTargetGeb
           | opts ^. compileTerm -> replaceExtension' juvixGebFileExt inputFile
           | otherwise -> replaceExtension' lispFileExt baseOutputFile
-        TargetVampIR ->
+        AppTargetVampIR ->
           replaceExtension' vampIRFileExt baseOutputFile
-        TargetCore ->
+        AppTargetCore ->
           replaceExtension' juvixCoreFileExt baseOutputFile
-        TargetAsm ->
+        AppTargetAsm ->
           replaceExtension' juvixAsmFileExt baseOutputFile
-        TargetReg ->
+        AppTargetReg ->
           replaceExtension' juvixRegFileExt baseOutputFile
-        TargetTree ->
+        AppTargetTree ->
           replaceExtension' juvixTreeFileExt baseOutputFile
-        TargetAnoma ->
+        AppTargetAnoma ->
           replaceExtension' nockmaFileExt baseOutputFile
-        TargetCasm ->
+        AppTargetCasm ->
           replaceExtension' casmFileExt baseOutputFile
-        TargetCairo ->
+        AppTargetCairo ->
           replaceExtension' jsonFileExt baseOutputFile
 
 clangNativeCompile ::

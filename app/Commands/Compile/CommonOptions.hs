@@ -32,9 +32,16 @@ applyCompileCommonOptions opts e =
 fromCompileCommonOptionsMain :: (Members '[App] r) => CompileCommonOptionsMain -> Sem r CompileCommonOptions
 fromCompileCommonOptionsMain = traverseOf compileInputFile getMainAppFile
 
-parseCompileCommonOptionsMain ::
+parseCompileCommonOptionsExtMain ::
+  FileExt ->
   Parser CompileCommonOptionsMain
-parseCompileCommonOptionsMain =
+parseCompileCommonOptionsExtMain inputExtension =
+  parseCompileCommonOptionsGeneric
+    (optional (parseInputFile inputExtension))
+
+parseCompileCommonOptionsJuvixMain ::
+  Parser CompileCommonOptionsMain
+parseCompileCommonOptionsJuvixMain =
   parseCompileCommonOptionsGeneric
     (optional (parseInputFile FileExtJuvix))
 

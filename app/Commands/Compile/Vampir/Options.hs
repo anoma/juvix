@@ -17,7 +17,7 @@ makeLenses ''VampirOptions
 
 parseVampir :: Parser VampirOptions
 parseVampir = do
-  _vampirCompileCommonOptions <- parseCompileCommonOptionsMain
+  _vampirCompileCommonOptions <- parseCompileCommonOptionsJuvixMain
   _vampirUnsafe <-
     switch
       ( long "unsafe"

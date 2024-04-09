@@ -6,13 +6,11 @@ where
 
 import Commands.Extra.Compile.Options
 import CommonOptions
-import Data.List.NonEmpty qualified as NonEmpty
 
 casmSupportedTargets :: NonEmpty CompileTarget
 casmSupportedTargets =
-  NonEmpty.fromList
-    [ TargetCairo
-    ]
+  AppTargetCairo
+    :| []
 
 parseCasmCompileOptions :: Parser CompileOptions
 parseCasmCompileOptions =

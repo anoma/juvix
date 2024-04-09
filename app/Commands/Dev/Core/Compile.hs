@@ -17,14 +17,14 @@ runCommand opts = do
             _pipelineArgModule = Core.moduleFromInfoTable tab
           }
   case opts ^. compileTarget of
-    TargetWasm32Wasi -> runCPipeline arg
-    TargetNative64 -> runCPipeline arg
-    TargetGeb -> runGebPipeline arg
-    TargetVampIR -> runVampIRPipeline arg
-    TargetCore -> return ()
-    TargetAsm -> runAsmPipeline arg
-    TargetReg -> runRegPipeline arg
-    TargetTree -> runTreePipeline arg
-    TargetAnoma -> runAnomaPipeline arg
-    TargetCasm -> runCasmPipeline arg
-    TargetCairo -> runCairoPipeline arg
+    AppTargetWasm32Wasi -> runCPipeline arg
+    AppTargetNative64 -> runCPipeline arg
+    AppTargetGeb -> runGebPipeline arg
+    AppTargetVampIR -> runVampIRPipeline arg
+    AppTargetCore -> return ()
+    AppTargetAsm -> runAsmPipeline arg
+    AppTargetReg -> runRegPipeline arg
+    AppTargetTree -> runTreePipeline arg
+    AppTargetAnoma -> runAnomaPipeline arg
+    AppTargetCasm -> runCasmPipeline arg
+    AppTargetCairo -> runCairoPipeline arg

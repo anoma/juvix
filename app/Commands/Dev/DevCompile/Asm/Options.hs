@@ -16,5 +16,5 @@ makeLenses ''AsmOptions
 
 parseAsm :: Parser AsmOptions
 parseAsm = do
-  _asmCompileCommonOptions <- parseCompileCommonOptionsMain
+  _asmCompileCommonOptions <- parseCompileCommonOptionsJuvixMain
   pure AsmOptions {..}
