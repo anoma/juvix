@@ -1,23 +1,31 @@
-module Commands.Compile.CommonOptions where
+{-# LANGUAGE UndecidableInstances #-}
+
+module Commands.Compile.CommonOptions
+  ( module Commands.Compile.CommonOptions,
+    module Commands.Compile.CommonOptions.InputKind,
+  )
+where
 
 import App
+import Commands.Compile.CommonOptions.InputKind
 import CommonOptions
 import Juvix.Compiler.Pipeline.EntryPoint
 
 -- | If the input file can be defaulted to the `main` in the `package.yaml` file, we
 -- can omit the input file.
-type CompileCommonOptionsMain = CompileCommonOptions' (Maybe (AppPath File))
+type CompileCommonOptionsMain = CompileCommonOptions' 'InputMain
 
-type CompileCommonOptions = CompileCommonOptions' (AppPath File)
+type CompileCommonOptions (e :: FileExt) = CompileCommonOptions' ('InputExtension e)
 
-data CompileCommonOptions' inputFile = CompileCommonOptions
-  { _compileInputFile :: inputFile,
+data CompileCommonOptions' (k :: InputKind) = CompileCommonOptions
+  { _compileInputFile :: InputFileType k,
     _compileOutputFile :: Maybe (AppPath File),
     _compileDebug :: Bool,
     _compileInliningDepth :: Int,
     _compileOptimizationLevel :: Maybe Int
   }
-  deriving stock (Data)
+
+deriving stock instance (Typeable k, Data (InputFileType k)) => Data (CompileCommonOptions' k)
 
 makeLenses ''CompileCommonOptions'
 
@@ -34,32 +42,13 @@ applyCompileCommonOptions opts e =
       | opts ^. compileDebug = 0
       | otherwise = defaultOptimizationLevel
 
-fromCompileCommonOptionsMain :: (Members '[App] r) => CompileCommonOptionsMain -> Sem r CompileCommonOptions
+fromCompileCommonOptionsMain :: (Members '[App] r) => CompileCommonOptionsMain -> Sem r (CompileCommonOptions 'FileExtJuvix)
 fromCompileCommonOptionsMain = traverseOf compileInputFile getMainAppFile
 
-parseCompileCommonOptionsExtMain ::
-  FileExt ->
-  Parser CompileCommonOptionsMain
-parseCompileCommonOptionsExtMain inputExtension =
-  parseCompileCommonOptionsGeneric
-    (optional (parseInputFile inputExtension))
-
-parseCompileCommonOptionsJuvixMain ::
-  Parser CompileCommonOptionsMain
-parseCompileCommonOptionsJuvixMain =
-  parseCompileCommonOptionsGeneric
-    (optional (parseInputFile FileExtJuvix))
-
-parseCompileCommonOptions ::
-  Parser CompileCommonOptions
-parseCompileCommonOptions =
-  parseCompileCommonOptionsGeneric
-    (parseInputFile FileExtJuvix)
-
-parseCompileCommonOptionsGeneric ::
-  Parser inputFile ->
-  Parser (CompileCommonOptions' inputFile)
-parseCompileCommonOptionsGeneric parserFile = do
+parseCompileCommonOptions :: forall k.
+  (SingI k) =>
+  Parser (CompileCommonOptions' k)
+parseCompileCommonOptions = do
   _compileDebug <-
     switch
       ( short 'g'
@@ -83,5 +72,5 @@ parseCompileCommonOptionsGeneric parserFile = do
           <> help ("Automatic inlining depth limit, logarithmic in the function size (default: " <> show defaultInliningDepth <> ")")
       )
   _compileOutputFile <- optional parseGenericOutputFile
-  _compileInputFile <- parserFile
+  _compileInputFile <- parseInputFileType @k
   pure CompileCommonOptions {..}

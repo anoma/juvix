@@ -16,5 +16,5 @@ makeLenses ''CoreOptions
 
 parseCore :: Parser CoreOptions
 parseCore = do
-  _coreCompileCommonOptions <- parseCompileCommonOptionsJuvixMain
+  _coreCompileCommonOptions <- parseCompileCommonOptions
   pure CoreOptions {..}

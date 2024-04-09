@@ -16,5 +16,5 @@ makeLenses ''TreeOptions
 
 parseTree :: Parser TreeOptions
 parseTree = do
-  _treeCompileCommonOptions <- parseCompileCommonOptionsJuvixMain
+  _treeCompileCommonOptions <- parseCompileCommonOptions
   pure TreeOptions {..}
