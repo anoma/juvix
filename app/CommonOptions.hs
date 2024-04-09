@@ -51,6 +51,19 @@ parseInputFiles exts' = do
 parseInputFile :: FileExt -> Parser (AppPath File)
 parseInputFile = parseInputFiles . NonEmpty.singleton
 
+parseProgramInputFile :: Parser (AppPath File)
+parseProgramInputFile = do
+  _pathPath <-
+    option
+      somePreFileOpt
+      ( long "program_input"
+          <> metavar "JSON_FILE"
+          <> help "Path to program input json file"
+          <> completer (extCompleter FileExtJson)
+          <> action "file"
+      )
+  pure AppPath {_pathIsInput = True, ..}
+
 parseGenericInputFile :: Parser (AppPath File)
 parseGenericInputFile = do
   _pathPath <-

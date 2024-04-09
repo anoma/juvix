@@ -18,7 +18,11 @@ import Juvix.Data.Field
 
 fromReg :: Reg.InfoTable -> Result
 fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolId tab) $ do
-  let initialOffset :: Int = 2
+  let mainSym = fromJust $ tab ^. Reg.infoMainFunction
+      mainInfo = fromJust (HashMap.lookup mainSym (tab ^. Reg.infoFunctions))
+      mainName = mainInfo ^. Reg.functionName
+      mainArgs = getInputArgs (mainInfo ^. Reg.functionArgsNum) (mainInfo ^. Reg.functionArgNames)
+      initialOffset = length mainArgs + 2
   (blts, binstrs) <- addStdlibBuiltins initialOffset
   let cinstrs = concatMap (mkFunCall . fst) $ sortOn snd $ HashMap.toList (info ^. Reg.extraInfoFUIDs)
   endSym <- freshSymbol
@@ -28,14 +32,19 @@ fromReg tab = uncurry Result $ run $ runLabelInfoBuilderWithNextId (Reg.getNextS
   eassert (addr == length instrs + length cinstrs + length binstrs + initialOffset)
   registerLabelName endSym endName
   registerLabelAddress endSym addr
-  let mainSym = fromJust $ tab ^. Reg.infoMainFunction
-      mainName = fromJust (HashMap.lookup mainSym (tab ^. Reg.infoFunctions)) ^. Reg.functionName
-      callInstr = mkCallRel (Lab $ LabelRef mainSym (Just mainName))
+  let callInstr = mkCallRel (Lab $ LabelRef mainSym (Just mainName))
       jmpInstr = mkJumpRel (Val $ Lab endLab)
-  return $ callInstr : jmpInstr : binstrs ++ cinstrs ++ instrs ++ [Label endLab]
+      margs = reverse $ map (Hint . HintInput) mainArgs
+  return $ margs ++ callInstr : jmpInstr : binstrs ++ cinstrs ++ instrs ++ [Label endLab]
   where
     info :: Reg.ExtraInfo
     info = Reg.computeExtraInfo tab
+
+    getInputArgs :: Int -> [Maybe Text] -> [Text]
+    getInputArgs n argnames = zipWith fromMaybe args (argnames ++ repeat Nothing)
+      where
+        args :: [Text]
+        args = if n == 1 then ["in"] else map (\k -> "in" <> show k) [1 .. n]
 
     mkFunCall :: Symbol -> [Instruction]
     mkFunCall sym =

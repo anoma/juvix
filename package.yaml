@@ -84,6 +84,7 @@ dependencies:
   - primitive == 0.8.*
   - process == 1.6.*
   - safe == 0.3.*
+  - scientific == 0.3.*
   - singletons == 3.0.*
   - singletons-base == 3.3.*
   - singletons-th == 3.3.*

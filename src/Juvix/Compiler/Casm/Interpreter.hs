@@ -11,6 +11,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Data.Vector qualified as Vec
 import Data.Vector.Mutable qualified as MV
 import GHC.IO qualified as GHC
+import Juvix.Compiler.Casm.Data.InputInfo
 import Juvix.Compiler.Casm.Data.LabelInfo
 import Juvix.Compiler.Casm.Error
 import Juvix.Compiler.Casm.Interpreter.Error
@@ -19,12 +20,12 @@ import Juvix.Data.Field
 
 type Memory s = MV.MVector s (Maybe FField)
 
-runCode :: LabelInfo -> [Instruction] -> FField
+runCode :: InputInfo -> LabelInfo -> [Instruction] -> FField
 runCode = hRunCode stderr
 
 -- | Runs Cairo Assembly. Returns the value of `[ap - 1]` at program exit.
-hRunCode :: Handle -> LabelInfo -> [Instruction] -> FField
-hRunCode hout (LabelInfo labelInfo) instrs0 = runST goCode
+hRunCode :: Handle -> InputInfo -> LabelInfo -> [Instruction] -> FField
+hRunCode hout inputInfo (LabelInfo labelInfo) instrs0 = runST goCode
   where
     instrs :: Vec.Vector Instruction
     instrs = Vec.fromList instrs0
@@ -61,6 +62,7 @@ hRunCode hout (LabelInfo labelInfo) instrs0 = runST goCode
             Return -> goReturn pc ap fp mem
             Alloc x -> goAlloc x pc ap fp mem
             Trace x -> goTrace x pc ap fp mem
+            Hint x -> goHint x pc ap fp mem
             Label {} -> go (pc + 1) ap fp mem
             Nop -> go (pc + 1) ap fp mem
 
@@ -240,6 +242,18 @@ hRunCode hout (LabelInfo labelInfo) instrs0 = runST goCode
       v <- readRValue ap fp mem _instrTraceValue
       GHC.unsafePerformIO (hPrint hout v >> return (pure ()))
       go (pc + 1) ap fp mem
+
+    goHint :: Hint -> Address -> Address -> Address -> Memory s -> ST s FField
+    goHint hint pc ap fp mem = case hint of
+      HintInput var -> do
+        let val =
+              fromMaybe (throwRunError "invalid input") $
+                HashMap.lookup var (inputInfo ^. inputInfoMap)
+        mem' <- writeMem mem ap val
+        go (pc + 1) (ap + 1) fp mem'
+      HintAlloc size -> do
+        mem' <- writeMem mem ap (fieldFromInteger fsize (fromIntegral ap + 1))
+        go (pc + 1) (ap + size + 1) fp mem'
 
     goFinish :: Address -> Memory s -> ST s FField
     goFinish ap mem = do

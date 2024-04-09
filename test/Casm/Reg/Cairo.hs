@@ -9,10 +9,11 @@ testDescr P.PosTest {..} =
   let tRoot = P.root <//> _relDir
       file' = tRoot <//> _file
       expected' = tRoot <//> _expectedFile
+      input' = fmap (tRoot <//>) _inputFile
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
-          _testAssertion = Steps $ regToCairoAssertion file' expected'
+          _testAssertion = Steps $ regToCairoAssertion file' input' expected'
         }
 
 allTests :: TestTree

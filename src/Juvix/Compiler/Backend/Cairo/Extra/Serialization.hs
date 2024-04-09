@@ -16,9 +16,21 @@ serialize elems =
       _resultStart = 0,
       _resultEnd = length initializeOutput + length elems + length finalizeOutput,
       _resultMain = 0,
+      _resultHints = hints,
       _resultBuiltins = ["output"]
     }
   where
+    hints :: [(Int, Text)]
+    hints = catMaybes $ zipWith mkHint elems [0 ..]
+
+    pcShift :: Int
+    pcShift = length initializeOutput
+
+    mkHint :: Element -> Int -> Maybe (Int, Text)
+    mkHint el pc = case el of
+      ElementHint Hint {..} -> Just (pc + pcShift, _hintCode)
+      _ -> Nothing
+
     toHexText :: Natural -> Text
     toHexText n = "0x" <> fromString (showHex n "")
 
@@ -48,6 +60,12 @@ serialize' = map goElement
     goElement = \case
       ElementInstruction i -> goInstr i
       ElementImmediate f -> fieldToNatural f
+      ElementHint h -> goHint h
+
+    goHint :: Hint -> Natural
+    goHint Hint {..}
+      | _hintIncAp = 0x481280007fff8000
+      | otherwise = 0x401280007fff8000
 
     goInstr :: Instruction -> Natural
     goInstr Instruction {..} =

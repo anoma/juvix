@@ -96,6 +96,11 @@ instance PrettyCode LoadValue where
     src' <- ppWithOffset _loadValueOff src
     return $ brackets src'
 
+instance PrettyCode Hint where
+  ppCode = \case
+    HintInput var -> return $ "%{ Input(" <> pretty var <> ") %}"
+    HintAlloc size -> return $ "%{ Alloc(" <> show size <> ") %}"
+
 instance PrettyCode InstrAssign where
   ppCode InstrAssign {..} = do
     v <- ppCode _instrAssignValue
@@ -163,5 +168,6 @@ instance PrettyCode Instruction where
     Return -> return Str.ret
     Alloc x -> ppCode x
     Trace x -> ppCode x
+    Hint x -> ppCode x
     Label x -> (<> colon) <$> ppCode x
     Nop -> return Str.nop
