@@ -41,6 +41,7 @@ import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Tree.Data.InfoTable qualified as Tree
 import Juvix.Compiler.Tree.Language qualified as Tree
 import Juvix.Compiler.Tree.Language.Rep
+import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude hiding (Atom, Path)
 
 newtype AnomaResult = AnomaResult
@@ -728,7 +729,7 @@ runCompilerWith opts constrs moduleFuns mainFun = makeAnomaFun
            )
 
     exportEnv :: Term Natural
-    exportEnv = "exportEnv" @ makeList compiledFuns
+    exportEnv = Str.theFunctionsLibrary @ makeList compiledFuns
 
     makeLibraryFunction :: (Text, Term Natural) -> Term Natural
     makeLibraryFunction (funName, c) =

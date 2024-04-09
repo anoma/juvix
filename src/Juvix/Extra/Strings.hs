@@ -987,4 +987,7 @@ version :: (IsString s) => s
 version = "version"
 
 functionsPlaceholder :: (IsString s) => s
-functionsPlaceholder = "functions_placeholder"
+functionsPlaceholder = "functionsLibrary_placeholder"
+
+theFunctionsLibrary :: (IsString s) => s
+theFunctionsLibrary = "the_functionsLibrary"
