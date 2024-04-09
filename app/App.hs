@@ -208,12 +208,20 @@ runPipelineTermination input_ p = do
   r <- runPipelineEither input_ (evalTermination iniTerminationState p) >>= fromRightJuvixError
   return (snd r)
 
-runPipeline :: (Members '[App, EmbedIO, TaggedLock] r) => Maybe (AppPath File) -> Sem (PipelineEff r) a -> Sem r a
+runPipeline ::
+  (Members '[App, EmbedIO, TaggedLock] r) =>
+  Maybe (AppPath File) ->
+  Sem (PipelineEff r) a ->
+  Sem r a
 runPipeline input_ p = do
   r <- runPipelineEither input_ p >>= fromRightJuvixError
   return (snd r ^. pipelineResult)
 
-runPipelineHtml :: (Members '[App, EmbedIO, TaggedLock] r) => Bool -> Maybe (AppPath File) -> Sem r (InternalTypedResult, [InternalTypedResult])
+runPipelineHtml ::
+  (Members '[App, EmbedIO, TaggedLock] r) =>
+  Bool ->
+  Maybe (AppPath File) ->
+  Sem r (InternalTypedResult, [InternalTypedResult])
 runPipelineHtml bNonRecursive input_
   | bNonRecursive = do
       r <- runPipeline input_ upToInternalTyped

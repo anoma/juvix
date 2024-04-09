@@ -13,7 +13,12 @@ import Commands.Extra.Clang
 import Commands.Extra.Compile.Options (CompileTarget (..), compileTargetDescription)
 import Juvix.Compiler.Core.Translation.FromInternal.Data.Context
 
-getOutputFile :: (Members '[App] r) => FileExt -> Maybe (AppPath File) -> Maybe (AppPath File) -> Sem r (Path Abs File)
+getOutputFile ::
+  (Members '[App] r) =>
+  FileExt ->
+  Maybe (AppPath File) ->
+  Maybe (AppPath File) ->
+  Sem r (Path Abs File)
 getOutputFile ext inp = \case
   Just out -> fromAppPathFile out
   Nothing -> do
@@ -22,7 +27,10 @@ getOutputFile ext inp = \case
     let baseOutputFile = invokeDir <//> filename mainFile
     return (replaceExtension' (fileExtToString ext) baseOutputFile)
 
-compileToCore :: (Members '[App, EmbedIO, TaggedLock] r) => CompileCommonOptions -> Sem r CoreResult
+compileToCore ::
+  (Members '[App, EmbedIO, TaggedLock] r) =>
+  CompileCommonOptions' ('InputExtension 'FileExtJuvix) ->
+  Sem r CoreResult
 compileToCore opts = runPipeline (Just (opts ^. compileInputFile)) upToCore
 
 commandTargetHelper :: CompileTarget -> Parser a -> Mod CommandFields a

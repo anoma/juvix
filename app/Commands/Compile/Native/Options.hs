@@ -9,7 +9,7 @@ import Commands.Base
 import Commands.Compile.CStage
 import Commands.Compile.CommonOptions
 
-data NativeOptions = NativeOptions
+data NativeOptions (k :: InputKind) = NativeOptions
   { _nativeCompileCommonOptions :: CompileCommonOptionsMain,
     _nativeCStage :: CStage
   }
@@ -17,13 +17,13 @@ data NativeOptions = NativeOptions
 
 makeLenses ''NativeOptions
 
-parseNative :: Parser NativeOptions
+parseNative :: forall k. Parser (NativeOptions k)
 parseNative = do
   _nativeCompileCommonOptions <- parseCompileCommonOptions
   _nativeCStage <- parseCStage
   pure NativeOptions {..}
 
-nativeOutputFile :: (Member App r) => NativeOptions -> Sem r (Path Abs File)
+nativeOutputFile :: (Member App r) => (NativeOptions k) -> Sem r (Path Abs File)
 nativeOutputFile opts =
   case opts ^. nativeCompileCommonOptions . compileOutputFile of
     Just f -> fromAppFile f

@@ -13,7 +13,7 @@ import Commands.Extra.NewCompile
 import CommonOptions
 
 data CompileCommand
-  = Native NativeOptions
+  = Native (NativeOptions 'InputMain)
   | Wasi WasiOptions
   | Geb GebOptions
   | Vampir VampirOptions
