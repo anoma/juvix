@@ -795,7 +795,7 @@ runCompilerWith opts constrs moduleFuns mainFun = makeAnomaFun
     makeAnomaFun :: AnomaResult
     makeAnomaFun =
       AnomaResult
-        { _anomaClosure = substEnv mainClosure
+        { _anomaClosure = substEnv (substEnv mainClosure)
         }
 
 functionsLibraryPlaceHolder :: Term Natural
