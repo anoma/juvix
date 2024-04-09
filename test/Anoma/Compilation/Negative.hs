@@ -30,7 +30,7 @@ mkAnomaNegativeTest testName' relRoot mainFile testCheck =
     compileMain rootCopyDir = do
       let testRootDir = rootCopyDir <//> relRoot
       entryPoint <-
-        set entryPointTarget TargetAnoma
+        set entryPointTarget (Just TargetAnoma)
           <$> testDefaultEntryPointIO testRootDir (testRootDir <//> mainFile)
       either Just (const Nothing) <$> testRunIOEither entryPoint upToAnoma
 

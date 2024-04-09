@@ -19,51 +19,86 @@ data EvalOptions = EvalOptions
 
 makeLenses ''EvalOptions
 
-evalAndPrint ::
-  forall r a b.
-  (Members '[EmbedIO, App] r, CanonicalProjection a EvalOptions, CanonicalProjection b Core.CoreOptions, CanonicalProjection a Core.Options) =>
-  b ->
-  a ->
+evalAndPrint' ::
+  forall r.
+  (Members '[EmbedIO, App] r) =>
+  Core.CoreOptions ->
+  Core.Options ->
+  EvalOptions ->
   Core.InfoTable ->
   Core.Node ->
   Sem r ()
-evalAndPrint gopts opts tab node = do
+evalAndPrint' gopts copts eopts tab node = do
   loc <- defaultLoc
-  r <- Core.doEval (Just $ project gopts ^. Core.optFieldSize) (project opts ^. evalNoIO) loc tab node
+  r <- Core.doEval (Just $ project gopts ^. Core.optFieldSize) (eopts ^. evalNoIO) loc tab node
   case r of
     Left err -> exitJuvixError (JuvixError err)
     Right node'
       | Info.member Info.kNoDisplayInfo (Core.getInfo node') ->
           return ()
     Right node'
-      | project opts ^. evalPrintValues -> do
-          renderStdOut (Core.ppOut opts (Core.toValue tab node'))
+      | eopts ^. evalPrintValues -> do
+          renderStdOut (Core.ppOut copts (Core.toValue tab node'))
           newline
       | otherwise -> do
-          renderStdOut (Core.ppOut opts node'')
+          renderStdOut (Core.ppOut copts node'')
           newline
       where
-        node'' = if project opts ^. evalNoDisambiguate then node' else Core.disambiguateNodeNames (Core.moduleFromInfoTable tab) node'
+        node'' = if project eopts ^. evalNoDisambiguate then node' else Core.disambiguateNodeNames (Core.moduleFromInfoTable tab) node'
   where
     defaultLoc :: Sem r Interval
     defaultLoc = singletonInterval . mkInitialLoc <$> fromAppPathFile f
-    f :: AppPath File
-    f = project opts ^. evalInputFile
 
-normalizeAndPrint ::
-  forall r a b.
-  (Members '[EmbedIO, App] r, CanonicalProjection a EvalOptions, CanonicalProjection b Core.CoreOptions, CanonicalProjection a Core.Options) =>
-  b ->
-  a ->
+    f :: AppPath File
+    f = eopts ^. evalInputFile
+
+evalAndPrint ::
+  forall r evalOptions coreOptions.
+  ( Members '[EmbedIO, App] r,
+    CanonicalProjection coreOptions Core.CoreOptions,
+    CanonicalProjection evalOptions EvalOptions,
+    CanonicalProjection evalOptions Core.Options
+  ) =>
+  coreOptions ->
+  evalOptions ->
   Core.InfoTable ->
   Core.Node ->
   Sem r ()
-normalizeAndPrint gopts opts tab node =
-  let node' = normalize (project gopts ^. Core.optFieldSize) (Core.moduleFromInfoTable tab) node
-   in if
-          | Info.member Info.kNoDisplayInfo (Core.getInfo node') ->
-              return ()
-          | otherwise -> do
-              let node'' = if project opts ^. evalNoDisambiguate then node' else Core.disambiguateNodeNames (Core.moduleFromInfoTable tab) node'
-              renderStdOut (Core.ppOut opts node'')
-              putStrLn ""
+evalAndPrint gopts opts = evalAndPrint' (project gopts) (project opts) (project opts)
+
+normalizeAndPrint ::
+  forall r evalOptions coreOptions.
+  ( Members '[EmbedIO, App] r,
+    CanonicalProjection evalOptions EvalOptions,
+    CanonicalProjection coreOptions Core.CoreOptions,
+    CanonicalProjection coreOptions Core.Options
+  ) =>
+  evalOptions ->
+  coreOptions ->
+  Core.InfoTable ->
+  Core.Node ->
+  Sem r ()
+normalizeAndPrint eopts copts = normalizeAndPrint' eopts copts copts
+
+normalizeAndPrint' ::
+  forall r evalOptions coreOptions corePretty.
+  ( Members '[EmbedIO, App] r,
+    CanonicalProjection evalOptions EvalOptions,
+    CanonicalProjection coreOptions Core.CoreOptions,
+    CanonicalProjection corePretty Core.Options
+  ) =>
+  evalOptions ->
+  coreOptions ->
+  corePretty ->
+  Core.InfoTable ->
+  Core.Node ->
+  Sem r ()
+normalizeAndPrint' eopts_ copts_ popts_ tab node =
+  let eopts :: EvalOptions = project eopts_
+      copts :: Core.CoreOptions = project copts_
+      popts :: Core.Options = project popts_
+      node' = normalize (copts ^. Core.optFieldSize) (Core.moduleFromInfoTable tab) node
+   in unless (Info.member Info.kNoDisplayInfo (Core.getInfo node')) $ do
+        let node'' = if eopts ^. evalNoDisambiguate then node' else Core.disambiguateNodeNames (Core.moduleFromInfoTable tab) node'
+        renderStdOut (Core.ppOut popts node'')
+        putStrLn ""

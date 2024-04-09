@@ -10,7 +10,7 @@ data HtmlOptions = HtmlOptions
     _htmlOnlyCode :: Bool,
     _htmlTheme :: Theme,
     _htmlOutputDir :: AppPath Dir,
-    _htmlInputFile :: AppPath File,
+    _htmlInputFile :: Maybe (AppPath File),
     _htmlNoFooter :: Bool,
     _htmlFolderStructure :: Bool,
     _htmlNoPath :: Bool,
@@ -114,7 +114,7 @@ parseHtml = do
       ( long "open"
           <> help "Open the documentation after generating it"
       )
-  _htmlInputFile <- parseInputFiles (NonEmpty.fromList [FileExtJuvix, FileExtJuvixMarkdown])
+  _htmlInputFile <- optional (parseInputFiles (NonEmpty.fromList [FileExtJuvix, FileExtJuvixMarkdown]))
   pure HtmlOptions {..}
   where
     allThemes :: [Theme]

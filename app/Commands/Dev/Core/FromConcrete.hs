@@ -12,15 +12,19 @@ import Juvix.Compiler.Core.Transformation.DisambiguateNames (disambiguateNames')
 import Juvix.Compiler.Core.Translation
 
 runCommand :: forall r. (Members '[EmbedIO, TaggedLock, App] r) => CoreFromConcreteOptions -> Sem r ()
-runCommand localOpts = do
+runCommand coreOpts = do
   gopts <- askGlobalOptions
-  md <- (^. coreResultModule) <$> runPipeline (localOpts ^. coreFromConcreteInputFile) upToCore
-  path :: Path Abs File <- fromAppPathFile (localOpts ^. coreFromConcreteInputFile)
-  let r = run $ runReader (project @GlobalOptions @Core.CoreOptions gopts) $ runError @JuvixError $ Core.applyTransformations (project localOpts ^. coreFromConcreteTransformations) md
+  md <- (^. coreResultModule) <$> runPipeline (Just (coreOpts ^. coreFromConcreteInputFile)) upToCore
+  path :: Path Abs File <- fromAppPathFile (coreOpts ^. coreFromConcreteInputFile)
+  let r =
+        run
+          . runReader (project @GlobalOptions @Core.CoreOptions gopts)
+          . runError @JuvixError
+          $ Core.applyTransformations (project coreOpts ^. coreFromConcreteTransformations) md
   tab0 :: InfoTable <- Core.computeCombinedInfoTable <$> getRight r
-  let tab' :: InfoTable = if localOpts ^. coreFromConcreteNoDisambiguate then tab0 else disambiguateNames' tab0
+  let tab' :: InfoTable = if coreOpts ^. coreFromConcreteNoDisambiguate then tab0 else disambiguateNames' tab0
       inInputModule :: IdentifierInfo -> Bool
-      inInputModule _ | not (localOpts ^. coreFromConcreteFilter) = True
+      inInputModule _ | not (coreOpts ^. coreFromConcreteFilter) = True
       inInputModule x = (== Just path) . (^? identifierLocation . _Just . intervalFile) $ x
 
       mainIdens :: [IdentifierInfo] =
@@ -35,33 +39,35 @@ runCommand localOpts = do
 
       selInfo :: Maybe IdentifierInfo
       selInfo = do
-        s <- localOpts ^. coreFromConcreteSymbolName
+        s <- coreOpts ^. coreFromConcreteSymbolName
         find (^. identifierName . to (== s)) mainIdens
 
       goPrint :: Sem r ()
-      goPrint = case localOpts ^. coreFromConcreteSymbolName of
+      goPrint = case coreOpts ^. coreFromConcreteSymbolName of
         Just {} -> printNode (fromMaybe err (getDef selInfo))
-        Nothing -> renderStdOut (Core.ppOut localOpts tab')
+        Nothing -> renderStdOut (Core.ppOut coreOpts tab')
         where
           printNode :: (Text, Core.Node) -> Sem r ()
           printNode (name, node) = do
             renderStdOut (name <> " = ")
-            renderStdOut (Core.ppOut localOpts node)
+            renderStdOut (Core.ppOut coreOpts node)
             newline
             newline
 
       goEval :: Sem r ()
-      goEval = evalAndPrint gopts localOpts tab' evalNode
+      goEval = evalAndPrint gopts coreOpts tab' evalNode
         where
           evalNode :: Core.Node
-            | isJust (localOpts ^. coreFromConcreteSymbolName) = getNode' selInfo
+            | isJust (coreOpts ^. coreFromConcreteSymbolName) = getNode' selInfo
             | otherwise = getNode' mainInfo
 
       goNormalize :: Sem r ()
-      goNormalize = normalizeAndPrint gopts localOpts tab' evalNode
+      goNormalize = do
+        evalOpts <- coreFromConcreteOptionsToEvalOptions coreOpts
+        normalizeAndPrint' evalOpts gopts coreOpts tab' evalNode
         where
           evalNode :: Core.Node
-            | isJust (localOpts ^. coreFromConcreteSymbolName) = getNode' selInfo
+            | isJust (coreOpts ^. coreFromConcreteSymbolName) = getNode' selInfo
             | otherwise = getNode' mainInfo
 
       getDef :: Maybe IdentifierInfo -> Maybe (Text, Core.Node)
@@ -80,6 +86,6 @@ runCommand localOpts = do
       err = error "function not found"
 
   if
-      | localOpts ^. coreFromConcreteEval -> goEval
-      | localOpts ^. coreFromConcreteNormalize -> goNormalize
+      | coreOpts ^. coreFromConcreteEval -> goEval
+      | coreOpts ^. coreFromConcreteNormalize -> goNormalize
       | otherwise -> goPrint

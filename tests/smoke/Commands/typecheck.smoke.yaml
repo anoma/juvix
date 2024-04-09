@@ -6,7 +6,7 @@ tests:
       - typecheck
       - --help
     stdout:
-      contains: 'Usage: juvix typecheck JUVIX_FILE'
+      contains: 'Usage: juvix typecheck [JUVIX_FILE|JUVIX_MARKDOWN_FILE]'
     exit-status: 0
 
   - name: check-simple-file

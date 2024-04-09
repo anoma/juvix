@@ -1,5 +1,6 @@
 module Commands.Dev.Core.FromConcrete.Options where
 
+import App
 import CommonOptions
 import Evaluator qualified as Eval
 import Juvix.Compiler.Core.Data.TransformationId
@@ -76,3 +77,14 @@ parseCoreFromConcreteOptions = do
             <> metavar "NAME"
         )
   pure CoreFromConcreteOptions {..}
+
+coreFromConcreteOptionsToEvalOptions :: (Members '[App] r) => CoreFromConcreteOptions -> Sem r Eval.EvalOptions
+coreFromConcreteOptionsToEvalOptions c = do
+  inputFile <- getMainAppFile (Just (c ^. coreFromConcreteInputFile))
+  return
+    Eval.EvalOptions
+      { _evalInputFile = inputFile,
+        _evalNoIO = c ^. coreFromConcreteNoIO,
+        _evalNoDisambiguate = c ^. coreFromConcreteNoDisambiguate,
+        _evalPrintValues = False
+      }

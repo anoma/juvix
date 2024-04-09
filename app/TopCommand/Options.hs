@@ -22,7 +22,7 @@ data TopCommand
   | DisplayNumericVersion
   | DisplayHelp
   | Typecheck TypecheckOptions
-  | Compile CompileOptions
+  | Compile CompileCommand
   | Clean CleanOptions
   | Eval EvalOptions
   | Html HtmlOptions
@@ -36,13 +36,14 @@ data TopCommand
   deriving stock (Data)
 
 topCommandInputPath :: TopCommand -> IO (Maybe (SomePath Abs))
-topCommandInputPath (JuvixFormat fopts) = case fopts ^. formatInput of
-  Just f -> getInputPathFromPrepathFileOrDir f
-  Nothing -> return Nothing
-topCommandInputPath t = do
-  d <- firstJustM getInputFileOrDir (universeBi t)
-  f <- firstJustM getInputFile (universeBi t)
-  return (f <|> d)
+topCommandInputPath = \case
+  JuvixFormat fopts -> case fopts ^. formatInput of
+    Just f -> getInputPathFromPrepathFileOrDir f
+    Nothing -> return Nothing
+  t -> do
+    d <- firstJustM getInputFileOrDir (universeBi t)
+    f <- firstJustM getInputFile (universeBi t)
+    return (f <|> d)
   where
     getInputFile :: AppPath File -> IO (Maybe (SomePath Abs))
     getInputFile p
@@ -173,7 +174,7 @@ commandCompile :: Mod CommandFields TopCommand
 commandCompile =
   command "compile" $
     info
-      (Compile <$> parseMainCompileOptions)
+      (Compile <$> parseCompileCommand)
       (progDesc "Compile a Juvix file")
 
 commandEval :: Mod CommandFields TopCommand

@@ -7,7 +7,7 @@ import Juvix.Compiler.Tree.Translation.FromSource qualified as Tree
 
 runCommand :: forall r. (Members '[EmbedIO, App, TaggedLock] r) => CompileOptions -> Sem r ()
 runCommand opts = do
-  file <- getFile
+  file <- getMainFile (Just (opts ^. compileInputFile))
   s <- readFile file
   tab <- getRight (mapLeft JuvixError (Tree.runParser file s))
   let arg = PipelineArg opts file tab
@@ -23,6 +23,3 @@ runCommand opts = do
     TargetAnoma -> runAnomaPipeline arg
     TargetCasm -> runCasmPipeline arg
     TargetCairo -> runCairoPipeline arg
-  where
-    getFile :: Sem r (Path Abs File)
-    getFile = getMainFile (opts ^. compileInputFile)

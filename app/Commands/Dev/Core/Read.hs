@@ -33,18 +33,18 @@ runCommand opts = do
   whenJust (tab' ^. Core.infoMain) $ \sym -> doEval gopts tab' (fromJust $ tab' ^. Core.identContext . at sym)
   where
     doEval :: GlobalOptions -> Core.InfoTable -> Core.Node -> Sem r ()
-    doEval gopts tab' node =
-      if
-          | project opts ^. coreReadEval -> do
-              putStrLn "--------------------------------"
-              putStrLn "|            Eval              |"
-              putStrLn "--------------------------------"
-              Eval.evalAndPrint gopts opts tab' node
-          | project opts ^. coreReadNormalize -> do
-              putStrLn "--------------------------------"
-              putStrLn "|         Normalize            |"
-              putStrLn "--------------------------------"
-              Eval.normalizeAndPrint gopts opts tab' node
-          | otherwise -> return ()
+    doEval gopts tab' node
+      | project opts ^. coreReadEval = do
+          putStrLn "--------------------------------"
+          putStrLn "|            Eval              |"
+          putStrLn "--------------------------------"
+          Eval.evalAndPrint gopts opts tab' node
+      | project opts ^. coreReadNormalize = do
+          putStrLn "--------------------------------"
+          putStrLn "|         Normalize            |"
+          putStrLn "--------------------------------"
+          let eopts :: Eval.EvalOptions = project opts
+          Eval.normalizeAndPrint' eopts gopts opts tab' node
+      | otherwise = return ()
     sinputFile :: AppPath File
     sinputFile = project opts ^. coreReadInputFile

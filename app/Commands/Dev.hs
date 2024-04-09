@@ -8,6 +8,7 @@ import Commands.Base
 import Commands.Dev.Asm qualified as Asm
 import Commands.Dev.Casm qualified as Casm
 import Commands.Dev.Core qualified as Core
+import Commands.Dev.DevCompile qualified as DevCompile
 import Commands.Dev.DisplayRoot qualified as DisplayRoot
 import Commands.Dev.Geb qualified as Geb
 import Commands.Dev.Highlight qualified as Highlight
@@ -26,6 +27,7 @@ import Commands.Repl qualified as Repl
 runCommand :: (Members '[EmbedIO, App, TaggedLock] r) => DevCommand -> Sem r ()
 runCommand = \case
   Highlight opts -> Highlight.runCommand opts
+  DevCompile opts -> DevCompile.runCommand opts
   Parse opts -> Parse.runCommand opts
   Scope opts -> Scope.runCommand opts
   Internal opts -> Internal.runCommand opts

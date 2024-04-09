@@ -15,6 +15,7 @@ where
 import Commands.Dev.Asm.Options hiding (Compile)
 import Commands.Dev.Casm.Options
 import Commands.Dev.Core.Options
+import Commands.Dev.DevCompile.Options (DevCompileCommand, parseDevCompileCommand)
 import Commands.Dev.DisplayRoot.Options
 import Commands.Dev.Geb.Options
 import Commands.Dev.Highlight.Options
@@ -35,6 +36,7 @@ data DevCommand
   = DisplayRoot RootOptions
   | Highlight HighlightOptions
   | Internal InternalCommand
+  | DevCompile DevCompileCommand
   | Core CoreCommand
   | Geb GebCommand
   | Asm AsmCommand
@@ -55,6 +57,7 @@ parseDevCommand =
   hsubparser
     ( mconcat
         [ commandHighlight,
+          commandDevCompile,
           commandInternal,
           commandCore,
           commandGeb,
@@ -72,6 +75,13 @@ parseDevCommand =
           commandNockma
         ]
     )
+
+commandDevCompile :: Mod CommandFields DevCommand
+commandDevCompile =
+  command "compile" $
+    info
+      (DevCompile <$> parseDevCompileCommand)
+      (progDesc "Compile a Juvix file to an internal language")
 
 commandHighlight :: Mod CommandFields DevCommand
 commandHighlight =

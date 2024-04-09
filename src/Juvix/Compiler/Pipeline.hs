@@ -98,6 +98,18 @@ upToStoredCore ::
 upToStoredCore =
   upToCore >>= \r -> Core.toStored (r ^. Core.coreResultModule) >>= \md -> return r {Core._coreResultModule = md}
 
+upToReg ::
+  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, GitClone, PathResolver] r) =>
+  Sem r Reg.InfoTable
+upToReg =
+  upToStoredCore >>= \Core.CoreResult {..} -> storedCoreToReg _coreResultModule
+
+upToTree ::
+  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, GitClone, PathResolver] r) =>
+  Sem r Tree.InfoTable
+upToTree =
+  upToStoredCore >>= \Core.CoreResult {..} -> storedCoreToTree Core.Identity _coreResultModule
+
 upToAsm ::
   (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, GitClone, PathResolver] r) =>
   Sem r Asm.InfoTable
@@ -149,12 +161,14 @@ upToCoreTypecheck =
 -- Workflows from stored Core
 --------------------------------------------------------------------------------
 
-storedCoreToTree :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.TransformationId -> Core.Module -> Sem r Tree.InfoTable
+storedCoreToTree ::
+  (Members '[Error JuvixError, Reader EntryPoint] r) =>
+  Core.TransformationId ->
+  Core.Module ->
+  Sem r Tree.InfoTable
 storedCoreToTree checkId md = do
   fsize <- asks (^. entryPointFieldSize)
-  Core.toStripped checkId
-    >=> return . Tree.fromCore . Stripped.fromCore fsize . Core.computeCombinedInfoTable
-    $ md
+  Tree.fromCore . Stripped.fromCore fsize . Core.computeCombinedInfoTable <$> Core.toStripped checkId md
 
 storedCoreToAnoma :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r NockmaTree.AnomaResult
 storedCoreToAnoma = storedCoreToTree Core.CheckAnoma >=> treeToAnoma
@@ -258,7 +272,7 @@ regToMiniC :: (Member (Reader EntryPoint) r) => Reg.InfoTable -> Sem r C.MiniCRe
 regToMiniC tab = do
   tab' <- Reg.toC tab
   e <- ask
-  return $ C.fromReg (Backend.getLimits (e ^. entryPointTarget) (e ^. entryPointDebug)) tab'
+  return $ C.fromReg (Backend.getLimits (getEntryPointTarget e) (e ^. entryPointDebug)) tab'
 
 regToCasm :: Reg.InfoTable -> Sem r Casm.Result
 regToCasm = Reg.toCasm >=> return . Casm.fromReg

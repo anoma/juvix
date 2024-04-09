@@ -13,56 +13,54 @@ import Juvix.Prelude.Pretty
 
 runCommand :: forall r. (Members '[EmbedIO, App, TaggedLock] r) => CompileOptions -> Sem r ()
 runCommand opts = do
-  file <- getFile
+  file <- getMainFile (Just (opts ^. compileInputFile))
   s <- readFile file
-  case Reg.runParser file s of
-    Left err -> exitJuvixError (JuvixError err)
-    Right tab -> do
-      ep <- getEntryPoint (AppPath (preFileFromAbs file) True)
-      tgt <- getTarget (opts ^. compileTarget)
-      let entryPoint :: EntryPoint
-          entryPoint =
-            ep
-              { _entryPointTarget = tgt,
-                _entryPointDebug = opts ^. compileDebug
-              }
-      case opts ^. compileTarget of
-        TargetCasm -> do
-          casmFile <- Compile.outputFile opts file
-          r <-
-            runReader entryPoint
-              . runError @JuvixError
-              . regToCasm
-              $ tab
-          Casm.Result {..} <- getRight r
-          writeFileEnsureLn casmFile (toPlainText $ Casm.ppProgram _resultCode)
-        TargetCairo -> do
-          cairoFile <- Compile.outputFile opts file
-          r <-
-            runReader entryPoint
-              . runError @JuvixError
-              . regToCairo
-              $ tab
-          res <- getRight r
-          liftIO $ JSON.encodeFile (toFilePath cairoFile) res
-        _ ->
-          case run $ runReader entryPoint $ runError $ regToMiniC tab of
-            Left err -> exitJuvixError err
-            Right C.MiniCResult {..} -> do
-              buildDir <- askBuildDir
-              ensureDir buildDir
-              cFile <- inputCFile file
-              writeFileEnsureLn cFile _resultCCode
-              outfile <- Compile.outputFile opts file
-              Compile.runCommand
-                opts
-                  { _compileInputFile = Just (AppPath (preFileFromAbs cFile) False),
-                    _compileOutputFile = Just (AppPath (preFileFromAbs outfile) False)
-                  }
+  tab <- fromRightGenericError (Reg.runParser file s)
+  ep <- getEntryPoint (Just (opts ^. compileInputFile))
+  tgt <- getTarget (opts ^. compileTarget)
+  let entryPoint :: EntryPoint
+      entryPoint =
+        ep
+          { _entryPointTarget = Just tgt,
+            _entryPointDebug = opts ^. compileDebug
+          }
+  case opts ^. compileTarget of
+    TargetCasm -> do
+      casmFile <- Compile.outputFile opts
+      r <-
+        runReader entryPoint
+          . runError @JuvixError
+          . regToCasm
+          $ tab
+      Casm.Result {..} <- getRight r
+      writeFileEnsureLn casmFile (toPlainText $ Casm.ppProgram _resultCode)
+    TargetCairo -> do
+      cairoFile <- Compile.outputFile opts
+      r <-
+        runReader entryPoint
+          . runError @JuvixError
+          . regToCairo
+          $ tab
+      res <- getRight r
+      liftIO $ JSON.encodeFile (toFilePath cairoFile) res
+    _ -> do
+      C.MiniCResult {..} <-
+        fromRightJuvixError
+          . run
+          . runReader entryPoint
+          . runError
+          $ regToMiniC tab
+      buildDir <- askBuildDir
+      ensureDir buildDir
+      cFile <- inputCFile file
+      writeFileEnsureLn cFile _resultCCode
+      outfile <- Compile.outputFile opts
+      Compile.runCommand
+        opts
+          { _compileInputFile = AppPath (preFileFromAbs cFile) False,
+            _compileOutputFile = Just (AppPath (preFileFromAbs outfile) False)
+          }
   where
-    getFile :: Sem r (Path Abs File)
-    getFile = getMainFile (opts ^. compileInputFile)
-
     getTarget :: CompileTarget -> Sem r Backend.Target
     getTarget = \case
       TargetWasm32Wasi -> return Backend.TargetCWasm32Wasi

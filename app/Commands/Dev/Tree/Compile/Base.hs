@@ -23,10 +23,10 @@ data PipelineArg = PipelineArg
 
 getEntry :: (Members '[EmbedIO, App, TaggedLock] r) => PipelineArg -> Sem r EntryPoint
 getEntry PipelineArg {..} = do
-  ep <- getEntryPoint (AppPath (preFileFromAbs _pipelineArgFile) True)
+  ep <- getEntryPoint (Just (AppPath (preFileFromAbs _pipelineArgFile) True))
   return $
     ep
-      { _entryPointTarget = getTarget (_pipelineArgOptions ^. compileTarget),
+      { _entryPointTarget = Just (getTarget (_pipelineArgOptions ^. compileTarget)),
         _entryPointDebug = _pipelineArgOptions ^. compileDebug,
         _entryPointUnsafe = _pipelineArgOptions ^. compileUnsafe,
         _entryPointOptimizationLevel = fromMaybe defaultOptLevel (_pipelineArgOptions ^. compileOptimizationLevel),
@@ -67,10 +67,10 @@ runCPipeline pa@PipelineArg {..} = do
       $ treeToMiniC _pipelineArgTable
   cFile <- inputCFile _pipelineArgFile
   writeFileEnsureLn cFile _resultCCode
-  outfile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
+  outfile <- Compile.outputFile _pipelineArgOptions
   Compile.runCommand
     _pipelineArgOptions
-      { _compileInputFile = Just (AppPath (preFileFromAbs cFile) False),
+      { _compileInputFile = AppPath (preFileFromAbs cFile) False,
         _compileOutputFile = Just (AppPath (preFileFromAbs outfile) False)
       }
   where
@@ -83,7 +83,7 @@ runCPipeline pa@PipelineArg {..} = do
 runAsmPipeline :: (Members '[EmbedIO, App, TaggedLock] r) => PipelineArg -> Sem r ()
 runAsmPipeline pa@PipelineArg {..} = do
   entryPoint <- getEntry pa
-  asmFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
+  asmFile <- Compile.outputFile _pipelineArgOptions
   r <-
     runReader entryPoint
       . runError @JuvixError
@@ -96,7 +96,7 @@ runAsmPipeline pa@PipelineArg {..} = do
 runRegPipeline :: (Members '[EmbedIO, App, TaggedLock] r) => PipelineArg -> Sem r ()
 runRegPipeline pa@PipelineArg {..} = do
   entryPoint <- getEntry pa
-  regFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
+  regFile <- Compile.outputFile _pipelineArgOptions
   r <-
     runReader entryPoint
       . runError @JuvixError
@@ -109,7 +109,7 @@ runRegPipeline pa@PipelineArg {..} = do
 runAnomaPipeline :: (Members '[EmbedIO, App, TaggedLock] r) => PipelineArg -> Sem r ()
 runAnomaPipeline pa@PipelineArg {..} = do
   entryPoint <- getEntry pa
-  nockmaFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
+  nockmaFile <- Compile.outputFile _pipelineArgOptions
   r <-
     runReader entryPoint
       . runError @JuvixError
@@ -128,7 +128,7 @@ outputAnomaResult nockmaFile Nockma.AnomaResult {..} = do
 runCasmPipeline :: (Members '[EmbedIO, App, TaggedLock] r) => PipelineArg -> Sem r ()
 runCasmPipeline pa@PipelineArg {..} = do
   entryPoint <- getEntry pa
-  casmFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
+  casmFile <- Compile.outputFile _pipelineArgOptions
   r <-
     runReader entryPoint
       . runError @JuvixError
@@ -140,7 +140,7 @@ runCasmPipeline pa@PipelineArg {..} = do
 runCairoPipeline :: (Members '[EmbedIO, App, TaggedLock] r) => PipelineArg -> Sem r ()
 runCairoPipeline pa@PipelineArg {..} = do
   entryPoint <- getEntry pa
-  cairoFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
+  cairoFile <- Compile.outputFile _pipelineArgOptions
   r <-
     runReader entryPoint
       . runError @JuvixError

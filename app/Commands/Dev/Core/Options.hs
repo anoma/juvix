@@ -69,7 +69,7 @@ parseCoreCommand =
     fromSourceInfo =
       info
         (FromConcrete <$> parseCoreFromConcreteOptions)
-        (progDesc "Read a Juvix file and compile it to core")
+        (progDesc "Parse a Juvix file and translate it to JuvixCore")
 
     evalInfo :: ParserInfo CoreCommand
     evalInfo =

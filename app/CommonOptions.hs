@@ -12,8 +12,8 @@ import Juvix.Compiler.Core.Data.TransformationId.Parser qualified as Core
 import Juvix.Compiler.Reg.Data.TransformationId.Parser qualified as Reg
 import Juvix.Compiler.Tree.Data.TransformationId.Parser qualified as Tree
 import Juvix.Data.Field
-import Juvix.Data.FileExt
 import Juvix.Prelude
+import Juvix.Prelude as Juvix
 import Options.Applicative
 import System.Process
 import Text.Read (readMaybe)
@@ -133,14 +133,26 @@ fieldSizeOpt = eitherReader aux
       "cairo" -> Right $ Just cairoFieldSize
       "small" -> Right $ Just smallFieldSize
       _ ->
-        mapRight Just $
-          either Left checkAllowed $
-            maybe (Left $ s <> " is not a valid field size") Right (readMaybe s :: Maybe Natural)
+        mapRight Just
+          . either Left checkAllowed
+          $ maybe (Left $ s <> " is not a valid field size") Right (readMaybe s :: Maybe Natural)
 
     checkAllowed :: Natural -> Either String Natural
     checkAllowed n
       | n `elem` allowedFieldSizes = Right n
       | otherwise = Left $ Prelude.show n <> " is not a recognized field size"
+
+enumReader :: forall a. (Bounded a, Enum a, Show a) => Proxy a -> ReadM a
+enumReader _ = eitherReader $ \val ->
+  case lookup val assocs of
+    Just x -> return x
+    Nothing -> Left ("Invalid value " <> val <> ". Valid values are: " <> (Juvix.show (allElements @a)))
+  where
+    assocs :: [(String, a)]
+    assocs = [(Prelude.show x, x) | x <- allElements @a]
+
+enumCompleter :: forall a. (Bounded a, Enum a, Show a) => Proxy a -> Completer
+enumCompleter _ = listCompleter [Juvix.show e | e <- allElements @a]
 
 extCompleter :: FileExt -> Completer
 extCompleter ext = mkCompleter $ \word -> do

@@ -39,7 +39,7 @@ targetFromOptions opts = do
           | isStdin -> return TargetStdin
           | not (isPackageGlobal) -> return (TargetProject pkgDir)
           | otherwise -> do
-              printFailureExit $
+              exitFailMsg $
                 Text.unlines
                   [ "juvix format error: either 'JUVIX_FILE_OR_PROJECT' or '--stdin' option must be specified",
                     "Use the --help option to display more usage information."
@@ -103,5 +103,5 @@ runScopeFileApp = interpret $ \case
             { _pathPath = mkPrepath (toFilePath p),
               _pathIsInput = False
             }
-    runPipeline appFile upToScoping
+    runPipeline (Just appFile) upToScoping
   ScopeStdin e -> runPipelineEntry e upToScoping

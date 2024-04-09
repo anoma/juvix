@@ -153,12 +153,22 @@ parseBuildDir m = do
       )
   pure AppPath {_pathIsInput = False, ..}
 
-entryPointFromGlobalOptionsPre :: (Members '[TaggedLock, EmbedIO] r) => Root -> Prepath File -> GlobalOptions -> Sem r EntryPoint
+entryPointFromGlobalOptionsPre ::
+  (Members '[TaggedLock, EmbedIO] r) =>
+  Root ->
+  Prepath File ->
+  GlobalOptions ->
+  Sem r EntryPoint
 entryPointFromGlobalOptionsPre root premainFile opts = do
   mainFile <- liftIO (prepathToAbsFile (root ^. rootInvokeDir) premainFile)
   entryPointFromGlobalOptions root mainFile opts
 
-entryPointFromGlobalOptions :: (Members '[TaggedLock, EmbedIO] r) => Root -> Path Abs File -> GlobalOptions -> Sem r EntryPoint
+entryPointFromGlobalOptions ::
+  (Members '[TaggedLock, EmbedIO] r) =>
+  Root ->
+  Path Abs File ->
+  GlobalOptions ->
+  Sem r EntryPoint
 entryPointFromGlobalOptions root mainFile opts = do
   mabsBuildDir :: Maybe (Path Abs Dir) <- liftIO (mapM (prepathToAbsDir cwd) optBuildDir)
   pkg <- readPackageRootIO root

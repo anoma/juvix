@@ -20,11 +20,12 @@ runCommand opts@EvalOptions {..} = do
         | isJust _evalSymbolName = getNode tab (selInfo tab)
         | otherwise = getNode tab (mainInfo tab)
   case mevalNode of
-    Just evalNode ->
-      Eval.evalAndPrint gopts opts tab evalNode
+    Just evalNode -> do
+      evopts <- evalOptionsToEvalOptions opts
+      Eval.evalAndPrint' (project gopts) (project opts) evopts tab evalNode
     Nothing -> do
       let name = fromMaybe Str.main _evalSymbolName
-      printFailureExit ("function not found: " <> name)
+      exitFailMsg ("function not found: " <> name)
   where
     mainInfo :: Core.InfoTable -> Maybe Core.IdentifierInfo
     mainInfo tab = do

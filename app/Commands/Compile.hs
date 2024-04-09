@@ -1,43 +1,23 @@
-module Commands.Compile where
+module Commands.Compile
+  ( module Commands.Compile,
+    module Commands.Compile.Options,
+  )
+where
 
 import Commands.Base
+import Commands.Compile.Anoma qualified as Anoma
+import Commands.Compile.Cairo qualified as Cairo
+import Commands.Compile.Geb qualified as Geb
+import Commands.Compile.Native qualified as Native
 import Commands.Compile.Options
-import Commands.Dev.Core.Compile.Base qualified as Compile
-import Commands.Extra.Compile qualified as Compile
-import Juvix.Compiler.Core qualified as Core
-import Juvix.Compiler.Core.Pretty qualified as Core
-import Juvix.Compiler.Core.Transformation.DisambiguateNames qualified as Core
+import Commands.Compile.Vampir qualified as Vampir
+import Commands.Compile.Wasi qualified as Wasi
 
-runCommand :: (Members '[EmbedIO, App, TaggedLock] r) => CompileOptions -> Sem r ()
-runCommand opts@CompileOptions {..} = do
-  inputFile <- getMainFile _compileInputFile
-  Core.CoreResult {..} <- runPipeline (AppPath (preFileFromAbs inputFile) True) upToCore
-  let arg =
-        Compile.PipelineArg
-          { _pipelineArgFile = inputFile,
-            _pipelineArgOptions = opts,
-            _pipelineArgModule = _coreResultModule
-          }
-  case _compileTarget of
-    TargetNative64 -> Compile.runCPipeline arg
-    TargetWasm32Wasi -> Compile.runCPipeline arg
-    TargetGeb -> Compile.runGebPipeline arg
-    TargetVampIR -> Compile.runVampIRPipeline arg
-    TargetCore -> writeCoreFile arg
-    TargetTree -> Compile.runTreePipeline arg
-    TargetAsm -> Compile.runAsmPipeline arg
-    TargetReg -> Compile.runRegPipeline arg
-    TargetAnoma -> Compile.runAnomaPipeline arg
-    TargetCasm -> Compile.runCasmPipeline arg
-    TargetCairo -> Compile.runCairoPipeline arg
-
-writeCoreFile :: (Members '[EmbedIO, App, TaggedLock] r) => Compile.PipelineArg -> Sem r ()
-writeCoreFile pa@Compile.PipelineArg {..} = do
-  entryPoint <- Compile.getEntry pa
-  coreFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
-  r <- runReader entryPoint . runError @JuvixError $ Core.toStored _pipelineArgModule
-  case r of
-    Left e -> exitJuvixError e
-    Right md -> do
-      let txt = show (Core.ppOutDefault (Core.disambiguateNames md ^. Core.moduleInfoTable))
-      writeFileEnsureLn coreFile txt
+runCommand :: (Members '[EmbedIO, App, TaggedLock] r) => CompileCommand -> Sem r ()
+runCommand = \case
+  Native opts -> Native.runCommand opts
+  Wasi opts -> Wasi.runCommand opts
+  Geb opts -> Geb.runCommand opts
+  Anoma opts -> Anoma.runCommand opts
+  Cairo opts -> Cairo.runCommand opts
+  Vampir opts -> Vampir.runCommand opts
