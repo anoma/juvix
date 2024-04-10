@@ -5,7 +5,6 @@ import Commands.Compile.Native.Options
 import Commands.Compile.NativeWasiHelper as Helper
 import Data.ByteString qualified as BS
 import Data.FileEmbed qualified as FE
-import Juvix.Compiler.Backend
 
 runCommand ::
   forall r k.

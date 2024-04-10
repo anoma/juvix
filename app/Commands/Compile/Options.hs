@@ -15,10 +15,10 @@ import CommonOptions
 data CompileCommand
   = Native (NativeOptions 'InputMain)
   | Wasi WasiOptions
-  | Geb GebOptions
-  | Vampir VampirOptions
-  | Anoma AnomaOptions
-  | Cairo CairoOptions
+  | Geb (GebOptions 'InputMain)
+  | Vampir (VampirOptions 'InputMain)
+  | Anoma (AnomaOptions 'InputMain)
+  | Cairo (CairoOptions 'InputMain)
   deriving stock (Data)
 
 parseCompileCommand :: Parser CompileCommand

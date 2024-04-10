@@ -10,7 +10,7 @@ runCommand :: forall r. (Members '[EmbedIO, App, TaggedLock] r) => CompileOption
 runCommand opts = do
   file <- getMainFile (Just (opts ^. compileInputFile))
   s <- readFile file
-  tab <- getRight (mapLeft JuvixError (Core.runParserMain file defaultModuleId mempty s))
+  tab <- getRight (Core.runParserMain file defaultModuleId mempty s)
   let arg =
         PipelineArg
           { _pipelineArgOptions = opts,

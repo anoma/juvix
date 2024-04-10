@@ -10,6 +10,7 @@ import Juvix.Compiler.Pipeline.Root
 import Juvix.Compiler.Pipeline.Run
 import Juvix.Data.Error qualified as Error
 import Juvix.Extra.Paths.Base hiding (rootBuildDir)
+import Juvix.Parser.Error
 import Juvix.Prelude.Pretty hiding
   ( Doc,
   )
@@ -249,6 +250,9 @@ printSuccessExit = exitMsg ExitSuccess
 
 getRight :: forall e a r. (Members '[App] r, AppError e) => Either e a -> Sem r a
 getRight = either appError return
+
+instance AppError MegaparsecError where
+  appError = appError . JuvixError
 
 instance AppError Text where
   appError = exitFailMsg

@@ -12,12 +12,11 @@ import Commands.Compile.NativeWasiHelper.RuntimeWriter
 import Commands.Extra.Clang
 import Commands.Extra.Clang.Backend
 import Commands.Extra.NewCompile
-import Juvix.Compiler.Backend
 import Juvix.Compiler.Backend.C qualified as C
 import Juvix.Extra.Paths
 
-data HelperOptions = HelperOptions
-  { _helperCompileCommonOptions :: CompileCommonOptionsMain,
+data HelperOptions (k :: InputKind) = HelperOptions
+  { _helperCompileCommonOptions :: CompileCommonOptions k,
     _helperCStage :: CStage,
     _helperTarget :: Target,
     _helperClangBackend :: ClangBackend,
@@ -27,7 +26,7 @@ data HelperOptions = HelperOptions
 
 makeLenses ''HelperOptions
 
-helperOutputFile :: (Member App r) => HelperOptions -> Sem r (Path Abs File)
+helperOutputFile :: (Member App r) => HelperOptions 'InputMain -> Sem r (Path Abs File)
 helperOutputFile opts =
   case opts ^. helperCompileCommonOptions . compileOutputFile of
     Just f -> fromAppFile f
@@ -37,13 +36,12 @@ helperOutputFile opts =
       let baseOutputFile = invokeDir <//> filename inputFile
       return ((opts ^. helperDefaultOutputFile) inputFile baseOutputFile)
 
-runCommand :: forall r. (Members '[App, TaggedLock, EmbedIO] r) => HelperOptions -> Sem r ()
+runCommand :: forall r. (Members '[App, TaggedLock, EmbedIO] r) => HelperOptions 'InputMain -> Sem r ()
 runCommand opts = do
   let opts' = opts ^. helperCompileCommonOptions
   coreRes <- fromCompileCommonOptionsMain opts' >>= compileToCore
   entryPoint <-
-    set entryPointTarget (Just (opts ^. helperTarget))
-      . applyCompileCommonOptions opts'
+    applyOptions opts
       <$> getEntryPoint (opts' ^. compileInputFile)
   C.MiniCResult {..} <-
     getRight
@@ -75,3 +73,8 @@ runCommand opts = do
       buildDir <- askBuildDir
       ensureDir buildDir
       return (buildDir <//> replaceExtension' ".c" (filename inputFileCompile))
+
+instance EntryPointOptions (HelperOptions k) where
+  applyOptions opts =
+    set entryPointTarget (Just (opts ^. helperTarget))
+      . applyOptions (opts ^. helperCompileCommonOptions)

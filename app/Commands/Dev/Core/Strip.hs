@@ -11,12 +11,13 @@ runCommand opts = do
   gopts <- askGlobalOptions
   inputFile :: Path Abs File <- fromAppPathFile sinputFile
   s' <- readFile inputFile
-  (tab, _) <- getRight (mapLeft JuvixError (Core.runParser inputFile defaultModuleId mempty s'))
+  (tab, _) <- getRight (Core.runParser inputFile defaultModuleId mempty s')
   let r =
-        run $
-          runReader (project gopts) $
-            runError @JuvixError (Core.toStripped' Core.Identity (Core.moduleFromInfoTable tab) :: Sem '[Error JuvixError, Reader Core.CoreOptions] Core.Module)
-  tab' <- getRight $ mapLeft JuvixError $ mapRight (Stripped.fromCore (project gopts ^. Core.optFieldSize) . Core.computeCombinedInfoTable) r
+        run
+          . runReader (project' @Core.CoreOptions gopts)
+          . runError @JuvixError
+          $ Core.toStripped' Core.Identity (Core.moduleFromInfoTable tab)
+  tab' <- getRight $ mapRight (Stripped.fromCore (project gopts ^. Core.optFieldSize) . Core.computeCombinedInfoTable) r
   unless (project opts ^. coreStripNoPrint) $ do
     renderStdOut (Core.ppOut opts tab')
   where

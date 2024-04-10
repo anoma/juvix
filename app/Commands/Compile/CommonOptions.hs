@@ -3,21 +3,22 @@
 module Commands.Compile.CommonOptions
   ( module Commands.Compile.CommonOptions,
     module Commands.Compile.CommonOptions.InputKind,
+    module Juvix.Compiler.Pipeline.EntryPoint,
+    module Juvix.Compiler.Backend,
   )
 where
 
 import App
 import Commands.Compile.CommonOptions.InputKind
 import CommonOptions
+import Juvix.Compiler.Backend
 import Juvix.Compiler.Pipeline.EntryPoint
 
 -- | If the input file can be defaulted to the `main` in the `package.yaml` file, we
 -- can omit the input file.
-type CompileCommonOptionsMain = CompileCommonOptions' 'InputMain
+type CompileCommonOptionsMain = CompileCommonOptions 'InputMain
 
-type CompileCommonOptions (e :: FileExt) = CompileCommonOptions' ('InputExtension e)
-
-data CompileCommonOptions' (k :: InputKind) = CompileCommonOptions
+data CompileCommonOptions (k :: InputKind) = CompileCommonOptions
   { _compileInputFile :: InputFileType k,
     _compileOutputFile :: Maybe (AppPath File),
     _compileDebug :: Bool,
@@ -25,29 +26,33 @@ data CompileCommonOptions' (k :: InputKind) = CompileCommonOptions
     _compileOptimizationLevel :: Maybe Int
   }
 
-deriving stock instance (Typeable k, Data (InputFileType k)) => Data (CompileCommonOptions' k)
+deriving stock instance (Typeable k, Data (InputFileType k)) => Data (CompileCommonOptions k)
 
-makeLenses ''CompileCommonOptions'
+makeLenses ''CompileCommonOptions
 
-applyCompileCommonOptions :: CompileCommonOptions' b -> EntryPoint -> EntryPoint
-applyCompileCommonOptions opts e =
-  e
-    { _entryPointDebug = opts ^. compileDebug,
-      _entryPointOptimizationLevel = fromMaybe defaultOptimization (opts ^. compileOptimizationLevel),
-      _entryPointInliningDepth = opts ^. compileInliningDepth
-    }
-  where
-    defaultOptimization :: Int
-    defaultOptimization
-      | opts ^. compileDebug = 0
-      | otherwise = defaultOptimizationLevel
+instance EntryPointOptions (CompileCommonOptions b) where
+  applyOptions opts e =
+    e
+      { _entryPointDebug = opts ^. compileDebug,
+        _entryPointOptimizationLevel = fromMaybe defaultOptimization (opts ^. compileOptimizationLevel),
+        _entryPointInliningDepth = opts ^. compileInliningDepth
+      }
+    where
+      defaultOptimization :: Int
+      defaultOptimization
+        | opts ^. compileDebug = 0
+        | otherwise = defaultOptimizationLevel
 
-fromCompileCommonOptionsMain :: (Members '[App] r) => CompileCommonOptionsMain -> Sem r (CompileCommonOptions 'FileExtJuvix)
+fromCompileCommonOptionsMain ::
+  (Members '[App] r) =>
+  CompileCommonOptionsMain ->
+  Sem r (CompileCommonOptions ('InputExtension 'FileExtJuvix))
 fromCompileCommonOptionsMain = traverseOf compileInputFile getMainAppFile
 
-parseCompileCommonOptions :: forall k.
+parseCompileCommonOptions ::
+  forall k.
   (SingI k) =>
-  Parser (CompileCommonOptions' k)
+  Parser (CompileCommonOptions k)
 parseCompileCommonOptions = do
   _compileDebug <-
     switch

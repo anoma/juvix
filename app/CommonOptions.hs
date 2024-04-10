@@ -9,6 +9,7 @@ where
 import Control.Exception qualified as GHC
 import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Core.Data.TransformationId.Parser qualified as Core
+import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Reg.Data.TransformationId.Parser qualified as Reg
 import Juvix.Compiler.Tree.Data.TransformationId.Parser qualified as Tree
 import Juvix.Data.Field
@@ -284,3 +285,6 @@ optTreeTransformationIds = optTransformationIds Tree.parseTransformations Tree.c
 
 optRegTransformationIds :: Parser [Reg.TransformationId]
 optRegTransformationIds = optTransformationIds Reg.parseTransformations Reg.completionsString
+
+class EntryPointOptions a where
+  applyOptions :: a -> EntryPoint -> EntryPoint
