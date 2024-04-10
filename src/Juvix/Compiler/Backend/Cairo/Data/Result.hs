@@ -103,12 +103,9 @@ instance FromJSON Result where
       parseHints val' = case val' of
         Object obj -> do
           lst <-
-            mapM
-              ( \(k, v) -> do
-                  v' <- parseHint v
-                  return (Aeson.toText k, v')
-              )
-              (KeyMap.toList obj)
+            forM (KeyMap.toList obj) $ \(k, v) -> do
+              v' <- parseHint v
+              return (Aeson.toText k, v')
           mapM (firstM (maybe (typeMismatch "Integer" val') return . T.readMaybe . unpack)) lst
         _ ->
           typeMismatch "Object" val'

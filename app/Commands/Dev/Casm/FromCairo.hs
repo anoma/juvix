@@ -18,7 +18,7 @@ runCommand opts = do
       let Casm.Result {..} = Casm.fromCairo (Cairo.deserialize r)
       renderStdOut (Casm.ppProgram _resultCode)
     Nothing ->
-      exitMsg (ExitFailure 1) "error reading input file"
+      exitFailMsg "error reading input file"
   where
     file :: AppPath File
     file = opts ^. casmFromCairoInputFile
