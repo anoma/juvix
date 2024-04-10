@@ -95,10 +95,17 @@ juvix_extend_closure:
   [ap] = [fp + 15]; ap++
   ret
 
--- [fp - 3]: closure; [fp - 3 - k]: argument k to closure call
+-- [fp - 3]: closure;
+-- [fp - 3 - k]: argument k to closure call
+-- assumption: 3 builtins passed at the end of args
 juvix_call_closure:
   -- jmp rel (9 - argsnum)
   jmp rel [[fp - 3] + 2]
+  -- builtins
+  [ap] = [fp - 14]; ap++
+  [ap] = [fp - 13]; ap++
+  [ap] = [fp - 12]; ap++
+  -- args
   [ap] = [fp - 11]; ap++
   [ap] = [fp - 10]; ap++
   [ap] = [fp - 9]; ap++

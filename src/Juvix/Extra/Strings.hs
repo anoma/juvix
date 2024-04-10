@@ -991,3 +991,12 @@ functionsPlaceholder = "functionsLibrary_placeholder"
 
 theFunctionsLibrary :: (IsString s) => s
 theFunctionsLibrary = "the_functionsLibrary"
+
+cairoRangeCheck :: (IsString s) => s
+cairoRangeCheck = "range_check"
+
+cairoPoseidon :: (IsString s) => s
+cairoPoseidon = "poseidon"
+
+cairoEcOp :: (IsString s) => s
+cairoEcOp = "ec_op"

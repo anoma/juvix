@@ -1,4 +1,8 @@
-module Juvix.Compiler.Casm.Data.LabelInfoBuilder where
+module Juvix.Compiler.Casm.Data.LabelInfoBuilder
+  ( module Juvix.Compiler.Casm.Data.LabelInfo,
+    module Juvix.Compiler.Casm.Data.LabelInfoBuilder,
+  )
+where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Casm.Data.LabelInfo
