@@ -23,6 +23,7 @@ compileRules = do
   phony "clean" $ do
     putInfo ("Deleting " <> toFilePath resultsDir)
     removePathForcibly resultsDir
+  phony "compile-only" (forM_ suites compileOnlyRules)
   forM_ suites suiteRules
 
 suiteRules :: Suite -> Rules ()
@@ -31,11 +32,33 @@ suiteRules s = do
   csvRules s
   plotRules s
 
+compileOnlyRules :: Suite -> Action ()
+compileOnlyRules s = forM_ (s ^. suiteVariants) (variantBuildAction s)
+
 multiRecipe :: [Path Abs File] -> Action () -> Rules ()
 multiRecipe out howto = map toFilePath out &%> const howto
 
 recipe :: Path Abs File -> Action () -> Rules ()
 recipe out howto = toFilePath out %> const howto
+
+variantBuildAction :: Suite -> Variant -> Action ()
+variantBuildAction s v = (v ^. variantBuild) args
+  where
+    args :: BuildArgs
+    args =
+      BuildArgs
+        { _buildSrc = srcFile,
+          _buildOutDir = outDir
+        }
+    lang :: Lang
+    lang = v ^. variantLanguage
+    srcFile :: Path Abs File
+    srcFile =
+      addExtension'
+        (langExtension lang)
+        (suiteSrcDir s <//> langPath lang <//> suiteBaseFile s)
+    outDir :: Path Abs Dir
+    outDir = variantBinDir s v
 
 variantRules :: Suite -> Variant -> Rules ()
 variantRules s v = do
