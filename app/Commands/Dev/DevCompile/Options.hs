@@ -9,10 +9,10 @@ import CommonOptions
 
 data DevCompileCommand
   = Core CoreOptions
-  | Asm AsmOptions
-  | Reg RegOptions
+  | Asm (AsmOptions 'InputMain)
+  | Reg (RegOptions 'InputMain)
   | Tree TreeOptions
-  | Casm CasmOptions
+  | Casm (CasmOptions 'InputMain)
   deriving stock (Data)
 
 parseDevCompileCommand :: Parser DevCompileCommand

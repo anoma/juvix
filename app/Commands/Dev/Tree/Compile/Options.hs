@@ -17,11 +17,11 @@ import CommonOptions
 data CompileCommand
   = Native (NativeOptions ('InputExtension 'FileExtJuvixTree))
   | Wasi WasiOptions
-  | Asm AsmOptions -- TODO update options to parse .jvt
-  | Reg RegOptions -- TODO update options to parse .jvt
-  | Casm CasmOptions -- TODO update options to parse .jvt
-  | Anoma AnomaOptions
-  | Cairo CairoOptions
+  | Asm (AsmOptions ('InputExtension 'FileExtJuvixTree))
+  | Reg (RegOptions ('InputExtension 'FileExtJuvixTree))
+  | Casm (CasmOptions ('InputExtension 'FileExtJuvixTree))
+  | Anoma (AnomaOptions ('InputExtension 'FileExtJuvixTree))
+  | Cairo (CairoOptions ('InputExtension 'FileExtJuvixTree))
   deriving stock (Data)
 
 treeSupportedTargets :: SupportedTargets

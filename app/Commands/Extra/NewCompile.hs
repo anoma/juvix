@@ -29,7 +29,7 @@ getOutputFile ext inp = \case
 
 compileToCore ::
   (Members '[App, EmbedIO, TaggedLock] r) =>
-  CompileCommonOptions' ('InputExtension 'FileExtJuvix) ->
+  CompileCommonOptions ('InputExtension 'FileExtJuvix) ->
   Sem r CoreResult
 compileToCore opts = runPipeline (Just (opts ^. compileInputFile)) upToCore
 

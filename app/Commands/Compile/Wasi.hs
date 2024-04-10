@@ -5,7 +5,6 @@ import Commands.Compile.NativeWasiHelper as Helper
 import Commands.Compile.Wasi.Options
 import Data.ByteString qualified as BS
 import Data.FileEmbed qualified as FE
-import Juvix.Compiler.Backend
 
 runCommand :: forall r. (Members '[App, TaggedLock, EmbedIO] r) => WasiOptions -> Sem r ()
 runCommand opts =

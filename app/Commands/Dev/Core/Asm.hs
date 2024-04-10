@@ -15,7 +15,7 @@ runCommand opts = do
   inputFile :: Path Abs File <- getMainFile (Just sinputFile)
   ep <- getEntryPoint (Just sinputFile)
   s' <- readFile inputFile
-  tab <- getRight (mapLeft JuvixError (Core.runParserMain inputFile defaultModuleId mempty s'))
+  tab <- getRight (Core.runParserMain inputFile defaultModuleId mempty s')
   r <- runReader ep . runError @JuvixError $ coreToAsm (Core.moduleFromInfoTable tab)
   tab' <- getRight r
   if
