@@ -10,7 +10,11 @@ import Juvix.Compiler.Core.Transformation qualified as Core
 compileTransformations :: [Core.TransformationId]
 compileTransformations = [Core.CombineInfoTables, Core.FilterUnreachable, Core.DisambiguateNames]
 
-runCommand :: forall r. (Members '[App, TaggedLock, EmbedIO] r) => CoreOptions -> Sem r ()
+runCommand ::
+  forall r.
+  (Members '[App, TaggedLock, EmbedIO] r) =>
+  CoreOptions 'InputMain ->
+  Sem r ()
 runCommand opts = do
   let inputFile = opts ^. coreCompileCommonOptions . compileInputFile
       moutputFile = opts ^. coreCompileCommonOptions . compileOutputFile

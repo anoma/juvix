@@ -1,16 +1,16 @@
-module Commands.Dev.Tree.Compile.Native where
+module Commands.Dev.Tree.Compile.Wasi where
 
 import Commands.Base
-import Commands.Compile.Native.Options
+import Commands.Compile.Wasi.Options
 import Juvix.Compiler.Backend.C qualified as C
 import Juvix.Compiler.Tree.Translation.FromSource qualified as Tree
 
 runCommand ::
   (Members '[EmbedIO, App, TaggedLock] r) =>
-  NativeOptions ('InputExtension 'FileExtJuvixTree) ->
+  WasiOptions ('InputExtension 'FileExtJuvixTree) ->
   Sem r ()
 runCommand opts = do
-  file <- getMainFileFromInputFileType @('InputExtension 'FileExtJuvixTree) (opts ^. nativeCompileCommonOptions . compileInputFile)
+  file <- getMainFileFromInputFileType @('InputExtension 'FileExtJuvixTree) (opts ^. wasiCompileCommonOptions . compileInputFile)
   s <- readFile file
   tab <- getRight (mapLeft JuvixError (Tree.runParser file s))
   -- entryPoint <- getEntry pa

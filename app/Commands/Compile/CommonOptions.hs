@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Commands.Compile.CommonOptions
@@ -13,10 +14,6 @@ import Commands.Compile.CommonOptions.InputKind
 import CommonOptions
 import Juvix.Compiler.Backend
 import Juvix.Compiler.Pipeline.EntryPoint
-
--- | If the input file can be defaulted to the `main` in the `package.yaml` file, we
--- can omit the input file.
-type CompileCommonOptionsMain = CompileCommonOptions 'InputMain
 
 data CompileCommonOptions (k :: InputKind) = CompileCommonOptions
   { _compileInputFile :: InputFileType k,
@@ -40,9 +37,25 @@ instance EntryPointOptions (CompileCommonOptions b) where
 
 fromCompileCommonOptionsMain ::
   (Members '[App] r) =>
-  CompileCommonOptionsMain ->
+  CompileCommonOptions 'InputMain ->
   Sem r (CompileCommonOptions ('InputExtension 'FileExtJuvix))
 fromCompileCommonOptionsMain = traverseOf compileInputFile getMainAppFile
+
+getMainFileFromInputFileType ::
+  forall (k :: InputKind) r.
+  (SingI k, Members '[App] r) =>
+  InputFileType k ->
+  Sem r (Path Abs File)
+getMainFileFromInputFileType = getMainAppFileFromInputFileType @k >=> fromAppFile
+
+getMainAppFileFromInputFileType ::
+  forall (k :: InputKind) r.
+  (SingI k, Members '[App] r) =>
+  InputFileType k ->
+  Sem r (AppPath File)
+getMainAppFileFromInputFileType i = case sing :: SInputKind k of
+  SInputMain -> getMainAppFile i
+  SInputExtension {} -> return i
 
 parseCompileCommonOptions ::
   forall k.

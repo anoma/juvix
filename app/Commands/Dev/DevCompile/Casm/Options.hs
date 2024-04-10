@@ -23,4 +23,6 @@ parseCasm = do
   pure CasmOptions {..}
 
 instance EntryPointOptions (CasmOptions k) where
-  applyOptions = applyOptions . (^. casmCompileCommonOptions)
+  applyOptions opts =
+    set entryPointTarget (Just TargetCairo) -- TODO is this the right target?
+      . applyOptions (opts ^. casmCompileCommonOptions)

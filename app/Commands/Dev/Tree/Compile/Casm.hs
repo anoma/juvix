@@ -7,7 +7,10 @@ import Juvix.Compiler.Casm.Pretty qualified as Casm
 import Juvix.Compiler.Tree.Data.InfoTable
 import Juvix.Compiler.Tree.Translation.FromSource qualified as Tree
 
-runCommand :: (Members '[App, TaggedLock, EmbedIO] r) => CasmOptions ('InputExtension 'FileExtJuvixTree) -> Sem r ()
+runCommand ::
+  (Members '[App, TaggedLock, EmbedIO] r) =>
+  CasmOptions ('InputExtension 'FileExtJuvixTree) ->
+  Sem r ()
 runCommand opts = do
   let opts' = opts ^. casmCompileCommonOptions
       inputFile = Just (opts' ^. compileInputFile)
@@ -16,8 +19,7 @@ runCommand opts = do
   mainFile <- getMainFile inputFile
   tab :: InfoTable <- readFile mainFile >>= getRight . Tree.runParser mainFile
   entrypoint <-
-    set entryPointTarget (Just TargetCairo) -- TODO revise
-      . applyOptions opts
+    applyOptions opts
       <$> getEntryPoint inputFile
   res <-
     getRight
