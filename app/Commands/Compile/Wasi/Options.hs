@@ -1,3 +1,5 @@
+{-# LANGUAGE UndecidableInstances #-}
+
 module Commands.Compile.Wasi.Options
   ( module Commands.Compile.Wasi.Options,
     module Commands.Compile.CommonOptions,
@@ -9,21 +11,25 @@ import Commands.Base
 import Commands.Compile.CStage
 import Commands.Compile.CommonOptions
 
-data WasiOptions = WasiOptions
-  { _wasiCompileCommonOptions :: CompileCommonOptionsMain,
+data WasiOptions (k :: InputKind) = WasiOptions
+  { _wasiCompileCommonOptions :: CompileCommonOptions k,
     _wasiCStage :: CStage
   }
-  deriving stock (Data)
+
+deriving stock instance (Typeable k, Data (InputFileType k)) => Data (WasiOptions k)
 
 makeLenses ''WasiOptions
 
-parseWasi :: Parser WasiOptions
+parseWasi :: (SingI k) => Parser (WasiOptions k)
 parseWasi = do
   _wasiCompileCommonOptions <- parseCompileCommonOptions
   _wasiCStage <- parseCStage
   pure WasiOptions {..}
 
-wasiOutputFile :: (Member App r) => WasiOptions -> Sem r (Path Abs File)
+wasiOutputFile ::
+  (Member App r) =>
+  WasiOptions 'InputMain ->
+  Sem r (Path Abs File)
 wasiOutputFile opts =
   case opts ^. wasiCompileCommonOptions . compileOutputFile of
     Just f -> fromAppFile f
@@ -36,3 +42,6 @@ wasiOutputFile opts =
         CPreprocess -> addExtension' cFileExt (addExtension' ".out" (removeExtension' inputFile))
         CAssembly -> replaceExtension' ".wat" inputFile
         CExecutable -> removeExtension' baseOutputFile
+
+instance EntryPointOptions (WasiOptions k) where
+  applyOptions opts = applyOptions (opts ^. wasiCompileCommonOptions)

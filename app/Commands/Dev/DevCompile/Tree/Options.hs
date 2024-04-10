@@ -1,3 +1,5 @@
+{-# LANGUAGE UndecidableInstances #-}
+
 module Commands.Dev.DevCompile.Tree.Options
   ( module Commands.Dev.DevCompile.Tree.Options,
     module Commands.Compile.CommonOptions,
@@ -7,14 +9,18 @@ where
 import Commands.Compile.CommonOptions
 import CommonOptions
 
-data TreeOptions = TreeOptions
-  { _treeCompileCommonOptions :: CompileCommonOptionsMain
+data TreeOptions (k :: InputKind) = TreeOptions
+  { _treeCompileCommonOptions :: CompileCommonOptions k
   }
-  deriving stock (Data)
+
+deriving stock instance (Typeable k, Data (InputFileType k)) => Data (TreeOptions k)
 
 makeLenses ''TreeOptions
 
-parseTree :: Parser TreeOptions
+parseTree :: (SingI k) => Parser (TreeOptions k)
 parseTree = do
   _treeCompileCommonOptions <- parseCompileCommonOptions
   pure TreeOptions {..}
+
+instance EntryPointOptions (TreeOptions k) where
+  applyOptions = applyOptions . (^. treeCompileCommonOptions)

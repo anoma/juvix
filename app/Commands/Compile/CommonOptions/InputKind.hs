@@ -2,6 +2,7 @@
 
 module Commands.Compile.CommonOptions.InputKind where
 
+import App
 import CommonOptions
 
 data InputKind

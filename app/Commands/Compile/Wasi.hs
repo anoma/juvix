@@ -6,7 +6,11 @@ import Commands.Compile.Wasi.Options
 import Data.ByteString qualified as BS
 import Data.FileEmbed qualified as FE
 
-runCommand :: forall r. (Members '[App, TaggedLock, EmbedIO] r) => WasiOptions -> Sem r ()
+runCommand ::
+  forall r.
+  (Members '[App, TaggedLock, EmbedIO] r) =>
+  WasiOptions 'InputMain ->
+  Sem r ()
 runCommand opts =
   Helper.runCommand
     HelperOptions

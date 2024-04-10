@@ -7,9 +7,9 @@ import Data.ByteString qualified as BS
 import Data.FileEmbed qualified as FE
 
 runCommand ::
-  forall r k.
+  forall r.
   (Members '[App, TaggedLock, EmbedIO] r) =>
-  NativeOptions k ->
+  NativeOptions 'InputMain ->
   Sem r ()
 runCommand opts =
   Helper.runCommand

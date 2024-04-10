@@ -20,8 +20,7 @@ runCommand opts = do
   mainFile <- getMainFile inputFile
   tab :: InfoTable <- readFile mainFile >>= getRight . Tree.runParser mainFile
   entrypoint <-
-    set entryPointTarget (Just TargetAnoma)
-      . applyOptions opts
+    applyOptions opts
       <$> getEntryPoint inputFile
   res <-
     getRight

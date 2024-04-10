@@ -16,7 +16,7 @@ import CommonOptions
 
 data CompileCommand
   = Native (NativeOptions ('InputExtension 'FileExtJuvixTree))
-  | Wasi WasiOptions
+  | Wasi (WasiOptions ('InputExtension 'FileExtJuvixTree))
   | Asm (AsmOptions ('InputExtension 'FileExtJuvixTree))
   | Reg (RegOptions ('InputExtension 'FileExtJuvixTree))
   | Casm (CasmOptions ('InputExtension 'FileExtJuvixTree))

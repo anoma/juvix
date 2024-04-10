@@ -14,7 +14,7 @@ import CommonOptions
 
 data CompileCommand
   = Native (NativeOptions 'InputMain)
-  | Wasi WasiOptions
+  | Wasi (WasiOptions 'InputMain)
   | Geb (GebOptions 'InputMain)
   | Vampir (VampirOptions 'InputMain)
   | Anoma (AnomaOptions 'InputMain)
