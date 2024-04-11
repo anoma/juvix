@@ -21,7 +21,7 @@ treeToC opts = do
     applyOptions opts
       <$> getEntryPoint (Just afile)
   getRight
-      . run
-      . runReader entryPoint
-      . runError @JuvixError
-      $ treeToMiniC tab
+    . run
+    . runReader entryPoint
+    . runError @JuvixError
+    $ treeToMiniC tab
