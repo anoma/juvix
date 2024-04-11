@@ -39,7 +39,8 @@ hRunCode hout inputInfo (LabelInfo labelInfo) instrs0 = runST goCode
     goCode :: ST s FField
     goCode = do
       mem <- MV.replicate initialMemSize Nothing
-      go 0 0 0 mem
+      MV.write mem 0 (Just (fieldFromInteger cairoFieldSize 0))
+      go 0 1 0 mem
 
     go ::
       Address ->

@@ -96,7 +96,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
               map (\k -> (Reg.VarRef Reg.VarGroupArgs k Nothing, -argsOffset - k)) [0 .. n - 1]
       instrs <-
         fmap fst
-          . runCasmBuilder addr1 (-argsOffset - n) vars
+          . runCasmBuilder addr1 vars (-argsOffset - n)
           . runOutputList
           $ goBlock funInfo blts failLab mempty Nothing block
       return (addr1 + length instrs, (pre ++ instrs) : acc)

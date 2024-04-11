@@ -28,8 +28,8 @@ data BuilderState = BuilderState
 
 makeLenses ''BuilderState
 
-mkBuilderState :: Address -> Int -> HashMap VarRef Int -> BuilderState
-mkBuilderState addr bltOff vars =
+mkBuilderState :: Address -> HashMap VarRef Int -> Int -> BuilderState
+mkBuilderState addr vars bltOff =
   BuilderState
     { _statePC = addr,
       _stateAP = 0,
@@ -37,8 +37,8 @@ mkBuilderState addr bltOff vars =
       _stateBuiltinOff = bltOff
     }
 
-runCasmBuilder :: Address -> Int -> HashMap VarRef Int -> Sem (CasmBuilder ': r) a -> Sem r a
-runCasmBuilder addr bltOff vars = fmap snd . runCasmBuilder' (mkBuilderState bltOff addr vars)
+runCasmBuilder :: Address -> HashMap VarRef Int -> Int -> Sem (CasmBuilder ': r) a -> Sem r a
+runCasmBuilder addr vars bltOff = fmap snd . runCasmBuilder' (mkBuilderState addr vars bltOff)
 
 runCasmBuilder' :: BuilderState -> Sem (CasmBuilder ': r) a -> Sem r (BuilderState, a)
 runCasmBuilder' bs = reinterpret (runState bs) interp
