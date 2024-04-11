@@ -1,40 +1,29 @@
 module Commands.Dev.Tree.Compile.Wasi where
 
 import Commands.Base
+import Commands.Compile.NativeWasiHelper qualified as Helper
 import Commands.Compile.Wasi.Options
-import Juvix.Compiler.Backend.C qualified as C
 import Juvix.Compiler.Tree.Translation.FromSource qualified as Tree
 
 runCommand ::
+  forall r.
   (Members '[EmbedIO, App, TaggedLock] r) =>
   WasiOptions ('InputExtension 'FileExtJuvixTree) ->
   Sem r ()
 runCommand opts = do
-  file <- getMainFileFromInputFileType @('InputExtension 'FileExtJuvixTree) (opts ^. wasiCompileCommonOptions . compileInputFile)
+  afile <-
+    getMainAppFileFromInputFileType @('InputExtension 'FileExtJuvixTree)
+      (opts ^. wasiCompileCommonOptions . compileInputFile)
+  file <- fromAppPathFile afile
   s <- readFile file
   tab <- getRight (mapLeft JuvixError (Tree.runParser file s))
-  -- entryPoint <- getEntry pa
-  entryPoint :: EntryPoint <- undefined
-  C.MiniCResult {..} <-
+  entryPoint :: EntryPoint <-
+    applyOptions opts
+      <$> getEntryPoint (Just afile)
+  cRes <-
     getRight
       . run
       . runReader entryPoint
       . runError @JuvixError
       $ treeToMiniC tab
-  let inputCFile = undefined
-  cFile <- inputCFile file
-  writeFileEnsureLn cFile _resultCCode
-  undefined
-
--- outfile <- Compile.outputFile _pipelineArgOptions
--- Compile.runCommand
---   _pipelineArgOptions
---     { _compileInputFile = AppPath (preFileFromAbs cFile) False,
---       _compileOutputFile = Just (AppPath (preFileFromAbs outfile) False)
---     }
--- where
---   inputCFile :: Path Abs File -> Sem r (Path Abs File)
---   inputCFile inputFileCompile = do
---     buildDir <- askBuildDir
---     ensureDir buildDir
---     return (buildDir <//> replaceExtension' ".c" (filename inputFileCompile))
+  Helper.fromC (wasiHelperOptions opts) cRes
