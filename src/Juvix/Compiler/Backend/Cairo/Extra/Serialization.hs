@@ -43,13 +43,6 @@ serialize builtins elems =
       [ "0x40480017fff7fff",
         toHexText (builtinsNum + 1)
       ]
-        ++ if
-            | builtinsNum > 0 ->
-                -- [ap] = 1
-                [ "0x480480017fff8000",
-                  "0x1"
-                ]
-            | otherwise -> []
 
     finalizeBuiltins :: [Text]
     finalizeBuiltins =
@@ -59,13 +52,11 @@ serialize builtins elems =
         "0x4826800180008000",
         "0x1"
       ]
-        ++ if
-            | builtinsNum > 0 ->
-                -- [ap] = [[ap - 3] + k]; ap++
-                map
-                  (\k -> toHexText (0x480080007ffd8000 + shift k 32))
-                  [0 .. builtinsNum - 1]
-            | otherwise -> []
+        ++
+        -- [ap] = [ap - builtinsNum - 2]; ap++
+        replicate
+          builtinsNum
+          (toHexText (0x48107ffe7fff8000 - shift builtinsNum 32))
 
     finalizeJump :: [Text]
     finalizeJump =

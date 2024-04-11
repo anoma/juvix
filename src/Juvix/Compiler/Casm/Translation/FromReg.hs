@@ -19,25 +19,51 @@ import Juvix.Data.Field
 
 fromReg :: Reg.InfoTable -> Result
 fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolId tab) $ do
+  let startAddr :: Address = 2
+  startSym <- freshSymbol
+  endSym <- freshSymbol
+  let startName :: Text = "__juvix_start"
+      startLab = LabelRef startSym (Just startName)
+      endName :: Text = "__juvix_end"
+      endLab = LabelRef endSym (Just endName)
+  registerLabelName startSym startName
+  registerLabelAddress startSym startAddr
   let mainSym = fromJust $ tab ^. Reg.infoMainFunction
       mainInfo = fromJust (HashMap.lookup mainSym (tab ^. Reg.infoFunctions))
       mainName = mainInfo ^. Reg.functionName
       mainArgs = getInputArgs (mainInfo ^. Reg.functionArgsNum) (mainInfo ^. Reg.functionArgNames)
-      mainBuiltins :: [Builtin] = allElements
-      initialOffset = length mainArgs + 2
-  (blts, binstrs) <- addStdlibBuiltins initialOffset
+      bnum = toOffset builtinsNum
+      callStartInstr = mkCallRel (Lab startLab)
+      initBuiltinsInstr = mkAssignAp (Binop $ BinopValue FieldAdd (MemRef Fp (-2)) (Imm 1))
+      callMainInstr = mkCallRel (Lab $ LabelRef mainSym (Just mainName))
+      jmpEndInstr = mkJumpRel (Val $ Lab endLab)
+      margs = reverse $ map (Hint . HintInput) mainArgs
+      -- [ap] = [[ap - 2 - k)] + bnum - k - 1]; ap++
+      bltsRet = map (\k -> mkAssignAp (Load $ LoadValue (MemRef Ap (-2 - k)) (bnum - k - 1))) [0 .. bnum - 1]
+      resRetInstr = mkAssignAp (Val $ Ref $ MemRef Ap (-bnum - 1))
+      pinstrs =
+        callStartInstr
+          : jmpEndInstr
+          : Label startLab
+          : initBuiltinsInstr
+          : margs
+          ++ callMainInstr
+          : bltsRet
+          ++ [resRetInstr, Return]
+  (blts, binstrs) <- addStdlibBuiltins (length pinstrs)
   let cinstrs = concatMap (mkFunCall . fst) $ sortOn snd $ HashMap.toList (info ^. Reg.extraInfoFUIDs)
-  endSym <- freshSymbol
-  let endName :: Text = "__juvix_end"
-      endLab = LabelRef endSym (Just endName)
-  (addr, instrs) <- second (concat . reverse) <$> foldM (goFun blts endLab) (initialOffset + length binstrs + length cinstrs, []) (tab ^. Reg.infoFunctions)
-  eassert (addr == length instrs + length cinstrs + length binstrs + initialOffset)
+  (addr, instrs) <- second (concat . reverse) <$> foldM (goFun blts endLab) (length pinstrs + length binstrs + length cinstrs, []) (tab ^. Reg.infoFunctions)
+  eassert (addr == length instrs + length cinstrs + length binstrs + length pinstrs)
   registerLabelName endSym endName
   registerLabelAddress endSym addr
-  let callInstr = mkCallRel (Lab $ LabelRef mainSym (Just mainName))
-      jmpInstr = mkJumpRel (Val $ Lab endLab)
-      margs = reverse $ map (Hint . HintInput) mainArgs
-  return $ (mainBuiltins, margs ++ callInstr : jmpInstr : binstrs ++ cinstrs ++ instrs ++ [Label endLab])
+  return $
+    ( allElements,
+      pinstrs
+        ++ binstrs
+        ++ cinstrs
+        ++ instrs
+        ++ [Label endLab]
+    )
   where
     mkResult :: (LabelInfo, ([Builtin], Code)) -> Result
     mkResult (labi, (blts, code)) = Result labi code blts

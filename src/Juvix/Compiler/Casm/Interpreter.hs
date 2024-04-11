@@ -40,7 +40,9 @@ hRunCode hout inputInfo (LabelInfo labelInfo) instrs0 = runST goCode
     goCode = do
       mem <- MV.replicate initialMemSize Nothing
       MV.write mem 0 (Just (fieldFromInteger cairoFieldSize 0))
-      go 0 1 0 mem
+      MV.write mem 1 (Just (fieldFromInteger cairoFieldSize 0))
+      MV.write mem 2 (Just (fieldFromInteger cairoFieldSize 0))
+      go 0 3 0 mem
 
     go ::
       Address ->
