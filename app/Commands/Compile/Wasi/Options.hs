@@ -63,7 +63,7 @@ wasiHelperOptions opts =
         CSource -> replaceExtension' cFileExt inputFile
         CPreprocess -> addExtension' cFileExt (addExtension' ".out" (removeExtension' inputFile))
         CAssembly -> replaceExtension' ".wat" inputFile
-        CExecutable -> removeExtension' baseOutputFile
+        CExecutable -> replaceExtension' ".wasm" baseOutputFile
 
 instance EntryPointOptions (WasiOptions k) where
   applyOptions opts = applyOptions (opts ^. wasiCompileCommonOptions)
