@@ -12,6 +12,7 @@ runCommand :: forall r. (Members '[EmbedIO, App, TaggedLock] r) => TreeCommand -
 runCommand = \case
   Eval opts -> Eval.runCommand opts
   Compile opts -> Compile.runCommand opts
+  CompileOld {} -> impossible
   Read opts -> Read.runCommand opts
   FromAsm opts -> FromAsm.runCommand opts
   Repl opts -> Repl.runCommand opts
