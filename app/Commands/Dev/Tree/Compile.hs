@@ -16,30 +16,10 @@ runCommand ::
   CompileCommand ->
   Sem r ()
 runCommand = \case
-  Native opts -> undefined
+  Native opts -> Native.runCommand opts
   Wasi opts -> Wasi.runCommand opts
   Asm opts -> Asm.runCommand opts
   Casm opts -> Casm.runCommand opts
   Reg opts -> Reg.runCommand opts
   Anoma opts -> Anoma.runCommand opts
   Cairo opts -> Cairo.runCommand opts
-
--- old
--- runCommand :: forall r. (Members '[EmbedIO, App, TaggedLock] r) => CompileOptions -> Sem r ()
--- runCommand opts = do
---   file <- getMainFile (Just (opts ^. compileInputFile))
---   s <- readFile file
---   tab <- getRight (Tree.runParser file s)
---   let arg = PipelineArg opts file tab
---   case opts ^. compileTarget of
---     TargetWasm32Wasi -> runCPipeline arg
---     TargetNative64 -> runCPipeline arg
---     TargetGeb -> return ()
---     TargetVampIR -> return ()
---     TargetCore -> return ()
---     TargetAsm -> runAsmPipeline arg
---     TargetReg -> runRegPipeline arg
---     TargetTree -> return ()
---     TargetAnoma -> runAnomaPipeline arg
---     TargetCasm -> runCasmPipeline arg
---     TargetCairo -> runCairoPipeline arg
