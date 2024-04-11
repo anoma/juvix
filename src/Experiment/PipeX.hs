@@ -19,6 +19,7 @@ type family StageType s = res | res -> s where
 data Entry = Entry
 
 data Err = Err
+  deriving stock (Show)
 
 type Empty = () ~ [()]
 
@@ -81,3 +82,11 @@ compute = fmap sum . mapM go
     go w = do
       modify @Int succ
       return (fromIntegral (Text.length w))
+
+runPip :: Text -> Either Err (Int, Natural)
+runPip =
+  run
+    . runError
+    . runState 0
+    . runReader Entry
+    . pipeline (SConcrete :%| SCons SParsed (SCons SComputed SNil))
