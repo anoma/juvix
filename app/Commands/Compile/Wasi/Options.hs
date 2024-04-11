@@ -10,6 +10,9 @@ where
 import Commands.Base
 import Commands.Compile.CStage
 import Commands.Compile.CommonOptions
+import Commands.Compile.NativeWasiHelper as Helper
+import Data.ByteString qualified as BS
+import Data.FileEmbed qualified as FE
 
 data WasiOptions (k :: InputKind) = WasiOptions
   { _wasiCompileCommonOptions :: CompileCommonOptions k,
@@ -26,18 +29,37 @@ parseWasi = do
   _wasiCStage <- parseCStage
   pure WasiOptions {..}
 
-wasiOutputFile ::
-  (Member App r) =>
-  WasiOptions 'InputMain ->
-  Sem r (Path Abs File)
-wasiOutputFile opts =
-  case opts ^. wasiCompileCommonOptions . compileOutputFile of
-    Just f -> fromAppFile f
-    Nothing -> do
-      inputFile <- getMainFile (opts ^. wasiCompileCommonOptions . compileInputFile)
-      invokeDir <- askInvokeDir
-      let baseOutputFile = invokeDir <//> filename inputFile
-      return $ case opts ^. wasiCStage of
+wasiHelperOptions :: WasiOptions k -> Helper.HelperOptions k
+wasiHelperOptions opts =
+  Helper.HelperOptions
+    { _helperCStage = opts ^. wasiCStage,
+      _helperTarget = TargetCWasm32Wasi,
+      _helperCompileCommonOptions = opts ^. wasiCompileCommonOptions,
+      _helperClangBackend = ClangWasi,
+      _helperPrepareRuntime = prepareRuntime,
+      _helperDefaultOutputFile = wasiDefaultOutputFile
+    }
+  where
+    prepareRuntime ::
+      forall s.
+      (Members '[App, EmbedIO] s) =>
+      Sem s ()
+    prepareRuntime = writeRuntime runtime
+      where
+        runtime :: BS.ByteString
+        runtime
+          | opts ^. wasiCompileCommonOptions . compileDebug = wasiDebugRuntime
+          | otherwise = wasiReleaseRuntime
+          where
+            wasiReleaseRuntime :: BS.ByteString
+            wasiReleaseRuntime = $(FE.makeRelativeToProject "runtime/_build.wasm32-wasi/libjuvix.a" >>= FE.embedFile)
+
+            wasiDebugRuntime :: BS.ByteString
+            wasiDebugRuntime = $(FE.makeRelativeToProject "runtime/_build.wasm32-wasi-debug/libjuvix.a" >>= FE.embedFile)
+
+    wasiDefaultOutputFile :: Path Abs File -> Path Abs File -> Path Abs File
+    wasiDefaultOutputFile inputFile baseOutputFile =
+      case opts ^. wasiCStage of
         CSource -> replaceExtension' cFileExt inputFile
         CPreprocess -> addExtension' cFileExt (addExtension' ".out" (removeExtension' inputFile))
         CAssembly -> replaceExtension' ".wat" inputFile
