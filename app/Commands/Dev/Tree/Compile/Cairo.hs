@@ -1,9 +1,9 @@
 module Commands.Dev.Tree.Compile.Cairo where
 
 import Commands.Base
-import Data.Aeson qualified as JSON
 import Commands.Compile.Cairo.Options
 import Commands.Extra.NewCompile
+import Data.Aeson qualified as JSON
 import Juvix.Compiler.Tree.Data.InfoTable
 import Juvix.Compiler.Tree.Translation.FromSource qualified as Tree
 
