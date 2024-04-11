@@ -1,7 +1,7 @@
 module Commands.Dev.Tree.Compile.TreeToC where
 
 import Commands.Base
-import Commands.Compile.Wasi.Options
+import Commands.Compile.CommonOptions
 import Juvix.Compiler.Backend.C
 import Juvix.Compiler.Tree.Translation.FromSource qualified as Tree
 
