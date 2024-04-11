@@ -1,0 +1,27 @@
+module Commands.Dev.Tree.Compile.TreeToC where
+
+import Commands.Base
+import Commands.Compile.Wasi.Options
+import Juvix.Compiler.Backend.C
+import Juvix.Compiler.Tree.Translation.FromSource qualified as Tree
+
+treeToC ::
+  forall r.
+  (Members '[EmbedIO, App, TaggedLock] r) =>
+  CompileCommonOptions ('InputExtension 'FileExtJuvixTree) ->
+  Sem r MiniCResult
+treeToC opts = do
+  afile <-
+    getMainAppFileFromInputFileType @('InputExtension 'FileExtJuvixTree)
+      (opts ^. compileInputFile)
+  file <- fromAppPathFile afile
+  s <- readFile file
+  tab <- getRight (mapLeft JuvixError (Tree.runParser file s))
+  entryPoint :: EntryPoint <-
+    applyOptions opts
+      <$> getEntryPoint (Just afile)
+  getRight
+      . run
+      . runReader entryPoint
+      . runError @JuvixError
+      $ treeToMiniC tab
