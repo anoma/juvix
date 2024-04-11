@@ -5,8 +5,8 @@ import Juvix.Prelude
 
 data Builtin
   = BuiltinRangeCheck
-  | BuiltinPoseidon
   | BuiltinEcOp
+  | BuiltinPoseidon
   deriving stock (Show, Eq, Generic, Enum, Bounded)
 
 instance Hashable Builtin
