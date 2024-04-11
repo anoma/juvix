@@ -17,14 +17,11 @@ serialize builtins elems =
       _resultEnd = length initializeBuiltins + length elems + length finalizeBuiltins,
       _resultMain = 0,
       _resultHints = hints,
-      _resultBuiltins = allBuiltins
+      _resultBuiltins = "output" : builtins
     }
   where
-    allBuiltins :: [Text]
-    allBuiltins = "output" : builtins
-
-    allBuiltinsNum :: Natural
-    allBuiltinsNum = fromIntegral (length allBuiltins)
+    builtinsNum :: Natural
+    builtinsNum = fromIntegral (length builtins)
 
     hints :: [(Int, Text)]
     hints = catMaybes $ zipWith mkHint elems [0 ..]
@@ -44,8 +41,15 @@ serialize builtins elems =
     initializeBuiltins =
       -- ap += allBuiltinsNum
       [ "0x40480017fff7fff",
-        toHexText allBuiltinsNum
+        toHexText (builtinsNum + 1)
       ]
+        ++ if
+            | builtinsNum > 0 ->
+                -- [ap] = 1
+                [ "0x480480017fff8000",
+                  "0x1"
+                ]
+            | otherwise -> []
 
     finalizeBuiltins :: [Text]
     finalizeBuiltins =
@@ -55,10 +59,13 @@ serialize builtins elems =
         "0x4826800180008000",
         "0x1"
       ]
-        -- [ap] = [ap - allBuiltinsNum - 1]; ap++
-        ++ replicate
-          (allBuiltinsNum - 1)
-          (toHexText (0x48107fff7fff8000 + shift (allBuiltinsNum - 1) 32))
+        ++ if
+            | builtinsNum > 0 ->
+                -- [ap] = [[ap - 3] + k]; ap++
+                map
+                  (\k -> toHexText (0x480080007ffd8000 + shift k 32))
+                  [0 .. builtinsNum - 1]
+            | otherwise -> []
 
     finalizeJump :: [Text]
     finalizeJump =
