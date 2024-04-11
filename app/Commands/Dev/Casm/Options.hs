@@ -1,6 +1,7 @@
 module Commands.Dev.Casm.Options where
 
 import Commands.Dev.Casm.Compile.Options
+import Commands.Dev.Casm.FromCairo.Options
 import Commands.Dev.Casm.Read.Options
 import Commands.Dev.Casm.Run.Options
 import CommonOptions
@@ -9,6 +10,7 @@ data CasmCommand
   = Compile CompileOptions
   | Run CasmRunOptions
   | Read CasmReadOptions
+  | FromCairo CasmFromCairoOptions
   deriving stock (Data)
 
 parseCasmCommand :: Parser CasmCommand
@@ -17,7 +19,8 @@ parseCasmCommand =
     mconcat
       [ commandCompile,
         commandRun,
-        commandRead
+        commandRead,
+        commandFromCairo
       ]
   where
     commandCompile :: Mod CommandFields CasmCommand
@@ -28,6 +31,9 @@ parseCasmCommand =
 
     commandRead :: Mod CommandFields CasmCommand
     commandRead = command "read" readInfo
+
+    commandFromCairo :: Mod CommandFields CasmCommand
+    commandFromCairo = command "from-cairo" fromCairoInfo
 
     compileInfo :: ParserInfo CasmCommand
     compileInfo =
@@ -46,3 +52,9 @@ parseCasmCommand =
       info
         (Read <$> parseCasmReadOptions)
         (progDesc "Parse a CASM file and pretty print it")
+
+    fromCairoInfo :: ParserInfo CasmCommand
+    fromCairoInfo =
+      info
+        (FromCairo <$> parseCasmFromCairoOptions)
+        (progDesc "Disassemble Cairo bytecode into CASM")

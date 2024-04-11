@@ -41,34 +41,40 @@ data Instruction = Instruction
     _instrApUpdate :: ApUpdate,
     _instrOpcode :: Opcode
   }
+  deriving stock (Show)
 
 data Op1Src
   = Op1SrcOp0
   | Op1SrcImm
   | Op1SrcFp
   | Op1SrcAp
+  deriving stock (Eq, Show)
 
 data ResLogic
   = ResOp1
   | ResAdd
   | ResMul
+  deriving stock (Eq, Show)
 
 data PcUpdate
   = PcUpdateRegular
   | PcUpdateJump
   | PcUpdateJumpRel
   | PcUpdateJnz
+  deriving stock (Eq, Show)
 
 data ApUpdate
   = ApUpdateRegular
   | ApUpdateAdd
   | ApUpdateInc
+  deriving stock (Eq, Show)
 
 data Opcode
   = Nop
   | Call
   | Ret
   | AssertEq
+  deriving stock (Eq, Show)
 
 defaultInstruction :: Instruction
 defaultInstruction =
