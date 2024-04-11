@@ -50,7 +50,7 @@ tests:
       script: |
         temp=$(mktemp -d)
         trap 'rm -rf -- "$temp"' EXIT
-        juvix dev tree compile -o $temp/test001 Tree/positive/test001.jvt
+        juvix dev tree compile native -o $temp/test001 Tree/positive/test001.jvt
         $temp/test001
     stdout: |
       11
@@ -63,7 +63,7 @@ tests:
       script: |
         temp=$(mktemp -d)
         trap 'rm -rf -- "$temp"' EXIT
-        juvix dev tree compile -t asm -o $temp/test001.jva Tree/positive/test001.jvt
+        juvix dev tree compile asm -o $temp/test001.jva Tree/positive/test001.jvt
         juvix dev asm run $temp/test001.jva
     stdout: |
       11
