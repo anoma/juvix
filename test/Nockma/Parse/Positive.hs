@@ -42,7 +42,7 @@ testDescr PosTest {..} =
 
 assertParse :: Text -> IO (Term Natural)
 assertParse txt = case parseText txt of
-  Left (MegaparsecError b) -> assertFailure ("Nockma parsing failed " <> unpack (prettyText (errorBundlePretty b)))
+  Left (MegaparsecError b) -> assertFailure ("Nockma parsing failed " <> prettyString (errorBundlePretty b))
   Right t -> return t
 
 allTests :: TestTree

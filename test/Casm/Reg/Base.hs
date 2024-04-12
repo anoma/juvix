@@ -14,7 +14,7 @@ compileAssertion' :: Maybe (Path Abs File) -> Path Abs Dir -> Path Abs File -> S
 compileAssertion' inputFile _ outputFile _ tab step = do
   step "Translate to CASM"
   case run $ runError @JuvixError $ regToCasm tab of
-    Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
+    Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
     Right Result {..} -> do
       step "Interpret"
       hout <- openFile (toFilePath outputFile) WriteMode
@@ -31,7 +31,7 @@ cairoAssertion' :: Maybe (Path Abs File) -> Path Abs Dir -> Path Abs File -> Sym
 cairoAssertion' inputFile dirPath outputFile _ tab step = do
   step "Translate to Cairo"
   case run $ runError @JuvixError $ regToCairo tab of
-    Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
+    Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
     Right res -> do
       step "Serialize to Cairo bytecode"
       encodeFile (toFilePath outputFile) res

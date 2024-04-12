@@ -13,7 +13,7 @@ gebEvalAssertion mainFile expectedFile step = do
   step "Parse"
   input_ <- readFile mainFile
   case Geb.runParser mainFile input_ of
-    Left err -> assertFailure (show (pretty err))
+    Left err -> assertFailure (prettyString err)
     Right (Geb.ExpressionObject _) -> do
       step "No evaluation for objects"
       assertFailure (unpack Geb.objNoEvalMsg)
@@ -47,7 +47,7 @@ gebEvalAssertion' _mainFile expectedFile step gebMorphism = do
       case result of
         Left err -> do
           hClose hout
-          assertFailure (show (pretty (fromJuvixError @GenericError err)))
+          assertFailure (prettyString (fromJuvixError @GenericError err))
         Right value -> do
           hPutStrLn hout (Geb.ppPrint value)
           hClose hout

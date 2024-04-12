@@ -70,7 +70,7 @@ coreEvalAssertion' mode tab mainFile expectedFile step =
                   case r' of
                     Left err -> do
                       hClose hout
-                      assertFailure (show (pretty err))
+                      assertFailure (prettyString err)
                     Right value -> do
                       unless
                         (Info.member kNoDisplayInfo (getInfo value))
@@ -143,14 +143,14 @@ coreEvalAssertion mainFile expectedFile trans testTrans step = do
   step "Parse"
   r <- parseFile mainFile
   case r of
-    Left err -> assertFailure (show (pretty err))
+    Left err -> assertFailure (prettyString err)
     Right (_, Nothing) -> do
       step "Compare expected and actual program output"
       expected <- readFile expectedFile
       assertEqDiffText ("Check: EVAL output = " <> toFilePath expectedFile) "" expected
     Right (tabIni, Just node) ->
       case run $ runReader defaultCoreOptions $ runError $ applyTransformations trans $ moduleFromInfoTable $ setupMainFunction defaultModuleId tabIni node of
-        Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
+        Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
         Right m -> do
           let tab = computeCombinedInfoTable m
           assertBool "Check info table" (checkInfoTable tab)

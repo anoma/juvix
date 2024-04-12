@@ -33,16 +33,16 @@ treeEvalAssertionParam evalParam mainFile expectedFile trans testTrans step = do
   step "Parse"
   s <- readFile mainFile
   case runParser mainFile s of
-    Left err -> assertFailure (show (pretty err))
+    Left err -> assertFailure (prettyString err)
     Right tab0 -> do
       step "Validate"
       case run $ runError @JuvixError $ applyTransformations [Validate] tab0 of
-        Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
+        Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
         Right tab1 -> do
           unless (null trans) $
             step "Transform"
           case run $ runError @JuvixError $ applyTransformations trans tab1 of
-            Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
+            Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
             Right tab -> do
               testTrans tab
               case tab ^. infoMainFunction of
@@ -67,7 +67,7 @@ evalAssertion hout sym tab = do
   case r' of
     Left err -> do
       hClose hout
-      assertFailure (show (pretty err))
+      assertFailure (prettyString err)
     Right value' -> do
       case value' of
         ValVoid -> return ()
@@ -85,7 +85,7 @@ treeEvalErrorAssertion mainFile step = do
   step "Parse"
   s <- readFile mainFile
   case runParser mainFile s of
-    Left err -> assertFailure (show (pretty err))
+    Left err -> assertFailure (prettyString err)
     Right tab ->
       case tab ^. infoMainFunction of
         Just sym -> do

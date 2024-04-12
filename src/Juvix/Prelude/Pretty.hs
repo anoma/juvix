@@ -11,6 +11,7 @@ import Data.Text qualified as Text
 import Juvix.Prelude.Base
 import Prettyprinter hiding (concatWith, defaultLayoutOptions, hsep, sep, vsep)
 import Prettyprinter qualified as PP
+import Prettyprinter.Render.String (renderString)
 import Prettyprinter.Render.Terminal (AnsiStyle)
 import Prettyprinter.Render.Terminal qualified as Ansi
 import Prettyprinter.Render.Text (renderStrict)
@@ -138,6 +139,9 @@ trimText =
 
 toPlainTextTrim :: (HasTextBackend a) => a -> Text
 toPlainTextTrim = trimText . toPlainText
+
+prettyString :: (Pretty a) => a -> String
+prettyString = renderString . layoutPretty defaultLayoutOptions . pretty
 
 prettyText :: (Pretty a) => a -> Text
 prettyText = Text.renderStrict . layoutPretty defaultLayoutOptions . pretty
