@@ -233,6 +233,7 @@ instance PrettyCode UnaryOp where
     OpFieldToInt -> Str.instrFieldToInt
     OpIntToField -> Str.instrIntToField
     OpArgsNum -> Str.instrArgsNum
+    OpCairoPoseidon -> Str.instrPoseidon
 
 instance PrettyCode UnaryOpcode where
   ppCode = \case

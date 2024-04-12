@@ -106,6 +106,7 @@ parseUnop =
     <|> parseUnaryOp kwTrace OpTrace
     <|> parseUnaryOp kwFail OpFail
     <|> parseUnaryOp kwArgsNum (PrimUnop OpArgsNum)
+    <|> parseUnaryOp kwPoseidon (PrimUnop OpCairoPoseidon)
     <|> parseUnaryOp kwAnomaGet (OpAnomaGet)
 
 parseUnaryOp ::

@@ -63,6 +63,7 @@ evalUnop tab op v = case op of
   OpFieldToInt -> goFieldToInt v
   OpIntToField -> goIntToField v
   OpArgsNum -> goArgsNum v
+  OpCairoPoseidon -> Left "unsupported: Poseidon hash"
   where
     strToInt :: Text -> Either ErrorMsg Value
     strToInt s = case T.readMaybe (fromText s) of

@@ -755,6 +755,9 @@ instrFailure = "fail"
 instrArgsNum :: (IsString s) => s
 instrArgsNum = "argsnum"
 
+instrPoseidon :: (IsString s) => s
+instrPoseidon = "poseidon"
+
 instrPrealloc :: (IsString s) => s
 instrPrealloc = "prealloc"
 

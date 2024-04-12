@@ -128,6 +128,7 @@ instrUnop vref =
   parseUnaryOp kwShow OpShow vref
     <|> parseUnaryOp kwAtoi OpStrToInt vref
     <|> parseUnaryOp kwArgsNum OpArgsNum vref
+    <|> parseUnaryOp kwPoseidon OpCairoPoseidon vref
 
 parseUnaryOp ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
