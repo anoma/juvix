@@ -19,7 +19,7 @@ coreToGebTranslationAssertion root mainFile expectedFile step = do
   input_ <- readFile mainFile
   entryPoint <- set entryPointTarget (Just TargetGeb) <$> testDefaultEntryPointIO root mainFile
   case Core.runParserMain mainFile defaultModuleId mempty input_ of
-    Left err -> assertFailure . show . pretty $ err
+    Left err -> assertFailure . prettyString $ err
     Right coreInfoTable -> coreToGebTranslationAssertion' coreInfoTable entryPoint expectedFile step
 
 coreToGebTranslationAssertion' ::
@@ -32,7 +32,7 @@ coreToGebTranslationAssertion' coreInfoTable entryPoint expectedFile step = do
   step "Prepare the Juvix Core node for translation to Geb"
   case run . runReader entryPoint . runError @Geb.JuvixError $ Core.toGeb (Core.moduleFromInfoTable coreInfoTable) of
     Left err ->
-      assertFailure . show . pretty $
+      assertFailure . prettyString $
         fromJuvixError @GenericError err
     Right readyCoreModule ->
       let readyCoreInfoTable = Core.computeCombinedInfoTable readyCoreModule
@@ -47,7 +47,7 @@ coreToGebTranslationAssertion' coreInfoTable entryPoint expectedFile step = do
                     }
             case run . runError @Geb.CheckingError $ Geb.check' typeMorph of
               Left err ->
-                assertFailure . show . pretty $
+                assertFailure . prettyString $
                   fromJuvixError @GenericError (JuvixError err)
               Right _ -> do
                 step "Try evaluating the JuvixCore node"
@@ -59,11 +59,11 @@ coreToGebTranslationAssertion' coreInfoTable entryPoint expectedFile step = do
                      ) of
                   (Left err, _) -> do
                     step "The evaluation of the translated Geb node failed"
-                    assertFailure . show . pretty $
+                    assertFailure . prettyString $
                       fromJuvixError @GenericError (JuvixError err)
                   (_, Left err) -> do
                     step "The evaluation of gebCoreEvalResult failed"
-                    assertFailure . show . pretty $ fromJuvixError @GenericError (JuvixError err)
+                    assertFailure . prettyString $ fromJuvixError @GenericError (JuvixError err)
                   ( Right resEvalTranslatedMorph,
                     Right resEvalGebCoreEvalResult
                     ) -> do
@@ -82,7 +82,7 @@ coreToGebTranslationAssertion' coreInfoTable entryPoint expectedFile step = do
                                                 <> "node is not equal to the expected output"
                                         | otherwise -> assertBool "" True
                               case Geb.runParser expectedFile expectedInput of
-                                Left parseErr -> assertFailure . show . pretty $ parseErr
+                                Left parseErr -> assertFailure . prettyString $ parseErr
                                 Right (Geb.ExpressionMorphism m) -> compareEvalOutput m
                                 Right (Geb.ExpressionTypedMorphism m) -> compareEvalOutput (m ^. Geb.typedMorphism)
                                 Right (Geb.ExpressionObject _) ->

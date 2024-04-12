@@ -17,7 +17,7 @@ runAssertion _ outputFile sym tab step = do
   case r' of
     Left err -> do
       hClose hout
-      assertFailure (show (pretty err))
+      assertFailure (prettyString err)
     Right value' -> do
       case value' of
         ValVoid ->
@@ -52,12 +52,12 @@ regRunAssertionParam interpretFun mainFile expectedFile trans testTrans step = d
   step "Parse"
   r <- parseFile mainFile
   case r of
-    Left err -> assertFailure (show (pretty err))
+    Left err -> assertFailure (prettyString err)
     Right tab0 -> do
       unless (null trans) $
         step "Transform"
       case run $ runError @JuvixError $ applyTransformations trans tab0 of
-        Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
+        Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
         Right tab -> do
           testTrans tab
           regRunAssertionParam' interpretFun tab expectedFile step

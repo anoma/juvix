@@ -11,7 +11,7 @@ regParseAssertion mainFile step = do
   step "Parse"
   r <- parseFile mainFile
   case r of
-    Left err -> assertFailure (show (pretty err))
+    Left err -> assertFailure (prettyString err)
     Right tab -> do
       withTempDir'
         ( \dirPath -> do
@@ -21,7 +21,7 @@ regParseAssertion mainFile step = do
             step "Parse printed"
             r' <- parseFile outputFile
             case r' of
-              Left err -> assertFailure (show (pretty err))
+              Left err -> assertFailure (prettyString err)
               Right tab' -> do
                 assertBool ("Check: print . parse = print . parse . print . parse") (ppPrint tab tab == ppPrint tab' tab')
         )

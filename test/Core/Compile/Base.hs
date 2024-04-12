@@ -51,7 +51,7 @@ coreCompileAssertion' ::
 coreCompileAssertion' optLevel tab mainFile expectedFile stdinText step = do
   step "Translate to JuvixAsm"
   case run . runReader opts . runError $ toStored' (moduleFromInfoTable tab) >>= toStripped' CheckExec of
-    Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
+    Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
     Right m -> do
       let tab0 = computeCombinedInfoTable m
       assertBool "Check info table" (checkInfoTable tab0)
@@ -71,7 +71,7 @@ coreCompileAssertion mainFile expectedFile stdinText step = do
   step "Parse"
   r <- parseFile mainFile
   case r of
-    Left err -> assertFailure (show (pretty err))
+    Left err -> assertFailure (prettyString err)
     Right (_, Nothing) -> do
       step "Empty program: compare expected and actual program output"
       expected <- readFile expectedFile

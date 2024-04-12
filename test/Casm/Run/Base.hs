@@ -40,7 +40,7 @@ casmRunAssertion' :: Bool -> LabelInfo -> Code -> [Builtin] -> Maybe (Path Abs F
 casmRunAssertion' bRunVM labi instrs blts inputFile expectedFile step =
   case validate labi instrs of
     Left err -> do
-      assertFailure (show (pretty err))
+      assertFailure (prettyString err)
     Right () -> do
       withTempDir'
         ( \dirPath -> do
@@ -51,7 +51,7 @@ casmRunAssertion' bRunVM labi instrs blts inputFile expectedFile step =
             case r' of
               Left err -> do
                 hClose hout
-                assertFailure (show (pretty err))
+                assertFailure (prettyString err)
               Right value' -> do
                 hPrint hout value'
                 hClose hout
@@ -68,7 +68,7 @@ casmRunAssertion bRunVM mainFile inputFile expectedFile step = do
   step "Parse"
   r <- parseFile mainFile
   case r of
-    Left err -> assertFailure (show (pretty err))
+    Left err -> assertFailure (prettyString err)
     Right (labi, instrs) -> casmRunAssertion' bRunVM labi instrs [] inputFile expectedFile step
 
 casmRunErrorAssertion :: Path Abs File -> (String -> IO ()) -> Assertion

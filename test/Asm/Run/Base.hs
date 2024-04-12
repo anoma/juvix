@@ -15,7 +15,7 @@ runAssertion hout sym tab = do
   case r' of
     Left err -> do
       hClose hout
-      assertFailure (show (pretty err))
+      assertFailure (prettyString err)
     Right value' -> do
       case value' of
         ValVoid -> return ()
@@ -28,7 +28,7 @@ asmRunAssertionParam' :: (Handle -> Symbol -> InfoTable -> IO ()) -> InfoTable -
 asmRunAssertionParam' interpretFun tab expectedFile step = do
   step "Validate"
   case validate' tab of
-    Just err -> assertFailure (show (pretty err))
+    Just err -> assertFailure (prettyString err)
     Nothing ->
       case tab ^. infoMainFunction of
         Just sym -> do
@@ -54,10 +54,10 @@ asmRunAssertionParam interpretFun mainFile expectedFile trans testTrans step = d
   step "Parse"
   r <- parseFile mainFile
   case r of
-    Left err -> assertFailure (show (pretty err))
+    Left err -> assertFailure (prettyString err)
     Right tab0 -> do
       case trans tab0 of
-        Left err -> assertFailure (show (pretty err))
+        Left err -> assertFailure (prettyString err)
         Right tab -> do
           testTrans tab
           asmRunAssertionParam' interpretFun tab expectedFile step

@@ -19,14 +19,14 @@ coreNormalizeAssertion mainFile expectedFile step = do
   step "Parse"
   r <- parseFile mainFile
   case r of
-    Left err -> assertFailure (show (pretty err))
+    Left err -> assertFailure (prettyString err)
     Right (_, Nothing) -> assertFailure "Empty program"
     Right (tabIni, Just node) -> do
       step "Transform"
       let tab = setupMainFunction defaultModuleId tabIni node
           transforms = toStoredTransformations ++ toNormalizeTransformations
       case run $ runReader defaultCoreOptions $ runError @JuvixError $ applyTransformations transforms (moduleFromInfoTable tab) of
-        Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
+        Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
         Right m -> do
           step "Normalize"
           let tab' = computeCombinedInfoTable m
