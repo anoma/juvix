@@ -5,7 +5,7 @@ import Juvix.Prelude
 
 -- The order of the builtins must correspond to the "standard" builtin order in
 -- the Cairo VM implementation. See:
--- https://github.com/lambdaclass/cairo-vm/blob/ed23efcdc80088e9422d6bc39f41cbe84a6e943a/vm/src/vm/runners/cairo_runner.rs#L148
+-- https://github.com/lambdaclass/cairo-vm/blob/main/vm/src/vm/runners/cairo_runner.rs#L257
 data Builtin
   = BuiltinRangeCheck
   | BuiltinEcOp
