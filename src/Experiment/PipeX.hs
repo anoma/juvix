@@ -1,6 +1,4 @@
--- {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE PostfixOperators #-}
 {-# OPTIONS_GHC -Wno-operator-whitespace #-}
 
 module Experiment.PipeX where
@@ -22,15 +20,15 @@ data Entry = Entry
 data Err = Err
   deriving stock (Show)
 
-type Empty = () ~ [()]
+type Impossible = () ~ [()]
 
 type StepContext :: Stage -> Stage -> [Effect] -> GHCConstraint
 type family StepContext from to r = res where
   StepContext 'Concrete 'Parsed r = Members '[Reader Entry, Error Err] r
-  StepContext 'Concrete _ _ = Empty
+  StepContext 'Concrete _ _ = Impossible
   StepContext 'Parsed 'Computed r = Members '[Reader Entry, State Int] r
-  StepContext 'Parsed _ _ = Empty
-  StepContext 'Computed _ _ = Empty
+  StepContext 'Parsed _ _ = Impossible
+  StepContext 'Computed _ _ = Impossible
 
 type PipelineContext :: Pipeline -> [Effect] -> GHCConstraint
 type family PipelineContext ss r where
@@ -55,12 +53,19 @@ pipeline ::
   Sem r (To p)
 pipeline p arg = case p of
   _ :%| SNil -> return arg
-  s1 :%| SCons s2 ss -> case s1 of
-    SConcrete ->
-      case s2 of
-        SParsed -> parseHelper s2 arg >>= pipeline (s2 :%| ss)
-    SParsed -> case s2 of
-      SComputed -> compute arg >>= pipeline (s2 :%| ss)
+  s1 :%| SCons s2 ss -> pipelineStep s1 s2 arg >>= pipeline (s2 :%| ss)
+
+pipelineStep ::
+  forall (s1 :: Stage) (s2 :: Stage) (r :: [Effect]).
+  (StepContext s1 s2 r) =>
+  SStage s1 ->
+  SStage s2 ->
+  StageType s1 ->
+  Sem r (StageType s2)
+pipelineStep s1 s2 arg =
+  case (s1, s2) of
+    (SConcrete, SParsed) -> parseHelper s2 arg
+    (SParsed, SComputed) -> compute arg
 
 parseHelper ::
   forall (s :: Stage) r.
