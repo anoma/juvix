@@ -1,5 +1,6 @@
 -- {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE PostfixOperators #-}
 {-# OPTIONS_GHC -Wno-operator-whitespace #-}
 
 module Experiment.PipeX where
@@ -65,8 +66,8 @@ parseHelper ::
   forall (s :: Stage) r.
   (StepContext 'Concrete s r) =>
   SStage s ->
-  StageType 'Concrete ->
-  Sem r (StageType 'Parsed)
+  Text ->
+  Sem r (NonEmpty Text)
 parseHelper si = case si of
   SParsed -> parse
 
@@ -89,4 +90,4 @@ runPip =
     . runError
     . runState 0
     . runReader Entry
-    . pipeline (SConcrete :%| SCons SParsed (SCons SComputed SNil))
+    . pipeline (SConcrete >>> SParsed >>>| SComputed)
