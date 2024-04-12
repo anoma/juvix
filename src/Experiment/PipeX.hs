@@ -45,15 +45,33 @@ type family To ss where
   To '[res] = StageType res
   To (_ ': s ': ss) = To (s ': ss)
 
+-- | TODO this is quadratic. Can it be improved?
+type CanonicalPipeline :: Stage -> Stage -> Pipeline
+type family CanonicalPipeline s1 s2 where
+  CanonicalPipeline 'Concrete 'Computed = 'Concrete ': CanonicalPipeline 'Parsed 'Computed
+  CanonicalPipeline 'Concrete 'Parsed = '[ 'Concrete, 'Parsed]
+  CanonicalPipeline 'Parsed 'Computed = '[ 'Parsed, 'Computed]
+  CanonicalPipeline x x = '[x]
+
+-- | Canonical pipeline
 pipeline ::
+  forall (s1 :: Stage) (s2 :: Stage) (r :: [Effect]).
+  (PipelineContext (CanonicalPipeline s1 s2) r, SingI (CanonicalPipeline s1 s2)) =>
+  SStage s1 ->
+  SStage s2 ->
+  From (CanonicalPipeline s1 s2) ->
+  Sem r (To (CanonicalPipeline s1 s2))
+pipeline _ _ = customPipeline (sing :: SPipeline (CanonicalPipeline s1 s2))
+
+customPipeline ::
   forall (p :: Pipeline) (r :: [Effect]).
   (PipelineContext p r) =>
   SPipeline p ->
   From p ->
   Sem r (To p)
-pipeline p arg = case p of
+customPipeline p arg = case p of
   SCons _ SNil -> return arg
-  SCons s1 (SCons s2 ss) -> pipelineStep s1 s2 arg >>= pipeline (SCons s2 ss)
+  SCons s1 (SCons s2 ss) -> pipelineStep s1 s2 arg >>= customPipeline (SCons s2 ss)
 
 pipelineStep ::
   forall (s1 :: Stage) (s2 :: Stage) (r :: [Effect]).
@@ -64,17 +82,8 @@ pipelineStep ::
   Sem r (StageType s2)
 pipelineStep s1 s2 arg =
   case (s1, s2) of
-    (SConcrete, SParsed) -> parseHelper s2 arg
+    (SConcrete, SParsed) -> parse arg
     (SParsed, SComputed) -> compute arg
-
-parseHelper ::
-  forall (s :: Stage) r.
-  (StepContext 'Concrete s r) =>
-  SStage s ->
-  Text ->
-  Sem r (NonEmpty Text)
-parseHelper si = case si of
-  SParsed -> parse
 
 parse :: (StepContext 'Concrete 'Parsed r) => Text -> Sem r (NonEmpty Text)
 parse txt = do
@@ -89,10 +98,17 @@ compute = fmap sum . mapM go
       modify @Int succ
       return (fromIntegral (Text.length w))
 
-runPip :: Text -> Either Err (Int, Natural)
-runPip =
+runAll :: Text -> Either Err (Int, Natural)
+runAll =
   run
     . runError
     . runState 0
     . runReader Entry
-    . pipeline (SConcrete >>> SParsed >>>| SComputed)
+    . pipeline SConcrete SComputed
+
+runUpToParsed :: Text -> Either Err (NonEmpty Text)
+runUpToParsed =
+  run
+    . runError
+    . runReader Entry
+    . pipeline SConcrete SParsed
