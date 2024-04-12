@@ -11,6 +11,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Data.Vector qualified as Vec
 import Data.Vector.Mutable qualified as MV
 import GHC.IO qualified as GHC
+import Juvix.Compiler.Casm.Data.Builtins
 import Juvix.Compiler.Casm.Data.InputInfo
 import Juvix.Compiler.Casm.Data.LabelInfo
 import Juvix.Compiler.Casm.Error
@@ -39,10 +40,9 @@ hRunCode hout inputInfo (LabelInfo labelInfo) instrs0 = runST goCode
     goCode :: ST s FField
     goCode = do
       mem <- MV.replicate initialMemSize Nothing
-      MV.write mem 0 (Just (fieldFromInteger cairoFieldSize 0))
-      MV.write mem 1 (Just (fieldFromInteger cairoFieldSize 0))
-      MV.write mem 2 (Just (fieldFromInteger cairoFieldSize 0))
-      go 0 3 0 mem
+      forM_ [0 .. builtinsNum] $ \k ->
+        MV.write mem k (Just (fieldFromInteger cairoFieldSize 0))
+      go 0 (builtinsNum + 1) 0 mem
 
     go ::
       Address ->

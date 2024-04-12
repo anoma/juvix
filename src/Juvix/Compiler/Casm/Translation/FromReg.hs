@@ -38,8 +38,8 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
       callMainInstr = mkCallRel (Lab $ LabelRef mainSym (Just mainName))
       jmpEndInstr = mkJumpRel (Val $ Lab endLab)
       margs = reverse $ map (Hint . HintInput) mainArgs
-      -- [ap] = [[ap - 2 - k)] + bnum - k - 1]; ap++
-      bltsRet = map (\k -> mkAssignAp (Load $ LoadValue (MemRef Ap (-2 - k)) (bnum - k - 1))) [0 .. bnum - 1]
+      -- [ap] = [[ap - 2 - k] + k]; ap++
+      bltsRet = map (\k -> mkAssignAp (Load $ LoadValue (MemRef Ap (-2 - k)) k)) [0 .. bnum - 1]
       resRetInstr = mkAssignAp (Val $ Ref $ MemRef Ap (-bnum - 1))
       pinstrs =
         callStartInstr
