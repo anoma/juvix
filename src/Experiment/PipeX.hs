@@ -3,14 +3,13 @@
 
 module Experiment.PipeX where
 
-import Data.List.NonEmpty.Singletons
 import Data.List.Singletons
 import Data.Text qualified as Text
 import Experiment.Stage
 import Juvix.Prelude
 
 type StageType :: Stage -> GHCType
-type family StageType s = res | res -> s where
+type family StageType s = res where
   StageType 'Concrete = Text
   StageType 'Parsed = NonEmpty Text
   StageType 'Computed = Natural
@@ -32,18 +31,19 @@ type family StepContext from to r = res where
 
 type PipelineContext :: Pipeline -> [Effect] -> GHCConstraint
 type family PipelineContext ss r where
-  PipelineContext (_ ':| '[]) _ = ()
-  PipelineContext (fromStage ':| (toStage ': ss)) r =
-    (StepContext fromStage toStage r, PipelineContext (toStage ':| ss) r)
+  PipelineContext '[] _ = Impossible
+  PipelineContext '[_] _ = ()
+  PipelineContext (fromStage ': toStage ': ss) r =
+    (StepContext fromStage toStage r, PipelineContext (toStage ': ss) r)
 
 type From :: Pipeline -> GHCType
 type family From ss where
-  From (from ':| _) = StageType from
+  From (from ': _) = StageType from
 
 type To :: Pipeline -> GHCType
 type family To ss where
-  To (res ':| '[]) = StageType res
-  To (_ ':| s ': ss) = To (s ':| ss)
+  To '[res] = StageType res
+  To (_ ': s ': ss) = To (s ': ss)
 
 pipeline ::
   forall (p :: Pipeline) (r :: [Effect]).
@@ -52,8 +52,8 @@ pipeline ::
   From p ->
   Sem r (To p)
 pipeline p arg = case p of
-  _ :%| SNil -> return arg
-  s1 :%| SCons s2 ss -> pipelineStep s1 s2 arg >>= pipeline (s2 :%| ss)
+  SCons _ SNil -> return arg
+  SCons s1 (SCons s2 ss) -> pipelineStep s1 s2 arg >>= pipeline (SCons s2 ss)
 
 pipelineStep ::
   forall (s1 :: Stage) (s2 :: Stage) (r :: [Effect]).
