@@ -124,7 +124,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
         fmap fst
           . runCasmBuilder addr1 vars (-argsOffset - n)
           . runOutputList
-          $ goBlock funInfo blts failLab mempty Nothing block
+          $ goBlock blts failLab mempty Nothing block
       return (addr1 + length instrs, (pre ++ instrs) : acc)
 
     -- To ensure that memory is accessed sequentially at all times, we divide
@@ -139,14 +139,14 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
     -- that the `fp` offsets of "old" variables are still statically determined
     -- even after the current `ap` offset becomes unknown -- the arbitrary
     -- increase of `ap` does not influence the previous variable associations.
-    goBlock :: forall r. (Members '[LabelInfoBuilder, CasmBuilder, Output Instruction] r) => Reg.FunctionInfo -> StdlibBuiltins -> LabelRef -> HashSet Reg.VarRef -> Maybe Reg.VarRef -> Reg.Block -> Sem r ()
-    goBlock funInfo blts failLab liveVars0 mout Reg.Block {..} = do
+    goBlock :: forall r. (Members '[LabelInfoBuilder, CasmBuilder, Output Instruction] r) => StdlibBuiltins -> LabelRef -> HashSet Reg.VarRef -> Maybe Reg.VarRef -> Reg.Block -> Sem r ()
+    goBlock blts failLab liveVars0 mout Reg.Block {..} = do
       mapM_ goInstr _blockBody
       case _blockNext of
         Just block' -> do
           eassert (isJust _blockFinal)
           goFinalInstr (block' ^. Reg.blockLiveVars) (fromJust _blockFinal)
-          goBlock funInfo blts failLab liveVars0 mout block'
+          goBlock blts failLab liveVars0 mout block'
         Nothing -> case _blockFinal of
           Just instr ->
             goFinalInstr liveVars0 instr
@@ -197,7 +197,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
           setAP ap0
           setVars vars
           setBuiltinOffset bltOff
-          goBlock funInfo blts failLab liveVars mout' block
+          goBlock blts failLab liveVars mout' block
 
         ----------------------------------------------------------------------
         -- The mk* functions don't change the builder state, may only read it
@@ -508,8 +508,8 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
           v <- goValue _instrBranchValue
           case v of
             Imm c
-              | c == 0 -> goBlock funInfo blts failLab liveVars _instrBranchOutVar _instrBranchTrue
-              | otherwise -> goBlock funInfo blts failLab liveVars _instrBranchOutVar _instrBranchFalse
+              | c == 0 -> goBlock blts failLab liveVars _instrBranchOutVar _instrBranchTrue
+              | otherwise -> goBlock blts failLab liveVars _instrBranchOutVar _instrBranchFalse
             Ref r -> do
               symFalse <- freshSymbol
               symEnd <- freshSymbol
