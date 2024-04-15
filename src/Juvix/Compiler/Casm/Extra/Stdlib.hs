@@ -14,7 +14,10 @@ data StdlibBuiltins = StdlibBuiltins
     _stdlibGetRegsName :: Text,
     _stdlibCallClosureName :: Text,
     _stdlibExtendClosureName :: Text,
-    _stdlibPoseidonName :: Text
+    _stdlibPoseidonName :: Text,
+    -- The Ap offsets include the 2 cells for function call
+    _stdlibGetRegsApOffset :: Int,
+    _stdlibPoseidonApOffset :: Int
   }
 
 makeLenses ''StdlibBuiltins
@@ -29,6 +32,9 @@ addStdlibBuiltins addr = do
       _stdlibCallClosureName :: Text = "juvix_call_closure"
       _stdlibExtendClosureName :: Text = "juvix_extend_closure"
       _stdlibPoseidonName :: Text = "juvix_poseidon"
+      -- Make sure the Ap offsets correspond to the runtime
+      _stdlibGetRegsApOffset :: Int = 4
+      _stdlibPoseidonApOffset :: Int = 19
   _stdlibGetRegs <- fromJust <$> getIdent _stdlibGetRegsName
   _stdlibCallClosure <- fromJust <$> getIdent _stdlibCallClosureName
   _stdlibExtendClosure <- fromJust <$> getIdent _stdlibExtendClosureName

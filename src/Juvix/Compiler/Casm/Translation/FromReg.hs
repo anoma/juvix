@@ -336,9 +336,14 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
           goAssignAp (Load $ LoadValue (adjustAp 1 v) casmClosureArgsNumOffset)
           goExtraBinop FieldSub res (MemRef Ap (-2)) (Ref $ MemRef Ap (-1))
 
-        -- TODO
         goOpPoseidon :: Reg.VarRef -> MemRef -> Sem r ()
-        goOpPoseidon res v = undefined
+        goOpPoseidon res v = do
+          goAssignApBuiltins
+          goAssignAp (Val $ Ref v)
+          output' (blts ^. stdlibPoseidonApOffset) $
+            mkCallRel (Lab (LabelRef (blts ^. stdlibPoseidon) (Just (blts ^. stdlibPoseidonName))))
+          off <- getAP
+          insertVar res (off - 1)
 
         goBinop' :: Reg.BinaryOp -> Reg.VarRef -> MemRef -> Value -> Sem r ()
         goBinop' op res arg1 arg2 = case op of
@@ -420,7 +425,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
 
         goAllocCall :: Reg.VarRef -> Sem r ()
         goAllocCall res = do
-          output' 4 $ mkCallRel $ Lab $ LabelRef (blts ^. stdlibGetRegs) (Just (blts ^. stdlibGetRegsName))
+          output' (blts ^. stdlibGetRegsApOffset) $ mkCallRel $ Lab $ LabelRef (blts ^. stdlibGetRegs) (Just (blts ^. stdlibGetRegsName))
           goNativeBinop FieldAdd res (MemRef Ap (-2)) (Imm 3)
 
         goAlloc :: Reg.InstrAlloc -> Sem r ()
