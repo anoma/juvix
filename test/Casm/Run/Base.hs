@@ -36,40 +36,45 @@ casmRunVM labi instrs blts inputFile expectedFile step = do
         assertEqDiffText ("Check: RUN output = " <> toFilePath expectedFile) actualOutput expected
     )
 
-casmRunAssertion' :: Bool -> LabelInfo -> Code -> [Builtin] -> Maybe (Path Abs File) -> Path Abs File -> (String -> IO ()) -> Assertion
-casmRunAssertion' bRunVM labi instrs blts inputFile expectedFile step =
+casmInterpret :: LabelInfo -> Code -> Maybe (Path Abs File) -> Path Abs File -> (String -> IO ()) -> Assertion
+casmInterpret labi instrs inputFile expectedFile step =
+  withTempDir'
+    ( \dirPath -> do
+        let outputFile = dirPath <//> $(mkRelFile "out.out")
+        step "Interpret"
+        hout <- openFile (toFilePath outputFile) WriteMode
+        r' <- doRun hout labi instrs inputFile
+        case r' of
+          Left err -> do
+            hClose hout
+            assertFailure (prettyString err)
+          Right value' -> do
+            hPrint hout value'
+            hClose hout
+            actualOutput <- readFile outputFile
+            step "Compare expected and actual program output"
+            expected <- readFile expectedFile
+            assertEqDiffText ("Check: RUN output = " <> toFilePath expectedFile) actualOutput expected
+    )
+
+casmRunAssertion' :: Bool -> Bool -> LabelInfo -> Code -> [Builtin] -> Maybe (Path Abs File) -> Path Abs File -> (String -> IO ()) -> Assertion
+casmRunAssertion' bInterp bRunVM labi instrs blts inputFile expectedFile step =
   case validate labi instrs of
     Left err -> do
       assertFailure (prettyString err)
     Right () -> do
-      withTempDir'
-        ( \dirPath -> do
-            let outputFile = dirPath <//> $(mkRelFile "out.out")
-            step "Interpret"
-            hout <- openFile (toFilePath outputFile) WriteMode
-            r' <- doRun hout labi instrs inputFile
-            case r' of
-              Left err -> do
-                hClose hout
-                assertFailure (prettyString err)
-              Right value' -> do
-                hPrint hout value'
-                hClose hout
-                actualOutput <- readFile outputFile
-                step "Compare expected and actual program output"
-                expected <- readFile expectedFile
-                assertEqDiffText ("Check: RUN output = " <> toFilePath expectedFile) actualOutput expected
-        )
+      when bInterp $
+        casmInterpret labi instrs inputFile expectedFile step
       when bRunVM $
         casmRunVM labi instrs blts inputFile expectedFile step
 
-casmRunAssertion :: Bool -> Path Abs File -> Maybe (Path Abs File) -> Path Abs File -> (String -> IO ()) -> Assertion
-casmRunAssertion bRunVM mainFile inputFile expectedFile step = do
+casmRunAssertion :: Bool -> Bool -> Path Abs File -> Maybe (Path Abs File) -> Path Abs File -> (String -> IO ()) -> Assertion
+casmRunAssertion bInterp bRunVM mainFile inputFile expectedFile step = do
   step "Parse"
   r <- parseFile mainFile
   case r of
     Left err -> assertFailure (prettyString err)
-    Right (labi, instrs) -> casmRunAssertion' bRunVM labi instrs [] inputFile expectedFile step
+    Right (labi, instrs) -> casmRunAssertion' bInterp bRunVM labi instrs [] inputFile expectedFile step
 
 casmRunErrorAssertion :: Path Abs File -> (String -> IO ()) -> Assertion
 casmRunErrorAssertion mainFile step = do
