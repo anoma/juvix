@@ -344,6 +344,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
             mkCallRel (Lab (LabelRef (blts ^. stdlibPoseidon) (Just (blts ^. stdlibPoseidonName))))
           off <- getAP
           insertVar res (off - 1)
+          setBuiltinOffset (off - 2)
 
         goBinop' :: Reg.BinaryOp -> Reg.VarRef -> MemRef -> Value -> Sem r ()
         goBinop' op res arg1 arg2 = case op of

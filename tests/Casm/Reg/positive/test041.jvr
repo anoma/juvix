@@ -1,0 +1,17 @@
+-- Poseidon hash
+
+type PoseidonState {
+  poseidon_state : (field, field, field) -> PoseidonState;
+}
+
+function poseidon_hash(field, field) : field {
+  tmp[0] = alloc poseidon_state (arg[0], arg[1], 2);
+  tmp[1] = poseidon tmp[0];
+  ret tmp[1].poseidon_state[0];
+}
+
+function main() : field {
+  tmp[0] = call poseidon_hash (7, 10);
+  tmp[1] = fadd tmp[0] 5;
+  ret tmp[1];
+}

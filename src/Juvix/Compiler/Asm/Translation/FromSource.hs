@@ -99,6 +99,8 @@ command = do
       return $ mkInstr' loc Failure
     "argsnum" ->
       return $ mkUnop' loc OpArgsNum
+    "poseidon" ->
+      return $ mkUnop' loc OpCairoPoseidon
     "alloc" ->
       mkInstr' loc . AllocConstr <$> constrTag @Code @(Maybe FunctionInfoExtra) @DirectRef
     "calloc" ->
