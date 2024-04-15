@@ -11,4 +11,11 @@ runCommand ::
   WasiOptions ('InputExtension 'FileExtJuvixTree) ->
   Sem r ()
 runCommand opts =
-  TreeToC.treeToC (opts ^. wasiCompileCommonOptions) >>= Helper.fromC (wasiHelperOptions opts)
+  TreeToC.treeToC treeToCArgs
+    >>= Helper.fromC (wasiHelperOptions opts)
+  where
+    treeToCArgs =
+      TreeToC.TreeToCArgs
+        { _treeToCTarget = TargetCNative64,
+          _treeToCCommonOptions = (opts ^. wasiCompileCommonOptions)
+        }

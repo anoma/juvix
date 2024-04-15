@@ -10,5 +10,11 @@ runCommand ::
   NativeOptions ('InputExtension 'FileExtJuvixTree) ->
   Sem r ()
 runCommand opts =
-  TreeToC.treeToC (opts ^. nativeCompileCommonOptions)
+  TreeToC.treeToC treeToCArgs
     >>= Helper.fromC (nativeHelperOptions opts)
+  where
+    treeToCArgs =
+      TreeToC.TreeToCArgs
+        { _treeToCTarget = TargetCNative64,
+          _treeToCCommonOptions = (opts ^. nativeCompileCommonOptions)
+        }
