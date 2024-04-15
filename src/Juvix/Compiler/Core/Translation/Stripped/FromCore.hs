@@ -60,6 +60,7 @@ fromCore fsize tab =
     shouldKeepConstructor = \case
       BuiltinListNil -> True
       BuiltinListCons -> True
+      BuiltinMkPoseidonState -> True
       BuiltinNatZero -> False
       BuiltinNatSuc -> False
       BuiltinBoolTrue -> False
@@ -94,8 +95,10 @@ fromCore fsize tab =
         BuiltinIntToString -> False
         BuiltinIntPrint -> False
         BuiltinAnomaGet -> False
+        BuiltinPoseidon -> False
       BuiltinTypeInductive i -> case i of
         BuiltinList -> True
+        BuiltinPoseidonState -> True
         BuiltinNat -> False
         BuiltinInt -> False
         BuiltinBool -> False

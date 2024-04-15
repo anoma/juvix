@@ -27,6 +27,7 @@ data BuiltinOp
   | OpTrace
   | OpFail
   | OpAnomaGet
+  | OpPoseidonHash
   deriving stock (Eq, Generic)
 
 instance Serialize BuiltinOp
@@ -68,6 +69,7 @@ builtinOpArgsNum = \case
   OpTrace -> 1
   OpFail -> 1
   OpAnomaGet -> 1
+  OpPoseidonHash -> 1
 
 builtinConstrArgsNum :: BuiltinDataTag -> Int
 builtinConstrArgsNum = \case

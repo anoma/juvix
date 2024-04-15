@@ -1003,3 +1003,9 @@ cairoPoseidon = "poseidon"
 
 cairoEcOp :: (IsString s) => s
 cairoEcOp = "ec_op"
+
+cairoPoseidonState :: (IsString s) => s
+cairoPoseidonState = "poseidon_state"
+
+cairoMkPoseidonState :: (IsString s) => s
+cairoMkPoseidonState = "mkPoseidonState"
