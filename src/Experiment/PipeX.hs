@@ -5,33 +5,41 @@ module Experiment.PipeX where
 
 import Data.List.Singletons
 import Data.Text qualified as Text
+import Data.Text.IO qualified as Text
 import Experiment.Stage
 import Juvix.Prelude
 
 type StageType :: Stage -> GHCType
 type family StageType s = res where
-  StageType 'Concrete = Text
+  StageType 'Entry = ()
+  StageType 'RawText = Text
+  StageType 'RawString = String
   StageType 'Parsed = NonEmpty Text
   StageType 'Computed = Natural
 
-data Entry = Entry
+data Options = Options
 
 data Err = Err
   deriving stock (Show)
 
-type Impossible = () ~ [()]
+type Never = () ~ [()]
 
 type StepContext :: Stage -> Stage -> [Effect] -> GHCConstraint
 type family StepContext from to r = res where
-  StepContext 'Concrete 'Parsed r = Members '[Reader Entry, Error Err] r
-  StepContext 'Concrete _ _ = Impossible
-  StepContext 'Parsed 'Computed r = Members '[Reader Entry, State Int] r
-  StepContext 'Parsed _ _ = Impossible
-  StepContext 'Computed _ _ = Impossible
+  StepContext 'Entry 'RawText r = Members '[IOE] r
+  StepContext 'Entry 'RawString r = Members '[IOE] r
+  StepContext 'Entry _ _ = Never
+  StepContext 'RawString 'RawText _ = ()
+  StepContext 'RawString _ _ = Never
+  StepContext 'RawText 'Parsed r = Members '[Reader Options, Error Err] r
+  StepContext 'RawText _ _ = Never
+  StepContext 'Parsed 'Computed r = Members '[Reader Options, State Int] r
+  StepContext 'Parsed _ _ = Never
+  StepContext 'Computed _ _ = Never
 
 type PipelineContext :: Pipeline -> [Effect] -> GHCConstraint
 type family PipelineContext ss r where
-  PipelineContext '[] _ = Impossible
+  PipelineContext '[] _ = Never
   PipelineContext '[_] _ = ()
   PipelineContext (fromStage ': toStage ': ss) r =
     (StepContext fromStage toStage r, PipelineContext (toStage ': ss) r)
@@ -48,8 +56,12 @@ type family To ss where
 -- | TODO this is quadratic. Can it be improved?
 type CanonicalPipeline :: Stage -> Stage -> Pipeline
 type family CanonicalPipeline s1 s2 where
-  CanonicalPipeline 'Concrete 'Computed = 'Concrete ': CanonicalPipeline 'Parsed 'Computed
-  CanonicalPipeline 'Concrete 'Parsed = '[ 'Concrete, 'Parsed]
+  CanonicalPipeline 'Entry 'RawText = '[ 'Entry, 'RawText ]
+  CanonicalPipeline 'Entry 'Parsed = 'Entry ': CanonicalPipeline 'RawText 'Parsed
+  CanonicalPipeline 'Entry 'Computed = 'Entry ': CanonicalPipeline 'RawText 'Computed
+  CanonicalPipeline 'RawString 'Computed = 'RawString ': CanonicalPipeline 'RawText 'Computed
+  CanonicalPipeline 'RawText 'Computed = 'RawText ': CanonicalPipeline 'Parsed 'Computed
+  CanonicalPipeline 'RawText 'Parsed = '[ 'RawText, 'Parsed]
   CanonicalPipeline 'Parsed 'Computed = '[ 'Parsed, 'Computed]
   CanonicalPipeline x x = '[x]
 
@@ -82,12 +94,15 @@ pipelineStep ::
   Sem r (StageType s2)
 pipelineStep s1 s2 arg =
   case (s1, s2) of
-    (SConcrete, SParsed) -> parse arg
+    (SRawString, SRawText) -> return (pack arg)
+    (SEntry, SRawText) -> liftIO Text.getLine
+    (SEntry, SRawString) -> liftIO (unpack <$> getLine)
+    (SRawText, SParsed) -> parse arg
     (SParsed, SComputed) -> compute arg
 
-parse :: (StepContext 'Concrete 'Parsed r) => Text -> Sem r (NonEmpty Text)
+parse :: (StepContext 'RawText 'Parsed r) => Text -> Sem r (NonEmpty Text)
 parse txt = do
-  void (ask @Entry)
+  void (ask @Options)
   maybe (throw Err) pure (nonEmpty (Text.words txt))
 
 compute :: forall r. (StepContext 'Parsed 'Computed r) => NonEmpty Text -> Sem r Natural
@@ -98,17 +113,26 @@ compute = fmap sum . mapM go
       modify @Int succ
       return (fromIntegral (Text.length w))
 
-runAll :: Text -> Either Err (Int, Natural)
-runAll =
+runPipelinePure :: Text -> Either Err (Int, Natural)
+runPipelinePure =
   run
     . runError
     . runState 0
-    . runReader Entry
-    . pipeline SConcrete SComputed
+    . runReader Options
+    . pipeline SRawText SComputed
 
 runUpToParsed :: Text -> Either Err (NonEmpty Text)
 runUpToParsed =
   run
     . runError
-    . runReader Entry
-    . pipeline SConcrete SParsed
+    . runReader Options
+    . pipeline SRawText SParsed
+
+runPipelineIO :: IO (Either Err (Int, Natural))
+runPipelineIO =
+  runM
+  . runReader Options
+  . runError
+  . runState @Int 0
+  . pipeline SEntry SComputed
+  $ ()

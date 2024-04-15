@@ -7,7 +7,7 @@ import Juvix.Compiler.Tree.Translation.FromSource qualified as Tree
 
 treeToC ::
   forall r.
-  (Members '[EmbedIO, App, TaggedLock] r) =>
+  (Members '[Files, App, TaggedLock] r) =>
   CompileCommonOptions ('InputExtension 'FileExtJuvixTree) ->
   Sem r MiniCResult
 treeToC opts = do
@@ -15,7 +15,7 @@ treeToC opts = do
     getMainAppFileFromInputFileType @('InputExtension 'FileExtJuvixTree)
       (opts ^. compileInputFile)
   file <- fromAppPathFile afile
-  s <- readFile file
+  s <- readFile' file
   tab <- getRight (mapLeft JuvixError (Tree.runParser file s))
   entryPoint :: EntryPoint <-
     applyOptions opts

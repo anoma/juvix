@@ -137,7 +137,7 @@ reAppIO args@RunAppIOArgs {..} =
         $ Error.render (not (_runAppIOArgsGlobalOptions ^. globalNoColors)) (g ^. globalOnlyErrors) e
 
 getEntryPoint' ::
-  (Members '[App, EmbedIO, TaggedLock] r) =>
+  (Members '[App, TaggedLock] r) =>
   RunAppIOArgs ->
   Maybe (AppPath File) ->
   Sem r EntryPoint
@@ -192,7 +192,7 @@ filePathToAbs fp = do
 askGenericOptions :: (Members '[App] r) => Sem r GenericOptions
 askGenericOptions = project <$> askGlobalOptions
 
-getEntryPoint :: (Members '[EmbedIO, App, TaggedLock] r) => Maybe (AppPath File) -> Sem r EntryPoint
+getEntryPoint :: (Members '[App, TaggedLock] r) => Maybe (AppPath File) -> Sem r EntryPoint
 getEntryPoint inputFile = do
   _runAppIOArgsGlobalOptions <- askGlobalOptions
   _runAppIOArgsRoot <- askRoot

@@ -6,7 +6,9 @@ import Data.List.Singletons
 import Juvix.Prelude
 
 data Stage
-  = Concrete
+  = Entry
+  | RawText
+  | RawString
   | Parsed
   | Computed
   deriving stock (Eq)
