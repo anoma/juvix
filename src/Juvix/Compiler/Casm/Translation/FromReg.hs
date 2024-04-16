@@ -242,6 +242,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
         goInstr = \case
           Reg.Binop x -> goBinop x
           Reg.Unop x -> goUnop x
+          Reg.Cairo x -> goCairo x
           Reg.Assign x -> goAssign x
           Reg.Alloc x -> goAlloc x
           Reg.AllocClosure x -> goAllocClosure x
@@ -420,7 +421,12 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
           Reg.OpFieldToInt -> goAssignValue _instrUnopResult _instrUnopArg
           Reg.OpIntToField -> goAssignValue _instrUnopResult _instrUnopArg
           Reg.OpArgsNum -> goUnop' goOpArgsNum _instrUnopResult _instrUnopArg
-          Reg.OpCairoPoseidon -> goOpPoseidon _instrUnopResult _instrUnopArg
+
+        goCairo :: Reg.InstrCairo -> Sem r ()
+        goCairo Reg.InstrCairo {..} = case _instrCairoOpcode of
+          Reg.OpCairoPoseidon -> case _instrCairoArgs of
+            [arg] -> goUnop' goOpPoseidon _instrCairoResult arg
+            _ -> impossible
 
         goAssign :: Reg.InstrAssign -> Sem r ()
         goAssign Reg.InstrAssign {..} =

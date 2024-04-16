@@ -16,6 +16,7 @@ data CallType
 data Node
   = Binop NodeBinop
   | Unop NodeUnop
+  | Cairo NodeCairo
   | -- | A constant value.
     Constant NodeConstant
   | -- | A memory reference.
@@ -80,6 +81,12 @@ data NodeUnop = NodeUnop
   { _nodeUnopInfo :: NodeInfo,
     _nodeUnopOpcode :: UnaryOpcode,
     _nodeUnopArg :: Node
+  }
+
+data NodeCairo = NodeCairo
+  { _nodeCairoInfo :: NodeInfo,
+    _nodeCairoOpcode :: CairoOp,
+    _nodeCairoArgs :: [Node]
   }
 
 data NodeConstant = NodeConstant

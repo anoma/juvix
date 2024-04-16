@@ -38,6 +38,7 @@ genCode fi =
     go isTail node = case node of
       Tree.Binop x -> goBinop isTail x
       Tree.Unop x -> goUnop isTail x
+      Tree.Cairo x -> goCairo isTail x
       Tree.Constant x -> goConstant isTail x
       Tree.MemRef x -> goMemRef isTail x
       Tree.AllocConstr x -> goAllocConstr isTail x
@@ -71,6 +72,11 @@ genCode fi =
     goUnop isTail Tree.NodeUnop {..} =
       snocReturn isTail $
         DL.snoc (go False _nodeUnopArg) (genUnOp _nodeUnopOpcode)
+
+    goCairo :: Bool -> Tree.NodeCairo -> Code'
+    goCairo isTail Tree.NodeCairo {..} =
+      snocReturn isTail $
+        DL.snoc (goArgs _nodeCairoArgs) (mkInstr $ Cairo _nodeCairoOpcode)
 
     goConstant :: Bool -> Tree.NodeConstant -> Code'
     goConstant isTail Tree.NodeConstant {..} =

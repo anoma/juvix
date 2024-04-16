@@ -30,6 +30,14 @@ data UnaryOp
   | -- | Compute the number of expected arguments for the given closure. JV*
     -- opcode: `argsnum`.
     OpArgsNum
-  | -- | Cairo Poseidon hash builtin. Implemented only in the Cairo backend.
+  deriving stock (Eq)
+
+-- | Builtin Cairo operations. Implemented only in the Cairo backend.
+data CairoOp
+  = -- | Cairo Poseidon hash builtin. Implemented only in the Cairo backend.
     OpCairoPoseidon
   deriving stock (Eq)
+
+cairoOpArgsNum :: CairoOp -> Int
+cairoOpArgsNum = \case
+  OpCairoPoseidon -> 1

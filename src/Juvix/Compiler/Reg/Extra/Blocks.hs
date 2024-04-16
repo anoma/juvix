@@ -69,6 +69,7 @@ getValueRefs :: Instruction -> [VarRef]
 getValueRefs = \case
   Binop x -> goBinop x
   Unop x -> goUnop x
+  Cairo x -> goCairo x
   Assign x -> goAssign x
   Alloc x -> goAlloc x
   AllocClosure x -> goAllocClosure x
@@ -83,6 +84,9 @@ getValueRefs = \case
 
     goUnop :: InstrUnop -> [VarRef]
     goUnop InstrUnop {..} = getValueRefs'' _instrUnopArg
+
+    goCairo :: InstrCairo -> [VarRef]
+    goCairo InstrCairo {..} = concatMap getValueRefs'' _instrCairoArgs
 
     goAssign :: InstrAssign -> [VarRef]
     goAssign InstrAssign {..} = getValueRefs'' _instrAssignValue

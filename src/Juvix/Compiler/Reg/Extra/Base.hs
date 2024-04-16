@@ -6,6 +6,7 @@ getResultVar :: Instruction -> Maybe VarRef
 getResultVar = \case
   Binop x -> Just $ x ^. instrBinopResult
   Unop x -> Just $ x ^. instrUnopResult
+  Cairo x -> Just $ x ^. instrCairoResult
   Assign x -> Just $ x ^. instrAssignResult
   Alloc x -> Just $ x ^. instrAllocResult
   AllocClosure x -> Just $ x ^. instrAllocClosureResult
@@ -18,6 +19,7 @@ setResultVar :: Instruction -> VarRef -> Instruction
 setResultVar instr vref = case instr of
   Binop x -> Binop $ set instrBinopResult vref x
   Unop x -> Unop $ set instrUnopResult vref x
+  Cairo x -> Cairo $ set instrCairoResult vref x
   Assign x -> Assign $ set instrAssignResult vref x
   Alloc x -> Alloc $ set instrAllocResult vref x
   AllocClosure x -> AllocClosure $ set instrAllocClosureResult vref x
@@ -30,6 +32,7 @@ overValueRefs :: (VarRef -> VarRef) -> Instruction -> Instruction
 overValueRefs f = \case
   Binop x -> Binop $ goBinop x
   Unop x -> Unop $ goUnop x
+  Cairo x -> Cairo $ goCairo x
   Assign x -> Assign $ goAssign x
   Alloc x -> Alloc $ goAlloc x
   AllocClosure x -> AllocClosure $ goAllocClosure x
@@ -67,6 +70,9 @@ overValueRefs f = \case
 
     goUnop :: InstrUnop -> InstrUnop
     goUnop = over instrUnopArg goValue
+
+    goCairo :: InstrCairo -> InstrCairo
+    goCairo = over instrCairoArgs (map goValue)
 
     goAssign :: InstrAssign -> InstrAssign
     goAssign = over instrAssignValue goValue

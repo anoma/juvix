@@ -75,6 +75,7 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
     goInstr loc instr cont = case instr of
       Binop op -> goBinOp (evalBinop op) >> goCode cont
       Unop op -> goUnop (evalUnop infoTable op) >> goCode cont
+      Cairo {} -> runtimeError "unsupported: Cairo builtin"
       Push ref -> do
         v <- getVal ref
         pushValueStack v

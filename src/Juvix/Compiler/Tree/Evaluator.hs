@@ -37,6 +37,7 @@ hEval hout tab = eval' [] mempty
     eval' args temps node = case node of
       Binop x -> goBinop x
       Unop x -> goUnop x
+      Cairo {} -> evalError "unsupported: Cairo builtin"
       Constant c -> goConstant c
       MemRef x -> goMemRef x
       AllocConstr x -> goAllocConstr x

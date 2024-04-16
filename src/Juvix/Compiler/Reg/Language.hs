@@ -9,6 +9,7 @@ import Juvix.Compiler.Reg.Language.Instrs
 data Instruction
   = Binop InstrBinop
   | Unop InstrUnop
+  | Cairo InstrCairo
   | Assign InstrAssign
   | Alloc InstrAlloc
   | AllocClosure InstrAllocClosure

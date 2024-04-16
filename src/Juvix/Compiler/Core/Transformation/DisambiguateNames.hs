@@ -96,6 +96,7 @@ setArgNames md sym node = reLambdas lhs' body
 
 disambiguateNames :: Module -> Module
 disambiguateNames md =
+  -- TODO: set identifierArgNames afterwards
   let md' = mapT (setArgNames md) md
    in mapAllNodes (disambiguateNodeNames md') md'
 

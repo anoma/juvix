@@ -233,6 +233,9 @@ instance PrettyCode UnaryOp where
     OpFieldToInt -> Str.instrFieldToInt
     OpIntToField -> Str.instrIntToField
     OpArgsNum -> Str.instrArgsNum
+
+instance PrettyCode CairoOp where
+  ppCode op = return $ primitive $ case op of
     OpCairoPoseidon -> Str.instrPoseidon
 
 instance PrettyCode UnaryOpcode where
@@ -247,6 +250,12 @@ instance PrettyCode NodeUnop where
     op <- ppCode _nodeUnopOpcode
     arg <- ppCode _nodeUnopArg
     return $ op <> parens arg
+
+instance PrettyCode NodeCairo where
+  ppCode NodeCairo {..} = do
+    op <- ppCode _nodeCairoOpcode
+    args <- ppCodeArgs _nodeCairoArgs
+    return $ op <> parens args
 
 instance PrettyCode NodeConstant where
   ppCode NodeConstant {..} = ppCode _nodeConstant
@@ -340,6 +349,7 @@ instance PrettyCode Node where
   ppCode = \case
     Binop x -> ppCode x
     Unop x -> ppCode x
+    Cairo x -> ppCode x
     Constant x -> ppCode x
     MemRef x -> ppCode x
     AllocConstr x -> ppCode x

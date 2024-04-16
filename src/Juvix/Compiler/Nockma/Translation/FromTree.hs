@@ -329,6 +329,7 @@ compile :: forall r. (Members '[Reader FunctionCtx, Reader CompilerCtx] r) => Tr
 compile = \case
   Tree.Binop b -> goBinop b
   Tree.Unop b -> goUnop b
+  Tree.Cairo {} -> cairoErr
   Tree.Constant c -> return (goConstant (c ^. Tree.nodeConstant))
   Tree.MemRef c -> goMemRef (c ^. Tree.nodeMemRef)
   Tree.AllocConstr c -> goAllocConstr c
@@ -435,7 +436,6 @@ compile = \case
          in sub (getF ClosureTotalArgsNum) (getF ClosureArgsNum)
       Tree.OpIntToField -> fieldErr
       Tree.OpFieldToInt -> fieldErr
-      Tree.OpCairoPoseidon -> cairoErr
 
     goAnomaGet :: Term Natural -> Sem r (Term Natural)
     goAnomaGet key = do

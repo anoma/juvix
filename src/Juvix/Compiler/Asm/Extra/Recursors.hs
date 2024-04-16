@@ -82,6 +82,8 @@ recurse' sig = go True
               fixMemBinop mem op
             Unop op ->
               fixMemUnop mem op
+            Cairo op ->
+              fixMemCairo mem op
             Push val -> do
               ty <- getValueType' loc (sig ^. recursorInfoTable) mem val
               return (pushValueStack ty mem)
@@ -187,13 +189,15 @@ recurse' sig = go True
             checkUnop mkTypeInteger TyField
           OpFieldToInt ->
             checkUnop TyField mkTypeInteger
-          OpCairoPoseidon ->
-            checkUnop TyDynamic TyDynamic
           where
             checkUnop :: Type -> Type -> Sem r Memory
             checkUnop ty1 ty2 = do
               checkValueStack' loc (sig ^. recursorInfoTable) [ty1] mem
               return (pushValueStack ty2 (popValueStack 1 mem))
+
+        fixMemCairo :: Memory -> CairoOp -> Sem r Memory
+        fixMemCairo mem op = do
+          return (pushValueStack TyDynamic (popValueStack (cairoOpArgsNum op) mem))
 
         fixMemExtendClosure :: Memory -> InstrExtendClosure -> Sem r Memory
         fixMemExtendClosure mem InstrExtendClosure {..} = do
@@ -398,6 +402,8 @@ recurseS' sig = go True
               fixStackBinOp si
             Unop {} ->
               return si
+            Cairo op ->
+              return (stackInfoPopValueStack (cairoOpArgsNum op - 1) si)
             Push {} -> do
               return (stackInfoPushValueStack 1 si)
             Pop -> do

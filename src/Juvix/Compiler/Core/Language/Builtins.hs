@@ -105,3 +105,8 @@ builtinIsFoldable = \case
   OpFail -> False
   OpAnomaGet -> False
   OpPoseidonHash -> False
+
+builtinIsCairo :: BuiltinOp -> Bool
+builtinIsCairo = \case
+  OpPoseidonHash -> True
+  _ -> False

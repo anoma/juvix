@@ -100,7 +100,7 @@ command = do
     "argsnum" ->
       return $ mkUnop' loc OpArgsNum
     "poseidon" ->
-      return $ mkUnop' loc OpCairoPoseidon
+      return $ mkCairo' loc OpCairoPoseidon
     "alloc" ->
       mkInstr' loc . AllocConstr <$> constrTag @Code @(Maybe FunctionInfoExtra) @DirectRef
     "calloc" ->
