@@ -65,9 +65,9 @@ processFile ::
   EntryPoint ->
   Sem r (PipelineResult Parser.ParserResult)
 processFile entry =
-  runReader @ImportParents mempty $
-    evalCacheEmpty processModule' $
-      processFile' entry
+  runReader @ImportParents mempty
+    . evalCacheEmpty processModule'
+    $ processFile' entry
 
 processImport ::
   forall r.
@@ -76,9 +76,9 @@ processImport ::
   Import 'Parsed ->
   Sem r (PipelineResult Store.ModuleInfo)
 processImport entry i =
-  runReader @ImportParents mempty $
-    evalCacheEmpty processModule' $
-      processImport' entry (i ^. importModulePath)
+  runReader @ImportParents mempty
+    . evalCacheEmpty processModule'
+    $ processImport' entry (i ^. importModulePath)
 
 processModule ::
   forall r.
@@ -86,9 +86,9 @@ processModule ::
   EntryPoint ->
   Sem r (PipelineResult Store.ModuleInfo)
 processModule entry =
-  runReader @ImportParents mempty $
-    evalCacheEmpty processModule' $
-      processModule' (EntryIndex entry)
+  runReader @ImportParents mempty
+    . evalCacheEmpty processModule'
+    $ processModule' (EntryIndex entry)
 
 processFileToStoredCore ::
   forall r.
@@ -96,9 +96,9 @@ processFileToStoredCore ::
   EntryPoint ->
   Sem r (PipelineResult Core.CoreResult)
 processFileToStoredCore entry =
-  runReader @ImportParents mempty $
-    evalCacheEmpty processModule' $
-      processFileToStoredCore' entry
+  runReader @ImportParents mempty
+    . evalCacheEmpty processModule'
+    $ processFileToStoredCore' entry
 
 processFileUpTo ::
   forall r a.
@@ -111,8 +111,9 @@ processFileUpTo a = do
   a' <-
     evalTopNameIdGen
       (res ^. pipelineResult . Parser.resultModule . moduleId)
-      $ runReader (res ^. pipelineResultImports)
-      $ runReader (res ^. pipelineResult) a
+      . runReader (res ^. pipelineResultImports)
+      . runReader (res ^. pipelineResult)
+      $ a
   return $ set pipelineResult a' res
 
 processFile' ::
@@ -198,7 +199,11 @@ processModule' ::
   Sem r (PipelineResult Store.ModuleInfo)
 processModule' (EntryIndex entry) = do
   let buildDir = resolveAbsBuildDir root (entry ^. entryPointBuildDir)
-      relPath = fromJust $ replaceExtension ".jvo" $ fromJust $ stripProperPrefix $(mkAbsDir "/") sourcePath
+      relPath =
+        fromJust
+          . replaceExtension ".jvo"
+          . fromJust
+          $ stripProperPrefix $(mkAbsDir "/") sourcePath
       absPath = buildDir Path.</> relPath
   sha256 <- SHA256.digestFile sourcePath
   m :: Maybe Store.ModuleInfo <- loadFromFile absPath
