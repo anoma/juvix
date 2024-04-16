@@ -1,8 +1,6 @@
 module Juvix.Compiler.Pipeline.Driver
-  ( processFile,
-    processFileUpTo,
+  ( processFileUpTo,
     processFileToStoredCore,
-    processModule,
     processImport,
     processRecursiveUpToTyped,
   )
@@ -79,16 +77,6 @@ processImport entry i =
   runReader @ImportParents mempty
     . evalCacheEmpty processModule'
     $ processImport' entry (i ^. importModulePath)
-
-processModule ::
-  forall r.
-  (Members '[TaggedLock, Error JuvixError, Files, PathResolver] r) =>
-  EntryPoint ->
-  Sem r (PipelineResult Store.ModuleInfo)
-processModule entry =
-  runReader @ImportParents mempty
-    . evalCacheEmpty processModule'
-    $ processModule' (EntryIndex entry)
 
 processFileToStoredCore ::
   forall r.
