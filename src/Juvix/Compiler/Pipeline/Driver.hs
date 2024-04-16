@@ -184,11 +184,11 @@ processFileToStoredCore' ::
 processFileToStoredCore' entry = ignoreHighlightBuilder $ do
   res <- processFile' entry
   r <-
-    evalTopNameIdGen
-      (res ^. pipelineResult . Parser.resultModule . moduleId)
-      $ runReader (res ^. pipelineResultImports)
-      $ runReader entry
-      $ runReader (res ^. pipelineResult) upToStoredCore
+    evalTopNameIdGen (res ^. pipelineResult . Parser.resultModule . moduleId)
+      . runReader (res ^. pipelineResultImports)
+      . runReader entry
+      . runReader (res ^. pipelineResult)
+      $ upToStoredCore
   return $ set pipelineResult r res
 
 processModule' ::
