@@ -6,7 +6,7 @@ import Commands.Extra.NewCompile
 import Juvix.Compiler.Casm.Data.Result
 import Juvix.Compiler.Casm.Pretty
 
-runCommand :: (Members '[App, TaggedLock, EmbedIO] r) => CasmOptions -> Sem r ()
+runCommand :: (Members '[App, TaggedLock, EmbedIO] r) => CasmOptions 'InputMain -> Sem r ()
 runCommand opts = do
   let inputFile = opts ^. casmCompileCommonOptions . compileInputFile
       moutputFile = opts ^. casmCompileCommonOptions . compileOutputFile

@@ -5,3 +5,5 @@ import Juvix.Prelude
 newtype MiniCResult = MiniCResult
   { _resultCCode :: Text
   }
+
+makeLenses ''MiniCResult

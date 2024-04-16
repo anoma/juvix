@@ -37,17 +37,17 @@ runCommand opts = do
 
     getTarget :: CompileTarget -> Sem r Backend.Target
     getTarget = \case
-      TargetCairo -> return Backend.TargetCairo
-      TargetWasm32Wasi -> err "WASM"
-      TargetNative64 -> err "native"
-      TargetCasm -> err "CASM"
-      TargetReg -> err "JuvixReg"
-      TargetAnoma -> err "Anoma"
-      TargetTree -> err "JuvixTree"
-      TargetGeb -> err "GEB"
-      TargetVampIR -> err "VampIR"
-      TargetCore -> err "JuvixCore"
-      TargetAsm -> err "JuvixAsm"
+      AppTargetCairo -> return Backend.TargetCairo
+      AppTargetWasm32Wasi -> err "WASM"
+      AppTargetNative64 -> err "native"
+      AppTargetCasm -> err "CASM"
+      AppTargetReg -> err "JuvixReg"
+      AppTargetAnoma -> err "Anoma"
+      AppTargetTree -> err "JuvixTree"
+      AppTargetGeb -> err "GEB"
+      AppTargetVampIR -> err "VampIR"
+      AppTargetCore -> err "JuvixCore"
+      AppTargetAsm -> err "JuvixAsm"
       where
         err :: Text -> Sem r a
         err tgt = exitMsg (ExitFailure 1) ("error: " <> tgt <> " target not supported for CASM")

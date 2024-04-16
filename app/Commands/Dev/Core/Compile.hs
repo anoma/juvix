@@ -10,21 +10,21 @@ runCommand :: forall r. (Members '[EmbedIO, App, TaggedLock] r) => CompileOption
 runCommand opts = do
   file <- getMainFile (Just (opts ^. compileInputFile))
   s <- readFile file
-  tab <- getRight (mapLeft JuvixError (Core.runParserMain file defaultModuleId mempty s))
+  tab <- getRight (Core.runParserMain file defaultModuleId mempty s)
   let arg =
         PipelineArg
           { _pipelineArgOptions = opts,
             _pipelineArgModule = Core.moduleFromInfoTable tab
           }
   case opts ^. compileTarget of
-    TargetWasm32Wasi -> runCPipeline arg
-    TargetNative64 -> runCPipeline arg
-    TargetGeb -> runGebPipeline arg
-    TargetVampIR -> runVampIRPipeline arg
-    TargetCore -> return ()
-    TargetAsm -> runAsmPipeline arg
-    TargetReg -> runRegPipeline arg
-    TargetTree -> runTreePipeline arg
-    TargetAnoma -> runAnomaPipeline arg
-    TargetCasm -> runCasmPipeline arg
-    TargetCairo -> runCairoPipeline arg
+    AppTargetWasm32Wasi -> runCPipeline arg
+    AppTargetNative64 -> runCPipeline arg
+    AppTargetGeb -> runGebPipeline arg
+    AppTargetVampIR -> runVampIRPipeline arg
+    AppTargetCore -> return ()
+    AppTargetAsm -> runAsmPipeline arg
+    AppTargetReg -> runRegPipeline arg
+    AppTargetTree -> runTreePipeline arg
+    AppTargetAnoma -> runAnomaPipeline arg
+    AppTargetCasm -> runCasmPipeline arg
+    AppTargetCairo -> runCairoPipeline arg

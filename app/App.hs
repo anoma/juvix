@@ -10,6 +10,7 @@ import Juvix.Compiler.Pipeline.Root
 import Juvix.Compiler.Pipeline.Run
 import Juvix.Data.Error qualified as Error
 import Juvix.Extra.Paths.Base hiding (rootBuildDir)
+import Juvix.Parser.Error
 import Juvix.Prelude.Pretty hiding
   ( Doc,
   )
@@ -208,12 +209,20 @@ runPipelineTermination input_ p = do
   r <- runPipelineEither input_ (evalTermination iniTerminationState p) >>= fromRightJuvixError
   return (snd r)
 
-runPipeline :: (Members '[App, EmbedIO, TaggedLock] r) => Maybe (AppPath File) -> Sem (PipelineEff r) a -> Sem r a
+runPipeline ::
+  (Members '[App, EmbedIO, TaggedLock] r) =>
+  Maybe (AppPath File) ->
+  Sem (PipelineEff r) a ->
+  Sem r a
 runPipeline input_ p = do
   r <- runPipelineEither input_ p >>= fromRightJuvixError
   return (snd r ^. pipelineResult)
 
-runPipelineHtml :: (Members '[App, EmbedIO, TaggedLock] r) => Bool -> Maybe (AppPath File) -> Sem r (InternalTypedResult, [InternalTypedResult])
+runPipelineHtml ::
+  (Members '[App, EmbedIO, TaggedLock] r) =>
+  Bool ->
+  Maybe (AppPath File) ->
+  Sem r (InternalTypedResult, [InternalTypedResult])
 runPipelineHtml bNonRecursive input_
   | bNonRecursive = do
       r <- runPipeline input_ upToInternalTyped
@@ -241,6 +250,9 @@ printSuccessExit = exitMsg ExitSuccess
 
 getRight :: forall e a r. (Members '[App] r, AppError e) => Either e a -> Sem r a
 getRight = either appError return
+
+instance AppError MegaparsecError where
+  appError = appError . JuvixError
 
 instance AppError Text where
   appError = exitFailMsg

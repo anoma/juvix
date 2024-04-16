@@ -3,19 +3,17 @@ module Commands.Compile.Geb where
 import Commands.Base
 import Commands.Compile.Geb.Options
 import Commands.Extra.NewCompile
-import Juvix.Compiler.Backend
 import Juvix.Compiler.Backend.Geb qualified as Geb
 import System.FilePath (takeBaseName)
 
-runCommand :: (Members '[App, TaggedLock, EmbedIO] r) => GebOptions -> Sem r ()
+runCommand :: (Members '[App, TaggedLock, EmbedIO] r) => GebOptions 'InputMain -> Sem r ()
 runCommand opts = do
   let opts' = opts ^. gebCompileCommonOptions
       inputFile = opts' ^. compileInputFile
       moutputFile = opts' ^. compileOutputFile
   coreRes <- fromCompileCommonOptionsMain opts' >>= compileToCore
   entryPoint <-
-    set entryPointTarget (Just TargetGeb)
-      . applyCompileCommonOptions opts'
+    applyOptions opts
       <$> getEntryPoint (opts' ^. compileInputFile)
   let ext :: FileExt
       ext
