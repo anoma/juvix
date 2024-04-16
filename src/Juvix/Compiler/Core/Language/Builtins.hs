@@ -79,3 +79,29 @@ builtinConstrArgsNum = \case
   TagBind -> 2
   TagWrite -> 1
   TagReadLn -> 0
+
+-- | True if the builtin can be evaluated away during constant folding
+builtinIsFoldable :: BuiltinOp -> Bool
+builtinIsFoldable = \case
+  OpIntAdd -> True
+  OpIntSub -> True
+  OpIntMul -> True
+  OpIntDiv -> True
+  OpIntMod -> True
+  OpIntLt -> True
+  OpIntLe -> True
+  OpFieldAdd -> True
+  OpFieldSub -> True
+  OpFieldMul -> True
+  OpFieldDiv -> True
+  OpFieldFromInt -> True
+  OpFieldToInt -> True
+  OpEq -> True
+  OpShow -> True
+  OpStrConcat -> True
+  OpStrToInt -> True
+  OpSeq -> False
+  OpTrace -> False
+  OpFail -> False
+  OpAnomaGet -> False
+  OpPoseidonHash -> False

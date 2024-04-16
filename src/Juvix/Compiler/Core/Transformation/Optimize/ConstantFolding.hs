@@ -15,9 +15,7 @@ convertNode opts nonRecSyms tab md = umap go
     go node = case node of
       NBlt BuiltinApp {..}
         | Info.isClosed node
-            && _builtinAppOp /= OpFail
-            && _builtinAppOp /= OpTrace
-            && _builtinAppOp /= OpSeq
+            && builtinIsFoldable _builtinAppOp
             && all isNonRecValue _builtinAppArgs ->
             doEval' node
       NApp {}
