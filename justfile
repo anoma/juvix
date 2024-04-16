@@ -76,6 +76,7 @@ test *filter:
     if [ -n "$filter" ]; then
       filter="-p \"$filter\""
     fi
+    set -x
     {{ stack }} test {{ stackArgs }} --ta "{{ testArgs }} {{ rtsFlag }} $filter"
 
 # Run a juvix command and profile it
@@ -99,6 +100,7 @@ build *opts:
             ;;
         *)
             just _buildRuntime
+            set -x
             {{ stack }} build {{ stackArgs }}
             ;;
     esac
