@@ -16,7 +16,7 @@ runCommand opts = do
     set entryPointTarget (Just TargetCairo)
       . applyCompileCommonOptions opts'
       <$> getEntryPoint (opts' ^. compileInputFile)
-  cairoFile :: Path Abs File <- getOutputFile FileExtCasm inputFile moutputFile
+  cairoFile :: Path Abs File <- getOutputFile FileExtJson inputFile moutputFile
   r <-
     runReader entryPoint
       . runError @JuvixError
