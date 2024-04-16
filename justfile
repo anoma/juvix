@@ -1,4 +1,4 @@
-# set to non-empty string to disable parallel tests
+# set to non-empty string to disable parallel builds and tests
 #
 # e.g:
 #   just disableParallel=yes test
@@ -13,6 +13,9 @@ enableOptimized := ''
 # set to non-empty string to enable command debugging
 enableDebug := ''
 
+# set to number of parallel jobs
+numParallelJobs := ''
+
 # the command used to run stack
 stack := "stack"
 
@@ -21,7 +24,12 @@ ormolu := "ormolu"
 
 # flags used in the stack command
 stackOptFlag := if enableOptimized == '' { '--fast' } else { '' }
-stackArgs := stackOptFlag + " -j" + num_cpus()
+# The ghc `-j` flag defaults to number of cpus when no argument is passed
+stackGhcParallelFlag := if disableParallel == '' { "--ghc-options=-j" + numParallelJobs } else { '' }
+# The stack `-j` options requires an argument
+stackParallelFlagJobs := if numParallelJobs == '' { num_cpus() } else { numParallelJobs }
+stackParallelFlag := if disableParallel == '' { '-j' + stackParallelFlagJobs } else { '' }
+stackArgs := stackOptFlag + ' ' + stackParallelFlag + ' ' + stackGhcParallelFlag
 
 # flags used in the stack test command
 testArgs := "--hide-successes"
