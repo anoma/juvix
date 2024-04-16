@@ -22,6 +22,17 @@ stack := "stack"
 # the command used to run ormolu
 ormolu := "ormolu"
 
+# The CC argument to the runtime Makefile
+runtimeCcArg := ''
+
+# The LIBTOOL argument to the runtime Makefile
+runtimeLibtoolArg := ''
+
+# The flags used in the runtime make commands
+runtimeCcFlag := if runtimeCcArg == '' { '' } else { "CC=" + runtimeCcArg }
+runtimeLibtoolFlag := if runtimeLibtoolArg == '' { '' } else { "LIBTOOL=" + runtimeLibtoolArg }
+runtimeArgs := trim(runtimeCcFlag + ' ' + runtimeLibtoolFlag)
+
 # flags used in the stack command
 stackOptFlag := if enableOptimized == '' { '--fast' } else { '' }
 # The ghc `-j` flag defaults to number of cpus when no argument is passed
@@ -93,7 +104,7 @@ run-profile +cmd:
 
 # Build the juvix runtime
 _buildRuntime:
-    cd runtime && make -j 4 -s
+    cd runtime && make {{ runtimeArgs }} -j 4 -s
 
 # Build the project. `build runtime` builds only the runtime.
 [no-exit-message]
@@ -104,10 +115,10 @@ build *opts:
 
     case $opts in
         runtime)
-            just _buildRuntime
+            just runtimeArgs="{{ runtimeArgs }}" _buildRuntime
             ;;
         *)
-            just _buildRuntime
+            just runtimeArgs="{{ runtimeArgs }}" _buildRuntime
             set -x
             {{ stack }} build {{ stackArgs }}
             ;;
