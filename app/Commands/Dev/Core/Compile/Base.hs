@@ -2,7 +2,7 @@ module Commands.Dev.Core.Compile.Base where
 
 import Commands.Base
 import Commands.Dev.Core.Compile.Options
-import Commands.Dev.Tree.Compile.Base (outputAnomaResult)
+import Commands.Dev.Tree.CompileOld.Base (outputAnomaResult)
 import Commands.Extra.Compile qualified as Compile
 import Data.Aeson qualified as JSON
 import Juvix.Compiler.Asm.Pretty qualified as Asm
@@ -38,17 +38,17 @@ getEntry PipelineArg {..} = do
   where
     getTarget :: CompileTarget -> Backend.Target
     getTarget = \case
-      TargetWasm32Wasi -> Backend.TargetCWasm32Wasi
-      TargetNative64 -> Backend.TargetCNative64
-      TargetGeb -> Backend.TargetGeb
-      TargetVampIR -> Backend.TargetVampIR
-      TargetCore -> Backend.TargetCore
-      TargetAsm -> Backend.TargetAsm
-      TargetReg -> Backend.TargetReg
-      TargetTree -> Backend.TargetTree
-      TargetAnoma -> Backend.TargetAnoma
-      TargetCasm -> Backend.TargetCairo
-      TargetCairo -> Backend.TargetCairo
+      AppTargetWasm32Wasi -> Backend.TargetCWasm32Wasi
+      AppTargetNative64 -> Backend.TargetCNative64
+      AppTargetGeb -> Backend.TargetGeb
+      AppTargetVampIR -> Backend.TargetVampIR
+      AppTargetCore -> Backend.TargetCore
+      AppTargetAsm -> Backend.TargetAsm
+      AppTargetReg -> Backend.TargetReg
+      AppTargetTree -> Backend.TargetTree
+      AppTargetAnoma -> Backend.TargetAnoma
+      AppTargetCasm -> Backend.TargetCairo
+      AppTargetCairo -> Backend.TargetCairo
 
     defaultOptLevel :: Int
     defaultOptLevel

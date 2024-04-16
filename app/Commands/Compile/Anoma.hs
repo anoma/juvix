@@ -3,19 +3,17 @@ module Commands.Compile.Anoma where
 import Commands.Base
 import Commands.Compile.Anoma.Options
 import Commands.Extra.NewCompile
-import Juvix.Compiler.Backend
 import Juvix.Compiler.Nockma.Pretty qualified as Nockma
 import Juvix.Compiler.Nockma.Translation.FromTree qualified as Nockma
 
-runCommand :: (Members '[App, EmbedIO, TaggedLock] r) => AnomaOptions -> Sem r ()
+runCommand :: (Members '[App, EmbedIO, TaggedLock] r) => AnomaOptions 'InputMain -> Sem r ()
 runCommand opts = do
   let opts' = opts ^. anomaCompileCommonOptions
       inputFile = opts' ^. compileInputFile
       moutputFile = opts' ^. compileOutputFile
   coreRes <- fromCompileCommonOptionsMain opts' >>= compileToCore
   entryPoint <-
-    set entryPointTarget (Just TargetAnoma)
-      . applyCompileCommonOptions opts'
+    applyOptions opts
       <$> getEntryPoint (opts' ^. compileInputFile)
   nockmaFile :: Path Abs File <- getOutputFile FileExtNockma inputFile moutputFile
   r <-

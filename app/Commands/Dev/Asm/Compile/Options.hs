@@ -6,19 +6,17 @@ where
 
 import Commands.Extra.Compile.Options
 import CommonOptions
-import Data.List.NonEmpty qualified as NonEmpty
 
 type AsmCompileOptions = CompileOptions
 
 asmSupportedTargets :: NonEmpty CompileTarget
 asmSupportedTargets =
-  NonEmpty.fromList
-    [ TargetWasm32Wasi,
-      TargetNative64,
-      TargetReg,
-      TargetCasm,
-      TargetCairo
-    ]
+  AppTargetWasm32Wasi
+    :| [ AppTargetNative64,
+         AppTargetReg,
+         AppTargetCasm,
+         AppTargetCairo
+       ]
 
 parseAsmCompileOptions :: Parser AsmCompileOptions
 parseAsmCompileOptions =

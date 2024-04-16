@@ -8,11 +8,11 @@ import Commands.Dev.DevCompile.Tree.Options
 import CommonOptions
 
 data DevCompileCommand
-  = Core CoreOptions
-  | Asm AsmOptions
-  | Reg RegOptions
-  | Tree TreeOptions
-  | Casm CasmOptions
+  = Core (CoreOptions 'InputMain)
+  | Asm (AsmOptions 'InputMain)
+  | Reg (RegOptions 'InputMain)
+  | Tree (TreeOptions 'InputMain)
+  | Casm (CasmOptions 'InputMain)
   deriving stock (Data)
 
 parseDevCompileCommand :: Parser DevCompileCommand

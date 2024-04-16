@@ -6,16 +6,14 @@ where
 
 import Commands.Extra.Compile.Options
 import CommonOptions
-import Data.List.NonEmpty qualified as NonEmpty
 
 regSupportedTargets :: NonEmpty CompileTarget
 regSupportedTargets =
-  NonEmpty.fromList
-    [ TargetNative64,
-      TargetWasm32Wasi,
-      TargetCasm,
-      TargetCairo
-    ]
+  AppTargetNative64
+    :| [ AppTargetWasm32Wasi,
+         AppTargetCasm,
+         AppTargetCairo
+       ]
 
 parseRegCompileOptions :: Parser CompileOptions
 parseRegCompileOptions =

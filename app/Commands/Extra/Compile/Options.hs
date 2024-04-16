@@ -5,33 +5,37 @@ import CommonOptions hiding (show)
 import Juvix.Compiler.Pipeline.EntryPoint
 import Prelude (Show (show))
 
+-- | Here we define a separate target from `Juvix.Compiler.Backend.Target`. The
+-- reason is that the type being defined here represents the targets available
+-- to the user through the CLI, whereas the Target in
+-- `Juvix.Compiler.Backend.Target` is used internally to establish certain limits.
 data CompileTarget
-  = TargetNative64
-  | TargetWasm32Wasi
-  | TargetGeb
-  | TargetVampIR
-  | TargetCore
-  | TargetAsm
-  | TargetReg
-  | TargetTree
-  | TargetAnoma
-  | TargetCasm
-  | TargetCairo
+  = AppTargetNative64
+  | AppTargetWasm32Wasi
+  | AppTargetGeb
+  | AppTargetVampIR
+  | AppTargetCore
+  | AppTargetAsm
+  | AppTargetReg
+  | AppTargetTree
+  | AppTargetAnoma
+  | AppTargetCasm
+  | AppTargetCairo
   deriving stock (Eq, Data, Bounded, Enum)
 
 instance Show CompileTarget where
   show = \case
-    TargetWasm32Wasi -> "wasm32-wasi"
-    TargetNative64 -> "native"
-    TargetGeb -> "geb"
-    TargetVampIR -> "vampir"
-    TargetCore -> "core"
-    TargetAsm -> "asm"
-    TargetReg -> "reg"
-    TargetTree -> "tree"
-    TargetAnoma -> "anoma"
-    TargetCasm -> "casm"
-    TargetCairo -> "cairo"
+    AppTargetWasm32Wasi -> "wasi"
+    AppTargetNative64 -> "native"
+    AppTargetGeb -> "geb"
+    AppTargetVampIR -> "vampir"
+    AppTargetCore -> "core"
+    AppTargetAsm -> "asm"
+    AppTargetReg -> "reg"
+    AppTargetTree -> "tree"
+    AppTargetAnoma -> "anoma"
+    AppTargetCasm -> "casm"
+    AppTargetCairo -> "cairo"
 
 -- | If the input file can be defaulted to the `main` in the `package.yaml` file, we
 -- can omit the input file.
@@ -59,6 +63,20 @@ makeLenses ''CompileOptions'
 
 fromCompileOptionsMain :: (Members '[App] r) => CompileOptionsMain -> Sem r CompileOptions
 fromCompileOptionsMain = traverseOf compileInputFile getMainAppFile
+
+compileTargetDescription :: forall str. (IsString str) => CompileTarget -> str
+compileTargetDescription = \case
+  AppTargetNative64 -> "Compile to native code"
+  AppTargetWasm32Wasi -> "Compile to WASI (WebAssembly System Interface)"
+  AppTargetAnoma -> "Compile to Anoma"
+  AppTargetCairo -> "Compile to Cairo"
+  AppTargetGeb -> "Compile to Geb"
+  AppTargetVampIR -> "Compile to VampIR"
+  AppTargetCasm -> "Compile to JuvixCasm"
+  AppTargetCore -> "Compile to VampIR"
+  AppTargetAsm -> "Compile to JuvixAsm"
+  AppTargetReg -> "Compile to JuvixReg"
+  AppTargetTree -> "Compile to JuvixTree"
 
 type SupportedTargets = NonEmpty CompileTarget
 
@@ -110,7 +128,7 @@ parseCompileOptions' supportedTargets parserFile = do
       )
   _compileTerm <-
     if
-        | elem TargetGeb supportedTargets ->
+        | elem AppTargetGeb supportedTargets ->
             switch
               ( short 'G'
                   <> long "only-term"
@@ -125,7 +143,7 @@ parseCompileOptions' supportedTargets parserFile = do
       )
   _compileUnsafe <-
     if
-        | elem TargetVampIR supportedTargets ->
+        | elem AppTargetVampIR supportedTargets ->
             switch
               ( long "unsafe"
                   <> help "Disable range and error checking (for targets: vampir)"
