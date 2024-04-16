@@ -25,9 +25,14 @@ applyCompileCommonOptions :: CompileCommonOptions' b -> EntryPoint -> EntryPoint
 applyCompileCommonOptions opts e =
   e
     { _entryPointDebug = opts ^. compileDebug,
-      _entryPointOptimizationLevel = fromMaybe defaultOptimizationLevel (opts ^. compileOptimizationLevel),
+      _entryPointOptimizationLevel = fromMaybe defaultOptimization (opts ^. compileOptimizationLevel),
       _entryPointInliningDepth = opts ^. compileInliningDepth
     }
+  where
+    defaultOptimization :: Int
+    defaultOptimization
+      | opts ^. compileDebug = 0
+      | otherwise = defaultOptimizationLevel
 
 fromCompileCommonOptionsMain :: (Members '[App] r) => CompileCommonOptionsMain -> Sem r CompileCommonOptions
 fromCompileCommonOptionsMain = traverseOf compileInputFile getMainAppFile
