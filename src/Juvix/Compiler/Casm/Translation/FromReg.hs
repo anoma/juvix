@@ -468,7 +468,6 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
           output'' $ mkCallRel $ Lab $ LabelRef (blts ^. stdlibExtendClosure) (Just (blts ^. stdlibExtendClosureName))
           goCallBlock False (Just _instrExtendClosureResult) liveVars
 
-        -- returns the builtins that have been updated by the function call
         goCall' :: Reg.CallType -> [Reg.Value] -> Sem r ()
         goCall' ct args = case ct of
           Reg.CallFun sym -> do
