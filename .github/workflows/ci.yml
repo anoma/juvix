@@ -60,8 +60,7 @@ jobs:
   build-and-test-linux:
     runs-on: ubuntu-22.04
     steps:
-      - name: install just
-        run: sudo snap install --edge --classic just
+      - uses: extractions/setup-just@v2
 
       - name: Checkout our repository
         uses: actions/checkout@v3
@@ -231,8 +230,7 @@ jobs:
   build-and-test-macos:
     runs-on: macos-12
     steps:
-      - name: Install just
-        run: brew install just
+      - uses: extractions/setup-just@v2
 
       - name: Checkout our repository
         uses: actions/checkout@v3
