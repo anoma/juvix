@@ -28,6 +28,7 @@ env:
   VAMPIRVERSION: v0.1.3
   CAIRO_VM_VERSION: ae06ba04f3b6864546b6baeeebf1b0735ddccb5d
   JUST_ARGS: enableOptimized=yes runtimeCcArg=$CC runtimeLibtoolArg=$LIBTOOL
+  STACK_BUILD_ARGS: --pedantic -j4 --ghc-options=-j
 
 jobs:
   pre-commit:
@@ -183,7 +184,7 @@ jobs:
         uses: freckle/stack-action@v5
         with:
           working-directory: main
-          stack-build-arguments: -j4 --ghc-options=-j
+          stack-build-arguments: ${{ env.STACK_BUILD_ARGS }}
           test: false
 
       - name: Install and test Juvix
@@ -383,7 +384,7 @@ jobs:
         uses: freckle/stack-action@v5
         with:
           working-directory: main
-          stack-build-arguments: -j4 --ghc-options=-j
+          stack-build-arguments: ${{ env.STACK_BUILD_ARGS }}
           test: false
 
       - name: Add homebrew clang to the PATH (macOS)
