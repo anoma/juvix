@@ -42,4 +42,4 @@ compileAssertionEntry adjustEntry root' bRunVM optLevel mainFile expectedFile st
             step "Pretty print"
             writeFileEnsureLn tmpFile (toPlainText $ ppProgram _resultCode)
         )
-      casmRunAssertion' bRunVM _resultLabelInfo _resultCode Nothing expectedFile step
+      casmRunAssertion' bRunVM _resultLabelInfo _resultCode _resultBuiltins Nothing expectedFile step

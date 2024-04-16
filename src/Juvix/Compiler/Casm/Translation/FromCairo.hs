@@ -5,7 +5,12 @@ import Juvix.Compiler.Casm.Data.Result
 import Juvix.Compiler.Casm.Language
 
 fromCairo :: [Cairo.Element] -> Result
-fromCairo elems0 = Result mempty (go 0 [] elems0)
+fromCairo elems0 =
+  Result
+    { _resultLabelInfo = mempty,
+      _resultCode = go 0 [] elems0,
+      _resultBuiltins = mempty
+    }
   where
     errorMsg :: Address -> Text -> a
     errorMsg addr msg = error ("error at address " <> show addr <> ": " <> msg)

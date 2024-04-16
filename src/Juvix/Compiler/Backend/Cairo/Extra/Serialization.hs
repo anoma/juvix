@@ -5,26 +5,29 @@ import Juvix.Compiler.Backend.Cairo.Data.Result
 import Juvix.Compiler.Backend.Cairo.Language
 import Numeric
 
-serialize :: [Element] -> Result
-serialize elems =
+serialize :: [Text] -> [Element] -> Result
+serialize builtins elems =
   Result
     { _resultData =
-        initializeOutput
+        initializeBuiltins
           ++ map toHexText (serialize' elems)
-          ++ finalizeOutput
+          ++ finalizeBuiltins
           ++ finalizeJump,
       _resultStart = 0,
-      _resultEnd = length initializeOutput + length elems + length finalizeOutput,
+      _resultEnd = length initializeBuiltins + length elems + length finalizeBuiltins,
       _resultMain = 0,
       _resultHints = hints,
-      _resultBuiltins = ["output"]
+      _resultBuiltins = "output" : builtins
     }
   where
+    builtinsNum :: Natural
+    builtinsNum = fromIntegral (length builtins)
+
     hints :: [(Int, Text)]
     hints = catMaybes $ zipWith mkHint elems [0 ..]
 
     pcShift :: Int
-    pcShift = length initializeOutput
+    pcShift = length initializeBuiltins
 
     mkHint :: Element -> Int -> Maybe (Int, Text)
     mkHint el pc = case el of
@@ -34,21 +37,30 @@ serialize elems =
     toHexText :: Natural -> Text
     toHexText n = "0x" <> fromString (showHex n "")
 
-    initializeOutput :: [Text]
-    initializeOutput =
+    initializeBuiltins :: [Text]
+    initializeBuiltins =
+      -- ap += allBuiltinsNum
       [ "0x40480017fff7fff",
-        "0x1"
+        toHexText (builtinsNum + 1)
       ]
 
-    finalizeOutput :: [Text]
-    finalizeOutput =
+    finalizeBuiltins :: [Text]
+    finalizeBuiltins =
+      -- [[fp]] = [ap - 1] -- [output_ptr] = [ap - 1]
+      -- [ap] = [fp] + 1; ap++ -- output_ptr
       [ "0x4002800080007fff",
         "0x4826800180008000",
         "0x1"
       ]
+        ++
+        -- [ap] = [ap - builtinsNum - 2]; ap++
+        replicate
+          builtinsNum
+          (toHexText (0x48107ffe7fff8000 - shift builtinsNum 32))
 
     finalizeJump :: [Text]
     finalizeJump =
+      -- jmp rel 0
       [ "0x10780017fff7fff",
         "0x0"
       ]

@@ -17,6 +17,7 @@ import Juvix.Compiler.Backend.C qualified as C
 import Juvix.Compiler.Backend.Cairo qualified as Cairo
 import Juvix.Compiler.Backend.Geb qualified as Geb
 import Juvix.Compiler.Backend.VampIR.Translation qualified as VampIR
+import Juvix.Compiler.Casm.Data.Builtins qualified as Casm
 import Juvix.Compiler.Casm.Data.Result qualified as Casm
 import Juvix.Compiler.Casm.Translation.FromReg qualified as Casm
 import Juvix.Compiler.Concrete.Data.Highlight.Input
@@ -278,7 +279,10 @@ regToCasm :: Reg.InfoTable -> Sem r Casm.Result
 regToCasm = Reg.toCasm >=> return . Casm.fromReg
 
 casmToCairo :: Casm.Result -> Sem r Cairo.Result
-casmToCairo Casm.Result {..} = return $ Cairo.serialize $ Cairo.fromCasm _resultCode
+casmToCairo Casm.Result {..} =
+  return
+    . Cairo.serialize (map Casm.builtinName _resultBuiltins)
+    $ Cairo.fromCasm _resultCode
 
 regToCairo :: Reg.InfoTable -> Sem r Cairo.Result
 regToCairo = regToCasm >=> casmToCairo
