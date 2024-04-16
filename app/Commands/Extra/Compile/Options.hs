@@ -5,7 +5,10 @@ import CommonOptions hiding (show)
 import Juvix.Compiler.Pipeline.EntryPoint
 import Prelude (Show (show))
 
--- TODO explain why we need this on top of `Juvix.Compiler.Backend.Target`
+-- | Here we define a separate target from `Juvix.Compiler.Backend.Target`. The
+-- reason is that the type being defined here represents the targets available
+-- to the user through the CLI, whereas the Target in
+-- `Juvix.Compiler.Backend.Target` is used internally to establish certain limits.
 data CompileTarget
   = AppTargetNative64
   | AppTargetWasm32Wasi
