@@ -39,6 +39,7 @@ getResultVar :: Instruction -> Maybe VarRef
 getResultVar = \case
   Binop x -> Just $ x ^. instrBinopResult
   Unop x -> Just $ x ^. instrUnopResult
+  Cairo x -> Just $ x ^. instrCairoResult
   Assign x -> Just $ x ^. instrAssignResult
   Alloc x -> Just $ x ^. instrAllocResult
   AllocClosure x -> Just $ x ^. instrAllocClosureResult
