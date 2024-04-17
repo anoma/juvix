@@ -20,7 +20,7 @@ runCommand opts = do
       moutputFile = opts ^. coreCompileCommonOptions . compileOutputFile
   gopts <- askGlobalOptions
   outFile :: Path Abs File <- getOutputFile FileExtJuvixCore inputFile moutputFile
-  coremodule :: Core.Module <- (^. coreResultModule) <$> runPipeline inputFile upToStoredCore
+  coremodule :: Core.Module <- (^. coreResultModule) <$> runPipeline opts inputFile upToStoredCore
   res :: Core.Module <-
     ( runError @JuvixError
         . runReader (project' @Core.CoreOptions gopts)

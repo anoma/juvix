@@ -17,7 +17,7 @@ runCommand ::
   Sem r ()
 runCommand opts = do
   let inputFile = opts ^. markdownInputFile
-  scopedM <- runPipeline inputFile upToScoping
+  scopedM <- runPipelineNoOptions inputFile upToScoping
   let m = scopedM ^. Scoper.resultModule
   outputDir <- fromAppPathDir (opts ^. markdownOutputDir)
   let res =

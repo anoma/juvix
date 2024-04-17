@@ -11,6 +11,6 @@ runCommand opts = do
   let inputFile = opts ^. casmCompileCommonOptions . compileInputFile
       moutputFile = opts ^. casmCompileCommonOptions . compileOutputFile
   outFile :: Path Abs File <- getOutputFile FileExtCasm inputFile moutputFile
-  res :: Result <- runPipeline inputFile upToCasm
+  res :: Result <- runPipeline opts inputFile upToCasm
   let txt = ppPrint res
   writeFileEnsureLn outFile txt

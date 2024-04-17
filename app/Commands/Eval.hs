@@ -9,7 +9,7 @@ import Juvix.Extra.Strings qualified as Str
 runCommand :: (Members '[EmbedIO, TaggedLock, App] r) => EvalOptions -> Sem r ()
 runCommand opts@EvalOptions {..} = do
   gopts <- askGlobalOptions
-  Core.CoreResult {..} <- runPipeline _evalInputFile upToCore
+  Core.CoreResult {..} <- runPipelineNoOptions _evalInputFile upToCore
   let r =
         run
           . runReader (project gopts)

@@ -10,7 +10,7 @@ import Juvix.Prelude.Pretty
 runCommand :: (Members '[EmbedIO, TaggedLock, App] r) => ScopeOptions -> Sem r ()
 runCommand opts = do
   globalOpts <- askGlobalOptions
-  res :: Scoper.ScoperResult <- runPipeline (opts ^. scopeInputFile) upToScoping
+  res :: Scoper.ScoperResult <- runPipelineNoOptions (opts ^. scopeInputFile) upToScoping
   let m :: Module 'Scoped 'ModuleTop = res ^. Scoper.resultModule
   if
       | opts ^. scopeWithComments ->

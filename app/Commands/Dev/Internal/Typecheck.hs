@@ -8,7 +8,7 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qu
 runCommand :: (Members '[EmbedIO, TaggedLock, App] r) => InternalTypeOptions -> Sem r ()
 runCommand localOpts = do
   globalOpts <- askGlobalOptions
-  res <- runPipeline (localOpts ^. internalTypeInputFile) upToInternalTyped
+  res <- runPipelineNoOptions (localOpts ^. internalTypeInputFile) upToInternalTyped
   say "Well done! It type checks"
   when (localOpts ^. internalTypePrint) $ do
     let checkedModule = res ^. InternalTyped.resultModule

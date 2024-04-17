@@ -31,7 +31,7 @@ compileToCore ::
   (Members '[App, EmbedIO, TaggedLock] r) =>
   CompileCommonOptions ('InputExtension 'FileExtJuvix) ->
   Sem r CoreResult
-compileToCore opts = runPipeline (Just (opts ^. compileInputFile)) upToCore
+compileToCore opts = runPipeline opts (Just (opts ^. compileInputFile)) upToCore
 
 commandTargetHelper :: CompileTarget -> Parser a -> Mod CommandFields a
 commandTargetHelper t parseCommand =
