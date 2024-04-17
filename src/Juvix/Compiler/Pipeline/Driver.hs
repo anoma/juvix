@@ -103,7 +103,7 @@ processFileUpTo a = do
       . runReader (res ^. pipelineResultImports)
       . runReader (res ^. pipelineResult)
       $ a
-  return $ set pipelineResult a' res
+  return (set pipelineResult a' res)
 
 processFileUpToParsing' ::
   forall r.
@@ -114,7 +114,12 @@ processFileUpToParsing' entry = do
   res <- runReader entry upToParsing
   let imports = res ^. Parser.resultParserState . Parser.parserStateImports
   mtab <- processImports' entry (map (^. importModulePath) imports)
-  return (PipelineResult res mtab True)
+  return
+    PipelineResult
+      { _pipelineResult = res,
+        _pipelineResultImports = mtab,
+        _pipelineResultChanged = True
+      }
 
 processImports' ::
   forall r.
@@ -132,7 +137,9 @@ processImports'' ::
   Sem r (Bool, Store.ModuleTable)
 processImports'' entry imports = do
   ms <- forM imports (processImport' entry)
-  let mtab = Store.mkModuleTable (map (^. pipelineResult) ms) <> mconcatMap (^. pipelineResultImports) ms
+  let mtab =
+        Store.mkModuleTable (map (^. pipelineResult) ms)
+          <> mconcatMap (^. pipelineResultImports) ms
       changed = any (^. pipelineResultChanged) ms
   return (changed, mtab)
 
@@ -179,7 +186,7 @@ processFileToStoredCore' entry = ignoreHighlightBuilder $ do
       . runReader entry
       . runReader (res ^. pipelineResult)
       $ upToStoredCore
-  return $ set pipelineResult r res
+  return (set pipelineResult r res)
 
 processModule' ::
   forall r.
@@ -205,12 +212,17 @@ processModule' (EntryIndex entry) = do
           -- We need to check whether any of the recursive imports is fragile,
           -- not only the direct ones, because identifiers may be re-exported
           -- (with `open public`).
-          let fragile = any (^. Store.moduleInfoFragile) (HashMap.elems $ mtab ^. Store.moduleTable)
+          let fragile = any (^. Store.moduleInfoFragile) (mtab ^. Store.moduleTable)
           if
               | changed && fragile ->
                   recompile sha256 absPath
               | otherwise ->
-                  return (PipelineResult info mtab False)
+                  return
+                    PipelineResult
+                      { _pipelineResult = info,
+                        _pipelineResultImports = mtab,
+                        _pipelineResultChanged = False
+                      }
     _ ->
       recompile sha256 absPath
   where
