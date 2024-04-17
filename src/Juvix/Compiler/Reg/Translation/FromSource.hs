@@ -152,6 +152,7 @@ instrCairo ::
   ParsecS r InstrCairo
 instrCairo vref =
   parseCairoOp kwPoseidon OpCairoPoseidon vref
+    <|> parseCairoOp kwEcOp OpCairoEc vref
 
 parseCairoOp ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>

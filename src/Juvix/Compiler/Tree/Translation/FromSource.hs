@@ -124,6 +124,7 @@ parseCairo ::
   ParsecS r NodeCairo
 parseCairo =
   parseCairo' kwPoseidon OpCairoPoseidon
+    <|> parseCairo' kwEcOp OpCairoEc
 
 parseCairo' ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>

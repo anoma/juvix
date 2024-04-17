@@ -758,6 +758,9 @@ instrArgsNum = "argsnum"
 instrPoseidon :: (IsString s) => s
 instrPoseidon = "poseidon"
 
+instrEcOp :: (IsString s) => s
+instrEcOp = "ec_op"
+
 instrPrealloc :: (IsString s) => s
 instrPrealloc = "prealloc"
 

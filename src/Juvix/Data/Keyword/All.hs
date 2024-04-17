@@ -280,6 +280,9 @@ kwArgsNum = asciiKw Str.instrArgsNum
 kwPoseidon :: Keyword
 kwPoseidon = asciiKw Str.instrPoseidon
 
+kwEcOp :: Keyword
+kwEcOp = asciiKw Str.instrEcOp
+
 kwAlloc :: Keyword
 kwAlloc = asciiKw Str.instrAlloc
 

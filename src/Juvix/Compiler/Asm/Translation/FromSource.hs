@@ -101,6 +101,8 @@ command = do
       return $ mkUnop' loc OpArgsNum
     "poseidon" ->
       return $ mkCairo' loc OpCairoPoseidon
+    "ec_op" ->
+      return $ mkCairo' loc OpCairoEc
     "alloc" ->
       mkInstr' loc . AllocConstr <$> constrTag @Code @(Maybe FunctionInfoExtra) @DirectRef
     "calloc" ->

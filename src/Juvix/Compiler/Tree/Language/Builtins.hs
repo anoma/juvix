@@ -34,10 +34,13 @@ data UnaryOp
 
 -- | Builtin Cairo operations. Implemented only in the Cairo backend.
 data CairoOp
-  = -- | Cairo Poseidon hash builtin. Implemented only in the Cairo backend.
+  = -- | Cairo Poseidon hash builtin (hades permutation). Implemented only in the Cairo backend.
     OpCairoPoseidon
+  | -- | Cairo Elliptic Curve operation.
+    OpCairoEc
   deriving stock (Eq)
 
 cairoOpArgsNum :: CairoOp -> Int
 cairoOpArgsNum = \case
   OpCairoPoseidon -> 1
+  OpCairoEc -> 3

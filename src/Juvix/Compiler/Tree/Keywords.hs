@@ -19,6 +19,7 @@ import Juvix.Data.Keyword.All
     kwCall,
     kwCase,
     kwDiv_,
+    kwEcOp,
     kwEq_,
     kwFail,
     kwFieldAdd,
@@ -72,5 +73,6 @@ allKeywords =
          kwCase,
          kwSave,
          kwAnomaGet,
-         kwPoseidon
+         kwPoseidon,
+         kwEcOp
        ]
