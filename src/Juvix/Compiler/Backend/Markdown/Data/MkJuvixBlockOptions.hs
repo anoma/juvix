@@ -3,6 +3,7 @@ module Juvix.Compiler.Backend.Markdown.Data.MkJuvixBlockOptions where
 import Juvix.Parser.Error.Base
 import Juvix.Prelude.Base
 import Juvix.Prelude.Parsing hiding (runParser)
+import Juvix.Prelude.Path
 import Text.Megaparsec qualified as P
 import Text.Megaparsec.Char.Lexer qualified as L
 
@@ -24,8 +25,8 @@ renderJuvixBlockOptions = \case
   MkJuvixBlockOptionsShow -> ""
   MkJuvixBlockOptionsExtractModule -> optionExtractModuleStatements
 
-parseJuvixBlockOptions :: Text -> Either MegaparsecError MkJuvixBlockOptions
-parseJuvixBlockOptions = mapLeft MegaparsecError . P.runParser parseOptions ""
+parseJuvixBlockOptions :: Path Abs File -> Text -> Either MegaparsecError MkJuvixBlockOptions
+parseJuvixBlockOptions p = mapLeft MegaparsecError . P.runParser parseOptions (toFilePath p)
 
 type Parser = P.Parsec Void Text
 

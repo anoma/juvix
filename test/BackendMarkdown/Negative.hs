@@ -94,5 +94,12 @@ tests =
       $(mkRelFile "InvalidExtractModuleBlockNotJustModule.juvix.md")
       $ \e -> case fromJuvixError e of
         Just (ErrInvalidExtractModuleBlock _) -> Nothing
+        _ -> wrongError e,
+    NegTest
+      "code block with both hide and extract-module-statements"
+      $(mkRelDir "Markdown")
+      $(mkRelFile "InvalidCodeBlockExtraAttribute.juvix.md")
+      $ \e -> case fromJuvixError e of
+        Just (ErrInvalidCodeBlockAttribtues _) -> Nothing
         _ -> wrongError e
   ]

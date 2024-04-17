@@ -127,7 +127,7 @@ go fname = do
           modify (set processingStateMk r)
           MkConcat lS <$> go fname
         MkJuvixCodeBlock j -> do
-          opts <- case parseJuvixBlockOptions (j ^. juvixCodeBlockOptions) of
+          opts <- case parseJuvixBlockOptions fname (j ^. juvixCodeBlockOptions) of
             Left e ->
               throw
                 ( ErrInvalidCodeBlockAttribtues
