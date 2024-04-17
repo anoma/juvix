@@ -70,15 +70,14 @@ disambiguateNodeNames :: Module -> Node -> Node
 disambiguateNodeNames md = disambiguateNodeNames' disambiguate md
   where
     disambiguate :: BinderList Binder -> Text -> Text
-    disambiguate bl name =
-      if
-          | name == "?" || name == "" || name == "_" ->
-              disambiguate bl "_X"
-          | elem name (map (^. binderName) (toList bl))
-              || HashSet.member name names ->
-              disambiguate bl (prime name)
-          | otherwise ->
-              name
+    disambiguate bl name
+      | name == "?" || name == "" || name == "_" =
+          disambiguate bl "_X"
+      | elem name (map (^. binderName) (toList bl))
+          || HashSet.member name names =
+          disambiguate bl (prime name)
+      | otherwise =
+          name
 
     names :: HashSet Text
     names = identNames md
@@ -96,7 +95,6 @@ setArgNames md sym node = reLambdas lhs' body
 
 disambiguateNames :: Module -> Module
 disambiguateNames md =
-  -- TODO: set identifierArgNames afterwards
   let md' = mapT (setArgNames md) md
    in mapAllNodes (disambiguateNodeNames md') md'
 
