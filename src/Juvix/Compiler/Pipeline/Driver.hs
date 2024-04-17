@@ -57,15 +57,15 @@ type MCache' a = Cache EntryIndex a
 
 type MCache = MCache' (PipelineResult Store.ModuleInfo)
 
-processFile ::
+processFileUpToParsing ::
   forall r.
   (Members '[TaggedLock, HighlightBuilder, Error JuvixError, Files, PathResolver] r) =>
   EntryPoint ->
   Sem r (PipelineResult Parser.ParserResult)
-processFile entry =
+processFileUpToParsing entry =
   runReader @ImportParents mempty
     . evalCacheEmpty processModule'
-    $ processFile' entry
+    $ processFileUpToParsing' entry
 
 processImport ::
   forall r.
@@ -78,6 +78,7 @@ processImport entry i =
     . evalCacheEmpty processModule'
     $ processImport' entry (i ^. importModulePath)
 
+-- TODO parallelize
 processFileToStoredCore ::
   forall r.
   (Members '[TaggedLock, Error JuvixError, Files, PathResolver] r) =>
@@ -95,7 +96,7 @@ processFileUpTo ::
   Sem r (PipelineResult a)
 processFileUpTo a = do
   entry <- ask
-  res <- processFile entry
+  res <- processFileUpToParsing entry
   a' <-
     evalTopNameIdGen
       (res ^. pipelineResult . Parser.resultModule . moduleId)
@@ -104,12 +105,12 @@ processFileUpTo a = do
       $ a
   return $ set pipelineResult a' res
 
-processFile' ::
+processFileUpToParsing' ::
   forall r.
   (Members '[HighlightBuilder, Reader ImportParents, Error JuvixError, Files, PathResolver, MCache] r) =>
   EntryPoint ->
   Sem r (PipelineResult Parser.ParserResult)
-processFile' entry = do
+processFileUpToParsing' entry = do
   res <- runReader entry upToParsing
   let imports = res ^. Parser.resultParserState . Parser.parserStateImports
   mtab <- processImports' entry (map (^. importModulePath) imports)
@@ -171,7 +172,7 @@ processFileToStoredCore' ::
   EntryPoint ->
   Sem r (PipelineResult Core.CoreResult)
 processFileToStoredCore' entry = ignoreHighlightBuilder $ do
-  res <- processFile' entry
+  res <- processFileUpToParsing' entry
   r <-
     evalTopNameIdGen (res ^. pipelineResult . Parser.resultModule . moduleId)
       . runReader (res ^. pipelineResultImports)
@@ -252,7 +253,7 @@ processRecursiveUpToTyped ::
   Sem r (InternalTypedResult, [InternalTypedResult])
 processRecursiveUpToTyped = do
   entry <- ask
-  PipelineResult res mtab _ <- processFile entry
+  PipelineResult res mtab _ <- processFileUpToParsing entry
   let imports = HashMap.keys (mtab ^. Store.moduleTable)
   ms <- forM imports (`withPath'` goImport)
   a <-
