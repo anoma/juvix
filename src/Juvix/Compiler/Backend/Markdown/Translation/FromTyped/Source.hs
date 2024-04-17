@@ -86,7 +86,7 @@ fromJuvixMarkdown opts = do
                 _processingStateStmtsSeparation = sepr,
                 _processingStateStmts = indModuleFilter $ m ^. Concrete.moduleBody
               }
-      (_, r) <- runState st . runReader htmlOptions . runReader opts $ go
+      (_, r) <- runState st . runReader htmlOptions . runReader opts $ go fname
       return $ MK.toPlainText r
     Nothing ->
       throw
@@ -104,26 +104,28 @@ go ::
   ( Members
       '[ Reader HtmlRender.HtmlOptions,
          Reader ProcessJuvixBlocksArgs,
-         State ProcessingState
+         State ProcessingState,
+         Error MarkdownBackendError
        ]
       r
   ) =>
+  Path Abs File ->
   Sem r Mk
-go = do
+go fname = do
   stmts <- gets @ProcessingState (^. processingStateStmts)
   sepr <- gets @ProcessingState (^. processingStateStmtsSeparation)
   mk <- gets @ProcessingState (^. processingStateMk)
-  case (sepr, stmts) of
-    ([], _) -> return mk
-    ((n : ns), _) -> do
+  case sepr of
+    [] -> return mk
+    (n : ns) -> do
       case mk of
         MkNull -> return mk
         MkTextBlock _ -> return mk
         MkConcat l r -> do
           modify (set processingStateMk l)
-          lS <- go
+          lS <- go fname
           modify (set processingStateMk r)
-          MkConcat lS <$> go
+          MkConcat lS <$> go fname
         MkJuvixCodeBlock j -> do
           m <-
             asks @ProcessJuvixBlocksArgs
@@ -131,7 +133,7 @@ go = do
 
           isFirstBlock <- gets @ProcessingState (^. processingStateFirstBlock)
 
-          let stmts' = take n stmts
+          stmts' <- checkStatements j (take n stmts)
 
           htmlStatements :: [Html] <-
             mapM (\s -> goRender s <> pure htmlSemicolon) stmts'
@@ -153,15 +155,14 @@ go = do
                         Text.intercalate "\n\n" $
                           map (toStrict . Html.renderHtml) htmlStatements
 
-          let _processingStateMk =
-                if j ^. juvixCodeBlockOptions . mkJuvixBlockOptionsHide
-                  then MkNull
-                  else
-                    MkTextBlock
-                      TextBlock
-                        { _textBlock = Text.replace "\n" "<br/>" resHtml,
-                          _textBlockInterval = j ^. juvixCodeBlockInterval
-                        }
+          let _processingStateMk = case j ^. juvixCodeBlockOptions of
+                MkJuvixBlockOptionsHide -> MkNull
+                _ ->
+                  MkTextBlock
+                    TextBlock
+                      { _textBlock = Text.replace "\n" "<br/>" resHtml,
+                        _textBlockInterval = j ^. juvixCodeBlockInterval
+                      }
           let newState =
                 ProcessingState
                   { _processingStateFirstBlock = False,
@@ -171,6 +172,26 @@ go = do
                   }
           modify @ProcessingState $ const newState
           return _processingStateMk
+      where
+        checkStatements :: JuvixCodeBlock -> [Concrete.Statement 'Concrete.Scoped] -> Sem r [Concrete.Statement 'Concrete.Scoped]
+        checkStatements j xs = do
+          case j ^. juvixCodeBlockOptions of
+            MkJuvixBlockOptionsExtractModule -> checkExtractModule
+            _ -> return xs
+          where
+            checkExtractModule :: Sem r [Concrete.Statement 'Concrete.Scoped]
+            checkExtractModule = case xs of
+              [Concrete.StatementModule m] -> do
+                return (indModuleFilter (m ^. Concrete.moduleBody))
+              _ ->
+                throw
+                  ( ErrInvalidExtractModuleBlock
+                      ( InvalidExtractModuleBlockError
+                          { _invalidExtractModuleBlockErrorPath = fname,
+                            _invalidExtractModuleBlockErrorInterval = j ^. juvixCodeBlockInterval
+                          }
+                      )
+                  )
 
 goRender ::
   (Concrete.PrettyPrint c, Members '[Reader HtmlRender.HtmlOptions, Reader ProcessJuvixBlocksArgs] r) =>

@@ -7,10 +7,11 @@ import Juvix.Prelude hiding (Raw)
 import Juvix.Prelude.Pretty
 import Text.Show qualified as Show
 
-newtype MkJuvixBlockOptions = MkJuvixBlockOptions
-  { _mkJuvixBlockOptionsHide :: Bool
-  }
-  deriving stock (Eq, Ord)
+data MkJuvixBlockOptions
+  = MkJuvixBlockOptionsHide
+  | MkJuvixBlockOptionsShow
+  | MkJuvixBlockOptionsExtractModule
+  deriving stock (Eq, Ord, Bounded, Enum)
 
 data JuvixCodeBlock = JuvixCodeBlock
   { _juvixCodeBlock :: Text,
@@ -26,24 +27,22 @@ data TextBlock = TextBlock
   deriving stock (Eq, Ord)
 
 makeLenses ''JuvixCodeBlock
-makeLenses ''MkJuvixBlockOptions
 makeLenses ''TextBlock
-
-defaultMkJuvixBlockOptions :: MkJuvixBlockOptions
-defaultMkJuvixBlockOptions =
-  MkJuvixBlockOptions
-    { _mkJuvixBlockOptionsHide = False
-    }
 
 instance Show TextBlock where
   show t = T.unpack (t ^. textBlock)
 
+optionExtractModuleStatements :: (IsString s) => s
+optionExtractModuleStatements = "extract-module-statements"
+
+optionHide :: (IsString s) => s
+optionHide = "hide"
+
 textJuvixBlockOptions :: MkJuvixBlockOptions -> Text
-textJuvixBlockOptions opt =
-  T.intercalate " " $
-    catMaybes
-      [ if opt ^. mkJuvixBlockOptionsHide then Just "hide" else Nothing
-      ]
+textJuvixBlockOptions = \case
+  MkJuvixBlockOptionsHide -> optionHide
+  MkJuvixBlockOptionsShow -> ""
+  MkJuvixBlockOptionsExtractModule -> optionExtractModuleStatements
 
 instance Show MkJuvixBlockOptions where
   show opt = T.unpack (textJuvixBlockOptions opt)
@@ -84,16 +83,13 @@ instance Monoid TextBlock where
   mappend = (<>)
 
 instance Semigroup MkJuvixBlockOptions where
-  a <> b =
-    MkJuvixBlockOptions
-      { _mkJuvixBlockOptionsHide = a ^. mkJuvixBlockOptionsHide || b ^. mkJuvixBlockOptionsHide
-      }
+  (<>) = \cases
+    MkJuvixBlockOptionsHide _ -> MkJuvixBlockOptionsHide
+    a MkJuvixBlockOptionsShow -> a
+    _ b -> b
 
 instance Monoid MkJuvixBlockOptions where
-  mempty =
-    MkJuvixBlockOptions
-      { _mkJuvixBlockOptionsHide = False
-      }
+  mempty = MkJuvixBlockOptionsShow
   mappend = (<>)
 
 instance Semigroup Mk where
@@ -191,9 +187,10 @@ instance MK.IsInline TextBlock where
     | otherwise = mempty
 
 getJuvixBlockOptions :: Text -> MkJuvixBlockOptions
-getJuvixBlockOptions = \case
-  "hide" -> mempty {_mkJuvixBlockOptionsHide = True}
-  _ -> mempty
+getJuvixBlockOptions x
+  | x == optionHide = MkJuvixBlockOptionsHide
+  | x == optionExtractModuleStatements = MkJuvixBlockOptionsExtractModule
+  | otherwise = MkJuvixBlockOptionsShow
 
 nl' :: Mk
 nl' = toMK nl

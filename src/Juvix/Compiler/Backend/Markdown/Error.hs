@@ -1,5 +1,6 @@
 module Juvix.Compiler.Backend.Markdown.Error where
 
+import Juvix.Compiler.Backend.Markdown.Data.Types
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Pretty
 import Juvix.Prelude
@@ -7,12 +8,14 @@ import Juvix.Prelude
 data MarkdownBackendError
   = ErrInternalNoMarkdownInfo NoMarkdownInfoError
   | ErrNoJuvixCodeBlocks NoJuvixCodeBlocksError
+  | ErrInvalidExtractModuleBlock InvalidExtractModuleBlockError
   deriving stock (Show)
 
 instance ToGenericError MarkdownBackendError where
   genericError = \case
     ErrInternalNoMarkdownInfo e -> genericError e
     ErrNoJuvixCodeBlocks e -> genericError e
+    ErrInvalidExtractModuleBlock e -> genericError e
 
 newtype NoMarkdownInfoError = NoMarkdownInfoError
   { _noMarkdownInfoFilepath :: Path Abs File
@@ -49,3 +52,26 @@ instance ToGenericError NoJuvixCodeBlocksError where
     where
       i :: Interval
       i = singletonInterval . mkInitialLoc $ _noJuvixCodeBlocksErrorFilepath
+
+data InvalidExtractModuleBlockError = InvalidExtractModuleBlockError
+  { _invalidExtractModuleBlockErrorInterval :: Maybe Interval,
+    _invalidExtractModuleBlockErrorPath :: Path Abs File
+  }
+  deriving stock (Show)
+
+instance ToGenericError InvalidExtractModuleBlockError where
+  genericError InvalidExtractModuleBlockError {..} = do
+    let msg :: Doc Ann
+        msg = "Juvix code blocks with attribute" <+> optionExtractModuleStatements <+> "must contain a single local module"
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = prettyError msg,
+          _genericErrorIntervals = [i]
+        }
+    where
+      i :: Interval
+      i =
+        fromMaybe
+          (singletonInterval (mkInitialLoc (_invalidExtractModuleBlockErrorPath)))
+          _invalidExtractModuleBlockErrorInterval

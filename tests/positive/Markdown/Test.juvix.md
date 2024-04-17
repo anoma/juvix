@@ -22,6 +22,14 @@ fib : Nat → Nat → Nat → Nat
 fibonacci (n : Nat) : Nat := fib n 0 1;
 ```
 
+The `extract-module-statements` attribute can be used to display only the statements contained in a module in the output.
+
+```juvix extract-module-statements
+module Foo;
+  type T := t;
+end;
+```
+
 Commands like `typecheck` and `compile` can be used with Juvix Markdown files.
 
 ```juvix
