@@ -268,6 +268,8 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
         goAssignApBuiltins :: Sem r ()
         goAssignApBuiltins = mkBuiltinRef >>= goAssignAp . Val . Ref
 
+        -- Warning: the result may depend on Ap. Use adjust_ap when changing ap
+        -- afterwards.
         goValue :: Reg.Value -> Sem r Value
         goValue = \case
           Reg.ValConst c -> return $ Imm $ mkConst c
@@ -336,10 +338,10 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
           goAssignAp (Load $ LoadValue (adjustAp 1 v) casmClosureArgsNumOffset)
           goExtraBinop FieldSub res (MemRef Ap (-2)) (Ref $ MemRef Ap (-1))
 
-        goOpPoseidon :: Reg.VarRef -> MemRef -> Sem r ()
+        goOpPoseidon :: Reg.VarRef -> Reg.Value -> Sem r ()
         goOpPoseidon res v = do
           goAssignApBuiltins
-          goAssignAp (Val $ Ref v)
+          goAssignApValue v
           output' (blts ^. stdlibPoseidonApOffset) $
             mkCallRel (Lab (LabelRef (blts ^. stdlibPoseidon) (Just (blts ^. stdlibPoseidonName))))
           off <- getAP
@@ -418,7 +420,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
           Reg.OpFieldToInt -> goAssignValue _instrUnopResult _instrUnopArg
           Reg.OpIntToField -> goAssignValue _instrUnopResult _instrUnopArg
           Reg.OpArgsNum -> goUnop' goOpArgsNum _instrUnopResult _instrUnopArg
-          Reg.OpCairoPoseidon -> goUnop' goOpPoseidon _instrUnopResult _instrUnopArg
+          Reg.OpCairoPoseidon -> goOpPoseidon _instrUnopResult _instrUnopArg
 
         goAssign :: Reg.InstrAssign -> Sem r ()
         goAssign Reg.InstrAssign {..} =
