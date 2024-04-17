@@ -10,20 +10,21 @@ import Text.Megaparsec.Char.Lexer qualified as L
 data MkJuvixBlockOptions
   = MkJuvixBlockOptionsHide
   | MkJuvixBlockOptionsShow
-  | MkJuvixBlockOptionsExtractModule
-  deriving stock (Eq, Ord, Bounded, Enum, Show)
+  | MkJuvixBlockOptionsExtractModule JuvixBlockOptionsExtractModule
+  deriving stock (Eq, Show)
+
+newtype JuvixBlockOptionsExtractModule = JuvixBlockOptionsExtractModule
+  { _juvixBlockOptionsExtractModuleDrop :: Int
+  }
+  deriving stock (Eq, Show)
+
+makeLenses ''JuvixBlockOptionsExtractModule
 
 optionExtractModuleStatements :: (IsString s) => s
 optionExtractModuleStatements = "extract-module-statements"
 
 optionHide :: (IsString s) => s
 optionHide = "hide"
-
-renderJuvixBlockOptions :: MkJuvixBlockOptions -> Text
-renderJuvixBlockOptions = \case
-  MkJuvixBlockOptionsHide -> optionHide
-  MkJuvixBlockOptionsShow -> ""
-  MkJuvixBlockOptionsExtractModule -> optionExtractModuleStatements
 
 parseJuvixBlockOptions :: Path Abs File -> Text -> Either MegaparsecError MkJuvixBlockOptions
 parseJuvixBlockOptions p = mapLeft MegaparsecError . P.runParser parseOptions (toFilePath p)
@@ -39,6 +40,9 @@ lexeme = L.lexeme spaceConsumer
 symbol :: Text -> Parser ()
 symbol = void . L.symbol spaceConsumer
 
+decimal :: Parser Int
+decimal = lexeme L.decimal
+
 parseOptions :: Parser MkJuvixBlockOptions
 parseOptions = spaceConsumer >> parseHide <|> parseExtractModule <|> parseShow
 
@@ -49,7 +53,9 @@ parseHide :: Parser MkJuvixBlockOptions
 parseHide = symbol optionHide $> MkJuvixBlockOptionsHide <* lexeme eof
 
 parseExtractModule :: Parser MkJuvixBlockOptions
-parseExtractModule =
+parseExtractModule = do
   symbol optionExtractModuleStatements
-    $> MkJuvixBlockOptionsExtractModule
-    <* lexeme eof
+  dropNum <- fromMaybe 0 <$> optional decimal
+  let res =
+        MkJuvixBlockOptionsExtractModule (JuvixBlockOptionsExtractModule dropNum)
+  return res <* lexeme eof

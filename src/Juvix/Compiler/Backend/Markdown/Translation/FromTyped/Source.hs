@@ -144,7 +144,8 @@ go fname = do
           stmts' <-
             let blockStmts = take n stmts
              in case opts of
-                  MkJuvixBlockOptionsExtractModule -> checkExtractModule j blockStmts
+                  MkJuvixBlockOptionsExtractModule o ->
+                    checkExtractModule j (o ^. juvixBlockOptionsExtractModuleDrop) blockStmts
                   _ -> return blockStmts
 
           htmlStatements :: [Html] <-
@@ -185,10 +186,10 @@ go fname = do
           modify @ProcessingState $ const newState
           return _processingStateMk
       where
-        checkExtractModule :: JuvixCodeBlock -> [Concrete.Statement 'Concrete.Scoped] -> Sem r [Concrete.Statement 'Concrete.Scoped]
-        checkExtractModule j xs = case xs of
+        checkExtractModule :: JuvixCodeBlock -> Int -> [Concrete.Statement 'Concrete.Scoped] -> Sem r [Concrete.Statement 'Concrete.Scoped]
+        checkExtractModule j dropNum xs = case xs of
           [Concrete.StatementModule m] -> do
-            return (indModuleFilter (m ^. Concrete.moduleBody))
+            return (drop dropNum (indModuleFilter (m ^. Concrete.moduleBody)))
           _ ->
             throw
               ( ErrInvalidExtractModuleBlock
