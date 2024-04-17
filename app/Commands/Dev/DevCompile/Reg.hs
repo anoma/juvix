@@ -14,6 +14,6 @@ runCommand opts = do
   let inputFile = opts ^. regCompileCommonOptions . compileInputFile
       moutputFile = opts ^. regCompileCommonOptions . compileOutputFile
   outFile :: Path Abs File <- getOutputFile FileExtJuvixReg inputFile moutputFile
-  res :: InfoTable <- runPipeline inputFile upToReg
+  res :: InfoTable <- runPipeline opts inputFile upToReg
   let txt = ppPrint res res
   writeFileEnsureLn outFile txt

@@ -9,5 +9,5 @@ runCommand :: (Members '[EmbedIO, App, TaggedLock] r) => ParseOptions -> Sem r (
 runCommand opts = do
   m <-
     (^. Parser.resultModule)
-      <$> runPipeline (opts ^. parseOptionsInputFile) upToParsing
+      <$> runPipelineNoOptions (opts ^. parseOptionsInputFile) upToParsing
   if opts ^. parseOptionsNoPrettyShow then say (show m) else say (pack (ppShow m))

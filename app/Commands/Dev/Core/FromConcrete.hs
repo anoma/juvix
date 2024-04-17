@@ -14,7 +14,7 @@ import Juvix.Compiler.Core.Translation
 runCommand :: forall r. (Members '[EmbedIO, TaggedLock, App] r) => CoreFromConcreteOptions -> Sem r ()
 runCommand coreOpts = do
   gopts <- askGlobalOptions
-  md <- (^. coreResultModule) <$> runPipeline (Just (coreOpts ^. coreFromConcreteInputFile)) upToCore
+  md <- (^. coreResultModule) <$> runPipelineNoOptions (Just (coreOpts ^. coreFromConcreteInputFile)) upToCore
   path :: Path Abs File <- fromAppPathFile (coreOpts ^. coreFromConcreteInputFile)
   let r =
         run

@@ -11,6 +11,6 @@ runCommand opts = do
   let inputFile = opts ^. asmCompileCommonOptions . compileInputFile
       moutputFile = opts ^. asmCompileCommonOptions . compileOutputFile
   outFile :: Path Abs File <- getOutputFile FileExtJuvixAsm inputFile moutputFile
-  res :: InfoTable <- runPipeline inputFile upToAsm
+  res :: InfoTable <- runPipeline opts inputFile upToAsm
   let txt = ppPrint res res
   writeFileEnsureLn outFile txt

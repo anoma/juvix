@@ -14,6 +14,6 @@ runCommand opts = do
   let inputFile = opts ^. treeCompileCommonOptions . compileInputFile
       moutputFile = opts ^. treeCompileCommonOptions . compileOutputFile
   outFile :: Path Abs File <- getOutputFile FileExtJuvixTree inputFile moutputFile
-  res :: InfoTable <- runPipeline inputFile upToTree
+  res :: InfoTable <- runPipeline opts inputFile upToTree
   let txt = ppPrint res res
   writeFileEnsureLn outFile txt
