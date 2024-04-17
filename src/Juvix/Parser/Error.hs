@@ -1,4 +1,8 @@
-module Juvix.Parser.Error where
+module Juvix.Parser.Error
+  ( module Juvix.Parser.Error,
+    module Juvix.Parser.Error.Base,
+  )
+where
 
 import Commonmark qualified as MK
 import Juvix.Compiler.Backend.Markdown.Error
@@ -7,9 +11,9 @@ import Juvix.Compiler.Concrete.Pretty.Options (fromGenericOptions)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Pretty
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Error
 import Juvix.Extra.Paths
+import Juvix.Parser.Error.Base
 import Juvix.Prelude
 import Text.Megaparsec qualified as M
-import Text.Megaparsec.Error (errorOffset)
 import Text.Parsec.Error qualified as P
 import Text.Parsec.Pos qualified as P
 
@@ -32,43 +36,6 @@ instance ToGenericError ParserError where
     ErrStdinOrFile e -> genericError e
     ErrDanglingJudoc e -> genericError e
     ErrMarkdownBackend e -> genericError e
-
-instance Pretty MegaparsecError where
-  pretty (MegaparsecError b) = pretty (M.errorBundlePretty b)
-
-instance HasLoc MegaparsecError where
-  getLoc (MegaparsecError b) = singletonInterval (mkLoc offset sourcePos)
-    where
-      state :: M.PosState Text
-      state = M.bundlePosState b
-      offset = errorOffset (head (M.bundleErrors b))
-
-      sourcePos :: M.SourcePos
-      sourcePos =
-        (snd . head . fst)
-          (M.attachSourcePos errorOffset (M.bundleErrors b) state)
-
-newtype MegaparsecError = MegaparsecError
-  { _megaParsecError :: M.ParseErrorBundle Text Void
-  }
-  deriving stock (Show)
-
-instance ToGenericError MegaparsecError where
-  genericError e =
-    return
-      GenericError
-        { _genericErrorLoc = i,
-          _genericErrorMessage = mkAnsiText $ pretty @_ @AnsiStyle e,
-          _genericErrorIntervals = [i]
-        }
-    where
-      i = getLoc e
-
--- | Use only for debugging
-fromMegaParsecError :: Either MegaparsecError a -> a
-fromMegaParsecError = \case
-  Left e -> error (prettyText e)
-  Right a -> a
 
 newtype CommonmarkError = CommonmarkError
   { _commonMarkError :: MK.ParseError

@@ -1,21 +1,20 @@
-module Juvix.Compiler.Backend.Markdown.Data.Types where
+module Juvix.Compiler.Backend.Markdown.Data.Types
+  ( module Juvix.Compiler.Backend.Markdown.Data.Types,
+    module Juvix.Compiler.Backend.Markdown.Data.MkJuvixBlockOptions,
+  )
+where
 
 import Commonmark qualified as MK
 import Data.Text qualified as T
+import Juvix.Compiler.Backend.Markdown.Data.MkJuvixBlockOptions
 import Juvix.Data.Loc
 import Juvix.Prelude hiding (Raw)
 import Juvix.Prelude.Pretty
 import Text.Show qualified as Show
 
-data MkJuvixBlockOptions
-  = MkJuvixBlockOptionsHide
-  | MkJuvixBlockOptionsShow
-  | MkJuvixBlockOptionsExtractModule
-  deriving stock (Eq, Ord, Bounded, Enum)
-
 data JuvixCodeBlock = JuvixCodeBlock
   { _juvixCodeBlock :: Text,
-    _juvixCodeBlockOptions :: MkJuvixBlockOptions,
+    _juvixCodeBlockOptions :: Text,
     _juvixCodeBlockInterval :: Maybe Interval
   }
   deriving stock (Eq, Ord)
@@ -32,26 +31,11 @@ makeLenses ''TextBlock
 instance Show TextBlock where
   show t = T.unpack (t ^. textBlock)
 
-optionExtractModuleStatements :: (IsString s) => s
-optionExtractModuleStatements = "extract-module-statements"
-
-optionHide :: (IsString s) => s
-optionHide = "hide"
-
-textJuvixBlockOptions :: MkJuvixBlockOptions -> Text
-textJuvixBlockOptions = \case
-  MkJuvixBlockOptionsHide -> optionHide
-  MkJuvixBlockOptionsShow -> ""
-  MkJuvixBlockOptionsExtractModule -> optionExtractModuleStatements
-
-instance Show MkJuvixBlockOptions where
-  show opt = T.unpack (textJuvixBlockOptions opt)
-
 textJuvixCodeBlock :: JuvixCodeBlock -> Text
 textJuvixCodeBlock cb =
   mconcat
     [ "```juvix",
-      textJuvixBlockOptions (cb ^. juvixCodeBlockOptions),
+      cb ^. juvixCodeBlockOptions,
       nl,
       cb ^. juvixCodeBlock,
       "```"
@@ -80,16 +64,6 @@ instance Monoid TextBlock where
       { _textBlock = mempty,
         _textBlockInterval = Nothing
       }
-  mappend = (<>)
-
-instance Semigroup MkJuvixBlockOptions where
-  (<>) = \cases
-    MkJuvixBlockOptionsHide _ -> MkJuvixBlockOptionsHide
-    a MkJuvixBlockOptionsShow -> a
-    _ b -> b
-
-instance Monoid MkJuvixBlockOptions where
-  mempty = MkJuvixBlockOptionsShow
   mappend = (<>)
 
 instance Semigroup Mk where
@@ -186,26 +160,20 @@ instance MK.IsInline TextBlock where
         toTextBlock t
     | otherwise = mempty
 
-getJuvixBlockOptions :: Text -> MkJuvixBlockOptions
-getJuvixBlockOptions x
-  | x == optionHide = MkJuvixBlockOptionsHide
-  | x == optionExtractModuleStatements = MkJuvixBlockOptionsExtractModule
-  | otherwise = MkJuvixBlockOptionsShow
-
 nl' :: Mk
 nl' = toMK nl
 
 processCodeBlock :: Text -> Text -> Maybe Interval -> Mk
 processCodeBlock info t loc =
-  case T.splitOn " " (T.strip info) of
-    ("juvix" : opts) ->
+  case T.stripPrefix "juvix" (T.strip info) of
+    Just opts ->
       MkJuvixCodeBlock
         JuvixCodeBlock
           { _juvixCodeBlock = t,
-            _juvixCodeBlockOptions = foldMap getJuvixBlockOptions opts,
+            _juvixCodeBlockOptions = opts,
             _juvixCodeBlockInterval = loc
           }
-    _ ->
+    Nothing ->
       let b = "```" <> info <> t <> "```"
        in MkTextBlock TextBlock {_textBlock = b, _textBlockInterval = loc}
 

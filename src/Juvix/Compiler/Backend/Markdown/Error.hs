@@ -3,12 +3,14 @@ module Juvix.Compiler.Backend.Markdown.Error where
 import Juvix.Compiler.Backend.Markdown.Data.Types
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Pretty
+import Juvix.Parser.Error.Base
 import Juvix.Prelude
 
 data MarkdownBackendError
   = ErrInternalNoMarkdownInfo NoMarkdownInfoError
   | ErrNoJuvixCodeBlocks NoJuvixCodeBlocksError
   | ErrInvalidExtractModuleBlock InvalidExtractModuleBlockError
+  | ErrInvalidCodeBlockAttribtues InvalidCodeBlockAttributesError
   deriving stock (Show)
 
 instance ToGenericError MarkdownBackendError where
@@ -16,6 +18,7 @@ instance ToGenericError MarkdownBackendError where
     ErrInternalNoMarkdownInfo e -> genericError e
     ErrNoJuvixCodeBlocks e -> genericError e
     ErrInvalidExtractModuleBlock e -> genericError e
+    ErrInvalidCodeBlockAttribtues e -> genericError e
 
 newtype NoMarkdownInfoError = NoMarkdownInfoError
   { _noMarkdownInfoFilepath :: Path Abs File
@@ -75,3 +78,12 @@ instance ToGenericError InvalidExtractModuleBlockError where
         fromMaybe
           (singletonInterval (mkInitialLoc (_invalidExtractModuleBlockErrorPath)))
           _invalidExtractModuleBlockErrorInterval
+
+newtype InvalidCodeBlockAttributesError = InvalidCodeBlockAttributesError
+  { _invalidCodeBlockAttributesErrorMegaparsecError :: MegaparsecError
+  }
+  deriving stock (Show)
+
+instance ToGenericError InvalidCodeBlockAttributesError where
+  genericError InvalidCodeBlockAttributesError {..} =
+    genericError _invalidCodeBlockAttributesErrorMegaparsecError

@@ -127,13 +127,25 @@ go fname = do
           modify (set processingStateMk r)
           MkConcat lS <$> go fname
         MkJuvixCodeBlock j -> do
+          opts <- case parseJuvixBlockOptions (j ^. juvixCodeBlockOptions) of
+            Left e ->
+              throw
+                ( ErrInvalidCodeBlockAttribtues
+                    (InvalidCodeBlockAttributesError e)
+                )
+            Right o -> return o
+
           m <-
             asks @ProcessJuvixBlocksArgs
               (^. processJuvixBlocksArgsModule)
 
           isFirstBlock <- gets @ProcessingState (^. processingStateFirstBlock)
 
-          stmts' <- checkStatements j (take n stmts)
+          stmts' <-
+            let blockStmts = take n stmts
+             in case opts of
+                  MkJuvixBlockOptionsExtractModule -> checkExtractModule j blockStmts
+                  _ -> return blockStmts
 
           htmlStatements :: [Html] <-
             mapM (\s -> goRender s <> pure htmlSemicolon) stmts'
@@ -155,7 +167,7 @@ go fname = do
                         Text.intercalate "\n\n" $
                           map (toStrict . Html.renderHtml) htmlStatements
 
-          let _processingStateMk = case j ^. juvixCodeBlockOptions of
+          let _processingStateMk = case opts of
                 MkJuvixBlockOptionsHide -> MkNull
                 _ ->
                   MkTextBlock
@@ -173,25 +185,19 @@ go fname = do
           modify @ProcessingState $ const newState
           return _processingStateMk
       where
-        checkStatements :: JuvixCodeBlock -> [Concrete.Statement 'Concrete.Scoped] -> Sem r [Concrete.Statement 'Concrete.Scoped]
-        checkStatements j xs = do
-          case j ^. juvixCodeBlockOptions of
-            MkJuvixBlockOptionsExtractModule -> checkExtractModule
-            _ -> return xs
-          where
-            checkExtractModule :: Sem r [Concrete.Statement 'Concrete.Scoped]
-            checkExtractModule = case xs of
-              [Concrete.StatementModule m] -> do
-                return (indModuleFilter (m ^. Concrete.moduleBody))
-              _ ->
-                throw
-                  ( ErrInvalidExtractModuleBlock
-                      ( InvalidExtractModuleBlockError
-                          { _invalidExtractModuleBlockErrorPath = fname,
-                            _invalidExtractModuleBlockErrorInterval = j ^. juvixCodeBlockInterval
-                          }
-                      )
+        checkExtractModule :: JuvixCodeBlock -> [Concrete.Statement 'Concrete.Scoped] -> Sem r [Concrete.Statement 'Concrete.Scoped]
+        checkExtractModule j xs = case xs of
+          [Concrete.StatementModule m] -> do
+            return (indModuleFilter (m ^. Concrete.moduleBody))
+          _ ->
+            throw
+              ( ErrInvalidExtractModuleBlock
+                  ( InvalidExtractModuleBlockError
+                      { _invalidExtractModuleBlockErrorPath = fname,
+                        _invalidExtractModuleBlockErrorInterval = j ^. juvixCodeBlockInterval
+                      }
                   )
+              )
 
 goRender ::
   (Concrete.PrettyPrint c, Members '[Reader HtmlRender.HtmlOptions, Reader ProcessJuvixBlocksArgs] r) =>
