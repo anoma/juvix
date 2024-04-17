@@ -576,6 +576,9 @@ indexedByHash getIx l = HashMap.fromList [(getIx i, i) | i <- toList l]
 hashMap :: (Foldable f, Hashable k) => f (k, v) -> HashMap k v
 hashMap = HashMap.fromList . toList
 
+hashSet :: (Foldable f, Hashable k) => f k -> HashSet k
+hashSet = HashSet.fromList . toList
+
 ensureLn :: Text -> Text
 ensureLn t =
   case Text.unsnoc t of

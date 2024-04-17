@@ -5,11 +5,15 @@ import CommonOptions
 import Data.String.Interpolate (i)
 import GlobalOptions
 import Juvix.Compiler.Pipeline.Root
+import Parallel.Experiment qualified as Experiment
 import TopCommand
 import TopCommand.Options
 
 main :: IO ()
-main = do
+main = Experiment.main
+
+main2 :: IO ()
+main2 = do
   let parserPreferences = prefs showHelpOnEmpty
   invokeDir <- getCurrentDir
   (_runAppIOArgsGlobalOptions, cli) <- customExecParser parserPreferences descr

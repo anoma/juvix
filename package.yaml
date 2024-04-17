@@ -89,6 +89,7 @@ dependencies:
   - singletons == 3.0.*
   - singletons-base == 3.3.*
   - singletons-th == 3.3.*
+  - stm == 2.5.*
   - Stream == 0.4.*
   - string-interpolate == 0.3.*
   - template-haskell == 2.21.*
@@ -187,6 +188,10 @@ executables:
       - optparse-applicative == 0.18.*
       - repline == 0.4.*
       - string-interpolate == 0.3.*
+    ghc-options:
+      - -threaded  # Enable multithreading
+      - -rtsopts  # Allow runtime options to be passed
+      - -with-rtsopts=-N  # Use all available cores by default
     verbatim:
       default-language: GHC2021
     when:
