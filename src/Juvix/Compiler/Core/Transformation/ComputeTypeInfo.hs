@@ -70,6 +70,9 @@ computeNodeTypeInfo md = umapL go
           OpPoseidonHash -> case _builtinAppArgs of
             [arg] -> Info.getNodeType arg
             _ -> error "incorrect poseidon builtin application"
+          OpEc -> case _builtinAppArgs of
+            [arg, _, _] -> Info.getNodeType arg
+            _ -> error "incorrect ec_op builtin application"
       NCtr Constr {..} ->
         let ci = lookupConstructorInfo md _constrTag
             ii = lookupInductiveInfo md (ci ^. constructorInductive)

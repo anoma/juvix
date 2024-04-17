@@ -301,6 +301,7 @@ genCode infoTable fi =
     genCairoOp :: Core.BuiltinOp -> CairoOp
     genCairoOp = \case
       Core.OpPoseidonHash -> OpCairoPoseidon
+      Core.OpEc -> OpCairoEc
       _ -> impossible
 
     getArgsNum :: Symbol -> Int
