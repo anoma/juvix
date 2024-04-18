@@ -44,18 +44,22 @@ decimal :: Parser Int
 decimal = lexeme L.decimal
 
 parseOptions :: Parser MkJuvixBlockOptions
-parseOptions = spaceConsumer >> parseHide <|> parseExtractModule <|> parseShow
+parseOptions = do
+  spaceConsumer
+  opts <- parseHide 
+    <|> parseExtractModule 
+    <|> parseShow
+  eof
+  return opts
 
 parseShow :: Parser MkJuvixBlockOptions
-parseShow = eof $> MkJuvixBlockOptionsShow
+parseShow = return MkJuvixBlockOptionsShow
 
 parseHide :: Parser MkJuvixBlockOptions
-parseHide = symbol optionHide $> MkJuvixBlockOptionsHide <* lexeme eof
+parseHide = symbol optionHide $> MkJuvixBlockOptionsHide
 
 parseExtractModule :: Parser MkJuvixBlockOptions
 parseExtractModule = do
   symbol optionExtractModuleStatements
   dropNum <- fromMaybe 0 <$> optional decimal
-  let res =
-        MkJuvixBlockOptionsExtractModule (JuvixBlockOptionsExtractModule dropNum)
-  return res <* lexeme eof
+  return (MkJuvixBlockOptionsExtractModule (JuvixBlockOptionsExtractModule dropNum))
