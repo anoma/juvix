@@ -86,7 +86,7 @@ fromJuvixMarkdown opts = do
                 _processingStateStmtsSeparation = sepr,
                 _processingStateStmts = indModuleFilter $ m ^. Concrete.moduleBody
               }
-      (_, r) <- runState st . runReader htmlOptions . runReader opts $ go
+      (_, r) <- runState st . runReader htmlOptions . runReader opts $ go fname
       return $ MK.toPlainText r
     Nothing ->
       throw
@@ -104,34 +104,49 @@ go ::
   ( Members
       '[ Reader HtmlRender.HtmlOptions,
          Reader ProcessJuvixBlocksArgs,
-         State ProcessingState
+         State ProcessingState,
+         Error MarkdownBackendError
        ]
       r
   ) =>
+  Path Abs File ->
   Sem r Mk
-go = do
+go fname = do
   stmts <- gets @ProcessingState (^. processingStateStmts)
   sepr <- gets @ProcessingState (^. processingStateStmtsSeparation)
   mk <- gets @ProcessingState (^. processingStateMk)
-  case (sepr, stmts) of
-    ([], _) -> return mk
-    ((n : ns), _) -> do
+  case sepr of
+    [] -> return mk
+    (n : ns) -> do
       case mk of
         MkNull -> return mk
         MkTextBlock _ -> return mk
         MkConcat l r -> do
           modify (set processingStateMk l)
-          lS <- go
+          lS <- go fname
           modify (set processingStateMk r)
-          MkConcat lS <$> go
+          MkConcat lS <$> go fname
         MkJuvixCodeBlock j -> do
+          opts <- case parseJuvixBlockOptions fname (j ^. juvixCodeBlockOptions) of
+            Left e ->
+              throw
+                ( ErrInvalidCodeBlockAttribtues
+                    (InvalidCodeBlockAttributesError e)
+                )
+            Right o -> return o
+
           m <-
             asks @ProcessJuvixBlocksArgs
               (^. processJuvixBlocksArgsModule)
 
           isFirstBlock <- gets @ProcessingState (^. processingStateFirstBlock)
 
-          let stmts' = take n stmts
+          stmts' <-
+            let blockStmts = take n stmts
+             in case opts of
+                  MkJuvixBlockOptionsExtractModule o ->
+                    checkExtractModule j (o ^. juvixBlockOptionsExtractModuleDrop) blockStmts
+                  _ -> return blockStmts
 
           htmlStatements :: [Html] <-
             mapM (\s -> goRender s <> pure htmlSemicolon) stmts'
@@ -153,15 +168,14 @@ go = do
                         Text.intercalate "\n\n" $
                           map (toStrict . Html.renderHtml) htmlStatements
 
-          let _processingStateMk =
-                if j ^. juvixCodeBlockOptions . mkJuvixBlockOptionsHide
-                  then MkNull
-                  else
-                    MkTextBlock
-                      TextBlock
-                        { _textBlock = Text.replace "\n" "<br/>" resHtml,
-                          _textBlockInterval = j ^. juvixCodeBlockInterval
-                        }
+          let _processingStateMk = case opts of
+                MkJuvixBlockOptionsHide -> MkNull
+                _ ->
+                  MkTextBlock
+                    TextBlock
+                      { _textBlock = Text.replace "\n" "<br/>" resHtml,
+                        _textBlockInterval = j ^. juvixCodeBlockInterval
+                      }
           let newState =
                 ProcessingState
                   { _processingStateFirstBlock = False,
@@ -171,6 +185,20 @@ go = do
                   }
           modify @ProcessingState $ const newState
           return _processingStateMk
+      where
+        checkExtractModule :: JuvixCodeBlock -> Int -> [Concrete.Statement 'Concrete.Scoped] -> Sem r [Concrete.Statement 'Concrete.Scoped]
+        checkExtractModule j dropNum xs = case xs of
+          [Concrete.StatementModule m] -> do
+            return (drop dropNum (indModuleFilter (m ^. Concrete.moduleBody)))
+          _ ->
+            throw
+              ( ErrInvalidExtractModuleBlock
+                  ( InvalidExtractModuleBlockError
+                      { _invalidExtractModuleBlockErrorPath = fname,
+                        _invalidExtractModuleBlockErrorInterval = j ^. juvixCodeBlockInterval
+                      }
+                  )
+              )
 
 goRender ::
   (Concrete.PrettyPrint c, Members '[Reader HtmlRender.HtmlOptions, Reader ProcessJuvixBlocksArgs] r) =>
