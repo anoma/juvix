@@ -11,7 +11,7 @@ main :: IO ()
 main = compile bigModuleList
 
 numWorkers :: Int
-numWorkers = 6
+numWorkers = 4
 
 loadingTimeFactor :: Double
 loadingTimeFactor = 0.4
@@ -163,7 +163,6 @@ registerCompiledModule m = do
   toQueue <- atomically $ do
     let msg = "Done compiling " <> m ^. moduleId
     logMsg tid logs msg
-    writeTQueue (logs ^. logQueue) msg
     stateTVar mutSt (swap . addCompiledModule deps m)
   forM_ toQueue (atomically . writeTBQueue qq)
 
