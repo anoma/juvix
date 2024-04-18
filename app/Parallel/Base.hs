@@ -71,13 +71,14 @@ getModule uid = asks (^?! modulesIndex . at uid . _Just)
 compilationStateFinished :: CompilationState -> Bool
 compilationStateFinished CompilationState {..} = _compilationFinishedNum == _compilationTotalNum
 
-addCompiledModule :: Dependencies -> Module -> CompilationState -> (CompilationState, [ModuleSimpleId])
+addCompiledModule :: Dependencies -> Module -> CompilationState -> (CompilationState, (Bool, [ModuleSimpleId]))
 addCompiledModule deps m st = run . runState st $ do
   let uid = m ^. moduleId
       revDeps :: [ModuleSimpleId] = deps ^. dependenciesTableReverse . at uid . _Just . to toList
   modify (set (compilationState . at uid) (Just CompiledProof))
   modify (over compilationFinishedNum succ)
-  execOutputList . forM_ revDeps $ \s -> do
+  isLast <- compilationStateFinished <$> get
+  fmap (isLast,) . execOutputList . forM_ revDeps $ \s -> do
     modify (over (compilationPending . at s . _Just) (HashSet.delete uid))
     -- if there are no more pending dependencies, we push it to the queue
     pend <- gets (^. compilationPending . at s)

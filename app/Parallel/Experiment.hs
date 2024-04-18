@@ -53,7 +53,6 @@ compile mods = runM . runConcurrent $ do
       void (forkIO handleLogs)
       replicateM_ numWorkers (forkIO lookForWork)
       waitForWorkers
-      putStrLn "All work is done!"
 
 handleLogs :: (Members '[EmbedIO, Concurrent, Reader Logs] r) => Sem r ()
 handleLogs = do
@@ -81,9 +80,6 @@ waitForWorkers = do
         ]
   unless allDone waitForWorkers
 
-allWorkIsFinished :: (Members '[Concurrent, Reader (TVar CompilationState)] r) => Sem r Bool
-allWorkIsFinished = compilationStateFinished <$> (ask >>= atomically . readTVar)
-
 lookForWork ::
   ( Members
       '[ Concurrent,
@@ -109,7 +105,7 @@ lookForWork = do
     let num = compSt ^. compilationStartedNum
         total = compSt ^. compilationTotalNum
         progress = "[" <> show (succ num) <> " of " <> show total <> "] "
-    logMsg tid logs (progress <> "Compiling " <> nextModule)
+    logMsg (Just tid) logs (progress <> "Compiling " <> nextModule)
     return (compSt, nextModule)
   compileModule compSt nextModule
   lookForWork
@@ -162,14 +158,19 @@ registerCompiledModule m = do
   logs <- ask
   toQueue <- atomically $ do
     let msg = "Done compiling " <> m ^. moduleId
-    logMsg tid logs msg
-    stateTVar mutSt (swap . addCompiledModule deps m)
+    logMsg (Just tid) logs msg
+    (isLast, toQueue) <- stateTVar mutSt (swap . addCompiledModule deps m)
+    when isLast (logMsg Nothing logs "All work is done!")
+    return toQueue
   forM_ toQueue (atomically . writeTBQueue qq)
 
 secondsToMicroseconds :: Double -> Int
 secondsToMicroseconds x = floor (x * (10 ^ (6 :: Int)))
 
-logMsg :: ThreadId -> Logs -> Text -> STM ()
-logMsg tid (Logs q) msg = do
-  let msg' = "[" <> show tid <> "] " <> msg
+logMsg :: Maybe ThreadId -> Logs -> Text -> STM ()
+logMsg mtid (Logs q) msg = do
+  let threadIdLabel = case mtid of
+        Nothing -> ""
+        Just tid -> "[" <> show tid <> "] "
+  let msg' = threadIdLabel <> msg
   STM.writeTQueue q msg'
