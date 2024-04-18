@@ -53,9 +53,10 @@ fromSource ::
   Sem r ParserResult
 fromSource e = mapError (JuvixError @ParserError) $ do
   (_resultParserState, _resultModule) <-
-    runParserResultBuilder mempty $
-      evalTopNameIdGen defaultModuleId $
-        runReader e getParsedModuleTop
+    runParserResultBuilder mempty
+      . evalTopNameIdGen defaultModuleId
+      . runReader e
+      $ getParsedModuleTop
   return ParserResult {..}
   where
     getParsedModuleTop ::
