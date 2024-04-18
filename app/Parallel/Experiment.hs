@@ -7,33 +7,21 @@ import Effectful.Concurrent.STM as STM
 import Juvix.Prelude
 import Parallel.Base
 
-data CompilationError = Unexpected
-  deriving stock (Show)
-
-newtype CompileQueue = CompileQueue
-  { _compileQueue :: TBQueue ModuleSimpleId
-  }
-
-newtype Logs = Logs
-  { _logQueue :: TQueue Text
-  }
-
-makeLenses ''Logs
-makeLenses ''CompileQueue
-
 main :: IO ()
 main = compile bigModuleList
 
 numWorkers :: Int
-numWorkers = 3
+numWorkers = 6
+
+loadingTimeFactor :: Double
+loadingTimeFactor = 0.4
 
 crashOnError :: (Members '[EmbedIO] r) => Sem (Error CompilationError ': r) a -> Sem r a
 crashOnError m = do
   x <- runError m
   case x of
     Right a -> return a
-    Left e -> do
-      print e >> exitFailure
+    Left e -> print e >> exitFailure
 
 compile :: [Module] -> IO ()
 compile mods = runM . runConcurrent $ do
@@ -144,18 +132,14 @@ compileModule ::
   Sem r ()
 compileModule st0 modId = do
   m <- getModule modId
-  -- st0 <- readTVarIO mutSt
   -- checks that all dependencies have already been compiled
   let checkDep :: ModuleSimpleId -> Sem r ()
       checkDep uid = case st0 ^. compilationState . at uid of
-        Nothing -> do
-          -- void (error ("Dependency not found: " <> show uid))
-          -- throw Unexpected
-          return ()
+        Nothing -> throw Unexpected
         Just CompiledProof -> return ()
   forM_ (m ^. moduleDeps) checkDep
   -- the delay simulates compuation
-  threadDelay (secondsToMicroseconds (m ^. moduleLoad))
+  threadDelay (secondsToMicroseconds (m ^. moduleLoad * loadingTimeFactor))
   registerCompiledModule m
 
 registerCompiledModule ::

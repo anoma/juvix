@@ -4,6 +4,7 @@ module Parallel.Base
 where
 
 import Data.HashSet qualified as HashSet
+import Effectful.Concurrent.STM as STM
 import Juvix.Prelude
 
 type ModuleSimpleId = Text
@@ -40,6 +41,19 @@ data Dependencies = Dependencies
   }
   deriving stock (Show)
 
+data CompilationError = Unexpected
+  deriving stock (Show)
+
+newtype CompileQueue = CompileQueue
+  { _compileQueue :: TBQueue ModuleSimpleId
+  }
+
+newtype Logs = Logs
+  { _logQueue :: TQueue Text
+  }
+
+makeLenses ''Logs
+makeLenses ''CompileQueue
 makeLenses ''Module
 makeLenses ''ModulesIndex
 makeLenses ''Dependencies
