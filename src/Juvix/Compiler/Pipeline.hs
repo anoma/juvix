@@ -89,71 +89,71 @@ upToInternalTyped ::
 upToInternalTyped = Internal.typeCheckingNew upToInternal
 
 upToCore ::
-  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, GitClone, PathResolver] r) =>
+  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, PathResolver] r) =>
   Sem r Core.CoreResult
 upToCore = upToInternalTyped >>= Core.fromInternal
 
 upToStoredCore ::
-  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, GitClone, PathResolver] r) =>
+  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, PathResolver] r) =>
   Sem r Core.CoreResult
 upToStoredCore =
   upToCore >>= \r -> Core.toStored (r ^. Core.coreResultModule) >>= \md -> return r {Core._coreResultModule = md}
 
 upToReg ::
-  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, GitClone, PathResolver] r) =>
+  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, PathResolver] r) =>
   Sem r Reg.InfoTable
 upToReg =
   upToStoredCore >>= \Core.CoreResult {..} -> storedCoreToReg _coreResultModule
 
 upToTree ::
-  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, GitClone, PathResolver] r) =>
+  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, PathResolver] r) =>
   Sem r Tree.InfoTable
 upToTree =
   upToStoredCore >>= \Core.CoreResult {..} -> storedCoreToTree Core.Identity _coreResultModule
 
 upToAsm ::
-  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, GitClone, PathResolver] r) =>
+  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, PathResolver] r) =>
   Sem r Asm.InfoTable
 upToAsm =
   upToStoredCore >>= \Core.CoreResult {..} -> storedCoreToAsm _coreResultModule
 
 upToCasm ::
-  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, GitClone, PathResolver] r) =>
+  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, PathResolver] r) =>
   Sem r Casm.Result
 upToCasm =
   upToStoredCore >>= \Core.CoreResult {..} -> storedCoreToCasm _coreResultModule
 
 upToCairo ::
-  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, GitClone, PathResolver] r) =>
+  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, PathResolver] r) =>
   Sem r Cairo.Result
 upToCairo =
   upToStoredCore >>= \Core.CoreResult {..} -> storedCoreToCairo _coreResultModule
 
 upToMiniC ::
-  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, GitClone, PathResolver] r) =>
+  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, PathResolver] r) =>
   Sem r C.MiniCResult
 upToMiniC = upToAsm >>= asmToMiniC
 
 upToVampIR ::
-  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, GitClone, PathResolver] r) =>
+  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, PathResolver] r) =>
   Sem r VampIR.Result
 upToVampIR =
   upToStoredCore >>= \Core.CoreResult {..} -> storedCoreToVampIR _coreResultModule
 
 upToGeb ::
-  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, GitClone, PathResolver] r) =>
+  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, PathResolver] r) =>
   Geb.ResultSpec ->
   Sem r Geb.Result
 upToGeb spec =
   upToStoredCore >>= \Core.CoreResult {..} -> storedCoreToGeb spec _coreResultModule
 
 upToAnoma ::
-  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, GitClone, PathResolver] r) =>
+  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, PathResolver] r) =>
   Sem r NockmaTree.AnomaResult
 upToAnoma = upToStoredCore >>= \Core.CoreResult {..} -> storedCoreToAnoma _coreResultModule
 
 upToCoreTypecheck ::
-  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, GitClone, PathResolver] r) =>
+  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, PathResolver] r) =>
   Sem r Core.CoreResult
 upToCoreTypecheck =
   upToCore >>= \r -> Core.toTypechecked (r ^. Core.coreResultModule) >>= \md -> return r {Core._coreResultModule = md}
