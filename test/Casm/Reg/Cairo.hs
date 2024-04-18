@@ -35,4 +35,15 @@ allTests =
             "Test036: Streams without memoization"
           ]
           P.tests
+          ++ cairoTests
     )
+
+cairoTests :: [P.PosTest]
+cairoTests =
+  [ P.PosTest
+      "Test041: Poseidon hash"
+      $(mkRelDir ".")
+      $(mkRelFile "test041.jvr")
+      $(mkRelFile "out/test041.out")
+      Nothing
+  ]

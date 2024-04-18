@@ -187,6 +187,8 @@ recurse' sig = go True
             checkUnop mkTypeInteger TyField
           OpFieldToInt ->
             checkUnop TyField mkTypeInteger
+          OpCairoPoseidon ->
+            checkUnop TyDynamic TyDynamic
           where
             checkUnop :: Type -> Type -> Sem r Memory
             checkUnop ty1 ty2 = do

@@ -81,6 +81,7 @@ inferType tab funInfo = goInfer mempty
           OpArgsNum -> checkUnop TyDynamic mkTypeInteger
           OpIntToField -> checkUnop mkTypeInteger TyField
           OpFieldToInt -> checkUnop TyField mkTypeInteger
+          OpCairoPoseidon -> checkUnop TyDynamic TyDynamic
 
     goConst :: BinderList Type -> NodeConstant -> Sem r Type
     goConst _ NodeConstant {..} = case _nodeConstant of

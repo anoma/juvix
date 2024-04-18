@@ -1,0 +1,8 @@
+-- Poseidon hash
+module test075;
+
+import Stdlib.Prelude open;
+import Stdlib.Cairo.Poseidon open;
+
+main : Field :=
+  poseidonHash2 7 10 + poseidonHashList [3; 5; 7];

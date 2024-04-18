@@ -60,6 +60,9 @@ getNatSymbol = (^. inductiveSymbol) <$> getBuiltinInductiveInfo BuiltinNat
 getIntSymbol :: (Member InfoTableBuilder r) => Sem r Symbol
 getIntSymbol = (^. inductiveSymbol) <$> getBuiltinInductiveInfo BuiltinInt
 
+getPoseidonStateSymbol :: (Member InfoTableBuilder r) => Sem r Symbol
+getPoseidonStateSymbol = (^. inductiveSymbol) <$> getBuiltinInductiveInfo BuiltinPoseidonState
+
 checkSymbolDefined :: (Member InfoTableBuilder r) => Symbol -> Sem r Bool
 checkSymbolDefined sym = do
   m <- getModule

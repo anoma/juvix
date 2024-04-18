@@ -1,5 +1,8 @@
 -- Juvix runtime for Cairo assembly
 
+-- Make sure Juvix.Compiler.Casm.Extra.Stdlib is kept up to date with
+-- this file.
+
 -- Closure layout: [ fuid | 9 - sargs | 9 - argsnum | arguments... ]
 --  fuid -- function id which also indicates the relative jump
 --          offset for closure call (see juvix_call_closure below)
@@ -12,10 +15,43 @@
 -- [ap - 4] = fp
 -- [ap - 3] = pc
 -- [ap - 2] = ap - 2
+-- ap offset: 4
 juvix_get_regs:
   call juvix_get_ap_reg
   ret
 juvix_get_ap_reg:
+  ret
+
+-- [fp - 3]: poseidon state ptr
+-- [fp - 4]: builtins ptr
+-- On return:
+-- [ap - 1]: new poseidon state ptr
+-- [ap - 2]: new builtins ptr
+-- Poseidon ap offset: 13 + 4 + 2
+juvix_poseidon:
+  -- [fp] = poseidon builtin ptr
+  [ap] = [[fp - 4] + 2]; ap++
+  -- transfer poseidon state to builtin memory
+  [ap] = [[fp - 3] + 1]; ap++
+  [ap - 1] = [[fp]]
+  [ap] = [[fp - 3] + 2]; ap++
+  [ap - 1] = [[fp] + 1]
+  [ap] = [[fp - 3] + 3]; ap++
+  [ap - 1] = [[fp] + 2]
+  call juvix_get_regs
+  -- alloc new poseidon state
+  [ap] = 1; ap++
+  [ap] = [[fp] + 3]; ap++
+  [ap] = [[fp] + 4]; ap++
+  [ap] = [[fp] + 5]; ap++
+  -- alloc new builtins
+  [ap] = [[fp - 4]]; ap++
+  [ap] = [[fp - 4] + 1]; ap++
+  [ap] = [fp] + 6; ap++
+  -- new builtins ptr
+  [ap] = [ap - 9] + 6; ap++
+  -- new poseidon state ptr
+  [ap] = [ap - 10] + 2; ap++
   ret
 
 -- [fp - 3]: closure
@@ -37,7 +73,7 @@ juvix_extend_closure:
   [ap] = [[fp - 3] + 4]; ap++
   [ap] = [[fp - 3] + 3]; ap++
   -- the following ensures continuous memory use
-  -- with a compile-time contant offset for local
+  -- with a compile-time constant offset for local
   -- variables
   [ap] = 10; ap++
   [ap] = [[fp - 3] + 1]; ap++

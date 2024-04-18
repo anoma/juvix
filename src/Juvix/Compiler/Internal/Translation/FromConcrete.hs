@@ -523,6 +523,7 @@ registerBuiltinInductive d = \case
   BuiltinBool -> registerBoolDef d
   BuiltinInt -> registerIntDef d
   BuiltinList -> registerListDef d
+  BuiltinPoseidonState -> registerPoseidonStateDef d
 
 registerBuiltinFunction ::
   (Members '[Error ScoperError, Builtins, NameIdGen] r) =>
@@ -588,6 +589,7 @@ registerBuiltinAxiom d = \case
   BuiltinIntToString -> registerIntToString d
   BuiltinIntPrint -> registerIntPrint d
   BuiltinAnomaGet -> registerAnomaGet d
+  BuiltinPoseidon -> registerPoseidon d
 
 goInductive ::
   (Members '[Reader EntryPoint, Reader DefaultArgsStack, NameIdGen, Reader Pragmas, Builtins, Error ScoperError, State ConstructorInfos, Reader S.InfoTable] r) =>

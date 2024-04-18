@@ -277,6 +277,9 @@ kwPrealloc = asciiKw Str.prealloc
 kwArgsNum :: Keyword
 kwArgsNum = asciiKw Str.instrArgsNum
 
+kwPoseidon :: Keyword
+kwPoseidon = asciiKw Str.instrPoseidon
+
 kwAlloc :: Keyword
 kwAlloc = asciiKw Str.instrAlloc
 

@@ -755,6 +755,9 @@ instrFailure = "fail"
 instrArgsNum :: (IsString s) => s
 instrArgsNum = "argsnum"
 
+instrPoseidon :: (IsString s) => s
+instrPoseidon = "poseidon"
+
 instrPrealloc :: (IsString s) => s
 instrPrealloc = "prealloc"
 
@@ -1000,3 +1003,9 @@ cairoPoseidon = "poseidon"
 
 cairoEcOp :: (IsString s) => s
 cairoEcOp = "ec_op"
+
+cairoPoseidonState :: (IsString s) => s
+cairoPoseidonState = "poseidon_state"
+
+cairoMkPoseidonState :: (IsString s) => s
+cairoMkPoseidonState = "mkPoseidonState"

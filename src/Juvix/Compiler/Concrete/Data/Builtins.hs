@@ -44,12 +44,14 @@ builtinConstructors = \case
   BuiltinBool -> [BuiltinBoolTrue, BuiltinBoolFalse]
   BuiltinInt -> [BuiltinIntOfNat, BuiltinIntNegSuc]
   BuiltinList -> [BuiltinListNil, BuiltinListCons]
+  BuiltinPoseidonState -> [BuiltinMkPoseidonState]
 
 data BuiltinInductive
   = BuiltinNat
   | BuiltinBool
   | BuiltinInt
   | BuiltinList
+  | BuiltinPoseidonState
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic, Data)
 
 instance Hashable BuiltinInductive
@@ -62,6 +64,7 @@ instance Pretty BuiltinInductive where
     BuiltinBool -> Str.bool_
     BuiltinInt -> Str.int_
     BuiltinList -> Str.list
+    BuiltinPoseidonState -> Str.cairoPoseidonState
 
 instance Pretty BuiltinConstructor where
   pretty = \case
@@ -73,6 +76,7 @@ instance Pretty BuiltinConstructor where
     BuiltinIntNegSuc -> Str.negSuc
     BuiltinListNil -> Str.nil
     BuiltinListCons -> Str.cons
+    BuiltinMkPoseidonState -> Str.cairoMkPoseidonState
 
 data BuiltinConstructor
   = BuiltinNatZero
@@ -83,6 +87,7 @@ data BuiltinConstructor
   | BuiltinIntNegSuc
   | BuiltinListNil
   | BuiltinListCons
+  | BuiltinMkPoseidonState
   deriving stock (Show, Eq, Ord, Generic, Data)
 
 instance Hashable BuiltinConstructor
@@ -178,6 +183,7 @@ data BuiltinAxiom
   | BuiltinIntToString
   | BuiltinIntPrint
   | BuiltinAnomaGet
+  | BuiltinPoseidon
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic, Data)
 
 instance Hashable BuiltinAxiom
@@ -210,6 +216,7 @@ instance Pretty BuiltinAxiom where
     BuiltinIntToString -> Str.intToString
     BuiltinIntPrint -> Str.intPrint
     BuiltinAnomaGet -> Str.anomaGet
+    BuiltinPoseidon -> Str.cairoPoseidon
 
 data BuiltinType
   = BuiltinTypeInductive BuiltinInductive

@@ -24,7 +24,7 @@ testDescr PosTest {..} =
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
-          _testAssertion = Steps $ casmRunAssertion _runVM file' input' expected'
+          _testAssertion = Steps $ casmRunAssertion True _runVM file' input' expected'
         }
 
 filterTests :: [String] -> [PosTest] -> [PosTest]

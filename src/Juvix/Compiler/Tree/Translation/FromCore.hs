@@ -289,6 +289,7 @@ genCode infoTable fi =
       Core.OpTrace -> OpTrace
       Core.OpFail -> OpFail
       Core.OpAnomaGet -> OpAnomaGet
+      Core.OpPoseidonHash -> PrimUnop OpCairoPoseidon
       _ -> impossible
 
     getArgsNum :: Symbol -> Int

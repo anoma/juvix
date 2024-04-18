@@ -29,6 +29,7 @@ import Juvix.Data.Keyword.All
     kwLt_,
     kwMod_,
     kwMul_,
+    kwPoseidon,
     kwSave,
     kwSeq_,
     kwShow,
@@ -70,5 +71,6 @@ allKeywords =
          kwBr,
          kwCase,
          kwSave,
-         kwAnomaGet
+         kwAnomaGet,
+         kwPoseidon
        ]

@@ -209,6 +209,7 @@ goConstructor sym ctor = do
       Just Internal.BuiltinIntNegSuc -> freshTag
       Just Internal.BuiltinListNil -> freshTag
       Just Internal.BuiltinListCons -> freshTag
+      Just Internal.BuiltinMkPoseidonState -> freshTag
       Nothing -> freshTag
 
     ctorType :: Sem r Type
@@ -578,6 +579,7 @@ goAxiomInductive a = whenJust (a ^. Internal.axiomBuiltin) builtinInductive
       Internal.BuiltinFieldFromInt -> return ()
       Internal.BuiltinFieldToNat -> return ()
       Internal.BuiltinAnomaGet -> return ()
+      Internal.BuiltinPoseidon -> return ()
 
     registerInductiveAxiom :: Maybe BuiltinAxiom -> [(Tag, Text, Type -> Type, Maybe BuiltinConstructor)] -> Sem r ()
     registerInductiveAxiom ax ctrs = do
@@ -695,6 +697,11 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
                   (mkLambda' (mkVar' 0) (mkBuiltinApp' OpAnomaGet [mkVar' 0]))
               )
           )
+      Internal.BuiltinPoseidon -> do
+        psName <- getPoseidonStateName
+        psSym <- getPoseidonStateSymbol
+        let ty = mkTypeConstr (setInfoName psName mempty) psSym []
+        registerAxiomDef (mkLambda' ty (mkBuiltinApp' OpPoseidonHash [mkVar' 0]))
 
     axiomType' :: Sem r Type
     axiomType' = fromTopIndex (goType (a ^. Internal.axiomType))
@@ -707,6 +714,9 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
 
     getIntName :: Sem r Text
     getIntName = (^. inductiveName) <$> getBuiltinInductiveInfo BuiltinInt
+
+    getPoseidonStateName :: Sem r Text
+    getPoseidonStateName = (^. inductiveName) <$> getBuiltinInductiveInfo BuiltinPoseidonState
 
     registerAxiomDef :: Node -> Sem r ()
     registerAxiomDef body = do
@@ -1071,6 +1081,7 @@ goApplication a = do
             _ -> app
         Just Internal.BuiltinFieldToNat -> app
         Just Internal.BuiltinAnomaGet -> app
+        Just Internal.BuiltinPoseidon -> app
         Nothing -> app
     Internal.ExpressionIden (Internal.IdenFunction n) -> do
       funInfoBuiltin <- Internal.getFunctionBuiltinInfo n

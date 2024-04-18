@@ -36,6 +36,7 @@ import Juvix.Data.Keyword.All
     kwMod_,
     kwMul_,
     kwNop,
+    kwPoseidon,
     kwPrealloc,
     kwRet,
     kwShow,
@@ -83,5 +84,6 @@ allKeywords =
          kwBr,
          kwCase,
          kwFail,
-         kwArgsNum
+         kwArgsNum,
+         kwPoseidon
        ]

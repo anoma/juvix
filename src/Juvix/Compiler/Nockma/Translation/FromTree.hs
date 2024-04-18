@@ -435,6 +435,7 @@ compile = \case
          in sub (getF ClosureTotalArgsNum) (getF ClosureArgsNum)
       Tree.OpIntToField -> fieldErr
       Tree.OpFieldToInt -> fieldErr
+      Tree.OpCairoPoseidon -> cairoErr
 
     goAnomaGet :: Term Natural -> Sem r (Term Natural)
     goAnomaGet key = do
@@ -690,6 +691,9 @@ stringsErr = unsupported "strings"
 
 fieldErr :: a
 fieldErr = unsupported "the field type"
+
+cairoErr :: a
+cairoErr = unsupported "cairo builtins"
 
 -- | Computes a - b
 sub :: Term Natural -> Term Natural -> Term Natural

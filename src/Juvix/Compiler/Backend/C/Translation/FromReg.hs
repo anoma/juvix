@@ -301,6 +301,7 @@ fromRegInstr bNoStack info = \case
       Reg.OpArgsNum -> "JUVIX_ARGS_NUM"
       Reg.OpFieldToInt -> unsupported "field type"
       Reg.OpIntToField -> unsupported "field type"
+      Reg.OpCairoPoseidon -> unsupported "Cairo builtins"
 
     fromVarRef :: Reg.VarRef -> Expression
     fromVarRef Reg.VarRef {..} =

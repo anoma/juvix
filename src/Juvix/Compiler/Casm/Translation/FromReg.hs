@@ -268,6 +268,8 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
         goAssignApBuiltins :: Sem r ()
         goAssignApBuiltins = mkBuiltinRef >>= goAssignAp . Val . Ref
 
+        -- Warning: the result may depend on Ap. Use adjust_ap when changing ap
+        -- afterwards.
         goValue :: Reg.Value -> Sem r Value
         goValue = \case
           Reg.ValConst c -> return $ Imm $ mkConst c
@@ -336,6 +338,16 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
           goAssignAp (Load $ LoadValue (adjustAp 1 v) casmClosureArgsNumOffset)
           goExtraBinop FieldSub res (MemRef Ap (-2)) (Ref $ MemRef Ap (-1))
 
+        goOpPoseidon :: Reg.VarRef -> Reg.Value -> Sem r ()
+        goOpPoseidon res v = do
+          goAssignApBuiltins
+          goAssignApValue v
+          output' (blts ^. stdlibPoseidonApOffset) $
+            mkCallRel (Lab (LabelRef (blts ^. stdlibPoseidon) (Just (blts ^. stdlibPoseidonName))))
+          off <- getAP
+          insertVar res (off - 1)
+          setBuiltinOffset (off - 2)
+
         goBinop' :: Reg.BinaryOp -> Reg.VarRef -> MemRef -> Value -> Sem r ()
         goBinop' op res arg1 arg2 = case op of
           Reg.OpIntAdd ->
@@ -392,19 +404,23 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
             v2 <- goValue _instrBinopArg2
             goBinop' _instrBinopOpcode _instrBinopResult ref v2
 
+        goUnop' :: (Reg.VarRef -> MemRef -> Sem r ()) -> Reg.VarRef -> Reg.Value -> Sem r ()
+        goUnop' f res val = do
+          v <- goValue val
+          case v of
+            Ref mr -> do
+              f res mr
+            Imm {} -> impossible
+            Lab {} -> impossible
+
         goUnop :: Reg.InstrUnop -> Sem r ()
         goUnop Reg.InstrUnop {..} = case _instrUnopOpcode of
           Reg.OpShow -> unsupported "strings"
           Reg.OpStrToInt -> unsupported "strings"
           Reg.OpFieldToInt -> goAssignValue _instrUnopResult _instrUnopArg
           Reg.OpIntToField -> goAssignValue _instrUnopResult _instrUnopArg
-          Reg.OpArgsNum -> do
-            v <- goValue _instrUnopArg
-            case v of
-              Ref mr -> do
-                goOpArgsNum _instrUnopResult mr
-              Imm {} -> impossible
-              Lab {} -> impossible
+          Reg.OpArgsNum -> goUnop' goOpArgsNum _instrUnopResult _instrUnopArg
+          Reg.OpCairoPoseidon -> goOpPoseidon _instrUnopResult _instrUnopArg
 
         goAssign :: Reg.InstrAssign -> Sem r ()
         goAssign Reg.InstrAssign {..} =
@@ -412,7 +428,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
 
         goAllocCall :: Reg.VarRef -> Sem r ()
         goAllocCall res = do
-          output' 4 $ mkCallRel $ Lab $ LabelRef (blts ^. stdlibGetRegs) (Just (blts ^. stdlibGetRegsName))
+          output' (blts ^. stdlibGetRegsApOffset) $ mkCallRel $ Lab $ LabelRef (blts ^. stdlibGetRegs) (Just (blts ^. stdlibGetRegsName))
           goNativeBinop FieldAdd res (MemRef Ap (-2)) (Imm 3)
 
         goAlloc :: Reg.InstrAlloc -> Sem r ()
