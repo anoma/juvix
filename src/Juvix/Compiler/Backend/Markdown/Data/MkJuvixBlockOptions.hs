@@ -46,9 +46,10 @@ decimal = lexeme L.decimal
 parseOptions :: Parser MkJuvixBlockOptions
 parseOptions = do
   spaceConsumer
-  opts <- parseHide 
-    <|> parseExtractModule 
-    <|> parseShow
+  opts <-
+    parseHide
+      <|> parseExtractModule
+      <|> parseShow
   eof
   return opts
 
