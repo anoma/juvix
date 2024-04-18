@@ -1012,3 +1012,9 @@ cairoPoseidonState = "poseidon_state"
 
 cairoMkPoseidonState :: (IsString s) => s
 cairoMkPoseidonState = "mkPoseidonState"
+
+cairoEcPoint :: (IsString s) => s
+cairoEcPoint = "ec_point"
+
+cairoMkEcPoint :: (IsString s) => s
+cairoMkEcPoint = "mkEcPoint"

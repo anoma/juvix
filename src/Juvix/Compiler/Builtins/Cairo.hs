@@ -30,3 +30,31 @@ registerPoseidon f = do
     (ftype === (ps --> ps))
     (error "poseidon must be of type PoseidonState -> PoseidonState")
   registerBuiltin BuiltinPoseidon (f ^. axiomName)
+
+registerEcPointDef :: (Member Builtins r) => InductiveDef -> Sem r ()
+registerEcPointDef d = do
+  unless (null (d ^. inductiveParameters)) (error "EcPoint should have no type parameters")
+  unless (isSmallUniverse' (d ^. inductiveType)) (error "EcPoint should be in the small universe")
+  registerBuiltin BuiltinEcPoint (d ^. inductiveName)
+  case d ^. inductiveConstructors of
+    [c] -> registerMkEcPoint c
+    _ -> error "EcPoint should have exactly one constructor"
+
+registerMkEcPoint :: (Member Builtins r) => ConstructorDef -> Sem r ()
+registerMkEcPoint d@ConstructorDef {..} = do
+  let mkpt = _inductiveConstructorName
+      ty = _inductiveConstructorType
+  field_ <- getBuiltinName (getLoc d) BuiltinField
+  pt <- getBuiltinName (getLoc d) BuiltinEcPoint
+  unless (ty === (field_ --> field_ --> pt)) (error "mkEcPoint has the wrong type")
+  registerBuiltin BuiltinMkEcPoint mkpt
+
+registerEcOp :: (Members '[Builtins, NameIdGen] r) => AxiomDef -> Sem r ()
+registerEcOp f = do
+  let ftype = f ^. axiomType
+  pt <- getBuiltinName (getLoc f) BuiltinEcPoint
+  field_ <- getBuiltinName (getLoc f) BuiltinField
+  unless
+    (ftype === (pt --> field_ --> pt --> pt))
+    (error "ecOp must be of type EcPoint -> Field -> EcPoint -> EcPoint")
+  registerBuiltin BuiltinEcOp (f ^. axiomName)
