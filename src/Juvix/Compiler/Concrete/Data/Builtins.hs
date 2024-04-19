@@ -190,6 +190,7 @@ data BuiltinAxiom
   | BuiltinAnomaGet
   | BuiltinPoseidon
   | BuiltinEcOp
+  | BuiltinRandomEcPoint
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic, Data)
 
 instance Hashable BuiltinAxiom
@@ -224,6 +225,7 @@ instance Pretty BuiltinAxiom where
     BuiltinAnomaGet -> Str.anomaGet
     BuiltinPoseidon -> Str.cairoPoseidon
     BuiltinEcOp -> Str.cairoEcOp
+    BuiltinRandomEcPoint -> Str.cairoRandomEcPoint
 
 data BuiltinType
   = BuiltinTypeInductive BuiltinInductive

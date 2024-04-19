@@ -582,6 +582,7 @@ goAxiomInductive a = whenJust (a ^. Internal.axiomBuiltin) builtinInductive
       Internal.BuiltinAnomaGet -> return ()
       Internal.BuiltinPoseidon -> return ()
       Internal.BuiltinEcOp -> return ()
+      Internal.BuiltinRandomEcPoint -> return ()
 
     registerInductiveAxiom :: Maybe BuiltinAxiom -> [(Tag, Text, Type -> Type, Maybe BuiltinConstructor)] -> Sem r ()
     registerInductiveAxiom ax ctrs = do
@@ -713,6 +714,8 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
             mkLambda' mkTypeField' $
               mkLambda' ty $
                 (mkBuiltinApp' OpEc [mkVar' 2, mkVar' 1, mkVar' 0])
+      Internal.BuiltinRandomEcPoint -> do
+        registerAxiomDef (mkBuiltinApp' OpRandomEcPoint [])
 
     axiomType' :: Sem r Type
     axiomType' = fromTopIndex (goType (a ^. Internal.axiomType))
@@ -1097,6 +1100,7 @@ goApplication a = do
         Just Internal.BuiltinAnomaGet -> app
         Just Internal.BuiltinPoseidon -> app
         Just Internal.BuiltinEcOp -> app
+        Just Internal.BuiltinRandomEcPoint -> app
         Nothing -> app
     Internal.ExpressionIden (Internal.IdenFunction n) -> do
       funInfoBuiltin <- Internal.getFunctionBuiltinInfo n

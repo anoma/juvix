@@ -98,6 +98,7 @@ fromCore fsize tab =
         BuiltinAnomaGet -> False
         BuiltinPoseidon -> False
         BuiltinEcOp -> False
+        BuiltinRandomEcPoint -> False
       BuiltinTypeInductive i -> case i of
         BuiltinList -> True
         BuiltinPoseidonState -> True
