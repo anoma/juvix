@@ -24,9 +24,8 @@ data Element
   | ElementImmediate FField
   | ElementHint Hint
 
-data Hint = Hint
-  { _hintCode :: Text,
-    _hintIncAp :: Bool
+newtype Hint = Hint
+  { _hintCode :: Text
   }
 
 data Instruction = Instruction
@@ -93,3 +92,12 @@ defaultInstruction =
 
 makeLenses ''Instruction
 makeLenses ''Hint
+
+elemSize :: Element -> Int
+elemSize = \case
+  ElementInstruction {} -> 1
+  ElementImmediate {} -> 1
+  ElementHint {} -> 0
+
+elemsSize :: [Element] -> Int
+elemsSize = sum . map elemSize

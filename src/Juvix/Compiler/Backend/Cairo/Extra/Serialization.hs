@@ -10,11 +10,11 @@ serialize builtins elems =
   Result
     { _resultData =
         initializeBuiltins
-          ++ map toHexText (serialize' elems)
+          ++ instrs
           ++ finalizeBuiltins
           ++ finalizeJump,
       _resultStart = 0,
-      _resultEnd = length initializeBuiltins + length elems + length finalizeBuiltins,
+      _resultEnd = length initializeBuiltins + elemsSize elems + length finalizeBuiltins,
       _resultMain = 0,
       _resultHints = hints,
       _resultBuiltins = "output" : builtins
@@ -24,15 +24,18 @@ serialize builtins elems =
     builtinsNum = fromIntegral (length builtins)
 
     hints :: [(Int, Text)]
-    hints = catMaybes $ zipWith mkHint elems [0 ..]
+    hints = reverse $ snd $ foldl' goHint (pcShift, []) elems
+
+    instrs :: [Text]
+    instrs = map toHexText (serialize' elems)
 
     pcShift :: Int
     pcShift = length initializeBuiltins
 
-    mkHint :: Element -> Int -> Maybe (Int, Text)
-    mkHint el pc = case el of
-      ElementHint Hint {..} -> Just (pc + pcShift, _hintCode)
-      _ -> Nothing
+    goHint :: (Int, [(Int, Text)]) -> Element -> (Int, [(Int, Text)])
+    goHint (addr, acc) = \case
+      ElementHint Hint {..} -> (addr, (addr, _hintCode) : acc)
+      elt -> (addr + elemSize elt, acc)
 
     toHexText :: Natural -> Text
     toHexText n = "0x" <> fromString (showHex n "")
@@ -66,18 +69,13 @@ serialize builtins elems =
       ]
 
 serialize' :: [Element] -> [Natural]
-serialize' = map goElement
+serialize' = mapMaybe goElement
   where
-    goElement :: Element -> Natural
+    goElement :: Element -> Maybe Natural
     goElement = \case
-      ElementInstruction i -> goInstr i
-      ElementImmediate f -> fieldToNatural f
-      ElementHint h -> goHint h
-
-    goHint :: Hint -> Natural
-    goHint Hint {..}
-      | _hintIncAp = 0x481280007fff8000
-      | otherwise = 0x401280007fff8000
+      ElementInstruction i -> Just $ goInstr i
+      ElementImmediate f -> Just $ fieldToNatural f
+      ElementHint {} -> Nothing
 
     goInstr :: Instruction -> Natural
     goInstr Instruction {..} =

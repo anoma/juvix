@@ -24,6 +24,7 @@ data MemRef = MemRef
   { _memRefReg :: Reg,
     _memRefOff :: Offset
   }
+  deriving stock (Eq)
 
 data LabelRef = LabelRef
   { _labelRefSymbol :: Symbol,
