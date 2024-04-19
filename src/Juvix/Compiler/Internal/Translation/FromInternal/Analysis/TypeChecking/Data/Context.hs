@@ -21,7 +21,6 @@ data InternalTypedResult = InternalTypedResult
     _resultModule :: Module,
     _resultInternalModule :: InternalModule,
     _resultTermination :: TerminationState,
-    _resultNormalized :: NormalizedTable,
     _resultIdenTypes :: TypesTable,
     _resultFunctions :: FunctionsTable
   }

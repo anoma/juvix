@@ -185,9 +185,6 @@ subsHoles s = leafExpressions helper
       ExpressionHole h -> clone (fromMaybe e (s ^. at h))
       _ -> return e
 
-instance HasExpressions Example where
-  leafExpressions f = traverseOf exampleExpression (leafExpressions f)
-
 instance HasExpressions ArgInfo where
   leafExpressions f ArgInfo {..} = do
     d' <- traverse (leafExpressions f) _argInfoDefault
@@ -201,13 +198,11 @@ instance HasExpressions FunctionDef where
   leafExpressions f FunctionDef {..} = do
     body' <- leafExpressions f _funDefBody
     ty' <- leafExpressions f _funDefType
-    examples' <- traverse (leafExpressions f) _funDefExamples
     infos' <- traverse (leafExpressions f) _funDefArgsInfo
     pure
       FunctionDef
         { _funDefBody = body',
           _funDefType = ty',
-          _funDefExamples = examples',
           _funDefArgsInfo = infos',
           _funDefTerminating,
           _funDefInstance,
@@ -242,13 +237,11 @@ instance HasExpressions InductiveDef where
   leafExpressions f InductiveDef {..} = do
     params' <- traverse (leafExpressions f) _inductiveParameters
     constrs' <- traverse (leafExpressions f) _inductiveConstructors
-    examples' <- traverse (leafExpressions f) _inductiveExamples
     ty' <- leafExpressions f _inductiveType
     pure
       InductiveDef
         { _inductiveParameters = params',
           _inductiveConstructors = constrs',
-          _inductiveExamples = examples',
           _inductiveType = ty',
           _inductiveName,
           _inductiveBuiltin,
@@ -260,11 +253,9 @@ instance HasExpressions InductiveDef where
 instance HasExpressions ConstructorDef where
   leafExpressions f ConstructorDef {..} = do
     ty' <- leafExpressions f _inductiveConstructorType
-    examples' <- traverse (leafExpressions f) _inductiveConstructorExamples
     pure
       ConstructorDef
-        { _inductiveConstructorExamples = examples',
-          _inductiveConstructorType = ty',
+        { _inductiveConstructorType = ty',
           _inductiveConstructorName,
           _inductiveConstructorPragmas
         }
@@ -770,7 +761,6 @@ simpleFunDef funName ty body =
   FunctionDef
     { _funDefName = funName,
       _funDefType = ty,
-      _funDefExamples = [],
       _funDefCoercion = False,
       _funDefInstance = False,
       _funDefPragmas = mempty,

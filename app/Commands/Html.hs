@@ -10,7 +10,7 @@ import Juvix.Compiler.Backend.Html.Translation.FromTyped.Source
 import Juvix.Compiler.Concrete.Pretty qualified as Concrete
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Internal.Translation
-import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context (resultInternal, resultNormalized)
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context (resultInternal)
 import Juvix.Extra.Process
 import System.Process qualified as Process
 
@@ -45,7 +45,6 @@ resultToJudocCtx :: InternalTypedResult -> Html.JudocCtx
 resultToJudocCtx res =
   Html.JudocCtx
     { _judocCtxComments = Scoper.getScoperResultComments sres,
-      _judocCtxNormalizedTable = res ^. resultNormalized,
       _judocCtxTopModules = [sres ^. Scoper.resultModule]
     }
   where

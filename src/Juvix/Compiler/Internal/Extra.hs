@@ -111,8 +111,7 @@ genFieldProjection _funDefName _funDefBuiltin info fieldIx = do
       retTy = constrArgs !! fieldIx
   cloneFunctionDefSameName
     FunctionDef
-      { _funDefExamples = [],
-        _funDefTerminating = False,
+      { _funDefTerminating = False,
         _funDefInstance = False,
         _funDefCoercion = False,
         _funDefArgsInfo = mempty,

@@ -807,13 +807,6 @@ ppJudocStart = do
       | inBlock -> return Nothing
       | otherwise -> ppCode Kw.delimJudocStart $> Just ()
 
-instance (SingI s) => PrettyPrint (Example s) where
-  ppCode e =
-    ppJudocStart
-      <??+> ppCode Kw.delimJudocExample
-      <+> ppExpressionType (e ^. exampleExpression)
-        <> semicolon
-
 instance (PrettyPrint a) => PrettyPrint (WithLoc a) where
   ppCode a = morphemeM (getLoc a) (ppCode (a ^. withLocParam))
 
@@ -872,7 +865,6 @@ instance (SingI s) => PrettyPrint (JudocGroup s) where
 instance (SingI s) => PrettyPrint (JudocBlock s) where
   ppCode = \case
     JudocLines l -> vsep (ppCode <$> l)
-    JudocExample e -> ppCode e
 
 instance (SingI s) => PrettyPrint (AxiomDef s) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => AxiomDef s -> Sem r ()

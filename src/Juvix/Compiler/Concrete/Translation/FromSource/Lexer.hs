@@ -13,7 +13,6 @@ import Juvix.Compiler.Concrete.Extra qualified as P
 import Juvix.Compiler.Concrete.Keywords
 import Juvix.Compiler.Concrete.Translation.FromSource.ParserResultBuilder
 import Juvix.Data.Keyword
-import Juvix.Extra.Strings qualified as Str
 import Juvix.Parser.Lexer
 import Juvix.Prelude
 import Text.Megaparsec.Char.Lexer qualified as L
@@ -72,9 +71,6 @@ bracedString =
 
 string :: (Members '[ParserResultBuilder] r) => ParsecS r (Text, Interval)
 string = lexemeInterval string'
-
-judocExampleStart :: ParsecS r ()
-judocExampleStart = P.chunk Str.judocExample >> hspace_
 
 judocBlockEnd :: (Members '[ParserResultBuilder] r) => ParsecS r KeywordRef
 judocBlockEnd = kw delimJudocBlockEnd
