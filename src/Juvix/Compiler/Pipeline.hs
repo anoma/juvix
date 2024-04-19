@@ -96,8 +96,10 @@ upToCore = upToInternalTyped >>= Core.fromInternal
 upToStoredCore ::
   (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, PathResolver] r) =>
   Sem r Core.CoreResult
-upToStoredCore =
-  upToCore >>= \r -> Core.toStored (r ^. Core.coreResultModule) >>= \md -> return r {Core._coreResultModule = md}
+upToStoredCore = do
+  r <- upToCore
+  md <- Core.toStored (r ^. Core.coreResultModule)
+  return r {Core._coreResultModule = md}
 
 upToReg ::
   (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, PathResolver] r) =>
@@ -155,8 +157,10 @@ upToAnoma = upToStoredCore >>= \Core.CoreResult {..} -> storedCoreToAnoma _coreR
 upToCoreTypecheck ::
   (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, PathResolver] r) =>
   Sem r Core.CoreResult
-upToCoreTypecheck =
-  upToCore >>= \r -> Core.toTypechecked (r ^. Core.coreResultModule) >>= \md -> return r {Core._coreResultModule = md}
+upToCoreTypecheck = do
+  r <- upToCore
+  md <- Core.toTypechecked (r ^. Core.coreResultModule)
+  return r {Core._coreResultModule = md}
 
 --------------------------------------------------------------------------------
 -- Workflows from stored Core

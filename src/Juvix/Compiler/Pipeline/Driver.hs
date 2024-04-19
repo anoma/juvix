@@ -1,8 +1,6 @@
 module Juvix.Compiler.Pipeline.Driver
-  ( processFile,
-    processFileUpTo,
+  ( processFileUpTo,
     processFileToStoredCore,
-    processModule,
     processImport,
     processRecursiveUpToTyped,
   )
@@ -59,15 +57,15 @@ type MCache' a = Cache EntryIndex a
 
 type MCache = MCache' (PipelineResult Store.ModuleInfo)
 
-processFile ::
+processFileUpToParsing ::
   forall r.
   (Members '[TaggedLock, HighlightBuilder, Error JuvixError, Files, PathResolver] r) =>
   EntryPoint ->
   Sem r (PipelineResult Parser.ParserResult)
-processFile entry =
-  runReader @ImportParents mempty $
-    evalCacheEmpty processModule' $
-      processFile' entry
+processFileUpToParsing entry =
+  runReader @ImportParents mempty
+    . evalCacheEmpty processModule'
+    $ processFileUpToParsing' entry
 
 processImport ::
   forall r.
@@ -76,19 +74,9 @@ processImport ::
   Import 'Parsed ->
   Sem r (PipelineResult Store.ModuleInfo)
 processImport entry i =
-  runReader @ImportParents mempty $
-    evalCacheEmpty processModule' $
-      processImport' entry (i ^. importModulePath)
-
-processModule ::
-  forall r.
-  (Members '[TaggedLock, Error JuvixError, Files, PathResolver] r) =>
-  EntryPoint ->
-  Sem r (PipelineResult Store.ModuleInfo)
-processModule entry =
-  runReader @ImportParents mempty $
-    evalCacheEmpty processModule' $
-      processModule' (EntryIndex entry)
+  runReader @ImportParents mempty
+    . evalCacheEmpty processModule'
+    $ processImport' entry (i ^. importModulePath)
 
 processFileToStoredCore ::
   forall r.
@@ -96,9 +84,9 @@ processFileToStoredCore ::
   EntryPoint ->
   Sem r (PipelineResult Core.CoreResult)
 processFileToStoredCore entry =
-  runReader @ImportParents mempty $
-    evalCacheEmpty processModule' $
-      processFileToStoredCore' entry
+  runReader @ImportParents mempty
+    . evalCacheEmpty processModule'
+    $ processFileToStoredCore' entry
 
 processFileUpTo ::
   forall r a.
@@ -107,24 +95,30 @@ processFileUpTo ::
   Sem r (PipelineResult a)
 processFileUpTo a = do
   entry <- ask
-  res <- processFile entry
+  res <- processFileUpToParsing entry
   a' <-
     evalTopNameIdGen
       (res ^. pipelineResult . Parser.resultModule . moduleId)
-      $ runReader (res ^. pipelineResultImports)
-      $ runReader (res ^. pipelineResult) a
-  return $ set pipelineResult a' res
+      . runReader (res ^. pipelineResultImports)
+      . runReader (res ^. pipelineResult)
+      $ a
+  return (set pipelineResult a' res)
 
-processFile' ::
+processFileUpToParsing' ::
   forall r.
   (Members '[HighlightBuilder, Reader ImportParents, Error JuvixError, Files, PathResolver, MCache] r) =>
   EntryPoint ->
   Sem r (PipelineResult Parser.ParserResult)
-processFile' entry = do
+processFileUpToParsing' entry = do
   res <- runReader entry upToParsing
   let imports = res ^. Parser.resultParserState . Parser.parserStateImports
   mtab <- processImports' entry (map (^. importModulePath) imports)
-  return (PipelineResult res mtab True)
+  return
+    PipelineResult
+      { _pipelineResult = res,
+        _pipelineResultImports = mtab,
+        _pipelineResultChanged = True
+      }
 
 processImports' ::
   forall r.
@@ -142,7 +136,9 @@ processImports'' ::
   Sem r (Bool, Store.ModuleTable)
 processImports'' entry imports = do
   ms <- forM imports (processImport' entry)
-  let mtab = Store.mkModuleTable (map (^. pipelineResult) ms) <> mconcatMap (^. pipelineResultImports) ms
+  let mtab =
+        Store.mkModuleTable (map (^. pipelineResult) ms)
+          <> mconcatMap (^. pipelineResultImports) ms
       changed = any (^. pipelineResultChanged) ms
   return (changed, mtab)
 
@@ -182,14 +178,14 @@ processFileToStoredCore' ::
   EntryPoint ->
   Sem r (PipelineResult Core.CoreResult)
 processFileToStoredCore' entry = ignoreHighlightBuilder $ do
-  res <- processFile' entry
+  res <- processFileUpToParsing' entry
   r <-
-    evalTopNameIdGen
-      (res ^. pipelineResult . Parser.resultModule . moduleId)
-      $ runReader (res ^. pipelineResultImports)
-      $ runReader entry
-      $ runReader (res ^. pipelineResult) upToStoredCore
-  return $ set pipelineResult r res
+    evalTopNameIdGen (res ^. pipelineResult . Parser.resultModule . moduleId)
+      . runReader (res ^. pipelineResultImports)
+      . runReader entry
+      . runReader (res ^. pipelineResult)
+      $ upToStoredCore
+  return (set pipelineResult r res)
 
 processModule' ::
   forall r.
@@ -198,7 +194,11 @@ processModule' ::
   Sem r (PipelineResult Store.ModuleInfo)
 processModule' (EntryIndex entry) = do
   let buildDir = resolveAbsBuildDir root (entry ^. entryPointBuildDir)
-      relPath = fromJust $ replaceExtension ".jvo" $ fromJust $ stripProperPrefix $(mkAbsDir "/") sourcePath
+      relPath =
+        fromJust
+          . replaceExtension ".jvo"
+          . fromJust
+          $ stripProperPrefix $(mkAbsDir "/") sourcePath
       absPath = buildDir Path.</> relPath
   sha256 <- SHA256.digestFile sourcePath
   m :: Maybe Store.ModuleInfo <- loadFromFile absPath
@@ -211,12 +211,17 @@ processModule' (EntryIndex entry) = do
           -- We need to check whether any of the recursive imports is fragile,
           -- not only the direct ones, because identifiers may be re-exported
           -- (with `open public`).
-          let fragile = any (^. Store.moduleInfoFragile) (HashMap.elems $ mtab ^. Store.moduleTable)
+          let fragile = any (^. Store.moduleInfoFragile) (mtab ^. Store.moduleTable)
           if
               | changed && fragile ->
                   recompile sha256 absPath
               | otherwise ->
-                  return (PipelineResult info mtab False)
+                  return
+                    PipelineResult
+                      { _pipelineResult = info,
+                        _pipelineResultImports = mtab,
+                        _pipelineResultChanged = False
+                      }
     _ ->
       recompile sha256 absPath
   where
@@ -259,7 +264,7 @@ processRecursiveUpToTyped ::
   Sem r (InternalTypedResult, [InternalTypedResult])
 processRecursiveUpToTyped = do
   entry <- ask
-  PipelineResult res mtab _ <- processFile entry
+  PipelineResult res mtab _ <- processFileUpToParsing entry
   let imports = HashMap.keys (mtab ^. Store.moduleTable)
   ms <- forM imports (`withPath'` goImport)
   a <-
