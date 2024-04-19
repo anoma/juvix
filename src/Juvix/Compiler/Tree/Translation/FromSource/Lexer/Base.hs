@@ -25,10 +25,10 @@ symbol = void . L.symbol space
 decimal :: (Num n) => ParsecS r (n, Interval)
 decimal = lexemeInterval L.decimal
 
-integer :: ParsecS r (Integer, Interval)
-integer = integer' decimal
+integer :: ParsecS r (WithLoc Integer)
+integer = integer'
 
-number :: Int -> Int -> ParsecS r (Int, Interval)
+number :: Int -> Int -> ParsecS r (WithLoc Int)
 number = number' integer
 
 field :: ParsecS r (Integer, Interval)

@@ -1115,7 +1115,7 @@ parseList = do
 --------------------------------------------------------------------------------
 
 literalInteger :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r LiteralLoc
-literalInteger = fmap LitInteger <$> integer
+literalInteger = fmap LitIntegerWithBase <$> integerWithBase
 
 literalString :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r LiteralLoc
 literalString = do

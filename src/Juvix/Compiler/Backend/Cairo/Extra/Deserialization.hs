@@ -3,7 +3,6 @@ module Juvix.Compiler.Backend.Cairo.Extra.Deserialization where
 import Data.Bits
 import Juvix.Compiler.Backend.Cairo.Data.Result
 import Juvix.Compiler.Backend.Cairo.Language
-import Numeric
 
 deserialize :: Result -> [Element]
 deserialize Result {..} = go [] (map (fromHexText . unpack) _resultData)

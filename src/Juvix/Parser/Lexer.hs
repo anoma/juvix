@@ -6,6 +6,7 @@ import Data.HashSet qualified as HashSet
 import Data.Set qualified as Set
 import Data.Text qualified as Text
 import GHC.Unicode
+import Juvix.Compiler.Concrete.Data.Literal
 import Juvix.Data.Keyword
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
@@ -115,23 +116,46 @@ space' special =
                   | n > 1 -> go (n - 1) (acc <> pack txt <> en)
                   | otherwise -> return (acc <> pack txt)
 
-integer' :: ParsecS r (Integer, Interval) -> ParsecS r (Integer, Interval)
-integer' dec = do
+integerWithBase' :: ParsecS r (WithLoc IntegerWithBase)
+integerWithBase' = withLoc $ do
   minus <- optional (char '-')
-  (nat, i) <- dec
-  let nat' = case minus of
-        Nothing -> nat
-        _ -> (-nat)
-  return (nat', i)
+  b <- integerBase
+  num :: Integer <- case b of
+    IntegerBaseBinary -> L.binary
+    IntegerBaseOctal -> L.octal
+    IntegerBaseDecimal -> L.decimal
+    IntegerBaseHexadecimal -> L.hexadecimal
+  let sign = case minus of
+        Nothing -> id
+        _ -> negate
+  return
+    IntegerWithBase
+      { _integerWithBaseBase = b,
+        _integerWithBaseValue = sign num
+      }
 
-number' :: ParsecS r (Integer, Interval) -> Int -> Int -> ParsecS r (Int, Interval)
+integer' :: ParsecS r (WithLoc Integer)
+integer' = fmap (^. integerWithBaseValue) <$> integerWithBase'
+
+integerBase :: ParsecS r IntegerBase
+integerBase =
+  baseprefix IntegerBaseBinary
+    <|> baseprefix IntegerBaseOctal
+    <|> baseprefix IntegerBaseHexadecimal
+    <|> return IntegerBaseDecimal
+  where
+    baseprefix :: IntegerBase -> ParsecS r IntegerBase
+    baseprefix x = P.chunk (integerBasePrefix x) $> x
+
+number' :: ParsecS r (WithLoc Integer) -> Int -> Int -> ParsecS r (WithLoc Int)
 number' int mn mx = do
   off <- getOffset
-  (n, i) <- int
+  num <- int
+  let n = num ^. withLocParam
   when
     (n < fromIntegral mn || n > fromIntegral mx)
     (parseFailure off ("number out of bounds: " ++ show n))
-  return (fromInteger n, i)
+  return (fromInteger <$> num)
 
 string' :: ParsecS r Text
 string' = pack <$> (char '"' >> manyTill L.charLiteral (char '"'))

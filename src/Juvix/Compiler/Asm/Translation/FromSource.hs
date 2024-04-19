@@ -172,12 +172,12 @@ instrAllocClosure ::
   ParsecS r InstrAllocClosure
 instrAllocClosure = do
   sym <- funSymbol @Code @(Maybe FunctionInfoExtra) @DirectRef
-  (argsNum, _) <- integer
+  argsNum <- (^. withLocParam) <$> integer
   return $ InstrAllocClosure sym (fromInteger argsNum)
 
 instrExtendClosure :: ParsecS r InstrExtendClosure
 instrExtendClosure = do
-  (argsNum, _) <- integer
+  argsNum <- (^. withLocParam) <$> integer
   return $ InstrExtendClosure (fromInteger argsNum)
 
 instrCall ::
@@ -190,7 +190,7 @@ instrCall = do
       fi <- lift $ getFunctionInfo sym
       return (fi ^. functionArgsNum)
     CallClosure -> do
-      (n, _) <- integer
+      n <- (^. withLocParam) <$> integer
       return (fromInteger n)
   return (InstrCall ct argsNum)
 
@@ -201,7 +201,7 @@ parseCallType = (kw kwDollar $> CallClosure) <|> (CallFun <$> funSymbol @Code @(
 
 instrCallClosures :: ParsecS r InstrCallClosures
 instrCallClosures = do
-  (argsNum, _) <- integer
+  argsNum <- (^. withLocParam) <$> integer
   return (InstrCallClosures (fromInteger argsNum))
 
 branchCode ::

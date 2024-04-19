@@ -62,7 +62,7 @@ registerLiteral l =
   where
     tag = case l ^. withLocParam of
       LitString {} -> ParsedTagLiteralString
-      LitInteger {} -> ParsedTagLiteralInt
+      LitIntegerWithBase {} -> ParsedTagLiteralInt
     loc = getLoc l
 
 registerItem' :: (Member (State ParserState) r) => ParsedItem -> Sem r ()

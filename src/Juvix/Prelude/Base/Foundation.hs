@@ -49,6 +49,7 @@ module Juvix.Prelude.Base.Foundation
     module Lens.Micro.Platform,
     module Language.Haskell.TH.Syntax,
     module Prettyprinter,
+    module Numeric,
     module System.Exit,
     module System.FilePath,
     module System.IO,
@@ -150,6 +151,7 @@ import GHC.Real
 import GHC.Stack.Types
 import Language.Haskell.TH.Syntax (Exp, Lift, Q)
 import Lens.Micro.Platform
+import Numeric hiding (exp, log, pi)
 import Path
 import Path.IO qualified as Path hiding (getCurrentDir, setCurrentDir, withCurrentDir)
 import Prettyprinter (Doc, (<+>))
