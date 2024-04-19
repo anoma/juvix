@@ -416,17 +416,28 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
           Reg.OpArgsNum -> goUnop' goOpArgsNum _instrUnopResult _instrUnopArg
 
         goCairo :: Reg.InstrCairo -> Sem r ()
-        goCairo Reg.InstrCairo {..} = do
-          goAssignApBuiltins
-          mapM_ goAssignApValue (reverse _instrCairoArgs)
-          output' apOff (mkCallRel (Lab (LabelRef sym (Just name))))
-          off <- getAP
-          insertVar _instrCairoResult (off - 1)
-          setBuiltinOffset (off - 2)
-          where
-            (apOff, sym, name) = case _instrCairoOpcode of
-              Reg.OpCairoPoseidon -> (blts ^. stdlibPoseidonApOffset, blts ^. stdlibPoseidon, blts ^. stdlibPoseidonName)
-              Reg.OpCairoEc -> (blts ^. stdlibEcOpApOffset, blts ^. stdlibEcOp, blts ^. stdlibEcOpName)
+        goCairo Reg.InstrCairo {..} = case _instrCairoOpcode of
+          Reg.OpCairoRandomEcPoint -> do
+            output'' (Hint HintRandomEcPoint)
+            output' 2 (Alloc $ InstrAlloc $ Val $ Imm 2)
+            goAllocCall _instrCairoResult
+            -- 1 is the tag of the first (and only) constructor in the ec_point record.
+            goAssignAp (Val $ Imm 1)
+            goAssignAp (Val $ Ref $ MemRef Ap (-off))
+            goAssignAp (Val $ Ref $ MemRef Ap (-off))
+            where
+              off = toOffset (blts ^. stdlibGetRegsApOffset) + 3
+          _ -> do
+            goAssignApBuiltins
+            mapM_ goAssignApValue (reverse _instrCairoArgs)
+            output' apOff (mkCallRel (Lab (LabelRef sym (Just name))))
+            off <- getAP
+            insertVar _instrCairoResult (off - 1)
+            setBuiltinOffset (off - 2)
+            where
+              (apOff, sym, name) = case _instrCairoOpcode of
+                Reg.OpCairoPoseidon -> (blts ^. stdlibPoseidonApOffset, blts ^. stdlibPoseidon, blts ^. stdlibPoseidonName)
+                Reg.OpCairoEc -> (blts ^. stdlibEcOpApOffset, blts ^. stdlibEcOp, blts ^. stdlibEcOpName)
 
         goAssign :: Reg.InstrAssign -> Sem r ()
         goAssign Reg.InstrAssign {..} =

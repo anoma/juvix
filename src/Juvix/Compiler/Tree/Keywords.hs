@@ -31,6 +31,7 @@ import Juvix.Data.Keyword.All
     kwMod_,
     kwMul_,
     kwPoseidon,
+    kwRandomEcPoint,
     kwSave,
     kwSeq_,
     kwShow,
@@ -74,5 +75,6 @@ allKeywords =
          kwSave,
          kwAnomaGet,
          kwPoseidon,
-         kwEcOp
+         kwEcOp,
+         kwRandomEcPoint
        ]

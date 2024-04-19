@@ -153,6 +153,7 @@ instrCairo ::
 instrCairo vref =
   parseCairoOp kwPoseidon OpCairoPoseidon vref
     <|> parseCairoOp kwEcOp OpCairoEc vref
+    <|> parseCairoOp kwRandomEcPoint OpCairoRandomEcPoint vref
 
 parseCairoOp ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>

@@ -1007,6 +1007,9 @@ cairoPoseidon = "poseidon"
 cairoEcOp :: (IsString s) => s
 cairoEcOp = "ec_op"
 
+cairoRandomEcPoint :: (IsString s) => s
+cairoRandomEcPoint = "random_ec_point"
+
 cairoPoseidonState :: (IsString s) => s
 cairoPoseidonState = "poseidon_state"
 

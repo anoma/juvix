@@ -238,6 +238,7 @@ instance PrettyCode CairoOp where
   ppCode op = return $ primitive $ case op of
     OpCairoPoseidon -> Str.instrPoseidon
     OpCairoEc -> Str.instrEcOp
+    OpCairoRandomEcPoint -> Str.cairoRandomEcPoint
 
 instance PrettyCode UnaryOpcode where
   ppCode = \case
