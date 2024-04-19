@@ -73,6 +73,9 @@ computeNodeTypeInfo md = umapL go
           OpEc -> case _builtinAppArgs of
             [arg, _, _] -> Info.getNodeType arg
             _ -> error "incorrect ec_op builtin application"
+          OpRandomEcPoint -> case _builtinAppArgs of
+            [] -> mkDynamic'
+            _ -> error "incorrect random_ec_point builtin application"
       NCtr Constr {..} ->
         let ci = lookupConstructorInfo md _constrTag
             ii = lookupInductiveInfo md (ci ^. constructorInductive)
