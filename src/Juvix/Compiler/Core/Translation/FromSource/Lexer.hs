@@ -27,9 +27,6 @@ symbol = void . L.symbol space
 kw :: Keyword -> ParsecS r ()
 kw = void . lexeme . kw'
 
-decimal :: (Num n) => ParsecS r (n, Interval)
-decimal = lexemeInterval L.decimal
-
 field :: ParsecS r (Integer, Interval)
 field = lexemeInterval field'
 

@@ -22,9 +22,6 @@ lexemeInterval = lexeme . interval
 symbol :: Text -> ParsecS r ()
 symbol = void . L.symbol space
 
-decimal :: (Num n) => ParsecS r (n, Interval)
-decimal = lexemeInterval L.decimal
-
 integer :: ParsecS r (WithLoc Integer)
 integer = integer'
 
