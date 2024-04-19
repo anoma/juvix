@@ -426,7 +426,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
             goAssignAp (Val $ Ref $ MemRef Ap (-off))
             goAssignAp (Val $ Ref $ MemRef Ap (-off))
             where
-              off = toOffset (blts ^. stdlibGetRegsApOffset) + 3
+              off = toOffset (blts ^. stdlibGetRegsApOffset) + 4
           _ -> do
             goAssignApBuiltins
             mapM_ goAssignApValue (reverse _instrCairoArgs)
