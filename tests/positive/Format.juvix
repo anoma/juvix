@@ -85,6 +85,16 @@ t3 : String :=
 -- escaping in String literals
 e1 : String := "\"\n";
 
+module Integers;
+  binary : Nat := 0b1010101;
+
+  octal : Nat := 0o3076101;
+
+  decimal : Nat := 9076191;
+
+  hexadecimal : Nat := 0x9076191aaff;
+end;
+
 syntax fixity l1 := binary {assoc := left; below := [pair]};
 syntax fixity r3 := binary {assoc := right; above := [pair]};
 syntax fixity l6 := binary {assoc := left; above := [r3]};
@@ -243,7 +253,8 @@ module Comments;
         {-- inside implicit arg
         A}
         -- before closing implicit arg
-        a;
+        a
+    | a _ := a;
 
   type color : Type :=
     -- comment before pipe
