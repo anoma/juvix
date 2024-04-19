@@ -80,7 +80,7 @@ instruction =
 parseHint :: ParsecS r Instruction
 parseHint = do
   symbol "%{"
-  h <- parseHintInput <|> parseHintAlloc
+  h <- parseHintInput <|> parseHintAlloc <|> parseHintRandomEcPoint
   symbol "%}"
   return $ Hint h
 
@@ -95,6 +95,11 @@ parseHintAlloc = do
   symbol "Alloc"
   (size, _) <- parens integer
   return $ HintAlloc (fromInteger size)
+
+parseHintRandomEcPoint :: ParsecS r Hint
+parseHintRandomEcPoint = do
+  symbol "RandomEcPoint"
+  return HintRandomEcPoint
 
 parseNop :: ParsecS r Instruction
 parseNop = do

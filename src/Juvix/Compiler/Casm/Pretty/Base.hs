@@ -117,6 +117,7 @@ instance PrettyCode Hint where
   ppCode = \case
     HintInput var -> return $ "%{ Input(" <> pretty var <> ") %}"
     HintAlloc size -> return $ "%{ Alloc(" <> show size <> ") %}"
+    HintRandomEcPoint -> return "%{ RandomEcPoint %}"
 
 instance PrettyCode InstrAssign where
   ppCode InstrAssign {..} = do

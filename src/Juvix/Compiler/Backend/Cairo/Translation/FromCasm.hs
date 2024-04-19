@@ -234,3 +234,4 @@ fromCasm instrs0 =
         goHint = \case
           Casm.HintInput var -> [ElementHint (Hint ("Input(" <> var <> ")"))]
           Casm.HintAlloc size -> [ElementHint (Hint ("Alloc(" <> show size <> ")"))]
+          Casm.HintRandomEcPoint -> [ElementHint (Hint "RandomEcPoint")]

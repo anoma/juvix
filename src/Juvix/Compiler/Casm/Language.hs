@@ -78,6 +78,7 @@ data ExtraOpcode
 data Hint
   = HintInput Text
   | HintAlloc Int
+  | HintRandomEcPoint
 
 data Instruction
   = Assign InstrAssign

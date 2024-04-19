@@ -261,6 +261,10 @@ hRunCode hout inputInfo (LabelInfo labelInfo) instrs0 = runST goCode
       HintAlloc size -> do
         mem' <- writeMem mem (ap + size) (fieldFromInteger fsize (fromIntegral ap))
         go (pc + 1) (ap + size) fp mem'
+      HintRandomEcPoint -> do
+        mem' <- writeMem mem ap (fieldFromInteger fsize 0)
+        mem'' <- writeMem mem' (ap + 1) (fieldFromInteger fsize 0)
+        go (pc + 1) ap fp mem''
 
     goFinish :: Address -> Memory s -> ST s FField
     goFinish ap mem = do
