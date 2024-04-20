@@ -31,7 +31,7 @@ kw :: Keyword -> ParsecS r ()
 kw = void . lexeme . kw'
 
 integer :: ParsecS r (WithLoc Integer)
-integer = integer'
+integer = lexeme integer'
 
 number :: Int -> Int -> ParsecS r (WithLoc Int)
 number = number' integer

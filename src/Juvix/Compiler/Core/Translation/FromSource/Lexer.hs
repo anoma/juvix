@@ -31,7 +31,7 @@ field :: ParsecS r (Integer, Interval)
 field = lexemeInterval field'
 
 integer :: ParsecS r (WithLoc Integer)
-integer = integer'
+integer = lexeme integer'
 
 number :: Int -> Int -> ParsecS r (WithLoc Int)
 number = number' integer

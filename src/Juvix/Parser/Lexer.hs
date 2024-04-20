@@ -119,7 +119,7 @@ space' special =
 integerWithBase' :: ParsecS r (WithLoc IntegerWithBase)
 integerWithBase' = withLoc $ do
   minus <- optional (char '-')
-  b <- integerBase
+  b <- integerBase'
   num :: Integer <- case b of
     IntegerBaseBinary -> L.binary
     IntegerBaseOctal -> L.octal
@@ -137,8 +137,8 @@ integerWithBase' = withLoc $ do
 integer' :: ParsecS r (WithLoc Integer)
 integer' = fmap (^. integerWithBaseValue) <$> integerWithBase'
 
-integerBase :: ParsecS r IntegerBase
-integerBase =
+integerBase' :: ParsecS r IntegerBase
+integerBase' =
   baseprefix IntegerBaseBinary
     <|> baseprefix IntegerBaseOctal
     <|> baseprefix IntegerBaseHexadecimal
