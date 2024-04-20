@@ -2,6 +2,7 @@ module Juvix.Data.Comment where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Data.Loc
+import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude.Base
 import Path
 import Prettyprinter
@@ -105,8 +106,8 @@ instance Pretty Comment where
     where
       delim :: Doc ann -> Doc ann
       delim = case c ^. commentType of
-        CommentOneLine -> ("--" <>)
-        CommentBlock -> enclose "{-" "-}"
+        CommentOneLine -> (Str.commentLineStart <>)
+        CommentBlock -> enclose Str.commentBlockStart Str.commentBlockEnd
 
 allComments :: Comments -> [Comment]
 allComments c =

@@ -49,7 +49,7 @@ runParser = runParserFor term
 spaceConsumer :: Parser ()
 spaceConsumer = L.space space1 lineComment empty
   where
-    lineComment :: Parser () = L.skipLineComment "--"
+    lineComment :: Parser () = L.skipLineComment Str.commentLineStart
 
 lexeme :: Parser a -> Parser a
 lexeme = L.lexeme spaceConsumer
