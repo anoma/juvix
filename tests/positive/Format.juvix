@@ -93,6 +93,8 @@ module Integers;
   decimal : Nat := 9076191;
 
   hexadecimal : Nat := 0x9076191aaff;
+
+  neghexadecimal : Int := -0x9076191aaff;
 end;
 
 syntax fixity l1 := binary {assoc := left; below := [pair]};

@@ -62,9 +62,9 @@ instance Pretty IntegerWithBase where
           | otherwise = ""
      in sign
           <> pretty (integerBasePrefix _integerWithBaseBase)
-          <> pretty (showNum _integerWithBaseValue)
+          <> pretty (showNum (fromIntegral (abs _integerWithBaseValue)))
     where
-      showNum :: Integer -> String
+      showNum :: Natural -> String
       showNum n = case _integerWithBaseBase of
         IntegerBaseBinary -> showBin n ""
         IntegerBaseOctal -> showOct n ""
