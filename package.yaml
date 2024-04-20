@@ -65,6 +65,7 @@ dependencies:
   - file-embed == 0.0.*
   - filelock == 0.1.*
   - filepath == 1.4.*
+  - flatparse == 0.5.*
   - ghc == 9.8.1
   - githash == 0.1.*
   - hashable == 1.4.*
