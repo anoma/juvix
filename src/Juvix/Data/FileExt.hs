@@ -89,10 +89,10 @@ nockmaFileExt :: (IsString a) => a
 nockmaFileExt = ".nockma"
 
 fileExtToString :: FileExt -> String
-fileExtToString = unpack . fileExtToText
+fileExtToString = fileExtToIsString
 
-fileExtToText :: FileExt -> Text
-fileExtToText = \case
+fileExtToIsString :: (IsString a) => FileExt -> a
+fileExtToIsString = \case
   FileExtJuvix -> juvixFileExt
   FileExtJuvixMarkdown -> juvixMarkdownFileExt
   FileExtJuvixGeb -> juvixGebFileExt
@@ -112,6 +112,9 @@ fileExtToText = \case
   FileExtHtml -> htmlFileExt
   FileExtCss -> cssFileExt
   FileExtNockma -> nockmaFileExt
+
+fileExtToText :: FileExt -> Text
+fileExtToText = fileExtToIsString
 
 toMetavar :: FileExt -> String
 toMetavar = \case

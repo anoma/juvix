@@ -160,6 +160,7 @@ import Safe.Foldable
 import System.Exit hiding (exitFailure, exitSuccess)
 import System.Exit qualified as IO
 import System.FilePath (FilePath, dropTrailingPathSeparator, normalise, (<.>), (</>))
+import System.FilePath qualified as FilePath
 import System.IO hiding
   ( appendFile,
     getContents,
@@ -575,6 +576,12 @@ indexedByInt getIx l = IntMap.fromList [(getIx i, i) | i <- toList l]
 indexedByHash :: (Foldable f, Hashable k) => (a -> k) -> f a -> HashMap k a
 indexedByHash getIx l = HashMap.fromList [(getIx i, i) | i <- toList l]
 
+hashSet :: (Foldable f, Hashable k) => f k -> HashSet k
+hashSet = HashSet.fromList . toList
+
+hashMapFromHashSet :: (Hashable k) => (k -> v) -> HashSet k -> HashMap k v
+hashMapFromHashSet fun s = hashMap [(x, fun x) | x <- toList s]
+
 hashMap :: (Foldable f, Hashable k) => f (k, v) -> HashMap k v
 hashMap = HashMap.fromList . toList
 
@@ -585,6 +592,9 @@ ensureLn t =
     Just (_, y) -> case y of
       '\n' -> t
       _ -> Text.snoc t '\n'
+
+joinFilePaths :: (Foldable l) => l FilePath -> FilePath
+joinFilePaths = FilePath.joinPath . toList
 
 readFile :: (MonadIO m) => Path Abs File -> m Text
 readFile = liftIO . Utf8.readFile . toFilePath

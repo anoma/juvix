@@ -12,11 +12,11 @@ import Juvix.Prelude
 import Juvix.Prelude.FlatParse
 import Juvix.Prelude.FlatParse.Lexer qualified as L
 
-scanFileImportsIO :: (MonadIO m) => Path Abs File -> m [ImportScan]
+scanFileImportsIO :: (MonadIO m) => Path Abs File -> m (HashSet ImportScan)
 scanFileImportsIO = runM . runFilesIO . scanFileImports
 
-scanFileImports :: (Members '[Files] r) => Path Abs File -> Sem r [ImportScan]
-scanFileImports file = fmap fromOk scanImports <$> readFileBS' file
+scanFileImports :: (Members '[Files] r) => Path Abs File -> Sem r (HashSet ImportScan)
+scanFileImports file = fmap (hashSet . fromOk) scanImports <$> readFileBS' file
   where
     fromOk :: Result () ok -> ok
     fromOk = \case

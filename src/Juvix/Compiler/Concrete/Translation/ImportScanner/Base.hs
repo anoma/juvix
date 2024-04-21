@@ -7,11 +7,16 @@ import Juvix.Prelude.Pretty
 data ImportScan = ImportScan
   { _importNames :: NonEmpty String
   }
-  deriving stock (Show)
+  deriving stock (Show, Eq, Generic)
+
+instance Hashable ImportScan
 
 instance Pretty ImportScan where
   pretty (ImportScan l) =
     Str.import_ <+> pretty (mconcat (intersperse "." (toList l)))
+
+importScanToRelPath :: ImportScan -> FileExt -> Path Rel File
+importScanToRelPath (ImportScan l) ext = relFile (joinFilePaths l <.> fileExtToString ext)
 
 data ParseError = ParseError
 

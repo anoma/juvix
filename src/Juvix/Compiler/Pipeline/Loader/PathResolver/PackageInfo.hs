@@ -12,7 +12,7 @@ data PackageInfo = PackageInfo
   { _packageRoot :: Path Abs Dir,
     -- | files relative to the root of the package
     _packageRelativeFiles :: HashSet (Path Rel File),
-    _packageImports :: HashMap (Path Rel File) ImportScan,
+    _packageImports :: HashMap (Path Rel File) (HashSet ImportScan),
     _packageAvailableRoots :: HashSet (Path Abs Dir),
     _packagePackage :: Package
   }

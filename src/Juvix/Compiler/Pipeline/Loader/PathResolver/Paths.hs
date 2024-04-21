@@ -12,7 +12,7 @@ topModulePathToRelativePath' m =
 
 topModulePathToRelativePathByExt :: FileExt -> TopModulePath -> Path Rel File
 topModulePathToRelativePathByExt ext m =
-  topModulePathToRelativePath (Text.unpack $ fileExtToText ext) "" (</>) m
+  topModulePathToRelativePath (Text.unpack (fileExtToText ext)) "" (</>) m
 
 topModulePathToRelativePath :: String -> String -> (FilePath -> FilePath -> FilePath) -> TopModulePath -> Path Rel File
 topModulePathToRelativePath ext suffix joinpath mp = relFile relFilePath

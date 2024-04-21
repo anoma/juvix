@@ -15,6 +15,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Data.Text qualified as T
 import Juvix.Compiler.Concrete.Data.Name
+import Juvix.Compiler.Concrete.Translation.ImportScanner.FlatParse
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Base
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Data
@@ -167,11 +168,16 @@ resolveDependency i = case i ^. packageDepdendencyInfoDependency of
             }
 
 scanImports ::
+  forall r.
   (Members '[Files] r) =>
   Path Abs Dir ->
   HashSet (Path Rel File) ->
-  Sem r (HashMap (Path Rel File) ImportScan)
-scanImports root files = undefined
+  Sem r (HashMap (Path Rel File) (HashSet ImportScan))
+scanImports root fileSet =
+  sequence (hashMapFromHashSet scanFile fileSet)
+  where
+    scanFile :: Path Rel File -> Sem r (HashSet ImportScan)
+    scanFile f = scanFileImports (root <//> f)
 
 registerPackageBase ::
   forall r.
@@ -345,7 +351,10 @@ currentPackage = do
 
 -- | Returns the root of the package where the module belongs and the path to
 -- the module relative to the root.
-resolvePath' :: (Members '[Files, State ResolverState, Reader ResolverEnv] r) => TopModulePath -> Sem r (Either PathResolverError (Path Abs Dir, Path Rel File))
+resolvePath' ::
+  (Members '[Files, State ResolverState, Reader ResolverEnv] r) =>
+  TopModulePath ->
+  Sem r (Either PathResolverError (Path Abs Dir, Path Rel File))
 resolvePath' mp = do
   z <- gets (^. resolverFiles)
   curPkg <- currentPackage
