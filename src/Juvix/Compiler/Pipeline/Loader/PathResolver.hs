@@ -60,10 +60,10 @@ mkPackageInfo mpackageEntry _packageRoot pkg = do
   ensureStdlib _packageRoot buildDir deps
   files :: [Path Rel File] <-
     map (fromJust . stripProperPrefix _packageRoot) <$> walkDirRelAccum juvixAccum _packageRoot []
-  packageBaseAbsDir <- globalPackageBaseRoot
+  globalPackageBaseAbsDir <- globalPackageBaseRoot
   let _packageRelativeFiles = HashSet.fromList files
       _packageAvailableRoots =
-        HashSet.fromList (packageBaseAbsDir : _packageRoot : depsPaths)
+        HashSet.fromList (globalPackageBaseAbsDir : _packageRoot : depsPaths)
   return PackageInfo {..}
   where
     juvixAccum :: Path Abs Dir -> [Path Rel Dir] -> [Path Rel File] -> [Path Abs File] -> Sem r ([Path Abs File], Recurse Rel)
@@ -191,8 +191,7 @@ registerPackageBase = do
             _resolverCacheItemDependency = dep
           }
   setResolverCacheItem packageBaseAbsDir (Just cacheItem)
-  forM_ (pkgInfo ^. packageRelativeFiles) $ \f -> do
-    modify' (over resolverFiles (HashMap.insertWith (<>) f (pure pkgInfo)))
+  addPackageRelativeFiles pkgInfo
 
 registerDependencies' ::
   forall r.
@@ -277,6 +276,11 @@ addDependency me d = do
       pkg <- mkPackage me p
       addDependency' pkg me resolvedDependency
 
+addPackageRelativeFiles :: Member (State ResolverState) r => PackageInfo -> Sem r ()
+addPackageRelativeFiles pkgInfo =
+    forM_ (pkgInfo ^. packageRelativeFiles) $ \f -> do
+      modify' (over resolverFiles (HashMap.insertWith (<>) f (pure pkgInfo)))
+
 addDependency' ::
   forall r.
   (Members '[TaggedLock, State ResolverState, Reader ResolverEnv, Files, Error JuvixError, Error DependencyError, GitClone, EvalFileEff] r) =>
@@ -287,8 +291,7 @@ addDependency' ::
 addDependency' pkg me resolvedDependency = do
   selectPackageLockfile pkg $ do
     pkgInfo <- mkPackageInfo me (resolvedDependency ^. resolvedDependencyPath) pkg
-    forM_ (pkgInfo ^. packageRelativeFiles) $ \f -> do
-      modify' (over resolverFiles (HashMap.insertWith (<>) f (pure pkgInfo)))
+    addPackageRelativeFiles pkgInfo
     let packagePath = pkgInfo ^. packagePackage . packageFile
     subDeps <-
       forM
@@ -336,8 +339,10 @@ resolvePath' :: (Members '[Files, State ResolverState, Reader ResolverEnv] r) =>
 resolvePath' mp = do
   z <- gets (^. resolverFiles)
   curPkg <- currentPackage
-  let exts = [FileExtJuvix, FileExtJuvixMarkdown]
-  let rpaths = map (`topModulePathToRelativePathByExt` mp) exts
+  let rpaths =
+        [ topModulePathToRelativePathByExt ext mp
+          | ext <- [FileExtJuvix, FileExtJuvixMarkdown]
+        ]
 
       packagesWithModule :: [(PackageInfo, Path Rel File)]
       packagesWithModule =
@@ -350,6 +355,7 @@ resolvePath' mp = do
 
       visible :: PackageInfo -> Bool
       visible pkg = HashSet.member (pkg ^. packageRoot) (curPkg ^. packageAvailableRoots)
+
   return $ case packagesWithModule of
     [(r, relPath)] -> Right (r ^. packageRoot, relPath)
     [] ->
@@ -360,7 +366,7 @@ resolvePath' mp = do
                 _missingModule = mp
               }
         )
-    ((r, _) : rs) ->
+    (r, _) : rs ->
       Left
         ( ErrDependencyConflict
             DependencyConflict
