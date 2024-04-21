@@ -1,23 +1,27 @@
 module Juvix.Compiler.Concrete.Translation.ImportScanner.FlatParse
-  ( module Juvix.Compiler.Concrete.Translation.ImportScanner.FlatParse,
-    module Juvix.Compiler.Concrete.Translation.ImportScanner.Base,
+  ( module Juvix.Compiler.Concrete.Translation.ImportScanner.Base,
+    scanFileImports,
+    scanFileImportsIO,
   )
 where
 
 import Juvix.Compiler.Concrete.Translation.ImportScanner.Base
 import Juvix.Data.Keyword (reservedSymbols)
-import Juvix.Extra.Paths
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
 import Juvix.Prelude.FlatParse
 import Juvix.Prelude.FlatParse.Lexer qualified as L
 
--- pretty <$> scanFileImportsIO (relToProject $(mkRelFile "tests/positive/Format.juvix"))
 scanFileImportsIO :: (MonadIO m) => Path Abs File -> m [ImportScan]
 scanFileImportsIO = runM . runFilesIO . scanFileImports
 
 scanFileImports :: (Members '[Files] r) => Path Abs File -> Sem r [ImportScan]
-scanFileImports file = scanImports <$> readFileBS' file
+scanFileImports file = fmap fromOk scanImports <$> readFileBS' file
+  where
+    fromOk :: Result () ok -> ok
+    fromOk = \case
+      OK r _ -> r
+      _ -> error "failed to parse"
 
 lexeme :: Parser e a -> Parser e a
 lexeme p = p <* whiteSpaceAndComments
@@ -26,10 +30,8 @@ whiteSpaceAndComments :: Parser e ()
 whiteSpaceAndComments = skipMany (L.whiteSpace1 <|> comment)
 
 -- | The input is a utf-8 encoded bytestring
-scanImports :: ByteString -> [ImportScan]
-scanImports bs = case runParser pImports bs of
-  OK r _ -> r
-  _ -> error "scanImports error"
+scanImports :: ByteString -> Result e [ImportScan]
+scanImports bs = runParser pImports bs
 
 pImports :: Parser e [ImportScan]
 pImports = do

@@ -64,6 +64,7 @@ mkPackageInfo mpackageEntry _packageRoot pkg = do
   let _packageRelativeFiles = HashSet.fromList files
       _packageAvailableRoots =
         HashSet.fromList (globalPackageBaseAbsDir : _packageRoot : depsPaths)
+  _packageImports <- scanImports _packageRoot _packageRelativeFiles
   return PackageInfo {..}
   where
     juvixAccum :: Path Abs Dir -> [Path Rel Dir] -> [Path Rel File] -> [Path Abs File] -> Sem r ([Path Abs File], Recurse Rel)
@@ -165,6 +166,13 @@ resolveDependency i = case i ^. packageDepdendencyInfoDependency of
               _dependencyErrorPackageFile = i ^. packageDependencyInfoPackageFile
             }
 
+scanImports ::
+  (Members '[Files] r) =>
+  Path Abs Dir ->
+  HashSet (Path Rel File) ->
+  Sem r (HashMap (Path Rel File) ImportScan)
+scanImports root files = undefined
+
 registerPackageBase ::
   forall r.
   (Members '[TaggedLock, State ResolverState, Reader ResolverEnv, Files] r) =>
@@ -173,10 +181,12 @@ registerPackageBase = do
   packageBaseAbsDir <- globalPackageBaseRoot
   runReader packageBaseAbsDir updatePackageBaseFiles
   packageBaseRelFiles <- relFiles packageBaseAbsDir
+  imports <- scanImports packageBaseAbsDir packageBaseRelFiles
   let pkgInfo =
         PackageInfo
           { _packageRoot = packageBaseAbsDir,
             _packageRelativeFiles = packageBaseRelFiles,
+            _packageImports = imports,
             _packagePackage = packageBasePackage,
             _packageAvailableRoots = HashSet.singleton packageBaseAbsDir
           }
@@ -276,10 +286,10 @@ addDependency me d = do
       pkg <- mkPackage me p
       addDependency' pkg me resolvedDependency
 
-addPackageRelativeFiles :: Member (State ResolverState) r => PackageInfo -> Sem r ()
+addPackageRelativeFiles :: (Member (State ResolverState) r) => PackageInfo -> Sem r ()
 addPackageRelativeFiles pkgInfo =
-    forM_ (pkgInfo ^. packageRelativeFiles) $ \f -> do
-      modify' (over resolverFiles (HashMap.insertWith (<>) f (pure pkgInfo)))
+  forM_ (pkgInfo ^. packageRelativeFiles) $ \f -> do
+    modify' (over resolverFiles (HashMap.insertWith (<>) f (pure pkgInfo)))
 
 addDependency' ::
   forall r.
