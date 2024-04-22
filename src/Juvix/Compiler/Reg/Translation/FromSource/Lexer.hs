@@ -10,10 +10,10 @@ import Juvix.Compiler.Tree.Translation.FromSource.Lexer.Base
 import Juvix.Prelude
 
 int :: ParsecS r Int
-int = fst <$> number (-(2 ^ (31 :: Int))) (2 ^ (31 :: Int))
+int = (^. withLocParam) <$> number (-(2 ^ (31 :: Int))) (2 ^ (31 :: Int))
 
 smallnat :: ParsecS r Int
-smallnat = fst <$> number 0 256
+smallnat = (^. withLocParam) <$> number 0 256
 
 identifier :: ParsecS r Text
 identifier = lexeme bareIdentifier

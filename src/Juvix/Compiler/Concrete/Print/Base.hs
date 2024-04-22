@@ -483,7 +483,7 @@ instance PrettyPrint Literal where
 
 ppLiteral :: Literal -> Doc Ann
 ppLiteral = \case
-  LitInteger n -> annotate AnnLiteralInteger (pretty n)
+  LitIntegerWithBase n -> annotate AnnLiteralInteger (pretty n)
   LitString s -> ppStringLit s
 
 instance (SingI s) => PrettyPrint (LambdaClause s) where

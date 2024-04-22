@@ -93,7 +93,7 @@ parseHintInput = do
 parseHintAlloc :: ParsecS r Hint
 parseHintAlloc = do
   symbol "Alloc"
-  (size, _) <- parens integer
+  size <- (^. withLocParam) <$> parens integer
   return $ HintAlloc (fromInteger size)
 
 parseHintRandomEcPoint :: ParsecS r Hint
@@ -169,7 +169,7 @@ parseValue :: (Member LabelInfoBuilder r) => ParsecS r Value
 parseValue = (Imm <$> parseImm) <|> (Ref <$> parseMemRef) <|> (Lab <$> parseLabel)
 
 parseImm :: ParsecS r Immediate
-parseImm = fst <$> integer
+parseImm = (^. withLocParam) <$> integer
 
 parseOffset :: ParsecS r Offset
 parseOffset =

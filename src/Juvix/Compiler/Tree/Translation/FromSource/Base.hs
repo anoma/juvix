@@ -325,7 +325,7 @@ fieldValue = P.try $ do
 
 integerValue :: ParsecS r Constant
 integerValue = do
-  (i, _) <- integer
+  i <- (^. withLocParam) <$> integer
   return $ ConstInt i
 
 boolValue :: ParsecS r Constant
@@ -376,13 +376,13 @@ directRef = argRef <|> tempRef <|> namedRef @t @e
 argRef :: ParsecS r DirectRef
 argRef = do
   kw kwArg
-  (off, _) <- brackets integer
+  off <- (^. withLocParam) <$> brackets integer
   return $ ArgRef (OffsetRef (fromInteger off) Nothing)
 
 tempRef :: ParsecS r DirectRef
 tempRef = do
   kw kwTmp
-  (off, _) <- brackets integer
+  off <- (^. withLocParam) <$> brackets integer
   return $ mkTempRef (OffsetRef (fromInteger off) Nothing)
 
 namedRef' :: forall t e d r. (Members '[Reader (ParserSig t e d), State (LocalParams' d)] r) => (Int -> Text -> ParsecS r d) -> ParsecS r d
@@ -405,7 +405,7 @@ parseField ::
 parseField dref = do
   dot
   tag <- constrTag @t @e @d
-  (off, _) <- brackets integer
+  off <- (^. withLocParam) <$> brackets integer
   return $ ConstrRef (Field Nothing tag dref (fromInteger off))
 
 constrTag ::

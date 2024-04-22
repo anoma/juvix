@@ -3,7 +3,6 @@ module Juvix.Compiler.Backend.Cairo.Extra.Serialization where
 import Data.Bits
 import Juvix.Compiler.Backend.Cairo.Data.Result
 import Juvix.Compiler.Backend.Cairo.Language
-import Numeric
 
 serialize :: [Text] -> [Element] -> Result
 serialize builtins elems =

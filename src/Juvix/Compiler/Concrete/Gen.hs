@@ -93,7 +93,7 @@ namedApplication n as =
 literalInteger :: (Member (Reader Interval) r, Integral a) => a -> Sem r (ExpressionAtom 'Parsed)
 literalInteger a = do
   l <- ask
-  return (AtomLiteral (WithLoc l (LitInteger (toInteger a))))
+  return (AtomLiteral (WithLoc l (LitIntegerWithBase (IntegerWithBase IntegerBaseDecimal (toInteger a)))))
 
 mkList :: (Member (Reader Interval) r) => [NonEmpty (ExpressionAtom 'Parsed)] -> Sem r (ExpressionAtom 'Parsed)
 mkList as = do

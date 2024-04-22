@@ -674,7 +674,7 @@ goLiteral = fmap go
     go :: Literal -> Internal.Literal
     go = \case
       LitString s -> Internal.LitString s
-      LitInteger i -> Internal.LitNumeric i
+      LitIntegerWithBase i -> Internal.LitNumeric (i ^. integerWithBaseValue)
 
 goListPattern :: (Members '[Builtins, Error ScoperError, NameIdGen, Reader S.InfoTable] r) => Concrete.ListPattern 'Scoped -> Sem r Internal.Pattern
 goListPattern l = do

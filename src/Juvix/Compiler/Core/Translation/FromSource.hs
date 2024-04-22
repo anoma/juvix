@@ -610,7 +610,7 @@ atom varsNum vars =
 
 exprConstInt :: ParsecS r Node
 exprConstInt = P.try $ do
-  (n, i) <- integer
+  WithLoc i n <- integer
   return $ mkConstant (Info.singleton (LocationInfo i)) (ConstInteger n)
 
 exprConstString :: ParsecS r Node
@@ -627,7 +627,7 @@ exprUniverse :: ParsecS r Type
 exprUniverse = do
   kw kwType
   level <- optional (number 0 128) -- TODO: global Limits.hs file
-  return $ mkUniv' (maybe 0 fst level)
+  return $ mkUniv' (maybe 0 (^. withLocParam) level)
 
 exprDynamic :: ParsecS r Type
 exprDynamic = kw kwAny $> mkDynamic'

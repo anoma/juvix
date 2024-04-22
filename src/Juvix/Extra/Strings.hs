@@ -2,6 +2,15 @@ module Juvix.Extra.Strings where
 
 import Juvix.Prelude.Base
 
+binaryPrefix :: (IsString s) => s
+binaryPrefix = "0b"
+
+hexadecimalPrefix :: (IsString s) => s
+hexadecimalPrefix = "0x"
+
+octalPrefix :: (IsString s) => s
+octalPrefix = "0o"
+
 module_ :: (IsString s) => s
 module_ = "module"
 

@@ -30,13 +30,10 @@ symbol = void . L.symbol space
 kw :: Keyword -> ParsecS r ()
 kw = void . lexeme . kw'
 
-decimal :: (Num n) => ParsecS r (n, Interval)
-decimal = lexemeInterval L.decimal
+integer :: ParsecS r (WithLoc Integer)
+integer = lexeme integer'
 
-integer :: ParsecS r (Integer, Interval)
-integer = integer' decimal
-
-number :: Int -> Int -> ParsecS r (Int, Interval)
+number :: Int -> Int -> ParsecS r (WithLoc Int)
 number = number' integer
 
 string :: ParsecS r (Text, Interval)

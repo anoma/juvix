@@ -8,6 +8,7 @@ where
 
 import Data.Text qualified as Text
 import GHC.Unicode
+import Juvix.Compiler.Concrete.Data.Literal
 import Juvix.Compiler.Concrete.Extra hiding (Pos, hspace, space, string')
 import Juvix.Compiler.Concrete.Extra qualified as P
 import Juvix.Compiler.Concrete.Keywords
@@ -49,10 +50,11 @@ identifier = fmap fst identifierL
 identifierL :: (Members '[ParserResultBuilder] r) => ParsecS r (Text, Interval)
 identifierL = lexeme bareIdentifier
 
+integerWithBase :: (Members '[ParserResultBuilder] r) => ParsecS r (WithLoc IntegerWithBase)
+integerWithBase = lexeme integerWithBase'
+
 integer :: (Members '[ParserResultBuilder] r) => ParsecS r (WithLoc Integer)
-integer = do
-  (num, i) <- integer' decimal
-  return (WithLoc i num)
+integer = lexeme integer'
 
 bracedString :: forall e m. (MonadParsec e Text m) => m Text
 bracedString =
