@@ -349,6 +349,30 @@ currentPackage = do
   curRoot <- asks (^. envRoot)
   (^. resolverCacheItemPackage) . fromJust <$> getResolverCacheItem curRoot
 
+resolveRelPath' ::
+  (Members '[Files, State ResolverState, Reader ResolverEnv] r) =>
+  Path Rel File ->
+  Sem r [(PackageInfo, FileExt)]
+resolveRelPath' fileNoExt = do
+  curPkg <- currentPackage
+  filesToPackage <- gets (^. resolverFiles)
+  let possibleExtensions = [FileExtJuvix, FileExtJuvixMarkdown]
+
+      visible :: PackageInfo -> Bool
+      visible pkg = HashSet.member (pkg ^. packageRoot) (curPkg ^. packageAvailableRoots)
+
+      packagesWithExt :: [(PackageInfo, FileExt)]
+      packagesWithExt =
+        [ (pkg, ext)
+          | ext <- possibleExtensions,
+            let file = addExtension' (fileExtToIsString ext) fileNoExt,
+            pkgs <- toList (HashMap.lookup file filesToPackage),
+            pkg <- toList pkgs,
+            visible pkg
+        ]
+
+  return packagesWithExt
+
 -- | Returns the root of the package where the module belongs and the path to
 -- the module relative to the root.
 resolvePath' ::
@@ -451,6 +475,7 @@ runPathResolver2 st topEnv arg = do
     handler localEnv = \case
       RegisterDependencies forceUpdateLockfile -> registerDependencies' forceUpdateLockfile
       ExpectedPathInfoTopModule m -> expectedPath' m
+      ResolvePath relp -> resolveRelPath relp
       WithPath
         m
         ( a ::

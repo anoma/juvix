@@ -7,6 +7,7 @@ where
 import Juvix.Compiler.Concrete.Data.Name
 import Juvix.Compiler.Pipeline.Loader.PathResolver.DependenciesConfig
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Error
+import Juvix.Compiler.Pipeline.Loader.PathResolver.PackageInfo
 import Juvix.Prelude
 
 data RootKind
@@ -27,6 +28,10 @@ data PathInfoTopModule = PathInfoTopModule
   deriving stock (Show)
 
 data PathResolver :: Effect where
+  -- | Given a relative file *with no extension*, returns the list of packages
+  -- that contain that file. The file extension is also returned since it can be
+  -- FileExtJuvix or FileExtJUvixMarkdown.
+  ResolvePath :: Path Rel File -> PathResolver m [(PackageInfo, FileExt)]
   RegisterDependencies :: DependenciesConfig -> PathResolver m ()
   ExpectedPathInfoTopModule :: TopModulePath -> PathResolver m PathInfoTopModule
   WithPath ::

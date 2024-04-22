@@ -21,6 +21,7 @@ scanFileImports file = fmap (hashSet . fromOk) scanImports <$> readFileBS' file
     fromOk :: Result () ok -> ok
     fromOk = \case
       OK r _ -> r
+      -- TODO maybe it would be sensible to return the empty set and rely on the full parser to return the parse error
       _ -> error "failed to parse"
 
 lexeme :: Parser e a -> Parser e a
