@@ -1,6 +1,5 @@
 module Juvix.Compiler.Pipeline.Loader.PathResolver.Paths where
 
-import Data.Text qualified as Text
 import Juvix.Compiler.Concrete.Data.Name
 import Juvix.Prelude
 
@@ -10,9 +9,8 @@ topModulePathToRelativePath' m =
       ext = fileExtension' absPath
    in topModulePathToRelativePath ext "" (</>) m
 
-topModulePathToRelativePathByExt :: FileExt -> TopModulePath -> Path Rel File
-topModulePathToRelativePathByExt ext m =
-  topModulePathToRelativePath (Text.unpack (fileExtToText ext)) "" (</>) m
+topModulePathToRelativePathNoExt :: TopModulePath -> Path Rel File
+topModulePathToRelativePathNoExt TopModulePath {..} = relFile (joinFilePaths (map (unpack . (^. withLocParam)) (_modulePathDir ++ [_modulePathName])))
 
 topModulePathToRelativePath :: String -> String -> (FilePath -> FilePath -> FilePath) -> TopModulePath -> Path Rel File
 topModulePathToRelativePath ext suffix joinpath mp = relFile relFilePath

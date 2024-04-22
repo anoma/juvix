@@ -380,24 +380,14 @@ resolvePath' ::
   TopModulePath ->
   Sem r (Either PathResolverError (Path Abs Dir, Path Rel File))
 resolvePath' mp = do
-  z <- gets (^. resolverFiles)
   curPkg <- currentPackage
-  let rpaths =
-        [ topModulePathToRelativePathByExt ext mp
-          | ext <- [FileExtJuvix, FileExtJuvixMarkdown]
-        ]
-
-      packagesWithModule :: [(PackageInfo, Path Rel File)]
+  let relpath = topModulePathToRelativePathNoExt mp
+  packagesWithExt <- resolveRelPath' relpath
+  let packagesWithModule :: [(PackageInfo, Path Rel File)]
       packagesWithModule =
-        [ (pkg, p)
-          | p <- rpaths,
-            pkgs <- toList (HashMap.lookup p z),
-            pkg <- toList pkgs,
-            visible pkg
+        [ (pkg, addExtension' (fileExtToIsString ext) relpath)
+          | (pkg, ext) <- packagesWithExt
         ]
-
-      visible :: PackageInfo -> Bool
-      visible pkg = HashSet.member (pkg ^. packageRoot) (curPkg ^. packageAvailableRoots)
 
   return $ case packagesWithModule of
     [(r, relPath)] -> Right (r ^. packageRoot, relPath)
@@ -475,7 +465,7 @@ runPathResolver2 st topEnv arg = do
     handler localEnv = \case
       RegisterDependencies forceUpdateLockfile -> registerDependencies' forceUpdateLockfile
       ExpectedPathInfoTopModule m -> expectedPath' m
-      ResolvePath relp -> resolveRelPath relp
+      ResolvePath relp -> resolveRelPath' relp
       WithPath
         m
         ( a ::
