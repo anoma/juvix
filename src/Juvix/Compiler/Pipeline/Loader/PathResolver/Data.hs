@@ -1,5 +1,6 @@
 module Juvix.Compiler.Pipeline.Loader.PathResolver.Data where
 
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Compiler.Pipeline.Loader.PathResolver.PackageInfo
 import Juvix.Compiler.Pipeline.Lockfile
 import Juvix.Compiler.Pipeline.Package.Base
@@ -33,10 +34,37 @@ data ResolvedDependency = ResolvedDependency
     _resolvedDependencyDependency :: Dependency
   }
 
+data ImportNode = ImportNode
+  { _importNodePackageRoot :: Path Abs Dir,
+    _importNodeFile :: Path Rel File
+  }
+  deriving stock (Eq, Generic)
+
+instance Hashable ImportNode
+
+data ImportTree = ImportTree
+  { -- | A ∈ importTree[B] ⇔ B imports A
+    _importTree :: HashMap ImportNode (HashSet ImportNode),
+    -- | A ∈ importTreeSym[B] ⇔ A imports B
+    _importTreeReverse :: HashMap ImportNode (HashSet ImportNode)
+  }
+
+emptyImportTree :: ImportTree
+emptyImportTree =
+  ImportTree
+    { _importTree = mempty,
+      _importTreeReverse = mempty
+    }
+
+makeLenses ''ImportTree
+makeLenses ''ImportNode
 makeLenses ''ResolverState
 makeLenses ''ResolverEnv
 makeLenses ''ResolvedDependency
 makeLenses ''ResolverCacheItem
+
+allPackageInfos :: ResolverState -> HashMap (Path Abs Dir) PackageInfo
+allPackageInfos = fmap (^. resolverCacheItemPackage) . (^. resolverCache)
 
 iniResolverState :: ResolverState
 iniResolverState =

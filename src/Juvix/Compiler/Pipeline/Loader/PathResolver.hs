@@ -8,6 +8,7 @@ module Juvix.Compiler.Pipeline.Loader.PathResolver
     runPathResolverPipe,
     runPathResolverPipe',
     evalPathResolverPipe,
+    mkImportTree,
   )
 where
 
@@ -15,6 +16,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Data.Text qualified as T
 import Juvix.Compiler.Concrete.Data.Name
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Compiler.Concrete.Translation.ImportScanner.FlatParse
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Base
@@ -349,6 +351,52 @@ currentPackage = do
   curRoot <- asks (^. envRoot)
   (^. resolverCacheItemPackage) . fromJust <$> getResolverCacheItem curRoot
 
+-- | TODO use scc
+checkImportTreeCycles :: forall r. (Members '[Error ScoperError] r) => ImportTree -> Sem r ()
+checkImportTreeCycles = undefined
+
+mkImportTree :: forall r. (Members '[Error ScoperError, PathResolver, Files] r) => Sem r ImportTree
+mkImportTree = do
+  pkgInfosTable <- allPackageInfos <$> getResolverState
+  let pkgs :: [PackageInfo] = toList pkgInfosTable
+      nodes :: [ImportNode] = concatMap packageNodes pkgs
+  tree <-
+    execState emptyImportTree
+      . evalVisitEmpty scanNode
+      $ mapM_ visit nodes
+  checkImportTreeCycles tree
+  return tree
+  where
+    packageNodes :: PackageInfo -> [ImportNode]
+    packageNodes pkg =
+      [ ImportNode
+          { _importNodePackageRoot = pkg ^. packageRoot,
+            _importNodeFile = f
+          }
+        | f <- HashMap.keys (pkg ^. packageImports)
+      ]
+
+    addEdge :: forall r'. (Members '[State ImportTree] r') => ImportNode -> ImportNode -> Sem r' ()
+    addEdge fromNode toNode = do
+      modify (over importTree (insertHelper fromNode toNode))
+      modify (over importTreeReverse (insertHelper toNode fromNode))
+      where
+        insertHelper :: (Hashable k, Hashable v) => k -> v -> HashMap k (HashSet v) -> HashMap k (HashSet v)
+        insertHelper k v = over (at k) (Just . maybe (HashSet.singleton v) (HashSet.insert v))
+
+    scanNode :: ImportNode -> Sem (Visit ImportNode ': State ImportTree ': r) ()
+    scanNode fromNode@ImportNode {..} = do
+      let file = _importNodePackageRoot <//> _importNodeFile
+      imports :: [ImportNode] <- scanFileImports file >>= mapM resolveImportScan . toList
+      forM_ imports $ \toNode -> do
+        addEdge fromNode toNode
+        visit toNode
+
+    resolveImportScan :: forall r'. (Members '[] r') => ImportScan -> Sem r' ImportNode
+    resolveImportScan s = do
+      let rel = importScanToRelPath s
+      undefined
+
 resolvePath' ::
   (Members '[Files, State ResolverState, Reader ResolverEnv] r) =>
   Path Rel File ->
@@ -465,6 +513,7 @@ runPathResolver2 st topEnv arg = do
     handler localEnv = \case
       RegisterDependencies forceUpdateLockfile -> registerDependencies' forceUpdateLockfile
       ExpectedPathInfoTopModule m -> expectedPath' m
+      GetResolverState -> get
       ResolvePath relp -> resolvePath' relp
       WithPath
         m

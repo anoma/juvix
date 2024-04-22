@@ -5,6 +5,7 @@ module Juvix.Compiler.Pipeline.Loader.PathResolver.Base
 where
 
 import Juvix.Compiler.Concrete.Data.Name
+import Juvix.Compiler.Pipeline.Loader.PathResolver.Data
 import Juvix.Compiler.Pipeline.Loader.PathResolver.DependenciesConfig
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Error
 import Juvix.Compiler.Pipeline.Loader.PathResolver.PackageInfo
@@ -33,6 +34,7 @@ data PathResolver :: Effect where
   -- FileExtJuvix or FileExtJUvixMarkdown.
   ResolvePath :: Path Rel File -> PathResolver m [(PackageInfo, FileExt)]
   RegisterDependencies :: DependenciesConfig -> PathResolver m ()
+  GetResolverState :: PathResolver m ResolverState
   ExpectedPathInfoTopModule :: TopModulePath -> PathResolver m PathInfoTopModule
   WithPath ::
     TopModulePath ->
@@ -43,5 +45,9 @@ makeLenses ''RootInfo
 makeLenses ''PathInfoTopModule
 makeSem ''PathResolver
 
-withPathFile :: (Members '[PathResolver] r) => TopModulePath -> (Either PathResolverError (Path Abs File) -> Sem r a) -> Sem r a
+withPathFile ::
+  (Members '[PathResolver] r) =>
+  TopModulePath ->
+  (Either PathResolverError (Path Abs File) -> Sem r a) ->
+  Sem r a
 withPathFile m f = withPath m (f . mapRight (uncurry (<//>)))

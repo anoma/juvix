@@ -4,7 +4,7 @@ import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
 import Juvix.Prelude.Pretty
 
-data ImportScan = ImportScan
+newtype ImportScan = ImportScan
   { _importNames :: NonEmpty String
   }
   deriving stock (Show, Eq, Generic)
@@ -15,8 +15,9 @@ instance Pretty ImportScan where
   pretty (ImportScan l) =
     Str.import_ <+> pretty (mconcat (intersperse "." (toList l)))
 
-importScanToRelPath :: ImportScan -> FileExt -> Path Rel File
-importScanToRelPath (ImportScan l) ext = relFile (joinFilePaths l <.> fileExtToString ext)
+-- | The relative path does not have a file extension
+importScanToRelPath :: ImportScan -> Path Rel File
+importScanToRelPath (ImportScan l) = relFile (joinFilePaths l)
 
 data ParseError = ParseError
 

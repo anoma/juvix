@@ -12,6 +12,8 @@ data PackageInfo = PackageInfo
   { _packageRoot :: Path Abs Dir,
     -- | files relative to the root of the package
     _packageRelativeFiles :: HashSet (Path Rel File),
+    -- | All files in _packageRelativeFiles are keys in this map, even if the
+    -- mapped HashSet is empty.
     _packageImports :: HashMap (Path Rel File) (HashSet ImportScan),
     _packageAvailableRoots :: HashSet (Path Abs Dir),
     _packagePackage :: Package
