@@ -349,11 +349,11 @@ currentPackage = do
   curRoot <- asks (^. envRoot)
   (^. resolverCacheItemPackage) . fromJust <$> getResolverCacheItem curRoot
 
-resolveRelPath' ::
+resolvePath' ::
   (Members '[Files, State ResolverState, Reader ResolverEnv] r) =>
   Path Rel File ->
   Sem r [(PackageInfo, FileExt)]
-resolveRelPath' fileNoExt = do
+resolvePath' fileNoExt = do
   curPkg <- currentPackage
   filesToPackage <- gets (^. resolverFiles)
   let possibleExtensions = [FileExtJuvix, FileExtJuvixMarkdown]
@@ -375,14 +375,14 @@ resolveRelPath' fileNoExt = do
 
 -- | Returns the root of the package where the module belongs and the path to
 -- the module relative to the root.
-resolvePath' ::
+resolveTopModulePath' ::
   (Members '[Files, State ResolverState, Reader ResolverEnv] r) =>
   TopModulePath ->
   Sem r (Either PathResolverError (Path Abs Dir, Path Rel File))
-resolvePath' mp = do
+resolveTopModulePath' mp = do
   curPkg <- currentPackage
   let relpath = topModulePathToRelativePathNoExt mp
-  packagesWithExt <- resolveRelPath' relpath
+  packagesWithExt <- resolvePath' relpath
   let packagesWithModule :: [(PackageInfo, Path Rel File)]
       packagesWithModule =
         [ (pkg, addExtension' (fileExtToIsString ext) relpath)
@@ -465,14 +465,14 @@ runPathResolver2 st topEnv arg = do
     handler localEnv = \case
       RegisterDependencies forceUpdateLockfile -> registerDependencies' forceUpdateLockfile
       ExpectedPathInfoTopModule m -> expectedPath' m
-      ResolvePath relp -> resolveRelPath' relp
+      ResolvePath relp -> resolvePath' relp
       WithPath
         m
         ( a ::
             Either PathResolverError (Path Abs Dir, Path Rel File) ->
             Sem localEs x
           ) -> do
-          x :: Either PathResolverError (Path Abs Dir, Path Rel File) <- resolvePath' m
+          x :: Either PathResolverError (Path Abs Dir, Path Rel File) <- resolveTopModulePath' m
           let y :: Sem localEs x = a x
           oldroot <- asks (^. envRoot)
           let root' = case x of
