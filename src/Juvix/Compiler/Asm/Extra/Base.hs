@@ -21,6 +21,12 @@ mkUnop = mkInstr . Unop
 mkUnop' :: Maybe Location -> UnaryOp -> Command
 mkUnop' loc = mkInstr' loc . Unop
 
+mkCairo :: CairoOp -> Command
+mkCairo = mkInstr . Cairo
+
+mkCairo' :: Maybe Location -> CairoOp -> Command
+mkCairo' loc = mkInstr' loc . Cairo
+
 isFinalInstr :: Instruction -> Bool
 isFinalInstr = \case
   Return -> True

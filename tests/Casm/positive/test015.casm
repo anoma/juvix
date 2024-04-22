@@ -1,5 +1,7 @@
 -- input hints
 
 %{ Input(X) %}
+[ap] = [ap]; ap++
 %{ Input(Y) %}
+[ap] = [ap]; ap++
 [ap] = [ap - 1] + [ap - 2]; ap++

@@ -95,6 +95,7 @@ instance PrettyCode Instruction where
   ppCode = \case
     Binop op -> Tree.ppCode op
     Unop op -> Tree.ppCode op
+    Cairo op -> Tree.ppCode op
     Push val -> (primitive Str.instrPush <+>) <$> ppCode val
     Pop -> return $ primitive Str.instrPop
     Trace -> return $ primitive Str.instrTrace

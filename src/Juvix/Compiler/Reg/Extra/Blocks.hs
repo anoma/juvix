@@ -39,6 +39,7 @@ getResultVar :: Instruction -> Maybe VarRef
 getResultVar = \case
   Binop x -> Just $ x ^. instrBinopResult
   Unop x -> Just $ x ^. instrUnopResult
+  Cairo x -> Just $ x ^. instrCairoResult
   Assign x -> Just $ x ^. instrAssignResult
   Alloc x -> Just $ x ^. instrAllocResult
   AllocClosure x -> Just $ x ^. instrAllocClosureResult
@@ -69,6 +70,7 @@ getValueRefs :: Instruction -> [VarRef]
 getValueRefs = \case
   Binop x -> goBinop x
   Unop x -> goUnop x
+  Cairo x -> goCairo x
   Assign x -> goAssign x
   Alloc x -> goAlloc x
   AllocClosure x -> goAllocClosure x
@@ -83,6 +85,9 @@ getValueRefs = \case
 
     goUnop :: InstrUnop -> [VarRef]
     goUnop InstrUnop {..} = getValueRefs'' _instrUnopArg
+
+    goCairo :: InstrCairo -> [VarRef]
+    goCairo InstrCairo {..} = concatMap getValueRefs'' _instrCairoArgs
 
     goAssign :: InstrAssign -> [VarRef]
     goAssign InstrAssign {..} = getValueRefs'' _instrAssignValue

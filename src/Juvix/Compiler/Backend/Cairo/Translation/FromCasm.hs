@@ -22,14 +22,14 @@ fromCasm instrs0 =
         instrs0
 
     instrSize :: Casm.Instruction -> Int
-    instrSize = length . goInstr dummyLabInfo 0
+    instrSize = elemsSize . goInstr dummyLabInfo 0
       where
         -- This LabelInfo has incorrect offsets -- it is used only to implement
         -- `instrSize` needed to compute the correct LabelInfo
         dummyLabInfo = Casm.LabelInfo $ HashMap.fromList $ zip labelSyms (repeat 0)
 
     goInstr' :: Casm.LabelInfo -> (Address, [Element]) -> Casm.Instruction -> (Address, [Element])
-    goInstr' labInfo (addr, acc) i = (addr + length is, reverse is ++ acc)
+    goInstr' labInfo (addr, acc) i = (addr + elemsSize is, reverse is ++ acc)
       where
         is = goInstr labInfo addr i
 
@@ -232,5 +232,6 @@ fromCasm instrs0 =
 
         goHint :: Casm.Hint -> [Element]
         goHint = \case
-          Casm.HintInput var -> [ElementHint (Hint ("Input(" <> var <> ")") True)]
-          Casm.HintAlloc size -> [ElementHint (Hint ("Alloc(" <> show size <> ")") True)]
+          Casm.HintInput var -> [ElementHint (Hint ("Input(" <> var <> ")"))]
+          Casm.HintAlloc size -> [ElementHint (Hint ("Alloc(" <> show size <> ")"))]
+          Casm.HintRandomEcPoint -> [ElementHint (Hint "RandomEcPoint")]

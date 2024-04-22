@@ -23,6 +23,7 @@ import Juvix.Data.Keyword.All
     kwDiv_,
     kwDollar,
     kwDump,
+    kwEcOp,
     kwEq,
     kwEq_,
     kwFail,
@@ -38,6 +39,7 @@ import Juvix.Data.Keyword.All
     kwNop,
     kwPoseidon,
     kwPrealloc,
+    kwRandomEcPoint,
     kwRet,
     kwShow,
     kwStrcat,
@@ -66,6 +68,7 @@ allKeywords =
          kwFieldMul,
          kwFieldSub,
          kwStrcat,
+         kwEcOp,
          kwEq,
          kwShow,
          kwAtoi,
@@ -85,5 +88,6 @@ allKeywords =
          kwCase,
          kwFail,
          kwArgsNum,
-         kwPoseidon
+         kwPoseidon,
+         kwRandomEcPoint
        ]

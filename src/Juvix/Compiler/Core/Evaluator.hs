@@ -189,6 +189,8 @@ geval opts herr ctx env0 = eval' env0
       OpTrace -> traceOp
       OpAnomaGet -> err "unsupported builtin operation: OpAnomaGet"
       OpPoseidonHash -> err "unsupported builtin operation: OpPoseidonHash"
+      OpEc -> err "unsupported builtin operation: OpEc"
+      OpRandomEcPoint -> err "unsupported builtin operation: OpRandomEcPoint"
       where
         err :: Text -> a
         err msg = evalError msg n

@@ -45,6 +45,7 @@ builtinConstructors = \case
   BuiltinInt -> [BuiltinIntOfNat, BuiltinIntNegSuc]
   BuiltinList -> [BuiltinListNil, BuiltinListCons]
   BuiltinPoseidonState -> [BuiltinMkPoseidonState]
+  BuiltinEcPoint -> [BuiltinMkEcPoint]
 
 data BuiltinInductive
   = BuiltinNat
@@ -52,6 +53,7 @@ data BuiltinInductive
   | BuiltinInt
   | BuiltinList
   | BuiltinPoseidonState
+  | BuiltinEcPoint
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic, Data)
 
 instance Hashable BuiltinInductive
@@ -65,6 +67,7 @@ instance Pretty BuiltinInductive where
     BuiltinInt -> Str.int_
     BuiltinList -> Str.list
     BuiltinPoseidonState -> Str.cairoPoseidonState
+    BuiltinEcPoint -> Str.cairoEcPoint
 
 instance Pretty BuiltinConstructor where
   pretty = \case
@@ -77,6 +80,7 @@ instance Pretty BuiltinConstructor where
     BuiltinListNil -> Str.nil
     BuiltinListCons -> Str.cons
     BuiltinMkPoseidonState -> Str.cairoMkPoseidonState
+    BuiltinMkEcPoint -> Str.cairoMkEcPoint
 
 data BuiltinConstructor
   = BuiltinNatZero
@@ -88,6 +92,7 @@ data BuiltinConstructor
   | BuiltinListNil
   | BuiltinListCons
   | BuiltinMkPoseidonState
+  | BuiltinMkEcPoint
   deriving stock (Show, Eq, Ord, Generic, Data)
 
 instance Hashable BuiltinConstructor
@@ -184,6 +189,8 @@ data BuiltinAxiom
   | BuiltinIntPrint
   | BuiltinAnomaGet
   | BuiltinPoseidon
+  | BuiltinEcOp
+  | BuiltinRandomEcPoint
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic, Data)
 
 instance Hashable BuiltinAxiom
@@ -217,6 +224,8 @@ instance Pretty BuiltinAxiom where
     BuiltinIntPrint -> Str.intPrint
     BuiltinAnomaGet -> Str.anomaGet
     BuiltinPoseidon -> Str.cairoPoseidon
+    BuiltinEcOp -> Str.cairoEcOp
+    BuiltinRandomEcPoint -> Str.cairoRandomEcPoint
 
 data BuiltinType
   = BuiltinTypeInductive BuiltinInductive

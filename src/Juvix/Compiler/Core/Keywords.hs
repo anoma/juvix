@@ -18,6 +18,7 @@ import Juvix.Data.Keyword.All
     kwComma,
     kwDef,
     kwDiv,
+    kwEcOp,
     kwElse,
     kwEq,
     kwFail,
@@ -41,6 +42,8 @@ import Juvix.Data.Keyword.All
     kwOf,
     kwPi,
     kwPlus,
+    kwPoseidon,
+    kwRandomEcPoint,
     kwRightArrow,
     kwSeq,
     kwSeqq,
@@ -101,5 +104,8 @@ allKeywords =
     kwFail,
     kwAny,
     kwPi,
-    kwType
+    kwType,
+    kwPoseidon,
+    kwEcOp,
+    kwRandomEcPoint
   ]

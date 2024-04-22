@@ -66,6 +66,7 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
   case _cmdInstrInstruction of
     Asm.Binop op -> return $ mkBinop op
     Asm.Unop op -> return $ mkUnop op
+    Asm.Cairo op -> return $ mkCairo op
     Asm.Push val -> return $ mkAssign (mkVarRef VarGroupLocal (ntmps + n + 1)) (mkValue val)
     Asm.Pop -> return Nop
     Asm.Trace -> return $ Trace $ InstrTrace (VRef $ mkVarRef VarGroupLocal (ntmps + n))
@@ -103,6 +104,8 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
         ++ map (mkVarRef VarGroupLocal) [ntmps .. ntmps + n - k]
         ++ map (mkVarRef VarGroupArgs) [0 .. funInfo ^. Asm.functionArgsNum - 1]
 
+    -- s is the number of stack cells to skip from the top
+    -- k is the number of arguments
     getArgs :: Int -> Int -> [Value]
     getArgs s k = map (\i -> VRef $ mkVarRef VarGroupLocal (ntmps + n - i)) [s .. (s + k - 1)]
 
@@ -125,6 +128,17 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
             _instrUnopResult = mkVarRef VarGroupLocal (ntmps + n),
             _instrUnopArg = VRef $ mkVarRef VarGroupLocal (ntmps + n)
           }
+
+    mkCairo :: CairoOp -> Instruction
+    mkCairo op =
+      Cairo
+        InstrCairo
+          { _instrCairoOpcode = op,
+            _instrCairoResult = mkVarRef VarGroupLocal (ntmps + n + 1 - k),
+            _instrCairoArgs = getArgs 0 k
+          }
+      where
+        k = cairoOpArgsNum op
 
     mkAssign :: VarRef -> Value -> Instruction
     mkAssign tgt src = Assign (InstrAssign tgt src)

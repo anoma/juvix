@@ -223,6 +223,8 @@ fromRegInstr bNoStack info = \case
     return [fromBinaryOp x]
   Reg.Unop x ->
     return [fromUnaryOp x]
+  Reg.Cairo {} ->
+    unsupported "Cairo builtin"
   Reg.Assign Reg.InstrAssign {..} ->
     return $ stmtsAssign (fromVarRef _instrAssignResult) (fromValue _instrAssignValue)
   Reg.Trace Reg.InstrTrace {..} ->
@@ -301,7 +303,6 @@ fromRegInstr bNoStack info = \case
       Reg.OpArgsNum -> "JUVIX_ARGS_NUM"
       Reg.OpFieldToInt -> unsupported "field type"
       Reg.OpIntToField -> unsupported "field type"
-      Reg.OpCairoPoseidon -> unsupported "Cairo builtins"
 
     fromVarRef :: Reg.VarRef -> Expression
     fromVarRef Reg.VarRef {..} =

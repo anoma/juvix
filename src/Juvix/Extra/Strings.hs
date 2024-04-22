@@ -758,6 +758,9 @@ instrArgsNum = "argsnum"
 instrPoseidon :: (IsString s) => s
 instrPoseidon = "poseidon"
 
+instrEcOp :: (IsString s) => s
+instrEcOp = "ec_op"
+
 instrPrealloc :: (IsString s) => s
 instrPrealloc = "prealloc"
 
@@ -1004,8 +1007,17 @@ cairoPoseidon = "poseidon"
 cairoEcOp :: (IsString s) => s
 cairoEcOp = "ec_op"
 
+cairoRandomEcPoint :: (IsString s) => s
+cairoRandomEcPoint = "random_ec_point"
+
 cairoPoseidonState :: (IsString s) => s
 cairoPoseidonState = "poseidon_state"
 
 cairoMkPoseidonState :: (IsString s) => s
 cairoMkPoseidonState = "mkPoseidonState"
+
+cairoEcPoint :: (IsString s) => s
+cairoEcPoint = "ec_point"
+
+cairoMkEcPoint :: (IsString s) => s
+cairoMkEcPoint = "mkEcPoint"

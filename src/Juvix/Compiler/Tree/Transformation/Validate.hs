@@ -15,6 +15,7 @@ inferType tab funInfo = goInfer mempty
     goInfer bl = \case
       Binop x -> goBinop bl x
       Unop x -> goUnop bl x
+      Cairo x -> goCairo bl x
       Constant x -> goConst bl x
       MemRef x -> goMemRef bl x
       AllocConstr x -> goAllocConstr bl x
@@ -81,7 +82,11 @@ inferType tab funInfo = goInfer mempty
           OpArgsNum -> checkUnop TyDynamic mkTypeInteger
           OpIntToField -> checkUnop mkTypeInteger TyField
           OpFieldToInt -> checkUnop TyField mkTypeInteger
-          OpCairoPoseidon -> checkUnop TyDynamic TyDynamic
+
+    goCairo :: BinderList Type -> NodeCairo -> Sem r Type
+    goCairo bl NodeCairo {..} = do
+      mapM_ (\arg -> checkType bl arg TyDynamic) _nodeCairoArgs
+      return TyDynamic
 
     goConst :: BinderList Type -> NodeConstant -> Sem r Type
     goConst _ NodeConstant {..} = case _nodeConstant of

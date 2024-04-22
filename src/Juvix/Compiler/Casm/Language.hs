@@ -24,6 +24,7 @@ data MemRef = MemRef
   { _memRefReg :: Reg,
     _memRefOff :: Offset
   }
+  deriving stock (Eq)
 
 data LabelRef = LabelRef
   { _labelRefSymbol :: Symbol,
@@ -77,6 +78,7 @@ data ExtraOpcode
 data Hint
   = HintInput Text
   | HintAlloc Int
+  | HintRandomEcPoint
 
 data Instruction
   = Assign InstrAssign

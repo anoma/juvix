@@ -88,6 +88,7 @@ goFunction infoTab fi = do
         goInstr Asm.CmdInstr {..} = case _cmdInstrInstruction of
           Asm.Binop op -> goBinop (PrimBinop op)
           Asm.Unop op -> goUnop (PrimUnop op)
+          Asm.Cairo op -> goCairo op
           Asm.Push (Asm.Constant c) -> return (mkConst c)
           Asm.Push (Asm.Ref r) -> return (mkMemRef r)
           Asm.Pop -> goPop
@@ -217,6 +218,17 @@ goFunction infoTab fi = do
                 { _nodeUnopInfo = mempty,
                   _nodeUnopArg = arg,
                   _nodeUnopOpcode = op
+                }
+
+        goCairo :: CairoOp -> Sem r Node
+        goCairo op = do
+          args <- replicateM (cairoOpArgsNum op) goCode
+          return $
+            Cairo
+              NodeCairo
+                { _nodeCairoInfo = mempty,
+                  _nodeCairoOpcode = op,
+                  _nodeCairoArgs = args
                 }
 
         goPop :: Sem r Node

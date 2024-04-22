@@ -64,18 +64,23 @@ toTypecheckTransformations = [MatchToCase]
 toStoredTransformations :: [TransformationId]
 toStoredTransformations = [EtaExpandApps, MatchToCase, NatToPrimInt, IntToPrimInt, ConvertBuiltinTypes, OptPhaseEval, DisambiguateNames]
 
+combineInfoTablesTransformations :: [TransformationId]
+combineInfoTablesTransformations = [CombineInfoTables, FilterUnreachable]
+
 toNormalizeTransformations :: [TransformationId]
 toNormalizeTransformations = [CombineInfoTables, LetRecLifting, LetFolding, UnrollRecursion]
 
 toVampIRTransformations :: [TransformationId]
-toVampIRTransformations = [CombineInfoTables, FilterUnreachable, CheckVampIR, LetRecLifting, OptPhaseVampIR, UnrollRecursion, Normalize, LetHoisting]
+toVampIRTransformations =
+  combineInfoTablesTransformations ++ [CheckVampIR, LetRecLifting, OptPhaseVampIR, UnrollRecursion, Normalize, LetHoisting]
 
 toStrippedTransformations :: TransformationId -> [TransformationId]
 toStrippedTransformations checkId =
-  [CombineInfoTables, FilterUnreachable, checkId, LambdaLetRecLifting, TopEtaExpand, OptPhaseExec, MoveApps, RemoveTypeArgs]
+  combineInfoTablesTransformations ++ [checkId, LambdaLetRecLifting, TopEtaExpand, OptPhaseExec, MoveApps, RemoveTypeArgs]
 
 toGebTransformations :: [TransformationId]
-toGebTransformations = [CombineInfoTables, FilterUnreachable, CheckGeb, LetRecLifting, OptPhaseGeb, UnrollRecursion, FoldTypeSynonyms, ComputeTypeInfo]
+toGebTransformations =
+  combineInfoTablesTransformations ++ [CheckGeb, LetRecLifting, OptPhaseGeb, UnrollRecursion, FoldTypeSynonyms, ComputeTypeInfo]
 
 instance TransformationId' TransformationId where
   transformationText :: TransformationId -> Text

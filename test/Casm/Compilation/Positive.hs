@@ -474,5 +474,12 @@ tests =
         True
         $(mkRelDir ".")
         $(mkRelFile "test075.juvix")
-        $(mkRelFile "out/test075.out")
+        $(mkRelFile "out/test075.out"),
+      posTest
+        "Test076: Elliptic Curve builtin"
+        False
+        True
+        $(mkRelDir ".")
+        $(mkRelFile "test076.juvix")
+        $(mkRelFile "out/test076.out")
     ]

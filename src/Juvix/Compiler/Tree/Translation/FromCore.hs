@@ -137,25 +137,32 @@ genCode infoTable fi =
                   }
 
     goBuiltinApp :: Int -> BinderList MemRef -> Core.BuiltinApp -> Node
-    goBuiltinApp tempSize refs Core.BuiltinApp {..} =
-      case args of
-        [arg] ->
-          Unop $
-            NodeUnop
-              { _nodeUnopInfo = mempty,
-                _nodeUnopOpcode = genUnOp _builtinAppOp,
-                _nodeUnopArg = arg
+    goBuiltinApp tempSize refs Core.BuiltinApp {..}
+      | Core.builtinIsCairo _builtinAppOp =
+          Cairo $
+            NodeCairo
+              { _nodeCairoInfo = mempty,
+                _nodeCairoOpcode = genCairoOp _builtinAppOp,
+                _nodeCairoArgs = args
               }
-        [arg1, arg2] ->
-          Binop $
-            NodeBinop
-              { _nodeBinopInfo = mempty,
-                _nodeBinopOpcode = genBinOp _builtinAppOp,
-                _nodeBinopArg1 = arg1,
-                _nodeBinopArg2 = arg2
-              }
-        _ ->
-          impossible
+      | otherwise =
+          case args of
+            [arg] ->
+              Unop $
+                NodeUnop
+                  { _nodeUnopInfo = mempty,
+                    _nodeUnopOpcode = genUnOp _builtinAppOp,
+                    _nodeUnopArg = arg
+                  }
+            [arg1, arg2] ->
+              Binop $
+                NodeBinop
+                  { _nodeBinopInfo = mempty,
+                    _nodeBinopOpcode = genBinOp _builtinAppOp,
+                    _nodeBinopArg1 = arg1,
+                    _nodeBinopArg2 = arg2
+                  }
+            _ -> impossible
       where
         args = map (go tempSize refs) _builtinAppArgs
 
@@ -289,7 +296,13 @@ genCode infoTable fi =
       Core.OpTrace -> OpTrace
       Core.OpFail -> OpFail
       Core.OpAnomaGet -> OpAnomaGet
-      Core.OpPoseidonHash -> PrimUnop OpCairoPoseidon
+      _ -> impossible
+
+    genCairoOp :: Core.BuiltinOp -> CairoOp
+    genCairoOp = \case
+      Core.OpPoseidonHash -> OpCairoPoseidon
+      Core.OpEc -> OpCairoEc
+      Core.OpRandomEcPoint -> OpCairoRandomEcPoint
       _ -> impossible
 
     getArgsNum :: Symbol -> Int

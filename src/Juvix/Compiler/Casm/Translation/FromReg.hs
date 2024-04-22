@@ -37,7 +37,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
       initBuiltinsInstr = mkAssignAp (Binop $ BinopValue FieldAdd (MemRef Fp (-2)) (Imm 1))
       callMainInstr = mkCallRel (Lab $ LabelRef mainSym (Just mainName))
       jmpEndInstr = mkJumpRel (Val $ Lab endLab)
-      margs = reverse $ map (Hint . HintInput) mainArgs
+      margs = concat $ reverse $ map mkLoadInputArg mainArgs
       -- [ap] = [[ap - 2 - k] + k]; ap++
       bltsRet = map (\k -> mkAssignAp (Load $ LoadValue (MemRef Ap (-2 - k)) k)) [0 .. bnum - 1]
       resRetInstr = mkAssignAp (Val $ Ref $ MemRef Ap (-bnum - 1))
@@ -67,6 +67,9 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
   where
     mkResult :: (LabelInfo, ([Builtin], Code)) -> Result
     mkResult (labi, (blts, code)) = Result labi code blts
+
+    mkLoadInputArg :: Text -> [Instruction]
+    mkLoadInputArg arg = [Hint (HintInput arg), mkAssignAp (Val $ Ref $ MemRef Ap 0)]
 
     info :: Reg.ExtraInfo
     info = Reg.computeExtraInfo tab
@@ -242,6 +245,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
         goInstr = \case
           Reg.Binop x -> goBinop x
           Reg.Unop x -> goUnop x
+          Reg.Cairo x -> goCairo x
           Reg.Assign x -> goAssign x
           Reg.Alloc x -> goAlloc x
           Reg.AllocClosure x -> goAllocClosure x
@@ -338,16 +342,6 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
           goAssignAp (Load $ LoadValue (adjustAp 1 v) casmClosureArgsNumOffset)
           goExtraBinop FieldSub res (MemRef Ap (-2)) (Ref $ MemRef Ap (-1))
 
-        goOpPoseidon :: Reg.VarRef -> Reg.Value -> Sem r ()
-        goOpPoseidon res v = do
-          goAssignApBuiltins
-          goAssignApValue v
-          output' (blts ^. stdlibPoseidonApOffset) $
-            mkCallRel (Lab (LabelRef (blts ^. stdlibPoseidon) (Just (blts ^. stdlibPoseidonName))))
-          off <- getAP
-          insertVar res (off - 1)
-          setBuiltinOffset (off - 2)
-
         goBinop' :: Reg.BinaryOp -> Reg.VarRef -> MemRef -> Value -> Sem r ()
         goBinop' op res arg1 arg2 = case op of
           Reg.OpIntAdd ->
@@ -420,7 +414,30 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
           Reg.OpFieldToInt -> goAssignValue _instrUnopResult _instrUnopArg
           Reg.OpIntToField -> goAssignValue _instrUnopResult _instrUnopArg
           Reg.OpArgsNum -> goUnop' goOpArgsNum _instrUnopResult _instrUnopArg
-          Reg.OpCairoPoseidon -> goOpPoseidon _instrUnopResult _instrUnopArg
+
+        goCairo :: Reg.InstrCairo -> Sem r ()
+        goCairo Reg.InstrCairo {..} = case _instrCairoOpcode of
+          Reg.OpCairoRandomEcPoint -> do
+            output'' (Hint HintRandomEcPoint)
+            output' 2 (Alloc $ InstrAlloc $ Val $ Imm 2)
+            goAllocCall _instrCairoResult
+            -- 1 is the tag of the first (and only) constructor in the ec_point record.
+            goAssignAp (Val $ Imm 1)
+            goAssignAp (Val $ Ref $ MemRef Ap (-off))
+            goAssignAp (Val $ Ref $ MemRef Ap (-off))
+            where
+              off = toOffset (blts ^. stdlibGetRegsApOffset) + 4
+          _ -> do
+            goAssignApBuiltins
+            mapM_ goAssignApValue (reverse _instrCairoArgs)
+            output' apOff (mkCallRel (Lab (LabelRef sym (Just name))))
+            off <- getAP
+            insertVar _instrCairoResult (off - 1)
+            setBuiltinOffset (off - 2)
+            where
+              (apOff, sym, name) = case _instrCairoOpcode of
+                Reg.OpCairoPoseidon -> (blts ^. stdlibPoseidonApOffset, blts ^. stdlibPoseidon, blts ^. stdlibPoseidonName)
+                Reg.OpCairoEc -> (blts ^. stdlibEcOpApOffset, blts ^. stdlibEcOp, blts ^. stdlibEcOpName)
 
         goAssign :: Reg.InstrAssign -> Sem r ()
         goAssign Reg.InstrAssign {..} =

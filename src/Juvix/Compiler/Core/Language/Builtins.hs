@@ -28,6 +28,8 @@ data BuiltinOp
   | OpFail
   | OpAnomaGet
   | OpPoseidonHash
+  | OpEc
+  | OpRandomEcPoint
   deriving stock (Eq, Generic)
 
 instance Serialize BuiltinOp
@@ -70,6 +72,8 @@ builtinOpArgsNum = \case
   OpFail -> 1
   OpAnomaGet -> 1
   OpPoseidonHash -> 1
+  OpEc -> 3
+  OpRandomEcPoint -> 0
 
 builtinConstrArgsNum :: BuiltinDataTag -> Int
 builtinConstrArgsNum = \case
@@ -105,3 +109,12 @@ builtinIsFoldable = \case
   OpFail -> False
   OpAnomaGet -> False
   OpPoseidonHash -> False
+  OpEc -> False
+  OpRandomEcPoint -> False
+
+builtinIsCairo :: BuiltinOp -> Bool
+builtinIsCairo = \case
+  OpPoseidonHash -> True
+  OpEc -> True
+  OpRandomEcPoint -> True
+  _ -> False

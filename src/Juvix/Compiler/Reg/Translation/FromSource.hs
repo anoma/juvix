@@ -73,6 +73,7 @@ instrWithResult = do
   kw kwEq
   (Binop <$> instrBinop vref)
     <|> (Unop <$> instrUnop vref)
+    <|> (Cairo <$> instrCairo vref)
     <|> (Alloc <$> instrAlloc vref)
     <|> (AllocClosure <$> instrAllocClosure vref)
     <|> (ExtendClosure <$> instrExtendClosure vref)
@@ -128,7 +129,6 @@ instrUnop vref =
   parseUnaryOp kwShow OpShow vref
     <|> parseUnaryOp kwAtoi OpStrToInt vref
     <|> parseUnaryOp kwArgsNum OpArgsNum vref
-    <|> parseUnaryOp kwPoseidon OpCairoPoseidon vref
 
 parseUnaryOp ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
@@ -144,6 +144,31 @@ parseUnaryOp kwd op vref = do
       { _instrUnopOpcode = op,
         _instrUnopResult = vref,
         _instrUnopArg = arg
+      }
+
+instrCairo ::
+  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  VarRef ->
+  ParsecS r InstrCairo
+instrCairo vref =
+  parseCairoOp kwPoseidon OpCairoPoseidon vref
+    <|> parseCairoOp kwEcOp OpCairoEc vref
+    <|> parseCairoOp kwRandomEcPoint OpCairoRandomEcPoint vref
+
+parseCairoOp ::
+  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  Keyword ->
+  CairoOp ->
+  VarRef ->
+  ParsecS r InstrCairo
+parseCairoOp kwd op vref = do
+  kw kwd
+  args <- replicateM (cairoOpArgsNum op) value
+  return $
+    InstrCairo
+      { _instrCairoOpcode = op,
+        _instrCairoResult = vref,
+        _instrCairoArgs = args
       }
 
 instrAssign ::

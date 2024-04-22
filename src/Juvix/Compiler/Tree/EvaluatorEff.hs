@@ -33,6 +33,7 @@ eval tab = runReader emptyEvalCtx . eval'
     eval' node = case node of
       Binop x -> goBinop x
       Unop x -> goUnop x
+      Cairo {} -> evalError "unsupported: Cairo builtins"
       Constant c -> return (goConstant c)
       MemRef x -> goMemRef x
       AllocConstr x -> goAllocConstr x

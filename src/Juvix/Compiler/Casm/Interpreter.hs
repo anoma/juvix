@@ -173,10 +173,14 @@ hRunCode hout inputInfo (LabelInfo labelInfo) instrs0 = runST goCode
     readRValue = readRValue' False 0
 
     goAssign :: InstrAssign -> Address -> Address -> Address -> Memory s -> ST s FField
-    goAssign InstrAssign {..} pc ap fp mem = do
-      v <- readRValue ap fp mem _instrAssignValue
-      mem' <- writeMemRef ap fp mem _instrAssignResult v
-      go (pc + 1) (ap + fromEnum _instrAssignIncAp) fp mem'
+    goAssign InstrAssign {..} pc ap fp mem = case _instrAssignValue of
+      Val (Ref r)
+        | r == _instrAssignResult ->
+            go (pc + 1) (ap + fromEnum _instrAssignIncAp) fp mem
+      _ -> do
+        v <- readRValue ap fp mem _instrAssignValue
+        mem' <- writeMemRef ap fp mem _instrAssignResult v
+        go (pc + 1) (ap + fromEnum _instrAssignIncAp) fp mem'
 
     goExtraBinop :: InstrExtraBinop -> Address -> Address -> Address -> Memory s -> ST s FField
     goExtraBinop InstrExtraBinop {..} pc ap fp mem = do
@@ -253,10 +257,14 @@ hRunCode hout inputInfo (LabelInfo labelInfo) instrs0 = runST goCode
               fromMaybe (throwRunError "invalid input") $
                 HashMap.lookup var (inputInfo ^. inputInfoMap)
         mem' <- writeMem mem ap val
-        go (pc + 1) (ap + 1) fp mem'
+        go (pc + 1) ap fp mem'
       HintAlloc size -> do
-        mem' <- writeMem mem ap (fieldFromInteger fsize (fromIntegral ap + 1))
-        go (pc + 1) (ap + size + 1) fp mem'
+        mem' <- writeMem mem (ap + size) (fieldFromInteger fsize (fromIntegral ap))
+        go (pc + 1) (ap + size) fp mem'
+      HintRandomEcPoint -> do
+        mem' <- writeMem mem ap (fieldFromInteger fsize 0)
+        mem'' <- writeMem mem' (ap + 1) (fieldFromInteger fsize 0)
+        go (pc + 1) ap fp mem''
 
     goFinish :: Address -> Memory s -> ST s FField
     goFinish ap mem = do

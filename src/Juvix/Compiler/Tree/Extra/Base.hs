@@ -18,6 +18,7 @@ getNodeInfo :: Node -> NodeInfo
 getNodeInfo = \case
   Binop NodeBinop {..} -> _nodeBinopInfo
   Unop NodeUnop {..} -> _nodeUnopInfo
+  Cairo NodeCairo {..} -> _nodeCairoInfo
   Constant NodeConstant {..} -> _nodeConstantInfo
   MemRef NodeMemRef {..} -> _nodeMemRefInfo
   AllocConstr NodeAllocConstr {..} -> _nodeAllocConstrInfo
@@ -138,6 +139,17 @@ destruct = \case
               { _nodeUnopArg = arg,
                 _nodeUnopOpcode,
                 _nodeUnopInfo
+              }
+      }
+  Cairo NodeCairo {..} ->
+    NodeDetails
+      { _nodeChildren = map noTempVar _nodeCairoArgs,
+        _nodeReassemble = manyChildren $ \args ->
+          Cairo
+            NodeCairo
+              { _nodeCairoArgs = args,
+                _nodeCairoOpcode,
+                _nodeCairoInfo
               }
       }
   Constant c ->

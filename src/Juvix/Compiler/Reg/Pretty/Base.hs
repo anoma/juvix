@@ -62,6 +62,13 @@ instance PrettyCode InstrUnop where
     val <- ppCode _instrUnopArg
     return $ res <+> primitive Str.equal <+> op <+> val
 
+instance PrettyCode InstrCairo where
+  ppCode InstrCairo {..} = do
+    op <- Tree.ppCode _instrCairoOpcode
+    res <- ppCode _instrCairoResult
+    vals <- mapM ppCode _instrCairoArgs
+    return $ res <+> primitive Str.equal <+> op <+> hsep vals
+
 instance PrettyCode InstrAssign where
   ppCode InstrAssign {..} = do
     res <- ppCode _instrAssignResult
@@ -238,6 +245,7 @@ instance PrettyCode Instruction where
     Nop -> return $ primitive Str.nop
     Binop x -> ppCode x
     Unop x -> ppCode x
+    Cairo x -> ppCode x
     Assign x -> ppCode x
     Trace x -> ppCode x
     Dump -> return $ primitive Str.dump

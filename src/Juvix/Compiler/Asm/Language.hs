@@ -41,6 +41,10 @@ data Instruction
   | -- | An instruction which on the top of the value stack, replacing it with
     -- the result of a unary operation.
     Unop UnaryOp
+  | -- | An instruction which replaces n values on top of the stack with the
+    -- result of computing the specified Cairo builtin operation, where n is the
+    -- builtin's number of arguments.
+    Cairo CairoOp
   | -- | Push a value on top of the stack. JVA opcode: 'push <val>'.
     Push Value
   | -- | Pop the stack. JVA opcode: 'pop'.

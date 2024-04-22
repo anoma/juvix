@@ -67,6 +67,13 @@ data InstrUnop = InstrUnop
   }
   deriving stock (Eq)
 
+data InstrCairo = InstrCairo
+  { _instrCairoOpcode :: CairoOp,
+    _instrCairoResult :: VarRef,
+    _instrCairoArgs :: [Value]
+  }
+  deriving stock (Eq)
+
 data InstrAssign = InstrAssign
   { _instrAssignResult :: VarRef,
     _instrAssignValue :: Value
@@ -163,6 +170,7 @@ data CaseBranch' a = CaseBranch
 
 makeLenses ''InstrBinop
 makeLenses ''InstrUnop
+makeLenses ''InstrCairo
 makeLenses ''InstrAssign
 makeLenses ''InstrTrace
 makeLenses ''InstrFailure

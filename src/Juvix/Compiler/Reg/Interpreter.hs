@@ -46,6 +46,7 @@ runFunction hout infoTable args0 info0 = do
         Nop -> go args tmps instrs
         Binop x -> goBinop args tmps instrs x
         Unop x -> goUnop args tmps instrs x
+        Cairo {} -> throwRunError "unsupported: Cairo builtin" Nothing
         Assign x -> goAssign args tmps instrs x
         Trace x -> goTrace args tmps instrs x
         Dump -> goDump args tmps instrs

@@ -570,6 +570,9 @@ builtinAppExpr varsNum vars = do
       <|> (kw kwSeqq $> OpSeq)
       <|> (kw kwTrace $> OpTrace)
       <|> (kw kwFail $> OpFail)
+      <|> (kw kwPoseidon $> OpPoseidonHash)
+      <|> (kw kwEcOp $> OpEc)
+      <|> (kw kwRandomEcPoint $> OpRandomEcPoint)
   args <- P.many (atom varsNum vars)
   return $ mkBuiltinApp' op args
 

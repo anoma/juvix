@@ -280,6 +280,12 @@ kwArgsNum = asciiKw Str.instrArgsNum
 kwPoseidon :: Keyword
 kwPoseidon = asciiKw Str.instrPoseidon
 
+kwEcOp :: Keyword
+kwEcOp = asciiKw Str.instrEcOp
+
+kwRandomEcPoint :: Keyword
+kwRandomEcPoint = asciiKw Str.cairoRandomEcPoint
+
 kwAlloc :: Keyword
 kwAlloc = asciiKw Str.instrAlloc
 

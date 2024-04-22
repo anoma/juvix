@@ -17,6 +17,7 @@ fromReg = over infoFunctions (fmap (over functionCode goCode))
       i : is -> Just $ case i of
         Reg.Binop x -> over blockBody (Binop x :) (goCode is)
         Reg.Unop x -> over blockBody (Unop x :) (goCode is)
+        Reg.Cairo x -> over blockBody (Cairo x :) (goCode is)
         Reg.Assign x -> over blockBody (Assign x :) (goCode is)
         Reg.Alloc x -> over blockBody (Alloc x :) (goCode is)
         Reg.AllocClosure x -> over blockBody (AllocClosure x :) (goCode is)

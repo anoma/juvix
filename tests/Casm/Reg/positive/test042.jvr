@@ -1,0 +1,39 @@
+-- Elliptic Curve operation
+
+type EcPoint {
+  ec_point : (field, field) -> EcPoint;
+}
+
+function ec_double(EcPoint) : EcPoint {
+  tmp[0] = eq arg[0].ec_point[0] 0;
+  br tmp[0] {
+    true: {
+      ret arg[0];
+    };
+    false: {
+      tmp[0] = fmul arg[0].ec_point[0] arg[0].ec_point[0];
+      tmp[0] = fmul tmp[0] 3;
+      tmp[0] = fadd tmp[0] 1;
+      tmp[1] = fmul arg[0].ec_point[1] 2;
+      tmp[0] = fdiv tmp[0] tmp[1];
+      -- slope = tmp[0]
+      tmp[1] = fmul tmp[0] tmp[0];
+      tmp[1] = fsub tmp[1] arg[0].ec_point[0];
+      tmp[1] = fsub tmp[1] arg[0].ec_point[0];
+      -- r_x = tmp[1]
+      tmp[2] = fsub arg[0].ec_point[0] tmp[1];
+      tmp[2] = fmul tmp[0] tmp[2];
+      tmp[2] = fsub tmp[2] arg[0].ec_point[1];
+      tmp[3] = alloc ec_point (tmp[1], tmp[2]);
+      ret tmp[3];
+    };
+  };
+}
+
+function main() : field {
+  tmp[0] = alloc ec_point (874739451078007766457464989774322083649278607533249481151382481072868806602, 152666792071518830868575557812948353041420400780739481342941381225525861407);
+  tmp[1] = call ec_double (tmp[0]);
+  tmp[2] = ec_op tmp[0] 9 tmp[1];
+  tmp[3] = fadd tmp[2].ec_point[0] tmp[2].ec_point[1];
+  ret tmp[3];
+}

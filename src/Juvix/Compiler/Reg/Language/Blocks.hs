@@ -16,6 +16,7 @@ data Block = Block
 data Instruction
   = Binop InstrBinop
   | Unop InstrUnop
+  | Cairo InstrCairo
   | Assign InstrAssign
   | Alloc InstrAlloc
   | AllocClosure InstrAllocClosure

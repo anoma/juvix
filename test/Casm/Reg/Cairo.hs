@@ -45,5 +45,11 @@ cairoTests =
       $(mkRelDir ".")
       $(mkRelFile "test041.jvr")
       $(mkRelFile "out/test041.out")
+      Nothing,
+    P.PosTest
+      "Test042: Elliptic Curve operation"
+      $(mkRelDir ".")
+      $(mkRelFile "test042.jvr")
+      $(mkRelFile "out/test042.out")
       Nothing
   ]
