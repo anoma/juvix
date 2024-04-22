@@ -18,7 +18,7 @@ data Type
   deriving stock (Eq)
 
 data Var = Var
-  { _varName :: Text
+  { _varName :: Name
   }
   deriving stock (Eq)
 
@@ -62,7 +62,7 @@ data Datatype = Datatype
 
 data Constructor = Constructor
   { _constructorName :: Name,
-    _constructorType :: Type,
+    _constructorArgTypes :: [Type],
     _constructorFixity :: Maybe Fixity
   }
 
@@ -84,3 +84,14 @@ data Theory = Theory
   }
 
 makeLenses ''Theory
+
+instance HasAtomicity Type where
+  atomicity = \case
+    TyVar {} -> Atom
+    TyBool -> Atom
+    TyNat -> Atom
+    TyInt -> Atom
+    TyFun {} -> Aggregate funFixity
+    TyInd IndApp {..}
+      | null _indAppParams -> Atom
+      | otherwise -> Aggregate appFixity
