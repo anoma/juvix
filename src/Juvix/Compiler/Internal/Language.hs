@@ -37,7 +37,6 @@ data PreStatement
 data Module' stmt = Module
   { _moduleId :: ModuleId,
     _moduleName :: Name,
-    _moduleExamples :: [Example],
     _moduleBody :: ModuleBody' stmt,
     _modulePragmas :: Pragmas
   }
@@ -89,7 +88,6 @@ instance Serialize AxiomDef
 data FunctionDef = FunctionDef
   { _funDefName :: FunctionName,
     _funDefType :: Expression,
-    _funDefExamples :: [Example],
     _funDefBody :: Expression,
     _funDefTerminating :: Bool,
     _funDefInstance :: Bool,
@@ -182,16 +180,6 @@ data Expression
 instance Hashable Expression
 
 instance Serialize Expression
-
-data Example = Example
-  { _exampleId :: NameId,
-    _exampleExpression :: Expression
-  }
-  deriving stock (Eq, Generic, Data)
-
-instance Hashable Example
-
-instance Serialize Example
 
 data SimpleBinder = SimpleBinder
   { _sbinderVar :: VarName,
@@ -330,7 +318,6 @@ instance Serialize InductiveParameter
 data InductiveDef = InductiveDef
   { _inductiveName :: InductiveName,
     _inductiveBuiltin :: Maybe BuiltinInductive,
-    _inductiveExamples :: [Example],
     _inductiveType :: Expression,
     _inductiveParameters :: [InductiveParameter],
     _inductiveConstructors :: [ConstructorDef],
@@ -342,7 +329,6 @@ data InductiveDef = InductiveDef
 
 data ConstructorDef = ConstructorDef
   { _inductiveConstructorName :: ConstrName,
-    _inductiveConstructorExamples :: [Example],
     _inductiveConstructorType :: Expression,
     _inductiveConstructorPragmas :: Pragmas
   }
@@ -402,7 +388,6 @@ makeLenses ''Module'
 makeLenses ''Let
 makeLenses ''MutualBlockLet
 makeLenses ''MutualBlock
-makeLenses ''Example
 makeLenses ''PatternArg
 makeLenses ''Import
 makeLenses ''FunctionDef

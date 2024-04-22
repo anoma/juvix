@@ -66,7 +66,6 @@ ppJudoc (Judoc bs) = do
     ppBlock :: JudocBlock 'Scoped -> Sem r (Doc CodeAnn)
     ppBlock = \case
       JudocLines ls -> hsep <$> mapM ppLine (toList ls)
-      JudocExample {} -> return mempty
 
     ppLine :: JudocLine 'Scoped -> Sem r (Doc CodeAnn)
     ppLine (JudocLine _ as) = mconcatMapM (ppAtom . (^. withLocParam)) (toList as)

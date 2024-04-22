@@ -249,8 +249,6 @@ instance Clonable FunctionDef where
             _funDefType = ty',
             _funDefBody = body',
             _funDefArgsInfo = defaultSig',
-            -- clones do not need to preserve examples
-            _funDefExamples = [],
             _funDefTerminating,
             _funDefInstance,
             _funDefCoercion,

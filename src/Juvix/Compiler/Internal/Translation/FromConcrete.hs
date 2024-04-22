@@ -216,12 +216,10 @@ toPreModule ::
 toPreModule Module {..} = do
   pragmas' <- goPragmas _modulePragmas
   body' <- local (const pragmas') (goModuleBody _moduleBody)
-  examples' <- goExamples _moduleDoc
   return
     Internal.Module
       { _moduleName = name',
         _moduleBody = body',
-        _moduleExamples = examples',
         _modulePragmas = pragmas',
         _moduleId
       }
@@ -375,7 +373,6 @@ goFunctionDef FunctionDef {..} = do
       _funDefCoercion = isJust _signCoercion
       _funDefBuiltin = (^. withLocParam) <$> _signBuiltin
   _funDefType <- goDefType
-  _funDefExamples <- goExamples _signDoc
   _funDefPragmas <- goPragmas _signPragmas
   _funDefBody <- goBody
   msig <- asks (^. S.infoNameSigs . at (_funDefName ^. Internal.nameId))
@@ -476,22 +473,6 @@ goFunctionDef FunctionDef {..} = do
                in return Internal.PatternArg {..}
             Concrete.ArgumentWildcard w -> goWidlcard w
       maybe (pure <$> noName) (mapM mk) (nonEmpty _sigArgNames)
-
-goExamples ::
-  forall r.
-  (Members '[Reader DefaultArgsStack, Builtins, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) =>
-  Maybe (Judoc 'Scoped) ->
-  Sem r [Internal.Example]
-goExamples = mapM goExample . maybe [] judocExamples
-  where
-    goExample :: Example 'Scoped -> Sem r Internal.Example
-    goExample ex = do
-      e' <- goExpression (ex ^. exampleExpression)
-      return
-        Internal.Example
-          { _exampleExpression = e',
-            _exampleId = ex ^. exampleId
-          }
 
 goInductiveParameters ::
   forall r.
@@ -604,7 +585,6 @@ goInductive ty@InductiveDef {..} = do
   _inductiveConstructors' <-
     local (const _inductivePragmas') $
       mapM (goConstructorDef constrRetType) _inductiveConstructors
-  _inductiveExamples' <- goExamples _inductiveDoc
   let loc = getLoc _inductiveName
       indDef =
         Internal.InductiveDef
@@ -613,7 +593,6 @@ goInductive ty@InductiveDef {..} = do
             _inductiveName = inductiveName',
             _inductiveType = fromMaybe (Internal.ExpressionUniverse (SmallUniverse loc)) _inductiveType',
             _inductiveConstructors = toList _inductiveConstructors',
-            _inductiveExamples = _inductiveExamples',
             _inductivePragmas = _inductivePragmas',
             _inductivePositive = isJust (ty ^. inductivePositive),
             _inductiveTrait = isJust (ty ^. inductiveTrait)
@@ -636,12 +615,10 @@ goConstructorDef ::
   Sem r Internal.ConstructorDef
 goConstructorDef retTy ConstructorDef {..} = do
   ty' <- goRhs _constructorRhs
-  examples' <- goExamples _constructorDoc
   pragmas' <- goPragmas _constructorPragmas
   return
     Internal.ConstructorDef
       { _inductiveConstructorType = ty',
-        _inductiveConstructorExamples = examples',
         _inductiveConstructorName = goSymbol _constructorName,
         _inductiveConstructorPragmas = pragmas'
       }

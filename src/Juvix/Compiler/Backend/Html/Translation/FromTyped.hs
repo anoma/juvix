@@ -15,11 +15,8 @@ import Juvix.Compiler.Backend.Html.Translation.FromTyped.Source hiding (go)
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Print
-import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qualified as InternalTyped
-import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Extra.Assets
-import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
 import Juvix.Prelude.Pretty
 import Text.Blaze.Html.Renderer.Utf8 qualified as Html
@@ -28,8 +25,7 @@ import Text.Blaze.Html5.Attributes qualified as Attr
 
 data JudocCtx = JudocCtx
   { _judocCtxComments :: Comments,
-    _judocCtxTopModules :: [Module 'Scoped 'ModuleTop],
-    _judocCtxNormalizedTable :: InternalTyped.NormalizedTable
+    _judocCtxTopModules :: [Module 'Scoped 'ModuleTop]
   }
 
 data JudocArgs = JudocArgs
@@ -56,16 +52,14 @@ instance Semigroup JudocCtx where
   ctx1 <> ctx2 =
     JudocCtx
       { _judocCtxComments = ctx1 ^. judocCtxComments <> ctx2 ^. judocCtxComments,
-        _judocCtxTopModules = ctx1 ^. judocCtxTopModules <> ctx2 ^. judocCtxTopModules,
-        _judocCtxNormalizedTable = ctx1 ^. judocCtxNormalizedTable <> ctx2 ^. judocCtxNormalizedTable
+        _judocCtxTopModules = ctx1 ^. judocCtxTopModules <> ctx2 ^. judocCtxTopModules
       }
 
 instance Monoid JudocCtx where
   mempty =
     JudocCtx
       { _judocCtxComments = mempty,
-        _judocCtxTopModules = mempty,
-        _judocCtxNormalizedTable = mempty
+        _judocCtxTopModules = mempty
       }
 
 data Tree k a = Tree
@@ -180,16 +174,13 @@ writeHtml f h = liftIO $ do
 
 genJudocHtml :: (Members '[EmbedIO] r) => EntryPoint -> JudocArgs -> Sem r ()
 genJudocHtml entry JudocArgs {..} =
-  runReader htmlOpts . runReader normTable . runReader entry $ do
+  runReader htmlOpts . runReader entry $ do
     liftIO (writeAssets _judocArgsOutputDir)
     mapM_ (goTopModule cs) allModules
     createIndexFile (map topModulePath (toList allModules))
   where
     cs :: Comments
     cs = _judocArgsCtx ^. judocCtxComments
-
-    normTable :: InternalTyped.NormalizedTable
-    normTable = _judocArgsCtx ^. judocCtxNormalizedTable
 
     mainMod :: Module 'Scoped 'ModuleTop
     mainMod = _judocArgsMainModule
@@ -285,7 +276,7 @@ template rightMenu' content' = do
 -- | This function compiles a module into Html documentation.
 goTopModule ::
   forall r.
-  (Members '[Reader HtmlOptions, EmbedIO, Reader EntryPoint, Reader NormalizedTable] r) =>
+  (Members '[Reader HtmlOptions, EmbedIO, Reader EntryPoint] r) =>
   Comments ->
   Module 'Scoped 'ModuleTop ->
   Sem r ()
@@ -314,7 +305,7 @@ goTopModule cs m = do
             _genModuleHtmlArgsModule = m
           }
 
-    docHtml :: forall s. (Members '[Reader HtmlOptions, Reader EntryPoint, Reader NormalizedTable] s) => Sem s Html
+    docHtml :: forall s. (Members '[Reader HtmlOptions, Reader EntryPoint] s) => Sem s Html
     docHtml = do
       content' <- content
       rightMenu' <- rightMenu
@@ -396,10 +387,10 @@ goTopModule cs m = do
               )
               <> sigs'
 
-goJudocMay :: (Members '[Reader HtmlOptions, Reader NormalizedTable] r) => Maybe (Judoc 'Scoped) -> Sem r Html
+goJudocMay :: (Members '[Reader HtmlOptions] r) => Maybe (Judoc 'Scoped) -> Sem r Html
 goJudocMay = maybe (return mempty) goJudoc
 
-goJudoc :: forall r. (Members '[Reader HtmlOptions, Reader NormalizedTable] r) => Judoc 'Scoped -> Sem r Html
+goJudoc :: forall r. (Members '[Reader HtmlOptions] r) => Judoc 'Scoped -> Sem r Html
 goJudoc (Judoc bs) = mconcatMapM goGroup bs
   where
     goGroup :: JudocGroup 'Scoped -> Sem r Html
@@ -413,30 +404,16 @@ goJudoc (Judoc bs) = mconcatMapM goGroup bs
     goBlock :: JudocBlock 'Scoped -> Sem r Html
     goBlock = \case
       JudocLines ls -> Html.p . concatWith (\l r -> l <> " " <> r) <$> mapM goLine (toList ls)
-      JudocExample e -> goExample e
 
     goLine :: JudocLine 'Scoped -> Sem r Html
     goLine (JudocLine _ atoms) = mconcatMapM goAtom (fmap (^. withLocParam) atoms)
-
-    goExample :: Example 'Scoped -> Sem r Html
-    goExample ex = do
-      e' <- ppCodeHtml defaultOptions (ex ^. exampleExpression)
-      norm' <- asks @NormalizedTable (^?! at (ex ^. exampleId) . _Just) >>= ppCodeHtmlInternal
-      return
-        $ Html.pre
-          ! Attr.class_ "screen"
-        $ (Html.code ! Attr.class_ "prompt" $ Str.judocExample)
-          <> " "
-          <> e'
-          <> "\n"
-          <> norm'
 
     goAtom :: JudocAtom 'Scoped -> Sem r Html
     goAtom = \case
       JudocExpression e -> ppCodeHtml defaultOptions e
       JudocText txt -> return (toHtml txt)
 
-goStatement :: forall r. (Members '[Reader HtmlOptions, Reader NormalizedTable] r) => Statement 'Scoped -> Sem r Html
+goStatement :: forall r. (Members '[Reader HtmlOptions] r) => Statement 'Scoped -> Sem r Html
 goStatement = \case
   StatementAxiom t -> goAxiom t
   StatementInductive t -> goInductive t
@@ -454,7 +431,7 @@ goStatement = \case
       SyntaxOperator {} -> mempty
       SyntaxIterator {} -> mempty
 
-goFixity :: forall r. (Members '[Reader HtmlOptions, Reader NormalizedTable] r) => FixitySyntaxDef 'Scoped -> Sem r Html
+goFixity :: forall r. (Members '[Reader HtmlOptions] r) => FixitySyntaxDef 'Scoped -> Sem r Html
 goFixity def = do
   sig' <- ppHelper (ppFixityDefHeaderNew def)
   header' <- defHeader (def ^. fixitySymbol) sig' (def ^. fixityDoc)
@@ -501,13 +478,13 @@ goFixity def = do
             arit
               <> assoc
 
-goAlias :: forall r. (Members '[Reader HtmlOptions, Reader NormalizedTable] r) => AliasDef 'Scoped -> Sem r Html
+goAlias :: forall r. (Members '[Reader HtmlOptions] r) => AliasDef 'Scoped -> Sem r Html
 goAlias def = do
   sig' <- ppCodeHtml defaultOptions def
   defHeader (def ^. aliasDefName) sig' Nothing
 
 -- | local modules generated by inductive types should not show up.
-goLocalModule :: forall r. (Members '[Reader HtmlOptions, Reader NormalizedTable] r) => Module 'Scoped 'ModuleLocal -> Sem r Html
+goLocalModule :: forall r. (Members '[Reader HtmlOptions] r) => Module 'Scoped 'ModuleLocal -> Sem r Html
 goLocalModule def = fmap (fromMaybe mempty) . runFail $ do
   failWhen (def ^. moduleInductive)
   sig' <- ppHelper (ppModuleHeader def)
@@ -529,7 +506,7 @@ goOpen op
   | Public <- op ^. openModuleParams . openPublic = noDefHeader <$> ppCodeHtml defaultOptions op
   | otherwise = mempty
 
-goAxiom :: forall r. (Members '[Reader HtmlOptions, Reader NormalizedTable] r) => AxiomDef 'Scoped -> Sem r Html
+goAxiom :: forall r. (Members '[Reader HtmlOptions] r) => AxiomDef 'Scoped -> Sem r Html
 goAxiom axiom = do
   header' <- axiomHeader
   defHeader (axiom ^. axiomName) header' (axiom ^. axiomDoc)
@@ -537,7 +514,7 @@ goAxiom axiom = do
     axiomHeader :: Sem r Html
     axiomHeader = ppCodeHtml defaultOptions (set axiomDoc Nothing axiom)
 
-goFunctionDef :: forall r. (Members '[Reader HtmlOptions, Reader NormalizedTable] r) => FunctionDef 'Scoped -> Sem r Html
+goFunctionDef :: forall r. (Members '[Reader HtmlOptions] r) => FunctionDef 'Scoped -> Sem r Html
 goFunctionDef def = do
   sig' <- funSig
   defHeader (def ^. signName) sig' (def ^. signDoc)
@@ -545,7 +522,7 @@ goFunctionDef def = do
     funSig :: Sem r Html
     funSig = ppHelper (ppFunctionSignature def)
 
-goInductive :: forall r. (Members '[Reader HtmlOptions, Reader NormalizedTable] r) => InductiveDef 'Scoped -> Sem r Html
+goInductive :: forall r. (Members '[Reader HtmlOptions] r) => InductiveDef 'Scoped -> Sem r Html
 goInductive def = do
   sig' <- inductiveHeader
   header' <- defHeader (def ^. inductiveName) sig' (def ^. inductiveDoc)
@@ -558,7 +535,7 @@ goInductive def = do
 ppHelper :: (Members '[Reader HtmlOptions] r) => Sem '[ExactPrint, Reader Options] () -> Sem r Html
 ppHelper = docToHtml . run . runReader defaultOptions . execExactPrint Nothing
 
-goConstructors :: forall r. (Members '[Reader HtmlOptions, Reader NormalizedTable] r) => NonEmpty (ConstructorDef 'Scoped) -> Sem r Html
+goConstructors :: forall r. (Members '[Reader HtmlOptions] r) => NonEmpty (ConstructorDef 'Scoped) -> Sem r Html
 goConstructors cc = do
   tbl' <- table . tbody <$> mconcatMapM goConstructor cc
   return
@@ -592,7 +569,7 @@ noDefHeader = p ! Attr.class_ "src"
 
 defHeader ::
   forall r x.
-  (Members '[Reader HtmlOptions, Reader NormalizedTable] r) =>
+  (Members '[Reader HtmlOptions] r) =>
   S.Name' x ->
   Html ->
   Maybe (Judoc 'Scoped) ->

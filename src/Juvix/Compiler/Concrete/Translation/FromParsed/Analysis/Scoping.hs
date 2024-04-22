@@ -2457,7 +2457,6 @@ checkJudocBlock ::
   Sem r (JudocBlock 'Scoped)
 checkJudocBlock = \case
   JudocLines l -> JudocLines <$> mapM checkJudocLine l
-  JudocExample e -> JudocExample <$> traverseOf exampleExpression checkParseExpressionAtoms e
 
 checkJudocBlockParagraph ::
   (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader EntryPoint] r) =>

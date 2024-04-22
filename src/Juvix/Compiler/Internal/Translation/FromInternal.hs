@@ -6,7 +6,6 @@ module Juvix.Compiler.Internal.Translation.FromInternal
   )
 where
 
-import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Concrete.Data.Highlight.Input
 import Juvix.Compiler.Internal.Data.LocalVars
 import Juvix.Compiler.Internal.Language
@@ -34,7 +33,6 @@ typeCheckExpressionType exp = do
     . runNameIdGenArtifacts
     . ignoreHighlightBuilder
     . runReader table
-    . ignoreOutput @Example
     . withEmptyLocalVars
     . withEmptyInsertedArgsStack
     . mapError (JuvixError @TypeCheckerError)
@@ -57,7 +55,7 @@ typeCheckingNew ::
   Sem (Termination ': r) InternalResult ->
   Sem r InternalTypedResult
 typeCheckingNew a = do
-  (termin, (res, (normalized, (idens, (funs, r))))) <- runTermination iniTerminationState $ do
+  (termin, (res, (idens, (funs, r)))) <- runTermination iniTerminationState $ do
     res <- a
     itab <- getInternalModuleTable <$> ask
     let md :: InternalModule
@@ -67,7 +65,6 @@ typeCheckingNew a = do
         table :: InfoTable
         table = computeCombinedInfoTable itab'
     fmap (res,)
-      . runOutputList
       . runState (computeTypesTable itab')
       . runState (computeFunctionsTable itab')
       . runReader table
@@ -80,7 +77,6 @@ typeCheckingNew a = do
         _resultModule = r,
         _resultInternalModule = md,
         _resultTermination = termin,
-        _resultNormalized = HashMap.fromList [(e ^. exampleId, e ^. exampleExpression) | e <- normalized],
         _resultIdenTypes = idens,
         _resultFunctions = funs
       }

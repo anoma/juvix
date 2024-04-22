@@ -2031,7 +2031,6 @@ deriving stock instance Ord (JudocGroup 'Scoped)
 
 data JudocBlock (s :: Stage)
   = JudocLines (NonEmpty (JudocLine s))
-  | JudocExample (Example s)
   deriving stock (Generic)
 
 instance Serialize (JudocBlock 'Scoped)
@@ -2500,7 +2499,6 @@ instance HasLoc (JudocGroup s) where
 instance HasLoc (JudocBlock s) where
   getLoc = \case
     JudocLines ls -> getLocSpan ls
-    JudocExample e -> getLoc e
 
 instance HasLoc PatternScopedIden where
   getLoc = \case
@@ -2816,22 +2814,6 @@ instance HasAtomicity PatternArg where
     | ImplicitInstance <- p ^. patternArgIsImplicit = Atom
     | isJust (p ^. patternArgName) = Atom
     | otherwise = atomicity (p ^. patternArgPattern)
-
-judocExamples :: Judoc s -> [Example s]
-judocExamples (Judoc bs) = concatMap goGroup bs
-  where
-    goGroup :: JudocGroup s -> [Example s]
-    goGroup = \case
-      JudocGroupBlock p -> goParagraph p
-      JudocGroupLines l -> concatMap goBlock l
-
-    goParagraph :: JudocBlockParagraph s -> [Example s]
-    goParagraph l = concatMap goBlock (l ^. judocBlockParagraphBlocks)
-
-    goBlock :: JudocBlock s -> [Example s]
-    goBlock = \case
-      JudocExample e -> [e]
-      _ -> mempty
 
 instance HasNameKind ScopedIden where
   getNameKind = getNameKind . (^. scopedIdenFinal)
