@@ -5,7 +5,6 @@ import Juvix.Compiler.Concrete hiding (Symbol)
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Base
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Data
-import Juvix.Compiler.Pipeline.Loader.PathResolver.Error
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Paths
 import Juvix.Data.Effect.TaggedLock
 import Juvix.Extra.PackageFiles
@@ -49,14 +48,13 @@ runPackagePathResolver rootPath sem = do
             fromMaybe (error "runPackagePathResolver: expected root info") $
               mkRootInfo' (topModulePathToRelativePath' m)
       return PathInfoTopModule {..}
-    WithPath m a -> do
-      let relPath = topModulePathToRelativePath' m
-          x :: Either PathResolverError (Path Abs Dir, Path Rel File)
-          x = case mkRootInfo' relPath of
-            Just p -> Right (p ^. rootInfoPath, relPath)
-            Nothing -> Left (ErrPackageInvalidImport PackageInvalidImport {_packageInvalidImport = m})
-      -- runTSimpleEff localEnv (a x)
-      undefined
+    -- WithPath m a -> do
+    --   let relPath = topModulePathToRelativePath' m
+    --       x :: Either PathResolverError (Path Abs Dir, Path Rel File)
+    --       x = case mkRootInfo' relPath of
+    --         Just p -> Right (p ^. rootInfoPath, relPath)
+    --         Nothing -> Left (ErrPackageInvalidImport PackageInvalidImport {_packageInvalidImport = m})
+    -- runTSimpleEff localEnv (a x)
   where
     rootInfoDirs :: Sem r RootInfoDirs
     rootInfoDirs = do

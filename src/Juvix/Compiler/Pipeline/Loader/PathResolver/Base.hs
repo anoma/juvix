@@ -7,6 +7,7 @@ where
 import Juvix.Compiler.Concrete.Data.Name
 import Juvix.Compiler.Pipeline.Loader.PathResolver.DependenciesConfig
 import Juvix.Compiler.Pipeline.Loader.PathResolver.PackageInfo
+import Juvix.Compiler.Pipeline.Loader.PathResolver.Paths
 import Juvix.Prelude
 
 data RootKind
@@ -36,10 +37,6 @@ data PathResolver :: Effect where
   ExpectedPathInfoTopModule :: TopModulePath -> PathResolver m PathInfoTopModule
   -- | The root is assumed to be a package root.
   WithResolverRoot :: Path Abs Dir -> m a -> PathResolver m a
-  WithPath ::
-    TopModulePath ->
-    ((Path Abs Dir, Path Rel File) -> m x) ->
-    PathResolver m x
 
 makeLenses ''RootInfo
 makeLenses ''PathInfoTopModule
@@ -50,4 +47,17 @@ withPathFile ::
   TopModulePath ->
   (Path Abs File -> Sem r a) ->
   Sem r a
-withPathFile m f = withPath m (f . uncurry (<//>))
+withPathFile m f = do
+  (root, file) <- resolveTopModulePath m
+  withResolverRoot root (f (root <//> file))
+
+-- | Returns the root of the package where the module belongs and the path to
+-- the module relative to the root.
+resolveTopModulePath ::
+  (Members '[PathResolver] r) =>
+  TopModulePath ->
+  Sem r (Path Abs Dir, Path Rel File)
+resolveTopModulePath mp = do
+  let relpath = topModulePathToRelativePathNoExt mp
+  (pkg, ext) <- resolvePath relpath
+  return (pkg ^. packageRoot, addExtension' (fileExtToIsString ext) relpath)

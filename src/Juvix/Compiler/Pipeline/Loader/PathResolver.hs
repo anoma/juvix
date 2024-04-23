@@ -459,17 +459,6 @@ resolvePath' fileNoExt = do
               _conflictPath = undefined
             }
 
--- | Returns the root of the package where the module belongs and the path to
--- the module relative to the root.
-resolveTopModulePath' ::
-  (Members '[Files, Error PathResolverError, State ResolverState, Reader ResolverEnv] r) =>
-  TopModulePath ->
-  Sem r (Path Abs Dir, Path Rel File)
-resolveTopModulePath' mp = do
-  let relpath = topModulePathToRelativePathNoExt mp
-  (pkg, ext) <- resolvePath' relpath
-  return (pkg ^. packageRoot, addExtension' (fileExtToIsString ext) relpath)
-
 isModuleOrphan ::
   (Members '[Files] r) =>
   TopModulePath ->
@@ -548,28 +537,6 @@ runPathResolver2 st topEnv arg = do
           res <- unlift m
           put oldState
           return res
-      WithPath
-        m
-        (a :: (Path Abs Dir, Path Rel File) -> Sem localEs x) -> do
-          x@(root', _relNoExt) :: (Path Abs Dir, Path Rel File) <- resolveTopModulePath' m
-          let y :: Sem localEs x = a x
-          e <- ask
-          let _envSingleFile :: Maybe (Path Abs File)
-              _envSingleFile
-                | e ^. entryPointPackageType == GlobalStdlib = e ^. entryPointModulePath
-                | otherwise = Nothing
-              env' :: ResolverEnv
-              env' =
-                ResolverEnv
-                  { _envRoot = root',
-                    _envLockfileInfo = Nothing,
-                    _envSingleFile
-                  }
-          localSeqUnlift localEnv $ \unlift -> local (const env') $ do
-            oldState <- get @ResolverState
-            res <- unlift y
-            put oldState
-            return res
 
 runPathResolver :: (Members '[TaggedLock, Reader EntryPoint, Files, Error JuvixError, Error DependencyError, GitClone, EvalFileEff] r) => Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
 runPathResolver = runPathResolver' iniResolverState
