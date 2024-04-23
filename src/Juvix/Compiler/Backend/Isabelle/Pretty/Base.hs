@@ -19,6 +19,14 @@ ppCodeQuoted c
   | atomicity c == Atom = ppCode c
   | otherwise = dquotes <$> ppCode c
 
+ppParams :: (HasAtomicity c, PrettyCode c, Member (Reader Options) r) => [c] -> Sem r (Maybe (Doc Ann))
+ppParams = \case
+  [] -> return Nothing
+  [x] -> Just <$> ppRightExpression appFixity x
+  params -> do
+    ps <- mapM ppCode params
+    return $ Just $ parens (hsep (punctuate comma ps))
+
 instance PrettyCode Name where
   ppCode = return . prettyName False
 
@@ -43,16 +51,17 @@ instance PrettyCode FunType where
 
 instance PrettyCode IndApp where
   ppCode IndApp {..} = do
-    params <- mapM ppCode _indAppParams
+    params <- ppParams _indAppParams
     ind <- ppCode _indAppInductive
-    return $ hsep (params ++ [ind])
+    return $ params <?+> ind
 
 instance PrettyCode Statement where
   ppCode = \case
     StmtDefinition x -> ppCode x
     StmtFunction x -> ppCode x
-    StmtDatatype x -> ppCode x
     StmtSynonym x -> ppCode x
+    StmtDatatype x -> ppCode x
+    StmtRecord x -> ppCode x
 
 instance PrettyCode Definition where
   ppCode Definition {..} = do
@@ -66,12 +75,18 @@ instance PrettyCode Function where
     ty <- ppCodeQuoted _functionType
     return $ kwFun <+> n <+> "::" <+> ty <+> kwWhere <> line <> dquotes (n <+> "_" <+> "=" <+> kwUndefined)
 
+instance PrettyCode Synonym where
+  ppCode Synonym {..} = do
+    n <- ppCode _synonymName
+    ty <- ppCodeQuoted _synonymType
+    return $ kwTypeSynonym <+> n <+> "=" <+> ty
+
 instance PrettyCode Datatype where
   ppCode Datatype {..} = do
     n <- ppCode _datatypeName
-    params <- mapM ppCode _datatypeParams
+    params <- ppParams _datatypeParams
     ctrs <- mapM ppCode _datatypeConstructors
-    return $ kwDatatype <+> hsep (params ++ [n]) <> line <> "=" <+> vsep (punctuate "|" ctrs)
+    return $ kwDatatype <+> params <?+> n <> line <> indent' ("=" <+> vsep (punctuate "|" ctrs))
 
 instance PrettyCode Constructor where
   ppCode Constructor {..} = do
@@ -79,11 +94,18 @@ instance PrettyCode Constructor where
     tys <- mapM ppCodeQuoted _constructorArgTypes
     return $ hsep (n : tys)
 
-instance PrettyCode Synonym where
-  ppCode Synonym {..} = do
-    n <- ppCode _synonymName
-    ty <- ppCodeQuoted _synonymType
-    return $ kwTypeSynonym <+> n <+> "=" <+> ty
+instance PrettyCode Record where
+  ppCode Record {..} = do
+    n <- ppCode _recordName
+    params <- ppParams _recordParams
+    fields <- mapM ppCode _recordFields
+    return $ kwRecord <+> params <?+> n <+> "=" <> line <> indent' (vsep fields)
+
+instance PrettyCode RecordField where
+  ppCode RecordField {..} = do
+    n <- ppCode _recordFieldName
+    ty <- ppCodeQuoted _recordFieldType
+    return $ n <+> "::" <+> ty
 
 instance PrettyCode Theory where
   ppCode Theory {..} = do

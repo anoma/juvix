@@ -41,8 +41,9 @@ makeLenses ''IndApp
 data Statement
   = StmtDefinition Definition
   | StmtFunction Function
-  | StmtDatatype Datatype
   | StmtSynonym Synonym
+  | StmtDatatype Datatype
+  | StmtRecord Record
 
 data Definition = Definition
   { _definitionName :: Name,
@@ -54,6 +55,11 @@ data Function = Function
     _functionType :: Type
   }
 
+data Synonym = Synonym
+  { _synonymName :: Name,
+    _synonymType :: Type
+  }
+
 data Datatype = Datatype
   { _datatypeName :: Name,
     _datatypeParams :: [Var],
@@ -62,20 +68,27 @@ data Datatype = Datatype
 
 data Constructor = Constructor
   { _constructorName :: Name,
-    _constructorArgTypes :: [Type],
-    _constructorFixity :: Maybe Fixity
+    _constructorArgTypes :: [Type]
   }
 
-data Synonym = Synonym
-  { _synonymName :: Name,
-    _synonymType :: Type
+data Record = Record
+  { _recordName :: Name,
+    _recordParams :: [Var],
+    _recordFields :: [RecordField]
+  }
+
+data RecordField = RecordField
+  { _recordFieldName :: Name,
+    _recordFieldType :: Type
   }
 
 makeLenses ''Definition
 makeLenses ''Function
+makeLenses ''Synonym
 makeLenses ''Datatype
 makeLenses ''Constructor
-makeLenses ''Synonym
+makeLenses ''Record
+makeLenses ''RecordField
 
 data Theory = Theory
   { _theoryName :: Name,
@@ -84,6 +97,9 @@ data Theory = Theory
   }
 
 makeLenses ''Theory
+
+instance HasAtomicity Var where
+  atomicity _ = Atom
 
 instance HasAtomicity Type where
   atomicity = \case

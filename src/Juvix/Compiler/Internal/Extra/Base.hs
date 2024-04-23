@@ -257,6 +257,7 @@ instance HasExpressions ConstructorDef where
       ConstructorDef
         { _inductiveConstructorType = ty',
           _inductiveConstructorName,
+          _inductiveConstructorIsRecord,
           _inductiveConstructorPragmas
         }
 

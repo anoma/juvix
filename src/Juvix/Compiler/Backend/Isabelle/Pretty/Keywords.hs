@@ -8,11 +8,14 @@ kwDefinition = keyword "definition"
 kwFun :: Doc Ann
 kwFun = keyword "fun"
 
+kwTypeSynonym :: Doc Ann
+kwTypeSynonym = keyword "type_synonym"
+
 kwDatatype :: Doc Ann
 kwDatatype = keyword "datatype"
 
-kwTypeSynonym :: Doc Ann
-kwTypeSynonym = keyword "type_synonym"
+kwRecord :: Doc Ann
+kwRecord = keyword "record"
 
 kwUndefined :: Doc Ann
 kwUndefined = keyword "undefined"
