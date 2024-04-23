@@ -8,8 +8,6 @@ import Juvix.Data.CodeAnn
 arrow :: Doc Ann
 arrow = "⇒"
 
-{-------------------------------------------------------------------}
-
 class PrettyCode c where
   ppCode :: (Member (Reader Options) r) => c -> Sem r (Doc Ann)
 
@@ -23,8 +21,6 @@ ppCodeQuoted c
 
 instance PrettyCode Name where
   ppCode = return . prettyName False
-
-{-------------------------------------------------------------------}
 
 instance PrettyCode Type where
   ppCode = \case
@@ -50,8 +46,6 @@ instance PrettyCode IndApp where
     params <- mapM ppCode _indAppParams
     ind <- ppCode _indAppInductive
     return $ hsep (params ++ [ind])
-
-{-------------------------------------------------------------------}
 
 instance PrettyCode Statement where
   ppCode = \case
@@ -91,8 +85,6 @@ instance PrettyCode Synonym where
     ty <- ppCodeQuoted _synonymType
     return $ kwTypeSynonym <+> n <+> "=" <+> ty
 
-{-------------------------------------------------------------------}
-
 instance PrettyCode Theory where
   ppCode Theory {..} = do
     n <- ppCode _theoryName
@@ -112,8 +104,6 @@ instance PrettyCode Theory where
           <> line
           <> line
           <> kwEnd
-
-{-------------------------------------------------------------------}
 
 ppRightExpression ::
   (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>
