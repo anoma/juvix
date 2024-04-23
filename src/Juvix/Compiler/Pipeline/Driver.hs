@@ -136,7 +136,7 @@ processImport' ::
 processImport' entry p = do
   checkCycle
   local (over importParents (p :)) $
-    withPath' p getCachedImport
+    withPathFile p getCachedImport
   where
     checkCycle :: Sem r ()
     checkCycle = do
@@ -251,7 +251,7 @@ processRecursiveUpToTyped = do
   entry <- ask
   PipelineResult res mtab _ <- processFileUpToParsing entry
   let imports = HashMap.keys (mtab ^. Store.moduleTable)
-  ms <- forM imports (`withPath'` goImport)
+  ms <- forM imports (`withPathFile` goImport)
   a <-
     evalTopNameIdGen
       (res ^. Parser.resultModule . moduleId)
@@ -269,14 +269,3 @@ processRecursiveUpToTyped = do
                 _entryPointModulePath = Just path
               }
       (^. pipelineResult) <$> runReader entry' (processFileUpTo upToInternalTyped)
-
-withPath' ::
-  forall r a.
-  (Members '[PathResolver, Error JuvixError] r) =>
-  TopModulePath ->
-  (Path Abs File -> Sem r a) ->
-  Sem r a
-withPath' path a = withPathFile path (either throwErr a)
-  where
-    throwErr :: PathResolverError -> Sem r a
-    throwErr = mapError (JuvixError @PathResolverError) . throw

@@ -28,14 +28,20 @@ makeLenses ''RootInfoFiles
 
 -- | A PackageResolver interpreter intended to be used to load a Package file.
 -- It aggregates files at `rootPath` and files from the global package stdlib.
-runPackagePathResolver :: forall r a. (Members '[TaggedLock, Files] r) => Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r a
+runPackagePathResolver ::
+  forall r a.
+  (Members '[TaggedLock, Files] r) =>
+  Path Abs Dir ->
+  Sem (PathResolver ': r) a ->
+  Sem r a
 runPackagePathResolver rootPath sem = do
   ds <- rootInfoDirs
   initFiles ds
   fs <- rootInfoFiles ds
-  let mkRootInfo' = mkRootInfo ds fs
+  let mkRootInfo' :: Path Rel File -> Maybe RootInfo = mkRootInfo ds fs
   (`interpretH` sem) $ \localEnv -> \case
     RegisterDependencies {} -> return ()
+    GetPackageInfos -> undefined
     ExpectedPathInfoTopModule m -> do
       let _pathInfoTopModule = m
           _pathInfoRootInfo =
@@ -49,7 +55,8 @@ runPackagePathResolver rootPath sem = do
           x = case mkRootInfo' relPath of
             Just p -> Right (p ^. rootInfoPath, relPath)
             Nothing -> Left (ErrPackageInvalidImport PackageInvalidImport {_packageInvalidImport = m})
-      runTSimpleEff localEnv (a x)
+      -- runTSimpleEff localEnv (a x)
+      undefined
   where
     rootInfoDirs :: Sem r RootInfoDirs
     rootInfoDirs = do

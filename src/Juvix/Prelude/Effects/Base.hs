@@ -180,6 +180,14 @@ reinterpretHCommon2 ::
   Sem r b
 reinterpretHCommon2 = E.reinterpret
 
+reinterpretHCommon3 ::
+  (DispatchOf e ~ 'Dynamic) =>
+  (Sem (e3 ': e2 ': e1 ': r) a -> Sem r b) ->
+  EffectHandler e (e3 ': e2 ': e1 ': r) ->
+  Sem (e ': r) a ->
+  Sem r b
+reinterpretHCommon3 = E.reinterpret
+
 reinterpretH ::
   (DispatchOf e ~ 'Dynamic) =>
   (Sem handlerEs a -> Sem r b) ->

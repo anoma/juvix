@@ -38,7 +38,7 @@ data ImportNode = ImportNode
   { _importNodePackageRoot :: Path Abs Dir,
     _importNodeFile :: Path Rel File
   }
-  deriving stock (Eq, Generic)
+  deriving stock (Eq, Ord, Generic, Show)
 
 instance Hashable ImportNode
 

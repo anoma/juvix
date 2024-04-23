@@ -5,9 +5,7 @@ module Juvix.Compiler.Pipeline.Loader.PathResolver.Base
 where
 
 import Juvix.Compiler.Concrete.Data.Name
-import Juvix.Compiler.Pipeline.Loader.PathResolver.Data
 import Juvix.Compiler.Pipeline.Loader.PathResolver.DependenciesConfig
-import Juvix.Compiler.Pipeline.Loader.PathResolver.Error
 import Juvix.Compiler.Pipeline.Loader.PathResolver.PackageInfo
 import Juvix.Prelude
 
@@ -31,14 +29,16 @@ data PathInfoTopModule = PathInfoTopModule
 data PathResolver :: Effect where
   -- | Given a relative file *with no extension*, returns the list of packages
   -- that contain that file. The file extension is also returned since it can be
-  -- FileExtJuvix or FileExtJUvixMarkdown.
-  ResolvePath :: Path Rel File -> PathResolver m [(PackageInfo, FileExt)]
+  -- FileExtJuvix or FileExtJuvixMarkdown.
+  ResolvePath :: Path Rel File -> PathResolver m (PackageInfo, FileExt)
   RegisterDependencies :: DependenciesConfig -> PathResolver m ()
-  GetResolverState :: PathResolver m ResolverState
+  GetPackageInfos :: PathResolver m (HashMap (Path Abs Dir) PackageInfo)
   ExpectedPathInfoTopModule :: TopModulePath -> PathResolver m PathInfoTopModule
+  -- | The root is assumed to be a package root.
+  WithResolverRoot :: Path Abs Dir -> m a -> PathResolver m a
   WithPath ::
     TopModulePath ->
-    (Either PathResolverError (Path Abs Dir, Path Rel File) -> m x) ->
+    ((Path Abs Dir, Path Rel File) -> m x) ->
     PathResolver m x
 
 makeLenses ''RootInfo
@@ -48,6 +48,6 @@ makeSem ''PathResolver
 withPathFile ::
   (Members '[PathResolver] r) =>
   TopModulePath ->
-  (Either PathResolverError (Path Abs File) -> Sem r a) ->
+  (Path Abs File -> Sem r a) ->
   Sem r a
-withPathFile m f = withPath m (f . mapRight (uncurry (<//>)))
+withPathFile m f = withPath m (f . uncurry (<//>))

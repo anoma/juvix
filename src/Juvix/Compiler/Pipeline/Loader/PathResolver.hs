@@ -232,7 +232,7 @@ registerDependencies' conf = do
         lockfilePath' <- lockfilePath
         writeLockfile lockfilePath' packageFileChecksum lockfile
   where
-    shouldWriteLockfile :: Sem ((Reader ResolverEnv ': State ResolverState ': r)) Bool
+    shouldWriteLockfile :: Sem (Reader ResolverEnv ': State ResolverState ': r) Bool
     shouldWriteLockfile = do
       lockfileExists <- lockfilePath >>= fileExists'
       hasRemoteDependencies <- gets (^. resolverHasRemoteDependencies)
@@ -243,7 +243,7 @@ registerDependencies' conf = do
           shouldUpdateLockfile = lockfileExists && shouldUpdateLockfile'
       return (shouldForce || shouldWriteInitialLockfile || shouldUpdateLockfile)
 
-    lockfilePath :: Sem ((Reader ResolverEnv ': State ResolverState ': r)) (Path Abs File)
+    lockfilePath :: Sem (Reader ResolverEnv ': State ResolverState ': r) (Path Abs File)
     lockfilePath = do
       root <- asks (^. envRoot)
       return (mkPackageLockfilePath root)
@@ -353,17 +353,31 @@ currentPackage = do
 
 -- | TODO use scc
 checkImportTreeCycles :: forall r. (Members '[Error ScoperError] r) => ImportTree -> Sem r ()
-checkImportTreeCycles = undefined
+checkImportTreeCycles tree = do
+  let sccs =
+        stronglyConnComp
+          [ (node, node, toList v) | (node, v) <- HashMap.toList (tree ^. importTree)
+          ]
+  whenJust (firstJust getCycle sccs) $ \cyc ->
+    throw
+      . ErrImportCycle
+      . ImportCycle
+      $ error ("cycle " <> show cyc)
+  where
+    getCycle :: SCC ImportNode -> Maybe (NonEmpty ImportNode)
+    getCycle = \case
+      AcyclicSCC {} -> Nothing
+      CyclicSCC l -> Just (nonEmpty' l)
 
-mkImportTree :: forall r. (Members '[Error ScoperError, PathResolver, Files] r) => Sem r ImportTree
+mkImportTree :: forall r. (Members '[Reader EntryPoint, Error ScoperError, PathResolver, Files] r) => Sem r ImportTree
 mkImportTree = do
-  pkgInfosTable <- allPackageInfos <$> getResolverState
+  pkgInfosTable <- getPackageInfos
   let pkgs :: [PackageInfo] = toList pkgInfosTable
       nodes :: [ImportNode] = concatMap packageNodes pkgs
   tree <-
     execState emptyImportTree
       . evalVisitEmpty scanNode
-      $ mapM_ visit nodes
+      $ mapM_ visit nodes -- TODO should we scan only main and its transitive imports. What if there is no main specified in the Entrypoint?
   checkImportTreeCycles tree
   return tree
   where
@@ -384,23 +398,32 @@ mkImportTree = do
         insertHelper :: (Hashable k, Hashable v) => k -> v -> HashMap k (HashSet v) -> HashMap k (HashSet v)
         insertHelper k v = over (at k) (Just . maybe (HashSet.singleton v) (HashSet.insert v))
 
-    scanNode :: ImportNode -> Sem (Visit ImportNode ': State ImportTree ': r) ()
+    scanNode ::
+      forall r'.
+      (Members '[State ImportTree, Files, PathResolver, Visit ImportNode] r') =>
+      ImportNode ->
+      Sem r' ()
     scanNode fromNode@ImportNode {..} = do
       let file = _importNodePackageRoot <//> _importNodeFile
       imports :: [ImportNode] <- scanFileImports file >>= mapM resolveImportScan . toList
       forM_ imports $ \toNode -> do
         addEdge fromNode toNode
-        visit toNode
+        withResolverRoot (toNode ^. importNodePackageRoot) (visit toNode)
 
-    resolveImportScan :: forall r'. (Members '[] r') => ImportScan -> Sem r' ImportNode
+    resolveImportScan :: forall r'. (Members '[PathResolver] r') => ImportScan -> Sem r' ImportNode
     resolveImportScan s = do
       let rel = importScanToRelPath s
-      undefined
+      (pkg, ext) <- resolvePath rel
+      return
+        ImportNode
+          { _importNodePackageRoot = pkg ^. packageRoot,
+            _importNodeFile = addExtension' (fileExtToString ext) rel
+          }
 
 resolvePath' ::
-  (Members '[Files, State ResolverState, Reader ResolverEnv] r) =>
+  (Members '[Files, Error PathResolverError, State ResolverState, Reader ResolverEnv] r) =>
   Path Rel File ->
-  Sem r [(PackageInfo, FileExt)]
+  Sem r (PackageInfo, FileExt)
 resolvePath' fileNoExt = do
   curPkg <- currentPackage
   filesToPackage <- gets (^. resolverFiles)
@@ -419,42 +442,33 @@ resolvePath' fileNoExt = do
             visible pkg
         ]
 
-  return packagesWithExt
+  case packagesWithExt of
+    [(r, relPath)] -> return (r, relPath)
+    [] ->
+      throw $
+        ErrMissingModule
+          MissingModule
+            { _missingInfo = curPkg,
+              _missingModule = undefined
+            }
+    (r, _) : rs ->
+      throw $
+        ErrDependencyConflict
+          DependencyConflict
+            { _conflictPackages = r :| map fst rs,
+              _conflictPath = undefined
+            }
 
 -- | Returns the root of the package where the module belongs and the path to
 -- the module relative to the root.
 resolveTopModulePath' ::
-  (Members '[Files, State ResolverState, Reader ResolverEnv] r) =>
+  (Members '[Files, Error PathResolverError, State ResolverState, Reader ResolverEnv] r) =>
   TopModulePath ->
-  Sem r (Either PathResolverError (Path Abs Dir, Path Rel File))
+  Sem r (Path Abs Dir, Path Rel File)
 resolveTopModulePath' mp = do
-  curPkg <- currentPackage
   let relpath = topModulePathToRelativePathNoExt mp
-  packagesWithExt <- resolvePath' relpath
-  let packagesWithModule :: [(PackageInfo, Path Rel File)]
-      packagesWithModule =
-        [ (pkg, addExtension' (fileExtToIsString ext) relpath)
-          | (pkg, ext) <- packagesWithExt
-        ]
-
-  return $ case packagesWithModule of
-    [(r, relPath)] -> Right (r ^. packageRoot, relPath)
-    [] ->
-      Left
-        ( ErrMissingModule
-            MissingModule
-              { _missingInfo = curPkg,
-                _missingModule = mp
-              }
-        )
-    (r, _) : rs ->
-      Left
-        ( ErrDependencyConflict
-            DependencyConflict
-              { _conflictPackages = r :| map fst rs,
-                _conflictPath = mp
-              }
-        )
+  (pkg, ext) <- resolvePath' relpath
+  return (pkg ^. packageRoot, addExtension' (fileExtToIsString ext) relpath)
 
 isModuleOrphan ::
   (Members '[Files] r) =>
@@ -496,8 +510,9 @@ runPathResolver2 ::
   Sem (PathResolver ': r) a ->
   Sem r (ResolverState, a)
 runPathResolver2 st topEnv arg = do
-  ( reinterpretHCommon2
-      ( runState st
+  ( reinterpretHCommon3
+      ( mapError (JuvixError @PathResolverError)
+          . runState st
           . runReader topEnv
       )
       handler
@@ -507,26 +522,37 @@ runPathResolver2 st topEnv arg = do
     handler ::
       forall t localEs x.
       (Members v t) =>
-      LocalEnv localEs (Reader ResolverEnv ': State ResolverState ': t) ->
+      LocalEnv localEs (Reader ResolverEnv ': State ResolverState ': Error PathResolverError ': t) ->
       PathResolver (Sem localEs) x ->
-      Sem (Reader ResolverEnv ': State ResolverState ': t) x
+      Sem (Reader ResolverEnv ': State ResolverState ': Error PathResolverError ': t) x
     handler localEnv = \case
       RegisterDependencies forceUpdateLockfile -> registerDependencies' forceUpdateLockfile
       ExpectedPathInfoTopModule m -> expectedPath' m
-      GetResolverState -> get
+      GetPackageInfos -> gets allPackageInfos
       ResolvePath relp -> resolvePath' relp
+      WithResolverRoot root' m -> do
+        e <- ask
+        let _envSingleFile :: Maybe (Path Abs File)
+            _envSingleFile
+              | e ^. entryPointPackageType == GlobalStdlib = e ^. entryPointModulePath
+              | otherwise = Nothing
+            env' :: ResolverEnv
+            env' =
+              ResolverEnv
+                { _envRoot = root',
+                  _envLockfileInfo = Nothing,
+                  _envSingleFile
+                }
+        localSeqUnlift localEnv $ \unlift -> local (const env') $ do
+          oldState <- get @ResolverState
+          res <- unlift m
+          put oldState
+          return res
       WithPath
         m
-        ( a ::
-            Either PathResolverError (Path Abs Dir, Path Rel File) ->
-            Sem localEs x
-          ) -> do
-          x :: Either PathResolverError (Path Abs Dir, Path Rel File) <- resolveTopModulePath' m
+        (a :: (Path Abs Dir, Path Rel File) -> Sem localEs x) -> do
+          x@(root', _relNoExt) :: (Path Abs Dir, Path Rel File) <- resolveTopModulePath' m
           let y :: Sem localEs x = a x
-          oldroot <- asks (^. envRoot)
-          let root' = case x of
-                Left {} -> oldroot
-                Right (r, _) -> r
           e <- ask
           let _envSingleFile :: Maybe (Path Abs File)
               _envSingleFile
