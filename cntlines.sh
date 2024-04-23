@@ -17,7 +17,6 @@ RUNTIME_CASM=$(count_ext '*.casm' runtime/casm)
 RUNTIME=$((RUNTIME_C+RUNTIME_RUST+RUNTIME_VAMPIR+RUNTIME_JVT+RUNTIME_CASM))
 
 BACKENDC=$(count src/Juvix/Compiler/Backend/C/)
-ISABELLE=$(count src/Juvix/Compiler/Backend/Isabelle/)
 CAIRO=$(count src/Juvix/Compiler/Backend/Cairo/)
 GEB=$(count src/Juvix/Compiler/Backend/Geb/)
 VAMPIR=$(count src/Juvix/Compiler/Backend/VampIR/)
@@ -35,14 +34,16 @@ PIPELINE=$(count src/Juvix/Compiler/Pipeline/)
 
 APP=$(count app/)
 HTML=$(count src/Juvix/Compiler/Backend/Html/)
+MARKDOWN=$(count src/Juvix/Compiler/Backend/Markdown/)
+ISABELLE=$(count src/Juvix/Compiler/Backend/Isabelle/)
 EXTRA=$(count src/Juvix/Extra/)
 DATA=$(count src/Juvix/Data/)
 PRELUDE=$(count src/Juvix/Prelude/)
 STORE=$(count src/Juvix/Compiler/Store/)
 
 FRONT=$((CONCRETE + INTERNAL + BUILTINS + PIPELINE))
-BACK=$((BACKENDC + GEB + VAMPIR + NOCK + ISABELLE + REG + ASM + TREE + CORE + CASM + CAIRO))
-OTHER=$((APP + STORE + HTML + EXTRA + DATA + PRELUDE))
+BACK=$((BACKENDC + GEB + VAMPIR + NOCK + REG + ASM + TREE + CORE + CASM + CAIRO))
+OTHER=$((APP + STORE + HTML + MARKDOWN + ISABELLE + EXTRA + DATA + PRELUDE))
 TESTS=$(count test/)
 
 TOTAL=$((FRONT+BACK+OTHER+TESTS))
@@ -58,7 +59,6 @@ echo "   GEB backend: $GEB LOC"
 echo "   C backend: $BACKENDC LOC"
 echo "   Cairo backend: $((CASM + CAIRO)) LOC"
 echo "   Nockma backend: $NOCK LOC"
-echo "   Isabelle backend: $ISABELLE LOC"
 echo "   JuvixReg: $REG LOC"
 echo "   JuvixAsm: $ASM LOC"
 echo "   JuvixTree: $TREE LOC"
@@ -73,6 +73,8 @@ echo "Other: $OTHER LOC"
 echo "   Application: $APP LOC"
 echo "   Store: $STORE LOC"
 echo "   Html: $HTML LOC"
+echo "   Markdown: $MARKDOWN LOC"
+echo "   Isabelle: $ISABELLE LOC"
 echo "   Extra: $EXTRA LOC"
 echo "   Data: $DATA LOC"
 echo "   Prelude: $PRELUDE LOC"

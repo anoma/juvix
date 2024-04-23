@@ -80,7 +80,7 @@ goConstructorDef Internal.ConstructorDef {..} =
 
 goFunctionDef :: Internal.FunctionDef -> Statement
 goFunctionDef Internal.FunctionDef {..}
-  | null _funDefArgsInfo =
+  | argsNum == 0 =
       StmtDefinition
         Definition
           { _definitionName = _funDefName,
@@ -92,6 +92,8 @@ goFunctionDef Internal.FunctionDef {..}
           { _functionName = _funDefName,
             _functionType = goType _funDefType
           }
+  where
+    argsNum = length $ fst $ Internal.unfoldFunType _funDefType
 
 goAxiomDef :: Internal.AxiomDef -> Statement
 goAxiomDef Internal.AxiomDef {..}

@@ -122,7 +122,7 @@ instance PrettyCode Theory where
           <> kwBegin
           <> line
           <> line
-          <> vsep stmts
+          <> vsep (punctuate line stmts)
           <> line
           <> line
           <> kwEnd
