@@ -112,19 +112,19 @@ parseCompileOptions' supportedTargets parserFile = do
     switch
       ( short 'C'
           <> long "only-c"
-          <> help "Produce C output only (for targets: wasm32-wasi, native)"
+          <> help "Produce C output only (for targets: wasi, native)"
       )
   _compilePreprocess <-
     switch
       ( short 'E'
           <> long "only-preprocess"
-          <> help "Run the C preprocessor only (for targets: wasm32-wasi, native)"
+          <> help "Run the C preprocessor only (for targets: wasi, native)"
       )
   _compileAssembly <-
     switch
       ( short 'S'
           <> long "only-assemble"
-          <> help "Produce assembly output only (for targets: wasm32-wasi, native)"
+          <> help "Produce assembly output only (for targets: wasi, native)"
       )
   _compileTerm <-
     if
