@@ -110,14 +110,13 @@ instance PrettyCode RecordField where
 instance PrettyCode Theory where
   ppCode Theory {..} = do
     n <- ppCode _theoryName
-    imps <- mapM ppCode _theoryImports
     stmts <- mapM ppCode _theoryStatements
     return $
       kwTheory
         <+> n
           <> line
           <> kwImports
-        <+> hsep ("Main" : imps)
+        <+> "Main"
           <> line
           <> kwBegin
           <> line

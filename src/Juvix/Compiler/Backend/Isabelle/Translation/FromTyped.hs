@@ -28,7 +28,12 @@ fromInternal Internal.InternalTypedResult {..} = do
   go table _resultModule
   where
     go :: Internal.InfoTable -> Internal.Module -> Sem r Result
-    go tab md = return $ Result $ goModule tab md
+    go tab md =
+      return $
+        Result
+          { _resultTheory = goModule tab md,
+            _resultModuleId = md ^. Internal.moduleId
+          }
 
 goModule :: Internal.InfoTable -> Internal.Module -> Theory
 goModule infoTable Internal.Module {..} =

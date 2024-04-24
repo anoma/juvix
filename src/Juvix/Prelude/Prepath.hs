@@ -19,14 +19,18 @@ import Juvix.Prelude.Pretty
 import System.Directory (getHomeDirectory)
 import System.Directory qualified as System
 import System.Environment
+import Prelude (show)
 
 -- | A file/directory path that may contain environmental variables
 newtype Prepath d = Prepath
   { _prepath :: String
   }
-  deriving stock (Show, Eq, Data, Generic)
+  deriving stock (Eq, Data, Generic)
 
 makeLenses ''Prepath
+
+instance Show (Prepath d) where
+  show Prepath {..} = _prepath
 
 type PrepathParts = NonEmpty PrepathPart
 

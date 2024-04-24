@@ -82,6 +82,9 @@ htmlFileExt = ".html"
 markdownFileExt :: (IsString a) => a
 markdownFileExt = ".md"
 
+isabelleFileExt :: (IsString a) => a
+isabelleFileExt = ".thy"
+
 cFileExt :: (IsString a) => a
 cFileExt = ".c"
 
