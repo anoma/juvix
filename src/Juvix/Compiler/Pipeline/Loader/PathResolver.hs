@@ -406,9 +406,11 @@ mkImportTree = do
       ImportNode ->
       Sem r' ()
     scanNode fromNode@ImportNode {..} = do
+      traceM ("scanNode " <> show _importNodeFile)
       let file = _importNodePackageRoot <//> _importNodeFile
       imports :: [ImportNode] <- scanFileImports file >>= mapM resolveImportScan . toList
       forM_ imports $ \toNode -> do
+        traceM ("scanNode.Import " <> show toNode)
         addEdge fromNode toNode
         withResolverRoot (toNode ^. importNodePackageRoot) (visit toNode)
 

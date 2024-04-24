@@ -11,5 +11,6 @@ runCommand :: (Members '[EmbedIO, App, TaggedLock] r) => ImportTreeOptions -> Se
 runCommand ImportTreeOptions =
   runPipelineSetup $ do
     entrySetup defaultDependenciesConfig
+    renderStdOut @Text "entry setup done"
     tree <- mapError (JuvixError @ScoperError) mkImportTree
     renderStdOut (ppOutDefaultNoComments tree)
