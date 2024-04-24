@@ -1,4 +1,4 @@
-module Juvix.Compiler.Pipeline.MCache where
+module Juvix.Compiler.Pipeline.ModuleInfoCache where
 
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Pipeline.Result
@@ -18,6 +18,6 @@ instance Eq EntryIndex where
 instance Hashable EntryIndex where
   hashWithSalt s = hashWithSalt s . (^. entryIxEntry . entryPointModulePath)
 
-type MCache' a = Cache EntryIndex a
+type ModuleInfoCache' a = Cache EntryIndex a
 
-type MCache = MCache' (PipelineResult Store.ModuleInfo)
+type ModuleInfoCache = ModuleInfoCache' (PipelineResult Store.ModuleInfo)

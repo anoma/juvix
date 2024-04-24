@@ -82,7 +82,7 @@ runIOEitherPipeline' entry a = do
     . mapError (JuvixError @PackageLoaderError)
     . runEvalFileEffIO
     . runPathResolver'
-    . evalMCache
+    . evalModuleInfoCache
     $ a
 
 mainIsPackageFile :: EntryPoint -> Bool
@@ -151,7 +151,7 @@ runReplPipelineIOEither' lockMode entry = do
       . mapError (JuvixError @PackageLoaderError)
       . runEvalFileEffIO
       . runPathResolver'
-      . evalMCache
+      . evalModuleInfoCache
       $ entrySetup defaultDependenciesConfig >> processFileToStoredCore entry
   return $ case eith of
     Left err -> Left err
