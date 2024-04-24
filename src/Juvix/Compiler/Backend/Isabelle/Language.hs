@@ -10,9 +10,6 @@ import Juvix.Prelude
 
 data Type
   = TyVar Var
-  | TyBool
-  | TyNat
-  | TyInt
   | TyFun FunType
   | TyInd IndApp
   deriving stock (Eq)
@@ -28,8 +25,15 @@ data FunType = FunType
   }
   deriving stock (Eq)
 
+data Inductive
+  = IndBool
+  | IndNat
+  | IndInt
+  | IndUser Name
+  deriving stock (Eq)
+
 data IndApp = IndApp
-  { _indAppInductive :: Name,
+  { _indAppInductive :: Inductive,
     _indAppParams :: [Type]
   }
   deriving stock (Eq)
@@ -104,9 +108,6 @@ instance HasAtomicity Var where
 instance HasAtomicity Type where
   atomicity = \case
     TyVar {} -> Atom
-    TyBool -> Atom
-    TyNat -> Atom
-    TyInt -> Atom
     TyFun {} -> Aggregate funFixity
     TyInd IndApp {..}
       | null _indAppParams -> Atom

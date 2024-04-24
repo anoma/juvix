@@ -33,9 +33,6 @@ instance PrettyCode Name where
 instance PrettyCode Type where
   ppCode = \case
     TyVar v -> ppCode v
-    TyBool -> return $ primitive "bool"
-    TyNat -> return $ primitive "nat"
-    TyInt -> return $ primitive "int"
     TyFun x -> ppCode x
     TyInd x -> ppCode x
 
@@ -48,6 +45,13 @@ instance PrettyCode FunType where
     l <- ppLeftExpression funFixity _funTypeLeft
     r <- ppRightExpression funFixity _funTypeRight
     return $ l <+> arrow <+> r
+
+instance PrettyCode Inductive where
+  ppCode = \case
+    IndBool -> return $ primitive "bool"
+    IndNat -> return $ primitive "nat"
+    IndInt -> return $ primitive "int"
+    IndUser name -> ppCode name
 
 instance PrettyCode IndApp where
   ppCode IndApp {..} = do

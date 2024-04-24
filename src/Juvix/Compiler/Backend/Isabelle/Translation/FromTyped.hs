@@ -160,21 +160,23 @@ goModule infoTable Internal.Module {..} =
         unsupportedType e = error ("unsupported type: " <> Internal.ppTrace e)
 
     mkIndType :: Name -> [Type] -> Type
-    mkIndType name params = case HashMap.lookup name (infoTable ^. Internal.infoInductives) of
-      Just ii -> case ii ^. Internal.inductiveInfoBuiltin of
-        Just Internal.BuiltinBool -> TyBool
-        Just Internal.BuiltinNat -> TyNat
-        Just Internal.BuiltinInt -> TyInt
-        --        Just Internal.BuiltinList -> TyList
-        _ -> TyInd $ IndApp name params
-      Nothing -> TyInd $ IndApp name params
+    mkIndType name params = TyInd $ IndApp ind params
+      where
+        ind = case HashMap.lookup name (infoTable ^. Internal.infoInductives) of
+          Just ii -> case ii ^. Internal.inductiveInfoBuiltin of
+            Just Internal.BuiltinBool -> IndBool
+            Just Internal.BuiltinNat -> IndNat
+            Just Internal.BuiltinInt -> IndInt
+            --        Just Internal.BuiltinList -> TyList
+            _ -> IndUser name
+          Nothing -> IndUser name
 
     goTypeIden :: Internal.Iden -> Type
     goTypeIden = \case
-      Internal.IdenFunction name -> TyInd $ IndApp name []
+      Internal.IdenFunction name -> mkIndType name []
       Internal.IdenConstructor name -> error ("unsupported type: constructor " <> Internal.ppTrace name)
       Internal.IdenVar name -> TyVar $ Var name
-      Internal.IdenAxiom name -> TyInd $ IndApp name []
+      Internal.IdenAxiom name -> mkIndType name []
       Internal.IdenInductive name -> mkIndType name []
 
     goTypeApp :: Internal.Application -> Type
@@ -189,7 +191,9 @@ goModule infoTable Internal.Module {..} =
           _ -> error ("unsupported type: " <> Internal.ppTrace app)
 
     goTypeFun :: Internal.Function -> Type
-    goTypeFun Internal.Function {..} = TyFun $ FunType l r
+    goTypeFun Internal.Function {..} = case lty of
+      Internal.ExpressionUniverse {} -> goType _functionRight
+      _ ->
+        TyFun $ FunType (goType lty) (goType _functionRight)
       where
-        l = goType (_functionLeft ^. Internal.paramType)
-        r = goType _functionRight
+        lty = _functionLeft ^. Internal.paramType
