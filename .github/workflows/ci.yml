@@ -395,10 +395,11 @@ jobs:
           echo "$(brew --prefix llvm@15)/bin" >> $GITHUB_PATH
 
       - name: Install VampIR for testing
-        uses: jaxxstorm/action-install-gh-release@v1.10.0
+        uses: jaxxstorm/action-install-gh-release@v1.11.0
         with:
           repo: ${{ env.VAMPIRREPO }}
           platform: darwin
+          arch: x86_64
           tag: ${{ env.VAMPIRVERSION }}
           chmod: 0755
           rename-to: vamp-ir
