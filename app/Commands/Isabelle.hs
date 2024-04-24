@@ -2,7 +2,6 @@ module Commands.Isabelle where
 
 import Commands.Base
 import Commands.Isabelle.Options
-import Data.Text.IO qualified as Text
 import Juvix.Compiler.Backend.Isabelle.Data.Result
 import Juvix.Compiler.Backend.Isabelle.Pretty
 
@@ -29,4 +28,4 @@ runCommand opts = do
                   )
               absPath :: Path Abs File
               absPath = outputDir <//> file
-          liftIO $ Text.writeFile (toFilePath absPath) (ppPrint thy)
+          writeFileEnsureLn absPath (ppPrint thy <> "\n")
