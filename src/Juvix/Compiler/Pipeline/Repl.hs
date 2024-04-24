@@ -12,10 +12,12 @@ import Juvix.Compiler.Internal qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 import Juvix.Compiler.Pipeline.Artifacts
 import Juvix.Compiler.Pipeline.Artifacts.PathResolver
+import Juvix.Compiler.Pipeline.Driver (evalMCache)
 import Juvix.Compiler.Pipeline.Driver qualified as Driver
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Base
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Error
+import Juvix.Compiler.Pipeline.MCache
 import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
 import Juvix.Compiler.Pipeline.Result
@@ -111,7 +113,7 @@ compileExpression p =
     >>= fromInternalExpression
 
 registerImport ::
-  (Members '[TaggedLock, Error JuvixError, State Artifacts, Reader EntryPoint, Files, GitClone, PathResolver] r) =>
+  (Members '[TaggedLock, Error JuvixError, State Artifacts, Reader EntryPoint, Files, GitClone, PathResolver, MCache] r) =>
   Import 'Parsed ->
   Sem r ()
 registerImport i = do
@@ -163,6 +165,7 @@ compileReplInputIO fp txt = do
     . mapError (JuvixError @PackageLoaderError)
     . runEvalFileEffIO
     . runPathResolverArtifacts
+    . evalMCache
     $ do
       p <- parseReplInput fp txt
       case p of

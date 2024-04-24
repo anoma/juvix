@@ -3,6 +3,8 @@ module Juvix.Compiler.Pipeline.Driver
     processFileToStoredCore,
     processImport,
     processRecursiveUpToTyped,
+    MCache,
+    evalMCache,
   )
 where
 
@@ -21,7 +23,9 @@ import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context qualified a
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as InternalTyped
 import Juvix.Compiler.Internal.Translation.FromInternal.Data (InternalTypedResult)
 import Juvix.Compiler.Pipeline
+import Juvix.Compiler.Pipeline.ImportParents
 import Juvix.Compiler.Pipeline.Loader.PathResolver
+import Juvix.Compiler.Pipeline.MCache
 import Juvix.Compiler.Store.Core.Extra
 import Juvix.Compiler.Store.Extra qualified as Store
 import Juvix.Compiler.Store.Language qualified as Store
@@ -34,63 +38,46 @@ import Juvix.Extra.Serialize
 import Juvix.Prelude
 import Path.Posix qualified as Path
 
-newtype ImportParents = ImportParents
-  { _importParents :: [TopModulePath]
-  }
-  deriving newtype (Semigroup, Monoid)
-
-makeLenses ''ImportParents
-
-newtype EntryIndex = EntryIndex
-  { _entryIxEntry :: EntryPoint
-  }
-
-makeLenses ''EntryIndex
-
-instance Eq EntryIndex where
-  (==) = (==) `on` (^. entryIxEntry . entryPointModulePath)
-
-instance Hashable EntryIndex where
-  hashWithSalt s = hashWithSalt s . (^. entryIxEntry . entryPointModulePath)
-
-type MCache' a = Cache EntryIndex a
-
-type MCache = MCache' (PipelineResult Store.ModuleInfo)
+evalMCache ::
+  forall r a.
+  (Members '[TaggedLock, Error JuvixError, Files, PathResolver] r) =>
+  Sem (MCache ': r) a ->
+  Sem r a
+evalMCache = evalCacheEmpty (runReader @ImportParents mempty . processModule')
 
 processFileUpToParsing ::
   forall r.
-  (Members '[TaggedLock, HighlightBuilder, Error JuvixError, Files, PathResolver] r) =>
+  (Members '[TaggedLock, HighlightBuilder, Error JuvixError, Files, PathResolver, MCache] r) =>
   EntryPoint ->
   Sem r (PipelineResult Parser.ParserResult)
 processFileUpToParsing entry =
-  runReader @ImportParents mempty
-    . evalCacheEmpty processModule'
-    $ processFileUpToParsing' entry
+  runReader @ImportParents mempty $
+    processFileUpToParsing' entry
 
 processImport ::
   forall r.
-  (Members '[TaggedLock, Error JuvixError, Files, PathResolver] r) =>
+  (Members '[TaggedLock, Error JuvixError, Files, PathResolver, MCache] r) =>
   EntryPoint ->
   Import 'Parsed ->
   Sem r (PipelineResult Store.ModuleInfo)
 processImport entry i =
-  runReader @ImportParents mempty
-    . evalCacheEmpty processModule'
-    $ processImport' entry (i ^. importModulePath)
+  runReader @ImportParents mempty $
+    processImport' entry (i ^. importModulePath)
 
 processFileToStoredCore ::
   forall r.
-  (Members '[TaggedLock, Error JuvixError, Files, PathResolver] r) =>
+  (Members '[TaggedLock, Error JuvixError, Files, PathResolver, MCache] r) =>
   EntryPoint ->
   Sem r (PipelineResult Core.CoreResult)
 processFileToStoredCore entry =
   runReader @ImportParents mempty
-    . evalCacheEmpty processModule'
-    $ processFileToStoredCore' entry
+  -- . evalCacheEmpty processModule'
+  $
+    processFileToStoredCore' entry
 
 processFileUpTo ::
   forall r a.
-  (Members '[TaggedLock, HighlightBuilder, Reader EntryPoint, Error JuvixError, Files, PathResolver] r) =>
+  (Members '[TaggedLock, HighlightBuilder, Reader EntryPoint, Error JuvixError, Files, PathResolver, MCache] r) =>
   Sem (Reader Parser.ParserResult ': Reader Store.ModuleTable ': NameIdGen ': r) a ->
   Sem r (PipelineResult a)
 processFileUpTo a = do
@@ -260,7 +247,7 @@ processModule'' sha256 entry = over pipelineResult mkModuleInfo <$> processFileT
 
 processRecursiveUpToTyped ::
   forall r.
-  (Members '[Reader EntryPoint, TaggedLock, HighlightBuilder, Error JuvixError, Files, PathResolver] r) =>
+  (Members '[Reader EntryPoint, TaggedLock, HighlightBuilder, Error JuvixError, Files, PathResolver, MCache] r) =>
   Sem r (InternalTypedResult, [InternalTypedResult])
 processRecursiveUpToTyped = do
   entry <- ask

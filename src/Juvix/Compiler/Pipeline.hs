@@ -34,6 +34,7 @@ import Juvix.Compiler.Pipeline.Artifacts
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Base
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Error
+import Juvix.Compiler.Pipeline.MCache
 import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
 import Juvix.Compiler.Pipeline.Result
@@ -49,7 +50,7 @@ import Juvix.Data.Field
 
 type PipelineAppEffects = '[TaggedLock, EmbedIO]
 
-type PipelineLocalEff = '[PathResolver, EvalFileEff, Error PackageLoaderError, Error DependencyError, GitClone, Error GitProcessError, Process, Log, Reader EntryPoint, Files, Error JuvixError, HighlightBuilder, Internet]
+type PipelineLocalEff = '[MCache, PathResolver, EvalFileEff, Error PackageLoaderError, Error DependencyError, GitClone, Error GitProcessError, Process, Log, Reader EntryPoint, Files, Error JuvixError, HighlightBuilder, Internet]
 
 type PipelineEff' r = PipelineLocalEff ++ r
 
