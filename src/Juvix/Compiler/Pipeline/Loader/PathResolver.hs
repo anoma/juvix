@@ -296,7 +296,7 @@ addDependency me d = do
 
 addPackageRelativeFiles :: (Member (State ResolverState) r) => PackageInfo -> Sem r ()
 addPackageRelativeFiles pkgInfo =
-  forM_ (pkgInfo ^. packageRelativeFiles) $ \f -> do
+  forM_ (pkgInfo ^. packageRelativeFiles) $ \f ->
     modify' (over resolverFiles (HashMap.insertWith (<>) f (pure pkgInfo)))
 
 addDependency' ::
@@ -333,7 +333,7 @@ addDependency' pkg me resolvedDependency = do
       currentLockfile <- asks (^. envLockfileInfo)
       case currentLockfile of
         Just _ -> action
-        Nothing -> case (p ^. packageLockfile) of
+        Nothing -> case p ^. packageLockfile of
           Just lf -> withLockfile lf action
           Nothing -> action
 
@@ -369,7 +369,10 @@ checkImportTreeCycles tree = do
       AcyclicSCC {} -> Nothing
       CyclicSCC l -> Just (nonEmpty' l)
 
-mkImportTree :: forall r. (Members '[Reader EntryPoint, Error ScoperError, PathResolver, Files] r) => Sem r ImportTree
+mkImportTree ::
+  forall r.
+  (Members '[Reader EntryPoint, Error ScoperError, PathResolver, Files] r) =>
+  Sem r ImportTree
 mkImportTree = do
   pkgInfosTable <- getPackageInfos
   let pkgs :: [PackageInfo] = toList pkgInfosTable
@@ -377,7 +380,7 @@ mkImportTree = do
   tree <-
     execState emptyImportTree
       . evalVisitEmpty scanNode
-      $ mapM_ visit nodes -- TODO should we scan only main and its transitive imports. What if there is no main specified in the Entrypoint?
+      $ mapM_ visit nodes
   checkImportTreeCycles tree
   return tree
   where
