@@ -108,39 +108,35 @@ goModule infoTable Internal.Module {..} =
       where
         tyargs = map (goType . (^. Internal.paramType)) (fst $ Internal.unfoldFunType _inductiveConstructorType)
 
-    goFunctionDef :: Internal.FunctionDef -> Statement
-    goFunctionDef Internal.FunctionDef {..}
-      | argsNum == 0 =
-          StmtDefinition
-            Definition
-              { _definitionName = _funDefName,
-                _definitionType = goType _funDefType
-              }
-      | otherwise =
-          StmtFunction
-            Function
-              { _functionName = _funDefName,
-                _functionType = goType _funDefType
-              }
+    goDef :: Name -> Internal.Expression -> Maybe Internal.Expression -> Statement
+    goDef name ty body = case ty of
+      Internal.ExpressionUniverse {} ->
+        StmtSynonym
+          Synonym
+            { _synonymName = name,
+              _synonymType = goType $ fromMaybe (error "unsupported axiomatic type") body
+            }
+      _
+        | argsNum == 0 ->
+            StmtDefinition
+              Definition
+                { _definitionName = name,
+                  _definitionType = goType ty
+                }
+        | otherwise ->
+            StmtFunction
+              Function
+                { _functionName = name,
+                  _functionType = goType ty
+                }
       where
-        argsNum = length $ fst $ Internal.unfoldFunType _funDefType
+        argsNum = length $ fst $ Internal.unfoldFunType ty
+
+    goFunctionDef :: Internal.FunctionDef -> Statement
+    goFunctionDef Internal.FunctionDef {..} = goDef _funDefName _funDefType (Just _funDefBody)
 
     goAxiomDef :: Internal.AxiomDef -> Statement
-    goAxiomDef Internal.AxiomDef {..}
-      | argsNum == 0 =
-          StmtDefinition
-            Definition
-              { _definitionName = _axiomName,
-                _definitionType = goType _axiomType
-              }
-      | otherwise =
-          StmtFunction
-            Function
-              { _functionName = _axiomName,
-                _functionType = goType _axiomType
-              }
-      where
-        argsNum = length $ fst $ Internal.unfoldFunType _axiomType
+    goAxiomDef Internal.AxiomDef {..} = goDef _axiomName _axiomType Nothing
 
     goType :: Internal.Expression -> Type
     goType ty = case ty of
