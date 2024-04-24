@@ -66,7 +66,7 @@ overStaticRep ::
   ) =>
   (StaticRep e -> StaticRep e) ->
   Sem r ()
-overStaticRep f = unsafeEff $ \r -> f <$> getEnv r >>= putEnv r
+overStaticRep f = unsafeEff $ \r -> getEnv r >>= putEnv r . f
 
 mapReader ::
   (Member (Reader e1) r) => (e1 -> e2) -> Sem (Reader e2 ': r) a -> Sem r a

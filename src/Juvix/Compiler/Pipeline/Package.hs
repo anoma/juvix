@@ -3,6 +3,7 @@ module Juvix.Compiler.Pipeline.Package
     readPackage,
     readGlobalPackage,
     packageBasePackage,
+    packageJuvixPackage,
     ensureGlobalPackage,
   )
 where
@@ -148,6 +149,18 @@ packageBasePackage =
       _packageMain = Nothing,
       _packageLockfile = Nothing,
       _packageFile = $(mkAbsFile "/<package-base>"),
+      _packageDependencies = [],
+      _packageBuildDir = Nothing
+    }
+
+packageJuvixPackage :: Package
+packageJuvixPackage =
+  Package
+    { _packageVersion = defaultVersion,
+      _packageName = "package-juvix",
+      _packageMain = Nothing,
+      _packageLockfile = Nothing,
+      _packageFile = $(mkAbsFile "/<package-juvix>"),
       _packageDependencies = [],
       _packageBuildDir = Nothing
     }

@@ -28,13 +28,13 @@ data PathInfoTopModule = PathInfoTopModule
   deriving stock (Show)
 
 data PathResolver :: Effect where
+  RegisterDependencies :: DependenciesConfig -> PathResolver m ()
+  GetPackageInfos :: PathResolver m (HashMap (Path Abs Dir) PackageInfo)
+  ExpectedPathInfoTopModule :: TopModulePath -> PathResolver m PathInfoTopModule
   -- | Given a relative file *with no extension*, returns the list of packages
   -- that contain that file. The file extension is also returned since it can be
   -- FileExtJuvix or FileExtJuvixMarkdown.
   ResolvePath :: Path Rel File -> PathResolver m (PackageInfo, FileExt)
-  RegisterDependencies :: DependenciesConfig -> PathResolver m ()
-  GetPackageInfos :: PathResolver m (HashMap (Path Abs Dir) PackageInfo)
-  ExpectedPathInfoTopModule :: TopModulePath -> PathResolver m PathInfoTopModule
   -- | The root is assumed to be a package root.
   WithResolverRoot :: Path Abs Dir -> m a -> PathResolver m a
 
