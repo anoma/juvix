@@ -41,7 +41,7 @@ runPackagePathResolver rootPath sem = do
       packageInfos = mkPackageInfos ds fs
   (`interpretH` sem) $ \localEnv -> \case
     RegisterDependencies {} -> return ()
-    ResolvePath fileNoExt -> case mkRootInfo ds fs (addExtension' (fileExtToIsString FileExtJuvix) fileNoExt) of
+    ResolvePath fileNoExt -> case mkRootInfo ds fs (addFileExt FileExtJuvix fileNoExt) of
       Nothing ->
         throw . JuvixError $
           ErrPackageInvalidImport
@@ -91,7 +91,7 @@ runPackagePathResolver rootPath sem = do
               }
           ),
           ( ds ^. rootInfoArgGlobalStdlibDir,
-            PackageInfo --
+            PackageInfo
               { _packageRoot = ds ^. rootInfoArgGlobalStdlibDir,
                 _packageRelativeFiles = error "TODO: compute from stdlibFiles",
                 _packageImports = error "TODO: compute from stdlibFiles",

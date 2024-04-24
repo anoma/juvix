@@ -35,7 +35,7 @@ import CommonOptions
 
 data DevCommand
   = DisplayRoot RootOptions
-  | ImportTree ImportTreeOptions
+  | ImportTree ImportTreeCommand
   | Highlight HighlightOptions
   | Internal InternalCommand
   | DevCompile DevCompileCommand

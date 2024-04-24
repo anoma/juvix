@@ -406,11 +406,9 @@ mkImportTree = do
       ImportNode ->
       Sem r' ()
     scanNode fromNode@ImportNode {..} = do
-      traceM ("scanNode " <> show _importNodeFile)
       let file = _importNodePackageRoot <//> _importNodeFile
       imports :: [ImportNode] <- scanFileImports file >>= mapM resolveImportScan . toList
       forM_ imports $ \toNode -> do
-        traceM ("scanNode.Import " <> show toNode)
         addEdge fromNode toNode
         withResolverRoot (toNode ^. importNodePackageRoot) (visit toNode)
 
@@ -421,7 +419,7 @@ mkImportTree = do
       return
         ImportNode
           { _importNodePackageRoot = pkg ^. packageRoot,
-            _importNodeFile = addExtension' (fileExtToString ext) rel
+            _importNodeFile = addFileExt ext rel
           }
 
 resolvePath' ::
@@ -434,18 +432,18 @@ resolvePath' fileNoExt = do
   let possibleExtensions = [FileExtJuvix, FileExtJuvixMarkdown]
 
       visible :: PackageInfo -> Bool
-      visible pkg = HashSet.member (pkg ^. packageRoot) (curPkg ^. packageAvailableRoots)
+      visible pkg =
+        HashSet.member (pkg ^. packageRoot) (curPkg ^. packageAvailableRoots)
 
       packagesWithExt :: [(PackageInfo, FileExt)]
       packagesWithExt =
         [ (pkg, ext)
           | ext <- possibleExtensions,
-            let file = addExtension' (fileExtToIsString ext) fileNoExt,
+            let file = addFileExt ext fileNoExt,
             pkgs <- toList (HashMap.lookup file filesToPackage),
             pkg <- toList pkgs,
             visible pkg
         ]
-
   case packagesWithExt of
     [(r, relPath)] -> return (r, relPath)
     [] ->

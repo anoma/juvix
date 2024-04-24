@@ -60,4 +60,4 @@ resolveTopModulePath ::
 resolveTopModulePath mp = do
   let relpath = topModulePathToRelativePathNoExt mp
   (pkg, ext) <- resolvePath relpath
-  return (pkg ^. packageRoot, addExtension' (fileExtToIsString ext) relpath)
+  return (pkg ^. packageRoot, addFileExt ext relpath)

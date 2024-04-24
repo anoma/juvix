@@ -2,8 +2,8 @@ module Juvix.Data.FileExt where
 
 import Data.Text qualified as Text
 import Juvix.Prelude.Base
-import Juvix.Prelude.Path
 import Juvix.Prelude.Pretty
+import Path (File, Path, fileExtension, splitExtension)
 import Prelude (show)
 
 -- | File extensions Juvix interacts with.
@@ -36,6 +36,9 @@ juvixFileExt = ".juvix"
 
 juvixMarkdownFileExt :: (IsString a) => a
 juvixMarkdownFileExt = ".juvix.md"
+
+juvixMarkdownFileExts :: (IsString a) => NonEmpty a
+juvixMarkdownFileExts = ".juvix" :| [".md"]
 
 juvixGebFileExt :: (IsString a) => a
 juvixGebFileExt = ".geb"
