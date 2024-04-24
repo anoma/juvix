@@ -535,11 +535,7 @@ runPathResolver2 st topEnv arg = do
                   _envLockfileInfo = Nothing,
                   _envSingleFile
                 }
-        localSeqUnlift localEnv $ \unlift -> local (const env') $ do
-          oldState <- get @ResolverState
-          res <- unlift m
-          put oldState
-          return res
+        localSeqUnlift localEnv $ \unlift -> local (const env') (unlift m)
 
 runPathResolver :: (Members '[TaggedLock, Reader EntryPoint, Files, Error JuvixError, Error DependencyError, GitClone, EvalFileEff] r) => Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
 runPathResolver = runPathResolver' iniResolverState
