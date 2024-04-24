@@ -70,9 +70,7 @@ processFileToStoredCore ::
   EntryPoint ->
   Sem r (PipelineResult Core.CoreResult)
 processFileToStoredCore entry =
-  runReader @ImportParents mempty
-  -- . evalCacheEmpty processModule'
-  $
+  runReader @ImportParents mempty $
     processFileToStoredCore' entry
 
 processFileUpTo ::
