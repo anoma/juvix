@@ -228,7 +228,7 @@ jobs:
           make smoke-only
 
   build-and-test-macos:
-    runs-on: macos-12
+    runs-on: macos-14
     steps:
       - uses: extractions/setup-just@v2
 
@@ -237,6 +237,10 @@ jobs:
         with:
           path: main
           submodules: true
+
+      - name: install stack
+        run: |
+          brew install haskell-stack
 
       - name: Install Sed
         run: |
@@ -310,7 +314,7 @@ jobs:
           test: false
           stack-arguments: --copy-bins
           working-directory: smoke-repo
-          cache-prefix: ${{ steps.icuversion.outputs.version }}
+          cache-prefix: ${{ runner.arch }}-${{ steps.icuversion.outputs.version }}
           pedantic: false
 
       - name: Set homebrew LLVM CC and LIBTOOL vars (macOS)
@@ -331,7 +335,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.HOME }}/.local/bin/juvix-cairo-vm
-          key: ${{ runner.os }}-cairo-vm-${{ env.CAIRO_VM_VERSION }}
+          key: ${{ runner.os }}-${{ runner.arch }}-cairo-vm-${{ env.CAIRO_VM_VERSION }}
 
       - name: Install Rust toolchain
         if: steps.cache-cairo-vm.outputs.cache-hit != 'true'
@@ -375,7 +379,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: main/.hie
-          key: ${{ runner.os }}-stack-hie
+          key: ${{ runner.os }}-${{ runner.arch }}-stack-hie
 
       - name: Stack setup
         id: stack
@@ -384,6 +388,7 @@ jobs:
           working-directory: main
           stack-build-arguments: ${{ env.STACK_BUILD_ARGS }}
           test: false
+          cache-prefix: ${{ runner.arch }}
 
       - name: Add homebrew clang to the PATH (macOS)
         run: |
