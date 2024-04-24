@@ -29,6 +29,8 @@ data Inductive
   = IndBool
   | IndNat
   | IndInt
+  | IndList
+  | IndString
   | IndUser Name
   deriving stock (Eq)
 

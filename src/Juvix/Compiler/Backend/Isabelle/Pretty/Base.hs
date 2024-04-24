@@ -51,6 +51,8 @@ instance PrettyCode Inductive where
     IndBool -> return $ primitive "bool"
     IndNat -> return $ primitive "nat"
     IndInt -> return $ primitive "int"
+    IndList -> return $ primitive "list"
+    IndString -> return $ primitive "string"
     IndUser name -> ppCode name
 
 instance PrettyCode IndApp where

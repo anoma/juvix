@@ -167,9 +167,13 @@ goModule infoTable Internal.Module {..} =
             Just Internal.BuiltinBool -> IndBool
             Just Internal.BuiltinNat -> IndNat
             Just Internal.BuiltinInt -> IndInt
-            --        Just Internal.BuiltinList -> TyList
+            Just Internal.BuiltinList -> IndList
             _ -> IndUser name
-          Nothing -> IndUser name
+          Nothing -> case HashMap.lookup name (infoTable ^. Internal.infoAxioms) of
+            Just ai -> case ai ^. Internal.axiomInfoDef . Internal.axiomBuiltin of
+              Just Internal.BuiltinString -> IndString
+              _ -> IndUser name
+            Nothing -> IndUser name
 
     goTypeIden :: Internal.Iden -> Type
     goTypeIden = \case
