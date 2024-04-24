@@ -1,11 +1,13 @@
 module Commands.Isabelle.Options where
 
 import CommonOptions
+import Juvix.Compiler.Pipeline.EntryPoint
 
 data IsabelleOptions = IsabelleOptions
   { _isabelleInputFile :: Maybe (AppPath File),
     _isabelleOutputDir :: AppPath Dir,
-    _isabelleStdout :: Bool
+    _isabelleStdout :: Bool,
+    _isabelleOnlyTypes :: Bool
   }
   deriving stock (Data)
 
@@ -17,13 +19,21 @@ parseIsabelle = do
     parseGenericOutputDir
       ( value "isabelle"
           <> showDefault
-          <> help "Isabelle/HOL output directory"
+          <> help "Isabelle/HOL output directory."
           <> action "directory"
       )
   _isabelleStdout <-
     switch
       ( long "stdout"
-          <> help "Write the output to stdout instead of a file"
+          <> help "Write the output to stdout instead of a file."
+      )
+  _isabelleOnlyTypes <-
+    switch
+      ( long "only-types"
+          <> help "Translate types only. Omit function signatures."
       )
   _isabelleInputFile <- optional (parseInputFile FileExtJuvix)
   pure IsabelleOptions {..}
+
+instance EntryPointOptions IsabelleOptions where
+  applyOptions IsabelleOptions {..} e = e {_entryPointIsabelleOnlyTypes = _isabelleOnlyTypes}

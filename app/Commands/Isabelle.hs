@@ -11,7 +11,7 @@ runCommand ::
   Sem r ()
 runCommand opts = do
   let inputFile = opts ^. isabelleInputFile
-  res <- runPipelineNoOptions inputFile upToIsabelle
+  res <- runPipeline opts inputFile upToIsabelle
   let thy = res ^. resultTheory
   outputDir <- fromAppPathDir (opts ^. isabelleOutputDir)
   if

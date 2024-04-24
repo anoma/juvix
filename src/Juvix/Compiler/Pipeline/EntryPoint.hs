@@ -40,7 +40,8 @@ data EntryPoint = EntryPoint
     _entryPointModulePath :: Maybe (Path Abs File),
     _entryPointSymbolPruningMode :: SymbolPruningMode,
     _entryPointOffline :: Bool,
-    _entryPointFieldSize :: Natural
+    _entryPointFieldSize :: Natural,
+    _entryPointIsabelleOnlyTypes :: Bool
   }
   deriving stock (Eq, Show)
 
@@ -81,7 +82,8 @@ defaultEntryPointNoFile pkg root =
       _entryPointModulePath = Nothing,
       _entryPointSymbolPruningMode = FilterUnreachable,
       _entryPointOffline = False,
-      _entryPointFieldSize = defaultFieldSize
+      _entryPointFieldSize = defaultFieldSize,
+      _entryPointIsabelleOnlyTypes = False
     }
 
 defaultUnrollLimit :: Int

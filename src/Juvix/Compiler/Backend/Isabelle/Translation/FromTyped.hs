@@ -18,6 +18,7 @@ fromInternal ::
   Internal.InternalTypedResult ->
   Sem r Result
 fromInternal Internal.InternalTypedResult {..} = do
+  onlyTypes <- (^. entryPointIsabelleOnlyTypes) <$> ask
   itab <- getInternalModuleTable <$> ask
   let md :: Internal.InternalModule
       md = _resultInternalModule
@@ -25,26 +26,36 @@ fromInternal Internal.InternalTypedResult {..} = do
       itab' = Internal.insertInternalModule itab md
       table :: Internal.InfoTable
       table = Internal.computeCombinedInfoTable itab'
-  go table _resultModule
+  go onlyTypes table _resultModule
   where
-    go :: Internal.InfoTable -> Internal.Module -> Sem r Result
-    go tab md =
+    go :: Bool -> Internal.InfoTable -> Internal.Module -> Sem r Result
+    go onlyTypes tab md =
       return $
         Result
-          { _resultTheory = goModule tab md,
+          { _resultTheory = goModule onlyTypes tab md,
             _resultModuleId = md ^. Internal.moduleId
           }
 
-goModule :: Internal.InfoTable -> Internal.Module -> Theory
-goModule infoTable Internal.Module {..} =
+goModule :: Bool -> Internal.InfoTable -> Internal.Module -> Theory
+goModule onlyTypes infoTable Internal.Module {..} =
   Theory
     { _theoryName = _moduleName,
       _theoryImports = map (^. Internal.importModuleName) (_moduleBody ^. Internal.moduleImports),
       _theoryStatements = concatMap goMutualBlock (_moduleBody ^. Internal.moduleStatements)
     }
   where
+    isTypeDef :: Statement -> Bool
+    isTypeDef = \case
+      StmtDefinition {} -> False
+      StmtFunction {} -> False
+      StmtSynonym {} -> True
+      StmtDatatype {} -> True
+      StmtRecord {} -> True
+
     goMutualBlock :: Internal.MutualBlock -> [Statement]
-    goMutualBlock Internal.MutualBlock {..} = map goMutualStatement (toList _mutualStatements)
+    goMutualBlock Internal.MutualBlock {..} =
+      filter (\stmt -> not onlyTypes || isTypeDef stmt) $
+        map goMutualStatement (toList _mutualStatements)
 
     goMutualStatement :: Internal.MutualStatement -> Statement
     goMutualStatement = \case
