@@ -118,12 +118,14 @@ import Data.List.NonEmpty.Extra
     some1,
     (|:),
   )
+import Data.Map qualified as Map
 import Data.Map.Strict (Map)
 import Data.Maybe
 import Data.Monoid
 import Data.Ord
 import Data.Semigroup (Semigroup, sconcat, (<>))
 import Data.Set (Set)
+import Data.Set qualified as Set
 import Data.Singletons hiding ((@@))
 import Data.Singletons.Sigma
 import Data.Singletons.TH (genSingletons, promoteOrdInstances, singOrdInstances)
@@ -576,11 +578,17 @@ indexedByInt getIx l = IntMap.fromList [(getIx i, i) | i <- toList l]
 indexedByHash :: (Foldable f, Hashable k) => (a -> k) -> f a -> HashMap k a
 indexedByHash getIx l = HashMap.fromList [(getIx i, i) | i <- toList l]
 
+ordSet :: (Foldable f, Ord k) => f k -> Set k
+ordSet = Set.fromList . toList
+
 hashSet :: (Foldable f, Hashable k) => f k -> HashSet k
 hashSet = HashSet.fromList . toList
 
 hashMapFromHashSet :: (Hashable k) => (k -> v) -> HashSet k -> HashMap k v
 hashMapFromHashSet fun s = hashMap [(x, fun x) | x <- toList s]
+
+ordMap :: (Foldable f, Ord k) => f (k, v) -> Map k v
+ordMap = Map.fromList . toList
 
 hashMap :: (Foldable f, Hashable k) => f (k, v) -> HashMap k v
 hashMap = HashMap.fromList . toList

@@ -351,7 +351,6 @@ currentPackage = do
   curRoot <- asks (^. envRoot)
   (^. resolverCacheItemPackage) . fromJust <$> getResolverCacheItem curRoot
 
--- | TODO use scc
 checkImportTreeCycles :: forall r. (Members '[Error ScoperError] r) => ImportTree -> Sem r ()
 checkImportTreeCycles tree = do
   let sccs =

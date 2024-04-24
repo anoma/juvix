@@ -1,6 +1,5 @@
 module Juvix.Compiler.Pipeline.Loader.PathResolver.Data where
 
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Compiler.Pipeline.Loader.PathResolver.PackageInfo
 import Juvix.Compiler.Pipeline.Lockfile
 import Juvix.Compiler.Pipeline.Package.Base

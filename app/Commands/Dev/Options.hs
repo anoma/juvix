@@ -19,6 +19,7 @@ import Commands.Dev.DevCompile.Options (DevCompileCommand, parseDevCompileComman
 import Commands.Dev.DisplayRoot.Options
 import Commands.Dev.Geb.Options
 import Commands.Dev.Highlight.Options
+import Commands.Dev.ImportTree.Options
 import Commands.Dev.Internal.Options
 import Commands.Dev.MigrateJuvixYaml.Options
 import Commands.Dev.Nockma.Options
@@ -34,6 +35,7 @@ import CommonOptions
 
 data DevCommand
   = DisplayRoot RootOptions
+  | ImportTree ImportTreeOptions
   | Highlight HighlightOptions
   | Internal InternalCommand
   | DevCompile DevCompileCommand
@@ -57,6 +59,7 @@ parseDevCommand =
   hsubparser
     ( mconcat
         [ commandHighlight,
+          commandImportTree,
           commandDevCompile,
           commandInternal,
           commandCore,
@@ -75,6 +78,13 @@ parseDevCommand =
           commandNockma
         ]
     )
+
+commandImportTree :: Mod CommandFields DevCommand
+commandImportTree =
+  command "import-tree" $
+    info
+      (ImportTree <$> parseImportTree)
+      (progDesc "Print the import dependency tree")
 
 commandDevCompile :: Mod CommandFields DevCommand
 commandDevCompile =

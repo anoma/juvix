@@ -9,12 +9,14 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.List.NonEmpty.Extra qualified as NonEmpty
+import Data.Map qualified as Map
 import Juvix.Compiler.Concrete.Data.Scope.Base
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra qualified as Concrete
 import Juvix.Compiler.Concrete.Keywords qualified as Kw
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty.Options
+import Juvix.Compiler.Pipeline.Loader.PathResolver.Data
 import Juvix.Compiler.Store.Scoped.Language (Alias, ModuleSymbolEntry, PreSymbolEntry (..), ScopedModule, SymbolEntry, aliasName, moduleEntry, scopedModuleName, symbolEntry)
 import Juvix.Data.Ape.Base
 import Juvix.Data.Ape.Print
@@ -546,7 +548,7 @@ instance (SingI s) => PrettyPrint (Case s) where
             | otherwise = Just (ppCode (b ^. caseBranchPipe . unIrrelevant))
 
 instance PrettyPrint Universe where
-  ppCode Universe {..} = ppCode _universeKw <+?> (noLoc <$> (pretty <$> _universeLevel))
+  ppCode Universe {..} = ppCode _universeKw <+?> (noLoc . pretty <$> _universeLevel)
 
 apeHelper :: (IsApe a ApeLeaf, Members '[Reader Options, ExactPrint] r) => a -> Sem r ()
 apeHelper a = do
@@ -1051,6 +1053,47 @@ instance (SingI s) => PrettyPrint (UsingItem s) where
         sym' = ppSymbolType (ui ^. usingSymbol)
         kwmodule = ppCode <$> (ui ^. usingModuleKw)
     kwmodule <?+> (sym' <+?> kwAs' <+?> alias')
+
+instance PrettyPrint ImportTree where
+  ppCode ImportTree {..} = do
+    header "Import Tree:"
+    header "============"
+    forM_ (Map.toList importsTable) $ \(pkgRoot, tbl) -> do
+      noLoc ("* Package at " <> pretty pkgRoot)
+      hardline
+      forM_ (Map.toList tbl) $ \(fromFile, toFiles) -> do
+        forM_ toFiles $ \toFile -> do
+          noLoc (pretty fromFile P.<+> "imports" P.<+> pretty (toFile ^. importNodeFile))
+          hardline
+      hardline
+    where
+      allNodes :: [ImportNode]
+      allNodes = HashMap.keys _importTree
+
+      allRoots :: [Path Abs Dir]
+      allRoots = nubSort (map (^. importNodePackageRoot) allNodes)
+
+      nodesByRoot :: HashMap (Path Abs Dir) (HashSet ImportNode)
+      nodesByRoot =
+        foldl'
+          (HashMap.unionWith (<>))
+          mempty
+          [hashMap [(node ^. importNodePackageRoot, hashSet [node])] | node <- allNodes]
+
+      -- fromPackageRoot -> fromFile -> tofile
+      importsTable :: Map (Path Abs Dir) (Map (Path Rel File) (Set ImportNode))
+      importsTable =
+        ordMap
+          [ (root, rootSubTable)
+            | root <- allRoots,
+              let nodesInRoot = toList (nodesByRoot ^?! at root . _Just),
+              let rootSubTable :: Map (Path Rel File) (Set ImportNode)
+                  rootSubTable =
+                    ordMap
+                      [ (from ^. importNodeFile, ordSet (_importTree ^?! at from . _Just))
+                        | from :: ImportNode <- nodesInRoot
+                      ]
+          ]
 
 instance (SingI s) => PrettyPrint (Import s) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => Import s -> Sem r ()

@@ -101,7 +101,10 @@ addExtensions' :: [String] -> Path b File -> Path b File
 addExtensions' ext = fromJust . addExtensions ext
 
 addExtension' :: String -> Path b File -> Path b File
-addExtension' ext = fromJust . addExtension ext
+addExtension' ext = fromMaybe err . addExtension ext
+  where
+    err :: a
+    err = error (err <> " is not a valid extension")
 
 replaceExtension' :: String -> Path b File -> Path b File
 replaceExtension' ext = fromJust . replaceExtension ext
