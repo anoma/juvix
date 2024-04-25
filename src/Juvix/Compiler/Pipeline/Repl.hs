@@ -15,7 +15,6 @@ import Juvix.Compiler.Pipeline.Artifacts.PathResolver
 import Juvix.Compiler.Pipeline.Driver (evalModuleInfoCache)
 import Juvix.Compiler.Pipeline.Driver qualified as Driver
 import Juvix.Compiler.Pipeline.EntryPoint
-import Juvix.Compiler.Pipeline.ImportParents
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Base
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Error
 import Juvix.Compiler.Pipeline.ModuleInfoCache
