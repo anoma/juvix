@@ -41,9 +41,9 @@ import Path.Posix qualified as Path
 evalModuleInfoCache ::
   forall r a.
   (Members '[TaggedLock, Error JuvixError, Files, PathResolver] r) =>
-  Sem (ModuleInfoCache ': r) a ->
+  Sem (ModuleInfoCache ': Reader ImportParents ': r) a ->
   Sem r a
-evalModuleInfoCache = evalCacheEmpty (runReader @ImportParents mempty . processModule')
+evalModuleInfoCache = runReader @ImportParents mempty . evalCacheEmpty processModule'
 
 processFileUpToParsing ::
   forall r.
