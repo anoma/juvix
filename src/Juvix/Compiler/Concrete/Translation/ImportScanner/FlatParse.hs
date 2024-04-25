@@ -9,14 +9,22 @@ import Juvix.Compiler.Concrete.Translation.ImportScanner.Base
 import Juvix.Data.Keyword (reservedSymbols)
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
-import Juvix.Prelude.FlatParse
+import Juvix.Prelude.FlatParse hiding (Pos)
+import Juvix.Prelude.FlatParse qualified as FP
 import Juvix.Prelude.FlatParse.Lexer qualified as L
 
 scanFileImportsIO :: (MonadIO m) => Path Abs File -> m (HashSet ImportScan)
 scanFileImportsIO = runM . runFilesIO . scanFileImports
 
 scanFileImports :: (Members '[Files] r) => Path Abs File -> Sem r (HashSet ImportScan)
-scanFileImports file = fmap (hashSet . fromOk) scanImports <$> readFileBS' file
+scanFileImports file = scanBSImports file <$> readFileBS' file
+
+scanBSImports :: Path Abs File -> ByteString -> HashSet ImportScan
+scanBSImports fp inputBS =
+  hashSet
+    . fromOk
+    . scanImports fp
+    $ inputBS
   where
     fromOk :: Result () ok -> ok
     fromOk = \case
@@ -31,17 +39,49 @@ whiteSpaceAndComments :: Parser e ()
 whiteSpaceAndComments = skipMany (L.whiteSpace1 <|> comment)
 
 -- | The input is a utf-8 encoded bytestring
-scanImports :: ByteString -> Result e [ImportScan]
-scanImports bs = runParser pImports bs
+scanImports :: Path Abs File -> ByteString -> Result e [ImportScan]
+scanImports fp bs = spansToLocs <$> runParser pImports bs
+  where
+    interval :: FileLoc -> FileLoc -> Interval
+    interval _intervalStart _intervalEnd =
+      Interval
+        { _intervalFile = fp,
+          ..
+        }
+    spansToLocs :: [ImportScanParsed] -> [ImportScan]
+    spansToLocs ps =
+      [ set importLoc interv scan
+        | (scan, interv) <-
+            zipExact ps (uncurry interval <$> listByPairsExact linesCols)
+      ]
+      where
+        spans :: [Span]
+        spans = map (^. importLoc) ps
 
-pImports :: Parser e [ImportScan]
+        positions :: [FP.Pos]
+        positions = concatMap spanToPos spans
+
+        linesCols :: [FileLoc]
+        linesCols =
+          [ FileLoc
+              { _locLine = Pos (fromIntegral l),
+                _locCol = Pos (fromIntegral c),
+                _locOffset = Pos (fromIntegral p)
+              }
+            | (FP.Pos p, (l, c)) <- zipExact positions (posLineCols bs positions)
+          ]
+
+        spanToPos :: Span -> [FP.Pos]
+        spanToPos (Span l r) = [l, r]
+
+pImports :: Parser e [ImportScanParsed]
 pImports = do
   whiteSpaceAndComments
   res <- mapMaybe getImport <$> many pToken
   eof
   return res
   where
-    getImport :: Token -> Maybe ImportScan
+    getImport :: Token -> Maybe ImportScanParsed
     getImport = \case
       TokenImport i -> Just i
       _ -> Nothing
@@ -58,11 +98,15 @@ dottedIdentifier = nonEmpty' <$> sepBy1 bareIdentifier dot
     dot :: Parser e ()
     dot = $(char '.')
 
-pImport :: Parser e ImportScan
+pImport :: Parser e ImportScanParsed
 pImport = do
-  lexeme $(string Str.import_)
-  _importNames <- dottedIdentifier
-  return ImportScan {..}
+  withSpan helper $ \_importNames _importLoc ->
+    return ImportScan {..}
+  where
+    helper :: Parser e (NonEmpty String)
+    helper = do
+      lexeme $(string Str.import_)
+      dottedIdentifier
 
 pToken :: Parser e Token
 pToken =

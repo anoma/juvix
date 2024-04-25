@@ -451,7 +451,7 @@ resolvePath' scan = do
         ErrMissingModule
           MissingModule
             { _missingInfo = curPkg,
-              _missingModule = undefined
+              _missingModule = scan
             }
     (r, _) : rs ->
       throw $

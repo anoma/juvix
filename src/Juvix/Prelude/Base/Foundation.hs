@@ -285,6 +285,16 @@ concatWith f ds = case nonEmpty ds of
   Just ds' -> foldr1 f ds'
 {-# INLINE concatWith #-}
 
+-- | The length of the input list must be even
+listByPairsExact :: forall a. [a] -> [(a, a)]
+listByPairsExact = reverse . go []
+  where
+    go :: [(a, a)] -> [a] -> [(a, a)]
+    go acc = \case
+      [] -> acc
+      [_] -> error "input list must have even length"
+      x : y : ls -> go ((x, y) : acc) ls
+
 --------------------------------------------------------------------------------
 -- HashMap
 --------------------------------------------------------------------------------
