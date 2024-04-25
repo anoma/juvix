@@ -45,6 +45,11 @@ instance Pretty ImportNode where
 
 instance Hashable ImportNode
 
+data ImportTreeStats = ImportTreeStats
+  { _importTreeStatsTotalModules :: Int,
+    _importTreeStatsHeight :: Int
+  }
+
 data ImportTree = ImportTree
   { -- | A ∈ importTree[B] ⇔ B imports A
     _importTree :: HashMap ImportNode (HashSet ImportNode),
@@ -60,6 +65,7 @@ emptyImportTree =
     }
 
 makeLenses ''ImportTree
+makeLenses ''ImportTreeStats
 makeLenses ''ImportNode
 makeLenses ''ResolverState
 makeLenses ''ResolverEnv
