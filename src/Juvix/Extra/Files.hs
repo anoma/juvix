@@ -18,10 +18,13 @@ juvixFiles fs = mapMaybe helper fs
       where
         fp :: Path Rel File
         fp = relFile fp'
+
     isStdLibFile :: Path Rel File -> Bool
     isStdLibFile = isJuvixFile .||. isYamlFile .||. isPackageFile
+
     isYamlFile :: Path Rel File -> Bool
     isYamlFile = (== juvixYamlFile)
+
     isPackageFile :: Path Rel File -> Bool
     isPackageFile = (== packageFilePath)
 
