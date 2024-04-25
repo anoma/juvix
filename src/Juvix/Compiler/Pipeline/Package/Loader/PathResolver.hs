@@ -15,6 +15,7 @@ data RootInfoDirs = RootInfoDirs
     _rootInfoArgPackageBaseDir :: Path Abs Dir,
     _rootInfoArgGlobalStdlibDir :: Path Abs Dir
   }
+  deriving stock (Show)
 
 data RootInfoFiles = RootInfoFiles
   { _rootInfoFilesPackage :: HashSet (Path Rel File),

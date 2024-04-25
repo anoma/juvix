@@ -11,6 +11,7 @@ import Juvix.Extra.Version
 import Juvix.Prelude.Base
 import Juvix.Prelude.Path
 import Juvix.Prelude.Prepath
+import Juvix.Prelude.Pretty
 import Path.IO qualified as Path
 import System.Environment.XDG.BaseDir
 import System.IO.Error
@@ -31,7 +32,9 @@ runFilesIO = interpret helper
     helper' :: forall rInitial x. Files (Sem rInitial) x -> IO x
     helper' = \case
       ReadFile' f -> readFile f
-      WriteFileBS p bs -> ByteString.writeFile (toFilePath p) bs
+      WriteFileBS p bs -> do
+        putStrLn ("writing file: " <> prettyText p)
+        ByteString.writeFile (toFilePath p) bs
       WriteFileEnsureLn' f txt -> writeFileEnsureLn f txt
       EnsureDir' p -> Path.ensureDir p
       DirectoryExists' p -> Path.doesDirExist p

@@ -63,10 +63,15 @@ mkPackageInfo mpackageEntry _packageRoot pkg = do
   ensureStdlib _packageRoot buildDir deps
   files :: [Path Rel File] <-
     map (fromJust . stripProperPrefix _packageRoot) <$> walkDirRelAccum juvixAccum _packageRoot []
+  globalPackageDescriptionAbsDir <- globalPackageDescriptionRoot
   globalPackageBaseAbsDir <- globalPackageBaseRoot
-  let _packageRelativeFiles = HashSet.fromList files
+  let _packageRelativeFiles = hashSet files
       _packageAvailableRoots =
-        HashSet.fromList (globalPackageBaseAbsDir : _packageRoot : depsPaths)
+        hashSet $
+          globalPackageDescriptionAbsDir
+            : globalPackageBaseAbsDir
+            : _packageRoot
+            : depsPaths
   _packageImports <- scanImports _packageRoot _packageRelativeFiles
   return PackageInfo {..}
   where
@@ -181,6 +186,36 @@ scanImports root fileSet =
     scanFile :: Path Rel File -> Sem r (HashSet ImportScan)
     scanFile f = scanFileImports (root <//> f)
 
+registerPackagePackage ::
+  forall r.
+  (Members '[TaggedLock, State ResolverState, Reader ResolverEnv, Files] r) =>
+  Sem r ()
+registerPackagePackage = do
+  packagePackageAbsDir <- globalPackageDescriptionRoot
+  runReader packagePackageAbsDir updatePackageFiles
+  packageDescriptionRelFiles <- relFiles packagePackageAbsDir
+  imports <- scanImports packagePackageAbsDir packageDescriptionRelFiles
+  let pkgInfo =
+        PackageInfo
+          { _packageRoot = packagePackageAbsDir,
+            _packageRelativeFiles = packageDescriptionRelFiles,
+            _packageImports = imports,
+            _packagePackage = packageJuvixPackage,
+            _packageAvailableRoots = HashSet.singleton packagePackageAbsDir
+          }
+      dep =
+        LockfileDependency
+          { _lockfileDependencyDependency = mkPathDependency (toFilePath packagePackageAbsDir),
+            _lockfileDependencyDependencies = []
+          }
+      cacheItem =
+        ResolverCacheItem
+          { _resolverCacheItemPackage = pkgInfo,
+            _resolverCacheItemDependency = dep
+          }
+  setResolverCacheItem packagePackageAbsDir (Just cacheItem)
+  addPackageRelativeFiles pkgInfo
+
 registerPackageBase ::
   forall r.
   (Members '[TaggedLock, State ResolverState, Reader ResolverEnv, Files] r) =>
@@ -219,6 +254,7 @@ registerDependencies' ::
 registerDependencies' conf = do
   e <- ask @EntryPoint
   registerPackageBase
+  registerPackagePackage
   case e ^. entryPointPackageType of
     GlobalStdlib -> do
       glob <- globalRoot
@@ -407,6 +443,7 @@ mkImportTree = do
       Sem r' ()
     scanNode fromNode@ImportNode {..} = do
       let file = _importNodePackageRoot <//> _importNodeFile
+      traceM ("scanNode " <> prettyText fromNode)
       imports :: [ImportNode] <- scanFileImports file >>= mapM resolveImportScan . toList
       forM_ imports $ \toNode -> do
         addEdge fromNode toNode
@@ -415,6 +452,7 @@ mkImportTree = do
     resolveImportScan :: forall r'. (Members '[PathResolver] r') => ImportScan -> Sem r' ImportNode
     resolveImportScan s = do
       let rel = importScanToRelPath s
+      traceM ("solveImport " <> prettyText s)
       (pkg, ext) <- resolvePath s
       return
         ImportNode
@@ -446,7 +484,12 @@ resolvePath' scan = do
         ]
   case packagesWithExt of
     [(r, relPath)] -> return (r, relPath)
-    [] ->
+    [] -> do
+      let ppAssoc :: (Path Rel File, NonEmpty PackageInfo) -> String
+          ppAssoc (f, pkg) = toFilePath f <> " -> " <> show ((^. packageRoot) <$> pkg)
+      f <- unlines . map ppAssoc . HashMap.toList <$> gets (^. resolverFiles)
+      traceM ("resolverFiles : " <> pack f)
+      traceM ("availableRoots : " <> show (curPkg ^. packageAvailableRoots))
       throw $
         ErrMissingModule
           MissingModule

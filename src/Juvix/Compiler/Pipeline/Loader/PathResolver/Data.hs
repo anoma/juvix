@@ -4,6 +4,7 @@ import Juvix.Compiler.Pipeline.Loader.PathResolver.PackageInfo
 import Juvix.Compiler.Pipeline.Lockfile
 import Juvix.Compiler.Pipeline.Package.Base
 import Juvix.Prelude
+import Juvix.Prelude.Pretty
 
 data ResolverEnv = ResolverEnv
   { _envRoot :: Path Abs Dir,
@@ -38,6 +39,9 @@ data ImportNode = ImportNode
     _importNodeFile :: Path Rel File
   }
   deriving stock (Eq, Ord, Generic, Show)
+
+instance Pretty ImportNode where
+  pretty ImportNode {..} = pretty _importNodePackageRoot <+> ":" <+> show _importNodeFile
 
 instance Hashable ImportNode
 
