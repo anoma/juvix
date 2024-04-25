@@ -1059,7 +1059,7 @@ instance PrettyPrint ImportTree where
     header "Import Tree:"
     header "============"
     forM_ (Map.toList importsTable) $ \(pkgRoot, tbl) -> do
-      noLoc ("* Package at " <> pretty pkgRoot)
+      annotated AnnImportant (noLoc ("* Package at " <> pretty pkgRoot))
       hardline
       forM_ (Map.toList tbl) $ \(fromFile, toFiles) -> do
         forM_ toFiles $ \toFile -> do

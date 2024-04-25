@@ -444,7 +444,6 @@ mkImportTree = do
       Sem r' ()
     scanNode fromNode@ImportNode {..} = do
       let file = _importNodePackageRoot <//> _importNodeFile
-      traceM ("scanNode " <> prettyText fromNode)
       imports :: [ImportNode] <- scanFileImports file >>= mapM resolveImportScan . toList
       forM_ imports $ \toNode -> do
         addEdge fromNode toNode
@@ -453,7 +452,6 @@ mkImportTree = do
     resolveImportScan :: forall r'. (Members '[PathResolver] r') => ImportScan -> Sem r' ImportNode
     resolveImportScan s = do
       let rel = importScanToRelPath s
-      traceM ("solveImport " <> prettyText s)
       (pkg, ext) <- resolvePath s
       return
         ImportNode
@@ -485,12 +483,7 @@ resolvePath' scan = do
         ]
   case packagesWithExt of
     [(r, relPath)] -> return (r, relPath)
-    [] -> do
-      let ppAssoc :: (Path Rel File, NonEmpty PackageInfo) -> String
-          ppAssoc (f, pkg) = toFilePath f <> " -> " <> show ((^. packageRoot) <$> pkg)
-      f <- unlines . map ppAssoc . HashMap.toList <$> gets (^. resolverFiles)
-      traceM ("resolverFiles : " <> pack f)
-      traceM ("availableRoots : " <> show (curPkg ^. packageAvailableRoots))
+    [] ->
       throw $
         ErrMissingModule
           MissingModule
