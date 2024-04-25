@@ -150,7 +150,7 @@ data MissingModule = MissingModule
 instance PrettyCodeAnn MissingModule where
   ppCodeAnn MissingModule {..} =
     "The module"
-      <+> pcode _missingModule
+      <+> code (importScanPrettyName _missingModule)
       <+> "does not exist."
         <> line
         <> suggestion
@@ -158,7 +158,7 @@ instance PrettyCodeAnn MissingModule where
       suggestion :: Doc Ann
       suggestion =
         "It should be in"
-          <+> pcode (_missingInfo ^. packageRoot <//> importScanToRelPath _missingModule) -- TODO add extension
+          <+> pcode (_missingInfo ^. packageRoot <//> addFileExt FileExtJuvix (importScanToRelPath _missingModule))
             <> dependenciesSuggestion
 
       dependenciesSuggestion :: Doc Ann

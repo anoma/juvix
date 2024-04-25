@@ -11,6 +11,5 @@ runCommand :: (Members '[EmbedIO, App, TaggedLock] r) => PrintOptions -> Sem r (
 runCommand PrintOptions =
   runPipelineSetup $ do
     entrySetup defaultDependenciesConfig
-    renderStdOut @Text "entry setup done"
     tree <- mapError (JuvixError @ScoperError) mkImportTree
     renderStdOut (ppOutDefaultNoComments tree)

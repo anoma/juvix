@@ -23,8 +23,11 @@ instance HasLoc ImportScan where
   getLoc = (^. importLoc)
 
 instance Pretty (ImportScan' a) where
-  pretty ImportScan {..} =
-    Str.import_ <+> pretty (mconcat (intersperse "." (toList _importNames)))
+  pretty s =
+    Str.import_ <+> importScanPrettyName s
+
+importScanPrettyName :: ImportScan' a -> Doc ann
+importScanPrettyName ImportScan {..} = pretty (mconcat (intersperse "." (toList _importNames)))
 
 -- | The relative path does not have a file extension
 importScanToRelPath :: ImportScan' a -> Path Rel File
