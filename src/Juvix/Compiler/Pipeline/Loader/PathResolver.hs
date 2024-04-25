@@ -193,6 +193,7 @@ registerPackagePackage ::
 registerPackagePackage = do
   packagePackageAbsDir <- globalPackageDescriptionRoot
   runReader packagePackageAbsDir updatePackageFiles
+  packageBaseAbsDir <- globalPackageBaseRoot
   packageDescriptionRelFiles <- relFiles packagePackageAbsDir
   imports <- scanImports packagePackageAbsDir packageDescriptionRelFiles
   let pkgInfo =
@@ -201,7 +202,7 @@ registerPackagePackage = do
             _packageRelativeFiles = packageDescriptionRelFiles,
             _packageImports = imports,
             _packagePackage = packageJuvixPackage,
-            _packageAvailableRoots = HashSet.singleton packagePackageAbsDir
+            _packageAvailableRoots = hashSet [packagePackageAbsDir, packageBaseAbsDir]
           }
       dep =
         LockfileDependency
