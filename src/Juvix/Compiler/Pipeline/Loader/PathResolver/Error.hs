@@ -2,7 +2,6 @@ module Juvix.Compiler.Pipeline.Loader.PathResolver.Error where
 
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Pipeline.Loader.PathResolver.PackageInfo
-import Juvix.Compiler.Pipeline.Loader.PathResolver.Paths
 import Juvix.Compiler.Pipeline.Package.Base
 import Juvix.Data.CodeAnn
 import Juvix.Data.Effect.Git
@@ -143,7 +142,7 @@ pcode :: (Pretty a) => a -> Doc CodeAnn
 pcode = code . pretty
 
 data MissingModule = MissingModule
-  { _missingModule :: TopModulePath,
+  { _missingModule :: ImportScan,
     _missingInfo :: PackageInfo
   }
   deriving stock (Show)
@@ -159,7 +158,7 @@ instance PrettyCodeAnn MissingModule where
       suggestion :: Doc Ann
       suggestion =
         "It should be in"
-          <+> pcode (_missingInfo ^. packageRoot <//> topModulePathToRelativePath' _missingModule)
+          <+> pcode (_missingInfo ^. packageRoot <//> importScanToRelPath _missingModule) -- TODO add extension
             <> dependenciesSuggestion
 
       dependenciesSuggestion :: Doc Ann

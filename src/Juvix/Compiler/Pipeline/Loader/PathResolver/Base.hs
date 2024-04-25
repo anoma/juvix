@@ -34,7 +34,7 @@ data PathResolver :: Effect where
   -- | Given a relative file *with no extension*, returns the list of packages
   -- that contain that file. The file extension is also returned since it can be
   -- FileExtJuvix or FileExtJuvixMarkdown.
-  ResolvePath :: Path Rel File -> PathResolver m (PackageInfo, FileExt)
+  ResolvePath :: ImportScan -> PathResolver m (PackageInfo, FileExt)
   -- | The root is assumed to be a package root.
   WithResolverRoot :: Path Abs Dir -> m a -> PathResolver m a
 
@@ -58,6 +58,7 @@ resolveTopModulePath ::
   TopModulePath ->
   Sem r (Path Abs Dir, Path Rel File)
 resolveTopModulePath mp = do
-  let relpath = topModulePathToRelativePathNoExt mp
-  (pkg, ext) <- resolvePath relpath
+  let scan = topModulePathToImportScan mp
+      relpath = topModulePathToRelativePathNoExt mp
+  (pkg, ext) <- resolvePath scan
   return (pkg ^. packageRoot, addFileExt ext relpath)

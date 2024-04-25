@@ -41,7 +41,7 @@ runPackagePathResolver rootPath sem = do
       packageInfos = mkPackageInfos ds fs
   (`interpretH` sem) $ \localEnv -> \case
     RegisterDependencies {} -> return ()
-    ResolvePath fileNoExt -> case mkRootInfo ds fs (addFileExt FileExtJuvix fileNoExt) of
+    ResolvePath scan -> case mkRootInfo ds fs (addFileExt FileExtJuvix (importScanToRelPath scan)) of
       Nothing ->
         throw . JuvixError $
           ErrPackageInvalidImport

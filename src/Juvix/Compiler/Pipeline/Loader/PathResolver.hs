@@ -415,7 +415,7 @@ mkImportTree = do
     resolveImportScan :: forall r'. (Members '[PathResolver] r') => ImportScan -> Sem r' ImportNode
     resolveImportScan s = do
       let rel = importScanToRelPath s
-      (pkg, ext) <- resolvePath rel
+      (pkg, ext) <- resolvePath s
       return
         ImportNode
           { _importNodePackageRoot = pkg ^. packageRoot,
@@ -424,9 +424,9 @@ mkImportTree = do
 
 resolvePath' ::
   (Members '[Files, Error PathResolverError, State ResolverState, Reader ResolverEnv] r) =>
-  Path Rel File ->
+  ImportScan ->
   Sem r (PackageInfo, FileExt)
-resolvePath' fileNoExt = do
+resolvePath' scan = do
   curPkg <- currentPackage
   filesToPackage <- gets (^. resolverFiles)
   let possibleExtensions = [FileExtJuvix, FileExtJuvixMarkdown]
@@ -439,7 +439,7 @@ resolvePath' fileNoExt = do
       packagesWithExt =
         [ (pkg, ext)
           | ext <- possibleExtensions,
-            let file = addFileExt ext fileNoExt,
+            let file = addFileExt ext (importScanToRelPath scan),
             pkgs <- toList (HashMap.lookup file filesToPackage),
             pkg <- toList pkgs,
             visible pkg

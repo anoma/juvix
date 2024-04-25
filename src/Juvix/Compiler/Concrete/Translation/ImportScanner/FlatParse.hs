@@ -61,7 +61,8 @@ dottedIdentifier = nonEmpty' <$> sepBy1 bareIdentifier dot
 pImport :: Parser e ImportScan
 pImport = do
   lexeme $(string Str.import_)
-  ImportScan <$> dottedIdentifier
+  _importNames <- dottedIdentifier
+  return ImportScan {..}
 
 pToken :: Parser e Token
 pToken =
