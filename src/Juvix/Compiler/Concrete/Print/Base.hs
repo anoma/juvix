@@ -1063,7 +1063,11 @@ instance PrettyPrint ImportTree where
       hardline
       forM_ (Map.toList tbl) $ \(fromFile, toFiles) -> do
         forM_ toFiles $ \toFile -> do
-          noLoc (pretty fromFile P.<+> "imports" P.<+> pretty (toFile ^. importNodeFile))
+          let pMod :: Path Rel File -> Doc Ann
+              pMod = annotate (AnnKind KNameTopModule) . pretty
+              fromMod = pMod fromFile
+              toMod = pMod (toFile ^. importNodeFile)
+          noLoc (fromMod P.<+> annotate AnnKeyword "imports" P.<+> toMod)
           hardline
       hardline
     where
