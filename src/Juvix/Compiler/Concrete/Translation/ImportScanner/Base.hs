@@ -1,9 +1,9 @@
 module Juvix.Compiler.Concrete.Translation.ImportScanner.Base where
 
 import FlatParse.Basic
+import Juvix.Data.CodeAnn
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
-import Juvix.Prelude.Pretty
 
 data ImportScan' a = ImportScan
   { _importNames :: NonEmpty String,
@@ -24,10 +24,13 @@ instance HasLoc ImportScan where
 
 instance Pretty (ImportScan' a) where
   pretty s =
-    Str.import_ <+> importScanPrettyName s
+    Str.import_ <+> unAnnotate (importScanPrettyName s)
 
-importScanPrettyName :: ImportScan' a -> Doc ann
-importScanPrettyName ImportScan {..} = pretty (mconcat (intersperse "." (toList _importNames)))
+importScanPrettyName :: ImportScan' a -> Doc CodeAnn
+importScanPrettyName ImportScan {..} =
+  annotate
+    (AnnKind KNameTopModule)
+    (pretty (mconcat (intersperse "." (toList _importNames))))
 
 -- | The relative path does not have a file extension
 importScanToRelPath :: ImportScan' a -> Path Rel File

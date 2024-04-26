@@ -47,7 +47,7 @@ runPackagePathResolver rootPath sem = do
         throw . JuvixError $
           ErrPackageInvalidImport
             PackageInvalidImport
-              { _packageInvalidImport = undefined -- TODO put a path
+              { _packageInvalidImport = scan
               }
       Just (ri :: RootInfo) ->
         let pkg = packageInfos ^?! at (ri ^. rootInfoPath) . _Just

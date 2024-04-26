@@ -495,7 +495,7 @@ resolvePath' scan = do
         ErrDependencyConflict
           DependencyConflict
             { _conflictPackages = r :| map fst rs,
-              _conflictPath = undefined
+              _conflictPath = scan
             }
 
 isModuleOrphan ::

@@ -1058,6 +1058,7 @@ instance PrettyPrint ImportTree where
   ppCode ImportTree {..} = do
     header "Import Tree:"
     header "============"
+    hardline
     forM_ (Map.toList importsTable) $ \(pkgRoot, tbl) -> do
       annotated AnnImportant (noLoc ("* Package at " <> pretty pkgRoot))
       hardline

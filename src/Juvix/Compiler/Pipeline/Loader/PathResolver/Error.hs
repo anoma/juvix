@@ -123,14 +123,14 @@ instance PrettyCodeAnn PathResolverError where
 
 data DependencyConflict = DependencyConflict
   { _conflictPackages :: NonEmpty PackageInfo,
-    _conflictPath :: TopModulePath
+    _conflictPath :: ImportScan
   }
   deriving stock (Show)
 
 instance PrettyCodeAnn DependencyConflict where
   ppCodeAnn DependencyConflict {..} =
     "The module name "
-      <> code (pretty _conflictPath)
+      <> importScanPrettyName _conflictPath
       <> " is ambiguous. It is defined in these packages:"
       <> line
       <> indent' (itemize (item <$> toList _conflictPackages))
@@ -150,7 +150,7 @@ data MissingModule = MissingModule
 instance PrettyCodeAnn MissingModule where
   ppCodeAnn MissingModule {..} =
     "The module"
-      <+> code (importScanPrettyName _missingModule)
+      <+> importScanPrettyName _missingModule
       <+> "does not exist."
         <> line
         <> suggestion
@@ -174,7 +174,7 @@ instance PrettyCodeAnn MissingModule where
           deps = _missingInfo ^. packagePackage . packageDependencies
 
 newtype PackageInvalidImport = PackageInvalidImport
-  {_packageInvalidImport :: TopModulePath}
+  {_packageInvalidImport :: ImportScan}
   deriving stock (Show)
 
 instance PrettyCodeAnn PackageInvalidImport where
