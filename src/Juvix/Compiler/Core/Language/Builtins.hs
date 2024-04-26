@@ -113,8 +113,13 @@ builtinIsFoldable = \case
   OpRandomEcPoint -> False
 
 builtinIsCairo :: BuiltinOp -> Bool
-builtinIsCairo = \case
-  OpPoseidonHash -> True
-  OpEc -> True
-  OpRandomEcPoint -> True
-  _ -> False
+builtinIsCairo op = op `elem` builtinsCairo
+
+builtinsString :: [BuiltinOp]
+builtinsString = [OpStrConcat, OpStrToInt, OpShow]
+
+builtinsCairo :: [BuiltinOp]
+builtinsCairo = [OpPoseidonHash, OpEc, OpRandomEcPoint]
+
+builtinsAnoma :: [BuiltinOp]
+builtinsAnoma = [OpAnomaGet]

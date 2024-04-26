@@ -55,9 +55,6 @@ checkBuiltins allowUntypedFail = dmapRM go
             throw $ unsupportedError "strings" node (getInfoLocation _typePrimInfo)
       NBlt BuiltinApp {..} ->
         case _builtinAppOp of
-          OpShow -> throw $ unsupportedError "strings" node (getInfoLocation _builtinAppInfo)
-          OpStrConcat -> throw $ unsupportedError "strings" node (getInfoLocation _builtinAppInfo)
-          OpStrToInt -> throw $ unsupportedError "strings" node (getInfoLocation _builtinAppInfo)
           OpTrace -> throw $ unsupportedError "tracing" node (getInfoLocation _builtinAppInfo)
           OpFail | not allowUntypedFail -> do
             let ty = Info.getInfoType _builtinAppInfo
@@ -67,7 +64,15 @@ checkBuiltins allowUntypedFail = dmapRM go
             return $ Recur node
           OpFail -> do
             return $ End node
-          _ -> return $ Recur node
+          _
+            | _builtinAppOp `elem` builtinsString ->
+                throw $ unsupportedError "strings" node (getInfoLocation _builtinAppInfo)
+            | _builtinAppOp `elem` builtinsCairo ->
+                throw $ unsupportedError "cairo" node (getInfoLocation _builtinAppInfo)
+            | _builtinAppOp `elem` builtinsAnoma ->
+                throw $ unsupportedError "anoma" node (getInfoLocation _builtinAppInfo)
+            | otherwise ->
+                return $ Recur node
       _ -> return $ Recur node
 
 checkBuiltins' :: forall r. (Member (Error CoreError) r) => [BuiltinOp] -> [Primitive] -> Node -> Sem r Node
