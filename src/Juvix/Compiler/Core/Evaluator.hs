@@ -116,7 +116,10 @@ geval opts herr ctx env0 = eval' env0
       NTyp (TypeConstr i sym args) -> mkTypeConstr i sym (map' (eval' env) args)
       NPrim {} -> n
       NDyn {} -> n
-      NBot {} -> evalError "bottom" n
+      NBot Bottom {..}
+        | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+            NBot Bottom {_bottomInfo, _bottomType = eval' env _bottomType}
+        | otherwise -> evalError "bottom" n
       Closure {} -> n
 
     branch :: Node -> Env -> [Node] -> Tag -> Maybe Node -> [CaseBranch] -> Node
@@ -187,10 +190,10 @@ geval opts herr ctx env0 = eval' env0
       OpSeq -> seqOp
       OpFail -> failOp
       OpTrace -> traceOp
-      OpAnomaGet -> err "unsupported builtin operation: OpAnomaGet"
-      OpPoseidonHash -> err "unsupported builtin operation: OpPoseidonHash"
-      OpEc -> err "unsupported builtin operation: OpEc"
-      OpRandomEcPoint -> err "unsupported builtin operation: OpRandomEcPoint"
+      OpAnomaGet -> anomaGetOp
+      OpPoseidonHash -> poseidonHashOp
+      OpEc -> ecOp
+      OpRandomEcPoint -> randomEcPointOp
       where
         err :: Text -> a
         err msg = evalError msg n
@@ -208,17 +211,18 @@ geval opts herr ctx env0 = eval' env0
         {-# INLINE binary #-}
 
         divOp :: (Integer -> Integer -> Integer) -> [Node] -> Node
-        divOp op = binOp nodeFromInteger integerFromNode $ \v1 v2 ->
+        divOp op = binOp' nodeFromInteger integerFromNode nonzeroIntegerFromNode $ \v1 v2 ->
           if
-              | v2 == 0 -> evalError "division by zero" (substEnv env n)
+              | v2 == 0 ->
+                  evalError "division by zero" (substEnv env n)
               | otherwise -> v1 `op` v2
         {-# INLINE divOp #-}
 
-        binOp :: (b -> Node) -> (Node -> Maybe a) -> (a -> a -> b) -> [Node] -> Node
-        binOp toNode toA op = binary $ \l r ->
+        binOp' :: (b -> Node) -> (Node -> Maybe a) -> (Node -> Maybe a) -> (a -> a -> b) -> [Node] -> Node
+        binOp' toNode toA toA' op = binary $ \l r ->
           let !vl = eval' env l
               !vr = eval' env r
-           in case (toA vl, toA vr) of
+           in case (toA vl, toA' vr) of
                 (Just v1, Just v2) ->
                   toNode (v1 `op` v2)
                 _
@@ -226,6 +230,10 @@ geval opts herr ctx env0 = eval' env0
                       mkBuiltinApp' opcode [vl, vr]
                   | otherwise ->
                       evalError "wrong operand type" n
+        {-# INLINE binOp' #-}
+
+        binOp :: (b -> Node) -> (Node -> Maybe a) -> (a -> a -> b) -> [Node] -> Node
+        binOp toNode toA op = binOp' toNode toA toA op
         {-# INLINE binOp #-}
 
         binNumCmpOp :: (Integer -> Integer -> Bool) -> [Node] -> Node
@@ -288,8 +296,11 @@ geval opts herr ctx env0 = eval' env0
               case T.readMaybe (fromText s) of
                 Just i ->
                   mkConstant' (ConstInteger i)
-                Nothing ->
-                  evalError "string to integer: not an integer" n
+                Nothing
+                  | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                      mkBuiltinApp' OpStrToInt [mkConstant' (ConstString s)]
+                  | otherwise ->
+                      evalError "string to integer: not an integer" n
             _ ->
               evalError "string conversion: argument not a string" n
         {-# INLINE strToIntOp #-}
@@ -316,6 +327,42 @@ geval opts herr ctx env0 = eval' env0
                   | otherwise ->
                       unsafePerformIO (hPutStrLn herr (printNode v) >> return v)
         {-# INLINE traceOp #-}
+
+        anomaGetOp :: [Node] -> Node
+        anomaGetOp = unary $ \arg ->
+          if
+              | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                  mkBuiltinApp' OpAnomaGet [eval' env arg]
+              | otherwise ->
+                  err "unsupported builtin operation: OpAnomaGet"
+        {-# INLINE anomaGetOp #-}
+
+        poseidonHashOp :: [Node] -> Node
+        poseidonHashOp = unary $ \arg ->
+          if
+              | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                  mkBuiltinApp' OpPoseidonHash [eval' env arg]
+              | otherwise ->
+                  err "unsupported builtin operation: OpPoseidonHash"
+        {-# INLINE poseidonHashOp #-}
+
+        ecOp :: [Node] -> Node
+        ecOp = \case
+          [arg1, arg2, arg3]
+            | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                mkBuiltinApp' OpEc [eval' env arg1, eval' env arg2, eval' env arg3]
+          _ ->
+            err "unsupported builtin operation: OpEc"
+        {-# INLINE ecOp #-}
+
+        randomEcPointOp :: [Node] -> Node
+        randomEcPointOp = \case
+          []
+            | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                mkBuiltinApp' OpRandomEcPoint []
+          _ ->
+            err "unsupported builtin operation: OpPoseidonHash"
+        {-# INLINE randomEcPointOp #-}
     {-# INLINE applyBuiltin #-}
 
     nodeFromInteger :: Integer -> Node
@@ -339,6 +386,13 @@ geval opts herr ctx env0 = eval' env0
       NCst (Constant _ (ConstInteger int)) -> Just int
       _ -> Nothing
     {-# INLINE integerFromNode #-}
+
+    nonzeroIntegerFromNode :: Node -> Maybe Integer
+    nonzeroIntegerFromNode = \case
+      NCst (Constant _ (ConstInteger int))
+        | int /= 0 -> Just int
+      _ -> Nothing
+    {-# INLINE nonzeroIntegerFromNode #-}
 
     fieldFromNode :: Node -> Maybe FField
     fieldFromNode = \case
