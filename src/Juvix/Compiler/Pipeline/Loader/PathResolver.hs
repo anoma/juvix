@@ -62,7 +62,9 @@ mkPackageInfo mpackageEntry _packageRoot pkg = do
   depsPaths <- mapM (fmap (^. resolvedDependencyPath) . resolveDependency . mkPackageDependencyInfo pkgFile) deps
   ensureStdlib _packageRoot buildDir deps
   files :: [Path Rel File] <-
-    map (fromJust . stripProperPrefix _packageRoot) <$> walkDirRelAccum juvixAccum _packageRoot []
+    filter (/= packageFilePath)
+      . map (fromJust . stripProperPrefix _packageRoot)
+      <$> walkDirRelAccum juvixAccum _packageRoot []
   globalPackageDescriptionAbsDir <- globalPackageDescriptionRoot
   globalPackageBaseAbsDir <- globalPackageBaseRoot
   let _packageRelativeFiles = hashSet files
@@ -186,36 +188,36 @@ scanImports root fileSet =
     scanFile :: Path Rel File -> Sem r (HashSet ImportScan)
     scanFile f = scanFileImports (root <//> f)
 
-registerPackagePackage ::
-  forall r.
-  (Members '[TaggedLock, State ResolverState, Reader ResolverEnv, Files] r) =>
-  Sem r ()
-registerPackagePackage = do
-  packagePackageAbsDir <- globalPackageDescriptionRoot
-  runReader packagePackageAbsDir updatePackageFiles
-  packageBaseAbsDir <- globalPackageBaseRoot
-  packageDescriptionRelFiles <- relFiles packagePackageAbsDir
-  imports <- scanImports packagePackageAbsDir packageDescriptionRelFiles
-  let pkgInfo =
-        PackageInfo
-          { _packageRoot = packagePackageAbsDir,
-            _packageRelativeFiles = packageDescriptionRelFiles,
-            _packageImports = imports,
-            _packagePackage = packageJuvixPackage,
-            _packageAvailableRoots = hashSet [packagePackageAbsDir, packageBaseAbsDir]
-          }
-      dep =
-        LockfileDependency
-          { _lockfileDependencyDependency = mkPathDependency (toFilePath packagePackageAbsDir),
-            _lockfileDependencyDependencies = []
-          }
-      cacheItem =
-        ResolverCacheItem
-          { _resolverCacheItemPackage = pkgInfo,
-            _resolverCacheItemDependency = dep
-          }
-  setResolverCacheItem packagePackageAbsDir (Just cacheItem)
-  addPackageRelativeFiles pkgInfo
+-- registerPackagePackage ::
+--   forall r.
+--   (Members '[TaggedLock, State ResolverState, Reader ResolverEnv, Files] r) =>
+--   Sem r ()
+-- registerPackagePackage = do
+--   packagePackageAbsDir <- globalPackageDescriptionRoot
+--   runReader packagePackageAbsDir updatePackageFiles
+--   packageBaseAbsDir <- globalPackageBaseRoot
+--   packageDescriptionRelFiles <- HashSet.filter (/= packageFilePath) <$> relFiles packagePackageAbsDir
+--   imports <- scanImports packagePackageAbsDir packageDescriptionRelFiles
+--   let pkgInfo =
+--         PackageInfo
+--           { _packageRoot = packagePackageAbsDir,
+--             _packageRelativeFiles = packageDescriptionRelFiles,
+--             _packageImports = imports,
+--             _packagePackage = packageJuvixPackage,
+--             _packageAvailableRoots = hashSet [packagePackageAbsDir, packageBaseAbsDir]
+--           }
+--       dep =
+--         LockfileDependency
+--           { _lockfileDependencyDependency = mkPathDependency (toFilePath packagePackageAbsDir),
+--             _lockfileDependencyDependencies = []
+--           }
+--       cacheItem =
+--         ResolverCacheItem
+--           { _resolverCacheItemPackage = pkgInfo,
+--             _resolverCacheItemDependency = dep
+--           }
+--   setResolverCacheItem packagePackageAbsDir (Just cacheItem)
+--   addPackageRelativeFiles pkgInfo
 
 registerPackageBase ::
   forall r.
@@ -255,7 +257,7 @@ registerDependencies' ::
 registerDependencies' conf = do
   e <- ask @EntryPoint
   registerPackageBase
-  registerPackagePackage
+  -- registerPackagePackage
   case e ^. entryPointPackageType of
     GlobalStdlib -> do
       glob <- globalRoot

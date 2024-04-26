@@ -80,7 +80,7 @@ runPackagePathResolver rootPath sem = do
           ( ds ^. rootInfoArgPackageDir,
             PackageInfo
               { _packageRoot = ds ^. rootInfoArgPackageDir,
-                _packageRelativeFiles = fs ^. rootInfoFilesPackage,
+                _packageRelativeFiles = HashSet.filter (/= packageFilePath) (fs ^. rootInfoFilesPackage),
                 _packageImports = error "TODO: scan _packageRelativeFiles files",
                 _packagePackage = error "TODO: read it from _packageRelativeFiles?",
                 _packageAvailableRoots =

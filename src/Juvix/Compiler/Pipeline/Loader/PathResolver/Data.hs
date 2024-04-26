@@ -1,5 +1,6 @@
 module Juvix.Compiler.Pipeline.Loader.PathResolver.Data where
 
+import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Pipeline.Loader.PathResolver.PackageInfo
 import Juvix.Compiler.Pipeline.Lockfile
 import Juvix.Compiler.Pipeline.Package.Base
@@ -110,3 +111,11 @@ getResolverCacheItem :: (Members '[Files, State ResolverState] r) => Path Abs Di
 getResolverCacheItem p = do
   np <- normalizeDir p
   gets (^. resolverCache . at np)
+
+-- | The import tree is assumed to not have cycles
+mkImportTreeStats :: ImportTree -> ImportTreeStats
+mkImportTreeStats ImportTree {..} =
+  ImportTreeStats
+    { _importTreeStatsTotalModules = length (HashMap.keys _importTree),
+      _importTreeStatsHeight = 111
+    }
