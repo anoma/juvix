@@ -8,6 +8,7 @@ module Juvix.Compiler.Pipeline.Loader.PathResolver
     runPathResolverPipe,
     runPathResolverPipe',
     evalPathResolverPipe,
+    findJuvixFiles,
     mkImportTree,
   )
 where
@@ -48,6 +49,15 @@ mkPackage mpackageEntry _packageRoot = do
         Nothing -> DefaultBuildDir
   maybe (readPackage _packageRoot buildDirDep) (return . (^. entryPointPackage)) mpackageEntry
 
+findJuvixFiles :: (Members '[Files] r) => Path Abs Dir -> Sem r [Path Rel File]
+findJuvixFiles pkgRoot = map (fromJust . stripProperPrefix pkgRoot) <$> walkDirRelAccum juvixAccum pkgRoot []
+  where
+    juvixAccum :: Path Abs Dir -> [Path Rel Dir] -> [Path Rel File] -> [Path Abs File] -> Sem r ([Path Abs File], Recurse Rel)
+    juvixAccum cd _ files acc = return (newJuvixFiles <> acc, RecurseFilter (\hasJuvixPackage d -> not hasJuvixPackage && not (isHiddenDirectory d)))
+      where
+        newJuvixFiles :: [Path Abs File]
+        newJuvixFiles = [cd <//> f | f <- files, isJuvixFile f || isJuvixMarkdownFile f]
+
 mkPackageInfo ::
   forall r.
   (Members '[TaggedLock, Files, Error JuvixError, Reader ResolverEnv, Error DependencyError, GitClone] r) =>
@@ -61,10 +71,7 @@ mkPackageInfo mpackageEntry _packageRoot pkg = do
   let _packagePackage = set packageDependencies deps pkg
   depsPaths <- mapM (fmap (^. resolvedDependencyPath) . resolveDependency . mkPackageDependencyInfo pkgFile) deps
   ensureStdlib _packageRoot buildDir deps
-  files :: [Path Rel File] <-
-    filter (/= packageFilePath)
-      . map (fromJust . stripProperPrefix _packageRoot)
-      <$> walkDirRelAccum juvixAccum _packageRoot []
+  files :: [Path Rel File] <- filter (/= packageFilePath) <$> findJuvixFiles _packageRoot
   globalPackageDescriptionAbsDir <- globalPackageDescriptionRoot
   globalPackageBaseAbsDir <- globalPackageBaseRoot
   let _packageRelativeFiles = hashSet files
@@ -77,12 +84,6 @@ mkPackageInfo mpackageEntry _packageRoot pkg = do
   _packageImports <- scanImports _packageRoot _packageRelativeFiles
   return PackageInfo {..}
   where
-    juvixAccum :: Path Abs Dir -> [Path Rel Dir] -> [Path Rel File] -> [Path Abs File] -> Sem r ([Path Abs File], Recurse Rel)
-    juvixAccum cd _ files acc = return (newJuvixFiles <> acc, RecurseFilter (\hasJuvixPackage d -> not hasJuvixPackage && not (isHiddenDirectory d)))
-      where
-        newJuvixFiles :: [Path Abs File]
-        newJuvixFiles = [cd <//> f | f <- files, isJuvixFile f || isJuvixMarkdownFile f]
-
     pkgFile :: Path Abs File
     pkgFile = pkg ^. packageFile
 

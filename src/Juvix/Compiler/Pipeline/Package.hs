@@ -1,6 +1,7 @@
 module Juvix.Compiler.Pipeline.Package
   ( module Juvix.Compiler.Pipeline.Package.Base,
     readPackage,
+    readPackageFile,
     readGlobalPackage,
     packageBasePackage,
     packageJuvixPackage,

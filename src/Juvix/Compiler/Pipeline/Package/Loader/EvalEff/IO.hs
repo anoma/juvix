@@ -138,6 +138,7 @@ loadPackage' packagePath = do
       . ignoreLog
       . mapError (JuvixError @GitProcessError)
       . runGitProcess
+      . runEvalFileEffIO
       . runPackagePathResolver rootPath
       . evalModuleInfoCache
       $ (^. pipelineResult) <$> processFileToStoredCore packageEntryPoint

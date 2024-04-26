@@ -6,14 +6,14 @@ import Juvix.Extra.Files
 import Juvix.Extra.Paths
 import Juvix.Prelude
 
-packageFiles :: [(Path Rel File, ByteString)]
-packageFiles = juvixFiles $(packageDescriptionDirContents)
+packagePackageFiles :: [(Path Rel File, ByteString)]
+packagePackageFiles = juvixFiles $(packageDescriptionDirContents)
 
 packageBaseFiles :: [(Path Rel File, ByteString)]
 packageBaseFiles = juvixFiles $(packageBaseDirContents)
 
 writePackageFiles :: forall r. (Members '[Reader OutputRoot, Files] r) => Sem r ()
-writePackageFiles = writeFiles packageFiles
+writePackageFiles = writeFiles packagePackageFiles
 
 writePackageBaseFiles :: forall r. (Members '[Reader OutputRoot, Files] r) => Sem r ()
 writePackageBaseFiles = writeFiles packageBaseFiles

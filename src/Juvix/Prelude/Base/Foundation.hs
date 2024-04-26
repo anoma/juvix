@@ -594,6 +594,16 @@ ordSet = Set.fromList . toList
 hashSet :: (Foldable f, Hashable k) => f k -> HashSet k
 hashSet = HashSet.fromList . toList
 
+hashMapFromHashSetM :: (Monad m, Hashable k) => (k -> m v) -> HashSet k -> m (HashMap k v)
+hashMapFromHashSetM fun s =
+  hashMap
+    <$> sequence
+      [ do
+          r <- fun x
+          return (x, r)
+        | x <- toList s
+      ]
+
 hashMapFromHashSet :: (Hashable k) => (k -> v) -> HashSet k -> HashMap k v
 hashMapFromHashSet fun s = hashMap [(x, fun x) | x <- toList s]
 

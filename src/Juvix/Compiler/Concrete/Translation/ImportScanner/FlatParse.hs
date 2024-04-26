@@ -1,6 +1,7 @@
 module Juvix.Compiler.Concrete.Translation.ImportScanner.FlatParse
   ( module Juvix.Compiler.Concrete.Translation.ImportScanner.Base,
     scanFileImports,
+    scanBSImports,
     scanFileImportsIO,
   )
 where
