@@ -6,7 +6,7 @@ import Juvix.Compiler.Concrete.Translation.ImportScanner.FlatParse
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Pipeline.Loader.PathResolver
-import Juvix.Compiler.Pipeline.Package (packageBasePackage, readPackageFile)
+import Juvix.Compiler.Pipeline.Package (packageBasePackage)
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
 import Juvix.Data.Effect.TaggedLock
 import Juvix.Extra.PackageFiles
@@ -109,9 +109,9 @@ runPackagePathResolver rootPath sem = do
           let rfiles = HashSet.filter (/= packageFilePath) (fs ^. rootInfoFilesPackage)
               imports = scanHelperPure (ds ^. rootInfoArgPackageDir) rfiles packagePackageFiles
               root = ds ^. rootInfoArgPackageDir
-          buildDir <- asks (^. entryPointBuildDir)
+          -- buildDir <- asks (^. entryPointBuildDir)
           -- pkg <- readPackageFile root buildDir (root <//> packageFilePath)
-          let pkg :: Package = undefined
+          let pkg :: Package = error "TODO pkg"
           return
             PackageInfo
               { _packageRoot = root,
@@ -128,12 +128,12 @@ runPackagePathResolver rootPath sem = do
 
         mkPkgGlobalStdlib :: Sem r PackageInfo
         mkPkgGlobalStdlib = do
-          buildDir <- asks (^. entryPointBuildDir)
+          -- buildDir <- asks (^. entryPointBuildDir)
           let root = ds ^. rootInfoArgGlobalStdlibDir
           jufiles <- findJuvixFiles root
           let rfiles = hashSet (filter (/= packageFilePath) jufiles)
           -- pkg <- readPackageFile root buildDir (root <//> packageFilePath)
-          let pkg :: Package = undefined
+          let pkg :: Package = error "TODO pkg"
           imports <- scanHelperFiles root rfiles
           return
             PackageInfo
@@ -150,9 +150,9 @@ runPackagePathResolver rootPath sem = do
 
         mkPackageDotJuvix :: Sem r PackageInfo
         mkPackageDotJuvix = do
-          buildDir <- asks (^. entryPointBuildDir)
+          -- buildDir <- asks (^. entryPointBuildDir)
           -- pkg <- readPackageFile rootPath buildDir (rootPath <//> packageFilePath)
-          let pkg :: Package = undefined
+          let pkg :: Package = error "TODO pkg"
           let rfiles = hashSet [packageFilePath]
           imports <- scanHelperFiles rootPath rfiles
           return
