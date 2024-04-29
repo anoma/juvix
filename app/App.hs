@@ -271,6 +271,9 @@ printSuccessExit = exitMsg ExitSuccess
 getRight :: forall e a r. (Members '[App] r, AppError e) => Either e a -> Sem r a
 getRight = either appError return
 
+runAppError :: forall e r a. (AppError e, Members '[App] r) => Sem (Error e ': r) a -> Sem r a
+runAppError = runErrorNoCallStackWith appError
+
 instance AppError MegaparsecError where
   appError = appError . JuvixError
 

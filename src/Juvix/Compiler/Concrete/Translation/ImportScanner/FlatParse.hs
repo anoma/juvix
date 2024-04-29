@@ -1,8 +1,6 @@
 module Juvix.Compiler.Concrete.Translation.ImportScanner.FlatParse
   ( module Juvix.Compiler.Concrete.Translation.ImportScanner.Base,
-    scanFileImports,
     scanBSImports,
-    scanFileImportsIO,
   )
 where
 
@@ -14,24 +12,17 @@ import Juvix.Prelude.FlatParse hiding (Pos)
 import Juvix.Prelude.FlatParse qualified as FP
 import Juvix.Prelude.FlatParse.Lexer qualified as L
 
-scanFileImportsIO :: (MonadIO m) => Path Abs File -> m (HashSet ImportScan)
-scanFileImportsIO = runM . runFilesIO . scanFileImports
-
-scanFileImports :: (Members '[Files] r) => Path Abs File -> Sem r (HashSet ImportScan)
-scanFileImports file = scanBSImports file <$> readFileBS' file
-
-scanBSImports :: Path Abs File -> ByteString -> HashSet ImportScan
+scanBSImports :: Path Abs File -> ByteString -> Maybe (HashSet ImportScan)
 scanBSImports fp inputBS =
-  hashSet
-    . fromOk
+  fmap hashSet
+    . fromResult
     . scanImports fp
     $ inputBS
   where
-    fromOk :: Result () ok -> ok
-    fromOk = \case
-      OK r _ -> r
-      -- TODO maybe it would be sensible to return the empty set and rely on the full parser to return the parse error
-      _ -> error "failed to parse"
+    fromResult :: Result () ok -> Maybe ok
+    fromResult = \case
+      OK r _ -> Just r
+      _ -> Nothing
 
 lexeme :: Parser e a -> Parser e a
 lexeme p = p <* whiteSpaceAndComments

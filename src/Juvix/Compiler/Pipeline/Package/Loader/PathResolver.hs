@@ -2,7 +2,7 @@ module Juvix.Compiler.Pipeline.Package.Loader.PathResolver where
 
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Concrete hiding (Symbol)
-import Juvix.Compiler.Concrete.Translation.ImportScanner.FlatParse
+import Juvix.Compiler.Concrete.Translation.ImportScanner
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Pipeline.Loader.PathResolver
@@ -66,24 +66,41 @@ runPackagePathResolver rootPath sem = do
       -- the _root' is not used because ResolvePath does not depend on it
       runTSimpleEff localEnv m
   where
-    scanHelperFiles :: Path Abs Dir -> HashSet (Path Rel File) -> Sem r (HashMap (Path Rel File) (HashSet ImportScan))
+    scanHelperFiles ::
+      Path Abs Dir ->
+      HashSet (Path Rel File) ->
+      Sem r (HashMap (Path Rel File) (HashSet ImportScan))
     scanHelperFiles pkgRoot relPkgFiles =
       let getScans :: Path Rel File -> Sem r (HashSet ImportScan)
-          getScans p = scanFileImports (pkgRoot <//> p)
+          getScans p =
+            mapError (JuvixError @MegaparsecError) $
+              scanFileImports (pkgRoot <//> p)
        in hashMapFromHashSetM getScans relPkgFiles
 
-    scanHelperPure :: Path Abs Dir -> HashSet (Path Rel File) -> [(Path Rel File, ByteString)] -> HashMap (Path Rel File) (HashSet ImportScan)
-    scanHelperPure pkgRoot relPkgFiles fileContents =
-      let getScans :: Path Rel File -> HashSet ImportScan
-          getScans p = scanBSImports (pkgRoot <//> p) (fileContentsMap ^?! at p . _Just)
-          fileContentsMap = hashMap fileContents
-       in hashMapFromHashSet getScans relPkgFiles
+    scanHelperPure ::
+      Path Abs Dir ->
+      HashSet (Path Rel File) ->
+      [(Path Rel File, ByteString)] ->
+      Sem r (HashMap (Path Rel File) (HashSet ImportScan))
+    scanHelperPure pkgRoot relPkgFiles fileContents = do
+      let getScans :: Path Rel File -> Sem r (HashSet ImportScan)
+          getScans p =
+            mapError (JuvixError @MegaparsecError) $
+              scanBSImports (pkgRoot <//> p) (getFile p)
+       in hashMapFromHashSetM getScans relPkgFiles
+      where
+        fileContentsMap = hashMap fileContents
+        getFile :: Path Rel File -> ByteString
+        getFile p = fromMaybe err (fileContentsMap ^. at p)
+          where
+            err = error ("impossible: " <> pack (toFilePath p) <> " not found")
 
     mkPackageInfos ::
       RootInfoDirs ->
       RootInfoFiles ->
       Sem r (HashMap (Path Abs Dir) PackageInfo)
     mkPackageInfos ds fs = do
+      pkgBase <- mkPkgBase
       gstdlib <- mkPkgGlobalStdlib
       pkgDotJuvix <- mkPackageDotJuvix
       pkgType <- mkPkgPackageType
@@ -94,23 +111,24 @@ runPackagePathResolver rootPath sem = do
         mkAssoc :: PackageInfo -> (Path Abs Dir, PackageInfo)
         mkAssoc pkg = (pkg ^. packageRoot, pkg)
 
-        pkgBase :: PackageInfo
-        pkgBase =
+        mkPkgBase :: Sem r PackageInfo
+        mkPkgBase = do
           let rfiles = fs ^. rootInfoFilesPackageBase
-              imports = scanHelperPure (ds ^. rootInfoArgPackageBaseDir) rfiles packageBaseFiles
-           in PackageInfo
-                { _packageRoot = ds ^. rootInfoArgPackageBaseDir,
-                  _packageAvailableRoots = hashSet [ds ^. rootInfoArgPackageBaseDir],
-                  _packageRelativeFiles = rfiles,
-                  _packageImports = imports,
-                  _packagePackage = PackageBase
-                }
+          imports <- scanHelperPure (ds ^. rootInfoArgPackageBaseDir) (keepJuvixFiles rfiles) packageBaseFiles
+          return
+            PackageInfo
+              { _packageRoot = ds ^. rootInfoArgPackageBaseDir,
+                _packageAvailableRoots = hashSet [ds ^. rootInfoArgPackageBaseDir],
+                _packageRelativeFiles = rfiles,
+                _packageImports = imports,
+                _packagePackage = PackageBase
+              }
 
         mkPkgPackageType :: Sem r PackageInfo
         mkPkgPackageType = do
           let rfiles = fs ^. rootInfoFilesPackage
-              imports = scanHelperPure (ds ^. rootInfoArgPackageDir) rfiles packagePackageFiles
               root = ds ^. rootInfoArgPackageDir
+          imports <- scanHelperPure (ds ^. rootInfoArgPackageDir) (keepJuvixFiles rfiles) packagePackageFiles
           return
             PackageInfo
               { _packageRoot = root,
