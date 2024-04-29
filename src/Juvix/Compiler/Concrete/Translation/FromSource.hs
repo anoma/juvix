@@ -1603,8 +1603,8 @@ pmodulePath = case sing :: SModuleIsTop t of
 
 getModuleId :: forall t r. (SingI t, Member (Reader EntryPoint) r) => ModulePathType 'Parsed t -> ParsecS r ModuleId
 getModuleId path = do
-  p <- P.lift $ asks (^. entryPointPackage)
-  return $
+  p <- P.lift (asks (^. entryPointPackage))
+  return
     ModuleId
       { _moduleIdPath =
           case sing :: SModuleIsTop t of
