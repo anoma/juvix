@@ -48,6 +48,7 @@ instance Hashable ImportNode
 
 data ImportTreeStats = ImportTreeStats
   { _importTreeStatsTotalModules :: Int,
+    _importTreeStatsTotalEdges :: Int,
     _importTreeStatsHeight :: Int
   }
 
@@ -117,10 +118,11 @@ getResolverCacheItem p = do
 -- | The import tree is assumed to have no cycles
 mkImportTreeStats :: ImportTree -> ImportTreeStats
 mkImportTreeStats ImportTree {..} =
-  ImportTreeStats
-    { _importTreeStatsTotalModules = length nodes,
-      _importTreeStatsHeight = maximum nodesHeight
-    }
+    ImportTreeStats
+      { _importTreeStatsTotalModules = length nodes,
+        _importTreeStatsTotalEdges = sum . map length . toList $ _importTree,
+        _importTreeStatsHeight = maximum nodesHeight
+      }
   where
     nodes :: [ImportNode]
     nodes = HashMap.keys _importTree

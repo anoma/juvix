@@ -1060,6 +1060,7 @@ instance PrettyPrint ImportTreeStats where
     header "======================="
     itemize
       [ noLoc "Total number of modules:" <+> noLoc (pretty _importTreeStatsTotalModules),
+        noLoc "Total number of edges:" <+> noLoc (pretty _importTreeStatsTotalEdges),
         noLoc "Height (longest chain of imports):" <+> noLoc (pretty _importTreeStatsHeight)
       ]
     hardline
