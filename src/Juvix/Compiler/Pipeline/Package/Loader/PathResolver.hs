@@ -101,7 +101,7 @@ runPackagePathResolver rootPath sem = do
            in PackageInfo
                 { _packageRoot = ds ^. rootInfoArgPackageBaseDir,
                   _packageAvailableRoots = hashSet [ds ^. rootInfoArgPackageBaseDir],
-                  _packageRelativeFilesTmp = rfiles,
+                  _packageRelativeFiles = rfiles,
                   _packageImports = imports,
                   _packagePackage = PackageBase
                 }
@@ -114,7 +114,7 @@ runPackagePathResolver rootPath sem = do
           return
             PackageInfo
               { _packageRoot = root,
-                _packageRelativeFilesTmp = rfiles,
+                _packageRelativeFiles = rfiles,
                 _packageImports = imports,
                 _packagePackage = PackageType,
                 _packageAvailableRoots =
@@ -134,7 +134,7 @@ runPackagePathResolver rootPath sem = do
           return
             PackageInfo
               { _packageRoot = root,
-                _packageRelativeFilesTmp = rfiles,
+                _packageRelativeFiles = rfiles,
                 _packageImports = imports,
                 _packageAvailableRoots =
                   hashSet
@@ -151,7 +151,7 @@ runPackagePathResolver rootPath sem = do
           return
             PackageInfo
               { _packageRoot = rootPath,
-                _packageRelativeFilesTmp = rfiles,
+                _packageRelativeFiles = rfiles,
                 _packageImports = imports,
                 _packageAvailableRoots =
                   hashSet

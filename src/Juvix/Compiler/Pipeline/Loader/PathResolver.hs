@@ -74,7 +74,7 @@ mkPackageInfo mpackageEntry _packageRoot pkg = do
   files :: [Path Rel File] <- findJuvixFiles _packageRoot
   globalPackageDescriptionAbsDir <- globalPackageDescriptionRoot
   globalPackageBaseAbsDir <- globalPackageBaseRoot
-  let _packageRelativeFilesTmp = keepJuvixFiles (hashSet files)
+  let _packageRelativeFiles = keepJuvixFiles (hashSet files)
       _packageAvailableRoots =
         hashSet $
           globalPackageDescriptionAbsDir
@@ -82,7 +82,7 @@ mkPackageInfo mpackageEntry _packageRoot pkg = do
             : _packageRoot
             : depsPaths
 
-  _packageImports <- scanImports _packageRoot _packageRelativeFilesTmp
+  _packageImports <- scanImports _packageRoot _packageRelativeFiles
   return PackageInfo {..}
   where
     pkgFile :: Path Abs File
@@ -202,7 +202,7 @@ registerPackageBase = do
   let pkgInfo =
         PackageInfo
           { _packageRoot = packageBaseAbsDir,
-            _packageRelativeFilesTmp = packageBaseRelFiles,
+            _packageRelativeFiles = packageBaseRelFiles,
             _packageImports = imports,
             _packagePackage = PackageBase,
             _packageAvailableRoots = HashSet.singleton packageBaseAbsDir

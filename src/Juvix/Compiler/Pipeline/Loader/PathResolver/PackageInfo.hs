@@ -21,7 +21,7 @@ data PackageLike
 data PackageInfo = PackageInfo
   { _packageRoot :: Path Abs Dir,
     -- | Files relative to the root of the package.
-    _packageRelativeFilesTmp :: HashSet (Path Rel File),
+    _packageRelativeFiles :: HashSet (Path Rel File),
     -- | All files in _packageRelativeFiles are keys in this map, even if the
     -- mapped HashSet is empty.
     _packageImports :: HashMap (Path Rel File) (HashSet ImportScan),
@@ -33,12 +33,12 @@ data PackageInfo = PackageInfo
 makeLenses ''PackageInfo
 
 packageFiles :: PackageInfo -> [Path Abs File]
-packageFiles k = [k ^. packageRoot <//> f | f <- toList (k ^. packageRelativeFilesTmp)]
+packageFiles k = [k ^. packageRoot <//> f | f <- toList (k ^. packageRelativeFiles)]
 
 -- | Does *not* include Package.juvix
 packageJuvixFiles :: SimpleGetter PackageInfo (HashSet (Path Rel File))
 packageJuvixFiles =
-  to $ keepJuvixFiles . (^. packageRelativeFilesTmp)
+  to $ keepJuvixFiles . (^. packageRelativeFiles)
 
 keepJuvixFiles :: HashSet (Path Rel File) -> HashSet (Path Rel File)
 keepJuvixFiles = HashSet.filter ((/= packageFilePath) .&&. isJuvixOrJuvixMdFile)
