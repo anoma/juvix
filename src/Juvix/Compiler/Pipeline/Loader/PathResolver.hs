@@ -68,20 +68,21 @@ mkPackageInfo ::
 mkPackageInfo mpackageEntry _packageRoot pkg = do
   let buildDir :: Path Abs Dir = maybe (rootBuildDir _packageRoot) (someBaseToAbs _packageRoot . resolveBuildDir . (^. entryPointBuildDir)) mpackageEntry
   deps <- getDependencies
-  let _packagePackage = set packageDependencies deps pkg
+  let _packagePackage = PackageReal (set packageDependencies deps pkg)
   depsPaths <- mapM (fmap (^. resolvedDependencyPath) . resolveDependency . mkPackageDependencyInfo pkgFile) deps
   ensureStdlib _packageRoot buildDir deps
-  files :: [Path Rel File] <- filter (/= packageFilePath) <$> findJuvixFiles _packageRoot
+  files :: [Path Rel File] <- findJuvixFiles _packageRoot
   globalPackageDescriptionAbsDir <- globalPackageDescriptionRoot
   globalPackageBaseAbsDir <- globalPackageBaseRoot
-  let _packageRelativeFiles = hashSet files
+  let _packageRelativeFilesTmp = keepJuvixFiles (hashSet files)
       _packageAvailableRoots =
         hashSet $
           globalPackageDescriptionAbsDir
             : globalPackageBaseAbsDir
             : _packageRoot
             : depsPaths
-  _packageImports <- scanImports _packageRoot _packageRelativeFiles
+
+  _packageImports <- scanImports _packageRoot _packageRelativeFilesTmp
   return PackageInfo {..}
   where
     pkgFile :: Path Abs File
@@ -189,37 +190,6 @@ scanImports root fileSet =
     scanFile :: Path Rel File -> Sem r (HashSet ImportScan)
     scanFile f = scanFileImports (root <//> f)
 
--- registerPackagePackage ::
---   forall r.
---   (Members '[TaggedLock, State ResolverState, Reader ResolverEnv, Files] r) =>
---   Sem r ()
--- registerPackagePackage = do
---   packagePackageAbsDir <- globalPackageDescriptionRoot
---   runReader packagePackageAbsDir updatePackageFiles
---   packageBaseAbsDir <- globalPackageBaseRoot
---   packageDescriptionRelFiles <- HashSet.filter (/= packageFilePath) <$> relFiles packagePackageAbsDir
---   imports <- scanImports packagePackageAbsDir packageDescriptionRelFiles
---   let pkgInfo =
---         PackageInfo
---           { _packageRoot = packagePackageAbsDir,
---             _packageRelativeFiles = packageDescriptionRelFiles,
---             _packageImports = imports,
---             _packagePackage = packageJuvixPackage,
---             _packageAvailableRoots = hashSet [packagePackageAbsDir, packageBaseAbsDir]
---           }
---       dep =
---         LockfileDependency
---           { _lockfileDependencyDependency = mkPathDependency (toFilePath packagePackageAbsDir),
---             _lockfileDependencyDependencies = []
---           }
---       cacheItem =
---         ResolverCacheItem
---           { _resolverCacheItemPackage = pkgInfo,
---             _resolverCacheItemDependency = dep
---           }
---   setResolverCacheItem packagePackageAbsDir (Just cacheItem)
---   addPackageRelativeFiles pkgInfo
-
 registerPackageBase ::
   forall r.
   (Members '[TaggedLock, State ResolverState, Reader ResolverEnv, Files] r) =>
@@ -232,9 +202,9 @@ registerPackageBase = do
   let pkgInfo =
         PackageInfo
           { _packageRoot = packageBaseAbsDir,
-            _packageRelativeFiles = packageBaseRelFiles,
+            _packageRelativeFilesTmp = packageBaseRelFiles,
             _packageImports = imports,
-            _packagePackage = packageBasePackage,
+            _packagePackage = PackageBase,
             _packageAvailableRoots = HashSet.singleton packageBaseAbsDir
           }
       dep =
@@ -336,7 +306,7 @@ addDependency me d = do
 
 addPackageRelativeFiles :: (Member (State ResolverState) r) => PackageInfo -> Sem r ()
 addPackageRelativeFiles pkgInfo =
-  forM_ (pkgInfo ^. packageRelativeFiles) $ \f ->
+  forM_ (pkgInfo ^. packageJuvixFiles) $ \f ->
     modify' (over resolverFiles (HashMap.insertWith (<>) f (pure pkgInfo)))
 
 addDependency' ::
@@ -350,10 +320,10 @@ addDependency' pkg me resolvedDependency = do
   selectPackageLockfile pkg $ do
     pkgInfo <- mkPackageInfo me (resolvedDependency ^. resolvedDependencyPath) pkg
     addPackageRelativeFiles pkgInfo
-    let packagePath = pkgInfo ^. packagePackage . packageFile
+    let packagePath = pkgInfo ^. packagePackage . packageLikeFile
     subDeps <-
       forM
-        (pkgInfo ^. packagePackage . packageDependencies)
+        (pkgInfo ^. packagePackage . packageLikeDependencies)
         (\dep -> selectDependencyLockfile dep (addDependency Nothing (mkPackageDependencyInfo packagePath dep)))
     let dep =
           LockfileDependency

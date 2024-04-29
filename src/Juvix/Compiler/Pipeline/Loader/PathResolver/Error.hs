@@ -136,7 +136,7 @@ instance PrettyCodeAnn DependencyConflict where
       <> indent' (itemize (item <$> toList _conflictPackages))
     where
       item :: PackageInfo -> Doc CodeAnn
-      item pkg = pcode (pkg ^. packagePackage . packageName) <+> "at" <+> pretty (pkg ^. packageRoot)
+      item pkg = pcode (pkg ^. packagePackage . packageLikeName) <+> "at" <+> pretty (pkg ^. packageRoot)
 
 pcode :: (Pretty a) => a -> Doc CodeAnn
 pcode = code . pretty
@@ -171,7 +171,7 @@ instance PrettyCodeAnn MissingModule where
               <> itemize (map pcode deps)
         where
           deps :: [Dependency]
-          deps = _missingInfo ^. packagePackage . packageDependencies
+          deps = _missingInfo ^. packagePackage . packageLikeDependencies
 
 newtype PackageInvalidImport = PackageInvalidImport
   {_packageInvalidImport :: ImportScan}

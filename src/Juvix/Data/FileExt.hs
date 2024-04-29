@@ -147,6 +147,9 @@ instance Show FileExt where
 instance Pretty FileExt where
   pretty = pretty . fileExtToText
 
+isJuvixOrJuvixMdFile :: Path b File -> Bool
+isJuvixOrJuvixMdFile = isJuvixFile .||. isJuvixMarkdownFile
+
 isJuvixFile :: Path b File -> Bool
 isJuvixFile = (== Just juvixFileExt) . fileExtension
 

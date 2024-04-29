@@ -4,6 +4,7 @@ module Juvix.Compiler.Pipeline.Package
     readPackageFile,
     readGlobalPackage,
     packagePackageStdlib,
+    packagePackageFile,
     packageBasePackage,
     packageJuvixPackage,
     ensureGlobalPackage,
@@ -176,6 +177,18 @@ packagePackageStdlib =
       _packageMain = Nothing,
       _packageLockfile = Nothing,
       _packageFile = $(mkAbsFile "/<package-stdlib>"),
+      _packageDependencies = [],
+      _packageBuildDir = Nothing
+    }
+
+packagePackageFile :: Package
+packagePackageFile =
+  Package
+    { _packageVersion = defaultVersion,
+      _packageName = "package-file",
+      _packageMain = Nothing,
+      _packageLockfile = Nothing,
+      _packageFile = $(mkAbsFile "/<package-file>"),
       _packageDependencies = [],
       _packageBuildDir = Nothing
     }

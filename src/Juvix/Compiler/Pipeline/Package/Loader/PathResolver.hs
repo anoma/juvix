@@ -6,7 +6,6 @@ import Juvix.Compiler.Concrete.Translation.ImportScanner.FlatParse
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Pipeline.Loader.PathResolver
-import Juvix.Compiler.Pipeline.Package (packageBasePackage, packageJuvixPackage, packagePackageStdlib)
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
 import Juvix.Data.Effect.TaggedLock
 import Juvix.Extra.PackageFiles
@@ -102,23 +101,22 @@ runPackagePathResolver rootPath sem = do
            in PackageInfo
                 { _packageRoot = ds ^. rootInfoArgPackageBaseDir,
                   _packageAvailableRoots = hashSet [ds ^. rootInfoArgPackageBaseDir],
-                  _packageRelativeFiles = rfiles,
+                  _packageRelativeFilesTmp = rfiles,
                   _packageImports = imports,
-                  _packagePackage = packageBasePackage
+                  _packagePackage = PackageBase
                 }
 
         mkPkgPackageType :: Sem r PackageInfo
         mkPkgPackageType = do
-          let rfiles = HashSet.filter (/= packageFilePath) (fs ^. rootInfoFilesPackage)
+          let rfiles = fs ^. rootInfoFilesPackage
               imports = scanHelperPure (ds ^. rootInfoArgPackageDir) rfiles packagePackageFiles
               root = ds ^. rootInfoArgPackageDir
-          let pkg :: Package = packageJuvixPackage
           return
             PackageInfo
               { _packageRoot = root,
-                _packageRelativeFiles = rfiles,
+                _packageRelativeFilesTmp = rfiles,
                 _packageImports = imports,
-                _packagePackage = pkg,
+                _packagePackage = PackageType,
                 _packageAvailableRoots =
                   hashSet
                     [ ds ^. rootInfoArgPackageDir,
@@ -131,33 +129,29 @@ runPackagePathResolver rootPath sem = do
         mkPkgGlobalStdlib = do
           let root = ds ^. rootInfoArgGlobalStdlibDir
           jufiles <- findJuvixFiles root
-          let rfiles = hashSet (filter (/= packageFilePath) jufiles)
-              pkg :: Package = packagePackageStdlib
+          let rfiles = hashSet jufiles
           imports <- scanHelperFiles root rfiles
           return
             PackageInfo
               { _packageRoot = root,
-                _packageRelativeFiles = rfiles,
+                _packageRelativeFilesTmp = rfiles,
                 _packageImports = imports,
                 _packageAvailableRoots =
                   hashSet
                     [ ds ^. rootInfoArgPackageBaseDir,
                       ds ^. rootInfoArgGlobalStdlibDir
                     ],
-                _packagePackage = pkg
+                _packagePackage = PackageGlobalStdlib
               }
 
         mkPackageDotJuvix :: Sem r PackageInfo
         mkPackageDotJuvix = do
-          -- buildDir <- asks (^. entryPointBuildDir)
-          -- pkg <- readPackageFile rootPath buildDir (rootPath <//> packageFilePath)
-          let pkg :: Package = error "TODO pkg"
           let rfiles = hashSet [packageFilePath]
           imports <- scanHelperFiles rootPath rfiles
           return
             PackageInfo
               { _packageRoot = rootPath,
-                _packageRelativeFiles = rfiles,
+                _packageRelativeFilesTmp = rfiles,
                 _packageImports = imports,
                 _packageAvailableRoots =
                   hashSet
@@ -166,7 +160,7 @@ runPackagePathResolver rootPath sem = do
                       ds ^. rootInfoArgGlobalStdlibDir,
                       rootPath
                     ],
-                _packagePackage = pkg
+                _packagePackage = PackageDotJuvix
               }
 
     rootInfoDirs :: Sem r RootInfoDirs
