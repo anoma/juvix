@@ -6,20 +6,48 @@ where
 
 import Juvix.Compiler.Concrete.Translation.ImportScanner.Base
 import Juvix.Compiler.Concrete.Translation.ImportScanner.FlatParse qualified as FlatParse
+import Juvix.Compiler.Concrete.Translation.ImportScanner.Megaparsec qualified as Megaparsec
 import Juvix.Parser.Error
 import Juvix.Prelude
+import Prelude (show)
+
+data ScanImportStrategy
+  = -- | use FlatParse first and fallback to megaparsec if it fails
+    ScanImportStrategyFallback
+  | ScanImportStrategyFlatParse
+  | ScanImportStrategyMegaparsec
+  deriving stock (Eq)
+
+instance Show ScanImportStrategy where
+  show :: ScanImportStrategy -> String
+  show = \case
+    ScanImportStrategyFallback -> "flatparse-megaparsec"
+    ScanImportStrategyFlatParse -> "flatparse"
+    ScanImportStrategyMegaparsec -> "megaparsec"
+
+defaultScanImportStrategy :: ScanImportStrategy
+defaultScanImportStrategy = ScanImportStrategyFallback
 
 scanFileImports ::
   (Members '[Files, Error ParserError] r) =>
+  ScanImportStrategy ->
   Path Abs File ->
   Sem r (HashSet ImportScan)
-scanFileImports file = readFileBS' file >>= scanBSImports file
+scanFileImports strat file = readFileBS' file >>= scanBSImports strat file
 
 scanBSImports ::
   (Members '[Error ParserError] r) =>
+  ScanImportStrategy ->
   Path Abs File ->
   ByteString ->
   Sem r (HashSet ImportScan)
-scanBSImports fp inputBS = case FlatParse.scanBSImports fp inputBS of
-  Just x -> return x
-  Nothing -> undefined
+scanBSImports strat fp inputBS =
+  case strat of
+    ScanImportStrategyFallback ->
+      case FlatParse.scanBSImports fp inputBS of
+        Just x -> return x
+        Nothing -> Megaparsec.scanBSImports fp inputBS
+    ScanImportStrategyFlatParse -> case FlatParse.scanBSImports fp inputBS of
+      Nothing -> error "Flatparse parser error"
+      Just r -> return r
+    ScanImportStrategyMegaparsec -> Megaparsec.scanBSImports fp inputBS
