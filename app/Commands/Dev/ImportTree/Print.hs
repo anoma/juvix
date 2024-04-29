@@ -13,7 +13,7 @@ runCommand PrintOptions {..} =
   runPipelineSetup $ do
     entrySetup defaultDependenciesConfig
     tree <-
-      mapError (JuvixError @MegaparsecError)
+      mapError (JuvixError @ParserError)
         . mapError (JuvixError @ScoperError)
         $ mkImportTree
     renderStdOut (ppOutDefaultNoComments tree)

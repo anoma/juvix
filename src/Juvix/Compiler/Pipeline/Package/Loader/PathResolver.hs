@@ -73,7 +73,7 @@ runPackagePathResolver rootPath sem = do
     scanHelperFiles pkgRoot relPkgFiles =
       let getScans :: Path Rel File -> Sem r (HashSet ImportScan)
           getScans p =
-            mapError (JuvixError @MegaparsecError) $
+            mapError (JuvixError @ParserError) $
               scanFileImports (pkgRoot <//> p)
        in hashMapFromHashSetM getScans relPkgFiles
 
@@ -85,7 +85,7 @@ runPackagePathResolver rootPath sem = do
     scanHelperPure pkgRoot relPkgFiles fileContents = do
       let getScans :: Path Rel File -> Sem r (HashSet ImportScan)
           getScans p =
-            mapError (JuvixError @MegaparsecError) $
+            mapError (JuvixError @ParserError) $
               scanBSImports (pkgRoot <//> p) (getFile p)
        in hashMapFromHashSetM getScans relPkgFiles
       where

@@ -10,13 +10,13 @@ import Juvix.Parser.Error
 import Juvix.Prelude
 
 scanFileImports ::
-  (Members '[Files, Error MegaparsecError] r) =>
+  (Members '[Files, Error ParserError] r) =>
   Path Abs File ->
   Sem r (HashSet ImportScan)
 scanFileImports file = readFileBS' file >>= scanBSImports file
 
 scanBSImports ::
-  (Members '[Error MegaparsecError] r) =>
+  (Members '[Error ParserError] r) =>
   Path Abs File ->
   ByteString ->
   Sem r (HashSet ImportScan)

@@ -9,11 +9,11 @@ import Juvix.Compiler.Concrete.Translation.FromSource
 import Juvix.Compiler.Concrete.Translation.FromSource.ParserResultBuilder
 import Juvix.Compiler.Concrete.Translation.ImportScanner.Base
 import Juvix.Compiler.Pipeline.EntryPoint
-import Juvix.Parser.Error
+import Juvix.Compiler.Pipeline.Loader.PathResolver.Base
 import Juvix.Prelude
 
 scanBSImports ::
-  (Members '[Error ParserError] r) =>
+  (Members '[Error ParserError, PathResolver] r) =>
   Path Abs File ->
   ByteString ->
   Sem r (HashSet ImportScan)

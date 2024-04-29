@@ -82,7 +82,7 @@ mkPackageInfo mpackageEntry _packageRoot pkg = do
             : _packageRoot
             : depsPaths
 
-  _packageImports <- mapError (JuvixError @MegaparsecError) (scanImports _packageRoot _packageRelativeFiles)
+  _packageImports <- mapError (JuvixError @ParserError) (scanImports _packageRoot _packageRelativeFiles)
   return PackageInfo {..}
   where
     pkgFile :: Path Abs File
@@ -180,7 +180,7 @@ resolveDependency i = case i ^. packageDepdendencyInfoDependency of
 
 scanImports ::
   forall r.
-  (Members '[Error MegaparsecError, Files] r) =>
+  (Members '[Error ParserError, Files] r) =>
   Path Abs Dir ->
   HashSet (Path Rel File) ->
   Sem r (HashMap (Path Rel File) (HashSet ImportScan))
@@ -192,7 +192,7 @@ scanImports root fileSet =
 
 registerPackageBase ::
   forall r.
-  (Members '[TaggedLock, Error MegaparsecError, State ResolverState, Reader ResolverEnv, Files] r) =>
+  (Members '[TaggedLock, Error ParserError, State ResolverState, Reader ResolverEnv, Files] r) =>
   Sem r ()
 registerPackageBase = do
   packageBaseAbsDir <- globalPackageBaseRoot
@@ -227,7 +227,7 @@ registerDependencies' ::
   Sem (Reader ResolverEnv ': State ResolverState ': r) ()
 registerDependencies' conf = do
   e <- ask @EntryPoint
-  mapError (JuvixError @MegaparsecError) registerPackageBase
+  mapError (JuvixError @ParserError) registerPackageBase
   -- registerPackagePackage
   case e ^. entryPointPackageType of
     GlobalStdlib -> do
@@ -380,7 +380,7 @@ checkImportTreeCycles tree = do
 
 mkImportTree ::
   forall r.
-  (Members '[Reader EntryPoint, Error MegaparsecError, Error ScoperError, PathResolver, Files] r) =>
+  (Members '[Reader EntryPoint, Error ParserError, Error ScoperError, PathResolver, Files] r) =>
   Sem r ImportTree
 mkImportTree = do
   pkgInfosTable <- getPackageInfos
@@ -412,7 +412,7 @@ mkImportTree = do
 
     scanNode ::
       forall r'.
-      (Members '[State ImportTree, Error MegaparsecError, Files, PathResolver, Visit ImportNode] r') =>
+      (Members '[State ImportTree, Error ParserError, Files, PathResolver, Visit ImportNode] r') =>
       ImportNode ->
       Sem r' ()
     scanNode fromNode@ImportNode {..} = do

@@ -274,6 +274,9 @@ getRight = either appError return
 runAppError :: forall e r a. (AppError e, Members '[App] r) => Sem (Error e ': r) a -> Sem r a
 runAppError = runErrorNoCallStackWith appError
 
+instance AppError ParserError where
+  appError = appError . JuvixError
+
 instance AppError MegaparsecError where
   appError = appError . JuvixError
 
