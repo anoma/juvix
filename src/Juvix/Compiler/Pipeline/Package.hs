@@ -3,10 +3,6 @@ module Juvix.Compiler.Pipeline.Package
     readPackage,
     readPackageFile,
     readGlobalPackage,
-    packagePackageStdlib,
-    packagePackageFile,
-    packageBasePackage,
-    packageJuvixPackage,
     ensureGlobalPackage,
   )
 where
@@ -143,52 +139,3 @@ writeGlobalPackage = do
   packagePath <- globalPackageJuvix
   ensureDir' (parent packagePath)
   writeFileEnsureLn' packagePath (renderPackageVersion currentPackageVersion (globalPackage packagePath))
-
-packageBasePackage :: Package
-packageBasePackage =
-  Package
-    { _packageVersion = defaultVersion,
-      _packageName = "package-base",
-      _packageMain = Nothing,
-      _packageLockfile = Nothing,
-      _packageFile = $(mkAbsFile "/<package-base>"),
-      _packageDependencies = [],
-      _packageBuildDir = Nothing
-    }
-
-packageJuvixPackage :: Package
-packageJuvixPackage =
-  Package
-    { _packageVersion = defaultVersion,
-      _packageName = "package-juvix",
-      _packageMain = Nothing,
-      _packageLockfile = Nothing,
-      _packageFile = $(mkAbsFile "/<package-juvix>"),
-      _packageDependencies = [],
-      _packageBuildDir = Nothing
-    }
-
--- | An immutable global stdlib
-packagePackageStdlib :: Package
-packagePackageStdlib =
-  Package
-    { _packageVersion = defaultVersion,
-      _packageName = "package-stdlib",
-      _packageMain = Nothing,
-      _packageLockfile = Nothing,
-      _packageFile = $(mkAbsFile "/<package-stdlib>"),
-      _packageDependencies = [],
-      _packageBuildDir = Nothing
-    }
-
-packagePackageFile :: Package
-packagePackageFile =
-  Package
-    { _packageVersion = defaultVersion,
-      _packageName = "package-file",
-      _packageMain = Nothing,
-      _packageLockfile = Nothing,
-      _packageFile = $(mkAbsFile "/<package-file>"),
-      _packageDependencies = [],
-      _packageBuildDir = Nothing
-    }
