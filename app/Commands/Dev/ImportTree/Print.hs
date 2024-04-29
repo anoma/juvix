@@ -8,8 +8,11 @@ import Juvix.Compiler.Pipeline.Loader.PathResolver
 import Juvix.Compiler.Pipeline.Setup
 
 runCommand :: (Members '[EmbedIO, App, TaggedLock] r) => PrintOptions -> Sem r ()
-runCommand PrintOptions =
+runCommand PrintOptions {..} =
   runPipelineSetup $ do
     entrySetup defaultDependenciesConfig
     tree <- mapError (JuvixError @ScoperError) mkImportTree
     renderStdOut (ppOutDefaultNoComments tree)
+    when _printStats $ do
+      let stats = mkImportTreeStats tree
+      renderStdOut (ppOutDefaultNoComments stats)

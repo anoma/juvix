@@ -6,7 +6,7 @@ import Juvix.Compiler.Concrete.Translation.ImportScanner.FlatParse
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Pipeline.Loader.PathResolver
-import Juvix.Compiler.Pipeline.Package (packageBasePackage)
+import Juvix.Compiler.Pipeline.Package (packageBasePackage, packageJuvixPackage, packagePackageStdlib)
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
 import Juvix.Data.Effect.TaggedLock
 import Juvix.Extra.PackageFiles
@@ -80,7 +80,10 @@ runPackagePathResolver rootPath sem = do
           fileContentsMap = hashMap fileContents
        in hashMapFromHashSet getScans relPkgFiles
 
-    mkPackageInfos :: RootInfoDirs -> RootInfoFiles -> Sem r (HashMap (Path Abs Dir) PackageInfo)
+    mkPackageInfos ::
+      RootInfoDirs ->
+      RootInfoFiles ->
+      Sem r (HashMap (Path Abs Dir) PackageInfo)
     mkPackageInfos ds fs = do
       gstdlib <- mkPkgGlobalStdlib
       pkgDotJuvix <- mkPackageDotJuvix
@@ -109,9 +112,7 @@ runPackagePathResolver rootPath sem = do
           let rfiles = HashSet.filter (/= packageFilePath) (fs ^. rootInfoFilesPackage)
               imports = scanHelperPure (ds ^. rootInfoArgPackageDir) rfiles packagePackageFiles
               root = ds ^. rootInfoArgPackageDir
-          -- buildDir <- asks (^. entryPointBuildDir)
-          -- pkg <- readPackageFile root buildDir (root <//> packageFilePath)
-          let pkg :: Package = error "TODO pkg"
+          let pkg :: Package = packageJuvixPackage
           return
             PackageInfo
               { _packageRoot = root,
@@ -128,12 +129,10 @@ runPackagePathResolver rootPath sem = do
 
         mkPkgGlobalStdlib :: Sem r PackageInfo
         mkPkgGlobalStdlib = do
-          -- buildDir <- asks (^. entryPointBuildDir)
           let root = ds ^. rootInfoArgGlobalStdlibDir
           jufiles <- findJuvixFiles root
           let rfiles = hashSet (filter (/= packageFilePath) jufiles)
-          -- pkg <- readPackageFile root buildDir (root <//> packageFilePath)
-          let pkg :: Package = error "TODO pkg"
+              pkg :: Package = packagePackageStdlib
           imports <- scanHelperFiles root rfiles
           return
             PackageInfo

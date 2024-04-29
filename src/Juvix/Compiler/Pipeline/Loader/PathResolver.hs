@@ -401,7 +401,7 @@ checkImportTreeCycles tree = do
     throw
       . ErrImportCycle
       . ImportCycle
-      $ error ("cycle " <> show cyc)
+      $ error ("TODO: proper error. Cycle found: " <> show cyc)
   where
     getCycle :: SCC ImportNode -> Maybe (NonEmpty ImportNode)
     getCycle = \case
@@ -417,7 +417,7 @@ mkImportTree = do
   let pkgs :: [PackageInfo] = toList pkgInfosTable
       nodes :: [ImportNode] = concatMap packageNodes pkgs
   tree <-
-    execState emptyImportTree
+    execState (emptyImportTree nodes)
       . evalVisitEmpty scanNode
       $ mapM_ visit nodes
   checkImportTreeCycles tree

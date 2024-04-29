@@ -1054,6 +1054,16 @@ instance (SingI s) => PrettyPrint (UsingItem s) where
         kwmodule = ppCode <$> (ui ^. usingModuleKw)
     kwmodule <?+> (sym' <+?> kwAs' <+?> alias')
 
+instance PrettyPrint ImportTreeStats where
+  ppCode ImportTreeStats {..} = do
+    header "Import Tree Statistics:"
+    header "======================="
+    itemize
+      [ noLoc "Total number of modules:" <+> noLoc (pretty _importTreeStatsTotalModules),
+        noLoc "Height (longest chain of imports):" <+> noLoc (pretty _importTreeStatsHeight)
+      ]
+    hardline
+
 instance PrettyPrint ImportTree where
   ppCode ImportTree {..} = do
     header "Import Tree:"

@@ -92,6 +92,7 @@ import Data.Foldable hiding (foldr1, minimum, minimumBy)
 import Data.Function
 import Data.Functor
 import Data.Graph (Graph, SCC (..), Vertex, stronglyConnComp)
+import Data.HashMap.Lazy qualified as LazyHashMap
 import Data.HashMap.Strict (HashMap)
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet (HashSet)
@@ -192,6 +193,8 @@ import Prelude (Double)
 type GHCType = GHC.Type
 
 type GHCConstraint = GHC.Constraint
+
+type LazyHashMap = LazyHashMap.HashMap
 
 traverseM ::
   (Monad m, Traversable m, Applicative f) =>
@@ -612,6 +615,9 @@ ordMap = Map.fromList . toList
 
 hashMap :: (Foldable f, Hashable k) => f (k, v) -> HashMap k v
 hashMap = HashMap.fromList . toList
+
+lazyHashMap :: (Foldable f, Hashable k) => f (k, v) -> LazyHashMap k v
+lazyHashMap = LazyHashMap.fromList . toList
 
 ensureLn :: Text -> Text
 ensureLn t =

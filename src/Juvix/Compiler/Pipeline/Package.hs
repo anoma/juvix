@@ -3,6 +3,7 @@ module Juvix.Compiler.Pipeline.Package
     readPackage,
     readPackageFile,
     readGlobalPackage,
+    packagePackageStdlib,
     packageBasePackage,
     packageJuvixPackage,
     ensureGlobalPackage,
@@ -123,7 +124,7 @@ readPackageFile root buildDir f = mapError (JuvixError @PackageLoaderError) $ do
   pkg <- loadPackage buildDir f
   mLockfile <- mayReadLockfile root
   checkNoDuplicateDepNames f (pkg ^. packageDependencies)
-  return (pkg {_packageLockfile = mLockfile})
+  return pkg {_packageLockfile = mLockfile}
 
 ensureGlobalPackage :: (Members '[TaggedLock, Files] r) => Sem r (Path Abs File)
 ensureGlobalPackage = do
@@ -162,6 +163,19 @@ packageJuvixPackage =
       _packageMain = Nothing,
       _packageLockfile = Nothing,
       _packageFile = $(mkAbsFile "/<package-juvix>"),
+      _packageDependencies = [],
+      _packageBuildDir = Nothing
+    }
+
+-- | An immutable global stdlib
+packagePackageStdlib :: Package
+packagePackageStdlib =
+  Package
+    { _packageVersion = defaultVersion,
+      _packageName = "package-stdlib",
+      _packageMain = Nothing,
+      _packageLockfile = Nothing,
+      _packageFile = $(mkAbsFile "/<package-stdlib>"),
       _packageDependencies = [],
       _packageBuildDir = Nothing
     }

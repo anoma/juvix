@@ -52,17 +52,19 @@ data ImportTreeStats = ImportTreeStats
   }
 
 data ImportTree = ImportTree
-  { -- | A ∈ importTree[B] ⇔ B imports A
+  { -- | A ∈ importTree[B] ⇔ B imports A. Every scanned node is a key, even if
+    -- it has no imports.
     _importTree :: HashMap ImportNode (HashSet ImportNode),
-    -- | A ∈ importTreeSym[B] ⇔ A imports B
+    -- | A ∈ importTreeSym[B] ⇔ A imports B. Every scanned node is a key, even
+    -- if it not imported by another node.
     _importTreeReverse :: HashMap ImportNode (HashSet ImportNode)
   }
 
-emptyImportTree :: ImportTree
-emptyImportTree =
+emptyImportTree :: [ImportNode] -> ImportTree
+emptyImportTree nodes =
   ImportTree
-    { _importTree = mempty,
-      _importTreeReverse = mempty
+    { _importTree = hashMap [(n, mempty) | n <- nodes],
+      _importTreeReverse = hashMap [(n, mempty) | n <- nodes]
     }
 
 makeLenses ''ImportTree
@@ -112,10 +114,24 @@ getResolverCacheItem p = do
   np <- normalizeDir p
   gets (^. resolverCache . at np)
 
--- | The import tree is assumed to not have cycles
+-- | The import tree is assumed to have no cycles
 mkImportTreeStats :: ImportTree -> ImportTreeStats
 mkImportTreeStats ImportTree {..} =
   ImportTreeStats
-    { _importTreeStatsTotalModules = length (HashMap.keys _importTree),
-      _importTreeStatsHeight = 111
+    { _importTreeStatsTotalModules = length nodes,
+      _importTreeStatsHeight = maximum nodesHeight
     }
+  where
+    nodes :: [ImportNode]
+    nodes = HashMap.keys _importTree
+
+    nodesHeight :: LazyHashMap ImportNode Int
+    nodesHeight = lazyHashMap [(n, computeHeight n) | n <- nodes]
+      where
+        computeHeight :: ImportNode -> Int
+        computeHeight n = case nonEmpty (_importTree ^. at n . _Just) of
+          Nothing -> 0
+          Just l -> 1 + maximum1 (getHeight <$> l)
+          where
+            getHeight :: ImportNode -> Int
+            getHeight m = nodesHeight ^?! at m . _Just
