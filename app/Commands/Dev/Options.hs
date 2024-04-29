@@ -84,7 +84,7 @@ commandImportTree =
   command "import-tree" $
     info
       (ImportTree <$> parseImportTree)
-      (progDesc "Print the import dependency tree")
+      (progDesc "Subcommands related to the import dependency tree")
 
 commandDevCompile :: Mod CommandFields DevCommand
 commandDevCompile =
