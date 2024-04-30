@@ -31,14 +31,14 @@ defaultImportScanStrategy = ImportScanStrategyFallback
 scanFileImports ::
   (Members '[Reader ImportScanStrategy, Files, Error ParserError] r) =>
   Path Abs File ->
-  Sem r (HashSet ImportScan)
+  Sem r ScanResult
 scanFileImports file = readFileBS' file >>= scanBSImports file
 
 scanBSImports ::
   (Members '[Reader ImportScanStrategy, Error ParserError] r) =>
   Path Abs File ->
   ByteString ->
-  Sem r (HashSet ImportScan)
+  Sem r ScanResult
 scanBSImports fp inputBS = do
   strat <- ask
   case strat of

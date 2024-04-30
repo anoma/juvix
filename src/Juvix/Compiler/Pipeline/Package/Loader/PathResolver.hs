@@ -60,7 +60,7 @@ runPackagePathResolver rootPath sem = do
           _pathInfoRootInfo =
             --  A Package file is a member of a package by definition.
             fromMaybe (error "runPackagePathResolver: expected root info") $
-              mkRootInfo' (topModulePathToRelativePath' m)
+              mkRootInfo' (scannedTopModuleNameToRelPath m)
       return PathInfoTopModule {..}
     WithResolverRoot _root' m ->
       -- the _root' is not used because ResolvePath does not depend on it
@@ -73,8 +73,9 @@ runPackagePathResolver rootPath sem = do
     scanHelperFiles pkgRoot relPkgFiles =
       let getScans :: Path Rel File -> Sem r (HashSet ImportScan)
           getScans p =
-            mapError (JuvixError @ParserError) $
-              scanFileImports (pkgRoot <//> p)
+            fmap (^. scanResultImports)
+              . mapError (JuvixError @ParserError)
+              $ scanFileImports (pkgRoot <//> p)
        in hashMapFromHashSetM getScans relPkgFiles
 
     scanHelperPure ::
@@ -85,8 +86,9 @@ runPackagePathResolver rootPath sem = do
     scanHelperPure pkgRoot relPkgFiles fileContents = do
       let getScans :: Path Rel File -> Sem r (HashSet ImportScan)
           getScans p =
-            mapError (JuvixError @ParserError) $
-              scanBSImports (pkgRoot <//> p) (getFile p)
+            fmap (^. scanResultImports)
+              . mapError (JuvixError @ParserError)
+              $ scanBSImports (pkgRoot <//> p) (getFile p)
        in hashMapFromHashSetM getScans relPkgFiles
       where
         fileContentsMap = hashMap fileContents

@@ -23,7 +23,7 @@ data RootInfo = RootInfo
   deriving stock (Show)
 
 data PathInfoTopModule = PathInfoTopModule
-  { _pathInfoTopModule :: TopModulePath,
+  { _pathInfoTopModule :: ScannedTopModuleName,
     _pathInfoRootInfo :: RootInfo
   }
   deriving stock (Show)
@@ -31,7 +31,7 @@ data PathInfoTopModule = PathInfoTopModule
 data PathResolver :: Effect where
   RegisterDependencies :: DependenciesConfig -> PathResolver m ()
   GetPackageInfos :: PathResolver m (HashMap (Path Abs Dir) PackageInfo)
-  ExpectedPathInfoTopModule :: TopModulePath -> PathResolver m PathInfoTopModule
+  ExpectedPathInfoTopModule :: ScannedTopModuleName -> PathResolver m PathInfoTopModule
   -- | Given a relative file *with no extension*, returns the list of packages
   -- that contain that file. The file extension is also returned since it can be
   -- FileExtJuvix or FileExtJuvixMarkdown.
@@ -66,32 +66,33 @@ resolveTopModulePath mp = do
 
 checkModulePath ::
   (Members '[Error ParserError, PathResolver] s) =>
-  TopModulePath ->
+  ScannedTopModuleName ->
   Sem s ()
-checkModulePath topJuvixPath = do
-  pathInfo :: PathInfoTopModule <- expectedPathInfoTopModule topJuvixPath
+checkModulePath t = do
+  pathInfo :: PathInfoTopModule <- expectedPathInfoTopModule t
   let expectedRootInfo = pathInfo ^. pathInfoRootInfo
-      actualPath = getLoc topJuvixPath ^. intervalFile
+      loc = getLoc t
+      actualPath = loc ^. intervalFile
   case expectedRootInfo ^. rootInfoKind of
     RootKindSingleFile -> do
-      let expectedName = pack . toFilePath . removeExtensions . filename $ actualPath
-          actualName = topModulePathToDottedPath topJuvixPath
+      let expectedName :: String = toFilePath . removeExtensions . filename $ actualPath
+          actualName :: String = scannedTopModuleNameToDottedString t
 
       unless (expectedName == actualName)
         . throw
         $ ErrWrongTopModuleNameOrphan
           WrongTopModuleNameOrphan
-            { _wrongTopModuleNameOrpahnExpectedName = expectedName,
-              _wrongTopModuleNameOrpahnActualName = topJuvixPath
+            { _wrongTopModuleNameOrpahnExpectedName = pack expectedName,
+              _wrongTopModuleNameOrpahnActualName = WithLoc loc (pack actualName)
             }
     RootKindPackage -> do
-      let relPath = topModulePathToRelativePath' topJuvixPath
+      let relPath = scannedTopModuleNameToRelPath t
           expectedAbsPath = (expectedRootInfo ^. rootInfoPath) <//> relPath
       unlessM (equalPaths actualPath expectedAbsPath)
         . throw
         $ ErrWrongTopModuleName
           WrongTopModuleName
-            { _wrongTopModuleNameActualName = topJuvixPath,
+            { _wrongTopModuleNameActualName = t,
               _wrongTopModuleNameExpectedPath = expectedAbsPath,
               _wrongTopModuleNameActualPath = actualPath
             }

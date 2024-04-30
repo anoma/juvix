@@ -16,13 +16,36 @@ type ImportScanParsed = ImportScan' Span
 type ImportScan = ImportScan' Interval
 
 data ScanResult = ScanResult
-  { _scanModule :: WithLoc (NonEmpty String),
-    _scanImports :: HashSet ImportScan
+  { _scanResultModule :: ScannedTopModuleName,
+    _scanResultImports :: HashSet ImportScan
   }
 
+data ScannedTopModuleName = ScannedTopModuleName
+  { _scannedTopModuleNameParts :: NonEmpty String,
+    _scannedTopModuleLoc :: Interval
+  }
+  deriving stock (Show, Eq)
+
 makeLenses ''ImportScan'
+makeLenses ''ScanResult
+makeLenses ''ScannedTopModuleName
+
+scannedTopModuleNameToRelPath :: ScannedTopModuleName -> Path Rel File
+scannedTopModuleNameToRelPath = relFile . scannedTopModuleNameToFilePath
+
+scannedTopModuleNameToFilePath :: ScannedTopModuleName -> FilePath
+scannedTopModuleNameToFilePath = joinFilePaths . (^. scannedTopModuleNameParts)
+
+scannedTopModuleNameToDottedString :: ScannedTopModuleName -> String
+scannedTopModuleNameToDottedString = intercalate "." . toList . (^. scannedTopModuleNameParts)
+
+instance Pretty ScannedTopModuleName where
+  pretty = pretty . scannedTopModuleNameToDottedString
 
 instance (Hashable a) => Hashable (ImportScan' a)
+
+instance HasLoc ScannedTopModuleName where
+  getLoc = (^. scannedTopModuleLoc)
 
 instance HasLoc ImportScan where
   getLoc = (^. importLoc)

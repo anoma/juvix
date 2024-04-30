@@ -97,8 +97,10 @@ topModulePathToName (TopModulePath ms m) = case nonEmpty ms of
   Just ms' -> NameQualified (QualifiedName (SymbolPath ms') m)
 
 topModulePathToDottedPath :: (IsString s) => TopModulePath -> s
-topModulePathToDottedPath (TopModulePath l r) =
-  fromText . mconcat . intersperse "." . map (^. symbolText) $ l ++ [r]
+topModulePathToDottedPath = fromText . mconcat . intersperse "." . toList . topModulePathParts
+
+topModulePathParts :: TopModulePath -> NonEmpty Text
+topModulePathParts TopModulePath {..} = (^. withLocParam) <$> prependList _modulePathDir (pure _modulePathName)
 
 moduleNameToTopModulePath :: Name -> TopModulePath
 moduleNameToTopModulePath = \case

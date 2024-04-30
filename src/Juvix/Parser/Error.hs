@@ -9,6 +9,7 @@ import Juvix.Compiler.Backend.Markdown.Error
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty.Options (fromGenericOptions)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Pretty
+import Juvix.Compiler.Concrete.Translation.ImportScanner.Base
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Error
 import Juvix.Extra.Paths
 import Juvix.Parser.Error.Base
@@ -95,7 +96,7 @@ instance ToGenericError TopModulePathError where
 data WrongTopModuleName = WrongTopModuleName
   { _wrongTopModuleNameExpectedPath :: Path Abs File,
     _wrongTopModuleNameActualPath :: Path Abs File,
-    _wrongTopModuleNameActualName :: TopModulePath
+    _wrongTopModuleNameActualName :: ScannedTopModuleName
   }
   deriving stock (Show)
 
@@ -125,7 +126,7 @@ instance ToGenericError WrongTopModuleName where
 
 data WrongTopModuleNameOrphan = WrongTopModuleNameOrphan
   { _wrongTopModuleNameOrpahnExpectedName :: Text,
-    _wrongTopModuleNameOrpahnActualName :: TopModulePath
+    _wrongTopModuleNameOrpahnActualName :: WithLoc Text
   }
   deriving stock (Show)
 
@@ -146,10 +147,10 @@ instance ToGenericError WrongTopModuleNameOrphan where
             "This is a standalone module, but it's name is not the same as the file name."
               <> line
               <> "Expected module name:"
-              <+> pcode _wrongTopModuleNameOrpahnExpectedName
+              <+> annotate (AnnKind KNameTopModule) (pcode _wrongTopModuleNameOrpahnExpectedName)
                 <> line
                 <> "Actual module name:"
-              <+> ppCode opts' _wrongTopModuleNameOrpahnActualName
+              <+> annotate (AnnKind KNameTopModule) (ppCode opts' _wrongTopModuleNameOrpahnActualName)
 
 data StdinOrFileError = StdinOrFileError
   deriving stock (Show)

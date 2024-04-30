@@ -12,12 +12,14 @@ import Juvix.Prelude.FlatParse hiding (Pos)
 import Juvix.Prelude.FlatParse qualified as FP
 import Juvix.Prelude.FlatParse.Lexer qualified as L
 
-scanBSImports :: Path Abs File -> ByteString -> Maybe (HashSet ImportScan)
-scanBSImports fp inputBS =
-  fmap hashSet
-    . fromResult
-    . scanImports fp
-    $ inputBS
+scanBSImports :: Path Abs File -> ByteString -> Maybe ScanResult
+scanBSImports fp inputBS = do
+  _scanImports <-
+    fmap hashSet
+      . fromResult
+      . scanImports fp
+      $ inputBS
+  return ScanResult {..}
   where
     fromResult :: Result () ok -> Maybe ok
     fromResult = \case

@@ -17,12 +17,25 @@ scanBSImports ::
   (Members '[Error ParserError] r) =>
   Path Abs File ->
   ByteString ->
-  Sem r (HashSet ImportScan)
+  Sem r ScanResult
 scanBSImports fp inputBS = do
-  fmap (hashSet . map fromImport . (^. parserStateImports))
-    . ignoreHighlightBuilder
-    . execParserResultBuilder mempty
-    $ runModuleParser fp (decodeUtf8 inputBS)
+  (st, errm) <-
+    ignoreHighlightBuilder
+      . runParserResultBuilder mempty
+      $ runModuleParser fp (decodeUtf8 inputBS)
+  m <- either throw return errm
+  return
+    ScanResult
+      { _scanResultImports = hashSet . map fromImport $ st ^. parserStateImports,
+        _scanResultModule = fromTopModulePath (m ^. modulePath)
+      }
   where
+    fromTopModulePath :: TopModulePath -> ScannedTopModuleName
+    fromTopModulePath t =
+      ScannedTopModuleName
+        { _scannedTopModuleNameParts = unpack <$> topModulePathParts t,
+          _scannedTopModuleLoc = getLoc t
+        }
+
     fromImport :: Import 'Parsed -> ImportScan
     fromImport i = topModulePathToImportScan (i ^. importModulePath)

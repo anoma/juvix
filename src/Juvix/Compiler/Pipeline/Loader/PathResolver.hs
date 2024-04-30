@@ -16,7 +16,6 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Data.Text qualified as T
-import Juvix.Compiler.Concrete.Data.Name
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Compiler.Concrete.Translation.ImportScanner
 import Juvix.Compiler.Pipeline.EntryPoint
@@ -188,7 +187,7 @@ scanImports root fileSet =
   sequence (hashMapFromHashSet scanFile fileSet)
   where
     scanFile :: Path Rel File -> Sem r (HashSet ImportScan)
-    scanFile f = scanFileImports (root <//> f)
+    scanFile f = (^. scanResultImports) <$> scanFileImports (root <//> f)
 
 registerPackageBase ::
   forall r.
@@ -416,7 +415,8 @@ mkImportTree = do
       Sem r' ()
     scanNode fromNode@ImportNode {..} = do
       let file = _importNodePackageRoot <//> _importNodeFile
-      imports :: [ImportNode] <- scanFileImports file >>= mapM resolveImportScan . toList
+      ScanResult {..} <- scanFileImports file
+      imports :: [ImportNode] <- mapM resolveImportScan (toList _scanResultImports)
       forM_ imports $ \toNode -> do
         addEdge fromNode toNode
         withResolverRoot (toNode ^. importNodePackageRoot) (visit toNode)
@@ -472,7 +472,7 @@ resolvePath' scan = do
 
 isModuleOrphan ::
   (Members '[Files] r) =>
-  TopModulePath ->
+  ScannedTopModuleName ->
   Sem r Bool
 isModuleOrphan topJuvixPath = do
   let actualPath = getLoc topJuvixPath ^. intervalFile
@@ -490,7 +490,7 @@ isModuleOrphan topJuvixPath = do
 
 expectedPath' ::
   (Members '[Reader ResolverEnv, Files] r) =>
-  TopModulePath ->
+  ScannedTopModuleName ->
   Sem r PathInfoTopModule
 expectedPath' m = do
   let _pathInfoTopModule = m
