@@ -228,7 +228,6 @@ registerDependencies' ::
 registerDependencies' conf = do
   e <- ask @EntryPoint
   mapError (JuvixError @ParserError) registerPackageBase
-  -- registerPackagePackage
   case e ^. entryPointPackageType of
     GlobalStdlib -> do
       glob <- globalRoot
