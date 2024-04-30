@@ -528,6 +528,7 @@ runPathResolver2 st topEnv arg = do
     handler localEnv = \case
       RegisterDependencies forceUpdateLockfile -> registerDependencies' forceUpdateLockfile
       GetPackageInfos -> gets allPackageInfos
+      ExpectedPathInfoTopModule m -> expectedPath' m
       ResolvePath relp -> resolvePath' relp
       WithResolverRoot root' m -> do
         e <- ask

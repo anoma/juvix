@@ -8,6 +8,7 @@ import Juvix.Compiler.Concrete.Data.Name
 import Juvix.Compiler.Pipeline.Loader.PathResolver.DependenciesConfig
 import Juvix.Compiler.Pipeline.Loader.PathResolver.PackageInfo
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Paths
+import Juvix.Parser.Error
 import Juvix.Prelude
 
 data RootKind
@@ -30,8 +31,7 @@ data PathInfoTopModule = PathInfoTopModule
 data PathResolver :: Effect where
   RegisterDependencies :: DependenciesConfig -> PathResolver m ()
   GetPackageInfos :: PathResolver m (HashMap (Path Abs Dir) PackageInfo)
-  -- CheckModulePath :: TopModulePath -> PathResolver m ()
-
+  ExpectedPathInfoTopModule :: TopModulePath -> PathResolver m PathInfoTopModule
   -- | Given a relative file *with no extension*, returns the list of packages
   -- that contain that file. The file extension is also returned since it can be
   -- FileExtJuvix or FileExtJuvixMarkdown.
@@ -63,3 +63,35 @@ resolveTopModulePath mp = do
       relpath = topModulePathToRelativePathNoExt mp
   (pkg, ext) <- resolvePath scan
   return (pkg ^. packageRoot, addFileExt ext relpath)
+
+checkModulePath ::
+  (Members '[Error ParserError, PathResolver] s) =>
+  TopModulePath ->
+  Sem s ()
+checkModulePath topJuvixPath = do
+  pathInfo :: PathInfoTopModule <- expectedPathInfoTopModule topJuvixPath
+  let expectedRootInfo = pathInfo ^. pathInfoRootInfo
+      actualPath = getLoc topJuvixPath ^. intervalFile
+  case expectedRootInfo ^. rootInfoKind of
+    RootKindSingleFile -> do
+      let expectedName = pack . toFilePath . removeExtensions . filename $ actualPath
+          actualName = topModulePathToDottedPath topJuvixPath
+
+      unless (expectedName == actualName)
+        . throw
+        $ ErrWrongTopModuleNameOrphan
+          WrongTopModuleNameOrphan
+            { _wrongTopModuleNameOrpahnExpectedName = expectedName,
+              _wrongTopModuleNameOrpahnActualName = topJuvixPath
+            }
+    RootKindPackage -> do
+      let relPath = topModulePathToRelativePath' topJuvixPath
+          expectedAbsPath = (expectedRootInfo ^. rootInfoPath) <//> relPath
+      unlessM (equalPaths actualPath expectedAbsPath)
+        . throw
+        $ ErrWrongTopModuleName
+          WrongTopModuleName
+            { _wrongTopModuleNameActualName = topJuvixPath,
+              _wrongTopModuleNameExpectedPath = expectedAbsPath,
+              _wrongTopModuleNameActualPath = actualPath
+            }

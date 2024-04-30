@@ -295,40 +295,6 @@ topModuleDefStdin = do
   optional_ stashJudoc
   top moduleDef
 
--- checkModulePath ::
---   (Members '[Error ParserError] s) =>
---   TopModulePath ->
---   Sem s ()
--- checkModulePath topJuvixPath = do
---   pathInfo :: PathInfoTopModule <- expectedPathInfoTopModule topJuvixPath
---   let expectedRootInfo = pathInfo ^. pathInfoRootInfo
---       actualPath = getLoc topJuvixPath ^. intervalFile
---   case expectedRootInfo ^. rootInfoKind of
---     RootKindSingleFile -> do
---       let expectedName = Text.pack . toFilePath . removeExtensions . filename $ actualPath
---           actualName = topModulePathToDottedPath topJuvixPath
-
---       unless (expectedName == actualName) $
---         throw
---           ( ErrWrongTopModuleNameOrphan
---               WrongTopModuleNameOrphan
---                 { _wrongTopModuleNameOrpahnExpectedName = expectedName,
---                   _wrongTopModuleNameOrpahnActualName = topJuvixPath
---                 }
---           )
---     RootKindPackage -> do
---       let relPath = topModulePathToRelativePath' topJuvixPath
---           expectedAbsPath = (expectedRootInfo ^. rootInfoPath) <//> relPath
---       unlessM (equalPaths actualPath expectedAbsPath) $
---         throw
---           ( ErrWrongTopModuleName
---               WrongTopModuleName
---                 { _wrongTopModuleNameActualName = topJuvixPath,
---                   _wrongTopModuleNameExpectedPath = expectedAbsPath,
---                   _wrongTopModuleNameActualPath = actualPath
---                 }
---           )
-
 topModuleDef ::
   (Members '[Error ParserError, ParserResultBuilder, PragmasStash, JudocStash] r) =>
   ParsecS r (Module 'Parsed 'ModuleTop)

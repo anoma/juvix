@@ -40,7 +40,7 @@ runPackagePathResolver rootPath sem = do
   ds <- rootInfoDirs
   initFiles ds
   fs <- rootInfoFiles ds
-  -- let mkRootInfo' :: Path Rel File -> Maybe RootInfo = mkRootInfo ds fs
+  let mkRootInfo' :: Path Rel File -> Maybe RootInfo = mkRootInfo ds fs
   packageInfos <- mkPackageInfos ds fs
   (`interpretH` sem) $ \localEnv -> \case
     RegisterDependencies {} -> return ()
@@ -55,13 +55,13 @@ runPackagePathResolver rootPath sem = do
         let pkg = packageInfos ^?! at (ri ^. rootInfoPath) . _Just
          in return (pkg, FileExtJuvix)
     GetPackageInfos -> return packageInfos
-    -- ExpectedPathInfoTopModule m -> do
-    --   let _pathInfoTopModule = m
-    --       _pathInfoRootInfo =
-    --         --  A Package file is a member of a package by definition.
-    --         fromMaybe (error "runPackagePathResolver: expected root info") $
-    --           mkRootInfo' (topModulePathToRelativePath' m)
-    --   return PathInfoTopModule {..}
+    ExpectedPathInfoTopModule m -> do
+      let _pathInfoTopModule = m
+          _pathInfoRootInfo =
+            --  A Package file is a member of a package by definition.
+            fromMaybe (error "runPackagePathResolver: expected root info") $
+              mkRootInfo' (topModulePathToRelativePath' m)
+      return PathInfoTopModule {..}
     WithResolverRoot _root' m ->
       -- the _root' is not used because ResolvePath does not depend on it
       runTSimpleEff localEnv m
