@@ -5,6 +5,7 @@ import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromParsed qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Concrete.Translation.FromSource.ParserResultBuilder (runParserResultBuilder)
+import Juvix.Compiler.Concrete.Translation.ImportScanner (defaultImportScanStrategy)
 import Juvix.Compiler.Core qualified as Core
 import Juvix.Compiler.Core.Transformation qualified as Core
 import Juvix.Compiler.Core.Transformation.DisambiguateNames (disambiguateNames)
@@ -84,10 +85,10 @@ parseReplInput ::
   Text ->
   Sem r Parser.ReplInput
 parseReplInput fp txt =
-  ignoreHighlightBuilder $
-    runNameIdGenArtifacts $
-      runStateLikeArtifacts runParserResultBuilder artifactParsing $
-        Parser.replInputFromTextSource fp txt
+  ignoreHighlightBuilder
+    . runNameIdGenArtifacts
+    . runStateLikeArtifacts runParserResultBuilder artifactParsing
+    $ Parser.replInputFromTextSource fp txt
 
 expressionUpToTyped ::
   (Members '[Reader EntryPoint, Error JuvixError, State Artifacts] r) =>
@@ -164,6 +165,7 @@ compileReplInputIO fp txt = do
     . mapError (JuvixError @DependencyError)
     . mapError (JuvixError @PackageLoaderError)
     . runEvalFileEffIO
+    . runReader defaultImportScanStrategy
     . runPathResolverArtifacts
     . evalModuleInfoCache
     $ do

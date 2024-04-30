@@ -32,7 +32,7 @@ makeLenses ''RootInfoFiles
 -- package and global standard library (currently under global-package/.juvix-build)
 runPackagePathResolver ::
   forall r a.
-  (Members '[TaggedLock, Error JuvixError, Files, EvalFileEff, Reader EntryPoint] r) =>
+  (Members '[Reader ImportScanStrategy, TaggedLock, Error JuvixError, Files, EvalFileEff, Reader EntryPoint] r) =>
   Path Abs Dir ->
   Sem (PathResolver ': r) a ->
   Sem r a
@@ -40,7 +40,7 @@ runPackagePathResolver rootPath sem = do
   ds <- rootInfoDirs
   initFiles ds
   fs <- rootInfoFiles ds
-  let mkRootInfo' :: Path Rel File -> Maybe RootInfo = mkRootInfo ds fs
+  -- let mkRootInfo' :: Path Rel File -> Maybe RootInfo = mkRootInfo ds fs
   packageInfos <- mkPackageInfos ds fs
   (`interpretH` sem) $ \localEnv -> \case
     RegisterDependencies {} -> return ()
@@ -55,13 +55,13 @@ runPackagePathResolver rootPath sem = do
         let pkg = packageInfos ^?! at (ri ^. rootInfoPath) . _Just
          in return (pkg, FileExtJuvix)
     GetPackageInfos -> return packageInfos
-    ExpectedPathInfoTopModule m -> do
-      let _pathInfoTopModule = m
-          _pathInfoRootInfo =
-            --  A Package file is a member of a package by definition.
-            fromMaybe (error "runPackagePathResolver: expected root info") $
-              mkRootInfo' (topModulePathToRelativePath' m)
-      return PathInfoTopModule {..}
+    -- ExpectedPathInfoTopModule m -> do
+    --   let _pathInfoTopModule = m
+    --       _pathInfoRootInfo =
+    --         --  A Package file is a member of a package by definition.
+    --         fromMaybe (error "runPackagePathResolver: expected root info") $
+    --           mkRootInfo' (topModulePathToRelativePath' m)
+    --   return PathInfoTopModule {..}
     WithResolverRoot _root' m ->
       -- the _root' is not used because ResolvePath does not depend on it
       runTSimpleEff localEnv m
@@ -218,7 +218,7 @@ runPackagePathResolver rootPath sem = do
             }
 
 runPackagePathResolver' ::
-  (Members '[TaggedLock, Error JuvixError, Files, EvalFileEff, Reader EntryPoint] r) =>
+  (Members '[Reader ImportScanStrategy, TaggedLock, Error JuvixError, Files, EvalFileEff, Reader EntryPoint] r) =>
   Path Abs Dir ->
   Sem (PathResolver ': r) a ->
   Sem r (ResolverState, a)
@@ -226,5 +226,5 @@ runPackagePathResolver' root eff = do
   res <- runPackagePathResolver root eff
   return (iniResolverState, res)
 
-runPackagePathResolver'' :: (Members '[Reader EntryPoint, TaggedLock, Error JuvixError, Files, EvalFileEff] r) => Path Abs Dir -> ResolverState -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
+runPackagePathResolver'' :: (Members '[Reader ImportScanStrategy, Reader EntryPoint, TaggedLock, Error JuvixError, Files, EvalFileEff] r) => Path Abs Dir -> ResolverState -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
 runPackagePathResolver'' root _ eff = runPackagePathResolver' root eff

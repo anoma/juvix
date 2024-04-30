@@ -24,6 +24,7 @@ import Juvix.Compiler.Concrete.Data.Highlight.Input
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromParsed qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
+import Juvix.Compiler.Concrete.Translation.ImportScanner
 import Juvix.Compiler.Core qualified as Core
 import Juvix.Compiler.Core.Transformation
 import Juvix.Compiler.Core.Translation.Stripped.FromCore qualified as Stripped
@@ -51,7 +52,7 @@ import Juvix.Data.Field
 
 type PipelineAppEffects = '[TaggedLock, EmbedIO]
 
-type PipelineLocalEff = '[ModuleInfoCache, Reader ImportParents, PathResolver, EvalFileEff, Error PackageLoaderError, Error DependencyError, GitClone, Error GitProcessError, Process, Log, Reader EntryPoint, Files, Error JuvixError, HighlightBuilder, Internet]
+type PipelineLocalEff = '[ModuleInfoCache, Reader ImportParents, PathResolver, Reader ImportScanStrategy, EvalFileEff, Error PackageLoaderError, Error DependencyError, GitClone, Error GitProcessError, Process, Log, Reader EntryPoint, Files, Error JuvixError, HighlightBuilder, Internet]
 
 type PipelineEff' r = PipelineLocalEff ++ r
 

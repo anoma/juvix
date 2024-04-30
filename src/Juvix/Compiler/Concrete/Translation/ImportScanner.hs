@@ -11,43 +11,42 @@ import Juvix.Parser.Error
 import Juvix.Prelude
 import Prelude (show)
 
-data ScanImportStrategy
+data ImportScanStrategy
   = -- | use FlatParse first and fallback to megaparsec if it fails
-    ScanImportStrategyFallback
-  | ScanImportStrategyFlatParse
-  | ScanImportStrategyMegaparsec
-  deriving stock (Eq)
+    ImportScanStrategyFallback
+  | ImportScanStrategyFlatParse
+  | ImportScanStrategyMegaparsec
+  deriving stock (Eq, Data, Ord, Enum, Bounded)
 
-instance Show ScanImportStrategy where
-  show :: ScanImportStrategy -> String
+instance Show ImportScanStrategy where
+  show :: ImportScanStrategy -> String
   show = \case
-    ScanImportStrategyFallback -> "flatparse-megaparsec"
-    ScanImportStrategyFlatParse -> "flatparse"
-    ScanImportStrategyMegaparsec -> "megaparsec"
+    ImportScanStrategyFallback -> "flatparse-megaparsec"
+    ImportScanStrategyFlatParse -> "flatparse"
+    ImportScanStrategyMegaparsec -> "megaparsec"
 
-defaultScanImportStrategy :: ScanImportStrategy
-defaultScanImportStrategy = ScanImportStrategyFallback
+defaultImportScanStrategy :: ImportScanStrategy
+defaultImportScanStrategy = ImportScanStrategyFallback
 
 scanFileImports ::
-  (Members '[Files, Error ParserError] r) =>
-  ScanImportStrategy ->
+  (Members '[Reader ImportScanStrategy, Files, Error ParserError] r) =>
   Path Abs File ->
   Sem r (HashSet ImportScan)
-scanFileImports strat file = readFileBS' file >>= scanBSImports strat file
+scanFileImports file = readFileBS' file >>= scanBSImports file
 
 scanBSImports ::
-  (Members '[Error ParserError] r) =>
-  ScanImportStrategy ->
+  (Members '[Reader ImportScanStrategy, Error ParserError] r) =>
   Path Abs File ->
   ByteString ->
   Sem r (HashSet ImportScan)
-scanBSImports strat fp inputBS =
+scanBSImports fp inputBS = do
+  strat <- ask
   case strat of
-    ScanImportStrategyFallback ->
+    ImportScanStrategyFallback ->
       case FlatParse.scanBSImports fp inputBS of
         Just x -> return x
         Nothing -> Megaparsec.scanBSImports fp inputBS
-    ScanImportStrategyFlatParse -> case FlatParse.scanBSImports fp inputBS of
+    ImportScanStrategyFlatParse -> case FlatParse.scanBSImports fp inputBS of
       Nothing -> error "Flatparse parser error"
       Just r -> return r
-    ScanImportStrategyMegaparsec -> Megaparsec.scanBSImports fp inputBS
+    ImportScanStrategyMegaparsec -> Megaparsec.scanBSImports fp inputBS

@@ -24,8 +24,6 @@ import Juvix.Compiler.Concrete.Translation.FromSource.Lexer hiding
   )
 import Juvix.Compiler.Concrete.Translation.FromSource.ParserResultBuilder
 import Juvix.Compiler.Pipeline.EntryPoint
-import Juvix.Compiler.Pipeline.Loader.PathResolver.Base
-import Juvix.Compiler.Pipeline.Loader.PathResolver.Paths
 import Juvix.Data.Yaml
 import Juvix.Extra.Paths
 import Juvix.Extra.Strings qualified as Str
@@ -48,7 +46,7 @@ type JudocStash = State (Maybe (Judoc 'Parsed))
 type PragmasStash = State (Maybe ParsedPragmas)
 
 fromSource ::
-  (Members '[HighlightBuilder, Files, PathResolver, Error JuvixError] r) =>
+  (Members '[HighlightBuilder, Files, Error JuvixError] r) =>
   EntryPoint ->
   Sem r ParserResult
 fromSource e = mapError (JuvixError @ParserError) $ do
@@ -61,7 +59,7 @@ fromSource e = mapError (JuvixError @ParserError) $ do
   where
     getParsedModuleTop ::
       forall r.
-      (Members '[Reader EntryPoint, Files, PathResolver, Error ParserError, ParserResultBuilder] r) =>
+      (Members '[Reader EntryPoint, Files, Error ParserError, ParserResultBuilder] r) =>
       Sem r (Module 'Parsed 'ModuleTop)
     getParsedModuleTop = case (e ^. entryPointStdin, e ^. entryPointModulePath) of
       (Nothing, Nothing) -> throw $ ErrStdinOrFile StdinOrFileError
@@ -77,7 +75,7 @@ fromSource e = mapError (JuvixError @ParserError) $ do
 
     goFile ::
       forall r.
-      (Members '[Reader EntryPoint, PathResolver, Files, Error ParserError, ParserResultBuilder] r) =>
+      (Members '[Reader EntryPoint, Files, Error ParserError, ParserResultBuilder] r) =>
       Path Abs File ->
       Sem r (Module 'Parsed 'ModuleTop)
     goFile fileName = do
@@ -111,14 +109,14 @@ expressionFromTextSource fp txt = mapError (JuvixError @ParserError) $ do
     Right exp' -> return exp'
 
 replInputFromTextSource ::
-  (Members '[Error JuvixError, PathResolver, ParserResultBuilder] r) =>
+  (Members '[Error JuvixError, ParserResultBuilder] r) =>
   Path Abs File ->
   Text ->
   Sem r ReplInput
 replInputFromTextSource fp txt = mapError (JuvixError @ParserError) $ runReplInputParser fp txt
 
 runReplInputParser ::
-  (Members '[Error ParserError, PathResolver, ParserResultBuilder] r) =>
+  (Members '[Error ParserError, ParserResultBuilder] r) =>
   Path Abs File ->
   Text ->
   Sem r ReplInput
@@ -132,7 +130,7 @@ runReplInputParser fileName input_ = do
     Right r -> return r
 
 runModuleParser ::
-  (Members '[Reader EntryPoint, ParserResultBuilder, Error ParserError, PathResolver] r) =>
+  (Members '[Reader EntryPoint, ParserResultBuilder, Error ParserError] r) =>
   Path Abs File ->
   Text ->
   Sem r (Either ParserError (Module 'Parsed 'ModuleTop))
@@ -156,7 +154,7 @@ runModuleParser fileName input_
         Right r -> return $ Right r
 
 runMarkdownModuleParser ::
-  (Members '[Reader EntryPoint, ParserResultBuilder, PathResolver] r) =>
+  (Members '[Reader EntryPoint, ParserResultBuilder] r) =>
   Path Abs File ->
   Mk ->
   Sem r (Either ParserError (Module 'Parsed 'ModuleTop))
@@ -234,14 +232,14 @@ runMarkdownModuleParser fpath mk =
         Right m -> return m
 
     parseFirstBlock ::
-      (Members '[Reader EntryPoint, ParserResultBuilder, Error ParserError, PathResolver] r') =>
+      (Members '[Reader EntryPoint, ParserResultBuilder, Error ParserError] r') =>
       MK.JuvixCodeBlock ->
       Sem r' (Module 'Parsed 'ModuleTop)
     parseFirstBlock x = parseHelper topMarkdownModuleDef x
 
     parseRestBlocks ::
       forall r'.
-      (Members '[Reader EntryPoint, ParserResultBuilder, Error ParserError, Input (Maybe MK.JuvixCodeBlock), State MdModuleBuilder, PathResolver] r') =>
+      (Members '[Reader EntryPoint, ParserResultBuilder, Error ParserError, Input (Maybe MK.JuvixCodeBlock), State MdModuleBuilder] r') =>
       Sem r' ()
     parseRestBlocks = whenJustM input $ \x -> do
       stmts <- parseHelper parseTopStatements x
@@ -250,7 +248,7 @@ runMarkdownModuleParser fpath mk =
       parseRestBlocks
 
 runModuleStdinParser ::
-  (Members '[Reader EntryPoint, Error ParserError, PathResolver, ParserResultBuilder] r) =>
+  (Members '[Reader EntryPoint, Error ParserError, ParserResultBuilder] r) =>
   Text ->
   Sem r (Either ParserError (Module 'Parsed 'ModuleTop))
 runModuleStdinParser input_ = do
@@ -291,56 +289,53 @@ top ::
 top p = space >> p <* (optional semicolon >> P.eof)
 
 topModuleDefStdin ::
-  (Members '[Reader EntryPoint, Error ParserError, PathResolver, ParserResultBuilder, PragmasStash, JudocStash] r) =>
+  (Members '[Reader EntryPoint, Error ParserError, ParserResultBuilder, PragmasStash, JudocStash] r) =>
   ParsecS r (Module 'Parsed 'ModuleTop)
 topModuleDefStdin = do
   optional_ stashJudoc
   top moduleDef
 
-checkModulePath ::
-  (Members '[PathResolver, Error ParserError] s) =>
-  Module 'Parsed 'ModuleTop ->
-  Sem s ()
-checkModulePath m = do
-  let topJuvixPath :: TopModulePath = m ^. modulePath
-  pathInfo :: PathInfoTopModule <- expectedPathInfoTopModule topJuvixPath
-  let expectedRootInfo = pathInfo ^. pathInfoRootInfo
-      actualPath = getLoc topJuvixPath ^. intervalFile
-  case expectedRootInfo ^. rootInfoKind of
-    RootKindSingleFile -> do
-      let expectedName = Text.pack . toFilePath . removeExtensions . filename $ actualPath
-          actualName = topModulePathToDottedPath topJuvixPath
+-- checkModulePath ::
+--   (Members '[Error ParserError] s) =>
+--   TopModulePath ->
+--   Sem s ()
+-- checkModulePath topJuvixPath = do
+--   pathInfo :: PathInfoTopModule <- expectedPathInfoTopModule topJuvixPath
+--   let expectedRootInfo = pathInfo ^. pathInfoRootInfo
+--       actualPath = getLoc topJuvixPath ^. intervalFile
+--   case expectedRootInfo ^. rootInfoKind of
+--     RootKindSingleFile -> do
+--       let expectedName = Text.pack . toFilePath . removeExtensions . filename $ actualPath
+--           actualName = topModulePathToDottedPath topJuvixPath
 
-      unless (expectedName == actualName) $
-        throw
-          ( ErrWrongTopModuleNameOrphan
-              WrongTopModuleNameOrphan
-                { _wrongTopModuleNameOrpahnExpectedName = expectedName,
-                  _wrongTopModuleNameOrpahnActualName = topJuvixPath
-                }
-          )
-    RootKindPackage -> do
-      let relPath = topModulePathToRelativePath' topJuvixPath
-          expectedAbsPath = (expectedRootInfo ^. rootInfoPath) <//> relPath
-      unlessM (equalPaths actualPath expectedAbsPath) $
-        throw
-          ( ErrWrongTopModuleName
-              WrongTopModuleName
-                { _wrongTopModuleNameActualName = topJuvixPath,
-                  _wrongTopModuleNameExpectedPath = expectedAbsPath,
-                  _wrongTopModuleNameActualPath = actualPath
-                }
-          )
+--       unless (expectedName == actualName) $
+--         throw
+--           ( ErrWrongTopModuleNameOrphan
+--               WrongTopModuleNameOrphan
+--                 { _wrongTopModuleNameOrpahnExpectedName = expectedName,
+--                   _wrongTopModuleNameOrpahnActualName = topJuvixPath
+--                 }
+--           )
+--     RootKindPackage -> do
+--       let relPath = topModulePathToRelativePath' topJuvixPath
+--           expectedAbsPath = (expectedRootInfo ^. rootInfoPath) <//> relPath
+--       unlessM (equalPaths actualPath expectedAbsPath) $
+--         throw
+--           ( ErrWrongTopModuleName
+--               WrongTopModuleName
+--                 { _wrongTopModuleNameActualName = topJuvixPath,
+--                   _wrongTopModuleNameExpectedPath = expectedAbsPath,
+--                   _wrongTopModuleNameActualPath = actualPath
+--                 }
+--           )
 
 topModuleDef ::
-  (Members '[Reader EntryPoint, Error ParserError, PathResolver, ParserResultBuilder, PragmasStash, JudocStash] r) =>
+  (Members '[Reader EntryPoint, Error ParserError, ParserResultBuilder, PragmasStash, JudocStash] r) =>
   ParsecS r (Module 'Parsed 'ModuleTop)
 topModuleDef = do
   space >> optional_ stashJudoc
   optional_ stashPragmas
-  m <- top moduleDef
-  P.lift . checkModulePath $ m
-  return m
+  top moduleDef
 
 juvixCodeBlockParser ::
   ParsecS r Mk
@@ -387,7 +382,7 @@ juvixCodeBlockParser = do
 -- Keep it. Intended to be used later for processing Markdown inside TextBlocks
 -- or (Judoc) comments.
 commanMarkParser ::
-  (Members '[Reader EntryPoint, ParserResultBuilder, Error ParserError, PathResolver] r) =>
+  (Members '[Reader EntryPoint, ParserResultBuilder, Error ParserError] r) =>
   Path Abs File ->
   Text ->
   Sem r (Either ParserError (Module 'Parsed 'ModuleTop))
@@ -398,7 +393,7 @@ commanMarkParser fileName input_ = do
     Left r -> return . Left . ErrCommonmark . CommonmarkError $ r
 
 topMarkdownModuleDef ::
-  (Members '[Reader EntryPoint, ParserResultBuilder, Error ParserError, PathResolver, PragmasStash, JudocStash] r) =>
+  (Members '[Reader EntryPoint, ParserResultBuilder, Error ParserError, PragmasStash, JudocStash] r) =>
   ParsecS r (Module 'Parsed 'ModuleTop)
 topMarkdownModuleDef = do
   optional_ stashJudoc
@@ -407,11 +402,11 @@ topMarkdownModuleDef = do
 
 parseTopStatements ::
   forall r.
-  (Members '[Reader EntryPoint, ParserResultBuilder, Error ParserError, PathResolver, PragmasStash, JudocStash] r) =>
+  (Members '[Reader EntryPoint, ParserResultBuilder, Error ParserError, PragmasStash, JudocStash] r) =>
   ParsecS r [Statement 'Parsed]
 parseTopStatements = top $ P.sepEndBy statement semicolon
 
-replInput :: forall r. (Members '[PathResolver, ParserResultBuilder, JudocStash, Error ParserError, State (Maybe ParsedPragmas)] r) => ParsecS r ReplInput
+replInput :: forall r. (Members '[ParserResultBuilder, JudocStash, Error ParserError, State (Maybe ParsedPragmas)] r) => ParsecS r ReplInput
 replInput =
   P.label "<repl input>" $
     ReplExpression <$> parseExpressionAtoms
@@ -499,7 +494,7 @@ l <?|> r = do
         r
   P.withRecovery (const recover) (P.try l)
 
-statement :: (Members '[Reader EntryPoint, Error ParserError, PathResolver, ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (Statement 'Parsed)
+statement :: (Members '[Reader EntryPoint, Error ParserError, ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (Statement 'Parsed)
 statement = P.label "<top level statement>" $ do
   optional_ stashJudoc
   optional_ stashPragmas
@@ -823,7 +818,7 @@ iteratorSyntaxDef _iterSyntaxKw = do
 -- Import statement
 --------------------------------------------------------------------------------
 
-import_ :: forall r. (Members '[PathResolver, ParserResultBuilder, PragmasStash, JudocStash, Error ParserError] r) => ParsecS r (Import 'Parsed)
+import_ :: forall r. (Members '[ParserResultBuilder, PragmasStash, JudocStash, Error ParserError] r) => ParsecS r (Import 'Parsed)
 import_ = do
   _importKw <- kw kwImport
   _importModulePath <- topModulePath
@@ -1613,7 +1608,7 @@ getModuleId path = do
         _moduleIdPackageVersion = show (p ^. packageVersion)
       }
 
-moduleDef :: forall t r. (SingI t, Members '[Reader EntryPoint, Error ParserError, PathResolver, ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (Module 'Parsed t)
+moduleDef :: forall t r. (SingI t, Members '[Reader EntryPoint, Error ParserError, ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (Module 'Parsed t)
 moduleDef = P.label "<module definition>" $ do
   _moduleKw <- kw kwModule
   _moduleDoc <- getJudoc
@@ -1659,7 +1654,7 @@ openModule = do
   return OpenModule {..}
 
 -- TODO is there way to merge this with `openModule`?
-popenModuleParams :: forall r. (Members '[Error ParserError, PathResolver, ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (OpenModuleParams 'Parsed)
+popenModuleParams :: forall r. (Members '[Error ParserError, ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (OpenModuleParams 'Parsed)
 popenModuleParams = do
   _openModuleKw <- kw kwOpen
   _openUsingHiding <- optional usingOrHiding

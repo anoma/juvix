@@ -11,11 +11,16 @@ data ImportScan' a = ImportScan
   }
   deriving stock (Show, Eq, Generic)
 
-makeLenses ''ImportScan'
-
 type ImportScanParsed = ImportScan' Span
 
 type ImportScan = ImportScan' Interval
+
+data ScanResult = ScanResult
+  { _scanModule :: WithLoc (NonEmpty String),
+    _scanImports :: HashSet ImportScan
+  }
+
+makeLenses ''ImportScan'
 
 instance (Hashable a) => Hashable (ImportScan' a)
 

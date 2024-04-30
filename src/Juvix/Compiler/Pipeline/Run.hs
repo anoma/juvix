@@ -10,6 +10,7 @@ import Juvix.Compiler.Concrete.Data.Scope
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoped
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as P
+import Juvix.Compiler.Concrete.Translation.ImportScanner (defaultImportScanStrategy)
 import Juvix.Compiler.Core.Data.Module qualified as Core
 import Juvix.Compiler.Core.Translation.FromInternal.Data qualified as Core
 import Juvix.Compiler.Internal.Translation qualified as Internal
@@ -81,6 +82,7 @@ runIOEitherPipeline' entry a = do
     . mapError (JuvixError @DependencyError)
     . mapError (JuvixError @PackageLoaderError)
     . runEvalFileEffIO
+    . runReader defaultImportScanStrategy
     . runPathResolver'
     . evalModuleInfoCache
     $ a
@@ -150,6 +152,7 @@ runReplPipelineIOEither' lockMode entry = do
       . mapError (JuvixError @DependencyError)
       . mapError (JuvixError @PackageLoaderError)
       . runEvalFileEffIO
+      . runReader defaultImportScanStrategy
       . runPathResolver'
       . evalModuleInfoCache
       $ entrySetup defaultDependenciesConfig >> processFileToStoredCore entry

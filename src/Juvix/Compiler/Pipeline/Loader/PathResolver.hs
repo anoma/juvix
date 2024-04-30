@@ -60,7 +60,7 @@ findJuvixFiles pkgRoot = map (fromJust . stripProperPrefix pkgRoot) <$> walkDirR
 
 mkPackageInfo ::
   forall r.
-  (Members '[TaggedLock, Files, Error JuvixError, Reader ResolverEnv, Error DependencyError, GitClone] r) =>
+  (Members '[Reader ImportScanStrategy, TaggedLock, Files, Error JuvixError, Reader ResolverEnv, Error DependencyError, GitClone] r) =>
   Maybe EntryPoint ->
   Path Abs Dir ->
   Package ->
@@ -180,7 +180,7 @@ resolveDependency i = case i ^. packageDepdendencyInfoDependency of
 
 scanImports ::
   forall r.
-  (Members '[Error ParserError, Files] r) =>
+  (Members '[Reader ImportScanStrategy, Error ParserError, Files] r) =>
   Path Abs Dir ->
   HashSet (Path Rel File) ->
   Sem r (HashMap (Path Rel File) (HashSet ImportScan))
@@ -192,7 +192,7 @@ scanImports root fileSet =
 
 registerPackageBase ::
   forall r.
-  (Members '[TaggedLock, Error ParserError, State ResolverState, Reader ResolverEnv, Files] r) =>
+  (Members '[Reader ImportScanStrategy, TaggedLock, Error ParserError, State ResolverState, Reader ResolverEnv, Files] r) =>
   Sem r ()
 registerPackageBase = do
   packageBaseAbsDir <- globalPackageBaseRoot
@@ -222,7 +222,7 @@ registerPackageBase = do
 
 registerDependencies' ::
   forall r.
-  (Members '[TaggedLock, Reader EntryPoint, Files, Error JuvixError, Error DependencyError, GitClone, EvalFileEff] r) =>
+  (Members '[Reader ImportScanStrategy, TaggedLock, Reader EntryPoint, Files, Error JuvixError, Error DependencyError, GitClone, EvalFileEff] r) =>
   DependenciesConfig ->
   Sem (Reader ResolverEnv ': State ResolverState ': r) ()
 registerDependencies' conf = do
@@ -260,7 +260,7 @@ registerDependencies' conf = do
 
 addRootDependency ::
   forall r.
-  (Members '[TaggedLock, State ResolverState, Reader ResolverEnv, Files, Error JuvixError, Error DependencyError, GitClone, EvalFileEff] r) =>
+  (Members '[Reader ImportScanStrategy, TaggedLock, State ResolverState, Reader ResolverEnv, Files, Error JuvixError, Error DependencyError, GitClone, EvalFileEff] r) =>
   DependenciesConfig ->
   EntryPoint ->
   Path Abs Dir ->
@@ -289,7 +289,7 @@ addRootDependency conf e root = do
 
 addDependency ::
   forall r.
-  (Members '[TaggedLock, State ResolverState, Reader ResolverEnv, Files, Error JuvixError, Error DependencyError, GitClone, EvalFileEff] r) =>
+  (Members '[Reader ImportScanStrategy, TaggedLock, State ResolverState, Reader ResolverEnv, Files, Error JuvixError, Error DependencyError, GitClone, EvalFileEff] r) =>
   Maybe EntryPoint ->
   PackageDependencyInfo ->
   Sem r LockfileDependency
@@ -311,7 +311,7 @@ addPackageRelativeFiles pkgInfo =
 
 addDependency' ::
   forall r.
-  (Members '[TaggedLock, State ResolverState, Reader ResolverEnv, Files, Error JuvixError, Error DependencyError, GitClone, EvalFileEff] r) =>
+  (Members '[Reader ImportScanStrategy, TaggedLock, State ResolverState, Reader ResolverEnv, Files, Error JuvixError, Error DependencyError, GitClone, EvalFileEff] r) =>
   Package ->
   Maybe EntryPoint ->
   ResolvedDependency ->
@@ -380,7 +380,7 @@ checkImportTreeCycles tree = do
 
 mkImportTree ::
   forall r.
-  (Members '[Reader EntryPoint, Error ParserError, Error ScoperError, PathResolver, Files] r) =>
+  (Members '[Reader ImportScanStrategy, Reader EntryPoint, Error ParserError, Error ScoperError, PathResolver, Files] r) =>
   Sem r ImportTree
 mkImportTree = do
   pkgInfosTable <- getPackageInfos
@@ -412,7 +412,7 @@ mkImportTree = do
 
     scanNode ::
       forall r'.
-      (Members '[State ImportTree, Error ParserError, Files, PathResolver, Visit ImportNode] r') =>
+      (Members '[State ImportTree, Reader ImportScanStrategy, Error ParserError, Files, PathResolver, Visit ImportNode] r') =>
       ImportNode ->
       Sem r' ()
     scanNode fromNode@ImportNode {..} = do
@@ -505,7 +505,7 @@ expectedPath' m = do
 
 runPathResolver2 ::
   forall r a v.
-  (v ~ '[TaggedLock, Reader EntryPoint, Files, Error JuvixError, Error DependencyError, GitClone, EvalFileEff], Members v r) =>
+  (v ~ '[Reader ImportScanStrategy, TaggedLock, Reader EntryPoint, Files, Error JuvixError, Error DependencyError, GitClone, EvalFileEff], Members v r) =>
   ResolverState ->
   ResolverEnv ->
   Sem (PathResolver ': r) a ->
@@ -528,7 +528,6 @@ runPathResolver2 st topEnv arg = do
       Sem (Reader ResolverEnv ': State ResolverState ': Error PathResolverError ': t) x
     handler localEnv = \case
       RegisterDependencies forceUpdateLockfile -> registerDependencies' forceUpdateLockfile
-      ExpectedPathInfoTopModule m -> expectedPath' m
       GetPackageInfos -> gets allPackageInfos
       ResolvePath relp -> resolvePath' relp
       WithResolverRoot root' m -> do
@@ -546,10 +545,10 @@ runPathResolver2 st topEnv arg = do
                 }
         localSeqUnlift localEnv $ \unlift -> local (const env') (unlift m)
 
-runPathResolver :: (Members '[TaggedLock, Reader EntryPoint, Files, Error JuvixError, Error DependencyError, GitClone, EvalFileEff] r) => Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
+runPathResolver :: (Members '[Reader ImportScanStrategy, TaggedLock, Reader EntryPoint, Files, Error JuvixError, Error DependencyError, GitClone, EvalFileEff] r) => Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
 runPathResolver = runPathResolver' iniResolverState
 
-runPathResolver' :: (Members '[TaggedLock, Reader EntryPoint, Files, Error JuvixError, Error DependencyError, GitClone, EvalFileEff] r) => ResolverState -> Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
+runPathResolver' :: (Members '[Reader ImportScanStrategy, TaggedLock, Reader EntryPoint, Files, Error JuvixError, Error DependencyError, GitClone, EvalFileEff] r) => ResolverState -> Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
 runPathResolver' st root x = do
   e <- ask
   let _envSingleFile :: Maybe (Path Abs File)
@@ -565,15 +564,15 @@ runPathResolver' st root x = do
           }
   runPathResolver2 st env x
 
-runPathResolverPipe' :: (Members '[TaggedLock, Files, Reader EntryPoint, Error DependencyError, GitClone, Error JuvixError, EvalFileEff] r) => ResolverState -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
+runPathResolverPipe' :: (Members '[Reader ImportScanStrategy, TaggedLock, Files, Reader EntryPoint, Error DependencyError, GitClone, Error JuvixError, EvalFileEff] r) => ResolverState -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
 runPathResolverPipe' iniState a = do
   r <- asks (^. entryPointResolverRoot)
   runPathResolver' iniState r a
 
-runPathResolverPipe :: (Members '[TaggedLock, Files, Reader EntryPoint, Error DependencyError, GitClone, Error JuvixError, EvalFileEff] r) => Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
+runPathResolverPipe :: (Members '[Reader ImportScanStrategy, TaggedLock, Files, Reader EntryPoint, Error DependencyError, GitClone, Error JuvixError, EvalFileEff] r) => Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
 runPathResolverPipe a = do
   r <- asks (^. entryPointResolverRoot)
   runPathResolver r a
 
-evalPathResolverPipe :: (Members '[TaggedLock, Files, Reader EntryPoint, Error DependencyError, GitClone, Error JuvixError, EvalFileEff] r) => Sem (PathResolver ': r) a -> Sem r a
+evalPathResolverPipe :: (Members '[Reader ImportScanStrategy, TaggedLock, Files, Reader EntryPoint, Error DependencyError, GitClone, Error JuvixError, EvalFileEff] r) => Sem (PathResolver ': r) a -> Sem r a
 evalPathResolverPipe = fmap snd . runPathResolverPipe

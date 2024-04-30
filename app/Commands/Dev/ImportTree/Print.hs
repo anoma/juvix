@@ -10,13 +10,15 @@ import Juvix.Parser.Error
 
 runCommand :: (Members '[EmbedIO, App, TaggedLock] r) => PrintOptions -> Sem r ()
 runCommand PrintOptions {..} =
-  runPipelineSetup $ do
-    entrySetup defaultDependenciesConfig
-    tree <-
-      mapError (JuvixError @ParserError)
-        . mapError (JuvixError @ScoperError)
-        $ mkImportTree
-    renderStdOut (ppOutDefaultNoComments tree)
-    when _printStats $ do
-      let stats = mkImportTreeStats tree
-      renderStdOut (ppOutDefaultNoComments stats)
+  runPipelineSetup
+    . local (const _printScanStrategy)
+    $ do
+      entrySetup defaultDependenciesConfig
+      tree <-
+        mapError (JuvixError @ParserError)
+          . mapError (JuvixError @ScoperError)
+          $ mkImportTree
+      renderStdOut (ppOutDefaultNoComments tree)
+      when _printStats $ do
+        let stats = mkImportTreeStats tree
+        renderStdOut (ppOutDefaultNoComments stats)
