@@ -32,3 +32,6 @@ runInputStream s = reinterpret (evalState s) $ \case
 
 runInputNaturals :: Sem (Input Natural ': r) a -> Sem r a
 runInputNaturals = runInputStream allNaturals
+
+inputJust :: (Members '[Input (Maybe i)] r) => Sem r i
+inputJust = fromMaybe (error "inputJust") <$> input

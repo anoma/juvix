@@ -13,13 +13,7 @@ import Juvix.Prelude.FlatParse qualified as FP
 import Juvix.Prelude.FlatParse.Lexer qualified as L
 
 scanBSImports :: Path Abs File -> ByteString -> Maybe ScanResult
-scanBSImports fp inputBS = do
-  _scanImports <-
-    fmap hashSet
-      . fromResult
-      . scanImports fp
-      $ inputBS
-  return ScanResult {..}
+scanBSImports fp = fromResult . scanner fp
   where
     fromResult :: Result () ok -> Maybe ok
     fromResult = \case
@@ -33,47 +27,58 @@ whiteSpaceAndComments :: Parser e ()
 whiteSpaceAndComments = skipMany (L.whiteSpace1 <|> comment)
 
 -- | The input is a utf-8 encoded bytestring
-scanImports :: Path Abs File -> ByteString -> Result e [ImportScan]
-scanImports fp bs = spansToLocs <$> runParser pImports bs
+scanner :: Path Abs File -> ByteString -> Result e ScanResult
+scanner fp bs = do
+  spansToLocs <$> runParser pPreScanResult bs
   where
-    interval :: FileLoc -> FileLoc -> Interval
-    interval _intervalStart _intervalEnd =
-      Interval
-        { _intervalFile = fp,
-          ..
-        }
-    spansToLocs :: [ImportScanParsed] -> [ImportScan]
-    spansToLocs ps =
-      [ set importLoc interv scan
-        | (scan, interv) <-
-            zipExact ps (uncurry interval <$> listByPairsExact linesCols)
-      ]
+    getInterval :: (Members '[Input (Maybe FileLoc)] r) => Sem r Interval
+    getInterval = do
+      _intervalStart <- inputJust
+      _intervalEnd <- inputJust
+      return
+        Interval
+          { _intervalFile = fp,
+            ..
+          }
+
+    spansToLocs :: ((NonEmpty String, Span), [ImportScanParsed]) -> ScanResult
+    spansToLocs ((_scannedTopModuleNameParts, sp1), imports) = run . runInputList allFileLocs $ do
+      _scannedTopModuleLoc <- getInterval
+      let _scanResultModule = ScannedTopModuleName {..}
+      _scanResultImports <- fmap hashSet . forM imports $ \(imp :: ImportScanParsed) -> do
+        loc <- getInterval
+        return (set importLoc loc imp)
+      return ScanResult {..}
       where
-        spans :: [Span]
-        spans = map (^. importLoc) ps
-
-        positions :: [FP.Pos]
-        positions = concatMap spanToPos spans
-
-        linesCols :: [FileLoc]
-        linesCols =
+        allFileLocs :: [FileLoc]
+        allFileLocs =
           [ FileLoc
               { _locLine = Pos (fromIntegral l),
                 _locCol = Pos (fromIntegral c),
                 _locOffset = Pos (fromIntegral p)
               }
-            | (FP.Pos p, (l, c)) <- zipExact positions (posLineCols bs positions)
+            | (FP.Pos p, (l, c)) <- zipExact allPositions (posLineCols bs allPositions)
           ]
 
-        spanToPos :: Span -> [FP.Pos]
-        spanToPos (Span l r) = [l, r]
+        allPositions :: [FP.Pos]
+        allPositions = spanToPos sp1 ++ importsPositions
 
-pImports :: Parser e [ImportScanParsed]
-pImports = do
+        importsPositions :: [FP.Pos]
+        importsPositions = concatMap spanToPos importsSpans
+          where
+            importsSpans :: [Span]
+            importsSpans = map (^. importLoc) imports
+
+    spanToPos :: Span -> [FP.Pos]
+    spanToPos (Span l r) = [l, r]
+
+pPreScanResult :: Parser e ((NonEmpty String, Span), [ImportScanParsed])
+pPreScanResult = do
   whiteSpaceAndComments
-  res <- mapMaybe getImport <$> many pToken
+  tm <- pTopModuleName
+  imports <- mapMaybe getImport <$> many pToken
   eof
-  return res
+  return (tm, imports)
   where
     getImport :: Token -> Maybe ImportScanParsed
     getImport = \case
@@ -91,6 +96,14 @@ dottedIdentifier = nonEmpty' <$> sepBy1 bareIdentifier dot
   where
     dot :: Parser e ()
     dot = $(char '.')
+
+pTopModuleName :: Parser e (NonEmpty String, Span)
+pTopModuleName = lexeme (withSpan helper (curry return))
+  where
+    helper :: Parser e (NonEmpty String)
+    helper = do
+      lexeme $(string Str.module_)
+      dottedIdentifier
 
 pImport :: Parser e ImportScanParsed
 pImport = do
