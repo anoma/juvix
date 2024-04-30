@@ -67,12 +67,7 @@ toConcrete t p = run . runReader l $ do
     return (stdlib <> body)
   _moduleKw <- kw kwModule
   let _modulePath = mkTopModulePath (packageSymbol :| [])
-      _moduleId =
-        ModuleId
-          { _moduleIdPath = show $ pretty (p ^. packageFile),
-            _moduleIdPackage = p ^. packageName,
-            _moduleIdPackageVersion = show (p ^. packageVersion)
-          }
+      _moduleId = ()
   return
     Module
       { _moduleKwEnd = (),

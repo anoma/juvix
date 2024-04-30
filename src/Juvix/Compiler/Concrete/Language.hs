@@ -53,6 +53,11 @@ type family FieldArgIxType s = res | res -> s where
   FieldArgIxType 'Parsed = ()
   FieldArgIxType 'Scoped = Int
 
+type ModuleIdType :: Stage -> GHC.Type
+type family ModuleIdType s = res | res -> s where
+  ModuleIdType 'Parsed = ()
+  ModuleIdType 'Scoped = ModuleId
+
 type SymbolType :: Stage -> GHC.Type
 type family SymbolType s = res | res -> s where
   SymbolType 'Parsed = Symbol
@@ -1067,7 +1072,7 @@ data Module (s :: Stage) (t :: ModuleIsTop) = Module
     _moduleBody :: [Statement s],
     _moduleKwEnd :: ModuleEndType t,
     _moduleInductive :: ModuleInductiveType t,
-    _moduleId :: ModuleId,
+    _moduleId :: ModuleIdType s,
     _moduleMarkdownInfo :: Maybe MarkdownInfo
   }
 
@@ -2029,7 +2034,7 @@ deriving stock instance Ord (JudocGroup 'Parsed)
 
 deriving stock instance Ord (JudocGroup 'Scoped)
 
-data JudocBlock (s :: Stage)
+newtype JudocBlock (s :: Stage)
   = JudocLines (NonEmpty (JudocLine s))
   deriving stock (Generic)
 

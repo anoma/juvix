@@ -13,6 +13,7 @@ import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Concrete (ImportCycle (ImportCycle), ScoperError (ErrImportCycle))
 import Juvix.Compiler.Concrete.Data.Highlight
 import Juvix.Compiler.Concrete.Language
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping (getModuleId)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Concrete.Translation.FromSource.Data.ParserState (parserStateImports)
@@ -81,9 +82,9 @@ processFileUpTo ::
 processFileUpTo a = do
   entry <- ask
   res <- processFileUpToParsing entry
+  mid <- getModuleId (res ^. pipelineResult . Parser.resultModule . modulePath)
   a' <-
-    evalTopNameIdGen
-      (res ^. pipelineResult . Parser.resultModule . moduleId)
+    evalTopNameIdGen mid
       . runReader (res ^. pipelineResultImports)
       . runReader (res ^. pipelineResult)
       $ a
@@ -162,12 +163,12 @@ processFileToStoredCore' ::
   (Members '[Reader ImportParents, Error JuvixError, Files, PathResolver, ModuleInfoCache] r) =>
   EntryPoint ->
   Sem r (PipelineResult Core.CoreResult)
-processFileToStoredCore' entry = ignoreHighlightBuilder $ do
+processFileToStoredCore' entry = ignoreHighlightBuilder . runReader entry $ do
   res <- processFileUpToParsing' entry
+  mid <- getModuleId (res ^. pipelineResult . Parser.resultModule . modulePath)
   r <-
-    evalTopNameIdGen (res ^. pipelineResult . Parser.resultModule . moduleId)
+    evalTopNameIdGen mid
       . runReader (res ^. pipelineResultImports)
-      . runReader entry
       . runReader (res ^. pipelineResult)
       $ upToStoredCore
   return (set pipelineResult r res)
@@ -252,9 +253,9 @@ processRecursiveUpToTyped = do
   PipelineResult res mtab _ <- processFileUpToParsing entry
   let imports = HashMap.keys (mtab ^. Store.moduleTable)
   ms <- forM imports (`withPathFile` goImport)
+  mid <- getModuleId (res ^. Parser.resultModule . modulePath)
   a <-
-    evalTopNameIdGen
-      (res ^. Parser.resultModule . moduleId)
+    evalTopNameIdGen mid
       . runReader mtab
       . runReader res
       $ upToInternalTyped
