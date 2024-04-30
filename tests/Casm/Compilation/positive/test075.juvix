@@ -4,5 +4,7 @@ module test075;
 import Stdlib.Prelude open;
 import Stdlib.Cairo.Poseidon open;
 
+poseidonHash2' (x y : Field) : Field := poseidonHash2 x y;
+
 main : Field :=
-  poseidonHash2 7 10 + poseidonHashList [3; 5; 7];
+  poseidonHash2' 7 10 + poseidonHashList [3; 5; 7];
