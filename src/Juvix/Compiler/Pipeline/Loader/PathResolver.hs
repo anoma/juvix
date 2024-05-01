@@ -197,7 +197,7 @@ registerPackageBase = do
   packageBaseAbsDir <- globalPackageBaseRoot
   runReader packageBaseAbsDir updatePackageBaseFiles
   packageBaseRelFiles <- relFiles packageBaseAbsDir
-  imports <- scanImports packageBaseAbsDir packageBaseRelFiles
+  imports <- scanImports packageBaseAbsDir (keepJuvixFiles packageBaseRelFiles)
   let pkgInfo =
         PackageInfo
           { _packageRoot = packageBaseAbsDir,
@@ -386,6 +386,7 @@ mkImportTree = do
       nodes :: [ImportNode] = concatMap packageNodes pkgs
   tree <-
     execState (emptyImportTree nodes)
+      . runReader pkgInfosTable
       . evalVisitEmpty scanNode
       $ mapM_ visit nodes
   checkImportTreeCycles tree
@@ -408,15 +409,22 @@ mkImportTree = do
         insertHelper :: (Hashable k, Hashable v) => k -> v -> HashMap k (HashSet v) -> HashMap k (HashSet v)
         insertHelper k v = over (at k) (Just . maybe (HashSet.singleton v) (HashSet.insert v))
 
+    getNodeImports ::
+      forall r'.
+      (Members '[Reader (HashMap (Path Abs Dir) PackageInfo)] r') =>
+      ImportNode ->
+      Sem r' (HashSet ImportScan)
+    getNodeImports ImportNode {..} = do
+      pkgInfo :: PackageInfo <- asks @(HashMap (Path Abs Dir) PackageInfo) (^?! at _importNodePackageRoot . _Just)
+      return (pkgInfo ^?! packageImports . at _importNodeFile . _Just)
+
     scanNode ::
       forall r'.
-      (Members '[State ImportTree, Reader ImportScanStrategy, Error ParserError, Files, PathResolver, Visit ImportNode] r') =>
+      (Members '[State ImportTree, Reader (HashMap (Path Abs Dir) PackageInfo), Reader ImportScanStrategy, Error ParserError, Files, PathResolver, Visit ImportNode] r') =>
       ImportNode ->
       Sem r' ()
-    scanNode fromNode@ImportNode {..} = do
-      let file = _importNodePackageRoot <//> _importNodeFile
-      ScanResult {..} <- scanFileImports file
-      imports :: [ImportNode] <- mapM resolveImportScan (toList _scanResultImports)
+    scanNode fromNode = do
+      imports :: [ImportNode] <- getNodeImports fromNode >>= mapM resolveImportScan . toList
       forM_ imports $ \toNode -> do
         addEdge fromNode toNode
         withResolverRoot (toNode ^. importNodePackageRoot) (visit toNode)
