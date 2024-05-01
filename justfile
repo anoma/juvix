@@ -44,7 +44,7 @@ stackArgs := stackOptFlag + ' ' + stackParallelFlag + ' ' + stackGhcParallelFlag
 
 # flags used in the stack test command
 testArgs := "--hide-successes"
-rtsFlag := if disableParallel == '' { '+RTS -N -RTS' } else { '' }
+rtsFlag := if disableParallel == '' { '+RTS -N' + numParallelJobs + ' -RTS' } else { '' }
 
 # flag used to enable tracing of bash commands
 bashDebugArg := if enableDebug == '' { '' } else { 'x' }
