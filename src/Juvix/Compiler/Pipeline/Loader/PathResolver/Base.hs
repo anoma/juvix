@@ -65,11 +65,11 @@ resolveTopModulePath mp = do
   return (pkg ^. packageRoot, addFileExt ext relpath)
 
 checkModulePath ::
-  (Members '[Error ParserError, PathResolver] s) =>
+  (Members '[Error ParserError] s) =>
   ScannedTopModuleName ->
+  PathInfoTopModule ->
   Sem s ()
-checkModulePath t = do
-  pathInfo :: PathInfoTopModule <- expectedPathInfoTopModule t
+checkModulePath t pathInfo = do
   let expectedRootInfo = pathInfo ^. pathInfoRootInfo
       loc = getLoc t
       actualPath = loc ^. intervalFile
@@ -77,7 +77,6 @@ checkModulePath t = do
     RootKindSingleFile -> do
       let expectedName :: String = toFilePath . removeExtensions . filename $ actualPath
           actualName :: String = scannedTopModuleNameToDottedString t
-
       unless (expectedName == actualName)
         . throw
         $ ErrWrongTopModuleNameOrphan
@@ -87,8 +86,8 @@ checkModulePath t = do
             }
     RootKindPackage -> do
       let relPath = scannedTopModuleNameToRelPath t
-          expectedAbsPath = (expectedRootInfo ^. rootInfoPath) <//> relPath
-      unlessM (equalPaths actualPath expectedAbsPath)
+          expectedAbsPath = expectedRootInfo ^. rootInfoPath <//> relPath
+      unlessM (equalPaths (removeExtensions actualPath) expectedAbsPath)
         . throw
         $ ErrWrongTopModuleName
           WrongTopModuleName

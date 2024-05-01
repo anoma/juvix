@@ -81,9 +81,20 @@ mkPackageInfo mpackageEntry _packageRoot pkg = do
             : _packageRoot
             : depsPaths
 
-  _packageImports <- mapError (JuvixError @ParserError) (scanImports _packageRoot _packageRelativeFiles)
+  scanRes <-
+    mapError (JuvixError @ParserError) $
+      scanImports _packageRoot _packageRelativeFiles
+  _packageImports <- mapM fromScanResult scanRes
   return PackageInfo {..}
   where
+    fromScanResult :: ScanResult -> Sem r (HashSet ImportScan)
+    fromScanResult res = do
+      pathInfo <- expectedPath' (res ^. scanResultModule)
+      -- TODO consider making the wrong path another type of error
+      mapError (JuvixError @ParserError) $
+        checkModulePath (res ^. scanResultModule) pathInfo
+      return (res ^. scanResultImports)
+
     pkgFile :: Path Abs File
     pkgFile = pkg ^. packageFile
 
@@ -182,27 +193,27 @@ scanImports ::
   (Members '[Reader ImportScanStrategy, Error ParserError, Files] r) =>
   Path Abs Dir ->
   HashSet (Path Rel File) ->
-  Sem r (HashMap (Path Rel File) (HashSet ImportScan))
+  Sem r (HashMap (Path Rel File) ScanResult)
 scanImports root fileSet =
   sequence (hashMapFromHashSet scanFile fileSet)
   where
-    scanFile :: Path Rel File -> Sem r (HashSet ImportScan)
-    scanFile f = (^. scanResultImports) <$> scanFileImports (root <//> f)
+    scanFile :: Path Rel File -> Sem r ScanResult
+    scanFile f = scanFileImports (root <//> f)
 
 registerPackageBase ::
   forall r.
-  (Members '[Reader ImportScanStrategy, TaggedLock, Error ParserError, State ResolverState, Reader ResolverEnv, Files] r) =>
+  (Members '[Reader ImportScanStrategy, Error ParserError, TaggedLock, State ResolverState, Files] r) =>
   Sem r ()
 registerPackageBase = do
   packageBaseAbsDir <- globalPackageBaseRoot
   runReader packageBaseAbsDir updatePackageBaseFiles
   packageBaseRelFiles <- relFiles packageBaseAbsDir
-  imports <- scanImports packageBaseAbsDir (keepJuvixFiles packageBaseRelFiles)
+  scanRes <- scanImports packageBaseAbsDir (keepJuvixFiles packageBaseRelFiles)
   let pkgInfo =
         PackageInfo
           { _packageRoot = packageBaseAbsDir,
             _packageRelativeFiles = packageBaseRelFiles,
-            _packageImports = imports,
+            _packageImports = (^. scanResultImports) <$> scanRes,
             _packagePackage = PackageBase,
             _packageAvailableRoots = HashSet.singleton packageBaseAbsDir
           }
