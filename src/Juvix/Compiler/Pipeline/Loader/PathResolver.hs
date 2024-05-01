@@ -135,7 +135,7 @@ resolveDependency i = case i ^. packageDepdendencyInfoDependency of
           _resolvedDependencyDependency = i ^. packageDepdendencyInfoDependency
         }
   DependencyGit g -> do
-    r <- rootBuildDir <$> asks (^. envRoot)
+    r <- rootBuildDir <$> asks (^. envProjectRoot)
     gitCacheDir <- globalGitCache
     let cloneRelDir :: Path Rel Dir
         cloneRelDir = relDir (T.unpack (SHA256.digestText (g ^. gitDependencyUrl)))
@@ -145,11 +145,14 @@ resolveDependency i = case i ^. packageDepdendencyInfoDependency of
             { _cloneArgsCloneDir = cloneDir,
               _cloneArgsRepoUrl = g ^. gitDependencyUrl
             }
-        destDir = r <//> relDependenciesDir <//> relDir (T.unpack (g ^. gitDependencyName))
     provideWith_ cloneArgs $ do
       fetchOnNoSuchRefAndRetry (errorHandler cloneDir) (`checkout` (g ^. gitDependencyRef))
       resolvedRef <- headRef (errorHandler cloneDir)
-      replaceDirectory cloneDir destDir
+      let destDir =
+            r
+              <//> relDependenciesDir
+              <//> relDir (T.unpack (SHA256.digestText (g ^. gitDependencyUrl <> resolvedRef)))
+      unlessM (directoryExists' destDir) (replaceDirectory cloneDir destDir)
       return
         ResolvedDependency
           { _resolvedDependencyPath = destDir,
@@ -249,7 +252,7 @@ addRootDependency conf e root = do
   resolvedDependency <- resolveDependency d
   checkRemoteDependency resolvedDependency
   let p = resolvedDependency ^. resolvedDependencyPath
-  withEnvRoot p $ do
+  withEnvProjectRoot p $ do
     pkg <- mkPackage (Just e) p
     shouldUpdateLockfile' <- shouldUpdateLockfile pkg
     when shouldUpdateLockfile' setShouldUpdateLockfile
@@ -452,6 +455,7 @@ runPathResolver2 st topEnv arg = do
               env' =
                 ResolverEnv
                   { _envRoot = root',
+                    _envProjectRoot = root',
                     _envLockfileInfo = Nothing,
                     _envSingleFile
                   }
@@ -475,6 +479,7 @@ runPathResolver' st root x = do
       env =
         ResolverEnv
           { _envRoot = root,
+            _envProjectRoot = root,
             _envLockfileInfo = Nothing,
             _envSingleFile
           }
