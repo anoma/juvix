@@ -61,7 +61,7 @@ instance PrettyCodeAnn DependencyErrorGit where
         <+> "is not a valid git clone."
           <> line
           <> "Try running"
-        <+> code "juvix clean"
+        <+> code "juvix clean --global"
     NoSuchRef ref ->
       prefix
         <> "The git ref:"
