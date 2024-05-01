@@ -136,18 +136,23 @@ resolveDependency i = case i ^. packageDepdendencyInfoDependency of
         }
   DependencyGit g -> do
     r <- rootBuildDir <$> asks (^. envRoot)
-    let cloneDir = r <//> relDependenciesDir <//> relDir (T.unpack (g ^. gitDependencyName))
+    gitCacheDir <- globalGitCache
+    let cloneRelDir :: Path Rel Dir
+        cloneRelDir = relDir (T.unpack (SHA256.digestText (g ^. gitDependencyUrl)))
+        cloneDir = gitCacheDir <//> cloneRelDir
         cloneArgs =
           CloneArgs
             { _cloneArgsCloneDir = cloneDir,
               _cloneArgsRepoUrl = g ^. gitDependencyUrl
             }
+        destDir = r <//> relDependenciesDir <//> relDir (T.unpack (g ^. gitDependencyName))
     provideWith_ cloneArgs $ do
       fetchOnNoSuchRefAndRetry (errorHandler cloneDir) (`checkout` (g ^. gitDependencyRef))
       resolvedRef <- headRef (errorHandler cloneDir)
+      replaceDirectory cloneDir destDir
       return
         ResolvedDependency
-          { _resolvedDependencyPath = cloneDir,
+          { _resolvedDependencyPath = destDir,
             _resolvedDependencyDependency =
               DependencyGit (set gitDependencyRef resolvedRef g)
           }
