@@ -8,7 +8,7 @@ module Juvix.Compiler.Pipeline.Loader.PathResolver
     runPathResolverPipe,
     runPathResolverPipe',
     evalPathResolverPipe,
-    findJuvixFiles,
+    findPackageJuvixFiles,
     mkImportTree,
   )
 where
@@ -31,6 +31,7 @@ import Juvix.Compiler.Pipeline.Root.Base (PackageType (..))
 import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.TaggedLock
 import Juvix.Data.SHA256 qualified as SHA256
+import Juvix.Extra.Files
 import Juvix.Extra.PackageFiles
 import Juvix.Extra.Paths
 import Juvix.Extra.Stdlib (ensureStdlib)
@@ -48,14 +49,14 @@ mkPackage mpackageEntry _packageRoot = do
         Nothing -> DefaultBuildDir
   maybe (readPackage _packageRoot buildDirDep) (return . (^. entryPointPackage)) mpackageEntry
 
-findJuvixFiles :: (Members '[Files] r) => Path Abs Dir -> Sem r [Path Rel File]
-findJuvixFiles pkgRoot = map (fromJust . stripProperPrefix pkgRoot) <$> walkDirRelAccum juvixAccum pkgRoot []
+findPackageJuvixFiles :: (Members '[Files] r) => Path Abs Dir -> Sem r [Path Rel File]
+findPackageJuvixFiles pkgRoot = map (fromJust . stripProperPrefix pkgRoot) <$> walkDirRelAccum juvixAccum pkgRoot []
   where
     juvixAccum :: Path Abs Dir -> [Path Rel Dir] -> [Path Rel File] -> [Path Abs File] -> Sem r ([Path Abs File], Recurse Rel)
     juvixAccum cd _ files acc = return (newJuvixFiles <> acc, RecurseFilter (\hasJuvixPackage d -> not hasJuvixPackage && not (isHiddenDirectory d)))
       where
         newJuvixFiles :: [Path Abs File]
-        newJuvixFiles = [cd <//> f | f <- files, isJuvixFile f || isJuvixMarkdownFile f]
+        newJuvixFiles = [cd <//> f | f <- files, isJuvixOrJuvixMdFile f, not (isPackageFile f)]
 
 mkPackageInfo ::
   forall r.
@@ -70,31 +71,18 @@ mkPackageInfo mpackageEntry _packageRoot pkg = do
   let _packagePackage = PackageReal (set packageDependencies deps pkg)
   depsPaths <- mapM (fmap (^. resolvedDependencyPath) . resolveDependency . mkPackageDependencyInfo pkgFile) deps
   ensureStdlib _packageRoot buildDir deps
-  files :: [Path Rel File] <- findJuvixFiles _packageRoot
+  files :: [Path Rel File] <- findPackageJuvixFiles _packageRoot
   globalPackageDescriptionAbsDir <- globalPackageDescriptionRoot
   globalPackageBaseAbsDir <- globalPackageBaseRoot
-  let _packageRelativeFiles = keepJuvixFiles (hashSet files)
+  let _packageJuvixRelativeFiles = keepJuvixFiles (hashSet files)
       _packageAvailableRoots =
         hashSet $
           globalPackageDescriptionAbsDir
             : globalPackageBaseAbsDir
             : _packageRoot
             : depsPaths
-
-  scanRes <-
-    mapError (JuvixError @ParserError) $
-      scanImports _packageRoot _packageRelativeFiles
-  _packageImports <- mapM fromScanResult scanRes
   return PackageInfo {..}
   where
-    fromScanResult :: ScanResult -> Sem r (HashSet ImportScan)
-    fromScanResult res = do
-      pathInfo <- expectedPath' (res ^. scanResultModule)
-      -- TODO consider making the wrong path another type of error
-      mapError (JuvixError @ParserError) $
-        checkModulePath (res ^. scanResultModule) pathInfo
-      return (res ^. scanResultImports)
-
     pkgFile :: Path Abs File
     pkgFile = pkg ^. packageFile
 
@@ -188,18 +176,6 @@ resolveDependency i = case i ^. packageDepdendencyInfoDependency of
               _dependencyErrorPackageFile = i ^. packageDependencyInfoPackageFile
             }
 
-scanImports ::
-  forall r.
-  (Members '[Reader ImportScanStrategy, Error ParserError, Files] r) =>
-  Path Abs Dir ->
-  HashSet (Path Rel File) ->
-  Sem r (HashMap (Path Rel File) ScanResult)
-scanImports root fileSet =
-  sequence (hashMapFromHashSet scanFile fileSet)
-  where
-    scanFile :: Path Rel File -> Sem r ScanResult
-    scanFile f = scanFileImports (root <//> f)
-
 registerPackageBase ::
   forall r.
   (Members '[Reader ImportScanStrategy, Error ParserError, TaggedLock, State ResolverState, Files] r) =>
@@ -208,12 +184,10 @@ registerPackageBase = do
   packageBaseAbsDir <- globalPackageBaseRoot
   runReader packageBaseAbsDir updatePackageBaseFiles
   packageBaseRelFiles <- relFiles packageBaseAbsDir
-  scanRes <- scanImports packageBaseAbsDir (keepJuvixFiles packageBaseRelFiles)
   let pkgInfo =
         PackageInfo
           { _packageRoot = packageBaseAbsDir,
-            _packageRelativeFiles = packageBaseRelFiles,
-            _packageImports = (^. scanResultImports) <$> scanRes,
+            _packageJuvixRelativeFiles = packageBaseRelFiles,
             _packagePackage = PackageBase,
             _packageAvailableRoots = HashSet.singleton packageBaseAbsDir
           }
@@ -418,7 +392,7 @@ mkImportTree = do
           { _importNodePackageRoot = pkg ^. packageRoot,
             _importNodeFile = f
           }
-        | f <- HashMap.keys (pkg ^. packageImports)
+        | f <- filter isJuvixOrJuvixMdFile (toList (pkg ^. packageJuvixRelativeFiles))
       ]
 
     addEdge :: forall r'. (Members '[State ImportTree] r') => ImportNode -> ImportNode -> Sem r' ()
@@ -431,12 +405,10 @@ mkImportTree = do
 
     getNodeImports ::
       forall r'.
-      (Members '[Reader (HashMap (Path Abs Dir) PackageInfo)] r') =>
+      (Members '[Reader ImportScanStrategy, Files, Error ParserError] r') =>
       ImportNode ->
       Sem r' (HashSet ImportScan)
-    getNodeImports ImportNode {..} = do
-      pkgInfo :: PackageInfo <- asks @(HashMap (Path Abs Dir) PackageInfo) (^?! at _importNodePackageRoot . _Just)
-      return (pkgInfo ^?! packageImports . at _importNodeFile . _Just)
+    getNodeImports n = (^. scanResultImports) <$> scanFileImports (n ^. importNodeAbsFile)
 
     scanNode ::
       forall r'.

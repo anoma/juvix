@@ -7,7 +7,6 @@ where
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Concrete.Translation.ImportScanner.Base
 import Juvix.Compiler.Pipeline.EntryPoint
-import Juvix.Extra.Paths.Base
 import Juvix.Prelude
 
 data PackageLike
@@ -20,11 +19,9 @@ data PackageLike
 
 data PackageInfo = PackageInfo
   { _packageRoot :: Path Abs Dir,
-    -- | Files relative to the root of the package.
-    _packageRelativeFiles :: HashSet (Path Rel File),
-    -- | All files in _packageRelativeFiles are keys in this map, even if the
-    -- mapped HashSet is empty.
-    _packageImports :: HashMap (Path Rel File) (HashSet ImportScan),
+    -- | Files relative to the root of the package. Does include all .juvix and
+    -- .juvix.md files. Note that it should not contain Package.juvix.
+    _packageJuvixRelativeFiles :: HashSet (Path Rel File),
     _packageAvailableRoots :: HashSet (Path Abs Dir),
     _packagePackage :: PackageLike
   }
@@ -33,15 +30,15 @@ data PackageInfo = PackageInfo
 makeLenses ''PackageInfo
 
 packageFiles :: PackageInfo -> [Path Abs File]
-packageFiles k = [k ^. packageRoot <//> f | f <- toList (k ^. packageRelativeFiles)]
+packageFiles k = [k ^. packageRoot <//> f | f <- toList (k ^. packageJuvixRelativeFiles)]
 
 -- | Does *not* include Package.juvix
 packageJuvixFiles :: SimpleGetter PackageInfo (HashSet (Path Rel File))
 packageJuvixFiles =
-  to $ keepJuvixFiles . (^. packageRelativeFiles)
+  to $ keepJuvixFiles . (^. packageJuvixRelativeFiles)
 
 keepJuvixFiles :: HashSet (Path Rel File) -> HashSet (Path Rel File)
-keepJuvixFiles = HashSet.filter ((/= packageFilePath) .&&. isJuvixOrJuvixMdFile)
+keepJuvixFiles = HashSet.filter isJuvixOrJuvixMdFile
 
 packageLikeName :: SimpleGetter PackageLike Text
 packageLikeName = to $ \case

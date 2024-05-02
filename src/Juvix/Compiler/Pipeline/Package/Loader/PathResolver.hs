@@ -66,37 +66,6 @@ runPackagePathResolver rootPath sem = do
       -- the _root' is not used because ResolvePath does not depend on it
       runTSimpleEff localEnv m
   where
-    scanHelperFiles ::
-      Path Abs Dir ->
-      HashSet (Path Rel File) ->
-      Sem r (HashMap (Path Rel File) (HashSet ImportScan))
-    scanHelperFiles pkgRoot relPkgFiles =
-      let getScans :: Path Rel File -> Sem r (HashSet ImportScan)
-          getScans p =
-            fmap (^. scanResultImports)
-              . mapError (JuvixError @ParserError)
-              $ scanFileImports (pkgRoot <//> p)
-       in hashMapFromHashSetM getScans relPkgFiles
-
-    scanHelperPure ::
-      Path Abs Dir ->
-      HashSet (Path Rel File) ->
-      [(Path Rel File, ByteString)] ->
-      Sem r (HashMap (Path Rel File) (HashSet ImportScan))
-    scanHelperPure pkgRoot relPkgFiles fileContents = do
-      let getScans :: Path Rel File -> Sem r (HashSet ImportScan)
-          getScans p =
-            fmap (^. scanResultImports)
-              . mapError (JuvixError @ParserError)
-              $ scanBSImports (pkgRoot <//> p) (getFile p)
-       in hashMapFromHashSetM getScans relPkgFiles
-      where
-        fileContentsMap = hashMap fileContents
-        getFile :: Path Rel File -> ByteString
-        getFile p = fromMaybe err (fileContentsMap ^. at p)
-          where
-            err = error ("impossible: " <> pack (toFilePath p) <> " not found")
-
     mkPackageInfos ::
       RootInfoDirs ->
       RootInfoFiles ->
@@ -116,13 +85,11 @@ runPackagePathResolver rootPath sem = do
         mkPkgBase :: Sem r PackageInfo
         mkPkgBase = do
           let rfiles = fs ^. rootInfoFilesPackageBase
-          imports <- scanHelperPure (ds ^. rootInfoArgPackageBaseDir) (keepJuvixFiles rfiles) packageBaseFiles
           return
             PackageInfo
               { _packageRoot = ds ^. rootInfoArgPackageBaseDir,
                 _packageAvailableRoots = hashSet [ds ^. rootInfoArgPackageBaseDir],
-                _packageRelativeFiles = rfiles,
-                _packageImports = imports,
+                _packageJuvixRelativeFiles = rfiles,
                 _packagePackage = PackageBase
               }
 
@@ -130,12 +97,10 @@ runPackagePathResolver rootPath sem = do
         mkPkgPackageType = do
           let rfiles = fs ^. rootInfoFilesPackage
               root = ds ^. rootInfoArgPackageDir
-          imports <- scanHelperPure (ds ^. rootInfoArgPackageDir) (keepJuvixFiles rfiles) packagePackageFiles
           return
             PackageInfo
               { _packageRoot = root,
-                _packageRelativeFiles = rfiles,
-                _packageImports = imports,
+                _packageJuvixRelativeFiles = rfiles,
                 _packagePackage = PackageType,
                 _packageAvailableRoots =
                   hashSet
@@ -148,14 +113,12 @@ runPackagePathResolver rootPath sem = do
         mkPkgGlobalStdlib :: Sem r PackageInfo
         mkPkgGlobalStdlib = do
           let root = ds ^. rootInfoArgGlobalStdlibDir
-          jufiles <- findJuvixFiles root
+          jufiles <- findPackageJuvixFiles root
           let rfiles = hashSet jufiles
-          imports <- scanHelperFiles root rfiles
           return
             PackageInfo
               { _packageRoot = root,
-                _packageRelativeFiles = rfiles,
-                _packageImports = imports,
+                _packageJuvixRelativeFiles = rfiles,
                 _packageAvailableRoots =
                   hashSet
                     [ ds ^. rootInfoArgPackageBaseDir,
@@ -167,12 +130,10 @@ runPackagePathResolver rootPath sem = do
         mkPackageDotJuvix :: Sem r PackageInfo
         mkPackageDotJuvix = do
           let rfiles = hashSet [packageFilePath]
-          imports <- scanHelperFiles rootPath rfiles
           return
             PackageInfo
               { _packageRoot = rootPath,
-                _packageRelativeFiles = rfiles,
-                _packageImports = imports,
+                _packageJuvixRelativeFiles = rfiles,
                 _packageAvailableRoots =
                   hashSet
                     [ ds ^. rootInfoArgPackageBaseDir,

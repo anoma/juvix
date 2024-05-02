@@ -76,6 +76,9 @@ makeLenses ''ResolverEnv
 makeLenses ''ResolvedDependency
 makeLenses ''ResolverCacheItem
 
+importNodeAbsFile :: SimpleGetter ImportNode (Path Abs File)
+importNodeAbsFile = to $ \ImportNode {..} -> _importNodePackageRoot <//> _importNodeFile
+
 allPackageInfos :: ResolverState -> HashMap (Path Abs Dir) PackageInfo
 allPackageInfos = fmap (^. resolverCacheItemPackage) . (^. resolverCache)
 
