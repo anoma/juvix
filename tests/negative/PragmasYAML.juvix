@@ -1,6 +1,6 @@
 module PragmasYAML;
 
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
 
 {-# {inline: true, unroll: 500} #-}
 main : Nat := 0;
