@@ -47,6 +47,26 @@ scanBSImports fp inputBS = do
         Just x -> return x
         Nothing -> Megaparsec.scanBSImports fp inputBS
     ImportScanStrategyFlatParse -> case FlatParse.scanBSImports fp inputBS of
-      Nothing -> error "Flatparse parser error"
+      Nothing ->
+        throw $
+          ErrFlatParseError
+            FlatParseError
+              { _flatParseErrorLoc = fileLoc
+              }
       Just r -> return r
     ImportScanStrategyMegaparsec -> Megaparsec.scanBSImports fp inputBS
+  where
+    fileLoc :: Interval
+    fileLoc =
+      Interval
+        { _intervalFile = fp,
+          _intervalStart = tmpFileLoc,
+          _intervalEnd = tmpFileLoc
+        }
+    tmpFileLoc :: FileLoc
+    tmpFileLoc =
+      FileLoc
+        { _locLine = mempty,
+          _locCol = mempty,
+          _locOffset = mempty
+        }

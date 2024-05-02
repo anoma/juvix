@@ -25,6 +25,7 @@ data ParserError
   | ErrStdinOrFile StdinOrFileError
   | ErrDanglingJudoc DanglingJudoc
   | ErrMarkdownBackend MarkdownBackendError
+  | ErrFlatParseError FlatParseError
   deriving stock (Show)
 
 instance ToGenericError ParserError where
@@ -36,6 +37,24 @@ instance ToGenericError ParserError where
     ErrStdinOrFile e -> genericError e
     ErrDanglingJudoc e -> genericError e
     ErrMarkdownBackend e -> genericError e
+    ErrFlatParseError e -> genericError e
+
+newtype FlatParseError = FlatParseError
+  { _flatParseErrorLoc :: Interval
+  }
+  deriving stock (Show)
+
+instance HasLoc FlatParseError where
+  getLoc FlatParseError {..} = _flatParseErrorLoc
+
+instance ToGenericError FlatParseError where
+  genericError e =
+    return
+      GenericError
+        { _genericErrorLoc = getLoc e,
+          _genericErrorMessage = mkAnsiText ("FlatParse parsing error" :: Text),
+          _genericErrorIntervals = [getLoc e]
+        }
 
 newtype CommonmarkError = CommonmarkError
   { _commonMarkError :: MK.ParseError
