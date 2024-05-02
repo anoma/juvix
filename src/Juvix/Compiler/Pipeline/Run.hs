@@ -10,6 +10,7 @@ import Juvix.Compiler.Concrete.Data.Scope
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoped
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as P
+import Juvix.Compiler.Concrete.Translation.FromSource.TopModuleNameChecker (runTopModuleNameChecker)
 import Juvix.Compiler.Concrete.Translation.ImportScanner (defaultImportScanStrategy)
 import Juvix.Compiler.Core.Data.Module qualified as Core
 import Juvix.Compiler.Core.Translation.FromInternal.Data qualified as Core
@@ -84,6 +85,7 @@ runIOEitherPipeline' entry a = do
     . runEvalFileEffIO
     . runReader defaultImportScanStrategy
     . runPathResolver'
+    . runTopModuleNameChecker
     . evalModuleInfoCache
     $ a
 
@@ -154,6 +156,7 @@ runReplPipelineIOEither' lockMode entry = do
       . runEvalFileEffIO
       . runReader defaultImportScanStrategy
       . runPathResolver'
+      . runTopModuleNameChecker
       . evalModuleInfoCache
       $ entrySetup defaultDependenciesConfig >> processFileToStoredCore entry
   return $ case eith of

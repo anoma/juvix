@@ -18,14 +18,14 @@ ignoreTopModuleNameChecker = interpret $ \case
   CheckModulePath {} -> return ()
 
 runTopModuleNameChecker ::
-  (Members '[PathResolver, Files, Error ParserError] r) =>
+  (Members '[PathResolver, Files, Error JuvixError] r) =>
   Sem (TopModuleNameChecker ': r) a ->
   Sem r a
 runTopModuleNameChecker = interpret $ \case
   CheckModulePath m -> checkModulePath' m
 
 checkModulePath' ::
-  (Members '[PathResolver, Files, Error ParserError] s) =>
+  (Members '[PathResolver, Files, Error JuvixError] s) =>
   TopModulePath ->
   Sem s ()
 checkModulePath' topJuvixPath = do
@@ -39,6 +39,7 @@ checkModulePath' topJuvixPath = do
 
       unless (expectedName == actualName)
         . throw
+        . JuvixError
         $ ErrWrongTopModuleNameOrphan
           WrongTopModuleNameOrphan
             { _wrongTopModuleNameOrpahnExpectedName = expectedName,
@@ -49,6 +50,7 @@ checkModulePath' topJuvixPath = do
           expectedAbsPath = (expectedRootInfo ^. rootInfoPath) <//> relPath
       unlessM (equalPaths actualPath expectedAbsPath)
         . throw
+        . JuvixError
         $ ErrWrongTopModuleName
           WrongTopModuleName
             { _wrongTopModuleNameActualName = topJuvixPath,

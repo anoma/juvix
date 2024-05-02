@@ -5,6 +5,7 @@ import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromParsed qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Concrete.Translation.FromSource.ParserResultBuilder (runParserResultBuilder)
+import Juvix.Compiler.Concrete.Translation.FromSource.TopModuleNameChecker (runTopModuleNameChecker)
 import Juvix.Compiler.Concrete.Translation.ImportScanner (defaultImportScanStrategy)
 import Juvix.Compiler.Core qualified as Core
 import Juvix.Compiler.Core.Transformation qualified as Core
@@ -167,6 +168,7 @@ compileReplInputIO fp txt = do
     . runEvalFileEffIO
     . runReader defaultImportScanStrategy
     . runPathResolverArtifacts
+    . runTopModuleNameChecker
     . evalModuleInfoCache
     $ do
       p <- parseReplInput fp txt

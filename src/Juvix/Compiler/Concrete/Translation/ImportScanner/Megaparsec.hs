@@ -9,6 +9,7 @@ import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromSource
 import Juvix.Compiler.Concrete.Translation.FromSource.Data.ParserState
 import Juvix.Compiler.Concrete.Translation.FromSource.ParserResultBuilder
+import Juvix.Compiler.Concrete.Translation.FromSource.TopModuleNameChecker
 import Juvix.Compiler.Concrete.Translation.ImportScanner.Base
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Paths
 import Juvix.Prelude
@@ -22,6 +23,7 @@ scanBSImports fp inputBS = do
   (st, errm) <-
     ignoreHighlightBuilder
       . runParserResultBuilder mempty
+      . ignoreTopModuleNameChecker
       $ runModuleParser fp (decodeUtf8 inputBS)
   m <- either throw return errm
   return

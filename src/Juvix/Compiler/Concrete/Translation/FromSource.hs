@@ -23,6 +23,7 @@ import Juvix.Compiler.Concrete.Translation.FromSource.Lexer hiding
   ( symbol,
   )
 import Juvix.Compiler.Concrete.Translation.FromSource.ParserResultBuilder
+import Juvix.Compiler.Concrete.Translation.FromSource.TopModuleNameChecker
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Data.Yaml
 import Juvix.Extra.Paths
@@ -46,7 +47,7 @@ type JudocStash = State (Maybe (Judoc 'Parsed))
 type PragmasStash = State (Maybe ParsedPragmas)
 
 fromSource ::
-  (Members '[HighlightBuilder, Files, Error JuvixError] r) =>
+  (Members '[HighlightBuilder, TopModuleNameChecker, Files, Error JuvixError] r) =>
   EntryPoint ->
   Sem r ParserResult
 fromSource e = mapError (JuvixError @ParserError) $ do
@@ -59,7 +60,7 @@ fromSource e = mapError (JuvixError @ParserError) $ do
   where
     getParsedModuleTop ::
       forall r.
-      (Members '[Files, Error ParserError, ParserResultBuilder] r) =>
+      (Members '[Files, TopModuleNameChecker, Error ParserError, ParserResultBuilder] r) =>
       Sem r (Module 'Parsed 'ModuleTop)
     getParsedModuleTop = case (e ^. entryPointStdin, e ^. entryPointModulePath) of
       (Nothing, Nothing) -> throw $ ErrStdinOrFile StdinOrFileError
@@ -75,7 +76,7 @@ fromSource e = mapError (JuvixError @ParserError) $ do
 
     goFile ::
       forall r.
-      (Members '[Files, Error ParserError, ParserResultBuilder] r) =>
+      (Members '[Files, TopModuleNameChecker, Error ParserError, ParserResultBuilder] r) =>
       Path Abs File ->
       Sem r (Module 'Parsed 'ModuleTop)
     goFile fileName = do
@@ -130,7 +131,7 @@ runReplInputParser fileName input_ = do
     Right r -> return r
 
 runModuleParser ::
-  (Members '[ParserResultBuilder, Error ParserError] r) =>
+  (Members '[ParserResultBuilder, TopModuleNameChecker, Error ParserError] r) =>
   Path Abs File ->
   Text ->
   Sem r (Either ParserError (Module 'Parsed 'ModuleTop))
@@ -296,12 +297,14 @@ topModuleDefStdin = do
   top moduleDef
 
 topModuleDef ::
-  (Members '[Error ParserError, ParserResultBuilder, PragmasStash, JudocStash] r) =>
+  (Members '[Error ParserError, TopModuleNameChecker, ParserResultBuilder, PragmasStash, JudocStash] r) =>
   ParsecS r (Module 'Parsed 'ModuleTop)
 topModuleDef = do
   space >> optional_ stashJudoc
   optional_ stashPragmas
-  top moduleDef
+  m <- top moduleDef
+  P.lift (checkModulePath (m ^. modulePath))
+  return m
 
 juvixCodeBlockParser ::
   ParsecS r Mk
