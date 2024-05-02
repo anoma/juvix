@@ -64,42 +64,6 @@ resolveTopModulePath mp = do
   (pkg, ext) <- resolvePath scan
   return (pkg ^. packageRoot, addFileExt ext relpath)
 
--- NOTE Old code
--- checkModulePath ::
---   (Members '[PathResolver, Files, Error ParserError] s) =>
---   Module 'Parsed 'ModuleTop ->
---   Sem s ()
--- checkModulePath m = do
---   let topJuvixPath :: TopModulePath = m ^. modulePath
---   pathInfo :: PathInfoTopModule <- expectedPathInfoTopModule topJuvixPath
---   let expectedRootInfo = pathInfo ^. pathInfoRootInfo
---   let actualPath = getLoc topJuvixPath ^. intervalFile
---   case expectedRootInfo ^. rootInfoKind of
---     RootKindSingleFile -> do
---       let expectedName = Text.pack . toFilePath . removeExtensions . filename $ actualPath
---           actualName = topModulePathToDottedPath topJuvixPath
-
---       unless (expectedName == actualName) $
---         throw
---           ( ErrWrongTopModuleNameOrphan
---               WrongTopModuleNameOrphan
---                 { _wrongTopModuleNameOrpahnExpectedName = expectedName,
---                   _wrongTopModuleNameOrpahnActualName = topJuvixPath
---                 }
---           )
---     RootKindPackage -> do
---       let relPath = topModulePathToRelativePath' topJuvixPath
---           expectedAbsPath = (expectedRootInfo ^. rootInfoPath) <//> relPath
---       unlessM (equalPaths actualPath expectedAbsPath) $
---         throw
---           ( ErrWrongTopModuleName
---               WrongTopModuleName
---                 { _wrongTopModuleNameActualName = topJuvixPath,
---                   _wrongTopModuleNameExpectedPath = expectedAbsPath,
---                   _wrongTopModuleNameActualPath = actualPath
---                 }
---           )
-
 checkModulePath ::
   (Members '[Error ParserError] s) =>
   ScannedTopModuleName ->

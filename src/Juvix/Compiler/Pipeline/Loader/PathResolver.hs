@@ -393,13 +393,22 @@ mkImportTree ::
   Sem r ImportTree
 mkImportTree = do
   pkgInfosTable <- getPackageInfos
+  entry <- ask
   let pkgs :: [PackageInfo] = toList pkgInfosTable
-      nodes :: [ImportNode] = concatMap packageNodes pkgs
+      allNodes :: [ImportNode] = concatMap packageNodes pkgs
+      mEntryImportNode :: Maybe ImportNode
+      mEntryImportNode = do
+        absPath <- entry ^. entryPointModulePath
+        let cond :: ImportNode -> Bool
+            cond ImportNode {..} = absPath == _importNodePackageRoot <//> _importNodeFile
+        find cond allNodes
+
+      startingNodes = maybe allNodes pure mEntryImportNode
   tree <-
-    execState (emptyImportTree nodes)
+    execState (emptyImportTree allNodes)
       . runReader pkgInfosTable
       . evalVisitEmpty scanNode
-      $ mapM_ visit nodes
+      $ mapM_ visit startingNodes
   checkImportTreeCycles tree
   return tree
   where
