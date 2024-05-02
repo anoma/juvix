@@ -34,6 +34,8 @@ topModulePathToRelativePath ext suffix joinpath mp = relFile relFilePath
     joinpath' l r
       | null l = r
       | otherwise = joinpath l r
+
+    addExt :: FilePath -> FilePath
     addExt = (<.> ext)
 
     toPath :: Symbol -> FilePath

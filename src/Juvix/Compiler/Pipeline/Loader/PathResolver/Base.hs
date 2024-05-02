@@ -64,6 +64,42 @@ resolveTopModulePath mp = do
   (pkg, ext) <- resolvePath scan
   return (pkg ^. packageRoot, addFileExt ext relpath)
 
+-- NOTE Old code
+-- checkModulePath ::
+--   (Members '[PathResolver, Files, Error ParserError] s) =>
+--   Module 'Parsed 'ModuleTop ->
+--   Sem s ()
+-- checkModulePath m = do
+--   let topJuvixPath :: TopModulePath = m ^. modulePath
+--   pathInfo :: PathInfoTopModule <- expectedPathInfoTopModule topJuvixPath
+--   let expectedRootInfo = pathInfo ^. pathInfoRootInfo
+--   let actualPath = getLoc topJuvixPath ^. intervalFile
+--   case expectedRootInfo ^. rootInfoKind of
+--     RootKindSingleFile -> do
+--       let expectedName = Text.pack . toFilePath . removeExtensions . filename $ actualPath
+--           actualName = topModulePathToDottedPath topJuvixPath
+
+--       unless (expectedName == actualName) $
+--         throw
+--           ( ErrWrongTopModuleNameOrphan
+--               WrongTopModuleNameOrphan
+--                 { _wrongTopModuleNameOrpahnExpectedName = expectedName,
+--                   _wrongTopModuleNameOrpahnActualName = topJuvixPath
+--                 }
+--           )
+--     RootKindPackage -> do
+--       let relPath = topModulePathToRelativePath' topJuvixPath
+--           expectedAbsPath = (expectedRootInfo ^. rootInfoPath) <//> relPath
+--       unlessM (equalPaths actualPath expectedAbsPath) $
+--         throw
+--           ( ErrWrongTopModuleName
+--               WrongTopModuleName
+--                 { _wrongTopModuleNameActualName = topJuvixPath,
+--                   _wrongTopModuleNameExpectedPath = expectedAbsPath,
+--                   _wrongTopModuleNameActualPath = actualPath
+--                 }
+--           )
+
 checkModulePath ::
   (Members '[Error ParserError] s) =>
   ScannedTopModuleName ->
@@ -72,22 +108,24 @@ checkModulePath ::
 checkModulePath t pathInfo = do
   let expectedRootInfo = pathInfo ^. pathInfoRootInfo
       loc = getLoc t
-      actualPath = loc ^. intervalFile
+      actualPath :: Path Abs File = loc ^. intervalFile
   case expectedRootInfo ^. rootInfoKind of
     RootKindSingleFile -> do
-      let expectedName :: String = toFilePath . removeExtensions . filename $ actualPath
-          actualName :: String = scannedTopModuleNameToDottedString t
-      unless (expectedName == actualName)
+      let expectedNameNoExts :: String = toFilePath . removeExtensions . filename $ actualPath
+          actualNameNoExts :: String = scannedTopModuleNameToDottedString t
+      unless (expectedNameNoExts == actualNameNoExts)
         . throw
         $ ErrWrongTopModuleNameOrphan
           WrongTopModuleNameOrphan
-            { _wrongTopModuleNameOrpahnExpectedName = pack expectedName,
-              _wrongTopModuleNameOrpahnActualName = WithLoc loc (pack actualName)
+            { _wrongTopModuleNameOrpahnExpectedName = pack expectedNameNoExts,
+              _wrongTopModuleNameOrpahnActualName = WithLoc loc (pack actualNameNoExts)
             }
     RootKindPackage -> do
-      let relPath = scannedTopModuleNameToRelPath t
-          expectedAbsPath = expectedRootInfo ^. rootInfoPath <//> relPath
-      unlessM (equalPaths (removeExtensions actualPath) expectedAbsPath)
+      let expectedRelPathNoExt = scannedTopModuleNameToRelPath t
+          expectedAbsPathNoExt = expectedRootInfo ^. rootInfoPath <//> expectedRelPathNoExt
+          expectedAbsPath = addFileExt FileExtJuvix expectedAbsPathNoExt
+          actualPathNoExt = removeExtensions actualPath
+      unlessM (equalPaths actualPathNoExt expectedAbsPathNoExt)
         . throw
         $ ErrWrongTopModuleName
           WrongTopModuleName
