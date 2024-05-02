@@ -472,7 +472,7 @@ resolvePath' scan = do
 
 isModuleOrphan ::
   (Members '[Files] r) =>
-  ScannedTopModuleName ->
+  TopModulePath ->
   Sem r Bool
 isModuleOrphan topJuvixPath = do
   let actualPath = getLoc topJuvixPath ^. intervalFile
@@ -490,7 +490,7 @@ isModuleOrphan topJuvixPath = do
 
 expectedPath' ::
   (Members '[Reader ResolverEnv, Files] r) =>
-  ScannedTopModuleName ->
+  TopModulePath ->
   Sem r PathInfoTopModule
 expectedPath' m = do
   let _pathInfoTopModule = m

@@ -60,7 +60,7 @@ runPackagePathResolver rootPath sem = do
           _pathInfoRootInfo =
             --  A Package file is a member of a package by definition.
             fromMaybe (error "runPackagePathResolver: expected root info") $
-              mkRootInfo' (scannedTopModuleNameToRelPath m)
+              mkRootInfo' (topModulePathToRelativePath' m)
       return PathInfoTopModule {..}
     WithResolverRoot _root' m ->
       -- the _root' is not used because ResolvePath does not depend on it
