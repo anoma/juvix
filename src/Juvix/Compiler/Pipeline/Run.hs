@@ -21,6 +21,7 @@ import Juvix.Compiler.Pipeline.Artifacts.PathResolver
 import Juvix.Compiler.Pipeline.Driver
 import Juvix.Compiler.Pipeline.Loader.PathResolver
 import Juvix.Compiler.Pipeline.Package.Loader.Error
+import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
 import Juvix.Compiler.Pipeline.Package.Loader.PathResolver
 import Juvix.Compiler.Pipeline.Setup
@@ -59,6 +60,28 @@ runIOEitherPipeline ::
   Sem r (Either JuvixError (ResolverState, a))
 runIOEitherPipeline entry = fmap snd . runIOEitherPipeline' entry
 
+-- | Runs the correct implementation of the PathResolver according to the input
+-- file
+runPathResolverInput ::
+  ( Members
+      '[ TaggedLock,
+         Files,
+         Reader EntryPoint,
+         Error DependencyError,
+         GitClone,
+         Error JuvixError,
+         EvalFileEff
+       ]
+      r
+  ) =>
+  Sem (PathResolver ': r) a ->
+  Sem r (ResolverState, a)
+runPathResolverInput m = do
+  entry <- ask
+  if
+      | mainIsPackageFile entry -> runPackagePathResolver' (entry ^. entryPointResolverRoot) m
+      | otherwise -> runPathResolverPipe m
+
 runIOEitherPipeline' ::
   forall a r.
   (Members '[TaggedLock, EmbedIO] r) =>
@@ -67,9 +90,6 @@ runIOEitherPipeline' ::
   Sem r (HighlightInput, (Either JuvixError (ResolverState, a)))
 runIOEitherPipeline' entry a = do
   let hasInternet = not (entry ^. entryPointOffline)
-      runPathResolver'
-        | mainIsPackageFile entry = runPackagePathResolver' (entry ^. entryPointResolverRoot)
-        | otherwise = runPathResolverPipe
   evalInternet hasInternet
     . runHighlightBuilder
     . runJuvixError
@@ -82,7 +102,7 @@ runIOEitherPipeline' entry a = do
     . mapError (JuvixError @DependencyError)
     . mapError (JuvixError @PackageLoaderError)
     . runEvalFileEffIO
-    . runPathResolver'
+    . runPathResolverInput
     . runTopModuleNameChecker
     . evalModuleInfoCache
     $ a
