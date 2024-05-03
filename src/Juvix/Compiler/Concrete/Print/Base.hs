@@ -16,7 +16,6 @@ import Juvix.Compiler.Concrete.Extra qualified as Concrete
 import Juvix.Compiler.Concrete.Keywords qualified as Kw
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty.Options
-import Juvix.Compiler.Concrete.Translation.ImportScanner.Base
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Data
 import Juvix.Compiler.Store.Scoped.Language (Alias, ModuleSymbolEntry, PreSymbolEntry (..), ScopedModule, SymbolEntry, aliasName, moduleEntry, scopedModuleName, symbolEntry)
 import Juvix.Data.Ape.Base
@@ -1054,9 +1053,6 @@ instance (SingI s) => PrettyPrint (UsingItem s) where
         sym' = ppSymbolType (ui ^. usingSymbol)
         kwmodule = ppCode <$> (ui ^. usingModuleKw)
     kwmodule <?+> (sym' <+?> kwAs' <+?> alias')
-
-instance PrettyPrint ScannedTopModuleName where
-  ppCode t = morpheme (getLoc t) (annotate (AnnKind KNameTopModule) (pretty t))
 
 instance PrettyPrint ImportTreeStats where
   ppCode ImportTreeStats {..} = do

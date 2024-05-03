@@ -20,24 +20,15 @@ scanBSImports ::
   ByteString ->
   Sem r ScanResult
 scanBSImports fp inputBS = do
-  (st, errm) <-
+  st <-
     ignoreHighlightBuilder
-      . runParserResultBuilder mempty
+      . execParserResultBuilder mempty
       . ignoreTopModuleNameChecker
       $ runModuleParser fp (decodeUtf8 inputBS)
-  m <- either throw return errm
   return
     ScanResult
-      { _scanResultImports = hashSet . map fromImport $ st ^. parserStateImports,
-        _scanResultModule = fromTopModulePath (m ^. modulePath)
+      { _scanResultImports = hashSet . map fromImport $ st ^. parserStateImports
       }
   where
-    fromTopModulePath :: TopModulePath -> ScannedTopModuleName
-    fromTopModulePath t =
-      ScannedTopModuleName
-        { _scannedTopModuleNameParts = unpack <$> topModulePathParts t,
-          _scannedTopModuleLoc = getLoc t
-        }
-
     fromImport :: Import 'Parsed -> ImportScan
     fromImport i = topModulePathToImportScan (i ^. importModulePath)

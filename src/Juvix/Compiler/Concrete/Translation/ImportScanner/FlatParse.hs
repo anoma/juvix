@@ -41,10 +41,8 @@ scanner fp bs = do
             ..
           }
 
-    spansToLocs :: ((NonEmpty String, Span), [ImportScanParsed]) -> ScanResult
-    spansToLocs ((_scannedTopModuleNameParts, sp1), imports) = run . runInputList allFileLocs $ do
-      _scannedTopModuleLoc <- getInterval
-      let _scanResultModule = ScannedTopModuleName {..}
+    spansToLocs :: [ImportScanParsed] -> ScanResult
+    spansToLocs imports = run . runInputList allFileLocs $ do
       _scanResultImports <- fmap hashSet . forM imports $ \(imp :: ImportScanParsed) -> do
         loc <- getInterval
         return (set importLoc loc imp)
@@ -57,11 +55,8 @@ scanner fp bs = do
                 _locCol = Pos (fromIntegral c),
                 _locOffset = Pos (fromIntegral p)
               }
-            | (FP.Pos p, (l, c)) <- zipExact allPositions (posLineCols bs allPositions)
+            | (FP.Pos p, (l, c)) <- zipExact importsPositions (posLineCols bs importsPositions)
           ]
-
-        allPositions :: [FP.Pos]
-        allPositions = spanToPos sp1 ++ importsPositions
 
         importsPositions :: [FP.Pos]
         importsPositions = concatMap spanToPos importsSpans
@@ -72,13 +67,12 @@ scanner fp bs = do
     spanToPos :: Span -> [FP.Pos]
     spanToPos (Span l r) = [l, r]
 
-pPreScanResult :: Parser e ((NonEmpty String, Span), [ImportScanParsed])
+pPreScanResult :: Parser e [ImportScanParsed]
 pPreScanResult = do
   whiteSpaceAndComments
-  tm <- pTopModuleName
   imports <- mapMaybe getImport <$> many pToken
   eof
-  return (tm, imports)
+  return imports
   where
     getImport :: Token -> Maybe ImportScanParsed
     getImport = \case
@@ -96,14 +90,6 @@ dottedIdentifier = nonEmpty' <$> sepBy1 bareIdentifier dot
   where
     dot :: Parser e ()
     dot = $(char '.')
-
-pTopModuleName :: Parser e (NonEmpty String, Span)
-pTopModuleName = lexeme (withSpan helper (curry return))
-  where
-    helper :: Parser e (NonEmpty String)
-    helper = do
-      lexeme $(string Str.module_)
-      dottedIdentifier
 
 pImport :: Parser e ImportScanParsed
 pImport = do

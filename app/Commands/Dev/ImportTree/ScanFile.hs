@@ -13,7 +13,6 @@ runCommand ScanFileOptions {..} =
     . runReader _scanFileStrategy
     $ do
       scanRes <- fromAppPathFile _scanFileFile >>= scanFileImports
-      renderStdOut (prettyText (scanRes ^. scanResultModule))
       forM_ (scanRes ^. scanResultImports) $ \impor -> do
         renderStdOut (prettyText impor)
         newline
