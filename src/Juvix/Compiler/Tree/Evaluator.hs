@@ -75,6 +75,7 @@ hEval hout tab = eval' [] mempty
                 OpTrace -> goTrace v
                 OpFail -> goFail v
                 OpAnomaGet -> evalError "Unsupported op: OpAnomaGet"
+                OpAnomaEncode -> evalError "Unsupported op: OpAnomaEncode"
 
         goFail :: Value -> Value
         goFail v = evalError ("failure: " <> printValue tab v)

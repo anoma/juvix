@@ -67,6 +67,7 @@ computeNodeTypeInfo md = umapL go
             _ -> error "incorrect trace builtin application"
           OpFail -> Info.getNodeType node
           OpAnomaGet -> Info.getNodeType node
+          OpAnomaEncode -> Info.getNodeType node
           OpPoseidonHash -> case _builtinAppArgs of
             [arg] -> Info.getNodeType arg
             _ -> error "incorrect poseidon builtin application"

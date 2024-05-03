@@ -20,3 +20,4 @@ stdlibPath = \case
   StdlibLe -> [nock| [9 84 0 31] |]
   StdlibLt -> [nock| [9 343 0 31] |]
   StdlibPow2 -> [nock| [9 4 0 3] |]
+  StdlibEncode -> [nock| [9 22 0 1] |]

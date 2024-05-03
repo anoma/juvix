@@ -17,3 +17,16 @@ registerAnomaGet f = do
     ((ftype ==% (u <>--> u <>--> keyT --> valueT)) freeVars)
     (error "anomaGet must be of type {Value Key : Type} -> Key -> Value")
   registerBuiltin BuiltinAnomaGet (f ^. axiomName)
+
+registerAnomaEncode :: (Members '[Builtins, NameIdGen] r) => AxiomDef -> Sem r ()
+registerAnomaEncode f = do
+  let ftype = f ^. axiomType
+      u = ExpressionUniverse smallUniverseNoLoc
+      l = getLoc f
+  encodeT <- freshVar l "encodeT"
+  nat <- getBuiltinName (getLoc f) BuiltinNat
+  let freeVars = HashSet.fromList [encodeT]
+  unless
+    ((ftype ==% (u <>--> encodeT --> nat)) freeVars)
+    (error "anomaEncode must be of type {A : Type} -> A -> Nat")
+  registerBuiltin BuiltinAnomaEncode (f ^. axiomName)

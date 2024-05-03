@@ -426,6 +426,7 @@ compile = \case
         Tree.OpFail -> return crash
         Tree.OpTrace -> goTrace arg
         Tree.OpAnomaGet -> goAnomaGet arg
+        Tree.OpAnomaEncode -> goAnomaEncode arg
 
     goPrimUnop :: Tree.UnaryOp -> Term Natural -> Term Natural
     goPrimUnop op arg = case op of
@@ -441,6 +442,9 @@ compile = \case
     goAnomaGet key = do
       let arg = remakeList [getFieldInSubject AnomaGetOrder, key]
       return (OpScry # (OpQuote # nockNilTagged "OpScry-typehint") # arg)
+
+    goAnomaEncode :: Term Natural -> Sem r (Term Natural)
+    goAnomaEncode arg = return (callStdlib StdlibEncode [arg])
 
     goTrace :: Term Natural -> Sem r (Term Natural)
     goTrace arg = do

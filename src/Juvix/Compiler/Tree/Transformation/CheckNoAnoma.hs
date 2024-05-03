@@ -11,13 +11,17 @@ checkNoAnoma = walkT checkNode
     checkNode :: Symbol -> Node -> Sem r ()
     checkNode _ = \case
       Unop NodeUnop {..} -> case _nodeUnopOpcode of
-        OpAnomaGet ->
-          throw
-            TreeError
-              { _treeErrorMsg = "OpAnomaGet is unsupported",
-                _treeErrorLoc = _nodeUnopInfo ^. nodeInfoLocation
-              }
+        OpAnomaGet -> unsupportedErr "OpAnomaGet"
+        OpAnomaEncode -> unsupportedErr "OpAnomaEncode"
         OpFail -> return ()
         OpTrace -> return ()
         PrimUnop {} -> return ()
+        where
+          unsupportedErr :: Text -> Sem r ()
+          unsupportedErr opName =
+            throw
+              TreeError
+                { _treeErrorMsg = opName <> " is unsupported",
+                  _treeErrorLoc = _nodeUnopInfo ^. nodeInfoLocation
+                }
       _ -> return ()
