@@ -36,7 +36,7 @@ runDependencyResolver = runProvider_ helper
                   _resolvedDependencyDependency = i ^. packageDepdendencyInfoDependency
                 }
           DependencyGit g -> do
-            let r = rootBuildDir (env ^. envProjectRoot)
+            let r = rootBuildDir (env ^. envInitialRoot)
             gitCacheDir <- globalGitCache
             let cloneRelDir :: Path Rel Dir
                 cloneRelDir = mkSafeDir (g ^. gitDependencyUrl)

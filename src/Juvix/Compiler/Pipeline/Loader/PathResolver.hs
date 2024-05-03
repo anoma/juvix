@@ -203,7 +203,7 @@ addRootDependency conf e root = do
   resolvedDependency <- resolveDependency d
   checkRemoteDependency resolvedDependency
   let p = resolvedDependency ^. resolvedDependencyPath
-  withEnvProjectRoot p $ do
+  withEnvInitialRoot p $ do
     pkg <- mkPackage (Just e) p
     shouldUpdateLockfile' <- shouldUpdateLockfile pkg
     when shouldUpdateLockfile' setShouldUpdateLockfile
@@ -406,7 +406,7 @@ runPathResolver2 st topEnv arg = do
               env' =
                 ResolverEnv
                   { _envRoot = root',
-                    _envProjectRoot = root',
+                    _envInitialRoot = root',
                     _envLockfileInfo = Nothing,
                     _envSingleFile
                   }
@@ -430,7 +430,7 @@ runPathResolver' st root x = do
       env =
         ResolverEnv
           { _envRoot = root,
-            _envProjectRoot = root,
+            _envInitialRoot = root,
             _envLockfileInfo = Nothing,
             _envSingleFile
           }
