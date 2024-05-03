@@ -81,6 +81,7 @@ runIOEitherPipeline' entry a = do
     . mapError (JuvixError @DependencyError)
     . mapError (JuvixError @PackageLoaderError)
     . runEvalFileEffIO
+    . runDependencyResolver
     . runPathResolver'
     . evalModuleInfoCache
     $ a
@@ -150,6 +151,7 @@ runReplPipelineIOEither' lockMode entry = do
       . mapError (JuvixError @DependencyError)
       . mapError (JuvixError @PackageLoaderError)
       . runEvalFileEffIO
+      . runDependencyResolver
       . runPathResolver'
       . evalModuleInfoCache
       $ entrySetup defaultDependenciesConfig >> processFileToStoredCore entry

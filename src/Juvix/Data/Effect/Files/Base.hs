@@ -41,6 +41,7 @@ data Files :: Effect where
   RemoveFile' :: Path Abs File -> Files m ()
   RenameFile' :: Path Abs File -> Path Abs File -> Files m ()
   CopyFile' :: Path Abs File -> Path Abs File -> Files m ()
+  CopyDirectory :: Path Abs Dir -> Path Abs Dir -> Files m ()
   JuvixConfigDir :: Files m (Path Abs Dir)
   CanonicalDir :: Path Abs Dir -> Prepath Dir -> Files m (Path Abs Dir)
   NormalizeDir :: Path b Dir -> Files m (Path Abs Dir)

@@ -866,7 +866,7 @@ tests:
         # compile project
         juvix --offline compile native HelloWorld.juvix
     stderr:
-      contains: dep1
+      contains: Failed to obtain remote dependencies
     stdout:
       matches:
         # compile should not attempt to clone the dependency
@@ -905,6 +905,9 @@ tests:
         mkdir $temp/base
         cd $temp/base
 
+        mkdir $temp/config
+        export XDG_CONFIG_HOME=$temp/config
+
         cat <<-EOF > juvix.yaml
         name: HelloWorld
         main: HelloWorld.juvix
@@ -931,7 +934,7 @@ tests:
         juvix compile native HelloWorld.juvix
 
         # corrupt the clone
-        rm -rf ./.juvix-build/deps/dep1/.git
+        find $XDG_CONFIG_HOME -type d -name '.git' -exec rm -rf {} +
 
         # compile project
         juvix compile native HelloWorld.juvix
@@ -1049,14 +1052,14 @@ tests:
         git commit -m "commit2"
 
         cd $temp/base
-        juvix clean
+        juvix clean --global
         juvix compile native HelloWorld.juvix
         ./HelloWorld
 
         # Update the Package file and recompile
         # it should use the latest commit
         echo "-- comment" >> Package.juvix
-        juvix clean
+        juvix clean --global
         juvix compile native HelloWorld.juvix
         ./HelloWorld
 
