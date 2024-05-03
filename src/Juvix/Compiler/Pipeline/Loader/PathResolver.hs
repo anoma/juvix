@@ -361,18 +361,20 @@ checkImportTreeCycles tree = do
       AcyclicSCC {} -> Nothing
       CyclicSCC l -> Just (nonEmpty' l)
 
+-- | If an entry file is given, it scans imports reachable from that file,
+-- otherwise it scans all files in all packages
 mkImportTree ::
   forall r.
-  (Members '[Reader ImportScanStrategy, Reader EntryPoint, Error ParserError, Error ScoperError, PathResolver, Files] r) =>
+  (Members '[Reader ImportScanStrategy, Error ParserError, Error ScoperError, PathResolver, Files] r) =>
+  Maybe (Path Abs File) ->
   Sem r ImportTree
-mkImportTree = do
+mkImportTree mentrypointModulePath = do
   pkgInfosTable <- getPackageInfos
-  entry <- ask
   let pkgs :: [PackageInfo] = toList pkgInfosTable
       allNodes :: [ImportNode] = concatMap packageNodes pkgs
       mEntryImportNode :: Maybe ImportNode
       mEntryImportNode = do
-        absPath <- entry ^. entryPointModulePath
+        absPath <- mentrypointModulePath
         let cond :: ImportNode -> Bool
             cond ImportNode {..} = absPath == _importNodePackageRoot <//> _importNodeFile
         find cond allNodes
