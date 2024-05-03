@@ -2,7 +2,6 @@ module Juvix.Compiler.Pipeline.Package.Loader.PathResolver where
 
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Concrete hiding (Symbol)
-import Juvix.Compiler.Concrete.Translation.ImportScanner
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Pipeline.Loader.PathResolver
@@ -32,7 +31,7 @@ makeLenses ''RootInfoFiles
 -- package and global standard library (currently under global-package/.juvix-build)
 runPackagePathResolver ::
   forall r a.
-  (Members '[Reader ImportScanStrategy, TaggedLock, Error JuvixError, Files, EvalFileEff, Reader EntryPoint] r) =>
+  (Members '[TaggedLock, Error JuvixError, Files, EvalFileEff, Reader EntryPoint] r) =>
   Path Abs Dir ->
   Sem (PathResolver ': r) a ->
   Sem r a
@@ -181,7 +180,7 @@ runPackagePathResolver rootPath sem = do
             }
 
 runPackagePathResolver' ::
-  (Members '[Reader ImportScanStrategy, TaggedLock, Error JuvixError, Files, EvalFileEff, Reader EntryPoint] r) =>
+  (Members '[TaggedLock, Error JuvixError, Files, EvalFileEff, Reader EntryPoint] r) =>
   Path Abs Dir ->
   Sem (PathResolver ': r) a ->
   Sem r (ResolverState, a)
@@ -189,5 +188,5 @@ runPackagePathResolver' root eff = do
   res <- runPackagePathResolver root eff
   return (iniResolverState, res)
 
-runPackagePathResolver'' :: (Members '[Reader ImportScanStrategy, Reader EntryPoint, TaggedLock, Error JuvixError, Files, EvalFileEff] r) => Path Abs Dir -> ResolverState -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
+runPackagePathResolver'' :: (Members '[Reader EntryPoint, TaggedLock, Error JuvixError, Files, EvalFileEff] r) => Path Abs Dir -> ResolverState -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
 runPackagePathResolver'' root _ eff = runPackagePathResolver' root eff
