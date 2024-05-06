@@ -83,6 +83,7 @@ re cwd = interpretTop $ \case
   RemoveFile' p -> removeFileHelper p
   RenameFile' p1 p2 -> renameFileHelper p1 p2
   CopyFile' p1 p2 -> copyFileHelper p1 p2
+  CopyDirectory p1 p2 -> copyDirectoryHelper p1 p2
   JuvixConfigDir -> return juvixConfigDirPure
   CanonicalDir root d -> return (canonicalDirPure root d)
   NormalizeDir p -> return (absDir (cwd' </> toFilePath p))
@@ -192,6 +193,13 @@ copyFileHelper :: (Members '[State FS] r) => Path Abs File -> Path Abs File -> S
 copyFileHelper fromPath toPath = do
   fromContents <- lookupFile' fromPath
   writeFileHelper toPath fromContents
+
+copyDirectoryHelper :: (Members '[State FS] r) => Path Abs Dir -> Path Abs Dir -> Sem r ()
+copyDirectoryHelper fromPath toPath = do
+  fromNode <- lookupDir' fromPath
+  ensureDirHelper toPath
+  forM_ (HashMap.keys (fromNode ^. dirFiles)) (\p -> copyFileHelper (fromPath <//> p) (toPath <//> p))
+  forM_ (HashMap.keys (fromNode ^. dirDirs)) (\p -> copyDirectoryHelper (fromPath <//> p) (toPath <//> p))
 
 lookupDir :: (Members '[State FS] r) => Path Abs Dir -> Sem r (Maybe FSNode)
 lookupDir p = do

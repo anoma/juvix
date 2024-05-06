@@ -18,6 +18,11 @@ import Juvix.Prelude.Path
 equalPaths :: Path Abs File -> Path Abs File -> Sem r Bool
 equalPaths a b = return (a == b)
 
+replaceDirectory :: (Member Files r) => Path Abs Dir -> Path Abs Dir -> Sem r ()
+replaceDirectory source target = do
+  whenM (directoryExists' target) (removeDirectoryRecursive' target)
+  copyDirectory source target
+
 walkDirRelAccum ::
   forall acc r.
   (Member Files r) =>
@@ -115,3 +120,6 @@ globalPackageDescriptionRoot = (<//> $(mkRelDir "package")) <$> juvixConfigDir
 
 globalPackageBaseRoot :: (Members '[Files] r) => Sem r (Path Abs Dir)
 globalPackageBaseRoot = (<//> $(mkRelDir "package-base")) <$> juvixConfigDir
+
+globalGitCache :: (Members '[Files] r) => Sem r (Path Abs Dir)
+globalGitCache = (<//> $(mkRelDir "git-cache")) <$> juvixConfigDir

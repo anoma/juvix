@@ -67,6 +67,7 @@ runPathResolverInput ::
       '[ TaggedLock,
          Files,
          Reader EntryPoint,
+         DependencyResolver,
          Error DependencyError,
          GitClone,
          Error JuvixError,
@@ -102,6 +103,7 @@ runIOEitherPipeline' entry a = do
     . mapError (JuvixError @DependencyError)
     . mapError (JuvixError @PackageLoaderError)
     . runEvalFileEffIO
+    . runDependencyResolver
     . runPathResolverInput
     . runTopModuleNameChecker
     . evalModuleInfoCache
@@ -172,6 +174,7 @@ runReplPipelineIOEither' lockMode entry = do
       . mapError (JuvixError @DependencyError)
       . mapError (JuvixError @PackageLoaderError)
       . runEvalFileEffIO
+      . runDependencyResolver
       . runPathResolver'
       . runTopModuleNameChecker
       . evalModuleInfoCache

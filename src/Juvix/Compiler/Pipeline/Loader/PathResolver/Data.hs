@@ -8,7 +8,10 @@ import Juvix.Prelude
 import Juvix.Prelude.Pretty
 
 data ResolverEnv = ResolverEnv
-  { _envRoot :: Path Abs Dir,
+  { -- | The root path of the current project being resolved
+    _envRoot :: Path Abs Dir,
+    -- | The root path of the initial project (i.e the first project considered in the resolution)
+    _envInitialRoot :: Path Abs Dir,
     -- | The path of the input file *if* we are using the global project
     _envSingleFile :: Maybe (Path Abs File),
     _envLockfileInfo :: Maybe LockfileInfo
@@ -107,6 +110,9 @@ checkRemoteDependency d = case d ^. resolvedDependencyDependency of
 
 withEnvRoot :: (Members '[Reader ResolverEnv] r) => Path Abs Dir -> Sem r a -> Sem r a
 withEnvRoot root' = local (set envRoot root')
+
+withEnvInitialRoot :: (Members '[Reader ResolverEnv] r) => Path Abs Dir -> Sem r a -> Sem r a
+withEnvInitialRoot projectRoot = local (set envInitialRoot projectRoot) . local (set envRoot projectRoot)
 
 withLockfile :: (Members '[Reader ResolverEnv] r) => LockfileInfo -> Sem r a -> Sem r a
 withLockfile f = local (set envLockfileInfo (Just f))
