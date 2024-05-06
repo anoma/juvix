@@ -92,6 +92,7 @@ dependencies:
   - singletons == 3.0.*
   - singletons-base == 3.3.*
   - singletons-th == 3.3.*
+  - stm == 2.5.*
   - Stream == 0.4.*
   - string-interpolate == 0.3.*
   - template-haskell == 2.21.*
