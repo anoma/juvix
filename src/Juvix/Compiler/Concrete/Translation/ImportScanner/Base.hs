@@ -28,8 +28,12 @@ instance HasLoc ImportScan where
   getLoc = (^. importLoc)
 
 instance Pretty (ImportScan' a) where
+  pretty :: ImportScan' a -> Doc ann
   pretty s =
     Str.import_ <+> unAnnotate (importScanPrettyName s)
+
+importScanPretty :: ImportScan' a -> Doc CodeAnn
+importScanPretty s = kwImport <+> importScanPrettyName s
 
 importScanPrettyName :: ImportScan' a -> Doc CodeAnn
 importScanPrettyName ImportScan {..} =

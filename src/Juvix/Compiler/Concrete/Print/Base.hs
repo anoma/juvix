@@ -16,6 +16,7 @@ import Juvix.Compiler.Concrete.Extra qualified as Concrete
 import Juvix.Compiler.Concrete.Keywords qualified as Kw
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty.Options
+import Juvix.Compiler.Concrete.Translation.ImportScanner.Base
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Data
 import Juvix.Compiler.Store.Scoped.Language (Alias, ModuleSymbolEntry, PreSymbolEntry (..), ScopedModule, SymbolEntry, aliasName, moduleEntry, scopedModuleName, symbolEntry)
 import Juvix.Data.Ape.Base
@@ -1110,6 +1111,9 @@ instance PrettyPrint ImportTree where
                         | from :: ImportNode <- nodesInRoot
                       ]
           ]
+
+instance PrettyPrint (ImportScan' a) where
+  ppCode = noLoc . importScanPretty
 
 instance (SingI s) => PrettyPrint (Import s) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => Import s -> Sem r ()

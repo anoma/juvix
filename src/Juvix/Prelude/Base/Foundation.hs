@@ -636,3 +636,14 @@ readFile = liftIO . Utf8.readFile . toFilePath
 writeFileEnsureLn :: (MonadIO m) => Path Abs File -> Text -> m ()
 writeFileEnsureLn p = liftIO . Utf8.writeFile (toFilePath p)
 {-# INLINE writeFileEnsureLn #-}
+
+-- | [a, b, c] -> [(a, b), (b, c), (c, a)]
+zipWithNextLoop :: forall a. NonEmpty a -> NonEmpty (a, a)
+zipWithNextLoop l = NonEmpty.reverse (go [] l)
+  where
+    h = head l
+
+    go :: [(a, a)] -> NonEmpty a -> NonEmpty (a, a)
+    go acc = \case
+      lastA :| [] -> (lastA, h) :| acc
+      x :| y : as -> go ((x, y) : acc) (y :| as)

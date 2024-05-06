@@ -350,12 +350,33 @@ checkImportTreeCycles tree = do
         stronglyConnComp
           [ (node, node, toList v) | (node, v) <- HashMap.toList (tree ^. importTree)
           ]
-  whenJust (firstJust getCycle sccs) $ \cyc ->
+  whenJust (firstJust getCycle sccs) $ \(cyc :: NonEmpty ImportNode) ->
     throw
-      . ErrImportCycle
-      . ImportCycle
-      $ error ("TODO: proper error. Cycle found: " <> show cyc)
+      . ErrImportCycleNew
+      . ImportCycleNew
+      $ getEdges cyc
   where
+    getEdges :: NonEmpty ImportNode -> NonEmpty ImportScan
+    getEdges = fmap (uncurry getEdge) . zipWithNextLoop
+
+    getEdge :: ImportNode -> ImportNode -> ImportScan
+    getEdge fromN toN = fromMaybe unexpected $ do
+      edges <- tree ^. importTreeEdges . at fromN
+      let rel :: Path Rel File = removeExtensions (toN ^. importNodeFile)
+          cond :: ImportScan -> Bool
+          cond = (== rel) . importScanToRelPath
+      find cond edges
+      where
+        unexpected =
+          error $
+            "Impossible: Could not find edge between\n"
+              <> prettyText fromN
+              <> "\nand\n"
+              <> prettyText toN
+              <> "\n"
+              <> "Available Edges:\n"
+              <> prettyText (toList (tree ^. importTreeEdges . at fromN . _Just))
+
     getCycle :: SCC ImportNode -> Maybe (NonEmpty ImportNode)
     getCycle = \case
       AcyclicSCC {} -> Nothing
@@ -397,10 +418,11 @@ mkImportTree mentrypointModulePath = do
         | f <- filter isJuvixOrJuvixMdFile (toList (pkg ^. packageJuvixRelativeFiles))
       ]
 
-    addEdge :: forall r'. (Members '[State ImportTree] r') => ImportNode -> ImportNode -> Sem r' ()
-    addEdge fromNode toNode = do
+    addEdge :: forall r'. (Members '[State ImportTree] r') => ImportScan -> ImportNode -> ImportNode -> Sem r' ()
+    addEdge importScan fromNode toNode = do
       modify (over importTree (insertHelper fromNode toNode))
       modify (over importTreeReverse (insertHelper toNode fromNode))
+      modify (over importTreeEdges (insertHelper fromNode importScan))
       where
         insertHelper :: (Hashable k, Hashable v) => k -> v -> HashMap k (HashSet v) -> HashMap k (HashSet v)
         insertHelper k v = over (at k) (Just . maybe (HashSet.singleton v) (HashSet.insert v))
@@ -418,9 +440,10 @@ mkImportTree mentrypointModulePath = do
       ImportNode ->
       Sem r' ()
     scanNode fromNode = do
-      imports :: [ImportNode] <- getNodeImports fromNode >>= mapM resolveImportScan . toList
-      forM_ imports $ \toNode -> do
-        addEdge fromNode toNode
+      scans <- toList <$> getNodeImports fromNode
+      imports :: [ImportNode] <- mapM resolveImportScan scans
+      forM_ (zipExact scans imports) $ \(importscan, toNode) -> do
+        addEdge importscan fromNode toNode
         withResolverRoot (toNode ^. importNodePackageRoot) (visit toNode)
 
     resolveImportScan :: forall r'. (Members '[PathResolver] r') => ImportScan -> Sem r' ImportNode

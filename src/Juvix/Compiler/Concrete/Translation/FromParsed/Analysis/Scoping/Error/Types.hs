@@ -13,6 +13,7 @@ import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty.Options (Options, fromGenericOptions)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Pretty
+import Juvix.Compiler.Concrete.Translation.ImportScanner.Base
 import Juvix.Compiler.Store.Scoped.Language (FixitySymbolEntry, ModuleSymbolEntry, PreSymbolEntry, ScopedModule)
 import Juvix.Data.CodeAnn
 import Juvix.Prelude
@@ -95,6 +96,44 @@ instance ToGenericError InfixErrorP where
               <> indent' (ppCode opts' _infixErrorAtomsP)
               <> line
               <> "Perhaps you forgot parentheses around a pattern?"
+
+newtype ImportCycleNew = ImportCycleNew
+  { -- | If we have [a, b, c] it means that a import b imports c imports a.
+    _importCycleImportsNew :: NonEmpty ImportScan
+  }
+  deriving stock (Show)
+
+instance ToGenericError ImportCycleNew where
+  genericError ImportCycleNew {..} = ask >>= generr
+    where
+      generr opts =
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = prettyError msg,
+              _genericErrorIntervals = [i]
+            }
+        where
+          opts' = fromGenericOptions opts
+          h = head _importCycleImportsNew
+          i = getLoc h
+          msg =
+            "There is an import cycle:"
+              <> line
+              <> ( indent'
+                     . vsep
+                     . intersperse "⇓"
+                     . map pp
+                     . toList
+                     . tie
+                     $ _importCycleImportsNew
+                 )
+
+          pp :: ImportScan -> Doc Ann
+          pp t = ppCode opts' t <+> parens ("at" <+> pretty (getLoc t))
+
+          tie :: NonEmpty a -> NonEmpty a
+          tie x = x <> pure (NonEmpty.head x)
 
 newtype ImportCycle = ImportCycle
   { -- | If we have [a, b, c] it means that a import b imports c imports a.
