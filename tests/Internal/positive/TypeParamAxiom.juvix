@@ -1,0 +1,12 @@
+module TypeParamAxiom;
+
+import Stdlib.Data.Nat open;
+
+axiom X : Type;
+axiom B : Type -> Type;
+
+type A := mkA {
+  a : B X;
+};
+
+main : Nat := 0;
