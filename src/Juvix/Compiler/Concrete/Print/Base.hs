@@ -342,6 +342,7 @@ instance (SingI s) => PrettyPrint (ExpressionAtom s) where
     AtomLet lb -> ppCode lb
     AtomCase c -> ppCode c
     AtomNewCase c -> ppCode c
+    AtomIf c -> ppCode c
     AtomList l -> ppCode l
     AtomUniverse uni -> ppCode uni
     AtomRecordUpdate u -> ppCode u
@@ -545,6 +546,23 @@ instance (SingI s) => PrettyPrint (Case s) where
             | singleBranch = Nothing
             | otherwise = Just (ppCode (b ^. caseBranchPipe . unIrrelevant))
 
+instance (SingI s) => PrettyPrint (If s) where
+  ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => If s -> Sem r ()
+  ppCode If {..} = do
+    ppCode _ifKw <+> blockIndent (vsepHard ((ppIfBranch <$> _ifBranches) <> nonEmpty' [ppIfBranchElse _ifBranchElse]))
+    where
+      ppIfBranch :: IfBranch s -> Sem r ()
+      ppIfBranch b = pipeHelper <+> ppCode b
+        where
+          pipeHelper :: Sem r ()
+          pipeHelper = ppCode (b ^. ifBranchPipe . unIrrelevant)
+
+      ppIfBranchElse :: IfBranchElse s -> Sem r ()
+      ppIfBranchElse b = pipeHelper <+> ppCode b
+        where
+          pipeHelper :: Sem r ()
+          pipeHelper = ppCode (b ^. ifBranchElsePipe . unIrrelevant)
+
 instance PrettyPrint Universe where
   ppCode Universe {..} = ppCode _universeKw <+?> (noLoc <$> (pretty <$> _universeLevel))
 
@@ -651,6 +669,17 @@ instance (SingI s) => PrettyPrint (NewCaseBranch s) where
     let pat' = ppPatternParensType _newCaseBranchPattern
         e' = ppExpressionType _newCaseBranchExpression
     pat' <+> ppCode _newCaseBranchAssignKw <> oneLineOrNext e'
+
+instance (SingI s) => PrettyPrint (IfBranch s) where
+  ppCode IfBranch {..} = do
+    let cond' = ppExpressionType _ifBranchCondition
+        e' = ppExpressionType _ifBranchExpression
+    cond' <+> ppCode _ifBranchAssignKw <> oneLineOrNext e'
+
+instance (SingI s) => PrettyPrint (IfBranchElse s) where
+  ppCode IfBranchElse {..} = do
+    let e' = ppExpressionType _ifBranchElseExpression
+    ppCode _ifBranchElseKw <+> ppCode _ifBranchElseAssignKw <> oneLineOrNext e'
 
 ppBlock :: (PrettyPrint a, Members '[Reader Options, ExactPrint] r, Traversable t) => t a -> Sem r ()
 ppBlock items = vsep (sepEndSemicolon (fmap ppCode items))
@@ -787,6 +816,7 @@ instance PrettyPrint Expression where
     ExpressionFunction f -> ppCode f
     ExpressionCase c -> ppCode c
     ExpressionNewCase c -> ppCode c
+    ExpressionIf c -> ppCode c
     ExpressionIterator i -> ppCode i
     ExpressionNamedApplication i -> ppCode i
     ExpressionNamedApplicationNew i -> ppCode i
