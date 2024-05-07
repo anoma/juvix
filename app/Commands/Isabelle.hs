@@ -3,6 +3,7 @@ module Commands.Isabelle where
 import Commands.Base
 import Commands.Isabelle.Options
 import Juvix.Compiler.Backend.Isabelle.Data.Result
+import Juvix.Compiler.Backend.Isabelle.Language
 import Juvix.Compiler.Backend.Isabelle.Pretty
 
 runCommand ::
@@ -23,7 +24,7 @@ runCommand opts = do
           let file :: Path Rel File
               file =
                 relFile
-                  ( unpack (res ^. resultModuleId . moduleIdPath)
+                  ( unpack (thy ^. theoryName . namePretty)
                       <.> isabelleFileExt
                   )
               absPath :: Path Abs File

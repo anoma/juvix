@@ -1,6 +1,7 @@
 module Juvix.Compiler.Backend.Isabelle.Translation.FromTyped where
 
 import Data.HashMap.Strict qualified as HashMap
+import Data.Text qualified as T
 import Juvix.Compiler.Backend.Isabelle.Data.Result
 import Juvix.Compiler.Backend.Isabelle.Language
 import Juvix.Compiler.Internal.Data.InfoTable qualified as Internal
@@ -39,11 +40,16 @@ fromInternal Internal.InternalTypedResult {..} = do
 goModule :: Bool -> Internal.InfoTable -> Internal.Module -> Theory
 goModule onlyTypes infoTable Internal.Module {..} =
   Theory
-    { _theoryName = _moduleName,
+    { _theoryName = over nameText toIsabelleName $ over namePretty toIsabelleName _moduleName,
       _theoryImports = map (^. Internal.importModuleName) (_moduleBody ^. Internal.moduleImports),
       _theoryStatements = concatMap goMutualBlock (_moduleBody ^. Internal.moduleStatements)
     }
   where
+    toIsabelleName :: Text -> Text
+    toIsabelleName name = case reverse $ filter (/= "") $ T.splitOn "." name of
+      h : _ -> h
+      [] -> impossible
+
     isTypeDef :: Statement -> Bool
     isTypeDef = \case
       StmtDefinition {} -> False
