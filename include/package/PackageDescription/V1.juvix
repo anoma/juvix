@@ -17,13 +17,6 @@ type Package :=
     buildDir : Maybe String
   };
 
---- Construct a ;Package; with useful default arguments.
-defaultPackage {name : String := "my-project"} {version : SemVer := defaultVersion} {dependencies : List
-  Dependency := [defaultStdlib]} {main : Maybe
-  String := nothing} {buildDir : Maybe String := nothing}
-  : Package :=
-  mkPackage name version dependencies main buildDir;
-
 --- A ;SemVer; defines a version that conforms to the Semantic Versioning specification.
 type SemVer :=
   mkSemVer {
@@ -33,20 +26,6 @@ type SemVer :=
     release : Maybe String;
     meta : Maybe String
   };
-
---- Construct a ;SemVer; with useful default arguments.
-mkVersion (major minor patch : Nat) {release : Maybe
-  String := nothing} {meta : Maybe String := nothing}
-  : SemVer :=
-  mkSemVer
-    (major := major;
-    minor := minor;
-    patch := patch;
-    release := release;
-    meta := meta);
-
---- The default version used in `defaultPackage`.
-defaultVersion : SemVer := mkVersion 0 0 0;
 
 --- A ;Dependency; defines a Juvix package dependency.
 type Dependency :=
@@ -63,6 +42,27 @@ type Dependency :=
     }
   | --- The ;defaultStdlib; that is bundled with the Juvix compiler.
     defaultStdlib;
+
+--- Construct a ;Package; with useful default arguments.
+defaultPackage {name : String := "my-project"} {version : SemVer := defaultVersion} {dependencies : List
+  Dependency := [defaultStdlib]} {main : Maybe
+  String := nothing} {buildDir : Maybe String := nothing}
+  : Package :=
+  mkPackage name version dependencies main buildDir;
+
+--- Construct a ;SemVer; with useful default arguments.
+mkVersion (major minor patch : Nat) {release : Maybe
+  String := nothing} {meta : Maybe String := nothing}
+  : SemVer :=
+  mkSemVer
+    (major := major;
+    minor := minor;
+    patch := patch;
+    release := release;
+    meta := meta);
+
+--- The default version used in `defaultPackage`.
+defaultVersion : SemVer := mkVersion 0 0 0;
 
 --- Constructs a GitHub dependency.
 github (org repo ref : String) : Dependency :=
