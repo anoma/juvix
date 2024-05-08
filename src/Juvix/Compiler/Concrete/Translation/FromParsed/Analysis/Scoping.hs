@@ -1972,6 +1972,48 @@ checkNewCase NewCase {..} = do
         _newCaseOfKw
       }
 
+checkIfBranch ::
+  forall r.
+  (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader EntryPoint] r) =>
+  IfBranch 'Parsed ->
+  Sem r (IfBranch 'Scoped)
+checkIfBranch IfBranch {..} = withLocalScope $ do
+  cond' <- checkParseExpressionAtoms _ifBranchCondition
+  expression' <- checkParseExpressionAtoms _ifBranchExpression
+  return $
+    IfBranch
+      { _ifBranchCondition = cond',
+        _ifBranchExpression = expression',
+        ..
+      }
+
+checkIfBranchElse ::
+  forall r.
+  (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader EntryPoint] r) =>
+  IfBranchElse 'Parsed ->
+  Sem r (IfBranchElse 'Scoped)
+checkIfBranchElse IfBranchElse {..} = withLocalScope $ do
+  expression' <- checkParseExpressionAtoms _ifBranchElseExpression
+  return $
+    IfBranchElse
+      { _ifBranchElseExpression = expression',
+        ..
+      }
+
+checkIf ::
+  (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader EntryPoint] r) =>
+  If 'Parsed ->
+  Sem r (If 'Scoped)
+checkIf If {..} = do
+  ifBranches' <- mapM checkIfBranch _ifBranches
+  ifBranchElse' <- checkIfBranchElse _ifBranchElse
+  return $
+    If
+      { _ifBranchElse = ifBranchElse',
+        _ifBranches = ifBranches',
+        _ifKw
+      }
+
 checkLambda ::
   (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader EntryPoint] r) =>
   Lambda 'Parsed ->
@@ -2183,6 +2225,7 @@ checkExpressionAtom e = case e of
   AtomLambda lam -> pure . AtomLambda <$> checkLambda lam
   AtomCase c -> pure . AtomCase <$> checkCase c
   AtomNewCase c -> pure . AtomNewCase <$> checkNewCase c
+  AtomIf c -> pure . AtomIf <$> checkIf c
   AtomLet letBlock -> pure . AtomLet <$> checkLet letBlock
   AtomUniverse uni -> return (pure (AtomUniverse uni))
   AtomFunction fun -> pure . AtomFunction <$> checkFunction fun
