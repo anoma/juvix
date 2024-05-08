@@ -1,0 +1,28 @@
+-- Test075: Multiway If
+module test075;
+
+import Stdlib.Data.Field open;
+
+type Point :=
+  mkPoint {
+    x : Field;
+    y : Field
+  };
+
+f : Point -> Point -> Point
+  | p@(mkPoint x1 y1) q@(mkPoint x2 y2) :=
+    if
+      | y1 == 0 := q
+      | y2 == 0 := p
+      | x1 == x2 :=
+        if
+          | y1 == y2 := p
+          | else := mkPoint 0 0
+      | else :=
+        let
+          slope := (y1 - y2) / (x1 - x2);
+          r_x := slope * slope - x1 - x2;
+          r_y := slope * (x1 - r_x) - y1;
+        in mkPoint r_x r_y;
+
+main : Field := Point.x (f (mkPoint 2 3) (mkPoint 4 7));
