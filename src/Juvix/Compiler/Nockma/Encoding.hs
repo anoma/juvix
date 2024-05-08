@@ -11,21 +11,21 @@ import VectorBuilder.Vector
 integerToVectorBits :: Integer -> U.Vector Bit
 integerToVectorBits = build . integerToBuilder
 
-integerToBuilder :: Integer -> Builder Bit
+integerToBuilder :: (Integral a) => a -> Builder Bit
 integerToBuilder x
   | x == 0 = Builder.singleton (Bit False)
   | x < 0 = error "integerToVectorBits: negative integers are not supported in this implementation"
-  | otherwise = unfoldBits x
+  | otherwise = unfoldBits (fromIntegral x)
   where
     unfoldBits :: Integer -> Builder Bit
     unfoldBits n
       | n == 0 = Builder.empty
       | otherwise = Builder.singleton (Bit (testBit n 0)) <> unfoldBits (n `shiftR` 1)
 
-bitLength :: Integer -> Int
+bitLength :: forall a. (Integral a) => a -> Int
 bitLength = \case
   0 -> 0
-  n -> go n 0
+  n -> go (fromIntegral n) 0
     where
       go :: Integer -> Int -> Int
       go 0 acc = acc
@@ -40,27 +40,22 @@ vectorBitsToInteger = U.ifoldl' go 0
       | otherwise = acc
 
 data JamState = JamState
-  { _jamStateCurrent :: Int,
-    _jamStateRefs :: HashMap (Term Natural) Int,
+  { _jamStateCache :: HashMap (Term Natural) Int,
     _jamStateBuilder :: Builder Bit
   }
 
-initState :: JamState
-initState =
+initJamState :: JamState
+initJamState =
   JamState
-    { _jamStateCurrent = 0,
-      _jamStateRefs = mempty,
+    { _jamStateCache = mempty,
       _jamStateBuilder = mempty
     }
 
 makeLenses ''JamState
 
 writeBit :: (Member (State JamState) r) => Bit -> Sem r ()
-writeBit b = modify (incrementCurrent . appendByte)
+writeBit b = modify appendByte
   where
-    incrementCurrent :: JamState -> JamState
-    incrementCurrent = over jamStateCurrent (+ 1)
-
     appendByte :: JamState -> JamState
     appendByte = over jamStateBuilder (<> Builder.singleton b)
 
@@ -70,92 +65,58 @@ writeOne = writeBit (Bit True)
 writeZero :: (Member (State JamState) r) => Sem r ()
 writeZero = writeBit (Bit False)
 
-writeInteger :: (Member (State JamState) r) => Integer -> Sem r ()
-writeInteger i = modify (updateCurrent . updateBuilder)
+writeIntegral :: (Integral a, Member (State JamState) r) => a -> Sem r ()
+writeIntegral i = modify updateBuilder
   where
     iBuilder :: Builder Bit
     iBuilder = integerToBuilder i
 
-    updateCurrent :: JamState -> JamState
-    updateCurrent = over jamStateCurrent (+ (Builder.size iBuilder))
-
     updateBuilder :: JamState -> JamState
     updateBuilder = over jamStateBuilder (<> iBuilder)
 
-saveTerm :: (Member (State JamState) r) => Term Natural -> Sem r ()
-saveTerm t = do
-  c <- gets (^. jamStateCurrent)
-  modify (set (jamStateRefs . at t) (Just c))
-
-mat :: (Member (State JamState) r) => Integer -> Sem r ()
-mat i = do
-  let a = bitLength i
-      b = bitLength (fromIntegral a)
-      below = b - 1
-  writeInteger (1 `shiftL` b)
-  writeInteger ((.&.) (fromIntegral a) ((1 `shiftL` below) - 1))
-  writeInteger i
-
-back :: (Member (State JamState) r) => Int -> Sem r ()
-back ref = do
+writeLength :: forall r. (Member (State JamState) r) => Int -> Sem r ()
+writeLength len = do
+  let lenOfLen = finiteBitSize len - countLeadingZeros len
+  replicateM_ lenOfLen writeZero
   writeOne
-  writeOne
-  mat (fromIntegral ref)
-
-maybeCell :: Term a -> Maybe (Cell a)
-maybeCell = \case
-  TermCell c -> Just c
-  TermAtom {} -> Nothing
-
-jamR :: forall r. (Member (State JamState) r) => Term Natural -> Sem r ()
-jamR t = do
-  mDupe <- gets (^. jamStateRefs . at t)
-  case t of
-    TermCell c -> maybe (goCell c) back mDupe
-    TermAtom a -> maybe (goAtom a) (goAtomDupe a) mDupe
+  unless (lenOfLen == 0) (go len)
   where
-    goCell :: Cell Natural -> Sem r ()
-    goCell c = do
-      saveTerm (TermCell c)
-      writeOne
-      writeZero
-      jamR (c ^. cellLeft)
-      jamR (c ^. cellRight)
+    go :: Int -> Sem r ()
+    go l = unless (l == 1) $ do
+      writeBit (Bit ((l .&. 1) /= 0))
+      go (l `shiftR` 1)
 
-    goAtom :: Atom Natural -> Sem r ()
-    goAtom a = do
-      saveTerm (TermAtom a)
-      writeZero
-      mat (fromIntegral (a ^. atom))
+writeAtom :: forall r a. (Integral a, Member (State JamState) r) => Atom a -> Sem r ()
+writeAtom a = do
+  writeZero
+  writeLength (bitLength (a ^. atom))
+  writeIntegral (a ^. atom)
 
-    goAtomDupe :: Atom Natural -> Int -> Sem r ()
-    goAtomDupe a dupe' = do
-      let isize = bitLength (fromIntegral (a ^. atom))
-          dsize = bitLength (fromIntegral dupe')
-      if
-          | isize < dsize -> do
-              writeZero
-              mat (fromIntegral (a ^. atom))
-          | otherwise -> back dupe'
+jamSem :: (Member (State JamState) r) => Term Natural -> Sem r ()
+jamSem = \case
+  TermAtom a -> writeAtom a
+  TermCell {} -> undefined
 
-jam :: Term Natural -> Atom Natural
-jam = (\i -> Atom @Natural i emptyAtomInfo) . fromInteger . vectorBitsToInteger . jamToVector
+evalJamStateBuilder :: JamState -> Sem '[State JamState] a -> Builder Bit
+evalJamStateBuilder st = (^. jamStateBuilder) . run . execState st
+
+evalJamState :: JamState -> Sem '[State JamState] a -> U.Vector Bit
+evalJamState st = build . evalJamStateBuilder st
+
+jamToBuilder :: Term Natural -> Builder Bit
+jamToBuilder = evalJamStateBuilder initJamState . jamSem
 
 jamToVector :: Term Natural -> U.Vector Bit
 jamToVector = build . jamToBuilder
 
-jamToBuilder :: Term Natural -> Builder Bit
-jamToBuilder =
-  (^. jamStateBuilder)
-    . run
-    . execState initState
-    . jamR
+jam :: Term Natural -> Atom Natural
+jam = (\i -> Atom @Natural i emptyAtomInfo) . fromInteger . vectorBitsToInteger . jamToVector
 
-cue :: Atom Natural -> Term Natural
-cue = cueFromBits . cueToVector
+cueToVector :: Atom Natural -> U.Vector Bit
+cueToVector = integerToVectorBits . fromIntegral . (^. atom)
 
 cueFromBits :: U.Vector Bit -> Term Natural
 cueFromBits = undefined
 
-cueToVector :: Atom Natural -> U.Vector Bit
-cueToVector = integerToVectorBits . fromIntegral . (^. atom)
+cue :: Atom Natural -> Term Natural
+cue = cueFromBits . cueToVector
