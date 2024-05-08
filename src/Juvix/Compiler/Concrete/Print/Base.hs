@@ -549,7 +549,7 @@ instance (SingI s) => PrettyPrint (Case s) where
 instance (SingI s) => PrettyPrint (If s) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => If s -> Sem r ()
   ppCode If {..} = do
-    ppCode _ifKw <+> blockIndent (vsepHard ((ppIfBranch <$> _ifBranches) <> nonEmpty' [ppIfBranchElse _ifBranchElse]))
+    ppCode _ifKw <+> hardline <> indent (vsepHard (ppIfBranch <$> _ifBranches) <> hardline <> ppIfBranchElse _ifBranchElse)
     where
       ppIfBranch :: IfBranch s -> Sem r ()
       ppIfBranch b = pipeHelper <+> ppCode b
