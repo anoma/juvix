@@ -721,6 +721,7 @@ goExpression = \case
   ExpressionApplication a -> goApplication a
   ExpressionCase a -> Internal.ExpressionCase <$> goCase a
   ExpressionNewCase a -> Internal.ExpressionCase <$> goNewCase a
+  ExpressionIf a -> goIf a
   ExpressionInfixApplication ia -> Internal.ExpressionApplication <$> goInfix ia
   ExpressionPostfixApplication pa -> Internal.ExpressionApplication <$> goPostfix pa
   ExpressionLiteral l -> return (Internal.ExpressionLiteral (goLiteral l))
@@ -929,6 +930,21 @@ goExpression = \case
       return (foldr (\a b -> cons_ Internal.@@ a Internal.@@ b) (Internal.toExpression nil_) items)
       where
         loc = getLoc l
+
+    goIf :: Concrete.If 'Scoped -> Sem r Internal.Expression
+    goIf e@Concrete.If {..} = do
+      if_ <- getBuiltinName (getLoc e) BuiltinBoolIf
+      go if_ (toList _ifBranches)
+      where
+        go :: Internal.Name -> [Concrete.IfBranch 'Scoped] -> Sem r Internal.Expression
+        go if_ = \case
+          [] ->
+            goExpression (_ifBranchElse ^. Concrete.ifBranchElseExpression)
+          Concrete.IfBranch {..} : brs -> do
+            c <- goExpression _ifBranchCondition
+            b1 <- goExpression _ifBranchExpression
+            b2 <- go if_ brs
+            return $ if_ Internal.@@ c Internal.@@ b1 Internal.@@ b2
 
     goIden :: Concrete.ScopedIden -> Internal.Expression
     goIden x = Internal.ExpressionIden $ case getNameKind x of
