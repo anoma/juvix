@@ -355,70 +355,74 @@ checkDefType ty = checkIsType loc ty
 
 checkInstanceType ::
   forall r.
-  (Members '[Error TypeCheckerError, Reader InfoTable, Inference, NameIdGen] r) =>
+  (Members '[Error TypeCheckerError, Reader InfoTable, Inference, NameIdGen, State FunctionsTable] r) =>
   FunctionDef ->
   Sem r ()
-checkInstanceType FunctionDef {..} = case mi of
-  Just ii@InstanceInfo {..} -> do
-    tab <- ask
-    unless (isTrait tab _instanceInfoInductive) $
-      throw (ErrTargetNotATrait (TargetNotATrait _funDefType))
-    is <- subsumingInstances (tab ^. infoInstances) ii
-    unless (null is) $
-      throw (ErrSubsumedInstance (SubsumedInstance ii is (getLoc _funDefName)))
-    let metaVars = HashSet.fromList $ mapMaybe (^. paramName) _instanceInfoArgs
-    mapM_ (checkArg tab metaVars ii) _instanceInfoArgs
-  Nothing ->
-    throw (ErrInvalidInstanceType (InvalidInstanceType _funDefType))
+checkInstanceType FunctionDef {..} = do
+  funsTab <- get
+  let mi =
+        instanceFromTypedExpression
+          funsTab
+          ( TypedExpression
+              { _typedType = _funDefType,
+                _typedExpression = ExpressionIden (IdenFunction _funDefName)
+              }
+          )
+  case mi of
+    Just ii@InstanceInfo {..} -> do
+      tab <- ask
+      unless (isTrait tab _instanceInfoInductive) $
+        throw (ErrTargetNotATrait (TargetNotATrait _funDefType))
+      is <- subsumingInstances (tab ^. infoInstances) ii
+      unless (null is) $
+        throw (ErrSubsumedInstance (SubsumedInstance ii is (getLoc _funDefName)))
+      let metaVars = HashSet.fromList $ mapMaybe (^. paramName) _instanceInfoArgs
+      mapM_ (checkArg funsTab tab metaVars ii) _instanceInfoArgs
+    Nothing ->
+      throw (ErrInvalidInstanceType (InvalidInstanceType _funDefType))
   where
-    mi =
-      instanceFromTypedExpression
-        ( TypedExpression
-            { _typedType = _funDefType,
-              _typedExpression = ExpressionIden (IdenFunction _funDefName)
-            }
-        )
-
-    checkArg :: InfoTable -> HashSet VarName -> InstanceInfo -> FunctionParameter -> Sem r ()
-    checkArg tab metaVars ii fp@FunctionParameter {..} = case _paramImplicit of
+    checkArg :: FunctionsTable -> InfoTable -> HashSet VarName -> InstanceInfo -> FunctionParameter -> Sem r ()
+    checkArg funsTab tab metaVars ii fp@FunctionParameter {..} = case _paramImplicit of
       Implicit -> return ()
       Explicit -> throw (ErrExplicitInstanceArgument (ExplicitInstanceArgument fp))
-      ImplicitInstance -> case traitFromExpression metaVars _paramType of
+      ImplicitInstance -> case traitFromExpression funsTab metaVars _paramType of
         Just app@InstanceApp {..}
           | isTrait tab _instanceAppHead ->
               checkTraitTermination app ii
         _ ->
           throw (ErrNotATrait (NotATrait _paramType))
 
-checkInstanceParam :: (Member (Error TypeCheckerError) r) => InfoTable -> Expression -> Sem r ()
-checkInstanceParam tab ty = case traitFromExpression mempty ty of
+checkInstanceParam :: (Member (Error TypeCheckerError) r) => FunctionsTable -> InfoTable -> Expression -> Sem r ()
+checkInstanceParam funsTab tab ty = case traitFromExpression funsTab mempty ty of
   Just InstanceApp {..} | isTrait tab _instanceAppHead -> return ()
   _ -> throw (ErrNotATrait (NotATrait ty))
 
 checkCoercionType ::
   forall r.
-  (Members '[Error TypeCheckerError, Reader InfoTable, Inference] r) =>
+  (Members '[Error TypeCheckerError, Reader InfoTable, Inference, State FunctionsTable] r) =>
   FunctionDef ->
   Sem r ()
-checkCoercionType FunctionDef {..} = case mi of
-  Just CoercionInfo {..} -> do
-    tab <- ask
-    unless (isTrait tab _coercionInfoInductive) $
-      throw (ErrTargetNotATrait (TargetNotATrait _funDefType))
-    unless (isTrait tab (_coercionInfoTarget ^. instanceAppHead)) $
+checkCoercionType FunctionDef {..} = do
+  funsTab <- get
+  let mi =
+        coercionFromTypedExpression
+          funsTab
+          ( TypedExpression
+              { _typedType = _funDefType,
+                _typedExpression = ExpressionIden (IdenFunction _funDefName)
+              }
+          )
+  case mi of
+    Just CoercionInfo {..} -> do
+      tab <- ask
+      unless (isTrait tab _coercionInfoInductive) $
+        throw (ErrTargetNotATrait (TargetNotATrait _funDefType))
+      unless (isTrait tab (_coercionInfoTarget ^. instanceAppHead)) $
+        throw (ErrInvalidCoercionType (InvalidCoercionType _funDefType))
+      mapM_ checkArg _coercionInfoArgs
+    Nothing ->
       throw (ErrInvalidCoercionType (InvalidCoercionType _funDefType))
-    mapM_ checkArg _coercionInfoArgs
-  Nothing ->
-    throw (ErrInvalidCoercionType (InvalidCoercionType _funDefType))
   where
-    mi =
-      coercionFromTypedExpression
-        ( TypedExpression
-            { _typedType = _funDefType,
-              _typedExpression = ExpressionIden (IdenFunction _funDefName)
-            }
-        )
-
     checkArg :: FunctionParameter -> Sem r ()
     checkArg fp@FunctionParameter {..} = case _paramImplicit of
       Implicit -> return ()
@@ -480,7 +484,8 @@ checkFunctionParameter FunctionParameter {..} = do
   ty' <- checkIsType (getLoc ty) ty
   when (_paramImplicit == ImplicitInstance) $ do
     tab <- ask
-    checkInstanceParam tab ty'
+    funsTab <- get
+    checkInstanceParam funsTab tab ty'
   return
     FunctionParameter
       { _paramType = ty',

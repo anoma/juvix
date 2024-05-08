@@ -68,7 +68,7 @@ exprToString : Expr -> String
 
 --- ;Show; instance for ;Expr;.
 instance
-showExprI : Show (Expr' Nat) := mkShow exprToString;
+showExprI : Show Expr := mkShow exprToString;
 
 terminating
 valToString : Val -> String

@@ -27,14 +27,15 @@ isTrait :: InfoTable -> Name -> Bool
 isTrait tab name = maybe False (^. inductiveInfoTrait) (HashMap.lookup name (tab ^. infoInductives))
 
 resolveTraitInstance ::
-  (Members '[Error TypeCheckerError, NameIdGen, Inference, Reader InfoTable] r) =>
+  (Members '[Error TypeCheckerError, NameIdGen, Inference, Reader InfoTable, State FunctionsTable] r) =>
   TypedHole ->
   Sem r Expression
 resolveTraitInstance TypedHole {..} = do
   tbl <- ask
-  let tab = foldr (flip updateInstanceTable) (tbl ^. infoInstances) (varsToInstances tbl _typedHoleLocalVars)
+  funsTab <- get
+  let tab = foldr (flip updateInstanceTable) (tbl ^. infoInstances) (varsToInstances funsTab tbl _typedHoleLocalVars)
   ty <- strongNormalize _typedHoleType
-  is <- lookupInstance (tbl ^. infoCoercions) tab ty
+  is <- lookupInstance funsTab (tbl ^. infoCoercions) tab ty
   case is of
     [(cs, ii, subs)] ->
       expandArity loc (subsIToE subs) (ii ^. instanceInfoArgs) (ii ^. instanceInfoResult)
@@ -94,16 +95,16 @@ substitutionI subs p = case p of
     | otherwise ->
         return p
 
-instanceFromTypedExpression' :: InfoTable -> TypedExpression -> Maybe InstanceInfo
-instanceFromTypedExpression' tbl e = do
-  ii@InstanceInfo {..} <- instanceFromTypedExpression e
+instanceFromTypedExpression' :: FunctionsTable -> InfoTable -> TypedExpression -> Maybe InstanceInfo
+instanceFromTypedExpression' funsTab tbl e = do
+  ii@InstanceInfo {..} <- instanceFromTypedExpression funsTab e
   guard (isTrait tbl _instanceInfoInductive)
   return ii
 
-varsToInstances :: InfoTable -> LocalVars -> [InstanceInfo]
-varsToInstances tbl LocalVars {..} =
+varsToInstances :: FunctionsTable -> InfoTable -> LocalVars -> [InstanceInfo]
+varsToInstances funsTab tbl LocalVars {..} =
   mapMaybe
-    (instanceFromTypedExpression' tbl . mkTyped)
+    (instanceFromTypedExpression' funsTab tbl . mkTyped)
     (HashMap.toList _localTypes)
   where
     mkTyped :: (VarName, Expression) -> TypedExpression
@@ -249,12 +250,13 @@ lookupInstance' visited canFillHoles ctab tab name params
 lookupInstance ::
   forall r.
   (Members '[Error TypeCheckerError, Inference, NameIdGen] r) =>
+  FunctionsTable ->
   CoercionTable ->
   InstanceTable ->
   Expression ->
   Sem r [(CoercionChain, InstanceInfo, SubsI)]
-lookupInstance ctab tab ty = do
-  case traitFromExpression mempty ty of
+lookupInstance funsTab ctab tab ty = do
+  case traitFromExpression funsTab mempty ty of
     Just InstanceApp {..} ->
       lookupInstance' [] False ctab tab _instanceAppHead _instanceAppArgs
     _ ->

@@ -4,6 +4,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Internal.Extra.Base
 import Juvix.Compiler.Internal.Language
+import Juvix.Compiler.Store.Internal.Data.FunctionsTable
 import Juvix.Extra.Serialize
 import Juvix.Prelude
 
@@ -99,8 +100,8 @@ paramToExpression = \case
   InstanceParamMeta v ->
     ExpressionIden (IdenVar v)
 
-paramFromExpression :: HashSet VarName -> Expression -> Maybe InstanceParam
-paramFromExpression metaVars e = case e of
+paramFromExpression :: FunctionsTable -> HashSet VarName -> Expression -> Maybe InstanceParam
+paramFromExpression funtab metaVars e = case e of
   ExpressionIden (IdenInductive n) ->
     Just $
       InstanceParamApp $
@@ -120,10 +121,14 @@ paramFromExpression metaVars e = case e of
   ExpressionIden (IdenVar v)
     | HashSet.member v metaVars -> Just $ InstanceParamMeta v
     | otherwise -> Just $ InstanceParamVar v
+  ExpressionIden (IdenFunction n) ->
+    case HashMap.lookup n (funtab ^. functionsTable) of
+      Just def -> paramFromExpression funtab metaVars def
+      Nothing -> Nothing
   ExpressionHole h -> Just $ InstanceParamHole h
   ExpressionApplication app -> do
     let (h, args) = unfoldApplication app
-    args' <- mapM (paramFromExpression metaVars) args
+    args' <- mapM (paramFromExpression funtab metaVars) args
     case h of
       ExpressionIden (IdenInductive n) ->
         return $
@@ -141,12 +146,25 @@ paramFromExpression metaVars e = case e of
                 _instanceAppArgs = toList args',
                 _instanceAppExpression = e
               }
+      ExpressionIden (IdenFunction n) ->
+        case HashMap.lookup n (funtab ^. functionsTable) of
+          Just def -> case paramFromExpression funtab metaVars def of
+            Just (InstanceParamApp InstanceApp {..}) ->
+              return $
+                InstanceParamApp $
+                  InstanceApp
+                    { _instanceAppHead,
+                      _instanceAppArgs = _instanceAppArgs ++ toList args',
+                      _instanceAppExpression = e
+                    }
+            _ -> Nothing
+          Nothing -> Nothing
       _ ->
         Nothing
   ExpressionFunction Function {..}
     | _functionLeft ^. paramImplicit == Explicit -> do
-        l <- paramFromExpression metaVars (_functionLeft ^. paramType)
-        r <- paramFromExpression metaVars _functionRight
+        l <- paramFromExpression funtab metaVars (_functionLeft ^. paramType)
+        r <- paramFromExpression funtab metaVars _functionRight
         return $
           InstanceParamFun
             InstanceFun
@@ -157,14 +175,14 @@ paramFromExpression metaVars e = case e of
   _ ->
     Nothing
 
-traitFromExpression :: HashSet VarName -> Expression -> Maybe InstanceApp
-traitFromExpression metaVars e = case paramFromExpression metaVars e of
+traitFromExpression :: FunctionsTable -> HashSet VarName -> Expression -> Maybe InstanceApp
+traitFromExpression funtab metaVars e = case paramFromExpression funtab metaVars e of
   Just (InstanceParamApp app) -> Just app
   _ -> Nothing
 
-instanceFromTypedExpression :: TypedExpression -> Maybe InstanceInfo
-instanceFromTypedExpression TypedExpression {..} = do
-  InstanceApp {..} <- traitFromExpression metaVars e
+instanceFromTypedExpression :: FunctionsTable -> TypedExpression -> Maybe InstanceInfo
+instanceFromTypedExpression funtab TypedExpression {..} = do
+  InstanceApp {..} <- traitFromExpression funtab metaVars e
   return $
     InstanceInfo
       { _instanceInfoInductive = _instanceAppHead,

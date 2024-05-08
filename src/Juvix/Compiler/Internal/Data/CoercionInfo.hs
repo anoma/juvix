@@ -6,6 +6,7 @@ import Data.List qualified as List
 import Juvix.Compiler.Internal.Data.InstanceInfo
 import Juvix.Compiler.Internal.Extra.Base
 import Juvix.Compiler.Internal.Language
+import Juvix.Compiler.Store.Internal.Data.FunctionsTable
 import Juvix.Extra.Serialize
 import Juvix.Prelude
 
@@ -57,12 +58,12 @@ updateCoercionTable tab ci@CoercionInfo {..} =
 lookupCoercionTable :: CoercionTable -> Name -> Maybe [CoercionInfo]
 lookupCoercionTable tab name = HashMap.lookup name (tab ^. coercionTableMap)
 
-coercionFromTypedExpression :: TypedExpression -> Maybe CoercionInfo
-coercionFromTypedExpression TypedExpression {..}
+coercionFromTypedExpression :: FunctionsTable -> TypedExpression -> Maybe CoercionInfo
+coercionFromTypedExpression funsTab TypedExpression {..}
   | null args = Nothing
   | otherwise = do
-      tgt <- traitFromExpression metaVars (t ^. paramType)
-      InstanceApp {..} <- traitFromExpression metaVars e
+      tgt <- traitFromExpression funsTab metaVars (t ^. paramType)
+      InstanceApp {..} <- traitFromExpression funsTab metaVars e
       return $
         CoercionInfo
           { _coercionInfoInductive = _instanceAppHead,
