@@ -2767,6 +2767,7 @@ parseTerm =
     <|> parseLambda
     <|> parseCase
     <|> parseNewCase
+    <|> parseIf
     <|> parseList
     <|> parseLiteral
     <|> parseLet
@@ -2824,11 +2825,19 @@ parseTerm =
           AtomNewCase l -> Just l
           _ -> Nothing
 
-    parseList :: Parse Expression
-    parseList = ExpressionList <$> P.token case_ mempty
+    parseIf :: Parse Expression
+    parseIf = ExpressionIf <$> P.token if_ mempty
       where
-        case_ :: ExpressionAtom 'Scoped -> Maybe (List 'Scoped)
-        case_ s = case s of
+        if_ :: ExpressionAtom 'Scoped -> Maybe (If 'Scoped)
+        if_ s = case s of
+          AtomIf l -> Just l
+          _ -> Nothing
+
+    parseList :: Parse Expression
+    parseList = ExpressionList <$> P.token list_ mempty
+      where
+        list_ :: ExpressionAtom 'Scoped -> Maybe (List 'Scoped)
+        list_ s = case s of
           AtomList l -> Just l
           _ -> Nothing
 
