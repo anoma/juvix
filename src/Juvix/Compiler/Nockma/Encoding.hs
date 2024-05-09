@@ -81,13 +81,23 @@ writeLength len = do
   unless (lenOfLen == 0) (go len)
   where
     go :: Int -> Sem r ()
+    -- Exclude the most significant bit of the length
     go l = unless (l == 1) $ do
       writeBit (Bit (testBit l 0))
       go (l `shiftR` 1)
 
+writeAtomTag :: (Member (State JamState) r) => Sem r ()
+writeAtomTag = writeZero
+
+writeCellTag :: (Member (State JamState) r) => Sem r ()
+writeCellTag = writeOne >> writeZero
+
+writeBackrefTag :: (Member (State JamState) r) => Sem r ()
+writeBackrefTag = writeOne >> writeOne
+
 writeAtom :: forall r a. (Integral a, Member (State JamState) r) => Atom a -> Sem r ()
 writeAtom a = do
-  writeZero
+  writeAtomTag
   writeLength (bitLength (a ^. atom))
   writeIntegral (a ^. atom)
 
@@ -101,8 +111,7 @@ lookupCache t = gets (^. jamStateCache . at t)
 
 writeCell :: forall r. (Member (State JamState) r) => Cell Natural -> Sem r ()
 writeCell c = do
-  writeOne
-  writeZero
+  writeCellTag
   jamSem (c ^. cellLeft)
   jamSem (c ^. cellRight)
 
@@ -126,8 +135,7 @@ jamSem t = do
   where
     backref :: Int -> Sem r ()
     backref idx = do
-      writeOne
-      writeOne
+      writeBackrefTag
       writeLength (bitLength idx)
       writeIntegral idx
 
