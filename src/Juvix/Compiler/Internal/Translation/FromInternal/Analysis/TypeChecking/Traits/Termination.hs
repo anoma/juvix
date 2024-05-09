@@ -3,7 +3,7 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Tr
   )
 where
 
-import Juvix.Compiler.Internal.Data.InstanceInfo
+import Juvix.Compiler.Internal.Extra.InstanceInfo
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error
 import Juvix.Prelude
 

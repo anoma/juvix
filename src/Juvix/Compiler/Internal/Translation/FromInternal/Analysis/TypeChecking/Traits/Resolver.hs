@@ -6,12 +6,12 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Tr
 where
 
 import Data.HashMap.Strict qualified as HashMap
-import Juvix.Compiler.Internal.Data.CoercionInfo
 import Juvix.Compiler.Internal.Data.InfoTable
-import Juvix.Compiler.Internal.Data.InstanceInfo
 import Juvix.Compiler.Internal.Data.LocalVars
 import Juvix.Compiler.Internal.Data.TypedHole
 import Juvix.Compiler.Internal.Extra
+import Juvix.Compiler.Internal.Extra.CoercionInfo
+import Juvix.Compiler.Internal.Extra.InstanceInfo
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Inference
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error
 import Juvix.Prelude

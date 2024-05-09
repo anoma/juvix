@@ -14,12 +14,12 @@ import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Builtins.Error (NotDefined (..))
 import Juvix.Compiler.Concrete.Data.Highlight
 import Juvix.Compiler.Internal.Data.Cast
-import Juvix.Compiler.Internal.Data.CoercionInfo
-import Juvix.Compiler.Internal.Data.InstanceInfo
 import Juvix.Compiler.Internal.Data.LocalVars
 import Juvix.Compiler.Internal.Data.TypedHole
 import Juvix.Compiler.Internal.Extra hiding (freshHole)
 import Juvix.Compiler.Internal.Extra qualified as Extra
+import Juvix.Compiler.Internal.Extra.CoercionInfo
+import Juvix.Compiler.Internal.Extra.InstanceInfo
 import Juvix.Compiler.Internal.Pretty
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.Checker
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker (Termination)

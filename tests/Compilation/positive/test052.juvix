@@ -23,6 +23,7 @@ type Lambda' (v : Type) := mkLambda : Expr' v -> Lambda' v;
 type App' (v : Type) :=
   mkApp : Expr' v -> Expr' v -> App' v;
 
+--- Expression with ;Nat; atoms
 Expr : Type := Expr' Nat;
 
 Lambda : Type := Lambda' Nat;
