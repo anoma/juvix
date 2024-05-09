@@ -1,3 +1,5 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+
 module Juvix.Compiler.Nockma.Encoding.Jam where
 
 import Data.Bit as Bit
@@ -8,12 +10,12 @@ import Juvix.Prelude.Base
 import VectorBuilder.Builder as Builder
 import VectorBuilder.Vector
 
-data JamState = JamState
-  { _jamStateCache :: HashMap (Term Natural) Int,
+data JamState a = JamState
+  { _jamStateCache :: HashMap (Term a) Int,
     _jamStateBuilder :: Builder Bit
   }
 
-initJamState :: JamState
+initJamState :: forall a. (Hashable a) => JamState a
 initJamState =
   JamState
     { _jamStateCache = mempty,
@@ -22,79 +24,79 @@ initJamState =
 
 makeLenses ''JamState
 
-writeBit :: (Member (State JamState) r) => Bit -> Sem r ()
+writeBit :: forall a r. (Member (State (JamState a)) r) => Bit -> Sem r ()
 writeBit b = modify appendByte
   where
-    appendByte :: JamState -> JamState
+    appendByte :: JamState a -> JamState a
     appendByte = over jamStateBuilder (<> Builder.singleton b)
 
-writeOne :: (Member (State JamState) r) => Sem r ()
-writeOne = writeBit (Bit True)
+writeOne :: forall a r. (Member (State (JamState a)) r) => Sem r ()
+writeOne = writeBit @a (Bit True)
 
-writeZero :: (Member (State JamState) r) => Sem r ()
-writeZero = writeBit (Bit False)
+writeZero :: forall a r. (Member (State (JamState a)) r) => Sem r ()
+writeZero = writeBit @a (Bit False)
 
-writeIntegral :: (Integral a, Member (State JamState) r) => a -> Sem r ()
-writeIntegral i = modify updateBuilder
+writeIntegral :: forall a b r. (Integral a, Member (State (JamState b)) r) => a -> Sem r ()
+writeIntegral i = modify @(JamState b) updateBuilder
   where
     iBuilder :: Builder Bit
     iBuilder = integerToBuilder i
 
-    updateBuilder :: JamState -> JamState
+    updateBuilder :: JamState b -> JamState b
     updateBuilder = over jamStateBuilder (<> iBuilder)
 
-writeLength :: forall r. (Member (State JamState) r) => Int -> Sem r ()
+writeLength :: forall a r. (Member (State (JamState a)) r) => Int -> Sem r ()
 writeLength len = do
   let lenOfLen = finiteBitSize len - countLeadingZeros len
-  replicateM_ lenOfLen writeZero
-  writeOne
+  replicateM_ lenOfLen (writeZero @a)
+  writeOne @a
   unless (lenOfLen == 0) (go len)
   where
     go :: Int -> Sem r ()
     -- Exclude the most significant bit of the length
     go l = unless (l == 1) $ do
-      writeBit (Bit (testBit l 0))
+      writeBit @a (Bit (testBit l 0))
       go (l `shiftR` 1)
 
-writeAtomTag :: (Member (State JamState) r) => Sem r ()
-writeAtomTag = writeZero
+writeAtomTag :: forall a r. (Member (State (JamState a)) r) => Sem r ()
+writeAtomTag = writeZero @a
 
-writeCellTag :: (Member (State JamState) r) => Sem r ()
-writeCellTag = writeOne >> writeZero
+writeCellTag :: forall a r. (Member (State (JamState a)) r) => Sem r ()
+writeCellTag = writeOne @a >> writeZero @a
 
-writeBackrefTag :: (Member (State JamState) r) => Sem r ()
-writeBackrefTag = writeOne >> writeOne
+writeBackrefTag :: forall a r. (Member (State (JamState a)) r) => Sem r ()
+writeBackrefTag = writeOne @a >> writeOne @a
 
-writeAtom :: forall r a. (Integral a, Member (State JamState) r) => Atom a -> Sem r ()
+writeAtom :: forall a r. (Integral a, Member (State (JamState a)) r) => Atom a -> Sem r ()
 writeAtom a = do
-  writeAtomTag
-  writeLength (bitLength (a ^. atom))
-  writeIntegral (a ^. atom)
+  writeAtomTag @a
+  writeLength @a (bitLength (a ^. atom))
+  writeIntegral @a @a (a ^. atom)
 
-writeCell :: forall r. (Member (State JamState) r) => Cell Natural -> Sem r ()
+writeCell :: forall a r. (Hashable a, Integral a, Member (State (JamState a)) r) => Cell a -> Sem r ()
 writeCell c = do
-  writeCellTag
-  jamSem (c ^. cellLeft)
-  jamSem (c ^. cellRight)
+  writeCellTag @a
+  jamSem @a (c ^. cellLeft)
+  jamSem @a (c ^. cellRight)
 
-cacheTerm :: (Member (State JamState) r) => Term Natural -> Sem r ()
+cacheTerm :: forall r a. (Hashable a, Member (State (JamState a)) r) => Term a -> Sem r ()
 cacheTerm t = do
-  pos <- Builder.size <$> gets (^. jamStateBuilder)
+  pos <- Builder.size <$> gets @(JamState a) (^. jamStateBuilder)
   modify (set (jamStateCache . at t) (Just pos))
 
-lookupCache :: (Member (State JamState) r) => Term Natural -> Sem r (Maybe Int)
-lookupCache t = gets (^. jamStateCache . at t)
+lookupCache :: forall a r. (Hashable a, Member (State (JamState a)) r) => Term a -> Sem r (Maybe Int)
+lookupCache t = gets @(JamState a) (^. jamStateCache . at t)
 
-jamSem :: forall r. (Member (State JamState) r) => Term Natural -> Sem r ()
+jamSem :: forall a r. (Integral a, Hashable a, Member (State (JamState a)) r) => Term a -> Sem r ()
 jamSem t = do
-  ct <- lookupCache t
+  ct <- lookupCache @a t
   case ct of
     Just idx -> case t of
       TermAtom a -> do
         let idxBitLength = finiteBitSize idx - countLeadingZeros idx
             atomBitLength = bitLength (a ^. atom)
         if
-            | atomBitLength <= idxBitLength -> writeAtom a
+            | atomBitLength <= idxBitLength -> writeAtom @a a
             | otherwise -> backref idx
       TermCell {} -> backref idx
     Nothing -> do
@@ -105,21 +107,24 @@ jamSem t = do
   where
     backref :: Int -> Sem r ()
     backref idx = do
-      writeBackrefTag
-      writeLength (bitLength idx)
-      writeIntegral idx
+      writeBackrefTag @a
+      writeLength @a (bitLength idx)
+      writeIntegral @Int @a idx
 
-evalJamStateBuilder :: JamState -> Sem '[State JamState] a -> Builder Bit
+evalJamStateBuilder :: JamState a -> Sem '[State (JamState a)] () -> Builder Bit
 evalJamStateBuilder st = (^. jamStateBuilder) . run . execState st
 
-evalJamState :: JamState -> Sem '[State JamState] a -> Bit.Vector Bit
+evalJamState :: JamState a -> Sem '[State (JamState a)] () -> Bit.Vector Bit
 evalJamState st = build . evalJamStateBuilder st
 
-jamToBuilder :: Term Natural -> Builder Bit
-jamToBuilder = evalJamStateBuilder initJamState . jamSem
+jamToBuilder :: forall a. (Integral a, Hashable a) => Term a -> Builder Bit
+jamToBuilder = evalJamStateBuilder (initJamState @a) . jamSem
 
-jamToVector :: Term Natural -> Bit.Vector Bit
+jamToVector :: (Integral a, Hashable a) => Term a -> Bit.Vector Bit
 jamToVector = build . jamToBuilder
 
-jam :: Term Natural -> Atom Natural
-jam = (\i -> Atom @Natural i emptyAtomInfo) . fromInteger . vectorBitsToInteger . jamToVector
+jam :: forall a r. (Integral a, Hashable a, NockNatural a, Member (Error (ErrNockNatural a)) r) => Term a -> Sem r (Atom a)
+jam t = do
+  let i = fromInteger . vectorBitsToInteger . jamToVector $ t
+  ai <- fromNatural i
+  return (Atom ai emptyAtomInfo)
