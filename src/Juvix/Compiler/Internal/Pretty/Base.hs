@@ -6,7 +6,7 @@ module Juvix.Compiler.Internal.Pretty.Base
 where
 
 import Data.HashMap.Strict qualified as HashMap
-import Juvix.Compiler.Internal.Data.InstanceInfo (instanceInfoResult, instanceTableMap)
+import Juvix.Compiler.Internal.Data.InstanceInfo
 import Juvix.Compiler.Internal.Data.LocalVars
 import Juvix.Compiler.Internal.Data.NameDependencyInfo
 import Juvix.Compiler.Internal.Data.TypedHole

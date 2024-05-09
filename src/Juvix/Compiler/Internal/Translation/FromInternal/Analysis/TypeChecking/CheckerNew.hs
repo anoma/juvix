@@ -109,7 +109,7 @@ registerConstructor ctr = do
   ty <- lookupConstructorType (ctr ^. inductiveConstructorName)
   registerNameIdType (ctr ^. inductiveConstructorName . nameId) ty
 
-registerNameIdType :: (Members '[HighlightBuilder, State TypesTable, Reader InfoTable] r) => NameId -> Expression -> Sem r ()
+registerNameIdType :: (Members '[HighlightBuilder, State TypesTable] r) => NameId -> Expression -> Sem r ()
 registerNameIdType uid ty = do
   modify (over typesTable (HashMap.insert uid ty))
   modify (over (highlightTypes . typesTable) (HashMap.insert uid ty))

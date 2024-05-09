@@ -58,15 +58,12 @@ typeCheckingNew a = do
   (termin, (res, (idens, (funs, r)))) <- runTermination iniTerminationState $ do
     res <- a
     itab <- getInternalModuleTable <$> ask
-    let md :: InternalModule
-        md = res ^. Internal.resultInternalModule
-        itab' :: InternalModuleTable
-        itab' = insertInternalModule itab md
-        table :: InfoTable
-        table = computeCombinedInfoTable itab'
+    let table :: InfoTable
+        table = computeCombinedInfoTable itab
+    -- TODO: ResultBuilder
     fmap (res,)
-      . runState (computeTypesTable itab')
-      . runState (computeFunctionsTable itab')
+      . runState (computeTypesTable itab)
+      . runState (computeFunctionsTable itab)
       . runReader table
       . mapError (JuvixError @TypeCheckerError)
       $ checkTable >> checkModule (res ^. Internal.resultModule)
