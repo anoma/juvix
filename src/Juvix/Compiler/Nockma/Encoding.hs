@@ -92,10 +92,45 @@ writeAtom a = do
   writeLength (bitLength (a ^. atom))
   writeIntegral (a ^. atom)
 
-jamSem :: (Member (State JamState) r) => Term Natural -> Sem r ()
-jamSem = \case
-  TermAtom a -> writeAtom a
-  TermCell {} -> undefined
+cacheTerm :: (Member (State JamState) r) => Term Natural -> Sem r ()
+cacheTerm t = do
+  pos <- Builder.size <$> gets (^. jamStateBuilder)
+  modify (set (jamStateCache . at t) (Just pos))
+
+lookupCache :: (Member (State JamState) r) => Term Natural -> Sem r (Maybe Int)
+lookupCache t = gets (^. jamStateCache . at t)
+
+writeCell :: forall r. (Member (State JamState) r) => Cell Natural -> Sem r ()
+writeCell c = do
+  writeOne
+  writeZero
+  jamSem (c ^. cellLeft)
+  jamSem (c ^. cellRight)
+
+jamSem :: forall r. (Member (State JamState) r) => Term Natural -> Sem r ()
+jamSem t = do
+  ct <- lookupCache t
+  case ct of
+    Just idx -> case t of
+      TermAtom a -> do
+        let idxBitLength = finiteBitSize idx - countLeadingZeros idx
+            atomBitLength = bitLength (a ^. atom)
+        if
+            | atomBitLength <= idxBitLength -> writeAtom a
+            | otherwise -> backref idx
+      TermCell {} -> backref idx
+    Nothing -> do
+      cacheTerm t
+      case t of
+        TermAtom a -> writeAtom a
+        TermCell c -> writeCell c
+  where
+    backref :: Int -> Sem r ()
+    backref idx = do
+      writeOne
+      writeOne
+      writeLength (bitLength idx)
+      writeIntegral idx
 
 evalJamStateBuilder :: JamState -> Sem '[State JamState] a -> Builder Bit
 evalJamStateBuilder st = (^. jamStateBuilder) . run . execState st
