@@ -1,6 +1,6 @@
 module Juvix.Compiler.Nockma.Encoding where
 
-import Data.Bit
+import Data.Bit as Bit
 import Data.Bits
 import Data.Vector.Unboxed qualified as U
 import Juvix.Compiler.Nockma.Language
@@ -8,12 +8,11 @@ import Juvix.Prelude.Base
 import VectorBuilder.Builder as Builder
 import VectorBuilder.Vector
 
-integerToVectorBits :: Integer -> U.Vector Bit
+integerToVectorBits :: Integer -> Bit.Vector Bit
 integerToVectorBits = build . integerToBuilder
 
 integerToBuilder :: (Integral a) => a -> Builder Bit
 integerToBuilder x
-  | x == 0 = Builder.singleton (Bit False)
   | x < 0 = error "integerToVectorBits: negative integers are not supported in this implementation"
   | otherwise = unfoldBits (fromIntegral x)
   where
@@ -31,7 +30,7 @@ bitLength = \case
       go 0 acc = acc
       go x acc = go (x `shiftR` 1) (acc + 1)
 
-vectorBitsToInteger :: U.Vector Bit -> Integer
+vectorBitsToInteger :: Bit.Vector Bit -> Integer
 vectorBitsToInteger = U.ifoldl' go 0
   where
     go :: Integer -> Int -> Bit -> Integer
@@ -83,7 +82,7 @@ writeLength len = do
   where
     go :: Int -> Sem r ()
     go l = unless (l == 1) $ do
-      writeBit (Bit ((l .&. 1) /= 0))
+      writeBit (Bit (testBit l 0))
       go (l `shiftR` 1)
 
 writeAtom :: forall r a. (Integral a, Member (State JamState) r) => Atom a -> Sem r ()
@@ -135,22 +134,22 @@ jamSem t = do
 evalJamStateBuilder :: JamState -> Sem '[State JamState] a -> Builder Bit
 evalJamStateBuilder st = (^. jamStateBuilder) . run . execState st
 
-evalJamState :: JamState -> Sem '[State JamState] a -> U.Vector Bit
+evalJamState :: JamState -> Sem '[State JamState] a -> Bit.Vector Bit
 evalJamState st = build . evalJamStateBuilder st
 
 jamToBuilder :: Term Natural -> Builder Bit
 jamToBuilder = evalJamStateBuilder initJamState . jamSem
 
-jamToVector :: Term Natural -> U.Vector Bit
+jamToVector :: Term Natural -> Bit.Vector Bit
 jamToVector = build . jamToBuilder
 
 jam :: Term Natural -> Atom Natural
 jam = (\i -> Atom @Natural i emptyAtomInfo) . fromInteger . vectorBitsToInteger . jamToVector
 
-cueToVector :: Atom Natural -> U.Vector Bit
+cueToVector :: Atom Natural -> Bit.Vector Bit
 cueToVector = integerToVectorBits . fromIntegral . (^. atom)
 
-cueFromBits :: U.Vector Bit -> Term Natural
+cueFromBits :: Bit.Vector Bit -> Term Natural
 cueFromBits = undefined
 
 cue :: Atom Natural -> Term Natural
