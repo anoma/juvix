@@ -254,6 +254,7 @@ serializeOp = \case
 class (NockmaEq a) => NockNatural a where
   type ErrNockNatural a :: Type
   nockNatural :: (Member (Error (ErrNockNatural a)) r) => Atom a -> Sem r Natural
+  fromNatural :: (Member (Error (ErrNockNatural a)) r) => Natural -> Sem r a
   serializeNockOp :: NockOp -> a
   serializePath :: Path -> a
 
@@ -309,6 +310,7 @@ nockBoolLiteral b
 instance NockNatural Natural where
   type ErrNockNatural Natural = NockNaturalNaturalError
   nockNatural a = return (a ^. atom)
+  fromNatural = return
   nockTrue = Atom 0 (atomHintInfo AtomHintBool)
   nockFalse = Atom 1 (atomHintInfo AtomHintBool)
   nockNil = Atom 0 (atomHintInfo AtomHintNil)
