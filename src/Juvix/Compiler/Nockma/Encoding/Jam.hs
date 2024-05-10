@@ -25,10 +25,6 @@ initJamState =
 
 makeLenses ''JamState
 
--- | Write the binary encoding of the argument to the output
-writeIntegral :: (Integral a, Member BitWriter r) => a -> Sem r ()
-writeIntegral i = writeBuilder (integerToBuilder i)
-
 -- | Write the binary encoding of argument interpreted as a length to the output
 writeLength :: forall r. (Member BitWriter r) => Int -> Sem r ()
 writeLength len = do

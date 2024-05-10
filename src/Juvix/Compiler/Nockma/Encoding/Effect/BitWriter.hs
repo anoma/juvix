@@ -6,13 +6,10 @@ import VectorBuilder.Builder as Builder
 import VectorBuilder.Vector
 
 data BitWriter :: Effect where
-  WriteBuilder :: Builder Bit -> BitWriter m ()
+  WriteBit :: Bit -> BitWriter m ()
   GetCurrentPosition :: BitWriter m Int
 
 makeSem ''BitWriter
-
-writeBit :: (Member BitWriter r) => Bit -> Sem r ()
-writeBit b = writeBuilder (Builder.singleton b)
 
 writeOne :: (Member BitWriter r) => Sem r ()
 writeOne = writeBit (Bit True)
@@ -41,14 +38,14 @@ execBitWriter sem = do
 
 re :: Sem (BitWriter ': r) a -> Sem (State WriterState ': r) a
 re = interpretTop $ \case
-  WriteBuilder b -> writeBuilder' b
+  WriteBit b -> writeBit' b
   GetCurrentPosition -> getCurrentPosition'
 
-writeBuilder' :: (Member (State WriterState) r) => Builder Bit -> Sem r ()
-writeBuilder' b = modify appendBuilder
+writeBit' :: (Member (State WriterState) r) => Bit -> Sem r ()
+writeBit' b = modify appendBit
   where
-    appendBuilder :: WriterState -> WriterState
-    appendBuilder = over writerStateBuilder (<> b)
+    appendBit :: WriterState -> WriterState
+    appendBit = over writerStateBuilder (<> Builder.singleton b)
 
 getCurrentPosition' :: (Member (State WriterState) r) => Sem r Int
 getCurrentPosition' = Builder.size <$> gets (^. writerStateBuilder)
