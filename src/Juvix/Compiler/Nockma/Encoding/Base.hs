@@ -7,6 +7,7 @@ import Juvix.Prelude.Base
 import VectorBuilder.Builder as Builder
 import VectorBuilder.Vector
 
+-- | Binary encode an integer to a vector of bits, ordered from least to most significant bits
 integerToVectorBits :: Integer -> Bit.Vector Bit
 integerToVectorBits = build . integerToBuilder
 
@@ -20,6 +21,7 @@ integerToBuilder x
       | n == 0 = Builder.empty
       | otherwise = Builder.singleton (Bit (testBit n 0)) <> unfoldBits (n `shiftR` 1)
 
+-- | Computes the number of bits required to store the argument in binary
 bitLength :: forall a. (Integral a) => a -> Int
 bitLength = \case
   0 -> 0
@@ -29,6 +31,7 @@ bitLength = \case
       go 0 acc = acc
       go x acc = go (x `shiftR` 1) (acc + 1)
 
+-- | Decode a vector of bits (ordered from least to most significant bits) to an integer
 vectorBitsToInteger :: Bit.Vector Bit -> Integer
 vectorBitsToInteger = U.ifoldl' go 0
   where
@@ -37,6 +40,7 @@ vectorBitsToInteger = U.ifoldl' go 0
       | b = setBit acc idx
       | otherwise = acc
 
+-- | Transform a Natural to an Int, computes Nothing if the Natural does not fit in an Int
 safeNaturalToInt :: Natural -> Maybe Int
 safeNaturalToInt n
   | n > fromIntegral (maxBound :: Int) = Nothing
