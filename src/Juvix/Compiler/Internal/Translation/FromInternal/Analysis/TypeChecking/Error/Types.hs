@@ -1,10 +1,10 @@
 module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error.Types where
 
-import Juvix.Compiler.Internal.Data.InstanceInfo
 import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Internal.Pretty (fromGenericOptions)
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.CheckerNew.Arity
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error.Pretty
+import Juvix.Compiler.Store.Internal.Data.InstanceInfo
 import Juvix.Data.PPOutput
 import Juvix.Prelude
 

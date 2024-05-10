@@ -1,4 +1,4 @@
-module Juvix.Compiler.Internal.Data.InstanceInfo where
+module Juvix.Compiler.Store.Internal.Data.InstanceInfo where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Internal.Language

@@ -1,8 +1,8 @@
 module Juvix.Compiler.Store.Internal.Data.InfoTable where
 
-import Juvix.Compiler.Internal.Data.CoercionInfo
-import Juvix.Compiler.Internal.Data.InstanceInfo
 import Juvix.Compiler.Internal.Language
+import Juvix.Compiler.Store.Internal.Data.CoercionInfo
+import Juvix.Compiler.Store.Internal.Data.InstanceInfo
 import Juvix.Extra.Serialize
 import Juvix.Prelude
 

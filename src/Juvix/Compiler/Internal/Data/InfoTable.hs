@@ -86,13 +86,13 @@ computeInternalModule tysTab funsTab m@Module {..} =
     { _internalModuleId = _moduleId,
       _internalModuleName = _moduleName,
       _internalModuleImports = _moduleBody ^. moduleImports,
-      _internalModuleInfoTable = computeInfoTable funsTab m,
+      _internalModuleInfoTable = computeInfoTable m,
       _internalModuleTypesTable = tysTab,
       _internalModuleFunctionsTable = funsTab
     }
 
-computeInfoTable :: FunctionsTable -> Module -> InfoTable
-computeInfoTable funsTab m = InfoTable {..}
+computeInfoTable :: Module -> InfoTable
+computeInfoTable m = InfoTable {..}
   where
     mutuals :: [MutualStatement]
     mutuals =
@@ -175,7 +175,6 @@ computeInfoTable funsTab m = InfoTable {..}
         mkInstance (FunctionInfo {..})
           | _functionInfoInstance =
               instanceFromTypedExpression
-                funsTab
                 ( TypedExpression
                     { _typedType = _functionInfoType,
                       _typedExpression = ExpressionIden (IdenFunction _functionInfoName)
@@ -191,7 +190,6 @@ computeInfoTable funsTab m = InfoTable {..}
         mkCoercion (FunctionInfo {..})
           | _functionInfoCoercion =
               coercionFromTypedExpression
-                funsTab
                 ( TypedExpression
                     { _typedType = _functionInfoType,
                       _typedExpression = ExpressionIden (IdenFunction _functionInfoName)

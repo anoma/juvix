@@ -1,5 +1,5 @@
 module Juvix.Compiler.Internal.Extra.CoercionInfo
-  ( module Juvix.Compiler.Internal.Data.CoercionInfo,
+  ( module Juvix.Compiler.Store.Internal.Data.CoercionInfo,
     module Juvix.Compiler.Internal.Extra.CoercionInfo,
   )
 where
@@ -7,11 +7,10 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Data.List qualified as List
-import Juvix.Compiler.Internal.Data.CoercionInfo
 import Juvix.Compiler.Internal.Extra.Base
 import Juvix.Compiler.Internal.Extra.InstanceInfo
 import Juvix.Compiler.Internal.Language
-import Juvix.Compiler.Store.Internal.Data.FunctionsTable
+import Juvix.Compiler.Store.Internal.Data.CoercionInfo
 import Juvix.Prelude
 
 updateCoercionTable :: CoercionTable -> CoercionInfo -> CoercionTable
@@ -26,12 +25,12 @@ updateCoercionTable tab ci@CoercionInfo {..} =
 lookupCoercionTable :: CoercionTable -> Name -> Maybe [CoercionInfo]
 lookupCoercionTable tab name = HashMap.lookup name (tab ^. coercionTableMap)
 
-coercionFromTypedExpression :: FunctionsTable -> TypedExpression -> Maybe CoercionInfo
-coercionFromTypedExpression funsTab TypedExpression {..}
+coercionFromTypedExpression :: TypedExpression -> Maybe CoercionInfo
+coercionFromTypedExpression TypedExpression {..}
   | null args = Nothing
   | otherwise = do
-      tgt <- traitFromExpression funsTab metaVars (t ^. paramType)
-      InstanceApp {..} <- traitFromExpression funsTab metaVars e
+      tgt <- traitFromExpression metaVars (t ^. paramType)
+      InstanceApp {..} <- traitFromExpression metaVars e
       return $
         CoercionInfo
           { _coercionInfoInductive = _instanceAppHead,

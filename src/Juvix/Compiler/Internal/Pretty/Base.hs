@@ -6,7 +6,6 @@ module Juvix.Compiler.Internal.Pretty.Base
 where
 
 import Data.HashMap.Strict qualified as HashMap
-import Juvix.Compiler.Internal.Data.InstanceInfo
 import Juvix.Compiler.Internal.Data.LocalVars
 import Juvix.Compiler.Internal.Data.NameDependencyInfo
 import Juvix.Compiler.Internal.Data.TypedHole
@@ -14,6 +13,7 @@ import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Internal.Pretty.Options
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.CheckerNew.Arity qualified as New
 import Juvix.Compiler.Store.Internal.Data.InfoTable
+import Juvix.Compiler.Store.Internal.Data.InstanceInfo
 import Juvix.Data.CodeAnn
 import Juvix.Prelude
 

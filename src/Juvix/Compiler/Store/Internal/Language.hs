@@ -6,8 +6,10 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Internal.Language
+import Juvix.Compiler.Store.Internal.Data.CoercionInfo
 import Juvix.Compiler.Store.Internal.Data.FunctionsTable
 import Juvix.Compiler.Store.Internal.Data.InfoTable
+import Juvix.Compiler.Store.Internal.Data.InstanceInfo
 import Juvix.Compiler.Store.Internal.Data.TypesTable
 import Juvix.Extra.Serialize
 import Juvix.Prelude
@@ -17,6 +19,8 @@ data InternalModule = InternalModule
     _internalModuleName :: Name,
     _internalModuleImports :: [Import],
     _internalModuleInfoTable :: InfoTable,
+    _internalModuleInstances :: InstanceTable,
+    _internalModuleCoercions :: CoercionTable,
     _internalModuleTypesTable :: TypesTable,
     _internalModuleFunctionsTable :: FunctionsTable
   }

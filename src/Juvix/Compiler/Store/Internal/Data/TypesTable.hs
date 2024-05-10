@@ -11,3 +11,5 @@ newtype TypesTable = TypesTable
   deriving stock (Generic)
 
 instance Serialize TypesTable
+
+makeLenses ''TypesTable

@@ -14,8 +14,6 @@ import Juvix.Compiler.Store.Internal.Data.FunctionsTable
 import Juvix.Compiler.Store.Internal.Data.TypesTable
 import Juvix.Prelude
 
-type NormalizedTable = HashMap NameId Expression
-
 data InternalTypedResult = InternalTypedResult
   { _resultInternal :: Internal.InternalResult,
     _resultModule :: Module,
@@ -25,5 +23,11 @@ data InternalTypedResult = InternalTypedResult
     _resultFunctions :: FunctionsTable
   }
 
-makeLenses ''TypesTable
+data ImportContext = ImportContext
+  { _importContextInfoTable :: InfoTable,
+    _importContextTypesTable :: TypesTable,
+    _importContextFunctionsTable :: FunctionsTable
+  }
+
 makeLenses ''InternalTypedResult
+makeLenses ''ImportContext

@@ -156,7 +156,6 @@ checkStrictlyPositiveOccurrences p = do
             ExpressionIden (IdenInductive ty') -> do
               when (inside && name == ty') (throwNegativePositonError expr)
               indInfo' <- lookupInductive ty'
-
               {- We now need to know whether `name` negatively occurs at
                `indTy'` or not. The way to know is by checking that the type ty'
                preserves the positivity condition, i.e., its type parameters are

@@ -359,10 +359,8 @@ checkInstanceType ::
   FunctionDef ->
   Sem r ()
 checkInstanceType FunctionDef {..} = do
-  funsTab <- get
   let mi =
         instanceFromTypedExpression
-          funsTab
           ( TypedExpression
               { _typedType = _funDefType,
                 _typedExpression = ExpressionIden (IdenFunction _funDefName)
@@ -377,23 +375,23 @@ checkInstanceType FunctionDef {..} = do
       unless (null is) $
         throw (ErrSubsumedInstance (SubsumedInstance ii is (getLoc _funDefName)))
       let metaVars = HashSet.fromList $ mapMaybe (^. paramName) _instanceInfoArgs
-      mapM_ (checkArg funsTab tab metaVars ii) _instanceInfoArgs
+      mapM_ (checkArg tab metaVars ii) _instanceInfoArgs
     Nothing ->
       throw (ErrInvalidInstanceType (InvalidInstanceType _funDefType))
   where
-    checkArg :: FunctionsTable -> InfoTable -> HashSet VarName -> InstanceInfo -> FunctionParameter -> Sem r ()
-    checkArg funsTab tab metaVars ii fp@FunctionParameter {..} = case _paramImplicit of
+    checkArg :: InfoTable -> HashSet VarName -> InstanceInfo -> FunctionParameter -> Sem r ()
+    checkArg tab metaVars ii fp@FunctionParameter {..} = case _paramImplicit of
       Implicit -> return ()
       Explicit -> throw (ErrExplicitInstanceArgument (ExplicitInstanceArgument fp))
-      ImplicitInstance -> case traitFromExpression funsTab metaVars _paramType of
+      ImplicitInstance -> case traitFromExpression metaVars _paramType of
         Just app@InstanceApp {..}
           | isTrait tab _instanceAppHead ->
               checkTraitTermination app ii
         _ ->
           throw (ErrNotATrait (NotATrait _paramType))
 
-checkInstanceParam :: (Member (Error TypeCheckerError) r) => FunctionsTable -> InfoTable -> Expression -> Sem r ()
-checkInstanceParam funsTab tab ty = case traitFromExpression funsTab mempty ty of
+checkInstanceParam :: (Member (Error TypeCheckerError) r) => InfoTable -> Expression -> Sem r ()
+checkInstanceParam tab ty = case traitFromExpression mempty ty of
   Just InstanceApp {..} | isTrait tab _instanceAppHead -> return ()
   _ -> throw (ErrNotATrait (NotATrait ty))
 
@@ -403,10 +401,8 @@ checkCoercionType ::
   FunctionDef ->
   Sem r ()
 checkCoercionType FunctionDef {..} = do
-  funsTab <- get
   let mi =
         coercionFromTypedExpression
-          funsTab
           ( TypedExpression
               { _typedType = _funDefType,
                 _typedExpression = ExpressionIden (IdenFunction _funDefName)
@@ -484,8 +480,7 @@ checkFunctionParameter FunctionParameter {..} = do
   ty' <- checkIsType (getLoc ty) ty
   when (_paramImplicit == ImplicitInstance) $ do
     tab <- ask
-    funsTab <- get
-    checkInstanceParam funsTab tab ty'
+    checkInstanceParam tab ty'
   return
     FunctionParameter
       { _paramType = ty',
