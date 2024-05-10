@@ -18,7 +18,7 @@ writeIntegral x
       | n == 0 = return ()
       | otherwise = writeBit (Bit (testBit n 0)) <> unfoldBits (n `shiftR` 1)
 
-integerToVectorBits ::  (Integral a) => a -> Bit.Vector Bit
+integerToVectorBits :: (Integral a) => a -> Bit.Vector Bit
 integerToVectorBits = run . execBitWriter . writeIntegral
 
 -- | Computes the number of bits required to store the argument in binary
