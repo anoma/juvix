@@ -19,8 +19,8 @@ data InternalModule = InternalModule
     _internalModuleName :: Name,
     _internalModuleImports :: [Import],
     _internalModuleInfoTable :: InfoTable,
-    _internalModuleInstances :: InstanceTable,
-    _internalModuleCoercions :: CoercionTable,
+    _internalModuleInstanceTable :: InstanceTable,
+    _internalModuleCoercionTable :: CoercionTable,
     _internalModuleTypesTable :: TypesTable,
     _internalModuleFunctionsTable :: FunctionsTable
   }
@@ -53,3 +53,9 @@ computeTypesTable = mconcatMap (^. internalModuleTypesTable) . (^. internalModul
 
 computeFunctionsTable :: InternalModuleTable -> FunctionsTable
 computeFunctionsTable = mconcatMap (^. internalModuleFunctionsTable) . (^. internalModuleTable)
+
+computeInstanceTable :: InternalModuleTable -> InstanceTable
+computeInstanceTable = mconcatMap (^. internalModuleInstanceTable) . (^. internalModuleTable)
+
+computeCoercionTable :: InternalModuleTable -> CoercionTable
+computeCoercionTable = mconcatMap (^. internalModuleCoercionTable) . (^. internalModuleTable)

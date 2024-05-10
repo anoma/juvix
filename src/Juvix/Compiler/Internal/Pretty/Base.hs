@@ -13,7 +13,6 @@ import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Internal.Pretty.Options
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.CheckerNew.Arity qualified as New
 import Juvix.Compiler.Store.Internal.Data.InfoTable
-import Juvix.Compiler.Store.Internal.Data.InstanceInfo
 import Juvix.Data.CodeAnn
 import Juvix.Prelude
 
@@ -366,7 +365,6 @@ instance PrettyCode InfoTable where
     inds <- ppCode (HashMap.keys (tbl ^. infoInductives))
     constrs <- ppCode (HashMap.keys (tbl ^. infoConstructors))
     funs <- ppCode (HashMap.keys (tbl ^. infoFunctions))
-    insts <- ppCode $ map (map (^. instanceInfoResult)) $ HashMap.elems (tbl ^. infoInstances . instanceTableMap)
     return $
       header "InfoTable"
         <> "\n========="
@@ -376,8 +374,6 @@ instance PrettyCode InfoTable where
         <> constrs
         <> header "\nFunctions: "
         <> funs
-        <> header "\nInstances: "
-        <> insts
 
 ppPostExpression ::
   (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>

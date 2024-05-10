@@ -1,6 +1,7 @@
 module Juvix.Compiler.Internal.Data.InfoTable
   ( module Juvix.Compiler.Store.Internal.Language,
     computeInternalModule,
+    computeInternalModuleInfoTable,
     extendWithReplExpression,
     lookupConstructor,
     lookupConstructorArgTypes,
@@ -80,19 +81,21 @@ letFunctionDefs e =
       LetFunDef f -> pure f
       LetMutualBlock (MutualBlockLet fs) -> fs
 
-computeInternalModule :: TypesTable -> FunctionsTable -> Module -> InternalModule
-computeInternalModule tysTab funsTab m@Module {..} =
+computeInternalModule :: InstanceTable -> CoercionTable -> TypesTable -> FunctionsTable -> Module -> InternalModule
+computeInternalModule instTab coeTab tysTab funsTab m@Module {..} =
   InternalModule
     { _internalModuleId = _moduleId,
       _internalModuleName = _moduleName,
       _internalModuleImports = _moduleBody ^. moduleImports,
-      _internalModuleInfoTable = computeInfoTable m,
+      _internalModuleInfoTable = computeInternalModuleInfoTable m,
       _internalModuleTypesTable = tysTab,
-      _internalModuleFunctionsTable = funsTab
+      _internalModuleFunctionsTable = funsTab,
+      _internalModuleInstanceTable = instTab,
+      _internalModuleCoercionTable = coeTab
     }
 
-computeInfoTable :: Module -> InfoTable
-computeInfoTable m = InfoTable {..}
+computeInternalModuleInfoTable :: Module -> InfoTable
+computeInternalModuleInfoTable m = InfoTable {..}
   where
     mutuals :: [MutualStatement]
     mutuals =
@@ -167,36 +170,6 @@ computeInfoTable m = InfoTable {..}
         goAxiom AxiomInfo {..} =
           _axiomInfoDef ^. axiomBuiltin
             >>= (\b -> Just (BuiltinsAxiom b, _axiomInfoDef ^. axiomName))
-
-    _infoInstances :: InstanceTable
-    _infoInstances = foldr (flip updateInstanceTable) mempty $ mapMaybe mkInstance (HashMap.elems _infoFunctions)
-      where
-        mkInstance :: FunctionInfo -> Maybe InstanceInfo
-        mkInstance (FunctionInfo {..})
-          | _functionInfoInstance =
-              instanceFromTypedExpression
-                ( TypedExpression
-                    { _typedType = _functionInfoType,
-                      _typedExpression = ExpressionIden (IdenFunction _functionInfoName)
-                    }
-                )
-          | otherwise =
-              Nothing
-
-    _infoCoercions :: CoercionTable
-    _infoCoercions = foldr (flip updateCoercionTable) mempty $ mapMaybe mkCoercion (HashMap.elems _infoFunctions)
-      where
-        mkCoercion :: FunctionInfo -> Maybe CoercionInfo
-        mkCoercion (FunctionInfo {..})
-          | _functionInfoCoercion =
-              coercionFromTypedExpression
-                ( TypedExpression
-                    { _typedType = _functionInfoType,
-                      _typedExpression = ExpressionIden (IdenFunction _functionInfoName)
-                    }
-                )
-          | otherwise =
-              Nothing
 
     ss :: [MutualBlock]
     ss = m ^. moduleBody . moduleStatements

@@ -1,8 +1,6 @@
 module Juvix.Compiler.Store.Internal.Data.InfoTable where
 
 import Juvix.Compiler.Internal.Language
-import Juvix.Compiler.Store.Internal.Data.CoercionInfo
-import Juvix.Compiler.Store.Internal.Data.InstanceInfo
 import Juvix.Extra.Serialize
 import Juvix.Prelude
 
@@ -58,9 +56,7 @@ data InfoTable = InfoTable
     _infoAxioms :: HashMap Name AxiomInfo,
     _infoFunctions :: HashMap Name FunctionInfo,
     _infoInductives :: HashMap Name InductiveInfo,
-    _infoBuiltins :: HashMap BuiltinPrim Name,
-    _infoInstances :: InstanceTable,
-    _infoCoercions :: CoercionTable
+    _infoBuiltins :: HashMap BuiltinPrim Name
   }
   deriving stock (Generic)
 
@@ -79,9 +75,7 @@ instance Semigroup InfoTable where
         _infoAxioms = a ^. infoAxioms <> b ^. infoAxioms,
         _infoFunctions = a ^. infoFunctions <> b ^. infoFunctions,
         _infoInductives = a ^. infoInductives <> b ^. infoInductives,
-        _infoBuiltins = a ^. infoBuiltins <> b ^. infoBuiltins,
-        _infoInstances = a ^. infoInstances <> b ^. infoInstances,
-        _infoCoercions = a ^. infoCoercions <> b ^. infoCoercions
+        _infoBuiltins = a ^. infoBuiltins <> b ^. infoBuiltins
       }
 
 instance Monoid InfoTable where
@@ -91,7 +85,5 @@ instance Monoid InfoTable where
         _infoAxioms = mempty,
         _infoFunctions = mempty,
         _infoInductives = mempty,
-        _infoBuiltins = mempty,
-        _infoInstances = mempty,
-        _infoCoercions = mempty
+        _infoBuiltins = mempty
       }

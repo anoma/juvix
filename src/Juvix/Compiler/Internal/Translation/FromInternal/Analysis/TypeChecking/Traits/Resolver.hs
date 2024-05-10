@@ -13,6 +13,7 @@ import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Extra.CoercionInfo
 import Juvix.Compiler.Internal.Extra.InstanceInfo
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Inference
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.ResultBuilder
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error
 import Juvix.Prelude
 
@@ -27,14 +28,16 @@ isTrait :: InfoTable -> Name -> Bool
 isTrait tab name = maybe False (^. inductiveInfoTrait) (HashMap.lookup name (tab ^. infoInductives))
 
 resolveTraitInstance ::
-  (Members '[Error TypeCheckerError, NameIdGen, Inference, Reader InfoTable] r) =>
+  (Members '[Error TypeCheckerError, NameIdGen, Inference, ResultBuilder, Reader InfoTable] r) =>
   TypedHole ->
   Sem r Expression
 resolveTraitInstance TypedHole {..} = do
-  tbl <- ask
-  let tab = foldr (flip updateInstanceTable) (tbl ^. infoInstances) (varsToInstances tbl _typedHoleLocalVars)
+  infoTab <- ask
+  tab0 <- getCombinedInstanceTable
+  let tab = foldr (flip updateInstanceTable) tab0 (varsToInstances infoTab _typedHoleLocalVars)
   ty <- strongNormalize _typedHoleType
-  is <- lookupInstance (tbl ^. infoCoercions) tab ty
+  ctab <- getCombinedCoercionTable
+  is <- lookupInstance ctab tab ty
   case is of
     [(cs, ii, subs)] ->
       expandArity loc (subsIToE subs) (ii ^. instanceInfoArgs) (ii ^. instanceInfoResult)

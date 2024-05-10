@@ -19,6 +19,7 @@ import Juvix.Compiler.Internal.Language qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromConcrete qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.ResultBuilder
 import Juvix.Compiler.Pipeline.Artifacts.Base
 import Juvix.Compiler.Store.Extra
 import Juvix.Compiler.Store.Language
@@ -70,6 +71,9 @@ runNameIdGenArtifacts = runStateLikeArtifacts runNameIdGen artifactNameIdState
 runFunctionsTableArtifacts :: (Members '[State Artifacts] r) => Sem (State FunctionsTable ': r) a -> Sem r a
 runFunctionsTableArtifacts = runStateArtifacts artifactFunctions
 
+readerFunctionsTableArtifacts :: (Members '[State Artifacts] r) => Sem (Reader FunctionsTable ': r) a -> Sem r a
+readerFunctionsTableArtifacts = runReaderArtifacts artifactFunctions
+
 readerTypesTableArtifacts :: (Members '[State Artifacts] r) => Sem (Reader TypesTable ': r) a -> Sem r a
 readerTypesTableArtifacts = runReaderArtifacts artifactTypes
 
@@ -97,4 +101,20 @@ runStateLikeArtifacts runner l m = do
   s <- gets (^. l)
   (s', a) <- runner s m
   modify' (set l s')
+  return a
+
+runResultBuilderArtifacts :: forall r a. (Members '[State Artifacts] r) => Sem (ResultBuilder ': r) a -> Sem r a
+runResultBuilderArtifacts m = do
+  ftab <- gets (^. artifactFunctions)
+  ttab <- gets (^. artifactTypes)
+  let importCtx =
+        ImportContext
+          { _importContextCoercions = mempty,
+            _importContextInstances = mempty,
+            _importContextFunctionsTable = ftab,
+            _importContextTypesTable = ttab
+          }
+  (s, a) <- runResultBuilder importCtx m
+  modify' (set artifactFunctions (s ^. resultBuilderStateCombinedFunctionsTable))
+  modify' (set artifactTypes (s ^. resultBuilderStateCombinedTypesTable))
   return a
