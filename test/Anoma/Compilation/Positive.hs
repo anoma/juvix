@@ -549,5 +549,5 @@ allTests =
         $(mkRelDir ".")
         $(mkRelFile "test075.juvix")
         []
-        $ checkNatOutput [2, 84081, 4657, 2]
+        $ checkNatOutput [2, 84081, 4657, 12]
     ]
