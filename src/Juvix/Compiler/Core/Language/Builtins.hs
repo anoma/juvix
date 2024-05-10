@@ -28,6 +28,7 @@ data BuiltinOp
   | OpFail
   | OpAnomaGet
   | OpAnomaEncode
+  | OpAnomaDecode
   | OpPoseidonHash
   | OpEc
   | OpRandomEcPoint
@@ -73,6 +74,7 @@ builtinOpArgsNum = \case
   OpFail -> 1
   OpAnomaGet -> 1
   OpAnomaEncode -> 1
+  OpAnomaDecode -> 1
   OpPoseidonHash -> 1
   OpEc -> 3
   OpRandomEcPoint -> 0
@@ -111,6 +113,7 @@ builtinIsFoldable = \case
   OpFail -> False
   OpAnomaGet -> False
   OpAnomaEncode -> False
+  OpAnomaDecode -> False
   OpPoseidonHash -> False
   OpEc -> False
   OpRandomEcPoint -> False
@@ -125,4 +128,4 @@ builtinsCairo :: [BuiltinOp]
 builtinsCairo = [OpPoseidonHash, OpEc, OpRandomEcPoint]
 
 builtinsAnoma :: [BuiltinOp]
-builtinsAnoma = [OpAnomaGet, OpAnomaEncode]
+builtinsAnoma = [OpAnomaGet, OpAnomaEncode, OpAnomaDecode]

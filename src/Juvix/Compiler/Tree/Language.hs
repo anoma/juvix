@@ -71,6 +71,8 @@ data UnaryOpcode
     OpAnomaGet
   | -- | Encode a value to an Anoma atom
     OpAnomaEncode
+  | -- | Decode a value from an Anoma atom
+    OpAnomaDecode
 
 data NodeBinop = NodeBinop
   { _nodeBinopInfo :: NodeInfo,

@@ -297,6 +297,7 @@ genCode infoTable fi =
       Core.OpFail -> OpFail
       Core.OpAnomaGet -> OpAnomaGet
       Core.OpAnomaEncode -> OpAnomaEncode
+      Core.OpAnomaDecode -> OpAnomaDecode
       _ -> impossible
 
     genCairoOp :: Core.BuiltinOp -> CairoOp

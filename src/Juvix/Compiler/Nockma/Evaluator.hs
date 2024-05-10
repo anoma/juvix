@@ -230,6 +230,7 @@ evalProfile inistack initerm =
             StdlibLe -> binCmp (<=)
             StdlibPow2 -> unaArith (2 ^)
             StdlibEncode -> TermAtom <$> Encoding.jam args'
+            StdlibDecode -> undefined
 
         goAutoConsCell :: AutoConsCell a -> Sem r (Term a)
         goAutoConsCell c = do
