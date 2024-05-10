@@ -94,6 +94,13 @@ writeCell c = do
   jamSem @a (c ^. cellLeft)
   jamSem @a (c ^. cellRight)
 
+-- | Encode and write a backref to the output
+writeBackref :: forall a r. (Member (State (JamState a)) r) => Int -> Sem r ()
+writeBackref idx = do
+  writeBackrefTag @a
+  writeLength @a (bitLength idx)
+  writeIntegral @Int @a idx
+
 -- | Cache the position of the encoding of the passed term
 cacheTerm :: forall r a. (Hashable a, Member (State (JamState a)) r) => Term a -> Sem r ()
 cacheTerm t = do
@@ -115,19 +122,13 @@ jamSem t = do
             atomBitLength = bitLength (a ^. atom)
         if
             | atomBitLength <= idxBitLength -> writeAtom @a a
-            | otherwise -> backref idx
-      TermCell {} -> backref idx
+            | otherwise -> writeBackref @a idx
+      TermCell {} -> writeBackref @a idx
     Nothing -> do
       cacheTerm t
       case t of
         TermAtom a -> writeAtom a
         TermCell c -> writeCell c
-  where
-    backref :: Int -> Sem r ()
-    backref idx = do
-      writeBackrefTag @a
-      writeLength @a (bitLength idx)
-      writeIntegral @Int @a idx
 
 evalJamStateBuilder :: JamState a -> Sem '[State (JamState a)] () -> Builder Bit
 evalJamStateBuilder st = (^. jamStateBuilder) . run . execState st
