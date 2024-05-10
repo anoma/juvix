@@ -2,22 +2,21 @@ module Juvix.Compiler.Nockma.Encoding.Cue where
 
 import Data.Bit as Bit
 import Data.Bits
-import Data.Vector.Unboxed qualified as U
 import Juvix.Compiler.Nockma.Encoding.Base
+import Juvix.Compiler.Nockma.Encoding.Effect.BitReader
 import Juvix.Compiler.Nockma.Language
 import Juvix.Prelude.Base
 import VectorBuilder.Builder as Builder
 import VectorBuilder.Vector
-import Juvix.Compiler.Nockma.Encoding.Effect.BitReader
 
-data CueState = CueState
-  {_cueStateCache :: HashMap Int (Term Natural)
+data CueState a = CueState
+  { _cueStateCache :: HashMap Int (Term a)
   }
 
-initCueState :: CueState
+initCueState :: CueState a
 initCueState =
   CueState
-    {_cueStateCache = mempty
+    { _cueStateCache = mempty
     }
 
 data CueEnv = CueEnv
@@ -39,7 +38,15 @@ data ReadError
   | ReadErrorInvalidBackref
   deriving stock (Show)
 
-registerElementStart :: (Members '[BitReader, State CueState, Reader CueEnv] r) => Sem r a -> Sem r a
+registerElementStart ::
+  ( Members
+      '[ BitReader,
+         Reader CueEnv
+       ]
+      r
+  ) =>
+  Sem r a ->
+  Sem r a
 registerElementStart sem = do
   pos <- getCurrentPosition
   local (set cueEnvStartPos pos) sem
@@ -47,7 +54,7 @@ registerElementStart sem = do
 handleBitError :: (Member (Error a) r) => a -> Sem (Error BitReadError ': r) x -> Sem r x
 handleBitError e = mapError @_ @_ @BitReadError (const e)
 
-consumeLength :: forall r. (Members '[BitReader, Error ReadError, State CueState] r) => Sem r Int
+consumeLength :: forall r. (Members '[BitReader, Error ReadError] r) => Sem r Int
 consumeLength = do
   lenOfLen <- handleBitError ReadErrorInvalidLength countBitsUntilOne
   if
@@ -65,7 +72,17 @@ consumeLength = do
             | b -> setBit acc n
             | otherwise -> acc
 
-consumeInteger :: forall r. (Members '[BitReader, Error ReadError, State CueState] r) => ReadError -> Int -> Sem r Integer
+consumeInteger ::
+  forall r.
+  ( Members
+      '[ BitReader,
+         Error ReadError
+       ]
+      r
+  ) =>
+  ReadError ->
+  Int ->
+  Sem r Integer
 consumeInteger e len
   | len == 0 = return 0
   | otherwise =
@@ -76,7 +93,15 @@ consumeInteger e len
 
 data JamTag = JamTagAtom | JamTagCell | JamTagBackref
 
-consumeTag :: forall r. (Members '[BitReader, Error ReadError, State CueState] r) => Sem r JamTag
+consumeTag ::
+  forall r.
+  ( Members
+      '[ BitReader,
+         Error ReadError
+       ]
+      r
+  ) =>
+  Sem r JamTag
 consumeTag = do
   Bit b0 <- nextBit'
   if
@@ -86,29 +111,74 @@ consumeTag = do
               | b1 -> return JamTagBackref
               | otherwise -> return JamTagCell
       | otherwise -> return JamTagAtom
+  where
+    nextBit' :: Sem r Bit
+    nextBit' = handleBitError ReadErrorInvalidTag nextBit
 
-    where
-      nextBit' :: Sem r Bit
-      nextBit' = handleBitError ReadErrorInvalidTag nextBit
-
-cacheCueTerm :: (Members '[State CueState, Reader CueEnv] r) => Term Natural -> Sem r ()
+cacheCueTerm ::
+  forall a r.
+  ( Members
+      '[ State (CueState a),
+         Reader CueEnv
+       ]
+      r
+  ) =>
+  Term a ->
+  Sem r ()
 cacheCueTerm t = do
   pos <- asks (^. cueEnvStartPos)
   modify' (set (cueStateCache . at pos) (Just t))
 
-lookupCueCache :: (Members '[Error ReadError, State CueState] r) => Int -> Sem r (Term Natural)
+lookupCueCache ::
+  ( Members
+      '[ Error ReadError,
+         State (CueState a)
+       ]
+      r
+  ) =>
+  Int ->
+  Sem r (Term a)
 lookupCueCache pos =
   fromMaybeM
     (throw ReadErrorCacheMiss)
     (gets (^. cueStateCache . at pos))
 
-cueToVector :: Atom Natural -> Bit.Vector Bit
-cueToVector = integerToVectorBits @Integer . fromIntegral . (^. atom)
+cueToVector ::
+  ( NockNatural a,
+    Member (Error (ErrNockNatural a)) r
+  ) =>
+  Atom a ->
+  Sem r (Bit.Vector Bit)
+cueToVector a' = do
+  n <- nockNatural a'
+  return (integerToVectorBits @Integer (fromIntegral n))
 
-cueFromBits :: (Member (Error ReadError) r) => Bit.Vector Bit -> Sem r (Term Natural)
-cueFromBits v = evalBitReader v (evalState initCueState (runReader initCueEnv cueFromBitsSem))
+cueFromBits ::
+  forall a r.
+  ( NockNatural a,
+    Members
+      '[ Error ReadError,
+         Error (ErrNockNatural a)
+       ]
+      r
+  ) =>
+  Bit.Vector Bit ->
+  Sem r (Term a)
+cueFromBits v = evalBitReader v (evalState (initCueState @a) (runReader initCueEnv cueFromBitsSem))
 
-cueFromBitsSem :: forall r. (Members '[BitReader, Error ReadError, State CueState, Reader CueEnv] r) => Sem r (Term Natural)
+cueFromBitsSem ::
+  forall a r.
+  ( NockNatural a,
+    Members
+      '[ BitReader,
+         Error ReadError,
+         State (CueState a),
+         Reader CueEnv,
+         Error (ErrNockNatural a)
+       ]
+      r
+  ) =>
+  Sem r (Term a)
 cueFromBitsSem = registerElementStart $ do
   tag <- consumeTag
   case tag of
@@ -116,19 +186,19 @@ cueFromBitsSem = registerElementStart $ do
     JamTagBackref -> goBackref
     JamTagCell -> goCell
   where
-    goAtom :: Sem r (Term Natural)
+    goAtom :: Sem r (Term a)
     goAtom = do
       a <- TermAtom <$> consumeAtom
       cacheCueTerm a
       return a
 
-    goBackref :: Sem r (Term Natural)
+    goBackref :: Sem r (Term a)
     goBackref = do
-      a <- consumeAtom
+      a <- consumeNatAtom
       idx <- maybe (throw ReadErrorInvalidBackref) return (safeNaturalToInt (a ^. atom))
       lookupCueCache idx
 
-    goCell :: Sem r (Term Natural)
+    goCell :: Sem r (Term a)
     goCell = do
       _cellLeft <- cueFromBitsSem
       _cellRight <- cueFromBitsSem
@@ -136,8 +206,8 @@ cueFromBitsSem = registerElementStart $ do
       cacheCueTerm cell
       return cell
 
-    consumeAtom :: Sem r (Atom Natural)
-    consumeAtom = do
+    consumeNatAtom :: Sem r (Atom Natural)
+    consumeNatAtom = do
       len <- consumeLength
       if
           | len == 0 -> return (Atom 0 emptyAtomInfo)
@@ -145,13 +215,43 @@ cueFromBitsSem = registerElementStart $ do
               a <- consumeInteger ReadErrorInvalidAtom len
               return (Atom (fromInteger a) emptyAtomInfo)
 
-cueAtom :: (Member (Error ReadError) r) => Atom Natural -> Sem r (Term Natural)
-cueAtom = cueFromBits . cueToVector
+    consumeAtom :: Sem r (Atom a)
+    consumeAtom = do
+      len <- consumeLength
+      if
+          | len == 0 -> do
+              z <- fromNatural @a 0
+              return (Atom z emptyAtomInfo)
+          | otherwise -> do
+              a <- consumeInteger ReadErrorInvalidAtom len
+              n <- fromNatural (fromInteger a)
+              return (Atom n emptyAtomInfo)
 
-cue :: (Member (Error ReadError) r) => Term Natural -> Sem r (Term Natural)
+cueAtom ::
+  ( NockNatural a,
+    Members
+      '[ Error (ErrNockNatural a),
+         Error ReadError
+       ]
+      r
+  ) =>
+  Atom a ->
+  Sem r (Term a)
+cueAtom a' = cueToVector a' >>= cueFromBits
+
+cue ::
+  ( NockNatural a,
+    Members
+      '[ Error (ErrNockNatural a),
+         Error ReadError
+       ]
+      r
+  ) =>
+  Term a ->
+  Sem r (Term a)
 cue = \case
   TermAtom a -> cueAtom a
   TermCell {} -> throw ReadErrorExpectedAtom
 
 cueJust :: Term Natural -> Either ReadError (Term Natural)
-cueJust = run . runError @ReadError . cue
+cueJust = run . runErrorWith @NockNaturalNaturalError (\__ -> error ("fail")) . runError @ReadError . cue
