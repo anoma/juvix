@@ -6,10 +6,6 @@ import Stdlib.Debug.Trace open;
 builtin anoma-encode
 axiom anomaEncode : {A : Type} -> A -> Nat;
 
-type R := mkR { a : Nat; b : Nat };
-
-type Tree := leaf Nat | node Tree Tree;
-
 main : Nat :=
   -- jam 0 == 2
   trace (anomaEncode 0)
