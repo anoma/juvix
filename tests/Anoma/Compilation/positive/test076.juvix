@@ -1,0 +1,17 @@
+module test076;
+
+import Stdlib.Prelude open;
+import Stdlib.Debug.Trace open;
+
+builtin anoma-decode
+axiom anomaDecode : {A : Type} -> Nat -> A;
+
+main : Bool :=
+  -- cue 2 == 0
+  trace (anomaDecode {Nat} 2)
+  -- cue 84081 == [1 2 0]
+  >>> trace (anomaDecode {List Nat} 84081)
+  -- cue 4657 == [1 2]
+  >>> trace (anomaDecode {Nat × Nat} 4657)
+  -- cue 12 == 1
+  >>> anomaDecode {Bool} 12;
