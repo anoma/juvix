@@ -5,6 +5,7 @@ import Data.Bits
 import Juvix.Compiler.Nockma.Encoding.Base
 import Juvix.Compiler.Nockma.Encoding.Effect.BitReader
 import Juvix.Compiler.Nockma.Language
+import Juvix.Compiler.Nockma.Pretty.Base
 import Juvix.Prelude.Base
 import VectorBuilder.Builder as Builder
 import VectorBuilder.Vector
@@ -28,15 +29,23 @@ initCueEnv = CueEnv {_cueEnvStartPos = 0}
 makeLenses ''CueState
 makeLenses ''CueEnv
 
-data ReadError
-  = ReadErrorEnd
-  | ReadErrorInvalidTag
-  | ReadErrorCacheMiss
-  | ReadErrorInvalidLength
-  | ReadErrorExpectedAtom
-  | ReadErrorInvalidAtom
-  | ReadErrorInvalidBackref
+data DecodingError
+  = DecodingErrorInvalidTag
+  | DecodingErrorCacheMiss
+  | DecodingErrorInvalidLength
+  | DecodingErrorExpectedAtom
+  | DecodingErrorInvalidAtom
+  | DecodingErrorInvalidBackref
   deriving stock (Show)
+
+instance PrettyCode DecodingError where
+  ppCode = \case
+    DecodingErrorInvalidTag -> return "Invalid tag"
+    DecodingErrorCacheMiss -> return "Cache miss"
+    DecodingErrorInvalidLength -> return "Invalid length"
+    DecodingErrorExpectedAtom -> return "Expected atom"
+    DecodingErrorInvalidAtom -> return "Invalid atom"
+    DecodingErrorInvalidBackref -> return "Invalid backref"
 
 registerElementStart ::
   ( Members
@@ -51,12 +60,12 @@ registerElementStart sem = do
   pos <- getCurrentPosition
   local (set cueEnvStartPos pos) sem
 
-handleBitError :: (Member (Error a) r) => a -> Sem (Error BitReadError ': r) x -> Sem r x
+handleBitError :: (Member (Error DecodingError) r) => DecodingError -> Sem (Error BitReadError ': r) x -> Sem r x
 handleBitError e = mapError @_ @_ @BitReadError (const e)
 
-consumeLength :: forall r. (Members '[BitReader, Error ReadError] r) => Sem r Int
+consumeLength :: forall r. (Members '[BitReader, Error DecodingError] r) => Sem r Int
 consumeLength = do
-  lenOfLen <- handleBitError ReadErrorInvalidLength countBitsUntilOne
+  lenOfLen <- handleBitError DecodingErrorInvalidLength countBitsUntilOne
   if
       | lenOfLen == 0 -> return 0
       | otherwise -> do
@@ -66,7 +75,7 @@ consumeLength = do
   where
     go :: Int -> Int -> Sem r Int
     go acc n = do
-      Bit b <- handleBitError ReadErrorInvalidLength nextBit
+      Bit b <- handleBitError DecodingErrorInvalidLength nextBit
       return $
         if
             | b -> setBit acc n
@@ -76,11 +85,11 @@ consumeInteger ::
   forall r.
   ( Members
       '[ BitReader,
-         Error ReadError
+         Error DecodingError
        ]
       r
   ) =>
-  ReadError ->
+  DecodingError ->
   Int ->
   Sem r Integer
 consumeInteger e len
@@ -97,7 +106,7 @@ consumeTag ::
   forall r.
   ( Members
       '[ BitReader,
-         Error ReadError
+         Error DecodingError
        ]
       r
   ) =>
@@ -113,7 +122,7 @@ consumeTag = do
       | otherwise -> return JamTagAtom
   where
     nextBit' :: Sem r Bit
-    nextBit' = handleBitError ReadErrorInvalidTag nextBit
+    nextBit' = handleBitError DecodingErrorInvalidTag nextBit
 
 cacheCueTerm ::
   forall a r.
@@ -131,7 +140,7 @@ cacheCueTerm t = do
 
 lookupCueCache ::
   ( Members
-      '[ Error ReadError,
+      '[ Error DecodingError,
          State (CueState a)
        ]
       r
@@ -140,25 +149,26 @@ lookupCueCache ::
   Sem r (Term a)
 lookupCueCache pos =
   fromMaybeM
-    (throw ReadErrorCacheMiss)
+    (throw DecodingErrorCacheMiss)
     (gets (^. cueStateCache . at pos))
 
 cueToVector ::
+  forall a r.
   ( NockNatural a,
-    Member (Error (ErrNockNatural a)) r
+    Member (Error (ErrNockNatural' a)) r
   ) =>
   Atom a ->
   Sem r (Bit.Vector Bit)
 cueToVector a' = do
-  n <- nockNatural a'
+  n <- nockNatural' a'
   return (integerToVectorBits @Integer (fromIntegral n))
 
 cueFromBits ::
   forall a r.
   ( NockNatural a,
     Members
-      '[ Error ReadError,
-         Error (ErrNockNatural a)
+      '[ Error DecodingError,
+         Error (ErrNockNatural' a)
        ]
       r
   ) =>
@@ -171,10 +181,10 @@ cueFromBitsSem ::
   ( NockNatural a,
     Members
       '[ BitReader,
-         Error ReadError,
+         Error DecodingError,
          State (CueState a),
          Reader CueEnv,
-         Error (ErrNockNatural a)
+         Error (ErrNockNatural' a)
        ]
       r
   ) =>
@@ -195,7 +205,7 @@ cueFromBitsSem = registerElementStart $ do
     goBackref :: Sem r (Term a)
     goBackref = do
       a <- consumeNatAtom
-      idx <- maybe (throw ReadErrorInvalidBackref) return (safeNaturalToInt (a ^. atom))
+      idx <- maybe (throw DecodingErrorInvalidBackref) return (safeNaturalToInt (a ^. atom))
       lookupCueCache idx
 
     goCell :: Sem r (Term a)
@@ -212,7 +222,7 @@ cueFromBitsSem = registerElementStart $ do
       if
           | len == 0 -> return (Atom 0 emptyAtomInfo)
           | otherwise -> do
-              a <- consumeInteger ReadErrorInvalidAtom len
+              a <- consumeInteger DecodingErrorInvalidAtom len
               return (Atom (fromInteger a) emptyAtomInfo)
 
     consumeAtom :: Sem r (Atom a)
@@ -220,38 +230,81 @@ cueFromBitsSem = registerElementStart $ do
       len <- consumeLength
       if
           | len == 0 -> do
-              z <- fromNatural @a 0
+              z <- fromNatural' @a 0
               return (Atom z emptyAtomInfo)
           | otherwise -> do
-              a <- consumeInteger ReadErrorInvalidAtom len
-              n <- fromNatural (fromInteger a)
+              a <- consumeInteger DecodingErrorInvalidAtom len
+              n <- fromNatural' (fromInteger a)
               return (Atom n emptyAtomInfo)
 
-cueAtom ::
+cue' ::
+  forall a r.
   ( NockNatural a,
     Members
-      '[ Error (ErrNockNatural a),
-         Error ReadError
+      '[ Error DecodingError,
+         Error (ErrNockNatural' a)
        ]
       r
   ) =>
   Atom a ->
   Sem r (Term a)
-cueAtom a' = cueToVector a' >>= cueFromBits
+cue' a' = cueToVector a' >>= cueFromBits
 
 cue ::
+  forall a r.
   ( NockNatural a,
     Members
-      '[ Error (ErrNockNatural a),
-         Error ReadError
+      '[ Error DecodingError,
+         Error (ErrNockNatural a)
        ]
       r
   ) =>
-  Term a ->
+  Atom a ->
   Sem r (Term a)
-cue = \case
-  TermAtom a -> cueAtom a
-  TermCell {} -> throw ReadErrorExpectedAtom
+cue a' =
+  runErrorNoCallStackWith @(ErrNockNatural' a)
+    (\(ErrNockNatural' e) -> throw e)
+    (cueToVector a' >>= cueFromBits)
 
-cueJust :: Term Natural -> Either ReadError (Term Natural)
-cueJust = run . runErrorWith @NockNaturalNaturalError (\__ -> error ("fail")) . runError @ReadError . cue
+-- | Decode an nock Atom to a nock term
+cueEither ::
+  -- NB: The signature returns the DecodingError in an Either to avoid
+  -- overlapping instances with `ErrNockNatural a` when errors are handled. See
+  -- the comment above `ErrNockNatural' a` for more explanation.
+  forall a r.
+  ( NockNatural a,
+    Member (Error (ErrNockNatural a)) r
+  ) =>
+  Atom a ->
+  Sem r (Either DecodingError (Term a))
+cueEither =
+  runErrorNoCallStackWith @(ErrNockNatural' a) (\(ErrNockNatural' e) -> throw e)
+    . runErrorNoCallStack @DecodingError
+    . cue'
+
+cueJust :: Term Natural -> Either DecodingError (Term Natural)
+cueJust =
+  run
+    . runErrorWith @(ErrNockNatural' Natural) (\_ _ -> error ("fail"))
+    . runError @DecodingError
+    . cue'
+    . ( \case
+          TermAtom a -> a
+          TermCell {} -> error "expected atom"
+      )
+
+{- `ErrNockNatural a` must be wrapped in a newtype to avoid overlapping instances
+with `DecodingError` when errors are handled before the type variable `a` is
+resolved.
+
+When handling an error with `runError` before `a` is resolved, the compiler
+cannot distinguish between `Error (ErrNockNatural a)` and `Error DecodingError`.
+For some `a` it's possible that `ErrNockNatural a` is equal to `DecodingError`.
+-}
+newtype ErrNockNatural' a = ErrNockNatural' (ErrNockNatural a)
+
+fromNatural' :: forall a r. (NockNatural a, Member (Error (ErrNockNatural' a)) r) => Natural -> Sem r a
+fromNatural' = mapError (ErrNockNatural' @a) . fromNatural
+
+nockNatural' :: forall a r. (NockNatural a, Member (Error (ErrNockNatural' a)) r) => Atom a -> Sem r Natural
+nockNatural' = mapError (ErrNockNatural' @a) . nockNatural
