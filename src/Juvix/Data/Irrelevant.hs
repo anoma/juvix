@@ -13,6 +13,8 @@ newtype Irrelevant a = Irrelevant
   }
   deriving stock (Generic, Data, Lift)
 
+instance (NFData a) => NFData (Irrelevant a)
+
 instance (Serialize a) => Serialize (Irrelevant a) where
   put (Irrelevant x) = S.put x
   get = Irrelevant <$> S.get

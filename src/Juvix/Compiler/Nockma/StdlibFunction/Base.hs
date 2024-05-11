@@ -32,3 +32,5 @@ data StdlibFunction
   deriving stock (Show, Lift, Eq, Bounded, Enum, Generic)
 
 instance Hashable StdlibFunction
+
+instance NFData StdlibFunction

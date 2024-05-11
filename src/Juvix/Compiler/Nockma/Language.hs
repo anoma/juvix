@@ -51,6 +51,8 @@ data Term a
 
 instance (Hashable a) => Hashable (Term a)
 
+instance NFData a => NFData (Term a)
+
 data StdlibCall a = StdlibCall
   { _stdlibCallFunction :: StdlibFunction,
     _stdlibCallArgs :: Term a
@@ -59,12 +61,16 @@ data StdlibCall a = StdlibCall
 
 instance (Hashable a) => Hashable (StdlibCall a)
 
+instance (NFData a) => NFData (StdlibCall a)
+
 newtype Tag = Tag
   { _unTag :: Text
   }
   deriving stock (Show, Eq, Lift, Generic)
 
 instance Hashable Tag
+
+instance NFData Tag
 
 data CellInfo a = CellInfo
   { _cellInfoLoc :: Irrelevant (Maybe Interval),
@@ -75,6 +81,8 @@ data CellInfo a = CellInfo
 
 instance (Hashable a) => Hashable (CellInfo a)
 
+instance (NFData a) => NFData (CellInfo a)
+
 data Cell a = Cell'
   { _cellLeft :: Term a,
     _cellRight :: Term a,
@@ -83,6 +91,8 @@ data Cell a = Cell'
   deriving stock (Show, Eq, Lift, Generic)
 
 instance (Hashable a) => Hashable (Cell a)
+
+instance (NFData a) => NFData (Cell a)
 
 data AtomInfo = AtomInfo
   { _atomInfoHint :: Maybe AtomHint,
@@ -93,6 +103,8 @@ data AtomInfo = AtomInfo
 
 instance Hashable AtomInfo
 
+instance NFData AtomInfo
+
 data Atom a = Atom
   { _atom :: a,
     _atomInfo :: AtomInfo
@@ -100,6 +112,8 @@ data Atom a = Atom
   deriving stock (Show, Eq, Lift, Generic)
 
 instance (Hashable a) => Hashable (Atom a)
+
+instance (NFData a) => NFData (Atom a)
 
 data AtomHint
   = AtomHintOp
@@ -111,6 +125,8 @@ data AtomHint
   deriving stock (Show, Eq, Lift, Generic)
 
 instance Hashable AtomHint
+
+instance NFData AtomHint
 
 data NockOp
   = OpAddress

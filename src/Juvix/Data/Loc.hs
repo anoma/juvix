@@ -12,6 +12,8 @@ newtype Pos = Pos {_unPos :: Word64}
 
 instance Serialize Pos
 
+instance NFData Pos
+
 instance Semigroup Pos where
   Pos x <> Pos y = Pos (x + y)
 
@@ -31,6 +33,8 @@ data FileLoc = FileLoc
 instance Hashable FileLoc
 
 instance Serialize FileLoc
+
+instance NFData FileLoc
 
 instance Ord FileLoc where
   compare (FileLoc l c o) (FileLoc l' c' o') = compare (l, c, o) (l', c', o')
@@ -77,6 +81,8 @@ data Interval = Interval
 instance Hashable Interval
 
 instance Serialize Interval
+
+instance NFData Interval
 
 class HasLoc t where
   getLoc :: t -> Interval
