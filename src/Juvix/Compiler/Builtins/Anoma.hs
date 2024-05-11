@@ -42,4 +42,4 @@ registerAnomaDecode f = do
   unless
     ((ftype ==% (u <>--> nat --> decodeT)) freeVars)
     (error "anomaEncode must be of type {A : Type} -> Nat -> A")
-  registerBuiltin BuiltinAnomaEncode (f ^. axiomName)
+  registerBuiltin BuiltinAnomaDecode (f ^. axiomName)
