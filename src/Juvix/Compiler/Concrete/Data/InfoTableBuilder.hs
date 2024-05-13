@@ -33,7 +33,7 @@ makeSem ''InfoTableBuilder
 
 registerDoc :: forall r. (Members '[HighlightBuilder, State InfoTable] r) => NameId -> Maybe (Judoc 'Scoped) -> Sem r ()
 registerDoc k md = do
-  modify (set (highlightDoc . at k) md)
+  modifyShared (set (highlightDoc . at k) md)
   modify (set (infoHighlightDoc . at k) md)
 
 runInfoTableBuilder :: (Member HighlightBuilder r) => InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
@@ -59,10 +59,10 @@ runInfoTableBuilder ini = reinterpret (runState ini) $ \case
           modify' (over infoFunctions (HashMap.insert (f ^. signName . nameId) f))
           registerDoc (f ^. signName . nameId) j
   RegisterName n -> do
-    modify (over highlightNames (cons (S.anameFromName n)))
+    modifyShared (over highlightNames (cons (S.anameFromName n)))
     modify (over infoHighlightNames (cons (S.anameFromName n)))
   RegisterScopedIden n -> do
-    modify (over highlightNames (cons (anameFromScopedIden n)))
+    modifyShared (over highlightNames (cons (anameFromScopedIden n)))
     modify (over infoHighlightNames (cons (anameFromScopedIden n)))
   RegisterModuleDoc uid doc -> do
     registerDoc uid doc
