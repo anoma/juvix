@@ -23,11 +23,14 @@ import Effectful.Provider
 import Effectful.Reader.Static
 import Effectful.State.Static.Local hiding (runState, state)
 import Effectful.State.Static.Local qualified as State
+import Effectful.State.Static.Shared qualified as Shared
 import Effectful.TH
 import Juvix.Prelude.Base.Foundation
 import Language.Haskell.TH.Syntax qualified as GHC
 
 type Sem = E.Eff
+
+type SharedState = Shared.State
 
 type EmbedIO = IOE
 
@@ -74,8 +77,29 @@ mapReader f s = do
   e <- ask
   runReader (f e) s
 
+putShared :: forall s (r :: [Effect]). (Member (SharedState s) r) => s -> Sem r ()
+putShared = Shared.put
+
+getsShared :: forall s a (r :: [Effect]). (Member (SharedState s) r) => (s -> a) -> Sem r a
+getsShared = Shared.gets
+
+getShared :: forall s (r :: [Effect]). (Member (SharedState s) r) => Sem r s
+getShared = Shared.get
+
+evalStateShared :: forall s r a. s -> Sem (SharedState s ': r) a -> Sem r a
+evalStateShared s = fmap snd . runStateShared s
+
+execStateShared :: forall s r a. s -> Sem (SharedState s ': r) a -> Sem r s
+execStateShared s = fmap fst . runStateShared s
+
+runStateShared :: forall s r a. s -> Sem (SharedState s ': r) a -> Sem r (s, a)
+runStateShared s = fmap swap . Shared.runState s
+
 runState :: forall s r a. s -> Sem (State s ': r) a -> Sem r (s, a)
 runState s = fmap swap . State.runState s
+
+modifyShared :: (Member (SharedState s) r) => (s -> s) -> Sem r ()
+modifyShared = Shared.modify
 
 -- | TODO can we make it strict?
 modify' :: (Member (State s) r) => (s -> s) -> Sem r ()
