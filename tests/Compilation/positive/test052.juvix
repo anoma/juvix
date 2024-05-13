@@ -82,7 +82,7 @@ valToString : Val -> String
 --- ;Show; instance for ;Val;.
 terminating
 instance
-showValI : Show (Val' Nat) := mkShow valToString;
+showValI : Show Val := mkShow valToString;
 
 syntax operator >>= seq;
 --- Monadic binding for ;Either;.

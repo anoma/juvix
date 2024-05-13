@@ -32,9 +32,10 @@ resolveTraitInstance ::
   TypedHole ->
   Sem r Expression
 resolveTraitInstance TypedHole {..} = do
+  vars <- overM localTypes (mapM strongNormalize) _typedHoleLocalVars
   infoTab <- ask
   tab0 <- getCombinedInstanceTable
-  let tab = foldr (flip updateInstanceTable) tab0 (varsToInstances infoTab _typedHoleLocalVars)
+  let tab = foldr (flip updateInstanceTable) tab0 (varsToInstances infoTab vars)
   ty <- strongNormalize _typedHoleType
   ctab <- getCombinedCoercionTable
   is <- lookupInstance ctab tab ty

@@ -129,8 +129,8 @@ checkTopModule ::
   Module ->
   Sem r Module
 checkTopModule md = do
-  md' <- checkModule md
   checkCoercionCycles
+  md' <- checkModule md
   return md'
 
 checkModule ::
@@ -367,10 +367,11 @@ checkInstanceType ::
   FunctionDef ->
   Sem r ()
 checkInstanceType FunctionDef {..} = do
+  ty <- strongNormalize _funDefType
   let mi =
         instanceFromTypedExpression
           ( TypedExpression
-              { _typedType = _funDefType,
+              { _typedType = ty,
                 _typedExpression = ExpressionIden (IdenFunction _funDefName)
               }
           )
@@ -385,6 +386,7 @@ checkInstanceType FunctionDef {..} = do
         throw (ErrSubsumedInstance (SubsumedInstance ii is (getLoc _funDefName)))
       let metaVars = HashSet.fromList $ mapMaybe (^. paramName) _instanceInfoArgs
       mapM_ (checkArg tab metaVars ii) _instanceInfoArgs
+      addInstanceInfo ii
     Nothing ->
       throw (ErrInvalidInstanceType (InvalidInstanceType _funDefType))
   where
@@ -410,21 +412,24 @@ checkCoercionType ::
   FunctionDef ->
   Sem r ()
 checkCoercionType FunctionDef {..} = do
+  ty <- strongNormalize _funDefType
   let mi =
         coercionFromTypedExpression
           ( TypedExpression
-              { _typedType = _funDefType,
+              { _typedType = ty,
                 _typedExpression = ExpressionIden (IdenFunction _funDefName)
               }
           )
   case mi of
-    Just CoercionInfo {..} -> do
+    Just ci@CoercionInfo {..} -> do
       tab <- ask
       unless (isTrait tab _coercionInfoInductive) $
         throw (ErrTargetNotATrait (TargetNotATrait _funDefType))
       unless (isTrait tab (_coercionInfoTarget ^. instanceAppHead)) $
         throw (ErrInvalidCoercionType (InvalidCoercionType _funDefType))
       mapM_ checkArg _coercionInfoArgs
+      addCoercionInfo ci
+      checkCoercionCycles
     Nothing ->
       throw (ErrInvalidCoercionType (InvalidCoercionType _funDefType))
   where
