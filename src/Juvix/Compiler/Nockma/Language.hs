@@ -51,7 +51,7 @@ data Term a
 
 instance (Hashable a) => Hashable (Term a)
 
-instance NFData a => NFData (Term a)
+instance (NFData a) => NFData (Term a)
 
 data StdlibCall a = StdlibCall
   { _stdlibCallFunction :: StdlibFunction,

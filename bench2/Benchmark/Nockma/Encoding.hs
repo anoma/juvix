@@ -13,8 +13,9 @@ bm :: Benchmark
 bm =
   bgroup
     "Jam"
-    [bench "jam stdlib" $ nf runJam stdlib,
-     bench "cue (jam stdlib)" $ nf runCue jamStdlib]
+    [ bench "jam stdlib" $ nf runJam stdlib,
+      bench "cue (jam stdlib)" $ nf runCue jamStdlib
+    ]
 
 runJam :: Term Natural -> Natural
 runJam =
