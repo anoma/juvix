@@ -22,7 +22,9 @@ data InternalTypedResult = InternalTypedResult
     _resultInternalModule :: InternalModule,
     _resultTermination :: TerminationState,
     _resultIdenTypes :: TypesTable,
-    _resultFunctions :: FunctionsTable
+    _resultFunctions :: FunctionsTable,
+    _resultInstances :: InstanceTable,
+    _resultCoercions :: CoercionTable
   }
 
 data ImportContext = ImportContext

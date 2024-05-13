@@ -68,9 +68,6 @@ runNameIdGenArtifacts ::
   Sem r a
 runNameIdGenArtifacts = runStateLikeArtifacts runNameIdGen artifactNameIdState
 
-runFunctionsTableArtifacts :: (Members '[State Artifacts] r) => Sem (State FunctionsTable ': r) a -> Sem r a
-runFunctionsTableArtifacts = runStateArtifacts artifactFunctions
-
 readerFunctionsTableArtifacts :: (Members '[State Artifacts] r) => Sem (Reader FunctionsTable ': r) a -> Sem r a
 readerFunctionsTableArtifacts = runReaderArtifacts artifactFunctions
 
@@ -79,9 +76,6 @@ readerTypesTableArtifacts = runReaderArtifacts artifactTypes
 
 runTerminationArtifacts :: (Members '[Error JuvixError, State Artifacts] r) => Sem (Termination ': r) a -> Sem r a
 runTerminationArtifacts = runStateLikeArtifacts runTermination artifactTerminationState
-
-runTypesTableArtifacts :: (Members '[State Artifacts] r) => Sem (State TypesTable ': r) a -> Sem r a
-runTypesTableArtifacts = runStateArtifacts artifactTypes
 
 runStateArtifacts :: (Members '[State Artifacts] r) => Lens' Artifacts f -> Sem (State f ': r) a -> Sem r a
 runStateArtifacts = runStateLikeArtifacts runState
@@ -107,14 +101,18 @@ runResultBuilderArtifacts :: forall r a. (Members '[State Artifacts] r) => Sem (
 runResultBuilderArtifacts m = do
   ftab <- gets (^. artifactFunctions)
   ttab <- gets (^. artifactTypes)
+  itab <- gets (^. artifactInstances)
+  ctab <- gets (^. artifactCoercions)
   let importCtx =
         ImportContext
-          { _importContextCoercions = mempty,
-            _importContextInstances = mempty,
+          { _importContextCoercions = ctab,
+            _importContextInstances = itab,
             _importContextFunctionsTable = ftab,
             _importContextTypesTable = ttab
           }
   (s, a) <- runResultBuilder importCtx m
   modify' (set artifactFunctions (s ^. resultBuilderStateCombinedFunctionsTable))
   modify' (set artifactTypes (s ^. resultBuilderStateCombinedTypesTable))
+  modify' (set artifactInstances (s ^. resultBuilderStateCombinedInstanceTable))
+  modify' (set artifactCoercions (s ^. resultBuilderStateCombinedCoercionTable))
   return a

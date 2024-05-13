@@ -28,9 +28,7 @@ typeCheckExpressionType ::
 typeCheckExpressionType exp = do
   -- TODO: refactor: modules outside of REPL should not refer to Artifacts
   table <- extendedTableReplArtifacts exp
-  runTypesTableArtifacts
-    . runFunctionsTableArtifacts
-    . runResultBuilderArtifacts
+  runResultBuilderArtifacts
     . runBuiltinsArtifacts
     . runNameIdGenArtifacts
     . ignoreHighlightBuilder
@@ -88,5 +86,7 @@ typeCheckingNew a = do
         _resultInternalModule = md,
         _resultTermination = termin,
         _resultIdenTypes = bst ^. resultBuilderStateCombinedTypesTable,
-        _resultFunctions = bst ^. resultBuilderStateCombinedFunctionsTable
+        _resultFunctions = bst ^. resultBuilderStateCombinedFunctionsTable,
+        _resultInstances = bst ^. resultBuilderStateCombinedInstanceTable,
+        _resultCoercions = bst ^. resultBuilderStateCombinedCoercionTable
       }

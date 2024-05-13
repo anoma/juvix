@@ -9,6 +9,8 @@ import Juvix.Compiler.Internal.Translation.FromConcrete qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Data
+import Juvix.Compiler.Store.Internal.Data.CoercionInfo
+import Juvix.Compiler.Store.Internal.Data.InstanceInfo
 import Juvix.Compiler.Store.Language qualified as Store
 import Juvix.Prelude
 
@@ -29,6 +31,8 @@ data Artifacts = Artifacts
     -- Typechecking
     _artifactTypes :: TypesTable,
     _artifactFunctions :: FunctionsTable,
+    _artifactInstances :: InstanceTable,
+    _artifactCoercions :: CoercionTable,
     -- | This includes the InfoTable from all type checked modules
     _artifactInternalTypedTable :: Internal.InfoTable,
     -- Core
