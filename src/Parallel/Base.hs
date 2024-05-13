@@ -19,16 +19,18 @@ data Module = Module
 data CompiledProof = CompiledProof
   deriving stock (Show)
 
-data CompilationState = CompilationState
-  { _compilationState :: HashMap ModuleSimpleId CompiledProof,
+data CompilationState' nodeId compiledProof = CompilationState
+  { _compilationState :: HashMap nodeId compiledProof,
     -- | Initially populated with `Dependencies._dependenciesTable`. It
     -- is used to keep track of which dependencies need to be compiled before
     -- this module is enqueued for compilation.
-    _compilationPending :: HashMap ModuleSimpleId (HashSet ModuleSimpleId),
+    _compilationPending :: HashMap nodeId (HashSet nodeId),
     _compilationStartedNum :: Natural,
     _compilationFinishedNum :: Natural,
     _compilationTotalNum :: Natural
   }
+
+type CompilationState = CompilationState' ModuleSimpleId CompiledProof
 
 newtype ModulesIndex = ModulesIndex
   { _modulesIndex :: HashMap ModuleSimpleId Module
@@ -57,7 +59,7 @@ makeLenses ''CompileQueue
 makeLenses ''Module
 makeLenses ''ModulesIndex
 makeLenses ''Dependencies
-makeLenses ''CompilationState
+makeLenses ''CompilationState'
 
 moduleDependencies :: Dependencies -> ModuleSimpleId -> HashSet ModuleSimpleId
 moduleDependencies deps m = fromMaybe mempty (deps ^. dependenciesTable . at m)
@@ -75,13 +77,13 @@ addCompiledModule :: Dependencies -> Module -> CompilationState -> (CompilationS
 addCompiledModule deps m st = run . runState st $ do
   let uid = m ^. moduleId
       revDeps :: [ModuleSimpleId] = deps ^. dependenciesTableReverse . at uid . _Just . to toList
-  modify (set (compilationState . at uid) (Just CompiledProof))
-  modify (over compilationFinishedNum succ)
+  modify @CompilationState (set (compilationState . at uid) (Just CompiledProof))
+  modify @CompilationState (over compilationFinishedNum succ)
   isLast <- compilationStateFinished <$> get
   fmap (isLast,) . execOutputList . forM_ revDeps $ \s -> do
-    modify (over (compilationPending . at s . _Just) (HashSet.delete uid))
+    modify @CompilationState (over (compilationPending . at s . _Just) (HashSet.delete uid))
     -- if there are no more pending dependencies, we push it to the queue
-    pend <- gets (^. compilationPending . at s)
+    pend <- gets @CompilationState (^. compilationPending . at s)
     case pend of
       Just p
         | null p -> output s

@@ -34,15 +34,15 @@ compile mods = runM . runConcurrent $ do
   qq <- newTBQueueIO numMods
   let compileQ = CompileQueue qq
   forM_ starterModules (atomically . writeTBQueue qq)
-  varCompilationState <-
-    newTVarIO
-      CompilationState
-        { _compilationStartedNum = 0,
-          _compilationFinishedNum = 0,
-          _compilationTotalNum = numMods,
-          _compilationPending = deps ^. dependenciesTable,
-          _compilationState = mempty
-        }
+  let iniCompilationState :: CompilationState =
+        CompilationState
+          { _compilationStartedNum = 0,
+            _compilationFinishedNum = 0,
+            _compilationTotalNum = numMods,
+            _compilationPending = deps ^. dependenciesTable,
+            _compilationState = mempty
+          }
+  varCompilationState <- newTVarIO iniCompilationState
   runReader varCompilationState
     . runReader modsIx
     . runReader logs
