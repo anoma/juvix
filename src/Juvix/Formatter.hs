@@ -137,15 +137,15 @@ formatResultFromContents formattedContents filepath = do
 
 formatScoperResult' ::
   Bool -> Text -> Scoper.ScoperResult -> Text
-formatScoperResult' force original sres =
-  run . runReader original $ formatScoperResult force sres
+formatScoperResult' forceFormat original sres =
+  run . runReader original $ formatScoperResult forceFormat sres
 
 formatScoperResult ::
   (Members '[Reader Text] r) =>
   Bool ->
   Scoper.ScoperResult ->
   Sem r Text
-formatScoperResult force res = do
+formatScoperResult forceFormat res = do
   let cs = Scoper.getScoperResultComments res
   formattedModule <-
     runReader cs
@@ -157,7 +157,7 @@ formatScoperResult force res = do
     Just pragmas ->
       case pragmas ^. withLocParam . withSourceValue . pragmasFormat of
         Just PragmaFormat {..}
-          | not _pragmaFormat && not force -> ask @Text
+          | not _pragmaFormat && not forceFormat -> ask @Text
         _ ->
           return txt
     Nothing ->

@@ -7,6 +7,7 @@ module Juvix.Prelude.Base.Foundation
     module Data.Set,
     module Data.IntMap.Strict,
     module Data.IntSet,
+    module Control.DeepSeq,
     module Control.Monad.Extra,
     module Control.Monad.Fix,
     module Data.Bitraversable,
@@ -74,7 +75,7 @@ module Juvix.Prelude.Base.Foundation
 where
 
 import Control.Applicative
-import Control.DeepSeq (NFData)
+import Control.DeepSeq
 import Control.Monad.Catch (ExitCase (..), MonadMask, MonadThrow, generalBracket, throwM)
 import Control.Monad.Extra hiding (fail, forM, mconcatMapM, whileJustM)
 import Control.Monad.Extra qualified as Monad
