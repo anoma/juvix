@@ -14,9 +14,6 @@ data ModuleInfo = ModuleInfo
     _moduleInfoCoreTable :: Core.InfoTable,
     _moduleInfoImports :: [TopModulePath],
     _moduleInfoOptions :: Options,
-    -- | True if any module depending on this module requires recompilation
-    -- whenever this module is changed
-    _moduleInfoFragile :: Bool,
     _moduleInfoSHA256 :: Text,
     _moduleInfoFieldSize :: Natural
   }
