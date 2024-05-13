@@ -47,6 +47,7 @@ instance PrettyCode DecodingError where
     DecodingErrorInvalidAtom -> return "Invalid atom"
     DecodingErrorInvalidBackref -> return "Invalid backref"
 
+-- | Register the start of processing a new entity
 registerElementStart ::
   ( Members
       '[ BitReader,
@@ -60,9 +61,11 @@ registerElementStart sem = do
   pos <- getCurrentPosition
   local (set cueEnvStartPos pos) sem
 
+-- | Convert a BitReadError to a DecodingError
 handleBitError :: (Member (Error DecodingError) r) => DecodingError -> Sem (Error BitReadError ': r) x -> Sem r x
 handleBitError e = mapError @_ @_ @BitReadError (const e)
 
+-- | Consume the encoded length from the input bits
 consumeLength :: forall r. (Members '[BitReader, Error DecodingError] r) => Sem r Int
 consumeLength = do
   lenOfLen <- handleBitError DecodingErrorInvalidLength countBitsUntilOne
@@ -81,6 +84,7 @@ consumeLength = do
             | b -> setBit acc n
             | otherwise -> acc
 
+-- | Consume a nock integer from the input bits
 consumeInteger ::
   forall r.
   ( Members
@@ -102,6 +106,7 @@ consumeInteger e len
 
 data JamTag = JamTagAtom | JamTagCell | JamTagBackref
 
+-- | Consume a nock tag from the input bits
 consumeTag ::
   forall r.
   ( Members
@@ -152,17 +157,19 @@ lookupCueCache pos =
     (throw DecodingErrorCacheMiss)
     (gets (^. cueStateCache . at pos))
 
-cueToVector ::
+-- | Transform an atom to a vector of bits
+atomToBits ::
   forall a r.
   ( NockNatural a,
     Member (Error (ErrNockNatural' a)) r
   ) =>
   Atom a ->
   Sem r (Bit.Vector Bit)
-cueToVector a' = do
+atomToBits a' = do
   n <- nockNatural' a'
   return (integerToVectorBits @Integer (fromIntegral n))
 
+-- | Transfor a vector of bits to a decoded term
 cueFromBits ::
   forall a r.
   ( NockNatural a,
@@ -237,19 +244,7 @@ cueFromBitsSem = registerElementStart $ do
               n <- fromNatural' (fromInteger a)
               return (Atom n emptyAtomInfo)
 
-cue' ::
-  forall a r.
-  ( NockNatural a,
-    Members
-      '[ Error DecodingError,
-         Error (ErrNockNatural' a)
-       ]
-      r
-  ) =>
-  Atom a ->
-  Sem r (Term a)
-cue' a' = cueToVector a' >>= cueFromBits
-
+-- | Decode an nock Atom to a nock term
 cue ::
   forall a r.
   ( NockNatural a,
@@ -264,9 +259,22 @@ cue ::
 cue a' =
   runErrorNoCallStackWith @(ErrNockNatural' a)
     (\(ErrNockNatural' e) -> throw e)
-    (cueToVector a' >>= cueFromBits)
+    (cue' a')
 
--- | Decode an nock Atom to a nock term
+-- | A variant of cue with `ErrNockNatural` wrapped in a newtype to disambiguate it from DecodingError
+cue' ::
+  forall a r.
+  ( NockNatural a,
+    Members
+      '[ Error DecodingError,
+         Error (ErrNockNatural' a)
+       ]
+      r
+  ) =>
+  Atom a ->
+  Sem r (Term a)
+cue' a' = atomToBits a' >>= cueFromBits
+
 cueEither ::
   -- NB: The signature returns the DecodingError in an Either to avoid
   -- overlapping instances with `ErrNockNatural a` when errors are handled. See
