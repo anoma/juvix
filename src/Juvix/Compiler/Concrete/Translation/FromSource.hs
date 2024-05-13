@@ -826,6 +826,7 @@ expressionAtom =
       <|> AtomNamedApplicationNew <$> namedApplicationNew
       <|> AtomNamedApplication <$> namedApplication
       <|> AtomList <$> parseList
+      <|> either AtomIf AtomIdentifier <$> multiwayIf
       <|> AtomIdentifier <$> name
       <|> AtomUniverse <$> universe
       <|> AtomLambda <$> lambda
@@ -1143,6 +1144,44 @@ newCase = P.label "new case" $ do
   _newCaseOfKw <- kw kwOf
   _newCaseBranches <- braces (pipeSep1 newCaseBranch)
   return NewCase {..}
+
+ifBranch' :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => Irrelevant KeywordRef -> ParsecS r (IfBranch 'Parsed)
+ifBranch' _ifBranchPipe = do
+  _ifBranchCondition <- parseExpressionAtoms
+  _ifBranchAssignKw <- Irrelevant <$> kw kwAssign
+  _ifBranchExpression <- parseExpressionAtoms
+  return IfBranch {..}
+
+parseIfBranchElse' :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => Irrelevant KeywordRef -> ParsecS r (IfBranchElse 'Parsed)
+parseIfBranchElse' _ifBranchElsePipe = do
+  _ifBranchElseKw <- Irrelevant <$> kw kwElse
+  _ifBranchElseAssignKw <- Irrelevant <$> kw kwAssign
+  _ifBranchElseExpression <- parseExpressionAtoms
+  return IfBranchElse {..}
+
+multiwayIf' :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => KeywordRef -> [IfBranch 'Parsed] -> ParsecS r (If 'Parsed)
+multiwayIf' _ifKw brs = do
+  pipeKw <- Irrelevant <$> kw kwPipe
+  multiwayIfBranchElse' _ifKw pipeKw brs <|> multiwayIfBranch' _ifKw pipeKw brs
+
+multiwayIfBranch' :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => KeywordRef -> Irrelevant KeywordRef -> [IfBranch 'Parsed] -> ParsecS r (If 'Parsed)
+multiwayIfBranch' _ifKw pipeKw brs = do
+  br <- ifBranch' pipeKw
+  multiwayIf' _ifKw (br : brs)
+
+multiwayIfBranchElse' :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => KeywordRef -> Irrelevant KeywordRef -> [IfBranch 'Parsed] -> ParsecS r (If 'Parsed)
+multiwayIfBranchElse' _ifKw pipeKw brs = do
+  off <- P.getOffset
+  _ifBranchElse <- parseIfBranchElse' pipeKw
+  case nonEmpty (reverse brs) of
+    Nothing -> parseFailure off "A multiway if must have at least one condition branch"
+    Just _ifBranches -> return If {..}
+
+multiwayIf :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (Either (If 'Parsed) Name)
+multiwayIf = do
+  _ifKw <- kw kwIf
+  (Left <$> multiwayIf' _ifKw [])
+    <|> (return $ Right $ NameUnqualified $ WithLoc (getLoc _ifKw) (_ifKw ^. keywordRefKeyword . keywordAscii))
 
 --------------------------------------------------------------------------------
 -- Universe expression

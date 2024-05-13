@@ -1280,6 +1280,7 @@ data Expression
   | ExpressionPostfixApplication PostfixApplication
   | ExpressionList (List 'Scoped)
   | ExpressionCase (Case 'Scoped)
+  | ExpressionIf (If 'Scoped)
   | ExpressionNewCase (NewCase 'Scoped)
   | ExpressionLambda (Lambda 'Scoped)
   | ExpressionLet (Let 'Scoped)
@@ -1610,6 +1611,77 @@ deriving stock instance Ord (NewCase 'Parsed)
 
 deriving stock instance Ord (NewCase 'Scoped)
 
+data IfBranch (s :: Stage) = IfBranch
+  { _ifBranchPipe :: Irrelevant KeywordRef,
+    _ifBranchAssignKw :: Irrelevant KeywordRef,
+    _ifBranchCondition :: ExpressionType s,
+    _ifBranchExpression :: ExpressionType s
+  }
+  deriving stock (Generic)
+
+instance Serialize (IfBranch 'Scoped)
+
+instance Serialize (IfBranch 'Parsed)
+
+deriving stock instance Show (IfBranch 'Parsed)
+
+deriving stock instance Show (IfBranch 'Scoped)
+
+deriving stock instance Eq (IfBranch 'Parsed)
+
+deriving stock instance Eq (IfBranch 'Scoped)
+
+deriving stock instance Ord (IfBranch 'Parsed)
+
+deriving stock instance Ord (IfBranch 'Scoped)
+
+data IfBranchElse (s :: Stage) = IfBranchElse
+  { _ifBranchElsePipe :: Irrelevant KeywordRef,
+    _ifBranchElseAssignKw :: Irrelevant KeywordRef,
+    _ifBranchElseKw :: Irrelevant KeywordRef,
+    _ifBranchElseExpression :: ExpressionType s
+  }
+  deriving stock (Generic)
+
+instance Serialize (IfBranchElse 'Scoped)
+
+instance Serialize (IfBranchElse 'Parsed)
+
+deriving stock instance Show (IfBranchElse 'Parsed)
+
+deriving stock instance Show (IfBranchElse 'Scoped)
+
+deriving stock instance Eq (IfBranchElse 'Parsed)
+
+deriving stock instance Eq (IfBranchElse 'Scoped)
+
+deriving stock instance Ord (IfBranchElse 'Parsed)
+
+deriving stock instance Ord (IfBranchElse 'Scoped)
+
+data If (s :: Stage) = If
+  { _ifKw :: KeywordRef,
+    _ifBranches :: NonEmpty (IfBranch s),
+    _ifBranchElse :: IfBranchElse s
+  }
+  deriving stock (Generic)
+
+instance Serialize (If 'Scoped)
+
+instance Serialize (If 'Parsed)
+
+deriving stock instance Show (If 'Parsed)
+
+deriving stock instance Show (If 'Scoped)
+
+deriving stock instance Eq (If 'Parsed)
+
+deriving stock instance Eq (If 'Scoped)
+
+deriving stock instance Ord (If 'Parsed)
+
+deriving stock instance Ord (If 'Scoped)
+
 data Initializer (s :: Stage) = Initializer
   { _initializerPattern :: PatternParensType s,
     _initializerAssignKw :: Irrelevant KeywordRef,
@@ -1896,6 +1968,7 @@ data ExpressionAtom (s :: Stage)
   | AtomList (List s)
   | AtomCase (Case s)
   | AtomNewCase (NewCase s)
+  | AtomIf (If s)
   | AtomHole (HoleType s)
   | AtomInstanceHole (HoleType s)
   | AtomDoubleBraces (DoubleBracesExpression s)
@@ -2156,6 +2229,9 @@ makeLenses ''Case
 makeLenses ''CaseBranch
 makeLenses ''NewCase
 makeLenses ''NewCaseBranch
+makeLenses ''If
+makeLenses ''IfBranch
+makeLenses ''IfBranchElse
 makeLenses ''PatternBinding
 makeLenses ''PatternAtoms
 makeLenses ''ExpressionAtoms
@@ -2252,6 +2328,7 @@ instance HasAtomicity Expression where
     ExpressionFunction {} -> Aggregate funFixity
     ExpressionCase c -> atomicity c
     ExpressionNewCase c -> atomicity c
+    ExpressionIf x -> atomicity x
     ExpressionIterator i -> atomicity i
     ExpressionNamedApplication i -> atomicity i
     ExpressionNamedApplicationNew i -> atomicity i
@@ -2270,6 +2347,9 @@ instance HasAtomicity (Case s) where
   atomicity = const Atom
 
 instance HasAtomicity (NewCase s) where
+  atomicity = const Atom
+
+instance HasAtomicity (If s) where
   atomicity = const Atom
 
 instance HasAtomicity (Let 'Scoped) where
@@ -2368,11 +2448,20 @@ instance (SingI s) => HasLoc (NewCaseBranch s) where
       branchLoc :: Interval
       branchLoc = getLocExpressionType (c ^. newCaseBranchExpression)
 
+instance (SingI s) => HasLoc (IfBranch s) where
+  getLoc c = getLoc (c ^. ifBranchPipe) <> getLocExpressionType (c ^. ifBranchExpression)
+
+instance (SingI s) => HasLoc (IfBranchElse s) where
+  getLoc c = getLoc (c ^. ifBranchElsePipe) <> getLocExpressionType (c ^. ifBranchElseExpression)
+
 instance (SingI s) => HasLoc (Case s) where
   getLoc c = getLoc (c ^. caseKw) <> getLoc (c ^. caseBranches . to last)
 
 instance (SingI s) => HasLoc (NewCase s) where
   getLoc c = getLoc (c ^. newCaseKw) <> getLoc (c ^. newCaseBranches . to last)
+
+instance (SingI s) => HasLoc (If s) where
+  getLoc c = getLoc (c ^. ifKw) <> getLoc (c ^. ifBranchElse)
 
 instance HasLoc (List s) where
   getLoc List {..} = getLoc _listBracketL <> getLoc _listBracketR
@@ -2414,6 +2503,7 @@ instance HasLoc Expression where
     ExpressionList l -> getLoc l
     ExpressionCase i -> getLoc i
     ExpressionNewCase i -> getLoc i
+    ExpressionIf x -> getLoc x
     ExpressionLet i -> getLoc i
     ExpressionUniverse i -> getLoc i
     ExpressionLiteral i -> getLoc i
@@ -2784,6 +2874,7 @@ instance IsApe Expression ApeLeaf where
     ExpressionList {} -> leaf
     ExpressionCase {} -> leaf
     ExpressionNewCase {} -> leaf
+    ExpressionIf {} -> leaf
     ExpressionLambda {} -> leaf
     ExpressionLet {} -> leaf
     ExpressionUniverse {} -> leaf
