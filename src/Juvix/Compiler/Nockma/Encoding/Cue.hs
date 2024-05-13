@@ -290,17 +290,6 @@ cueEither =
     . runErrorNoCallStack @DecodingError
     . cue'
 
-cueJust :: Term Natural -> Either DecodingError (Term Natural)
-cueJust =
-  run
-    . runErrorWith @(ErrNockNatural' Natural) (\_ _ -> error ("fail"))
-    . runError @DecodingError
-    . cue'
-    . ( \case
-          TermAtom a -> a
-          TermCell {} -> error "expected atom"
-      )
-
 {- `ErrNockNatural a` must be wrapped in a newtype to avoid overlapping instances
 with `DecodingError` when errors are handled before the type variable `a` is
 resolved.
