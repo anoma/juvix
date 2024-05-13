@@ -5,7 +5,7 @@ import Stdlib.Prelude open;
 
 myfun : {A : Type} -> (A -> A -> A) -> A -> List A -> A
   | f x xs :=
-    case x :: xs
+    case x :: xs of
       | nil := x
       | y :: nil := y
       | y :: z :: _ := f y z;

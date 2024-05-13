@@ -343,8 +343,7 @@ instance (SingI s) => PrettyPrint (ExpressionAtom s) where
     AtomIdentifier n -> ppIdentifierType n
     AtomLambda l -> ppCode l
     AtomLet lb -> ppCode lb
-    AtomCase c -> ppCode c
-    AtomNewCase c -> ppCode c
+    AtomCase c -> ppCase c
     AtomIf c -> ppCode c
     AtomList l -> ppCode l
     AtomUniverse uni -> ppCode uni
@@ -509,45 +508,26 @@ instance (SingI s) => PrettyPrint (Let s) where
         letExpression' = ppExpressionType _letExpression
     align $ ppCode _letKw <> letFunDefs' <> ppCode _letInKw <+> letExpression'
 
-instance (SingI s) => PrettyPrint (NewCase s) where
-  ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => NewCase s -> Sem r ()
-  ppCode NewCase {..} = do
-    let exp' = ppExpressionType _newCaseExpression
-    align $ ppCode _newCaseKw <> oneLineOrNextBlock exp' <> ppCode _newCaseOfKw <+> ppBranches _newCaseBranches
-    where
-      ppBranches :: NonEmpty (NewCaseBranch s) -> Sem r ()
-      ppBranches = \case
-        b :| [] -> oneLineOrNextBraces (ppCaseBranch True b)
-        _ -> braces (blockIndent (vsepHard (ppCaseBranch False <$> _newCaseBranches)))
+-- TODO: nested case
+ppCase :: forall r s. (Members '[ExactPrint, Reader Options] r, SingI s) => Case s -> Sem r ()
+ppCase Case {..} = do
+  let exp' = ppExpressionType _caseExpression
+  align $ ppCode _caseKw <> oneLineOrNextBlock exp' <> ppCode _caseOfKw <+> ppBranches _caseBranches
+  where
+    ppBranches :: NonEmpty (CaseBranch s) -> Sem r ()
+    ppBranches = \case
+      b :| [] -> oneLineOrNextBraces (ppCaseBranch True b)
+      _ -> braces (blockIndent (vsepHard (ppCaseBranch False <$> _caseBranches)))
 
-      ppCaseBranch :: Bool -> NewCaseBranch s -> Sem r ()
-      ppCaseBranch singleBranch b = pipeHelper <?+> ppCode b
-        where
-          pipeHelper :: Maybe (Sem r ())
-          pipeHelper
-            | singleBranch = Nothing
-            | otherwise = Just $ case b ^. newCaseBranchPipe . unIrrelevant of
-                Just p -> ppCode p
-                Nothing -> ppCode Kw.kwPipe
-
-instance (SingI s) => PrettyPrint (Case s) where
-  ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => Case s -> Sem r ()
-  ppCode Case {..} = do
-    let exp' = ppExpressionType _caseExpression
-    ppCode _caseKw <+> exp' <+> ppCode Kw.kwOf <+> ppBranches _caseBranches
-    where
-      ppBranches :: NonEmpty (CaseBranch s) -> Sem r ()
-      ppBranches = \case
-        b :| [] -> braces (ppCaseBranch True b)
-        _ -> braces (blockIndent (vsepHard (ppCaseBranch False <$> _caseBranches)))
-
-      ppCaseBranch :: Bool -> CaseBranch s -> Sem r ()
-      ppCaseBranch singleBranch b = pipeHelper <?+> ppCode b
-        where
-          pipeHelper :: Maybe (Sem r ())
-          pipeHelper
-            | singleBranch = Nothing
-            | otherwise = Just (ppCode (b ^. caseBranchPipe . unIrrelevant))
+    ppCaseBranch :: Bool -> CaseBranch s -> Sem r ()
+    ppCaseBranch singleBranch b = pipeHelper <?+> ppCode b
+      where
+        pipeHelper :: Maybe (Sem r ())
+        pipeHelper
+          | singleBranch = Nothing
+          | otherwise = Just $ case b ^. caseBranchPipe . unIrrelevant of
+              Just p -> ppCode p
+              Nothing -> ppCode Kw.kwPipe
 
 instance (SingI s) => PrettyPrint (If s) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => If s -> Sem r ()
@@ -666,12 +646,6 @@ instance (SingI s) => PrettyPrint (CaseBranch s) where
     let pat' = ppPatternParensType _caseBranchPattern
         e' = ppExpressionType _caseBranchExpression
     pat' <+> ppCode _caseBranchAssignKw <> oneLineOrNext e'
-
-instance (SingI s) => PrettyPrint (NewCaseBranch s) where
-  ppCode NewCaseBranch {..} = do
-    let pat' = ppPatternParensType _newCaseBranchPattern
-        e' = ppExpressionType _newCaseBranchExpression
-    pat' <+> ppCode _newCaseBranchAssignKw <> oneLineOrNext e'
 
 instance (SingI s) => PrettyPrint (IfBranch s) where
   ppCode IfBranch {..} = do
@@ -817,8 +791,7 @@ instance PrettyPrint Expression where
     ExpressionUniverse u -> ppCode u
     ExpressionLiteral l -> ppCode l
     ExpressionFunction f -> ppCode f
-    ExpressionCase c -> ppCode c
-    ExpressionNewCase c -> ppCode c
+    ExpressionCase c -> ppCase c
     ExpressionIf c -> ppCode c
     ExpressionIterator i -> ppCode i
     ExpressionNamedApplication i -> ppCode i
