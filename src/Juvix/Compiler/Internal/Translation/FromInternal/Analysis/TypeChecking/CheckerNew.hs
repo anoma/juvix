@@ -490,8 +490,8 @@ checkFunctionParameter ::
   FunctionParameter ->
   Sem r FunctionParameter
 checkFunctionParameter FunctionParameter {..} = do
-  let ty = _paramType
-  ty' <- checkIsType (getLoc ty) ty
+  ty <- checkIsType (getLoc _paramType) _paramType
+  ty' <- strongNormalize ty
   when (_paramImplicit == ImplicitInstance) $ do
     tab <- ask
     checkInstanceParam tab ty'
