@@ -1,8 +1,6 @@
 module Juvix.Compiler.Nockma.Encoding.Effect.BitReader where
 
 import Data.Bit as Bit
--- makSem ''BitReader has a type error if Sem is used instead of Eff
-
 import Data.Vector.Unboxed qualified as U
 import Effectful (Eff)
 import Juvix.Prelude.Base
@@ -10,6 +8,7 @@ import Juvix.Prelude.Base
 data BitReadError = BitReadErrorNoMoreBits
 
 data BitReader :: Effect where
+  -- makeSem ''BitReader has a type error if Sem is used instead of Eff
   NextBit :: (Member (Error BitReadError) r) => BitReader (Eff r) Bit
   GetCurrentPosition :: BitReader m Int
 
