@@ -195,12 +195,8 @@ processModule' (EntryIndex entry) = do
           && info ^. Store.moduleInfoOptions == opts
           && info ^. Store.moduleInfoFieldSize == entry ^. entryPointFieldSize -> do
           (changed, mtab) <- processImports'' entry (info ^. Store.moduleInfoImports)
-          -- We need to check whether any of the recursive imports is fragile,
-          -- not only the direct ones, because identifiers may be re-exported
-          -- (with `open public`).
-          let fragile = any (^. Store.moduleInfoFragile) (mtab ^. Store.moduleTable)
           if
-              | changed && fragile ->
+              | changed ->
                   recompile sha256 absPath
               | otherwise ->
                   return
@@ -238,7 +234,6 @@ processModule'' sha256 entry = over pipelineResult mkModuleInfo <$> processFileT
           _moduleInfoCoreTable = fromCore (_coreResultModule ^. Core.moduleInfoTable),
           _moduleInfoImports = map (^. importModulePath) $ scoperResult ^. Scoper.resultParserResult . Parser.resultParserState . parserStateImports,
           _moduleInfoOptions = StoredOptions.fromEntryPoint entry,
-          _moduleInfoFragile = Core.moduleIsFragile _coreResultModule,
           _moduleInfoSHA256 = sha256,
           _moduleInfoFieldSize = entry ^. entryPointFieldSize
         }
