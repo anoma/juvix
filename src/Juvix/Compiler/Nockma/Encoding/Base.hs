@@ -24,13 +24,11 @@ integerToVectorBits = run . execBitWriter . writeIntegral
 -- | Computes the number of bits required to store the argument in binary
 -- NB: 0 is encoded to the empty bit vector (as specified by the Hoon serialization spec), so 0 has bit length 0.
 bitLength :: forall a. (Integral a) => a -> Int
-bitLength = \case
-  0 -> 0
-  n -> go (fromIntegral n) 0
-    where
-      go :: Integer -> Int -> Int
-      go 0 acc = acc
-      go x acc = go (x `shiftR` 1) (acc + 1)
+bitLength =
+  length
+    . takeWhile (/= 0)
+    . iterate (`shiftR` 1)
+    . toInteger
 
 -- | Decode a vector of bits (ordered from least to most significant bits) to an integer
 vectorBitsToInteger :: Bit.Vector Bit -> Integer
