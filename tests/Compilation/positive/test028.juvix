@@ -3,8 +3,7 @@ module test028;
 
 import Stdlib.Prelude open;
 
-type Stream :=
-  | cons : Nat → (Unit → Stream) → Stream;
+type Stream := cons : Nat → (Unit → Stream) → Stream;
 
 force : (Unit → Stream) → Stream
   | f := f unit;
@@ -47,4 +46,3 @@ main : IO :=
     >> printNatLn (snth 50 primes)
     >> printNatLn (snth 100 primes)
     >> printNatLn (snth 200 primes);
-

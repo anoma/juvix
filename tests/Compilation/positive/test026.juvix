@@ -3,8 +3,7 @@ module test026;
 
 import Stdlib.Prelude open;
 
-type Queue (A : Type) :=
-  | queue : List A → List A → Queue A;
+type Queue (A : Type) := queue : List A → List A → Queue A;
 
 qfst : {A : Type} → Queue A → List A
   | (queue x _) := x;
@@ -20,8 +19,8 @@ pop_front : {A : Type} → Queue A → Queue A
     let
       q' : Queue A := queue (tail (qfst q)) (qsnd q);
     in case qfst q' of
-      | nil := queue (reverse (qsnd q')) nil
-      | _ := q';
+         | nil := queue (reverse (qsnd q')) nil
+         | _ := q';
 
 push_back : {A : Type} → Queue A → A → Queue A
   | q x :=
@@ -55,5 +54,6 @@ printListNatLn : List Nat → IO
   | (h :: t) :=
     printNat h >> printString " :: " >> printListNatLn t;
 
-main : IO := printListNatLn (runPartial (λ {{{_}} := f 100 empty}));
+main : IO :=
+  printListNatLn (runPartial λ {{{_}} := f 100 empty});
 -- list of numbers from 1 to 100

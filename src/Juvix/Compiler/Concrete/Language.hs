@@ -2289,7 +2289,7 @@ instance HasAtomicity (Iterator s) where
   atomicity = const Atom
 
 instance HasAtomicity (Case s) where
-  atomicity = const (Aggregate appFixity)
+  atomicity = const Atom
 
 instance HasAtomicity (If s) where
   atomicity = const Atom

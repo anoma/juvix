@@ -4,43 +4,38 @@ import Stdlib.Prelude open;
 
 isZero : Nat → Bool
   | n :=
-    case n of {
+    case n of
       | zero := true
-      | k@(suc _) := false
-    };
+      | k@(suc _) := false;
 
 id' : Bool → {A : Type} → A → A
   | b :=
-    case b of {
+    case b of
       | true := id
-      | false := id
-    };
+      | false := id;
 
 pred : Nat → Nat
   | n :=
-    case n of {
+    case n of
       | zero := zero
-      | suc n := n
-    };
+      | suc n := n;
 
 appIf : {A : Type} → Bool → (A → A) → A → A
   | b f :=
-    case b of {
+    case b of
       | true := f
-      | false := id
-    };
+      | false := id;
 
 appIf2 : {A : Type} → Bool → (A → A) → A → A
   | b f a :=
-    (case b of {
+    case b of {
       | true := f
       | false := id
-    })
+    }
       a;
 
 nestedCase1 : {A : Type} → Bool → (A → A) → A → A
   | b f :=
-    case b of {
+    case b of
       | true := case b of {_ := id}
-      | false := id
-    };
+      | false := id;
