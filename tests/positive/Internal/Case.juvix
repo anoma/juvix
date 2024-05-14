@@ -32,10 +32,10 @@ appIf : {A : Type} → Bool → (A → A) → A → A
 
 appIf2 : {A : Type} → Bool → (A → A) → A → A
   | b f a :=
-    case b of {
+    (case b of {
       | true := f
       | false := id
-    }
+    })
       a;
 
 nestedCase1 : {A : Type} → Bool → (A → A) → A → A

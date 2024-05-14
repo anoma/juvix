@@ -25,13 +25,13 @@ pop_front : {A : Type} → Queue A → Queue A
 
 push_back : {A : Type} → Queue A → A → Queue A
   | q x :=
-    case qfst q
+    case qfst q of
       | nil := queue (x :: nil) (qsnd q)
       | q' := queue q' (x :: qsnd q);
 
 is_empty : {A : Type} → Queue A → Bool
   | q :=
-    case qfst q
+    case qfst q of
       | nil :=
         (case qsnd q
           | nil := true

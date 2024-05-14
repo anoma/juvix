@@ -4,7 +4,7 @@ module test002;
 import Stdlib.Prelude open;
 
 f (x : List Nat) : Nat :=
-  case x
+  case x of
     | nil := 0
     | x :: y :: _ := x + y;
 

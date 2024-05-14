@@ -27,13 +27,13 @@ f : Tree → Nat
       terminating
       a :
         Nat :=
-          case l
+          case l of
             | leaf := 1
             | node l r := f l + f r;
       terminating
       b :
         Nat :=
-          case r
+          case r of
             | node l r := f l + f r
             | _ := 2;
     in a * b;
