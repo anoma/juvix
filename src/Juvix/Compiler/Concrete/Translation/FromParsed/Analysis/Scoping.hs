@@ -1230,7 +1230,7 @@ checkSections sec = topBindings helper
           where
             goDefs :: [Definition 'Parsed] -> [Module 'Parsed 'ModuleLocal] -> [Definition 'Parsed] -> Sem r' (DefinitionsSection 'Scoped)
             goDefs acc ms = \case
-              def@(DefinitionFunctionDef {}) : defs
+              def@DefinitionFunctionDef {} : defs
                 | not (null ms) -> do
                     eassert (not (null acc))
                     sec' <- goDefsSection (nonEmpty' (reverse acc))
