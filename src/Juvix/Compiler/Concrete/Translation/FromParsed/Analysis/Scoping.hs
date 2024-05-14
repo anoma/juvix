@@ -1241,7 +1241,7 @@ checkSections sec = topBindings helper
             goDefs acc ms = \case
               -- if there were some inductive type definitions (the list `ms` of
               -- corresponding inductive modules is not empty) and the next
-              -- definitions is a function definition, then we need to break the
+              -- definition is a function definition, then we need to break the
               -- section and start a new one
               def@DefinitionFunctionDef {} : defs
                 | not (null ms) -> do
