@@ -1228,8 +1228,21 @@ checkSections sec = topBindings helper
         goDefinitions :: DefinitionsSection 'Parsed -> Sem r' (DefinitionsSection 'Scoped)
         goDefinitions DefinitionsSection {..} = goDefs [] [] (toList _definitionsSection)
           where
+            -- This functions goes through a section reserving definitions and
+            -- collecting inductive modules. It breaks a section when the
+            -- collected inductive modules are non-empty (there were some
+            -- inductive definitions) and the next definition is a function
+            -- definition.
+            -- `acc` holds the definitions in the section encountered up till
+            -- now (reversed)
+            -- `ms` holds the inductive modules for the inductive definitions in
+            -- the section up till now (reversed)
             goDefs :: [Definition 'Parsed] -> [Module 'Parsed 'ModuleLocal] -> [Definition 'Parsed] -> Sem r' (DefinitionsSection 'Scoped)
             goDefs acc ms = \case
+              -- if there were some inductive type definitions (the list `ms` of
+              -- corresponding inductive modules is not empty) and the next
+              -- definitions is a function definition, then we need to break the
+              -- section and start a new one
               def@DefinitionFunctionDef {} : defs
                 | not (null ms) -> do
                     eassert (not (null acc))
@@ -1247,6 +1260,8 @@ checkSections sec = topBindings helper
                           _definitionsSection = sec'
                         }
               def : defs -> do
+                -- `reserveDefinition` returns the created inductive module if
+                -- `def` is an inductive type definition
                 m <- reserveDefinition def
                 let ms' = maybeToList m ++ ms
                 goDefs (def : acc) ms' defs
@@ -1275,11 +1290,13 @@ checkSections sec = topBindings helper
                       _definitionsSection = sec'
                     }
 
+            -- checks the local inductive modules generated for the inductive type definitions
             goInductiveModules :: NonEmpty (Module 'Parsed 'ModuleLocal) -> Sem r' (NonEmpty (NonDefinition 'Scoped))
             goInductiveModules ms = do
               ms' <- mapM checkLocalModule ms
               return $ fmap NonDefinitionModule ms'
 
+            -- checks the definitions in a section
             goDefsSection :: NonEmpty (Definition 'Parsed) -> Sem r' (NonEmpty (Definition 'Scoped))
             goDefsSection defs = do
               mapM_ scanAlias (defs ^.. each . _DefinitionSyntax . _SyntaxAlias)
@@ -1310,6 +1327,7 @@ checkSections sec = topBindings helper
               DefinitionProjectionDef d -> void (reserveProjectionSymbol d) >> return Nothing
               DefinitionInductive d -> Just <$> reserveInductive d
               where
+                -- returns the module generated for the inductive definition
                 reserveInductive :: InductiveDef 'Parsed -> Sem r' (Module 'Parsed 'ModuleLocal)
                 reserveInductive d = do
                   i <- reserveInductiveSymbol d
