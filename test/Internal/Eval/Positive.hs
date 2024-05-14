@@ -155,6 +155,11 @@ tests =
       $(mkRelFile "Universe.juvix")
       $(mkRelFile "out/Universe.out"),
     PosTest
+      "Parameterized type axioms"
+      $(mkRelDir ".")
+      $(mkRelFile "TypeParamAxiom.juvix")
+      $(mkRelFile "out/TypeParamAxiom.out"),
+    PosTest
       "Inductive type constructor"
       $(mkRelDir ".")
       $(mkRelFile "Inductive.juvix")

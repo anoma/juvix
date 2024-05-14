@@ -293,6 +293,12 @@ instance PrettyCode MutualStatement where
     StatementFunction d -> ppCode d
     StatementAxiom d -> ppCode d
 
+instance PrettyCode PreStatement where
+  ppCode = \case
+    PreInductiveDef d -> ppCode d
+    PreFunctionDef d -> ppCode d
+    PreAxiomDef d -> ppCode d
+
 instance PrettyCode MutualBlock where
   ppCode (MutualBlock funs) = ppMutual funs
 

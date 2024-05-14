@@ -1198,28 +1198,11 @@ checkSections ::
   (Members '[HighlightBuilder, Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, State ScoperSyntax, Reader EntryPoint] r) =>
   StatementSections 'Parsed ->
   Sem r (StatementSections 'Scoped)
-checkSections sec = do
-  (inductiveModules, sec' :: StatementSections 'Scoped) <- runOutputList (topBindings helper)
-  return $ case (fmap NonDefinitionModule) <$> nonEmpty inductiveModules of
-    Nothing -> sec'
-    Just im -> case sec' of
-      SectionsNonDefinitions d -> SectionsNonDefinitions (over nonDefinitionsSection (im <>) d)
-      SectionsEmpty ->
-        SectionsNonDefinitions
-          NonDefinitionsSection
-            { _nonDefinitionsSection = im,
-              _nonDefinitionsNext = Nothing
-            }
-      SectionsDefinitions d ->
-        SectionsNonDefinitions
-          NonDefinitionsSection
-            { _nonDefinitionsSection = im,
-              _nonDefinitionsNext = Just d
-            }
+checkSections sec = topBindings helper
   where
     helper ::
       forall r'.
-      (r' ~ Reader BindingStrategy ': Output (Module 'Scoped 'ModuleLocal) ': r) =>
+      (r' ~ Reader BindingStrategy ': r) =>
       Sem r' (StatementSections 'Scoped)
     helper = case sec of
       SectionsEmpty -> return SectionsEmpty
@@ -1243,17 +1226,82 @@ checkSections sec = do
               NonDefinitionOpenModule i -> NonDefinitionOpenModule <$> checkOpenModule i
 
         goDefinitions :: DefinitionsSection 'Parsed -> Sem r' (DefinitionsSection 'Scoped)
-        goDefinitions DefinitionsSection {..} = do
-          mapM_ reserveDefinition _definitionsSection
-          mapM_ scanAlias (_definitionsSection ^.. each . _DefinitionSyntax . _SyntaxAlias)
-          sec' <- mapM goDefinition _definitionsSection
-          next' <- mapM goNonDefinitions _definitionsNext
-          return
-            DefinitionsSection
-              { _definitionsNext = next',
-                _definitionsSection = sec'
-              }
+        goDefinitions DefinitionsSection {..} = goDefs [] [] (toList _definitionsSection)
           where
+            -- This functions goes through a section reserving definitions and
+            -- collecting inductive modules. It breaks a section when the
+            -- collected inductive modules are non-empty (there were some
+            -- inductive definitions) and the next definition is a function
+            -- definition.
+            -- `acc` holds the definitions in the section encountered up till
+            -- now (reversed)
+            -- `ms` holds the inductive modules for the inductive definitions in
+            -- the section up till now (reversed)
+            goDefs :: [Definition 'Parsed] -> [Module 'Parsed 'ModuleLocal] -> [Definition 'Parsed] -> Sem r' (DefinitionsSection 'Scoped)
+            goDefs acc ms = \case
+              -- if there were some inductive type definitions (the list `ms` of
+              -- corresponding inductive modules is not empty) and the next
+              -- definition is a function definition, then we need to break the
+              -- section and start a new one
+              def@DefinitionFunctionDef {} : defs
+                | not (null ms) -> do
+                    eassert (not (null acc))
+                    sec' <- goDefsSection (nonEmpty' (reverse acc))
+                    ms' <- goInductiveModules (nonEmpty' (reverse ms))
+                    next' <- goDefs [] [] (def : defs)
+                    let next'' =
+                          NonDefinitionsSection
+                            { _nonDefinitionsSection = ms',
+                              _nonDefinitionsNext = Just next'
+                            }
+                    return
+                      DefinitionsSection
+                        { _definitionsNext = Just next'',
+                          _definitionsSection = sec'
+                        }
+              def : defs -> do
+                -- `reserveDefinition` returns the created inductive module if
+                -- `def` is an inductive type definition
+                m <- reserveDefinition def
+                let ms' = maybeToList m ++ ms
+                goDefs (def : acc) ms' defs
+              [] -> do
+                eassert (not (null acc))
+                sec' <- goDefsSection (nonEmpty' (reverse acc))
+                next' <- case nonEmpty (reverse ms) of
+                  Nothing -> mapM goNonDefinitions _definitionsNext
+                  Just ms' ->
+                    case _definitionsNext of
+                      Nothing -> do
+                        ms'' <- goInductiveModules ms'
+                        return $
+                          Just
+                            NonDefinitionsSection
+                              { _nonDefinitionsSection = ms'',
+                                _nonDefinitionsNext = Nothing
+                              }
+                      Just nd -> do
+                        ms'' <- goInductiveModules ms'
+                        nd' <- goNonDefinitions nd
+                        return $ Just $ over nonDefinitionsSection (ms'' <>) nd'
+                return
+                  DefinitionsSection
+                    { _definitionsNext = next',
+                      _definitionsSection = sec'
+                    }
+
+            -- checks the local inductive modules generated for the inductive type definitions
+            goInductiveModules :: NonEmpty (Module 'Parsed 'ModuleLocal) -> Sem r' (NonEmpty (NonDefinition 'Scoped))
+            goInductiveModules ms = do
+              ms' <- mapM checkLocalModule ms
+              return $ fmap NonDefinitionModule ms'
+
+            -- checks the definitions in a section
+            goDefsSection :: NonEmpty (Definition 'Parsed) -> Sem r' (NonEmpty (Definition 'Scoped))
+            goDefsSection defs = do
+              mapM_ scanAlias (defs ^.. each . _DefinitionSyntax . _SyntaxAlias)
+              mapM goDefinition defs
+
             scanAlias :: AliasDef 'Parsed -> Sem r' ()
             scanAlias a = do
               aliasId <- gets (^?! scopeLocalSymbols . at (a ^. aliasDefName) . _Just . S.nameId)
@@ -1271,20 +1319,22 @@ checkSections sec = do
                       modify' (HashSet.insert i)
                       whenJustM (gets (^? scoperAlias . at i . _Just . preSymbolName . S.nameId)) go
 
-            reserveDefinition :: Definition 'Parsed -> Sem r' ()
+            reserveDefinition :: Definition 'Parsed -> Sem r' (Maybe (Module 'Parsed 'ModuleLocal))
             reserveDefinition = \case
-              DefinitionSyntax s -> resolveSyntaxDef s
-              DefinitionFunctionDef d -> void (reserveFunctionSymbol d)
-              DefinitionAxiom d -> void (reserveAxiomSymbol d)
-              DefinitionProjectionDef d -> void (reserveProjectionSymbol d)
-              DefinitionInductive d -> reserveInductive d
+              DefinitionSyntax s -> resolveSyntaxDef s $> Nothing
+              DefinitionFunctionDef d -> void (reserveFunctionSymbol d) >> return Nothing
+              DefinitionAxiom d -> void (reserveAxiomSymbol d) >> return Nothing
+              DefinitionProjectionDef d -> void (reserveProjectionSymbol d) >> return Nothing
+              DefinitionInductive d -> Just <$> reserveInductive d
               where
-                reserveInductive :: InductiveDef 'Parsed -> Sem r' ()
+                -- returns the module generated for the inductive definition
+                reserveInductive :: InductiveDef 'Parsed -> Sem r' (Module 'Parsed 'ModuleLocal)
                 reserveInductive d = do
                   i <- reserveInductiveSymbol d
                   constrs <- mapM reserveConstructor (d ^. inductiveConstructors)
-                  void (defineInductiveModule (head constrs) d)
+                  m <- defineInductiveModule (head constrs) d
                   ignoreFail (registerRecordType (head constrs) i)
+                  return m
                   where
                     reserveConstructor :: ConstructorDef 'Parsed -> Sem r' S.Symbol
                     reserveConstructor c = do
@@ -1323,10 +1373,9 @@ checkSections sec = do
               DefinitionInductive d -> DefinitionInductive <$> checkInductiveDef d
               DefinitionProjectionDef d -> DefinitionProjectionDef <$> checkProjectionDef d
 
-            defineInductiveModule :: S.Symbol -> InductiveDef 'Parsed -> Sem r' ()
+            defineInductiveModule :: S.Symbol -> InductiveDef 'Parsed -> Sem r' (Module 'Parsed 'ModuleLocal)
             defineInductiveModule headConstr i = do
-              m <- runReader (getLoc (i ^. inductiveName)) genModule
-              checkLocalModule m >>= output
+              runReader (getLoc (i ^. inductiveName)) genModule
               where
                 genModule :: forall s'. (Members '[Reader Interval, Reader EntryPoint, State Scope] s') => Sem s' (Module 'Parsed 'ModuleLocal)
                 genModule = do
