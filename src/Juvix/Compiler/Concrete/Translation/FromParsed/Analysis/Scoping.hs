@@ -1304,7 +1304,7 @@ checkSections sec = topBindings helper
 
             reserveDefinition :: Definition 'Parsed -> Sem r' (Maybe (Module 'Parsed 'ModuleLocal))
             reserveDefinition = \case
-              DefinitionSyntax s -> resolveSyntaxDef s >> return Nothing
+              DefinitionSyntax s -> resolveSyntaxDef s $> Nothing
               DefinitionFunctionDef d -> void (reserveFunctionSymbol d) >> return Nothing
               DefinitionAxiom d -> void (reserveAxiomSymbol d) >> return Nothing
               DefinitionProjectionDef d -> void (reserveProjectionSymbol d) >> return Nothing
