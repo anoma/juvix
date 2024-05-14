@@ -31,7 +31,7 @@ scanner :: Path Abs File -> ByteString -> Result e ScanResult
 scanner fp bs = do
   spansToLocs <$> runParser pPreScanResult bs
   where
-    getInterval :: (Members '[Input (Maybe FileLoc)] r) => Sem r Interval
+    getInterval :: (Members '[Input FileLoc] r) => Sem r Interval
     getInterval = do
       _intervalStart <- inputJust
       _intervalEnd <- inputJust

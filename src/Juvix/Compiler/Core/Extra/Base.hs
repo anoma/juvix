@@ -474,10 +474,6 @@ twoManyChildrenI f i is = \case
   (x : y : xs) -> f i is x y xs
   _ -> impossible
 
-{-# INLINE input' #-}
-input' :: (Members '[Input (Maybe a)] r) => Sem r a
-input' = fmap fromJust input
-
 -- | Destruct a node into NodeDetails. This is an ugly internal function used to
 -- implement more high-level accessors and recursors.
 destruct :: Node -> NodeDetails
@@ -587,11 +583,11 @@ destruct = \case
             [ br : reverse (foldl' (\r b -> manyBinders (take (length r) bi) (b ^. binderType) : r) [] bi)
               | (bi, br) <- branchChildren
             ]
-        mkBranch :: Info -> CaseBranch -> Sem '[Input (Maybe Node)] CaseBranch
+        mkBranch :: Info -> CaseBranch -> Sem '[Input Node] CaseBranch
         mkBranch nfo' br = do
-          b' <- input'
+          b' <- inputJust
           let nBinders = br ^. caseBranchBindersNum
-          tys' <- replicateM nBinders input'
+          tys' <- replicateM nBinders inputJust
           return
             br
               { _caseBranchInfo = nfo',
@@ -600,12 +596,12 @@ destruct = \case
               }
         mkBranches :: [Info] -> [Node] -> [CaseBranch]
         mkBranches is' allNodes' =
-          run $
-            runInputList allNodes' $
-              sequence
-                [ mkBranch ci' br
-                  | (ci', br) <- zipExact is' brs
-                ]
+          run
+            . runInputList allNodes'
+            $ sequence
+              [ mkBranch ci' br
+                | (ci', br) <- zipExact is' brs
+              ]
      in case mdef of
           Nothing ->
             NodeDetails
@@ -651,18 +647,18 @@ destruct = \case
               | br <- branches
             ]
         -- sets the infos and the binder types in the patterns
-        setPatternsInfos :: forall r. (Members '[Input (Maybe Info), Input (Maybe Node)] r) => NonEmpty Pattern -> Sem r (NonEmpty Pattern)
+        setPatternsInfos :: forall r. (Members '[Input Info, Input Node] r) => NonEmpty Pattern -> Sem r (NonEmpty Pattern)
         setPatternsInfos = mapM goPattern
           where
             goPattern :: Pattern -> Sem r Pattern
             goPattern = \case
               PatWildcard x -> do
-                i' <- input'
-                ty <- input'
+                i' <- inputJust
+                ty <- inputJust
                 return (PatWildcard (over patternWildcardBinder (set binderType ty) (set patternWildcardInfo i' x)))
               PatConstr x -> do
-                i' <- input'
-                ty <- input'
+                i' <- inputJust
+                ty <- inputJust
                 args' <- mapM goPattern (x ^. patternConstrArgs)
                 return (PatConstr (over patternConstrBinder (set binderType ty) (set patternConstrInfo i' (set patternConstrArgs args' x))))
      in NodeDetails
@@ -670,10 +666,10 @@ destruct = \case
             _nodeSubinfos = branchInfos,
             _nodeChildren = allNodes,
             _nodeReassemble = someChildrenI $ \i' is' chs' ->
-              let mkBranch :: MatchBranch -> Sem '[Input (Maybe Node), Input (Maybe Info)] MatchBranch
+              let mkBranch :: MatchBranch -> Sem '[Input Node, Input Info] MatchBranch
                   mkBranch br = do
-                    bi' <- input'
-                    b' <- input'
+                    bi' <- inputJust
+                    b' <- inputJust
                     pats' <- setPatternsInfos (br ^. matchBranchPatterns)
                     return
                       br
