@@ -19,7 +19,6 @@ main : Bool :=
     z : Bool := false;
   in itconst (a := true; b := false) (c in false; d in false)
        for (x := true) (y in false)
-         case x of {
+         case x of
            | true := y
-           | false := z
-         };
+           | false := z;
