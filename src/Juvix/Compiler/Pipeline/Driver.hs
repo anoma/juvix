@@ -98,7 +98,7 @@ processFileUpToParsing' ::
   Sem r (PipelineResult Parser.ParserResult)
 processFileUpToParsing' entry = do
   res <- runReader entry upToParsing
-  let imports = res ^. Parser.resultParserState . Parser.parserStateImports
+  let imports :: [Import 'Parsed] = res ^. Parser.resultParserState . Parser.parserStateImports
   mtab <- processImports' entry (map (^. importModulePath) imports)
   return
     PipelineResult
@@ -181,6 +181,7 @@ processModule' ::
   Sem r (PipelineResult Store.ModuleInfo)
 processModule' (EntryIndex entry) = do
   let buildDir = resolveAbsBuildDir root (entry ^. entryPointBuildDir)
+      sourcePath = fromJust (entry ^. entryPointModulePath)
       relPath =
         fromJust
           . replaceExtension ".jvo"
@@ -209,22 +210,21 @@ processModule' (EntryIndex entry) = do
       recompile sha256 absPath
   where
     root = entry ^. entryPointRoot
-    sourcePath = fromJust $ entry ^. entryPointModulePath
     opts = StoredModule.fromEntryPoint entry
 
     recompile :: Text -> Path Abs File -> Sem r (PipelineResult Store.ModuleInfo)
     recompile sha256 absPath = do
-      res <- processModule'' sha256 entry
+      res <- processModuleToStoredCore sha256 entry
       saveToFile absPath (res ^. pipelineResult)
       return res
 
-processModule'' ::
+processModuleToStoredCore ::
   forall r.
   (Members '[Reader ImportParents, TopModuleNameChecker, Error JuvixError, Files, PathResolver, ModuleInfoCache] r) =>
   Text ->
   EntryPoint ->
   Sem r (PipelineResult Store.ModuleInfo)
-processModule'' sha256 entry = over pipelineResult mkModuleInfo <$> processFileToStoredCore' entry
+processModuleToStoredCore sha256 entry = over pipelineResult mkModuleInfo <$> processFileToStoredCore' entry
   where
     mkModuleInfo :: Core.CoreResult -> Store.ModuleInfo
     mkModuleInfo Core.CoreResult {..} =
