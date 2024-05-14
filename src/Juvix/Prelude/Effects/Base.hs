@@ -66,7 +66,7 @@ overStaticRep ::
   ) =>
   (StaticRep e -> StaticRep e) ->
   Sem r ()
-overStaticRep f = unsafeEff $ \r -> f <$> getEnv r >>= putEnv r
+overStaticRep f = unsafeEff $ \r -> getEnv r >>= putEnv r . f
 
 mapReader ::
   (Member (Reader e1) r) => (e1 -> e2) -> Sem (Reader e2 ': r) a -> Sem r a
@@ -179,6 +179,14 @@ reinterpretHCommon2 ::
   Sem (e ': r) a ->
   Sem r b
 reinterpretHCommon2 = E.reinterpret
+
+reinterpretHCommon3 ::
+  (DispatchOf e ~ 'Dynamic) =>
+  (Sem (e3 ': e2 ': e1 ': r) a -> Sem r b) ->
+  EffectHandler e (e3 ': e2 ': e1 ': r) ->
+  Sem (e ': r) a ->
+  Sem r b
+reinterpretHCommon3 = E.reinterpret
 
 reinterpretH ::
   (DispatchOf e ~ 'Dynamic) =>

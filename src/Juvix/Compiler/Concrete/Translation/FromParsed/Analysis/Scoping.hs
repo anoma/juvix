@@ -695,6 +695,19 @@ checkFixityInfo ParsedFixityInfo {..} = do
             _fixityFieldsBraces
           }
 
+getModuleId :: forall t r. (SingI t, Member (Reader EntryPoint) r) => ModulePathType 'Parsed t -> Sem r ModuleId
+getModuleId path = do
+  p <- asks (^. entryPointPackage)
+  return
+    ModuleId
+      { _moduleIdPath =
+          case sing :: SModuleIsTop t of
+            SModuleLocal -> prettyText path
+            SModuleTop -> prettyText path,
+        _moduleIdPackage = p ^. packageName,
+        _moduleIdPackageVersion = show (p ^. packageVersion)
+      }
+
 checkFixitySyntaxDef ::
   forall r.
   (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, State ScoperSyntax, NameIdGen, Reader EntryPoint, InfoTableBuilder, Reader InfoTable] r) =>
@@ -1064,7 +1077,7 @@ checkTopModule m@Module {..} = checkedModule
 
     checkedModule :: Sem r (Module 'Scoped 'ModuleTop, ScopedModule, Scope)
     checkedModule = do
-      (sc, (tab, (e, body', path', doc'))) <- runState iniScope $ runInfoTableBuilder mempty $ do
+      (sc, (tab, (e, body', path', doc'))) <- runState iniScope . runInfoTableBuilder mempty $ do
         path' <- freshTopModulePath
         withTopScope $ do
           (e, body') <- topBindings (checkModuleBody _moduleBody)
@@ -1072,6 +1085,7 @@ checkTopModule m@Module {..} = checkedModule
           registerModuleDoc (path' ^. S.nameId) doc'
           return (e, body', path', doc')
       localModules <- getLocalModules e
+      _moduleId <- getModuleId (path' ^. S.nameConcrete)
       let md =
             Module
               { _modulePath = path',
@@ -1316,17 +1330,10 @@ checkSections sec = do
               where
                 genModule :: forall s'. (Members '[Reader Interval, Reader EntryPoint, State Scope] s') => Sem s' (Module 'Parsed 'ModuleLocal)
                 genModule = do
-                  path <- gets (^. scopePath)
-                  p <- asks (^. entryPointPackage)
-                  let _moduleId =
-                        ModuleId
-                          { _moduleIdPath = show path <> "." <> show (i ^. inductiveName),
-                            _moduleIdPackage = p ^. packageName,
-                            _moduleIdPackageVersion = show (p ^. packageVersion)
-                          }
                   _moduleKw <- G.kw G.kwModule
                   _moduleKwEnd <- G.kw G.kwEnd
                   let _modulePath = i ^. inductiveName
+                      _moduleId = ()
                   _moduleBody <- genBody
                   return
                     Module
@@ -1458,6 +1465,7 @@ checkLocalModule md@Module {..} = do
       doc' <- mapM checkJudoc _moduleDoc
       return (e, b, doc')
   _modulePath' <- reserveLocalModuleSymbol _modulePath
+  _moduleId' <- getModuleId _modulePath
   localModules <- getLocalModules moduleExportInfo
   let mid = _modulePath' ^. S.nameId
       moduleName = S.unqualifiedSymbol _modulePath'
@@ -1468,14 +1476,14 @@ checkLocalModule md@Module {..} = do
             _moduleDoc = moduleDoc',
             _modulePragmas = _modulePragmas,
             _moduleMarkdownInfo = Nothing,
+            _moduleId = _moduleId',
             _moduleKw,
             _moduleInductive,
-            _moduleKwEnd,
-            _moduleId
+            _moduleKwEnd
           }
       smod =
         ScopedModule
-          { _scopedModuleId = _moduleId,
+          { _scopedModuleId = _moduleId',
             _scopedModulePath = set nameConcrete (moduleNameToTopModulePath (NameUnqualified _modulePath)) moduleName,
             _scopedModuleName = moduleName,
             _scopedModuleFilePath = P.getModuleFilePath md,

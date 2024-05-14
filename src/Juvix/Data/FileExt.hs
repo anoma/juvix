@@ -2,8 +2,8 @@ module Juvix.Data.FileExt where
 
 import Data.Text qualified as Text
 import Juvix.Prelude.Base
-import Juvix.Prelude.Path
 import Juvix.Prelude.Pretty
+import Path (File, Path, fileExtension, splitExtension)
 import Prelude (show)
 
 -- | File extensions Juvix interacts with.
@@ -36,6 +36,9 @@ juvixFileExt = ".juvix"
 
 juvixMarkdownFileExt :: (IsString a) => a
 juvixMarkdownFileExt = ".juvix.md"
+
+juvixMarkdownFileExts :: (IsString a) => NonEmpty a
+juvixMarkdownFileExts = ".juvix" :| [".md"]
 
 juvixGebFileExt :: (IsString a) => a
 juvixGebFileExt = ".geb"
@@ -89,10 +92,10 @@ nockmaFileExt :: (IsString a) => a
 nockmaFileExt = ".nockma"
 
 fileExtToString :: FileExt -> String
-fileExtToString = unpack . fileExtToText
+fileExtToString = fileExtToIsString
 
-fileExtToText :: FileExt -> Text
-fileExtToText = \case
+fileExtToIsString :: (IsString a) => FileExt -> a
+fileExtToIsString = \case
   FileExtJuvix -> juvixFileExt
   FileExtJuvixMarkdown -> juvixMarkdownFileExt
   FileExtJuvixGeb -> juvixGebFileExt
@@ -112,6 +115,9 @@ fileExtToText = \case
   FileExtHtml -> htmlFileExt
   FileExtCss -> cssFileExt
   FileExtNockma -> nockmaFileExt
+
+fileExtToText :: FileExt -> Text
+fileExtToText = fileExtToIsString
 
 toMetavar :: FileExt -> String
 toMetavar = \case
@@ -140,6 +146,9 @@ instance Show FileExt where
 
 instance Pretty FileExt where
   pretty = pretty . fileExtToText
+
+isJuvixOrJuvixMdFile :: Path b File -> Bool
+isJuvixOrJuvixMdFile = isJuvixFile .||. isJuvixMarkdownFile
 
 isJuvixFile :: Path b File -> Bool
 isJuvixFile = (== Just juvixFileExt) . fileExtension

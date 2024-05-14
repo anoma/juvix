@@ -10,6 +10,7 @@ import Juvix.Compiler.Concrete.Data.Scope
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoped
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as P
+import Juvix.Compiler.Concrete.Translation.FromSource.TopModuleNameChecker (runTopModuleNameChecker)
 import Juvix.Compiler.Core.Data.Module qualified as Core
 import Juvix.Compiler.Core.Translation.FromInternal.Data qualified as Core
 import Juvix.Compiler.Internal.Translation qualified as Internal
@@ -20,6 +21,7 @@ import Juvix.Compiler.Pipeline.Artifacts.PathResolver
 import Juvix.Compiler.Pipeline.Driver
 import Juvix.Compiler.Pipeline.Loader.PathResolver
 import Juvix.Compiler.Pipeline.Package.Loader.Error
+import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
 import Juvix.Compiler.Pipeline.Package.Loader.PathResolver
 import Juvix.Compiler.Pipeline.Setup
@@ -58,6 +60,29 @@ runIOEitherPipeline ::
   Sem r (Either JuvixError (ResolverState, a))
 runIOEitherPipeline entry = fmap snd . runIOEitherPipeline' entry
 
+-- | Runs the correct implementation of the PathResolver according to the input
+-- file
+runPathResolverInput ::
+  ( Members
+      '[ TaggedLock,
+         Files,
+         Reader EntryPoint,
+         DependencyResolver,
+         Error DependencyError,
+         GitClone,
+         Error JuvixError,
+         EvalFileEff
+       ]
+      r
+  ) =>
+  Sem (PathResolver ': r) a ->
+  Sem r (ResolverState, a)
+runPathResolverInput m = do
+  entry <- ask
+  if
+      | mainIsPackageFile entry -> runPackagePathResolver' (entry ^. entryPointResolverRoot) m
+      | otherwise -> runPathResolverPipe m
+
 runIOEitherPipeline' ::
   forall a r.
   (Members '[TaggedLock, EmbedIO] r) =>
@@ -66,9 +91,6 @@ runIOEitherPipeline' ::
   Sem r (HighlightInput, (Either JuvixError (ResolverState, a)))
 runIOEitherPipeline' entry a = do
   let hasInternet = not (entry ^. entryPointOffline)
-      runPathResolver'
-        | mainIsPackageFile entry = runPackagePathResolver' (entry ^. entryPointResolverRoot)
-        | otherwise = runPathResolverPipe
   evalInternet hasInternet
     . runHighlightBuilder
     . runJuvixError
@@ -82,7 +104,8 @@ runIOEitherPipeline' entry a = do
     . mapError (JuvixError @PackageLoaderError)
     . runEvalFileEffIO
     . runDependencyResolver
-    . runPathResolver'
+    . runPathResolverInput
+    . runTopModuleNameChecker
     . evalModuleInfoCache
     $ a
 
@@ -153,6 +176,7 @@ runReplPipelineIOEither' lockMode entry = do
       . runEvalFileEffIO
       . runDependencyResolver
       . runPathResolver'
+      . runTopModuleNameChecker
       . evalModuleInfoCache
       $ entrySetup defaultDependenciesConfig >> processFileToStoredCore entry
   return $ case eith of

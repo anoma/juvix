@@ -3,10 +3,9 @@ module Juvix.Compiler.Pipeline.Package.Loader.PathResolver where
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Concrete hiding (Symbol)
 import Juvix.Compiler.Core.Language
-import Juvix.Compiler.Pipeline.Loader.PathResolver.Base
-import Juvix.Compiler.Pipeline.Loader.PathResolver.Data
-import Juvix.Compiler.Pipeline.Loader.PathResolver.Error
-import Juvix.Compiler.Pipeline.Loader.PathResolver.Paths
+import Juvix.Compiler.Pipeline.EntryPoint
+import Juvix.Compiler.Pipeline.Loader.PathResolver
+import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
 import Juvix.Data.Effect.TaggedLock
 import Juvix.Extra.PackageFiles
 import Juvix.Extra.Paths
@@ -17,6 +16,7 @@ data RootInfoDirs = RootInfoDirs
     _rootInfoArgPackageBaseDir :: Path Abs Dir,
     _rootInfoArgGlobalStdlibDir :: Path Abs Dir
   }
+  deriving stock (Show)
 
 data RootInfoFiles = RootInfoFiles
   { _rootInfoFilesPackage :: HashSet (Path Rel File),
@@ -27,15 +27,33 @@ makeLenses ''RootInfoDirs
 makeLenses ''RootInfoFiles
 
 -- | A PackageResolver interpreter intended to be used to load a Package file.
--- It aggregates files at `rootPath` and files from the global package stdlib.
-runPackagePathResolver :: forall r a. (Members '[TaggedLock, Files] r) => Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r a
+-- It aggregates the package.juvix file in `rootPath` and the package-base,
+-- package and global standard library (currently under global-package/.juvix-build)
+runPackagePathResolver ::
+  forall r a.
+  (Members '[TaggedLock, Error JuvixError, Files, EvalFileEff, Reader EntryPoint] r) =>
+  Path Abs Dir ->
+  Sem (PathResolver ': r) a ->
+  Sem r a
 runPackagePathResolver rootPath sem = do
   ds <- rootInfoDirs
   initFiles ds
   fs <- rootInfoFiles ds
-  let mkRootInfo' = mkRootInfo ds fs
+  let mkRootInfo' :: Path Rel File -> Maybe RootInfo = mkRootInfo ds fs
+  packageInfos <- mkPackageInfos ds fs
   (`interpretH` sem) $ \localEnv -> \case
     RegisterDependencies {} -> return ()
+    ResolvePath scan -> case mkRootInfo ds fs (addFileExt FileExtJuvix (importScanToRelPath scan)) of
+      Nothing ->
+        throw . JuvixError $
+          ErrPackageInvalidImport
+            PackageInvalidImport
+              { _packageInvalidImport = scan
+              }
+      Just (ri :: RootInfo) ->
+        let pkg = packageInfos ^?! at (ri ^. rootInfoPath) . _Just
+         in return (pkg, FileExtJuvix)
+    GetPackageInfos -> return packageInfos
     ExpectedPathInfoTopModule m -> do
       let _pathInfoTopModule = m
           _pathInfoRootInfo =
@@ -43,14 +61,88 @@ runPackagePathResolver rootPath sem = do
             fromMaybe (error "runPackagePathResolver: expected root info") $
               mkRootInfo' (topModulePathToRelativePath' m)
       return PathInfoTopModule {..}
-    WithPath m a -> do
-      let relPath = topModulePathToRelativePath' m
-          x :: Either PathResolverError (Path Abs Dir, Path Rel File)
-          x = case mkRootInfo' relPath of
-            Just p -> Right (p ^. rootInfoPath, relPath)
-            Nothing -> Left (ErrPackageInvalidImport PackageInvalidImport {_packageInvalidImport = m})
-      runTSimpleEff localEnv (a x)
+    WithResolverRoot _root' m ->
+      -- the _root' is not used because ResolvePath does not depend on it
+      runTSimpleEff localEnv m
   where
+    mkPackageInfos ::
+      RootInfoDirs ->
+      RootInfoFiles ->
+      Sem r (HashMap (Path Abs Dir) PackageInfo)
+    mkPackageInfos ds fs = do
+      pkgBase <- mkPkgBase
+      gstdlib <- mkPkgGlobalStdlib
+      pkgDotJuvix <- mkPackageDotJuvix
+      pkgType <- mkPkgPackageType
+      return
+        . hashMap
+        $ mkAssoc <$> [pkgBase, pkgType, gstdlib, pkgDotJuvix]
+      where
+        mkAssoc :: PackageInfo -> (Path Abs Dir, PackageInfo)
+        mkAssoc pkg = (pkg ^. packageRoot, pkg)
+
+        mkPkgBase :: Sem r PackageInfo
+        mkPkgBase = do
+          let rfiles = fs ^. rootInfoFilesPackageBase
+          return
+            PackageInfo
+              { _packageRoot = ds ^. rootInfoArgPackageBaseDir,
+                _packageAvailableRoots = hashSet [ds ^. rootInfoArgPackageBaseDir],
+                _packageJuvixRelativeFiles = rfiles,
+                _packagePackage = PackageBase
+              }
+
+        mkPkgPackageType :: Sem r PackageInfo
+        mkPkgPackageType = do
+          let rfiles = fs ^. rootInfoFilesPackage
+              root = ds ^. rootInfoArgPackageDir
+          return
+            PackageInfo
+              { _packageRoot = root,
+                _packageJuvixRelativeFiles = rfiles,
+                _packagePackage = PackageType,
+                _packageAvailableRoots =
+                  hashSet
+                    [ ds ^. rootInfoArgPackageDir,
+                      ds ^. rootInfoArgPackageBaseDir,
+                      ds ^. rootInfoArgGlobalStdlibDir
+                    ]
+              }
+
+        mkPkgGlobalStdlib :: Sem r PackageInfo
+        mkPkgGlobalStdlib = do
+          let root = ds ^. rootInfoArgGlobalStdlibDir
+          jufiles <- findPackageJuvixFiles root
+          let rfiles = hashSet jufiles
+          return
+            PackageInfo
+              { _packageRoot = root,
+                _packageJuvixRelativeFiles = rfiles,
+                _packageAvailableRoots =
+                  hashSet
+                    [ ds ^. rootInfoArgPackageBaseDir,
+                      ds ^. rootInfoArgGlobalStdlibDir
+                    ],
+                _packagePackage = PackageGlobalStdlib
+              }
+
+        mkPackageDotJuvix :: Sem r PackageInfo
+        mkPackageDotJuvix = do
+          let rfiles = hashSet [packageFilePath]
+          return
+            PackageInfo
+              { _packageRoot = rootPath,
+                _packageJuvixRelativeFiles = rfiles,
+                _packageAvailableRoots =
+                  hashSet
+                    [ ds ^. rootInfoArgPackageBaseDir,
+                      ds ^. rootInfoArgPackageDir,
+                      ds ^. rootInfoArgGlobalStdlibDir,
+                      rootPath
+                    ],
+                _packagePackage = PackageDotJuvix
+              }
+
     rootInfoDirs :: Sem r RootInfoDirs
     rootInfoDirs = do
       _rootInfoArgGlobalStdlibDir <- juvixStdlibDir . rootBuildDir <$> globalRoot
@@ -71,25 +163,30 @@ runPackagePathResolver rootPath sem = do
       return RootInfoFiles {..}
 
     mkRootInfo :: RootInfoDirs -> RootInfoFiles -> Path Rel File -> Maybe RootInfo
-    mkRootInfo ds fs relPath
-      | parent preludePath `isProperPrefixOf` relPath = mkInfo (ds ^. rootInfoArgGlobalStdlibDir)
-      | relPath == packageFilePath = mkInfo rootPath
-      | relPath `HashSet.member` (fs ^. rootInfoFilesPackage) = mkInfo (ds ^. rootInfoArgPackageDir)
-      | relPath `HashSet.member` (fs ^. rootInfoFilesPackageBase) = mkInfo (ds ^. rootInfoArgPackageBaseDir)
-      | otherwise = Nothing
+    mkRootInfo ds fs relPath = mkInfo <$> mrootInfoPath
       where
-        mkInfo :: Path Abs Dir -> Maybe RootInfo
+        mrootInfoPath :: Maybe (Path Abs Dir)
+        mrootInfoPath
+          | parent preludePath `isProperPrefixOf` relPath = Just (ds ^. rootInfoArgGlobalStdlibDir)
+          | relPath == packageFilePath = Just rootPath
+          | relPath `HashSet.member` (fs ^. rootInfoFilesPackage) = Just (ds ^. rootInfoArgPackageDir)
+          | relPath `HashSet.member` (fs ^. rootInfoFilesPackageBase) = Just (ds ^. rootInfoArgPackageBaseDir)
+          | otherwise = Nothing
+        mkInfo :: Path Abs Dir -> RootInfo
         mkInfo d =
-          Just $
-            RootInfo
-              { _rootInfoPath = d,
-                _rootInfoKind = RootKindPackage
-              }
+          RootInfo
+            { _rootInfoPath = d,
+              _rootInfoKind = RootKindPackage
+            }
 
-runPackagePathResolver' :: (Members '[TaggedLock, Files] r) => Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
+runPackagePathResolver' ::
+  (Members '[TaggedLock, Error JuvixError, Files, EvalFileEff, Reader EntryPoint] r) =>
+  Path Abs Dir ->
+  Sem (PathResolver ': r) a ->
+  Sem r (ResolverState, a)
 runPackagePathResolver' root eff = do
   res <- runPackagePathResolver root eff
   return (iniResolverState, res)
 
-runPackagePathResolver'' :: (Members '[TaggedLock, Files] r) => Path Abs Dir -> ResolverState -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
+runPackagePathResolver'' :: (Members '[Reader EntryPoint, TaggedLock, Error JuvixError, Files, EvalFileEff] r) => Path Abs Dir -> ResolverState -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
 runPackagePathResolver'' root _ eff = runPackagePathResolver' root eff

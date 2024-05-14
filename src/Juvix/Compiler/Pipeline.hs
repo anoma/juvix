@@ -24,6 +24,7 @@ import Juvix.Compiler.Concrete.Data.Highlight.Input
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromParsed qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
+import Juvix.Compiler.Concrete.Translation.FromSource.TopModuleNameChecker
 import Juvix.Compiler.Core qualified as Core
 import Juvix.Compiler.Core.Transformation
 import Juvix.Compiler.Core.Translation.Stripped.FromCore qualified as Stripped
@@ -52,7 +53,7 @@ import Juvix.Data.Field
 
 type PipelineAppEffects = '[TaggedLock, EmbedIO]
 
-type PipelineLocalEff = '[ModuleInfoCache, Reader ImportParents, PathResolver, DependencyResolver, EvalFileEff, Error PackageLoaderError, Error DependencyError, GitClone, Error GitProcessError, Process, Log, Reader EntryPoint, Files, Error JuvixError, HighlightBuilder, Internet]
+type PipelineLocalEff = '[ModuleInfoCache, Reader ImportParents, TopModuleNameChecker, PathResolver, DependencyResolver, EvalFileEff, Error PackageLoaderError, Error DependencyError, GitClone, Error GitProcessError, Process, Log, Reader EntryPoint, Files, Error JuvixError, HighlightBuilder, Internet]
 
 type PipelineEff' r = PipelineLocalEff ++ r
 
@@ -63,7 +64,7 @@ type PipelineEff r = Reader Parser.ParserResult ': Reader Store.ModuleTable ': N
 --------------------------------------------------------------------------------
 
 upToParsing ::
-  (Members '[HighlightBuilder, Reader EntryPoint, Error JuvixError, Files, PathResolver] r) =>
+  (Members '[HighlightBuilder, TopModuleNameChecker, Reader EntryPoint, Error JuvixError, Files, PathResolver] r) =>
   Sem r Parser.ParserResult
 upToParsing = ask >>= Parser.fromSource
 

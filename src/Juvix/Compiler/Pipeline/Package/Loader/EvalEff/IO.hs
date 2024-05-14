@@ -6,6 +6,7 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Concrete hiding (Symbol)
+import Juvix.Compiler.Concrete.Translation.FromSource.TopModuleNameChecker (runTopModuleNameChecker)
 import Juvix.Compiler.Core (CoreResult, coreResultModule)
 import Juvix.Compiler.Core qualified as Core
 import Juvix.Compiler.Core.Evaluator
@@ -138,7 +139,9 @@ loadPackage' packagePath = do
       . ignoreLog
       . mapError (JuvixError @GitProcessError)
       . runGitProcess
+      . runEvalFileEffIO
       . runPackagePathResolver rootPath
+      . runTopModuleNameChecker
       . evalModuleInfoCache
       $ (^. pipelineResult) <$> processFileToStoredCore packageEntryPoint
     )

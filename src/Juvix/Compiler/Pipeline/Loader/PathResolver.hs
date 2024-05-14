@@ -9,12 +9,16 @@ module Juvix.Compiler.Pipeline.Loader.PathResolver
     runPathResolverPipe,
     runPathResolverPipe',
     evalPathResolverPipe,
+    findPackageJuvixFiles,
+    mkImportTree,
   )
 where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Concrete.Data.Name
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
+import Juvix.Compiler.Concrete.Translation.ImportScanner
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Base
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Data
@@ -28,6 +32,7 @@ import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
 import Juvix.Compiler.Pipeline.Root.Base (PackageType (..))
 import Juvix.Data.Effect.TaggedLock
 import Juvix.Data.SHA256 qualified as SHA256
+import Juvix.Extra.Files
 import Juvix.Extra.PackageFiles
 import Juvix.Extra.Paths
 import Juvix.Extra.Stdlib (ensureStdlib)
@@ -45,6 +50,15 @@ mkPackage mpackageEntry _packageRoot = do
         Nothing -> DefaultBuildDir
   maybe (readPackage _packageRoot buildDirDep) (return . (^. entryPointPackage)) mpackageEntry
 
+findPackageJuvixFiles :: (Members '[Files] r) => Path Abs Dir -> Sem r [Path Rel File]
+findPackageJuvixFiles pkgRoot = map (fromJust . stripProperPrefix pkgRoot) <$> walkDirRelAccum juvixAccum pkgRoot []
+  where
+    juvixAccum :: Path Abs Dir -> [Path Rel Dir] -> [Path Rel File] -> [Path Abs File] -> Sem r ([Path Abs File], Recurse Rel)
+    juvixAccum cd _ files acc = return (newJuvixFiles <> acc, RecurseFilter (\hasJuvixPackage d -> not hasJuvixPackage && not (isHiddenDirectory d)))
+      where
+        newJuvixFiles :: [Path Abs File]
+        newJuvixFiles = [cd <//> f | f <- files, isJuvixOrJuvixMdFile f, not (isPackageFile f)]
+
 mkPackageInfo ::
   forall r.
   (Members '[TaggedLock, Files, Error JuvixError, Error DependencyError, Reader ResolverEnv, DependencyResolver] r) =>
@@ -55,23 +69,21 @@ mkPackageInfo ::
 mkPackageInfo mpackageEntry _packageRoot pkg = do
   let buildDir :: Path Abs Dir = maybe (rootBuildDir _packageRoot) (someBaseToAbs _packageRoot . resolveBuildDir . (^. entryPointBuildDir)) mpackageEntry
   deps <- getDependencies
-  let _packagePackage = set packageDependencies deps pkg
+  let _packagePackage = PackageReal (set packageDependencies deps pkg)
   depsPaths <- mapM (fmap (^. resolvedDependencyPath) . resolveDependency . mkPackageDependencyInfo pkgFile) deps
   ensureStdlib _packageRoot buildDir deps
-  files :: [Path Rel File] <-
-    map (fromJust . stripProperPrefix _packageRoot) <$> walkDirRelAccum juvixAccum _packageRoot []
-  packageBaseAbsDir <- globalPackageBaseRoot
-  let _packageRelativeFiles = HashSet.fromList files
+  files :: [Path Rel File] <- findPackageJuvixFiles _packageRoot
+  globalPackageDescriptionAbsDir <- globalPackageDescriptionRoot
+  globalPackageBaseAbsDir <- globalPackageBaseRoot
+  let _packageJuvixRelativeFiles = keepJuvixFiles (hashSet files)
       _packageAvailableRoots =
-        HashSet.fromList (packageBaseAbsDir : _packageRoot : depsPaths)
+        hashSet $
+          globalPackageDescriptionAbsDir
+            : globalPackageBaseAbsDir
+            : _packageRoot
+            : depsPaths
   return PackageInfo {..}
   where
-    juvixAccum :: Path Abs Dir -> [Path Rel Dir] -> [Path Rel File] -> [Path Abs File] -> Sem r ([Path Abs File], Recurse Rel)
-    juvixAccum cd _ files acc = return (newJuvixFiles <> acc, RecurseFilter (\hasJuvixPackage d -> not hasJuvixPackage && not (isHiddenDirectory d)))
-      where
-        newJuvixFiles :: [Path Abs File]
-        newJuvixFiles = [cd <//> f | f <- files, isJuvixFile f || isJuvixMarkdownFile f]
-
     pkgFile :: Path Abs File
     pkgFile = pkg ^. packageFile
 
@@ -126,7 +138,7 @@ lookupCachedDependency p = fmap (^. resolverCacheItemDependency) . HashMap.looku
 
 registerPackageBase ::
   forall r.
-  (Members '[TaggedLock, State ResolverState, Reader ResolverEnv, Files] r) =>
+  (Members '[Error ParserError, TaggedLock, State ResolverState, Files] r) =>
   Sem r ()
 registerPackageBase = do
   packageBaseAbsDir <- globalPackageBaseRoot
@@ -135,8 +147,8 @@ registerPackageBase = do
   let pkgInfo =
         PackageInfo
           { _packageRoot = packageBaseAbsDir,
-            _packageRelativeFiles = packageBaseRelFiles,
-            _packagePackage = packageBasePackage,
+            _packageJuvixRelativeFiles = packageBaseRelFiles,
+            _packagePackage = PackageBase,
             _packageAvailableRoots = HashSet.singleton packageBaseAbsDir
           }
       dep =
@@ -150,8 +162,7 @@ registerPackageBase = do
             _resolverCacheItemDependency = dep
           }
   setResolverCacheItem packageBaseAbsDir (Just cacheItem)
-  forM_ (pkgInfo ^. packageRelativeFiles) $ \f -> do
-    modify' (over resolverFiles (HashMap.insertWith (<>) f (pure pkgInfo)))
+  addPackageRelativeFiles pkgInfo
 
 registerDependencies' ::
   forall r.
@@ -160,7 +171,7 @@ registerDependencies' ::
   Sem (Reader ResolverEnv ': State ResolverState ': r) ()
 registerDependencies' conf = do
   e <- ask @EntryPoint
-  registerPackageBase
+  mapError (JuvixError @ParserError) registerPackageBase
   case e ^. entryPointPackageType of
     GlobalStdlib -> do
       glob <- globalRoot
@@ -174,7 +185,7 @@ registerDependencies' conf = do
         lockfilePath' <- lockfilePath
         writeLockfile lockfilePath' packageFileChecksum lockfile
   where
-    shouldWriteLockfile :: Sem ((Reader ResolverEnv ': State ResolverState ': r)) Bool
+    shouldWriteLockfile :: Sem (Reader ResolverEnv ': State ResolverState ': r) Bool
     shouldWriteLockfile = do
       lockfileExists <- lockfilePath >>= fileExists'
       hasRemoteDependencies <- gets (^. resolverHasRemoteDependencies)
@@ -185,7 +196,7 @@ registerDependencies' conf = do
           shouldUpdateLockfile = lockfileExists && shouldUpdateLockfile'
       return (shouldForce || shouldWriteInitialLockfile || shouldUpdateLockfile)
 
-    lockfilePath :: Sem ((Reader ResolverEnv ': State ResolverState ': r)) (Path Abs File)
+    lockfilePath :: Sem (Reader ResolverEnv ': State ResolverState ': r) (Path Abs File)
     lockfilePath = do
       root <- asks (^. envRoot)
       return (mkPackageLockfilePath root)
@@ -236,6 +247,11 @@ addDependency me d = do
       pkg <- mkPackage me p
       addDependency' pkg me resolvedDependency
 
+addPackageRelativeFiles :: (Member (State ResolverState) r) => PackageInfo -> Sem r ()
+addPackageRelativeFiles pkgInfo =
+  forM_ (pkgInfo ^. packageJuvixFiles) $ \f ->
+    modify' (over resolverFiles (HashMap.insertWith (<>) f (pure pkgInfo)))
+
 addDependency' ::
   forall r.
   (Members '[TaggedLock, State ResolverState, Reader ResolverEnv, Files, Error JuvixError, Error DependencyError, DependencyResolver, EvalFileEff] r) =>
@@ -246,12 +262,11 @@ addDependency' ::
 addDependency' pkg me resolvedDependency = do
   selectPackageLockfile pkg $ do
     pkgInfo <- mkPackageInfo me (resolvedDependency ^. resolvedDependencyPath) pkg
-    forM_ (pkgInfo ^. packageRelativeFiles) $ \f -> do
-      modify' (over resolverFiles (HashMap.insertWith (<>) f (pure pkgInfo)))
-    let packagePath = pkgInfo ^. packagePackage . packageFile
+    addPackageRelativeFiles pkgInfo
+    let packagePath = pkgInfo ^. packagePackage . packageLikeFile
     subDeps <-
       forM
-        (pkgInfo ^. packagePackage . packageDependencies)
+        (pkgInfo ^. packagePackage . packageLikeDependencies)
         (\dep -> selectDependencyLockfile dep (addDependency Nothing (mkPackageDependencyInfo packagePath dep)))
     let dep =
           LockfileDependency
@@ -271,7 +286,7 @@ addDependency' pkg me resolvedDependency = do
       currentLockfile <- asks (^. envLockfileInfo)
       case currentLockfile of
         Just _ -> action
-        Nothing -> case (p ^. packageLockfile) of
+        Nothing -> case p ^. packageLockfile of
           Just lf -> withLockfile lf action
           Nothing -> action
 
@@ -289,44 +304,156 @@ currentPackage = do
   curRoot <- asks (^. envRoot)
   (^. resolverCacheItemPackage) . fromJust <$> getResolverCacheItem curRoot
 
--- | Returns the root of the package where the module belongs and the path to
--- the module relative to the root.
-resolvePath' :: (Members '[Files, State ResolverState, Reader ResolverEnv] r) => TopModulePath -> Sem r (Either PathResolverError (Path Abs Dir, Path Rel File))
-resolvePath' mp = do
-  z <- gets (^. resolverFiles)
-  curPkg <- currentPackage
-  let exts = [FileExtJuvix, FileExtJuvixMarkdown]
-  let rpaths = map (`topModulePathToRelativePathByExt` mp) exts
+checkImportTreeCycles :: forall r. (Members '[Error ScoperError] r) => ImportTree -> Sem r ()
+checkImportTreeCycles tree = do
+  let sccs =
+        stronglyConnComp
+          [ (node, node, toList v) | (node, v) <- HashMap.toList (tree ^. importTree)
+          ]
+  whenJust (firstJust getCycle sccs) $ \(cyc :: NonEmpty ImportNode) ->
+    throw
+      . ErrImportCycleNew
+      . ImportCycleNew
+      $ getEdges cyc
+  where
+    getEdges :: NonEmpty ImportNode -> NonEmpty ImportScan
+    getEdges = fmap (uncurry getEdge) . zipWithNextLoop
 
-      packagesWithModule :: [(PackageInfo, Path Rel File)]
-      packagesWithModule =
-        [ (pkg, p)
-          | p <- rpaths,
-            pkgs <- toList (HashMap.lookup p z),
+    getEdge :: ImportNode -> ImportNode -> ImportScan
+    getEdge fromN toN = fromMaybe unexpected $ do
+      edges <- tree ^. importTreeEdges . at fromN
+      let rel :: Path Rel File = removeExtensions (toN ^. importNodeFile)
+          cond :: ImportScan -> Bool
+          cond = (== rel) . importScanToRelPath
+      find cond edges
+      where
+        unexpected =
+          error $
+            "Impossible: Could not find edge between\n"
+              <> prettyText fromN
+              <> "\nand\n"
+              <> prettyText toN
+              <> "\n"
+              <> "Available Edges:\n"
+              <> prettyText (toList (tree ^. importTreeEdges . at fromN . _Just))
+
+    getCycle :: SCC ImportNode -> Maybe (NonEmpty ImportNode)
+    getCycle = \case
+      AcyclicSCC {} -> Nothing
+      CyclicSCC l -> Just (nonEmpty' l)
+
+-- | If an entry file is given, it scans imports reachable from that file,
+-- otherwise it scans all files in all packages
+mkImportTree ::
+  forall r.
+  (Members '[Reader ImportScanStrategy, Error ParserError, Error ScoperError, PathResolver, Files] r) =>
+  Maybe (Path Abs File) ->
+  Sem r ImportTree
+mkImportTree mentrypointModulePath = do
+  pkgInfosTable <- getPackageInfos
+  let pkgs :: [PackageInfo] = toList pkgInfosTable
+      allNodes :: [ImportNode] = concatMap packageNodes pkgs
+      mEntryImportNode :: Maybe ImportNode
+      mEntryImportNode = do
+        absPath <- mentrypointModulePath
+        let cond :: ImportNode -> Bool
+            cond ImportNode {..} = absPath == _importNodePackageRoot <//> _importNodeFile
+        find cond allNodes
+
+      startingNodes = maybe allNodes pure mEntryImportNode
+  tree <-
+    execState (emptyImportTree allNodes)
+      . runReader pkgInfosTable
+      . evalVisitEmpty scanNode
+      $ mapM_ visit startingNodes
+  checkImportTreeCycles tree
+  return tree
+  where
+    packageNodes :: PackageInfo -> [ImportNode]
+    packageNodes pkg =
+      [ ImportNode
+          { _importNodePackageRoot = pkg ^. packageRoot,
+            _importNodeFile = f
+          }
+        | f <- filter isJuvixOrJuvixMdFile (toList (pkg ^. packageJuvixRelativeFiles))
+      ]
+
+    addEdge :: forall r'. (Members '[State ImportTree] r') => ImportScan -> ImportNode -> ImportNode -> Sem r' ()
+    addEdge importScan fromNode toNode = do
+      modify (over importTree (insertHelper fromNode toNode))
+      modify (over importTreeReverse (insertHelper toNode fromNode))
+      modify (over importTreeEdges (insertHelper fromNode importScan))
+      where
+        insertHelper :: (Hashable k, Hashable v) => k -> v -> HashMap k (HashSet v) -> HashMap k (HashSet v)
+        insertHelper k v = over (at k) (Just . maybe (HashSet.singleton v) (HashSet.insert v))
+
+    getNodeImports ::
+      forall r'.
+      (Members '[Reader ImportScanStrategy, Files, Error ParserError] r') =>
+      ImportNode ->
+      Sem r' (HashSet ImportScan)
+    getNodeImports n = (^. scanResultImports) <$> scanFileImports (n ^. importNodeAbsFile)
+
+    scanNode ::
+      forall r'.
+      (Members '[State ImportTree, Reader (HashMap (Path Abs Dir) PackageInfo), Reader ImportScanStrategy, Error ParserError, Files, PathResolver, Visit ImportNode] r') =>
+      ImportNode ->
+      Sem r' ()
+    scanNode fromNode = do
+      scans <- toList <$> getNodeImports fromNode
+      imports :: [ImportNode] <- mapM resolveImportScan scans
+      forM_ (zipExact scans imports) $ \(importscan, toNode) -> do
+        addEdge importscan fromNode toNode
+        withResolverRoot (toNode ^. importNodePackageRoot) (visit toNode)
+
+    resolveImportScan :: forall r'. (Members '[PathResolver] r') => ImportScan -> Sem r' ImportNode
+    resolveImportScan s = do
+      let rel = importScanToRelPath s
+      (pkg, ext) <- resolvePath s
+      return
+        ImportNode
+          { _importNodePackageRoot = pkg ^. packageRoot,
+            _importNodeFile = addFileExt ext rel
+          }
+
+resolvePath' ::
+  (Members '[Files, Error PathResolverError, State ResolverState, Reader ResolverEnv] r) =>
+  ImportScan ->
+  Sem r (PackageInfo, FileExt)
+resolvePath' scan = do
+  curPkg <- currentPackage
+  filesToPackage <- gets (^. resolverFiles)
+  let possibleExtensions = [FileExtJuvix, FileExtJuvixMarkdown]
+
+      visible :: PackageInfo -> Bool
+      visible pkg =
+        HashSet.member (pkg ^. packageRoot) (curPkg ^. packageAvailableRoots)
+
+      packagesWithExt :: [(PackageInfo, FileExt)]
+      packagesWithExt =
+        [ (pkg, ext)
+          | ext <- possibleExtensions,
+            let file = addFileExt ext (importScanToRelPath scan),
+            pkgs <- toList (HashMap.lookup file filesToPackage),
             pkg <- toList pkgs,
             visible pkg
         ]
-
-      visible :: PackageInfo -> Bool
-      visible pkg = HashSet.member (pkg ^. packageRoot) (curPkg ^. packageAvailableRoots)
-  return $ case packagesWithModule of
-    [(r, relPath)] -> Right (r ^. packageRoot, relPath)
+  case packagesWithExt of
+    [(r, relPath)] -> return (r, relPath)
     [] ->
-      Left
-        ( ErrMissingModule
-            MissingModule
-              { _missingInfo = curPkg,
-                _missingModule = mp
-              }
-        )
-    ((r, _) : rs) ->
-      Left
-        ( ErrDependencyConflict
-            DependencyConflict
-              { _conflictPackages = r :| map fst rs,
-                _conflictPath = mp
-              }
-        )
+      throw $
+        ErrMissingModule
+          MissingModule
+            { _missingInfo = curPkg,
+              _missingModule = scan
+            }
+    (r, _) : rs ->
+      throw $
+        ErrDependencyConflict
+          DependencyConflict
+            { _conflictPackages = r :| map fst rs,
+              _conflictPath = scan
+            }
 
 isModuleOrphan ::
   (Members '[Files] r) =>
@@ -368,8 +495,9 @@ runPathResolver2 ::
   Sem (PathResolver ': r) a ->
   Sem r (ResolverState, a)
 runPathResolver2 st topEnv arg = do
-  ( reinterpretHCommon2
-      ( runState st
+  ( reinterpretHCommon3
+      ( mapError (JuvixError @PathResolverError)
+          . runState st
           . runReader topEnv
       )
       handler
@@ -379,42 +507,29 @@ runPathResolver2 st topEnv arg = do
     handler ::
       forall t localEs x.
       (Members v t) =>
-      LocalEnv localEs (Reader ResolverEnv ': State ResolverState ': t) ->
+      LocalEnv localEs (Reader ResolverEnv ': State ResolverState ': Error PathResolverError ': t) ->
       PathResolver (Sem localEs) x ->
-      Sem (Reader ResolverEnv ': State ResolverState ': t) x
+      Sem (Reader ResolverEnv ': State ResolverState ': Error PathResolverError ': t) x
     handler localEnv = \case
       RegisterDependencies forceUpdateLockfile -> registerDependencies' forceUpdateLockfile
+      GetPackageInfos -> gets allPackageInfos
       ExpectedPathInfoTopModule m -> expectedPath' m
-      WithPath
-        m
-        ( a ::
-            Either PathResolverError (Path Abs Dir, Path Rel File) ->
-            Sem localEs x
-          ) -> do
-          x :: Either PathResolverError (Path Abs Dir, Path Rel File) <- resolvePath' m
-          let y :: Sem localEs x = a x
-          oldroot <- asks (^. envRoot)
-          let root' = case x of
-                Left {} -> oldroot
-                Right (r, _) -> r
-          e <- ask
-          let _envSingleFile :: Maybe (Path Abs File)
-              _envSingleFile
-                | e ^. entryPointPackageType == GlobalStdlib = e ^. entryPointModulePath
-                | otherwise = Nothing
-              env' :: ResolverEnv
-              env' =
-                ResolverEnv
-                  { _envRoot = root',
-                    _envInitialRoot = root',
-                    _envLockfileInfo = Nothing,
-                    _envSingleFile
-                  }
-          localSeqUnlift localEnv $ \unlift -> local (const env') $ do
-            oldState <- get @ResolverState
-            res <- unlift y
-            put oldState
-            return res
+      ResolvePath relp -> resolvePath' relp
+      WithResolverRoot root' m -> do
+        e <- ask
+        let _envSingleFile :: Maybe (Path Abs File)
+            _envSingleFile
+              | e ^. entryPointPackageType == GlobalStdlib = e ^. entryPointModulePath
+              | otherwise = Nothing
+            env' :: ResolverEnv -> ResolverEnv
+            env' ResolverEnv {..} =
+              ResolverEnv
+                { _envRoot = root',
+                  _envLockfileInfo = Nothing,
+                  _envInitialRoot,
+                  _envSingleFile
+                }
+        localSeqUnlift localEnv $ \unlift -> local env' (unlift m)
 
 runPathResolver :: (Members '[TaggedLock, Reader EntryPoint, Files, Error JuvixError, Error DependencyError, DependencyResolver, EvalFileEff] r) => Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
 runPathResolver = runPathResolver' iniResolverState

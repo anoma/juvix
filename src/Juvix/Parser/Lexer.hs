@@ -85,7 +85,7 @@ space' special =
                 )
             )
           (_commentText, _commentInterval) <- interval $ do
-            void (P.chunk "--")
+            void (P.chunk Str.commentLineStart)
             P.takeWhileP Nothing (/= '\n')
           return Comment {..}
 
@@ -105,8 +105,8 @@ space' special =
           hspace_
           return Comment {..}
           where
-            start :: m Text = P.chunk "{-"
-            ending :: m Text = P.chunk "-}"
+            start :: m Text = P.chunk Str.commentBlockStart
+            ending :: m Text = P.chunk Str.commentBlockEnd
             go :: Int -> Text -> m Text
             go n acc = do
               (txt, startOrEnd) <- P.manyTill_ anySingle (Left <$> start <|> Right <$> ending)

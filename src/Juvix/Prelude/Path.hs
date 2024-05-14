@@ -8,6 +8,7 @@ where
 
 import Data.List qualified as L
 import Data.List.NonEmpty qualified as NonEmpty
+import Juvix.Data.FileExt
 import Juvix.Prelude.Base
 import Juvix.Prelude.Path.OrphanInstances ()
 import Juvix.Prelude.Path.SomePath
@@ -89,7 +90,7 @@ removeExtension' = fst . fromJust . splitExtension
 addExtensions :: (MonadThrow m) => [String] -> Path b File -> m (Path b File)
 addExtensions ext p = case ext of
   [] -> return p
-  (e : es) -> addExtension e p >>= addExtensions es
+  e : es -> addExtension e p >>= addExtensions es
 
 replaceExtensions :: (MonadThrow m) => [String] -> Path b File -> m (Path b File)
 replaceExtensions ext = addExtensions ext . removeExtensions
@@ -100,8 +101,18 @@ replaceExtensions' ext = fromJust . replaceExtensions ext
 addExtensions' :: [String] -> Path b File -> Path b File
 addExtensions' ext = fromJust . addExtensions ext
 
+-- | TODO this is ugly. Please, fix it. FileExtJuvixMarkdown needs special
+-- treatment because ".juvix.md" is not recognised as a valid extension by `addExtension`
+addFileExt :: FileExt -> Path b File -> Path b File
+addFileExt = \case
+  FileExtJuvixMarkdown -> addExtensions' (toList juvixMarkdownFileExts)
+  ext -> addExtension' (fileExtToIsString ext)
+
 addExtension' :: String -> Path b File -> Path b File
-addExtension' ext = fromJust . addExtension ext
+addExtension' ext = fromMaybe err . addExtension ext
+  where
+    err :: a
+    err = error (show ext <> " is not a valid extension")
 
 replaceExtension' :: String -> Path b File -> Path b File
 replaceExtension' ext = fromJust . replaceExtension ext

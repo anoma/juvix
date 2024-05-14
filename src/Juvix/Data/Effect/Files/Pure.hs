@@ -103,7 +103,7 @@ canonicalDirPure cwd0 = dotdot . (^. prepath)
         go cwd = \case
           ".." : ps -> go (parent cwd) ps
           ps ->
-            case parseSomeDir (FilePath.joinPath ps) of
+            case parseSomeDir (joinFilePaths ps) of
               Nothing -> error ("failed to parse directory: " <> pack d)
               Just m -> case m of
                 Rel r -> cwd <//> r

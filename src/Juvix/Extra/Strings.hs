@@ -17,6 +17,15 @@ module_ = "module"
 axiom :: (IsString s) => s
 axiom = "axiom"
 
+commentLineStart :: (IsString s) => s
+commentLineStart = "--"
+
+commentBlockStart :: (IsString s) => s
+commentBlockStart = "{-"
+
+commentBlockEnd :: (IsString s) => s
+commentBlockEnd = "-}"
+
 judocBlockStart :: (IsString s) => s
 judocBlockStart = "{--"
 

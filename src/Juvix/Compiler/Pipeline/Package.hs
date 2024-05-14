@@ -1,8 +1,8 @@
 module Juvix.Compiler.Pipeline.Package
   ( module Juvix.Compiler.Pipeline.Package.Base,
     readPackage,
+    readPackageFile,
     readGlobalPackage,
-    packageBasePackage,
     ensureGlobalPackage,
   )
 where
@@ -121,7 +121,7 @@ readPackageFile root buildDir f = mapError (JuvixError @PackageLoaderError) $ do
   pkg <- loadPackage buildDir f
   mLockfile <- mayReadLockfile root
   checkNoDuplicateDepNames f (pkg ^. packageDependencies)
-  return (pkg {_packageLockfile = mLockfile})
+  return pkg {_packageLockfile = mLockfile}
 
 ensureGlobalPackage :: (Members '[TaggedLock, Files] r) => Sem r (Path Abs File)
 ensureGlobalPackage = do
@@ -139,15 +139,3 @@ writeGlobalPackage = do
   packagePath <- globalPackageJuvix
   ensureDir' (parent packagePath)
   writeFileEnsureLn' packagePath (renderPackageVersion currentPackageVersion (globalPackage packagePath))
-
-packageBasePackage :: Package
-packageBasePackage =
-  Package
-    { _packageVersion = defaultVersion,
-      _packageName = "package-base",
-      _packageMain = Nothing,
-      _packageLockfile = Nothing,
-      _packageFile = $(mkAbsFile "/<package-base>"),
-      _packageDependencies = [],
-      _packageBuildDir = Nothing
-    }

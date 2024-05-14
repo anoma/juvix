@@ -18,6 +18,7 @@ data ScoperError
   | ErrInfixPattern InfixErrorP
   | ErrMultipleDeclarations MultipleDeclarations
   | ErrImportCycle ImportCycle
+  | ErrImportCycleNew ImportCycleNew
   | ErrSymNotInScope NotInScope
   | ErrQualSymNotInScope QualSymNotInScope
   | ErrModuleNotInScope ModuleNotInScope
@@ -63,6 +64,7 @@ instance ToGenericError ScoperError where
     ErrInfixPattern e -> genericError e
     ErrMultipleDeclarations e -> genericError e
     ErrImportCycle e -> genericError e
+    ErrImportCycleNew e -> genericError e
     ErrSymNotInScope e -> genericError e
     ErrQualSymNotInScope e -> genericError e
     ErrModuleNotInScope e -> genericError e

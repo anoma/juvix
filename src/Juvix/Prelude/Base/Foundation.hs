@@ -92,6 +92,7 @@ import Data.Foldable hiding (foldr1, minimum, minimumBy)
 import Data.Function
 import Data.Functor
 import Data.Graph (Graph, SCC (..), Vertex, stronglyConnComp)
+import Data.HashMap.Lazy qualified as LazyHashMap
 import Data.HashMap.Strict (HashMap)
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet (HashSet)
@@ -118,12 +119,14 @@ import Data.List.NonEmpty.Extra
     some1,
     (|:),
   )
+import Data.Map qualified as Map
 import Data.Map.Strict (Map)
 import Data.Maybe
 import Data.Monoid
 import Data.Ord
 import Data.Semigroup (Semigroup, sconcat, (<>))
 import Data.Set (Set)
+import Data.Set qualified as Set
 import Data.Singletons hiding ((@@))
 import Data.Singletons.Sigma
 import Data.Singletons.TH (genSingletons, promoteOrdInstances, singOrdInstances)
@@ -160,6 +163,7 @@ import Safe.Foldable
 import System.Exit hiding (exitFailure, exitSuccess)
 import System.Exit qualified as IO
 import System.FilePath (FilePath, dropTrailingPathSeparator, normalise, (<.>), (</>))
+import System.FilePath qualified as FilePath
 import System.IO hiding
   ( appendFile,
     getContents,
@@ -189,6 +193,8 @@ import Prelude (Double)
 type GHCType = GHC.Type
 
 type GHCConstraint = GHC.Constraint
+
+type LazyHashMap = LazyHashMap.HashMap
 
 traverseM ::
   (Monad m, Traversable m, Applicative f) =>
@@ -281,6 +287,16 @@ concatWith f ds = case nonEmpty ds of
   Nothing -> mempty
   Just ds' -> foldr1 f ds'
 {-# INLINE concatWith #-}
+
+-- | The length of the input list must be even
+listByPairsExact :: forall a. [a] -> [(a, a)]
+listByPairsExact = reverse . go []
+  where
+    go :: [(a, a)] -> [a] -> [(a, a)]
+    go acc = \case
+      [] -> acc
+      [_] -> error "input list must have even length"
+      x : y : ls -> go ((x, y) : acc) ls
 
 --------------------------------------------------------------------------------
 -- HashMap
@@ -575,8 +591,33 @@ indexedByInt getIx l = IntMap.fromList [(getIx i, i) | i <- toList l]
 indexedByHash :: (Foldable f, Hashable k) => (a -> k) -> f a -> HashMap k a
 indexedByHash getIx l = HashMap.fromList [(getIx i, i) | i <- toList l]
 
+ordSet :: (Foldable f, Ord k) => f k -> Set k
+ordSet = Set.fromList . toList
+
+hashSet :: (Foldable f, Hashable k) => f k -> HashSet k
+hashSet = HashSet.fromList . toList
+
+hashMapFromHashSetM :: (Monad m, Hashable k) => (k -> m v) -> HashSet k -> m (HashMap k v)
+hashMapFromHashSetM fun s =
+  hashMap
+    <$> sequence
+      [ do
+          r <- fun x
+          return (x, r)
+        | x <- toList s
+      ]
+
+hashMapFromHashSet :: (Hashable k) => (k -> v) -> HashSet k -> HashMap k v
+hashMapFromHashSet fun s = hashMap [(x, fun x) | x <- toList s]
+
+ordMap :: (Foldable f, Ord k) => f (k, v) -> Map k v
+ordMap = Map.fromList . toList
+
 hashMap :: (Foldable f, Hashable k) => f (k, v) -> HashMap k v
 hashMap = HashMap.fromList . toList
+
+lazyHashMap :: (Foldable f, Hashable k) => f (k, v) -> LazyHashMap k v
+lazyHashMap = LazyHashMap.fromList . toList
 
 ensureLn :: Text -> Text
 ensureLn t =
@@ -586,9 +627,23 @@ ensureLn t =
       '\n' -> t
       _ -> Text.snoc t '\n'
 
+joinFilePaths :: (Foldable l) => l FilePath -> FilePath
+joinFilePaths = FilePath.joinPath . toList
+
 readFile :: (MonadIO m) => Path Abs File -> m Text
 readFile = liftIO . Utf8.readFile . toFilePath
 
 writeFileEnsureLn :: (MonadIO m) => Path Abs File -> Text -> m ()
 writeFileEnsureLn p = liftIO . Utf8.writeFile (toFilePath p)
 {-# INLINE writeFileEnsureLn #-}
+
+-- | [a, b, c] -> [(a, b), (b, c), (c, a)]
+zipWithNextLoop :: forall a. NonEmpty a -> NonEmpty (a, a)
+zipWithNextLoop l = NonEmpty.reverse (go [] l)
+  where
+    h = head l
+
+    go :: [(a, a)] -> NonEmpty a -> NonEmpty (a, a)
+    go acc = \case
+      lastA :| [] -> (lastA, h) :| acc
+      x :| y : as -> go ((x, y) : acc) (y :| as)

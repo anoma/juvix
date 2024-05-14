@@ -164,6 +164,9 @@ oneLineOrNextBraces = region P.oneLineOrNextBraces
 nextLine :: (Members '[ExactPrint] r) => Sem r () -> Sem r ()
 nextLine = region P.nextLine
 
+itemize :: (Members '[ExactPrint] r, Functor f, Foldable f) => f (Sem r ()) -> Sem r ()
+itemize = vsepHard . fmap (noLoc "•" <+>)
+
 paragraphs :: (Foldable l, Members '[ExactPrint] r) => l (Sem r ()) -> Sem r ()
 paragraphs = sequenceWith (line >> ensureEmptyLine)
 

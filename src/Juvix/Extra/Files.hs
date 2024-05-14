@@ -18,12 +18,15 @@ juvixFiles fs = mapMaybe helper fs
       where
         fp :: Path Rel File
         fp = relFile fp'
+
     isStdLibFile :: Path Rel File -> Bool
     isStdLibFile = isJuvixFile .||. isYamlFile .||. isPackageFile
+
     isYamlFile :: Path Rel File -> Bool
     isYamlFile = (== juvixYamlFile)
-    isPackageFile :: Path Rel File -> Bool
-    isPackageFile = (== packageFilePath)
+
+isPackageFile :: Path Rel File -> Bool
+isPackageFile = (== packageFilePath)
 
 writeFiles :: forall r. (Members '[Reader OutputRoot, Files] r) => [(Path Rel File, ByteString)] -> Sem r ()
 writeFiles fs = do

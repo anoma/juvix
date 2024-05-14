@@ -1,9 +1,11 @@
 module Juvix.Compiler.Pipeline.Loader.PathResolver.Data where
 
+import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Pipeline.Loader.PathResolver.PackageInfo
 import Juvix.Compiler.Pipeline.Lockfile
 import Juvix.Compiler.Pipeline.Package.Base
 import Juvix.Prelude
+import Juvix.Prelude.Pretty
 
 data ResolverEnv = ResolverEnv
   { -- | The root path of the current project being resolved
@@ -36,10 +38,55 @@ data ResolvedDependency = ResolvedDependency
     _resolvedDependencyDependency :: Dependency
   }
 
+data ImportNode = ImportNode
+  { _importNodePackageRoot :: Path Abs Dir,
+    _importNodeFile :: Path Rel File
+  }
+  deriving stock (Eq, Ord, Generic, Show)
+
+instance Pretty ImportNode where
+  pretty ImportNode {..} = pretty _importNodePackageRoot <+> ":" <+> show _importNodeFile
+
+instance Hashable ImportNode
+
+data ImportTreeStats = ImportTreeStats
+  { _importTreeStatsTotalModules :: Int,
+    _importTreeStatsTotalEdges :: Int,
+    _importTreeStatsHeight :: Int
+  }
+
+data ImportTree = ImportTree
+  { -- | A ∈ importTree[B] ⇔ B imports A. Every scanned node is a key, even if
+    -- it has no imports.
+    _importTree :: HashMap ImportNode (HashSet ImportNode),
+    -- | A ∈ importTreeSym[B] ⇔ A imports B. Every scanned node is a key, even
+    -- if it not imported by another node.
+    _importTreeReverse :: HashMap ImportNode (HashSet ImportNode),
+    -- | Useful for reporting a concrete error in case of a cycle.
+    _importTreeEdges :: HashMap ImportNode (HashSet ImportScan)
+  }
+
+emptyImportTree :: [ImportNode] -> ImportTree
+emptyImportTree nodes =
+  ImportTree
+    { _importTree = hashMap [(n, mempty) | n <- nodes],
+      _importTreeReverse = hashMap [(n, mempty) | n <- nodes],
+      _importTreeEdges = hashMap [(n, mempty) | n <- nodes]
+    }
+
+makeLenses ''ImportTree
+makeLenses ''ImportTreeStats
+makeLenses ''ImportNode
 makeLenses ''ResolverState
 makeLenses ''ResolverEnv
 makeLenses ''ResolvedDependency
 makeLenses ''ResolverCacheItem
+
+importNodeAbsFile :: SimpleGetter ImportNode (Path Abs File)
+importNodeAbsFile = to $ \ImportNode {..} -> _importNodePackageRoot <//> _importNodeFile
+
+allPackageInfos :: ResolverState -> HashMap (Path Abs Dir) PackageInfo
+allPackageInfos = fmap (^. resolverCacheItemPackage) . (^. resolverCache)
 
 iniResolverState :: ResolverState
 iniResolverState =
@@ -79,3 +126,26 @@ getResolverCacheItem :: (Members '[Files, State ResolverState] r) => Path Abs Di
 getResolverCacheItem p = do
   np <- normalizeDir p
   gets (^. resolverCache . at np)
+
+-- | The import tree is assumed to have no cycles
+mkImportTreeStats :: ImportTree -> ImportTreeStats
+mkImportTreeStats ImportTree {..} =
+  ImportTreeStats
+    { _importTreeStatsTotalModules = length nodes,
+      _importTreeStatsTotalEdges = sum . map length . toList $ _importTree,
+      _importTreeStatsHeight = maximum nodesHeight
+    }
+  where
+    nodes :: [ImportNode]
+    nodes = HashMap.keys _importTree
+
+    nodesHeight :: LazyHashMap ImportNode Int
+    nodesHeight = lazyHashMap [(n, computeHeight n) | n <- nodes]
+      where
+        computeHeight :: ImportNode -> Int
+        computeHeight n = case nonEmpty (_importTree ^. at n . _Just) of
+          Nothing -> 0
+          Just l -> 1 + maximum1 (getHeight <$> l)
+          where
+            getHeight :: ImportNode -> Int
+            getHeight m = nodesHeight ^?! at m . _Just

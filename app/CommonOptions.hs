@@ -8,6 +8,7 @@ where
 
 import Control.Exception qualified as GHC
 import Data.List.NonEmpty qualified as NonEmpty
+import Juvix.Compiler.Concrete.Translation.ImportScanner
 import Juvix.Compiler.Core.Data.TransformationId.Parser qualified as Core
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Reg.Data.TransformationId.Parser qualified as Reg
@@ -276,6 +277,17 @@ optTransformationIds parseIds completions =
   where
     parseTransf :: String -> Either String [a]
     parseTransf = mapLeft unpack . parseIds . pack
+
+optImportScanStrategy :: Parser ImportScanStrategy
+optImportScanStrategy =
+  option
+    (enumReader Proxy)
+    ( long "scan-strategy"
+        <> metavar "SCAN_STRAT"
+        <> completer (enumCompleter @ImportScanStrategy Proxy)
+        <> value defaultImportScanStrategy
+        <> help "Import scanning strategy"
+    )
 
 optCoreTransformationIds :: Parser [Core.TransformationId]
 optCoreTransformationIds = optTransformationIds Core.parseTransformations Core.completionsString

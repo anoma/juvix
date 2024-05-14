@@ -2,7 +2,6 @@ module Juvix.Compiler.Pipeline.Loader.PathResolver.Error where
 
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Pipeline.Loader.PathResolver.PackageInfo
-import Juvix.Compiler.Pipeline.Loader.PathResolver.Paths
 import Juvix.Compiler.Pipeline.Package.Base
 import Juvix.Data.CodeAnn
 import Juvix.Data.Effect.Git
@@ -124,26 +123,26 @@ instance PrettyCodeAnn PathResolverError where
 
 data DependencyConflict = DependencyConflict
   { _conflictPackages :: NonEmpty PackageInfo,
-    _conflictPath :: TopModulePath
+    _conflictPath :: ImportScan
   }
   deriving stock (Show)
 
 instance PrettyCodeAnn DependencyConflict where
   ppCodeAnn DependencyConflict {..} =
     "The module name "
-      <> code (pretty _conflictPath)
+      <> importScanPrettyName _conflictPath
       <> " is ambiguous. It is defined in these packages:"
       <> line
       <> indent' (itemize (item <$> toList _conflictPackages))
     where
       item :: PackageInfo -> Doc CodeAnn
-      item pkg = pcode (pkg ^. packagePackage . packageName) <+> "at" <+> pretty (pkg ^. packageRoot)
+      item pkg = pcode (pkg ^. packagePackage . packageLikeName) <+> "at" <+> pretty (pkg ^. packageRoot)
 
 pcode :: (Pretty a) => a -> Doc CodeAnn
 pcode = code . pretty
 
 data MissingModule = MissingModule
-  { _missingModule :: TopModulePath,
+  { _missingModule :: ImportScan,
     _missingInfo :: PackageInfo
   }
   deriving stock (Show)
@@ -151,7 +150,7 @@ data MissingModule = MissingModule
 instance PrettyCodeAnn MissingModule where
   ppCodeAnn MissingModule {..} =
     "The module"
-      <+> pcode _missingModule
+      <+> importScanPrettyName _missingModule
       <+> "does not exist."
         <> line
         <> suggestion
@@ -159,7 +158,7 @@ instance PrettyCodeAnn MissingModule where
       suggestion :: Doc Ann
       suggestion =
         "It should be in"
-          <+> pcode (_missingInfo ^. packageRoot <//> topModulePathToRelativePath' _missingModule)
+          <+> pcode (_missingInfo ^. packageRoot <//> addFileExt FileExtJuvix (importScanToRelPath _missingModule))
             <> dependenciesSuggestion
 
       dependenciesSuggestion :: Doc Ann
@@ -172,10 +171,10 @@ instance PrettyCodeAnn MissingModule where
               <> itemize (map pcode deps)
         where
           deps :: [Dependency]
-          deps = _missingInfo ^. packagePackage . packageDependencies
+          deps = _missingInfo ^. packagePackage . packageLikeDependencies
 
 newtype PackageInvalidImport = PackageInvalidImport
-  {_packageInvalidImport :: TopModulePath}
+  {_packageInvalidImport :: ImportScan}
   deriving stock (Show)
 
 instance PrettyCodeAnn PackageInvalidImport where
