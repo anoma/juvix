@@ -705,10 +705,12 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
               mkSmallUniv
               (mkLambda' (mkVar' 0) (mkBuiltinApp' OpAnomaEncode [mkVar' 0]))
           )
-      Internal.BuiltinAnomaDecode ->
+      Internal.BuiltinAnomaDecode -> do
+        natName <- getNatName
+        natSym <- getNatSymbol
         registerAxiomDef
           ( mkLambda'
-              mkSmallUniv
+              (mkTypeConstr (setInfoName natName mempty) natSym [])
               (mkLambda' (mkVar' 0) (mkBuiltinApp' OpAnomaDecode [mkVar' 0]))
           )
       Internal.BuiltinPoseidon -> do
