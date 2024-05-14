@@ -580,6 +580,7 @@ goAxiomInductive a = whenJust (a ^. Internal.axiomBuiltin) builtinInductive
       Internal.BuiltinFieldFromInt -> return ()
       Internal.BuiltinFieldToNat -> return ()
       Internal.BuiltinAnomaGet -> return ()
+      Internal.BuiltinAnomaEncode -> return ()
       Internal.BuiltinPoseidon -> return ()
       Internal.BuiltinEcOp -> return ()
       Internal.BuiltinRandomEcPoint -> return ()
@@ -699,6 +700,12 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
                   mkSmallUniv
                   (mkLambda' (mkVar' 0) (mkBuiltinApp' OpAnomaGet [mkVar' 0]))
               )
+          )
+      Internal.BuiltinAnomaEncode ->
+        registerAxiomDef
+          ( mkLambda'
+              mkSmallUniv
+              (mkLambda' (mkVar' 0) (mkBuiltinApp' OpAnomaEncode [mkVar' 0]))
           )
       Internal.BuiltinPoseidon -> do
         psName <- getPoseidonStateName
@@ -1098,6 +1105,7 @@ goApplication a = do
             _ -> app
         Just Internal.BuiltinFieldToNat -> app
         Just Internal.BuiltinAnomaGet -> app
+        Just Internal.BuiltinAnomaEncode -> app
         Just Internal.BuiltinPoseidon -> app
         Just Internal.BuiltinEcOp -> app
         Just Internal.BuiltinRandomEcPoint -> app

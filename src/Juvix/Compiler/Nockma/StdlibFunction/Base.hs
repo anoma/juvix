@@ -14,6 +14,7 @@ instance Pretty StdlibFunction where
     StdlibLt -> "<"
     StdlibLe -> "<="
     StdlibPow2 -> "pow2"
+    StdlibEncode -> "encode"
 
 data StdlibFunction
   = StdlibDec
@@ -25,6 +26,7 @@ data StdlibFunction
   | StdlibLt
   | StdlibLe
   | StdlibPow2
+  | StdlibEncode
   deriving stock (Show, Lift, Eq, Bounded, Enum, Generic)
 
 instance Hashable StdlibFunction

@@ -49,6 +49,7 @@ dependencies:
   - ansi-terminal == 1.0.*
   - base == 4.19.*
   - base16-bytestring == 1.0.*
+  - bitvec == 1.1.*
   - blaze-html == 0.9.*
   - bytestring == 0.12.*
   - cereal == 0.5.*
@@ -103,6 +104,7 @@ dependencies:
   - unordered-containers == 0.2.*
   - utf8-string == 1.0.*
   - vector == 0.13.*
+  - vector-builder == 0.3.*
   - versions == 6.0.*
   - xdg-basedir == 0.2.*
   - yaml == 0.11.*

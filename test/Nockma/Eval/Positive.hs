@@ -51,7 +51,8 @@ allTests =
     "Nockma eval positive"
     [ testGroup "Unit" (map mkNockmaTest unitTests),
       testGroup "Juvix calling convention" (map mkNockmaTest juvixCallingConventionTests),
-      testGroup "Anoma calling convention" (map mkNockmaTest anomaCallingConventionTests)
+      testGroup "Anoma calling convention" (map mkNockmaTest anomaCallingConventionTests),
+      testGroup "Anoma serialization tests" (map mkNockmaTest serializationTests)
     ]
   where
     mkNockmaTest :: Test -> TestTree
@@ -88,6 +89,12 @@ eqTraces expected = do
 compilerTest :: Text -> Term Natural -> Check () -> Bool -> Test
 compilerTest n mainFun _testCheck _evalInterceptStdlibCalls =
   anomaTest n mainFun [] _testCheck _evalInterceptStdlibCalls
+
+serializationTest :: Text -> Term Natural -> Term Natural -> Test
+serializationTest n jamTerm cueTerm =
+  let _testCheck :: Check () = eqNock cueTerm
+      mainFun :: Term Natural = callStdlib StdlibEncode [OpQuote # jamTerm]
+   in anomaTest n mainFun [] _testCheck True
 
 withAssertErrKeyNotInStorage :: Test -> Test
 withAssertErrKeyNotInStorage Test {..} =
@@ -144,6 +151,27 @@ anomaCallingConventionTests =
                  p1 <- pathToArg 1
                  return (anomaTest "stdlib sub args" (sub (OpAddress # p0) (OpAddress # p1)) args (eqNock [nock| 2 |]))
          ]
+
+serializationTests :: [Test]
+serializationTests =
+  [ serializationTest "jam 0" [nock| 0 |] [nock| 2 |],
+    serializationTest "jam 1" [nock| 1 |] [nock| 12 |],
+    serializationTest "jam 2" [nock| 2 |] [nock| 72 |],
+    serializationTest "jam 19" [nock| 19 |] [nock| 2480 |],
+    serializationTest "jam 581.949.002" [nock| 581.949.002 |] [nock| 1.191.831.557.952 |],
+    serializationTest "jam [1 19]" [nock| [0 19] |] [nock| 39689 |],
+    serializationTest "jam [1 1]" [nock| [1 1] |] [nock| 817 |],
+    serializationTest "jam [10.000 10.000]" [nock| [10.000 10.000] |] [nock| 4.952.983.169 |],
+    serializationTest "jam [999.999.999 999.999.999]" [nock| [999.999.999 999.999.999] |] [nock| 1.301.217.674.263.809 |],
+    serializationTest "jam [222 444 888]" [nock| [222 444 888] |] [nock| 250.038.217.192.960.129 |],
+    serializationTest "jam [[107 110] [107 110]]" [nock| [[107 110] [107 110]] |] [nock| 635.080.761.093 |],
+    serializationTest "jam [0 1 2 3 4 5 6 7 8 9 10]" [nock| [0 1 2 3 4 5 6 7 8 9 10] |] [nock| 25.681.224.503.728.653.597.984.370.231.065 |],
+    serializationTest "jam [99 100 101 102 103 104 0]" [nock| [99 100 101 102 103 104 0] |] [nock| 223.372.995.869.285.333.705.242.560.449 |],
+    serializationTest "jam [[222 444 888] [222 444 888]]" [nock| [[222 444 888] [222 444 888]] |] [nock| 170.479.614.045.978.345.989 |],
+    serializationTest "jam [[0 1] [1 2] [2 3] [3 4] 0]" [nock| [[0 1] [1 2] [2 3] [3 4] 0] |] [nock| 11.976.248.475.217.237.797 |],
+    serializationTest "jam [[0 1] [1 2] [2 3] [3 4] [4 5] [5 6] [6 7] [7 8] [8 9] 0]" [nock| [[0 1] [1 2] [2 3] [3 4] [4 5] [5 6] [6 7] [7 8] [8 9] 0] |] [nock| 7.694.087.033.387.855.647.747.387.855.514.468.399.947.749.137.782.565 |],
+    serializationTest "jam [[0 1] [2 3] [4 5] [6 7] [8 9] [10 11] [12 13] [14 15] [16 17] [18 19] [20 21] 0] " [nock| [[0 1] [2 3] [4 5] [6 7] [8 9] [10 11] [12 13] [14 15] [16 17] [18 19] [20 21] 0] |] [nock| 308.947.677.754.874.070.959.300.747.182.056.036.528.545.493.781.368.831.595.479.491.505.523.344.414.501 |]
+  ]
 
 juvixCallingConventionTests :: [Test]
 juvixCallingConventionTests =

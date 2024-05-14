@@ -191,6 +191,7 @@ geval opts herr ctx env0 = eval' env0
       OpFail -> failOp
       OpTrace -> traceOp
       OpAnomaGet -> anomaGetOp
+      OpAnomaEncode -> anomaEncodeOp
       OpPoseidonHash -> poseidonHashOp
       OpEc -> ecOp
       OpRandomEcPoint -> randomEcPointOp
@@ -336,6 +337,15 @@ geval opts herr ctx env0 = eval' env0
               | otherwise ->
                   err "unsupported builtin operation: OpAnomaGet"
         {-# INLINE anomaGetOp #-}
+
+        anomaEncodeOp :: [Node] -> Node
+        anomaEncodeOp = unary $ \arg ->
+          if
+              | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                  mkBuiltinApp' OpAnomaEncode [eval' env arg]
+              | otherwise ->
+                  err "unsupported builtin operation: OpAnomaGet"
+        {-# INLINE anomaEncodeOp #-}
 
         poseidonHashOp :: [Node] -> Node
         poseidonHashOp = unary $ \arg ->

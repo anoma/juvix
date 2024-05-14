@@ -329,6 +329,9 @@ intPrint = "int-print"
 anomaGet :: (IsString s) => s
 anomaGet = "anoma-get"
 
+anomaEncode :: (IsString s) => s
+anomaEncode = "anoma-encode"
+
 builtinSeq :: (IsString s) => s
 builtinSeq = "seq"
 

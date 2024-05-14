@@ -7,6 +7,7 @@ module Juvix.Compiler.Nockma.Evaluator
 where
 
 import Data.HashMap.Strict qualified as HashMap
+import Juvix.Compiler.Nockma.Encoding qualified as Encoding
 import Juvix.Compiler.Nockma.Evaluator.Error
 import Juvix.Compiler.Nockma.Evaluator.Options
 import Juvix.Compiler.Nockma.Evaluator.Storage
@@ -228,6 +229,7 @@ evalProfile inistack initerm =
             StdlibLt -> binCmp (<)
             StdlibLe -> binCmp (<=)
             StdlibPow2 -> unaArith (2 ^)
+            StdlibEncode -> TermAtom <$> Encoding.jam args'
 
         goAutoConsCell :: AutoConsCell a -> Sem r (Term a)
         goAutoConsCell c = do

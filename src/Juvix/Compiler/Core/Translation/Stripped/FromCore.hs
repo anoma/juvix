@@ -96,6 +96,7 @@ fromCore fsize tab =
         BuiltinIntToString -> False
         BuiltinIntPrint -> False
         BuiltinAnomaGet -> False
+        BuiltinAnomaEncode -> False
         BuiltinPoseidon -> False
         BuiltinEcOp -> False
         BuiltinRandomEcPoint -> False

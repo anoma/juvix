@@ -571,6 +571,7 @@ registerBuiltinAxiom d = \case
   BuiltinIntToString -> registerIntToString d
   BuiltinIntPrint -> registerIntPrint d
   BuiltinAnomaGet -> registerAnomaGet d
+  BuiltinAnomaEncode -> registerAnomaEncode d
   BuiltinPoseidon -> registerPoseidon d
   BuiltinEcOp -> registerEcOp d
   BuiltinRandomEcPoint -> registerRandomEcPoint d
