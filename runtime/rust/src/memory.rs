@@ -8,7 +8,9 @@ pub struct Memory {
 
 impl Memory {
     pub fn new() -> Self {
-        Self { memory: Vec::new() }
+        Self {
+            memory: Vec::with_capacity(INITIAL_MEMORY_CAPACITY),
+        }
     }
 
     pub fn alloc(&mut self, size: usize) -> Pointer {
