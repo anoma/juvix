@@ -26,6 +26,7 @@ import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromParsed qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Concrete.Translation.FromSource.TopModuleNameChecker
+import Juvix.Compiler.Concrete.Translation.ImportScanner (ImportScanStrategy)
 import Juvix.Compiler.Core qualified as Core
 import Juvix.Compiler.Core.Transformation
 import Juvix.Compiler.Core.Translation.Stripped.FromCore qualified as Stripped
@@ -37,6 +38,7 @@ import Juvix.Compiler.Pipeline.DriverParallel.Base
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Pipeline.ImportParents
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Base
+import Juvix.Compiler.Pipeline.Loader.PathResolver.Data (ImportTree)
 import Juvix.Compiler.Pipeline.Loader.PathResolver.DependencyResolver
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Error
 import Juvix.Compiler.Pipeline.ModuleInfoCache
@@ -59,6 +61,8 @@ type PipelineLocalEff =
   '[ ImportsAccess,
      ModuleInfoCache,
      Reader ImportParents,
+     Reader ImportTree,
+     Reader ImportScanStrategy,
      TopModuleNameChecker,
      PathResolver,
      DependencyResolver,

@@ -11,6 +11,7 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as P
 import Juvix.Compiler.Concrete.Translation.FromSource.TopModuleNameChecker (TopModuleNameChecker, runTopModuleNameChecker)
+import Juvix.Compiler.Concrete.Translation.ImportScanner (defaultImportScanStrategy)
 import Juvix.Compiler.Core.Data.Module qualified as Core
 import Juvix.Compiler.Core.Translation.FromInternal.Data qualified as Core
 import Juvix.Compiler.Internal.Translation qualified as Internal
@@ -119,6 +120,8 @@ runIOEitherPipeline' entry a = do
     . runDependencyResolver
     . runPathResolverInput
     . runTopModuleNameChecker
+    . runReader defaultImportScanStrategy
+    . withImportTree (entry ^. entryPointModulePath)
     . DriverSeq.evalModuleInfoCache
     $ a
 
