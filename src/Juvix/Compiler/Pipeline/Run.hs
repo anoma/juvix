@@ -11,6 +11,7 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as P
 import Juvix.Compiler.Concrete.Translation.FromSource.TopModuleNameChecker (runTopModuleNameChecker)
+import Juvix.Compiler.Concrete.Translation.ImportScanner (defaultImportScanStrategy)
 import Juvix.Compiler.Core.Data.Module qualified as Core
 import Juvix.Compiler.Core.Translation.FromInternal.Data qualified as Core
 import Juvix.Compiler.Internal.Translation qualified as Internal
@@ -18,7 +19,8 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qualified as Typed
 import Juvix.Compiler.Pipeline
 import Juvix.Compiler.Pipeline.Artifacts.PathResolver
-import Juvix.Compiler.Pipeline.Driver
+import Juvix.Compiler.Pipeline.Driver qualified as Driver
+import Juvix.Compiler.Pipeline.DriverParallel qualified as DriverPar
 import Juvix.Compiler.Pipeline.Loader.PathResolver
 import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
@@ -44,13 +46,13 @@ runPipelineHighlight entry = fmap fst . runIOEitherHelper entry
 
 runPipelineHtmlEither :: forall r. (Members '[TaggedLock, EmbedIO] r) => EntryPoint -> Sem r (Either JuvixError (Typed.InternalTypedResult, [Typed.InternalTypedResult]))
 runPipelineHtmlEither entry = do
-  x <- runIOEitherPipeline' entry $ entrySetup defaultDependenciesConfig >> processRecursiveUpToTyped
+  x <- runIOEitherPipeline' entry $ entrySetup defaultDependenciesConfig >> Driver.processRecursiveUpToTyped
   return $ mapRight snd $ snd x
 
 runIOEitherHelper :: forall a r. (Members '[TaggedLock, EmbedIO] r) => EntryPoint -> Sem (PipelineEff r) a -> Sem r (HighlightInput, (Either JuvixError (ResolverState, PipelineResult a)))
 runIOEitherHelper entry a = do
   runIOEitherPipeline' entry $
-    entrySetup defaultDependenciesConfig >> processFileUpTo a
+    entrySetup defaultDependenciesConfig >> DriverPar.processFileUpTo a
 
 runIOEitherPipeline ::
   forall a r.
@@ -106,7 +108,7 @@ runIOEitherPipeline' entry a = do
     . runDependencyResolver
     . runPathResolverInput
     . runTopModuleNameChecker
-    . evalModuleInfoCache
+    . Driver.evalModuleInfoCache
     $ a
 
 mainIsPackageFile :: EntryPoint -> Bool
@@ -177,8 +179,12 @@ runReplPipelineIOEither' lockMode entry = do
       . runDependencyResolver
       . runPathResolver'
       . runTopModuleNameChecker
-      . evalModuleInfoCache
-      $ entrySetup defaultDependenciesConfig >> processFileToStoredCore entry
+      . Driver.evalModuleInfoCache
+      . runReader defaultImportScanStrategy
+      . withImportTree (entry ^. entryPointModulePath)
+      $ do
+        entrySetup defaultDependenciesConfig
+        DriverPar.processFileToStoredCore entry
   return $ case eith of
     Left err -> Left err
     Right (art, PipelineResult {..}) ->

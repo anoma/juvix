@@ -11,6 +11,7 @@ module Juvix.Compiler.Pipeline.Loader.PathResolver
     evalPathResolverPipe,
     findPackageJuvixFiles,
     mkImportTree,
+    withImportTree,
   )
 where
 
@@ -341,6 +342,19 @@ checkImportTreeCycles tree = do
     getCycle = \case
       AcyclicSCC {} -> Nothing
       CyclicSCC l -> Just (nonEmpty' l)
+
+withImportTree ::
+  forall r a.
+  (Members '[Reader ImportScanStrategy, Error JuvixError, PathResolver, Files] r) =>
+  Maybe (Path Abs File) ->
+  Sem (Reader ImportTree ': r) a ->
+  Sem r a
+withImportTree entryModule x = do
+  t <-
+    mapError (JuvixError @ParserError)
+      . mapError (JuvixError @ScoperError)
+      $ mkImportTree entryModule
+  runReader t x
 
 -- | If an entry file is given, it scans imports reachable from that file,
 -- otherwise it scans all files in all packages

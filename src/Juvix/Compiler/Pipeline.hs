@@ -54,18 +54,40 @@ import Juvix.Data.Field
 
 type PipelineAppEffects = '[TaggedLock, EmbedIO]
 
-type PipelineLocalEff = '[ModuleInfoCache, Reader ImportParents, TopModuleNameChecker, PathResolver, DependencyResolver, EvalFileEff, Error PackageLoaderError, Error DependencyError, GitClone, Error GitProcessError, Process, Log, Reader EntryPoint, Files, Error JuvixError, HighlightBuilder, Internet]
+type PipelineLocalEff =
+  '[ ModuleInfoCache,
+     Reader ImportParents,
+     TopModuleNameChecker,
+     PathResolver,
+     DependencyResolver,
+     EvalFileEff,
+     Error PackageLoaderError,
+     Error DependencyError,
+     GitClone,
+     Error GitProcessError,
+     Process,
+     Log,
+     Reader EntryPoint,
+     Files,
+     Error JuvixError,
+     HighlightBuilder,
+     Internet
+   ]
 
 type PipelineEff' r = PipelineLocalEff ++ r
 
-type PipelineEff r = Reader Parser.ParserResult ': Reader Store.ModuleTable ': NameIdGen ': PipelineEff' r
+type PipelineEff r =
+  Reader Parser.ParserResult
+    ': Reader Store.ModuleTable
+    ': NameIdGen
+    ': PipelineEff' r
 
 --------------------------------------------------------------------------------
 -- Workflows from source
 --------------------------------------------------------------------------------
 
 upToParsing ::
-  (Members '[HighlightBuilder, TopModuleNameChecker, Reader EntryPoint, Error JuvixError, Files, PathResolver] r) =>
+  (Members '[HighlightBuilder, TopModuleNameChecker, Reader EntryPoint, Error JuvixError, Files] r) =>
   Sem r Parser.ParserResult
 upToParsing = ask >>= Parser.fromSource
 
@@ -94,12 +116,12 @@ upToInternalTyped ::
 upToInternalTyped = Internal.typeCheckingNew upToInternal
 
 upToCore ::
-  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, PathResolver] r) =>
+  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError] r) =>
   Sem r Core.CoreResult
 upToCore = upToInternalTyped >>= Core.fromInternal
 
 upToStoredCore ::
-  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, PathResolver] r) =>
+  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError] r) =>
   Sem r Core.CoreResult
 upToStoredCore = do
   r <- upToCore

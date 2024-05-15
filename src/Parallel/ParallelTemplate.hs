@@ -6,6 +6,8 @@
 
 module Parallel.ParallelTemplate
   ( CompileArgs (..),
+    NodesIndex (..),
+    Dependencies (..),
     compileArgsDependencies,
     compileArgsNodesIndex,
     compileArgsNodeName,
@@ -110,7 +112,7 @@ compile ::
   forall nodeId node compileProof r.
   (Hashable nodeId, Members '[IOE, Concurrent] r) =>
   CompileArgs r nodeId node compileProof ->
-  Sem r ()
+  Sem r (HashMap nodeId compileProof)
 compile args@CompileArgs {..} = do
   let modsIx = _compileArgsNodesIndex
       deps = _compileArgsDependencies
@@ -143,6 +145,7 @@ compile args@CompileArgs {..} = do
         . forkIO
         $ lookForWork @nodeId @node @compileProof
       waitForWorkers @nodeId @compileProof
+  (^. compilationState) <$> readTVarIO varCompilationState
 
 handleLogs :: (Members '[EmbedIO, Concurrent, Reader Logs] r) => Sem r ()
 handleLogs = do

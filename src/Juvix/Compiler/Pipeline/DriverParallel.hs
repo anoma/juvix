@@ -1,0 +1,302 @@
+module Juvix.Compiler.Pipeline.DriverParallel
+  ( processFileUpTo,
+    processFileToStoredCore,
+    processModuleParallel,
+    ModuleInfoCache,
+    evalModuleInfoCache,
+  )
+where
+
+import Data.HashMap.Strict qualified as HashMap
+import Effectful.Concurrent
+import Juvix.Compiler.Concrete.Data.Highlight
+import Juvix.Compiler.Concrete.Language
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping (getModuleId)
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context qualified as Scoper
+import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
+import Juvix.Compiler.Concrete.Translation.FromSource.Data.ParserState (parserStateImports)
+import Juvix.Compiler.Concrete.Translation.FromSource.TopModuleNameChecker
+import Juvix.Compiler.Core.Data.Module qualified as Core
+import Juvix.Compiler.Core.Translation.FromInternal.Data.Context qualified as Core
+import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context qualified as Internal
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as InternalTyped
+import Juvix.Compiler.Pipeline
+import Juvix.Compiler.Pipeline.Loader.PathResolver.Data
+import Juvix.Compiler.Pipeline.ModuleInfoCache
+import Juvix.Compiler.Store.Core.Extra
+import Juvix.Compiler.Store.Extra qualified as Store
+import Juvix.Compiler.Store.Language qualified as Store
+import Juvix.Compiler.Store.Options qualified as StoredModule
+import Juvix.Compiler.Store.Options qualified as StoredOptions
+import Juvix.Data.Effect.TaggedLock
+import Juvix.Data.SHA256 qualified as SHA256
+import Juvix.Extra.Serialize
+import Juvix.Prelude
+import Parallel.ParallelTemplate
+import Path.Posix qualified as Path
+
+type ImportsAccess = Reader (HashMap (Path Abs File) (PipelineResult Store.ModuleInfo))
+
+data CompileResult = CompileResult
+  { _compileResultModuleTable :: Store.ModuleTable,
+    _compileResultChanged :: Bool
+  }
+
+makeLenses ''CompileResult
+
+type NodeId = Path Abs File
+
+type Node = EntryIndex
+
+type CompileProof = PipelineResult Store.ModuleInfo
+
+mkNodesIndex :: EntryPoint -> ImportTree -> NodesIndex NodeId Node
+mkNodesIndex e tree =
+  NodesIndex
+    ( hashMap
+        [ mkAssoc (fromNode ^. importNodeAbsFile)
+          | fromNode <- HashMap.keys (tree ^. importTree)
+        ]
+    )
+  where
+    mkAssoc :: Path Abs File -> (Path Abs File, EntryIndex)
+    mkAssoc p = (p, EntryIndex (set entryPointModulePath (Just p) e))
+
+mkDependencies :: ImportTree -> Dependencies NodeId
+mkDependencies tree =
+  Dependencies
+    { _dependenciesTable = helper (tree ^. importTree),
+      _dependenciesTableReverse = helper (tree ^. importTreeReverse)
+    }
+  where
+    helper :: HashMap ImportNode (HashSet ImportNode) -> HashMap NodeId (HashSet NodeId)
+    helper m = hashMap [(toPath k, hashSet (toPath <$> toList v)) | (k, v) <- HashMap.toList m]
+    toPath :: ImportNode -> Path Abs File
+    toPath = (^. importNodeAbsFile)
+
+compileNode ::
+  ( Members
+      '[ Reader ImportTree,
+         TaggedLock,
+         TopModuleNameChecker,
+         Error JuvixError,
+         Files,
+         ModuleInfoCache
+       ]
+      r
+  ) =>
+  HashMap NodeId CompileProof ->
+  Node ->
+  Sem r CompileProof
+compileNode k = runReader k . processModule
+
+getNodeName :: Node -> Text
+getNodeName (EntryIndex e) = show (fromJust (e ^. entryPointModulePath))
+
+processModuleParallel ::
+  ( Members
+      '[ Concurrent,
+         IOE,
+         TaggedLock,
+         Files,
+         TopModuleNameChecker,
+         Error JuvixError,
+         Reader EntryPoint,
+         ModuleInfoCache,
+         Reader ImportTree
+       ]
+      r
+  ) =>
+  Path Abs File ->
+  Sem r CompileProof
+processModuleParallel m = do
+  e <- ask
+  t <- ask
+  res <-
+    compile
+      CompileArgs
+        { _compileArgsNodesIndex = mkNodesIndex e t,
+          _compileArgsNodeName = getNodeName,
+          _compileArgsDependencies = mkDependencies t,
+          _compileArgsNumWorkers = 4,
+          _compileArgsCompileNode = compileNode
+        }
+  return (fromJust (res ^. at m))
+
+instance Semigroup CompileResult where
+  sconcat l =
+    CompileResult
+      { _compileResultChanged = any (^. compileResultChanged) l,
+        _compileResultModuleTable = sconcatMap (^. compileResultModuleTable) l
+      }
+
+instance Monoid CompileResult where
+  mempty =
+    CompileResult
+      { _compileResultChanged = False,
+        _compileResultModuleTable = mempty
+      }
+
+evalModuleInfoCache ::
+  forall r a.
+  (Members '[Reader ImportTree, ImportsAccess, TaggedLock, TopModuleNameChecker, Error JuvixError, Files] r) =>
+  Sem (ModuleInfoCache ': r) a ->
+  Sem r a
+evalModuleInfoCache = evalCacheEmpty processModule
+
+processFileUpTo ::
+  forall r a.
+  (Members '[Reader ImportTree, ImportsAccess, TaggedLock, TopModuleNameChecker, HighlightBuilder, Reader EntryPoint, Error JuvixError, Files, ModuleInfoCache] r) =>
+  Sem (Reader Parser.ParserResult ': Reader Store.ModuleTable ': NameIdGen ': r) a ->
+  Sem r (PipelineResult a)
+processFileUpTo a = do
+  entry <- ask
+  res <- processFileUpToParsing entry
+  mid <- getModuleId (res ^. pipelineResult . Parser.resultModule . modulePath)
+  a' <-
+    evalTopNameIdGen mid
+      . runReader (res ^. pipelineResultImports)
+      . runReader (res ^. pipelineResult)
+      $ a
+  return (set pipelineResult a' res)
+
+processFileUpToParsing ::
+  forall r.
+  (Members '[Reader ImportTree, ImportsAccess, HighlightBuilder, TopModuleNameChecker, Error JuvixError, Files, ModuleInfoCache] r) =>
+  EntryPoint ->
+  Sem r (PipelineResult Parser.ParserResult)
+processFileUpToParsing entry = do
+  res <- runReader entry upToParsing
+  mtab <- (^. compileResultModuleTable) <$> processImports entry
+  return
+    PipelineResult
+      { _pipelineResult = res,
+        _pipelineResultImports = mtab,
+        _pipelineResultChanged = True
+      }
+
+processImports ::
+  forall r.
+  (Members '[Reader ImportTree, ImportsAccess] r) =>
+  EntryPoint ->
+  Sem r CompileResult
+processImports e = do
+  tree <- ask @ImportTree
+  tbl <- ask @(HashMap (Path Abs File) (PipelineResult Store.ModuleInfo))
+  let deps :: HashSet ImportNode = fromJust (tree ^. importTree . at node)
+      depsPaths :: [Path Abs File] = (^. importNodeAbsFile) <$> toList deps
+      getDep :: Path Abs File -> PipelineResult Store.ModuleInfo
+      getDep p = fromJust (tbl ^. at p)
+      depsInfos = map getDep depsPaths
+      mtab =
+        Store.mkModuleTable (map (^. pipelineResult) depsInfos)
+          <> mconcatMap (^. pipelineResultImports) depsInfos
+      changed = any (^. pipelineResultChanged) depsInfos
+  return
+    CompileResult
+      { _compileResultChanged = changed,
+        _compileResultModuleTable = mtab
+      }
+  where
+    node :: ImportNode
+    node = entryPointNode e
+
+entryPointNode :: EntryPoint -> ImportNode
+entryPointNode e =
+  ImportNode
+    { _importNodePackageRoot = root,
+      _importNodeFile = fromMaybe err (stripProperPrefix root srcFile)
+    }
+  where
+    err :: a
+    err =
+      error $
+        "unexpected: expected the path of the input file to have the root as prefix\n"
+          <> "root = "
+          <> show root
+          <> "\n"
+          <> "srcFile = "
+          <> show srcFile
+    root = e ^. entryPointRoot
+    srcFile = fromJust (e ^. entryPointModulePath)
+
+processFileToStoredCore ::
+  forall r.
+  (Members '[Reader ImportTree, ImportsAccess, TopModuleNameChecker, Error JuvixError, Files, ModuleInfoCache] r) =>
+  EntryPoint ->
+  Sem r (PipelineResult Core.CoreResult)
+processFileToStoredCore entry = ignoreHighlightBuilder . runReader entry $ do
+  res <- processFileUpToParsing entry
+  mid <- getModuleId (res ^. pipelineResult . Parser.resultModule . modulePath)
+  r <-
+    evalTopNameIdGen mid
+      . runReader (res ^. pipelineResultImports)
+      . runReader (res ^. pipelineResult)
+      $ upToStoredCore
+  return (set pipelineResult r res)
+
+processModule ::
+  forall r.
+  (Members '[Reader ImportTree, ImportsAccess, TaggedLock, TopModuleNameChecker, Error JuvixError, Files, ModuleInfoCache] r) =>
+  EntryIndex ->
+  Sem r (PipelineResult Store.ModuleInfo)
+processModule (EntryIndex entry) = do
+  let buildDir = resolveAbsBuildDir root (entry ^. entryPointBuildDir)
+      sourcePath = fromJust (entry ^. entryPointModulePath)
+      relPath =
+        fromJust
+          . replaceExtension ".jvo"
+          . fromJust
+          $ stripProperPrefix $(mkAbsDir "/") sourcePath
+      absPath = buildDir Path.</> relPath
+  sha256 <- SHA256.digestFile sourcePath
+  m :: Maybe Store.ModuleInfo <- loadFromFile absPath
+  case m of
+    Just info
+      | info ^. Store.moduleInfoSHA256 == sha256
+          && info ^. Store.moduleInfoOptions == opts
+          && info ^. Store.moduleInfoFieldSize == entry ^. entryPointFieldSize -> do
+          CompileResult {..} <- processImports entry
+          if
+              | _compileResultChanged ->
+                  recompile sha256 absPath
+              | otherwise ->
+                  return
+                    PipelineResult
+                      { _pipelineResult = info,
+                        _pipelineResultImports = _compileResultModuleTable,
+                        _pipelineResultChanged = False
+                      }
+    _ ->
+      recompile sha256 absPath
+  where
+    root = entry ^. entryPointRoot
+    opts = StoredModule.fromEntryPoint entry
+
+    recompile :: Text -> Path Abs File -> Sem r (PipelineResult Store.ModuleInfo)
+    recompile sha256 absPath = do
+      res <- processModuleToStoredCore sha256 entry
+      saveToFile absPath (res ^. pipelineResult)
+      return res
+
+processModuleToStoredCore ::
+  forall r.
+  (Members '[Reader ImportTree, ImportsAccess, TopModuleNameChecker, Error JuvixError, Files, ModuleInfoCache] r) =>
+  Text ->
+  EntryPoint ->
+  Sem r (PipelineResult Store.ModuleInfo)
+processModuleToStoredCore sha256 entry = over pipelineResult mkModuleInfo <$> processFileToStoredCore entry
+  where
+    mkModuleInfo :: Core.CoreResult -> Store.ModuleInfo
+    mkModuleInfo Core.CoreResult {..} =
+      Store.ModuleInfo
+        { _moduleInfoScopedModule = scoperResult ^. Scoper.resultScopedModule,
+          _moduleInfoInternalModule = _coreResultInternalTypedResult ^. InternalTyped.resultInternalModule,
+          _moduleInfoCoreTable = fromCore (_coreResultModule ^. Core.moduleInfoTable),
+          _moduleInfoImports = map (^. importModulePath) $ scoperResult ^. Scoper.resultParserResult . Parser.resultParserState . parserStateImports,
+          _moduleInfoOptions = StoredOptions.fromEntryPoint entry,
+          _moduleInfoSHA256 = sha256,
+          _moduleInfoFieldSize = entry ^. entryPointFieldSize
+        }
+      where
+        scoperResult = _coreResultInternalTypedResult ^. InternalTyped.resultInternal . Internal.resultScoper

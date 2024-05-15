@@ -1,6 +1,7 @@
 module Juvix.Prelude.Effects.Base
   ( module Juvix.Prelude.Effects.Base,
     module Effectful,
+    module Effectful.Concurrent,
     module Effectful.Reader.Static,
     module Effectful.State.Static.Local,
     module Effectful.Error.Static,
@@ -14,6 +15,7 @@ where
 import Data.Kind qualified as GHC
 import Effectful hiding (Eff, (:>))
 import Effectful qualified as E
+import Effectful.Concurrent
 import Effectful.Dispatch.Dynamic (LocalEnv, SharedSuffix, impose, interpose, localLift, localLiftUnlift, localLiftUnliftIO, localSeqLift, localSeqUnlift, localSeqUnliftIO, localUnlift, localUnliftIO, withLiftMap, withLiftMapIO)
 import Effectful.Dispatch.Dynamic qualified as E
 import Effectful.Dispatch.Static

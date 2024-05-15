@@ -40,12 +40,33 @@ import Juvix.Extra.Serialize
 import Juvix.Prelude
 import Path.Posix qualified as Path
 
+data CompileResult = CompileResult
+  { _compileResultModuleTable :: Store.ModuleTable,
+    _compileResultChanged :: Bool
+  }
+
+makeLenses ''CompileResult
+
+instance Semigroup CompileResult where
+  sconcat l =
+    CompileResult
+      { _compileResultChanged = any (^. compileResultChanged) l,
+        _compileResultModuleTable = sconcatMap (^. compileResultModuleTable) l
+      }
+
+instance Monoid CompileResult where
+  mempty =
+    CompileResult
+      { _compileResultChanged = False,
+        _compileResultModuleTable = mempty
+      }
+
 evalModuleInfoCache ::
   forall r a.
   (Members '[TaggedLock, TopModuleNameChecker, Error JuvixError, Files, PathResolver] r) =>
   Sem (ModuleInfoCache ': Reader ImportParents ': r) a ->
   Sem r a
-evalModuleInfoCache = runReader @ImportParents mempty . evalCacheEmpty processModule'
+evalModuleInfoCache = runReader @ImportParents mempty . evalCacheEmpty processModule
 
 processFileUpToParsing ::
   forall r.
@@ -99,7 +120,7 @@ processFileUpToParsing' ::
 processFileUpToParsing' entry = do
   res <- runReader entry upToParsing
   let imports :: [Import 'Parsed] = res ^. Parser.resultParserState . Parser.parserStateImports
-  mtab <- processImports' entry (map (^. importModulePath) imports)
+  mtab <- (^. compileResultModuleTable) <$> processImports entry (map (^. importModulePath) imports)
   return
     PipelineResult
       { _pipelineResult = res,
@@ -107,27 +128,23 @@ processFileUpToParsing' entry = do
         _pipelineResultChanged = True
       }
 
-processImports' ::
+processImports ::
   forall r.
   (Members '[Reader ImportParents, Error JuvixError, Files, PathResolver, ModuleInfoCache] r) =>
   EntryPoint ->
   [TopModulePath] ->
-  Sem r Store.ModuleTable
-processImports' entry imports = snd <$> processImports'' entry imports
-
-processImports'' ::
-  forall r.
-  (Members '[Reader ImportParents, Error JuvixError, Files, PathResolver, ModuleInfoCache] r) =>
-  EntryPoint ->
-  [TopModulePath] ->
-  Sem r (Bool, Store.ModuleTable)
-processImports'' entry imports = do
-  ms <- forM imports (processImport' entry)
+  Sem r CompileResult
+processImports entry imports = do
+  ms :: [PipelineResult Store.ModuleInfo] <- forM imports (processImport' entry)
   let mtab =
         Store.mkModuleTable (map (^. pipelineResult) ms)
           <> mconcatMap (^. pipelineResultImports) ms
       changed = any (^. pipelineResultChanged) ms
-  return (changed, mtab)
+  return
+    CompileResult
+      { _compileResultChanged = changed,
+        _compileResultModuleTable = mtab
+      }
 
 processImport' ::
   forall r a.
@@ -174,12 +191,12 @@ processFileToStoredCore' entry = ignoreHighlightBuilder . runReader entry $ do
       $ upToStoredCore
   return (set pipelineResult r res)
 
-processModule' ::
+processModule ::
   forall r.
   (Members '[TaggedLock, TopModuleNameChecker, Reader ImportParents, Error JuvixError, Files, PathResolver, ModuleInfoCache] r) =>
   EntryIndex ->
   Sem r (PipelineResult Store.ModuleInfo)
-processModule' (EntryIndex entry) = do
+processModule (EntryIndex entry) = do
   let buildDir = resolveAbsBuildDir root (entry ^. entryPointBuildDir)
       sourcePath = fromJust (entry ^. entryPointModulePath)
       relPath =
@@ -188,6 +205,13 @@ processModule' (EntryIndex entry) = do
           . fromJust
           $ stripProperPrefix $(mkAbsDir "/") sourcePath
       absPath = buildDir Path.</> relPath
+  traceM $
+    "File = "
+      <> pack (toFilePath sourcePath)
+      <> "\n"
+      <> "Root = "
+      <> pack (toFilePath (entry ^. entryPointRoot))
+  -- traceM ("Node = " <> show (entryPointNode entry))
   sha256 <- SHA256.digestFile sourcePath
   m :: Maybe Store.ModuleInfo <- loadFromFile absPath
   case m of
@@ -195,15 +219,15 @@ processModule' (EntryIndex entry) = do
       | info ^. Store.moduleInfoSHA256 == sha256
           && info ^. Store.moduleInfoOptions == opts
           && info ^. Store.moduleInfoFieldSize == entry ^. entryPointFieldSize -> do
-          (changed, mtab) <- processImports'' entry (info ^. Store.moduleInfoImports)
+          CompileResult {..} <- processImports entry (info ^. Store.moduleInfoImports)
           if
-              | changed ->
+              | _compileResultChanged ->
                   recompile sha256 absPath
               | otherwise ->
                   return
                     PipelineResult
                       { _pipelineResult = info,
-                        _pipelineResultImports = mtab,
+                        _pipelineResultImports = _compileResultModuleTable,
                         _pipelineResultChanged = False
                       }
     _ ->
@@ -217,6 +241,25 @@ processModule' (EntryIndex entry) = do
       res <- processModuleToStoredCore sha256 entry
       saveToFile absPath (res ^. pipelineResult)
       return res
+
+entryPointNode :: EntryPoint -> ImportNode
+entryPointNode e =
+  ImportNode
+    { _importNodePackageRoot = root,
+      _importNodeFile = fromMaybe err (stripProperPrefix root srcFile)
+    }
+  where
+    err :: a
+    err =
+      error $
+        "unexpected: expected the path of the input file to have the root as prefix\n"
+          <> "root = "
+          <> show root
+          <> "\n"
+          <> "srcFile = "
+          <> show srcFile
+    root = e ^. entryPointRoot
+    srcFile = fromJust (e ^. entryPointModulePath)
 
 processModuleToStoredCore ::
   forall r.

@@ -29,7 +29,7 @@ getInternalModuleTable mtab =
     HashMap.fromList (map (\mi -> (mi ^. moduleInfoInternalModule . internalModuleName, mi ^. moduleInfoInternalModule)) (HashMap.elems (mtab ^. moduleTable)))
 
 mkModuleTable :: [ModuleInfo] -> ModuleTable
-mkModuleTable = ModuleTable . HashMap.fromList . map (\mi -> (getModulePath mi, mi))
+mkModuleTable = ModuleTable . hashMap . map (\mi -> (getModulePath mi, mi))
 
 lookupModule :: ModuleTable -> TopModulePath -> ModuleInfo
 lookupModule mtab n = fromJust $ HashMap.lookup n (mtab ^. moduleTable)
