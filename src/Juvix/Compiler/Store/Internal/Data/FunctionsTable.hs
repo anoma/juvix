@@ -13,6 +13,3 @@ newtype FunctionsTable = FunctionsTable
 instance Serialize FunctionsTable
 
 makeLenses ''FunctionsTable
-
-askFunctionDef :: (Member (State FunctionsTable) r) => FunctionName -> Sem r (Maybe Expression)
-askFunctionDef f = gets (^. functionsTable . at f)

@@ -6,11 +6,14 @@ import Stdlib.Prelude open hiding {Show; mkShow; module Show};
 trait
 type Show A := mkShow {show : A → String};
 
+Show' : Type -> Type := Show;
+Bool' : Type := Bool;
+
 instance
 showStringI : Show String := mkShow (show := id);
 
 instance
-showBoolI : Show Bool :=
+showBoolI : Show' Bool' :=
   mkShow@{
     show (x : Bool) : String := if x "true" "false"
   };
@@ -21,9 +24,9 @@ showNatI : Show Nat := mkShow (show := natToString);
 g : {A : Type} → {{Show A}} → Nat := 5;
 
 instance
-showListI {A} {{Show A}} : Show (List A) :=
+showListI {A} {{Show' A}} : Show (List A) :=
   mkShow@{
-    show {A} : {{Show A}} → List A → String
+    show {A} : {{Show' A}} → List A → String
       | nil := "nil"
       | (h :: t) := Show.show h ++str " :: " ++str show t
   };
@@ -49,7 +52,7 @@ f'3 {A} {{M : Show A}} : A → String := Show.show {{M}};
 
 f'4 {A} {{_ : Show A}} : A → String := Show.show;
 
-f5 {A} {{Show A}} (n : String) (a : A) : String :=
+f5 {A} {{Show' A}} (n : String) (a : A) : String :=
   n ++str Show.show a;
 
 instance
@@ -63,7 +66,7 @@ showBoolFunI : Show (Bool → Bool) := mkShow@{
 };
 
 instance
-showPairI {A B} {{Show A}} {{Show B}} : Show (A × B) :=
+showPairI {A B} {{Show A}} {{Show' B}} : Show' (A × B) :=
   mkShow λ {(x, y) := Show.show x ++str ", " ++str Show.show y};
 
 trait

@@ -10,11 +10,11 @@ import Juvix.Compiler.Internal.Data.InfoTable
 import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker (TerminationState)
+import Juvix.Compiler.Store.Internal.Data.CoercionInfo
 import Juvix.Compiler.Store.Internal.Data.FunctionsTable
+import Juvix.Compiler.Store.Internal.Data.InstanceInfo
 import Juvix.Compiler.Store.Internal.Data.TypesTable
 import Juvix.Prelude
-
-type NormalizedTable = HashMap NameId Expression
 
 data InternalTypedResult = InternalTypedResult
   { _resultInternal :: Internal.InternalResult,
@@ -22,8 +22,17 @@ data InternalTypedResult = InternalTypedResult
     _resultInternalModule :: InternalModule,
     _resultTermination :: TerminationState,
     _resultIdenTypes :: TypesTable,
-    _resultFunctions :: FunctionsTable
+    _resultFunctions :: FunctionsTable,
+    _resultInstances :: InstanceTable,
+    _resultCoercions :: CoercionTable
   }
 
-makeLenses ''TypesTable
+data ImportContext = ImportContext
+  { _importContextTypesTable :: TypesTable,
+    _importContextFunctionsTable :: FunctionsTable,
+    _importContextInstances :: InstanceTable,
+    _importContextCoercions :: CoercionTable
+  }
+
 makeLenses ''InternalTypedResult
+makeLenses ''ImportContext

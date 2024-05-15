@@ -20,7 +20,6 @@ import Juvix.Compiler.Concrete.Gen qualified as Gen
 import Juvix.Compiler.Concrete.Language qualified as Concrete
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
-import Juvix.Compiler.Internal.Data.InfoTable qualified as Internal
 import Juvix.Compiler.Internal.Data.NameDependencyInfo qualified as Internal
 import Juvix.Compiler.Internal.Extra (mkLetClauses)
 import Juvix.Compiler.Internal.Extra qualified as Internal
@@ -79,7 +78,6 @@ fromConcrete _resultScoper = do
         . runReader @DefaultArgsStack mempty
         . evalBuiltins (BuiltinsState blts)
         $ goTopModule m
-    let _resultInternalModule = Internal.computeInternalModule mempty mempty _resultModule
     return InternalResult {..}
   where
     m = _resultScoper ^. Scoper.resultModule

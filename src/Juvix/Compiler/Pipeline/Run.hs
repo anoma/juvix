@@ -193,6 +193,12 @@ runReplPipelineIOEither' lockMode entry = do
           functionsTable :: Typed.FunctionsTable
           functionsTable = typedResult ^. Typed.resultFunctions
 
+          instanceTable :: Typed.InstanceTable
+          instanceTable = typedResult ^. Typed.resultInstances
+
+          coercionTable :: Typed.CoercionTable
+          coercionTable = typedResult ^. Typed.resultCoercions
+
           typedTable :: Internal.InfoTable
           typedTable = typedResult ^. Typed.resultInternalModule . Typed.internalModuleInfoTable
 
@@ -226,6 +232,8 @@ runReplPipelineIOEither' lockMode entry = do
                   _artifactScopeExports = scopedResult ^. Scoped.resultExports,
                   _artifactTypes = typesTable,
                   _artifactFunctions = functionsTable,
+                  _artifactInstances = instanceTable,
+                  _artifactCoercions = coercionTable,
                   _artifactScoperState = scopedResult ^. Scoped.resultScoperState,
                   _artifactResolver = art ^. artifactResolver,
                   _artifactBuiltins = art ^. artifactBuiltins,
@@ -244,6 +252,8 @@ runReplPipelineIOEither' lockMode entry = do
           _artifactNameIdState = genNameIdState defaultModuleId,
           _artifactTypes = mempty,
           _artifactFunctions = mempty,
+          _artifactInstances = mempty,
+          _artifactCoercions = mempty,
           _artifactCoreModule = Core.emptyModule,
           _artifactScopeTable = mempty,
           _artifactBuiltins = iniBuiltins,

@@ -7,7 +7,7 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Da
     matchErrorRight,
     queryMetavar,
     registerIdenType,
-    strongNormalize',
+    strongNormalize'',
     iniState,
     strongNormalize,
     weakNormalize,
@@ -24,6 +24,7 @@ import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.ResultBuilder
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error
 import Juvix.Compiler.Store.Internal.Data.FunctionsTable
 import Juvix.Prelude hiding (fromEither)
@@ -130,7 +131,7 @@ queryMetavarFinal h = do
     Just (ExpressionHole h') -> queryMetavarFinal h'
     _ -> return m
 
-strongNormalize' :: forall r. (Members '[State FunctionsTable, State InferenceState, NameIdGen] r) => Expression -> Sem r Expression
+strongNormalize' :: forall r. (Members '[ResultBuilder, State InferenceState, NameIdGen] r) => Expression -> Sem r Expression
 strongNormalize' = go
   where
     go :: Expression -> Sem r Expression
@@ -233,7 +234,7 @@ strongNormalize' = go
     goIden :: Iden -> Sem r Expression
     goIden i = case i of
       IdenFunction f -> do
-        f' <- askFunctionDef f
+        f' <- lookupFunctionDef f
         case f' of
           Nothing -> return i'
           Just x -> go x
@@ -241,7 +242,7 @@ strongNormalize' = go
       where
         i' = ExpressionIden i
 
-weakNormalize' :: forall r. (Members '[State FunctionsTable, State InferenceState, NameIdGen] r) => Expression -> Sem r Expression
+weakNormalize' :: forall r. (Members '[ResultBuilder, State InferenceState, NameIdGen] r) => Expression -> Sem r Expression
 weakNormalize' = go
   where
     go :: Expression -> Sem r Expression
@@ -260,7 +261,7 @@ weakNormalize' = go
     goIden :: Iden -> Sem r Expression
     goIden i = case i of
       IdenFunction f -> do
-        f' <- askFunctionDef f
+        f' <- lookupFunctionDef f
         case f' of
           Nothing -> return i'
           Just x -> go x
@@ -295,7 +296,7 @@ queryMetavar' h = do
     Just (Refined e) -> return (Just e)
 
 runInferenceState ::
-  (Members '[State FunctionsTable, Error TypeCheckerError, NameIdGen] r) =>
+  (Members '[ResultBuilder, Error TypeCheckerError, NameIdGen] r) =>
   InferenceState ->
   Sem (Inference ': r) a ->
   Sem r (InferenceState, a)
@@ -311,14 +312,14 @@ runInferenceState inis = reinterpret (runState inis) $ \case
     registerIdenType' i ty = modify (over (inferenceIdens . typesTable) (HashMap.insert (i ^. nameId) ty))
 
     -- Supports alpha equivalence.
-    matchTypes' :: (Members '[State InferenceState, State FunctionsTable, Error TypeCheckerError, NameIdGen] r) => Expression -> Expression -> Sem r (Maybe MatchError)
+    matchTypes' :: (Members '[State InferenceState, ResultBuilder, Error TypeCheckerError, NameIdGen] r) => Expression -> Expression -> Sem r (Maybe MatchError)
     matchTypes' ty = runReader ini . go ty
       where
         ini :: HashMap VarName VarName
         ini = mempty
         go ::
           forall r.
-          (Members '[State InferenceState, Reader (HashMap VarName VarName), State FunctionsTable, Error TypeCheckerError, NameIdGen] r) =>
+          (Members '[State InferenceState, Reader (HashMap VarName VarName), ResultBuilder, Error TypeCheckerError, NameIdGen] r) =>
           Expression ->
           Expression ->
           Sem r (Maybe MatchError)
@@ -450,7 +451,7 @@ runInferenceState inis = reinterpret (runState inis) $ \case
 
 matchPatterns ::
   forall r.
-  (Members '[State InferenceState, State (HashMap VarName VarName), State FunctionsTable] r) =>
+  (Members '[State InferenceState, State (HashMap VarName VarName), ResultBuilder] r) =>
   PatternArg ->
   PatternArg ->
   Sem r Bool
@@ -484,7 +485,7 @@ matchPatterns (PatternArg impl1 name1 pat1) (PatternArg impl2 name2 pat2) =
     err = return False
 
 runInferenceDefs ::
-  (Members '[Termination, Error TypeCheckerError, State FunctionsTable, State TypesTable, NameIdGen] r, HasExpressions funDef) =>
+  (Members '[Termination, Error TypeCheckerError, ResultBuilder, NameIdGen] r, HasExpressions funDef) =>
   Sem (Inference ': r) (NonEmpty funDef) ->
   Sem r (NonEmpty funDef)
 runInferenceDefs a = do
@@ -493,18 +494,14 @@ runInferenceDefs a = do
   idens' <- mapM (subsHoles subs) (idens ^. typesTable)
   stash' <- mapM (subsHoles subs) (finalState ^. inferenceFunctionsStash)
   forM_ stash' registerFunctionDef
-  addIdens (TypesTable idens')
+  addIdenTypes (TypesTable idens')
   mapM (subsHoles subs) expr
 
 runInferenceDef ::
-  (Members '[Termination, Error TypeCheckerError, State FunctionsTable, State TypesTable, NameIdGen] r, HasExpressions funDef) =>
+  (Members '[Termination, Error TypeCheckerError, ResultBuilder, NameIdGen] r, HasExpressions funDef) =>
   Sem (Inference ': r) funDef ->
   Sem r funDef
 runInferenceDef = fmap head . runInferenceDefs . fmap pure
-
-addIdens :: (Members '[State TypesTable] r) => TypesTable -> Sem r ()
-addIdens idens = do
-  modify (over typesTable (HashMap.union (idens ^. typesTable)))
 
 -- | Assumes the given function has been type checked. Does *not* register the
 -- function.
@@ -515,14 +512,14 @@ addIdens idens = do
 --
 -- Throws an error if the return type is Type and it does not satisfy the
 -- above conditions.
-functionDefEval :: forall r'. (Members '[State FunctionsTable, Termination, Error TypeCheckerError, NameIdGen] r') => FunctionDef -> Sem r' (Maybe Expression)
+functionDefEval :: forall r'. (Members '[ResultBuilder, Termination, Error TypeCheckerError, NameIdGen] r') => FunctionDef -> Sem r' (Maybe Expression)
 functionDefEval f = do
   (params :: [FunctionParameter], ret :: Expression) <- unfoldFunType <$> strongNorm (f ^. funDefType)
   r <- runFail (goTop params (canBeUniverse ret))
   when (isNothing r && isUniverse ret) (throw (ErrUnsupportedTypeFunction (UnsupportedTypeFunction f)))
   return r
   where
-    strongNorm :: (Members '[State FunctionsTable, NameIdGen] r) => Expression -> Sem r Expression
+    strongNorm :: (Members '[ResultBuilder, NameIdGen] r) => Expression -> Sem r Expression
     strongNorm = evalState iniState . strongNormalize'
 
     isUniverse :: Expression -> Bool
@@ -539,7 +536,7 @@ functionDefEval f = do
 
     goTop ::
       forall r.
-      (Members '[Fail, State FunctionsTable, Error TypeCheckerError, Termination] r) =>
+      (Members '[Fail, ResultBuilder, Error TypeCheckerError, Termination] r) =>
       [FunctionParameter] ->
       Bool ->
       Sem r Expression
@@ -581,6 +578,21 @@ functionDefEval f = do
                 | isImplicitOrInstance (p ^. patternArgIsImplicit) -> fail
                 | otherwise -> go ps >>= goPattern (p ^. patternArgPattern, ty)
 
-registerFunctionDef :: (Members '[State FunctionsTable, Error TypeCheckerError, NameIdGen, Termination] r) => FunctionDef -> Sem r ()
+registerFunctionDef :: (Members '[ResultBuilder, Error TypeCheckerError, NameIdGen, Termination] r) => FunctionDef -> Sem r ()
 registerFunctionDef f = whenJustM (functionDefEval f) $ \e ->
-  modify (over functionsTable (HashMap.insert (f ^. funDefName) e))
+  addFunctionDef (f ^. funDefName) e
+
+strongNormalize'' :: (Members '[Reader FunctionsTable, NameIdGen] r) => Expression -> Sem r Expression
+strongNormalize'' ty = do
+  ftab <- ask
+  let importCtx =
+        ImportContext
+          { _importContextCoercions = mempty,
+            _importContextInstances = mempty,
+            _importContextTypesTable = mempty,
+            _importContextFunctionsTable = ftab
+          }
+  fmap snd
+    . runResultBuilder importCtx
+    . evalState iniState
+    $ strongNormalize' ty

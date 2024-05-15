@@ -6,7 +6,6 @@ module Juvix.Compiler.Internal.Pretty.Base
 where
 
 import Data.HashMap.Strict qualified as HashMap
-import Juvix.Compiler.Internal.Data.InstanceInfo (instanceInfoResult, instanceTableMap)
 import Juvix.Compiler.Internal.Data.LocalVars
 import Juvix.Compiler.Internal.Data.NameDependencyInfo
 import Juvix.Compiler.Internal.Data.TypedHole
@@ -366,7 +365,6 @@ instance PrettyCode InfoTable where
     inds <- ppCode (HashMap.keys (tbl ^. infoInductives))
     constrs <- ppCode (HashMap.keys (tbl ^. infoConstructors))
     funs <- ppCode (HashMap.keys (tbl ^. infoFunctions))
-    insts <- ppCode $ map (map (^. instanceInfoResult)) $ HashMap.elems (tbl ^. infoInstances . instanceTableMap)
     return $
       header "InfoTable"
         <> "\n========="
@@ -376,8 +374,6 @@ instance PrettyCode InfoTable where
         <> constrs
         <> header "\nFunctions: "
         <> funs
-        <> header "\nInstances: "
-        <> insts
 
 ppPostExpression ::
   (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>

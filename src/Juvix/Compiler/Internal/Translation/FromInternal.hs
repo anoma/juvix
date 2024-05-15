@@ -7,6 +7,7 @@ module Juvix.Compiler.Internal.Translation.FromInternal
 where
 
 import Juvix.Compiler.Concrete.Data.Highlight.Input
+import Juvix.Compiler.Internal.Data.InfoTable
 import Juvix.Compiler.Internal.Data.LocalVars
 import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context as Internal
@@ -27,8 +28,7 @@ typeCheckExpressionType ::
 typeCheckExpressionType exp = do
   -- TODO: refactor: modules outside of REPL should not refer to Artifacts
   table <- extendedTableReplArtifacts exp
-  runTypesTableArtifacts
-    . runFunctionsTableArtifacts
+  runResultBuilderArtifacts
     . runBuiltinsArtifacts
     . runNameIdGenArtifacts
     . ignoreHighlightBuilder
@@ -55,28 +55,38 @@ typeCheckingNew ::
   Sem (Termination ': r) InternalResult ->
   Sem r InternalTypedResult
 typeCheckingNew a = do
-  (termin, (res, (idens, (funs, r)))) <- runTermination iniTerminationState $ do
+  (termin, (res, (bst, checkedModule))) <- runTermination iniTerminationState $ do
     res <- a
     itab <- getInternalModuleTable <$> ask
-    let md :: InternalModule
-        md = res ^. Internal.resultInternalModule
-        itab' :: InternalModuleTable
-        itab' = insertInternalModule itab md
-        table :: InfoTable
-        table = computeCombinedInfoTable itab'
+    let table :: InfoTable
+        table = computeCombinedInfoTable itab <> computeInternalModuleInfoTable (res ^. Internal.resultModule)
+        importCtx =
+          ImportContext
+            { _importContextTypesTable = computeTypesTable itab,
+              _importContextFunctionsTable = computeFunctionsTable itab,
+              _importContextInstances = computeInstanceTable itab,
+              _importContextCoercions = computeCoercionTable itab
+            }
     fmap (res,)
-      . runState (computeTypesTable itab')
-      . runState (computeFunctionsTable itab')
       . runReader table
+      . runResultBuilder importCtx
       . mapError (JuvixError @TypeCheckerError)
-      $ checkTable >> checkModule (res ^. Internal.resultModule)
-  let md = computeInternalModule idens funs r
+      $ checkTopModule (res ^. Internal.resultModule)
+  let md =
+        computeInternalModule
+          (bst ^. resultBuilderStateInstanceTable)
+          (bst ^. resultBuilderStateCoercionTable)
+          (bst ^. resultBuilderStateTypesTable)
+          (bst ^. resultBuilderStateFunctionsTable)
+          checkedModule
   return
     InternalTypedResult
       { _resultInternal = res,
-        _resultModule = r,
+        _resultModule = checkedModule,
         _resultInternalModule = md,
         _resultTermination = termin,
-        _resultIdenTypes = idens,
-        _resultFunctions = funs
+        _resultIdenTypes = bst ^. resultBuilderStateCombinedTypesTable,
+        _resultFunctions = bst ^. resultBuilderStateCombinedFunctionsTable,
+        _resultInstances = bst ^. resultBuilderStateCombinedInstanceTable,
+        _resultCoercions = bst ^. resultBuilderStateCombinedCoercionTable
       }

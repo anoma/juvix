@@ -23,6 +23,7 @@ type Lambda' (v : Type) := mkLambda : Expr' v -> Lambda' v;
 type App' (v : Type) :=
   mkApp : Expr' v -> Expr' v -> App' v;
 
+--- Expression with ;Nat; atoms
 Expr : Type := Expr' Nat;
 
 Lambda : Type := Lambda' Nat;
@@ -68,7 +69,7 @@ exprToString : Expr -> String
 
 --- ;Show; instance for ;Expr;.
 instance
-showExprI : Show (Expr' Nat) := mkShow exprToString;
+showExprI : Show Expr := mkShow exprToString;
 
 terminating
 valToString : Val -> String
@@ -81,7 +82,7 @@ valToString : Val -> String
 --- ;Show; instance for ;Val;.
 terminating
 instance
-showValI : Show (Val' Nat) := mkShow valToString;
+showValI : Show Val := mkShow valToString;
 
 syntax operator >>= seq;
 --- Monadic binding for ;Either;.

@@ -138,7 +138,7 @@ fromInternalExpression exp = do
   runNameIdGenArtifacts
     . runReader typedTable
     . tmpCoreInfoTableBuilderArtifacts
-    . runFunctionsTableArtifacts
+    . readerFunctionsTableArtifacts
     . readerTypesTableArtifacts
     . runReader Core.initIndexTable
     $ Core.goExpression exp

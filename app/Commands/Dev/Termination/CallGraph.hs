@@ -4,15 +4,15 @@ import Commands.Base
 import Commands.Dev.Termination.CallGraph.Options
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Internal.Pretty qualified as Internal
-import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination qualified as Termination
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as Internal
 import Juvix.Compiler.Store.Extra qualified as Stored
 import Juvix.Prelude.Pretty
 
 runCommand :: (Members '[EmbedIO, TaggedLock, App] r) => CallGraphOptions -> Sem r ()
 runCommand CallGraphOptions {..} = do
   globalOpts <- askGlobalOptions
-  PipelineResult {..} <- runPipelineTermination _graphInputFile upToInternal
+  PipelineResult {..} <- runPipelineTermination _graphInputFile upToInternalTyped
   let mainModule = _pipelineResult ^. Internal.resultModule
       toAnsiText' :: forall a. (HasAnsiBackend a, HasTextBackend a) => a -> Text
       toAnsiText' = toAnsiText (not (globalOpts ^. globalNoColors))
