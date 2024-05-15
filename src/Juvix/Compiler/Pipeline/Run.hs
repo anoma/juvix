@@ -18,7 +18,7 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qualified as Typed
 import Juvix.Compiler.Pipeline
 import Juvix.Compiler.Pipeline.Artifacts.PathResolver
-import Juvix.Compiler.Pipeline.Driver
+import Juvix.Compiler.Pipeline.Driver qualified as DriverSeq
 import Juvix.Compiler.Pipeline.Loader.PathResolver
 import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
@@ -44,13 +44,16 @@ runPipelineHighlight entry = fmap fst . runIOEitherHelper entry
 
 runPipelineHtmlEither :: forall r. (Members '[TaggedLock, EmbedIO] r) => EntryPoint -> Sem r (Either JuvixError (Typed.InternalTypedResult, [Typed.InternalTypedResult]))
 runPipelineHtmlEither entry = do
-  x <- runIOEitherPipeline' entry $ entrySetup defaultDependenciesConfig >> processRecursiveUpToTyped
-  return $ mapRight snd $ snd x
+  x <- runIOEitherPipeline' entry $ do
+    entrySetup defaultDependenciesConfig
+    DriverSeq.processRecursiveUpToTyped
+  return . mapRight snd $ snd x
 
 runIOEitherHelper :: forall a r. (Members '[TaggedLock, EmbedIO] r) => EntryPoint -> Sem (PipelineEff r) a -> Sem r (HighlightInput, (Either JuvixError (ResolverState, PipelineResult a)))
 runIOEitherHelper entry a = do
-  runIOEitherPipeline' entry $
-    entrySetup defaultDependenciesConfig >> processFileUpTo a
+  runIOEitherPipeline' entry $ do
+    entrySetup defaultDependenciesConfig
+    DriverSeq.processFileUpTo a
 
 runIOEitherPipeline ::
   forall a r.
@@ -107,7 +110,7 @@ runIOEitherPipeline' entry a = do
     . runDependencyResolver
     . runPathResolverInput
     . runTopModuleNameChecker
-    . evalModuleInfoCache
+    . DriverSeq.evalModuleInfoCache
     $ a
 
 mainIsPackageFile :: EntryPoint -> Bool
@@ -178,8 +181,10 @@ runReplPipelineIOEither' lockMode entry = do
       . runDependencyResolver
       . runPathResolver'
       . runTopModuleNameChecker
-      . evalModuleInfoCache
-      $ entrySetup defaultDependenciesConfig >> processFileToStoredCore entry
+      . DriverSeq.evalModuleInfoCache
+      $ do
+        entrySetup defaultDependenciesConfig
+        DriverSeq.processFileToStoredCore entry
   return $ case eith of
     Left err -> Left err
     Right (art, PipelineResult {..}) ->
