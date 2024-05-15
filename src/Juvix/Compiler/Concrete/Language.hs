@@ -2807,7 +2807,6 @@ instance IsApe Expression ApeLeaf where
     ExpressionParensIdentifier {} -> leaf
     ExpressionIdentifier {} -> leaf
     ExpressionList {} -> leaf
-    -- TODO: toApe?
     ExpressionCase {} -> leaf
     ExpressionIf {} -> leaf
     ExpressionLambda {} -> leaf

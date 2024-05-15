@@ -31,6 +31,13 @@ import Juvix.Prelude hiding ((<+>), (<+?>), (<?+>), (?<>))
 import Juvix.Prelude.Pretty (annotate, pretty)
 import Juvix.Prelude.Pretty qualified as P
 
+--- An expression is `Top` if it is:
+--- * immediately at the top of a function definition,
+--- * the body of a `Top` let expression,
+--- * the else branch body of a `Top` if expression,
+--- * the last branch body of a `Top` case expresssion.
+data IsTop = Top | NotTop
+
 type PrettyPrinting a = forall r. (Members '[ExactPrint, Reader Options] r) => a -> Sem r ()
 
 class PrettyPrint a where
@@ -123,9 +130,9 @@ ppTopExpressionType :: forall s. (SingI s) => PrettyPrinting (ExpressionType s)
 ppTopExpressionType e = case sing :: SStage s of
   SParsed -> ppCode e
   SScoped -> case e of
-    ExpressionLet l -> ppLet True l
-    ExpressionCase c -> ppCase True c
-    ExpressionIf i -> ppIf True i
+    ExpressionLet l -> ppLet Top l
+    ExpressionCase c -> ppCase Top c
+    ExpressionIf i -> ppIf Top i
     _ -> ppCode e
 
 ppExpressionAtomType :: forall s. (SingI s) => PrettyPrinting (ExpressionType s)
@@ -351,9 +358,9 @@ instance (SingI s) => PrettyPrint (ExpressionAtom s) where
   ppCode = \case
     AtomIdentifier n -> ppIdentifierType n
     AtomLambda l -> ppCode l
-    AtomLet lb -> ppLet False lb
-    AtomCase c -> ppCase False c
-    AtomIf c -> ppIf False c
+    AtomLet lb -> ppLet NotTop lb
+    AtomCase c -> ppCase NotTop c
+    AtomIf c -> ppIf NotTop c
     AtomList l -> ppCode l
     AtomUniverse uni -> ppCode uni
     AtomRecordUpdate u -> ppCode u
@@ -511,38 +518,43 @@ instance (SingI s) => PrettyPrint (LetStatement s) where
     LetAliasDef f -> ppCode f
     LetOpen f -> ppCode f
 
-ppLet :: forall r s. (Members '[ExactPrint, Reader Options] r, SingI s) => Bool -> Let s -> Sem r ()
+ppMaybeTopExpression :: (Members '[ExactPrint, Reader Options] r, SingI s) => IsTop -> ExpressionType s -> Sem r ()
+ppMaybeTopExpression isTop e = case isTop of
+  Top -> ppTopExpressionType e
+  NotTop -> ppExpressionType e
+
+ppLet :: forall r s. (Members '[ExactPrint, Reader Options] r, SingI s) => IsTop -> Let s -> Sem r ()
 ppLet isTop Let {..} = do
   let letFunDefs' = blockIndent (ppBlock _letFunDefs)
-      letExpression' = if isTop then ppTopExpressionType _letExpression else ppExpressionType _letExpression
+      letExpression' = ppMaybeTopExpression isTop _letExpression
   align $ ppCode _letKw <> letFunDefs' <> ppCode _letInKw <+> letExpression'
 
-ppCaseBranch :: forall r s. (Members '[ExactPrint, Reader Options] r, SingI s) => Bool -> CaseBranch s -> Sem r ()
+ppCaseBranch :: forall r s. (Members '[ExactPrint, Reader Options] r, SingI s) => IsTop -> CaseBranch s -> Sem r ()
 ppCaseBranch isTop CaseBranch {..} = do
   let pat' = ppPatternParensType _caseBranchPattern
-      e' = if isTop then ppTopExpressionType _caseBranchExpression else ppExpressionType _caseBranchExpression
+      e' = ppMaybeTopExpression isTop _caseBranchExpression
   pat' <+> ppCode _caseBranchAssignKw <> oneLineOrNext e'
 
-ppCase :: forall r s. (Members '[ExactPrint, Reader Options] r, SingI s) => Bool -> Case s -> Sem r ()
+ppCase :: forall r s. (Members '[ExactPrint, Reader Options] r, SingI s) => IsTop -> Case s -> Sem r ()
 ppCase isTop Case {..} = do
   let exp' = ppExpressionType _caseExpression
   align $ ppCode _caseKw <> oneLineOrNextBlock exp' <> ppCode _caseOfKw <> ppBranches _caseBranches
   where
     ppBranches :: NonEmpty (CaseBranch s) -> Sem r ()
     ppBranches = \case
-      b :| []
-        | isTop -> oneLineOrNext (ppCaseBranch' True True b)
-        | otherwise -> space <> oneLineOrNextBraces (ppCaseBranch' True False b)
-      _
-        | isTop -> do
-            let brs =
-                  vsepHard (ppCaseBranch' False False <$> NonEmpty.init _caseBranches)
-                    <> hardline
-                    <> ppCaseBranch' False True (NonEmpty.last _caseBranches)
-            hardline <> indent brs
-        | otherwise -> space <> braces (blockIndent (vsepHard (ppCaseBranch' False False <$> _caseBranches)))
+      b :| [] -> case isTop of
+        Top -> oneLineOrNext (ppCaseBranch' True Top b)
+        NotTop -> space <> oneLineOrNextBraces (ppCaseBranch' True NotTop b)
+      _ -> case isTop of
+        Top -> do
+          let brs =
+                vsepHard (ppCaseBranch' False NotTop <$> NonEmpty.init _caseBranches)
+                  <> hardline
+                  <> ppCaseBranch' False Top (NonEmpty.last _caseBranches)
+          hardline <> indent brs
+        NotTop -> space <> braces (blockIndent (vsepHard (ppCaseBranch' False NotTop <$> _caseBranches)))
 
-    ppCaseBranch' :: Bool -> Bool -> CaseBranch s -> Sem r ()
+    ppCaseBranch' :: Bool -> IsTop -> CaseBranch s -> Sem r ()
     ppCaseBranch' singleBranch lastTopBranch b = pipeHelper <?+> ppCaseBranch lastTopBranch b
       where
         pipeHelper :: Maybe (Sem r ())
@@ -558,12 +570,12 @@ instance (SingI s) => PrettyPrint (IfBranch s) where
         e' = ppExpressionType _ifBranchExpression
     cond' <+> ppCode _ifBranchAssignKw <> oneLineOrNext e'
 
-ppIfBranchElse :: forall r s. (Members '[ExactPrint, Reader Options] r, SingI s) => Bool -> IfBranchElse s -> Sem r ()
+ppIfBranchElse :: forall r s. (Members '[ExactPrint, Reader Options] r, SingI s) => IsTop -> IfBranchElse s -> Sem r ()
 ppIfBranchElse isTop IfBranchElse {..} = do
-  let e' = if isTop then ppTopExpressionType _ifBranchElseExpression else ppExpressionType _ifBranchElseExpression
+  let e' = ppMaybeTopExpression isTop _ifBranchElseExpression
   ppCode _ifBranchElseKw <+> ppCode _ifBranchElseAssignKw <> oneLineOrNext e'
 
-ppIf :: forall r s. (Members '[ExactPrint, Reader Options] r, SingI s) => Bool -> If s -> Sem r ()
+ppIf :: forall r s. (Members '[ExactPrint, Reader Options] r, SingI s) => IsTop -> If s -> Sem r ()
 ppIf isTop If {..} = do
   ppCode _ifKw <+> hardline <> indent (vsepHard (ppIfBranch <$> _ifBranches) <> hardline <> ppIfBranchElse' _ifBranchElse)
   where
@@ -803,12 +815,12 @@ instance PrettyPrint Expression where
     ExpressionInfixApplication a -> ppCode a
     ExpressionPostfixApplication a -> ppCode a
     ExpressionLambda l -> ppCode l
-    ExpressionLet lb -> ppLet False lb
+    ExpressionLet lb -> ppLet NotTop lb
     ExpressionUniverse u -> ppCode u
     ExpressionLiteral l -> ppCode l
     ExpressionFunction f -> ppCode f
-    ExpressionCase c -> ppCase False c
-    ExpressionIf c -> ppIf False c
+    ExpressionCase c -> ppCase NotTop c
+    ExpressionIf c -> ppIf NotTop c
     ExpressionIterator i -> ppCode i
     ExpressionNamedApplication i -> ppCode i
     ExpressionNamedApplicationNew i -> ppCode i
