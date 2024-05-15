@@ -19,7 +19,7 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qualified as Typed
 import Juvix.Compiler.Pipeline
 import Juvix.Compiler.Pipeline.Artifacts.PathResolver
-import Juvix.Compiler.Pipeline.Driver qualified as Driver
+import Juvix.Compiler.Pipeline.Driver qualified as DriverSeq
 import Juvix.Compiler.Pipeline.DriverParallel qualified as DriverPar
 import Juvix.Compiler.Pipeline.Loader.PathResolver
 import Juvix.Compiler.Pipeline.Package.Loader.Error
@@ -32,6 +32,7 @@ import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process
 import Juvix.Data.Effect.TaggedLock
 import Juvix.Prelude
+import Juvix.Compiler.Pipeline.ImportParents (ImportParents)
 
 -- | It returns `ResolverState` so that we can retrieve the `juvix.yaml` files,
 -- which we require for `Scope` tests.
@@ -46,13 +47,21 @@ runPipelineHighlight entry = fmap fst . runIOEitherHelper entry
 
 runPipelineHtmlEither :: forall r. (Members '[TaggedLock, EmbedIO] r) => EntryPoint -> Sem r (Either JuvixError (Typed.InternalTypedResult, [Typed.InternalTypedResult]))
 runPipelineHtmlEither entry = do
-  x <- runIOEitherPipeline' entry $ entrySetup defaultDependenciesConfig >> Driver.processRecursiveUpToTyped
+  x <- runIOEitherPipeline' entry $ do
+    entrySetup defaultDependenciesConfig
+    DriverSeq.processRecursiveUpToTyped
   return $ mapRight snd $ snd x
 
-runIOEitherHelper :: forall a r. (Members '[TaggedLock, EmbedIO] r) => EntryPoint -> Sem (PipelineEff r) a -> Sem r (HighlightInput, (Either JuvixError (ResolverState, PipelineResult a)))
+runIOEitherHelper ::
+  forall a r.
+  (Members '[TaggedLock, EmbedIO] r) =>
+  EntryPoint ->
+  Sem (PipelineEff r) a ->
+  Sem r (HighlightInput, (Either JuvixError (ResolverState, PipelineResult a)))
 runIOEitherHelper entry a = do
-  runIOEitherPipeline' entry $
-    entrySetup defaultDependenciesConfig >> DriverPar.processFileUpTo a
+  runIOEitherPipeline' entry $ do
+    entrySetup defaultDependenciesConfig
+    DriverSeq.processFileUpTo a
 
 runIOEitherPipeline ::
   forall a r.
@@ -93,6 +102,7 @@ runIOEitherPipeline' ::
   Sem r (HighlightInput, (Either JuvixError (ResolverState, a)))
 runIOEitherPipeline' entry a = do
   let hasInternet = not (entry ^. entryPointOffline)
+  -- runConcurrent
   evalInternet hasInternet
     . runHighlightBuilder
     . runJuvixError
@@ -107,8 +117,9 @@ runIOEitherPipeline' entry a = do
     . runEvalFileEffIO
     . runDependencyResolver
     . runPathResolverInput
+    . runReader (undefined :: ImportParents)
     . runTopModuleNameChecker
-    . Driver.evalModuleInfoCache
+    . DriverSeq.evalModuleInfoCache
     $ a
 
 mainIsPackageFile :: EntryPoint -> Bool
@@ -160,6 +171,7 @@ runReplPipelineIOEither' lockMode entry = do
         | otherwise = runPathResolverArtifacts
   eith <-
     runM
+      . runConcurrent
       . evalInternet hasInternet
       . ignoreHighlightBuilder
       . runError
@@ -179,9 +191,10 @@ runReplPipelineIOEither' lockMode entry = do
       . runDependencyResolver
       . runPathResolver'
       . runTopModuleNameChecker
-      . Driver.evalModuleInfoCache
+      . DriverSeq.evalModuleInfoCache
       . runReader defaultImportScanStrategy
       . withImportTree (entry ^. entryPointModulePath)
+      . DriverPar.compileInParallel
       $ do
         entrySetup defaultDependenciesConfig
         DriverPar.processFileToStoredCore entry

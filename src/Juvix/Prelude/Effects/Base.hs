@@ -15,7 +15,7 @@ where
 import Data.Kind qualified as GHC
 import Effectful hiding (Eff, (:>))
 import Effectful qualified as E
-import Effectful.Concurrent
+import Effectful.Concurrent hiding (yield)
 import Effectful.Dispatch.Dynamic (LocalEnv, SharedSuffix, impose, interpose, localLift, localLiftUnlift, localLiftUnliftIO, localSeqLift, localSeqUnlift, localSeqUnliftIO, localUnlift, localUnliftIO, withLiftMap, withLiftMapIO)
 import Effectful.Dispatch.Dynamic qualified as E
 import Effectful.Dispatch.Static

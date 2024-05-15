@@ -205,12 +205,12 @@ processModule (EntryIndex entry) = do
           . fromJust
           $ stripProperPrefix $(mkAbsDir "/") sourcePath
       absPath = buildDir Path.</> relPath
-  traceM $
-    "File = "
-      <> pack (toFilePath sourcePath)
-      <> "\n"
-      <> "Root = "
-      <> pack (toFilePath (entry ^. entryPointRoot))
+  -- traceM $
+  --   "File = "
+  --     <> pack (toFilePath sourcePath)
+  --     <> "\n"
+  --     <> "Root = "
+  --     <> pack (toFilePath (entry ^. entryPointRoot))
   -- traceM ("Node = " <> show (entryPointNode entry))
   sha256 <- SHA256.digestFile sourcePath
   m :: Maybe Store.ModuleInfo <- loadFromFile absPath

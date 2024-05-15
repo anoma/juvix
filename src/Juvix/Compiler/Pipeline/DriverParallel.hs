@@ -1,7 +1,8 @@
 module Juvix.Compiler.Pipeline.DriverParallel
-  ( processFileUpTo,
+  ( module Juvix.Compiler.Pipeline.DriverParallel.Base,
+    processFileUpTo,
+    compileInParallel,
     processFileToStoredCore,
-    processModuleParallel,
     ModuleInfoCache,
     evalModuleInfoCache,
   )
@@ -21,6 +22,7 @@ import Juvix.Compiler.Core.Translation.FromInternal.Data.Context qualified as Co
 import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as InternalTyped
 import Juvix.Compiler.Pipeline
+import Juvix.Compiler.Pipeline.DriverParallel.Base
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Data
 import Juvix.Compiler.Pipeline.ModuleInfoCache
 import Juvix.Compiler.Store.Core.Extra
@@ -34,8 +36,6 @@ import Juvix.Extra.Serialize
 import Juvix.Prelude
 import Parallel.ParallelTemplate
 import Path.Posix qualified as Path
-
-type ImportsAccess = Reader (HashMap (Path Abs File) (PipelineResult Store.ModuleInfo))
 
 data CompileResult = CompileResult
   { _compileResultModuleTable :: Store.ModuleTable,
@@ -93,7 +93,7 @@ compileNode k = runReader k . processModule
 getNodeName :: Node -> Text
 getNodeName (EntryIndex e) = show (fromJust (e ^. entryPointModulePath))
 
-processModuleParallel ::
+compileInParallel ::
   ( Members
       '[ Concurrent,
          IOE,
@@ -107,9 +107,9 @@ processModuleParallel ::
        ]
       r
   ) =>
-  Path Abs File ->
-  Sem r CompileProof
-processModuleParallel m = do
+  Sem (ImportsAccess ': r) a ->
+  Sem r a
+compileInParallel m = do
   e <- ask
   t <- ask
   res <-
@@ -121,7 +121,7 @@ processModuleParallel m = do
           _compileArgsNumWorkers = 4,
           _compileArgsCompileNode = compileNode
         }
-  return (fromJust (res ^. at m))
+  runReader res m
 
 instance Semigroup CompileResult where
   sconcat l =
@@ -139,14 +139,38 @@ instance Monoid CompileResult where
 
 evalModuleInfoCache ::
   forall r a.
-  (Members '[Reader ImportTree, ImportsAccess, TaggedLock, TopModuleNameChecker, Error JuvixError, Files] r) =>
-  Sem (ModuleInfoCache ': r) a ->
+  ( Members
+      '[ Reader EntryPoint,
+         IOE,
+         Concurrent,
+         Reader ImportTree,
+         ImportsAccess,
+         TaggedLock,
+         TopModuleNameChecker,
+         Error JuvixError,
+         Files
+       ]
+      r
+  ) =>
+  Sem (ImportsAccess ': ModuleInfoCache ': r) a ->
   Sem r a
-evalModuleInfoCache = evalCacheEmpty processModule
+evalModuleInfoCache = evalCacheEmpty processModule . compileInParallel
 
 processFileUpTo ::
   forall r a.
-  (Members '[Reader ImportTree, ImportsAccess, TaggedLock, TopModuleNameChecker, HighlightBuilder, Reader EntryPoint, Error JuvixError, Files, ModuleInfoCache] r) =>
+  ( Members
+      '[ Reader ImportTree,
+         ImportsAccess,
+         TaggedLock,
+         TopModuleNameChecker,
+         HighlightBuilder,
+         Reader EntryPoint,
+         Error JuvixError,
+         Files,
+         ModuleInfoCache
+       ]
+      r
+  ) =>
   Sem (Reader Parser.ParserResult ': Reader Store.ModuleTable ': NameIdGen ': r) a ->
   Sem r (PipelineResult a)
 processFileUpTo a = do

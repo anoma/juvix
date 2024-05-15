@@ -33,6 +33,7 @@ import Juvix.Compiler.Internal qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 import Juvix.Compiler.Nockma.Translation.FromTree qualified as NockmaTree
 import Juvix.Compiler.Pipeline.Artifacts
+import Juvix.Compiler.Pipeline.DriverParallel.Base
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Pipeline.ImportParents
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Base
@@ -56,6 +57,7 @@ type PipelineAppEffects = '[TaggedLock, EmbedIO]
 
 type PipelineLocalEff =
   '[ ModuleInfoCache,
+     ImportsAccess,
      Reader ImportParents,
      TopModuleNameChecker,
      PathResolver,
@@ -71,16 +73,18 @@ type PipelineLocalEff =
      Files,
      Error JuvixError,
      HighlightBuilder,
-     Internet
+     Internet,
+     Concurrent
    ]
 
 type PipelineEff' r = PipelineLocalEff ++ r
 
 type PipelineEff r =
-  Reader Parser.ParserResult
-    ': Reader Store.ModuleTable
-    ': NameIdGen
-    ': PipelineEff' r
+  '[ Reader Parser.ParserResult,
+     Reader Store.ModuleTable,
+     NameIdGen
+   ]
+    ++ PipelineEff' r
 
 --------------------------------------------------------------------------------
 -- Workflows from source
