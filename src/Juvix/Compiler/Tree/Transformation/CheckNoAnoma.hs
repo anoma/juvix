@@ -13,6 +13,7 @@ checkNoAnoma = walkT checkNode
       Unop NodeUnop {..} -> case _nodeUnopOpcode of
         OpAnomaGet -> unsupportedErr "OpAnomaGet"
         OpAnomaEncode -> unsupportedErr "OpAnomaEncode"
+        OpAnomaDecode -> unsupportedErr "OpAnomaDecode"
         OpFail -> return ()
         OpTrace -> return ()
         PrimUnop {} -> return ()

@@ -427,6 +427,7 @@ compile = \case
         Tree.OpTrace -> goTrace arg
         Tree.OpAnomaGet -> goAnomaGet arg
         Tree.OpAnomaEncode -> goAnomaEncode arg
+        Tree.OpAnomaDecode -> goAnomaDecode arg
 
     goPrimUnop :: Tree.UnaryOp -> Term Natural -> Term Natural
     goPrimUnop op arg = case op of
@@ -445,6 +446,9 @@ compile = \case
 
     goAnomaEncode :: Term Natural -> Sem r (Term Natural)
     goAnomaEncode arg = return (callStdlib StdlibEncode [arg])
+
+    goAnomaDecode :: Term Natural -> Sem r (Term Natural)
+    goAnomaDecode arg = return (callStdlib StdlibDecode [arg])
 
     goTrace :: Term Natural -> Sem r (Term Natural)
     goTrace arg = do

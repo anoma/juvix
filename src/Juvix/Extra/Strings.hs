@@ -332,6 +332,9 @@ anomaGet = "anoma-get"
 anomaEncode :: (IsString s) => s
 anomaEncode = "anoma-encode"
 
+anomaDecode :: (IsString s) => s
+anomaDecode = "anoma-decode"
+
 builtinSeq :: (IsString s) => s
 builtinSeq = "seq"
 

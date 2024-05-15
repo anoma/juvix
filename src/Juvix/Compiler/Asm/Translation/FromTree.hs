@@ -235,6 +235,7 @@ genCode fi =
       Tree.OpFail -> mkInstr Failure
       Tree.OpAnomaGet -> impossible
       Tree.OpAnomaEncode -> impossible
+      Tree.OpAnomaDecode -> impossible
 
     snocReturn :: Bool -> Code' -> Code'
     snocReturn True code = DL.snoc code (mkInstr Return)

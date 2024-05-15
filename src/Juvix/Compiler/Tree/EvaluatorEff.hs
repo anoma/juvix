@@ -71,6 +71,7 @@ eval tab = runReader emptyEvalCtx . eval'
             OpFail -> goFail v
             OpAnomaGet -> evalError "Unsupported op: OpAnomaGet"
             OpAnomaEncode -> evalError "Unsupported op: OpAnomaEncode"
+            OpAnomaDecode -> evalError "Unsupported op: OpAnomaDecode"
 
         goFail :: Value -> Sem r' Value
         goFail v = evalError ("failure: " <> printValue tab v)

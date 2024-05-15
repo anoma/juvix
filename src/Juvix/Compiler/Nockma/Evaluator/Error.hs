@@ -6,6 +6,7 @@ module Juvix.Compiler.Nockma.Evaluator.Error
 where
 
 import Data.HashMap.Strict qualified as HashMap
+import Juvix.Compiler.Nockma.Encoding
 import Juvix.Compiler.Nockma.Evaluator.Crumbs
 import Juvix.Compiler.Nockma.Evaluator.Storage
 import Juvix.Compiler.Nockma.Language
@@ -22,6 +23,7 @@ data NockEvalError a
   | -- TODO perhaps this should be a repl error type
     ErrAssignmentNotFound Text
   | ErrKeyNotInStorage (KeyNotInStorage a)
+  | ErrDecodingFailed (DecodingFailed a)
 
 newtype GenericNockEvalError = GenericNockEvalError
   { _genericNockEvalErrorMessage :: AnsiText
@@ -57,6 +59,12 @@ data InvalidNockOp a = InvalidNockOp
   }
 
 data NoStack = NoStack
+
+data DecodingFailed a = DecodingFailed
+  { _decodingFailedCtx :: EvalCtx,
+    _decodingFailedTerm :: Term a,
+    _decodingFailedReason :: DecodingError
+  }
 
 throwInvalidNockOp :: (Members '[Error (NockEvalError a), Reader EvalCtx] r) => Atom a -> Sem r x
 throwInvalidNockOp a = do
@@ -109,6 +117,17 @@ throwKeyNotInStorage k = do
           _keyNotInStorageStorage = s
         }
 
+throwDecodingFailed :: (Members '[Error (NockEvalError a), Reader EvalCtx] r) => Term a -> DecodingError -> Sem r x
+throwDecodingFailed a e = do
+  ctx <- ask
+  throw $
+    ErrDecodingFailed
+      DecodingFailed
+        { _decodingFailedCtx = ctx,
+          _decodingFailedTerm = a,
+          _decodingFailedReason = e
+        }
+
 instance PrettyCode NoStack where
   ppCode _ = return "Missing stack"
 
@@ -152,6 +171,13 @@ instance (PrettyCode a, NockNatural a) => PrettyCode (KeyNotInStorage a) where
         pt2 <- ppCode t2
         return (pt1 <+> ":=" <+> pt2)
 
+instance (PrettyCode a, NockNatural a) => PrettyCode (DecodingFailed a) where
+  ppCode DecodingFailed {..} = do
+    t <- ppCode _decodingFailedTerm
+    ctx <- ppCtx _decodingFailedCtx
+    r <- ppCode _decodingFailedReason
+    return (ctx <> "Decoding the term" <+> t <+> "failed with reason:" <> line <> r)
+
 instance (PrettyCode a, NockNatural a) => PrettyCode (NockEvalError a) where
   ppCode = \case
     ErrInvalidPath e -> ppCode e
@@ -161,3 +187,4 @@ instance (PrettyCode a, NockNatural a) => PrettyCode (NockEvalError a) where
     ErrNoStack e -> ppCode e
     ErrAssignmentNotFound e -> return (pretty e)
     ErrKeyNotInStorage e -> ppCode e
+    ErrDecodingFailed e -> ppCode e

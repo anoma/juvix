@@ -56,6 +56,7 @@ module Juvix.Prelude.Base.Foundation
     module Text.Show,
     module Control.Monad.Catch,
     module Control.Monad.Zip,
+    module Control.DeepSeq,
     Data,
     Text,
     pack,
@@ -73,6 +74,7 @@ module Juvix.Prelude.Base.Foundation
 where
 
 import Control.Applicative
+import Control.DeepSeq (NFData)
 import Control.Monad.Catch (ExitCase (..), MonadMask, MonadThrow, generalBracket, throwM)
 import Control.Monad.Extra hiding (fail, forM, mconcatMapM, whileJustM)
 import Control.Monad.Extra qualified as Monad

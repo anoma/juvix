@@ -247,6 +247,7 @@ instance PrettyCode UnaryOpcode where
     OpFail -> return $ primitive Str.instrFailure
     OpAnomaGet -> return $ primitive Str.anomaGet
     OpAnomaEncode -> return $ primitive Str.anomaEncode
+    OpAnomaDecode -> return $ primitive Str.anomaDecode
 
 instance PrettyCode NodeUnop where
   ppCode NodeUnop {..} = do

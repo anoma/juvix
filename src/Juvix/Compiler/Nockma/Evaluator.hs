@@ -7,6 +7,7 @@ module Juvix.Compiler.Nockma.Evaluator
 where
 
 import Data.HashMap.Strict qualified as HashMap
+import Juvix.Compiler.Nockma.Encoding
 import Juvix.Compiler.Nockma.Encoding qualified as Encoding
 import Juvix.Compiler.Nockma.Evaluator.Error
 import Juvix.Compiler.Nockma.Evaluator.Options
@@ -230,6 +231,11 @@ evalProfile inistack initerm =
             StdlibLe -> binCmp (<=)
             StdlibPow2 -> unaArith (2 ^)
             StdlibEncode -> TermAtom <$> Encoding.jam args'
+            StdlibDecode -> case args' of
+              TermAtom a -> do
+                r <- Encoding.cueEither a
+                either (throwDecodingFailed args') return r
+              TermCell {} -> throwDecodingFailed args' DecodingErrorExpectedAtom
 
         goAutoConsCell :: AutoConsCell a -> Sem r (Term a)
         goAutoConsCell c = do

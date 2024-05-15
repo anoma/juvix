@@ -549,5 +549,16 @@ allTests =
         $(mkRelDir ".")
         $(mkRelFile "test075.juvix")
         []
-        $ checkNatOutput [2, 84081, 4657, 12]
+        $ checkNatOutput [2, 84081, 4657, 12],
+      mkAnomaCallTest
+        "Test076: Anoma decode"
+        $(mkRelDir ".")
+        $(mkRelFile "test076.juvix")
+        []
+        $ checkOutput
+          [ [nock| 0 |],
+            [nock| [1 2 0] |],
+            [nock| [1 2] |],
+            [nock| false |]
+          ]
     ]
