@@ -91,7 +91,8 @@ runIOEitherPipeline' ::
   Sem r (HighlightInput, (Either JuvixError (ResolverState, a)))
 runIOEitherPipeline' entry a = do
   let hasInternet = not (entry ^. entryPointOffline)
-  evalInternet hasInternet
+  runConcurrent
+    . evalInternet hasInternet
     . runHighlightBuilder
     . runJuvixError
     . runFilesIO

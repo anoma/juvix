@@ -71,7 +71,8 @@ type PipelineLocalEff =
      Files,
      Error JuvixError,
      HighlightBuilder,
-     Internet
+     Internet,
+     Concurrent
    ]
 
 type PipelineEff' r = PipelineLocalEff ++ r
