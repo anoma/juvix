@@ -25,6 +25,7 @@ import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context qualified a
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as InternalTyped
 import Juvix.Compiler.Internal.Translation.FromInternal.Data (InternalTypedResult)
 import Juvix.Compiler.Pipeline
+import Juvix.Compiler.Pipeline.DriverParallel.Base
 import Juvix.Compiler.Pipeline.ImportParents
 import Juvix.Compiler.Pipeline.Loader.PathResolver
 import Juvix.Compiler.Pipeline.ModuleInfoCache
@@ -61,12 +62,13 @@ instance Monoid CompileResult where
         _compileResultModuleTable = mempty
       }
 
+-- TODO ImportsAccess makes no sense here
 evalModuleInfoCache ::
   forall r a.
   (Members '[TaggedLock, TopModuleNameChecker, Error JuvixError, Files, PathResolver] r) =>
-  Sem (ModuleInfoCache ': Reader ImportParents ': r) a ->
+  Sem (ImportsAccess ': ModuleInfoCache ': Reader ImportParents ': r) a ->
   Sem r a
-evalModuleInfoCache = runReader @ImportParents mempty . evalCacheEmpty processModule
+evalModuleInfoCache = runReader @ImportParents mempty . evalCacheEmpty processModule . runReader mempty
 
 processFileUpToParsing ::
   forall r.

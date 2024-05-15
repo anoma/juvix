@@ -23,6 +23,7 @@ import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context qualified a
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as InternalTyped
 import Juvix.Compiler.Pipeline
 import Juvix.Compiler.Pipeline.DriverParallel.Base
+import Juvix.Compiler.Pipeline.ImportParents (ImportParents)
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Data
 import Juvix.Compiler.Pipeline.ModuleInfoCache
 import Juvix.Compiler.Store.Core.Extra
@@ -137,6 +138,7 @@ instance Monoid CompileResult where
         _compileResultModuleTable = mempty
       }
 
+-- TODO there must be a more elegant way to handle this
 evalModuleInfoCache ::
   forall r a.
   ( Members
@@ -152,9 +154,9 @@ evalModuleInfoCache ::
        ]
       r
   ) =>
-  Sem (ImportsAccess ': ModuleInfoCache ': r) a ->
+  Sem (ImportsAccess ': ModuleInfoCache ': Reader ImportParents ': r) a ->
   Sem r a
-evalModuleInfoCache = evalCacheEmpty processModule . compileInParallel
+evalModuleInfoCache = runReader @ImportParents mempty . evalCacheEmpty processModule . compileInParallel
 
 processFileUpTo ::
   forall r a.

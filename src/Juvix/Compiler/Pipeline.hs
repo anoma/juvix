@@ -33,6 +33,7 @@ import Juvix.Compiler.Internal qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 import Juvix.Compiler.Nockma.Translation.FromTree qualified as NockmaTree
 import Juvix.Compiler.Pipeline.Artifacts
+import Juvix.Compiler.Pipeline.DriverParallel.Base
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Pipeline.ImportParents
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Base
@@ -55,7 +56,8 @@ import Juvix.Data.Field
 type PipelineAppEffects = '[TaggedLock, EmbedIO]
 
 type PipelineLocalEff =
-  '[ ModuleInfoCache,
+  '[ ImportsAccess,
+     ModuleInfoCache,
      Reader ImportParents,
      TopModuleNameChecker,
      PathResolver,
