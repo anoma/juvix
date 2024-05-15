@@ -7,4 +7,6 @@ entrySetup ::
   (Member PathResolver r) =>
   DependenciesConfig ->
   Sem r ()
-entrySetup = registerDependencies
+entrySetup = do
+  traceM "entrySetup"
+  registerDependencies

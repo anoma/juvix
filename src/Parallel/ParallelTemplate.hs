@@ -110,7 +110,9 @@ nodeDependencies deps m = fromMaybe mempty (deps ^. dependenciesTable . at m)
 
 compile ::
   forall nodeId node compileProof r.
-  (Hashable nodeId, Members '[IOE, Concurrent] r) =>
+  ( Hashable nodeId,
+    Members '[IOE, Concurrent] r
+  ) =>
   CompileArgs r nodeId node compileProof ->
   Sem r (HashMap nodeId compileProof)
 compile args@CompileArgs {..} = do
@@ -120,7 +122,8 @@ compile args@CompileArgs {..} = do
       starterModules = [m | m <- HashMap.keys (modsIx ^. nodesIndex), null (nodeDependencies deps m)]
 
   logs <- Logs <$> newTQueueIO
-  qq <- newTBQueueIO numMods
+  traceM ("numMods = " <> show numMods)
+  qq <- newTBQueueIO (max 1 numMods)
   let compileQ = CompileQueue qq
   forM_ starterModules (atomically . writeTBQueue qq)
   let iniCompilationState :: CompilationState nodeId compileProof =
@@ -195,15 +198,19 @@ lookForWork = do
   qq <- asks (^. compileQueue)
   stVar <- ask @(TVar (CompilationState nodeId compileProof))
   logs <- ask
+  args <- ask @(CompileArgs s nodeId node compileProof)
+  idx <- ask @(NodesIndex nodeId node)
   tid <- myThreadId
   (compSt, nextModule) <- atomically $ do
-    nextModule <- readTBQueue qq
+    nextModule :: nodeId <- readTBQueue qq
+    let n :: node = run . runReader idx $ getNode nextModule
+        name = (args ^. compileArgsNodeName) n
     compSt <- readTVar stVar
     modifyTVar stVar (over compilationStartedNum succ)
     let num = compSt ^. compilationStartedNum
         total = compSt ^. compilationTotalNum
         progress = "[" <> show (succ num) <> " of " <> show total <> "] "
-    logMsg (Just tid) logs (progress <> "Compiling " <> "TODO module name")
+    logMsg (Just tid) logs (progress <> "Compiling " <> name)
     return (compSt, nextModule)
   compileNode @s @nodeId @node @compileProof compSt nextModule
   lookForWork @nodeId @node @compileProof @s
@@ -245,16 +252,17 @@ compileNode st0 nodId = do
         Just x -> return x
   depsProofs :: HashMap nodeId compileProof <- hashMapFromHashSetM checkDep mdeps
   compileFun <- asks @(CompileArgs s nodeId node compileProof) (^. compileArgsCompileNode)
-  result <- inject (compileFun depsProofs m)
-  registerCompiledModule @nodeId @node nodId result
+  result :: compileProof <- inject (compileFun depsProofs m)
+  registerCompiledModule @nodeId @node @s nodId result
 
 registerCompiledModule ::
-  forall nodeId node compileProof r.
+  forall nodeId node s compileProof r.
   ( Hashable nodeId,
     Members
       '[ Concurrent,
          Reader (NodesIndex nodeId node),
          Reader (Dependencies nodeId),
+         Reader (CompileArgs s nodeId node compileProof),
          Reader (TVar (CompilationState nodeId compileProof)),
          Reader (CompileQueue nodeId),
          Reader Logs
@@ -267,11 +275,13 @@ registerCompiledModule ::
 registerCompiledModule m proof = do
   mutSt <- ask
   deps <- ask
+  n <- getNode @nodeId @node m
+  args <- ask @(CompileArgs s nodeId node compileProof)
   qq <- asks (^. compileQueue)
   tid <- myThreadId
   logs <- ask
   toQueue <- atomically $ do
-    let msg :: Text = "Done compiling " <> "TODO <module name>"
+    let msg :: Text = "Done compiling " <> (args ^. compileArgsNodeName) n
     logMsg (Just tid) logs msg
     (isLast, toQueue) <- stateTVar mutSt (swap . addCompiledModule deps m proof)
     when isLast (logMsg Nothing logs "All work is done!")
@@ -283,5 +293,5 @@ logMsg mtid (Logs q) msg = do
   let threadIdLabel = case mtid of
         Nothing -> ""
         Just tid -> "[" <> show tid <> "] "
-  let msg' = threadIdLabel <> msg
+      msg' = threadIdLabel <> msg
   STM.writeTQueue q msg'

@@ -37,6 +37,8 @@ data PathResolver :: Effect where
   ResolvePath :: ImportScan -> PathResolver m (PackageInfo, FileExt)
   -- | The root is assumed to be a package root.
   WithResolverRoot :: Path Abs Dir -> m a -> PathResolver m a
+  -- TODO ugly af
+  WhichPathResolver :: PathResolver m Bool
 
 makeLenses ''RootInfo
 makeLenses ''PathInfoTopModule

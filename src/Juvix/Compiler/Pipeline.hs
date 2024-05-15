@@ -58,10 +58,8 @@ import Juvix.Data.Field
 type PipelineAppEffects = '[TaggedLock, EmbedIO]
 
 type PipelineLocalEff =
-  '[ ImportsAccess,
-     ModuleInfoCache,
+  '[ ModuleInfoCache,
      Reader ImportParents,
-     Reader ImportTree,
      Reader ImportScanStrategy,
      TopModuleNameChecker,
      PathResolver,

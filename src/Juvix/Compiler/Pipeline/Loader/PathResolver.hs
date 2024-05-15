@@ -18,6 +18,7 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Concrete.Data.Name
+import Juvix.Compiler.Concrete.Print (ppOutDefaultNoComments)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Compiler.Concrete.Translation.ImportScanner
 import Juvix.Compiler.Pipeline.EntryPoint
@@ -364,6 +365,9 @@ mkImportTree ::
   Maybe (Path Abs File) ->
   Sem r ImportTree
 mkImportTree mentrypointModulePath = do
+  traceM ("make import tree starting at " <> show mentrypointModulePath <> "\n")
+  b <- whichPathResolver
+  traceM ("path resolver = " <> show b)
   pkgInfosTable <- getPackageInfos
   let pkgs :: [PackageInfo] = toList pkgInfosTable
       allNodes :: [ImportNode] = concatMap packageNodes pkgs
@@ -381,6 +385,9 @@ mkImportTree mentrypointModulePath = do
       . evalVisitEmpty scanNode
       $ mapM_ visit startingNodes
   checkImportTreeCycles tree
+  traceM ("allNodes " <> show allNodes)
+  traceM ("starting " <> show startingNodes)
+  traceM ("Tree " <> toPlainText (ppOutDefaultNoComments tree))
   return tree
   where
     packageNodes :: PackageInfo -> [ImportNode]
@@ -525,6 +532,7 @@ runPathResolver2 st topEnv arg = do
       PathResolver (Sem localEs) x ->
       Sem (Reader ResolverEnv ': State ResolverState ': Error PathResolverError ': t) x
     handler localEnv = \case
+      WhichPathResolver -> return True
       RegisterDependencies forceUpdateLockfile -> registerDependencies' forceUpdateLockfile
       GetPackageInfos -> gets allPackageInfos
       ExpectedPathInfoTopModule m -> expectedPath' m

@@ -11,7 +11,7 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as P
 import Juvix.Compiler.Concrete.Translation.FromSource.TopModuleNameChecker (TopModuleNameChecker, runTopModuleNameChecker)
-import Juvix.Compiler.Concrete.Translation.ImportScanner (defaultImportScanStrategy)
+import Juvix.Compiler.Concrete.Translation.ImportScanner (ImportScanStrategy, defaultImportScanStrategy)
 import Juvix.Compiler.Core.Data.Module qualified as Core
 import Juvix.Compiler.Core.Translation.FromInternal.Data qualified as Core
 import Juvix.Compiler.Internal.Translation qualified as Internal
@@ -22,7 +22,6 @@ import Juvix.Compiler.Pipeline.Artifacts.PathResolver
 import Juvix.Compiler.Pipeline.Driver (ModuleInfoCache)
 import Juvix.Compiler.Pipeline.Driver qualified as DriverSeq
 import Juvix.Compiler.Pipeline.DriverParallel qualified as DriverPar
-import Juvix.Compiler.Pipeline.DriverParallel.Base
 import Juvix.Compiler.Pipeline.ImportParents (ImportParents)
 import Juvix.Compiler.Pipeline.Loader.PathResolver
 import Juvix.Compiler.Pipeline.Package.Loader.Error
@@ -104,6 +103,7 @@ runIOEitherPipeline' ::
   Sem r (HighlightInput, (Either JuvixError (ResolverState, a)))
 runIOEitherPipeline' entry a = do
   let hasInternet = not (entry ^. entryPointOffline)
+  traceM "runIOEitherPipeline' hey"
   runConcurrent
     . evalInternet hasInternet
     . runHighlightBuilder
@@ -121,8 +121,7 @@ runIOEitherPipeline' entry a = do
     . runPathResolverInput
     . runTopModuleNameChecker
     . runReader defaultImportScanStrategy
-    . withImportTree (entry ^. entryPointModulePath)
-    . DriverSeq.evalModuleInfoCache
+    . evalModuleInfoCacheHelper
     $ a
 
 evalModuleInfoCacheHelper ::
@@ -131,19 +130,26 @@ evalModuleInfoCacheHelper ::
       '[ Reader EntryPoint,
          IOE,
          Concurrent,
-         Reader ImportTree,
-         ImportsAccess,
          TaggedLock,
          TopModuleNameChecker,
          Error JuvixError,
          PathResolver,
+         Reader ImportScanStrategy,
          Files
        ]
       r
   ) =>
-  Sem (ImportsAccess ': ModuleInfoCache ': Reader ImportParents ': r) a ->
+  Sem (ModuleInfoCache ': Reader ImportParents ': r) a ->
   Sem r a
-evalModuleInfoCacheHelper = DriverPar.evalModuleInfoCache
+evalModuleInfoCacheHelper m = do
+  b <- whichPathResolver
+  if
+      | b -> do
+          traceM "using parallel"
+          DriverPar.evalModuleInfoCache m
+      | otherwise -> do
+          traceM "using seq"
+          DriverSeq.evalModuleInfoCache m
 
 mainIsPackageFile :: EntryPoint -> Bool
 mainIsPackageFile entry = case entry ^. entryPointModulePath of
@@ -194,6 +200,7 @@ runReplPipelineIOEither' lockMode entry = do
         | otherwise = runPathResolverArtifacts
   eith <-
     runM
+      . runConcurrent
       . evalInternet hasInternet
       . ignoreHighlightBuilder
       . runError
@@ -213,7 +220,9 @@ runReplPipelineIOEither' lockMode entry = do
       . runDependencyResolver
       . runPathResolver'
       . runTopModuleNameChecker
-      . DriverSeq.evalModuleInfoCache
+      . runReader defaultImportScanStrategy
+      . withImportTree (entry ^. entryPointModulePath)
+      . evalModuleInfoCacheHelper
       $ do
         entrySetup defaultDependenciesConfig
         DriverSeq.processFileToStoredCore entry

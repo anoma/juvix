@@ -14,9 +14,11 @@ import Juvix.Compiler.Concrete.Data.Highlight
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping (getModuleId)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context qualified as Scoper
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error (ScoperError)
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Concrete.Translation.FromSource.Data.ParserState (parserStateImports)
 import Juvix.Compiler.Concrete.Translation.FromSource.TopModuleNameChecker
+import Juvix.Compiler.Concrete.Translation.ImportScanner (ImportScanStrategy)
 import Juvix.Compiler.Core.Data.Module qualified as Core
 import Juvix.Compiler.Core.Translation.FromInternal.Data.Context qualified as Core
 import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context qualified as Internal
@@ -24,7 +26,7 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Da
 import Juvix.Compiler.Pipeline
 import Juvix.Compiler.Pipeline.DriverParallel.Base
 import Juvix.Compiler.Pipeline.ImportParents (ImportParents)
-import Juvix.Compiler.Pipeline.Loader.PathResolver.Data
+import Juvix.Compiler.Pipeline.Loader.PathResolver
 import Juvix.Compiler.Pipeline.ModuleInfoCache
 import Juvix.Compiler.Store.Core.Extra
 import Juvix.Compiler.Store.Extra qualified as Store
@@ -34,6 +36,7 @@ import Juvix.Compiler.Store.Options qualified as StoredOptions
 import Juvix.Data.Effect.TaggedLock
 import Juvix.Data.SHA256 qualified as SHA256
 import Juvix.Extra.Serialize
+import Juvix.Parser.Error (ParserError)
 import Juvix.Prelude
 import Parallel.ParallelTemplate
 import Path.Posix qualified as Path
@@ -81,8 +84,8 @@ compileNode ::
          TaggedLock,
          TopModuleNameChecker,
          Error JuvixError,
-         Files,
-         ModuleInfoCache
+         -- ModuleInfoCache,
+         Files
        ]
       r
   ) =>
@@ -103,7 +106,7 @@ compileInParallel ::
          TopModuleNameChecker,
          Error JuvixError,
          Reader EntryPoint,
-         ModuleInfoCache,
+         -- ModuleInfoCache,
          Reader ImportTree
        ]
       r
@@ -113,10 +116,11 @@ compileInParallel ::
 compileInParallel m = do
   e <- ask
   t <- ask
+  let idx = mkNodesIndex e t
   res <-
     compile
       CompileArgs
-        { _compileArgsNodesIndex = mkNodesIndex e t,
+        { _compileArgsNodesIndex = idx,
           _compileArgsNodeName = getNodeName,
           _compileArgsDependencies = mkDependencies t,
           _compileArgsNumWorkers = 4,
@@ -145,18 +149,29 @@ evalModuleInfoCache ::
       '[ Reader EntryPoint,
          IOE,
          Concurrent,
-         Reader ImportTree,
-         ImportsAccess,
          TaggedLock,
          TopModuleNameChecker,
          Error JuvixError,
+         PathResolver,
+         Reader ImportScanStrategy,
          Files
        ]
       r
   ) =>
-  Sem (ImportsAccess ': ModuleInfoCache ': Reader ImportParents ': r) a ->
+  Sem (ModuleInfoCache ': Reader ImportParents ': r) a ->
   Sem r a
-evalModuleInfoCache = runReader @ImportParents mempty . evalCacheEmpty processModule . compileInParallel
+evalModuleInfoCache m = do
+  e <- ask
+  registerDependencies defaultDependenciesConfig
+  tree <-
+    mapError (JuvixError @ParserError)
+      . mapError (JuvixError @ScoperError)
+      $ mkImportTree (e ^. entryPointModulePath)
+  runReader @ImportParents mempty
+    . runReader tree
+    . compileInParallel
+    . evalCacheEmpty processModule
+    $ inject m
 
 processFileUpTo ::
   forall r a.
@@ -188,7 +203,17 @@ processFileUpTo a = do
 
 processFileUpToParsing ::
   forall r.
-  (Members '[Reader ImportTree, ImportsAccess, HighlightBuilder, TopModuleNameChecker, Error JuvixError, Files, ModuleInfoCache] r) =>
+  ( Members
+      '[ Reader ImportTree,
+         ImportsAccess,
+         HighlightBuilder,
+         TopModuleNameChecker,
+         Error JuvixError,
+         -- ModuleInfoCache,
+         Files
+       ]
+      r
+  ) =>
   EntryPoint ->
   Sem r (PipelineResult Parser.ParserResult)
 processFileUpToParsing entry = do
@@ -209,7 +234,9 @@ processImports ::
 processImports e = do
   tree <- ask @ImportTree
   tbl <- ask @(HashMap (Path Abs File) (PipelineResult Store.ModuleInfo))
-  let deps :: HashSet ImportNode = fromJust (tree ^. importTree . at node)
+  node :: ImportNode <- entryPointNode e
+  let deps :: HashSet ImportNode = fromMaybe err (tree ^. importTree . at node)
+      err :: HashSet ImportNode = error ("unexpected: could not find deps for node " <> show node)
       depsPaths :: [Path Abs File] = (^. importNodeAbsFile) <$> toList deps
       getDep :: Path Abs File -> PipelineResult Store.ModuleInfo
       getDep p = fromJust (tbl ^. at p)
@@ -223,32 +250,34 @@ processImports e = do
       { _compileResultChanged = changed,
         _compileResultModuleTable = mtab
       }
-  where
-    node :: ImportNode
-    node = entryPointNode e
 
-entryPointNode :: EntryPoint -> ImportNode
-entryPointNode e =
-  ImportNode
-    { _importNodePackageRoot = root,
-      _importNodeFile = fromMaybe err (stripProperPrefix root srcFile)
-    }
+entryPointNode :: (Members '[Reader ImportTree] r) => EntryPoint -> Sem r ImportNode
+entryPointNode e = do
+  t <- ask
+  return (fromMaybe (err t) (t ^. importTreeFiles . at srcFile))
   where
-    err :: a
-    err =
+    err :: ImportTree -> a
+    err t =
       error $
-        "unexpected: expected the path of the input file to have the root as prefix\n"
-          <> "root = "
-          <> show root
-          <> "\n"
-          <> "srcFile = "
+        "Could not find srcFile:\n"
           <> show srcFile
-    root = e ^. entryPointRoot
+          <> "in node collection "
+          <> show (t ^. importTreeFiles)
+          <> "\n"
     srcFile = fromJust (e ^. entryPointModulePath)
 
 processFileToStoredCore ::
   forall r.
-  (Members '[Reader ImportTree, ImportsAccess, TopModuleNameChecker, Error JuvixError, Files, ModuleInfoCache] r) =>
+  ( Members
+      '[ Reader ImportTree,
+         ImportsAccess,
+         TopModuleNameChecker,
+         Error JuvixError,
+         -- ModuleInfoCache,
+         Files
+       ]
+      r
+  ) =>
   EntryPoint ->
   Sem r (PipelineResult Core.CoreResult)
 processFileToStoredCore entry = ignoreHighlightBuilder . runReader entry $ do
@@ -263,7 +292,17 @@ processFileToStoredCore entry = ignoreHighlightBuilder . runReader entry $ do
 
 processModule ::
   forall r.
-  (Members '[Reader ImportTree, ImportsAccess, TaggedLock, TopModuleNameChecker, Error JuvixError, Files, ModuleInfoCache] r) =>
+  ( Members
+      '[ Reader ImportTree,
+         ImportsAccess,
+         TaggedLock,
+         TopModuleNameChecker,
+         Error JuvixError,
+         -- ModuleInfoCache,
+         Files
+       ]
+      r
+  ) =>
   EntryIndex ->
   Sem r (PipelineResult Store.ModuleInfo)
 processModule (EntryIndex entry) = do
@@ -307,7 +346,16 @@ processModule (EntryIndex entry) = do
 
 processModuleToStoredCore ::
   forall r.
-  (Members '[Reader ImportTree, ImportsAccess, TopModuleNameChecker, Error JuvixError, Files, ModuleInfoCache] r) =>
+  ( Members
+      '[ Reader ImportTree,
+         ImportsAccess,
+         TopModuleNameChecker,
+         Error JuvixError,
+         -- ModuleInfoCache
+         Files
+       ]
+      r
+  ) =>
   Text ->
   EntryPoint ->
   Sem r (PipelineResult Store.ModuleInfo)

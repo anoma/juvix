@@ -1,6 +1,7 @@
 module Juvix.Compiler.Pipeline.Driver
   ( processFileUpTo,
     processFileToStoredCore,
+    processModule,
     processImport,
     processRecursiveUpToTyped,
     ModuleInfoCache,
@@ -66,9 +67,9 @@ instance Monoid CompileResult where
 evalModuleInfoCache ::
   forall r a.
   (Members '[TaggedLock, TopModuleNameChecker, Error JuvixError, Files, PathResolver] r) =>
-  Sem (ImportsAccess ': ModuleInfoCache ': Reader ImportParents ': r) a ->
+  Sem (ModuleInfoCache ': Reader ImportParents ': r) a ->
   Sem r a
-evalModuleInfoCache = runReader @ImportParents mempty . evalCacheEmpty processModule . runReader mempty
+evalModuleInfoCache = runReader @ImportParents mempty . evalCacheEmpty processModule
 
 processFileUpToParsing ::
   forall r.
@@ -195,10 +196,21 @@ processFileToStoredCore' entry = ignoreHighlightBuilder . runReader entry $ do
 
 processModule ::
   forall r.
-  (Members '[TaggedLock, TopModuleNameChecker, Reader ImportParents, Error JuvixError, Files, PathResolver, ModuleInfoCache] r) =>
+  ( Members
+      '[ TaggedLock,
+         TopModuleNameChecker,
+         Reader ImportParents,
+         Error JuvixError,
+         Files,
+         PathResolver,
+         ModuleInfoCache
+       ]
+      r
+  ) =>
   EntryIndex ->
   Sem r (PipelineResult Store.ModuleInfo)
 processModule (EntryIndex entry) = do
+  traceM "processModule"
   let buildDir = resolveAbsBuildDir root (entry ^. entryPointBuildDir)
       sourcePath = fromJust (entry ^. entryPointModulePath)
       relPath =
@@ -243,25 +255,6 @@ processModule (EntryIndex entry) = do
       res <- processModuleToStoredCore sha256 entry
       saveToFile absPath (res ^. pipelineResult)
       return res
-
-entryPointNode :: EntryPoint -> ImportNode
-entryPointNode e =
-  ImportNode
-    { _importNodePackageRoot = root,
-      _importNodeFile = fromMaybe err (stripProperPrefix root srcFile)
-    }
-  where
-    err :: a
-    err =
-      error $
-        "unexpected: expected the path of the input file to have the root as prefix\n"
-          <> "root = "
-          <> show root
-          <> "\n"
-          <> "srcFile = "
-          <> show srcFile
-    root = e ^. entryPointRoot
-    srcFile = fromJust (e ^. entryPointModulePath)
 
 processModuleToStoredCore ::
   forall r.
