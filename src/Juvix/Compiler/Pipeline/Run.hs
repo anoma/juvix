@@ -11,7 +11,6 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as P
 import Juvix.Compiler.Concrete.Translation.FromSource.TopModuleNameChecker (runTopModuleNameChecker)
-import Juvix.Compiler.Concrete.Translation.ImportScanner (defaultImportScanStrategy)
 import Juvix.Compiler.Core.Data.Module qualified as Core
 import Juvix.Compiler.Core.Translation.FromInternal.Data qualified as Core
 import Juvix.Compiler.Internal.Translation qualified as Internal
@@ -19,8 +18,7 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qualified as Typed
 import Juvix.Compiler.Pipeline
 import Juvix.Compiler.Pipeline.Artifacts.PathResolver
-import Juvix.Compiler.Pipeline.Driver qualified as DriverSeq
-import Juvix.Compiler.Pipeline.DriverParallel qualified as DriverPar
+import Juvix.Compiler.Pipeline.Driver
 import Juvix.Compiler.Pipeline.Loader.PathResolver
 import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
@@ -32,7 +30,6 @@ import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process
 import Juvix.Data.Effect.TaggedLock
 import Juvix.Prelude
-import Juvix.Compiler.Pipeline.ImportParents (ImportParents)
 
 -- | It returns `ResolverState` so that we can retrieve the `juvix.yaml` files,
 -- which we require for `Scope` tests.
@@ -47,21 +44,13 @@ runPipelineHighlight entry = fmap fst . runIOEitherHelper entry
 
 runPipelineHtmlEither :: forall r. (Members '[TaggedLock, EmbedIO] r) => EntryPoint -> Sem r (Either JuvixError (Typed.InternalTypedResult, [Typed.InternalTypedResult]))
 runPipelineHtmlEither entry = do
-  x <- runIOEitherPipeline' entry $ do
-    entrySetup defaultDependenciesConfig
-    DriverSeq.processRecursiveUpToTyped
+  x <- runIOEitherPipeline' entry $ entrySetup defaultDependenciesConfig >> processRecursiveUpToTyped
   return $ mapRight snd $ snd x
 
-runIOEitherHelper ::
-  forall a r.
-  (Members '[TaggedLock, EmbedIO] r) =>
-  EntryPoint ->
-  Sem (PipelineEff r) a ->
-  Sem r (HighlightInput, (Either JuvixError (ResolverState, PipelineResult a)))
+runIOEitherHelper :: forall a r. (Members '[TaggedLock, EmbedIO] r) => EntryPoint -> Sem (PipelineEff r) a -> Sem r (HighlightInput, (Either JuvixError (ResolverState, PipelineResult a)))
 runIOEitherHelper entry a = do
-  runIOEitherPipeline' entry $ do
-    entrySetup defaultDependenciesConfig
-    DriverSeq.processFileUpTo a
+  runIOEitherPipeline' entry $
+    entrySetup defaultDependenciesConfig >> processFileUpTo a
 
 runIOEitherPipeline ::
   forall a r.
@@ -102,7 +91,6 @@ runIOEitherPipeline' ::
   Sem r (HighlightInput, (Either JuvixError (ResolverState, a)))
 runIOEitherPipeline' entry a = do
   let hasInternet = not (entry ^. entryPointOffline)
-  -- runConcurrent
   evalInternet hasInternet
     . runHighlightBuilder
     . runJuvixError
@@ -117,9 +105,8 @@ runIOEitherPipeline' entry a = do
     . runEvalFileEffIO
     . runDependencyResolver
     . runPathResolverInput
-    . runReader (undefined :: ImportParents)
     . runTopModuleNameChecker
-    . DriverSeq.evalModuleInfoCache
+    . evalModuleInfoCache
     $ a
 
 mainIsPackageFile :: EntryPoint -> Bool
@@ -171,7 +158,6 @@ runReplPipelineIOEither' lockMode entry = do
         | otherwise = runPathResolverArtifacts
   eith <-
     runM
-      . runConcurrent
       . evalInternet hasInternet
       . ignoreHighlightBuilder
       . runError
@@ -191,13 +177,8 @@ runReplPipelineIOEither' lockMode entry = do
       . runDependencyResolver
       . runPathResolver'
       . runTopModuleNameChecker
-      . DriverSeq.evalModuleInfoCache
-      . runReader defaultImportScanStrategy
-      . withImportTree (entry ^. entryPointModulePath)
-      . DriverPar.compileInParallel
-      $ do
-        entrySetup defaultDependenciesConfig
-        DriverPar.processFileToStoredCore entry
+      . evalModuleInfoCache
+      $ entrySetup defaultDependenciesConfig >> processFileToStoredCore entry
   return $ case eith of
     Left err -> Left err
     Right (art, PipelineResult {..}) ->
