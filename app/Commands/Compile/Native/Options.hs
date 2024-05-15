@@ -52,10 +52,10 @@ nativeHelperOptions opts =
           | otherwise = nativeReleaseRuntime
           where
             nativeReleaseRuntime :: BS.ByteString
-            nativeReleaseRuntime = $(FE.makeRelativeToProject "runtime/_build.native64/libjuvix.a" >>= FE.embedFile)
+            nativeReleaseRuntime = $(FE.makeRelativeToProject "runtime/c/_build.native64/libjuvix.a" >>= FE.embedFile)
 
             nativeDebugRuntime :: BS.ByteString
-            nativeDebugRuntime = $(FE.makeRelativeToProject "runtime/_build.native64-debug/libjuvix.a" >>= FE.embedFile)
+            nativeDebugRuntime = $(FE.makeRelativeToProject "runtime/c/_build.native64-debug/libjuvix.a" >>= FE.embedFile)
 
     nativeDefaultOutputFile :: Path Abs File -> Path Abs File -> Path Abs File
     nativeDefaultOutputFile inputFile baseOutputFile =

@@ -29,4 +29,4 @@ writeRuntime runtime = do
   mapM_ (uncurry writeHeader) headersDir
   where
     headersDir :: [(Path Rel File, BS.ByteString)]
-    headersDir = map (first relFile) $(FE.makeRelativeToProject "runtime/include" >>= FE.embedDir)
+    headersDir = map (first relFile) $(FE.makeRelativeToProject "runtime/c/include" >>= FE.embedDir)

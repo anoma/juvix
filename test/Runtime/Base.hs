@@ -99,7 +99,7 @@ commonArgs outputFile =
   ]
   where
     runtimeInclude :: FilePath
-    runtimeInclude = $(makeRelativeToProject "runtime/include" >>= strToExp)
+    runtimeInclude = $(makeRelativeToProject "runtime/c/include" >>= strToExp)
 
 native64Args :: Int -> Path Abs File -> Path Abs File -> [String]
 native64Args optLevel outputFile inputFile =
@@ -115,7 +115,7 @@ native64Args optLevel outputFile inputFile =
        ]
   where
     juvixLibraryDir :: FilePath
-    juvixLibraryDir = $(makeRelativeToProject "runtime/_build.native64-debug" >>= strToExp)
+    juvixLibraryDir = $(makeRelativeToProject "runtime/c/_build.native64-debug" >>= strToExp)
 
 wasiArgs :: Int -> Path Abs Dir -> Path Abs File -> Path Abs File -> [String]
 wasiArgs optLevel sysrootPath outputFile inputFile =
@@ -134,4 +134,4 @@ wasiArgs optLevel sysrootPath outputFile inputFile =
        ]
   where
     juvixLibraryDir :: Path Abs Dir
-    juvixLibraryDir = absDir $(makeRelativeToProject "runtime/_build.wasm32-wasi-debug" >>= strToExp)
+    juvixLibraryDir = absDir $(makeRelativeToProject "runtime/c/_build.wasm32-wasi-debug" >>= strToExp)

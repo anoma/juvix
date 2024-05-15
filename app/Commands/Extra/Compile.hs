@@ -58,16 +58,16 @@ prepareRuntime buildDir o = do
     AppTargetCairo -> return ()
   where
     wasiReleaseRuntime :: BS.ByteString
-    wasiReleaseRuntime = $(FE.makeRelativeToProject "runtime/_build.wasm32-wasi/libjuvix.a" >>= FE.embedFile)
+    wasiReleaseRuntime = $(FE.makeRelativeToProject "runtime/c/_build.wasm32-wasi/libjuvix.a" >>= FE.embedFile)
 
     nativeReleaseRuntime :: BS.ByteString
-    nativeReleaseRuntime = $(FE.makeRelativeToProject "runtime/_build.native64/libjuvix.a" >>= FE.embedFile)
+    nativeReleaseRuntime = $(FE.makeRelativeToProject "runtime/c/_build.native64/libjuvix.a" >>= FE.embedFile)
 
     wasiDebugRuntime :: BS.ByteString
-    wasiDebugRuntime = $(FE.makeRelativeToProject "runtime/_build.wasm32-wasi-debug/libjuvix.a" >>= FE.embedFile)
+    wasiDebugRuntime = $(FE.makeRelativeToProject "runtime/c/_build.wasm32-wasi-debug/libjuvix.a" >>= FE.embedFile)
 
     nativeDebugRuntime :: BS.ByteString
-    nativeDebugRuntime = $(FE.makeRelativeToProject "runtime/_build.native64-debug/libjuvix.a" >>= FE.embedFile)
+    nativeDebugRuntime = $(FE.makeRelativeToProject "runtime/c/_build.native64-debug/libjuvix.a" >>= FE.embedFile)
 
     writeRuntime :: BS.ByteString -> Sem r ()
     writeRuntime =
@@ -75,7 +75,7 @@ prepareRuntime buildDir o = do
         . BS.writeFile (toFilePath (buildDir <//> $(mkRelFile "libjuvix.a")))
 
     headersDir :: [(Path Rel File, BS.ByteString)]
-    headersDir = map (first relFile) $(FE.makeRelativeToProject "runtime/include" >>= FE.embedDir)
+    headersDir = map (first relFile) $(FE.makeRelativeToProject "runtime/c/include" >>= FE.embedDir)
 
     includeDir :: Path Abs Dir
     includeDir = juvixIncludeDir buildDir

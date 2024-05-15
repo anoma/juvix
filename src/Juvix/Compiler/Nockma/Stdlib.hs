@@ -8,4 +8,4 @@ stdlib :: Term Natural
 stdlib =
   fromRight impossible $
     parseText $
-      decodeUtf8 $(FE.makeRelativeToProject "runtime/src/nockma/stdlib.nockma" >>= FE.embedFile)
+      decodeUtf8 $(FE.makeRelativeToProject "runtime/nockma/stdlib.nockma" >>= FE.embedFile)
