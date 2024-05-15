@@ -4,11 +4,11 @@
 #   just disableParallel=yes test
 disableParallel := ''
 
-# set to non-empty string to enable optimzed build
+# set to non-empty string to disable optimized build
 #
 # e.g:
-#   just enableOptimized=yes install
-enableOptimized := ''
+#   just disableOptimized=yes install
+disableOptimized := ''
 
 # set to non-empty string to enable command debugging
 enableDebug := ''
@@ -34,7 +34,7 @@ runtimeLibtoolFlag := if runtimeLibtoolArg == '' { '' } else { "LIBTOOL=" + runt
 runtimeArgs := trim(runtimeCcFlag + ' ' + runtimeLibtoolFlag)
 
 # flags used in the stack command
-stackOptFlag := if enableOptimized == '' { '--fast' } else { '' }
+stackOptFlag := if disableOptimized == '' { '' } else { '--fast' }
 # The ghc `-j` flag defaults to number of cpus when no argument is passed
 stackGhcParallelFlag := if disableParallel == '' { "--ghc-options=-j" + numParallelJobs } else { '' }
 # The stack `-j` options requires an argument
