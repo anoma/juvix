@@ -33,9 +33,10 @@
     DECL_TAIL_APPLY_3;                              \
     juvix_program_start:
 
-#define JUVIX_EPILOGUE              \
-    juvix_program_end : STACK_POPT; \
-    IO_INTERPRET;                   \
+#define JUVIX_EPILOGUE \
+    juvix_program_end: \
+    STACK_POPT;        \
+    IO_INTERPRET;      \
     io_print_toplevel(juvix_result);
 
 // Temporary / local vars
@@ -44,7 +45,9 @@
 
 // Begin a function definition. `max_stack` is the maximum stack allocation in
 // the function.
-#define JUVIX_FUNCTION(label, max_stack) label : STACK_ENTER((max_stack))
+#define JUVIX_FUNCTION(label, max_stack) \
+    label:                               \
+    STACK_ENTER((max_stack))
 
 /*
     Macro sequence for function definition:
@@ -64,7 +67,8 @@ closure_label:
 */
 
 // Begin a function with no stack allocation.
-#define JUVIX_FUNCTION_NS(label) label:
+#define JUVIX_FUNCTION_NS(label) \
+    label:
 
 #define JUVIX_INT_ADD(var0, var1, var2) (var0 = smallint_add(var1, var2))
 #define JUVIX_INT_SUB(var0, var1, var2) (var0 = smallint_sub(var1, var2))
