@@ -239,7 +239,7 @@ runMarkdownModuleParser fpath mk =
 
     parseRestBlocks ::
       forall r'.
-      (Members '[ParserResultBuilder, Error ParserError, Input (Maybe MK.JuvixCodeBlock), State MdModuleBuilder] r') =>
+      (Members '[ParserResultBuilder, Error ParserError, Input MK.JuvixCodeBlock, State MdModuleBuilder] r') =>
       Sem r' ()
     parseRestBlocks = whenJustM input $ \x -> do
       stmts <- parseHelper parseTopStatements x

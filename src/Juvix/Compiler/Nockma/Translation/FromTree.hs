@@ -100,7 +100,7 @@ data FunctionInfo = FunctionInfo
     _functionInfoName :: Text
   }
 
-data FunctionCtx = FunctionCtx
+newtype FunctionCtx = FunctionCtx
   { _functionCtxArity :: Natural
   }
 
@@ -520,7 +520,7 @@ compile = \case
                 ClosureTotalArgsNum -> Nothing
                 ClosureArgsNum -> Nothing
                 AnomaGetOrder -> Nothing
-          return $ (opCall "callClosure" (closurePath WrapperCode) newSubject)
+          return (opCall "callClosure" (closurePath WrapperCode) newSubject)
 
 isZero :: Term Natural -> Term Natural
 isZero a = OpEq # a # nockNatLiteral 0
@@ -773,11 +773,11 @@ runCompilerWith opts constrs moduleFuns mainFun = makeAnomaFun
             AnomaGetOrder -> nockNilHere
 
     functionInfos :: HashMap FunctionId FunctionInfo
-    functionInfos = hashMap (run (runInputNaturals (toList <$> userFunctions)))
+    functionInfos = hashMap (run (runStreamOfNaturals (toList <$> userFunctions)))
 
-    userFunctions :: (Members '[Input Natural] r) => Sem r (NonEmpty (FunctionId, FunctionInfo))
+    userFunctions :: (Members '[StreamOf Natural] r) => Sem r (NonEmpty (FunctionId, FunctionInfo))
     userFunctions = forM allFuns $ \CompilerFunction {..} -> do
-      i <- input
+      i <- yield
       return
         ( _compilerFunctionId,
           FunctionInfo
