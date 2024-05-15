@@ -32,7 +32,8 @@ import Juvix.Prelude.Pretty (annotate, pretty)
 import Juvix.Prelude.Pretty qualified as P
 
 --- An expression is `Top` if it is:
---- * immediately at the top of a function definition,
+--- * immediately at the top of a function (clause) body (including in let
+---   bindings),
 --- * the body of a `Top` let expression,
 --- * the else branch body of a `Top` if expression,
 --- * the last branch body of a `Top` case expresssion.
