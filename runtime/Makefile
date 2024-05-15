@@ -1,4 +1,6 @@
 
+export
+
 .PHONY: all
 all: juvix_c
 

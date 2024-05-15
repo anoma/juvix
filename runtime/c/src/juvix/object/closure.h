@@ -96,7 +96,7 @@ EXTEND_CLOSURE(dest, src, n, {
 #define DECL_ZEROARG_CLOSURE(name, fuid, largs)                 \
     word_t juvix_zeroarg_closure_data_##name[1 + CLOSURE_SKIP]; \
     word_t juvix_zeroarg_closure_##name =                       \
-        (word_t)&juvix_zeroarg_closure_data_##name;             \
+        (word_t) & juvix_zeroarg_closure_data_##name;           \
     INIT_CLOSURE(juvix_zeroarg_closure_##name, fuid,            \
                  LABEL_ADDR(juvix_closure_##name), 0, largs);
 

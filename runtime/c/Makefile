@@ -5,6 +5,7 @@ release: wasm32-wasi native64
 debug: wasm32-wasi-debug native64-debug
 
 HEADERS := $(patsubst src/%,include/%,$(shell find src -name '*.h'))
+CFORMAT := clang-format
 
 includes: $(HEADERS)
 
@@ -46,7 +47,7 @@ asm:
 	$(MAKE) -f Makefile.generic CONFIG=ASM+DEBUG
 
 format:
-	@clang-format -i `find src -name '*.c' -or -name '*.h'`
+	@$(CFORMAT) -i `find src -name '*.c' -or -name '*.h'`
 
 clean:
 	@-rm -rf _build*
