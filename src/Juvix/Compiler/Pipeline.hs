@@ -54,11 +54,34 @@ import Juvix.Data.Field
 
 type PipelineAppEffects = '[TaggedLock, EmbedIO]
 
-type PipelineLocalEff = '[ModuleInfoCache, Reader ImportParents, TopModuleNameChecker, PathResolver, DependencyResolver, EvalFileEff, Error PackageLoaderError, Error DependencyError, GitClone, Error GitProcessError, Process, Log, Reader EntryPoint, Files, Error JuvixError, HighlightBuilder, Internet]
+type PipelineLocalEff =
+  '[ ModuleInfoCache,
+     Reader ImportParents,
+     TopModuleNameChecker,
+     PathResolver,
+     DependencyResolver,
+     EvalFileEff,
+     Error PackageLoaderError,
+     Error DependencyError,
+     GitClone,
+     Error GitProcessError,
+     Process,
+     Log,
+     Reader EntryPoint,
+     Files,
+     Error JuvixError,
+     HighlightBuilder,
+     Internet
+   ]
 
 type PipelineEff' r = PipelineLocalEff ++ r
 
-type PipelineEff r = Reader Parser.ParserResult ': Reader Store.ModuleTable ': NameIdGen ': PipelineEff' r
+type PipelineEff r =
+  '[ Reader Parser.ParserResult,
+     Reader Store.ModuleTable,
+     NameIdGen
+   ]
+    ++ PipelineEff' r
 
 --------------------------------------------------------------------------------
 -- Workflows from source
