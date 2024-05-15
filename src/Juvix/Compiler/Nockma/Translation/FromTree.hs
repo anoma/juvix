@@ -330,6 +330,7 @@ compile = \case
   Tree.Binop b -> goBinop b
   Tree.Unop b -> goUnop b
   Tree.Cairo {} -> cairoErr
+  Tree.Anoma b -> goAnomaOp b
   Tree.Constant c -> return (goConstant (c ^. Tree.nodeConstant))
   Tree.MemRef c -> goMemRef (c ^. Tree.nodeMemRef)
   Tree.AllocConstr c -> goAllocConstr c
@@ -418,6 +419,14 @@ compile = \case
       iffalse <- compile _nodeBranchFalse
       return (branch arg iftrue iffalse)
 
+    goAnomaOp :: Tree.NodeAnoma -> Sem r (Term Natural)
+    goAnomaOp Tree.NodeAnoma {..} = do
+      args <- mapM compile _nodeAnomaArgs
+      case _nodeAnomaOpcode of
+        Tree.OpAnomaGet -> goAnomaGet args
+        Tree.OpAnomaEncode -> goAnomaEncode args
+        Tree.OpAnomaDecode -> goAnomaDecode args
+
     goUnop :: Tree.NodeUnop -> Sem r (Term Natural)
     goUnop Tree.NodeUnop {..} = do
       arg <- compile _nodeUnopArg
@@ -425,9 +434,6 @@ compile = \case
         Tree.PrimUnop op -> return $ goPrimUnop op arg
         Tree.OpFail -> return crash
         Tree.OpTrace -> goTrace arg
-        Tree.OpAnomaGet -> goAnomaGet arg
-        Tree.OpAnomaEncode -> goAnomaEncode arg
-        Tree.OpAnomaDecode -> goAnomaDecode arg
 
     goPrimUnop :: Tree.UnaryOp -> Term Natural -> Term Natural
     goPrimUnop op arg = case op of
@@ -439,16 +445,16 @@ compile = \case
       Tree.OpIntToField -> fieldErr
       Tree.OpFieldToInt -> fieldErr
 
-    goAnomaGet :: Term Natural -> Sem r (Term Natural)
+    goAnomaGet :: [Term Natural] -> Sem r (Term Natural)
     goAnomaGet key = do
-      let arg = remakeList [getFieldInSubject AnomaGetOrder, key]
+      let arg = remakeList [getFieldInSubject AnomaGetOrder, foldTermsOrNil key]
       return (OpScry # (OpQuote # nockNilTagged "OpScry-typehint") # arg)
 
-    goAnomaEncode :: Term Natural -> Sem r (Term Natural)
-    goAnomaEncode arg = return (callStdlib StdlibEncode [arg])
+    goAnomaEncode :: [Term Natural] -> Sem r (Term Natural)
+    goAnomaEncode args = return (callStdlib StdlibEncode args)
 
-    goAnomaDecode :: Term Natural -> Sem r (Term Natural)
-    goAnomaDecode arg = return (callStdlib StdlibDecode [arg])
+    goAnomaDecode :: [Term Natural] -> Sem r (Term Natural)
+    goAnomaDecode args = return (callStdlib StdlibDecode args)
 
     goTrace :: Term Natural -> Sem r (Term Natural)
     goTrace arg = do

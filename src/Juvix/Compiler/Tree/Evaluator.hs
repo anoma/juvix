@@ -37,6 +37,7 @@ hEval hout tab = eval' [] mempty
     eval' args temps node = case node of
       Binop x -> goBinop x
       Unop x -> goUnop x
+      Anoma {} -> evalError "unsupported: Anoma builtin"
       Cairo {} -> evalError "unsupported: Cairo builtin"
       Constant c -> goConstant c
       MemRef x -> goMemRef x
@@ -74,9 +75,6 @@ hEval hout tab = eval' [] mempty
                 PrimUnop op -> eitherToError $ evalUnop tab op v
                 OpTrace -> goTrace v
                 OpFail -> goFail v
-                OpAnomaGet -> evalError "Unsupported op: OpAnomaGet"
-                OpAnomaEncode -> evalError "Unsupported op: OpAnomaEncode"
-                OpAnomaDecode -> evalError "Unsupported op: OpAnomaDecode"
 
         goFail :: Value -> Value
         goFail v = evalError ("failure: " <> printValue tab v)

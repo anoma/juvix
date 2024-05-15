@@ -47,3 +47,13 @@ cairoOpArgsNum = \case
   OpCairoPoseidon -> 1
   OpCairoEc -> 3
   OpCairoRandomEcPoint -> 0
+
+-- | Builtin Anoma operations. Implemented only in the Anoma backend.
+data AnomaOp
+  = -- | Get a value by key from Anoma storage
+    OpAnomaGet
+  | -- | Encode a value to an Anoma atom
+    OpAnomaEncode
+  | -- | Decode a value from an Anoma atom
+    OpAnomaDecode
+  deriving stock (Eq)

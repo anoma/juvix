@@ -121,6 +121,9 @@ builtinIsFoldable = \case
 builtinIsCairo :: BuiltinOp -> Bool
 builtinIsCairo op = op `elem` builtinsCairo
 
+builtinIsAnoma :: BuiltinOp -> Bool
+builtinIsAnoma op = op `elem` builtinsAnoma
+
 builtinsString :: [BuiltinOp]
 builtinsString = [OpStrConcat, OpStrToInt, OpShow]
 

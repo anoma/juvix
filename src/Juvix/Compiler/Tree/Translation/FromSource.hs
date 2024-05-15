@@ -53,6 +53,7 @@ parseNode ::
 parseNode =
   (Binop <$> parseBinop)
     <|> (Unop <$> parseUnop)
+    <|> (Anoma <$> parseAnoma)
     <|> (Cairo <$> parseCairo)
     <|> (Constant <$> parseConst)
     <|> (AllocConstr <$> parseAlloc)
@@ -107,7 +108,6 @@ parseUnop =
     <|> parseUnaryOp kwTrace OpTrace
     <|> parseUnaryOp kwFail OpFail
     <|> parseUnaryOp kwArgsNum (PrimUnop OpArgsNum)
-    <|> parseUnaryOp kwAnomaGet (OpAnomaGet)
 
 parseUnaryOp ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
@@ -118,6 +118,24 @@ parseUnaryOp kwd op = do
   loc <- onlyInterval (kw kwd)
   arg <- parens parseNode
   return $ NodeUnop (NodeInfo (Just loc)) op arg
+
+parseAnoma ::
+  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  ParsecS r NodeAnoma
+parseAnoma =
+  parseAnoma' kwAnomaGet OpAnomaGet
+    <|> parseAnoma' kwAnomaDecode OpAnomaDecode
+    <|> parseAnoma' kwAnomaEncode OpAnomaEncode
+
+parseAnoma' ::
+  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  Keyword ->
+  AnomaOp ->
+  ParsecS r NodeAnoma
+parseAnoma' kwd op = do
+  loc <- onlyInterval (kw kwd)
+  args <- parseArgs
+  return $ NodeAnoma (NodeInfo (Just loc)) op args
 
 parseCairo ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>

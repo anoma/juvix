@@ -39,6 +39,7 @@ genCode fi =
       Tree.Binop x -> goBinop isTail x
       Tree.Unop x -> goUnop isTail x
       Tree.Cairo x -> goCairo isTail x
+      Tree.Anoma {} -> error "Anoma instructions are not supported in the Asm backend"
       Tree.Constant x -> goConstant isTail x
       Tree.MemRef x -> goMemRef isTail x
       Tree.AllocConstr x -> goAllocConstr isTail x
@@ -233,9 +234,6 @@ genCode fi =
       Tree.PrimUnop op' -> mkUnop op'
       Tree.OpTrace -> mkInstr Trace
       Tree.OpFail -> mkInstr Failure
-      Tree.OpAnomaGet -> impossible
-      Tree.OpAnomaEncode -> impossible
-      Tree.OpAnomaDecode -> impossible
 
     snocReturn :: Bool -> Code' -> Code'
     snocReturn True code = DL.snoc code (mkInstr Return)

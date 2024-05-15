@@ -1,0 +1,5 @@
+-- calling unsupported anoma-decode
+
+function main() : * {
+  anoma-decode(1)
+}

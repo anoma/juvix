@@ -16,6 +16,7 @@ inferType tab funInfo = goInfer mempty
       Binop x -> goBinop bl x
       Unop x -> goUnop bl x
       Cairo x -> goCairo bl x
+      Anoma x -> goAnoma bl x
       Constant x -> goConst bl x
       MemRef x -> goMemRef bl x
       AllocConstr x -> goAllocConstr bl x
@@ -65,9 +66,6 @@ inferType tab funInfo = goInfer mempty
       PrimUnop x -> checkPrimUnop x
       OpTrace -> goInfer bl _nodeUnopArg
       OpFail -> checkUnop TyDynamic TyDynamic
-      OpAnomaGet -> checkUnop TyDynamic TyDynamic
-      OpAnomaEncode -> checkUnop TyDynamic TyDynamic
-      OpAnomaDecode -> checkUnop TyDynamic TyDynamic
       where
         loc = _nodeUnopInfo ^. nodeInfoLocation
 
@@ -88,6 +86,11 @@ inferType tab funInfo = goInfer mempty
     goCairo :: BinderList Type -> NodeCairo -> Sem r Type
     goCairo bl NodeCairo {..} = do
       mapM_ (\arg -> checkType bl arg TyDynamic) _nodeCairoArgs
+      return TyDynamic
+
+    goAnoma :: BinderList Type -> NodeAnoma -> Sem r Type
+    goAnoma bl NodeAnoma {..} = do
+      mapM_ (\arg -> checkType bl arg TyDynamic) _nodeAnomaArgs
       return TyDynamic
 
     goConst :: BinderList Type -> NodeConstant -> Sem r Type
