@@ -36,6 +36,7 @@ import Juvix.Prelude.Pretty qualified as P
 ---   bindings) or a lambda body
 --- * immediately inside parens or braces
 --- * the body of a `Top` let expression,
+--- * the body of a `Top` iterator,
 --- * the else branch body of a `Top` if expression,
 --- * the last branch body of a `Top` case expresssion.
 data IsTop = Top | NotTop
@@ -135,6 +136,7 @@ ppTopExpressionType e = case sing :: SStage s of
     ExpressionLet l -> ppLet Top l
     ExpressionCase c -> ppCase Top c
     ExpressionIf i -> ppIf Top i
+    ExpressionIterator i -> ppIterator Top i
     _ -> ppCode e
 
 ppExpressionAtomType :: forall s. (SingI s) => PrettyPrinting (ExpressionType s)
@@ -262,19 +264,19 @@ instance (SingI s) => PrettyPrint (Range s) where
         e = ppExpressionType _rangeExpression
     n <+> ppCode _rangeInKw <+> e
 
-instance (SingI s) => PrettyPrint (Iterator s) where
-  ppCode Iterator {..} = do
-    let n = ppIdentifierType _iteratorName
-        is = ppCode <$> _iteratorInitializers
-        rngs = ppCode <$> _iteratorRanges
-        is' = parens . hsepSemicolon <$> nonEmpty is
-        rngs' = parens . hsepSemicolon <$> nonEmpty rngs
-        b = ppExpressionType _iteratorBody
-        b'
-          | _iteratorBodyBraces = braces (oneLineOrNextNoIndent b)
-          | otherwise = line <> b
-    parensIf _iteratorParens $
-      hang (n <+?> is' <+?> rngs' <> b')
+ppIterator :: forall r s. (Members '[ExactPrint, Reader Options] r, SingI s) => IsTop -> Iterator s -> Sem r ()
+ppIterator isTop Iterator {..} = do
+  let n = ppIdentifierType _iteratorName
+      is = ppCode <$> _iteratorInitializers
+      rngs = ppCode <$> _iteratorRanges
+      is' = parens . hsepSemicolon <$> nonEmpty is
+      rngs' = parens . hsepSemicolon <$> nonEmpty rngs
+      b = ppMaybeTopExpression isTop _iteratorBody
+      b'
+        | _iteratorBodyBraces = braces (oneLineOrNextNoIndent b)
+        | otherwise = line <> b
+  parensIf _iteratorParens $
+    hang (n <+?> is' <+?> rngs' <> b')
 
 instance PrettyPrint S.AName where
   ppCode n = annotated (AnnKind (S.getNameKind n)) (noLoc (pretty (n ^. S.anameVerbatim)))
@@ -374,7 +376,7 @@ instance (SingI s) => PrettyPrint (ExpressionAtom s) where
     AtomBraces e -> braces (ppTopExpressionType (e ^. withLocParam))
     AtomHole w -> ppHoleType w
     AtomInstanceHole w -> ppHoleType w
-    AtomIterator i -> ppCode i
+    AtomIterator i -> ppIterator NotTop i
     AtomNamedApplication i -> ppCode i
     AtomNamedApplicationNew i -> ppCode i
 
@@ -823,7 +825,7 @@ instance PrettyPrint Expression where
     ExpressionFunction f -> ppCode f
     ExpressionCase c -> ppCase NotTop c
     ExpressionIf c -> ppIf NotTop c
-    ExpressionIterator i -> ppCode i
+    ExpressionIterator i -> ppIterator NotTop i
     ExpressionNamedApplication i -> ppCode i
     ExpressionNamedApplicationNew i -> ppCode i
     ExpressionRecordUpdate i -> ppCode i
