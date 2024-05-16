@@ -1,6 +1,7 @@
+pub mod closure;
+pub mod constr;
 pub mod defs;
 pub mod memory;
-pub mod object;
 pub mod stack;
 
 pub fn add(left: usize, right: usize) -> usize {
