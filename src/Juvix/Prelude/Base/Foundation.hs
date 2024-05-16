@@ -57,7 +57,6 @@ module Juvix.Prelude.Base.Foundation
     module Text.Show,
     module Control.Monad.Catch,
     module Control.Monad.Zip,
-    module Control.DeepSeq,
     Data,
     Text,
     pack,
