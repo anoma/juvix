@@ -579,6 +579,7 @@ goAxiomInductive a = whenJust (a ^. Internal.axiomBuiltin) builtinInductive
       Internal.BuiltinAnomaGet -> return ()
       Internal.BuiltinAnomaEncode -> return ()
       Internal.BuiltinAnomaDecode -> return ()
+      Internal.BuiltinAnomaVerifyDetached -> return ()
       Internal.BuiltinPoseidon -> return ()
       Internal.BuiltinEcOp -> return ()
       Internal.BuiltinRandomEcPoint -> return ()
@@ -706,12 +707,28 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
               (mkLambda' (mkVar' 0) (mkBuiltinApp' OpAnomaEncode [mkVar' 0]))
           )
       Internal.BuiltinAnomaDecode -> do
-        natName <- getNatName
-        natSym <- getNatSymbol
+        natType <- getNatType
         registerAxiomDef
           ( mkLambda'
-              (mkTypeConstr (setInfoName natName mempty) natSym [])
-              (mkLambda' (mkVar' 0) (mkBuiltinApp' OpAnomaDecode [mkVar' 0]))
+              mkSmallUniv
+              (mkLambda' natType (mkBuiltinApp' OpAnomaDecode [mkVar' 0]))
+          )
+      -- ((ftype ==% (u <>--> nat --> decodeT --> nat --> bool_)) freeVars)
+      Internal.BuiltinAnomaVerifyDetached -> do
+        natType <- getNatType
+        registerAxiomDef
+          ( mkLambda'
+              mkSmallUniv
+              ( mkLambda'
+                  natType
+                  ( mkLambda'
+                      (mkVar' 0)
+                      ( mkLambda'
+                          natType
+                          (mkBuiltinApp' OpAnomaVerifyDetached [mkVar' 2, mkVar' 1, mkVar' 0])
+                      )
+                  )
+              )
           )
       Internal.BuiltinPoseidon -> do
         psName <- getPoseidonStateName
@@ -738,6 +755,12 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
 
     getNatName :: Sem r Text
     getNatName = (^. inductiveName) <$> getBuiltinInductiveInfo BuiltinNat
+
+    getNatType :: Sem r Type
+    getNatType = do
+      natName <- getNatName
+      natSym <- getNatSymbol
+      return (mkTypeConstr (setInfoName natName mempty) natSym [])
 
     getIntName :: Sem r Text
     getIntName = (^. inductiveName) <$> getBuiltinInductiveInfo BuiltinInt
@@ -1113,6 +1136,7 @@ goApplication a = do
         Just Internal.BuiltinAnomaGet -> app
         Just Internal.BuiltinAnomaEncode -> app
         Just Internal.BuiltinAnomaDecode -> app
+        Just Internal.BuiltinAnomaVerifyDetached -> app
         Just Internal.BuiltinPoseidon -> app
         Just Internal.BuiltinEcOp -> app
         Just Internal.BuiltinRandomEcPoint -> app

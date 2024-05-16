@@ -190,6 +190,7 @@ data BuiltinAxiom
   | BuiltinAnomaGet
   | BuiltinAnomaEncode
   | BuiltinAnomaDecode
+  | BuiltinAnomaVerifyDetached
   | BuiltinPoseidon
   | BuiltinEcOp
   | BuiltinRandomEcPoint
@@ -227,6 +228,7 @@ instance Pretty BuiltinAxiom where
     BuiltinAnomaGet -> Str.anomaGet
     BuiltinAnomaEncode -> Str.anomaEncode
     BuiltinAnomaDecode -> Str.anomaDecode
+    BuiltinAnomaVerifyDetached -> Str.anomaVerifyDetached
     BuiltinPoseidon -> Str.cairoPoseidon
     BuiltinEcOp -> Str.cairoEcOp
     BuiltinRandomEcPoint -> Str.cairoRandomEcPoint

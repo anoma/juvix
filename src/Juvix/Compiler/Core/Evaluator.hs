@@ -193,6 +193,7 @@ geval opts herr ctx env0 = eval' env0
       OpAnomaGet -> anomaGetOp
       OpAnomaEncode -> anomaEncodeOp
       OpAnomaDecode -> anomaDecodeOp
+      OpAnomaVerifyDetached -> anomaVerifyDetachedOp
       OpPoseidonHash -> poseidonHashOp
       OpEc -> ecOp
       OpRandomEcPoint -> randomEcPointOp
@@ -356,6 +357,15 @@ geval opts herr ctx env0 = eval' env0
               | otherwise ->
                   err "unsupported builtin operation: OpAnomaDecode"
         {-# INLINE anomaDecodeOp #-}
+
+        anomaVerifyDetachedOp :: [Node] -> Node
+        anomaVerifyDetachedOp = checkApply $ \arg1 arg2 arg3 ->
+          if
+              | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                  mkBuiltinApp' OpAnomaVerifyDetached (eval' env <$> [arg1, arg2, arg3])
+              | otherwise ->
+                  err "unsupported builtin operation: OpAnomaVerifyDetached"
+        {-# INLINE anomaVerifyDetachedOp #-}
 
         poseidonHashOp :: [Node] -> Node
         poseidonHashOp = unary $ \arg ->
@@ -563,3 +573,17 @@ toCoreError loc (EvalError {..}) =
       _coreErrorNode = _evalErrorNode,
       _coreErrorLoc = fromMaybe loc (lookupLocation =<< _evalErrorNode)
     }
+
+-- | A class that provides a function `checkApply` that applies a function to a
+-- list of arguments and fails if the length of the arguments list is not equal
+-- to the arity of the function.
+class CheckApplyType a t where
+  checkApply :: t -> [a] -> a
+
+instance CheckApplyType a a where
+  checkApply f [] = f
+  checkApply _ _ = error "too many arguments for operator"
+
+instance (CheckApplyType a r) => CheckApplyType a (a -> r) where
+  checkApply f (x : xs) = checkApply (f x) xs
+  checkApply _ [] = error "too few arguments for operator"

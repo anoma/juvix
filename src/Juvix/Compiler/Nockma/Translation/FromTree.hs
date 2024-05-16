@@ -424,8 +424,9 @@ compile = \case
       args <- mapM compile _nodeAnomaArgs
       case _nodeAnomaOpcode of
         Tree.OpAnomaGet -> goAnomaGet args
-        Tree.OpAnomaEncode -> goAnomaEncode args
-        Tree.OpAnomaDecode -> goAnomaDecode args
+        Tree.OpAnomaEncode -> return (goAnomaEncode args)
+        Tree.OpAnomaDecode -> return (goAnomaDecode args)
+        Tree.OpAnomaVerifyDetached -> return (goAnomaVerifyDetached args)
 
     goUnop :: Tree.NodeUnop -> Sem r (Term Natural)
     goUnop Tree.NodeUnop {..} = do
@@ -450,11 +451,16 @@ compile = \case
       let arg = remakeList [getFieldInSubject AnomaGetOrder, foldTermsOrNil key]
       return (OpScry # (OpQuote # nockNilTagged "OpScry-typehint") # arg)
 
-    goAnomaEncode :: [Term Natural] -> Sem r (Term Natural)
-    goAnomaEncode args = return (callStdlib StdlibEncode args)
+    goAnomaEncode :: [Term Natural] -> Term Natural
+    goAnomaEncode = callStdlib StdlibEncode
 
-    goAnomaDecode :: [Term Natural] -> Sem r (Term Natural)
-    goAnomaDecode args = return (callStdlib StdlibDecode args)
+    goAnomaDecode :: [Term Natural] -> Term Natural
+    goAnomaDecode = callStdlib StdlibDecode
+
+    goAnomaVerifyDetached :: [Term Natural] -> Term Natural
+    goAnomaVerifyDetached = \case
+      [sig, message, pubKey] -> callStdlib StdlibVerifyDetached [sig, goAnomaEncode [message], pubKey]
+      _ -> impossible
 
     goTrace :: Term Natural -> Sem r (Term Natural)
     goTrace arg = do
