@@ -365,7 +365,6 @@ mkImportTree ::
   Maybe (Path Abs File) ->
   Sem r ImportTree
 mkImportTree mentrypointModulePath = do
-  traceM ("make import tree starting at " <> show mentrypointModulePath <> "\n")
   b <- whichPathResolver
   traceM ("path resolver = " <> show b)
   pkgInfosTable <- getPackageInfos
@@ -385,8 +384,6 @@ mkImportTree mentrypointModulePath = do
       . evalVisitEmpty scanNode
       $ mapM_ visit startingNodes
   checkImportTreeCycles tree
-  traceM ("allNodes " <> show allNodes)
-  traceM ("starting " <> show startingNodes)
   traceM ("Tree " <> toPlainText (ppOutDefaultNoComments tree))
   return tree
   where

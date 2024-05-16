@@ -122,7 +122,6 @@ compile args@CompileArgs {..} = do
       starterModules = [m | m <- HashMap.keys (modsIx ^. nodesIndex), null (nodeDependencies deps m)]
 
   logs <- Logs <$> newTQueueIO
-  traceM ("numMods = " <> show numMods)
   qq <- newTBQueueIO (max 1 numMods)
   let compileQ = CompileQueue qq
   forM_ starterModules (atomically . writeTBQueue qq)

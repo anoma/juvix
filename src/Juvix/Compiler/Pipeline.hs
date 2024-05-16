@@ -60,6 +60,7 @@ data PipelineOptions = PipelineOptions
     _pipelineDependenciesConfig :: DependenciesConfig
   }
 
+defaultPipelineOptions :: PipelineOptions
 defaultPipelineOptions =
   PipelineOptions
     { _pipelineImportStrategy = defaultImportScanStrategy,

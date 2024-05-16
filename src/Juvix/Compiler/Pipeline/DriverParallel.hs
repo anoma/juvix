@@ -84,7 +84,6 @@ compileNode ::
          TaggedLock,
          TopModuleNameChecker,
          Error JuvixError,
-         -- ModuleInfoCache,
          Files
        ]
       r
@@ -106,7 +105,6 @@ compileInParallel ::
          TopModuleNameChecker,
          Error JuvixError,
          Reader EntryPoint,
-         -- ModuleInfoCache,
          Reader ImportTree
        ]
       r
@@ -123,7 +121,7 @@ compileInParallel m = do
         { _compileArgsNodesIndex = idx,
           _compileArgsNodeName = getNodeName,
           _compileArgsDependencies = mkDependencies t,
-          _compileArgsNumWorkers = 4,
+          _compileArgsNumWorkers = 8,
           _compileArgsCompileNode = compileNode
         }
   runReader res m
@@ -142,7 +140,8 @@ instance Monoid CompileResult where
         _compileResultModuleTable = mempty
       }
 
--- TODO there must be a more elegant way to handle this
+-- TODO there must be a more elegant way to handle this (i.e. what are
+-- ModuleInfoCache and ImportParents doing here?)
 evalModuleInfoCache ::
   forall r a.
   ( Members
@@ -208,7 +207,6 @@ processFileUpToParsing ::
          HighlightBuilder,
          TopModuleNameChecker,
          Error JuvixError,
-         -- ModuleInfoCache,
          Files
        ]
       r
@@ -272,7 +270,6 @@ processFileToStoredCore ::
          ImportsAccess,
          TopModuleNameChecker,
          Error JuvixError,
-         -- ModuleInfoCache,
          Files
        ]
       r
@@ -297,7 +294,6 @@ processModule ::
          TaggedLock,
          TopModuleNameChecker,
          Error JuvixError,
-         -- ModuleInfoCache,
          Files
        ]
       r
@@ -350,7 +346,6 @@ processModuleToStoredCore ::
          ImportsAccess,
          TopModuleNameChecker,
          Error JuvixError,
-         -- ModuleInfoCache
          Files
        ]
       r
