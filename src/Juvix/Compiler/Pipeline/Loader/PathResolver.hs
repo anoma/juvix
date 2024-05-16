@@ -379,7 +379,7 @@ mkImportTree mentrypointModulePath = do
 
       startingNodes = maybe allNodes pure mEntryImportNode
   tree <-
-    execState (emptyImportTree allNodes)
+    execState (initImportTree allNodes)
       . runReader pkgInfosTable
       . evalVisitEmpty scanNode
       $ mapM_ visit startingNodes

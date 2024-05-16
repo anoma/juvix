@@ -183,6 +183,9 @@ instance (SingI s) => PrettyPrint (ListPattern s) where
         e = hsepSemicolon (map ppPatternParensType _listpItems)
     l <> e <> r
 
+instance PrettyPrint Interval where
+  ppCode = noLoc . pretty
+
 instance PrettyPrint Void where
   ppCode = absurd
 

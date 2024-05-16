@@ -12,6 +12,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Effectful.Concurrent
 import Juvix.Compiler.Concrete.Data.Highlight
 import Juvix.Compiler.Concrete.Language
+import Juvix.Compiler.Concrete.Pretty (ppTrace)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping (getModuleId)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error (ScoperError)
@@ -38,6 +39,7 @@ import Juvix.Data.SHA256 qualified as SHA256
 import Juvix.Extra.Serialize
 import Juvix.Parser.Error (ParserError)
 import Juvix.Prelude
+import Juvix.Prelude.Pretty
 import Parallel.ParallelTemplate
 import Path.Posix qualified as Path
 
@@ -75,6 +77,7 @@ mkDependencies tree =
   where
     helper :: HashMap ImportNode (HashSet ImportNode) -> HashMap NodeId (HashSet NodeId)
     helper m = hashMap [(toPath k, hashSet (toPath <$> toList v)) | (k, v) <- HashMap.toList m]
+
     toPath :: ImportNode -> Path Abs File
     toPath = (^. importNodeAbsFile)
 
@@ -91,12 +94,22 @@ compileNode ::
   HashMap NodeId CompileProof ->
   Node ->
   Sem r CompileProof
-compileNode k = runReader k . processModule
+compileNode k node = do
+  tree <- ask @ImportTree
+  traceM
+    ( "compileNode: "
+        <> getNodeName node
+        <> "\ndeps available: "
+        <> show (HashMap.keys k)
+    )
+  -- traceM (ppTrace tree)
+  runReader k (processModule node)
 
 getNodeName :: Node -> Text
 getNodeName (EntryIndex e) = show (fromJust (e ^. entryPointModulePath))
 
 compileInParallel ::
+  forall r a.
   ( Members
       '[ Concurrent,
          IOE,
@@ -115,15 +128,16 @@ compileInParallel m = do
   e <- ask
   t <- ask
   let idx = mkNodesIndex e t
-  res <-
-    compile
-      CompileArgs
-        { _compileArgsNodesIndex = idx,
-          _compileArgsNodeName = getNodeName,
-          _compileArgsDependencies = mkDependencies t,
-          _compileArgsNumWorkers = 8,
-          _compileArgsCompileNode = compileNode
-        }
+      args :: CompileArgs r NodeId Node CompileProof
+      args =
+        CompileArgs
+          { _compileArgsNodesIndex = idx,
+            _compileArgsNodeName = getNodeName,
+            _compileArgsDependencies = mkDependencies t,
+            _compileArgsNumWorkers = 1,
+            _compileArgsCompileNode = compileNode
+          }
+  res <- compile args
   runReader res m
 
 instance Semigroup CompileResult where
@@ -286,6 +300,19 @@ processFileToStoredCore entry = ignoreHighlightBuilder . runReader entry $ do
       $ upToStoredCore
   return (set pipelineResult r res)
 
+traceImports :: (Members '[Reader ImportTree, ImportsAccess] r) => Path Abs File -> Sem r ()
+traceImports file = do
+  tree <- ask
+  tbl <- ask @(HashMap (Path Abs File) (PipelineResult Store.ModuleInfo))
+  let node :: ImportNode = fromJust (tree ^. importTreeFiles . at file)
+      deps :: HashSet ImportNode = fromJust (tree ^. importTree . at node)
+  traceM
+    ( pack (toFilePath file)
+        <> "\nDepends on:\n"
+        <> show (prettyText <$> toList deps)
+    )
+  traceM (pack (toFilePath file) <> "\nhas Access to:\n" <> show (toFilePath <$> HashMap.keys tbl))
+
 processModule ::
   forall r.
   ( Members
@@ -309,6 +336,7 @@ processModule (EntryIndex entry) = do
           . fromJust
           $ stripProperPrefix $(mkAbsDir "/") sourcePath
       absPath = buildDir Path.</> relPath
+  traceImports sourcePath
   sha256 <- SHA256.digestFile sourcePath
   m :: Maybe Store.ModuleInfo <- loadFromFile absPath
   case m of

@@ -75,8 +75,8 @@ makeLenses ''ResolverEnv
 makeLenses ''ResolvedDependency
 makeLenses ''ResolverCacheItem
 
-emptyImportTree :: [ImportNode] -> ImportTree
-emptyImportTree nodes =
+initImportTree :: [ImportNode] -> ImportTree
+initImportTree nodes =
   ImportTree
     { _importTree = hashMap [(n, mempty) | n <- nodes],
       _importTreeReverse = hashMap [(n, mempty) | n <- nodes],

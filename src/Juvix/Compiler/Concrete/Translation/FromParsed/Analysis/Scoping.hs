@@ -662,11 +662,24 @@ getLocalModules ExportInfo {..} = do
         n = _moduleEntry ^. S.nameId
 
 readScopeModule ::
+  forall r.
   (Members '[Error ScoperError, Reader ScopeParameters, NameIdGen, State ScoperState, InfoTableBuilder, Reader InfoTable] r) =>
   Import 'Parsed ->
   Sem r ScopedModule
 readScopeModule import_ = do
-  asks (^?! scopeImportedModules . at (import_ ^. importModulePath) . _Just)
+  mods <- ask
+  let err :: a
+      err = do
+        error
+          ( "unexpected error in "
+              <> ppTrace (getLoc import_)
+              <> "\n"
+              <> "could not find module "
+              <> ppTrace (import_ ^. importModulePath)
+              <> "\nAvailable modules:\n "
+              <> show (HashMap.keys (mods ^. scopeImportedModules))
+          )
+  return (fromMaybe err (mods ^. scopeImportedModules . at (import_ ^. importModulePath)))
 
 checkFixityInfo ::
   forall r.
