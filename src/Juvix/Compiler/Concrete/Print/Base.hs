@@ -33,7 +33,8 @@ import Juvix.Prelude.Pretty qualified as P
 
 --- An expression is `Top` if it is:
 --- * immediately at the top of a function (clause) body (including in let
----   bindings),
+---   bindings) or a lambda body
+--- * immediately inside parens or braces
 --- * the body of a `Top` let expression,
 --- * the else branch body of a `Top` if expression,
 --- * the last branch body of a `Top` case expresssion.
@@ -252,13 +253,13 @@ instance (SingI s) => PrettyPrint (ExpressionAtoms s) where
 instance (SingI s) => PrettyPrint (Initializer s) where
   ppCode Initializer {..} = do
     let n = ppPatternParensType _initializerPattern
-        e = ppTopExpressionType _initializerExpression
+        e = ppExpressionType _initializerExpression
     n <+> ppCode _initializerAssignKw <+> e
 
 instance (SingI s) => PrettyPrint (Range s) where
   ppCode Range {..} = do
     let n = ppPatternParensType _rangePattern
-        e = ppTopExpressionType _rangeExpression
+        e = ppExpressionType _rangeExpression
     n <+> ppCode _rangeInKw <+> e
 
 instance (SingI s) => PrettyPrint (Iterator s) where
@@ -268,7 +269,7 @@ instance (SingI s) => PrettyPrint (Iterator s) where
         rngs = ppCode <$> _iteratorRanges
         is' = parens . hsepSemicolon <$> nonEmpty is
         rngs' = parens . hsepSemicolon <$> nonEmpty rngs
-        b = ppTopExpressionType _iteratorBody
+        b = ppExpressionType _iteratorBody
         b'
           | _iteratorBodyBraces = braces (oneLineOrNextNoIndent b)
           | otherwise = line <> b
@@ -282,14 +283,14 @@ instance (SingI s) => PrettyPrint (List s) where
   ppCode List {..} = do
     let l = ppCode _listBracketL
         r = ppCode _listBracketR
-        es = vcatPreSemicolon (map ppTopExpressionType _listItems)
+        es = vcatPreSemicolon (map ppExpressionType _listItems)
     grouped (align (l <> spaceOrEmpty <> es <> lineOrEmpty <> r))
 
 instance (SingI s) => PrettyPrint (NamedArgument s) where
   ppCode NamedArgument {..} = do
     let s = ppCode _namedArgName
         kwassign = ppCode _namedArgAssignKw
-        val = ppTopExpressionType _namedArgValue
+        val = ppExpressionType _namedArgValue
     s <+> kwassign <+> val
 
 instance (SingI s) => PrettyPrint (ArgumentBlock s) where
@@ -329,7 +330,7 @@ instance (SingI s) => PrettyPrint (RecordStatement s) where
 
 instance (SingI s) => PrettyPrint (RecordUpdateField s) where
   ppCode RecordUpdateField {..} =
-    ppSymbolType _fieldUpdateName <+> ppCode _fieldUpdateAssignKw <+> ppTopExpressionType _fieldUpdateValue
+    ppSymbolType _fieldUpdateName <+> ppCode _fieldUpdateAssignKw <+> ppExpressionType _fieldUpdateValue
 
 instance (SingI s) => PrettyPrint (RecordUpdate s) where
   ppCode RecordUpdate {..} = do
