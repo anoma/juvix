@@ -20,14 +20,6 @@ pub fn usize_to_word(s: usize) -> Word {
     s as Word
 }
 
-pub fn word_to_smallint(x: Word) -> SmallInt {
-    x as SmallInt
-}
-
-pub fn smallint_to_word(x: SmallInt) -> Word {
-    x as Word
-}
-
 pub fn bool_to_word(x: bool) -> Word {
     x as Word
 }
