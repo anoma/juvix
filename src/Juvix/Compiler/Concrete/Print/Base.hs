@@ -271,12 +271,11 @@ ppIterator isTop Iterator {..} = do
       rngs = ppCode <$> _iteratorRanges
       is' = parens . hsepSemicolon <$> nonEmpty is
       rngs' = parens . hsepSemicolon <$> nonEmpty rngs
-      b = ppMaybeTopExpression isTop _iteratorBody
-      b'
-        | _iteratorBodyBraces = braces (oneLineOrNextNoIndent b)
-        | otherwise = line <> b
+      b
+        | _iteratorBodyBraces = braces (oneLineOrNextNoIndent (ppTopExpressionType _iteratorBody))
+        | otherwise = line <> ppMaybeTopExpression isTop _iteratorBody
   parensIf _iteratorParens $
-    hang (n <+?> is' <+?> rngs' <> b')
+    hang (n <+?> is' <+?> rngs' <> b)
 
 instance PrettyPrint S.AName where
   ppCode n = annotated (AnnKind (S.getNameKind n)) (noLoc (pretty (n ^. S.anameVerbatim)))
