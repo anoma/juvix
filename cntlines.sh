@@ -8,12 +8,13 @@ function count_ext () {
     find $2 -name $1 -print | xargs sed '/^[[:space:]]*$/d' | wc -l | tr -d ' '
 }
 
-RUNTIME_C=$(count runtime/src/juvix)
-RUNTIME_VAMPIR=$(count_ext '*.pir' runtime/src/vampir)
-RUNTIME_JVT=$(count_ext '*.jvt' runtime/src/tree)
-RUNTIME_CASM=$(count_ext '*.casm' runtime/src/casm)
+RUNTIME_C=$(count runtime/c/src/juvix)
+RUNTIME_RUST=$(count runtime/rust/src)
+RUNTIME_VAMPIR=$(count_ext '*.pir' runtime/vampir)
+RUNTIME_JVT=$(count_ext '*.jvt' runtime/tree)
+RUNTIME_CASM=$(count_ext '*.casm' runtime/casm)
 
-RUNTIME=$((RUNTIME_C+RUNTIME_VAMPIR+RUNTIME_JVT+RUNTIME_CASM))
+RUNTIME=$((RUNTIME_C+RUNTIME_RUST+RUNTIME_VAMPIR+RUNTIME_JVT+RUNTIME_CASM))
 
 BACKENDC=$(count src/Juvix/Compiler/Backend/C/)
 CAIRO=$(count src/Juvix/Compiler/Backend/Cairo/)
@@ -62,6 +63,7 @@ echo "   JuvixTree: $TREE LOC"
 echo "   JuvixCore: $CORE LOC"
 echo "Runtime: $RUNTIME LOC"
 echo "   C runtime: $RUNTIME_C LOC"
+echo "   Rust runtime: $RUNTIME_RUST LOC"
 echo "   JuvixTree runtime: $RUNTIME_JVT LOC"
 echo "   Cairo assembly runtime: $RUNTIME_CASM LOC"
 echo "   VampIR runtime: $RUNTIME_VAMPIR LOC"
@@ -74,4 +76,4 @@ echo "   Data: $DATA LOC"
 echo "   Prelude: $PRELUDE LOC"
 echo "Tests: $TESTS LOC"
 echo ""
-echo "Total: $TOTAL Haskell LOC + $RUNTIME_C C LOC + $RUNTIME_JVT JuvixTree LOC + $RUNTIME_CASM CASM LOC + $RUNTIME_VAMPIR VampIR LOC"
+echo "Total: $TOTAL Haskell LOC + $RUNTIME_C C LOC + $RUNTIME_RUST Rust LOC + $RUNTIME_JVT JuvixTree LOC + $RUNTIME_CASM CASM LOC + $RUNTIME_VAMPIR VampIR LOC"
