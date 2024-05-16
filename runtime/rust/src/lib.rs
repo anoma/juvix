@@ -1,6 +1,8 @@
 pub mod closure;
 pub mod constr;
 pub mod defs;
+pub mod equality;
+pub mod integer;
 pub mod memory;
 pub mod stack;
 
