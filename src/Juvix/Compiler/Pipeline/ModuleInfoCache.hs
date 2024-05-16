@@ -18,6 +18,4 @@ instance Eq EntryIndex where
 instance Hashable EntryIndex where
   hashWithSalt s = hashWithSalt s . (^. entryIxEntry . entryPointModulePath)
 
-type ModuleInfoCache' a = Cache EntryIndex a
-
-type ModuleInfoCache = ModuleInfoCache' (PipelineResult Store.ModuleInfo)
+type ModuleInfoCache = Cache EntryIndex (PipelineResult Store.ModuleInfo)

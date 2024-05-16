@@ -22,8 +22,8 @@ import Juvix.Compiler.Pipeline.Artifacts.PathResolver
 import Juvix.Compiler.Pipeline.Driver (ModuleInfoCache)
 import Juvix.Compiler.Pipeline.Driver qualified as DriverSeq
 import Juvix.Compiler.Pipeline.DriverParallel qualified as DriverPar
-import Juvix.Compiler.Pipeline.ImportParents (ImportParents)
 import Juvix.Compiler.Pipeline.Loader.PathResolver
+import Juvix.Compiler.Pipeline.Loader.PathResolver.ImportTree (withImportTree)
 import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
@@ -131,6 +131,7 @@ runIOEitherPipeline' entry a = do
     . runPathResolverInput
     . runTopModuleNameChecker
     . runReader (opts ^. pipelineImportStrategy)
+    . withImportTree (entry ^. entryPointModulePath)
     . evalModuleInfoCacheHelper
     $ a
 
@@ -139,6 +140,7 @@ evalModuleInfoCacheHelper ::
   ( Members
       '[ Reader EntryPoint,
          IOE,
+         Reader ImportTree,
          Concurrent,
          TaggedLock,
          TopModuleNameChecker,
@@ -149,7 +151,7 @@ evalModuleInfoCacheHelper ::
        ]
       r
   ) =>
-  Sem (ModuleInfoCache ': Reader ImportParents ': r) a ->
+  Sem (ModuleInfoCache ': r) a ->
   Sem r a
 evalModuleInfoCacheHelper m = do
   b <- whichPathResolver

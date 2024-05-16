@@ -120,7 +120,7 @@ registerImport ::
   Sem r ()
 registerImport i = do
   e <- ask
-  PipelineResult {..} <- Driver.processImport e i
+  PipelineResult {..} <- Driver.processImport e (i ^. importModulePath)
   let mtab' = Store.insertModule (i ^. importModulePath) _pipelineResult _pipelineResultImports
   modify' (appendArtifactsModuleTable mtab')
   scopeTable <- gets (^. artifactScopeTable)

@@ -35,8 +35,8 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Che
 import Juvix.Compiler.Nockma.Translation.FromTree qualified as NockmaTree
 import Juvix.Compiler.Pipeline.Artifacts
 import Juvix.Compiler.Pipeline.EntryPoint
-import Juvix.Compiler.Pipeline.ImportParents
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Base
+import Juvix.Compiler.Pipeline.Loader.PathResolver.Data
 import Juvix.Compiler.Pipeline.Loader.PathResolver.DependencyResolver
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Error
 import Juvix.Compiler.Pipeline.ModuleInfoCache
@@ -69,7 +69,7 @@ defaultPipelineOptions =
 
 type PipelineLocalEff =
   '[ ModuleInfoCache,
-     Reader ImportParents,
+     Reader ImportTree,
      Reader ImportScanStrategy,
      TopModuleNameChecker,
      PathResolver,

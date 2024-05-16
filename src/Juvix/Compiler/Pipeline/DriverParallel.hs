@@ -12,10 +12,8 @@ import Data.HashMap.Strict qualified as HashMap
 import Effectful.Concurrent
 import Juvix.Compiler.Concrete.Data.Highlight
 import Juvix.Compiler.Concrete.Language
-import Juvix.Compiler.Concrete.Pretty (ppTrace)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping (getModuleId)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context qualified as Scoper
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error (ScoperError)
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Concrete.Translation.FromSource.Data.ParserState (parserStateImports)
 import Juvix.Compiler.Concrete.Translation.FromSource.TopModuleNameChecker
@@ -26,7 +24,6 @@ import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context qualified a
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as InternalTyped
 import Juvix.Compiler.Pipeline
 import Juvix.Compiler.Pipeline.DriverParallel.Base
-import Juvix.Compiler.Pipeline.ImportParents (ImportParents)
 import Juvix.Compiler.Pipeline.Loader.PathResolver
 import Juvix.Compiler.Pipeline.ModuleInfoCache
 import Juvix.Compiler.Store.Core.Extra
@@ -37,7 +34,6 @@ import Juvix.Compiler.Store.Options qualified as StoredOptions
 import Juvix.Data.Effect.TaggedLock
 import Juvix.Data.SHA256 qualified as SHA256
 import Juvix.Extra.Serialize
-import Juvix.Parser.Error (ParserError)
 import Juvix.Prelude
 import Juvix.Prelude.Pretty
 import Parallel.ParallelTemplate
@@ -95,7 +91,6 @@ compileNode ::
   Node ->
   Sem r CompileProof
 compileNode k node = do
-  tree <- ask @ImportTree
   traceM
     ( "compileNode: "
         <> getNodeName node
@@ -161,6 +156,7 @@ evalModuleInfoCache ::
   ( Members
       '[ Reader EntryPoint,
          IOE,
+         Reader ImportTree,
          Concurrent,
          TaggedLock,
          TopModuleNameChecker,
@@ -171,16 +167,11 @@ evalModuleInfoCache ::
        ]
       r
   ) =>
-  Sem (ModuleInfoCache ': Reader ImportParents ': r) a ->
+  Sem (ModuleInfoCache ': r) a ->
   Sem r a
 evalModuleInfoCache m = do
-  e <- ask
-  tree <-
-    mapError (JuvixError @ParserError)
-      . mapError (JuvixError @ScoperError)
-      $ mkImportTree (e ^. entryPointModulePath)
-  runReader @ImportParents mempty
-    . runReader tree
+  tree <- ask @ImportTree
+  runReader tree
     . compileInParallel
     . evalCacheEmpty processModule
     $ inject m
