@@ -8,7 +8,7 @@ import Juvix.Compiler.Pipeline.Package.Loader.PathResolver
 import Juvix.Data.Effect.TaggedLock
 import Juvix.Prelude
 
-runPathResolverArtifacts :: (Members '[TaggedLock, Files, Reader EntryPoint, State Artifacts, Error DependencyError, DependencyResolver, Error JuvixError, EvalFileEff] r) => Sem (PathResolver ': r) a -> Sem r a
+runPathResolverArtifacts :: (Members '[TaggedLock, Reader DependenciesConfig, Files, Reader EntryPoint, State Artifacts, Error DependencyError, DependencyResolver, Error JuvixError, EvalFileEff] r) => Sem (PathResolver ': r) a -> Sem r a
 runPathResolverArtifacts = runStateLikeArtifacts runPathResolverPipe' artifactResolver
 
 runPackagePathResolverArtifacts :: (Members '[TaggedLock, Files, Reader EntryPoint, State Artifacts, Error DependencyError, DependencyResolver, Error JuvixError, EvalFileEff] r) => Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r a

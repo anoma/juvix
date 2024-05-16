@@ -162,7 +162,6 @@ evalModuleInfoCache ::
   Sem r a
 evalModuleInfoCache m = do
   e <- ask
-  registerDependencies defaultDependenciesConfig
   tree <-
     mapError (JuvixError @ParserError)
       . mapError (JuvixError @ScoperError)

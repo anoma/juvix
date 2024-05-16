@@ -167,6 +167,7 @@ compileReplInputIO fp txt = do
     . mapError (JuvixError @PackageLoaderError)
     . runEvalFileEffIO
     . runDependencyResolver
+    . runReader defaultDependenciesConfig
     . runPathResolverArtifacts
     . runTopModuleNameChecker
     . evalModuleInfoCache

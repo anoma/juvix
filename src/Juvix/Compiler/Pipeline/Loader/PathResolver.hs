@@ -510,16 +510,20 @@ expectedPath' m = do
 
 runPathResolver2 ::
   forall r a v.
-  (v ~ '[TaggedLock, Reader EntryPoint, Files, Error JuvixError, Error DependencyError, DependencyResolver, EvalFileEff], Members v r) =>
+  (v ~ '[TaggedLock, Reader DependenciesConfig, Reader EntryPoint, Files, Error JuvixError, Error DependencyError, DependencyResolver, EvalFileEff], Members v r) =>
   ResolverState ->
   ResolverEnv ->
   Sem (PathResolver ': r) a ->
   Sem r (ResolverState, a)
 runPathResolver2 st topEnv arg = do
+  depsConfig <- ask
   ( reinterpretHCommon3
-      ( mapError (JuvixError @PathResolverError)
+      ( \k -> mapError (JuvixError @PathResolverError)
           . runState st
           . runReader topEnv
+          $ do
+            registerDependencies' depsConfig
+            k
       )
       handler
     )
@@ -553,10 +557,10 @@ runPathResolver2 st topEnv arg = do
                 }
         localSeqUnlift localEnv $ \unlift -> local env' (unlift m)
 
-runPathResolver :: (Members '[TaggedLock, Reader EntryPoint, Files, Error JuvixError, Error DependencyError, DependencyResolver, EvalFileEff] r) => Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
+runPathResolver :: (Members '[TaggedLock, Reader DependenciesConfig, Reader EntryPoint, Files, Error JuvixError, Error DependencyError, DependencyResolver, EvalFileEff] r) => Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
 runPathResolver = runPathResolver' iniResolverState
 
-runPathResolver' :: (Members '[TaggedLock, Reader EntryPoint, Files, Error JuvixError, Error DependencyError, DependencyResolver, EvalFileEff] r) => ResolverState -> Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
+runPathResolver' :: (Members '[TaggedLock, Reader DependenciesConfig, Reader EntryPoint, Files, Error JuvixError, Error DependencyError, DependencyResolver, EvalFileEff] r) => ResolverState -> Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
 runPathResolver' st root x = do
   e <- ask
   let _envSingleFile :: Maybe (Path Abs File)
@@ -573,15 +577,15 @@ runPathResolver' st root x = do
           }
   runPathResolver2 st env x
 
-runPathResolverPipe' :: (Members '[TaggedLock, Files, Reader EntryPoint, DependencyResolver, Error JuvixError, Error DependencyError, EvalFileEff] r) => ResolverState -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
+runPathResolverPipe' :: (Members '[TaggedLock, Files, Reader DependenciesConfig, Reader EntryPoint, DependencyResolver, Error JuvixError, Error DependencyError, EvalFileEff] r) => ResolverState -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
 runPathResolverPipe' iniState a = do
   r <- asks (^. entryPointResolverRoot)
   runPathResolver' iniState r a
 
-runPathResolverPipe :: (Members '[TaggedLock, Files, Reader EntryPoint, DependencyResolver, Error JuvixError, Error DependencyError, EvalFileEff] r) => Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
+runPathResolverPipe :: (Members '[TaggedLock, Reader DependenciesConfig, Files, Reader EntryPoint, DependencyResolver, Error JuvixError, Error DependencyError, EvalFileEff] r) => Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
 runPathResolverPipe a = do
   r <- asks (^. entryPointResolverRoot)
   runPathResolver r a
 
-evalPathResolverPipe :: (Members '[TaggedLock, Files, Reader EntryPoint, DependencyResolver, Error JuvixError, Error DependencyError, EvalFileEff] r) => Sem (PathResolver ': r) a -> Sem r a
+evalPathResolverPipe :: (Members '[TaggedLock, Reader DependenciesConfig, Files, Reader EntryPoint, DependencyResolver, Error JuvixError, Error DependencyError, EvalFileEff] r) => Sem (PathResolver ': r) a -> Sem r a
 evalPathResolverPipe = fmap snd . runPathResolverPipe

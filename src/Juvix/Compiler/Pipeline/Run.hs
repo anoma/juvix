@@ -28,7 +28,6 @@ import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
 import Juvix.Compiler.Pipeline.Package.Loader.PathResolver
-import Juvix.Compiler.Pipeline.Setup
 import Juvix.Compiler.Store.Scoped.Language qualified as Scoped
 import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process
@@ -37,36 +36,45 @@ import Juvix.Prelude
 
 -- | It returns `ResolverState` so that we can retrieve the `juvix.yaml` files,
 -- which we require for `Scope` tests.
-runIOEither :: forall a r. (Members '[TaggedLock, EmbedIO] r) => EntryPoint -> Sem (PipelineEff r) a -> Sem r (Either JuvixError (ResolverState, PipelineResult a))
+runIOEither ::
+  forall a r.
+  (Members '[TaggedLock, Reader PipelineOptions, EmbedIO] r) =>
+  EntryPoint ->
+  Sem (PipelineEff r) a ->
+  Sem r (Either JuvixError (ResolverState, PipelineResult a))
 runIOEither entry = fmap snd . runIOEitherHelper entry
 
-runIOEither' :: forall a r. (Members '[TaggedLock, EmbedIO] r) => EntryPoint -> Sem (PipelineEff r) a -> Sem r (Either JuvixError (ResolverState, PipelineResult a))
-runIOEither' entry = fmap snd . runIOEitherHelper entry
-
-runPipelineHighlight :: forall a r. (Members '[TaggedLock, EmbedIO] r) => EntryPoint -> Sem (PipelineEff r) a -> Sem r HighlightInput
+runPipelineHighlight ::
+  forall a r.
+  (Members '[TaggedLock, Reader PipelineOptions, EmbedIO] r) =>
+  EntryPoint ->
+  Sem (PipelineEff r) a ->
+  Sem r HighlightInput
 runPipelineHighlight entry = fmap fst . runIOEitherHelper entry
 
-runPipelineHtmlEither :: forall r. (Members '[TaggedLock, EmbedIO] r) => EntryPoint -> Sem r (Either JuvixError (Typed.InternalTypedResult, [Typed.InternalTypedResult]))
+runPipelineHtmlEither ::
+  forall r.
+  (Members '[TaggedLock, Reader PipelineOptions, EmbedIO] r) =>
+  EntryPoint ->
+  Sem r (Either JuvixError (Typed.InternalTypedResult, [Typed.InternalTypedResult]))
 runPipelineHtmlEither entry = do
   x <- runIOEitherPipeline' entry $ do
-    entrySetup defaultDependenciesConfig
     DriverSeq.processRecursiveUpToTyped
   return . mapRight snd $ snd x
 
 runIOEitherHelper ::
   forall a r.
-  (Members '[TaggedLock, EmbedIO] r) =>
+  (Members '[TaggedLock, Reader PipelineOptions, EmbedIO] r) =>
   EntryPoint ->
   Sem (PipelineEff r) a ->
   Sem r (HighlightInput, (Either JuvixError (ResolverState, PipelineResult a)))
-runIOEitherHelper entry a = do
+runIOEitherHelper entry a =
   runIOEitherPipeline' entry $ do
-    entrySetup defaultDependenciesConfig
     DriverSeq.processFileUpTo a
 
 runIOEitherPipeline ::
   forall a r.
-  (Members '[TaggedLock, EmbedIO] r) =>
+  (Members '[TaggedLock, Reader PipelineOptions, EmbedIO] r) =>
   EntryPoint ->
   Sem (PipelineEff' r) a ->
   Sem r (Either JuvixError (ResolverState, a))
@@ -80,6 +88,7 @@ runPathResolverInput ::
          Files,
          Reader EntryPoint,
          DependencyResolver,
+         Reader DependenciesConfig,
          Error DependencyError,
          GitClone,
          Error JuvixError,
@@ -97,13 +106,13 @@ runPathResolverInput m = do
 
 runIOEitherPipeline' ::
   forall a r.
-  (Members '[TaggedLock, EmbedIO] r) =>
+  (Members '[Reader PipelineOptions, TaggedLock, EmbedIO] r) =>
   EntryPoint ->
   Sem (PipelineEff' r) a ->
   Sem r (HighlightInput, (Either JuvixError (ResolverState, a)))
 runIOEitherPipeline' entry a = do
   let hasInternet = not (entry ^. entryPointOffline)
-  traceM "runIOEitherPipeline' hey"
+  opts :: PipelineOptions <- ask
   runConcurrent
     . evalInternet hasInternet
     . runHighlightBuilder
@@ -118,9 +127,10 @@ runIOEitherPipeline' entry a = do
     . mapError (JuvixError @PackageLoaderError)
     . runEvalFileEffIO
     . runDependencyResolver
+    . runReader (opts ^. pipelineDependenciesConfig)
     . runPathResolverInput
     . runTopModuleNameChecker
-    . runReader defaultImportScanStrategy
+    . runReader (opts ^. pipelineImportStrategy)
     . evalModuleInfoCacheHelper
     $ a
 
@@ -158,7 +168,7 @@ mainIsPackageFile entry = case entry ^. entryPointModulePath of
 
 runIO ::
   forall a r.
-  (Members '[TaggedLock, EmbedIO] r) =>
+  (Members '[TaggedLock, Reader PipelineOptions, EmbedIO] r) =>
   GenericOptions ->
   EntryPoint ->
   Sem (PipelineEff r) a ->
@@ -218,13 +228,13 @@ runReplPipelineIOEither' lockMode entry = do
       . mapError (JuvixError @PackageLoaderError)
       . runEvalFileEffIO
       . runDependencyResolver
+      . runReader defaultDependenciesConfig
       . runPathResolver'
       . runTopModuleNameChecker
       . runReader defaultImportScanStrategy
       . withImportTree (entry ^. entryPointModulePath)
       . evalModuleInfoCacheHelper
       $ do
-        entrySetup defaultDependenciesConfig
         DriverSeq.processFileToStoredCore entry
   return $ case eith of
     Left err -> Left err

@@ -26,7 +26,7 @@ import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromParsed qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Concrete.Translation.FromSource.TopModuleNameChecker
-import Juvix.Compiler.Concrete.Translation.ImportScanner (ImportScanStrategy)
+import Juvix.Compiler.Concrete.Translation.ImportScanner
 import Juvix.Compiler.Core qualified as Core
 import Juvix.Compiler.Core.Transformation
 import Juvix.Compiler.Core.Translation.Stripped.FromCore qualified as Stripped
@@ -34,11 +34,9 @@ import Juvix.Compiler.Internal qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 import Juvix.Compiler.Nockma.Translation.FromTree qualified as NockmaTree
 import Juvix.Compiler.Pipeline.Artifacts
-import Juvix.Compiler.Pipeline.DriverParallel.Base
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Pipeline.ImportParents
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Base
-import Juvix.Compiler.Pipeline.Loader.PathResolver.Data (ImportTree)
 import Juvix.Compiler.Pipeline.Loader.PathResolver.DependencyResolver
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Error
 import Juvix.Compiler.Pipeline.ModuleInfoCache
@@ -57,12 +55,24 @@ import Juvix.Data.Field
 
 type PipelineAppEffects = '[TaggedLock, EmbedIO]
 
+data PipelineOptions = PipelineOptions
+  { _pipelineImportStrategy :: ImportScanStrategy,
+    _pipelineDependenciesConfig :: DependenciesConfig
+  }
+
+defaultPipelineOptions =
+  PipelineOptions
+    { _pipelineImportStrategy = defaultImportScanStrategy,
+      _pipelineDependenciesConfig = defaultDependenciesConfig
+    }
+
 type PipelineLocalEff =
   '[ ModuleInfoCache,
      Reader ImportParents,
      Reader ImportScanStrategy,
      TopModuleNameChecker,
      PathResolver,
+     Reader DependenciesConfig,
      DependencyResolver,
      EvalFileEff,
      Error PackageLoaderError,
@@ -87,6 +97,8 @@ type PipelineEff r =
      NameIdGen
    ]
     ++ PipelineEff' r
+
+makeLenses ''PipelineOptions
 
 --------------------------------------------------------------------------------
 -- Workflows from source
