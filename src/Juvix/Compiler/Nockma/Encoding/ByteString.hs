@@ -1,9 +1,9 @@
 module Juvix.Compiler.Nockma.Encoding.ByteString where
 
-import Juvix.Prelude.Base
-import Juvix.Compiler.Nockma.Language
 import Data.Bit
 import Juvix.Compiler.Nockma.Encoding.Base
+import Juvix.Compiler.Nockma.Language
+import Juvix.Prelude.Base
 
 atomToByteString :: (NockNatural a, Member (Error (ErrNockNatural a)) r) => Atom a -> Sem r ByteString
 atomToByteString am = do

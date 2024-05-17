@@ -5,8 +5,8 @@ module Juvix.Data.Keyword.All
 where
 
 import Juvix.Data.Keyword
-import Juvix.Extra.Strings qualified as Str
 import Juvix.Extra.Strings qualified as Std
+import Juvix.Extra.Strings qualified as Str
 
 kwAs :: Keyword
 kwAs = asciiKw Str.as
