@@ -33,6 +33,7 @@ eval tab = runReader emptyEvalCtx . eval'
     eval' node = case node of
       Binop x -> goBinop x
       Unop x -> goUnop x
+      Anoma {} -> evalError "unsupported: Anoma builtins"
       Cairo {} -> evalError "unsupported: Cairo builtins"
       Constant c -> return (goConstant c)
       MemRef x -> goMemRef x
@@ -69,9 +70,6 @@ eval tab = runReader emptyEvalCtx . eval'
             PrimUnop op -> eitherToError $ evalUnop tab op v
             OpTrace -> goTrace v
             OpFail -> goFail v
-            OpAnomaGet -> evalError "Unsupported op: OpAnomaGet"
-            OpAnomaEncode -> evalError "Unsupported op: OpAnomaEncode"
-            OpAnomaDecode -> evalError "Unsupported op: OpAnomaDecode"
 
         goFail :: Value -> Sem r' Value
         goFail v = evalError ("failure: " <> printValue tab v)

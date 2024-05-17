@@ -63,5 +63,13 @@ tests =
   [ Eval.NegTest
       "anomaGet"
       $(mkRelDir ".")
-      $(mkRelFile "test009.jvt")
+      $(mkRelFile "test009.jvt"),
+    Eval.NegTest
+      "anomaDecode"
+      $(mkRelDir ".")
+      $(mkRelFile "test010.jvt"),
+    Eval.NegTest
+      "anomaEncode"
+      $(mkRelDir ".")
+      $(mkRelFile "test011.jvt")
   ]

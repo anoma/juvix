@@ -445,6 +445,12 @@ kwLive = asciiKw Str.live
 kwAnomaGet :: Keyword
 kwAnomaGet = asciiKw Str.anomaGet
 
+kwAnomaDecode :: Keyword
+kwAnomaDecode = asciiKw Str.anomaDecode
+
+kwAnomaEncode :: Keyword
+kwAnomaEncode = asciiKw Str.anomaEncode
+
 delimBraceL :: Keyword
 delimBraceL = mkDelim Str.braceL
 

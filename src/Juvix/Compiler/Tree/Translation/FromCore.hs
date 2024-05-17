@@ -145,6 +145,13 @@ genCode infoTable fi =
                 _nodeCairoOpcode = genCairoOp _builtinAppOp,
                 _nodeCairoArgs = args
               }
+      | Core.builtinIsAnoma _builtinAppOp =
+          Anoma $
+            NodeAnoma
+              { _nodeAnomaInfo = mempty,
+                _nodeAnomaOpcode = genAnomaOp _builtinAppOp,
+                _nodeAnomaArgs = args
+              }
       | otherwise =
           case args of
             [arg] ->
@@ -295,9 +302,6 @@ genCode infoTable fi =
       Core.OpFieldToInt -> PrimUnop OpFieldToInt
       Core.OpTrace -> OpTrace
       Core.OpFail -> OpFail
-      Core.OpAnomaGet -> OpAnomaGet
-      Core.OpAnomaEncode -> OpAnomaEncode
-      Core.OpAnomaDecode -> OpAnomaDecode
       _ -> impossible
 
     genCairoOp :: Core.BuiltinOp -> CairoOp
@@ -305,6 +309,13 @@ genCode infoTable fi =
       Core.OpPoseidonHash -> OpCairoPoseidon
       Core.OpEc -> OpCairoEc
       Core.OpRandomEcPoint -> OpCairoRandomEcPoint
+      _ -> impossible
+
+    genAnomaOp :: Core.BuiltinOp -> AnomaOp
+    genAnomaOp = \case
+      Core.OpAnomaGet -> OpAnomaGet
+      Core.OpAnomaEncode -> OpAnomaEncode
+      Core.OpAnomaDecode -> OpAnomaDecode
       _ -> impossible
 
     getArgsNum :: Symbol -> Int

@@ -17,6 +17,7 @@ data Node
   = Binop NodeBinop
   | Unop NodeUnop
   | Cairo NodeCairo
+  | Anoma NodeAnoma
   | -- | A constant value.
     Constant NodeConstant
   | -- | A memory reference.
@@ -67,12 +68,6 @@ data UnaryOpcode
     OpTrace
   | -- | Interrupt execution with a runtime error printing the argument.
     OpFail
-  | -- | Get a value by key from Anoma storage
-    OpAnomaGet
-  | -- | Encode a value to an Anoma atom
-    OpAnomaEncode
-  | -- | Decode a value from an Anoma atom
-    OpAnomaDecode
 
 data NodeBinop = NodeBinop
   { _nodeBinopInfo :: NodeInfo,
@@ -91,6 +86,12 @@ data NodeCairo = NodeCairo
   { _nodeCairoInfo :: NodeInfo,
     _nodeCairoOpcode :: CairoOp,
     _nodeCairoArgs :: [Node]
+  }
+
+data NodeAnoma = NodeAnoma
+  { _nodeAnomaInfo :: NodeInfo,
+    _nodeAnomaOpcode :: AnomaOp,
+    _nodeAnomaArgs :: [Node]
   }
 
 data NodeConstant = NodeConstant

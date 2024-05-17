@@ -240,14 +240,17 @@ instance PrettyCode CairoOp where
     OpCairoEc -> Str.instrEcOp
     OpCairoRandomEcPoint -> Str.cairoRandomEcPoint
 
+instance PrettyCode AnomaOp where
+  ppCode op = return . primitive $ case op of
+    OpAnomaGet -> Str.anomaGet
+    OpAnomaEncode -> Str.anomaEncode
+    OpAnomaDecode -> Str.anomaDecode
+
 instance PrettyCode UnaryOpcode where
   ppCode = \case
     PrimUnop x -> ppCode x
     OpTrace -> return $ primitive Str.instrTrace
     OpFail -> return $ primitive Str.instrFailure
-    OpAnomaGet -> return $ primitive Str.anomaGet
-    OpAnomaEncode -> return $ primitive Str.anomaEncode
-    OpAnomaDecode -> return $ primitive Str.anomaDecode
 
 instance PrettyCode NodeUnop where
   ppCode NodeUnop {..} = do
@@ -260,6 +263,12 @@ instance PrettyCode NodeCairo where
     op <- ppCode _nodeCairoOpcode
     args <- ppCodeArgs _nodeCairoArgs
     return $ op <> parens args
+
+instance PrettyCode NodeAnoma where
+  ppCode NodeAnoma {..} = do
+    op <- ppCode _nodeAnomaOpcode
+    args <- ppCodeArgs _nodeAnomaArgs
+    return (op <> parens args)
 
 instance PrettyCode NodeConstant where
   ppCode NodeConstant {..} = ppCode _nodeConstant
@@ -353,6 +362,7 @@ instance PrettyCode Node where
   ppCode = \case
     Binop x -> ppCode x
     Unop x -> ppCode x
+    Anoma x -> ppCode x
     Cairo x -> ppCode x
     Constant x -> ppCode x
     MemRef x -> ppCode x
