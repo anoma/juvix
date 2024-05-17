@@ -1,0 +1,5 @@
+-- calling unsupported anoma-verify-detached
+
+function main() : * {
+  anoma-verify-detached(1,2,3)
+}

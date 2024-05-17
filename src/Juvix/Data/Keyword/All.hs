@@ -6,6 +6,7 @@ where
 
 import Juvix.Data.Keyword
 import Juvix.Extra.Strings qualified as Str
+import Juvix.Extra.Strings qualified as Std
 
 kwAs :: Keyword
 kwAs = asciiKw Str.as
@@ -450,6 +451,9 @@ kwAnomaDecode = asciiKw Str.anomaDecode
 
 kwAnomaEncode :: Keyword
 kwAnomaEncode = asciiKw Str.anomaEncode
+
+kwAnomaVerifyDetached :: Keyword
+kwAnomaVerifyDetached = asciiKw Std.anomaVerifyDetached
 
 delimBraceL :: Keyword
 delimBraceL = mkDelim Str.braceL
