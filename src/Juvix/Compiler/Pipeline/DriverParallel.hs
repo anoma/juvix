@@ -91,8 +91,7 @@ compileInParallel = do
             _compileArgsNumWorkers = 1,
             _compileArgsCompileNode = processModule
           }
-  traceM "bouta compile"
-  void (compile @JuvixError args)
+  void (compile args)
 
 instance Semigroup CompileResult where
   sconcat l =
@@ -127,7 +126,6 @@ evalModuleInfoCache ::
   Sem (ModuleInfoCache ': r) a ->
   Sem r a
 evalModuleInfoCache m = do
-  traceM "eval cache"
   Driver.evalModuleInfoCache $
     do
       compileInParallel

@@ -13,6 +13,7 @@ module Parallel.ParallelTemplate
     compileArgsNodeName,
     compileArgsNumWorkers,
     compileArgsCompileNode,
+    compilationError,
     compile,
   )
 where
@@ -41,6 +42,7 @@ data CompilationState nodeId compiledProof = CompilationState
     _compilationPending :: HashMap nodeId (HashSet nodeId),
     _compilationStartedNum :: Natural,
     _compilationFinishedNum :: Natural,
+    _compilationError :: Maybe JuvixError,
     _compilationTotalNum :: Natural
   }
 
@@ -73,8 +75,21 @@ makeLenses ''Dependencies
 makeLenses ''CompilationState
 makeLenses ''CompileArgs
 
-compilationStateFinished :: CompilationState nodeId compileProof -> Bool
-compilationStateFinished CompilationState {..} = _compilationFinishedNum == _compilationTotalNum
+data Finished
+  = FinishedOk
+  | FinishedError JuvixError
+  | FinishedNot
+
+isFinishedOk :: Finished -> Bool
+isFinishedOk = \case
+  FinishedOk -> True
+  _ -> False
+
+compilationStateFinished :: CompilationState nodeId compileProof -> Finished
+compilationStateFinished CompilationState {..}
+  | Just err <- _compilationError = FinishedError err
+  | _compilationFinishedNum == _compilationTotalNum = FinishedOk
+  | otherwise = FinishedNot
 
 addCompiledModule ::
   forall nodeId proof.
@@ -83,13 +98,12 @@ addCompiledModule ::
   nodeId ->
   proof ->
   CompilationState nodeId proof ->
-  (CompilationState nodeId proof, (Bool, [nodeId]))
+  (CompilationState nodeId proof, [nodeId])
 addCompiledModule deps uid proof st = run . runState st $ do
   let revDeps :: [nodeId] = deps ^. dependenciesTableReverse . at uid . _Just . to toList
   modify @(CompilationState nodeId proof) (set (compilationState . at uid) (Just proof))
   modify @(CompilationState nodeId proof) (over compilationFinishedNum succ)
-  isLast <- compilationStateFinished <$> get @(CompilationState nodeId proof)
-  fmap (isLast,) . execOutputList . forM_ revDeps $ \s -> do
+  execOutputList . forM_ revDeps $ \s -> do
     modify @(CompilationState nodeId proof) (over (compilationPending . at s . _Just) (HashSet.delete uid))
     -- if there are no more pending dependencies, we push it to the queue
     pend <- gets @(CompilationState nodeId proof) (^. compilationPending . at s)
@@ -109,11 +123,9 @@ nodeDependencies :: (Hashable nodeId) => Dependencies nodeId -> nodeId -> HashSe
 nodeDependencies deps m = fromMaybe mempty (deps ^. dependenciesTable . at m)
 
 compile ::
-  forall err nodeId node compileProof r.
+  forall nodeId node compileProof r.
   ( Hashable nodeId,
-    Members '[Error err] r,
-    ToGenericError err,
-    Members '[IOE, Concurrent] r
+    Members '[IOE, Concurrent, Error JuvixError] r
   ) =>
   CompileArgs r nodeId node compileProof ->
   Sem r (HashMap nodeId compileProof)
@@ -131,6 +143,7 @@ compile args@CompileArgs {..} = do
           { _compilationStartedNum = 0,
             _compilationFinishedNum = 0,
             _compilationTotalNum = numMods,
+            _compilationError = Nothing,
             _compilationPending = deps ^. dependenciesTable,
             _compilationState = mempty
           }
@@ -146,7 +159,7 @@ compile args@CompileArgs {..} = do
       void (forkIO handleLogs)
       replicateM_ _compileArgsNumWorkers
         . forkIO
-        $ lookForWork @nodeId @node @compileProof @err
+        $ lookForWork @nodeId @node @compileProof
       waitForWorkers @nodeId @compileProof
   (^. compilationState) <$> readTVarIO varCompilationState
 
@@ -161,6 +174,7 @@ waitForWorkers ::
   ( Members
       '[ Concurrent,
          Reader (TVar (CompilationState nodeId compileProof)),
+         Error JuvixError,
          Reader Logs
        ]
       r
@@ -169,19 +183,17 @@ waitForWorkers ::
 waitForWorkers = do
   Logs logs <- ask
   cstVar <- ask @(TVar (CompilationState nodeId compileProof))
-  allDone <-
-    atomically $
-      andM
-        [ compilationStateFinished <$> readTVar cstVar,
-          isEmptyTQueue logs
-        ]
-  unless allDone (waitForWorkers @nodeId @compileProof)
+  finished <- atomically $ compilationStateFinished <$> readTVar cstVar
+  let wait = waitForWorkers @nodeId @compileProof
+  case finished of
+    FinishedError err -> throw err
+    FinishedNot -> wait
+    FinishedOk -> unlessM (atomically (isEmptyTQueue logs)) wait
 
 lookForWork ::
-  forall nodeId node compileProof err (s :: [Effect]) r.
+  forall nodeId node compileProof (s :: [Effect]) r.
   ( Hashable nodeId,
-    Members '[Error err] s,
-    ToGenericError err,
+    Members '[Error JuvixError] s,
     Members
       '[ Concurrent,
          Error ParallelError,
@@ -214,8 +226,8 @@ lookForWork = do
         progress = "[" <> show (succ num) <> " of " <> show total <> "] "
     logMsg (Just tid) logs (progress <> "Compiling " <> name)
     return nextModule
-  compileNode @err @s @nodeId @node @compileProof nextModule
-  lookForWork @nodeId @node @compileProof @err @s @r
+  compileNode @s @nodeId @node @compileProof nextModule
+  lookForWork @nodeId @node @compileProof @s @r
 
 getNode ::
   forall nodeId node r.
@@ -225,10 +237,9 @@ getNode ::
 getNode uid = asks (^?! nodesIndex . at uid . _Just)
 
 compileNode ::
-  forall err s nodeId node compileProof r.
+  forall s nodeId node compileProof r.
   ( Hashable nodeId,
-    Members '[Error err] s,
-    ToGenericError err,
+    Members '[Error JuvixError] s,
     Members
       '[ Concurrent,
          Error ParallelError,
@@ -247,10 +258,13 @@ compileNode ::
 compileNode nodId = do
   m :: node <- getNode nodId
   compileFun <- asks @(CompileArgs s nodeId node compileProof) (^. compileArgsCompileNode)
-  result :: compileProof <- inject $
-    catchError @err (compileFun m) $
-      \_ err -> error ("ERROR: " <> renderTextDefault err)
-  registerCompiledModule @nodeId @node @s nodId result
+  st :: TVar (CompilationState nodeId compileProof) <- ask
+  result :: Either (CallStack, JuvixError) compileProof <-
+    inject $
+      tryError @JuvixError (compileFun m)
+  case result of
+    Left (_, err) -> atomically (modifyTVar st (set compilationError (Just err)))
+    Right proof -> registerCompiledModule @nodeId @node @s @compileProof nodId proof
 
 registerCompiledModule ::
   forall nodeId node s compileProof r.
@@ -270,7 +284,7 @@ registerCompiledModule ::
   compileProof ->
   Sem r ()
 registerCompiledModule m proof = do
-  mutSt <- ask
+  mutSt <- ask @((TVar (CompilationState nodeId compileProof)))
   deps <- ask
   n <- getNode @nodeId @node m
   args <- ask @(CompileArgs s nodeId node compileProof)
@@ -280,7 +294,8 @@ registerCompiledModule m proof = do
   toQueue <- atomically $ do
     let msg :: Text = "Done compiling " <> (args ^. compileArgsNodeName) n
     logMsg (Just tid) logs msg
-    (isLast, toQueue) <- stateTVar mutSt (swap . addCompiledModule deps m proof)
+    toQueue <- stateTVar mutSt (swap . addCompiledModule deps m proof)
+    isLast <- isFinishedOk . compilationStateFinished <$> readTVar mutSt
     when isLast (logMsg Nothing logs "All work is done!")
     return toQueue
   forM_ toQueue (atomically . writeTBQueue qq)
