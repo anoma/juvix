@@ -19,8 +19,7 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qualified as Typed
 import Juvix.Compiler.Pipeline
 import Juvix.Compiler.Pipeline.Artifacts.PathResolver
-import Juvix.Compiler.Pipeline.Driver (ModuleInfoCache)
-import Juvix.Compiler.Pipeline.Driver qualified as DriverSeq
+import Juvix.Compiler.Pipeline.Driver
 import Juvix.Compiler.Pipeline.DriverParallel qualified as DriverPar
 import Juvix.Compiler.Pipeline.Loader.PathResolver
 import Juvix.Compiler.Pipeline.Loader.PathResolver.ImportTree (withImportTree)
@@ -59,7 +58,7 @@ runPipelineHtmlEither ::
   Sem r (Either JuvixError (Typed.InternalTypedResult, [Typed.InternalTypedResult]))
 runPipelineHtmlEither entry = do
   x <- runIOEitherPipeline' entry $ do
-    DriverSeq.processRecursiveUpToTyped
+    processRecursiveUpToTyped
   return . mapRight snd $ snd x
 
 runIOEitherHelper ::
@@ -70,7 +69,7 @@ runIOEitherHelper ::
   Sem r (HighlightInput, (Either JuvixError (ResolverState, PipelineResult a)))
 runIOEitherHelper entry a =
   runIOEitherPipeline' entry $ do
-    DriverSeq.processFileUpTo a
+    processFileUpTo a
 
 runIOEitherPipeline ::
   forall a r.
@@ -154,14 +153,14 @@ evalModuleInfoCacheHelper ::
   Sem (ModuleInfoCache ': r) a ->
   Sem r a
 evalModuleInfoCacheHelper m = do
-  b <- whichPathResolver
+  b <- supportsParallel
   if
       | b -> do
           traceM "using parallel"
           DriverPar.evalModuleInfoCache m
       | otherwise -> do
           traceM "using seq"
-          DriverSeq.evalModuleInfoCache m
+          evalModuleInfoCache m
 
 mainIsPackageFile :: EntryPoint -> Bool
 mainIsPackageFile entry = case entry ^. entryPointModulePath of
@@ -236,8 +235,7 @@ runReplPipelineIOEither' lockMode entry = do
       . runReader defaultImportScanStrategy
       . withImportTree (entry ^. entryPointModulePath)
       . evalModuleInfoCacheHelper
-      $ do
-        DriverSeq.processFileToStoredCore entry
+      $ processFileToStoredCore entry
   return $ case eith of
     Left err -> Left err
     Right (art, PipelineResult {..}) ->

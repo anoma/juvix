@@ -7,6 +7,7 @@ module Juvix.Data.Effect.Cache
     runCacheEmpty,
     cacheGet,
     cacheLookup,
+    cacheAsk,
     evalSingletonCache,
     cacheSingletonGet,
     Cache,
@@ -19,6 +20,7 @@ import Juvix.Prelude.Base
 data Cache (k :: GHCType) (v :: GHCType) :: Effect where
   CacheGet :: k -> Cache k v m v
   CacheLookup :: k -> Cache k v m (Maybe v)
+  CacheAsk :: Cache k v m (HashMap k v)
 
 makeSem ''Cache
 
@@ -33,7 +35,7 @@ runCache ::
   HashMap k v ->
   Sem (Cache k v ': r) a ->
   Sem r (HashMap k v, a)
-runCache f c = runState c . re f
+runCache f c = runStateShared c . re f
 
 evalCache ::
   (Hashable k) =>
@@ -75,16 +77,17 @@ re ::
   (Hashable k) =>
   (k -> Sem (Cache k v ': r) v) ->
   Sem (Cache k v ': r) a ->
-  Sem (State (HashMap k v) ': r) a
+  Sem (SharedState (HashMap k v) ': r) a
 re f =
   interpretTop $
     \case
-      CacheLookup k -> gets @(HashMap k v) (^. at k)
+      CacheLookup k -> getsShared @(HashMap k v) (^. at k)
+      CacheAsk -> getShared @(HashMap k v)
       CacheGet k -> do
-        mv <- gets @(HashMap k v) (^. at k)
+        mv <- getsShared @(HashMap k v) (^. at k)
         case mv of
           Nothing -> do
             x <- re f (f k)
-            modify' @(HashMap k v) (set (at k) (Just x))
+            modifyShared @(HashMap k v) (set (at k) (Just x))
             return x
           Just v -> return v

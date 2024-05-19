@@ -413,7 +413,7 @@ runPathResolver2 st topEnv arg = do
       PathResolver (Sem localEs) x ->
       Sem (Reader ResolverEnv ': State ResolverState ': Error PathResolverError ': t) x
     handler localEnv = \case
-      WhichPathResolver -> return True
+      SupportsParallel -> return True
       RegisterDependencies forceUpdateLockfile -> registerDependencies' forceUpdateLockfile
       GetPackageInfos -> gets allPackageInfos
       ExpectedPathInfoTopModule m -> expectedPath' m

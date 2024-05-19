@@ -5,7 +5,6 @@ module Juvix.Compiler.Pipeline.Loader.PathResolver.Base
 where
 
 import Juvix.Compiler.Concrete.Data.Name
-import Juvix.Compiler.Pipeline.Loader.PathResolver.Data
 import Juvix.Compiler.Pipeline.Loader.PathResolver.DependenciesConfig
 import Juvix.Compiler.Pipeline.Loader.PathResolver.PackageInfo
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Paths
@@ -39,7 +38,7 @@ data PathResolver :: Effect where
   -- | The root is assumed to be a package root.
   WithResolverRoot :: Path Abs Dir -> m a -> PathResolver m a
   -- TODO remove: ugly af
-  WhichPathResolver :: PathResolver m Bool
+  SupportsParallel :: PathResolver m Bool
 
 makeLenses ''RootInfo
 makeLenses ''PathInfoTopModule

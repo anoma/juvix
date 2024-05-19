@@ -13,13 +13,11 @@ import Juvix.Compiler.Internal qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 import Juvix.Compiler.Pipeline.Artifacts
 import Juvix.Compiler.Pipeline.Artifacts.PathResolver
-import Juvix.Compiler.Pipeline.Driver (evalModuleInfoCache)
-import Juvix.Compiler.Pipeline.Driver qualified as Driver
+import Juvix.Compiler.Pipeline.Driver
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Pipeline.Loader.PathResolver (runDependencyResolver)
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Base
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Error
-import Juvix.Compiler.Pipeline.ModuleInfoCache
 import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
 import Juvix.Compiler.Pipeline.Result
@@ -119,8 +117,7 @@ registerImport ::
   Import 'Parsed ->
   Sem r ()
 registerImport i = do
-  e <- ask
-  PipelineResult {..} <- Driver.processImport e (i ^. importModulePath)
+  PipelineResult {..} <- processImport (i ^. importModulePath)
   let mtab' = Store.insertModule (i ^. importModulePath) _pipelineResult _pipelineResultImports
   modify' (appendArtifactsModuleTable mtab')
   scopeTable <- gets (^. artifactScopeTable)

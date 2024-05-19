@@ -42,7 +42,7 @@ runPackagePathResolver rootPath sem = do
   let mkRootInfo' :: Path Rel File -> Maybe RootInfo = mkRootInfo ds fs
   packageInfos <- mkPackageInfos ds fs
   (`interpretH` sem) $ \localEnv -> \case
-    WhichPathResolver -> return False
+    SupportsParallel -> return False
     RegisterDependencies {} -> return ()
     ResolvePath scan -> case mkRootInfo ds fs (addFileExt FileExtJuvix (importScanToRelPath scan)) of
       Nothing ->
