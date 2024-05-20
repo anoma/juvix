@@ -4,7 +4,6 @@ pub mod defs;
 pub mod equality;
 pub mod integer;
 pub mod memory;
-pub mod stack;
 
 #[cfg(test)]
 mod tests {
@@ -15,18 +14,18 @@ mod tests {
 
     fn program_fib(fid: Word, args: &[Word]) -> Word {
         const FUN_FIB: Word = 0;
-        #[allow(unused_mut)]
-        let mut tmp1: Word;
-        #[allow(unused_mut)]
-        let mut tmp2: Word;
         loop {
             match fid {
                 FUN_FIB => {
+                    #[allow(unused_mut)]
+                    let mut tmp1: Word;
+                    #[allow(unused_mut)]
+                    let mut tmp2: Word;
                     if word_to_bool(smallint_le(args[0], make_smallint(1))) {
                         break args[0];
                     } else {
-                        tmp1 = program_fib(0, &[smallint_sub(args[0], make_smallint(1))]);
-                        tmp2 = program_fib(0, &[smallint_sub(args[0], make_smallint(2))]);
+                        tmp1 = program_fib(FUN_FIB, &[smallint_sub(args[0], make_smallint(1))]);
+                        tmp2 = program_fib(FUN_FIB, &[smallint_sub(args[0], make_smallint(2))]);
                         break (smallint_add(tmp1, tmp2));
                     }
                 }
@@ -40,8 +39,6 @@ mod tests {
         const FUN_ITFIB_GO: Word = 1;
         #[allow(unused_mut)]
         let mut fid = arg_fid;
-        #[allow(unused_mut)]
-        let mut tmp1: Word;
         loop {
             match fid {
                 FUN_ITFIB => {
@@ -51,6 +48,8 @@ mod tests {
                     continue;
                 }
                 FUN_ITFIB_GO => {
+                    #[allow(unused_mut)]
+                    let mut tmp1: Word;
                     if juvix_equal(args[0], make_smallint(0)) {
                         break args[1];
                     } else {
@@ -73,9 +72,6 @@ mod tests {
         const FUN_APPLY_2: Word = 2;
         #[allow(unused_mut)]
         let mut fid = arg_fid;
-        #[allow(unused_mut)]
-        let mut tmp1: Word;
-        println!("hello!");
         loop {
             match fid {
                 FUN_MAIN => {
@@ -85,6 +81,8 @@ mod tests {
                     continue;
                 }
                 FUN_CALCULATE => {
+                    #[allow(unused_mut)]
+                    let mut tmp1: Word;
                     tmp1 = smallint_mul(args[2], args[1]);
                     tmp1 = smallint_add(args[0], tmp1);
                     break tmp1;
