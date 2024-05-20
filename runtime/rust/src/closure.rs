@@ -30,6 +30,14 @@ impl Memory {
         p
     }
 
+    // Assigns stored closure args plus the provided closure args (`cargs`) to the
+    // argument space (`args`). Returns the function id to call.
+    pub fn call_closure(self: &Memory, cl: Word, cargs: &[Word]) -> (Word, Vec<Word>) {
+        let mut args = Vec::from(self.get_closure_args(cl));
+        args.extend(cargs);
+        return (self.get_closure_fid(cl), args);
+    }
+
     // Function id
     pub fn get_closure_fid(self: &Memory, ptr: Pointer) -> Word {
         self[word_to_usize(ptr)]
@@ -49,7 +57,13 @@ impl Memory {
         self[word_to_usize(ptr) + CLOSURE_HEADER_SIZE + word_to_usize(idx)]
     }
 
-    pub fn get_closure_args(self: &mut Memory, ptr: Pointer) -> &mut [Word] {
+    pub fn get_closure_args(self: &Memory, ptr: Pointer) -> &[Word] {
+        let i = word_to_usize(ptr) + CLOSURE_HEADER_SIZE;
+        let nargs = self.get_closure_nargs(ptr);
+        &self[i..i + nargs]
+    }
+
+    pub fn mut_closure_args(self: &mut Memory, ptr: Pointer) -> &mut [Word] {
         let i = word_to_usize(ptr) + CLOSURE_HEADER_SIZE;
         let nargs = self.get_closure_nargs(ptr);
         &mut self[i..i + nargs]
@@ -72,6 +86,6 @@ impl Memory {
     }
 
     pub fn set_closure_args(self: &mut Memory, ptr: Pointer, args: &[Word]) {
-        self.get_closure_args(ptr).copy_from_slice(args);
+        self.mut_closure_args(ptr).copy_from_slice(args);
     }
 }

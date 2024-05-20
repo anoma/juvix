@@ -1,3 +1,5 @@
+#[macro_use]
+pub mod apply;
 pub mod closure;
 pub mod constr;
 pub mod defs;
@@ -7,6 +9,7 @@ pub mod memory;
 
 #[cfg(test)]
 mod tests {
+    use super::apply;
     use super::defs::*;
     use super::equality::*;
     use super::integer::*;
@@ -66,10 +69,10 @@ mod tests {
         }
     }
 
-    fn program_closure_call(mem: &mut Memory, arg_fid: Word, args: &mut [Word]) -> Word {
+    fn program_closure_call(mem: &mut Memory, arg_fid: Word, mut args: Vec<Word>) -> Word {
         const FUN_MAIN: Word = 0;
         const FUN_CALCULATE: Word = 1;
-        const FUN_APPLY_2: Word = 2;
+        const FUN_APPLY_1: Word = 2;
         #[allow(unused_mut)]
         let mut fid = arg_fid;
         loop {
@@ -77,7 +80,7 @@ mod tests {
                 FUN_MAIN => {
                     args[0] =
                         mem.alloc_closure(FUN_CALCULATE, &[make_smallint(5), make_smallint(3)], 1);
-                    fid = FUN_APPLY_2;
+                    fid = FUN_APPLY_1;
                     continue;
                 }
                 FUN_CALCULATE => {
@@ -87,12 +90,58 @@ mod tests {
                     tmp1 = smallint_add(args[0], tmp1);
                     break tmp1;
                 }
-                FUN_APPLY_2 => {
-                    let cl = args[0];
-                    fid = mem.get_closure_fid(cl);
-                    args[0..2].copy_from_slice(&mem.get_closure_args(cl));
-                    args[2] = make_smallint(2);
+                FUN_APPLY_1 => {
+                    (fid, args) = mem.call_closure(args[0], &[make_smallint(2)]);
                     continue;
+                }
+                _ => panic!("unknown function id"),
+            }
+        }
+    }
+
+    fn program_sk(mem: &mut Memory, arg_fid: Word, mut args: Vec<Word>) -> Word {
+        const FUN_MAIN: Word = 0;
+        const FUN_S: Word = 1;
+        const FUN_K: Word = 2;
+        const FUN_I: Word = 3;
+        #[allow(unused_mut)]
+        let mut fid = arg_fid;
+        'program: loop {
+            match fid {
+                FUN_MAIN => {
+                    let id = program_sk(mem, FUN_I, vec![]);
+                    let x = apply!(
+                        program_sk,
+                        mem,
+                        id,
+                        vec![id, id, id, id, id, id, make_smallint(1)]
+                    );
+                    let y = apply!(
+                        program_sk,
+                        mem,
+                        id,
+                        vec![id, id, id, id, id, id, id, id, id, make_smallint(1)]
+                    );
+                    let z = apply!(
+                        program_sk,
+                        mem,
+                        id,
+                        vec![id, id, id, id, id, id, id, id, id, id, id, make_smallint(1)]
+                    );
+                    let tmp1 = smallint_add(x, y);
+                    break smallint_add(tmp1, z);
+                }
+                FUN_S => {
+                    let xz = apply!(program_sk, mem, args[0], vec![args[2]]);
+                    let yz = apply!(program_sk, mem, args[1], vec![args[2]]);
+                    tapply!('program, program_sk, mem, fid, args, xz, vec![yz]);
+                }
+                FUN_K => {
+                    break args[0];
+                }
+                FUN_I => {
+                    let k = mem.alloc_closure(FUN_K, &[], 2);
+                    break mem.alloc_closure(FUN_S, &[k, k], 1);
                 }
                 _ => panic!("unknown function id"),
             }
@@ -113,7 +162,13 @@ mod tests {
 
     #[test]
     fn test_closure_call() {
-        let result = program_closure_call(&mut Memory::new(), 0, &mut [0, 0, 0]);
+        let result = program_closure_call(&mut Memory::new(), 0, vec![0, 0, 0]);
         assert_eq!(result, 11);
+    }
+
+    #[test]
+    fn test_sk() {
+        let result = program_sk(&mut Memory::new(), 0, vec![]);
+        assert_eq!(result, 3);
     }
 }
