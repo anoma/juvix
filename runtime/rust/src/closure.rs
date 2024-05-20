@@ -23,10 +23,10 @@ impl Memory {
         let i1 = word_to_usize(ptr) + CLOSURE_HEADER_SIZE;
         let nargs = self.get_closure_nargs(ptr);
         let i2 = word_to_usize(p) + CLOSURE_HEADER_SIZE;
-        for i in 0..nargs - 1 {
+        for i in 0..nargs {
             self[i2 + i] = self[i1 + i]
         }
-        self[i2 + nargs..i2 + nargs + args.len() - 1].copy_from_slice(args);
+        self[i2 + nargs..i2 + nargs + args.len()].copy_from_slice(args);
         p
     }
 
@@ -52,7 +52,7 @@ impl Memory {
     pub fn get_closure_args(self: &mut Memory, ptr: Pointer) -> &mut [Word] {
         let i = word_to_usize(ptr) + CLOSURE_HEADER_SIZE;
         let nargs = self.get_closure_nargs(ptr);
-        &mut self[i..i + nargs - 1]
+        &mut self[i..i + nargs]
     }
 
     pub fn set_closure_fid(self: &mut Memory, ptr: Pointer, uid: Word) {
@@ -64,7 +64,7 @@ impl Memory {
     }
 
     pub fn set_closure_largs(self: &mut Memory, ptr: Pointer, largs: usize) {
-        self[word_to_usize(ptr) + 1] = usize_to_word(largs)
+        self[word_to_usize(ptr) + 2] = usize_to_word(largs)
     }
 
     pub fn set_closure_arg(self: &mut Memory, ptr: Pointer, idx: Word, x: Word) {

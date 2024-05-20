@@ -29,7 +29,7 @@ impl Memory {
     pub fn get_constr_args(self: &mut Memory, ptr: Pointer) -> &mut [Word] {
         let i = word_to_usize(ptr) + CONSTR_HEADER_SIZE;
         let nargs = self.get_constr_nargs(ptr);
-        &mut self[i..i + nargs - 1]
+        &mut self[i..i + nargs]
     }
 
     pub fn set_constr_uid(self: &mut Memory, ptr: Pointer, uid: Word) {
