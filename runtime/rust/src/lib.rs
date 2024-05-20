@@ -15,7 +15,7 @@ mod tests {
     use super::integer::*;
     use super::memory::*;
 
-    fn program_fib(fid: Word, args: &[Word]) -> Word {
+    fn program_fib(fid: Word, args: Vec<Word>) -> Word {
         const FUN_FIB: Word = 0;
         loop {
             match fid {
@@ -27,8 +27,8 @@ mod tests {
                     if word_to_bool(smallint_le(args[0], make_smallint(1))) {
                         break args[0];
                     } else {
-                        tmp1 = program_fib(FUN_FIB, &[smallint_sub(args[0], make_smallint(1))]);
-                        tmp2 = program_fib(FUN_FIB, &[smallint_sub(args[0], make_smallint(2))]);
+                        tmp1 = program_fib(FUN_FIB, vec![smallint_sub(args[0], make_smallint(1))]);
+                        tmp2 = program_fib(FUN_FIB, vec![smallint_sub(args[0], make_smallint(2))]);
                         break (smallint_add(tmp1, tmp2));
                     }
                 }
@@ -37,7 +37,7 @@ mod tests {
         }
     }
 
-    fn program_itfib(arg_fid: Word, args: &mut [Word]) -> Word {
+    fn program_itfib(arg_fid: Word, mut args: Vec<Word>) -> Word {
         const FUN_ITFIB: Word = 0;
         const FUN_ITFIB_GO: Word = 1;
         #[allow(unused_mut)]
@@ -150,13 +150,13 @@ mod tests {
 
     #[test]
     fn test_fib() {
-        let result = program_fib(0, &[11]);
+        let result = program_fib(0, vec![11]);
         assert_eq!(result, 89);
     }
 
     #[test]
     fn test_itfib() {
-        let result = program_itfib(0, &mut [11, 0, 0]);
+        let result = program_itfib(0, vec![11, 0, 0]);
         assert_eq!(result, 89);
     }
 
