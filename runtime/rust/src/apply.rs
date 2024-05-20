@@ -29,7 +29,7 @@ impl Memory {
 
 #[macro_export]
 macro_rules! tapply {
-    ($lab:lifetime, $program:ident, $mem:ident, $fid:ident, $args:expr, $cl0:expr, $cargs0:expr) => {
+    ($lab:lifetime, $program:ident, $mem:ident, $fid:ident, $args:ident, $cl0:expr, $cargs0:expr) => {
         let mut cl = $cl0;
         let mut cargs = $cargs0;
         loop {

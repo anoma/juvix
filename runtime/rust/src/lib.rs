@@ -15,7 +15,8 @@ mod tests {
     use super::integer::*;
     use super::memory::*;
 
-    fn program_fib(fid: Word, args: Vec<Word>) -> Word {
+    #[allow(unused_mut)]
+    fn program_fib(mut fid: Word, args: Vec<Word>) -> Word {
         const FUN_FIB: Word = 0;
         loop {
             match fid {
@@ -37,29 +38,25 @@ mod tests {
         }
     }
 
-    fn program_itfib(arg_fid: Word, mut args: Vec<Word>) -> Word {
+    fn program_itfib(mut fid: Word, mut args: Vec<Word>) -> Word {
         const FUN_ITFIB: Word = 0;
         const FUN_ITFIB_GO: Word = 1;
-        #[allow(unused_mut)]
-        let mut fid = arg_fid;
         loop {
             match fid {
                 FUN_ITFIB => {
-                    args[1] = 0;
-                    args[2] = 1;
+                    args = vec![args[0], 0, 1];
                     fid = FUN_ITFIB_GO;
                     continue;
                 }
                 FUN_ITFIB_GO => {
-                    #[allow(unused_mut)]
-                    let mut tmp1: Word;
                     if juvix_equal(args[0], make_smallint(0)) {
                         break args[1];
                     } else {
-                        tmp1 = args[1];
-                        args[1] = args[2];
-                        args[2] = smallint_add(args[1], tmp1);
-                        args[0] = smallint_sub(args[0], make_smallint(1));
+                        args = vec![
+                            smallint_sub(args[0], make_smallint(1)),
+                            args[2],
+                            smallint_add(args[1], args[2]),
+                        ];
                         fid = FUN_ITFIB_GO;
                         continue;
                     }
@@ -69,12 +66,10 @@ mod tests {
         }
     }
 
-    fn program_closure_call(mem: &mut Memory, arg_fid: Word, mut args: Vec<Word>) -> Word {
+    fn program_closure_call(mem: &mut Memory, mut fid: Word, mut args: Vec<Word>) -> Word {
         const FUN_MAIN: Word = 0;
         const FUN_CALCULATE: Word = 1;
         const FUN_APPLY_1: Word = 2;
-        #[allow(unused_mut)]
-        let mut fid = arg_fid;
         loop {
             match fid {
                 FUN_MAIN => {
@@ -88,7 +83,7 @@ mod tests {
                     let mut tmp1: Word;
                     tmp1 = smallint_mul(args[2], args[1]);
                     tmp1 = smallint_add(args[0], tmp1);
-                    break tmp1;
+                    return tmp1;
                 }
                 FUN_APPLY_1 => {
                     (fid, args) = mem.call_closure(args[0], &[make_smallint(2)]);
@@ -99,13 +94,11 @@ mod tests {
         }
     }
 
-    fn program_sk(mem: &mut Memory, arg_fid: Word, mut args: Vec<Word>) -> Word {
+    fn program_sk(mem: &mut Memory, mut fid: Word, mut args: Vec<Word>) -> Word {
         const FUN_MAIN: Word = 0;
         const FUN_S: Word = 1;
         const FUN_K: Word = 2;
         const FUN_I: Word = 3;
-        #[allow(unused_mut)]
-        let mut fid = arg_fid;
         'program: loop {
             match fid {
                 FUN_MAIN => {
@@ -148,6 +141,71 @@ mod tests {
         }
     }
 
+    #[allow(unused_mut)]
+    fn program_lists(mem: &mut Memory, mut fid: Word, mut args: Vec<Word>) -> Word {
+        const FUN_MAIN: Word = 0;
+        const FUN_MAP: Word = 1;
+        const FUN_ADD_ONE: Word = 2;
+        const FUN_SUM: Word = 3;
+        const FUN_GEN: Word = 4;
+        const TAG_NIL: Word = 0;
+        const TAG_CONS: Word = 1;
+        loop {
+            match fid {
+                FUN_MAIN => {
+                    let lst1 = program_lists(mem, FUN_GEN, vec![make_smallint(1000)]);
+                    let inc = mem.alloc_closure(FUN_ADD_ONE, &[], 1);
+                    let lst2 = program_lists(mem, FUN_MAP, vec![inc, lst1]);
+                    return program_lists(mem, FUN_SUM, vec![lst2]);
+                }
+                FUN_MAP => match mem.get_constr_tag(args[1]) {
+                    TAG_NIL => {
+                        return args[1];
+                    }
+                    TAG_CONS => {
+                        let h = apply!(
+                            program_lists,
+                            mem,
+                            args[0],
+                            vec![mem.get_constr_arg(args[1], 0)]
+                        );
+                        let t = program_lists(
+                            mem,
+                            FUN_MAP,
+                            vec![args[0], mem.get_constr_arg(args[1], 1)],
+                        );
+                        return mem.alloc_constr(TAG_CONS, &[h, t]);
+                    }
+                    _ => panic!("unknown constructor tag"),
+                },
+                FUN_ADD_ONE => {
+                    return smallint_add(args[0], make_smallint(1));
+                }
+                FUN_SUM => match mem.get_constr_tag(args[0]) {
+                    TAG_NIL => return make_smallint(0),
+                    TAG_CONS => {
+                        let s = program_lists(mem, FUN_SUM, vec![mem.get_constr_arg(args[0], 1)]);
+                        return smallint_add(s, mem.get_constr_arg(args[0], 0));
+                    }
+                    _ => panic!("unknown constructor tag"),
+                },
+                FUN_GEN => {
+                    if args[0] == make_smallint(0) {
+                        return mem.alloc_constr(TAG_NIL, &[]);
+                    } else {
+                        let t = program_lists(
+                            mem,
+                            FUN_GEN,
+                            vec![smallint_sub(args[0], make_smallint(1))],
+                        );
+                        return mem.alloc_constr(TAG_CONS, &[args[0], t]);
+                    }
+                }
+                _ => panic!("unknown function id"),
+            }
+        }
+    }
+
     #[test]
     fn test_fib() {
         let result = program_fib(0, vec![11]);
@@ -170,5 +228,11 @@ mod tests {
     fn test_sk() {
         let result = program_sk(&mut Memory::new(), 0, vec![]);
         assert_eq!(result, 3);
+    }
+
+    #[test]
+    fn test_lists() {
+        let result = program_lists(&mut Memory::new(), 0, vec![]);
+        assert_eq!(result, 501500);
     }
 }
