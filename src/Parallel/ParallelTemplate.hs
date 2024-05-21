@@ -80,11 +80,6 @@ data Finished
   | FinishedError JuvixError
   | FinishedNot
 
-isFinishedOk :: Finished -> Bool
-isFinishedOk = \case
-  FinishedOk -> True
-  _ -> False
-
 compilationStateFinished :: CompilationState nodeId compileProof -> Finished
 compilationStateFinished CompilationState {..}
   | Just err <- _compilationError = FinishedError err
