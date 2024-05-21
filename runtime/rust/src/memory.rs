@@ -39,3 +39,23 @@ where
         &mut self.memory[index]
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_memory() {
+        let mut mem = Memory::new();
+        for k in 0..100 {
+            let p = mem.alloc(1000);
+            for j in 1..1001 {
+                mem[(p + j - 1) as usize] = k * 1000 + j;
+                assert_eq!(mem[(p + j - 1) as usize], k * 1000 + j);
+            }
+        }
+        for i in 0..100_000 {
+            assert_eq!(mem[i as usize], i + 1);
+        }
+    }
+}

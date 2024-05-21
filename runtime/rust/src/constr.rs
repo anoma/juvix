@@ -54,3 +54,27 @@ impl Memory {
         self.mut_constr_args(ptr).copy_from_slice(args);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_constrs() {
+        let mut mem = Memory::new();
+        for tag in 0..10 {
+            for k in 0..100 {
+                let args: Vec<Word> = (0..k).collect();
+                let ctr = mem.alloc_constr(tag, &args);
+                assert_eq!(mem.get_constr_tag(ctr), tag);
+                assert_eq!(mem.get_constr_args(ctr), args);
+                mem.set_constr_tag(ctr, tag + 1);
+                assert_eq!(mem.get_constr_tag(ctr), tag + 1);
+                if k > 0 {
+                    mem.set_constr_arg(ctr, k / 2, 789);
+                    assert_eq!(mem.get_constr_arg(ctr, k / 2), 789);
+                }
+            }
+        }
+    }
+}

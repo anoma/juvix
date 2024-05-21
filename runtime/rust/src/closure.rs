@@ -16,12 +16,12 @@ impl Memory {
     }
 
     pub fn extend_closure(self: &mut Memory, ptr: Pointer, args: &[Word]) -> Pointer {
-        let p = self.alloc(args.len() + CLOSURE_HEADER_SIZE);
+        let nargs = self.get_closure_nargs(ptr);
+        let p = self.alloc(nargs + args.len() + CLOSURE_HEADER_SIZE);
         self.set_closure_fid(p, self.get_closure_fid(ptr));
         self.set_closure_nargs(p, self.get_closure_nargs(ptr) + args.len());
         self.set_closure_largs(p, self.get_closure_largs(ptr) - args.len());
         let i1 = word_to_usize(ptr) + CLOSURE_HEADER_SIZE;
-        let nargs = self.get_closure_nargs(ptr);
         let i2 = word_to_usize(p) + CLOSURE_HEADER_SIZE;
         for i in 0..nargs {
             self[i2 + i] = self[i1 + i]
@@ -87,5 +87,44 @@ impl Memory {
 
     pub fn set_closure_args(self: &mut Memory, ptr: Pointer, args: &[Word]) {
         self.mut_closure_args(ptr).copy_from_slice(args);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_closures() {
+        let mut mem = Memory::new();
+        for fid in 0..10 {
+            for k in 0..100 {
+                let args: Vec<Word> = (0..k).collect();
+                let largs = (k / 2) as usize;
+                let cl = mem.alloc_closure(fid, &args, largs);
+                assert_eq!(mem.get_closure_fid(cl), fid);
+                assert_eq!(mem.get_closure_nargs(cl), args.len());
+                assert_eq!(mem.get_closure_largs(cl), largs);
+                assert_eq!(mem.get_closure_args(cl), args);
+                mem.set_closure_fid(cl, fid + 1);
+                assert_eq!(mem.get_closure_fid(cl), fid + 1);
+                if k > 0 {
+                    mem.set_closure_arg(cl, k / 2, 789);
+                    assert_eq!(mem.get_closure_arg(cl, k / 2), 789);
+                }
+                if largs > 1 {
+                    let n: Word = k + largs as Word - 1;
+                    let args1: Vec<Word> = (k..n).collect();
+                    let cl1 = mem.extend_closure(cl, &args1);
+                    let mut args2: Vec<Word> = (0..n).collect();
+                    if k > 0 {
+                        args2[(k / 2) as usize] = 789;
+                    }
+                    assert_eq!(mem.get_closure_args(cl1), args2);
+                    assert_eq!(mem.get_closure_nargs(cl1), args2.len());
+                    assert_eq!(mem.get_closure_largs(cl1), 1);
+                }
+            }
+        }
     }
 }
