@@ -6,9 +6,13 @@ module Juvix.Data.Effect.Cache
     evalCacheEmpty,
     runCacheEmpty,
     cacheGet,
+    cacheGetResult,
     cacheLookup,
     evalSingletonCache,
     cacheSingletonGet,
+    CacheResult (..),
+    cacheResultHit,
+    cacheResult,
     Cache,
     SCache,
   )
@@ -16,8 +20,16 @@ where
 
 import Juvix.Prelude.Base
 
+data CacheResult a = CacheResult
+  { _cacheResultHit :: Bool,
+    _cacheResult :: a
+  }
+  deriving stock (Show, Eq)
+
+makeLenses ''CacheResult
+
 data Cache (k :: GHCType) (v :: GHCType) :: Effect where
-  CacheGet :: k -> Cache k v m v
+  CacheGetResult :: k -> Cache k v m (CacheResult v)
   CacheLookup :: k -> Cache k v m (Maybe v)
 
 makeSem ''Cache
@@ -70,6 +82,13 @@ evalSingletonCache ::
 evalSingletonCache f c = evalCacheEmpty @() (const f) c
 {-# INLINE evalSingletonCache #-}
 
+cacheGet ::
+  forall k v r.
+  (Member (Cache k v) r) =>
+  k ->
+  Sem r v
+cacheGet = fmap (^. cacheResult) . cacheGetResult
+
 re ::
   forall k v r a.
   (Hashable k) =>
@@ -80,11 +99,20 @@ re f =
   interpretTop $
     \case
       CacheLookup k -> getsShared @(HashMap k v) (^. at k)
-      CacheGet k -> do
+      CacheGetResult k -> do
         mv <- getsShared @(HashMap k v) (^. at k)
         case mv of
           Nothing -> do
-            x <- re f (f k)
-            modifyShared @(HashMap k v) (set (at k) (Just x))
-            return x
-          Just v -> return v
+            _cacheResult <- re f (f k)
+            modifyShared @(HashMap k v) (set (at k) (Just _cacheResult))
+            return
+              CacheResult
+                { _cacheResultHit = False,
+                  _cacheResult
+                }
+          Just _cacheResult ->
+            return
+              CacheResult
+                { _cacheResultHit = True,
+                  _cacheResult
+                }
