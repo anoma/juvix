@@ -286,18 +286,8 @@ registerCompiledModule ::
 registerCompiledModule m proof = do
   mutSt <- ask @((TVar (CompilationState nodeId compileProof)))
   deps <- ask
-  -- n <- getNode @nodeId @node m
-  -- args <- ask @(CompileArgs s nodeId node compileProof)
-  -- tid <- myThreadId
   qq <- asks (^. compileQueue)
-  -- logs <- ask
-  toQueue <- atomically $ do
-    -- let msg :: Text = "Done compiling " <> (args ^. compileArgsNodeName) n
-    -- logMsg (Just tid) logs msg
-    toQueue <- stateTVar mutSt (swap . addCompiledModule deps m proof)
-    isFinishedOk . compilationStateFinished <$> readTVar mutSt
-    -- when isLast (logMsg Nothing logs "All work is done!")
-    return toQueue
+  toQueue <- atomically (stateTVar mutSt (swap . addCompiledModule deps m proof))
   forM_ toQueue (atomically . writeTBQueue qq)
 
 logMsg :: Maybe ThreadId -> Logs -> Text -> STM ()
