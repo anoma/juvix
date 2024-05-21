@@ -156,10 +156,10 @@ evalModuleInfoCacheHelper m = do
   b <- supportsParallel
   if
       | b -> do
-          traceM "using parallel"
+          -- traceM "using parallel"
           DriverPar.evalModuleInfoCache m
       | otherwise -> do
-          traceM "using seq"
+          -- traceM "using seq"
           evalModuleInfoCache m
 
 mainIsPackageFile :: EntryPoint -> Bool

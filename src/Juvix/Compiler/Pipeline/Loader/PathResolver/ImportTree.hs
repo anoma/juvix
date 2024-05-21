@@ -28,8 +28,8 @@ mkImportTree mentrypointModulePath =
   mapError (JuvixError @ParserError)
     . mapError (JuvixError @ScoperError)
     $ do
-      b <- supportsParallel
-      traceM ("path resolver supports parallel = " <> show b)
+      -- b <- supportsParallel
+      -- traceM ("path resolver supports parallel = " <> show b)
       pkgInfosTable <- getPackageInfos
       let pkgs :: [PackageInfo] = toList pkgInfosTable
           allNodes :: [ImportNode] = concatMap packageNodes pkgs

@@ -59,7 +59,7 @@ mkDependencies tree =
     toPath = (^. importNodeAbsFile)
 
 getNodeName :: Node -> Text
-getNodeName (EntryIndex e) = show (fromJust (e ^. entryPointModulePath))
+getNodeName (EntryIndex e) = pack (toFilePath (fromJust (e ^. entryPointModulePath)))
 
 -- | Fills the cache in parallel
 compileInParallel ::
@@ -88,7 +88,7 @@ compileInParallel = do
           { _compileArgsNodesIndex = idx,
             _compileArgsNodeName = getNodeName,
             _compileArgsDependencies = mkDependencies t,
-            _compileArgsNumWorkers = 1,
+            _compileArgsNumWorkers = 12,
             _compileArgsCompileNode = processModule
           }
   void (compile args)
