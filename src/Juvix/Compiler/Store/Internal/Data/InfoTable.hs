@@ -16,6 +16,8 @@ data ConstructorInfo = ConstructorInfo
 
 instance Serialize ConstructorInfo
 
+instance NFData ConstructorInfo
+
 data FunctionInfo = FunctionInfo
   { _functionInfoName :: FunctionName,
     _functionInfoType :: Expression,
@@ -30,12 +32,16 @@ data FunctionInfo = FunctionInfo
 
 instance Serialize FunctionInfo
 
+instance NFData FunctionInfo
+
 newtype AxiomInfo = AxiomInfo
   { _axiomInfoDef :: AxiomDef
   }
   deriving stock (Generic)
 
 instance Serialize AxiomInfo
+
+instance NFData AxiomInfo
 
 data InductiveInfo = InductiveInfo
   { _inductiveInfoName :: InductiveName,
@@ -51,6 +57,8 @@ data InductiveInfo = InductiveInfo
 
 instance Serialize InductiveInfo
 
+instance NFData InductiveInfo
+
 data InfoTable = InfoTable
   { _infoConstructors :: HashMap Name ConstructorInfo,
     _infoAxioms :: HashMap Name AxiomInfo,
@@ -61,6 +69,8 @@ data InfoTable = InfoTable
   deriving stock (Generic)
 
 instance Serialize InfoTable
+
+instance NFData InfoTable
 
 makeLenses ''InfoTable
 makeLenses ''FunctionInfo

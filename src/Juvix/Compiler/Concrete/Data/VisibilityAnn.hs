@@ -10,6 +10,8 @@ data VisibilityAnn
 
 instance Serialize VisibilityAnn
 
+instance NFData VisibilityAnn
+
 instance Semigroup VisibilityAnn where
   v1 <> v2 = case v1 of
     VisPublic -> VisPublic

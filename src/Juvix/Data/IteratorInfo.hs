@@ -11,6 +11,8 @@ data IteratorInfo = IteratorInfo
 
 instance Serialize IteratorInfo
 
+instance NFData IteratorInfo
+
 makeLenses ''IteratorInfo
 
 emptyIteratorInfo :: IteratorInfo

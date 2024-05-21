@@ -88,7 +88,7 @@ compileInParallel = do
           { _compileArgsNodesIndex = idx,
             _compileArgsNodeName = getNodeName,
             _compileArgsDependencies = mkDependencies t,
-            _compileArgsNumWorkers = 12,
+            _compileArgsNumWorkers = 4,
             _compileArgsCompileNode = processModule
           }
   void (compile args)

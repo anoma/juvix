@@ -20,6 +20,8 @@ instance Hashable ModuleId
 
 instance Serialize ModuleId
 
+instance NFData ModuleId
+
 defaultModuleId :: ModuleId
 defaultModuleId =
   ModuleId

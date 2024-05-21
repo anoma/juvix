@@ -12,6 +12,8 @@ data WithSource a = WithSource
 
 instance (Serialize a) => Serialize (WithSource a)
 
+instance (NFData a) => NFData (WithSource a)
+
 makeLenses ''WithSource
 
 instance (HasAtomicity a) => HasAtomicity (WithSource a) where

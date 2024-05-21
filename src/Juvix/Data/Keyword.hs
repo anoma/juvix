@@ -13,6 +13,8 @@ data IsUnicode
 
 instance Serialize IsUnicode
 
+instance NFData IsUnicode
+
 data KeywordType
   = KeywordTypeKeyword
   | KeywordTypeDelimiter
@@ -20,6 +22,8 @@ data KeywordType
   deriving stock (Eq, Show, Ord, Data, Generic)
 
 instance Serialize KeywordType
+
+instance NFData KeywordType
 
 data Keyword = Keyword
   { _keywordAscii :: Text,
@@ -32,6 +36,8 @@ data Keyword = Keyword
 
 instance Serialize Keyword
 
+instance NFData Keyword
+
 data KeywordRef = KeywordRef
   { _keywordRefKeyword :: Keyword,
     _keywordRefInterval :: Interval,
@@ -40,6 +46,8 @@ data KeywordRef = KeywordRef
   deriving stock (Show, Data, Generic)
 
 instance Serialize KeywordRef
+
+instance NFData KeywordRef
 
 makeLenses ''Keyword
 makeLenses ''KeywordRef

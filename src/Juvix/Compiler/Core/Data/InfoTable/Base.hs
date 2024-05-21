@@ -90,19 +90,35 @@ data SpecialisationInfo' n = SpecialisationInfo
 
 instance (Serialize n) => Serialize (InfoTable' n)
 
+instance (NFData n) => NFData (InfoTable' n)
+
 instance Serialize IdentKind
+
+instance NFData IdentKind
 
 instance (Serialize n) => Serialize (IdentifierInfo' n)
 
+instance (NFData n) => NFData (IdentifierInfo' n)
+
 instance (Serialize n) => Serialize (InductiveInfo' n)
+
+instance (NFData n) => NFData (InductiveInfo' n)
 
 instance (Serialize n) => Serialize (ConstructorInfo' n)
 
+instance (NFData n) => NFData (ConstructorInfo' n)
+
 instance (Serialize n) => Serialize (ParameterInfo' n)
+
+instance (NFData n) => NFData (ParameterInfo' n)
 
 instance (Serialize n) => Serialize (AxiomInfo' n)
 
+instance (NFData n) => NFData (AxiomInfo' n)
+
 instance (Serialize n) => Serialize (SpecialisationInfo' n)
+
+instance (NFData n) => NFData (SpecialisationInfo' n)
 
 makeLenses ''InfoTable'
 makeLenses ''IdentifierInfo'

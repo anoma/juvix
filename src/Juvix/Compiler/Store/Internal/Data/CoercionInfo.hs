@@ -20,6 +20,8 @@ instance Hashable CoercionInfo where
 
 instance Serialize CoercionInfo
 
+instance NFData CoercionInfo
+
 -- | Maps trait names to available coercions
 newtype CoercionTable = CoercionTable
   { _coercionTableMap :: HashMap InductiveName [CoercionInfo]
@@ -27,6 +29,8 @@ newtype CoercionTable = CoercionTable
   deriving stock (Eq, Generic)
 
 instance Serialize CoercionTable
+
+instance NFData CoercionTable
 
 makeLenses ''CoercionInfo
 makeLenses ''CoercionTable

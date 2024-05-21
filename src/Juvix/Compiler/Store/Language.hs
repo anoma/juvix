@@ -21,10 +21,15 @@ data ModuleInfo = ModuleInfo
 
 instance Serialize ModuleInfo
 
+instance NFData ModuleInfo
+
 newtype ModuleTable = ModuleTable
   { _moduleTable :: HashMap TopModulePath ModuleInfo
   }
   deriving newtype (Semigroup, Monoid)
+  deriving stock (Generic)
 
 makeLenses ''ModuleInfo
 makeLenses ''ModuleTable
+
+instance NFData ModuleTable

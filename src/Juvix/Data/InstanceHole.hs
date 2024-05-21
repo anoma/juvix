@@ -20,6 +20,8 @@ data InstanceHole = InstanceHole
 
 instance Serialize InstanceHole
 
+instance NFData InstanceHole
+
 mkInstanceHole :: Interval -> NameId -> InstanceHole
 mkInstanceHole loc uid =
   InstanceHole
