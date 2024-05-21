@@ -89,7 +89,7 @@ compileInParallel = do
             _compileArgsNodeName = getNodeName,
             _compileArgsDependencies = mkDependencies t,
             _compileArgsNumWorkers = 4,
-            _compileArgsCompileNode = processModule
+            _compileArgsCompileNode = fmap force . processModule
           }
   void (compile args)
 
