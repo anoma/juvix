@@ -26,7 +26,13 @@ impl Memory {
         self[word_to_usize(ptr) + CONSTR_HEADER_SIZE + word_to_usize(idx)]
     }
 
-    pub fn get_constr_args(self: &mut Memory, ptr: Pointer) -> &mut [Word] {
+    pub fn get_constr_args(self: &Memory, ptr: Pointer) -> &[Word] {
+        let i = word_to_usize(ptr) + CONSTR_HEADER_SIZE;
+        let nargs = self.get_constr_nargs(ptr);
+        &self[i..i + nargs]
+    }
+
+    pub fn mut_constr_args(self: &mut Memory, ptr: Pointer) -> &mut [Word] {
         let i = word_to_usize(ptr) + CONSTR_HEADER_SIZE;
         let nargs = self.get_constr_nargs(ptr);
         &mut self[i..i + nargs]
@@ -45,6 +51,6 @@ impl Memory {
     }
 
     pub fn set_constr_args(self: &mut Memory, ptr: Pointer, args: &[Word]) {
-        self.get_constr_args(ptr).copy_from_slice(args);
+        self.mut_constr_args(ptr).copy_from_slice(args);
     }
 }
