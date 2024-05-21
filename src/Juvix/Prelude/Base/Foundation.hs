@@ -53,6 +53,7 @@ module Juvix.Prelude.Base.Foundation
     module Numeric,
     module System.Exit,
     module System.FilePath,
+    module Path,
     module System.IO,
     module Text.Show,
     module Control.Monad.Catch,
@@ -157,7 +158,8 @@ import GHC.Stack.Types
 import Language.Haskell.TH.Syntax (Exp, Lift, Q)
 import Lens.Micro.Platform
 import Numeric hiding (exp, log, pi)
-import Path
+import Path (Abs, Dir, File, Path, Rel, SomeBase (..))
+import Path qualified as PPath
 import Path.IO qualified as Path hiding (getCurrentDir, setCurrentDir, withCurrentDir)
 import Prettyprinter (Doc, (<+>))
 import Safe.Exact
@@ -628,6 +630,9 @@ ensureLn t =
     Just (_, y) -> case y of
       '\n' -> t
       _ -> Text.snoc t '\n'
+
+toFilePath :: (IsString s) => Path a b -> s
+toFilePath = fromString . PPath.toFilePath
 
 joinFilePaths :: (Foldable l) => l FilePath -> FilePath
 joinFilePaths = FilePath.joinPath . toList

@@ -7,7 +7,6 @@ where
 import Juvix.Data.Uid
 import Juvix.Prelude.Base
 import Juvix.Prelude.Prepath
-import Path
 
 data RecursorArgs = RecursorArgs
   { _recCurDir :: Path Rel Dir,

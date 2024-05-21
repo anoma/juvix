@@ -7,10 +7,9 @@
 module Juvix.Prelude.Path.OrphanInstances where
 
 import Juvix.Prelude.Base
-import Path
 import Prettyprinter
 
 instance Pretty (Path a b) where
-  pretty = pretty . toFilePath
+  pretty = pretty . toFilePath @String
 
 deriving stock instance (Data b) => Data (SomeBase b)

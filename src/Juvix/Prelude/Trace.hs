@@ -9,7 +9,6 @@ import Debug.Trace hiding (trace, traceM, traceShow)
 import Debug.Trace qualified as T
 import GHC.IO (unsafePerformIO)
 import Juvix.Prelude.Base
-import Juvix.Prelude.Path
 
 setDebugMsg :: Text -> Text
 setDebugMsg msg = "[debug] " <> fmsg <> "\n"
