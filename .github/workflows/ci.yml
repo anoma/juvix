@@ -164,6 +164,11 @@ jobs:
           cd main
           just ${{ env.JUST_ARGS }} build runtime
 
+      - name: Test Rust runtime
+        run: |
+          cd main/runtime/rust
+          cargo test --release
+
       # We use the options:
       #   - -fhide-source-paths
       #   - -fwrite-ide-info -hiedir=.hie
