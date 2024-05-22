@@ -63,8 +63,7 @@ data ImportTree = ImportTree
     -- if it not imported by another node.
     _importTreeReverse :: HashMap ImportNode (HashSet ImportNode),
     -- | Useful for reporting a concrete error in case of a cycle.
-    _importTreeEdges :: HashMap ImportNode (HashSet ImportScan),
-    _importTreeFiles :: HashMap (Path Abs File) ImportNode
+    _importTreeEdges :: HashMap ImportNode (HashSet ImportScan)
   }
 
 makeLenses ''ImportTree
@@ -80,8 +79,7 @@ initImportTree nodes =
   ImportTree
     { _importTree = hashMap [(n, mempty) | n <- nodes],
       _importTreeReverse = hashMap [(n, mempty) | n <- nodes],
-      _importTreeEdges = hashMap [(n, mempty) | n <- nodes],
-      _importTreeFiles = hashMap [(n ^. importNodeAbsFile, n) | n <- nodes]
+      _importTreeEdges = hashMap [(n, mempty) | n <- nodes]
     }
 
 importNodeAbsFile :: SimpleGetter ImportNode (Path Abs File)
