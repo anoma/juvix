@@ -6,8 +6,9 @@ import Juvix.Compiler.Store.Language qualified as Store
 import Juvix.Data.Effect.Cache
 import Juvix.Prelude
 
-newtype EntryIndex = EntryIndex
-  { _entryIxEntry :: EntryPoint
+data EntryIndex = EntryIndex
+  { _entryIxEntry :: EntryPoint,
+    _entryIxResolverRoot :: Path Abs Dir
   }
 
 makeLenses ''EntryIndex
@@ -26,8 +27,8 @@ entryIndexPath = fromMaybe err . (^. entryIxEntry . entryPointModulePath)
     err :: a
     err = error "unexpected: EntryIndex should always have a path"
 
-mkEntryIndex :: (Members '[Reader EntryPoint] r) => Path Abs File -> Sem r EntryIndex
-mkEntryIndex path = do
+mkEntryIndex :: (Members '[Reader EntryPoint] r) => Path Abs Dir -> Path Abs File -> Sem r EntryIndex
+mkEntryIndex _entryIxResolverRoot path = do
   entry <- ask
   let stdin'
         | Just path == entry ^. entryPointModulePath = entry ^. entryPointStdin
@@ -37,4 +38,8 @@ mkEntryIndex path = do
           { _entryPointStdin = stdin',
             _entryPointModulePath = Just path
           }
-  return (EntryIndex entry')
+  return
+    EntryIndex
+      { _entryIxEntry = entry',
+        _entryIxResolverRoot
+      }

@@ -33,17 +33,20 @@ type Node = EntryIndex
 
 type CompileProof = PipelineResult Store.ModuleInfo
 
-mkNodesIndex :: EntryPoint -> ImportTree -> NodesIndex NodeId Node
-mkNodesIndex e tree =
+mkNodesIndex :: forall r. (Members '[Reader EntryPoint] r) => ImportTree -> Sem r (NodesIndex NodeId Node)
+mkNodesIndex tree =
   NodesIndex
-    ( hashMap
-        [ mkAssoc (fromNode ^. importNodeAbsFile)
-          | fromNode <- HashMap.keys (tree ^. importTree)
-        ]
-    )
+    . hashMap
+    <$> sequence
+      [ mkAssoc fromNode
+        | fromNode <- HashMap.keys (tree ^. importTree)
+      ]
   where
-    mkAssoc :: Path Abs File -> (Path Abs File, EntryIndex)
-    mkAssoc p = (p, EntryIndex (set entryPointModulePath (Just p) e))
+    mkAssoc :: ImportNode -> Sem r (Path Abs File, EntryIndex)
+    mkAssoc p = do
+      let abspath = p ^. importNodeAbsFile
+      i <- mkEntryIndex (p ^. importNodePackageRoot) abspath
+      return (abspath, i)
 
 mkDependencies :: ImportTree -> Dependencies NodeId
 mkDependencies tree =
@@ -59,7 +62,7 @@ mkDependencies tree =
     toPath = (^. importNodeAbsFile)
 
 getNodeName :: Node -> Text
-getNodeName (EntryIndex e) = pack (toFilePath (fromJust (e ^. entryPointModulePath)))
+getNodeName = toFilePath . fromJust . (^. entryIxEntry . entryPointModulePath)
 
 -- | Fills the cache in parallel
 compileInParallel ::
@@ -73,25 +76,31 @@ compileInParallel ::
          TopModuleNameChecker,
          Error JuvixError,
          Reader EntryPoint,
+         PathResolver,
          Reader ImportTree
        ]
       r
   ) =>
   Sem r ()
 compileInParallel = do
-  entry <- ask
   t <- ask
-  let idx = mkNodesIndex entry t
-      args :: CompileArgs r NodeId Node CompileProof
+  idx <- mkNodesIndex t
+  let args :: CompileArgs r NodeId Node CompileProof
       args =
         CompileArgs
           { _compileArgsNodesIndex = idx,
             _compileArgsNodeName = getNodeName,
             _compileArgsDependencies = mkDependencies t,
             _compileArgsNumWorkers = 4,
-            _compileArgsCompileNode = fmap force . processModule
+            _compileArgsCompileNode = compileNode
           }
   void (compile args)
+
+compileNode :: (Members '[ModuleInfoCache, PathResolver] r) => EntryIndex -> Sem r CompileProof
+compileNode e =
+  withResolverRoot (e ^. entryIxResolverRoot)
+    . fmap force
+    $ processModule e
 
 instance Semigroup CompileResult where
   sconcat l =

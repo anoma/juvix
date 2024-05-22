@@ -22,7 +22,7 @@ runTopModuleNameChecker ::
   Sem (TopModuleNameChecker ': r) a ->
   Sem r a
 runTopModuleNameChecker = interpret $ \case
-  CheckModulePath m -> return () -- checkModulePath' m
+  CheckModulePath m -> checkModulePath' m
 
 checkModulePath' ::
   (Members '[PathResolver, Files, Error JuvixError] s) =>

@@ -70,7 +70,7 @@ processModuleCacheMiss ::
   ) =>
   EntryIndex ->
   Sem r (PipelineResult Store.ModuleInfo)
-processModuleCacheMiss (EntryIndex entry) = do
+processModuleCacheMiss entryIx = do
   let buildDir = resolveAbsBuildDir root (entry ^. entryPointBuildDir)
       sourcePath = fromJust (entry ^. entryPointModulePath)
       relPath =
@@ -100,6 +100,7 @@ processModuleCacheMiss (EntryIndex entry) = do
     _ ->
       recompile sha256 absPath
   where
+    entry = entryIx ^. entryIxEntry
     root = entry ^. entryPointRoot
     opts = StoredModule.fromEntryPoint entry
 
@@ -155,7 +156,15 @@ processImport ::
 processImport p = withPathFile p getCachedImport
   where
     getCachedImport :: Path Abs File -> Sem r (PipelineResult Store.ModuleInfo)
-    getCachedImport = mkEntryIndex >=> processModule
+    getCachedImport file = do
+      b <- supportsParallel
+      root <- resolverRoot
+      if
+          | b -> do
+              res <- mkEntryIndex root file >>= cacheGetResult
+              unless (res ^. cacheResultHit) (error ("impossible: cache miss for import " <> pack (toFilePath file)))
+              return (res ^. cacheResult)
+          | otherwise -> mkEntryIndex root file >>= cacheGet
 
 processFileUpToParsing ::
   forall r.

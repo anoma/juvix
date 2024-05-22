@@ -414,6 +414,7 @@ runPathResolver2 st topEnv arg = do
       Sem (Reader ResolverEnv ': State ResolverState ': Error PathResolverError ': t) x
     handler localEnv = \case
       SupportsParallel -> return True
+      ResolverRoot -> asks (^. envRoot)
       RegisterDependencies forceUpdateLockfile -> registerDependencies' forceUpdateLockfile
       GetPackageInfos -> gets allPackageInfos
       ExpectedPathInfoTopModule m -> expectedPath' m
