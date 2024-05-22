@@ -27,11 +27,8 @@ smallFieldSize = 2147483647
 allowedFieldSizes :: [Natural]
 allowedFieldSizes = [11, smallFieldSize, cairoFieldSize]
 
--- | FIXME give implementation
-instance NFData (Sigma Natural (TyCon1 PrimeField)) where
-  rnf _ = ()
-
-instance NFData FField
+instance NFData FField where
+  rnf (FField (_ :&: x)) = rnf x
 
 instance Serialize FField where
   put f = S.put (fieldSize f, fieldToInteger f)
