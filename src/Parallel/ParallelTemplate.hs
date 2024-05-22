@@ -25,6 +25,7 @@ import Data.HashSet qualified as HashSet
 import Effectful.Concurrent
 import Effectful.Concurrent.STM as STM
 import Juvix.Prelude
+import Juvix.Prelude.Pretty
 
 data CompileArgs (s :: [Effect]) nodeId node compileProof = CompileArgs
   { _compileArgsNodesIndex :: NodesIndex nodeId node,
@@ -74,6 +75,13 @@ makeLenses ''CompileQueue
 makeLenses ''Dependencies
 makeLenses ''CompilationState
 makeLenses ''CompileArgs
+
+instance (Show nodeId, Pretty nodeId) => Pretty (Dependencies nodeId) where
+  pretty d =
+    itemize
+      [ pretty from <> ":\n" <> indent' (itemize (pretty <$> toList deps))
+        | (from, deps) <- HashMap.toList (d ^. dependenciesTable)
+      ]
 
 data Finished
   = FinishedOk
