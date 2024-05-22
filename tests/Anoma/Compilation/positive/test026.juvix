@@ -18,58 +18,51 @@ last {A} : List A -> Maybe A
 
 front : {A : Type} → Queue A → Maybe A
   | q :=
-    case qfst q of {
+    case qfst q of
       | nil := last (qsnd q)
-      | x :: _ := just x
-    };
+      | x :: _ := just x;
 
 drop_front : {A : Type} → Queue A → Queue A
   | {A} q :=
     let
       q' : Queue A := queue (tail (qfst q)) (qsnd q);
-    in case qfst q' of {
+    in case qfst q' of
          | nil := queue (reverse (qsnd q')) nil
-         | _ := q'
-       };
+         | _ := q';
 
 pop_front {A} : Queue A -> Maybe (A × Queue A)
   | (queue xs ys) :=
-    case xs of {
+    case xs of
       | h :: t := just (h, queue t ys)
       | [] :=
-        case reverse ys of {
+        case reverse ys of
           | h :: t := just (h, queue t [])
-          | [] := nothing
-        }
-    };
+          | [] := nothing;
 
 push_back : {A : Type} → Queue A → A → Queue A
   | q x :=
-    case qfst q of {
+    case qfst q of
       | nil := queue (x :: nil) (qsnd q)
-      | q' := queue q' (x :: qsnd q)
-    };
+      | q' := queue q' (x :: qsnd q);
 
 is_empty : {A : Type} → Queue A → Bool
   | q :=
-    case qfst q of {
+    case qfst q of
       | nil :=
         case qsnd q of {
           | nil := true
           | _ := false
         }
-      | _ := false
-    };
+      | _ := false;
 
 empty : {A : Type} → Queue A := queue nil nil;
 
 terminating
 g : List Nat → Queue Nat → List Nat
   | acc q :=
-    case pop_front q of {
+    case pop_front q of
       | nothing := acc
-      | just (h, q') := g (h :: acc) q'
-    };
+      | just (h, q') := g (h :: acc) q';
 
 f : Nat → Queue Nat → List Nat
   | zero q := g nil q

@@ -7,7 +7,7 @@ type Pair :=
   | pair : Nat -> Nat -> Pair;
 
 main : Nat :=
-  case pair 1 2
+  case pair 1 2 of
     | pair (suc _) zero := 0
     | pair (suc _) (suc x) := x
     | _ := 19;

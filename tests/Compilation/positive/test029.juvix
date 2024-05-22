@@ -15,4 +15,3 @@ main : IO :=
     >> printNatLn (ack 2 7)
     >> printNatLn (ack 2 13)
     >> printNatLn (ack 3 7);
-

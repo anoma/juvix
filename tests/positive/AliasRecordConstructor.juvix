@@ -12,7 +12,7 @@ t : T :=
   };
 
 t1 : T -> A
- | mkT'@{ field := x } := x;
+  | mkT'@{field := x} := x;
 
 syntax iterator it {init := 0; range := 1};
 it : (A → A) → T → A

@@ -6,7 +6,10 @@ import Stdlib.Prelude open;
 terminating
 gcd : Nat → Nat → Nat
   | a b :=
-    if (a > b) (gcd b a) (if (a == 0) b (gcd (mod b a) a));
+    if
+      | a > b := gcd b a
+      | a == 0 := b
+      | else := gcd (mod b a) a;
 
 main : IO :=
   printNatLn (gcd (3 * 7 * 2) (7 * 2 * 11))

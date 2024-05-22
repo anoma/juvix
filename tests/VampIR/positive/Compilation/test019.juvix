@@ -3,9 +3,7 @@ module test019;
 
 import Stdlib.Prelude open;
 
-main : Nat -> Nat -> Nat
-  | x y :=
-    case tail (id (x :: y :: nil)) of {
-      | nil := 0
-      | h :: _ := h
-    };
+main (x y : Nat) : Nat :=
+  case tail (id (x :: y :: nil)) of
+    | nil := 0
+    | h :: _ := h;

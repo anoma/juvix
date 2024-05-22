@@ -3,8 +3,7 @@ module test026;
 
 import Stdlib.Prelude open;
 
-type Queue (A : Type) :=
-  | queue : List A → List A → Queue A;
+type Queue (A : Type) := queue : List A → List A → Queue A;
 
 qfst : {A : Type} → Queue A → List A
   | (queue x _) := x;
@@ -19,23 +18,24 @@ pop_front : {A : Type} → Queue A → Queue A
   | {A} q :=
     let
       q' : Queue A := queue (tail (qfst q)) (qsnd q);
-    in case qfst q'
-      | nil := queue (reverse (qsnd q')) nil
-      | _ := q';
+    in case qfst q' of
+         | nil := queue (reverse (qsnd q')) nil
+         | _ := q';
 
 push_back : {A : Type} → Queue A → A → Queue A
   | q x :=
-    case qfst q
+    case qfst q of
       | nil := queue (x :: nil) (qsnd q)
       | q' := queue q' (x :: qsnd q);
 
 is_empty : {A : Type} → Queue A → Bool
   | q :=
-    case qfst q
+    case qfst q of
       | nil :=
-        (case qsnd q
+        case qsnd q of {
           | nil := true
-          | _ := false)
+          | _ := false
+        }
       | _ := false;
 
 empty : {A : Type} → Queue A := queue nil nil;
@@ -45,8 +45,6 @@ g {{Partial}} : List Nat → Queue Nat → List Nat
   | acc q :=
     if (is_empty q) acc (g (front q :: acc) (pop_front q));
 
--- TODO: remove `terminating` after fixing https://github.com/anoma/juvix/issues/2414
-terminating
 f {{Partial}} : Nat → Queue Nat → List Nat
   | zero q := g nil q
   | n@(suc n') q := f n' (push_back q n);
@@ -55,4 +53,4 @@ sum : List Nat → Nat
   | nil := 0
   | (h :: t) := h + sum t;
 
-main : Nat := sum (runPartial (λ {{{_}} := f 100 empty}));
+main : Nat := sum (runPartial λ {{{_}} := f 100 empty});

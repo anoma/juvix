@@ -148,9 +148,8 @@ res : Either Error Val := eval (double+1 # num 7);
 -- TODO: Use Partial or failwith in left branches when anoma backend supports
 -- strings
 main : List Nat :=
-  case res >>= getNat of {
+  case res >>= getNat of
     | left (ScopeError n ctx) := []
     | left (ExpectedNat e) := []
     | left ExpectedLambda := []
-    | right r := [r]
-  };
+    | right r := [r];

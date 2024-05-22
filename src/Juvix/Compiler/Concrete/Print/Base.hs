@@ -31,6 +31,16 @@ import Juvix.Prelude hiding ((<+>), (<+?>), (<?+>), (?<>))
 import Juvix.Prelude.Pretty (annotate, pretty)
 import Juvix.Prelude.Pretty qualified as P
 
+--- An expression is `Top` if it is:
+--- * immediately at the top of a function (clause) body (including in let
+---   bindings) or a lambda body
+--- * immediately inside parens or braces
+--- * the body of a `Top` let expression,
+--- * the body of a `Top` iterator,
+--- * the else branch body of a `Top` if expression,
+--- * the last branch body of a `Top` case expresssion.
+data IsTop = Top | NotTop
+
 type PrettyPrinting a = forall r. (Members '[ExactPrint, Reader Options] r) => a -> Sem r ()
 
 class PrettyPrint a where
@@ -118,6 +128,16 @@ ppExpressionType :: forall s. (SingI s) => PrettyPrinting (ExpressionType s)
 ppExpressionType = case sing :: SStage s of
   SParsed -> ppCode
   SScoped -> ppCode
+
+ppTopExpressionType :: forall s. (SingI s) => PrettyPrinting (ExpressionType s)
+ppTopExpressionType e = case sing :: SStage s of
+  SParsed -> ppCode e
+  SScoped -> case e of
+    ExpressionLet l -> ppLet Top l
+    ExpressionCase c -> ppCase Top c
+    ExpressionIf i -> ppIf Top i
+    ExpressionIterator i -> ppIterator Top i
+    _ -> ppCode e
 
 ppExpressionAtomType :: forall s. (SingI s) => PrettyPrinting (ExpressionType s)
 ppExpressionAtomType = case sing :: SStage s of
@@ -244,19 +264,18 @@ instance (SingI s) => PrettyPrint (Range s) where
         e = ppExpressionType _rangeExpression
     n <+> ppCode _rangeInKw <+> e
 
-instance (SingI s) => PrettyPrint (Iterator s) where
-  ppCode Iterator {..} = do
-    let n = ppIdentifierType _iteratorName
-        is = ppCode <$> _iteratorInitializers
-        rngs = ppCode <$> _iteratorRanges
-        is' = parens . hsepSemicolon <$> nonEmpty is
-        rngs' = parens . hsepSemicolon <$> nonEmpty rngs
-        b = ppExpressionType _iteratorBody
-        b'
-          | _iteratorBodyBraces = braces (oneLineOrNextNoIndent b)
-          | otherwise = line <> b
-    parensIf _iteratorParens $
-      hang (n <+?> is' <+?> rngs' <> b')
+ppIterator :: forall r s. (Members '[ExactPrint, Reader Options] r, SingI s) => IsTop -> Iterator s -> Sem r ()
+ppIterator isTop Iterator {..} = do
+  let n = ppIdentifierType _iteratorName
+      is = ppCode <$> _iteratorInitializers
+      rngs = ppCode <$> _iteratorRanges
+      is' = parens . hsepSemicolon <$> nonEmpty is
+      rngs' = parens . hsepSemicolon <$> nonEmpty rngs
+      b
+        | _iteratorBodyBraces = braces (oneLineOrNextNoIndent (ppTopExpressionType _iteratorBody))
+        | otherwise = line <> ppMaybeTopExpression isTop _iteratorBody
+  parensIf _iteratorParens $
+    hang (n <+?> is' <+?> rngs' <> b)
 
 instance PrettyPrint S.AName where
   ppCode n = annotated (AnnKind (S.getNameKind n)) (noLoc (pretty (n ^. S.anameVerbatim)))
@@ -336,28 +355,27 @@ instance (SingI s) => PrettyPrint (RecordUpdate s) where
 instance (SingI s) => PrettyPrint (DoubleBracesExpression s) where
   ppCode DoubleBracesExpression {..} = do
     let (l, r) = _doubleBracesDelims ^. unIrrelevant
-    ppCode l <> ppExpressionType _doubleBracesExpression <> ppCode r
+    ppCode l <> ppTopExpressionType _doubleBracesExpression <> ppCode r
 
 instance (SingI s) => PrettyPrint (ExpressionAtom s) where
   ppCode = \case
     AtomIdentifier n -> ppIdentifierType n
     AtomLambda l -> ppCode l
-    AtomLet lb -> ppCode lb
-    AtomCase c -> ppCode c
-    AtomNewCase c -> ppCode c
-    AtomIf c -> ppCode c
+    AtomLet lb -> ppLet NotTop lb
+    AtomCase c -> ppCase NotTop c
+    AtomIf c -> ppIf NotTop c
     AtomList l -> ppCode l
     AtomUniverse uni -> ppCode uni
     AtomRecordUpdate u -> ppCode u
     AtomFunction fun -> ppCode fun
     AtomLiteral lit -> ppCode lit
     AtomFunArrow a -> ppCode a
-    AtomParens e -> parens (ppExpressionType e)
+    AtomParens e -> parens (ppTopExpressionType e)
     AtomDoubleBraces e -> ppCode e
-    AtomBraces e -> braces (ppExpressionType (e ^. withLocParam))
+    AtomBraces e -> braces (ppTopExpressionType (e ^. withLocParam))
     AtomHole w -> ppHoleType w
     AtomInstanceHole w -> ppHoleType w
-    AtomIterator i -> ppCode i
+    AtomIterator i -> ppIterator NotTop i
     AtomNamedApplication i -> ppCode i
     AtomNamedApplicationNew i -> ppCode i
 
@@ -493,7 +511,7 @@ ppLiteral = \case
 instance (SingI s) => PrettyPrint (LambdaClause s) where
   ppCode LambdaClause {..} = do
     let lambdaParameters' = hsep (ppPatternAtom <$> _lambdaParameters)
-        lambdaBody' = ppExpressionType _lambdaBody
+        lambdaBody' = ppTopExpressionType _lambdaBody
         lambdaPipe' = ppCode <$> _lambdaPipe ^. unIrrelevant
     lambdaPipe' <?+> lambdaParameters' <+> ppCode _lambdaAssignKw <> oneLineOrNext lambdaBody'
 
@@ -503,68 +521,78 @@ instance (SingI s) => PrettyPrint (LetStatement s) where
     LetAliasDef f -> ppCode f
     LetOpen f -> ppCode f
 
-instance (SingI s) => PrettyPrint (Let s) where
-  ppCode Let {..} = do
-    let letFunDefs' = blockIndent (ppBlock _letFunDefs)
-        letExpression' = ppExpressionType _letExpression
-    align $ ppCode _letKw <> letFunDefs' <> ppCode _letInKw <+> letExpression'
+ppMaybeTopExpression :: (Members '[ExactPrint, Reader Options] r, SingI s) => IsTop -> ExpressionType s -> Sem r ()
+ppMaybeTopExpression isTop e = case isTop of
+  Top -> ppTopExpressionType e
+  NotTop -> ppExpressionType e
 
-instance (SingI s) => PrettyPrint (NewCase s) where
-  ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => NewCase s -> Sem r ()
-  ppCode NewCase {..} = do
-    let exp' = ppExpressionType _newCaseExpression
-    align $ ppCode _newCaseKw <> oneLineOrNextBlock exp' <> ppCode _newCaseOfKw <+> ppBranches _newCaseBranches
-    where
-      ppBranches :: NonEmpty (NewCaseBranch s) -> Sem r ()
-      ppBranches = \case
-        b :| [] -> oneLineOrNextBraces (ppCaseBranch True b)
-        _ -> braces (blockIndent (vsepHard (ppCaseBranch False <$> _newCaseBranches)))
+ppLet :: forall r s. (Members '[ExactPrint, Reader Options] r, SingI s) => IsTop -> Let s -> Sem r ()
+ppLet isTop Let {..} = do
+  let letFunDefs' = blockIndent (ppBlock _letFunDefs)
+      letExpression' = ppMaybeTopExpression isTop _letExpression
+  align $ ppCode _letKw <> letFunDefs' <> ppCode _letInKw <+> letExpression'
 
-      ppCaseBranch :: Bool -> NewCaseBranch s -> Sem r ()
-      ppCaseBranch singleBranch b = pipeHelper <?+> ppCode b
-        where
-          pipeHelper :: Maybe (Sem r ())
-          pipeHelper
-            | singleBranch = Nothing
-            | otherwise = Just $ case b ^. newCaseBranchPipe . unIrrelevant of
-                Just p -> ppCode p
-                Nothing -> ppCode Kw.kwPipe
+ppCaseBranch :: forall r s. (Members '[ExactPrint, Reader Options] r, SingI s) => IsTop -> CaseBranch s -> Sem r ()
+ppCaseBranch isTop CaseBranch {..} = do
+  let pat' = ppPatternParensType _caseBranchPattern
+      e' = ppMaybeTopExpression isTop _caseBranchExpression
+  pat' <+> ppCode _caseBranchAssignKw <> oneLineOrNext e'
 
-instance (SingI s) => PrettyPrint (Case s) where
-  ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => Case s -> Sem r ()
-  ppCode Case {..} = do
-    let exp' = ppExpressionType _caseExpression
-    ppCode _caseKw <+> exp' <+> ppCode Kw.kwOf <+> ppBranches _caseBranches
-    where
-      ppBranches :: NonEmpty (CaseBranch s) -> Sem r ()
-      ppBranches = \case
-        b :| [] -> braces (ppCaseBranch True b)
-        _ -> braces (blockIndent (vsepHard (ppCaseBranch False <$> _caseBranches)))
+ppCase :: forall r s. (Members '[ExactPrint, Reader Options] r, SingI s) => IsTop -> Case s -> Sem r ()
+ppCase isTop Case {..} = do
+  let exp' = ppExpressionType _caseExpression
+  align $ ppCode _caseKw <> oneLineOrNextBlock exp' <> ppCode _caseOfKw <> ppBranches _caseBranches
+  where
+    ppBranches :: NonEmpty (CaseBranch s) -> Sem r ()
+    ppBranches = \case
+      b :| [] -> case isTop of
+        Top -> oneLineOrNext (ppCaseBranch' True Top b)
+        NotTop -> space <> oneLineOrNextBraces (ppCaseBranch' True NotTop b)
+      _ -> case isTop of
+        Top -> do
+          let brs =
+                vsepHard (ppCaseBranch' False NotTop <$> NonEmpty.init _caseBranches)
+                  <> hardline
+                  <> ppCaseBranch' False Top (NonEmpty.last _caseBranches)
+          hardline <> indent brs
+        NotTop -> space <> braces (blockIndent (vsepHard (ppCaseBranch' False NotTop <$> _caseBranches)))
 
-      ppCaseBranch :: Bool -> CaseBranch s -> Sem r ()
-      ppCaseBranch singleBranch b = pipeHelper <?+> ppCode b
-        where
-          pipeHelper :: Maybe (Sem r ())
-          pipeHelper
-            | singleBranch = Nothing
-            | otherwise = Just (ppCode (b ^. caseBranchPipe . unIrrelevant))
+    ppCaseBranch' :: Bool -> IsTop -> CaseBranch s -> Sem r ()
+    ppCaseBranch' singleBranch lastTopBranch b = pipeHelper <?+> ppCaseBranch lastTopBranch b
+      where
+        pipeHelper :: Maybe (Sem r ())
+        pipeHelper
+          | singleBranch = Nothing
+          | otherwise = Just $ case b ^. caseBranchPipe . unIrrelevant of
+              Just p -> ppCode p
+              Nothing -> ppCode Kw.kwPipe
 
-instance (SingI s) => PrettyPrint (If s) where
-  ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => If s -> Sem r ()
-  ppCode If {..} = do
-    ppCode _ifKw <+> hardline <> indent (vsepHard (ppIfBranch <$> _ifBranches) <> hardline <> ppIfBranchElse _ifBranchElse)
-    where
-      ppIfBranch :: IfBranch s -> Sem r ()
-      ppIfBranch b = pipeHelper <+> ppCode b
-        where
-          pipeHelper :: Sem r ()
-          pipeHelper = ppCode (b ^. ifBranchPipe . unIrrelevant)
+instance (SingI s) => PrettyPrint (IfBranch s) where
+  ppCode IfBranch {..} = do
+    let cond' = ppExpressionType _ifBranchCondition
+        e' = ppExpressionType _ifBranchExpression
+    cond' <+> ppCode _ifBranchAssignKw <> oneLineOrNext e'
 
-      ppIfBranchElse :: IfBranchElse s -> Sem r ()
-      ppIfBranchElse b = pipeHelper <+> ppCode b
-        where
-          pipeHelper :: Sem r ()
-          pipeHelper = ppCode (b ^. ifBranchElsePipe . unIrrelevant)
+ppIfBranchElse :: forall r s. (Members '[ExactPrint, Reader Options] r, SingI s) => IsTop -> IfBranchElse s -> Sem r ()
+ppIfBranchElse isTop IfBranchElse {..} = do
+  let e' = ppMaybeTopExpression isTop _ifBranchElseExpression
+  ppCode _ifBranchElseKw <+> ppCode _ifBranchElseAssignKw <> oneLineOrNext e'
+
+ppIf :: forall r s. (Members '[ExactPrint, Reader Options] r, SingI s) => IsTop -> If s -> Sem r ()
+ppIf isTop If {..} = do
+  ppCode _ifKw <+> hardline <> indent (vsepHard (ppIfBranch <$> _ifBranches) <> hardline <> ppIfBranchElse' _ifBranchElse)
+  where
+    ppIfBranch :: IfBranch s -> Sem r ()
+    ppIfBranch b = pipeHelper <+> ppCode b
+      where
+        pipeHelper :: Sem r ()
+        pipeHelper = ppCode (b ^. ifBranchPipe . unIrrelevant)
+
+    ppIfBranchElse' :: IfBranchElse s -> Sem r ()
+    ppIfBranchElse' b = pipeHelper <+> ppIfBranchElse isTop b
+      where
+        pipeHelper :: Sem r ()
+        pipeHelper = ppCode (b ^. ifBranchElsePipe . unIrrelevant)
 
 instance PrettyPrint Universe where
   ppCode Universe {..} = ppCode _universeKw <+?> (noLoc . pretty <$> _universeLevel)
@@ -660,29 +688,6 @@ ppLRExpression associates fixlr e =
   parensIf
     (atomParens associates (atomicity e) fixlr)
     (ppCode e)
-
-instance (SingI s) => PrettyPrint (CaseBranch s) where
-  ppCode CaseBranch {..} = do
-    let pat' = ppPatternParensType _caseBranchPattern
-        e' = ppExpressionType _caseBranchExpression
-    pat' <+> ppCode _caseBranchAssignKw <> oneLineOrNext e'
-
-instance (SingI s) => PrettyPrint (NewCaseBranch s) where
-  ppCode NewCaseBranch {..} = do
-    let pat' = ppPatternParensType _newCaseBranchPattern
-        e' = ppExpressionType _newCaseBranchExpression
-    pat' <+> ppCode _newCaseBranchAssignKw <> oneLineOrNext e'
-
-instance (SingI s) => PrettyPrint (IfBranch s) where
-  ppCode IfBranch {..} = do
-    let cond' = ppExpressionType _ifBranchCondition
-        e' = ppExpressionType _ifBranchExpression
-    cond' <+> ppCode _ifBranchAssignKw <> oneLineOrNext e'
-
-instance (SingI s) => PrettyPrint (IfBranchElse s) where
-  ppCode IfBranchElse {..} = do
-    let e' = ppExpressionType _ifBranchElseExpression
-    ppCode _ifBranchElseKw <+> ppCode _ifBranchElseAssignKw <> oneLineOrNext e'
 
 ppBlock :: (PrettyPrint a, Members '[Reader Options, ExactPrint] r, Traversable t) => t a -> Sem r ()
 ppBlock items = vsep (sepEndSemicolon (fmap ppCode items))
@@ -813,14 +818,13 @@ instance PrettyPrint Expression where
     ExpressionInfixApplication a -> ppCode a
     ExpressionPostfixApplication a -> ppCode a
     ExpressionLambda l -> ppCode l
-    ExpressionLet lb -> ppCode lb
+    ExpressionLet lb -> ppLet NotTop lb
     ExpressionUniverse u -> ppCode u
     ExpressionLiteral l -> ppCode l
     ExpressionFunction f -> ppCode f
-    ExpressionCase c -> ppCode c
-    ExpressionNewCase c -> ppCode c
-    ExpressionIf c -> ppCode c
-    ExpressionIterator i -> ppCode i
+    ExpressionCase c -> ppCase NotTop c
+    ExpressionIf c -> ppIf NotTop c
+    ExpressionIterator i -> ppIterator NotTop i
     ExpressionNamedApplication i -> ppCode i
     ExpressionNamedApplicationNew i -> ppCode i
     ExpressionRecordUpdate i -> ppCode i
@@ -927,7 +931,7 @@ instance (SingI s) => PrettyPrint (FunctionClause s) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => FunctionClause s -> Sem r ()
   ppCode FunctionClause {..} = do
     let pats' = hsep (ppPatternAtomType <$> _clausenPatterns)
-        e' = ppExpressionType _clausenBody
+        e' = ppTopExpressionType _clausenBody
     ppCode _clausenPipeKw <+> pats' <+> ppCode _clausenAssignKw <> oneLineOrNext e'
 
 instance (SingI s) => PrettyPrint (Argument s) where
@@ -983,7 +987,7 @@ instance (SingI s) => PrettyPrint (FunctionDef s) where
         pragmas' :: Maybe (Sem r ()) = ppCode <$> _signPragmas
         sig' = ppFunctionSignature fun
         body' = case _signBody of
-          SigBodyExpression e -> space <> ppCode Kw.kwAssign <> oneLineOrNext (ppExpressionType e)
+          SigBodyExpression e -> space <> ppCode Kw.kwAssign <> oneLineOrNext (ppTopExpressionType e)
           SigBodyClauses k -> line <> indent (vsep (ppCode <$> k))
     doc'
       ?<> pragmas'

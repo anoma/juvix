@@ -20,10 +20,9 @@ not2 (b : Boolean) : Boolean :=
   let
     syntax alias yes := ⊤;
     syntax alias no := ⊥;
-  in case b of {
+  in case b of
        | no := yes
-       | yes := no
-     };
+       | yes := no;
 
 module ExportAlias;
   syntax alias Binary := Bool;

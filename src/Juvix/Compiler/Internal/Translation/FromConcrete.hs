@@ -720,7 +720,6 @@ goExpression = \case
   ExpressionParensIdentifier nt -> return (goIden nt)
   ExpressionApplication a -> goApplication a
   ExpressionCase a -> Internal.ExpressionCase <$> goCase a
-  ExpressionNewCase a -> Internal.ExpressionCase <$> goNewCase a
   ExpressionIf a -> goIf a
   ExpressionInfixApplication ia -> Internal.ExpressionApplication <$> goInfix ia
   ExpressionPostfixApplication pa -> Internal.ExpressionApplication <$> goPostfix pa
@@ -1054,7 +1053,7 @@ goCase :: forall r. (Members '[Reader DefaultArgsStack, Builtins, NameIdGen, Err
 goCase c = do
   _caseExpression <- goExpression (c ^. caseExpression)
   _caseBranches <- mapM goBranch (c ^. caseBranches)
-  let _caseParens = c ^. caseParens
+  let _caseParens = False
       _caseExpressionType :: Maybe Internal.Expression = Nothing
       _caseExpressionWholeType :: Maybe Internal.Expression = Nothing
   return Internal.Case {..}
@@ -1063,21 +1062,6 @@ goCase c = do
     goBranch b = do
       _caseBranchPattern <- goPatternArg (b ^. caseBranchPattern)
       _caseBranchExpression <- goExpression (b ^. caseBranchExpression)
-      return Internal.CaseBranch {..}
-
-goNewCase :: forall r. (Members '[Reader DefaultArgsStack, Builtins, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) => NewCase 'Scoped -> Sem r Internal.Case
-goNewCase c = do
-  _caseExpression <- goExpression (c ^. newCaseExpression)
-  _caseBranches <- mapM goBranch (c ^. newCaseBranches)
-  let _caseParens = False
-      _caseExpressionType :: Maybe Internal.Expression = Nothing
-      _caseExpressionWholeType :: Maybe Internal.Expression = Nothing
-  return Internal.Case {..}
-  where
-    goBranch :: NewCaseBranch 'Scoped -> Sem r Internal.CaseBranch
-    goBranch b = do
-      _caseBranchPattern <- goPatternArg (b ^. newCaseBranchPattern)
-      _caseBranchExpression <- goExpression (b ^. newCaseBranchExpression)
       return Internal.CaseBranch {..}
 
 goLambda :: forall r. (Members '[Reader DefaultArgsStack, Builtins, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) => Lambda 'Scoped -> Sem r Internal.Lambda

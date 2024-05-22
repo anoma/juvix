@@ -3,8 +3,6 @@ module test023;
 
 import Stdlib.Prelude open;
 
-main : Nat → Nat → Nat
-  | x y :=
-    case λ {z := if (x == z) (x, 0) (x, z)} (y + x) of {
-      a, b := a + b
-    };
+main (x y : Nat) : Nat :=
+    case λ {z := if (x == z) (x, 0) (x, z)} (y + x) of
+      a, b := a + b;

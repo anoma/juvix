@@ -7,12 +7,9 @@ terminating
 power' : Nat → Nat → Nat → Nat
   | acc a b :=
     if
-      (b == 0)
-      acc
-      (if
-        (mod b 2 == 0)
-        (power' acc (a * a) (div b 2))
-        (power' (acc * a) (a * a) (div b 2)));
+      | b == 0 := acc
+      | mod b 2 == 0 := power' acc (a * a) (div b 2)
+      | else := power' (acc * a) (a * a) (div b 2);
 
 power : Nat → Nat → Nat := power' 1;
 
@@ -20,4 +17,3 @@ main : IO :=
   printNatLn (power 2 3)
     >> printNatLn (power 3 7)
     >> printNatLn (power 5 11);
-
