@@ -52,10 +52,10 @@ wasiHelperOptions opts =
           | otherwise = wasiReleaseRuntime
           where
             wasiReleaseRuntime :: BS.ByteString
-            wasiReleaseRuntime = $(FE.makeRelativeToProject "runtime/_build.wasm32-wasi/libjuvix.a" >>= FE.embedFile)
+            wasiReleaseRuntime = $(FE.makeRelativeToProject "runtime/c/_build.wasm32-wasi/libjuvix.a" >>= FE.embedFile)
 
             wasiDebugRuntime :: BS.ByteString
-            wasiDebugRuntime = $(FE.makeRelativeToProject "runtime/_build.wasm32-wasi-debug/libjuvix.a" >>= FE.embedFile)
+            wasiDebugRuntime = $(FE.makeRelativeToProject "runtime/c/_build.wasm32-wasi-debug/libjuvix.a" >>= FE.embedFile)
 
     wasiDefaultOutputFile :: Path Abs File -> Path Abs File -> Path Abs File
     wasiDefaultOutputFile inputFile baseOutputFile =

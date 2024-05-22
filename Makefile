@@ -211,7 +211,7 @@ fast-build: submodules runtime
 
 .PHONY: runtime
 runtime:
-	cd runtime && make -j 4 -s
+	cd runtime && make
 
 # -- Install
 

@@ -36,12 +36,12 @@ extra-source-files:
   - juvix-stdlib/**/*.juvix
   - include/package/**/*.juvix
   - include/package-base/**/*.juvix
-  - runtime/include/**/*.h
-  - runtime/**/*.a
-  - runtime/src/tree/*.jvt
-  - runtime/src/vampir/*.pir
-  - runtime/src/casm/*.casm
-  - runtime/src/nockma/*.nockma
+  - runtime/c/include/**/*.h
+  - runtime/c/**/*.a
+  - runtime/tree/*.jvt
+  - runtime/vampir/*.pir
+  - runtime/casm/*.casm
+  - runtime/nockma/*.nockma
 
 dependencies:
   - aeson-better-errors == 0.9.*

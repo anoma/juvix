@@ -104,7 +104,7 @@ run-profile +cmd:
 
 # Build the juvix runtime
 _buildRuntime:
-    cd runtime && make {{ runtimeArgs }} -j 4 -s
+    cd runtime && make {{ runtimeArgs }}
 
 # Build the project. `build runtime` builds only the runtime.
 [no-exit-message]
