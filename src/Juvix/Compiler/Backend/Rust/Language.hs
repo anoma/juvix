@@ -7,16 +7,22 @@ data Type
   | VecOfWord
   | Memory
 
+data IsMut
+  = Mut
+  | NotMut
+
 data FunctionArgument = FunctionArgument
   { _functionArgumentType :: Type,
     _functionArgumentName :: Text,
-    _functionArgumentMutable :: Bool
+    _functionArgumentMutable :: IsMut
   }
 
 data Function = Function
-  { _functionArguments :: [FunctionArgument],
+  { _functionName :: Text,
+    _functionArguments :: [FunctionArgument],
     _functionReturnType :: Maybe Type,
-    _functionBody :: [Statement]
+    _functionBody :: [Statement],
+    _functionAttributes :: Maybe Text
   }
 
 data Statement
@@ -31,7 +37,7 @@ data Statement
 
 data Let = Let
   { _letVariable :: Text,
-    _letMutable :: Bool,
+    _letMutable :: IsMut,
     _letInitializer :: Maybe Expression
   }
 
@@ -47,7 +53,7 @@ data Assignment = Assignment
 
 data MatchBranch = MatchBranch
   { _matchBranchPattern :: Expression,
-    _matchBranchBody :: Expression
+    _matchBranchBody :: [Statement]
   }
 
 data Match = Match

@@ -1075,3 +1075,18 @@ rustMut = "mut"
 
 rustVec :: (IsString s) => s
 rustVec = "vec!"
+
+rustVector :: (IsString s) => s
+rustVector = "Vec"
+
+rustWord :: (IsString s) => s
+rustWord = "Word"
+
+rustMemory :: (IsString s) => s
+rustMemory = "Memory"
+
+rustContinue :: (IsString s) => s
+rustContinue = "continue"
+
+rustReturn :: (IsString s) => s
+rustReturn = "return"
