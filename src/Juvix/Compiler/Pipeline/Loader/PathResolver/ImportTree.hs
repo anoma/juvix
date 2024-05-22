@@ -27,8 +27,6 @@ mkImportTree mentrypointModulePath =
   mapError (JuvixError @ParserError)
     . mapError (JuvixError @ScoperError)
     $ do
-      -- b <- supportsParallel
-      -- traceM ("path resolver supports parallel = " <> show b)
       pkgInfosTable <- getPackageInfos
       let pkgs :: [PackageInfo] = toList pkgInfosTable
           allNodes :: [ImportNode] = concatMap packageNodes pkgs
@@ -39,14 +37,15 @@ mkImportTree mentrypointModulePath =
                 cond ImportNode {..} = absPath == _importNodePackageRoot <//> _importNodeFile
             find cond allNodes
 
-          startingNodes = maybe allNodes pure mEntryImportNode
+          -- startingNodes = maybe allNodes pure mEntryImportNode
+          startingNodes = allNodes
+
       tree <-
         execState (initImportTree allNodes)
           . runReader pkgInfosTable
           . evalVisitEmpty scanNode
           $ mapM_ visit startingNodes
       checkImportTreeCycles tree
-      -- traceM ("Tree " <> toPlainText (ppOutDefaultNoComments tree))
       return tree
   where
     packageNodes :: PackageInfo -> [ImportNode]
