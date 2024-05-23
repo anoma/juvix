@@ -6,7 +6,7 @@ import Juvix.Compiler.Concrete.Data.Highlight qualified as Highlight
 import Juvix.Compiler.Pipeline.Run
 
 runCommand :: (Members '[EmbedIO, App, TaggedLock] r) => HighlightOptions -> Sem r ()
-runCommand HighlightOptions {..} = runReader defaultPipelineOptions $ do
+runCommand HighlightOptions {..} = runPipelineOptions $ do
   entry <- getEntryPoint (Just _highlightInputFile)
   inputFile <- fromAppPathFile _highlightInputFile
   hinput <-

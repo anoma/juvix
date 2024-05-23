@@ -1,6 +1,7 @@
 module Juvix.Data
   ( module Juvix.Data.Effect,
     module Juvix.Data.Error,
+    module Juvix.Data.NumJobs,
     module Juvix.Data.Fixity,
     module Juvix.Data.FileExt,
     module Juvix.Data.Hole,
@@ -33,6 +34,7 @@ import Juvix.Data.Irrelevant
 import Juvix.Data.IsImplicit
 import Juvix.Data.Loc
 import Juvix.Data.NameId qualified
+import Juvix.Data.NumJobs
 import Juvix.Data.Pragmas
 import Juvix.Data.Processed
 import Juvix.Data.Uid

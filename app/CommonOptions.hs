@@ -2,12 +2,10 @@
 module CommonOptions
   ( module CommonOptions,
     module Juvix.Prelude,
-    module CommonOptions.NumJobs,
     module Options.Applicative,
   )
 where
 
-import CommonOptions.NumJobs
 import Control.Exception qualified as GHC
 import Data.List.NonEmpty qualified as NonEmpty
 import GHC.Conc

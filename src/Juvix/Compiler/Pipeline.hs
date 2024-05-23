@@ -57,14 +57,16 @@ type PipelineAppEffects = '[TaggedLock, Reader PipelineOptions, EmbedIO]
 
 data PipelineOptions = PipelineOptions
   { _pipelineImportStrategy :: ImportScanStrategy,
-    _pipelineDependenciesConfig :: DependenciesConfig
+    _pipelineDependenciesConfig :: DependenciesConfig,
+    _pipelineNumJobs :: NumJobs
   }
 
 defaultPipelineOptions :: PipelineOptions
 defaultPipelineOptions =
   PipelineOptions
     { _pipelineImportStrategy = defaultImportScanStrategy,
-      _pipelineDependenciesConfig = defaultDependenciesConfig
+      _pipelineDependenciesConfig = defaultDependenciesConfig,
+      _pipelineNumJobs = defaultNumJobs
     }
 
 type PipelineLocalEff =

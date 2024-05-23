@@ -157,7 +157,7 @@ runPipelineEither ::
   Maybe (AppPath File) ->
   Sem (PipelineEff r) a ->
   Sem r (Either JuvixError (ResolverState, PipelineResult a))
-runPipelineEither opts input_ p = runReader defaultPipelineOptions $ do
+runPipelineEither opts input_ p = runPipelineOptions $ do
   args <- askArgs
   entry <- applyOptions opts <$> getEntryPoint' args input_
   runIOEither entry (inject p)
@@ -243,8 +243,17 @@ runPipelineHtml bNonRecursive input_
       entry <- getEntryPoint' args input_
       runReader defaultPipelineOptions (runPipelineHtmlEither entry) >>= fromRightJuvixError
 
+runPipelineOptions :: (Members '[App] r) => Sem (Reader PipelineOptions ': r) a -> Sem r a
+runPipelineOptions m = do
+  g <- askGlobalOptions
+  let opt =
+        defaultPipelineOptions
+          { _pipelineNumJobs = g ^. globalNumJobs
+          }
+  runReader opt m
+
 runPipelineEntry :: (Members '[App, EmbedIO, TaggedLock] r) => EntryPoint -> Sem (PipelineEff r) a -> Sem r a
-runPipelineEntry entry p = runReader defaultPipelineOptions $ do
+runPipelineEntry entry p = runPipelineOptions $ do
   r <- runIOEither entry (inject p) >>= fromRightJuvixError
   return (snd r ^. pipelineResult)
 
