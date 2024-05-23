@@ -5,7 +5,8 @@
 {-# HLINT ignore "Avoid restricted flags" #-}
 
 module Parallel.ParallelTemplate
-  ( CompileArgs (..),
+  ( module Parallel.ProgressLog,
+    CompileArgs (..),
     NodesIndex (..),
     Dependencies (..),
     compileArgsDependencies,
@@ -24,8 +25,9 @@ import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Effectful.Concurrent
 import Effectful.Concurrent.STM as STM
+import Juvix.Data.CodeAnn
 import Juvix.Prelude
-import Juvix.Prelude.Pretty
+import Parallel.ProgressLog
 
 data CompileArgs (s :: [Effect]) nodeId node compileProof = CompileArgs
   { _compileArgsNodesIndex :: NodesIndex nodeId node,
@@ -62,7 +64,7 @@ newtype CompileQueue nodeId = CompileQueue
   }
 
 newtype Logs = Logs
-  { _logQueue :: TQueue Text
+  { _logQueue :: TQueue (Doc CodeAnn)
   }
 
 newtype NodesIndex nodeId node = NodesIndex
@@ -128,7 +130,7 @@ nodeDependencies deps m = fromMaybe impossible (deps ^. dependenciesTable . at m
 compile ::
   forall nodeId node compileProof r.
   ( Hashable nodeId,
-    Members '[IOE, Concurrent, Error JuvixError] r
+    Members '[IOE, ProgressLog, Concurrent, Error JuvixError] r
   ) =>
   CompileArgs r nodeId node compileProof ->
   Sem r (HashMap nodeId compileProof)
@@ -167,10 +169,10 @@ compile args@CompileArgs {..} = do
       waitForWorkers @nodeId @compileProof
   (^. compilationState) <$> readTVarIO varCompilationState
 
-handleLogs :: (Members '[EmbedIO, Concurrent, Reader Logs] r) => Sem r ()
+handleLogs :: (Members '[ProgressLog, Concurrent, Reader Logs] r) => Sem r ()
 handleLogs = do
   x <- asks (^. logQueue) >>= atomically . readTQueue
-  putStrLn x
+  progressLog x
   handleLogs
 
 waitForWorkers ::
@@ -222,13 +224,18 @@ lookForWork = do
   nextModule <- atomically $ do
     nextModule :: nodeId <- readTBQueue qq
     let n :: node = run . runReader idx $ getNode nextModule
-        name = (args ^. compileArgsNodeName) n
+        name = annotate (AnnKind KNameTopModule) (pretty ((args ^. compileArgsNodeName) n))
     compSt <- readTVar stVar
     modifyTVar stVar (over compilationStartedNum succ)
     let num = compSt ^. compilationStartedNum
         total = compSt ^. compilationTotalNum
-        progress = "[" <> show (succ num) <> " of " <> show total <> "] "
-    logMsg (Just tid) logs (progress <> "Compiling " <> name)
+        progress :: Doc CodeAnn =
+          kwBracketL
+            <> annotate AnnLiteralInteger (pretty (succ num))
+            <+> kwOf
+            <+> annotate AnnLiteralInteger (pretty total) <> kwBracketR <> " "
+        kwCompiling = annotate AnnKeyword "Compiling"
+    logMsg (Just tid) logs (progress <> kwCompiling <> " " <> name)
     return nextModule
   compileNode @s @nodeId @node @compileProof nextModule
   lookForWork @nodeId @node @compileProof @s @r
@@ -294,10 +301,10 @@ registerCompiledModule m proof = do
   toQueue <- atomically (stateTVar mutSt (swap . addCompiledModule deps m proof))
   forM_ toQueue (atomically . writeTBQueue qq)
 
-logMsg :: Maybe ThreadId -> Logs -> Text -> STM ()
+logMsg :: Maybe ThreadId -> Logs -> Doc CodeAnn -> STM ()
 logMsg mtid (Logs q) msg = do
-  let threadIdLabel = case mtid of
+  let threadIdLabel :: Doc CodeAnn = case mtid of
         Nothing -> ""
-        Just tid -> "[" <> show tid <> "] "
+        Just tid -> kwBracketL <> show tid <> kwBracketR <> " "
       msg' = threadIdLabel <> msg
   STM.writeTQueue q msg'

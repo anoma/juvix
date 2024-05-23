@@ -187,6 +187,9 @@ delimiter = annotate AnnDelimiter . pretty
 kwSemicolon :: Doc Ann
 kwSemicolon = delimiter Str.semicolon
 
+kwOf :: Doc Ann
+kwOf = keyword Str.of_
+
 kwTerminating :: Doc Ann
 kwTerminating = keyword Str.terminating
 

@@ -54,6 +54,7 @@ import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process
 import Juvix.Data.Effect.TaggedLock
 import Juvix.Data.Field
+import Parallel.ProgressLog (ProgressLog)
 
 type PipelineAppEffects = '[TaggedLock, Reader PipelineOptions, EmbedIO]
 
@@ -77,6 +78,7 @@ type PipelineLocalEff =
      Error JuvixError,
      HighlightBuilder,
      Internet,
+     ProgressLog,
      Concurrent
    ]
 

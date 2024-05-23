@@ -2,6 +2,7 @@ module Juvix.Compiler.Pipeline.DriverParallel
   ( compileInParallel,
     ModuleInfoCache,
     evalModuleInfoCache,
+    module Parallel.ProgressLog,
   )
 where
 
@@ -19,6 +20,7 @@ import Juvix.Compiler.Store.Language qualified as Store
 import Juvix.Data.Effect.TaggedLock
 import Juvix.Prelude
 import Parallel.ParallelTemplate
+import Parallel.ProgressLog
 
 data CompileResult = CompileResult
   { _compileResultModuleTable :: Store.ModuleTable,
@@ -69,6 +71,7 @@ compileInParallel ::
   forall r.
   ( Members
       '[ Concurrent,
+         ProgressLog,
          IOE,
          ModuleInfoCache,
          TaggedLock,
@@ -122,6 +125,7 @@ evalModuleInfoCache ::
   ( Members
       '[ Reader EntryPoint,
          IOE,
+         ProgressLog,
          Reader ImportTree,
          Concurrent,
          TaggedLock,

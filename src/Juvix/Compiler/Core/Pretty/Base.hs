@@ -770,9 +770,6 @@ primStrToInt = primitive Str.strToInt
 kwLetRec :: Doc Ann
 kwLetRec = keyword Str.letrec_
 
-kwOf :: Doc Ann
-kwOf = keyword Str.of_
-
 kwMatch :: Doc Ann
 kwMatch = keyword Str.match_
 

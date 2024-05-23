@@ -32,6 +32,7 @@ import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process
 import Juvix.Data.Effect.TaggedLock
 import Juvix.Prelude
+import Parallel.ProgressLog
 
 -- | It returns `ResolverState` so that we can retrieve the `juvix.yaml` files,
 -- which we require for `Scope` tests.
@@ -113,6 +114,7 @@ runIOEitherPipeline' entry a = do
   let hasInternet = not (entry ^. entryPointOffline)
   opts :: PipelineOptions <- ask
   runConcurrent
+    . runProgressLogIO
     . evalInternet hasInternet
     . runHighlightBuilder
     . runJuvixError
@@ -140,6 +142,7 @@ evalModuleInfoCacheHelper ::
       '[ Reader EntryPoint,
          IOE,
          Reader ImportTree,
+         ProgressLog,
          Concurrent,
          TaggedLock,
          TopModuleNameChecker,
@@ -231,6 +234,7 @@ runReplPipelineIOEither' lockMode entry = do
       . runTopModuleNameChecker
       . runReader defaultImportScanStrategy
       . withImportTree (entry ^. entryPointModulePath)
+      . ignoreProgressLog
       . evalModuleInfoCacheHelper defaultNumJobs
       $ processFileToStoredCore entry
   return $ case eith of
