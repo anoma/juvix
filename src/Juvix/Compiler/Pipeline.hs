@@ -53,7 +53,7 @@ import Juvix.Data.Effect.Process
 import Juvix.Data.Effect.TaggedLock
 import Juvix.Data.Field
 
-type PipelineAppEffects = '[TaggedLock, EmbedIO]
+type PipelineAppEffects = '[TaggedLock, Reader PipelineOptions, EmbedIO]
 
 data PipelineOptions = PipelineOptions
   { _pipelineImportStrategy :: ImportScanStrategy,
