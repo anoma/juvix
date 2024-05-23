@@ -577,15 +577,15 @@ toCoreError loc (EvalError {..}) =
 -- | A class that provides a function `checkApply` that applies a function to a
 -- list of arguments and fails if the length of the arguments list is not equal
 -- to the arity of the function.
-class CheckApplyType a t where
+class CheckApplyType t a where
   checkApply :: t -> [a] -> a
 
 instance CheckApplyType a a where
   checkApply f = \case
-     [] -> f
-     _ -> error "too many arguments for operator"
+    [] -> f
+    _ -> error "too many arguments for operator"
 
-instance (CheckApplyType a r) => CheckApplyType a (a -> r) where
+instance (CheckApplyType r a) => CheckApplyType (a -> r) a where
   checkApply f = \case
-     x : xs -> checkApply (f x) xs
+    x : xs -> checkApply (f x) xs
     [] -> error "too few arguments for operator"
