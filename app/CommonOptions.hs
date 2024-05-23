@@ -59,8 +59,8 @@ numJobsOpt = eitherReader aux
   where
     aux :: String -> Either String NumJobs
     aux s = do
-      i <- readEither s
-      mkNumJobs i
+      i :: Int <- readEither s
+      mkNumJobs (Just i)
 
 parseNumJobs :: Parser NumJobs
 parseNumJobs = do
