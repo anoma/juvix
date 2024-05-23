@@ -58,4 +58,6 @@ data AnomaOp
     OpAnomaDecode
   | -- | Verify a cryptogtaphic signature of an Anoma value
     OpAnomaVerifyDetached
+  | -- | Cryptographically sign an Anoma value using a secret key
+    OpAnomaSign
   deriving stock (Eq)

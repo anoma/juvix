@@ -194,6 +194,7 @@ geval opts herr ctx env0 = eval' env0
       OpAnomaEncode -> anomaEncodeOp
       OpAnomaDecode -> anomaDecodeOp
       OpAnomaVerifyDetached -> anomaVerifyDetachedOp
+      OpAnomaSign -> anomaSignOp
       OpPoseidonHash -> poseidonHashOp
       OpEc -> ecOp
       OpRandomEcPoint -> randomEcPointOp
@@ -366,6 +367,15 @@ geval opts herr ctx env0 = eval' env0
               | otherwise ->
                   err "unsupported builtin operation: OpAnomaVerifyDetached"
         {-# INLINE anomaVerifyDetachedOp #-}
+
+        anomaSignOp :: [Node] -> Node
+        anomaSignOp = checkApply $ \arg1 arg2 ->
+          if
+              | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                  mkBuiltinApp' OpAnomaSign (eval' env <$> [arg1, arg2])
+              | otherwise ->
+                  err "unsupported builtin operation: OpAnomaSign"
+        {-# INLINE anomaSignOp #-}
 
         poseidonHashOp :: [Node] -> Node
         poseidonHashOp = unary $ \arg ->

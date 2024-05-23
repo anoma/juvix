@@ -246,6 +246,7 @@ instance PrettyCode AnomaOp where
     OpAnomaEncode -> Str.anomaEncode
     OpAnomaDecode -> Str.anomaDecode
     OpAnomaVerifyDetached -> Str.anomaVerifyDetached
+    OpAnomaSign -> Str.anomaSign
 
 instance PrettyCode UnaryOpcode where
   ppCode = \case

@@ -427,6 +427,7 @@ builtinOpArgTypes = \case
   OpAnomaEncode -> [mkDynamic']
   OpAnomaDecode -> [mkDynamic']
   OpAnomaVerifyDetached -> [mkDynamic', mkDynamic', mkDynamic']
+  OpAnomaSign -> [mkDynamic', mkDynamic']
   OpPoseidonHash -> [mkDynamic']
   OpEc -> [mkDynamic', mkTypeField', mkDynamic']
   OpRandomEcPoint -> []

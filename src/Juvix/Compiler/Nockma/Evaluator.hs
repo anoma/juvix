@@ -239,7 +239,10 @@ evalProfile inistack initerm =
               TermCell {} -> throwDecodingFailed args' DecodingErrorExpectedAtom
             StdlibVerifyDetached -> case args' of
               TCell (TermAtom sig) (TCell (TermAtom message) (TermAtom pubKey)) -> goVerifyDetached sig message pubKey
-              _ -> error "expected a term of the form [signature (atom) message (term) public_key (atom)]"
+              _ -> error "expected a term of the form [signature (atom) message (encoded term) public_key (atom)]"
+            StdlibSign -> case args' of
+              TCell (TermAtom message) (TermAtom privKey) -> goSign message privKey
+              _ -> error "expected a term of the form [message (encoded term) private_key (atom)]"
           where
             goVerifyDetached :: Atom a -> Atom a -> Atom a -> Sem r (Term a)
             goVerifyDetached sigT messageT pubKeyT = do
@@ -248,6 +251,13 @@ evalProfile inistack initerm =
               message <- atomToByteString messageT
               let res = dverify pubKey message sig
               return (TermAtom (nockBool res))
+
+            goSign :: Atom a -> Atom a -> Sem r (Term a)
+            goSign messageT privKeyT = do
+              privKey <- SecretKey <$> atomToByteString privKeyT
+              message <- atomToByteString messageT
+              res <- byteStringToAtom (sign privKey message)
+              return (TermAtom res)
 
         goAutoConsCell :: AutoConsCell a -> Sem r (Term a)
         goAutoConsCell c = do

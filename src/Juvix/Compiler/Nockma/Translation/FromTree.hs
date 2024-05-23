@@ -427,6 +427,7 @@ compile = \case
         Tree.OpAnomaEncode -> return (goAnomaEncode args)
         Tree.OpAnomaDecode -> return (goAnomaDecode args)
         Tree.OpAnomaVerifyDetached -> return (goAnomaVerifyDetached args)
+        Tree.OpAnomaSign -> return (goAnomaSign args)
 
     goUnop :: Tree.NodeUnop -> Sem r (Term Natural)
     goUnop Tree.NodeUnop {..} = do
@@ -460,6 +461,11 @@ compile = \case
     goAnomaVerifyDetached :: [Term Natural] -> Term Natural
     goAnomaVerifyDetached = \case
       [sig, message, pubKey] -> callStdlib StdlibVerifyDetached [sig, goAnomaEncode [message], pubKey]
+      _ -> impossible
+
+    goAnomaSign :: [Term Natural] -> Term Natural
+    goAnomaSign = \case
+      [message, privKey] -> callStdlib StdlibSign [goAnomaEncode [message], privKey]
       _ -> impossible
 
     goTrace :: Term Natural -> Sem r (Term Natural)

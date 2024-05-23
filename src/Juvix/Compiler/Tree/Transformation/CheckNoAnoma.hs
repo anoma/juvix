@@ -15,6 +15,7 @@ checkNoAnoma = walkT checkNode
         OpAnomaEncode -> unsupportedErr "OpAnomaEncode"
         OpAnomaDecode -> unsupportedErr "OpAnomaDecode"
         OpAnomaVerifyDetached -> unsupportedErr "OpAnomaVerifyDetached"
+        OpAnomaSign -> unsupportedErr "OpAnomaSign"
         where
           unsupportedErr :: Text -> Sem r ()
           unsupportedErr opName =

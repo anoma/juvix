@@ -75,5 +75,9 @@ tests =
     Eval.NegTest
       "anomaVerifyDetached"
       $(mkRelDir ".")
-      $(mkRelFile "test012.jvt")
+      $(mkRelFile "test012.jvt"),
+    Eval.NegTest
+      "anomaSign"
+      $(mkRelDir ".")
+      $(mkRelFile "test013.jvt")
   ]
