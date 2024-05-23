@@ -2,12 +2,15 @@
 module CommonOptions
   ( module CommonOptions,
     module Juvix.Prelude,
+    module CommonOptions.NumJobs,
     module Options.Applicative,
   )
 where
 
+import CommonOptions.NumJobs
 import Control.Exception qualified as GHC
 import Data.List.NonEmpty qualified as NonEmpty
+import GHC.Conc
 import Juvix.Compiler.Concrete.Translation.ImportScanner
 import Juvix.Compiler.Core.Data.TransformationId.Parser qualified as Core
 import Juvix.Compiler.Pipeline.EntryPoint
@@ -18,7 +21,7 @@ import Juvix.Prelude
 import Juvix.Prelude as Juvix
 import Options.Applicative
 import System.Process
-import Text.Read (readMaybe)
+import Text.Read (readEither, readMaybe)
 import Prelude (show)
 
 -- | Paths that are input are used to detect the root of the project.
@@ -52,6 +55,27 @@ parseInputFiles exts' = do
 
 parseInputFile :: FileExt -> Parser (AppPath File)
 parseInputFile = parseInputFiles . NonEmpty.singleton
+
+numJobsOpt :: ReadM NumJobs
+numJobsOpt = eitherReader aux
+  where
+    aux :: String -> Either String NumJobs
+    aux s = do
+      i <- readEither s
+      mkNumJobs i
+
+parseNumJobs :: Parser NumJobs
+parseNumJobs = do
+  option
+    numJobsOpt
+    ( long "jobs"
+        <> short 'j'
+        <> metavar "JOBS"
+        <> value defaultNumJobs
+        <> showDefault
+        <> help "Number of concurrent jobs to run"
+        <> completer (listCompleter [Juvix.show j | j <- [1 .. numCapabilities]])
+    )
 
 parseProgramInputFile :: Parser (AppPath File)
 parseProgramInputFile = do
