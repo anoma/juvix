@@ -60,4 +60,6 @@ data AnomaOp
     OpAnomaVerifyDetached
   | -- | Cryptographically sign an Anoma value using a secret key
     OpAnomaSign
+  | -- | Verify a signature obtained from OpAnomaSign using a public key
+    OpAnomaVerify
   deriving stock (Eq)

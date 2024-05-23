@@ -568,5 +568,13 @@ allTests =
         []
         $ checkOutput
           [ [nock| true |]
-          ]
+          ],
+      let toSignAndVerify :: Term Natural = [nock| [1 2 nil] |]
+       in mkAnomaCallTest
+            "Test078: Anoma sign and verify"
+            $(mkRelDir ".")
+            $(mkRelFile "test078.juvix")
+            [OpQuote # toSignAndVerify]
+            $ checkOutput
+              [toSignAndVerify]
     ]
