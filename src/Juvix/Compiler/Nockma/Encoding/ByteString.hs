@@ -14,8 +14,7 @@ byteStringToAtom :: (NockNatural a, Member (Error (ErrNockNatural a)) r) => Byte
 byteStringToAtom bs = do
   a <- fromNatural . fromInteger . vectorBitsToInteger . cloneFromByteString $ bs
   return
-    ( Atom
-        { _atomInfo = emptyAtomInfo,
-          _atom = a
-        }
-    )
+    Atom
+      { _atomInfo = emptyAtomInfo,
+        _atom = a
+      }
