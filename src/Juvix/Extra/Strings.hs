@@ -335,6 +335,9 @@ anomaEncode = "anoma-encode"
 anomaDecode :: (IsString s) => s
 anomaDecode = "anoma-decode"
 
+anomaVerifyDetached :: (IsString s) => s
+anomaVerifyDetached = "anoma-verify-detached"
+
 builtinSeq :: (IsString s) => s
 builtinSeq = "seq"
 

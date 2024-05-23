@@ -560,5 +560,13 @@ allTests =
             [nock| [1 2 0] |],
             [nock| [1 2] |],
             [nock| false |]
+          ],
+      mkAnomaCallTest
+        "Test077: Anoma verify-detached"
+        $(mkRelDir ".")
+        $(mkRelFile "test077.juvix")
+        []
+        $ checkOutput
+          [ [nock| true |]
           ]
     ]

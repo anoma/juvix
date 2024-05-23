@@ -56,4 +56,6 @@ data AnomaOp
     OpAnomaEncode
   | -- | Decode a value from an Anoma atom
     OpAnomaDecode
+  | -- | Verify a cryptogtaphic signature of an Anoma value
+    OpAnomaVerifyDetached
   deriving stock (Eq)

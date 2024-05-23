@@ -43,7 +43,7 @@ writeLength len = do
 writeAtomTag :: (Member BitWriter r) => Sem r ()
 writeAtomTag = writeZero
 
--- | Write the cell tag 0b01 to the output
+-- | Write the cell tag 0b10 to the output
 writeCellTag :: (Member BitWriter r) => Sem r ()
 writeCellTag = writeOne >> writeZero
 

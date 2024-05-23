@@ -72,7 +72,7 @@ consumeLength = do
   if
       | lenOfLen == 0 -> return 0
       | otherwise -> do
-          -- The mist significant bit of the length is omitted
+          -- The most significant bit of the length is omitted
           let lenBits = lenOfLen - 1
           foldlM go (bit lenBits) [0 .. lenBits - 1]
   where

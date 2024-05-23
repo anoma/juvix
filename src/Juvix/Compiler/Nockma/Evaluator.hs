@@ -6,6 +6,7 @@ module Juvix.Compiler.Nockma.Evaluator
   )
 where
 
+import Crypto.Sign.Ed25519
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Nockma.Encoding
 import Juvix.Compiler.Nockma.Encoding qualified as Encoding
@@ -236,6 +237,17 @@ evalProfile inistack initerm =
                 r <- Encoding.cueEither a
                 either (throwDecodingFailed args') return r
               TermCell {} -> throwDecodingFailed args' DecodingErrorExpectedAtom
+            StdlibVerifyDetached -> case args' of
+              TCell (TermAtom sig) (TCell (TermAtom message) (TermAtom pubKey)) -> goVerifyDetached sig message pubKey
+              _ -> error "expected a term of the form [signature (atom) message (term) public_key (atom)]"
+          where
+            goVerifyDetached :: Atom a -> Atom a -> Atom a -> Sem r (Term a)
+            goVerifyDetached sigT messageT pubKeyT = do
+              sig <- Signature <$> atomToByteString sigT
+              pubKey <- PublicKey <$> atomToByteString pubKeyT
+              message <- atomToByteString messageT
+              let res = dverify pubKey message sig
+              return (TermAtom (nockBool res))
 
         goAutoConsCell :: AutoConsCell a -> Sem r (Term a)
         goAutoConsCell c = do
