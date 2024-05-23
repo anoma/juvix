@@ -81,8 +81,9 @@ compileInParallel ::
        ]
       r
   ) =>
+  NumJobs ->
   Sem r ()
-compileInParallel = do
+compileInParallel nj = do
   t <- ask
   idx <- mkNodesIndex t
   let args :: CompileArgs r NodeId Node CompileProof
@@ -91,7 +92,7 @@ compileInParallel = do
           { _compileArgsNodesIndex = idx,
             _compileArgsNodeName = getNodeName,
             _compileArgsDependencies = mkDependencies t,
-            _compileArgsNumWorkers = 4,
+            _compileArgsNumWorkers = numJobs nj,
             _compileArgsCompileNode = compileNode
           }
   void (compile args)
@@ -132,10 +133,11 @@ evalModuleInfoCache ::
        ]
       r
   ) =>
+  NumJobs ->
   Sem (ModuleInfoCache ': r) a ->
   Sem r a
-evalModuleInfoCache m = do
+evalModuleInfoCache nj m = do
   Driver.evalModuleInfoCache $
     do
-      compileInParallel
+      compileInParallel nj
       m

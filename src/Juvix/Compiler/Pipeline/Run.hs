@@ -131,7 +131,7 @@ runIOEitherPipeline' entry a = do
     . runTopModuleNameChecker
     . runReader (opts ^. pipelineImportStrategy)
     . withImportTree (entry ^. entryPointModulePath)
-    . evalModuleInfoCacheHelper
+    . evalModuleInfoCacheHelper (opts ^. pipelineNumJobs)
     $ a
 
 evalModuleInfoCacheHelper ::
@@ -150,17 +150,14 @@ evalModuleInfoCacheHelper ::
        ]
       r
   ) =>
+  NumJobs ->
   Sem (ModuleInfoCache ': r) a ->
   Sem r a
-evalModuleInfoCacheHelper m = do
+evalModuleInfoCacheHelper nj m = do
   b <- supportsParallel
   if
-      | b -> do
-          -- traceM "using parallel"
-          DriverPar.evalModuleInfoCache m
-      | otherwise -> do
-          -- traceM "using seq"
-          evalModuleInfoCache m
+      | b -> DriverPar.evalModuleInfoCache nj m
+      | otherwise -> evalModuleInfoCache m
 
 mainIsPackageFile :: EntryPoint -> Bool
 mainIsPackageFile entry = case entry ^. entryPointModulePath of
@@ -234,7 +231,7 @@ runReplPipelineIOEither' lockMode entry = do
       . runTopModuleNameChecker
       . runReader defaultImportScanStrategy
       . withImportTree (entry ^. entryPointModulePath)
-      . evalModuleInfoCacheHelper
+      . evalModuleInfoCacheHelper defaultNumJobs
       $ processFileToStoredCore entry
   return $ case eith of
     Left err -> Left err
