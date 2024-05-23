@@ -1,7 +1,6 @@
 module Juvix.Compiler.Pipeline.Loader.PathResolver.ImportTree where
 
 import Data.HashMap.Strict qualified as HashMap
-import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Compiler.Concrete.Translation.ImportScanner
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Base
@@ -30,19 +29,18 @@ mkImportTree mentrypointModulePath =
       pkgInfosTable <- getPackageInfos
       let pkgs :: [PackageInfo] = toList pkgInfosTable
           allNodes :: [ImportNode] = concatMap packageNodes pkgs
+
           mEntryImportNode :: Maybe ImportNode
           mEntryImportNode = do
             absPath <- mentrypointModulePath
             let cond :: ImportNode -> Bool
-                cond ImportNode {..} = absPath == _importNodePackageRoot <//> _importNodeFile
+                cond n = absPath == n ^. importNodeAbsFile
             find cond allNodes
 
-          -- startingNodes = maybe allNodes pure mEntryImportNode
-          startingNodes = allNodes
-
+          startingNodes = maybe allNodes pure mEntryImportNode
+      -- startingNodes = allNodes -- TODO investigate
       tree <-
-        execState (initImportTree allNodes)
-          . runReader pkgInfosTable
+        execImportTreeBuilder
           . evalVisitEmpty scanNode
           $ mapM_ visit startingNodes
       checkImportTreeCycles tree
@@ -57,15 +55,6 @@ mkImportTree mentrypointModulePath =
         | f <- filter isJuvixOrJuvixMdFile (toList (pkg ^. packageJuvixRelativeFiles))
       ]
 
-    addEdge :: forall r'. (Members '[State ImportTree] r') => ImportScan -> ImportNode -> ImportNode -> Sem r' ()
-    addEdge importScan fromNode toNode = do
-      modify (over importTree (insertHelper fromNode toNode))
-      modify (over importTreeReverse (insertHelper toNode fromNode))
-      modify (over importTreeEdges (insertHelper fromNode importScan))
-      where
-        insertHelper :: (Hashable k, Hashable v) => k -> v -> HashMap k (HashSet v) -> HashMap k (HashSet v)
-        insertHelper k v = over (at k) (Just . maybe (HashSet.singleton v) (HashSet.insert v))
-
     getNodeImports ::
       forall r'.
       (Members '[Reader ImportScanStrategy, Files, Error ParserError] r') =>
@@ -76,8 +65,7 @@ mkImportTree mentrypointModulePath =
     scanNode ::
       forall r'.
       ( Members
-          '[ State ImportTree,
-             Reader (HashMap (Path Abs Dir) PackageInfo),
+          '[ ImportTreeBuilder,
              Reader ImportScanStrategy,
              Error ParserError,
              Files,
@@ -88,11 +76,11 @@ mkImportTree mentrypointModulePath =
       ) =>
       ImportNode ->
       Sem r' ()
-    scanNode fromNode = do
+    scanNode fromNode = withImportNode fromNode $ do
       scans <- toList <$> getNodeImports fromNode
       imports :: [ImportNode] <- mapM resolveImportScan scans
       forM_ (zipExact scans imports) $ \(importscan, toNode) -> do
-        addEdge importscan fromNode toNode
+        importTreeAddEdge importscan toNode
         withResolverRoot (toNode ^. importNodePackageRoot) (visit toNode)
 
     resolveImportScan :: forall r'. (Members '[PathResolver] r') => ImportScan -> Sem r' ImportNode
@@ -104,6 +92,23 @@ mkImportTree mentrypointModulePath =
           { _importNodePackageRoot = pkg ^. packageRoot,
             _importNodeFile = addFileExt ext rel
           }
+
+withImportTree ::
+  forall r a.
+  ( Members
+      '[ Reader ImportScanStrategy,
+         Error JuvixError,
+         PathResolver,
+         Files
+       ]
+      r
+  ) =>
+  Maybe (Path Abs File) ->
+  Sem (Reader ImportTree ': r) a ->
+  Sem r a
+withImportTree entryModule x = do
+  t <- mkImportTree entryModule
+  runReader t x
 
 checkImportTreeCycles :: forall r. (Members '[Error ScoperError] r) => ImportTree -> Sem r ()
 checkImportTreeCycles tree = do
@@ -142,20 +147,3 @@ checkImportTreeCycles tree = do
     getCycle = \case
       AcyclicSCC {} -> Nothing
       CyclicSCC l -> Just (nonEmpty' l)
-
-withImportTree ::
-  forall r a.
-  ( Members
-      '[ Reader ImportScanStrategy,
-         Error JuvixError,
-         PathResolver,
-         Files
-       ]
-      r
-  ) =>
-  Maybe (Path Abs File) ->
-  Sem (Reader ImportTree ': r) a ->
-  Sem r a
-withImportTree entryModule x = do
-  t <- mkImportTree entryModule
-  runReader t x

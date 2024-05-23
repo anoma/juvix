@@ -620,6 +620,9 @@ ordMap = Map.fromList . toList
 hashMap :: (Foldable f, Hashable k) => f (k, v) -> HashMap k v
 hashMap = HashMap.fromList . toList
 
+hashMapInsertWeak :: (Hashable k) => k -> v -> HashMap k v -> HashMap k v
+hashMapInsertWeak = HashMap.insertWith (\_new old -> old)
+
 lazyHashMap :: (Foldable f, Hashable k) => f (k, v) -> LazyHashMap k v
 lazyHashMap = LazyHashMap.fromList . toList
 

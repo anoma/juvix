@@ -123,7 +123,7 @@ crashOnError m = do
     Left e -> print e >> exitFailure
 
 nodeDependencies :: (Hashable nodeId) => Dependencies nodeId -> nodeId -> HashSet nodeId
-nodeDependencies deps m = fromMaybe mempty (deps ^. dependenciesTable . at m)
+nodeDependencies deps m = fromMaybe impossible (deps ^. dependenciesTable . at m)
 
 compile ::
   forall nodeId node compileProof r.
@@ -136,7 +136,8 @@ compile args@CompileArgs {..} = do
   let modsIx = _compileArgsNodesIndex
       deps = _compileArgsDependencies
       numMods :: Natural = fromIntegral (length (modsIx ^. nodesIndex))
-      starterModules = [m | m <- HashMap.keys (modsIx ^. nodesIndex), null (nodeDependencies deps m)]
+      starterModules :: [nodeId] =
+        [m | m <- HashMap.keys (modsIx ^. nodesIndex), null (nodeDependencies deps m)]
   logs <- Logs <$> newTQueueIO
   qq <- newTBQueueIO (max 1 numMods)
   let compileQ = CompileQueue qq

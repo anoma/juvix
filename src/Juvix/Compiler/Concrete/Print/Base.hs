@@ -1104,7 +1104,7 @@ instance PrettyPrint ImportTreeStats where
     hardline
 
 instance PrettyPrint ImportTree where
-  ppCode ImportTree {..} = do
+  ppCode tree = do
     header "Import Tree:"
     header "============"
     hardline
@@ -1124,7 +1124,7 @@ instance PrettyPrint ImportTree where
       hardline
     where
       allNodes :: [ImportNode]
-      allNodes = HashMap.keys _importTree
+      allNodes = HashMap.keys (tree ^. importTree)
 
       allRoots :: [Path Abs Dir]
       allRoots = nubSort (map (^. importNodePackageRoot) allNodes)
@@ -1146,7 +1146,7 @@ instance PrettyPrint ImportTree where
               let rootSubTable :: Map (Path Rel File) (Set ImportNode)
                   rootSubTable =
                     ordMap
-                      [ (from ^. importNodeFile, ordSet (_importTree ^?! at from . _Just))
+                      [ (from ^. importNodeFile, ordSet (tree ^. importTree ^?! at from . _Just))
                         | from :: ImportNode <- nodesInRoot
                       ]
           ]
