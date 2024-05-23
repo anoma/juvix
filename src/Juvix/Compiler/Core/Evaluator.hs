@@ -581,9 +581,11 @@ class CheckApplyType a t where
   checkApply :: t -> [a] -> a
 
 instance CheckApplyType a a where
-  checkApply f [] = f
-  checkApply _ _ = error "too many arguments for operator"
+  checkApply f = \case
+     [] -> f
+     _ -> error "too many arguments for operator"
 
 instance (CheckApplyType a r) => CheckApplyType a (a -> r) where
-  checkApply f (x : xs) = checkApply (f x) xs
-  checkApply _ [] = error "too few arguments for operator"
+  checkApply f = \case
+     x : xs -> checkApply (f x) xs
+    [] -> error "too few arguments for operator"
