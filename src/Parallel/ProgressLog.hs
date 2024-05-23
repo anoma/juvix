@@ -8,11 +8,11 @@ data ProgressLog :: Effect where
 
 makeSem ''ProgressLog
 
-runProgressLogIO :: (Members '[EmbedIO] r) => Sem (ProgressLog ': r) a -> Sem r a
-runProgressLogIO = interpret $ \case
+runProgressLogIO :: (Members '[EmbedIO] r) => Bool -> Sem (ProgressLog ': r) a -> Sem r a
+runProgressLogIO useColors = interpret $ \case
   ProgressLog l -> do
-    renderIO True l
-    renderIO False ("\n" :: Text)
+    renderIO useColors l
+    renderIO useColors ("\n" :: Text)
 
 ignoreProgressLog :: Sem (ProgressLog ': r) a -> Sem r a
 ignoreProgressLog = interpret $ \case

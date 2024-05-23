@@ -248,7 +248,8 @@ runPipelineOptions m = do
   g <- askGlobalOptions
   let opt =
         defaultPipelineOptions
-          { _pipelineNumJobs = g ^. globalNumJobs
+          { _pipelineNumJobs = g ^. globalNumJobs,
+            _pipelineUseColors = not (g ^. globalNoColors)
           }
   runReader opt m
 

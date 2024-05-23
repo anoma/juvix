@@ -114,7 +114,7 @@ runIOEitherPipeline' entry a = do
   let hasInternet = not (entry ^. entryPointOffline)
   opts :: PipelineOptions <- ask
   runConcurrent
-    . runProgressLogIO
+    . runProgressLogIO (opts ^. pipelineUseColors)
     . evalInternet hasInternet
     . runHighlightBuilder
     . runJuvixError
