@@ -2,6 +2,10 @@ module Juvix.Compiler.Backend.Rust.Language where
 
 import Juvix.Prelude
 
+data Program = Program
+  { _programFunctions :: [Function]
+  }
+
 data Type
   = Word
   | VecOfWord
@@ -12,9 +16,9 @@ data IsMut
   | NotMut
 
 data FunctionArgument = FunctionArgument
-  { _functionArgumentType :: Type,
+  { _functionArgumentMutable :: IsMut,
     _functionArgumentName :: Text,
-    _functionArgumentMutable :: IsMut
+    _functionArgumentType :: Type
   }
 
 data Function = Function
@@ -29,6 +33,7 @@ data Statement
   = StatementLet Let
   | StatementConst ConstDecl
   | StatementAssignment Assignment
+  | StatementIf If
   | StatementMatch Match
   | StatementLoop Loop
   | StatementContinue
@@ -51,8 +56,15 @@ data Assignment = Assignment
     _assignmentValue :: Expression
   }
 
+data If = If
+  { _ifValue :: Expression,
+    _ifBranchTrue :: [Statement],
+    _ifBranchFalse :: [Statement]
+  }
+
 data MatchBranch = MatchBranch
-  { _matchBranchPattern :: Expression,
+  { -- Nothing indicates the wildcard
+    _matchBranchPattern :: Maybe Expression,
     _matchBranchBody :: [Statement]
   }
 
@@ -67,14 +79,20 @@ data Loop = Loop
   }
 
 data Return = Return
-  { _returnValue :: Expression
+  { _returnValue :: Maybe Expression
   }
 
 data Expression
-  = ExprCall Call
+  = ExprVar Var
+  | ExprCall Call
   | ExprVec Vec
   | ExprArray Array
   | ExprLiteral Literal
+  | ExprBlock Block
+
+data Var = Var
+  { _varName :: Text
+  }
 
 data Call = Call
   { _callFunction :: Text,
@@ -87,6 +105,10 @@ data Vec = Vec
 
 data Array = Array
   { _arrayArgs :: [Expression]
+  }
+
+data Block = Block
+  { _blockBody :: [Statement]
   }
 
 data Literal
@@ -102,6 +124,9 @@ makeLenses ''MatchBranch
 makeLenses ''Match
 makeLenses ''Loop
 makeLenses ''Return
+makeLenses ''Var
 makeLenses ''Call
 makeLenses ''Vec
 makeLenses ''Array
+makeLenses ''Block
+makeLenses ''Program

@@ -1058,6 +1058,12 @@ cairoMkEcPoint = "mkEcPoint"
 rustFn :: (IsString s) => s
 rustFn = "fn"
 
+rustIf :: (IsString s) => s
+rustIf = "if"
+
+rustElse :: (IsString s) => s
+rustElse = "else"
+
 rustMatch :: (IsString s) => s
 rustMatch = "match"
 

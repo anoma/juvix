@@ -37,7 +37,7 @@ ppAttrs = \case
 ppBlock :: (Member (Reader Options) r) => [Statement] -> Sem r (Doc Ann)
 ppBlock stmts = do
   stmts' <- mapM ppCode stmts
-  let stmts'' = map (<> semi) stmts'
+  let stmts'' = punctuate semi stmts'
   return $ braces (indent' (vsep stmts''))
 
 instance PrettyCode Type where
@@ -68,6 +68,7 @@ instance PrettyCode Statement where
     StatementLet x -> ppCode x
     StatementConst x -> ppCode x
     StatementAssignment x -> ppCode x
+    StatementIf x -> ppCode x
     StatementMatch x -> ppCode x
     StatementLoop x -> ppCode x
     StatementContinue -> return kwContinue
@@ -94,9 +95,18 @@ instance PrettyCode Assignment where
     val <- ppCode _assignmentValue
     return $ name <+> "=" <+> val
 
+instance PrettyCode If where
+  ppCode If {..} = do
+    val <- ppCode _ifValue
+    br1 <- ppBlock _ifBranchTrue
+    br2 <- ppBlock _ifBranchFalse
+    return $ kwIf <+> val <+> br1 <+> kwElse <+> br2
+
 instance PrettyCode MatchBranch where
   ppCode MatchBranch {..} = do
-    pat <- ppCode _matchBranchPattern
+    pat <- case _matchBranchPattern of
+      Just p -> ppCode p
+      Nothing -> return "_"
     body <- ppBlock _matchBranchBody
     return $ pat <+> "=>" <+> body
 
@@ -114,15 +124,20 @@ instance PrettyCode Loop where
 
 instance PrettyCode Return where
   ppCode Return {..} = do
-    val <- ppCode _returnValue
-    return $ kwReturn <+> val
+    val <- maybe (return Nothing) (ppCode >=> return . Just) _returnValue
+    return $ kwReturn <+?> val
 
 instance PrettyCode Expression where
   ppCode = \case
+    ExprVar x -> ppCode x
     ExprCall x -> ppCode x
     ExprVec x -> ppCode x
     ExprArray x -> ppCode x
     ExprLiteral x -> ppCode x
+    ExprBlock x -> ppCode x
+
+instance PrettyCode Var where
+  ppCode Var {..} = ppName KNameLocal _varName
 
 instance PrettyCode Call where
   ppCode Call {..} = do
@@ -144,3 +159,11 @@ instance PrettyCode Literal where
   ppCode = \case
     LitInteger i -> return $ annotate AnnLiteralInteger (pretty i)
     LitString s -> return $ annotate AnnLiteralString (show s)
+
+instance PrettyCode Block where
+  ppCode Block {..} = ppBlock _blockBody
+
+instance PrettyCode Program where
+  ppCode Program {..} = do
+    funs <- mapM ppCode _programFunctions
+    return $ vsep funs
