@@ -21,7 +21,7 @@ import Juvix.Prelude as Juvix
 import Options.Applicative
 import Parallel.ProgressLog
 import System.Process
-import Text.Read (readEither, readMaybe)
+import Text.Read (readMaybe)
 import Prelude (show)
 
 -- | Paths that are input are used to detect the root of the project.
@@ -57,12 +57,7 @@ parseInputFile :: FileExt -> Parser (AppPath File)
 parseInputFile = parseInputFiles . NonEmpty.singleton
 
 numThreadsOpt :: ReadM NumThreads
-numThreadsOpt = eitherReader aux
-  where
-    aux :: String -> Either String NumThreads
-    aux s = do
-      i :: Int <- readEither s
-      mkNumThreads (Just i)
+numThreadsOpt = eitherReader readNumThreads
 
 parseNumThreads :: Parser NumThreads
 parseNumThreads = do
@@ -74,7 +69,7 @@ parseNumThreads = do
         <> value defaultNumThreads
         <> showDefault
         <> help "Number of physical threads to run"
-        <> completer (listCompleter [Juvix.show j | j <- [1 .. numCapabilities]])
+        <> completer (listCompleter (Juvix.show NumThreadsAuto : [Juvix.show j | j <- [1 .. numCapabilities]]))
     )
 
 parseProgramInputFile :: Parser (AppPath File)

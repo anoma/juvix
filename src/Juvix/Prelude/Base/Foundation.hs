@@ -56,6 +56,7 @@ module Juvix.Prelude.Base.Foundation
     module Path,
     module System.IO,
     module Text.Show,
+    module Text.Read,
     module Control.Monad.Catch,
     module Control.Monad.Zip,
     Data,
@@ -188,6 +189,7 @@ import System.IO hiding
   )
 import System.IO qualified as IO
 import System.IO.Error
+import Text.Read (readEither)
 import Text.Read qualified as Text
 import Text.Show (Show)
 import Text.Show qualified as Show

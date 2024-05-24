@@ -14,7 +14,7 @@ main = do
   let parserPreferences = prefs showHelpOnEmpty
   invokeDir <- getCurrentDir
   (_runAppIOArgsGlobalOptions, cli) <- customExecParser parserPreferences descr
-  GHC.setNumCapabilities (numThreads (_runAppIOArgsGlobalOptions ^. globalNumThreads))
+  numThreads (_runAppIOArgsGlobalOptions ^. globalNumThreads) >>= GHC.setNumCapabilities
   mbuildDir <- mapM (prepathToAbsDir invokeDir) (_runAppIOArgsGlobalOptions ^? globalBuildDir . _Just . pathPath)
   mainFile <- topCommandInputPath cli
   mapM_ checkMainFile mainFile

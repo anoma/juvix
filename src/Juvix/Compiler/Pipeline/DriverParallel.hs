@@ -89,13 +89,14 @@ compileInParallel ::
 compileInParallel nj = do
   t <- ask
   idx <- mkNodesIndex t
+  numWorkers <- numThreads nj
   let args :: CompileArgs r NodeId Node CompileProof
       args =
         CompileArgs
           { _compileArgsNodesIndex = idx,
             _compileArgsNodeName = getNodeName,
             _compileArgsDependencies = mkDependencies t,
-            _compileArgsNumWorkers = numThreads nj,
+            _compileArgsNumWorkers = numWorkers,
             _compileArgsCompileNode = compileNode
           }
   void (compile args)
