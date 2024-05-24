@@ -11,8 +11,8 @@ makeSem ''ProgressLog
 runProgressLogIO :: (Members '[EmbedIO] r) => Bool -> Sem (ProgressLog ': r) a -> Sem r a
 runProgressLogIO useColors = interpret $ \case
   ProgressLog l -> do
-    renderIO useColors l
-    renderIO useColors ("\n" :: Text)
+    hRenderIO useColors stderr l
+    hRenderIO useColors stderr ("\n" :: Text)
 
 ignoreProgressLog :: Sem (ProgressLog ': r) a -> Sem r a
 ignoreProgressLog = interpret $ \case

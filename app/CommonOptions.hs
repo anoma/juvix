@@ -2,6 +2,7 @@
 module CommonOptions
   ( module CommonOptions,
     module Juvix.Prelude,
+    module Parallel.ProgressLog,
     module Options.Applicative,
   )
 where
@@ -18,6 +19,7 @@ import Juvix.Data.Field
 import Juvix.Prelude
 import Juvix.Prelude as Juvix
 import Options.Applicative
+import Parallel.ProgressLog
 import System.Process
 import Text.Read (readEither, readMaybe)
 import Prelude (show)

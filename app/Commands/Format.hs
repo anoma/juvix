@@ -104,4 +104,4 @@ runScopeFileApp = interpret $ \case
               _pathIsInput = False
             }
     runPipelineNoOptions (Just appFile) upToScoping
-  ScopeStdin e -> runPipelineEntry e upToScoping
+  ScopeStdin e -> ignoreProgressLog (runPipelineEntry e upToScoping)

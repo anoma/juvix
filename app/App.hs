@@ -152,7 +152,7 @@ getEntryPoint' RunAppIOArgs {..} inputFile = do
   set entryPointStdin estdin <$> entryPointFromGlobalOptionsPre root (mainFile ^. pathPath) opts
 
 runPipelineEither ::
-  (Members '[EmbedIO, TaggedLock, App] r, EntryPointOptions opts) =>
+  (Members '[EmbedIO, TaggedLock, ProgressLog, App] r, EntryPointOptions opts) =>
   opts ->
   Maybe (AppPath File) ->
   Sem (PipelineEff r) a ->
@@ -208,9 +208,16 @@ runPipelineTermination ::
   Maybe (AppPath File) ->
   Sem (Termination ': PipelineEff r) a ->
   Sem r (PipelineResult a)
-runPipelineTermination input_ p = do
-  r <- runPipelineEither () input_ (evalTermination iniTerminationState p) >>= fromRightJuvixError
+runPipelineTermination input_ p = ignoreProgressLog $ do
+  r <- runPipelineEither () input_ (evalTermination iniTerminationState (inject p)) >>= fromRightJuvixError
   return (snd r)
+
+appRunProgressLog :: (Members '[EmbedIO, App] r) => Sem (ProgressLog ': r) a -> Sem r a
+appRunProgressLog m = do
+  g <- askGlobalOptions
+  if
+      | g ^. globalOnlyErrors -> ignoreProgressLog m
+      | otherwise -> runProgressLogIO (not (g ^. globalNoColors)) m
 
 runPipelineNoOptions ::
   (Members '[App, EmbedIO, TaggedLock] r) =>
@@ -225,8 +232,8 @@ runPipeline ::
   Maybe (AppPath File) ->
   Sem (PipelineEff r) a ->
   Sem r a
-runPipeline opts input_ p = do
-  r <- runPipelineEither opts input_ p >>= fromRightJuvixError
+runPipeline opts input_ p = appRunProgressLog $ do
+  r <- runPipelineEither opts input_ (inject p) >>= fromRightJuvixError
   return (snd r ^. pipelineResult)
 
 runPipelineHtml ::
@@ -234,35 +241,36 @@ runPipelineHtml ::
   Bool ->
   Maybe (AppPath File) ->
   Sem r (InternalTypedResult, [InternalTypedResult])
-runPipelineHtml bNonRecursive input_
-  | bNonRecursive = do
-      r <- runPipelineNoOptions input_ upToInternalTyped
-      return (r, [])
-  | otherwise = do
-      args <- askArgs
-      entry <- getEntryPoint' args input_
-      runReader defaultPipelineOptions (runPipelineHtmlEither entry) >>= fromRightJuvixError
+runPipelineHtml bNonRecursive input_ =
+  appRunProgressLog $
+    if
+        | bNonRecursive -> do
+            r <- runPipelineNoOptions input_ upToInternalTyped
+            return (r, [])
+        | otherwise -> do
+            args <- askArgs
+            entry <- getEntryPoint' args input_
+            runReader defaultPipelineOptions (runPipelineHtmlEither entry) >>= fromRightJuvixError
 
 runPipelineOptions :: (Members '[App] r) => Sem (Reader PipelineOptions ': r) a -> Sem r a
 runPipelineOptions m = do
   g <- askGlobalOptions
   let opt =
         defaultPipelineOptions
-          { _pipelineNumThreads = g ^. globalNumThreads,
-            _pipelineUseColors = not (g ^. globalNoColors)
+          { _pipelineNumThreads = g ^. globalNumThreads
           }
   runReader opt m
 
-runPipelineEntry :: (Members '[App, EmbedIO, TaggedLock] r) => EntryPoint -> Sem (PipelineEff r) a -> Sem r a
+runPipelineEntry :: (Members '[App, ProgressLog, EmbedIO, TaggedLock] r) => EntryPoint -> Sem (PipelineEff r) a -> Sem r a
 runPipelineEntry entry p = runPipelineOptions $ do
   r <- runIOEither entry (inject p) >>= fromRightJuvixError
   return (snd r ^. pipelineResult)
 
 runPipelineSetup :: (Members '[App, EmbedIO, Reader PipelineOptions, TaggedLock] r) => Sem (PipelineEff' r) a -> Sem r a
-runPipelineSetup p = do
+runPipelineSetup p = ignoreProgressLog $ do
   args <- askArgs
   entry <- getEntryPointStdin' args
-  r <- runIOEitherPipeline entry p >>= fromRightJuvixError
+  r <- runIOEitherPipeline entry (inject p) >>= fromRightJuvixError
   return (snd r)
 
 newline :: (Member App r) => Sem r ()

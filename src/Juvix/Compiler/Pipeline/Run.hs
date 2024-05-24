@@ -38,7 +38,7 @@ import Parallel.ProgressLog
 -- which we require for `Scope` tests.
 runIOEither ::
   forall a r.
-  (Members '[TaggedLock, Reader PipelineOptions, EmbedIO] r) =>
+  (Members PipelineAppEffects r) =>
   EntryPoint ->
   Sem (PipelineEff r) a ->
   Sem r (Either JuvixError (ResolverState, PipelineResult a))
@@ -46,7 +46,7 @@ runIOEither entry = fmap snd . runIOEitherHelper entry
 
 runPipelineHighlight ::
   forall a r.
-  (Members '[TaggedLock, Reader PipelineOptions, EmbedIO] r) =>
+  (Members PipelineAppEffects r) =>
   EntryPoint ->
   Sem (PipelineEff r) a ->
   Sem r HighlightInput
@@ -54,7 +54,7 @@ runPipelineHighlight entry = fmap fst . runIOEitherHelper entry
 
 runPipelineHtmlEither ::
   forall r.
-  (Members '[TaggedLock, Reader PipelineOptions, EmbedIO] r) =>
+  (Members PipelineAppEffects r) =>
   EntryPoint ->
   Sem r (Either JuvixError (Typed.InternalTypedResult, [Typed.InternalTypedResult]))
 runPipelineHtmlEither entry = do
@@ -64,7 +64,7 @@ runPipelineHtmlEither entry = do
 
 runIOEitherHelper ::
   forall a r.
-  (Members '[TaggedLock, Reader PipelineOptions, EmbedIO] r) =>
+  (Members PipelineAppEffects r) =>
   EntryPoint ->
   Sem (PipelineEff r) a ->
   Sem r (HighlightInput, (Either JuvixError (ResolverState, PipelineResult a)))
@@ -74,7 +74,7 @@ runIOEitherHelper entry a =
 
 runIOEitherPipeline ::
   forall a r.
-  (Members '[TaggedLock, Reader PipelineOptions, EmbedIO] r) =>
+  (Members PipelineAppEffects r) =>
   EntryPoint ->
   Sem (PipelineEff' r) a ->
   Sem r (Either JuvixError (ResolverState, a))
@@ -106,7 +106,7 @@ runPathResolverInput m = do
 
 runIOEitherPipeline' ::
   forall a r.
-  (Members '[Reader PipelineOptions, TaggedLock, EmbedIO] r) =>
+  (Members '[Reader PipelineOptions, ProgressLog, TaggedLock, EmbedIO] r) =>
   EntryPoint ->
   Sem (PipelineEff' r) a ->
   Sem r (HighlightInput, (Either JuvixError (ResolverState, a)))
@@ -114,7 +114,6 @@ runIOEitherPipeline' entry a = do
   let hasInternet = not (entry ^. entryPointOffline)
   opts :: PipelineOptions <- ask
   runConcurrent
-    . runProgressLogIO (opts ^. pipelineUseColors)
     . evalInternet hasInternet
     . runHighlightBuilder
     . runJuvixError
@@ -169,7 +168,7 @@ mainIsPackageFile entry = case entry ^. entryPointModulePath of
 
 runIO ::
   forall a r.
-  (Members '[TaggedLock, Reader PipelineOptions, EmbedIO] r) =>
+  (Members PipelineAppEffects r) =>
   GenericOptions ->
   EntryPoint ->
   Sem (PipelineEff r) a ->
