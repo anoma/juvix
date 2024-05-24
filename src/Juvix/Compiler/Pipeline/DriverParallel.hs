@@ -85,8 +85,11 @@ compileInParallel ::
       r
   ) =>
   NumThreads ->
+  EntryIndex ->
   Sem r ()
-compileInParallel nj = do
+compileInParallel nj _entry = do
+  -- At the moment we compile everything, so the EntryIndex is ignored, but in
+  -- principle we could only compile what is reachable from the given EntryIndex
   t <- ask
   idx <- mkNodesIndex t
   numWorkers <- numThreads nj
@@ -141,8 +144,4 @@ evalModuleInfoCache ::
   NumThreads ->
   Sem (ModuleInfoCache ': r) a ->
   Sem r a
-evalModuleInfoCache nj m = do
-  Driver.evalModuleInfoCache $
-    do
-      compileInParallel nj
-      m
+evalModuleInfoCache nj = Driver.evalModuleInfoCacheSetup (compileInParallel nj)

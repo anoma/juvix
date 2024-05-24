@@ -3,6 +3,7 @@ module Juvix.Compiler.Pipeline.Driver
     ModuleInfoCache,
     processFileUpTo,
     evalModuleInfoCache,
+    evalModuleInfoCacheSetup,
     processFileToStoredCore,
     processFileUpToParsing,
     processModule,
@@ -56,6 +57,14 @@ evalModuleInfoCache ::
   Sem (ModuleInfoCache ': r) a ->
   Sem r a
 evalModuleInfoCache = evalCacheEmpty processModuleCacheMiss
+
+evalModuleInfoCacheSetup ::
+  forall r a.
+  (Members '[TaggedLock, TopModuleNameChecker, Error JuvixError, Files, PathResolver] r) =>
+  (EntryIndex -> Sem (ModuleInfoCache ': r) ()) ->
+  Sem (ModuleInfoCache ': r) a ->
+  Sem r a
+evalModuleInfoCacheSetup setup = evalCacheEmptySetup setup processModuleCacheMiss
 
 processModuleCacheMiss ::
   forall r.
