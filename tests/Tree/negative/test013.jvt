@@ -1,5 +1,5 @@
 -- calling unsupported anoma-sign
 
 function main() : * {
-  anoma-verify-sign(1,2)
+  anoma-sign(1,2)
 }
