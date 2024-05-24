@@ -54,24 +54,24 @@ parseInputFiles exts' = do
 parseInputFile :: FileExt -> Parser (AppPath File)
 parseInputFile = parseInputFiles . NonEmpty.singleton
 
-numJobsOpt :: ReadM NumJobs
-numJobsOpt = eitherReader aux
+numThreadsOpt :: ReadM NumThreads
+numThreadsOpt = eitherReader aux
   where
-    aux :: String -> Either String NumJobs
+    aux :: String -> Either String NumThreads
     aux s = do
       i :: Int <- readEither s
-      mkNumJobs (Just i)
+      mkNumThreads (Just i)
 
-parseNumJobs :: Parser NumJobs
-parseNumJobs = do
+parseNumThreads :: Parser NumThreads
+parseNumThreads = do
   option
-    numJobsOpt
-    ( long "jobs"
-        <> short 'j'
+    numThreadsOpt
+    ( long "threads"
+        <> short 'N'
         <> metavar "JOBS"
-        <> value defaultNumJobs
+        <> value defaultNumThreads
         <> showDefault
-        <> help "Number of concurrent jobs to run"
+        <> help "Number of physical threads to run"
         <> completer (listCompleter [Juvix.show j | j <- [1 .. numCapabilities]])
     )
 

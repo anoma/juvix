@@ -3,6 +3,7 @@ module Main (main) where
 import App
 import CommonOptions
 import Data.String.Interpolate (i)
+import GHC.Conc qualified as GHC
 import GlobalOptions
 import Juvix.Compiler.Pipeline.Root
 import TopCommand
@@ -13,6 +14,7 @@ main = do
   let parserPreferences = prefs showHelpOnEmpty
   invokeDir <- getCurrentDir
   (_runAppIOArgsGlobalOptions, cli) <- customExecParser parserPreferences descr
+  GHC.setNumCapabilities (numThreads (_runAppIOArgsGlobalOptions ^. globalNumThreads))
   mbuildDir <- mapM (prepathToAbsDir invokeDir) (_runAppIOArgsGlobalOptions ^? globalBuildDir . _Just . pathPath)
   mainFile <- topCommandInputPath cli
   mapM_ checkMainFile mainFile

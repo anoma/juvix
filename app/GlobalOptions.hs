@@ -24,7 +24,7 @@ data GlobalOptions = GlobalOptions
     _globalNoCoverage :: Bool,
     _globalNoStdlib :: Bool,
     _globalUnrollLimit :: Int,
-    _globalNumJobs :: NumJobs,
+    _globalNumThreads :: NumThreads,
     _globalFieldSize :: Maybe Natural,
     _globalOffline :: Bool
   }
@@ -58,7 +58,7 @@ defaultGlobalOptions :: GlobalOptions
 defaultGlobalOptions =
   GlobalOptions
     { _globalNoColors = False,
-      _globalNumJobs = defaultNumJobs,
+      _globalNumThreads = defaultNumThreads,
       _globalShowNameIds = False,
       _globalOnlyErrors = False,
       _globalNoTermination = False,
@@ -142,7 +142,7 @@ parseGlobalFlags = do
       ( long "show-name-ids"
           <> help "[DEV] Show the unique number of each identifier when pretty printing"
       )
-  _globalNumJobs <- parseNumJobs
+  _globalNumThreads <- parseNumThreads
   return GlobalOptions {..}
 
 parseBuildDir :: Mod OptionFields (Prepath Dir) -> Parser (AppPath Dir)

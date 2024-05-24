@@ -133,7 +133,7 @@ runIOEitherPipeline' entry a = do
     . runTopModuleNameChecker
     . runReader (opts ^. pipelineImportStrategy)
     . withImportTree (entry ^. entryPointModulePath)
-    . evalModuleInfoCacheHelper (opts ^. pipelineNumJobs)
+    . evalModuleInfoCacheHelper (opts ^. pipelineNumThreads)
     $ a
 
 evalModuleInfoCacheHelper ::
@@ -153,7 +153,7 @@ evalModuleInfoCacheHelper ::
        ]
       r
   ) =>
-  NumJobs ->
+  NumThreads ->
   Sem (ModuleInfoCache ': r) a ->
   Sem r a
 evalModuleInfoCacheHelper nj m = do
@@ -235,7 +235,7 @@ runReplPipelineIOEither' lockMode entry = do
       . runReader defaultImportScanStrategy
       . withImportTree (entry ^. entryPointModulePath)
       . ignoreProgressLog
-      . evalModuleInfoCacheHelper defaultNumJobs
+      . evalModuleInfoCacheHelper defaultNumThreads
       $ processFileToStoredCore entry
   return $ case eith of
     Left err -> Left err

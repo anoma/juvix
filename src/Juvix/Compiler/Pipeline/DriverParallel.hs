@@ -84,7 +84,7 @@ compileInParallel ::
        ]
       r
   ) =>
-  NumJobs ->
+  NumThreads ->
   Sem r ()
 compileInParallel nj = do
   t <- ask
@@ -95,7 +95,7 @@ compileInParallel nj = do
           { _compileArgsNodesIndex = idx,
             _compileArgsNodeName = getNodeName,
             _compileArgsDependencies = mkDependencies t,
-            _compileArgsNumWorkers = numJobs nj,
+            _compileArgsNumWorkers = numThreads nj,
             _compileArgsCompileNode = compileNode
           }
   void (compile args)
@@ -137,7 +137,7 @@ evalModuleInfoCache ::
        ]
       r
   ) =>
-  NumJobs ->
+  NumThreads ->
   Sem (ModuleInfoCache ': r) a ->
   Sem r a
 evalModuleInfoCache nj m = do

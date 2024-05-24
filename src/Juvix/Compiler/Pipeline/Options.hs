@@ -7,7 +7,7 @@ import Juvix.Prelude
 data PipelineOptions = PipelineOptions
   { _pipelineImportStrategy :: ImportScanStrategy,
     _pipelineDependenciesConfig :: DependenciesConfig,
-    _pipelineNumJobs :: NumJobs,
+    _pipelineNumThreads :: NumThreads,
     _pipelineUseColors :: Bool
   }
 
@@ -17,5 +17,5 @@ defaultPipelineOptions =
     { _pipelineImportStrategy = defaultImportScanStrategy,
       _pipelineDependenciesConfig = defaultDependenciesConfig,
       _pipelineUseColors = True,
-      _pipelineNumJobs = defaultNumJobs
+      _pipelineNumThreads = defaultNumThreads
     }

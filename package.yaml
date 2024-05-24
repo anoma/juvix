@@ -180,7 +180,6 @@ executables:
       - polysemy == 1.9.*
     verbatim:
       default-language: GHC2021
-
   juvix:
     main: Main.hs
     source-dirs: app
@@ -194,6 +193,8 @@ executables:
       - string-interpolate == 0.3.*
     verbatim:
       default-language: GHC2021
+    ghc-options:
+      - -threaded
     when:
       - condition: flag(static)
         ld-options:

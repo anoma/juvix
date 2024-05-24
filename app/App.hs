@@ -248,7 +248,7 @@ runPipelineOptions m = do
   g <- askGlobalOptions
   let opt =
         defaultPipelineOptions
-          { _pipelineNumJobs = g ^. globalNumJobs,
+          { _pipelineNumThreads = g ^. globalNumThreads,
             _pipelineUseColors = not (g ^. globalNoColors)
           }
   runReader opt m
