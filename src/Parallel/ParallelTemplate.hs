@@ -21,6 +21,7 @@ where
 
 import Control.Concurrent (ThreadId)
 import Control.Concurrent.STM.TVar (stateTVar)
+import Control.Exception qualified as GHC
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Effectful.Concurrent
@@ -162,9 +163,17 @@ compile args@CompileArgs {..} = do
     . runReader deps
     . crashOnError
     $ do
-      void (forkIO handleLogs)
+      let newThread ::
+            forall r' a.
+            (Members '[Concurrent] r') =>
+            Sem r' a ->
+            Sem r' ()
+          newThread m = void . forkFinally m $ \case
+            Left err -> GHC.throw err
+            Right {} -> return ()
+      void (newThread handleLogs)
       replicateM_ _compileArgsNumWorkers
-        . forkIO
+        . newThread
         $ lookForWork @nodeId @node @compileProof
       waitForWorkers @nodeId @compileProof
   (^. compilationState) <$> readTVarIO varCompilationState
