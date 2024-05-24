@@ -5,6 +5,7 @@ module Juvix.Compiler.Nockma.Pretty.Base
   )
 where
 
+import Juvix.Compiler.Nockma.Encoding.ByteString (atomToText)
 import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Pretty.Options
 import Juvix.Data.CodeAnn
@@ -23,7 +24,7 @@ class PrettyCode c where
 runPrettyCode :: (PrettyCode c) => Options -> c -> Doc Ann
 runPrettyCode opts = run . runReader opts . ppCode
 
-instance (PrettyCode a, NockNatural a) => PrettyCode (Atom a) where
+instance forall a. (PrettyCode a, NockNatural a) => PrettyCode (Atom a) where
   ppCode atm = do
     t <- runFail $ do
       failWhenM (asks (^. optIgnoreTags))
@@ -43,6 +44,10 @@ instance (PrettyCode a, NockNatural a) => PrettyCode (Atom a) where
           AtomHintNil -> return (annotate (AnnKind KNameConstructor) Str.nil)
           AtomHintVoid -> return (annotate (AnnKind KNameAxiom) Str.void)
           AtomHintFunctionsPlaceholder -> return (annotate (AnnKind KNameAxiom) Str.functionsPlaceholder)
+          AtomHintString -> atomToText atm >>= ppCode
+
+instance PrettyCode Text where
+  ppCode = return . dquotes . pretty
 
 instance PrettyCode Interval where
   ppCode = return . pretty

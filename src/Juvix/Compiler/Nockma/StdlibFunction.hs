@@ -25,3 +25,10 @@ stdlibPath = \case
   StdlibVerifyDetached -> [nock| [9 22 0 1] |]
   StdlibSign -> [nock| [9 10 0 1] |]
   StdlibVerify -> [nock| [9 4 0 1] |]
+  -- Obtained from the urbit dojo using:
+  --
+  -- =>  anoma  !=(~(cat block 3))
+  --
+  -- The `3` here is because we want to treat each atom as sequences of 2^3
+  -- bits, i.e bytes.
+  StdlibCatBytes -> [nock| [8 [9 10 0 7] 9 4 10 [6 7 [0 3] 1 3] 0 2] |]

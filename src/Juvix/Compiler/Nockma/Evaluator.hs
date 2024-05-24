@@ -247,7 +247,13 @@ evalProfile inistack initerm =
             StdlibVerify -> case args' of
               TCell (TermAtom signedMessage) (TermAtom pubKey) -> goVerify signedMessage pubKey
               _ -> error "expected a term of the form [signedMessage (atom) public_key (atom)]"
+            StdlibCatBytes -> case args' of
+              TCell (TermAtom arg1) (TermAtom arg2) -> goCat arg1 arg2
+              _ -> error "expected a term with two atoms"
           where
+            goCat :: Atom a -> Atom a -> Sem r (Term a)
+            goCat arg1 arg2 = TermAtom . setAtomHint AtomHintString <$> atomConcatenateBytes arg1 arg2
+
             goVerifyDetached :: Atom a -> Atom a -> Atom a -> Sem r (Term a)
             goVerifyDetached sigT messageT pubKeyT = do
               sig <- Signature <$> atomToByteString sigT

@@ -19,6 +19,7 @@ instance Pretty StdlibFunction where
     StdlibVerifyDetached -> "verify-detached"
     StdlibSign -> "sign"
     StdlibVerify -> "verify"
+    StdlibCatBytes -> "cat"
 
 data StdlibFunction
   = StdlibDec
@@ -35,6 +36,7 @@ data StdlibFunction
   | StdlibVerifyDetached
   | StdlibSign
   | StdlibVerify
+  | StdlibCatBytes
   deriving stock (Show, Lift, Eq, Bounded, Enum, Generic)
 
 instance Hashable StdlibFunction
