@@ -38,7 +38,6 @@ mkImportTree mentrypointModulePath =
             find cond allNodes
 
           startingNodes = maybe allNodes pure mEntryImportNode
-      -- startingNodes = allNodes -- TODO investigate
       tree <-
         execImportTreeBuilder
           . evalVisitEmpty scanNode

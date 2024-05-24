@@ -10,7 +10,6 @@ module Base
   )
 where
 
-import Parallel.ProgressLog
 import Control.Monad.Extra as Monad
 import Data.Algorithm.Diff
 import Data.Algorithm.DiffOutput
@@ -23,6 +22,7 @@ import Juvix.Extra.Paths hiding (rootBuildDir)
 import Juvix.Prelude hiding (assert)
 import Juvix.Prelude.Env
 import System.Process qualified as P
+import Parallel.ProgressLog
 import Test.Tasty
 import Test.Tasty.HUnit hiding (assertFailure)
 import Test.Tasty.HUnit qualified as HUnit
