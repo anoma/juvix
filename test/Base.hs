@@ -10,6 +10,7 @@ module Base
   )
 where
 
+import Parallel.ProgressLog
 import Control.Monad.Extra as Monad
 import Data.Algorithm.Diff
 import Data.Algorithm.DiffOutput
@@ -83,6 +84,7 @@ assertCmdExists cmd =
 testTaggedLockedToIO :: (MonadIO m) => Sem PipelineAppEffects a -> m a
 testTaggedLockedToIO =
   runM
+    . ignoreProgressLog
     . runReader defaultPipelineOptions
     . runTaggedLock LockModeExclusive
 
