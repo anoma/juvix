@@ -65,7 +65,7 @@ parseNumThreads = do
     numThreadsOpt
     ( long "threads"
         <> short 'N'
-        <> metavar "JOBS"
+        <> metavar "THREADS"
         <> value defaultNumThreads
         <> showDefault
         <> help "Number of physical threads to run"
