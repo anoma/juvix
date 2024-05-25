@@ -9,6 +9,7 @@ module Juvix.Prelude.Effects.Base
     module Effectful.TH,
     module Effectful.Dispatch.Static,
     module Effectful.Provider,
+    module Effectful.Concurrent.Async,
   )
 where
 
@@ -16,6 +17,7 @@ import Data.Kind qualified as GHC
 import Effectful hiding (Eff, (:>))
 import Effectful qualified as E
 import Effectful.Concurrent hiding (yield)
+import Effectful.Concurrent.Async
 import Effectful.Dispatch.Dynamic (LocalEnv, SharedSuffix, impose, interpose, localLift, localLiftUnlift, localLiftUnliftIO, localSeqLift, localSeqUnlift, localSeqUnliftIO, localUnlift, localUnliftIO, withLiftMap, withLiftMapIO)
 import Effectful.Dispatch.Dynamic qualified as E
 import Effectful.Dispatch.Static

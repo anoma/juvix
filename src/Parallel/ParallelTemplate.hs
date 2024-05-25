@@ -172,9 +172,8 @@ compile args@CompileArgs {..} = do
             Left err -> GHC.throw err
             Right {} -> return ()
       void (newThread handleLogs)
-      replicateM_ _compileArgsNumWorkers
-        . newThread
-        $ lookForWork @nodeId @node @compileProof
+      replicateConcurrently_ _compileArgsNumWorkers $
+        lookForWork @nodeId @node @compileProof
       waitForWorkers @nodeId @compileProof
   (^. compilationState) <$> readTVarIO varCompilationState
 
@@ -199,11 +198,11 @@ waitForWorkers = do
   Logs logs <- ask
   cstVar <- ask @(TVar (CompilationState nodeId compileProof))
   finished <- atomically $ compilationStateFinished <$> readTVar cstVar
-  let wait = waitForWorkers @nodeId @compileProof
+  let waitMore = waitForWorkers @nodeId @compileProof
   case finished of
     FinishedError err -> throw err
-    FinishedNot -> wait
-    FinishedOk -> unlessM (atomically (isEmptyTQueue logs)) wait
+    FinishedNot -> waitMore
+    FinishedOk -> unlessM (atomically (isEmptyTQueue logs)) waitMore
 
 lookForWork ::
   forall nodeId node compileProof (s :: [Effect]) r.
