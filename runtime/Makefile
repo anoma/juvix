@@ -10,7 +10,7 @@ juvix_c:
 
 .PHONY: juvix_rust
 juvix_rust:
-	cd rust && cargo build --release
+	cd rust && cargo build && cargo build --release
 
 .PHONY: clean
 clean:
