@@ -135,6 +135,7 @@ instance PrettyCode Expression where
     ExprArray x -> ppCode x
     ExprLiteral x -> ppCode x
     ExprBlock x -> ppCode x
+    ExprVerbatim x -> return $ pretty x
 
 instance PrettyCode Var where
   ppCode Var {..} = ppName KNameLocal _varName

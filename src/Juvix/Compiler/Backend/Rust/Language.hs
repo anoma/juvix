@@ -89,6 +89,7 @@ data Expression
   | ExprArray Array
   | ExprLiteral Literal
   | ExprBlock Block
+  | ExprVerbatim Text
 
 data Var = Var
   { _varName :: Text

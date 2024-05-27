@@ -26,7 +26,7 @@ fromReg lims tab =
           _functionArguments = [],
           _functionReturnType = Nothing,
           _functionBody =
-            [ stmtLet NotMut "result" (mkCall "program" [mkVar "&mut Memory::new()", mkVec []]),
+            [ stmtLet NotMut "result" (mkCall "program" [ExprVerbatim "&mut Memory::new()", mkVec []]),
               StatementExpression (mkCall "println!" [mkString "{}", mkVar "result"]),
               StatementReturn (Return Nothing)
             ]
