@@ -4,6 +4,7 @@ import Commands.Dev.DevCompile.Asm.Options
 import Commands.Dev.DevCompile.Casm.Options
 import Commands.Dev.DevCompile.Core.Options
 import Commands.Dev.DevCompile.Reg.Options
+import Commands.Dev.DevCompile.Rust.Options
 import Commands.Dev.DevCompile.Tree.Options
 import CommonOptions
 
@@ -13,6 +14,7 @@ data DevCompileCommand
   | Reg (RegOptions 'InputMain)
   | Tree (TreeOptions 'InputMain)
   | Casm (CasmOptions 'InputMain)
+  | Rust (RustOptions 'InputMain)
   deriving stock (Data)
 
 parseDevCompileCommand :: Parser DevCompileCommand
@@ -23,7 +25,8 @@ parseDevCompileCommand =
           commandReg,
           commandTree,
           commandCasm,
-          commandAsm
+          commandAsm,
+          commandRust
         ]
     )
 
@@ -61,3 +64,10 @@ commandAsm =
     info
       (Asm <$> parseAsm)
       (progDesc "Compile to Juvix ASM")
+
+commandRust :: Mod CommandFields DevCompileCommand
+commandRust =
+  command "rust" $
+    info
+      (Rust <$> parseRust)
+      (progDesc "Compile to Rust")

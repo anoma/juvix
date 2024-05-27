@@ -22,6 +22,7 @@ data FileExt
   | FileExtPlonk
   | FileExtHalo
   | FileExtLisp
+  | FileExtRust
   | FileExtC
   | FileExtMarkdown
   | FileExtHtml
@@ -85,6 +86,9 @@ markdownFileExt = ".md"
 cFileExt :: (IsString a) => a
 cFileExt = ".c"
 
+rustFileExt :: (IsString a) => a
+rustFileExt = ".rs"
+
 cssFileExt :: (IsString a) => a
 cssFileExt = ".css"
 
@@ -110,6 +114,7 @@ fileExtToIsString = \case
   FileExtPlonk -> plonkFileExt
   FileExtHalo -> haloFileExt
   FileExtLisp -> lispFileExt
+  FileExtRust -> rustFileExt
   FileExtC -> cFileExt
   FileExtMarkdown -> markdownFileExt
   FileExtHtml -> htmlFileExt
@@ -135,6 +140,7 @@ toMetavar = \case
   FileExtPlonk -> "PLONK_FILE"
   FileExtHalo -> "HALO_FILE"
   FileExtLisp -> "LISP_FILE"
+  FileExtRust -> "RUST_FILE"
   FileExtC -> "C_FILE"
   FileExtMarkdown -> "MARKDOWN_FILE"
   FileExtHtml -> "HTML_FILE"
@@ -194,6 +200,9 @@ isLispFile = (== Just lispFileExt) . fileExtension
 isMarkdownFile :: Path b File -> Bool
 isMarkdownFile = (== Just markdownFileExt) . fileExtension
 
+isRustFile :: Path b File -> Bool
+isRustFile = (== Just rustFileExt) . fileExtension
+
 isCFile :: Path b File -> Bool
 isCFile = (== Just cFileExt) . fileExtension
 
@@ -221,6 +230,7 @@ toFileExt p
   | isPlonkFile p = Just FileExtPlonk
   | isHaloFile p = Just FileExtHalo
   | isLispFile p = Just FileExtLisp
+  | isRustFile p = Just FileExtRust
   | isCFile p = Just FileExtC
   | isMarkdownFile p = Just FileExtMarkdown
   | isHtmlFile p = Just FileExtHtml

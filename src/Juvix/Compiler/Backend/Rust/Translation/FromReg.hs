@@ -1,7 +1,12 @@
-module Juvix.Compiler.Backend.Rust.Translation.FromReg where
+module Juvix.Compiler.Backend.Rust.Translation.FromReg
+  ( module Juvix.Compiler.Backend.Rust.Translation.FromReg,
+    module Juvix.Compiler.Backend.Rust.Data.Result,
+  )
+where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Backend
+import Juvix.Compiler.Backend.Rust.Data.Result
 import Juvix.Compiler.Backend.Rust.Data.Result as Rust
 import Juvix.Compiler.Backend.Rust.Language as Rust
 import Juvix.Compiler.Backend.Rust.Pretty as Rust

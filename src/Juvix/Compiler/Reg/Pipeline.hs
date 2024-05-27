@@ -14,6 +14,10 @@ import Juvix.Compiler.Reg.Translation.Blocks.FromReg qualified as Blocks
 toC :: InfoTable -> Sem r InfoTable
 toC = applyTransformations toCTransformations
 
+-- | Perform transformations on JuvixReg necessary before the translation to Rust
+toRust :: InfoTable -> Sem r InfoTable
+toRust = applyTransformations toRustTransformations
+
 -- | Perform transformations on JuvixReg necessary before the translation to
 -- Cairo assembly
 toCasm :: InfoTable -> Sem r Blocks.InfoTable

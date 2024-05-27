@@ -16,6 +16,7 @@ import Juvix.Compiler.Backend qualified as Backend
 import Juvix.Compiler.Backend.C qualified as C
 import Juvix.Compiler.Backend.Cairo qualified as Cairo
 import Juvix.Compiler.Backend.Geb qualified as Geb
+import Juvix.Compiler.Backend.Rust.Translation.FromReg qualified as Rust
 import Juvix.Compiler.Backend.VampIR.Translation qualified as VampIR
 import Juvix.Compiler.Casm.Data.Builtins qualified as Casm
 import Juvix.Compiler.Casm.Data.Result qualified as Casm
@@ -158,6 +159,11 @@ upToAnoma ::
   Sem r NockmaTree.AnomaResult
 upToAnoma = upToStoredCore >>= \Core.CoreResult {..} -> storedCoreToAnoma _coreResultModule
 
+upToRust ::
+  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, PathResolver] r) =>
+  Sem r Rust.Result
+upToRust = upToStoredCore >>= \Core.CoreResult {..} -> storedCoreToRust _coreResultModule
+
 upToCoreTypecheck ::
   (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, PathResolver] r) =>
   Sem r Core.CoreResult
@@ -190,6 +196,9 @@ storedCoreToReg = storedCoreToAsm >=> asmToReg
 
 storedCoreToMiniC :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r C.MiniCResult
 storedCoreToMiniC = storedCoreToAsm >=> asmToMiniC
+
+storedCoreToRust :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Rust.Result
+storedCoreToRust = storedCoreToReg >=> regToRust
 
 storedCoreToCasm :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Casm.Result
 storedCoreToCasm = local (set entryPointFieldSize cairoFieldSize) . storedCoreToTree Core.CheckCairo >=> treeToCasm
@@ -282,6 +291,12 @@ regToMiniC tab = do
   tab' <- Reg.toC tab
   e <- ask
   return $ C.fromReg (Backend.getLimits (getEntryPointTarget e) (e ^. entryPointDebug)) tab'
+
+regToRust :: (Member (Reader EntryPoint) r) => Reg.InfoTable -> Sem r Rust.Result
+regToRust tab = do
+  tab' <- Reg.toRust tab
+  e <- ask
+  return $ Rust.fromReg (Backend.getLimits (getEntryPointTarget e) (e ^. entryPointDebug)) tab'
 
 regToCasm :: Reg.InfoTable -> Sem r Casm.Result
 regToCasm = Reg.toCasm >=> return . Casm.fromReg
