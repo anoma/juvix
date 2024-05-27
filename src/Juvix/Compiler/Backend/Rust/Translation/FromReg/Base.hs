@@ -64,6 +64,15 @@ stmtLet isMut result value =
         _letInitializer = Just value
       }
 
+stmtDecl :: IsMut -> Text -> Statement
+stmtDecl isMut result =
+  StatementLet $
+    Let
+      { _letMutable = isMut,
+        _letVariable = result,
+        _letInitializer = Nothing
+      }
+
 stmtIf :: Expression -> [Statement] -> [Statement] -> Statement
 stmtIf v br1 br2 = StatementIf $ If v br1 br2
 

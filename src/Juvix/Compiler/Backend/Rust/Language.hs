@@ -48,6 +48,7 @@ data Let = Let
 
 data ConstDecl = ConstDecl
   { _constVariable :: Text,
+    _constType :: Type,
     _constValue :: Expression
   }
 

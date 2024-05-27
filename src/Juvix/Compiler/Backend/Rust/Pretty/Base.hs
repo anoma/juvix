@@ -38,7 +38,7 @@ ppBlock :: (Member (Reader Options) r) => [Statement] -> Sem r (Doc Ann)
 ppBlock stmts = do
   stmts' <- mapM ppCode stmts
   let stmts'' = punctuate semi stmts'
-  return $ braces (indent' (vsep stmts''))
+  return $ oneLineOrNextBraces (vsep stmts'')
 
 instance PrettyCode Type where
   ppCode = \case
@@ -51,17 +51,17 @@ instance PrettyCode FunctionArgument where
     ty <- ppCode _functionArgumentType
     n <- ppName KNameLocal _functionArgumentName
     mut <- ppMut _functionArgumentMutable
-    return $ mut <?+> n <> ":" <+> ty
+    return $ mut <?+> n <> colon <+> ty
 
 instance PrettyCode Function where
   ppCode Function {..} = do
     attrs <- ppAttrs _functionAttributes
     name <- ppName KNameFunction _functionName
     args <- mapM ppCode _functionArguments
-    rty <- maybe (return Nothing) (ppCode >=> return . Just) _functionReturnType
+    rty <- maybe (return Nothing) (ppCode >=> return . Just . ("->" <+>)) _functionReturnType
     body <- ppBlock _functionBody
-    let args' = punctuate colon args
-    return $ attrs <> kwFn <+> name <> parens (hsep args') <+> rty <?+> "=" <+> body
+    let args' = punctuate comma args
+    return $ attrs <> kwFn <+> name <> parens (hsep args') <+> rty <?+> body <> line
 
 instance PrettyCode Statement where
   ppCode = \case
@@ -86,8 +86,9 @@ instance PrettyCode Let where
 instance PrettyCode ConstDecl where
   ppCode ConstDecl {..} = do
     name <- ppName KNameLocal _constVariable
+    ty <- ppCode _constType
     val <- ppCode _constValue
-    return $ kwConst <+> name <+> "=" <+> val
+    return $ kwConst <+> name <> colon <+> ty <+> "=" <+> val
 
 instance PrettyCode Assignment where
   ppCode Assignment {..} = do
@@ -114,11 +115,11 @@ instance PrettyCode Match where
   ppCode Match {..} = do
     val <- ppCode _matchValue
     brs <- mapM ppCode _matchBranches
-    return $ kwMatch <+> val <+> braces (indent' (vsep brs))
+    return $ kwMatch <+> val <+> oneLineOrNextBraces (vsep brs)
 
 instance PrettyCode Loop where
   ppCode Loop {..} = do
-    let lab = fmap pretty _loopLabel
+    let lab = fmap ((<> colon) . pretty) _loopLabel
     body <- ppBlock _loopBody
     return $ lab <?+> kwLoop <+> body
 
@@ -176,7 +177,7 @@ instance PrettyCode Program where
         \#[allow(unused_imports)]\n\
         \use juvix::defs::*;\n\
         \#[allow(unused_imports)]\n\
-        \use juvix::apply;\
+        \use juvix::apply;\n\
         \#[allow(unused_imports)]\n\
         \use juvix::tapply;\n\
         \#[allow(unused_imports)]\n\

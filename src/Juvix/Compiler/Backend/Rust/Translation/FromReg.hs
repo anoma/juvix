@@ -31,7 +31,7 @@ fromReg lims tab =
           _functionArguments = [],
           _functionReturnType = Nothing,
           _functionBody =
-            [ stmtLet NotMut "result" (mkCall "program" [ExprVerbatim "&mut Memory::new()", mkVec []]),
+            [ stmtLet NotMut "result" (mkCall "program" [ExprVerbatim "&mut Memory::new()", mkInteger @Int 0, mkVec []]),
               StatementExpression (mkCall "println!" [mkString "{}", mkVar "result"]),
               StatementReturn (Return Nothing)
             ]
@@ -62,6 +62,7 @@ fromReg lims tab =
           StatementConst $
             ConstDecl
               { _constVariable = getFunctionIdent info (funInfo ^. Reg.functionSymbol),
+                _constType = Word,
                 _constValue = mkInteger (getFUID info (funInfo ^. Reg.functionSymbol))
               }
 
@@ -93,8 +94,14 @@ fromRegFunction :: Reg.ExtraInfo -> Reg.FunctionInfo -> MatchBranch
 fromRegFunction info funInfo =
   MatchBranch
     { _matchBranchPattern = Just $ mkVar $ getFunctionIdent info (funInfo ^. Reg.functionSymbol),
-      _matchBranchBody = fromRegCode info (funInfo ^. Reg.functionCode)
+      _matchBranchBody = varDecls ++ fromRegCode info (funInfo ^. Reg.functionCode)
     }
+  where
+    varsNum :: Int
+    varsNum = getLocalVarsNum info (funInfo ^. Reg.functionSymbol)
+
+    varDecls :: [Statement]
+    varDecls = map (\n -> stmtDecl Mut ("var_" <> show n)) [0 .. varsNum - 1]
 
 fromRegCode :: Reg.ExtraInfo -> Reg.Code -> [Statement]
 fromRegCode info = concatMap (fromRegInstr info)
