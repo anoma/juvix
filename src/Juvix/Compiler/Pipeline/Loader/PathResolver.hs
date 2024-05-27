@@ -165,26 +165,29 @@ registerPackageBase = do
 
 registerDependencies' ::
   forall r.
-  (Members '[TaggedLock, Reader EntryPoint, Files, Error JuvixError, Error DependencyError, DependencyResolver, EvalFileEff] r) =>
+  (Members '[TaggedLock, Reader EntryPoint, Files, Error JuvixError, Error DependencyError, DependencyResolver, EvalFileEff, Reader ResolverEnv, State ResolverState] r) =>
   DependenciesConfig ->
-  Sem (Reader ResolverEnv ': State ResolverState ': r) ()
+  Sem r ()
 registerDependencies' conf = do
-  e <- ask @EntryPoint
-  mapError (JuvixError @ParserError) registerPackageBase
-  case e ^. entryPointPackageType of
-    GlobalStdlib -> do
-      glob <- globalRoot
-      void (addRootDependency conf e glob)
-    GlobalPackageBase -> return ()
-    GlobalPackageDescription -> void (addRootDependency conf e (e ^. entryPointRoot))
-    LocalPackage -> do
-      lockfile <- addRootDependency conf e (e ^. entryPointRoot)
-      whenM shouldWriteLockfile $ do
-        packageFileChecksum <- SHA256.digestFile (e ^. entryPointPackage . packageFile)
-        lockfilePath' <- lockfilePath
-        writeLockfile lockfilePath' packageFileChecksum lockfile
+  initialized <- gets (^. resolverInitialized)
+  unless initialized $ do
+    modify (set resolverInitialized True)
+    e <- ask @EntryPoint
+    mapError (JuvixError @ParserError) registerPackageBase
+    case e ^. entryPointPackageType of
+      GlobalStdlib -> do
+        glob <- globalRoot
+        void (addRootDependency conf e glob)
+      GlobalPackageBase -> return ()
+      GlobalPackageDescription -> void (addRootDependency conf e (e ^. entryPointRoot))
+      LocalPackage -> do
+        lockfile <- addRootDependency conf e (e ^. entryPointRoot)
+        whenM shouldWriteLockfile $ do
+          packageFileChecksum <- SHA256.digestFile (e ^. entryPointPackage . packageFile)
+          lockfilePath' <- lockfilePath
+          writeLockfile lockfilePath' packageFileChecksum lockfile
   where
-    shouldWriteLockfile :: Sem (Reader ResolverEnv ': State ResolverState ': r) Bool
+    shouldWriteLockfile :: Sem r Bool
     shouldWriteLockfile = do
       lockfileExists <- lockfilePath >>= fileExists'
       hasRemoteDependencies <- gets (^. resolverHasRemoteDependencies)
@@ -195,7 +198,7 @@ registerDependencies' conf = do
           shouldUpdateLockfile = lockfileExists && shouldUpdateLockfile'
       return (shouldForce || shouldWriteInitialLockfile || shouldUpdateLockfile)
 
-    lockfilePath :: Sem (Reader ResolverEnv ': State ResolverState ': r) (Path Abs File)
+    lockfilePath :: Sem r (Path Abs File)
     lockfilePath = do
       root <- asks (^. envRoot)
       return (mkPackageLockfilePath root)

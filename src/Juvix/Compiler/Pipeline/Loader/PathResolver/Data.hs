@@ -32,6 +32,7 @@ data ResolverState = ResolverState
     -- | PackageInfos indexed by root
     _resolverCache :: HashMap (Path Abs Dir) ResolverCacheItem,
     _resolverHasRemoteDependencies :: Bool,
+    _resolverInitialized :: Bool,
     _resolverShouldUpdateLockfile :: Bool
   }
   deriving stock (Show)
@@ -55,6 +56,7 @@ iniResolverState =
     { _resolverCache = mempty,
       _resolverFiles = mempty,
       _resolverHasRemoteDependencies = False,
+      _resolverInitialized = False,
       _resolverShouldUpdateLockfile = False
     }
 

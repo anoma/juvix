@@ -163,7 +163,8 @@ processImport ::
   (Members '[ModuleInfoCache, Reader EntryPoint, Error JuvixError, Files, PathResolver] r) =>
   TopModulePath ->
   Sem r (PipelineResult Store.ModuleInfo)
-processImport p = withPathFile p getCachedImport
+processImport p = do
+  withPathFile p getCachedImport
   where
     getCachedImport :: Path Abs File -> Sem r (PipelineResult Store.ModuleInfo)
     getCachedImport file = do
@@ -183,7 +184,7 @@ processImport p = withPathFile p getCachedImport
                     <> "\nFile where the import statement is: "
                     <> prettyText fromFile
               return (res ^. cacheResult)
-          | otherwise -> mkEntryIndex root file >>= cacheGet
+          | otherwise -> mkEntryIndex root file >>= processModule
 
 processFileUpToParsing ::
   forall r.

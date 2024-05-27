@@ -6,6 +6,7 @@ import Juvix.Compiler.Concrete.Translation.FromParsed qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Concrete.Translation.FromSource.ParserResultBuilder (runParserResultBuilder)
 import Juvix.Compiler.Concrete.Translation.FromSource.TopModuleNameChecker (runTopModuleNameChecker)
+import Juvix.Compiler.Concrete.Translation.ImportScanner (defaultImportScanStrategy)
 import Juvix.Compiler.Core qualified as Core
 import Juvix.Compiler.Core.Transformation qualified as Core
 import Juvix.Compiler.Core.Transformation.DisambiguateNames (disambiguateNames)
@@ -18,14 +19,17 @@ import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Pipeline.Loader.PathResolver (runDependencyResolver)
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Base
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Error
+import Juvix.Compiler.Pipeline.Loader.PathResolver.ImportTree (withImportTree)
 import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
 import Juvix.Compiler.Pipeline.Result
+import Juvix.Compiler.Pipeline.Run (evalModuleInfoCacheHelper)
 import Juvix.Compiler.Store.Extra qualified as Store
 import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process (runProcessIO)
 import Juvix.Data.Effect.TaggedLock
 import Juvix.Prelude
+import Parallel.ProgressLog
 
 upToInternalExpression ::
   (Members '[Reader EntryPoint, Error JuvixError, State Artifacts, Termination] r) =>
@@ -153,6 +157,7 @@ compileReplInputIO ::
 compileReplInputIO fp txt = do
   hasInternet <- not <$> asks (^. entryPointOffline)
   runError
+    . runConcurrent
     . evalInternet hasInternet
     . runTaggedLockPermissive
     . runLogIO
@@ -167,7 +172,10 @@ compileReplInputIO fp txt = do
     . runReader defaultDependenciesConfig
     . runPathResolverArtifacts
     . runTopModuleNameChecker
-    . evalModuleInfoCache
+    . runReader defaultImportScanStrategy
+    . withImportTree (Just fp)
+    . ignoreProgressLog
+    . evalModuleInfoCacheHelper defaultNumThreads
     $ do
       p <- parseReplInput fp txt
       case p of
