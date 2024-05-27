@@ -321,8 +321,7 @@ resolvePath' scan = do
         [ (pkg, ext)
           | ext <- possibleExtensions,
             let file = addFileExt ext (importScanToRelPath scan),
-            pkgs <- toList (HashMap.lookup file filesToPackage),
-            pkg <- toList pkgs,
+            pkg <- maybe [] toList (HashMap.lookup file filesToPackage),
             visible pkg
         ]
   case packagesWithExt of
