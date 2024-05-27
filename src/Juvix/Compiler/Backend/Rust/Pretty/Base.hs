@@ -167,4 +167,21 @@ instance PrettyCode Block where
 instance PrettyCode Program where
   ppCode Program {..} = do
     funs <- mapM ppCode _programFunctions
-    return $ vsep funs
+    return $ pretty prelude <> line <> vsep funs
+    where
+      prelude :: Text
+      prelude =
+        "extern crate juvix;\n\
+        \\n\
+        \#[allow(unused_imports)]\n\
+        \use juvix::defs::*;\n\
+        \#[allow(unused_imports)]\n\
+        \use juvix::apply;\
+        \#[allow(unused_imports)]\n\
+        \use juvix::tapply;\n\
+        \#[allow(unused_imports)]\n\
+        \use juvix::equality::*;\n\
+        \#[allow(unused_imports)]\n\
+        \use juvix::integer::*;\n\
+        \#[allow(unused_imports)]\n\
+        \use juvix::memory::*;\n"
