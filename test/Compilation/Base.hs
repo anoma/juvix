@@ -54,9 +54,10 @@ compileErrorAssertion root' mainFile step = do
   case res of
     Left {} -> return ()
     Right {} -> assertFailure "no error"
-  -- case run
-  --   . runReader Core.defaultCoreOptions
-  --   . runError @JuvixError
-  --   $ Core.toStored' (_pipelineResult ^. Core.coreResultModule) >>= Core.toStripped' Core.CheckExec of
-  --   Left _ -> return ()
-  --   Right _ ->
+
+-- case run
+--   . runReader Core.defaultCoreOptions
+--   . runError @JuvixError
+--   $ Core.toStored' (_pipelineResult ^. Core.coreResultModule) >>= Core.toStripped' Core.CheckExec of
+--   Left _ -> return ()
+--   Right _ ->
