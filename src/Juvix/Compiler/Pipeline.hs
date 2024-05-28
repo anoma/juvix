@@ -36,6 +36,7 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Che
 import Juvix.Compiler.Nockma.Translation.FromTree qualified as NockmaTree
 import Juvix.Compiler.Pipeline.Artifacts
 import Juvix.Compiler.Pipeline.EntryPoint
+import Juvix.Compiler.Pipeline.JvoCache
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Base
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Data
 import Juvix.Compiler.Pipeline.Loader.PathResolver.DependencyResolver
@@ -52,7 +53,6 @@ import Juvix.Compiler.Store.Language qualified as Store
 import Juvix.Compiler.Tree qualified as Tree
 import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process
-import Juvix.Data.Effect.TaggedLock
 import Juvix.Data.Field
 import Parallel.ProgressLog (ProgressLog)
 
@@ -60,6 +60,7 @@ type PipelineAppEffects = '[TaggedLock, Reader PipelineOptions, ProgressLog, Emb
 
 type PipelineLocalEff =
   '[ ModuleInfoCache,
+     JvoCache,
      Reader ImportTree,
      Reader ImportScanStrategy,
      TopModuleNameChecker,

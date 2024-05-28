@@ -1,6 +1,8 @@
 module Juvix.Compiler.Pipeline.Driver
   ( module Juvix.Compiler.Pipeline.Driver.Data,
     ModuleInfoCache,
+    JvoCache,
+    evalJvoCache,
     processFileUpTo,
     evalModuleInfoCache,
     evalModuleInfoCacheSetup,
@@ -31,6 +33,7 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Da
 import Juvix.Compiler.Internal.Translation.FromInternal.Data (InternalTypedResult)
 import Juvix.Compiler.Pipeline
 import Juvix.Compiler.Pipeline.Driver.Data
+import Juvix.Compiler.Pipeline.JvoCache
 import Juvix.Compiler.Pipeline.Loader.PathResolver
 import Juvix.Compiler.Pipeline.ModuleInfoCache
 import Juvix.Compiler.Store.Core.Extra
@@ -39,9 +42,8 @@ import Juvix.Compiler.Store.Language qualified as Store
 import Juvix.Compiler.Store.Options qualified as StoredModule
 import Juvix.Compiler.Store.Options qualified as StoredOptions
 import Juvix.Data.CodeAnn
-import Juvix.Data.Effect.TaggedLock.Base
 import Juvix.Data.SHA256 qualified as SHA256
-import Juvix.Extra.Serialize
+import Juvix.Extra.Serialize qualified as Serialize
 import Juvix.Prelude
 import Path.Posix qualified as Path
 
@@ -54,17 +56,18 @@ processModule = cacheGet
 evalModuleInfoCache ::
   forall r a.
   (Members '[TaggedLock, TopModuleNameChecker, Error JuvixError, Files, PathResolver] r) =>
-  Sem (ModuleInfoCache ': r) a ->
+  Sem (ModuleInfoCache ': JvoCache ': r) a ->
   Sem r a
-evalModuleInfoCache = evalCacheEmpty processModuleCacheMiss
+evalModuleInfoCache = evalJvoCache . evalCacheEmpty processModuleCacheMiss
 
+-- | Used for parallel compilation
 evalModuleInfoCacheSetup ::
   forall r a.
   (Members '[TaggedLock, TopModuleNameChecker, Error JuvixError, Files, PathResolver] r) =>
-  (EntryIndex -> Sem (ModuleInfoCache ': r) ()) ->
-  Sem (ModuleInfoCache ': r) a ->
+  (EntryIndex -> Sem (ModuleInfoCache ': JvoCache ': r) ()) ->
+  Sem (ModuleInfoCache ': JvoCache ': r) a ->
   Sem r a
-evalModuleInfoCacheSetup setup = evalCacheEmptySetup setup processModuleCacheMiss
+evalModuleInfoCacheSetup setup = evalJvoCache . evalCacheEmptySetup setup processModuleCacheMiss
 
 processModuleCacheMiss ::
   forall r.
@@ -74,6 +77,7 @@ processModuleCacheMiss ::
          TopModuleNameChecker,
          Error JuvixError,
          Files,
+         JvoCache,
          PathResolver
        ]
       r
@@ -117,7 +121,7 @@ processModuleCacheMiss entryIx = do
     recompile :: Text -> Path Abs File -> Sem r (PipelineResult Store.ModuleInfo)
     recompile sha256 absPath = do
       res <- processModuleToStoredCore sha256 entry
-      saveToFile absPath (res ^. pipelineResult)
+      Serialize.saveToFile absPath (res ^. pipelineResult)
       return res
 
 processRecursiveUpToTyped ::

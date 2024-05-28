@@ -153,7 +153,7 @@ evalModuleInfoCacheHelper ::
       r
   ) =>
   NumThreads ->
-  Sem (ModuleInfoCache ': r) a ->
+  Sem (ModuleInfoCache ': JvoCache ': r) a ->
   Sem r a
 evalModuleInfoCacheHelper nj m = do
   b <- supportsParallel

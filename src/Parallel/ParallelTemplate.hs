@@ -14,6 +14,7 @@ module Parallel.ParallelTemplate
     compileArgsNodeName,
     compileArgsNumWorkers,
     compileArgsCompileNode,
+    compileArgsPreProcess,
     compilationError,
     compile,
   )
@@ -35,6 +36,8 @@ data CompileArgs (s :: [Effect]) nodeId node compileProof = CompileArgs
     _compileArgsDependencies :: Dependencies nodeId,
     _compileArgsNodeName :: node -> Text,
     _compileArgsNumWorkers :: Int,
+    -- | Called on every node without any specific order
+    _compileArgsPreProcess :: Maybe (node -> Sem s ()),
     _compileArgsCompileNode :: node -> Sem s compileProof
   }
 

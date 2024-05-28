@@ -12,12 +12,11 @@ import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromSource.TopModuleNameChecker
 import Juvix.Compiler.Concrete.Translation.ImportScanner (ImportScanStrategy)
 import Juvix.Compiler.Pipeline
-import Juvix.Compiler.Pipeline.Driver (processModule)
+import Juvix.Compiler.Pipeline.Driver (JvoCache, processModule)
 import Juvix.Compiler.Pipeline.Driver qualified as Driver
 import Juvix.Compiler.Pipeline.Loader.PathResolver
 import Juvix.Compiler.Pipeline.ModuleInfoCache
 import Juvix.Compiler.Store.Language qualified as Store
-import Juvix.Data.Effect.TaggedLock
 import Juvix.Prelude
 import Parallel.ParallelTemplate
 import Parallel.ProgressLog
@@ -98,6 +97,7 @@ compileInParallel nj _entry = do
         CompileArgs
           { _compileArgsNodesIndex = idx,
             _compileArgsNodeName = getNodeName,
+            _compileArgsPreProcess = Nothing,
             _compileArgsDependencies = mkDependencies t,
             _compileArgsNumWorkers = numWorkers,
             _compileArgsCompileNode = compileNode
@@ -142,6 +142,6 @@ evalModuleInfoCache ::
       r
   ) =>
   NumThreads ->
-  Sem (ModuleInfoCache ': r) a ->
+  Sem (ModuleInfoCache ': JvoCache ': r) a ->
   Sem r a
 evalModuleInfoCache nj = Driver.evalModuleInfoCacheSetup (compileInParallel nj)

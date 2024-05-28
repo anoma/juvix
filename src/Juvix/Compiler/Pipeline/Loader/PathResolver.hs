@@ -29,7 +29,6 @@ import Juvix.Compiler.Pipeline.Lockfile
 import Juvix.Compiler.Pipeline.Package
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
 import Juvix.Compiler.Pipeline.Root.Base (PackageType (..))
-import Juvix.Data.Effect.TaggedLock
 import Juvix.Data.SHA256 qualified as SHA256
 import Juvix.Extra.Files
 import Juvix.Extra.PackageFiles

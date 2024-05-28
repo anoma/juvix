@@ -27,7 +27,6 @@ import Juvix.Compiler.Pipeline.Run (evalModuleInfoCacheHelper)
 import Juvix.Compiler.Store.Extra qualified as Store
 import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process (runProcessIO)
-import Juvix.Data.Effect.TaggedLock
 import Juvix.Prelude
 import Parallel.ProgressLog
 
