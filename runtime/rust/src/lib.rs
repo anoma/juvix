@@ -127,7 +127,7 @@ mod tests {
                 FUN_S => {
                     let xz = apply!(program_sk, mem, args[0], vec![args[2]]);
                     let yz = apply!(program_sk, mem, args[1], vec![args[2]]);
-                    tapply!('program, program_sk, mem, fid, args, xz, vec![yz]);
+                    tapply!('program, program_sk, mem, fid, args, xz, vec![yz])
                 }
                 FUN_K => {
                     return args[0];

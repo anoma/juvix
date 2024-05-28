@@ -29,11 +29,11 @@ impl Memory {
 
 #[macro_export]
 macro_rules! tapply {
-    ($lab:lifetime, $program:ident, $mem:ident, $fid:ident, $args:ident, $cl0:expr, $cargs0:expr) => {
+    ($lab:lifetime, $program:ident, $mem:ident, $fid:ident, $args:ident, $cl0:expr, $cargs0:expr) => {{
         let mut cl = $cl0;
         let mut cargs = $cargs0;
         loop {
-            match $mem.apply( cl, &cargs) {
+            match $mem.apply(cl, &cargs) {
                 apply::AppResult::Call(fid1, args1) => {
                     $fid = fid1;
                     $args = args1;
@@ -46,7 +46,7 @@ macro_rules! tapply {
                 }
             }
         }
-    };
+    }}
 }
 
 #[macro_export]

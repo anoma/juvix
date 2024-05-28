@@ -334,6 +334,7 @@ fromRegInstr info = \case
               mkVar "program",
               mkVar "mem",
               mkVar "funid",
+              mkVar "args",
               fromVarRef _instrTailCallClosuresValue,
               mkVec (map fromValue _instrTailCallClosuresArgs)
             ]
