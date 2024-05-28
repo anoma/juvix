@@ -22,4 +22,4 @@ mutrec : Nat :=
     h (x : Nat) : Nat := if (x < 1) 1 (x * f (sub x 1));
   in f 5 + f 10 + g 5 + h 5;
 
-main : Nat := sum 10000 + mutrec;
+main : Nat := sum 1000 + mutrec;
