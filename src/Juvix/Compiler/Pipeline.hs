@@ -198,7 +198,7 @@ storedCoreToMiniC :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.
 storedCoreToMiniC = storedCoreToAsm >=> asmToMiniC
 
 storedCoreToRust :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Rust.Result
-storedCoreToRust = storedCoreToReg >=> regToRust
+storedCoreToRust = storedCoreToTree Core.CheckRust >=> treeToReg >=> regToRust
 
 storedCoreToCasm :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Casm.Result
 storedCoreToCasm = local (set entryPointFieldSize cairoFieldSize) . storedCoreToTree Core.CheckCairo >=> treeToCasm

@@ -23,6 +23,7 @@ data TransformationId
   | CombineInfoTables
   | CheckGeb
   | CheckExec
+  | CheckRust
   | CheckVampIR
   | CheckAnoma
   | CheckCairo
@@ -103,6 +104,7 @@ instance TransformationId' TransformationId where
     CombineInfoTables -> strCombineInfoTables
     CheckGeb -> strCheckGeb
     CheckExec -> strCheckExec
+    CheckRust -> strCheckRust
     CheckVampIR -> strCheckVampIR
     CheckAnoma -> strCheckAnoma
     CheckCairo -> strCheckCairo

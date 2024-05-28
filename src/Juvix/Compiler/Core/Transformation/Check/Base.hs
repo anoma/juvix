@@ -162,3 +162,36 @@ checkMainExists md =
           _coreErrorNode = Nothing,
           _coreErrorLoc = defaultLoc
         }
+
+checkMainTypeExec :: (Member (Error CoreError) r) => Module -> Sem r ()
+checkMainTypeExec md =
+  case md ^. moduleInfoTable . infoMain of
+    Nothing ->
+      throw
+        CoreError
+          { _coreErrorMsg = ppOutput "no `main` function",
+            _coreErrorNode = Nothing,
+            _coreErrorLoc = defaultLoc
+          }
+    Just sym ->
+      case ii ^. identifierType of
+        NPi {} ->
+          throw
+            CoreError
+              { _coreErrorMsg = ppOutput "`main` cannot have a function type for this target",
+                _coreErrorNode = Nothing,
+                _coreErrorLoc = loc
+              }
+        ty
+          | isTypeConstr md ty ->
+              throw
+                CoreError
+                  { _coreErrorMsg = ppOutput "`main` cannot be a type for this target",
+                    _coreErrorNode = Nothing,
+                    _coreErrorLoc = loc
+                  }
+        _ ->
+          return ()
+      where
+        ii = lookupIdentifierInfo md sym
+        loc = fromMaybe defaultLoc (ii ^. identifierLocation)
