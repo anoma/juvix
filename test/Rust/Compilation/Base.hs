@@ -67,6 +67,8 @@ nativeArgs optLevel outputFile inputFile =
     "-C",
     "opt-level="
       <> show optLevel,
+    "-C",
+    "link-args=-Wl,-zstack-size=4194304",
     "-L",
     juvixLibraryDir,
     toFilePath inputFile
