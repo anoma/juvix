@@ -49,7 +49,7 @@ mod tests {
                     continue;
                 }
                 FUN_ITFIB_GO => {
-                    if juvix_equal(args[0], make_smallint(0)) {
+                    if word_to_bool(juvix_equal(args[0], make_smallint(0))) {
                         break args[1];
                     } else {
                         args = vec![

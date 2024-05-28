@@ -101,7 +101,7 @@ fromRegFunction info funInfo =
     varsNum = getLocalVarsNum info (funInfo ^. Reg.functionSymbol)
 
     varDecls :: [Statement]
-    varDecls = map (\n -> stmtDecl Mut ("var_" <> show n)) [0 .. varsNum - 1]
+    varDecls = map (\n -> stmtDecl Mut ("var_" <> show n) Word) [0 .. varsNum - 1]
 
 fromRegCode :: Reg.ExtraInfo -> Reg.Code -> [Statement]
 fromRegCode info = concatMap (fromRegInstr info)
@@ -338,7 +338,7 @@ fromRegInstr info = \case
 
     fromBranch :: Reg.InstrBranch -> [Statement]
     fromBranch Reg.InstrBranch {..} =
-      stmtsIf (fromValue _instrBranchValue) br1 br2
+      stmtsIf (mkCall "word_to_bool" [fromValue _instrBranchValue]) br1 br2
       where
         br1 = fromRegCode info _instrBranchTrue
         br2 = fromRegCode info _instrBranchFalse

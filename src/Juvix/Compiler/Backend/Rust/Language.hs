@@ -42,6 +42,7 @@ data Statement
 
 data Let = Let
   { _letVariable :: Text,
+    _letType :: Maybe Type,
     _letMutable :: IsMut,
     _letInitializer :: Maybe Expression
   }

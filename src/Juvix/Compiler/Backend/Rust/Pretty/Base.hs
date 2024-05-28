@@ -78,10 +78,12 @@ instance PrettyCode Statement where
 instance PrettyCode Let where
   ppCode Let {..} = do
     name <- ppName KNameLocal _letVariable
+    ty <- maybe (return Nothing) (ppCode >=> return . Just) _letType
     mut <- ppMut _letMutable
     ini <- maybe (return Nothing) (ppCode >=> return . Just) _letInitializer
     let ini' = fmap ("=" <+>) ini
-    return $ kwLet <+> mut <?+> (name <+?> ini')
+        ty' = fmap (colon <+>) ty
+    return $ kwLet <+> mut <?+> (name <>? ty' <+?> ini')
 
 instance PrettyCode ConstDecl where
   ppCode ConstDecl {..} = do

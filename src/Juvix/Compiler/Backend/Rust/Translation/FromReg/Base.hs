@@ -61,15 +61,17 @@ stmtLet isMut result value =
     Let
       { _letMutable = isMut,
         _letVariable = result,
+        _letType = Nothing,
         _letInitializer = Just value
       }
 
-stmtDecl :: IsMut -> Text -> Statement
-stmtDecl isMut result =
+stmtDecl :: IsMut -> Text -> Type -> Statement
+stmtDecl isMut var ty =
   StatementLet $
     Let
       { _letMutable = isMut,
-        _letVariable = result,
+        _letVariable = var,
+        _letType = Just ty,
         _letInitializer = Nothing
       }
 
