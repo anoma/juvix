@@ -226,15 +226,26 @@ runPipelineNoOptions ::
   Sem r a
 runPipelineNoOptions = runPipeline ()
 
+runPipelineProgress ::
+  (Members '[App, EmbedIO, ProgressLog, TaggedLock] r, EntryPointOptions opts) =>
+  opts ->
+  Maybe (AppPath File) ->
+  Sem (PipelineEff r) a ->
+  Sem r a
+runPipelineProgress opts input_ p = do
+  r <- runPipelineEither opts input_ (inject p) >>= fromRightJuvixError
+  return (snd r ^. pipelineResult)
+
 runPipeline ::
   (Members '[App, EmbedIO, TaggedLock] r, EntryPointOptions opts) =>
   opts ->
   Maybe (AppPath File) ->
   Sem (PipelineEff r) a ->
   Sem r a
-runPipeline opts input_ p = appRunProgressLog $ do
-  r <- runPipelineEither opts input_ (inject p) >>= fromRightJuvixError
-  return (snd r ^. pipelineResult)
+runPipeline opts input_ =
+  appRunProgressLog
+    . runPipelineProgress opts input_
+    . inject
 
 runPipelineHtml ::
   (Members '[App, EmbedIO, TaggedLock] r) =>

@@ -22,6 +22,9 @@ tests:
         cd milestone/HelloWorld
         juvix html HelloWorld.juvix --only-source
         cat html/HelloWorld.html
+    stderr:
+      matches: |
+        .*
     stdout:
       contains:
         <!DOCTYPE HTML>
@@ -36,6 +39,9 @@ tests:
         rm -rf html
         juvix html HelloWorld.juvix --only-source --ext=md
         cat html/HelloWorld.md
+    stderr:
+      matches: |
+        .*
     stdout:
       contains:
         <!DOCTYPE HTML>
@@ -50,6 +56,9 @@ tests:
         juvix html milestone/HelloWorld/HelloWorld.juvix --only-source --output-dir=html --non-recursive
         [ -d html/assets ]
         [ -f html/HelloWorld.html ]
+    stderr:
+      matches: |
+        .*
     stdout:
       matches: |
         Copying assets files to .*
@@ -65,6 +74,9 @@ tests:
         rm -rf html
         juvix html HelloWorld.juvix --only-source --only-code --non-recursive
         cat html/HelloWorld.html
+    stderr:
+      matches: |
+        .*
     stdout:
       matches: |
         <span class="ju-comment">-- HelloWorld.juvix</span>.*
@@ -79,6 +91,9 @@ tests:
         rm -rf html
         juvix html HelloWorld.juvix --only-source --only-code --prefix-id="XYZ"
         cat html/HelloWorld.html
+    stderr:
+      matches: |
+        .*
     stdout:
       matches: |
         .*href="HelloWorld.html#XYZHelloWorld:[0-9]+".*
@@ -96,4 +111,7 @@ tests:
     stdout:
       matches: |
         .*href="#HelloWorld:[0-9]+".*
+    stderr:
+      matches: |
+        .*
     exit-status: 0

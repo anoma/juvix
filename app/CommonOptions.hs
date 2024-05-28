@@ -320,5 +320,8 @@ optRegTransformationIds = optTransformationIds Reg.parseTransformations Reg.comp
 class EntryPointOptions a where
   applyOptions :: a -> EntryPoint -> EntryPoint
 
+instance EntryPointOptions (EntryPoint -> EntryPoint) where
+  applyOptions = id
+
 instance EntryPointOptions () where
   applyOptions () = id

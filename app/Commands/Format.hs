@@ -103,5 +103,5 @@ runScopeFileApp = interpret $ \case
             { _pathPath = mkPrepath (toFilePath p),
               _pathIsInput = False
             }
-    runPipelineNoOptions (Just appFile) upToScoping
+    ignoreProgressLog (runPipelineProgress () (Just appFile) upToScoping)
   ScopeStdin e -> ignoreProgressLog (runPipelineEntry e upToScoping)
