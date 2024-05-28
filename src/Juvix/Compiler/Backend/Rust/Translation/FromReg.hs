@@ -23,6 +23,9 @@ fromReg lims tab =
     info :: Reg.ExtraInfo
     info = Reg.computeExtraInfo lims tab
 
+    mainFunid :: Int
+    mainFunid = getFUID info $ fromJust $ tab ^. Reg.infoMainFunction
+
     mainFunction :: Function
     mainFunction =
       Function
@@ -31,7 +34,7 @@ fromReg lims tab =
           _functionArguments = [],
           _functionReturnType = Nothing,
           _functionBody =
-            [ stmtLet NotMut "result" (mkCall "program" [ExprVerbatim "&mut Memory::new()", mkInteger @Int 0, mkVec []]),
+            [ stmtLet NotMut "result" (mkCall "program" [ExprVerbatim "&mut Memory::new()", mkInteger mainFunid, mkVec []]),
               StatementExpression (mkCall "println!" [mkString "{}", mkVar "result"]),
               StatementReturn (Return Nothing)
             ]
@@ -252,7 +255,7 @@ fromRegInstr info = \case
         (mkVarRef _instrAllocClosureResult)
         ( mkCall
             "mem.alloc_closure"
-            [ mkInteger (getFUID info _instrAllocClosureSymbol),
+            [ mkVar (getFunctionIdent info _instrAllocClosureSymbol),
               mkArray (map fromValue _instrAllocClosureArgs),
               mkInteger (_instrAllocClosureExpectedArgsNum - length _instrAllocClosureArgs)
             ]
@@ -277,7 +280,7 @@ fromRegInstr info = \case
             (mkVarRef _instrCallResult)
             ( mkCall
                 "program"
-                [mkVar "mem", mkInteger (getFUID info sym), mkVec (map fromValue _instrCallArgs)]
+                [mkVar "mem", mkVar (getFunctionIdent info sym), mkVec (map fromValue _instrCallArgs)]
             )
         Reg.CallClosure vr ->
           stmtsBlock
@@ -296,7 +299,7 @@ fromRegInstr info = \case
       case _instrTailCallType of
         Reg.CallFun sym ->
           [ stmtAssign "args" (mkVec (map fromValue _instrTailCallArgs)),
-            stmtAssign "funid" (mkInteger (getFUID info sym)),
+            stmtAssign "funid" (mkVar (getFunctionIdent info sym)),
             StatementContinue
           ]
         Reg.CallClosure vr ->
