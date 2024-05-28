@@ -144,7 +144,7 @@ compile args@CompileArgs {..} = do
   logs <- Logs <$> newTQueueIO
   qq <- newTBQueueIO (max 1 numMods)
   let compileQ = CompileQueue qq
-  forM_ starterModules (atomically . writeTBQueue qq)
+  atomically (forM_ starterModules (writeTBQueue qq))
   let iniCompilationState :: CompilationState nodeId compileProof =
         CompilationState
           { _compilationStartedNum = 0,
@@ -204,8 +204,10 @@ waitForWorkers ::
 waitForWorkers = do
   Logs logs <- ask
   cstVar <- ask @(TVar (CompilationState nodeId compileProof))
-  finished <- atomically $ compilationStateFinished <$> readTVar cstVar
-  noMoreLogs <- atomically (isEmptyTQueue logs)
+  (finished, noMoreLogs) <- atomically $ do
+    finished <- compilationStateFinished <$> readTVar cstVar
+    noMoreLogs <- isEmptyTQueue logs
+    return (finished, noMoreLogs)
   let waitMore = waitForWorkers @nodeId @compileProof
   case finished of
     FinishedError err
@@ -316,8 +318,9 @@ registerCompiledModule m proof = do
   mutSt <- ask @((TVar (CompilationState nodeId compileProof)))
   deps <- ask
   qq <- asks (^. compileQueue)
-  toQueue <- atomically (stateTVar mutSt (swap . addCompiledModule deps m proof))
-  forM_ toQueue (atomically . writeTBQueue qq)
+  atomically $ do
+    toQueue <- stateTVar mutSt (swap . addCompiledModule deps m proof)
+    forM_ toQueue (writeTBQueue qq)
 
 logMsg :: Maybe ThreadId -> Logs -> Doc CodeAnn -> STM ()
 logMsg mtid (Logs q) msg = do
