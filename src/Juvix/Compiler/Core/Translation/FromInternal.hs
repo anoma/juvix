@@ -580,6 +580,8 @@ goAxiomInductive a = whenJust (a ^. Internal.axiomBuiltin) builtinInductive
       Internal.BuiltinAnomaEncode -> return ()
       Internal.BuiltinAnomaDecode -> return ()
       Internal.BuiltinAnomaVerifyDetached -> return ()
+      Internal.BuiltinAnomaSign -> return ()
+      Internal.BuiltinAnomaVerify -> return ()
       Internal.BuiltinPoseidon -> return ()
       Internal.BuiltinEcOp -> return ()
       Internal.BuiltinRandomEcPoint -> return ()
@@ -713,7 +715,6 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
               mkSmallUniv
               (mkLambda' natType (mkBuiltinApp' OpAnomaDecode [mkVar' 0]))
           )
-      -- ((ftype ==% (u <>--> nat --> decodeT --> nat --> bool_)) freeVars)
       Internal.BuiltinAnomaVerifyDetached -> do
         natType <- getNatType
         registerAxiomDef
@@ -727,6 +728,32 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
                           natType
                           (mkBuiltinApp' OpAnomaVerifyDetached [mkVar' 2, mkVar' 1, mkVar' 0])
                       )
+                  )
+              )
+          )
+      Internal.BuiltinAnomaSign -> do
+        natType <- getNatType
+        registerAxiomDef
+          ( mkLambda'
+              mkSmallUniv
+              ( mkLambda'
+                  (mkVar' 0)
+                  ( mkLambda'
+                      natType
+                      (mkBuiltinApp' OpAnomaSign [mkVar' 1, mkVar' 0])
+                  )
+              )
+          )
+      Internal.BuiltinAnomaVerify -> do
+        natType <- getNatType
+        registerAxiomDef
+          ( mkLambda'
+              mkSmallUniv
+              ( mkLambda'
+                  natType
+                  ( mkLambda'
+                      natType
+                      (mkBuiltinApp' OpAnomaVerify [mkVar' 1, mkVar' 0])
                   )
               )
           )
@@ -1137,6 +1164,8 @@ goApplication a = do
         Just Internal.BuiltinAnomaEncode -> app
         Just Internal.BuiltinAnomaDecode -> app
         Just Internal.BuiltinAnomaVerifyDetached -> app
+        Just Internal.BuiltinAnomaSign -> app
+        Just Internal.BuiltinAnomaVerify -> app
         Just Internal.BuiltinPoseidon -> app
         Just Internal.BuiltinEcOp -> app
         Just Internal.BuiltinRandomEcPoint -> app

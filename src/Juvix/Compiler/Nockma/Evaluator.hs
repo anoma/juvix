@@ -10,6 +10,7 @@ import Crypto.Sign.Ed25519
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Nockma.Encoding
 import Juvix.Compiler.Nockma.Encoding qualified as Encoding
+import Juvix.Compiler.Nockma.Encoding.Ed25519
 import Juvix.Compiler.Nockma.Evaluator.Error
 import Juvix.Compiler.Nockma.Evaluator.Options
 import Juvix.Compiler.Nockma.Evaluator.Storage
@@ -239,7 +240,13 @@ evalProfile inistack initerm =
               TermCell {} -> throwDecodingFailed args' DecodingErrorExpectedAtom
             StdlibVerifyDetached -> case args' of
               TCell (TermAtom sig) (TCell (TermAtom message) (TermAtom pubKey)) -> goVerifyDetached sig message pubKey
-              _ -> error "expected a term of the form [signature (atom) message (term) public_key (atom)]"
+              _ -> error "expected a term of the form [signature (atom) message (encoded term) public_key (atom)]"
+            StdlibSign -> case args' of
+              TCell (TermAtom message) (TermAtom privKey) -> goSign message privKey
+              _ -> error "expected a term of the form [message (encoded term) private_key (atom)]"
+            StdlibVerify -> case args' of
+              TCell (TermAtom signedMessage) (TermAtom pubKey) -> goVerify signedMessage pubKey
+              _ -> error "expected a term of the form [signedMessage (atom) public_key (atom)]"
           where
             goVerifyDetached :: Atom a -> Atom a -> Atom a -> Sem r (Term a)
             goVerifyDetached sigT messageT pubKeyT = do
@@ -248,6 +255,21 @@ evalProfile inistack initerm =
               message <- atomToByteString messageT
               let res = dverify pubKey message sig
               return (TermAtom (nockBool res))
+
+            goSign :: Atom a -> Atom a -> Sem r (Term a)
+            goSign messageT privKeyT = do
+              privKey <- SecretKey <$> atomToByteString privKeyT
+              message <- atomToByteString messageT
+              res <- byteStringToAtom (sign privKey message)
+              return (TermAtom res)
+
+            goVerify :: Atom a -> Atom a -> Sem r (Term a)
+            goVerify signedMessageT pubKeyT = do
+              pubKey <- PublicKey <$> atomToByteString pubKeyT
+              signedMessage <- atomToByteString signedMessageT
+              if
+                  | verify pubKey signedMessage -> TermAtom <$> byteStringToAtom (removeSignature signedMessage)
+                  | otherwise -> throwVerificationFailed signedMessageT pubKeyT
 
         goAutoConsCell :: AutoConsCell a -> Sem r (Term a)
         goAutoConsCell c = do

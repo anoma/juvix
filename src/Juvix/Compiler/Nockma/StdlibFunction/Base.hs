@@ -17,6 +17,8 @@ instance Pretty StdlibFunction where
     StdlibEncode -> "encode"
     StdlibDecode -> "decode"
     StdlibVerifyDetached -> "verify-detached"
+    StdlibSign -> "sign"
+    StdlibVerify -> "verify"
 
 data StdlibFunction
   = StdlibDec
@@ -31,6 +33,8 @@ data StdlibFunction
   | StdlibEncode
   | StdlibDecode
   | StdlibVerifyDetached
+  | StdlibSign
+  | StdlibVerify
   deriving stock (Show, Lift, Eq, Bounded, Enum, Generic)
 
 instance Hashable StdlibFunction
