@@ -17,7 +17,7 @@ import Runtime.Base qualified as R
 casmRunVM' :: Path Abs Dir -> Path Abs File -> Maybe (Path Abs File) -> IO Text
 casmRunVM' dirPath outputFile inputFile = do
   let args = maybe [] (\f -> ["--program_input", toFilePath f]) inputFile
-  R.readProcessCwd (toFilePath dirPath) "run_cairo_vm.sh" (toFilePath outputFile : args) ""
+  readProcessCwd (toFilePath dirPath) "run_cairo_vm.sh" (toFilePath outputFile : args) ""
 
 casmRunVM :: LabelInfo -> Code -> [Builtin] -> Maybe (Path Abs File) -> Path Abs File -> (String -> IO ()) -> Assertion
 casmRunVM labi instrs blts inputFile expectedFile step = do

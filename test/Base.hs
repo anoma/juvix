@@ -21,6 +21,7 @@ import Juvix.Data.Effect.TaggedLock
 import Juvix.Extra.Paths hiding (rootBuildDir)
 import Juvix.Prelude hiding (assert)
 import Juvix.Prelude.Env
+import System.Process qualified as P
 import Test.Tasty
 import Test.Tasty.HUnit hiding (assertFailure)
 import Test.Tasty.HUnit qualified as HUnit
@@ -114,3 +115,36 @@ testRunIOEitherTermination entry =
 
 assertFailure :: (MonadIO m) => String -> m a
 assertFailure = liftIO . HUnit.assertFailure
+
+-- | The same as `P.readProcess` but instead of inheriting `stderr` redirects it
+-- to the child's `stdout`.
+readProcess :: FilePath -> [String] -> Text -> IO Text
+readProcess = readProcessCwd' Nothing
+
+readProcessCwd :: FilePath -> FilePath -> [String] -> Text -> IO Text
+readProcessCwd cwd = readProcessCwd' (Just cwd)
+
+readProcessCwd' :: Maybe FilePath -> FilePath -> [String] -> Text -> IO Text
+readProcessCwd' mcwd cmd args stdinText =
+  withTempDir'
+    ( \dirPath -> do
+        (_, hin) <- openTempFile dirPath "stdin"
+        (_, hout) <- openTempFile dirPath "stdout"
+        hPutStr hin stdinText
+        hSeek hin AbsoluteSeek 0
+        (_, _, _, ph) <-
+          P.createProcess_
+            "readProcess"
+            (P.proc cmd args)
+              { P.std_in = P.UseHandle hin,
+                P.std_out = P.UseHandle hout,
+                P.std_err = P.UseHandle hout,
+                P.cwd = mcwd
+              }
+        P.waitForProcess ph
+        hSeek hout AbsoluteSeek 0
+        r <- hGetContents hout
+        hClose hin
+        hClose hout
+        return r
+    )

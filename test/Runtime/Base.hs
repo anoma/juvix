@@ -23,39 +23,6 @@ clangCompile mkClangArgs inputFile outputFile execute step =
         execute outputFile'
     )
 
--- | The same as `P.readProcess` but instead of inheriting `stderr` redirects it
--- to the child's `stdout`.
-readProcess :: FilePath -> [String] -> Text -> IO Text
-readProcess = readProcessCwd' Nothing
-
-readProcessCwd :: FilePath -> FilePath -> [String] -> Text -> IO Text
-readProcessCwd cwd = readProcessCwd' (Just cwd)
-
-readProcessCwd' :: Maybe FilePath -> FilePath -> [String] -> Text -> IO Text
-readProcessCwd' mcwd cmd args stdinText =
-  withTempDir'
-    ( \dirPath -> do
-        (_, hin) <- openTempFile dirPath "stdin"
-        (_, hout) <- openTempFile dirPath "stdout"
-        hPutStr hin stdinText
-        hSeek hin AbsoluteSeek 0
-        (_, _, _, ph) <-
-          P.createProcess_
-            "readProcess"
-            (P.proc cmd args)
-              { P.std_in = P.UseHandle hin,
-                P.std_out = P.UseHandle hout,
-                P.std_err = P.UseHandle hout,
-                P.cwd = mcwd
-              }
-        P.waitForProcess ph
-        hSeek hout AbsoluteSeek 0
-        r <- hGetContents hout
-        hClose hin
-        hClose hout
-        return r
-    )
-
 clangAssertion :: Int -> Path Abs File -> Path Abs File -> Text -> ((String -> IO ()) -> Assertion)
 clangAssertion optLevel inputFile expectedFile stdinText step = do
   step "Check clang and wasmer are on path"

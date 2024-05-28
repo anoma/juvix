@@ -1,0 +1,7 @@
+module N;
+
+import Stdlib.Prelude open;
+
+mkNat (n : Nat) : Nat := n;
+
+f {a : Nat := mkNat 0} : Nat := a;

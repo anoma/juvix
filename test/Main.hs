@@ -19,6 +19,7 @@ import Reg qualified
 import Repl qualified
 import Resolver qualified
 import Runtime qualified
+import Rust qualified
 import Scope qualified
 import Termination qualified
 import Tree qualified
@@ -38,6 +39,7 @@ slowTests =
       Internal.allTests,
       Compilation.allTests,
       Examples.allTests,
+      Rust.allTests,
       Casm.allTests,
       VampIR.allTests,
       Anoma.allTests,
