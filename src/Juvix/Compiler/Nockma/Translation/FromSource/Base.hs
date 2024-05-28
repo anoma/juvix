@@ -3,6 +3,7 @@ module Juvix.Compiler.Nockma.Translation.FromSource.Base where
 import Data.HashMap.Internal.Strict qualified as HashMap
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.Text qualified as Text
+import Juvix.Compiler.Nockma.Encoding.ByteString (textToNatural)
 import Juvix.Compiler.Nockma.Language
 import Juvix.Extra.Paths
 import Juvix.Extra.Strings qualified as Str
@@ -62,6 +63,9 @@ lsbracket = void (lexeme "[")
 
 rsbracket :: Parser ()
 rsbracket = void (lexeme "]")
+
+stringLiteral :: Parser Text
+stringLiteral = lexeme (pack <$> (char '"' >> manyTill L.charLiteral (char '"')))
 
 dottedNatural :: Parser Natural
 dottedNatural = lexeme $ do
@@ -139,6 +143,17 @@ atomVoid = symbol Str.void $> nockVoid
 atomFunctionsPlaceholder :: Parser (Atom Natural)
 atomFunctionsPlaceholder = symbol Str.functionsPlaceholder $> nockNil
 
+atomStringLiteral :: Parser (Atom Natural)
+atomStringLiteral = do
+  WithLoc loc s <- withLoc stringLiteral
+  let info =
+        AtomInfo
+          { _atomInfoTag = Nothing,
+            _atomInfoLoc = Irrelevant (Just loc),
+            _atomInfoHint = Just AtomHintString
+          }
+  return (Atom (textToNatural s) info)
+
 patom :: Parser (Atom Natural)
 patom = do
   mtag <- optional pTag
@@ -149,6 +164,7 @@ patom = do
     <|> atomNil
     <|> atomVoid
     <|> atomFunctionsPlaceholder
+    <|> try atomStringLiteral
 
 iden :: Parser Text
 iden = lexeme (takeWhile1P (Just "<iden>") (isAscii .&&. not . isWhiteSpace))

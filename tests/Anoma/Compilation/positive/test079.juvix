@@ -1,0 +1,6 @@
+module test079;
+
+import Stdlib.Prelude open;
+
+main (s : String) : String :=
+  s ++str " " ++str "✨ héllo" ++str " " ++str "world ✨";

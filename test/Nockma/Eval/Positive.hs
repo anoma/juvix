@@ -268,7 +268,8 @@ juvixCallingConventionTests =
                res :: Term Natural = foldTerms (toNock <$> r)
                lenR :: Term Natural = nockIntegralLiteral (length r)
                tupR = OpQuote # foldTerms (toNock <$> r)
-            in compilerTest "appendToTuple (left empty, right-nonempty)" (appendToTuple (OpQuote # nockNilTagged "test-appendtotuple") (nockNatLiteral 0) tupR lenR) (eqNock res)
+            in compilerTest "appendToTuple (left empty, right-nonempty)" (appendToTuple (OpQuote # nockNilTagged "test-appendtotuple") (nockNatLiteral 0) tupR lenR) (eqNock res),
+           compilerTest "stdlib cat" (callStdlib StdlibCatBytes [nockNatLiteral 2, nockNatLiteral 1]) (eqNock [nock| 258 |])
          ]
 
 unitTests :: [Test]

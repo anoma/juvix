@@ -122,6 +122,7 @@ data AtomHint
   | AtomHintNil
   | AtomHintVoid
   | AtomHintFunctionsPlaceholder
+  | AtomHintString
   deriving stock (Show, Eq, Lift, Generic)
 
 instance Hashable AtomHint
@@ -345,6 +346,9 @@ atomHintInfo h =
   emptyAtomInfo
     { _atomInfoHint = Just h
     }
+
+setAtomHint :: AtomHint -> Atom a -> Atom a
+setAtomHint h = set (atomInfo . atomInfoHint) (Just h)
 
 class IsNock nock where
   toNock :: nock -> Term Natural

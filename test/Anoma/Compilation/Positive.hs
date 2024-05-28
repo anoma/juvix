@@ -576,5 +576,12 @@ allTests =
             $(mkRelFile "test078.juvix")
             [OpQuote # toSignAndVerify]
             $ checkOutput
-              [toSignAndVerify]
+              [toSignAndVerify],
+      let inputStr :: Term Natural = [nock| "Juvix!" |]
+       in mkAnomaCallTest
+            "Test079: Strings"
+            $(mkRelDir ".")
+            $(mkRelFile "test079.juvix")
+            [OpQuote # inputStr]
+            $ checkOutput [[nock| "Juvix! ✨ héllo world ✨" |]]
     ]
