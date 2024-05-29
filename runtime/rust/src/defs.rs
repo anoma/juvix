@@ -12,6 +12,11 @@ pub type SmallInt = i32;
 pub const INITIAL_STACK_CAPACITY: usize = 10 * 1024;
 pub const INITIAL_MEMORY_CAPACITY: usize = 10 * 1024;
 
+pub const BOOL_FALSE: Word = 0;
+pub const BOOL_TRUE: Word = 1;
+pub const OBJ_UNIT: Word = 0;
+pub const OBJ_VOID: Word = 0;
+
 pub fn word_to_usize(s: Word) -> usize {
     s as usize
 }

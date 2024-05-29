@@ -1,0 +1,36 @@
+-- Inlining
+module test053;
+
+import Stdlib.Prelude open;
+
+{-# inline: 2 #-}
+mycompose : {A B C : Type} -> (B -> C) -> (A -> B) -> A -> C
+  | f g x := f (g x);
+
+{-# inline: true #-}
+myconst : {A B : Type} -> A -> B -> A
+  | x _ := x;
+
+{-# inline: 1 #-}
+myflip : {A B C : Type} -> (A -> B -> C) -> B -> A -> C
+  | f b a := f a b;
+
+rumpa : {A : Type} -> (A -> A) -> A -> A
+  | {A} f a :=
+    let
+      {-# inline: 1 #-}
+      go : Nat -> A -> A
+        | zero a := a
+        | (suc _) a := f a;
+
+      {-# inline: false #-}
+      h (g : A -> A) : A := g a;
+    in h (go 10);
+
+main : Nat :=
+  let
+    f : Nat -> Nat := mycompose λ {x := x + 1} λ {x := x * 2};
+    g : Nat -> Nat -> Nat := myflip myconst;
+    {-# inline: false #-}
+    myid : Nat -> Nat := λ {x := x};
+  in myid (f 3 + g 7 9 + rumpa myid 5);

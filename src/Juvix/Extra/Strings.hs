@@ -1054,3 +1054,45 @@ cairoEcPoint = "ec_point"
 
 cairoMkEcPoint :: (IsString s) => s
 cairoMkEcPoint = "mkEcPoint"
+
+rustFn :: (IsString s) => s
+rustFn = "fn"
+
+rustIf :: (IsString s) => s
+rustIf = "if"
+
+rustElse :: (IsString s) => s
+rustElse = "else"
+
+rustMatch :: (IsString s) => s
+rustMatch = "match"
+
+rustLoop :: (IsString s) => s
+rustLoop = "loop"
+
+rustLet :: (IsString s) => s
+rustLet = "let"
+
+rustConst :: (IsString s) => s
+rustConst = "const"
+
+rustMut :: (IsString s) => s
+rustMut = "mut"
+
+rustVec :: (IsString s) => s
+rustVec = "vec!"
+
+rustVector :: (IsString s) => s
+rustVector = "Vec"
+
+rustWord :: (IsString s) => s
+rustWord = "Word"
+
+rustMemory :: (IsString s) => s
+rustMemory = "Memory"
+
+rustContinue :: (IsString s) => s
+rustContinue = "continue"
+
+rustReturn :: (IsString s) => s
+rustReturn = "return"

@@ -17,6 +17,7 @@ RUNTIME_CASM=$(count_ext '*.casm' runtime/casm)
 RUNTIME=$((RUNTIME_C+RUNTIME_RUST+RUNTIME_VAMPIR+RUNTIME_JVT+RUNTIME_CASM))
 
 BACKENDC=$(count src/Juvix/Compiler/Backend/C/)
+BACKENDRUST=$(count src/Juvix/Compiler/Backend/Rust/)
 CAIRO=$(count src/Juvix/Compiler/Backend/Cairo/)
 GEB=$(count src/Juvix/Compiler/Backend/Geb/)
 VAMPIR=$(count src/Juvix/Compiler/Backend/VampIR/)
@@ -40,7 +41,7 @@ PRELUDE=$(count src/Juvix/Prelude/)
 STORE=$(count src/Juvix/Compiler/Store/)
 
 FRONT=$((CONCRETE + INTERNAL + BUILTINS + PIPELINE))
-BACK=$((BACKENDC + GEB + VAMPIR + NOCK + REG + ASM + TREE + CORE + CASM + CAIRO))
+BACK=$((BACKENDC + BACKENDRUST + GEB + VAMPIR + NOCK + REG + ASM + TREE + CORE + CASM + CAIRO))
 OTHER=$((APP + STORE + HTML + EXTRA + DATA + PRELUDE))
 TESTS=$(count test/)
 
@@ -55,6 +56,7 @@ echo "Middle and back end: $BACK LOC"
 echo "   VampIR backend: $VAMPIR LOC"
 echo "   GEB backend: $GEB LOC"
 echo "   C backend: $BACKENDC LOC"
+echo "   Rust backend: $BACKENDRUST LOC"
 echo "   Cairo backend: $((CASM + CAIRO)) LOC"
 echo "   Nockma backend: $NOCK LOC"
 echo "   JuvixReg: $REG LOC"

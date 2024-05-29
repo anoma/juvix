@@ -1,0 +1,25 @@
+-- recursive functions
+module test020;
+
+import Stdlib.Prelude open;
+
+-- McCarthy's 91 function
+terminating
+f91 : Nat → Nat
+  | n := if (n > 100) (sub n 10) (f91 (f91 (n + 11)));
+
+-- subtraction by increments
+terminating
+subp : Nat → Nat → Nat
+  | i j := if (i == j) 0 (subp i (j + 1) + 1);
+
+main : Nat :=
+  f91 101
+    + f91 95
+    + f91 16
+    + f91 5
+    + subp 101 1
+    + subp 11 5
+    + subp 10 4
+    + subp 1000 600
+    + subp 10000 6000;

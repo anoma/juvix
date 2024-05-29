@@ -5,6 +5,9 @@ import Juvix.Prelude
 strCPipeline :: Text
 strCPipeline = "pipeline-c"
 
+strRustPipeline :: Text
+strRustPipeline = "pipeline-rust"
+
 strCasmPipeline :: Text
 strCasmPipeline = "pipeline-casm"
 

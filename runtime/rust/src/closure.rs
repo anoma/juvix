@@ -30,8 +30,8 @@ impl Memory {
         p
     }
 
-    // Assigns stored closure args plus the provided closure args (`cargs`) to the
-    // argument space (`args`). Returns the function id to call.
+    // Returns the function id to call and the full arguments for closure call:
+    // stored closure args plus the provided closure args (`cargs`).
     pub fn call_closure(self: &Memory, cl: Word, cargs: &[Word]) -> (Word, Vec<Word>) {
         let mut args = Vec::from(self.get_closure_args(cl));
         args.extend(cargs);

@@ -1,0 +1,15 @@
+-- Arithmetic simplification
+module test065;
+
+import Stdlib.Prelude open;
+
+{-# inline: false #-}
+f (x : Int) : Int :=
+  (x + fromNat 1 - fromNat 1) * fromNat 1
+    + fromNat 0 * x
+    + (fromNat 10 + (x - fromNat 10))
+    + (fromNat 10 + x - fromNat 10)
+    + (fromNat 11 + (fromNat 11 - x))
+    + fromNat 1 * x * fromNat 0 * fromNat 1;
+
+main : Int := f (fromNat 10);

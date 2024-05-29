@@ -12,6 +12,7 @@ data Target
   | TargetAsm
   | TargetReg
   | TargetTree
+  | TargetRust
   | TargetAnoma
   | TargetCairo
   deriving stock (Data, Eq, Show)
@@ -109,6 +110,21 @@ getLimits tgt debug = case tgt of
         _limitsDispatchStackSize = 0, -- irrelevant
         _limitsBuiltinUIDsNum = 8,
         _limitsSpecialisedApply = 3
+      }
+  TargetRust ->
+    Limits
+      { _limitsMaxConstrs = fromIntegral (maxBound :: Int32),
+        _limitsMaxConstrArgs = fromIntegral (maxBound :: Int32),
+        _limitsMaxFunctionArgs = fromIntegral (maxBound :: Int32),
+        _limitsMaxLocalVars = 2048,
+        _limitsMaxClosureSize = fromIntegral (maxBound :: Int32),
+        _limitsClosureHeadSize = 3,
+        _limitsMaxStringSize = 0,
+        _limitsMaxStackDelta = 0,
+        _limitsMaxFunctionAlloc = 0,
+        _limitsDispatchStackSize = 0,
+        _limitsBuiltinUIDsNum = 0,
+        _limitsSpecialisedApply = 0
       }
 
 defaultLimits :: Limits
