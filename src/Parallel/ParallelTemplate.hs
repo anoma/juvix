@@ -37,7 +37,7 @@ data CompileArgs (s :: [Effect]) nodeId node compileProof = CompileArgs
     _compileArgsNodeName :: node -> Text,
     _compileArgsNumWorkers :: Int,
     -- | Called on every node without any specific order
-    _compileArgsPreProcess :: Maybe (node -> Sem s ()),
+    _compileArgsPreProcess :: Maybe (nodeId -> Sem s ()),
     _compileArgsCompileNode :: node -> Sem s compileProof
   }
 
@@ -139,14 +139,17 @@ compile ::
   CompileArgs r nodeId node compileProof ->
   Sem r (HashMap nodeId compileProof)
 compile args@CompileArgs {..} = do
-  let modsIx = _compileArgsNodesIndex
+  let nodesIx = _compileArgsNodesIndex
+      allNodesIds :: [nodeId] = HashMap.keys (nodesIx ^. nodesIndex)
       deps = _compileArgsDependencies
-      numMods :: Natural = fromIntegral (length (modsIx ^. nodesIndex))
+      numMods :: Natural = fromIntegral (length allNodesIds)
       starterModules :: [nodeId] =
-        [m | m <- HashMap.keys (modsIx ^. nodesIndex), null (nodeDependencies deps m)]
+        [m | m <- allNodesIds, null (nodeDependencies deps m)]
   logs <- Logs <$> newTQueueIO
   qq <- newTBQueueIO (max 1 numMods)
   let compileQ = CompileQueue qq
+  whenJust _compileArgsPreProcess $ \preProcess ->
+    mapConcurrently_ preProcess allNodesIds
   atomically (forM_ starterModules (writeTBQueue qq))
   let iniCompilationState :: CompilationState nodeId compileProof =
         CompilationState
@@ -159,7 +162,7 @@ compile args@CompileArgs {..} = do
           }
   varCompilationState <- newTVarIO iniCompilationState
   runReader varCompilationState
-    . runReader modsIx
+    . runReader nodesIx
     . runReader args
     . runReader logs
     . runReader compileQ

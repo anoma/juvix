@@ -27,7 +27,9 @@ data CacheResult a = CacheResult
   { _cacheResultHit :: Bool,
     _cacheResult :: a
   }
-  deriving stock (Show, Eq)
+  deriving stock (Show, Eq, Generic)
+
+instance (NFData a) => NFData (CacheResult a)
 
 makeLenses ''CacheResult
 
