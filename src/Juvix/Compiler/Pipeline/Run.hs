@@ -157,8 +157,9 @@ evalModuleInfoCacheHelper ::
   Sem r a
 evalModuleInfoCacheHelper nj m = do
   b <- supportsParallel
+  threads <- numThreads nj
   if
-      | b -> DriverPar.evalModuleInfoCache nj m
+      | b && threads > 1 -> DriverPar.evalModuleInfoCache nj m
       | otherwise -> evalModuleInfoCache m
 
 mainIsPackageFile :: EntryPoint -> Bool
