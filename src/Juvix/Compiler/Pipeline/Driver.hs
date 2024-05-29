@@ -19,7 +19,6 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Concrete.Data.Highlight
 import Juvix.Compiler.Concrete.Language
-import Juvix.Compiler.Concrete.Pretty (ppTrace)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping (getModuleId)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
@@ -176,17 +175,7 @@ processImport p = do
       root <- resolverRoot
       if
           | b -> do
-              let fromFile = getLoc p
               res <- mkEntryIndex root file >>= cacheGetResult
-              unless (res ^. cacheResultHit) $
-                error $
-                  "impossible: cache miss for import: "
-                    <> ppTrace p
-                    <> "\n"
-                    <> "File to Import = "
-                    <> toFilePath file
-                    <> "\nFile where the import statement is: "
-                    <> prettyText fromFile
               return (res ^. cacheResult)
           | otherwise -> mkEntryIndex root file >>= processModule
 
