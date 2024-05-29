@@ -21,8 +21,8 @@ import Juvix.Data.Effect.TaggedLock
 import Juvix.Extra.Paths hiding (rootBuildDir)
 import Juvix.Prelude hiding (assert)
 import Juvix.Prelude.Env
-import System.Process qualified as P
 import Parallel.ProgressLog
+import System.Process qualified as P
 import Test.Tasty
 import Test.Tasty.HUnit hiding (assertFailure)
 import Test.Tasty.HUnit qualified as HUnit
