@@ -12,7 +12,6 @@ import Juvix.Compiler.Casm.Validate
 import Juvix.Data.Field
 import Juvix.Data.PPOutput
 import Juvix.Parser.Error
-import Runtime.Base qualified as R
 
 casmRunVM' :: Path Abs Dir -> Path Abs File -> Maybe (Path Abs File) -> IO Text
 casmRunVM' dirPath outputFile inputFile = do
