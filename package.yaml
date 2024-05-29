@@ -195,7 +195,7 @@ executables:
       default-language: GHC2021
     ghc-options:
       - -threaded
-      - -with-rtsopts=-N
+      - -with-rtsopts=-N1
     when:
       - condition: flag(static)
         ld-options:
