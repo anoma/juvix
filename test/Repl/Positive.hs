@@ -7,7 +7,6 @@ import Juvix.Compiler.Core.Language.Value qualified as Core
 import Juvix.Compiler.Core.Transformation
 import Juvix.Compiler.Pipeline.Repl
 import Juvix.Compiler.Pipeline.Root
-import Juvix.Data.Effect.TaggedLock
 import Juvix.Extra.Paths qualified as P
 import Juvix.Extra.Stdlib
 import Repl.Assertions
