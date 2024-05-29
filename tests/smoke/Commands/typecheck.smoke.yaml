@@ -54,8 +54,10 @@ tests:
     stdout:
       equals: "Well done! It type checks\n"
     stderr:
-      matches: |
-        .*
+      matches:
+        regex: .*
+        options:
+          - dot-all
     exit-status: 0
 
   - name: typecheck-global-package
@@ -101,8 +103,10 @@ tests:
     stdout:
       equals: "Well done! It type checks\n"
     stderr:
-      matches: |
-        .*
+      matches:
+        regex: .*
+        options:
+          - dot-all
     exit-status: 0
 
   - name: typecheck-stdin

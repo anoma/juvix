@@ -23,8 +23,11 @@ tests:
         juvix html HelloWorld.juvix --only-source
         cat html/HelloWorld.html
     stderr:
-      matches: |
-        .*
+      matches:
+        regex: .*
+        options:
+          - dot-all
+
     stdout:
       contains:
         <!DOCTYPE HTML>
@@ -40,8 +43,10 @@ tests:
         juvix html HelloWorld.juvix --only-source --ext=md
         cat html/HelloWorld.md
     stderr:
-      matches: |
-        .*
+      matches:
+        regex: .*
+        options:
+          - dot-all
     stdout:
       contains:
         <!DOCTYPE HTML>
@@ -57,8 +62,10 @@ tests:
         [ -d html/assets ]
         [ -f html/HelloWorld.html ]
     stderr:
-      matches: |
-        .*
+      matches:
+        regex: .*
+        options:
+          - dot-all
     stdout:
       matches: |
         Copying assets files to .*
@@ -75,8 +82,11 @@ tests:
         juvix html HelloWorld.juvix --only-source --only-code --non-recursive
         cat html/HelloWorld.html
     stderr:
-      matches: |
-        .*
+      matches:
+        regex: .*
+        options:
+          - dot-all
+
     stdout:
       matches: |
         <span class="ju-comment">-- HelloWorld.juvix</span>.*
@@ -92,8 +102,10 @@ tests:
         juvix html HelloWorld.juvix --only-source --only-code --prefix-id="XYZ"
         cat html/HelloWorld.html
     stderr:
-      matches: |
-        .*
+      matches:
+        regex: .*
+        options:
+          - dot-all
     stdout:
       matches: |
         .*href="HelloWorld.html#XYZHelloWorld:[0-9]+".*
@@ -112,6 +124,8 @@ tests:
       matches: |
         .*href="#HelloWorld:[0-9]+".*
     stderr:
-      matches: |
-        .*
+      matches:
+        regex: .*
+        options:
+          - dot-all
     exit-status: 0
