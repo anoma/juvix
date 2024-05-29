@@ -7,14 +7,10 @@ data RustArgs = RustArgs
   { _rustDebug :: Bool,
     _rustInputFile :: Path Abs File,
     _rustOutputFile :: Path Abs File,
-    _rustOptimizationLevel :: Maybe Int,
-    _rustStackSize :: Int
+    _rustOptimizationLevel :: Maybe Int
   }
 
 makeLenses ''RustArgs
-
-defaultRustStackSize :: Int
-defaultRustStackSize = 4194304
 
 rustCompile ::
   forall r.
@@ -65,8 +61,6 @@ commonArgs buildDir RustArgs {..} = run . execAccumList $ do
     addArg "debug-assertions=true"
     addArg "-C"
     addArg "overflow-checks=true"
-  addArg "-C"
-  addArg $ "link-args=-Wl,-zstack-size=" <> show _rustStackSize
   addArg "-o"
   addArg (toFilePath _rustOutputFile)
   addArg ("-L")

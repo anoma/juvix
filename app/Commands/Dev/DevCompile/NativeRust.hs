@@ -28,8 +28,7 @@ runCommand opts = do
           { _rustDebug = opts' ^. compileDebug,
             _rustInputFile = rustFile,
             _rustOutputFile = outputFile,
-            _rustOptimizationLevel = fmap (min 3 . (+ 1)) (opts' ^. compileOptimizationLevel),
-            _rustStackSize = fromMaybe defaultRustStackSize (opts ^. nativeRustStackSize)
+            _rustOptimizationLevel = fmap (min 3 . (+ 1)) (opts' ^. compileOptimizationLevel)
           }
   rustCompile args
   where
