@@ -215,9 +215,14 @@ runPipelineTermination input_ p = ignoreProgressLog $ do
 appRunProgressLog :: (Members '[EmbedIO, App] r) => Sem (ProgressLog ': r) a -> Sem r a
 appRunProgressLog m = do
   g <- askGlobalOptions
+  let opts =
+        ProgressLogOptions
+          { _progressLogOptionsUseColors = not (g ^. globalNoColors),
+            _progressLogOptionsShowThreadId = g ^. globalDevShowThreadIds
+          }
   if
       | g ^. globalOnlyErrors -> ignoreProgressLog m
-      | otherwise -> runProgressLogIO (not (g ^. globalNoColors)) m
+      | otherwise -> runProgressLogIO opts m
 
 runPipelineNoOptions ::
   (Members '[App, EmbedIO, TaggedLock] r) =>

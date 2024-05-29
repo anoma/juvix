@@ -68,7 +68,7 @@ newtype CompileQueue nodeId = CompileQueue
   }
 
 newtype Logs = Logs
-  { _logQueue :: TQueue (Doc CodeAnn)
+  { _logQueue :: TQueue LogItem
   }
 
 newtype NodesIndex nodeId node = NodesIndex
@@ -261,7 +261,7 @@ lookForWork = do
             <+> kwOf
             <+> annotate AnnLiteralInteger (pretty total) <> kwBracketR <> " "
         kwCompiling = annotate AnnKeyword "Compiling"
-    logMsg (Just tid) logs (progress <> kwCompiling <> " " <> name)
+    logMsg tid logs (progress <> kwCompiling <> " " <> name)
     return nextModule
   compileNode @s @nodeId @node @compileProof nextModule
   lookForWork @nodeId @node @compileProof @s @r
@@ -328,10 +328,11 @@ registerCompiledModule m proof = do
     toQueue <- stateTVar mutSt (swap . addCompiledModule deps m proof)
     forM_ toQueue (writeTBQueue qq)
 
-logMsg :: Maybe ThreadId -> Logs -> Doc CodeAnn -> STM ()
-logMsg mtid (Logs q) msg = do
-  let threadIdLabel :: Doc CodeAnn = case mtid of
-        Nothing -> ""
-        Just tid -> kwBracketL <> show tid <> kwBracketR <> " "
-      msg' = threadIdLabel <> msg
-  STM.writeTQueue q msg'
+logMsg :: ThreadId -> Logs -> Doc CodeAnn -> STM ()
+logMsg tid (Logs q) msg = do
+  STM.writeTQueue
+    q
+    LogItem
+      { _logItemMessage = msg,
+        _logItemThreadId = tid
+      }
