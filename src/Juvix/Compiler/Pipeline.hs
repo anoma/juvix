@@ -61,7 +61,7 @@ type PipelineAppEffects = '[TaggedLock, Reader PipelineOptions, ProgressLog, Emb
 type PipelineLocalEff =
   '[ ModuleInfoCache,
      JvoCache,
-     SCache ImportTree,
+     Reader ImportTree,
      Reader ImportScanStrategy,
      TopModuleNameChecker,
      PathResolver,
