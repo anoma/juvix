@@ -140,7 +140,7 @@ evalModuleInfoCacheHelper ::
   ( Members
       '[ Reader EntryPoint,
          IOE,
-         Reader ImportTree,
+         SCache ImportTree,
          ProgressLog,
          Concurrent,
          TaggedLock,

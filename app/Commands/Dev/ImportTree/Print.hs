@@ -9,7 +9,7 @@ import Juvix.Compiler.Pipeline.Loader.PathResolver.ImportTree
 runCommand :: (Members '[EmbedIO, App, TaggedLock] r) => PrintOptions -> Sem r ()
 runCommand PrintOptions {..} = runReader opts . runPipelineSetup $ do
   tree <- case _printInputFile of
-    Nothing -> ask
+    Nothing -> cacheSingletonGet
     Just appInputFile -> do
       inputFile <- fromAppPathFile appInputFile
       mkImportTree (Just inputFile)

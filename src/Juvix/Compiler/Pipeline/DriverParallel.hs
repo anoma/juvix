@@ -81,7 +81,7 @@ compileInParallel ::
          Error JuvixError,
          Reader EntryPoint,
          PathResolver,
-         Reader ImportTree
+         SCache ImportTree
        ]
       r
   ) =>
@@ -91,7 +91,7 @@ compileInParallel ::
 compileInParallel nj _entry = do
   -- At the moment we compile everything, so the EntryIndex is ignored, but in
   -- principle we could only compile what is reachable from the given EntryIndex
-  t <- ask
+  t <- cacheSingletonGet
   idx <- mkNodesIndex t
   numWorkers <- numThreads nj
   let args :: CompileArgs r NodeId Node CompileProof
@@ -132,7 +132,7 @@ evalModuleInfoCache ::
       '[ Reader EntryPoint,
          IOE,
          ProgressLog,
-         Reader ImportTree,
+         SCache ImportTree,
          Concurrent,
          TaggedLock,
          TopModuleNameChecker,

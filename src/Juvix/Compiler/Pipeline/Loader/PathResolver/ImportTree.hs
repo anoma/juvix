@@ -103,11 +103,10 @@ withImportTree ::
       r
   ) =>
   Maybe (Path Abs File) ->
-  Sem (Reader ImportTree ': r) a ->
+  Sem (SCache ImportTree ': r) a ->
   Sem r a
-withImportTree entryModule x = do
-  t <- mkImportTree entryModule
-  runReader t x
+withImportTree entryModule =
+  evalSingletonCache (mkImportTree entryModule)
 
 checkImportTreeCycles :: forall r. (Members '[Error ScoperError] r) => ImportTree -> Sem r ()
 checkImportTreeCycles tree = do
