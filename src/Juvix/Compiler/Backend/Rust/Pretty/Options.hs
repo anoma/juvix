@@ -2,14 +2,17 @@ module Juvix.Compiler.Backend.Rust.Pretty.Options where
 
 import Juvix.Prelude
 
--- no fields for now, but make it easier to add options in the future I don't
--- remove this datatype entirely
 data Options = Options
+  { _optRiscZero :: Bool
+  }
 
 makeLenses ''Options
 
 defaultOptions :: Options
-defaultOptions = Options
+defaultOptions =
+  Options
+    { _optRiscZero = False
+    }
 
 traceOptions :: Options
 traceOptions = defaultOptions

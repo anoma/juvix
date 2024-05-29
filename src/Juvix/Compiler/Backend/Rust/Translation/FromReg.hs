@@ -16,9 +16,9 @@ import Juvix.Compiler.Reg.Extra.Info qualified as Reg
 import Juvix.Compiler.Reg.Language qualified as Reg
 import Juvix.Prelude
 
-fromReg :: Limits -> Reg.InfoTable -> Rust.Result
-fromReg lims tab =
-  Rust.Result $ Rust.ppPrint $ Program [programFunction, mainFunction]
+fromReg :: Bool -> Limits -> Reg.InfoTable -> Rust.Result
+fromReg isRiscZero lims tab =
+  Rust.Result $ show $ Rust.ppOut (Rust.Options isRiscZero) $ Program [programFunction, mainFunction]
   where
     info :: Reg.ExtraInfo
     info = Reg.computeExtraInfo lims tab
