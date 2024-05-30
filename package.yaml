@@ -195,6 +195,7 @@ executables:
       default-language: GHC2021
     ghc-options:
       - -threaded
+      - -rtsopts
       # We set -N1 to avoid spending time in thread initialization. We manually
       # set the number of cores we want to use through the juvix -N global flag.
       - -with-rtsopts=-N1
