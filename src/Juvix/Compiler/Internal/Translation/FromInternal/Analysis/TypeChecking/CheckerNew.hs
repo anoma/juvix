@@ -111,7 +111,7 @@ registerConstructor ctr = do
 registerNameIdType :: (Members '[HighlightBuilder, ResultBuilder] r) => NameId -> Expression -> Sem r ()
 registerNameIdType uid ty = do
   addIdenType uid ty
-  modifyShared (over (highlightTypes . typesTable) (HashMap.insert uid ty))
+  modify (over (highlightTypes . typesTable) (HashMap.insert uid ty))
 
 checkCoercionCycles ::
   (Members '[ResultBuilder, Error TypeCheckerError] r) =>
@@ -130,8 +130,7 @@ checkTopModule ::
   Sem r Module
 checkTopModule md = do
   checkCoercionCycles
-  md' <- checkModule md
-  return md'
+  checkModule md
 
 checkModule ::
   (Members '[HighlightBuilder, Reader EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, ResultBuilder, Termination] r) =>

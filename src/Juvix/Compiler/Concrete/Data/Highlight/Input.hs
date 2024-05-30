@@ -40,14 +40,13 @@ filterInput absPth HighlightInput {..} =
       _highlightDoc
     }
 
--- TODO think more about whether we want to use shared or local. Maybe give both options
-type HighlightBuilder = SharedState HighlightInput
+type HighlightBuilder = State HighlightInput
 
 runHighlightBuilder :: Sem (HighlightBuilder ': r) a -> Sem r (HighlightInput, a)
-runHighlightBuilder = runStateShared emptyHighlightInput
+runHighlightBuilder = runState emptyHighlightInput
 
 ignoreHighlightBuilder :: Sem (HighlightBuilder ': r) a -> Sem r a
-ignoreHighlightBuilder = evalStateShared emptyHighlightInput
+ignoreHighlightBuilder = evalState emptyHighlightInput
 
 runJuvixError :: (Members '[HighlightBuilder] r) => Sem (Error JuvixError ': r) a -> Sem r (Either JuvixError a)
 runJuvixError m = do
@@ -56,5 +55,5 @@ runJuvixError m = do
     r@Right {} -> return r
     l@(Left err) -> do
       let errs = run (runReader defaultGenericOptions (genericError err)) ^. genericErrorIntervals
-      modifyShared (over highlightErrors (errs ++))
+      modify (over highlightErrors (errs ++))
       return l

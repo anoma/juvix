@@ -84,7 +84,7 @@ runParserResultBuilder s =
   reinterpret (runState s) $ \case
     RegisterImport i -> modify' (over parserStateImports (i :))
     RegisterItem i -> do
-      modifyShared (over highlightParsed (i :))
+      modify (over highlightParsed (i :))
       registerItem' i
     RegisterSpaceSpan g -> do
       modify' (over parserStateComments (g :))
