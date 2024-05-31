@@ -32,8 +32,8 @@ numThreads :: (MonadIO m) => NumThreads -> m Int
 numThreads = \case
   NumThreads i -> return i
   NumThreadsAuto -> do
-    nc <- liftIO GHC.getNumCapabilities
-    return (max 1 (min 6 (nc - 2)))
+    nc <- liftIO GHC.getNumProcessors
+    return (max 1 (min 8 (nc `div` 2)))
 
 defaultNumThreads :: NumThreads
 defaultNumThreads = NumThreads 1
