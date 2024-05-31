@@ -1,7 +1,8 @@
 module Juvix.Compiler.Nockma.Encoding.ByteString where
 
-import Data.Bit
-import Juvix.Compiler.Nockma.Encoding.Base
+import Data.Bits
+import Data.ByteString qualified as BS
+import Data.ByteString.Builder qualified as BS
 import Juvix.Compiler.Nockma.Language
 import Juvix.Prelude.Base
 
@@ -12,19 +13,24 @@ byteStringToAtom :: (NockNatural a, Member (Error (ErrNockNatural a)) r) => Byte
 byteStringToAtom = fmap mkEmptyAtom . fromNatural . byteStringToNatural
 
 byteStringToNatural :: ByteString -> Natural
-byteStringToNatural = bitsToNatural . cloneFromByteString
+byteStringToNatural = fromInteger . byteStringToIntegerLE
 
 naturalToByteString :: Natural -> ByteString
-naturalToByteString = cloneToByteString . naturalToBits
+naturalToByteString = integerToByteStringLE . toInteger
+
+byteStringToIntegerLE :: ByteString -> Integer
+byteStringToIntegerLE = BS.foldr (\b acc -> acc `shiftL` 8 .|. fromIntegral b) 0
+
+integerToByteStringLE :: Integer -> ByteString
+integerToByteStringLE = BS.toStrict . BS.toLazyByteString . go
+  where
+    go :: Integer -> BS.Builder
+    go = \case
+      0 -> mempty
+      n -> BS.word8 (fromIntegral n) <> go (n `shiftR` 8)
 
 textToNatural :: Text -> Natural
 textToNatural = byteStringToNatural . encodeUtf8
-
-bitsToNatural :: Vector Bit -> Natural
-bitsToNatural = fromInteger . vectorBitsToInteger
-
-naturalToBits :: Natural -> Vector Bit
-naturalToBits = integerToVectorBits . toInteger
 
 atomToText :: (NockNatural a, Member (Error (ErrNockNatural a)) r) => Atom a -> Sem r Text
 atomToText = fmap decodeUtf8Lenient . atomToByteString
@@ -32,13 +38,9 @@ atomToText = fmap decodeUtf8Lenient . atomToByteString
 -- | Construct an atom formed by concatenating the bits of two atoms, where each atom represents a sequence of bytes
 atomConcatenateBytes :: forall a r. (NockNatural a, Member (Error (ErrNockNatural a)) r) => Atom a -> Atom a -> Sem r (Atom a)
 atomConcatenateBytes l r = do
-  -- cloneToByteString ensures that the bytestring is zero-padded up to the byte boundary
-  lBs <- cloneToByteString <$> atomToBits l
-  rBs <- cloneToByteString <$> atomToBits r
+  lBs <- atomToByteString l
+  rBs <- atomToByteString r
   byteStringToAtom (lBs <> rBs)
-  where
-    atomToBits :: Atom a -> Sem r (Vector Bit)
-    atomToBits = fmap naturalToBits . nockNatural
 
 mkEmptyAtom :: a -> Atom a
 mkEmptyAtom x =
