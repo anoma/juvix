@@ -195,6 +195,11 @@ executables:
       default-language: GHC2021
     ghc-options:
       - -threaded
+      # We enable rtsopts because we've found that tweaking the -A flag can lead
+      # to great performance gains. However, GHC's decumentation warns that
+      # enabling this may cause security problems: "...can be used to write logging
+      # data to arbitrary files under the security context of the running
+      # program..."
       - -rtsopts
       # We set -N1 to avoid spending time in thread initialization. We manually
       # set the number of cores we want to use through the juvix -N global flag.
