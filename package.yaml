@@ -12,7 +12,7 @@ author:
     Lukasz Czajka,
     Github's contributors,
   ]
-tested-with: ghc == 9.8.1
+tested-with: ghc == 9.8.2
 homepage: https://juvix.org
 bug-reports: https://github.com/anoma/juvix/issues
 description: The Juvix compiler
@@ -47,7 +47,7 @@ extra-source-files:
 dependencies:
   - aeson-better-errors == 0.9.*
   - aeson == 2.2.*
-  - ansi-terminal == 1.0.*
+  - ansi-terminal == 1.1.*
   - base == 4.19.*
   - base16-bytestring == 1.0.*
   - bitvec == 1.1.*
@@ -70,7 +70,7 @@ dependencies:
   - filelock == 0.1.*
   - filepath == 1.4.*
   - flatparse == 0.5.*
-  - ghc == 9.8.1
+  - ghc == 9.8.2
   - githash == 0.1.*
   - hashable == 1.4.*
   - language-c == 0.9.*
@@ -85,7 +85,7 @@ dependencies:
   - pretty == 1.1.*
   - prettyprinter == 1.7.*
   - prettyprinter-ansi-terminal == 1.1.*
-  - primitive == 0.8.*
+  - primitive == 0.9.*
   - process == 1.6.*
   - safe == 0.3.*
   - scientific == 0.3.*

@@ -149,7 +149,7 @@ go fname = do
                   _ -> return blockStmts
 
           htmlStatements :: [Html] <-
-            mapM (\s -> goRender s <> pure htmlSemicolon) stmts'
+            mapM (\stm -> goRender stm <> pure htmlSemicolon) stmts'
 
           resHtml <-
             toStrict
@@ -208,7 +208,7 @@ goRender xs = do
   concreteOpts <- asks @ProcessJuvixBlocksArgs (^. processJuvixBlocksArgsConcreteOpts)
   HtmlRender.ppCodeHtml concreteOpts xs
 
-indModuleFilter :: [Concrete.Statement s] -> [Concrete.Statement s]
+indModuleFilter :: forall s. [Concrete.Statement s] -> [Concrete.Statement s]
 indModuleFilter =
   filter
     ( \case
