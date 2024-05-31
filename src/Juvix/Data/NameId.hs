@@ -23,3 +23,5 @@ instance Pretty NameId where
 instance Hashable NameId
 
 instance Serialize NameId
+
+instance NFData NameId

@@ -3,7 +3,6 @@ module Juvix.Compiler.Backend.Markdown.Data.MkJuvixBlockOptions where
 import Juvix.Parser.Error.Base
 import Juvix.Prelude.Base
 import Juvix.Prelude.Parsing hiding (runParser)
-import Juvix.Prelude.Path
 import Text.Megaparsec qualified as P
 import Text.Megaparsec.Char.Lexer qualified as L
 

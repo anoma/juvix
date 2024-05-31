@@ -2,7 +2,8 @@ module Commands.Dependencies.Update where
 
 import Commands.Base
 import Juvix.Compiler.Pipeline.Loader.PathResolver
-import Juvix.Compiler.Pipeline.Setup
 
 runCommand :: (Members '[EmbedIO, TaggedLock, App] r) => Sem r ()
-runCommand = runPipelineSetup (entrySetup (set dependenciesConfigForceUpdateLockfile True defaultDependenciesConfig))
+runCommand = do
+  let opts = set (pipelineDependenciesConfig . dependenciesConfigForceUpdateLockfile) True defaultPipelineOptions
+  runReader opts . runPipelineSetup $ return ()

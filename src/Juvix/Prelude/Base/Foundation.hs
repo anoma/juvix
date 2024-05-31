@@ -7,6 +7,7 @@ module Juvix.Prelude.Base.Foundation
     module Data.Set,
     module Data.IntMap.Strict,
     module Data.IntSet,
+    module Control.DeepSeq,
     module Control.Monad.Extra,
     module Control.Monad.Fix,
     module Data.Bitraversable,
@@ -52,11 +53,12 @@ module Juvix.Prelude.Base.Foundation
     module Numeric,
     module System.Exit,
     module System.FilePath,
+    module Path,
     module System.IO,
     module Text.Show,
+    module Text.Read,
     module Control.Monad.Catch,
     module Control.Monad.Zip,
-    module Control.DeepSeq,
     Data,
     Text,
     pack,
@@ -74,7 +76,7 @@ module Juvix.Prelude.Base.Foundation
 where
 
 import Control.Applicative
-import Control.DeepSeq (NFData)
+import Control.DeepSeq
 import Control.Monad.Catch (ExitCase (..), MonadMask, MonadThrow, generalBracket, throwM)
 import Control.Monad.Extra hiding (fail, forM, mconcatMapM, whileJustM)
 import Control.Monad.Extra qualified as Monad
@@ -157,7 +159,8 @@ import GHC.Stack.Types
 import Language.Haskell.TH.Syntax (Exp, Lift, Q)
 import Lens.Micro.Platform
 import Numeric hiding (exp, log, pi)
-import Path
+import Path (Abs, Dir, File, Path, Rel, SomeBase (..))
+import Path qualified as PPath
 import Path.IO qualified as Path hiding (getCurrentDir, setCurrentDir, withCurrentDir)
 import Prettyprinter (Doc, (<+>))
 import Safe.Exact
@@ -186,6 +189,7 @@ import System.IO hiding
   )
 import System.IO qualified as IO
 import System.IO.Error
+import Text.Read (readEither)
 import Text.Read qualified as Text
 import Text.Show (Show)
 import Text.Show qualified as Show
@@ -618,6 +622,9 @@ ordMap = Map.fromList . toList
 hashMap :: (Foldable f, Hashable k) => f (k, v) -> HashMap k v
 hashMap = HashMap.fromList . toList
 
+hashMapInsertWeak :: (Hashable k) => k -> v -> HashMap k v -> HashMap k v
+hashMapInsertWeak = HashMap.insertWith (\_new old -> old)
+
 lazyHashMap :: (Foldable f, Hashable k) => f (k, v) -> LazyHashMap k v
 lazyHashMap = LazyHashMap.fromList . toList
 
@@ -628,6 +635,9 @@ ensureLn t =
     Just (_, y) -> case y of
       '\n' -> t
       _ -> Text.snoc t '\n'
+
+toFilePath :: (IsString s) => Path a b -> s
+toFilePath = fromString . PPath.toFilePath
 
 joinFilePaths :: (Foldable l) => l FilePath -> FilePath
 joinFilePaths = FilePath.joinPath . toList

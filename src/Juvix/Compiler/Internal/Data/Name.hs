@@ -28,6 +28,8 @@ makeLenses ''Name
 
 instance Serialize Name
 
+instance NFData Name
+
 varFromHole :: Hole -> VarName
 varFromHole h =
   Name

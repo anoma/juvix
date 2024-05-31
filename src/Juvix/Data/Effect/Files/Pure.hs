@@ -70,7 +70,7 @@ re :: Path Abs Dir -> Sem (Files ': r) a -> Sem (State FS ': r) a
 re cwd = interpretTop $ \case
   ReadFile' f -> lookupFile' f
   FileExists' f -> isJust <$> lookupFile f
-  PathUid p -> return (Uid (toFilePath p))
+  PathUid p -> return (Uid (toFilePath @String p))
   ReadFileBS' f -> encodeUtf8 <$> lookupFile' f
   EnsureDir' p -> ensureDirHelper p
   DirectoryExists' p -> isJust <$> lookupDir p

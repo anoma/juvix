@@ -21,6 +21,7 @@ import Juvix.Data.Effect.TaggedLock
 import Juvix.Extra.Paths hiding (rootBuildDir)
 import Juvix.Prelude hiding (assert)
 import Juvix.Prelude.Env
+import Parallel.ProgressLog
 import System.Process qualified as P
 import Test.Tasty
 import Test.Tasty.HUnit hiding (assertFailure)
@@ -83,6 +84,8 @@ assertCmdExists cmd =
 testTaggedLockedToIO :: (MonadIO m) => Sem PipelineAppEffects a -> m a
 testTaggedLockedToIO =
   runM
+    . ignoreProgressLog
+    . runReader defaultPipelineOptions
     . runTaggedLock LockModeExclusive
 
 testRunIO ::
@@ -91,10 +94,14 @@ testRunIO ::
   EntryPoint ->
   Sem (PipelineEff PipelineAppEffects) a ->
   m (ResolverState, PipelineResult a)
-testRunIO e = testTaggedLockedToIO . runIO defaultGenericOptions e
+testRunIO e =
+  testTaggedLockedToIO
+    . runIO defaultGenericOptions e
 
 testDefaultEntryPointIO :: (MonadIO m) => Path Abs Dir -> Path Abs File -> m EntryPoint
-testDefaultEntryPointIO cwd mainFile = testTaggedLockedToIO (defaultEntryPointIO cwd mainFile)
+testDefaultEntryPointIO cwd mainFile =
+  testTaggedLockedToIO $
+    defaultEntryPointIO cwd mainFile
 
 testDefaultEntryPointNoFileIO :: Path Abs Dir -> IO EntryPoint
 testDefaultEntryPointNoFileIO cwd = testTaggedLockedToIO (defaultEntryPointNoFileIO cwd)
@@ -103,7 +110,9 @@ testRunIOEither ::
   EntryPoint ->
   Sem (PipelineEff PipelineAppEffects) a ->
   IO (Either JuvixError (ResolverState, PipelineResult a))
-testRunIOEither entry = testTaggedLockedToIO . runIOEither entry
+testRunIOEither entry =
+  testTaggedLockedToIO
+    . runIOEither entry
 
 testRunIOEitherTermination ::
   EntryPoint ->

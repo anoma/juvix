@@ -3,7 +3,7 @@ module Juvix.Data.FileExt where
 import Data.Text qualified as Text
 import Juvix.Prelude.Base
 import Juvix.Prelude.Pretty
-import Path (File, Path, fileExtension, splitExtension)
+import Path (fileExtension, splitExtension)
 import Prelude (show)
 
 -- | File extensions Juvix interacts with.

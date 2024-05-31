@@ -11,3 +11,5 @@ data PublicAnn
   deriving stock (Show, Eq, Ord, Generic)
 
 instance Serialize PublicAnn
+
+instance NFData PublicAnn

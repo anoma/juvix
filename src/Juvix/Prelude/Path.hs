@@ -12,10 +12,10 @@ import Juvix.Data.FileExt
 import Juvix.Prelude.Base
 import Juvix.Prelude.Path.OrphanInstances ()
 import Juvix.Prelude.Path.SomePath
-import Path hiding ((<.>), (</>))
+import Path hiding (toFilePath, (<.>), (</>))
 import Path qualified
 import Path.IO hiding (listDirRel, walkDirRel)
-import Path.Internal
+import Path.Internal (relRootFP)
 
 data FileOrDir
 

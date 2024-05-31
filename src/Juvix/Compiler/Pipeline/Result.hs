@@ -14,5 +14,8 @@ data PipelineResult a = PipelineResult
     -- from disk.
     _pipelineResultChanged :: Bool
   }
+  deriving stock (Generic)
 
 makeLenses ''PipelineResult
+
+instance (NFData a) => NFData (PipelineResult a)

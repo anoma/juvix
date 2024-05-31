@@ -15,7 +15,7 @@ runLogIO sem = do
   liftIO (hSetBuffering stdout LineBuffering)
   interpret
     ( \case
-        Log txt -> hPutStrLn stdout txt
+        Log txt -> putStrLn txt
     )
     sem
 

@@ -39,6 +39,8 @@ data BuiltinOp
 
 instance Serialize BuiltinOp
 
+instance NFData BuiltinOp
+
 -- Builtin data tags
 data BuiltinDataTag
   = TagTrue
@@ -52,6 +54,8 @@ data BuiltinDataTag
 instance Hashable BuiltinDataTag
 
 instance Serialize BuiltinDataTag
+
+instance NFData BuiltinDataTag
 
 builtinOpArgsNum :: BuiltinOp -> Int
 builtinOpArgsNum = \case

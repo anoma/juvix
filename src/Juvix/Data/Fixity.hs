@@ -39,13 +39,23 @@ makeLenses ''Fixity
 
 instance Serialize Precedence
 
+instance NFData Precedence
+
 instance Serialize UnaryAssoc
+
+instance NFData UnaryAssoc
 
 instance Serialize BinaryAssoc
 
+instance NFData BinaryAssoc
+
 instance Serialize OperatorArity
 
+instance NFData OperatorArity
+
 instance Serialize Fixity
+
+instance NFData Fixity
 
 data Atomicity
   = Atom

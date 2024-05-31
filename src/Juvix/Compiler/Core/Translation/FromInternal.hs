@@ -14,7 +14,7 @@ import Juvix.Compiler.Core.Translation.FromInternal.Builtins.Nat
 import Juvix.Compiler.Core.Translation.FromInternal.Data
 import Juvix.Compiler.Internal.Data.Name
 import Juvix.Compiler.Internal.Extra qualified as Internal
-import Juvix.Compiler.Internal.Pretty (ppTrace)
+import Juvix.Compiler.Internal.Pretty (ppPrint, ppTrace)
 import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Compiler.Internal.Translation.Extra qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qualified as InternalTyped
@@ -372,6 +372,7 @@ mkFunBody ::
   Sem r Node
 mkFunBody ty f =
   mkBody
+    (WithLoc (getLoc f) (ppPrint f))
     ty
     (f ^. Internal.funDefName . nameLoc)
     (pure (Internal.unfoldLambda (f ^. Internal.funDefBody)))
@@ -379,11 +380,12 @@ mkFunBody ty f =
 mkBody ::
   forall r.
   (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen] r) =>
+  WithLoc Text -> -- The printed lambda for error message
   Type -> -- type of the function
   Location ->
   NonEmpty ([Internal.PatternArg], Internal.Expression) ->
   Sem r Node
-mkBody ty loc clauses
+mkBody ppLam ty loc clauses
   | nPatterns == 0 = goExpression (snd (head clauses))
   | otherwise = do
       let values = map (mkVar Info.empty) vs
@@ -455,7 +457,12 @@ mkBody ty loc clauses
     checkPatternsNum len = \case
       [] -> len
       ps : pats | length ps == len -> checkPatternsNum len pats
-      _ -> error "internal-to-core: all clauses must have the same number of patterns"
+      _ ->
+        error $
+          "internal-to-core: all clauses must have the same number of patterns. Offending lambda at"
+            <> ppPrint (getLoc ppLam)
+            <> "\n"
+            <> (ppLam ^. withLocParam)
 
     goClause :: Level -> [Internal.PatternArg] -> Internal.Expression -> Sem r MatchBranch
     goClause lvl pats body = goPatternArgs lvl body pats ptys
@@ -504,7 +511,7 @@ goLambda ::
   Sem r Node
 goLambda l = do
   ty <- goType (fromJust (l ^. Internal.lambdaType))
-  mkBody ty (getLoc l) (fmap (\c -> (toList (c ^. Internal.lambdaPatterns), c ^. Internal.lambdaBody)) (l ^. Internal.lambdaClauses))
+  mkBody (WithLoc (getLoc l) (ppPrint l)) ty (getLoc l) (fmap (\c -> (toList (c ^. Internal.lambdaPatterns), c ^. Internal.lambdaBody)) (l ^. Internal.lambdaClauses))
 
 goLet ::
   forall r.

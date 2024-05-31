@@ -22,6 +22,8 @@ data ExportInfo = ExportInfo
 
 instance Serialize ExportInfo
 
+instance NFData ExportInfo
+
 data ScopedModule = ScopedModule
   { _scopedModuleId :: ModuleId,
     _scopedModulePath :: S.TopModulePath,
@@ -34,6 +36,8 @@ data ScopedModule = ScopedModule
   deriving stock (Generic)
 
 instance Serialize ScopedModule
+
+instance NFData ScopedModule
 
 newtype ScopedModuleTable = ScopedModuleTable
   { _scopedModuleTable :: HashMap C.TopModulePath ScopedModule

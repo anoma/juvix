@@ -30,6 +30,8 @@ mkHole loc uid =
 
 makeLenses ''Hole
 
+instance NFData Hole
+
 instance Serialize Hole where
   put Hole {..} = do
     S.put _holeId

@@ -2,12 +2,14 @@
 module CommonOptions
   ( module CommonOptions,
     module Juvix.Prelude,
+    module Parallel.ProgressLog,
     module Options.Applicative,
   )
 where
 
 import Control.Exception qualified as GHC
 import Data.List.NonEmpty qualified as NonEmpty
+import GHC.Conc
 import Juvix.Compiler.Concrete.Translation.ImportScanner
 import Juvix.Compiler.Core.Data.TransformationId.Parser qualified as Core
 import Juvix.Compiler.Pipeline.EntryPoint
@@ -17,6 +19,7 @@ import Juvix.Data.Field
 import Juvix.Prelude
 import Juvix.Prelude as Juvix
 import Options.Applicative
+import Parallel.ProgressLog
 import System.Process
 import Text.Read (readMaybe)
 import Prelude (show)
@@ -52,6 +55,22 @@ parseInputFiles exts' = do
 
 parseInputFile :: FileExt -> Parser (AppPath File)
 parseInputFile = parseInputFiles . NonEmpty.singleton
+
+numThreadsOpt :: ReadM NumThreads
+numThreadsOpt = eitherReader readNumThreads
+
+parseNumThreads :: Parser NumThreads
+parseNumThreads = do
+  option
+    numThreadsOpt
+    ( long "threads"
+        <> short 'N'
+        <> metavar "THREADS"
+        <> value defaultNumThreads
+        <> showDefault
+        <> help "Number of physical threads to run"
+        <> completer (listCompleter (Juvix.show NumThreadsAuto : [Juvix.show j | j <- [1 .. numCapabilities]]))
+    )
 
 parseProgramInputFile :: Parser (AppPath File)
 parseProgramInputFile = do
@@ -300,6 +319,9 @@ optRegTransformationIds = optTransformationIds Reg.parseTransformations Reg.comp
 
 class EntryPointOptions a where
   applyOptions :: a -> EntryPoint -> EntryPoint
+
+instance EntryPointOptions (EntryPoint -> EntryPoint) where
+  applyOptions = id
 
 instance EntryPointOptions () where
   applyOptions () = id

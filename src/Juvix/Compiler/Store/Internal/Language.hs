@@ -28,6 +28,8 @@ data InternalModule = InternalModule
 
 instance Serialize InternalModule
 
+instance NFData InternalModule
+
 newtype InternalModuleTable = InternalModuleTable
   { _internalModuleTable :: HashMap Name InternalModule
   }
@@ -35,6 +37,8 @@ newtype InternalModuleTable = InternalModuleTable
   deriving newtype (Semigroup, Monoid)
 
 instance Serialize InternalModuleTable
+
+instance NFData InternalModuleTable
 
 makeLenses ''InternalModule
 makeLenses ''InternalModuleTable

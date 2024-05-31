@@ -4,7 +4,6 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Data.Loc
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude.Base
-import Path
 import Prettyprinter
 
 newtype Comments = Comments

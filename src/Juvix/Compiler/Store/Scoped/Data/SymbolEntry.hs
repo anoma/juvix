@@ -12,6 +12,8 @@ newtype Alias = Alias
 
 instance Serialize Alias
 
+instance NFData Alias
+
 -- | Either an alias or a symbol entry.
 data PreSymbolEntry
   = PreSymbolAlias Alias
@@ -19,6 +21,8 @@ data PreSymbolEntry
   deriving stock (Show, Eq, Ord, Generic)
 
 instance Serialize PreSymbolEntry
+
+instance NFData PreSymbolEntry
 
 -- | A symbol which is not an alias.
 newtype SymbolEntry = SymbolEntry
@@ -30,6 +34,8 @@ instance Hashable SymbolEntry
 
 instance Serialize SymbolEntry
 
+instance NFData SymbolEntry
+
 newtype ModuleSymbolEntry = ModuleSymbolEntry
   { _moduleEntry :: S.Name
   }
@@ -37,12 +43,16 @@ newtype ModuleSymbolEntry = ModuleSymbolEntry
 
 instance Serialize ModuleSymbolEntry
 
+instance NFData ModuleSymbolEntry
+
 newtype FixitySymbolEntry = FixitySymbolEntry
   { _fixityEntry :: S.Name
   }
   deriving stock (Show, Eq, Ord, Generic)
 
 instance Serialize FixitySymbolEntry
+
+instance NFData FixitySymbolEntry
 
 makeLenses ''Alias
 makeLenses ''SymbolEntry

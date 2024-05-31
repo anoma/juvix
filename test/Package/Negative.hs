@@ -3,7 +3,6 @@ module Package.Negative where
 import Base
 import Juvix.Compiler.Pipeline.Package
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
-import Juvix.Data.Effect.TaggedLock
 
 type FailMsg = String
 

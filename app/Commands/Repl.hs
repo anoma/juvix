@@ -117,7 +117,7 @@ loadEntryPoint ep = do
           }
   State.modify (set replStateContext (Just newCtx))
   let epPath :: Maybe (Path Abs File) = ep ^. entryPointModulePath
-  whenJust epPath $ \path -> liftIO (putStrLn [i|OK loaded: #{toFilePath path}|])
+  whenJust epPath $ \path -> liftIO (putStrLn [i|OK loaded: #{toFilePath @String path}|])
 
 reloadFile :: String -> Repl ()
 reloadFile _ = replGetContext >>= loadEntryPoint . (^. replContextEntryPoint)

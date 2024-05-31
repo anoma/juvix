@@ -25,6 +25,8 @@ data AbsModulePath = AbsModulePath
 
 instance Serialize AbsModulePath
 
+instance NFData AbsModulePath
+
 makeLenses ''AbsModulePath
 
 instance HasLoc AbsModulePath where
@@ -61,6 +63,8 @@ data WhyInScope
 
 instance Serialize WhyInScope
 
+instance NFData WhyInScope
+
 type Name = Name' C.Name
 
 type Symbol = Name' C.Symbol
@@ -84,9 +88,15 @@ data Name' n = Name'
 
 instance Serialize Name
 
+instance NFData Name
+
 instance Serialize Symbol
 
+instance NFData Symbol
+
 instance Serialize TopModulePath
+
+instance NFData TopModulePath
 
 -- | For highlighting
 data AName = AName
@@ -99,6 +109,8 @@ data AName = AName
   deriving stock (Generic)
 
 instance Serialize AName
+
+instance NFData AName
 
 makeLenses ''Name'
 makeLenses ''AName

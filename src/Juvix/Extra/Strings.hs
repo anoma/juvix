@@ -2,6 +2,9 @@ module Juvix.Extra.Strings where
 
 import Juvix.Prelude.Base
 
+auto :: (IsString s) => s
+auto = "auto"
+
 binaryPrefix :: (IsString s) => s
 binaryPrefix = "0b"
 

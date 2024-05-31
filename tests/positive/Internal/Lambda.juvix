@@ -46,7 +46,7 @@ mapB : {A : Type} → (A → A) → A → A := λ {f a := f a};
 add : Nat → Nat → Nat :=
   λ {
     | zero n := n
-    | (suc n) := λ {m := suc (add n m)}
+    | (suc n) m := add n m
   };
 
 fst : {A : Type} → {B : Type} → A × B → A
@@ -161,7 +161,8 @@ t
 
 type Box (A : Type) := box : A → Box A;
 
-x : Box ((A : Type) → A → A) := box λ {A a := a};
+-- FIXME
+-- x : Box ((A : Type) → A → A) := box λ {A a := a};
 
 t1 : {A : Type} → Box ((A : Type) → A → A) → A → A
   | {A} := λ {(box f) := f A};

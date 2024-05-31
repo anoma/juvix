@@ -260,43 +260,83 @@ data Bottom' i a = Bottom
 
 instance (Serialize i) => Serialize (Var' i)
 
+instance (NFData i) => NFData (Var' i)
+
 instance (Serialize i) => Serialize (Ident' i)
+
+instance (NFData i) => NFData (Ident' i)
 
 instance Serialize ConstantValue
 
+instance NFData ConstantValue
+
 instance (Serialize i) => Serialize (Constant' i)
+
+instance (NFData i) => NFData (Constant' i)
 
 instance (Serialize i, Serialize a) => Serialize (App' i a)
 
+instance (NFData i, NFData a) => NFData (App' i a)
+
 instance (Serialize i, Serialize a) => Serialize (BuiltinApp' i a)
+
+instance (NFData i, NFData a) => NFData (BuiltinApp' i a)
 
 instance (Serialize i, Serialize a) => Serialize (Constr' i a)
 
+instance (NFData i, NFData a) => NFData (Constr' i a)
+
 instance (Serialize ty) => Serialize (Binder' ty)
+
+instance (NFData ty) => NFData (Binder' ty)
 
 instance (Serialize i, Serialize a, Serialize ty) => Serialize (Lambda' i a ty)
 
+instance (NFData i, NFData a, NFData ty) => NFData (Lambda' i a ty)
+
 instance (Serialize a, Serialize ty) => Serialize (LetItem' a ty)
+
+instance (NFData a, NFData ty) => NFData (LetItem' a ty)
 
 instance (Serialize i, Serialize a, Serialize ty) => Serialize (Let' i a ty)
 
+instance (NFData i, NFData a, NFData ty) => NFData (Let' i a ty)
+
 instance (Serialize i, Serialize a, Serialize ty) => Serialize (LetRec' i a ty)
+
+instance (NFData i, NFData a, NFData ty) => NFData (LetRec' i a ty)
 
 instance (Serialize bi, Serialize a, Serialize ty) => Serialize (CaseBranch' bi a ty)
 
+instance (NFData bi, NFData a, NFData ty) => NFData (CaseBranch' bi a ty)
+
 instance (Serialize i, Serialize bi, Serialize a, Serialize ty) => Serialize (Case' i bi a ty)
+
+instance (NFData i, NFData bi, NFData a, NFData ty) => NFData (Case' i bi a ty)
 
 instance (Serialize i, Serialize a) => Serialize (Pi' i a)
 
+instance (NFData i, NFData a) => NFData (Pi' i a)
+
 instance (Serialize i) => Serialize (Univ' i)
+
+instance (NFData i) => NFData (Univ' i)
 
 instance (Serialize i) => Serialize (TypePrim' i)
 
+instance (NFData i) => NFData (TypePrim' i)
+
 instance (Serialize i, Serialize a) => Serialize (TypeConstr' i a)
+
+instance (NFData i, NFData a) => NFData (TypeConstr' i a)
 
 instance (Serialize i) => Serialize (DynamicTy' i)
 
+instance (NFData i) => NFData (DynamicTy' i)
+
 instance (Serialize i, Serialize a) => Serialize (Bottom' i a)
+
+instance (NFData i, NFData a) => NFData (Bottom' i a)
 
 instance HasAtomicity (Var' i) where
   atomicity _ = Atom

@@ -20,6 +20,8 @@ data Name
 
 instance Serialize Name
 
+instance NFData Name
+
 instance HasLoc Name where
   getLoc = \case
     NameQualified q -> getLoc q
@@ -48,6 +50,8 @@ newtype SymbolPath = SymbolPath
 
 instance Serialize SymbolPath
 
+instance NFData SymbolPath
+
 data QualifiedName = QualifiedName
   { _qualifiedPath :: SymbolPath,
     _qualifiedSymbol :: Symbol
@@ -55,6 +59,8 @@ data QualifiedName = QualifiedName
   deriving stock (Show, Eq, Ord, Generic)
 
 instance Serialize QualifiedName
+
+instance NFData QualifiedName
 
 instance HasLoc QualifiedName where
   getLoc QualifiedName {..} =
@@ -78,6 +84,8 @@ data TopModulePath = TopModulePath
   deriving stock (Show, Eq, Ord, Generic)
 
 instance Serialize TopModulePath
+
+instance NFData TopModulePath
 
 makeLenses ''TopModulePath
 

@@ -30,6 +30,8 @@ $(genSingletons [''NameKind])
 
 instance Serialize NameKind
 
+instance NFData NameKind
+
 class HasNameKind a where
   getNameKind :: a -> NameKind
 

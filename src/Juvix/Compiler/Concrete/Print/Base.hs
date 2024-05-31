@@ -183,6 +183,9 @@ instance (SingI s) => PrettyPrint (ListPattern s) where
         e = hsepSemicolon (map ppPatternParensType _listpItems)
     l <> e <> r
 
+instance PrettyPrint Interval where
+  ppCode = noLoc . pretty
+
 instance PrettyPrint Void where
   ppCode = absurd
 
@@ -1101,7 +1104,7 @@ instance PrettyPrint ImportTreeStats where
     hardline
 
 instance PrettyPrint ImportTree where
-  ppCode ImportTree {..} = do
+  ppCode tree = do
     header "Import Tree:"
     header "============"
     hardline
@@ -1110,16 +1113,18 @@ instance PrettyPrint ImportTree where
       hardline
       forM_ (Map.toList tbl) $ \(fromFile, toFiles) -> do
         forM_ toFiles $ \toFile -> do
-          let pMod :: Path Rel File -> Doc Ann
+          let pMod :: Path x File -> Doc Ann
               pMod = annotate (AnnKind KNameTopModule) . pretty
               fromMod = pMod fromFile
-              toMod = pMod (toFile ^. importNodeFile)
+              toMod
+                | pkgRoot == toFile ^. importNodePackageRoot = pMod (toFile ^. importNodeFile)
+                | otherwise = pMod (toFile ^. importNodeAbsFile)
           noLoc (fromMod P.<+> annotate AnnKeyword "imports" P.<+> toMod)
           hardline
       hardline
     where
       allNodes :: [ImportNode]
-      allNodes = HashMap.keys _importTree
+      allNodes = HashMap.keys (tree ^. importTree)
 
       allRoots :: [Path Abs Dir]
       allRoots = nubSort (map (^. importNodePackageRoot) allNodes)
@@ -1141,7 +1146,7 @@ instance PrettyPrint ImportTree where
               let rootSubTable :: Map (Path Rel File) (Set ImportNode)
                   rootSubTable =
                     ordMap
-                      [ (from ^. importNodeFile, ordSet (_importTree ^?! at from . _Just))
+                      [ (from ^. importNodeFile, ordSet (tree ^. importTree ^?! at from . _Just))
                         | from :: ImportNode <- nodesInRoot
                       ]
           ]

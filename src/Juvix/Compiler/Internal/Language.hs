@@ -49,6 +49,8 @@ newtype Import = Import
 
 instance Serialize Import
 
+instance NFData Import
+
 data ModuleBody' stmt = ModuleBody
   { _moduleImports :: [Import],
     _moduleStatements :: [stmt]
@@ -75,6 +77,8 @@ instance Hashable MutualBlockLet
 
 instance Serialize MutualBlockLet
 
+instance NFData MutualBlockLet
+
 data AxiomDef = AxiomDef
   { _axiomName :: AxiomName,
     _axiomBuiltin :: Maybe BuiltinAxiom,
@@ -84,6 +88,8 @@ data AxiomDef = AxiomDef
   deriving stock (Data, Generic)
 
 instance Serialize AxiomDef
+
+instance NFData AxiomDef
 
 data FunctionDef = FunctionDef
   { _funDefName :: FunctionName,
@@ -101,6 +107,8 @@ data FunctionDef = FunctionDef
 instance Hashable FunctionDef
 
 instance Serialize FunctionDef
+
+instance NFData FunctionDef
 
 data Iden
   = IdenFunction Name
@@ -122,6 +130,8 @@ instance Hashable Iden
 
 instance Serialize Iden
 
+instance NFData Iden
+
 data TypedExpression = TypedExpression
   { _typedType :: Expression,
     _typedExpression :: Expression
@@ -137,6 +147,8 @@ instance Hashable LetClause
 
 instance Serialize LetClause
 
+instance NFData LetClause
+
 data Let = Let
   { _letClauses :: NonEmpty LetClause,
     _letExpression :: Expression
@@ -146,6 +158,8 @@ data Let = Let
 instance Hashable Let
 
 instance Serialize Let
+
+instance NFData Let
 
 type LiteralLoc = WithLoc Literal
 
@@ -162,6 +176,8 @@ data Literal
 instance Hashable Literal
 
 instance Serialize Literal
+
+instance NFData Literal
 
 data Expression
   = ExpressionIden Iden
@@ -181,6 +197,8 @@ instance Hashable Expression
 
 instance Serialize Expression
 
+instance NFData Expression
+
 data SimpleBinder = SimpleBinder
   { _sbinderVar :: VarName,
     _sbinderType :: Expression
@@ -189,6 +207,8 @@ data SimpleBinder = SimpleBinder
 
 instance Serialize SimpleBinder
 
+instance NFData SimpleBinder
+
 data SimpleLambda = SimpleLambda
   { _slambdaBinder :: SimpleBinder,
     _slambdaBody :: Expression
@@ -196,6 +216,8 @@ data SimpleLambda = SimpleLambda
   deriving stock (Eq, Generic, Data)
 
 instance Serialize SimpleLambda
+
+instance NFData SimpleLambda
 
 data CaseBranch = CaseBranch
   { _caseBranchPattern :: PatternArg,
@@ -206,6 +228,8 @@ data CaseBranch = CaseBranch
 instance Hashable CaseBranch
 
 instance Serialize CaseBranch
+
+instance NFData CaseBranch
 
 data Case = Case
   { _caseExpression :: Expression,
@@ -221,6 +245,8 @@ data Case = Case
 instance Hashable Case
 
 instance Serialize Case
+
+instance NFData Case
 
 data Lambda = Lambda
   { _lambdaClauses :: NonEmpty LambdaClause,
@@ -245,7 +271,11 @@ instance Hashable SimpleLambda
 
 instance Serialize Lambda
 
+instance NFData Lambda
+
 instance Serialize LambdaClause
+
+instance NFData LambdaClause
 
 data Application = Application
   { _appLeft :: Expression,
@@ -255,6 +285,8 @@ data Application = Application
   deriving stock (Data, Generic)
 
 instance Serialize Application
+
+instance NFData Application
 
 -- TODO: Eq and Hashable instances ignore the _appImplicit field
 instance Eq Application where
@@ -276,6 +308,8 @@ instance Hashable ConstructorApp
 
 instance Serialize ConstructorApp
 
+instance NFData ConstructorApp
+
 data PatternArg = PatternArg
   { _patternArgIsImplicit :: IsImplicit,
     _patternArgName :: Maybe VarName,
@@ -287,6 +321,8 @@ instance Hashable PatternArg
 
 instance Serialize PatternArg
 
+instance NFData PatternArg
+
 newtype WildcardConstructor = WildcardConstructor
   { _wildcardConstructor :: ConstrName
   }
@@ -295,6 +331,8 @@ newtype WildcardConstructor = WildcardConstructor
 instance Hashable WildcardConstructor
 
 instance Serialize WildcardConstructor
+
+instance NFData WildcardConstructor
 
 data Pattern
   = PatternVariable VarName
@@ -307,6 +345,8 @@ instance Hashable Pattern
 
 instance Serialize Pattern
 
+instance NFData Pattern
+
 data InductiveParameter = InductiveParameter
   { _inductiveParamName :: VarName,
     _inductiveParamType :: Expression
@@ -314,6 +354,8 @@ data InductiveParameter = InductiveParameter
   deriving stock (Eq, Data, Generic)
 
 instance Serialize InductiveParameter
+
+instance NFData InductiveParameter
 
 data InductiveDef = InductiveDef
   { _inductiveName :: InductiveName,
@@ -353,6 +395,8 @@ instance Hashable ArgInfo
 
 instance Serialize ArgInfo
 
+instance NFData ArgInfo
+
 data FunctionParameter = FunctionParameter
   { _paramName :: Maybe VarName,
     _paramImplicit :: IsImplicit,
@@ -364,6 +408,8 @@ instance Hashable FunctionParameter
 
 instance Serialize FunctionParameter
 
+instance NFData FunctionParameter
+
 data Function = Function
   { _functionLeft :: FunctionParameter,
     _functionRight :: Expression
@@ -373,6 +419,8 @@ data Function = Function
 instance Hashable Function
 
 instance Serialize Function
+
+instance NFData Function
 
 newtype ModuleIndex = ModuleIndex
   { _moduleIxModule :: Module

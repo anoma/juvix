@@ -92,6 +92,7 @@ dependencies:
   - singletons == 3.0.*
   - singletons-base == 3.3.*
   - singletons-th == 3.3.*
+  - stm == 2.5.*
   - Stream == 0.4.*
   - string-interpolate == 0.3.*
   - template-haskell == 2.21.*
@@ -179,7 +180,6 @@ executables:
       - polysemy == 1.9.*
     verbatim:
       default-language: GHC2021
-
   juvix:
     main: Main.hs
     source-dirs: app
@@ -193,6 +193,17 @@ executables:
       - string-interpolate == 0.3.*
     verbatim:
       default-language: GHC2021
+    ghc-options:
+      - -threaded
+      # We enable rtsopts because we've found that tweaking the -A flag can lead
+      # to great performance gains. However, GHC's decumentation warns that
+      # enabling this may cause security problems: "...can be used to write logging
+      # data to arbitrary files under the security context of the running
+      # program..."
+      - -rtsopts
+      # We set -N1 to avoid spending time in thread initialization. We manually
+      # set the number of cores we want to use through the juvix -N global flag.
+      - -with-rtsopts=-N1
     when:
       - condition: flag(static)
         ld-options:
