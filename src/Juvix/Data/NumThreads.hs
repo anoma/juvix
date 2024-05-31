@@ -36,7 +36,7 @@ numThreads = \case
     return (max 1 (min 8 (nc `div` 2)))
 
 defaultNumThreads :: NumThreads
-defaultNumThreads = NumThreads 1
+defaultNumThreads = NumThreadsAuto
 
 readNumThreads :: String -> Either String NumThreads
 readNumThreads str
