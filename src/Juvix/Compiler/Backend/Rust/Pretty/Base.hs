@@ -1,5 +1,6 @@
 module Juvix.Compiler.Backend.Rust.Pretty.Base where
 
+import Juvix.Compiler.Backend.Rust.Data.Backend
 import Juvix.Compiler.Backend.Rust.Language
 import Juvix.Compiler.Backend.Rust.Pretty.Keywords
 import Juvix.Compiler.Backend.Rust.Pretty.Options
@@ -169,11 +170,17 @@ instance PrettyCode Block where
 
 instance PrettyCode Program where
   ppCode Program {..} = do
+    rustBackend <- asks (^. optBackend)
     funs <- mapM ppCode _programFunctions
-    return $ pretty prelude <> line <> vsep funs
+    return $ pretty (prelude rustBackend) <> line <> vsep funs
     where
-      prelude :: Text
-      prelude =
+      prelude :: Backend -> Text
+      prelude rustBackend = case rustBackend of
+        BackendRust -> preludeRust
+        BackendRiscZero -> preludeRiscZero
+
+      preludeRust :: Text
+      preludeRust =
         "extern crate juvix;\n\
         \\n\
         \#[allow(unused_imports)]\n\
@@ -188,3 +195,13 @@ instance PrettyCode Program where
         \use juvix::integer::*;\n\
         \#[allow(unused_imports)]\n\
         \use juvix::memory::*;\n"
+
+      preludeRiscZero :: Text
+      preludeRiscZero =
+        preludeRust
+          <> "\n"
+          <> "#![no_main]\n\
+             \\n\
+             \use risc0_zkvm::guest::env;\n\
+             \\n\
+             \risc0_zkvm::guest::entry!(main);\n"

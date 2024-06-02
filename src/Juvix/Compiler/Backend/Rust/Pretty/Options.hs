@@ -1,9 +1,10 @@
 module Juvix.Compiler.Backend.Rust.Pretty.Options where
 
+import Juvix.Compiler.Backend.Rust.Data.Backend
 import Juvix.Prelude
 
 data Options = Options
-  { _optRiscZero :: Bool
+  { _optBackend :: Backend
   }
 
 makeLenses ''Options
@@ -11,7 +12,7 @@ makeLenses ''Options
 defaultOptions :: Options
 defaultOptions =
   Options
-    { _optRiscZero = False
+    { _optBackend = BackendRust
     }
 
 traceOptions :: Options

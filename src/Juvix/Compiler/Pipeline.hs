@@ -336,7 +336,7 @@ regToRust :: (Member (Reader EntryPoint) r) => Reg.InfoTable -> Sem r Rust.Resul
 regToRust tab = do
   tab' <- Reg.toRust tab
   e <- ask
-  return $ Rust.fromReg (Backend.getLimits (getEntryPointTarget e) (e ^. entryPointDebug)) tab'
+  return $ Rust.fromReg Rust.BackendRust (Backend.getLimits (getEntryPointTarget e) (e ^. entryPointDebug)) tab'
 
 regToCasm :: Reg.InfoTable -> Sem r Casm.Result
 regToCasm = Reg.toCasm >=> return . Casm.fromReg
