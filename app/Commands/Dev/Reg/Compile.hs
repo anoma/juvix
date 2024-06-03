@@ -67,6 +67,7 @@ runCommand opts = do
       AppTargetNative64 -> return Backend.TargetCNative64
       AppTargetCasm -> return Backend.TargetCairo
       AppTargetCairo -> return Backend.TargetCairo
+      AppTargetRiscZeroRust -> err "RISC0 Rust"
       AppTargetReg -> err "JuvixReg"
       AppTargetAnoma -> err "Anoma"
       AppTargetTree -> err "JuvixTree"

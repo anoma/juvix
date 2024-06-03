@@ -46,6 +46,7 @@ getEntry PipelineArg {..} = do
       AppTargetAnoma -> Backend.TargetAnoma
       AppTargetCasm -> Backend.TargetCairo
       AppTargetCairo -> Backend.TargetCairo
+      AppTargetRiscZeroRust -> Backend.TargetRust
 
     defaultOptLevel :: Int
     defaultOptLevel
