@@ -166,7 +166,7 @@ jobs:
 
       - name: Test Rust runtime
         run: |
-          cd main/runtime/rust
+          cd main/runtime/rust/juvix
           cargo test --release
 
       # We use the options:
@@ -371,6 +371,11 @@ jobs:
         run: |
           cd main
           just ${{ env.JUST_ARGS }} build runtime
+
+      - name: Test Rust runtime
+        run: |
+          cd main/runtime/rust/juvix
+          cargo test --release
 
       # We use the options:
       #   - -fhide-source-paths
