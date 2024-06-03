@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 risc0-zkvm = { version = "0.21.0", default-features = false, features = [ "std" ] }
+juvix = { path = "../../juvix" }

@@ -37,10 +37,17 @@ fromReg backend lims tab =
           _functionReturnType = Nothing,
           _functionBody =
             [ stmtLet NotMut "result" (mkCall "program" [ExprVerbatim "&mut Memory::new()", mkInteger mainFunid, mkVec []]),
-              StatementExpression (mkCall "println!" [mkString "{}", mkVar "result"]),
+              out,
               StatementReturn (Return Nothing)
             ]
         }
+      where
+        out :: Statement
+        out = case backend of
+          BackendRust ->
+            StatementExpression (mkCall "println!" [mkString "{}", mkVar "result"])
+          BackendRiscZero ->
+            StatementExpression (ExprVerbatim "env::commit(&result)")
 
     programFunction :: Function
     programFunction =

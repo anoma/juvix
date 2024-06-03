@@ -14,6 +14,9 @@ runCommand opts = do
       moutputDir = opts ^. riscZeroRustOutputDir
   outDir :: Path Abs Dir <- getOutputDir FileExtRiscZero inputFile moutputDir
   writeDirFiles riscZeroDir outDir
+  let outJuvixSourceDir :: Path Abs Dir = outDir <//> $(mkRelDir "juvix") <//> $(mkRelDir "src")
+  writeDirFiles rustRuntimeSourceDir outJuvixSourceDir
+  writeFile (outDir <//> $(mkRelDir "juvix") <//> $(mkRelFile "Cargo.toml")) rustRuntimeToml
   let outFile :: Path Abs File =
         outDir
           <//> $(mkRelDir "methods")
@@ -26,12 +29,18 @@ runCommand opts = do
     riscZeroDir :: [(FilePath, ByteString)]
     riscZeroDir = $(FE.makeRelativeToProject "runtime/rust/risc0" >>= FE.embedDir)
 
+    rustRuntimeSourceDir :: [(FilePath, ByteString)]
+    rustRuntimeSourceDir = $(FE.makeRelativeToProject "runtime/rust/juvix/src" >>= FE.embedDir)
+
+    rustRuntimeToml :: ByteString
+    rustRuntimeToml = $(FE.makeRelativeToProject "runtime/rust/juvix/Cargo.toml" >>= FE.embedFile)
+
     writeDirFiles :: [(FilePath, ByteString)] -> Path Abs Dir -> Sem r ()
     writeDirFiles fs outDir = do
       let fs' = map (first relFile) fs
       forM_ (first (outDir <//>) <$> fs') (uncurry writeFile)
-      where
-        writeFile :: Path Abs File -> ByteString -> Sem r ()
-        writeFile p bs = do
-          ensureDir (parent p)
-          liftIO $ BS.writeFile (toFilePath p) bs
+
+    writeFile :: Path Abs File -> ByteString -> Sem r ()
+    writeFile p bs = do
+      ensureDir (parent p)
+      liftIO $ BS.writeFile (toFilePath p) bs
