@@ -9,6 +9,7 @@ import Juvix.Compiler.Asm.Pretty qualified as Asm
 import Juvix.Compiler.Backend qualified as Backend
 import Juvix.Compiler.Backend.C qualified as C
 import Juvix.Compiler.Backend.Geb qualified as Geb
+import Juvix.Compiler.Backend.Rust.Data.Result qualified as Rust
 import Juvix.Compiler.Backend.VampIR.Translation qualified as VampIR
 import Juvix.Compiler.Casm.Data.Result qualified as Casm
 import Juvix.Compiler.Casm.Pretty qualified as Casm
@@ -49,6 +50,7 @@ getEntry PipelineArg {..} = do
       AppTargetAnoma -> Backend.TargetAnoma
       AppTargetCasm -> Backend.TargetCairo
       AppTargetCairo -> Backend.TargetCairo
+      AppTargetRiscZeroRust -> Backend.TargetRust
 
     defaultOptLevel :: Int
     defaultOptLevel
@@ -198,3 +200,15 @@ runCairoPipeline pa@PipelineArg {..} = do
       $ _pipelineArgModule
   res <- getRight r
   liftIO $ JSON.encodeFile (toFilePath cairoFile) res
+
+runRiscZeroRustPipeline :: (Members '[EmbedIO, App, TaggedLock] r) => PipelineArg -> Sem r ()
+runRiscZeroRustPipeline pa@PipelineArg {..} = do
+  entryPoint <- getEntry pa
+  rustFile <- Compile.outputFile _pipelineArgOptions
+  r <-
+    runReader entryPoint
+      . runError @JuvixError
+      . coreToRiscZeroRust
+      $ _pipelineArgModule
+  Rust.Result {..} <- getRight r
+  writeFileEnsureLn rustFile _resultRustCode

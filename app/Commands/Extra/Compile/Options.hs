@@ -21,6 +21,7 @@ data CompileTarget
   | AppTargetAnoma
   | AppTargetCasm
   | AppTargetCairo
+  | AppTargetRiscZeroRust
   deriving stock (Eq, Data, Bounded, Enum)
 
 instance Show CompileTarget where
@@ -36,6 +37,7 @@ instance Show CompileTarget where
     AppTargetAnoma -> "anoma"
     AppTargetCasm -> "casm"
     AppTargetCairo -> "cairo"
+    AppTargetRiscZeroRust -> "risc0-rust"
 
 -- | If the input file can be defaulted to the `main` in the `package.yaml` file, we
 -- can omit the input file.
@@ -77,6 +79,7 @@ compileTargetDescription = \case
   AppTargetAsm -> "Compile to JuvixAsm"
   AppTargetReg -> "Compile to JuvixReg"
   AppTargetTree -> "Compile to JuvixTree"
+  AppTargetRiscZeroRust -> "Compile to Rust for RISC0"
 
 type SupportedTargets = NonEmpty CompileTarget
 

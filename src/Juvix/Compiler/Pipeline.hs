@@ -204,6 +204,11 @@ upToRust ::
   Sem r Rust.Result
 upToRust = upToStoredCore >>= \Core.CoreResult {..} -> storedCoreToRust _coreResultModule
 
+upToRiscZeroRust ::
+  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, PathResolver] r) =>
+  Sem r Rust.Result
+upToRiscZeroRust = upToStoredCore >>= \Core.CoreResult {..} -> storedCoreToRiscZeroRust _coreResultModule
+
 upToCoreTypecheck ::
   (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError] r) =>
   Sem r Core.CoreResult
@@ -239,6 +244,9 @@ storedCoreToMiniC = storedCoreToAsm >=> asmToMiniC
 
 storedCoreToRust :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Rust.Result
 storedCoreToRust = storedCoreToTree Core.CheckRust >=> treeToReg >=> regToRust
+
+storedCoreToRiscZeroRust :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Rust.Result
+storedCoreToRiscZeroRust = storedCoreToTree Core.CheckRust >=> treeToReg >=> regToRiscZeroRust
 
 storedCoreToCasm :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Casm.Result
 storedCoreToCasm = local (set entryPointFieldSize cairoFieldSize) . storedCoreToTree Core.CheckCairo >=> treeToCasm
@@ -276,6 +284,12 @@ coreToCairo = Core.toStored >=> storedCoreToCairo
 
 coreToAnoma :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r NockmaTree.AnomaResult
 coreToAnoma = coreToTree Core.CheckAnoma >=> treeToAnoma
+
+coreToRust :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Rust.Result
+coreToRust = Core.toStored >=> storedCoreToRust
+
+coreToRiscZeroRust :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Rust.Result
+coreToRiscZeroRust = Core.toStored >=> storedCoreToRiscZeroRust
 
 coreToMiniC :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r C.MiniCResult
 coreToMiniC = coreToAsm >=> asmToMiniC
@@ -332,11 +346,17 @@ regToMiniC tab = do
   e <- ask
   return $ C.fromReg (Backend.getLimits (getEntryPointTarget e) (e ^. entryPointDebug)) tab'
 
-regToRust :: (Member (Reader EntryPoint) r) => Reg.InfoTable -> Sem r Rust.Result
-regToRust tab = do
+regToRust' :: (Member (Reader EntryPoint) r) => Rust.Backend -> Reg.InfoTable -> Sem r Rust.Result
+regToRust' backend tab = do
   tab' <- Reg.toRust tab
   e <- ask
-  return $ Rust.fromReg Rust.BackendRust (Backend.getLimits (getEntryPointTarget e) (e ^. entryPointDebug)) tab'
+  return $ Rust.fromReg backend (Backend.getLimits (getEntryPointTarget e) (e ^. entryPointDebug)) tab'
+
+regToRust :: (Member (Reader EntryPoint) r) => Reg.InfoTable -> Sem r Rust.Result
+regToRust = regToRust' Rust.BackendRust
+
+regToRiscZeroRust :: (Member (Reader EntryPoint) r) => Reg.InfoTable -> Sem r Rust.Result
+regToRiscZeroRust = regToRust' Rust.BackendRiscZero
 
 regToCasm :: Reg.InfoTable -> Sem r Casm.Result
 regToCasm = Reg.toCasm >=> return . Casm.fromReg

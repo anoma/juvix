@@ -198,10 +198,9 @@ instance PrettyCode Program where
 
       preludeRiscZero :: Text
       preludeRiscZero =
-        preludeRust
+        "#![no_main]\n\n"
+          <> preludeRust
           <> "\n"
-          <> "#![no_main]\n\
-             \\n\
-             \use risc0_zkvm::guest::env;\n\
+          <> "use risc0_zkvm::guest::env;\n\
              \\n\
              \risc0_zkvm::guest::entry!(main);\n"

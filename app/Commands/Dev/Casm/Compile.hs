@@ -48,6 +48,7 @@ runCommand opts = do
       AppTargetVampIR -> err "VampIR"
       AppTargetCore -> err "JuvixCore"
       AppTargetAsm -> err "JuvixAsm"
+      AppTargetRiscZeroRust -> err "RISC0 Rust"
       where
         err :: Text -> Sem r a
         err tgt = exitMsg (ExitFailure 1) ("error: " <> tgt <> " target not supported for CASM")
