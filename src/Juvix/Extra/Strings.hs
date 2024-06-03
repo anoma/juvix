@@ -344,6 +344,9 @@ anomaVerifyDetached = "anoma-verify-detached"
 anomaSign :: (IsString s) => s
 anomaSign = "anoma-sign"
 
+anomaSignDetached :: (IsString s) => s
+anomaSignDetached = "anoma-sign-detached"
+
 anomaVerify :: (IsString s) => s
 anomaVerify = "anoma-verify"
 

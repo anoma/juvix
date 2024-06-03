@@ -128,6 +128,7 @@ parseAnoma =
     <|> parseAnoma' kwAnomaEncode OpAnomaEncode
     <|> parseAnoma' kwAnomaVerifyDetached OpAnomaVerifyDetached
     <|> parseAnoma' kwAnomaSign OpAnomaSign
+    <|> parseAnoma' kwAnomaSignDetached OpAnomaSignDetached
     <|> parseAnoma' kwAnomaVerify OpAnomaVerify
 
 parseAnoma' ::

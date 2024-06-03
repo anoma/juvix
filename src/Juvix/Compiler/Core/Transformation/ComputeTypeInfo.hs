@@ -71,6 +71,7 @@ computeNodeTypeInfo md = umapL go
           OpAnomaDecode -> Info.getNodeType node
           OpAnomaVerifyDetached -> Info.getNodeType node
           OpAnomaSign -> Info.getNodeType node
+          OpAnomaSignDetached -> Info.getNodeType node
           OpAnomaVerify -> Info.getNodeType node
           OpPoseidonHash -> case _builtinAppArgs of
             [arg] -> Info.getNodeType arg

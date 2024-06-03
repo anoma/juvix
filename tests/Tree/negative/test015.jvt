@@ -1,0 +1,5 @@
+-- calling unsupported anoma-sign-detached
+
+function main() : * {
+  anoma-sign-detached(1,2)
+}
