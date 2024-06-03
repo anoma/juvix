@@ -3,6 +3,12 @@ module test077;
 import Stdlib.Prelude open;
 import Stdlib.Debug.Trace open;
 
+builtin anoma-sign-detached
+axiom anomaSignDetached : {A : Type}
+  -> A
+  -> Nat
+  -> Nat;
+
 builtin anoma-verify-detached
 axiom anomaVerifyDetached : {A : Type}
   -> Nat
@@ -10,11 +16,11 @@ axiom anomaVerifyDetached : {A : Type}
   -> Nat
   -> Bool;
 
---- dsign privateKey (anomaEncode 1)
-sig : Nat :=
-  0x9dac7337633844c1df6af03431adec37b8b67331fbd0a36553dd11f8ac92107e58f0ca42d93d88f98a2f1181e81e1808842193af64a4abb42c6e57570fd7a5a;
+privKey : Nat :=
+  0x3181f891cd2323ffe802dd8f36f7e77cd072e3bd8f49884e8b38a297646351e9015535fa1125ec092c85758756d51bf29eed86a118942135c1657bf4cb5c6fc9;
 
-publicKey : Nat :=
-  0xd5d974196b220bc1fc3c11a0a04bfa46b2aba0c792daf2f3f6c2d6ac1064c463;
+pubKey : Nat :=
+  0x3181f891cd2323ffe802dd8f36f7e77cd072e3bd8f49884e8b38a297646351e9;
 
-main : Bool := anomaVerifyDetached sig 1 publicKey;
+main : Bool := let msg : Nat := 1 in
+  anomaVerifyDetached (anomaSignDetached msg privKey) msg pubKey;

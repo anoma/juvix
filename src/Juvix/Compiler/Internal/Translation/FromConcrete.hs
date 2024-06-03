@@ -573,6 +573,7 @@ registerBuiltinAxiom d = \case
   BuiltinAnomaDecode -> registerAnomaDecode d
   BuiltinAnomaVerifyDetached -> registerAnomaVerifyDetached d
   BuiltinAnomaSign -> registerAnomaSign d
+  BuiltinAnomaSignDetached -> registerAnomaSignDetached d
   BuiltinAnomaVerify -> registerAnomaVerify d
   BuiltinPoseidon -> registerPoseidon d
   BuiltinEcOp -> registerEcOp d

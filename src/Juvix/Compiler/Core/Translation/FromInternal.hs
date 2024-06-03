@@ -588,6 +588,7 @@ goAxiomInductive a = whenJust (a ^. Internal.axiomBuiltin) builtinInductive
       Internal.BuiltinAnomaDecode -> return ()
       Internal.BuiltinAnomaVerifyDetached -> return ()
       Internal.BuiltinAnomaSign -> return ()
+      Internal.BuiltinAnomaSignDetached -> return ()
       Internal.BuiltinAnomaVerify -> return ()
       Internal.BuiltinPoseidon -> return ()
       Internal.BuiltinEcOp -> return ()
@@ -748,6 +749,19 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
                   ( mkLambda'
                       natType
                       (mkBuiltinApp' OpAnomaSign [mkVar' 1, mkVar' 0])
+                  )
+              )
+          )
+      Internal.BuiltinAnomaSignDetached -> do
+        natType <- getNatType
+        registerAxiomDef
+          ( mkLambda'
+              mkSmallUniv
+              ( mkLambda'
+                  (mkVar' 0)
+                  ( mkLambda'
+                      natType
+                      (mkBuiltinApp' OpAnomaSignDetached [mkVar' 1, mkVar' 0])
                   )
               )
           )
@@ -1172,6 +1186,7 @@ goApplication a = do
         Just Internal.BuiltinAnomaDecode -> app
         Just Internal.BuiltinAnomaVerifyDetached -> app
         Just Internal.BuiltinAnomaSign -> app
+        Just Internal.BuiltinAnomaSignDetached -> app
         Just Internal.BuiltinAnomaVerify -> app
         Just Internal.BuiltinPoseidon -> app
         Just Internal.BuiltinEcOp -> app

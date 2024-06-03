@@ -18,6 +18,7 @@ instance Pretty StdlibFunction where
     StdlibDecode -> "decode"
     StdlibVerifyDetached -> "verify-detached"
     StdlibSign -> "sign"
+    StdlibSignDetached -> "sign-detached"
     StdlibVerify -> "verify"
     StdlibCatBytes -> "cat"
 
@@ -35,6 +36,7 @@ data StdlibFunction
   | StdlibDecode
   | StdlibVerifyDetached
   | StdlibSign
+  | StdlibSignDetached
   | StdlibVerify
   | StdlibCatBytes
   deriving stock (Show, Lift, Eq, Bounded, Enum, Generic)

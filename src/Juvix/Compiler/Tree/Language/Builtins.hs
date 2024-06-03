@@ -62,4 +62,6 @@ data AnomaOp
     OpAnomaSign
   | -- | Verify a signature obtained from OpAnomaSign using a public key
     OpAnomaVerify
+  | -- | Produce a cryptographic signature of an Anoma value
+    OpAnomaSignDetached
   deriving stock (Eq)
