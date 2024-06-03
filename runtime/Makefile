@@ -10,11 +10,12 @@ juvix_c:
 
 .PHONY: juvix_rust
 juvix_rust:
-	cd rust && cargo build && cargo build --release
+	cd rust/juvix && cargo build && cargo build --release
 
 .PHONY: clean
 clean:
 	cd c && $(MAKE) clean
+	cd rust/juvix && cargo clean
 
 .PHONY: format
 format:

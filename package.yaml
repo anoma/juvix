@@ -38,7 +38,7 @@ extra-source-files:
   - include/package-base/**/*.juvix
   - runtime/c/include/**/*.h
   - runtime/c/**/*.a
-  - runtime/rust/target/**/*.rlib
+  - runtime/rust/juvix/target/**/*.rlib
   - runtime/tree/*.jvt
   - runtime/vampir/*.pir
   - runtime/casm/*.casm

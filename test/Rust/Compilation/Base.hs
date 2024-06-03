@@ -76,6 +76,6 @@ nativeArgs optLevel outputFile inputFile =
     juvixLibraryDir =
       if
           | optLevel > 0 ->
-              $(makeRelativeToProject "runtime/rust/target/release" >>= strToExp)
+              $(makeRelativeToProject "runtime/rust/juvix/target/release" >>= strToExp)
           | otherwise ->
-              $(makeRelativeToProject "runtime/rust/target/debug" >>= strToExp)
+              $(makeRelativeToProject "runtime/rust/juvix/target/debug" >>= strToExp)
