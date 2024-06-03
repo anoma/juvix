@@ -1,0 +1,23 @@
+-- Ackermann function (higher-order definition)
+module test030;
+
+import Stdlib.Prelude open hiding {iterate};
+
+iterate : {A : Type} → (A → A) → Nat → A → A
+  -- clauses with differing number of patterns not yet supported
+  -- iterate f zero x := x;
+  | f zero := id
+  | f (suc n) := f ∘ iterate f n;
+
+plus : Nat → Nat → Nat := iterate suc;
+
+mult : Nat → Nat → Nat
+  | m n := iterate (plus n) m 0;
+
+exp : Nat → Nat → Nat
+  | m n := iterate (mult m) n 1;
+
+ackermann : Nat → Nat → Nat
+  | m := iterate λ {f n := iterate f (suc n) 1} m suc;
+
+main : Nat := plus 3 7 + mult 3 7 + exp 3 7 + ackermann 2 13;

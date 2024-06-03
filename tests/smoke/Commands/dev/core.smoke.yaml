@@ -29,6 +29,7 @@ tests:
       - f
     args:
       - positive/Internal/LiteralInt.juvix
+    stderr: ''
     stdout: |
       1
     exit-status: 0
@@ -43,6 +44,7 @@ tests:
     stdout:
       contains: |
         λ(x : Int) + x 2
+    stderr: ''
     exit-status: 0
 
   - name: core-from-concrete-normalize

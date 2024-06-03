@@ -15,6 +15,8 @@ data InstanceParam
 
 instance Serialize InstanceParam
 
+instance NFData InstanceParam
+
 data InstanceApp = InstanceApp
   { _instanceAppHead :: Name,
     _instanceAppArgs :: [InstanceParam],
@@ -25,6 +27,8 @@ data InstanceApp = InstanceApp
 
 instance Serialize InstanceApp
 
+instance NFData InstanceApp
+
 data InstanceFun = InstanceFun
   { _instanceFunLeft :: InstanceParam,
     _instanceFunRight :: InstanceParam,
@@ -34,6 +38,8 @@ data InstanceFun = InstanceFun
   deriving stock (Eq, Generic)
 
 instance Serialize InstanceFun
+
+instance NFData InstanceFun
 
 data InstanceInfo = InstanceInfo
   { _instanceInfoInductive :: InductiveName,
@@ -48,6 +54,8 @@ instance Hashable InstanceInfo where
 
 instance Serialize InstanceInfo
 
+instance NFData InstanceInfo
+
 -- | Maps trait names to available instances
 newtype InstanceTable = InstanceTable
   { _instanceTableMap :: HashMap InductiveName [InstanceInfo]
@@ -55,6 +63,8 @@ newtype InstanceTable = InstanceTable
   deriving stock (Eq, Generic)
 
 instance Serialize InstanceTable
+
+instance NFData InstanceTable
 
 makeLenses ''InstanceApp
 makeLenses ''InstanceFun

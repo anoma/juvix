@@ -1,0 +1,20 @@
+module test077;
+
+import Stdlib.Prelude open;
+import Stdlib.Debug.Trace open;
+
+builtin anoma-verify-detached
+axiom anomaVerifyDetached : {A : Type}
+  -> Nat
+  -> A
+  -> Nat
+  -> Bool;
+
+--- dsign privateKey (anomaEncode 1)
+sig : Nat :=
+  0x9dac7337633844c1df6af03431adec37b8b67331fbd0a36553dd11f8ac92107e58f0ca42d93d88f98a2f1181e81e1808842193af64a4abb42c6e57570fd7a5a;
+
+publicKey : Nat :=
+  0xd5d974196b220bc1fc3c11a0a04bfa46b2aba0c792daf2f3f6c2d6ac1064c463;
+
+main : Bool := anomaVerifyDetached sig 1 publicKey;

@@ -19,8 +19,6 @@ import Juvix.Prelude.Path
 
 instance Serialize (Path Abs File)
 
-instance Serialize (Path Abs Dir)
-
 instance Serialize Text where
   put txt = Serial.put (unpack txt)
 

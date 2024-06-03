@@ -53,6 +53,11 @@ tests:
         HOME="home" JUVIX_TEST_PATH="other dep" juvix typecheck positive/FancyPaths/Main.juvix
     stdout:
       equals: "Well done! It type checks\n"
+    stderr:
+      matches:
+        regex: .*
+        options:
+          - dot-all
     exit-status: 0
 
   - name: typecheck-global-package
@@ -97,6 +102,11 @@ tests:
         juvix typecheck "$packagePackageDir/PackageDescription/V2.juvix"
     stdout:
       equals: "Well done! It type checks\n"
+    stderr:
+      matches:
+        regex: .*
+        options:
+          - dot-all
     exit-status: 0
 
   - name: typecheck-stdin

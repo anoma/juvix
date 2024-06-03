@@ -10,7 +10,6 @@ module Juvix.Compiler.Pipeline.Loader.PathResolver
     runPathResolverPipe',
     evalPathResolverPipe,
     findPackageJuvixFiles,
-    mkImportTree,
   )
 where
 
@@ -30,7 +29,6 @@ import Juvix.Compiler.Pipeline.Lockfile
 import Juvix.Compiler.Pipeline.Package
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
 import Juvix.Compiler.Pipeline.Root.Base (PackageType (..))
-import Juvix.Data.Effect.TaggedLock
 import Juvix.Data.SHA256 qualified as SHA256
 import Juvix.Extra.Files
 import Juvix.Extra.PackageFiles
@@ -166,26 +164,29 @@ registerPackageBase = do
 
 registerDependencies' ::
   forall r.
-  (Members '[TaggedLock, Reader EntryPoint, Files, Error JuvixError, Error DependencyError, DependencyResolver, EvalFileEff] r) =>
+  (Members '[TaggedLock, Reader EntryPoint, Files, Error JuvixError, Error DependencyError, DependencyResolver, EvalFileEff, Reader ResolverEnv, State ResolverState] r) =>
   DependenciesConfig ->
-  Sem (Reader ResolverEnv ': State ResolverState ': r) ()
+  Sem r ()
 registerDependencies' conf = do
-  e <- ask @EntryPoint
-  mapError (JuvixError @ParserError) registerPackageBase
-  case e ^. entryPointPackageType of
-    GlobalStdlib -> do
-      glob <- globalRoot
-      void (addRootDependency conf e glob)
-    GlobalPackageBase -> return ()
-    GlobalPackageDescription -> void (addRootDependency conf e (e ^. entryPointRoot))
-    LocalPackage -> do
-      lockfile <- addRootDependency conf e (e ^. entryPointRoot)
-      whenM shouldWriteLockfile $ do
-        packageFileChecksum <- SHA256.digestFile (e ^. entryPointPackage . packageFile)
-        lockfilePath' <- lockfilePath
-        writeLockfile lockfilePath' packageFileChecksum lockfile
+  initialized <- gets (^. resolverInitialized)
+  unless initialized $ do
+    modify (set resolverInitialized True)
+    e <- ask @EntryPoint
+    mapError (JuvixError @ParserError) registerPackageBase
+    case e ^. entryPointPackageType of
+      GlobalStdlib -> do
+        glob <- globalRoot
+        void (addRootDependency conf e glob)
+      GlobalPackageBase -> return ()
+      GlobalPackageDescription -> void (addRootDependency conf e (e ^. entryPointRoot))
+      LocalPackage -> do
+        lockfile <- addRootDependency conf e (e ^. entryPointRoot)
+        whenM shouldWriteLockfile $ do
+          packageFileChecksum <- SHA256.digestFile (e ^. entryPointPackage . packageFile)
+          lockfilePath' <- lockfilePath
+          writeLockfile lockfilePath' packageFileChecksum lockfile
   where
-    shouldWriteLockfile :: Sem (Reader ResolverEnv ': State ResolverState ': r) Bool
+    shouldWriteLockfile :: Sem r Bool
     shouldWriteLockfile = do
       lockfileExists <- lockfilePath >>= fileExists'
       hasRemoteDependencies <- gets (^. resolverHasRemoteDependencies)
@@ -196,7 +197,7 @@ registerDependencies' conf = do
           shouldUpdateLockfile = lockfileExists && shouldUpdateLockfile'
       return (shouldForce || shouldWriteInitialLockfile || shouldUpdateLockfile)
 
-    lockfilePath :: Sem (Reader ResolverEnv ': State ResolverState ': r) (Path Abs File)
+    lockfilePath :: Sem r (Path Abs File)
     lockfilePath = do
       root <- asks (^. envRoot)
       return (mkPackageLockfilePath root)
@@ -304,118 +305,6 @@ currentPackage = do
   curRoot <- asks (^. envRoot)
   (^. resolverCacheItemPackage) . fromJust <$> getResolverCacheItem curRoot
 
-checkImportTreeCycles :: forall r. (Members '[Error ScoperError] r) => ImportTree -> Sem r ()
-checkImportTreeCycles tree = do
-  let sccs =
-        stronglyConnComp
-          [ (node, node, toList v) | (node, v) <- HashMap.toList (tree ^. importTree)
-          ]
-  whenJust (firstJust getCycle sccs) $ \(cyc :: NonEmpty ImportNode) ->
-    throw
-      . ErrImportCycleNew
-      . ImportCycleNew
-      $ getEdges cyc
-  where
-    getEdges :: NonEmpty ImportNode -> NonEmpty ImportScan
-    getEdges = fmap (uncurry getEdge) . zipWithNextLoop
-
-    getEdge :: ImportNode -> ImportNode -> ImportScan
-    getEdge fromN toN = fromMaybe unexpected $ do
-      edges <- tree ^. importTreeEdges . at fromN
-      let rel :: Path Rel File = removeExtensions (toN ^. importNodeFile)
-          cond :: ImportScan -> Bool
-          cond = (== rel) . importScanToRelPath
-      find cond edges
-      where
-        unexpected =
-          error $
-            "Impossible: Could not find edge between\n"
-              <> prettyText fromN
-              <> "\nand\n"
-              <> prettyText toN
-              <> "\n"
-              <> "Available Edges:\n"
-              <> prettyText (toList (tree ^. importTreeEdges . at fromN . _Just))
-
-    getCycle :: SCC ImportNode -> Maybe (NonEmpty ImportNode)
-    getCycle = \case
-      AcyclicSCC {} -> Nothing
-      CyclicSCC l -> Just (nonEmpty' l)
-
--- | If an entry file is given, it scans imports reachable from that file,
--- otherwise it scans all files in all packages
-mkImportTree ::
-  forall r.
-  (Members '[Reader ImportScanStrategy, Error ParserError, Error ScoperError, PathResolver, Files] r) =>
-  Maybe (Path Abs File) ->
-  Sem r ImportTree
-mkImportTree mentrypointModulePath = do
-  pkgInfosTable <- getPackageInfos
-  let pkgs :: [PackageInfo] = toList pkgInfosTable
-      allNodes :: [ImportNode] = concatMap packageNodes pkgs
-      mEntryImportNode :: Maybe ImportNode
-      mEntryImportNode = do
-        absPath <- mentrypointModulePath
-        let cond :: ImportNode -> Bool
-            cond ImportNode {..} = absPath == _importNodePackageRoot <//> _importNodeFile
-        find cond allNodes
-
-      startingNodes = maybe allNodes pure mEntryImportNode
-  tree <-
-    execState (emptyImportTree allNodes)
-      . runReader pkgInfosTable
-      . evalVisitEmpty scanNode
-      $ mapM_ visit startingNodes
-  checkImportTreeCycles tree
-  return tree
-  where
-    packageNodes :: PackageInfo -> [ImportNode]
-    packageNodes pkg =
-      [ ImportNode
-          { _importNodePackageRoot = pkg ^. packageRoot,
-            _importNodeFile = f
-          }
-        | f <- filter isJuvixOrJuvixMdFile (toList (pkg ^. packageJuvixRelativeFiles))
-      ]
-
-    addEdge :: forall r'. (Members '[State ImportTree] r') => ImportScan -> ImportNode -> ImportNode -> Sem r' ()
-    addEdge importScan fromNode toNode = do
-      modify (over importTree (insertHelper fromNode toNode))
-      modify (over importTreeReverse (insertHelper toNode fromNode))
-      modify (over importTreeEdges (insertHelper fromNode importScan))
-      where
-        insertHelper :: (Hashable k, Hashable v) => k -> v -> HashMap k (HashSet v) -> HashMap k (HashSet v)
-        insertHelper k v = over (at k) (Just . maybe (HashSet.singleton v) (HashSet.insert v))
-
-    getNodeImports ::
-      forall r'.
-      (Members '[Reader ImportScanStrategy, Files, Error ParserError] r') =>
-      ImportNode ->
-      Sem r' (HashSet ImportScan)
-    getNodeImports n = (^. scanResultImports) <$> scanFileImports (n ^. importNodeAbsFile)
-
-    scanNode ::
-      forall r'.
-      (Members '[State ImportTree, Reader (HashMap (Path Abs Dir) PackageInfo), Reader ImportScanStrategy, Error ParserError, Files, PathResolver, Visit ImportNode] r') =>
-      ImportNode ->
-      Sem r' ()
-    scanNode fromNode = do
-      scans <- toList <$> getNodeImports fromNode
-      imports :: [ImportNode] <- mapM resolveImportScan scans
-      forM_ (zipExact scans imports) $ \(importscan, toNode) -> do
-        addEdge importscan fromNode toNode
-        withResolverRoot (toNode ^. importNodePackageRoot) (visit toNode)
-
-    resolveImportScan :: forall r'. (Members '[PathResolver] r') => ImportScan -> Sem r' ImportNode
-    resolveImportScan s = do
-      let rel = importScanToRelPath s
-      (pkg, ext) <- resolvePath s
-      return
-        ImportNode
-          { _importNodePackageRoot = pkg ^. packageRoot,
-            _importNodeFile = addFileExt ext rel
-          }
-
 resolvePath' ::
   (Members '[Files, Error PathResolverError, State ResolverState, Reader ResolverEnv] r) =>
   ImportScan ->
@@ -434,8 +323,7 @@ resolvePath' scan = do
         [ (pkg, ext)
           | ext <- possibleExtensions,
             let file = addFileExt ext (importScanToRelPath scan),
-            pkgs <- toList (HashMap.lookup file filesToPackage),
-            pkg <- toList pkgs,
+            pkg <- maybe [] toList (HashMap.lookup file filesToPackage),
             visible pkg
         ]
   case packagesWithExt of
@@ -489,16 +377,31 @@ expectedPath' m = do
 
 runPathResolver2 ::
   forall r a v.
-  (v ~ '[TaggedLock, Reader EntryPoint, Files, Error JuvixError, Error DependencyError, DependencyResolver, EvalFileEff], Members v r) =>
+  ( v
+      ~ '[ TaggedLock,
+           Reader DependenciesConfig,
+           Reader EntryPoint,
+           Files,
+           Error JuvixError,
+           Error DependencyError,
+           DependencyResolver,
+           EvalFileEff
+         ],
+    Members v r
+  ) =>
   ResolverState ->
   ResolverEnv ->
   Sem (PathResolver ': r) a ->
   Sem r (ResolverState, a)
 runPathResolver2 st topEnv arg = do
-  ( reinterpretHCommon3
-      ( mapError (JuvixError @PathResolverError)
+  depsConfig <- ask
+  ( reinterpretH
+      ( \k -> mapError (JuvixError @PathResolverError)
           . runState st
           . runReader topEnv
+          $ do
+            registerDependencies' depsConfig
+            k
       )
       handler
     )
@@ -511,6 +414,8 @@ runPathResolver2 st topEnv arg = do
       PathResolver (Sem localEs) x ->
       Sem (Reader ResolverEnv ': State ResolverState ': Error PathResolverError ': t) x
     handler localEnv = \case
+      SupportsParallel -> return True
+      ResolverRoot -> asks (^. envRoot)
       RegisterDependencies forceUpdateLockfile -> registerDependencies' forceUpdateLockfile
       GetPackageInfos -> gets allPackageInfos
       ExpectedPathInfoTopModule m -> expectedPath' m
@@ -531,10 +436,41 @@ runPathResolver2 st topEnv arg = do
                 }
         localSeqUnlift localEnv $ \unlift -> local env' (unlift m)
 
-runPathResolver :: (Members '[TaggedLock, Reader EntryPoint, Files, Error JuvixError, Error DependencyError, DependencyResolver, EvalFileEff] r) => Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
+runPathResolver ::
+  ( Members
+      '[ TaggedLock,
+         Reader DependenciesConfig,
+         Reader EntryPoint,
+         Files,
+         Error JuvixError,
+         Error DependencyError,
+         DependencyResolver,
+         EvalFileEff
+       ]
+      r
+  ) =>
+  Path Abs Dir ->
+  Sem (PathResolver ': r) a ->
+  Sem r (ResolverState, a)
 runPathResolver = runPathResolver' iniResolverState
 
-runPathResolver' :: (Members '[TaggedLock, Reader EntryPoint, Files, Error JuvixError, Error DependencyError, DependencyResolver, EvalFileEff] r) => ResolverState -> Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
+runPathResolver' ::
+  ( Members
+      '[ TaggedLock,
+         Reader DependenciesConfig,
+         Reader EntryPoint,
+         Files,
+         Error JuvixError,
+         Error DependencyError,
+         DependencyResolver,
+         EvalFileEff
+       ]
+      r
+  ) =>
+  ResolverState ->
+  Path Abs Dir ->
+  Sem (PathResolver ': r) a ->
+  Sem r (ResolverState, a)
 runPathResolver' st root x = do
   e <- ask
   let _envSingleFile :: Maybe (Path Abs File)
@@ -551,15 +487,58 @@ runPathResolver' st root x = do
           }
   runPathResolver2 st env x
 
-runPathResolverPipe' :: (Members '[TaggedLock, Files, Reader EntryPoint, DependencyResolver, Error JuvixError, Error DependencyError, EvalFileEff] r) => ResolverState -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
+runPathResolverPipe' ::
+  ( Members
+      '[ TaggedLock,
+         Files,
+         Reader DependenciesConfig,
+         Reader EntryPoint,
+         DependencyResolver,
+         Error JuvixError,
+         Error DependencyError,
+         EvalFileEff
+       ]
+      r
+  ) =>
+  ResolverState ->
+  Sem (PathResolver ': r) a ->
+  Sem r (ResolverState, a)
 runPathResolverPipe' iniState a = do
   r <- asks (^. entryPointResolverRoot)
   runPathResolver' iniState r a
 
-runPathResolverPipe :: (Members '[TaggedLock, Files, Reader EntryPoint, DependencyResolver, Error JuvixError, Error DependencyError, EvalFileEff] r) => Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
+runPathResolverPipe ::
+  ( Members
+      '[ TaggedLock,
+         Reader DependenciesConfig,
+         Files,
+         Reader EntryPoint,
+         DependencyResolver,
+         Error JuvixError,
+         Error DependencyError,
+         EvalFileEff
+       ]
+      r
+  ) =>
+  Sem (PathResolver ': r) a ->
+  Sem r (ResolverState, a)
 runPathResolverPipe a = do
   r <- asks (^. entryPointResolverRoot)
   runPathResolver r a
 
-evalPathResolverPipe :: (Members '[TaggedLock, Files, Reader EntryPoint, DependencyResolver, Error JuvixError, Error DependencyError, EvalFileEff] r) => Sem (PathResolver ': r) a -> Sem r a
+evalPathResolverPipe ::
+  ( Members
+      '[ TaggedLock,
+         Reader DependenciesConfig,
+         Files,
+         Reader EntryPoint,
+         DependencyResolver,
+         Error JuvixError,
+         Error DependencyError,
+         EvalFileEff
+       ]
+      r
+  ) =>
+  Sem (PathResolver ': r) a ->
+  Sem r a
 evalPathResolverPipe = fmap snd . runPathResolverPipe

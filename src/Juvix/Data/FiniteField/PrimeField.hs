@@ -27,20 +27,20 @@ module Juvix.Data.FiniteField.PrimeField
 where
 
 import Data.Hashable
-import Data.Ratio (denominator, numerator)
 import Data.Singletons
 import GHC.TypeLits
 import GHC.TypeLits.Singletons ()
 import Juvix.Data.FiniteField.Base
+import Juvix.Prelude.Base.Foundation hiding (toInteger)
 import Language.Haskell.TH qualified as TH
-import Prelude hiding (toInteger)
+import Prelude (Read, readsPrec, showsPrec)
 
 -- | Finite field of prime order p, Fp = Z/pZ.
 --
 -- NB: Primality of @p@ is assumed, but not checked.
 newtype PrimeField (p :: Natural)
   = PrimeField Integer
-  deriving stock (Eq)
+  deriving stock (Eq, Generic)
 
 -- | conversion to 'Integer'
 toInteger :: PrimeField p -> Integer
@@ -48,6 +48,8 @@ toInteger (PrimeField a) = a
 
 toInt :: (Integral a) => PrimeField p -> a
 toInt = fromInteger . toInteger
+
+instance NFData (PrimeField p)
 
 instance Show (PrimeField p) where
   showsPrec n (PrimeField x) = showsPrec n x

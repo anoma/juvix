@@ -316,6 +316,9 @@ genCode infoTable fi =
       Core.OpAnomaGet -> OpAnomaGet
       Core.OpAnomaEncode -> OpAnomaEncode
       Core.OpAnomaDecode -> OpAnomaDecode
+      Core.OpAnomaVerifyDetached -> OpAnomaVerifyDetached
+      Core.OpAnomaSign -> OpAnomaSign
+      Core.OpAnomaVerify -> OpAnomaVerify
       _ -> impossible
 
     getArgsNum :: Symbol -> Int

@@ -33,6 +33,7 @@ module Juvix.Compiler.Nockma.Translation.FromTree
   )
 where
 
+import Juvix.Compiler.Nockma.Encoding
 import Juvix.Compiler.Nockma.Language.Path
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Stdlib
@@ -384,10 +385,18 @@ compile = \case
         | i < 0 -> error "negative integer"
         | otherwise -> nockIntegralLiteral i
       Tree.ConstBool i -> nockBoolLiteral i
-      Tree.ConstString {} -> stringsErr
+      Tree.ConstString t -> OpQuote # goConstString t
       Tree.ConstUnit -> OpQuote # constUnit
       Tree.ConstVoid -> OpQuote # constVoid
       Tree.ConstField {} -> fieldErr
+
+    goConstString :: Text -> Term Natural
+    goConstString t =
+      TermAtom
+        Atom
+          { _atomInfo = atomHintInfo AtomHintString,
+            _atom = textToNatural t
+          }
 
     goSave :: Tree.NodeSave -> Sem r (Term Natural)
     goSave Tree.NodeSave {..} = do
@@ -424,8 +433,11 @@ compile = \case
       args <- mapM compile _nodeAnomaArgs
       case _nodeAnomaOpcode of
         Tree.OpAnomaGet -> goAnomaGet args
-        Tree.OpAnomaEncode -> goAnomaEncode args
-        Tree.OpAnomaDecode -> goAnomaDecode args
+        Tree.OpAnomaEncode -> return (goAnomaEncode args)
+        Tree.OpAnomaDecode -> return (goAnomaDecode args)
+        Tree.OpAnomaVerifyDetached -> return (goAnomaVerifyDetached args)
+        Tree.OpAnomaSign -> return (goAnomaSign args)
+        Tree.OpAnomaVerify -> return (goAnomaVerify args)
 
     goUnop :: Tree.NodeUnop -> Sem r (Term Natural)
     goUnop Tree.NodeUnop {..} = do
@@ -437,8 +449,8 @@ compile = \case
 
     goPrimUnop :: Tree.UnaryOp -> Term Natural -> Term Natural
     goPrimUnop op arg = case op of
-      Tree.OpShow -> stringsErr
-      Tree.OpStrToInt -> stringsErr
+      Tree.OpShow -> stringsErr "show"
+      Tree.OpStrToInt -> stringsErr "strToInt"
       Tree.OpArgsNum ->
         let getF f = getClosureField f arg
          in sub (getF ClosureTotalArgsNum) (getF ClosureArgsNum)
@@ -450,11 +462,26 @@ compile = \case
       let arg = remakeList [getFieldInSubject AnomaGetOrder, foldTermsOrNil key]
       return (OpScry # (OpQuote # nockNilTagged "OpScry-typehint") # arg)
 
-    goAnomaEncode :: [Term Natural] -> Sem r (Term Natural)
-    goAnomaEncode args = return (callStdlib StdlibEncode args)
+    goAnomaEncode :: [Term Natural] -> Term Natural
+    goAnomaEncode = callStdlib StdlibEncode
 
-    goAnomaDecode :: [Term Natural] -> Sem r (Term Natural)
-    goAnomaDecode args = return (callStdlib StdlibDecode args)
+    goAnomaDecode :: [Term Natural] -> Term Natural
+    goAnomaDecode = callStdlib StdlibDecode
+
+    goAnomaVerifyDetached :: [Term Natural] -> Term Natural
+    goAnomaVerifyDetached = \case
+      [sig, message, pubKey] -> callStdlib StdlibVerifyDetached [sig, goAnomaEncode [message], pubKey]
+      _ -> impossible
+
+    goAnomaSign :: [Term Natural] -> Term Natural
+    goAnomaSign = \case
+      [message, privKey] -> callStdlib StdlibSign [goAnomaEncode [message], privKey]
+      _ -> impossible
+
+    goAnomaVerify :: [Term Natural] -> Term Natural
+    goAnomaVerify = \case
+      [signedMessage, pubKey] -> callStdlib StdlibDecode [callStdlib StdlibVerify [signedMessage, pubKey]]
+      _ -> impossible
 
     goTrace :: Term Natural -> Sem r (Term Natural)
     goTrace arg = do
@@ -482,7 +509,7 @@ compile = \case
           Tree.OpIntLt -> return (callStdlib StdlibLt args)
           Tree.OpIntLe -> return (callStdlib StdlibLe args)
           Tree.OpEq -> testEq _nodeBinopArg1 _nodeBinopArg2
-          Tree.OpStrConcat -> stringsErr
+          Tree.OpStrConcat -> return (callStdlib StdlibCatBytes args)
           Tree.OpFieldAdd -> fieldErr
           Tree.OpFieldSub -> fieldErr
           Tree.OpFieldMul -> fieldErr
@@ -700,8 +727,8 @@ goConstructor mr t args = case t of
 unsupported :: Text -> a
 unsupported thing = error ("The Nockma backend does not support " <> thing)
 
-stringsErr :: a
-stringsErr = unsupported "strings"
+stringsErr :: Text -> a
+stringsErr t = unsupported ("strings: " <> t)
 
 fieldErr :: a
 fieldErr = unsupported "the field type"

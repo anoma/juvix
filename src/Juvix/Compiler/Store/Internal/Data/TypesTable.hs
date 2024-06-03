@@ -12,4 +12,6 @@ newtype TypesTable = TypesTable
 
 instance Serialize TypesTable
 
+instance NFData TypesTable
+
 makeLenses ''TypesTable

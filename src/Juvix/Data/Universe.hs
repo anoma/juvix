@@ -16,6 +16,8 @@ data Universe = Universe
 
 instance Serialize Universe
 
+instance NFData Universe
+
 newtype SmallUniverse = SmallUniverse
   { _smallUniverseLoc :: Interval
   }
@@ -27,6 +29,8 @@ instance Eq SmallUniverse where
 instance Hashable SmallUniverse
 
 instance Serialize SmallUniverse
+
+instance NFData SmallUniverse
 
 getUniverseLevel :: Universe -> Natural
 getUniverseLevel Universe {..} = fromMaybe defaultLevel _universeLevel

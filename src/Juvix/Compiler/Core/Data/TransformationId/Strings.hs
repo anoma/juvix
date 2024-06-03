@@ -77,6 +77,9 @@ strCheckGeb = "check-geb"
 strCheckExec :: Text
 strCheckExec = "check-exec"
 
+strCheckRust :: Text
+strCheckRust = "check-rust"
+
 strCheckVampIR :: Text
 strCheckVampIR = "check-vampir"
 

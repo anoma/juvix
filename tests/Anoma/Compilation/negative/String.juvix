@@ -2,4 +2,4 @@ module String;
 
 import Stdlib.Prelude open;
 
-main : String := "boom";
+main : String := intToString 1;

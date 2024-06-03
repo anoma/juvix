@@ -2,6 +2,7 @@ module Juvix.Compiler.Pipeline
   ( module Juvix.Compiler.Pipeline,
     module Juvix.Compiler.Pipeline.EntryPoint,
     module Juvix.Compiler.Pipeline.Artifacts,
+    module Juvix.Compiler.Pipeline.Options,
     module Juvix.Compiler.Pipeline.Root.Base,
     module Juvix.Compiler.Pipeline.Result,
   )
@@ -18,6 +19,7 @@ import Juvix.Compiler.Backend.Cairo qualified as Cairo
 import Juvix.Compiler.Backend.Geb qualified as Geb
 import Juvix.Compiler.Backend.Isabelle.Data.Result qualified as Isabelle
 import Juvix.Compiler.Backend.Isabelle.Translation.FromTyped qualified as Isabelle
+import Juvix.Compiler.Backend.Rust.Translation.FromReg qualified as Rust
 import Juvix.Compiler.Backend.VampIR.Translation qualified as VampIR
 import Juvix.Compiler.Casm.Data.Builtins qualified as Casm
 import Juvix.Compiler.Casm.Data.Result qualified as Casm
@@ -27,6 +29,7 @@ import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromParsed qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Concrete.Translation.FromSource.TopModuleNameChecker
+import Juvix.Compiler.Concrete.Translation.ImportScanner
 import Juvix.Compiler.Core qualified as Core
 import Juvix.Compiler.Core.Transformation
 import Juvix.Compiler.Core.Translation.Stripped.FromCore qualified as Stripped
@@ -35,11 +38,13 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Che
 import Juvix.Compiler.Nockma.Translation.FromTree qualified as NockmaTree
 import Juvix.Compiler.Pipeline.Artifacts
 import Juvix.Compiler.Pipeline.EntryPoint
-import Juvix.Compiler.Pipeline.ImportParents
+import Juvix.Compiler.Pipeline.JvoCache
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Base
+import Juvix.Compiler.Pipeline.Loader.PathResolver.Data
 import Juvix.Compiler.Pipeline.Loader.PathResolver.DependencyResolver
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Error
 import Juvix.Compiler.Pipeline.ModuleInfoCache
+import Juvix.Compiler.Pipeline.Options
 import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
 import Juvix.Compiler.Pipeline.Result
@@ -50,23 +55,52 @@ import Juvix.Compiler.Store.Language qualified as Store
 import Juvix.Compiler.Tree qualified as Tree
 import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process
-import Juvix.Data.Effect.TaggedLock
 import Juvix.Data.Field
+import Parallel.ProgressLog (ProgressLog)
 
-type PipelineAppEffects = '[TaggedLock, EmbedIO]
+type PipelineAppEffects = '[TaggedLock, Reader PipelineOptions, ProgressLog, EmbedIO]
 
-type PipelineLocalEff = '[ModuleInfoCache, Reader ImportParents, TopModuleNameChecker, PathResolver, DependencyResolver, EvalFileEff, Error PackageLoaderError, Error DependencyError, GitClone, Error GitProcessError, Process, Log, Reader EntryPoint, Files, Error JuvixError, HighlightBuilder, Internet]
+type PipelineLocalEff =
+  '[ ModuleInfoCache,
+     JvoCache,
+     Reader ImportTree,
+     Reader ImportScanStrategy,
+     TopModuleNameChecker,
+     PathResolver,
+     Reader DependenciesConfig,
+     DependencyResolver,
+     EvalFileEff,
+     Error PackageLoaderError,
+     Error DependencyError,
+     GitClone,
+     Error GitProcessError,
+     Process,
+     Log,
+     Reader EntryPoint,
+     Files,
+     Error JuvixError,
+     HighlightBuilder,
+     Internet,
+     Concurrent
+   ]
 
 type PipelineEff' r = PipelineLocalEff ++ r
 
-type PipelineEff r = Reader Parser.ParserResult ': Reader Store.ModuleTable ': NameIdGen ': PipelineEff' r
+type PipelineEff r =
+  '[ Reader Parser.ParserResult,
+     Reader Store.ModuleTable,
+     NameIdGen
+   ]
+    ++ PipelineEff' r
+
+makeLenses ''PipelineOptions
 
 --------------------------------------------------------------------------------
 -- Workflows from source
 --------------------------------------------------------------------------------
 
 upToParsing ::
-  (Members '[HighlightBuilder, TopModuleNameChecker, Reader EntryPoint, Error JuvixError, Files, PathResolver] r) =>
+  (Members '[HighlightBuilder, TopModuleNameChecker, Reader EntryPoint, Error JuvixError, Files] r) =>
   Sem r Parser.ParserResult
 upToParsing = ask >>= Parser.fromSource
 
@@ -100,12 +134,12 @@ upToIsabelle ::
 upToIsabelle = upToInternalTyped >>= Isabelle.fromInternal
 
 upToCore ::
-  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, PathResolver] r) =>
+  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError] r) =>
   Sem r Core.CoreResult
 upToCore = upToInternalTyped >>= Core.fromInternal
 
 upToStoredCore ::
-  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, PathResolver] r) =>
+  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError] r) =>
   Sem r Core.CoreResult
 upToStoredCore = do
   r <- upToCore
@@ -113,60 +147,65 @@ upToStoredCore = do
   return r {Core._coreResultModule = md}
 
 upToReg ::
-  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, PathResolver] r) =>
+  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError] r) =>
   Sem r Reg.InfoTable
 upToReg =
   upToStoredCore >>= \Core.CoreResult {..} -> storedCoreToReg _coreResultModule
 
 upToTree ::
-  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, PathResolver] r) =>
+  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError] r) =>
   Sem r Tree.InfoTable
 upToTree =
   upToStoredCore >>= \Core.CoreResult {..} -> storedCoreToTree Core.Identity _coreResultModule
 
 upToAsm ::
-  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, PathResolver] r) =>
+  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError] r) =>
   Sem r Asm.InfoTable
 upToAsm =
   upToStoredCore >>= \Core.CoreResult {..} -> storedCoreToAsm _coreResultModule
 
 upToCasm ::
-  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, PathResolver] r) =>
+  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError] r) =>
   Sem r Casm.Result
 upToCasm =
   upToStoredCore >>= \Core.CoreResult {..} -> storedCoreToCasm _coreResultModule
 
 upToCairo ::
-  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, PathResolver] r) =>
+  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError] r) =>
   Sem r Cairo.Result
 upToCairo =
   upToStoredCore >>= \Core.CoreResult {..} -> storedCoreToCairo _coreResultModule
 
 upToMiniC ::
-  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, PathResolver] r) =>
+  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError] r) =>
   Sem r C.MiniCResult
 upToMiniC = upToAsm >>= asmToMiniC
 
 upToVampIR ::
-  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, PathResolver] r) =>
+  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError] r) =>
   Sem r VampIR.Result
 upToVampIR =
   upToStoredCore >>= \Core.CoreResult {..} -> storedCoreToVampIR _coreResultModule
 
 upToGeb ::
-  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, PathResolver] r) =>
+  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError] r) =>
   Geb.ResultSpec ->
   Sem r Geb.Result
 upToGeb spec =
   upToStoredCore >>= \Core.CoreResult {..} -> storedCoreToGeb spec _coreResultModule
 
 upToAnoma ::
-  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, PathResolver] r) =>
+  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError] r) =>
   Sem r NockmaTree.AnomaResult
 upToAnoma = upToStoredCore >>= \Core.CoreResult {..} -> storedCoreToAnoma _coreResultModule
 
-upToCoreTypecheck ::
+upToRust ::
   (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, PathResolver] r) =>
+  Sem r Rust.Result
+upToRust = upToStoredCore >>= \Core.CoreResult {..} -> storedCoreToRust _coreResultModule
+
+upToCoreTypecheck ::
+  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError] r) =>
   Sem r Core.CoreResult
 upToCoreTypecheck = do
   r <- upToCore
@@ -197,6 +236,9 @@ storedCoreToReg = storedCoreToAsm >=> asmToReg
 
 storedCoreToMiniC :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r C.MiniCResult
 storedCoreToMiniC = storedCoreToAsm >=> asmToMiniC
+
+storedCoreToRust :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Rust.Result
+storedCoreToRust = storedCoreToTree Core.CheckRust >=> treeToReg >=> regToRust
 
 storedCoreToCasm :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Casm.Result
 storedCoreToCasm = local (set entryPointFieldSize cairoFieldSize) . storedCoreToTree Core.CheckCairo >=> treeToCasm
@@ -289,6 +331,12 @@ regToMiniC tab = do
   tab' <- Reg.toC tab
   e <- ask
   return $ C.fromReg (Backend.getLimits (getEntryPointTarget e) (e ^. entryPointDebug)) tab'
+
+regToRust :: (Member (Reader EntryPoint) r) => Reg.InfoTable -> Sem r Rust.Result
+regToRust tab = do
+  tab' <- Reg.toRust tab
+  e <- ask
+  return $ Rust.fromReg (Backend.getLimits (getEntryPointTarget e) (e ^. entryPointDebug)) tab'
 
 regToCasm :: Reg.InfoTable -> Sem r Casm.Result
 regToCasm = Reg.toCasm >=> return . Casm.fromReg

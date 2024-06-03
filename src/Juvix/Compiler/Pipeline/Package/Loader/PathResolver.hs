@@ -6,7 +6,6 @@ import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Pipeline.Loader.PathResolver
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
-import Juvix.Data.Effect.TaggedLock
 import Juvix.Extra.PackageFiles
 import Juvix.Extra.Paths
 import Juvix.Extra.Stdlib
@@ -42,6 +41,8 @@ runPackagePathResolver rootPath sem = do
   let mkRootInfo' :: Path Rel File -> Maybe RootInfo = mkRootInfo ds fs
   packageInfos <- mkPackageInfos ds fs
   (`interpretH` sem) $ \localEnv -> \case
+    SupportsParallel -> return False
+    ResolverRoot -> return rootPath
     RegisterDependencies {} -> return ()
     ResolvePath scan -> case mkRootInfo ds fs (addFileExt FileExtJuvix (importScanToRelPath scan)) of
       Nothing ->

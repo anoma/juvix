@@ -3,7 +3,7 @@ module Juvix.Compiler.Backend.Html.Extra where
 import Juvix.Compiler.Backend.Html.Data.Options
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Extra.Version
-import Juvix.Prelude
+import Juvix.Prelude hiding (link)
 import Text.Blaze.Html5 as Html hiding (map)
 import Text.Blaze.Html5.Attributes qualified as Attr
 

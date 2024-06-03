@@ -7,9 +7,8 @@ type Nat :=
 type Unit := unit : Unit;
 
 t : Nat :=
-  case unit of {
+  case unit of
     x :=
       let
         x : Nat := suc zero;
-      in x
-  };
+      in x;

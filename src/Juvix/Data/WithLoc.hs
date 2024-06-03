@@ -16,6 +16,8 @@ makeLenses ''WithLoc
 
 instance (Serialize a) => Serialize (WithLoc a)
 
+instance (NFData a) => NFData (WithLoc a)
+
 instance HasLoc (WithLoc a) where
   getLoc = (^. withLocInt)
 

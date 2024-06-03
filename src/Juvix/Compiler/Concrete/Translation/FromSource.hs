@@ -830,7 +830,6 @@ expressionAtom =
       <|> AtomIdentifier <$> name
       <|> AtomUniverse <$> universe
       <|> AtomLambda <$> lambda
-      <|> P.try (AtomNewCase <$> newCase)
       <|> AtomCase <$> case_
       <|> AtomFunction <$> function
       <|> AtomLet <$> letBlock
@@ -1114,36 +1113,20 @@ letBlock = do
   _letExpression <- parseExpressionAtoms
   return Let {..}
 
-caseBranch :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (CaseBranch 'Parsed)
-caseBranch = do
-  _caseBranchPipe <- Irrelevant <$> kw kwPipe
+caseBranch :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => Irrelevant (Maybe KeywordRef) -> ParsecS r (CaseBranch 'Parsed)
+caseBranch _caseBranchPipe = do
   _caseBranchPattern <- parsePatternAtoms
   _caseBranchAssignKw <- Irrelevant <$> kw kwAssign
   _caseBranchExpression <- parseExpressionAtoms
   return CaseBranch {..}
 
-case_ :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (Case 'Parsed)
-case_ = do
+case_ :: forall r. (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (Case 'Parsed)
+case_ = P.label "case" $ do
   _caseKw <- kw kwCase
   _caseExpression <- parseExpressionAtoms
-  _caseBranches <- some1 caseBranch
-  let _caseParens = False
+  _caseOfKw <- kw kwOf
+  _caseBranches <- braces (pipeSep1 caseBranch) <|> pipeSep1 caseBranch
   return Case {..}
-
-newCaseBranch :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => Irrelevant (Maybe KeywordRef) -> ParsecS r (NewCaseBranch 'Parsed)
-newCaseBranch _newCaseBranchPipe = do
-  _newCaseBranchPattern <- parsePatternAtoms
-  _newCaseBranchAssignKw <- Irrelevant <$> kw kwAssign
-  _newCaseBranchExpression <- parseExpressionAtoms
-  return NewCaseBranch {..}
-
-newCase :: forall r. (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (NewCase 'Parsed)
-newCase = P.label "new case" $ do
-  _newCaseKw <- kw kwCase
-  _newCaseExpression <- parseExpressionAtoms
-  _newCaseOfKw <- kw kwOf
-  _newCaseBranches <- braces (pipeSep1 newCaseBranch)
-  return NewCase {..}
 
 ifBranch' :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => Irrelevant KeywordRef -> ParsecS r (IfBranch 'Parsed)
 ifBranch' _ifBranchPipe = do

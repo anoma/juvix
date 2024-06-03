@@ -55,6 +55,9 @@ instance PrettyCode BuiltinOp where
     OpAnomaGet -> return primAnomaGet
     OpAnomaEncode -> return primAnomaEncode
     OpAnomaDecode -> return primAnomaDecode
+    OpAnomaVerifyDetached -> return primAnomaVerifyDetached
+    OpAnomaSign -> return primAnomaSign
+    OpAnomaVerify -> return primAnomaVerify
     OpPoseidonHash -> return primPoseidonHash
     OpEc -> return primEc
     OpRandomEcPoint -> return primRandomEcPoint
@@ -767,9 +770,6 @@ primStrToInt = primitive Str.strToInt
 kwLetRec :: Doc Ann
 kwLetRec = keyword Str.letrec_
 
-kwOf :: Doc Ann
-kwOf = keyword Str.of_
-
 kwMatch :: Doc Ann
 kwMatch = keyword Str.match_
 
@@ -808,6 +808,15 @@ primAnomaEncode = primitive Str.anomaEncode
 
 primAnomaDecode :: Doc Ann
 primAnomaDecode = primitive Str.anomaDecode
+
+primAnomaVerifyDetached :: Doc Ann
+primAnomaVerifyDetached = primitive Str.anomaVerifyDetached
+
+primAnomaSign :: Doc Ann
+primAnomaSign = primitive Str.anomaSign
+
+primAnomaVerify :: Doc Ann
+primAnomaVerify = primitive Str.anomaVerify
 
 primPoseidonHash :: Doc Ann
 primPoseidonHash = primitive Str.cairoPoseidon

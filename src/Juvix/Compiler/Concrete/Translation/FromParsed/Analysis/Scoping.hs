@@ -662,11 +662,24 @@ getLocalModules ExportInfo {..} = do
         n = _moduleEntry ^. S.nameId
 
 readScopeModule ::
+  forall r.
   (Members '[Error ScoperError, Reader ScopeParameters, NameIdGen, State ScoperState, InfoTableBuilder, Reader InfoTable] r) =>
   Import 'Parsed ->
   Sem r ScopedModule
 readScopeModule import_ = do
-  asks (^?! scopeImportedModules . at (import_ ^. importModulePath) . _Just)
+  mods <- ask
+  let err :: a
+      err = do
+        error
+          ( "unexpected error in "
+              <> ppTrace (getLoc import_)
+              <> "\n"
+              <> "could not find module "
+              <> ppTrace (import_ ^. importModulePath)
+              <> "\nAvailable modules:\n "
+              <> show (HashMap.keys (mods ^. scopeImportedModules))
+          )
+  return (fromMaybe err (mods ^. scopeImportedModules . at (import_ ^. importModulePath)))
 
 checkFixityInfo ::
   forall r.
@@ -1984,21 +1997,6 @@ checkCaseBranch CaseBranch {..} = withLocalScope $ do
         ..
       }
 
-checkNewCaseBranch ::
-  forall r.
-  (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader EntryPoint] r) =>
-  NewCaseBranch 'Parsed ->
-  Sem r (NewCaseBranch 'Scoped)
-checkNewCaseBranch NewCaseBranch {..} = withLocalScope $ do
-  pattern' <- checkParsePatternAtoms _newCaseBranchPattern
-  expression' <- (checkParseExpressionAtoms _newCaseBranchExpression)
-  return $
-    NewCaseBranch
-      { _newCaseBranchPattern = pattern',
-        _newCaseBranchExpression = expression',
-        ..
-      }
-
 checkCase ::
   (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader EntryPoint] r) =>
   Case 'Parsed ->
@@ -2011,22 +2009,7 @@ checkCase Case {..} = do
       { _caseExpression = caseExpression',
         _caseBranches = caseBranches',
         _caseKw,
-        _caseParens
-      }
-
-checkNewCase ::
-  (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader EntryPoint] r) =>
-  NewCase 'Parsed ->
-  Sem r (NewCase 'Scoped)
-checkNewCase NewCase {..} = do
-  caseBranches' <- mapM checkNewCaseBranch _newCaseBranches
-  caseExpression' <- checkParseExpressionAtoms _newCaseExpression
-  return $
-    NewCase
-      { _newCaseExpression = caseExpression',
-        _newCaseBranches = caseBranches',
-        _newCaseKw,
-        _newCaseOfKw
+        _caseOfKw
       }
 
 checkIfBranch ::
@@ -2281,7 +2264,6 @@ checkExpressionAtom e = case e of
   AtomIdentifier n -> pure . AtomIdentifier <$> checkScopedIden n
   AtomLambda lam -> pure . AtomLambda <$> checkLambda lam
   AtomCase c -> pure . AtomCase <$> checkCase c
-  AtomNewCase c -> pure . AtomNewCase <$> checkNewCase c
   AtomIf c -> pure . AtomIf <$> checkIf c
   AtomLet letBlock -> pure . AtomLet <$> checkLet letBlock
   AtomUniverse uni -> return (pure (AtomUniverse uni))
@@ -2525,7 +2507,6 @@ checkParens e@(ExpressionAtoms as _) = case as of
       let scopedIdenNoFix = over scopedIdenSrcName (set S.nameFixity Nothing) scopedId
       return (ExpressionParensIdentifier scopedIdenNoFix)
     AtomIterator i -> ExpressionIterator . set iteratorParens True <$> checkIterator i
-    AtomCase c -> ExpressionCase . set caseParens True <$> checkCase c
     AtomRecordUpdate u -> ExpressionParensRecordUpdate . ParensRecordUpdate <$> checkRecordUpdate u
     _ -> checkParseExpressionAtoms e
   _ -> checkParseExpressionAtoms e
@@ -2823,7 +2804,6 @@ parseTerm =
     <|> parseFunction
     <|> parseLambda
     <|> parseCase
-    <|> parseNewCase
     <|> parseIf
     <|> parseList
     <|> parseLiteral
@@ -2872,14 +2852,6 @@ parseTerm =
         case_ :: ExpressionAtom 'Scoped -> Maybe (Case 'Scoped)
         case_ s = case s of
           AtomCase l -> Just l
-          _ -> Nothing
-
-    parseNewCase :: Parse Expression
-    parseNewCase = ExpressionNewCase <$> P.token case_ mempty
-      where
-        case_ :: ExpressionAtom 'Scoped -> Maybe (NewCase 'Scoped)
-        case_ s = case s of
-          AtomNewCase l -> Just l
           _ -> Nothing
 
     parseIf :: Parse Expression

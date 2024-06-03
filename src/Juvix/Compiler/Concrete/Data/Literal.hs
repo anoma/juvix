@@ -32,13 +32,19 @@ instance Hashable IntegerBase
 
 instance Serialize IntegerBase
 
+instance NFData IntegerBase
+
 instance Hashable IntegerWithBase
 
 instance Serialize IntegerWithBase
 
+instance NFData IntegerWithBase
+
 instance Hashable Literal
 
 instance Serialize Literal
+
+instance NFData Literal
 
 instance HasAtomicity IntegerWithBase where
   atomicity = const Atom

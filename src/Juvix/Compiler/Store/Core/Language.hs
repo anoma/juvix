@@ -73,3 +73,5 @@ data Node
   deriving stock (Generic)
 
 instance Serialize Node
+
+instance NFData Node

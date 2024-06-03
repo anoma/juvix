@@ -2,6 +2,9 @@ module Juvix.Extra.Strings where
 
 import Juvix.Prelude.Base
 
+auto :: (IsString s) => s
+auto = "auto"
+
 binaryPrefix :: (IsString s) => s
 binaryPrefix = "0b"
 
@@ -334,6 +337,15 @@ anomaEncode = "anoma-encode"
 
 anomaDecode :: (IsString s) => s
 anomaDecode = "anoma-decode"
+
+anomaVerifyDetached :: (IsString s) => s
+anomaVerifyDetached = "anoma-verify-detached"
+
+anomaSign :: (IsString s) => s
+anomaSign = "anoma-sign"
+
+anomaVerify :: (IsString s) => s
+anomaVerify = "anoma-verify"
 
 builtinSeq :: (IsString s) => s
 builtinSeq = "seq"
@@ -1045,3 +1057,45 @@ cairoEcPoint = "ec_point"
 
 cairoMkEcPoint :: (IsString s) => s
 cairoMkEcPoint = "mkEcPoint"
+
+rustFn :: (IsString s) => s
+rustFn = "fn"
+
+rustIf :: (IsString s) => s
+rustIf = "if"
+
+rustElse :: (IsString s) => s
+rustElse = "else"
+
+rustMatch :: (IsString s) => s
+rustMatch = "match"
+
+rustLoop :: (IsString s) => s
+rustLoop = "loop"
+
+rustLet :: (IsString s) => s
+rustLet = "let"
+
+rustConst :: (IsString s) => s
+rustConst = "const"
+
+rustMut :: (IsString s) => s
+rustMut = "mut"
+
+rustVec :: (IsString s) => s
+rustVec = "vec!"
+
+rustVector :: (IsString s) => s
+rustVector = "Vec"
+
+rustWord :: (IsString s) => s
+rustWord = "Word"
+
+rustMemory :: (IsString s) => s
+rustMemory = "Memory"
+
+rustContinue :: (IsString s) => s
+rustContinue = "continue"
+
+rustReturn :: (IsString s) => s
+rustReturn = "return"

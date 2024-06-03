@@ -142,7 +142,11 @@ data NameItem (s :: Stage) = NameItem
 
 instance Serialize (NameItem 'Scoped)
 
+instance NFData (NameItem 'Scoped)
+
 instance Serialize (NameItem 'Parsed)
+
+instance NFData (NameItem 'Parsed)
 
 data NameBlock (s :: Stage) = NameBlock
   { -- | Symbols map to themselves so we can retrieve the location
@@ -154,7 +158,11 @@ data NameBlock (s :: Stage) = NameBlock
 
 instance Serialize (NameBlock 'Scoped)
 
+instance NFData (NameBlock 'Scoped)
+
 instance Serialize (NameBlock 'Parsed)
+
+instance NFData (NameBlock 'Parsed)
 
 -- | Two consecutive blocks should have different implicitness
 newtype NameSignature (s :: Stage) = NameSignature
@@ -164,7 +172,11 @@ newtype NameSignature (s :: Stage) = NameSignature
 
 instance Serialize (NameSignature 'Scoped)
 
+instance NFData (NameSignature 'Scoped)
+
 instance Serialize (NameSignature 'Parsed)
+
+instance NFData (NameSignature 'Parsed)
 
 newtype RecordNameSignature s = RecordNameSignature
   { _recordNames :: HashMap Symbol (NameItem s)
@@ -173,7 +185,11 @@ newtype RecordNameSignature s = RecordNameSignature
 
 instance Serialize (RecordNameSignature 'Scoped)
 
+instance NFData (RecordNameSignature 'Scoped)
+
 instance Serialize (RecordNameSignature 'Parsed)
+
+instance NFData (RecordNameSignature 'Parsed)
 
 data RecordInfo = RecordInfo
   { _recordInfoConstructor :: S.Symbol,
@@ -183,6 +199,8 @@ data RecordInfo = RecordInfo
 
 instance Serialize RecordInfo
 
+instance NFData RecordInfo
+
 data Argument (s :: Stage)
   = ArgumentSymbol (SymbolType s)
   | ArgumentWildcard Wildcard
@@ -190,7 +208,11 @@ data Argument (s :: Stage)
 
 instance Serialize (Argument 'Scoped)
 
+instance NFData (Argument 'Scoped)
+
 instance Serialize (Argument 'Parsed)
+
+instance NFData (Argument 'Parsed)
 
 deriving stock instance Show (Argument 'Parsed)
 
@@ -304,7 +326,11 @@ data AliasDef (s :: Stage) = AliasDef
 
 instance Serialize (AliasDef 'Scoped)
 
+instance NFData (AliasDef 'Scoped)
+
 instance Serialize (AliasDef 'Parsed)
+
+instance NFData (AliasDef 'Parsed)
 
 deriving stock instance (Show (AliasDef 'Parsed))
 
@@ -411,6 +437,8 @@ data FixityDef = FixityDef
 
 instance Serialize FixityDef
 
+instance NFData FixityDef
+
 data OperatorSyntaxDef = OperatorSyntaxDef
   { _opSymbol :: Symbol,
     _opFixity :: Symbol,
@@ -420,6 +448,8 @@ data OperatorSyntaxDef = OperatorSyntaxDef
   deriving stock (Show, Eq, Ord, Generic)
 
 instance Serialize OperatorSyntaxDef
+
+instance NFData OperatorSyntaxDef
 
 instance HasLoc OperatorSyntaxDef where
   getLoc OperatorSyntaxDef {..} = getLoc _opSyntaxKw <> getLoc _opSymbol
@@ -443,7 +473,11 @@ data ArgDefault (s :: Stage) = ArgDefault
 
 instance Serialize (ArgDefault 'Scoped)
 
+instance NFData (ArgDefault 'Scoped)
+
 instance Serialize (ArgDefault 'Parsed)
+
+instance NFData (ArgDefault 'Parsed)
 
 deriving stock instance Show (ArgDefault 'Parsed)
 
@@ -472,7 +506,11 @@ data SigArg (s :: Stage) = SigArg
 
 instance Serialize (SigArg 'Scoped)
 
+instance NFData (SigArg 'Scoped)
+
 instance Serialize (SigArg 'Parsed)
+
+instance NFData (SigArg 'Parsed)
 
 deriving stock instance Show (SigArg 'Parsed)
 
@@ -496,7 +534,11 @@ data FunctionClause (s :: Stage) = FunctionClause
 
 instance Serialize (FunctionClause 'Scoped)
 
+instance NFData (FunctionClause 'Scoped)
+
 instance Serialize (FunctionClause 'Parsed)
+
+instance NFData (FunctionClause 'Parsed)
 
 deriving stock instance Show (FunctionClause 'Parsed)
 
@@ -517,7 +559,11 @@ data FunctionDefBody (s :: Stage)
 
 instance Serialize (FunctionDefBody 'Scoped)
 
+instance NFData (FunctionDefBody 'Scoped)
+
 instance Serialize (FunctionDefBody 'Parsed)
+
+instance NFData (FunctionDefBody 'Parsed)
 
 deriving stock instance Show (FunctionDefBody 'Parsed)
 
@@ -548,7 +594,11 @@ data FunctionDef (s :: Stage) = FunctionDef
 
 instance Serialize (FunctionDef 'Scoped)
 
+instance NFData (FunctionDef 'Scoped)
+
 instance Serialize (FunctionDef 'Parsed)
+
+instance NFData (FunctionDef 'Parsed)
 
 deriving stock instance Show (FunctionDef 'Parsed)
 
@@ -574,6 +624,8 @@ data AxiomDef (s :: Stage) = AxiomDef
   deriving stock (Generic)
 
 instance Serialize (AxiomDef 'Scoped)
+
+instance NFData (AxiomDef 'Scoped)
 
 deriving stock instance Show (AxiomDef 'Parsed)
 
@@ -603,6 +655,8 @@ data ConstructorDef (s :: Stage) = ConstructorDef
 
 instance Serialize (ConstructorDef 'Scoped)
 
+instance NFData (ConstructorDef 'Scoped)
+
 deriving stock instance Show (ConstructorDef 'Parsed)
 
 deriving stock instance Show (ConstructorDef 'Scoped)
@@ -625,7 +679,11 @@ data RecordUpdateField (s :: Stage) = RecordUpdateField
 
 instance Serialize (RecordUpdateField 'Scoped)
 
+instance NFData (RecordUpdateField 'Scoped)
+
 instance Serialize (RecordUpdateField 'Parsed)
+
+instance NFData (RecordUpdateField 'Parsed)
 
 deriving stock instance Show (RecordUpdateField 'Parsed)
 
@@ -649,6 +707,8 @@ data RecordField (s :: Stage) = RecordField
 
 instance Serialize (RecordField 'Scoped)
 
+instance NFData (RecordField 'Scoped)
+
 deriving stock instance Show (RecordField 'Parsed)
 
 deriving stock instance Show (RecordField 'Scoped)
@@ -667,6 +727,8 @@ newtype RhsAdt (s :: Stage) = RhsAdt
   deriving stock (Generic)
 
 instance Serialize (RhsAdt 'Scoped)
+
+instance NFData (RhsAdt 'Scoped)
 
 deriving stock instance Show (RhsAdt 'Parsed)
 
@@ -688,6 +750,8 @@ data RhsRecord (s :: Stage) = RhsRecord
 
 instance Serialize (RhsRecord 'Scoped)
 
+instance NFData (RhsRecord 'Scoped)
+
 deriving stock instance Show (RhsRecord 'Parsed)
 
 deriving stock instance Show (RhsRecord 'Scoped)
@@ -707,6 +771,8 @@ data RhsGadt (s :: Stage) = RhsGadt
   deriving stock (Generic)
 
 instance Serialize (RhsGadt 'Scoped)
+
+instance NFData (RhsGadt 'Scoped)
 
 deriving stock instance Show (RhsGadt 'Parsed)
 
@@ -728,6 +794,8 @@ data ConstructorRhs (s :: Stage)
 
 instance Serialize (ConstructorRhs 'Scoped)
 
+instance NFData (ConstructorRhs 'Scoped)
+
 deriving stock instance Show (ConstructorRhs 'Parsed)
 
 deriving stock instance Show (ConstructorRhs 'Scoped)
@@ -748,6 +816,8 @@ data InductiveParametersRhs (s :: Stage) = InductiveParametersRhs
 
 instance Serialize (InductiveParametersRhs 'Scoped)
 
+instance NFData (InductiveParametersRhs 'Scoped)
+
 deriving stock instance Show (InductiveParametersRhs 'Parsed)
 
 deriving stock instance Show (InductiveParametersRhs 'Scoped)
@@ -767,6 +837,8 @@ data InductiveParameters (s :: Stage) = InductiveParameters
   deriving stock (Generic)
 
 instance Serialize (InductiveParameters 'Scoped)
+
+instance NFData (InductiveParameters 'Scoped)
 
 deriving stock instance Show (InductiveParameters 'Parsed)
 
@@ -797,6 +869,8 @@ data InductiveDef (s :: Stage) = InductiveDef
 
 instance Serialize (InductiveDef 'Scoped)
 
+instance NFData (InductiveDef 'Scoped)
+
 deriving stock instance Show (InductiveDef 'Parsed)
 
 deriving stock instance Show (InductiveDef 'Scoped)
@@ -817,6 +891,8 @@ data PatternApp = PatternApp
 
 instance Serialize PatternApp
 
+instance NFData PatternApp
+
 data PatternInfixApp = PatternInfixApp
   { _patInfixLeft :: PatternArg,
     _patInfixConstructor :: ScopedIden,
@@ -826,6 +902,8 @@ data PatternInfixApp = PatternInfixApp
 
 instance Serialize PatternInfixApp
 
+instance NFData PatternInfixApp
+
 data PatternPostfixApp = PatternPostfixApp
   { _patPostfixParameter :: PatternArg,
     _patPostfixConstructor :: ScopedIden
@@ -833,6 +911,8 @@ data PatternPostfixApp = PatternPostfixApp
   deriving stock (Show, Eq, Ord, Generic)
 
 instance Serialize PatternPostfixApp
+
+instance NFData PatternPostfixApp
 
 data PatternArg = PatternArg
   { _patternArgIsImplicit :: IsImplicit,
@@ -842,6 +922,8 @@ data PatternArg = PatternArg
   deriving stock (Show, Eq, Ord, Generic)
 
 instance Serialize PatternArg
+
+instance NFData PatternArg
 
 data Pattern
   = PatternVariable (SymbolType 'Scoped)
@@ -858,6 +940,8 @@ data Pattern
 
 instance Serialize Pattern
 
+instance NFData Pattern
+
 data PatternScopedIden
   = PatternScopedVar S.Symbol
   | PatternScopedConstructor ScopedIden
@@ -872,6 +956,8 @@ data PatternBinding = PatternBinding
 
 instance Serialize PatternBinding
 
+instance NFData PatternBinding
+
 data ListPattern (s :: Stage) = ListPattern
   { _listpBracketL :: Irrelevant KeywordRef,
     _listpBracketR :: Irrelevant KeywordRef,
@@ -881,7 +967,11 @@ data ListPattern (s :: Stage) = ListPattern
 
 instance Serialize (ListPattern 'Scoped)
 
+instance NFData (ListPattern 'Scoped)
+
 instance Serialize (ListPattern 'Parsed)
+
+instance NFData (ListPattern 'Parsed)
 
 deriving stock instance Show (ListPattern 'Parsed)
 
@@ -905,7 +995,11 @@ data RecordPatternAssign (s :: Stage) = RecordPatternAssign
 
 instance Serialize (RecordPatternAssign 'Scoped)
 
+instance NFData (RecordPatternAssign 'Scoped)
+
 instance Serialize (RecordPatternAssign 'Parsed)
+
+instance NFData (RecordPatternAssign 'Parsed)
 
 deriving stock instance Show (RecordPatternAssign 'Parsed)
 
@@ -927,7 +1021,11 @@ data FieldPun (s :: Stage) = FieldPun
 
 instance Serialize (FieldPun 'Scoped)
 
+instance NFData (FieldPun 'Scoped)
+
 instance Serialize (FieldPun 'Parsed)
+
+instance NFData (FieldPun 'Parsed)
 
 deriving stock instance Show (FieldPun 'Parsed)
 
@@ -948,7 +1046,11 @@ data RecordPatternItem (s :: Stage)
 
 instance Serialize (RecordPatternItem 'Scoped)
 
+instance NFData (RecordPatternItem 'Scoped)
+
 instance Serialize (RecordPatternItem 'Parsed)
+
+instance NFData (RecordPatternItem 'Parsed)
 
 deriving stock instance Show (RecordPatternItem 'Parsed)
 
@@ -970,7 +1072,11 @@ data RecordPattern (s :: Stage) = RecordPattern
 
 instance Serialize (RecordPattern 'Scoped)
 
+instance NFData (RecordPattern 'Scoped)
+
 instance Serialize (RecordPattern 'Parsed)
+
+instance NFData (RecordPattern 'Parsed)
 
 deriving stock instance Show (RecordPattern 'Parsed)
 
@@ -993,7 +1099,11 @@ data WildcardConstructor (s :: Stage) = WildcardConstructor
 
 instance Serialize (WildcardConstructor 'Scoped)
 
+instance NFData (WildcardConstructor 'Scoped)
+
 instance Serialize (WildcardConstructor 'Parsed)
+
+instance NFData (WildcardConstructor 'Parsed)
 
 deriving stock instance Show (WildcardConstructor 'Parsed)
 
@@ -1022,6 +1132,8 @@ data PatternAtom (s :: Stage)
 
 instance Serialize (PatternAtom 'Parsed)
 
+instance NFData (PatternAtom 'Parsed)
+
 deriving stock instance Show (PatternAtom 'Parsed)
 
 deriving stock instance Show (PatternAtom 'Scoped)
@@ -1041,6 +1153,8 @@ data PatternAtoms (s :: Stage) = PatternAtoms
   deriving stock (Generic)
 
 instance Serialize (PatternAtoms 'Parsed)
+
+instance NFData (PatternAtoms 'Parsed)
 
 deriving stock instance Show (PatternAtoms 'Parsed)
 
@@ -1108,7 +1222,11 @@ data HidingItem (s :: Stage) = HidingItem
 
 instance Serialize (HidingItem 'Scoped)
 
+instance NFData (HidingItem 'Scoped)
+
 instance Serialize (HidingItem 'Parsed)
+
+instance NFData (HidingItem 'Parsed)
 
 deriving stock instance Show (HidingItem 'Parsed)
 
@@ -1132,7 +1250,11 @@ data UsingItem (s :: Stage) = UsingItem
 
 instance Serialize (UsingItem 'Scoped)
 
+instance NFData (UsingItem 'Scoped)
+
 instance Serialize (UsingItem 'Parsed)
+
+instance NFData (UsingItem 'Parsed)
 
 deriving stock instance Show (UsingItem 'Parsed)
 
@@ -1155,7 +1277,11 @@ data UsingList (s :: Stage) = UsingList
 
 instance Serialize (UsingList 'Scoped)
 
+instance NFData (UsingList 'Scoped)
+
 instance Serialize (UsingList 'Parsed)
+
+instance NFData (UsingList 'Parsed)
 
 deriving stock instance Show (UsingList 'Parsed)
 
@@ -1178,7 +1304,11 @@ data HidingList (s :: Stage) = HidingList
 
 instance Serialize (HidingList 'Scoped)
 
+instance NFData (HidingList 'Scoped)
+
 instance Serialize (HidingList 'Parsed)
+
+instance NFData (HidingList 'Parsed)
 
 deriving stock instance Show (HidingList 'Parsed)
 
@@ -1199,7 +1329,11 @@ data UsingHiding (s :: Stage)
 
 instance Serialize (UsingHiding 'Scoped)
 
+instance NFData (UsingHiding 'Scoped)
+
 instance Serialize (UsingHiding 'Parsed)
+
+instance NFData (UsingHiding 'Parsed)
 
 deriving stock instance Show (UsingHiding 'Parsed)
 
@@ -1226,7 +1360,11 @@ data OpenModule (s :: Stage) = OpenModule
 
 instance Serialize (OpenModule 'Scoped)
 
+instance NFData (OpenModule 'Scoped)
+
 instance Serialize (OpenModule 'Parsed)
+
+instance NFData (OpenModule 'Parsed)
 
 deriving stock instance Show (OpenModule 'Parsed)
 
@@ -1250,7 +1388,11 @@ data OpenModuleParams (s :: Stage) = OpenModuleParams
 
 instance Serialize (OpenModuleParams 'Scoped)
 
+instance NFData (OpenModuleParams 'Scoped)
+
 instance Serialize (OpenModuleParams 'Parsed)
+
+instance NFData (OpenModuleParams 'Parsed)
 
 deriving stock instance Show (OpenModuleParams 'Parsed)
 
@@ -1272,6 +1414,8 @@ data ScopedIden = ScopedIden
 
 instance Serialize ScopedIden
 
+instance NFData ScopedIden
+
 data Expression
   = ExpressionIdentifier ScopedIden
   | ExpressionParensIdentifier ScopedIden
@@ -1281,7 +1425,6 @@ data Expression
   | ExpressionList (List 'Scoped)
   | ExpressionCase (Case 'Scoped)
   | ExpressionIf (If 'Scoped)
-  | ExpressionNewCase (NewCase 'Scoped)
   | ExpressionLambda (Lambda 'Scoped)
   | ExpressionLet (Let 'Scoped)
   | ExpressionUniverse Universe
@@ -1300,6 +1443,8 @@ data Expression
 
 instance Serialize Expression
 
+instance NFData Expression
+
 data DoubleBracesExpression (s :: Stage) = DoubleBracesExpression
   { _doubleBracesExpression :: ExpressionType s,
     _doubleBracesDelims :: Irrelevant (KeywordRef, KeywordRef)
@@ -1308,7 +1453,11 @@ data DoubleBracesExpression (s :: Stage) = DoubleBracesExpression
 
 instance Serialize (DoubleBracesExpression 'Scoped)
 
+instance NFData (DoubleBracesExpression 'Scoped)
+
 instance Serialize (DoubleBracesExpression 'Parsed)
+
+instance NFData (DoubleBracesExpression 'Parsed)
 
 deriving stock instance Show (DoubleBracesExpression 'Parsed)
 
@@ -1332,7 +1481,11 @@ data FunctionParameter (s :: Stage)
 
 instance Serialize (FunctionParameter 'Scoped)
 
+instance NFData (FunctionParameter 'Scoped)
+
 instance Serialize (FunctionParameter 'Parsed)
+
+instance NFData (FunctionParameter 'Parsed)
 
 deriving stock instance Show (FunctionParameter 'Parsed)
 
@@ -1357,7 +1510,11 @@ data FunctionParameters (s :: Stage) = FunctionParameters
 
 instance Serialize (FunctionParameters 'Scoped)
 
+instance NFData (FunctionParameters 'Scoped)
+
 instance Serialize (FunctionParameters 'Parsed)
+
+instance NFData (FunctionParameters 'Parsed)
 
 deriving stock instance Show (FunctionParameters 'Parsed)
 
@@ -1381,7 +1538,11 @@ data Function (s :: Stage) = Function
 
 instance Serialize (Function 'Scoped)
 
+instance NFData (Function 'Scoped)
+
 instance Serialize (Function 'Parsed)
+
+instance NFData (Function 'Parsed)
 
 deriving stock instance Show (Function 'Parsed)
 
@@ -1404,7 +1565,11 @@ data Lambda (s :: Stage) = Lambda
 
 instance Serialize (Lambda 'Scoped)
 
+instance NFData (Lambda 'Scoped)
+
 instance Serialize (Lambda 'Parsed)
+
+instance NFData (Lambda 'Parsed)
 
 deriving stock instance Show (Lambda 'Parsed)
 
@@ -1428,7 +1593,11 @@ data LambdaClause (s :: Stage) = LambdaClause
 
 instance Serialize (LambdaClause 'Scoped)
 
+instance NFData (LambdaClause 'Scoped)
+
 instance Serialize (LambdaClause 'Parsed)
+
+instance NFData (LambdaClause 'Parsed)
 
 deriving stock instance Show (LambdaClause 'Parsed)
 
@@ -1450,6 +1619,8 @@ data Application = Application
 
 instance Serialize Application
 
+instance NFData Application
+
 data InfixApplication = InfixApplication
   { _infixAppLeft :: Expression,
     _infixAppOperator :: ScopedIden,
@@ -1459,6 +1630,8 @@ data InfixApplication = InfixApplication
 
 instance Serialize InfixApplication
 
+instance NFData InfixApplication
+
 data PostfixApplication = PostfixApplication
   { _postfixAppParameter :: Expression,
     _postfixAppOperator :: ScopedIden
@@ -1466,6 +1639,8 @@ data PostfixApplication = PostfixApplication
   deriving stock (Show, Eq, Ord, Generic)
 
 instance Serialize PostfixApplication
+
+instance NFData PostfixApplication
 
 data LetStatement (s :: Stage)
   = LetFunctionDef (FunctionDef s)
@@ -1475,7 +1650,11 @@ data LetStatement (s :: Stage)
 
 instance Serialize (LetStatement 'Scoped)
 
+instance NFData (LetStatement 'Scoped)
+
 instance Serialize (LetStatement 'Parsed)
+
+instance NFData (LetStatement 'Parsed)
 
 deriving stock instance Show (LetStatement 'Parsed)
 
@@ -1499,7 +1678,11 @@ data Let (s :: Stage) = Let
 
 instance Serialize (Let 'Scoped)
 
+instance NFData (Let 'Scoped)
+
 instance Serialize (Let 'Parsed)
+
+instance NFData (Let 'Parsed)
 
 deriving stock instance Show (Let 'Parsed)
 
@@ -1514,7 +1697,7 @@ deriving stock instance Ord (Let 'Parsed)
 deriving stock instance Ord (Let 'Scoped)
 
 data CaseBranch (s :: Stage) = CaseBranch
-  { _caseBranchPipe :: Irrelevant KeywordRef,
+  { _caseBranchPipe :: Irrelevant (Maybe KeywordRef),
     _caseBranchAssignKw :: Irrelevant KeywordRef,
     _caseBranchPattern :: PatternParensType s,
     _caseBranchExpression :: ExpressionType s
@@ -1523,7 +1706,11 @@ data CaseBranch (s :: Stage) = CaseBranch
 
 instance Serialize (CaseBranch 'Scoped)
 
+instance NFData (CaseBranch 'Scoped)
+
 instance Serialize (CaseBranch 'Parsed)
+
+instance NFData (CaseBranch 'Parsed)
 
 deriving stock instance Show (CaseBranch 'Parsed)
 
@@ -1539,9 +1726,7 @@ deriving stock instance Ord (CaseBranch 'Scoped)
 
 data Case (s :: Stage) = Case
   { _caseKw :: KeywordRef,
-    -- | Due to limitations of the pretty printing algorithm, we store whether
-    -- the `case` was surrounded by parentheses in the code.
-    _caseParens :: Bool,
+    _caseOfKw :: KeywordRef,
     _caseExpression :: ExpressionType s,
     _caseBranches :: NonEmpty (CaseBranch s)
   }
@@ -1549,7 +1734,11 @@ data Case (s :: Stage) = Case
 
 instance Serialize (Case 'Scoped)
 
+instance NFData (Case 'Scoped)
+
 instance Serialize (Case 'Parsed)
+
+instance NFData (Case 'Parsed)
 
 deriving stock instance Show (Case 'Parsed)
 
@@ -1573,7 +1762,11 @@ data NewCaseBranch (s :: Stage) = NewCaseBranch
 
 instance Serialize (NewCaseBranch 'Scoped)
 
+instance NFData (NewCaseBranch 'Scoped)
+
 instance Serialize (NewCaseBranch 'Parsed)
+
+instance NFData (NewCaseBranch 'Parsed)
 
 deriving stock instance Show (NewCaseBranch 'Parsed)
 
@@ -1597,7 +1790,11 @@ data NewCase (s :: Stage) = NewCase
 
 instance Serialize (NewCase 'Scoped)
 
+instance NFData (NewCase 'Scoped)
+
 instance Serialize (NewCase 'Parsed)
+
+instance NFData (NewCase 'Parsed)
 
 deriving stock instance Show (NewCase 'Parsed)
 
@@ -1621,7 +1818,11 @@ data IfBranch (s :: Stage) = IfBranch
 
 instance Serialize (IfBranch 'Scoped)
 
+instance NFData (IfBranch 'Scoped)
+
 instance Serialize (IfBranch 'Parsed)
+
+instance NFData (IfBranch 'Parsed)
 
 deriving stock instance Show (IfBranch 'Parsed)
 
@@ -1645,7 +1846,11 @@ data IfBranchElse (s :: Stage) = IfBranchElse
 
 instance Serialize (IfBranchElse 'Scoped)
 
+instance NFData (IfBranchElse 'Scoped)
+
 instance Serialize (IfBranchElse 'Parsed)
+
+instance NFData (IfBranchElse 'Parsed)
 
 deriving stock instance Show (IfBranchElse 'Parsed)
 
@@ -1668,7 +1873,11 @@ data If (s :: Stage) = If
 
 instance Serialize (If 'Scoped)
 
+instance NFData (If 'Scoped)
+
 instance Serialize (If 'Parsed)
+
+instance NFData (If 'Parsed)
 
 deriving stock instance Show (If 'Parsed)
 
@@ -1691,7 +1900,11 @@ data Initializer (s :: Stage) = Initializer
 
 instance Serialize (Initializer 'Scoped)
 
+instance NFData (Initializer 'Scoped)
+
 instance Serialize (Initializer 'Parsed)
+
+instance NFData (Initializer 'Parsed)
 
 deriving stock instance Show (Initializer 'Parsed)
 
@@ -1714,7 +1927,11 @@ data Range (s :: Stage) = Range
 
 instance Serialize (Range 'Scoped)
 
+instance NFData (Range 'Scoped)
+
 instance Serialize (Range 'Parsed)
+
+instance NFData (Range 'Parsed)
 
 deriving stock instance Show (Range 'Parsed)
 
@@ -1743,7 +1960,11 @@ data Iterator s = Iterator
 
 instance Serialize (Iterator 'Scoped)
 
+instance NFData (Iterator 'Scoped)
+
 instance Serialize (Iterator 'Parsed)
+
+instance NFData (Iterator 'Parsed)
 
 deriving stock instance Show (Iterator 'Parsed)
 
@@ -1766,7 +1987,11 @@ data List (s :: Stage) = List
 
 instance Serialize (List 'Scoped)
 
+instance NFData (List 'Scoped)
+
 instance Serialize (List 'Parsed)
+
+instance NFData (List 'Parsed)
 
 deriving stock instance Show (List 'Parsed)
 
@@ -1789,7 +2014,11 @@ data NamedArgument (s :: Stage) = NamedArgument
 
 instance Serialize (NamedArgument 'Scoped)
 
+instance NFData (NamedArgument 'Scoped)
+
 instance Serialize (NamedArgument 'Parsed)
+
+instance NFData (NamedArgument 'Parsed)
 
 deriving stock instance Show (NamedArgument 'Parsed)
 
@@ -1812,7 +2041,11 @@ data ArgumentBlock (s :: Stage) = ArgumentBlock
 
 instance Serialize (ArgumentBlock 'Scoped)
 
+instance NFData (ArgumentBlock 'Scoped)
+
 instance Serialize (ArgumentBlock 'Parsed)
+
+instance NFData (ArgumentBlock 'Parsed)
 
 deriving stock instance Show (ArgumentBlock 'Parsed)
 
@@ -1835,12 +2068,16 @@ data RecordUpdateExtra = RecordUpdateExtra
 
 instance Serialize RecordUpdateExtra
 
+instance NFData RecordUpdateExtra
+
 newtype ParensRecordUpdate = ParensRecordUpdate
   { _parensRecordUpdate :: RecordUpdate 'Scoped
   }
   deriving stock (Show, Eq, Ord, Generic)
 
 instance Serialize ParensRecordUpdate
+
+instance NFData ParensRecordUpdate
 
 data RecordUpdate (s :: Stage) = RecordUpdate
   { _recordUpdateAtKw :: Irrelevant KeywordRef,
@@ -1853,7 +2090,11 @@ data RecordUpdate (s :: Stage) = RecordUpdate
 
 instance Serialize (RecordUpdate 'Scoped)
 
+instance NFData (RecordUpdate 'Scoped)
+
 instance Serialize (RecordUpdate 'Parsed)
+
+instance NFData (RecordUpdate 'Parsed)
 
 deriving stock instance Show (RecordUpdate 'Parsed)
 
@@ -1875,6 +2116,8 @@ data RecordUpdateApp = RecordUpdateApp
 
 instance Serialize RecordUpdateApp
 
+instance NFData RecordUpdateApp
+
 data NamedApplication (s :: Stage) = NamedApplication
   { _namedAppName :: IdentifierType s,
     _namedAppArgs :: NonEmpty (ArgumentBlock s)
@@ -1883,7 +2126,11 @@ data NamedApplication (s :: Stage) = NamedApplication
 
 instance Serialize (NamedApplication 'Scoped)
 
+instance NFData (NamedApplication 'Scoped)
+
 instance Serialize (NamedApplication 'Parsed)
+
+instance NFData (NamedApplication 'Parsed)
 
 deriving stock instance Show (NamedApplication 'Parsed)
 
@@ -1904,7 +2151,11 @@ newtype NamedArgumentNew (s :: Stage) = NamedArgumentNew
 
 instance Serialize (NamedArgumentNew 'Scoped)
 
+instance NFData (NamedArgumentNew 'Scoped)
+
 instance Serialize (NamedArgumentNew 'Parsed)
+
+instance NFData (NamedArgumentNew 'Parsed)
 
 deriving stock instance Show (NamedArgumentNew 'Parsed)
 
@@ -1928,7 +2179,11 @@ data NamedApplicationNew (s :: Stage) = NamedApplicationNew
 
 instance Serialize (NamedApplicationNew 'Scoped)
 
+instance NFData (NamedApplicationNew 'Scoped)
+
 instance Serialize (NamedApplicationNew 'Parsed)
+
+instance NFData (NamedApplicationNew 'Parsed)
 
 deriving stock instance Show (NamedApplicationNew 'Parsed)
 
@@ -1949,6 +2204,8 @@ data RecordStatement (s :: Stage)
 
 instance Serialize (RecordStatement 'Scoped)
 
+instance NFData (RecordStatement 'Scoped)
+
 deriving stock instance Show (RecordStatement 'Parsed)
 
 deriving stock instance Show (RecordStatement 'Scoped)
@@ -1967,7 +2224,6 @@ data ExpressionAtom (s :: Stage)
   | AtomLambda (Lambda s)
   | AtomList (List s)
   | AtomCase (Case s)
-  | AtomNewCase (NewCase s)
   | AtomIf (If s)
   | AtomHole (HoleType s)
   | AtomInstanceHole (HoleType s)
@@ -1986,6 +2242,8 @@ data ExpressionAtom (s :: Stage)
   deriving stock (Generic)
 
 instance Serialize (ExpressionAtom 'Parsed)
+
+instance NFData (ExpressionAtom 'Parsed)
 
 deriving stock instance Show (ExpressionAtom 'Parsed)
 
@@ -2007,6 +2265,8 @@ data ExpressionAtoms (s :: Stage) = ExpressionAtoms
 
 instance Serialize (ExpressionAtoms 'Parsed)
 
+instance NFData (ExpressionAtoms 'Parsed)
+
 deriving stock instance Show (ExpressionAtoms 'Parsed)
 
 deriving stock instance Show (ExpressionAtoms 'Scoped)
@@ -2026,7 +2286,11 @@ newtype Judoc (s :: Stage) = Judoc
 
 instance Serialize (Judoc 'Scoped)
 
+instance NFData (Judoc 'Scoped)
+
 instance Serialize (Judoc 'Parsed)
+
+instance NFData (Judoc 'Parsed)
 
 deriving stock instance Show (Judoc 'Parsed)
 
@@ -2049,7 +2313,11 @@ data Example (s :: Stage) = Example
 
 instance Serialize (Example 'Scoped)
 
+instance NFData (Example 'Scoped)
+
 instance Serialize (Example 'Parsed)
+
+instance NFData (Example 'Parsed)
 
 deriving stock instance Show (Example 'Parsed)
 
@@ -2072,7 +2340,11 @@ data JudocBlockParagraph (s :: Stage) = JudocBlockParagraph
 
 instance Serialize (JudocBlockParagraph 'Scoped)
 
+instance NFData (JudocBlockParagraph 'Scoped)
+
 instance Serialize (JudocBlockParagraph 'Parsed)
+
+instance NFData (JudocBlockParagraph 'Parsed)
 
 deriving stock instance Show (JudocBlockParagraph 'Parsed)
 
@@ -2093,7 +2365,11 @@ data JudocGroup (s :: Stage)
 
 instance Serialize (JudocGroup 'Scoped)
 
+instance NFData (JudocGroup 'Scoped)
+
 instance Serialize (JudocGroup 'Parsed)
+
+instance NFData (JudocGroup 'Parsed)
 
 deriving stock instance Show (JudocGroup 'Parsed)
 
@@ -2113,7 +2389,11 @@ newtype JudocBlock (s :: Stage)
 
 instance Serialize (JudocBlock 'Scoped)
 
+instance NFData (JudocBlock 'Scoped)
+
 instance Serialize (JudocBlock 'Parsed)
+
+instance NFData (JudocBlock 'Parsed)
 
 deriving stock instance Show (JudocBlock 'Parsed)
 
@@ -2135,7 +2415,11 @@ data JudocLine (s :: Stage) = JudocLine
 
 instance Serialize (JudocLine 'Scoped)
 
+instance NFData (JudocLine 'Scoped)
+
 instance Serialize (JudocLine 'Parsed)
+
+instance NFData (JudocLine 'Parsed)
 
 deriving stock instance Show (JudocLine 'Parsed)
 
@@ -2156,7 +2440,11 @@ data JudocAtom (s :: Stage)
 
 instance Serialize (JudocAtom 'Scoped)
 
+instance NFData (JudocAtom 'Scoped)
+
 instance Serialize (JudocAtom 'Parsed)
+
+instance NFData (JudocAtom 'Parsed)
 
 deriving stock instance Show (JudocAtom 'Parsed)
 
@@ -2227,8 +2515,6 @@ makeLenses ''PatternInfixApp
 makeLenses ''PatternPostfixApp
 makeLenses ''Case
 makeLenses ''CaseBranch
-makeLenses ''NewCase
-makeLenses ''NewCaseBranch
 makeLenses ''If
 makeLenses ''IfBranch
 makeLenses ''IfBranchElse
@@ -2327,7 +2613,6 @@ instance HasAtomicity Expression where
     ExpressionUniverse {} -> Atom
     ExpressionFunction {} -> Aggregate funFixity
     ExpressionCase c -> atomicity c
-    ExpressionNewCase c -> atomicity c
     ExpressionIf x -> atomicity x
     ExpressionIterator i -> atomicity i
     ExpressionNamedApplication i -> atomicity i
@@ -2344,9 +2629,6 @@ instance HasAtomicity (Iterator s) where
   atomicity = const Atom
 
 instance HasAtomicity (Case s) where
-  atomicity = const Atom
-
-instance HasAtomicity (NewCase s) where
   atomicity = const Atom
 
 instance HasAtomicity (If s) where
@@ -2438,15 +2720,12 @@ instance HasLoc (Let 'Scoped) where
   getLoc l = getLoc (l ^. letKw) <> getLoc (l ^. letExpression)
 
 instance (SingI s) => HasLoc (CaseBranch s) where
-  getLoc c = getLoc (c ^. caseBranchPipe) <> getLocExpressionType (c ^. caseBranchExpression)
-
-instance (SingI s) => HasLoc (NewCaseBranch s) where
-  getLoc c = case c ^. newCaseBranchPipe . unIrrelevant of
+  getLoc c = case c ^. caseBranchPipe . unIrrelevant of
     Nothing -> branchLoc
     Just p -> getLoc p <> branchLoc
     where
       branchLoc :: Interval
-      branchLoc = getLocExpressionType (c ^. newCaseBranchExpression)
+      branchLoc = getLocExpressionType (c ^. caseBranchExpression)
 
 instance (SingI s) => HasLoc (IfBranch s) where
   getLoc c = getLoc (c ^. ifBranchPipe) <> getLocExpressionType (c ^. ifBranchExpression)
@@ -2456,9 +2735,6 @@ instance (SingI s) => HasLoc (IfBranchElse s) where
 
 instance (SingI s) => HasLoc (Case s) where
   getLoc c = getLoc (c ^. caseKw) <> getLoc (c ^. caseBranches . to last)
-
-instance (SingI s) => HasLoc (NewCase s) where
-  getLoc c = getLoc (c ^. newCaseKw) <> getLoc (c ^. newCaseBranches . to last)
 
 instance (SingI s) => HasLoc (If s) where
   getLoc c = getLoc (c ^. ifKw) <> getLoc (c ^. ifBranchElse)
@@ -2502,7 +2778,6 @@ instance HasLoc Expression where
     ExpressionLambda i -> getLoc i
     ExpressionList l -> getLoc l
     ExpressionCase i -> getLoc i
-    ExpressionNewCase i -> getLoc i
     ExpressionIf x -> getLoc x
     ExpressionLet i -> getLoc i
     ExpressionUniverse i -> getLoc i
@@ -2873,7 +3148,6 @@ instance IsApe Expression ApeLeaf where
     ExpressionIdentifier {} -> leaf
     ExpressionList {} -> leaf
     ExpressionCase {} -> leaf
-    ExpressionNewCase {} -> leaf
     ExpressionIf {} -> leaf
     ExpressionLambda {} -> leaf
     ExpressionLet {} -> leaf

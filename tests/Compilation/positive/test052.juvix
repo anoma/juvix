@@ -180,7 +180,7 @@ double+1 : Expr := Λ (compose # +1 # double # ! 0);
 res : Either Error Val := eval (double+1 # num 7);
 
 main : IO :=
-  case res
+  case res of
     | left (ScopeError n ctx) :=
       printStringLn
         ("ScopeError: "

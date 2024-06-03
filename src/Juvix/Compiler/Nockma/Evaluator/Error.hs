@@ -24,6 +24,7 @@ data NockEvalError a
     ErrAssignmentNotFound Text
   | ErrKeyNotInStorage (KeyNotInStorage a)
   | ErrDecodingFailed (DecodingFailed a)
+  | ErrVerificationFailed (VerificationFailed a)
 
 newtype GenericNockEvalError = GenericNockEvalError
   { _genericNockEvalErrorMessage :: AnsiText
@@ -64,6 +65,12 @@ data DecodingFailed a = DecodingFailed
   { _decodingFailedCtx :: EvalCtx,
     _decodingFailedTerm :: Term a,
     _decodingFailedReason :: DecodingError
+  }
+
+data VerificationFailed a = VerificationFailed
+  { _verificationFailedCtx :: EvalCtx,
+    _verificationFailedMessage :: Atom a,
+    _verificationFailedPublicKey :: Atom a
   }
 
 throwInvalidNockOp :: (Members '[Error (NockEvalError a), Reader EvalCtx] r) => Atom a -> Sem r x
@@ -128,6 +135,17 @@ throwDecodingFailed a e = do
           _decodingFailedReason = e
         }
 
+throwVerificationFailed :: (Members '[Error (NockEvalError a), Reader EvalCtx] r) => Atom a -> Atom a -> Sem r x
+throwVerificationFailed m k = do
+  ctx <- ask
+  throw $
+    ErrVerificationFailed
+      VerificationFailed
+        { _verificationFailedCtx = ctx,
+          _verificationFailedMessage = m,
+          _verificationFailedPublicKey = k
+        }
+
 instance PrettyCode NoStack where
   ppCode _ = return "Missing stack"
 
@@ -178,6 +196,22 @@ instance (PrettyCode a, NockNatural a) => PrettyCode (DecodingFailed a) where
     r <- ppCode _decodingFailedReason
     return (ctx <> "Decoding the term" <+> t <+> "failed with reason:" <> line <> r)
 
+instance (PrettyCode a, NockNatural a) => PrettyCode (VerificationFailed a) where
+  ppCode VerificationFailed {..} = do
+    m <- ppCode _verificationFailedMessage
+    ctx <- ppCtx _verificationFailedCtx
+    k <- ppCode _verificationFailedPublicKey
+    return
+      ( ctx
+          <> "Signature verification failed for message atom:"
+          <> line
+          <> m
+          <> line
+          <> "and public key atom:"
+          <> line
+          <> k
+      )
+
 instance (PrettyCode a, NockNatural a) => PrettyCode (NockEvalError a) where
   ppCode = \case
     ErrInvalidPath e -> ppCode e
@@ -188,3 +222,4 @@ instance (PrettyCode a, NockNatural a) => PrettyCode (NockEvalError a) where
     ErrAssignmentNotFound e -> return (pretty e)
     ErrKeyNotInStorage e -> ppCode e
     ErrDecodingFailed e -> ppCode e
+    ErrVerificationFailed e -> ppCode e

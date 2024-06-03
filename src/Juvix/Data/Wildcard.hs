@@ -12,6 +12,8 @@ newtype Wildcard = Wildcard
 
 instance Serialize Wildcard
 
+instance NFData Wildcard
+
 makeLenses ''Wildcard
 
 instance Eq Wildcard where

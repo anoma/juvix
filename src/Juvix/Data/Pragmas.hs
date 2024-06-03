@@ -104,25 +104,47 @@ instance Hashable Pragmas
 
 instance Serialize PragmaInline
 
+instance NFData PragmaInline
+
 instance Serialize PragmaUnroll
+
+instance NFData PragmaUnroll
 
 instance Serialize PragmaArgNames
 
+instance NFData PragmaArgNames
+
 instance Serialize PragmaPublic
+
+instance NFData PragmaPublic
 
 instance Serialize PragmaFormat
 
+instance NFData PragmaFormat
+
 instance Serialize PragmaSpecialiseArg
+
+instance NFData PragmaSpecialiseArg
 
 instance Serialize PragmaSpecialiseArgs
 
+instance NFData PragmaSpecialiseArgs
+
 instance Serialize PragmaSpecialise
+
+instance NFData PragmaSpecialise
 
 instance Serialize PragmaSpecialiseBy
 
+instance NFData PragmaSpecialiseBy
+
 instance Serialize PragmaEval
 
+instance NFData PragmaEval
+
 instance Serialize Pragmas
+
+instance NFData Pragmas
 
 instance FromJSON Pragmas where
   parseJSON = toAesonParser id parsePragmas

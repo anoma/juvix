@@ -193,6 +193,9 @@ geval opts herr ctx env0 = eval' env0
       OpAnomaGet -> anomaGetOp
       OpAnomaEncode -> anomaEncodeOp
       OpAnomaDecode -> anomaDecodeOp
+      OpAnomaVerifyDetached -> anomaVerifyDetachedOp
+      OpAnomaSign -> anomaSignOp
+      OpAnomaVerify -> anomaVerifyOp
       OpPoseidonHash -> poseidonHashOp
       OpEc -> ecOp
       OpRandomEcPoint -> randomEcPointOp
@@ -356,6 +359,33 @@ geval opts herr ctx env0 = eval' env0
               | otherwise ->
                   err "unsupported builtin operation: OpAnomaDecode"
         {-# INLINE anomaDecodeOp #-}
+
+        anomaVerifyDetachedOp :: [Node] -> Node
+        anomaVerifyDetachedOp = checkApply $ \arg1 arg2 arg3 ->
+          if
+              | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                  mkBuiltinApp' OpAnomaVerifyDetached (eval' env <$> [arg1, arg2, arg3])
+              | otherwise ->
+                  err "unsupported builtin operation: OpAnomaVerifyDetached"
+        {-# INLINE anomaVerifyDetachedOp #-}
+
+        anomaSignOp :: [Node] -> Node
+        anomaSignOp = checkApply $ \arg1 arg2 ->
+          if
+              | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                  mkBuiltinApp' OpAnomaSign (eval' env <$> [arg1, arg2])
+              | otherwise ->
+                  err "unsupported builtin operation: OpAnomaSign"
+        {-# INLINE anomaSignOp #-}
+
+        anomaVerifyOp :: [Node] -> Node
+        anomaVerifyOp = checkApply $ \arg1 arg2 ->
+          if
+              | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                  mkBuiltinApp' OpAnomaVerify (eval' env <$> [arg1, arg2])
+              | otherwise ->
+                  err "unsupported builtin operation: OpAnomaVerify"
+        {-# INLINE anomaVerifyOp #-}
 
         poseidonHashOp :: [Node] -> Node
         poseidonHashOp = unary $ \arg ->
@@ -563,3 +593,19 @@ toCoreError loc (EvalError {..}) =
       _coreErrorNode = _evalErrorNode,
       _coreErrorLoc = fromMaybe loc (lookupLocation =<< _evalErrorNode)
     }
+
+-- | A class that provides a function `checkApply` that applies a function to a
+-- list of arguments and fails if the length of the arguments list is not equal
+-- to the arity of the function.
+class CheckApplyType t a where
+  checkApply :: t -> [a] -> a
+
+instance CheckApplyType a a where
+  checkApply f = \case
+    [] -> f
+    _ -> error "too many arguments for operator"
+
+instance (CheckApplyType r a) => CheckApplyType (a -> r) a where
+  checkApply f = \case
+    x : xs -> checkApply (f x) xs
+    [] -> error "too few arguments for operator"

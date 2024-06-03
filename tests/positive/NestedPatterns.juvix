@@ -9,7 +9,6 @@ toList : {A : Type} -> MyList A -> List A
 
 f : MyList Nat -> Nat
   | xs :=
-    case toList xs of {
+    case toList xs of
       | suc n :: nil := n
-      | _ := zero
-    };
+      | _ := zero;

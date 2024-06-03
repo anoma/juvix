@@ -69,7 +69,7 @@ scoperErrorTests =
       $(mkRelDir "ImportCycle")
       $(mkRelFile "A.juvix")
       $ \case
-        ErrImportCycle {} -> Nothing
+        ErrImportCycleNew {} -> Nothing
         _ -> wrongError,
     NegTest
       "Binding group conflict (function clause)"

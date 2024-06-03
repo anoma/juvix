@@ -33,6 +33,12 @@ data PrimBoolInfo = PrimBoolInfo
 
 instance Serialize Primitive
 
+instance NFData Primitive
+
 instance Serialize PrimIntegerInfo
 
+instance NFData PrimIntegerInfo
+
 instance Serialize PrimBoolInfo
+
+instance NFData PrimBoolInfo

@@ -19,6 +19,8 @@ data Options = Options
 
 instance Serialize Options
 
+instance NFData Options
+
 makeLenses ''Options
 
 fromEntryPoint :: EntryPoint -> Options

@@ -1,0 +1,19 @@
+-- Higher-order functions
+module test005;
+
+import Stdlib.Prelude open;
+
+S {A B C} (x : A → B → C) (y : A → B) (z : A) : C :=
+  x z (y z);
+
+K {A B} (x : A) (_ : B) : A := x;
+
+I {A} : A → A := S K (K {_} {Bool});
+
+main : Nat :=
+  I 1
+    + I I 1
+    + I (I 1)
+    + I I I 1
+    + I (I I) I (I I I) 1
+    + I I I (I I I (I I)) I (I I) I I I 1;

@@ -31,6 +31,8 @@ instance Hashable BuiltinPrim
 
 instance Serialize BuiltinPrim
 
+instance NFData BuiltinPrim
+
 instance Pretty BuiltinPrim where
   pretty = \case
     BuiltinsInductive i -> pretty i
@@ -59,6 +61,8 @@ data BuiltinInductive
 instance Hashable BuiltinInductive
 
 instance Serialize BuiltinInductive
+
+instance NFData BuiltinInductive
 
 instance Pretty BuiltinInductive where
   pretty = \case
@@ -99,6 +103,8 @@ instance Hashable BuiltinConstructor
 
 instance Serialize BuiltinConstructor
 
+instance NFData BuiltinConstructor
+
 data BuiltinFunction
   = BuiltinNatPlus
   | BuiltinNatSub
@@ -132,6 +138,8 @@ data BuiltinFunction
 instance Hashable BuiltinFunction
 
 instance Serialize BuiltinFunction
+
+instance NFData BuiltinFunction
 
 instance Pretty BuiltinFunction where
   pretty = \case
@@ -190,6 +198,9 @@ data BuiltinAxiom
   | BuiltinAnomaGet
   | BuiltinAnomaEncode
   | BuiltinAnomaDecode
+  | BuiltinAnomaVerifyDetached
+  | BuiltinAnomaSign
+  | BuiltinAnomaVerify
   | BuiltinPoseidon
   | BuiltinEcOp
   | BuiltinRandomEcPoint
@@ -198,6 +209,8 @@ data BuiltinAxiom
 instance Hashable BuiltinAxiom
 
 instance Serialize BuiltinAxiom
+
+instance NFData BuiltinAxiom
 
 instance Pretty BuiltinAxiom where
   pretty = \case
@@ -227,6 +240,9 @@ instance Pretty BuiltinAxiom where
     BuiltinAnomaGet -> Str.anomaGet
     BuiltinAnomaEncode -> Str.anomaEncode
     BuiltinAnomaDecode -> Str.anomaDecode
+    BuiltinAnomaVerifyDetached -> Str.anomaVerifyDetached
+    BuiltinAnomaSign -> Str.anomaSign
+    BuiltinAnomaVerify -> Str.anomaVerify
     BuiltinPoseidon -> Str.cairoPoseidon
     BuiltinEcOp -> Str.cairoEcOp
     BuiltinRandomEcPoint -> Str.cairoRandomEcPoint
@@ -239,6 +255,8 @@ data BuiltinType
 instance Hashable BuiltinType
 
 instance Serialize BuiltinType
+
+instance NFData BuiltinType
 
 instance Pretty BuiltinType where
   pretty = \case

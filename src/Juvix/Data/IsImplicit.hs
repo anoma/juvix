@@ -20,6 +20,8 @@ instance Hashable IsImplicit
 
 instance Serialize IsImplicit
 
+instance NFData IsImplicit
+
 instance Pretty IsImplicit where
   pretty = \case
     Implicit -> "implicit"

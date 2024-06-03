@@ -1,5 +1,5 @@
 name: juvix
-version: 0.6.1
+version: 0.6.2
 license: GPL-3.0-only
 license-file: LICENSE.md
 copyright: (c) 2022- Heliax AG.
@@ -38,6 +38,7 @@ extra-source-files:
   - include/package-base/**/*.juvix
   - runtime/c/include/**/*.h
   - runtime/c/**/*.a
+  - runtime/rust/target/**/*.rlib
   - runtime/tree/*.jvt
   - runtime/vampir/*.pir
   - runtime/casm/*.casm
@@ -58,6 +59,7 @@ dependencies:
   - deepseq == 1.5.*
   - directory == 1.3.*
   - dlist == 1.0.*
+  - ed25519 == 0.0.*
   - edit-distance == 0.2.*
   - effectful == 2.3.*
   - effectful-core == 2.3.*
@@ -90,6 +92,7 @@ dependencies:
   - singletons == 3.0.*
   - singletons-base == 3.3.*
   - singletons-th == 3.3.*
+  - stm == 2.5.*
   - Stream == 0.4.*
   - string-interpolate == 0.3.*
   - template-haskell == 2.21.*
@@ -177,7 +180,6 @@ executables:
       - polysemy == 1.9.*
     verbatim:
       default-language: GHC2021
-
   juvix:
     main: Main.hs
     source-dirs: app
@@ -191,6 +193,17 @@ executables:
       - string-interpolate == 0.3.*
     verbatim:
       default-language: GHC2021
+    ghc-options:
+      - -threaded
+      # We enable rtsopts because we've found that tweaking the -A flag can lead
+      # to great performance gains. However, GHC's decumentation warns that
+      # enabling this may cause security problems: "...can be used to write logging
+      # data to arbitrary files under the security context of the running
+      # program..."
+      - -rtsopts
+      # We set -N1 to avoid spending time in thread initialization. We manually
+      # set the number of cores we want to use through the juvix -N global flag.
+      - -with-rtsopts=-N1
     when:
       - condition: flag(static)
         ld-options:

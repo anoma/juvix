@@ -17,6 +17,7 @@ import Juvix.Compiler.Core.Transformation.Check.Anoma
 import Juvix.Compiler.Core.Transformation.Check.Cairo
 import Juvix.Compiler.Core.Transformation.Check.Exec
 import Juvix.Compiler.Core.Transformation.Check.Geb
+import Juvix.Compiler.Core.Transformation.Check.Rust
 import Juvix.Compiler.Core.Transformation.Check.VampIR
 import Juvix.Compiler.Core.Transformation.CombineInfoTables (combineInfoTables)
 import Juvix.Compiler.Core.Transformation.ComputeTypeInfo
@@ -81,6 +82,7 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
       CombineInfoTables -> return . combineInfoTables
       CheckGeb -> mapError (JuvixError @CoreError) . checkGeb
       CheckExec -> mapError (JuvixError @CoreError) . checkExec
+      CheckRust -> mapError (JuvixError @CoreError) . checkRust
       CheckVampIR -> mapError (JuvixError @CoreError) . checkVampIR
       CheckAnoma -> mapError (JuvixError @CoreError) . checkAnoma
       CheckCairo -> mapError (JuvixError @CoreError) . checkCairo

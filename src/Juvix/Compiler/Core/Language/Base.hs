@@ -26,6 +26,8 @@ data Symbol = Symbol
 
 instance Serialize Symbol
 
+instance NFData Symbol
+
 instance Hashable Symbol
 
 instance Pretty Symbol where
@@ -50,6 +52,8 @@ instance Hashable TagUser
 
 instance Serialize TagUser
 
+instance NFData TagUser
+
 -- | Tag of a constructor, uniquely identifying it. Tag values are consecutive
 -- and separate from symbol IDs. We might need fixed special tags in Core for
 -- common "builtin" constructors, e.g., unit, nat, so that the code generator
@@ -62,6 +66,8 @@ data Tag
 instance Hashable Tag
 
 instance Serialize Tag
+
+instance NFData Tag
 
 isBuiltinTag :: Tag -> Bool
 isBuiltinTag = \case

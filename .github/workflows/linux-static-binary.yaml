@@ -47,6 +47,9 @@ jobs:
       - name: Git permissions workaround
         run: "chown -R $(id -un):$(id -gn) ."
 
+      - name: Install cargo
+        run: apk add --update cargo
+
       - name: Install clang
         run: apk add --update clang
 

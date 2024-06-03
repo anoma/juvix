@@ -79,7 +79,7 @@ import Stdlib.Data.Product open;
   {{Semigroup A}}
   {B C : Type}
   : A × B -> (B -> A × C) -> A × C
-  | (a, b) f := case f b of {a', b' := a <> a', b'};
+  | (a, b) f := case f b of a', b' := a <> a', b';
 
 instance
 ×-Monad

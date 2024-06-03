@@ -32,6 +32,8 @@ data InfoTable = InfoTable
 
 instance Serialize InfoTable
 
+instance NFData InfoTable
+
 makeLenses ''InfoTable
 
 instance Semigroup InfoTable where

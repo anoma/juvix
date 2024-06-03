@@ -1,7 +1,6 @@
 module Juvix.Data.Effect.TaggedLock.Base where
 
 import Juvix.Prelude.Base
-import Juvix.Prelude.Path
 
 -- | An effect that wraps an action with a lock that is tagged with a relative
 -- path.

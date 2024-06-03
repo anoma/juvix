@@ -4,18 +4,16 @@ import Stdlib.Prelude open;
 
 not' : Bool → Bool
   | b :=
-    case b of {
+    case b of
       | true := false
-      | false := true
-    };
+      | false := true;
 
 terminating
 andList : List Bool → Bool
   | l :=
-    case l of {
+    case l of
       | nil := true
-      | x :: xs := x && andList xs
-    };
+      | x :: xs := x && andList xs;
 
 main : IO :=
   printBoolLn (not' false)

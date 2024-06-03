@@ -14,7 +14,7 @@ import Juvix.Compiler.Core.Translation.FromInternal.Builtins.Nat
 import Juvix.Compiler.Core.Translation.FromInternal.Data
 import Juvix.Compiler.Internal.Data.Name
 import Juvix.Compiler.Internal.Extra qualified as Internal
-import Juvix.Compiler.Internal.Pretty (ppTrace)
+import Juvix.Compiler.Internal.Pretty (ppPrint, ppTrace)
 import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Compiler.Internal.Translation.Extra qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qualified as InternalTyped
@@ -372,6 +372,7 @@ mkFunBody ::
   Sem r Node
 mkFunBody ty f =
   mkBody
+    (WithLoc (getLoc f) (ppPrint f))
     ty
     (f ^. Internal.funDefName . nameLoc)
     (pure (Internal.unfoldLambda (f ^. Internal.funDefBody)))
@@ -379,11 +380,12 @@ mkFunBody ty f =
 mkBody ::
   forall r.
   (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen] r) =>
+  WithLoc Text -> -- The printed lambda for error message
   Type -> -- type of the function
   Location ->
   NonEmpty ([Internal.PatternArg], Internal.Expression) ->
   Sem r Node
-mkBody ty loc clauses
+mkBody ppLam ty loc clauses
   | nPatterns == 0 = goExpression (snd (head clauses))
   | otherwise = do
       let values = map (mkVar Info.empty) vs
@@ -455,7 +457,12 @@ mkBody ty loc clauses
     checkPatternsNum len = \case
       [] -> len
       ps : pats | length ps == len -> checkPatternsNum len pats
-      _ -> error "internal-to-core: all clauses must have the same number of patterns"
+      _ ->
+        error $
+          "internal-to-core: all clauses must have the same number of patterns. Offending lambda at"
+            <> ppPrint (getLoc ppLam)
+            <> "\n"
+            <> (ppLam ^. withLocParam)
 
     goClause :: Level -> [Internal.PatternArg] -> Internal.Expression -> Sem r MatchBranch
     goClause lvl pats body = goPatternArgs lvl body pats ptys
@@ -504,7 +511,7 @@ goLambda ::
   Sem r Node
 goLambda l = do
   ty <- goType (fromJust (l ^. Internal.lambdaType))
-  mkBody ty (getLoc l) (fmap (\c -> (toList (c ^. Internal.lambdaPatterns), c ^. Internal.lambdaBody)) (l ^. Internal.lambdaClauses))
+  mkBody (WithLoc (getLoc l) (ppPrint l)) ty (getLoc l) (fmap (\c -> (toList (c ^. Internal.lambdaPatterns), c ^. Internal.lambdaBody)) (l ^. Internal.lambdaClauses))
 
 goLet ::
   forall r.
@@ -579,6 +586,9 @@ goAxiomInductive a = whenJust (a ^. Internal.axiomBuiltin) builtinInductive
       Internal.BuiltinAnomaGet -> return ()
       Internal.BuiltinAnomaEncode -> return ()
       Internal.BuiltinAnomaDecode -> return ()
+      Internal.BuiltinAnomaVerifyDetached -> return ()
+      Internal.BuiltinAnomaSign -> return ()
+      Internal.BuiltinAnomaVerify -> return ()
       Internal.BuiltinPoseidon -> return ()
       Internal.BuiltinEcOp -> return ()
       Internal.BuiltinRandomEcPoint -> return ()
@@ -706,12 +716,53 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
               (mkLambda' (mkVar' 0) (mkBuiltinApp' OpAnomaEncode [mkVar' 0]))
           )
       Internal.BuiltinAnomaDecode -> do
-        natName <- getNatName
-        natSym <- getNatSymbol
+        natType <- getNatType
         registerAxiomDef
           ( mkLambda'
-              (mkTypeConstr (setInfoName natName mempty) natSym [])
-              (mkLambda' (mkVar' 0) (mkBuiltinApp' OpAnomaDecode [mkVar' 0]))
+              mkSmallUniv
+              (mkLambda' natType (mkBuiltinApp' OpAnomaDecode [mkVar' 0]))
+          )
+      Internal.BuiltinAnomaVerifyDetached -> do
+        natType <- getNatType
+        registerAxiomDef
+          ( mkLambda'
+              mkSmallUniv
+              ( mkLambda'
+                  natType
+                  ( mkLambda'
+                      (mkVar' 0)
+                      ( mkLambda'
+                          natType
+                          (mkBuiltinApp' OpAnomaVerifyDetached [mkVar' 2, mkVar' 1, mkVar' 0])
+                      )
+                  )
+              )
+          )
+      Internal.BuiltinAnomaSign -> do
+        natType <- getNatType
+        registerAxiomDef
+          ( mkLambda'
+              mkSmallUniv
+              ( mkLambda'
+                  (mkVar' 0)
+                  ( mkLambda'
+                      natType
+                      (mkBuiltinApp' OpAnomaSign [mkVar' 1, mkVar' 0])
+                  )
+              )
+          )
+      Internal.BuiltinAnomaVerify -> do
+        natType <- getNatType
+        registerAxiomDef
+          ( mkLambda'
+              mkSmallUniv
+              ( mkLambda'
+                  natType
+                  ( mkLambda'
+                      natType
+                      (mkBuiltinApp' OpAnomaVerify [mkVar' 1, mkVar' 0])
+                  )
+              )
           )
       Internal.BuiltinPoseidon -> do
         psName <- getPoseidonStateName
@@ -738,6 +789,12 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
 
     getNatName :: Sem r Text
     getNatName = (^. inductiveName) <$> getBuiltinInductiveInfo BuiltinNat
+
+    getNatType :: Sem r Type
+    getNatType = do
+      natName <- getNatName
+      natSym <- getNatSymbol
+      return (mkTypeConstr (setInfoName natName mempty) natSym [])
 
     getIntName :: Sem r Text
     getIntName = (^. inductiveName) <$> getBuiltinInductiveInfo BuiltinInt
@@ -1113,6 +1170,9 @@ goApplication a = do
         Just Internal.BuiltinAnomaGet -> app
         Just Internal.BuiltinAnomaEncode -> app
         Just Internal.BuiltinAnomaDecode -> app
+        Just Internal.BuiltinAnomaVerifyDetached -> app
+        Just Internal.BuiltinAnomaSign -> app
+        Just Internal.BuiltinAnomaVerify -> app
         Just Internal.BuiltinPoseidon -> app
         Just Internal.BuiltinEcOp -> app
         Just Internal.BuiltinRandomEcPoint -> app

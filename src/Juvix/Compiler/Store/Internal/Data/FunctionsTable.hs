@@ -12,4 +12,6 @@ newtype FunctionsTable = FunctionsTable
 
 instance Serialize FunctionsTable
 
+instance NFData FunctionsTable
+
 makeLenses ''FunctionsTable

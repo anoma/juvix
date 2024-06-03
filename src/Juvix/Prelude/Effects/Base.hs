@@ -1,6 +1,7 @@
 module Juvix.Prelude.Effects.Base
   ( module Juvix.Prelude.Effects.Base,
     module Effectful,
+    module Effectful.Concurrent,
     module Effectful.Reader.Static,
     module Effectful.State.Static.Local,
     module Effectful.Error.Static,
@@ -8,12 +9,15 @@ module Juvix.Prelude.Effects.Base
     module Effectful.TH,
     module Effectful.Dispatch.Static,
     module Effectful.Provider,
+    module Effectful.Concurrent.Async,
   )
 where
 
 import Data.Kind qualified as GHC
 import Effectful hiding (Eff, (:>))
 import Effectful qualified as E
+import Effectful.Concurrent hiding (yield)
+import Effectful.Concurrent.Async
 import Effectful.Dispatch.Dynamic (LocalEnv, SharedSuffix, impose, interpose, localLift, localLiftUnlift, localLiftUnliftIO, localSeqLift, localSeqUnlift, localSeqUnliftIO, localUnlift, localUnliftIO, withLiftMap, withLiftMapIO)
 import Effectful.Dispatch.Dynamic qualified as E
 import Effectful.Dispatch.Static
@@ -23,11 +27,14 @@ import Effectful.Provider
 import Effectful.Reader.Static
 import Effectful.State.Static.Local hiding (runState, state)
 import Effectful.State.Static.Local qualified as State
+import Effectful.State.Static.Shared qualified as Shared
 import Effectful.TH
 import Juvix.Prelude.Base.Foundation
 import Language.Haskell.TH.Syntax qualified as GHC
 
 type Sem = E.Eff
+
+type SharedState = Shared.State
 
 type EmbedIO = IOE
 
@@ -74,8 +81,29 @@ mapReader f s = do
   e <- ask
   runReader (f e) s
 
+putShared :: forall s (r :: [Effect]). (Member (SharedState s) r) => s -> Sem r ()
+putShared = Shared.put
+
+getsShared :: forall s a (r :: [Effect]). (Member (SharedState s) r) => (s -> a) -> Sem r a
+getsShared = Shared.gets
+
+getShared :: forall s (r :: [Effect]). (Member (SharedState s) r) => Sem r s
+getShared = Shared.get
+
+evalStateShared :: forall s r a. s -> Sem (SharedState s ': r) a -> Sem r a
+evalStateShared s = fmap snd . runStateShared s
+
+execStateShared :: forall s r a. s -> Sem (SharedState s ': r) a -> Sem r s
+execStateShared s = fmap fst . runStateShared s
+
+runStateShared :: forall s r a. s -> Sem (SharedState s ': r) a -> Sem r (s, a)
+runStateShared s = fmap swap . Shared.runState s
+
 runState :: forall s r a. s -> Sem (State s ': r) a -> Sem r (s, a)
 runState s = fmap swap . State.runState s
+
+modifyShared :: (Member (SharedState s) r) => (s -> s) -> Sem r ()
+modifyShared = Shared.modify
 
 -- | TODO can we make it strict?
 modify' :: (Member (State s) r) => (s -> s) -> Sem r ()

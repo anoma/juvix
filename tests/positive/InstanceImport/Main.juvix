@@ -10,4 +10,4 @@ type Bool :=
 instance
 boolI : T Bool := mkT λ {x := x};
 
-main : Bool := case T.pp unit of {unit := T.pp true};
+main : Bool := case T.pp unit of unit := T.pp true;

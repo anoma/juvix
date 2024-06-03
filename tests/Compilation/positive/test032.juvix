@@ -7,8 +7,7 @@ split : {A : Type} → Nat → List A → List A × List A
   | zero xs := nil, xs
   | (suc n) nil := nil, nil
   | (suc n) (x :: xs) :=
-    case split n xs
-      | l1, l2 := x :: l1, l2;
+    case split n xs of l1, l2 := x :: l1, l2;
 
 terminating
 merge' : List Nat → List Nat → List Nat
@@ -23,10 +22,10 @@ sort : List Nat → List Nat
     let
       n : Nat := length xs;
     in if
-      (n <= 1)
-      xs
-      (case split (div n 2) xs
-        | l1, l2 := merge' (sort l1) (sort l2));
+      | n <= 1 := xs
+      | else :=
+        case split (div n 2) xs of
+          l1, l2 := merge' (sort l1) (sort l2);
 
 terminating
 uniq : List Nat → List Nat

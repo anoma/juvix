@@ -19,7 +19,6 @@ import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
 import Juvix.Compiler.Pipeline.Package.Loader.PathResolver
 import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process
-import Juvix.Data.Effect.TaggedLock
 
 data LoaderResource = LoaderResource
   { _loaderResourceResult :: CoreResult,

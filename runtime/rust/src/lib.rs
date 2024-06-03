@@ -49,7 +49,7 @@ mod tests {
                     continue;
                 }
                 FUN_ITFIB_GO => {
-                    if juvix_equal(args[0], make_smallint(0)) {
+                    if word_to_bool(juvix_equal(args[0], make_smallint(0))) {
                         break args[1];
                     } else {
                         args = vec![
@@ -122,19 +122,19 @@ mod tests {
                         vec![id, id, id, id, id, id, id, id, id, id, id, make_smallint(1)]
                     );
                     let tmp1 = smallint_add(x, y);
-                    break smallint_add(tmp1, z);
+                    return smallint_add(tmp1, z);
                 }
                 FUN_S => {
                     let xz = apply!(program_sk, mem, args[0], vec![args[2]]);
                     let yz = apply!(program_sk, mem, args[1], vec![args[2]]);
-                    tapply!('program, program_sk, mem, fid, args, xz, vec![yz]);
+                    tapply!('program, program_sk, mem, fid, args, xz, vec![yz])
                 }
                 FUN_K => {
-                    break args[0];
+                    return args[0];
                 }
                 FUN_I => {
                     let k = mem.alloc_closure(FUN_K, &[], 2);
-                    break mem.alloc_closure(FUN_S, &[k, k], 1);
+                    return mem.alloc_closure(FUN_S, &[k, k], 1);
                 }
                 _ => panic!("unknown function id"),
             }

@@ -130,8 +130,7 @@ checkTopModule ::
   Sem r Module
 checkTopModule md = do
   checkCoercionCycles
-  md' <- checkModule md
-  return md'
+  checkModule md
 
 checkModule ::
   (Members '[HighlightBuilder, Reader EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, ResultBuilder, Termination] r) =>

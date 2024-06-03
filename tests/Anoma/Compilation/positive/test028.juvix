@@ -13,8 +13,8 @@ force : (Unit → Stream) → Stream
 terminating
 sfilter : (Nat → Bool) → (Unit → Stream) → Unit → Stream
   | p s unit :=
-    case force s
-      | cons h t :=
+    case force s of
+      cons h t :=
         if (p h) (cons h (sfilter p t)) (force (sfilter p t));
 
 shead : Stream → Nat
@@ -37,8 +37,8 @@ indivisible : Nat → Nat → Bool
 terminating
 eratostenes : (Unit → Stream) → Unit → Stream
   | s unit :=
-    case force s
-      | cons n t :=
+    case force s of
+      cons n t :=
         cons n (eratostenes (sfilter (indivisible n) t));
 
 primes : Unit → Stream := eratostenes (numbers 2);

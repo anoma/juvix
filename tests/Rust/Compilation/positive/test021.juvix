@@ -1,0 +1,16 @@
+-- fast exponentiation
+module test021;
+
+import Stdlib.Prelude open;
+
+terminating
+power' : Nat → Nat → Nat → Nat
+  | acc a b :=
+    if
+      | b == 0 := acc
+      | mod b 2 == 0 := power' acc (a * a) (div b 2)
+      | else := power' (acc * a) (a * a) (div b 2);
+
+power : Nat → Nat → Nat := power' 1;
+
+main : Nat := power 2 3 + power 3 7 + power 5 7;

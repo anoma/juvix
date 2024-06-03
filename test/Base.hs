@@ -21,6 +21,8 @@ import Juvix.Data.Effect.TaggedLock
 import Juvix.Extra.Paths hiding (rootBuildDir)
 import Juvix.Prelude hiding (assert)
 import Juvix.Prelude.Env
+import Parallel.ProgressLog
+import System.Process qualified as P
 import Test.Tasty
 import Test.Tasty.HUnit hiding (assertFailure)
 import Test.Tasty.HUnit qualified as HUnit
@@ -82,6 +84,8 @@ assertCmdExists cmd =
 testTaggedLockedToIO :: (MonadIO m) => Sem PipelineAppEffects a -> m a
 testTaggedLockedToIO =
   runM
+    . ignoreProgressLog
+    . runReader defaultPipelineOptions
     . runTaggedLock LockModeExclusive
 
 testRunIO ::
@@ -90,10 +94,14 @@ testRunIO ::
   EntryPoint ->
   Sem (PipelineEff PipelineAppEffects) a ->
   m (ResolverState, PipelineResult a)
-testRunIO e = testTaggedLockedToIO . runIO defaultGenericOptions e
+testRunIO e =
+  testTaggedLockedToIO
+    . runIO defaultGenericOptions e
 
 testDefaultEntryPointIO :: (MonadIO m) => Path Abs Dir -> Path Abs File -> m EntryPoint
-testDefaultEntryPointIO cwd mainFile = testTaggedLockedToIO (defaultEntryPointIO cwd mainFile)
+testDefaultEntryPointIO cwd mainFile =
+  testTaggedLockedToIO $
+    defaultEntryPointIO cwd mainFile
 
 testDefaultEntryPointNoFileIO :: Path Abs Dir -> IO EntryPoint
 testDefaultEntryPointNoFileIO cwd = testTaggedLockedToIO (defaultEntryPointNoFileIO cwd)
@@ -102,7 +110,9 @@ testRunIOEither ::
   EntryPoint ->
   Sem (PipelineEff PipelineAppEffects) a ->
   IO (Either JuvixError (ResolverState, PipelineResult a))
-testRunIOEither entry = testTaggedLockedToIO . runIOEither entry
+testRunIOEither entry =
+  testTaggedLockedToIO
+    . runIOEither entry
 
 testRunIOEitherTermination ::
   EntryPoint ->
@@ -114,3 +124,36 @@ testRunIOEitherTermination entry =
 
 assertFailure :: (MonadIO m) => String -> m a
 assertFailure = liftIO . HUnit.assertFailure
+
+-- | The same as `P.readProcess` but instead of inheriting `stderr` redirects it
+-- to the child's `stdout`.
+readProcess :: FilePath -> [String] -> Text -> IO Text
+readProcess = readProcessCwd' Nothing
+
+readProcessCwd :: FilePath -> FilePath -> [String] -> Text -> IO Text
+readProcessCwd cwd = readProcessCwd' (Just cwd)
+
+readProcessCwd' :: Maybe FilePath -> FilePath -> [String] -> Text -> IO Text
+readProcessCwd' mcwd cmd args stdinText =
+  withTempDir'
+    ( \dirPath -> do
+        (_, hin) <- openTempFile dirPath "stdin"
+        (_, hout) <- openTempFile dirPath "stdout"
+        hPutStr hin stdinText
+        hSeek hin AbsoluteSeek 0
+        (_, _, _, ph) <-
+          P.createProcess_
+            "readProcess"
+            (P.proc cmd args)
+              { P.std_in = P.UseHandle hin,
+                P.std_out = P.UseHandle hout,
+                P.std_err = P.UseHandle hout,
+                P.cwd = mcwd
+              }
+        P.waitForProcess ph
+        hSeek hout AbsoluteSeek 0
+        r <- hGetContents hout
+        hClose hin
+        hClose hout
+        return r
+    )

@@ -24,8 +24,10 @@ data GlobalOptions = GlobalOptions
     _globalNoCoverage :: Bool,
     _globalNoStdlib :: Bool,
     _globalUnrollLimit :: Int,
+    _globalNumThreads :: NumThreads,
     _globalFieldSize :: Maybe Natural,
-    _globalOffline :: Bool
+    _globalOffline :: Bool,
+    _globalDevShowThreadIds :: Bool
   }
   deriving stock (Eq, Show)
 
@@ -57,6 +59,7 @@ defaultGlobalOptions :: GlobalOptions
 defaultGlobalOptions =
   GlobalOptions
     { _globalNoColors = False,
+      _globalNumThreads = defaultNumThreads,
       _globalShowNameIds = False,
       _globalOnlyErrors = False,
       _globalNoTermination = False,
@@ -67,6 +70,7 @@ defaultGlobalOptions =
       _globalNoStdlib = False,
       _globalUnrollLimit = defaultUnrollLimit,
       _globalFieldSize = Nothing,
+      _globalDevShowThreadIds = False,
       _globalOffline = False
     }
 
@@ -140,6 +144,12 @@ parseGlobalFlags = do
       ( long "show-name-ids"
           <> help "[DEV] Show the unique number of each identifier when pretty printing"
       )
+  _globalDevShowThreadIds <-
+    switch
+      ( long "dev-show-thread-ids"
+          <> help "[DEV] Show the thread id when compiling a module"
+      )
+  _globalNumThreads <- parseNumThreads
   return GlobalOptions {..}
 
 parseBuildDir :: Mod OptionFields (Prepath Dir) -> Parser (AppPath Dir)

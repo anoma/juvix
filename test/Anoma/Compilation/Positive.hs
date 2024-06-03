@@ -560,5 +560,28 @@ allTests =
             [nock| [1 2 0] |],
             [nock| [1 2] |],
             [nock| false |]
-          ]
+          ],
+      mkAnomaCallTest
+        "Test077: Anoma verify-detached"
+        $(mkRelDir ".")
+        $(mkRelFile "test077.juvix")
+        []
+        $ checkOutput
+          [ [nock| true |]
+          ],
+      let toSignAndVerify :: Term Natural = [nock| [1 2 nil] |]
+       in mkAnomaCallTest
+            "Test078: Anoma sign and verify"
+            $(mkRelDir ".")
+            $(mkRelFile "test078.juvix")
+            [OpQuote # toSignAndVerify]
+            $ checkOutput
+              [toSignAndVerify],
+      let inputStr :: Term Natural = [nock| "Juvix!" |]
+       in mkAnomaCallTest
+            "Test079: Strings"
+            $(mkRelDir ".")
+            $(mkRelFile "test079.juvix")
+            [OpQuote # inputStr]
+            $ checkOutput [[nock| "Juvix! ✨ héllo world ✨" |]]
     ]
