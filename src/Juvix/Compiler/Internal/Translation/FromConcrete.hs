@@ -1269,7 +1269,7 @@ goRecordPattern r = do
               output arg'
               go maxIdx (idx + 1) args'
           | otherwise = do
-              v <- Internal.freshVar loc ("x" <> show idx)
+              v <- Internal.freshVar loc ("gen_" <> show idx)
               output (Internal.patternArgFromVar Internal.Explicit v)
               go maxIdx (idx + 1) args
 
