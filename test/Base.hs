@@ -128,13 +128,16 @@ assertFailure = liftIO . HUnit.assertFailure
 -- | The same as `P.readProcess` but instead of inheriting `stderr` redirects it
 -- to the child's `stdout`.
 readProcess :: FilePath -> [String] -> Text -> IO Text
-readProcess = readProcessCwd' Nothing
+readProcess = readProcessCwd' Nothing Nothing
+
+readProcessWithEnv :: [(String, String)] -> FilePath -> [String] -> Text -> IO Text
+readProcessWithEnv env = readProcessCwd' (Just env) Nothing
 
 readProcessCwd :: FilePath -> FilePath -> [String] -> Text -> IO Text
-readProcessCwd cwd = readProcessCwd' (Just cwd)
+readProcessCwd cwd = readProcessCwd' Nothing (Just cwd)
 
-readProcessCwd' :: Maybe FilePath -> FilePath -> [String] -> Text -> IO Text
-readProcessCwd' mcwd cmd args stdinText =
+readProcessCwd' :: Maybe [(String, String)] -> Maybe FilePath -> FilePath -> [String] -> Text -> IO Text
+readProcessCwd' menv mcwd cmd args stdinText =
   withTempDir'
     ( \dirPath -> do
         (_, hin) <- openTempFile dirPath "stdin"
@@ -148,7 +151,8 @@ readProcessCwd' mcwd cmd args stdinText =
               { P.std_in = P.UseHandle hin,
                 P.std_out = P.UseHandle hout,
                 P.std_err = P.UseHandle hout,
-                P.cwd = mcwd
+                P.cwd = mcwd,
+                P.env = menv
               }
         P.waitForProcess ph
         hSeek hout AbsoluteSeek 0

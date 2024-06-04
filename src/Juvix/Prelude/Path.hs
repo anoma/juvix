@@ -131,6 +131,11 @@ parents = go [] . parent
 withTempDir' :: (MonadIO m, MonadMask m) => (Path Abs Dir -> m a) -> m a
 withTempDir' = withSystemTempDir "tmp"
 
+createTempDir' :: (MonadIO m) => m (Path Abs Dir)
+createTempDir' = do
+  dir <- getTempDir
+  createTempDir dir "tmp"
+
 -- | 'pure True' if the file exists and is executable, 'pure False' otherwise
 isExecutable :: (MonadIO m) => Path b File -> m Bool
 isExecutable f = doesFileExist f &&^ (executable <$> getPermissions f)
