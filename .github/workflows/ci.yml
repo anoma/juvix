@@ -138,6 +138,13 @@ jobs:
         if: steps.cache-cairo-vm.outputs.cache-hit != 'true'
         uses: actions-rust-lang/setup-rust-toolchain@v1
 
+      - name: Install RISC0 VM
+        shell: bash
+        run: |
+          cargo install cargo-binstall
+          cargo binstall cargo-risczero
+          cargo risczero install
+
       - name: Checkout CairoVM
         uses: actions/checkout@v4
         if: steps.cache-cairo-vm.outputs.cache-hit != 'true'
@@ -345,6 +352,13 @@ jobs:
       - name: Install Rust toolchain
         if: steps.cache-cairo-vm.outputs.cache-hit != 'true'
         uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Install RISC0 VM
+        shell: bash
+        run: |
+          cargo install cargo-binstall
+          cargo binstall cargo-risczero
+          cargo risczero install
 
       - name: Checkout CairoVM
         uses: actions/checkout@v4

@@ -8,6 +8,7 @@ import Juvix.Compiler.Backend.Rust.Data.Result
 import Juvix.Compiler.Backend.Rust.Pretty
 import Juvix.Compiler.Core qualified as Core
 import System.Directory
+import System.Environment
 import System.Process qualified as P
 
 compileAssertion ::
@@ -43,6 +44,9 @@ compileAssertion tmpDir' root' optLevel mainFile expectedFile step = do
 
       step "Check cargo is on path"
       assertCmdExists $(mkRelFile "cargo")
+
+      step "Check r0vm is on path"
+      assertCmdExists $(mkRelFile "r0vm")
 
       expected <- readFile expectedFile
 
@@ -87,5 +91,6 @@ compileAssertion tmpDir' root' optLevel mainFile expectedFile step = do
 
     executeRISC0 :: Path Abs File -> IO Text
     executeRISC0 outputFile = do
-      out <- readProcessWithEnv [("RISC0_DEV_MODE", "1")] (toFilePath outputFile) [] ""
+      env <- getEnvironment
+      out <- readProcessWithEnv (("RISC0_DEV_MODE", "1") : env) (toFilePath outputFile) [] ""
       return $ T.unlines $ filter (not . T.isPrefixOf "WARNING:") $ T.lines out
