@@ -318,6 +318,7 @@ genCode infoTable fi =
       Core.OpAnomaDecode -> OpAnomaDecode
       Core.OpAnomaVerifyDetached -> OpAnomaVerifyDetached
       Core.OpAnomaSign -> OpAnomaSign
+      Core.OpAnomaSignDetached -> OpAnomaSignDetached
       Core.OpAnomaVerify -> OpAnomaVerify
       _ -> impossible
 

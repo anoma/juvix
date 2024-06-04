@@ -200,6 +200,7 @@ data BuiltinAxiom
   | BuiltinAnomaDecode
   | BuiltinAnomaVerifyDetached
   | BuiltinAnomaSign
+  | BuiltinAnomaSignDetached
   | BuiltinAnomaVerify
   | BuiltinPoseidon
   | BuiltinEcOp
@@ -241,6 +242,7 @@ instance Pretty BuiltinAxiom where
     BuiltinAnomaEncode -> Str.anomaEncode
     BuiltinAnomaDecode -> Str.anomaDecode
     BuiltinAnomaVerifyDetached -> Str.anomaVerifyDetached
+    BuiltinAnomaSignDetached -> Str.anomaSignDetached
     BuiltinAnomaSign -> Str.anomaSign
     BuiltinAnomaVerify -> Str.anomaVerify
     BuiltinPoseidon -> Str.cairoPoseidon

@@ -244,6 +244,9 @@ evalProfile inistack initerm =
             StdlibSign -> case args' of
               TCell (TermAtom message) (TermAtom privKey) -> goSign message privKey
               _ -> error "expected a term of the form [message (encoded term) private_key (atom)]"
+            StdlibSignDetached -> case args' of
+              TCell (TermAtom message) (TermAtom privKey) -> goSignDetached message privKey
+              _ -> error "expected a term of the form [message (encoded term) private_key (atom)]"
             StdlibVerify -> case args' of
               TCell (TermAtom signedMessage) (TermAtom pubKey) -> goVerify signedMessage pubKey
               _ -> error "expected a term of the form [signedMessage (atom) public_key (atom)]"
@@ -254,24 +257,41 @@ evalProfile inistack initerm =
             goCat :: Atom a -> Atom a -> Sem r (Term a)
             goCat arg1 arg2 = TermAtom . setAtomHint AtomHintString <$> atomConcatenateBytes arg1 arg2
 
+            signatureLength :: Int
+            signatureLength = 64
+
+            publicKeyLength :: Int
+            publicKeyLength = 32
+
+            privateKeyLength :: Int
+            privateKeyLength = 64
+
             goVerifyDetached :: Atom a -> Atom a -> Atom a -> Sem r (Term a)
             goVerifyDetached sigT messageT pubKeyT = do
-              sig <- Signature <$> atomToByteString sigT
-              pubKey <- PublicKey <$> atomToByteString pubKeyT
+              sig <- Signature <$> atomToByteStringLen signatureLength sigT
+              pubKey <- PublicKey <$> atomToByteStringLen publicKeyLength pubKeyT
               message <- atomToByteString messageT
               let res = dverify pubKey message sig
               return (TermAtom (nockBool res))
 
             goSign :: Atom a -> Atom a -> Sem r (Term a)
             goSign messageT privKeyT = do
-              privKey <- SecretKey <$> atomToByteString privKeyT
+              privKey <- SecretKey <$> atomToByteStringLen privateKeyLength privKeyT
               message <- atomToByteString messageT
               res <- byteStringToAtom (sign privKey message)
               return (TermAtom res)
 
+            goSignDetached :: Atom a -> Atom a -> Sem r (Term a)
+            goSignDetached messageT privKeyT = do
+              privKey <- SecretKey <$> atomToByteStringLen privateKeyLength privKeyT
+              message <- atomToByteString messageT
+              let (Signature sig) = dsign privKey message
+              res <- byteStringToAtom sig
+              return (TermAtom res)
+
             goVerify :: Atom a -> Atom a -> Sem r (Term a)
             goVerify signedMessageT pubKeyT = do
-              pubKey <- PublicKey <$> atomToByteString pubKeyT
+              pubKey <- PublicKey <$> atomToByteStringLen publicKeyLength pubKeyT
               signedMessage <- atomToByteString signedMessageT
               if
                   | verify pubKey signedMessage -> TermAtom <$> byteStringToAtom (removeSignature signedMessage)

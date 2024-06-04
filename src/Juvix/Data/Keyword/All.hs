@@ -457,6 +457,9 @@ kwAnomaVerifyDetached = asciiKw Str.anomaVerifyDetached
 kwAnomaSign :: Keyword
 kwAnomaSign = asciiKw Str.anomaSign
 
+kwAnomaSignDetached :: Keyword
+kwAnomaSignDetached = asciiKw Str.anomaSignDetached
+
 kwAnomaVerify :: Keyword
 kwAnomaVerify = asciiKw Str.anomaVerify
 

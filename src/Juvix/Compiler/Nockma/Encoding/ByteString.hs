@@ -6,8 +6,13 @@ import Data.ByteString.Builder qualified as BS
 import Juvix.Compiler.Nockma.Language
 import Juvix.Prelude.Base
 
+-- | Encode an atom to little-endian bytes
 atomToByteString :: (NockNatural a, Member (Error (ErrNockNatural a)) r) => Atom a -> Sem r ByteString
 atomToByteString = fmap naturalToByteString . nockNatural
+
+-- | Encode an atom to little-endian bytes, padded with zeros up to a specified length
+atomToByteStringLen :: (NockNatural a, Member (Error (ErrNockNatural a)) r) => Int -> Atom a -> Sem r ByteString
+atomToByteStringLen len = fmap (padByteString len) . atomToByteString
 
 byteStringToAtom :: (NockNatural a, Member (Error (ErrNockNatural a)) r) => ByteString -> Sem r (Atom a)
 byteStringToAtom = fmap mkEmptyAtom . fromNatural . byteStringToNatural
@@ -48,3 +53,9 @@ mkEmptyAtom x =
     { _atomInfo = emptyAtomInfo,
       _atom = x
     }
+
+-- | Pad a ByteString with zeros up to a specified length
+padByteString :: Int -> ByteString -> ByteString
+padByteString n bs
+  | BS.length bs >= n = bs
+  | otherwise = BS.append bs (BS.replicate (n - BS.length bs) 0)

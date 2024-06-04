@@ -24,6 +24,7 @@ stdlibPath = \case
   StdlibDecode -> [nock| [9 94 0 3] |]
   StdlibVerifyDetached -> [nock| [9 22 0 1] |]
   StdlibSign -> [nock| [9 10 0 1] |]
+  StdlibSignDetached -> [nock| [9 23 0 1] |]
   StdlibVerify -> [nock| [9 4 0 1] |]
   -- Obtained from the urbit dojo using:
   --

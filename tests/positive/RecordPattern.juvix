@@ -6,6 +6,11 @@ type Pair (A B : Type) :=
     snd : B
   };
 
+type T := t;
+
+partialMatch : Pair T T -> T
+  | mypair@mkPair@{snd := t} := t;
+
 swap {A B : Type} : Pair A B -> Pair B A
   | mkPair@{fst := c1; snd := c2} := mkPair c2 c1;
 
