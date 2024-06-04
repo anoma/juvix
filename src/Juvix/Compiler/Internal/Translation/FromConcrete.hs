@@ -1251,7 +1251,11 @@ goRecordPattern r = do
 
     mkPatterns :: Sem r [Internal.PatternArg]
     mkPatterns = do
-      sig <- asks (fromJust . HashMap.lookup (constr ^. Internal.nameId) . (^. S.infoConstructorSigs))
+      sig <-
+        asks $
+          fromJust
+            . HashMap.lookup (constr ^. Internal.nameId)
+            . (^. S.infoConstructorSigs)
       let maxIdx = length (sig ^. recordNames) - 1
       args <- IntMap.toAscList <$> byIndex
       execOutputList (go maxIdx 0 args)
@@ -1265,8 +1269,9 @@ goRecordPattern r = do
               output arg'
               go maxIdx (idx + 1) args'
           | otherwise = do
-              v <- Internal.freshVar loc ("x" <> show idx)
+              v <- Internal.freshVar loc ("gen_" <> show idx)
               output (Internal.patternArgFromVar Internal.Explicit v)
+              go maxIdx (idx + 1) args
 
 goAxiom :: (Members '[Reader DefaultArgsStack, Reader Pragmas, Error ScoperError, Builtins, NameIdGen, Reader S.InfoTable] r) => AxiomDef 'Scoped -> Sem r Internal.AxiomDef
 goAxiom a = do
