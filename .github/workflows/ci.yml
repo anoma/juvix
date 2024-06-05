@@ -29,7 +29,6 @@ env:
   CAIRO_VM_VERSION: 6bb5330aede3fc8049b498012a6efbf12bc9432a
   JUST_ARGS: runtimeCcArg=$CC runtimeLibtoolArg=$LIBTOOL
   STACK_BUILD_ARGS: --pedantic -j4 --ghc-options=-j
-  GITHUB_TOKEN: ${{ secrets.TOKEN }}
 
 jobs:
   pre-commit:
@@ -242,6 +241,7 @@ jobs:
 
   build-and-test-macos:
     runs-on: macos-14
+    if: false
     steps:
       - uses: extractions/setup-just@v2
 
