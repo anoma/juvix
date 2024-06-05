@@ -35,6 +35,8 @@ PIPELINE=$(count src/Juvix/Compiler/Pipeline/)
 
 APP=$(count app/)
 HTML=$(count src/Juvix/Compiler/Backend/Html/)
+MARKDOWN=$(count src/Juvix/Compiler/Backend/Markdown/)
+ISABELLE=$(count src/Juvix/Compiler/Backend/Isabelle/)
 EXTRA=$(count src/Juvix/Extra/)
 DATA=$(count src/Juvix/Data/)
 PRELUDE=$(count src/Juvix/Prelude/)
@@ -42,7 +44,7 @@ STORE=$(count src/Juvix/Compiler/Store/)
 
 FRONT=$((CONCRETE + INTERNAL + BUILTINS + PIPELINE))
 BACK=$((BACKENDC + BACKENDRUST + GEB + VAMPIR + NOCK + REG + ASM + TREE + CORE + CASM + CAIRO))
-OTHER=$((APP + STORE + HTML + EXTRA + DATA + PRELUDE))
+OTHER=$((APP + STORE + HTML + MARKDOWN + ISABELLE + EXTRA + DATA + PRELUDE))
 TESTS=$(count test/)
 
 TOTAL=$((FRONT+BACK+OTHER+TESTS))
@@ -73,6 +75,8 @@ echo "Other: $OTHER LOC"
 echo "   Application: $APP LOC"
 echo "   Store: $STORE LOC"
 echo "   Html: $HTML LOC"
+echo "   Markdown: $MARKDOWN LOC"
+echo "   Isabelle: $ISABELLE LOC"
 echo "   Extra: $EXTRA LOC"
 echo "   Data: $DATA LOC"
 echo "   Prelude: $PRELUDE LOC"

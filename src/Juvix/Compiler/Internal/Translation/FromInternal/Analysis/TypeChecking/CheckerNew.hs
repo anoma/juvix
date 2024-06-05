@@ -214,6 +214,7 @@ checkInductiveDef InductiveDef {..} = runInferenceDef $ do
             ConstructorDef
               { _inductiveConstructorType = cty',
                 _inductiveConstructorName,
+                _inductiveConstructorIsRecord,
                 _inductiveConstructorPragmas
               }
       registerConstructor c'

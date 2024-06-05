@@ -372,6 +372,7 @@ data InductiveDef = InductiveDef
 data ConstructorDef = ConstructorDef
   { _inductiveConstructorName :: ConstrName,
     _inductiveConstructorType :: Expression,
+    _inductiveConstructorIsRecord :: Bool,
     _inductiveConstructorPragmas :: Pragmas
   }
   deriving stock (Data)

@@ -627,6 +627,7 @@ goConstructorDef retTy ConstructorDef {..} = do
     Internal.ConstructorDef
       { _inductiveConstructorType = ty',
         _inductiveConstructorName = goSymbol _constructorName,
+        _inductiveConstructorIsRecord = isRhsRecord _constructorRhs,
         _inductiveConstructorPragmas = pragmas'
       }
   where
@@ -671,6 +672,12 @@ goConstructorDef retTy ConstructorDef {..} = do
       ConstructorRhsGadt r -> goGadtType r
       ConstructorRhsRecord r -> goRecordType r
       ConstructorRhsAdt r -> goAdtType r
+
+    isRhsRecord :: Concrete.ConstructorRhs 'Scoped -> Bool
+    isRhsRecord = \case
+      ConstructorRhsGadt {} -> False
+      ConstructorRhsRecord {} -> True
+      ConstructorRhsAdt {} -> False
 
 goLiteral :: LiteralLoc -> Internal.LiteralLoc
 goLiteral = fmap go

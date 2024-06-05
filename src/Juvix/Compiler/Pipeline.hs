@@ -17,6 +17,8 @@ import Juvix.Compiler.Backend qualified as Backend
 import Juvix.Compiler.Backend.C qualified as C
 import Juvix.Compiler.Backend.Cairo qualified as Cairo
 import Juvix.Compiler.Backend.Geb qualified as Geb
+import Juvix.Compiler.Backend.Isabelle.Data.Result qualified as Isabelle
+import Juvix.Compiler.Backend.Isabelle.Translation.FromTyped qualified as Isabelle
 import Juvix.Compiler.Backend.Rust.Translation.FromReg qualified as Rust
 import Juvix.Compiler.Backend.VampIR.Translation qualified as VampIR
 import Juvix.Compiler.Casm.Data.Builtins qualified as Casm
@@ -125,6 +127,11 @@ upToInternalTyped ::
   (Members '[HighlightBuilder, Reader Parser.ParserResult, Error JuvixError, Reader EntryPoint, Reader Store.ModuleTable, NameIdGen] r) =>
   Sem r Internal.InternalTypedResult
 upToInternalTyped = Internal.typeCheckingNew upToInternal
+
+upToIsabelle ::
+  (Members '[HighlightBuilder, Reader Parser.ParserResult, Error JuvixError, Reader EntryPoint, Reader Store.ModuleTable, NameIdGen] r) =>
+  Sem r Isabelle.Result
+upToIsabelle = upToInternalTyped >>= Isabelle.fromInternal
 
 upToCore ::
   (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError] r) =>

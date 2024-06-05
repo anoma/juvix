@@ -9,6 +9,7 @@ import Commands.Eval.Options
 import Commands.Format.Options
 import Commands.Html.Options
 import Commands.Init.Options
+import Commands.Isabelle.Options
 import Commands.Markdown.Options
 import Commands.Repl.Options
 import Commands.Typecheck.Options
@@ -27,6 +28,7 @@ data TopCommand
   | Eval EvalOptions
   | Html HtmlOptions
   | Markdown MarkdownOptions
+  | Isabelle IsabelleOptions
   | Dev Dev.DevCommand
   | Doctor DoctorOptions
   | Init InitOptions
@@ -198,6 +200,13 @@ commandMarkdown =
       (Markdown <$> parseJuvixMarkdown)
       (progDesc "Translate Juvix code blocks in a Markdown file to Markdown")
 
+commandIsabelle :: Mod CommandFields TopCommand
+commandIsabelle =
+  command "isabelle" $
+    info
+      (Isabelle <$> parseIsabelle)
+      (progDesc "Generate Isabelle/HOL types for a Juvix file")
+
 commandDev :: Mod CommandFields TopCommand
 commandDev =
   command "dev" $
@@ -215,7 +224,8 @@ parseCompilerCommand =
           commandCompile,
           commandEval,
           commandHtml,
-          commandMarkdown
+          commandMarkdown,
+          commandIsabelle
         ]
     )
 
