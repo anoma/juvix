@@ -135,18 +135,11 @@ jobs:
           path: ${{ env.HOME }}/.local/bin/juvix-cairo-vm
           key: ${{ runner.os }}-cairo-vm-${{ env.CAIRO_VM_VERSION }}
 
-      - name: Cache RISC0 VM
-        id: cache-risc0-vm
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.HOME }}/.cargo/bin/r0vm
-          key: ${{ runner.os }}-risc0-vm-${{ env.RISC0_VM_VERSION }}
-
       - name: Install Rust toolchain
+        if: steps.cache-cairo-vm.outputs.cache-hit != 'true'
         uses: actions-rust-lang/setup-rust-toolchain@v1
 
       - name: Install RISC0 VM
-        if: steps.cache-risc0-vm.outputs.cache-hit != 'true'
         shell: bash
         run: |
           cargo install cargo-binstall
@@ -358,18 +351,11 @@ jobs:
           path: ${{ env.HOME }}/.local/bin/juvix-cairo-vm
           key: ${{ runner.os }}-${{ runner.arch }}-cairo-vm-${{ env.CAIRO_VM_VERSION }}
 
-      - name: Cache RISC0 VM
-        id: cache-risc0-vm
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.HOME }}/.cargo/bin/r0vm
-          key: ${{ runner.os }}-risc0-vm-${{ env.RISC0_VM_VERSION }}
-
       - name: Install Rust toolchain
+        if: steps.cache-cairo-vm.outputs.cache-hit != 'true'
         uses: actions-rust-lang/setup-rust-toolchain@v1
 
       - name: Install RISC0 VM
-        if: steps.cache-risc0-vm.outputs.cache-hit != 'true'
         shell: bash
         run: |
           cargo install cargo-binstall
