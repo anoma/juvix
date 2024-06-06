@@ -85,7 +85,7 @@ testTaggedLockedToIO :: (MonadIO m) => Sem PipelineAppEffects a -> m a
 testTaggedLockedToIO =
   runM
     . ignoreProgressLog
-    . runReader defaultPipelineOptions
+    . runReader testPipelineOptions
     . runTaggedLock LockModeExclusive
 
 testRunIO ::
