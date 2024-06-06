@@ -9,7 +9,7 @@ fn main() {
     let env = ExecutorEnv::builder().build().unwrap();
     let prover = default_prover();
 
-    let receipt = prover.prove(env, GUEST_ELF).unwrap();
+    let receipt = prover.prove(env, GUEST_ELF).unwrap().receipt;
 
     let output: u32 = receipt.journal.decode().unwrap();
     println!("{}", output);

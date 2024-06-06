@@ -142,7 +142,7 @@ jobs:
         shell: bash
         run: |
           cargo install cargo-binstall
-          cargo binstall cargo-risczero --no-confirm
+          cargo binstall cargo-risczero@1.0.1 --no-confirm
           cargo risczero install
 
       - name: Checkout CairoVM
@@ -241,7 +241,7 @@ jobs:
 
   build-and-test-macos:
     runs-on: macos-14
-    if: false
+    if: true
     steps:
       - uses: extractions/setup-just@v2
 
@@ -358,7 +358,7 @@ jobs:
         shell: bash
         run: |
           cargo install cargo-binstall
-          cargo binstall cargo-risczero --no-confirm
+          cargo binstall cargo-risczero@1.0.1 --no-confirm --rate-limit 1
           cargo risczero install
 
       - name: Checkout CairoVM
