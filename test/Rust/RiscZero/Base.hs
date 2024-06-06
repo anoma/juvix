@@ -1,7 +1,6 @@
 module Rust.RiscZero.Base where
 
 import Base
-import Data.ByteString qualified as BS
 import Data.FileEmbed qualified as FE
 import Data.Text qualified as T
 import Juvix.Compiler.Backend.Rust.Data.Result
@@ -68,11 +67,6 @@ compileAssertion tmpDir' root' optLevel mainFile expectedFile step = do
     writeDirFiles fs dir = do
       let fs' = map (first relFile) fs
       forM_ (first (dir <//>) <$> fs') (uncurry writeFile)
-
-    writeFile :: Path Abs File -> ByteString -> IO ()
-    writeFile p bs = do
-      ensureDir (parent p)
-      liftIO $ BS.writeFile (toFilePath p) bs
 
     cargoCompile :: Path Abs Dir -> IO Text
     cargoCompile outDir =

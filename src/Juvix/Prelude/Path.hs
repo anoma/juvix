@@ -6,6 +6,7 @@ module Juvix.Prelude.Path
   )
 where
 
+import Data.ByteString qualified as BS
 import Data.List qualified as L
 import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Data.FileExt
@@ -144,3 +145,8 @@ isPathPrefix :: Path b Dir -> Path b t -> Bool
 isPathPrefix p1 p2 = case L.stripPrefix (toFilePath p1) (toFilePath p2) of
   Nothing -> False
   Just {} -> True
+
+writeFile :: (MonadIO m) => Path Abs File -> ByteString -> m ()
+writeFile p bs = do
+  ensureDir (parent p)
+  liftIO $ BS.writeFile (toFilePath p) bs

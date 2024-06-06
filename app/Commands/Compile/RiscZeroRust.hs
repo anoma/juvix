@@ -3,7 +3,6 @@ module Commands.Compile.RiscZeroRust where
 import Commands.Base
 import Commands.Compile.RiscZeroRust.Options
 import Commands.Extra.NewCompile
-import Data.ByteString qualified as BS
 import Data.FileEmbed qualified as FE
 import Juvix.Compiler.Backend.Rust.Data.Result
 
@@ -39,8 +38,3 @@ runCommand opts = do
     writeDirFiles fs outDir = do
       let fs' = map (first relFile) fs
       forM_ (first (outDir <//>) <$> fs') (uncurry writeFile)
-
-    writeFile :: Path Abs File -> ByteString -> Sem r ()
-    writeFile p bs = do
-      ensureDir (parent p)
-      liftIO $ BS.writeFile (toFilePath p) bs
