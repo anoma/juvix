@@ -23,7 +23,7 @@ allTests =
     ( \tmpDir ->
         sequentialTestGroup
           "Juvix to RISC0 Rust positive tests"
-          AllSucceed
+          AllFinish
           (map (mkTest . toTestDescr tmpDir 2) C.tests)
     )
 
@@ -35,6 +35,6 @@ allTestsNoOptimize =
     ( \tmpDir ->
         sequentialTestGroup
           "Juvix to RISC0 Rust positive tests (no optimization)"
-          AllSucceed
+          AllFinish
           (map (mkTest . toTestDescr tmpDir 0) C.tests)
     )
