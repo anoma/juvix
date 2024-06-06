@@ -150,3 +150,6 @@ writeFile :: (MonadIO m) => Path Abs File -> ByteString -> m ()
 writeFile p bs = do
   ensureDir (parent p)
   liftIO $ BS.writeFile (toFilePath p) bs
+
+pathFileToPathDir :: Path Abs File -> Path Abs Dir
+pathFileToPathDir = absDir . toFilePath

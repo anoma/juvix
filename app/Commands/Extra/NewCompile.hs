@@ -39,7 +39,7 @@ getOutputDir ext inp = \case
     mainFile <- getMainFile inp
     invokeDir <- askInvokeDir
     let baseOutputDir = invokeDir <//> filename (replaceExtension' (fileExtToString ext) mainFile)
-    return $ absDir $ toFilePath baseOutputDir
+    return $ pathFileToPathDir baseOutputDir
 
 compileToCore ::
   (Members '[App, EmbedIO, TaggedLock] r) =>
