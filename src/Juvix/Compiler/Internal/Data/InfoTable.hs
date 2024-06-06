@@ -230,7 +230,7 @@ lookupFunction f = do
           <> ppTrace (HashMap.keys tbl)
 
 lookupAxiom :: (Member (Reader InfoTable) r) => Name -> Sem r AxiomInfo
-lookupAxiom f = HashMap.lookupDefault impossible f <$> asks (^. infoAxioms)
+lookupAxiom f = HashMap.lookupDefault (error ("impossible: couldn't find axiom " <> ppTrace f)) f <$> asks (^. infoAxioms)
 
 lookupInductiveType :: (Member (Reader InfoTable) r) => Name -> Sem r Expression
 lookupInductiveType v = fullInductiveType <$> lookupInductive v
