@@ -5,7 +5,6 @@ module Juvix.Compiler.Concrete.Translation.ImportScanner.FlatParse
 where
 
 import Juvix.Compiler.Concrete.Translation.ImportScanner.Base
-import Juvix.Data.Keyword (reservedSymbols)
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
 import Juvix.Prelude.FlatParse hiding (Pos)
