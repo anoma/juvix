@@ -5,7 +5,7 @@ import Juvix.Compiler.Reg.Data.TransformationId.Strings
 import Juvix.Prelude
 
 data TransformationId
-  = Identity
+  = IdentityTrans
   | Cleanup
   | SSA
   | InitBranchVars
@@ -31,7 +31,7 @@ toCasmTransformations = [Cleanup, SSA]
 instance TransformationId' TransformationId where
   transformationText :: TransformationId -> Text
   transformationText = \case
-    Identity -> strIdentity
+    IdentityTrans -> strIdentity
     Cleanup -> strCleanup
     SSA -> strSSA
     InitBranchVars -> strInitBranchVars

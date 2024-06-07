@@ -16,7 +16,7 @@ runCommand opts = do
         run
           . runReader (project' @Core.CoreOptions gopts)
           . runError @JuvixError
-          $ Core.toStripped' Core.Identity (Core.moduleFromInfoTable tab)
+          $ Core.toStripped' Core.IdentityTrans (Core.moduleFromInfoTable tab)
   tab' <- getRight $ mapRight (Stripped.fromCore (project gopts ^. Core.optFieldSize) . Core.computeCombinedInfoTable) r
   unless (project opts ^. coreStripNoPrint) $ do
     renderStdOut (Core.ppOut opts tab')

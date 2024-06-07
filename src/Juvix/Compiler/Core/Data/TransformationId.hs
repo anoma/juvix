@@ -13,7 +13,7 @@ data TransformationId
   | NatToPrimInt
   | IntToPrimInt
   | ConvertBuiltinTypes
-  | Identity
+  | IdentityTrans
   | UnrollRecursion
   | ComputeTypeInfo
   | MatchToCase
@@ -92,7 +92,7 @@ instance TransformationId' TransformationId where
     MatchToCase -> strMatchToCase
     NaiveMatchToCase -> strNaiveMatchToCase
     EtaExpandApps -> strEtaExpandApps
-    Identity -> strIdentity
+    IdentityTrans -> strIdentity
     RemoveTypeArgs -> strRemoveTypeArgs
     MoveApps -> strMoveApps
     NatToPrimInt -> strNatToPrimInt
@@ -144,5 +144,5 @@ instance PipelineId' TransformationId PipelineId where
     PipelineNormalize -> toNormalizeTransformations
     PipelineGeb -> toGebTransformations
     PipelineVampIR -> toVampIRTransformations
-    PipelineStripped -> toStrippedTransformations Identity
+    PipelineStripped -> toStrippedTransformations IdentityTrans
     PipelineExec -> toStrippedTransformations CheckExec

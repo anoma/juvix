@@ -39,6 +39,7 @@ module Juvix.Prelude.Base.Foundation
     module Data.Text.IO,
     module Data.Text.IO.Utf8,
     module Data.Traversable,
+    module Data.Functor.Identity,
     module Data.Tuple.Extra,
     module Data.Typeable,
     module Data.Void,
@@ -95,6 +96,7 @@ import Data.Eq
 import Data.Foldable hiding (foldr1, minimum, minimumBy)
 import Data.Function
 import Data.Functor
+import Data.Functor.Identity
 import Data.Graph (Graph, SCC (..), Vertex, stronglyConnComp)
 import Data.HashMap.Lazy qualified as LazyHashMap
 import Data.HashMap.Strict (HashMap)

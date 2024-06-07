@@ -1,5 +1,5 @@
-module Juvix.Compiler.Tree.Transformation.Identity
-  ( module Juvix.Compiler.Tree.Transformation.Identity,
+module Juvix.Compiler.Tree.Transformation.IdentityTrans
+  ( module Juvix.Compiler.Tree.Transformation.IdentityTrans,
     module Juvix.Compiler.Tree.Transformation.Base,
   )
 where

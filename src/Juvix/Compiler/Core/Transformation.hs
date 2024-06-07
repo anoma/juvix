@@ -25,7 +25,7 @@ import Juvix.Compiler.Core.Transformation.ConvertBuiltinTypes
 import Juvix.Compiler.Core.Transformation.DisambiguateNames
 import Juvix.Compiler.Core.Transformation.Eta
 import Juvix.Compiler.Core.Transformation.FoldTypeSynonyms
-import Juvix.Compiler.Core.Transformation.Identity
+import Juvix.Compiler.Core.Transformation.IdentityTrans
 import Juvix.Compiler.Core.Transformation.IntToPrimInt
 import Juvix.Compiler.Core.Transformation.LambdaLetRecLifting
 import Juvix.Compiler.Core.Transformation.LetHoisting
@@ -66,7 +66,7 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
     appTrans = \case
       LambdaLetRecLifting -> return . lambdaLetRecLifting
       LetRecLifting -> return . letRecLifting
-      Identity -> return . identity
+      IdentityTrans -> return . identity
       TopEtaExpand -> return . topEtaExpand
       RemoveTypeArgs -> return . removeTypeArgs
       MoveApps -> return . moveApps

@@ -5,7 +5,7 @@ import Juvix.Compiler.Tree.Data.TransformationId.Strings
 import Juvix.Prelude
 
 data TransformationId
-  = Identity
+  = IdentityTrans
   | IdentityU
   | IdentityD
   | Apply
@@ -35,7 +35,7 @@ toCairoAsmTransformations = [Validate, Apply, FilterUnreachable]
 instance TransformationId' TransformationId where
   transformationText :: TransformationId -> Text
   transformationText = \case
-    Identity -> strIdentity
+    IdentityTrans -> strIdentity
     IdentityU -> strIdentityU
     IdentityD -> strIdentityD
     Apply -> strApply
