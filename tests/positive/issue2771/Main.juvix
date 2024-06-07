@@ -1,0 +1,12 @@
+module Main;
+
+type T := t;
+
+type Box := mkBox { unbox : T };
+
+f (b : Box) : Box :=
+  case b of {
+    mkBox _ := mkBox t
+  };
+
+main : T := f (mkBox t);
