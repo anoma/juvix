@@ -28,6 +28,7 @@ data FileExt
   | FileExtHtml
   | FileExtCss
   | FileExtNockma
+  | FileExtRiscZero
   deriving stock (Eq)
 
 $(genSingletons [''FileExt])
@@ -98,6 +99,9 @@ cssFileExt = ".css"
 nockmaFileExt :: (IsString a) => a
 nockmaFileExt = ".nockma"
 
+riscZeroFileExt :: (IsString a) => a
+riscZeroFileExt = ".risc0"
+
 fileExtToString :: FileExt -> String
 fileExtToString = fileExtToIsString
 
@@ -123,6 +127,7 @@ fileExtToIsString = \case
   FileExtHtml -> htmlFileExt
   FileExtCss -> cssFileExt
   FileExtNockma -> nockmaFileExt
+  FileExtRiscZero -> riscZeroFileExt
 
 fileExtToText :: FileExt -> Text
 fileExtToText = fileExtToIsString
@@ -149,6 +154,7 @@ toMetavar = \case
   FileExtHtml -> "HTML_FILE"
   FileExtCss -> "CSS_FILE"
   FileExtNockma -> "NOCKMA_FILE"
+  FileExtRiscZero -> "RISC0_PROJECT"
 
 instance Show FileExt where
   show = Text.unpack . fileExtToText

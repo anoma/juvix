@@ -7,6 +7,7 @@ import Commands.Compile.Anoma.Options
 import Commands.Compile.Cairo.Options
 import Commands.Compile.Geb.Options
 import Commands.Compile.Native.Options
+import Commands.Compile.RiscZeroRust.Options
 import Commands.Compile.Vampir.Options
 import Commands.Compile.Wasi.Options
 import Commands.Extra.NewCompile
@@ -19,6 +20,7 @@ data CompileCommand
   | Vampir (VampirOptions 'InputMain)
   | Anoma (AnomaOptions 'InputMain)
   | Cairo (CairoOptions 'InputMain)
+  | RiscZeroRust (RiscZeroRustOptions 'InputMain)
   deriving stock (Data)
 
 parseCompileCommand :: Parser CompileCommand
@@ -31,5 +33,6 @@ supportedTargets =
     (AppTargetCairo, Cairo <$> parseCairo),
     (AppTargetGeb, Geb <$> parseGeb),
     (AppTargetWasm32Wasi, Wasi <$> parseWasi),
-    (AppTargetNative64, Native <$> parseNative)
+    (AppTargetNative64, Native <$> parseNative),
+    (AppTargetRiscZeroRust, RiscZeroRust <$> parseRiscZeroRust)
   ]

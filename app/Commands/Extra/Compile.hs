@@ -36,6 +36,7 @@ runCompile opts = do
     AppTargetAnoma -> return ()
     AppTargetCasm -> return ()
     AppTargetCairo -> return ()
+    AppTargetRiscZeroRust -> return ()
 
 prepareRuntime :: forall r. (Members '[App, EmbedIO] r) => Path Abs Dir -> CompileOptions -> Sem r ()
 prepareRuntime buildDir o = do
@@ -56,6 +57,7 @@ prepareRuntime buildDir o = do
     AppTargetAnoma -> return ()
     AppTargetCasm -> return ()
     AppTargetCairo -> return ()
+    AppTargetRiscZeroRust -> return ()
   where
     wasiReleaseRuntime :: BS.ByteString
     wasiReleaseRuntime = $(FE.makeRelativeToProject "runtime/c/_build.wasm32-wasi/libjuvix.a" >>= FE.embedFile)
@@ -124,6 +126,8 @@ outputFile opts = do
           replaceExtension' casmFileExt baseOutputFile
         AppTargetCairo ->
           replaceExtension' jsonFileExt baseOutputFile
+        AppTargetRiscZeroRust ->
+          replaceExtension' rustFileExt baseOutputFile
 
 clangNativeCompile ::
   forall r.

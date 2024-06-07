@@ -1,15 +1,19 @@
 module Juvix.Compiler.Backend.Rust.Pretty.Options where
 
+import Juvix.Compiler.Backend.Rust.Data.Backend
 import Juvix.Prelude
 
--- no fields for now, but make it easier to add options in the future I don't
--- remove this datatype entirely
 data Options = Options
+  { _optBackend :: Backend
+  }
 
 makeLenses ''Options
 
 defaultOptions :: Options
-defaultOptions = Options
+defaultOptions =
+  Options
+    { _optBackend = BackendRust
+    }
 
 traceOptions :: Options
 traceOptions = defaultOptions

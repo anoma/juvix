@@ -62,11 +62,12 @@ getMainAppFileFromInputFileType i = case sing :: SInputKind k of
   SInputMain -> getMainAppFile i
   SInputExtension {} -> return i
 
-parseCompileCommonOptions ::
+parseCompileCommonOptions' ::
   forall k.
   (SingI k) =>
+  Bool ->
   Parser (CompileCommonOptions k)
-parseCompileCommonOptions = do
+parseCompileCommonOptions' allowOutputFile = do
   _compileDebug <-
     switch
       ( short 'g'
@@ -89,6 +90,17 @@ parseCompileCommonOptions = do
           <> value defaultInliningDepth
           <> help ("Automatic inlining depth limit, logarithmic in the function size (default: " <> show defaultInliningDepth <> ")")
       )
-  _compileOutputFile <- optional parseGenericOutputFile
+  _compileOutputFile <-
+    if
+        | allowOutputFile ->
+            optional parseGenericOutputFile
+        | otherwise ->
+            pure Nothing
   _compileInputFile <- parseInputFileType @k
   pure CompileCommonOptions {..}
+
+parseCompileCommonOptions ::
+  forall k.
+  (SingI k) =>
+  Parser (CompileCommonOptions k)
+parseCompileCommonOptions = parseCompileCommonOptions' True

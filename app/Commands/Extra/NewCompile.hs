@@ -27,6 +27,20 @@ getOutputFile ext inp = \case
     let baseOutputFile = invokeDir <//> filename mainFile
     return (replaceExtension' (fileExtToString ext) baseOutputFile)
 
+getOutputDir ::
+  (Members '[App] r) =>
+  FileExt ->
+  Maybe (AppPath File) ->
+  Maybe (AppPath Dir) ->
+  Sem r (Path Abs Dir)
+getOutputDir ext inp = \case
+  Just out -> fromAppPathDir out
+  Nothing -> do
+    mainFile <- getMainFile inp
+    invokeDir <- askInvokeDir
+    let baseOutputDir = invokeDir <//> filename (replaceExtension' (fileExtToString ext) mainFile)
+    return $ pathFileToPathDir baseOutputDir
+
 compileToCore ::
   (Members '[App, EmbedIO, TaggedLock] r) =>
   CompileCommonOptions ('InputExtension 'FileExtJuvix) ->

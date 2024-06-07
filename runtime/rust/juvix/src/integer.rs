@@ -11,7 +11,7 @@ pub fn smallint_value(x: Word) -> SmallInt {
 }
 
 pub fn smallint_add(x: Word, y: Word) -> Word {
-    x + y
+    make_smallint(smallint_value(x) + smallint_value(y))
 }
 
 pub fn smallint_sub(x: Word, y: Word) -> Word {

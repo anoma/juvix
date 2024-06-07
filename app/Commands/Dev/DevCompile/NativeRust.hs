@@ -44,10 +44,10 @@ runCommand opts = do
           | otherwise = rustReleaseRuntime
           where
             rustReleaseRuntime :: BS.ByteString
-            rustReleaseRuntime = $(FE.makeRelativeToProject "runtime/rust/target/release/libjuvix.rlib" >>= FE.embedFile)
+            rustReleaseRuntime = $(FE.makeRelativeToProject "runtime/rust/juvix/target/release/libjuvix.rlib" >>= FE.embedFile)
 
             rustDebugRuntime :: BS.ByteString
-            rustDebugRuntime = $(FE.makeRelativeToProject "runtime/rust/target/debug/libjuvix.rlib" >>= FE.embedFile)
+            rustDebugRuntime = $(FE.makeRelativeToProject "runtime/rust/juvix/target/debug/libjuvix.rlib" >>= FE.embedFile)
 
 inputRustFile :: (Members '[App, EmbedIO] r) => Path Abs File -> Sem r (Path Abs File)
 inputRustFile inputFileCompile = do

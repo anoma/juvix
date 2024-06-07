@@ -18,5 +18,7 @@ defaultPipelineOptions =
       _pipelineNumThreads = defaultNumThreads
     }
 
+-- We need to disable parallel module compilation in the tests until we have
+-- project-level locking
 testPipelineOptions :: PipelineOptions
-testPipelineOptions = defaultPipelineOptions
+testPipelineOptions = defaultPipelineOptions {_pipelineNumThreads = numThreadsOne}

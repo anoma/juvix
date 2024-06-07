@@ -10,6 +10,7 @@ import Commands.Compile.Cairo qualified as Cairo
 import Commands.Compile.Geb qualified as Geb
 import Commands.Compile.Native qualified as Native
 import Commands.Compile.Options
+import Commands.Compile.RiscZeroRust qualified as RiscZeroRust
 import Commands.Compile.Vampir qualified as Vampir
 import Commands.Compile.Wasi qualified as Wasi
 
@@ -21,3 +22,4 @@ runCommand = \case
   Anoma opts -> Anoma.runCommand opts
   Cairo opts -> Cairo.runCommand opts
   Vampir opts -> Vampir.runCommand opts
+  RiscZeroRust opts -> RiscZeroRust.runCommand opts

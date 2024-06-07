@@ -1,11 +1,13 @@
 module Juvix.Compiler.Backend.Rust.Translation.FromReg
   ( module Juvix.Compiler.Backend.Rust.Translation.FromReg,
     module Juvix.Compiler.Backend.Rust.Data.Result,
+    module Juvix.Compiler.Backend.Rust.Data.Backend,
   )
 where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Backend
+import Juvix.Compiler.Backend.Rust.Data.Backend
 import Juvix.Compiler.Backend.Rust.Data.Result
 import Juvix.Compiler.Backend.Rust.Data.Result as Rust
 import Juvix.Compiler.Backend.Rust.Language as Rust
@@ -16,9 +18,9 @@ import Juvix.Compiler.Reg.Extra.Info qualified as Reg
 import Juvix.Compiler.Reg.Language qualified as Reg
 import Juvix.Prelude
 
-fromReg :: Limits -> Reg.InfoTable -> Rust.Result
-fromReg lims tab =
-  Rust.Result $ Rust.ppPrint $ Program [programFunction, mainFunction]
+fromReg :: Backend -> Limits -> Reg.InfoTable -> Rust.Result
+fromReg backend lims tab =
+  Rust.Result $ show $ Rust.ppOut (Rust.Options backend) $ Program [programFunction, mainFunction]
   where
     info :: Reg.ExtraInfo
     info = Reg.computeExtraInfo lims tab
@@ -35,10 +37,17 @@ fromReg lims tab =
           _functionReturnType = Nothing,
           _functionBody =
             [ stmtLet NotMut "result" (mkCall "program" [ExprVerbatim "&mut Memory::new()", mkInteger mainFunid, mkVec []]),
-              StatementExpression (mkCall "println!" [mkString "{}", mkVar "result"]),
+              out,
               StatementReturn (Return Nothing)
             ]
         }
+      where
+        out :: Statement
+        out = case backend of
+          BackendRust ->
+            StatementExpression (mkCall "println!" [mkString "{}", mkVar "result"])
+          BackendRiscZero ->
+            StatementExpression (ExprVerbatim "env::commit(&result)")
 
     programFunction :: Function
     programFunction =

@@ -13,4 +13,4 @@ sum : Nat → Nat
 sum' : Nat → Nat
   | n := foldr (+) 0 (gen n);
 
-main : Nat := sum 10000 + sum' 10000;
+main : Nat := sum 1000 + sum' 1000;

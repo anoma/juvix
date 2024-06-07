@@ -28,3 +28,4 @@ runCommand opts = do
     AppTargetAnoma -> runAnomaPipeline arg
     AppTargetCasm -> runCasmPipeline arg
     AppTargetCairo -> runCairoPipeline arg
+    AppTargetRiscZeroRust -> runRiscZeroRustPipeline arg

@@ -21,7 +21,8 @@ coreSupportedTargets =
       AppTargetAsm,
       AppTargetReg,
       AppTargetCasm,
-      AppTargetCairo
+      AppTargetCairo,
+      AppTargetRiscZeroRust
     ]
 
 parseCoreCompileOptions :: Parser CoreCompileOptions

@@ -6,6 +6,7 @@ module Juvix.Prelude.Path
   )
 where
 
+import Data.ByteString qualified as BS
 import Data.List qualified as L
 import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Data.FileExt
@@ -131,6 +132,11 @@ parents = go [] . parent
 withTempDir' :: (MonadIO m, MonadMask m) => (Path Abs Dir -> m a) -> m a
 withTempDir' = withSystemTempDir "tmp"
 
+createTempDir' :: (MonadIO m) => m (Path Abs Dir)
+createTempDir' = do
+  dir <- getTempDir
+  createTempDir dir "tmp"
+
 -- | 'pure True' if the file exists and is executable, 'pure False' otherwise
 isExecutable :: (MonadIO m) => Path b File -> m Bool
 isExecutable f = doesFileExist f &&^ (executable <$> getPermissions f)
@@ -139,3 +145,11 @@ isPathPrefix :: Path b Dir -> Path b t -> Bool
 isPathPrefix p1 p2 = case L.stripPrefix (toFilePath p1) (toFilePath p2) of
   Nothing -> False
   Just {} -> True
+
+writeFile :: (MonadIO m) => Path Abs File -> ByteString -> m ()
+writeFile p bs = do
+  ensureDir (parent p)
+  liftIO $ BS.writeFile (toFilePath p) bs
+
+pathFileToPathDir :: Path Abs File -> Path Abs Dir
+pathFileToPathDir = absDir . toFilePath

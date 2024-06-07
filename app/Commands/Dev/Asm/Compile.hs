@@ -79,6 +79,7 @@ runCommand opts = do
       AppTargetReg -> return Backend.TargetReg
       AppTargetCasm -> return Backend.TargetCairo
       AppTargetCairo -> return Backend.TargetCairo
+      AppTargetRiscZeroRust -> err "RISC0 Rust"
       AppTargetAnoma -> err "Anoma"
       AppTargetTree -> err "JuvixTree"
       AppTargetGeb -> err "GEB"
