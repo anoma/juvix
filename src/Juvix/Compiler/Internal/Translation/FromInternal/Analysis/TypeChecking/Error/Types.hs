@@ -159,18 +159,36 @@ instance ToGenericError WrongConstructorAppArgs where
           pat :: Int -> Doc ann
           pat n = pretty n <+> plural "pattern" "patterns" n
 
+data WrongTypeThing
+  = WrongTypeThingPattern Pattern
+  | WrongTypeThingExpression WrongTypeThingExpression
+
+data WrongTypeThingExpression = MkWrongTypeThingExpression
+  { _wrongTypeNormalizedExpression :: NormalizedExpression,
+    _wrongTypeInferredExpression :: Expression
+  }
+
 -- | the type of an expression does not match the inferred type
 data WrongType = WrongType
-  { _wrongTypeThing :: Either Expression Pattern,
-    _wrongTypeThingWithHoles :: Maybe (Either Expression Pattern),
-    _wrongTypeExpected :: Expression,
-    _wrongTypeActual :: Expression
+  { _wrongTypeThing :: WrongTypeThing,
+    _wrongTypeExpected :: NormalizedExpression,
+    _wrongTypeActual :: NormalizedExpression
   }
 
 makeLenses ''WrongType
+makeLenses ''WrongTypeThingExpression
 
+instance HasLoc WrongTypeThing where
+  getLoc = \case
+    WrongTypeThingPattern p -> getLoc p
+    WrongTypeThingExpression e -> getLoc e
+
+instance HasLoc WrongTypeThingExpression where
+  getLoc = getLoc . (^. wrongTypeNormalizedExpression)
+
+-- TODO we should show both the normalized and original version of the expression when relevant.
 instance ToGenericError WrongType where
-  genericError e = ask >>= generr
+  genericError err = ask >>= generr
     where
       generr opts =
         return
@@ -181,24 +199,28 @@ instance ToGenericError WrongType where
             }
         where
           opts' = fromGenericOptions opts
-          i = either getLoc getLoc (e ^. wrongTypeThing)
+          i = getLoc (err ^. wrongTypeThing)
           msg =
             "The"
+              <+> thingName
               <+> thing
-              <+> either (ppCode opts') (ppCode opts') subjectThing
               <+> "has type:"
                 <> line
-                <> indent' (ppCode opts' (e ^. wrongTypeActual))
+                <> indent' (ppCode opts' (err ^. wrongTypeActual ^. normalizedExpression))
                 <> line
                 <> "but is expected to have type:"
                 <> line
-                <> indent' (ppCode opts' (e ^. wrongTypeExpected))
-          thing :: Doc a
-          thing = case subjectThing of
-            Left {} -> "expression"
-            Right {} -> "pattern"
-          subjectThing :: Either Expression Pattern
-          subjectThing = fromMaybe (e ^. wrongTypeThing) (e ^. wrongTypeThingWithHoles)
+                <> indent' (ppCode opts' (err ^. wrongTypeExpected . normalizedExpression))
+
+          thingName :: Doc a
+          thingName = case err ^. wrongTypeThing of
+            WrongTypeThingExpression {} -> "expression"
+            WrongTypeThingPattern {} -> "pattern"
+
+          thing :: Doc CodeAnn
+          thing = case err ^. wrongTypeThing of
+            WrongTypeThingExpression e -> ppCode opts' (e ^. wrongTypeInferredExpression)
+            WrongTypeThingPattern p -> ppCode opts' p
 
 -- | The left hand expression of a function application is not
 -- a function type.
@@ -463,7 +485,7 @@ instance ToGenericError CoercionCycles where
               <> indent' (hsep (ppCode opts' <$> take 10 (toList (e ^. coercionCycles))))
 
 data NoInstance = NoInstance
-  { _noInstanceType :: Expression,
+  { _noInstanceType :: NormalizedExpression,
     _noInstanceLoc :: Interval
   }
 
@@ -484,10 +506,10 @@ instance ToGenericError NoInstance where
           i = e ^. noInstanceLoc
           msg =
             "No trait instance found for:"
-              <+> ppCode opts' (e ^. noInstanceType)
+              <+> ppCode opts' (e ^. noInstanceType . normalizedExpression)
 
 data AmbiguousInstances = AmbiguousInstances
-  { _ambiguousInstancesType :: Expression,
+  { _ambiguousInstancesType :: NormalizedExpression,
     _ambiguousInstancesInfos :: [InstanceInfo],
     _ambiguousInstancesLoc :: Interval
   }
@@ -510,7 +532,7 @@ instance ToGenericError AmbiguousInstances where
           locs = itemize $ map (pretty . getLoc . (^. instanceInfoResult)) (e ^. ambiguousInstancesInfos)
           msg =
             "Multiple trait instances found for"
-              <+> ppCode opts' (e ^. ambiguousInstancesType)
+              <+> ppCode opts' (e ^. ambiguousInstancesType . normalizedExpression)
                 <> line
                 <> "Matching instances found at:"
                 <> line

@@ -8,6 +8,7 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Da
     queryMetavar,
     registerIdenType,
     strongNormalize'',
+    strongNormalize_,
     iniState,
     strongNormalize,
     weakNormalize,
@@ -35,8 +36,8 @@ data MetavarState
     Refined Expression
 
 data MatchError = MatchError
-  { _matchErrorLeft :: Expression,
-    _matchErrorRight :: Expression
+  { _matchErrorLeft :: NormalizedExpression,
+    _matchErrorRight :: NormalizedExpression
   }
 
 makeLenses ''MatchError
@@ -46,7 +47,7 @@ data Inference :: Effect where
   QueryMetavar :: Hole -> Inference m (Maybe Expression)
   RegisterIdenType :: Name -> Expression -> Inference m ()
   RememberFunctionDef :: FunctionDef -> Inference m ()
-  StrongNormalize :: Expression -> Inference m Expression
+  StrongNormalize :: Expression -> Inference m NormalizedExpression
   WeakNormalize :: Expression -> Inference m Expression
 
 makeSem ''Inference
@@ -131,9 +132,18 @@ queryMetavarFinal h = do
     Just (ExpressionHole h') -> queryMetavarFinal h'
     _ -> return m
 
+strongNormalize_ :: (Members '[Inference] r) => Expression -> Sem r Expression
+strongNormalize_ = fmap (^. normalizedExpression) . strongNormalize
+
 -- FIXME the returned expression should have the same location as the original
-strongNormalize' :: forall r. (Members '[ResultBuilder, State InferenceState, NameIdGen] r) => Expression -> Sem r Expression
-strongNormalize' = go
+strongNormalize' :: forall r. (Members '[ResultBuilder, State InferenceState, NameIdGen] r) => Expression -> Sem r NormalizedExpression
+strongNormalize' original = do
+  normalized <- go original
+  return
+    NormalizedExpression
+      { _normalizedExpression = normalized,
+        _normalizedExpressionOriginal = original
+      }
   where
     go :: Expression -> Sem r Expression
     go e = case e of
@@ -362,14 +372,30 @@ runInferenceState inis = reinterpret (runState inis) $ \case
               where
                 ok :: Sem r (Maybe MatchError)
                 ok = return Nothing
+
                 check :: Bool -> Sem r (Maybe MatchError)
                 check b
                   | b = ok
                   | otherwise = err
+
                 bicheck :: Sem r (Maybe MatchError) -> Sem r (Maybe MatchError) -> Sem r (Maybe MatchError)
                 bicheck = liftA2 (<|>)
+
+                normalizedB =
+                  NormalizedExpression
+                    { _normalizedExpression = normB,
+                      _normalizedExpressionOriginal = inputB
+                    }
+
+                normalizedA =
+                  NormalizedExpression
+                    { _normalizedExpression = normA,
+                      _normalizedExpressionOriginal = inputA
+                    }
+
                 err :: Sem r (Maybe MatchError)
-                err = return (Just (MatchError normA normB))
+                err = return (Just (MatchError normalizedA normalizedB))
+
                 goHole :: Hole -> Expression -> Sem r (Maybe MatchError)
                 goHole h t = do
                   r <- queryMetavar' h
@@ -382,7 +408,7 @@ runInferenceState inis = reinterpret (runState inis) $ \case
                       | ExpressionHole h' <- holTy, h' == hol = return ()
                       | otherwise =
                           do
-                            holTy' <- strongNormalize' holTy
+                            holTy' <- (^. normalizedExpression) <$> strongNormalize' holTy
                             let er =
                                   ErrUnsolvedMeta
                                     UnsolvedMeta
@@ -392,7 +418,7 @@ runInferenceState inis = reinterpret (runState inis) $ \case
                             when (LeafExpressionHole hol `elem` holTy' ^.. leafExpressions) (throw er)
                             s <- gets (fromJust . (^. inferenceMap . at hol))
                             case s of
-                              Fresh -> modify (over inferenceMap (HashMap.insert hol (Refined holTy')))
+                              Fresh -> modify (set (inferenceMap . at hol) (Just (Refined holTy')))
                               Refined {} -> impossible
 
                 goIden :: Iden -> Iden -> Sem r (Maybe MatchError)
@@ -521,7 +547,7 @@ functionDefEval f = do
   return r
   where
     strongNorm :: (Members '[ResultBuilder, NameIdGen] r) => Expression -> Sem r Expression
-    strongNorm = evalState iniState . strongNormalize'
+    strongNorm = evalState iniState . fmap (^. normalizedExpression) . strongNormalize'
 
     isUniverse :: Expression -> Bool
     isUniverse = \case
@@ -583,7 +609,10 @@ registerFunctionDef :: (Members '[ResultBuilder, Error TypeCheckerError, NameIdG
 registerFunctionDef f = whenJustM (functionDefEval f) $ \e ->
   addFunctionDef (f ^. funDefName) e
 
-strongNormalize'' :: (Members '[Reader FunctionsTable, NameIdGen] r) => Expression -> Sem r Expression
+strongNormalize'' ::
+  (Members '[Reader FunctionsTable, NameIdGen] r) =>
+  Expression ->
+  Sem r NormalizedExpression
 strongNormalize'' ty = do
   ftab <- ask
   let importCtx =

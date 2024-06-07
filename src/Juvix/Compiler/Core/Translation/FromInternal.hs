@@ -362,7 +362,7 @@ goType ::
   Sem r Type
 goType ty = do
   normTy <- InternalTyped.strongNormalize'' ty
-  squashApps <$> goExpression normTy
+  squashApps <$> goExpression (normTy ^. Internal.normalizedExpression)
 
 mkFunBody ::
   forall r.
