@@ -131,6 +131,7 @@ queryMetavarFinal h = do
     Just (ExpressionHole h') -> queryMetavarFinal h'
     _ -> return m
 
+-- FIXME the returned expression should have the same location as the original
 strongNormalize' :: forall r. (Members '[ResultBuilder, State InferenceState, NameIdGen] r) => Expression -> Sem r Expression
 strongNormalize' = go
   where
@@ -149,7 +150,7 @@ strongNormalize' = go
       -- We just recurse inside
       ExpressionLet l -> ExpressionLet <$> goLet l
       -- TODO it should normalize like an applied lambda
-      ExpressionCase {} -> error "normalization of case expressions is not supported yet"
+      ExpressionCase c -> return (ExpressionCase c)
 
     goLet :: Let -> Sem r Let
     goLet Let {..} = do

@@ -256,6 +256,13 @@ tests =
       $(mkRelFile "LoopingCoercion.juvix")
       $ \case
         ErrCoercionCycles {} -> Nothing
+        _ -> wrongError,
+    negTest
+      "Wrong type (issue 2771)"
+      $(mkRelDir "issue2771")
+      $(mkRelFile "Main.juvix")
+      $ \case
+        ErrWrongType {} -> Nothing
         _ -> wrongError
   ]
 
