@@ -12,7 +12,7 @@ import Juvix.Compiler.Tree.Transformation.Apply
 import Juvix.Compiler.Tree.Transformation.Base
 import Juvix.Compiler.Tree.Transformation.CheckNoAnoma
 import Juvix.Compiler.Tree.Transformation.FilterUnreachable
-import Juvix.Compiler.Tree.Transformation.Identity
+import Juvix.Compiler.Tree.Transformation.IdentityTrans
 import Juvix.Compiler.Tree.Transformation.TempHeight
 import Juvix.Compiler.Tree.Transformation.Validate
 
@@ -21,7 +21,7 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
   where
     appTrans :: TransformationId -> InfoTable -> Sem r InfoTable
     appTrans = \case
-      Identity -> return . identity
+      IdentityTrans -> return . identity
       IdentityU -> return . identityU
       IdentityD -> return . identityD
       Apply -> return . computeApply

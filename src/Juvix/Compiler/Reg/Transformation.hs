@@ -8,7 +8,7 @@ where
 import Juvix.Compiler.Reg.Data.TransformationId
 import Juvix.Compiler.Reg.Transformation.Base
 import Juvix.Compiler.Reg.Transformation.Cleanup
-import Juvix.Compiler.Reg.Transformation.Identity
+import Juvix.Compiler.Reg.Transformation.IdentityTrans
 import Juvix.Compiler.Reg.Transformation.InitBranchVars
 import Juvix.Compiler.Reg.Transformation.SSA
 
@@ -17,7 +17,7 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
   where
     appTrans :: TransformationId -> InfoTable -> Sem r InfoTable
     appTrans = \case
-      Identity -> return . identity
+      IdentityTrans -> return . identity
       Cleanup -> return . cleanup
       SSA -> return . computeSSA
       InitBranchVars -> return . initBranchVars

@@ -53,8 +53,17 @@ coreAsmAssertion mainFile expectedFile step = do
       assertEqDiffText ("Check: EVAL output = " <> toFilePath expectedFile) "" expected
     Right (tabIni, Just node) -> do
       step "Translate"
-      case run $ runReader defaultCoreOptions $ runError $ toStored' >=> toStripped' Identity $ moduleFromInfoTable $ setupMainFunction defaultModuleId tabIni node of
+      case run
+        . runReader defaultCoreOptions
+        . runError
+        . (toStored' >=> toStripped' IdentityTrans)
+        . moduleFromInfoTable
+        $ setupMainFunction defaultModuleId tabIni node of
         Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
         Right m -> do
-          let tab = Asm.fromTree $ Tree.fromCore $ Stripped.fromCore (maximum allowedFieldSizes) $ computeCombinedInfoTable m
+          let tab =
+                Asm.fromTree
+                  . Tree.fromCore
+                  . Stripped.fromCore (maximum allowedFieldSizes)
+                  $ computeCombinedInfoTable m
           Asm.asmRunAssertion' tab expectedFile step

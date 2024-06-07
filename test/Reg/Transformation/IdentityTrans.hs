@@ -1,4 +1,4 @@
-module Reg.Transformation.Identity where
+module Reg.Transformation.IdentityTrans where
 
 import Base
 import Juvix.Compiler.Reg.Transformation
@@ -9,7 +9,7 @@ allTests :: TestTree
 allTests = testGroup "Identity" (map liftTest Parse.tests)
 
 pipe :: [TransformationId]
-pipe = [Identity]
+pipe = [IdentityTrans]
 
 liftTest :: Parse.PosTest -> TestTree
 liftTest _testRun =
