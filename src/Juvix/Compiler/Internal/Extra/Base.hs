@@ -22,8 +22,28 @@ makeLenses ''ApplicationArg
 instance HasLoc ApplicationArg where
   getLoc = getLoc . (^. appArg)
 
+data LeafExpression
+  = LeafExpressionIden Iden
+  | LeafExpressionHole Hole
+  | LeafExpressionLiteral (WithLoc Literal)
+  | LeafExpressionUniverse SmallUniverse
+  | LeafExpressionInstanceHole InstanceHole
+  deriving stock (Eq)
+
+class IsExpression a where
+  toExpression :: a -> Expression
+
+instance IsExpression LeafExpression where
+  toExpression =
+    \case
+      LeafExpressionIden i -> ExpressionIden i
+      LeafExpressionLiteral i -> ExpressionLiteral i
+      LeafExpressionHole i -> ExpressionHole i
+      LeafExpressionUniverse i -> ExpressionUniverse i
+      LeafExpressionInstanceHole i -> ExpressionInstanceHole i
+
 class HasExpressions a where
-  leafExpressions :: Traversal' a Expression
+  leafExpressions :: forall expr. (IsExpression expr) => Traversal a a LeafExpression expr
 
 instance HasExpressions LambdaClause where
   leafExpressions f l = do
@@ -39,17 +59,17 @@ instance HasExpressions Lambda where
 
 instance HasExpressions Expression where
   leafExpressions f e = case e of
-    ExpressionIden {} -> f e
+    ExpressionIden i -> toExpression <$> f (LeafExpressionIden i)
     ExpressionApplication a -> ExpressionApplication <$> leafExpressions f a
     ExpressionFunction fun -> ExpressionFunction <$> leafExpressions f fun
     ExpressionSimpleLambda l -> ExpressionSimpleLambda <$> leafExpressions f l
     ExpressionLambda l -> ExpressionLambda <$> leafExpressions f l
     ExpressionLet l -> ExpressionLet <$> leafExpressions f l
     ExpressionCase c -> ExpressionCase <$> leafExpressions f c
-    ExpressionLiteral {} -> f e
-    ExpressionUniverse {} -> f e
-    ExpressionHole {} -> f e
-    ExpressionInstanceHole {} -> f e
+    ExpressionLiteral l -> toExpression <$> f (LeafExpressionLiteral l)
+    ExpressionUniverse u -> toExpression <$> f (LeafExpressionUniverse u)
+    ExpressionHole h -> toExpression <$> f (LeafExpressionHole h)
+    ExpressionInstanceHole h -> toExpression <$> f (LeafExpressionInstanceHole h)
 
 instance HasExpressions ConstructorApp where
   leafExpressions f a = do
@@ -158,13 +178,13 @@ instance HasExpressions Application where
     pure (Application l' r' i)
 
 -- | Prism
-_ExpressionHole :: Traversal' Expression Hole
-_ExpressionHole f e = case e of
-  ExpressionHole h -> ExpressionHole <$> f h
+_LeafExpressionHole :: Traversal' LeafExpression Hole
+_LeafExpressionHole f e = case e of
+  LeafExpressionHole h -> LeafExpressionHole <$> f h
   _ -> pure e
 
 holes :: (HasExpressions a) => Traversal' a Hole
-holes = leafExpressions . _ExpressionHole
+holes = leafExpressions . _LeafExpressionHole
 
 hasHoles :: (HasExpressions a) => a -> Bool
 hasHoles = has holes
@@ -172,18 +192,22 @@ hasHoles = has holes
 subsInstanceHoles :: forall r a. (HasExpressions a, Member NameIdGen r) => HashMap InstanceHole Expression -> a -> Sem r a
 subsInstanceHoles s = leafExpressions helper
   where
-    helper :: Expression -> Sem r Expression
-    helper e = case e of
-      ExpressionInstanceHole h -> clone (fromMaybe e (s ^. at h))
+    helper :: LeafExpression -> Sem r Expression
+    helper le = case le of
+      LeafExpressionInstanceHole h -> clone (fromMaybe e (s ^. at h))
       _ -> return e
+      where
+        e = toExpression le
 
 subsHoles :: forall r a. (HasExpressions a, Member NameIdGen r) => HashMap Hole Expression -> a -> Sem r a
 subsHoles s = leafExpressions helper
   where
-    helper :: Expression -> Sem r Expression
-    helper e = case e of
-      ExpressionHole h -> clone (fromMaybe e (s ^. at h))
+    helper :: LeafExpression -> Sem r Expression
+    helper le = case le of
+      LeafExpressionHole h -> clone (fromMaybe e (s ^. at h))
       _ -> return e
+      where
+        e = toExpression le
 
 instance HasExpressions ArgInfo where
   leafExpressions f ArgInfo {..} = do
@@ -318,10 +342,11 @@ substitutionE m
   | null m = pure
   | otherwise = leafExpressions goLeaf
   where
-    goLeaf :: Expression -> Sem r Expression
+    goLeaf :: LeafExpression -> Sem r Expression
     goLeaf = \case
-      ExpressionIden i -> goName (i ^. idenName)
-      e -> return e
+      LeafExpressionIden i -> goName (i ^. idenName)
+      e -> return (toExpression e)
+
     goName :: Name -> Sem r Expression
     goName n =
       case HashMap.lookup n m of
@@ -488,9 +513,6 @@ viewExpressionAsPattern e = case viewApp e of
     getVariable f = case f of
       ExpressionIden (IdenVar n) -> Just n
       _ -> Nothing
-
-class IsExpression a where
-  toExpression :: a -> Expression
 
 instance IsExpression Iden where
   toExpression = ExpressionIden

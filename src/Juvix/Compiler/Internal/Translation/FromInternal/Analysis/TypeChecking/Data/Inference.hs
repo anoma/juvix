@@ -114,10 +114,10 @@ closeState = \case
         goExpression :: Expression -> Sem r' Expression
         goExpression = traverseOf leafExpressions aux
           where
-            aux :: Expression -> Sem r' Expression
+            aux :: LeafExpression -> Sem r' Expression
             aux = \case
-              ExpressionHole h -> goHole h
-              e -> return e
+              LeafExpressionHole h -> goHole h
+              e -> return (toExpression e)
 
 getMetavar :: (Member (State InferenceState) r) => Hole -> Sem r MetavarState
 getMetavar h = do
@@ -389,7 +389,7 @@ runInferenceState inis = reinterpret (runState inis) $ \case
                                       { _unsolvedMeta = hol,
                                         _unsolvedIsLoop = True
                                       }
-                            when (ExpressionHole hol `elem` holTy' ^.. leafExpressions) (throw er)
+                            when (LeafExpressionHole hol `elem` holTy' ^.. leafExpressions) (throw er)
                             s <- gets (fromJust . (^. inferenceMap . at hol))
                             case s of
                               Fresh -> modify (over inferenceMap (HashMap.insert hol (Refined holTy')))
