@@ -1162,6 +1162,7 @@ instance (SingI s) => PrettyPrint (Import s) where
       <+> ppModulePathType (i ^. importModulePath)
       <+?> ppAlias
       <+?> open'
+      <+?> fmap ppCode (i ^? importPublic . _Public . _Just)
     where
       ppAlias :: Maybe (Sem r ())
       ppAlias = case i ^. importAsName of
@@ -1173,11 +1174,9 @@ ppOpenModuleHelper modName OpenModuleParams {..} = do
   let name' = ppModuleNameType <$> modName
       usingHiding' = ppCode <$> _openUsingHiding
       openkw = ppCode _openModuleKw
-      public' = ppCode <$> _openPublic ^? _Public . _Just
   openkw
     <+?> name'
     <+?> usingHiding'
-    <+?> public'
 
 instance (SingI s) => PrettyPrint (OpenModule s) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => OpenModule s -> Sem r ()

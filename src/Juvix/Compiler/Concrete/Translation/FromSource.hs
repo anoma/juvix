@@ -792,6 +792,7 @@ import_ = do
   _importModulePath <- topModulePath
   _importAsName <- optional pasName
   _importOpen <- optional popenModuleParams
+  _importPublic <- publicAnn
   let i = Import {..}
   P.lift (registerImport i)
   return i
@@ -1620,14 +1621,16 @@ atomicExpression = do
     _ -> return ()
   return $ ExpressionAtoms (NonEmpty.singleton atom) (Irrelevant loc)
 
+publicAnn :: forall r. (Members '[ParserResultBuilder] r) => ParsecS r PublicAnn
+publicAnn = maybe NoPublic (Public . Irrelevant . Just) <$> optional (kw kwPublic)
+
 openModule :: forall r. (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (OpenModule 'Parsed)
 openModule = do
   _openModuleKw <- kw kwOpen
   _openModuleName <- name
   _openUsingHiding <- optional usingOrHiding
-  openPublicKw <- optional (kw kwPublic)
-  let _openPublic = maybe NoPublic (Public . Irrelevant . Just) openPublicKw
-      _openModuleParams = OpenModuleParams {..}
+  _openModulePublic <- publicAnn
+  let _openModuleParams = OpenModuleParams {..}
   return OpenModule {..}
 
 -- TODO is there way to merge this with `openModule`?
@@ -1635,10 +1638,7 @@ popenModuleParams :: forall r. (Members '[Error ParserError, ParserResultBuilder
 popenModuleParams = do
   _openModuleKw <- kw kwOpen
   _openUsingHiding <- optional usingOrHiding
-  _openPublicKw <- Irrelevant <$> optional (kw kwPublic)
-  openPublicKw <- optional (kw kwPublic)
-  let _openPublic = maybe NoPublic (Public . Irrelevant . Just) openPublicKw
-      _openModuleParams = OpenModuleParams {..}
+  let _openModuleParams = OpenModuleParams {..}
   return OpenModuleParams {..}
 
 usingOrHiding :: (Members '[ParserResultBuilder, JudocStash, PragmasStash] r) => ParsecS r (UsingHiding 'Parsed)

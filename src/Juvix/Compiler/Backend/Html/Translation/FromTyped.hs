@@ -498,12 +498,12 @@ goLocalModule def = fmap (fromMaybe mempty) . runFail $ do
 
 goImport :: forall r. (Members '[Reader HtmlOptions] r) => Import 'Scoped -> Sem r Html
 goImport op
-  | Just Public {} <- op ^? importOpen . _Just . openPublic = noDefHeader <$> ppCodeHtml defaultOptions op
+  | Just Public {} <- op ^? importPublic = noDefHeader <$> ppCodeHtml defaultOptions op
   | otherwise = mempty
 
 goOpen :: forall r. (Members '[Reader HtmlOptions] r) => OpenModule 'Scoped -> Sem r Html
 goOpen op
-  | Public {} <- op ^. openModuleParams . openPublic = noDefHeader <$> ppCodeHtml defaultOptions op
+  | Public {} <- op ^. openModulePublic = noDefHeader <$> ppCodeHtml defaultOptions op
   | otherwise = mempty
 
 goAxiom :: forall r. (Members '[Reader HtmlOptions] r) => AxiomDef 'Scoped -> Sem r Html

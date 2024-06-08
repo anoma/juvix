@@ -301,7 +301,8 @@ data Import (s :: Stage) = Import
   { _importKw :: KeywordRef,
     _importModulePath :: ModulePathType s 'ModuleTop,
     _importAsName :: Maybe (ModulePathType s 'ModuleTop),
-    _importOpen :: Maybe (OpenModuleParams s)
+    _importOpen :: Maybe (OpenModuleParams s),
+    _importPublic :: PublicAnn
   }
 
 deriving stock instance Show (Import 'Parsed)
@@ -1354,7 +1355,8 @@ getNameRefId = case sing :: S.SIsConcrete c of
 
 data OpenModule (s :: Stage) = OpenModule
   { _openModuleName :: ModuleNameType s,
-    _openModuleParams :: OpenModuleParams s
+    _openModuleParams :: OpenModuleParams s,
+    _openModulePublic :: PublicAnn
   }
   deriving stock (Generic)
 
@@ -1380,8 +1382,7 @@ deriving stock instance Ord (OpenModule 'Scoped)
 
 data OpenModuleParams (s :: Stage) = OpenModuleParams
   { _openModuleKw :: KeywordRef,
-    _openUsingHiding :: Maybe (UsingHiding s),
-    _openPublic :: PublicAnn
+    _openUsingHiding :: Maybe (UsingHiding s)
   }
   deriving stock (Generic)
 
@@ -2665,9 +2666,9 @@ instance (SingI s) => HasLoc (AxiomDef s) where
   getLoc m = getLoc (m ^. axiomKw) <> getLocExpressionType (m ^. axiomType)
 
 instance HasLoc (OpenModule 'Scoped) where
-  getLoc m =
-    getLoc (m ^. openModuleParams . openModuleKw)
-      <>? fmap getLoc (m ^? openModuleParams . openPublic . _Public . _Just)
+  getLoc OpenModule {..} =
+    getLoc (_openModuleParams ^. openModuleKw)
+      <>? fmap getLoc (_openModulePublic ^? _Public . _Just)
 
 instance HasLoc (ProjectionDef s) where
   getLoc = getLoc . (^. projectionConstructor)
@@ -2800,10 +2801,30 @@ getLocIdentifierType e = case sing :: SStage s of
 instance (SingI s) => HasLoc (Iterator s) where
   getLoc Iterator {..} = getLocIdentifierType _iteratorName <> getLocExpressionType _iteratorBody
 
+instance HasLoc (HidingList s) where
+  getLoc HidingList {..} =
+    let rbra = _hidingBraces ^. unIrrelevant . _2
+     in getLoc (_hidingKw ^. unIrrelevant) <> getLoc rbra
+
+instance HasLoc (UsingList s) where
+  getLoc UsingList {..} =
+    let rbra = _usingBraces ^. unIrrelevant . _2
+     in getLoc (_usingKw ^. unIrrelevant) <> getLoc rbra
+
+instance HasLoc (UsingHiding s) where
+  getLoc = \case
+    Using u -> getLoc u
+    Hiding u -> getLoc u
+
+instance HasLoc (OpenModuleParams s) where
+  getLoc OpenModuleParams {..} = getLoc _openModuleKw <>? (getLoc <$> _openUsingHiding)
+
 instance (SingI s) => HasLoc (Import s) where
-  getLoc Import {..} = case sing :: SStage s of
-    SParsed -> getLoc _importKw
-    SScoped -> getLoc _importKw
+  getLoc Import {..} =
+    let sLoc = case sing :: SStage s of
+          SParsed -> getLoc _importKw <> getLoc _importModulePath <>? (getLoc <$> _importOpen)
+          SScoped -> getLoc _importKw <> getLoc _importModulePath <>? (getLoc <$> _importOpen)
+     in sLoc <>? fmap getLoc (_importPublic ^? _Public . _Just)
 
 instance (SingI s, SingI t) => HasLoc (Module s t) where
   getLoc m = case sing :: SStage s of

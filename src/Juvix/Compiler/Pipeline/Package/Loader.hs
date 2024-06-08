@@ -108,20 +108,19 @@ toConcrete t p = run . runReader l $ do
     mkImport _importModulePath = do
       _openModuleKw <- kw kwOpen
       _importKw <- kw kwImport
-      return
-        ( StatementImport
-            Import
-              { _importOpen =
-                  Just
-                    OpenModuleParams
-                      { _openUsingHiding = Nothing,
-                        _openPublic = NoPublic,
-                        ..
-                      },
-                _importAsName = Nothing,
+      let openParams =
+            OpenModuleParams
+              { _openUsingHiding = Nothing,
                 ..
               }
-        )
+      return $
+        StatementImport
+          Import
+            { _importOpen = Just openParams,
+              _importPublic = NoPublic,
+              _importAsName = Nothing,
+              ..
+            }
 
     mkStdlibImport :: (Member (Reader Interval) r) => Sem r (Statement 'Parsed)
     mkStdlibImport = do
