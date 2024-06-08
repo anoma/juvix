@@ -1381,7 +1381,6 @@ deriving stock instance Ord (OpenModule 'Scoped)
 data OpenModuleParams (s :: Stage) = OpenModuleParams
   { _openModuleKw :: KeywordRef,
     _openUsingHiding :: Maybe (UsingHiding s),
-    _openPublicKw :: Irrelevant (Maybe KeywordRef),
     _openPublic :: PublicAnn
   }
   deriving stock (Generic)
@@ -2668,7 +2667,7 @@ instance (SingI s) => HasLoc (AxiomDef s) where
 instance HasLoc (OpenModule 'Scoped) where
   getLoc m =
     getLoc (m ^. openModuleParams . openModuleKw)
-      <>? fmap getLoc (m ^. openModuleParams . openPublicKw . unIrrelevant)
+      <>? fmap getLoc (m ^? openModuleParams . openPublic . _Public . _Just)
 
 instance HasLoc (ProjectionDef s) where
   getLoc = getLoc . (^. projectionConstructor)

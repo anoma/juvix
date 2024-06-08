@@ -115,7 +115,6 @@ toConcrete t p = run . runReader l $ do
                   Just
                     OpenModuleParams
                       { _openUsingHiding = Nothing,
-                        _openPublicKw = Irrelevant Nothing,
                         _openPublic = NoPublic,
                         ..
                       },

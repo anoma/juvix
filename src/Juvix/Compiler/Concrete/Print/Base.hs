@@ -1173,7 +1173,7 @@ ppOpenModuleHelper modName OpenModuleParams {..} = do
   let name' = ppModuleNameType <$> modName
       usingHiding' = ppCode <$> _openUsingHiding
       openkw = ppCode _openModuleKw
-      public' = ppCode <$> _openPublicKw ^. unIrrelevant
+      public' = ppCode <$> _openPublic ^? _Public . _Just
   openkw
     <+?> name'
     <+?> usingHiding'

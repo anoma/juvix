@@ -1816,7 +1816,7 @@ checkOpenModuleHelper importModuleHint OpenModule {..} = do
 
         publicAnnToVis :: PublicAnn -> VisibilityAnn
         publicAnnToVis = \case
-          Public -> VisPublic
+          Public {} -> VisPublic
           NoPublic -> VisPrivate
 
         filterScope :: ExportInfo -> ExportInfo

@@ -1625,8 +1625,8 @@ openModule = do
   _openModuleKw <- kw kwOpen
   _openModuleName <- name
   _openUsingHiding <- optional usingOrHiding
-  _openPublicKw <- Irrelevant <$> optional (kw kwPublic)
-  let _openPublic = maybe NoPublic (const Public) (_openPublicKw ^. unIrrelevant)
+  openPublicKw <- optional (kw kwPublic)
+  let _openPublic = maybe NoPublic (Public . Irrelevant . Just) openPublicKw
       _openModuleParams = OpenModuleParams {..}
   return OpenModule {..}
 
@@ -1636,7 +1636,8 @@ popenModuleParams = do
   _openModuleKw <- kw kwOpen
   _openUsingHiding <- optional usingOrHiding
   _openPublicKw <- Irrelevant <$> optional (kw kwPublic)
-  let _openPublic = maybe NoPublic (const Public) (_openPublicKw ^. unIrrelevant)
+  openPublicKw <- optional (kw kwPublic)
+  let _openPublic = maybe NoPublic (Public . Irrelevant . Just) openPublicKw
       _openModuleParams = OpenModuleParams {..}
   return OpenModuleParams {..}
 

@@ -5,7 +5,7 @@ import Juvix.Prelude
 
 data PublicAnn
   = -- | Explicit public annotation
-    Public
+    Public (Irrelevant (Maybe KeywordRef))
   | -- | No annotation. Do not confuse this with 'not public' or 'private'.
     NoPublic
   deriving stock (Show, Eq, Ord, Generic)
@@ -13,3 +13,8 @@ data PublicAnn
 instance Serialize PublicAnn
 
 instance NFData PublicAnn
+
+_Public :: Traversal' PublicAnn (Maybe KeywordRef)
+_Public f = \case
+  NoPublic -> pure NoPublic
+  Public (Irrelevant x) -> Public . Irrelevant <$> f x
