@@ -32,13 +32,13 @@ resolveTraitInstance ::
   TypedHole ->
   Sem r Expression
 resolveTraitInstance TypedHole {..} = do
-  vars <- overM localTypes (mapM strongNormalize) _typedHoleLocalVars
+  vars <- overM localTypes (mapM strongNormalize_) _typedHoleLocalVars
   infoTab <- ask
   tab0 <- getCombinedInstanceTable
   let tab = foldr (flip updateInstanceTable) tab0 (varsToInstances infoTab vars)
   ty <- strongNormalize _typedHoleType
   ctab <- getCombinedCoercionTable
-  is <- lookupInstance ctab tab ty
+  is <- lookupInstance ctab tab (ty ^. normalizedExpression)
   case is of
     [(cs, ii, subs)] ->
       expandArity loc (subsIToE subs) (ii ^. instanceInfoArgs) (ii ^. instanceInfoResult)
@@ -257,7 +257,7 @@ lookupInstance ::
   InstanceTable ->
   Expression ->
   Sem r [(CoercionChain, InstanceInfo, SubsI)]
-lookupInstance ctab tab ty = do
+lookupInstance ctab tab ty =
   case traitFromExpression mempty ty of
     Just InstanceApp {..} ->
       lookupInstance' [] False ctab tab _instanceAppHead _instanceAppArgs

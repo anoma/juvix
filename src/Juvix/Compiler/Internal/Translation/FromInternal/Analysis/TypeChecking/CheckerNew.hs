@@ -369,12 +369,11 @@ checkInstanceType ::
 checkInstanceType FunctionDef {..} = do
   ty <- strongNormalize _funDefType
   let mi =
-        instanceFromTypedExpression
-          ( TypedExpression
-              { _typedType = ty,
-                _typedExpression = ExpressionIden (IdenFunction _funDefName)
-              }
-          )
+        instanceFromTypedExpression $
+          TypedExpression
+            { _typedType = ty ^. normalizedExpression,
+              _typedExpression = ExpressionIden (IdenFunction _funDefName)
+            }
   case mi of
     Just ii@InstanceInfo {..} -> do
       tab <- ask
@@ -401,10 +400,16 @@ checkInstanceType FunctionDef {..} = do
         _ ->
           throw (ErrNotATrait (NotATrait _paramType))
 
-checkInstanceParam :: (Member (Error TypeCheckerError) r) => InfoTable -> Expression -> Sem r ()
-checkInstanceParam tab ty = case traitFromExpression mempty ty of
+checkInstanceParam ::
+  (Member (Error TypeCheckerError) r) =>
+  InfoTable ->
+  NormalizedExpression ->
+  Sem r ()
+checkInstanceParam tab ty' = case traitFromExpression mempty ty of
   Just InstanceApp {..} | isTrait tab _instanceAppHead -> return ()
   _ -> throw (ErrNotATrait (NotATrait ty))
+  where
+    ty = ty' ^. normalizedExpression
 
 checkCoercionType ::
   forall r.
@@ -416,7 +421,7 @@ checkCoercionType FunctionDef {..} = do
   let mi =
         coercionFromTypedExpression
           ( TypedExpression
-              { _typedType = ty,
+              { _typedType = ty ^. normalizedExpression,
                 _typedExpression = ExpressionIden (IdenFunction _funDefName)
               }
           )
@@ -456,11 +461,16 @@ checkExpression expectedTy e = do
       e' <- strongNormalize e
       inferred' <- strongNormalize (inferred ^. typedType)
       expected' <- strongNormalize expectedTy
+      let thing =
+            WrongTypeThingExpression
+              MkWrongTypeThingExpression
+                { _wrongTypeNormalizedExpression = e',
+                  _wrongTypeInferredExpression = inferred ^. typedExpression
+                }
       throw
         . ErrWrongType
         $ WrongType
-          { _wrongTypeThing = Left e',
-            _wrongTypeThingWithHoles = Just (Left (inferred ^. typedExpression)),
+          { _wrongTypeThing = thing,
             _wrongTypeActual = inferred',
             _wrongTypeExpected = expected'
           }
@@ -497,7 +507,7 @@ checkFunctionParameter FunctionParameter {..} = do
     checkInstanceParam tab ty'
   return
     FunctionParameter
-      { _paramType = ty',
+      { _paramType = ty' ^. normalizedExpression,
         _paramName,
         _paramImplicit
       }
@@ -728,15 +738,13 @@ checkPattern = go
               constrName = a ^. constrAppConstructor
               err :: MatchError -> Sem r ()
               err m =
-                throw
-                  ( ErrWrongType
-                      WrongType
-                        { _wrongTypeThing = Right pat,
-                          _wrongTypeThingWithHoles = Nothing,
-                          _wrongTypeExpected = m ^. matchErrorRight,
-                          _wrongTypeActual = m ^. matchErrorLeft
-                        }
-                  )
+                throw $
+                  ErrWrongType
+                    WrongType
+                      { _wrongTypeThing = WrongTypeThingPattern pat,
+                        _wrongTypeExpected = m ^. matchErrorRight,
+                        _wrongTypeActual = m ^. matchErrorLeft
+                      }
           case s of
             Left hole -> do
               let indParams = info ^. constructorInfoInductiveParameters
@@ -754,15 +762,13 @@ checkPattern = go
             Right (ind, tyArgs) -> do
               when
                 (ind /= constrIndName)
-                ( throw
-                    ( ErrWrongConstructorType
-                        WrongConstructorType
-                          { _wrongCtorTypeName = constrName,
-                            _wrongCtorTypeExpected = ind,
-                            _wrongCtorTypeActual = constrIndName
-                          }
-                    )
-                )
+                $ throw
+                $ ErrWrongConstructorType
+                  WrongConstructorType
+                    { _wrongCtorTypeName = constrName,
+                      _wrongCtorTypeExpected = ind,
+                      _wrongCtorTypeActual = constrIndName
+                    }
               PatternConstructorApp <$> goConstr (IdenInductive ind) a tyArgs
 
         goConstr :: Iden -> ConstructorApp -> [(InductiveParameter, Expression)] -> Sem r ConstructorApp

@@ -64,7 +64,7 @@ checkStrictlyPositiveOccurrences ::
   CheckPositivityArgs ->
   Sem r ()
 checkStrictlyPositiveOccurrences p = do
-  typeOfConstr <- strongNormalize (p ^. checkPositivityArgsTypeOfConstructor)
+  typeOfConstr <- strongNormalize_ (p ^. checkPositivityArgsTypeOfConstructor)
   go False typeOfConstr
   where
     indInfo = p ^. checkPositivityArgsInductive

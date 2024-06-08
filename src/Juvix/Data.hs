@@ -19,6 +19,7 @@ module Juvix.Data
     module Juvix.Data.WithLoc,
     module Juvix.Data.WithSource,
     module Juvix.Data.DependencyInfo,
+    module Juvix.Data.Keyword,
   )
 where
 
@@ -32,6 +33,7 @@ import Juvix.Data.Hole
 import Juvix.Data.InstanceHole
 import Juvix.Data.Irrelevant
 import Juvix.Data.IsImplicit
+import Juvix.Data.Keyword
 import Juvix.Data.Loc
 import Juvix.Data.NameId qualified
 import Juvix.Data.NumThreads

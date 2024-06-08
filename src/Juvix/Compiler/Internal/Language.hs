@@ -428,6 +428,12 @@ newtype ModuleIndex = ModuleIndex
   }
   deriving stock (Data)
 
+-- | An expression that maybe has been normalized
+data NormalizedExpression = NormalizedExpression
+  { _normalizedExpression :: Expression,
+    _normalizedExpressionOriginal :: Expression
+  }
+
 makeLenses ''ModuleIndex
 makeLenses ''ArgInfo
 makeLenses ''WildcardConstructor
@@ -454,6 +460,10 @@ makeLenses ''FunctionParameter
 makeLenses ''InductiveParameter
 makeLenses ''ConstructorDef
 makeLenses ''ConstructorApp
+makeLenses ''NormalizedExpression
+
+instance HasLoc NormalizedExpression where
+  getLoc = getLoc . (^. normalizedExpressionOriginal)
 
 instance Eq ModuleIndex where
   (==) = (==) `on` (^. moduleIxModule . moduleName)
