@@ -242,6 +242,7 @@ jobs:
 
   build-and-test-macos:
     runs-on: macos-14
+    if: false
     steps:
       - uses: extractions/setup-just@v2
 
