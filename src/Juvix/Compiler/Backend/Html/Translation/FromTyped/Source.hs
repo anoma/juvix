@@ -276,7 +276,7 @@ go sdt = case sdt of
   STEmpty -> return mempty
   STChar c -> return (toHtml c)
   STText _ t -> return (toHtml t)
-  STLine s -> return ("\n" <> toHtml (textSpaces s))
+  STLine n -> return ("\n" <> toHtml (textSpaces n))
   STAnn ann content -> go content >>= putTag ann
   STConcat l -> mconcatMap go l
   where
@@ -373,13 +373,12 @@ moduleDocRelativePath m = do
       | null fixPrefix -> return relpath
       | otherwise -> do
           return $
-            maybe
+            fromMaybe
               relpath
-              id
               (stripProperPrefix (fromJust (parseRelDir fixPrefix)) relpath)
 
 nameIdAttrRef :: (Members '[Reader HtmlOptions] r) => TopModulePath -> Maybe S.NameId -> Sem r AttributeValue
-nameIdAttrRef tp s = do
+nameIdAttrRef tp mid = do
   prefixUrl <- unpack <$> asks (^. htmlOptionsUrlPrefix)
   path <- toFilePath <$> moduleDocRelativePath tp
   noPath <- asks (^. htmlOptionsNoPath)
@@ -388,5 +387,5 @@ nameIdAttrRef tp s = do
     maybe
       (return mempty)
       (((preEscapedToValue '#' <>) <$>) . nameIdAttr)
-      s
+      mid
   return $ fromString prefix <> attr

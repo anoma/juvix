@@ -75,7 +75,7 @@ indexTree :: [TopModulePath] -> Tree Symbol (Maybe TopModulePath)
 indexTree = foldr insertModule emptyTree
   where
     insertModule :: TopModulePath -> ModuleTree -> ModuleTree
-    insertModule m@(TopModulePath ps s) t = go (Just t) (snoc ps s)
+    insertModule m@(TopModulePath ps name) t = go (Just t) (snoc ps name)
       where
         go :: Maybe ModuleTree -> [Symbol] -> ModuleTree
         go tree = \case
@@ -97,7 +97,7 @@ createIndexFile ::
   Sem r ()
 createIndexFile ps = do
   outputDir <- asks (^. htmlOptionsOutputDir)
-  indexHtml >>= (template mempty >=> writeHtml (outputDir <//> indexFileName))
+  indexHtml >>= (topTemplate mempty >=> writeHtml (outputDir <//> indexFileName))
   where
     indexHtml :: Sem r Html
     indexHtml = do
@@ -128,7 +128,7 @@ createIndexFile ps = do
       return $ ul c'
 
     goChild :: Symbol -> ModuleTree -> Sem r Html
-    goChild s (Tree lbl children) = node
+    goChild sym (Tree lbl children) = node
       where
         nodeRow :: Sem r Html
         nodeRow = case lbl of
@@ -136,7 +136,7 @@ createIndexFile ps = do
             return
               $ Html.span
                 ! Attr.class_ attrBare
-              $ toHtml (prettyText s)
+              $ toHtml (prettyText sym)
           Just lbl' -> do
             lnk <- nameIdAttrRef lbl' Nothing
             return
@@ -219,8 +219,8 @@ moduleDocPath m = do
 topModulePath :: Module 'Scoped 'ModuleTop -> TopModulePath
 topModulePath = (^. modulePath . S.nameConcrete)
 
-template :: forall r. (Members '[Reader EntryPoint, Reader HtmlOptions] r) => Html -> Html -> Sem r Html
-template rightMenu' content' = do
+topTemplate :: forall r. (Members '[Reader EntryPoint, Reader HtmlOptions] r) => Html -> Html -> Sem r Html
+topTemplate rightMenu' content' = do
   mathJax <- mathJaxCdn
   ayuTheme <- ayuCss
   judocTheme <- linuwialCss
@@ -309,7 +309,7 @@ goTopModule cs m = do
     docHtml = do
       content' <- content
       rightMenu' <- rightMenu
-      template rightMenu' content'
+      topTemplate rightMenu' content'
       where
         rightMenu :: Sem s Html
         rightMenu = do
@@ -419,8 +419,8 @@ goStatement = \case
   StatementInductive t -> goInductive t
   StatementOpenModule t -> goOpen t
   StatementFunctionDef t -> goFunctionDef t
-  StatementSyntax s -> goSyntax s
-  StatementImport s -> goImport s
+  StatementSyntax syn -> goSyntax syn
+  StatementImport t -> goImport t
   StatementModule m -> goLocalModule m
   StatementProjectionDef {} -> mempty
   where
@@ -454,8 +454,8 @@ goFixity def = do
     mkPrec :: Sem r Html
     mkPrec = case info ^. fixityPrecSame of
       Just txt -> do
-        s <- ppCodeHtml defaultOptions txt
-        return (row $ toHtml ("Same precedence as " <> s))
+        d <- ppCodeHtml defaultOptions txt
+        return (row $ toHtml ("Same precedence as " <> d))
       Nothing ->
         goPrec "Higher" (info ^. fixityPrecAbove)
           <> goPrec "Lower" (info ^. fixityPrecBelow)
