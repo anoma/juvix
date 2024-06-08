@@ -37,7 +37,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
       initBuiltinsInstr = mkAssignAp (Binop $ BinopValue FieldAdd (MemRef Fp (-2)) (Imm 1))
       callMainInstr = mkCallRel (Lab $ LabelRef mainSym (Just mainName))
       jmpEndInstr = mkJumpRel (Val $ Lab endLab)
-      margs = concat $ reverse $ map mkLoadInputArg mainArgs
+      loadInputArgsInstrs = concat $ reverse $ map mkLoadInputArg mainArgs
       -- [ap] = [[ap - 2 - k] + k]; ap++
       bltsRet = map (\k -> mkAssignAp (Load $ LoadValue (MemRef Ap (-2 - k)) k)) [0 .. bnum - 1]
       resRetInstr = mkAssignAp (Val $ Ref $ MemRef Ap (-bnum - 1))
@@ -46,7 +46,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
           : jmpEndInstr
           : Label startLab
           : initBuiltinsInstr
-          : margs
+          : loadInputArgsInstrs
           ++ callMainInstr
           : bltsRet
           ++ [resRetInstr, Return]
@@ -66,7 +66,13 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
     )
   where
     mkResult :: (LabelInfo, ([Builtin], Code)) -> Result
-    mkResult (labi, (blts, code)) = Result labi code blts
+    mkResult (labi, (blts, code)) =
+      Result
+        { _resultLabelInfo = labi,
+          _resultCode = code,
+          _resultBuiltins = blts,
+          _resultOutputSize = 1
+        }
 
     mkLoadInputArg :: Text -> [Instruction]
     mkLoadInputArg arg = [Hint (HintInput arg), mkAssignAp (Val $ Ref $ MemRef Ap 0)]

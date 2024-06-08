@@ -9,7 +9,8 @@ fromCairo elems0 =
   Result
     { _resultLabelInfo = mempty,
       _resultCode = go 0 [] elems0,
-      _resultBuiltins = mempty
+      _resultBuiltins = mempty,
+      _resultOutputSize = 0
     }
   where
     errorMsg :: Address -> Text -> a
