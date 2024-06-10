@@ -25,7 +25,16 @@ casmRunVM labi instrs blts inputFile expectedFile step = do
   withTempDir'
     ( \dirPath -> do
         step "Serialize to Cairo bytecode"
-        let res = run $ casmToCairo (Casm.Result labi instrs blts)
+        let res =
+              run $
+                casmToCairo
+                  ( Casm.Result
+                      { _resultLabelInfo = labi,
+                        _resultCode = instrs,
+                        _resultBuiltins = blts,
+                        _resultOutputSize = 1
+                      }
+                  )
             outputFile = dirPath <//> $(mkRelFile "out.json")
         encodeFile (toFilePath outputFile) res
         step "Run Cairo VM"
