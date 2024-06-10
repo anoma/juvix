@@ -28,7 +28,12 @@ runCommand opts = do
     runReader entryPoint
       . runError @JuvixError
       . casmToCairo
-      $ Casm.Result labi code []
+      $ Casm.Result
+        { _resultLabelInfo = labi,
+          _resultCode = code,
+          _resultBuiltins = [],
+          _resultOutputSize = 1
+        }
   res <- getRight r
   liftIO $ JSON.encodeFile (toFilePath cairoFile) res
   where
