@@ -56,7 +56,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
   eassert (addr == length instrs + length cinstrs + length binstrs + length pinstrs)
   registerLabelName endSym endName
   registerLabelAddress endSym addr
-  return $
+  return
     ( allElements,
       pinstrs
         ++ binstrs
@@ -176,7 +176,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
 
         goCallBlock :: Bool -> Maybe Reg.VarRef -> HashSet Reg.VarRef -> Sem r ()
         goCallBlock updatedBuiltins outVar liveVars = do
-          let liveVars' = toList (maybe liveVars (flip HashSet.delete liveVars) outVar)
+          let liveVars' = toList (maybe liveVars (`HashSet.delete` liveVars) outVar)
               n = length liveVars'
               bltOff =
                 if
@@ -584,7 +584,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
           syms <- replicateM (length tags) freshSymbol
           symEnd <- freshSymbol
           let symMap = HashMap.fromList $ zip tags syms
-              labs = map (flip LabelRef Nothing) syms
+              labs = map (`LabelRef` Nothing) syms
               labEnd = LabelRef symEnd Nothing
               jmps = map (mkJumpRel . Val . Lab) labs
               -- we need the Nop instructions to ensure that the relative jump

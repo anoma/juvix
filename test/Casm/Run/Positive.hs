@@ -5,6 +5,7 @@ import Casm.Run.Base
 
 data PosTest = PosTest
   { _name :: String,
+    _interp :: Bool,
     _runVM :: Bool,
     _relDir :: Path Rel Dir,
     _file :: Path Rel File,
@@ -24,7 +25,7 @@ testDescr PosTest {..} =
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
-          _testAssertion = Steps $ casmRunAssertion True _runVM file' input' expected'
+          _testAssertion = Steps $ casmRunAssertion _interp _runVM file' input' expected'
         }
 
 filterTests :: [String] -> [PosTest] -> [PosTest]
@@ -41,12 +42,14 @@ tests =
   [ PosTest
       "Test001: Sum of numbers"
       True
+      True
       $(mkRelDir ".")
       $(mkRelFile "test001.casm")
       $(mkRelFile "out/test001.out")
       Nothing,
     PosTest
       "Test002: Factorial"
+      True
       True
       $(mkRelDir ".")
       $(mkRelFile "test002.casm")
@@ -55,12 +58,14 @@ tests =
     PosTest
       "Test003: Direct call"
       True
+      True
       $(mkRelDir ".")
       $(mkRelFile "test003.casm")
       $(mkRelFile "out/test003.out")
       Nothing,
     PosTest
       "Test004: Indirect call"
+      True
       True
       $(mkRelDir ".")
       $(mkRelFile "test004.casm")
@@ -69,12 +74,14 @@ tests =
     PosTest
       "Test005: Exp function"
       True
+      True
       $(mkRelDir ".")
       $(mkRelFile "test005.casm")
       $(mkRelFile "out/test005.out")
       Nothing,
     PosTest
       "Test006: Branch"
+      True
       True
       $(mkRelDir ".")
       $(mkRelFile "test006.casm")
@@ -83,12 +90,14 @@ tests =
     PosTest
       "Test007: Closure extension"
       True
+      True
       $(mkRelDir ".")
       $(mkRelFile "test007.casm")
       $(mkRelFile "out/test007.out")
       Nothing,
     PosTest
       "Test008: Integer arithmetic"
+      True
       False -- integer division not yet supported
       $(mkRelDir ".")
       $(mkRelFile "test008.casm")
@@ -97,12 +106,14 @@ tests =
     PosTest
       "Test009: Recursion"
       True
+      True
       $(mkRelDir ".")
       $(mkRelFile "test009.casm")
       $(mkRelFile "out/test009.out")
       Nothing,
     PosTest
       "Test010: Functions returning functions"
+      True
       True
       $(mkRelDir ".")
       $(mkRelFile "test010.casm")
@@ -111,12 +122,14 @@ tests =
     PosTest
       "Test011: Lists"
       True
+      True
       $(mkRelDir ".")
       $(mkRelFile "test011.casm")
       $(mkRelFile "out/test011.out")
       Nothing,
     PosTest
       "Test012: Recursion through higher-order functions"
+      True
       True
       $(mkRelDir ".")
       $(mkRelFile "test012.casm")
@@ -125,12 +138,14 @@ tests =
     PosTest
       "Test013: Currying and uncurrying"
       True
+      True
       $(mkRelDir ".")
       $(mkRelFile "test013.casm")
       $(mkRelFile "out/test013.out")
       Nothing,
     PosTest
       "Test014: Field arithmetic"
+      True
       True
       $(mkRelDir ".")
       $(mkRelFile "test014.casm")
@@ -139,8 +154,17 @@ tests =
     PosTest
       "Test015: Input"
       True
+      True
       $(mkRelDir ".")
       $(mkRelFile "test015.casm")
       $(mkRelFile "out/test015.out")
-      (Just $(mkRelFile "in/test015.json"))
+      (Just $(mkRelFile "in/test015.json")),
+    PosTest
+      "Test016: Complex input"
+      False
+      True
+      $(mkRelDir ".")
+      $(mkRelFile "test016.casm")
+      $(mkRelFile "out/test016.out")
+      (Just $(mkRelFile "in/test016.json"))
   ]
