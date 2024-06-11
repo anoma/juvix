@@ -4,8 +4,8 @@ import Data.Bits
 import Juvix.Compiler.Backend.Cairo.Data.Result
 import Juvix.Compiler.Backend.Cairo.Language
 
-serialize :: [Text] -> [Element] -> Result
-serialize builtins elems =
+serialize :: Int -> [Text] -> [Element] -> Result
+serialize outputSize builtins elems =
   Result
     { _resultData =
         initializeBuiltins
@@ -48,17 +48,25 @@ serialize builtins elems =
 
     finalizeBuiltins :: [Text]
     finalizeBuiltins =
-      -- [[fp]] = [ap - 1] -- [output_ptr] = [ap - 1]
-      -- [ap] = [fp] + 1; ap++ -- output_ptr
-      [ "0x4002800080007fff",
-        "0x4826800180008000",
-        "0x1"
-      ]
+      -- [[fp] + i] = [ap - outputSize + i]
+      -- [output_ptr + i] = [ap - outputSize + i]
+      map
+        ( \i ->
+            toHexText (0x4002800080008000 - outputSize' + i + shift i 32)
+        )
+        [0 .. outputSize' - 1]
+        ++
+        -- [ap] = [fp] + outputSize; ap++ -- output_ptr
+        [ "0x4826800180008000",
+          toHexText outputSize'
+        ]
         ++
         -- [ap] = [ap - builtinsNum - 2]; ap++
         replicate
           builtinsNum
           (toHexText (0x48107ffe7fff8000 - shift builtinsNum 32))
+      where
+        outputSize' = fromIntegral outputSize
 
     finalizeJump :: [Text]
     finalizeJump =

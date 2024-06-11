@@ -27,7 +27,7 @@ testDescr PosTest {..} =
         }
 
 filterOutTests :: [String] -> [PosTest] -> [PosTest]
-filterOutTests incl = filter (\PosTest {..} -> not (_name `elem` incl))
+filterOutTests incl = filter (\PosTest {..} -> _name `notElem` incl)
 
 allTests :: TestTree
 allTests =

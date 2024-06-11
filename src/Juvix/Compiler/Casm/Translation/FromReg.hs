@@ -29,8 +29,9 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
   registerLabelName startSym startName
   registerLabelAddress startSym startAddr
   let mainSym = fromJust $ tab ^. Reg.infoMainFunction
-      mainInfo = fromJust (HashMap.lookup mainSym (tab ^. Reg.infoFunctions))
+      mainInfo = Reg.lookupFunInfo tab mainSym
       mainName = mainInfo ^. Reg.functionName
+      mainResultType = Reg.typeTarget (mainInfo ^. Reg.functionType)
       mainArgs = getInputArgs (mainInfo ^. Reg.functionArgsNum) (mainInfo ^. Reg.functionArgNames)
       bnum = toOffset builtinsNum
       callStartInstr = mkCallRel (Lab startLab)
@@ -40,7 +41,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
       loadInputArgsInstrs = concat $ reverse $ map mkLoadInputArg mainArgs
       -- [ap] = [[ap - 2 - k] + k]; ap++
       bltsRet = map (\k -> mkAssignAp (Load $ LoadValue (MemRef Ap (-2 - k)) k)) [0 .. bnum - 1]
-      resRetInstr = mkAssignAp (Val $ Ref $ MemRef Ap (-bnum - 1))
+      resRetInstrs = mkResultInstrs bnum mainResultType
       pinstrs =
         callStartInstr
           : jmpEndInstr
@@ -49,7 +50,8 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
           : loadInputArgsInstrs
           ++ callMainInstr
           : bltsRet
-          ++ [resRetInstr, Return]
+          ++ resRetInstrs
+          ++ [Return]
   (blts, binstrs) <- addStdlibBuiltins (length pinstrs)
   let cinstrs = concatMap (mkFunCall . fst) $ sortOn snd $ HashMap.toList (info ^. Reg.extraInfoFUIDs)
   (addr, instrs) <- second (concat . reverse) <$> foldM (goFun blts endLab) (length pinstrs + length binstrs + length cinstrs, []) (tab ^. Reg.infoFunctions)
@@ -57,7 +59,8 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
   registerLabelName endSym endName
   registerLabelAddress endSym addr
   return
-    ( allElements,
+    ( length resRetInstrs,
+      allElements,
       pinstrs
         ++ binstrs
         ++ cinstrs
@@ -65,14 +68,32 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
         ++ [Label endLab]
     )
   where
-    mkResult :: (LabelInfo, ([Builtin], Code)) -> Result
-    mkResult (labi, (blts, code)) =
+    mkResult :: (LabelInfo, (Int, [Builtin], Code)) -> Result
+    mkResult (labi, (outSize, blts, code)) =
       Result
         { _resultLabelInfo = labi,
           _resultCode = code,
           _resultBuiltins = blts,
-          _resultOutputSize = 1
+          _resultOutputSize = outSize
         }
+
+    mkResultInstrs :: Offset -> Reg.Type -> [Instruction]
+    mkResultInstrs off = \case
+      Reg.TyInductive Reg.TypeInductive {..} -> goRecord _typeInductiveSymbol
+      Reg.TyConstr Reg.TypeConstr {..} -> goRecord _typeConstrInductive
+      _ -> [mkAssignAp (Val $ Ref $ MemRef Ap (-off - 1))]
+      where
+        goRecord :: Symbol -> [Instruction]
+        goRecord sym = case indInfo ^. Reg.inductiveConstructors of
+          [tag] -> case Reg.lookupConstrInfo tab tag of
+            Reg.ConstructorInfo {..} ->
+              map mkOutInstr [1 .. toOffset _constructorArgsNum]
+              where
+                mkOutInstr :: Offset -> Instruction
+                mkOutInstr i = mkAssignAp (Load $ LoadValue (MemRef Ap (-off - i)) i)
+          _ -> impossible
+          where
+            indInfo = Reg.lookupInductiveInfo tab sym
 
     mkLoadInputArg :: Text -> [Instruction]
     mkLoadInputArg arg = [Hint (HintInput arg), mkAssignAp (Val $ Ref $ MemRef Ap 0)]

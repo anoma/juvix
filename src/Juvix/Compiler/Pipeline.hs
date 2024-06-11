@@ -364,7 +364,7 @@ regToCasm = Reg.toCasm >=> return . Casm.fromReg
 casmToCairo :: Casm.Result -> Sem r Cairo.Result
 casmToCairo Casm.Result {..} =
   return
-    . Cairo.serialize (map Casm.builtinName _resultBuiltins)
+    . Cairo.serialize _resultOutputSize (map Casm.builtinName _resultBuiltins)
     $ Cairo.fromCasm _resultCode
 
 regToCairo :: Reg.InfoTable -> Sem r Cairo.Result

@@ -9,7 +9,7 @@ function count_ext () {
 }
 
 RUNTIME_C=$(count runtime/c/src/juvix)
-RUNTIME_RUST=$(count runtime/rust/src)
+RUNTIME_RUST=$(count runtime/rust/juvix/src)
 RUNTIME_VAMPIR=$(count_ext '*.pir' runtime/vampir)
 RUNTIME_JVT=$(count_ext '*.jvt' runtime/tree)
 RUNTIME_CASM=$(count_ext '*.casm' runtime/casm)

@@ -8,7 +8,7 @@ data Result = Result
   { _resultLabelInfo :: LabelInfo,
     _resultCode :: [Instruction],
     _resultBuiltins :: [Builtin],
-    _resultOutputSize :: Natural
+    _resultOutputSize :: Int
   }
 
 makeLenses ''Result
