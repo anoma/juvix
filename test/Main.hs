@@ -28,10 +28,9 @@ import VampIR qualified
 
 slowTests :: TestTree
 slowTests =
-  --  sequentialTestGroup
-  testGroup
+  sequentialTestGroup
     "Juvix slow tests"
-    --    AllFinish
+    AllFinish
     [ BackendGeb.allTests,
       Runtime.allTests,
       Reg.allTests,

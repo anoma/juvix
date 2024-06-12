@@ -1,0 +1,12 @@
+module test001;
+
+import Stdlib.Prelude open;
+
+type T :=
+  | T1 {
+      x : Field;
+      y : Field
+    }
+  | T2;
+
+main (x : Field) (_ : T) : Field := x + 1;
