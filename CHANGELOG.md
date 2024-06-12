@@ -4,7 +4,7 @@
 <img align="right" width="300" height="300" alt="Juvix Mascot" src="../assets/images/tara-smiling.svg" />
 </a>
 
-## [v0.6.2](https://github.com/anoma/juvix/tree/v0.6.2) (2024-05-31)
+## [v0.6.2](https://github.com/anoma/juvix/tree/v0.6.2) (2024-06-12)
 
 [Full Changelog](https://github.com/anoma/juvix/compare/v0.6.1...v0.6.2)
 
@@ -19,9 +19,22 @@
 - Cairo Elliptic Curve builtin [\#2731](https://github.com/anoma/juvix/pull/2731) ([lukaszcz](https://github.com/lukaszcz))
 - refactor `--target` into subcommands for `dev tree compile` and other improvements [\#2713](https://github.com/anoma/juvix/pull/2713) ([janmasrovira](https://github.com/janmasrovira))
 - Make `compile` targets a subcommand instead of a flag [\#2700](https://github.com/anoma/juvix/pull/2700) ([janmasrovira](https://github.com/janmasrovira))
+- Translate Juvix types to Isabelle/HOL [\#2689](https://github.com/anoma/juvix/issues/2689) ([lukaszcz](https://github.com/lukaszcz))
+- Parallelize the pipeline [\#2749](https://github.com/anoma/juvix/issues/2749) ([janmasrovira](https://github.com/janmasrovira))
 
 **Merged pull requests:**
 
+- Upgrade to ghc-9.8.2 [\#2794](https://github.com/anoma/juvix/pull/2794) ([janmasrovira](https://github.com/janmasrovira))
+- Report proper location for normalized types in the WrongType error [\#2814](https://github.com/anoma/juvix/pull/2814) ([janmasrovira](https://github.com/janmasrovira))
+- Disable macOS CI [\#2821](https://github.com/anoma/juvix/pull/2821) ([lukaszcz](https://github.com/lukaszcz))
+- Add pedantic option to justfile [\#2816](https://github.com/anoma/juvix/pull/2816) ([janmasrovira](https://github.com/janmasrovira))
+- Add GHC Identity to Juvix/Prelude [\#2815](https://github.com/anoma/juvix/pull/2815) ([janmasrovira](https://github.com/janmasrovira))
+- Fixes crash when trying to normalize case expression [\#2811](https://github.com/anoma/juvix/pull/2811) ([janmasrovira](https://github.com/janmasrovira))
+- Improve parallel template [\#2809](https://github.com/anoma/juvix/pull/2809) ([janmasrovira](https://github.com/janmasrovira))
+- RISC0 Rust backend [\#2702](https://github.com/anoma/juvix/pull/2792) ([lukaszcz](https://github.com/lukaszcz))
+- Juvix to Isabelle/HOL translation [\#2752](https://github.com/anoma/juvix/pull/2752) ([lukaszcz](https://github.com/lukaszcz))
+- Fix generation of wildcards in RecordPattern [\#2802](https://github.com/anoma/juvix/pull/2802) ([janmasrovira](https://github.com/janmasrovira))
+- Support Anoma stdlib sign-detached API [\#2798](https://github.com/anoma/juvix/pull/2798) ([paulcadman](https://github.com/paulcadman))
 - Use little endian encoding of ByteStrings in Anoma [\#2793](https://github.com/anoma/juvix/pull/2793) ([paulcadman](https://github.com/paulcadman))
 - Update stdlib to the main branch [\#2791](https://github.com/anoma/juvix/pull/2791) ([lukaszcz](https://github.com/lukaszcz))
 - Add support for Strings in the Anoma backend [\#2789](https://github.com/anoma/juvix/pull/2789) ([paulcadman](https://github.com/paulcadman))
