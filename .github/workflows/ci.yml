@@ -139,7 +139,7 @@ jobs:
         id: cache-risc0-vm
         uses: actions/cache@v4
         with:
-          path: ${{ env.HOME }}/.cargo/bin/r0vm
+          path: ${{ env.HOME }}/.local/bin/r0vm
           key: ${{ runner.os }}-risc0-vm-${{ env.RISC0_VM_VERSION }}
 
       - name: Install Rust toolchain
@@ -152,9 +152,10 @@ jobs:
         if: steps.cache-risc0-vm.outputs.cache-hit != 'true'
         shell: bash
         run: |
-          cargo install cargo-binstall
-          cargo binstall cargo-risczero@1.0.1 --no-confirm
+          cargo install cargo-binstall --force
+          cargo binstall cargo-risczero@1.0.1 --no-confirm --force
           cargo risczero install
+          cp `which r0vm` $HOME/.local/bin/r0vm
 
       - name: Checkout CairoVM
         uses: actions/checkout@v4
