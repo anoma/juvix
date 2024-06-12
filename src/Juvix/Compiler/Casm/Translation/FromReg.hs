@@ -114,6 +114,10 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
         Nop
       ]
 
+    -- To make it convenient with relative jumps, Cairo constructor tag is `2 *
+    -- tag + 1` where `tag` is the 0-based constructor number within the
+    -- inductive type. Make sure this corresponds with the relative jump code in
+    -- `goCase`.
     getTagId :: Tag -> Int
     getTagId tag =
       1 + 2 * fromJust (HashMap.lookup tag (info ^. Reg.extraInfoCIDs))

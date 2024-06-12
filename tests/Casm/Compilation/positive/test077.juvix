@@ -1,0 +1,50 @@
+-- Complex input and output
+module test077;
+
+import Stdlib.Prelude open;
+
+type Resource :=
+  mkResource {
+    fld0 : Field;
+    fld1 : Field;
+    eph : Bool
+  };
+
+type Point :=
+  mkPoint {
+    x : Field;
+    y : Field
+  };
+
+type ComplianceResult :=
+  mkResult {
+    cnt : Field;
+    x : Field;
+    y : Field
+  };
+
+count : List (Field × Bool) -> Field
+  | [] := 0
+  | ((h, b) :: t) := if b (h + count t) (count t);
+
+main
+  (input : Resource)
+  (path : List (Field × Bool))
+  : ComplianceResult :=
+  mkResult@{
+    cnt := count path;
+    x :=
+      if
+        | Resource.eph input :=
+          Resource.fld0 input + Resource.fld1 input
+        | else := Resource.fld0 input;
+    y := Resource.fld1 input
+  };
+
+{-
+main
+  (input : Resource)
+  (path : List (Field × Bool))
+  : Field :=
+  count path;
+-}

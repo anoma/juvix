@@ -56,15 +56,16 @@ serialize outputSize builtins elems =
         )
         [0 .. outputSize' - 1]
         ++
-        -- [ap] = [fp] + outputSize; ap++ -- output_ptr
+        -- [ap] = [fp] + outputSize; ap++
+        -- output_ptr = output_ptr + outputSize
         [ "0x4826800180008000",
           toHexText outputSize'
         ]
         ++
-        -- [ap] = [ap - builtinsNum - 2]; ap++
+        -- [ap] = [ap - 1 - builtinsNum - outputSize]; ap++
         replicate
           builtinsNum
-          (toHexText (0x48107ffe7fff8000 - shift builtinsNum 32))
+          (toHexText (0x48107fff7fff8000 - shift (builtinsNum + outputSize') 32))
       where
         outputSize' = fromIntegral outputSize
 

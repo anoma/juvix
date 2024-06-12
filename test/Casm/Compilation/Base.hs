@@ -14,6 +14,7 @@ compileAssertion ::
   Bool ->
   Int ->
   Path Abs File ->
+  Maybe (Path Abs File) ->
   Path Abs File ->
   (String -> IO ()) ->
   Assertion
@@ -26,10 +27,11 @@ compileAssertionEntry ::
   Bool ->
   Int ->
   Path Abs File ->
+  Maybe (Path Abs File) ->
   Path Abs File ->
   (String -> IO ()) ->
   Assertion
-compileAssertionEntry adjustEntry root' bInterp bRunVM optLevel mainFile expectedFile step = do
+compileAssertionEntry adjustEntry root' bInterp bRunVM optLevel mainFile inputFile expectedFile step = do
   step "Translate to JuvixCore"
   entryPoint <- adjustEntry <$> testDefaultEntryPointIO root' mainFile
   PipelineResult {..} <- snd <$> testRunIO entryPoint upToStoredCore
@@ -44,4 +46,4 @@ compileAssertionEntry adjustEntry root' bInterp bRunVM optLevel mainFile expecte
             step "Pretty print"
             writeFileEnsureLn tmpFile (toPlainText $ ppProgram _resultCode)
         )
-      casmRunAssertion' bInterp bRunVM _resultLabelInfo _resultCode _resultBuiltins Nothing expectedFile step
+      casmRunAssertion' bInterp bRunVM _resultLabelInfo _resultCode _resultBuiltins _resultOutputSize inputFile expectedFile step
