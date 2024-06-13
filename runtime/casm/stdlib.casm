@@ -11,6 +11,13 @@
 -- sargs + argsnum = total numer of arguments for the function
 -- Maximum number of function arguments: 8
 
+-- Constructor layout: [ cid | arguments... ]
+--  cid -- constructor id: 2 * tag + 1, where tag is the 0-based index
+--         of the constructor within its inductive type
+-- Make sure this spec is followed by:
+-- * Juvix.Compiler.Casm.Translation.FromReg
+-- * get_cid() in juvix_hint_processor/hint_processor.rs in juvix-cairo-vm
+
 -- after calling juvix_get_regs:
 -- [ap - 4] = fp
 -- [ap - 3] = pc

@@ -10,7 +10,8 @@ data PosTest = PosTest
     _name :: String,
     _dir :: Path Abs Dir,
     _file :: Path Abs File,
-    _expectedFile :: Path Abs File
+    _expectedFile :: Path Abs File,
+    _inputFile :: Maybe (Path Abs File)
   }
 
 makeLenses ''PosTest
@@ -23,10 +24,11 @@ toTestDescr optLevel PosTest {..} =
   let tRoot = _dir
       file' = _file
       expected' = _expectedFile
+      input' = _inputFile
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
-          _testAssertion = Steps $ compileAssertion _dir _interp _runVM optLevel file' expected'
+          _testAssertion = Steps $ compileAssertion _dir _interp _runVM optLevel file' input' expected'
         }
 
 allTests :: TestTree
@@ -41,11 +43,12 @@ allTestsNoOptimize =
     "Juvix to CASM positive tests (no optimization)"
     (map (mkTest . toTestDescr 0) tests)
 
-posTest :: String -> Bool -> Bool -> Path Rel Dir -> Path Rel File -> Path Rel File -> PosTest
-posTest _name _interp _runVM rdir rfile routfile =
+posTest :: String -> Bool -> Bool -> Path Rel Dir -> Path Rel File -> Maybe (Path Rel File) -> Path Rel File -> PosTest
+posTest _name _interp _runVM rdir rfile rinfile routfile =
   let _dir = root <//> rdir
       _file = _dir <//> rfile
       _expectedFile = root <//> routfile
+      _inputFile = fmap (root <//>) rinfile
    in PosTest {..}
 
 isIgnored :: PosTest -> Bool
@@ -68,6 +71,7 @@ tests =
         True
         $(mkRelDir ".")
         $(mkRelFile "test001.juvix")
+        Nothing
         $(mkRelFile "out/test001.out"),
       posTest
         "Test002: Arithmetic operators inside lambdas"
@@ -75,6 +79,7 @@ tests =
         True
         $(mkRelDir ".")
         $(mkRelFile "test002.juvix")
+        Nothing
         $(mkRelFile "out/test002.out"),
       posTest
         "Test003: Integer arithmetic"
@@ -82,6 +87,7 @@ tests =
         False
         $(mkRelDir ".")
         $(mkRelFile "test003.juvix")
+        Nothing
         $(mkRelFile "out/test003.out"),
       posTest
         "Test005: Higher-order functions"
@@ -89,6 +95,7 @@ tests =
         True
         $(mkRelDir ".")
         $(mkRelFile "test005.juvix")
+        Nothing
         $(mkRelFile "out/test005.out"),
       posTest
         "Test006: If-then-else and lazy boolean operators"
@@ -96,6 +103,7 @@ tests =
         False
         $(mkRelDir ".")
         $(mkRelFile "test006.juvix")
+        Nothing
         $(mkRelFile "out/test006.out"),
       posTest
         "Test007: Pattern matching and lambda-case"
@@ -103,6 +111,7 @@ tests =
         True
         $(mkRelDir ".")
         $(mkRelFile "test007.juvix")
+        Nothing
         $(mkRelFile "out/test007.out"),
       posTest
         "Test008: Recursion"
@@ -110,6 +119,7 @@ tests =
         True
         $(mkRelDir ".")
         $(mkRelFile "test008.juvix")
+        Nothing
         $(mkRelFile "out/test008.out"),
       posTest
         "Test009: Tail recursion"
@@ -117,6 +127,7 @@ tests =
         True
         $(mkRelDir ".")
         $(mkRelFile "test009.juvix")
+        Nothing
         $(mkRelFile "out/test009.out"),
       posTest
         "Test010: Let"
@@ -124,6 +135,7 @@ tests =
         True
         $(mkRelDir ".")
         $(mkRelFile "test010.juvix")
+        Nothing
         $(mkRelFile "out/test010.out"),
       posTest
         "Test013: Functions returning functions with variable capture"
@@ -131,6 +143,7 @@ tests =
         True
         $(mkRelDir ".")
         $(mkRelFile "test013.juvix")
+        Nothing
         $(mkRelFile "out/test013.out"),
       posTest
         "Test014: Arithmetic"
@@ -138,6 +151,7 @@ tests =
         False
         $(mkRelDir ".")
         $(mkRelFile "test014.juvix")
+        Nothing
         $(mkRelFile "out/test014.out"),
       posTest
         "Test015: Local functions with free variables"
@@ -145,6 +159,7 @@ tests =
         False
         $(mkRelDir ".")
         $(mkRelFile "test015.juvix")
+        Nothing
         $(mkRelFile "out/test015.out"),
       posTest
         "Test016: Recursion through higher-order functions"
@@ -152,6 +167,7 @@ tests =
         True
         $(mkRelDir ".")
         $(mkRelFile "test016.juvix")
+        Nothing
         $(mkRelFile "out/test016.out"),
       posTest
         "Test017: Tail recursion through higher-order functions"
@@ -159,6 +175,7 @@ tests =
         True
         $(mkRelDir ".")
         $(mkRelFile "test017.juvix")
+        Nothing
         $(mkRelFile "out/test017.out"),
       posTest
         "Test018: Higher-order functions and recursion"
@@ -166,6 +183,7 @@ tests =
         True
         $(mkRelDir ".")
         $(mkRelFile "test018.juvix")
+        Nothing
         $(mkRelFile "out/test018.out"),
       posTest
         "Test019: Self-application"
@@ -173,6 +191,7 @@ tests =
         True
         $(mkRelDir ".")
         $(mkRelFile "test019.juvix")
+        Nothing
         $(mkRelFile "out/test019.out"),
       posTest
         "Test020: Recursive functions: McCarthy's 91 function, subtraction by increments"
@@ -180,6 +199,7 @@ tests =
         False
         $(mkRelDir ".")
         $(mkRelFile "test020.juvix")
+        Nothing
         $(mkRelFile "out/test020.out"),
       posTest
         "Test021: Fast exponentiation"
@@ -187,6 +207,7 @@ tests =
         False
         $(mkRelDir ".")
         $(mkRelFile "test021.juvix")
+        Nothing
         $(mkRelFile "out/test021.out"),
       posTest
         "Test022: Lists"
@@ -194,6 +215,7 @@ tests =
         True
         $(mkRelDir ".")
         $(mkRelFile "test022.juvix")
+        Nothing
         $(mkRelFile "out/test022.out"),
       posTest
         "Test023: Mutual recursion"
@@ -201,6 +223,7 @@ tests =
         False
         $(mkRelDir ".")
         $(mkRelFile "test023.juvix")
+        Nothing
         $(mkRelFile "out/test023.out"),
       posTest
         "Test024: Nested binders with variable capture"
@@ -208,6 +231,7 @@ tests =
         True
         $(mkRelDir ".")
         $(mkRelFile "test024.juvix")
+        Nothing
         $(mkRelFile "out/test024.out"),
       posTest
         "Test025: Euclid's algorithm"
@@ -215,6 +239,7 @@ tests =
         False
         $(mkRelDir ".")
         $(mkRelFile "test025.juvix")
+        Nothing
         $(mkRelFile "out/test025.out"),
       posTest
         "Test026: Functional queues"
@@ -222,6 +247,7 @@ tests =
         True
         $(mkRelDir ".")
         $(mkRelFile "test026.juvix")
+        Nothing
         $(mkRelFile "out/test026.out"),
       posTest
         "Test028: Streams without memoization"
@@ -229,6 +255,7 @@ tests =
         False
         $(mkRelDir ".")
         $(mkRelFile "test028.juvix")
+        Nothing
         $(mkRelFile "out/test028.out"),
       posTest
         "Test029: Ackermann function"
@@ -236,6 +263,7 @@ tests =
         True
         $(mkRelDir ".")
         $(mkRelFile "test029.juvix")
+        Nothing
         $(mkRelFile "out/test029.out"),
       posTest
         "Test030: Ackermann function (higher-order definition)"
@@ -243,6 +271,7 @@ tests =
         True
         $(mkRelDir ".")
         $(mkRelFile "test030.juvix")
+        Nothing
         $(mkRelFile "out/test030.out"),
       posTest
         "Test032: Merge sort"
@@ -250,6 +279,7 @@ tests =
         False
         $(mkRelDir ".")
         $(mkRelFile "test032.juvix")
+        Nothing
         $(mkRelFile "out/test032.out"),
       posTest
         "Test033: Eta-expansion of builtins and constructors"
@@ -257,6 +287,7 @@ tests =
         False
         $(mkRelDir ".")
         $(mkRelFile "test033.juvix")
+        Nothing
         $(mkRelFile "out/test033.out"),
       posTest
         "Test034: Recursive let"
@@ -264,6 +295,7 @@ tests =
         False
         $(mkRelDir ".")
         $(mkRelFile "test034.juvix")
+        Nothing
         $(mkRelFile "out/test034.out"),
       posTest
         "Test035: Pattern matching"
@@ -271,6 +303,7 @@ tests =
         False
         $(mkRelDir ".")
         $(mkRelFile "test035.juvix")
+        Nothing
         $(mkRelFile "out/test035.out"),
       posTest
         "Test036: Eta-expansion"
@@ -278,6 +311,7 @@ tests =
         False
         $(mkRelDir ".")
         $(mkRelFile "test036.juvix")
+        Nothing
         $(mkRelFile "out/test036.out"),
       posTest
         "Test037: Applications with lets and cases in function position"
@@ -285,6 +319,7 @@ tests =
         True
         $(mkRelDir ".")
         $(mkRelFile "test037.juvix")
+        Nothing
         $(mkRelFile "out/test037.out"),
       posTest
         "Test038: Simple case expression"
@@ -292,6 +327,7 @@ tests =
         True
         $(mkRelDir ".")
         $(mkRelFile "test038.juvix")
+        Nothing
         $(mkRelFile "out/test038.out"),
       posTest
         "Test039: Mutually recursive let expression"
@@ -299,6 +335,7 @@ tests =
         True
         $(mkRelDir ".")
         $(mkRelFile "test039.juvix")
+        Nothing
         $(mkRelFile "out/test039.out"),
       posTest
         "Test040: Pattern matching nullary constructor"
@@ -306,6 +343,7 @@ tests =
         True
         $(mkRelDir ".")
         $(mkRelFile "test040.juvix")
+        Nothing
         $(mkRelFile "out/test040.out"),
       posTest
         "Test045: Implicit builtin bool"
@@ -313,6 +351,7 @@ tests =
         True
         $(mkRelDir ".")
         $(mkRelFile "test045.juvix")
+        Nothing
         $(mkRelFile "out/test045.out"),
       posTest
         "Test046: Polymorphic type arguments"
@@ -320,6 +359,7 @@ tests =
         True
         $(mkRelDir ".")
         $(mkRelFile "test046.juvix")
+        Nothing
         $(mkRelFile "out/test046.out"),
       posTest
         "Test047: Local Modules"
@@ -327,6 +367,7 @@ tests =
         True
         $(mkRelDir ".")
         $(mkRelFile "test047.juvix")
+        Nothing
         $(mkRelFile "out/test047.out"),
       posTest
         "Test050: Pattern matching with integers"
@@ -334,6 +375,7 @@ tests =
         False
         $(mkRelDir ".")
         $(mkRelFile "test050.juvix")
+        Nothing
         $(mkRelFile "out/test050.out"),
       posTest
         "Test053: Inlining"
@@ -341,6 +383,7 @@ tests =
         True
         $(mkRelDir ".")
         $(mkRelFile "test053.juvix")
+        Nothing
         $(mkRelFile "out/test053.out"),
       posTest
         "Test054: Iterators"
@@ -348,6 +391,7 @@ tests =
         True
         $(mkRelDir ".")
         $(mkRelFile "test054.juvix")
+        Nothing
         $(mkRelFile "out/test054.out"),
       posTest
         "Test056: Argument specialization"
@@ -355,6 +399,7 @@ tests =
         True
         $(mkRelDir ".")
         $(mkRelFile "test056.juvix")
+        Nothing
         $(mkRelFile "out/test056.out"),
       posTest
         "Test057: Case folding"
@@ -362,6 +407,7 @@ tests =
         True
         $(mkRelDir ".")
         $(mkRelFile "test057.juvix")
+        Nothing
         $(mkRelFile "out/test057.out"),
       posTest
         "Test058: Ranges"
@@ -369,6 +415,7 @@ tests =
         False
         $(mkRelDir ".")
         $(mkRelFile "test058.juvix")
+        Nothing
         $(mkRelFile "out/test058.out"),
       posTest
         "Test059: Builtin list"
@@ -376,6 +423,7 @@ tests =
         True
         $(mkRelDir ".")
         $(mkRelFile "test059.juvix")
+        Nothing
         $(mkRelFile "out/test059.out"),
       posTest
         "Test060: Record update"
@@ -383,6 +431,7 @@ tests =
         True
         $(mkRelDir ".")
         $(mkRelFile "test060.juvix")
+        Nothing
         $(mkRelFile "out/test060.out"),
       posTest
         "Test062: Overapplication"
@@ -390,6 +439,7 @@ tests =
         True
         $(mkRelDir ".")
         $(mkRelFile "test062.juvix")
+        Nothing
         $(mkRelFile "out/test062.out"),
       posTest
         "Test064: Constant folding"
@@ -397,6 +447,7 @@ tests =
         True
         $(mkRelDir ".")
         $(mkRelFile "test064.juvix")
+        Nothing
         $(mkRelFile "out/test064.out"),
       posTest
         "Test065: Arithmetic simplification"
@@ -404,6 +455,7 @@ tests =
         True
         $(mkRelDir ".")
         $(mkRelFile "test065.juvix")
+        Nothing
         $(mkRelFile "out/test065.out"),
       posTest
         "Test066: Import function with a function call in default argument"
@@ -411,6 +463,7 @@ tests =
         True
         $(mkRelDir "test066")
         $(mkRelFile "M.juvix")
+        Nothing
         $(mkRelFile "out/test066.out"),
       posTest
         "Test067: Dependent default values inserted during translation FromConcrete"
@@ -418,6 +471,7 @@ tests =
         True
         $(mkRelDir ".")
         $(mkRelFile "test067.juvix")
+        Nothing
         $(mkRelFile "out/test067.out"),
       posTest
         "Test068: Dependent default values inserted in the arity checker"
@@ -425,6 +479,7 @@ tests =
         True
         $(mkRelDir ".")
         $(mkRelFile "test068.juvix")
+        Nothing
         $(mkRelFile "out/test068.out"),
       posTest
         "Test069: Dependent default values for Ord trait"
@@ -432,6 +487,7 @@ tests =
         False
         $(mkRelDir ".")
         $(mkRelFile "test069.juvix")
+        Nothing
         $(mkRelFile "out/test069.out"),
       posTest
         "Test070: Nested default values and named arguments"
@@ -439,6 +495,7 @@ tests =
         True
         $(mkRelDir ".")
         $(mkRelFile "test070.juvix")
+        Nothing
         $(mkRelFile "out/test070.out"),
       posTest
         "Test071: Named application (Ord instance with default cmp)"
@@ -446,6 +503,7 @@ tests =
         False
         $(mkRelDir ".")
         $(mkRelFile "test071.juvix")
+        Nothing
         $(mkRelFile "out/test071.out"),
       posTest
         "Test072: Monad transformers (ReaderT + StateT + Identity)"
@@ -453,6 +511,7 @@ tests =
         True
         $(mkRelDir "test072")
         $(mkRelFile "ReaderT.juvix")
+        Nothing
         $(mkRelFile "out/test072.out"),
       posTest
         "Test073: Import and use a syntax alias"
@@ -460,6 +519,7 @@ tests =
         True
         $(mkRelDir "test073")
         $(mkRelFile "test073.juvix")
+        Nothing
         $(mkRelFile "out/test073.out"),
       posTest
         "Test074: Fields"
@@ -467,6 +527,7 @@ tests =
         True
         $(mkRelDir ".")
         $(mkRelFile "test074.juvix")
+        Nothing
         $(mkRelFile "out/test074.out"),
       posTest
         "Test075: Poseidon hash"
@@ -474,6 +535,7 @@ tests =
         True
         $(mkRelDir ".")
         $(mkRelFile "test075.juvix")
+        Nothing
         $(mkRelFile "out/test075.out"),
       posTest
         "Test076: Elliptic Curve builtin"
@@ -481,5 +543,14 @@ tests =
         True
         $(mkRelDir ".")
         $(mkRelFile "test076.juvix")
-        $(mkRelFile "out/test076.out")
+        Nothing
+        $(mkRelFile "out/test076.out"),
+      posTest
+        "Test077: Input and output"
+        False
+        True
+        $(mkRelDir ".")
+        $(mkRelFile "test077.juvix")
+        (Just $(mkRelFile "in/test077.json"))
+        $(mkRelFile "out/test077.out")
     ]

@@ -1,0 +1,21 @@
+{
+  "input": {
+    "fld0": 7,
+    "fld1": 9,
+    "eph": true
+  },
+  "path": [
+    {
+      "fst": 1,
+      "snd": true
+    },
+    {
+      "fst": 2,
+      "snd": false
+    },
+    {
+      "fst": 3,
+      "snd": true
+    }
+  ]
+}

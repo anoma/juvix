@@ -29,35 +29,38 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
   registerLabelName startSym startName
   registerLabelAddress startSym startAddr
   let mainSym = fromJust $ tab ^. Reg.infoMainFunction
-      mainInfo = fromJust (HashMap.lookup mainSym (tab ^. Reg.infoFunctions))
+      mainInfo = Reg.lookupFunInfo tab mainSym
       mainName = mainInfo ^. Reg.functionName
+      mainResultType = Reg.typeTarget (mainInfo ^. Reg.functionType)
       mainArgs = getInputArgs (mainInfo ^. Reg.functionArgsNum) (mainInfo ^. Reg.functionArgNames)
       bnum = toOffset builtinsNum
       callStartInstr = mkCallRel (Lab startLab)
       initBuiltinsInstr = mkAssignAp (Binop $ BinopValue FieldAdd (MemRef Fp (-2)) (Imm 1))
       callMainInstr = mkCallRel (Lab $ LabelRef mainSym (Just mainName))
       jmpEndInstr = mkJumpRel (Val $ Lab endLab)
-      margs = concat $ reverse $ map mkLoadInputArg mainArgs
+      loadInputArgsInstrs = concat $ reverse $ map mkLoadInputArg mainArgs
       -- [ap] = [[ap - 2 - k] + k]; ap++
       bltsRet = map (\k -> mkAssignAp (Load $ LoadValue (MemRef Ap (-2 - k)) k)) [0 .. bnum - 1]
-      resRetInstr = mkAssignAp (Val $ Ref $ MemRef Ap (-bnum - 1))
+      resRetInstrs = mkResultInstrs bnum mainResultType
       pinstrs =
         callStartInstr
           : jmpEndInstr
           : Label startLab
           : initBuiltinsInstr
-          : margs
+          : loadInputArgsInstrs
           ++ callMainInstr
           : bltsRet
-          ++ [resRetInstr, Return]
+          ++ resRetInstrs
+          ++ [Return]
   (blts, binstrs) <- addStdlibBuiltins (length pinstrs)
   let cinstrs = concatMap (mkFunCall . fst) $ sortOn snd $ HashMap.toList (info ^. Reg.extraInfoFUIDs)
   (addr, instrs) <- second (concat . reverse) <$> foldM (goFun blts endLab) (length pinstrs + length binstrs + length cinstrs, []) (tab ^. Reg.infoFunctions)
   eassert (addr == length instrs + length cinstrs + length binstrs + length pinstrs)
   registerLabelName endSym endName
   registerLabelAddress endSym addr
-  return $
-    ( allElements,
+  return
+    ( length resRetInstrs,
+      allElements,
       pinstrs
         ++ binstrs
         ++ cinstrs
@@ -65,8 +68,32 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
         ++ [Label endLab]
     )
   where
-    mkResult :: (LabelInfo, ([Builtin], Code)) -> Result
-    mkResult (labi, (blts, code)) = Result labi code blts
+    mkResult :: (LabelInfo, (Int, [Builtin], Code)) -> Result
+    mkResult (labi, (outSize, blts, code)) =
+      Result
+        { _resultLabelInfo = labi,
+          _resultCode = code,
+          _resultBuiltins = blts,
+          _resultOutputSize = outSize
+        }
+
+    mkResultInstrs :: Offset -> Reg.Type -> [Instruction]
+    mkResultInstrs off = \case
+      Reg.TyInductive Reg.TypeInductive {..} -> goRecord _typeInductiveSymbol
+      Reg.TyConstr Reg.TypeConstr {..} -> goRecord _typeConstrInductive
+      _ -> [mkAssignAp (Val $ Ref $ MemRef Ap (-off - 1))]
+      where
+        goRecord :: Symbol -> [Instruction]
+        goRecord sym = case indInfo ^. Reg.inductiveConstructors of
+          [tag] -> case Reg.lookupConstrInfo tab tag of
+            Reg.ConstructorInfo {..} ->
+              map mkOutInstr [1 .. toOffset _constructorArgsNum]
+              where
+                mkOutInstr :: Offset -> Instruction
+                mkOutInstr i = mkAssignAp (Load $ LoadValue (MemRef Ap (-off - i)) i)
+          _ -> impossible
+          where
+            indInfo = Reg.lookupInductiveInfo tab sym
 
     mkLoadInputArg :: Text -> [Instruction]
     mkLoadInputArg arg = [Hint (HintInput arg), mkAssignAp (Val $ Ref $ MemRef Ap 0)]
@@ -87,6 +114,10 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
         Nop
       ]
 
+    -- To make it convenient with relative jumps, Cairo constructor tag is `2 *
+    -- tag + 1` where `tag` is the 0-based constructor number within the
+    -- inductive type. Make sure this corresponds with the relative jump code in
+    -- `goCase`.
     getTagId :: Tag -> Int
     getTagId tag =
       1 + 2 * fromJust (HashMap.lookup tag (info ^. Reg.extraInfoCIDs))
@@ -170,7 +201,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
 
         goCallBlock :: Bool -> Maybe Reg.VarRef -> HashSet Reg.VarRef -> Sem r ()
         goCallBlock updatedBuiltins outVar liveVars = do
-          let liveVars' = toList (maybe liveVars (flip HashSet.delete liveVars) outVar)
+          let liveVars' = toList (maybe liveVars (`HashSet.delete` liveVars) outVar)
               n = length liveVars'
               bltOff =
                 if
@@ -578,7 +609,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
           syms <- replicateM (length tags) freshSymbol
           symEnd <- freshSymbol
           let symMap = HashMap.fromList $ zip tags syms
-              labs = map (flip LabelRef Nothing) syms
+              labs = map (`LabelRef` Nothing) syms
               labEnd = LabelRef symEnd Nothing
               jmps = map (mkJumpRel . Val . Lab) labs
               -- we need the Nop instructions to ensure that the relative jump

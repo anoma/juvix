@@ -18,14 +18,23 @@ casmRunVM' dirPath outputFile inputFile = do
   let args = maybe [] (\f -> ["--program_input", toFilePath f]) inputFile
   readProcessCwd (toFilePath dirPath) "run_cairo_vm.sh" (toFilePath outputFile : args) ""
 
-casmRunVM :: LabelInfo -> Code -> [Builtin] -> Maybe (Path Abs File) -> Path Abs File -> (String -> IO ()) -> Assertion
-casmRunVM labi instrs blts inputFile expectedFile step = do
+casmRunVM :: LabelInfo -> Code -> [Builtin] -> Int -> Maybe (Path Abs File) -> Path Abs File -> (String -> IO ()) -> Assertion
+casmRunVM labi instrs blts outputSize inputFile expectedFile step = do
   step "Check run_cairo_vm.sh is on path"
   assertCmdExists $(mkRelFile "run_cairo_vm.sh")
   withTempDir'
     ( \dirPath -> do
         step "Serialize to Cairo bytecode"
-        let res = run $ casmToCairo (Casm.Result labi instrs blts)
+        let res =
+              run $
+                casmToCairo
+                  ( Casm.Result
+                      { _resultLabelInfo = labi,
+                        _resultCode = instrs,
+                        _resultBuiltins = blts,
+                        _resultOutputSize = outputSize
+                      }
+                  )
             outputFile = dirPath <//> $(mkRelFile "out.json")
         encodeFile (toFilePath outputFile) res
         step "Run Cairo VM"
@@ -56,8 +65,8 @@ casmInterpret labi instrs inputFile expectedFile step =
             assertEqDiffText ("Check: RUN output = " <> toFilePath expectedFile) actualOutput expected
     )
 
-casmRunAssertion' :: Bool -> Bool -> LabelInfo -> Code -> [Builtin] -> Maybe (Path Abs File) -> Path Abs File -> (String -> IO ()) -> Assertion
-casmRunAssertion' bInterp bRunVM labi instrs blts inputFile expectedFile step =
+casmRunAssertion' :: Bool -> Bool -> LabelInfo -> Code -> [Builtin] -> Int -> Maybe (Path Abs File) -> Path Abs File -> (String -> IO ()) -> Assertion
+casmRunAssertion' bInterp bRunVM labi instrs blts outputSize inputFile expectedFile step =
   case validate labi instrs of
     Left err -> do
       assertFailure (prettyString err)
@@ -65,7 +74,7 @@ casmRunAssertion' bInterp bRunVM labi instrs blts inputFile expectedFile step =
       when bInterp $
         casmInterpret labi instrs inputFile expectedFile step
       when bRunVM $
-        casmRunVM labi instrs blts inputFile expectedFile step
+        casmRunVM labi instrs blts outputSize inputFile expectedFile step
 
 casmRunAssertion :: Bool -> Bool -> Path Abs File -> Maybe (Path Abs File) -> Path Abs File -> (String -> IO ()) -> Assertion
 casmRunAssertion bInterp bRunVM mainFile inputFile expectedFile step = do
@@ -73,7 +82,7 @@ casmRunAssertion bInterp bRunVM mainFile inputFile expectedFile step = do
   r <- parseFile mainFile
   case r of
     Left err -> assertFailure (prettyString err)
-    Right (labi, instrs) -> casmRunAssertion' bInterp bRunVM labi instrs [] inputFile expectedFile step
+    Right (labi, instrs) -> casmRunAssertion' bInterp bRunVM labi instrs [] 1 inputFile expectedFile step
 
 casmRunErrorAssertion :: Path Abs File -> (String -> IO ()) -> Assertion
 casmRunErrorAssertion mainFile step = do

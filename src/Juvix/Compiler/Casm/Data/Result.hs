@@ -7,7 +7,8 @@ import Juvix.Compiler.Casm.Language
 data Result = Result
   { _resultLabelInfo :: LabelInfo,
     _resultCode :: [Instruction],
-    _resultBuiltins :: [Builtin]
+    _resultBuiltins :: [Builtin],
+    _resultOutputSize :: Int
   }
 
 makeLenses ''Result

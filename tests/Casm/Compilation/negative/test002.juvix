@@ -1,0 +1,5 @@
+module test002;
+
+import Stdlib.Prelude open;
+
+main (x : Field) : List Field := [x + 1];
