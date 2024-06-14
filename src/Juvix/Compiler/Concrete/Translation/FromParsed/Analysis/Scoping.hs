@@ -466,7 +466,7 @@ checkImport import_@Import {..} = do
   registerName importName
   whenJust synonymName registerName
   registerScoperModules cmodule
-  importOpen' <- mapM (checkImportOpenParams cmodule _importPublic) _importOpen
+  importOpen' <- mapM (checkImportOpenParams cmodule) _importOpen
   return
     Import
       { _importModulePath = sname,
@@ -1670,18 +1670,16 @@ checkImportOpenParams ::
   forall r.
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen] r) =>
   ScopedModule ->
-  PublicAnn ->
   OpenModuleParams 'Parsed ->
   Sem r (OpenModuleParams 'Scoped)
-checkImportOpenParams m pub p =
-  (^. openModuleParams)
-    <$> checkOpenModuleHelper
-      (Just m)
-      OpenModule
-        { _openModuleParams = p,
-          _openModuleName = m ^. scopedModuleName . S.nameConcrete,
-          _openModulePublic = pub
-        }
+checkImportOpenParams m p = do
+  let open =
+        OpenModule
+          { _openModuleParams = p,
+            _openModuleName = m ^. scopedModuleName . S.nameConcrete,
+            _openModulePublic = p ^. openPublic
+          }
+  (^. openModuleParams) <$> checkOpenModuleHelper (Just m) open
 
 checkOpenModule ::
   forall r.

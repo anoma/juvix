@@ -1162,8 +1162,10 @@ instance (SingI s) => PrettyPrint (Import s) where
       <+> ppModulePathType (i ^. importModulePath)
       <+?> ppAlias
       <+?> open'
-      <+?> fmap ppCode (i ^? importPublic . _Public . _Just)
     where
+      -- TODO add public
+      -- <+?> fmap ppCode (i ^? importPublic . _Public . _Just)
+
       ppAlias :: Maybe (Sem r ())
       ppAlias = case i ^. importAsName of
         Nothing -> Nothing
@@ -1178,8 +1180,8 @@ ppOpenModuleHelper modName OpenModuleParams {..} = do
     <+?> name'
     <+?> usingHiding'
 
-instance (SingI s) => PrettyPrint (OpenModule s) where
-  ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => OpenModule s -> Sem r ()
+instance (SingI s, SingI short) => PrettyPrint (OpenModule s short) where
+  ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => OpenModule s short -> Sem r ()
   ppCode OpenModule {..} = ppOpenModuleHelper (Just _openModuleName) _openModuleParams
 
 ppCodeAtom :: (HasAtomicity c, PrettyPrint c) => PrettyPrinting c

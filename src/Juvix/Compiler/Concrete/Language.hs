@@ -21,6 +21,7 @@ where
 import Data.Kind qualified as GHC
 import Juvix.Compiler.Backend.Markdown.Data.Types (Mk)
 import Juvix.Compiler.Concrete.Data.Builtins
+import Juvix.Compiler.Concrete.Data.IsOpenShort
 import Juvix.Compiler.Concrete.Data.Literal
 import Juvix.Compiler.Concrete.Data.ModuleIsTop
 import Juvix.Compiler.Concrete.Data.Name
@@ -109,6 +110,13 @@ type family ModulePathType s t = res | res -> t s where
   ModulePathType 'Scoped 'ModuleTop = S.TopModulePath
   ModulePathType 'Parsed 'ModuleLocal = Symbol
   ModulePathType 'Scoped 'ModuleLocal = S.Symbol
+
+type OpenModuleNameType :: Stage -> IsOpenShort -> GHC.Type
+type family OpenModuleNameType s short = res | res -> short where
+  OpenModuleNameType 'Parsed 'OpenFull = Name
+  OpenModuleNameType 'Scoped 'OpenFull = S.Name
+  OpenModuleNameType 'Parsed 'OpenShort = ()
+  OpenModuleNameType 'Scoped 'OpenShort = ()
 
 type ModuleNameType :: Stage -> GHC.Type
 type family ModuleNameType s = res | res -> s where
@@ -254,7 +262,7 @@ data Definition (s :: Stage)
 data NonDefinition (s :: Stage)
   = NonDefinitionImport (Import s)
   | NonDefinitionModule (Module s 'ModuleLocal)
-  | NonDefinitionOpenModule (OpenModule s)
+  | NonDefinitionOpenModule (OpenModule s 'OpenFull)
 
 data Statement (s :: Stage)
   = StatementSyntax (SyntaxDef s)
@@ -262,7 +270,7 @@ data Statement (s :: Stage)
   | StatementImport (Import s)
   | StatementInductive (InductiveDef s)
   | StatementModule (Module s 'ModuleLocal)
-  | StatementOpenModule (OpenModule s)
+  | StatementOpenModule (OpenModule s 'OpenFull)
   | StatementAxiom (AxiomDef s)
   | StatementProjectionDef (ProjectionDef s)
 
@@ -301,8 +309,7 @@ data Import (s :: Stage) = Import
   { _importKw :: KeywordRef,
     _importModulePath :: ModulePathType s 'ModuleTop,
     _importAsName :: Maybe (ModulePathType s 'ModuleTop),
-    _importOpen :: Maybe (OpenModuleParams s),
-    _importPublic :: PublicAnn
+    _importOpen :: Maybe (OpenModule s 'OpenShort)
   }
 
 deriving stock instance Show (Import 'Parsed)
@@ -1353,36 +1360,61 @@ getNameRefId = case sing :: S.SIsConcrete c of
   S.SConcrete -> (^. S.nameId)
   S.SNotConcrete -> (^. S.nameId)
 
-data OpenModule (s :: Stage) = OpenModule
-  { _openModuleName :: ModuleNameType s,
-    _openModuleParams :: OpenModuleParams s,
-    _openModulePublic :: PublicAnn
+data OpenModule (s :: Stage) (short :: IsOpenShort) = OpenModule
+  { _openModuleKw :: KeywordRef,
+    _openModuleName :: OpenModuleNameType s short,
+    _openModuleParams :: OpenModuleParams s
   }
   deriving stock (Generic)
 
-instance Serialize (OpenModule 'Scoped)
+instance Serialize (OpenModule 'Scoped 'OpenFull)
 
-instance NFData (OpenModule 'Scoped)
+instance Serialize (OpenModule 'Scoped 'OpenShort)
 
-instance Serialize (OpenModule 'Parsed)
+instance NFData (OpenModule 'Scoped 'OpenFull)
 
-instance NFData (OpenModule 'Parsed)
+instance NFData (OpenModule 'Scoped 'OpenShort)
 
-deriving stock instance Show (OpenModule 'Parsed)
+instance Serialize (OpenModule 'Parsed 'OpenFull)
 
-deriving stock instance Show (OpenModule 'Scoped)
+instance Serialize (OpenModule 'Parsed 'OpenShort)
 
-deriving stock instance Eq (OpenModule 'Parsed)
+instance NFData (OpenModule 'Parsed 'OpenShort)
 
-deriving stock instance Eq (OpenModule 'Scoped)
+instance NFData (OpenModule 'Parsed 'OpenFull)
 
-deriving stock instance Ord (OpenModule 'Parsed)
+deriving stock instance Show (OpenModule 'Parsed 'OpenShort)
 
-deriving stock instance Ord (OpenModule 'Scoped)
+deriving stock instance Show (OpenModule 'Parsed 'OpenFull)
+
+deriving stock instance Show (OpenModule 'Scoped 'OpenShort)
+
+deriving stock instance Show (OpenModule 'Scoped 'OpenFull)
+
+deriving stock instance Eq (OpenModule 'Parsed 'OpenShort)
+
+deriving stock instance Eq (OpenModule 'Parsed 'OpenFull)
+
+deriving stock instance Eq (OpenModule 'Scoped 'OpenShort)
+
+deriving stock instance Eq (OpenModule 'Scoped 'OpenFull)
+
+deriving stock instance Ord (OpenModule 'Parsed 'OpenShort)
+
+deriving stock instance Ord (OpenModule 'Parsed 'OpenFull)
+
+deriving stock instance Ord (OpenModule 'Scoped 'OpenShort)
+
+deriving stock instance Ord (OpenModule 'Scoped 'OpenFull)
+
+data OpenModuleShort (s :: Stage) = OpenModuleShort
+  { _openModuleShortKw :: KeywordRef,
+    _openModuleShortParams :: OpenModuleParams (s :: Stage)
+  }
 
 data OpenModuleParams (s :: Stage) = OpenModuleParams
-  { _openModuleKw :: KeywordRef,
-    _openUsingHiding :: Maybe (UsingHiding s)
+  { _openUsingHiding :: Maybe (UsingHiding s),
+    _openModulePublic :: PublicAnn
   }
   deriving stock (Generic)
 
@@ -1645,7 +1677,7 @@ instance NFData PostfixApplication
 data LetStatement (s :: Stage)
   = LetFunctionDef (FunctionDef s)
   | LetAliasDef (AliasDef s)
-  | LetOpen (OpenModule s)
+  | LetOpen (OpenModule s 'OpenFull)
   deriving stock (Generic)
 
 instance Serialize (LetStatement 'Scoped)
@@ -2509,6 +2541,7 @@ makeLenses ''AxiomDef
 makeLenses ''InductiveParameters
 makeLenses ''InductiveParametersRhs
 makeLenses ''OpenModule
+makeLenses ''OpenModuleShort
 makeLenses ''OpenModuleParams
 makeLenses ''PatternApp
 makeLenses ''PatternInfixApp
@@ -2665,10 +2698,21 @@ instance HasLoc (InductiveDef s) where
 instance (SingI s) => HasLoc (AxiomDef s) where
   getLoc m = getLoc (m ^. axiomKw) <> getLocExpressionType (m ^. axiomType)
 
-instance HasLoc (OpenModule 'Scoped) where
+getLocPublicAnn :: PublicAnn -> Maybe Interval
+getLocPublicAnn p = getLoc <$> p ^? _Public . _Just
+
+getLocOpenModuleParams :: OpenModuleParams s -> Maybe Interval
+getLocOpenModuleParams OpenModuleParams {..} =
+  fmap getLoc _openUsingHiding ?<>? getLocPublicAnn _openModulePublic
+
+instance HasLoc (OpenModuleShort s) where
+  getLoc OpenModuleShort {..} =
+    getLoc _openModuleShortKw <>? getLocOpenModuleParams _openModuleShortParams
+
+instance HasLoc (OpenModule s short) where
   getLoc OpenModule {..} =
-    getLoc (_openModuleParams ^. openModuleKw)
-      <>? fmap getLoc (_openModulePublic ^? _Public . _Just)
+    getLoc _openModuleKw
+      <>? fmap getLoc (_openModuleParams ^? openModulePublic . _Public . _Just)
 
 instance HasLoc (ProjectionDef s) where
   getLoc = getLoc . (^. projectionConstructor)
@@ -2816,15 +2860,15 @@ instance HasLoc (UsingHiding s) where
     Using u -> getLoc u
     Hiding u -> getLoc u
 
-instance HasLoc (OpenModuleParams s) where
-  getLoc OpenModuleParams {..} = getLoc _openModuleKw <>? (getLoc <$> _openUsingHiding)
-
 instance (SingI s) => HasLoc (Import s) where
   getLoc Import {..} =
     let sLoc = case sing :: SStage s of
           SParsed -> getLoc _importKw <> getLoc _importModulePath <>? (getLoc <$> _importOpen)
           SScoped -> getLoc _importKw <> getLoc _importModulePath <>? (getLoc <$> _importOpen)
-     in sLoc <>? fmap getLoc (_importPublic ^? _Public . _Just)
+     in sLoc
+
+-- TODO add public
+-- <>? fmap getLoc (_importPublic ^? _Public . _Just)
 
 instance (SingI s, SingI t) => HasLoc (Module s t) where
   getLoc m = case sing :: SStage s of

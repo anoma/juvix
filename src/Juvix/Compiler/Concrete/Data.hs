@@ -12,6 +12,7 @@ module Juvix.Compiler.Concrete.Data
     module Juvix.Compiler.Concrete.Data.VisibilityAnn,
     module Juvix.Compiler.Concrete.Data.Literal,
     module Juvix.Compiler.Concrete.Data.NameRef,
+    module Juvix.Compiler.Concrete.Data.IsOpenShort,
     module Juvix.Data.NameId,
   )
 where
@@ -19,6 +20,7 @@ where
 import Juvix.Compiler.Concrete.Data.Builtins
 import Juvix.Compiler.Concrete.Data.Highlight
 import Juvix.Compiler.Concrete.Data.InfoTableBuilder
+import Juvix.Compiler.Concrete.Data.IsOpenShort
 import Juvix.Compiler.Concrete.Data.Literal
 import Juvix.Compiler.Concrete.Data.ModuleIsTop
 import Juvix.Compiler.Concrete.Data.Name
