@@ -26,6 +26,9 @@ testDescr PosTest {..} =
 filterTests :: [String] -> [PosTest] -> [PosTest]
 filterTests incl = filter (\PosTest {..} -> _name `elem` incl)
 
+filterOutTests :: [String] -> [PosTest] -> [PosTest]
+filterOutTests excl = filter (\PosTest {..} -> _name `notElem` excl)
+
 allTests :: TestTree
 allTests =
   testGroup
@@ -223,5 +226,10 @@ tests =
       "Test038: Apply & argsnum"
       $(mkRelDir ".")
       $(mkRelFile "test038.jvr")
-      $(mkRelFile "out/test038.out")
+      $(mkRelFile "out/test038.out"),
+    PosTest
+      "Test039: Copy & constant propagation"
+      $(mkRelDir ".")
+      $(mkRelFile "test039.jvr")
+      $(mkRelFile "out/test039.out")
   ]

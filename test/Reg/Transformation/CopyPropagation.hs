@@ -2,7 +2,6 @@ module Reg.Transformation.CopyPropagation where
 
 import Base
 import Juvix.Compiler.Reg.Transformation
-import Juvix.Compiler.Reg.Transformation.CopyPropagation
 import Reg.Parse.Positive qualified as Parse
 import Reg.Transformation.Base
 
