@@ -9,6 +9,7 @@ data TransformationId
   | Cleanup
   | SSA
   | InitBranchVars
+  | CopyPropagation
   deriving stock (Data, Bounded, Enum, Show)
 
 data PipelineId
@@ -35,6 +36,7 @@ instance TransformationId' TransformationId where
     Cleanup -> strCleanup
     SSA -> strSSA
     InitBranchVars -> strInitBranchVars
+    CopyPropagation -> strCopyPropagation
 
 instance PipelineId' TransformationId PipelineId where
   pipelineText :: PipelineId -> Text

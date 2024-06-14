@@ -22,3 +22,6 @@ strSSA = "ssa"
 
 strInitBranchVars :: Text
 strInitBranchVars = "init-branch-vars"
+
+strCopyPropagation :: Text
+strCopyPropagation = "copy-propagation"

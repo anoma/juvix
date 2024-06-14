@@ -8,6 +8,7 @@ where
 import Juvix.Compiler.Reg.Data.TransformationId
 import Juvix.Compiler.Reg.Transformation.Base
 import Juvix.Compiler.Reg.Transformation.Cleanup
+import Juvix.Compiler.Reg.Transformation.CopyPropagation
 import Juvix.Compiler.Reg.Transformation.IdentityTrans
 import Juvix.Compiler.Reg.Transformation.InitBranchVars
 import Juvix.Compiler.Reg.Transformation.SSA
@@ -21,3 +22,4 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
       Cleanup -> return . cleanup
       SSA -> return . computeSSA
       InitBranchVars -> return . initBranchVars
+      CopyPropagation -> return . copyPropagate
