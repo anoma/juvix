@@ -38,7 +38,7 @@ copyPropagateFunction =
       VarGroupLocal -> fromMaybe vref $ HashMap.lookup vref mpv
 
     combine :: Instruction -> NonEmpty VarMap -> (VarMap, Instruction)
-    combine instr mpvs = (mpv, instr)
+    combine instr mpvs = (mpv, instr')
       where
         mpv' :| mpvs' = fmap HashMap.toList mpvs
         mpv =
@@ -46,6 +46,11 @@ copyPropagateFunction =
             . HashSet.toList
             . foldr (HashSet.intersection . HashSet.fromList) (HashSet.fromList mpv')
             $ mpvs'
+
+        instr' = case instr of
+          Branch x -> Branch $ over instrBranchOutVar (fmap (adjustVarRef mpv)) x
+          Case x -> Case $ over instrCaseOutVar (fmap (adjustVarRef mpv)) x
+          _ -> impossible
 
 copyPropagate :: InfoTable -> InfoTable
 copyPropagate = mapT (const copyPropagateFunction)

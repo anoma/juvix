@@ -1,4 +1,4 @@
--- Copy & constant propagation
+-- Copy & constant propagation with branches
 
 type either {
     left : integer -> either;
@@ -26,27 +26,37 @@ function main() : * {
     -- tmp[2] = 53
 
     tmp[1] = eq tmp[2] 54;
-    tmp[0] = 4;
     tmp[3] = 3;
-    tmp[4] = tmp[0];
     tmp[5] = 4;
     tmp[6] = tmp[5];
-    br tmp[1] {
+    br tmp[1], out: tmp[3] {
         true: {
-            tmp[4] = 7;
+            nop;
         };
         false: {
             tmp[3] = tmp[6];
         };
     };
-    tmp[2] = add tmp[2] tmp[4];
     tmp[2] = add tmp[2] tmp[3];
-    -- tmp[2] = 61
+    -- tmp[2] = 57
+
+    tmp[0] = 1;
+    br tmp[1], out: tmp[3] {
+        true: {
+            tmp[0] = 4;
+            tmp[3] = tmp[0];
+        };
+        false: {
+            tmp[3] = tmp[0];
+        };
+    };
+    tmp[2] = add tmp[2] tmp[3];
+    -- tmp[2] = 58
 
     tmp[0] = alloc left (3);
     tmp[1] = 17;
     tmp[3] = tmp[1];
-    case[either] tmp[0] {
+    case[either] tmp[0], out: tmp[3] {
         left: {
             tmp[4] = tmp[0].left[0];
             tmp[1] = tmp[4];
@@ -57,19 +67,20 @@ function main() : * {
         };
     };
     tmp[2] = add tmp[2] tmp[3];
-    -- tmp[2] = 64
+    -- tmp[2] = 61
 
     tmp[0] = alloc right (true);
     tmp[1] = 17;
     tmp[3] = tmp[1];
-    case[either] tmp[0] {
+    case[either] tmp[0], out: tmp[3] {
         left: {
-            tmp[1] = tmp[0].left[0];
+            nop;
         };
         right: {
-            br tmp[0].right[0] {
+            br tmp[0].right[0], out: tmp[3] {
                 true: {
                     tmp[1] = add tmp[3] 1;
+                    tmp[3] = tmp[1];
                 };
                 false: {
                     nop;
@@ -77,8 +88,8 @@ function main() : * {
             };
         };
     };
-    tmp[2] = add tmp[2] tmp[1];
-    -- tmp[2] = 82
+    tmp[2] = add tmp[2] tmp[3];
+    -- tmp[2] = 79
 
     ret tmp[2];
 }

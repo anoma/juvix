@@ -231,5 +231,10 @@ tests =
       "Test039: Copy & constant propagation"
       $(mkRelDir ".")
       $(mkRelFile "test039.jvr")
-      $(mkRelFile "out/test039.out")
+      $(mkRelFile "out/test039.out"),
+    PosTest
+      "Test040: Copy & constant propagation with branches"
+      $(mkRelDir ".")
+      $(mkRelFile "test040.jvr")
+      $(mkRelFile "out/test040.out")
   ]
