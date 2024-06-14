@@ -21,13 +21,13 @@ data PipelineId
 type TransformationLikeId = TransformationLikeId' TransformationId PipelineId
 
 toCTransformations :: [TransformationId]
-toCTransformations = [Cleanup]
+toCTransformations = [Cleanup, CopyPropagation]
 
 toRustTransformations :: [TransformationId]
-toRustTransformations = [Cleanup]
+toRustTransformations = [Cleanup, CopyPropagation]
 
 toCasmTransformations :: [TransformationId]
-toCasmTransformations = [Cleanup, SSA]
+toCasmTransformations = [Cleanup, CopyPropagation, SSA]
 
 instance TransformationId' TransformationId where
   transformationText :: TransformationId -> Text
