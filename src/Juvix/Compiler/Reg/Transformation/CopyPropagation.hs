@@ -30,7 +30,7 @@ copyPropagateFunction =
         mpv' = maybe mpv (filterOutVars mpv) (getResultVar instr')
 
     filterOutVars :: VarMap -> VarRef -> VarMap
-    filterOutVars mpv v = HashMap.filter (/= v) mpv
+    filterOutVars mpv v = HashMap.delete v $ HashMap.filter (/= v) mpv
 
     adjustVarRef :: VarMap -> VarRef -> VarRef
     adjustVarRef mpv vref@VarRef {..} = case _varRefGroup of
