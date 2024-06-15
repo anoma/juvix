@@ -144,7 +144,7 @@ jobs:
       - name: Install RISC0 VM
         shell: bash
         run: |
-          cargo install cargo-binstall --force
+          cargo install cargo-binstall@1.6.9 --force
           cargo binstall cargo-risczero@1.0.1 --no-confirm --force
           cargo risczero install
 
