@@ -27,7 +27,7 @@ copyPropagateFunction =
         (mpv', instr')
       where
         instr' = overValueRefs (adjustVarRef mpv) instr
-        mpv' = maybe mpv (filterOutVars mpv) (getResultVar instr')
+        mpv' = maybe mpv (filterOutVars mpv) (getResultVar instr)
 
     filterOutVars :: VarMap -> VarRef -> VarMap
     filterOutVars mpv v = HashMap.delete v $ HashMap.filter (/= v) mpv

@@ -20,6 +20,8 @@ data PipelineId
 
 type TransformationLikeId = TransformationLikeId' TransformationId PipelineId
 
+-- Note: this works only because for now we mark all variables as live. Liveness
+-- information needs to be re-computed after copy propagation.
 toCTransformations :: [TransformationId]
 toCTransformations = [Cleanup, CopyPropagation]
 
