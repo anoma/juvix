@@ -1,7 +1,6 @@
 module Juvix.Compiler.Reg.Transformation.CopyPropagation where
 
 import Data.HashMap.Strict qualified as HashMap
-import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Reg.Extra
 import Juvix.Compiler.Reg.Transformation.Base
 
@@ -40,13 +39,7 @@ copyPropagateFunction =
     combine :: Instruction -> NonEmpty VarMap -> (VarMap, Instruction)
     combine instr mpvs = (mpv, instr')
       where
-        mpv' :| mpvs' = fmap HashMap.toList mpvs
-        mpv =
-          HashMap.fromList
-            . HashSet.toList
-            . foldr (HashSet.intersection . HashSet.fromList) (HashSet.fromList mpv')
-            $ mpvs'
-
+        mpv = combineMaps mpvs
         instr' = case instr of
           Branch x -> Branch $ over instrBranchOutVar (fmap (adjustVarRef mpv)) x
           Case x -> Case $ over instrCaseOutVar (fmap (adjustVarRef mpv)) x

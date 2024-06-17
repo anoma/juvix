@@ -1,0 +1,56 @@
+module Juvix.Compiler.Reg.Transformation.ConstantPropagation where
+
+import Data.HashMap.Strict qualified as HashMap
+import Juvix.Compiler.Reg.Extra
+import Juvix.Compiler.Reg.Transformation.Base
+import Juvix.Compiler.Tree.Evaluator.Builtins
+
+type VarMap = HashMap VarRef Constant
+
+constantPropagateFunction :: Code -> Code
+constantPropagateFunction =
+  snd
+    . runIdentity
+    . recurseF
+      ForwardRecursorSig
+        { _forwardFun = \i acc -> return (go i acc),
+          _forwardCombine = combine
+        }
+      mempty
+  where
+    go :: Instruction -> VarMap -> (VarMap, Instruction)
+    go instr mpv = case instr' of
+      Assign InstrAssign {..}
+        | ValConst c <- _instrAssignValue ->
+            (HashMap.insert _instrAssignResult c mpv', instr')
+      Binop InstrBinop {..}
+        | ValConst c1 <- _instrBinopArg1,
+          ValConst c2 <- _instrBinopArg2 ->
+            case evalBinop _instrBinopOpcode (constantToValue c1) (constantToValue c2) of
+              Left _ -> (mpv', instr')
+              Right v ->
+                ( HashMap.insert _instrBinopResult c mpv',
+                  Assign
+                    InstrAssign
+                      { _instrAssignResult = _instrBinopResult,
+                        _instrAssignValue = ValConst c
+                      }
+                )
+                where
+                  c = valueToConstant v
+      _ ->
+        (mpv', instr')
+      where
+        instr' = overValueRefs' (adjustVarRef mpv) instr
+        mpv' = maybe mpv (`HashMap.delete` mpv) (getResultVar instr)
+
+    adjustVarRef :: VarMap -> VarRef -> Value
+    adjustVarRef mpv vref@VarRef {..} = case _varRefGroup of
+      VarGroupArgs -> VRef vref
+      VarGroupLocal -> maybe (VRef vref) ValConst (HashMap.lookup vref mpv)
+
+    combine :: Instruction -> NonEmpty VarMap -> (VarMap, Instruction)
+    combine instr mpvs = (combineMaps mpvs, instr)
+
+constantPropagate :: InfoTable -> InfoTable
+constantPropagate = mapT (const constantPropagateFunction)

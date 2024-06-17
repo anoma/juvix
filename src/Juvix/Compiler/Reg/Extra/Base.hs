@@ -28,8 +28,8 @@ setResultVar instr vref = case instr of
   CallClosures x -> CallClosures $ set instrCallClosuresResult vref x
   _ -> impossible
 
-overValueRefs :: (VarRef -> VarRef) -> Instruction -> Instruction
-overValueRefs f = \case
+overValueRefs' :: (VarRef -> Value) -> Instruction -> Instruction
+overValueRefs' f = \case
   Binop x -> Binop $ goBinop x
   Unop x -> Unop $ goUnop x
   Cairo x -> Cairo $ goCairo x
@@ -51,14 +51,19 @@ overValueRefs f = \case
   Nop -> Nop
   Block x -> Block $ goBlock x
   where
+    fromVarRef :: Value -> VarRef
+    fromVarRef = \case
+      VRef r -> r
+      _ -> impossible
+
     goConstrField :: ConstrField -> ConstrField
-    goConstrField = over constrFieldRef f
+    goConstrField = over constrFieldRef (fromVarRef . f)
 
     goValue :: Value -> Value
     goValue = \case
       ValConst c -> ValConst c
       CRef x -> CRef $ goConstrField x
-      VRef x -> VRef $ f x
+      VRef x -> f x
 
     goBinop :: InstrBinop -> InstrBinop
     goBinop InstrBinop {..} =
@@ -86,7 +91,7 @@ overValueRefs f = \case
     goExtendClosure :: InstrExtendClosure -> InstrExtendClosure
     goExtendClosure InstrExtendClosure {..} =
       InstrExtendClosure
-        { _instrExtendClosureValue = f _instrExtendClosureValue,
+        { _instrExtendClosureValue = fromVarRef (f _instrExtendClosureValue),
           _instrExtendClosureArgs = map goValue _instrExtendClosureArgs,
           ..
         }
@@ -94,7 +99,7 @@ overValueRefs f = \case
     goCallType :: CallType -> CallType
     goCallType = \case
       CallFun sym -> CallFun sym
-      CallClosure cl -> CallClosure (f cl)
+      CallClosure cl -> CallClosure (fromVarRef (f cl))
 
     goCall :: InstrCall -> InstrCall
     goCall InstrCall {..} =
@@ -108,7 +113,7 @@ overValueRefs f = \case
     goCallClosures InstrCallClosures {..} =
       InstrCallClosures
         { _instrCallClosuresArgs = map goValue _instrCallClosuresArgs,
-          _instrCallClosuresValue = f _instrCallClosuresValue,
+          _instrCallClosuresValue = fromVarRef (f _instrCallClosuresValue),
           ..
         }
 
@@ -123,7 +128,7 @@ overValueRefs f = \case
     goTailCallClosures :: InstrTailCallClosures -> InstrTailCallClosures
     goTailCallClosures InstrTailCallClosures {..} =
       InstrTailCallClosures
-        { _instrTailCallClosuresValue = f _instrTailCallClosuresValue,
+        { _instrTailCallClosuresValue = fromVarRef (f _instrTailCallClosuresValue),
           _instrTailCallClosuresArgs = map goValue _instrTailCallClosuresArgs,
           ..
         }
@@ -148,6 +153,9 @@ overValueRefs f = \case
 
     goBlock :: InstrBlock -> InstrBlock
     goBlock x = x
+
+overValueRefs :: (VarRef -> VarRef) -> Instruction -> Instruction
+overValueRefs f = overValueRefs' (VRef . f)
 
 updateLiveVars' :: (VarRef -> Maybe VarRef) -> Instruction -> Instruction
 updateLiveVars' f = \case
