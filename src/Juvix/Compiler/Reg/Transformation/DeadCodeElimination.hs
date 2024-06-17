@@ -21,11 +21,21 @@ removeDeadAssignments = mapT (const goFun)
     -- The accumulator contains live variables
     go :: Code -> HashSet VarRef -> [HashSet VarRef] -> (HashSet VarRef, Code)
     go is live lives = case is of
-      instr : is' -> undefined
+      instr : is' -> case getResultVar instr of
+        Just var
+          | not (HashSet.member var liveVars) ->
+              (liveVars, is')
+        _ ->
+          (liveVars', instr : is')
         where
+          liveVars' =
+            HashSet.union
+              (maybe liveVars (`HashSet.delete` liveVars) (getResultVar instr))
+              (HashSet.fromList (getValueRefs instr))
           liveVars = case instr of
             Branch {} -> ulives
             Case {} -> ulives
             _ -> live
           ulives = HashSet.unions lives
-      [] -> impossible
+      [] ->
+        (live, [])
