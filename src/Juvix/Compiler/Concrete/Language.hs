@@ -3,6 +3,7 @@
 module Juvix.Compiler.Concrete.Language
   ( module Juvix.Compiler.Concrete.Language,
     module Juvix.Data.FixityInfo,
+    module Juvix.Compiler.Concrete.Data.IsOpenShort,
     module Juvix.Data.IteratorInfo,
     module Juvix.Compiler.Concrete.Data.Name,
     module Juvix.Compiler.Concrete.Data.Stage,
@@ -112,11 +113,9 @@ type family ModulePathType s t = res | res -> t s where
   ModulePathType 'Scoped 'ModuleLocal = S.Symbol
 
 type OpenModuleNameType :: Stage -> IsOpenShort -> GHC.Type
-type family OpenModuleNameType s short = res | res -> short where
-  OpenModuleNameType 'Parsed 'OpenFull = Name
-  OpenModuleNameType 'Scoped 'OpenFull = S.Name
-  OpenModuleNameType 'Parsed 'OpenShort = ()
-  OpenModuleNameType 'Scoped 'OpenShort = ()
+type family OpenModuleNameType s short = res where
+  OpenModuleNameType s 'OpenFull = ModuleNameType s
+  OpenModuleNameType _ 'OpenShort = ()
 
 type ModuleNameType :: Stage -> GHC.Type
 type family ModuleNameType s = res | res -> s where
@@ -2699,7 +2698,7 @@ instance (SingI s) => HasLoc (AxiomDef s) where
   getLoc m = getLoc (m ^. axiomKw) <> getLocExpressionType (m ^. axiomType)
 
 getLocPublicAnn :: PublicAnn -> Maybe Interval
-getLocPublicAnn p = getLoc <$> p ^? _Public . _Just
+getLocPublicAnn p = getLoc <$> p ^? _Public
 
 getLocOpenModuleParams :: OpenModuleParams s -> Maybe Interval
 getLocOpenModuleParams OpenModuleParams {..} =
@@ -2712,7 +2711,7 @@ instance HasLoc (OpenModuleShort s) where
 instance HasLoc (OpenModule s short) where
   getLoc OpenModule {..} =
     getLoc _openModuleKw
-      <>? fmap getLoc (_openModuleParams ^? openModulePublic . _Public . _Just)
+      <>? fmap getLoc (_openModuleParams ^? openModulePublic . _Public)
 
 instance HasLoc (ProjectionDef s) where
   getLoc = getLoc . (^. projectionConstructor)

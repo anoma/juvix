@@ -41,6 +41,8 @@ import Juvix.Prelude.Pretty qualified as P
 --- * the last branch body of a `Top` case expresssion.
 data IsTop = Top | NotTop
 
+type PrettyPrintingMaybe a = forall r. (Members '[ExactPrint, Reader Options] r) => a -> Maybe (Sem r ())
+
 type PrettyPrinting a = forall r. (Members '[ExactPrint, Reader Options] r) => a -> Sem r ()
 
 class PrettyPrint a where
@@ -1157,7 +1159,7 @@ instance PrettyPrint (ImportScan' a) where
 instance (SingI s) => PrettyPrint (Import s) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => Import s -> Sem r ()
   ppCode i = do
-    let open' = ppOpenModuleHelper Nothing <$> (i ^. importOpen)
+    let open' = ppCode <$> (i ^. importOpen)
     ppCode (i ^. importKw)
       <+> ppModulePathType (i ^. importModulePath)
       <+?> ppAlias
@@ -1171,18 +1173,29 @@ instance (SingI s) => PrettyPrint (Import s) where
         Nothing -> Nothing
         Just as -> Just (ppCode Kw.kwAs <+> ppModulePathType as)
 
-ppOpenModuleHelper :: (SingI s) => Maybe (ModuleNameType s) -> PrettyPrinting (OpenModuleParams s)
-ppOpenModuleHelper modName OpenModuleParams {..} = do
-  let name' = ppModuleNameType <$> modName
-      usingHiding' = ppCode <$> _openUsingHiding
-      openkw = ppCode _openModuleKw
-  openkw
-    <+?> name'
-    <+?> usingHiding'
-
 instance (SingI s, SingI short) => PrettyPrint (OpenModule s short) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => OpenModule s short -> Sem r ()
-  ppCode OpenModule {..} = ppOpenModuleHelper (Just _openModuleName) _openModuleParams
+  ppCode OpenModule {..} = do
+    let name' :: Maybe (Sem r ()) = case sing :: SIsOpenShort short of
+          SOpenShort -> Nothing
+          SOpenFull -> Just (ppModuleNameType _openModuleName)
+        params' = ppOpenModuleParams _openModuleParams
+        openkw = ppCode _openModuleKw
+    openkw
+      <+?> name'
+      <+?> params'
+    where
+      ppOpenModuleParams :: OpenModuleParams s -> Maybe (Sem r ())
+      ppOpenModuleParams OpenModuleParams {..} = do
+        let pub = ppPublicAnn _openModulePublic
+            usingHiding = ppCode <$> _openUsingHiding
+        pub
+          <?+?> usingHiding
+
+ppPublicAnn :: PrettyPrintingMaybe PublicAnn
+ppPublicAnn = \case
+  NoPublic -> Nothing
+  Public k -> Just (ppCode (k ^. unIrrelevant))
 
 ppCodeAtom :: (HasAtomicity c, PrettyPrint c) => PrettyPrinting c
 ppCodeAtom c = do

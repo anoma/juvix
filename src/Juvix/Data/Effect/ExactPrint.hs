@@ -34,6 +34,14 @@ infixr 7 <??+>
     Nothing -> b
     Just () -> (space <> b)
 
+infixr 7 <?+?>
+
+(<?+?>) :: (Members '[ExactPrint] r) => Maybe (Sem r ()) -> Maybe (Sem r ()) -> Maybe (Sem r ())
+a <?+?> b = do
+  a' <- a
+  b' <- b
+  return (a' <+> b')
+
 infixr 7 <?+>
 
 (<?+>) :: (Members '[ExactPrint] r) => Maybe (Sem r ()) -> Sem r () -> Sem r ()

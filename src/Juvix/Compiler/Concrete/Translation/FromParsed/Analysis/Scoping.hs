@@ -147,8 +147,8 @@ scopeCheckImport = scopeCheckRepl checkImport
 scopeCheckOpenModule ::
   forall r.
   (Members '[Error JuvixError, InfoTableBuilder, Reader InfoTable, NameIdGen, State Scope, Reader ScopeParameters, State ScoperState] r) =>
-  OpenModule 'Parsed ->
-  Sem r (OpenModule 'Scoped)
+  OpenModule 'Parsed 'OpenFull ->
+  Sem r (OpenModule 'Scoped 'OpenFull)
 scopeCheckOpenModule = mapError (JuvixError @ScoperError) . checkOpenModule
 
 freshVariable :: (Members '[NameIdGen, State ScoperSyntax, State Scope, State ScoperState] r) => Symbol -> Sem r S.Symbol
@@ -466,7 +466,7 @@ checkImport import_@Import {..} = do
   registerName importName
   whenJust synonymName registerName
   registerScoperModules cmodule
-  importOpen' <- mapM (checkImportOpenParams cmodule) _importOpen
+  importOpen' <- mapM (checkOpenModuleShort cmodule) _importOpen
   return
     Import
       { _importModulePath = sname,
@@ -1666,40 +1666,32 @@ lookupModuleSymbol n = do
       NameUnqualified s -> ([], s)
       NameQualified (QualifiedName (SymbolPath p) s) -> (toList p, s)
 
-checkImportOpenParams ::
+checkOpenModuleShort ::
   forall r.
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen] r) =>
   ScopedModule ->
-  OpenModuleParams 'Parsed ->
-  Sem r (OpenModuleParams 'Scoped)
-checkImportOpenParams m p = do
-  let open =
-        OpenModule
-          { _openModuleParams = p,
-            _openModuleName = m ^. scopedModuleName . S.nameConcrete,
-            _openModulePublic = p ^. openPublic
-          }
-  (^. openModuleParams) <$> checkOpenModuleHelper (Just m) open
+  OpenModule 'Parsed 'OpenShort ->
+  Sem r (OpenModule 'Scoped 'OpenShort)
+checkOpenModuleShort = checkOpenModuleHelper
 
 checkOpenModule ::
   forall r.
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen] r) =>
-  OpenModule 'Parsed ->
-  Sem r (OpenModule 'Scoped)
-checkOpenModule = checkOpenModuleHelper Nothing
+  OpenModule 'Parsed 'OpenFull ->
+  Sem r (OpenModule 'Scoped 'OpenFull)
+checkOpenModule open@OpenModule {..} = do
+  m <- lookupModuleSymbol _openModuleName
+  checkOpenModuleHelper m open
 
 checkOpenModuleHelper ::
-  forall r.
-  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen] r) =>
-  Maybe ScopedModule ->
-  OpenModule 'Parsed ->
-  Sem r (OpenModule 'Scoped)
-checkOpenModuleHelper importModuleHint OpenModule {..} = do
-  cmod <- case importModuleHint of
-    Nothing -> lookupModuleSymbol _openModuleName
-    Just m -> return m
-  let exportInfo = cmod ^. scopedModuleExportInfo
-  registerName (cmod ^. scopedModuleName)
+  forall r short.
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen] r, SingI short) =>
+  ScopedModule ->
+  OpenModule 'Parsed short ->
+  Sem r (OpenModule 'Scoped short)
+checkOpenModuleHelper openedModule OpenModule {..} = do
+  let exportInfo = openedModule ^. scopedModuleExportInfo
+  registerName (openedModule ^. scopedModuleName)
 
   let checkUsingHiding :: UsingHiding 'Parsed -> Sem r (UsingHiding 'Scoped)
       checkUsingHiding = \case
@@ -1712,13 +1704,11 @@ checkOpenModuleHelper importModuleHint OpenModule {..} = do
                 mentry = exportInfo ^. exportNameSpace . at s
                 err =
                   throw
-                    ( ErrModuleDoesNotExportSymbol
-                        ( ModuleDoesNotExportSymbol
-                            { _moduleDoesNotExportSymbol = s,
-                              _moduleDoesNotExportModule = cmod
-                            }
-                        )
-                    )
+                    . ErrModuleDoesNotExportSymbol
+                    $ ModuleDoesNotExportSymbol
+                      { _moduleDoesNotExportSymbol = s,
+                        _moduleDoesNotExportModule = openedModule
+                      }
             entry <- maybe err return mentry
             let scopedSym = entryToSymbol entry s
             registerName scopedSym
@@ -1777,9 +1767,12 @@ checkOpenModuleHelper importModuleHint OpenModule {..} = do
                 }
   openParams' <- traverseOf openUsingHiding (mapM checkUsingHiding) _openModuleParams
   mergeScope (alterScope (openParams' ^. openUsingHiding) exportInfo)
+  let openName :: OpenModuleNameType 'Scoped short = case sing :: SIsOpenShort short of
+        SOpenFull -> openedModule ^. scopedModuleName
+        SOpenShort -> ()
   return
     OpenModule
-      { _openModuleName = cmod ^. scopedModuleName,
+      { _openModuleName = openName,
         _openModuleParams = openParams',
         ..
       }
@@ -1811,7 +1804,7 @@ checkOpenModuleHelper importModuleHint OpenModule {..} = do
           over
             nsEntry
             ( set S.nameWhyInScope S.BecauseImportedOpened
-                . set S.nameVisibilityAnn (publicAnnToVis _openModulePublic)
+                . set S.nameVisibilityAnn (publicAnnToVis (_openModuleParams ^. openModulePublic))
             )
 
         publicAnnToVis :: PublicAnn -> VisibilityAnn
