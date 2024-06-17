@@ -18,6 +18,22 @@ data BinaryOp
   | OpStrConcat
   deriving stock (Eq)
 
+isCommutative :: BinaryOp -> Bool
+isCommutative = \case
+  OpIntAdd -> True
+  OpIntSub -> False
+  OpIntMul -> True
+  OpIntDiv -> False
+  OpIntMod -> False
+  OpIntLt -> False
+  OpIntLe -> False
+  OpFieldAdd -> True
+  OpFieldSub -> False
+  OpFieldMul -> True
+  OpFieldDiv -> False
+  OpEq -> True
+  OpStrConcat -> False
+
 data UnaryOp
   = -- | Convert the argument to a string. JV* opcode: `show`.
     OpShow
