@@ -1,6 +1,7 @@
 module Juvix.Compiler.Concrete.Data.Builtins where
 
 import Data.Serialize
+import Juvix.Data.NameKind
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
 import Juvix.Prelude.Pretty
@@ -206,6 +207,42 @@ data BuiltinAxiom
   | BuiltinEcOp
   | BuiltinRandomEcPoint
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic, Data)
+
+instance HasNameKind BuiltinAxiom where
+  getNameKind = \case
+    BuiltinNatPrint -> KNameFunction
+    BuiltinNatToString -> KNameFunction
+    BuiltinStringPrint -> KNameFunction
+    BuiltinStringConcat -> KNameFunction
+    BuiltinStringEq -> KNameFunction
+    BuiltinStringToNat -> KNameFunction
+    BuiltinBoolPrint -> KNameFunction
+    BuiltinFieldEq -> KNameFunction
+    BuiltinFieldAdd -> KNameFunction
+    BuiltinFieldMul -> KNameFunction
+    BuiltinFieldSub -> KNameFunction
+    BuiltinFieldDiv -> KNameFunction
+    BuiltinField -> KNameInductive
+    BuiltinFieldFromInt -> KNameFunction
+    BuiltinFieldToNat -> KNameFunction
+    BuiltinString -> KNameInductive
+    BuiltinIO -> KNameInductive
+    BuiltinIOSequence -> KNameFunction
+    BuiltinIOReadline -> KNameFunction
+    BuiltinTrace -> KNameFunction
+    BuiltinFail -> KNameFunction
+    BuiltinIntToString -> KNameFunction
+    BuiltinIntPrint -> KNameFunction
+    BuiltinAnomaGet -> KNameFunction
+    BuiltinAnomaEncode -> KNameFunction
+    BuiltinAnomaDecode -> KNameFunction
+    BuiltinAnomaVerifyDetached -> KNameFunction
+    BuiltinAnomaSign -> KNameFunction
+    BuiltinAnomaSignDetached -> KNameFunction
+    BuiltinAnomaVerify -> KNameFunction
+    BuiltinPoseidon -> KNameFunction
+    BuiltinEcOp -> KNameFunction
+    BuiltinRandomEcPoint -> KNameFunction
 
 instance Hashable BuiltinAxiom
 
