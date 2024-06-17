@@ -3187,6 +3187,7 @@ instance HasAtomicity PatternArg where
 
 instance HasNameKind ScopedIden where
   getNameKind = getNameKind . (^. scopedIdenFinal)
+  getNameKindDisplay = getNameKindDisplay . (^. scopedIdenFinal)
 
 _ConstructorRhsRecord :: Traversal' (ConstructorRhs s) (RhsRecord s)
 _ConstructorRhsRecord f rhs = case rhs of

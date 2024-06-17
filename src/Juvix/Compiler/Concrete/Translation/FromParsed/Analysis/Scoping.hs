@@ -152,7 +152,7 @@ scopeCheckOpenModule ::
 scopeCheckOpenModule = mapError (JuvixError @ScoperError) . checkOpenModule
 
 freshVariable :: (Members '[NameIdGen, State ScoperSyntax, State Scope, State ScoperState] r) => Symbol -> Sem r S.Symbol
-freshVariable = freshSymbol KNameLocal
+freshVariable = freshSymbol KNameLocal KNameLocal
 
 checkProjectionDef ::
   forall r.
@@ -173,9 +173,10 @@ freshSymbol ::
   forall r.
   (Members '[State Scope, State ScoperState, NameIdGen, State ScoperSyntax] r) =>
   NameKind ->
+  NameKind ->
   Symbol ->
   Sem r S.Symbol
-freshSymbol _nameKind _nameConcrete = do
+freshSymbol _nameKind _nameKindDisplay _nameConcrete = do
   _nameId <- freshNameId
   _nameDefinedIn <- gets (^. scopePath)
   let _nameDefined = getLoc _nameConcrete
@@ -213,12 +214,13 @@ reserveSymbolSignatureOfNameSpace ::
   ) =>
   SNameSpace ns ->
   NameKind ->
+  NameKind ->
   d ->
   Symbol ->
   Sem r S.Symbol
-reserveSymbolSignatureOfNameSpace ns k d s = do
+reserveSymbolSignatureOfNameSpace ns kind kindDisplay d s = do
   sig <- mkNameSignature d
-  reserveSymbolOfNameSpace ns k (Just sig) s
+  reserveSymbolOfNameSpace ns kind kindDisplay (Just sig) s
 
 reserveSymbolSignatureOf ::
   forall (k :: NameKind) r d.
@@ -270,14 +272,15 @@ reserveSymbolOfNameSpace ::
   ) =>
   SNameSpace ns ->
   NameKind ->
+  NameKind ->
   Maybe (NameSignature 'Parsed) ->
   Symbol ->
   Sem r S.Symbol
-reserveSymbolOfNameSpace ns k nameSig s = do
+reserveSymbolOfNameSpace ns kind kindDisplay nameSig s = do
   checkNotBound
   path <- gets (^. scopePath)
   strat <- ask
-  s' <- freshSymbol k s
+  s' <- freshSymbol kind kindDisplay s
   whenJust nameSig (modify' . set (scoperSignatures . at (s' ^. S.nameId)) . Just)
   whenJust nameSig (registerParsedNameSig (s' ^. S.nameId))
   modify (set (scopeNameSpaceLocal sns . at s) (Just s'))
@@ -304,7 +307,7 @@ reserveSymbolOfNameSpace ns k nameSig s = do
   modify (over scopeNameSpace (HashMap.alter (Just . addS entry) s))
   return s'
   where
-    isAlias = case k of
+    isAlias = case kind of
       KNameAlias -> True
       _ -> False
     sns :: Sing ns = sing
@@ -339,7 +342,7 @@ reserveSymbolOf ::
   Maybe (NameSignature 'Parsed) ->
   Symbol ->
   Sem r S.Symbol
-reserveSymbolOf k = reserveSymbolOfNameSpace (sing :: Sing (NameKindNameSpace nameKind)) (fromSing k)
+reserveSymbolOf k = reserveSymbolOfNameSpace (sing :: Sing (NameKindNameSpace nameKind)) (fromSing k) (fromSing k)
 
 getReservedDefinitionSymbol ::
   forall r.
@@ -402,10 +405,10 @@ reserveAxiomSymbol ::
   AxiomDef 'Parsed ->
   Sem r S.Symbol
 reserveAxiomSymbol a =
-  reserveSymbolSignatureOfNameSpace SNameSpaceSymbols kind a (a ^. axiomName)
+  reserveSymbolSignatureOfNameSpace SNameSpaceSymbols KNameAxiom kindDisplay a (a ^. axiomName)
   where
-    kind :: NameKind
-    kind = maybe KNameAxiom getNameKind (a ^? axiomBuiltin . _Just . withLocParam)
+    kindDisplay :: NameKind
+    kindDisplay = maybe KNameAxiom getNameKind (a ^? axiomBuiltin . _Just . withLocParam)
 
 bindFunctionSymbol ::
   (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, InfoTableBuilder, Reader InfoTable, State ScoperState, Reader BindingStrategy] r) =>
@@ -1118,6 +1121,7 @@ checkTopModule m@Module {..} = checkedModule
           _nameConcrete = _modulePath
           _nameDefined = getLoc (_modulePath ^. modulePathName)
           _nameKind = KNameTopModule
+          _nameKindDisplay = _nameKind
           _nameFixity :: Maybe Fixity
           _nameFixity = Nothing
           -- This visibility annotation is not relevant

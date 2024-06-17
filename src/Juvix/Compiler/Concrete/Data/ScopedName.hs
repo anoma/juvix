@@ -76,6 +76,9 @@ data Name' n = Name'
     _nameId :: NameId,
     _nameDefined :: Interval,
     _nameKind :: NameKind,
+    -- | Used to display sensitive colors for builtins. It the name is not a
+    -- builtin, then _nameKind == _nameKindDisplay
+    _nameKindDisplay :: NameKind,
     _nameDefinedIn :: AbsModulePath,
     _nameFixity :: Maybe C.Fixity,
     _nameIterator :: Maybe IteratorInfo,
@@ -102,7 +105,7 @@ instance NFData TopModulePath
 data AName = AName
   { _anameLoc :: Interval,
     _anameDefinedLoc :: Interval,
-    _anameKind :: NameKind,
+    _anameKindDisplay :: NameKind,
     _anameDocId :: NameId,
     _anameVerbatim :: Text
   }
@@ -120,13 +123,14 @@ anameFromName n =
   AName
     { _anameLoc = getLoc n,
       _anameDefinedLoc = n ^. nameDefined,
-      _anameKind = getNameKind n,
+      _anameKindDisplay = getNameKindDisplay n,
       _anameDocId = n ^. nameId,
       _anameVerbatim = n ^. nameVerbatim
     }
 
 instance HasNameKind (Name' n) where
   getNameKind = (^. nameKind)
+  getNameKindDisplay = (^. nameKindDisplay)
 
 instance (HasLoc n) => HasLoc (Name' n) where
   getLoc = getLoc . (^. nameConcrete)
@@ -138,7 +142,7 @@ instance HasLoc AName where
   getLoc = (^. anameLoc)
 
 instance HasNameKind AName where
-  getNameKind = (^. anameKind)
+  getNameKind = (^. anameKindDisplay)
 
 hasFixity :: Name' s -> Bool
 hasFixity n = case n ^. nameFixity of

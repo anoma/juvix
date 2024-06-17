@@ -35,6 +35,9 @@ instance NFData NameKind
 class HasNameKind a where
   getNameKind :: a -> NameKind
 
+  getNameKindDisplay :: a -> NameKind
+  getNameKindDisplay = getNameKind
+
 class HasNameKindAnn a where
   annNameKind :: NameKind -> a
 
