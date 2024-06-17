@@ -205,6 +205,21 @@ freshSymbol _nameKind _nameConcrete = do
             return (maybe emptyIteratorInfo fromParsedIteratorInfo ma)
       | otherwise = return Nothing
 
+reserveSymbolSignatureOfNameSpace ::
+  forall r d ns.
+  ( Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable] r,
+    HasNameSignature 'Parsed d,
+    SingI ns
+  ) =>
+  SNameSpace ns ->
+  NameKind ->
+  d ->
+  Symbol ->
+  Sem r S.Symbol
+reserveSymbolSignatureOfNameSpace ns k d s = do
+  sig <- mkNameSignature d
+  reserveSymbolOfNameSpace ns k (Just sig) s
+
 reserveSymbolSignatureOf ::
   forall (k :: NameKind) r d.
   ( Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable] r,
@@ -238,43 +253,48 @@ registerConstructorSignature uid sig = do
   modify' (set (scoperScopedConstructorFields . at uid) (Just sig))
   registerConstructorSig uid sig
 
-reserveSymbolOf ::
-  forall (nameKind :: NameKind) (ns :: NameSpace) r.
-  ( Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable] r,
-    ns ~ NameKindNameSpace nameKind,
+reserveSymbolOfNameSpace ::
+  forall (ns :: NameSpace) r.
+  ( Members
+      '[ Error ScoperError,
+         NameIdGen,
+         State ScoperSyntax,
+         State Scope,
+         State ScoperState,
+         Reader BindingStrategy,
+         InfoTableBuilder,
+         Reader InfoTable
+       ]
+      r,
     SingI ns
   ) =>
-  Sing nameKind ->
+  SNameSpace ns ->
+  NameKind ->
   Maybe (NameSignature 'Parsed) ->
   Symbol ->
   Sem r S.Symbol
-reserveSymbolOf k nameSig s = do
+reserveSymbolOfNameSpace ns k nameSig s = do
   checkNotBound
   path <- gets (^. scopePath)
   strat <- ask
-  s' <- freshSymbol (fromSing k) s
+  s' <- freshSymbol k s
   whenJust nameSig (modify' . set (scoperSignatures . at (s' ^. S.nameId)) . Just)
   whenJust nameSig (registerParsedNameSig (s' ^. S.nameId))
   modify (set (scopeNameSpaceLocal sns . at s) (Just s'))
   registerName s'
   let u = S.unqualifiedSymbol s'
-      entry :: NameSpaceEntryType (NameKindNameSpace nameKind)
+      entry :: NameSpaceEntryType ns
       entry =
         let symE
               | isAlias = PreSymbolAlias (Alias u)
               | otherwise = PreSymbolFinal (SymbolEntry u)
             modE = ModuleSymbolEntry u
             fixE = FixitySymbolEntry u
-         in case k of
-              SKNameConstructor -> symE
-              SKNameAlias -> symE
-              SKNameInductive -> symE
-              SKNameFunction -> symE
-              SKNameAxiom -> symE
-              SKNameLocal -> symE
-              SKNameLocalModule -> modE
-              SKNameTopModule -> modE
-              SKNameFixity -> fixE
+         in case ns of
+              SNameSpaceSymbols -> symE
+              SNameSpaceModules -> modE
+              SNameSpaceFixities -> fixE
+
       addS :: NameSpaceEntryType ns -> Maybe (SymbolInfo ns) -> SymbolInfo ns
       addS mentry m = case m of
         Nothing -> symbolInfoSingle mentry
@@ -285,7 +305,7 @@ reserveSymbolOf k nameSig s = do
   return s'
   where
     isAlias = case k of
-      SKNameAlias -> True
+      KNameAlias -> True
       _ -> False
     sns :: Sing ns = sing
     checkNotBound :: Sem r ()
@@ -299,6 +319,27 @@ reserveSymbolOf k nameSig s = do
                   _multipleDeclFirst = getLoc d
                 }
           )
+
+reserveSymbolOf ::
+  forall (nameKind :: NameKind) r.
+  ( Members
+      '[ Error ScoperError,
+         NameIdGen,
+         State ScoperSyntax,
+         State Scope,
+         State ScoperState,
+         Reader BindingStrategy,
+         InfoTableBuilder,
+         Reader InfoTable
+       ]
+      r,
+    SingI (NameKindNameSpace nameKind)
+  ) =>
+  Sing nameKind ->
+  Maybe (NameSignature 'Parsed) ->
+  Symbol ->
+  Sem r S.Symbol
+reserveSymbolOf k = reserveSymbolOfNameSpace (sing :: Sing (NameKindNameSpace nameKind)) (fromSing k)
 
 getReservedDefinitionSymbol ::
   forall r.
@@ -360,7 +401,11 @@ reserveAxiomSymbol ::
   (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable] r) =>
   AxiomDef 'Parsed ->
   Sem r S.Symbol
-reserveAxiomSymbol a = reserveSymbolSignatureOf SKNameAxiom a (a ^. axiomName)
+reserveAxiomSymbol a =
+  reserveSymbolSignatureOfNameSpace SNameSpaceSymbols kind a (a ^. axiomName)
+  where
+    kind :: NameKind
+    kind = maybe KNameAxiom getNameKind (a ^? axiomBuiltin . _Just . withLocParam)
 
 bindFunctionSymbol ::
   (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, InfoTableBuilder, Reader InfoTable, State ScoperState, Reader BindingStrategy] r) =>
