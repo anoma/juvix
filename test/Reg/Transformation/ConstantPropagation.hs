@@ -1,4 +1,4 @@
-module Reg.Transformation.CopyPropagation where
+module Reg.Transformation.ConstantPropagation where
 
 import Base
 import Juvix.Compiler.Reg.Transformation
@@ -6,10 +6,10 @@ import Reg.Parse.Positive qualified as Parse
 import Reg.Transformation.Base
 
 allTests :: TestTree
-allTests = testGroup "JuvixReg Copy Propagation" (map liftTest Parse.tests)
+allTests = testGroup "JuvixReg Constant Propagation" (map liftTest Parse.tests)
 
 pipe :: [TransformationId]
-pipe = [CopyPropagation]
+pipe = [ConstantPropagation]
 
 liftTest :: Parse.PosTest -> TestTree
 liftTest _testRun =
