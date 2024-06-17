@@ -4,7 +4,10 @@ import Data.Functor.Identity
 import Juvix.Compiler.Reg.Language
 
 data ForwardRecursorSig m c = ForwardRecursorSig
-  { _forwardFun :: Instruction -> c -> m (c, Instruction),
+  { -- `_forwardFun` is always called first
+    _forwardFun :: Instruction -> c -> m (c, Instruction),
+    -- `_forwardCombine` is called if the result of applying `_forwardFun` is
+    -- `Branch` or `Case`
     _forwardCombine :: Instruction -> NonEmpty c -> (c, Instruction)
   }
 

@@ -50,7 +50,18 @@ constantPropagateFunction =
       VarGroupLocal -> maybe (VRef vref) ValConst (HashMap.lookup vref mpv)
 
     combine :: Instruction -> NonEmpty VarMap -> (VarMap, Instruction)
-    combine instr mpvs = (combineMaps mpvs, instr)
+    combine instr mpvs = case instr of
+      Branch InstrBranch {..}
+        | ValConst (ConstBool True) <- _instrBranchValue ->
+            (mpv1, Block $ InstrBlock _instrBranchTrue)
+        | ValConst (ConstBool False) <- _instrBranchValue ->
+            (mpv2, Block $ InstrBlock _instrBranchFalse)
+        where
+          (mpv1, mpv2) = case mpvs of
+            mpv1' :| [mpv2'] -> (mpv1', mpv2')
+            _ -> impossible
+      _ ->
+        (combineMaps mpvs, instr)
 
 constantPropagate :: InfoTable -> InfoTable
 constantPropagate = mapT (const constantPropagateFunction)
