@@ -10,6 +10,7 @@ data TransformationId
   | SSA
   | InitBranchVars
   | CopyPropagation
+  | ConstantPropagation
   deriving stock (Data, Bounded, Enum, Show)
 
 data PipelineId
@@ -21,15 +22,15 @@ data PipelineId
 type TransformationLikeId = TransformationLikeId' TransformationId PipelineId
 
 -- Note: this works only because for now we mark all variables as live. Liveness
--- information needs to be re-computed after copy propagation.
+-- information needs to be re-computed after copy & constant propagation.
 toCTransformations :: [TransformationId]
-toCTransformations = [Cleanup, CopyPropagation]
+toCTransformations = [Cleanup, CopyPropagation, ConstantPropagation]
 
 toRustTransformations :: [TransformationId]
-toRustTransformations = [Cleanup, CopyPropagation]
+toRustTransformations = [Cleanup, CopyPropagation, ConstantPropagation]
 
 toCasmTransformations :: [TransformationId]
-toCasmTransformations = [Cleanup, CopyPropagation, SSA]
+toCasmTransformations = [Cleanup, CopyPropagation, ConstantPropagation, SSA]
 
 instance TransformationId' TransformationId where
   transformationText :: TransformationId -> Text
@@ -39,6 +40,7 @@ instance TransformationId' TransformationId where
     SSA -> strSSA
     InitBranchVars -> strInitBranchVars
     CopyPropagation -> strCopyPropagation
+    ConstantPropagation -> strConstantPropagation
 
 instance PipelineId' TransformationId PipelineId where
   pipelineText :: PipelineId -> Text
