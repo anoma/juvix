@@ -143,6 +143,7 @@ instance HasLoc AName where
 
 instance HasNameKind AName where
   getNameKind = (^. anameKindDisplay)
+  getNameKindDisplay = (^. anameKindDisplay)
 
 hasFixity :: Name' s -> Bool
 hasFixity n = case n ^. nameFixity of

@@ -630,6 +630,7 @@ freshVar _nameLoc n = do
       { _nameId = uid,
         _nameText = n,
         _nameKind = KNameLocal,
+        _nameKindDisplay = KNameLocal,
         _namePretty = n,
         _nameFixity = Nothing,
         _nameLoc

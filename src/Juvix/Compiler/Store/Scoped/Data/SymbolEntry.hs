@@ -72,6 +72,7 @@ instance HasLoc SymbolEntry where
 
 instance HasNameKind ModuleSymbolEntry where
   getNameKind (ModuleSymbolEntry s) = S.getNameKind s
+  getNameKindDisplay (ModuleSymbolEntry s) = S.getNameKindDisplay s
 
 instance HasLoc ModuleSymbolEntry where
   getLoc (ModuleSymbolEntry s) = s ^. S.nameDefined
@@ -81,6 +82,7 @@ symbolEntryNameId = (^. symbolEntry . S.nameId)
 
 instance HasNameKind SymbolEntry where
   getNameKind = S.getNameKind . (^. symbolEntry)
+  getNameKindDisplay = S.getNameKindDisplay . (^. symbolEntry)
 
 preSymbolName :: Lens' PreSymbolEntry S.Name
 preSymbolName f = \case

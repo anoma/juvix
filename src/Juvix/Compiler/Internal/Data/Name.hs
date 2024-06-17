@@ -17,6 +17,7 @@ data Name = Name
   { _nameText :: Text,
     _nameId :: NameId,
     _nameKind :: NameKind,
+    _nameKindDisplay :: NameKind,
     -- |  How to print this name in error messages
     _namePretty :: Text,
     _nameLoc :: Interval,
@@ -35,6 +36,7 @@ varFromHole h =
   Name
     { _nameText = pp,
       _nameKind = KNameLocal,
+      _nameKindDisplay = KNameLocal,
       _namePretty = pp,
       _nameLoc = getLoc h,
       _nameId = h ^. holeId,
@@ -48,6 +50,7 @@ varFromWildcard w = do
   _nameId <- freshNameId
   let _nameText :: Text = "_ω" <> prettyText _nameId
       _nameKind = KNameLocal
+      _nameKindDisplay = KNameLocal
       _namePretty = _nameText
       _nameLoc = getLoc w
       _nameFixity :: Maybe Fixity
@@ -71,6 +74,7 @@ instance Hashable Name where
 
 instance HasNameKind Name where
   getNameKind = (^. nameKind)
+  getNameKindDisplay = (^. nameKindDisplay)
 
 instance Pretty Name where
   pretty n = pretty (n ^. namePretty)
@@ -83,7 +87,7 @@ addNameIdTag showNameId nid
 prettyName :: (HasNameKindAnn a) => Bool -> Name -> Doc a
 prettyName showNameId n =
   annotate
-    (annNameKind (n ^. nameKind))
+    (annNameKind (n ^. nameKindDisplay))
     (addNameIdTag showNameId (n ^. nameId) (pretty (n ^. namePretty)))
 
 type FunctionName = Name

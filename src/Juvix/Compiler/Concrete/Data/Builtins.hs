@@ -244,6 +244,9 @@ instance HasNameKind BuiltinAxiom where
     BuiltinEcOp -> KNameFunction
     BuiltinRandomEcPoint -> KNameFunction
 
+  getNameKindDisplay :: BuiltinAxiom -> NameKind
+  getNameKindDisplay = getNameKind
+
 instance Hashable BuiltinAxiom
 
 instance Serialize BuiltinAxiom

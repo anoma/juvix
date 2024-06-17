@@ -36,13 +36,13 @@ class HasNameKind a where
   getNameKind :: a -> NameKind
 
   getNameKindDisplay :: a -> NameKind
-  getNameKindDisplay = getNameKind
 
 class HasNameKindAnn a where
   annNameKind :: NameKind -> a
 
 instance HasNameKind NameKind where
   getNameKind = id
+  getNameKindDisplay = id
 
 instance Pretty NameKind where
   pretty = pretty . nameKindText
