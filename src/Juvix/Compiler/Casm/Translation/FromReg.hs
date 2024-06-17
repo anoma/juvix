@@ -412,8 +412,8 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
             _ ->
               goBinop
                 x
-                  { Reg._instrBinopArg1 = _instrBinopArg2,
-                    Reg._instrBinopArg2 = _instrBinopArg1
+                  { Reg._instrBinopArg1 = _instrBinopArg1,
+                    Reg._instrBinopArg2 = _instrBinopArg2
                   }
           Reg.CRef ctr1 -> do
             v1 <- mkLoad ctr1

@@ -26,9 +26,9 @@ constantPropagateFunction =
       Binop InstrBinop {..}
         | ValConst c1 <- _instrBinopArg1,
           ValConst c2 <- _instrBinopArg2 ->
-            case evalBinop _instrBinopOpcode (constantToValue c1) (constantToValue c2) of
+            case evalBinop' _instrBinopOpcode c1 c2 of
               Left _ -> (mpv', instr')
-              Right v ->
+              Right c ->
                 ( HashMap.insert _instrBinopResult c mpv',
                   Assign
                     InstrAssign
@@ -36,8 +36,6 @@ constantPropagateFunction =
                         _instrAssignValue = ValConst c
                       }
                 )
-                where
-                  c = valueToConstant v
       _ ->
         (mpv', instr')
       where
