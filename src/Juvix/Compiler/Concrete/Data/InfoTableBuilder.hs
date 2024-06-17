@@ -98,7 +98,7 @@ anameFromScopedIden :: ScopedIden -> AName
 anameFromScopedIden s =
   AName
     { _anameLoc = getLoc s,
-      _anameKindDisplay = getNameKindDisplay s,
+      _anameKindPretty = getNameKindPretty s,
       _anameDocId = s ^. scopedIdenFinal . nameId,
       _anameDefinedLoc = s ^. scopedIdenSrcName . nameDefined,
       _anameVerbatim = s ^. scopedIdenSrcName . nameVerbatim

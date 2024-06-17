@@ -64,7 +64,7 @@ goFaceParsedItem i = WithLoc (i ^. parsedLoc) (PropertyFace f)
 
 goFaceName :: AName -> Maybe (WithLoc PropertyFace)
 goFaceName n = do
-  f <- nameKindFace (getNameKindDisplay n)
+  f <- nameKindFace (getNameKindPretty n)
   return (WithLoc (getLoc n) (PropertyFace f))
 
 goGotoProperty :: AName -> WithLoc PropertyGoto

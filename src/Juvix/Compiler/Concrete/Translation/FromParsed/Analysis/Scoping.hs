@@ -176,7 +176,7 @@ freshSymbol ::
   NameKind ->
   Symbol ->
   Sem r S.Symbol
-freshSymbol _nameKind _nameKindDisplay _nameConcrete = do
+freshSymbol _nameKind _nameKindPretty _nameConcrete = do
   _nameId <- freshNameId
   _nameDefinedIn <- gets (^. scopePath)
   let _nameDefined = getLoc _nameConcrete
@@ -218,9 +218,9 @@ reserveSymbolSignatureOfNameSpace ::
   d ->
   Symbol ->
   Sem r S.Symbol
-reserveSymbolSignatureOfNameSpace ns kind kindDisplay d s = do
+reserveSymbolSignatureOfNameSpace ns kind kindPretty d s = do
   sig <- mkNameSignature d
-  reserveSymbolOfNameSpace ns kind kindDisplay (Just sig) s
+  reserveSymbolOfNameSpace ns kind kindPretty (Just sig) s
 
 reserveSymbolSignatureOf ::
   forall (k :: NameKind) r d.
@@ -276,11 +276,11 @@ reserveSymbolOfNameSpace ::
   Maybe (NameSignature 'Parsed) ->
   Symbol ->
   Sem r S.Symbol
-reserveSymbolOfNameSpace ns kind kindDisplay nameSig s = do
+reserveSymbolOfNameSpace ns kind kindPretty nameSig s = do
   checkNotBound
   path <- gets (^. scopePath)
   strat <- ask
-  s' <- freshSymbol kind kindDisplay s
+  s' <- freshSymbol kind kindPretty s
   whenJust nameSig (modify' . set (scoperSignatures . at (s' ^. S.nameId)) . Just)
   whenJust nameSig (registerParsedNameSig (s' ^. S.nameId))
   modify (set (scopeNameSpaceLocal sns . at s) (Just s'))
@@ -405,10 +405,10 @@ reserveAxiomSymbol ::
   AxiomDef 'Parsed ->
   Sem r S.Symbol
 reserveAxiomSymbol a =
-  reserveSymbolSignatureOfNameSpace SNameSpaceSymbols KNameAxiom kindDisplay a (a ^. axiomName)
+  reserveSymbolSignatureOfNameSpace SNameSpaceSymbols KNameAxiom kindPretty a (a ^. axiomName)
   where
-    kindDisplay :: NameKind
-    kindDisplay = maybe KNameAxiom getNameKind (a ^? axiomBuiltin . _Just . withLocParam)
+    kindPretty :: NameKind
+    kindPretty = maybe KNameAxiom getNameKind (a ^? axiomBuiltin . _Just . withLocParam)
 
 bindFunctionSymbol ::
   (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, InfoTableBuilder, Reader InfoTable, State ScoperState, Reader BindingStrategy] r) =>
@@ -1121,7 +1121,7 @@ checkTopModule m@Module {..} = checkedModule
           _nameConcrete = _modulePath
           _nameDefined = getLoc (_modulePath ^. modulePathName)
           _nameKind = KNameTopModule
-          _nameKindDisplay = _nameKind
+          _nameKindPretty = _nameKind
           _nameFixity :: Maybe Fixity
           _nameFixity = Nothing
           -- This visibility annotation is not relevant
