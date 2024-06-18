@@ -148,3 +148,13 @@ overValueRefs f = \case
 
     goBlock :: InstrBlock -> InstrBlock
     goBlock x = x
+
+updateLiveVars' :: (VarRef -> Maybe VarRef) -> Instruction -> Instruction
+updateLiveVars' f = \case
+  Prealloc x -> Prealloc $ over instrPreallocLiveVars (mapMaybe f) x
+  Call x -> Call $ over instrCallLiveVars (mapMaybe f) x
+  CallClosures x -> CallClosures $ over instrCallClosuresLiveVars (mapMaybe f) x
+  instr -> instr
+
+updateLiveVars :: (VarRef -> VarRef) -> Instruction -> Instruction
+updateLiveVars f = updateLiveVars' (Just . f)
