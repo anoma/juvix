@@ -15,8 +15,6 @@ type PrecedenceGraph = HashMap S.NameId (HashSet S.NameId)
 data InfoTable = InfoTable
   { _infoFixities :: HashMap S.NameId FixityDef,
     _infoPrecedenceGraph :: PrecedenceGraph,
-    _infoHighlightDoc :: DocTable,
-    _infoHighlightNames :: [S.AName],
     _infoConstructorSigs :: HashMap NameId (RecordNameSignature 'Scoped),
     _infoNameSigs :: HashMap NameId (NameSignature 'Scoped),
     _infoParsedConstructorSigs :: HashMap NameId (RecordNameSignature 'Parsed),
@@ -41,8 +39,6 @@ instance Semigroup InfoTable where
     InfoTable
       { _infoFixities = tab1 ^. infoFixities <> tab2 ^. infoFixities,
         _infoPrecedenceGraph = combinePrecedenceGraphs (tab1 ^. infoPrecedenceGraph) (tab2 ^. infoPrecedenceGraph),
-        _infoHighlightDoc = tab1 ^. infoHighlightDoc <> tab2 ^. infoHighlightDoc,
-        _infoHighlightNames = tab1 ^. infoHighlightNames <> tab2 ^. infoHighlightNames,
         _infoConstructorSigs = tab1 ^. infoConstructorSigs <> tab2 ^. infoConstructorSigs,
         _infoNameSigs = tab1 ^. infoNameSigs <> tab2 ^. infoNameSigs,
         _infoParsedConstructorSigs = tab1 ^. infoParsedConstructorSigs <> tab2 ^. infoParsedConstructorSigs,
@@ -60,8 +56,6 @@ instance Monoid InfoTable where
     InfoTable
       { _infoFixities = mempty,
         _infoPrecedenceGraph = mempty,
-        _infoHighlightDoc = mempty,
-        _infoHighlightNames = mempty,
         _infoConstructorSigs = mempty,
         _infoNameSigs = mempty,
         _infoParsedConstructorSigs = mempty,

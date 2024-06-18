@@ -35,11 +35,14 @@ instance NFData NameKind
 class HasNameKind a where
   getNameKind :: a -> NameKind
 
+  getNameKindPretty :: a -> NameKind
+
 class HasNameKindAnn a where
   annNameKind :: NameKind -> a
 
 instance HasNameKind NameKind where
   getNameKind = id
+  getNameKindPretty = id
 
 instance Pretty NameKind where
   pretty = pretty . nameKindText

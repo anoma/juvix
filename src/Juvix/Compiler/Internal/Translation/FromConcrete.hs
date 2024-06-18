@@ -192,6 +192,7 @@ goSymbolPretty pp s =
     { _nameText = S.symbolText s,
       _nameId = s ^. S.nameId,
       _nameKind = getNameKind s,
+      _nameKindPretty = getNameKindPretty s,
       _namePretty = pp,
       _nameLoc = s ^. S.nameConcrete . symbolLoc,
       _nameFixity = s ^. S.nameFixity

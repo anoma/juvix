@@ -152,7 +152,7 @@ scopeCheckOpenModule ::
 scopeCheckOpenModule = mapError (JuvixError @ScoperError) . checkOpenModule
 
 freshVariable :: (Members '[NameIdGen, State ScoperSyntax, State Scope, State ScoperState] r) => Symbol -> Sem r S.Symbol
-freshVariable = freshSymbol KNameLocal
+freshVariable = freshSymbol KNameLocal KNameLocal
 
 checkProjectionDef ::
   forall r.
@@ -173,9 +173,10 @@ freshSymbol ::
   forall r.
   (Members '[State Scope, State ScoperState, NameIdGen, State ScoperSyntax] r) =>
   NameKind ->
+  NameKind ->
   Symbol ->
   Sem r S.Symbol
-freshSymbol _nameKind _nameConcrete = do
+freshSymbol _nameKind _nameKindPretty _nameConcrete = do
   _nameId <- freshNameId
   _nameDefinedIn <- gets (^. scopePath)
   let _nameDefined = getLoc _nameConcrete
@@ -204,6 +205,22 @@ freshSymbol _nameKind _nameConcrete = do
             modify (set (scoperSyntaxIterators . scoperIterators . at _nameConcrete . _Just . symbolIteratorUsed) True)
             return (maybe emptyIteratorInfo fromParsedIteratorInfo ma)
       | otherwise = return Nothing
+
+reserveSymbolSignatureOfNameSpace ::
+  forall r d ns.
+  ( Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable] r,
+    HasNameSignature 'Parsed d,
+    SingI ns
+  ) =>
+  SNameSpace ns ->
+  NameKind ->
+  NameKind ->
+  d ->
+  Symbol ->
+  Sem r S.Symbol
+reserveSymbolSignatureOfNameSpace ns kind kindPretty d s = do
+  sig <- mkNameSignature d
+  reserveSymbolOfNameSpace ns kind kindPretty (Just sig) s
 
 reserveSymbolSignatureOf ::
   forall (k :: NameKind) r d.
@@ -238,43 +255,49 @@ registerConstructorSignature uid sig = do
   modify' (set (scoperScopedConstructorFields . at uid) (Just sig))
   registerConstructorSig uid sig
 
-reserveSymbolOf ::
-  forall (nameKind :: NameKind) (ns :: NameSpace) r.
-  ( Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable] r,
-    ns ~ NameKindNameSpace nameKind,
+reserveSymbolOfNameSpace ::
+  forall (ns :: NameSpace) r.
+  ( Members
+      '[ Error ScoperError,
+         NameIdGen,
+         State ScoperSyntax,
+         State Scope,
+         State ScoperState,
+         Reader BindingStrategy,
+         InfoTableBuilder,
+         Reader InfoTable
+       ]
+      r,
     SingI ns
   ) =>
-  Sing nameKind ->
+  SNameSpace ns ->
+  NameKind ->
+  NameKind ->
   Maybe (NameSignature 'Parsed) ->
   Symbol ->
   Sem r S.Symbol
-reserveSymbolOf k nameSig s = do
+reserveSymbolOfNameSpace ns kind kindPretty nameSig s = do
   checkNotBound
   path <- gets (^. scopePath)
   strat <- ask
-  s' <- freshSymbol (fromSing k) s
+  s' <- freshSymbol kind kindPretty s
   whenJust nameSig (modify' . set (scoperSignatures . at (s' ^. S.nameId)) . Just)
   whenJust nameSig (registerParsedNameSig (s' ^. S.nameId))
   modify (set (scopeNameSpaceLocal sns . at s) (Just s'))
   registerName s'
   let u = S.unqualifiedSymbol s'
-      entry :: NameSpaceEntryType (NameKindNameSpace nameKind)
+      entry :: NameSpaceEntryType ns
       entry =
         let symE
               | isAlias = PreSymbolAlias (Alias u)
               | otherwise = PreSymbolFinal (SymbolEntry u)
             modE = ModuleSymbolEntry u
             fixE = FixitySymbolEntry u
-         in case k of
-              SKNameConstructor -> symE
-              SKNameAlias -> symE
-              SKNameInductive -> symE
-              SKNameFunction -> symE
-              SKNameAxiom -> symE
-              SKNameLocal -> symE
-              SKNameLocalModule -> modE
-              SKNameTopModule -> modE
-              SKNameFixity -> fixE
+         in case ns of
+              SNameSpaceSymbols -> symE
+              SNameSpaceModules -> modE
+              SNameSpaceFixities -> fixE
+
       addS :: NameSpaceEntryType ns -> Maybe (SymbolInfo ns) -> SymbolInfo ns
       addS mentry m = case m of
         Nothing -> symbolInfoSingle mentry
@@ -284,8 +307,8 @@ reserveSymbolOf k nameSig s = do
   modify (over scopeNameSpace (HashMap.alter (Just . addS entry) s))
   return s'
   where
-    isAlias = case k of
-      SKNameAlias -> True
+    isAlias = case kind of
+      KNameAlias -> True
       _ -> False
     sns :: Sing ns = sing
     checkNotBound :: Sem r ()
@@ -299,6 +322,27 @@ reserveSymbolOf k nameSig s = do
                   _multipleDeclFirst = getLoc d
                 }
           )
+
+reserveSymbolOf ::
+  forall (nameKind :: NameKind) r.
+  ( Members
+      '[ Error ScoperError,
+         NameIdGen,
+         State ScoperSyntax,
+         State Scope,
+         State ScoperState,
+         Reader BindingStrategy,
+         InfoTableBuilder,
+         Reader InfoTable
+       ]
+      r,
+    SingI (NameKindNameSpace nameKind)
+  ) =>
+  Sing nameKind ->
+  Maybe (NameSignature 'Parsed) ->
+  Symbol ->
+  Sem r S.Symbol
+reserveSymbolOf k = reserveSymbolOfNameSpace (sing :: Sing (NameKindNameSpace nameKind)) (fromSing k) (fromSing k)
 
 getReservedDefinitionSymbol ::
   forall r.
@@ -360,7 +404,11 @@ reserveAxiomSymbol ::
   (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable] r) =>
   AxiomDef 'Parsed ->
   Sem r S.Symbol
-reserveAxiomSymbol a = reserveSymbolSignatureOf SKNameAxiom a (a ^. axiomName)
+reserveAxiomSymbol a =
+  reserveSymbolSignatureOfNameSpace SNameSpaceSymbols KNameAxiom kindPretty a (a ^. axiomName)
+  where
+    kindPretty :: NameKind
+    kindPretty = maybe KNameAxiom getNameKind (a ^? axiomBuiltin . _Just . withLocParam)
 
 bindFunctionSymbol ::
   (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, InfoTableBuilder, Reader InfoTable, State ScoperState, Reader BindingStrategy] r) =>
@@ -1073,6 +1121,7 @@ checkTopModule m@Module {..} = checkedModule
           _nameConcrete = _modulePath
           _nameDefined = getLoc (_modulePath ^. modulePathName)
           _nameKind = KNameTopModule
+          _nameKindPretty = _nameKind
           _nameFixity :: Maybe Fixity
           _nameFixity = Nothing
           -- This visibility annotation is not relevant

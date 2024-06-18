@@ -105,6 +105,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
             { _nameText = "_",
               _nameId = defaultId,
               _nameKind = KNameLocal,
+              _nameKindPretty = KNameLocal,
               _namePretty = "",
               _nameLoc = defaultLoc,
               _nameFixity = Nothing
