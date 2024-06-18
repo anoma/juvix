@@ -7,13 +7,14 @@ import Juvix.Compiler.Casm.Data.Result
 import Juvix.Compiler.Casm.Error
 import Juvix.Compiler.Casm.Interpreter
 import Juvix.Compiler.Reg.Data.InfoTable qualified as Reg
+import Juvix.Compiler.Reg.Transformation qualified as Reg
 import Juvix.Data.PPOutput
 import Reg.Run.Base qualified as Reg
 
 compileAssertion' :: Maybe (Path Abs File) -> Path Abs Dir -> Path Abs File -> Symbol -> Reg.InfoTable -> (String -> IO ()) -> Assertion
 compileAssertion' inputFile _ outputFile _ tab step = do
   step "Translate to CASM"
-  case run $ runError @JuvixError $ regToCasm tab of
+  case run $ runError @JuvixError $ runReader Reg.defaultOptions $ regToCasm' tab of
     Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
     Right Result {..} -> do
       step "Interpret"
@@ -30,7 +31,7 @@ compileAssertion' inputFile _ outputFile _ tab step = do
 cairoAssertion' :: Maybe (Path Abs File) -> Path Abs Dir -> Path Abs File -> Symbol -> Reg.InfoTable -> (String -> IO ()) -> Assertion
 cairoAssertion' inputFile dirPath outputFile _ tab step = do
   step "Translate to Cairo"
-  case run $ runError @JuvixError $ regToCairo tab of
+  case run $ runError @JuvixError $ runReader Reg.defaultOptions $ regToCairo' tab of
     Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
     Right res -> do
       step "Serialize to Cairo bytecode"

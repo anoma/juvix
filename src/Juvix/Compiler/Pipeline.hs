@@ -361,6 +361,9 @@ regToRiscZeroRust = regToRust' Rust.BackendRiscZero
 regToCasm :: (Member (Reader EntryPoint) r) => Reg.InfoTable -> Sem r Casm.Result
 regToCasm = Reg.toCasm >=> return . Casm.fromReg
 
+regToCasm' :: (Member (Reader Reg.Options) r) => Reg.InfoTable -> Sem r Casm.Result
+regToCasm' = Reg.toCasm' >=> return . Casm.fromReg
+
 casmToCairo :: Casm.Result -> Sem r Cairo.Result
 casmToCairo Casm.Result {..} =
   return
@@ -369,6 +372,9 @@ casmToCairo Casm.Result {..} =
 
 regToCairo :: (Member (Reader EntryPoint) r) => Reg.InfoTable -> Sem r Cairo.Result
 regToCairo = regToCasm >=> casmToCairo
+
+regToCairo' :: (Member (Reader Reg.Options) r) => Reg.InfoTable -> Sem r Cairo.Result
+regToCairo' = regToCasm' >=> casmToCairo
 
 treeToAnoma' :: (Members '[Error JuvixError, Reader NockmaTree.CompilerOptions] r) => Tree.InfoTable -> Sem r NockmaTree.AnomaResult
 treeToAnoma' = Tree.toNockma >=> NockmaTree.fromTreeTable

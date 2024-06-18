@@ -5,7 +5,7 @@ import Juvix.Compiler.Reg.Data.InfoTable
 import Juvix.Compiler.Reg.Error
 import Juvix.Compiler.Reg.Interpreter
 import Juvix.Compiler.Reg.Pretty
-import Juvix.Compiler.Reg.Transformation
+import Juvix.Compiler.Reg.Transformation as Reg
 import Juvix.Compiler.Reg.Translation.FromSource
 import Juvix.Data.PPOutput
 
@@ -56,7 +56,7 @@ regRunAssertionParam interpretFun mainFile expectedFile trans testTrans step = d
     Right tab0 -> do
       unless (null trans) $
         step "Transform"
-      case run $ runError @JuvixError $ applyTransformations trans tab0 of
+      case run $ runError @JuvixError $ runReader Reg.defaultOptions $ applyTransformations trans tab0 of
         Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
         Right tab -> do
           testTrans tab

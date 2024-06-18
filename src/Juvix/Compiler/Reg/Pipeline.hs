@@ -1,6 +1,7 @@
 module Juvix.Compiler.Reg.Pipeline
   ( module Juvix.Compiler.Reg.Pipeline,
     module Juvix.Compiler.Reg.Data.InfoTable,
+    Options,
   )
 where
 
@@ -33,4 +34,4 @@ toRust :: (Member (Reader EntryPoint) r) => InfoTable -> Sem r InfoTable
 toRust = mapReader fromEntryPoint . toRust'
 
 toCasm :: (Member (Reader EntryPoint) r) => InfoTable -> Sem r Blocks.InfoTable
-toCasm = mapReader fromEntryPoint . toCasm
+toCasm = mapReader fromEntryPoint . toCasm'
