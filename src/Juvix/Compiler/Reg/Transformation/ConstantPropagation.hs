@@ -7,17 +7,20 @@ import Juvix.Compiler.Tree.Evaluator.Builtins
 
 type VarMap = HashMap VarRef Constant
 
-constantPropagateFunction :: Code -> Code
-constantPropagateFunction =
-  snd
-    . runIdentity
-    . recurseF
-      ForwardRecursorSig
-        { _forwardFun = \i acc -> return (go i acc),
-          _forwardCombine = combine
-        }
-      mempty
+constantPropagate :: InfoTable -> InfoTable
+constantPropagate = mapT (const goFun)
   where
+    goFun :: Code -> Code
+    goFun =
+      snd
+        . runIdentity
+        . recurseF
+          ForwardRecursorSig
+            { _forwardFun = \i acc -> return (go i acc),
+              _forwardCombine = combine
+            }
+          mempty
+
     go :: Instruction -> VarMap -> (VarMap, Instruction)
     go instr mpv = case instr' of
       Assign InstrAssign {..}
@@ -60,6 +63,3 @@ constantPropagateFunction =
             _ -> impossible
       _ ->
         (combineMaps mpvs, instr)
-
-constantPropagate :: InfoTable -> InfoTable
-constantPropagate = mapT (const constantPropagateFunction)

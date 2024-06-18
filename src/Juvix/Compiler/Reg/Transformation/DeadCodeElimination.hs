@@ -14,13 +14,17 @@ removeDeadAssignments = mapT (const goFun)
         . recurseB
           BackwardRecursorSig
             { _backwardFun = \is a as -> return (go is a as),
-              _backwardAdjust = const mempty
+              _backwardAdjust = id
             }
           mempty
 
     -- The accumulator contains live variables
     go :: Code -> HashSet VarRef -> [HashSet VarRef] -> (HashSet VarRef, Code)
     go is live lives = case is of
+      Assign InstrAssign {..} : is'
+        | VRef r <- _instrAssignValue,
+          _instrAssignResult == r ->
+            (live, is')
       instr : is' -> case getResultVar instr of
         Just var
           | not (HashSet.member var liveVars) ->

@@ -28,3 +28,6 @@ strCopyPropagation = "copy-propagation"
 
 strConstantPropagation :: Text
 strConstantPropagation = "constant-propagation"
+
+strDeadCodeElimination :: Text
+strDeadCodeElimination = "dead-code"
