@@ -6,9 +6,9 @@ import Juvix.Compiler.Core.Transformation.Base
 
 filterUnreachable :: Module -> Module
 filterUnreachable md =
-  pruneInfoTable $
-    over (moduleInfoTable . infoInductives) goFilter $
-      over (moduleInfoTable . infoIdentifiers) goFilter md
+  pruneInfoTable
+    $ over (moduleInfoTable . infoInductives) goFilter
+    $ over (moduleInfoTable . infoIdentifiers) goFilter md
   where
     depInfo = createSymbolDependencyInfo (md ^. moduleInfoTable)
 

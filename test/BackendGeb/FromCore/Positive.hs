@@ -22,8 +22,8 @@ testDescr PosTest {..} =
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion =
-            Steps $
-              coreToGebTranslationAssertion tRoot file' expected'
+            Steps
+              $ coreToGebTranslationAssertion tRoot file' expected'
         }
 
 filterOutTests :: [String] -> [PosTest] -> [PosTest]

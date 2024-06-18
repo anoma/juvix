@@ -142,7 +142,8 @@ loadPackage' packagePath = do
       . runPackagePathResolver rootPath
       . runTopModuleNameChecker
       . evalModuleInfoCache
-      $ (^. pipelineResult) <$> processFileToStoredCore packageEntryPoint
+      $ (^. pipelineResult)
+      <$> processFileToStoredCore packageEntryPoint
     )
   where
     rootPath :: Path Abs Dir

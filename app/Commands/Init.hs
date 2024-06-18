@@ -29,21 +29,21 @@ init opts = do
   cwd <- getCurrentDir
   when isInteractive (say ("creating " <> pack (toFilePath packageFilePath)))
   if
-      | opts ^. initOptionsBasic -> writeBasicPackage cwd
-      | otherwise -> do
-          pkg <-
-            if
-                | isInteractive -> do
-                    say "✨ Your next Juvix adventure is about to begin! ✨"
-                    say "I will help you set it up"
-                    getPackage
-                | otherwise -> do
-                    projectName <- getDefaultProjectName
-                    let emptyPkg = emptyPackage DefaultBuildDir (cwd <//> packageFilePath)
-                    return $ case projectName of
-                      Nothing -> emptyPkg
-                      Just n -> emptyPkg {_packageName = n}
-          writePackageFile cwd pkg
+    | opts ^. initOptionsBasic -> writeBasicPackage cwd
+    | otherwise -> do
+        pkg <-
+          if
+            | isInteractive -> do
+                say "✨ Your next Juvix adventure is about to begin! ✨"
+                say "I will help you set it up"
+                getPackage
+            | otherwise -> do
+                projectName <- getDefaultProjectName
+                let emptyPkg = emptyPackage DefaultBuildDir (cwd <//> packageFilePath)
+                return $ case projectName of
+                  Nothing -> emptyPkg
+                  Just n -> emptyPkg {_packageName = n}
+        writePackageFile cwd pkg
   checkPackage
   when isInteractive (say "you are all set")
   where
@@ -112,17 +112,17 @@ getProjName = do
         go = do
           txt <- getLine
           if
-              | Text.null txt, Just def' <- def -> return def'
-              | otherwise ->
-                  case parse projectNameParser txt of
-                    Right p
-                      | Text.length p <= projextNameMaxLength -> return p
-                      | otherwise -> do
-                          say ("The project name cannot exceed " <> prettyText projextNameMaxLength <> " characters")
-                          retry
-                    Left err -> do
-                      say err
-                      retry
+            | Text.null txt, Just def' <- def -> return def'
+            | otherwise ->
+                case parse projectNameParser txt of
+                  Right p
+                    | Text.length p <= projextNameMaxLength -> return p
+                    | otherwise -> do
+                        say ("The project name cannot exceed " <> prettyText projextNameMaxLength <> " characters")
+                        retry
+                  Left err -> do
+                    say err
+                    retry
           where
             retry :: Sem r Text
             retry = do
@@ -139,13 +139,13 @@ getVersion :: forall r. (Members '[EmbedIO] r) => Sem r SemVer
 getVersion = do
   txt <- getLine
   if
-      | Text.null txt -> return defaultVersion
-      | otherwise -> case parse semver' txt of
-          Right r -> return r
-          Left err -> do
-            say err
-            say "The version must follow the 'Semantic Versioning 2.0.0' specification"
-            retry
+    | Text.null txt -> return defaultVersion
+    | otherwise -> case parse semver' txt of
+        Right r -> return r
+        Left err -> do
+          say err
+          say "The version must follow the 'Semantic Versioning 2.0.0' specification"
+          retry
   where
     retry :: Sem r SemVer
     retry = do

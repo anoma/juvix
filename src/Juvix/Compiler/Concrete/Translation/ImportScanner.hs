@@ -48,8 +48,8 @@ scanBSImports fp inputBS = do
         Nothing -> Megaparsec.scanBSImports fp inputBS
     ImportScanStrategyFlatParse -> case FlatParse.scanBSImports fp inputBS of
       Nothing ->
-        throw $
-          ErrFlatParseError
+        throw
+          $ ErrFlatParseError
             FlatParseError
               { _flatParseErrorLoc = fileLoc
               }

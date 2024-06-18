@@ -39,21 +39,21 @@ paramToExpression = \case
 paramFromExpression :: HashSet VarName -> Expression -> Maybe InstanceParam
 paramFromExpression metaVars e = case e of
   ExpressionIden (IdenInductive n) ->
-    Just $
-      InstanceParamApp $
-        InstanceApp
-          { _instanceAppHead = n,
-            _instanceAppArgs = [],
-            _instanceAppExpression = e
-          }
+    Just
+      $ InstanceParamApp
+      $ InstanceApp
+        { _instanceAppHead = n,
+          _instanceAppArgs = [],
+          _instanceAppExpression = e
+        }
   ExpressionIden (IdenAxiom n) ->
-    Just $
-      InstanceParamApp $
-        InstanceApp
-          { _instanceAppHead = n,
-            _instanceAppArgs = [],
-            _instanceAppExpression = e
-          }
+    Just
+      $ InstanceParamApp
+      $ InstanceApp
+        { _instanceAppHead = n,
+          _instanceAppArgs = [],
+          _instanceAppExpression = e
+        }
   ExpressionIden (IdenVar v)
     | HashSet.member v metaVars -> Just $ InstanceParamMeta v
     | otherwise -> Just $ InstanceParamVar v
@@ -63,29 +63,29 @@ paramFromExpression metaVars e = case e of
     args' <- mapM (paramFromExpression metaVars) args
     case h of
       ExpressionIden (IdenInductive n) ->
-        return $
-          InstanceParamApp $
-            InstanceApp
-              { _instanceAppHead = n,
-                _instanceAppArgs = toList args',
-                _instanceAppExpression = e
-              }
+        return
+          $ InstanceParamApp
+          $ InstanceApp
+            { _instanceAppHead = n,
+              _instanceAppArgs = toList args',
+              _instanceAppExpression = e
+            }
       ExpressionIden (IdenAxiom n) ->
-        return $
-          InstanceParamApp $
-            InstanceApp
-              { _instanceAppHead = n,
-                _instanceAppArgs = toList args',
-                _instanceAppExpression = e
-              }
+        return
+          $ InstanceParamApp
+          $ InstanceApp
+            { _instanceAppHead = n,
+              _instanceAppArgs = toList args',
+              _instanceAppExpression = e
+            }
       _ ->
         Nothing
   ExpressionFunction Function {..}
     | _functionLeft ^. paramImplicit == Explicit -> do
         l <- paramFromExpression metaVars (_functionLeft ^. paramType)
         r <- paramFromExpression metaVars _functionRight
-        return $
-          InstanceParamFun
+        return
+          $ InstanceParamFun
             InstanceFun
               { _instanceFunLeft = l,
                 _instanceFunRight = r,
@@ -102,8 +102,8 @@ traitFromExpression metaVars e = case paramFromExpression metaVars e of
 instanceFromTypedExpression :: TypedExpression -> Maybe InstanceInfo
 instanceFromTypedExpression TypedExpression {..} = do
   InstanceApp {..} <- traitFromExpression metaVars e
-  return $
-    InstanceInfo
+  return
+    $ InstanceInfo
       { _instanceInfoInductive = _instanceAppHead,
         _instanceInfoParams = _instanceAppArgs,
         _instanceInfoResult = _typedExpression,

@@ -96,10 +96,10 @@ commonArgs buildDir ClangArgs {..} = run . execAccumList $ do
     CPreprocess -> addArg "-E"
     CAssembly -> addArg "-S"
     CExecutable -> return ()
-  addArg $
-    if
-        | _clangDebug -> "-DDEBUG"
-        | otherwise -> "-DNDEBUG"
+  addArg
+    $ if
+      | _clangDebug -> "-DDEBUG"
+      | otherwise -> "-DNDEBUG"
   addArg "-W"
   addArg "-Wall"
   addArg "-Wno-unused-parameter"

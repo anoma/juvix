@@ -40,25 +40,26 @@ runParser fileName input_ = do
         | isJuvixGebFile fileName = parseGeb
         | isLispFile fileName = parseGebLisp
         | otherwise = error "unknown file extension"
-  case run $
-    P.runParserT parser (fromAbsFile fileName) input_ of
+  case run
+    $ P.runParserT parser (fromAbsFile fileName) input_ of
     Left err -> Left (MegaparsecError err)
     Right gebTerm -> Right gebTerm
 
 parseLispSymbol :: ParsecS r Text
 parseLispSymbol =
   P.label "<lisp symbol>" $ do
-    lexeme $
-      P.takeWhile1P Nothing validChars
+    lexeme
+      $ P.takeWhile1P Nothing validChars
   where
     validChars :: Char -> Bool
     validChars = (`notElem` ("() " :: String))
 
 parseLispList :: ParsecS r ()
 parseLispList =
-  P.label "<lisp list>" $
-    lexeme . parens $
-      P.skipSome parseLispExpr
+  P.label "<lisp list>"
+    $ lexeme
+    . parens
+    $ P.skipSome parseLispExpr
 
 parseLispExpr :: ParsecS r ()
 parseLispExpr =
@@ -71,8 +72,8 @@ parseTypedMorphism =
     symbol "typed"
     m <- morphism
     o <- object
-    return $
-      Geb.TypedMorphism
+    return
+      $ Geb.TypedMorphism
         { _typedMorphism = m,
           _typedMorphismObject = o
         }
@@ -97,10 +98,10 @@ parseGebLisp = do
   P.label "<in-package>" parseLispExpr
   entry <- parseDefParameter
   P.eof
-  return $
-    Geb.ExpressionMorphism $
-      entry
-        ^. lispDefParameterMorphism
+  return
+    $ Geb.ExpressionMorphism
+    $ entry
+    ^. lispDefParameterMorphism
 
 parseGeb :: ParsecS r Geb.Expression
 parseGeb =
@@ -108,7 +109,8 @@ parseGeb =
     space
     ( P.try (Geb.ExpressionObject <$> object)
         <|> P.try (Geb.ExpressionMorphism <$> morphism)
-        <|> Geb.ExpressionTypedMorphism <$> parseTypedMorphism
+        <|> Geb.ExpressionTypedMorphism
+        <$> parseTypedMorphism
       )
       <* P.eof
 
@@ -118,19 +120,32 @@ morphism =
     morphismUnit
       <|> parens
         ( morphismUnit
-            <|> Geb.MorphismAbsurd <$> morphismAbsurd
-            <|> Geb.MorphismLeft <$> morphismLeftInj
-            <|> Geb.MorphismRight <$> morphismRightInj
-            <|> Geb.MorphismCase <$> morphismCase
-            <|> Geb.MorphismPair <$> morphismPair
-            <|> Geb.MorphismFirst <$> morphismFirst
-            <|> Geb.MorphismSecond <$> morphismSecond
-            <|> Geb.MorphismLambda <$> morphismLambda
-            <|> Geb.MorphismApplication <$> morphismApplication
-            <|> Geb.MorphismVar <$> morphismVar
-            <|> Geb.MorphismBinop <$> morphismBinop
-            <|> Geb.MorphismFail <$> morphismFail
-            <|> Geb.MorphismInteger <$> morphismBitChoice
+            <|> Geb.MorphismAbsurd
+            <$> morphismAbsurd
+            <|> Geb.MorphismLeft
+            <$> morphismLeftInj
+            <|> Geb.MorphismRight
+            <$> morphismRightInj
+            <|> Geb.MorphismCase
+            <$> morphismCase
+            <|> Geb.MorphismPair
+            <$> morphismPair
+            <|> Geb.MorphismFirst
+            <$> morphismFirst
+            <|> Geb.MorphismSecond
+            <$> morphismSecond
+            <|> Geb.MorphismLambda
+            <$> morphismLambda
+            <|> Geb.MorphismApplication
+            <$> morphismApplication
+            <|> Geb.MorphismVar
+            <$> morphismVar
+            <|> Geb.MorphismBinop
+            <$> morphismBinop
+            <|> Geb.MorphismFail
+            <$> morphismFail
+            <|> Geb.MorphismInteger
+            <$> morphismBitChoice
         )
 
 morphismList :: ParsecS r Geb.Morphism
@@ -150,14 +165,21 @@ morphismBitChoice = do
 
 opcode :: ParsecS r Geb.Opcode
 opcode =
-  P.label "<geb Opcode>" $
-    Geb.OpAdd <$ kw kwGebBinopAdd
-      <|> Geb.OpSub <$ kw kwGebBinopSub
-      <|> Geb.OpMul <$ kw kwGebBinopMul
-      <|> Geb.OpDiv <$ kw kwGebBinopDiv
-      <|> Geb.OpMod <$ kw kwGebBinopMod
-      <|> Geb.OpEq <$ kw kwGebBinopEq
-      <|> Geb.OpLt <$ kw kwGebBinopLt
+  P.label "<geb Opcode>"
+    $ Geb.OpAdd
+    <$ kw kwGebBinopAdd
+    <|> Geb.OpSub
+    <$ kw kwGebBinopSub
+    <|> Geb.OpMul
+    <$ kw kwGebBinopMul
+    <|> Geb.OpDiv
+    <$ kw kwGebBinopDiv
+    <|> Geb.OpMod
+    <$ kw kwGebBinopMod
+    <|> Geb.OpEq
+    <$ kw kwGebBinopEq
+    <|> Geb.OpLt
+    <$ kw kwGebBinopLt
 
 morphismBinop :: ParsecS r Geb.Binop
 morphismBinop = do
@@ -183,11 +205,15 @@ object =
   P.label "<geb Object>" $ do
     objectInitial
       <|> objectTerminal
-      <|> Geb.ObjectInteger <$ (kw kwGebObjectInteger)
+      <|> Geb.ObjectInteger
+      <$ (kw kwGebObjectInteger)
       <|> parens
-        ( Geb.ObjectProduct <$> objectProduct
-            <|> Geb.ObjectCoproduct <$> objectCoproduct
-            <|> Geb.ObjectHom <$> objectHom
+        ( Geb.ObjectProduct
+            <$> objectProduct
+            <|> Geb.ObjectCoproduct
+            <$> objectCoproduct
+            <|> Geb.ObjectHom
+            <$> objectHom
         )
 
 objectList :: ParsecS r Geb.Object
@@ -207,8 +233,8 @@ morphismAbsurd =
     kw kwGebMorphismAbsurd
     obj <- object
     morph <- morphism
-    return $
-      Geb.Absurd
+    return
+      $ Geb.Absurd
         { _absurdType = obj,
           _absurdValue = morph
         }
@@ -219,8 +245,8 @@ morphismLeftInj = do
     kw kwGebMorphismLeft
     rType <- object
     lValue <- morphism
-    return $
-      Geb.LeftInj
+    return
+      $ Geb.LeftInj
         { _leftInjRightType = rType,
           _leftInjValue = lValue
         }
@@ -231,8 +257,8 @@ morphismRightInj = do
     kw kwGebMorphismRight
     lType <- object
     rValue <- morphism
-    return $
-      Geb.RightInj
+    return
+      $ Geb.RightInj
         { _rightInjLeftType = lType,
           _rightInjValue = rValue
         }

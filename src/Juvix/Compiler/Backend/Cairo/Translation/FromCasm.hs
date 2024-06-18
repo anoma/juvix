@@ -208,8 +208,8 @@ fromCasm instrs0 =
 
         goReturn :: [Element]
         goReturn =
-          [ ElementInstruction $
-              Instruction
+          [ ElementInstruction
+              $ Instruction
                 { _instrOffDst = -2,
                   _instrOffOp0 = -1,
                   _instrOffOp1 = -1,

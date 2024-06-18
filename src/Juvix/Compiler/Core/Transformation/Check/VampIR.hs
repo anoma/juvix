@@ -17,8 +17,8 @@ checkVampIR md =
   where
     checkMainType :: Sem r ()
     checkMainType =
-      unless (checkType (ii ^. identifierType)) $
-        throw
+      unless (checkType (ii ^. identifierType))
+        $ throw
           CoreError
             { _coreErrorMsg = ppOutput "for this target the arguments and the result of the `main` function must be numbers or booleans",
               _coreErrorLoc = fromMaybe defaultLoc (ii ^. identifierLocation),
@@ -37,8 +37,8 @@ checkVampIR md =
 
     checkPublicInputs :: Sem r ()
     checkPublicInputs =
-      unless (maybe True (all (`elem` argnames) . (^. pragmaPublic)) (ii ^. identifierPragmas . pragmasPublic)) $
-        throw
+      unless (maybe True (all (`elem` argnames) . (^. pragmaPublic)) (ii ^. identifierPragmas . pragmasPublic))
+        $ throw
           CoreError
             { _coreErrorMsg = ppOutput "invalid public input: not an argument name",
               _coreErrorLoc = fromMaybe defaultLoc (ii ^. identifierLocation),

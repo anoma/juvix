@@ -52,8 +52,8 @@ optimize' opts@CoreOptions {..} md =
       where
         recs' =
           if
-              | _optOptimizationLevel > 1 -> recursiveIdents md'
-              | otherwise -> recs
+            | _optOptimizationLevel > 1 -> recursiveIdents md'
+            | otherwise -> recs
 
     doSimplification :: Int -> Module -> Module
     doSimplification n =

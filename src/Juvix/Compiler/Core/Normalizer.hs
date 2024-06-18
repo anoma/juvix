@@ -72,9 +72,9 @@ normalize fsize md = run . evalInfoTableBuilder md . runReader normEnv . normali
     underBinder cont = do
       sym <- freshSymbol
       bl <- asks (^. normEnvLevel)
-      local (over normEnvVars (HashMap.insert sym bl)) $
-        local (over normEnvEvalEnv (mkIdent' sym :)) $
-          local (over normEnvLevel (1 +)) cont
+      local (over normEnvVars (HashMap.insert sym bl))
+        $ local (over normEnvEvalEnv (mkIdent' sym :))
+        $ local (over normEnvLevel (1 +)) cont
     {-# INLINE underBinder #-}
 
     underBinders :: Int -> Norm a -> Norm a
@@ -91,11 +91,11 @@ normalize fsize md = run . evalInfoTableBuilder md . runReader normEnv . normali
     goIdent Ident {..} = do
       bl <- asks (^. normEnvLevel)
       vars <- asks (^. normEnvVars)
-      return $
-        mkVar' $
-          getBinderIndex bl $
-            fromJust $
-              HashMap.lookup _identSymbol vars
+      return
+        $ mkVar'
+        $ getBinderIndex bl
+        $ fromJust
+        $ HashMap.lookup _identSymbol vars
     {-# INLINE goIdent #-}
 
     goApp :: App -> Norm Node

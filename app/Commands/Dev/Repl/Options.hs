@@ -11,10 +11,10 @@ parseDevRepl = do
   _replInputFile <- optional (parseInputFile FileExtJuvix)
   _replTransformations <- do
     ts <- optCoreTransformationIds
-    pure $
-      if
-          | null ts -> toStoredTransformations
-          | otherwise -> ts
+    pure
+      $ if
+        | null ts -> toStoredTransformations
+        | otherwise -> ts
   _replNoDisambiguate <- optNoDisambiguate
   _replShowDeBruijn <-
     switch

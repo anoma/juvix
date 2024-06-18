@@ -24,10 +24,10 @@ packageStdlib rootDir buildDir = firstJustM isStdLib
         adir <- canonicalDir rootDir (dep ^. pathDependencyPath)
         normBuildDir <- normalizeDir buildDir
         let mstdlib :: Maybe (Path Rel Dir) = stripProperPrefix normBuildDir adir
-        return $
-          if
-              | mstdlib == Just relStdlibDir -> Just stdLibBuildDir
-              | otherwise -> Nothing
+        return
+          $ if
+            | mstdlib == Just relStdlibDir -> Just stdLibBuildDir
+            | otherwise -> Nothing
         where
           stdLibBuildDir :: Path Abs Dir
           stdLibBuildDir = juvixStdlibDir buildDir

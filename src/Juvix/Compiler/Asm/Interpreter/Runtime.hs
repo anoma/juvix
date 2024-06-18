@@ -85,14 +85,14 @@ runRuntime tab = interp
         modify' (set runtimeFrame frm {_frameCallLocation = s ^. runtimeFrame . frameCallLocation})
       ReadArg off -> do
         s <- get
-        return $
-          fromMaybe
+        return
+          $ fromMaybe
             (throwRuntimeError s "invalid argument area read")
             (HashMap.lookup off (s ^. runtimeFrame . frameArgs . argumentArea))
       ReadTemp r -> do
         s <- get
-        return $
-          fromMaybe
+        return
+          $ fromMaybe
             (throwRuntimeError s "invalid temporary stack read")
             (Stack.nthFromBottom (r ^. refTempOffsetRef . offsetRefOffset) (s ^. runtimeFrame . frameTemp . temporaryStack))
       PushTempStack val ->
@@ -114,8 +114,8 @@ runRuntime tab = interp
 
     throwRuntimeError :: forall b. RuntimeState -> Text -> b
     throwRuntimeError s msg =
-      doFlushLogs s `GHC.seq`
-        throwRunError s msg
+      doFlushLogs s
+        `GHC.seq` throwRunError s msg
 
     doFlushLogs :: RuntimeState -> ()
     doFlushLogs s =

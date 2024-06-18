@@ -21,8 +21,8 @@ data GebCommand
 
 parseGebCommand :: Parser GebCommand
 parseGebCommand =
-  hsubparser $
-    mconcat
+  hsubparser
+    $ mconcat
       [ commandRepl,
         commandEval,
         commandRead,

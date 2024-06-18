@@ -14,8 +14,8 @@ data AssetKind
   | Images
 
 assetsDirByKind :: AssetKind -> [(Path Rel File, ByteString)]
-assetsDirByKind k = map (first relFile) $
-  case k of
+assetsDirByKind k = map (first relFile)
+  $ case k of
     Css -> $(cssDirQ)
     Js -> $(jsDirQ)
     Images -> $(imagesDirQ)

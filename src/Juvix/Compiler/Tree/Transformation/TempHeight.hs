@@ -14,8 +14,8 @@ computeFunctionTempHeight = umapN go
          in MemRef $ NodeMemRef i $ DRef (TempRef r')
       MemRef (NodeMemRef i (ConstrRef field@Field {_fieldRef = TempRef r})) ->
         let r' = set refTempTempHeight (Just k) r
-         in MemRef $
-              NodeMemRef
+         in MemRef
+              $ NodeMemRef
                 i
                 ( ConstrRef
                     field

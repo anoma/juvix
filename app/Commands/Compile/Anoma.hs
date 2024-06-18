@@ -20,7 +20,8 @@ runCommand opts = do
     runReader entryPoint
       . runError @JuvixError
       . coreToAnoma
-      $ coreRes ^. coreResultModule
+      $ coreRes
+      ^. coreResultModule
   res <- getRight r
   outputAnomaResult nockmaFile res
 

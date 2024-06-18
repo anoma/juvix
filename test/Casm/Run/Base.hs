@@ -26,8 +26,8 @@ casmRunVM labi instrs blts outputSize inputFile expectedFile step = do
     ( \dirPath -> do
         step "Serialize to Cairo bytecode"
         let res =
-              run $
-                casmToCairo
+              run
+                $ casmToCairo
                   ( Casm.Result
                       { _resultLabelInfo = labi,
                         _resultCode = instrs,
@@ -71,10 +71,10 @@ casmRunAssertion' bInterp bRunVM labi instrs blts outputSize inputFile expectedF
     Left err -> do
       assertFailure (prettyString err)
     Right () -> do
-      when bInterp $
-        casmInterpret labi instrs inputFile expectedFile step
-      when bRunVM $
-        casmRunVM labi instrs blts outputSize inputFile expectedFile step
+      when bInterp
+        $ casmInterpret labi instrs inputFile expectedFile step
+      when bRunVM
+        $ casmRunVM labi instrs blts outputSize inputFile expectedFile step
 
 casmRunAssertion :: Bool -> Bool -> Path Abs File -> Maybe (Path Abs File) -> Path Abs File -> (String -> IO ()) -> Assertion
 casmRunAssertion bInterp bRunVM mainFile inputFile expectedFile step = do

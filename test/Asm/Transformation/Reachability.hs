@@ -15,8 +15,8 @@ data ReachabilityTest = ReachabilityTest
 
 allTests :: TestTree
 allTests =
-  testGroup "Reachability" $
-    map liftTest rtests
+  testGroup "Reachability"
+    $ map liftTest rtests
 
 rtests :: [ReachabilityTest]
 rtests =

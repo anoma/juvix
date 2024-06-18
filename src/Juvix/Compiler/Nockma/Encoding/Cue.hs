@@ -70,19 +70,19 @@ consumeLength :: forall r. (Members '[BitReader, Error DecodingError] r) => Sem 
 consumeLength = do
   lenOfLen <- handleBitError DecodingErrorInvalidLength countBitsUntilOne
   if
-      | lenOfLen == 0 -> return 0
-      | otherwise -> do
-          -- The most significant bit of the length is omitted
-          let lenBits = lenOfLen - 1
-          foldlM go (bit lenBits) [0 .. lenBits - 1]
+    | lenOfLen == 0 -> return 0
+    | otherwise -> do
+        -- The most significant bit of the length is omitted
+        let lenBits = lenOfLen - 1
+        foldlM go (bit lenBits) [0 .. lenBits - 1]
   where
     go :: Int -> Int -> Sem r Int
     go acc n = do
       Bit b <- handleBitError DecodingErrorInvalidLength nextBit
-      return $
-        if
-            | b -> setBit acc n
-            | otherwise -> acc
+      return
+        $ if
+          | b -> setBit acc n
+          | otherwise -> acc
 
 -- | Consume a nock integer from the input bits
 consumeInteger ::
@@ -119,12 +119,12 @@ consumeTag ::
 consumeTag = do
   Bit b0 <- nextBit'
   if
-      | b0 -> do
-          Bit b1 <- nextBit'
-          if
-              | b1 -> return JamTagBackref
-              | otherwise -> return JamTagCell
-      | otherwise -> return JamTagAtom
+    | b0 -> do
+        Bit b1 <- nextBit'
+        if
+          | b1 -> return JamTagBackref
+          | otherwise -> return JamTagCell
+    | otherwise -> return JamTagAtom
   where
     nextBit' :: Sem r Bit
     nextBit' = handleBitError DecodingErrorInvalidTag nextBit
@@ -227,22 +227,22 @@ cueFromBitsSem = registerElementStart $ do
     consumeNatAtom = do
       len <- consumeLength
       if
-          | len == 0 -> return (Atom 0 emptyAtomInfo)
-          | otherwise -> do
-              a <- consumeInteger DecodingErrorInvalidAtom len
-              return (Atom (fromInteger a) emptyAtomInfo)
+        | len == 0 -> return (Atom 0 emptyAtomInfo)
+        | otherwise -> do
+            a <- consumeInteger DecodingErrorInvalidAtom len
+            return (Atom (fromInteger a) emptyAtomInfo)
 
     consumeAtom :: Sem r (Atom a)
     consumeAtom = do
       len <- consumeLength
       if
-          | len == 0 -> do
-              z <- fromNatural' @a 0
-              return (Atom z emptyAtomInfo)
-          | otherwise -> do
-              a <- consumeInteger DecodingErrorInvalidAtom len
-              n <- fromNatural' (fromInteger a)
-              return (Atom n emptyAtomInfo)
+        | len == 0 -> do
+            z <- fromNatural' @a 0
+            return (Atom z emptyAtomInfo)
+        | otherwise -> do
+            a <- consumeInteger DecodingErrorInvalidAtom len
+            n <- fromNatural' (fromInteger a)
+            return (Atom n emptyAtomInfo)
 
 -- | Decode an nock Atom to a nock term
 cue ::

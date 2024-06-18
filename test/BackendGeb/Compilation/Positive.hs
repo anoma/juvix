@@ -22,8 +22,8 @@ testDescr PosTest {..} =
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion =
-            Steps $
-              gebCompilationAssertion tRoot file' expected'
+            Steps
+              $ gebCompilationAssertion tRoot file' expected'
         }
 
 allTests :: TestTree

@@ -318,8 +318,8 @@ runIO hin hout infoTable = \case
         x'' <- runFunction hout infoTable (args ++ [x']) fi
         runIO hin hout infoTable x''
       _ ->
-        throw $
-          RegError
+        throw
+          $ RegError
             { _regErrorMsg = "expected a closure",
               _regErrorLoc = Nothing
             }

@@ -28,11 +28,11 @@ mapT f = over infoFunctions (HashMap.mapWithKey (over functionCode . f))
 
 mapT' :: forall a e r. (Symbol -> a -> Sem (InfoTableBuilder' a e ': r) a) -> InfoTable' a e -> Sem r (InfoTable' a e)
 mapT' f tab =
-  fmap fst $
-    runInfoTableBuilderWithInfoTable tab $
-      mapM_
-        (\(sym, fi) -> overM functionCode (f sym) fi >>= registerFunction' @a @e)
-        (HashMap.toList (tab ^. infoFunctions))
+  fmap fst
+    $ runInfoTableBuilderWithInfoTable tab
+    $ mapM_
+      (\(sym, fi) -> overM functionCode (f sym) fi >>= registerFunction' @a @e)
+      (HashMap.toList (tab ^. infoFunctions))
 
 walkT :: (Applicative f) => (Symbol -> a -> f ()) -> InfoTable' a e -> f ()
 walkT f tab = for_ (HashMap.toList (tab ^. infoFunctions)) (\(k, v) -> f k (v ^. functionCode))

@@ -38,8 +38,8 @@ gebEvalAssertion' _mainFile expectedFile step gebMorphism = do
           { _envEvaluatorOptions = Geb.defaultEvaluatorOptions,
             _envContext = mempty
           }
-  withTempDir' $
-    \dirPath -> do
+  withTempDir'
+    $ \dirPath -> do
       let outputFile = dirPath <//> $(mkRelFile "out.out")
       step "Evaluate"
       hout <- openFile (toFilePath outputFile) WriteMode

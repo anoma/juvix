@@ -119,10 +119,10 @@ checkCoercionCycles ::
 checkCoercionCycles = do
   ctab <- getCombinedCoercionTable
   let s = toList $ cyclicCoercions ctab
-  whenJust (nonEmpty s) $
-    throw
-      . ErrCoercionCycles
-      . CoercionCycles
+  whenJust (nonEmpty s)
+    $ throw
+    . ErrCoercionCycles
+    . CoercionCycles
 
 checkTopModule ::
   (Members '[HighlightBuilder, Reader EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, ResultBuilder, Termination] r) =>
@@ -320,10 +320,10 @@ checkFunctionDef FunctionDef {..} = do
           _funDefBuiltin,
           _funDefPragmas
         }
-  when _funDefInstance $
-    checkInstanceType funDef
-  when _funDefCoercion $
-    checkCoercionType funDef
+  when _funDefInstance
+    $ checkInstanceType funDef
+  when _funDefCoercion
+    $ checkCoercionType funDef
   registerFunctionDef funDef
   rememberFunctionDef funDef
   return funDef
@@ -369,20 +369,20 @@ checkInstanceType ::
 checkInstanceType FunctionDef {..} = do
   ty <- strongNormalize _funDefType
   let mi =
-        instanceFromTypedExpression $
-          TypedExpression
+        instanceFromTypedExpression
+          $ TypedExpression
             { _typedType = ty ^. normalizedExpression,
               _typedExpression = ExpressionIden (IdenFunction _funDefName)
             }
   case mi of
     Just ii@InstanceInfo {..} -> do
       tab <- ask
-      unless (isTrait tab _instanceInfoInductive) $
-        throw (ErrTargetNotATrait (TargetNotATrait _funDefType))
+      unless (isTrait tab _instanceInfoInductive)
+        $ throw (ErrTargetNotATrait (TargetNotATrait _funDefType))
       itab <- getCombinedInstanceTable
       is <- subsumingInstances itab ii
-      unless (null is) $
-        throw (ErrSubsumedInstance (SubsumedInstance ii is (getLoc _funDefName)))
+      unless (null is)
+        $ throw (ErrSubsumedInstance (SubsumedInstance ii is (getLoc _funDefName)))
       let metaVars = HashSet.fromList $ mapMaybe (^. paramName) _instanceInfoArgs
       mapM_ (checkArg tab metaVars ii) _instanceInfoArgs
       addInstanceInfo ii
@@ -428,10 +428,10 @@ checkCoercionType FunctionDef {..} = do
   case mi of
     Just ci@CoercionInfo {..} -> do
       tab <- ask
-      unless (isTrait tab _coercionInfoInductive) $
-        throw (ErrTargetNotATrait (TargetNotATrait _funDefType))
-      unless (isTrait tab (_coercionInfoTarget ^. instanceAppHead)) $
-        throw (ErrInvalidCoercionType (InvalidCoercionType _funDefType))
+      unless (isTrait tab _coercionInfoInductive)
+        $ throw (ErrTargetNotATrait (TargetNotATrait _funDefType))
+      unless (isTrait tab (_coercionInfoTarget ^. instanceAppHead))
+        $ throw (ErrInvalidCoercionType (InvalidCoercionType _funDefType))
       mapM_ checkArg _coercionInfoArgs
       addCoercionInfo ci
       checkCoercionCycles
@@ -598,13 +598,13 @@ checkClause clauseLoc clauseType clausePats body = do
             aI :: Int = preImplicits (map (^. paramImplicit) bodyParams)
             targetI :: Int = preImplicits (map (^. arityParameterImplicit) guessedBodyParams)
         if
-            | 0 < pref -> do
-                let n = length pref'
-                    bodyParams' = drop n bodyParams
-                    ty' = foldFunType bodyParams' bodyRest
-                wildcards <- mapM (genPatternWildcard clauseLoc) pref'
-                return (wildcards, ty')
-            | otherwise -> return ([], bodyTy)
+          | 0 < pref -> do
+              let n = length pref'
+                  bodyParams' = drop n bodyParams
+                  ty' = foldFunType bodyParams' bodyRest
+              wildcards <- mapM (genPatternWildcard clauseLoc) pref'
+              return (wildcards, ty')
+          | otherwise -> return ([], bodyTy)
       p : ps -> do
         bodyTy' <- weakNormalize bodyTy
         case bodyTy' of
@@ -641,16 +641,18 @@ checkClause clauseLoc clauseType clausePats body = do
         where
           throwWrongIsImplicit :: (Members '[Error TypeCheckerError] r') => PatternArg -> IsImplicit -> Sem r' a
           throwWrongIsImplicit patArg expected =
-            throw . ErrArityCheckerError $
-              ErrWrongPatternIsImplicit
+            throw
+              . ErrArityCheckerError
+              $ ErrWrongPatternIsImplicit
                 WrongPatternIsImplicit
                   { _wrongPatternIsImplicitActual = patArg,
                     _wrongPatternIsImplicitExpected = expected
                   }
           throwTooManyPatterns :: (Members '[Error TypeCheckerError] r') => Sem r' a
           throwTooManyPatterns =
-            throw . ErrArityCheckerError $
-              ErrLhsTooManyPatterns
+            throw
+              . ErrArityCheckerError
+              $ ErrLhsTooManyPatterns
                 LhsTooManyPatterns
                   { _lhsTooManyPatternsRemaining = p :| ps
                   }
@@ -738,8 +740,8 @@ checkPattern = go
               constrName = a ^. constrAppConstructor
               err :: MatchError -> Sem r ()
               err m =
-                throw $
-                  ErrWrongType
+                throw
+                  $ ErrWrongType
                     WrongType
                       { _wrongTypeThing = WrongTypeThingPattern pat,
                         _wrongTypeExpected = m ^. matchErrorRight,
@@ -806,8 +808,8 @@ checkPattern = go
               numParams = length params
           when
             (numArgs < numParams)
-            ( throw $
-                ErrTooFewArgumentsIndType
+            ( throw
+                $ ErrTooFewArgumentsIndType
                   WrongNumberArgumentsIndType
                     { _wrongNumberArgumentsIndTypeActualType = ty,
                       _wrongNumberArgumentsIndTypeActualNumArgs = numArgs,
@@ -816,8 +818,8 @@ checkPattern = go
             )
           when
             (numArgs > numParams)
-            ( throw $
-                ErrTooManyArgumentsIndType
+            ( throw
+                $ ErrTooManyArgumentsIndType
                   WrongNumberArgumentsIndType
                     { _wrongNumberArgumentsIndTypeActualType = ty,
                       _wrongNumberArgumentsIndTypeActualNumArgs = numArgs,
@@ -986,15 +988,15 @@ inferLeftAppExpression mhint e = case e of
       LitNumeric v -> outHole v >> typedLitNumeric v
       LitInteger {} -> do
         ty <- getIntTy
-        return $
-          TypedExpression
+        return
+          $ TypedExpression
             { _typedType = ty,
               _typedExpression = ExpressionLiteral lit
             }
       LitNatural {} -> do
         ty <- getNatTy
-        return $
-          TypedExpression
+        return
+          $ TypedExpression
             { _typedType = ty,
               _typedExpression = ExpressionLiteral lit
             }
@@ -1016,8 +1018,8 @@ inferLeftAppExpression mhint e = case e of
               from <- getBuiltinName i blt
               ihole <- freshHoleImpl i ImplicitInstance
               let ty' = fromMaybe ty mhint
-              inferExpression' (Just ty') $
-                foldApplication
+              inferExpression' (Just ty')
+                $ foldApplication
                   (ExpressionIden (IdenFunction from))
                   [ ApplicationArg Implicit ty',
                     ApplicationArg ImplicitInstance ihole,
@@ -1189,15 +1191,15 @@ holesHelper mhint expr = do
     checkBuiltinApp n implArgsNum argsNum args = do
       args' <- goImplArgs implArgsNum args
       if
-          | length args' >= argsNum -> return ()
-          | otherwise ->
-              throw
-                . ErrArityCheckerError
-                $ ErrBuiltinNotFullyApplied
-                  BuiltinNotFullyApplied
-                    { _builtinNotFullyAppliedName = n,
-                      _builtinNotFullyAplliedExpectedArgsNum = argsNum
-                    }
+        | length args' >= argsNum -> return ()
+        | otherwise ->
+            throw
+              . ErrArityCheckerError
+              $ ErrBuiltinNotFullyApplied
+                BuiltinNotFullyApplied
+                  { _builtinNotFullyAppliedName = n,
+                    _builtinNotFullyAplliedExpectedArgsNum = argsNum
+                  }
       where
         goImplArgs :: Int -> [ApplicationArg] -> Sem r [ApplicationArg]
         goImplArgs 0 as = return as
@@ -1391,8 +1393,8 @@ holesHelper mhint expr = do
                       builderTy <- gets (^. appBuilderType)
                       args <- gets (^. appBuilderArgs)
                       let a :: Expression = foldApplication l (map (^. appBuilderArg) args)
-                      throw $
-                        ErrExpectedFunctionType
+                      throw
+                        $ ErrExpectedFunctionType
                           ExpectedFunctionType
                             { _expectedFunctionTypeExpression = a,
                               _expectedFunctionTypeLeft = l,
@@ -1551,10 +1553,10 @@ simplelambda = error "simple lambda expressions are not supported by the arity c
 arityLambda :: forall r. (Members '[Reader InfoTable, Inference, Reader LocalVars] r) => Lambda -> Sem r Arity
 arityLambda l = do
   aris <- mapM guessClauseArity (l ^. lambdaClauses)
-  return $
-    if
-        | allSame aris -> head aris
-        | otherwise -> ArityNotKnown
+  return
+    $ if
+      | allSame aris -> head aris
+      | otherwise -> ArityNotKnown
   where
     guessClauseArity :: LambdaClause -> Sem r Arity
     guessClauseArity cl = do
@@ -1596,8 +1598,8 @@ arityCase c = do
   aris <- mapM (guessArity . (^. caseBranchExpression)) (c ^. caseBranches)
   return
     if
-        | allSame aris -> head aris
-        | otherwise -> ArityNotKnown
+      | allSame aris -> head aris
+      | otherwise -> ArityNotKnown
 
 idenArity :: (Members '[Inference, Reader LocalVars, Reader InfoTable] r) => Iden -> Sem r Arity
 idenArity = \case
@@ -1645,8 +1647,8 @@ getBuiltinName i b = fromMaybeM notDefined (asks (^. infoBuiltins . at b'))
   where
     b' = toBuiltinPrim b
     notDefined =
-      throw $
-        ErrBuiltinNotDefined
+      throw
+        $ ErrBuiltinNotDefined
           NotDefined
             { _notDefinedBuiltin = b',
               _notDefinedLoc = i

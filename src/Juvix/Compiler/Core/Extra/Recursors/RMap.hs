@@ -82,8 +82,8 @@ rmapG coll f = go mempty 0 (coll ^. cEmpty)
               binders' = BL.prepend rbs' binders
            in \case
                 NVar v ->
-                  return $
-                    maybe
+                  return
+                    $ maybe
                       (NVar v {_varIndex = getBinderIndex bl' lvl})
                       (shift (bl' - lvl))
                       mnode

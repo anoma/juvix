@@ -159,7 +159,8 @@ geval opts herr ctx env0 = eval' env0
 
     evalBody :: Info -> Binder -> Env -> Node -> Node -> Node
     evalBody i bi env v body
-      | opts ^. evalOptionsNormalize
+      | opts
+          ^. evalOptionsNormalize
           && isTypePrim (bi ^. binderType)
           && not (isImmediate' v)
           && not (isFailNode v) =
@@ -219,9 +220,9 @@ geval opts herr ctx env0 = eval' env0
         divOp :: (Integer -> Integer -> Integer) -> [Node] -> Node
         divOp op = binOp' nodeFromInteger integerFromNode nonzeroIntegerFromNode $ \v1 v2 ->
           if
-              | v2 == 0 ->
-                  evalError "division by zero" (substEnv env n)
-              | otherwise -> v1 `op` v2
+            | v2 == 0 ->
+                evalError "division by zero" (substEnv env n)
+            | otherwise -> v1 `op` v2
         {-# INLINE divOp #-}
 
         binOp' :: (b -> Node) -> (Node -> Maybe a) -> (Node -> Maybe a) -> (a -> a -> b) -> [Node] -> Node
@@ -258,20 +259,20 @@ geval opts herr ctx env0 = eval' env0
         fieldFromIntOp =
           unary $ \node ->
             let !v = eval' env node
-             in nodeFromField $
-                  fieldFromInteger (opts ^. evalOptionsFieldSize) $
-                    fromMaybe (evalError "expected integer" v) $
-                      integerFromNode v
+             in nodeFromField
+                  $ fieldFromInteger (opts ^. evalOptionsFieldSize)
+                  $ fromMaybe (evalError "expected integer" v)
+                  $ integerFromNode v
         {-# INLINE fieldFromIntOp #-}
 
         fieldToIntOp :: [Node] -> Node
         fieldToIntOp =
           unary $ \node ->
             let !v = eval' env node
-             in nodeFromInteger $
-                  fieldToInteger $
-                    fromMaybe (evalError "expected field element" v) $
-                      fieldFromNode v
+             in nodeFromInteger
+                  $ fieldToInteger
+                  $ fromMaybe (evalError "expected field element" v)
+                  $ fieldFromNode v
         {-# INLINE fieldToIntOp #-}
 
         eqOp :: [Node] -> Node
@@ -318,92 +319,92 @@ geval opts herr ctx env0 = eval' env0
         failOp :: [Node] -> Node
         failOp = unary $ \msg ->
           if
-              | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
-                  mkBuiltinApp' OpFail [eval' env msg]
-              | otherwise ->
-                  Exception.throw (EvalError ("failure: " <> printNode (eval' env msg)) Nothing)
+            | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                mkBuiltinApp' OpFail [eval' env msg]
+            | otherwise ->
+                Exception.throw (EvalError ("failure: " <> printNode (eval' env msg)) Nothing)
         {-# INLINE failOp #-}
 
         traceOp :: [Node] -> Node
         traceOp = unary $ \msg ->
           let !v = eval' env msg
            in if
-                  | opts ^. evalOptionsSilent ->
-                      v
-                  | otherwise ->
-                      unsafePerformIO (hPutStrLn herr (printNode v) >> return v)
+                | opts ^. evalOptionsSilent ->
+                    v
+                | otherwise ->
+                    unsafePerformIO (hPutStrLn herr (printNode v) >> return v)
         {-# INLINE traceOp #-}
 
         anomaGetOp :: [Node] -> Node
         anomaGetOp = unary $ \arg ->
           if
-              | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
-                  mkBuiltinApp' OpAnomaGet [eval' env arg]
-              | otherwise ->
-                  err "unsupported builtin operation: OpAnomaGet"
+            | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                mkBuiltinApp' OpAnomaGet [eval' env arg]
+            | otherwise ->
+                err "unsupported builtin operation: OpAnomaGet"
         {-# INLINE anomaGetOp #-}
 
         anomaEncodeOp :: [Node] -> Node
         anomaEncodeOp = unary $ \arg ->
           if
-              | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
-                  mkBuiltinApp' OpAnomaEncode [eval' env arg]
-              | otherwise ->
-                  err "unsupported builtin operation: OpAnomaEncode"
+            | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                mkBuiltinApp' OpAnomaEncode [eval' env arg]
+            | otherwise ->
+                err "unsupported builtin operation: OpAnomaEncode"
         {-# INLINE anomaEncodeOp #-}
 
         anomaDecodeOp :: [Node] -> Node
         anomaDecodeOp = unary $ \arg ->
           if
-              | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
-                  mkBuiltinApp' OpAnomaDecode [eval' env arg]
-              | otherwise ->
-                  err "unsupported builtin operation: OpAnomaDecode"
+            | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                mkBuiltinApp' OpAnomaDecode [eval' env arg]
+            | otherwise ->
+                err "unsupported builtin operation: OpAnomaDecode"
         {-# INLINE anomaDecodeOp #-}
 
         anomaVerifyDetachedOp :: [Node] -> Node
         anomaVerifyDetachedOp = checkApply $ \arg1 arg2 arg3 ->
           if
-              | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
-                  mkBuiltinApp' OpAnomaVerifyDetached (eval' env <$> [arg1, arg2, arg3])
-              | otherwise ->
-                  err "unsupported builtin operation: OpAnomaVerifyDetached"
+            | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                mkBuiltinApp' OpAnomaVerifyDetached (eval' env <$> [arg1, arg2, arg3])
+            | otherwise ->
+                err "unsupported builtin operation: OpAnomaVerifyDetached"
         {-# INLINE anomaVerifyDetachedOp #-}
 
         anomaSignOp :: [Node] -> Node
         anomaSignOp = checkApply $ \arg1 arg2 ->
           if
-              | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
-                  mkBuiltinApp' OpAnomaSign (eval' env <$> [arg1, arg2])
-              | otherwise ->
-                  err "unsupported builtin operation: OpAnomaSign"
+            | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                mkBuiltinApp' OpAnomaSign (eval' env <$> [arg1, arg2])
+            | otherwise ->
+                err "unsupported builtin operation: OpAnomaSign"
         {-# INLINE anomaSignOp #-}
 
         anomaSignDetachedOp :: [Node] -> Node
         anomaSignDetachedOp = checkApply $ \arg1 arg2 ->
           if
-              | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
-                  mkBuiltinApp' OpAnomaSignDetached (eval' env <$> [arg1, arg2])
-              | otherwise ->
-                  err "unsupported builtin operation: OpAnomaSignDetached"
+            | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                mkBuiltinApp' OpAnomaSignDetached (eval' env <$> [arg1, arg2])
+            | otherwise ->
+                err "unsupported builtin operation: OpAnomaSignDetached"
         {-# INLINE anomaSignDetachedOp #-}
 
         anomaVerifyOp :: [Node] -> Node
         anomaVerifyOp = checkApply $ \arg1 arg2 ->
           if
-              | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
-                  mkBuiltinApp' OpAnomaVerify (eval' env <$> [arg1, arg2])
-              | otherwise ->
-                  err "unsupported builtin operation: OpAnomaVerify"
+            | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                mkBuiltinApp' OpAnomaVerify (eval' env <$> [arg1, arg2])
+            | otherwise ->
+                err "unsupported builtin operation: OpAnomaVerify"
         {-# INLINE anomaVerifyOp #-}
 
         poseidonHashOp :: [Node] -> Node
         poseidonHashOp = unary $ \arg ->
           if
-              | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
-                  mkBuiltinApp' OpPoseidonHash [eval' env arg]
-              | otherwise ->
-                  err "unsupported builtin operation: OpPoseidonHash"
+            | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                mkBuiltinApp' OpPoseidonHash [eval' env arg]
+            | otherwise ->
+                err "unsupported builtin operation: OpPoseidonHash"
         {-# INLINE poseidonHashOp #-}
 
         ecOp :: [Node] -> Node
@@ -585,8 +586,8 @@ doEvalIO mfsize noIO i tab node = runM (doEval mfsize noIO i tab node)
 -- no location is available in EvalError.
 catchEvalError :: (MonadIO m) => Location -> a -> m (Either CoreError a)
 catchEvalError loc a =
-  liftIO $
-    Exception.catch
+  liftIO
+    $ Exception.catch
       (Exception.evaluate a <&> Right)
       (\(ex :: EvalError) -> return (Left (toCoreError loc ex)))
 

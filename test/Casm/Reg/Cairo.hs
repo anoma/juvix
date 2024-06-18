@@ -20,8 +20,8 @@ allTests :: TestTree
 allTests =
   testGroup
     "JuvixReg to Cairo translation positive tests"
-    ( map (mkTest . testDescr) $
-        P.filterOutTests
+    ( map (mkTest . testDescr)
+        $ P.filterOutTests
           [ "Test001: Arithmetic opcodes",
             "Test013: Fibonacci numbers in linear time",
             "Test014: Trees",
@@ -35,7 +35,7 @@ allTests =
             "Test036: Streams without memoization"
           ]
           P.tests
-          ++ cairoTests
+        ++ cairoTests
     )
 
 cairoTests :: [P.PosTest]

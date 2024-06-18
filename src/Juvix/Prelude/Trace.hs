@@ -35,11 +35,11 @@ traceShow b = traceLabel "" (pack . show $ b) b
 
 traceToFile :: Path Abs File -> Text -> a -> a
 traceToFile fpath t a =
-  traceLabel (pack ("[" <> toFilePath fpath <> "]")) t $
-    unsafePerformIO $
-      do
-        writeFileEnsureLn fpath t
-        return a
+  traceLabel (pack ("[" <> toFilePath fpath <> "]")) t
+    $ unsafePerformIO
+    $ do
+      writeFileEnsureLn fpath t
+      return a
 {-# WARNING traceToFile "Using traceToFile" #-}
 
 traceToFileM :: (Applicative m) => Path Abs File -> Text -> a -> m ()

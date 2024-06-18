@@ -31,8 +31,8 @@ coercionFromTypedExpression TypedExpression {..}
   | otherwise = do
       tgt <- traitFromExpression metaVars (t ^. paramType)
       InstanceApp {..} <- traitFromExpression metaVars e
-      return $
-        CoercionInfo
+      return
+        $ CoercionInfo
           { _coercionInfoInductive = _instanceAppHead,
             _coercionInfoParams = _instanceAppArgs,
             _coercionInfoTarget = tgt,

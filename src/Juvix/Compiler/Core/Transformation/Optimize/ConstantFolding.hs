@@ -24,8 +24,12 @@ convertNode opts nonRecSyms tab md = umap go
               NIdt Ident {..}
                 | HashSet.member _identSymbol nonRecSyms
                     && evalAllowed
-                    && length args == ii ^. identifierArgsNum
-                    && length tyargs == ii ^. identifierArgsNum
+                    && length args
+                    == ii
+                    ^. identifierArgsNum
+                    && length tyargs
+                    == ii
+                    ^. identifierArgsNum
                     && isZeroOrderType md tgt'
                     && all isNonRecValue args ->
                     doEval' node

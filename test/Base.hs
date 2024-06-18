@@ -100,8 +100,8 @@ testRunIO e =
 
 testDefaultEntryPointIO :: (MonadIO m) => Path Abs Dir -> Path Abs File -> m EntryPoint
 testDefaultEntryPointIO cwd mainFile =
-  testTaggedLockedToIO $
-    defaultEntryPointIO cwd mainFile
+  testTaggedLockedToIO
+    $ defaultEntryPointIO cwd mainFile
 
 testDefaultEntryPointNoFileIO :: Path Abs Dir -> IO EntryPoint
 testDefaultEntryPointNoFileIO cwd = testTaggedLockedToIO (defaultEntryPointNoFileIO cwd)

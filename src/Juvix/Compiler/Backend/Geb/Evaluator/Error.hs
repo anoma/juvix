@@ -61,13 +61,14 @@ evalError ::
   Maybe Morphism ->
   Sem r a
 evalError msg val m =
-  throw . JuvixError $
-    ( EvalError
-        { _evalErrorMsg = msg,
-          _evalErrorGebValue = val,
-          _evalErrorGebExpression = m
-        }
-    )
+  throw
+    . JuvixError
+    $ ( EvalError
+          { _evalErrorMsg = msg,
+            _evalErrorGebValue = val,
+            _evalErrorGebExpression = m
+          }
+      )
 
 instance Exception.Exception QuoteError
 

@@ -22,8 +22,8 @@ testDescr PosTest {..} =
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion =
-            Steps $
-              gebEvalAssertion file' expected'
+            Steps
+              $ gebEvalAssertion file' expected'
         }
 
 filterOutTests :: [String] -> [PosTest] -> [PosTest]

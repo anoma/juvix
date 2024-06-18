@@ -25,9 +25,9 @@ addApplyBuiltins tab = (blts, bs' ^. stateInfoTable)
 
     bs' :: BuilderState
     bs' =
-      fromRight impossible $
-        parseText' bs $
-          decodeUtf8 $(FE.makeRelativeToProject "runtime/tree/apply.jvt" >>= FE.embedFile)
+      fromRight impossible
+        $ parseText' bs
+        $ decodeUtf8 $(FE.makeRelativeToProject "runtime/tree/apply.jvt" >>= FE.embedFile)
 
     blts :: ApplyBuiltins
     blts =

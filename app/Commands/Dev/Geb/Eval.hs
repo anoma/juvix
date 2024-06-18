@@ -44,14 +44,14 @@ evalAndPrint opts = \case
               _envContext = mempty
             }
     if
-        | opts' ^. Geb.evaluatorOptionsOutputMorphism ->
-            case Geb.evalAndOutputMorphism' env morphism of
-              Left err -> exitJuvixError err
-              Right m -> renderStdOut (Geb.ppOut opts' m)
-        | otherwise ->
-            case Geb.eval' env morphism of
-              Left err -> exitJuvixError err
-              Right m -> renderStdOut (Geb.ppOut opts' m)
+      | opts' ^. Geb.evaluatorOptionsOutputMorphism ->
+          case Geb.evalAndOutputMorphism' env morphism of
+            Left err -> exitJuvixError err
+            Right m -> renderStdOut (Geb.ppOut opts' m)
+      | otherwise ->
+          case Geb.eval' env morphism of
+            Left err -> exitJuvixError err
+            Right m -> renderStdOut (Geb.ppOut opts' m)
   Geb.ExpressionTypedMorphism tyMorph ->
     evalAndPrint
       opts

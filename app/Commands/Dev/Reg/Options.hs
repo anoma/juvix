@@ -13,8 +13,8 @@ data RegCommand
 
 parseRegCommand :: Parser RegCommand
 parseRegCommand =
-  hsubparser $
-    mconcat
+  hsubparser
+    $ mconcat
       [ commandCompile,
         commandRun,
         commandRead

@@ -19,8 +19,8 @@ runCommand opts = do
       case r of
         Left err -> exitJuvixError (JuvixError err)
         Right tab' -> do
-          unless (project opts ^. regReadNoPrint) $
-            renderStdOut (Reg.ppOutDefault tab' tab')
+          unless (project opts ^. regReadNoPrint)
+            $ renderStdOut (Reg.ppOutDefault tab' tab')
           doRun tab'
   where
     file :: AppPath File
