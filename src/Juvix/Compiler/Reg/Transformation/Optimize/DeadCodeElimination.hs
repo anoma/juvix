@@ -1,4 +1,4 @@
-module Juvix.Compiler.Reg.Transformation.DeadCodeElimination where
+module Juvix.Compiler.Reg.Transformation.Optimize.DeadCodeElimination where
 
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Reg.Extra

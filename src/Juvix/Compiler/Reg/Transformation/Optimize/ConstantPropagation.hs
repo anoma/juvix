@@ -1,4 +1,4 @@
-module Juvix.Compiler.Reg.Transformation.ConstantPropagation where
+module Juvix.Compiler.Reg.Transformation.Optimize.ConstantPropagation where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Reg.Extra

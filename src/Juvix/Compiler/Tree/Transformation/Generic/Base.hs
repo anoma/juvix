@@ -4,6 +4,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Tree.Data.InfoTable.Base
 import Juvix.Compiler.Tree.Data.InfoTableBuilder.Base
 import Juvix.Compiler.Tree.Language.Base
+import Juvix.Compiler.Tree.Options
 
 mapFunctionsM :: (Monad m) => (FunctionInfo' a e -> m (FunctionInfo' a e)) -> InfoTable' a e -> m (InfoTable' a e)
 mapFunctionsM = overM infoFunctions . mapM
@@ -36,3 +37,13 @@ mapT' f tab =
 
 walkT :: (Applicative f) => (Symbol -> a -> f ()) -> InfoTable' a e -> f ()
 walkT f tab = for_ (HashMap.toList (tab ^. infoFunctions)) (\(k, v) -> f k (v ^. functionCode))
+
+withOptimizationLevel :: (Member (Reader Options) r) => Int -> (InfoTable' a e -> Sem r (InfoTable' a e)) -> InfoTable' a e -> Sem r (InfoTable' a e)
+withOptimizationLevel n f tab = do
+  l <- asks (^. optOptimizationLevel)
+  if
+      | l >= n -> f tab
+      | otherwise -> return tab
+
+withOptimizationLevel' :: (Member (Reader Options) r) => InfoTable' a e -> Int -> (InfoTable' a e -> Sem r (InfoTable' a e)) -> Sem r (InfoTable' a e)
+withOptimizationLevel' tab n f = withOptimizationLevel n f tab

@@ -12,6 +12,8 @@ data TransformationId
   | CopyPropagation
   | ConstantPropagation
   | DeadCodeElimination
+  | OptPhaseMain
+  | OptPhaseCairo
   deriving stock (Data, Bounded, Enum, Show)
 
 data PipelineId
@@ -29,7 +31,7 @@ toRustTransformations :: [TransformationId]
 toRustTransformations = [Cleanup]
 
 toCasmTransformations :: [TransformationId]
-toCasmTransformations = [Cleanup, CopyPropagation, ConstantPropagation, DeadCodeElimination, SSA]
+toCasmTransformations = [Cleanup, OptPhaseCairo, SSA]
 
 instance TransformationId' TransformationId where
   transformationText :: TransformationId -> Text
@@ -41,6 +43,8 @@ instance TransformationId' TransformationId where
     CopyPropagation -> strCopyPropagation
     ConstantPropagation -> strConstantPropagation
     DeadCodeElimination -> strDeadCodeElimination
+    OptPhaseMain -> strOptPhaseMain
+    OptPhaseCairo -> strOptPhaseCairo
 
 instance PipelineId' TransformationId PipelineId where
   pipelineText :: PipelineId -> Text
