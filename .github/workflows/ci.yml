@@ -48,6 +48,7 @@ jobs:
       - uses: mrkkrp/ormolu-action@v11
         with:
           version: 0.5.3.0
+          respect-cabal-files: true
 
   build-and-test-linux:
     runs-on: ubuntu-22.04
