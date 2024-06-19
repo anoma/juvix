@@ -43,12 +43,12 @@ varFromHole h =
       _nameFixity = Nothing
     }
   where
-    pp = "_ω" <> prettyText (h ^. holeId)
+    pp :: Text = "_ω"
 
 varFromWildcard :: (Members '[NameIdGen] r) => Wildcard -> Sem r VarName
 varFromWildcard w = do
   _nameId <- freshNameId
-  let _nameText :: Text = "_ω" <> prettyText _nameId
+  let _nameText :: Text = "_ω"
       _nameKind = KNameLocal
       _nameKindPretty = KNameLocal
       _namePretty = _nameText
