@@ -66,7 +66,7 @@ format *opts:
     set -euo{{ bashDebugArg }} pipefail
 
     if [ ! -e "juvix.cabal" ]; then
-        echo "Error: juvix.cabal does not exist. Please, run \`just install\` or \`stack setup\` first"
+        echo "Error: juvix.cabal does not exist. Please, run 'just install' or 'stack setup' first"
         exit 1
     fi
 
