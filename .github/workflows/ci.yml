@@ -48,15 +48,6 @@ jobs:
       - uses: mrkkrp/ormolu-action@v11
         with:
           version: 0.5.3.0
-          extra-args: >-
-            --ghc-opt -XDerivingStrategies
-            --ghc-opt -XImportQualifiedPost
-            --ghc-opt -XMultiParamTypeClasses
-            --ghc-opt -XPatternSynonyms
-            --ghc-opt -XStandaloneDeriving
-            --ghc-opt -XTemplateHaskell
-            --ghc-opt -XUnicodeSyntax
-            --ghc-opt -XBangPatterns
 
   build-and-test-linux:
     runs-on: ubuntu-22.04
