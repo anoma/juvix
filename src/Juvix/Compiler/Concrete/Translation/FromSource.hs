@@ -1639,18 +1639,9 @@ openModule = do
   _openModuleName <- case sing :: SIsOpenShort short of
     SOpenFull -> name
     SOpenShort -> return ()
-  _openModuleParams <- popenModuleParams
-  return OpenModule {..}
-
-popenModuleParams ::
-  forall r.
-  (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) =>
-  ParsecS r (OpenModuleParams 'Parsed)
-popenModuleParams = do
-  _openUsingHiding <- optional usingOrHiding
+  _openModuleUsingHiding <- optional usingOrHiding
   _openModulePublic <- publicAnn
-  let _openModuleParams = OpenModuleParams {..}
-  return OpenModuleParams {..}
+  return OpenModule {..}
 
 usingOrHiding :: (Members '[ParserResultBuilder, JudocStash, PragmasStash] r) => ParsecS r (UsingHiding 'Parsed)
 usingOrHiding =

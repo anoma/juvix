@@ -1765,15 +1765,16 @@ checkOpenModuleHelper openedModule OpenModule {..} = do
                   _usingAsKw = i ^. usingAsKw,
                   _usingModuleKw = i ^. usingModuleKw
                 }
-  openParams' <- traverseOf openUsingHiding (mapM checkUsingHiding) _openModuleParams
-  mergeScope (alterScope (openParams' ^. openUsingHiding) exportInfo)
+  usingHiding' <- mapM checkUsingHiding _openModuleUsingHiding
+  mergeScope (alterScope usingHiding' exportInfo)
   let openName :: OpenModuleNameType 'Scoped short = case sing :: SIsOpenShort short of
         SOpenFull -> openedModule ^. scopedModuleName
         SOpenShort -> ()
   return
     OpenModule
       { _openModuleName = openName,
-        _openModuleParams = openParams',
+        _openModuleUsingHiding = usingHiding',
+        _openModulePublic,
         ..
       }
   where
@@ -1804,7 +1805,7 @@ checkOpenModuleHelper openedModule OpenModule {..} = do
           over
             nsEntry
             ( set S.nameWhyInScope S.BecauseImportedOpened
-                . set S.nameVisibilityAnn (publicAnnToVis (_openModuleParams ^. openModulePublic))
+                . set S.nameVisibilityAnn (publicAnnToVis _openModulePublic)
             )
 
         publicAnnToVis :: PublicAnn -> VisibilityAnn

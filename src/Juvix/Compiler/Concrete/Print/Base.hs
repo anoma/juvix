@@ -1179,18 +1179,13 @@ instance (SingI s, SingI short) => PrettyPrint (OpenModule s short) where
     let name' :: Maybe (Sem r ()) = case sing :: SIsOpenShort short of
           SOpenShort -> Nothing
           SOpenFull -> Just (ppModuleNameType _openModuleName)
-        params' = ppOpenModuleParams _openModuleParams
         openkw = ppCode _openModuleKw
+        pub = ppPublicAnn _openModulePublic
+        usingHiding = ppCode <$> _openModuleUsingHiding
     openkw
       <+?> name'
-      <+?> params'
-    where
-      ppOpenModuleParams :: OpenModuleParams s -> Maybe (Sem r ())
-      ppOpenModuleParams OpenModuleParams {..} = do
-        let pub = ppPublicAnn _openModulePublic
-            usingHiding = ppCode <$> _openUsingHiding
-        pub
-          <?+?> usingHiding
+      <+?> usingHiding
+      <+?> pub
 
 ppPublicAnn :: PrettyPrintingMaybe PublicAnn
 ppPublicAnn = \case

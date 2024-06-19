@@ -108,16 +108,12 @@ toConcrete t p = run . runReader l $ do
     mkImport _importModulePath = do
       _openModuleKw <- kw kwOpen
       _importKw <- kw kwImport
-      let _openModuleParams :: OpenModuleParams 'Parsed =
-            OpenModuleParams
-              { _openUsingHiding = Nothing,
-                _openModulePublic = NoPublic
-              }
-          openShort :: OpenModule 'Parsed 'OpenShort =
+      let openShort :: OpenModule 'Parsed 'OpenShort =
             OpenModule
               { _openModuleName = (),
-                _openModuleKw,
-                _openModuleParams
+                _openModuleUsingHiding = Nothing,
+                _openModulePublic = NoPublic,
+                _openModuleKw
               }
       return $
         StatementImport

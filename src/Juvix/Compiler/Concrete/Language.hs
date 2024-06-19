@@ -1362,7 +1362,8 @@ getNameRefId = case sing :: S.SIsConcrete c of
 data OpenModule (s :: Stage) (short :: IsOpenShort) = OpenModule
   { _openModuleKw :: KeywordRef,
     _openModuleName :: OpenModuleNameType s short,
-    _openModuleParams :: OpenModuleParams s
+    _openModuleUsingHiding :: Maybe (UsingHiding s),
+    _openModulePublic :: PublicAnn
   }
   deriving stock (Generic)
 
@@ -1405,37 +1406,6 @@ deriving stock instance Ord (OpenModule 'Parsed 'OpenFull)
 deriving stock instance Ord (OpenModule 'Scoped 'OpenShort)
 
 deriving stock instance Ord (OpenModule 'Scoped 'OpenFull)
-
-data OpenModuleShort (s :: Stage) = OpenModuleShort
-  { _openModuleShortKw :: KeywordRef,
-    _openModuleShortParams :: OpenModuleParams (s :: Stage)
-  }
-
-data OpenModuleParams (s :: Stage) = OpenModuleParams
-  { _openUsingHiding :: Maybe (UsingHiding s),
-    _openModulePublic :: PublicAnn
-  }
-  deriving stock (Generic)
-
-instance Serialize (OpenModuleParams 'Scoped)
-
-instance NFData (OpenModuleParams 'Scoped)
-
-instance Serialize (OpenModuleParams 'Parsed)
-
-instance NFData (OpenModuleParams 'Parsed)
-
-deriving stock instance Show (OpenModuleParams 'Parsed)
-
-deriving stock instance Show (OpenModuleParams 'Scoped)
-
-deriving stock instance Eq (OpenModuleParams 'Parsed)
-
-deriving stock instance Eq (OpenModuleParams 'Scoped)
-
-deriving stock instance Ord (OpenModuleParams 'Parsed)
-
-deriving stock instance Ord (OpenModuleParams 'Scoped)
 
 data ScopedIden = ScopedIden
   { _scopedIdenFinal :: S.Name,
@@ -2540,8 +2510,6 @@ makeLenses ''AxiomDef
 makeLenses ''InductiveParameters
 makeLenses ''InductiveParametersRhs
 makeLenses ''OpenModule
-makeLenses ''OpenModuleShort
-makeLenses ''OpenModuleParams
 makeLenses ''PatternApp
 makeLenses ''PatternInfixApp
 makeLenses ''PatternPostfixApp
@@ -2700,18 +2668,11 @@ instance (SingI s) => HasLoc (AxiomDef s) where
 getLocPublicAnn :: PublicAnn -> Maybe Interval
 getLocPublicAnn p = getLoc <$> p ^? _Public
 
-getLocOpenModuleParams :: OpenModuleParams s -> Maybe Interval
-getLocOpenModuleParams OpenModuleParams {..} =
-  fmap getLoc _openUsingHiding ?<>? getLocPublicAnn _openModulePublic
-
-instance HasLoc (OpenModuleShort s) where
-  getLoc OpenModuleShort {..} =
-    getLoc _openModuleShortKw <>? getLocOpenModuleParams _openModuleShortParams
-
 instance HasLoc (OpenModule s short) where
   getLoc OpenModule {..} =
     getLoc _openModuleKw
-      <>? fmap getLoc (_openModuleParams ^? openModulePublic . _Public)
+      <>? fmap getLoc _openModuleUsingHiding
+      <>? getLocPublicAnn _openModulePublic
 
 instance HasLoc (ProjectionDef s) where
   getLoc = getLoc . (^. projectionConstructor)

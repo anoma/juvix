@@ -505,7 +505,7 @@ goImport op
     shouldBeDocumented
       -- TODO add import public
       --- | Just Public {} <- op ^? importPublic = True
-      | Just Public {} <- op ^? importOpen . _Just . openModuleParams . openModulePublic = True
+      | Just Public {} <- op ^? importOpen . _Just . openModulePublic = True
       | otherwise = False
 
 goOpen :: forall r. (Members '[Reader HtmlOptions] r) => OpenModule 'Scoped 'OpenFull -> Sem r Html
@@ -515,7 +515,7 @@ goOpen op
   where
     shouldBeDocumented :: Bool
     shouldBeDocumented
-      | Public {} <- op ^. openModuleParams . openModulePublic = True
+      | Public {} <- op ^. openModulePublic = True
       | otherwise = False
 
 goAxiom :: forall r. (Members '[Reader HtmlOptions] r) => AxiomDef 'Scoped -> Sem r Html
