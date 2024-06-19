@@ -461,8 +461,8 @@ goFunctionDef FunctionDef {..} = do
     argToPattern arg@SigArg {..} = do
       let _patternArgIsImplicit = _sigArgImplicit
           _patternArgName :: Maybe Internal.Name = Nothing
-          noName = goWidlcard (Wildcard (getLoc arg))
-          goWidlcard w = do
+          noName = goWildcard (Wildcard (getLoc arg))
+          goWildcard w = do
             _patternArgPattern <- Internal.PatternVariable <$> varFromWildcard w
             return Internal.PatternArg {..}
           mk :: Concrete.Argument 'Scoped -> Sem r Internal.PatternArg
@@ -470,7 +470,7 @@ goFunctionDef FunctionDef {..} = do
             Concrete.ArgumentSymbol s ->
               let _patternArgPattern = Internal.PatternVariable (goSymbol s)
                in return Internal.PatternArg {..}
-            Concrete.ArgumentWildcard w -> goWidlcard w
+            Concrete.ArgumentWildcard w -> goWildcard w
       maybe (pure <$> noName) (mapM mk) (nonEmpty _sigArgNames)
 
 goInductiveParameters ::

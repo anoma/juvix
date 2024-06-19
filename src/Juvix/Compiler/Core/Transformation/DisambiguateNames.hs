@@ -16,6 +16,8 @@ disambiguateNodeNames' disambiguate md = dmapL go
         mkVar (setInfoName (BL.lookup _varIndex bl ^. binderName) _varInfo) _varIndex
       NIdt Ident {..} ->
         mkIdent (setInfoName (identName md _identSymbol) _identInfo) _identSymbol
+      NCtr Constr {..} ->
+        mkConstr (setInfoName (constrName md _constrTag) _constrInfo) _constrTag _constrArgs
       NLam lam ->
         NLam (over lambdaBinder (over binderName (disambiguate bl)) lam)
       NLet lt ->
@@ -35,7 +37,18 @@ disambiguateNodeNames' disambiguate md = dmapL go
         where
           vs = toList (lt ^. letRecValues)
       NCase c ->
-        NCase (over caseBranches (map (over caseBranchBinders (disambiguateBinders bl))) c)
+        NCase
+          ( over
+              caseBranches
+              ( map
+                  ( \br ->
+                      over caseBranchInfo (setInfoName (constrName md (br ^. caseBranchTag)))
+                        . over caseBranchBinders (disambiguateBinders bl)
+                        $ br
+                  )
+              )
+              c
+          )
       NMatch m ->
         NMatch (over matchBranches (map (over matchBranchPatterns (NonEmpty.fromList . snd . disambiguatePatterns bl . toList))) m)
       NTyp TypeConstr {..} ->
@@ -64,7 +77,12 @@ disambiguateNodeNames' disambiguate md = dmapL go
           where
             b' = over binderName (disambiguate bl) (c ^. patternConstrBinder)
             (bl', args') = disambiguatePatterns (BL.cons b' bl) (c ^. patternConstrArgs)
-            pat' = PatConstr $ set patternConstrBinder b' $ set patternConstrArgs args' c
+            pat' =
+              PatConstr
+                . set patternConstrBinder b'
+                . set patternConstrArgs args'
+                . over patternConstrInfo (setInfoName (constrName md (c ^. patternConstrTag)))
+                $ c
 
 disambiguateNodeNames :: Module -> Node -> Node
 disambiguateNodeNames md = disambiguateNodeNames' disambiguate md

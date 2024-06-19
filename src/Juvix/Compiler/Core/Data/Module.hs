@@ -99,10 +99,13 @@ getInfoMain Module {..} =
     <|> _moduleImportsTable ^. infoMain
 
 identName :: Module -> Symbol -> Text
-identName m = identName' (computeCombinedInfoTable m)
+identName md sym = lookupIdentifierInfo md sym ^. identifierName
 
 typeName :: Module -> Symbol -> Text
-typeName m = typeName' (computeCombinedInfoTable m)
+typeName md sym = lookupInductiveInfo md sym ^. inductiveName
+
+constrName :: Module -> Tag -> Text
+constrName md tag = lookupConstructorInfo md tag ^. constructorName
 
 identNames :: Module -> HashSet Text
 identNames m = identNames' (computeCombinedInfoTable m)
