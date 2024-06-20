@@ -497,7 +497,7 @@ checkImportPublic i@Import {..} = do
           }
   outerImport' <- checkImportNoPublic outerImport
   let locMod :: Module 'Parsed 'ModuleLocal =
-        localModule (splitName (topModulePathToName _importModulePath))
+        localModule (splitName outerOpenModuleName)
   local' <- checkLocalModule locMod
   let (innerModuleName', usingHiding') = extract local'
   mouterOpen' :: Maybe (OpenModule 'Scoped 'OpenShort) <-
