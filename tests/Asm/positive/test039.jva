@@ -1,0 +1,42 @@
+-- Copy propagation
+
+-- This test will fail with the native/WASM backend if copy propagation is
+-- performed on JuvixReg without adjusting the live variables.
+
+function f(integer) {
+    push arg[0];
+    push 0;
+    eq;
+    br {
+        true: {
+            push 3;
+            push 4;
+            tsave {
+                tsave {
+                    push tmp[1];
+                    call f;
+                    push tmp[0];
+                    add;
+                    ret;
+                };
+            };
+        };
+        false: {
+            push arg[0];
+            push arg[0];
+            push arg[0];
+            push arg[0];
+            add;
+            sub;
+            add;
+            push 1;
+            add;
+            ret;
+        };
+    };
+}
+
+function main() {
+    push 0;
+    tcall f;
+}

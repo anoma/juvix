@@ -378,5 +378,6 @@ asmToMiniC' = mapError (JuvixError @Asm.AsmError) . Asm.toReg' >=> regToMiniC' .
 
 regToMiniC' :: (Member (Reader Asm.Options) r) => Reg.InfoTable -> Sem r C.MiniCResult
 regToMiniC' tab = do
+  tab' <- Reg.toC tab
   e <- ask
-  return $ C.fromReg (e ^. Asm.optLimits) tab
+  return $ C.fromReg (e ^. Asm.optLimits) tab'

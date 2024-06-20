@@ -58,21 +58,17 @@ default:
 
 @_ormoluCmd filesCmd:
     {{ trim(filesCmd) }} \
-     | xargs -r {{ ormolu }} --no-cabal \
-     --ghc-opt -XStandaloneDeriving \
-     --ghc-opt -XUnicodeSyntax \
-     --ghc-opt -XDerivingStrategies \
-     --ghc-opt -XPatternSynonyms \
-     --ghc-opt -XMultiParamTypeClasses  \
-     --ghc-opt -XTemplateHaskell \
-     --ghc-opt -XImportQualifiedPost \
-     --ghc-opt -XBangPatterns \
-     --mode inplace
+     | xargs -r {{ ormolu }} --mode inplace
 
 # Formats all Haskell files in the project. `format changed` formats only changed files. `format FILES` formats individual files.
 format *opts:
     #!/usr/bin/env bash
     set -euo{{ bashDebugArg }} pipefail
+
+    if [ ! -e "juvix.cabal" ]; then
+        echo "Error: juvix.cabal does not exist. Please, run 'just install' or 'stack setup' first"
+        exit 1
+    fi
 
     opts='{{ trim(opts) }}'
 
