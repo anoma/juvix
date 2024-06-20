@@ -71,7 +71,7 @@ toConcrete t p = run . runReader l $ do
   return
     Module
       { _moduleKwEnd = (),
-        _moduleInductive = (),
+        _moduleOrigin = (),
         _moduleDoc = Nothing,
         _modulePragmas = Nothing,
         _moduleMarkdownInfo = Nothing,
@@ -119,6 +119,8 @@ toConcrete t p = run . runReader l $ do
         StatementImport
           Import
             { _importOpen = Just openShort,
+              _importPublic = NoPublic,
+              _importUsingHiding = Nothing,
               _importAsName = Nothing,
               ..
             }

@@ -1603,9 +1603,9 @@ moduleDef = P.label "<module definition>" $ do
         ..
       }
   where
-    _moduleInductive :: ModuleInductiveType t
-    _moduleInductive = case sing :: SModuleIsTop t of
-      SModuleLocal -> False
+    _moduleOrigin :: ModuleInductiveType t
+    _moduleOrigin = case sing :: SModuleIsTop t of
+      SModuleLocal -> LocalModuleSource
       SModuleTop -> ()
 
     endModule :: ParsecS r (ModuleEndType t)

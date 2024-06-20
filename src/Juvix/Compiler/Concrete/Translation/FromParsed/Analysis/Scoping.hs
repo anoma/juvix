@@ -138,8 +138,7 @@ scopeCheckExpression = scopeCheckRepl checkParseExpressionAtoms
 
 scopeCheckImport ::
   forall r.
-  (Members '[Error JuvixError, NameIdGen, Reader EntryPoint, State Scope, State ScoperState, Reader BindingStrategy] r) =>
-
+  (Members '[Error JuvixError, NameIdGen, Reader EntryPoint, State Scope, State ScoperState] r) =>
   ScopedModuleTable ->
   InfoTable ->
   Import 'Parsed ->
@@ -500,16 +499,20 @@ checkImportPublic i@Import {..} = do
   let locMod :: Module 'Parsed 'ModuleLocal =
         localModule (splitName (topModulePathToName _importModulePath))
   local' <- checkLocalModule locMod
-  outerOpen' :: Maybe (OpenModule 'Scoped 'OpenShort) <-
+  let (innerModuleName', usingHiding') = extract local'
+  mouterOpen' :: Maybe (OpenModule 'Scoped 'OpenShort) <-
     fmap (set openModuleName ()) <$> mapM checkOpenModule outerOpen
+  let asName' :: Maybe S.TopModulePath = do
+        topModule :: TopModulePath <- _importAsName
+        return (set nameConcrete topModule innerModuleName')
   return
     Import
       { _importKw,
         _importPublic,
         _importModulePath = outerImport' ^. importModulePath,
-        _importAsName = undefined,
-        _importOpen = outerOpen',
-        _importUsingHiding = undefined
+        _importAsName = asName',
+        _importOpen = mouterOpen',
+        _importUsingHiding = usingHiding'
       }
   where
     gen :: forall a. Sem '[Reader Interval] a -> a
@@ -518,6 +521,16 @@ checkImportPublic i@Import {..} = do
     loc :: Interval
     loc = getLoc i
 
+    -- Extracts the name of the innermost module as well as the scoped UsingHiding of the inner open
+    extract :: Module 'Scoped 'ModuleLocal -> (S.Symbol, Maybe (UsingHiding 'Scoped))
+    extract m = case m ^. moduleBody of
+      [StatementOpenModule OpenModule {..}] -> (m ^. modulePath, _openModuleUsingHiding)
+      [StatementModule inner] -> extract inner
+      _ -> error "impossible. When generating this module we always put a single statement"
+
+    outerOpenModuleName :: Name
+    outerOpenModuleName = topModulePathToName (fromMaybe _importModulePath _importAsName)
+
     outerOpen :: Maybe (OpenModule 'Parsed 'OpenFull)
     outerOpen = do
       OpenModule {..} <- _importOpen
@@ -525,7 +538,7 @@ checkImportPublic i@Import {..} = do
         OpenModule
           { _openModuleKw,
             _openModulePublic,
-            _openModuleName = topModulePathToName (fromMaybe _importModulePath _importAsName),
+            _openModuleName = outerOpenModuleName,
             _openModuleUsingHiding
           }
 

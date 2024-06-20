@@ -2,6 +2,7 @@ module Juvix.Compiler.Backend.Markdown.Translation.FromTyped.Source where
 
 import Commonmark qualified as MK
 import Data.Text qualified as Text
+import Juvix.Compiler.Concrete.Data.LocalModuleOrigin
 import Data.Text.Lazy (toStrict)
 import Juvix.Compiler.Backend.Html.Data.Options qualified as HtmlRender
 import Juvix.Compiler.Backend.Html.Translation.FromTyped.Source qualified as HtmlRender
@@ -216,7 +217,7 @@ indModuleFilter =
         Concrete.StatementFunctionDef _ -> True
         Concrete.StatementImport _ -> True
         Concrete.StatementInductive _ -> True
-        Concrete.StatementModule o -> not (o ^. Concrete.moduleInductive)
+        Concrete.StatementModule o -> o ^. Concrete.moduleOrigin == LocalModuleSource
         Concrete.StatementOpenModule _ -> True
         Concrete.StatementAxiom _ -> True
         Concrete.StatementProjectionDef _ -> True
