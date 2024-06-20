@@ -151,6 +151,7 @@ import Data.Type.Equality (type (~))
 import Data.Typeable hiding (TyCon)
 import Data.Void
 import Data.Word
+import GHC.Arr qualified as Array
 import GHC.Base (assert)
 import GHC.Enum
 import GHC.Err qualified as Err
@@ -661,3 +662,10 @@ zipWithNextLoop l = NonEmpty.reverse (go [] l)
     go acc = \case
       lastA :| [] -> (lastA, h) :| acc
       x :| y : as -> go ((x, y) : acc) (y :| as)
+
+addFreshVertex :: [Vertex] -> Graph -> (Vertex, Graph)
+addFreshVertex adjacent graph =
+  (v, Array.array (lo, v) (Array.assocs graph ++ [(v, adjacent)]))
+  where
+    (lo, hi) = Array.bounds graph
+    v = hi + 1
