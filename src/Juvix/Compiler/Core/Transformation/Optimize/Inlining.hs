@@ -55,7 +55,13 @@ convertNode inlineDepth recSyms md = dmapL go
           Just InlineFullyApplied | argsNum == 0 -> def
           Just (InlinePartiallyApplied 0) -> def
           Just InlineAlways -> def
-          _ -> node
+          Just InlineNever -> node
+          _
+            | not (HashSet.member _identSymbol recSyms)
+                && isImmediate md def ->
+                def
+            | otherwise ->
+                node
         where
           ii = lookupIdentifierInfo md _identSymbol
           pi = ii ^. identifierPragmas . pragmasInline
