@@ -51,8 +51,10 @@ symbol = void . lexeme . P.chunk
 
 transformationLike :: (PipelineId' t p, MonadParsec e Text m) => m (TransformationLikeId' t p)
 transformationLike =
-  TransformationId <$> parseTransformation
-    <|> PipelineId <$> parsePipeline
+  TransformationId
+    <$> parseTransformation
+    <|> PipelineId
+    <$> parsePipeline
 
 transformationLikeText :: (PipelineId' t p) => TransformationLikeId' t p -> Text
 transformationLikeText = \case

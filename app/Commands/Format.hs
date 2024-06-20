@@ -36,14 +36,14 @@ targetFromOptions opts = do
     Nothing -> do
       isPackageGlobal <- askPackageGlobal
       if
-          | isStdin -> return TargetStdin
-          | not (isPackageGlobal) -> return (TargetProject pkgDir)
-          | otherwise -> do
-              exitFailMsg $
-                Text.unlines
-                  [ "juvix format error: either 'JUVIX_FILE_OR_PROJECT' or '--stdin' option must be specified",
-                    "Use the --help option to display more usage information."
-                  ]
+        | isStdin -> return TargetStdin
+        | not (isPackageGlobal) -> return (TargetProject pkgDir)
+        | otherwise -> do
+            exitFailMsg
+              $ Text.unlines
+                [ "juvix format error: either 'JUVIX_FILE_OR_PROJECT' or '--stdin' option must be specified",
+                  "Use the --help option to display more usage information."
+                ]
 
 runCommand :: forall r. (Members '[EmbedIO, App, TaggedLock, Files] r) => FormatOptions -> Sem r ()
 runCommand opts = do

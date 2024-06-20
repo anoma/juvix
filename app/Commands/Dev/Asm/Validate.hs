@@ -18,11 +18,11 @@ runCommand opts = do
           exitJuvixError (JuvixError err)
         Nothing ->
           if
-              | opts ^. asmValidateNoPrint ->
-                  exitMsg ExitSuccess "validation succeeded"
-              | otherwise -> do
-                  renderStdOut (Asm.ppOutDefault tab tab)
-                  exitMsg ExitSuccess ""
+            | opts ^. asmValidateNoPrint ->
+                exitMsg ExitSuccess "validation succeeded"
+            | otherwise -> do
+                renderStdOut (Asm.ppOutDefault tab tab)
+                exitMsg ExitSuccess ""
   where
     file :: AppPath File
     file = opts ^. asmValidateInputFile

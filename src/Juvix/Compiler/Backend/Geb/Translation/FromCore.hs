@@ -94,8 +94,8 @@ fromCore tab = case tab ^. Core.infoMain of
       ii : idents -> do
         lamb <- mkLambda
         arg <- zeroLevel (convertNode fundef)
-        return $
-          MorphismApplication
+        return
+          $ MorphismApplication
             Application
               { _applicationLeft = lamb,
                 _applicationRight = arg
@@ -106,8 +106,8 @@ fromCore tab = case tab ^. Core.infoMain of
           argty = convertType (Info.getNodeType fundef)
           mkLambda = do
             body <- withSymbol sym (goIdents node idents)
-            return $
-              MorphismLambda
+            return
+              $ MorphismLambda
                 Lambda
                   { _lambdaVarType = argty,
                     _lambdaBody = body
@@ -163,8 +163,8 @@ fromCore tab = case tab ^. Core.infoMain of
     convertApp Core.App {..} = do
       _applicationLeft <- convertNode _appLeft
       _applicationRight <- convertNode _appRight
-      return $
-        MorphismApplication
+      return
+        $ MorphismApplication
           Application
             { _applicationLeft,
               _applicationRight
@@ -189,8 +189,8 @@ fromCore tab = case tab ^. Core.infoMain of
       [arg1, arg2] -> do
         arg1' <- convertNode arg1
         arg2' <- convertNode arg2
-        return $
-          MorphismBinop
+        return
+          $ MorphismBinop
             Binop
               { _binopOpcode = op,
                 _binopLeft = arg1',
@@ -230,8 +230,8 @@ fromCore tab = case tab ^. Core.infoMain of
                                 )
                           }
                   }
-         in return $
-              MorphismApplication
+         in return
+              $ MorphismApplication
                 Application
                   { _applicationLeft =
                       MorphismApplication
@@ -247,8 +247,10 @@ fromCore tab = case tab ^. Core.infoMain of
     convertOpEq :: [Core.Node] -> Trans Morphism
     convertOpEq args = case args of
       arg1 : arg2 : _
-        | Info.getNodeType arg1 == Core.mkTypeInteger'
-            && Info.getNodeType arg2 == Core.mkTypeInteger' ->
+        | Info.getNodeType arg1
+            == Core.mkTypeInteger'
+            && Info.getNodeType arg2
+            == Core.mkTypeInteger' ->
             convertBinop OpEq args
       _ ->
         error "unsupported equality argument types"
@@ -263,8 +265,8 @@ fromCore tab = case tab ^. Core.infoMain of
     convertConstr :: Core.Constr -> Trans Morphism
     convertConstr Core.Constr {..} = do
       args <- convertProduct _constrArgs
-      unless (tagNum < length constructors) $
-        error "constructor tag out of range"
+      unless (tagNum < length constructors)
+        $ error "constructor tag out of range"
       return $ (constructors !! tagNum) args
       where
         ci = Core.lookupTabConstructorInfo tab _constrTag
@@ -274,7 +276,7 @@ fromCore tab = case tab ^. Core.infoMain of
           fromJust
             $ elemIndex
               _constrTag
-              . sort
+            . sort
             $ ctrs
         constructors = mkConstructors $ convertInductive sym
 
@@ -306,12 +308,12 @@ fromCore tab = case tab ^. Core.infoMain of
         h : t -> do
           env <- ask
           let convertNode' = run . runReader env . convertNode
-          return $
-            fst $
-              foldr
-                (\x -> mkPair (convertNode' x, convertType (Info.getNodeType x)))
-                (convertNode' h, convertType (Info.getNodeType h))
-                (reverse t)
+          return
+            $ fst
+            $ foldr
+              (\x -> mkPair (convertNode' x, convertType (Info.getNodeType x)))
+              (convertNode' h, convertType (Info.getNodeType h))
+              (reverse t)
         [] -> return MorphismUnit
       where
         mkPair :: (Morphism, Object) -> (Morphism, Object) -> (Morphism, Object)
@@ -335,8 +337,8 @@ fromCore tab = case tab ^. Core.infoMain of
       _lambdaBody <- underBinder (convertNode _letBody)
       let domty = convertType (_letItem ^. Core.letItemBinder . Core.binderType)
       arg <- convertNode (_letItem ^. Core.letItemValue)
-      return $
-        MorphismApplication
+      return
+        $ MorphismApplication
           Application
             { _applicationLeft =
                 MorphismLambda
@@ -350,8 +352,8 @@ fromCore tab = case tab ^. Core.infoMain of
     convertLambda :: Core.Lambda -> Trans Morphism
     convertLambda Core.Lambda {..} = do
       body <- underBinder (convertNode _lambdaBody)
-      return $
-        MorphismLambda
+      return
+        $ MorphismLambda
           Lambda
             { _lambdaVarType = convertType (_lambdaBinder ^. Core.binderType),
               _lambdaBody = body
@@ -360,34 +362,34 @@ fromCore tab = case tab ^. Core.infoMain of
     convertCase :: Core.Case -> Trans Morphism
     convertCase Core.Case {..} = do
       if
-          | null branches -> do
-              x <- convertNode _caseValue
-              let ty = convertType (Info.getInfoType _caseInfo)
-              return $
-                MorphismAbsurd
-                  Absurd
-                    { _absurdType = ty,
-                      _absurdValue = x
-                    }
-          | missingCtrsNum > 1 -> do
-              arg <- convertNode defaultNode
-              val <- shifting (convertNode _caseValue)
-              body <- shifting (go indty val branches)
-              let ty = convertType (Info.getNodeType defaultNode)
-              return $
-                MorphismApplication
-                  Application
-                    { _applicationLeft =
-                        MorphismLambda
-                          Lambda
-                            { _lambdaVarType = ty,
-                              _lambdaBody = body
-                            },
-                      _applicationRight = arg
-                    }
-          | otherwise -> do
-              val <- convertNode _caseValue
-              go indty val branches
+        | null branches -> do
+            x <- convertNode _caseValue
+            let ty = convertType (Info.getInfoType _caseInfo)
+            return
+              $ MorphismAbsurd
+                Absurd
+                  { _absurdType = ty,
+                    _absurdValue = x
+                  }
+        | missingCtrsNum > 1 -> do
+            arg <- convertNode defaultNode
+            val <- shifting (convertNode _caseValue)
+            body <- shifting (go indty val branches)
+            let ty = convertType (Info.getNodeType defaultNode)
+            return
+              $ MorphismApplication
+                Application
+                  { _applicationLeft =
+                      MorphismLambda
+                        Lambda
+                          { _lambdaVarType = ty,
+                            _lambdaBody = body
+                          },
+                    _applicationRight = arg
+                  }
+        | otherwise -> do
+            val <- convertNode _caseValue
+            go indty val branches
       where
         indty = convertInductive _caseInductive
         ii = Core.lookupTabInductiveInfo tab _caseInductive
@@ -424,8 +426,8 @@ fromCore tab = case tab ^. Core.infoMain of
             n = length tyargs
             defaultBody =
               if
-                  | missingCtrsNum > 1 -> Core.mkVar'
-                  | otherwise -> (`Core.shift` defaultNode)
+                | missingCtrsNum > 1 -> Core.mkVar'
+                | otherwise -> (`Core.shift` defaultNode)
 
         go :: Object -> Morphism -> [Core.CaseBranch] -> Trans Morphism
         go ty val = \case
@@ -435,8 +437,8 @@ fromCore tab = case tab ^. Core.infoMain of
           br : brs -> do
             bodyLeft <- shifting (mkBranch lty (MorphismVar (Var 0)) br)
             bodyRight <- shifting (go rty (MorphismVar (Var 0)) brs)
-            return $
-              MorphismCase
+            return
+              $ MorphismCase
                 Case
                   { _caseOn = val,
                     _caseLeft = bodyLeft,
@@ -452,21 +454,21 @@ fromCore tab = case tab ^. Core.infoMain of
         mkBranch valType val Core.CaseBranch {..} = do
           branch <- underBinders _caseBranchBindersNum (convertNode _caseBranchBody)
           if
-              | _caseBranchBindersNum == 0 -> return branch
-              | _caseBranchBindersNum == 1 ->
-                  return $
-                    MorphismApplication
-                      Application
-                        { _applicationLeft =
-                            MorphismLambda
-                              Lambda
-                                { _lambdaVarType = valType,
-                                  _lambdaBody = branch
-                                },
-                          _applicationRight = val
-                        }
-              | otherwise ->
-                  return $ mkApps (mkLambs branch argtys) val argtys
+            | _caseBranchBindersNum == 0 -> return branch
+            | _caseBranchBindersNum == 1 ->
+                return
+                  $ MorphismApplication
+                    Application
+                      { _applicationLeft =
+                          MorphismLambda
+                            Lambda
+                              { _lambdaVarType = valType,
+                                _lambdaBody = branch
+                              },
+                        _applicationRight = val
+                      }
+            | otherwise ->
+                return $ mkApps (mkLambs branch argtys) val argtys
           where
             argtys = destructProduct valType
 
@@ -488,13 +490,13 @@ fromCore tab = case tab ^. Core.infoMain of
                         { _applicationLeft = acc,
                           _applicationRight =
                             if
-                                | null tys ->
-                                    v
-                                | otherwise ->
-                                    MorphismFirst
-                                      First
-                                        { _firstValue = v
-                                        }
+                              | null tys ->
+                                  v
+                              | otherwise ->
+                                  MorphismFirst
+                                    First
+                                      { _firstValue = v
+                                      }
                         }
               [] ->
                 acc
@@ -550,9 +552,10 @@ fromCore tab = case tab ^. Core.infoMain of
     convertInductive :: Symbol -> Object
     convertInductive sym = do
       let ctrs =
-            map (Core.lookupTabConstructorInfo tab) $
-              sort $
-                Core.lookupTabInductiveInfo tab sym ^. Core.inductiveConstructors
+            map (Core.lookupTabConstructorInfo tab)
+              $ sort
+              $ Core.lookupTabInductiveInfo tab sym
+              ^. Core.inductiveConstructors
       case reverse ctrs of
         ci : ctrs' -> do
           foldr

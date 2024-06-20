@@ -25,8 +25,8 @@ checkTypesEqual :: (Members '[Reader CheckingEnv, Error CheckingError] r) => Obj
 checkTypesEqual obj obj' =
   unless
     (obj == obj')
-    ( throw $
-        CheckingErrorTypeMismatch
+    ( throw
+        $ CheckingErrorTypeMismatch
           TypeMismatch
             { _typeMismatchExpected = obj,
               _typeMismatchActual = obj'
@@ -79,8 +79,8 @@ inferObjectApplication app = do
       checkTypesEqual _homDomain lType
       return _homCodomain
     _ ->
-      throw $
-        CheckingErrorExpectedType
+      throw
+        $ CheckingErrorExpectedType
           ExpectedType
             { _expectedTypeObject = homTy,
               _expectedTypeKind = "hom object"
@@ -94,19 +94,19 @@ inferObjectLambda l = do
     local
       (const (Context.cons aType ctx))
       (inferObject (l ^. lambdaBody))
-  return $
-    ObjectHom $
-      Hom
-        { _homDomain = aType,
-          _homCodomain = bType
-        }
+  return
+    $ ObjectHom
+    $ Hom
+      { _homDomain = aType,
+        _homCodomain = bType
+      }
 
 inferObjectPair :: (InferEffects r) => Pair -> Sem r Object
 inferObjectPair pair = do
   lType <- inferObject (pair ^. pairLeft)
   rType <- inferObject (pair ^. pairRight)
-  return $
-    ObjectProduct
+  return
+    $ ObjectProduct
       Product
         { _productLeft = lType,
           _productRight = rType
@@ -129,8 +129,8 @@ inferObjectCase c = do
       checkTypesEqual leftType rightType
       return leftType
     _ ->
-      throw $
-        CheckingErrorExpectedType
+      throw
+        $ CheckingErrorExpectedType
           ExpectedType
             { _expectedTypeObject = vType,
               _expectedTypeKind = "coproduct"
@@ -143,8 +143,8 @@ inferObjectFirst p = do
     ObjectProduct Product {..} ->
       return _productLeft
     _ ->
-      throw $
-        CheckingErrorExpectedType
+      throw
+        $ CheckingErrorExpectedType
           ExpectedType
             { _expectedTypeObject = pairType,
               _expectedTypeKind = "product"
@@ -157,8 +157,8 @@ inferObjectSecond p = do
     ObjectProduct Product {..} ->
       return _productRight
     _ ->
-      throw $
-        CheckingErrorExpectedType
+      throw
+        $ CheckingErrorExpectedType
           ExpectedType
             { _expectedTypeObject = pairType,
               _expectedTypeKind = "product"
@@ -202,19 +202,19 @@ inferObjectBinop opApp = do
 inferObjectLeft :: (InferEffects r) => LeftInj -> Sem r Object
 inferObjectLeft LeftInj {..} = do
   lType <- inferObject _leftInjValue
-  return $
-    ObjectCoproduct $
-      Coproduct
-        { _coproductLeft = lType,
-          _coproductRight = _leftInjRightType
-        }
+  return
+    $ ObjectCoproduct
+    $ Coproduct
+      { _coproductLeft = lType,
+        _coproductRight = _leftInjRightType
+      }
 
 inferObjectRight :: (InferEffects r) => RightInj -> Sem r Object
 inferObjectRight RightInj {..} = do
   rType <- inferObject _rightInjValue
-  return $
-    ObjectCoproduct $
-      Coproduct
-        { _coproductLeft = _rightInjLeftType,
-          _coproductRight = rType
-        }
+  return
+    $ ObjectCoproduct
+    $ Coproduct
+      { _coproductLeft = _rightInjLeftType,
+        _coproductRight = rType
+      }

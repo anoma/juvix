@@ -22,12 +22,12 @@ convertNode = dmap go
           blt' ^. builtinAppOp == OpIntAdd,
           [x, m] <- blt' ^. builtinAppArgs ->
             if
-                | m == n ->
-                    x
-                | x == n ->
-                    m
-                | otherwise ->
-                    node
+              | m == n ->
+                  x
+              | x == n ->
+                  m
+              | otherwise ->
+                  node
       NBlt BuiltinApp {..}
         | _builtinAppOp == OpIntAdd,
           [n, NBlt blt'] <- _builtinAppArgs,
@@ -72,12 +72,12 @@ convertNode = dmap go
           blt' ^. builtinAppOp == OpFieldAdd,
           [x, m] <- blt' ^. builtinAppArgs ->
             if
-                | m == n ->
-                    x
-                | x == n ->
-                    m
-                | otherwise ->
-                    node
+              | m == n ->
+                  x
+              | x == n ->
+                  m
+              | otherwise ->
+                  node
       NBlt BuiltinApp {..}
         | _builtinAppOp == OpFieldAdd,
           [n, NBlt blt'] <- _builtinAppArgs,

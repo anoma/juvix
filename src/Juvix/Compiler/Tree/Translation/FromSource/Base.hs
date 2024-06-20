@@ -96,8 +96,8 @@ declareBuiltins = do
           createBuiltinConstr sym TagWrite "write" (mkTypeFun [TyDynamic] tyio) i,
           createBuiltinConstr sym TagReadLn "readLn" tyio i
         ]
-  lift $
-    registerInductive' @t @e
+  lift
+    $ registerInductive' @t @e
       ( InductiveInfo
           { _inductiveName = "IO",
             _inductiveSymbol = sym,
@@ -137,8 +137,8 @@ statementFunction = do
     Nothing -> lift $ freshSymbol' @t @e
     Just (IdentFwd sym) -> return sym
     _ -> parseFailure off ("duplicate identifier: " ++ fromText txt)
-  when (txt == "main") $
-    lift (registerMain' @t @e sym)
+  when (txt == "main")
+    $ lift (registerMain' @t @e sym)
   args <- functionArguments @t @e @d
   let argtys = map snd args
       argnames = map fst args
@@ -163,19 +163,22 @@ statementFunction = do
   let fi = fi0 {_functionCode = fromMaybe ec mcode}
   case idt of
     Just (IdentFwd _) -> do
-      when (isNothing mcode) $
-        parseFailure off ("duplicate forward declaration of " ++ fromText txt)
+      when (isNothing mcode)
+        $ parseFailure off ("duplicate forward declaration of " ++ fromText txt)
       fi' <- lift $ getFunctionInfo' @t @e sym
       unless
-        ( fi' ^. functionArgsNum == fi ^. functionArgsNum
+        ( fi'
+            ^. functionArgsNum
+            == fi
+            ^. functionArgsNum
             && isSubtype (fi' ^. functionType) (fi ^. functionType)
         )
         $ parseFailure off "function definition does not match earlier declaration"
       lift $ registerFunction' fi
     _ -> do
       lift $ registerFunction' fi
-      when (isNothing mcode) $
-        lift (registerForward' @t @e txt sym)
+      when (isNothing mcode)
+        $ lift (registerForward' @t @e txt sym)
 
 statementInductive ::
   forall t e d r.
@@ -186,8 +189,8 @@ statementInductive = do
   off <- P.getOffset
   (txt, i) <- identifierL @t @e @d
   idt <- lift $ getIdent' @t @e txt
-  when (isJust idt) $
-    parseFailure off ("duplicate identifier: " ++ fromText txt)
+  when (isJust idt)
+    $ parseFailure off ("duplicate identifier: " ++ fromText txt)
   sym <- lift $ freshSymbol' @t @e
   let ii =
         InductiveInfo
@@ -221,8 +224,8 @@ constrDecl symInd = do
   off <- P.getOffset
   (txt, i) <- identifierL @t @e @d
   idt <- lift $ getIdent' @t @e txt
-  when (isJust idt) $
-    parseFailure off ("duplicate identifier: " ++ fromText txt)
+  when (isJust idt)
+    $ parseFailure off ("duplicate identifier: " ++ fromText txt)
   tag <- lift $ freshTag' @t @e
   ty <- typeAnnotation @t @e @d
   let ty' = uncurryType ty
@@ -271,8 +274,8 @@ parseType = do
   off <- P.getOffset
   typeFun' @t @e @d tys
     <|> do
-      unless (null (NonEmpty.tail tys)) $
-        parseFailure off "expected \"->\""
+      unless (null (NonEmpty.tail tys))
+        $ parseFailure off "expected \"->\""
       return (head tys)
 
 typeFun' ::

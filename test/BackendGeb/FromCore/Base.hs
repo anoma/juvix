@@ -32,8 +32,9 @@ coreToGebTranslationAssertion' coreInfoTable entryPoint expectedFile step = do
   step "Prepare the Juvix Core node for translation to Geb"
   case run . runReader entryPoint . runError @Geb.JuvixError $ Core.toGeb (Core.moduleFromInfoTable coreInfoTable) of
     Left err ->
-      assertFailure . prettyString $
-        fromJuvixError @GenericError err
+      assertFailure
+        . prettyString
+        $ fromJuvixError @GenericError err
     Right readyCoreModule ->
       let readyCoreInfoTable = Core.computeCombinedInfoTable readyCoreModule
        in length (fromText (Core.ppTrace readyCoreInfoTable) :: String) `seq` do
@@ -47,8 +48,9 @@ coreToGebTranslationAssertion' coreInfoTable entryPoint expectedFile step = do
                     }
             case run . runError @Geb.CheckingError $ Geb.check' typeMorph of
               Left err ->
-                assertFailure . prettyString $
-                  fromJuvixError @GenericError (JuvixError err)
+                assertFailure
+                  . prettyString
+                  $ fromJuvixError @GenericError (JuvixError err)
               Right _ -> do
                 step "Try evaluating the JuvixCore node"
                 let resultCoreEval :: Core.Node = Core.evalInfoTable stderr readyCoreInfoTable
@@ -59,8 +61,9 @@ coreToGebTranslationAssertion' coreInfoTable entryPoint expectedFile step = do
                      ) of
                   (Left err, _) -> do
                     step "The evaluation of the translated Geb node failed"
-                    assertFailure . prettyString $
-                      fromJuvixError @GenericError (JuvixError err)
+                    assertFailure
+                      . prettyString
+                      $ fromJuvixError @GenericError (JuvixError err)
                   (_, Left err) -> do
                     step "The evaluation of gebCoreEvalResult failed"
                     assertFailure . prettyString $ fromJuvixError @GenericError (JuvixError err)
@@ -69,21 +72,21 @@ coreToGebTranslationAssertion' coreInfoTable entryPoint expectedFile step = do
                     ) -> do
                       step "Compare the geb value of the Core eval output and the Geb eval output"
                       if
-                          | resEvalTranslatedMorph /= resEvalGebCoreEvalResult ->
-                              assertFailure "The evaluation for the Core node and the Geb node are not equal"
-                          | otherwise -> do
-                              expectedInput <- readFile expectedFile
-                              step "Compare expected and actual program output"
-                              let compareEvalOutput morph =
-                                    if
-                                        | Geb.quote resEvalTranslatedMorph /= morph ->
-                                            assertFailure $
-                                              "The result of evaluating the translated Geb"
-                                                <> "node is not equal to the expected output"
-                                        | otherwise -> assertBool "" True
-                              case Geb.runParser expectedFile expectedInput of
-                                Left parseErr -> assertFailure . prettyString $ parseErr
-                                Right (Geb.ExpressionMorphism m) -> compareEvalOutput m
-                                Right (Geb.ExpressionTypedMorphism m) -> compareEvalOutput (m ^. Geb.typedMorphism)
-                                Right (Geb.ExpressionObject _) ->
-                                  assertFailure "Expected a morphism, but got an object for the expected output"
+                        | resEvalTranslatedMorph /= resEvalGebCoreEvalResult ->
+                            assertFailure "The evaluation for the Core node and the Geb node are not equal"
+                        | otherwise -> do
+                            expectedInput <- readFile expectedFile
+                            step "Compare expected and actual program output"
+                            let compareEvalOutput morph =
+                                  if
+                                    | Geb.quote resEvalTranslatedMorph /= morph ->
+                                        assertFailure
+                                          $ "The result of evaluating the translated Geb"
+                                          <> "node is not equal to the expected output"
+                                    | otherwise -> assertBool "" True
+                            case Geb.runParser expectedFile expectedInput of
+                              Left parseErr -> assertFailure . prettyString $ parseErr
+                              Right (Geb.ExpressionMorphism m) -> compareEvalOutput m
+                              Right (Geb.ExpressionTypedMorphism m) -> compareEvalOutput (m ^. Geb.typedMorphism)
+                              Right (Geb.ExpressionObject _) ->
+                                assertFailure "Expected a morphism, but got an object for the expected output"

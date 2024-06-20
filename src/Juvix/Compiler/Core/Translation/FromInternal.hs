@@ -70,19 +70,21 @@ fromInternal i = do
         let resultModule = i ^. InternalTyped.resultModule
             resultTable =
               Internal.computeCombinedInfoTable importTab
-                <> i ^. InternalTyped.resultInternalModule . Internal.internalModuleInfoTable
-        runReader resultTable $
-          goModule resultModule
+                <> i
+                ^. InternalTyped.resultInternalModule
+                . Internal.internalModuleInfoTable
+        runReader resultTable
+          $ goModule resultModule
         tab <- getModule
         when
           (isNothing (lookupBuiltinInductive tab BuiltinBool))
           declareBoolBuiltins
-        when (isNothing (coreImportsTab ^. infoLiteralIntToNat)) $
-          setupLiteralIntToNat literalIntToNatNode
-        when (isNothing (coreImportsTab ^. infoLiteralIntToInt)) $
-          setupLiteralIntToInt literalIntToIntNode
-  return $
-    CoreResult
+        when (isNothing (coreImportsTab ^. infoLiteralIntToNat))
+          $ setupLiteralIntToNat literalIntToNatNode
+        when (isNothing (coreImportsTab ^. infoLiteralIntToInt))
+          $ setupLiteralIntToInt literalIntToIntNode
+  return
+    $ CoreResult
       { _coreResultModule = res,
         _coreResultInternalTypedResult = i
       }
@@ -90,7 +92,10 @@ fromInternal i = do
 fromInternalExpression :: (Member NameIdGen r) => Internal.InternalModuleTable -> CoreResult -> Internal.Expression -> Sem r Node
 fromInternalExpression importTab res exp = do
   let mtab =
-        res ^. coreResultInternalTypedResult . InternalTyped.resultInternalModule . Internal.internalModuleInfoTable
+        res
+          ^. coreResultInternalTypedResult
+          . InternalTyped.resultInternalModule
+          . Internal.internalModuleInfoTable
           <> Internal.computeCombinedInfoTable importTab
   fmap snd
     . runReader mtab
@@ -458,11 +463,11 @@ mkBody ppLam ty loc clauses
       [] -> len
       ps : pats | length ps == len -> checkPatternsNum len pats
       _ ->
-        error $
-          "internal-to-core: all clauses must have the same number of patterns. Offending lambda at"
-            <> ppPrint (getLoc ppLam)
-            <> "\n"
-            <> (ppLam ^. withLocParam)
+        error
+          $ "internal-to-core: all clauses must have the same number of patterns. Offending lambda at"
+          <> ppPrint (getLoc ppLam)
+          <> "\n"
+          <> (ppLam ^. withLocParam)
 
     goClause :: Level -> [Internal.PatternArg] -> Internal.Expression -> Sem r MatchBranch
     goClause lvl pats body = goPatternArgs lvl body pats ptys
@@ -787,11 +792,11 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
         ptName <- getEcPointName
         ptSym <- getEcPointSymbol
         let ty = mkTypeConstr (setInfoName ptName mempty) ptSym []
-        registerAxiomDef $
-          mkLambda' ty $
-            mkLambda' mkTypeField' $
-              mkLambda' ty $
-                (mkBuiltinApp' OpEc [mkVar' 2, mkVar' 1, mkVar' 0])
+        registerAxiomDef
+          $ mkLambda' ty
+          $ mkLambda' mkTypeField'
+          $ mkLambda' ty
+          $ (mkBuiltinApp' OpEc [mkVar' 2, mkVar' 1, mkVar' 0])
       Internal.BuiltinRandomEcPoint -> do
         registerAxiomDef (mkBuiltinApp' OpRandomEcPoint [])
 
@@ -894,8 +899,8 @@ fromPatternArg pa = case pa ^. Internal.patternArgName of
         m <- getIdent identIndex
         case m of
           Just (IdentConstr tag) ->
-            return $
-              PatConstr
+            return
+              $ PatConstr
                 ( PatternConstr
                     { _patternConstrInfo = setInfoName (ctrName ^. nameText) mempty,
                       _patternConstrBinder = binder ctorTy,
@@ -1147,8 +1152,8 @@ goApplication a = do
           as <- exprArgs
           case as of
             (arg1 : arg2 : xs) ->
-              return $
-                mkApps'
+              return
+                $ mkApps'
                   ( mkConstr'
                       (BuiltinTag TagBind)
                       [arg1, mkLambda' (mkTypeConstr (setInfoName Str.io mempty) ioSym []) (shift 1 arg2)]

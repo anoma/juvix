@@ -39,7 +39,8 @@ convertNode inlineDepth recSyms md = dmapL go
                   _
                     | not (HashSet.member _identSymbol recSyms)
                         && isInlineableLambda inlineDepth md bl def
-                        && length args >= argsNum ->
+                        && length args
+                        >= argsNum ->
                         mkApps def args
                   _ ->
                     node

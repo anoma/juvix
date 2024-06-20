@@ -30,8 +30,10 @@ instance forall a. (PrettyCode a, NockNatural a) => PrettyCode (Atom a) where
       failWhenM (asks (^. optIgnoreTags))
       failMaybe (atm ^. atomTag) >>= ppCode
     let def = fmap (t <?+>) (annotate (AnnKind KNameFunction) <$> ppCode (atm ^. atom))
-    fmap (t <?+>) . runFailDefaultM def . failFromError @(ErrNockNatural a) $
-      do
+    fmap (t <?+>)
+      . runFailDefaultM def
+      . failFromError @(ErrNockNatural a)
+      $ do
         whenM (asks (^. optIgnoreHints)) fail
         h' <- failMaybe (atm ^. atomHint)
         case h' of

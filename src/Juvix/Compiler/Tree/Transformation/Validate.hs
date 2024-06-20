@@ -117,8 +117,8 @@ inferType tab funInfo = goInfer mempty
       | _offsetRefOffset < length tys = return $ tys !! _offsetRefOffset
       | typeTarget (funInfo ^. functionType) == TyDynamic = return TyDynamic
       | otherwise =
-          throw $
-            TreeError
+          throw
+            $ TreeError
               { _treeErrorLoc = loc,
                 _treeErrorMsg = "Wrong target type"
               }
@@ -142,8 +142,8 @@ inferType tab funInfo = goInfer mempty
           forM_ (zipExact _nodeAllocConstrArgs tys) (uncurry (checkType bl))
           return $ typeTarget (ci ^. constructorType)
       | otherwise =
-          throw $
-            TreeError
+          throw
+            $ TreeError
               { _treeErrorLoc = _nodeAllocConstrInfo ^. nodeInfoLocation,
                 _treeErrorMsg = ""
               }
@@ -157,8 +157,8 @@ inferType tab funInfo = goInfer mempty
           forM_ (zipExact _nodeAllocClosureArgs (take n tys)) (uncurry (checkType bl))
           return $ mkTypeFun (drop n tys) (typeTarget (fi ^. functionType))
       | otherwise =
-          throw $
-            TreeError
+          throw
+            $ TreeError
               { _treeErrorLoc = _nodeAllocClosureInfo ^. nodeInfoLocation,
                 _treeErrorMsg = "Wrong number of arguments"
               }
@@ -174,30 +174,30 @@ inferType tab funInfo = goInfer mempty
           m = length tys
           n = length _nodeExtendClosureArgs
       if
-          | n < m -> do
-              forM_ (zipExact (toList _nodeExtendClosureArgs) (take n tys)) (uncurry (checkType bl))
-              return $ mkTypeFun (drop n tys) (typeTarget ty)
-          | typeTarget ty == TyDynamic -> do
-              let tys' = tys ++ replicate (n - m) TyDynamic
-              forM_ (zipExact (toList _nodeExtendClosureArgs) tys') (uncurry (checkType bl))
-              return $ typeTarget ty
-          | otherwise ->
-              throw $
-                TreeError
-                  { _treeErrorLoc = _nodeExtendClosureInfo ^. nodeInfoLocation,
-                    _treeErrorMsg = "Too many arguments"
-                  }
+        | n < m -> do
+            forM_ (zipExact (toList _nodeExtendClosureArgs) (take n tys)) (uncurry (checkType bl))
+            return $ mkTypeFun (drop n tys) (typeTarget ty)
+        | typeTarget ty == TyDynamic -> do
+            let tys' = tys ++ replicate (n - m) TyDynamic
+            forM_ (zipExact (toList _nodeExtendClosureArgs) tys') (uncurry (checkType bl))
+            return $ typeTarget ty
+        | otherwise ->
+            throw
+              $ TreeError
+                { _treeErrorLoc = _nodeExtendClosureInfo ^. nodeInfoLocation,
+                  _treeErrorMsg = "Too many arguments"
+                }
 
     goCall :: BinderList Type -> NodeCall -> Sem r Type
     goCall bl NodeCall {..} = case _nodeCallType of
       CallFun sym
         | n == fi ^. functionArgsNum -> do
-            unless (n == 0) $
-              forM_ (zipExact _nodeCallArgs tys) (uncurry (checkType bl))
+            unless (n == 0)
+              $ forM_ (zipExact _nodeCallArgs tys) (uncurry (checkType bl))
             return $ mkTypeFun (drop n tys) (typeTarget (fi ^. functionType))
         | otherwise ->
-            throw $
-              TreeError
+            throw
+              $ TreeError
                 { _treeErrorLoc = _nodeCallInfo ^. nodeInfoLocation,
                   _treeErrorMsg = "Wrong number of arguments"
                 }
@@ -209,18 +209,18 @@ inferType tab funInfo = goInfer mempty
         ty <- goInfer bl cl
         let tys = typeArgs ty
             n = length _nodeCallArgs
-        when (length tys > n) $
-          throw $
-            TreeError
-              { _treeErrorLoc = _nodeCallInfo ^. nodeInfoLocation,
-                _treeErrorMsg = "Too few arguments"
-              }
-        when (length tys < n && typeTarget ty /= TyDynamic) $
-          throw $
-            TreeError
-              { _treeErrorLoc = _nodeCallInfo ^. nodeInfoLocation,
-                _treeErrorMsg = "Too many arguments"
-              }
+        when (length tys > n)
+          $ throw
+          $ TreeError
+            { _treeErrorLoc = _nodeCallInfo ^. nodeInfoLocation,
+              _treeErrorMsg = "Too few arguments"
+            }
+        when (length tys < n && typeTarget ty /= TyDynamic)
+          $ throw
+          $ TreeError
+            { _treeErrorLoc = _nodeCallInfo ^. nodeInfoLocation,
+              _treeErrorMsg = "Too many arguments"
+            }
         let tys' = tys ++ replicate (n - length tys) TyDynamic
         forM_ (zipExact _nodeCallArgs tys') (uncurry (checkType bl))
         return $ typeTarget ty
@@ -255,12 +255,12 @@ inferType tab funInfo = goInfer mempty
     goCase :: BinderList Type -> NodeCase -> Sem r Type
     goCase bl NodeCase {..} = do
       ity <- goInfer bl _nodeCaseArg
-      unless (ity == mkTypeInductive _nodeCaseInductive || ity == TyDynamic) $
-        throw $
-          TreeError
-            { _treeErrorLoc = _nodeCaseInfo ^. nodeInfoLocation,
-              _treeErrorMsg = "Inductive type mismatch"
-            }
+      unless (ity == mkTypeInductive _nodeCaseInductive || ity == TyDynamic)
+        $ throw
+        $ TreeError
+          { _treeErrorLoc = _nodeCaseInfo ^. nodeInfoLocation,
+            _treeErrorMsg = "Inductive type mismatch"
+          }
       ty <- maybe (return TyDynamic) (goInfer bl) _nodeCaseDefault
       go ity ty _nodeCaseBranches
       where

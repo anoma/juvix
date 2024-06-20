@@ -19,6 +19,7 @@ runCommand opts = do
     runReader entryPoint
       . runError @JuvixError
       . coreToCairo
-      $ coreRes ^. coreResultModule
+      $ coreRes
+      ^. coreResultModule
   res <- getRight r
   liftIO (JSON.encodeFile (toFilePath cairoFile) res)

@@ -42,8 +42,8 @@ mkHoms :: [Object] -> Object -> Object
 mkHoms argtys codty = case argtys of
   [] -> codty
   ty : tys ->
-    ObjectHom $
-      Hom
+    ObjectHom
+      $ Hom
         { _homDomain = ty,
           _homCodomain = (mkHoms tys codty)
         }

@@ -12,9 +12,9 @@ class PrettyCode c where
 
 doc :: (PrettyCode c) => Options -> c -> Doc Ann
 doc opts x =
-  run $
-    runReader opts $
-      ppCode x
+  run
+    $ runReader opts
+    $ ppCode x
 
 ampersand :: Doc Ann
 ampersand = "&"

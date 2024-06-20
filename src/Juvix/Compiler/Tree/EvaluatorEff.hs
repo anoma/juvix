@@ -156,15 +156,15 @@ eval tab = runReader emptyEvalCtx . eval'
           let fi = lookupFunInfo tab sym
               vs' = clArgs ++ vs
            in if
-                  | length vs' == fi ^. functionArgsNum -> do
-                      let ctx' =
-                            EvalCtx
-                              { _evalCtxArgs = vs',
-                                _evalCtxTemp = mempty
-                              }
-                      withCtx ctx' (eval' (fi ^. functionCode))
-                  | otherwise ->
-                      evalError "wrong number of arguments"
+                | length vs' == fi ^. functionArgsNum -> do
+                    let ctx' =
+                          EvalCtx
+                            { _evalCtxArgs = vs',
+                              _evalCtxTemp = mempty
+                            }
+                    withCtx ctx' (eval' (fi ^. functionCode))
+                | otherwise ->
+                    evalError "wrong number of arguments"
 
         doCallClosure :: Node -> [Node] -> Sem r' Value
         doCallClosure cl cargs = do

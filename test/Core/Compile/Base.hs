@@ -56,8 +56,8 @@ coreCompileAssertion' optLevel tab mainFile expectedFile stdinText step = do
       let tab0 = computeCombinedInfoTable m
       assertBool "Check info table" (checkInfoTable tab0)
       let tab' = Asm.fromTree . Tree.fromCore $ Stripped.fromCore (maximum allowedFieldSizes) tab0
-      length (fromText (Asm.ppPrint tab' tab') :: String) `seq`
-        Asm.asmCompileAssertion' optLevel tab' mainFile expectedFile stdinText step
+      length (fromText (Asm.ppPrint tab' tab') :: String)
+        `seq` Asm.asmCompileAssertion' optLevel tab' mainFile expectedFile stdinText step
   where
     opts = defaultCoreOptions {_optOptimizationLevel = optLevel}
 

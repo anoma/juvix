@@ -59,7 +59,8 @@ compileErrorAssertion root' mainFile step = do
             run
               . runError @JuvixError
               . runReader Core.defaultCoreOptions
-              $ Core.toStored' (core ^. pipelineResult . Core.coreResultModule) >>= Core.toStripped' Core.CheckExec
+              $ Core.toStored' (core ^. pipelineResult . Core.coreResultModule)
+              >>= Core.toStripped' Core.CheckExec
       case res' of
         Left {} -> return ()
         Right {} -> noError

@@ -39,8 +39,8 @@ ppDoc n ty j = do
   n' <- ppScoped n
   ty' <- fmap ((n' <+> kwColon) <+>) <$> mapM ppInternal ty
   j' <- mapM ppJudoc j
-  return $
-    case (ty', j') of
+  return
+    $ case (ty', j') of
       (Just jty', Just jj') -> return (jty' <+> line <> line <> jj')
       _ -> ty' <|> j'
 

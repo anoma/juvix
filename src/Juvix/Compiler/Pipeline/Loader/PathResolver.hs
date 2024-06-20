@@ -75,11 +75,11 @@ mkPackageInfo mpackageEntry _packageRoot pkg = do
   globalPackageBaseAbsDir <- globalPackageBaseRoot
   let _packageJuvixRelativeFiles = keepJuvixFiles (hashSet files)
       _packageAvailableRoots =
-        hashSet $
-          globalPackageDescriptionAbsDir
-            : globalPackageBaseAbsDir
-            : _packageRoot
-            : depsPaths
+        hashSet
+          $ globalPackageDescriptionAbsDir
+          : globalPackageBaseAbsDir
+          : _packageRoot
+          : depsPaths
   return PackageInfo {..}
   where
     pkgFile :: Path Abs File
@@ -329,15 +329,15 @@ resolvePath' scan = do
   case packagesWithExt of
     [(r, relPath)] -> return (r, relPath)
     [] ->
-      throw $
-        ErrMissingModule
+      throw
+        $ ErrMissingModule
           MissingModule
             { _missingInfo = curPkg,
               _missingModule = scan
             }
     (r, _) : rs ->
-      throw $
-        ErrDependencyConflict
+      throw
+        $ ErrDependencyConflict
           DependencyConflict
             { _conflictPackages = r :| map fst rs,
               _conflictPath = scan

@@ -14,11 +14,11 @@ import Juvix.Data.CodeAnn
 
 doc :: (HasAtomicity c, PrettyCode c) => Options -> c -> Doc Ann
 doc opts x =
-  run $
-    runReader opts $
-      case atomicity x of
-        Atom -> ppCode x
-        Aggregate _ -> parens <$> ppCode x
+  run
+    $ runReader opts
+    $ case atomicity x of
+      Atom -> ppCode x
+      Aggregate _ -> parens <$> ppCode x
 
 docLisp :: Options -> Text -> Text -> Morphism -> Object -> Doc Ann
 docLisp opts packageName entryName morph _ =
@@ -44,9 +44,9 @@ docLisp opts packageName entryName morph _ =
     <> parens
       ( "defparameter"
           <+> pretty entryName
-            <> line
-            <> indent'
-              (doc opts morph)
+          <> line
+          <> indent'
+            (doc opts morph)
       )
 
 class PrettyCode c where
@@ -60,8 +60,10 @@ instance PrettyCode Case where
     val <- ppArg _caseOn
     left <- ppArg _caseLeft
     right <- ppArg _caseRight
-    return $
-      kwCaseOn <> line <> indent 2 (vsep [val, left, right])
+    return
+      $ kwCaseOn
+      <> line
+      <> indent 2 (vsep [val, left, right])
 
 instance (HasAtomicity a, PrettyCode a) => PrettyCode (Pair' a) where
   ppCode Pair {..} = do
@@ -133,9 +135,9 @@ instance PrettyCode Failure where
 
 instance PrettyCode Var where
   ppCode Var {..} = do
-    return $
-      kwVar
-        <+> annotate AnnLiteralInteger (pretty _varIndex)
+    return
+      $ kwVar
+      <+> annotate AnnLiteralInteger (pretty _varIndex)
 
 instance PrettyCode Morphism where
   ppCode = \case
@@ -203,23 +205,23 @@ instance PrettyCode ValueClosure where
   ppCode cls = do
     lamb <- ppArg (MorphismLambda (cls ^. valueClosureLambda))
     env <- mapM ppArg (toList (cls ^. valueClosureEnv))
-    return $
-      kwClosure
-        <> line
-        <> indent'
-          ( vsep
-              [ parens
-                  ( kwClosureEnv
-                      <> line
-                      <> indent'
-                        ( if null env
-                            then kwNil
-                            else (vsep env)
-                        )
-                  ),
-                lamb
-              ]
-          )
+    return
+      $ kwClosure
+      <> line
+      <> indent'
+        ( vsep
+            [ parens
+                ( kwClosureEnv
+                    <> line
+                    <> indent'
+                      ( if null env
+                          then kwNil
+                          else (vsep env)
+                      )
+                ),
+              lamb
+            ]
+        )
 
 instance PrettyCode GebValue where
   ppCode = \case

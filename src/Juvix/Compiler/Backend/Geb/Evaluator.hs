@@ -47,10 +47,11 @@ objNoEvalMsg = "Geb objects cannot be evaluated, only morphisms."
 
 eval' :: Env -> Morphism -> Either JuvixError GebValue
 eval' env m =
-  run . runError $
-    mapError (JuvixError @EvalError) $
-      runReader env $
-        eval m
+  run
+    . runError
+    $ mapError (JuvixError @EvalError)
+    $ runReader env
+    $ eval m
 
 evalAndOutputMorphism' :: Env -> Morphism -> Either JuvixError Morphism
 evalAndOutputMorphism' env m = run . runError $ runReader env (evalAndOutputMorphism m)
@@ -106,12 +107,12 @@ evalPair :: (EvalEffects r) => Pair -> Sem r GebValue
 evalPair pair = do
   left <- eval $ pair ^. pairLeft
   right <- eval $ pair ^. pairRight
-  return $
-    GebValueMorphismPair $
-      Pair
-        { _pairLeft = left,
-          _pairRight = right
-        }
+  return
+    $ GebValueMorphismPair
+    $ Pair
+      { _pairLeft = left,
+        _pairRight = right
+      }
 
 evalFirst :: (EvalEffects r) => First -> Sem r GebValue
 evalFirst f = do
@@ -142,22 +143,22 @@ evalSecond s = do
 evalLeftInj :: (EvalEffects r) => LeftInj -> Sem r GebValue
 evalLeftInj s = do
   res <- eval $ s ^. leftInjValue
-  return $
-    GebValueMorphismLeft $
-      LeftInj
-        { _leftInjValue = res,
-          _leftInjRightType = s ^. leftInjRightType
-        }
+  return
+    $ GebValueMorphismLeft
+    $ LeftInj
+      { _leftInjValue = res,
+        _leftInjRightType = s ^. leftInjRightType
+      }
 
 evalRightInj :: (EvalEffects r) => RightInj -> Sem r GebValue
 evalRightInj s = do
   res <- eval $ s ^. rightInjValue
-  return $
-    GebValueMorphismRight $
-      RightInj
-        { _rightInjValue = res,
-          _rightInjLeftType = s ^. rightInjLeftType
-        }
+  return
+    $ GebValueMorphismRight
+    $ RightInj
+      { _rightInjValue = res,
+        _rightInjLeftType = s ^. rightInjLeftType
+      }
 
 evalApp :: (EvalEffects r) => Application -> Sem r GebValue
 evalApp app = do
@@ -176,11 +177,11 @@ apply fun' arg = do
       do
         let clsEnv = cls ^. valueClosureEnv
             bodyEnv = Context.cons arg clsEnv
-        local (set envContext bodyEnv) $
-          eval (cls ^. valueClosureLambda . lambdaBody)
+        local (set envContext bodyEnv)
+          $ eval (cls ^. valueClosureLambda . lambdaBody)
     _ ->
-      throw $
-        EvalError
+      throw
+        $ EvalError
           { _evalErrorMsg = "Can only apply functions.",
             _evalErrorGebValue = (Just fun),
             _evalErrorGebExpression = Nothing
@@ -189,18 +190,18 @@ apply fun' arg = do
 evalExtendContext :: (EvalEffects r) => GebValue -> Morphism -> Sem r GebValue
 evalExtendContext v m = do
   ctx <- asks (^. envContext)
-  local (set envContext (Context.cons v ctx)) $
-    eval m
+  local (set envContext (Context.cons v ctx))
+    $ eval m
 
 evalLambda :: (EvalEffects r) => Lambda -> Sem r GebValue
 evalLambda lambda = do
   ctx <- asks (^. envContext)
-  return $
-    GebValueClosure $
-      ValueClosure
-        { _valueClosureLambda = lambda,
-          _valueClosureEnv = ctx
-        }
+  return
+    $ GebValueClosure
+    $ ValueClosure
+      { _valueClosureLambda = lambda,
+        _valueClosureEnv = ctx
+      }
 
 evalCase :: (EvalEffects r) => Case -> Sem r GebValue
 evalCase c = do
@@ -241,26 +242,26 @@ evalBinop binop = do
         OpMod -> return $ GebValueMorphismInteger $ l `mod` r
         OpLt ->
           if
-              | l < r -> return valueTrue
-              | otherwise -> return valueFalse
+            | l < r -> return valueTrue
+            | otherwise -> return valueFalse
         OpEq ->
           if
-              | l == r -> return valueTrue
-              | otherwise -> return valueFalse
+            | l == r -> return valueTrue
+            | otherwise -> return valueFalse
     (m1, m2) -> case binop ^. binopOpcode of
       OpEq ->
         if
-            | sameKind m1 m2 ->
-                if
-                    | m1 == m2 -> return valueTrue
-                    | otherwise -> return valueFalse
-            | otherwise ->
-                throw
-                  EvalError
-                    { _evalErrorMsg = "Equality can only be applied to values of the same kind.",
-                      _evalErrorGebValue = Just (lfPair m1 m2),
-                      _evalErrorGebExpression = (Just (MorphismBinop binop))
-                    }
+          | sameKind m1 m2 ->
+              if
+                | m1 == m2 -> return valueTrue
+                | otherwise -> return valueFalse
+          | otherwise ->
+              throw
+                EvalError
+                  { _evalErrorMsg = "Equality can only be applied to values of the same kind.",
+                    _evalErrorGebValue = Just (lfPair m1 m2),
+                    _evalErrorGebExpression = (Just (MorphismBinop binop))
+                  }
       _ ->
         throw
           EvalError
@@ -290,16 +291,16 @@ sameKind l r = case (l, r) of
 
 valueTrue :: GebValue
 valueTrue =
-  GebValueMorphismLeft $
-    LeftInj
+  GebValueMorphismLeft
+    $ LeftInj
       { _leftInjValue = GebValueMorphismUnit,
         _leftInjRightType = ObjectTerminal
       }
 
 valueFalse :: GebValue
 valueFalse =
-  GebValueMorphismRight $
-    RightInj
+  GebValueMorphismRight
+    $ RightInj
       { _rightInjValue = GebValueMorphismUnit,
         _rightInjLeftType = ObjectTerminal
       }

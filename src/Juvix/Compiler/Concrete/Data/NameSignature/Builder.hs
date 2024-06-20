@@ -190,13 +190,13 @@ addSymbol' :: forall s r. (SingI s) => IsImplicit -> Maybe (ArgDefault s) -> Sym
 addSymbol' impl mdef sym ty = do
   curImpl <- gets @(BuilderState s) (^. stateCurrentImplicit)
   if
-      | Just impl == curImpl -> addToCurrentBlock
-      | otherwise -> startNewBlock
+    | Just impl == curImpl -> addToCurrentBlock
+    | otherwise -> startNewBlock
   where
     errDuplicateName :: Symbol -> Sem (Re s r) ()
     errDuplicateName _dupNameFirst =
-      throw $
-        ErrDuplicateName
+      throw
+        $ ErrDuplicateName
           DuplicateName
             { _dupNameSecond = symbolParsed sym,
               ..
@@ -234,8 +234,8 @@ endBuild' = get @(BuilderState s) >>= throw
 
 mkRecordNameSignature :: forall s. (SingI s) => RhsRecord s -> RecordNameSignature s
 mkRecordNameSignature rhs =
-  RecordNameSignature $
-    HashMap.fromList
+  RecordNameSignature
+    $ HashMap.fromList
       [ (symbolParsed _nameItemSymbol, NameItem {..})
         | (Indexed _nameItemIndex field) <- indexFrom 0 (toList (rhs ^.. rhsRecordStatements . each . _RecordStatementField)),
           let _nameItemSymbol :: SymbolType s = field ^. fieldName

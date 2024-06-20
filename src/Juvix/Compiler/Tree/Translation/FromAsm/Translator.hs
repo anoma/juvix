@@ -23,8 +23,8 @@ runTranslator cs = runTranslator' (TranslatorState cs Nothing)
 runTranslator' :: forall r a. (Member (Error TreeError) r) => TranslatorState -> Sem (Translator ': r) a -> Sem r a
 runTranslator' st m = do
   (st', a) <- reinterpret (runState st) interp m
-  unless (null (st' ^. stateCode)) $
-    throw
+  unless (null (st' ^. stateCode))
+    $ throw
       TreeError
         { _treeErrorLoc = getCommandLocation $ head' (st' ^. stateCode),
           _treeErrorMsg = "extra instructions"
@@ -35,8 +35,8 @@ runTranslator' st m = do
     interp = \case
       NextCommand -> do
         s <- get
-        when (null (s ^. stateCode)) $
-          throw
+        when (null (s ^. stateCode))
+          $ throw
             TreeError
               { _treeErrorLoc = s ^. statePrevLoc,
                 _treeErrorMsg = "expected instruction"

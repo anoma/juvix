@@ -55,8 +55,8 @@ commandTargetHelper t parseCommand =
 
 commandTargetsHelper :: [(CompileTarget, Parser a)] -> Parser a
 commandTargetsHelper supportedTargets =
-  hsubparser $
-    mconcat
+  hsubparser
+    $ mconcat
       [ commandTargetHelper backend parser
         | (backend, parser) <- supportedTargets
       ]

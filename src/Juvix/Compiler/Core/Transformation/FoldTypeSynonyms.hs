@@ -23,5 +23,5 @@ convertNode md = rmap go
 
 foldTypeSynonyms :: Module -> Module
 foldTypeSynonyms md =
-  filterOutTypeSynonyms $
-    mapAllNodes (convertNode md) md
+  filterOutTypeSynonyms
+    $ mapAllNodes (convertNode md) md

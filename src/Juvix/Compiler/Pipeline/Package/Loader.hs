@@ -137,6 +137,6 @@ packageDescriptionDir' :: Path Abs Dir
 packageDescriptionDir' =
   $( FE.makeRelativeToProject (toFilePath packageDescriptionDir)
        >>= runIO
-         . parseAbsDir
+       . parseAbsDir
        >>= lift
    )

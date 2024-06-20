@@ -12,9 +12,9 @@ class PrettyCode c where
 
 doc :: (PrettyCode c) => Options -> c -> Doc Ann
 doc opts x =
-  run $
-    runReader opts $
-      ppCode x
+  run
+    $ runReader opts
+    $ ppCode x
 
 ppName :: NameKind -> Text -> Sem r (Doc Ann)
 ppName k n = return $ annotate (AnnKind k) (pretty n)
@@ -102,10 +102,10 @@ vampIRDefs bits unsafe =
     <> show bits
     <> ";\n\n"
     <> if
-        | unsafe ->
-            UTF8.toString $(FE.makeRelativeToProject ("runtime/vampir/stdlib_unsafe" <> vampIRFileExt) >>= FE.embedFile)
-        | otherwise ->
-            UTF8.toString $(FE.makeRelativeToProject ("runtime/vampir/stdlib" <> vampIRFileExt) >>= FE.embedFile)
+      | unsafe ->
+          UTF8.toString $(FE.makeRelativeToProject ("runtime/vampir/stdlib_unsafe" <> vampIRFileExt) >>= FE.embedFile)
+      | otherwise ->
+          UTF8.toString $(FE.makeRelativeToProject ("runtime/vampir/stdlib" <> vampIRFileExt) >>= FE.embedFile)
 
 --------------------------------------------------------------------------------
 -- helper functions

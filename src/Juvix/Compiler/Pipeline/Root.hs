@@ -52,11 +52,11 @@ findRootAndChangeDir minputFileDir mbuildDir _rootInvokeDir = do
           packageBaseRootDir <- runFilesIO globalPackageBaseRoot
           (_rootRootDir, _rootPackageType) <-
             if
-                | isPathPrefix packageBaseRootDir cwd ->
-                    return (packageBaseRootDir, GlobalPackageBase)
-                | otherwise -> do
-                    r <- runFilesIO globalRoot
-                    return (r, GlobalStdlib)
+              | isPathPrefix packageBaseRootDir cwd ->
+                  return (packageBaseRootDir, GlobalPackageBase)
+              | otherwise -> do
+                  r <- runFilesIO globalRoot
+                  return (r, GlobalStdlib)
           let _rootBuildDir = getBuildDir mbuildDir
           return Root {..}
         Just pkgPath -> do

@@ -12,13 +12,13 @@ convertNode md = umap go
       NCase Case {..}
         | not (null idents) ->
             if
-                | isCaseBoolean _caseBranches && not (isImmediate md _caseValue) ->
-                    mkLet'
-                      mkTypeBool'
-                      _caseValue
-                      (liftApps 0 _caseInductive (mkVar' 0) (brs' 1) (def' 1) idents)
-                | otherwise ->
-                    liftApps 0 _caseInductive _caseValue (brs' 0) (def' 0) idents
+              | isCaseBoolean _caseBranches && not (isImmediate md _caseValue) ->
+                  mkLet'
+                    mkTypeBool'
+                    _caseValue
+                    (liftApps 0 _caseInductive (mkVar' 0) (brs' 1) (def' 1) idents)
+              | otherwise ->
+                  liftApps 0 _caseInductive _caseValue (brs' 0) (def' 0) idents
         where
           bodies = map (^. caseBranchBody) _caseBranches ++ maybeToList _caseDefault
           idts = foldr (flip gatherIdents) mempty bodies
@@ -91,8 +91,10 @@ convertNode md = umap go
             let (h, args) = unfoldApps' node
              in case h of
                   NIdt Ident {..}
-                    | _identSymbol == sym
-                        && length args == argsNum ->
+                    | _identSymbol
+                        == sym
+                        && length args
+                        == argsNum ->
                         acc + 1
                   _ -> acc
           _ -> acc
@@ -108,8 +110,10 @@ convertNode md = umap go
             let (h, args) = unfoldApps' node
              in case h of
                   NIdt Ident {..}
-                    | _identSymbol == sym
-                        && length args == argsNum ->
+                    | _identSymbol
+                        == sym
+                        && length args
+                        == argsNum ->
                         Just args
                   _ -> acc
           _ -> acc
@@ -125,8 +129,10 @@ convertNode md = umap go
             let (h, args) = unfoldApps' node
              in case h of
                   NIdt Ident {..}
-                    | _identSymbol == sym
-                        && length args == argsNum ->
+                    | _identSymbol
+                        == sym
+                        && length args
+                        == argsNum ->
                         snode
                   _ -> node
           _ -> node

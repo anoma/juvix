@@ -31,14 +31,14 @@ computeFreeVarsInfo = umap go
         modifyInfo (Info.insert fvi) node
         where
           fvi =
-            FreeVarsInfo $
-              foldr
+            FreeVarsInfo
+              $ foldr
                 ( \NodeChild {..} acc ->
-                    Map.unionWith (+) acc $
-                      Map.mapKeysMonotonic (\idx -> idx - _childBindersNum) $
-                        Map.filterWithKey
-                          (\idx _ -> idx >= _childBindersNum)
-                          (getFreeVarsInfo _childNode ^. infoFreeVars)
+                    Map.unionWith (+) acc
+                      $ Map.mapKeysMonotonic (\idx -> idx - _childBindersNum)
+                      $ Map.filterWithKey
+                        (\idx _ -> idx >= _childBindersNum)
+                        (getFreeVarsInfo _childNode ^. infoFreeVars)
                 )
                 mempty
                 (children node)

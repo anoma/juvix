@@ -23,8 +23,8 @@ runCommand opts = do
       case run . runError @Geb.CheckingError $ Geb.check' tyMorph of
         Left err -> exitJuvixError (JuvixError err)
         Right _ -> do
-          renderStdOut $
-            Geb.ppOut
+          renderStdOut
+            $ Geb.ppOut
               opts
               (tyMorph ^. Geb.typedMorphismObject)
           putStrLn ""

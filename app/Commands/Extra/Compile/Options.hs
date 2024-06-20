@@ -131,14 +131,14 @@ parseCompileOptions' supportedTargets parserFile = do
       )
   _compileTerm <-
     if
-        | elem AppTargetGeb supportedTargets ->
-            switch
-              ( short 'G'
-                  <> long "only-term"
-                  <> help "Produce term output only (for targets: geb)"
-              )
-        | otherwise ->
-            pure False
+      | elem AppTargetGeb supportedTargets ->
+          switch
+            ( short 'G'
+                <> long "only-term"
+                <> help "Produce term output only (for targets: geb)"
+            )
+      | otherwise ->
+          pure False
   _compileNockmaUsePrettySymbols <-
     switch
       ( long "nockma-pretty"
@@ -146,13 +146,13 @@ parseCompileOptions' supportedTargets parserFile = do
       )
   _compileUnsafe <-
     if
-        | elem AppTargetVampIR supportedTargets ->
-            switch
-              ( long "unsafe"
-                  <> help "Disable range and error checking (for targets: vampir)"
-              )
-        | otherwise ->
-            pure False
+      | elem AppTargetVampIR supportedTargets ->
+          switch
+            ( long "unsafe"
+                <> help "Disable range and error checking (for targets: vampir)"
+            )
+      | otherwise ->
+          pure False
   _compileOptimizationLevel <-
     optional
       ( option
@@ -192,8 +192,8 @@ optCompileTarget supportedTargets =
 
     parseTarget :: String -> Either String CompileTarget
     parseTarget txt =
-      maybe err return $
-        lookup
+      maybe err return
+        $ lookup
           (map toLower txt)
           [(Prelude.show t, t) | t <- listTargets]
       where

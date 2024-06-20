@@ -15,8 +15,8 @@ literalIntToNatNode sym = do
       boolSymM = (^. inductiveSymbol) <$> lookupBuiltinInductive md BuiltinBool
   return $ case (tagZeroM, tagSucM, boolSymM) of
     (Just tagZero, Just tagSuc, Just boolSym) ->
-      mkLambda' mkTypeInteger' $
-        mkIf'
+      mkLambda' mkTypeInteger'
+        $ mkIf'
           boolSym
           (mkBuiltinApp' OpEq [mkVar' 0, mkConstant' (ConstInteger 0)])
           (mkConstr (setInfoName "zero" mempty) tagZero [])

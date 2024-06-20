@@ -38,7 +38,7 @@ typeCheckExpressionType exp = do
     . mapError (JuvixError @TypeCheckerError)
     . runInferenceDef
     $ inferExpression Nothing exp
-      >>= traverseOf typedType strongNormalize_
+    >>= traverseOf typedType strongNormalize_
 
 typeCheckExpression ::
   (Members '[Error JuvixError, State Artifacts, Termination] r) =>

@@ -121,8 +121,8 @@ formatResultFromContents ::
 formatResultFromContents formattedContents filepath = do
   originalContents <- ask
   if
-      | originalContents /= formattedContents -> mkResult FormatResultNotFormatted
-      | otherwise -> mkResult FormatResultOK
+    | originalContents /= formattedContents -> mkResult FormatResultNotFormatted
+    | otherwise -> mkResult FormatResultOK
   where
     mkResult :: FormatResult -> Sem r FormatResult
     mkResult res = do
@@ -151,7 +151,7 @@ formatScoperResult forceFormat res = do
     runReader cs
       . formatTopModule
       $ res
-        ^. Scoper.resultModule
+      ^. Scoper.resultModule
   let txt :: Text = toPlainTextTrim formattedModule
   case res ^. Scoper.mainModule . modulePragmas of
     Just pragmas ->

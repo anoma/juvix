@@ -71,5 +71,5 @@ writeRuntime ::
   Sem r ()
 writeRuntime runtime = do
   buildDir <- askBuildDir
-  liftIO $
-    BS.writeFile (toFilePath (buildDir <//> $(mkRelFile "libjuvix.rlib"))) runtime
+  liftIO
+    $ BS.writeFile (toFilePath (buildDir <//> $(mkRelFile "libjuvix.rlib"))) runtime

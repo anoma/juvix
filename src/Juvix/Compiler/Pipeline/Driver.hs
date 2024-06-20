@@ -96,20 +96,27 @@ processModuleCacheMiss entryIx = do
   m :: Maybe Store.ModuleInfo <- loadFromFile absPath
   case m of
     Just info
-      | info ^. Store.moduleInfoSHA256 == sha256
-          && info ^. Store.moduleInfoOptions == opts
-          && info ^. Store.moduleInfoFieldSize == entry ^. entryPointFieldSize -> do
+      | info
+          ^. Store.moduleInfoSHA256
+          == sha256
+          && info
+          ^. Store.moduleInfoOptions
+          == opts
+          && info
+          ^. Store.moduleInfoFieldSize
+          == entry
+          ^. entryPointFieldSize -> do
           CompileResult {..} <- runReader entry ((processImports (info ^. Store.moduleInfoImports)))
           if
-              | _compileResultChanged ->
-                  recompile sha256 absPath
-              | otherwise ->
-                  return
-                    PipelineResult
-                      { _pipelineResult = info,
-                        _pipelineResultImports = _compileResultModuleTable,
-                        _pipelineResultChanged = False
-                      }
+            | _compileResultChanged ->
+                recompile sha256 absPath
+            | otherwise ->
+                return
+                  PipelineResult
+                    { _pipelineResult = info,
+                      _pipelineResultImports = _compileResultModuleTable,
+                      _pipelineResultChanged = False
+                    }
     _ ->
       recompile sha256 absPath
   where
@@ -174,10 +181,10 @@ processImport p = do
       b <- supportsParallel
       root <- resolverRoot
       if
-          | b -> do
-              res <- mkEntryIndex root file >>= cacheGetResult
-              return (res ^. cacheResult)
-          | otherwise -> mkEntryIndex root file >>= processModule
+        | b -> do
+            res <- mkEntryIndex root file >>= cacheGetResult
+            return (res ^. cacheResult)
+        | otherwise -> mkEntryIndex root file >>= processModule
 
 processFileUpToParsing ::
   forall r.

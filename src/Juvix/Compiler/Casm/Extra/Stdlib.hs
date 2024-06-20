@@ -28,9 +28,9 @@ makeLenses ''StdlibBuiltins
 addStdlibBuiltins :: (Member LabelInfoBuilder r) => Address -> Sem r (StdlibBuiltins, [Instruction])
 addStdlibBuiltins addr = do
   instrs <-
-    fmap (fromRight impossible) $
-      runParser' addr "stdlib.casm" $
-        decodeUtf8 $(FE.makeRelativeToProject "runtime/casm/stdlib.casm" >>= FE.embedFile)
+    fmap (fromRight impossible)
+      $ runParser' addr "stdlib.casm"
+      $ decodeUtf8 $(FE.makeRelativeToProject "runtime/casm/stdlib.casm" >>= FE.embedFile)
   let _stdlibGetRegsName :: Text = "juvix_get_regs"
       _stdlibCallClosureName :: Text = "juvix_call_closure"
       _stdlibExtendClosureName :: Text = "juvix_extend_closure"

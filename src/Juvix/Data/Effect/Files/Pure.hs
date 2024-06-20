@@ -115,13 +115,13 @@ juvixConfigDirPure = $(mkAbsDir "/.config/juvix/") <//> versionDir
 missingErr :: (Members '[State FS] r) => FilePath -> Sem r a
 missingErr f = do
   root <- get @FS
-  error $
-    pack $
-      "file "
-        <> f
-        <> " does not exist."
-        <> "\nThe contents of the mocked file system are:\n"
-        <> Prelude.show root
+  error
+    $ pack
+    $ "file "
+    <> f
+    <> " does not exist."
+    <> "\nThe contents of the mocked file system are:\n"
+    <> Prelude.show root
 
 checkRoot :: (Members '[State FS] r) => Path Abs Dir -> Sem r ()
 checkRoot r = do

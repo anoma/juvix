@@ -10,9 +10,9 @@ import Juvix.Compiler.Core.Transformation.TopEtaExpand
 optimize :: (Member (Reader CoreOptions) r) => Module -> Sem r Module
 optimize tab = do
   opts <- ask
-  withOptimizationLevel' tab 1 $
-    return
-      . topEtaExpand
-      . letFolding
-      . lambdaLetRecLifting
-      . Main.optimize' opts
+  withOptimizationLevel' tab 1
+    $ return
+    . topEtaExpand
+    . letFolding
+    . lambdaLetRecLifting
+    . Main.optimize' opts

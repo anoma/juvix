@@ -63,8 +63,8 @@ loadEntryPoint ep = do
     liftIO (putStrLn . pack $ "OK loaded " <> toFilePath path)
     content <- liftIO (readFile path)
     let evalRes =
-          Geb.runEval $
-            Geb.RunEvalArgs
+          Geb.runEval
+            $ Geb.RunEvalArgs
               { _runEvalArgsContent = content,
                 _runEvalArgsInputFile = path,
                 _runEvalArgsEvaluatorOptions = Geb.defaultEvaluatorOptions
@@ -110,11 +110,11 @@ checkTypedMorphism gebMorphism = Repline.dontCrash $ do
 
 runReplCommand :: String -> Repl ()
 runReplCommand input_ =
-  Repline.dontCrash $
-    do
+  Repline.dontCrash
+    $ do
       let evalRes =
-            Geb.runEval $
-              Geb.RunEvalArgs
+            Geb.runEval
+              $ Geb.RunEvalArgs
                 { _runEvalArgsContent = pack input_,
                   _runEvalArgsInputFile = gebReplPath,
                   _runEvalArgsEvaluatorOptions = Geb.defaultEvaluatorOptions
@@ -125,8 +125,8 @@ evalAndOutputMorphism :: String -> Repl ()
 evalAndOutputMorphism input_ =
   Repline.dontCrash $ do
     let evalRes =
-          Geb.runEval $
-            Geb.RunEvalArgs
+          Geb.runEval
+            $ Geb.RunEvalArgs
               { _runEvalArgsContent = pack input_,
                 _runEvalArgsInputFile = gebReplPath,
                 _runEvalArgsEvaluatorOptions =
@@ -198,7 +198,7 @@ noFileLoadedMsg =
     $ P.annotate
       ReplError
       "No file loaded. Load a file using the `:load FILE` command."
-      <> P.line
+    <> P.line
 
 initSession :: GebReplOptions -> Repl ()
 initSession replOpts
@@ -207,13 +207,13 @@ initSession replOpts
 
 welcomeMsg :: ReplMessageDoc
 welcomeMsg =
-  ReplMessageDoc $
-    P.annotate ReplIntro "Welcome to the Juvix Geb REPL!"
-      <> P.line
-      <> normal [i|Juvix v#{versionTag}: https://juvix.org.|]
-      <> P.line
-      <> normal "Type :help for help."
-      <> P.line
+  ReplMessageDoc
+    $ P.annotate ReplIntro "Welcome to the Juvix Geb REPL!"
+    <> P.line
+    <> normal [i|Juvix v#{versionTag}: https://juvix.org.|]
+    <> P.line
+    <> normal "Type :help for help."
+    <> P.line
 
 replPromptText :: Repl String
 replPromptText = do
@@ -286,7 +286,8 @@ printError e = do
   hasAnsi <- liftIO (Ansi.hSupportsANSIColor stderr)
   let useAnsi = (not (opts ^. globalNoColors) && hasAnsi)
   errorText <-
-    replText . ReplMessageDoc
+    replText
+      . ReplMessageDoc
       $ P.annotate
         ReplError
       $ pretty

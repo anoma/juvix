@@ -69,9 +69,9 @@ getEcPointSymbol = (^. inductiveSymbol) <$> getBuiltinInductiveInfo BuiltinEcPoi
 checkSymbolDefined :: (Member InfoTableBuilder r) => Symbol -> Sem r Bool
 checkSymbolDefined sym = do
   m <- getModule
-  return $
-    HashMap.member sym (m ^. moduleInfoTable . identContext)
-      || HashMap.member sym (m ^. moduleImportsTable . identContext)
+  return
+    $ HashMap.member sym (m ^. moduleInfoTable . identContext)
+    || HashMap.member sym (m ^. moduleImportsTable . identContext)
 
 setIdentArgs :: (Member InfoTableBuilder r) => Symbol -> [Binder] -> Sem r ()
 setIdentArgs sym = overIdentArgs sym . const
@@ -304,8 +304,8 @@ setupLiteralIntToNat mkNode = do
         info s = do
           m <- getModule
           ty <- targetType
-          return $
-            IdentifierInfo
+          return
+            $ IdentifierInfo
               { _identifierSymbol = s,
                 _identifierName = freshIdentName m "intToNat",
                 _identifierLocation = Nothing,
@@ -340,8 +340,8 @@ setupLiteralIntToInt node = do
         info s = do
           m <- getModule
           ty <- targetType
-          return $
-            IdentifierInfo
+          return
+            $ IdentifierInfo
               { _identifierSymbol = s,
                 _identifierName = freshIdentName m "literalIntToInt",
                 _identifierLocation = Nothing,
