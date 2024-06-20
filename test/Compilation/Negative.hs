@@ -51,7 +51,7 @@ tests =
       $(mkRelDir ".")
       $(mkRelFile "test005.juvix"),
     NegTest
-      "Test006: Ill scoped term (Thi is a bug. It should be positive)"
+      "Test006: Ill scoped term (This is a bug. It should be positive)"
       $(mkRelDir ".")
       $(mkRelFile "test006.juvix")
   ]

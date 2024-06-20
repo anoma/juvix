@@ -206,7 +206,7 @@ instance ToGenericError WrongType where
               <+> thing
               <+> "has type:"
                 <> line
-                <> indent' (ppCode opts' (err ^. wrongTypeActual ^. normalizedExpression))
+                <> indent' (ppCode opts' (err ^. wrongTypeActual . normalizedExpression))
                 <> line
                 <> "but is expected to have type:"
                 <> line
@@ -656,7 +656,7 @@ instance ToGenericError BadScope where
           i = getLoc (e ^. badScopeVar)
           var = e ^. badScopeVar
           msg :: Doc Ann =
-            annotate AnnImportant "Oops! This is a known bug in the juvix compiler."
+            annotate AnnImportant "Oops! This is a known bug in the Juvix compiler."
               <> line
               <> "Most likely, the inference algorithm inserted the variable"
               <+> ppCode opts' var
