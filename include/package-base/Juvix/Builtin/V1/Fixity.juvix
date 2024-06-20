@@ -21,3 +21,4 @@ syntax fixity additive := binary {assoc := left; above := [comparison; range; co
 syntax fixity multiplicative := binary {assoc := left; above := [additive]};
 
 syntax fixity composition := binary {assoc := right; above := [multiplicative]};
+syntax fixity lcomposition := binary {assoc := left; above := [multiplicative]};
