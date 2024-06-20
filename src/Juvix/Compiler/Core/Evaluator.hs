@@ -2,6 +2,7 @@ module Juvix.Compiler.Core.Evaluator where
 
 import Control.Exception qualified as Exception
 import Data.HashMap.Strict qualified as HashMap
+import Data.Serialize qualified as S
 import GHC.Base (seq)
 import GHC.Conc qualified as GHC
 import GHC.IO (unsafePerformIO)
@@ -12,6 +13,8 @@ import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.NoDisplayInfo
 import Juvix.Compiler.Core.Pretty
+import Juvix.Compiler.Nockma.Encoding qualified as Encoding
+import Juvix.Compiler.Store.Core.Extra qualified as Store
 import Juvix.Data.Field
 import Text.Read qualified as T
 
@@ -76,6 +79,9 @@ geval opts herr ctx env0 = eval' env0
   where
     evalError :: Text -> Node -> a
     evalError msg node = Exception.throw (EvalError msg (Just node))
+
+    evalError' :: Text -> a
+    evalError' msg = Exception.throw (EvalError msg Nothing)
 
     eval' :: Env -> Node -> Node
     eval' !env !n = case n of
@@ -345,20 +351,16 @@ geval opts herr ctx env0 = eval' env0
 
         anomaEncodeOp :: [Node] -> Node
         anomaEncodeOp = unary $ \arg ->
-          if
-              | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
-                  mkBuiltinApp' OpAnomaEncode [eval' env arg]
-              | otherwise ->
-                  err "unsupported builtin operation: OpAnomaEncode"
+          let !node = eval' env arg
+              !bs = serializeNode node
+           in mkConstant' (ConstInteger (Encoding.byteStringToIntegerLE bs))
         {-# INLINE anomaEncodeOp #-}
 
         anomaDecodeOp :: [Node] -> Node
         anomaDecodeOp = unary $ \arg ->
-          if
-              | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
-                  mkBuiltinApp' OpAnomaDecode [eval' env arg]
-              | otherwise ->
-                  err "unsupported builtin operation: OpAnomaDecode"
+          case eval' env arg of
+            (NCst (Constant _ (ConstInteger i))) -> deserializeNode (Encoding.integerToByteStringLE i)
+            _ -> evalError "anomaDecodeOp: argument not an integer" n
         {-# INLINE anomaDecodeOp #-}
 
         anomaVerifyDetachedOp :: [Node] -> Node
@@ -428,6 +430,12 @@ geval opts herr ctx env0 = eval' env0
     nodeFromInteger :: Integer -> Node
     nodeFromInteger !int = mkConstant' (ConstInteger int)
     {-# INLINE nodeFromInteger #-}
+
+    serializeNode :: Node -> ByteString
+    serializeNode = S.encode . Store.fromCoreNode
+
+    deserializeNode :: ByteString -> Node
+    deserializeNode = fromRight (evalError' "failed to decode to a node") . fmap Store.toCoreNode . S.decode
 
     nodeFromField :: FField -> Node
     nodeFromField !fld = mkConstant' (ConstField fld)
