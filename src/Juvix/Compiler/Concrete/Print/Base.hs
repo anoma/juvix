@@ -451,12 +451,13 @@ instance (PrettyPrint a) => PrettyPrint [a] where
     encloseSep (ppCode @Text "[") (ppCode @Text "]") (ppCode @Text ", ") cs
 
 ppStatements :: forall s r. (SingI s, Members '[ExactPrint, Reader Options] r) => [Statement s] -> Sem r ()
-ppStatements ss = paragraphs (ppGroup <$> Concrete.groupStatements (filter (not . shouldBePrinted) ss))
+ppStatements ss = paragraphs (ppGroup <$> Concrete.groupStatements (filter shouldBePrinted ss))
   where
     shouldBePrinted :: Statement s -> Bool
     shouldBePrinted = \case
       StatementModule m -> m ^. moduleOrigin == LocalModuleSource
-      _ -> False
+      _ -> True
+
     ppGroup :: NonEmpty (Statement s) -> Sem r ()
     ppGroup = vsep . sepEndSemicolon . fmap ppCode
 
