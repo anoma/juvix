@@ -4,6 +4,7 @@ module Juvix.Compiler.Concrete.Language
   ( module Juvix.Compiler.Concrete.Language,
     module Juvix.Data.FixityInfo,
     module Juvix.Compiler.Concrete.Data.IsOpenShort,
+    module Juvix.Compiler.Concrete.Data.LocalModuleOrigin,
     module Juvix.Data.IteratorInfo,
     module Juvix.Compiler.Concrete.Data.Name,
     module Juvix.Compiler.Concrete.Data.Stage,
@@ -24,6 +25,7 @@ import Juvix.Compiler.Backend.Markdown.Data.Types (Mk)
 import Juvix.Compiler.Concrete.Data.Builtins
 import Juvix.Compiler.Concrete.Data.IsOpenShort
 import Juvix.Compiler.Concrete.Data.Literal
+import Juvix.Compiler.Concrete.Data.LocalModuleOrigin
 import Juvix.Compiler.Concrete.Data.ModuleIsTop
 import Juvix.Compiler.Concrete.Data.Name
 import Juvix.Compiler.Concrete.Data.NameRef
@@ -125,7 +127,7 @@ type family ModuleNameType s = res | res -> s where
 type ModuleInductiveType :: ModuleIsTop -> GHC.Type
 type family ModuleInductiveType t = res | res -> t where
   ModuleInductiveType 'ModuleTop = ()
-  ModuleInductiveType 'ModuleLocal = Bool
+  ModuleInductiveType 'ModuleLocal = LocalModuleOrigin
 
 type ModuleEndType :: ModuleIsTop -> GHC.Type
 type family ModuleEndType t = res | res -> t where
@@ -1194,7 +1196,7 @@ data Module (s :: Stage) (t :: ModuleIsTop) = Module
     _modulePragmas :: Maybe ParsedPragmas,
     _moduleBody :: [Statement s],
     _moduleKwEnd :: ModuleEndType t,
-    _moduleInductive :: ModuleInductiveType t,
+    _moduleOrigin :: ModuleInductiveType t,
     _moduleId :: ModuleIdType s,
     _moduleMarkdownInfo :: Maybe MarkdownInfo
   }

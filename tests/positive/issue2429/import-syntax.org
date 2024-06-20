@@ -17,13 +17,15 @@ Primitive import statements are:
 * Derived statements
 Derived imports are the opens that we parse and desugar into primitives during scoping.
 ** Import (public)
-1. =import A as B params@(using/hiding {..}) public [short-open]=. Equvialent to
+1. =import X.Y as X'.Y' params@(using/hiding {..}) public [short-open]=. Equvialent to
    #+begin_example
-   import A;
-   module B;
-     open A params public;
+   import X.Y;
+   module X';
+     module Y';
+       open X.Y params public;
+     end;
    end;
-   open B (with short-open using/hiding and public); -- only when short-open is present
+   open X'.Y' (with short-open using/hiding and public); -- only when short-open is present
    #+end_example
    The import public modifier is required. The =as B= alias, the
    =using/hiding= and the =short-open= are optional. =short-open= refers to an

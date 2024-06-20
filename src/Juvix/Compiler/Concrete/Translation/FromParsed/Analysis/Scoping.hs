@@ -92,7 +92,7 @@ scopeCheckRepl ::
   forall r a b.
   (Members '[Error JuvixError, NameIdGen, Reader EntryPoint, State Scope, State ScoperState] r) =>
   ( forall r'.
-    (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader EntryPoint] r') =>
+    (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader BindingStrategy, Reader EntryPoint] r') =>
     a ->
     Sem r' b
   ) ->
@@ -106,6 +106,7 @@ scopeCheckRepl check importTab tab a = mapError (JuvixError @ScoperError) $ do
     . runInfoTableBuilder tab
     . runReader iniScopeParameters
     . runReader tab'
+    . localBindings
     $ check a
   where
     tab' = computeCombinedInfoTable importTab
@@ -137,7 +138,8 @@ scopeCheckExpression = scopeCheckRepl checkParseExpressionAtoms
 
 scopeCheckImport ::
   forall r.
-  (Members '[Error JuvixError, NameIdGen, Reader EntryPoint, State Scope, State ScoperState] r) =>
+  (Members '[Error JuvixError, NameIdGen, Reader EntryPoint, State Scope, State ScoperState, Reader BindingStrategy] r) =>
+
   ScopedModuleTable ->
   InfoTable ->
   Import 'Parsed ->
@@ -446,14 +448,134 @@ bindFixitySymbol s = do
 
 checkImport ::
   forall r.
+  ( Members
+      '[ HighlightBuilder,
+         Error ScoperError,
+         State Scope,
+         Reader ScopeParameters,
+         State ScoperState,
+         InfoTableBuilder,
+         Reader InfoTable,
+         NameIdGen,
+         Reader BindingStrategy,
+         Reader EntryPoint
+       ]
+      r
+  ) =>
+  Import 'Parsed ->
+  Sem r (Import 'Scoped)
+checkImport i@Import {..} = case _importPublic of
+  NoPublic -> checkImportNoPublic i
+  Public {} -> checkImportPublic i
+
+checkImportPublic ::
+  forall r.
+  ( Members
+      '[ Error ScoperError,
+         State Scope,
+         Reader ScopeParameters,
+         State ScoperState,
+         InfoTableBuilder,
+         Reader InfoTable,
+         NameIdGen,
+         HighlightBuilder,
+         Reader BindingStrategy,
+         Reader EntryPoint
+       ]
+      r
+  ) =>
+  Import 'Parsed ->
+  Sem r (Import 'Scoped)
+checkImportPublic i@Import {..} = do
+  let outerImport =
+        Import
+          { _importKw,
+            _importModulePath,
+            _importAsName = Nothing,
+            _importUsingHiding = Nothing,
+            _importPublic = NoPublic,
+            _importOpen = Nothing
+          }
+  outerImport' <- checkImportNoPublic outerImport
+  let locMod :: Module 'Parsed 'ModuleLocal =
+        localModule (splitName (topModulePathToName _importModulePath))
+  local' <- checkLocalModule locMod
+  outerOpen' :: Maybe (OpenModule 'Scoped 'OpenShort) <-
+    fmap (set openModuleName ()) <$> mapM checkOpenModule outerOpen
+  return
+    Import
+      { _importKw,
+        _importPublic,
+        _importModulePath = outerImport' ^. importModulePath,
+        _importAsName = undefined,
+        _importOpen = outerOpen',
+        _importUsingHiding = undefined
+      }
+  where
+    gen :: forall a. Sem '[Reader Interval] a -> a
+    gen = run . runReader loc
+
+    loc :: Interval
+    loc = getLoc i
+
+    outerOpen :: Maybe (OpenModule 'Parsed 'OpenFull)
+    outerOpen = do
+      OpenModule {..} <- _importOpen
+      return
+        OpenModule
+          { _openModuleKw,
+            _openModulePublic,
+            _openModuleName = topModulePathToName (fromMaybe _importModulePath _importAsName),
+            _openModuleUsingHiding
+          }
+
+    innerOpen :: OpenModule 'Parsed 'OpenFull
+    innerOpen = gen $ do
+      _openModuleKw <- G.kw G.kwOpen
+      let _openModuleName = topModulePathToName _importModulePath
+      pubKw <- Irrelevant <$> G.kw G.kwPublic
+      let
+      return
+        OpenModule
+          { _openModuleKw,
+            _openModuleUsingHiding = _importUsingHiding,
+            _openModulePublic = Public pubKw,
+            _openModuleName
+          }
+
+    singletonModule :: Symbol -> Statement 'Parsed -> Module 'Parsed 'ModuleLocal
+    singletonModule modName stm = gen $ do
+      _moduleKw <- G.kw G.kwModule
+      _moduleKwEnd <- G.kw G.kwEnd
+      let _moduleId = ()
+          _moduleBody = [stm]
+      return
+        Module
+          { _moduleDoc = Nothing,
+            _modulePragmas = Nothing,
+            _moduleOrigin = LocalModuleType,
+            _moduleMarkdownInfo = Nothing,
+            _modulePath = modName,
+            ..
+          }
+
+    localModule :: ([Symbol], Symbol) -> Module 'Parsed 'ModuleLocal
+    localModule (qualf, m) = case qualf of
+      [] -> singletonModule m (StatementOpenModule innerOpen)
+      n : ns -> singletonModule n (StatementModule (localModule (ns, m)))
+
+checkImportNoPublic ::
+  forall r.
   (Members '[Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen] r) =>
   Import 'Parsed ->
   Sem r (Import 'Scoped)
-checkImport import_@Import {..} = do
+checkImportNoPublic import_@Import {..} = do
+  eassert (_importPublic == NoPublic)
   smodule <- readScopeModule import_
   let sname :: S.TopModulePath = smodule ^. scopedModulePath
       sname' :: S.Name = set S.nameConcrete (topModulePathToName _importModulePath) sname
-      cmodule :: ScopedModule = set scopedModuleName sname' smodule
+      scopedModule :: ScopedModule = set scopedModuleName sname' smodule
+      exportInfoOriginal = scopedModule ^. scopedModuleExportInfo
       importName :: S.TopModulePath = set S.nameConcrete _importModulePath sname
       synonymName :: Maybe S.TopModulePath = do
         synonym <- _importAsName
@@ -462,12 +584,14 @@ checkImport import_@Import {..} = do
       qual' = do
         asName <- _importAsName
         return (set S.nameConcrete asName sname')
-  addModuleToScope cmodule
   registerName importName
   whenJust synonymName registerName
-  registerScoperModules cmodule
-  importOpen' <- mapM (checkOpenModuleShort cmodule) _importOpen
-  usingHiding' <- mapM (checkUsingHiding importName undefined) _importUsingHiding
+  registerScoperModules scopedModule
+  importOpen' <- mapM (checkOpenModuleShort scopedModule) _importOpen
+  usingHiding' <- mapM (checkUsingHiding importName exportInfoOriginal) _importUsingHiding
+  let exportInfoFiltered :: ExportInfo = filterExportInfo _importPublic usingHiding' exportInfoOriginal
+      filteredScopedModule = set scopedModuleExportInfo exportInfoFiltered scopedModule
+  addModuleToScope filteredScopedModule
   return
     Import
       { _importModulePath = sname,
@@ -773,7 +897,7 @@ getModuleId path = do
 
 checkFixitySyntaxDef ::
   forall r.
-  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, State ScoperSyntax, NameIdGen, Reader EntryPoint, InfoTableBuilder, Reader InfoTable] r) =>
+  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, State ScoperSyntax, NameIdGen, InfoTableBuilder, Reader InfoTable, Reader EntryPoint] r) =>
   FixitySyntaxDef 'Parsed ->
   Sem r (FixitySyntaxDef 'Scoped)
 checkFixitySyntaxDef FixitySyntaxDef {..} = topBindings $ do
@@ -1157,7 +1281,7 @@ checkTopModule m@Module {..} = checkedModule
                 _moduleDoc = doc',
                 _modulePragmas = _modulePragmas,
                 _moduleKw,
-                _moduleInductive,
+                _moduleOrigin,
                 _moduleKwEnd,
                 _moduleId,
                 _moduleMarkdownInfo
@@ -1452,7 +1576,7 @@ checkSections sec = topBindings helper
                     Module
                       { _moduleDoc = Nothing,
                         _modulePragmas = Nothing,
-                        _moduleInductive = True,
+                        _moduleOrigin = LocalModuleType,
                         _moduleMarkdownInfo = Nothing,
                         ..
                       }
@@ -1565,7 +1689,20 @@ reserveLocalModuleSymbol =
 
 checkLocalModule ::
   forall r.
-  (Members '[HighlightBuilder, Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader EntryPoint, Reader BindingStrategy] r) =>
+  ( Members
+      '[ HighlightBuilder,
+         Error ScoperError,
+         State Scope,
+         Reader ScopeParameters,
+         State ScoperState,
+         InfoTableBuilder,
+         Reader InfoTable,
+         NameIdGen,
+         Reader BindingStrategy,
+         Reader EntryPoint
+       ]
+      r
+  ) =>
   Module 'Parsed 'ModuleLocal ->
   Sem r (Module 'Scoped 'ModuleLocal)
 checkLocalModule md@Module {..} = do
@@ -1591,7 +1728,7 @@ checkLocalModule md@Module {..} = do
             _moduleMarkdownInfo = Nothing,
             _moduleId = _moduleId',
             _moduleKw,
-            _moduleInductive,
+            _moduleOrigin,
             _moduleKwEnd
           }
       smod =
@@ -2573,7 +2710,10 @@ checkJudoc ::
   (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader EntryPoint] r) =>
   Judoc 'Parsed ->
   Sem r (Judoc 'Scoped)
-checkJudoc (Judoc groups) = ignoreHighlightBuilder $ ignoreInfoTableBuilder $ Judoc <$> mapM checkJudocGroup groups
+checkJudoc (Judoc groups) =
+  ignoreHighlightBuilder
+    . ignoreInfoTableBuilder
+    $ Judoc <$> mapM checkJudocGroup groups
 
 checkJudocGroup ::
   (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader EntryPoint] r) =>

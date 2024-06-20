@@ -13,6 +13,7 @@ module Juvix.Compiler.Concrete.Data
     module Juvix.Compiler.Concrete.Data.Literal,
     module Juvix.Compiler.Concrete.Data.NameRef,
     module Juvix.Compiler.Concrete.Data.IsOpenShort,
+    module Juvix.Compiler.Concrete.Data.LocalModuleOrigin,
     module Juvix.Data.NameId,
   )
 where
@@ -22,6 +23,7 @@ import Juvix.Compiler.Concrete.Data.Highlight
 import Juvix.Compiler.Concrete.Data.InfoTableBuilder
 import Juvix.Compiler.Concrete.Data.IsOpenShort
 import Juvix.Compiler.Concrete.Data.Literal
+import Juvix.Compiler.Concrete.Data.LocalModuleOrigin
 import Juvix.Compiler.Concrete.Data.ModuleIsTop
 import Juvix.Compiler.Concrete.Data.Name
 import Juvix.Compiler.Concrete.Data.NameRef
