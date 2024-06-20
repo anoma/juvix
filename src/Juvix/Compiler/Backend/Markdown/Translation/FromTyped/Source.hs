@@ -2,12 +2,12 @@ module Juvix.Compiler.Backend.Markdown.Translation.FromTyped.Source where
 
 import Commonmark qualified as MK
 import Data.Text qualified as Text
-import Juvix.Compiler.Concrete.Data.LocalModuleOrigin
 import Data.Text.Lazy (toStrict)
 import Juvix.Compiler.Backend.Html.Data.Options qualified as HtmlRender
 import Juvix.Compiler.Backend.Html.Translation.FromTyped.Source qualified as HtmlRender
 import Juvix.Compiler.Backend.Markdown.Data.Types
 import Juvix.Compiler.Backend.Markdown.Error
+import Juvix.Compiler.Concrete.Data.LocalModuleOrigin
 import Juvix.Compiler.Concrete.Language qualified as Concrete
 import Juvix.Compiler.Concrete.Pretty qualified as Concrete
 import Juvix.Prelude
