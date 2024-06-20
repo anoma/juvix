@@ -14,7 +14,7 @@ import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty.Options (Options, fromGenericOptions)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Pretty
 import Juvix.Compiler.Concrete.Translation.ImportScanner.Base
-import Juvix.Compiler.Store.Scoped.Language (FixitySymbolEntry, ModuleSymbolEntry, PreSymbolEntry, ScopedModule)
+import Juvix.Compiler.Store.Scoped.Language (FixitySymbolEntry, ModuleSymbolEntry, PreSymbolEntry)
 import Juvix.Data.CodeAnn
 import Juvix.Prelude
 
@@ -651,7 +651,7 @@ instance ToGenericError ConstructorExpectedLeftApplication where
 
 data ModuleDoesNotExportSymbol = ModuleDoesNotExportSymbol
   { _moduleDoesNotExportSymbol :: Symbol,
-    _moduleDoesNotExportModule :: ScopedModule
+    _moduleDoesNotExportModule :: S.TopModulePath
   }
 
 instance ToGenericError ModuleDoesNotExportSymbol where

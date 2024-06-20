@@ -308,6 +308,8 @@ data Import (s :: Stage) = Import
   { _importKw :: KeywordRef,
     _importModulePath :: ModulePathType s 'ModuleTop,
     _importAsName :: Maybe (ModulePathType s 'ModuleTop),
+    _importUsingHiding :: Maybe (UsingHiding s),
+    _importPublic :: PublicAnn,
     _importOpen :: Maybe (OpenModule s 'OpenShort)
   }
 
@@ -2823,12 +2825,15 @@ instance HasLoc (UsingHiding s) where
 instance (SingI s) => HasLoc (Import s) where
   getLoc Import {..} =
     let sLoc = case sing :: SStage s of
-          SParsed -> getLoc _importKw <> getLoc _importModulePath <>? (getLoc <$> _importOpen)
-          SScoped -> getLoc _importKw <> getLoc _importModulePath <>? (getLoc <$> _importOpen)
-     in sLoc
-
--- TODO add public
--- <>? fmap getLoc (_importPublic ^? _Public . _Just)
+          SParsed ->
+            getLoc _importKw
+              <> getLoc _importModulePath
+              <>? (getLoc <$> _importOpen)
+          SScoped ->
+            getLoc _importKw
+              <> getLoc _importModulePath
+              <>? (getLoc <$> _importOpen)
+     in sLoc <>? fmap getLoc (_importPublic ^? _Public)
 
 instance (SingI s, SingI t) => HasLoc (Module s t) where
   getLoc m = case sing :: SStage s of

@@ -453,7 +453,7 @@ checkImport import_@Import {..} = do
   smodule <- readScopeModule import_
   let sname :: S.TopModulePath = smodule ^. scopedModulePath
       sname' :: S.Name = set S.nameConcrete (topModulePathToName _importModulePath) sname
-      cmodule = set scopedModuleName sname' smodule
+      cmodule :: ScopedModule = set scopedModuleName sname' smodule
       importName :: S.TopModulePath = set S.nameConcrete _importModulePath sname
       synonymName :: Maybe S.TopModulePath = do
         synonym <- _importAsName
@@ -467,11 +467,13 @@ checkImport import_@Import {..} = do
   whenJust synonymName registerName
   registerScoperModules cmodule
   importOpen' <- mapM (checkOpenModuleShort cmodule) _importOpen
+  usingHiding' <- mapM (checkUsingHiding importName undefined) _importUsingHiding
   return
     Import
       { _importModulePath = sname,
         _importAsName = qual',
         _importOpen = importOpen',
+        _importUsingHiding = usingHiding',
         ..
       }
   where
@@ -1683,6 +1685,85 @@ checkOpenModule open@OpenModule {..} = do
   m <- lookupModuleSymbol _openModuleName
   checkOpenModuleHelper m open
 
+checkUsingHiding ::
+  forall r.
+  (Members '[Error ScoperError, InfoTableBuilder] r) =>
+  S.TopModulePath ->
+  ExportInfo ->
+  UsingHiding 'Parsed ->
+  Sem r (UsingHiding 'Scoped)
+checkUsingHiding modulepath exportInfo = \case
+  Hiding h -> Hiding <$> checkHidingList h
+  Using uh -> Using <$> checkUsingList uh
+  where
+    scopeSymbol :: forall (ns :: NameSpace). (SingI ns) => Sing ns -> Symbol -> Sem r S.Symbol
+    scopeSymbol _ s = do
+      let mentry :: Maybe (NameSpaceEntryType ns)
+          mentry = exportInfo ^. exportNameSpace . at s
+          err =
+            throw
+              . ErrModuleDoesNotExportSymbol
+              $ ModuleDoesNotExportSymbol
+                { _moduleDoesNotExportSymbol = s,
+                  _moduleDoesNotExportModule = modulepath
+                }
+      entry <- maybe err return mentry
+      let scopedSym = entryToSymbol entry s
+      registerName scopedSym
+      return scopedSym
+
+    checkHidingList :: HidingList 'Parsed -> Sem r (HidingList 'Scoped)
+    checkHidingList l = do
+      items' <- mapM checkHidingItem (l ^. hidingList)
+      return
+        HidingList
+          { _hidingKw = l ^. hidingKw,
+            _hidingBraces = l ^. hidingBraces,
+            _hidingList = items'
+          }
+
+    checkUsingList :: UsingList 'Parsed -> Sem r (UsingList 'Scoped)
+    checkUsingList l = do
+      items' <- mapM checkUsingItem (l ^. usingList)
+      return
+        UsingList
+          { _usingKw = l ^. usingKw,
+            _usingBraces = l ^. usingBraces,
+            _usingList = items'
+          }
+
+    checkHidingItem :: HidingItem 'Parsed -> Sem r (HidingItem 'Scoped)
+    checkHidingItem h = do
+      let s = h ^. hidingSymbol
+      scopedSym <-
+        if
+            | isJust (h ^. hidingModuleKw) -> scopeSymbol SNameSpaceModules s
+            | otherwise -> scopeSymbol SNameSpaceSymbols s
+      return
+        HidingItem
+          { _hidingSymbol = scopedSym,
+            _hidingModuleKw = h ^. hidingModuleKw
+          }
+
+    checkUsingItem :: UsingItem 'Parsed -> Sem r (UsingItem 'Scoped)
+    checkUsingItem i = do
+      let s = i ^. usingSymbol
+      scopedSym <-
+        if
+            | isJust (i ^. usingModuleKw) -> scopeSymbol SNameSpaceModules s
+            | otherwise -> scopeSymbol SNameSpaceSymbols s
+      let scopedAs = do
+            c <- i ^. usingAs
+            return (set S.nameConcrete c scopedSym)
+      mapM_ registerName scopedAs
+      return
+        UsingItem
+          { _usingSymbol = scopedSym,
+            _usingAs = scopedAs,
+            _usingAsKw = i ^. usingAsKw,
+            _usingModuleKw = i ^. usingModuleKw
+          }
+
 checkOpenModuleHelper ::
   forall r short.
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen] r, SingI short) =>
@@ -1692,81 +1773,8 @@ checkOpenModuleHelper ::
 checkOpenModuleHelper openedModule OpenModule {..} = do
   let exportInfo = openedModule ^. scopedModuleExportInfo
   registerName (openedModule ^. scopedModuleName)
-
-  let checkUsingHiding :: UsingHiding 'Parsed -> Sem r (UsingHiding 'Scoped)
-      checkUsingHiding = \case
-        Hiding h -> Hiding <$> checkHidingList h
-        Using uh -> Using <$> checkUsingList uh
-        where
-          scopeSymbol :: forall (ns :: NameSpace). (SingI ns) => Sing ns -> Symbol -> Sem r S.Symbol
-          scopeSymbol _ s = do
-            let mentry :: Maybe (NameSpaceEntryType ns)
-                mentry = exportInfo ^. exportNameSpace . at s
-                err =
-                  throw
-                    . ErrModuleDoesNotExportSymbol
-                    $ ModuleDoesNotExportSymbol
-                      { _moduleDoesNotExportSymbol = s,
-                        _moduleDoesNotExportModule = openedModule
-                      }
-            entry <- maybe err return mentry
-            let scopedSym = entryToSymbol entry s
-            registerName scopedSym
-            return scopedSym
-
-          checkHidingList :: HidingList 'Parsed -> Sem r (HidingList 'Scoped)
-          checkHidingList l = do
-            items' <- mapM checkHidingItem (l ^. hidingList)
-            return
-              HidingList
-                { _hidingKw = l ^. hidingKw,
-                  _hidingBraces = l ^. hidingBraces,
-                  _hidingList = items'
-                }
-
-          checkUsingList :: UsingList 'Parsed -> Sem r (UsingList 'Scoped)
-          checkUsingList l = do
-            items' <- mapM checkUsingItem (l ^. usingList)
-            return
-              UsingList
-                { _usingKw = l ^. usingKw,
-                  _usingBraces = l ^. usingBraces,
-                  _usingList = items'
-                }
-
-          checkHidingItem :: HidingItem 'Parsed -> Sem r (HidingItem 'Scoped)
-          checkHidingItem h = do
-            let s = h ^. hidingSymbol
-            scopedSym <-
-              if
-                  | isJust (h ^. hidingModuleKw) -> scopeSymbol SNameSpaceModules s
-                  | otherwise -> scopeSymbol SNameSpaceSymbols s
-            return
-              HidingItem
-                { _hidingSymbol = scopedSym,
-                  _hidingModuleKw = h ^. hidingModuleKw
-                }
-
-          checkUsingItem :: UsingItem 'Parsed -> Sem r (UsingItem 'Scoped)
-          checkUsingItem i = do
-            let s = i ^. usingSymbol
-            scopedSym <-
-              if
-                  | isJust (i ^. usingModuleKw) -> scopeSymbol SNameSpaceModules s
-                  | otherwise -> scopeSymbol SNameSpaceSymbols s
-            let scopedAs = do
-                  c <- i ^. usingAs
-                  return (set S.nameConcrete c scopedSym)
-            mapM_ registerName scopedAs
-            return
-              UsingItem
-                { _usingSymbol = scopedSym,
-                  _usingAs = scopedAs,
-                  _usingAsKw = i ^. usingAsKw,
-                  _usingModuleKw = i ^. usingModuleKw
-                }
-  usingHiding' <- mapM checkUsingHiding _openModuleUsingHiding
-  mergeScope (alterScope usingHiding' exportInfo)
+  usingHiding' <- mapM (checkUsingHiding (openedModule ^. scopedModulePath) exportInfo) _openModuleUsingHiding
+  mergeScope (filterExportInfo _openModulePublic usingHiding' exportInfo)
   let openName :: OpenModuleNameType 'Scoped short = case sing :: SIsOpenShort short of
         SOpenFull -> openedModule ^. scopedModuleName
         SOpenShort -> ()
@@ -1789,61 +1797,61 @@ checkOpenModuleHelper openedModule OpenModule {..} = do
           modify
             (over scopeNameSpace (HashMap.insertWith (<>) s (symbolInfoSingle entry)))
 
-    alterScope :: Maybe (UsingHiding 'Scoped) -> ExportInfo -> ExportInfo
-    alterScope openModif = alterEntries . filterScope
-      where
-        alterEntries :: ExportInfo -> ExportInfo
-        alterEntries nfo =
-          ExportInfo
-            { _exportSymbols = alterEntry <$> nfo ^. exportSymbols,
-              _exportModuleSymbols = alterEntry <$> nfo ^. exportModuleSymbols,
-              _exportFixitySymbols = alterEntry <$> nfo ^. exportFixitySymbols
-            }
+filterExportInfo :: PublicAnn -> Maybe (UsingHiding 'Scoped) -> ExportInfo -> ExportInfo
+filterExportInfo pub openModif = alterEntries . filterScope
+  where
+    alterEntries :: ExportInfo -> ExportInfo
+    alterEntries nfo =
+      ExportInfo
+        { _exportSymbols = alterEntry <$> nfo ^. exportSymbols,
+          _exportModuleSymbols = alterEntry <$> nfo ^. exportModuleSymbols,
+          _exportFixitySymbols = alterEntry <$> nfo ^. exportFixitySymbols
+        }
 
-        alterEntry :: (SingI ns) => NameSpaceEntryType ns -> NameSpaceEntryType ns
-        alterEntry =
-          over
-            nsEntry
-            ( set S.nameWhyInScope S.BecauseImportedOpened
-                . set S.nameVisibilityAnn (publicAnnToVis _openModulePublic)
-            )
+    alterEntry :: (SingI ns) => NameSpaceEntryType ns -> NameSpaceEntryType ns
+    alterEntry =
+      over
+        nsEntry
+        ( set S.nameWhyInScope S.BecauseImportedOpened
+            . set S.nameVisibilityAnn (publicAnnToVis pub)
+        )
 
-        publicAnnToVis :: PublicAnn -> VisibilityAnn
-        publicAnnToVis = \case
-          Public {} -> VisPublic
-          NoPublic -> VisPrivate
+    publicAnnToVis :: PublicAnn -> VisibilityAnn
+    publicAnnToVis = \case
+      Public {} -> VisPublic
+      NoPublic -> VisPrivate
 
-        filterScope :: ExportInfo -> ExportInfo
-        filterScope = case openModif of
-          Just (Using l) ->
-            over exportSymbols (HashMap.fromList . mapMaybe inUsing . HashMap.toList)
-              . over exportModuleSymbols (HashMap.fromList . mapMaybe inUsing . HashMap.toList)
-              . over exportFixitySymbols (HashMap.fromList . mapMaybe inUsing . HashMap.toList)
-            where
-              inUsing ::
-                forall (ns :: NameSpace).
-                (SingI ns) =>
-                (Symbol, NameSpaceEntryType ns) ->
-                Maybe (Symbol, NameSpaceEntryType ns)
-              inUsing (sym, e) = do
-                mayAs' <- u ^. at (e ^. nsEntry . S.nameId)
-                return (fromMaybe sym mayAs', e)
-              u :: HashMap NameId (Maybe Symbol)
-              u =
-                HashMap.fromList
-                  [ (i ^. usingSymbol . S.nameId, i ^? usingAs . _Just . S.nameConcrete)
-                    | i <- toList (l ^. usingList)
-                  ]
-          Just (Hiding l) ->
-            over exportSymbols (HashMap.filter (not . inHiding))
-              . over exportModuleSymbols (HashMap.filter (not . inHiding))
-              . over exportFixitySymbols (HashMap.filter (not . inHiding))
-            where
-              inHiding :: forall ns. (SingI ns) => NameSpaceEntryType ns -> Bool
-              inHiding e = HashSet.member (e ^. nsEntry . S.nameId) u
-              u :: HashSet NameId
-              u = HashSet.fromList (map (^. hidingSymbol . S.nameId) (toList (l ^. hidingList)))
-          Nothing -> id
+    filterScope :: ExportInfo -> ExportInfo
+    filterScope = case openModif of
+      Just (Using l) ->
+        over exportSymbols (HashMap.fromList . mapMaybe inUsing . HashMap.toList)
+          . over exportModuleSymbols (HashMap.fromList . mapMaybe inUsing . HashMap.toList)
+          . over exportFixitySymbols (HashMap.fromList . mapMaybe inUsing . HashMap.toList)
+        where
+          inUsing ::
+            forall (ns :: NameSpace).
+            (SingI ns) =>
+            (Symbol, NameSpaceEntryType ns) ->
+            Maybe (Symbol, NameSpaceEntryType ns)
+          inUsing (sym, e) = do
+            mayAs' <- u ^. at (e ^. nsEntry . S.nameId)
+            return (fromMaybe sym mayAs', e)
+          u :: HashMap NameId (Maybe Symbol)
+          u =
+            HashMap.fromList
+              [ (i ^. usingSymbol . S.nameId, i ^? usingAs . _Just . S.nameConcrete)
+                | i <- toList (l ^. usingList)
+              ]
+      Just (Hiding l) ->
+        over exportSymbols (HashMap.filter (not . inHiding))
+          . over exportModuleSymbols (HashMap.filter (not . inHiding))
+          . over exportFixitySymbols (HashMap.filter (not . inHiding))
+        where
+          inHiding :: forall ns. (SingI ns) => NameSpaceEntryType ns -> Bool
+          inHiding e = HashSet.member (e ^. nsEntry . S.nameId) u
+          u :: HashSet NameId
+          u = HashSet.fromList (map (^. hidingSymbol . S.nameId) (toList (l ^. hidingList)))
+      Nothing -> id
 
 checkAxiomDef ::
   (Members '[HighlightBuilder, Reader ScopeParameters, InfoTableBuilder, Reader InfoTable, Error ScoperError, State Scope, State ScoperState, NameIdGen, State ScoperSyntax, Reader BindingStrategy, Reader EntryPoint] r) =>

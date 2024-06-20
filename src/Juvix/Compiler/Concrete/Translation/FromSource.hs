@@ -791,6 +791,8 @@ import_ = do
   _importKw <- kw kwImport
   _importModulePath <- topModulePath
   _importAsName <- optional pasName
+  _importUsingHiding <- optional usingOrHiding
+  _importPublic <- publicAnn
   _importOpen <- optional openModule
   let i = Import {..}
   P.lift (registerImport i)
