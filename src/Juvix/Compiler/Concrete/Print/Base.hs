@@ -1160,14 +1160,15 @@ instance (SingI s) => PrettyPrint (Import s) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => Import s -> Sem r ()
   ppCode i = do
     let open' = ppCode <$> (i ^. importOpen)
+        usingHiding' = ppCode <$> i ^. importUsingHiding
+        public' = ppCode <$> i ^? importPublic . _Public
     ppCode (i ^. importKw)
       <+> ppModulePathType (i ^. importModulePath)
       <+?> ppAlias
       <+?> open'
+      <+?> usingHiding'
+      <+?> public'
     where
-      -- TODO add public
-      -- <+?> fmap ppCode (i ^? importPublic . _Public . _Just)
-
       ppAlias :: Maybe (Sem r ())
       ppAlias = case i ^. importAsName of
         Nothing -> Nothing
