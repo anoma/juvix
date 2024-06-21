@@ -25,20 +25,6 @@ initJamState =
 
 makeLenses ''JamState
 
--- | Write the binary encoding of argument interpreted as a length to the output
-writeLength :: forall r. (Member BitWriter r) => Int -> Sem r ()
-writeLength len = do
-  let lenOfLen = finiteBitSize len - countLeadingZeros len
-  replicateM_ lenOfLen writeZero
-  writeOne
-  unless (lenOfLen == 0) (go len)
-  where
-    go :: Int -> Sem r ()
-    -- Exclude the most significant bit of the length
-    go l = unless (l == 1) $ do
-      writeBit (Bit (testBit l 0))
-      go (l `shiftR` 1)
-
 -- | Write the atom tag 0b0 to the output
 writeAtomTag :: (Member BitWriter r) => Sem r ()
 writeAtomTag = writeZero

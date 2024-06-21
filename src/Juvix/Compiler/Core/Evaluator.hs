@@ -14,6 +14,7 @@ import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.NoDisplayInfo
 import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Nockma.Encoding qualified as Encoding
+import Juvix.Compiler.Nockma.Encoding.Effect.BitReader
 import Juvix.Compiler.Store.Core.Extra qualified as Store
 import Juvix.Data.Field
 import Text.Read qualified as T
@@ -79,9 +80,6 @@ geval opts herr ctx env0 = eval' env0
   where
     evalError :: Text -> Node -> a
     evalError msg node = Exception.throw (EvalError msg (Just node))
-
-    evalError' :: Text -> a
-    evalError' msg = Exception.throw (EvalError msg Nothing)
 
     eval' :: Env -> Node -> Node
     eval' !env !n = case n of
@@ -351,16 +349,29 @@ geval opts herr ctx env0 = eval' env0
 
         anomaEncodeOp :: [Node] -> Node
         anomaEncodeOp = unary $ \arg ->
-          let !node = eval' env arg
-              !bs = serializeNode node
-           in mkConstant' (ConstInteger (Encoding.byteStringToIntegerLE bs))
+          let !v = eval' env arg
+           in if
+                  | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                      mkBuiltinApp' OpAnomaEncode [v]
+                  | otherwise ->
+                      let !bs = serializeNode v
+                       in mkConstant' (ConstInteger (Encoding.encodeByteString bs))
         {-# INLINE anomaEncodeOp #-}
 
         anomaDecodeOp :: [Node] -> Node
         anomaDecodeOp = unary $ \arg ->
-          case eval' env arg of
-            (NCst (Constant _ (ConstInteger i))) -> deserializeNode (Encoding.integerToByteStringLE i)
-            _ -> evalError "anomaDecodeOp: argument not an integer" n
+          let !v = eval' env arg
+           in if
+                  | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                      mkBuiltinApp' OpAnomaDecode [v]
+                  | otherwise ->
+                      case v of
+                        (NCst (Constant _ (ConstInteger i))) -> deserializeNode (doIt @BitReadError $ Encoding.decodeByteString i)
+                        _ -> evalError "anomaDecodeOp: argument not an integer" n
+          where
+            doIt :: Sem '[Error e] x -> x
+            doIt = fromRight (err "failed to decode bytestring") . run . runErrorNoCallStack
+
         {-# INLINE anomaDecodeOp #-}
 
         anomaVerifyDetachedOp :: [Node] -> Node
@@ -430,12 +441,6 @@ geval opts herr ctx env0 = eval' env0
     nodeFromInteger :: Integer -> Node
     nodeFromInteger !int = mkConstant' (ConstInteger int)
     {-# INLINE nodeFromInteger #-}
-
-    serializeNode :: Node -> ByteString
-    serializeNode = S.encode . Store.fromCoreNode
-
-    deserializeNode :: ByteString -> Node
-    deserializeNode = fromRight (evalError' "failed to decode to a node") . fmap Store.toCoreNode . S.decode
 
     nodeFromField :: FField -> Node
     nodeFromField !fld = mkConstant' (ConstField fld)
@@ -579,6 +584,12 @@ doEval mfsize noIO loc tab node
         defaultEvalOptions
         (\fsize -> defaultEvalOptions {_evalOptionsFieldSize = fsize})
         mfsize
+
+serializeNode :: Node -> ByteString
+serializeNode = S.encode . Store.fromCoreNode
+
+deserializeNode :: ByteString -> Node
+deserializeNode = fromRight (error "failed to decode to a node") . fmap Store.toCoreNode . S.decode
 
 doEvalIO ::
   Maybe Natural ->

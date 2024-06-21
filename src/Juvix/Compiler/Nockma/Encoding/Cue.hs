@@ -1,7 +1,6 @@
 module Juvix.Compiler.Nockma.Encoding.Cue where
 
 import Data.Bit as Bit
-import Data.Bits
 import Juvix.Compiler.Nockma.Encoding.Base
 import Juvix.Compiler.Nockma.Encoding.Effect.BitReader
 import Juvix.Compiler.Nockma.Language
@@ -66,23 +65,8 @@ handleBitError :: (Member (Error DecodingError) r) => DecodingError -> Sem (Erro
 handleBitError e = mapError @_ @_ @BitReadError (const e)
 
 -- | Consume the encoded length from the input bits
-consumeLength :: forall r. (Members '[BitReader, Error DecodingError] r) => Sem r Int
-consumeLength = do
-  lenOfLen <- handleBitError DecodingErrorInvalidLength countBitsUntilOne
-  if
-      | lenOfLen == 0 -> return 0
-      | otherwise -> do
-          -- The most significant bit of the length is omitted
-          let lenBits = lenOfLen - 1
-          foldlM go (bit lenBits) [0 .. lenBits - 1]
-  where
-    go :: Int -> Int -> Sem r Int
-    go acc n = do
-      Bit b <- handleBitError DecodingErrorInvalidLength nextBit
-      return $
-        if
-            | b -> setBit acc n
-            | otherwise -> acc
+consumeLength' :: forall r. (Members '[BitReader, Error DecodingError] r) => Sem r Int
+consumeLength' = handleBitError DecodingErrorInvalidLength consumeLength
 
 -- | Consume a nock integer from the input bits
 consumeInteger ::
@@ -225,7 +209,7 @@ cueFromBitsSem = registerElementStart $ do
 
     consumeNatAtom :: Sem r (Atom Natural)
     consumeNatAtom = do
-      len <- consumeLength
+      len <- consumeLength'
       if
           | len == 0 -> return (Atom 0 emptyAtomInfo)
           | otherwise -> do
@@ -234,7 +218,7 @@ cueFromBitsSem = registerElementStart $ do
 
     consumeAtom :: Sem r (Atom a)
     consumeAtom = do
-      len <- consumeLength
+      len <- consumeLength'
       if
           | len == 0 -> do
               z <- fromNatural' @a 0

@@ -1,8 +1,12 @@
 module Juvix.Compiler.Nockma.Encoding.ByteString where
 
+import Data.Bit
 import Data.Bits
 import Data.ByteString qualified as BS
 import Data.ByteString.Builder qualified as BS
+import Juvix.Compiler.Nockma.Encoding.Base
+import Juvix.Compiler.Nockma.Encoding.Effect.BitReader
+import Juvix.Compiler.Nockma.Encoding.Effect.BitWriter
 import Juvix.Compiler.Nockma.Language
 import Juvix.Prelude.Base
 
@@ -59,3 +63,23 @@ padByteString :: Int -> ByteString -> ByteString
 padByteString n bs
   | BS.length bs >= n = bs
   | otherwise = BS.append bs (BS.replicate (n - BS.length bs) 0)
+
+-- | encode a ByteString to an Integer with its length as part of the encoding.
+encodeByteString :: ByteString -> Integer
+encodeByteString = vectorBitsToInteger . run . execBitWriter . go
+  where
+    go :: ByteString -> Sem (BitWriter ': r) ()
+    go bs = do
+      let len = BS.length bs
+      writeLength len
+      writeByteString bs
+
+-- | decode a ByteString that was encoded using `encodeByteString`
+decodeByteString :: forall r. (Member (Error BitReadError) r) => Integer -> Sem r ByteString
+decodeByteString i = evalBitReader (integerToVectorBits i) go
+  where
+    go :: Sem (BitReader ': r) ByteString
+    go = do
+      len <- consumeLength
+      v <- consumeRemaining
+      return (padByteString len (cloneToByteString v))
