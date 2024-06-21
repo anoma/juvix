@@ -5,10 +5,8 @@ import Juvix.Compiler.Asm.Data.InfoTable
 import Juvix.Compiler.Asm.Extra
 import Juvix.Compiler.Asm.Language
 
--- | Call graph type
 type CallGraph = DependencyInfo Symbol
 
--- | Compute the call graph
 createCallGraph :: (Member (Error AsmError) r) => InfoTable -> Sem r CallGraph
 createCallGraph tab = do
   graph <- createCallGraphMap tab

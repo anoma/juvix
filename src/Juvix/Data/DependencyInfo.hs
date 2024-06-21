@@ -75,3 +75,15 @@ nodesOnCycles = foldr go mempty . buildSCCs
     go x acc = case x of
       CyclicSCC ns -> foldr HashSet.insert acc ns
       _ -> acc
+
+-- | Computes the ancestors of `startNodes`, i.e., the set of nodes from which
+-- some node in `startNodes` is reachable. Complexity O(V + E).
+computeAncestors :: forall n. (Hashable n) => DependencyInfo n -> [n] -> HashSet n
+computeAncestors depInfo startNodes =
+  HashSet.fromList
+    . map (fst . (depInfo ^. depInfoNodeFromVertex))
+    . filter (/= v)
+    $ Graph.reachable graph' v
+  where
+    adjacent = mapMaybe (depInfo ^. depInfoVertexFromName) startNodes
+    (v, graph') = addFreshVertex adjacent (Graph.transposeG (depInfo ^. depInfoGraph))

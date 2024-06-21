@@ -4,8 +4,11 @@ module Juvix.Compiler.Reg.Extra.Blocks.Info
   )
 where
 
+import Data.HashMap.Strict qualified as HashMap
+import Juvix.Compiler.Reg.Data.Blocks.CallGraph
 import Juvix.Compiler.Reg.Data.Blocks.InfoTable
-import Juvix.Compiler.Reg.Language.Base
+import Juvix.Compiler.Reg.Extra.Blocks
+import Juvix.Compiler.Reg.Language.Blocks
 import Juvix.Compiler.Tree.Extra.Info
 
 data ExtraInfo = ExtraInfo
@@ -14,7 +17,8 @@ data ExtraInfo = ExtraInfo
     _extraInfoFUIDs :: HashMap Symbol Int,
     -- | IDs for constructor tags, consecutive starting from 0 for each
     -- inductive type separately
-    _extraInfoCIDs :: HashMap Tag Int
+    _extraInfoCIDs :: HashMap Tag Int,
+    _extraInfoCairoBltFuns :: HashSet Symbol
   }
 
 makeLenses ''ExtraInfo
@@ -24,5 +28,31 @@ computeExtraInfo tab =
   ExtraInfo
     { _extraInfoTable = tab,
       _extraInfoFUIDs = computeFUIDs tab,
-      _extraInfoCIDs = computeCIDs tab
+      _extraInfoCIDs = computeCIDs tab,
+      _extraInfoCairoBltFuns = computeCairoBltFuns tab
     }
+
+computeCairoBltFuns :: InfoTable -> HashSet Symbol
+computeCairoBltFuns tab =
+  computeAncestors callGraph startNodes
+  where
+    callGraph :: CallGraph
+    callGraph = createCallGraph tab
+
+    startNodes :: [Symbol]
+    startNodes =
+      map (^. functionSymbol)
+        . filter (usesCairoBuiltins . (^. functionCode))
+        . HashMap.elems
+        $ (tab ^. infoFunctions)
+
+    usesCairoBuiltins :: Block -> Bool
+    usesCairoBuiltins block =
+      maybe False usesCairoBuiltins (block ^. blockNext)
+        || any isCairo (block ^. blockBody)
+        || any usesCairoBuiltins (getSubBlocks block)
+      where
+        isCairo :: Instruction -> Bool
+        isCairo = \case
+          Cairo {} -> True
+          _ -> False

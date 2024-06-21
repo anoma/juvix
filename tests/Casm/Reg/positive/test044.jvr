@@ -1,0 +1,11 @@
+
+function f(integer) : integer {
+    tmp[0] = add arg[0] 1;
+    ret tmp[0];
+}
+
+function main() {
+    tmp[0] = 2;
+    tmp[1] = add tmp[0] 1;
+    tcall f (tmp[1]);
+}
