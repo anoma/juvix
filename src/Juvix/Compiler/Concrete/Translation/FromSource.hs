@@ -1112,11 +1112,57 @@ letBlock = do
   _letExpression <- parseExpressionAtoms
   return Let {..}
 
+sideIfBranch :: forall r k. (SingI k, Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => Irrelevant (Maybe KeywordRef) -> ParsecS r (SideIfBranch 'Parsed k)
+sideIfBranch _sideIfBranchPipe = do
+  _sideIfBranchKw <-
+    Irrelevant <$> case sing :: SSideIfBranchKind k of
+      SSideIfBool -> kw kwIf
+      SSideIfElse -> kw kwElse
+  _sideIfBranchCondition <- case sing :: SSideIfBranchKind k of
+    SSideIfBool -> parseExpressionAtoms
+    SSideIfElse -> return ()
+  _sideIfBranchAssignKw <- Irrelevant <$> kw kwAssign
+  _sideIfBranchBody <- parseExpressionAtoms
+  return SideIfBranch {..}
+
+sideIfs :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (SideIfs 'Parsed)
+sideIfs = do
+  fstBranch <- do
+    pipe' <- Irrelevant <$> optional (kw kwPipe)
+    sideIfBranch pipe'
+  moreBranches <- many $ do
+    pipe' <- Irrelevant . Just <$> kw kwPipe
+    sideIfBranch pipe'
+  let _sideIfBranches = fstBranch :| moreBranches
+  _sideIfElse <- optional $ do
+    pipe' <- kw kwPipe
+    sideIfBranch (Irrelevant (Just pipe'))
+  return
+    SideIfs
+      { ..
+      }
+
+prhsExpression :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (RhsExpression 'Parsed)
+prhsExpression = do
+  _rhsExpressionAssignKw <- Irrelevant <$> kw kwAssign
+  _rhsExpression <- parseExpressionAtoms
+  return RhsExpression {..}
+
+pcaseBranchRhs :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (CaseBranchRhs 'Parsed)
+pcaseBranchRhs =
+  CaseBranchRhsExpression <$> pcaseBranchRhsExpression
+    <|> CaseBranchRhsIf <$> sideIfs
+
+pcaseBranchRhsExpression :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (RhsExpression 'Parsed)
+pcaseBranchRhsExpression = do
+  _rhsExpressionAssignKw <- Irrelevant <$> kw kwAssign
+  _rhsExpression <- parseExpressionAtoms
+  return RhsExpression {..}
+
 caseBranch :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => Irrelevant (Maybe KeywordRef) -> ParsecS r (CaseBranch 'Parsed)
 caseBranch _caseBranchPipe = do
   _caseBranchPattern <- parsePatternAtoms
-  _caseBranchAssignKw <- Irrelevant <$> kw kwAssign
-  _caseBranchExpression <- parseExpressionAtoms
+  _caseBranchRhs <- pcaseBranchRhs
   return CaseBranch {..}
 
 case_ :: forall r. (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (Case 'Parsed)

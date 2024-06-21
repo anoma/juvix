@@ -62,7 +62,7 @@ type family FieldArgIxType s = res | res -> s where
 type SideIfBranchConditionType :: Stage -> SideIfBranchKind -> GHC.Type
 type family SideIfBranchConditionType s k = res where
   SideIfBranchConditionType s 'SideIfBool = ExpressionType s
-  SideIfBranchConditionType _ 'SideIfElse = Irrelevant KeywordRef
+  SideIfBranchConditionType _ 'SideIfElse = ()
 
 type ModuleIdType :: Stage -> ModuleIsTop -> GHC.Type
 type family ModuleIdType s t = res where
