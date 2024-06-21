@@ -68,6 +68,9 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
         ++ [Label endLab]
     )
   where
+    info :: Reg.ExtraInfo
+    info = Reg.computeExtraInfo tab
+
     mkResult :: (LabelInfo, (Int, [Builtin], Code)) -> Result
     mkResult (labi, (outSize, blts, code)) =
       Result
@@ -97,9 +100,6 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
 
     mkLoadInputArg :: Text -> [Instruction]
     mkLoadInputArg arg = [Hint (HintInput arg), mkAssignAp (Val $ Ref $ MemRef Ap 0)]
-
-    info :: Reg.ExtraInfo
-    info = Reg.computeExtraInfo tab
 
     getInputArgs :: Int -> [Maybe Text] -> [Text]
     getInputArgs n argnames = zipWith fromMaybe args (argnames ++ repeat Nothing)
@@ -303,7 +303,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
         goAssignApBuiltins :: Sem r ()
         goAssignApBuiltins = mkBuiltinRef >>= goAssignAp . Val . Ref
 
-        -- Warning: the result may depend on Ap. Use adjust_ap when changing ap
+        -- Warning: the result may depend on Ap. Use `adjustAp` when changing Ap
         -- afterwards.
         goValue :: Reg.Value -> Sem r Value
         goValue = \case

@@ -20,7 +20,7 @@ data ExtraInfo = ExtraInfo
     _extraInfoCIDs :: HashMap Tag Int,
     -- | Symbols of functions which depend (directly or indirectly) on Cairo
     -- builtins
-    _extraInfoCairoDepFuns :: HashSet Symbol
+    _extraInfoCairoBltFuns :: HashSet Symbol
   }
 
 makeLenses ''ExtraInfo
@@ -31,11 +31,11 @@ computeExtraInfo tab =
     { _extraInfoTable = tab,
       _extraInfoFUIDs = computeFUIDs tab,
       _extraInfoCIDs = computeCIDs tab,
-      _extraInfoCairoDepFuns = computeCairoDepFuns tab
+      _extraInfoCairoBltFuns = computeCairoBltFuns tab
     }
 
-computeCairoDepFuns :: InfoTable -> HashSet Symbol
-computeCairoDepFuns tab =
+computeCairoBltFuns :: InfoTable -> HashSet Symbol
+computeCairoBltFuns tab =
   computeAncestors callGraph startNodes
   where
     callGraph :: CallGraph

@@ -21,4 +21,6 @@ toRust = applyTransformations toRustTransformations
 -- | Perform transformations on JuvixReg necessary before the translation to
 -- Cairo assembly
 toCasm :: InfoTable -> Sem r Blocks.InfoTable
-toCasm = applyTransformations toCasmTransformations >=> return . Blocks.computeLiveness . Blocks.fromReg
+toCasm =
+  applyTransformations toCasmTransformations
+    >=> return . Blocks.computeLiveness . Blocks.fromReg
