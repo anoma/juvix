@@ -107,6 +107,31 @@ underBinders ps f = do
           modify' @FreshBindersContext (set (at (v ^. nameId)) (Just uid'))
           return (set nameId uid' v)
 
+instance Clonable SideIfBranch where
+  freshNameIds SideIfBranch {..} = do
+    cond' <- freshNameIds _sideIfBranchCondition
+    body' <- freshNameIds _sideIfBranchBody
+    return
+      SideIfBranch
+        { _sideIfBranchCondition = cond',
+          _sideIfBranchBody = body'
+        }
+
+instance Clonable SideIfs where
+  freshNameIds SideIfs {..} = do
+    branches' <- mapM freshNameIds _sideIfBranches
+    else' <- mapM freshNameIds _sideIfElse
+    return
+      SideIfs
+        { _sideIfBranches = branches',
+          _sideIfElse = else'
+        }
+
+instance Clonable CaseBranchRhs where
+  freshNameIds = \case
+    CaseBranchRhsExpression e -> CaseBranchRhsExpression <$> freshNameIds e
+    CaseBranchRhsIf e -> CaseBranchRhsIf <$> freshNameIds e
+
 instance Clonable CaseBranch where
   freshNameIds CaseBranch {..} =
     underBinder _caseBranchPattern $ \pat' -> do

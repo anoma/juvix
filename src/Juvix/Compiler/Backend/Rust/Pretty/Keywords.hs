@@ -6,9 +6,6 @@ import Juvix.Extra.Strings qualified as Str
 kwFn :: Doc Ann
 kwFn = keyword Str.rustFn
 
-kwIf :: Doc Ann
-kwIf = keyword Str.rustIf
-
 kwElse :: Doc Ann
 kwElse = keyword Str.rustElse
 
