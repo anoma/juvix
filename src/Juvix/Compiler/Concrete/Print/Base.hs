@@ -544,14 +544,14 @@ instance (SingI s, SingI k) => PrettyPrint (SideIfBranch s k) where
         kwIfElse' = ppCode _sideIfBranchKw
         kwAssign' = ppCode _sideIfBranchAssignKw
         condition' = case sing :: SSideIfBranchKind k of
-          SSideIfBool -> ppExpressionType _sideIfBranchCondition
-          SSideIfElse -> ppCode _sideIfBranchCondition
+          SSideIfBool -> Just (ppExpressionType _sideIfBranchCondition)
+          SSideIfElse -> Nothing
         body' = ppExpressionType _sideIfBranchBody
     kwPipe'
-      <?+> kwIfElse'
-        <+> condition'
+      <?+> (kwIfElse'
+        <+?> condition'
         <+> kwAssign'
-        <+> oneLineOrNext body'
+        <+> oneLineOrNext body')
 
 instance (SingI s) => PrettyPrint (SideIfs s) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => SideIfs s -> Sem r ()
