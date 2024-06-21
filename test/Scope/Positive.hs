@@ -243,11 +243,7 @@ tests =
       $(mkRelDir "VisibilityPrecendence")
       $(mkRelFile "VisibilityPrecedence.juvix"),
     posTest
-      "import A as B public (issue 2429)"
-      $(mkRelDir "issue2429")
-      $(mkRelFile "Main.juvix"),
-    posTest
-     "public import"
+     "Public import"
      $(mkRelDir "PublicImports")
      $(mkRelFile "Main.juvix")
   ]

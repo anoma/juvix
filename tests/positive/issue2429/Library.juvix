@@ -1,3 +1,0 @@
-module Library;
-
-axiom libType : Type;

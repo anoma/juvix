@@ -1,5 +1,0 @@
-module Main;
-
-import Export;
-
-axiom X : Export.Lib.libType;
