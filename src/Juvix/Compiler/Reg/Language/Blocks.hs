@@ -10,7 +10,10 @@ data Block = Block
   { _blockLiveVars :: HashSet VarRef,
     _blockBody :: [Instruction],
     _blockFinal :: Maybe FinalInstruction,
-    _blockNext :: Maybe Block
+    _blockNext :: Maybe Block,
+    -- | May the block use Cairo builtins? False if definitely not, True if
+    -- possible.
+    _blockUsesCairoBuiltins :: Bool
   }
 
 data Instruction
@@ -47,5 +50,6 @@ emptyBlock =
     { _blockLiveVars = mempty,
       _blockBody = [],
       _blockFinal = Nothing,
-      _blockNext = Nothing
+      _blockNext = Nothing,
+      _blockUsesCairoBuiltins = True
     }

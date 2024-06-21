@@ -18,8 +18,6 @@ data ExtraInfo = ExtraInfo
     -- | IDs for constructor tags, consecutive starting from 0 for each
     -- inductive type separately
     _extraInfoCIDs :: HashMap Tag Int,
-    -- | Symbols of functions which depend (directly or indirectly) on Cairo
-    -- builtins
     _extraInfoCairoBltFuns :: HashSet Symbol
   }
 

@@ -7,6 +7,7 @@ where
 import Juvix.Compiler.Reg.Data.Blocks.InfoTable qualified as Blocks
 import Juvix.Compiler.Reg.Data.InfoTable
 import Juvix.Compiler.Reg.Transformation
+import Juvix.Compiler.Reg.Transformation.Blocks.Cairo qualified as Blocks
 import Juvix.Compiler.Reg.Transformation.Blocks.Liveness qualified as Blocks
 import Juvix.Compiler.Reg.Translation.Blocks.FromReg qualified as Blocks
 
@@ -23,4 +24,7 @@ toRust = applyTransformations toRustTransformations
 toCasm :: InfoTable -> Sem r Blocks.InfoTable
 toCasm =
   applyTransformations toCasmTransformations
-    >=> return . Blocks.computeLiveness . Blocks.fromReg
+    >=> return
+      . Blocks.computeCairoBlts
+      . Blocks.computeLiveness
+      . Blocks.fromReg
