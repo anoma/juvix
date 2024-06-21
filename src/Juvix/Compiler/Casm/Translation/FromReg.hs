@@ -305,7 +305,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
         goAssignApBuiltins :: Sem r ()
         goAssignApBuiltins = mkBuiltinRef >>= goAssignAp . Val . Ref
 
-        -- Warning: the result may depend on Ap. Use adjust_ap when changing ap
+        -- Warning: the result may depend on Ap. Use adjustAp when changing Ap
         -- afterwards.
         goValue :: Reg.Value -> Sem r Value
         goValue = \case
@@ -461,14 +461,16 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
         goCairo Reg.InstrCairo {..} = case _instrCairoOpcode of
           Reg.OpCairoRandomEcPoint -> do
             output'' (Hint HintRandomEcPoint)
+            -- output: ap += 2
             output' 2 (Alloc $ InstrAlloc $ Val $ Imm 2)
+            -- TODO: we don't need alloc when we don't have the tag
             goAllocCall _instrCairoResult
-            -- 1 is the tag of the first (and only) constructor in the ec_point record.
-            goAssignAp (Val $ Imm 1)
+            -- store x
             goAssignAp (Val $ Ref $ MemRef Ap (-off))
+            -- store y
             goAssignAp (Val $ Ref $ MemRef Ap (-off))
             where
-              off = toOffset (blts ^. stdlibGetRegsApOffset) + 4
+              off = toOffset (blts ^. stdlibGetRegsApOffset) + 3
           _ -> do
             goAssignApBuiltins
             mapM_ goAssignApValue (reverse _instrCairoArgs)

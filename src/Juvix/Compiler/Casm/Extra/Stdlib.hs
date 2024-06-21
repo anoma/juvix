@@ -38,7 +38,7 @@ addStdlibBuiltins addr = do
       _stdlibEcOpName :: Text = "juvix_ec_op"
       -- Make sure the Ap offsets correspond to the runtime
       _stdlibGetRegsApOffset :: Int = 4
-      _stdlibPoseidonApOffset :: Int = 19
+      _stdlibPoseidonApOffset :: Int = 18
       _stdlibEcOpApOffset :: Int = 19
   _stdlibGetRegs <- fromJust <$> getIdent _stdlibGetRegsName
   _stdlibCallClosure <- fromJust <$> getIdent _stdlibCallClosureName
