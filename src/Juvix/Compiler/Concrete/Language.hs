@@ -6,6 +6,7 @@ module Juvix.Compiler.Concrete.Language
     module Juvix.Compiler.Concrete.Data.IsOpenShort,
     module Juvix.Compiler.Concrete.Data.LocalModuleOrigin,
     module Juvix.Data.IteratorInfo,
+    module Juvix.Compiler.Concrete.Data.SideIfBranchKind,
     module Juvix.Compiler.Concrete.Data.Name,
     module Juvix.Compiler.Concrete.Data.Stage,
     module Juvix.Compiler.Concrete.Data.NameRef,
@@ -31,6 +32,7 @@ import Juvix.Compiler.Concrete.Data.Name
 import Juvix.Compiler.Concrete.Data.NameRef
 import Juvix.Compiler.Concrete.Data.PublicAnn
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
+import Juvix.Compiler.Concrete.Data.SideIfBranchKind
 import Juvix.Compiler.Concrete.Data.Stage
 import Juvix.Compiler.Concrete.Data.VisibilityAnn
 import Juvix.Data
@@ -56,6 +58,11 @@ type FieldArgIxType :: Stage -> GHC.Type
 type family FieldArgIxType s = res | res -> s where
   FieldArgIxType 'Parsed = ()
   FieldArgIxType 'Scoped = Int
+
+type SideIfBranchConditionType :: Stage -> SideIfBranchKind -> GHC.Type
+type family SideIfBranchConditionType s k = res where
+  SideIfBranchConditionType s 'SideIfBool = ExpressionType s
+  SideIfBranchConditionType _ 'SideIfElse = ()
 
 type ModuleIdType :: Stage -> ModuleIsTop -> GHC.Type
 type family ModuleIdType s t = res where
@@ -1706,6 +1713,66 @@ deriving stock instance Ord (Let 'Parsed)
 
 deriving stock instance Ord (Let 'Scoped)
 
+data SideIfBranch (s :: Stage) (k :: SideIfBranchKind) = SideIfBranch
+  { _sideIfBranchPipe :: Irrelevant KeywordRef,
+    _sideIfBranchKw :: Irrelevant KeywordRef,
+    _sideIfBranchCondition :: SideIfBranchConditionType s k,
+    _sideIfBranchBody :: ExpressionType s
+  }
+  deriving stock (Generic)
+
+data SideIf (s :: Stage) = SideIf
+  { _sideIfKw :: Irrelevant KeywordRef,
+    _sideIfBranches :: [SideIfBranch s 'SideIfBool],
+    _sideIfElse :: Maybe (SideIfBranch s 'SideIfElse)
+  }
+  deriving stock (Generic)
+
+instance Serialize (SideIf 'Scoped)
+
+instance NFData (SideIf 'Scoped)
+
+instance Serialize (SideIf 'Parsed)
+
+instance NFData (SideIf 'Parsed)
+
+deriving stock instance Show (SideIf 'Parsed)
+
+deriving stock instance Show (SideIf 'Scoped)
+
+deriving stock instance Eq (SideIf 'Parsed)
+
+deriving stock instance Eq (SideIf 'Scoped)
+
+deriving stock instance Ord (SideIf 'Parsed)
+
+deriving stock instance Ord (SideIf 'Scoped)
+
+data CaseBranchRhs (s :: Stage)
+  = CaseBranchRhsExpression (ExpressionType s)
+  | CaseBranchRhsIf (SideIf s)
+  deriving stock (Generic)
+
+instance Serialize (CaseBranchRhs 'Scoped)
+
+instance NFData (CaseBranchRhs 'Scoped)
+
+instance Serialize (CaseBranchRhs 'Parsed)
+
+instance NFData (CaseBranchRhs 'Parsed)
+
+deriving stock instance Show (CaseBranchRhs 'Parsed)
+
+deriving stock instance Show (CaseBranchRhs 'Scoped)
+
+deriving stock instance Eq (CaseBranchRhs 'Parsed)
+
+deriving stock instance Eq (CaseBranchRhs 'Scoped)
+
+deriving stock instance Ord (CaseBranchRhs 'Parsed)
+
+deriving stock instance Ord (CaseBranchRhs 'Scoped)
+
 data CaseBranch (s :: Stage) = CaseBranch
   { _caseBranchPipe :: Irrelevant (Maybe KeywordRef),
     _caseBranchAssignKw :: Irrelevant KeywordRef,
@@ -2468,6 +2535,7 @@ deriving stock instance Ord (JudocAtom 'Parsed)
 
 deriving stock instance Ord (JudocAtom 'Scoped)
 
+makeLenses ''SideIf
 makeLenses ''PatternArg
 makeLenses ''WildcardConstructor
 makeLenses ''DoubleBracesExpression
