@@ -180,7 +180,7 @@ compileReplInputIO fp txt = do
       case p of
         Parser.ReplExpression e -> ReplPipelineResultNode <$> compileExpression e
         Parser.ReplImport i -> registerImport i $> ReplPipelineResultImport (i ^. importModulePath)
-        Parser.ReplOpenImport i -> return (ReplPipelineResultOpen (i ^. openModuleName))
+        Parser.ReplOpen i -> return (ReplPipelineResultOpen (i ^. openModuleName))
 
 runTransformations ::
   forall r.

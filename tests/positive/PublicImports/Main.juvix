@@ -1,0 +1,30 @@
+module Main;
+
+module Using;
+
+  module Inner;
+    import M using {MType} public;
+  end;
+
+  axiom x : Inner.M.MType;
+
+end;
+
+module Hiding;
+  module Inner;
+    import M hiding {MType} public;
+  end;
+
+  module P;
+    module Inner;
+      module M;
+        axiom MType : Type;
+      end;
+    end;
+  end;
+
+  open P;
+
+  --- There would be an ambiguity error if the above hiding did nothing
+  axiom x : Inner.M.MType;
+end;

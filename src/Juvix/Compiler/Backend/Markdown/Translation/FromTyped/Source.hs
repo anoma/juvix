@@ -7,6 +7,7 @@ import Juvix.Compiler.Backend.Html.Data.Options qualified as HtmlRender
 import Juvix.Compiler.Backend.Html.Translation.FromTyped.Source qualified as HtmlRender
 import Juvix.Compiler.Backend.Markdown.Data.Types
 import Juvix.Compiler.Backend.Markdown.Error
+import Juvix.Compiler.Concrete.Data.LocalModuleOrigin
 import Juvix.Compiler.Concrete.Language qualified as Concrete
 import Juvix.Compiler.Concrete.Pretty qualified as Concrete
 import Juvix.Prelude
@@ -216,7 +217,7 @@ indModuleFilter =
         Concrete.StatementFunctionDef _ -> True
         Concrete.StatementImport _ -> True
         Concrete.StatementInductive _ -> True
-        Concrete.StatementModule o -> not (o ^. Concrete.moduleInductive)
+        Concrete.StatementModule o -> o ^. Concrete.moduleOrigin == LocalModuleSource
         Concrete.StatementOpenModule _ -> True
         Concrete.StatementAxiom _ -> True
         Concrete.StatementProjectionDef _ -> True

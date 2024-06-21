@@ -241,5 +241,9 @@ tests =
     posTest
       "Visibility precedence"
       $(mkRelDir "VisibilityPrecendence")
-      $(mkRelFile "VisibilityPrecedence.juvix")
+      $(mkRelFile "VisibilityPrecedence.juvix"),
+    posTest
+      "Public import"
+      $(mkRelDir "PublicImports")
+      $(mkRelFile "Main.juvix")
   ]

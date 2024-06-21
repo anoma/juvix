@@ -95,7 +95,7 @@ fromSource e = mapError (JuvixError @ParserError) $ do
 data ReplInput
   = ReplExpression (ExpressionAtoms 'Parsed)
   | ReplImport (Import 'Parsed)
-  | ReplOpenImport (OpenModule 'Parsed)
+  | ReplOpen (OpenModule 'Parsed 'OpenFull)
 
 expressionFromTextSource ::
   (Members '[Error JuvixError] r) =>
@@ -378,7 +378,7 @@ replInput :: forall r. (Members '[ParserResultBuilder, JudocStash, Error ParserE
 replInput =
   P.label "<repl input>" $
     ReplExpression <$> parseExpressionAtoms
-      <|> ReplOpenImport <$> openModule
+      <|> ReplOpen <$> openModule
       <|> ReplImport <$> import_
 
 --------------------------------------------------------------------------------
@@ -791,7 +791,9 @@ import_ = do
   _importKw <- kw kwImport
   _importModulePath <- topModulePath
   _importAsName <- optional pasName
-  _importOpen <- optional popenModuleParams
+  _importUsingHiding <- optional usingOrHiding
+  _importPublic <- publicAnn
+  _importOpen <- optional openModule
   let i = Import {..}
   P.lift (registerImport i)
   return i
@@ -1164,7 +1166,7 @@ multiwayIf :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => Pa
 multiwayIf = do
   _ifKw <- kw kwIf
   (Left <$> multiwayIf' _ifKw [])
-    <|> (return $ Right $ NameUnqualified $ WithLoc (getLoc _ifKw) (_ifKw ^. keywordRefKeyword . keywordAscii))
+    <|> return (Right $ NameUnqualified $ WithLoc (getLoc _ifKw) (_ifKw ^. keywordRefKeyword . keywordAscii))
 
 --------------------------------------------------------------------------------
 -- Universe expression
@@ -1601,9 +1603,9 @@ moduleDef = P.label "<module definition>" $ do
         ..
       }
   where
-    _moduleInductive :: ModuleInductiveType t
-    _moduleInductive = case sing :: SModuleIsTop t of
-      SModuleLocal -> False
+    _moduleOrigin :: ModuleInductiveType t
+    _moduleOrigin = case sing :: SModuleIsTop t of
+      SModuleLocal -> LocalModuleSource
       SModuleTop -> ()
 
     endModule :: ParsecS r (ModuleEndType t)
@@ -1620,25 +1622,28 @@ atomicExpression = do
     _ -> return ()
   return $ ExpressionAtoms (NonEmpty.singleton atom) (Irrelevant loc)
 
-openModule :: forall r. (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (OpenModule 'Parsed)
+publicAnn :: forall r. (Members '[ParserResultBuilder] r) => ParsecS r PublicAnn
+publicAnn = maybe NoPublic (Public . Irrelevant) <$> optional (kw kwPublic)
+
+openModule ::
+  forall r (short :: IsOpenShort).
+  ( SingI short,
+    Members
+      '[ ParserResultBuilder,
+         PragmasStash,
+         JudocStash
+       ]
+      r
+  ) =>
+  ParsecS r (OpenModule 'Parsed short)
 openModule = do
   _openModuleKw <- kw kwOpen
-  _openModuleName <- name
-  _openUsingHiding <- optional usingOrHiding
-  _openPublicKw <- Irrelevant <$> optional (kw kwPublic)
-  let _openPublic = maybe NoPublic (const Public) (_openPublicKw ^. unIrrelevant)
-      _openModuleParams = OpenModuleParams {..}
+  _openModuleName <- case sing :: SIsOpenShort short of
+    SOpenFull -> name
+    SOpenShort -> return ()
+  _openModuleUsingHiding <- optional usingOrHiding
+  _openModulePublic <- publicAnn
   return OpenModule {..}
-
--- TODO is there way to merge this with `openModule`?
-popenModuleParams :: forall r. (Members '[Error ParserError, ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (OpenModuleParams 'Parsed)
-popenModuleParams = do
-  _openModuleKw <- kw kwOpen
-  _openUsingHiding <- optional usingOrHiding
-  _openPublicKw <- Irrelevant <$> optional (kw kwPublic)
-  let _openPublic = maybe NoPublic (const Public) (_openPublicKw ^. unIrrelevant)
-      _openModuleParams = OpenModuleParams {..}
-  return OpenModuleParams {..}
 
 usingOrHiding :: (Members '[ParserResultBuilder, JudocStash, PragmasStash] r) => ParsecS r (UsingHiding 'Parsed)
 usingOrHiding =

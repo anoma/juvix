@@ -92,7 +92,7 @@ scopeCheckRepl ::
   forall r a b.
   (Members '[Error JuvixError, NameIdGen, Reader EntryPoint, State Scope, State ScoperState] r) =>
   ( forall r'.
-    (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader EntryPoint] r') =>
+    (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader BindingStrategy, Reader EntryPoint] r') =>
     a ->
     Sem r' b
   ) ->
@@ -106,6 +106,7 @@ scopeCheckRepl check importTab tab a = mapError (JuvixError @ScoperError) $ do
     . runInfoTableBuilder tab
     . runReader iniScopeParameters
     . runReader tab'
+    . localBindings
     $ check a
   where
     tab' = computeCombinedInfoTable importTab
@@ -147,8 +148,8 @@ scopeCheckImport = scopeCheckRepl checkImport
 scopeCheckOpenModule ::
   forall r.
   (Members '[Error JuvixError, InfoTableBuilder, Reader InfoTable, NameIdGen, State Scope, Reader ScopeParameters, State ScoperState] r) =>
-  OpenModule 'Parsed ->
-  Sem r (OpenModule 'Scoped)
+  OpenModule 'Parsed 'OpenFull ->
+  Sem r (OpenModule 'Scoped 'OpenFull)
 scopeCheckOpenModule = mapError (JuvixError @ScoperError) . checkOpenModule
 
 freshVariable :: (Members '[NameIdGen, State ScoperSyntax, State Scope, State ScoperState] r) => Symbol -> Sem r S.Symbol
@@ -446,14 +447,148 @@ bindFixitySymbol s = do
 
 checkImport ::
   forall r.
+  ( Members
+      '[ HighlightBuilder,
+         Error ScoperError,
+         State Scope,
+         Reader ScopeParameters,
+         State ScoperState,
+         InfoTableBuilder,
+         Reader InfoTable,
+         NameIdGen,
+         Reader BindingStrategy,
+         Reader EntryPoint
+       ]
+      r
+  ) =>
+  Import 'Parsed ->
+  Sem r (Import 'Scoped)
+checkImport i@Import {..} = case _importPublic of
+  NoPublic -> checkImportNoPublic i
+  Public {} -> checkImportPublic i
+
+checkImportPublic ::
+  forall r.
+  ( Members
+      '[ Error ScoperError,
+         State Scope,
+         Reader ScopeParameters,
+         State ScoperState,
+         InfoTableBuilder,
+         Reader InfoTable,
+         NameIdGen,
+         HighlightBuilder,
+         Reader BindingStrategy,
+         Reader EntryPoint
+       ]
+      r
+  ) =>
+  Import 'Parsed ->
+  Sem r (Import 'Scoped)
+checkImportPublic i@Import {..} = do
+  let outerImport =
+        Import
+          { _importKw,
+            _importModulePath,
+            _importAsName = Nothing,
+            _importUsingHiding = Nothing,
+            _importPublic = NoPublic,
+            _importOpen = Nothing
+          }
+  outerImport' <- checkImportNoPublic outerImport
+  let locMod :: Module 'Parsed 'ModuleLocal =
+        localModule (splitName outerOpenModuleName)
+  local' <- checkLocalModule locMod
+  let (innerModuleName', usingHiding') = extract local'
+  mouterOpen' :: Maybe (OpenModule 'Scoped 'OpenShort) <-
+    fmap (set openModuleName ()) <$> mapM checkOpenModule outerOpen
+  let asName' :: Maybe S.TopModulePath = do
+        topModule :: TopModulePath <- _importAsName
+        return (set nameConcrete topModule innerModuleName')
+  return
+    Import
+      { _importKw,
+        _importPublic,
+        _importModulePath = outerImport' ^. importModulePath,
+        _importAsName = asName',
+        _importOpen = mouterOpen',
+        _importUsingHiding = usingHiding'
+      }
+  where
+    gen :: forall a. Sem '[Reader Interval] a -> a
+    gen = run . runReader loc
+
+    loc :: Interval
+    loc = getLoc i
+
+    -- Extracts the name of the innermost module as well as the scoped UsingHiding of the inner open
+    extract :: Module 'Scoped 'ModuleLocal -> (S.Symbol, Maybe (UsingHiding 'Scoped))
+    extract m = case m ^. moduleBody of
+      [StatementOpenModule OpenModule {..}] -> (m ^. modulePath, _openModuleUsingHiding)
+      [StatementModule inner] -> extract inner
+      _ -> error "impossible. When generating this module we always put a single statement"
+
+    outerOpenModuleName :: Name
+    outerOpenModuleName = topModulePathToName (fromMaybe _importModulePath _importAsName)
+
+    outerOpen :: Maybe (OpenModule 'Parsed 'OpenFull)
+    outerOpen = do
+      OpenModule {..} <- _importOpen
+      return
+        OpenModule
+          { _openModuleKw,
+            _openModulePublic,
+            _openModuleName = outerOpenModuleName,
+            _openModuleUsingHiding
+          }
+
+    innerOpen :: OpenModule 'Parsed 'OpenFull
+    innerOpen = gen $ do
+      _openModuleKw <- G.kw G.kwOpen
+      let _openModuleName = topModulePathToName _importModulePath
+      pubKw <- Irrelevant <$> G.kw G.kwPublic
+      let
+      return
+        OpenModule
+          { _openModuleKw,
+            _openModuleUsingHiding = _importUsingHiding,
+            _openModulePublic = Public pubKw,
+            _openModuleName
+          }
+
+    singletonModule :: Symbol -> Statement 'Parsed -> Module 'Parsed 'ModuleLocal
+    singletonModule modName stm = gen $ do
+      _moduleKw <- G.kw G.kwModule
+      _moduleKwEnd <- G.kw G.kwEnd
+      let _moduleId = ()
+          _moduleBody = [stm]
+      return
+        Module
+          { _moduleDoc = Nothing,
+            _modulePragmas = Nothing,
+            _moduleOrigin = LocalModuleType,
+            _moduleMarkdownInfo = Nothing,
+            _modulePath = modName,
+            ..
+          }
+
+    localModule :: ([Symbol], Symbol) -> Module 'Parsed 'ModuleLocal
+    localModule (qualf, m) = case qualf of
+      [] -> singletonModule m (StatementOpenModule innerOpen)
+      n : ns -> singletonModule n (StatementModule (localModule (ns, m)))
+
+checkImportNoPublic ::
+  forall r.
   (Members '[Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen] r) =>
   Import 'Parsed ->
   Sem r (Import 'Scoped)
-checkImport import_@Import {..} = do
+checkImportNoPublic import_@Import {..} = do
+  eassert (_importPublic == NoPublic)
   smodule <- readScopeModule import_
   let sname :: S.TopModulePath = smodule ^. scopedModulePath
       sname' :: S.Name = set S.nameConcrete (topModulePathToName _importModulePath) sname
-      cmodule = set scopedModuleName sname' smodule
+      scopedModule :: ScopedModule = set scopedModuleName sname' smodule
+      exportInfoOriginal = scopedModule ^. scopedModuleExportInfo
       importName :: S.TopModulePath = set S.nameConcrete _importModulePath sname
       synonymName :: Maybe S.TopModulePath = do
         synonym <- _importAsName
@@ -462,16 +597,20 @@ checkImport import_@Import {..} = do
       qual' = do
         asName <- _importAsName
         return (set S.nameConcrete asName sname')
-  addModuleToScope cmodule
   registerName importName
   whenJust synonymName registerName
-  registerScoperModules cmodule
-  importOpen' <- mapM (checkImportOpenParams cmodule) _importOpen
+  registerScoperModules scopedModule
+  importOpen' <- mapM (checkOpenModuleShort scopedModule) _importOpen
+  usingHiding' <- mapM (checkUsingHiding importName exportInfoOriginal) _importUsingHiding
+  let exportInfoFiltered :: ExportInfo = filterExportInfo _importPublic usingHiding' exportInfoOriginal
+      filteredScopedModule = set scopedModuleExportInfo exportInfoFiltered scopedModule
+  addModuleToScope filteredScopedModule
   return
     Import
       { _importModulePath = sname,
         _importAsName = qual',
         _importOpen = importOpen',
+        _importUsingHiding = usingHiding',
         ..
       }
   where
@@ -771,7 +910,7 @@ getModuleId path = do
 
 checkFixitySyntaxDef ::
   forall r.
-  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, State ScoperSyntax, NameIdGen, Reader EntryPoint, InfoTableBuilder, Reader InfoTable] r) =>
+  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, State ScoperSyntax, NameIdGen, InfoTableBuilder, Reader InfoTable, Reader EntryPoint] r) =>
   FixitySyntaxDef 'Parsed ->
   Sem r (FixitySyntaxDef 'Scoped)
 checkFixitySyntaxDef FixitySyntaxDef {..} = topBindings $ do
@@ -1155,7 +1294,7 @@ checkTopModule m@Module {..} = checkedModule
                 _moduleDoc = doc',
                 _modulePragmas = _modulePragmas,
                 _moduleKw,
-                _moduleInductive,
+                _moduleOrigin,
                 _moduleKwEnd,
                 _moduleId,
                 _moduleMarkdownInfo
@@ -1450,7 +1589,7 @@ checkSections sec = topBindings helper
                     Module
                       { _moduleDoc = Nothing,
                         _modulePragmas = Nothing,
-                        _moduleInductive = True,
+                        _moduleOrigin = LocalModuleType,
                         _moduleMarkdownInfo = Nothing,
                         ..
                       }
@@ -1563,7 +1702,20 @@ reserveLocalModuleSymbol =
 
 checkLocalModule ::
   forall r.
-  (Members '[HighlightBuilder, Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader EntryPoint, Reader BindingStrategy] r) =>
+  ( Members
+      '[ HighlightBuilder,
+         Error ScoperError,
+         State Scope,
+         Reader ScopeParameters,
+         State ScoperState,
+         InfoTableBuilder,
+         Reader InfoTable,
+         NameIdGen,
+         Reader BindingStrategy,
+         Reader EntryPoint
+       ]
+      r
+  ) =>
   Module 'Parsed 'ModuleLocal ->
   Sem r (Module 'Scoped 'ModuleLocal)
 checkLocalModule md@Module {..} = do
@@ -1589,7 +1741,7 @@ checkLocalModule md@Module {..} = do
             _moduleMarkdownInfo = Nothing,
             _moduleId = _moduleId',
             _moduleKw,
-            _moduleInductive,
+            _moduleOrigin,
             _moduleKwEnd
           }
       smod =
@@ -1666,121 +1818,121 @@ lookupModuleSymbol n = do
       NameUnqualified s -> ([], s)
       NameQualified (QualifiedName (SymbolPath p) s) -> (toList p, s)
 
-checkImportOpenParams ::
+checkOpenModuleShort ::
   forall r.
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen] r) =>
   ScopedModule ->
-  OpenModuleParams 'Parsed ->
-  Sem r (OpenModuleParams 'Scoped)
-checkImportOpenParams m p =
-  (^. openModuleParams)
-    <$> checkOpenModuleHelper
-      (Just m)
-      OpenModule
-        { _openModuleParams = p,
-          _openModuleName = m ^. scopedModuleName . S.nameConcrete
-        }
+  OpenModule 'Parsed 'OpenShort ->
+  Sem r (OpenModule 'Scoped 'OpenShort)
+checkOpenModuleShort = checkOpenModuleHelper
 
 checkOpenModule ::
   forall r.
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen] r) =>
-  OpenModule 'Parsed ->
-  Sem r (OpenModule 'Scoped)
-checkOpenModule = checkOpenModuleHelper Nothing
+  OpenModule 'Parsed 'OpenFull ->
+  Sem r (OpenModule 'Scoped 'OpenFull)
+checkOpenModule open@OpenModule {..} = do
+  m <- lookupModuleSymbol _openModuleName
+  checkOpenModuleHelper m open
+
+checkUsingHiding ::
+  forall r.
+  (Members '[Error ScoperError, InfoTableBuilder] r) =>
+  S.TopModulePath ->
+  ExportInfo ->
+  UsingHiding 'Parsed ->
+  Sem r (UsingHiding 'Scoped)
+checkUsingHiding modulepath exportInfo = \case
+  Hiding h -> Hiding <$> checkHidingList h
+  Using uh -> Using <$> checkUsingList uh
+  where
+    scopeSymbol :: forall (ns :: NameSpace). (SingI ns) => Sing ns -> Symbol -> Sem r S.Symbol
+    scopeSymbol _ s = do
+      let mentry :: Maybe (NameSpaceEntryType ns)
+          mentry = exportInfo ^. exportNameSpace . at s
+          err =
+            throw
+              . ErrModuleDoesNotExportSymbol
+              $ ModuleDoesNotExportSymbol
+                { _moduleDoesNotExportSymbol = s,
+                  _moduleDoesNotExportModule = modulepath
+                }
+      entry <- maybe err return mentry
+      let scopedSym = entryToSymbol entry s
+      registerName scopedSym
+      return scopedSym
+
+    checkHidingList :: HidingList 'Parsed -> Sem r (HidingList 'Scoped)
+    checkHidingList l = do
+      items' <- mapM checkHidingItem (l ^. hidingList)
+      return
+        HidingList
+          { _hidingKw = l ^. hidingKw,
+            _hidingBraces = l ^. hidingBraces,
+            _hidingList = items'
+          }
+
+    checkUsingList :: UsingList 'Parsed -> Sem r (UsingList 'Scoped)
+    checkUsingList l = do
+      items' <- mapM checkUsingItem (l ^. usingList)
+      return
+        UsingList
+          { _usingKw = l ^. usingKw,
+            _usingBraces = l ^. usingBraces,
+            _usingList = items'
+          }
+
+    checkHidingItem :: HidingItem 'Parsed -> Sem r (HidingItem 'Scoped)
+    checkHidingItem h = do
+      let s = h ^. hidingSymbol
+      scopedSym <-
+        if
+            | isJust (h ^. hidingModuleKw) -> scopeSymbol SNameSpaceModules s
+            | otherwise -> scopeSymbol SNameSpaceSymbols s
+      return
+        HidingItem
+          { _hidingSymbol = scopedSym,
+            _hidingModuleKw = h ^. hidingModuleKw
+          }
+
+    checkUsingItem :: UsingItem 'Parsed -> Sem r (UsingItem 'Scoped)
+    checkUsingItem i = do
+      let s = i ^. usingSymbol
+      scopedSym <-
+        if
+            | isJust (i ^. usingModuleKw) -> scopeSymbol SNameSpaceModules s
+            | otherwise -> scopeSymbol SNameSpaceSymbols s
+      let scopedAs = do
+            c <- i ^. usingAs
+            return (set S.nameConcrete c scopedSym)
+      mapM_ registerName scopedAs
+      return
+        UsingItem
+          { _usingSymbol = scopedSym,
+            _usingAs = scopedAs,
+            _usingAsKw = i ^. usingAsKw,
+            _usingModuleKw = i ^. usingModuleKw
+          }
 
 checkOpenModuleHelper ::
-  forall r.
-  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen] r) =>
-  Maybe ScopedModule ->
-  OpenModule 'Parsed ->
-  Sem r (OpenModule 'Scoped)
-checkOpenModuleHelper importModuleHint OpenModule {..} = do
-  cmod <- case importModuleHint of
-    Nothing -> lookupModuleSymbol _openModuleName
-    Just m -> return m
-  let exportInfo = cmod ^. scopedModuleExportInfo
-  registerName (cmod ^. scopedModuleName)
-
-  let checkUsingHiding :: UsingHiding 'Parsed -> Sem r (UsingHiding 'Scoped)
-      checkUsingHiding = \case
-        Hiding h -> Hiding <$> checkHidingList h
-        Using uh -> Using <$> checkUsingList uh
-        where
-          scopeSymbol :: forall (ns :: NameSpace). (SingI ns) => Sing ns -> Symbol -> Sem r S.Symbol
-          scopeSymbol _ s = do
-            let mentry :: Maybe (NameSpaceEntryType ns)
-                mentry = exportInfo ^. exportNameSpace . at s
-                err =
-                  throw
-                    ( ErrModuleDoesNotExportSymbol
-                        ( ModuleDoesNotExportSymbol
-                            { _moduleDoesNotExportSymbol = s,
-                              _moduleDoesNotExportModule = cmod
-                            }
-                        )
-                    )
-            entry <- maybe err return mentry
-            let scopedSym = entryToSymbol entry s
-            registerName scopedSym
-            return scopedSym
-
-          checkHidingList :: HidingList 'Parsed -> Sem r (HidingList 'Scoped)
-          checkHidingList l = do
-            items' <- mapM checkHidingItem (l ^. hidingList)
-            return
-              HidingList
-                { _hidingKw = l ^. hidingKw,
-                  _hidingBraces = l ^. hidingBraces,
-                  _hidingList = items'
-                }
-
-          checkUsingList :: UsingList 'Parsed -> Sem r (UsingList 'Scoped)
-          checkUsingList l = do
-            items' <- mapM checkUsingItem (l ^. usingList)
-            return
-              UsingList
-                { _usingKw = l ^. usingKw,
-                  _usingBraces = l ^. usingBraces,
-                  _usingList = items'
-                }
-
-          checkHidingItem :: HidingItem 'Parsed -> Sem r (HidingItem 'Scoped)
-          checkHidingItem h = do
-            let s = h ^. hidingSymbol
-            scopedSym <-
-              if
-                  | isJust (h ^. hidingModuleKw) -> scopeSymbol SNameSpaceModules s
-                  | otherwise -> scopeSymbol SNameSpaceSymbols s
-            return
-              HidingItem
-                { _hidingSymbol = scopedSym,
-                  _hidingModuleKw = h ^. hidingModuleKw
-                }
-
-          checkUsingItem :: UsingItem 'Parsed -> Sem r (UsingItem 'Scoped)
-          checkUsingItem i = do
-            let s = i ^. usingSymbol
-            scopedSym <-
-              if
-                  | isJust (i ^. usingModuleKw) -> scopeSymbol SNameSpaceModules s
-                  | otherwise -> scopeSymbol SNameSpaceSymbols s
-            let scopedAs = do
-                  c <- i ^. usingAs
-                  return (set S.nameConcrete c scopedSym)
-            mapM_ registerName scopedAs
-            return
-              UsingItem
-                { _usingSymbol = scopedSym,
-                  _usingAs = scopedAs,
-                  _usingAsKw = i ^. usingAsKw,
-                  _usingModuleKw = i ^. usingModuleKw
-                }
-  openParams' <- traverseOf openUsingHiding (mapM checkUsingHiding) _openModuleParams
-  mergeScope (alterScope (openParams' ^. openUsingHiding) exportInfo)
+  forall r short.
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen] r, SingI short) =>
+  ScopedModule ->
+  OpenModule 'Parsed short ->
+  Sem r (OpenModule 'Scoped short)
+checkOpenModuleHelper openedModule OpenModule {..} = do
+  let exportInfo = openedModule ^. scopedModuleExportInfo
+  registerName (openedModule ^. scopedModuleName)
+  usingHiding' <- mapM (checkUsingHiding (openedModule ^. scopedModulePath) exportInfo) _openModuleUsingHiding
+  mergeScope (filterExportInfo _openModulePublic usingHiding' exportInfo)
+  let openName :: OpenModuleNameType 'Scoped short = case sing :: SIsOpenShort short of
+        SOpenFull -> openedModule ^. scopedModuleName
+        SOpenShort -> ()
   return
     OpenModule
-      { _openModuleName = cmod ^. scopedModuleName,
-        _openModuleParams = openParams',
+      { _openModuleName = openName,
+        _openModuleUsingHiding = usingHiding',
+        _openModulePublic,
         ..
       }
   where
@@ -1795,61 +1947,61 @@ checkOpenModuleHelper importModuleHint OpenModule {..} = do
           modify
             (over scopeNameSpace (HashMap.insertWith (<>) s (symbolInfoSingle entry)))
 
-    alterScope :: Maybe (UsingHiding 'Scoped) -> ExportInfo -> ExportInfo
-    alterScope openModif = alterEntries . filterScope
-      where
-        alterEntries :: ExportInfo -> ExportInfo
-        alterEntries nfo =
-          ExportInfo
-            { _exportSymbols = alterEntry <$> nfo ^. exportSymbols,
-              _exportModuleSymbols = alterEntry <$> nfo ^. exportModuleSymbols,
-              _exportFixitySymbols = alterEntry <$> nfo ^. exportFixitySymbols
-            }
+filterExportInfo :: PublicAnn -> Maybe (UsingHiding 'Scoped) -> ExportInfo -> ExportInfo
+filterExportInfo pub openModif = alterEntries . filterScope
+  where
+    alterEntries :: ExportInfo -> ExportInfo
+    alterEntries nfo =
+      ExportInfo
+        { _exportSymbols = alterEntry <$> nfo ^. exportSymbols,
+          _exportModuleSymbols = alterEntry <$> nfo ^. exportModuleSymbols,
+          _exportFixitySymbols = alterEntry <$> nfo ^. exportFixitySymbols
+        }
 
-        alterEntry :: (SingI ns) => NameSpaceEntryType ns -> NameSpaceEntryType ns
-        alterEntry =
-          over
-            nsEntry
-            ( set S.nameWhyInScope S.BecauseImportedOpened
-                . set S.nameVisibilityAnn (publicAnnToVis (_openModuleParams ^. openPublic))
-            )
+    alterEntry :: (SingI ns) => NameSpaceEntryType ns -> NameSpaceEntryType ns
+    alterEntry =
+      over
+        nsEntry
+        ( set S.nameWhyInScope S.BecauseImportedOpened
+            . set S.nameVisibilityAnn (publicAnnToVis pub)
+        )
 
-        publicAnnToVis :: PublicAnn -> VisibilityAnn
-        publicAnnToVis = \case
-          Public -> VisPublic
-          NoPublic -> VisPrivate
+    publicAnnToVis :: PublicAnn -> VisibilityAnn
+    publicAnnToVis = \case
+      Public {} -> VisPublic
+      NoPublic -> VisPrivate
 
-        filterScope :: ExportInfo -> ExportInfo
-        filterScope = case openModif of
-          Just (Using l) ->
-            over exportSymbols (HashMap.fromList . mapMaybe inUsing . HashMap.toList)
-              . over exportModuleSymbols (HashMap.fromList . mapMaybe inUsing . HashMap.toList)
-              . over exportFixitySymbols (HashMap.fromList . mapMaybe inUsing . HashMap.toList)
-            where
-              inUsing ::
-                forall (ns :: NameSpace).
-                (SingI ns) =>
-                (Symbol, NameSpaceEntryType ns) ->
-                Maybe (Symbol, NameSpaceEntryType ns)
-              inUsing (sym, e) = do
-                mayAs' <- u ^. at (e ^. nsEntry . S.nameId)
-                return (fromMaybe sym mayAs', e)
-              u :: HashMap NameId (Maybe Symbol)
-              u =
-                HashMap.fromList
-                  [ (i ^. usingSymbol . S.nameId, i ^? usingAs . _Just . S.nameConcrete)
-                    | i <- toList (l ^. usingList)
-                  ]
-          Just (Hiding l) ->
-            over exportSymbols (HashMap.filter (not . inHiding))
-              . over exportModuleSymbols (HashMap.filter (not . inHiding))
-              . over exportFixitySymbols (HashMap.filter (not . inHiding))
-            where
-              inHiding :: forall ns. (SingI ns) => NameSpaceEntryType ns -> Bool
-              inHiding e = HashSet.member (e ^. nsEntry . S.nameId) u
-              u :: HashSet NameId
-              u = HashSet.fromList (map (^. hidingSymbol . S.nameId) (toList (l ^. hidingList)))
-          Nothing -> id
+    filterScope :: ExportInfo -> ExportInfo
+    filterScope = case openModif of
+      Just (Using l) ->
+        over exportSymbols (HashMap.fromList . mapMaybe inUsing . HashMap.toList)
+          . over exportModuleSymbols (HashMap.fromList . mapMaybe inUsing . HashMap.toList)
+          . over exportFixitySymbols (HashMap.fromList . mapMaybe inUsing . HashMap.toList)
+        where
+          inUsing ::
+            forall (ns :: NameSpace).
+            (SingI ns) =>
+            (Symbol, NameSpaceEntryType ns) ->
+            Maybe (Symbol, NameSpaceEntryType ns)
+          inUsing (sym, e) = do
+            mayAs' <- u ^. at (e ^. nsEntry . S.nameId)
+            return (fromMaybe sym mayAs', e)
+          u :: HashMap NameId (Maybe Symbol)
+          u =
+            HashMap.fromList
+              [ (i ^. usingSymbol . S.nameId, i ^? usingAs . _Just . S.nameConcrete)
+                | i <- toList (l ^. usingList)
+              ]
+      Just (Hiding l) ->
+        over exportSymbols (HashMap.filter (not . inHiding))
+          . over exportModuleSymbols (HashMap.filter (not . inHiding))
+          . over exportFixitySymbols (HashMap.filter (not . inHiding))
+        where
+          inHiding :: forall ns. (SingI ns) => NameSpaceEntryType ns -> Bool
+          inHiding e = HashSet.member (e ^. nsEntry . S.nameId) u
+          u :: HashSet NameId
+          u = HashSet.fromList (map (^. hidingSymbol . S.nameId) (toList (l ^. hidingList)))
+      Nothing -> id
 
 checkAxiomDef ::
   (Members '[HighlightBuilder, Reader ScopeParameters, InfoTableBuilder, Reader InfoTable, Error ScoperError, State Scope, State ScoperState, NameIdGen, State ScoperSyntax, Reader BindingStrategy, Reader EntryPoint] r) =>
@@ -2571,7 +2723,10 @@ checkJudoc ::
   (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader EntryPoint] r) =>
   Judoc 'Parsed ->
   Sem r (Judoc 'Scoped)
-checkJudoc (Judoc groups) = ignoreHighlightBuilder $ ignoreInfoTableBuilder $ Judoc <$> mapM checkJudocGroup groups
+checkJudoc (Judoc groups) =
+  ignoreHighlightBuilder
+    . ignoreInfoTableBuilder
+    $ Judoc <$> mapM checkJudocGroup groups
 
 checkJudocGroup ::
   (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader EntryPoint] r) =>

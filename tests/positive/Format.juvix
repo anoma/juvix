@@ -416,4 +416,13 @@ fff
   {f7 : List Nat}
   : Nat := zero;
 
+module PublicImports;
+
+  module Inner;
+    import Stdlib.Prelude as X.Y.Z using {Nat} public;
+  end;
+
+  axiom a : Inner.X.Y.Z.Nat;
+end;
+
 -- Comment at the end of a module

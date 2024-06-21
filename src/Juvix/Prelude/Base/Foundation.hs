@@ -432,6 +432,14 @@ infixr 7 <?+>
   Nothing -> id
   Just a -> (a <+>)
 
+infixr 7 ?<>?
+
+(?<>?) :: (Semigroup m) => Maybe m -> Maybe m -> Maybe m
+a ?<>? b = do
+  a' <- a
+  b' <- b
+  return (a' <> b')
+
 infixr 7 ?<>
 
 (?<>) :: (Semigroup m) => Maybe m -> m -> m
