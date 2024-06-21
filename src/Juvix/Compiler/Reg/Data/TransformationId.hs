@@ -31,7 +31,7 @@ toRustTransformations :: [TransformationId]
 toRustTransformations = [Cleanup]
 
 toCasmTransformations :: [TransformationId]
-toCasmTransformations = [Cleanup, OptPhaseCairo, SSA]
+toCasmTransformations = [Cleanup, SSA, OptPhaseCairo]
 
 instance TransformationId' TransformationId where
   transformationText :: TransformationId -> Text
