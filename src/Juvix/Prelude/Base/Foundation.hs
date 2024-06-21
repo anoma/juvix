@@ -333,6 +333,15 @@ tableNestedInsert ::
   HashMap k1 (HashMap k2 a)
 tableNestedInsert k1 k2 = tableInsert (HashMap.singleton k2) (HashMap.insert k2) k1
 
+combineMaps :: (Hashable k, Hashable v) => NonEmpty (HashMap k v) -> HashMap k v
+combineMaps mps =
+  HashMap.fromList
+    . HashSet.toList
+    . foldr (HashSet.intersection . HashSet.fromList) (HashSet.fromList mpv')
+    $ mpvs'
+  where
+    mpv' :| mpvs' = fmap HashMap.toList mps
+
 --------------------------------------------------------------------------------
 -- List
 --------------------------------------------------------------------------------

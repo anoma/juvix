@@ -10,6 +10,7 @@ data TransformationId
   | SSA
   | InitBranchVars
   | CopyPropagation
+  | ConstantPropagation
   deriving stock (Data, Bounded, Enum, Show)
 
 data PipelineId
@@ -27,7 +28,7 @@ toRustTransformations :: [TransformationId]
 toRustTransformations = [Cleanup]
 
 toCasmTransformations :: [TransformationId]
-toCasmTransformations = [Cleanup, CopyPropagation, SSA]
+toCasmTransformations = [Cleanup, CopyPropagation, ConstantPropagation, SSA]
 
 instance TransformationId' TransformationId where
   transformationText :: TransformationId -> Text
@@ -37,6 +38,7 @@ instance TransformationId' TransformationId where
     SSA -> strSSA
     InitBranchVars -> strInitBranchVars
     CopyPropagation -> strCopyPropagation
+    ConstantPropagation -> strConstantPropagation
 
 instance PipelineId' TransformationId PipelineId where
   pipelineText :: PipelineId -> Text

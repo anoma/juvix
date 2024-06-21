@@ -222,5 +222,11 @@ tests =
       $(mkRelDir ".")
       $(mkRelFile "test040.jvr")
       $(mkRelFile "out/test040.out")
-      (Just $(mkRelFile "in/test040.json"))
+      (Just $(mkRelFile "in/test040.json")),
+    PosTest
+      "Test043: Copy & constant propagation"
+      $(mkRelDir ".")
+      $(mkRelFile "test043.jvr")
+      $(mkRelFile "out/test043.out")
+      Nothing
   ]

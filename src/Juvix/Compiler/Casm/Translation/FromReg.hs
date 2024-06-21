@@ -409,12 +409,21 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
               Left err -> error err
               Right c ->
                 goAssignVar _instrBinopResult (Val $ Imm $ mkConst c)
-            _ ->
-              goBinop
-                x
-                  { Reg._instrBinopArg1 = _instrBinopArg2,
-                    Reg._instrBinopArg2 = _instrBinopArg1
-                  }
+            _
+              | Reg.isCommutative _instrBinopOpcode ->
+                  goBinop
+                    x
+                      { Reg._instrBinopArg1 = _instrBinopArg2,
+                        Reg._instrBinopArg2 = _instrBinopArg1
+                      }
+              | otherwise -> do
+                  goAssignAp (Val $ Imm $ mkConst c1)
+                  v2 <- goValue _instrBinopArg2
+                  case _instrBinopArg2 of
+                    Reg.CRef {} -> do
+                      goBinop' _instrBinopOpcode _instrBinopResult (MemRef Ap (-2)) v2
+                    _ -> do
+                      goBinop' _instrBinopOpcode _instrBinopResult (MemRef Ap (-1)) v2
           Reg.CRef ctr1 -> do
             v1 <- mkLoad ctr1
             goAssignAp v1

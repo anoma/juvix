@@ -43,6 +43,9 @@ instance Pretty FField where
 instance Show FField where
   show f = show (fieldToInteger f)
 
+instance Hashable FField where
+  hashWithSalt salt f = hashWithSalt salt (fieldToInteger f)
+
 fieldAdd :: FField -> FField -> FField
 fieldAdd
   (FField ((n1 :: Sing (p :: Natural)) :&: (f1 :: PrimeField p)))

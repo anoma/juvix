@@ -18,7 +18,9 @@ data Constant
   | ConstField FField
   | ConstUnit
   | ConstVoid
-  deriving stock (Eq)
+  deriving stock (Eq, Generic)
+
+instance (Hashable Constant)
 
 -- | MemRefs are references to values stored in memory.
 data MemRef

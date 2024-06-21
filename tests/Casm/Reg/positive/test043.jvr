@@ -1,0 +1,95 @@
+-- Copy & constant propagation with branches
+
+type either {
+    left : integer -> either;
+    right : bool -> either;
+}
+
+function main() : * {
+    tmp[0] = 7;
+    tmp[1] = tmp[0];
+    tmp[0] = tmp[1];
+    tmp[2] = tmp[0];
+    -- tmp[2] = 7
+
+    tmp[1] = tmp[0];
+    tmp[0] = add tmp[1] 1;
+    tmp[2] = add tmp[2] tmp[1];
+    -- tmp[2] = 14
+
+    tmp[0] = 19;
+    tmp[1] = tmp[0];
+    tmp[0] = add tmp[1] 1;
+    tmp[3] = add tmp[0] tmp[1];
+    tmp[4] = tmp[3];
+    tmp[2] = add tmp[4] tmp[2];
+    -- tmp[2] = 53
+
+    tmp[1] = eq tmp[2] 54;
+    tmp[3] = 3;
+    tmp[5] = 4;
+    tmp[6] = tmp[5];
+    br tmp[1], out: tmp[3] {
+        true: {
+            nop;
+        };
+        false: {
+            tmp[3] = tmp[6];
+        };
+    };
+    tmp[2] = add tmp[2] tmp[3];
+    -- tmp[2] = 57
+
+    tmp[0] = 1;
+    br tmp[1], out: tmp[3] {
+        true: {
+            tmp[0] = 4;
+            tmp[3] = tmp[0];
+        };
+        false: {
+            tmp[3] = tmp[0];
+        };
+    };
+    tmp[2] = add tmp[2] tmp[3];
+    -- tmp[2] = 58
+
+    tmp[0] = alloc left (3);
+    tmp[1] = 17;
+    tmp[3] = tmp[1];
+    case[either] tmp[0], out: tmp[3] {
+        left: {
+            tmp[4] = tmp[0].left[0];
+            tmp[1] = tmp[4];
+            tmp[3] = tmp[1];
+        };
+        right: {
+            nop;
+        };
+    };
+    tmp[2] = add tmp[2] tmp[3];
+    -- tmp[2] = 61
+
+    tmp[0] = alloc right (true);
+    tmp[1] = 17;
+    tmp[3] = tmp[1];
+    case[either] tmp[0], out: tmp[3] {
+        left: {
+            nop;
+        };
+        right: {
+            br tmp[0].right[0], out: tmp[3] {
+                true: {
+                    tmp[1] = add tmp[3] 1;
+                    tmp[3] = tmp[1];
+                };
+                false: {
+                    nop;
+                };
+            };
+        };
+    };
+    tmp[2] = add tmp[2] tmp[3];
+    -- tmp[2] = 79
+
+    ret tmp[2];
+}

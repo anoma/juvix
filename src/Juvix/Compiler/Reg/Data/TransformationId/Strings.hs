@@ -25,3 +25,6 @@ strInitBranchVars = "init-branch-vars"
 
 strCopyPropagation :: Text
 strCopyPropagation = "copy-propagation"
+
+strConstantPropagation :: Text
+strConstantPropagation = "constant-propagation"
