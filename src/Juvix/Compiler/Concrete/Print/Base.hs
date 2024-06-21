@@ -538,11 +538,46 @@ ppLet isTop Let {..} = do
       letExpression' = ppMaybeTopExpression isTop _letExpression
   align $ ppCode _letKw <> letFunDefs' <> ppCode _letInKw <+> letExpression'
 
+instance (SingI s, SingI k) => PrettyPrint (SideIfBranch s k) where
+  ppCode SideIfBranch {..} = do
+    let kwPipe' = ppCode <$> _sideIfBranchPipe ^. unIrrelevant
+        kwIfElse' = ppCode _sideIfBranchKw
+        kwAssign' = ppCode _sideIfBranchAssignKw
+        condition' = case sing :: SSideIfBranchKind k of
+          SSideIfBool -> ppExpressionType _sideIfBranchCondition
+          SSideIfElse -> ppCode _sideIfBranchCondition
+        body' = ppExpressionType _sideIfBranchBody
+    kwPipe'
+      <?+> kwIfElse'
+        <+> condition'
+        <+> kwAssign'
+        <+> oneLineOrNext body'
+
+instance (SingI s) => PrettyPrint (SideIfs s) where
+  ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => SideIfs s -> Sem r ()
+  ppCode SideIfs {..} =
+    case (_sideIfBranches, _sideIfElse) of
+      (b :| [], Nothing) -> ppCode (set sideIfBranchPipe (Irrelevant Nothing) b)
+      _ -> do
+        let ifbranches = map ppCode (toList _sideIfBranches)
+            allBranches :: [Sem r ()] = snocMaybe ifbranches (ppCode <$> _sideIfElse)
+        line <> indent (vsep allBranches)
+
+ppCaseBranchRhs :: forall r s. (Members '[ExactPrint, Reader Options] r, SingI s) => IsTop -> CaseBranchRhs s -> Sem r ()
+ppCaseBranchRhs isTop = \case
+  CaseBranchRhsExpression e -> ppExpressionRhs isTop e
+  CaseBranchRhsIf ifCond -> ppCode ifCond
+
+ppExpressionRhs :: (Member (Reader Options) r, Member ExactPrint r, SingI s) => IsTop -> RhsExpression s -> Sem r ()
+ppExpressionRhs isTop RhsExpression {..} = do
+  let expr' = ppMaybeTopExpression isTop _rhsExpression
+  ppCode _rhsExpressionAssignKw <> oneLineOrNext expr'
+
 ppCaseBranch :: forall r s. (Members '[ExactPrint, Reader Options] r, SingI s) => IsTop -> CaseBranch s -> Sem r ()
 ppCaseBranch isTop CaseBranch {..} = do
   let pat' = ppPatternParensType _caseBranchPattern
-      e' = ppMaybeTopExpression isTop _caseBranchExpression
-  pat' <+> ppCode _caseBranchAssignKw <> oneLineOrNext e'
+      rhs' = ppCaseBranchRhs isTop _caseBranchRhs
+  pat' <+> rhs'
 
 ppCase :: forall r s. (Members '[ExactPrint, Reader Options] r, SingI s) => IsTop -> Case s -> Sem r ()
 ppCase isTop Case {..} = do

@@ -13,3 +13,5 @@ data SideIfBranchKind
 instance Serialize SideIfBranchKind
 
 instance NFData SideIfBranchKind
+
+$(genSingletons [''SideIfBranchKind])

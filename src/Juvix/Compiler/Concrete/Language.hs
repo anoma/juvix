@@ -62,7 +62,7 @@ type family FieldArgIxType s = res | res -> s where
 type SideIfBranchConditionType :: Stage -> SideIfBranchKind -> GHC.Type
 type family SideIfBranchConditionType s k = res where
   SideIfBranchConditionType s 'SideIfBool = ExpressionType s
-  SideIfBranchConditionType _ 'SideIfElse = ()
+  SideIfBranchConditionType _ 'SideIfElse = Irrelevant KeywordRef
 
 type ModuleIdType :: Stage -> ModuleIsTop -> GHC.Type
 type family ModuleIdType s t = res where
@@ -1714,43 +1714,109 @@ deriving stock instance Ord (Let 'Parsed)
 deriving stock instance Ord (Let 'Scoped)
 
 data SideIfBranch (s :: Stage) (k :: SideIfBranchKind) = SideIfBranch
-  { _sideIfBranchPipe :: Irrelevant KeywordRef,
+  { _sideIfBranchPipe :: Irrelevant (Maybe KeywordRef),
     _sideIfBranchKw :: Irrelevant KeywordRef,
     _sideIfBranchCondition :: SideIfBranchConditionType s k,
+    _sideIfBranchAssignKw :: Irrelevant KeywordRef,
     _sideIfBranchBody :: ExpressionType s
   }
   deriving stock (Generic)
 
-data SideIf (s :: Stage) = SideIf
-  { _sideIfKw :: Irrelevant KeywordRef,
-    _sideIfBranches :: [SideIfBranch s 'SideIfBool],
+instance Serialize (SideIfBranch 'Scoped 'SideIfBool)
+
+instance Serialize (SideIfBranch 'Scoped 'SideIfElse)
+
+instance NFData (SideIfBranch 'Scoped 'SideIfBool)
+
+instance NFData (SideIfBranch 'Scoped 'SideIfElse)
+
+instance Serialize (SideIfBranch 'Parsed 'SideIfBool)
+
+instance Serialize (SideIfBranch 'Parsed 'SideIfElse)
+
+instance NFData (SideIfBranch 'Parsed 'SideIfElse)
+
+instance NFData (SideIfBranch 'Parsed 'SideIfBool)
+
+deriving stock instance Show (SideIfBranch 'Parsed 'SideIfElse)
+
+deriving stock instance Show (SideIfBranch 'Parsed 'SideIfBool)
+
+deriving stock instance Show (SideIfBranch 'Scoped 'SideIfElse)
+
+deriving stock instance Show (SideIfBranch 'Scoped 'SideIfBool)
+
+deriving stock instance Eq (SideIfBranch 'Parsed 'SideIfElse)
+
+deriving stock instance Eq (SideIfBranch 'Parsed 'SideIfBool)
+
+deriving stock instance Eq (SideIfBranch 'Scoped 'SideIfElse)
+
+deriving stock instance Eq (SideIfBranch 'Scoped 'SideIfBool)
+
+deriving stock instance Ord (SideIfBranch 'Parsed 'SideIfElse)
+
+deriving stock instance Ord (SideIfBranch 'Parsed 'SideIfBool)
+
+deriving stock instance Ord (SideIfBranch 'Scoped 'SideIfElse)
+
+deriving stock instance Ord (SideIfBranch 'Scoped 'SideIfBool)
+
+data SideIfs (s :: Stage) = SideIfs
+  { _sideIfBranches :: NonEmpty (SideIfBranch s 'SideIfBool),
     _sideIfElse :: Maybe (SideIfBranch s 'SideIfElse)
   }
   deriving stock (Generic)
 
-instance Serialize (SideIf 'Scoped)
+instance Serialize (SideIfs 'Scoped)
 
-instance NFData (SideIf 'Scoped)
+instance NFData (SideIfs 'Scoped)
 
-instance Serialize (SideIf 'Parsed)
+instance Serialize (SideIfs 'Parsed)
 
-instance NFData (SideIf 'Parsed)
+instance NFData (SideIfs 'Parsed)
 
-deriving stock instance Show (SideIf 'Parsed)
+deriving stock instance Show (SideIfs 'Parsed)
 
-deriving stock instance Show (SideIf 'Scoped)
+deriving stock instance Show (SideIfs 'Scoped)
 
-deriving stock instance Eq (SideIf 'Parsed)
+deriving stock instance Eq (SideIfs 'Parsed)
 
-deriving stock instance Eq (SideIf 'Scoped)
+deriving stock instance Eq (SideIfs 'Scoped)
 
-deriving stock instance Ord (SideIf 'Parsed)
+deriving stock instance Ord (SideIfs 'Parsed)
 
-deriving stock instance Ord (SideIf 'Scoped)
+deriving stock instance Ord (SideIfs 'Scoped)
+
+data RhsExpression (s :: Stage) = RhsExpression
+  { _rhsExpressionAssignKw :: Irrelevant KeywordRef,
+    _rhsExpression :: ExpressionType s
+  }
+  deriving stock (Generic)
+
+instance Serialize (RhsExpression 'Scoped)
+
+instance NFData (RhsExpression 'Scoped)
+
+instance Serialize (RhsExpression 'Parsed)
+
+instance NFData (RhsExpression 'Parsed)
+
+deriving stock instance Show (RhsExpression 'Parsed)
+
+deriving stock instance Show (RhsExpression 'Scoped)
+
+deriving stock instance Eq (RhsExpression 'Parsed)
+
+deriving stock instance Eq (RhsExpression 'Scoped)
+
+deriving stock instance Ord (RhsExpression 'Parsed)
+
+deriving stock instance Ord (RhsExpression 'Scoped)
 
 data CaseBranchRhs (s :: Stage)
-  = CaseBranchRhsExpression (ExpressionType s)
-  | CaseBranchRhsIf (SideIf s)
+  = CaseBranchRhsExpression (RhsExpression s)
+  | CaseBranchRhsIf (SideIfs s)
   deriving stock (Generic)
 
 instance Serialize (CaseBranchRhs 'Scoped)
@@ -1775,9 +1841,8 @@ deriving stock instance Ord (CaseBranchRhs 'Scoped)
 
 data CaseBranch (s :: Stage) = CaseBranch
   { _caseBranchPipe :: Irrelevant (Maybe KeywordRef),
-    _caseBranchAssignKw :: Irrelevant KeywordRef,
     _caseBranchPattern :: PatternParensType s,
-    _caseBranchExpression :: ExpressionType s
+    _caseBranchRhs :: CaseBranchRhs s
   }
   deriving stock (Generic)
 
@@ -2535,7 +2600,9 @@ deriving stock instance Ord (JudocAtom 'Parsed)
 
 deriving stock instance Ord (JudocAtom 'Scoped)
 
-makeLenses ''SideIf
+makeLenses ''SideIfs
+makeLenses ''SideIfBranch
+makeLenses ''RhsExpression
 makeLenses ''PatternArg
 makeLenses ''WildcardConstructor
 makeLenses ''DoubleBracesExpression
@@ -2800,13 +2867,33 @@ instance HasLoc (Function 'Scoped) where
 instance HasLoc (Let 'Scoped) where
   getLoc l = getLoc (l ^. letKw) <> getLoc (l ^. letExpression)
 
+instance (SingI s) => HasLoc (SideIfBranch s k) where
+  getLoc SideIfBranch {..} =
+    (getLoc <$> _sideIfBranchPipe ^. unIrrelevant)
+      ?<> getLocExpressionType _sideIfBranchBody
+
+instance (SingI s) => HasLoc (SideIfs s) where
+  getLoc SideIfs {..} =
+    getLocSpan _sideIfBranches
+      <>? (getLoc <$> _sideIfElse)
+
+instance (SingI s) => HasLoc (RhsExpression s) where
+  getLoc RhsExpression {..} =
+    getLoc _rhsExpressionAssignKw
+      <> getLocExpressionType _rhsExpression
+
+instance (SingI s) => HasLoc (CaseBranchRhs s) where
+  getLoc = \case
+    CaseBranchRhsExpression e -> getLoc e
+    CaseBranchRhsIf e -> getLoc e
+
 instance (SingI s) => HasLoc (CaseBranch s) where
   getLoc c = case c ^. caseBranchPipe . unIrrelevant of
     Nothing -> branchLoc
     Just p -> getLoc p <> branchLoc
     where
       branchLoc :: Interval
-      branchLoc = getLocExpressionType (c ^. caseBranchExpression)
+      branchLoc = getLoc (c ^. caseBranchRhs)
 
 instance (SingI s) => HasLoc (IfBranch s) where
   getLoc c = getLoc (c ^. ifBranchPipe) <> getLocExpressionType (c ^. ifBranchExpression)

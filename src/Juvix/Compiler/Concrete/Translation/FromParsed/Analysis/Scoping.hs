@@ -2189,6 +2189,98 @@ checkLet Let {..} =
           _letInKw
         }
 
+checkRhsExpression ::
+  forall r.
+  ( Members
+      '[ HighlightBuilder,
+         Reader ScopeParameters,
+         Error ScoperError,
+         State Scope,
+         State ScoperState,
+         InfoTableBuilder,
+         Reader InfoTable,
+         NameIdGen,
+         Reader EntryPoint
+       ]
+      r
+  ) =>
+  RhsExpression 'Parsed ->
+  Sem r (RhsExpression 'Scoped)
+checkRhsExpression RhsExpression {..} = do
+  expr' <- checkParseExpressionAtoms _rhsExpression
+  return
+    RhsExpression
+      { _rhsExpression = expr',
+        _rhsExpressionAssignKw
+      }
+
+checkSideIfBranch ::
+  forall r (k :: SideIfBranchKind).
+  ( SingI k,
+    Members
+      '[ HighlightBuilder,
+         Reader ScopeParameters,
+         Error ScoperError,
+         State Scope,
+         State ScoperState,
+         InfoTableBuilder,
+         Reader InfoTable,
+         NameIdGen,
+         Reader EntryPoint
+       ]
+      r
+  ) =>
+  SideIfBranch 'Parsed k ->
+  Sem r (SideIfBranch 'Scoped k)
+checkSideIfBranch SideIfBranch {..} = do
+  cond' <- case sing :: SSideIfBranchKind k of
+    SSideIfBool -> checkParseExpressionAtoms _sideIfBranchCondition
+    SSideIfElse -> return _sideIfBranchCondition
+  body' <- checkParseExpressionAtoms _sideIfBranchBody
+  return
+    SideIfBranch
+      { _sideIfBranchBody = body',
+        _sideIfBranchCondition = cond',
+        _sideIfBranchPipe,
+        _sideIfBranchKw,
+        _sideIfBranchAssignKw
+      }
+
+checkSideIfs ::
+  forall r.
+  ( Members
+      '[ HighlightBuilder,
+         Reader ScopeParameters,
+         Error ScoperError,
+         State Scope,
+         State ScoperState,
+         InfoTableBuilder,
+         Reader InfoTable,
+         NameIdGen,
+         Reader EntryPoint
+       ]
+      r
+  ) =>
+  SideIfs 'Parsed ->
+  Sem r (SideIfs 'Scoped)
+checkSideIfs SideIfs {..} = do
+  branches' <- mapM checkSideIfBranch _sideIfBranches
+  else' <- mapM checkSideIfBranch _sideIfElse
+  return
+    SideIfs
+      { _sideIfBranches = branches',
+        _sideIfElse = else'
+      }
+
+checkCaseBranchRhs ::
+  forall r.
+  (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader EntryPoint] r) =>
+  CaseBranchRhs 'Parsed ->
+  Sem r (CaseBranchRhs 'Scoped)
+checkCaseBranchRhs = \case
+  CaseBranchRhsExpression r -> CaseBranchRhsExpression <$> checkRhsExpression r
+  CaseBranchRhsIf r -> CaseBranchRhsIf <$> checkSideIfs r
+
 checkCaseBranch ::
   forall r.
   (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader Package] r) =>
@@ -2196,11 +2288,11 @@ checkCaseBranch ::
   Sem r (CaseBranch 'Scoped)
 checkCaseBranch CaseBranch {..} = withLocalScope $ do
   pattern' <- checkParsePatternAtoms _caseBranchPattern
-  expression' <- (checkParseExpressionAtoms _caseBranchExpression)
+  rhs' <- checkCaseBranchRhs _caseBranchRhs
   return $
     CaseBranch
       { _caseBranchPattern = pattern',
-        _caseBranchExpression = expression',
+        _caseBranchRhs = rhs',
         ..
       }
 
