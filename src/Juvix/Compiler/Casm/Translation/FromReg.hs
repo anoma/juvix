@@ -15,6 +15,7 @@ import Juvix.Compiler.Reg.Data.Blocks.InfoTable qualified as Reg
 import Juvix.Compiler.Reg.Extra.Blocks.Info qualified as Reg
 import Juvix.Compiler.Reg.Language.Blocks qualified as Reg
 import Juvix.Compiler.Tree.Evaluator.Builtins qualified as Reg
+import Juvix.Compiler.Tree.Extra.Rep qualified as Reg
 import Juvix.Data.Field
 
 fromReg :: Reg.InfoTable -> Result
@@ -249,8 +250,9 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
 
         mkLoad :: Reg.ConstrField -> Sem r RValue
         mkLoad Reg.ConstrField {..} = do
+          let tagOffset = if Reg.isConstrRecord tab _constrFieldTag then 0 else 1
           v <- mkMemRef _constrFieldRef
-          return $ Load $ LoadValue v (toOffset _constrFieldIndex + 1)
+          return $ Load $ LoadValue v (toOffset _constrFieldIndex + tagOffset)
 
         mkMemRef :: Reg.VarRef -> Sem r MemRef
         mkMemRef vr = do
@@ -491,7 +493,8 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
         goAlloc :: Reg.InstrAlloc -> Sem r ()
         goAlloc Reg.InstrAlloc {..} = do
           goAllocCall _instrAllocResult
-          goAssignAp (Val $ Imm $ fromIntegral tagId)
+          unless (Reg.isConstrRecord tab _instrAllocTag) $
+            goAssignAp (Val $ Imm $ fromIntegral tagId)
           mapM_ goAssignApValue _instrAllocArgs
           where
             tagId = getTagId _instrAllocTag
@@ -615,6 +618,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
 
         goCase :: HashSet Reg.VarRef -> Reg.InstrCase -> Sem r ()
         goCase liveVars Reg.InstrCase {..} = do
+          eassert (not (Reg.isInductiveRecord tab _instrCaseInductive))
           syms <- replicateM (length tags) freshSymbol
           symEnd <- freshSymbol
           let symMap = HashMap.fromList $ zip tags syms
