@@ -113,7 +113,7 @@ instance PrettyCode CaseBranchRhs where
 instance PrettyCode CaseBranch where
   ppCode CaseBranch {..} = do
     pat <- ppCode _caseBranchPattern
-    e <- ppCode _caseBranchExpression
+    e <- ppCode _caseBranchRhs
     return $ kwPipe <+> pat <+> kwAssign <+> e
 
 instance PrettyCode Case where

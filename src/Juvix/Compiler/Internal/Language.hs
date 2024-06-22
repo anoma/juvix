@@ -256,7 +256,7 @@ instance Hashable CaseBranchRhs
 
 data CaseBranch = CaseBranch
   { _caseBranchPattern :: PatternArg,
-    _caseBranchExpression :: CaseBranchRhs
+    _caseBranchRhs :: CaseBranchRhs
   }
   deriving stock (Eq, Generic, Data)
 
@@ -634,7 +634,7 @@ instance HasLoc CaseBranchRhs where
     CaseBranchRhsIf e -> getLoc e
 
 instance HasLoc CaseBranch where
-  getLoc c = getLoc (c ^. caseBranchPattern) <> getLoc (c ^. caseBranchExpression)
+  getLoc c = getLoc (c ^. caseBranchPattern) <> getLoc (c ^. caseBranchRhs)
 
 instance HasLoc Case where
   getLoc c = getLocSpan (c ^. caseBranches)
