@@ -65,7 +65,7 @@ checkStrictlyPositiveOccurrences ::
   Sem r ()
 checkStrictlyPositiveOccurrences p = do
   typeOfConstr <- strongNormalize_ (p ^. checkPositivityArgsTypeOfConstructor)
-  go False typeOfConstr
+  goExpression False typeOfConstr
   where
     indInfo = p ^. checkPositivityArgsInductive
     ctorName = p ^. checkPositivityArgsConstructorName
@@ -81,11 +81,11 @@ checkStrictlyPositiveOccurrences p = do
      used below indicates whether the current search is performed on the left of
      an inner arrow or not.
     -}
-    go :: Bool -> Expression -> Sem r ()
-    go inside expr = case expr of
+    goExpression :: Bool -> Expression -> Sem r ()
+    goExpression inside expr = case expr of
       ExpressionApplication tyApp -> goApp tyApp
       ExpressionCase l -> goCase l
-      ExpressionFunction (Function l r) -> go True (l ^. paramType) >> go inside r
+      ExpressionFunction (Function l r) -> goLeft (l ^. paramType) >> go r
       ExpressionHole {} -> return ()
       ExpressionInstanceHole {} -> return ()
       ExpressionIden i -> goIden i
@@ -95,17 +95,38 @@ checkStrictlyPositiveOccurrences p = do
       ExpressionSimpleLambda l -> goSimpleLambda l
       ExpressionUniverse {} -> return ()
       where
+        go :: Expression -> Sem r ()
+        go = goExpression inside
+
+        goLeft :: Expression -> Sem r ()
+        goLeft = goExpression True
+
         goCase :: Case -> Sem r ()
         goCase l = do
-          go inside (l ^. caseExpression)
+          go (l ^. caseExpression)
           mapM_ goCaseBranch (l ^. caseBranches)
 
+        goSideIfBranch :: SideIfBranch -> Sem r ()
+        goSideIfBranch b = do
+          go (b ^. sideIfBranchCondition)
+          go (b ^. sideIfBranchBody)
+
+        goSideIfs :: SideIfs -> Sem r ()
+        goSideIfs s = do
+          mapM_ goSideIfBranch (s ^. sideIfBranches)
+          mapM_ go (s ^. sideIfElse)
+
+        goCaseBranchRhs :: CaseBranchRhs -> Sem r ()
+        goCaseBranchRhs = \case
+          CaseBranchRhsExpression e -> go e
+          CaseBranchRhsIf s -> goSideIfs s
+
         goCaseBranch :: CaseBranch -> Sem r ()
-        goCaseBranch b = go inside (b ^. caseBranchExpression)
+        goCaseBranch b = goCaseBranchRhs (b ^. caseBranchRhs)
 
         goLet :: Let -> Sem r ()
         goLet l = do
-          go inside (l ^. letExpression)
+          go (l ^. letExpression)
           mapM_ goLetClause (l ^. letClauses)
 
         goLetClause :: LetClause -> Sem r ()
@@ -118,19 +139,19 @@ checkStrictlyPositiveOccurrences p = do
 
         goFunctionDef :: FunctionDef -> Sem r ()
         goFunctionDef d = do
-          go inside (d ^. funDefType)
-          go inside (d ^. funDefBody)
+          go (d ^. funDefType)
+          go (d ^. funDefBody)
 
         goSimpleLambda :: SimpleLambda -> Sem r ()
         goSimpleLambda (SimpleLambda (SimpleBinder _ lamVarTy) lamBody) = do
-          go inside lamVarTy
-          go inside lamBody
+          go lamVarTy
+          go lamBody
 
         goLambda :: Lambda -> Sem r ()
         goLambda l = mapM_ goClause (l ^. lambdaClauses)
           where
             goClause :: LambdaClause -> Sem r ()
-            goClause (LambdaClause _ b) = go inside b
+            goClause (LambdaClause _ b) = go b
 
         goIden :: Iden -> Sem r ()
         goIden = \case

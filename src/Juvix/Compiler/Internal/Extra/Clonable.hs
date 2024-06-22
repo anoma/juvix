@@ -135,11 +135,11 @@ instance Clonable CaseBranchRhs where
 instance Clonable CaseBranch where
   freshNameIds CaseBranch {..} =
     underBinder _caseBranchPattern $ \pat' -> do
-      body' <- freshNameIds _caseBranchExpression
+      body' <- freshNameIds _caseBranchRhs
       return
         CaseBranch
           { _caseBranchPattern = pat',
-            _caseBranchExpression = body'
+            _caseBranchRhs = body'
           }
 
 instance Clonable Case where
