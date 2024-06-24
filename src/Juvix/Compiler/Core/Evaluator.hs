@@ -446,16 +446,17 @@ geval opts herr ctx env0 = eval' env0
             err "unsupported builtin operation: OpPoseidonHash"
         {-# INLINE randomEcPointOp #-}
 
-        deserializeNode' :: ByteString -> Node
-        deserializeNode' = deserializeNodeWithDefault env decodeErr
+        -- Deserialize a Node that was serialized using `serializeNode`.
+        deserializeNode :: ByteString -> Node
+        deserializeNode = fromRight decodeErr . fmap (eval' env . Store.toCoreNode) . S.decode
           where
-            decodeErr :: x
+            decodeErr :: Node
             decodeErr = err "failed to decode to Node"
-        {-# INLINE deserializeNode' #-}
+        {-# INLINE deserializeNode #-}
 
         -- Deserialize a Integer, serialized using `serializeInteger` to a Node
         deserializeFromInteger :: Integer -> Node
-        deserializeFromInteger = deserializeNode' . decodeByteString
+        deserializeFromInteger = deserializeNode . decodeByteString
         {-# INLINE deserializeFromInteger #-}
 
         serializeToInteger :: Node -> Integer
@@ -465,7 +466,7 @@ geval opts herr ctx env0 = eval' env0
         decodeByteString :: Integer -> ByteString
         decodeByteString = Encoding.decodeByteStringWithDefault decodeErr
           where
-            decodeErr :: x
+            decodeErr :: ByteString
             decodeErr = err "failed to decode Integer"
         {-# INLINE decodeByteString #-}
 
@@ -481,7 +482,7 @@ geval opts herr ctx env0 = eval' env0
           let !signedMessage = decodeByteString signedMessageInt
               !publicKey = publicKeyFromInteger publicKeyInt
            in if
-                  | E.verify publicKey signedMessage -> deserializeNode' (E.removeSignature signedMessage)
+                  | E.verify publicKey signedMessage -> deserializeNode (E.removeSignature signedMessage)
                   | otherwise -> err "signature verification failed"
         {-# INLINE verify #-}
 
@@ -662,11 +663,6 @@ doEval mfsize noIO loc tab node
 
 serializeNode :: Node -> ByteString
 serializeNode = S.encode . Store.fromCoreNode . removeClosures
-
--- | Deserialize a Node that was serialized using `serializeNode`. The default
--- is used if the deserialization fails.
-deserializeNodeWithDefault :: Env -> Node -> ByteString -> Node
-deserializeNodeWithDefault env d = fromRight d . fmap (wrapLambdaInClosure env . Store.toCoreNode) . S.decode
 
 doEvalIO ::
   Maybe Natural ->
