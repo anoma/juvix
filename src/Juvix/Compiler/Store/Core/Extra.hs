@@ -175,7 +175,11 @@ fromCoreNode = \case
   Core.NDyn Core.DynamicTy {} -> NDyn $ DynamicTy ()
   Core.NBot Core.Bottom {..} -> NBot $ Bottom () (fromCoreNode _bottomType)
   Core.NMatch {} -> impossible
-  Core.Closure {} -> impossible
+  Core.Closure {..} ->
+    Closure
+      { _closureNode = fromCoreNode _closureNode,
+        _closureEnv = fromCoreNode <$> _closureEnv
+      }
   where
     goBinder :: Core.Binder -> Binder
     goBinder Core.Binder {..} = Binder _binderName _binderLocation (fromCoreNode _binderType)
@@ -185,13 +189,3 @@ fromCoreNode = \case
 
     goCaseBranch :: Core.CaseBranch -> CaseBranch
     goCaseBranch Core.CaseBranch {..} = CaseBranch mempty _caseBranchTag (map goBinder _caseBranchBinders) _caseBranchBindersNum (fromCoreNode _caseBranchBody)
-
--- Used in the Core evaluator for Anoma encoding
-fromCoreNodeEval :: Core.Node -> Node
-fromCoreNodeEval n = case n of
-  Core.Closure {..} ->
-    Closure
-      { _closureNode = fromCoreNode _closureNode,
-        _closureEnv = fromCoreNode <$> _closureEnv
-      }
-  _ -> fromCoreNode n
