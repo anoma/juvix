@@ -82,6 +82,11 @@ toCoreNode = \case
   NPrim TypePrim {..} -> Core.mkTypePrim' _typePrimPrimitive
   NDyn DynamicTy {} -> Core.mkDynamic'
   NBot Bottom {..} -> Core.mkBottom mempty (toCoreNode _bottomType)
+  Closure {..} ->
+    Core.Closure
+      { _closureNode = toCoreNode _closureNode,
+        _closureEnv = toCoreNode <$> _closureEnv
+      }
   where
     goBinder :: Binder -> Core.Binder
     goBinder Binder {..} = Core.Binder _binderName _binderLocation (toCoreNode _binderType)
@@ -180,3 +185,13 @@ fromCoreNode = \case
 
     goCaseBranch :: Core.CaseBranch -> CaseBranch
     goCaseBranch Core.CaseBranch {..} = CaseBranch mempty _caseBranchTag (map goBinder _caseBranchBinders) _caseBranchBindersNum (fromCoreNode _caseBranchBody)
+
+-- Used in the Core evaluator for Anoma encoding
+fromCoreNodeEval :: Core.Node -> Node
+fromCoreNodeEval n = case n of
+  Core.Closure {..} ->
+    Closure
+      { _closureNode = fromCoreNode _closureNode,
+        _closureEnv = fromCoreNode <$> _closureEnv
+      }
+  _ -> fromCoreNode n

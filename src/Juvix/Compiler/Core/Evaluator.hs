@@ -661,7 +661,7 @@ doEval mfsize noIO loc tab node
         mfsize
 
 serializeNode :: Node -> ByteString
-serializeNode = S.encode . Store.fromCoreNode
+serializeNode = S.encode . Store.fromCoreNodeEval
 
 -- | Deserialize a Node that was serialized using `serializeNode`. The default
 -- is used if the deserialization fails.

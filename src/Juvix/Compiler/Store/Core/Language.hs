@@ -53,6 +53,8 @@ type Binder = Binder' Node
 
 {---------------------------------------------------------------------------------}
 
+type Env = [Node]
+
 data Node
   = NVar Var
   | NIdt Ident
@@ -70,6 +72,11 @@ data Node
   | NPrim TypePrim
   | NDyn Dynamic
   | NBot Bottom
+  | -- Evaluation only:
+    Closure
+      { _closureEnv :: !Env,
+        _closureNode :: !Node
+      }
   deriving stock (Generic)
 
 instance Serialize Node
