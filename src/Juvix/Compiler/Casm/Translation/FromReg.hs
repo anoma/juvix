@@ -460,17 +460,11 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
         goCairo :: Reg.InstrCairo -> Sem r ()
         goCairo Reg.InstrCairo {..} = case _instrCairoOpcode of
           Reg.OpCairoRandomEcPoint -> do
+            off <- getAP
+            insertVar _instrCairoResult off
             output'' (Hint HintRandomEcPoint)
-            -- output: ap += 2
+            -- ap += 2
             output' 2 (Alloc $ InstrAlloc $ Val $ Imm 2)
-            -- TODO: we don't need alloc when we don't have the tag
-            goAllocCall _instrCairoResult
-            -- store x
-            goAssignAp (Val $ Ref $ MemRef Ap (-off))
-            -- store y
-            goAssignAp (Val $ Ref $ MemRef Ap (-off))
-            where
-              off = toOffset (blts ^. stdlibGetRegsApOffset) + 3
           _ -> do
             goAssignApBuiltins
             mapM_ goAssignApValue (reverse _instrCairoArgs)
