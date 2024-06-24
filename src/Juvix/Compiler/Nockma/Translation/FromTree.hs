@@ -534,9 +534,9 @@ compile = \case
           Tree.OpIntMul -> return (callStdlib StdlibMul args)
           Tree.OpIntDiv -> return (callStdlib StdlibDiv args)
           Tree.OpIntMod -> return (callStdlib StdlibMod args)
-          Tree.OpIntLt -> return (callStdlib StdlibLt args)
-          Tree.OpIntLe -> return (callStdlib StdlibLe args)
-          Tree.OpEq -> testEq _nodeBinopArg1 _nodeBinopArg2
+          Tree.OpBool Tree.OpIntLt -> return (callStdlib StdlibLt args)
+          Tree.OpBool Tree.OpIntLe -> return (callStdlib StdlibLe args)
+          Tree.OpBool Tree.OpEq -> testEq _nodeBinopArg1 _nodeBinopArg2
           Tree.OpStrConcat -> return (callStdlib StdlibCatBytes args)
           Tree.OpFieldAdd -> fieldErr
           Tree.OpFieldSub -> fieldErr

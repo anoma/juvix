@@ -387,9 +387,9 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
             goExtraBinop IntDiv res arg1 arg2
           Reg.OpIntMod ->
             goExtraBinop IntMod res arg1 arg2
-          Reg.OpIntLt ->
+          Reg.OpBool Reg.OpIntLt ->
             goExtraBinop IntLt res arg1 arg2
-          Reg.OpIntLe ->
+          Reg.OpBool Reg.OpIntLe ->
             goIntLe res arg1 arg2
           Reg.OpFieldAdd ->
             goNativeBinop FieldAdd res arg1 arg2
@@ -399,7 +399,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
             goNativeBinop FieldMul res arg1 arg2
           Reg.OpFieldDiv ->
             goExtraBinop FieldDiv res arg1 arg2
-          Reg.OpEq ->
+          Reg.OpBool Reg.OpEq ->
             goEq res arg1 arg2
           Reg.OpStrConcat ->
             unsupported "strings"

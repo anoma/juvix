@@ -5,6 +5,10 @@ import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Transformation.Base
 
+-- | Checks if `node` is a case tree such that all leaves are constructor
+-- applications, and each constructor `C` matched on in `c` either occurs as a
+-- leaf in `node` at most once or the branch body in `c` associated with `C` is
+-- an immediate value.
 isConstructorTree :: Module -> Case -> Node -> Bool
 isConstructorTree md c node = case run $ runFail $ go mempty node of
   Just ctrsMap ->
@@ -29,6 +33,8 @@ isConstructorTree md c node = case run $ runFail $ go mempty node of
           tags' = HashSet.fromList tags
       Nothing -> True
 
+    -- Returns the map from tags to their number of occurrences in the leaves of
+    -- the case tree.
     go :: (Member Fail r) => HashMap Tag Int -> Node -> Sem r (HashMap Tag Int)
     go ctrs = \case
       NCtr Constr {..} ->
@@ -39,6 +45,9 @@ isConstructorTree md c node = case run $ runFail $ go mempty node of
       _ ->
         fail
 
+-- | Convert e.g. `case (if A C1 C2) of C1 := X | C2 := Y` to
+-- `if A (case C1 of C1 := X | C2 := Y) (case C2 of C1 := X | C2 := Y)`
+-- See: https://github.com/anoma/juvix/issues/2440
 convertNode :: Module -> Node -> Node
 convertNode md = dmap go
   where

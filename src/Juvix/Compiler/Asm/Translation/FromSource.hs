@@ -68,11 +68,11 @@ command = do
     "mod" ->
       return $ mkBinop' loc OpIntMod
     "lt" ->
-      return $ mkBinop' loc OpIntLt
+      return $ mkBinop' loc (OpBool OpIntLt)
     "le" ->
-      return $ mkBinop' loc OpIntLe
+      return $ mkBinop' loc (OpBool OpIntLe)
     "eq" ->
-      return $ mkBinop' loc OpEq
+      return $ mkBinop' loc (OpBool OpEq)
     "fadd" ->
       return $ mkBinop' loc OpFieldAdd
     "fsub" ->

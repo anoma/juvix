@@ -52,13 +52,13 @@ inferType tab funInfo = goInfer mempty
           OpIntMul -> checkBinop mkTypeInteger mkTypeInteger mkTypeInteger
           OpIntDiv -> checkBinop mkTypeInteger mkTypeInteger mkTypeInteger
           OpIntMod -> checkBinop mkTypeInteger mkTypeInteger mkTypeInteger
-          OpIntLt -> checkBinop mkTypeInteger mkTypeInteger mkTypeBool
-          OpIntLe -> checkBinop mkTypeInteger mkTypeInteger mkTypeBool
+          OpBool OpIntLt -> checkBinop mkTypeInteger mkTypeInteger mkTypeBool
+          OpBool OpIntLe -> checkBinop mkTypeInteger mkTypeInteger mkTypeBool
           OpFieldAdd -> checkBinop TyField TyField TyField
           OpFieldSub -> checkBinop TyField TyField TyField
           OpFieldMul -> checkBinop TyField TyField TyField
           OpFieldDiv -> checkBinop TyField TyField TyField
-          OpEq -> checkBinop TyDynamic TyDynamic mkTypeBool
+          OpBool OpEq -> checkBinop TyDynamic TyDynamic mkTypeBool
           OpStrConcat -> checkBinop TyString TyString TyString
 
     goUnop :: BinderList Type -> NodeUnop -> Sem r Type

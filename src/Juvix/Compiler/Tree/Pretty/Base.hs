@@ -205,13 +205,13 @@ instance PrettyCode BinaryOp where
     OpIntMul -> Str.instrMul
     OpIntDiv -> Str.instrDiv
     OpIntMod -> Str.instrMod
-    OpIntLt -> Str.instrLt
-    OpIntLe -> Str.instrLe
+    OpBool OpIntLt -> Str.instrLt
+    OpBool OpIntLe -> Str.instrLe
     OpFieldAdd -> Str.fadd
     OpFieldSub -> Str.fsub
     OpFieldMul -> Str.fmul
     OpFieldDiv -> Str.fdiv
-    OpEq -> Str.instrEq
+    OpBool OpEq -> Str.instrEq
     OpStrConcat -> Str.instrStrConcat
 
 instance PrettyCode BinaryOpcode where

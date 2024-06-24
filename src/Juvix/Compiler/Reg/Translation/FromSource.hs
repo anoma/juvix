@@ -94,9 +94,9 @@ instrBinop vref =
     <|> parseBinaryOp kwMul_ OpIntMul vref
     <|> parseBinaryOp kwDiv_ OpIntDiv vref
     <|> parseBinaryOp kwMod_ OpIntMod vref
-    <|> parseBinaryOp kwLt_ OpIntLt vref
-    <|> parseBinaryOp kwLe_ OpIntLe vref
-    <|> parseBinaryOp kwEq_ OpEq vref
+    <|> parseBinaryOp kwLt_ (OpBool OpIntLt) vref
+    <|> parseBinaryOp kwLe_ (OpBool OpIntLe) vref
+    <|> parseBinaryOp kwEq_ (OpBool OpEq) vref
     <|> parseBinaryOp kwFieldAdd OpFieldAdd vref
     <|> parseBinaryOp kwFieldSub OpFieldSub vref
     <|> parseBinaryOp kwFieldMul OpFieldMul vref
