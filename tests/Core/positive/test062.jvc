@@ -1,0 +1,20 @@
+--- anoma builtins
+
+type t : Type {
+   ctor : Int -> t;
+};
+
+
+def privKey : Int := 11617894433197913967256772080085224292574263152640782716628013903136761875218972825378605552167075549144813844196048766885080313195607865362963533894031960;
+
+def pubKey : Int := 100334094580390620383139794340338190270834129828455530198518726236886616013505;
+
+def v1 : t := ctor 10;
+def v2 : t := ctor 0;
+
+def writeLn := \x write x >> write "\n";
+
+writeLn (anoma-decode (anoma-encode v1) = v1)
+>> writeLn (anoma-verify (anoma-sign v1 privKey) pubKey = v1)
+>> writeLn (anoma-verify-detached (anoma-sign-detached v1 privKey) v1 pubKey)
+>> writeLn (anoma-verify-detached (anoma-sign-detached v1 privKey) v2 pubKey)

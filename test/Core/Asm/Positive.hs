@@ -8,7 +8,7 @@ allTests :: TestTree
 allTests = testGroup "JuvixCore to JuvixAsm positive tests" (map liftTest (Eval.filterOutTests ignoredTests Eval.compilableTests))
 
 ignoredTests :: [String]
-ignoredTests = []
+ignoredTests = ["Test062: Anoma"]
 
 liftTest :: Eval.PosTest -> TestTree
 liftTest _testEval =
