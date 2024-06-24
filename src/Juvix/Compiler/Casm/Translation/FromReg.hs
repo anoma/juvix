@@ -88,10 +88,10 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
         goRecord sym = case indInfo ^. Reg.inductiveConstructors of
           [tag] -> case Reg.lookupConstrInfo tab tag of
             Reg.ConstructorInfo {..} ->
-              map mkOutInstr [1 .. toOffset _constructorArgsNum]
+              map mkOutInstr [0 .. toOffset _constructorArgsNum - 1]
               where
                 mkOutInstr :: Offset -> Instruction
-                mkOutInstr i = mkAssignAp (Load $ LoadValue (MemRef Ap (-off - i)) i)
+                mkOutInstr i = mkAssignAp (Load $ LoadValue (MemRef Ap (-off - i - 1)) i)
           _ -> impossible
           where
             indInfo = Reg.lookupInductiveInfo tab sym
