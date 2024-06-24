@@ -447,7 +447,7 @@ geval opts herr ctx env0 = eval' env0
         {-# INLINE randomEcPointOp #-}
 
         deserializeNode' :: ByteString -> Node
-        deserializeNode' = deserializeNodeWithDefault decodeErr
+        deserializeNode' = deserializeNodeWithDefault env decodeErr
           where
             decodeErr :: x
             decodeErr = err "failed to decode to Node"
@@ -665,8 +665,8 @@ serializeNode = S.encode . Store.fromCoreNode . removeClosures
 
 -- | Deserialize a Node that was serialized using `serializeNode`. The default
 -- is used if the deserialization fails.
-deserializeNodeWithDefault :: Node -> ByteString -> Node
-deserializeNodeWithDefault d = fromRight d . fmap Store.toCoreNode . S.decode
+deserializeNodeWithDefault :: Env -> Node -> ByteString -> Node
+deserializeNodeWithDefault env d = fromRight d . fmap (wrapLambdaInClosure env . Store.toCoreNode) . S.decode
 
 doEvalIO ::
   Maybe Natural ->

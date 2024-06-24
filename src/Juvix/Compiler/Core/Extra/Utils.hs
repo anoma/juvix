@@ -377,6 +377,14 @@ removeClosures = dmap go
       Closure {..} -> substEnv _closureEnv _closureNode
       node -> node
 
+wrapLambdaInClosure :: [Node] -> Node -> Node
+wrapLambdaInClosure env = dmapR go
+  where
+    go :: Node -> Recur
+    go node = case node of
+      NLam {} -> End (Closure env node)
+      _ -> Recur node
+
 etaExpand :: [Type] -> Node -> Node
 etaExpand [] n = n
 etaExpand argtys n =
