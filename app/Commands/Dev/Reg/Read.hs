@@ -2,7 +2,7 @@ module Commands.Dev.Reg.Read where
 
 import Commands.Base
 import Commands.Dev.Reg.Read.Options
-import Juvix.Compiler.Reg.Pretty qualified as Reg
+import Juvix.Compiler.Reg.Pretty qualified as Reg hiding (defaultOptions)
 import Juvix.Compiler.Reg.Transformation qualified as Reg
 import Juvix.Compiler.Reg.Translation.FromSource qualified as Reg
 import RegInterpreter
@@ -15,7 +15,10 @@ runCommand opts = do
     Left err ->
       exitJuvixError (JuvixError err)
     Right tab -> do
-      r <- runError @JuvixError (Reg.applyTransformations (project opts ^. regReadTransformations) tab)
+      r <-
+        runError @JuvixError
+          . runReader Reg.defaultOptions
+          $ (Reg.applyTransformations (project opts ^. regReadTransformations) tab)
       case r of
         Left err -> exitJuvixError (JuvixError err)
         Right tab' -> do

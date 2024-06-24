@@ -358,8 +358,11 @@ regToRust = regToRust' Rust.BackendRust
 regToRiscZeroRust :: (Member (Reader EntryPoint) r) => Reg.InfoTable -> Sem r Rust.Result
 regToRiscZeroRust = regToRust' Rust.BackendRiscZero
 
-regToCasm :: Reg.InfoTable -> Sem r Casm.Result
+regToCasm :: (Member (Reader EntryPoint) r) => Reg.InfoTable -> Sem r Casm.Result
 regToCasm = Reg.toCasm >=> return . Casm.fromReg
+
+regToCasm' :: (Member (Reader Reg.Options) r) => Reg.InfoTable -> Sem r Casm.Result
+regToCasm' = Reg.toCasm' >=> return . Casm.fromReg
 
 casmToCairo :: Casm.Result -> Sem r Cairo.Result
 casmToCairo Casm.Result {..} =
@@ -367,8 +370,11 @@ casmToCairo Casm.Result {..} =
     . Cairo.serialize _resultOutputSize (map Casm.builtinName _resultBuiltins)
     $ Cairo.fromCasm _resultCode
 
-regToCairo :: Reg.InfoTable -> Sem r Cairo.Result
+regToCairo :: (Member (Reader EntryPoint) r) => Reg.InfoTable -> Sem r Cairo.Result
 regToCairo = regToCasm >=> casmToCairo
+
+regToCairo' :: (Member (Reader Reg.Options) r) => Reg.InfoTable -> Sem r Cairo.Result
+regToCairo' = regToCasm' >=> casmToCairo
 
 treeToAnoma' :: (Members '[Error JuvixError, Reader NockmaTree.CompilerOptions] r) => Tree.InfoTable -> Sem r NockmaTree.AnomaResult
 treeToAnoma' = Tree.toNockma >=> NockmaTree.fromTreeTable
@@ -378,6 +384,6 @@ asmToMiniC' = mapError (JuvixError @Asm.AsmError) . Asm.toReg' >=> regToMiniC' .
 
 regToMiniC' :: (Member (Reader Asm.Options) r) => Reg.InfoTable -> Sem r C.MiniCResult
 regToMiniC' tab = do
-  tab' <- Reg.toC tab
+  tab' <- mapReader (^. Asm.optTreeOptions) $ Reg.toC' tab
   e <- ask
   return $ C.fromReg (e ^. Asm.optLimits) tab'

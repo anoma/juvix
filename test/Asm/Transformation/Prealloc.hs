@@ -6,6 +6,7 @@ import Base
 import Juvix.Compiler.Asm.Options
 import Juvix.Compiler.Asm.Transformation
 import Juvix.Compiler.Asm.Transformation.Base
+import Juvix.Compiler.Tree.Options qualified as Tree
 
 allTests :: TestTree
 allTests = testGroup "Prealloc" (map liftTest Run.tests)
@@ -22,5 +23,6 @@ liftTest _testEval =
     opts =
       Options
         { _optDebug = True,
-          _optLimits = getLimits TargetCWasm32Wasi True
+          _optLimits = getLimits TargetCWasm32Wasi True,
+          _optTreeOptions = Tree.defaultOptions
         }

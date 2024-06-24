@@ -1,4 +1,4 @@
-module Juvix.Compiler.Reg.Transformation.CopyPropagation where
+module Juvix.Compiler.Reg.Transformation.Optimize.CopyPropagation where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Reg.Extra
@@ -6,17 +6,20 @@ import Juvix.Compiler.Reg.Transformation.Base
 
 type VarMap = HashMap VarRef VarRef
 
-copyPropagateFunction :: Code -> Code
-copyPropagateFunction =
-  snd
-    . runIdentity
-    . recurseF
-      ForwardRecursorSig
-        { _forwardFun = \i acc -> return (go i acc),
-          _forwardCombine = combine
-        }
-      mempty
+copyPropagate :: InfoTable -> InfoTable
+copyPropagate = mapT (const goFun)
   where
+    goFun :: Code -> Code
+    goFun =
+      snd
+        . runIdentity
+        . recurseF
+          ForwardRecursorSig
+            { _forwardFun = \i acc -> return (go i acc),
+              _forwardCombine = combine
+            }
+          mempty
+
     go :: Instruction -> VarMap -> (VarMap, Instruction)
     go instr mpv = case instr' of
       Assign InstrAssign {..}
@@ -44,6 +47,3 @@ copyPropagateFunction =
           Branch x -> Branch $ over instrBranchOutVar (fmap (adjustVarRef mpv)) x
           Case x -> Case $ over instrCaseOutVar (fmap (adjustVarRef mpv)) x
           _ -> impossible
-
-copyPropagate :: InfoTable -> InfoTable
-copyPropagate = mapT (const copyPropagateFunction)

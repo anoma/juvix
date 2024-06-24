@@ -8,13 +8,16 @@ where
 import Juvix.Compiler.Reg.Data.TransformationId
 import Juvix.Compiler.Reg.Transformation.Base
 import Juvix.Compiler.Reg.Transformation.Cleanup
-import Juvix.Compiler.Reg.Transformation.ConstantPropagation (constantPropagate)
-import Juvix.Compiler.Reg.Transformation.CopyPropagation
 import Juvix.Compiler.Reg.Transformation.IdentityTrans
 import Juvix.Compiler.Reg.Transformation.InitBranchVars
+import Juvix.Compiler.Reg.Transformation.Optimize.ConstantPropagation
+import Juvix.Compiler.Reg.Transformation.Optimize.CopyPropagation
+import Juvix.Compiler.Reg.Transformation.Optimize.DeadCodeElimination
+import Juvix.Compiler.Reg.Transformation.Optimize.Phase.Cairo qualified as Phase.Cairo
+import Juvix.Compiler.Reg.Transformation.Optimize.Phase.Main qualified as Phase.Main
 import Juvix.Compiler.Reg.Transformation.SSA
 
-applyTransformations :: forall r. [TransformationId] -> InfoTable -> Sem r InfoTable
+applyTransformations :: forall r. (Member (Reader Options) r) => [TransformationId] -> InfoTable -> Sem r InfoTable
 applyTransformations ts tbl = foldM (flip appTrans) tbl ts
   where
     appTrans :: TransformationId -> InfoTable -> Sem r InfoTable
@@ -25,3 +28,6 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
       InitBranchVars -> return . initBranchVars
       CopyPropagation -> return . copyPropagate
       ConstantPropagation -> return . constantPropagate
+      DeadCodeElimination -> return . removeDeadAssignments
+      OptPhaseMain -> Phase.Main.optimize
+      OptPhaseCairo -> Phase.Cairo.optimize

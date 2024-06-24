@@ -28,3 +28,12 @@ strCopyPropagation = "copy-propagation"
 
 strConstantPropagation :: Text
 strConstantPropagation = "constant-propagation"
+
+strDeadCodeElimination :: Text
+strDeadCodeElimination = "dead-code"
+
+strOptPhaseMain :: Text
+strOptPhaseMain = "opt-main"
+
+strOptPhaseCairo :: Text
+strOptPhaseCairo = "opt-cairo"
