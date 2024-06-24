@@ -81,7 +81,7 @@ juvix_poseidon:
 -- On return:
 -- [ap - 1]: result EcPoint ptr (p + m * q)
 -- [ap - 2]: new builtins ptr
--- EcOp ap offset: 13 + 4 + 2
+-- EcOp ap offset: 12 + 4 + 2
 juvix_ec_op:
   -- [fp] = ec_op builtin ptr
   [ap] = [[fp - 6] + 1]; ap++
