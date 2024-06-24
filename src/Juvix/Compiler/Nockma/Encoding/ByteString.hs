@@ -38,6 +38,9 @@ integerToByteStringLE = BS.toStrict . BS.toLazyByteString . go
       0 -> mempty
       n -> BS.word8 (fromIntegral n) <> go (n `shiftR` 8)
 
+integerToByteStringLELen :: Int -> Integer -> ByteString
+integerToByteStringLELen len = padByteString len . integerToByteStringLE
+
 textToNatural :: Text -> Natural
 textToNatural = byteStringToNatural . encodeUtf8
 
@@ -83,3 +86,7 @@ decodeByteString i = evalBitReader (integerToVectorBits i) go
       len <- consumeLength
       v <- consumeRemaining
       return (padByteString len (cloneToByteString v))
+
+-- | decode a ByteString that was encoded using `encodeByteString` with a default that's used if decoding fails.
+decodeByteStringWithDefault :: ByteString -> Integer -> ByteString
+decodeByteStringWithDefault d = fromRight d . run . runErrorNoCallStack @BitReadError . decodeByteString

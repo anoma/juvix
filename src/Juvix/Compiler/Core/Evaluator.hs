@@ -1,6 +1,7 @@
 module Juvix.Compiler.Core.Evaluator where
 
 import Control.Exception qualified as Exception
+import Crypto.Sign.Ed25519 qualified as E
 import Data.HashMap.Strict qualified as HashMap
 import Data.Serialize qualified as S
 import GHC.Base (seq)
@@ -14,7 +15,7 @@ import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.NoDisplayInfo
 import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Nockma.Encoding qualified as Encoding
-import Juvix.Compiler.Nockma.Encoding.Effect.BitReader
+import Juvix.Compiler.Nockma.Encoding.Ed25519 qualified as E
 import Juvix.Compiler.Store.Core.Extra qualified as Store
 import Juvix.Data.Field
 import Text.Read qualified as T
@@ -353,9 +354,7 @@ geval opts herr ctx env0 = eval' env0
            in if
                   | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
                       mkBuiltinApp' OpAnomaEncode [v]
-                  | otherwise ->
-                      let !bs = serializeNode v
-                       in mkConstant' (ConstInteger (Encoding.encodeByteString bs))
+                  | otherwise -> nodeFromInteger (serializeToInteger v)
         {-# INLINE anomaEncodeOp #-}
 
         anomaDecodeOp :: [Node] -> Node
@@ -364,50 +363,60 @@ geval opts herr ctx env0 = eval' env0
            in if
                   | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
                       mkBuiltinApp' OpAnomaDecode [v]
-                  | otherwise ->
-                      case v of
-                        (NCst (Constant _ (ConstInteger i))) -> deserializeNode (doIt @BitReadError $ Encoding.decodeByteString i)
-                        _ -> evalError "anomaDecodeOp: argument not an integer" n
-          where
-            doIt :: Sem '[Error e] x -> x
-            doIt = fromRight (err "failed to decode bytestring") . run . runErrorNoCallStack
-
+                  | otherwise -> case integerFromNode v of
+                      Just i -> deserializeFromInteger i
+                      Nothing -> err "anomaDecodeOp: argument not an integer"
         {-# INLINE anomaDecodeOp #-}
 
         anomaVerifyDetachedOp :: [Node] -> Node
         anomaVerifyDetachedOp = checkApply $ \arg1 arg2 arg3 ->
-          if
-              | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
-                  mkBuiltinApp' OpAnomaVerifyDetached (eval' env <$> [arg1, arg2, arg3])
-              | otherwise ->
-                  err "unsupported builtin operation: OpAnomaVerifyDetached"
+          let !v1 = eval' env arg1
+              !v2 = eval' env arg2
+              !v3 = eval' env arg3
+           in if
+                  | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                      mkBuiltinApp' OpAnomaVerifyDetached [v1, v2, v3]
+                  | otherwise ->
+                      case (integerFromNode v1, integerFromNode v3) of
+                        (Just i1, Just i3) -> verifyDetached i1 v2 i3
+                        _ -> err "OpAnomaVerifyDetached: first and third arguments must be integers"
         {-# INLINE anomaVerifyDetachedOp #-}
 
         anomaSignOp :: [Node] -> Node
         anomaSignOp = checkApply $ \arg1 arg2 ->
-          if
-              | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
-                  mkBuiltinApp' OpAnomaSign (eval' env <$> [arg1, arg2])
-              | otherwise ->
-                  err "unsupported builtin operation: OpAnomaSign"
+          let !v1 = eval' env arg1
+              !v2 = eval' env arg2
+           in if
+                  | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                      mkBuiltinApp' OpAnomaSign [v1, v2]
+                  | otherwise -> case integerFromNode v2 of
+                      Just i -> sign v1 i
+                      Nothing -> err "anomaSignOp: second argument not an integer"
         {-# INLINE anomaSignOp #-}
 
         anomaSignDetachedOp :: [Node] -> Node
         anomaSignDetachedOp = checkApply $ \arg1 arg2 ->
-          if
-              | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
-                  mkBuiltinApp' OpAnomaSignDetached (eval' env <$> [arg1, arg2])
-              | otherwise ->
-                  err "unsupported builtin operation: OpAnomaSignDetached"
+          let !v1 = eval' env arg1
+              !v2 = eval' env arg2
+           in if
+                  | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                      mkBuiltinApp' OpAnomaSignDetached [v1, v2]
+                  | otherwise -> case integerFromNode v2 of
+                      Just i -> signDetached v1 i
+                      Nothing -> err "anomaSignDetachedOp: second argument not an integer"
         {-# INLINE anomaSignDetachedOp #-}
 
         anomaVerifyOp :: [Node] -> Node
         anomaVerifyOp = checkApply $ \arg1 arg2 ->
-          if
-              | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
-                  mkBuiltinApp' OpAnomaVerify (eval' env <$> [arg1, arg2])
-              | otherwise ->
-                  err "unsupported builtin operation: OpAnomaVerify"
+          let !v1 = eval' env arg1
+              !v2 = eval' env arg2
+           in if
+                  | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                      mkBuiltinApp' OpAnomaVerify [v1, v2]
+                  | otherwise ->
+                      case (integerFromNode v1, integerFromNode v2) of
+                        (Just i1, Just i2) -> verify i1 i2
+                        _ -> err "anomaVerifyOp: both arguments are not integers"
         {-# INLINE anomaVerifyOp #-}
 
         poseidonHashOp :: [Node] -> Node
@@ -436,7 +445,73 @@ geval opts herr ctx env0 = eval' env0
           _ ->
             err "unsupported builtin operation: OpPoseidonHash"
         {-# INLINE randomEcPointOp #-}
+
+        deserializeNode' :: ByteString -> Node
+        deserializeNode' = deserializeNodeWithDefault decodeErr
+          where
+            decodeErr :: x
+            decodeErr = err "failed to decode to Node"
+        {-# INLINE deserializeNode' #-}
+
+        -- Deserialize a Integer, serialized using `serializeInteger` to a Node
+        deserializeFromInteger :: Integer -> Node
+        deserializeFromInteger = deserializeNode' . decodeByteString
+        {-# INLINE deserializeFromInteger #-}
+
+        serializeToInteger :: Node -> Integer
+        serializeToInteger = Encoding.encodeByteString . serializeNode
+        {-# INLINE serializeToInteger #-}
+
+        decodeByteString :: Integer -> ByteString
+        decodeByteString = Encoding.decodeByteStringWithDefault decodeErr
+          where
+            decodeErr :: x
+            decodeErr = err "failed to decode Integer"
+        {-# INLINE decodeByteString #-}
+
+        sign :: Node -> Integer -> Node
+        sign !messageNode !secretKeyInt =
+          let !message = serializeNode messageNode
+              !secretKey = secretKeyFromInteger secretKeyInt
+           in nodeFromInteger (Encoding.encodeByteString (E.sign secretKey message))
+        {-# INLINE sign #-}
+
+        verify :: Integer -> Integer -> Node
+        verify !signedMessageInt !publicKeyInt =
+          let !signedMessage = decodeByteString signedMessageInt
+              !publicKey = publicKeyFromInteger publicKeyInt
+           in if
+                  | E.verify publicKey signedMessage -> deserializeNode' (E.removeSignature signedMessage)
+                  | otherwise -> err "signature verification failed"
+        {-# INLINE verify #-}
+
+        signDetached :: Node -> Integer -> Node
+        signDetached !messageNode !secretKeyInt =
+          let !message = serializeNode messageNode
+              !secretKey = secretKeyFromInteger secretKeyInt
+              (E.Signature !sig) = E.dsign secretKey message
+           in nodeFromInteger (Encoding.encodeByteString sig)
+        {-# INLINE signDetached #-}
+
+        verifyDetached :: Integer -> Node -> Integer -> Node
+        verifyDetached !signatureInt !messageNode !publicKeyInt =
+          let !sig = E.Signature (decodeByteString signatureInt)
+              !message = serializeNode messageNode
+              !publicKey = publicKeyFromInteger publicKeyInt
+           in nodeFromBool (E.dverify publicKey message sig)
+        {-# INLINE verifyDetached #-}
     {-# INLINE applyBuiltin #-}
+
+    -- secretKey, publicKey are not encoded with their length as
+    -- a bytestring in order to be compatible with Anoma sign. Therefore the
+    -- expected length of each must be specified.
+    secretKeyFromInteger :: Integer -> E.SecretKey
+    secretKeyFromInteger = E.SecretKey . Encoding.integerToByteStringLELen 64
+    {-# INLINE secretKeyFromInteger #-}
+
+    publicKeyFromInteger :: Integer -> E.PublicKey
+    publicKeyFromInteger = E.PublicKey . Encoding.integerToByteStringLELen 32
+    {-# INLINE publicKeyFromInteger #-}
 
     nodeFromInteger :: Integer -> Node
     nodeFromInteger !int = mkConstant' (ConstInteger int)
@@ -588,8 +663,10 @@ doEval mfsize noIO loc tab node
 serializeNode :: Node -> ByteString
 serializeNode = S.encode . Store.fromCoreNode
 
-deserializeNode :: ByteString -> Node
-deserializeNode = fromRight (error "failed to decode to a node") . fmap Store.toCoreNode . S.decode
+-- | Deserialize a Node that was serialized using `serializeNode`. The default
+-- is used if the deserialization fails.
+deserializeNodeWithDefault :: Node -> ByteString -> Node
+deserializeNodeWithDefault d = fromRight d . fmap Store.toCoreNode . S.decode
 
 doEvalIO ::
   Maybe Natural ->
