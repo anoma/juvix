@@ -82,11 +82,6 @@ toCoreNode = \case
   NPrim TypePrim {..} -> Core.mkTypePrim' _typePrimPrimitive
   NDyn DynamicTy {} -> Core.mkDynamic'
   NBot Bottom {..} -> Core.mkBottom mempty (toCoreNode _bottomType)
-  Closure {..} ->
-    Core.Closure
-      { _closureNode = toCoreNode _closureNode,
-        _closureEnv = toCoreNode <$> _closureEnv
-      }
   where
     goBinder :: Binder -> Core.Binder
     goBinder Binder {..} = Core.Binder _binderName _binderLocation (toCoreNode _binderType)
@@ -175,11 +170,7 @@ fromCoreNode = \case
   Core.NDyn Core.DynamicTy {} -> NDyn $ DynamicTy ()
   Core.NBot Core.Bottom {..} -> NBot $ Bottom () (fromCoreNode _bottomType)
   Core.NMatch {} -> impossible
-  Core.Closure {..} ->
-    Closure
-      { _closureNode = fromCoreNode _closureNode,
-        _closureEnv = fromCoreNode <$> _closureEnv
-      }
+  Core.Closure {} -> impossible
   where
     goBinder :: Core.Binder -> Binder
     goBinder Core.Binder {..} = Binder _binderName _binderLocation (fromCoreNode _binderType)
