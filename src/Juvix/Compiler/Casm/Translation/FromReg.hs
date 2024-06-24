@@ -463,8 +463,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
             off <- getAP
             insertVar _instrCairoResult off
             output'' (Hint HintRandomEcPoint)
-            -- ap += 2
-            output' 2 (Alloc $ InstrAlloc $ Val $ Imm 2)
+            goAssignAp (Val $ Ref $ MemRef Ap 0)
           _ -> do
             goAssignApBuiltins
             mapM_ goAssignApValue (reverse _instrCairoArgs)
