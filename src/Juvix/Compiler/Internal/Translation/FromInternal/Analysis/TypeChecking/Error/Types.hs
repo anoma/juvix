@@ -206,7 +206,7 @@ instance ToGenericError WrongType where
               <+> thing
               <+> "has type:"
                 <> line
-                <> indent' (ppCode opts' (err ^. wrongTypeActual ^. normalizedExpression))
+                <> indent' (ppCode opts' (err ^. wrongTypeActual . normalizedExpression))
                 <> line
                 <> "but is expected to have type:"
                 <> line
@@ -634,3 +634,34 @@ instance ToGenericError DefaultArgLoop where
             "Inserting default arguments caused a loop. The involved arguments are:"
               <> line
               <> itemize (ppCode opts' <$> e ^. defaultArgLoop)
+
+newtype BadScope = BadScope
+  { _badScopeVar :: VarName
+  }
+
+makeLenses ''BadScope
+
+instance ToGenericError BadScope where
+  genericError e = ask >>= generr
+    where
+      generr opts =
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = ppOutput msg,
+              _genericErrorIntervals = [i]
+            }
+        where
+          opts' = fromGenericOptions opts
+          i = getLoc (e ^. badScopeVar)
+          var = e ^. badScopeVar
+          msg :: Doc Ann =
+            annotate AnnImportant "Oops! This is a known bug in the Juvix compiler."
+              <> line
+              <> "Most likely, the inference algorithm inserted the variable"
+              <+> ppCode opts' var
+              <+> "in a place where it is not in scope."
+                <> line
+                <> "As a workaround, explicitly provide a type in the place where you think the variable got inserted."
+                <> line
+                <> "More information at https://github.com/anoma/juvix/issues/2247"
