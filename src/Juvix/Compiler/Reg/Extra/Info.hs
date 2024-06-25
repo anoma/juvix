@@ -44,6 +44,10 @@ computeMaxStackHeight lims = maximum . map go
           + lims
             ^. limitsDispatchStackSize
       Return {} -> 0
+      If InstrIf {..} ->
+        max
+          (computeMaxStackHeight lims _instrIfTrue)
+          (computeMaxStackHeight lims _instrIfFalse)
       Branch InstrBranch {..} ->
         max
           (computeMaxStackHeight lims _instrBranchTrue)
@@ -83,6 +87,10 @@ computeMaxCallClosuresArgsNum = maximum . map go
       TailCallClosures InstrTailCallClosures {..} ->
         length _instrTailCallClosuresArgs
       Return {} -> 0
+      If InstrIf {..} ->
+        max
+          (computeMaxCallClosuresArgsNum _instrIfTrue)
+          (computeMaxCallClosuresArgsNum _instrIfFalse)
       Branch InstrBranch {..} ->
         max
           (computeMaxCallClosuresArgsNum _instrBranchTrue)
@@ -135,6 +143,11 @@ computeStringMap strs = snd . run . execState (HashMap.size strs, strs) . mapM g
         mapM_ goVal _instrTailCallClosuresArgs
       Return InstrReturn {..} ->
         goVal _instrReturnValue
+      If InstrIf {..} -> do
+        goVal _instrIfArg1
+        goVal _instrIfArg2
+        mapM_ go _instrIfTrue
+        mapM_ go _instrIfFalse
       Branch InstrBranch {..} -> do
         goVal _instrBranchValue
         mapM_ go _instrBranchTrue
@@ -179,6 +192,10 @@ computeLocalVarsNum = maximum . map go
       CallClosures InstrCallClosures {..} -> goVarRef _instrCallClosuresResult
       TailCallClosures {} -> 0
       Return {} -> 0
+      If InstrIf {..} ->
+        max
+          (computeLocalVarsNum _instrIfTrue)
+          (computeLocalVarsNum _instrIfFalse)
       Branch InstrBranch {..} ->
         max
           (computeLocalVarsNum _instrBranchTrue)

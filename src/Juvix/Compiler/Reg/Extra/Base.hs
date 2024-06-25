@@ -30,6 +30,7 @@ setResultVar instr vref = case instr of
 
 getOutVar :: Instruction -> Maybe VarRef
 getOutVar = \case
+  If x -> x ^. instrIfOutVar
   Branch x -> x ^. instrBranchOutVar
   Case x -> x ^. instrCaseOutVar
   _ -> Nothing
