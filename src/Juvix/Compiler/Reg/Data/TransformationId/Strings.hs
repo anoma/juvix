@@ -32,6 +32,12 @@ strConstantPropagation = "constant-propagation"
 strDeadCodeElimination :: Text
 strDeadCodeElimination = "dead-code"
 
+strBranchToIf :: Text
+strBranchToIf = "branch-to-if"
+
+strBranchOnZeroToIf :: Text
+strBranchOnZeroToIf = "branch-on-zero-to-if"
+
 strOptPhaseMain :: Text
 strOptPhaseMain = "opt-main"
 

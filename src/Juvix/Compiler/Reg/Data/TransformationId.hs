@@ -12,6 +12,8 @@ data TransformationId
   | CopyPropagation
   | ConstantPropagation
   | DeadCodeElimination
+  | BranchToIf
+  | BranchOnZeroToIf
   | OptPhaseMain
   | OptPhaseCairo
   deriving stock (Data, Bounded, Enum, Show)
@@ -43,6 +45,8 @@ instance TransformationId' TransformationId where
     CopyPropagation -> strCopyPropagation
     ConstantPropagation -> strConstantPropagation
     DeadCodeElimination -> strDeadCodeElimination
+    BranchToIf -> strBranchToIf
+    BranchOnZeroToIf -> strBranchOnZeroToIf
     OptPhaseMain -> strOptPhaseMain
     OptPhaseCairo -> strOptPhaseCairo
 

@@ -10,6 +10,7 @@ import Juvix.Compiler.Reg.Transformation.Base
 import Juvix.Compiler.Reg.Transformation.Cleanup
 import Juvix.Compiler.Reg.Transformation.IdentityTrans
 import Juvix.Compiler.Reg.Transformation.InitBranchVars
+import Juvix.Compiler.Reg.Transformation.Optimize.BranchToIf
 import Juvix.Compiler.Reg.Transformation.Optimize.ConstantPropagation
 import Juvix.Compiler.Reg.Transformation.Optimize.CopyPropagation
 import Juvix.Compiler.Reg.Transformation.Optimize.DeadCodeElimination
@@ -29,5 +30,7 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
       CopyPropagation -> return . copyPropagate
       ConstantPropagation -> return . constantPropagate
       DeadCodeElimination -> return . removeDeadAssignments
+      BranchToIf -> return . convertBranchToIf
+      BranchOnZeroToIf -> return . convertBranchOnZeroToIf
       OptPhaseMain -> Phase.Main.optimize
       OptPhaseCairo -> Phase.Cairo.optimize
