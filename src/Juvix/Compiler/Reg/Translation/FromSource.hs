@@ -60,6 +60,7 @@ instruction =
     <|> (TailCall <$> instrTailCall)
     <|> (TailCallClosures <$> instrTailCallClosures)
     <|> (Return <$> instrReturn)
+    <|> (If <$> instrIf)
     <|> (Branch <$> instrBranch)
     <|> (Case <$> instrCase)
     <|> (Block <$> instrBlock)
@@ -365,6 +366,39 @@ instrReturn = do
   return
     InstrReturn
       { _instrReturnValue = val
+      }
+
+parseBoolOp :: ParsecS r BoolOp
+parseBoolOp =
+  (kw kwLt_ >> return OpIntLt)
+    <|> (kw kwLe_ >> return OpIntLe)
+    <|> (kw kwEq_ >> return OpEq)
+
+instrIf ::
+  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  ParsecS r InstrIf
+instrIf = do
+  kw kwIf
+  op <- parseBoolOp
+  arg1 <- value
+  arg2 <- value
+  var <- optional outVar
+  (br1, br2) <- braces $ do
+    symbol "true:"
+    br1 <- braces parseCode
+    kw delimSemicolon
+    symbol "false:"
+    br2 <- braces parseCode
+    kw delimSemicolon
+    return (br1, br2)
+  return
+    InstrIf
+      { _instrIfOp = op,
+        _instrIfArg1 = arg1,
+        _instrIfArg2 = arg2,
+        _instrIfTrue = br1,
+        _instrIfFalse = br2,
+        _instrIfOutVar = var
       }
 
 instrBranch ::

@@ -198,21 +198,27 @@ instance PrettyCode Constant where
     ConstVoid {} ->
       return $ annotate (AnnKind KNameConstructor) Str.void
 
-instance PrettyCode BinaryOp where
+instance PrettyCode BoolOp where
   ppCode op = return $ primitive $ case op of
-    OpIntAdd -> Str.instrAdd
-    OpIntSub -> Str.instrSub
-    OpIntMul -> Str.instrMul
-    OpIntDiv -> Str.instrDiv
-    OpIntMod -> Str.instrMod
-    OpBool OpIntLt -> Str.instrLt
-    OpBool OpIntLe -> Str.instrLe
-    OpFieldAdd -> Str.fadd
-    OpFieldSub -> Str.fsub
-    OpFieldMul -> Str.fmul
-    OpFieldDiv -> Str.fdiv
-    OpBool OpEq -> Str.instrEq
-    OpStrConcat -> Str.instrStrConcat
+    OpIntLt -> Str.instrLt
+    OpIntLe -> Str.instrLe
+    OpEq -> Str.instrEq
+
+instance PrettyCode BinaryOp where
+  ppCode = \case
+    OpBool x -> ppCode x
+    op ->
+      return $ primitive $ case op of
+        OpIntAdd -> Str.instrAdd
+        OpIntSub -> Str.instrSub
+        OpIntMul -> Str.instrMul
+        OpIntDiv -> Str.instrDiv
+        OpIntMod -> Str.instrMod
+        OpFieldAdd -> Str.fadd
+        OpFieldSub -> Str.fsub
+        OpFieldMul -> Str.fmul
+        OpFieldDiv -> Str.fdiv
+        OpStrConcat -> Str.instrStrConcat
 
 instance PrettyCode BinaryOpcode where
   ppCode = \case
