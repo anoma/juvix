@@ -489,7 +489,7 @@ checkSideIfBranch ::
   SideIfBranch ->
   Sem r SideIfBranch
 checkSideIfBranch expectedTy SideIfBranch {..} = do
-  boolTy <- getBoolType (getLoc expectedTy)
+  boolTy <- getBoolType (getLoc _sideIfBranchCondition)
   cond' <- checkExpression boolTy _sideIfBranchCondition
   body' <- checkExpression expectedTy _sideIfBranchBody
   return
