@@ -14,6 +14,6 @@ mklst2 : Nat → List (List Nat)
 printListNatLn : List Nat → IO
   | nil := printStringLn "nil"
   | (x :: xs) :=
-    printNat x >> printString " :: " >> printListNatLn xs;
+    printNat x >>> printString " :: " >>> printListNatLn xs;
 
 main : IO := printListNatLn (flatten (mklst2 4));

@@ -4,15 +4,15 @@ import Monad open;
 import Monad open using {module Monad as MMonad};
 import Functor open;
 import Functor open using {module Functor as MFunctor};
-import Stdlib.Data.Product open;
+import Stdlib.Data.Pair open;
 
 type StateT (S : Type) (M : Type → Type) (A : Type) :=
-  mkStateT {runStateT : S → M (A × S)};
+  mkStateT {runStateT : S → M (Pair A S)};
 
 runState {S A : Type} {M : Type → Type} (s : S) (m : StateT
   S
   M
-  A) : M (A × S) := StateT.runStateT m s;
+  A) : M (Pair A S) := StateT.runStateT m s;
 
 evalState {S A : Type} {M : Type → Type} {{Functor
   M}} (s : S) (m : StateT S M A) : M A :=

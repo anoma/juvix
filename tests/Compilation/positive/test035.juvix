@@ -43,16 +43,16 @@ h : Nat -> Nat
 printListNatLn : List Nat → IO
   | nil := printStringLn "nil"
   | (x :: xs) :=
-    printNat x >> printString " :: " >> printListNatLn xs;
+    printNat x >>> printString " :: " >>> printListNatLn xs;
 
 main : IO :=
   printListNatLn (sum2 (lgen 5))
-    >> printNatLn (f (gen 10))
-    >> printNatLn (f (gen 15))
-    >> printNatLn (f (gen 16))
-    >> printNatLn (f (gen 17))
-    >> printNatLn (f (gen 18))
-    >> printNatLn (f (gen 20))
-    >> printNatLn (h 5)
-    >> printNatLn (h 3);
+    >>> printNatLn (f (gen 10))
+    >>> printNatLn (f (gen 15))
+    >>> printNatLn (f (gen 16))
+    >>> printNatLn (f (gen 17))
+    >>> printNatLn (f (gen 18))
+    >>> printNatLn (f (gen 20))
+    >>> printNatLn (h 5)
+    >>> printNatLn (h 3);
 

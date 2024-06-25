@@ -23,13 +23,13 @@ vy : Nat := 7;
 
 main : IO :=
   printNatLn (func (div y x))
-    >> -- 17 div 5 + 4 = 7
+    >>> -- 17 div 5 + 4 = 7
       printNatLn
       (y + x * z)
-    >> -- 17
+    >>> -- 17
       printNatLn
       (vx + vy * (z + 1))
-    >> -- 37
+    >>> -- 37
       f
       (h g 2 3)
       4;

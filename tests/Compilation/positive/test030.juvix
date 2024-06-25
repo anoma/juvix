@@ -7,7 +7,7 @@ iterate : {A : Type} → (A → A) → Nat → A → A
   -- clauses with differing number of patterns not yet supported
   -- iterate f zero x := x;
   | f zero := id
-  | f (suc n) := f ∘ iterate f n;
+  | f (suc n) := f << iterate f n;
 
 plus : Nat → Nat → Nat := iterate suc;
 
@@ -22,7 +22,7 @@ ackermann : Nat → Nat → Nat
 
 main : IO :=
   printNatLn (plus 3 7)
-    >> printNatLn (mult 3 7)
-    >> printNatLn (exp 3 7)
-    >> printNatLn (ackermann 3 7);
+    >>> printNatLn (mult 3 7)
+    >>> printNatLn (exp 3 7)
+    >>> printNatLn (ackermann 3 7);
 

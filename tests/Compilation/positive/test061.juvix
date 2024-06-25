@@ -66,7 +66,7 @@ showBoolFunI : Show (Bool → Bool) := mkShow@{
 };
 
 instance
-showPairI {A B} {{Show A}} {{Show' B}} : Show' (A × B) :=
+showPairI {A B} {{Show A}} {{Show' B}} : Show' (Pair A B) :=
   mkShow λ {(x, y) := Show.show x ++str ", " ++str Show.show y};
 
 trait
@@ -79,19 +79,19 @@ instance
 tFunI {A} {{T A}} : T (A -> A) := mkT \ { a := a };
 
 main : IO :=
-  printStringLn (Show.show true) >>
-  printStringLn (f false) >>
-  printStringLn (Show.show 3) >>
-  printStringLn (Show.show (g {Nat})) >>
-  printStringLn (Show.show [true; false]) >>
-  printStringLn (Show.show [1; 2; 3]) >>
-  printStringLn (f' [1; 2]) >>
-  printStringLn (f'' [true; false]) >>
-  printStringLn (f'3 [just true; nothing; just false]) >>
-  printStringLn (f'4 [just [1]; nothing; just [2; 3]]) >>
-  printStringLn (f'3 "abba") >>
-  printStringLn (f'3 {{M := mkShow (λ{x := x ++str "!"})}} "abba") >>
-  printStringLn (f5 "abba" 3) >>
-  printStringLn (Show.show {{_}} ["a"; "b"; "c"; "d"]) >>
-  printStringLn (Show.show (λ{x := not x})) >>
+  printStringLn (Show.show true) >>>
+  printStringLn (f false) >>>
+  printStringLn (Show.show 3) >>>
+  printStringLn (Show.show (g {Nat})) >>>
+  printStringLn (Show.show [true; false]) >>>
+  printStringLn (Show.show [1; 2; 3]) >>>
+  printStringLn (f' [1; 2]) >>>
+  printStringLn (f'' [true; false]) >>>
+  printStringLn (f'3 [just true; nothing; just false]) >>>
+  printStringLn (f'4 [just [1]; nothing; just [2; 3]]) >>>
+  printStringLn (f'3 "abba") >>>
+  printStringLn (f'3 {{M := mkShow (λ{x := x ++str "!"})}} "abba") >>>
+  printStringLn (f5 "abba" 3) >>>
+  printStringLn (Show.show {{_}} ["a"; "b"; "c"; "d"]) >>>
+  printStringLn (Show.show (λ{x := not x})) >>>
   printStringLn (Show.show (3, [1; 2 + T.a 0]));

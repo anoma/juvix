@@ -3,7 +3,7 @@ module test032;
 
 import Stdlib.Prelude open;
 
-split : {A : Type} → Nat → List A → List A × List A
+split : {A : Type} → Nat → List A → Pair (List A) (List A)
   | zero xs := nil, xs
   | (suc n) nil := nil, nil
   | (suc n) (x :: xs) :=
@@ -46,12 +46,12 @@ gen2 : List (List Nat) → Nat → Nat → List (List Nat)
 printListNatLn : List Nat → IO
   | nil := printStringLn "nil"
   | (x :: xs) :=
-    printNat x >> printString " :: " >> printListNatLn xs;
+    printNat x >>> printString " :: " >>> printListNatLn xs;
 
 main : IO :=
   printListNatLn
       (take 10 (uniq (sort (flatten (gen2 nil 6 40)))))
-    >> printListNatLn
+    >>> printListNatLn
       (take 10 (uniq (sort (flatten (gen2 nil 9 80)))))
-    >> printListNatLn
+    >>> printListNatLn
       (take 10 (uniq (sort (flatten (gen2 nil 6 80)))));

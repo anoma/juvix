@@ -10,22 +10,22 @@ f : Int -> Nat
 
 main : Int :=
     trace (ofNat 1)
-    >>> trace (ofNat (suc zero))
-    >>> trace (f -1)
-    >>> trace (f (ofNat (suc zero)))
-    >>> trace (f (negSuc (suc zero)))
-    >>> trace (1 == -1)
-    >>> trace (neg -1)
-    >>> trace
+    >-> trace (ofNat (suc zero))
+    >-> trace (f -1)
+    >-> trace (f (ofNat (suc zero)))
+    >-> trace (f (negSuc (suc zero)))
+    >-> trace (1 == -1)
+    >-> trace (neg -1)
+    >-> trace
        (let
          g : Int -> Int := neg;
        in g -1)
-    >>> trace (-2 * -2)
-    >>> trace (nonNeg 0)
-    >>> trace (nonNeg -1)
-    >>> trace (0 < 0)
-    >>> trace (0 <= 0)
-    >>> trace (0 < 1)
-    >>> trace (-1 <= 0)
-    >>> trace (mod 4 -3)
-    >>> div -6 -3;
+    >-> trace (-2 * -2)
+    >-> trace (nonNeg 0)
+    >-> trace (nonNeg -1)
+    >-> trace (0 < 0)
+    >-> trace (0 <= 0)
+    >-> trace (0 < 1)
+    >-> trace (-1 <= 0)
+    >-> trace (mod 4 -3)
+    >-> div -6 -3;

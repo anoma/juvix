@@ -20,19 +20,19 @@ gen : Nat → Tree
 
 preorder : Tree → IO
   | leaf := printNat 0
-  | (node1 c) := printNat 1 >> preorder c
-  | (node2 l r) := printNat 2 >> preorder l >> preorder r
+  | (node1 c) := printNat 1 >>> preorder c
+  | (node2 l r) := printNat 2 >>> preorder l >>> preorder r
   | (node3 l m r) :=
-    printNat 3 >> preorder l >> preorder m >> preorder r;
+    printNat 3 >>> preorder l >>> preorder m >>> preorder r;
 
 main : IO :=
   preorder (gen 3)
-    >> printString "\n"
-    >> preorder (gen 4)
-    >> printString "\n"
-    >> preorder (gen 5)
-    >> printString "\n"
-    >> preorder (gen 6)
-    >> printString "\n"
-    >> preorder (gen 7)
-    >> printString "\n";
+    >>> printString "\n"
+    >>> preorder (gen 4)
+    >>> printString "\n"
+    >>> preorder (gen 5)
+    >>> printString "\n"
+    >>> preorder (gen 6)
+    >>> printString "\n"
+    >>> preorder (gen 7)
+    >>> printString "\n";

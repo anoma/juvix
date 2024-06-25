@@ -8,4 +8,5 @@ fib : Nat → Nat → Nat → Nat
 
 fibonacci (n : Nat) : Nat := fib n 0 1;
 
-main : IO := readLn (printNatLn ∘ fibonacci ∘ stringToNat);
+main : IO :=
+  readLn (stringToNat >> fibonacci >> printNatLn);

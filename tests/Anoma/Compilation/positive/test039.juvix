@@ -15,4 +15,4 @@ main : Bool :=
       | zero := true
       | (suc n) := not (odd n);
     plusOne (n : Ty) : Ty := n + 1;
-  in trace (odd (plusOne 13)) >>> even (plusOne 12);
+  in trace (odd (plusOne 13)) >-> even (plusOne 12);

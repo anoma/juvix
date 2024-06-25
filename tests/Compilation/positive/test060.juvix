@@ -10,13 +10,13 @@ type Triple (A B C : Type) :=
     thd : C
   };
 
-type Pair (A B : Type) :=
+type Pair' (A B : Type) :=
   mkPair {
     fst : A;
     snd : B
   };
 
-mf : Pair (Pair Bool (List Nat)) (List Nat) → Bool
+mf : Pair' (Pair' Bool (List Nat)) (List Nat) → Bool
   | mkPair@{fst := mkPair@{fst; snd := nil};
            snd := zero :: _} := fst
   | x := case x of _ := false;

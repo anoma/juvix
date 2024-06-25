@@ -9,10 +9,10 @@ uncurry'
     → {B : Type}
     → {C : Type}
     → (A → B → C)
-    → A × B
+    → Pair A B
     → C := λ {| f (a, b) := f a b};
 
-fst' : {A : Type} → {B : Type} → A × B → A
+fst' : {A : Type} → {B : Type} → Pair A B → A
   | {_} := λ {| (a, _) := a};
 
 first'
@@ -20,8 +20,8 @@ first'
     → {B : Type}
     → {A' : Type}
     → (A → A')
-    → A × B
-    → A' × B := λ {| f (a, b) := f a, b};
+    → Pair A B
+    → Pair A' B := λ {| f (a, b) := f a, b};
 
 foldr'
   : {A : Type}
@@ -37,7 +37,7 @@ foldr'
 
 main : IO :=
   printNatLn (id' zero)
-    >> printNatLn (uncurry' (+) (1, 1))
-    >> printNatLn (fst' (zero, 1))
-    >> printNatLn (fst (first' ((+) 1) (1, zero)))
-    >> printNatLn (foldr' (+) zero (1 :: 2 :: 3 :: nil));
+    >>> printNatLn (uncurry' (+) (1, 1))
+    >>> printNatLn (fst' (zero, 1))
+    >>> printNatLn (fst (first' ((+) 1) (1, zero)))
+    >>> printNatLn (foldr' (+) zero (1 :: 2 :: 3 :: nil));

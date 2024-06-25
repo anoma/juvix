@@ -43,8 +43,8 @@ h : Nat -> Nat
 
 main : Nat :=
   trace (sum2 (lgen 5))
-    >>> trace (f (gen 10))
-    >>> trace (f (gen 15))
-    >>> trace (f (gen 16))
-    >>> trace (h 5)
-    >>> h 3;
+    >-> trace (f (gen 10))
+    >-> trace (f (gen 15))
+    >-> trace (f (gen 16))
+    >-> trace (h 5)
+    >-> h 3;

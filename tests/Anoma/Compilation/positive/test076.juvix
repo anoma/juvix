@@ -10,8 +10,8 @@ main : Bool :=
   -- cue 2 == 0
   trace (anomaDecode {Nat} 2)
   -- cue 84081 == [1 2 0]
-  >>> trace (anomaDecode {List Nat} 84081)
+  >-> trace (anomaDecode {List Nat} 84081)
   -- cue 4657 == [1 2]
-  >>> trace (anomaDecode {Nat × Nat} 4657)
+  >-> trace (anomaDecode {Pair Nat Nat} 4657)
   -- cue 12 == 1
-  >>> anomaDecode {Bool} 12;
+  >-> anomaDecode {Bool} 12;

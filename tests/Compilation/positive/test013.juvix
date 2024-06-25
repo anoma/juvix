@@ -15,6 +15,6 @@ f : Nat → Nat → Nat
 
 main : IO :=
   printNatLn (f 5 6)
-    >> printNatLn (f 6 5)
-    >> printNatLn (f 10 5)
-    >> printNatLn (f 11 5);
+    >>> printNatLn (f 6 5)
+    >>> printNatLn (f 10 5)
+    >>> printNatLn (f 11 5);

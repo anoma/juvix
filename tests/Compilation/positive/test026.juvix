@@ -52,7 +52,7 @@ f {{Partial}} : Nat → Queue Nat → List Nat
 printListNatLn : List Nat → IO
   | nil := printStringLn "nil"
   | (h :: t) :=
-    printNat h >> printString " :: " >> printListNatLn t;
+    printNat h >>> printString " :: " >>> printListNatLn t;
 
 main : IO :=
   printListNatLn (runPartial λ {{{_}} := f 100 empty});

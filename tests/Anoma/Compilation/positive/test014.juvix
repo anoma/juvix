@@ -24,13 +24,13 @@ vy : Nat := 7;
 
 main : Nat :=
   trace (func (div y x))
-    >>> -- 17 div 5 + 4 = 7
+    >-> -- 17 div 5 + 4 = 7
       trace
       (y + x * z)
-    >>> -- 17
+    >-> -- 17
       trace
       (vx + vy * (z + 1))
-    >>> -- 37
+    >-> -- 37
       f
       (h g 2 3)
       4;

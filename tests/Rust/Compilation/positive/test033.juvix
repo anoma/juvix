@@ -9,19 +9,19 @@ f : (Nat → Nat) → Nat
 f' : Nat → Nat
   | x := f ((+) x);
 
-g : (Nat → Nat × Nat) → Nat × Nat
+g : (Nat → Pair Nat Nat) → Pair Nat Nat
   | f := f 2;
 
-g' : Nat → Nat × Nat
+g' : Nat → Pair Nat Nat
   | x := g ((,) x);
 
 f1' : Nat → Nat → Nat
   | x y := f ((+) (div x y));
 
-g1' : Nat → Nat → Nat × Nat
+g1' : Nat → Nat → Pair Nat Nat
   | x y := g ((,) (div x y));
 
-h : (Nat → Nat → Nat × Nat) → Nat × Nat
+h : (Nat → Nat → Pair Nat Nat) → Pair Nat Nat
   | f := f 1 2;
 
 main : Nat :=

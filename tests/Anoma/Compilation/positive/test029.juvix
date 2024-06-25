@@ -11,7 +11,7 @@ ack : Nat → Nat → Nat
 
 main : Nat :=
   trace (ack 0 7)
-    >>> trace (ack 1 7)
-    >>> trace (ack 1 13)
-    >>> trace (ack 2 7)
-    >>> ack 2 13;
+    >-> trace (ack 1 7)
+    >-> trace (ack 1 13)
+    >-> trace (ack 2 7)
+    >-> ack 2 13;

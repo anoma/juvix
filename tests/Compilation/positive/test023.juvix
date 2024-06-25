@@ -18,6 +18,6 @@ h : Nat → Nat
 
 main : IO :=
   printNatLn (f 5)
-    >> printNatLn (f 10)
-    >> printNatLn (f 20);
+    >>> printNatLn (f 10)
+    >>> printNatLn (f 20);
 

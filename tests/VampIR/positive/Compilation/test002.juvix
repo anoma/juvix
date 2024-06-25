@@ -17,7 +17,7 @@ boolToNat : Bool -> Nat
 main : Nat -> Nat -> Nat
   | a b :=
     boolToNat
-      $ λ {
+      <| λ {
           | x (Just b) := if x false b
           | _ Nothing := false
         }

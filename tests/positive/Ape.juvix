@@ -15,8 +15,8 @@ axiom * : String → String → String;
 syntax operator - sub;
 axiom - : String → String → String;
 
-syntax operator >> seq;
-axiom >> : String → String → String;
+syntax operator >>> seq;
+axiom >>> : String → String → String;
 
 syntax operator + ladd;
 axiom + : String → String → String;
@@ -56,13 +56,13 @@ nesting : String :=
 
 t : String :=
   "Hellooooooooo"
-    >> "Hellooooooooo"
-    >> "Hellooooooooo"
-    >> "Hellooooooooo"
-    >> "Hellooooooooo"
-    >> "Hellooooooooo"
-    >> "Hellooooooooo"
-    >> "Hellooooooooo"
+    >>> "Hellooooooooo"
+    >>> "Hellooooooooo"
+    >>> "Hellooooooooo"
+    >>> "Hellooooooooo"
+    >>> "Hellooooooooo"
+    >>> "Hellooooooooo"
+    >>> "Hellooooooooo"
       + "Hellooooooooo"
       + "Hellooooooooo"
       + ("Hellooooooooo"

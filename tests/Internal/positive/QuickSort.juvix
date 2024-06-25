@@ -2,7 +2,7 @@ module QuickSort;
 
 import Stdlib.Prelude open hiding {quickSort};
 
-qsHelper : {A : Type} → A → List A × List A → List A
+qsHelper : {A : Type} → A → Pair (List A) (List A) → List A
   | a (l, r) := l ++ (a :: nil) ++ r;
 
 terminating
@@ -13,7 +13,7 @@ quickSort
   | cmp (x :: xs) :=
     qsHelper
       x
-      (both (quickSort cmp) (partition (isGT ∘ cmp x) xs));
+      (both (quickSort cmp) (partition (isGT << cmp x) xs));
 
 uniq
   : {A : Type} -> (A -> A -> Ordering) -> List A -> List A

@@ -44,7 +44,7 @@ h : Nat -> Nat
 printListNatLn : List Nat → IO
   | nil := printStringLn "nil"
   | (x :: xs) :=
-    printNat x >> printString " :: " >> printListNatLn xs;
+    printNat x >>> printString " :: " >>> printListNatLn xs;
 
 main : Nat :=
   head 0 (sum2 (lgen 5))

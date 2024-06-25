@@ -52,13 +52,13 @@ ReaderT-MonadReader {S : Type} {M : Type → Type} {{Monad M}}
     monad := ReaderT-Monad;
     ask : ReaderT S M S := mkReaderT λ {s := MMonad.return s};
     reader {A : Type} (f : S → A) : ReaderT S M A :=
-      mkReaderT (MMonad.return ∘ f)
+      mkReaderT (MMonad.return << f)
   };
 
 import MonadState open;
 import StateT open;
 import Identity open;
-import Stdlib.Data.Product open;
+import Stdlib.Data.Pair open;
 
 liftReaderT {R A : Type} {M : Type → Type} (m : M A)
   : ReaderT R M A := mkReaderT (const m);
@@ -76,7 +76,7 @@ askNat {M : Type → Type} {{Monad M}} : ReaderT Nat M Nat :=
 monadic : ReaderT Nat (StateT Nat Identity) Nat :=
   askNat
     >>= λ {n :=
-      liftReaderT (modify λ {m := m * n}) >> liftReaderT get};
+      liftReaderT (modify λ {m := m * n}) >>> liftReaderT get};
 
 main : Nat :=
   runIdentity (evalState 2 (runReader 5 monadic));
@@ -87,6 +87,6 @@ main : Nat :=
 --   → Type} {{mreader : MonadReader R M}} : MonadReader R (StateT S M) :=
 --   mkMonadReader@{
 --     monad := StateT-Monad@{mon := MonadReader.monad {{mreader}}};
---     reader {A : Type} : (R → A) → StateT S M A := liftStateT ∘ MonadReader.reader;
+--     reader {A : Type} : (R → A) → StateT S M A := liftStateT << MonadReader.reader;
 --     ask : StateT S M R := liftStateT MonadReader.ask;
 --   };

@@ -13,7 +13,7 @@ import Stdlib.Prelude open;
 
 main : IO :=
   printNatLn (mod 3 2)
-    >> printNatLn (div 18 4)
-    >> printNatLn (mod 18 4)
-    >> printNatLn (div 16 4)
-    >> printNatLn (mod 16 4);
+    >>> printNatLn (div 18 4)
+    >>> printNatLn (mod 18 4)
+    >>> printNatLn (div 16 4)
+    >>> printNatLn (mod 16 4);

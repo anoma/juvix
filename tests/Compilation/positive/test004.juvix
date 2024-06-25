@@ -5,8 +5,8 @@ import Stdlib.Prelude open;
 
 main : IO :=
   printNat 1
-    >> printNat 2
-    >> printNat 3
-    >> printNat 4
-    >> printNat 5
-    >> printString "\n";
+    >>> printNat 2
+    >>> printNat 3
+    >>> printNat 4
+    >>> printNat 5
+    >>> printString "\n";

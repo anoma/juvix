@@ -34,7 +34,7 @@ open Token;
 
 --- This module defines the type for balances and its associated operations.
 module Balances;
-  Balances : Type := List (Field × Nat);
+  Balances : Type := List (Pair Field Nat);
 
   --- Increments the amount associated with a certain ;Field;.
   increment : Field -> Nat -> Balances -> Balances

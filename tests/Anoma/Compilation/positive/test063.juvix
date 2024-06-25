@@ -78,10 +78,10 @@ h {A} {{U2 A}} : A -> A := f;
 
 main : Nat :=
   trace (T1.pp 0)
-       >>> trace (T2.pp 1)
-       >>> trace (T3.pp 2)
-       >>> trace (T4.pp 3)
-       >>> trace (U.pp 4)
-       >>> trace (f 5)
-       >>> trace (g {{mkU1 id}} 6)
-       >>> h 7;
+       >-> trace (T2.pp 1)
+       >-> trace (T3.pp 2)
+       >-> trace (T4.pp 3)
+       >-> trace (U.pp 4)
+       >-> trace (f 5)
+       >-> trace (g {{mkU1 id}} 6)
+       >-> h 7;

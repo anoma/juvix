@@ -14,7 +14,7 @@ import Stdlib.Debug.Trace open;
 
 main : Nat :=
   trace (mod 3 2)
-    >>> trace (div 18 4)
-    >>> trace (mod 18 4)
-    >>> trace (div 16 4)
-    >>> mod 16 4;
+    >-> trace (div 18 4)
+    >-> trace (mod 18 4)
+    >-> trace (div 16 4)
+    >-> mod 16 4;

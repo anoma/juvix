@@ -15,11 +15,11 @@ subp : Nat → Nat → Nat
 
 main : IO :=
   printNatLn (f91 101)
-    >> printNatLn (f91 95)
-    >> printNatLn (f91 16)
-    >> printNatLn (f91 5)
-    >> printNatLn (subp 101 1)
-    >> printNatLn (subp 11 5)
-    >> printNatLn (subp 10 4)
-    >> printNatLn (subp 1000 600)
-    >> printNatLn (subp 10000 6000);
+    >>> printNatLn (f91 95)
+    >>> printNatLn (f91 16)
+    >>> printNatLn (f91 5)
+    >>> printNatLn (subp 101 1)
+    >>> printNatLn (subp 11 5)
+    >>> printNatLn (subp 10 4)
+    >>> printNatLn (subp 1000 600)
+    >>> printNatLn (subp 10000 6000);

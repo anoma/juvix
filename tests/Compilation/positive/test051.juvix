@@ -1,4 +1,4 @@
--- local recursive function using IO >>
+-- local recursive function using IO >>>
 module test051;
 
 import Stdlib.Prelude open;
@@ -7,5 +7,5 @@ main : IO :=
   let
     f : Nat -> IO
       | zero := printStringLn ""
-      | (suc n) := printString "*" >> f n;
+      | (suc n) := printString "*" >>> f n;
   in f 3;

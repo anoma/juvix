@@ -21,18 +21,18 @@ h : Nat → Nat
 
 main : IO :=
   printNatLn (f 100 500)
-    >> -- 600
+    >>> -- 600
       printNatLn
       (f 5 0)
-    >> -- 25
+    >>> -- 25
       printNatLn
       (f 5 5)
-    >> -- 30
+    >>> -- 30
       printNatLn
       (h 10)
-    >> -- 45
+    >>> -- 45
       printNatLn
       (g 10 h)
-    >> -- 55
+    >>> -- 55
       printNatLn
       (g 3 (f 10));

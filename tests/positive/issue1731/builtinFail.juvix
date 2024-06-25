@@ -8,5 +8,5 @@ axiom fail : {A : Type} → String → A;
 
 main : IO :=
   printStringLn "Get"
-    >> fail "Enough"
-    >> printStringLn "Sleep";
+    >>> fail "Enough"
+    >>> printStringLn "Sleep";

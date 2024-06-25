@@ -9,33 +9,32 @@ f : (Nat → Nat) → Nat
 f' : Nat → Nat
   | x := f ((+) x);
 
-g : (Nat → Nat × Nat) → Nat × Nat
+g : (Nat → Pair Nat Nat) → Pair Nat Nat
   | f := f 2;
 
-g' : Nat → Nat × Nat
+g' : Nat → Pair Nat Nat
   | x := g ((,) x);
 
 f1' : Nat → Nat → Nat
   | x y := f ((+) (div x y));
 
-g1' : Nat → Nat → Nat × Nat
+g1' : Nat → Nat → Pair Nat Nat
   | x y := g ((,) (div x y));
 
-h : (Nat → Nat → Nat × Nat) → Nat × Nat
+h : (Nat → Nat → Pair Nat Nat) → Pair Nat Nat
   | f := f 1 2;
 
-printPairNatLn : Nat × Nat → IO
+printPairNatLn : Pair Nat Nat → IO
   | (x, y) :=
     printString "("
-      >> printNat x
-      >> printString ", "
-      >> printNat y
-      >> printStringLn ")";
+      >>> printNat x
+      >>> printString ", "
+      >>> printNat y
+      >>> printStringLn ")";
 
 main : IO :=
   printNatLn (f' 7)
-    >> printPairNatLn (g' 7)
-    >> printNatLn (f1' 7 2)
-    >> printPairNatLn (g1' 7 2)
-    >> printPairNatLn (h (,));
-
+    >>> printPairNatLn (g' 7)
+    >>> printNatLn (f1' 7 2)
+    >>> printPairNatLn (g1' 7 2)
+    >>> printPairNatLn (h (,));

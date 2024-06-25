@@ -8,7 +8,7 @@ czero : Num
   | {_} f x := x;
 
 csuc : Num → Num
-  | n {_} f := f ∘ n {_} f;
+  | n {_} f := f << n {_} f;
 
 toNat : Num → Nat
   | n := n {_} ((+) (suc zero)) zero;
