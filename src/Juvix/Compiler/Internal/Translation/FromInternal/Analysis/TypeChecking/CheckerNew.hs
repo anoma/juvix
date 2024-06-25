@@ -444,6 +444,63 @@ checkCoercionType FunctionDef {..} = do
       Explicit -> throw (ErrWrongCoercionArgument (WrongCoercionArgument fp))
       ImplicitInstance -> throw (ErrWrongCoercionArgument (WrongCoercionArgument fp))
 
+checkCaseBranchRhs ::
+  forall r.
+  (Members '[Reader InfoTable, ResultBuilder, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Output TypedHole, Termination, Output CastHole, Reader InsertedArgsStack] r) =>
+  Expression ->
+  CaseBranchRhs ->
+  Sem r CaseBranchRhs
+checkCaseBranchRhs expectedTy = \case
+  CaseBranchRhsExpression e -> CaseBranchRhsExpression <$> checkExpression expectedTy e
+  CaseBranchRhsIf s -> CaseBranchRhsIf <$> checkSideIfs expectedTy s
+
+checkSideIfs ::
+  forall r.
+  ( Members
+      '[ Reader InfoTable,
+         ResultBuilder,
+         Error TypeCheckerError,
+         NameIdGen,
+         Reader LocalVars,
+         Inference,
+         Output TypedHole,
+         Termination,
+         Output CastHole,
+         Reader InsertedArgsStack
+       ]
+      r
+  ) =>
+  Expression ->
+  SideIfs ->
+  Sem r SideIfs
+checkSideIfs expectedTy SideIfs {..} = do
+  branches' <- mapM (checkSideIfBranch expectedTy) _sideIfBranches
+  else' <- mapM (checkExpression expectedTy) _sideIfElse
+  return
+    SideIfs
+      { _sideIfBranches = branches',
+        _sideIfElse = else'
+      }
+
+checkSideIfBranch ::
+  forall r.
+  (Members '[Reader InfoTable, ResultBuilder, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Output TypedHole, Termination, Output CastHole, Reader InsertedArgsStack] r) =>
+  Expression ->
+  SideIfBranch ->
+  Sem r SideIfBranch
+checkSideIfBranch expectedTy SideIfBranch {..} = do
+  boolTy <- getBoolType (getLoc expectedTy)
+  cond' <- checkExpression boolTy _sideIfBranchCondition
+  body' <- checkExpression expectedTy _sideIfBranchBody
+  return
+    SideIfBranch
+      { _sideIfBranchCondition = cond',
+        _sideIfBranchBody = body'
+      }
+
+getBoolType :: (Members '[Reader InfoTable, Error TypeCheckerError] r) => Interval -> Sem r Expression
+getBoolType loc = toExpression <$> getBuiltinName loc BuiltinBool
+
 checkExpression ::
   forall r.
   (Members '[Reader InfoTable, ResultBuilder, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Output TypedHole, Termination, Output CastHole, Reader InsertedArgsStack] r) =>
@@ -536,7 +593,7 @@ checkFunctionBody expectedTy body =
   case body of
     ExpressionLambda {} -> checkExpression expectedTy body
     _ -> do
-      (patterns', typedBody) <- checkClause (getLoc body) expectedTy [] body
+      (patterns', typedBody) <- checkClauseExpression (getLoc body) expectedTy [] body
       return $ case nonEmpty patterns' of
         Nothing -> typedBody
         Just lambdaPatterns' ->
@@ -551,8 +608,7 @@ checkFunctionBody expectedTy body =
                       }
               }
 
--- | helper function for lambda functions and case branches
-checkClause ::
+checkClauseExpression ::
   forall r.
   (Members '[Reader InfoTable, ResultBuilder, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Termination, Output TypedHole, Output CastHole, Reader InsertedArgsStack] r) =>
   Interval ->
@@ -563,12 +619,30 @@ checkClause ::
   -- | Body
   Expression ->
   Sem r ([PatternArg], Expression) -- (Checked patterns, Checked body)
+checkClauseExpression clauseLoc clauseType clausePats body = do
+  (pats', rhs') <- checkClause clauseLoc clauseType clausePats (CaseBranchRhsExpression body)
+  case rhs' of
+    CaseBranchRhsExpression body' -> return (pats', body')
+    CaseBranchRhsIf {} -> impossible
+
+-- | helper function for lambda functions and case branches
+checkClause ::
+  forall r.
+  (Members '[Reader InfoTable, ResultBuilder, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Termination, Output TypedHole, Output CastHole, Reader InsertedArgsStack] r) =>
+  Interval ->
+  -- | Type
+  Expression ->
+  -- | Arguments
+  [PatternArg] ->
+  -- | Body
+  CaseBranchRhs ->
+  Sem r ([PatternArg], CaseBranchRhs) -- (Checked patterns, Checked body)
 checkClause clauseLoc clauseType clausePats body = do
   locals0 <- ask
   (localsPats, (checkedPatterns, bodyType)) <- helper clausePats clauseType
   let locals' = locals0 <> localsPats
   bodyTy' <- substitutionE (localsToSubsE locals') bodyType
-  checkedBody <- local (const locals') (checkExpression bodyTy' body)
+  checkedBody <- local (const locals') (checkCaseBranchRhs bodyTy' body)
   return (checkedPatterns, checkedBody)
   where
     helper :: [PatternArg] -> Expression -> Sem r (LocalVars, ([PatternArg], Expression))
@@ -591,7 +665,7 @@ checkClause clauseLoc clauseType clausePats body = do
       [] -> do
         (bodyParams, bodyRest) <- unfoldFunType' bodyTy
         locals <- get
-        guessedBodyParams <- withLocalVars locals (unfoldArity <$> guessArity body)
+        guessedBodyParams <- withLocalVars locals (unfoldArity <$> arityCaseRhs body)
         let pref' :: [FunctionParameter] = take pref bodyParams
             pref :: Int = aI - targetI
             preImplicits = length . takeWhile isImplicitOrInstance
@@ -921,7 +995,12 @@ inferLeftAppExpression mhint e = case e of
           _caseExpressionWholeType = Just ty
           goBranch :: CaseBranch -> Sem r CaseBranch
           goBranch b = do
-            (onePat, _caseBranchExpression) <- checkClause (getLoc b) funty [b ^. caseBranchPattern] (b ^. caseBranchExpression)
+            (onePat, _caseBranchRhs) <-
+              checkClause
+                (getLoc b)
+                funty
+                [b ^. caseBranchPattern]
+                (b ^. caseBranchRhs)
             let _caseBranchPattern = case onePat of
                   [x] -> x
                   _ -> impossible
@@ -957,7 +1036,7 @@ inferLeftAppExpression mhint e = case e of
       where
         goClause :: Expression -> LambdaClause -> Sem r LambdaClause
         goClause ty cl@LambdaClause {..} = do
-          (pats', body') <- checkClause (getLoc cl) ty (toList _lambdaPatterns) _lambdaBody
+          (pats', body') <- checkClauseExpression (getLoc cl) ty (toList _lambdaPatterns) _lambdaBody
           return
             LambdaClause
               { _lambdaPatterns = nonEmpty' pats',
@@ -1588,16 +1667,29 @@ guessPatternArgArity p =
 arityLet :: (Members '[Reader InfoTable, Inference, Reader LocalVars] r) => Let -> Sem r Arity
 arityLet l = guessArity (l ^. letExpression)
 
--- | All branches should have the same arity. If they are all the same, we
--- return that, otherwise we return ArityBlocking. Probably something better can
--- be done.
+-- | If all arities are the same, we return that, otherwise we return
+-- ArityNotKnown. Probably something better can be done.
+arityBranches :: NonEmpty Arity -> Arity
+arityBranches l
+  | allSame l = head l
+  | otherwise = ArityNotKnown
+
+-- | All branches should have the same arity.
 arityCase :: (Members '[Reader InfoTable, Inference, Reader LocalVars] r) => Case -> Sem r Arity
-arityCase c = do
-  aris <- mapM (guessArity . (^. caseBranchExpression)) (c ^. caseBranches)
-  return
-    if
-        | allSame aris -> head aris
-        | otherwise -> ArityNotKnown
+arityCase c = arityBranches <$> mapM (arityCaseRhs . (^. caseBranchRhs)) (c ^. caseBranches)
+
+aritySideIf :: (Members '[Reader InfoTable, Inference, Reader LocalVars] r) => SideIfs -> Sem r Arity
+aritySideIf SideIfs {..} = do
+  let bodies :: NonEmpty Expression =
+        snocNonEmptyMaybe
+          ((^. sideIfBranchBody) <$> _sideIfBranches)
+          _sideIfElse
+  arityBranches <$> mapM guessArity bodies
+
+arityCaseRhs :: (Members '[Reader InfoTable, Inference, Reader LocalVars] r) => CaseBranchRhs -> Sem r Arity
+arityCaseRhs = \case
+  CaseBranchRhsExpression e -> guessArity e
+  CaseBranchRhsIf s -> aritySideIf s
 
 idenArity :: (Members '[Inference, Reader LocalVars, Reader InfoTable] r) => Iden -> Sem r Arity
 idenArity = \case
