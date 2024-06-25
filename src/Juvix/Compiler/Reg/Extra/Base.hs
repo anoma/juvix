@@ -1,5 +1,6 @@
 module Juvix.Compiler.Reg.Extra.Base where
 
+import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Reg.Language
 
 getResultVar :: Instruction -> Maybe VarRef
@@ -204,3 +205,18 @@ updateLiveVars' f = \case
 
 updateLiveVars :: (VarRef -> VarRef) -> Instruction -> Instruction
 updateLiveVars f = updateLiveVars' (Just . f)
+
+updateInstrLiveVars :: Instruction -> HashSet VarRef -> HashSet VarRef
+updateInstrLiveVars instr liveVars =
+  HashSet.union
+    (maybe liveVars (`HashSet.delete` liveVars) (getResultVar instr))
+    (HashSet.fromList (getValueRefs instr))
+
+computeBackwardLiveVars :: Instruction -> HashSet VarRef -> [HashSet VarRef] -> HashSet VarRef
+computeBackwardLiveVars instr live lives = case instr of
+  If {} -> ulives
+  Branch {} -> ulives
+  Case {} -> ulives
+  _ -> live
+  where
+    ulives = HashSet.unions lives

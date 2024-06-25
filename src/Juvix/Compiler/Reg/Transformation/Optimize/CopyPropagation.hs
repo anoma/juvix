@@ -44,6 +44,7 @@ copyPropagate = mapT (const goFun)
       where
         mpv = combineMaps mpvs
         instr' = case instr of
+          If x -> If $ over instrIfOutVar (fmap (adjustVarRef mpv)) x
           Branch x -> Branch $ over instrBranchOutVar (fmap (adjustVarRef mpv)) x
           Case x -> Case $ over instrCaseOutVar (fmap (adjustVarRef mpv)) x
           _ -> impossible
