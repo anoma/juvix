@@ -192,6 +192,7 @@ makeLenses ''InstrExtendClosure
 makeLenses ''InstrReturn
 makeLenses ''InstrTailCall
 makeLenses ''InstrCall
+makeLenses ''InstrIf'
 makeLenses ''InstrBranch'
 makeLenses ''InstrCase'
 makeLenses ''CaseBranch'

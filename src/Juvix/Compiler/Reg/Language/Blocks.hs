@@ -30,8 +30,11 @@ data FinalInstruction
   | Call InstrCall
   | TailCall InstrTailCall
   | Return InstrReturn
+  | If InstrIf
   | Branch InstrBranch
   | Case InstrCase
+
+type InstrIf = InstrIf' Block
 
 type InstrBranch = InstrBranch' Block
 

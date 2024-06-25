@@ -48,6 +48,7 @@ overValueRefs'' f = \case
   TailCall x -> TailCall <$> goTailCall x
   TailCallClosures x -> TailCallClosures <$> goTailCallClosures x
   Return x -> Return <$> goReturn x
+  If x -> If <$> goIf x
   Branch x -> Branch <$> goBranch x
   Case x -> Case <$> goCase x
   Trace x -> Trace <$> goTrace x
@@ -161,6 +162,9 @@ overValueRefs'' f = \case
 
     goReturn :: InstrReturn -> m InstrReturn
     goReturn = overM instrReturnValue goValue
+
+    goIf :: InstrIf -> m InstrIf
+    goIf = overM instrIfArg1 goValue >=> overM instrIfArg2 goValue
 
     goBranch :: InstrBranch -> m InstrBranch
     goBranch = overM instrBranchValue goValue
