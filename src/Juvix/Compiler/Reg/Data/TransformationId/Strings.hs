@@ -33,10 +33,10 @@ strDeadCodeElimination :: Text
 strDeadCodeElimination = "dead-code"
 
 strBranchToIf :: Text
-strBranchToIf = "branch-to-if"
+strBranchToIf = "br-to-if"
 
 strBranchOnZeroToIf :: Text
-strBranchOnZeroToIf = "branch-on-zero-to-if"
+strBranchOnZeroToIf = "brz-to-if"
 
 strOptPhaseMain :: Text
 strOptPhaseMain = "opt-main"
