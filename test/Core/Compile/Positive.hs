@@ -16,7 +16,8 @@ ignoredTests =
     "Test026: Nested 'case', 'let' and 'if' with variable capture",
     "Test036: Big numbers",
     "Test040: LetRec - fib, fact",
-    "Test061: Fields"
+    "Test061: Fields",
+    "Test062: Anoma"
   ]
 
 liftTest :: Eval.PosTest -> TestTree

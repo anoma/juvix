@@ -3,6 +3,7 @@ module Juvix.Compiler.Nockma.Encoding.Base where
 import Data.Bit as Bit
 import Data.Bits
 import Data.Vector.Unboxed qualified as U
+import Juvix.Compiler.Nockma.Encoding.Effect.BitReader
 import Juvix.Compiler.Nockma.Encoding.Effect.BitWriter
 import Juvix.Prelude.Base
 
@@ -44,3 +45,36 @@ safeNaturalToInt :: Natural -> Maybe Int
 safeNaturalToInt n
   | n > fromIntegral (maxBound :: Int) = Nothing
   | otherwise = Just (fromIntegral n)
+
+-- | Write the binary encoding of argument interpreted as a length to the output
+writeLength :: forall r. (Member BitWriter r) => Int -> Sem r ()
+writeLength len = do
+  let lenOfLen = finiteBitSize len - countLeadingZeros len
+  replicateM_ lenOfLen writeZero
+  writeOne
+  unless (lenOfLen == 0) (go len)
+  where
+    go :: Int -> Sem r ()
+    -- Exclude the most significant bit of the length
+    go l = unless (l == 1) $ do
+      writeBit (Bit (testBit l 0))
+      go (l `shiftR` 1)
+
+-- | Consume the encoded length from the input bits
+consumeLength :: forall r. (Members '[BitReader, Error BitReadError] r) => Sem r Int
+consumeLength = do
+  lenOfLen <- countBitsUntilOne
+  if
+      | lenOfLen == 0 -> return 0
+      | otherwise -> do
+          -- The most significant bit of the length is omitted
+          let lenBits = lenOfLen - 1
+          foldlM go (bit lenBits) [0 .. lenBits - 1]
+  where
+    go :: Int -> Int -> Sem r Int
+    go acc n = do
+      Bit b <- nextBit
+      return $
+        if
+            | b -> setBit acc n
+            | otherwise -> acc

@@ -7,6 +7,7 @@ import VectorBuilder.Vector
 
 data BitWriter :: Effect where
   WriteBit :: Bit -> BitWriter m ()
+  WriteByteString :: ByteString -> BitWriter m ()
   GetCurrentPosition :: BitWriter m Int
 
 makeSem ''BitWriter
@@ -39,6 +40,7 @@ execBitWriter sem = do
 re :: Sem (BitWriter ': r) a -> Sem (State WriterState ': r) a
 re = interpretTop $ \case
   WriteBit b -> writeBit' b
+  WriteByteString bs -> writeByteString' bs
   GetCurrentPosition -> getCurrentPosition'
 
 writeBit' :: (Member (State WriterState) r) => Bit -> Sem r ()
@@ -46,6 +48,12 @@ writeBit' b = modify appendBit
   where
     appendBit :: WriterState -> WriterState
     appendBit = over writerStateBuilder (<> Builder.singleton b)
+
+writeByteString' :: (Member (State WriterState) r) => ByteString -> Sem r ()
+writeByteString' bs = modify appendByteString
+  where
+    appendByteString :: WriterState -> WriterState
+    appendByteString = over writerStateBuilder (<> Builder.vector (cloneFromByteString bs))
 
 getCurrentPosition' :: (Member (State WriterState) r) => Sem r Int
 getCurrentPosition' = Builder.size <$> gets (^. writerStateBuilder)

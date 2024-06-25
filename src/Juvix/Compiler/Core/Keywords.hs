@@ -8,6 +8,12 @@ where
 import Juvix.Data.Keyword
 import Juvix.Data.Keyword.All
   ( delimSemicolon,
+    kwAnomaDecode,
+    kwAnomaEncode,
+    kwAnomaSign,
+    kwAnomaSignDetached,
+    kwAnomaVerify,
+    kwAnomaVerifyDetached,
     kwAny,
     kwAssign,
     kwBind,
