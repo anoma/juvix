@@ -427,6 +427,24 @@ fff
   {f7 : List Nat}
   : Nat := zero;
 
+module SideIfConditions;
+  singleCaseBr : Nat :=
+    case 12 of
+      _
+        | if 0 < 0 :=  3
+        | else :=  4;
+
+  multiCaseBr : Nat :=
+    case 12 of
+      | zero
+        | if 0 < 0 :=  3
+        | else :=  4
+      | suc (suc n)
+        | if 0 < 0 :=  3
+        | else :=  n
+      | suc n if 0 < 0 :=  3;
+end;
+
 module PublicImports;
 
   module Inner;

@@ -13,6 +13,8 @@ import Data.Map qualified as Map
 import Juvix.Compiler.Concrete.Data.Scope.Base
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra qualified as Concrete
+import Juvix.Compiler.Concrete.Gen qualified as Gen
+import Juvix.Compiler.Concrete.Keywords
 import Juvix.Compiler.Concrete.Keywords qualified as Kw
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty.Options
@@ -548,20 +550,26 @@ instance (SingI s, SingI k) => PrettyPrint (SideIfBranch s k) where
           SSideIfElse -> Nothing
         body' = ppExpressionType _sideIfBranchBody
     kwPipe'
-      <?+> (kwIfElse'
-        <+?> condition'
-        <+> kwAssign'
-        <+> oneLineOrNext body')
+      <?+> ( kwIfElse'
+               <+?> condition'
+               <+> kwAssign'
+                 <> oneLineOrNext body'
+           )
 
 instance (SingI s) => PrettyPrint (SideIfs s) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => SideIfs s -> Sem r ()
   ppCode SideIfs {..} =
     case (_sideIfBranches, _sideIfElse) of
       (b :| [], Nothing) -> ppCode (set sideIfBranchPipe (Irrelevant Nothing) b)
-      _ -> do
-        let ifbranches = map ppCode (toList _sideIfBranches)
+      (b :| bs, _) -> do
+        let putPipe :: Maybe KeywordRef -> Maybe KeywordRef
+            putPipe = \case
+              Nothing -> Just (run (runReader (getLoc b) (Gen.kw kwPipe)))
+              Just p -> Just p
+            firstBr = over (sideIfBranchPipe . unIrrelevant) putPipe b
+            ifbranches = map ppCode (toList (firstBr : bs))
             allBranches :: [Sem r ()] = snocMaybe ifbranches (ppCode <$> _sideIfElse)
-        line <> indent (vsep allBranches)
+        line <> indent (vsepHard allBranches)
 
 ppCaseBranchRhs :: forall r s. (Members '[ExactPrint, Reader Options] r, SingI s) => IsTop -> CaseBranchRhs s -> Sem r ()
 ppCaseBranchRhs isTop = \case

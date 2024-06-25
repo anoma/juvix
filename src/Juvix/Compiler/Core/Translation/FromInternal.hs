@@ -506,18 +506,23 @@ goCase c = do
     goCaseBranch :: Type -> Internal.CaseBranch -> Sem r MatchBranch
     goCaseBranch ty b = goPatternArgs 0 (b ^. Internal.caseBranchRhs) [b ^. Internal.caseBranchPattern] [ty]
 
--- | Remove this as soon as side if conditions are implemented in Core.
-todoSideIfs :: a
-todoSideIfs = error "TODO: implement side if conditions"
+-- | FIXME Fix this as soon as side if conditions are implemented in Core. This
+-- is needed so that we can test typechecking without a crash.
+todoSideIfs ::
+  forall r.
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen, Error BadScope] r) =>
+  Internal.SideIfs ->
+  Sem r Node
+todoSideIfs s = goExpression (s ^. Internal.sideIfBranches . _head1 . Internal.sideIfBranchBody)
 
 goCaseBranchRhs ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen, Error BadScope] r) =>
   Internal.CaseBranchRhs ->
   Sem r Node
 goCaseBranchRhs = \case
   Internal.CaseBranchRhsExpression e -> goExpression e
-  Internal.CaseBranchRhsIf {} -> todoSideIfs
+  Internal.CaseBranchRhsIf i -> todoSideIfs i
 
 goLambda ::
   forall r.
