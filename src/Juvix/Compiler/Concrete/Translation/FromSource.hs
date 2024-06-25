@@ -1112,12 +1112,24 @@ letBlock = do
   _letExpression <- parseExpressionAtoms
   return Let {..}
 
-sideIfBranch :: forall r k. (SingI k, Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => Irrelevant (Maybe KeywordRef) -> ParsecS r (SideIfBranch 'Parsed k)
-sideIfBranch _sideIfBranchPipe = do
-  _sideIfBranchKw <-
-    Irrelevant <$> case sing :: SSideIfBranchKind k of
-      SSideIfBool -> kw kwIf
-      SSideIfElse -> kw kwElse
+-- | The pipe for the first branch is optional
+sideIfBranch ::
+  forall r k.
+  (SingI k, Members '[ParserResultBuilder, PragmasStash, JudocStash] r) =>
+  Bool ->
+  ParsecS r (SideIfBranch 'Parsed k)
+sideIfBranch isFirst = do
+  let ifElseKw =
+        Irrelevant <$> case sing :: SSideIfBranchKind k of
+          SSideIfBool -> kw kwIf
+          SSideIfElse -> kw kwElse
+  (_sideIfBranchPipe, _sideIfBranchKw) <- P.try $ do
+    let opt
+          | isFirst = optional
+          | otherwise = fmap Just
+    pipe' <- Irrelevant <$> opt (kw kwPipe)
+    condKw' <- ifElseKw
+    return (pipe', condKw')
   _sideIfBranchCondition <- case sing :: SSideIfBranchKind k of
     SSideIfBool -> parseExpressionAtoms
     SSideIfElse -> return ()
@@ -1127,16 +1139,10 @@ sideIfBranch _sideIfBranchPipe = do
 
 sideIfs :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (SideIfs 'Parsed)
 sideIfs = do
-  fstBranch <- do
-    pipe' <- Irrelevant <$> optional (kw kwPipe)
-    sideIfBranch pipe'
-  moreBranches <- many $ do
-    pipe' <- Irrelevant . Just <$> kw kwPipe
-    sideIfBranch pipe'
+  fstBranch <- sideIfBranch True
+  moreBranches <- many (sideIfBranch False)
   let _sideIfBranches = fstBranch :| moreBranches
-  _sideIfElse <- optional $ do
-    pipe' <- kw kwPipe
-    sideIfBranch (Irrelevant (Just pipe'))
+  _sideIfElse <- optional (sideIfBranch False)
   return
     SideIfs
       { ..
