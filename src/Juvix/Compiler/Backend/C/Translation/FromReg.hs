@@ -251,6 +251,8 @@ fromRegInstr bNoStack info = \case
     fromCallClosures x
   Reg.Return x ->
     return $ fromReturn x
+  Reg.If x ->
+    fromIf x
   Reg.Branch x ->
     fromBranch x
   Reg.Case x ->
@@ -270,6 +272,12 @@ fromRegInstr bNoStack info = \case
             fromValue _instrBinopArg1,
             fromValue _instrBinopArg2
           ]
+
+    getBoolOpMacro :: Reg.BoolOp -> Text
+    getBoolOpMacro = \case
+      Reg.OpIntLt -> "JUVIX_BOOL_INT_LT"
+      Reg.OpIntLe -> "JUVIX_BOOL_INT_LE"
+      Reg.OpEq -> "JUVIX_BOOL_VAL_EQ"
 
     getBinaryOpMacro :: Reg.BinaryOp -> Text
     getBinaryOpMacro = \case
@@ -504,6 +512,26 @@ fromRegInstr bNoStack info = \case
                         integer argsNum,
                         ExpressionVar lab
                       ]
+    fromIf :: Reg.InstrIf -> Sem r [Statement]
+    fromIf Reg.InstrIf {..} = do
+      br1 <- fromRegCode bNoStack info _instrIfTrue
+      br2 <- fromRegCode bNoStack info _instrIfFalse
+      return
+        [ StatementIf $
+            If
+              { _ifCondition =
+                  macroCall
+                    "is_true"
+                    [ macroCall
+                        (getBoolOpMacro _instrIfOp)
+                        [ fromValue _instrIfArg1,
+                          fromValue _instrIfArg2
+                        ]
+                    ],
+                _ifThen = StatementCompound br1,
+                _ifElse = Just (StatementCompound br2)
+              }
+        ]
 
     fromBranch :: Reg.InstrBranch -> Sem r [Statement]
     fromBranch Reg.InstrBranch {..} = do
