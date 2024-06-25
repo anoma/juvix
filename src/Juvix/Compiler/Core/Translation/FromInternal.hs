@@ -467,7 +467,7 @@ mkBody ppLam ty loc clauses
             <> (ppLam ^. withLocParam)
 
     goClause :: Level -> [Internal.PatternArg] -> Internal.Expression -> Sem r MatchBranch
-    goClause lvl pats body = goPatternArgs lvl body pats ptys
+    goClause lvl pats body = goPatternArgs lvl (Internal.CaseBranchRhsExpression body) pats ptys
       where
         ptys :: [Type]
         ptys = take (length pats) (typeArgs ty)
@@ -498,13 +498,26 @@ goCase c = do
               body <-
                 local
                   (set indexTableVars vars')
-                  (underBinders 1 (goExpression _caseBranchExpression))
+                  (underBinders 1 (goCaseBranchRhs _caseBranchRhs))
               return $ mkLet i (Binder (name ^. nameText) (Just $ name ^. nameLoc) ty) expr body
             _ ->
               impossible
   where
     goCaseBranch :: Type -> Internal.CaseBranch -> Sem r MatchBranch
-    goCaseBranch ty b = goPatternArgs 0 (b ^. Internal.caseBranchExpression) [b ^. Internal.caseBranchPattern] [ty]
+    goCaseBranch ty b = goPatternArgs 0 (b ^. Internal.caseBranchRhs) [b ^. Internal.caseBranchPattern] [ty]
+
+-- | Remove this as soon as side if conditions are implemented in Core.
+todoSideIfs :: a
+todoSideIfs = error "TODO: implement side if conditions"
+
+goCaseBranchRhs ::
+  forall r.
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen] r) =>
+  Internal.CaseBranchRhs ->
+  Sem r Node
+goCaseBranchRhs = \case
+  Internal.CaseBranchRhsExpression e -> goExpression e
+  Internal.CaseBranchRhsIf {} -> todoSideIfs
 
 goLambda ::
   forall r.
@@ -932,7 +945,7 @@ goPatternArgs ::
   forall r.
   (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen, Error BadScope] r) =>
   Level -> -- the level of the first binder for the matched value
-  Internal.Expression ->
+  Internal.CaseBranchRhs ->
   [Internal.PatternArg] ->
   [Type] -> -- types of the patterns
   Sem r MatchBranch
@@ -960,7 +973,7 @@ goPatternArgs lvl0 body = go lvl0 []
           _ ->
             impossible
       ([], []) -> do
-        body' <- goExpression body
+        body' <- goCaseBranchRhs body
         return $ MatchBranch Info.empty (nonEmpty' (reverse pats)) body'
       _ ->
         impossible
