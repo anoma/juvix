@@ -11,12 +11,26 @@
 -- sargs + argsnum = total numer of arguments for the function
 -- Maximum number of function arguments: 8
 
--- Constructor layout: [ cid | arguments... ]
+-- Constructor layout (non-records): [ cid | arguments... ]
 --  cid -- constructor id: 2 * tag + 1, where tag is the 0-based index
 --         of the constructor within its inductive type
 -- Make sure this spec is followed by:
 -- * Juvix.Compiler.Casm.Translation.FromReg
 -- * get_cid() in juvix_hint_processor/hint_processor.rs in juvix-cairo-vm
+--
+-- Records omit the cid.
+-- Record constructor layout: [arguments...]
+
+-- Builtin pointers are passed around in a record. So we pass around
+-- only one pointer (builtins ptr) to a record which contains Cairo
+-- builtin pointers.
+--
+-- The builtin record layout is:
+-- [ range_check_ptr | ec_op_ptr | poseidon_ptr ]
+-- Make sure this corresponds to:
+-- * Juvix.Compiler.Casm.Data.Builtins
+-- * "standard" builtin order in the Cairo VM implementation
+--   (https://github.com/lambdaclass/cairo-vm/blob/main/vm/src/vm/runners/cairo_runner.rs#L257)
 
 -- after calling juvix_get_regs:
 -- [ap - 4] = fp
@@ -34,20 +48,19 @@ juvix_get_ap_reg:
 -- On return:
 -- [ap - 1]: new poseidon state ptr
 -- [ap - 2]: new builtins ptr
--- Poseidon ap offset: 13 + 4 + 2
+-- Poseidon ap offset: 12 + 4 + 2
 juvix_poseidon:
   -- [fp] = poseidon builtin ptr
   [ap] = [[fp - 4] + 2]; ap++
   -- transfer poseidon state to builtin memory
-  [ap] = [[fp - 3] + 1]; ap++
+  [ap] = [[fp - 3]]; ap++
   [ap - 1] = [[fp]]
-  [ap] = [[fp - 3] + 2]; ap++
+  [ap] = [[fp - 3] + 1]; ap++
   [ap - 1] = [[fp] + 1]
-  [ap] = [[fp - 3] + 3]; ap++
+  [ap] = [[fp - 3] + 2]; ap++
   [ap - 1] = [[fp] + 2]
   call juvix_get_regs
   -- alloc new poseidon state
-  [ap] = 1; ap++
   [ap] = [[fp] + 3]; ap++
   [ap] = [[fp] + 4]; ap++
   [ap] = [[fp] + 5]; ap++
@@ -56,9 +69,9 @@ juvix_poseidon:
   [ap] = [[fp - 4] + 1]; ap++
   [ap] = [fp] + 6; ap++
   -- new builtins ptr
-  [ap] = [ap - 9] + 6; ap++
+  [ap] = [ap - 8] + 5; ap++
   -- new poseidon state ptr
-  [ap] = [ap - 10] + 2; ap++
+  [ap] = [ap - 9] + 2; ap++
   ret
 
 -- [fp - 3]: p : EcPoint ptr
@@ -68,25 +81,24 @@ juvix_poseidon:
 -- On return:
 -- [ap - 1]: result EcPoint ptr (p + m * q)
 -- [ap - 2]: new builtins ptr
--- EcOp ap offset: 13 + 4 + 2
+-- EcOp ap offset: 12 + 4 + 2
 juvix_ec_op:
   -- [fp] = ec_op builtin ptr
   [ap] = [[fp - 6] + 1]; ap++
   -- transfer p to builtin memory
-  [ap] = [[fp - 3] + 1]; ap++
+  [ap] = [[fp - 3]]; ap++
   [ap - 1] = [[fp]]
-  [ap] = [[fp - 3] + 2]; ap++
+  [ap] = [[fp - 3] + 1]; ap++
   [ap - 1] = [[fp] + 1]
   -- transfer q to builtin memory
-  [ap] = [[fp - 5] + 1]; ap++
+  [ap] = [[fp - 5]]; ap++
   [ap - 1] = [[fp] + 2]
-  [ap] = [[fp - 5] + 2]; ap++
+  [ap] = [[fp - 5] + 1]; ap++
   [ap - 1] = [[fp] + 3]
   -- transfer m to builtin memory
   [fp - 4] = [[fp] + 4]
   call juvix_get_regs
   -- alloc result EcPoint
-  [ap] = 1; ap++
   [ap] = [[fp] + 5]; ap++
   [ap] = [[fp] + 6]; ap++
   -- alloc new builtins
@@ -94,9 +106,9 @@ juvix_ec_op:
   [ap] = [fp] + 7; ap++
   [ap] = [[fp - 6] + 2]; ap++
   -- new builtins ptr
-  [ap] = [ap - 8] + 5; ap++
+  [ap] = [ap - 7] + 4; ap++
   -- result EcPoint ptr
-  [ap] = [ap - 9] + 2; ap++
+  [ap] = [ap - 8] + 2; ap++
   ret
 
 -- [fp - 3]: closure

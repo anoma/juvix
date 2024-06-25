@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
+
 module Juvix.Prelude.Base.Foundation
   ( module Juvix.Prelude.Base.Foundation,
     module Control.Applicative,
@@ -515,7 +517,7 @@ optional_ = void . optional
 -- Misc
 --------------------------------------------------------------------------------
 
-eassert :: (Applicative f) => Bool -> f ()
+eassert :: (HasCallStack, Applicative f) => Bool -> f ()
 eassert b = assert b (pure ())
 
 -- | applies a function n times
