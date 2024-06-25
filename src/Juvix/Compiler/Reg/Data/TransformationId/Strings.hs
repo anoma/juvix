@@ -17,6 +17,9 @@ strIdentity = "identity"
 strCleanup :: Text
 strCleanup = "cleanup"
 
+strCleanupCairo :: Text
+strCleanupCairo = "cleanup-cairo"
+
 strSSA :: Text
 strSSA = "ssa"
 

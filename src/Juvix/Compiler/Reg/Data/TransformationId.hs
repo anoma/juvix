@@ -6,6 +6,7 @@ import Juvix.Prelude
 
 data TransformationId
   = IdentityTrans
+  | CleanupCairo
   | Cleanup
   | SSA
   | InitBranchVars
@@ -33,12 +34,13 @@ toRustTransformations :: [TransformationId]
 toRustTransformations = [Cleanup]
 
 toCasmTransformations :: [TransformationId]
-toCasmTransformations = [Cleanup, SSA, OptPhaseCairo]
+toCasmTransformations = [CleanupCairo, SSA, OptPhaseCairo]
 
 instance TransformationId' TransformationId where
   transformationText :: TransformationId -> Text
   transformationText = \case
     IdentityTrans -> strIdentity
+    CleanupCairo -> strCleanupCairo
     Cleanup -> strCleanup
     SSA -> strSSA
     InitBranchVars -> strInitBranchVars

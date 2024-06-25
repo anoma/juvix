@@ -25,6 +25,7 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
     appTrans = \case
       IdentityTrans -> return . identity
       Cleanup -> return . cleanup
+      CleanupCairo -> return . cleanup' True
       SSA -> return . computeSSA
       InitBranchVars -> return . initBranchVars
       CopyPropagation -> return . copyPropagate
