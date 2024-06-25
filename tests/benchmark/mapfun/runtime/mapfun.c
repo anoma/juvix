@@ -219,8 +219,7 @@ juvix_closure_app_plus:
         JUVIX_BRANCH(
             TMP(0),
             {
-                PREALLOC(
-                    2, { STACK_PUSH(ARG(0)); }, { STACK_POP(ARG(0)); });
+                PREALLOC(2, { STACK_PUSH(ARG(0)); }, { STACK_POP(ARG(0)); });
                 ALLOC_CONSTR_PAIR(juvix_result);
                 FST(juvix_result) = ARG(0);
                 SND(juvix_result) = CONSTR_NIL;

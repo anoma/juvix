@@ -29,8 +29,7 @@ juvix_closure_print:
     ARG(0) = CARG(0);
     JUVIX_FUNCTION(juvix_function_print, 1);
     {
-        PREALLOC(
-            2, { STACK_PUSH(ARG(0)); }, { STACK_POP(ARG(0)); });
+        PREALLOC(2, { STACK_PUSH(ARG(0)); }, { STACK_POP(ARG(0)); });
         ALLOC_CONSTR_BOXED(juvix_result, UID_WRITE, 1);
         CONSTR_ARG(juvix_result, 0) = ARG(0);
         RETURN;
