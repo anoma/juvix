@@ -60,6 +60,7 @@ runFunction hout infoTable args0 info0 = do
         CallClosures x -> goCallClosures args tmps instrs x
         TailCallClosures x -> goTailCallClosures args tmps instrs x
         Return x -> goReturn args tmps instrs x
+        If x -> goIf args tmps instrs x
         Branch x -> goBranch args tmps instrs x
         Case x -> goCase args tmps instrs x
         Block x -> goBlock args tmps instrs x
@@ -260,6 +261,17 @@ runFunction hout infoTable args0 info0 = do
           readValue args tmps _instrReturnValue
       | otherwise =
           throwRunError "return not in tail position" Nothing
+
+    goIf :: Args -> Vars s -> Code -> InstrIf -> ST s Val
+    goIf args tmps instrs InstrIf {..} = do
+      arg1 <- readValue args tmps _instrIfArg1
+      arg2 <- readValue args tmps _instrIfArg2
+      let val = binop (OpBool _instrIfOp) arg1 arg2
+      r <- case val of
+        ValBool True -> go args tmps _instrIfTrue
+        ValBool False -> go args tmps _instrIfFalse
+        _ -> throwRunError "expected a boolean" Nothing
+      goNext args tmps r instrs
 
     goBranch :: Args -> Vars s -> Code -> InstrBranch -> ST s Val
     goBranch args tmps instrs InstrBranch {..} = do
