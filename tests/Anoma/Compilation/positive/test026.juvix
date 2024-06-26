@@ -30,7 +30,7 @@ drop_front : {A : Type} → Queue A → Queue A
          | nil := queue (reverse (qsnd q')) nil
          | _ := q';
 
-pop_front {A} : Queue A -> Maybe (A × Queue A)
+pop_front {A} : Queue A -> Maybe (Pair A (Queue A))
   | (queue xs ys) :=
     case xs of
       | h :: t := just (h, queue t ys)

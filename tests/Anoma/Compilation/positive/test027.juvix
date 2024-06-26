@@ -10,17 +10,17 @@ czero : Num
   | {_} f x := x;
 
 csuc : Num → Num
-  | n {_} f := f ∘ n {_} f;
+  | n {_} f := f << n {_} f;
 
 num : Nat → Num
   | zero := czero
   | (suc n) := csuc (num n);
 
 add : Num → Num → Num
-  | n m {_} f := n {_} f ∘ m {_} f;
+  | n m {_} f := n {_} f << m {_} f;
 
 mul : Num → Num → Num
-  | n m {_} := n {_} ∘ m {_};
+  | n m {_} := n {_} << m {_};
 
 isZero : Num → Bool
   | n := n {_} (const false) true;
@@ -30,5 +30,5 @@ toNat : Num → Nat
 
 main : Nat :=
   trace (toNat (num 7))
-    >>> trace (toNat (add (num 7) (num 3)))
-    >>> toNat (mul (num 7) (num 3));
+    >-> trace (toNat (add (num 7) (num 3)))
+    >-> toNat (mul (num 7) (num 3));

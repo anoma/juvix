@@ -17,6 +17,6 @@ fact : Nat → Nat := fact' 1;
 
 main : IO :=
   printNatLn (sum 10000)
-    >> printNatLn (fact 5)
-    >> printNatLn (fact 10)
-    >> printNatLn (fact 12);
+    >>> printNatLn (fact 5)
+    >>> printNatLn (fact 10)
+    >>> printNatLn (fact 12);

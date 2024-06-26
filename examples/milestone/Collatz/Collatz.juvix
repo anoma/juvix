@@ -12,8 +12,8 @@ collatz : Nat → Nat
 
 terminating
 run (f : Nat → Nat) : Nat → IO
-  | (suc zero) := printNatLn 1 >> printStringLn "Finished!"
-  | n := printNatLn n >> run f (f n);
+  | (suc zero) := printNatLn 1 >>> printStringLn "Finished!"
+  | n := printNatLn n >>> run f (f n);
 
 welcome : String :=
   "Collatz calculator\n------------------\n\nType a number then ENTER";
@@ -22,7 +22,7 @@ resultHeading : String := "Collatz sequence:";
 
 main : IO :=
   printStringLn welcome
-    >> readLn
+    >>> readLn
       λ {s :=
         printStringLn resultHeading
-          >> run collatz (stringToNat s)};
+          >>> run collatz (stringToNat s)};

@@ -20,11 +20,11 @@ lst : List Nat := 0 :: 1 :: nil;
 
 main : List Nat :=
   trace (null lst)
-    >>> trace (null (nil {Nat}))
-    >>> trace (head 1 lst)
-    >>> trace (tail lst)
-    >>> trace (head 0 (tail lst))
-    >>> trace (map ((+) 1) lst)
-    >>> map' ((+) 1) lst
+    >-> trace (null (nil {Nat}))
+    >-> trace (head 1 lst)
+    >-> trace (tail lst)
+    >-> trace (head 0 (tail lst))
+    >-> trace (map ((+) 1) lst)
+    >-> map' ((+) 1) lst
     -- TODO: Restore when anoma backend supports strings
-    -- >>> runPartial λ {{{_}} := map'' ((+) 1) lst};
+    -- >-> runPartial λ {{{_}} := map'' ((+) 1) lst};

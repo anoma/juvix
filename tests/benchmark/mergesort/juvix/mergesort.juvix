@@ -4,11 +4,11 @@ module mergesort;
 import Stdlib.Prelude open;
 
 split_go
-  : {A : Type} → List A → List A → List A → List A × List A
+  : {A : Type} → List A → List A → List A → Pair (List A) (List A)
   | nil ys zs := ys, zs
   | (x :: xs') ys zs := split_go xs' zs (x :: ys);
 
-split : {A : Type} → List A → List A × List A
+split : {A : Type} → List A → Pair (List A) (List A)
   | xs := split_go xs nil nil;
 
 revappend : {A : Type} → List A → List A → List A
@@ -25,7 +25,7 @@ merget : List Nat → List Nat → List Nat → List Nat
       (merget (x :: xs') ys' (y :: acc));
 
 terminating
-sort' : List Nat × List Nat → List Nat
+sort' : Pair (List Nat) (List Nat) → List Nat
   | (l1, l2) := merget (sort l1) (sort l2) nil;
 
 terminating

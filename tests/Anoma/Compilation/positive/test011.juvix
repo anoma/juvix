@@ -12,5 +12,5 @@ fib : Nat → Nat := fib' 0 1;
 
 main : Nat :=
   trace (fib 10)
-    >>> trace (fib 100)
-    >>> fib 1000;
+    >-> trace (fib 100)
+    >-> fib 1000;

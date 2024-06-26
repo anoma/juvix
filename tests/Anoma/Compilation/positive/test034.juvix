@@ -22,8 +22,8 @@ mutrec : Nat :=
     terminating
     h (x : Nat) : Nat := if (x < 1) 1 (x * f (sub x 1));
   in trace (f 5)
-    >>> trace (f 10)
-    >>> trace (g 5)
-    >>> h 5;
+    >-> trace (f 10)
+    >-> trace (g 5)
+    >-> h 5;
 
-main : Nat := trace (sum 1000) >>> mutrec;
+main : Nat := trace (sum 1000) >-> mutrec;

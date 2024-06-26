@@ -43,6 +43,6 @@ primes : Unit → Stream := eratostenes (numbers 2);
 
 main : IO :=
   printNatLn (snth 10 primes)
-    >> printNatLn (snth 50 primes)
-    >> printNatLn (snth 100 primes)
-    >> printNatLn (snth 200 primes);
+    >>> printNatLn (snth 50 primes)
+    >>> printNatLn (snth 100 primes)
+    >>> printNatLn (snth 200 primes);

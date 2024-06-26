@@ -45,4 +45,4 @@ primes : Unit → Stream := eratostenes (numbers 2);
 
 main (n1 n2 : Nat) : Nat :=
   trace (snth n1 primes)
-    >>> snth n2 primes;
+    >-> snth n2 primes;

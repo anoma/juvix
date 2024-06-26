@@ -16,11 +16,11 @@ subp : Nat → Nat → Nat
 
 main : Nat :=
   trace (f91 101)
-    >>> trace (f91 95)
-    >>> trace (f91 16)
-    >>> trace (f91 5)
-    >>> trace (subp 101 1)
-    >>> trace (subp 11 5)
-    >>> trace (subp 10 4)
-    >>> trace (subp 1000 600)
-    >>> subp 10000 6000;
+    >-> trace (f91 95)
+    >-> trace (f91 16)
+    >-> trace (f91 5)
+    >-> trace (subp 101 1)
+    >-> trace (subp 11 5)
+    >-> trace (subp 10 4)
+    >-> trace (subp 1000 600)
+    >-> subp 10000 6000;

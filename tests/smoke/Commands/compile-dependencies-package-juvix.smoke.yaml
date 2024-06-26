@@ -268,7 +268,7 @@ tests:
         module HelloDep;
         import Stdlib.Prelude open;
         import HelloDep2 open;
-        main : IO := printStringLn "Hello from dep1" >> printStringLn hello;
+        main : IO := printStringLn "Hello from dep1" >>> printStringLn hello;
         EOF
 
         cat <<-EOF > Package.juvix
@@ -352,7 +352,7 @@ tests:
         module HelloDep;
         import HelloDep2 open;
         import Stdlib.Prelude open;
-        main : IO := printStringLn "This is from the second commit" >> printStringLn hello;
+        main : IO := printStringLn "This is from the second commit" >>> printStringLn hello;
         EOF
 
         git add -A
@@ -607,7 +607,7 @@ tests:
         module HelloDep;
         import Stdlib.Prelude open;
         import HelloDep2 open;
-        main : IO := printStringLn "Hello from dep1" >> printStringLn hello;
+        main : IO := printStringLn "Hello from dep1" >>> printStringLn hello;
         EOF
 
         cat <<-EOF > Package.juvix

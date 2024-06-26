@@ -32,7 +32,7 @@ combineDigits (xs : List Nat) : Nat := for (acc := 0) (x in xs) acc * 10 + x;
 
 main : Nat :=
   trace (combineDigits (preorder (gen 3)))
-    >>> trace (combineDigits (preorder (gen 4)))
-    >>> trace (combineDigits (preorder (gen 5)))
-    >>> trace (combineDigits (preorder (gen 6)))
-    >>> combineDigits (preorder (gen 7));
+    >-> trace (combineDigits (preorder (gen 4)))
+    >-> trace (combineDigits (preorder (gen 5)))
+    >-> trace (combineDigits (preorder (gen 6)))
+    >-> combineDigits (preorder (gen 7));

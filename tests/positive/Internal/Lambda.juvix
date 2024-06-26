@@ -10,9 +10,9 @@ syntax operator × functor;
 syntax operator , pair;
 type × (A : Type) (B : Type) := , : A → B → A × B;
 
-syntax operator ∘ composition;
+syntax operator << composition;
 
-∘
+<<
   : {A : Type}
     → {B : Type}
     → {C : Type}

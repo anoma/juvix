@@ -42,7 +42,7 @@ end;
 Commands like `typecheck` and `compile` can be used with Juvix Markdown files.
 
 ```juvix
-main : IO := readLn (printNatLn ∘ fibonacci ∘ stringToNat);
+main : IO := readLn (printNatLn << fibonacci << stringToNat);
 ```
 
 Other code blocks are not touched, e.g:

@@ -10,7 +10,7 @@ instance
 Reader-Functor {R : Type} : Functor (Reader R) :=
   mkFunctor@{
     <$> {A B : Type} (f : A -> B) : Reader R A -> Reader R B
-      | (mkReader ra) := mkReader (f ∘ ra)
+      | (mkReader ra) := mkReader (f << ra)
   };
 
 instance

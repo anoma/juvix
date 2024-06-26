@@ -18,17 +18,17 @@ lst : List Nat := 0 :: 1 :: nil;
 printNatList : List Nat → IO
   | nil := printString "nil"
   | (h :: t) :=
-    printNat h >> printString " :: " >> printNatList t;
+    printNat h >>> printString " :: " >>> printNatList t;
 
 printNatListLn (lst : List Nat) : IO :=
-  printNatList lst >> printString "\n";
+  printNatList lst >>> printString "\n";
 
 main : IO :=
   printBoolLn (null lst)
-    >> printBoolLn (null (nil {Nat}))
-    >> printNatLn (head 1 lst)
-    >> printNatListLn (tail lst)
-    >> printNatLn (head 0 (tail lst))
-    >> printNatListLn (map ((+) 1) lst)
-    >> printNatListLn (map' ((+) 1) lst)
-    >> printNatListLn (runPartial (λ{{{_}} := map'' ((+) 1) lst}));
+    >>> printBoolLn (null (nil {Nat}))
+    >>> printNatLn (head 1 lst)
+    >>> printNatListLn (tail lst)
+    >>> printNatLn (head 0 (tail lst))
+    >>> printNatListLn (map ((+) 1) lst)
+    >>> printNatListLn (map' ((+) 1) lst)
+    >>> printNatListLn (runPartial (λ{{{_}} := map'' ((+) 1) lst}));

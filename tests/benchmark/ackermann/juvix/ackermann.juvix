@@ -5,7 +5,7 @@ import Stdlib.Prelude open;
 
 iter : {A : Type} → (A → A) → Nat → A → A
   | f zero := id
-  | f (suc n) := f ∘ iter f n;
+  | f (suc n) := f << iter f n;
 
 step : (Nat → Nat) → Nat → Nat
   | f n := iter f (suc n) 1;

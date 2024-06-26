@@ -23,4 +23,4 @@ czero : Num
   | {_} f x := x;
 
 csuc : idTy2 Num → idTy Num
-  | n {_} f := f ∘ n {_} f;
+  | n {_} f := f << n {_} f;

@@ -9,5 +9,5 @@ loop : Nat := loop;
 main : IO :=
   printNatLn
       (if (3 > 0) 1 loop + if (2 < 1) loop (if (7 >= 8) loop 1))
-    >> printBoolLn (2 > 0 || loop == 0)
-    >> printBoolLn (2 < 0 && loop == 0);
+    >>> printBoolLn (2 > 0 || loop == 0)
+    >>> printBoolLn (2 < 0 && loop == 0);

@@ -2,9 +2,9 @@ module AsPattern;
 
 import Stdlib.Data.Fixity open;
 
-syntax operator ∘ composition;
+syntax operator << composition;
 
-∘
+<<
   : {A : Type}
     → {B : Type}
     → {C : Type}
@@ -48,5 +48,5 @@ a : {A : Type} → A × Nat → Nat
   | p@(x, s@_) := snd p + suc zero;
 
 b : {A : Type} → A × Nat → ({B : Type} → B → B) → A
-  | p@(_, zero) f := (f ∘ fst) p
-  | p@(_, _) f := (f ∘ fst) p;
+  | p@(_, zero) f := (f << fst) p
+  | p@(_, _) f := (f << fst) p;

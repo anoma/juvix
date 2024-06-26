@@ -3,7 +3,7 @@ module test071;
 
 import Stdlib.Data.Nat open hiding {Ord; mkOrd};
 import Stdlib.Data.Nat.Ord as Ord;
-import Stdlib.Data.Product as Ord;
+import Stdlib.Data.Pair as Ord;
 import Stdlib.Data.Bool.Base open;
 import Stdlib.Trait.Ord open using {Ordering; LT; EQ; GT; isLT; isGT};
 

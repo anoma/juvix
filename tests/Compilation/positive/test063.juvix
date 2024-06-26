@@ -77,10 +77,10 @@ h {A} {{U2 A}} : A -> A := f;
 
 main : IO :=
   printStringLn (T1.pp "a")
-    >> printStringLn (T2.pp "b")
-    >> printStringLn (T3.pp "c")
-    >> printStringLn (T4.pp "d")
-    >> printStringLn (U.pp "e")
-    >> printStringLn (f "f")
-    >> printStringLn (g {{mkU1 id}} "g")
-    >> printStringLn (h "h");
+    >>> printStringLn (T2.pp "b")
+    >>> printStringLn (T3.pp "c")
+    >>> printStringLn (T4.pp "d")
+    >>> printStringLn (U.pp "e")
+    >>> printStringLn (f "f")
+    >>> printStringLn (g {{mkU1 id}} "g")
+    >>> printStringLn (h "h");

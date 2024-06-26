@@ -3,7 +3,7 @@ module test009;
 
 import Stdlib.Prelude open;
 
-f : Nat -> ((Nat -> Nat) -> Nat -> Nat) × Nat → Nat
+f : Nat -> Pair ((Nat -> Nat) -> Nat -> Nat) Nat → Nat
   | a l :=
     case l of {
       | x, zero := x

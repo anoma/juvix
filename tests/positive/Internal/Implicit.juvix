@@ -2,9 +2,9 @@ module Implicit;
 
 import Stdlib.Data.Fixity open;
 
-syntax operator ∘ composition;
+syntax operator << composition;
 
-∘
+<<
   : {A : Type}
     → {B : Type}
     → {C : Type}

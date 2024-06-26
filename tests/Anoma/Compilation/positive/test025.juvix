@@ -11,7 +11,7 @@ gcd : Nat → Nat → Nat
 
 main : Nat :=
   trace (gcd (3 * 7 * 2) (7 * 2 * 11))
-    >>> trace (gcd (3 * 7 * 2 * 11 * 5) (7 * 2 * 5))
-    >>> trace (gcd 3 7)
-    >>> trace (gcd 7 3)
-    >>> gcd (11 * 7 * 3) (2 * 5 * 13);
+    >-> trace (gcd (3 * 7 * 2 * 11 * 5) (7 * 2 * 5))
+    >-> trace (gcd 3 7)
+    >-> trace (gcd 7 3)
+    >-> gcd (11 * 7 * 3) (2 * 5 * 13);

@@ -60,18 +60,18 @@ f5 {A} {{T A}} (n : Nat) (a : A) : Nat := n + T.toNat a;
 
 main : Nat :=
   trace (T.toNat true)
-    >>> trace (f false)
-    >>> trace (T.toNat 3)
-    >>> trace (T.toNat (g {Nat}))
-    >>> trace (T.toNat [true; false])
-    >>> trace (T.toNat [1; 2; 3])
-    >>> trace
+    >-> trace (f false)
+    >-> trace (T.toNat 3)
+    >-> trace (T.toNat (g {Nat}))
+    >-> trace (T.toNat [true; false])
+    >-> trace (T.toNat [1; 2; 3])
+    >-> trace
       (let
         f (_ : Unit) : Nat := 5;
       in T.toNat f)
-    >>> trace (f' [1; 2])
-    >>> trace (f'' [true; false])
-    >>> trace (f'3 [just true; nothing; just false])
-    >>> trace (f'4 [just [1]; nothing; just [2; 3]])
-    >>> trace (f'3 true)
-    >>> f5 1 [0; 1; 1];
+    >-> trace (f' [1; 2])
+    >-> trace (f'' [true; false])
+    >-> trace (f'3 [just true; nothing; just false])
+    >-> trace (f'4 [just [1]; nothing; just [2; 3]])
+    >-> trace (f'3 true)
+    >-> f5 1 [0; 1; 1];

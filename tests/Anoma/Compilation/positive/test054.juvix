@@ -36,12 +36,12 @@ myfor2
 syntax iterator myzip2 {init := 2; range := 2};
 myzip2
   : {A A' B C : Type}
-    → (A → A' → B → C → A × A')
+    → (A → A' → B → C → Pair A A')
     → A
     → A'
     → List B
     → List C
-    → A × A'
+    → Pair A A'
   | f a b xs ys :=
     myfor (acc, acc' := a, b) (x, y in zip xs ys)
       f acc acc' x y;

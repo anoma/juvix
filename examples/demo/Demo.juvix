@@ -43,11 +43,11 @@ sort {A} {{Ord A}} : List A → List A
 printNatListLn : List Nat → IO
   | nil := printStringLn "nil"
   | (x :: xs) :=
-    printNat x >> printString " :: " >> printNatListLn xs;
+    printNat x >>> printString " :: " >>> printNatListLn xs;
 
 main : IO :=
   printStringLn "Hello!"
-    >> printNatListLn (preorder (mirror tree))
-    >> printNatListLn (sort (preorder (mirror tree)))
-    >> printNatLn (log2 3)
-    >> printNatLn (log2 130);
+    >>> printNatListLn (preorder (mirror tree))
+    >>> printNatListLn (sort (preorder (mirror tree)))
+    >>> printNatLn (log2 3)
+    >>> printNatLn (log2 130);

@@ -19,7 +19,7 @@ I : {A : Type} → A → A := S K (K {_} {Bool});
 
 main : IO :=
   printNatLn
-    $ I {Nat} 1
+    <| I {Nat} 1
       + I I 1
       + I (I 1)
       + I 1

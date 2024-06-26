@@ -327,7 +327,7 @@ tests =
         $(mkRelFile "test050.juvix")
         $(mkRelFile "out/test050.out"),
       posTest
-        "Test051: Local recursive function using IO >>"
+        "Test051: Local recursive function using IO >>>"
         $(mkRelDir ".")
         $(mkRelFile "test051.juvix")
         $(mkRelFile "out/test051.out"),

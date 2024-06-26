@@ -3,8 +3,8 @@ module test011;
 
 import Stdlib.Prelude open;
 
-type Pair :=
-  | pair : ((Nat → Nat) → Nat → Nat) → Nat → Pair;
+type Pair' :=
+  | pair : ((Nat → Nat) → Nat → Nat) → Nat → Pair';
 
 id' : Nat → Nat
   | x := x;
@@ -15,7 +15,7 @@ id'' : (Nat → Nat) → Nat → Nat
 id''' : ((Nat → Nat) → Nat → Nat) → (Nat → Nat) → Nat → Nat
   | x := x;
 
-f : Pair → Nat
+f : Pair' → Nat
   | l :=
     (case l of
         | pair x zero := x

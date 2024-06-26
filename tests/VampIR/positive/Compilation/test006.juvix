@@ -18,7 +18,7 @@ boolToNat : Bool -> Nat
 main : Nat -> Nat -> Nat
   | x y :=
     boolToNat
-      $ case
+      <| case
           opt3 (natToBool x) λ {x y := if y false x} (natToBool y)
         of {
           | opt0 := false

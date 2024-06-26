@@ -23,13 +23,13 @@ type ComplianceResult :=
     y : Field
   };
 
-count : List (Field × Bool) -> Field
+count : List (Pair Field Bool) -> Field
   | [] := 0
   | ((h, b) :: t) := if b (h + count t) (count t);
 
 main
   (input : Resource)
-  (path : List (Field × Bool))
+  (path : List (Pair Field Bool))
   : ComplianceResult :=
   mkResult@{
     cnt := count path;
@@ -44,7 +44,7 @@ main
 {-
 main
   (input : Resource)
-  (path : List (Field × Bool))
+  (path : List (Pair Field Bool))
   : Field :=
   count path;
 -}

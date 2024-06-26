@@ -10,8 +10,8 @@ ack : Nat → Nat → Nat
 
 main : IO :=
   printNatLn (ack 0 7)
-    >> printNatLn (ack 1 7)
-    >> printNatLn (ack 1 13)
-    >> printNatLn (ack 2 7)
-    >> printNatLn (ack 2 13)
-    >> printNatLn (ack 3 7);
+    >>> printNatLn (ack 1 7)
+    >>> printNatLn (ack 1 13)
+    >>> printNatLn (ack 2 7)
+    >>> printNatLn (ack 2 13)
+    >>> printNatLn (ack 3 7);

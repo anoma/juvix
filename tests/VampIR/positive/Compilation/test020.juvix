@@ -6,7 +6,7 @@ import Stdlib.Prelude open;
 {-# unroll: 10 #-}
 compose : {A : Type} → Nat → (A → A) → A → A
   | zero _ := id
-  | (suc n) f := f ∘ compose n f;
+  | (suc n) f := f << compose n f;
 
 main : Nat → Bool → Bool
   | n b := compose n not b;

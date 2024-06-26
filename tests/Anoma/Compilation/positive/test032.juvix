@@ -4,7 +4,7 @@ module test032;
 import Stdlib.Prelude open;
 import Stdlib.Debug.Trace open;
 
-split : {A : Type} → Nat → List A → List A × List A
+split : {A : Type} → Nat → List A → Pair (List A) (List A)
   | zero xs := nil, xs
   | (suc n) nil := nil, nil
   | (suc n) (x :: xs) :=
@@ -46,5 +46,5 @@ gen2 : List (List Nat) → Nat → Nat → List (List Nat)
 
 main : List Nat :=
   trace (take 10 (uniq (sort (flatten (gen2 nil 6 10)))))
-    >>> trace (take 10 (uniq (sort (flatten (gen2 nil 7 10)))))
-    >>> take 10 (uniq (sort (flatten (gen2 nil 6 20))));
+    >-> trace (take 10 (uniq (sort (flatten (gen2 nil 7 10)))))
+    >-> take 10 (uniq (sort (flatten (gen2 nil 6 20))));

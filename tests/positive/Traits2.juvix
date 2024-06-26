@@ -66,24 +66,27 @@ Maybe-Monad : Monad Maybe :=
 
 import Stdlib.Data.Bool open;
 import Stdlib.Function open;
-import Stdlib.Data.Product open;
+import Stdlib.Data.Pair open;
 
-×-fmap {A B C : Type} (f : B -> C) : A × B -> A × C
+×-fmap {A B C : Type} (f : B -> C) : Pair A B -> Pair A C
   | (a, b) := a, f b;
 
-×-Functor : {A : Type} -> Functor ((×) A) :=
+×-Functor : {A : Type} -> Functor (Pair A) :=
   mkFunctor ×-fmap;
 
 ×-bind
   {A : Type}
   {{Semigroup A}}
   {B C : Type}
-  : A × B -> (B -> A × C) -> A × C
+  : Pair A B -> (B -> Pair A C) -> Pair A C
   | (a, b) f := case f b of a', b' := a <> a', b';
 
 instance
 ×-Monad
-  {A : Type} {{Semigroup A}} {{Monoid A}} : Monad ((×) A) :=
+  {A : Type}
+  {{Semigroup A}}
+  {{Monoid A}}
+  : Monad (Pair A) :=
   mkMonad@{
     bind := ×-bind;
     return := λ {b := Monoid.mempty, b};
@@ -94,7 +97,7 @@ type Reader (r a : Type) := mkReader {runReader : r -> a};
 
 Reader-fmap
   {R A B : Type} (f : A -> B) : Reader R A -> Reader R B
-  | (mkReader ra) := mkReader (f ∘ ra);
+  | (mkReader ra) := mkReader (f << ra);
 
 Reader-Functor-NoNamed {R : Type} : Functor (Reader R) :=
   mkFunctor Reader-fmap;
@@ -103,7 +106,7 @@ instance
 Reader-Functor {R : Type} : Functor (Reader R) :=
   mkFunctor@{
     fmap {A B : Type} (f : A -> B) : Reader R A -> Reader R B
-      | (mkReader ra) := mkReader (f ∘ ra)
+      | (mkReader ra) := mkReader (f << ra)
   };
 
 instance

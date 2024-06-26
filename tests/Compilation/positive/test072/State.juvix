@@ -2,9 +2,9 @@ module State;
 
 import Monad open;
 import Functor open;
-import Stdlib.Data.Product open;
+import Stdlib.Data.Pair open;
 
-type State (S A : Type) := mkState {runState : S -> A × S};
+type State (S A : Type) := mkState {runState : S -> Pair A S};
 
 instance
 State-Functor {S : Type} : Functor (State S) :=

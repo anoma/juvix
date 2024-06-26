@@ -10,7 +10,7 @@ type Triple (A B C : Type) :=
     thd : C
   };
 
-type Pair (A B : Type) :=
+type Pair' (A B : Type) :=
   mkPair {
     fst : A;
     snd : B
@@ -19,7 +19,7 @@ type Pair (A B : Type) :=
 sum : Triple Nat Nat Nat → Nat
   | mkTriple@{fst; snd; thd} := fst + snd + thd;
 
-mf : Pair (Pair Bool (List Nat)) (List Nat) → Bool
+mf : Pair' (Pair' Bool (List Nat)) (List Nat) → Bool
   | mkPair@{fst := mkPair@{fst; snd := nil};
            snd := zero :: _} := fst
   | x := case x of {_ := false};
@@ -34,7 +34,7 @@ main : Nat :=
       };
     f : Triple Nat Nat Nat -> Triple Nat Nat Nat :=
       (@Triple{fst := fst * 10});
-  in sum $ if
+  in sum <| if
     (mf
       mkPair@{
         fst := mkPair true nil;
