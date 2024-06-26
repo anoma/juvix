@@ -64,21 +64,23 @@ instance Show EvalError where
 instance Exception.Exception EvalError
 
 evalInfoTable :: Handle -> InfoTable -> Node
-evalInfoTable herr info = eval herr idenCtxt [] mainNode
+evalInfoTable herr tab = eval herr tab [] mainNode
   where
-    idenCtxt = info ^. identContext
-    mainSym = fromJust (info ^. infoMain)
-    mainNode = fromJust (HashMap.lookup mainSym idenCtxt)
+    mainSym = fromJust (tab ^. infoMain)
+    mainNode = fromJust (HashMap.lookup mainSym (tab ^. identContext))
 
 -- | `eval ctx env n` evaluates a node `n` whose all free variables point into
 -- `env`. All nodes in `ctx` must be closed. All nodes in `env` must be values.
 -- Invariant for values v: eval ctx env v = v
-eval :: Handle -> IdentContext -> Env -> Node -> Node
+eval :: Handle -> InfoTable -> Env -> Node -> Node
 eval herr ctx env = geval defaultEvalOptions herr ctx env
 
-geval :: EvalOptions -> Handle -> IdentContext -> Env -> Node -> Node
-geval opts herr ctx env0 = eval' env0
+geval :: EvalOptions -> Handle -> InfoTable -> Env -> Node -> Node
+geval opts herr tab env0 = eval' env0
   where
+    ctx :: IdentContext
+    ctx = tab ^. identContext
+
     evalError :: Text -> Node -> a
     evalError msg node = Exception.throw (EvalError msg (Just node))
 
@@ -613,15 +615,15 @@ geval opts herr ctx env0 = eval' env0
           mkCase i sym b (map (substEnvInBranch env) bs) (fmap (substEnv env) def)
 
 -- Evaluate `node` and interpret the builtin IO actions.
-hEvalIO' :: EvalOptions -> Handle -> Handle -> Handle -> IdentContext -> Env -> Node -> IO Node
-hEvalIO' opts herr hin hout ctx env node =
-  let node' = geval opts herr ctx env node
+hEvalIO' :: EvalOptions -> Handle -> Handle -> Handle -> InfoTable -> Env -> Node -> IO Node
+hEvalIO' opts herr hin hout tab env node =
+  let node' = geval opts herr tab env node
    in case node' of
         NCtr (Constr _ (BuiltinTag TagReturn) [x]) ->
           return x
         NCtr (Constr _ (BuiltinTag TagBind) [x, f]) -> do
-          x' <- hEvalIO' opts herr hin hout ctx env x
-          hEvalIO' opts herr hin hout ctx env (mkApp Info.empty f x')
+          x' <- hEvalIO' opts herr hin hout tab env x
+          hEvalIO' opts herr hin hout tab env (mkApp Info.empty f x')
         NCtr (Constr _ (BuiltinTag TagWrite) [NCst (Constant _ (ConstString s))]) -> do
           hPutStr hout s
           return unitNode
@@ -646,8 +648,8 @@ doEval ::
   Node ->
   Sem r (Either CoreError Node)
 doEval mfsize noIO loc tab node
-  | noIO = catchEvalError loc (eval stderr (tab ^. identContext) [] node)
-  | otherwise = liftIO (catchEvalErrorIO loc (hEvalIO' opts stderr stdin stdout (tab ^. identContext) [] node))
+  | noIO = catchEvalError loc (eval stderr tab [] node)
+  | otherwise = liftIO (catchEvalErrorIO loc (hEvalIO' opts stderr stdin stdout tab [] node))
   where
     opts =
       maybe
