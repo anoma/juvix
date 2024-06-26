@@ -645,7 +645,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
           ap0 <- getAP
           vars <- getVars
           bltOff <- getBuiltinOffset
-          mapM_ (goCaseBranch ap0 vars bltOff symMap labEnd) _instrCaseBranches
+          mapM_ (goCaseBranch ap0 vars bltOff symMap labEnd) (reverse _instrCaseBranches)
           mapM_ (goDefaultLabel symMap) defaultTags
           whenJust _instrCaseDefault $
             goLocalBlock ap0 vars bltOff liveVars _instrCaseOutVar
