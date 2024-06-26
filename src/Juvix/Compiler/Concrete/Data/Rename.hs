@@ -70,6 +70,9 @@ stdlib;Stdlib.Function;if -> ite
 _;Stdlib.Function;if -> ite
 
 note that the space before '->' is mandatory because - is not a reserved symbol.
+
+It should be that:
+forall r :: Rename. parseRename (prettyText r) == r
 --}
 
 parseRename :: Text -> Either Text Rename
