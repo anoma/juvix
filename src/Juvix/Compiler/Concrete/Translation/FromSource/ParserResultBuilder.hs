@@ -75,6 +75,15 @@ execParserResultBuilder ::
   Sem r ParserState
 execParserResultBuilder s = fmap fst . runParserResultBuilder s
 
+ignoreParserResultBuilder ::
+  Sem (ParserResultBuilder ': r) a ->
+  Sem r a
+ignoreParserResultBuilder =
+  interpret $ \case
+    RegisterImport {} -> return ()
+    RegisterItem {} -> return ()
+    RegisterSpaceSpan {} -> return ()
+
 runParserResultBuilder ::
   (Member HighlightBuilder r) =>
   ParserState ->

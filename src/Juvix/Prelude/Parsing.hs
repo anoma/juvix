@@ -16,7 +16,14 @@ import Juvix.Prelude.Pretty
 import Text.Megaparsec hiding (sepBy1, sepEndBy1, some)
 import Text.Megaparsec.Char
 
+type ParsecS r = ParsecT Void Text (Sem r)
+
 parseHelper :: (TraversableStream txt, VisualStream txt) => Parsec Void txt a -> txt -> Either Text a
 parseHelper p t = case runParser p "<input>" t of
+  Left (err :: ParseErrorBundle txt Void) -> Left (prettyText (errorBundlePretty err))
+  Right r -> return r
+
+parseHelperSem :: ParsecS r a -> (forall x. Sem r x -> x) -> Text -> Either Text a
+parseHelperSem p runS t = case runS (runParserT p "<input>" t) of
   Left (err :: ParseErrorBundle txt Void) -> Left (prettyText (errorBundlePretty err))
   Right r -> return r
