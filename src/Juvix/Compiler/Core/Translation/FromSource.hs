@@ -576,7 +576,7 @@ builtinAppExpr varsNum vars = do
       <|> (kw kwAnomaEncode $> OpAnomaEncode)
       <|> (kw kwAnomaDecode $> OpAnomaDecode)
       <|> (kw kwAnomaSign $> OpAnomaSign)
-      <|> (kw kwAnomaVerify $> OpAnomaVerify)
+      <|> (kw kwAnomaVerifyWithMessage $> OpAnomaVerifyWithMessage)
       <|> (kw kwAnomaSignDetached $> OpAnomaSignDetached)
       <|> (kw kwAnomaVerifyDetached $> OpAnomaVerifyDetached)
   args <- P.many (atom varsNum vars)

@@ -1,5 +1,5 @@
 -- calling unsupported anoma-verify
 
 function main() : * {
-  anoma-verify(1,2)
+  anoma-verify-with-message(1,2)
 }

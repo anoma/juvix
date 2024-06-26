@@ -201,7 +201,7 @@ geval opts herr ctx env0 = eval' env0
       OpAnomaVerifyDetached -> anomaVerifyDetachedOp
       OpAnomaSign -> anomaSignOp
       OpAnomaSignDetached -> anomaSignDetachedOp
-      OpAnomaVerify -> anomaVerifyOp
+      OpAnomaVerifyWithMessage -> anomaVerifyWithMessageOp
       OpPoseidonHash -> poseidonHashOp
       OpEc -> ecOp
       OpRandomEcPoint -> randomEcPointOp
@@ -406,18 +406,18 @@ geval opts herr ctx env0 = eval' env0
                       Nothing -> err "anomaSignDetachedOp: second argument not an integer"
         {-# INLINE anomaSignDetachedOp #-}
 
-        anomaVerifyOp :: [Node] -> Node
-        anomaVerifyOp = checkApply $ \arg1 arg2 ->
+        anomaVerifyWithMessageOp :: [Node] -> Node
+        anomaVerifyWithMessageOp = checkApply $ \arg1 arg2 ->
           let !v1 = eval' env arg1
               !v2 = eval' env arg2
            in if
                   | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
-                      mkBuiltinApp' OpAnomaVerify [v1, v2]
+                      mkBuiltinApp' OpAnomaVerifyWithMessage [v1, v2]
                   | otherwise ->
                       case (integerFromNode v1, integerFromNode v2) of
                         (Just i1, Just i2) -> verify i1 i2
-                        _ -> err "anomaVerifyOp: both arguments are not integers"
-        {-# INLINE anomaVerifyOp #-}
+                        _ -> err "anomaVerifyWithMessageOp: both arguments are not integers"
+        {-# INLINE anomaVerifyWithMessageOp #-}
 
         poseidonHashOp :: [Node] -> Node
         poseidonHashOp = unary $ \arg ->

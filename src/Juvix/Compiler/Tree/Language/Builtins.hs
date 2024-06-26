@@ -81,7 +81,7 @@ data AnomaOp
   | -- | Cryptographically sign an Anoma value using a secret key
     OpAnomaSign
   | -- | Verify a signature obtained from OpAnomaSign using a public key
-    OpAnomaVerify
+    OpAnomaVerifyWithMessage
   | -- | Produce a cryptographic signature of an Anoma value
     OpAnomaSignDetached
   deriving stock (Eq)

@@ -253,7 +253,7 @@ instance PrettyCode AnomaOp where
     OpAnomaDecode -> Str.anomaDecode
     OpAnomaVerifyDetached -> Str.anomaVerifyDetached
     OpAnomaSign -> Str.anomaSign
-    OpAnomaVerify -> Str.anomaVerify
+    OpAnomaVerifyWithMessage -> Str.anomaVerifyWithMessage
     OpAnomaSignDetached -> Str.anomaSignDetached
 
 instance PrettyCode UnaryOpcode where

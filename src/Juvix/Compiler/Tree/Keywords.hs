@@ -14,8 +14,8 @@ import Juvix.Data.Keyword.All
     kwAnomaGet,
     kwAnomaSign,
     kwAnomaSignDetached,
-    kwAnomaVerify,
     kwAnomaVerifyDetached,
+    kwAnomaVerifyWithMessage,
     kwArgsNum,
     kwAtoi,
     kwBr,
@@ -85,7 +85,7 @@ allKeywords =
          kwAnomaVerifyDetached,
          kwAnomaSign,
          kwAnomaSignDetached,
-         kwAnomaVerify,
+         kwAnomaVerifyWithMessage,
          kwPoseidon,
          kwEcOp,
          kwRandomEcPoint

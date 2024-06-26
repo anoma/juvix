@@ -81,7 +81,7 @@ tests =
       $(mkRelDir ".")
       $(mkRelFile "test013.jvt"),
     Eval.NegTest
-      "anomaVerify"
+      "anomaVerifyWithMessage"
       $(mkRelDir ".")
       $(mkRelFile "test014.jvt"),
     Eval.NegTest
