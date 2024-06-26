@@ -636,12 +636,6 @@ hEvalIO' opts herr hin hout ctx env node =
   where
     unitNode = mkConstr (Info.singleton (NoDisplayInfo ())) (BuiltinTag TagTrue) []
 
-hEvalIO :: Handle -> Handle -> Handle -> IdentContext -> Env -> Node -> IO Node
-hEvalIO = hEvalIO' defaultEvalOptions
-
-evalIO :: IdentContext -> Env -> Node -> IO Node
-evalIO = hEvalIO stderr stdin stdout
-
 doEval ::
   forall r.
   (MonadIO (Sem r)) =>
