@@ -62,6 +62,8 @@ fromCore fsize tab =
       BuiltinListCons -> True
       BuiltinMkPoseidonState -> True
       BuiltinMkEcPoint -> True
+      BuiltinMaybeNothing -> True
+      BuiltinMaybeJust -> True
       BuiltinNatZero -> False
       BuiltinNatSuc -> False
       BuiltinBoolTrue -> False
@@ -107,6 +109,7 @@ fromCore fsize tab =
         BuiltinRandomEcPoint -> False
       BuiltinTypeInductive i -> case i of
         BuiltinList -> True
+        BuiltinMaybe -> True
         BuiltinPoseidonState -> True
         BuiltinEcPoint -> True
         BuiltinNat -> False

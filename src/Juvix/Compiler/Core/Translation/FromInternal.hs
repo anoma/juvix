@@ -209,6 +209,8 @@ goConstructor sym ctor = do
       Just Internal.BuiltinIntNegSuc -> freshTag
       Just Internal.BuiltinListNil -> freshTag
       Just Internal.BuiltinListCons -> freshTag
+      Just Internal.BuiltinMaybeNothing -> freshTag
+      Just Internal.BuiltinMaybeJust -> freshTag
       Just Internal.BuiltinMkPoseidonState -> freshTag
       Just Internal.BuiltinMkEcPoint -> freshTag
       Nothing -> freshTag

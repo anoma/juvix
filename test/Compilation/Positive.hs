@@ -450,5 +450,10 @@ tests =
         "Test075: Multiway If"
         $(mkRelDir ".")
         $(mkRelFile "test075.juvix")
-        $(mkRelFile "out/test075.out")
+        $(mkRelFile "out/test075.out"),
+      posTestEval
+        "Test076: Builtin Maybe"
+        $(mkRelDir ".")
+        $(mkRelFile "test076.juvix")
+        $(mkRelFile "out/test076.out")
     ]
