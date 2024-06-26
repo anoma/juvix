@@ -166,5 +166,13 @@ tests =
       $(mkRelDir ".")
       $(mkRelFile "test016.casm")
       $(mkRelFile "out/test016.out")
-      (Just $(mkRelFile "in/test016.json"))
+      (Just $(mkRelFile "in/test016.json")),
+    PosTest
+      "Test017: Peephole optimization"
+      True
+      True
+      $(mkRelDir ".")
+      $(mkRelFile "test017.casm")
+      $(mkRelFile "out/test017.out")
+      Nothing
   ]
