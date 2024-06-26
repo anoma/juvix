@@ -10,7 +10,7 @@ import Juvix.Compiler.Pipeline.EntryPoint (EntryPoint)
 
 -- | Perform transformations on CASM necessary before the translation to Cairo
 -- bytecode
-toCairo' :: (Member (Reader Options) r) => Code -> Sem r Code
+toCairo' :: Code -> Sem r Code
 toCairo' = applyTransformations toCairoTransformations
 
 toCairo :: (Member (Reader EntryPoint) r) => Code -> Sem r Code
