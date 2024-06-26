@@ -2,19 +2,23 @@ module Juvix.Compiler.Tree.Language.Builtins where
 
 import Juvix.Prelude
 
+data BoolOp
+  = OpIntLt
+  | OpIntLe
+  | OpEq
+  deriving stock (Eq)
+
 data BinaryOp
-  = OpIntAdd
+  = OpBool BoolOp
+  | OpIntAdd
   | OpIntSub
   | OpIntMul
   | OpIntDiv
   | OpIntMod
-  | OpIntLt
-  | OpIntLe
   | OpFieldAdd
   | OpFieldSub
   | OpFieldMul
   | OpFieldDiv
-  | OpEq
   | OpStrConcat
   deriving stock (Eq)
 
@@ -25,13 +29,13 @@ isCommutative = \case
   OpIntMul -> True
   OpIntDiv -> False
   OpIntMod -> False
-  OpIntLt -> False
-  OpIntLe -> False
+  OpBool OpIntLt -> False
+  OpBool OpIntLe -> False
   OpFieldAdd -> True
   OpFieldSub -> False
   OpFieldMul -> True
   OpFieldDiv -> False
-  OpEq -> True
+  OpBool OpEq -> True
   OpStrConcat -> False
 
 data UnaryOp

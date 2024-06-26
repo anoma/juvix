@@ -251,6 +251,8 @@ fromRegInstr bNoStack info = \case
     fromCallClosures x
   Reg.Return x ->
     return $ fromReturn x
+  Reg.If x ->
+    fromIf x
   Reg.Branch x ->
     fromBranch x
   Reg.Case x ->
@@ -271,6 +273,12 @@ fromRegInstr bNoStack info = \case
             fromValue _instrBinopArg2
           ]
 
+    getBoolOpMacro :: Reg.BoolOp -> Text
+    getBoolOpMacro = \case
+      Reg.OpIntLt -> "JUVIX_BOOL_INT_LT"
+      Reg.OpIntLe -> "JUVIX_BOOL_INT_LE"
+      Reg.OpEq -> "JUVIX_BOOL_VAL_EQ"
+
     getBinaryOpMacro :: Reg.BinaryOp -> Text
     getBinaryOpMacro = \case
       Reg.OpIntAdd -> "JUVIX_INT_ADD"
@@ -278,9 +286,9 @@ fromRegInstr bNoStack info = \case
       Reg.OpIntMul -> "JUVIX_INT_MUL"
       Reg.OpIntDiv -> "JUVIX_INT_DIV"
       Reg.OpIntMod -> "JUVIX_INT_MOD"
-      Reg.OpIntLt -> "JUVIX_INT_LT"
-      Reg.OpIntLe -> "JUVIX_INT_LE"
-      Reg.OpEq -> "JUVIX_VAL_EQ"
+      Reg.OpBool Reg.OpIntLt -> "JUVIX_INT_LT"
+      Reg.OpBool Reg.OpIntLe -> "JUVIX_INT_LE"
+      Reg.OpBool Reg.OpEq -> "JUVIX_VAL_EQ"
       Reg.OpStrConcat -> "JUVIX_STR_CONCAT"
       Reg.OpFieldAdd -> unsupported "field type"
       Reg.OpFieldSub -> unsupported "field type"
@@ -504,6 +512,26 @@ fromRegInstr bNoStack info = \case
                         integer argsNum,
                         ExpressionVar lab
                       ]
+    fromIf :: Reg.InstrIf -> Sem r [Statement]
+    fromIf Reg.InstrIf {..} = do
+      br1 <- fromRegCode bNoStack info _instrIfTrue
+      br2 <- fromRegCode bNoStack info _instrIfFalse
+      return
+        [ StatementIf $
+            If
+              { _ifCondition =
+                  macroCall
+                    "is_true"
+                    [ macroCall
+                        (getBoolOpMacro _instrIfOp)
+                        [ fromValue _instrIfArg1,
+                          fromValue _instrIfArg2
+                        ]
+                    ],
+                _ifThen = StatementCompound br1,
+                _ifElse = Just (StatementCompound br2)
+              }
+        ]
 
     fromBranch :: Reg.InstrBranch -> Sem r [Statement]
     fromBranch Reg.InstrBranch {..} = do

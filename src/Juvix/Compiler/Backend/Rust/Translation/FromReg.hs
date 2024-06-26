@@ -154,6 +154,8 @@ fromRegInstr info = \case
     fromCallClosures x
   Reg.Return x ->
     fromReturn x
+  Reg.If x ->
+    fromIf x
   Reg.Branch x ->
     fromBranch x
   Reg.Case x ->
@@ -173,16 +175,20 @@ fromRegInstr info = \case
             [fromValue _instrBinopArg1, fromValue _instrBinopArg2]
         )
 
+    getBoolOpName :: Reg.BoolOp -> Text
+    getBoolOpName = \case
+      Reg.OpIntLt -> "smallint_lt"
+      Reg.OpIntLe -> "smallint_le"
+      Reg.OpEq -> "juvix_equal"
+
     getBinaryOpName :: Reg.BinaryOp -> Text
     getBinaryOpName = \case
+      Reg.OpBool x -> getBoolOpName x
       Reg.OpIntAdd -> "smallint_add"
       Reg.OpIntSub -> "smallint_sub"
       Reg.OpIntMul -> "smallint_mul"
       Reg.OpIntDiv -> "smallint_div"
       Reg.OpIntMod -> "smallint_mod"
-      Reg.OpIntLt -> "smallint_lt"
-      Reg.OpIntLe -> "smallint_le"
-      Reg.OpEq -> "juvix_equal"
       Reg.OpStrConcat -> unsupported "strings"
       Reg.OpFieldAdd -> unsupported "field type"
       Reg.OpFieldSub -> unsupported "field type"
@@ -348,6 +354,23 @@ fromRegInstr info = \case
               mkVec (map fromValue _instrTailCallClosuresArgs)
             ]
       ]
+
+    fromIf :: Reg.InstrIf -> [Statement]
+    fromIf Reg.InstrIf {..} =
+      stmtsIf
+        ( mkCall
+            "word_to_bool"
+            [ ( mkCall
+                  (getBoolOpName _instrIfOp)
+                  [fromValue _instrIfArg1, fromValue _instrIfArg2]
+              )
+            ]
+        )
+        br1
+        br2
+      where
+        br1 = fromRegCode info _instrIfTrue
+        br2 = fromRegCode info _instrIfFalse
 
     fromBranch :: Reg.InstrBranch -> [Statement]
     fromBranch Reg.InstrBranch {..} =

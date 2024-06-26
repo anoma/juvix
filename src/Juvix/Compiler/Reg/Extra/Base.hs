@@ -1,5 +1,6 @@
 module Juvix.Compiler.Reg.Extra.Base where
 
+import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Reg.Language
 
 getResultVar :: Instruction -> Maybe VarRef
@@ -30,6 +31,7 @@ setResultVar instr vref = case instr of
 
 getOutVar :: Instruction -> Maybe VarRef
 getOutVar = \case
+  If x -> x ^. instrIfOutVar
   Branch x -> x ^. instrBranchOutVar
   Case x -> x ^. instrCaseOutVar
   _ -> Nothing
@@ -48,6 +50,7 @@ overValueRefs'' f = \case
   TailCall x -> TailCall <$> goTailCall x
   TailCallClosures x -> TailCallClosures <$> goTailCallClosures x
   Return x -> Return <$> goReturn x
+  If x -> If <$> goIf x
   Branch x -> Branch <$> goBranch x
   Case x -> Case <$> goCase x
   Trace x -> Trace <$> goTrace x
@@ -162,6 +165,9 @@ overValueRefs'' f = \case
     goReturn :: InstrReturn -> m InstrReturn
     goReturn = overM instrReturnValue goValue
 
+    goIf :: InstrIf -> m InstrIf
+    goIf = overM instrIfArg1 goValue >=> overM instrIfArg2 goValue
+
     goBranch :: InstrBranch -> m InstrBranch
     goBranch = overM instrBranchValue goValue
 
@@ -199,3 +205,18 @@ updateLiveVars' f = \case
 
 updateLiveVars :: (VarRef -> VarRef) -> Instruction -> Instruction
 updateLiveVars f = updateLiveVars' (Just . f)
+
+updateInstrLiveVars :: Instruction -> HashSet VarRef -> HashSet VarRef
+updateInstrLiveVars instr liveVars =
+  HashSet.union
+    (maybe liveVars (`HashSet.delete` liveVars) (getResultVar instr))
+    (HashSet.fromList (getValueRefs instr))
+
+computeBackwardLiveVars :: Instruction -> HashSet VarRef -> [HashSet VarRef] -> HashSet VarRef
+computeBackwardLiveVars instr live lives = case instr of
+  If {} -> ulives
+  Branch {} -> ulives
+  Case {} -> ulives
+  _ -> live
+  where
+    ulives = HashSet.unions lives

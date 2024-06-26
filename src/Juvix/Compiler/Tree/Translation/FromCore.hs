@@ -283,13 +283,13 @@ genCode infoTable fi =
       Core.OpIntMul -> PrimBinop OpIntMul
       Core.OpIntDiv -> PrimBinop OpIntDiv
       Core.OpIntMod -> PrimBinop OpIntMod
-      Core.OpIntLt -> PrimBinop OpIntLt
-      Core.OpIntLe -> PrimBinop OpIntLe
+      Core.OpIntLt -> PrimBinop (OpBool OpIntLt)
+      Core.OpIntLe -> PrimBinop (OpBool OpIntLe)
       Core.OpFieldAdd -> PrimBinop OpFieldAdd
       Core.OpFieldSub -> PrimBinop OpFieldSub
       Core.OpFieldMul -> PrimBinop OpFieldMul
       Core.OpFieldDiv -> PrimBinop OpFieldDiv
-      Core.OpEq -> PrimBinop OpEq
+      Core.OpEq -> PrimBinop (OpBool OpEq)
       Core.OpStrConcat -> PrimBinop OpStrConcat
       Core.OpSeq -> OpSeq
       _ -> impossible

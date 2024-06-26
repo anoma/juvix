@@ -387,9 +387,9 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
             goExtraBinop IntDiv res arg1 arg2
           Reg.OpIntMod ->
             goExtraBinop IntMod res arg1 arg2
-          Reg.OpIntLt ->
+          Reg.OpBool Reg.OpIntLt ->
             goExtraBinop IntLt res arg1 arg2
-          Reg.OpIntLe ->
+          Reg.OpBool Reg.OpIntLe ->
             goIntLe res arg1 arg2
           Reg.OpFieldAdd ->
             goNativeBinop FieldAdd res arg1 arg2
@@ -399,7 +399,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
             goNativeBinop FieldMul res arg1 arg2
           Reg.OpFieldDiv ->
             goExtraBinop FieldDiv res arg1 arg2
-          Reg.OpEq ->
+          Reg.OpBool Reg.OpEq ->
             goEq res arg1 arg2
           Reg.OpStrConcat ->
             unsupported "strings"
@@ -527,6 +527,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
           Reg.Call x -> goCall liveVars x
           Reg.TailCall x -> goTailCall x
           Reg.Return x -> goReturn x
+          Reg.If x -> goIf liveVars x
           Reg.Branch x -> goBranch liveVars x
           Reg.Case x -> goCase liveVars x
 
@@ -573,34 +574,48 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
           goAssignApValue _instrReturnValue
           output'' Return
 
+        goIf :: HashSet Reg.VarRef -> Reg.InstrIf -> Sem r ()
+        goIf liveVars Reg.InstrIf {..} = case _instrIfOp of
+          Reg.OpEq
+            | Reg.ValConst (Reg.ConstInt 0) <- _instrIfArg1 -> do
+                v <- goValue _instrIfArg2
+                goBranch' liveVars _instrIfOutVar _instrIfTrue _instrIfFalse v
+            | Reg.ValConst (Reg.ConstInt 0) <- _instrIfArg2 -> do
+                v <- goValue _instrIfArg1
+                goBranch' liveVars _instrIfOutVar _instrIfTrue _instrIfFalse v
+          _ -> impossible
+
         goBranch :: HashSet Reg.VarRef -> Reg.InstrBranch -> Sem r ()
         goBranch liveVars Reg.InstrBranch {..} = do
           v <- goValue _instrBranchValue
-          case v of
-            Imm c
-              | c == 0 -> goBlock blts failLab liveVars _instrBranchOutVar _instrBranchTrue
-              | otherwise -> goBlock blts failLab liveVars _instrBranchOutVar _instrBranchFalse
-            Ref r -> do
-              symFalse <- freshSymbol
-              symEnd <- freshSymbol
-              let labFalse = LabelRef symFalse Nothing
-                  labEnd = LabelRef symEnd Nothing
-              output'' $ mkJumpIf (Lab labFalse) r
-              ap0 <- getAP
-              vars <- getVars
-              bltOff <- getBuiltinOffset
-              goLocalBlock ap0 vars bltOff liveVars _instrBranchOutVar _instrBranchTrue
-              -- _instrBranchOutVar is Nothing iff the branch returns
-              when (isJust _instrBranchOutVar) $
-                output'' (mkJumpRel (Val $ Lab labEnd))
-              addrFalse <- getPC
-              registerLabelAddress symFalse addrFalse
-              output'' $ Label labFalse
-              goLocalBlock ap0 vars bltOff liveVars _instrBranchOutVar _instrBranchFalse
-              addrEnd <- getPC
-              registerLabelAddress symEnd addrEnd
-              output'' $ Label labEnd
-            Lab {} -> impossible
+          goBranch' liveVars _instrBranchOutVar _instrBranchTrue _instrBranchFalse v
+
+        goBranch' :: HashSet Reg.VarRef -> Maybe Reg.VarRef -> Reg.Block -> Reg.Block -> Value -> Sem r ()
+        goBranch' liveVars outVar branchTrue branchFalse = \case
+          Imm c
+            | c == 0 -> goBlock blts failLab liveVars outVar branchTrue
+            | otherwise -> goBlock blts failLab liveVars outVar branchFalse
+          Ref r -> do
+            symFalse <- freshSymbol
+            symEnd <- freshSymbol
+            let labFalse = LabelRef symFalse Nothing
+                labEnd = LabelRef symEnd Nothing
+            output'' $ mkJumpIf (Lab labFalse) r
+            ap0 <- getAP
+            vars <- getVars
+            bltOff <- getBuiltinOffset
+            goLocalBlock ap0 vars bltOff liveVars outVar branchTrue
+            -- outVar is Nothing iff the branch returns
+            when (isJust outVar) $
+              output'' (mkJumpRel (Val $ Lab labEnd))
+            addrFalse <- getPC
+            registerLabelAddress symFalse addrFalse
+            output'' $ Label labFalse
+            goLocalBlock ap0 vars bltOff liveVars outVar branchFalse
+            addrEnd <- getPC
+            registerLabelAddress symEnd addrEnd
+            output'' $ Label labEnd
+          Lab {} -> impossible
 
         goLoad :: Reg.Value -> Offset -> Sem r RValue
         goLoad val off = do

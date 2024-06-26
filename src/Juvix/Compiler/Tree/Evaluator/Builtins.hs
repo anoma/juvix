@@ -22,8 +22,8 @@ evalBinop op arg1 arg2 = case op of
   OpIntMod
     | arg2 == ValInteger 0 -> Left "division by zero"
     | otherwise -> goIntBinop rem arg1 arg2
-  OpIntLe -> goIntCmpBinop (<=) arg1 arg2
-  OpIntLt -> goIntCmpBinop (<) arg1 arg2
+  OpBool OpIntLe -> goIntCmpBinop (<=) arg1 arg2
+  OpBool OpIntLt -> goIntCmpBinop (<) arg1 arg2
   OpFieldAdd -> goFieldBinop fieldAdd arg1 arg2
   OpFieldSub -> goFieldBinop fieldSub arg1 arg2
   OpFieldMul -> goFieldBinop fieldMul arg1 arg2
@@ -31,7 +31,7 @@ evalBinop op arg1 arg2 = case op of
     ValField arg2'
       | fieldToInteger arg2' == 0 -> Left "division by zero"
     _ -> goFieldBinop fieldDiv arg1 arg2
-  OpEq
+  OpBool OpEq
     | arg1 == arg2 -> Right $ ValBool True
     | otherwise -> Right $ ValBool False
   OpStrConcat -> goStrConcat arg1 arg2

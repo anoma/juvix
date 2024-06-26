@@ -124,8 +124,7 @@ int main() {
                              { CARG(juvix_closure_nargs) = juvix_result; });
                 CALL_CLOSURE(TMP(0), juvix_label_7);
                 STACK_POP(TMP(1));
-                PREALLOC(
-                    3, { STACK_PUSH(TMP(1)); }, { STACK_POP(TMP(1)); });
+                PREALLOC(3, { STACK_PUSH(TMP(1)); }, { STACK_POP(TMP(1)); });
                 ALLOC_CONSTR_BOXED(TMP(0), UID_CONS, 2);
                 CONSTR_ARG(TMP(0), 0) = juvix_result;
                 CONSTR_ARG(TMP(0), 1) = TMP(1);
@@ -158,8 +157,7 @@ juvix_closure_add_one:
                 ARG(0) = TMP(0);
                 CALL(0, juvix_function_gen, juvix_label_gen_1);
                 STACK_POP(ARG(0));
-                PREALLOC(
-                    3, { STACK_PUSH(ARG(0)); }, { STACK_POP(ARG(0)); });
+                PREALLOC(3, { STACK_PUSH(ARG(0)); }, { STACK_POP(ARG(0)); });
                 ALLOC_CONSTR_BOXED(TMP(0), UID_CONS, 2);
                 CONSTR_ARG(TMP(0), 0) = ARG(0);
                 CONSTR_ARG(TMP(0), 1) = juvix_result;

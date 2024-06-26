@@ -139,6 +139,18 @@ newtype InstrReturn = InstrReturn
   }
   deriving stock (Eq)
 
+data InstrIf' a = InstrIf
+  { _instrIfOp :: BoolOp,
+    _instrIfArg1 :: Value,
+    _instrIfArg2 :: Value,
+    _instrIfTrue :: a,
+    _instrIfFalse :: a,
+    -- | Output variable storing the result (corresponds to the top of the value
+    -- stack in JuvixAsm after executing the branches)
+    _instrIfOutVar :: Maybe VarRef
+  }
+  deriving stock (Eq, Functor)
+
 data InstrBranch' a = InstrBranch
   { _instrBranchValue :: Value,
     _instrBranchTrue :: a,
@@ -180,6 +192,7 @@ makeLenses ''InstrExtendClosure
 makeLenses ''InstrReturn
 makeLenses ''InstrTailCall
 makeLenses ''InstrCall
+makeLenses ''InstrIf'
 makeLenses ''InstrBranch'
 makeLenses ''InstrCase'
 makeLenses ''CaseBranch'

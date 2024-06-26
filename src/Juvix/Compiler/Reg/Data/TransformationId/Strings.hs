@@ -17,6 +17,9 @@ strIdentity = "identity"
 strCleanup :: Text
 strCleanup = "cleanup"
 
+strCleanupCairo :: Text
+strCleanupCairo = "cleanup-cairo"
+
 strSSA :: Text
 strSSA = "ssa"
 
@@ -31,6 +34,12 @@ strConstantPropagation = "constant-propagation"
 
 strDeadCodeElimination :: Text
 strDeadCodeElimination = "dead-code"
+
+strBranchToIf :: Text
+strBranchToIf = "br-to-if"
+
+strBranchOnZeroToIf :: Text
+strBranchOnZeroToIf = "brz-to-if"
 
 strOptPhaseMain :: Text
 strOptPhaseMain = "opt-main"

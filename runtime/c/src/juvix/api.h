@@ -33,10 +33,9 @@
     DECL_TAIL_APPLY_3;                              \
     juvix_program_start:
 
-#define JUVIX_EPILOGUE \
-    juvix_program_end: \
-    STACK_POPT;        \
-    IO_INTERPRET;      \
+#define JUVIX_EPILOGUE              \
+    juvix_program_end : STACK_POPT; \
+    IO_INTERPRET;                   \
     io_print_toplevel(juvix_result);
 
 // Temporary / local vars
@@ -45,9 +44,7 @@
 
 // Begin a function definition. `max_stack` is the maximum stack allocation in
 // the function.
-#define JUVIX_FUNCTION(label, max_stack) \
-    label:                               \
-    STACK_ENTER((max_stack))
+#define JUVIX_FUNCTION(label, max_stack) label : STACK_ENTER((max_stack))
 
 /*
     Macro sequence for function definition:
@@ -67,8 +64,7 @@ closure_label:
 */
 
 // Begin a function with no stack allocation.
-#define JUVIX_FUNCTION_NS(label) \
-    label:
+#define JUVIX_FUNCTION_NS(label) label:
 
 #define JUVIX_INT_ADD(var0, var1, var2) (var0 = smallint_add(var1, var2))
 #define JUVIX_INT_SUB(var0, var1, var2) (var0 = smallint_sub(var1, var2))
@@ -82,6 +78,10 @@ closure_label:
 
 #define JUVIX_VAL_EQ(var0, var1, var2) \
     (var0 = make_bool(juvix_equal(var1, var2)))
+
+#define JUVIX_BOOL_INT_LT(var1, var2) (smallint_lt(var1, var2))
+#define JUVIX_BOOL_INT_LE(var1, var2) (smallint_le(var1, var2))
+#define JUVIX_BOOL_VAL_EQ(var1, var2) (make_bool(juvix_equal(var1, var2)))
 
 #define JUVIX_STR_CONCAT(var0, var1, var2) CONCAT_CSTRINGS(var0, var1, var2)
 

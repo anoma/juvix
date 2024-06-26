@@ -25,6 +25,7 @@ fromReg = over infoFunctions (fmap (over functionCode goCode))
         Reg.Call x -> mkBlock (Call x)
         Reg.TailCall x -> mkBlock (TailCall x)
         Reg.Return x -> mkBlock (Return x)
+        Reg.If x -> mkBlock (If (fmap goCode x))
         Reg.Branch x -> mkBlock (Branch (fmap goCode x))
         Reg.Case x -> mkBlock (Case (fmap goCode x))
         Reg.CallClosures {} -> impossible

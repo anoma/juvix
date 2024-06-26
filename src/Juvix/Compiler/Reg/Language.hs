@@ -21,7 +21,8 @@ data Instruction
   | TailCallClosures InstrTailCallClosures
   | Return InstrReturn
   | ----
-    Branch InstrBranch
+    If InstrIf
+  | Branch InstrBranch
   | Case InstrCase
   | ----
     Trace InstrTrace
@@ -53,6 +54,8 @@ data InstrTailCallClosures = InstrTailCallClosures
     _instrTailCallClosuresArgs :: [Value]
   }
   deriving stock (Eq)
+
+type InstrIf = InstrIf' Code
 
 type InstrBranch = InstrBranch' Code
 

@@ -35,6 +35,11 @@ recurseF sig c = \case
     (c0, i0) <- (sig ^. forwardFun) i c
     (c', i') <-
       case i0 of
+        If x@InstrIf {..} -> do
+          (c1, is1) <- recurseF sig c0 _instrIfTrue
+          (c2, is2) <- recurseF sig c0 _instrIfFalse
+          let i' = If x {_instrIfTrue = is1, _instrIfFalse = is2}
+          return $ (sig ^. forwardCombine) i' (c1 :| [c2])
         Branch x@InstrBranch {..} -> do
           (c1, is1) <- recurseF sig c0 _instrBranchTrue
           (c2, is2) <- recurseF sig c0 _instrBranchFalse
@@ -70,6 +75,10 @@ recurseB sig a = \case
     let a0 = (sig ^. backwardAdjust) a'
     (as, i') <-
       case i of
+        If x@InstrIf {..} -> do
+          (a1, is1) <- recurseB sig a0 _instrIfTrue
+          (a2, is2) <- recurseB sig a0 _instrIfFalse
+          return ([a1, a2], If x {_instrIfTrue = is1, _instrIfFalse = is2})
         Branch x@InstrBranch {..} -> do
           (a1, is1) <- recurseB sig a0 _instrBranchTrue
           (a2, is2) <- recurseB sig a0 _instrBranchFalse

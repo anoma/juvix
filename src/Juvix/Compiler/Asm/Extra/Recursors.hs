@@ -156,9 +156,9 @@ recurse' sig = go True
             fixMemIntOp mem
           OpIntMod ->
             fixMemIntOp mem
-          OpIntLt ->
+          OpBool OpIntLt ->
             fixMemBinOp' mem mkTypeInteger mkTypeInteger mkTypeBool
-          OpIntLe ->
+          OpBool OpIntLe ->
             fixMemBinOp' mem mkTypeInteger mkTypeInteger mkTypeBool
           OpFieldAdd ->
             fixMemFieldOp mem
@@ -168,7 +168,7 @@ recurse' sig = go True
             fixMemFieldOp mem
           OpFieldDiv ->
             fixMemFieldOp mem
-          OpEq ->
+          OpBool OpEq ->
             fixMemBinOp' mem TyDynamic TyDynamic mkTypeBool
           OpStrConcat ->
             fixMemBinOp' mem TyString TyString TyString

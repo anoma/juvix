@@ -196,6 +196,30 @@ instance PrettyCode InstrReturn where
     val <- ppCode _instrReturnValue
     return $ primitive Str.ret <+> val
 
+instance PrettyCode InstrIf where
+  ppCode InstrIf {..} = do
+    op <- Tree.ppCode _instrIfOp
+    arg1 <- ppCode _instrIfArg1
+    arg2 <- ppCode _instrIfArg2
+    br1 <- ppCodeCode _instrIfTrue
+    br2 <- ppCodeCode _instrIfFalse
+    var <- ppOutVar _instrIfOutVar
+    return $
+      primitive Str.if_
+        <+> op
+        <+> arg1
+        <+> arg2
+          <> var
+        <+> braces'
+          ( constr Str.true_ <> colon
+              <+> braces' br1
+                <> semi
+                <> line
+                <> constr Str.false_
+                <> colon
+              <+> braces' br2 <> semi
+          )
+
 instance PrettyCode InstrBranch where
   ppCode InstrBranch {..} = do
     val <- ppCode _instrBranchValue
@@ -259,6 +283,7 @@ instance PrettyCode Instruction where
     CallClosures x -> ppCode x
     TailCallClosures x -> ppCode x
     Return x -> ppCode x
+    If x -> ppCode x
     Branch x -> ppCode x
     Case x -> ppCode x
     Block x -> ppCode x

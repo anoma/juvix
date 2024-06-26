@@ -13,6 +13,8 @@ overSubBlocks f block = block'
       Call x -> Call x
       TailCall x -> TailCall x
       Return x -> Return x
+      If x ->
+        If $ over instrIfTrue f $ over instrIfFalse f x
       Branch x ->
         Branch $ over instrBranchTrue f $ over instrBranchFalse f x
       Case x ->
@@ -29,6 +31,8 @@ getSubBlocks block = maybe [] goFinal (block ^. blockFinal)
       Call {} -> []
       TailCall {} -> []
       Return {} -> []
+      If x ->
+        [x ^. instrIfTrue, x ^. instrIfFalse]
       Branch x ->
         [x ^. instrBranchTrue, x ^. instrBranchFalse]
       Case x ->
@@ -55,6 +59,7 @@ getOutVar :: FinalInstruction -> Maybe VarRef
 getOutVar = \case
   Call x -> Just $ x ^. instrCallResult
   ExtendClosure x -> Just $ x ^. instrExtendClosureResult
+  If x -> x ^. instrIfOutVar
   Branch x -> x ^. instrBranchOutVar
   Case x -> x ^. instrCaseOutVar
   TailCall {} -> Nothing
@@ -110,6 +115,7 @@ getValueRefs' = \case
   Call x -> goCall x
   TailCall x -> goTailCall x
   Return x -> goReturn x
+  If x -> goIf x
   Branch x -> goBranch x
   Case x -> goCase x
   where
@@ -131,6 +137,9 @@ getValueRefs' = \case
 
     goReturn :: InstrReturn -> [VarRef]
     goReturn InstrReturn {..} = getValueRefs'' _instrReturnValue
+
+    goIf :: InstrIf -> [VarRef]
+    goIf InstrIf {..} = getValueRefs'' _instrIfArg1 ++ getValueRefs'' _instrIfArg2
 
     goBranch :: InstrBranch -> [VarRef]
     goBranch InstrBranch {..} = getValueRefs'' _instrBranchValue

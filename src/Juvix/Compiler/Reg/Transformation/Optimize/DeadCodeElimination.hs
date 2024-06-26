@@ -32,14 +32,7 @@ removeDeadAssignments = mapT (const goFun)
         _ ->
           (liveVars', instr : is')
         where
-          liveVars' =
-            HashSet.union
-              (maybe liveVars (`HashSet.delete` liveVars) (getResultVar instr))
-              (HashSet.fromList (getValueRefs instr))
-          liveVars = case instr of
-            Branch {} -> ulives
-            Case {} -> ulives
-            _ -> live
-          ulives = HashSet.unions lives
+          liveVars' = updateInstrLiveVars instr liveVars
+          liveVars = computeBackwardLiveVars instr live lives
       [] ->
         (live, [])
