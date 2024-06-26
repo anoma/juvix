@@ -647,6 +647,9 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
           ap0 <- getAP
           vars <- getVars
           bltOff <- getBuiltinOffset
+          -- reversing `_instrCaseBranches` typically results in better
+          -- opportunities for peephole optimization (the last jump to branch
+          -- may be removed by the peephole optimizer)
           mapM_ (goCaseBranch ap0 vars bltOff symMap labEnd) (reverse _instrCaseBranches)
           mapM_ (goDefaultLabel symMap) defaultTags
           whenJust _instrCaseDefault $
