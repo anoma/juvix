@@ -1,9 +1,15 @@
-module Commands.Format.Options where
+module Commands.Format.Options
+  ( module Commands.Format.Options,
+    module Juvix.Compiler.Concrete.Data.Rename,
+  )
+where
 
 import CommonOptions
+import Juvix.Compiler.Concrete.Data.Rename
 
 data FormatOptions = FormatOptions
   { _formatInput :: Maybe (AppPath FileOrDir),
+    _formatRename :: Maybe Rename,
     _formatCheck :: Bool,
     _formatInPlace :: Bool
   }
@@ -26,6 +32,7 @@ parseInputFileOrDir = do
 parseFormat :: Parser FormatOptions
 parseFormat = do
   _formatInput <- optional parseInputFileOrDir
+  _formatRename <- optional parseOptRename
   _formatCheck <-
     switch
       ( long "check"

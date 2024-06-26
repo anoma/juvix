@@ -1,10 +1,16 @@
-module Juvix.Compiler.Concrete.Pretty.Options where
+module Juvix.Compiler.Concrete.Pretty.Options
+  ( module Juvix.Compiler.Concrete.Pretty.Options,
+    module Juvix.Compiler.Concrete.Data.Rename,
+  )
+where
 
+import Juvix.Compiler.Concrete.Data.Rename
 import Juvix.Prelude
 
 data Options = Options
   { _optShowNameIds :: Bool,
     _optInJudocBlock :: Bool,
+    _optRenames :: [Rename],
     _optPrintPragmas :: Bool
   }
 
@@ -13,6 +19,7 @@ defaultOptions =
   Options
     { _optShowNameIds = False,
       _optInJudocBlock = False,
+      _optRenames = [],
       _optPrintPragmas = True
     }
 
@@ -21,6 +28,7 @@ traceOptions =
   Options
     { _optShowNameIds = True,
       _optInJudocBlock = False,
+      _optRenames = [],
       _optPrintPragmas = True
     }
 
