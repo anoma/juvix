@@ -194,6 +194,9 @@ bool_ = "bool"
 list :: (IsString s) => s
 list = "list"
 
+maybe_ :: (IsString s) => s
+maybe_ = "maybe"
+
 int_ :: (IsString s) => s
 int_ = "int"
 
@@ -988,6 +991,12 @@ nil = "nil"
 
 cons :: (IsString s) => s
 cons = "cons"
+
+nothing :: (IsString s) => s
+nothing = "nothing"
+
+just :: (IsString s) => s
+just = "just"
 
 unary :: (IsString s) => s
 unary = "unary"

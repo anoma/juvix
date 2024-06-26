@@ -1,0 +1,15 @@
+-- builtin maybe
+module test076;
+
+import Juvix.Builtin.V1.Nat open;
+
+builtin maybe
+type Maybe A :=
+  | nothing
+  | just A;
+
+fromMaybe {A} (default : A) : Maybe A -> A
+  | nothing := default
+  | (just a) := a;
+
+main : Nat := fromMaybe 0 (just 1) + fromMaybe 5 nothing;

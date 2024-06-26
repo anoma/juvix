@@ -503,6 +503,7 @@ registerBuiltinInductive d = \case
   BuiltinBool -> registerBoolDef d
   BuiltinInt -> registerIntDef d
   BuiltinList -> registerListDef d
+  BuiltinMaybe -> registerMaybeDef d
   BuiltinPoseidonState -> registerPoseidonStateDef d
   BuiltinEcPoint -> registerEcPointDef d
 
