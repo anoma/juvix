@@ -164,16 +164,18 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
 
     -- To ensure that memory is accessed sequentially at all times, we divide
     -- instructions into basic blocks. Within each basic block, the `ap` offset
-    -- is known at each instruction, which allows to statically associate `fp`
-    -- offsets to variables while still generating only sequential assignments
-    -- to `[ap]` with increasing `ap`. When the `ap` offset can no longer be
-    -- statically determined for new variables (e.g. due to an intervening
-    -- recursive call), we switch to the next basic block by "calling" it with
-    -- the `call` instruction (see `goCallBlock`). The arguments of the basic
-    -- block call are the variables live at the beginning of the block. Note
-    -- that the `fp` offsets of "old" variables are still statically determined
-    -- even after the current `ap` offset becomes unknown -- the arbitrary
-    -- increase of `ap` does not influence the previous variable associations.
+    -- (i.e. how much `ap` increased since the start of the basic block) is
+    -- known at each instruction, which allows to statically associate `fp`
+    -- offsets (i.e. offsets relative to `fp`) to variables while still
+    -- generating only sequential assignments to `[ap]` with increasing `ap`.
+    -- When the `ap` offset can no longer be statically determined for new
+    -- variables (e.g. due to an intervening recursive call), we switch to the
+    -- next basic block by "calling" it with the `call` instruction (see
+    -- `goCallBlock`). The arguments of the basic block call are the variables
+    -- live at the beginning of the block. Note that the `fp` offsets of "old"
+    -- variables are still statically determined even after the current `ap`
+    -- offset becomes unknown -- the arbitrary increase of `ap` does not
+    -- influence the previous variable associations.
     goBlock :: forall r. (Members '[LabelInfoBuilder, CasmBuilder, Output Instruction] r) => StdlibBuiltins -> LabelRef -> HashSet Reg.VarRef -> Maybe Reg.VarRef -> Reg.Block -> Sem r ()
     goBlock blts failLab liveVars0 mout Reg.Block {..} = do
       mapM_ goInstr _blockBody
