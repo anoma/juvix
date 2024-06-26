@@ -5,6 +5,7 @@ import Commands.Format.Options
 import Data.Text qualified as Text
 import Juvix.Compiler.Pipeline.Driver (processModule)
 import Juvix.Compiler.Pipeline.Loader.PathResolver.ImportTree.Base
+import Juvix.Compiler.Concrete.Pretty.Options
 import Juvix.Compiler.Pipeline.ModuleInfoCache
 import Juvix.Compiler.Store.Language (ModuleInfo)
 import Juvix.Formatter
@@ -69,7 +70,11 @@ runCommand :: forall r. (Members '[EmbedIO, App, TaggedLock, Files] r) => Format
 runCommand opts = do
   target <- targetFromOptions opts
   runOutputSem (renderFormattedOutput target opts) . runScopeFileApp $ do
-    res <- case target of
+    let printOpts =
+          defaultOptions
+            { _optRenames = maybe [] pure (opts ^. formatRename)
+            }
+    res <- runReader printOpts $ case target of
       TargetFile p -> format p
       TargetProject -> formatProject
       TargetStdin -> do

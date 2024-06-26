@@ -5,6 +5,7 @@ module Juvix.Formatter where
 import Juvix.Compiler.Concrete.Data.Highlight.Input (ignoreHighlightBuilder)
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Print (ppOutDefault)
+import Juvix.Compiler.Concrete.Pretty.Options
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping (ScoperResult, getModuleId, scopeCheck)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource (ParserResult, fromSource)
@@ -67,7 +68,7 @@ instance Monoid FormatResult where
 -- contents of the file.
 format ::
   forall r.
-  (Members '[ScopeEff, Files, Output FormattedFileInfo] r) =>
+  (Members '[ScopeEff, Reader Options, Files, Output FormattedFileInfo] r) =>
   Path Abs File ->
   Sem r FormatResult
 format p = do
@@ -154,7 +155,7 @@ formatPath p = do
 
 formatStdin ::
   forall r.
-  (Members '[Reader EntryPoint, ScopeEff, Files, Output FormattedFileInfo] r) =>
+  (Members '[Reader EntryPoint, Reader Options, ScopeEff, Files, Output FormattedFileInfo] r) =>
   Sem r FormatResult
 formatStdin = do
   entry <- ask
@@ -189,7 +190,10 @@ formatResultSourceCode filepath src = do
 formatScoperResult' ::
   Bool -> Text -> Scoper.ScoperResult -> Text
 formatScoperResult' forceFormat original sres =
-  run . runReader original $ formatScoperResult forceFormat sres
+  run
+    . runReader original
+    . runReader defaultOptions
+    $ formatScoperResult forceFormat sres
 
 formatScoperResult ::
   (Members '[Reader OriginalSource] r) =>

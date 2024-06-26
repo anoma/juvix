@@ -30,14 +30,20 @@ instance Hashable RenameCondition
 
 instance Hashable Rename
 
+applyRename :: Name' n -> Rename -> Maybe Text
+applyRename n r
+  | checkRenameCondition (r ^. renameCondition) n = Just (r ^. renameNewName)
+  | otherwise = Nothing
+
 checkRenameCondition :: RenameCondition -> Name' n -> Bool
 checkRenameCondition RenameCondition {..} n =
   checkEq _renameModulePath (modId ^. moduleIdPath)
     && checkEq _renamePackageName (modId ^. moduleIdPackage)
-    && checkEq _renamePackageName (n ^. nameVerbatim)
+    && checkEq (Just _renameOldName) (n ^. nameVerbatim)
   where
     modId :: ModuleId
     modId = n ^. nameId . nameIdModuleId
+
     checkEq :: Maybe Text -> Text -> Bool
     checkEq mt1 t2 = case mt1 of
       Nothing -> True

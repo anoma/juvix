@@ -28,7 +28,7 @@ import Juvix.Data.Keyword.All qualified as Kw
 import Juvix.Data.NameKind
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude hiding ((<+>), (<+?>), (<?+>), (?<>))
-import Juvix.Prelude.Pretty (annotate, pretty)
+import Juvix.Prelude.Pretty (annotate, pretty, prettyText)
 import Juvix.Prelude.Pretty qualified as P
 
 --- An expression is `Top` if it is:
@@ -468,8 +468,13 @@ instance PrettyPrint TopModulePath where
 
 instance (PrettyPrint n) => PrettyPrint (S.Name' n) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => S.Name' n -> Sem r ()
-  ppCode S.Name' {..} = do
-    let nameConcrete' = region (C.annotateKind _nameKind) (ppCode _nameConcrete)
+  ppCode sn@S.Name' {..} = do
+    renames <- asks (^. optRenames)
+    -- TODO qualified names are not currently handled properly
+    let renameText :: Maybe (Doc Ann) = pretty <$> firstJust (applyRename sn) renames
+        nameConcrete' =
+          region (C.annotateKind _nameKind) $
+            maybe (ppCode _nameConcrete) noLoc renameText
     annSRef (withNameIdSuffix _nameId nameConcrete')
     where
       annSRef :: Sem r () -> Sem r ()
