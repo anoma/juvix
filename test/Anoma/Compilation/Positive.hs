@@ -583,5 +583,16 @@ allTests =
             $(mkRelDir ".")
             $(mkRelFile "test079.juvix")
             [OpQuote # inputStr]
-            $ checkOutput [[nock| "Juvix! ✨ héllo world ✨" |]]
+            $ checkOutput [[nock| "Juvix! ✨ héllo world ✨" |]],
+      mkAnomaCallTest
+        "Test080: Maybe"
+        $(mkRelDir ".")
+        $(mkRelFile "test080.juvix")
+        []
+        $ checkOutput
+          [ [nock| [nil 1] |],
+            [nock| 2 |],
+            [nock| 3 |],
+            [nock| nil |]
+          ]
     ]

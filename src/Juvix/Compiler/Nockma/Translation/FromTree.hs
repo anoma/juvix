@@ -62,10 +62,16 @@ data NockmaMemRepListConstr
   | NockmaMemRepListConstrCons
   deriving stock (Eq)
 
+data NockmaMemRepMaybeConstr
+  = NockmaMemRepMaybeConstrNothing
+  | NockmaMemRepMaybeConstrJust
+  deriving stock (Eq)
+
 data NockmaMemRep
   = NockmaMemRepConstr
   | NockmaMemRepTuple
   | NockmaMemRepList NockmaMemRepListConstr
+  | NockmaMemRepMaybe NockmaMemRepMaybeConstr
 
 newtype NockmaBuiltinTag
   = NockmaBuiltinBool Bool
@@ -224,15 +230,27 @@ allConstructors Tree.InfoTable {..} ci =
     getConstructorInfo'' :: Tree.Tag -> Tree.ConstructorInfo
     getConstructorInfo'' t = _infoConstrs ^?! at t . _Just
 
-supportsListNockmaRep :: Tree.InfoTable -> Tree.ConstructorInfo -> Maybe NockmaMemRepListConstr
-supportsListNockmaRep tab ci = case allConstructors tab ci of
-  c1 :| [c2]
-    | [0, 2] `elem` permutations ((^. Tree.constructorArgsNum) <$> [c1, c2]) -> Just $ case ci ^. Tree.constructorArgsNum of
-        0 -> NockmaMemRepListConstrNil
-        2 -> NockmaMemRepListConstrCons
-        _ -> impossible
-    | otherwise -> Nothing
-  _ -> Nothing
+supportsListNockmaRep :: Tree.InfoTable -> Tree.ConstructorInfo -> Maybe NockmaMemRep
+supportsListNockmaRep tab ci =
+  NockmaMemRepList <$> case allConstructors tab ci of
+    c1 :| [c2]
+      | [0, 2] `elem` permutations ((^. Tree.constructorArgsNum) <$> [c1, c2]) -> Just $ case ci ^. Tree.constructorArgsNum of
+          0 -> NockmaMemRepListConstrNil
+          2 -> NockmaMemRepListConstrCons
+          _ -> impossible
+      | otherwise -> Nothing
+    _ -> Nothing
+
+supportsMaybeNockmaRep :: Tree.InfoTable -> Tree.ConstructorInfo -> Maybe NockmaMemRep
+supportsMaybeNockmaRep tab ci =
+  NockmaMemRepMaybe <$> case allConstructors tab ci of
+    c1 :| [c2]
+      | [0, 1] `elem` permutations ((^. Tree.constructorArgsNum) <$> [c1, c2]) -> Just $ case ci ^. Tree.constructorArgsNum of
+          0 -> NockmaMemRepMaybeConstrNothing
+          1 -> NockmaMemRepMaybeConstrJust
+          _ -> impossible
+      | otherwise -> Nothing
+    _ -> Nothing
 
 -- | Use `Tree.toNockma` before calling this function
 fromTreeTable :: (Members '[Error JuvixError, Reader CompilerOptions] r) => Tree.InfoTable -> Sem r AnomaResult
@@ -253,7 +271,7 @@ fromTreeTable t = case t ^. Tree.infoMainFunction of
               }
             where
               rep :: NockmaMemRep
-              rep = maybe r NockmaMemRepList (supportsListNockmaRep tab ci)
+              rep = fromMaybe r (supportsListNockmaRep tab ci <|> supportsMaybeNockmaRep tab ci)
                 where
                   r = nockmaMemRep (memRep ci (getInductiveInfo (ci ^. Tree.constructorInductive)))
 
@@ -372,6 +390,10 @@ compile = \case
                 NockmaMemRepList constr -> case constr of
                   NockmaMemRepListConstrNil -> impossible
                   NockmaMemRepListConstrCons -> fr ++ indexTuple 2 argIx
+                NockmaMemRepMaybe constr -> case constr of
+                  NockmaMemRepMaybeConstrNothing -> impossible
+                  -- just x is represented as [0 x] so argument index is offset by 1.
+                  NockmaMemRepMaybeConstrJust -> fr ++ indexTuple 2 (argIx + 1)
         (opAddress "constrRef") <$> path
       where
         goDirectRef :: Tree.DirectRef -> Sem r (Term Natural)
@@ -729,6 +751,13 @@ goConstructor mr t args = case t of
       NockmaMemRepListConstrCons -> case args of
         [l, r] -> TCell l r
         _ -> impossible
+    NockmaMemRepMaybe constr -> case constr of
+      NockmaMemRepMaybeConstrNothing
+        | null args -> (OpQuote # nockNilTagged "maybe-constr-nothing")
+        | otherwise -> impossible
+      NockmaMemRepMaybeConstrJust -> case args of
+        [x] -> TCell (OpQuote # nockNilTagged "maybe-constr-just-head") x
+        _ -> impossible
 
 unsupported :: Text -> a
 unsupported thing = error ("The Nockma backend does not support " <> thing)
@@ -965,6 +994,9 @@ caseCmd arg defaultBranch = \case
         NockmaMemRepList constr -> do
           bs' <- mapM (firstM asNockmaMemRepListConstr) bs
           return (goRepList ((constr, b) :| bs'))
+        NockmaMemRepMaybe constr -> do
+          bs' <- mapM (firstM asNockmaMemRepMaybeConstr) bs
+          return (goRepMaybe ((constr, b) :| bs'))
   where
     goRepConstr ::
       Tree.Tag ->
@@ -990,6 +1022,15 @@ caseCmd arg defaultBranch = \case
         rep <- getConstructorMemRep tag
         case rep of
           NockmaMemRepList constr -> return constr
+          _ -> impossible
+      Tree.BuiltinTag {} -> impossible
+
+    asNockmaMemRepMaybeConstr :: Tree.Tag -> Sem r NockmaMemRepMaybeConstr
+    asNockmaMemRepMaybeConstr tag = case tag of
+      Tree.UserTag {} -> do
+        rep <- getConstructorMemRep tag
+        case rep of
+          NockmaMemRepMaybe constr -> return constr
           _ -> impossible
       Tree.BuiltinTag {} -> impossible
 
@@ -1019,6 +1060,17 @@ caseCmd arg defaultBranch = \case
             NockmaMemRepListConstrNil -> branch cond otherBranch b
       where
         f :: (NockmaMemRepListConstr, Term Natural) -> Maybe (Term Natural)
+        f (c', br) = guard (c /= c') $> br
+
+    goRepMaybe :: NonEmpty (NockmaMemRepMaybeConstr, Term Natural) -> Term Natural
+    goRepMaybe ((c, b) :| bs) =
+      let cond = OpIsCell # arg
+          otherBranch = fromMaybe crash (firstJust f bs <|> defaultBranch)
+       in case c of
+            NockmaMemRepMaybeConstrJust -> branch cond b otherBranch
+            NockmaMemRepMaybeConstrNothing -> branch cond otherBranch b
+      where
+        f :: (NockmaMemRepMaybeConstr, Term Natural) -> Maybe (Term Natural)
         f (c', br) = guard (c /= c') $> br
 
 branch ::

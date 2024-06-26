@@ -1,0 +1,20 @@
+module test080;
+
+import Stdlib.Prelude open;
+import Stdlib.Debug.Trace open;
+
+main : Maybe Nat :=
+  trace (just 1)
+    >-> trace
+      {Nat}
+      case just 2 of {
+        | just x := x
+        | nothing := 0
+      }
+    >-> trace
+      {Nat}
+      case nothing {Nat} of {
+        | just x := 0
+        | nothing := 3
+      }
+    >-> nothing;
