@@ -39,7 +39,9 @@ import Juvix.Prelude.Pretty qualified as P
 --- * the body of a `Top` iterator,
 --- * the else branch body of a `Top` if expression,
 --- * the last branch body of a `Top` case expresssion.
-data IsTop = Top | NotTop
+data IsTop
+  = Top
+  | NotTop
 
 type PrettyPrintingMaybe a = forall r. (Members '[ExactPrint, Reader Options] r) => a -> Maybe (Sem r ())
 
@@ -60,11 +62,10 @@ instance PrettyPrint KeywordRef where
   ppCode p =
     morphemeM
       (getLoc p)
-      ( annotated (C.kwTypeAnn (p ^. keywordRefKeyword . keywordType))
-          . noLoc
-          . pretty
-          $ p
-      )
+      . annotated (C.kwTypeAnn (p ^. keywordRefKeyword . keywordType))
+      . noLoc
+      . pretty
+      $ p
 
 docNoComments :: (PrettyPrint c) => Options -> c -> Doc Ann
 docNoComments = docHelper Nothing
