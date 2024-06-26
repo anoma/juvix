@@ -13,4 +13,8 @@ peephole = mapT go
           Val (Lab (LabelRef sym _)) <- _instrJumpTarget,
           sym == _labelRefSymbol ->
             lab : is
+      Call InstrCall {..} : Return : Return : is
+        | _instrCallRel,
+          Imm 3 <- _instrCallTarget ->
+            Return : is
       is -> is
