@@ -4,6 +4,7 @@ module Juvix.Compiler.Pipeline.Loader.PathResolver.ImportTree.Base
     importTree,
     importTreeReverse,
     importTreeEdges,
+    importTreeNodes,
     ImportTreeBuilder,
     runImportTreeBuilder,
     ignoreImportTreeBuilder,
@@ -92,6 +93,9 @@ importTree = fimportTree
 
 importTreeReverse :: SimpleGetter ImportTree (HashMap ImportNode (HashSet ImportNode))
 importTreeReverse = fimportTreeReverse
+
+importTreeNodes :: SimpleGetter ImportTree (HashSet ImportNode)
+importTreeNodes = importTree . to HashMap.keysSet
 
 importTreeEdges :: SimpleGetter ImportTree (HashMap ImportNode (HashSet ImportScan))
 importTreeEdges = fimportTreeEdges
