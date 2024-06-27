@@ -1760,7 +1760,7 @@ checkLocalModule md@Module {..} = do
             _scopedModuleFilePath = P.getModuleFilePath md,
             _scopedModuleExportInfo = moduleExportInfo,
             _scopedModuleLocalModules = localModules,
-            _scopedModuleSource = error "local modules do not store the source",
+            _scopedModuleSource = "no source", -- local modules do not store the source
             _scopedModuleInfoTable = tab
           }
   modify (over scoperModules (HashMap.insert mid smod))

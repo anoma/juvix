@@ -28,7 +28,7 @@ targetFromOptions :: (Members '[EmbedIO, App] r) => FormatOptions -> Sem r Forma
 targetFromOptions opts = do
   globalOpts <- askGlobalOptions
   let isStdin = globalOpts ^. globalStdin
-  f <- mapM filePathToAbs (opts ^. formatInput)
+  f <- mapM fromAppPathFileOrDir (opts ^. formatInput)
   pkgDir <- askPkgDir
   case f of
     Just (Left p) -> return (TargetFile p)

@@ -73,6 +73,12 @@ format p = do
 --
 -- NB: This function does not traverse into Juvix sub-projects, i.e into
 -- subdirectories that contain a juvix.yaml file.
+-- formatProjectNew ::
+--   forall r.
+--   (Members '[Files, Output FormattedFileInfo] r) =>
+--   Path Abs Dir ->
+--   Sem r FormatResult
+-- formatProjectNew p = undefined
 formatProject ::
   forall r.
   (Members '[ScopeEff, Files, Output FormattedFileInfo] r) =>

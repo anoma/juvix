@@ -37,8 +37,8 @@ makeLenses ''AppPath
 instance Show (AppPath f) where
   show = Prelude.show . (^. pathPath)
 
-parseInputFiles :: NonEmpty FileExt -> Parser (AppPath File)
-parseInputFiles exts' = do
+parseInputFilesMod :: NonEmpty FileExt -> Mod ArgumentFields (Prepath File) -> Parser (AppPath File)
+parseInputFilesMod exts' mods = do
   let exts = NonEmpty.toList exts'
       mvars = intercalate "|" (map toMetavar exts)
       dotExts = intercalate ", " (map Prelude.show exts)
@@ -51,8 +51,12 @@ parseInputFiles exts' = do
           <> help helpMsg
           <> completers
           <> action "file"
+          <> mods
       )
   pure AppPath {_pathIsInput = True, ..}
+
+parseInputFiles :: NonEmpty FileExt -> Parser (AppPath File)
+parseInputFiles exts' = parseInputFilesMod exts' mempty
 
 parseInputFile :: FileExt -> Parser (AppPath File)
 parseInputFile = parseInputFiles . NonEmpty.singleton
@@ -125,6 +129,9 @@ parseGenericOutputDir m = do
 
 somePreDirOpt :: ReadM (Prepath Dir)
 somePreDirOpt = mkPrepath <$> str
+
+somePreFileOrDirOpt :: ReadM (Prepath FileOrDir)
+somePreFileOrDirOpt = mkPrepath <$> str
 
 somePreFileOpt :: ReadM (Prepath File)
 somePreFileOpt = mkPrepath <$> str

@@ -143,10 +143,10 @@ getReplEntryPoint f inputFile = do
   liftIO (set entryPointSymbolPruningMode KeepAll <$> f root inputFile gopts)
 
 getReplEntryPointFromPrepath :: Prepath File -> Repl EntryPoint
-getReplEntryPointFromPrepath = getReplEntryPoint (\r x -> runM . runTaggedLockPermissive . entryPointFromGlobalOptionsPre r x)
+getReplEntryPointFromPrepath = getReplEntryPoint (\r x -> runM . runTaggedLockPermissive . entryPointFromGlobalOptionsPre r (Just x))
 
 getReplEntryPointFromPath :: Path Abs File -> Repl EntryPoint
-getReplEntryPointFromPath = getReplEntryPoint (\r a -> runM . runTaggedLockPermissive . entryPointFromGlobalOptions r a)
+getReplEntryPointFromPath = getReplEntryPoint (\r a -> runM . runTaggedLockPermissive . entryPointFromGlobalOptions r (Just a))
 
 displayVersion :: String -> Repl ()
 displayVersion _ = liftIO (putStrLn versionTag)

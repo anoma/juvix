@@ -3,7 +3,7 @@ module Commands.Format.Options where
 import CommonOptions
 
 data FormatOptions = FormatOptions
-  { _formatInput :: Maybe (Prepath FileOrDir),
+  { _formatInput :: Maybe (AppPath FileOrDir),
     _formatCheck :: Bool,
     _formatInPlace :: Bool
   }
@@ -11,18 +11,21 @@ data FormatOptions = FormatOptions
 
 makeLenses ''FormatOptions
 
-parseInputJuvixFileOrDir :: Parser (Prepath FileOrDir)
-parseInputJuvixFileOrDir =
-  strArgument
-    ( metavar "JUVIX_FILE_OR_PROJECT"
-        <> help ("Path to a " <> show FileExtJuvix <> " file or to a directory containing a Juvix project.")
-        <> completer (extCompleter FileExtJuvix)
-        <> action "directory"
-    )
+parseInputFileOrDir :: Parser (AppPath FileOrDir)
+parseInputFileOrDir = do
+  _pathPath <-
+    argument
+      somePreFileOrDirOpt
+      ( metavar "JUVIX_FILE_OR_PROJECT"
+          <> help ("Path to a " <> show FileExtJuvix <> " file or to a directory containing a Juvix project.")
+          <> completer (extCompleter FileExtJuvix)
+          <> action "directory"
+      )
+  pure AppPath {_pathIsInput = True, ..}
 
 parseFormat :: Parser FormatOptions
 parseFormat = do
-  _formatInput <- optional parseInputJuvixFileOrDir
+  _formatInput <- optional parseInputFileOrDir
   _formatCheck <-
     switch
       ( long "check"

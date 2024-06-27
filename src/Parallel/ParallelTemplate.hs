@@ -152,14 +152,14 @@ compile args@CompileArgs {..} = do
       allNodesIds :: [nodeId] = HashMap.keys (nodesIx ^. nodesIndex)
       deps = _compileArgsDependencies
       numMods :: Natural = fromIntegral (length allNodesIds)
-      starterModules :: [nodeId] =
+      startingModules :: [nodeId] =
         [m | m <- allNodesIds, null (nodeDependencies deps m)]
   logs <- Logs <$> newTQueueIO
   qq <- newTBQueueIO (max 1 numMods)
   let compileQ = CompileQueue qq
   whenJust _compileArgsPreProcess $ \preProcess ->
     mapConcurrently_ preProcess allNodesIds
-  atomically (forM_ starterModules (writeTBQueue qq))
+  atomically (forM_ startingModules (writeTBQueue qq))
   let iniCompilationState :: CompilationState nodeId compileProof =
         CompilationState
           { _compilationStartedNum = 0,
