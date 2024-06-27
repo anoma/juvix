@@ -46,6 +46,16 @@ type JudocStash = State (Maybe (Judoc 'Parsed))
 
 type PragmasStash = State (Maybe ParsedPragmas)
 
+fromSourceMany ::
+  (Members '[HighlightBuilder, TopModuleNameChecker, Files, Error JuvixError] r) =>
+  [Path Abs File] ->
+  EntryPoint ->
+  Sem r (HashMap (Path Abs File) ParserResult)
+fromSourceMany files commonEntry = fmap hashMap $ forM files $ \file -> do
+  let entry = set entryPointModulePath (Just file) commonEntry
+  res <- fromSource entry
+  return (file, res)
+
 fromSource ::
   (Members '[HighlightBuilder, TopModuleNameChecker, Files, Error JuvixError] r) =>
   EntryPoint ->
