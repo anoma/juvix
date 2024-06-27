@@ -143,7 +143,8 @@ processRecursiveUpToTyped = do
   PipelineResult res mtab _ <- processFileUpToParsing entry
   let imports = HashMap.keys (mtab ^. Store.moduleTable)
   ms <- forM imports (`withPathFile` goImport)
-  mid <- getModuleId (res ^. Parser.resultModule . modulePath)
+  let pkg = entry ^. entryPointPackage
+  mid <- runReader pkg (getModuleId (res ^. Parser.resultModule . modulePath))
   a <-
     evalTopNameIdGen mid
       . runReader mtab
@@ -203,7 +204,8 @@ processFileUpTo ::
 processFileUpTo a = do
   entry <- ask
   res <- processFileUpToParsing entry
-  mid <- getModuleId (res ^. pipelineResult . Parser.resultModule . modulePath)
+  let pkg = entry ^. entryPointPackage
+  mid <- runReader pkg (getModuleId (res ^. pipelineResult . Parser.resultModule . modulePath))
   a' <-
     evalTopNameIdGen mid
       . runReader (res ^. pipelineResultImports)
@@ -257,7 +259,8 @@ processFileToStoredCore ::
   Sem r (PipelineResult Core.CoreResult)
 processFileToStoredCore entry = ignoreHighlightBuilder . runReader entry $ do
   res <- processFileUpToParsing entry
-  mid <- getModuleId (res ^. pipelineResult . Parser.resultModule . modulePath)
+  let pkg = entry ^. entryPointPackage
+  mid <- runReader pkg (getModuleId (res ^. pipelineResult . Parser.resultModule . modulePath))
   r <-
     evalTopNameIdGen mid
       . runReader (res ^. pipelineResultImports)

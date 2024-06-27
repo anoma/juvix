@@ -18,7 +18,7 @@ import Juvix.Prelude
 fromParsed ::
   ( Members
       '[ HighlightBuilder,
-         Reader EntryPoint,
+         Reader Package,
          Reader ModuleTable,
          Reader Parsed.ParserResult,
          Error JuvixError,

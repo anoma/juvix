@@ -3,7 +3,7 @@ module Commands.Format where
 import Commands.Base
 import Commands.Format.Options
 import Data.Text qualified as Text
-import Juvix.Compiler.Pipeline.Loader.PathResolver.ImportTree.Base
+-- import Juvix.Compiler.Pipeline.Loader.PathResolver.ImportTree.Base
 import Juvix.Formatter
 
 data FormatNoEditRenderMode
@@ -47,18 +47,18 @@ targetFromOptions opts = do
                   ]
 
 -- | Formats the project on the root
-formatProjectNew ::
-  forall r.
-  (Members '[App, EmbedIO, TaggedLock, Reader PipelineOptions, Files, Output FormattedFileInfo] r) =>
-  Sem r FormatResult
-formatProjectNew = runPipelineSetup $ do
-  root <- askRoot
-  tree <- ask @ImportTree
-  let inProject :: ImportNode -> Bool
-      inProject ImportNode {..} = _importNodePackageRoot == root ^. rootRootDir
-      projectNodes :: [ImportNode] = filter inProject (toList (tree ^. importTreeNodes))
+-- formatProjectNew ::
+--   forall r.
+--   (Members '[App, EmbedIO, TaggedLock, Reader PipelineOptions, Files, Output FormattedFileInfo] r) =>
+--   Sem r FormatResult
+-- formatProjectNew = runPipelineSetup $ do
+--   root <- askRoot
+--   tree <- ask @ImportTree
+--   let inProject :: ImportNode -> Bool
+--       inProject ImportNode {..} = _importNodePackageRoot == root ^. rootRootDir
+--       projectNodes :: [ImportNode] = filter inProject (toList (tree ^. importTreeNodes))
 
-  undefined
+--   undefined
 
 runCommand :: forall r. (Members '[EmbedIO, App, TaggedLock, Files] r) => FormatOptions -> Sem r ()
 runCommand opts = do
@@ -118,5 +118,5 @@ runScopeFileApp = interpret $ \case
             { _pathPath = mkPrepath (toFilePath p),
               _pathIsInput = False
             }
-    ignoreProgressLog (runPipelineProgress () (Just appFile) upToScoping)
-  ScopeStdin e -> ignoreProgressLog (runPipelineEntry e upToScoping)
+    ignoreProgressLog (runPipelineProgress () (Just appFile) upToScopingEntry)
+  ScopeStdin e -> ignoreProgressLog (runPipelineEntry e upToScopingEntry)

@@ -25,7 +25,7 @@ testDescr NegTest {..} =
           _testRoot = tRoot,
           _testAssertion = Single $ do
             entryPoint <- testDefaultEntryPointIO tRoot file'
-            result <- testTaggedLockedToIO (runIOEither entryPoint upToScoping)
+            result <- testTaggedLockedToIO (runIOEither entryPoint upToScopingEntry)
             case result of
               Left err -> whenJust (_checkErr err) assertFailure
               Right (_, pipelineRes) -> checkResult pipelineRes

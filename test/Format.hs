@@ -36,7 +36,7 @@ testDescr PosTest {..} =
         original :: Text <- readFile f
 
         step "Parsing & scoping"
-        PipelineResult {..} <- snd <$> testRunIO entryPoint upToScoping
+        PipelineResult {..} <- snd <$> testRunIO entryPoint upToScopingEntry
 
         let formatted = formatScoperResult' _force original _pipelineResult
         case _expectedFile of
