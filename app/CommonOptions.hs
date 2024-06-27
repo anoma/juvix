@@ -10,6 +10,7 @@ where
 import Control.Exception qualified as GHC
 import Data.List.NonEmpty qualified as NonEmpty
 import GHC.Conc
+import Juvix.Compiler.Casm.Data.TransformationId.Parser qualified as Casm
 import Juvix.Compiler.Concrete.Translation.ImportScanner
 import Juvix.Compiler.Core.Data.TransformationId.Parser qualified as Core
 import Juvix.Compiler.Pipeline.EntryPoint
@@ -282,6 +283,20 @@ optNoDisambiguate =
         <> help "Don't disambiguate the names of bound variables"
     )
 
+optReadRun :: Parser Bool
+optReadRun =
+  switch
+    ( long "run"
+        <> help "Run the code after the transformation"
+    )
+
+optReadNoPrint :: Parser Bool
+optReadNoPrint =
+  switch
+    ( long "no-print"
+        <> help "Do not print the transformed code"
+    )
+
 optTransformationIds :: forall a. (Text -> Either Text [a]) -> (String -> [String]) -> Parser [a]
 optTransformationIds parseIds completions =
   option
@@ -316,6 +331,9 @@ optTreeTransformationIds = optTransformationIds Tree.parseTransformations Tree.c
 
 optRegTransformationIds :: Parser [Reg.TransformationId]
 optRegTransformationIds = optTransformationIds Reg.parseTransformations Reg.completionsString
+
+optCasmTransformationIds :: Parser [Casm.TransformationId]
+optCasmTransformationIds = optTransformationIds Casm.parseTransformations Casm.completionsString
 
 class EntryPointOptions a where
   applyOptions :: a -> EntryPoint -> EntryPoint

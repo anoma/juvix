@@ -9,6 +9,7 @@ import Juvix.Compiler.Casm.Extra.InputInfo
 import Juvix.Compiler.Casm.Interpreter
 import Juvix.Compiler.Casm.Translation.FromSource
 import Juvix.Compiler.Casm.Validate
+import Juvix.Compiler.Tree.Options qualified as Casm
 import Juvix.Data.Field
 import Juvix.Data.PPOutput
 import Juvix.Parser.Error
@@ -27,14 +28,15 @@ casmRunVM labi instrs blts outputSize inputFile expectedFile step = do
         step "Serialize to Cairo bytecode"
         let res =
               run $
-                casmToCairo
-                  ( Casm.Result
-                      { _resultLabelInfo = labi,
-                        _resultCode = instrs,
-                        _resultBuiltins = blts,
-                        _resultOutputSize = outputSize
-                      }
-                  )
+                runReader Casm.defaultOptions $
+                  casmToCairo'
+                    ( Casm.Result
+                        { _resultLabelInfo = labi,
+                          _resultCode = instrs,
+                          _resultBuiltins = blts,
+                          _resultOutputSize = outputSize
+                        }
+                    )
             outputFile = dirPath <//> $(mkRelFile "out.json")
         encodeFile (toFilePath outputFile) res
         step "Run Cairo VM"

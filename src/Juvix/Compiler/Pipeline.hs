@@ -23,6 +23,7 @@ import Juvix.Compiler.Backend.Rust.Translation.FromReg qualified as Rust
 import Juvix.Compiler.Backend.VampIR.Translation qualified as VampIR
 import Juvix.Compiler.Casm.Data.Builtins qualified as Casm
 import Juvix.Compiler.Casm.Data.Result qualified as Casm
+import Juvix.Compiler.Casm.Pipeline qualified as Casm
 import Juvix.Compiler.Casm.Translation.FromReg qualified as Casm
 import Juvix.Compiler.Concrete.Data.Highlight.Input
 import Juvix.Compiler.Concrete.Language
@@ -364,17 +365,25 @@ regToCasm = Reg.toCasm >=> return . Casm.fromReg
 regToCasm' :: (Member (Reader Reg.Options) r) => Reg.InfoTable -> Sem r Casm.Result
 regToCasm' = Reg.toCasm' >=> return . Casm.fromReg
 
-casmToCairo :: Casm.Result -> Sem r Cairo.Result
-casmToCairo Casm.Result {..} =
+casmToCairo :: (Member (Reader EntryPoint) r) => Casm.Result -> Sem r Cairo.Result
+casmToCairo Casm.Result {..} = do
+  code' <- Casm.toCairo _resultCode
   return
     . Cairo.serialize _resultOutputSize (map Casm.builtinName _resultBuiltins)
-    $ Cairo.fromCasm _resultCode
+    $ Cairo.fromCasm code'
+
+casmToCairo' :: Casm.Result -> Sem r Cairo.Result
+casmToCairo' Casm.Result {..} = do
+  code' <- Casm.toCairo' _resultCode
+  return
+    . Cairo.serialize _resultOutputSize (map Casm.builtinName _resultBuiltins)
+    $ Cairo.fromCasm code'
 
 regToCairo :: (Member (Reader EntryPoint) r) => Reg.InfoTable -> Sem r Cairo.Result
 regToCairo = regToCasm >=> casmToCairo
 
 regToCairo' :: (Member (Reader Reg.Options) r) => Reg.InfoTable -> Sem r Cairo.Result
-regToCairo' = regToCasm' >=> casmToCairo
+regToCairo' = regToCasm' >=> casmToCairo'
 
 treeToAnoma' :: (Members '[Error JuvixError, Reader NockmaTree.CompilerOptions] r) => Tree.InfoTable -> Sem r NockmaTree.AnomaResult
 treeToAnoma' = Tree.toNockma >=> NockmaTree.fromTreeTable

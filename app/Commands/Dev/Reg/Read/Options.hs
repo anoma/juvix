@@ -15,16 +15,8 @@ makeLenses ''RegReadOptions
 
 parseRegReadOptions :: Parser RegReadOptions
 parseRegReadOptions = do
-  _regReadNoPrint <-
-    switch
-      ( long "no-print"
-          <> help "Do not print the transformed code"
-      )
-  _regReadRun <-
-    switch
-      ( long "run"
-          <> help "Run the code after the transformation"
-      )
+  _regReadNoPrint <- optReadNoPrint
+  _regReadRun <- optReadRun
   _regReadTransformations <- optRegTransformationIds
   _regReadInputFile <- parseInputFile FileExtJuvixReg
   pure RegReadOptions {..}

@@ -1,0 +1,29 @@
+-- peephole optimization
+
+call main
+jmp end
+
+main:
+jmp lab_1
+lab_1:
+nop
+nop
+jmp lab_2
+nop
+nop
+lab_2:
+call rel 3
+ret
+nop
+jmp lab_3
+lab_4:
+[ap] = 7; ap++
+call rel 3
+ret
+nop
+[ap] = [fp - 3]; ap++
+ret
+lab_3:
+jmp lab_4
+
+end:
