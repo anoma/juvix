@@ -5,6 +5,7 @@ module Juvix.Compiler.Pipeline.Loader.PathResolver.ImportTree.Base
     importTreeReverse,
     importTreeEdges,
     importTreeNodes,
+    importTreeProjectFiles,
     ImportTreeBuilder,
     runImportTreeBuilder,
     ignoreImportTreeBuilder,
@@ -96,6 +97,14 @@ importTreeReverse = fimportTreeReverse
 
 importTreeNodes :: SimpleGetter ImportTree (HashSet ImportNode)
 importTreeNodes = importTree . to HashMap.keysSet
+
+importTreeProjectFiles :: ImportTree -> Path Abs Dir -> [Path Abs File]
+importTreeProjectFiles tree pkgRoot = mapMaybe projectFile (toList (tree ^. importTreeNodes))
+  where
+    projectFile :: ImportNode -> Maybe (Path Abs File)
+    projectFile i
+      | i ^. importNodePackageRoot == pkgRoot = Just (i ^. importNodeAbsFile)
+      | otherwise = Nothing
 
 importTreeEdges :: SimpleGetter ImportTree (HashMap ImportNode (HashSet ImportScan))
 importTreeEdges = fimportTreeEdges
