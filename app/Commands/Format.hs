@@ -3,6 +3,7 @@ module Commands.Format where
 import Commands.Base
 import Commands.Format.Options
 import Data.Text qualified as Text
+import Juvix.Compiler.Pipeline.Loader.PathResolver.ImportTree.Base
 import Juvix.Formatter
 
 data FormatNoEditRenderMode
@@ -44,6 +45,20 @@ targetFromOptions opts = do
                   [ "juvix format error: either 'JUVIX_FILE_OR_PROJECT' or '--stdin' option must be specified",
                     "Use the --help option to display more usage information."
                   ]
+
+-- | Formats the project on the root
+formatProjectNew ::
+  forall r.
+  (Members '[App, EmbedIO, TaggedLock, Reader PipelineOptions, Files, Output FormattedFileInfo] r) =>
+  Sem r FormatResult
+formatProjectNew = runPipelineSetup $ do
+  root <- askRoot
+  tree <- ask @ImportTree
+  let inProject :: ImportNode -> Bool
+      inProject ImportNode {..} = _importNodePackageRoot == root ^. rootRootDir
+      projectNodes :: [ImportNode] = filter inProject (toList (tree ^. importTreeNodes))
+
+  undefined
 
 runCommand :: forall r. (Members '[EmbedIO, App, TaggedLock, Files] r) => FormatOptions -> Sem r ()
 runCommand opts = do

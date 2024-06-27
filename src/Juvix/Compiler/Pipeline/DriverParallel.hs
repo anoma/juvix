@@ -1,5 +1,6 @@
 module Juvix.Compiler.Pipeline.DriverParallel
   ( compileInParallel,
+    compileInParallel_,
     ModuleInfoCache,
     evalModuleInfoCache,
     module Parallel.ProgressLog,
@@ -67,6 +68,28 @@ getNodeName :: Node -> Text
 getNodeName = toFilePath . fromJust . (^. entryIxEntry . entryPointModulePath)
 
 -- | Fills the cache in parallel
+compileInParallel_ ::
+  forall r.
+  ( Members
+      '[ Concurrent,
+         ProgressLog,
+         IOE,
+         ModuleInfoCache,
+         JvoCache,
+         TaggedLock,
+         Files,
+         TopModuleNameChecker,
+         Error JuvixError,
+         Reader EntryPoint,
+         PathResolver,
+         Reader ImportTree
+       ]
+      r
+  ) =>
+  NumThreads ->
+  Sem r ()
+compileInParallel_ = void . compileInParallel
+
 compileInParallel ::
   forall r.
   ( Members
@@ -86,9 +109,8 @@ compileInParallel ::
       r
   ) =>
   NumThreads ->
-  EntryIndex ->
-  Sem r ()
-compileInParallel nj _entry = do
+  Sem r (HashMap (Path Abs File) (PipelineResult Store.ModuleInfo))
+compileInParallel nj = do
   -- At the moment we compile everything, so the EntryIndex is ignored, but in
   -- principle we could only compile what is reachable from the given EntryIndex
   t <- ask
@@ -104,7 +126,7 @@ compileInParallel nj _entry = do
             _compileArgsNumWorkers = numWorkers,
             _compileArgsCompileNode = compileNode
           }
-  void (compile args)
+  compile args
 
 compileNode :: (Members '[ModuleInfoCache, PathResolver] r) => EntryIndex -> Sem r CompileProof
 compileNode e =
@@ -146,4 +168,4 @@ evalModuleInfoCache ::
   NumThreads ->
   Sem (ModuleInfoCache ': JvoCache ': r) a ->
   Sem r a
-evalModuleInfoCache nj = Driver.evalModuleInfoCacheSetup (compileInParallel nj)
+evalModuleInfoCache nj = Driver.evalModuleInfoCacheSetup (const (compileInParallel_ nj))

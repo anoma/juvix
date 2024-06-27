@@ -39,9 +39,9 @@ scopeCheck ::
   Parser.ParserResult ->
   Sem r ScoperResult
 scopeCheck entry importMap pr =
-  mapError (JuvixError @ScoperError) $
-    runReader entry $
-      scopeCheck' importMap pr m
+  mapError (JuvixError @ScoperError)
+    . runReader entry
+    $ scopeCheck' importMap pr m
   where
     m :: Module 'Parsed 'ModuleTop
     m = pr ^. Parser.resultModule

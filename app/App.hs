@@ -298,9 +298,11 @@ runPipelineEntry entry p = runPipelineOptions $ do
   r <- runIOEither entry (inject p) >>= fromRightJuvixError
   return (snd r ^. pipelineResult)
 
-runPipelineSetup :: (Members '[App, EmbedIO, Reader PipelineOptions, TaggedLock] r) => Sem (PipelineEff' r) a -> Sem r a
--- runPipelineSetup p = ignoreProgressLog $ do -- TODO restore
-runPipelineSetup p = appRunProgressLog $ do
+runPipelineSetup ::
+  (Members '[App, EmbedIO, Reader PipelineOptions, TaggedLock] r) =>
+  Sem (PipelineEff' r) a ->
+  Sem r a
+runPipelineSetup p = ignoreProgressLog $ do
   args <- askArgs
   entry <- getEntryPointStdin' args
   r <- runIOEitherPipeline entry (inject p) >>= fromRightJuvixError
