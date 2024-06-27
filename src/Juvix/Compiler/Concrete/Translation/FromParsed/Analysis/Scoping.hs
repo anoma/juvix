@@ -22,8 +22,10 @@ import Juvix.Compiler.Concrete.Extra qualified as P
 import Juvix.Compiler.Concrete.Gen qualified as G
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty (ppTrace)
+import Juvix.Compiler.Concrete.Print (ppOutDefault)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
+import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context
 import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context qualified as Parser
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Store.Scoped.Language as Store
@@ -67,8 +69,12 @@ scopeCheck' importTab pr m = do
     . runReader tab
     . runReader iniScopeParameters
     . runState (iniScoperState tab)
-    $ checkTopModule m
+    $ checkTopModule comments m
   where
+    comments :: Comments
+    comments = getParserResultComments pr
+
+    tab :: InfoTable
     tab = computeCombinedInfoTable importTab
 
     iniScopeParameters :: ScopeParameters
@@ -1246,9 +1252,10 @@ localBindings = runReader BindingLocal
 checkTopModule ::
   forall r.
   (Members '[HighlightBuilder, Error ScoperError, Reader ScopeParameters, State ScoperState, Reader InfoTable, NameIdGen, Reader EntryPoint] r) =>
+  Comments ->
   Module 'Parsed 'ModuleTop ->
   Sem r (Module 'Scoped 'ModuleTop, ScopedModule, Scope)
-checkTopModule m@Module {..} = checkedModule
+checkTopModule comments m@Module {..} = checkedModule
   where
     freshTopModulePath ::
       forall s.
@@ -1307,7 +1314,8 @@ checkTopModule m@Module {..} = checkedModule
                 _scopedModuleFilePath = P.getModuleFilePath m,
                 _scopedModuleExportInfo = e,
                 _scopedModuleLocalModules = localModules,
-                _scopedModuleInfoTable = tab
+                _scopedModuleInfoTable = tab,
+                _scopedModuleSource = toPlainText (ppOutDefault comments md)
               }
       return (md, smd, sc)
 
@@ -1752,6 +1760,7 @@ checkLocalModule md@Module {..} = do
             _scopedModuleFilePath = P.getModuleFilePath md,
             _scopedModuleExportInfo = moduleExportInfo,
             _scopedModuleLocalModules = localModules,
+            _scopedModuleSource = error "local modules do not store the source",
             _scopedModuleInfoTable = tab
           }
   modify (over scoperModules (HashMap.insert mid smod))

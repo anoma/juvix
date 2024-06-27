@@ -48,7 +48,7 @@ targetFromOptions opts = do
 runCommand :: forall r. (Members '[EmbedIO, App, TaggedLock, Files] r) => FormatOptions -> Sem r ()
 runCommand opts = do
   target <- targetFromOptions opts
-  runOutputSem (renderFormattedOutput target opts) $ runScopeFileApp $ do
+  runOutputSem (renderFormattedOutput target opts) . runScopeFileApp $ do
     res <- case target of
       TargetFile p -> format p
       TargetProject p -> formatProject p
