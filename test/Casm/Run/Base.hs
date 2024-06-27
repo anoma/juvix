@@ -9,7 +9,6 @@ import Juvix.Compiler.Casm.Extra.InputInfo
 import Juvix.Compiler.Casm.Interpreter
 import Juvix.Compiler.Casm.Translation.FromSource
 import Juvix.Compiler.Casm.Validate
-import Juvix.Compiler.Tree.Options qualified as Casm
 import Juvix.Data.Field
 import Juvix.Data.PPOutput
 import Juvix.Parser.Error

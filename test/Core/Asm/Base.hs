@@ -7,7 +7,6 @@ import Core.Eval.Positive qualified as Eval
 import Juvix.Compiler.Asm.Translation.FromTree qualified as Asm
 import Juvix.Compiler.Core.Data.Module (computeCombinedInfoTable, moduleFromInfoTable)
 import Juvix.Compiler.Core.Data.TransformationId
-import Juvix.Compiler.Core.Options
 import Juvix.Compiler.Core.Pipeline
 import Juvix.Compiler.Core.Translation.FromSource
 import Juvix.Compiler.Core.Translation.Stripped.FromCore qualified as Stripped
@@ -43,7 +42,7 @@ coreAsmAssertion ::
   Path Abs File ->
   (String -> IO ()) ->
   Assertion
-coreAsmAssertion root mainFile expectedFile step = do
+coreAsmAssertion root' mainFile expectedFile step = do
   step "Parse"
   r <- parseFile mainFile
   case r of
@@ -54,7 +53,7 @@ coreAsmAssertion root mainFile expectedFile step = do
       assertEqDiffText ("Check: EVAL output = " <> toFilePath expectedFile) "" expected
     Right (tabIni, Just node) -> do
       step "Translate"
-      entryPoint <- testDefaultEntryPointIO root mainFile
+      entryPoint <- testDefaultEntryPointIO root' mainFile
       case run
         . runReader entryPoint
         . runError
