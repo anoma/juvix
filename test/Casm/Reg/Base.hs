@@ -7,7 +7,6 @@ import Juvix.Compiler.Casm.Data.Result
 import Juvix.Compiler.Casm.Error
 import Juvix.Compiler.Casm.Interpreter
 import Juvix.Compiler.Reg.Data.InfoTable qualified as Reg
-import Juvix.Compiler.Reg.Transformation qualified as Reg
 import Juvix.Data.PPOutput
 import Reg.Run.Base qualified as Reg
 

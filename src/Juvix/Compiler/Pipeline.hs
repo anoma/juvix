@@ -361,12 +361,5 @@ casmToCairo Casm.Result {..} = do
     . Cairo.serialize _resultOutputSize (map Casm.builtinName _resultBuiltins)
     $ Cairo.fromCasm code'
 
-casmToCairo' :: Casm.Result -> Sem r Cairo.Result
-casmToCairo' Casm.Result {..} = do
-  code' <- Casm.toCairo' _resultCode
-  return
-    . Cairo.serialize _resultOutputSize (map Casm.builtinName _resultBuiltins)
-    $ Cairo.fromCasm code'
-
 regToCairo :: (Member (Reader EntryPoint) r) => Reg.InfoTable -> Sem r Cairo.Result
 regToCairo = regToCasm >=> casmToCairo

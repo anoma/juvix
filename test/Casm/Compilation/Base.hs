@@ -46,7 +46,7 @@ compileAssertionEntry adjustEntry root' bInterp bRunVM optLevel mainFile inputFi
             step "Pretty print"
             writeFileEnsureLn tmpFile (toPlainText $ ppProgram _resultCode)
         )
-      casmRunAssertion' bInterp bRunVM _resultLabelInfo _resultCode _resultBuiltins _resultOutputSize inputFile expectedFile step
+      casmRunAssertion' entryPoint' bInterp bRunVM _resultLabelInfo _resultCode _resultBuiltins _resultOutputSize inputFile expectedFile step
 
 compileErrorAssertion :: Path Abs Dir -> Path Abs File -> (String -> IO ()) -> Assertion
 compileErrorAssertion root' mainFile step = do
