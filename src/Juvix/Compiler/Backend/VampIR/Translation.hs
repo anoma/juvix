@@ -24,6 +24,3 @@ fromCore :: (Member (Reader EntryPoint) r) => InfoTable -> Sem r Result
 fromCore tab = do
   unsafe <- asks (^. entryPointUnsafe)
   return $ toResult unsafe $ VampIR.fromCore tab
-
-fromCore' :: Bool -> InfoTable -> Result
-fromCore' unsafe = toResult unsafe . VampIR.fromCore

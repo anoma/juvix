@@ -9,8 +9,6 @@ module Juvix.Compiler.Pipeline
 where
 
 import Data.List.Singletons (type (++))
-import Juvix.Compiler.Asm.Error qualified as Asm
-import Juvix.Compiler.Asm.Options qualified as Asm
 import Juvix.Compiler.Asm.Pipeline qualified as Asm
 import Juvix.Compiler.Asm.Translation.FromTree qualified as Asm
 import Juvix.Compiler.Backend qualified as Backend
@@ -261,9 +259,6 @@ storedCoreToGeb spec = Core.toGeb >=> return . uncurry (Geb.toResult spec) . Geb
 storedCoreToVampIR :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r VampIR.Result
 storedCoreToVampIR = Core.toVampIR >=> VampIR.fromCore . Core.computeCombinedInfoTable
 
-storedCoreToVampIR' :: (Members '[Error JuvixError, Reader Core.CoreOptions] r) => Core.Module -> Sem r VampIR.Result
-storedCoreToVampIR' = Core.toVampIR' >=> return . VampIR.fromCore' False . Core.computeCombinedInfoTable
-
 --------------------------------------------------------------------------------
 -- Workflows from Core
 --------------------------------------------------------------------------------
@@ -300,9 +295,6 @@ coreToGeb spec = Core.toStored >=> storedCoreToGeb spec
 
 coreToVampIR :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r VampIR.Result
 coreToVampIR = Core.toStored >=> storedCoreToVampIR
-
-coreToVampIR' :: (Members '[Error JuvixError, Reader Core.CoreOptions] r) => Core.Module -> Sem r VampIR.Result
-coreToVampIR' = Core.toStored' >=> storedCoreToVampIR'
 
 --------------------------------------------------------------------------------
 -- Other workflows
@@ -362,9 +354,6 @@ regToRiscZeroRust = regToRust' Rust.BackendRiscZero
 regToCasm :: (Member (Reader EntryPoint) r) => Reg.InfoTable -> Sem r Casm.Result
 regToCasm = Reg.toCasm >=> return . Casm.fromReg
 
-regToCasm' :: (Member (Reader Reg.Options) r) => Reg.InfoTable -> Sem r Casm.Result
-regToCasm' = Reg.toCasm' >=> return . Casm.fromReg
-
 casmToCairo :: (Member (Reader EntryPoint) r) => Casm.Result -> Sem r Cairo.Result
 casmToCairo Casm.Result {..} = do
   code' <- Casm.toCairo _resultCode
@@ -381,18 +370,3 @@ casmToCairo' Casm.Result {..} = do
 
 regToCairo :: (Member (Reader EntryPoint) r) => Reg.InfoTable -> Sem r Cairo.Result
 regToCairo = regToCasm >=> casmToCairo
-
-regToCairo' :: (Member (Reader Reg.Options) r) => Reg.InfoTable -> Sem r Cairo.Result
-regToCairo' = regToCasm' >=> casmToCairo'
-
-treeToAnoma' :: (Members '[Error JuvixError, Reader NockmaTree.CompilerOptions] r) => Tree.InfoTable -> Sem r NockmaTree.AnomaResult
-treeToAnoma' = Tree.toNockma >=> NockmaTree.fromTreeTable
-
-asmToMiniC' :: (Members '[Error JuvixError, Reader Asm.Options] r) => Asm.InfoTable -> Sem r C.MiniCResult
-asmToMiniC' = mapError (JuvixError @Asm.AsmError) . Asm.toReg' >=> regToMiniC' . Reg.fromAsm
-
-regToMiniC' :: (Member (Reader Asm.Options) r) => Reg.InfoTable -> Sem r C.MiniCResult
-regToMiniC' tab = do
-  tab' <- mapReader (^. Asm.optTreeOptions) $ Reg.toC' tab
-  e <- ask
-  return $ C.fromReg (e ^. Asm.optLimits) tab'

@@ -22,7 +22,8 @@ root :: Path Abs Dir
 root = relToProject $(mkRelDir "tests/VampIR/positive")
 
 toTestDescr' ::
-  ( Path Abs File ->
+  ( Path Abs Dir ->
+    Path Abs File ->
     Path Abs File ->
     (String -> IO ()) ->
     Assertion
@@ -36,11 +37,11 @@ toTestDescr' assertion PosTest {..} =
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
-          _testAssertion = Steps $ assertion file' expected'
+          _testAssertion = Steps $ assertion tRoot file' expected'
         }
 
 toTestDescr :: PosTest -> TestDescr
-toTestDescr = toTestDescr' coreNormalizeAssertion
+toTestDescr = toTestDescr' (const coreNormalizeAssertion)
 
 allTests :: TestTree
 allTests =

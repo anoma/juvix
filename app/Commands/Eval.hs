@@ -9,12 +9,14 @@ import Juvix.Extra.Strings qualified as Str
 runCommand :: (Members '[EmbedIO, TaggedLock, App] r) => EvalOptions -> Sem r ()
 runCommand opts@EvalOptions {..} = do
   gopts <- askGlobalOptions
+  root <- askRoot
+  entryPoint <- maybe (entryPointFromGlobalOptionsNoFile root gopts) (fromAppPathFile >=> \f -> entryPointFromGlobalOptions root f gopts) _evalInputFile
   Core.CoreResult {..} <- ignoreProgressLog (runPipelineProgress () _evalInputFile upToCore)
   let r =
         run
-          . runReader (project gopts)
+          . runReader entryPoint
           . runError @JuvixError
-          $ (Core.toStored' _coreResultModule :: Sem '[Error JuvixError, Reader Core.CoreOptions] Core.Module)
+          $ (Core.toStored _coreResultModule :: Sem '[Error JuvixError, Reader EntryPoint] Core.Module)
   tab <- Core.computeCombinedInfoTable <$> getRight r
   let mevalNode
         | isJust _evalSymbolName = getNode tab (selInfo tab)

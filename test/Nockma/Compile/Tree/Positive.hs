@@ -4,7 +4,6 @@ import Base
 import Juvix.Compiler.Nockma.Anoma
 import Juvix.Compiler.Nockma.EvalCompiled
 import Juvix.Compiler.Nockma.Evaluator qualified as NockmaEval
-import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Language qualified as Nockma
 import Juvix.Compiler.Nockma.Pretty qualified as Nockma
 import Juvix.Compiler.Nockma.Translation.FromTree
@@ -12,16 +11,18 @@ import Juvix.Compiler.Tree
 import Tree.Eval.Base
 import Tree.Eval.Positive qualified as Tree
 
-runNockmaAssertion :: Handle -> Symbol -> InfoTable -> IO ()
-runNockmaAssertion hout _main tab = do
+runNockmaAssertion :: Path Abs Dir -> Handle -> Symbol -> InfoTable -> IO ()
+runNockmaAssertion root hout _main tab = do
+  entryPoint <- testDefaultEntryPointNoFileIO root
+  let entryPoint' = entryPoint {_entryPointDebug = True}
   anomaRes :: AnomaResult <-
     runM
       . runErrorIO' @JuvixError
-      . runReader opts
-      $ treeToAnoma' tab
+      . runReader entryPoint'
+      $ treeToAnoma tab
   res <-
     runM
-      . runOutputSem @(Term Natural)
+      . runOutputSem @(Nockma.Term Natural)
         (hPutStrLn hout . Nockma.ppTest)
       . runReader NockmaEval.defaultEvalOptions
       . NockmaEval.ignoreOpCounts
@@ -29,16 +30,10 @@ runNockmaAssertion hout _main tab = do
   let ret = getReturn res
   whenJust ret (hPutStrLn hout . Nockma.ppTest)
   where
-    opts :: CompilerOptions
-    opts =
-      CompilerOptions
-        { _compilerOptionsEnableTrace = True
-        }
-
-    getReturn :: Term Natural -> Maybe (Term Natural)
+    getReturn :: Nockma.Term Natural -> Maybe (Nockma.Term Natural)
     getReturn = \case
-      TermAtom Nockma.Atom {..}
-        | _atomInfo ^. atomInfoHint == Just AtomHintVoid -> Nothing
+      Nockma.TermAtom Nockma.Atom {..}
+        | _atomInfo ^. Nockma.atomInfoHint == Just Nockma.AtomHintVoid -> Nothing
       t -> Just t
 
 testDescr :: Tree.PosTest -> TestDescr
@@ -49,7 +44,7 @@ testDescr Tree.PosTest {..} =
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
-          _testAssertion = Steps $ treeEvalAssertionParam runNockmaAssertion file' expected' [] (const (return ()))
+          _testAssertion = Steps $ treeEvalAssertionParam (runNockmaAssertion tRoot) file' expected' [] (const (return ()))
         }
 
 -- | Tests which require Nockma-specific expected output files

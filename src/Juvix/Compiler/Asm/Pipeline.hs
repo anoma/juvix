@@ -14,16 +14,16 @@ import Juvix.Prelude
 
 -- | Perform transformations on JuvixAsm necessary before the translation to
 -- JuvixReg
-toReg' :: (Members '[Error AsmError, Reader Options] r) => InfoTable -> Sem r InfoTable
-toReg' = validate >=> filterUnreachable >=> computeStackUsage >=> computePrealloc
+toReg :: (Members '[Error JuvixError, Reader EntryPoint] r) => InfoTable -> Sem r InfoTable
+toReg = mapReader fromEntryPoint . mapError (JuvixError @AsmError) . toReg'
+  where
+    toReg' :: (Members '[Error AsmError, Reader Options] r) => InfoTable -> Sem r InfoTable
+    toReg' = validate >=> filterUnreachable >=> computeStackUsage >=> computePrealloc
 
 -- | Perform transformations on JuvixAsm necessary before the translation to
 -- Nockma
-toNockma' :: (Members '[Error AsmError, Reader Options] r) => InfoTable -> Sem r InfoTable
-toNockma' = validate
-
-toReg :: (Members '[Error JuvixError, Reader EntryPoint] r) => InfoTable -> Sem r InfoTable
-toReg = mapReader fromEntryPoint . mapError (JuvixError @AsmError) . toReg'
-
 toNockma :: (Members '[Error JuvixError, Reader EntryPoint] r) => InfoTable -> Sem r InfoTable
 toNockma = mapReader fromEntryPoint . mapError (JuvixError @AsmError) . toNockma'
+  where
+    toNockma' :: (Members '[Error AsmError, Reader Options] r) => InfoTable -> Sem r InfoTable
+    toNockma' = validate

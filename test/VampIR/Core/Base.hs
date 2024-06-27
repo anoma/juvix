@@ -8,21 +8,23 @@ import System.Process qualified as P
 
 data VampirBackend = VampirHalo2 | VampirPlonk
 
-vampirAssertion :: VampirBackend -> Path Abs File -> Path Abs File -> (String -> IO ()) -> Assertion
-vampirAssertion backend mainFile dataFile step = do
+vampirAssertion :: VampirBackend -> Path Abs Dir -> Path Abs File -> Path Abs File -> (String -> IO ()) -> Assertion
+vampirAssertion backend root mainFile dataFile step = do
   step "Parse"
   s <- readFile mainFile
   case runParserMain mainFile defaultModuleId mempty s of
     Left err -> assertFailure (show err)
-    Right tab -> vampirAssertion' backend tab dataFile step
+    Right tab -> do
+      entryPoint <- testDefaultEntryPointIO root mainFile
+      vampirAssertion' entryPoint backend tab dataFile step
 
-vampirAssertion' :: VampirBackend -> InfoTable -> Path Abs File -> (String -> IO ()) -> Assertion
-vampirAssertion' backend tab dataFile step = do
+vampirAssertion' :: EntryPoint -> VampirBackend -> InfoTable -> Path Abs File -> (String -> IO ()) -> Assertion
+vampirAssertion' entryPoint backend tab dataFile step = do
   withTempDir'
     ( \dirPath -> do
         step "Translate to VampIR"
         let vampirFile = dirPath <//> $(mkRelFile "program.pir")
-        case run (runReader defaultCoreOptions (runError @JuvixError (coreToVampIR' (moduleFromInfoTable tab)))) of
+        case run (runReader entryPoint (runError @JuvixError (coreToVampIR (moduleFromInfoTable tab)))) of
           Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
           Right VampIR.Result {..} -> do
             writeFileEnsureLn vampirFile _resultCode

@@ -23,7 +23,7 @@ testDescr PosTest {..} =
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
-          _testAssertion = Steps $ regToCasmAssertion file' input' expected'
+          _testAssertion = Steps $ regToCasmAssertion tRoot file' input' expected'
         }
 
 filterOutTests :: [String] -> [PosTest] -> [PosTest]

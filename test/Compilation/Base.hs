@@ -36,7 +36,7 @@ compileAssertionEntry adjustEntry root' optLevel mode mainFile expectedFile step
   PipelineResult {..} <- snd <$> testRunIO entryPoint upToStoredCore
   let tab' = Core.computeCombinedInfoTable (_pipelineResult ^. Core.coreResultModule)
       evalAssertion = coreEvalAssertion' EvalModePlain tab' mainFile expectedFile step
-      compileAssertion' stdinText = coreCompileAssertion' optLevel tab' mainFile expectedFile stdinText step
+      compileAssertion' stdinText = coreCompileAssertion' entryPoint optLevel tab' mainFile expectedFile stdinText step
   case mode of
     EvalOnly -> evalAssertion
     CompileOnly stdinText -> compileAssertion' stdinText
@@ -58,8 +58,9 @@ compileErrorAssertion root' mainFile step = do
       let res' =
             run
               . runError @JuvixError
-              . runReader Core.defaultCoreOptions
-              $ Core.toStored' (core ^. pipelineResult . Core.coreResultModule) >>= Core.toStripped' Core.CheckExec
+              . runReader entryPoint
+              $ Core.toStored (core ^. pipelineResult . Core.coreResultModule)
+                >>= Core.toStripped Core.CheckExec
       case res' of
         Left {} -> return ()
         Right {} -> noError
