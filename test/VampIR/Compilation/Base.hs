@@ -12,7 +12,7 @@ vampirCompileAssertion root' mainFile dataFile step = do
   PipelineResult {..} <- snd <$> testRunIO entryPoint upToStoredCore
   let tab = computeCombinedInfoTable (_pipelineResult ^. coreResultModule)
   coreVampIRAssertion' tab toVampIRTransformations mainFile dataFile step
-  vampirAssertion' VampirHalo2 tab dataFile step
+  vampirAssertion' entryPoint VampirHalo2 tab dataFile step
 
 vampirCompileErrorAssertion ::
   Path Abs Dir ->
@@ -27,6 +27,6 @@ vampirCompileErrorAssertion root' mainFile step = do
     Left _ -> return ()
     Right res ->
       let m = snd res ^. pipelineResult . coreResultModule
-       in case run $ runReader defaultCoreOptions $ runError @JuvixError $ toVampIR' m of
+       in case run $ runReader entryPoint $ runError @JuvixError $ toVampIR m of
             Left _ -> return ()
             Right _ -> assertFailure "no error"

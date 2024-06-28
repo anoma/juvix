@@ -7,7 +7,6 @@ import Core.Eval.Positive qualified as Eval
 import Juvix.Compiler.Asm.Translation.FromTree qualified as Asm
 import Juvix.Compiler.Core.Data.Module (computeCombinedInfoTable, moduleFromInfoTable)
 import Juvix.Compiler.Core.Data.TransformationId
-import Juvix.Compiler.Core.Options
 import Juvix.Compiler.Core.Pipeline
 import Juvix.Compiler.Core.Translation.FromSource
 import Juvix.Compiler.Core.Translation.Stripped.FromCore qualified as Stripped
@@ -34,15 +33,16 @@ toTestDescr Test {..} =
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
-          _testAssertion = Steps $ coreAsmAssertion file' expected'
+          _testAssertion = Steps $ coreAsmAssertion tRoot file' expected'
         }
 
 coreAsmAssertion ::
+  Path Abs Dir ->
   Path Abs File ->
   Path Abs File ->
   (String -> IO ()) ->
   Assertion
-coreAsmAssertion mainFile expectedFile step = do
+coreAsmAssertion root' mainFile expectedFile step = do
   step "Parse"
   r <- parseFile mainFile
   case r of
@@ -53,10 +53,11 @@ coreAsmAssertion mainFile expectedFile step = do
       assertEqDiffText ("Check: EVAL output = " <> toFilePath expectedFile) "" expected
     Right (tabIni, Just node) -> do
       step "Translate"
+      entryPoint <- testDefaultEntryPointIO root' mainFile
       case run
-        . runReader defaultCoreOptions
+        . runReader entryPoint
         . runError
-        . (toStored' >=> toStripped' IdentityTrans)
+        . (toStored >=> toStripped IdentityTrans)
         . moduleFromInfoTable
         $ setupMainFunction defaultModuleId tabIni node of
         Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))

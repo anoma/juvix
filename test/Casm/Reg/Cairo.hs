@@ -13,7 +13,7 @@ testDescr P.PosTest {..} =
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
-          _testAssertion = Steps $ regToCairoAssertion file' input' expected'
+          _testAssertion = Steps $ regToCairoAssertion tRoot file' input' expected'
         }
 
 allTests :: TestTree

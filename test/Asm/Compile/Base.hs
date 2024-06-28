@@ -5,15 +5,14 @@ import Juvix.Compiler.Asm.Data.InfoTable
 import Juvix.Compiler.Asm.Error
 import Juvix.Compiler.Asm.Options
 import Juvix.Compiler.Asm.Translation.FromSource
-import Juvix.Compiler.Backend qualified as Backend
 import Juvix.Compiler.Backend.C qualified as C
 import Juvix.Compiler.Pipeline qualified as Pipeline
 import Runtime.Base qualified as Runtime
 
-asmCompileAssertion' :: Int -> InfoTable -> Path Abs File -> Path Abs File -> Text -> (String -> IO ()) -> Assertion
-asmCompileAssertion' optLevel tab mainFile expectedFile stdinText step = do
+asmCompileAssertion' :: EntryPoint -> Int -> InfoTable -> Path Abs File -> Path Abs File -> Text -> (String -> IO ()) -> Assertion
+asmCompileAssertion' entryPoint optLevel tab mainFile expectedFile stdinText step = do
   step "Generate C code"
-  case run $ runReader asmOpts $ runError @JuvixError $ Pipeline.asmToMiniC' tab of
+  case run $ runReader entryPoint' $ runError @JuvixError $ Pipeline.asmToMiniC tab of
     Left e -> do
       let err :: AsmError = fromJust (fromJuvixError e)
       assertFailure ("code generation failed:" <> "\n" <> unpack (err ^. asmErrorMsg))
@@ -29,13 +28,20 @@ asmCompileAssertion' optLevel tab mainFile expectedFile stdinText step = do
     -- the actual target, and C code will then need to be re-generated for each
     -- target separately. Now this works only because those limits that
     -- Prealloc.hs uses are the same for the Native64 and Wasm32 targets.
-    asmOpts :: Options
-    asmOpts = makeOptions Backend.TargetCNative64 True
+    entryPoint' :: EntryPoint
+    entryPoint' =
+      entryPoint
+        { _entryPointDebug = True,
+          _entryPointTarget = Just TargetCNative64,
+          _entryPointOptimizationLevel = optLevel
+        }
 
-asmCompileAssertion :: Path Abs File -> Path Abs File -> Text -> (String -> IO ()) -> Assertion
-asmCompileAssertion mainFile expectedFile stdinText step = do
+asmCompileAssertion :: Path Abs Dir -> Path Abs File -> Path Abs File -> Text -> (String -> IO ()) -> Assertion
+asmCompileAssertion root' mainFile expectedFile stdinText step = do
   step "Parse"
   s <- readFile mainFile
   case runParser mainFile s of
     Left err -> assertFailure (show err)
-    Right tab -> asmCompileAssertion' 3 tab mainFile expectedFile stdinText step
+    Right tab -> do
+      entryPoint <- testDefaultEntryPointIO root' mainFile
+      asmCompileAssertion' entryPoint 3 tab mainFile expectedFile stdinText step

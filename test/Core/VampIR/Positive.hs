@@ -10,7 +10,7 @@ fromTest :: PosTest -> TestTree
 fromTest = mkTest . toTestDescr
 
 toTestDescr :: PosTest -> TestDescr
-toTestDescr = Normalize.toTestDescr' (coreVampIRAssertion (toStoredTransformations ++ toVampIRTransformations))
+toTestDescr = Normalize.toTestDescr' (const (coreVampIRAssertion (toStoredTransformations ++ toVampIRTransformations)))
 
 allTests :: TestTree
 allTests =
