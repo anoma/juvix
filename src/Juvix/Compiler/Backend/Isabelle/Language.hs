@@ -44,6 +44,70 @@ makeLenses ''Var
 makeLenses ''FunType
 makeLenses ''IndApp
 
+data Expression
+  = ExprIden Name
+  | ExprLiteral Literal
+  | ExprApp App
+  | ExprLet Let
+  | ExprIf If
+  | ExprCase Case
+  | ExprLambda Lambda
+
+data Literal
+  = LitNumeric Integer
+  | LitString Text
+
+data App = App
+  { _appLeft :: Expression,
+    _appRight :: Expression
+  }
+
+data Let = Let
+  { _letVar :: Var,
+    _letValue :: Expression,
+    _letBody :: Expression
+  }
+
+data If = If
+  { _ifValue :: Expression,
+    _ifBranchTrue :: Expression,
+    _ifBranchFalse :: Expression
+  }
+
+data Case = Case
+  { _caseValue :: Expression,
+    _caseBranches :: NonEmpty CaseBranch
+  }
+
+data CaseBranch = CaseBranch
+  { _caseBranchPattern :: Pattern,
+    _caseBranchBody :: Expression
+  }
+
+data Lambda = Lambda
+  { _lambdaVar :: Var,
+    _lambdaType :: Type,
+    _lambdaBody :: Expression
+  }
+
+data Pattern
+  = PatVar Var
+  | PatConstrApp ConstrApp
+
+data ConstrApp = ConstrApp
+  { _constrAppConstructor :: Name,
+    _constrAppArgs :: [Pattern]
+  }
+
+makeLenses ''App
+makeLenses ''Let
+makeLenses ''If
+makeLenses ''Case
+makeLenses ''CaseBranch
+makeLenses ''Lambda
+makeLenses ''ConstrApp
+makeLenses ''Expression
+
 data Statement
   = StmtDefinition Definition
   | StmtFunction Function
