@@ -1309,8 +1309,7 @@ checkTopModule comments m@Module {..} = checkedModule
               }
           smd =
             ScopedModule
-              { _scopedModuleId = _moduleId,
-                _scopedModulePath = path',
+              { _scopedModulePath = path',
                 _scopedModuleName = S.topModulePathName path',
                 _scopedModuleFilePath = P.getModuleFilePath m,
                 _scopedModuleExportInfo = e,
@@ -1754,8 +1753,7 @@ checkLocalModule md@Module {..} = do
           }
       smod =
         ScopedModule
-          { _scopedModuleId = error "FIXME should local modules have id?",
-            _scopedModulePath = set nameConcrete (moduleNameToTopModulePath (NameUnqualified _modulePath)) moduleName,
+          { _scopedModulePath = set nameConcrete (moduleNameToTopModulePath (NameUnqualified _modulePath)) moduleName,
             _scopedModuleName = moduleName,
             _scopedModuleFilePath = P.getModuleFilePath md,
             _scopedModuleExportInfo = moduleExportInfo,

@@ -25,8 +25,7 @@ instance Serialize ExportInfo
 instance NFData ExportInfo
 
 data ScopedModule = ScopedModule
-  { _scopedModuleId :: ModuleId,
-    _scopedModulePath :: S.TopModulePath,
+  { _scopedModulePath :: S.TopModulePath,
     _scopedModuleName :: S.Name,
     _scopedModuleFilePath :: Path Abs File,
     _scopedModuleExportInfo :: ExportInfo,

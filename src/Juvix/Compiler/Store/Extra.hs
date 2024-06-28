@@ -16,9 +16,6 @@ import Juvix.Prelude
 getModulePath :: ModuleInfo -> TopModulePath
 getModulePath mi = mi ^. moduleInfoScopedModule . scopedModulePath . S.nameConcrete
 
-getModuleId :: ModuleInfo -> ModuleId
-getModuleId mi = mi ^. moduleInfoScopedModule . scopedModuleId
-
 getScopedModuleTable :: ModuleTable -> ScopedModuleTable
 getScopedModuleTable mtab =
   ScopedModuleTable $ fmap (^. moduleInfoScopedModule) (mtab ^. moduleTable)
