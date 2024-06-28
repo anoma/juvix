@@ -25,6 +25,7 @@ def projectClosure := \t match t with {
 
 writeLn (anoma-decode (anoma-encode v1) = v1)
 >> writeLn (projectClosure (anoma-decode (anoma-encode v3)) 10 = 20)
->> writeLn (anoma-verify-with-message (anoma-sign v1 privKey) pubKey = v1)
+>> writeLn (anoma-verify-with-message (anoma-sign v1 privKey) pubKey = just v1)
+>> writeLn (anoma-verify-with-message (anoma-sign v1 privKey) privKey = nothing)
 >> writeLn (anoma-verify-detached (anoma-sign-detached v1 privKey) v1 pubKey)
 >> writeLn (anoma-verify-detached (anoma-sign-detached v1 privKey) v2 pubKey)

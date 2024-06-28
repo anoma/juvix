@@ -6,7 +6,10 @@ builtin anoma-sign
 axiom anomaSign : {A : Type} -> A -> Nat -> Nat;
 
 builtin anoma-verify-with-message
-axiom anomaVerifyWithMessage : {A : Type} -> Nat -> Nat -> A;
+axiom anomaVerifyWithMessage : {A : Type}
+  -> Nat
+  -> Nat
+  -> Maybe A;
 
 privKey : Nat :=
   0x3181f891cd2323ffe802dd8f36f7e77cd072e3bd8f49884e8b38a297646351e9015535fa1125ec092c85758756d51bf29eed86a118942135c1657bf4cb5c6fc9;
@@ -14,4 +17,6 @@ privKey : Nat :=
 pubKey : Nat :=
   0x3181f891cd2323ffe802dd8f36f7e77cd072e3bd8f49884e8b38a297646351e9;
 
-main (input : List Nat) : List Nat := anomaVerifyWithMessage (anomaSign input privKey) pubKey;
+main (input : List Nat) : List Nat :=
+  fromMaybe []
+    <| anomaVerifyWithMessage (anomaSign input privKey) pubKey;

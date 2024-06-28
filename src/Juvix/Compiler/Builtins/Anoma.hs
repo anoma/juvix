@@ -78,10 +78,11 @@ registerAnomaVerifyWithMessage f = do
       l = getLoc f
   dataT <- freshVar l "dataT"
   nat <- getBuiltinName (getLoc f) BuiltinNat
+  maybe_ <- getBuiltinName (getLoc f) BuiltinMaybe
   let freeVars = HashSet.fromList [dataT]
   unless
-    ((ftype ==% (u <>--> nat --> nat --> dataT)) freeVars)
-    (error "anomaVerify must be of type {A : Type} -> Nat -> Nat -> A")
+    ((ftype ==% (u <>--> nat --> nat --> maybe_ @@ dataT)) freeVars)
+    (error "anomaVerify must be of type {A : Type} -> Nat -> Nat -> Maybe A")
   registerBuiltin BuiltinAnomaVerifyWithMessage (f ^. axiomName)
 
 registerAnomaSignDetached :: (Members '[Builtins, NameIdGen] r) => AxiomDef -> Sem r ()

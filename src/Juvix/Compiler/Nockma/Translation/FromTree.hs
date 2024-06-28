@@ -506,10 +506,37 @@ compile = \case
       [message, privKey] -> callStdlib StdlibSignDetached [goAnomaEncode [message], privKey]
       _ -> impossible
 
+    -- Conceptually this function is:
+    -- anomaDecode <$> verify signedMessage pubKey
+    --
+    -- verify returns a `Maybe Nat` that is `Just msg` if the signedMessage is verified.
     goAnomaVerifyWithMessage :: [Term Natural] -> Term Natural
     goAnomaVerifyWithMessage = \case
-      [signedMessage, pubKey] -> callStdlib StdlibDecode [callStdlib StdlibVerify [signedMessage, pubKey]]
+      [signedMessage, pubKey] ->
+        opReplace
+          "callDecodeFromVerify-args"
+          (closurePath ArgsTuple)
+          (callStdlib StdlibVerify [signedMessage, pubKey])
+          (opAddress "stack" emptyPath)
+          >># goDecodeResult
       _ -> impossible
+      where
+        goDecodeResult :: Term Natural
+        goDecodeResult = branch (OpIsCell # verifyResult) goDecodeResultJust goDecodeResultNothing
+
+        goDecodeResultJust :: Term Natural
+        goDecodeResultJust =
+          opReplace
+            "putDecodeResultInJust"
+            [R]
+            (callStdlib StdlibDecode [opAddress "verify-result-just" (closurePath ArgsTuple ++ [R])])
+            verifyResult
+
+        goDecodeResultNothing :: Term Natural
+        goDecodeResultNothing = verifyResult
+
+        verifyResult :: Term Natural
+        verifyResult = opAddress "verify-result" (closurePath ArgsTuple)
 
     goTrace :: Term Natural -> Sem r (Term Natural)
     goTrace arg = do

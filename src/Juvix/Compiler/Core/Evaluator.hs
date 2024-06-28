@@ -81,8 +81,14 @@ geval opts herr tab env0 = eval' env0
     ctx :: IdentContext
     ctx = tab ^. identContext
 
+    evalError' :: Text -> Maybe Node -> a
+    evalError' msg = Exception.throw . EvalError msg
+
     evalError :: Text -> Node -> a
-    evalError msg node = Exception.throw (EvalError msg (Just node))
+    evalError msg node = evalError' msg (Just node)
+
+    evalErrorMsg' :: Text -> a
+    evalErrorMsg' msg = evalError' msg Nothing
 
     eval' :: Env -> Node -> Node
     eval' !env !n = case n of
@@ -484,8 +490,8 @@ geval opts herr tab env0 = eval' env0
           let !signedMessage = decodeByteString signedMessageInt
               !publicKey = publicKeyFromInteger publicKeyInt
            in if
-                  | E.verify publicKey signedMessage -> deserializeNode (E.removeSignature signedMessage)
-                  | otherwise -> err "signature verification failed"
+                  | E.verify publicKey signedMessage -> nodeMaybeJust (deserializeNode (E.removeSignature signedMessage))
+                  | otherwise -> nodeMaybeNothing
         {-# INLINE verify #-}
 
         signDetached :: Node -> Integer -> Node
@@ -531,6 +537,26 @@ geval opts herr tab env0 = eval' env0
           | b = TagTrue
           | otherwise = TagFalse
     {-# INLINE nodeFromBool #-}
+
+    mkBuiltinConstructor :: BuiltinConstructor -> [Node] -> Maybe Node
+    mkBuiltinConstructor ctor args =
+      (\tag -> mkConstr' tag args)
+        . (^. constructorTag)
+        <$> lookupTabBuiltinConstructor tab ctor
+
+    nodeMaybeNothing :: Node
+    nodeMaybeNothing =
+      fromMaybe
+        (evalErrorMsg' "builtin Maybe is not available")
+        (mkBuiltinConstructor BuiltinMaybeNothing [])
+    {-# INLINE nodeMaybeNothing #-}
+
+    nodeMaybeJust :: Node -> Node
+    nodeMaybeJust n =
+      fromMaybe
+        (evalErrorMsg' "builtin Maybe is not available")
+        (mkBuiltinConstructor BuiltinMaybeJust [n])
+    {-# INLINE nodeMaybeJust #-}
 
     integerFromNode :: Node -> Maybe Integer
     integerFromNode = \case

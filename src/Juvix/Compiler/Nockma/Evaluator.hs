@@ -294,8 +294,14 @@ evalProfile inistack initerm =
               pubKey <- PublicKey <$> atomToByteStringLen publicKeyLength pubKeyT
               signedMessage <- atomToByteString signedMessageT
               if
-                  | verify pubKey signedMessage -> TermAtom <$> byteStringToAtom (removeSignature signedMessage)
-                  | otherwise -> throwVerificationFailed signedMessageT pubKeyT
+                  | verify pubKey signedMessage -> mkMaybeJust . TermAtom <$> byteStringToAtom (removeSignature signedMessage)
+                  | otherwise -> return mkMaybeNothing
+
+        mkMaybeNothing :: Term a
+        mkMaybeNothing = TermAtom nockNil
+
+        mkMaybeJust :: Term a -> Term a
+        mkMaybeJust t = TermCell (Cell (TermAtom nockNil) t)
 
         goAutoConsCell :: AutoConsCell a -> Sem r (Term a)
         goAutoConsCell c = do
