@@ -43,6 +43,9 @@ makeLenses ''CompileResult
 
 type Node = EntryIndex
 
+forceFormat :: Path Abs Dir -> Path Abs File -> ScopingResult -> ScopingResult
+forceFormat pkgRoot modulePath r = undefined
+
 mkNodesIndex ::
   forall r.
   (Members '[Reader EntryPoint] r) =>
@@ -143,6 +146,7 @@ compileInParallel nj = do
           }
   compile args
 
+-- TODO We should have a way to skip scoping modules that are not needed
 scopeInParallel ::
   forall r.
   ( Members
@@ -161,9 +165,10 @@ scopeInParallel ::
        ]
       r
   ) =>
+  (Maybe (Path Abs File -> ScopingResult -> ScopingResult)) ->
   NumThreads ->
   Sem r (HashMap (Path Abs File) ScopingResult)
-scopeInParallel nj = do
+scopeInParallel forcing nj = do
   t <- ask
   pkg <- asks (^. entryPointPackage)
   idx <- mkNodesIndex t
@@ -176,7 +181,7 @@ scopeInParallel nj = do
             _compileArgsPreProcess = Nothing,
             _compileArgsDependencies = mkDependencies t,
             _compileArgsNumWorkers = numWorkers,
-            _compileArgsCompileNode = scopeNode
+            _compileArgsCompileNode = scopeNode forcing
           }
   runReader pkg $
     compile args
@@ -191,9 +196,12 @@ scopeNode ::
        ]
       r
   ) =>
+  -- This argument may be used to force (full or partial) evaluation of the
+  -- result in the worker thread.
+  (Maybe (Path Abs File -> ScopingResult -> ScopingResult)) ->
   EntryIndex ->
   Sem r ScopingResult
-scopeNode e = ignoreHighlightBuilder $ do
+scopeNode forcing e = ignoreHighlightBuilder $ do
   moduleInfo :: PipelineResult Store.ModuleInfo <- compileNode e
   pkg :: Package <- ask
   parseRes :: ParserResult <-
@@ -207,11 +215,16 @@ scopeNode e = ignoreHighlightBuilder $ do
     evalTopNameIdGen moduleid $
       scopeCheck pkg scopedModules parseRes
   -- FIXME need to apply `force`
-  return
-    ScopingResult
-      { _scopingResultModuleInfo = moduleInfo,
-        _scopingResultScoperResult = scopeRes
-      }
+  return $
+    forceIf
+      ScopingResult
+        { _scopingResultModuleInfo = moduleInfo,
+          _scopingResultScoperResult = scopeRes
+        }
+  where
+    forceIf = case forcing of
+      Nothing -> id
+      Just f -> f (getNodePath e)
 
 compileNode :: (Members '[ModuleInfoCache, PathResolver] r) => EntryIndex -> Sem r (PipelineResult Store.ModuleInfo)
 compileNode e =
