@@ -93,13 +93,13 @@ compileInParallel_ ::
          Error JuvixError,
          Reader EntryPoint,
          PathResolver,
+         Reader NumThreads,
          Reader ImportTree
        ]
       r
   ) =>
-  NumThreads ->
   Sem r ()
-compileInParallel_ = void . compileInParallel
+compileInParallel_ = void compileInParallel
 
 -- | Compiles the whole project in parallel (i.e. all modules in the ImportTree).
 compileInParallel ::
@@ -116,18 +116,18 @@ compileInParallel ::
          Error JuvixError,
          Reader EntryPoint,
          PathResolver,
+         Reader NumThreads,
          Reader ImportTree
        ]
       r
   ) =>
-  NumThreads ->
   Sem r (HashMap ImportNode (PipelineResult Store.ModuleInfo))
-compileInParallel nj = do
+compileInParallel = do
   -- At the moment we compile everything, so the EntryIndex is ignored, but in
   -- principle we could only compile what is reachable from the given EntryIndex
   t <- ask
   idx <- mkNodesIndex t
-  numWorkers <- numThreads nj
+  numWorkers <- ask >>= numThreads
   let args :: CompileArgs r ImportNode Node (PipelineResult Store.ModuleInfo)
       args =
         CompileArgs
@@ -164,6 +164,7 @@ formatInParallel nj = do
   t <- ask
   pkg <- asks (^. entryPointPackage)
   idx <- mkNodesIndex t
+  root <- asks (^. entryPointRoot)
   numWorkers <- numThreads nj
   let args :: CompileArgs (Reader Package ': r) ImportNode Node FormatSourceResult
       args =
@@ -173,11 +174,12 @@ formatInParallel nj = do
             _compileArgsPreProcess = Nothing,
             _compileArgsDependencies = mkDependencies t,
             _compileArgsNumWorkers = numWorkers,
-            _compileArgsCompileNode = formatNode
+            _compileArgsCompileNode = formatNode root
           }
   runReader pkg $
     compile args
 
+-- TODO format only relevant modules
 formatNode ::
   ( Members
       '[ ModuleInfoCache,
@@ -188,12 +190,12 @@ formatNode ::
        ]
       r
   ) =>
+  Path Abs Dir ->
   EntryIndex ->
   Sem r FormatSourceResult
-formatNode e = ignoreHighlightBuilder $ do
+formatNode _pkgRoot e = ignoreHighlightBuilder $ do
   moduleInfo :: PipelineResult Store.ModuleInfo <- compileNode e
   pkg :: Package <- ask
-  originalSource :: Text <- readFile' (e ^. entryIxImportNode . importNodeAbsFile)
   parseRes :: ParserResult <-
     runTopModuleNameChecker $
       fromSource Nothing (Just (getNodePath e ^. importNodeAbsFile))
@@ -204,6 +206,7 @@ formatNode e = ignoreHighlightBuilder $ do
   scopeRes :: ScoperResult <-
     evalTopNameIdGen moduleid $
       scopeCheck pkg scopedModules parseRes
+  originalSource :: Text <- readFile' (e ^. entryIxImportNode . importNodeAbsFile)
   formattedTxt <-
     runReader originalSource $
       formatScoperResult False scopeRes
@@ -213,7 +216,6 @@ formatNode e = ignoreHighlightBuilder $ do
             _formatResultOriginal = originalSource
           }
   return . forcing formatRes $
-    -- TODO force only relevant modules
     when (True) $ do
       forcesField formatResultFormatted
       forcesField formatResultOriginal
@@ -254,11 +256,11 @@ evalModuleInfoCache ::
          Error JuvixError,
          PathResolver,
          Reader ImportScanStrategy,
+         Reader NumThreads,
          Files
        ]
       r
   ) =>
-  NumThreads ->
   Sem (ModuleInfoCache ': JvoCache ': r) a ->
   Sem r a
-evalModuleInfoCache nj = Driver.evalModuleInfoCacheSetup (const (compileInParallel_ nj))
+evalModuleInfoCache = Driver.evalModuleInfoCacheSetup (const (compileInParallel_))

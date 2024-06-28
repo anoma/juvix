@@ -47,18 +47,13 @@ targetFromOptions opts = do
                   ]
 
 -- | Formats the project on the root
--- formatProjectNew ::
---   forall r.
---   (Members '[App, EmbedIO, TaggedLock, Reader PipelineOptions, Files, Output FormattedFileInfo] r) =>
---   Sem r FormatResult
--- formatProjectNew = runPipelineSetup $ do
---   root <- askRoot
---   tree <- ask @ImportTree
---   let inProject :: ImportNode -> Bool
---       inProject ImportNode {..} = _importNodePackageRoot == root ^. rootRootDir
---       projectNodes :: [ImportNode] = filter inProject (toList (tree ^. importTreeNodes))
-
---   undefined
+formatProjectNew ::
+  forall r.
+  (Members '[App, EmbedIO, TaggedLock, Reader PipelineOptions, Files, Output FormattedFileInfo] r) =>
+  Sem r FormatResult
+formatProjectNew = runPipelineSetup $ do
+  root <- askRoot
+  undefined
 
 runCommand :: forall r. (Members '[EmbedIO, App, TaggedLock, Files] r) => FormatOptions -> Sem r ()
 runCommand opts = do

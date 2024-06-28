@@ -80,6 +80,7 @@ type PipelineLocalEff =
      Error JuvixError,
      HighlightBuilder,
      Internet,
+     Reader NumThreads,
      Concurrent
    ]
 

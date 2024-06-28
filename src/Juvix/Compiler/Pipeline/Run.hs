@@ -114,6 +114,7 @@ runIOEitherPipeline' entry a = do
   let hasInternet = not (entry ^. entryPointOffline)
   opts :: PipelineOptions <- ask
   runConcurrent
+    . runReader (opts ^. pipelineNumThreads)
     . evalInternet hasInternet
     . runHighlightBuilder
     . runJuvixError
@@ -132,7 +133,7 @@ runIOEitherPipeline' entry a = do
     . runTopModuleNameChecker
     . runReader (opts ^. pipelineImportStrategy)
     . withImportTree (entry ^. entryPointModulePath)
-    . evalModuleInfoCacheHelper (opts ^. pipelineNumThreads)
+    . evalModuleInfoCacheHelper
     $ a
 
 evalModuleInfoCacheHelper ::
@@ -148,18 +149,18 @@ evalModuleInfoCacheHelper ::
          Error JuvixError,
          PathResolver,
          Reader ImportScanStrategy,
+         Reader NumThreads,
          Files
        ]
       r
   ) =>
-  NumThreads ->
   Sem (ModuleInfoCache ': JvoCache ': r) a ->
   Sem r a
-evalModuleInfoCacheHelper nj m = do
+evalModuleInfoCacheHelper m = do
   b <- supportsParallel
-  threads <- numThreads nj
+  threads <- ask >>= numThreads
   if
-      | b && threads > 1 -> DriverPar.evalModuleInfoCache nj m
+      | b && threads > 1 -> DriverPar.evalModuleInfoCache m
       | otherwise -> evalModuleInfoCache m
 
 mainIsPackageFile :: EntryPoint -> Bool
@@ -212,6 +213,7 @@ runReplPipelineIOEither' lockMode entry = do
   eith <-
     runM
       . runConcurrent
+      . runReader defaultNumThreads
       . evalInternet hasInternet
       . ignoreHighlightBuilder
       . runError
@@ -235,7 +237,7 @@ runReplPipelineIOEither' lockMode entry = do
       . runReader defaultImportScanStrategy
       . withImportTree (entry ^. entryPointModulePath)
       . ignoreProgressLog
-      . evalModuleInfoCacheHelper defaultNumThreads
+      . evalModuleInfoCacheHelper
       $ processFileToStoredCore entry
   return $ case eith of
     Left err -> Left err
