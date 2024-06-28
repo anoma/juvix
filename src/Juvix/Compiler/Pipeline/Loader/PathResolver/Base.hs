@@ -6,6 +6,7 @@ where
 
 import Juvix.Compiler.Concrete.Data.Name
 import Juvix.Compiler.Pipeline.Loader.PathResolver.DependenciesConfig
+import Juvix.Compiler.Pipeline.Loader.PathResolver.ImportTree.ImportNode
 import Juvix.Compiler.Pipeline.Loader.PathResolver.PackageInfo
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Paths
 import Juvix.Prelude
@@ -47,20 +48,26 @@ makeSem ''PathResolver
 withPathFile ::
   (Members '[PathResolver] r) =>
   TopModulePath ->
-  (Path Abs File -> Sem r a) ->
+  (ImportNode -> Sem r a) ->
   Sem r a
 withPathFile m f = do
-  (root, file) <- resolveTopModulePath m
-  withResolverRoot root (f (root <//> file))
+  node <- resolveTopModulePath m
+  let root = node ^. importNodePackageRoot
+  withResolverRoot root (f node)
 
 -- | Returns the root of the package where the module belongs and the path to
 -- the module relative to the root.
 resolveTopModulePath ::
   (Members '[PathResolver] r) =>
   TopModulePath ->
-  Sem r (Path Abs Dir, Path Rel File)
+  Sem r ImportNode
 resolveTopModulePath mp = do
   let scan = topModulePathToImportScan mp
       relpath = topModulePathToRelativePathNoExt mp
   (pkg, ext) <- resolvePath scan
-  return (pkg ^. packageRoot, addFileExt ext relpath)
+  let node =
+        ImportNode
+          { _importNodeFile = addFileExt ext relpath,
+            _importNodePackageRoot = pkg ^. packageRoot
+          }
+  return node

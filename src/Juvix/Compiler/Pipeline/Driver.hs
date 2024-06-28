@@ -153,13 +153,13 @@ processRecursiveUpToTyped = do
       $ upToInternalTyped
   return (a, ms)
   where
-    goImport :: Path Abs File -> Sem r InternalTypedResult
-    goImport path = do
+    goImport :: ImportNode -> Sem r InternalTypedResult
+    goImport node = do
       entry <- ask
       let entry' =
             entry
               { _entryPointStdin = Nothing,
-                _entryPointModulePath = Just path
+                _entryPointModulePath = Just (node ^. importNodeAbsFile)
               }
       (^. pipelineResult) <$> runReader entry' (processFileUpTo upToInternalTyped)
 
@@ -170,11 +170,10 @@ processImport ::
   Sem r (PipelineResult Store.ModuleInfo)
 processImport p = withPathFile p getCachedImport
   where
-    getCachedImport :: Path Abs File -> Sem r (PipelineResult Store.ModuleInfo)
-    getCachedImport file = do
+    getCachedImport :: ImportNode -> Sem r (PipelineResult Store.ModuleInfo)
+    getCachedImport node = do
       b <- supportsParallel
-      root <- resolverRoot
-      eix <- mkEntryIndex (topModulePathKey p) root file
+      eix <- mkEntryIndex node
       if
           | b -> do
               res <- cacheGetResult eix

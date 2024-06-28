@@ -3,7 +3,7 @@
 module Juvix.Formatter where
 
 import Juvix.Compiler.Concrete.Language
-import Juvix.Compiler.Concrete.Print (docDefault)
+import Juvix.Compiler.Concrete.Print (ppOutDefault)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Data.CodeAnn
@@ -15,6 +15,8 @@ data FormattedFileInfo = FormattedFileInfo
     _formattedFileInfoContents :: Text,
     _formattedFileInfoContentsModified :: Bool
   }
+
+type OriginalSource = Text
 
 data ScopeEff :: Effect where
   ScopeFile :: Path Abs File -> ScopeEff m Scoper.ScoperResult
@@ -93,7 +95,7 @@ formatProject p = do
       return (res <> subRes, RecurseFilter (\hasJuvixPackage d -> not hasJuvixPackage && not (isHiddenDirectory d)))
 
 formatPath ::
-  (Members '[Reader Text, ScopeEff] r) =>
+  (Members '[Reader OriginalSource, ScopeEff] r) =>
   Path Abs File ->
   Sem r Text
 formatPath p = do
@@ -114,7 +116,7 @@ formatStdin = do
 
 formatResultFromContents ::
   forall r.
-  (Members '[Reader Text, Output FormattedFileInfo] r) =>
+  (Members '[Reader OriginalSource, Output FormattedFileInfo] r) =>
   Text ->
   Path Abs File ->
   Sem r FormatResult
@@ -141,29 +143,15 @@ formatScoperResult' forceFormat original sres =
   run . runReader original $ formatScoperResult forceFormat sres
 
 formatScoperResult ::
-  (Members '[Reader Text] r) =>
+  (Members '[Reader OriginalSource] r) =>
   Bool ->
   Scoper.ScoperResult ->
   Sem r Text
 formatScoperResult forceFormat res = do
-  let cs = Scoper.getScoperResultComments res
-  formattedModule <-
-    runReader cs
-      . formatTopModule
-      $ res
-        ^. Scoper.resultModule
-  let txt :: Text = toPlainTextTrim formattedModule
-  case res ^. Scoper.mainModule . modulePragmas of
-    Just pragmas ->
-      case pragmas ^. withLocParam . withSourceValue . pragmasFormat of
-        Just PragmaFormat {..}
-          | not _pragmaFormat && not forceFormat -> ask @Text
-        _ ->
-          return txt
-    Nothing ->
-      return txt
-  where
-    formatTopModule :: (Members '[Reader Comments] r) => Module 'Scoped 'ModuleTop -> Sem r (Doc Ann)
-    formatTopModule m = do
-      cs :: Comments <- ask
-      return $ docDefault cs m
+  let comments = Scoper.getScoperResultComments res
+      formattedTxt = toPlainText (ppOutDefault comments (res ^. Scoper.resultModule))
+  runFailDefault formattedTxt $ do
+    pragmas <- failMaybe (res ^. Scoper.mainModule . modulePragmas)
+    PragmaFormat {..} <- failMaybe (pragmas ^. withLocParam . withSourceValue . pragmasFormat)
+    failUnless (not _pragmaFormat && not forceFormat)
+    ask @OriginalSource
