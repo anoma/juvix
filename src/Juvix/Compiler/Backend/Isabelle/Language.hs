@@ -46,8 +46,9 @@ makeLenses ''IndApp
 
 data Expression
   = ExprIden Name
+  | ExprUndefined
   | ExprLiteral Literal
-  | ExprApp App
+  | ExprApp Application
   | ExprLet Let
   | ExprIf If
   | ExprCase Case
@@ -57,7 +58,7 @@ data Literal
   = LitNumeric Integer
   | LitString Text
 
-data App = App
+data Application = Application
   { _appLeft :: Expression,
     _appRight :: Expression
   }
@@ -99,7 +100,7 @@ data ConstrApp = ConstrApp
     _constrAppArgs :: [Pattern]
   }
 
-makeLenses ''App
+makeLenses ''Application
 makeLenses ''Let
 makeLenses ''If
 makeLenses ''Case
@@ -117,12 +118,15 @@ data Statement
 
 data Definition = Definition
   { _definitionName :: Name,
-    _definitionType :: Type
+    _definitionType :: Type,
+    _definitionBody :: Expression
   }
 
 data Function = Function
   { _functionName :: Name,
-    _functionType :: Type
+    _functionType :: Type,
+    _functionArgs :: NonEmpty Name,
+    _functionBody :: Expression
   }
 
 data Synonym = Synonym
