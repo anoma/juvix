@@ -6,6 +6,7 @@ module Juvix.Data.Effect
     module Juvix.Data.Effect.Visit,
     module Juvix.Data.Effect.Log,
     module Juvix.Data.Effect.Internet,
+    module Juvix.Data.Effect.Forcing,
     module Juvix.Data.Effect.TaggedLock,
   )
 where
@@ -13,6 +14,7 @@ where
 import Juvix.Data.Effect.Cache
 import Juvix.Data.Effect.Fail
 import Juvix.Data.Effect.Files
+import Juvix.Data.Effect.Forcing
 import Juvix.Data.Effect.Internet
 import Juvix.Data.Effect.Log
 import Juvix.Data.Effect.NameIdGen
