@@ -622,7 +622,7 @@ checkImportNoPublic import_@Import {..} = do
   where
     addModuleToScope :: ScopedModule -> Sem r ()
     addModuleToScope smod = do
-      let mpath :: TopModulePath = fromMaybe _importModulePath _importAsName
+      let mpath :: TopModulePathKey = topModulePathKey (fromMaybe _importModulePath _importAsName)
           uid :: S.NameId = smod ^. scopedModuleName . S.nameId
           singTbl = HashMap.singleton uid smod
       modify (over (scopeTopModules . at mpath) (Just . maybe singTbl (HashMap.insert uid smod)))
@@ -684,7 +684,7 @@ lookupSymbolAux modules final = do
       tbl <- gets (^. scopeTopModules)
       mapM_ output (tbl ^.. at path . _Just . each . to mkModuleEntry)
       where
-        path = TopModulePath modules final
+        path = topModulePathKey (TopModulePath modules final)
 
 mkModuleEntry :: ScopedModule -> ModuleSymbolEntry
 mkModuleEntry m = ModuleSymbolEntry (m ^. scopedModuleName)
@@ -734,7 +734,7 @@ lookupQualifiedSymbol sms = do
         there :: Sem r' ()
         there = mapM_ (uncurry lookInTopModule) allTopPaths
           where
-            allTopPaths :: [(TopModulePath, [Symbol])]
+            allTopPaths :: [(TopModulePathKey, [Symbol])]
             allTopPaths = map (first nonEmptyToTopPath) raw
               where
                 lpath = toList path
@@ -742,9 +742,12 @@ lookupQualifiedSymbol sms = do
                 raw =
                   [ (l, r) | i <- [1 .. length path], (Just l, r) <- [first nonEmpty (splitAt i lpath)]
                   ]
-                nonEmptyToTopPath :: NonEmpty Symbol -> TopModulePath
-                nonEmptyToTopPath l = TopModulePath (NonEmpty.init l) (NonEmpty.last l)
-            lookInTopModule :: TopModulePath -> [Symbol] -> Sem r' ()
+                nonEmptyToTopPath :: NonEmpty Symbol -> TopModulePathKey
+                nonEmptyToTopPath lsym = TopModulePathKey (NonEmpty.init l) (NonEmpty.last l)
+                  where
+                    l = (^. symbolText) <$> lsym
+
+            lookInTopModule :: TopModulePathKey -> [Symbol] -> Sem r' ()
             lookInTopModule topPath remaining = do
               tbl <- gets (^. scopeTopModules)
               sequence_
@@ -872,7 +875,8 @@ readScopeModule import_ = do
               <> "\nAvailable modules:\n "
               <> show (HashMap.keys (mods ^. scopeImportedModules))
           )
-  return (fromMaybe err (mods ^. scopeImportedModules . at (import_ ^. importModulePath)))
+  let path = topModulePathKey (import_ ^. importModulePath)
+  return (fromMaybe err (mods ^. scopeImportedModules . at path))
 
 checkFixityInfo ::
   forall r.

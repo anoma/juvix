@@ -11,15 +11,22 @@ topModulePathToRelativePath' m =
       ext = fileExtension' absPath
    in topModulePathToRelativePath ext "" (</>) m
 
+topModulePathKeyToRelativePathNoExt :: TopModulePathKey -> Path Rel File
+topModulePathKeyToRelativePathNoExt TopModulePathKey {..} =
+  relFile (joinFilePaths (map unpack (_modulePathKeyDir ++ [_modulePathKeyName])))
+
 topModulePathToRelativePathNoExt :: TopModulePath -> Path Rel File
-topModulePathToRelativePathNoExt TopModulePath {..} = relFile (joinFilePaths (map (unpack . (^. withLocParam)) (_modulePathDir ++ [_modulePathName])))
+topModulePathToRelativePathNoExt = topModulePathKeyToRelativePathNoExt . topModulePathKey
+
+topModulePathKeyToImportScan :: Interval -> TopModulePathKey -> ImportScan
+topModulePathKeyToImportScan loc TopModulePathKey {..} =
+  ImportScan
+    { _importNames = unpack <$> NonEmpty.prependList _modulePathKeyDir (pure _modulePathKeyName),
+      _importLoc = loc
+    }
 
 topModulePathToImportScan :: TopModulePath -> ImportScan
-topModulePathToImportScan t@TopModulePath {..} =
-  ImportScan
-    { _importNames = unpack . (^. withLocParam) <$> (NonEmpty.prependList _modulePathDir (pure _modulePathName)),
-      _importLoc = getLoc t
-    }
+topModulePathToImportScan t = topModulePathKeyToImportScan (getLoc t) (topModulePathKey t)
 
 topModulePathToRelativePath :: String -> String -> (FilePath -> FilePath -> FilePath) -> TopModulePath -> Path Rel File
 topModulePathToRelativePath ext suffix joinpath mp = relFile relFilePath

@@ -2,8 +2,8 @@ module Juvix.Compiler.Store.Extra where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Concrete.Data.Builtins
+import Juvix.Compiler.Concrete.Data.Name qualified as C
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
-import Juvix.Compiler.Concrete.Language (TopModulePath)
 import Juvix.Compiler.Core.Data.InfoTable qualified as Core
 import Juvix.Compiler.Internal.Data.Name
 import Juvix.Compiler.Store.Core.Extra
@@ -13,12 +13,15 @@ import Juvix.Compiler.Store.Scoped.Data.InfoTable qualified as Scoped
 import Juvix.Compiler.Store.Scoped.Language
 import Juvix.Prelude
 
-getModulePath :: ModuleInfo -> TopModulePath
+getModulePath :: ModuleInfo -> C.TopModulePath
 getModulePath mi = mi ^. moduleInfoScopedModule . scopedModulePath . S.nameConcrete
+
+getModulePathKey :: ModuleInfo -> TopModulePathKey
+getModulePathKey = C.topModulePathKey . getModulePath
 
 getScopedModuleTable :: ModuleTable -> ScopedModuleTable
 getScopedModuleTable mtab =
-  ScopedModuleTable $ fmap (^. moduleInfoScopedModule) (mtab ^. moduleTable)
+  ScopedModuleTable $ HashMap.mapKeys C.topModulePathKey (fmap (^. moduleInfoScopedModule) (mtab ^. moduleTable))
 
 getInternalModuleTable :: ModuleTable -> InternalModuleTable
 getInternalModuleTable mtab =
@@ -28,10 +31,10 @@ getInternalModuleTable mtab =
 mkModuleTable :: [ModuleInfo] -> ModuleTable
 mkModuleTable = ModuleTable . hashMap . map (\mi -> (getModulePath mi, mi))
 
-lookupModule :: ModuleTable -> TopModulePath -> ModuleInfo
-lookupModule mtab n = fromJust $ HashMap.lookup n (mtab ^. moduleTable)
+lookupModule :: ModuleTable -> C.TopModulePath -> ModuleInfo
+lookupModule mtab n = fromJust (mtab ^. moduleTable . at n)
 
-insertModule :: TopModulePath -> ModuleInfo -> ModuleTable -> ModuleTable
+insertModule :: C.TopModulePath -> ModuleInfo -> ModuleTable -> ModuleTable
 insertModule p mi = over moduleTable (HashMap.insert p mi)
 
 computeCombinedScopedInfoTable :: ModuleTable -> Scoped.InfoTable

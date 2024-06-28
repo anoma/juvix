@@ -40,7 +40,7 @@ instance Serialize ScopedModule
 instance NFData ScopedModule
 
 newtype ScopedModuleTable = ScopedModuleTable
-  { _scopedModuleTable :: HashMap C.TopModulePath ScopedModule
+  { _scopedModuleTable :: HashMap TopModulePathKey ScopedModule
   }
 
 makeLenses ''ExportInfo
