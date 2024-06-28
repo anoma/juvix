@@ -86,6 +86,8 @@ instance Serialize TopModulePathKey
 
 instance NFData TopModulePathKey
 
+instance Hashable TopModulePathKey
+
 -- | A.B.C corresponds to TopModulePath [A,B] C
 data TopModulePath = TopModulePath
   { _modulePathDir :: [Symbol],
@@ -96,6 +98,8 @@ data TopModulePath = TopModulePath
 instance Serialize TopModulePath
 
 instance NFData TopModulePath
+
+instance Hashable TopModulePath
 
 makeLenses ''TopModulePath
 makeLenses ''TopModulePathKey
@@ -132,8 +136,6 @@ moduleNameToTopModulePath :: Name -> TopModulePath
 moduleNameToTopModulePath = \case
   NameUnqualified s -> TopModulePath [] s
   NameQualified (QualifiedName (SymbolPath p) s) -> TopModulePath (toList p) s
-
-instance Hashable TopModulePath
 
 splitName :: Name -> ([Symbol], Symbol)
 splitName = \case
