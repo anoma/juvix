@@ -145,7 +145,7 @@ processRecursiveUpToTyped = do
   ms <- forM imports $ \imp ->
     withPathFile imp goImport
   let pkg = entry ^. entryPointPackage
-  mid <- runReader pkg (getModuleId (_pipelineResult ^. Parser.resultModule . modulePath))
+  mid <- runReader pkg (getModuleId (_pipelineResult ^. Parser.resultModule . modulePath . to topModulePathKey))
   a <-
     evalTopNameIdGen mid
       . runReader _pipelineResultImports
@@ -174,11 +174,12 @@ processImport p = withPathFile p getCachedImport
     getCachedImport file = do
       b <- supportsParallel
       root <- resolverRoot
+      eix <- mkEntryIndex (topModulePathKey p) root file
       if
           | b -> do
-              res <- mkEntryIndex root file >>= cacheGetResult
+              res <- cacheGetResult eix
               return (res ^. cacheResult)
-          | otherwise -> mkEntryIndex root file >>= processModule
+          | otherwise -> processModule eix
 
 processFileUpToParsing ::
   forall r.
@@ -205,7 +206,7 @@ processFileUpTo a = do
   entry <- ask
   res <- processFileUpToParsing entry
   let pkg = entry ^. entryPointPackage
-  mid <- runReader pkg (getModuleId (res ^. pipelineResult . Parser.resultModule . modulePath))
+  mid <- runReader pkg (getModuleId (res ^. pipelineResult . Parser.resultModule . modulePath . to topModulePathKey))
   a' <-
     evalTopNameIdGen mid
       . runReader (res ^. pipelineResultImports)
@@ -260,7 +261,7 @@ processFileToStoredCore ::
 processFileToStoredCore entry = ignoreHighlightBuilder . runReader entry $ do
   res <- processFileUpToParsing entry
   let pkg = entry ^. entryPointPackage
-  mid <- runReader pkg (getModuleId (res ^. pipelineResult . Parser.resultModule . modulePath))
+  mid <- runReader pkg (getModuleId (res ^. pipelineResult . Parser.resultModule . modulePath . to topModulePathKey))
   r <-
     evalTopNameIdGen mid
       . runReader (res ^. pipelineResultImports)

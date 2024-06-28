@@ -1,6 +1,7 @@
 module Juvix.Compiler.Pipeline.DriverParallel
   ( compileInParallel,
     compileInParallel_,
+    scopeInParallel,
     ModuleInfoCache,
     evalModuleInfoCache,
     module Parallel.ProgressLog,
@@ -9,7 +10,10 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import Effectful.Concurrent
+import Juvix.Compiler.Concrete.Data.Highlight (ignoreHighlightBuilder)
 import Juvix.Compiler.Concrete.Language
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping
+import Juvix.Compiler.Concrete.Translation.FromSource
 import Juvix.Compiler.Concrete.Translation.FromSource.TopModuleNameChecker
 import Juvix.Compiler.Concrete.Translation.ImportScanner (ImportScanStrategy)
 import Juvix.Compiler.Pipeline
@@ -18,7 +22,9 @@ import Juvix.Compiler.Pipeline.Driver qualified as Driver
 import Juvix.Compiler.Pipeline.JvoCache
 import Juvix.Compiler.Pipeline.Loader.PathResolver
 import Juvix.Compiler.Pipeline.ModuleInfoCache
+import Juvix.Compiler.Store.Extra
 import Juvix.Compiler.Store.Language qualified as Store
+import Juvix.Compiler.Store.Scoped.Language
 import Juvix.Prelude
 import Parallel.ParallelTemplate
 import Parallel.ProgressLog
@@ -28,15 +34,20 @@ data CompileResult = CompileResult
     _compileResultChanged :: Bool
   }
 
-makeLenses ''CompileResult
+data ScopingResult = ScopingResult
+  { _scopingResultModuleInfo :: PipelineResult Store.ModuleInfo,
+    _scopingResultScoperResult :: ScoperResult
+  }
 
-type NodeId = Path Abs File
+makeLenses ''CompileResult
 
 type Node = EntryIndex
 
-type CompileProof = PipelineResult Store.ModuleInfo
-
-mkNodesIndex :: forall r. (Members '[Reader EntryPoint] r) => ImportTree -> Sem r (NodesIndex NodeId Node)
+mkNodesIndex ::
+  forall r.
+  (Members '[Reader EntryPoint] r) =>
+  ImportTree ->
+  Sem r (NodesIndex (Path Abs File) Node)
 mkNodesIndex tree =
   NodesIndex
     . hashMap
@@ -48,26 +59,29 @@ mkNodesIndex tree =
     mkAssoc :: ImportNode -> Sem r (Path Abs File, EntryIndex)
     mkAssoc p = do
       let abspath = p ^. importNodeAbsFile
-      i <- mkEntryIndex (p ^. importNodePackageRoot) abspath
+          moduleKey = relPathtoTopModulePathKey (p ^. importNodeFile)
+      i <- mkEntryIndex moduleKey (p ^. importNodePackageRoot) abspath
       return (abspath, i)
 
-mkDependencies :: ImportTree -> Dependencies NodeId
+mkDependencies :: ImportTree -> Dependencies (Path Abs File)
 mkDependencies tree =
   Dependencies
     { _dependenciesTable = helper (tree ^. importTree),
       _dependenciesTableReverse = helper (tree ^. importTreeReverse)
     }
   where
-    helper :: HashMap ImportNode (HashSet ImportNode) -> HashMap NodeId (HashSet NodeId)
+    helper :: HashMap ImportNode (HashSet ImportNode) -> HashMap (Path Abs File) (HashSet (Path Abs File))
     helper m = hashMap [(toPath k, hashSet (toPath <$> toList v)) | (k, v) <- HashMap.toList m]
 
     toPath :: ImportNode -> Path Abs File
     toPath = (^. importNodeAbsFile)
 
-getNodeName :: Node -> Text
-getNodeName = toFilePath . fromJust . (^. entryIxEntry . entryPointModulePath)
+getNodePath :: Node -> Path Abs File
+getNodePath = fromJust . (^. entryIxEntry . entryPointModulePath)
 
--- | Fills the cache in parallel
+getNodeName :: Node -> Text
+getNodeName = toFilePath . getNodePath
+
 compileInParallel_ ::
   forall r.
   ( Members
@@ -90,6 +104,7 @@ compileInParallel_ ::
   Sem r ()
 compileInParallel_ = void . compileInParallel
 
+-- | Compiles the whole project in parallel (i.e. all modules in the ImportTree).
 compileInParallel ::
   forall r.
   ( Members
@@ -116,7 +131,7 @@ compileInParallel nj = do
   t <- ask
   idx <- mkNodesIndex t
   numWorkers <- numThreads nj
-  let args :: CompileArgs r NodeId Node CompileProof
+  let args :: CompileArgs r (Path Abs File) Node (PipelineResult Store.ModuleInfo)
       args =
         CompileArgs
           { _compileArgsNodesIndex = idx,
@@ -128,7 +143,77 @@ compileInParallel nj = do
           }
   compile args
 
-compileNode :: (Members '[ModuleInfoCache, PathResolver] r) => EntryIndex -> Sem r CompileProof
+scopeInParallel ::
+  forall r.
+  ( Members
+      '[ Concurrent,
+         ProgressLog,
+         IOE,
+         JvoCache,
+         TaggedLock,
+         ModuleInfoCache,
+         Files,
+         TopModuleNameChecker,
+         Error JuvixError,
+         Reader EntryPoint,
+         PathResolver,
+         Reader ImportTree
+       ]
+      r
+  ) =>
+  NumThreads ->
+  Sem r (HashMap (Path Abs File) ScopingResult)
+scopeInParallel nj = do
+  t <- ask
+  pkg <- asks (^. entryPointPackage)
+  idx <- mkNodesIndex t
+  numWorkers <- numThreads nj
+  let args :: CompileArgs (Reader Package ': r) (Path Abs File) Node ScopingResult
+      args =
+        CompileArgs
+          { _compileArgsNodesIndex = idx,
+            _compileArgsNodeName = getNodeName,
+            _compileArgsPreProcess = Nothing,
+            _compileArgsDependencies = mkDependencies t,
+            _compileArgsNumWorkers = numWorkers,
+            _compileArgsCompileNode = scopeNode
+          }
+  runReader pkg $
+    compile args
+
+scopeNode ::
+  ( Members
+      '[ ModuleInfoCache,
+         PathResolver,
+         Error JuvixError,
+         Files,
+         Reader Package
+       ]
+      r
+  ) =>
+  EntryIndex ->
+  Sem r ScopingResult
+scopeNode e = ignoreHighlightBuilder $ do
+  moduleInfo :: PipelineResult Store.ModuleInfo <- compileNode e
+  pkg :: Package <- ask
+  parseRes :: ParserResult <-
+    runTopModuleNameChecker $
+      fromSource Nothing (Just (getNodePath e))
+  let modules = moduleInfo ^. pipelineResultImports
+      scopedModules :: ScopedModuleTable = getScopedModuleTable modules
+      tmp :: TopModulePathKey = e ^. entryIxTopModulePathKey
+  moduleid :: ModuleId <- runReader pkg (getModuleId tmp)
+  scopeRes <-
+    evalTopNameIdGen moduleid $
+      scopeCheck pkg scopedModules parseRes
+  -- FIXME need to apply `force`
+  return
+    ScopingResult
+      { _scopingResultModuleInfo = moduleInfo,
+        _scopingResultScoperResult = scopeRes
+      }
+
+compileNode :: (Members '[ModuleInfoCache, PathResolver] r) => EntryIndex -> Sem r (PipelineResult Store.ModuleInfo)
 compileNode e =
   withResolverRoot (e ^. entryIxResolverRoot)
     . fmap force

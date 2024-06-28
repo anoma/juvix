@@ -905,16 +905,12 @@ checkFixityInfo ParsedFixityInfo {..} = do
             _fixityFieldsBraces
           }
 
-getModuleId :: forall t r. (SingI t, Member (Reader Package) r) => ModulePathType 'Parsed t -> Sem r ModuleId
+getModuleId :: forall r. (Member (Reader Package) r) => TopModulePathKey -> Sem r ModuleId
 getModuleId path = do
   p <- ask
   return
     ModuleId
-      { _moduleIdPath =
-          case sing :: SModuleIsTop t of
-            -- FIXME module id may not be unique because local modules might have the same path as top modules
-            SModuleLocal -> prettyText path
-            SModuleTop -> prettyText path,
+      { _moduleIdPath = prettyText path,
         _moduleIdPackage = p ^. packageName,
         _moduleIdPackageVersion = show (p ^. packageVersion)
       }
@@ -1298,7 +1294,7 @@ checkTopModule comments m@Module {..} = checkedModule
           registerModuleDoc (path' ^. S.nameId) doc'
           return (e, body', path', doc')
       localModules <- getLocalModules e
-      _moduleId <- getModuleId (path' ^. S.nameConcrete)
+      _moduleId <- getModuleId (topModulePathKey (path' ^. S.nameConcrete))
       let md =
             Module
               { _modulePath = path',

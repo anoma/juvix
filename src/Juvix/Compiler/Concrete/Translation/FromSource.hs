@@ -45,15 +45,6 @@ type JudocStash = State (Maybe (Judoc 'Parsed))
 
 type PragmasStash = State (Maybe ParsedPragmas)
 
--- | Stdin is never used
-fromSourceMany ::
-  (Members '[HighlightBuilder, TopModuleNameChecker, Files, Error JuvixError] r) =>
-  [Path Abs File] ->
-  Sem r (HashMap (Path Abs File) ParserResult)
-fromSourceMany files = fmap hashMap $ forM files $ \file -> do
-  res <- fromSource Nothing (Just file)
-  return (file, res)
-
 fromSource ::
   (Members '[HighlightBuilder, TopModuleNameChecker, Files, Error JuvixError] r) =>
   Maybe Text ->
