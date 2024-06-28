@@ -76,6 +76,16 @@ deriving newtype instance Hashable SymbolPath
 makeLenses ''QualifiedName
 makeLenses ''SymbolPath
 
+data TopModulePathKey = TopModulePathKey
+  { _modulePathKeyDir :: [Text],
+    _modulePathKeyName :: Text
+  }
+  deriving stock (Show, Eq, Ord, Generic)
+
+instance Serialize TopModulePathKey
+
+instance NFData TopModulePathKey
+
 -- | A.B.C corresponds to TopModulePath [A,B] C
 data TopModulePath = TopModulePath
   { _modulePathDir :: [Symbol],
@@ -88,6 +98,14 @@ instance Serialize TopModulePath
 instance NFData TopModulePath
 
 makeLenses ''TopModulePath
+makeLenses ''TopModulePathKey
+
+topModulePathKey :: TopModulePath -> TopModulePathKey
+topModulePathKey TopModulePath {..} =
+  TopModulePathKey
+    { _modulePathKeyDir = (^. symbolText) <$> _modulePathDir,
+      _modulePathKeyName = _modulePathName ^. symbolText
+    }
 
 instance Pretty TopModulePath where
   pretty (TopModulePath path name) =

@@ -908,6 +908,7 @@ getModuleId path = do
     ModuleId
       { _moduleIdPath =
           case sing :: SModuleIsTop t of
+            -- FIXME module id may not be unique because local modules might have the same path as top modules
             SModuleLocal -> prettyText path
             SModuleTop -> prettyText path,
         _moduleIdPackage = p ^. packageName,
@@ -1736,7 +1737,6 @@ checkLocalModule md@Module {..} = do
       doc' <- mapM checkJudoc _moduleDoc
       return (e, b, doc')
   _modulePath' <- reserveLocalModuleSymbol _modulePath
-  _moduleId' <- getModuleId _modulePath
   localModules <- getLocalModules moduleExportInfo
   let mid = _modulePath' ^. S.nameId
       moduleName = S.unqualifiedSymbol _modulePath'
@@ -1747,14 +1747,14 @@ checkLocalModule md@Module {..} = do
             _moduleDoc = moduleDoc',
             _modulePragmas = _modulePragmas,
             _moduleMarkdownInfo = Nothing,
-            _moduleId = _moduleId',
+            _moduleId = (),
             _moduleKw,
             _moduleOrigin,
             _moduleKwEnd
           }
       smod =
         ScopedModule
-          { _scopedModuleId = _moduleId',
+          { _scopedModuleId = error "FIXME should local modules have id?",
             _scopedModulePath = set nameConcrete (moduleNameToTopModulePath (NameUnqualified _modulePath)) moduleName,
             _scopedModuleName = moduleName,
             _scopedModuleFilePath = P.getModuleFilePath md,
