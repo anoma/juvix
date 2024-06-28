@@ -20,10 +20,10 @@ module Juvix.Compiler.Internal.Data.InfoTable
   )
 where
 
-import Data.Generics.Uniplate.Data
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Extra.CoercionInfo
+import Juvix.Compiler.Internal.Extra.HasLetDefs
 import Juvix.Compiler.Internal.Extra.InstanceInfo
 import Juvix.Compiler.Internal.Pretty (ppTrace)
 import Juvix.Compiler.Store.Internal.Data.FunctionsTable
@@ -69,11 +69,11 @@ extendWithReplExpression e =
         )
     )
 
-letFunctionDefs :: (Data from) => from -> [FunctionDef]
+letFunctionDefs :: (HasLetDefs a) => a -> [FunctionDef]
 letFunctionDefs e =
   concat
     [ concatMap (toList . flattenClause) _letClauses
-      | Let {..} <- universeBi e
+      | Let {..} <- letDefs e
     ]
   where
     flattenClause :: LetClause -> NonEmpty FunctionDef
