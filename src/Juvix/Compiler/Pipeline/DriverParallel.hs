@@ -179,7 +179,7 @@ formatNode ::
   Path Abs Dir ->
   EntryIndex ->
   Sem r SourceCode
-formatNode pkgRoot e = do
+formatNode _pkgRoot e = do
   moduleInfo :: PipelineResult Store.ModuleInfo <- cacheGet e
   formatModuleInfo (e ^. entryIxImportNode) moduleInfo
 
