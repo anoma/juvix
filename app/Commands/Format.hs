@@ -4,6 +4,9 @@ import Commands.Base
 import Commands.Format.Options
 import Data.Text qualified as Text
 -- import Juvix.Compiler.Pipeline.Loader.PathResolver.ImportTree.Base
+
+import Juvix.Compiler.Pipeline.DriverParallel
+import Juvix.Compiler.Pipeline.Loader.PathResolver.ImportTree.ImportNode
 import Juvix.Formatter
 
 data FormatNoEditRenderMode
@@ -17,7 +20,7 @@ data FormatRenderMode
 
 data FormatTarget
   = TargetFile (Path Abs File)
-  | TargetProject (Path Abs Dir)
+  | TargetProject
   | TargetStdin
 
 isTargetProject :: FormatTarget -> Bool
@@ -30,15 +33,14 @@ targetFromOptions opts = do
   globalOpts <- askGlobalOptions
   let isStdin = globalOpts ^. globalStdin
   f <- mapM fromAppPathFileOrDir (opts ^. formatInput)
-  pkgDir <- askPkgDir
   case f of
     Just (Left p) -> return (TargetFile p)
-    Just Right {} -> return (TargetProject pkgDir)
+    Just Right {} -> return TargetProject
     Nothing -> do
       isPackageGlobal <- askPackageGlobal
       if
           | isStdin -> return TargetStdin
-          | not (isPackageGlobal) -> return (TargetProject pkgDir)
+          | not isPackageGlobal -> return TargetProject
           | otherwise -> do
               exitFailMsg $
                 Text.unlines
@@ -49,11 +51,11 @@ targetFromOptions opts = do
 -- | Formats the project on the root
 formatProjectNew ::
   forall r.
-  (Members '[App, EmbedIO, TaggedLock, Reader PipelineOptions, Files, Output FormattedFileInfo] r) =>
+  (Members '[App, EmbedIO, TaggedLock, Files, Output FormattedFileInfo] r) =>
   Sem r FormatResult
-formatProjectNew = runPipelineSetup $ do
-  root <- askRoot
-  undefined
+formatProjectNew = runPipelineOptions . runPipelineSetup $ do
+  res :: HashMap ImportNode SourceCode <- ignoreProgressLog formatInParallel
+  formatProject res
 
 runCommand :: forall r. (Members '[EmbedIO, App, TaggedLock, Files] r) => FormatOptions -> Sem r ()
 runCommand opts = do
@@ -61,7 +63,7 @@ runCommand opts = do
   runOutputSem (renderFormattedOutput target opts) . runScopeFileApp $ do
     res <- case target of
       TargetFile p -> format p
-      TargetProject p -> formatProject p
+      TargetProject {} -> formatProjectNew
       TargetStdin -> do
         entry <- getEntryPointStdin
         runReader entry formatStdin

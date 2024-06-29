@@ -5,9 +5,6 @@ module Juvix.Compiler.Pipeline.DriverParallel
     ModuleInfoCache,
     evalModuleInfoCache,
     module Parallel.ProgressLog,
-    FormatResult,
-    formatResultFormatted,
-    formatResultOriginal,
   )
 where
 
@@ -38,13 +35,7 @@ data CompileResult = CompileResult
     _compileResultChanged :: Bool
   }
 
-data FormatSourceResult = FormatSourceResult
-  { _formatResultFormatted :: Text,
-    _formatResultOriginal :: Text
-  }
-
 makeLenses ''CompileResult
-makeLenses ''FormatSourceResult
 
 type Node = EntryIndex
 
@@ -154,19 +145,19 @@ formatInParallel ::
          Error JuvixError,
          Reader EntryPoint,
          PathResolver,
+         Reader NumThreads,
          Reader ImportTree
        ]
       r
   ) =>
-  NumThreads ->
-  Sem r (HashMap ImportNode FormatSourceResult)
-formatInParallel nj = do
+  Sem r (HashMap ImportNode SourceCode)
+formatInParallel = do
   t <- ask
   pkg <- asks (^. entryPointPackage)
   idx <- mkNodesIndex t
   root <- asks (^. entryPointRoot)
-  numWorkers <- numThreads nj
-  let args :: CompileArgs (Reader Package ': r) ImportNode Node FormatSourceResult
+  numWorkers <- ask >>= numThreads
+  let args :: CompileArgs (Reader Package ': r) ImportNode Node SourceCode
       args =
         CompileArgs
           { _compileArgsNodesIndex = idx,
@@ -192,7 +183,7 @@ formatNode ::
   ) =>
   Path Abs Dir ->
   EntryIndex ->
-  Sem r FormatSourceResult
+  Sem r SourceCode
 formatNode _pkgRoot e = ignoreHighlightBuilder $ do
   moduleInfo :: PipelineResult Store.ModuleInfo <- compileNode e
   pkg :: Package <- ask
@@ -211,14 +202,14 @@ formatNode _pkgRoot e = ignoreHighlightBuilder $ do
     runReader originalSource $
       formatScoperResult False scopeRes
   let formatRes =
-        FormatSourceResult
-          { _formatResultFormatted = formattedTxt,
-            _formatResultOriginal = originalSource
+        SourceCode
+          { _sourceCodeFormatted = formattedTxt,
+            _sourceCodeOriginal = originalSource
           }
   return . forcing formatRes $
     when (True) $ do
-      forcesField formatResultFormatted
-      forcesField formatResultOriginal
+      forcesField sourceCodeFormatted
+      forcesField sourceCodeOriginal
 
 compileNode ::
   (Members '[ModuleInfoCache, PathResolver] r) =>

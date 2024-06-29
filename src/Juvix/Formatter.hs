@@ -2,10 +2,12 @@
 
 module Juvix.Formatter where
 
+import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Print (ppOutDefault)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Pipeline.EntryPoint
+import Juvix.Compiler.Pipeline.Loader.PathResolver.ImportTree.ImportNode
 import Juvix.Data.CodeAnn
 import Juvix.Extra.Paths
 import Juvix.Prelude
@@ -30,6 +32,13 @@ data FormatResult
   | FormatResultNotFormatted
   | FormatResultFail
   deriving stock (Eq)
+
+data SourceCode = SourceCode
+  { _sourceCodeFormatted :: Text,
+    _sourceCodeOriginal :: Text
+  }
+
+makeLenses ''SourceCode
 
 instance Semigroup FormatResult where
   FormatResultFail <> _ = FormatResultFail
@@ -56,9 +65,13 @@ format ::
   Sem r FormatResult
 format p = do
   originalContents <- readFile' p
-  runReader originalContents $ do
-    formattedContents :: Text <- formatPath p
-    formatResultFromContents formattedContents p
+  formattedContents :: Text <- runReader originalContents (formatPath p)
+  let src =
+        SourceCode
+          { _sourceCodeFormatted = formattedContents,
+            _sourceCodeOriginal = originalContents
+          }
+  formatResultSourceCode p src
 
 -- | Format a Juvix project.
 --
@@ -77,22 +90,13 @@ format p = do
 -- subdirectories that contain a juvix.yaml file.
 formatProject ::
   forall r.
-  (Members '[ScopeEff, Files, Output FormattedFileInfo] r) =>
-  Path Abs Dir ->
+  (Members '[Output FormattedFileInfo] r) =>
+  HashMap ImportNode SourceCode ->
   Sem r FormatResult
-formatProject p = do
-  walkDirRelAccum handler p FormatResultOK
-  where
-    handler ::
-      Path Abs Dir ->
-      [Path Rel Dir] ->
-      [Path Rel File] ->
-      FormatResult ->
-      Sem r (FormatResult, Recurse Rel)
-    handler cd _ files res = do
-      let juvixFiles = [cd <//> f | f <- files, isJuvixFile f]
-      subRes <- mconcat <$> mapM format juvixFiles
-      return (res <> subRes, RecurseFilter (\hasJuvixPackage d -> not hasJuvixPackage && not (isHiddenDirectory d)))
+formatProject =
+  mconcatMapM (uncurry formatResultSourceCode)
+    . map (first (^. importNodeAbsFile))
+    . HashMap.toList
 
 formatPath ::
   (Members '[Reader OriginalSource, ScopeEff] r) =>
@@ -109,21 +113,20 @@ formatStdin ::
 formatStdin = do
   entry <- ask
   res <- scopeStdin entry
-  let originalContents = fromMaybe "" (entry ^. entryPointStdin)
-  runReader originalContents $ do
-    formattedContents :: Text <- formatScoperResult False res
-    formatResultFromContents formattedContents formatStdinPath
+  let _sourceCodeOriginal = fromMaybe "" (entry ^. entryPointStdin)
+  _sourceCodeFormatted :: Text <- runReader _sourceCodeOriginal (formatScoperResult False res)
+  let src = SourceCode {..}
+  formatResultSourceCode formatStdinPath src
 
-formatResultFromContents ::
+formatResultSourceCode ::
   forall r.
-  (Members '[Reader OriginalSource, Output FormattedFileInfo] r) =>
-  Text ->
+  (Members '[Output FormattedFileInfo] r) =>
   Path Abs File ->
+  SourceCode ->
   Sem r FormatResult
-formatResultFromContents formattedContents filepath = do
-  originalContents <- ask
+formatResultSourceCode filepath src = do
   if
-      | originalContents /= formattedContents -> mkResult FormatResultNotFormatted
+      | src ^. sourceCodeOriginal /= src ^. sourceCodeFormatted -> mkResult FormatResultNotFormatted
       | otherwise -> mkResult FormatResultOK
   where
     mkResult :: FormatResult -> Sem r FormatResult
@@ -131,7 +134,7 @@ formatResultFromContents formattedContents filepath = do
       output
         ( FormattedFileInfo
             { _formattedFileInfoPath = filepath,
-              _formattedFileInfoContents = formattedContents,
+              _formattedFileInfoContents = src ^. sourceCodeFormatted,
               _formattedFileInfoContentsModified = res == FormatResultNotFormatted
             }
         )
