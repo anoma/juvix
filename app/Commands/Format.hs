@@ -72,7 +72,7 @@ runCommand opts = do
   runOutputSem (renderFormattedOutput target opts) . runScopeFileApp $ do
     res <- case target of
       TargetFile p -> format p
-      TargetProject {} -> formatProjectNew
+      TargetProject -> formatProjectNew
       TargetStdin -> do
         entry <- getEntryPointStdin
         runReader entry formatStdin

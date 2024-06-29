@@ -201,7 +201,7 @@ formatScoperResult ::
   Sem r Text
 formatScoperResult forceFormat res = do
   let comments = Scoper.getScoperResultComments res
-      formattedTxt = toPlainText (ppOutDefault comments (res ^. Scoper.resultModule))
+      formattedTxt = toPlainTextTrim (ppOutDefault comments (res ^. Scoper.resultModule))
   runFailDefault formattedTxt $ do
     pragmas <- failMaybe (res ^. Scoper.mainModule . modulePragmas)
     PragmaFormat {..} <- failMaybe (pragmas ^. withLocParam . withSourceValue . pragmasFormat)
