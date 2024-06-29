@@ -118,31 +118,34 @@ formatModuleInfo ::
   ImportNode ->
   PipelineResult Store.ModuleInfo ->
   Sem r SourceCode
-formatModuleInfo node moduleInfo = ignoreHighlightBuilder $ do
-  pkg :: Package <- ask
-  parseRes :: ParserResult <-
-    runTopModuleNameChecker $
-      fromSource Nothing (Just (node ^. importNodeAbsFile))
-  let modules = moduleInfo ^. pipelineResultImports
-      scopedModules :: ScopedModuleTable = getScopedModuleTable modules
-      tmp :: TopModulePathKey = relPathtoTopModulePathKey (node ^. importNodeFile)
-      moduleid :: ModuleId = run (runReader pkg (getModuleId tmp))
-  scopeRes :: ScoperResult <-
-    evalTopNameIdGen moduleid $
-      scopeCheck pkg scopedModules parseRes
-  originalSource :: Text <- readFile' (node ^. importNodeAbsFile)
-  formattedTxt <-
-    runReader originalSource $
-      formatScoperResult False scopeRes
-  let formatRes =
-        SourceCode
-          { _sourceCodeFormatted = formattedTxt,
-            _sourceCodeOriginal = originalSource
-          }
-  return . forcing formatRes $
-    when (True) $ do
-      forcesField sourceCodeFormatted
-      forcesField sourceCodeOriginal
+formatModuleInfo node moduleInfo =
+  withResolverRoot (node ^. importNodePackageRoot)
+    . ignoreHighlightBuilder
+    $ do
+      pkg :: Package <- ask
+      parseRes :: ParserResult <-
+        runTopModuleNameChecker $
+          fromSource Nothing (Just (node ^. importNodeAbsFile))
+      let modules = moduleInfo ^. pipelineResultImports
+          scopedModules :: ScopedModuleTable = getScopedModuleTable modules
+          tmp :: TopModulePathKey = relPathtoTopModulePathKey (node ^. importNodeFile)
+          moduleid :: ModuleId = run (runReader pkg (getModuleId tmp))
+      scopeRes :: ScoperResult <-
+        evalTopNameIdGen moduleid $
+          scopeCheck pkg scopedModules parseRes
+      originalSource :: Text <- readFile' (node ^. importNodeAbsFile)
+      formattedTxt <-
+        runReader originalSource $
+          formatScoperResult False scopeRes
+      let formatRes =
+            SourceCode
+              { _sourceCodeFormatted = formattedTxt,
+                _sourceCodeOriginal = originalSource
+              }
+      return . forcing formatRes $
+        when (True) $ do
+          forcesField sourceCodeFormatted
+          forcesField sourceCodeOriginal
 
 formatPath ::
   (Members '[Reader OriginalSource, ScopeEff] r) =>

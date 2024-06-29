@@ -4,12 +4,10 @@ import Commands.Base
 import Commands.Format.Options
 -- import Juvix.Compiler.Pipeline.Loader.PathResolver.ImportTree.Base
 
-import Data.HashMap.Strict qualified as HashMap
 import Data.Text qualified as Text
 import Juvix.Compiler.Pipeline.Driver (processModule)
 import Juvix.Compiler.Pipeline.DriverParallel
 import Juvix.Compiler.Pipeline.Loader.PathResolver.ImportTree.Base
-import Juvix.Compiler.Pipeline.Loader.PathResolver.ImportTree.ImportNode
 import Juvix.Compiler.Pipeline.ModuleInfoCache
 import Juvix.Compiler.Store.Language (ModuleInfo)
 import Juvix.Formatter

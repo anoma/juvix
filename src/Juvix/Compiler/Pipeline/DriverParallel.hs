@@ -10,10 +10,7 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import Effectful.Concurrent
-import Juvix.Compiler.Concrete.Data.Highlight (ignoreHighlightBuilder)
 import Juvix.Compiler.Concrete.Language
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping
-import Juvix.Compiler.Concrete.Translation.FromSource (ParserResult, fromSource)
 import Juvix.Compiler.Concrete.Translation.FromSource.TopModuleNameChecker
 import Juvix.Compiler.Concrete.Translation.ImportScanner (ImportScanStrategy)
 import Juvix.Compiler.Pipeline
@@ -22,9 +19,7 @@ import Juvix.Compiler.Pipeline.Driver qualified as Driver
 import Juvix.Compiler.Pipeline.JvoCache
 import Juvix.Compiler.Pipeline.Loader.PathResolver
 import Juvix.Compiler.Pipeline.ModuleInfoCache
-import Juvix.Compiler.Store.Extra
 import Juvix.Compiler.Store.Language qualified as Store
-import Juvix.Compiler.Store.Scoped.Language
 import Juvix.Formatter
 import Juvix.Prelude
 import Parallel.ParallelTemplate
