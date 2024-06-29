@@ -6,7 +6,6 @@ import Commands.Format.Options
 
 import Data.Text qualified as Text
 import Juvix.Compiler.Pipeline.Driver (processModule)
-import Juvix.Compiler.Pipeline.DriverParallel
 import Juvix.Compiler.Pipeline.Loader.PathResolver.ImportTree.Base
 import Juvix.Compiler.Pipeline.ModuleInfoCache
 import Juvix.Compiler.Store.Language (ModuleInfo)
