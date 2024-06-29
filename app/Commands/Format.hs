@@ -6,8 +6,11 @@ import Commands.Format.Options
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.Text qualified as Text
+import Juvix.Compiler.Pipeline.Driver (processModule)
 import Juvix.Compiler.Pipeline.DriverParallel
+import Juvix.Compiler.Pipeline.Loader.PathResolver.ImportTree.Base
 import Juvix.Compiler.Pipeline.Loader.PathResolver.ImportTree.ImportNode
+import Juvix.Compiler.Pipeline.ModuleInfoCache
 import Juvix.Compiler.Store.Language (ModuleInfo)
 import Juvix.Formatter
 
@@ -57,8 +60,13 @@ formatProjectNew ::
   Sem r FormatResult
 formatProjectNew = runPipelineOptions . runPipelineSetup $ do
   pkg <- askPackage
-  res :: HashMap ImportNode (PipelineResult ModuleInfo) <- appRunProgressLog compileInParallel
-  res' :: HashMap ImportNode SourceCode <- runReader pkg (HashMap.traverseWithKey formatModuleInfo res)
+  nodes <- toList <$> asks (^. importTreeNodes)
+  res :: [(ImportNode, PipelineResult ModuleInfo)] <- forM nodes $ \node -> do
+    res <- mkEntryIndex node >>= processModule
+    return (node, res)
+  res' :: HashMap ImportNode SourceCode <- fmap hashMap . runReader pkg . forM res $ \(node, nfo) -> do
+    src <- formatModuleInfo node nfo
+    return (node, src)
   formatProject res'
 
 -- | Formats the project on the root
