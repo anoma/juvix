@@ -67,15 +67,6 @@ formatProjectNew = runPipelineOptions . runPipelineSetup $ do
     return (node, src)
   formatProject res'
 
--- | Formats the project on the root
-formatProjectNewWtf ::
-  forall r.
-  (Members '[App, EmbedIO, TaggedLock, Files, Output FormattedFileInfo] r) =>
-  Sem r FormatResult
-formatProjectNewWtf = runPipelineOptions . runPipelineSetup $ do
-  res :: HashMap ImportNode SourceCode <- ignoreProgressLog formatInParallel
-  formatProject res
-
 runCommand :: forall r. (Members '[EmbedIO, App, TaggedLock, Files] r) => FormatOptions -> Sem r ()
 runCommand opts = do
   target <- targetFromOptions opts
