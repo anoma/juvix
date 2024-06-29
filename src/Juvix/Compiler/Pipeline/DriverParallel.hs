@@ -184,32 +184,9 @@ formatNode ::
   Path Abs Dir ->
   EntryIndex ->
   Sem r SourceCode
-formatNode _pkgRoot e = ignoreHighlightBuilder $ do
-  moduleInfo :: PipelineResult Store.ModuleInfo <- compileNode e
-  pkg :: Package <- ask
-  parseRes :: ParserResult <-
-    runTopModuleNameChecker $
-      fromSource Nothing (Just (getNodePath e ^. importNodeAbsFile))
-  let modules = moduleInfo ^. pipelineResultImports
-      scopedModules :: ScopedModuleTable = getScopedModuleTable modules
-      tmp :: TopModulePathKey = entryIndexTopModulePathKey e
-  moduleid :: ModuleId <- runReader pkg (getModuleId tmp)
-  scopeRes :: ScoperResult <-
-    evalTopNameIdGen moduleid $
-      scopeCheck pkg scopedModules parseRes
-  originalSource :: Text <- readFile' (e ^. entryIxImportNode . importNodeAbsFile)
-  formattedTxt <-
-    runReader originalSource $
-      formatScoperResult False scopeRes
-  let formatRes =
-        SourceCode
-          { _sourceCodeFormatted = formattedTxt,
-            _sourceCodeOriginal = originalSource
-          }
-  return . forcing formatRes $
-    when (True) $ do
-      forcesField sourceCodeFormatted
-      forcesField sourceCodeOriginal
+formatNode pkgRoot e = do
+  moduleInfo :: PipelineResult Store.ModuleInfo <- cacheGet e
+  formatModuleInfo (e ^. entryIxImportNode) moduleInfo
 
 compileNode ::
   (Members '[ModuleInfoCache, PathResolver] r) =>

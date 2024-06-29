@@ -3,11 +3,19 @@
 module Juvix.Formatter where
 
 import Data.HashMap.Strict qualified as HashMap
+import Juvix.Compiler.Concrete.Data.Highlight.Input (ignoreHighlightBuilder)
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Print (ppOutDefault)
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping (ScoperResult, getModuleId, scopeCheck)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
+import Juvix.Compiler.Concrete.Translation.FromSource (ParserResult, fromSource)
+import Juvix.Compiler.Concrete.Translation.FromSource.TopModuleNameChecker (runTopModuleNameChecker)
 import Juvix.Compiler.Pipeline.EntryPoint
-import Juvix.Compiler.Pipeline.Loader.PathResolver.ImportTree.ImportNode
+import Juvix.Compiler.Pipeline.Loader.PathResolver
+import Juvix.Compiler.Pipeline.Result
+import Juvix.Compiler.Store.Extra (getScopedModuleTable)
+import Juvix.Compiler.Store.Language qualified as Store
+import Juvix.Compiler.Store.Scoped.Language (ScopedModuleTable)
 import Juvix.Data.CodeAnn
 import Juvix.Extra.Paths
 import Juvix.Prelude
@@ -97,6 +105,44 @@ formatProject =
   mconcatMapM (uncurry formatResultSourceCode)
     . map (first (^. importNodeAbsFile))
     . HashMap.toList
+
+formatModuleInfo ::
+  ( Members
+      '[ PathResolver,
+         Error JuvixError,
+         Files,
+         Reader Package
+       ]
+      r
+  ) =>
+  ImportNode ->
+  PipelineResult Store.ModuleInfo ->
+  Sem r SourceCode
+formatModuleInfo node moduleInfo = ignoreHighlightBuilder $ do
+  pkg :: Package <- ask
+  parseRes :: ParserResult <-
+    runTopModuleNameChecker $
+      fromSource Nothing (Just (node ^. importNodeAbsFile))
+  let modules = moduleInfo ^. pipelineResultImports
+      scopedModules :: ScopedModuleTable = getScopedModuleTable modules
+      tmp :: TopModulePathKey = relPathtoTopModulePathKey (node ^. importNodeFile)
+      moduleid :: ModuleId = run (runReader pkg (getModuleId tmp))
+  scopeRes :: ScoperResult <-
+    evalTopNameIdGen moduleid $
+      scopeCheck pkg scopedModules parseRes
+  originalSource :: Text <- readFile' (node ^. importNodeAbsFile)
+  formattedTxt <-
+    runReader originalSource $
+      formatScoperResult False scopeRes
+  let formatRes =
+        SourceCode
+          { _sourceCodeFormatted = formattedTxt,
+            _sourceCodeOriginal = originalSource
+          }
+  return . forcing formatRes $
+    when (True) $ do
+      forcesField sourceCodeFormatted
+      forcesField sourceCodeOriginal
 
 formatPath ::
   (Members '[Reader OriginalSource, ScopeEff] r) =>

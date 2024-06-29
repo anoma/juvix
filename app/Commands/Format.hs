@@ -2,11 +2,13 @@ module Commands.Format where
 
 import Commands.Base
 import Commands.Format.Options
-import Data.Text qualified as Text
 -- import Juvix.Compiler.Pipeline.Loader.PathResolver.ImportTree.Base
 
+import Data.HashMap.Strict qualified as HashMap
+import Data.Text qualified as Text
 import Juvix.Compiler.Pipeline.DriverParallel
 import Juvix.Compiler.Pipeline.Loader.PathResolver.ImportTree.ImportNode
+import Juvix.Compiler.Store.Language (ModuleInfo)
 import Juvix.Formatter
 
 data FormatNoEditRenderMode
@@ -54,6 +56,17 @@ formatProjectNew ::
   (Members '[App, EmbedIO, TaggedLock, Files, Output FormattedFileInfo] r) =>
   Sem r FormatResult
 formatProjectNew = runPipelineOptions . runPipelineSetup $ do
+  pkg <- askPackage
+  res :: HashMap ImportNode (PipelineResult ModuleInfo) <- appRunProgressLog compileInParallel
+  res' :: HashMap ImportNode SourceCode <- runReader pkg (HashMap.traverseWithKey formatModuleInfo res)
+  formatProject res'
+
+-- | Formats the project on the root
+formatProjectNewWtf ::
+  forall r.
+  (Members '[App, EmbedIO, TaggedLock, Files, Output FormattedFileInfo] r) =>
+  Sem r FormatResult
+formatProjectNewWtf = runPipelineOptions . runPipelineSetup $ do
   res :: HashMap ImportNode SourceCode <- ignoreProgressLog formatInParallel
   formatProject res
 
