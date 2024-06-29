@@ -51,10 +51,7 @@ fromSource ::
   Maybe (Path Abs File) ->
   Sem r ParserResult
 fromSource mstdin minputfile = mapError (JuvixError @ParserError) $ do
-  (_resultParserState, _resultModule) <-
-    runParserResultBuilder mempty
-      . evalTopNameIdGen defaultModuleId
-      $ getParsedModuleTop
+  (_resultParserState, _resultModule) <- runParserResultBuilder mempty getParsedModuleTop
   return ParserResult {..}
   where
     getParsedModuleTop ::
