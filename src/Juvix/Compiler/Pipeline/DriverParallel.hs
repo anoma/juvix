@@ -1,7 +1,6 @@
 module Juvix.Compiler.Pipeline.DriverParallel
   ( compileInParallel,
     compileInParallel_,
-    formatInParallel,
     ModuleInfoCache,
     evalModuleInfoCache,
     module Parallel.ProgressLog,
@@ -20,7 +19,6 @@ import Juvix.Compiler.Pipeline.JvoCache
 import Juvix.Compiler.Pipeline.Loader.PathResolver
 import Juvix.Compiler.Pipeline.ModuleInfoCache
 import Juvix.Compiler.Store.Language qualified as Store
-import Juvix.Formatter
 import Juvix.Prelude
 import Parallel.ParallelTemplate
 import Parallel.ProgressLog
@@ -125,63 +123,6 @@ compileInParallel = do
             _compileArgsCompileNode = compileNode
           }
   compile args
-
-formatInParallel ::
-  forall r.
-  ( Members
-      '[ Concurrent,
-         ProgressLog,
-         IOE,
-         JvoCache,
-         TaggedLock,
-         ModuleInfoCache,
-         Files,
-         TopModuleNameChecker,
-         Error JuvixError,
-         Reader EntryPoint,
-         PathResolver,
-         Reader NumThreads,
-         Reader ImportTree
-       ]
-      r
-  ) =>
-  Sem r (HashMap ImportNode SourceCode)
-formatInParallel = do
-  t <- ask
-  pkg <- asks (^. entryPointPackage)
-  idx <- mkNodesIndex t
-  root <- asks (^. entryPointRoot)
-  numWorkers <- ask >>= numThreads
-  let args :: CompileArgs (Reader Package ': r) ImportNode Node SourceCode
-      args =
-        CompileArgs
-          { _compileArgsNodesIndex = idx,
-            _compileArgsNodeName = getNodeName,
-            _compileArgsPreProcess = Nothing,
-            _compileArgsDependencies = mkDependencies t,
-            _compileArgsNumWorkers = numWorkers,
-            _compileArgsCompileNode = formatNode root
-          }
-  runReader pkg $
-    compile args
-
--- TODO format only relevant modules
-formatNode ::
-  ( Members
-      '[ ModuleInfoCache,
-         PathResolver,
-         Error JuvixError,
-         Files,
-         Reader Package
-       ]
-      r
-  ) =>
-  Path Abs Dir ->
-  EntryIndex ->
-  Sem r SourceCode
-formatNode _pkgRoot e = do
-  moduleInfo :: PipelineResult Store.ModuleInfo <- cacheGet e
-  formatModuleInfo (e ^. entryIxImportNode) moduleInfo
 
 compileNode ::
   (Members '[ModuleInfoCache, PathResolver] r) =>
