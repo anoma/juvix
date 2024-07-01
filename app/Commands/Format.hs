@@ -52,7 +52,7 @@ targetFromOptions opts = do
 -- | Formats the project on the root
 formatProject ::
   forall r.
-  (Members '[App, EmbedIO, TaggedLock, Files, Output FormattedFileInfo] r) =>
+  (Members '[App, EmbedIO, Reader Options, TaggedLock, Files, Output FormattedFileInfo] r) =>
   Sem r FormatResult
 formatProject = runPipelineOptions . runPipelineSetup $ do
   pkg <- askPackage

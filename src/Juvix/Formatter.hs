@@ -5,7 +5,7 @@ module Juvix.Formatter where
 import Juvix.Compiler.Concrete.Data.Highlight.Input (ignoreHighlightBuilder)
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty.Options
-import Juvix.Compiler.Concrete.Print (ppOutDefault)
+import Juvix.Compiler.Concrete.Print (ppOut)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping (ScoperResult, getModuleId, scopeCheck)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource (ParserResult, fromSource)
@@ -109,6 +109,7 @@ formatModuleInfo ::
   ( Members
       '[ PathResolver,
          Error JuvixError,
+         Reader Options,
          Files,
          Reader Package
        ]
@@ -146,7 +147,7 @@ formatModuleInfo node moduleInfo =
         forcesField sourceCodeOriginal
 
 formatPath ::
-  (Members '[Reader OriginalSource, ScopeEff] r) =>
+  (Members '[Reader Options, Reader OriginalSource, ScopeEff] r) =>
   Path Abs File ->
   Sem r Text
 formatPath p = do
@@ -196,13 +197,14 @@ formatScoperResult' forceFormat original sres =
     $ formatScoperResult forceFormat sres
 
 formatScoperResult ::
-  (Members '[Reader OriginalSource] r) =>
+  (Members '[Reader Options, Reader OriginalSource] r) =>
   Bool ->
   Scoper.ScoperResult ->
   Sem r Text
 formatScoperResult forceFormat res = do
+  opts :: Options <- ask
   let comments = Scoper.getScoperResultComments res
-      formattedTxt = toPlainTextTrim (ppOutDefault comments (res ^. Scoper.resultModule))
+      formattedTxt = toPlainTextTrim (ppOut opts comments (res ^. Scoper.resultModule))
   runFailDefault formattedTxt $ do
     pragmas <- failMaybe (res ^. Scoper.mainModule . modulePragmas)
     PragmaFormat {..} <- failMaybe (pragmas ^. withLocParam . withSourceValue . pragmasFormat)
