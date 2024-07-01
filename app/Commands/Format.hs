@@ -2,8 +2,6 @@ module Commands.Format where
 
 import Commands.Base
 import Commands.Format.Options
--- import Juvix.Compiler.Pipeline.Loader.PathResolver.ImportTree.Base
-
 import Data.Text qualified as Text
 import Juvix.Compiler.Pipeline.Driver (processModule)
 import Juvix.Compiler.Pipeline.Loader.PathResolver.ImportTree.Base
