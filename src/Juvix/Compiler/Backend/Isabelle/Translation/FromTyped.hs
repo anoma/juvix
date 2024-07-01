@@ -99,23 +99,6 @@ goModule onlyTypes infoTable Internal.Module {..} =
         { _recordFieldName = fromMaybe defaultName _paramName,
           _recordFieldType = goType _paramType
         }
-      where
-        defaultName =
-          Name
-            { _nameText = "_",
-              _nameId = defaultId,
-              _nameKind = KNameLocal,
-              _nameKindPretty = KNameLocal,
-              _namePretty = "",
-              _nameLoc = defaultLoc,
-              _nameFixity = Nothing
-            }
-        defaultLoc = singletonInterval $ mkInitialLoc P.noFile
-        defaultId =
-          NameId
-            { _nameIdUid = 0,
-              _nameIdModuleId = ModuleId "" "" ""
-            }
 
     goConstructorDef :: Internal.ConstructorDef -> Constructor
     goConstructorDef Internal.ConstructorDef {..} =
@@ -126,35 +109,38 @@ goModule onlyTypes infoTable Internal.Module {..} =
       where
         tyargs = map (goType . (^. Internal.paramType)) (fst $ Internal.unfoldFunType _inductiveConstructorType)
 
-    goDef :: Name -> Internal.Expression -> Maybe Internal.Expression -> Statement
-    goDef name ty body = case ty of
+    goDef :: Name -> Internal.Expression -> [Internal.ArgInfo] -> Maybe Internal.Expression -> Statement
+    goDef name ty argsInfo body = case ty of
       Internal.ExpressionUniverse {} ->
         StmtSynonym
           Synonym
             { _synonymName = name,
               _synonymType = goType $ fromMaybe (error "unsupported axiomatic type") body
             }
-      _
-        | argsNum == 0 ->
-            StmtDefinition
-              Definition
-                { _definitionName = name,
-                  _definitionType = goType ty
-                }
-        | otherwise ->
-            StmtFunction
-              Function
-                { _functionName = name,
-                  _functionType = goType ty
-                }
-      where
-        argsNum = length $ fst $ Internal.unfoldFunType ty
+      _ -> case nonEmpty argsInfo of
+        Nothing ->
+          StmtDefinition
+            Definition
+              { _definitionName = name,
+                _definitionType = goType ty,
+                _definitionBody = goBody [] body
+              }
+        Just args ->
+          StmtFunction
+            Function
+              { _functionName = name,
+                _functionType = goType ty,
+                _functionArgs = argnames,
+                _functionBody = goBody (map (^. Internal.argInfoName) $ toList args) body
+              }
+          where
+            argnames = fmap (fromMaybe defaultName . (^. Internal.argInfoName)) args
 
     goFunctionDef :: Internal.FunctionDef -> Statement
-    goFunctionDef Internal.FunctionDef {..} = goDef _funDefName _funDefType (Just _funDefBody)
+    goFunctionDef Internal.FunctionDef {..} = goDef _funDefName _funDefType _funDefArgsInfo (Just _funDefBody)
 
     goAxiomDef :: Internal.AxiomDef -> Statement
-    goAxiomDef Internal.AxiomDef {..} = goDef _axiomName _axiomType Nothing
+    goAxiomDef Internal.AxiomDef {..} = goDef _axiomName _axiomType [] Nothing
 
     goType :: Internal.Expression -> Type
     goType ty = case ty of
@@ -215,3 +201,106 @@ goModule onlyTypes infoTable Internal.Module {..} =
         TyFun $ FunType (goType lty) (goType _functionRight)
       where
         lty = _functionLeft ^. Internal.paramType
+
+    goBody :: [Maybe Name] -> Maybe Internal.Expression -> Expression
+    goBody _ = \case
+      Nothing -> ExprUndefined
+      Just body -> goExpression body
+
+    goExpression :: Internal.Expression -> Expression
+    goExpression = \case
+      Internal.ExpressionIden x -> goIden x
+      Internal.ExpressionApplication x -> goApplication x
+      Internal.ExpressionFunction x -> goFunType x
+      Internal.ExpressionLiteral x -> goLiteral x
+      Internal.ExpressionHole x -> goHole x
+      Internal.ExpressionInstanceHole x -> goInstanceHole x
+      Internal.ExpressionLet x -> goLet x
+      Internal.ExpressionUniverse x -> goUniverse x
+      Internal.ExpressionSimpleLambda x -> goSimpleLambda x
+      Internal.ExpressionLambda x -> goLambda x
+      Internal.ExpressionCase x -> goCase x
+
+    goIden :: Internal.Iden -> Expression
+    goIden iden = ExprIden $ Internal.getName iden
+
+    goApplication :: Internal.Application -> Expression
+    goApplication Internal.Application {..} =
+      let l = goExpression _appLeft
+          r = goExpression _appRight
+       in ExprApp (Application l r)
+
+    goFunType :: Internal.Function -> Expression
+    goFunType _ = ExprUndefined
+
+    goLiteral :: Internal.LiteralLoc -> Expression
+    goLiteral lit = case lit ^. withLocParam of
+      Internal.LitString s -> ExprLiteral $ LitString s
+      Internal.LitNumeric n -> ExprLiteral $ LitNumeric n
+      Internal.LitInteger n -> ExprLiteral $ LitNumeric n
+      Internal.LitNatural n -> ExprLiteral $ LitNumeric n
+
+    goHole :: Internal.Hole -> Expression
+    goHole _ = ExprUndefined
+
+    goInstanceHole :: Internal.InstanceHole -> Expression
+    goInstanceHole _ = ExprUndefined
+
+    goLet :: Internal.Let -> Expression
+    goLet Internal.Let {..} = go (concatMap toFunDefs (toList _letClauses))
+      where
+        toFunDefs :: Internal.LetClause -> [Internal.FunctionDef]
+        toFunDefs = \case
+          Internal.LetFunDef d -> [d]
+          Internal.LetMutualBlock Internal.MutualBlockLet {..} -> toList _mutualLet
+
+        go :: [Internal.FunctionDef] -> Expression
+        go = \case
+          d : defs' -> goFunDef d (go defs')
+          [] -> goExpression _letExpression
+
+        goFunDef :: Internal.FunctionDef -> Expression -> Expression
+        goFunDef Internal.FunctionDef {..} expr =
+          ExprLet
+            Let
+              { _letVar = Var _funDefName,
+                _letValue = goExpression _funDefBody,
+                _letBody = expr
+              }
+
+    goUniverse :: Internal.SmallUniverse -> Expression
+    goUniverse _ = ExprUndefined
+
+    goSimpleLambda :: Internal.SimpleLambda -> Expression
+    goSimpleLambda Internal.SimpleLambda {..} =
+      ExprLambda
+        Lambda
+          { _lambdaVar = Var $ _slambdaBinder ^. Internal.sbinderVar,
+            _lambdaType = goType $ _slambdaBinder ^. Internal.sbinderType,
+            _lambdaBody = goExpression _slambdaBody
+          }
+
+    goLambda :: Internal.Lambda -> Expression
+    goLambda = undefined
+
+    goCase :: Internal.Case -> Expression
+    goCase = undefined
+
+    defaultName :: Name
+    defaultName =
+      Name
+        { _nameText = "_",
+          _nameId = defaultId,
+          _nameKind = KNameLocal,
+          _nameKindPretty = KNameLocal,
+          _namePretty = "",
+          _nameLoc = defaultLoc,
+          _nameFixity = Nothing
+        }
+      where
+        defaultLoc = singletonInterval $ mkInitialLoc P.noFile
+        defaultId =
+          NameId
+            { _nameIdUid = 0,
+              _nameIdModuleId = ModuleId "" "" ""
+            }

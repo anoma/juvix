@@ -6,12 +6,14 @@ module Juvix.Compiler.Internal.Language
     module Juvix.Data.Universe,
     module Juvix.Data.Hole,
     module Juvix.Compiler.Concrete.Data.Builtins,
+    module Juvix.Data.InstanceHole,
   )
 where
 
 import Juvix.Compiler.Concrete.Data.Builtins
 import Juvix.Compiler.Internal.Data.Name
 import Juvix.Data.Hole
+import Juvix.Data.InstanceHole
 import Juvix.Data.IsImplicit
 import Juvix.Data.Universe hiding (smallUniverse)
 import Juvix.Data.WithLoc
@@ -377,8 +379,6 @@ data ConstructorDef = ConstructorDef
   }
   deriving stock (Data)
 
--- | At the moment we only use the name when we have a default value, so
--- isNothing _argInfoDefault implies isNothing _argInfoName
 data ArgInfo = ArgInfo
   { _argInfoDefault :: Maybe Expression,
     _argInfoName :: Maybe Name
