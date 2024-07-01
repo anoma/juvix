@@ -55,7 +55,8 @@ formatProjectNew ::
   Sem r FormatResult
 formatProjectNew = runPipelineOptions . runPipelineSetup $ do
   pkg <- askPackage
-  nodes <- toList <$> asks (^. importTreeNodes)
+  root <- (^. rootRootDir) <$> askRoot
+  nodes <- toList <$> asks (importTreeProjectNodes root)
   res :: [(ImportNode, PipelineResult ModuleInfo)] <- forM nodes $ \node -> do
     res <- mkEntryIndex node >>= processModule
     return (node, res)
