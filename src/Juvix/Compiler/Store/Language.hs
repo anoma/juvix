@@ -1,6 +1,6 @@
 module Juvix.Compiler.Store.Language where
 
-import Juvix.Compiler.Concrete.Language (TopModulePath)
+import Juvix.Compiler.Concrete.Data.Name
 import Juvix.Compiler.Store.Core.Data.InfoTable qualified as Core
 import Juvix.Compiler.Store.Internal.Language
 import Juvix.Compiler.Store.Options

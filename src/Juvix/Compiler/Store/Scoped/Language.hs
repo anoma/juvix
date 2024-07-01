@@ -25,8 +25,7 @@ instance Serialize ExportInfo
 instance NFData ExportInfo
 
 data ScopedModule = ScopedModule
-  { _scopedModuleId :: ModuleId,
-    _scopedModulePath :: S.TopModulePath,
+  { _scopedModulePath :: S.TopModulePath,
     _scopedModuleName :: S.Name,
     _scopedModuleFilePath :: Path Abs File,
     _scopedModuleExportInfo :: ExportInfo,
@@ -40,7 +39,7 @@ instance Serialize ScopedModule
 instance NFData ScopedModule
 
 newtype ScopedModuleTable = ScopedModuleTable
-  { _scopedModuleTable :: HashMap C.TopModulePath ScopedModule
+  { _scopedModuleTable :: HashMap TopModulePathKey ScopedModule
   }
 
 makeLenses ''ExportInfo

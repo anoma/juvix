@@ -9,7 +9,7 @@ defaultEntryPointIO :: (Members '[EmbedIO, TaggedLock, EmbedIO] r) => Path Abs D
 defaultEntryPointIO cwd mainFile = do
   root <- findRootAndChangeDir (Just (parent mainFile)) Nothing cwd
   pkg <- readPackageRootIO root
-  return (defaultEntryPoint pkg root mainFile)
+  return (defaultEntryPoint pkg root (Just mainFile))
 
 defaultEntryPointNoFileIO :: (Members '[EmbedIO, TaggedLock, EmbedIO] r) => Path Abs Dir -> Sem r EntryPoint
 defaultEntryPointNoFileIO cwd = do

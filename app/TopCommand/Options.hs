@@ -38,14 +38,10 @@ data TopCommand
   deriving stock (Data)
 
 topCommandInputPath :: TopCommand -> IO (Maybe (SomePath Abs))
-topCommandInputPath = \case
-  JuvixFormat fopts -> case fopts ^. formatInput of
-    Just f -> getInputPathFromPrepathFileOrDir f
-    Nothing -> return Nothing
-  t -> do
-    d <- firstJustM getInputFileOrDir (universeBi t)
-    f <- firstJustM getInputFile (universeBi t)
-    return (f <|> d)
+topCommandInputPath t = do
+  d <- firstJustM getInputFileOrDir (universeBi t)
+  f <- firstJustM getInputFile (universeBi t)
+  return (f <|> d)
   where
     getInputFile :: AppPath File -> IO (Maybe (SomePath Abs))
     getInputFile p

@@ -19,6 +19,7 @@ module Juvix.Data
     module Juvix.Data.WithLoc,
     module Juvix.Data.WithSource,
     module Juvix.Data.DependencyInfo,
+    module Juvix.Data.TopModulePathKey,
     module Juvix.Data.Keyword,
   )
 where
@@ -39,6 +40,7 @@ import Juvix.Data.NameId qualified
 import Juvix.Data.NumThreads
 import Juvix.Data.Pragmas
 import Juvix.Data.Processed
+import Juvix.Data.TopModulePathKey
 import Juvix.Data.Uid
 import Juvix.Data.Universe
 import Juvix.Data.Wildcard

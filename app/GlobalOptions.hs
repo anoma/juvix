@@ -166,17 +166,17 @@ parseBuildDir m = do
 entryPointFromGlobalOptionsPre ::
   (Members '[TaggedLock, EmbedIO] r) =>
   Root ->
-  Prepath File ->
+  Maybe (Prepath File) ->
   GlobalOptions ->
   Sem r EntryPoint
 entryPointFromGlobalOptionsPre root premainFile opts = do
-  mainFile <- liftIO (prepathToAbsFile (root ^. rootInvokeDir) premainFile)
+  mainFile <- mapM (prepathToAbsFile (root ^. rootInvokeDir)) premainFile
   entryPointFromGlobalOptions root mainFile opts
 
 entryPointFromGlobalOptions ::
   (Members '[TaggedLock, EmbedIO] r) =>
   Root ->
-  Path Abs File ->
+  Maybe (Path Abs File) ->
   GlobalOptions ->
   Sem r EntryPoint
 entryPointFromGlobalOptions root mainFile opts = do

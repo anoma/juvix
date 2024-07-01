@@ -149,7 +149,7 @@ loadPackage' packagePath = do
     rootPath = parent packagePath
 
     packageEntryPoint :: EntryPoint
-    packageEntryPoint = defaultEntryPoint rootPkg root packagePath
+    packageEntryPoint = defaultEntryPoint rootPkg root (Just packagePath)
       where
         root :: Root
         root =

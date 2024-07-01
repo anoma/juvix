@@ -1,6 +1,7 @@
 module Juvix.Compiler.Pipeline.ModuleInfoCache where
 
 import Juvix.Compiler.Pipeline.EntryPoint
+import Juvix.Compiler.Pipeline.Loader.PathResolver.ImportTree.ImportNode
 import Juvix.Compiler.Pipeline.Result
 import Juvix.Compiler.Store.Language qualified as Store
 import Juvix.Data.Effect.Cache
@@ -8,7 +9,7 @@ import Juvix.Prelude
 
 data EntryIndex = EntryIndex
   { _entryIxEntry :: EntryPoint,
-    _entryIxResolverRoot :: Path Abs Dir
+    _entryIxImportNode :: ImportNode
   }
 
 makeLenses ''EntryIndex
@@ -27,10 +28,11 @@ entryIndexPath = fromMaybe err . (^. entryIxEntry . entryPointModulePath)
     err :: a
     err = error "unexpected: EntryIndex should always have a path"
 
-mkEntryIndex :: (Members '[Reader EntryPoint] r) => Path Abs Dir -> Path Abs File -> Sem r EntryIndex
-mkEntryIndex _entryIxResolverRoot path = do
+mkEntryIndex :: (Members '[Reader EntryPoint] r) => ImportNode -> Sem r EntryIndex
+mkEntryIndex node = do
   entry <- ask
-  let stdin'
+  let path = node ^. importNodeAbsFile
+      stdin'
         | Just path == entry ^. entryPointModulePath = entry ^. entryPointStdin
         | otherwise = Nothing
       entry' =
@@ -41,5 +43,5 @@ mkEntryIndex _entryIxResolverRoot path = do
   return
     EntryIndex
       { _entryIxEntry = entry',
-        _entryIxResolverRoot
+        _entryIxImportNode = node
       }

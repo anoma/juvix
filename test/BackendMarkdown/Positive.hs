@@ -35,7 +35,7 @@ testDescr PosTest {..} =
       _testAssertion = Steps $ \step -> do
         entryPoint <- testDefaultEntryPointIO _dir _file
         step "Parsing & Scoping"
-        PipelineResult {..} <- snd <$> testRunIO entryPoint upToScoping
+        PipelineResult {..} <- snd <$> testRunIO entryPoint upToScopingEntry
         let m = _pipelineResult ^. Scoper.resultModule
         let opts =
               ProcessJuvixBlocksArgs

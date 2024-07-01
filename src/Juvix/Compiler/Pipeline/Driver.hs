@@ -99,7 +99,7 @@ processModuleCacheMiss entryIx = do
       | info ^. Store.moduleInfoSHA256 == sha256
           && info ^. Store.moduleInfoOptions == opts
           && info ^. Store.moduleInfoFieldSize == entry ^. entryPointFieldSize -> do
-          CompileResult {..} <- runReader entry ((processImports (info ^. Store.moduleInfoImports)))
+          CompileResult {..} <- runReader entry (processImports (info ^. Store.moduleInfoImports))
           if
               | _compileResultChanged ->
                   recompile sha256 absPath
@@ -140,24 +140,26 @@ processRecursiveUpToTyped ::
   Sem r (InternalTypedResult, [InternalTypedResult])
 processRecursiveUpToTyped = do
   entry <- ask
-  PipelineResult res mtab _ <- processFileUpToParsing entry
-  let imports = HashMap.keys (mtab ^. Store.moduleTable)
-  ms <- forM imports (`withPathFile` goImport)
-  mid <- getModuleId (res ^. Parser.resultModule . modulePath)
+  PipelineResult {..} <- processFileUpToParsing entry
+  let imports = HashMap.keys (_pipelineResultImports ^. Store.moduleTable)
+  ms <- forM imports $ \imp ->
+    withPathFile imp goImport
+  let pkg = entry ^. entryPointPackage
+  mid <- runReader pkg (getModuleId (_pipelineResult ^. Parser.resultModule . modulePath . to topModulePathKey))
   a <-
     evalTopNameIdGen mid
-      . runReader mtab
-      . runReader res
+      . runReader _pipelineResultImports
+      . runReader _pipelineResult
       $ upToInternalTyped
   return (a, ms)
   where
-    goImport :: Path Abs File -> Sem r InternalTypedResult
-    goImport path = do
+    goImport :: ImportNode -> Sem r InternalTypedResult
+    goImport node = do
       entry <- ask
       let entry' =
             entry
               { _entryPointStdin = Nothing,
-                _entryPointModulePath = Just path
+                _entryPointModulePath = Just (node ^. importNodeAbsFile)
               }
       (^. pipelineResult) <$> runReader entry' (processFileUpTo upToInternalTyped)
 
@@ -166,18 +168,17 @@ processImport ::
   (Members '[ModuleInfoCache, Reader EntryPoint, Error JuvixError, Files, PathResolver] r) =>
   TopModulePath ->
   Sem r (PipelineResult Store.ModuleInfo)
-processImport p = do
-  withPathFile p getCachedImport
+processImport p = withPathFile p getCachedImport
   where
-    getCachedImport :: Path Abs File -> Sem r (PipelineResult Store.ModuleInfo)
-    getCachedImport file = do
+    getCachedImport :: ImportNode -> Sem r (PipelineResult Store.ModuleInfo)
+    getCachedImport node = do
       b <- supportsParallel
-      root <- resolverRoot
+      eix <- mkEntryIndex node
       if
           | b -> do
-              res <- mkEntryIndex root file >>= cacheGetResult
+              res <- cacheGetResult eix
               return (res ^. cacheResult)
-          | otherwise -> mkEntryIndex root file >>= processModule
+          | otherwise -> processModule eix
 
 processFileUpToParsing ::
   forall r.
@@ -203,7 +204,8 @@ processFileUpTo ::
 processFileUpTo a = do
   entry <- ask
   res <- processFileUpToParsing entry
-  mid <- getModuleId (res ^. pipelineResult . Parser.resultModule . modulePath)
+  let pkg = entry ^. entryPointPackage
+  mid <- runReader pkg (getModuleId (res ^. pipelineResult . Parser.resultModule . modulePath . to topModulePathKey))
   a' <-
     evalTopNameIdGen mid
       . runReader (res ^. pipelineResultImports)
@@ -257,7 +259,8 @@ processFileToStoredCore ::
   Sem r (PipelineResult Core.CoreResult)
 processFileToStoredCore entry = ignoreHighlightBuilder . runReader entry $ do
   res <- processFileUpToParsing entry
-  mid <- getModuleId (res ^. pipelineResult . Parser.resultModule . modulePath)
+  let pkg = entry ^. entryPointPackage
+  mid <- runReader pkg (getModuleId (res ^. pipelineResult . Parser.resultModule . modulePath . to topModulePathKey))
   r <-
     evalTopNameIdGen mid
       . runReader (res ^. pipelineResultImports)

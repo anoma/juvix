@@ -10,7 +10,7 @@ runCommand :: (Members '[EmbedIO, TaggedLock, App] r) => EvalOptions -> Sem r ()
 runCommand opts@EvalOptions {..} = do
   gopts <- askGlobalOptions
   root <- askRoot
-  entryPoint <- maybe (entryPointFromGlobalOptionsNoFile root gopts) (fromAppPathFile >=> \f -> entryPointFromGlobalOptions root f gopts) _evalInputFile
+  entryPoint <- maybe (entryPointFromGlobalOptionsNoFile root gopts) (fromAppPathFile >=> \f -> entryPointFromGlobalOptions root (Just f) gopts) _evalInputFile
   Core.CoreResult {..} <- ignoreProgressLog (runPipelineProgress () _evalInputFile upToCore)
   let r =
         run

@@ -171,7 +171,7 @@ import Safe.Exact
 import Safe.Foldable
 import System.Exit hiding (exitFailure, exitSuccess)
 import System.Exit qualified as IO
-import System.FilePath (FilePath, dropTrailingPathSeparator, normalise, (<.>), (</>))
+import System.FilePath (FilePath, dropTrailingPathSeparator, normalise, splitDirectories, (<.>), (</>))
 import System.FilePath qualified as FilePath
 import System.IO hiding
   ( appendFile,

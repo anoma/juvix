@@ -16,7 +16,16 @@ import Juvix.Compiler.Store.Language
 import Juvix.Prelude
 
 fromParsed ::
-  (Members '[HighlightBuilder, Reader EntryPoint, Reader ModuleTable, Reader Parsed.ParserResult, Error JuvixError, NameIdGen] r) =>
+  ( Members
+      '[ HighlightBuilder,
+         Reader Package,
+         Reader ModuleTable,
+         Reader Parsed.ParserResult,
+         Error JuvixError,
+         NameIdGen
+       ]
+      r
+  ) =>
   Sem r ScoperResult
 fromParsed = do
   e <- ask

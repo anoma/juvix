@@ -10,3 +10,6 @@ data ParserResult = ParserResult
   }
 
 makeLenses ''ParserResult
+
+getParserResultComments :: ParserResult -> Comments
+getParserResultComments sr = mkComments $ sr ^. resultParserState . parserStateComments

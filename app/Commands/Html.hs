@@ -16,7 +16,7 @@ import System.Process qualified as Process
 
 runGenOnlySourceHtml :: (Members '[EmbedIO, TaggedLock, App] r) => HtmlOptions -> Sem r ()
 runGenOnlySourceHtml HtmlOptions {..} = do
-  res <- runPipelineNoOptions _htmlInputFile upToScoping
+  res <- runPipelineNoOptions _htmlInputFile upToScopingEntry
   let m = res ^. Scoper.resultModule
   outputDir <- fromAppPathDir _htmlOutputDir
   liftIO $

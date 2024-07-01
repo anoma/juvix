@@ -38,9 +38,11 @@ upToInternalExpression ::
 upToInternalExpression p = do
   scopeTable <- gets (^. artifactScopeTable)
   mtab <- gets (^. artifactModuleTable)
+  pkg <- asks (^. entryPointPackage)
   runBuiltinsArtifacts
     . runScoperScopeArtifacts
     . runStateArtifacts artifactScoperState
+    . runReader pkg
     $ runNameIdGenArtifacts (Scoper.scopeCheckExpression (Store.getScopedModuleTable mtab) scopeTable p)
       >>= runNameIdGenArtifacts . runReader scopeTable . Internal.fromConcreteExpression
 
@@ -62,10 +64,12 @@ expressionUpToAtomsScoped ::
 expressionUpToAtomsScoped fp txt = do
   scopeTable <- gets (^. artifactScopeTable)
   mtab <- gets (^. artifactModuleTable)
+  pkg <- asks (^. entryPointPackage)
   runBuiltinsArtifacts
     . runScoperScopeArtifacts
     . runStateArtifacts artifactScoperState
     . runNameIdGenArtifacts
+    . runReader pkg
     $ Parser.expressionFromTextSource fp txt
       >>= Scoper.scopeCheckExpressionAtoms (Store.getScopedModuleTable mtab) scopeTable
 
@@ -76,10 +80,12 @@ scopeCheckExpression ::
 scopeCheckExpression p = do
   scopeTable <- gets (^. artifactScopeTable)
   mtab <- gets (^. artifactModuleTable)
+  pkg <- asks (^. entryPointPackage)
   runNameIdGenArtifacts
     . runBuiltinsArtifacts
     . runScoperScopeArtifacts
     . runStateArtifacts artifactScoperState
+    . runReader pkg
     $ Scoper.scopeCheckExpression (Store.getScopedModuleTable mtab) scopeTable p
 
 parseReplInput ::
@@ -126,11 +132,13 @@ registerImport i = do
   modify' (appendArtifactsModuleTable mtab')
   scopeTable <- gets (^. artifactScopeTable)
   mtab'' <- gets (^. artifactModuleTable)
+  pkg <- asks (^. entryPointPackage)
   void
     . runNameIdGenArtifacts
     . runBuiltinsArtifacts
     . runScoperScopeArtifacts
     . runStateArtifacts artifactScoperState
+    . runReader pkg
     $ Scoper.scopeCheckImport (Store.getScopedModuleTable mtab'') scopeTable i
 
 fromInternalExpression :: (Members '[State Artifacts, Error JuvixError] r) => Internal.Expression -> Sem r Core.Node
@@ -159,6 +167,7 @@ compileReplInputIO fp txt = do
   hasInternet <- not <$> asks (^. entryPointOffline)
   runError
     . runConcurrent
+    . runReader defaultNumThreads
     . evalInternet hasInternet
     . runTaggedLockPermissive
     . runLogIO
@@ -176,7 +185,7 @@ compileReplInputIO fp txt = do
     . runReader defaultImportScanStrategy
     . withImportTree (Just fp)
     . ignoreProgressLog
-    . evalModuleInfoCacheHelper defaultNumThreads
+    . evalModuleInfoCacheHelper
     $ do
       p <- parseReplInput fp txt
       case p of

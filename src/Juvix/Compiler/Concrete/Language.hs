@@ -57,10 +57,11 @@ type family FieldArgIxType s = res | res -> s where
   FieldArgIxType 'Parsed = ()
   FieldArgIxType 'Scoped = Int
 
-type ModuleIdType :: Stage -> GHC.Type
-type family ModuleIdType s = res | res -> s where
-  ModuleIdType 'Parsed = ()
-  ModuleIdType 'Scoped = ModuleId
+type ModuleIdType :: Stage -> ModuleIsTop -> GHC.Type
+type family ModuleIdType s t = res where
+  ModuleIdType 'Parsed _ = ()
+  ModuleIdType 'Scoped 'ModuleLocal = ()
+  ModuleIdType 'Scoped 'ModuleTop = ModuleId
 
 type SymbolType :: Stage -> GHC.Type
 type family SymbolType s = res | res -> s where
@@ -1197,7 +1198,7 @@ data Module (s :: Stage) (t :: ModuleIsTop) = Module
     _moduleBody :: [Statement s],
     _moduleKwEnd :: ModuleEndType t,
     _moduleOrigin :: ModuleInductiveType t,
-    _moduleId :: ModuleIdType s,
+    _moduleId :: ModuleIdType s t,
     _moduleMarkdownInfo :: Maybe MarkdownInfo
   }
 
