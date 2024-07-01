@@ -95,12 +95,12 @@ format p = do
 --
 -- NB: This function does not traverse into Juvix sub-projects, i.e into
 -- subdirectories that contain a juvix.yaml file.
-formatProject ::
+formatProjectSourceCode ::
   forall r.
   (Members '[Output FormattedFileInfo] r) =>
   [(ImportNode, SourceCode)] ->
   Sem r FormatResult
-formatProject =
+formatProjectSourceCode =
   mconcatMapM (uncurry formatResultSourceCode)
     . map (first (^. importNodeAbsFile))
 

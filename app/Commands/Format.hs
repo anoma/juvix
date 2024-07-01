@@ -49,11 +49,11 @@ targetFromOptions opts = do
                   ]
 
 -- | Formats the project on the root
-formatProjectNew ::
+formatProject ::
   forall r.
   (Members '[App, EmbedIO, TaggedLock, Files, Output FormattedFileInfo] r) =>
   Sem r FormatResult
-formatProjectNew = runPipelineOptions . runPipelineSetup $ do
+formatProject = runPipelineOptions . runPipelineSetup $ do
   pkg <- askPackage
   root <- (^. rootRootDir) <$> askRoot
   nodes <- toList <$> asks (importTreeProjectNodes root)
@@ -63,7 +63,7 @@ formatProjectNew = runPipelineOptions . runPipelineSetup $ do
   res' :: [(ImportNode, SourceCode)] <- runReader pkg . forM res $ \(node, nfo) -> do
     src <- formatModuleInfo node nfo
     return (node, src)
-  formatProject res'
+  formatProjectSourceCode res'
 
 runCommand :: forall r. (Members '[EmbedIO, App, TaggedLock, Files] r) => FormatOptions -> Sem r ()
 runCommand opts = do
@@ -71,7 +71,7 @@ runCommand opts = do
   runOutputSem (renderFormattedOutput target opts) . runScopeFileApp $ do
     res <- case target of
       TargetFile p -> format p
-      TargetProject -> formatProjectNew
+      TargetProject -> formatProject
       TargetStdin -> do
         entry <- getEntryPointStdin
         runReader entry formatStdin
