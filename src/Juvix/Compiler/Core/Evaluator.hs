@@ -64,23 +64,31 @@ instance Show EvalError where
 instance Exception.Exception EvalError
 
 evalInfoTable :: Handle -> InfoTable -> Node
-evalInfoTable herr info = eval herr idenCtxt [] mainNode
+evalInfoTable herr tab = eval herr tab [] mainNode
   where
-    idenCtxt = info ^. identContext
-    mainSym = fromJust (info ^. infoMain)
-    mainNode = fromJust (HashMap.lookup mainSym idenCtxt)
+    mainSym = fromJust (tab ^. infoMain)
+    mainNode = fromJust (HashMap.lookup mainSym (tab ^. identContext))
 
 -- | `eval ctx env n` evaluates a node `n` whose all free variables point into
 -- `env`. All nodes in `ctx` must be closed. All nodes in `env` must be values.
 -- Invariant for values v: eval ctx env v = v
-eval :: Handle -> IdentContext -> Env -> Node -> Node
+eval :: Handle -> InfoTable -> Env -> Node -> Node
 eval herr ctx env = geval defaultEvalOptions herr ctx env
 
-geval :: EvalOptions -> Handle -> IdentContext -> Env -> Node -> Node
-geval opts herr ctx env0 = eval' env0
+geval :: EvalOptions -> Handle -> InfoTable -> Env -> Node -> Node
+geval opts herr tab env0 = eval' env0
   where
+    ctx :: IdentContext
+    ctx = tab ^. identContext
+
+    evalError' :: Text -> Maybe Node -> a
+    evalError' msg = Exception.throw . EvalError msg
+
     evalError :: Text -> Node -> a
-    evalError msg node = Exception.throw (EvalError msg (Just node))
+    evalError msg node = evalError' msg (Just node)
+
+    evalErrorMsg' :: Text -> a
+    evalErrorMsg' msg = evalError' msg Nothing
 
     eval' :: Env -> Node -> Node
     eval' !env !n = case n of
@@ -201,7 +209,7 @@ geval opts herr ctx env0 = eval' env0
       OpAnomaVerifyDetached -> anomaVerifyDetachedOp
       OpAnomaSign -> anomaSignOp
       OpAnomaSignDetached -> anomaSignDetachedOp
-      OpAnomaVerify -> anomaVerifyOp
+      OpAnomaVerifyWithMessage -> anomaVerifyWithMessageOp
       OpPoseidonHash -> poseidonHashOp
       OpEc -> ecOp
       OpRandomEcPoint -> randomEcPointOp
@@ -406,18 +414,18 @@ geval opts herr ctx env0 = eval' env0
                       Nothing -> err "anomaSignDetachedOp: second argument not an integer"
         {-# INLINE anomaSignDetachedOp #-}
 
-        anomaVerifyOp :: [Node] -> Node
-        anomaVerifyOp = checkApply $ \arg1 arg2 ->
+        anomaVerifyWithMessageOp :: [Node] -> Node
+        anomaVerifyWithMessageOp = checkApply $ \arg1 arg2 ->
           let !v1 = eval' env arg1
               !v2 = eval' env arg2
            in if
                   | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
-                      mkBuiltinApp' OpAnomaVerify [v1, v2]
+                      mkBuiltinApp' OpAnomaVerifyWithMessage [v1, v2]
                   | otherwise ->
                       case (integerFromNode v1, integerFromNode v2) of
                         (Just i1, Just i2) -> verify i1 i2
-                        _ -> err "anomaVerifyOp: both arguments are not integers"
-        {-# INLINE anomaVerifyOp #-}
+                        _ -> err "anomaVerifyWithMessageOp: both arguments are not integers"
+        {-# INLINE anomaVerifyWithMessageOp #-}
 
         poseidonHashOp :: [Node] -> Node
         poseidonHashOp = unary $ \arg ->
@@ -482,8 +490,8 @@ geval opts herr ctx env0 = eval' env0
           let !signedMessage = decodeByteString signedMessageInt
               !publicKey = publicKeyFromInteger publicKeyInt
            in if
-                  | E.verify publicKey signedMessage -> deserializeNode (E.removeSignature signedMessage)
-                  | otherwise -> err "signature verification failed"
+                  | E.verify publicKey signedMessage -> nodeMaybeJust (deserializeNode (E.removeSignature signedMessage))
+                  | otherwise -> nodeMaybeNothing
         {-# INLINE verify #-}
 
         signDetached :: Node -> Integer -> Node
@@ -529,6 +537,26 @@ geval opts herr ctx env0 = eval' env0
           | b = TagTrue
           | otherwise = TagFalse
     {-# INLINE nodeFromBool #-}
+
+    mkBuiltinConstructor :: BuiltinConstructor -> [Node] -> Maybe Node
+    mkBuiltinConstructor ctor args =
+      (\tag -> mkConstr' tag args)
+        . (^. constructorTag)
+        <$> lookupTabBuiltinConstructor tab ctor
+
+    nodeMaybeNothing :: Node
+    nodeMaybeNothing =
+      fromMaybe
+        (evalErrorMsg' "builtin Maybe is not available")
+        (mkBuiltinConstructor BuiltinMaybeNothing [])
+    {-# INLINE nodeMaybeNothing #-}
+
+    nodeMaybeJust :: Node -> Node
+    nodeMaybeJust n =
+      fromMaybe
+        (evalErrorMsg' "builtin Maybe is not available")
+        (mkBuiltinConstructor BuiltinMaybeJust [n])
+    {-# INLINE nodeMaybeJust #-}
 
     integerFromNode :: Node -> Maybe Integer
     integerFromNode = \case
@@ -613,15 +641,15 @@ geval opts herr ctx env0 = eval' env0
           mkCase i sym b (map (substEnvInBranch env) bs) (fmap (substEnv env) def)
 
 -- Evaluate `node` and interpret the builtin IO actions.
-hEvalIO' :: EvalOptions -> Handle -> Handle -> Handle -> IdentContext -> Env -> Node -> IO Node
-hEvalIO' opts herr hin hout ctx env node =
-  let node' = geval opts herr ctx env node
+hEvalIO' :: EvalOptions -> Handle -> Handle -> Handle -> InfoTable -> Env -> Node -> IO Node
+hEvalIO' opts herr hin hout tab env node =
+  let node' = geval opts herr tab env node
    in case node' of
         NCtr (Constr _ (BuiltinTag TagReturn) [x]) ->
           return x
         NCtr (Constr _ (BuiltinTag TagBind) [x, f]) -> do
-          x' <- hEvalIO' opts herr hin hout ctx env x
-          hEvalIO' opts herr hin hout ctx env (mkApp Info.empty f x')
+          x' <- hEvalIO' opts herr hin hout tab env x
+          hEvalIO' opts herr hin hout tab env (mkApp Info.empty f x')
         NCtr (Constr _ (BuiltinTag TagWrite) [NCst (Constant _ (ConstString s))]) -> do
           hPutStr hout s
           return unitNode
@@ -636,12 +664,6 @@ hEvalIO' opts herr hin hout ctx env node =
   where
     unitNode = mkConstr (Info.singleton (NoDisplayInfo ())) (BuiltinTag TagTrue) []
 
-hEvalIO :: Handle -> Handle -> Handle -> IdentContext -> Env -> Node -> IO Node
-hEvalIO = hEvalIO' defaultEvalOptions
-
-evalIO :: IdentContext -> Env -> Node -> IO Node
-evalIO = hEvalIO stderr stdin stdout
-
 doEval ::
   forall r.
   (MonadIO (Sem r)) =>
@@ -652,8 +674,8 @@ doEval ::
   Node ->
   Sem r (Either CoreError Node)
 doEval mfsize noIO loc tab node
-  | noIO = catchEvalError loc (eval stderr (tab ^. identContext) [] node)
-  | otherwise = liftIO (catchEvalErrorIO loc (hEvalIO' opts stderr stdin stdout (tab ^. identContext) [] node))
+  | noIO = catchEvalError loc (eval stderr tab [] node)
+  | otherwise = liftIO (catchEvalErrorIO loc (hEvalIO' opts stderr stdin stdout tab [] node))
   where
     opts =
       maybe

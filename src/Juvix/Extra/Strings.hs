@@ -350,8 +350,8 @@ anomaSign = "anoma-sign"
 anomaSignDetached :: (IsString s) => s
 anomaSignDetached = "anoma-sign-detached"
 
-anomaVerify :: (IsString s) => s
-anomaVerify = "anoma-verify"
+anomaVerifyWithMessage :: (IsString s) => s
+anomaVerifyWithMessage = "anoma-verify-with-message"
 
 builtinSeq :: (IsString s) => s
 builtinSeq = "seq"

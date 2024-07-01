@@ -72,7 +72,7 @@ computeNodeTypeInfo md = umapL go
           OpAnomaVerifyDetached -> Info.getNodeType node
           OpAnomaSign -> Info.getNodeType node
           OpAnomaSignDetached -> Info.getNodeType node
-          OpAnomaVerify -> Info.getNodeType node
+          OpAnomaVerifyWithMessage -> Info.getNodeType node
           OpPoseidonHash -> case _builtinAppArgs of
             [arg] -> Info.getNodeType arg
             _ -> error "incorrect poseidon builtin application"

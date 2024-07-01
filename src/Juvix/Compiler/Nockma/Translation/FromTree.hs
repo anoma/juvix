@@ -169,14 +169,19 @@ constructorPath = pathFromEnum
 stackPath :: AnomaCallablePathId -> Path
 stackPath s = indexStack (fromIntegral (fromEnum s))
 
-indexTuple :: Natural -> Natural -> Path
-indexTuple len idx
-  | idx >= len = impossible
+data IndexTupleArgs = IndexTupleArgs
+  { _indexTupleArgsLength :: Natural,
+    _indexTupleArgsIndex :: Natural
+  }
+
+indexTuple :: IndexTupleArgs -> Path
+indexTuple IndexTupleArgs {..}
+  | _indexTupleArgsIndex >= _indexTupleArgsLength = impossible
   | otherwise =
       let lastL
-            | idx == len - 1 = []
+            | _indexTupleArgsIndex == _indexTupleArgsLength - 1 = []
             | otherwise = [L]
-       in replicate idx R ++ lastL
+       in replicate _indexTupleArgsIndex R ++ lastL
 
 indexStack :: Natural -> Path
 indexStack idx = replicate idx R ++ [L]
@@ -202,7 +207,14 @@ runCompilerFunction ctx fun =
 pathToArg :: (Members '[Reader FunctionCtx] r) => Natural -> Sem r Path
 pathToArg n = do
   ari <- asks (^. functionCtxArity)
-  return (stackPath ArgsTuple <> indexTuple ari n)
+  return
+    ( stackPath ArgsTuple
+        <> indexTuple
+          IndexTupleArgs
+            { _indexTupleArgsLength = ari,
+              _indexTupleArgsIndex = n
+            }
+    )
 
 termFromParts :: (Bounded p, Enum p) => (p -> Term Natural) -> Term Natural
 termFromParts f = remakeList [f pi | pi <- allElements]
@@ -386,14 +398,31 @@ compile = \case
                     ++ indexStack argIx
                 NockmaMemRepTuple ->
                   fr
-                    ++ indexTuple arity argIx
+                    ++ indexTuple
+                      IndexTupleArgs
+                        { _indexTupleArgsLength = arity,
+                          _indexTupleArgsIndex = argIx
+                        }
                 NockmaMemRepList constr -> case constr of
                   NockmaMemRepListConstrNil -> impossible
-                  NockmaMemRepListConstrCons -> fr ++ indexTuple 2 argIx
+                  NockmaMemRepListConstrCons ->
+                    fr
+                      ++ indexTuple
+                        IndexTupleArgs
+                          { _indexTupleArgsLength = 2,
+                            _indexTupleArgsIndex = argIx
+                          }
                 NockmaMemRepMaybe constr -> case constr of
                   NockmaMemRepMaybeConstrNothing -> impossible
-                  -- just x is represented as [0 x] so argument index is offset by 1.
-                  NockmaMemRepMaybeConstrJust -> fr ++ indexTuple 2 (argIx + 1)
+                  -- just x is represented as [nil x] so argument index is offset by 1.
+                  -- argIx will always be 0 because just has one argument
+                  NockmaMemRepMaybeConstrJust ->
+                    fr
+                      ++ indexTuple
+                        IndexTupleArgs
+                          { _indexTupleArgsLength = 2,
+                            _indexTupleArgsIndex = argIx + 1
+                          }
         (opAddress "constrRef") <$> path
       where
         goDirectRef :: Tree.DirectRef -> Sem r (Term Natural)
@@ -459,7 +488,7 @@ compile = \case
         Tree.OpAnomaDecode -> return (goAnomaDecode args)
         Tree.OpAnomaVerifyDetached -> return (goAnomaVerifyDetached args)
         Tree.OpAnomaSign -> return (goAnomaSign args)
-        Tree.OpAnomaVerify -> return (goAnomaVerify args)
+        Tree.OpAnomaVerifyWithMessage -> return (goAnomaVerifyWithMessage args)
         Tree.OpAnomaSignDetached -> return (goAnomaSignDetached args)
 
     goUnop :: Tree.NodeUnop -> Sem r (Term Natural)
@@ -506,10 +535,46 @@ compile = \case
       [message, privKey] -> callStdlib StdlibSignDetached [goAnomaEncode [message], privKey]
       _ -> impossible
 
-    goAnomaVerify :: [Term Natural] -> Term Natural
-    goAnomaVerify = \case
-      [signedMessage, pubKey] -> callStdlib StdlibDecode [callStdlib StdlibVerify [signedMessage, pubKey]]
+    -- Conceptually this function is:
+    -- anomaDecode <$> verify signedMessage pubKey
+    --
+    -- verify returns a `Maybe Nat` that is `Just msg` if the signedMessage is verified.
+    goAnomaVerifyWithMessage :: [Term Natural] -> Term Natural
+    goAnomaVerifyWithMessage = \case
+      [signedMessage, pubKey] ->
+        opReplace
+          "callDecodeFromVerify-args"
+          (closurePath ArgsTuple)
+          (callStdlib StdlibVerify [signedMessage, pubKey])
+          (opAddress "stack" emptyPath)
+          >># goDecodeResult
       _ -> impossible
+      where
+        goDecodeResult :: Term Natural
+        goDecodeResult = branch (OpIsCell # verifyResult) goDecodeResultJust goDecodeResultNothing
+
+        -- just x is represented as [nil x] so the payload of just is always at index 1.
+        justPayloadPath :: Path
+        justPayloadPath =
+          indexTuple
+            IndexTupleArgs
+              { _indexTupleArgsLength = 2,
+                _indexTupleArgsIndex = 1
+              }
+
+        goDecodeResultJust :: Term Natural
+        goDecodeResultJust =
+          opReplace
+            "putDecodeResultInJust"
+            justPayloadPath
+            (callStdlib StdlibDecode [opAddress "verify-result-just" (closurePath ArgsTuple ++ justPayloadPath)])
+            verifyResult
+
+        goDecodeResultNothing :: Term Natural
+        goDecodeResultNothing = verifyResult
+
+        verifyResult :: Term Natural
+        verifyResult = opAddress "verify-result" (closurePath ArgsTuple)
 
     goTrace :: Term Natural -> Sem r (Term Natural)
     goTrace arg = do

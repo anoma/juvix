@@ -103,7 +103,7 @@ fromCore fsize tab =
         BuiltinAnomaVerifyDetached -> False
         BuiltinAnomaSign -> False
         BuiltinAnomaSignDetached -> False
-        BuiltinAnomaVerify -> False
+        BuiltinAnomaVerifyWithMessage -> False
         BuiltinPoseidon -> False
         BuiltinEcOp -> False
         BuiltinRandomEcPoint -> False

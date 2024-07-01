@@ -460,8 +460,8 @@ kwAnomaSign = asciiKw Str.anomaSign
 kwAnomaSignDetached :: Keyword
 kwAnomaSignDetached = asciiKw Str.anomaSignDetached
 
-kwAnomaVerify :: Keyword
-kwAnomaVerify = asciiKw Str.anomaVerify
+kwAnomaVerifyWithMessage :: Keyword
+kwAnomaVerifyWithMessage = asciiKw Str.anomaVerifyWithMessage
 
 delimBraceL :: Keyword
 delimBraceL = mkDelim Str.braceL
