@@ -905,7 +905,7 @@ getModuleId path = do
   p <- ask
   return
     ModuleId
-      { _moduleIdPath = prettyText path,
+      { _moduleIdPath = path,
         _moduleIdPackage = p ^. packageName,
         _moduleIdPackageVersion = show (p ^. packageVersion)
       }

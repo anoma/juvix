@@ -114,7 +114,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
         defaultId =
           NameId
             { _nameIdUid = 0,
-              _nameIdModuleId = ModuleId "" "" ""
+              _nameIdModuleId = defaultModuleId
             }
 
     goConstructorDef :: Internal.ConstructorDef -> Constructor

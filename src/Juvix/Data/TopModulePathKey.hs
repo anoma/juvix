@@ -10,7 +10,7 @@ data TopModulePathKey = TopModulePathKey
   { _modulePathKeyDir :: [Text],
     _modulePathKeyName :: Text
   }
-  deriving stock (Show, Eq, Ord, Generic)
+  deriving stock (Show, Eq, Ord, Generic, Data)
 
 instance Serialize TopModulePathKey
 
