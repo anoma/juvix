@@ -49,6 +49,7 @@ data Expression
   | ExprUndefined
   | ExprLiteral Literal
   | ExprApp Application
+  | ExprTuple (Tuple Expression)
   | ExprLet Let
   | ExprIf If
   | ExprCase Case
@@ -94,6 +95,11 @@ data Lambda = Lambda
 data Pattern
   = PatVar Var
   | PatConstrApp ConstrApp
+  | PatTuple (Tuple Pattern)
+
+newtype Tuple a = Tuple
+  { _tupleComponents :: NonEmpty a
+  }
 
 data ConstrApp = ConstrApp
   { _constrAppConstructor :: Name,
@@ -125,8 +131,12 @@ data Definition = Definition
 data Function = Function
   { _functionName :: Name,
     _functionType :: Type,
-    _functionArgs :: NonEmpty Name,
-    _functionBody :: Expression
+    _functionClauses :: NonEmpty Clause
+  }
+
+data Clause = Clause
+  { _clausePatterns :: NonEmpty Pattern,
+    _clauseBody :: Expression
   }
 
 data Synonym = Synonym
@@ -163,6 +173,7 @@ makeLenses ''Datatype
 makeLenses ''Constructor
 makeLenses ''Record
 makeLenses ''RecordField
+makeLenses ''Tuple
 
 data Theory = Theory
   { _theoryName :: Name,
