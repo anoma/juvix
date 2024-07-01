@@ -8,7 +8,6 @@ module Juvix.Data.Effect.Cache
     evalCacheEmptySetup,
     runCacheEmpty,
     cacheGet,
-    cacheGetCache,
     cacheGetResult,
     cacheLookup,
     evalSingletonCache,
@@ -37,7 +36,6 @@ makeLenses ''CacheResult
 data Cache (k :: GHCType) (v :: GHCType) :: Effect where
   CacheGetResult :: k -> Cache k v m (CacheResult v)
   CacheLookup :: k -> Cache k v m (Maybe v)
-  CacheGetCache :: Cache k v m (HashMap k v)
 
 makeSem ''Cache
 
@@ -151,7 +149,6 @@ cacheSimpleHandler ::
   EffectHandlerFO (Cache k v) (SharedState (HashMap k v) ': r)
 cacheSimpleHandler f =
   \case
-    CacheGetCache -> getShared
     CacheLookup k -> cacheLookup' k
     CacheGetResult k -> do
       mv <- cacheLookup' k
@@ -182,7 +179,6 @@ cacheSetupHandler ::
   EffectHandlerFO (Cache k v) (SharedState (HashMap k v) ': r)
 cacheSetupHandler setup f = do
   \case
-    CacheGetCache -> getShared
     CacheLookup k -> cacheLookup' k
     CacheGetResult k -> do
       mv <- cacheLookup' k
