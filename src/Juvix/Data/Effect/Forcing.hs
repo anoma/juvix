@@ -1,11 +1,15 @@
 {-# OPTIONS_GHC -Wno-unused-type-patterns #-}
 
+-- | This effect provides convenient syntax for individually forcing evaluation
+-- on fields of a record type (or anything pointed by a lens)
 module Juvix.Data.Effect.Forcing where
 
 import Juvix.Prelude.Base
 
 data Forcing (a :: GHCType) :: Effect where
+  -- | Forces full evaluation on the field pointed by the lens
   ForcesField :: (NFData b) => Lens' a b -> Forcing a m ()
+  -- | Forcing effect scoped to the field pointed by the lens
   Forces :: Lens' a b -> Sem '[Forcing b] () -> Forcing a m ()
 
 makeSem ''Forcing
