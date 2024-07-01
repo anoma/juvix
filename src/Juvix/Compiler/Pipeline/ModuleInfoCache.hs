@@ -22,9 +22,6 @@ instance Hashable EntryIndex where
 
 type ModuleInfoCache = Cache EntryIndex (PipelineResult Store.ModuleInfo)
 
-entryIndexTopModulePathKey :: EntryIndex -> TopModulePathKey
-entryIndexTopModulePathKey = relPathtoTopModulePathKey . (^. entryIxImportNode . importNodeFile)
-
 entryIndexPath :: EntryIndex -> Path Abs File
 entryIndexPath = fromMaybe err . (^. entryIxEntry . entryPointModulePath)
   where
