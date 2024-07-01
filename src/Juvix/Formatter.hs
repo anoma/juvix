@@ -140,10 +140,9 @@ formatModuleInfo node moduleInfo =
               { _sourceCodeFormatted = formattedTxt,
                 _sourceCodeOriginal = originalSource
               }
-      return . forcing formatRes $
-        when (True) $ do
-          forcesField sourceCodeFormatted
-          forcesField sourceCodeOriginal
+      return . forcing formatRes $ do
+        forcesField sourceCodeFormatted
+        forcesField sourceCodeOriginal
 
 formatPath ::
   (Members '[Reader OriginalSource, ScopeEff] r) =>
