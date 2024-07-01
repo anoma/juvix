@@ -1,10 +1,10 @@
 module Juvix.Compiler.Concrete.Data.Rename where
 
-import Data.Text qualified as Text
 import Juvix.Compiler.Concrete.Data.ScopedName
 import Juvix.Compiler.Concrete.Translation.FromSource.Lexer qualified as L
 import Juvix.Compiler.Concrete.Translation.FromSource.ParserResultBuilder (ParserResultBuilder, ignoreParserResultBuilder)
 import Juvix.Data.Keyword.All qualified as Kw
+import Juvix.Data.TopModulePathKey
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude.Base
 import Juvix.Prelude.Parsing
@@ -12,7 +12,7 @@ import Juvix.Prelude.Pretty
 
 data RenameCondition = RenameCondition
   { _renamePackageName :: Maybe Text,
-    _renameModulePath :: Maybe Text,
+    _renameModulePath :: Maybe TopModulePathKey,
     _renameOldName :: Text
   }
   deriving stock (Show, Eq, Ord, Generic, Data)
@@ -44,7 +44,7 @@ checkRenameCondition RenameCondition {..} n =
     modId :: ModuleId
     modId = n ^. nameId . nameIdModuleId
 
-    checkEq :: Maybe Text -> Text -> Bool
+    checkEq :: (Eq a) => Maybe a -> a -> Bool
     checkEq mt1 t2 = case mt1 of
       Nothing -> True
       Just t1 -> t1 == t2
@@ -57,7 +57,7 @@ instance Pretty RenameCondition where
       <> pretty Kw.delimSemicolon
       <> pretty _renameOldName
     where
-      helper :: Maybe Text -> Doc a
+      helper :: (Pretty str) => Maybe str -> Doc a
       helper = maybe Str.underscore pretty
 
 instance Pretty Rename where
@@ -87,9 +87,9 @@ parseRename = parseHelperSem parser (run . ignoreParserResultBuilder)
     parser :: forall r. (Members '[ParserResultBuilder] r) => ParsecS r Rename
     parser = do
       L.whiteSpace
-      _renamePackageName <- stringHelper L.identifier
+      _renamePackageName <- optionalHelper L.identifier
       L.kw Kw.delimSemicolon
-      _renameModulePath <- stringHelper pmodulePath
+      _renameModulePath <- optionalHelper pmodulePath
       L.kw Kw.delimSemicolon
       _renameOldName <- L.identifier
       L.kw Kw.kwMapsTo
@@ -107,15 +107,14 @@ parseRename = parseHelperSem parser (run . ignoreParserResultBuilder)
             _renameNewName
           }
       where
-        pmodulePath :: ParsecS r Text
+        pmodulePath :: ParsecS r TopModulePathKey
         pmodulePath =
-          Text.intercalate Str.dot
+          nonEmptyToTopModulePathKey
             . fmap fst
-            . toList
             <$> L.dottedIdentifier
 
-        stringHelper :: ParsecS r Text -> ParsecS r (Maybe Text)
-        stringHelper p =
+        optionalHelper :: ParsecS r a -> ParsecS r (Maybe a)
+        optionalHelper p =
           chunk Str.underscore $> Nothing
             <|> Just <$> p
 

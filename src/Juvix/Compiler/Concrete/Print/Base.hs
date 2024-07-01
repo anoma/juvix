@@ -28,7 +28,7 @@ import Juvix.Data.Keyword.All qualified as Kw
 import Juvix.Data.NameKind
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude hiding ((<+>), (<+?>), (<?+>), (?<>))
-import Juvix.Prelude.Pretty (annotate, pretty, prettyText)
+import Juvix.Prelude.Pretty (annotate, pretty)
 import Juvix.Prelude.Pretty qualified as P
 
 --- An expression is `Top` if it is:

@@ -4,8 +4,8 @@ module Juvix.Formatter where
 
 import Juvix.Compiler.Concrete.Data.Highlight.Input (ignoreHighlightBuilder)
 import Juvix.Compiler.Concrete.Language
-import Juvix.Compiler.Concrete.Print (ppOutDefault)
 import Juvix.Compiler.Concrete.Pretty.Options
+import Juvix.Compiler.Concrete.Print (ppOutDefault)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping (ScoperResult, getModuleId, scopeCheck)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource (ParserResult, fromSource)

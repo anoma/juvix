@@ -3,9 +3,9 @@ module Commands.Format where
 import Commands.Base
 import Commands.Format.Options
 import Data.Text qualified as Text
+import Juvix.Compiler.Concrete.Pretty.Options
 import Juvix.Compiler.Pipeline.Driver (processModule)
 import Juvix.Compiler.Pipeline.Loader.PathResolver.ImportTree.Base
-import Juvix.Compiler.Concrete.Pretty.Options
 import Juvix.Compiler.Pipeline.ModuleInfoCache
 import Juvix.Compiler.Store.Language (ModuleInfo)
 import Juvix.Formatter
