@@ -10,16 +10,16 @@ type enum :=
   | opt3 : Bool -> (Bool -> Bool -> Bool) -> Bool -> enum;
 
 natToBool : Nat -> Bool
-  | x := if (x == 0) false true;
+  | x := ite (x == 0) false true;
 
 boolToNat : Bool -> Nat
-  | x := if x 1 0;
+  | x := ite x 1 0;
 
 main : Nat -> Nat -> Nat
   | x y :=
     boolToNat
       <| case
-          opt3 (natToBool x) λ {x y := if y false x} (natToBool y)
+          opt3 (natToBool x) λ {x y := ite y false x} (natToBool y)
         of {
           | opt0 := false
           | opt1 b := b

@@ -10,6 +10,6 @@ run : Nat → Nat → List Nat → Nat
 
 terminating
 gen : Nat → Nat → List Nat
-  | k n := if (k == n) (k :: nil) (k :: gen (suc k) n);
+  | k n := ite (k == n) (k :: nil) (k :: gen (suc k) n);
 
 main : IO := printNatLn (run 10000 0 (gen 1 10000));

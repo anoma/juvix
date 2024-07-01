@@ -6,10 +6,10 @@ import Stdlib.Prelude open;
 terminating
 power' : Nat → Nat → Nat → Nat
   | acc a b :=
-    if
+    ite
       (b == 0)
       acc
-      (if
+      (ite
         (mod b 2 == 0)
         (power' acc (a * a) (div b 2))
         (power' (acc * a) (a * a) (div b 2)));

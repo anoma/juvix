@@ -28,4 +28,4 @@ ordNatNamed : Ord Nat := mkOrdHelper (cmp := Ord.compare);
 instance
 ordNat : Ord Nat := mkOrdHelper Ord.compare;
 
-main : Nat := if (Ord.lt 1 2) 1 0;
+main : Nat := ite (Ord.lt 1 2) 1 0;

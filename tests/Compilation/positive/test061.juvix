@@ -15,7 +15,7 @@ showStringI : Show String := mkShow (show := id);
 instance
 showBoolI : Show' Bool' :=
   mkShow@{
-    show (x : Bool) : String := if x "true" "false"
+    show (x : Bool) : String := ite x "true" "false"
   };
 
 instance

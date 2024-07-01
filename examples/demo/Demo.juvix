@@ -14,7 +14,7 @@ even' : Nat → Bool
 -- base 2 logarithm rounded down
 terminating
 log2 : Nat → Nat
-  | n := if (n <= 1) 0 (suc (log2 (div n 2)));
+  | n := ite (n <= 1) 0 (suc (log2 (div n 2)));
 
 type Tree (A : Type) :=
   | leaf : A → Tree A

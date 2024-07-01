@@ -20,7 +20,7 @@ uniq
   | _ nil := nil
   | _ y@(x :: nil) := y
   | cmp (x :: x' :: xs) :=
-    if
+    ite
       (isEQ (cmp x x'))
       (uniq cmp (x' :: xs))
       (x :: uniq cmp (x' :: xs));

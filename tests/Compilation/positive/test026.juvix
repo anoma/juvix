@@ -43,7 +43,7 @@ empty : {A : Type} → Queue A := queue nil nil;
 terminating
 g {{Partial}} : List Nat → Queue Nat → List Nat
   | acc q :=
-    if (is_empty q) acc (g (front q :: acc) (pop_front q));
+    ite (is_empty q) acc (g (front q :: acc) (pop_front q));
 
 f {{Partial}} : Nat → Queue Nat → List Nat
   | zero q := g nil q

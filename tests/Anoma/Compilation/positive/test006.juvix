@@ -9,6 +9,6 @@ loop : Nat := loop;
 
 main : Bool :=
   trace
-      (if (3 > 0) 1 loop + if (2 < 1) loop (if (7 >= 8) loop 1))
+      (ite (3 > 0) 1 loop + ite (2 < 1) loop (ite (7 >= 8) loop 1))
     >-> trace (2 > 0 || loop == 0)
     >-> 2 < 0 && loop == 0;

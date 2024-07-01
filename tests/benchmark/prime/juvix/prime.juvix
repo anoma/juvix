@@ -5,14 +5,14 @@ import Stdlib.Prelude open;
 
 checkDivisible : Nat → List Nat → Bool
   | p nil := false
-  | p (h :: t) := if (mod p h == 0) true (checkDivisible p t);
+  | p (h :: t) := ite (mod p h == 0) true (checkDivisible p t);
 
 terminating
 go (n p : Nat) (lst : List Nat) : Nat :=
-    if
+    ite
       (n == 0)
       (head 0 lst)
-      (if
+      (ite
         (checkDivisible p lst)
         (go n (p + 1) lst)
         (go (sub n 1) (p + 1) (p :: lst)));

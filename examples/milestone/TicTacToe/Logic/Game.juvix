@@ -12,14 +12,14 @@ import Logic.GameState open public;
 --- Checks if we reached the end of the game.
 checkState : GameState → GameState
   | (state b p e) :=
-    if
+    ite
       (won (state b p e))
       (state
         b
         p
         (terminate
           ("Player " ++str showSymbol (switch p) ++str " wins!")))
-      (if
+      (ite
         (draw (state b p e))
         (state b p (terminate "It's a draw!"))
         (state b p e));
@@ -29,7 +29,7 @@ playMove : Maybe Nat → GameState → GameState
   | nothing (state b p _) :=
     state b p (continue "\nInvalid number, try again\n")
   | (just k) (state (board s) player e) :=
-    if
+    ite
       (not (elem (==) k (possibleMoves (flatten s))))
       (state
         (board s)
@@ -43,4 +43,4 @@ playMove : Maybe Nat → GameState → GameState
 
 --- Returns ;just; if the given ;Nat; is in range of 1..9
 validMove (n : Nat) : Maybe Nat :=
-  if (n <= 9 && n >= 1) (just n) nothing;
+  ite (n <= 9 && n >= 1) (just n) nothing;

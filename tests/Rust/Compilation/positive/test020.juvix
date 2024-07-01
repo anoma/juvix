@@ -6,12 +6,12 @@ import Stdlib.Prelude open;
 -- McCarthy's 91 function
 terminating
 f91 : Nat → Nat
-  | n := if (n > 100) (sub n 10) (f91 (f91 (n + 11)));
+  | n := ite (n > 100) (sub n 10) (f91 (f91 (n + 11)));
 
 -- subtraction by increments
 terminating
 subp : Nat → Nat → Nat
-  | i j := if (i == j) 0 (subp i (j + 1) + 1);
+  | i j := ite (i == j) 0 (subp i (j + 1) + 1);
 
 main : Nat :=
   f91 101

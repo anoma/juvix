@@ -5,13 +5,13 @@ import Stdlib.Prelude open;
 
 f : Nat → Nat → Nat
   | x :=
-    if
+    ite
       (x == 6)
       λ {_ := 0}
-      (if
+      (ite
         (x == 5)
         λ {_ := 1}
-        (if (x == 10) λ {_ := λ {x := x} 2} λ {x := x}));
+        (ite (x == 10) λ {_ := λ {x := x} 2} λ {x := x}));
 
 main : IO :=
   printNatLn (f 5 6)

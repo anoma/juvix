@@ -34,7 +34,7 @@ main : Nat :=
       };
     f : Triple Nat Nat Nat -> Triple Nat Nat Nat :=
       (@Triple{fst := fst * 10});
-  in sum <| if
+  in sum <| ite
     (mf
       mkPair@{
         fst := mkPair true nil;

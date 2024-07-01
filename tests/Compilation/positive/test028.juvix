@@ -13,7 +13,7 @@ sfilter : (Nat → Bool) → (Unit → Stream) → Unit → Stream
   | p s unit :=
     case force s of
       cons h t :=
-        if (p h) (cons h (sfilter p t)) (force (sfilter p t));
+        ite (p h) (cons h (sfilter p t)) (force (sfilter p t));
 
 shead : Stream → Nat
   | (cons h _) := h;

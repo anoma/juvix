@@ -6,6 +6,6 @@ type Bool :=
   | false : Bool;
 
 builtin bool-if
-if : {A : Type} → Bool → A → A → A
+ite : {A : Type} → Bool → A → A → A
   | true t _ := t
   | false _ e := e;

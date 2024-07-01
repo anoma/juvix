@@ -12,8 +12,8 @@ map' {A B} (f : A → B) : List A → List B :=
 lst : List Nat := 0 :: 1 :: nil;
 
 main : Nat :=
-  if (null lst) 1 0
-    + if (null (nil {Nat})) 1 0
+  ite (null lst) 1 0
+    + ite (null (nil {Nat})) 1 0
     + head 1 lst
     + head 0 (tail lst)
     + head 0 (tail (map ((+) 1) lst))

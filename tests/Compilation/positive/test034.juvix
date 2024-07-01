@@ -15,11 +15,11 @@ sum : Nat → Nat :=
 mutrec : IO :=
   let
     terminating
-    f (x : Nat) : Nat := if (x < 1) 1 (g (sub x 1) + 2 * x);
+    f (x : Nat) : Nat := ite (x < 1) 1 (g (sub x 1) + 2 * x);
     terminating
-    g (x : Nat) : Nat := if (x < 1) 1 (x + h (sub x 1));
+    g (x : Nat) : Nat := ite (x < 1) 1 (x + h (sub x 1));
     terminating
-    h (x : Nat) : Nat := if (x < 1) 1 (x * f (sub x 1));
+    h (x : Nat) : Nat := ite (x < 1) 1 (x * f (sub x 1));
   in printNatLn (f 5)
     >>> printNatLn (f 10)
     >>> printNatLn (g 5)

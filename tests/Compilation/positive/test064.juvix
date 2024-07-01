@@ -8,10 +8,10 @@ import Stdlib.Debug.Fail as Debug;
 f (x y : Nat) : Nat := x + y;
 
 {-# inline: false #-}
-g (x : Bool) : Bool := if x (Debug.failwith "a") true;
+g (x : Bool) : Bool := ite x (Debug.failwith "a") true;
 
 {-# inline: false #-}
-h (x : Bool) : Bool := if (g x) false true;
+h (x : Bool) : Bool := ite (g x) false true;
 
 {-# inline: false, eval: false #-}
 j (x : Nat) : Nat := x + 0;
@@ -37,5 +37,5 @@ even' : Nat -> Bool := even;
 main : Nat :=
   sum 3
     + case even' 6 || g true || h true of
-        | true := if (g false) (f 1 2 + sum 7 + j 0) 0
+        | true := ite (g false) (f 1 2 + sum 7 + j 0) 0
         | false := f (3 + 4) (f 0 8) + loop;
