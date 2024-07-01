@@ -3,6 +3,10 @@ module Commands.Format where
 import Commands.Base
 import Commands.Format.Options
 import Data.Text qualified as Text
+import Juvix.Compiler.Pipeline.Driver (processModule)
+import Juvix.Compiler.Pipeline.Loader.PathResolver.ImportTree.Base
+import Juvix.Compiler.Pipeline.ModuleInfoCache
+import Juvix.Compiler.Store.Language (ModuleInfo)
 import Juvix.Formatter
 
 data FormatNoEditRenderMode
@@ -16,7 +20,7 @@ data FormatRenderMode
 
 data FormatTarget
   = TargetFile (Path Abs File)
-  | TargetProject (Path Abs Dir)
+  | TargetProject
   | TargetStdin
 
 isTargetProject :: FormatTarget -> Bool
@@ -28,16 +32,15 @@ targetFromOptions :: (Members '[EmbedIO, App] r) => FormatOptions -> Sem r Forma
 targetFromOptions opts = do
   globalOpts <- askGlobalOptions
   let isStdin = globalOpts ^. globalStdin
-  f <- mapM filePathToAbs (opts ^. formatInput)
-  pkgDir <- askPkgDir
+  f <- mapM fromAppPathFileOrDir (opts ^. formatInput)
   case f of
     Just (Left p) -> return (TargetFile p)
-    Just Right {} -> return (TargetProject pkgDir)
+    Just Right {} -> return TargetProject
     Nothing -> do
       isPackageGlobal <- askPackageGlobal
       if
           | isStdin -> return TargetStdin
-          | not (isPackageGlobal) -> return (TargetProject pkgDir)
+          | not isPackageGlobal -> return TargetProject
           | otherwise -> do
               exitFailMsg $
                 Text.unlines
@@ -45,13 +48,30 @@ targetFromOptions opts = do
                     "Use the --help option to display more usage information."
                   ]
 
+-- | Formats the project on the root
+formatProject ::
+  forall r.
+  (Members '[App, EmbedIO, TaggedLock, Files, Output FormattedFileInfo] r) =>
+  Sem r FormatResult
+formatProject = runPipelineOptions . runPipelineSetup $ do
+  pkg <- askPackage
+  root <- (^. rootRootDir) <$> askRoot
+  nodes <- toList <$> asks (importTreeProjectNodes root)
+  res :: [(ImportNode, PipelineResult ModuleInfo)] <- forM nodes $ \node -> do
+    res <- mkEntryIndex node >>= processModule
+    return (node, res)
+  res' :: [(ImportNode, SourceCode)] <- runReader pkg . forM res $ \(node, nfo) -> do
+    src <- formatModuleInfo node nfo
+    return (node, src)
+  formatProjectSourceCode res'
+
 runCommand :: forall r. (Members '[EmbedIO, App, TaggedLock, Files] r) => FormatOptions -> Sem r ()
 runCommand opts = do
   target <- targetFromOptions opts
-  runOutputSem (renderFormattedOutput target opts) $ runScopeFileApp $ do
+  runOutputSem (renderFormattedOutput target opts) . runScopeFileApp $ do
     res <- case target of
       TargetFile p -> format p
-      TargetProject p -> formatProject p
+      TargetProject -> formatProject
       TargetStdin -> do
         entry <- getEntryPointStdin
         runReader entry formatStdin
@@ -103,5 +123,5 @@ runScopeFileApp = interpret $ \case
             { _pathPath = mkPrepath (toFilePath p),
               _pathIsInput = False
             }
-    ignoreProgressLog (runPipelineProgress () (Just appFile) upToScoping)
-  ScopeStdin e -> ignoreProgressLog (runPipelineEntry e upToScoping)
+    ignoreProgressLog (runPipelineProgress () (Just appFile) upToScopingEntry)
+  ScopeStdin e -> ignoreProgressLog (runPipelineEntry e upToScopingEntry)

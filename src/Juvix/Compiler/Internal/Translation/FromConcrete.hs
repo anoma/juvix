@@ -208,13 +208,14 @@ traverseM' ::
 traverseM' f x = sequence <$> traverse f x
 
 toPreModule ::
-  forall r t.
-  (SingI t, Members '[Reader EntryPoint, Reader DefaultArgsStack, Reader ExportsTable, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ConstructorInfos, Reader S.InfoTable] r) =>
-  Module 'Scoped t ->
+  forall r.
+  (Members '[Reader EntryPoint, Reader DefaultArgsStack, Reader ExportsTable, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ConstructorInfos, Reader S.InfoTable] r) =>
+  Module 'Scoped 'ModuleTop ->
   Sem r Internal.PreModule
 toPreModule Module {..} = do
   pragmas' <- goPragmas _modulePragmas
   body' <- local (const pragmas') (goModuleBody _moduleBody)
+  let name' = goTopModulePath _modulePath
   return
     Internal.Module
       { _moduleName = name',
@@ -222,11 +223,6 @@ toPreModule Module {..} = do
         _modulePragmas = pragmas',
         _moduleId
       }
-  where
-    name' :: Internal.Name
-    name' = case sing :: SModuleIsTop t of
-      SModuleTop -> goTopModulePath _modulePath
-      SModuleLocal -> goSymbol _modulePath
 
 goTopModulePath :: S.TopModulePath -> Internal.Name
 goTopModulePath p = goSymbolPretty (prettyText p) (S.topModulePathSymbol p)

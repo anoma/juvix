@@ -1,11 +1,12 @@
 module Juvix.Data.ModuleId where
 
+import Juvix.Data.TopModulePathKey
 import Juvix.Extra.Serialize
 import Juvix.Prelude.Base
 import Prettyprinter
 
 data ModuleId = ModuleId
-  { _moduleIdPath :: Text,
+  { _moduleIdPath :: TopModulePathKey,
     _moduleIdPackage :: Text,
     _moduleIdPackageVersion :: Text
   }
@@ -25,7 +26,7 @@ instance NFData ModuleId
 defaultModuleId :: ModuleId
 defaultModuleId =
   ModuleId
-    { _moduleIdPath = "$DefaultModule$",
+    { _moduleIdPath = nonEmptyToTopModulePathKey (pure "$DefaultModule$"),
       _moduleIdPackage = "$",
       _moduleIdPackageVersion = "1.0"
     }

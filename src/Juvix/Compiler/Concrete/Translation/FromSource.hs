@@ -24,7 +24,6 @@ import Juvix.Compiler.Concrete.Translation.FromSource.Lexer hiding
   )
 import Juvix.Compiler.Concrete.Translation.FromSource.ParserResultBuilder
 import Juvix.Compiler.Concrete.Translation.FromSource.TopModuleNameChecker
-import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Data.Yaml
 import Juvix.Extra.Paths
 import Juvix.Extra.Strings qualified as Str
@@ -48,20 +47,18 @@ type PragmasStash = State (Maybe ParsedPragmas)
 
 fromSource ::
   (Members '[HighlightBuilder, TopModuleNameChecker, Files, Error JuvixError] r) =>
-  EntryPoint ->
+  Maybe Text ->
+  Maybe (Path Abs File) ->
   Sem r ParserResult
-fromSource e = mapError (JuvixError @ParserError) $ do
-  (_resultParserState, _resultModule) <-
-    runParserResultBuilder mempty
-      . evalTopNameIdGen defaultModuleId
-      $ getParsedModuleTop
+fromSource mstdin minputfile = mapError (JuvixError @ParserError) $ do
+  (_resultParserState, _resultModule) <- runParserResultBuilder mempty getParsedModuleTop
   return ParserResult {..}
   where
     getParsedModuleTop ::
       forall r.
       (Members '[Files, TopModuleNameChecker, Error ParserError, ParserResultBuilder] r) =>
       Sem r (Module 'Parsed 'ModuleTop)
-    getParsedModuleTop = case (e ^. entryPointStdin, e ^. entryPointModulePath) of
+    getParsedModuleTop = case (mstdin, minputfile) of
       (Nothing, Nothing) -> throw $ ErrStdinOrFile StdinOrFileError
       (Just txt, Just x) ->
         runModuleParser x txt >>= \case
@@ -87,8 +84,8 @@ fromSource e = mapError (JuvixError @ParserError) $ do
       where
         getFileContents :: Path Abs File -> Sem r Text
         getFileContents fp
-          | Just fp == e ^. entryPointModulePath,
-            Just txt <- e ^. entryPointStdin =
+          | Just fp == minputfile,
+            Just txt <- mstdin =
               return txt
           | otherwise = readFile' fp
 

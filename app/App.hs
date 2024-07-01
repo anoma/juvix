@@ -32,7 +32,9 @@ data App :: Effect where
   AskGlobalOptions :: App m GlobalOptions
   FromAppPathFile :: AppPath File -> App m (Path Abs File)
   GetMainAppFile :: Maybe (AppPath File) -> App m (AppPath File)
+  GetMainAppFileMaybe :: Maybe (AppPath File) -> App m (Maybe (AppPath File))
   GetMainFile :: Maybe (AppPath File) -> App m (Path Abs File)
+  GetMainFileMaybe :: Maybe (AppPath File) -> App m (Maybe (Path Abs File))
   FromAppPathDir :: AppPath Dir -> App m (Path Abs Dir)
   RenderStdOut :: (HasAnsiBackend a, HasTextBackend a) => a -> App m ()
   Say :: Text -> App m ()
@@ -68,7 +70,9 @@ reAppIO args@RunAppIOArgs {..} =
     FromAppPathFile p -> prepathToAbsFile invDir (p ^. pathPath)
     FromAppFile m -> fromAppFile' m
     GetMainAppFile m -> getMainAppFile' m
+    GetMainAppFileMaybe m -> getMainAppFileMaybe' m
     GetMainFile m -> getMainFile' m
+    GetMainFileMaybe m -> getMainFileMaybe' m
     FromAppPathDir p -> liftIO (prepathToAbsDir invDir (p ^. pathPath))
     RenderStdOut t
       | _runAppIOArgsGlobalOptions ^. globalOnlyErrors -> return ()
@@ -105,19 +109,25 @@ reAppIO args@RunAppIOArgs {..} =
     getMainFile' :: (Members '[SCache Package, EmbedIO] r') => Maybe (AppPath File) -> Sem r' (Path Abs File)
     getMainFile' = getMainAppFile' >=> fromAppFile'
 
-    getMainAppFile' :: (Members '[SCache Package, EmbedIO] r') => Maybe (AppPath File) -> Sem r' (AppPath File)
-    getMainAppFile' = \case
-      Just p -> return p
+    getMainFileMaybe' :: (Members '[SCache Package, EmbedIO] r') => Maybe (AppPath File) -> Sem r' (Maybe (Path Abs File))
+    getMainFileMaybe' = getMainAppFileMaybe' >=> mapM fromAppFile'
+
+    getMainAppFileMaybe' :: (Members '[SCache Package, EmbedIO] r') => Maybe (AppPath File) -> Sem r' (Maybe (AppPath File))
+    getMainAppFileMaybe' = \case
+      Just p -> return (Just p)
       Nothing -> do
         pkg <- getPkg
-        case pkg ^. packageMain of
+        return $ case pkg ^. packageMain of
           Just p ->
             return
               AppPath
                 { _pathPath = p,
                   _pathIsInput = True
                 }
-          Nothing -> missingMainErr
+          Nothing -> Nothing
+
+    getMainAppFile' :: (Members '[SCache Package, EmbedIO] r') => Maybe (AppPath File) -> Sem r' (AppPath File)
+    getMainAppFile' = fromMaybeM missingMainErr . getMainAppFileMaybe'
 
     missingMainErr :: (Members '[EmbedIO] r') => Sem r' x
     missingMainErr =
@@ -148,8 +158,8 @@ getEntryPoint' RunAppIOArgs {..} inputFile = do
     if
         | opts ^. globalStdin -> Just <$> liftIO getContents
         | otherwise -> return Nothing
-  mainFile <- getMainAppFile inputFile
-  set entryPointStdin estdin <$> entryPointFromGlobalOptionsPre root (mainFile ^. pathPath) opts
+  mainFile <- getMainAppFileMaybe inputFile
+  set entryPointStdin estdin <$> entryPointFromGlobalOptionsPre root ((^. pathPath) <$> mainFile) opts
 
 runPipelineEither ::
   (Members '[EmbedIO, TaggedLock, ProgressLog, App] r, EntryPointOptions opts) =>
@@ -182,6 +192,12 @@ someBaseToAbs' :: (Members '[App] r) => SomeBase a -> Sem r (Path Abs a)
 someBaseToAbs' f = do
   r <- askInvokeDir
   return (someBaseToAbs r f)
+
+fromAppPathFileOrDir ::
+  (Members '[EmbedIO, App] r) =>
+  AppPath FileOrDir ->
+  Sem r (Either (Path Abs File) (Path Abs Dir))
+fromAppPathFileOrDir = filePathToAbs . (^. pathPath)
 
 filePathToAbs :: (Members '[EmbedIO, App] r) => Prepath FileOrDir -> Sem r (Either (Path Abs File) (Path Abs Dir))
 filePathToAbs fp = do
@@ -282,9 +298,11 @@ runPipelineEntry entry p = runPipelineOptions $ do
   r <- runIOEither entry (inject p) >>= fromRightJuvixError
   return (snd r ^. pipelineResult)
 
-runPipelineSetup :: (Members '[App, EmbedIO, Reader PipelineOptions, TaggedLock] r) => Sem (PipelineEff' r) a -> Sem r a
--- runPipelineSetup p = ignoreProgressLog $ do -- TODO restore
-runPipelineSetup p = appRunProgressLog $ do
+runPipelineSetup ::
+  (Members '[App, EmbedIO, Reader PipelineOptions, TaggedLock] r) =>
+  Sem (PipelineEff' r) a ->
+  Sem r a
+runPipelineSetup p = ignoreProgressLog $ do
   args <- askArgs
   entry <- getEntryPointStdin' args
   r <- runIOEitherPipeline entry (inject p) >>= fromRightJuvixError

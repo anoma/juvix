@@ -87,11 +87,19 @@ instance Serialize TopModulePath
 
 instance NFData TopModulePath
 
+instance Hashable TopModulePath
+
 makeLenses ''TopModulePath
 
+topModulePathKey :: TopModulePath -> TopModulePathKey
+topModulePathKey TopModulePath {..} =
+  TopModulePathKey
+    { _modulePathKeyDir = (^. symbolText) <$> _modulePathDir,
+      _modulePathKeyName = _modulePathName ^. symbolText
+    }
+
 instance Pretty TopModulePath where
-  pretty (TopModulePath path name) =
-    mconcat (punctuate Pretty.dot (map pretty (snoc path name)))
+  pretty = pretty . topModulePathKey
 
 instance HasLoc TopModulePath where
   getLoc TopModulePath {..} =
@@ -114,8 +122,6 @@ moduleNameToTopModulePath :: Name -> TopModulePath
 moduleNameToTopModulePath = \case
   NameUnqualified s -> TopModulePath [] s
   NameQualified (QualifiedName (SymbolPath p) s) -> TopModulePath (toList p) s
-
-instance Hashable TopModulePath
 
 splitName :: Name -> ([Symbol], Symbol)
 splitName = \case

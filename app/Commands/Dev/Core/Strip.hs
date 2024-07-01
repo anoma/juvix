@@ -11,7 +11,7 @@ runCommand opts = do
   root <- askRoot
   gopts <- askGlobalOptions
   inputFile :: Path Abs File <- fromAppPathFile sinputFile
-  ep <- entryPointFromGlobalOptions root inputFile gopts
+  ep <- entryPointFromGlobalOptions root (Just inputFile) gopts
   s' <- readFile inputFile
   (tab, _) <- getRight (Core.runParser inputFile defaultModuleId mempty s')
   let r =
@@ -19,7 +19,9 @@ runCommand opts = do
           . runReader ep
           . runError @JuvixError
           $ Core.toStripped Core.IdentityTrans (Core.moduleFromInfoTable tab)
-  tab' <- getRight $ mapRight (Stripped.fromCore (project gopts ^. Core.optFieldSize) . Core.computeCombinedInfoTable) r
+  tab' <-
+    getRight $
+      mapRight (Stripped.fromCore (project gopts ^. Core.optFieldSize) . Core.computeCombinedInfoTable) r
   unless (project opts ^. coreStripNoPrint) $ do
     renderStdOut (Core.ppOut opts tab')
   where

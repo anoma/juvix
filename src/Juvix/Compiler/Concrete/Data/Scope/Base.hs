@@ -37,7 +37,7 @@ data Scope = Scope
     -- several imports under the same name. E.g.
     -- import A as X;
     -- import B as X;
-    _scopeTopModules :: HashMap TopModulePath (HashMap S.NameId ScopedModule),
+    _scopeTopModules :: HashMap TopModulePathKey (HashMap S.NameId ScopedModule),
     -- | Symbols that have been defined in the current scope level. Every symbol
     -- should map to itself. This is needed because we may query it with a
     -- symbol with a different location but we may want the location of the
@@ -48,11 +48,11 @@ data Scope = Scope
   }
 
 newtype ModulesCache = ModulesCache
-  { _cachedModules :: HashMap TopModulePath ScopedModule
+  { _cachedModules :: HashMap TopModulePathKey ScopedModule
   }
 
 newtype ScopeParameters = ScopeParameters
-  { _scopeImportedModules :: HashMap TopModulePath ScopedModule
+  { _scopeImportedModules :: HashMap TopModulePathKey ScopedModule
   }
 
 data ScoperState = ScoperState

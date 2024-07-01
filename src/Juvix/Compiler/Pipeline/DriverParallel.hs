@@ -1,5 +1,6 @@
 module Juvix.Compiler.Pipeline.DriverParallel
   ( compileInParallel,
+    compileInParallel_,
     ModuleInfoCache,
     evalModuleInfoCache,
     module Parallel.ProgressLog,
@@ -29,13 +30,13 @@ data CompileResult = CompileResult
 
 makeLenses ''CompileResult
 
-type NodeId = Path Abs File
-
 type Node = EntryIndex
 
-type CompileProof = PipelineResult Store.ModuleInfo
-
-mkNodesIndex :: forall r. (Members '[Reader EntryPoint] r) => ImportTree -> Sem r (NodesIndex NodeId Node)
+mkNodesIndex ::
+  forall r.
+  (Members '[Reader EntryPoint] r) =>
+  ImportTree ->
+  Sem r (NodesIndex ImportNode Node)
 mkNodesIndex tree =
   NodesIndex
     . hashMap
@@ -44,29 +45,47 @@ mkNodesIndex tree =
         | fromNode <- HashMap.keys (tree ^. importTree)
       ]
   where
-    mkAssoc :: ImportNode -> Sem r (Path Abs File, EntryIndex)
+    mkAssoc :: ImportNode -> Sem r (ImportNode, EntryIndex)
     mkAssoc p = do
-      let abspath = p ^. importNodeAbsFile
-      i <- mkEntryIndex (p ^. importNodePackageRoot) abspath
-      return (abspath, i)
+      i <- mkEntryIndex p
+      return (p, i)
 
-mkDependencies :: ImportTree -> Dependencies NodeId
+mkDependencies :: ImportTree -> Dependencies ImportNode
 mkDependencies tree =
   Dependencies
-    { _dependenciesTable = helper (tree ^. importTree),
-      _dependenciesTableReverse = helper (tree ^. importTreeReverse)
+    { _dependenciesTable = tree ^. importTree,
+      _dependenciesTableReverse = tree ^. importTreeReverse
     }
-  where
-    helper :: HashMap ImportNode (HashSet ImportNode) -> HashMap NodeId (HashSet NodeId)
-    helper m = hashMap [(toPath k, hashSet (toPath <$> toList v)) | (k, v) <- HashMap.toList m]
 
-    toPath :: ImportNode -> Path Abs File
-    toPath = (^. importNodeAbsFile)
+getNodePath :: Node -> ImportNode
+getNodePath = (^. entryIxImportNode)
 
 getNodeName :: Node -> Text
-getNodeName = toFilePath . fromJust . (^. entryIxEntry . entryPointModulePath)
+getNodeName = toFilePath . (^. importNodeAbsFile) . getNodePath
 
--- | Fills the cache in parallel
+compileInParallel_ ::
+  forall r.
+  ( Members
+      '[ Concurrent,
+         ProgressLog,
+         IOE,
+         ModuleInfoCache,
+         JvoCache,
+         TaggedLock,
+         Files,
+         TopModuleNameChecker,
+         Error JuvixError,
+         Reader EntryPoint,
+         PathResolver,
+         Reader NumThreads,
+         Reader ImportTree
+       ]
+      r
+  ) =>
+  Sem r ()
+compileInParallel_ = void compileInParallel
+
+-- | Compiles the whole project in parallel (i.e. all modules in the ImportTree).
 compileInParallel ::
   forall r.
   ( Members
@@ -81,20 +100,19 @@ compileInParallel ::
          Error JuvixError,
          Reader EntryPoint,
          PathResolver,
+         Reader NumThreads,
          Reader ImportTree
        ]
       r
   ) =>
-  NumThreads ->
-  EntryIndex ->
-  Sem r ()
-compileInParallel nj _entry = do
+  Sem r (HashMap ImportNode (PipelineResult Store.ModuleInfo))
+compileInParallel = do
   -- At the moment we compile everything, so the EntryIndex is ignored, but in
   -- principle we could only compile what is reachable from the given EntryIndex
   t <- ask
   idx <- mkNodesIndex t
-  numWorkers <- numThreads nj
-  let args :: CompileArgs r NodeId Node CompileProof
+  numWorkers <- ask >>= numThreads
+  let args :: CompileArgs r ImportNode Node (PipelineResult Store.ModuleInfo)
       args =
         CompileArgs
           { _compileArgsNodesIndex = idx,
@@ -104,11 +122,14 @@ compileInParallel nj _entry = do
             _compileArgsNumWorkers = numWorkers,
             _compileArgsCompileNode = compileNode
           }
-  void (compile args)
+  compile args
 
-compileNode :: (Members '[ModuleInfoCache, PathResolver] r) => EntryIndex -> Sem r CompileProof
+compileNode ::
+  (Members '[ModuleInfoCache, PathResolver] r) =>
+  EntryIndex ->
+  Sem r (PipelineResult Store.ModuleInfo)
 compileNode e =
-  withResolverRoot (e ^. entryIxResolverRoot)
+  withResolverRoot (e ^. entryIxImportNode . importNodePackageRoot)
     . fmap force
     $ processModule e
 
@@ -139,11 +160,11 @@ evalModuleInfoCache ::
          Error JuvixError,
          PathResolver,
          Reader ImportScanStrategy,
+         Reader NumThreads,
          Files
        ]
       r
   ) =>
-  NumThreads ->
   Sem (ModuleInfoCache ': JvoCache ': r) a ->
   Sem r a
-evalModuleInfoCache nj = Driver.evalModuleInfoCacheSetup (compileInParallel nj)
+evalModuleInfoCache = Driver.evalModuleInfoCacheSetup (const (compileInParallel_))

@@ -53,7 +53,7 @@ testDescr PosTest {..} = helper renderCodeNew
                     evalHelper input_ m = snd <$> testRunIO entryPoint {_entryPointStdin = Just input_} m
 
                 step "Parsing & Scoping"
-                PipelineResult s _ _ <- snd <$> testRunIO entryPoint upToScoping
+                PipelineResult s _ _ <- snd <$> testRunIO entryPoint upToScopingEntry
 
                 let p = s ^. Scoper.resultParserResult
                     fScoped :: Text
@@ -62,7 +62,7 @@ testDescr PosTest {..} = helper renderCodeNew
                     fParsed = renderer $ p ^. Parser.resultModule
 
                 step "Parsing & scoping pretty scoped"
-                PipelineResult s' _ _ <- evalHelper fScoped upToScoping
+                PipelineResult s' _ _ <- evalHelper fScoped upToScopingEntry
                 let p' = s' ^. Scoper.resultParserResult
 
                 step "Parsing pretty parsed"

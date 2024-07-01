@@ -53,10 +53,10 @@ getEntryPointTarget e = fromMaybe defaultTarget (e ^. entryPointTarget)
     -- TODO is having a default target a good idea?
     defaultTarget = TargetCore
 
-defaultEntryPoint :: Package -> Root -> Path Abs File -> EntryPoint
+defaultEntryPoint :: Package -> Root -> Maybe (Path Abs File) -> EntryPoint
 defaultEntryPoint pkg root mainFile =
   (defaultEntryPointNoFile pkg root)
-    { _entryPointModulePath = pure mainFile
+    { _entryPointModulePath = mainFile
     }
 
 defaultEntryPointNoFile :: Package -> Root -> EntryPoint

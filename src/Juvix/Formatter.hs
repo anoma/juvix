@@ -2,10 +2,19 @@
 
 module Juvix.Formatter where
 
+import Juvix.Compiler.Concrete.Data.Highlight.Input (ignoreHighlightBuilder)
 import Juvix.Compiler.Concrete.Language
-import Juvix.Compiler.Concrete.Print (docDefault)
+import Juvix.Compiler.Concrete.Print (ppOutDefault)
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping (ScoperResult, getModuleId, scopeCheck)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
+import Juvix.Compiler.Concrete.Translation.FromSource (ParserResult, fromSource)
+import Juvix.Compiler.Concrete.Translation.FromSource.TopModuleNameChecker (runTopModuleNameChecker)
 import Juvix.Compiler.Pipeline.EntryPoint
+import Juvix.Compiler.Pipeline.Loader.PathResolver
+import Juvix.Compiler.Pipeline.Result
+import Juvix.Compiler.Store.Extra (getScopedModuleTable)
+import Juvix.Compiler.Store.Language qualified as Store
+import Juvix.Compiler.Store.Scoped.Language (ScopedModuleTable)
 import Juvix.Data.CodeAnn
 import Juvix.Extra.Paths
 import Juvix.Prelude
@@ -15,6 +24,8 @@ data FormattedFileInfo = FormattedFileInfo
     _formattedFileInfoContents :: Text,
     _formattedFileInfoContentsModified :: Bool
   }
+
+type OriginalSource = Text
 
 data ScopeEff :: Effect where
   ScopeFile :: Path Abs File -> ScopeEff m Scoper.ScoperResult
@@ -28,6 +39,13 @@ data FormatResult
   | FormatResultNotFormatted
   | FormatResultFail
   deriving stock (Eq)
+
+data SourceCode = SourceCode
+  { _sourceCodeFormatted :: Text,
+    _sourceCodeOriginal :: Text
+  }
+
+makeLenses ''SourceCode
 
 instance Semigroup FormatResult where
   FormatResultFail <> _ = FormatResultFail
@@ -54,9 +72,13 @@ format ::
   Sem r FormatResult
 format p = do
   originalContents <- readFile' p
-  runReader originalContents $ do
-    formattedContents :: Text <- formatPath p
-    formatResultFromContents formattedContents p
+  formattedContents :: Text <- runReader originalContents (formatPath p)
+  let src =
+        SourceCode
+          { _sourceCodeFormatted = formattedContents,
+            _sourceCodeOriginal = originalContents
+          }
+  formatResultSourceCode p src
 
 -- | Format a Juvix project.
 --
@@ -73,27 +95,57 @@ format p = do
 --
 -- NB: This function does not traverse into Juvix sub-projects, i.e into
 -- subdirectories that contain a juvix.yaml file.
-formatProject ::
+formatProjectSourceCode ::
   forall r.
-  (Members '[ScopeEff, Files, Output FormattedFileInfo] r) =>
-  Path Abs Dir ->
+  (Members '[Output FormattedFileInfo] r) =>
+  [(ImportNode, SourceCode)] ->
   Sem r FormatResult
-formatProject p = do
-  walkDirRelAccum handler p FormatResultOK
-  where
-    handler ::
-      Path Abs Dir ->
-      [Path Rel Dir] ->
-      [Path Rel File] ->
-      FormatResult ->
-      Sem r (FormatResult, Recurse Rel)
-    handler cd _ files res = do
-      let juvixFiles = [cd <//> f | f <- files, isJuvixFile f]
-      subRes <- mconcat <$> mapM format juvixFiles
-      return (res <> subRes, RecurseFilter (\hasJuvixPackage d -> not hasJuvixPackage && not (isHiddenDirectory d)))
+formatProjectSourceCode =
+  mconcatMapM (uncurry formatResultSourceCode)
+    . map (first (^. importNodeAbsFile))
+
+formatModuleInfo ::
+  ( Members
+      '[ PathResolver,
+         Error JuvixError,
+         Files,
+         Reader Package
+       ]
+      r
+  ) =>
+  ImportNode ->
+  PipelineResult Store.ModuleInfo ->
+  Sem r SourceCode
+formatModuleInfo node moduleInfo =
+  withResolverRoot (node ^. importNodePackageRoot)
+    . ignoreHighlightBuilder
+    $ do
+      pkg :: Package <- ask
+      parseRes :: ParserResult <-
+        runTopModuleNameChecker $
+          fromSource Nothing (Just (node ^. importNodeAbsFile))
+      let modules = moduleInfo ^. pipelineResultImports
+          scopedModules :: ScopedModuleTable = getScopedModuleTable modules
+          tmp :: TopModulePathKey = relPathtoTopModulePathKey (node ^. importNodeFile)
+          moduleid :: ModuleId = run (runReader pkg (getModuleId tmp))
+      scopeRes :: ScoperResult <-
+        evalTopNameIdGen moduleid $
+          scopeCheck pkg scopedModules parseRes
+      originalSource :: Text <- readFile' (node ^. importNodeAbsFile)
+      formattedTxt <-
+        runReader originalSource $
+          formatScoperResult False scopeRes
+      let formatRes =
+            SourceCode
+              { _sourceCodeFormatted = formattedTxt,
+                _sourceCodeOriginal = originalSource
+              }
+      return . forcing formatRes $ do
+        forcesField sourceCodeFormatted
+        forcesField sourceCodeOriginal
 
 formatPath ::
-  (Members '[Reader Text, ScopeEff] r) =>
+  (Members '[Reader OriginalSource, ScopeEff] r) =>
   Path Abs File ->
   Sem r Text
 formatPath p = do
@@ -107,21 +159,20 @@ formatStdin ::
 formatStdin = do
   entry <- ask
   res <- scopeStdin entry
-  let originalContents = fromMaybe "" (entry ^. entryPointStdin)
-  runReader originalContents $ do
-    formattedContents :: Text <- formatScoperResult False res
-    formatResultFromContents formattedContents formatStdinPath
+  let _sourceCodeOriginal = fromMaybe "" (entry ^. entryPointStdin)
+  _sourceCodeFormatted :: Text <- runReader _sourceCodeOriginal (formatScoperResult False res)
+  let src = SourceCode {..}
+  formatResultSourceCode formatStdinPath src
 
-formatResultFromContents ::
+formatResultSourceCode ::
   forall r.
-  (Members '[Reader Text, Output FormattedFileInfo] r) =>
-  Text ->
+  (Members '[Output FormattedFileInfo] r) =>
   Path Abs File ->
+  SourceCode ->
   Sem r FormatResult
-formatResultFromContents formattedContents filepath = do
-  originalContents <- ask
+formatResultSourceCode filepath src = do
   if
-      | originalContents /= formattedContents -> mkResult FormatResultNotFormatted
+      | src ^. sourceCodeOriginal /= src ^. sourceCodeFormatted -> mkResult FormatResultNotFormatted
       | otherwise -> mkResult FormatResultOK
   where
     mkResult :: FormatResult -> Sem r FormatResult
@@ -129,7 +180,7 @@ formatResultFromContents formattedContents filepath = do
       output
         ( FormattedFileInfo
             { _formattedFileInfoPath = filepath,
-              _formattedFileInfoContents = formattedContents,
+              _formattedFileInfoContents = src ^. sourceCodeFormatted,
               _formattedFileInfoContentsModified = res == FormatResultNotFormatted
             }
         )
@@ -141,29 +192,15 @@ formatScoperResult' forceFormat original sres =
   run . runReader original $ formatScoperResult forceFormat sres
 
 formatScoperResult ::
-  (Members '[Reader Text] r) =>
+  (Members '[Reader OriginalSource] r) =>
   Bool ->
   Scoper.ScoperResult ->
   Sem r Text
 formatScoperResult forceFormat res = do
-  let cs = Scoper.getScoperResultComments res
-  formattedModule <-
-    runReader cs
-      . formatTopModule
-      $ res
-        ^. Scoper.resultModule
-  let txt :: Text = toPlainTextTrim formattedModule
-  case res ^. Scoper.mainModule . modulePragmas of
-    Just pragmas ->
-      case pragmas ^. withLocParam . withSourceValue . pragmasFormat of
-        Just PragmaFormat {..}
-          | not _pragmaFormat && not forceFormat -> ask @Text
-        _ ->
-          return txt
-    Nothing ->
-      return txt
-  where
-    formatTopModule :: (Members '[Reader Comments] r) => Module 'Scoped 'ModuleTop -> Sem r (Doc Ann)
-    formatTopModule m = do
-      cs :: Comments <- ask
-      return $ docDefault cs m
+  let comments = Scoper.getScoperResultComments res
+      formattedTxt = toPlainTextTrim (ppOutDefault comments (res ^. Scoper.resultModule))
+  runFailDefault formattedTxt $ do
+    pragmas <- failMaybe (res ^. Scoper.mainModule . modulePragmas)
+    PragmaFormat {..} <- failMaybe (pragmas ^. withLocParam . withSourceValue . pragmasFormat)
+    failUnless (not _pragmaFormat && not forceFormat)
+    ask @OriginalSource

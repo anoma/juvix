@@ -22,7 +22,7 @@ loadPrelude :: Path Abs Dir -> IO (Artifacts, EntryPoint)
 loadPrelude rootDir = runTaggedLockIO' $ do
   runReader rootDir writeStdlib
   pkg <- readPackageRootIO root
-  let ep = defaultEntryPoint pkg root (rootDir <//> preludePath)
+  let ep = defaultEntryPoint pkg root (Just (rootDir <//> preludePath))
   artif <- runReplPipelineIO ep
   return (artif, ep)
   where

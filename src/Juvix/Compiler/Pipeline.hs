@@ -80,6 +80,7 @@ type PipelineLocalEff =
      Error JuvixError,
      HighlightBuilder,
      Internet,
+     Reader NumThreads,
      Concurrent
    ]
 
@@ -101,7 +102,9 @@ makeLenses ''PipelineOptions
 upToParsing ::
   (Members '[HighlightBuilder, TopModuleNameChecker, Reader EntryPoint, Error JuvixError, Files] r) =>
   Sem r Parser.ParserResult
-upToParsing = ask >>= Parser.fromSource
+upToParsing = do
+  e <- ask
+  Parser.fromSource (e ^. entryPointStdin) (e ^. entryPointModulePath)
 
 --------------------------------------------------------------------------------
 -- Workflows from parsed source
@@ -112,15 +115,24 @@ upToParsedSource ::
   Sem r Parser.ParserResult
 upToParsedSource = ask
 
-upToScoping ::
+upToScopingEntry ::
   (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Error JuvixError, NameIdGen] r) =>
+  Sem r Scoper.ScoperResult
+upToScopingEntry = do
+  pkg <- asks (^. entryPointPackage)
+  runReader pkg (upToScoping)
+
+upToScoping ::
+  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader Package, Reader Store.ModuleTable, Error JuvixError, NameIdGen] r) =>
   Sem r Scoper.ScoperResult
 upToScoping = Scoper.fromParsed
 
 upToInternal ::
   (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Error JuvixError, NameIdGen, Termination] r) =>
   Sem r Internal.InternalResult
-upToInternal = upToScoping >>= Internal.fromConcrete
+upToInternal = do
+  pkg <- asks (^. entryPointPackage)
+  runReader pkg upToScoping >>= Internal.fromConcrete
 
 upToInternalTyped ::
   (Members '[HighlightBuilder, Reader Parser.ParserResult, Error JuvixError, Reader EntryPoint, Reader Store.ModuleTable, NameIdGen] r) =>
