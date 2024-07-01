@@ -2,7 +2,6 @@
 
 module Juvix.Formatter where
 
-import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Concrete.Data.Highlight.Input (ignoreHighlightBuilder)
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Print (ppOutDefault)
@@ -99,12 +98,11 @@ format p = do
 formatProject ::
   forall r.
   (Members '[Output FormattedFileInfo] r) =>
-  HashMap ImportNode SourceCode ->
+  [(ImportNode, SourceCode)] ->
   Sem r FormatResult
 formatProject =
   mconcatMapM (uncurry formatResultSourceCode)
     . map (first (^. importNodeAbsFile))
-    . HashMap.toList
 
 formatModuleInfo ::
   ( Members

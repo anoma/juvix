@@ -61,7 +61,7 @@ formatProjectNew = runPipelineOptions . runPipelineSetup $ do
   res :: [(ImportNode, PipelineResult ModuleInfo)] <- forM nodes $ \node -> do
     res <- mkEntryIndex node >>= processModule
     return (node, res)
-  res' :: HashMap ImportNode SourceCode <- fmap hashMap . runReader pkg . forM res $ \(node, nfo) -> do
+  res' :: [(ImportNode, SourceCode)] <- runReader pkg . forM res $ \(node, nfo) -> do
     src <- formatModuleInfo node nfo
     return (node, src)
   formatProject res'
