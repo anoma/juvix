@@ -90,8 +90,8 @@ goModule onlyTypes infoTable Internal.Module {..} =
       where
         params = map goInductiveParameter _inductiveParameters
 
-    goInductiveParameter :: Internal.InductiveParameter -> Var
-    goInductiveParameter Internal.InductiveParameter {..} = Var _inductiveParamName
+    goInductiveParameter :: Internal.InductiveParameter -> TypeVar
+    goInductiveParameter Internal.InductiveParameter {..} = TypeVar _inductiveParamName
 
     goRecordField :: Internal.FunctionParameter -> RecordField
     goRecordField Internal.FunctionParameter {..} =
@@ -148,7 +148,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
         oneClause expr =
           nonEmpty'
             [ Clause
-                { _clausePatterns = fmap (PatVar . Var) argnames,
+                { _clausePatterns = fmap PatVar argnames,
                   _clauseBody = expr
                 }
             ]
@@ -223,7 +223,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
     goTypeIden = \case
       Internal.IdenFunction name -> mkIndType name []
       Internal.IdenConstructor name -> error ("unsupported type: constructor " <> Internal.ppTrace name)
-      Internal.IdenVar name -> TyVar $ Var name
+      Internal.IdenVar name -> TyVar $ TypeVar name
       Internal.IdenAxiom name -> mkIndType name []
       Internal.IdenInductive name -> mkIndType name []
 
@@ -302,7 +302,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
         goFunDef Internal.FunctionDef {..} expr =
           ExprLet
             Let
-              { _letVar = Var _funDefName,
+              { _letVar = _funDefName,
                 _letValue = goExpression _funDefBody,
                 _letBody = expr
               }
@@ -314,7 +314,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
     goSimpleLambda Internal.SimpleLambda {..} =
       ExprLambda
         Lambda
-          { _lambdaVar = Var $ _slambdaBinder ^. Internal.sbinderVar,
+          { _lambdaVar = _slambdaBinder ^. Internal.sbinderVar,
             _lambdaType = Just $ goType $ _slambdaBinder ^. Internal.sbinderType,
             _lambdaBody = goExpression _slambdaBody
           }
@@ -332,7 +332,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
             ExprLambda
               Lambda
                 { _lambdaType = fmap goType _lambdaType,
-                  _lambdaVar = Var v,
+                  _lambdaVar = v,
                   _lambdaBody = goLams vs
                 }
           [] ->
@@ -379,7 +379,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
 
     goPattern :: Internal.Pattern -> Pattern
     goPattern = \case
-      Internal.PatternVariable x -> PatVar $ Var x
+      Internal.PatternVariable x -> PatVar x
       Internal.PatternConstructorApp x -> goPatternConstructorApp x
       Internal.PatternWildcardConstructor {} -> impossible
 

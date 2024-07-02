@@ -36,9 +36,9 @@ instance PrettyCode Type where
     TyFun x -> ppCode x
     TyInd x -> ppCode x
 
-instance PrettyCode Var where
-  ppCode Var {..} =
-    (squote <>) <$> ppCode _varName
+instance PrettyCode TypeVar where
+  ppCode TypeVar {..} =
+    (squote <>) <$> ppCode _typeVarName
 
 instance PrettyCode FunType where
   ppCode FunType {..} = do
@@ -80,8 +80,8 @@ instance PrettyCode Literal where
 
 instance PrettyCode Application where
   ppCode Application {..} = do
-    l <- ppCode _appLeft
-    r <- ppCode _appRight
+    l <- ppLeftExpression appFixity _appLeft
+    r <- ppRightExpression appFixity _appRight
     return $ l <+> r
 
 instance PrettyCode Let where

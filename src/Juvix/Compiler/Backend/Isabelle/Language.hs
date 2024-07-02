@@ -9,13 +9,13 @@ import Juvix.Compiler.Internal.Data.Name
 import Juvix.Prelude
 
 data Type
-  = TyVar Var
+  = TyVar TypeVar
   | TyFun FunType
   | TyInd IndApp
   deriving stock (Eq)
 
-data Var = Var
-  { _varName :: Name
+data TypeVar = TypeVar
+  { _typeVarName :: Name
   }
   deriving stock (Eq)
 
@@ -40,7 +40,7 @@ data IndApp = IndApp
   }
   deriving stock (Eq)
 
-makeLenses ''Var
+makeLenses ''TypeVar
 makeLenses ''FunType
 makeLenses ''IndApp
 
@@ -65,7 +65,7 @@ data Application = Application
   }
 
 data Let = Let
-  { _letVar :: Var,
+  { _letVar :: Name,
     _letValue :: Expression,
     _letBody :: Expression
   }
@@ -87,13 +87,13 @@ data CaseBranch = CaseBranch
   }
 
 data Lambda = Lambda
-  { _lambdaVar :: Var,
+  { _lambdaVar :: Name,
     _lambdaType :: Maybe Type,
     _lambdaBody :: Expression
   }
 
 data Pattern
-  = PatVar Var
+  = PatVar Name
   | PatConstrApp ConstrApp
   | PatTuple (Tuple Pattern)
 
@@ -146,7 +146,7 @@ data Synonym = Synonym
 
 data Datatype = Datatype
   { _datatypeName :: Name,
-    _datatypeParams :: [Var],
+    _datatypeParams :: [TypeVar],
     _datatypeConstructors :: [Constructor]
   }
 
@@ -157,7 +157,7 @@ data Constructor = Constructor
 
 data Record = Record
   { _recordName :: Name,
-    _recordParams :: [Var],
+    _recordParams :: [TypeVar],
     _recordFields :: [RecordField]
   }
 
@@ -183,7 +183,7 @@ data Theory = Theory
 
 makeLenses ''Theory
 
-instance HasAtomicity Var where
+instance HasAtomicity TypeVar where
   atomicity _ = Atom
 
 instance HasAtomicity Type where
@@ -193,3 +193,15 @@ instance HasAtomicity Type where
     TyInd IndApp {..}
       | null _indAppParams -> Atom
       | otherwise -> Aggregate appFixity
+
+instance HasAtomicity Expression where
+  atomicity = \case
+    ExprIden {} -> Atom
+    ExprUndefined -> Atom
+    ExprLiteral {} -> Atom
+    ExprApp {} -> Aggregate appFixity
+    ExprTuple {} -> Atom
+    ExprLet {} -> Aggregate letFixity
+    ExprIf {} -> Aggregate letFixity
+    ExprCase {} -> Atom
+    ExprLambda {} -> Atom
