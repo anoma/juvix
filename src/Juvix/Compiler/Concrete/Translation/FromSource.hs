@@ -1120,9 +1120,9 @@ sideIfBranch ::
   ParsecS r (SideIfBranch 'Parsed k)
 sideIfBranch isFirst = do
   let ifElseKw =
-        Irrelevant <$> case sing :: SSideIfBranchKind k of
-          SSideIfBool -> kw kwIf
-          SSideIfElse -> kw kwElse
+        Irrelevant <$> case sing :: SIfBranchKind k of
+          SBranchIfBool -> kw kwIf
+          SBranchIfElse -> kw kwElse
   (_sideIfBranchPipe, _sideIfBranchKw) <- P.try $ do
     let opt
           | isFirst = optional
@@ -1130,9 +1130,9 @@ sideIfBranch isFirst = do
     pipe' <- Irrelevant <$> opt (kw kwPipe)
     condKw' <- ifElseKw
     return (pipe', condKw')
-  _sideIfBranchCondition <- case sing :: SSideIfBranchKind k of
-    SSideIfBool -> parseExpressionAtoms
-    SSideIfElse -> return ()
+  _sideIfBranchCondition <- case sing :: SIfBranchKind k of
+    SBranchIfBool -> parseExpressionAtoms
+    SBranchIfElse -> return ()
   _sideIfBranchAssignKw <- Irrelevant <$> kw kwAssign
   _sideIfBranchBody <- parseExpressionAtoms
   return SideIfBranch {..}
@@ -1193,12 +1193,8 @@ parseIfBranchElse' _ifBranchElsePipe = do
   _ifBranchElseExpression <- parseExpressionAtoms
   return IfBranchElse {..}
 
-multiwayIf' :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => KeywordRef -> [IfBranch 'Parsed] -> ParsecS r (If 'Parsed)
-multiwayIf' _ifKw brs = do
-  pipeKw <- Irrelevant <$> kw kwPipe
-  multiwayIfBranchElse' _ifKw pipeKw brs <|> multiwayIfBranch' _ifKw pipeKw brs
+mumultiwayIfBranch' :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => KeywordRef -> Irrelevant KeywordRef -> [IfBranch 'Parsed] -> ParsecS r (If 'Parsed)
 
-multiwayIfBranch' :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => KeywordRef -> Irrelevant KeywordRef -> [IfBranch 'Parsed] -> ParsecS r (If 'Parsed)
 multiwayIfBranch' _ifKw pipeKw brs = do
   br <- ifBranch' pipeKw
   multiwayIf' _ifKw (br : brs)
@@ -1211,11 +1207,12 @@ multiwayIfBranchElse' _ifKw pipeKw brs = do
     Nothing -> parseFailure off "A multiway if must have at least one condition branch"
     Just _ifBranches -> return If {..}
 
-multiwayIf :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (Either (If 'Parsed) Name)
+multiwayIf :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (If 'Parsed)
 multiwayIf = do
   _ifKw <- kw kwIf
-  (Left <$> multiwayIf' _ifKw [])
-    <|> return (Right $ NameUnqualified $ WithLoc (getLoc _ifKw) (_ifKw ^. keywordRefKeyword . keywordAscii))
+  multiwayIf' _ifKw []
+  pipeKw <- Irrelevant <$> kw kwPipe
+  multiwayIfBranchElse' _ifKw pipeKw brs <|> multiwayIfBranch' _ifKw pipeKw brs
 
 --------------------------------------------------------------------------------
 -- Universe expression

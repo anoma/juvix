@@ -545,9 +545,9 @@ instance (SingI s, SingI k) => PrettyPrint (SideIfBranch s k) where
     let kwPipe' = ppCode <$> _sideIfBranchPipe ^. unIrrelevant
         kwIfElse' = ppCode _sideIfBranchKw
         kwAssign' = ppCode _sideIfBranchAssignKw
-        condition' = case sing :: SSideIfBranchKind k of
-          SSideIfBool -> Just (ppExpressionType _sideIfBranchCondition)
-          SSideIfElse -> Nothing
+        condition' = case sing :: SIfBranchKind k of
+          SBranchIfBool -> Just (ppExpressionType _sideIfBranchCondition)
+          SBranchIfElse -> Nothing
         body' = ppExpressionType _sideIfBranchBody
     kwPipe'
       <?+> ( kwIfElse'

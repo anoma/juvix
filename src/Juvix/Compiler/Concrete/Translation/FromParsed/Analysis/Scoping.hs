@@ -2215,7 +2215,7 @@ checkRhsExpression RhsExpression {..} = do
       }
 
 checkSideIfBranch ::
-  forall r (k :: SideIfBranchKind).
+  forall r (k :: IfBranchKind).
   ( SingI k,
     Members
       '[ HighlightBuilder,
@@ -2233,9 +2233,9 @@ checkSideIfBranch ::
   SideIfBranch 'Parsed k ->
   Sem r (SideIfBranch 'Scoped k)
 checkSideIfBranch SideIfBranch {..} = do
-  cond' <- case sing :: SSideIfBranchKind k of
-    SSideIfBool -> checkParseExpressionAtoms _sideIfBranchCondition
-    SSideIfElse -> return _sideIfBranchCondition
+  cond' <- case sing :: SIfBranchKind k of
+    SBranchIfBool -> checkParseExpressionAtoms _sideIfBranchCondition
+    SBranchIfElse -> return _sideIfBranchCondition
   body' <- checkParseExpressionAtoms _sideIfBranchBody
   return
     SideIfBranch

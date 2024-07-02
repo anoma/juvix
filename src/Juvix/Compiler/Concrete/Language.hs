@@ -6,7 +6,7 @@ module Juvix.Compiler.Concrete.Language
     module Juvix.Compiler.Concrete.Data.IsOpenShort,
     module Juvix.Compiler.Concrete.Data.LocalModuleOrigin,
     module Juvix.Data.IteratorInfo,
-    module Juvix.Compiler.Concrete.Data.SideIfBranchKind,
+    module Juvix.Compiler.Concrete.Data.IfBranchKind,
     module Juvix.Compiler.Concrete.Data.Name,
     module Juvix.Compiler.Concrete.Data.Stage,
     module Juvix.Compiler.Concrete.Data.NameRef,
@@ -24,6 +24,7 @@ where
 import Data.Kind qualified as GHC
 import Juvix.Compiler.Backend.Markdown.Data.Types (Mk)
 import Juvix.Compiler.Concrete.Data.Builtins
+import Juvix.Compiler.Concrete.Data.IfBranchKind
 import Juvix.Compiler.Concrete.Data.IsOpenShort
 import Juvix.Compiler.Concrete.Data.Literal
 import Juvix.Compiler.Concrete.Data.LocalModuleOrigin
@@ -32,7 +33,6 @@ import Juvix.Compiler.Concrete.Data.Name
 import Juvix.Compiler.Concrete.Data.NameRef
 import Juvix.Compiler.Concrete.Data.PublicAnn
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
-import Juvix.Compiler.Concrete.Data.SideIfBranchKind
 import Juvix.Compiler.Concrete.Data.Stage
 import Juvix.Compiler.Concrete.Data.VisibilityAnn
 import Juvix.Data
@@ -59,10 +59,10 @@ type family FieldArgIxType s = res | res -> s where
   FieldArgIxType 'Parsed = ()
   FieldArgIxType 'Scoped = Int
 
-type SideIfBranchConditionType :: Stage -> SideIfBranchKind -> GHC.Type
-type family SideIfBranchConditionType s k = res where
-  SideIfBranchConditionType s 'SideIfBool = ExpressionType s
-  SideIfBranchConditionType _ 'SideIfElse = ()
+type IfBranchConditionType :: Stage -> IfBranchKind -> GHC.Type
+type family IfBranchConditionType s k = res where
+  IfBranchConditionType s 'BranchIfBool = ExpressionType s
+  IfBranchConditionType _ 'BranchIfElse = ()
 
 type ModuleIdType :: Stage -> ModuleIsTop -> GHC.Type
 type family ModuleIdType s t = res where
@@ -1713,58 +1713,58 @@ deriving stock instance Ord (Let 'Parsed)
 
 deriving stock instance Ord (Let 'Scoped)
 
-data SideIfBranch (s :: Stage) (k :: SideIfBranchKind) = SideIfBranch
+data SideIfBranch (s :: Stage) (k :: IfBranchKind) = SideIfBranch
   { _sideIfBranchPipe :: Irrelevant (Maybe KeywordRef),
     _sideIfBranchKw :: Irrelevant KeywordRef,
-    _sideIfBranchCondition :: SideIfBranchConditionType s k,
+    _sideIfBranchCondition :: IfBranchConditionType s k,
     _sideIfBranchAssignKw :: Irrelevant KeywordRef,
     _sideIfBranchBody :: ExpressionType s
   }
   deriving stock (Generic)
 
-instance Serialize (SideIfBranch 'Scoped 'SideIfBool)
+instance Serialize (SideIfBranch 'Scoped 'BranchIfBool)
 
-instance Serialize (SideIfBranch 'Scoped 'SideIfElse)
+instance Serialize (SideIfBranch 'Scoped 'BranchIfElse)
 
-instance NFData (SideIfBranch 'Scoped 'SideIfBool)
+instance NFData (SideIfBranch 'Scoped 'BranchIfBool)
 
-instance NFData (SideIfBranch 'Scoped 'SideIfElse)
+instance NFData (SideIfBranch 'Scoped 'BranchIfElse)
 
-instance Serialize (SideIfBranch 'Parsed 'SideIfBool)
+instance Serialize (SideIfBranch 'Parsed 'BranchIfBool)
 
-instance Serialize (SideIfBranch 'Parsed 'SideIfElse)
+instance Serialize (SideIfBranch 'Parsed 'BranchIfElse)
 
-instance NFData (SideIfBranch 'Parsed 'SideIfElse)
+instance NFData (SideIfBranch 'Parsed 'BranchIfElse)
 
-instance NFData (SideIfBranch 'Parsed 'SideIfBool)
+instance NFData (SideIfBranch 'Parsed 'BranchIfBool)
 
-deriving stock instance Show (SideIfBranch 'Parsed 'SideIfElse)
+deriving stock instance Show (SideIfBranch 'Parsed 'BranchIfElse)
 
-deriving stock instance Show (SideIfBranch 'Parsed 'SideIfBool)
+deriving stock instance Show (SideIfBranch 'Parsed 'BranchIfBool)
 
-deriving stock instance Show (SideIfBranch 'Scoped 'SideIfElse)
+deriving stock instance Show (SideIfBranch 'Scoped 'BranchIfElse)
 
-deriving stock instance Show (SideIfBranch 'Scoped 'SideIfBool)
+deriving stock instance Show (SideIfBranch 'Scoped 'BranchIfBool)
 
-deriving stock instance Eq (SideIfBranch 'Parsed 'SideIfElse)
+deriving stock instance Eq (SideIfBranch 'Parsed 'BranchIfElse)
 
-deriving stock instance Eq (SideIfBranch 'Parsed 'SideIfBool)
+deriving stock instance Eq (SideIfBranch 'Parsed 'BranchIfBool)
 
-deriving stock instance Eq (SideIfBranch 'Scoped 'SideIfElse)
+deriving stock instance Eq (SideIfBranch 'Scoped 'BranchIfElse)
 
-deriving stock instance Eq (SideIfBranch 'Scoped 'SideIfBool)
+deriving stock instance Eq (SideIfBranch 'Scoped 'BranchIfBool)
 
-deriving stock instance Ord (SideIfBranch 'Parsed 'SideIfElse)
+deriving stock instance Ord (SideIfBranch 'Parsed 'BranchIfElse)
 
-deriving stock instance Ord (SideIfBranch 'Parsed 'SideIfBool)
+deriving stock instance Ord (SideIfBranch 'Parsed 'BranchIfBool)
 
-deriving stock instance Ord (SideIfBranch 'Scoped 'SideIfElse)
+deriving stock instance Ord (SideIfBranch 'Scoped 'BranchIfElse)
 
-deriving stock instance Ord (SideIfBranch 'Scoped 'SideIfBool)
+deriving stock instance Ord (SideIfBranch 'Scoped 'BranchIfBool)
 
 data SideIfs (s :: Stage) = SideIfs
-  { _sideIfBranches :: NonEmpty (SideIfBranch s 'SideIfBool),
-    _sideIfElse :: Maybe (SideIfBranch s 'SideIfElse)
+  { _sideIfBranches :: NonEmpty (SideIfBranch s 'BranchIfBool),
+    _sideIfElse :: Maybe (SideIfBranch s 'BranchIfElse)
   }
   deriving stock (Generic)
 
