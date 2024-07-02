@@ -1195,7 +1195,7 @@ ifBranch = do
     pipeHelper :: ParsecS r KeywordRef
     pipeHelper = case sing :: SIfBranchKind k of
       SBranchIfBool -> P.try (kw kwPipe <* P.notFollowedBy (kw kwElse))
-      SBranchIfElse -> kw kwElse
+      SBranchIfElse -> kw kwPipe
 
 multiwayIf :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (If 'Parsed)
 multiwayIf = do
