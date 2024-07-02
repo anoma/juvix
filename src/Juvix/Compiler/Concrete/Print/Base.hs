@@ -616,32 +616,37 @@ ppCase isTop Case {..} = do
               Just p -> ppCode p
               Nothing -> ppCode Kw.kwPipe
 
-instance (SingI s) => PrettyPrint (IfBranch s) where
+instance (SingI s) => PrettyPrint (IfBranch s 'BranchIfBool) where
   ppCode IfBranch {..} = do
-    let cond' = ppExpressionType _ifBranchCondition
+    let pipe' = ppCode _ifBranchPipe
+        cond' = ppExpressionType _ifBranchCondition
         e' = ppExpressionType _ifBranchExpression
-    cond' <+> ppCode _ifBranchAssignKw <> oneLineOrNext e'
+    pipe' <+> cond' <+> ppCode _ifBranchAssignKw <> oneLineOrNext e'
 
-ppIfBranchElse :: forall r s. (Members '[ExactPrint, Reader Options] r, SingI s) => IsTop -> IfBranchElse s -> Sem r ()
-ppIfBranchElse isTop IfBranchElse {..} = do
-  let e' = ppMaybeTopExpression isTop _ifBranchElseExpression
-  ppCode _ifBranchElseKw <+> ppCode _ifBranchElseAssignKw <> oneLineOrNext e'
+ppIfBranchElse ::
+  forall r s.
+  (Members '[ExactPrint, Reader Options] r, SingI s) =>
+  IsTop ->
+  IfBranch s 'BranchIfElse ->
+  Sem r ()
+ppIfBranchElse isTop IfBranch {..} = do
+  let e' = ppMaybeTopExpression isTop _ifBranchExpression
+  ppCode _ifBranchCondition <+> ppCode _ifBranchAssignKw <> oneLineOrNext e'
 
 ppIf :: forall r s. (Members '[ExactPrint, Reader Options] r, SingI s) => IsTop -> If s -> Sem r ()
 ppIf isTop If {..} = do
-  ppCode _ifKw <+> hardline <> indent (vsepHard (ppIfBranch <$> _ifBranches) <> hardline <> ppIfBranchElse' _ifBranchElse)
+  ppCode _ifKw
+    <+> hardline
+      <> indent
+        ( vsepHard (ppIfBranch <$> _ifBranches)
+            <> hardline
+            <> ppIfBranch _ifBranchElse
+        )
   where
-    ppIfBranch :: IfBranch s -> Sem r ()
-    ppIfBranch b = pipeHelper <+> ppCode b
-      where
-        pipeHelper :: Sem r ()
-        pipeHelper = ppCode (b ^. ifBranchPipe . unIrrelevant)
-
-    ppIfBranchElse' :: IfBranchElse s -> Sem r ()
-    ppIfBranchElse' b = pipeHelper <+> ppIfBranchElse isTop b
-      where
-        pipeHelper :: Sem r ()
-        pipeHelper = ppCode (b ^. ifBranchElsePipe . unIrrelevant)
+    ppIfBranch :: forall k. (SingI k) => IfBranch s k -> Sem r ()
+    ppIfBranch b = case sing :: SIfBranchKind k of
+      SBranchIfBool -> ppCode b
+      SBranchIfElse -> ppIfBranchElse isTop b
 
 instance PrettyPrint Universe where
   ppCode Universe {..} = ppCode _universeKw <+?> (noLoc . pretty <$> _universeLevel)

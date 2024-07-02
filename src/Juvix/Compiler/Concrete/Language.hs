@@ -59,10 +59,15 @@ type family FieldArgIxType s = res | res -> s where
   FieldArgIxType 'Parsed = ()
   FieldArgIxType 'Scoped = Int
 
+type SideIfBranchConditionType :: Stage -> IfBranchKind -> GHC.Type
+type family SideIfBranchConditionType s k = res where
+  SideIfBranchConditionType s 'BranchIfBool = ExpressionType s
+  SideIfBranchConditionType _ 'BranchIfElse = ()
+
 type IfBranchConditionType :: Stage -> IfBranchKind -> GHC.Type
 type family IfBranchConditionType s k = res where
   IfBranchConditionType s 'BranchIfBool = ExpressionType s
-  IfBranchConditionType _ 'BranchIfElse = ()
+  IfBranchConditionType _ 'BranchIfElse = Irrelevant KeywordRef
 
 type ModuleIdType :: Stage -> ModuleIsTop -> GHC.Type
 type family ModuleIdType s t = res where
@@ -1716,7 +1721,7 @@ deriving stock instance Ord (Let 'Scoped)
 data SideIfBranch (s :: Stage) (k :: IfBranchKind) = SideIfBranch
   { _sideIfBranchPipe :: Irrelevant (Maybe KeywordRef),
     _sideIfBranchKw :: Irrelevant KeywordRef,
-    _sideIfBranchCondition :: IfBranchConditionType s k,
+    _sideIfBranchCondition :: SideIfBranchConditionType s k,
     _sideIfBranchAssignKw :: Irrelevant KeywordRef,
     _sideIfBranchBody :: ExpressionType s
   }
@@ -1950,66 +1955,58 @@ deriving stock instance Ord (NewCase 'Parsed)
 
 deriving stock instance Ord (NewCase 'Scoped)
 
-data IfBranch (s :: Stage) = IfBranch
+data IfBranch (s :: Stage) (k :: IfBranchKind) = IfBranch
   { _ifBranchPipe :: Irrelevant KeywordRef,
     _ifBranchAssignKw :: Irrelevant KeywordRef,
-    _ifBranchCondition :: ExpressionType s,
+    _ifBranchCondition :: IfBranchConditionType s k,
     _ifBranchExpression :: ExpressionType s
   }
   deriving stock (Generic)
 
-instance Serialize (IfBranch 'Scoped)
+instance Serialize (IfBranch 'Scoped 'BranchIfBool)
 
-instance NFData (IfBranch 'Scoped)
+instance Serialize (IfBranch 'Scoped 'BranchIfElse)
 
-instance Serialize (IfBranch 'Parsed)
+instance NFData (IfBranch 'Scoped 'BranchIfBool)
 
-instance NFData (IfBranch 'Parsed)
+instance NFData (IfBranch 'Scoped 'BranchIfElse)
 
-deriving stock instance Show (IfBranch 'Parsed)
+instance Serialize (IfBranch 'Parsed 'BranchIfBool)
 
-deriving stock instance Show (IfBranch 'Scoped)
+instance Serialize (IfBranch 'Parsed 'BranchIfElse)
 
-deriving stock instance Eq (IfBranch 'Parsed)
+instance NFData (IfBranch 'Parsed 'BranchIfElse)
 
-deriving stock instance Eq (IfBranch 'Scoped)
+instance NFData (IfBranch 'Parsed 'BranchIfBool)
 
-deriving stock instance Ord (IfBranch 'Parsed)
+deriving stock instance Show (IfBranch 'Parsed 'BranchIfElse)
 
-deriving stock instance Ord (IfBranch 'Scoped)
+deriving stock instance Show (IfBranch 'Parsed 'BranchIfBool)
 
-data IfBranchElse (s :: Stage) = IfBranchElse
-  { _ifBranchElsePipe :: Irrelevant KeywordRef,
-    _ifBranchElseAssignKw :: Irrelevant KeywordRef,
-    _ifBranchElseKw :: Irrelevant KeywordRef,
-    _ifBranchElseExpression :: ExpressionType s
-  }
-  deriving stock (Generic)
+deriving stock instance Show (IfBranch 'Scoped 'BranchIfElse)
 
-instance Serialize (IfBranchElse 'Scoped)
+deriving stock instance Show (IfBranch 'Scoped 'BranchIfBool)
 
-instance NFData (IfBranchElse 'Scoped)
+deriving stock instance Eq (IfBranch 'Parsed 'BranchIfElse)
 
-instance Serialize (IfBranchElse 'Parsed)
+deriving stock instance Eq (IfBranch 'Parsed 'BranchIfBool)
 
-instance NFData (IfBranchElse 'Parsed)
+deriving stock instance Eq (IfBranch 'Scoped 'BranchIfElse)
 
-deriving stock instance Show (IfBranchElse 'Parsed)
+deriving stock instance Eq (IfBranch 'Scoped 'BranchIfBool)
 
-deriving stock instance Show (IfBranchElse 'Scoped)
+deriving stock instance Ord (IfBranch 'Parsed 'BranchIfElse)
 
-deriving stock instance Eq (IfBranchElse 'Parsed)
+deriving stock instance Ord (IfBranch 'Parsed 'BranchIfBool)
 
-deriving stock instance Eq (IfBranchElse 'Scoped)
+deriving stock instance Ord (IfBranch 'Scoped 'BranchIfElse)
 
-deriving stock instance Ord (IfBranchElse 'Parsed)
-
-deriving stock instance Ord (IfBranchElse 'Scoped)
+deriving stock instance Ord (IfBranch 'Scoped 'BranchIfBool)
 
 data If (s :: Stage) = If
   { _ifKw :: KeywordRef,
-    _ifBranches :: NonEmpty (IfBranch s),
-    _ifBranchElse :: IfBranchElse s
+    _ifBranches :: [IfBranch s 'BranchIfBool],
+    _ifBranchElse :: IfBranch s 'BranchIfElse
   }
   deriving stock (Generic)
 
@@ -2661,7 +2658,6 @@ makeLenses ''Case
 makeLenses ''CaseBranch
 makeLenses ''If
 makeLenses ''IfBranch
-makeLenses ''IfBranchElse
 makeLenses ''PatternBinding
 makeLenses ''PatternAtoms
 makeLenses ''ExpressionAtoms
@@ -2895,11 +2891,8 @@ instance (SingI s) => HasLoc (CaseBranch s) where
       branchLoc :: Interval
       branchLoc = getLoc (c ^. caseBranchRhs)
 
-instance (SingI s) => HasLoc (IfBranch s) where
+instance (SingI s) => HasLoc (IfBranch s k) where
   getLoc c = getLoc (c ^. ifBranchPipe) <> getLocExpressionType (c ^. ifBranchExpression)
-
-instance (SingI s) => HasLoc (IfBranchElse s) where
-  getLoc c = getLoc (c ^. ifBranchElsePipe) <> getLocExpressionType (c ^. ifBranchElseExpression)
 
 instance (SingI s) => HasLoc (Case s) where
   getLoc c = getLoc (c ^. caseKw) <> getLoc (c ^. caseBranches . to last)
