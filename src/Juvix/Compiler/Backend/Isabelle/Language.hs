@@ -88,7 +88,7 @@ data CaseBranch = CaseBranch
 
 data Lambda = Lambda
   { _lambdaVar :: Var,
-    _lambdaType :: Type,
+    _lambdaType :: Maybe Type,
     _lambdaBody :: Expression
   }
 

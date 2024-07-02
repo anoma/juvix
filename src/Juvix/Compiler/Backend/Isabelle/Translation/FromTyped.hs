@@ -315,18 +315,81 @@ goModule onlyTypes infoTable Internal.Module {..} =
       ExprLambda
         Lambda
           { _lambdaVar = Var $ _slambdaBinder ^. Internal.sbinderVar,
-            _lambdaType = goType $ _slambdaBinder ^. Internal.sbinderType,
+            _lambdaType = Just $ goType $ _slambdaBinder ^. Internal.sbinderType,
             _lambdaBody = goExpression _slambdaBody
           }
 
+    -- TODO: properly unique names for lambda-bound variables
     goLambda :: Internal.Lambda -> Expression
-    goLambda = undefined
+    goLambda Internal.Lambda {..} = goLams vars
+      where
+        npats = length $ head _lambdaClauses ^. Internal.lambdaPatterns
+        vars = map (\i -> defaultName {_nameText = "X" <> show i}) [0 .. npats - 1]
+
+        goLams :: [Name] -> Expression
+        goLams = \case
+          v : vs ->
+            ExprLambda
+              Lambda
+                { _lambdaType = fmap goType _lambdaType,
+                  _lambdaVar = Var v,
+                  _lambdaBody = goLams vs
+                }
+          [] ->
+            ExprCase
+              Case
+                { _caseValue =
+                    ExprTuple
+                      Tuple
+                        { _tupleComponents = nonEmpty' $ map ExprIden vars
+                        },
+                  _caseBranches = fmap goClause _lambdaClauses
+                }
+
+        goClause :: Internal.LambdaClause -> CaseBranch
+        goClause Internal.LambdaClause {..} =
+          CaseBranch
+            { _caseBranchPattern =
+                PatTuple
+                  Tuple
+                    { _tupleComponents = fmap goPatternArg _lambdaPatterns
+                    },
+              _caseBranchBody = goExpression _lambdaBody
+            }
 
     goCase :: Internal.Case -> Expression
-    goCase = undefined
+    goCase Internal.Case {..} =
+      ExprCase
+        Case
+          { _caseValue = goExpression _caseExpression,
+            _caseBranches = fmap goCaseBranch _caseBranches
+          }
 
+    goCaseBranch :: Internal.CaseBranch -> CaseBranch
+    goCaseBranch Internal.CaseBranch {..} =
+      CaseBranch
+        { _caseBranchPattern = goPatternArg _caseBranchPattern,
+          _caseBranchBody = goExpression _caseBranchExpression
+        }
+
+    -- TODO: named patterns (`_patternArgName`) are not handled properly
     goPatternArg :: Internal.PatternArg -> Pattern
-    goPatternArg = undefined
+    goPatternArg Internal.PatternArg {..} =
+      goPattern _patternArgPattern
+
+    goPattern :: Internal.Pattern -> Pattern
+    goPattern = \case
+      Internal.PatternVariable x -> PatVar $ Var x
+      Internal.PatternConstructorApp x -> goPatternConstructorApp x
+      Internal.PatternWildcardConstructor {} -> impossible
+
+    goPatternConstructorApp :: Internal.ConstructorApp -> Pattern
+    goPatternConstructorApp Internal.ConstructorApp {..} =
+      PatConstrApp
+        ConstrApp
+          { _constrAppConstructor = _constrAppConstructor,
+            _constrAppArgs = map goPatternArg _constrAppParameters
+          }
 
     defaultName :: Name
     defaultName =

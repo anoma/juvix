@@ -131,9 +131,10 @@ instance PrettyCode ConstrApp where
 instance PrettyCode Lambda where
   ppCode Lambda {..} = do
     name <- ppCode _lambdaVar
-    ty <- ppCode _lambdaType
+    mty <- maybe (return Nothing) (ppCode >=> return . Just) _lambdaType
     body <- ppCode _lambdaBody
-    return $ parens $ kwLambda <+> name <+> colon <> colon <+> ty <+> dot <+> body
+    let ty = fmap (\t -> colon <> colon <+> t) mty
+    return $ parens $ kwLambda <+> name <+?> ty <+> dot <+> body
 
 instance PrettyCode Statement where
   ppCode = \case
@@ -156,7 +157,7 @@ instance PrettyCode Function where
     ty <- ppCodeQuoted _functionType
     cls <- mapM ppCode _functionClauses
     let cls' = fmap (dquotes . (n <+>)) cls
-    return $ kwFun <+> n <+> "::" <+> ty <+> kwWhere <> line <> indent' (hsep cls')
+    return $ kwFun <+> n <+> "::" <+> ty <+> kwWhere <> line <> indent' (vsep cls')
 
 instance PrettyCode Clause where
   ppCode Clause {..} = do
