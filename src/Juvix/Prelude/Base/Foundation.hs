@@ -206,6 +206,11 @@ type GHCConstraint = GHC.Constraint
 
 type LazyHashMap = LazyHashMap.HashMap
 
+type ImpliesK :: Bool -> GHCConstraint -> GHCConstraint
+type family ImpliesK cond k = res where
+  ImpliesK 'True k = k
+  ImpliesK 'False _ = ()
+
 traverseM ::
   (Monad m, Traversable m, Applicative f) =>
   (a1 -> f (m a2)) ->

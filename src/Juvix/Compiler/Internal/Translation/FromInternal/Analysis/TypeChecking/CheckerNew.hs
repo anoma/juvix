@@ -68,7 +68,17 @@ makeLenses ''AppBuilderArg
 makeLenses ''FunctionDefault
 makeLenses ''FunctionDefaultInfo
 
+instance RecHasExpressions FunctionDefaultInfo
+
 instance HasExpressions FunctionDefaultInfo where
+  immediateSubExpressions f i = do
+    val' <- recImmediateSubExpressions f (i ^. functionDefaultValue)
+    pure
+      FunctionDefaultInfo
+        { _functionDefaultValue = val',
+          _functionDefaultArgId = i ^. functionDefaultArgId
+        }
+
   leafExpressions f i = do
     val' <- leafExpressions f (i ^. functionDefaultValue)
     pure
@@ -77,7 +87,20 @@ instance HasExpressions FunctionDefaultInfo where
           _functionDefaultArgId = i ^. functionDefaultArgId
         }
 
+instance RecHasExpressions FunctionDefault
+
 instance HasExpressions FunctionDefault where
+  immediateSubExpressions f FunctionDefault {..} = do
+    l' <- recImmediateSubExpressions f _functionDefaultLeft
+    r' <- recImmediateSubExpressions f _functionDefaultRight
+    d' <- recImmediateSubExpressions f _functionDefaultDefault
+    pure
+      FunctionDefault
+        { _functionDefaultLeft = l',
+          _functionDefaultRight = r',
+          _functionDefaultDefault = d'
+        }
+
   leafExpressions f FunctionDefault {..} = do
     l' <- leafExpressions f _functionDefaultLeft
     r' <- leafExpressions f _functionDefaultRight
@@ -89,12 +112,28 @@ instance HasExpressions FunctionDefault where
           _functionDefaultDefault = d'
         }
 
+instance RecHasExpressions BuilderType
+
 instance HasExpressions BuilderType where
+  immediateSubExpressions f = \case
+    BuilderTypeNoDefaults e -> BuilderTypeNoDefaults <$> recImmediateSubExpressions f e
+    BuilderTypeDefaults l -> BuilderTypeDefaults <$> recImmediateSubExpressions f l
+
   leafExpressions f = \case
     BuilderTypeNoDefaults e -> BuilderTypeNoDefaults <$> leafExpressions f e
     BuilderTypeDefaults l -> BuilderTypeDefaults <$> leafExpressions f l
 
+instance RecHasExpressions AppBuilderArg
+
 instance HasExpressions AppBuilderArg where
+  immediateSubExpressions f AppBuilderArg {..} = do
+    a' <- recImmediateSubExpressions f _appBuilderArg
+    pure
+      AppBuilderArg
+        { _appBuilderArg = a',
+          _appBuilderArgIsDefault
+        }
+
   leafExpressions f AppBuilderArg {..} = do
     a' <- leafExpressions f _appBuilderArg
     pure
