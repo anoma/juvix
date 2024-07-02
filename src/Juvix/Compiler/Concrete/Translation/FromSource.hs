@@ -825,7 +825,7 @@ expressionAtom =
       <|> AtomNamedApplicationNew <$> namedApplicationNew
       <|> AtomNamedApplication <$> namedApplication
       <|> AtomList <$> parseList
-      <|> either AtomIf AtomIdentifier <$> multiwayIf
+      <|> AtomIf <$> multiwayIf
       <|> AtomIdentifier <$> name
       <|> AtomUniverse <$> universe
       <|> AtomLambda <$> lambda
@@ -1112,11 +1112,63 @@ letBlock = do
   _letExpression <- parseExpressionAtoms
   return Let {..}
 
+-- | The pipe for the first branch is optional
+sideIfBranch ::
+  forall r k.
+  (SingI k, Members '[ParserResultBuilder, PragmasStash, JudocStash] r) =>
+  Bool ->
+  ParsecS r (SideIfBranch 'Parsed k)
+sideIfBranch isFirst = do
+  let ifElseKw =
+        Irrelevant <$> case sing :: SIfBranchKind k of
+          SBranchIfBool -> kw kwIf
+          SBranchIfElse -> kw kwElse
+  (_sideIfBranchPipe, _sideIfBranchKw) <- P.try $ do
+    let opt
+          | isFirst = optional
+          | otherwise = fmap Just
+    pipe' <- Irrelevant <$> opt (kw kwPipe)
+    condKw' <- ifElseKw
+    return (pipe', condKw')
+  _sideIfBranchCondition <- case sing :: SIfBranchKind k of
+    SBranchIfBool -> parseExpressionAtoms
+    SBranchIfElse -> return ()
+  _sideIfBranchAssignKw <- Irrelevant <$> kw kwAssign
+  _sideIfBranchBody <- parseExpressionAtoms
+  return SideIfBranch {..}
+
+sideIfs :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (SideIfs 'Parsed)
+sideIfs = do
+  fstBranch <- sideIfBranch True
+  moreBranches <- many (sideIfBranch False)
+  let _sideIfBranches = fstBranch :| moreBranches
+  _sideIfElse <- optional (sideIfBranch False)
+  return
+    SideIfs
+      { ..
+      }
+
+prhsExpression :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (RhsExpression 'Parsed)
+prhsExpression = do
+  _rhsExpressionAssignKw <- Irrelevant <$> kw kwAssign
+  _rhsExpression <- parseExpressionAtoms
+  return RhsExpression {..}
+
+pcaseBranchRhs :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (CaseBranchRhs 'Parsed)
+pcaseBranchRhs =
+  CaseBranchRhsExpression <$> pcaseBranchRhsExpression
+    <|> CaseBranchRhsIf <$> sideIfs
+
+pcaseBranchRhsExpression :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (RhsExpression 'Parsed)
+pcaseBranchRhsExpression = do
+  _rhsExpressionAssignKw <- Irrelevant <$> kw kwAssign
+  _rhsExpression <- parseExpressionAtoms
+  return RhsExpression {..}
+
 caseBranch :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => Irrelevant (Maybe KeywordRef) -> ParsecS r (CaseBranch 'Parsed)
 caseBranch _caseBranchPipe = do
   _caseBranchPattern <- parsePatternAtoms
-  _caseBranchAssignKw <- Irrelevant <$> kw kwAssign
-  _caseBranchExpression <- parseExpressionAtoms
+  _caseBranchRhs <- pcaseBranchRhs
   return CaseBranch {..}
 
 case_ :: forall r. (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (Case 'Parsed)
@@ -1127,43 +1179,30 @@ case_ = P.label "case" $ do
   _caseBranches <- braces (pipeSep1 caseBranch) <|> pipeSep1 caseBranch
   return Case {..}
 
-ifBranch' :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => Irrelevant KeywordRef -> ParsecS r (IfBranch 'Parsed)
-ifBranch' _ifBranchPipe = do
-  _ifBranchCondition <- parseExpressionAtoms
+ifBranch ::
+  forall r k.
+  (SingI k, Members '[ParserResultBuilder, PragmasStash, JudocStash] r) =>
+  ParsecS r (IfBranch 'Parsed k)
+ifBranch = do
+  _ifBranchPipe <- Irrelevant <$> pipeHelper
+  _ifBranchCondition <- case sing :: SIfBranchKind k of
+    SBranchIfBool -> parseExpressionAtoms
+    SBranchIfElse -> Irrelevant <$> kw kwElse
   _ifBranchAssignKw <- Irrelevant <$> kw kwAssign
   _ifBranchExpression <- parseExpressionAtoms
   return IfBranch {..}
+  where
+    pipeHelper :: ParsecS r KeywordRef
+    pipeHelper = case sing :: SIfBranchKind k of
+      SBranchIfBool -> P.try (kw kwPipe <* P.notFollowedBy (kw kwElse))
+      SBranchIfElse -> kw kwPipe
 
-parseIfBranchElse' :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => Irrelevant KeywordRef -> ParsecS r (IfBranchElse 'Parsed)
-parseIfBranchElse' _ifBranchElsePipe = do
-  _ifBranchElseKw <- Irrelevant <$> kw kwElse
-  _ifBranchElseAssignKw <- Irrelevant <$> kw kwAssign
-  _ifBranchElseExpression <- parseExpressionAtoms
-  return IfBranchElse {..}
-
-multiwayIf' :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => KeywordRef -> [IfBranch 'Parsed] -> ParsecS r (If 'Parsed)
-multiwayIf' _ifKw brs = do
-  pipeKw <- Irrelevant <$> kw kwPipe
-  multiwayIfBranchElse' _ifKw pipeKw brs <|> multiwayIfBranch' _ifKw pipeKw brs
-
-multiwayIfBranch' :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => KeywordRef -> Irrelevant KeywordRef -> [IfBranch 'Parsed] -> ParsecS r (If 'Parsed)
-multiwayIfBranch' _ifKw pipeKw brs = do
-  br <- ifBranch' pipeKw
-  multiwayIf' _ifKw (br : brs)
-
-multiwayIfBranchElse' :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => KeywordRef -> Irrelevant KeywordRef -> [IfBranch 'Parsed] -> ParsecS r (If 'Parsed)
-multiwayIfBranchElse' _ifKw pipeKw brs = do
-  off <- P.getOffset
-  _ifBranchElse <- parseIfBranchElse' pipeKw
-  case nonEmpty (reverse brs) of
-    Nothing -> parseFailure off "A multiway if must have at least one condition branch"
-    Just _ifBranches -> return If {..}
-
-multiwayIf :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (Either (If 'Parsed) Name)
+multiwayIf :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (If 'Parsed)
 multiwayIf = do
   _ifKw <- kw kwIf
-  (Left <$> multiwayIf' _ifKw [])
-    <|> return (Right $ NameUnqualified $ WithLoc (getLoc _ifKw) (_ifKw ^. keywordRefKeyword . keywordAscii))
+  _ifBranches <- many ifBranch
+  _ifBranchElse <- ifBranch
+  return If {..}
 
 --------------------------------------------------------------------------------
 -- Universe expression

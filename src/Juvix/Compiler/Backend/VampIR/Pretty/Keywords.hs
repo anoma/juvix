@@ -51,6 +51,3 @@ kwLessThan = keyword Str.vampirLessThan
 
 kwLessOrEqual :: Doc Ann
 kwLessOrEqual = keyword Str.vampirLessOrEqual
-
-kwIf :: Doc Ann
-kwIf = keyword Str.vampirIf

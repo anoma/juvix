@@ -90,10 +90,27 @@ instance HasExpressions Pattern where
     PatternConstructorApp a -> PatternConstructorApp <$> leafExpressions f a
     PatternWildcardConstructor {} -> pure p
 
+instance HasExpressions SideIfBranch where
+  leafExpressions f b = do
+    _sideIfBranchCondition <- leafExpressions f (b ^. sideIfBranchCondition)
+    _sideIfBranchBody <- leafExpressions f (b ^. sideIfBranchBody)
+    pure SideIfBranch {..}
+
+instance HasExpressions SideIfs where
+  leafExpressions f b = do
+    _sideIfBranches <- traverse (leafExpressions f) (b ^. sideIfBranches)
+    _sideIfElse <- traverse (leafExpressions f) (b ^. sideIfElse)
+    pure SideIfs {..}
+
+instance HasExpressions CaseBranchRhs where
+  leafExpressions f = \case
+    CaseBranchRhsExpression e -> CaseBranchRhsExpression <$> leafExpressions f e
+    CaseBranchRhsIf e -> CaseBranchRhsIf <$> leafExpressions f e
+
 instance HasExpressions CaseBranch where
   leafExpressions f b = do
     _caseBranchPattern <- leafExpressions f (b ^. caseBranchPattern)
-    _caseBranchExpression <- leafExpressions f (b ^. caseBranchExpression)
+    _caseBranchRhs <- leafExpressions f (b ^. caseBranchRhs)
     pure CaseBranch {..}
 
 instance HasExpressions Case where

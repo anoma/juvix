@@ -92,6 +92,7 @@ reservedKeywords =
     kwEnd,
     kwHiding,
     kwHole,
+    kwIf,
     kwImport,
     kwIn,
     kwInductive,

@@ -100,6 +100,9 @@ kwColon = keyword Str.colon
 kwData :: Doc Ann
 kwData = keyword Str.data_
 
+kwIf :: Doc Ann
+kwIf = keyword Str.if_
+
 kwAssign :: Doc Ann
 kwAssign = keyword Str.assignAscii
 
