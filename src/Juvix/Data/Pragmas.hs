@@ -58,6 +58,11 @@ newtype PragmaEval = PragmaEval
   }
   deriving stock (Show, Eq, Ord, Data, Generic)
 
+newtype PragmaIsabelleOperator = PragmaIsabelleOperator
+  { _pragmaIsabelleOperator :: Text
+  }
+  deriving stock (Show, Eq, Ord, Data, Generic)
+
 data Pragmas = Pragmas
   { _pragmasInline :: Maybe PragmaInline,
     _pragmasUnroll :: Maybe PragmaUnroll,
@@ -67,7 +72,8 @@ data Pragmas = Pragmas
     _pragmasSpecialise :: Maybe PragmaSpecialise,
     _pragmasSpecialiseArgs :: Maybe PragmaSpecialiseArgs,
     _pragmasSpecialiseBy :: Maybe PragmaSpecialiseBy,
-    _pragmasEval :: Maybe PragmaEval
+    _pragmasEval :: Maybe PragmaEval,
+    _pragmasIsabelleOperator :: Maybe PragmaIsabelleOperator
   }
   deriving stock (Show, Eq, Ord, Data, Generic)
 
@@ -99,6 +105,8 @@ instance Hashable PragmaSpecialise
 instance Hashable PragmaSpecialiseBy
 
 instance Hashable PragmaEval
+
+instance Hashable PragmaIsabelleOperator
 
 instance Hashable Pragmas
 
@@ -142,6 +150,10 @@ instance Serialize PragmaEval
 
 instance NFData PragmaEval
 
+instance Serialize PragmaIsabelleOperator
+
+instance NFData PragmaIsabelleOperator
+
 instance Serialize Pragmas
 
 instance NFData Pragmas
@@ -170,6 +182,7 @@ instance FromJSON Pragmas where
         specby' <- keyMay "specialize-by" parseSpecialiseBy
         let _pragmasSpecialiseBy = specby <|> specby'
         _pragmasEval <- keyMay "eval" parseEval
+        _pragmasIsabelleOperator <- keyMay "isabelle-operator" parseIsabelleOperator
         return Pragmas {..}
 
       parseInline :: Parse YamlError PragmaInline
@@ -221,6 +234,11 @@ instance FromJSON Pragmas where
         _pragmaEval <- asBool
         return PragmaEval {..}
 
+      parseIsabelleOperator :: Parse YamlError PragmaIsabelleOperator
+      parseIsabelleOperator = do
+        _pragmaIsabelleOperator <- asText
+        return PragmaIsabelleOperator {..}
+
       parseSpecialiseArg :: Parse YamlError PragmaSpecialiseArg
       parseSpecialiseArg =
         (SpecialiseArgNum <$> asIntegral)
@@ -262,7 +280,8 @@ instance Semigroup Pragmas where
         _pragmasEval = p2 ^. pragmasEval <|> p1 ^. pragmasEval,
         _pragmasSpecialise = p2 ^. pragmasSpecialise <|> p1 ^. pragmasSpecialise,
         _pragmasSpecialiseArgs = p2 ^. pragmasSpecialiseArgs <|> p1 ^. pragmasSpecialiseArgs,
-        _pragmasSpecialiseBy = p2 ^. pragmasSpecialiseBy <|> p1 ^. pragmasSpecialiseBy
+        _pragmasSpecialiseBy = p2 ^. pragmasSpecialiseBy <|> p1 ^. pragmasSpecialiseBy,
+        _pragmasIsabelleOperator = p2 ^. pragmasIsabelleOperator
       }
 
 instance Monoid Pragmas where
@@ -276,7 +295,8 @@ instance Monoid Pragmas where
         _pragmasSpecialise = Nothing,
         _pragmasSpecialiseArgs = Nothing,
         _pragmasSpecialiseBy = Nothing,
-        _pragmasEval = Nothing
+        _pragmasEval = Nothing,
+        _pragmasIsabelleOperator = Nothing
       }
 
 adjustPragmaInline :: Int -> PragmaInline -> PragmaInline

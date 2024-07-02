@@ -96,7 +96,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
     goRecordField :: Internal.FunctionParameter -> RecordField
     goRecordField Internal.FunctionParameter {..} =
       RecordField
-        { _recordFieldName = fromMaybe defaultName _paramName,
+        { _recordFieldName = fromMaybe (defaultName "_") _paramName,
           _recordFieldType = goType _paramType
         }
 
@@ -133,7 +133,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
                 _functionClauses = goBody argnames body
               }
           where
-            argnames = fmap (fromMaybe defaultName . (^. Internal.argInfoName)) args
+            argnames = fmap (fromMaybe (defaultName "_") . (^. Internal.argInfoName)) args
 
     goBody :: NonEmpty Name -> Maybe Internal.Expression -> NonEmpty Clause
     goBody argnames = \case
@@ -155,7 +155,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
 
         goClause :: Internal.LambdaClause -> Clause
         goClause Internal.LambdaClause {..}
-          | argsNum >= length pats =
+          | argsNum >= length _lambdaPatterns =
               Clause
                 { _clausePatterns = pats,
                   _clauseBody = goExpression _lambdaBody
@@ -324,7 +324,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
     goLambda Internal.Lambda {..} = goLams vars
       where
         npats = length $ head _lambdaClauses ^. Internal.lambdaPatterns
-        vars = map (\i -> defaultName {_nameText = "X" <> show i}) [0 .. npats - 1]
+        vars = map (\i -> defaultName ("X" <> show i)) [0 .. npats - 1]
 
         goLams :: [Name] -> Expression
         goLams = \case
@@ -391,14 +391,14 @@ goModule onlyTypes infoTable Internal.Module {..} =
             _constrAppArgs = map goPatternArg _constrAppParameters
           }
 
-    defaultName :: Name
-    defaultName =
+    defaultName :: Text -> Name
+    defaultName n =
       Name
-        { _nameText = "_",
+        { _nameText = n,
           _nameId = defaultId,
           _nameKind = KNameLocal,
           _nameKindPretty = KNameLocal,
-          _namePretty = "",
+          _namePretty = n,
           _nameLoc = defaultLoc,
           _nameFixity = Nothing
         }
