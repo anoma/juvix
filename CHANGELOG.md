@@ -4,6 +4,41 @@
 <img align="right" width="300" height="300" alt="Juvix Mascot" src="../assets/images/tara-smiling.svg" />
 </a>
 
+## [v0.6.3](https://github.com/anoma/juvix/tree/v0.6.3) (2024-07-02)
+
+[Full Changelog](https://github.com/anoma/juvix/compare/v0.6.2...v0.6.3)
+
+**Implemented enhancements:**
+
+- Improve performance of formatting a project [\#2863](https://github.com/anoma/juvix/pull/2863) ([janmasrovira](https://github.com/janmasrovira))
+- Adapt Anoma builtins to new Anoma Node API [\#2861](https://github.com/anoma/juvix/pull/2861) ([paulcadman](https://github.com/paulcadman))
+- Support Anoma representation of Maybe [\#2856](https://github.com/anoma/juvix/pull/2856) ([paulcadman](https://github.com/paulcadman))
+- Add support for anoma specific functions to the Core evaluator [\#2851](https://github.com/anoma/juvix/pull/2851) ([paulcadman](https://github.com/paulcadman))
+- Inline immediate values [\#2842](https://github.com/anoma/juvix/pull/2842) ([lukaszcz](https://github.com/lukaszcz))
+- Dead code elimination in JuvixReg [\#2835](https://github.com/anoma/juvix/pull/2835) ([lukaszcz](https://github.com/lukaszcz))
+- Give proper colors to builtins [\#2834](https://github.com/anoma/juvix/pull/2834) ([janmasrovira](https://github.com/janmasrovira))
+- Constant propagation in JuvixReg [\#2833](https://github.com/anoma/juvix/pull/2833) ([lukaszcz](https://github.com/lukaszcz))
+- Copy propagation in JuvixReg [\#2828](https://github.com/anoma/juvix/pull/2828) ([lukaszcz](https://github.com/lukaszcz))
+- Generalize import syntax [\#2819](https://github.com/anoma/juvix/pull/2819) ([janmasrovira](https://github.com/janmasrovira))
+
+**Merged pull requests:**
+
+- Merge `if` -\> `ite` renaming from stdlib [\#2869](https://github.com/anoma/juvix/pull/2869) ([janmasrovira](https://github.com/janmasrovira))
+- Optimize `letFunctionDefs` in `Juvix.Compiler.Internal.Data.InfoTable` [\#2867](https://github.com/anoma/juvix/pull/2867) ([lukaszcz](https://github.com/lukaszcz))
+- Refactor pipeline functions for tests [\#2864](https://github.com/anoma/juvix/pull/2864) ([lukaszcz](https://github.com/lukaszcz))
+- Make `Maybe` a builtin inductive type [\#2860](https://github.com/anoma/juvix/pull/2860) ([paulcadman](https://github.com/paulcadman))
+- Peephole optimization of Cairo assembly [\#2858](https://github.com/anoma/juvix/pull/2858) ([lukaszcz](https://github.com/lukaszcz))
+- Update juvix-stdlib to remove non-ASCII indentifiers [\#2857](https://github.com/anoma/juvix/pull/2857) ([paulcadman](https://github.com/paulcadman))
+- Add an `if` instruction to JuvixReg [\#2855](https://github.com/anoma/juvix/pull/2855) ([lukaszcz](https://github.com/lukaszcz))
+- Cairo: untagged record representation [\#2853](https://github.com/anoma/juvix/pull/2853) ([lukaszcz](https://github.com/lukaszcz))
+- Add lcomposition fixity to support \(\>\>\) in the stdlib [\#2847](https://github.com/anoma/juvix/pull/2847) ([paulcadman](https://github.com/paulcadman))
+- Remove copy propagation from the native/WASM and Rust pipelines [\#2846](https://github.com/anoma/juvix/pull/2846) ([lukaszcz](https://github.com/lukaszcz))
+- `just format` uses ghc flags in juvix.cabal [\#2844](https://github.com/anoma/juvix/pull/2844) ([janmasrovira](https://github.com/janmasrovira))
+- Fix names in Core [\#2843](https://github.com/anoma/juvix/pull/2843) ([lukaszcz](https://github.com/lukaszcz))
+- Fix Rust toolchain caching [\#2825](https://github.com/anoma/juvix/pull/2825) ([lukaszcz](https://github.com/lukaszcz))
+- Cairo: Support complex data types in program input [\#2822](https://github.com/anoma/juvix/pull/2822) ([lukaszcz](https://github.com/lukaszcz))
+- Add error message for ill-scoped variables [\#2566](https://github.com/anoma/juvix/pull/2566) ([janmasrovira](https://github.com/janmasrovira))
+
 ## [v0.6.2](https://github.com/anoma/juvix/tree/v0.6.2) (2024-06-12)
 
 [Full Changelog](https://github.com/anoma/juvix/compare/v0.6.1...v0.6.2)
