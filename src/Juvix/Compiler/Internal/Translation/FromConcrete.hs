@@ -942,12 +942,12 @@ goExpression = \case
     goIf :: Concrete.If 'Scoped -> Sem r Internal.Expression
     goIf e@Concrete.If {..} = do
       if_ <- getBuiltinName (getLoc e) BuiltinBoolIf
-      go if_ (toList _ifBranches)
+      go if_ _ifBranches
       where
-        go :: Internal.Name -> [Concrete.IfBranch 'Scoped] -> Sem r Internal.Expression
+        go :: Internal.Name -> [Concrete.IfBranch 'Scoped 'BranchIfBool] -> Sem r Internal.Expression
         go if_ = \case
           [] ->
-            goExpression (_ifBranchElse ^. Concrete.ifBranchElseExpression)
+            goExpression (_ifBranchElse ^. Concrete.ifBranchExpression)
           Concrete.IfBranch {..} : brs -> do
             c <- goExpression _ifBranchCondition
             b1 <- goExpression _ifBranchExpression
@@ -1083,7 +1083,7 @@ gRhsExpression RhsExpression {..} = goExpression _rhsExpression
 goSideIfBranch ::
   forall r.
   (Members '[Reader DefaultArgsStack, Builtins, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) =>
-  BranchIfBranch 'Scoped 'BranchIfBool ->
+  SideIfBranch 'Scoped 'BranchIfBool ->
   Sem r Internal.SideIfBranch
 goSideIfBranch s = do
   cond' <- goExpression (s ^. sideIfBranchCondition)
