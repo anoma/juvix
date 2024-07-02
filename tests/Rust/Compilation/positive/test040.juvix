@@ -14,4 +14,4 @@ type Foo (A : Type) :=
 f : {A : Type} -> Foo A -> A
   | (foo unit a) := a;
 
-main : Nat := if (f (foo unit true)) 1 0;
+main : Nat := ite (f (foo unit true)) 1 0;

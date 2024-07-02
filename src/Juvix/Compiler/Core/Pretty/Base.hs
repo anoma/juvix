@@ -58,7 +58,7 @@ instance PrettyCode BuiltinOp where
     OpAnomaVerifyDetached -> return primAnomaVerifyDetached
     OpAnomaSign -> return primAnomaSign
     OpAnomaSignDetached -> return primAnomaSignDetached
-    OpAnomaVerify -> return primAnomaVerify
+    OpAnomaVerifyWithMessage -> return primAnomaVerifyWithMessage
     OpPoseidonHash -> return primPoseidonHash
     OpEc -> return primEc
     OpRandomEcPoint -> return primRandomEcPoint
@@ -819,8 +819,8 @@ primAnomaSign = primitive Str.anomaSign
 primAnomaSignDetached :: Doc Ann
 primAnomaSignDetached = primitive Str.anomaSignDetached
 
-primAnomaVerify :: Doc Ann
-primAnomaVerify = primitive Str.anomaVerify
+primAnomaVerifyWithMessage :: Doc Ann
+primAnomaVerifyWithMessage = primitive Str.anomaVerifyWithMessage
 
 primPoseidonHash :: Doc Ann
 primPoseidonHash = primitive Str.cairoPoseidon

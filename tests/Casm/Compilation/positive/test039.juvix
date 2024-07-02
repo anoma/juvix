@@ -14,4 +14,4 @@ main : Nat :=
       | zero := true
       | (suc n) := not (odd n);
     plusOne (n : Ty) : Ty := n + 1;
-  in if (odd (plusOne 13)) 1 0 + if (even (plusOne 12)) 1 0;
+  in ite (odd (plusOne 13)) 1 0 + ite (even (plusOne 12)) 1 0;

@@ -32,7 +32,7 @@ data BuiltinOp
   | OpAnomaVerifyDetached
   | OpAnomaSign
   | OpAnomaSignDetached
-  | OpAnomaVerify
+  | OpAnomaVerifyWithMessage
   | OpPoseidonHash
   | OpEc
   | OpRandomEcPoint
@@ -86,7 +86,7 @@ builtinOpArgsNum = \case
   OpAnomaVerifyDetached -> 3
   OpAnomaSign -> 2
   OpAnomaSignDetached -> 2
-  OpAnomaVerify -> 2
+  OpAnomaVerifyWithMessage -> 2
   OpPoseidonHash -> 1
   OpEc -> 3
   OpRandomEcPoint -> 0
@@ -129,7 +129,7 @@ builtinIsFoldable = \case
   OpAnomaVerifyDetached -> False
   OpAnomaSign -> False
   OpAnomaSignDetached -> False
-  OpAnomaVerify -> False
+  OpAnomaVerifyWithMessage -> False
   OpPoseidonHash -> False
   OpEc -> False
   OpRandomEcPoint -> False
@@ -153,6 +153,6 @@ builtinsAnoma =
     OpAnomaDecode,
     OpAnomaVerifyDetached,
     OpAnomaSign,
-    OpAnomaVerify,
+    OpAnomaVerifyWithMessage,
     OpAnomaSignDetached
   ]

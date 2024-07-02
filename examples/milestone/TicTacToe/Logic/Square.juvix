@@ -23,5 +23,5 @@ showSquare : Square → String
   | (occupied s) := " " ++str showSymbol s ++str " ";
 
 replace (player : Symbol) (k : Nat) : Square → Square
-  | (empty n) := if (n == k) (occupied player) (empty n)
+  | (empty n) := ite (n == k) (occupied player) (empty n)
   | s := s;

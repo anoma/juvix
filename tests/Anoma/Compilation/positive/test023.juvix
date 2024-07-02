@@ -7,14 +7,14 @@ import Stdlib.Debug.Trace open;
 terminating
 f : Nat → Nat
 
-  | x := if (x < 1) 1 (2 * x + g (sub x 1));
+  | x := ite (x < 1) 1 (2 * x + g (sub x 1));
 
 terminating
 g : Nat → Nat
-  | x := if (x < 1) 1 (x + h (sub x 1));
+  | x := ite (x < 1) 1 (x + h (sub x 1));
 
 terminating
 h : Nat → Nat
-  | x := if (x < 1) 1 (x * f (sub x 1));
+  | x := ite (x < 1) 1 (x * f (sub x 1));
 
 main : Nat := trace (f 5) >-> trace (f 10) >-> f 20;

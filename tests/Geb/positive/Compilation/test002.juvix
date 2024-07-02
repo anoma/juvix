@@ -9,7 +9,7 @@ type optbool :=
 
 main : Bool :=
   λ {
-      x (Just b) := if x true b
+      x (Just b) := ite x true b
       | _ Nothing := false
     }
     false

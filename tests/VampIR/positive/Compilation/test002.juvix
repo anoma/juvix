@@ -8,17 +8,17 @@ type optbool :=
   | Nothing : optbool;
 
 natToBool : Nat -> Bool
-  | x := if (x == 0) false true;
+  | x := ite (x == 0) false true;
 
 boolToNat : Bool -> Nat
-  | x := if x 1 0;
+  | x := ite x 1 0;
 
 {-# public: [b] #-}
 main : Nat -> Nat -> Nat
   | a b :=
     boolToNat
       <| λ {
-          | x (Just b) := if x false b
+          | x (Just b) := ite x false b
           | _ Nothing := false
         }
         (natToBool a)

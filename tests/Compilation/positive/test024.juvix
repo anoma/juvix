@@ -14,7 +14,7 @@ gen : Nat → Tree
 
 g : Tree → Tree
   | leaf := leaf
-  | (node l r) := if (isNode l) r (node r l);
+  | (node l r) := ite (isNode l) r (node r l);
 
 terminating
 f : Tree → Nat

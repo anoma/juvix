@@ -65,7 +65,7 @@ type Bool :=
   | true : Bool
   | false : Bool;
 
-if : {A : Type} → Bool → A → A → A
+ite : {A : Type} → Bool → A → A → A
   | true a _ := a
   | false _ b := b;
 
@@ -130,10 +130,10 @@ foldl
 
 filter : {A : Type} → (A → Bool) → List A → List A
   | _ nil := nil
-  | f (h :: hs) := if (f h) (h :: filter f hs) (filter f hs);
+  | f (h :: hs) := ite (f h) (h :: filter f hs) (filter f hs);
 
 partition
   : {A : Type} → (A → Bool) → List A → List A × List A
   | _ nil := nil, nil
   | f (x :: xs) :=
-    if (f x) first second ((::) x) (partition f xs);
+    ite (f x) first second ((::) x) (partition f xs);

@@ -25,7 +25,7 @@ type ComplianceResult :=
 
 count : List (Pair Field Bool) -> Field
   | [] := 0
-  | ((h, b) :: t) := if b (h + count t) (count t);
+  | ((h, b) :: t) := ite b (h + count t) (count t);
 
 main
   (input : Resource)

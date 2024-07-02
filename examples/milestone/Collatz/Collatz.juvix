@@ -3,7 +3,7 @@ module Collatz;
 import Stdlib.Prelude open;
 
 collatzNext (n : Nat) : Nat :=
-  if (mod n 2 == 0) (div n 2) (3 * n + 1);
+  ite (mod n 2 == 0) (div n 2) (3 * n + 1);
 
 collatz : Nat → Nat
   | zero := zero

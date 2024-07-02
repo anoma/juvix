@@ -9,8 +9,8 @@ power : Nat → Nat → Nat :=
     terminating
     power' (acc a b : Nat) : Nat :=
       let
-        acc' : Nat := if (mod b 2 == 0) acc (acc * a);
-      in if (b == 0) acc (power' acc' (a * a) (div b 2));
+        acc' : Nat := ite (mod b 2 == 0) acc (acc * a);
+      in ite (b == 0) acc (power' acc' (a * a) (div b 2));
   in power' 1;
 
 main : Nat -> Nat -> Nat := power;

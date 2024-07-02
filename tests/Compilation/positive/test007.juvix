@@ -11,7 +11,7 @@ map' {A B} (f : A → B) : List A → List B :=
 
 terminating
 map'' {A B} {{Partial}} (f : A → B) (x : List A) : List B :=
-  if (null x) nil (f (phead x) :: map'' f (tail x));
+  ite (null x) nil (f (phead x) :: map'' f (tail x));
 
 lst : List Nat := 0 :: 1 :: nil;
 

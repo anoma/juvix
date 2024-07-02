@@ -29,7 +29,7 @@ normalize fsize md = run . evalInfoTableBuilder md . runReader normEnv . normali
           _normEnvLevel = 0,
           _normEnvEvalEnv = []
         }
-    identCtx = computeCombinedIdentContext md
+    tab = computeCombinedInfoTable md
 
     normalize' :: Node -> Norm Node
     normalize' node0 = do
@@ -39,7 +39,7 @@ normalize fsize md = run . evalInfoTableBuilder md . runReader normEnv . normali
     neval :: Node -> Norm Node
     neval node = do
       env <- asks (^. normEnvEvalEnv)
-      return $ geval opts stdout identCtx env node
+      return $ geval opts stdout tab env node
       where
         opts =
           defaultEvalOptions

@@ -40,7 +40,7 @@ module Balances;
   increment : Field -> Nat -> Balances -> Balances
     | f n nil := (f, n) :: nil
     | f n ((b, bn) :: bs) :=
-      if
+      ite
         (f == b)
         ((b, bn + n) :: bs)
         ((b, bn) :: increment f n bs);
@@ -51,7 +51,7 @@ module Balances;
   decrement : Field -> Nat -> Balances -> Balances
     | _ _ nil := nil
     | f n ((b, bn) :: bs) :=
-      if
+      ite
         (f == b)
         ((b, sub bn n) :: bs)
         ((b, bn) :: decrement f n bs);
@@ -80,7 +80,7 @@ calculateInterest : Nat -> Nat -> Nat -> Nat
 
 --- Asserts some ;Bool; condition.
 assert : {A : Type} -> Bool -> A -> A
-  | c a := if c a (failwith "assertion failed");
+  | c a := ite c a (failwith "assertion failed");
 
 --- Returns a new ;Token;. Arguments are:
 ---

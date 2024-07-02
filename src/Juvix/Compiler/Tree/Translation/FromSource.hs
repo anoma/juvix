@@ -129,7 +129,7 @@ parseAnoma =
     <|> parseAnoma' kwAnomaVerifyDetached OpAnomaVerifyDetached
     <|> parseAnoma' kwAnomaSign OpAnomaSign
     <|> parseAnoma' kwAnomaSignDetached OpAnomaSignDetached
-    <|> parseAnoma' kwAnomaVerify OpAnomaVerify
+    <|> parseAnoma' kwAnomaVerifyWithMessage OpAnomaVerifyWithMessage
 
 parseAnoma' ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>

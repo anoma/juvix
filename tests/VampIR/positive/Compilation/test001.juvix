@@ -4,4 +4,4 @@ module test001;
 import Stdlib.Prelude open;
 
 main : Nat -> Nat
-  | x := if (x == 0) 1 0;
+  | x := ite (x == 0) 1 0;

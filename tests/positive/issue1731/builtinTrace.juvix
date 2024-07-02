@@ -7,7 +7,7 @@ axiom trace : {A : Type} → A → A;
 
 terminating
 f : Nat → Nat → Nat
-  | x y := if (x == 0) y (trace x >-> f (sub x 1) y);
+  | x y := ite (x == 0) y (trace x >-> f (sub x 1) y);
 
 {-
 f 4 0 =

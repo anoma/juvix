@@ -17,7 +17,7 @@ terminating
 -- Comment between terminating and type sig
 go : Nat → Nat → Nat
   | n s :=
-    if
+    ite
       (s < n)
       (go (sub n 1) s)
       (go n (sub s n) + go (sub n 1) s);
@@ -297,7 +297,7 @@ module Traits;
 
   instance
   showBoolI : Show Bool :=
-    mkShow (show := λ {x := if x "true" "false"});
+    mkShow (show := λ {x := ite x "true" "false"});
 
   instance
   showNatI : Show Nat := mkShow (show := natToString);
