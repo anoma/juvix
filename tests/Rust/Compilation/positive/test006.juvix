@@ -7,7 +7,7 @@ terminating
 loop : Nat := loop;
 
 main : Nat :=
-  if (3 > 0) 1 loop
-    + if (2 < 1) loop (if (7 >= 8) loop 1)
-    + if (2 > 0 || loop == 0) 1 0
-    + if (2 < 0 && loop == 0) 1 0;
+  ite (3 > 0) 1 loop
+    + ite (2 < 1) loop (ite (7 >= 8) loop 1)
+    + ite (2 > 0 || loop == 0) 1 0
+    + ite (2 < 0 && loop == 0) 1 0;

@@ -19,7 +19,7 @@ merget : List Nat → List Nat → List Nat → List Nat
   | nil ys acc := revappend acc ys
   | xs nil acc := revappend acc xs
   | (x :: xs') (y :: ys') acc :=
-    if
+    ite
       (x <= y)
       (merget xs' (y :: ys') (x :: acc))
       (merget (x :: xs') ys' (y :: acc));
@@ -37,14 +37,14 @@ sort : List Nat → List Nat
 sorted : List Nat → Bool
   | nil := true
   | (_ :: nil) := true
-  | (x :: y :: t) := if (x <= y) (sorted (y :: t)) false;
+  | (x :: y :: t) := ite (x <= y) (sorted (y :: t)) false;
 
 gen : Nat → List Nat → List Nat
   | zero acc := acc
   | (suc n) acc := gen n (suc n :: acc);
 
 main : IO :=
-  if
+  ite
     (sorted (sort (gen 2000000 nil)))
     (printStringLn "true")
     (printStringLn "false");

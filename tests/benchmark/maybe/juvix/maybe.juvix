@@ -18,7 +18,7 @@ terminating
 sum : Nat → Tree → Maybe Nat
   | x leaf := just 0
   | x (node y l r) :=
-    if (x == y) nothing (step1 x y (sum x l) r);
+    ite (x == y) nothing (step1 x y (sum x l) r);
 
 step2 : Nat → Maybe Nat → Maybe Nat
   | x (just y) := just (x + y)

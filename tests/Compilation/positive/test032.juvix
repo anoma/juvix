@@ -14,7 +14,7 @@ merge' : List Nat → List Nat → List Nat
   | nil ys := ys
   | xs nil := xs
   | xs@(x :: xs') ys@(y :: ys') :=
-    if (x <= y) (x :: merge' xs' ys) (y :: merge' xs ys');
+    ite (x <= y) (x :: merge' xs' ys) (y :: merge' xs ys');
 
 terminating
 sort : List Nat → List Nat
@@ -32,7 +32,7 @@ uniq : List Nat → List Nat
   | nil := nil
   | (x :: nil) := x :: nil
   | (x :: xs@(x' :: _)) :=
-    if (x == x') (uniq xs) (x :: uniq xs);
+    ite (x == x') (uniq xs) (x :: uniq xs);
 
 gen : List Nat → Nat → (Nat → Nat) → List Nat
   | acc zero f := acc

@@ -3,4 +3,4 @@ module test001;
 
 import Stdlib.Prelude open;
 
-main : Bool := λ {x := if x false true} true;
+main : Bool := λ {x := ite x false true} true;

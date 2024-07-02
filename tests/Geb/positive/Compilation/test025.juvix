@@ -9,7 +9,7 @@ pow : Nat -> Nat
 
 hash' : Nat -> Nat -> Nat
   | (suc n@(suc (suc m))) x :=
-    if
+    ite
       (x < pow n)
       (hash' n x)
       (mod (div (x * x) (pow m)) (pow 6))

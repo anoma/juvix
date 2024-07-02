@@ -26,7 +26,7 @@ sum : List Int → Int := sum_go 0;
 
 terminating
 gen : Int → Int → List Int
-  | k n := if (k == n) (k :: nil) (k :: gen (k + 1) n);
+  | k n := ite (k == n) (k :: nil) (k :: gen (k + 1) n);
 
 main : IO :=
   printIntLn

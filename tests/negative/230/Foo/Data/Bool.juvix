@@ -24,6 +24,6 @@ syntax operator && logical;
   | false _ := false
   | true a := a;
 
-if : {A : Type} → Bool → A → A → A
+ite : {A : Type} → Bool → A → A → A
   | true a _ := a
   | false _ b := b;
