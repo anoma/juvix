@@ -44,6 +44,77 @@ makeLenses ''Var
 makeLenses ''FunType
 makeLenses ''IndApp
 
+data Expression
+  = ExprIden Name
+  | ExprUndefined
+  | ExprLiteral Literal
+  | ExprApp Application
+  | ExprTuple (Tuple Expression)
+  | ExprLet Let
+  | ExprIf If
+  | ExprCase Case
+  | ExprLambda Lambda
+
+data Literal
+  = LitNumeric Integer
+  | LitString Text
+
+data Application = Application
+  { _appLeft :: Expression,
+    _appRight :: Expression
+  }
+
+data Let = Let
+  { _letVar :: Var,
+    _letValue :: Expression,
+    _letBody :: Expression
+  }
+
+data If = If
+  { _ifValue :: Expression,
+    _ifBranchTrue :: Expression,
+    _ifBranchFalse :: Expression
+  }
+
+data Case = Case
+  { _caseValue :: Expression,
+    _caseBranches :: NonEmpty CaseBranch
+  }
+
+data CaseBranch = CaseBranch
+  { _caseBranchPattern :: Pattern,
+    _caseBranchBody :: Expression
+  }
+
+data Lambda = Lambda
+  { _lambdaVar :: Var,
+    _lambdaType :: Maybe Type,
+    _lambdaBody :: Expression
+  }
+
+data Pattern
+  = PatVar Var
+  | PatConstrApp ConstrApp
+  | PatTuple (Tuple Pattern)
+
+newtype Tuple a = Tuple
+  { _tupleComponents :: NonEmpty a
+  }
+
+data ConstrApp = ConstrApp
+  { _constrAppConstructor :: Name,
+    _constrAppArgs :: [Pattern]
+  }
+
+makeLenses ''Application
+makeLenses ''Let
+makeLenses ''If
+makeLenses ''Case
+makeLenses ''CaseBranch
+makeLenses ''Lambda
+makeLenses ''ConstrApp
+makeLenses ''Expression
+
 data Statement
   = StmtDefinition Definition
   | StmtFunction Function
@@ -53,12 +124,19 @@ data Statement
 
 data Definition = Definition
   { _definitionName :: Name,
-    _definitionType :: Type
+    _definitionType :: Type,
+    _definitionBody :: Expression
   }
 
 data Function = Function
   { _functionName :: Name,
-    _functionType :: Type
+    _functionType :: Type,
+    _functionClauses :: NonEmpty Clause
+  }
+
+data Clause = Clause
+  { _clausePatterns :: NonEmpty Pattern,
+    _clauseBody :: Expression
   }
 
 data Synonym = Synonym
@@ -95,6 +173,7 @@ makeLenses ''Datatype
 makeLenses ''Constructor
 makeLenses ''Record
 makeLenses ''RecordField
+makeLenses ''Tuple
 
 data Theory = Theory
   { _theoryName :: Name,

@@ -103,8 +103,6 @@ instance HasExpressions Case where
     _caseExpressionType <- traverse (leafExpressions f) (l ^. caseExpressionType)
     _caseExpressionWholeType <- traverse (leafExpressions f) (l ^. caseExpressionWholeType)
     pure Case {..}
-    where
-      _caseParens = l ^. caseParens
 
 instance HasExpressions MutualBlock where
   leafExpressions f (MutualBlock defs) =

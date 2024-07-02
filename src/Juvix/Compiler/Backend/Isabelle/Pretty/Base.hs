@@ -61,6 +61,81 @@ instance PrettyCode IndApp where
     ind <- ppCode _indAppInductive
     return $ params <?+> ind
 
+instance PrettyCode Expression where
+  ppCode = \case
+    ExprIden x -> ppCode x
+    ExprUndefined -> return kwUndefined
+    ExprLiteral x -> ppCode x
+    ExprApp x -> ppCode x
+    ExprTuple x -> ppCode x
+    ExprLet x -> ppCode x
+    ExprIf x -> ppCode x
+    ExprCase x -> ppCode x
+    ExprLambda x -> ppCode x
+
+instance PrettyCode Literal where
+  ppCode = \case
+    LitNumeric x -> return $ annotate AnnLiteralInteger (pretty x)
+    LitString x -> return $ annotate AnnLiteralString $ squotes $ squotes $ pretty x
+
+instance PrettyCode Application where
+  ppCode Application {..} = do
+    l <- ppCode _appLeft
+    r <- ppCode _appRight
+    return $ l <+> r
+
+instance PrettyCode Let where
+  ppCode Let {..} = do
+    name <- ppCode _letVar
+    val <- ppCode _letValue
+    body <- ppCode _letBody
+    return $ parens $ kwLet <+> name <+> "=" <+> val <+> kwIn <+> body
+
+instance PrettyCode If where
+  ppCode If {..} = do
+    val <- ppCode _ifValue
+    br1 <- ppCode _ifBranchTrue
+    br2 <- ppCode _ifBranchFalse
+    return $ parens $ kwIf <+> val <+> kwThen <+> br1 <+> kwElse <+> br2
+
+instance PrettyCode Case where
+  ppCode Case {..} = do
+    val <- ppCode _caseValue
+    brs <- toList <$> mapM ppCode _caseBranches
+    let brs' = punctuate kwPipe brs
+    return $ parens $ kwCase <+> val <+> kwOf <+> hsep brs'
+
+instance PrettyCode CaseBranch where
+  ppCode CaseBranch {..} = do
+    pat <- ppCode _caseBranchPattern
+    body <- ppCode _caseBranchBody
+    return $ pat <+> arrow <+> body
+
+instance (PrettyCode a) => PrettyCode (Tuple a) where
+  ppCode Tuple {..} = do
+    elems <- mapM ppCode _tupleComponents
+    return $ parens $ hsep (punctuate comma (toList elems))
+
+instance PrettyCode Pattern where
+  ppCode = \case
+    PatVar x -> ppCode x
+    PatConstrApp x -> ppCode x
+    PatTuple x -> ppCode x
+
+instance PrettyCode ConstrApp where
+  ppCode ConstrApp {..} = do
+    args <- mapM ppCode _constrAppArgs
+    name <- ppCode _constrAppConstructor
+    return $ (if null args then id else parens) $ name <+> hsep args
+
+instance PrettyCode Lambda where
+  ppCode Lambda {..} = do
+    name <- ppCode _lambdaVar
+    mty <- maybe (return Nothing) (ppCode >=> return . Just) _lambdaType
+    body <- ppCode _lambdaBody
+    let ty = fmap (\t -> colon <> colon <+> t) mty
+    return $ parens $ kwLambda <+> name <+?> ty <+> dot <+> body
+
 instance PrettyCode Statement where
   ppCode = \case
     StmtDefinition x -> ppCode x
@@ -73,13 +148,22 @@ instance PrettyCode Definition where
   ppCode Definition {..} = do
     n <- ppCode _definitionName
     ty <- ppCodeQuoted _definitionType
-    return $ kwDefinition <+> n <+> "::" <+> ty <+> kwWhere <> line <> dquotes (n <+> "=" <+> kwUndefined)
+    body <- ppCode _definitionBody
+    return $ kwDefinition <+> n <+> "::" <+> ty <+> kwWhere <> line <> dquotes (n <+> "=" <+> body)
 
 instance PrettyCode Function where
   ppCode Function {..} = do
     n <- ppCode _functionName
     ty <- ppCodeQuoted _functionType
-    return $ kwFun <+> n <+> "::" <+> ty <+> kwWhere <> line <> dquotes (n <+> "_" <+> "=" <+> kwUndefined)
+    cls <- mapM ppCode _functionClauses
+    let cls' = fmap (dquotes . (n <+>)) cls
+    return $ kwFun <+> n <+> "::" <+> ty <+> kwWhere <> line <> indent' (vsep cls')
+
+instance PrettyCode Clause where
+  ppCode Clause {..} = do
+    pats <- mapM ppCode _clausePatterns
+    body <- ppCode _clauseBody
+    return $ hsep pats <+> "=" <+> body
 
 instance PrettyCode Synonym where
   ppCode Synonym {..} = do

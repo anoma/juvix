@@ -1062,8 +1062,7 @@ goCase :: forall r. (Members '[Reader DefaultArgsStack, Builtins, NameIdGen, Err
 goCase c = do
   _caseExpression <- goExpression (c ^. caseExpression)
   _caseBranches <- mapM goBranch (c ^. caseBranches)
-  let _caseParens = False
-      _caseExpressionType :: Maybe Internal.Expression = Nothing
+  let _caseExpressionType :: Maybe Internal.Expression = Nothing
       _caseExpressionWholeType :: Maybe Internal.Expression = Nothing
   return Internal.Case {..}
   where
