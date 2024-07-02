@@ -135,6 +135,51 @@ goModule onlyTypes infoTable Internal.Module {..} =
           where
             argnames = fmap (fromMaybe defaultName . (^. Internal.argInfoName)) args
 
+    goBody :: NonEmpty Name -> Maybe Internal.Expression -> NonEmpty Clause
+    goBody argnames = \case
+      Nothing -> oneClause ExprUndefined
+      Just (Internal.ExpressionLambda Internal.Lambda {..}) ->
+        fmap goClause _lambdaClauses
+      Just body -> oneClause (goExpression body)
+      where
+        argsNum = length argnames
+
+        oneClause :: Expression -> NonEmpty Clause
+        oneClause expr =
+          nonEmpty'
+            [ Clause
+                { _clausePatterns = fmap (PatVar . Var) argnames,
+                  _clauseBody = expr
+                }
+            ]
+
+        goClause :: Internal.LambdaClause -> Clause
+        goClause Internal.LambdaClause {..}
+          | argsNum >= length pats =
+              Clause
+                { _clausePatterns = pats,
+                  _clauseBody = goExpression _lambdaBody
+                }
+          | otherwise =
+              Clause
+                { _clausePatterns = pats,
+                  _clauseBody =
+                    goExpression $
+                      Internal.ExpressionLambda
+                        Internal.Lambda
+                          { _lambdaType = Nothing,
+                            _lambdaClauses =
+                              nonEmpty'
+                                [ Internal.LambdaClause
+                                    { _lambdaPatterns = nonEmpty' $ drop argsNum (toList _lambdaPatterns),
+                                      _lambdaBody
+                                    }
+                                ]
+                          }
+                }
+          where
+            pats = nonEmpty' $ map goPatternArg (take argsNum (toList _lambdaPatterns))
+
     goFunctionDef :: Internal.FunctionDef -> Statement
     goFunctionDef Internal.FunctionDef {..} = goDef _funDefName _funDefType _funDefArgsInfo (Just _funDefBody)
 
@@ -200,51 +245,6 @@ goModule onlyTypes infoTable Internal.Module {..} =
         TyFun $ FunType (goType lty) (goType _functionRight)
       where
         lty = _functionLeft ^. Internal.paramType
-
-    goBody :: NonEmpty Name -> Maybe Internal.Expression -> NonEmpty Clause
-    goBody argnames = \case
-      Nothing -> oneClause ExprUndefined
-      Just (Internal.ExpressionLambda Internal.Lambda {..}) ->
-        fmap goClause _lambdaClauses
-      Just body -> oneClause (goExpression body)
-      where
-        argsNum = length argnames
-
-        oneClause :: Expression -> NonEmpty Clause
-        oneClause expr =
-          nonEmpty'
-            [ Clause
-                { _clausePatterns = fmap (PatVar . Var) argnames,
-                  _clauseBody = expr
-                }
-            ]
-
-        goClause :: Internal.LambdaClause -> Clause
-        goClause Internal.LambdaClause {..}
-          | argsNum >= length pats =
-              Clause
-                { _clausePatterns = pats,
-                  _clauseBody = goExpression _lambdaBody
-                }
-          | otherwise =
-              Clause
-                { _clausePatterns = pats,
-                  _clauseBody =
-                    goExpression $
-                      Internal.ExpressionLambda
-                        Internal.Lambda
-                          { _lambdaType = Nothing,
-                            _lambdaClauses =
-                              nonEmpty'
-                                [ Internal.LambdaClause
-                                    { _lambdaPatterns = nonEmpty' $ drop argsNum (toList _lambdaPatterns),
-                                      _lambdaBody
-                                    }
-                                ]
-                          }
-                }
-          where
-            pats = nonEmpty' $ map goPatternArg (take argsNum (toList _lambdaPatterns))
 
     goExpression :: Internal.Expression -> Expression
     goExpression = \case

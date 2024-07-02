@@ -239,8 +239,7 @@ data Case = Case
     _caseExpressionType :: Maybe Expression,
     -- | The type of the whole case expression. The typechecker fills this field
     _caseExpressionWholeType :: Maybe Expression,
-    _caseBranches :: NonEmpty CaseBranch,
-    _caseParens :: Bool
+    _caseBranches :: NonEmpty CaseBranch
   }
   deriving stock (Eq, Generic, Data)
 
