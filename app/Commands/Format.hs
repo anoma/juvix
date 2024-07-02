@@ -3,6 +3,7 @@ module Commands.Format where
 import Commands.Base
 import Commands.Format.Options
 import Data.Text qualified as Text
+import Juvix.Compiler.Concrete.Pretty.Options
 import Juvix.Compiler.Pipeline.Driver (processModule)
 import Juvix.Compiler.Pipeline.Loader.PathResolver.ImportTree.Base
 import Juvix.Compiler.Pipeline.ModuleInfoCache
@@ -51,7 +52,7 @@ targetFromOptions opts = do
 -- | Formats the project on the root
 formatProject ::
   forall r.
-  (Members '[App, EmbedIO, TaggedLock, Files, Output FormattedFileInfo] r) =>
+  (Members '[App, EmbedIO, Reader Options, TaggedLock, Files, Output FormattedFileInfo] r) =>
   Sem r FormatResult
 formatProject = runPipelineOptions . runPipelineSetup $ do
   pkg <- askPackage
@@ -69,7 +70,11 @@ runCommand :: forall r. (Members '[EmbedIO, App, TaggedLock, Files] r) => Format
 runCommand opts = do
   target <- targetFromOptions opts
   runOutputSem (renderFormattedOutput target opts) . runScopeFileApp $ do
-    res <- case target of
+    let printOpts =
+          defaultOptions
+            { _optRenames = maybe [] pure (opts ^. formatRename)
+            }
+    res <- runReader printOpts $ case target of
       TargetFile p -> format p
       TargetProject -> formatProject
       TargetStdin -> do

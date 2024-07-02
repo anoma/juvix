@@ -11,6 +11,7 @@ import Control.Exception qualified as GHC
 import Data.List.NonEmpty qualified as NonEmpty
 import GHC.Conc
 import Juvix.Compiler.Casm.Data.TransformationId.Parser qualified as Casm
+import Juvix.Compiler.Concrete.Data.Rename
 import Juvix.Compiler.Concrete.Translation.ImportScanner
 import Juvix.Compiler.Core.Data.TransformationId.Parser qualified as Core
 import Juvix.Compiler.Pipeline.EntryPoint
@@ -101,6 +102,15 @@ parseGenericInputFile = do
       )
   pure AppPath {_pathIsInput = True, ..}
 
+parseOptRename :: Parser Rename
+parseOptRename =
+  option
+    renameOpt
+    ( long "dev-rename"
+        <> metavar "RENAME_SPEC"
+        <> help "Rename an identifier while formatting"
+    )
+
 parseGenericOutputFile :: Parser (AppPath File)
 parseGenericOutputFile = do
   _pathPath <-
@@ -135,6 +145,12 @@ somePreFileOrDirOpt = mkPrepath <$> str
 
 somePreFileOpt :: ReadM (Prepath File)
 somePreFileOpt = mkPrepath <$> str
+
+renameOpt :: ReadM Rename
+renameOpt = eitherReader aux
+  where
+    aux :: String -> Either String Rename
+    aux = mapLeft unpack . parseRename . pack
 
 someFileOpt :: ReadM (SomeBase File)
 someFileOpt = eitherReader aux
