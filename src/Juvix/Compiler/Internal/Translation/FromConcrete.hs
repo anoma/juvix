@@ -1083,7 +1083,7 @@ gRhsExpression RhsExpression {..} = goExpression _rhsExpression
 goSideIfBranch ::
   forall r.
   (Members '[Reader DefaultArgsStack, Builtins, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) =>
-  SideIfBranch 'Scoped 'SideIfBool ->
+  BranchIfBranch 'Scoped 'BranchIfBool ->
   Sem r Internal.SideIfBranch
 goSideIfBranch s = do
   cond' <- goExpression (s ^. sideIfBranchCondition)
@@ -1097,7 +1097,7 @@ goSideIfBranch s = do
 goSideIfBranchElse ::
   forall r.
   (Members '[Reader DefaultArgsStack, Builtins, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) =>
-  SideIfBranch 'Scoped 'SideIfElse ->
+  SideIfBranch 'Scoped 'BranchIfElse ->
   Sem r Internal.Expression
 goSideIfBranchElse s = goExpression (s ^. sideIfBranchBody)
 
