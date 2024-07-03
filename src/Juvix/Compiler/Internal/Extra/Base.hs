@@ -38,31 +38,11 @@ instance Plated Expression where
   plate :: Traversal' Expression Expression
   plate = immediateSubExpressions
 
-prismGet :: Prism s t a b -> b -> t
-prismGet aprism = withPrism aprism const
-
-pleaves3 ::
-  forall a expr subExpr leaf.
-  (Plated expr) =>
-  Traversal' a expr ->
-  Prism expr expr leaf subExpr ->
-  Traversal a a leaf subExpr
-pleaves3 childr priLeaf = go
-  where
-    go :: forall f. (Applicative f) => (leaf -> f subExpr) -> a -> f a
-    go g = childr expToExp
-      where
-        expToExp :: expr -> f expr
-        expToExp x =
-          case matching priLeaf x of
-            Right (l :: leaf) -> prismGet priLeaf <$> g l
-            _ -> plate expToExp x
-
 leafExpressions :: forall a expr. (HasExpressions a, IsExpression expr) => Traversal a a LeafExpression expr
-leafExpressions = pleaves3 immediateSubExpressions pri
+leafExpressions = platedTraverseNode immediateSubExpressions pri
   where
     pri :: Prism Expression Expression LeafExpression expr
-    pri = prism toExpression (\e -> maybe (Left e) Right (leafExpression e))
+    pri = prism' toExpression leafExpression
 
 leafExpression :: Expression -> Maybe LeafExpression
 leafExpression = \case
@@ -100,16 +80,16 @@ instance RecHasExpressions LambdaClause
 
 instance HasExpressions LambdaClause where
   immediateSubExpressions f l = do
-    _lambdaPatterns <- traverse (immediateSubExpressions f) (l ^. lambdaPatterns)
-    _lambdaBody <- f (l ^. lambdaBody)
+    _lambdaPatterns <- recImmediateSubExpressions f (l ^. lambdaPatterns)
+    _lambdaBody <- recImmediateSubExpressions f (l ^. lambdaBody)
     pure LambdaClause {..}
 
 instance RecHasExpressions Lambda
 
 instance HasExpressions Lambda where
   immediateSubExpressions f l = do
-    _lambdaClauses <- traverse (recImmediateSubExpressions f) (l ^. lambdaClauses)
-    _lambdaType <- traverse (recImmediateSubExpressions f) (l ^. lambdaType)
+    _lambdaClauses <- recImmediateSubExpressions f (l ^. lambdaClauses)
+    _lambdaType <- recImmediateSubExpressions f (l ^. lambdaType)
     pure Lambda {..}
 
 instance RecHasExpressions Expression where

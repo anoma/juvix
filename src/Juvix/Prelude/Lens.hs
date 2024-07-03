@@ -28,3 +28,37 @@ overM l f a = do
 
 setAndRemember :: LensLike ((,) a) s t a b -> b -> s -> (a, t)
 setAndRemember = (<<.~)
+
+-- | Extracts the getter from a prism
+prismView :: Prism s t a b -> b -> t
+prismView aprism = withPrism aprism const
+
+matchingMaybe :: Prism s s a b -> s -> Maybe a
+matchingMaybe pri = either (const Nothing) return . matching pri
+
+-- | Arguments:
+--
+-- 1. 'a' is the object that we traverse.
+--
+-- 2. 'expr' is the expression
+--
+-- 3. 'node' is the particular part that we are interested in and want to
+-- collect or modify.
+--
+-- 4. 'subExpr' is something that can be unequivocally transformed into 'expr'. Most of the time `subExpr` == `expr`
+platedTraverseNode ::
+  forall a expr node subExpr.
+  (Plated expr) =>
+  Traversal' a expr ->
+  Prism expr expr node subExpr ->
+  Traversal a a node subExpr
+platedTraverseNode childr priLeaf = go
+  where
+    go :: forall f. (Applicative f) => (node -> f subExpr) -> a -> f a
+    go g = childr expToExp
+      where
+        expToExp :: expr -> f expr
+        expToExp x =
+          case matchingMaybe priLeaf x of
+            Just (l :: leaf) -> prismView priLeaf <$> g l
+            Nothing -> plate expToExp x
