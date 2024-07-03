@@ -104,40 +104,28 @@ instance HasExpressions Pattern where
     PatternConstructorApp a -> PatternConstructorApp <$> directExpressions f a
     PatternWildcardConstructor {} -> pure p
 
-  leafExpressions f p = case p of
-    PatternVariable {} -> pure p
-    PatternConstructorApp a -> PatternConstructorApp <$> leafExpressions f a
-    PatternWildcardConstructor {} -> pure p
-
 instance HasExpressions SideIfBranch where
-  leafExpressions f b = do
-    _sideIfBranchCondition <- leafExpressions f (b ^. sideIfBranchCondition)
-    _sideIfBranchBody <- leafExpressions f (b ^. sideIfBranchBody)
+  directExpressions f b = do
+    _sideIfBranchCondition <- directExpressions f (b ^. sideIfBranchCondition)
+    _sideIfBranchBody <- directExpressions f (b ^. sideIfBranchBody)
     pure SideIfBranch {..}
 
 instance HasExpressions SideIfs where
-  leafExpressions f b = do
-    _sideIfBranches <- traverse (leafExpressions f) (b ^. sideIfBranches)
-    _sideIfElse <- traverse (leafExpressions f) (b ^. sideIfElse)
+  directExpressions f b = do
+    _sideIfBranches <- directExpressions f (b ^. sideIfBranches)
+    _sideIfElse <- directExpressions f (b ^. sideIfElse)
     pure SideIfs {..}
 
 instance HasExpressions CaseBranchRhs where
-  leafExpressions f = \case
-    CaseBranchRhsExpression e -> CaseBranchRhsExpression <$> leafExpressions f e
-    CaseBranchRhsIf e -> CaseBranchRhsIf <$> leafExpressions f e
+  directExpressions f = \case
+    CaseBranchRhsExpression e -> CaseBranchRhsExpression <$> directExpressions f e
+    CaseBranchRhsIf e -> CaseBranchRhsIf <$> directExpressions f e
 
 instance HasExpressions CaseBranch where
   directExpressions f b = do
     _caseBranchPattern <- directExpressions f (b ^. caseBranchPattern)
-    _caseBranchExpression <- directExpressions f (b ^. caseBranchExpression)
+    _caseBranchRhs <- directExpressions f (b ^. caseBranchRhs)
     pure CaseBranch {..}
-
-  leafExpressions f b = do
-    _caseBranchPattern <- leafExpressions f (b ^. caseBranchPattern)
-    _caseBranchRhs <- leafExpressions f (b ^. caseBranchRhs)
-    pure CaseBranch {..}
-
-instance RecHasExpressions Case
 
 instance HasExpressions Case where
   directExpressions f l = do

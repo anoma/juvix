@@ -58,12 +58,12 @@ type family FieldArgIxType s = res | res -> s where
   FieldArgIxType 'Parsed = ()
   FieldArgIxType 'Scoped = Int
 
-type SideIfBranchConditionType :: Stage -> IfBranchKind -> GHC.Type
+type SideIfBranchConditionType :: Stage -> IfBranchKind -> GHCType
 type family SideIfBranchConditionType s k = res where
   SideIfBranchConditionType s 'BranchIfBool = ExpressionType s
   SideIfBranchConditionType _ 'BranchIfElse = ()
 
-type IfBranchConditionType :: Stage -> IfBranchKind -> GHC.Type
+type IfBranchConditionType :: Stage -> IfBranchKind -> GHCType
 type family IfBranchConditionType s k = res where
   IfBranchConditionType s 'BranchIfBool = ExpressionType s
   IfBranchConditionType _ 'BranchIfElse = Irrelevant KeywordRef
