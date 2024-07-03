@@ -158,17 +158,20 @@ freshVariable = freshSymbol KNameLocal KNameLocal
 
 checkProjectionDef ::
   forall r.
-  (Members '[Error ScoperError, InfoTableBuilder, Reader InfoTable, Reader BindingStrategy, State Scope, State ScoperState, NameIdGen, State ScoperSyntax] r) =>
+  (Members '[Error ScoperError, InfoTableBuilder, Reader Package, Reader ScopeParameters, Reader InfoTable, Reader BindingStrategy, State Scope, State ScoperState, NameIdGen, State ScoperSyntax] r) =>
   ProjectionDef 'Parsed ->
   Sem r (ProjectionDef 'Scoped)
 checkProjectionDef p = do
   _projectionField <- getReservedDefinitionSymbol (p ^. projectionField)
+  _projectionDoc <- maybe (return Nothing) (checkJudoc >=> return . Just) (p ^. projectionDoc)
   return
     ProjectionDef
       { _projectionFieldIx = p ^. projectionFieldIx,
         _projectionConstructor = p ^. projectionConstructor,
         _projectionFieldBuiltin = p ^. projectionFieldBuiltin,
-        _projectionField
+        _projectionPragmas = p ^. projectionPragmas,
+        _projectionField,
+        _projectionDoc
       }
 
 freshSymbol ::
@@ -1210,6 +1213,7 @@ checkInductiveDef InductiveDef {..} = do
 
             checkField :: RecordField 'Parsed -> Sem r (RecordField 'Scoped)
             checkField RecordField {..} = do
+              doc' <- maybe (return Nothing) (checkJudoc >=> return . Just) _fieldDoc
               type' <- checkParseExpressionAtoms _fieldType
               -- Since we don't allow dependent types in constructor types, each
               -- field is checked with a local scope
@@ -1219,6 +1223,7 @@ checkInductiveDef InductiveDef {..} = do
                   RecordField
                     { _fieldType = type',
                       _fieldName = name',
+                      _fieldDoc = doc',
                       ..
                     }
 
@@ -1629,7 +1634,9 @@ checkSections sec = topBindings helper
                                 { _projectionConstructor = headConstr,
                                   _projectionField = field ^. fieldName,
                                   _projectionFieldIx = idx,
-                                  _projectionFieldBuiltin = field ^. fieldBuiltin
+                                  _projectionFieldBuiltin = field ^. fieldBuiltin,
+                                  _projectionDoc = field ^. fieldDoc,
+                                  _projectionPragmas = field ^. fieldPragmas
                                 }
 
                             getFields :: Sem (Fail ': s') [RecordStatement 'Parsed]

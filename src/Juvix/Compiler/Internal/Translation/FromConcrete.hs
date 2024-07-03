@@ -352,7 +352,7 @@ goProjectionDef ::
 goProjectionDef ProjectionDef {..} = do
   let c = goSymbol _projectionConstructor
   info <- gets (^?! constructorInfos . at c . _Just)
-  fun <- Internal.genFieldProjection (goSymbol _projectionField) ((^. withLocParam) <$> _projectionFieldBuiltin) info _projectionFieldIx
+  fun <- Internal.genFieldProjection (goSymbol _projectionField) ((^. withLocParam) <$> _projectionFieldBuiltin) (fmap (^. withLocParam . withSourceValue) _projectionPragmas) info _projectionFieldIx
   whenJust (fun ^. Internal.funDefBuiltin) (registerBuiltinFunction fun)
   return fun
 
