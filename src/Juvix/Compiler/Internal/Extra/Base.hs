@@ -37,14 +37,6 @@ makeLenses ''ApplicationArg
 instance HasLoc ApplicationArg where
   getLoc = getLoc . (^. appArg)
 
-data LeafExpression
-  = LeafExpressionIden Iden
-  | LeafExpressionHole Hole
-  | LeafExpressionLiteral (WithLoc Literal)
-  | LeafExpressionUniverse SmallUniverse
-  | LeafExpressionInstanceHole InstanceHole
-  deriving stock (Eq)
-
 class IsExpression a where
   toExpression :: a -> Expression
 
@@ -62,32 +54,6 @@ instance Plated Expression where
     ExpressionUniverse {} -> pure e
     ExpressionHole {} -> pure e
     ExpressionInstanceHole {} -> pure e
-
-instance PrettyCode LeafExpression where
-  ppCode = ppCode . toExpression
-
-leafExpression :: Expression -> Maybe LeafExpression
-leafExpression = \case
-  ExpressionIden i -> Just (LeafExpressionIden i)
-  ExpressionLiteral l -> Just (LeafExpressionLiteral l)
-  ExpressionUniverse l -> Just (LeafExpressionUniverse l)
-  ExpressionHole l -> Just (LeafExpressionHole l)
-  ExpressionInstanceHole l -> Just (LeafExpressionInstanceHole l)
-  ExpressionApplication {} -> Nothing
-  ExpressionFunction {} -> Nothing
-  ExpressionLet {} -> Nothing
-  ExpressionCase {} -> Nothing
-  ExpressionSimpleLambda {} -> Nothing
-  ExpressionLambda {} -> Nothing
-
-instance IsExpression LeafExpression where
-  toExpression =
-    \case
-      LeafExpressionIden i -> ExpressionIden i
-      LeafExpressionLiteral i -> ExpressionLiteral i
-      LeafExpressionHole i -> ExpressionHole i
-      LeafExpressionUniverse i -> ExpressionUniverse i
-      LeafExpressionInstanceHole i -> ExpressionInstanceHole i
 
 class HasExpressions a where
   -- | Traverses itself if `a` is an Expression. Otherwise traverses children `Expression`s (not transitive).
@@ -249,12 +215,6 @@ instance HasExpressions Application where
     l' <- directExpressions f l
     r' <- directExpressions f r
     pure (Application l' r' i)
-
--- | Prism
-_LeafExpressionHole :: Traversal' LeafExpression Hole
-_LeafExpressionHole f e = case e of
-  LeafExpressionHole h -> LeafExpressionHole <$> f h
-  _ -> pure e
 
 subsInstanceHoles :: forall r a. (HasExpressions a, Member NameIdGen r) => HashMap InstanceHole Expression -> a -> Sem r a
 subsInstanceHoles s = umapM helper
