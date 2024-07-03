@@ -1,9 +1,7 @@
-{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Juvix.Compiler.Internal.Extra.Base where
 
-import Data.Data
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Internal.Data.LocalVars
@@ -41,31 +39,8 @@ instance Plated Expression where
   plate :: Traversal' Expression Expression
   plate = immediateSubExpressions
 
--- leafExpressions :: forall a expr. (HasExpressions a, IsExpression expr) => Traversal a a LeafExpression expr
--- leafExpressions = platedTraverseNode immediateSubExpressions pri
---   where
---     pri :: Prism Expression Expression LeafExpression expr
---     pri = prism' toExpression leafExpression
-
-new ::
-  forall a expr node subExpr.
-  (Plated expr) =>
-  Traversal' a expr ->
-  Prism expr expr node subExpr ->
-  Traversal a a node subExpr
-new childr pri = go
-  where
-    go :: forall f. (Applicative f) => (node -> f subExpr) -> a -> f a
-    go g = trace "go" $ childr expToExp
-      where
-        expToExp :: expr -> f expr
-        expToExp x =
-          case matchingMaybe pri x of
-            Just (l :: leaf) -> prismView pri <$> g l
-            Nothing -> trace "recurse" $ platedTraverseNode plate pri g x
-
 leafExpressions :: forall a expr. (HasExpressions a, IsExpression expr) => Traversal a a LeafExpression expr
-leafExpressions = trace "leafExpressions" $ new immediateSubExpressions pri
+leafExpressions = platedTraverseNode immediateSubExpressions pri
   where
     pri :: Prism Expression Expression LeafExpression expr
     pri = prism' toExpression leafExpression
@@ -98,9 +73,9 @@ class HasExpressions a where
   immediateSubExpressions :: Traversal' a Expression
 
 -- | Helper class. All types except Expression should use the default implementation
-class (Data a, HasExpressions a) => RecHasExpressions a where
+class (HasExpressions a) => RecHasExpressions a where
   recImmediateSubExpressions :: Traversal' a Expression
-  recImmediateSubExpressions = trace ("rec : " <> pack (dataTypeName (dataTypeOf (undefined :: a)))) immediateSubExpressions
+  recImmediateSubExpressions = immediateSubExpressions
 
 instance RecHasExpressions LambdaClause
 
@@ -122,7 +97,7 @@ instance RecHasExpressions Expression where
   recImmediateSubExpressions = id
 
 instance HasExpressions Expression where
-  immediateSubExpressions f e = trace "goExpression" $ case e of
+  immediateSubExpressions f e = case e of
     ExpressionIden {} -> pure e
     ExpressionApplication a -> ExpressionApplication <$> recImmediateSubExpressions f a
     ExpressionFunction fun -> ExpressionFunction <$> recImmediateSubExpressions f fun
@@ -294,9 +269,9 @@ instance HasExpressions ApplicationArg where
           _appArgIsImplicit
         }
 
-instance (RecHasExpressions a, HasExpressions a, Data (l a), Traversable l) => RecHasExpressions (l a)
+instance (RecHasExpressions a, HasExpressions a, Traversable l) => RecHasExpressions (l a)
 
-instance (RecHasExpressions a, HasExpressions a, Traversable l) => HasExpressions (l a) where
+instance (RecHasExpressions a, Traversable l) => HasExpressions (l a) where
   immediateSubExpressions f = traverse (recImmediateSubExpressions f)
 
 instance RecHasExpressions Application
@@ -314,13 +289,13 @@ _LeafExpressionHole f e = case e of
   _ -> pure e
 
 holes :: (HasExpressions a) => Traversal' a Hole
-holes = trace "holes" . leafExpressions . _LeafExpressionHole
+holes = leafExpressions . _LeafExpressionHole
 
 hasHoles :: (HasExpressions a) => a -> Bool
 hasHoles = has holes
 
 subsInstanceHoles :: forall r a. (HasExpressions a, Member NameIdGen r) => HashMap InstanceHole Expression -> a -> Sem r a
-subsInstanceHoles s = trace "subsInstanceHoles" $ leafExpressions helper
+subsInstanceHoles s = leafExpressions helper
   where
     helper :: LeafExpression -> Sem r Expression
     helper le = case le of
@@ -330,7 +305,7 @@ subsInstanceHoles s = trace "subsInstanceHoles" $ leafExpressions helper
         e = toExpression le
 
 subsHoles :: forall r a. (HasExpressions a, Member NameIdGen r) => HashMap Hole Expression -> a -> Sem r a
-subsHoles s = trace "subsInstanceHoles" $ leafExpressions helper
+subsHoles s = leafExpressions helper
   where
     helper :: LeafExpression -> Sem r Expression
     helper le = case le of
@@ -489,7 +464,7 @@ subsKind uids k =
 substitutionE :: forall r expr. (Member NameIdGen r, HasExpressions expr) => Subs -> expr -> Sem r expr
 substitutionE m
   | null m = pure
-  | otherwise = trace "substitutionE" $ leafExpressions goLeaf
+  | otherwise = leafExpressions goLeaf
   where
     goLeaf :: LeafExpression -> Sem r Expression
     goLeaf = \case
