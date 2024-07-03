@@ -79,14 +79,6 @@ instance HasExpressions FunctionDefaultInfo where
           _functionDefaultArgId = i ^. functionDefaultArgId
         }
 
-  leafExpressions f i = do
-    val' <- leafExpressions f (i ^. functionDefaultValue)
-    pure
-      FunctionDefaultInfo
-        { _functionDefaultValue = val',
-          _functionDefaultArgId = i ^. functionDefaultArgId
-        }
-
 instance RecHasExpressions FunctionDefault
 
 instance HasExpressions FunctionDefault where
@@ -101,17 +93,6 @@ instance HasExpressions FunctionDefault where
           _functionDefaultDefault = d'
         }
 
-  leafExpressions f FunctionDefault {..} = do
-    l' <- leafExpressions f _functionDefaultLeft
-    r' <- leafExpressions f _functionDefaultRight
-    d' <- leafExpressions f _functionDefaultDefault
-    pure
-      FunctionDefault
-        { _functionDefaultLeft = l',
-          _functionDefaultRight = r',
-          _functionDefaultDefault = d'
-        }
-
 instance RecHasExpressions BuilderType
 
 instance HasExpressions BuilderType where
@@ -119,23 +100,11 @@ instance HasExpressions BuilderType where
     BuilderTypeNoDefaults e -> BuilderTypeNoDefaults <$> recImmediateSubExpressions f e
     BuilderTypeDefaults l -> BuilderTypeDefaults <$> recImmediateSubExpressions f l
 
-  leafExpressions f = \case
-    BuilderTypeNoDefaults e -> BuilderTypeNoDefaults <$> leafExpressions f e
-    BuilderTypeDefaults l -> BuilderTypeDefaults <$> leafExpressions f l
-
 instance RecHasExpressions AppBuilderArg
 
 instance HasExpressions AppBuilderArg where
   immediateSubExpressions f AppBuilderArg {..} = do
     a' <- recImmediateSubExpressions f _appBuilderArg
-    pure
-      AppBuilderArg
-        { _appBuilderArg = a',
-          _appBuilderArgIsDefault
-        }
-
-  leafExpressions f AppBuilderArg {..} = do
-    a' <- leafExpressions f _appBuilderArg
     pure
       AppBuilderArg
         { _appBuilderArg = a',
