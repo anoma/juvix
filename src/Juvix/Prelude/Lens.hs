@@ -45,7 +45,8 @@ matchingMaybe pri = either (const Nothing) return . matching pri
 -- 3. 'node' is the particular part that we are interested in and want to
 -- collect or modify.
 --
--- 4. 'subExpr' is something that can be unequivocally transformed into 'expr'. Most of the time `subExpr` == `expr`
+-- 4. 'subExpr' is something that can be unequivocally transformed into 'expr'.
+-- Most of the time `subExpr` == `expr`. See platedTraverseNode'
 platedTraverseNode ::
   forall a expr node subExpr.
   (Plated expr) =>
@@ -62,3 +63,11 @@ platedTraverseNode childr pri = go
           case matchingMaybe pri x of
             Just (l :: leaf) -> prismView pri <$> g l
             Nothing -> platedTraverseNode plate pri g x
+
+platedTraverseNode' ::
+  forall a expr node.
+  (Plated expr) =>
+  Traversal' a expr ->
+  (expr -> Maybe node) ->
+  Traversal a a node expr
+platedTraverseNode' childr getnode = platedTraverseNode childr (prism' id getnode)
