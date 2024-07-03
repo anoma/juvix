@@ -438,6 +438,7 @@ module SideIfConditions;
     case 12 of
       | zero
         | if 0 < 0 := 3
+        | if 0 > 0 := 6
         | else := 4
       | suc (suc n)
         | if 0 < 0 := 3
