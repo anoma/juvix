@@ -99,10 +99,11 @@ genFieldProjection ::
   (Members '[NameIdGen] r) =>
   FunctionName ->
   Maybe BuiltinFunction ->
+  Maybe Pragmas ->
   ConstructorInfo ->
   Int ->
   Sem r FunctionDef
-genFieldProjection _funDefName _funDefBuiltin info fieldIx = do
+genFieldProjection _funDefName _funDefBuiltin mpragmas info fieldIx = do
   body' <- genBody
   let (inductiveParams, constrArgs) = constructorArgTypes info
       implicity = constructorImplicity info
@@ -115,7 +116,11 @@ genFieldProjection _funDefName _funDefBuiltin info fieldIx = do
         _funDefInstance = False,
         _funDefCoercion = False,
         _funDefArgsInfo = mempty,
-        _funDefPragmas = mempty {_pragmasInline = Just InlineAlways},
+        _funDefPragmas =
+          maybe
+            (mempty {_pragmasInline = Just InlineAlways})
+            (over pragmasInline (maybe (Just InlineAlways) Just))
+            mpragmas,
         _funDefBody = body',
         _funDefType = foldFunType (inductiveArgs ++ [saturatedTy]) retTy,
         _funDefName,

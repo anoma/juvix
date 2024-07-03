@@ -292,7 +292,9 @@ data ProjectionDef s = ProjectionDef
   { _projectionConstructor :: S.Symbol,
     _projectionField :: SymbolType s,
     _projectionFieldIx :: Int,
-    _projectionFieldBuiltin :: Maybe (WithLoc BuiltinFunction)
+    _projectionFieldBuiltin :: Maybe (WithLoc BuiltinFunction),
+    _projectionDoc :: Maybe (Judoc s),
+    _projectionPragmas :: Maybe ParsedPragmas
   }
 
 deriving stock instance Show (ProjectionDef 'Parsed)
@@ -713,7 +715,9 @@ data RecordField (s :: Stage) = RecordField
   { _fieldName :: SymbolType s,
     _fieldColon :: Irrelevant (KeywordRef),
     _fieldType :: ExpressionType s,
-    _fieldBuiltin :: Maybe (WithLoc BuiltinFunction)
+    _fieldBuiltin :: Maybe (WithLoc BuiltinFunction),
+    _fieldDoc :: Maybe (Judoc s),
+    _fieldPragmas :: Maybe ParsedPragmas
   }
   deriving stock (Generic)
 

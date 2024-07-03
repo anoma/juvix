@@ -354,6 +354,17 @@ module OperatorRecord;
     in n + m * m;
 end;
 
+module RecordFieldPragmas;
+  type Pr (A B : Type) :=
+    mkPr {
+      --- Judoc for A
+      {-# inline: false #-}
+      pfst : A;
+      {-# inline: false #-}
+      psnd : B
+    };
+end;
+
 longLongLongArg : Int := 0;
 
 longLongLongListArg : List Int := [];

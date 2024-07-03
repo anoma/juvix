@@ -1429,6 +1429,8 @@ rhsGadt = P.label "<constructor gadt>" $ do
 
 recordField :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (RecordField 'Parsed)
 recordField = do
+  _fieldDoc <- optional stashJudoc >> getJudoc
+  _fieldPragmas <- optional stashPragmas >> getPragmas
   _fieldBuiltin <- optional builtinRecordField
   _fieldName <- symbol
   _fieldColon <- Irrelevant <$> kw kwColon
