@@ -243,11 +243,6 @@ type SimpleFold s a = forall r. (Monoid r) => Getting r s a
 
 type SimpleGetter s a = forall r. Getting r s a
 
-type ImpliesK :: Bool -> GHCConstraint -> GHCConstraint
-type family ImpliesK cond k = res where
-  ImpliesK 'True k = k
-  ImpliesK 'False _ = ()
-
 traverseM ::
   (Monad m, Traversable m, Applicative f) =>
   (a1 -> f (m a2)) ->
