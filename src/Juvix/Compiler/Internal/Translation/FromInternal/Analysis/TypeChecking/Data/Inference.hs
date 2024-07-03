@@ -513,7 +513,7 @@ matchPatterns (PatternArg impl1 name1 pat1) (PatternArg impl2 name2 pat2) =
     err = return False
 
 runInferenceDefs ::
-  (Members '[Termination, Error TypeCheckerError, ResultBuilder, NameIdGen] r, HasExpressions funDef) =>
+  (Members '[Termination, Error TypeCheckerError, ResultBuilder, NameIdGen] r, RecHasExpressions funDef) =>
   Sem (Inference ': r) (NonEmpty funDef) ->
   Sem r (NonEmpty funDef)
 runInferenceDefs a = do
@@ -526,7 +526,7 @@ runInferenceDefs a = do
   mapM (subsHoles subs) expr
 
 runInferenceDef ::
-  (Members '[Termination, Error TypeCheckerError, ResultBuilder, NameIdGen] r, HasExpressions funDef) =>
+  (Members '[Termination, Error TypeCheckerError, ResultBuilder, NameIdGen] r, RecHasExpressions funDef) =>
   Sem (Inference ': r) funDef ->
   Sem r funDef
 runInferenceDef = fmap head . runInferenceDefs . fmap pure

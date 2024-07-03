@@ -556,8 +556,9 @@ checkExpression expectedTy e = do
 
 resolveInstanceHoles ::
   forall a r.
-  (HasExpressions a) =>
-  (Members '[Reader InfoTable, ResultBuilder, Error TypeCheckerError, NameIdGen, Inference, Termination, Reader InsertedArgsStack] r) =>
+  ( RecHasExpressions a,
+    Members '[Reader InfoTable, ResultBuilder, Error TypeCheckerError, NameIdGen, Inference, Termination, Reader InsertedArgsStack] r
+  ) =>
   Sem (Output TypedHole ': r) a ->
   Sem r a
 resolveInstanceHoles s = do
@@ -1221,7 +1222,7 @@ holesHelper mhint expr = do
     extendCtx funParam arg' = whenJust (funParam ^. paramName) $ \nm -> do
       modify' (over appBuilderTypeCtx (set (at nm) (Just arg')))
 
-    applyCtx :: (Members '[State AppBuilder, NameIdGen] r', HasExpressions exp) => exp -> Sem r' exp
+    applyCtx :: (Members '[State AppBuilder, NameIdGen] r', RecHasExpressions exp) => exp -> Sem r' exp
     applyCtx x = do
       s <- gets (^. appBuilderTypeCtx)
       substitutionE s x

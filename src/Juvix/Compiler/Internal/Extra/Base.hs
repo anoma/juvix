@@ -100,7 +100,9 @@ class HasExpressions a where
   immediateSubExpressions :: Traversal' a Expression
 
 -- | Helper class. All types except Expression should use the default implementation
+-- TODO is there another way to handle this more elegantly?
 class (HasExpressions a) => RecHasExpressions a where
+  -- | Traverses itself if `a` is an Expression. Descends until an `Expression` is found otherwise
   recImmediateSubExpressions :: Traversal' a Expression
   recImmediateSubExpressions = immediateSubExpressions
 
@@ -298,7 +300,7 @@ _LeafExpressionHole f e = case e of
   LeafExpressionHole h -> LeafExpressionHole <$> f h
   _ -> pure e
 
-subsInstanceHoles :: forall r a. (HasExpressions a, Member NameIdGen r) => HashMap InstanceHole Expression -> a -> Sem r a
+subsInstanceHoles :: forall r a. (RecHasExpressions a, Member NameIdGen r) => HashMap InstanceHole Expression -> a -> Sem r a
 subsInstanceHoles s = umapM helper
   where
     helper :: Expression -> Sem r Expression
@@ -308,7 +310,7 @@ subsInstanceHoles s = umapM helper
       where
         e = toExpression le
 
-subsHoles :: forall r a. (HasExpressions a, Member NameIdGen r) => HashMap Hole Expression -> a -> Sem r a
+subsHoles :: forall r a. (RecHasExpressions a, Member NameIdGen r) => HashMap Hole Expression -> a -> Sem r a
 subsHoles s = umapM helper
   where
     helper :: Expression -> Sem r Expression
@@ -467,13 +469,27 @@ subsKind uids k =
     [ (s, toExpression s') | s <- uids, let s' = toExpression (set nameKind k s)
     ]
 
-umapM :: (Monad m, HasExpressions expr) => (Expression -> m Expression) -> expr -> m expr
-umapM = transformMOn immediateSubExpressions
+data Expr
+  = Val Int
+  | Neg Expr
+  | Add Expr Expr
+  deriving stock (Eq, Ord, Show, Data)
 
-substitutionE :: forall r expr. (Member NameIdGen r, HasExpressions expr) => Subs -> expr -> Sem r expr
-substitutionE m
-  | null m = pure
-  | otherwise = umapM go
+instance Plated Expr where
+  plate f (Neg e) = Neg <$> f e
+  plate f (Add a b) = Add <$> f a <*> f b
+  plate _ a = pure a
+
+allExpressions :: (RecHasExpressions expr) => Fold expr Expression
+allExpressions = cosmosOn recImmediateSubExpressions
+
+umapM :: (Monad m, RecHasExpressions expr) => (Expression -> m Expression) -> expr -> m expr
+umapM = transformMOn recImmediateSubExpressions
+
+substitutionE :: forall r expr. (Member NameIdGen r, RecHasExpressions expr) => Subs -> expr -> Sem r expr
+substitutionE m expr
+  | null m = pure expr
+  | otherwise = umapM go expr
   where
     go :: Expression -> Sem r Expression
     go = \case
