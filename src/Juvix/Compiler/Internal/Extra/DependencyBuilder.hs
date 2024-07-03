@@ -259,10 +259,10 @@ goExpression p e = case e of
   ExpressionUniverse {} -> return ()
   ExpressionFunction f -> do
     goFunctionParameter p (f ^. functionLeft)
-    goExpression p (f ^. functionRight)
+    goExpression_ (f ^. functionRight)
   ExpressionApplication (Application l r _) -> do
-    goExpression p l
-    goExpression p r
+    goExpression_ l
+    goExpression_ r
   ExpressionLiteral {} -> return ()
   ExpressionCase c -> goCase c
   ExpressionHole {} -> return ()
@@ -271,6 +271,9 @@ goExpression p e = case e of
   ExpressionLet l -> goLet l
   ExpressionSimpleLambda l -> goSimpleLambda l
   where
+    goExpression_ :: Expression -> Sem r ()
+    goExpression_ = goExpression p
+
     goSimpleLambda :: SimpleLambda -> Sem r ()
     goSimpleLambda l = do
       addEdgeMay p (l ^. slambdaBinder . sbinderVar)
@@ -280,21 +283,36 @@ goExpression p e = case e of
       where
         goClause :: LambdaClause -> Sem r ()
         goClause (LambdaClause {..}) = do
-          goExpression p _lambdaBody
+          goExpression_ _lambdaBody
           mapM_ (goPattern p) _lambdaPatterns
 
     goCase :: Case -> Sem r ()
     goCase c = do
-      goExpression p (c ^. caseExpression)
+      goExpression_ (c ^. caseExpression)
       mapM_ goBranch (c ^. caseBranches)
 
     goBranch :: CaseBranch -> Sem r ()
-    goBranch = goExpression p . (^. caseBranchExpression)
+    goBranch = goCaseBranchRhs . (^. caseBranchRhs)
+
+    goSideIfBranch :: SideIfBranch -> Sem r ()
+    goSideIfBranch SideIfBranch {..} = do
+      goExpression_ _sideIfBranchCondition
+      goExpression_ _sideIfBranchBody
+
+    goSideIfs :: SideIfs -> Sem r ()
+    goSideIfs SideIfs {..} = do
+      mapM_ goSideIfBranch _sideIfBranches
+      mapM_ goExpression_ _sideIfElse
+
+    goCaseBranchRhs :: CaseBranchRhs -> Sem r ()
+    goCaseBranchRhs = \case
+      CaseBranchRhsExpression expr -> goExpression_ expr
+      CaseBranchRhsIf s -> goSideIfs s
 
     goLet :: Let -> Sem r ()
     goLet l = do
       mapM_ goLetClause (l ^. letClauses)
-      goExpression p (l ^. letExpression)
+      goExpression_ (l ^. letExpression)
 
     goLetClause :: LetClause -> Sem r ()
     goLetClause = \case

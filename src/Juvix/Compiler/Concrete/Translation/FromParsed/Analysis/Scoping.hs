@@ -2189,6 +2189,98 @@ checkLet Let {..} =
           _letInKw
         }
 
+checkRhsExpression ::
+  forall r.
+  ( Members
+      '[ HighlightBuilder,
+         Reader ScopeParameters,
+         Error ScoperError,
+         State Scope,
+         State ScoperState,
+         InfoTableBuilder,
+         Reader InfoTable,
+         NameIdGen,
+         Reader Package
+       ]
+      r
+  ) =>
+  RhsExpression 'Parsed ->
+  Sem r (RhsExpression 'Scoped)
+checkRhsExpression RhsExpression {..} = do
+  expr' <- checkParseExpressionAtoms _rhsExpression
+  return
+    RhsExpression
+      { _rhsExpression = expr',
+        _rhsExpressionAssignKw
+      }
+
+checkSideIfBranch ::
+  forall r (k :: IfBranchKind).
+  ( SingI k,
+    Members
+      '[ HighlightBuilder,
+         Reader ScopeParameters,
+         Error ScoperError,
+         State Scope,
+         State ScoperState,
+         InfoTableBuilder,
+         Reader InfoTable,
+         NameIdGen,
+         Reader Package
+       ]
+      r
+  ) =>
+  SideIfBranch 'Parsed k ->
+  Sem r (SideIfBranch 'Scoped k)
+checkSideIfBranch SideIfBranch {..} = do
+  cond' <- case sing :: SIfBranchKind k of
+    SBranchIfBool -> checkParseExpressionAtoms _sideIfBranchCondition
+    SBranchIfElse -> return _sideIfBranchCondition
+  body' <- checkParseExpressionAtoms _sideIfBranchBody
+  return
+    SideIfBranch
+      { _sideIfBranchBody = body',
+        _sideIfBranchCondition = cond',
+        _sideIfBranchPipe,
+        _sideIfBranchKw,
+        _sideIfBranchAssignKw
+      }
+
+checkSideIfs ::
+  forall r.
+  ( Members
+      '[ HighlightBuilder,
+         Reader ScopeParameters,
+         Error ScoperError,
+         State Scope,
+         State ScoperState,
+         InfoTableBuilder,
+         Reader InfoTable,
+         NameIdGen,
+         Reader Package
+       ]
+      r
+  ) =>
+  SideIfs 'Parsed ->
+  Sem r (SideIfs 'Scoped)
+checkSideIfs SideIfs {..} = do
+  branches' <- mapM checkSideIfBranch _sideIfBranches
+  else' <- mapM checkSideIfBranch _sideIfElse
+  return
+    SideIfs
+      { _sideIfBranches = branches',
+        _sideIfElse = else'
+      }
+
+checkCaseBranchRhs ::
+  forall r.
+  (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader Package] r) =>
+  CaseBranchRhs 'Parsed ->
+  Sem r (CaseBranchRhs 'Scoped)
+checkCaseBranchRhs = \case
+  CaseBranchRhsExpression r -> CaseBranchRhsExpression <$> checkRhsExpression r
+  CaseBranchRhsIf r -> CaseBranchRhsIf <$> checkSideIfs r
+
 checkCaseBranch ::
   forall r.
   (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader Package] r) =>
@@ -2196,11 +2288,11 @@ checkCaseBranch ::
   Sem r (CaseBranch 'Scoped)
 checkCaseBranch CaseBranch {..} = withLocalScope $ do
   pattern' <- checkParsePatternAtoms _caseBranchPattern
-  expression' <- (checkParseExpressionAtoms _caseBranchExpression)
+  rhs' <- checkCaseBranchRhs _caseBranchRhs
   return $
     CaseBranch
       { _caseBranchPattern = pattern',
-        _caseBranchExpression = expression',
+        _caseBranchRhs = rhs',
         ..
       }
 
@@ -2220,30 +2312,19 @@ checkCase Case {..} = do
       }
 
 checkIfBranch ::
-  forall r.
-  (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader Package] r) =>
-  IfBranch 'Parsed ->
-  Sem r (IfBranch 'Scoped)
+  forall r k.
+  (SingI k, Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader Package] r) =>
+  IfBranch 'Parsed k ->
+  Sem r (IfBranch 'Scoped k)
 checkIfBranch IfBranch {..} = withLocalScope $ do
-  cond' <- checkParseExpressionAtoms _ifBranchCondition
+  cond' <- case sing :: SIfBranchKind k of
+    SBranchIfBool -> checkParseExpressionAtoms _ifBranchCondition
+    SBranchIfElse -> return _ifBranchCondition
   expression' <- checkParseExpressionAtoms _ifBranchExpression
   return $
     IfBranch
       { _ifBranchCondition = cond',
         _ifBranchExpression = expression',
-        ..
-      }
-
-checkIfBranchElse ::
-  forall r.
-  (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader Package] r) =>
-  IfBranchElse 'Parsed ->
-  Sem r (IfBranchElse 'Scoped)
-checkIfBranchElse IfBranchElse {..} = withLocalScope $ do
-  expression' <- checkParseExpressionAtoms _ifBranchElseExpression
-  return $
-    IfBranchElse
-      { _ifBranchElseExpression = expression',
         ..
       }
 
@@ -2253,7 +2334,7 @@ checkIf ::
   Sem r (If 'Scoped)
 checkIf If {..} = do
   ifBranches' <- mapM checkIfBranch _ifBranches
-  ifBranchElse' <- checkIfBranchElse _ifBranchElse
+  ifBranchElse' <- checkIfBranch _ifBranchElse
   return $
     If
       { _ifBranchElse = ifBranchElse',
