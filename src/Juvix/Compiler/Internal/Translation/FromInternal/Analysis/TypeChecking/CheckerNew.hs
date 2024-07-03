@@ -73,6 +73,15 @@ makeLenses ''AppBuilderArg
 makeLenses ''FunctionDefault
 makeLenses ''FunctionDefaultInfo
 
+instance PrettyCode FunctionDefault where
+  ppCode _ = return "ppCode(FunctionDefault)"
+
+instance PrettyCode AppBuilderArg where
+  ppCode _ = return "ppCode(AppBuilderArg)"
+
+instance PrettyCode BuilderType where
+  ppCode _ = return "ppCode(BuilderType)"
+
 instance RecHasExpressions FunctionDefaultInfo
 
 instance HasExpressions FunctionDefaultInfo where
