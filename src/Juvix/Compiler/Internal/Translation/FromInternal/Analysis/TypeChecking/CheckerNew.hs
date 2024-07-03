@@ -82,24 +82,20 @@ instance PrettyCode AppBuilderArg where
 instance PrettyCode BuilderType where
   ppCode _ = return "ppCode(BuilderType)"
 
-instance RecHasExpressions FunctionDefaultInfo
-
 instance HasExpressions FunctionDefaultInfo where
-  immediateSubExpressions f i = do
-    val' <- recImmediateSubExpressions f (i ^. functionDefaultValue)
+  directExpressions f i = do
+    val' <- directExpressions f (i ^. functionDefaultValue)
     pure
       FunctionDefaultInfo
         { _functionDefaultValue = val',
           _functionDefaultArgId = i ^. functionDefaultArgId
         }
 
-instance RecHasExpressions FunctionDefault
-
 instance HasExpressions FunctionDefault where
-  immediateSubExpressions f FunctionDefault {..} = do
-    l' <- recImmediateSubExpressions f _functionDefaultLeft
-    r' <- recImmediateSubExpressions f _functionDefaultRight
-    d' <- recImmediateSubExpressions f _functionDefaultDefault
+  directExpressions f FunctionDefault {..} = do
+    l' <- directExpressions f _functionDefaultLeft
+    r' <- directExpressions f _functionDefaultRight
+    d' <- directExpressions f _functionDefaultDefault
     pure
       FunctionDefault
         { _functionDefaultLeft = l',
@@ -107,18 +103,14 @@ instance HasExpressions FunctionDefault where
           _functionDefaultDefault = d'
         }
 
-instance RecHasExpressions BuilderType
-
 instance HasExpressions BuilderType where
-  immediateSubExpressions f = \case
-    BuilderTypeNoDefaults e -> BuilderTypeNoDefaults <$> recImmediateSubExpressions f e
-    BuilderTypeDefaults l -> BuilderTypeDefaults <$> recImmediateSubExpressions f l
-
-instance RecHasExpressions AppBuilderArg
+  directExpressions f = \case
+    BuilderTypeNoDefaults e -> BuilderTypeNoDefaults <$> directExpressions f e
+    BuilderTypeDefaults l -> BuilderTypeDefaults <$> directExpressions f l
 
 instance HasExpressions AppBuilderArg where
-  immediateSubExpressions f AppBuilderArg {..} = do
-    a' <- recImmediateSubExpressions f _appBuilderArg
+  directExpressions f AppBuilderArg {..} = do
+    a' <- directExpressions f _appBuilderArg
     pure
       AppBuilderArg
         { _appBuilderArg = a',
@@ -556,7 +548,7 @@ checkExpression expectedTy e = do
 
 resolveInstanceHoles ::
   forall a r.
-  ( RecHasExpressions a,
+  ( HasExpressions a,
     Members '[Reader InfoTable, ResultBuilder, Error TypeCheckerError, NameIdGen, Inference, Termination, Reader InsertedArgsStack] r
   ) =>
   Sem (Output TypedHole ': r) a ->
@@ -1222,7 +1214,7 @@ holesHelper mhint expr = do
     extendCtx funParam arg' = whenJust (funParam ^. paramName) $ \nm -> do
       modify' (over appBuilderTypeCtx (set (at nm) (Just arg')))
 
-    applyCtx :: (Members '[State AppBuilder, NameIdGen] r', RecHasExpressions exp) => exp -> Sem r' exp
+    applyCtx :: (Members '[State AppBuilder, NameIdGen] r', HasExpressions exp) => exp -> Sem r' exp
     applyCtx x = do
       s <- gets (^. appBuilderTypeCtx)
       substitutionE s x

@@ -50,7 +50,18 @@ class IsExpression a where
 
 instance Plated Expression where
   plate :: Traversal' Expression Expression
-  plate = immediateSubExpressions
+  plate f e = case e of
+    ExpressionApplication a -> ExpressionApplication <$> directExpressions f a
+    ExpressionFunction fun -> ExpressionFunction <$> directExpressions f fun
+    ExpressionSimpleLambda l -> ExpressionSimpleLambda <$> directExpressions f l
+    ExpressionLambda l -> ExpressionLambda <$> directExpressions f l
+    ExpressionLet l -> ExpressionLet <$> directExpressions f l
+    ExpressionCase c -> ExpressionCase <$> directExpressions f c
+    ExpressionIden {} -> pure e
+    ExpressionLiteral {} -> pure e
+    ExpressionUniverse {} -> pure e
+    ExpressionHole {} -> pure e
+    ExpressionInstanceHole {} -> pure e
 
 instance PrettyCode LeafExpression where
   ppCode = ppCode . toExpression
@@ -69,23 +80,6 @@ leafExpression = \case
   ExpressionSimpleLambda {} -> Nothing
   ExpressionLambda {} -> Nothing
 
-instance RecHasExpressions Expression where
-  recImmediateSubExpressions = id
-
-instance HasExpressions Expression where
-  immediateSubExpressions f e = case e of
-    ExpressionApplication a -> ExpressionApplication <$> recImmediateSubExpressions f a
-    ExpressionFunction fun -> ExpressionFunction <$> recImmediateSubExpressions f fun
-    ExpressionSimpleLambda l -> ExpressionSimpleLambda <$> recImmediateSubExpressions f l
-    ExpressionLambda l -> ExpressionLambda <$> recImmediateSubExpressions f l
-    ExpressionLet l -> ExpressionLet <$> recImmediateSubExpressions f l
-    ExpressionCase c -> ExpressionCase <$> recImmediateSubExpressions f c
-    ExpressionIden {} -> pure e
-    ExpressionLiteral {} -> pure e
-    ExpressionUniverse {} -> pure e
-    ExpressionHole {} -> pure e
-    ExpressionInstanceHole {} -> pure e
-
 instance IsExpression LeafExpression where
   toExpression =
     \case
@@ -96,63 +90,52 @@ instance IsExpression LeafExpression where
       LeafExpressionInstanceHole i -> ExpressionInstanceHole i
 
 class HasExpressions a where
-  -- | Traversal over its subexpressions. It does not include the subexpressions of the subexpressions.
-  immediateSubExpressions :: Traversal' a Expression
+  -- | Traverses itself if `a` is an Expression. Otherwise traverses children `Expression`s (not transitive).
+  directExpressions :: Traversal' a Expression
 
--- | Helper class. All types except Expression should use the default implementation
--- TODO is there another way to handle this more elegantly?
-class (HasExpressions a) => RecHasExpressions a where
-  -- | Traverses itself if `a` is an Expression. Descends until an `Expression` is found otherwise
-  recImmediateSubExpressions :: Traversal' a Expression
-  recImmediateSubExpressions = immediateSubExpressions
+instance HasExpressions Expression where
+  directExpressions = id
 
-instance RecHasExpressions LambdaClause
+instance (HasExpressions a, Traversable l) => HasExpressions (l a) where
+  directExpressions f = traverse (directExpressions f)
 
 instance HasExpressions LambdaClause where
-  immediateSubExpressions f l = do
-    _lambdaPatterns <- recImmediateSubExpressions f (l ^. lambdaPatterns)
-    _lambdaBody <- recImmediateSubExpressions f (l ^. lambdaBody)
+  directExpressions f l = do
+    _lambdaPatterns <- directExpressions f (l ^. lambdaPatterns)
+    _lambdaBody <- directExpressions f (l ^. lambdaBody)
     pure LambdaClause {..}
 
-instance RecHasExpressions Lambda
-
 instance HasExpressions Lambda where
-  immediateSubExpressions f l = do
-    _lambdaClauses <- recImmediateSubExpressions f (l ^. lambdaClauses)
-    _lambdaType <- recImmediateSubExpressions f (l ^. lambdaType)
+  directExpressions f l = do
+    _lambdaClauses <- directExpressions f (l ^. lambdaClauses)
+    _lambdaType <- directExpressions f (l ^. lambdaType)
     pure Lambda {..}
 
-instance RecHasExpressions ConstructorApp
-
 instance HasExpressions ConstructorApp where
-  immediateSubExpressions f a = do
+  directExpressions f a = do
     let _constrAppConstructor = a ^. constrAppConstructor
-    _constrAppType <- recImmediateSubExpressions f (a ^. constrAppType)
-    _constrAppParameters <- recImmediateSubExpressions f (a ^. constrAppParameters)
+    _constrAppType <- directExpressions f (a ^. constrAppType)
+    _constrAppParameters <- directExpressions f (a ^. constrAppParameters)
     pure ConstructorApp {..}
 
-instance RecHasExpressions PatternArg
-
 instance HasExpressions PatternArg where
-  immediateSubExpressions f a = do
+  directExpressions f a = do
     let _patternArgIsImplicit = a ^. patternArgIsImplicit
         _patternArgName = a ^. patternArgName
-    _patternArgPattern <- recImmediateSubExpressions f (a ^. patternArgPattern)
+    _patternArgPattern <- directExpressions f (a ^. patternArgPattern)
     pure PatternArg {..}
 
 instance HasExpressions WildcardConstructor where
-  immediateSubExpressions _ WildcardConstructor {..} = do
+  directExpressions _ WildcardConstructor {..} = do
     pure
       WildcardConstructor
         { _wildcardConstructor
         }
 
-instance RecHasExpressions Pattern
-
 instance HasExpressions Pattern where
-  immediateSubExpressions f p = case p of
+  directExpressions f p = case p of
     PatternVariable {} -> pure p
-    PatternConstructorApp a -> PatternConstructorApp <$> recImmediateSubExpressions f a
+    PatternConstructorApp a -> PatternConstructorApp <$> directExpressions f a
     PatternWildcardConstructor {} -> pure p
 
   leafExpressions f p = case p of
@@ -178,9 +161,9 @@ instance HasExpressions CaseBranchRhs where
     CaseBranchRhsIf e -> CaseBranchRhsIf <$> leafExpressions f e
 
 instance HasExpressions CaseBranch where
-  immediateSubExpressions f b = do
-    _caseBranchPattern <- recImmediateSubExpressions f (b ^. caseBranchPattern)
-    _caseBranchExpression <- recImmediateSubExpressions f (b ^. caseBranchExpression)
+  directExpressions f b = do
+    _caseBranchPattern <- directExpressions f (b ^. caseBranchPattern)
+    _caseBranchExpression <- directExpressions f (b ^. caseBranchExpression)
     pure CaseBranch {..}
 
   leafExpressions f b = do
@@ -191,70 +174,54 @@ instance HasExpressions CaseBranch where
 instance RecHasExpressions Case
 
 instance HasExpressions Case where
-  immediateSubExpressions f l = do
-    _caseBranches <- recImmediateSubExpressions f (l ^. caseBranches)
-    _caseExpression <- recImmediateSubExpressions f (l ^. caseExpression)
-    _caseExpressionType <- recImmediateSubExpressions f (l ^. caseExpressionType)
-    _caseExpressionWholeType <- recImmediateSubExpressions f (l ^. caseExpressionWholeType)
+  directExpressions f l = do
+    _caseBranches <- directExpressions f (l ^. caseBranches)
+    _caseExpression <- directExpressions f (l ^. caseExpression)
+    _caseExpressionType <- directExpressions f (l ^. caseExpressionType)
+    _caseExpressionWholeType <- directExpressions f (l ^. caseExpressionWholeType)
     pure Case {..}
     where
       _caseParens = l ^. caseParens
 
-instance RecHasExpressions MutualBlock
-
 instance HasExpressions MutualBlock where
-  immediateSubExpressions f (MutualBlock defs) =
-    MutualBlock <$> recImmediateSubExpressions f defs
-
-instance RecHasExpressions MutualBlockLet
+  directExpressions f (MutualBlock defs) =
+    MutualBlock <$> directExpressions f defs
 
 instance HasExpressions MutualBlockLet where
-  immediateSubExpressions f (MutualBlockLet defs) =
-    MutualBlockLet <$> recImmediateSubExpressions f defs
-
-instance RecHasExpressions LetClause
+  directExpressions f (MutualBlockLet defs) =
+    MutualBlockLet <$> directExpressions f defs
 
 instance HasExpressions LetClause where
-  immediateSubExpressions f = \case
-    LetFunDef d -> LetFunDef <$> recImmediateSubExpressions f d
-    LetMutualBlock b -> LetMutualBlock <$> recImmediateSubExpressions f b
-
-instance RecHasExpressions Let
+  directExpressions f = \case
+    LetFunDef d -> LetFunDef <$> directExpressions f d
+    LetMutualBlock b -> LetMutualBlock <$> directExpressions f b
 
 instance HasExpressions Let where
-  immediateSubExpressions f l = do
-    _letClauses :: NonEmpty LetClause <- recImmediateSubExpressions f (l ^. letClauses)
-    _letExpression <- recImmediateSubExpressions f (l ^. letExpression)
+  directExpressions f l = do
+    _letClauses :: NonEmpty LetClause <- directExpressions f (l ^. letClauses)
+    _letExpression <- directExpressions f (l ^. letExpression)
     pure Let {..}
 
-instance RecHasExpressions TypedExpression
-
 instance HasExpressions TypedExpression where
-  immediateSubExpressions f a = do
-    _typedExpression <- recImmediateSubExpressions f (a ^. typedExpression)
-    _typedType <- recImmediateSubExpressions f (a ^. typedType)
+  directExpressions f a = do
+    _typedExpression <- directExpressions f (a ^. typedExpression)
+    _typedType <- directExpressions f (a ^. typedType)
     pure TypedExpression {..}
 
-instance RecHasExpressions SimpleBinder
-
 instance HasExpressions SimpleBinder where
-  immediateSubExpressions f (SimpleBinder v ty) = do
-    ty' <- recImmediateSubExpressions f ty
+  directExpressions f (SimpleBinder v ty) = do
+    ty' <- directExpressions f ty
     pure (SimpleBinder v ty')
 
-instance RecHasExpressions SimpleLambda
-
 instance HasExpressions SimpleLambda where
-  immediateSubExpressions f (SimpleLambda bi b) = do
-    bi' <- recImmediateSubExpressions f bi
-    b' <- recImmediateSubExpressions f b
+  directExpressions f (SimpleLambda bi b) = do
+    bi' <- directExpressions f bi
+    b' <- directExpressions f b
     pure (SimpleLambda bi' b')
 
-instance RecHasExpressions FunctionParameter
-
 instance HasExpressions FunctionParameter where
-  immediateSubExpressions f FunctionParameter {..} = do
-    ty' <- recImmediateSubExpressions f _paramType
+  directExpressions f FunctionParameter {..} = do
+    ty' <- directExpressions f _paramType
     pure
       FunctionParameter
         { _paramType = ty',
@@ -262,36 +229,25 @@ instance HasExpressions FunctionParameter where
           _paramImplicit
         }
 
-instance RecHasExpressions Function
-
 instance HasExpressions Function where
-  immediateSubExpressions f (Function l r) = do
-    l' <- recImmediateSubExpressions f l
-    r' <- recImmediateSubExpressions f r
+  directExpressions f (Function l r) = do
+    l' <- directExpressions f l
+    r' <- directExpressions f r
     pure (Function l' r')
 
-instance RecHasExpressions ApplicationArg
-
 instance HasExpressions ApplicationArg where
-  immediateSubExpressions f ApplicationArg {..} = do
-    arg' <- recImmediateSubExpressions f _appArg
+  directExpressions f ApplicationArg {..} = do
+    arg' <- directExpressions f _appArg
     pure
       ApplicationArg
         { _appArg = arg',
           _appArgIsImplicit
         }
 
-instance (RecHasExpressions a, HasExpressions a, Traversable l) => RecHasExpressions (l a)
-
-instance (RecHasExpressions a, Traversable l) => HasExpressions (l a) where
-  immediateSubExpressions f = traverse (recImmediateSubExpressions f)
-
-instance RecHasExpressions Application
-
 instance HasExpressions Application where
-  immediateSubExpressions f (Application l r i) = do
-    l' <- recImmediateSubExpressions f l
-    r' <- recImmediateSubExpressions f r
+  directExpressions f (Application l r i) = do
+    l' <- directExpressions f l
+    r' <- directExpressions f r
     pure (Application l' r' i)
 
 -- | Prism
@@ -300,7 +256,7 @@ _LeafExpressionHole f e = case e of
   LeafExpressionHole h -> LeafExpressionHole <$> f h
   _ -> pure e
 
-subsInstanceHoles :: forall r a. (RecHasExpressions a, Member NameIdGen r) => HashMap InstanceHole Expression -> a -> Sem r a
+subsInstanceHoles :: forall r a. (HasExpressions a, Member NameIdGen r) => HashMap InstanceHole Expression -> a -> Sem r a
 subsInstanceHoles s = umapM helper
   where
     helper :: Expression -> Sem r Expression
@@ -310,7 +266,7 @@ subsInstanceHoles s = umapM helper
       where
         e = toExpression le
 
-subsHoles :: forall r a. (RecHasExpressions a, Member NameIdGen r) => HashMap Hole Expression -> a -> Sem r a
+subsHoles :: forall r a. (HasExpressions a, Member NameIdGen r) => HashMap Hole Expression -> a -> Sem r a
 subsHoles s = umapM helper
   where
     helper :: Expression -> Sem r Expression
@@ -320,24 +276,20 @@ subsHoles s = umapM helper
       where
         e = toExpression le
 
-instance RecHasExpressions ArgInfo
-
 instance HasExpressions ArgInfo where
-  immediateSubExpressions f ArgInfo {..} = do
-    d' <- recImmediateSubExpressions f _argInfoDefault
+  directExpressions f ArgInfo {..} = do
+    d' <- directExpressions f _argInfoDefault
     return
       ArgInfo
         { _argInfoDefault = d',
           _argInfoName
         }
 
-instance RecHasExpressions FunctionDef
-
 instance HasExpressions FunctionDef where
-  immediateSubExpressions f FunctionDef {..} = do
-    body' <- recImmediateSubExpressions f _funDefBody
-    ty' <- recImmediateSubExpressions f _funDefType
-    infos' <- recImmediateSubExpressions f _funDefArgsInfo
+  directExpressions f FunctionDef {..} = do
+    body' <- directExpressions f _funDefBody
+    ty' <- directExpressions f _funDefType
+    infos' <- directExpressions f _funDefArgsInfo
     pure
       FunctionDef
         { _funDefBody = body',
@@ -351,19 +303,15 @@ instance HasExpressions FunctionDef where
           _funDefPragmas
         }
 
-instance RecHasExpressions MutualStatement
-
 instance HasExpressions MutualStatement where
-  immediateSubExpressions f = \case
-    StatementFunction d -> StatementFunction <$> recImmediateSubExpressions f d
-    StatementInductive d -> StatementInductive <$> recImmediateSubExpressions f d
-    StatementAxiom d -> StatementAxiom <$> recImmediateSubExpressions f d
-
-instance RecHasExpressions AxiomDef
+  directExpressions f = \case
+    StatementFunction d -> StatementFunction <$> directExpressions f d
+    StatementInductive d -> StatementInductive <$> directExpressions f d
+    StatementAxiom d -> StatementAxiom <$> directExpressions f d
 
 instance HasExpressions AxiomDef where
-  immediateSubExpressions f AxiomDef {..} = do
-    ty' <- recImmediateSubExpressions f _axiomType
+  directExpressions f AxiomDef {..} = do
+    ty' <- directExpressions f _axiomType
     pure
       AxiomDef
         { _axiomType = ty',
@@ -372,26 +320,22 @@ instance HasExpressions AxiomDef where
           _axiomPragmas
         }
 
-instance RecHasExpressions InductiveParameter
-
 instance HasExpressions InductiveParameter where
-  immediateSubExpressions _ = pure
+  directExpressions _ = pure
 
 -- do
--- ty' <- recImmediateSubExpressions f _inductiveParamType
+-- ty' <- directExpressions f _inductiveParamType
 -- pure
 --   InductiveParameter
 --     { _inductiveParamType = ty',
 --       _inductiveParamName
 --     }
 
-instance RecHasExpressions InductiveDef
-
 instance HasExpressions InductiveDef where
-  immediateSubExpressions f InductiveDef {..} = do
-    params' <- recImmediateSubExpressions f _inductiveParameters
-    constrs' <- recImmediateSubExpressions f _inductiveConstructors
-    ty' <- recImmediateSubExpressions f _inductiveType
+  directExpressions f InductiveDef {..} = do
+    params' <- directExpressions f _inductiveParameters
+    constrs' <- directExpressions f _inductiveConstructors
+    ty' <- directExpressions f _inductiveType
     pure
       InductiveDef
         { _inductiveParameters = params',
@@ -404,11 +348,9 @@ instance HasExpressions InductiveDef where
           _inductivePragmas
         }
 
-instance RecHasExpressions ConstructorDef
-
 instance HasExpressions ConstructorDef where
-  immediateSubExpressions f ConstructorDef {..} = do
-    ty' <- recImmediateSubExpressions f _inductiveConstructorType
+  directExpressions f ConstructorDef {..} = do
+    ty' <- directExpressions f _inductiveConstructorType
     pure
       ConstructorDef
         { _inductiveConstructorType = ty',
@@ -481,13 +423,13 @@ instance Plated Expr where
   plate _ a = pure a
 
 -- | A Fold over all subexressions, including self
-allExpressions :: (RecHasExpressions expr) => Fold expr Expression
-allExpressions = cosmosOn recImmediateSubExpressions
+allExpressions :: (HasExpressions expr) => Fold expr Expression
+allExpressions = cosmosOn directExpressions
 
-umapM :: (Monad m, RecHasExpressions expr) => (Expression -> m Expression) -> expr -> m expr
-umapM = transformMOn recImmediateSubExpressions
+umapM :: (Monad m, HasExpressions expr) => (Expression -> m Expression) -> expr -> m expr
+umapM = transformMOn directExpressions
 
-substitutionE :: forall r expr. (Member NameIdGen r, RecHasExpressions expr) => Subs -> expr -> Sem r expr
+substitutionE :: forall r expr. (Member NameIdGen r, HasExpressions expr) => Subs -> expr -> Sem r expr
 substitutionE m expr
   | null m = pure expr
   | otherwise = umapM go expr
