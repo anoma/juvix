@@ -1230,8 +1230,12 @@ instance (SingI s) => PrettyPrint (RhsGadt s) where
 
 instance (SingI s) => PrettyPrint (RecordField s) where
   ppCode RecordField {..} = do
-    let builtin' = (<> line) . ppCode <$> _fieldBuiltin
-    builtin'
+    let doc' = ppCode <$> _fieldDoc
+        pragmas' = ppCode <$> _fieldPragmas
+        builtin' = (<> line) . ppCode <$> _fieldBuiltin
+    doc'
+      ?<> pragmas'
+      ?<> builtin'
       ?<> ppSymbolType _fieldName
       <+> ppCode _fieldColon
       <+> ppExpressionType _fieldType
