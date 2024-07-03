@@ -20,6 +20,7 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Da
   )
 where
 
+import Control.Lens qualified as Lens
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty
@@ -113,11 +114,11 @@ closeState = \case
                       modify (HashMap.insert h x)
                       return x
         goExpression :: Expression -> Sem r' Expression
-        goExpression = traverseOf leafExpressions aux
+        goExpression = umapM aux
           where
-            aux :: LeafExpression -> Sem r' Expression
+            aux :: Expression -> Sem r' Expression
             aux = \case
-              LeafExpressionHole h -> goHole h
+              ExpressionHole h -> goHole h
               e -> return (toExpression e)
 
 getMetavar :: (Member (State InferenceState) r) => Hole -> Sem r MetavarState
@@ -415,7 +416,7 @@ runInferenceState inis = reinterpret (runState inis) $ \case
                                       { _unsolvedMeta = hol,
                                         _unsolvedIsLoop = True
                                       }
-                            when (LeafExpressionHole hol `elem` holTy' ^.. leafExpressions) (throw er)
+                            when (ExpressionHole hol `elem` holTy' ^.. Lens.cosmos) (throw er)
                             s <- gets (fromJust . (^. inferenceMap . at hol))
                             case s of
                               Fresh -> modify (set (inferenceMap . at hol) (Just (Refined holTy')))

@@ -1,4 +1,3 @@
-{-# LANGUAGE ImpredicativeTypes #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Juvix.Compiler.Internal.Extra.Base where
@@ -56,12 +55,6 @@ instance Plated Expression where
 instance PrettyCode LeafExpression where
   ppCode = ppCode . toExpression
 
-leafExpressions :: forall a expr. (HasExpressions a, IsExpression expr) => Traversal a a LeafExpression expr
-leafExpressions = platedTraverseNode selfExpression immediateSubExpressions pri
-  where
-    pri :: Prism Expression Expression LeafExpression expr
-    pri = prism' toExpression leafExpression
-
 leafExpression :: Expression -> Maybe LeafExpression
 leafExpression = \case
   ExpressionIden i -> Just (LeafExpressionIden i)
@@ -80,16 +73,14 @@ instance RecHasExpressions Expression where
   recImmediateSubExpressions = id
 
 instance HasExpressions Expression where
-  selfExpression = Just _self
-
   immediateSubExpressions f e = case e of
-    ExpressionIden {} -> pure e
     ExpressionApplication a -> ExpressionApplication <$> recImmediateSubExpressions f a
     ExpressionFunction fun -> ExpressionFunction <$> recImmediateSubExpressions f fun
     ExpressionSimpleLambda l -> ExpressionSimpleLambda <$> recImmediateSubExpressions f l
     ExpressionLambda l -> ExpressionLambda <$> recImmediateSubExpressions f l
     ExpressionLet l -> ExpressionLet <$> recImmediateSubExpressions f l
     ExpressionCase c -> ExpressionCase <$> recImmediateSubExpressions f c
+    ExpressionIden {} -> pure e
     ExpressionLiteral {} -> pure e
     ExpressionUniverse {} -> pure e
     ExpressionHole {} -> pure e
@@ -107,9 +98,6 @@ instance IsExpression LeafExpression where
 class HasExpressions a where
   -- | Traversal over its subexpressions. It does not include the subexpressions of the subexpressions.
   immediateSubExpressions :: Traversal' a Expression
-
-  selfExpression :: Maybe (Prism' a Expression)
-  selfExpression = Nothing
 
 -- | Helper class. All types except Expression should use the default implementation
 class (HasExpressions a) => RecHasExpressions a where
@@ -310,28 +298,22 @@ _LeafExpressionHole f e = case e of
   LeafExpressionHole h -> LeafExpressionHole <$> f h
   _ -> pure e
 
-holes :: (HasExpressions a) => Traversal' a Hole
-holes = leafExpressions . _LeafExpressionHole
-
-hasHoles :: (HasExpressions a) => a -> Bool
-hasHoles = has holes
-
 subsInstanceHoles :: forall r a. (HasExpressions a, Member NameIdGen r) => HashMap InstanceHole Expression -> a -> Sem r a
-subsInstanceHoles s = leafExpressions helper
+subsInstanceHoles s = umapM helper
   where
-    helper :: LeafExpression -> Sem r Expression
+    helper :: Expression -> Sem r Expression
     helper le = case le of
-      LeafExpressionInstanceHole h -> clone (fromMaybe e (s ^. at h))
+      ExpressionInstanceHole h -> clone (fromMaybe e (s ^. at h))
       _ -> return e
       where
         e = toExpression le
 
 subsHoles :: forall r a. (HasExpressions a, Member NameIdGen r) => HashMap Hole Expression -> a -> Sem r a
-subsHoles s = leafExpressions helper
+subsHoles s = umapM helper
   where
-    helper :: LeafExpression -> Sem r Expression
+    helper :: Expression -> Sem r Expression
     helper le = case le of
-      LeafExpressionHole h -> clone (fromMaybe e (s ^. at h))
+      ExpressionHole h -> clone (fromMaybe e (s ^. at h))
       _ -> return e
       where
         e = toExpression le
@@ -485,26 +467,17 @@ subsKind uids k =
     [ (s, toExpression s') | s <- uids, let s' = toExpression (set nameKind k s)
     ]
 
-substitutionE :: forall r expr. (Member NameIdGen r, HasExpressions expr) => Subs -> expr -> Sem r expr
-substitutionE m expr
-  | null m = pure expr
-  | otherwise = leafExpressions goLeaf expr
-  where
-    -- traceM
-    --   ( "subs = "
-    --       <> ppTrace m
-    --       <> "\nbefore = "
-    --       <> ppTrace expr
-    --       <> "\n"
-    --       <> "after "
-    --       <> ppTrace expr'
-    --       <> "\nall leaves: "
-    --       <> ppTrace (expr ^.. leafExpressions)
-    --   )
+umapM :: (Monad m, HasExpressions expr) => (Expression -> m Expression) -> expr -> m expr
+umapM = transformMOn immediateSubExpressions
 
-    goLeaf :: LeafExpression -> Sem r Expression
-    goLeaf = \case
-      LeafExpressionIden i -> goName (i ^. idenName)
+substitutionE :: forall r expr. (Member NameIdGen r, HasExpressions expr) => Subs -> expr -> Sem r expr
+substitutionE m
+  | null m = pure
+  | otherwise = umapM go
+  where
+    go :: Expression -> Sem r Expression
+    go = \case
+      ExpressionIden i -> goName (i ^. idenName)
       e -> return (toExpression e)
 
     goName :: Name -> Sem r Expression

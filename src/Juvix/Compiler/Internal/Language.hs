@@ -470,6 +470,7 @@ data NormalizedExpression = NormalizedExpression
     _normalizedExpressionOriginal :: Expression
   }
 
+makePrisms ''Expression
 makeLenses ''SideIfBranch
 makeLenses ''SideIfs
 makeLenses ''CaseBranchRhs
