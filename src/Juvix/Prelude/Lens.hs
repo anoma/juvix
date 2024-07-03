@@ -52,13 +52,13 @@ platedTraverseNode ::
   Traversal' a expr ->
   Prism expr expr node subExpr ->
   Traversal a a node subExpr
-platedTraverseNode childr priLeaf = go
+platedTraverseNode childr pri = go
   where
     go :: forall f. (Applicative f) => (node -> f subExpr) -> a -> f a
     go g = childr expToExp
       where
         expToExp :: expr -> f expr
         expToExp x =
-          case matchingMaybe priLeaf x of
-            Just (l :: leaf) -> prismView priLeaf <$> g l
-            Nothing -> plate expToExp x
+          case matchingMaybe pri x of
+            Just (l :: leaf) -> prismView pri <$> g l
+            Nothing -> platedTraverseNode plate pri g x

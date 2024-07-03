@@ -36,25 +36,30 @@ data FunctionDefaultInfo = FunctionDefaultInfo
   { _functionDefaultArgId :: ArgId,
     _functionDefaultValue :: Expression
   }
+  deriving stock (Generic, Data)
 
 data FunctionDefault = FunctionDefault
   { _functionDefaultLeft :: FunctionParameter,
     _functionDefaultDefault :: Maybe FunctionDefaultInfo,
     _functionDefaultRight :: BuilderType
   }
+  deriving stock (Generic, Data)
 
 data BuilderType
   = BuilderTypeNoDefaults Expression
   | BuilderTypeDefaults FunctionDefault
+  deriving stock (Generic, Data)
 
 data IsDefault
   = ItIsDefault ArgId
   | ItIsNotDefault
+  deriving stock (Generic, Data)
 
 data AppBuilderArg = AppBuilderArg
   { _appBuilderArgIsDefault :: IsDefault,
     _appBuilderArg :: ApplicationArg
   }
+  deriving stock (Generic, Data)
 
 data AppBuilder = AppBuilder
   { _appBuilderLeft :: Expression,

@@ -136,6 +136,7 @@ data TypedExpression = TypedExpression
   { _typedType :: Expression,
     _typedExpression :: Expression
   }
+  deriving stock (Generic, Data)
 
 data LetClause
   = -- | Non-recursive let definition
