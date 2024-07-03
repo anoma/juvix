@@ -226,6 +226,9 @@ subsInstanceHoles s = umapM helper
       where
         e = toExpression le
 
+letDefs :: (HasExpressions a) => a -> [Let]
+letDefs a = [l | ExpressionLet l <- a ^.. allExpressions]
+
 subsHoles :: forall r a. (HasExpressions a, Member NameIdGen r) => HashMap Hole Expression -> a -> Sem r a
 subsHoles s = umapM helper
   where
