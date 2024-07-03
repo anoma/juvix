@@ -20,7 +20,6 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Da
   )
 where
 
-import Control.Lens qualified as Lens
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty
@@ -416,7 +415,7 @@ runInferenceState inis = reinterpret (runState inis) $ \case
                                       { _unsolvedMeta = hol,
                                         _unsolvedIsLoop = True
                                       }
-                            when (ExpressionHole hol `elem` holTy' ^.. Lens.cosmos) (throw er)
+                            when (ExpressionHole hol `elem` holTy' ^.. allExpressions) (throw er)
                             s <- gets (fromJust . (^. inferenceMap . at hol))
                             case s of
                               Fresh -> modify (set (inferenceMap . at hol) (Just (Refined holTy')))

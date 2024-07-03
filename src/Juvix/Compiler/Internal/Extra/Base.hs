@@ -480,6 +480,7 @@ instance Plated Expr where
   plate f (Add a b) = Add <$> f a <*> f b
   plate _ a = pure a
 
+-- | A Fold over all subexressions, including self
 allExpressions :: (RecHasExpressions expr) => Fold expr Expression
 allExpressions = cosmosOn recImmediateSubExpressions
 
