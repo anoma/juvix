@@ -41,7 +41,9 @@ import Juvix.Prelude.Pretty qualified as P
 --- * the body of a `Top` iterator,
 --- * the else branch body of a `Top` if expression,
 --- * the last branch body of a `Top` case expresssion.
-data IsTop = Top | NotTop
+data IsTop
+  = Top
+  | NotTop
 
 type PrettyPrintingMaybe a = forall r. (Members '[ExactPrint, Reader Options] r) => a -> Maybe (Sem r ())
 
@@ -62,11 +64,10 @@ instance PrettyPrint KeywordRef where
   ppCode p =
     morphemeM
       (getLoc p)
-      ( annotated (C.kwTypeAnn (p ^. keywordRefKeyword . keywordType))
-          . noLoc
-          . pretty
-          $ p
-      )
+      . annotated (C.kwTypeAnn (p ^. keywordRefKeyword . keywordType))
+      . noLoc
+      . pretty
+      $ p
 
 docNoComments :: (PrettyPrint c) => Options -> c -> Doc Ann
 docNoComments = docHelper Nothing
@@ -469,8 +470,13 @@ instance PrettyPrint TopModulePath where
 
 instance (PrettyPrint n) => PrettyPrint (S.Name' n) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => S.Name' n -> Sem r ()
-  ppCode S.Name' {..} = do
-    let nameConcrete' = region (C.annotateKind _nameKind) (ppCode _nameConcrete)
+  ppCode sn@S.Name' {..} = do
+    renames <- asks (^. optRenames)
+    -- TODO qualified names are not currently handled properly
+    let renameText :: Maybe (Doc Ann) = pretty <$> firstJust (applyRename sn) renames
+        nameConcrete' =
+          region (C.annotateKind _nameKind) $
+            maybe (ppCode _nameConcrete) noLoc renameText
     annSRef (withNameIdSuffix _nameId nameConcrete')
     where
       annSRef :: Sem r () -> Sem r ()

@@ -1,6 +1,7 @@
 module Formatter.Positive where
 
 import Base
+import Juvix.Compiler.Concrete.Pretty.Options
 import Juvix.Formatter
 import Scope.Positive qualified
 import Scope.Positive qualified as Scope
@@ -26,6 +27,7 @@ makeFormatTest' Scope.PosTest {..} =
                 . runError
                 . runOutputList @FormattedFileInfo
                 . runScopeEffIO tRoot
+                . runReader defaultOptions
                 . runFilesIO
                 $ format file'
             case d of
