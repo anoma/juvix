@@ -272,15 +272,13 @@ instance HasExpressions AxiomDef where
         }
 
 instance HasExpressions InductiveParameter where
-  directExpressions _ = pure
-
--- do
--- ty' <- directExpressions f _inductiveParamType
--- pure
---   InductiveParameter
---     { _inductiveParamType = ty',
---       _inductiveParamName
---     }
+  directExpressions f InductiveParameter {..} = do
+    ty' <- directExpressions f _inductiveParamType
+    pure
+      InductiveParameter
+        { _inductiveParamType = ty',
+          _inductiveParamName
+        }
 
 instance HasExpressions InductiveDef where
   directExpressions f InductiveDef {..} = do
