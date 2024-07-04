@@ -5,7 +5,6 @@ module Juvix.Compiler.Internal.Extra.Base where
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Internal.Data.LocalVars
-import Juvix.Compiler.Internal.Extra.Clonable
 import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Internal.Pretty
 import Juvix.Prelude
@@ -207,28 +206,8 @@ instance HasExpressions Application where
     r' <- directExpressions f r
     pure (Application l' r' i)
 
-subsInstanceHoles :: forall r a. (HasExpressions a, Member NameIdGen r) => HashMap InstanceHole Expression -> a -> Sem r a
-subsInstanceHoles s = umapM helper
-  where
-    helper :: Expression -> Sem r Expression
-    helper le = case le of
-      ExpressionInstanceHole h -> clone (fromMaybe e (s ^. at h))
-      _ -> return e
-      where
-        e = toExpression le
-
 letDefs :: (HasExpressions a) => a -> [Let]
 letDefs a = [l | ExpressionLet l <- a ^.. allExpressions]
-
-subsHoles :: forall r a. (HasExpressions a, Member NameIdGen r) => HashMap Hole Expression -> a -> Sem r a
-subsHoles s = umapM helper
-  where
-    helper :: Expression -> Sem r Expression
-    helper le = case le of
-      ExpressionHole h -> clone (fromMaybe e (s ^. at h))
-      _ -> return e
-      where
-        e = toExpression le
 
 instance HasExpressions ArgInfo where
   directExpressions f ArgInfo {..} = do
@@ -311,9 +290,6 @@ instance HasExpressions ConstructorDef where
           _inductiveConstructorPragmas
         }
 
-substituteIndParams :: forall r. (Member NameIdGen r) => [(InductiveParameter, Expression)] -> Expression -> Sem r Expression
-substituteIndParams = substitutionE . HashMap.fromList . map (first (^. inductiveParamName))
-
 typeAbstraction :: IsImplicit -> Name -> FunctionParameter
 typeAbstraction i var = FunctionParameter (Just var) i (ExpressionUniverse (SmallUniverse (getLoc var)))
 
@@ -377,22 +353,6 @@ instance Plated Expr where
 -- | A Fold over all subexressions, including self
 allExpressions :: (HasExpressions expr) => Fold expr Expression
 allExpressions = cosmosOn directExpressions
-
-substitutionE :: forall r expr. (Member NameIdGen r, HasExpressions expr) => Subs -> expr -> Sem r expr
-substitutionE m expr
-  | null m = pure expr
-  | otherwise = umapM go expr
-  where
-    go :: Expression -> Sem r Expression
-    go = \case
-      ExpressionIden i -> goName (i ^. idenName)
-      e -> return (toExpression e)
-
-    goName :: Name -> Sem r Expression
-    goName n =
-      case HashMap.lookup n m of
-        Just e -> clone e
-        Nothing -> return (toExpression n)
 
 smallUniverseE :: Interval -> Expression
 smallUniverseE = ExpressionUniverse . SmallUniverse
