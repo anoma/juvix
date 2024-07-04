@@ -5,8 +5,8 @@ module Juvix.Compiler.Backend.Isabelle.Language
   )
 where
 
-import Juvix.Compiler.Internal.Data.Name
-import Juvix.Prelude
+import Juvix.Compiler.Internal.Data.Name hiding (letFixity)
+import Juvix.Prelude hiding (letFixity)
 
 data Type
   = TyVar TypeVar
@@ -190,6 +190,30 @@ data Theory = Theory
 
 makeLenses ''Theory
 
+caseFixity :: Fixity
+caseFixity =
+  Fixity
+    { _fixityPrecedence = PrecNat 0,
+      _fixityArity = OpBinary AssocLeft,
+      _fixityId = Nothing
+    }
+
+ifFixity :: Fixity
+ifFixity =
+  Fixity
+    { _fixityPrecedence = PrecNat 1,
+      _fixityArity = OpBinary AssocRight,
+      _fixityId = Nothing
+    }
+
+letFixity :: Fixity
+letFixity =
+  Fixity
+    { _fixityPrecedence = PrecNat 2,
+      _fixityArity = OpBinary AssocRight,
+      _fixityId = Nothing
+    }
+
 instance HasAtomicity TypeVar where
   atomicity _ = Atom
 
@@ -212,7 +236,6 @@ instance HasAtomicity Expression where
     ExprBinop {} -> Atom
     ExprTuple {} -> Atom
     ExprLet {} -> Aggregate letFixity
-    -- `if` is printed in parentheses, so it is atomic
-    ExprIf {} -> Atom
-    ExprCase {} -> Atom
+    ExprIf {} -> Aggregate ifFixity
+    ExprCase {} -> Aggregate caseFixity
     ExprLambda {} -> Atom

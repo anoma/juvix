@@ -369,24 +369,34 @@ goModule onlyTypes infoTable Internal.Module {..} =
           [] ->
             ExprCase
               Case
-                { _caseValue =
+                { _caseValue = val,
+                  _caseBranches = fmap goClause _lambdaClauses
+                }
+            where
+              val =
+                case vars of
+                  [v] -> ExprIden v
+                  _ ->
                     ExprTuple
                       Tuple
                         { _tupleComponents = nonEmpty' $ map ExprIden vars
-                        },
-                  _caseBranches = fmap goClause _lambdaClauses
-                }
+                        }
 
         goClause :: Internal.LambdaClause -> CaseBranch
         goClause Internal.LambdaClause {..} =
           CaseBranch
-            { _caseBranchPattern =
-                PatTuple
-                  Tuple
-                    { _tupleComponents = fmap goPatternArg _lambdaPatterns
-                    },
+            { _caseBranchPattern = pat,
               _caseBranchBody = goExpression _lambdaBody
             }
+          where
+            pat =
+              case _lambdaPatterns of
+                p :| [] -> goPatternArg p
+                _ ->
+                  PatTuple
+                    Tuple
+                      { _tupleComponents = fmap goPatternArg _lambdaPatterns
+                      }
 
     goCase :: Internal.Case -> Expression
     goCase Internal.Case {..} =

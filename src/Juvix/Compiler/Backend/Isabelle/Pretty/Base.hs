@@ -97,26 +97,26 @@ instance PrettyCode Let where
     name <- ppCode _letVar
     val <- ppCode _letValue
     body <- ppCode _letBody
-    return $ parens $ kwLet <+> name <+> "=" <+> val <+> kwIn <+> body
+    return $ kwLet <+> name <+> "=" <+> val <+> kwIn <+> body
 
 instance PrettyCode If where
   ppCode If {..} = do
     val <- ppCode _ifValue
     br1 <- ppCode _ifBranchTrue
     br2 <- ppCode _ifBranchFalse
-    return $ parens $ kwIf <+> val <+> kwThen <+> br1 <+> kwElse <+> br2
+    return $ kwIf <+> val <+> kwThen <+> br1 <+> kwElse <+> br2
 
 instance PrettyCode Case where
   ppCode Case {..} = do
     val <- ppCode _caseValue
     brs <- toList <$> mapM ppCode _caseBranches
     let brs' = punctuate kwPipe brs
-    return $ parens $ kwCase <+> val <+> kwOf <+> hsep brs'
+    return $ kwCase <+> val <+> kwOf <+> hsep brs'
 
 instance PrettyCode CaseBranch where
   ppCode CaseBranch {..} = do
     pat <- ppCode _caseBranchPattern
-    body <- ppCode _caseBranchBody
+    body <- ppRightExpression caseFixity _caseBranchBody
     return $ pat <+> arrow <+> body
 
 instance (PrettyCode a) => PrettyCode (Tuple a) where
@@ -170,7 +170,7 @@ instance PrettyCode Function where
 instance PrettyCode Clause where
   ppCode Clause {..} = do
     pats <- mapM ppCode _clausePatterns
-    body <- ppCode _clauseBody
+    body <- parensIf (isAtomic _clauseBody) <$> ppCode _clauseBody
     return $ hsep pats <+> "=" <+> body
 
 instance PrettyCode Synonym where
