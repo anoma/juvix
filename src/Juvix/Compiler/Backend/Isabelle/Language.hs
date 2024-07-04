@@ -49,6 +49,7 @@ data Expression
   | ExprUndefined
   | ExprLiteral Literal
   | ExprApp Application
+  | ExprBinop Binop
   | ExprTuple (Tuple Expression)
   | ExprLet Let
   | ExprIf If
@@ -62,6 +63,12 @@ data Literal
 data Application = Application
   { _appLeft :: Expression,
     _appRight :: Expression
+  }
+
+data Binop = Binop
+  { _binopOperator :: Name,
+    _binopLeft :: Expression,
+    _binopRight :: Expression
   }
 
 data Let = Let
@@ -200,8 +207,12 @@ instance HasAtomicity Expression where
     ExprUndefined -> Atom
     ExprLiteral {} -> Atom
     ExprApp {} -> Aggregate appFixity
+    -- for now, we always print parentheses around binary operators, so they may
+    -- be considered atoms
+    ExprBinop {} -> Atom
     ExprTuple {} -> Atom
     ExprLet {} -> Aggregate letFixity
-    ExprIf {} -> Aggregate letFixity
+    -- `if` is printed in parentheses, so it is atomic
+    ExprIf {} -> Atom
     ExprCase {} -> Atom
     ExprLambda {} -> Atom

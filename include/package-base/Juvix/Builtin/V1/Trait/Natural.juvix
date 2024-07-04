@@ -7,8 +7,10 @@ trait
 type Natural A :=
   mkNatural {
     syntax operator + additive;
+    {-# isabelle-operator: "+" #-}
     + : A -> A -> A;
     syntax operator * multiplicative;
+    {-# isabelle-operator: "*" #-}
     * : A -> A -> A;
     builtin from-nat
     fromNat : Nat -> A

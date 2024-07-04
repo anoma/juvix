@@ -67,6 +67,7 @@ instance PrettyCode Expression where
     ExprUndefined -> return kwUndefined
     ExprLiteral x -> ppCode x
     ExprApp x -> ppCode x
+    ExprBinop x -> ppCode x
     ExprTuple x -> ppCode x
     ExprLet x -> ppCode x
     ExprIf x -> ppCode x
@@ -83,6 +84,13 @@ instance PrettyCode Application where
     l <- ppLeftExpression appFixity _appLeft
     r <- ppRightExpression appFixity _appRight
     return $ l <+> r
+
+instance PrettyCode Binop where
+  ppCode Binop {..} = do
+    op <- ppCode _binopOperator
+    l <- ppCode _binopLeft
+    r <- ppCode _binopRight
+    return $ parens $ l <+> op <+> r
 
 instance PrettyCode Let where
   ppCode Let {..} = do

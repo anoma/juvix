@@ -264,10 +264,41 @@ goModule onlyTypes infoTable Internal.Module {..} =
     goIden iden = ExprIden $ Internal.getName iden
 
     goApplication :: Internal.Application -> Expression
-    goApplication Internal.Application {..} =
-      let l = goExpression _appLeft
-          r = goExpression _appRight
-       in ExprApp (Application l r)
+    goApplication app@Internal.Application {..}
+      | Just (op, arg1, arg2) <- getIsabelleOperator app =
+          ExprBinop
+            Binop
+              { _binopOperator = defaultName op,
+                _binopLeft = goExpression arg1,
+                _binopRight = goExpression arg2
+              }
+      | otherwise =
+          let l = goExpression _appLeft
+              r = goExpression _appRight
+           in ExprApp (Application l r)
+
+    getIsabelleOperator :: Internal.Application -> Maybe (Text, Internal.Expression, Internal.Expression)
+    getIsabelleOperator app = case fn of
+      Internal.ExpressionIden (Internal.IdenFunction name) ->
+        case HashMap.lookup name (infoTable ^. Internal.infoFunctions) of
+          Just funInfo ->
+            case funInfo ^. Internal.functionInfoPragmas . pragmasIsabelleOperator of
+              Just PragmaIsabelleOperator {..} ->
+                case args of
+                  Internal.ExpressionIden (Internal.IdenInductive tyname) :| [_, arg1, arg2] ->
+                    case HashMap.lookup tyname (infoTable ^. Internal.infoInductives) of
+                      Just Internal.InductiveInfo {..} ->
+                        case _inductiveInfoBuiltin of
+                          Just Internal.BuiltinNat -> Just (_pragmaIsabelleOperator, arg1, arg2)
+                          Just Internal.BuiltinInt -> Just (_pragmaIsabelleOperator, arg1, arg2)
+                          _ -> Nothing
+                      Nothing -> Nothing
+                  _ -> Nothing
+              Nothing -> Nothing
+          Nothing -> Nothing
+      _ -> Nothing
+      where
+        (fn, args) = Internal.unfoldApplication app
 
     goFunType :: Internal.Function -> Expression
     goFunType _ = ExprUndefined
