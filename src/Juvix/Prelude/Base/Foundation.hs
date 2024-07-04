@@ -348,6 +348,14 @@ combineMaps mps =
 -- List
 --------------------------------------------------------------------------------
 
+snocMaybe :: [a] -> Maybe a -> [a]
+snocMaybe l = \case
+  Nothing -> l
+  Just x -> snoc l x
+
+snocNonEmptyMaybe :: NonEmpty a -> Maybe a -> NonEmpty a
+snocNonEmptyMaybe (h :| t) m = h :| snocMaybe t m
+
 revAppend :: [a] -> [a] -> [a]
 revAppend [] !ys = ys
 revAppend (x : xs) !ys = revAppend xs (x : ys)

@@ -777,9 +777,6 @@ kwMatch = keyword Str.match_
 kwWith :: Doc Ann
 kwWith = keyword Str.with_
 
-kwIf :: Doc Ann
-kwIf = keyword Str.if_
-
 kwThen :: Doc Ann
 kwThen = keyword Str.then_
 

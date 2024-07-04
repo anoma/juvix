@@ -13,6 +13,8 @@ import Data.Map qualified as Map
 import Juvix.Compiler.Concrete.Data.Scope.Base
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra qualified as Concrete
+import Juvix.Compiler.Concrete.Gen qualified as Gen
+import Juvix.Compiler.Concrete.Keywords
 import Juvix.Compiler.Concrete.Keywords qualified as Kw
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty.Options
@@ -538,11 +540,52 @@ ppLet isTop Let {..} = do
       letExpression' = ppMaybeTopExpression isTop _letExpression
   align $ ppCode _letKw <> letFunDefs' <> ppCode _letInKw <+> letExpression'
 
+instance (SingI s, SingI k) => PrettyPrint (SideIfBranch s k) where
+  ppCode SideIfBranch {..} = do
+    let kwPipe' = ppCode <$> _sideIfBranchPipe ^. unIrrelevant
+        kwIfElse' = ppCode _sideIfBranchKw
+        kwAssign' = ppCode _sideIfBranchAssignKw
+        condition' = case sing :: SIfBranchKind k of
+          SBranchIfBool -> Just (ppExpressionType _sideIfBranchCondition)
+          SBranchIfElse -> Nothing
+        body' = ppExpressionType _sideIfBranchBody
+    kwPipe'
+      <?+> ( kwIfElse'
+               <+?> condition'
+               <+> kwAssign'
+                 <> oneLineOrNext body'
+           )
+
+instance (SingI s) => PrettyPrint (SideIfs s) where
+  ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => SideIfs s -> Sem r ()
+  ppCode SideIfs {..} =
+    case (_sideIfBranches, _sideIfElse) of
+      (b :| [], Nothing) -> ppCode (set sideIfBranchPipe (Irrelevant Nothing) b)
+      (b :| bs, _) -> do
+        let putPipe :: Maybe KeywordRef -> Maybe KeywordRef
+            putPipe = \case
+              Nothing -> Just (run (runReader (getLoc b) (Gen.kw kwPipe)))
+              Just p -> Just p
+            firstBr = over (sideIfBranchPipe . unIrrelevant) putPipe b
+            ifbranches = map ppCode (toList (firstBr : bs))
+            allBranches :: [Sem r ()] = snocMaybe ifbranches (ppCode <$> _sideIfElse)
+        line <> indent (vsepHard allBranches)
+
+ppCaseBranchRhs :: forall r s. (Members '[ExactPrint, Reader Options] r, SingI s) => IsTop -> CaseBranchRhs s -> Sem r ()
+ppCaseBranchRhs isTop = \case
+  CaseBranchRhsExpression e -> ppExpressionRhs isTop e
+  CaseBranchRhsIf ifCond -> ppCode ifCond
+
+ppExpressionRhs :: (Member (Reader Options) r, Member ExactPrint r, SingI s) => IsTop -> RhsExpression s -> Sem r ()
+ppExpressionRhs isTop RhsExpression {..} = do
+  let expr' = ppMaybeTopExpression isTop _rhsExpression
+  ppCode _rhsExpressionAssignKw <> oneLineOrNext expr'
+
 ppCaseBranch :: forall r s. (Members '[ExactPrint, Reader Options] r, SingI s) => IsTop -> CaseBranch s -> Sem r ()
 ppCaseBranch isTop CaseBranch {..} = do
   let pat' = ppPatternParensType _caseBranchPattern
-      e' = ppMaybeTopExpression isTop _caseBranchExpression
-  pat' <+> ppCode _caseBranchAssignKw <> oneLineOrNext e'
+      rhs' = ppCaseBranchRhs isTop _caseBranchRhs
+  pat' <+> rhs'
 
 ppCase :: forall r s. (Members '[ExactPrint, Reader Options] r, SingI s) => IsTop -> Case s -> Sem r ()
 ppCase isTop Case {..} = do
@@ -573,32 +616,37 @@ ppCase isTop Case {..} = do
               Just p -> ppCode p
               Nothing -> ppCode Kw.kwPipe
 
-instance (SingI s) => PrettyPrint (IfBranch s) where
+instance (SingI s) => PrettyPrint (IfBranch s 'BranchIfBool) where
   ppCode IfBranch {..} = do
-    let cond' = ppExpressionType _ifBranchCondition
+    let pipe' = ppCode _ifBranchPipe
+        cond' = ppExpressionType _ifBranchCondition
         e' = ppExpressionType _ifBranchExpression
-    cond' <+> ppCode _ifBranchAssignKw <> oneLineOrNext e'
+    pipe' <+> cond' <+> ppCode _ifBranchAssignKw <> oneLineOrNext e'
 
-ppIfBranchElse :: forall r s. (Members '[ExactPrint, Reader Options] r, SingI s) => IsTop -> IfBranchElse s -> Sem r ()
-ppIfBranchElse isTop IfBranchElse {..} = do
-  let e' = ppMaybeTopExpression isTop _ifBranchElseExpression
-  ppCode _ifBranchElseKw <+> ppCode _ifBranchElseAssignKw <> oneLineOrNext e'
+ppIfBranchElse ::
+  forall r s.
+  (Members '[ExactPrint, Reader Options] r, SingI s) =>
+  IsTop ->
+  IfBranch s 'BranchIfElse ->
+  Sem r ()
+ppIfBranchElse isTop IfBranch {..} = do
+  let e' = ppMaybeTopExpression isTop _ifBranchExpression
+  ppCode _ifBranchCondition <+> ppCode _ifBranchAssignKw <> oneLineOrNext e'
 
 ppIf :: forall r s. (Members '[ExactPrint, Reader Options] r, SingI s) => IsTop -> If s -> Sem r ()
 ppIf isTop If {..} = do
-  ppCode _ifKw <+> hardline <> indent (vsepHard (ppIfBranch <$> _ifBranches) <> hardline <> ppIfBranchElse' _ifBranchElse)
+  ppCode _ifKw
+    <+> hardline
+      <> indent
+        ( vsepHard (ppIfBranch <$> _ifBranches)
+            <> hardline
+            <> ppIfBranch _ifBranchElse
+        )
   where
-    ppIfBranch :: IfBranch s -> Sem r ()
-    ppIfBranch b = pipeHelper <+> ppCode b
-      where
-        pipeHelper :: Sem r ()
-        pipeHelper = ppCode (b ^. ifBranchPipe . unIrrelevant)
-
-    ppIfBranchElse' :: IfBranchElse s -> Sem r ()
-    ppIfBranchElse' b = pipeHelper <+> ppIfBranchElse isTop b
-      where
-        pipeHelper :: Sem r ()
-        pipeHelper = ppCode (b ^. ifBranchElsePipe . unIrrelevant)
+    ppIfBranch :: forall k. (SingI k) => IfBranch s k -> Sem r ()
+    ppIfBranch b = case sing :: SIfBranchKind k of
+      SBranchIfBool -> ppCode b
+      SBranchIfElse -> ppIfBranchElse isTop b
 
 instance PrettyPrint Universe where
   ppCode Universe {..} = ppCode _universeKw <+?> (noLoc . pretty <$> _universeLevel)

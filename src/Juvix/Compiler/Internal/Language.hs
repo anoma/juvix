@@ -221,9 +221,44 @@ instance Serialize SimpleLambda
 
 instance NFData SimpleLambda
 
+data SideIfBranch = SideIfBranch
+  { _sideIfBranchCondition :: Expression,
+    _sideIfBranchBody :: Expression
+  }
+  deriving stock (Eq, Generic, Data)
+
+instance Serialize SideIfBranch
+
+instance NFData SideIfBranch
+
+instance Hashable SideIfBranch
+
+data SideIfs = SideIfs
+  { _sideIfBranches :: NonEmpty SideIfBranch,
+    _sideIfElse :: Maybe Expression
+  }
+  deriving stock (Eq, Generic, Data)
+
+instance Serialize SideIfs
+
+instance NFData SideIfs
+
+instance Hashable SideIfs
+
+data CaseBranchRhs
+  = CaseBranchRhsExpression Expression
+  | CaseBranchRhsIf SideIfs
+  deriving stock (Eq, Generic, Data)
+
+instance Serialize CaseBranchRhs
+
+instance NFData CaseBranchRhs
+
+instance Hashable CaseBranchRhs
+
 data CaseBranch = CaseBranch
   { _caseBranchPattern :: PatternArg,
-    _caseBranchExpression :: Expression
+    _caseBranchRhs :: CaseBranchRhs
   }
   deriving stock (Eq, Generic, Data)
 
@@ -433,6 +468,9 @@ data NormalizedExpression = NormalizedExpression
     _normalizedExpressionOriginal :: Expression
   }
 
+makeLenses ''SideIfBranch
+makeLenses ''SideIfs
+makeLenses ''CaseBranchRhs
 makeLenses ''ModuleIndex
 makeLenses ''ArgInfo
 makeLenses ''WildcardConstructor
@@ -579,8 +617,23 @@ instance HasLoc LetClause where
 instance HasLoc Let where
   getLoc l = getLocSpan (l ^. letClauses) <> getLoc (l ^. letExpression)
 
+instance HasLoc SideIfBranch where
+  getLoc SideIfBranch {..} =
+    getLoc _sideIfBranchCondition
+      <> getLoc _sideIfBranchBody
+
+instance HasLoc SideIfs where
+  getLoc SideIfs {..} =
+    getLocSpan _sideIfBranches
+      <>? (getLoc <$> _sideIfElse)
+
+instance HasLoc CaseBranchRhs where
+  getLoc = \case
+    CaseBranchRhsExpression e -> getLoc e
+    CaseBranchRhsIf e -> getLoc e
+
 instance HasLoc CaseBranch where
-  getLoc c = getLoc (c ^. caseBranchPattern) <> getLoc (c ^. caseBranchExpression)
+  getLoc c = getLoc (c ^. caseBranchPattern) <> getLoc (c ^. caseBranchRhs)
 
 instance HasLoc Case where
   getLoc c = getLocSpan (c ^. caseBranches)

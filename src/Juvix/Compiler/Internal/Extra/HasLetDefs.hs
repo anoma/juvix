@@ -5,8 +5,9 @@ import Juvix.Prelude
 
 class HasLetDefs a where
   letDefs' :: [Let] -> a -> [Let]
-  letDefs :: a -> [Let]
-  letDefs = letDefs' []
+
+letDefs :: (HasLetDefs a) => a -> [Let]
+letDefs = letDefs' []
 
 instance (HasLetDefs a, Foldable f) => HasLetDefs (f a) where
   letDefs' = foldl' letDefs'
@@ -69,8 +70,19 @@ instance HasLetDefs ConstructorApp where
 instance HasLetDefs Case where
   letDefs' acc Case {..} = letDefs' (letDefs' acc _caseExpression) _caseBranches
 
+instance HasLetDefs SideIfs where
+  letDefs' acc SideIfs {..} = letDefs' (letDefs' acc _sideIfBranches) _sideIfElse
+
+instance HasLetDefs CaseBranchRhs where
+  letDefs' acc = \case
+    CaseBranchRhsExpression e -> letDefs' acc e
+    CaseBranchRhsIf e -> letDefs' acc e
+
+instance HasLetDefs SideIfBranch where
+  letDefs' acc SideIfBranch {..} = letDefs' (letDefs' acc _sideIfBranchCondition) _sideIfBranchBody
+
 instance HasLetDefs CaseBranch where
-  letDefs' acc CaseBranch {..} = letDefs' acc _caseBranchExpression
+  letDefs' acc CaseBranch {..} = letDefs' acc _caseBranchRhs
 
 instance HasLetDefs MutualBlockLet where
   letDefs' acc MutualBlockLet {..} = letDefs' acc _mutualLet

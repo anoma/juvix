@@ -177,11 +177,35 @@ scanCase c = do
   mapM_ scanCaseBranch (c ^. caseBranches)
   scanExpression (c ^. caseExpression)
 
+scanSideIfBranch ::
+  (Members '[State CallMap, Reader (Maybe FunctionRef), Reader SizeInfo] r) =>
+  SideIfBranch ->
+  Sem r ()
+scanSideIfBranch SideIfBranch {..} = do
+  scanExpression _sideIfBranchCondition
+  scanExpression _sideIfBranchBody
+
+scanSideIfs ::
+  (Members '[State CallMap, Reader (Maybe FunctionRef), Reader SizeInfo] r) =>
+  SideIfs ->
+  Sem r ()
+scanSideIfs SideIfs {..} = do
+  mapM_ scanSideIfBranch _sideIfBranches
+  mapM_ scanExpression _sideIfElse
+
+scanCaseBranchRhs ::
+  (Members '[State CallMap, Reader (Maybe FunctionRef), Reader SizeInfo] r) =>
+  CaseBranchRhs ->
+  Sem r ()
+scanCaseBranchRhs = \case
+  CaseBranchRhsExpression e -> scanExpression e
+  CaseBranchRhsIf e -> scanSideIfs e
+
 scanCaseBranch ::
   (Members '[State CallMap, Reader (Maybe FunctionRef), Reader SizeInfo] r) =>
   CaseBranch ->
   Sem r ()
-scanCaseBranch = scanExpression . (^. caseBranchExpression)
+scanCaseBranch = scanCaseBranchRhs . (^. caseBranchRhs)
 
 scanLet ::
   (Members '[State CallMap, Reader (Maybe FunctionRef), Reader SizeInfo] r) =>

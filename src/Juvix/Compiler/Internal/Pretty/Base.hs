@@ -83,10 +83,37 @@ instance PrettyCode Expression where
     ExpressionLet l -> ppCode l
     ExpressionCase c -> ppCode c
 
+instance PrettyCode SideIfBranch where
+  ppCode SideIfBranch {..} = do
+    condition' <- ppCode _sideIfBranchCondition
+    body' <- ppCode _sideIfBranchBody
+    return $
+      kwPipe
+        <+> kwIf
+        <+> condition'
+        <+> kwAssign
+        <+> oneLineOrNext body'
+
+instance PrettyCode SideIfs where
+  ppCode SideIfs {..} =
+    case (_sideIfBranches, _sideIfElse) of
+      (b :| [], Nothing) -> ppCode b
+      _ -> do
+        ifbranches <- mapM ppCode (toList _sideIfBranches)
+        elseBr <- mapM ppCode _sideIfElse
+        let allBranches = snocMaybe ifbranches elseBr
+        return $
+          line <> indent' (vsep allBranches)
+
+instance PrettyCode CaseBranchRhs where
+  ppCode = \case
+    CaseBranchRhsExpression e -> ppCode e
+    CaseBranchRhsIf ifCond -> ppCode ifCond
+
 instance PrettyCode CaseBranch where
   ppCode CaseBranch {..} = do
     pat <- ppCode _caseBranchPattern
-    e <- ppCode _caseBranchExpression
+    e <- ppCode _caseBranchRhs
     return $ kwPipe <+> pat <+> kwAssign <+> e
 
 instance PrettyCode Case where

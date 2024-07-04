@@ -942,12 +942,12 @@ goExpression = \case
     goIf :: Concrete.If 'Scoped -> Sem r Internal.Expression
     goIf e@Concrete.If {..} = do
       if_ <- getBuiltinName (getLoc e) BuiltinBoolIf
-      go if_ (toList _ifBranches)
+      go if_ _ifBranches
       where
-        go :: Internal.Name -> [Concrete.IfBranch 'Scoped] -> Sem r Internal.Expression
+        go :: Internal.Name -> [Concrete.IfBranch 'Scoped 'BranchIfBool] -> Sem r Internal.Expression
         go if_ = \case
           [] ->
-            goExpression (_ifBranchElse ^. Concrete.ifBranchElseExpression)
+            goExpression (_ifBranchElse ^. Concrete.ifBranchExpression)
           Concrete.IfBranch {..} : brs -> do
             c <- goExpression _ifBranchCondition
             b1 <- goExpression _ifBranchExpression
@@ -1069,8 +1069,59 @@ goCase c = do
     goBranch :: CaseBranch 'Scoped -> Sem r Internal.CaseBranch
     goBranch b = do
       _caseBranchPattern <- goPatternArg (b ^. caseBranchPattern)
-      _caseBranchExpression <- goExpression (b ^. caseBranchExpression)
+      _caseBranchRhs <- goCaseBranchRhs (b ^. caseBranchRhs)
       return Internal.CaseBranch {..}
+
+gRhsExpression ::
+  forall r.
+  (Members '[Reader DefaultArgsStack, Builtins, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) =>
+  RhsExpression 'Scoped ->
+  Sem r Internal.Expression
+gRhsExpression RhsExpression {..} = goExpression _rhsExpression
+
+goSideIfBranch ::
+  forall r.
+  (Members '[Reader DefaultArgsStack, Builtins, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) =>
+  SideIfBranch 'Scoped 'BranchIfBool ->
+  Sem r Internal.SideIfBranch
+goSideIfBranch s = do
+  cond' <- goExpression (s ^. sideIfBranchCondition)
+  body' <- goExpression (s ^. sideIfBranchBody)
+  return
+    Internal.SideIfBranch
+      { _sideIfBranchCondition = cond',
+        _sideIfBranchBody = body'
+      }
+
+goSideIfBranchElse ::
+  forall r.
+  (Members '[Reader DefaultArgsStack, Builtins, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) =>
+  SideIfBranch 'Scoped 'BranchIfElse ->
+  Sem r Internal.Expression
+goSideIfBranchElse s = goExpression (s ^. sideIfBranchBody)
+
+goSideIfs ::
+  forall r.
+  (Members '[Reader DefaultArgsStack, Builtins, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) =>
+  SideIfs 'Scoped ->
+  Sem r Internal.SideIfs
+goSideIfs s = do
+  branches' <- mapM goSideIfBranch (s ^. sideIfBranches)
+  else' <- mapM goSideIfBranchElse (s ^. sideIfElse)
+  return
+    Internal.SideIfs
+      { _sideIfBranches = branches',
+        _sideIfElse = else'
+      }
+
+goCaseBranchRhs ::
+  forall r.
+  (Members '[Reader DefaultArgsStack, Builtins, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) =>
+  CaseBranchRhs 'Scoped ->
+  Sem r Internal.CaseBranchRhs
+goCaseBranchRhs = \case
+  CaseBranchRhsExpression e -> Internal.CaseBranchRhsExpression <$> gRhsExpression e
+  CaseBranchRhsIf s -> Internal.CaseBranchRhsIf <$> goSideIfs s
 
 goLambda :: forall r. (Members '[Reader DefaultArgsStack, Builtins, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) => Lambda 'Scoped -> Sem r Internal.Lambda
 goLambda l = do
