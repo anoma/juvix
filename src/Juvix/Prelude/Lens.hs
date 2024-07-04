@@ -21,9 +21,6 @@ _unsnoc1 afb la = uncurryF (|:) (afb (maybe [] toList minit, lasta))
 _last1 :: Lens' (NonEmpty a) a
 _last1 = _unsnoc1 . _2
 
-_self :: Prism' a a
-_self = prism' id Just
-
 overM :: (Applicative m) => Lens' a b -> (b -> m b) -> a -> m a
 overM l f a = do
   a' <- f (a ^. l)
@@ -31,10 +28,3 @@ overM l f a = do
 
 setAndRemember :: LensLike ((,) a) s t a b -> b -> s -> (a, t)
 setAndRemember = (<<.~)
-
--- | Extracts the getter from a prism
-prismView :: Prism s t a b -> b -> t
-prismView aprism = withPrism aprism const
-
-matchingMaybe :: Prism s s a b -> s -> Maybe a
-matchingMaybe pri = either (const Nothing) return . matching pri
