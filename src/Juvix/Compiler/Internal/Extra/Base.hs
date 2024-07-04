@@ -59,6 +59,9 @@ class HasExpressions a where
   -- | Traverses itself if `a` is an Expression. Otherwise traverses children `Expression`s (not transitive).
   directExpressions :: Traversal' a Expression
 
+directExpressions_ :: forall f a. (HasExpressions a, Applicative f) => (Expression -> f ()) -> a -> f ()
+directExpressions_ f = void . directExpressions (\e -> e <$ f e)
+
 instance HasExpressions Expression where
   directExpressions = id
 
@@ -374,9 +377,6 @@ instance Plated Expr where
 -- | A Fold over all subexressions, including self
 allExpressions :: (HasExpressions expr) => Fold expr Expression
 allExpressions = cosmosOn directExpressions
-
-umapM :: (Monad m, HasExpressions expr) => (Expression -> m Expression) -> expr -> m expr
-umapM = transformMOn directExpressions
 
 substitutionE :: forall r expr. (Member NameIdGen r, HasExpressions expr) => Subs -> expr -> Sem r expr
 substitutionE m expr
@@ -828,3 +828,6 @@ simpleFunDef funName ty body =
       _funDefBuiltin = Nothing,
       _funDefBody = body
     }
+
+umapM :: (Monad m, HasExpressions expr) => (Expression -> m Expression) -> expr -> m expr
+umapM = transformMOn directExpressions
