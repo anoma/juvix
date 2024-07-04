@@ -68,7 +68,8 @@ data Application = Application
 data Binop = Binop
   { _binopOperator :: Name,
     _binopLeft :: Expression,
-    _binopRight :: Expression
+    _binopRight :: Expression,
+    _binopFixity :: Fixity
   }
 
 data Let = Let
@@ -198,6 +199,14 @@ caseFixity =
       _fixityId = Nothing
     }
 
+lambdaFixity :: Fixity
+lambdaFixity =
+  Fixity
+    { _fixityPrecedence = PrecNat 0,
+      _fixityArity = OpUnary AssocPostfix,
+      _fixityId = Nothing
+    }
+
 ifFixity :: Fixity
 ifFixity =
   Fixity
@@ -231,9 +240,7 @@ instance HasAtomicity Expression where
     ExprUndefined -> Atom
     ExprLiteral {} -> Atom
     ExprApp {} -> Aggregate appFixity
-    -- for now, we always print parentheses around binary operators, so they may
-    -- be considered atoms
-    ExprBinop {} -> Atom
+    ExprBinop Binop {..} -> Aggregate _binopFixity
     ExprTuple {} -> Atom
     ExprLet {} -> Aggregate letFixity
     ExprIf {} -> Aggregate ifFixity

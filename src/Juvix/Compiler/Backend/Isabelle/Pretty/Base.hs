@@ -88,9 +88,9 @@ instance PrettyCode Application where
 instance PrettyCode Binop where
   ppCode Binop {..} = do
     op <- ppCode _binopOperator
-    l <- ppCode _binopLeft
-    r <- ppCode _binopRight
-    return $ parens $ l <+> op <+> r
+    l <- ppLeftExpression _binopFixity _binopLeft
+    r <- ppRightExpression _binopFixity _binopRight
+    return $ l <+> op <+> r
 
 instance PrettyCode Let where
   ppCode Let {..} = do

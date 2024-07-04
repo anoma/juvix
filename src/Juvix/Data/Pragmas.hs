@@ -1,6 +1,7 @@
 module Juvix.Data.Pragmas where
 
 import Data.Aeson.BetterErrors qualified as Aeson
+import Juvix.Data.Fixity
 import Juvix.Data.Yaml
 import Juvix.Extra.Serialize
 import Juvix.Prelude.Base
@@ -58,8 +59,10 @@ newtype PragmaEval = PragmaEval
   }
   deriving stock (Show, Eq, Ord, Data, Generic)
 
-newtype PragmaIsabelleOperator = PragmaIsabelleOperator
-  { _pragmaIsabelleOperator :: Text
+data PragmaIsabelleOperator = PragmaIsabelleOperator
+  { _pragmaIsabelleOperatorName :: Text,
+    _pragmaIsabelleOperatorPrec :: Maybe Int,
+    _pragmaIsabelleOperatorAssoc :: Maybe BinaryAssoc
   }
   deriving stock (Show, Eq, Ord, Data, Generic)
 
@@ -236,8 +239,19 @@ instance FromJSON Pragmas where
 
       parseIsabelleOperator :: Parse YamlError PragmaIsabelleOperator
       parseIsabelleOperator = do
-        _pragmaIsabelleOperator <- asText
+        _pragmaIsabelleOperatorName <- key "name" asText
+        _pragmaIsabelleOperatorPrec <- keyMay "prec" asIntegral
+        _pragmaIsabelleOperatorAssoc <- keyMay "assoc" parseAssoc
         return PragmaIsabelleOperator {..}
+
+      parseAssoc :: Parse YamlError BinaryAssoc
+      parseAssoc = do
+        assoc <- asText
+        case assoc of
+          "left" -> return AssocLeft
+          "right" -> return AssocRight
+          "none" -> return AssocNone
+          _ -> throwCustomError "unknown associativity"
 
       parseSpecialiseArg :: Parse YamlError PragmaSpecialiseArg
       parseSpecialiseArg =

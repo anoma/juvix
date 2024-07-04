@@ -265,32 +265,38 @@ goModule onlyTypes infoTable Internal.Module {..} =
 
     goApplication :: Internal.Application -> Expression
     goApplication app@Internal.Application {..}
-      | Just (op, arg1, arg2) <- getIsabelleOperator app =
+      | Just (PragmaIsabelleOperator {..}, arg1, arg2) <- getIsabelleOperator app =
           ExprBinop
             Binop
-              { _binopOperator = defaultName op,
+              { _binopOperator = defaultName _pragmaIsabelleOperatorName,
                 _binopLeft = goExpression arg1,
-                _binopRight = goExpression arg2
+                _binopRight = goExpression arg2,
+                _binopFixity =
+                  Fixity
+                    { _fixityPrecedence = PrecNat (fromMaybe 0 _pragmaIsabelleOperatorPrec),
+                      _fixityArity = OpBinary (fromMaybe AssocNone _pragmaIsabelleOperatorAssoc),
+                      _fixityId = Nothing
+                    }
               }
       | otherwise =
           let l = goExpression _appLeft
               r = goExpression _appRight
            in ExprApp (Application l r)
 
-    getIsabelleOperator :: Internal.Application -> Maybe (Text, Internal.Expression, Internal.Expression)
+    getIsabelleOperator :: Internal.Application -> Maybe (PragmaIsabelleOperator, Internal.Expression, Internal.Expression)
     getIsabelleOperator app = case fn of
       Internal.ExpressionIden (Internal.IdenFunction name) ->
         case HashMap.lookup name (infoTable ^. Internal.infoFunctions) of
           Just funInfo ->
             case funInfo ^. Internal.functionInfoPragmas . pragmasIsabelleOperator of
-              Just PragmaIsabelleOperator {..} ->
+              Just pragma ->
                 case args of
                   Internal.ExpressionIden (Internal.IdenInductive tyname) :| [_, arg1, arg2] ->
                     case HashMap.lookup tyname (infoTable ^. Internal.infoInductives) of
                       Just Internal.InductiveInfo {..} ->
                         case _inductiveInfoBuiltin of
-                          Just Internal.BuiltinNat -> Just (_pragmaIsabelleOperator, arg1, arg2)
-                          Just Internal.BuiltinInt -> Just (_pragmaIsabelleOperator, arg1, arg2)
+                          Just Internal.BuiltinNat -> Just (pragma, arg1, arg2)
+                          Just Internal.BuiltinInt -> Just (pragma, arg1, arg2)
                           _ -> Nothing
                       Nothing -> Nothing
                   _ -> Nothing
