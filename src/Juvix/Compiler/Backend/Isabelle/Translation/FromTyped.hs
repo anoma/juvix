@@ -400,8 +400,13 @@ goModule onlyTypes infoTable Internal.Module {..} =
     goCaseBranch Internal.CaseBranch {..} =
       CaseBranch
         { _caseBranchPattern = goPatternArg _caseBranchPattern,
-          _caseBranchBody = goExpression _caseBranchExpression
+          _caseBranchBody = goCaseBranchRhs _caseBranchRhs
         }
+
+    goCaseBranchRhs :: Internal.CaseBranchRhs -> Expression
+    goCaseBranchRhs = \case
+      Internal.CaseBranchRhsExpression e -> goExpression e
+      Internal.CaseBranchRhsIf {} -> error "unsupported: side conditions"
 
     -- TODO: named patterns (`_patternArgName`) are not handled properly
     goPatternArg :: Internal.PatternArg -> Pattern
