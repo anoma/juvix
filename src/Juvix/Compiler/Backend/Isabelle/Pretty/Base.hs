@@ -142,7 +142,7 @@ instance PrettyCode Lambda where
     mty <- maybe (return Nothing) (ppCode >=> return . Just) _lambdaType
     body <- ppCode _lambdaBody
     let ty = fmap (\t -> colon <> colon <+> t) mty
-    return $ parens $ kwLambda <+> name <+?> ty <+> dot <+> body
+    return $ kwLambda <+> name <+?> ty <+> dot <+> body
 
 instance PrettyCode Statement where
   ppCode = \case
@@ -170,7 +170,7 @@ instance PrettyCode Function where
 instance PrettyCode Clause where
   ppCode Clause {..} = do
     pats <- mapM ppCode _clausePatterns
-    body <- parensIf (isAtomic _clauseBody) <$> ppCode _clauseBody
+    body <- parensIf (not (isAtomic _clauseBody)) <$> ppCode _clauseBody
     return $ hsep pats <+> "=" <+> body
 
 instance PrettyCode Synonym where

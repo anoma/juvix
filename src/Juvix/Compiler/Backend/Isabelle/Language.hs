@@ -245,4 +245,4 @@ instance HasAtomicity Expression where
     ExprLet {} -> Aggregate letFixity
     ExprIf {} -> Aggregate ifFixity
     ExprCase {} -> Aggregate caseFixity
-    ExprLambda {} -> Atom
+    ExprLambda {} -> Aggregate lambdaFixity
