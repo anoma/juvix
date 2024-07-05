@@ -106,6 +106,8 @@ data Pattern
   = PatVar Name
   | PatConstrApp ConstrApp
   | PatTuple (Tuple Pattern)
+  | PatList (List Pattern)
+  | PatCons (Cons Pattern)
 
 newtype Tuple a = Tuple
   { _tupleComponents :: NonEmpty a
@@ -267,3 +269,13 @@ instance HasAtomicity Expression where
     ExprIf {} -> Aggregate ifFixity
     ExprCase {} -> Aggregate caseFixity
     ExprLambda {} -> Aggregate lambdaFixity
+
+instance HasAtomicity Pattern where
+  atomicity = \case
+    PatVar {} -> Atom
+    PatConstrApp ConstrApp {..}
+      | null _constrAppArgs -> Atom
+      | otherwise -> Aggregate appFixity
+    PatTuple {} -> Atom
+    PatList {} -> Atom
+    PatCons {} -> Aggregate consFixity

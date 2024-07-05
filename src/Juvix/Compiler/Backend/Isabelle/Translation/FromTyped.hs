@@ -365,6 +365,33 @@ goModule onlyTypes infoTable Internal.Module {..} =
       where
         (fn, args) = Internal.unfoldApplication app
 
+    -- This function cannot be simply merged with `getList` because for patterns
+    -- the constructors don't get the type argument.
+    getListPat :: Name -> [Internal.PatternArg] -> Maybe [Pattern]
+    getListPat name args =
+      case HashMap.lookup name (infoTable ^. Internal.infoConstructors) of
+        Just funInfo ->
+          case funInfo ^. Internal.constructorInfoBuiltin of
+            Just Internal.BuiltinListNil -> Just []
+            Just Internal.BuiltinListCons
+              | [arg1, Internal.PatternArg {..}] <- args,
+                Internal.PatternConstructorApp Internal.ConstructorApp {..} <- _patternArgPattern,
+                Just lst <- getListPat _constrAppConstructor _constrAppParameters ->
+                  Just (goPatternArg arg1 : lst)
+            _ -> Nothing
+        Nothing -> Nothing
+
+    getConsPat :: Name -> [Internal.PatternArg] -> Maybe (Pattern, Pattern)
+    getConsPat name args =
+      case HashMap.lookup name (infoTable ^. Internal.infoConstructors) of
+        Just funInfo ->
+          case funInfo ^. Internal.constructorInfoBuiltin of
+            Just Internal.BuiltinListCons
+              | [arg1, arg2] <- args ->
+                  Just (goPatternArg arg1, goPatternArg arg2)
+            _ -> Nothing
+        Nothing -> Nothing
+
     goFunType :: Internal.Function -> Expression
     goFunType _ = ExprUndefined
 
@@ -495,12 +522,17 @@ goModule onlyTypes infoTable Internal.Module {..} =
       Internal.PatternWildcardConstructor {} -> impossible
 
     goPatternConstructorApp :: Internal.ConstructorApp -> Pattern
-    goPatternConstructorApp Internal.ConstructorApp {..} =
-      PatConstrApp
-        ConstrApp
-          { _constrAppConstructor = _constrAppConstructor,
-            _constrAppArgs = map goPatternArg _constrAppParameters
-          }
+    goPatternConstructorApp Internal.ConstructorApp {..}
+      | Just lst <- getListPat _constrAppConstructor _constrAppParameters =
+          PatList (List lst)
+      | Just (x, y) <- getConsPat _constrAppConstructor _constrAppParameters =
+          PatCons (Cons x y)
+      | otherwise =
+          PatConstrApp
+            ConstrApp
+              { _constrAppConstructor = _constrAppConstructor,
+                _constrAppArgs = map goPatternArg _constrAppParameters
+              }
 
     defaultName :: Text -> Name
     defaultName n =

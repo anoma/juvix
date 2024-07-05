@@ -19,6 +19,9 @@ ppCodeQuoted c
   | atomicity c == Atom = ppCode c
   | otherwise = dquotes <$> ppCode c
 
+ppTopCode :: (HasAtomicity c, PrettyCode c, Member (Reader Options) r) => c -> Sem r (Doc Ann)
+ppTopCode c = parensIf (not (isAtomic c)) <$> ppCode c
+
 ppParams :: (HasAtomicity c, PrettyCode c, Member (Reader Options) r) => [c] -> Sem r (Maybe (Doc Ann))
 ppParams = \case
   [] -> return Nothing
@@ -117,7 +120,7 @@ instance PrettyCode Case where
 
 instance PrettyCode CaseBranch where
   ppCode CaseBranch {..} = do
-    pat <- ppCode _caseBranchPattern
+    pat <- ppTopCode _caseBranchPattern
     body <- ppRightExpression caseFixity _caseBranchBody
     return $ pat <+> arrow <+> body
 
@@ -142,6 +145,8 @@ instance PrettyCode Pattern where
     PatVar x -> ppCode x
     PatConstrApp x -> ppCode x
     PatTuple x -> ppCode x
+    PatList x -> ppCode x
+    PatCons x -> ppCode x
 
 instance PrettyCode ConstrApp where
   ppCode ConstrApp {..} = do
@@ -186,8 +191,8 @@ instance PrettyCode Function where
 
 instance PrettyCode Clause where
   ppCode Clause {..} = do
-    pats <- mapM ppCode _clausePatterns
-    body <- parensIf (not (isAtomic _clauseBody)) <$> ppCode _clauseBody
+    pats <- mapM ppTopCode _clausePatterns
+    body <- ppTopCode _clauseBody
     return $ hsep pats <+> "=" <+> body
 
 instance PrettyCode Synonym where
