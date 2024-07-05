@@ -69,6 +69,8 @@ instance PrettyCode Expression where
     ExprApp x -> ppCode x
     ExprBinop x -> ppCode x
     ExprTuple x -> ppCode x
+    ExprList x -> ppCode x
+    ExprCons x -> ppCode x
     ExprLet x -> ppCode x
     ExprIf x -> ppCode x
     ExprCase x -> ppCode x
@@ -110,7 +112,7 @@ instance PrettyCode Case where
   ppCode Case {..} = do
     val <- ppCode _caseValue
     brs <- toList <$> mapM ppCode _caseBranches
-    let brs' = punctuate kwPipe brs
+    let brs' = punctuate (space <> kwPipe) brs
     return $ kwCase <+> val <+> kwOf <+> hsep brs'
 
 instance PrettyCode CaseBranch where
@@ -124,6 +126,17 @@ instance (PrettyCode a) => PrettyCode (Tuple a) where
     elems <- mapM ppCode _tupleComponents
     return $ parens $ hsep (punctuate comma (toList elems))
 
+instance (PrettyCode a) => PrettyCode (List a) where
+  ppCode List {..} = do
+    elems <- mapM ppCode _listElements
+    return $ brackets $ hsep (punctuate comma (toList elems))
+
+instance (PrettyCode a, HasAtomicity a) => PrettyCode (Cons a) where
+  ppCode Cons {..} = do
+    h <- ppLeftExpression consFixity _consHead
+    t <- ppRightExpression consFixity _consTail
+    return $ h <+> "#" <+> t
+
 instance PrettyCode Pattern where
   ppCode = \case
     PatVar x -> ppCode x
@@ -134,7 +147,11 @@ instance PrettyCode ConstrApp where
   ppCode ConstrApp {..} = do
     args <- mapM ppCode _constrAppArgs
     name <- ppCode _constrAppConstructor
-    return $ (if null args then id else parens) $ name <+> hsep args
+    if
+        | null args ->
+            return name
+        | otherwise ->
+            return $ parens $ name <+> hsep args
 
 instance PrettyCode Lambda where
   ppCode Lambda {..} = do

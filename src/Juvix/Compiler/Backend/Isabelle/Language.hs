@@ -51,6 +51,8 @@ data Expression
   | ExprApp Application
   | ExprBinop Binop
   | ExprTuple (Tuple Expression)
+  | ExprList (List Expression)
+  | ExprCons (Cons Expression)
   | ExprLet Let
   | ExprIf If
   | ExprCase Case
@@ -107,6 +109,15 @@ data Pattern
 
 newtype Tuple a = Tuple
   { _tupleComponents :: NonEmpty a
+  }
+
+newtype List a = List
+  { _listElements :: [a]
+  }
+
+data Cons a = Cons
+  { _consHead :: a,
+    _consTail :: a
   }
 
 data ConstrApp = ConstrApp
@@ -223,6 +234,14 @@ letFixity =
       _fixityId = Nothing
     }
 
+consFixity :: Fixity
+consFixity =
+  Fixity
+    { _fixityPrecedence = PrecNat 20,
+      _fixityArity = OpBinary AssocRight,
+      _fixityId = Nothing
+    }
+
 instance HasAtomicity TypeVar where
   atomicity _ = Atom
 
@@ -242,6 +261,8 @@ instance HasAtomicity Expression where
     ExprApp {} -> Aggregate appFixity
     ExprBinop Binop {..} -> Aggregate _binopFixity
     ExprTuple {} -> Atom
+    ExprList {} -> Atom
+    ExprCons {} -> Aggregate consFixity
     ExprLet {} -> Aggregate letFixity
     ExprIf {} -> Aggregate ifFixity
     ExprCase {} -> Aggregate caseFixity

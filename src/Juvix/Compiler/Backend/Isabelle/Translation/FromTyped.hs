@@ -279,6 +279,8 @@ goModule onlyTypes infoTable Internal.Module {..} =
                     }
               }
       | Just x <- getLiteralConversion app = ExprLiteral (LitNumeric x)
+      | Just x <- getList app = ExprList (List x)
+      | Just (x, y) <- getCons app = ExprCons (Cons x y)
       | otherwise =
           let l = goExpression _appLeft
               r = goExpression _appRight
@@ -330,6 +332,38 @@ goModule onlyTypes infoTable Internal.Module {..} =
               Internal.LitInteger x -> Just x
               Internal.LitNatural x -> Just x
           _ -> Nothing
+
+    getList :: Internal.Application -> Maybe [Expression]
+    getList app = case fn of
+      Internal.ExpressionIden (Internal.IdenConstructor name) ->
+        case HashMap.lookup name (infoTable ^. Internal.infoConstructors) of
+          Just funInfo ->
+            case funInfo ^. Internal.constructorInfoBuiltin of
+              Just Internal.BuiltinListNil -> Just []
+              Just Internal.BuiltinListCons
+                | (_ :| [arg1, Internal.ExpressionApplication app2]) <- args,
+                  Just lst <- getList app2 ->
+                    Just (goExpression arg1 : lst)
+              _ -> Nothing
+          Nothing -> Nothing
+      _ -> Nothing
+      where
+        (fn, args) = Internal.unfoldApplication app
+
+    getCons :: Internal.Application -> Maybe (Expression, Expression)
+    getCons app = case fn of
+      Internal.ExpressionIden (Internal.IdenConstructor name) ->
+        case HashMap.lookup name (infoTable ^. Internal.infoConstructors) of
+          Just funInfo ->
+            case funInfo ^. Internal.constructorInfoBuiltin of
+              Just Internal.BuiltinListCons
+                | (_ :| [arg1, arg2]) <- args ->
+                    Just (goExpression arg1, goExpression arg2)
+              _ -> Nothing
+          Nothing -> Nothing
+      _ -> Nothing
+      where
+        (fn, args) = Internal.unfoldApplication app
 
     goFunType :: Internal.Function -> Expression
     goFunType _ = ExprUndefined
