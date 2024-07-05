@@ -278,6 +278,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
                       _fixityId = Nothing
                     }
               }
+      | Just x <- getLiteralConversion app = ExprLiteral (LitNumeric x)
       | otherwise =
           let l = goExpression _appLeft
               r = goExpression _appRight
@@ -305,6 +306,30 @@ goModule onlyTypes infoTable Internal.Module {..} =
       _ -> Nothing
       where
         (fn, args) = Internal.unfoldApplication app
+
+    getLiteralConversion :: Internal.Application -> Maybe Integer
+    getLiteralConversion app = case fn of
+      Internal.ExpressionIden (Internal.IdenFunction name) ->
+        case HashMap.lookup name (infoTable ^. Internal.infoFunctions) of
+          Just funInfo ->
+            case funInfo ^. Internal.functionInfoBuiltin of
+              Just Internal.BuiltinFromNat -> lit
+              Just Internal.BuiltinFromInt -> lit
+              _ -> Nothing
+          Nothing -> Nothing
+      _ -> Nothing
+      where
+        (fn, args) = Internal.unfoldApplication app
+
+        lit :: Maybe Integer
+        lit = case args of
+          _ :| [_, Internal.ExpressionLiteral l] ->
+            case l ^. Internal.withLocParam of
+              Internal.LitString {} -> Nothing
+              Internal.LitNumeric x -> Just x
+              Internal.LitInteger x -> Just x
+              Internal.LitNatural x -> Just x
+          _ -> Nothing
 
     goFunType :: Internal.Function -> Expression
     goFunType _ = ExprUndefined
