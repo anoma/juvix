@@ -243,8 +243,36 @@ goModule onlyTypes infoTable Internal.Module {..} =
       Internal.ExpressionLambda x -> goLambda x
       Internal.ExpressionCase x -> goCase x
 
+    goConstrName :: Name -> Name
+    goConstrName name =
+      case HashMap.lookup name (infoTable ^. Internal.infoConstructors) of
+        Just ctrInfo ->
+          case ctrInfo ^. Internal.constructorInfoBuiltin of
+            Just Internal.BuiltinNatSuc ->
+              setNameText "Suc" name
+            Just Internal.BuiltinBoolTrue ->
+              setNameText "True" name
+            Just Internal.BuiltinBoolFalse ->
+              setNameText "False" name
+            _ -> name
+        Nothing -> name
+
+    goFunName :: Name -> Name
+    goFunName name = name
+
     goIden :: Internal.Iden -> Expression
-    goIden iden = ExprIden $ Internal.getName iden
+    goIden = \case
+      Internal.IdenFunction name -> ExprIden (goFunName name)
+      Internal.IdenConstructor name ->
+        case HashMap.lookup name (infoTable ^. Internal.infoConstructors) of
+          Just ctrInfo ->
+            case ctrInfo ^. Internal.constructorInfoBuiltin of
+              Just Internal.BuiltinNatZero -> ExprLiteral (LitNumeric 0)
+              _ -> ExprIden (goConstrName name)
+          Nothing -> ExprIden (goConstrName name)
+      Internal.IdenVar name -> ExprIden name
+      Internal.IdenAxiom name -> ExprIden name
+      Internal.IdenInductive name -> ExprIden name
 
     goApplication :: Internal.Application -> Expression
     goApplication app@Internal.Application {..}
@@ -321,8 +349,8 @@ goModule onlyTypes infoTable Internal.Module {..} =
     getList app = case fn of
       Internal.ExpressionIden (Internal.IdenConstructor name) ->
         case HashMap.lookup name (infoTable ^. Internal.infoConstructors) of
-          Just funInfo ->
-            case funInfo ^. Internal.constructorInfoBuiltin of
+          Just ctrInfo ->
+            case ctrInfo ^. Internal.constructorInfoBuiltin of
               Just Internal.BuiltinListNil -> Just []
               Just Internal.BuiltinListCons
                 | (_ :| [arg1, Internal.ExpressionApplication app2]) <- args,
@@ -363,33 +391,6 @@ goModule onlyTypes infoTable Internal.Module {..} =
       _ -> Nothing
       where
         (fn, args) = Internal.unfoldApplication app
-
-    -- This function cannot be simply merged with `getList` because in patterns
-    -- the constructors don't get the type argument.
-    getListPat :: Name -> [Internal.PatternArg] -> Maybe [Pattern]
-    getListPat name args =
-      case HashMap.lookup name (infoTable ^. Internal.infoConstructors) of
-        Just funInfo ->
-          case funInfo ^. Internal.constructorInfoBuiltin of
-            Just Internal.BuiltinListNil -> Just []
-            Just Internal.BuiltinListCons
-              | [arg1, Internal.PatternArg {..}] <- args,
-                Internal.PatternConstructorApp Internal.ConstructorApp {..} <- _patternArgPattern,
-                Just lst <- getListPat _constrAppConstructor _constrAppParameters ->
-                  Just (goPatternArg arg1 : lst)
-            _ -> Nothing
-        Nothing -> Nothing
-
-    getConsPat :: Name -> [Internal.PatternArg] -> Maybe (Pattern, Pattern)
-    getConsPat name args =
-      case HashMap.lookup name (infoTable ^. Internal.infoConstructors) of
-        Just funInfo ->
-          case funInfo ^. Internal.constructorInfoBuiltin of
-            Just Internal.BuiltinListCons
-              | [arg1, arg2] <- args ->
-                  Just (goPatternArg arg1, goPatternArg arg2)
-            _ -> Nothing
-        Nothing -> Nothing
 
     goFunType :: Internal.Function -> Expression
     goFunType _ = ExprUndefined
@@ -526,12 +527,55 @@ goModule onlyTypes infoTable Internal.Module {..} =
           PatList (List lst)
       | Just (x, y) <- getConsPat _constrAppConstructor _constrAppParameters =
           PatCons (Cons x y)
+      | Just p <- getNatPat _constrAppConstructor _constrAppParameters =
+          p
       | otherwise =
           PatConstrApp
             ConstrApp
               { _constrAppConstructor = _constrAppConstructor,
                 _constrAppArgs = map goPatternArg _constrAppParameters
               }
+
+    -- This function cannot be simply merged with `getList` because in patterns
+    -- the constructors don't get the type argument.
+    getListPat :: Name -> [Internal.PatternArg] -> Maybe [Pattern]
+    getListPat name args =
+      case HashMap.lookup name (infoTable ^. Internal.infoConstructors) of
+        Just funInfo ->
+          case funInfo ^. Internal.constructorInfoBuiltin of
+            Just Internal.BuiltinListNil -> Just []
+            Just Internal.BuiltinListCons
+              | [arg1, Internal.PatternArg {..}] <- args,
+                Internal.PatternConstructorApp Internal.ConstructorApp {..} <- _patternArgPattern,
+                Just lst <- getListPat _constrAppConstructor _constrAppParameters ->
+                  Just (goPatternArg arg1 : lst)
+            _ -> Nothing
+        Nothing -> Nothing
+
+    getConsPat :: Name -> [Internal.PatternArg] -> Maybe (Pattern, Pattern)
+    getConsPat name args =
+      case HashMap.lookup name (infoTable ^. Internal.infoConstructors) of
+        Just funInfo ->
+          case funInfo ^. Internal.constructorInfoBuiltin of
+            Just Internal.BuiltinListCons
+              | [arg1, arg2] <- args ->
+                  Just (goPatternArg arg1, goPatternArg arg2)
+            _ -> Nothing
+        Nothing -> Nothing
+
+    getNatPat :: Name -> [Internal.PatternArg] -> Maybe Pattern
+    getNatPat name args =
+      case HashMap.lookup name (infoTable ^. Internal.infoConstructors) of
+        Just funInfo ->
+          case funInfo ^. Internal.constructorInfoBuiltin of
+            Just Internal.BuiltinNatZero
+              | null args ->
+                  Just PatZero
+            Just Internal.BuiltinNatSuc
+              | [arg] <- args ->
+                  Just (PatConstrApp (ConstrApp (goConstrName name) [goPatternArg arg]))
+            _ -> Nothing
+        Nothing -> Nothing
 
     defaultName :: Text -> Name
     defaultName n =
@@ -551,3 +595,9 @@ goModule onlyTypes infoTable Internal.Module {..} =
             { _nameIdUid = 0,
               _nameIdModuleId = defaultModuleId
             }
+
+    setNameText :: Text -> Name -> Name
+    setNameText txt name =
+      set namePretty txt
+        . set nameText txt
+        $ name

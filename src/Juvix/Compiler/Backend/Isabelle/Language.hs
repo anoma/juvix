@@ -104,6 +104,7 @@ data Lambda = Lambda
 
 data Pattern
   = PatVar Name
+  | PatZero
   | PatConstrApp ConstrApp
   | PatTuple (Tuple Pattern)
   | PatList (List Pattern)
@@ -273,6 +274,7 @@ instance HasAtomicity Expression where
 instance HasAtomicity Pattern where
   atomicity = \case
     PatVar {} -> Atom
+    PatZero -> Atom
     PatConstrApp ConstrApp {..}
       | null _constrAppArgs -> Atom
       | otherwise -> Aggregate appFixity

@@ -143,6 +143,7 @@ instance (PrettyCode a, HasAtomicity a) => PrettyCode (Cons a) where
 instance PrettyCode Pattern where
   ppCode = \case
     PatVar x -> ppCode x
+    PatZero -> return $ annotate AnnLiteralInteger (pretty (0 :: Int))
     PatConstrApp x -> ppCode x
     PatTuple x -> ppCode x
     PatList x -> ppCode x
