@@ -264,6 +264,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
       | Just x <- getLiteralConversion app = ExprLiteral (LitNumeric x)
       | Just x <- getList app = ExprList (List x)
       | Just (x, y) <- getCons app = ExprCons (Cons x y)
+      | Just (v, x, y) <- getIf app = ExprIf (If v x y)
       | otherwise =
           let l = goExpression _appLeft
               r = goExpression _appRight
@@ -337,11 +338,26 @@ goModule onlyTypes infoTable Internal.Module {..} =
     getCons app = case fn of
       Internal.ExpressionIden (Internal.IdenConstructor name) ->
         case HashMap.lookup name (infoTable ^. Internal.infoConstructors) of
-          Just funInfo ->
-            case funInfo ^. Internal.constructorInfoBuiltin of
+          Just ctrInfo ->
+            case ctrInfo ^. Internal.constructorInfoBuiltin of
               Just Internal.BuiltinListCons
                 | (_ :| [arg1, arg2]) <- args ->
                     Just (goExpression arg1, goExpression arg2)
+              _ -> Nothing
+          Nothing -> Nothing
+      _ -> Nothing
+      where
+        (fn, args) = Internal.unfoldApplication app
+
+    getIf :: Internal.Application -> Maybe (Expression, Expression, Expression)
+    getIf app = case fn of
+      Internal.ExpressionIden (Internal.IdenFunction name) ->
+        case HashMap.lookup name (infoTable ^. Internal.infoFunctions) of
+          Just funInfo ->
+            case funInfo ^. Internal.functionInfoBuiltin of
+              Just Internal.BuiltinBoolIf
+                | (_ :| [val, br1, br2]) <- args ->
+                    Just (goExpression val, goExpression br1, goExpression br2)
               _ -> Nothing
           Nothing -> Nothing
       _ -> Nothing
