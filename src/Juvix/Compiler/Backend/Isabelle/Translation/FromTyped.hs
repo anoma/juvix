@@ -117,68 +117,51 @@ goModule onlyTypes infoTable Internal.Module {..} =
             { _synonymName = name,
               _synonymType = goType $ fromMaybe (error "unsupported axiomatic type") body
             }
-      _ -> case nonEmpty argsInfo of
-        Nothing ->
-          StmtDefinition
-            Definition
-              { _definitionName = name,
-                _definitionType = goType ty,
-                _definitionBody = maybe ExprUndefined goExpression body
-              }
-        Just args ->
-          StmtFunction
-            Function
-              { _functionName = name,
-                _functionType = goType ty,
-                _functionClauses = goBody argnames body
-              }
-          where
-            argnames = fmap (fromMaybe (defaultName "_") . (^. Internal.argInfoName)) args
+      _
+        | isFunction argnames body ->
+            StmtFunction
+              Function
+                { _functionName = name,
+                  _functionType = goType ty,
+                  _functionClauses = goBody argnames body
+                }
+        | otherwise ->
+            StmtDefinition
+              Definition
+                { _definitionName = name,
+                  _definitionType = goType ty,
+                  _definitionBody = maybe ExprUndefined goExpression body
+                }
+        where
+          argnames = map (fromMaybe (defaultName "_") . (^. Internal.argInfoName)) argsInfo
 
-    goBody :: NonEmpty Name -> Maybe Internal.Expression -> NonEmpty Clause
+    isFunction :: [Name] -> Maybe Internal.Expression -> Bool
+    isFunction argnames = \case
+      Just (Internal.ExpressionLambda {}) -> True
+      _ -> not (null argnames)
+
+    goBody :: [Name] -> Maybe Internal.Expression -> NonEmpty Clause
     goBody argnames = \case
       Nothing -> oneClause ExprUndefined
       Just (Internal.ExpressionLambda Internal.Lambda {..}) ->
         fmap goClause _lambdaClauses
       Just body -> oneClause (goExpression body)
       where
-        argsNum = length argnames
-
         oneClause :: Expression -> NonEmpty Clause
         oneClause expr =
           nonEmpty'
             [ Clause
-                { _clausePatterns = fmap PatVar argnames,
+                { _clausePatterns = nonEmpty' $ map PatVar argnames,
                   _clauseBody = expr
                 }
             ]
 
         goClause :: Internal.LambdaClause -> Clause
-        goClause Internal.LambdaClause {..}
-          | argsNum >= length _lambdaPatterns =
-              Clause
-                { _clausePatterns = pats,
-                  _clauseBody = goExpression _lambdaBody
-                }
-          | otherwise =
-              Clause
-                { _clausePatterns = pats,
-                  _clauseBody =
-                    goExpression $
-                      Internal.ExpressionLambda
-                        Internal.Lambda
-                          { _lambdaType = Nothing,
-                            _lambdaClauses =
-                              nonEmpty'
-                                [ Internal.LambdaClause
-                                    { _lambdaPatterns = nonEmpty' $ drop argsNum (toList _lambdaPatterns),
-                                      _lambdaBody
-                                    }
-                                ]
-                          }
-                }
-          where
-            pats = nonEmpty' $ map goPatternArg (take argsNum (toList _lambdaPatterns))
+        goClause Internal.LambdaClause {..} =
+          Clause
+            { _clausePatterns = nonEmpty' $ map goPatternArg (toList _lambdaPatterns),
+              _clauseBody = goExpression _lambdaBody
+            }
 
     goFunctionDef :: Internal.FunctionDef -> Statement
     goFunctionDef Internal.FunctionDef {..} = goDef _funDefName _funDefType _funDefArgsInfo (Just _funDefBody)
@@ -365,7 +348,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
       where
         (fn, args) = Internal.unfoldApplication app
 
-    -- This function cannot be simply merged with `getList` because for patterns
+    -- This function cannot be simply merged with `getList` because in patterns
     -- the constructors don't get the type argument.
     getListPat :: Name -> [Internal.PatternArg] -> Maybe [Pattern]
     getListPat name args =
