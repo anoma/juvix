@@ -156,7 +156,7 @@ instance PrettyCode ConstrApp where
         | null args ->
             return name
         | otherwise ->
-            return $ parens $ name <+> hsep args
+            return $ name <+> hsep args
 
 instance PrettyCode Lambda where
   ppCode Lambda {..} = do
@@ -186,7 +186,7 @@ instance PrettyCode Function where
     n <- ppCode _functionName
     ty <- ppCodeQuoted _functionType
     cls <- mapM ppCode _functionClauses
-    let cls' = fmap (dquotes . (n <+>)) cls
+    let cls' = punctuate (space <> kwPipe) $ map (dquotes . (n <+>)) (toList cls)
     return $ kwFun <+> n <+> "::" <+> ty <+> kwWhere <> line <> indent' (vsep cls')
 
 instance PrettyCode Clause where
