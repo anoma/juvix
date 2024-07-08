@@ -195,6 +195,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
             Just Internal.BuiltinNat -> IndNat
             Just Internal.BuiltinInt -> IndInt
             Just Internal.BuiltinList -> IndList
+            Just Internal.BuiltinMaybe -> IndOption
             _ -> IndUser name
           Nothing -> case HashMap.lookup name (infoTable ^. Internal.infoAxioms) of
             Just ai -> case ai ^. Internal.axiomInfoDef . Internal.axiomBuiltin of
@@ -254,6 +255,10 @@ goModule onlyTypes infoTable Internal.Module {..} =
               setNameText "True" name
             Just Internal.BuiltinBoolFalse ->
               setNameText "False" name
+            Just Internal.BuiltinMaybeNothing ->
+              setNameText "None" name
+            Just Internal.BuiltinMaybeJust ->
+              setNameText "Some" name
             _ -> name
         Nothing -> name
 
@@ -532,7 +537,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
       | otherwise =
           PatConstrApp
             ConstrApp
-              { _constrAppConstructor = _constrAppConstructor,
+              { _constrAppConstructor = goConstrName _constrAppConstructor,
                 _constrAppArgs = map goPatternArg _constrAppParameters
               }
 

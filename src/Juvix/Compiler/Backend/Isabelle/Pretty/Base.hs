@@ -56,6 +56,7 @@ instance PrettyCode Inductive where
     IndInt -> return $ primitive "int"
     IndList -> return $ primitive "list"
     IndString -> return $ primitive "string"
+    IndOption -> return $ primitive "option"
     IndUser name -> ppCode name
 
 instance PrettyCode IndApp where
