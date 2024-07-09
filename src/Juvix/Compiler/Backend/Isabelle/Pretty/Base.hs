@@ -57,13 +57,19 @@ instance PrettyCode Inductive where
     IndList -> return $ primitive "list"
     IndString -> return $ primitive "string"
     IndOption -> return $ primitive "option"
+    IndTuple -> return $ primitive "×"
     IndUser name -> ppCode name
 
 instance PrettyCode IndApp where
-  ppCode IndApp {..} = do
-    params <- ppParams _indAppParams
-    ind <- ppCode _indAppInductive
-    return $ params <?+> ind
+  ppCode IndApp {..}
+    | _indAppInductive == IndTuple = do
+        ps <- mapM ppCode _indAppParams
+        ind <- ppCode _indAppInductive
+        return $ hsep $ punctuate (space <> ind) ps
+    | otherwise = do
+        params <- ppParams _indAppParams
+        ind <- ppCode _indAppInductive
+        return $ params <?+> ind
 
 instance PrettyCode Expression where
   ppCode = \case

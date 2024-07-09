@@ -32,6 +32,7 @@ data Inductive
   | IndList
   | IndString
   | IndOption
+  | IndTuple
   | IndUser Name
   deriving stock (Eq)
 

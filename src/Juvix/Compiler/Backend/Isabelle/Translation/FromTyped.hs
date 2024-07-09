@@ -204,6 +204,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
             Just Internal.BuiltinInt -> IndInt
             Just Internal.BuiltinList -> IndList
             Just Internal.BuiltinMaybe -> IndOption
+            Just Internal.BuiltinPair -> IndTuple
             _ -> IndUser name
           Nothing -> case HashMap.lookup name (infoTable ^. Internal.infoAxioms) of
             Just ai -> case ai ^. Internal.axiomInfoDef . Internal.axiomBuiltin of
@@ -306,6 +307,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
       | Just x <- getList app = ExprList (List x)
       | Just (x, y) <- getCons app = ExprCons (Cons x y)
       | Just (v, x, y) <- getIf app = ExprIf (If v x y)
+      | Just (x, y) <- getPair app = ExprTuple (Tuple (x :| [y]))
       | Just app' <- getIdentApp app = app'
       | otherwise =
           let l = goExpression _appLeft
@@ -400,6 +402,21 @@ goModule onlyTypes infoTable Internal.Module {..} =
               Just Internal.BuiltinBoolIf
                 | (_ :| [val, br1, br2]) <- args ->
                     Just (goExpression val, goExpression br1, goExpression br2)
+              _ -> Nothing
+          Nothing -> Nothing
+      _ -> Nothing
+      where
+        (fn, args) = Internal.unfoldApplication app
+
+    getPair :: Internal.Application -> Maybe (Expression, Expression)
+    getPair app = case fn of
+      Internal.ExpressionIden (Internal.IdenConstructor name) ->
+        case HashMap.lookup name (infoTable ^. Internal.infoConstructors) of
+          Just ctrInfo ->
+            case ctrInfo ^. Internal.constructorInfoBuiltin of
+              Just Internal.BuiltinPairConstr
+                | (_ :| [_, arg1, arg2]) <- args ->
+                    Just (goExpression arg1, goExpression arg2)
               _ -> Nothing
           Nothing -> Nothing
       _ -> Nothing
@@ -570,6 +587,8 @@ goModule onlyTypes infoTable Internal.Module {..} =
           PatList (List lst)
       | Just (x, y) <- getConsPat _constrAppConstructor _constrAppParameters =
           PatCons (Cons x y)
+      | Just (x, y) <- getPairPat _constrAppConstructor _constrAppParameters =
+          PatTuple (Tuple (x :| [y]))
       | Just p <- getNatPat _constrAppConstructor _constrAppParameters =
           p
       | otherwise =
@@ -617,6 +636,17 @@ goModule onlyTypes infoTable Internal.Module {..} =
             Just Internal.BuiltinNatSuc
               | [arg] <- args ->
                   Just (PatConstrApp (ConstrApp (goConstrName name) [goPatternArg arg]))
+            _ -> Nothing
+        Nothing -> Nothing
+
+    getPairPat :: Name -> [Internal.PatternArg] -> Maybe (Pattern, Pattern)
+    getPairPat name args =
+      case HashMap.lookup name (infoTable ^. Internal.infoConstructors) of
+        Just funInfo ->
+          case funInfo ^. Internal.constructorInfoBuiltin of
+            Just Internal.BuiltinPairConstr
+              | [arg1, arg2] <- args ->
+                  Just (goPatternArg arg1, goPatternArg arg2)
             _ -> Nothing
         Nothing -> Nothing
 
