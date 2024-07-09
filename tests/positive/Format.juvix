@@ -446,6 +446,14 @@ module SideIfConditions;
       | suc n if 0 < 0 := 3;
 end;
 
+module MultiIf;
+  x : Nat :=
+    if
+      | 0 == 1 := 1
+      | 1 == 1 := 1
+      | else := 2;
+end;
+
 module PublicImports;
 
   module Inner;
