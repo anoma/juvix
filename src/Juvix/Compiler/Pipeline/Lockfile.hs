@@ -15,7 +15,6 @@ import Juvix.Extra.Strings qualified as Str
 import Juvix.Extra.Version
 import Juvix.Prelude hiding ((.=))
 import Juvix.Prelude.Aeson
-import Lens.Micro.Platform qualified as Lens
 
 data LockfileDependency = LockfileDependency
   { _lockfileDependencyDependency :: Dependency,
@@ -110,7 +109,7 @@ instance FromJSON LockfileDependency where
 lockfileV2Options :: Options
 lockfileV2Options =
   defaultOptions
-    { fieldLabelModifier = over Lens._head toLower . dropPrefix "_lockfileV2",
+    { fieldLabelModifier = over _head toLower . dropPrefix "_lockfileV2",
       rejectUnknownFields = True,
       omitNothingFields = True
     }

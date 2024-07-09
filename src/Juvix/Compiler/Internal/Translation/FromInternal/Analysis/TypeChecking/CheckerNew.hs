@@ -36,25 +36,30 @@ data FunctionDefaultInfo = FunctionDefaultInfo
   { _functionDefaultArgId :: ArgId,
     _functionDefaultValue :: Expression
   }
+  deriving stock (Generic, Data)
 
 data FunctionDefault = FunctionDefault
   { _functionDefaultLeft :: FunctionParameter,
     _functionDefaultDefault :: Maybe FunctionDefaultInfo,
     _functionDefaultRight :: BuilderType
   }
+  deriving stock (Generic, Data)
 
 data BuilderType
   = BuilderTypeNoDefaults Expression
   | BuilderTypeDefaults FunctionDefault
+  deriving stock (Generic, Data)
 
 data IsDefault
   = ItIsDefault ArgId
   | ItIsNotDefault
+  deriving stock (Generic, Data)
 
 data AppBuilderArg = AppBuilderArg
   { _appBuilderArgIsDefault :: IsDefault,
     _appBuilderArg :: ApplicationArg
   }
+  deriving stock (Generic, Data)
 
 data AppBuilder = AppBuilder
   { _appBuilderLeft :: Expression,
@@ -68,9 +73,18 @@ makeLenses ''AppBuilderArg
 makeLenses ''FunctionDefault
 makeLenses ''FunctionDefaultInfo
 
+instance PrettyCode FunctionDefault where
+  ppCode _ = return "ppCode(FunctionDefault)"
+
+instance PrettyCode AppBuilderArg where
+  ppCode _ = return "ppCode(AppBuilderArg)"
+
+instance PrettyCode BuilderType where
+  ppCode _ = return "ppCode(BuilderType)"
+
 instance HasExpressions FunctionDefaultInfo where
-  leafExpressions f i = do
-    val' <- leafExpressions f (i ^. functionDefaultValue)
+  directExpressions f i = do
+    val' <- directExpressions f (i ^. functionDefaultValue)
     pure
       FunctionDefaultInfo
         { _functionDefaultValue = val',
@@ -78,10 +92,10 @@ instance HasExpressions FunctionDefaultInfo where
         }
 
 instance HasExpressions FunctionDefault where
-  leafExpressions f FunctionDefault {..} = do
-    l' <- leafExpressions f _functionDefaultLeft
-    r' <- leafExpressions f _functionDefaultRight
-    d' <- leafExpressions f _functionDefaultDefault
+  directExpressions f FunctionDefault {..} = do
+    l' <- directExpressions f _functionDefaultLeft
+    r' <- directExpressions f _functionDefaultRight
+    d' <- directExpressions f _functionDefaultDefault
     pure
       FunctionDefault
         { _functionDefaultLeft = l',
@@ -90,13 +104,13 @@ instance HasExpressions FunctionDefault where
         }
 
 instance HasExpressions BuilderType where
-  leafExpressions f = \case
-    BuilderTypeNoDefaults e -> BuilderTypeNoDefaults <$> leafExpressions f e
-    BuilderTypeDefaults l -> BuilderTypeDefaults <$> leafExpressions f l
+  directExpressions f = \case
+    BuilderTypeNoDefaults e -> BuilderTypeNoDefaults <$> directExpressions f e
+    BuilderTypeDefaults l -> BuilderTypeDefaults <$> directExpressions f l
 
 instance HasExpressions AppBuilderArg where
-  leafExpressions f AppBuilderArg {..} = do
-    a' <- leafExpressions f _appBuilderArg
+  directExpressions f AppBuilderArg {..} = do
+    a' <- directExpressions f _appBuilderArg
     pure
       AppBuilderArg
         { _appBuilderArg = a',
@@ -534,8 +548,9 @@ checkExpression expectedTy e = do
 
 resolveInstanceHoles ::
   forall a r.
-  (HasExpressions a) =>
-  (Members '[Reader InfoTable, ResultBuilder, Error TypeCheckerError, NameIdGen, Inference, Termination, Reader InsertedArgsStack] r) =>
+  ( HasExpressions a,
+    Members '[Reader InfoTable, ResultBuilder, Error TypeCheckerError, NameIdGen, Inference, Termination, Reader InsertedArgsStack] r
+  ) =>
   Sem (Output TypedHole ': r) a ->
   Sem r a
 resolveInstanceHoles s = do

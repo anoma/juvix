@@ -10,7 +10,7 @@ data ArgId = ArgId
     _argIdDefinitionLoc :: Irrelevant Interval,
     _argIdName :: Irrelevant (Maybe Name)
   }
-  deriving stock (Eq, Ord)
+  deriving stock (Eq, Ord, Data)
 
 -- | Used to detect of cycles of default arguments in the arity checker.
 newtype InsertedArgsStack = InsertedArgsStack

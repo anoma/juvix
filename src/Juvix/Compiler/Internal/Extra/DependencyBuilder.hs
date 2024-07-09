@@ -76,30 +76,24 @@ addCastEdges = do
 addStartNode :: (Member (State StartNodes) r) => Name -> Sem r ()
 addStartNode n = modify (HashSet.insert n)
 
-addEdgeMay :: (Member (State DependencyGraph) r) => Maybe Name -> Name -> Sem r ()
-addEdgeMay mn1 n2 = whenJust mn1 $ \n1 -> addEdge n1 n2
+addEdgeMay :: (Members '[State DependencyGraph, Reader (Maybe Name)] r) => Name -> Sem r ()
+addEdgeMay n2 = whenJustM ask $ \n1 -> addEdge n1 n2
+
+addEdgeMayRev :: (Members '[State DependencyGraph, Reader (Maybe Name)] r) => Name -> Sem r ()
+addEdgeMayRev n2 = whenJustM ask $ \n1 -> addEdge n2 n1
 
 addNode :: (Member (State DependencyGraph) r) => Name -> Sem r ()
 addNode n =
-  modify
-    ( HashMap.alter
-        ( \case
-            Just x -> Just x
-            Nothing -> Just (mempty :: HashSet Name)
-        )
-        n
-    )
+  modify @DependencyGraph . over (at n) $
+    \case
+      Just x -> Just x
+      Nothing -> Just (mempty :: HashSet Name)
 
 addEdge :: (Member (State DependencyGraph) r) => Name -> Name -> Sem r ()
 addEdge n1 n2 =
-  modify
-    ( HashMap.alter
-        ( \case
-            Just ns -> Just (HashSet.insert n2 ns)
-            Nothing -> Just (HashSet.singleton n2)
-        )
-        n1
-    )
+  modify @DependencyGraph . over (at n1) $ \case
+    Just ns -> Just (HashSet.insert n2 ns)
+    Nothing -> Just (HashSet.singleton n2)
 
 checkStartNode :: (Members '[Reader ExportsTable, State StartNodes, State BuilderState] r) => Name -> Sem r ()
 checkStartNode n = do
@@ -116,11 +110,16 @@ goPreModule m = do
   -- module is reachable if at least one of the declarations in it is reachable)
   goPreStatements (m ^. moduleName) (b ^. moduleStatements)
 
-goPreLetStatements :: forall r. (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, State BuilderState] r) => Maybe Name -> [PreLetStatement] -> Sem r ()
+goPreLetStatements ::
+  forall r.
+  (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, State BuilderState] r) =>
+  Maybe Name ->
+  [PreLetStatement] ->
+  Sem r ()
 goPreLetStatements mp = \case
   stmt : stmts -> do
-    goPreLetStatement mp stmt
-    goPreLetStatements (Just $ getPreLetStatementName stmt) stmts
+    runReader mp (goPreLetStatement stmt)
+    goPreLetStatements (Just (getPreLetStatementName stmt)) stmts
   [] -> return ()
   where
     getPreLetStatementName :: PreLetStatement -> Name
@@ -129,14 +128,12 @@ goPreLetStatements mp = \case
 
 goPreLetStatement ::
   forall r.
-  (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, State BuilderState] r) =>
-  Maybe Name ->
+  (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, State BuilderState, Reader (Maybe Name)] r) =>
   PreLetStatement ->
   Sem r ()
-goPreLetStatement mp = \case
+goPreLetStatement = \case
   PreLetFunctionDef f -> do
-    whenJust mp $ \n ->
-      addEdge (f ^. funDefName) n
+    addEdgeMayRev (f ^. funDefName)
     goFunctionDefHelper f
 
 -- | `p` is the parent -- the previous declaration or the enclosing module. A
@@ -168,16 +165,18 @@ goAxiom :: forall r. (Members '[Reader ExportsTable, State DependencyGraph, Stat
 goAxiom p ax = do
   checkStartNode (ax ^. axiomName)
   addEdge (ax ^. axiomName) p
-  goExpression (Just (ax ^. axiomName)) (ax ^. axiomType)
+  runReader (Just (ax ^. axiomName)) (goExpression (ax ^. axiomType))
 
 goInductive :: forall r. (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, State BuilderState] r) => Name -> InductiveDef -> Sem r ()
 goInductive p i = do
-  checkStartNode (i ^. inductiveName)
+  let indName = i ^. inductiveName
+  checkStartNode indName
   checkBuiltinInductiveStartNode i
-  addEdge (i ^. inductiveName) p
-  mapM_ (goInductiveParameter (Just (i ^. inductiveName))) (i ^. inductiveParameters)
-  goExpression (Just (i ^. inductiveName)) (i ^. inductiveType)
-  mapM_ (goConstructorDef (i ^. inductiveName)) (i ^. inductiveConstructors)
+  addEdge indName p
+  mapM_ (goConstructorDef indName) (i ^. inductiveConstructors)
+  runReader (Just indName) $ do
+    mapM_ goInductiveParameter (i ^. inductiveParameters)
+    goExpression (i ^. inductiveType)
 
 -- BuiltinBool and BuiltinNat are required by the Internal to Core translation
 -- when translating literal integers to Nats.
@@ -223,46 +222,46 @@ goFunctionDefHelper f = do
   addNode (f ^. funDefName)
   checkStartNode (f ^. funDefName)
   checkCast f
-  goExpression (Just (f ^. funDefName)) (f ^. funDefType)
-  goExpression (Just (f ^. funDefName)) (f ^. funDefBody)
-  mapM_ (goExpression (Just (f ^. funDefName))) (f ^.. funDefArgsInfo . each . argInfoDefault . _Just)
+  runReader (Just (f ^. funDefName)) $ do
+    goExpression (f ^. funDefType)
+    goExpression (f ^. funDefBody)
+    mapM_ goExpression (f ^.. funDefArgsInfo . each . argInfoDefault . _Just)
 
--- constructors of an inductive type depend on the inductive type, not the other
+-- | constructors of an inductive type depend on the inductive type, not the other
 -- way round; an inductive type depends on the types of its constructors
 goConstructorDef :: (Members '[State DependencyGraph, State StartNodes, State BuilderState, Reader ExportsTable] r) => Name -> ConstructorDef -> Sem r ()
 goConstructorDef indName c = do
   addEdge (c ^. inductiveConstructorName) indName
-  goExpression (Just indName) (c ^. inductiveConstructorType)
+  runReader (Just indName) (goExpression (c ^. inductiveConstructorType))
 
-goPattern :: forall r. (Member (State DependencyGraph) r) => Maybe Name -> PatternArg -> Sem r ()
-goPattern n p = case p ^. patternArgPattern of
+goPattern :: forall r. (Members '[State DependencyGraph, Reader (Maybe Name)] r) => PatternArg -> Sem r ()
+goPattern p = case p ^. patternArgPattern of
   PatternVariable {} -> return ()
   PatternWildcardConstructor c -> goWildcardConstructor c
   PatternConstructorApp a -> goApp a
   where
     goWildcardConstructor :: WildcardConstructor -> Sem r ()
-    goWildcardConstructor w = addEdgeMay n (w ^. wildcardConstructor)
+    goWildcardConstructor w = addEdgeMay (w ^. wildcardConstructor)
 
     goApp :: ConstructorApp -> Sem r ()
     goApp (ConstructorApp ctr ps _) = do
-      addEdgeMay n ctr
-      mapM_ (goPattern n) ps
+      addEdgeMay ctr
+      mapM_ goPattern ps
 
 goExpression ::
   forall r.
-  (Members '[State DependencyGraph, State StartNodes, State BuilderState, Reader ExportsTable] r) =>
-  Maybe Name ->
+  (Members '[State DependencyGraph, State StartNodes, State BuilderState, Reader ExportsTable, Reader (Maybe Name)] r) =>
   Expression ->
   Sem r ()
-goExpression p e = case e of
-  ExpressionIden i -> addEdgeMay p (i ^. idenName)
+goExpression e = case e of
+  ExpressionIden i -> addEdgeMay (i ^. idenName)
   ExpressionUniverse {} -> return ()
   ExpressionFunction f -> do
-    goFunctionParameter p (f ^. functionLeft)
-    goExpression_ (f ^. functionRight)
+    goFunctionParameter (f ^. functionLeft)
+    goExpression (f ^. functionRight)
   ExpressionApplication (Application l r _) -> do
-    goExpression_ l
-    goExpression_ r
+    goExpression l
+    goExpression r
   ExpressionLiteral {} -> return ()
   ExpressionCase c -> goCase c
   ExpressionHole {} -> return ()
@@ -271,70 +270,67 @@ goExpression p e = case e of
   ExpressionLet l -> goLet l
   ExpressionSimpleLambda l -> goSimpleLambda l
   where
-    goExpression_ :: Expression -> Sem r ()
-    goExpression_ = goExpression p
-
     goSimpleLambda :: SimpleLambda -> Sem r ()
     goSimpleLambda l = do
-      addEdgeMay p (l ^. slambdaBinder . sbinderVar)
+      addEdgeMay (l ^. slambdaBinder . sbinderVar)
 
     goLambda :: Lambda -> Sem r ()
     goLambda Lambda {..} = mapM_ goClause _lambdaClauses
       where
         goClause :: LambdaClause -> Sem r ()
-        goClause (LambdaClause {..}) = do
-          goExpression_ _lambdaBody
-          mapM_ (goPattern p) _lambdaPatterns
+        goClause LambdaClause {..} = do
+          goExpression _lambdaBody
+          mapM_ goPattern _lambdaPatterns
 
     goCase :: Case -> Sem r ()
     goCase c = do
-      goExpression_ (c ^. caseExpression)
+      goExpression (c ^. caseExpression)
       mapM_ goBranch (c ^. caseBranches)
 
     goBranch :: CaseBranch -> Sem r ()
-    goBranch = goCaseBranchRhs . (^. caseBranchRhs)
+    goBranch c = do
+      goPattern (c ^. caseBranchPattern)
+      goCaseBranchRhs (c ^. caseBranchRhs)
 
     goSideIfBranch :: SideIfBranch -> Sem r ()
     goSideIfBranch SideIfBranch {..} = do
-      goExpression_ _sideIfBranchCondition
-      goExpression_ _sideIfBranchBody
+      goExpression _sideIfBranchCondition
+      goExpression _sideIfBranchBody
 
     goSideIfs :: SideIfs -> Sem r ()
     goSideIfs SideIfs {..} = do
       mapM_ goSideIfBranch _sideIfBranches
-      mapM_ goExpression_ _sideIfElse
+      mapM_ goExpression _sideIfElse
 
     goCaseBranchRhs :: CaseBranchRhs -> Sem r ()
     goCaseBranchRhs = \case
-      CaseBranchRhsExpression expr -> goExpression_ expr
+      CaseBranchRhsExpression expr -> goExpression expr
       CaseBranchRhsIf s -> goSideIfs s
 
     goLet :: Let -> Sem r ()
     goLet l = do
       mapM_ goLetClause (l ^. letClauses)
-      goExpression_ (l ^. letExpression)
+      goExpression (l ^. letExpression)
 
     goLetClause :: LetClause -> Sem r ()
     goLetClause = \case
       LetFunDef f -> do
-        addEdgeMay p (f ^. funDefName)
+        addEdgeMay (f ^. funDefName)
         goFunctionDefHelper f
       LetMutualBlock MutualBlockLet {..} -> mapM_ goFunctionDefHelper _mutualLet
 
 goInductiveParameter ::
-  (Members '[State DependencyGraph, State StartNodes, State BuilderState, Reader ExportsTable] r) =>
-  Maybe Name ->
+  (Members '[State DependencyGraph, State StartNodes, State BuilderState, Reader ExportsTable, Reader (Maybe Name)] r) =>
   InductiveParameter ->
   Sem r ()
-goInductiveParameter p param = do
-  addEdgeMay p (param ^. inductiveParamName)
-  goExpression p (param ^. inductiveParamType)
+goInductiveParameter param = do
+  addEdgeMay (param ^. inductiveParamName)
+  goExpression (param ^. inductiveParamType)
 
 goFunctionParameter ::
-  (Members '[State DependencyGraph, State StartNodes, State BuilderState, Reader ExportsTable] r) =>
-  Maybe Name ->
+  (Members '[State DependencyGraph, State StartNodes, State BuilderState, Reader ExportsTable, Reader (Maybe Name)] r) =>
   FunctionParameter ->
   Sem r ()
-goFunctionParameter p param = do
-  whenJust (param ^. paramName) (addEdgeMay p)
-  goExpression p (param ^. paramType)
+goFunctionParameter param = do
+  whenJust (param ^. paramName) addEdgeMay
+  goExpression (param ^. paramType)

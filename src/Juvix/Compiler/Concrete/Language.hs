@@ -21,7 +21,6 @@ module Juvix.Compiler.Concrete.Language
   )
 where
 
-import Data.Kind qualified as GHC
 import Juvix.Compiler.Backend.Markdown.Data.Types (Mk)
 import Juvix.Compiler.Concrete.Data.Builtins
 import Juvix.Compiler.Concrete.Data.IfBranchKind
@@ -49,100 +48,100 @@ import Juvix.Prelude.Pretty (Pretty, pretty, prettyText)
 
 type Delims = Irrelevant (Maybe (KeywordRef, KeywordRef))
 
-type RecordUpdateExtraType :: Stage -> GHC.Type
+type RecordUpdateExtraType :: Stage -> GHCType
 type family RecordUpdateExtraType s = res | res -> s where
   RecordUpdateExtraType 'Parsed = ()
   RecordUpdateExtraType 'Scoped = RecordUpdateExtra
 
-type FieldArgIxType :: Stage -> GHC.Type
+type FieldArgIxType :: Stage -> GHCType
 type family FieldArgIxType s = res | res -> s where
   FieldArgIxType 'Parsed = ()
   FieldArgIxType 'Scoped = Int
 
-type SideIfBranchConditionType :: Stage -> IfBranchKind -> GHC.Type
+type SideIfBranchConditionType :: Stage -> IfBranchKind -> GHCType
 type family SideIfBranchConditionType s k = res where
   SideIfBranchConditionType s 'BranchIfBool = ExpressionType s
   SideIfBranchConditionType _ 'BranchIfElse = ()
 
-type IfBranchConditionType :: Stage -> IfBranchKind -> GHC.Type
+type IfBranchConditionType :: Stage -> IfBranchKind -> GHCType
 type family IfBranchConditionType s k = res where
   IfBranchConditionType s 'BranchIfBool = ExpressionType s
   IfBranchConditionType _ 'BranchIfElse = Irrelevant KeywordRef
 
-type ModuleIdType :: Stage -> ModuleIsTop -> GHC.Type
+type ModuleIdType :: Stage -> ModuleIsTop -> GHCType
 type family ModuleIdType s t = res where
   ModuleIdType 'Parsed _ = ()
   ModuleIdType 'Scoped 'ModuleLocal = ()
   ModuleIdType 'Scoped 'ModuleTop = ModuleId
 
-type SymbolType :: Stage -> GHC.Type
+type SymbolType :: Stage -> GHCType
 type family SymbolType s = res | res -> s where
   SymbolType 'Parsed = Symbol
   SymbolType 'Scoped = S.Symbol
 
-type IdentifierType :: Stage -> GHC.Type
+type IdentifierType :: Stage -> GHCType
 type family IdentifierType s = res | res -> s where
   IdentifierType 'Parsed = Name
   IdentifierType 'Scoped = ScopedIden
 
-type HoleType :: Stage -> GHC.Type
+type HoleType :: Stage -> GHCType
 type family HoleType s = res | res -> s where
   HoleType 'Parsed = KeywordRef
   HoleType 'Scoped = Hole
 
-type PatternAtomIdenType :: Stage -> GHC.Type
+type PatternAtomIdenType :: Stage -> GHCType
 type family PatternAtomIdenType s = res | res -> s where
   PatternAtomIdenType 'Parsed = Name
   PatternAtomIdenType 'Scoped = PatternScopedIden
 
-type ExpressionType :: Stage -> GHC.Type
+type ExpressionType :: Stage -> GHCType
 type family ExpressionType s = res | res -> s where
   ExpressionType 'Parsed = ExpressionAtoms 'Parsed
   ExpressionType 'Scoped = Expression
 
-type PatternAtomType :: Stage -> GHC.Type
+type PatternAtomType :: Stage -> GHCType
 type family PatternAtomType s = res | res -> s where
   PatternAtomType 'Parsed = PatternAtom 'Parsed
   PatternAtomType 'Scoped = PatternArg
 
-type PatternParensType :: Stage -> GHC.Type
+type PatternParensType :: Stage -> GHCType
 type family PatternParensType s = res | res -> s where
   PatternParensType 'Parsed = PatternAtoms 'Parsed
   PatternParensType 'Scoped = PatternArg
 
-type PatternAtType :: Stage -> GHC.Type
+type PatternAtType :: Stage -> GHCType
 type family PatternAtType s = res | res -> s where
   PatternAtType 'Parsed = PatternBinding
   PatternAtType 'Scoped = PatternArg
 
-type NameSignatureType :: Stage -> GHC.Type
+type NameSignatureType :: Stage -> GHCType
 type family NameSignatureType s = res | res -> s where
   NameSignatureType 'Parsed = ()
   NameSignatureType 'Scoped = NameSignature 'Scoped
 
-type ModulePathType :: Stage -> ModuleIsTop -> GHC.Type
+type ModulePathType :: Stage -> ModuleIsTop -> GHCType
 type family ModulePathType s t = res | res -> t s where
   ModulePathType 'Parsed 'ModuleTop = TopModulePath
   ModulePathType 'Scoped 'ModuleTop = S.TopModulePath
   ModulePathType 'Parsed 'ModuleLocal = Symbol
   ModulePathType 'Scoped 'ModuleLocal = S.Symbol
 
-type OpenModuleNameType :: Stage -> IsOpenShort -> GHC.Type
+type OpenModuleNameType :: Stage -> IsOpenShort -> GHCType
 type family OpenModuleNameType s short = res where
   OpenModuleNameType s 'OpenFull = ModuleNameType s
   OpenModuleNameType _ 'OpenShort = ()
 
-type ModuleNameType :: Stage -> GHC.Type
+type ModuleNameType :: Stage -> GHCType
 type family ModuleNameType s = res | res -> s where
   ModuleNameType 'Parsed = Name
   ModuleNameType 'Scoped = S.Name
 
-type ModuleInductiveType :: ModuleIsTop -> GHC.Type
+type ModuleInductiveType :: ModuleIsTop -> GHCType
 type family ModuleInductiveType t = res | res -> t where
   ModuleInductiveType 'ModuleTop = ()
   ModuleInductiveType 'ModuleLocal = LocalModuleOrigin
 
-type ModuleEndType :: ModuleIsTop -> GHC.Type
+type ModuleEndType :: ModuleIsTop -> GHCType
 type family ModuleEndType t = res | res -> t where
   ModuleEndType 'ModuleTop = ()
   ModuleEndType 'ModuleLocal = KeywordRef

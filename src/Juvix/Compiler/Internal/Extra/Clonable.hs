@@ -5,6 +5,7 @@ module Juvix.Compiler.Internal.Extra.Clonable
 where
 
 import Data.HashMap.Strict qualified as HashMap
+import Juvix.Compiler.Internal.Extra.Base
 import Juvix.Compiler.Internal.Extra.Binders
 import Juvix.Compiler.Internal.Language
 import Juvix.Prelude
@@ -108,24 +109,10 @@ underBinders ps f = do
           return (set nameId uid' v)
 
 instance Clonable SideIfBranch where
-  freshNameIds SideIfBranch {..} = do
-    cond' <- freshNameIds _sideIfBranchCondition
-    body' <- freshNameIds _sideIfBranchBody
-    return
-      SideIfBranch
-        { _sideIfBranchCondition = cond',
-          _sideIfBranchBody = body'
-        }
+  freshNameIds = directExpressions freshNameIds
 
 instance Clonable SideIfs where
-  freshNameIds SideIfs {..} = do
-    branches' <- mapM freshNameIds _sideIfBranches
-    else' <- mapM freshNameIds _sideIfElse
-    return
-      SideIfs
-        { _sideIfBranches = branches',
-          _sideIfElse = else'
-        }
+  freshNameIds = directExpressions freshNameIds
 
 instance Clonable CaseBranchRhs where
   freshNameIds = \case

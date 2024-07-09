@@ -50,7 +50,7 @@ module Juvix.Prelude.Base.Foundation
     module GHC.Generics,
     module GHC.Num,
     module GHC.Real,
-    module Lens.Micro.Platform,
+    module Control.Lens,
     module Language.Haskell.TH.Syntax,
     module Prettyprinter,
     module Numeric,
@@ -80,6 +80,40 @@ where
 
 import Control.Applicative
 import Control.DeepSeq
+import Control.Lens hiding
+  ( Context,
+    Index,
+    Indexed,
+    Level,
+    List,
+    argument,
+    au,
+    below,
+    children,
+    cons,
+    cosmos,
+    enum,
+    from,
+    holes,
+    ignored,
+    imapM,
+    indexed,
+    indices,
+    inside,
+    op,
+    para,
+    parts,
+    pre,
+    re,
+    repeated,
+    rmap,
+    snoc,
+    uncons,
+    universe,
+    unsnoc,
+    (#),
+    (<.>),
+  )
 import Control.Monad.Catch (ExitCase (..), MonadMask, MonadThrow, generalBracket, throwM)
 import Control.Monad.Extra hiding (fail, forM, mconcatMapM, whileJustM)
 import Control.Monad.Extra qualified as Monad
@@ -161,7 +195,6 @@ import GHC.Num
 import GHC.Real
 import GHC.Stack.Types
 import Language.Haskell.TH.Syntax (Exp, Lift, Q)
-import Lens.Micro.Platform
 import Numeric hiding (exp, log, pi)
 import Path (Abs, Dir, File, Path, Rel, SomeBase (..))
 import Path qualified as PPath
@@ -205,6 +238,10 @@ type GHCType = GHC.Type
 type GHCConstraint = GHC.Constraint
 
 type LazyHashMap = LazyHashMap.HashMap
+
+type SimpleFold s a = forall r. (Monoid r) => Getting r s a
+
+type SimpleGetter s a = forall r. Getting r s a
 
 traverseM ::
   (Monad m, Traversable m, Applicative f) =>

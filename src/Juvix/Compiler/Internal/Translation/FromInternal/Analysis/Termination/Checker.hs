@@ -11,6 +11,7 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Che
 where
 
 import Data.HashMap.Internal.Strict qualified as HashMap
+import Juvix.Compiler.Internal.Extra.Base (directExpressions_)
 import Juvix.Compiler.Internal.Language as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.FunctionCall
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Data
@@ -169,44 +170,6 @@ scanFunctionBody topbody = go [] topbody
         goClause :: LambdaClause -> Sem r ()
         goClause (LambdaClause pats clBody) = go (reverse (toList pats) ++ revArgs) clBody
 
-scanCase ::
-  (Members '[State CallMap, Reader (Maybe FunctionRef), Reader SizeInfo] r) =>
-  Case ->
-  Sem r ()
-scanCase c = do
-  mapM_ scanCaseBranch (c ^. caseBranches)
-  scanExpression (c ^. caseExpression)
-
-scanSideIfBranch ::
-  (Members '[State CallMap, Reader (Maybe FunctionRef), Reader SizeInfo] r) =>
-  SideIfBranch ->
-  Sem r ()
-scanSideIfBranch SideIfBranch {..} = do
-  scanExpression _sideIfBranchCondition
-  scanExpression _sideIfBranchBody
-
-scanSideIfs ::
-  (Members '[State CallMap, Reader (Maybe FunctionRef), Reader SizeInfo] r) =>
-  SideIfs ->
-  Sem r ()
-scanSideIfs SideIfs {..} = do
-  mapM_ scanSideIfBranch _sideIfBranches
-  mapM_ scanExpression _sideIfElse
-
-scanCaseBranchRhs ::
-  (Members '[State CallMap, Reader (Maybe FunctionRef), Reader SizeInfo] r) =>
-  CaseBranchRhs ->
-  Sem r ()
-scanCaseBranchRhs = \case
-  CaseBranchRhsExpression e -> scanExpression e
-  CaseBranchRhsIf e -> scanSideIfs e
-
-scanCaseBranch ::
-  (Members '[State CallMap, Reader (Maybe FunctionRef), Reader SizeInfo] r) =>
-  CaseBranch ->
-  Sem r ()
-scanCaseBranch = scanCaseBranchRhs . (^. caseBranchRhs)
-
 scanLet ::
   (Members '[State CallMap, Reader (Maybe FunctionRef), Reader SizeInfo] r) =>
   Let ->
@@ -228,7 +191,10 @@ scanTopExpression ::
   (Members '[State CallMap] r) =>
   Expression ->
   Sem r ()
-scanTopExpression = runReader (Nothing @FunctionRef) . runReader emptySizeInfo . scanExpression
+scanTopExpression =
+  runReader (Nothing @FunctionRef)
+    . runReader emptySizeInfo
+    . scanExpression
 
 scanExpression ::
   (Members '[State CallMap, Reader (Maybe FunctionRef), Reader SizeInfo] r) =>
@@ -240,53 +206,14 @@ scanExpression e =
       whenJustM (ask @(Maybe FunctionRef)) (\caller -> runReader caller (registerCall c))
       mapM_ (scanExpression . snd) (c ^. callArgs)
     Nothing -> case e of
-      ExpressionApplication a -> scanApplication a
-      ExpressionFunction f -> scanFunction f
-      ExpressionLambda l -> scanLambda l
+      ExpressionApplication a -> directExpressions_ scanExpression a
+      ExpressionFunction f -> directExpressions_ scanExpression f
+      ExpressionLambda l -> directExpressions_ scanExpression l
       ExpressionLet l -> scanLet l
-      ExpressionCase l -> scanCase l
-      ExpressionSimpleLambda l -> scanSimpleLambda l
+      ExpressionCase l -> directExpressions_ scanExpression l
+      ExpressionSimpleLambda l -> directExpressions_ scanExpression l
       ExpressionIden {} -> return ()
       ExpressionHole {} -> return ()
       ExpressionInstanceHole {} -> return ()
       ExpressionUniverse {} -> return ()
       ExpressionLiteral {} -> return ()
-
-scanSimpleLambda ::
-  forall r.
-  (Members '[State CallMap, Reader (Maybe FunctionRef), Reader SizeInfo] r) =>
-  SimpleLambda ->
-  Sem r ()
-scanSimpleLambda SimpleLambda {..} = scanExpression _slambdaBody
-
-scanLambda ::
-  forall r.
-  (Members '[State CallMap, Reader (Maybe FunctionRef), Reader SizeInfo] r) =>
-  Lambda ->
-  Sem r ()
-scanLambda Lambda {..} = mapM_ scanClause _lambdaClauses
-  where
-    scanClause :: LambdaClause -> Sem r ()
-    scanClause LambdaClause {..} = scanExpression _lambdaBody
-
-scanApplication ::
-  (Members '[State CallMap, Reader (Maybe FunctionRef), Reader SizeInfo] r) =>
-  Application ->
-  Sem r ()
-scanApplication (Application l r _) = do
-  scanExpression l
-  scanExpression r
-
-scanFunction ::
-  (Members '[State CallMap, Reader (Maybe FunctionRef), Reader SizeInfo] r) =>
-  Function ->
-  Sem r ()
-scanFunction (Function l r) = do
-  scanFunctionParameter l
-  scanExpression r
-
-scanFunctionParameter ::
-  (Members '[State CallMap, Reader (Maybe FunctionRef), Reader SizeInfo] r) =>
-  FunctionParameter ->
-  Sem r ()
-scanFunctionParameter p = scanExpression (p ^. paramType)

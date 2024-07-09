@@ -12,7 +12,6 @@ import Juvix.Compiler.Pipeline.Lockfile
 import Juvix.Compiler.Pipeline.Package.Dependency
 import Juvix.Extra.Paths
 import Juvix.Prelude
-import Lens.Micro.Platform qualified as Lens
 
 data BuildDir
   = DefaultBuildDir
@@ -72,7 +71,7 @@ deriving stock instance Show Package
 rawPackageOptions :: Options
 rawPackageOptions =
   defaultOptions
-    { fieldLabelModifier = over Lens._head toLower . dropPrefix "_package",
+    { fieldLabelModifier = over _head toLower . dropPrefix "_package",
       rejectUnknownFields = True,
       omitNothingFields = True
     }
