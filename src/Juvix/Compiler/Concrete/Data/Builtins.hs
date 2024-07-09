@@ -48,6 +48,7 @@ builtinConstructors = \case
   BuiltinInt -> [BuiltinIntOfNat, BuiltinIntNegSuc]
   BuiltinList -> [BuiltinListNil, BuiltinListCons]
   BuiltinMaybe -> [BuiltinMaybeNothing, BuiltinMaybeJust]
+  BuiltinPair -> [BuiltinPairConstr]
   BuiltinPoseidonState -> [BuiltinMkPoseidonState]
   BuiltinEcPoint -> [BuiltinMkEcPoint]
 
@@ -57,6 +58,7 @@ data BuiltinInductive
   | BuiltinInt
   | BuiltinList
   | BuiltinMaybe
+  | BuiltinPair
   | BuiltinPoseidonState
   | BuiltinEcPoint
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic, Data)
@@ -74,6 +76,7 @@ instance Pretty BuiltinInductive where
     BuiltinInt -> Str.int_
     BuiltinList -> Str.list
     BuiltinMaybe -> Str.maybe_
+    BuiltinPair -> Str.pair
     BuiltinPoseidonState -> Str.cairoPoseidonState
     BuiltinEcPoint -> Str.cairoEcPoint
 
@@ -89,6 +92,7 @@ instance Pretty BuiltinConstructor where
     BuiltinListCons -> Str.cons
     BuiltinMaybeNothing -> Str.nothing
     BuiltinMaybeJust -> Str.just
+    BuiltinPairConstr -> Str.pair
     BuiltinMkPoseidonState -> Str.cairoMkPoseidonState
     BuiltinMkEcPoint -> Str.cairoMkEcPoint
 
@@ -103,6 +107,7 @@ data BuiltinConstructor
   | BuiltinListCons
   | BuiltinMaybeNothing
   | BuiltinMaybeJust
+  | BuiltinPairConstr
   | BuiltinMkPoseidonState
   | BuiltinMkEcPoint
   deriving stock (Show, Eq, Ord, Generic, Data)

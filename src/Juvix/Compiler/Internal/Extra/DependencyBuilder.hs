@@ -195,6 +195,7 @@ checkBuiltinInductiveStartNode i = whenJust (i ^. inductiveBuiltin) go
         addInductiveStartNode
       BuiltinList -> return ()
       BuiltinMaybe -> return ()
+      BuiltinPair -> return ()
       BuiltinPoseidonState -> return ()
       BuiltinEcPoint -> return ()
 
