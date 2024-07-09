@@ -506,10 +506,17 @@ goModule onlyTypes infoTable Internal.Module {..} =
       | otherwise = goLams vars
       where
         npats =
-          length
-            . filterTypeArgs 0 (fromJust _lambdaType)
-            . toList
-            $ head _lambdaClauses ^. Internal.lambdaPatterns
+          case _lambdaType of
+            Just ty ->
+              length
+                . filterTypeArgs 0 ty
+                . toList
+                $ head _lambdaClauses ^. Internal.lambdaPatterns
+            Nothing ->
+              length
+                . filter ((/= Internal.Implicit) . (^. Internal.patternArgIsImplicit))
+                . toList
+                $ head _lambdaClauses ^. Internal.lambdaPatterns
         vars = map (\i -> defaultName ("X" <> show i)) [0 .. npats - 1]
 
         goLams :: [Name] -> Expression
