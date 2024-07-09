@@ -290,31 +290,34 @@ goModule onlyTypes infoTable Internal.Module {..} =
 
     goApplication :: Internal.Application -> Expression
     goApplication app@Internal.Application {..}
-      | Just (PragmaIsabelleOperator {..}, arg1, arg2) <- getIsabelleOperator app =
-          ExprBinop
-            Binop
-              { _binopOperator = defaultName _pragmaIsabelleOperatorName,
-                _binopLeft = goExpression arg1,
-                _binopRight = goExpression arg2,
-                _binopFixity =
-                  Fixity
-                    { _fixityPrecedence = PrecNat (fromMaybe 0 _pragmaIsabelleOperatorPrec),
-                      _fixityArity = OpBinary (fromMaybe AssocNone _pragmaIsabelleOperatorAssoc),
-                      _fixityId = Nothing
-                    }
-              }
-      | Just x <- getLiteralConversion app = ExprLiteral (LitNumeric x)
+      | Just x <- getIsabelleOperator app = x
+      | Just x <- getLiteral app = x
       | Just x <- getList app = ExprList (List x)
-      | Just (x, y) <- getCons app = ExprCons (Cons x y)
-      | Just (v, x, y) <- getIf app = ExprIf (If v x y)
+      | Just x <- getCons app = x
+      | Just x <- getIf app = x
       | Just (x, y) <- getPair app = ExprTuple (Tuple (x :| [y]))
-      | Just app' <- getIdentApp app = app'
+      | Just x <- getIdentApp app = x
       | otherwise =
           let l = goExpression _appLeft
               r = goExpression _appRight
            in ExprApp (Application l r)
 
-    getIsabelleOperator :: Internal.Application -> Maybe (PragmaIsabelleOperator, Internal.Expression, Internal.Expression)
+    mkIsabelleOperator :: PragmaIsabelleOperator -> Internal.Expression -> Internal.Expression -> Expression
+    mkIsabelleOperator PragmaIsabelleOperator {..} arg1 arg2 =
+      ExprBinop
+        Binop
+          { _binopOperator = defaultName _pragmaIsabelleOperatorName,
+            _binopLeft = goExpression arg1,
+            _binopRight = goExpression arg2,
+            _binopFixity =
+              Fixity
+                { _fixityPrecedence = PrecNat (fromMaybe 0 _pragmaIsabelleOperatorPrec),
+                  _fixityArity = OpBinary (fromMaybe AssocNone _pragmaIsabelleOperatorAssoc),
+                  _fixityId = Nothing
+                }
+          }
+
+    getIsabelleOperator :: Internal.Application -> Maybe Expression
     getIsabelleOperator app = case fn of
       Internal.ExpressionIden (Internal.IdenFunction name) ->
         case HashMap.lookup name (infoTable ^. Internal.infoFunctions) of
@@ -326,8 +329,8 @@ goModule onlyTypes infoTable Internal.Module {..} =
                     case HashMap.lookup tyname (infoTable ^. Internal.infoInductives) of
                       Just Internal.InductiveInfo {..} ->
                         case _inductiveInfoBuiltin of
-                          Just Internal.BuiltinNat -> Just (pragma, arg1, arg2)
-                          Just Internal.BuiltinInt -> Just (pragma, arg1, arg2)
+                          Just Internal.BuiltinNat -> Just (mkIsabelleOperator pragma arg1 arg2)
+                          Just Internal.BuiltinInt -> Just (mkIsabelleOperator pragma arg1 arg2)
                           _ -> Nothing
                       Nothing -> Nothing
                   _ -> Nothing
@@ -337,8 +340,8 @@ goModule onlyTypes infoTable Internal.Module {..} =
       where
         (fn, args) = Internal.unfoldApplication app
 
-    getLiteralConversion :: Internal.Application -> Maybe Integer
-    getLiteralConversion app = case fn of
+    getLiteral :: Internal.Application -> Maybe Expression
+    getLiteral app = case fn of
       Internal.ExpressionIden (Internal.IdenFunction name) ->
         case HashMap.lookup name (infoTable ^. Internal.infoFunctions) of
           Just funInfo ->
@@ -351,14 +354,14 @@ goModule onlyTypes infoTable Internal.Module {..} =
       where
         (fn, args) = Internal.unfoldApplication app
 
-        lit :: Maybe Integer
+        lit :: Maybe Expression
         lit = case args of
           _ :| [_, Internal.ExpressionLiteral l] ->
             case l ^. Internal.withLocParam of
               Internal.LitString {} -> Nothing
-              Internal.LitNumeric x -> Just x
-              Internal.LitInteger x -> Just x
-              Internal.LitNatural x -> Just x
+              Internal.LitNumeric x -> Just $ ExprLiteral $ LitNumeric x
+              Internal.LitInteger x -> Just $ ExprLiteral $ LitNumeric x
+              Internal.LitNatural x -> Just $ ExprLiteral $ LitNumeric x
           _ -> Nothing
 
     getList :: Internal.Application -> Maybe [Expression]
@@ -378,7 +381,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
       where
         (fn, args) = Internal.unfoldApplication app
 
-    getCons :: Internal.Application -> Maybe (Expression, Expression)
+    getCons :: Internal.Application -> Maybe Expression
     getCons app = case fn of
       Internal.ExpressionIden (Internal.IdenConstructor name) ->
         case HashMap.lookup name (infoTable ^. Internal.infoConstructors) of
@@ -386,14 +389,14 @@ goModule onlyTypes infoTable Internal.Module {..} =
             case ctrInfo ^. Internal.constructorInfoBuiltin of
               Just Internal.BuiltinListCons
                 | (_ :| [arg1, arg2]) <- args ->
-                    Just (goExpression arg1, goExpression arg2)
+                    Just $ ExprCons $ Cons (goExpression arg1) (goExpression arg2)
               _ -> Nothing
           Nothing -> Nothing
       _ -> Nothing
       where
         (fn, args) = Internal.unfoldApplication app
 
-    getIf :: Internal.Application -> Maybe (Expression, Expression, Expression)
+    getIf :: Internal.Application -> Maybe Expression
     getIf app = case fn of
       Internal.ExpressionIden (Internal.IdenFunction name) ->
         case HashMap.lookup name (infoTable ^. Internal.infoFunctions) of
@@ -401,7 +404,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
             case funInfo ^. Internal.functionInfoBuiltin of
               Just Internal.BuiltinBoolIf
                 | (_ :| [val, br1, br2]) <- args ->
-                    Just (goExpression val, goExpression br1, goExpression br2)
+                    Just $ ExprIf $ If (goExpression val) (goExpression br1) (goExpression br2)
               _ -> Nothing
           Nothing -> Nothing
       _ -> Nothing
