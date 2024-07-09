@@ -8,3 +8,6 @@ type Functor (f : Type -> Type) :=
     syntax operator <$> fmap;
     <$> : {A B : Type} -> (A -> B) -> f A -> f B
   };
+
+fmap {f : Type -> Type} {{Functor f}} {A B : Type} (fun : A -> B) (x : f A) : f B :=
+  fun Functor.<$> x
