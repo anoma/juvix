@@ -780,6 +780,11 @@ isSmallUniverse' = \case
   ExpressionUniverse {} -> True
   _ -> False
 
+-- | This function does not take into account synonyms (won't work with e.g.
+-- `Type' : Type := Type`).
+isTypeConstructor :: Expression -> Bool
+isTypeConstructor = isSmallUniverse' . snd . unfoldFunType
+
 explicitPatternArg :: Pattern -> PatternArg
 explicitPatternArg _patternArgPattern =
   PatternArg

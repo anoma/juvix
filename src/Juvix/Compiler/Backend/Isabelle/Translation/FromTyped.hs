@@ -3,6 +3,7 @@ module Juvix.Compiler.Backend.Isabelle.Translation.FromTyped where
 import Data.HashMap.Strict qualified as HashMap
 import Data.Text qualified as T
 import Juvix.Compiler.Backend.Isabelle.Data.Result
+import Juvix.Compiler.Backend.Isabelle.Extra
 import Juvix.Compiler.Backend.Isabelle.Language
 import Juvix.Compiler.Internal.Data.InfoTable qualified as Internal
 import Juvix.Compiler.Internal.Extra qualified as Internal
@@ -118,12 +119,12 @@ goModule onlyTypes infoTable Internal.Module {..} =
               _synonymType = goType $ fromMaybe (error "unsupported axiomatic type") body
             }
       _
-        | isFunction argnames body ->
+        | isFunction argnames ty body ->
             StmtFunction
               Function
                 { _functionName = name,
                   _functionType = goType ty,
-                  _functionClauses = goBody argnames body
+                  _functionClauses = goBody argnames ty body
                 }
         | otherwise ->
             StmtDefinition
@@ -133,18 +134,25 @@ goModule onlyTypes infoTable Internal.Module {..} =
                   _definitionBody = maybe ExprUndefined goExpression body
                 }
         where
-          argnames = map (fromMaybe (defaultName "_") . (^. Internal.argInfoName)) argsInfo
+          argnames =
+            filterTypeArgs 0 ty $ map (fromMaybe (defaultName "_") . (^. Internal.argInfoName)) argsInfo
 
-    isFunction :: [Name] -> Maybe Internal.Expression -> Bool
-    isFunction argnames = \case
-      Just (Internal.ExpressionLambda {}) -> True
+    isFunction :: [Name] -> Internal.Expression -> Maybe Internal.Expression -> Bool
+    isFunction argnames ty = \case
+      Just (Internal.ExpressionLambda Internal.Lambda {..})
+        | not $ null $ filterTypeArgs 0 ty $ toList $ head _lambdaClauses ^. Internal.lambdaPatterns ->
+            True
       _ -> not (null argnames)
 
-    goBody :: [Name] -> Maybe Internal.Expression -> NonEmpty Clause
-    goBody argnames = \case
+    goBody :: [Name] -> Internal.Expression -> Maybe Internal.Expression -> NonEmpty Clause
+    goBody argnames ty = \case
       Nothing -> oneClause ExprUndefined
-      Just (Internal.ExpressionLambda Internal.Lambda {..}) ->
-        fmap goClause _lambdaClauses
+      -- We assume here that all clauses have the same number of patterns
+      Just (Internal.ExpressionLambda Internal.Lambda {..})
+        | not $ null $ filterTypeArgs 0 ty $ toList $ head _lambdaClauses ^. Internal.lambdaPatterns ->
+            fmap goClause _lambdaClauses
+        | otherwise ->
+            oneClause (goExpression (head _lambdaClauses ^. Internal.lambdaBody))
       Just body -> oneClause (goExpression body)
       where
         oneClause :: Expression -> NonEmpty Clause
@@ -159,7 +167,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
         goClause :: Internal.LambdaClause -> Clause
         goClause Internal.LambdaClause {..} =
           Clause
-            { _clausePatterns = nonEmpty' $ map goPatternArg (toList _lambdaPatterns),
+            { _clausePatterns = nonEmpty' $ map goPatternArg (filterTypeArgs 0 ty (toList _lambdaPatterns)),
               _clauseBody = goExpression _lambdaBody
             }
 
@@ -223,10 +231,10 @@ goModule onlyTypes infoTable Internal.Module {..} =
           _ -> error ("unsupported type: " <> Internal.ppTrace app)
 
     goTypeFun :: Internal.Function -> Type
-    goTypeFun Internal.Function {..} = case lty of
-      Internal.ExpressionUniverse {} -> goType _functionRight
-      _ ->
-        TyFun $ FunType (goType lty) (goType _functionRight)
+    goTypeFun Internal.Function {..}
+      | Internal.isTypeConstructor lty = goType _functionRight
+      | otherwise =
+          TyFun $ FunType (goType lty) (goType _functionRight)
       where
         lty = _functionLeft ^. Internal.paramType
 
@@ -298,6 +306,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
       | Just x <- getList app = ExprList (List x)
       | Just (x, y) <- getCons app = ExprCons (Cons x y)
       | Just (v, x, y) <- getIf app = ExprIf (If v x y)
+      | Just app' <- getIdentApp app = app'
       | otherwise =
           let l = goExpression _appLeft
               r = goExpression _appRight
@@ -397,6 +406,29 @@ goModule onlyTypes infoTable Internal.Module {..} =
       where
         (fn, args) = Internal.unfoldApplication app
 
+    getIdentApp :: Internal.Application -> Maybe Expression
+    getIdentApp app = case mty of
+      Just (ty, paramsNum) -> Just $ mkApp (goExpression fn) (map goExpression args')
+        where
+          args' = filterTypeArgs paramsNum ty (toList args)
+      Nothing -> Nothing
+      where
+        (fn, args) = Internal.unfoldApplication app
+        mty = case fn of
+          Internal.ExpressionIden (Internal.IdenFunction name) ->
+            case HashMap.lookup name (infoTable ^. Internal.infoFunctions) of
+              Just funInfo -> Just (funInfo ^. Internal.functionInfoType, 0)
+              Nothing -> Nothing
+          Internal.ExpressionIden (Internal.IdenConstructor name) ->
+            case HashMap.lookup name (infoTable ^. Internal.infoConstructors) of
+              Just ctrInfo ->
+                Just
+                  ( ctrInfo ^. Internal.constructorInfoType,
+                    length (ctrInfo ^. Internal.constructorInfoInductiveParameters)
+                  )
+              Nothing -> Nothing
+          _ -> Nothing
+
     goFunType :: Internal.Function -> Expression
     goFunType _ = ExprUndefined
 
@@ -449,9 +481,15 @@ goModule onlyTypes infoTable Internal.Module {..} =
 
     -- TODO: properly unique names for lambda-bound variables
     goLambda :: Internal.Lambda -> Expression
-    goLambda Internal.Lambda {..} = goLams vars
+    goLambda Internal.Lambda {..}
+      | npats == 0 = goExpression (head _lambdaClauses ^. Internal.lambdaBody)
+      | otherwise = goLams vars
       where
-        npats = length $ head _lambdaClauses ^. Internal.lambdaPatterns
+        npats =
+          length
+            . filterTypeArgs 0 (fromJust _lambdaType)
+            . toList
+            $ head _lambdaClauses ^. Internal.lambdaPatterns
         vars = map (\i -> defaultName ("X" <> show i)) [0 .. npats - 1]
 
         goLams :: [Name] -> Expression
@@ -459,7 +497,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
           v : vs ->
             ExprLambda
               Lambda
-                { _lambdaType = fmap goType _lambdaType,
+                { _lambdaType = Nothing,
                   _lambdaVar = v,
                   _lambdaBody = goLams vs
                 }
@@ -606,3 +644,16 @@ goModule onlyTypes infoTable Internal.Module {..} =
       set namePretty txt
         . set nameText txt
         $ name
+
+    filterTypeArgs :: Int -> Internal.Expression -> [a] -> [a]
+    filterTypeArgs paramsNum ty args =
+      map fst $
+        filter (not . snd) $
+          zip (drop paramsNum args) (argtys ++ repeat False)
+      where
+        argtys =
+          map Internal.isTypeConstructor
+            . map (^. Internal.paramType)
+            . fst
+            . Internal.unfoldFunType
+            $ ty
