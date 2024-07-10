@@ -65,6 +65,8 @@ checkCairo md = do
         isRecordOrList TypeConstr {..} = case ii ^. inductiveBuiltin of
           Just (BuiltinTypeInductive BuiltinList) ->
             all isArgType _typeConstrArgs
+          Just (BuiltinTypeInductive BuiltinPair) ->
+            all isArgType _typeConstrArgs
           Just {} ->
             False
           Nothing ->

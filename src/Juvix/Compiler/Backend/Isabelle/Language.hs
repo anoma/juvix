@@ -6,7 +6,7 @@ module Juvix.Compiler.Backend.Isabelle.Language
 where
 
 import Juvix.Compiler.Internal.Data.Name hiding (letFixity)
-import Juvix.Prelude hiding (letFixity)
+import Juvix.Prelude hiding (Cons, letFixity)
 
 data Type
   = TyVar TypeVar
