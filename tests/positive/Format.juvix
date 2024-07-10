@@ -16,11 +16,7 @@ Bool; true; false; mkShow; module Show};
 terminating
 -- Comment between terminating and type sig
 go : Nat → Nat → Nat
-  | n s :=
-    ite
-      (s < n)
-      (go (sub n 1) s)
-      (go n (sub s n) + go (sub n 1) s);
+  | n s := ite (s < n) (go (sub n 1) s) (go n (sub s n) + go (sub n 1) s);
 
 module {- local module -}
 M;
@@ -65,19 +61,7 @@ t5 : String := "a" M., "b" M., "c", "d";
 t2 : String := "a", "b", "c", "d";
 
 -- comma chain does not fit in a line
-t3 : String :=
-  "a"
-    , "b"
-    , "c"
-    , "d"
-    , "e"
-    , "f"
-    , "g"
-    , "h"
-    , "i"
-    , "j"
-    , "k"
-    , "1234";
+t3 : String := "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "1234";
 
 -- escaping in String literals
 e1 : String := "\"\n";
@@ -121,14 +105,9 @@ t : String :=
     +l1 "Hellooooooooo"
     +l1 "Hellooooooooo"
         +l6 "Hellooooooooo"
-        +l6 ("Hellooooooooo"
-          +r6 "Hellooooooooo"
-          +r6 "Hellooooooooo")
+        +l6 ("Hellooooooooo" +r6 "Hellooooooooo" +r6 "Hellooooooooo")
         +l6 "Hellooooooooo"
-        +l6 "Hellooooooooo"
-          +l7 "Hellooooooooo"
-          +l7 "Hellooooooooo"
-          +l7 "Hellooooooooo"
+        +l6 "Hellooooooooo" +l7 "Hellooooooooo" +l7 "Hellooooooooo" +l7 "Hellooooooooo"
       , "hi"
       , "hi";
 
@@ -296,8 +275,7 @@ module Traits;
   showStringI : Show String := mkShow (show := id);
 
   instance
-  showBoolI : Show Bool :=
-    mkShow (show := λ {x := ite x "true" "false"});
+  showBoolI : Show Bool := mkShow (show := λ {x := ite x "true" "false"});
 
   instance
   showNatI : Show Nat := mkShow (show := natToString);
@@ -309,16 +287,14 @@ module Traits;
   g : {A : Type} → {{Show A}} → Nat := 5;
 
   instance
-  showListI {A} {{Show A}} : Show (List A) :=
-    mkShow (show := showList);
+  showListI {A} {{Show A}} : Show (List A) := mkShow (show := showList);
 
   showMaybe {A} {{Show A}} : Maybe A → String
     | (just x) := "just (" ++str Show.show x ++str ")"
     | nothing := "nothing";
 
   instance
-  showMaybeI {A} {{Show A}} : Show (Maybe A) :=
-    mkShow (show := showMaybe);
+  showMaybeI {A} {{Show A}} : Show (Maybe A) := mkShow (show := showMaybe);
 
   f {A} {{Show A}} : A → String
     | x := Show.show x;
@@ -370,31 +346,17 @@ longLongLongArg : Int := 0;
 longLongLongListArg : List Int := [];
 
 l1 : List Int :=
-  [ 1
-  ; 2
-  ; longLongLongArg
-  ; longLongLongArg
-  ; longLongLongArg
-  ; longLongLongArg
-  ];
+  [1; 2; longLongLongArg; longLongLongArg; longLongLongArg; longLongLongArg];
 
 l2 : List Int := [1; 2; 3];
 
 l3 : List (List Int) :=
-  [ [1; 2; 3]
-  ; longLongLongListArg
-  ; longLongLongListArg
-  ; longLongLongListArg
-  ];
+  [[1; 2; 3]; longLongLongListArg; longLongLongListArg; longLongLongListArg];
 
 l4 : List (List Int) :=
   [ [1; 2; 3]
   ; longLongLongListArg
-  ; [ longLongLongArg
-    ; longLongLongArg
-    ; longLongLongArg
-    ; longLongLongArg
-    ]
+  ; [longLongLongArg; longLongLongArg; longLongLongArg; longLongLongArg]
   ; longLongLongListArg
   ];
 
@@ -411,8 +373,7 @@ i2479' : {_ : Nat} -> Nat
   | {_} := zero;
 
 -- formatting arguments that do not fit in a line
-fffffffffffffffffffffffffffffffffffffffffffffffff
-  {f : List Nat} : Nat := zero;
+fffffffffffffffffffffffffffffffffffffffffffffffff {f : List Nat} : Nat := zero;
 
 -- formatting arguments that do not fit in a line
 fff
