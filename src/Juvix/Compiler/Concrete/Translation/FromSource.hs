@@ -821,9 +821,10 @@ expressionAtom :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) =
 expressionAtom =
   P.label "<expression>" $
     AtomLiteral <$> P.try literal
-      <|> either AtomIterator AtomNamedApplication <$> iterator
+      -- <|> either AtomIterator AtomNamedApplication <$> iterator
+      <|> AtomIterator <$> iterator
       <|> AtomNamedApplicationNew <$> namedApplicationNew
-      <|> AtomNamedApplication <$> namedApplication -- TODO remove
+      -- <|> AtomNamedApplication <$> namedApplication -- TODO remove
       <|> AtomList <$> parseList
       <|> AtomIf <$> multiwayIf
       <|> AtomIdentifier <$> name
@@ -873,12 +874,113 @@ pdoubleBracesExpression = do
 -- Iterators
 --------------------------------------------------------------------------------
 
+-- iterator ::
+--   forall r.
+--   (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) =>
+--   ParsecS r (Either (Iterator 'Parsed) (NamedApplication 'Parsed))
+-- iterator = do
+--   off <- P.getOffset
+--   (firstIsInit, keywordRef, _iteratorName, pat) <- P.try $ do
+--     n <- name
+--     lparen
+--     pat <- parsePatternAtoms
+--     (isInit, kwr) <-
+--       (True,) <$> kw kwAssign
+--         <|> (False,) <$> kw kwIn
+--     return (isInit, Irrelevant kwr, n, pat)
+--   val <- parseExpressionAtoms
+--   _iteratorInitializers <-
+--     if
+--         | firstIsInit -> do
+--             inis <- many (semicolon >> initializer)
+--             rparen
+--             let ini =
+--                   Initializer
+--                     { _initializerPattern = pat,
+--                       _initializerAssignKw = keywordRef,
+--                       _initializerExpression = val
+--                     }
+--             return (ini : inis)
+--         | otherwise -> return []
+--   _iteratorRanges <-
+--     if
+--         | not firstIsInit -> do
+--             rngs <- many (semicolon >> range)
+--             rparen
+--             let ran =
+--                   Range
+--                     { _rangeExpression = val,
+--                       _rangePattern = pat,
+--                       _rangeInKw = keywordRef
+--                     }
+--             return (ran : rngs)
+--         | otherwise -> fmap (maybe [] toList) . optional $ do
+--             s <- P.try $ do
+--               lparen
+--               rangeStart
+--             r <- rangeCont s
+--             rngs <- (r :) <$> many (semicolon >> range)
+--             rparen
+--             return rngs
+--   if
+--       | null _iteratorRanges -> do
+--           args <- nonEmpty' <$> mapM (mkNamedArgument off) _iteratorInitializers
+--           tailBlocks <- many argumentBlock
+--           let firstBlock =
+--                 ArgumentBlock
+--                   { _argBlockDelims = Irrelevant Nothing,
+--                     _argBlockImplicit = Explicit,
+--                     _argBlockArgs = args
+--                   }
+--               _namedAppName = _iteratorName
+--               _namedAppArgs = firstBlock :| tailBlocks
+--               _namedAppSignature = Irrelevant ()
+--           return $ Right NamedApplication {..}
+--       | otherwise -> do
+--           (_iteratorBody, _iteratorBodyBraces) <-
+--             (,True) <$> braces parseExpressionAtoms
+--               <|> (,False) <$> parseExpressionAtoms
+--           let _iteratorParens = False
+--           return $ Left Iterator {..}
+--   where
+--     initializer :: ParsecS r (Initializer 'Parsed)
+--     initializer = do
+--       (_initializerPattern, _initializerAssignKw) <- P.try $ do
+--         pat <- parsePatternAtoms
+--         r <- Irrelevant <$> kw kwAssign
+--         return (pat, r)
+--       _initializerExpression <- parseExpressionAtoms
+--       return Initializer {..}
+
+--     rangeStart :: ParsecS r (PatternAtoms 'Parsed, Irrelevant KeywordRef)
+--     rangeStart = do
+--       pat <- parsePatternAtoms
+--       r <- Irrelevant <$> kw kwIn
+--       return (pat, r)
+
+--     rangeCont :: (PatternAtoms 'Parsed, Irrelevant KeywordRef) -> ParsecS r (Range 'Parsed)
+--     rangeCont (_rangePattern, _rangeInKw) = do
+--       _rangeExpression <- parseExpressionAtoms
+--       return Range {..}
+
+--     range :: ParsecS r (Range 'Parsed)
+--     range = do
+--       s <- P.try rangeStart
+--       rangeCont s
+
+--     mkNamedArgument :: Int -> Initializer 'Parsed -> ParsecS r (NamedArgumentAssign 'Parsed)
+--     mkNamedArgument off Initializer {..} = do
+--       let _namedArgAssignKw = _initializerAssignKw
+--           _namedArgValue = _initializerExpression
+--       _namedArgName <- case _initializerPattern ^. patternAtoms of
+--         PatternAtomIden (NameUnqualified n) :| [] -> return n
+--         _ -> parseFailure off "an iterator must have at least one range"
+--       return NamedArgumentAssign {..}
 iterator ::
   forall r.
   (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) =>
-  ParsecS r (Either (Iterator 'Parsed) (NamedApplication 'Parsed))
+  ParsecS r (Iterator 'Parsed)
 iterator = do
-  off <- P.getOffset
   (firstIsInit, keywordRef, _iteratorName, pat) <- P.try $ do
     n <- name
     lparen
@@ -921,26 +1023,11 @@ iterator = do
             rngs <- (r :) <$> many (semicolon >> range)
             rparen
             return rngs
-  if
-      | null _iteratorRanges -> do
-          args <- nonEmpty' <$> mapM (mkNamedArgument off) _iteratorInitializers
-          tailBlocks <- many argumentBlock
-          let firstBlock =
-                ArgumentBlock
-                  { _argBlockDelims = Irrelevant Nothing,
-                    _argBlockImplicit = Explicit,
-                    _argBlockArgs = args
-                  }
-              _namedAppName = _iteratorName
-              _namedAppArgs = firstBlock :| tailBlocks
-              _namedAppSignature = Irrelevant ()
-          return $ Right NamedApplication {..}
-      | otherwise -> do
-          (_iteratorBody, _iteratorBodyBraces) <-
-            (,True) <$> braces parseExpressionAtoms
-              <|> (,False) <$> parseExpressionAtoms
-          let _iteratorParens = False
-          return $ Left Iterator {..}
+  (_iteratorBody, _iteratorBodyBraces) <-
+    (,True) <$> braces parseExpressionAtoms
+      <|> (,False) <$> parseExpressionAtoms
+  let _iteratorParens = False
+  return $ Iterator {..}
   where
     initializer :: ParsecS r (Initializer 'Parsed)
     initializer = do
@@ -966,15 +1053,6 @@ iterator = do
     range = do
       s <- P.try rangeStart
       rangeCont s
-
-    mkNamedArgument :: Int -> Initializer 'Parsed -> ParsecS r (NamedArgumentAssign 'Parsed)
-    mkNamedArgument off Initializer {..} = do
-      let _namedArgAssignKw = _initializerAssignKw
-          _namedArgValue = _initializerExpression
-      _namedArgName <- case _initializerPattern ^. patternAtoms of
-        PatternAtomIden (NameUnqualified n) :| [] -> return n
-        _ -> parseFailure off "an iterator must have at least one range"
-      return NamedArgumentAssign {..}
 
 pnamedArgumentFunctionDef ::
   forall r.
