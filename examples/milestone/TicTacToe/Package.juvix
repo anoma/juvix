@@ -3,7 +3,8 @@ module Package;
 import PackageDescription.V2 open;
 
 package : Package :=
-  defaultPackage
-    {name := "TicTacToe";
-     version := mkVersion 0 1 0;
-     main := just "CLI/TicTacToe.juvix"};
+  defaultPackage@?{
+    name := "TicTacToe";
+    version := mkVersion 0 1 0;
+    main := just "CLI/TicTacToe.juvix"
+  };
