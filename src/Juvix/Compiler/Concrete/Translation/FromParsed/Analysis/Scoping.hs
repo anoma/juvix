@@ -2681,10 +2681,6 @@ checkNamedApplication napp = do
       _argBlockArgs <- mapM checkNamedArgumentAssign (b ^. argBlockArgs)
       return ArgumentBlock {..}
 
--- | NOTE the argument `isNew` indicates whether the caller is using the new
--- syntax for NamedArgument. This argument is temporary. When the old named
--- argument syntax is removed, the behaviour of this function should be the same
--- as passing isNew = True.
 checkNamedArgumentAssign ::
   forall r.
   (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader Package] r) =>
