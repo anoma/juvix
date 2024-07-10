@@ -39,22 +39,14 @@ module Balances;
   --- Increments the amount associated with a certain ;Field;.
   increment : Field -> Nat -> Balances -> Balances
     | f n nil := (f, n) :: nil
-    | f n ((b, bn) :: bs) :=
-      ite
-        (f == b)
-        ((b, bn + n) :: bs)
-        ((b, bn) :: increment f n bs);
+    | f n ((b, bn) :: bs) := ite (f == b) ((b, bn + n) :: bs) ((b, bn) :: increment f n bs);
 
   --- Decrements the amount associated with a certain ;Field;.
   --- If the ;Field; is not found, it does nothing.
   --- Subtraction is truncated to ;zero;.
   decrement : Field -> Nat -> Balances -> Balances
     | _ _ nil := nil
-    | f n ((b, bn) :: bs) :=
-      ite
-        (f == b)
-        ((b, sub bn n) :: bs)
-        ((b, bn) :: decrement f n bs);
+    | f n ((b, bn) :: bs) := ite (f == b) ((b, sub bn n) :: bs) ((b, bn) :: decrement f n bs);
 
   emtpyBalances : Balances := nil;
 
@@ -90,16 +82,13 @@ assert : {A : Type} -> Bool -> A -> A
 ---
 --- `caller`: Who is creating the transaction. It must be the bank.
 issue : Address -> Address -> Nat -> Token
-  | caller owner amount :=
-    assert (caller == bankAddress) (mkToken owner 0 amount);
+  | caller owner amount := assert (caller == bankAddress) (mkToken owner 0 amount);
 
 --- Deposits some amount of money into the bank.
-deposit
-  (bal : Balances) (token : Token) (amount : Nat) : Token :=
+deposit (bal : Balances) (token : Token) (amount : Nat) : Token :=
   let
     difference : Nat := sub (getAmount token) amount;
-    remaining : Token :=
-      mkToken (getOwner token) (getGates token) difference;
+    remaining : Token := mkToken (getOwner token) (getGates token) difference;
     hash : Field := hashAddress (getOwner token);
     bal' : Balances := increment hash amount bal;
   in runOnChain (commitBalances bal') remaining;
