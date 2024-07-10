@@ -21,22 +21,16 @@ full : List Square → Bool
   | _ := failwith "full";
 
 diagonals : List (List Square) → List (List Square)
-  | ((a1 :: _ :: b1 :: nil)
-    :: (_ :: c :: _ :: nil)
-    :: (b2 :: _ :: a2 :: nil)
-    :: nil) :=
+  | ((a1 :: _ :: b1 :: nil) :: (_ :: c :: _ :: nil) :: (b2 :: _ :: a2 :: nil) :: nil) :=
     (a1 :: c :: a2 :: nil) :: (b1 :: c :: b2 :: nil) :: nil
   | _ := failwith "diagonals";
 
-columns : List (List Square) → List (List Square) :=
-  transpose;
+columns : List (List Square) → List (List Square) := transpose;
 
 rows : List (List Square) → List (List Square) := id;
 
 --- Textual representation of a ;List Square;
-showRow (xs : List Square) : String :=
-  concat (surround "|" (map showSquare xs));
+showRow (xs : List Square) : String := concat (surround "|" (map showSquare xs));
 
 showBoard : Board → String
-  | (board squares) :=
-    unlines (surround "+---+---+---+" (map showRow squares));
+  | (board squares) := unlines (surround "+---+---+---+" (map showRow squares));

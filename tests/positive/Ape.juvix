@@ -28,8 +28,7 @@ axiom f : String → String;
 
 x : String := "" + ("" ++ "");
 
-axiom wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww : String
-  → String;
+axiom wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww : String → String;
 
 nesting : String :=
   wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww

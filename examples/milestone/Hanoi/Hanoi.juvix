@@ -15,9 +15,7 @@ module Hanoi;
 import Stdlib.Prelude open;
 
 --- Concatenates a list of strings
---- ;concat (("a" :: nil) :: "b" :: nil); evaluates to ;"a"
-  :: "b"
-  :: nil;
+--- ;concat (("a" :: nil) :: "b" :: nil); evaluates to ;"a" :: "b" :: nil;
 concat : List String → String := foldl (++str) "";
 
 intercalate : String → List String → String
@@ -29,8 +27,7 @@ singleton : {A : Type} → A → List A
 
 --- Produce a ;String; representation of a ;List Nat;
 showList : List Nat → String
-  | xs :=
-    "[" ++str intercalate "," (map natToString xs) ++str "]";
+  | xs := "[" ++str intercalate "," (map natToString xs) ++str "]";
 
 --- A Peg represents a peg in the towers of Hanoi game
 type Peg :=
@@ -47,17 +44,11 @@ showPeg : Peg → String
 type Move := move : Peg → Peg → Move;
 
 showMove : Move → String
-  | (move from to) :=
-    showPeg from ++str " -> " ++str showPeg to;
+  | (move from to) := showPeg from ++str " -> " ++str showPeg to;
 
 --- Produce a list of ;Move;s that solves the towers of Hanoi game
 hanoi : Nat → Peg → Peg → Peg → List Move
   | zero _ _ _ := nil
-  | (suc n) p1 p2 p3 :=
-    hanoi n p1 p3 p2
-      ++ singleton (move p1 p2)
-      ++ hanoi n p3 p2 p1;
+  | (suc n) p1 p2 p3 := hanoi n p1 p3 p2 ++ singleton (move p1 p2) ++ hanoi n p3 p2 p1;
 
-main : IO :=
-  printStringLn
-    (unlines (map showMove (hanoi 5 left middle right)));
+main : IO := printStringLn (unlines (map showMove (hanoi 5 left middle right)));

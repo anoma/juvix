@@ -1,8 +1,6 @@
 module Syntax;
 
-compose
-  {A B C : Type} (f : B -> C) (g : A -> B) (x : A) : C :=
-  f (g x);
+compose {A B C : Type} (f : B -> C) (g : A -> B) (x : A) : C := f (g x);
 
 compose' {A B C : Type} (f : B -> C) (g : A -> B) : A -> C
   | x := f (g x);
@@ -41,8 +39,7 @@ syntax operator ==2 cmp;
   | _ _ := false;
 
 module MutualTypes;
-  isNotEmpty {a : Type} (t : Tree a) : Bool :=
-    not (isEmpty t);
+  isNotEmpty {a : Type} (t : Tree a) : Bool := not (isEmpty t);
 
   isEmpty {a : Type} : (t : Tree a) -> Bool
     | empty := true
