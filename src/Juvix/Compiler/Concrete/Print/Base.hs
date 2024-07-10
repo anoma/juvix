@@ -675,7 +675,6 @@ instance PrettyPrint ApeLeaf where
     ApeLeafPattern r -> ppCode r
     ApeLeafPatternArg r -> ppCode r
     ApeLeafAtom r -> ppAnyStage r
-    ApeLeafArgumentBlock r -> ppAnyStage r
 
 annDef :: forall s r. (SingI s, Members '[ExactPrint] r) => SymbolType s -> Sem r () -> Sem r ()
 annDef nm = case sing :: SStage s of

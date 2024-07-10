@@ -823,7 +823,7 @@ expressionAtom =
     AtomLiteral <$> P.try literal
       <|> either AtomIterator AtomNamedApplication <$> iterator
       <|> AtomNamedApplicationNew <$> namedApplicationNew
-      -- <|> AtomNamedApplication <$> namedApplication -- TODO remove
+      <|> AtomNamedApplication <$> namedApplication -- TODO remove
       <|> AtomList <$> parseList
       <|> AtomIf <$> multiwayIf
       <|> AtomIdentifier <$> name
@@ -991,9 +991,7 @@ namedArgumentNew ::
   forall r.
   (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) =>
   ParsecS r (NamedArgumentNew 'Parsed)
-namedArgumentNew =
-  -- P.try (NamedArgumentRegular <$> namedArgumentAssign) -- TODO this try should be optimized
-  NamedArgumentNewFunction <$> pnamedArgumentFunctionDef
+namedArgumentNew = NamedArgumentNewFunction <$> pnamedArgumentFunctionDef
 
 pisExhaustive ::
   forall r.

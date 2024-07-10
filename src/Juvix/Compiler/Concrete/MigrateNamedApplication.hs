@@ -2,7 +2,7 @@ module Juvix.Compiler.Concrete.MigrateNamedApplication where
 
 import Juvix.Compiler.Concrete.Gen qualified as Gen
 import Juvix.Compiler.Concrete.Keywords
-import Juvix.Compiler.Concrete.Language
+import Juvix.Compiler.Concrete.Language.Base
 import Juvix.Prelude
 
 migrateNamedApplication :: forall s. (SingI s) => NamedApplication s -> NamedApplicationNew s
@@ -15,15 +15,15 @@ migrateNamedApplication old@NamedApplication {..} = run . runReader (getLoc old)
         _namedApplicationNewArguments = migrateNamedApplicationArguments (toList _namedAppArgs),
         _namedApplicationNewExhaustive
       }
-
-migrateNamedApplicationArguments :: forall s. [ArgumentBlock s] -> [NamedArgumentNew s]
-migrateNamedApplicationArguments = concatMap goBlock
   where
-    goBlock :: ArgumentBlock s -> [NamedArgumentNew s]
-    goBlock ArgumentBlock {..} = map goArg (toList _argBlockArgs)
+    migrateNamedApplicationArguments :: [ArgumentBlock s] -> [NamedArgumentNew s]
+    migrateNamedApplicationArguments = concatMap goBlock
       where
-        goArg :: NamedArgumentAssign s -> NamedArgumentNew s
-        goArg = NamedArgumentNewFunction . NamedArgumentFunctionDef . toFun
+        goBlock :: ArgumentBlock s -> [NamedArgumentNew s]
+        goBlock ArgumentBlock {..} = map goArg (toList _argBlockArgs)
+          where
+            goArg :: NamedArgumentAssign s -> NamedArgumentNew s
+            goArg = NamedArgumentNewFunction . NamedArgumentFunctionDef . toFun
 
-        toFun :: NamedArgumentAssign s -> FunctionDef s
-        toFun NamedArgumentAssign {..} = Gen.simplestFunctionDef _namedArgName _namedArgValue
+            toFun :: NamedArgumentAssign s -> FunctionDef s
+            toFun NamedArgumentAssign {..} = Gen.simplestFunctionDef _namedArgName _namedArgValue

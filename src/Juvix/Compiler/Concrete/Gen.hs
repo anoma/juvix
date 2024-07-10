@@ -5,7 +5,7 @@ module Juvix.Compiler.Concrete.Gen
 where
 
 import Juvix.Compiler.Concrete.Keywords
-import Juvix.Compiler.Concrete.Language
+import Juvix.Compiler.Concrete.Language.Base
 import Juvix.Prelude
 
 kw :: (Members '[Reader Interval] r) => Keyword -> Sem r KeywordRef
