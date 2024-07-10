@@ -61,7 +61,26 @@ t5 : String := "a" M., "b" M., "c", "d";
 t2 : String := "a", "b", "c", "d";
 
 -- comma chain does not fit in a line
-t3 : String := "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "1234";
+t3 : String :=
+  "a"
+    , "b"
+    , "c"
+    , "d"
+    , "e"
+    , "f"
+    , "g"
+    , "h"
+    , "i"
+    , "j"
+    , "k"
+    , "1234"
+    , "1234"
+    , "1234"
+    , "1234"
+    , "1234"
+    , "1234"
+    , "1234"
+    , "1234";
 
 -- escaping in String literals
 e1 : String := "\"\n";
@@ -117,16 +136,38 @@ g : (_ : Type) -> Nat
 
 -- grouping of type arguments
 exampleFunction1
-  : {A : Type} -> List A -> List A -> List A -> List A -> List A -> List A -> List A -> Nat
-  | _ _ _ _ _ _ _ := 1;
+  : {A : Type}
+    -> List A
+    -> List A
+    -> List A
+    -> List A
+    -> List A
+    -> List A
+    -> List A
+    -> List A
+    -> List A
+    -> List A
+    -> Nat
+  | _ _ _ _ _ _ _ _ _ _ := 1;
 
 axiom undefined : {A : Type} -> A;
 
 -- 200 in the body is indented with respect to the start of the chain
 -- (at {A : Type})
 exampleFunction2
-  : {A : Type} -> List A -> List A -> List A -> List A -> List A -> List A -> List A -> Nat :=
-  λ {_ _ _ _ _ _ _ :=
+  : {A : Type}
+    -> List A
+    -> List A
+    -> List A
+    -> List A
+    -> List A
+    -> List A
+    -> List A
+    -> List A
+    -> List A
+    -> List A
+    -> Nat :=
+  λ {_ _ _ _ _ _ _ _ _ _ :=
     undefined
       -- comment after first
       + undefined
@@ -329,16 +370,38 @@ longLongLongArg : Int := 0;
 
 longLongLongListArg : List Int := [];
 
-l1 : List Int := [1; 2; longLongLongArg; longLongLongArg; longLongLongArg; longLongLongArg];
+l1 : List Int :=
+  [ 1
+  ; 2
+  ; longLongLongArg
+  ; longLongLongArg
+  ; longLongLongArg
+  ; longLongLongArg
+  ; longLongLongArg
+  ; longLongLongArg
+  ];
 
 l2 : List Int := [1; 2; 3];
 
-l3 : List (List Int) := [[1; 2; 3]; longLongLongListArg; longLongLongListArg; longLongLongListArg];
+l3 : List (List Int) :=
+  [ [1; 2; 3]
+  ; longLongLongListArg
+  ; longLongLongListArg
+  ; longLongLongListArg
+  ; longLongLongListArg
+  ; longLongLongListArg
+  ];
 
 l4 : List (List Int) :=
   [ [1; 2; 3]
   ; longLongLongListArg
-  ; [longLongLongArg; longLongLongArg; longLongLongArg; longLongLongArg]
+  ; [ longLongLongArg
+    ; longLongLongArg
+    ; longLongLongArg
+    ; longLongLongArg
+    ; longLongLongArg
+    ; longLongLongArg
+    ]
   ; longLongLongListArg
   ];
 
@@ -355,7 +418,8 @@ i2479' : {_ : Nat} -> Nat
   | {_} := zero;
 
 -- formatting arguments that do not fit in a line
-fffffffffffffffffffffffffffffffffffffffffffffffff {f : List Nat} : Nat := zero;
+fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+  {f : List Nat} : Nat := zero;
 
 -- formatting arguments that do not fit in a line
 fff
