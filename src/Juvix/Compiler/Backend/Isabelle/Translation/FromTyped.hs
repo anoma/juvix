@@ -1,7 +1,9 @@
 module Juvix.Compiler.Backend.Isabelle.Translation.FromTyped where
 
 import Data.HashMap.Strict qualified as HashMap
+import Data.HashSet qualified as HashSet
 import Data.Text qualified as T
+import Data.Text qualified as Text
 import Juvix.Compiler.Backend.Isabelle.Data.Result
 import Juvix.Compiler.Backend.Isabelle.Extra
 import Juvix.Compiler.Backend.Isabelle.Language
@@ -13,6 +15,17 @@ import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Store.Extra
 import Juvix.Compiler.Store.Language
 import Juvix.Extra.Paths qualified as P
+
+newtype NameSet = NameSet
+  { _nameSet :: HashSet Text
+  }
+
+newtype NameMap = NameMap
+  { _nameMap :: HashMap Name Name
+  }
+
+makeLenses ''NameSet
+makeLenses ''NameMap
 
 fromInternal ::
   forall r.
@@ -131,11 +144,11 @@ goModule onlyTypes infoTable Internal.Module {..} =
               Definition
                 { _definitionName = name,
                   _definitionType = goType ty,
-                  _definitionBody = maybe ExprUndefined goExpression body
+                  _definitionBody = maybe ExprUndefined goExpression' body
                 }
         where
           argnames =
-            filterTypeArgs 0 ty $ map (fromMaybe (defaultName "_") . (^. Internal.argInfoName)) argsInfo
+            map (overNameText quote) $ filterTypeArgs 0 ty $ map (fromMaybe (defaultName "_") . (^. Internal.argInfoName)) argsInfo
 
     isFunction :: [Name] -> Internal.Expression -> Maybe Internal.Expression -> Bool
     isFunction argnames ty = \case
@@ -152,9 +165,12 @@ goModule onlyTypes infoTable Internal.Module {..} =
         | not $ null $ filterTypeArgs 0 ty $ toList $ head _lambdaClauses ^. Internal.lambdaPatterns ->
             fmap goClause _lambdaClauses
         | otherwise ->
-            oneClause (goExpression (head _lambdaClauses ^. Internal.lambdaBody))
-      Just body -> oneClause (goExpression body)
+            oneClause (goExpression'' nset (NameMap mempty) (head _lambdaClauses ^. Internal.lambdaBody))
+      Just body -> oneClause (goExpression'' nset (NameMap mempty) body)
       where
+        nset :: NameSet
+        nset = NameSet $ HashSet.fromList $ map (^. namePretty) argnames
+
         oneClause :: Expression -> NonEmpty Clause
         oneClause expr =
           nonEmpty'
@@ -167,9 +183,11 @@ goModule onlyTypes infoTable Internal.Module {..} =
         goClause :: Internal.LambdaClause -> Clause
         goClause Internal.LambdaClause {..} =
           Clause
-            { _clausePatterns = nonEmpty' $ map goPatternArg (filterTypeArgs 0 ty (toList _lambdaPatterns)),
-              _clauseBody = goExpression _lambdaBody
+            { _clausePatterns = nonEmpty' pats,
+              _clauseBody = goExpression'' nset' nmap' _lambdaBody
             }
+          where
+            (pats, nset', nmap') = goPatternArgs'' (filterTypeArgs 0 ty (toList _lambdaPatterns))
 
     goFunctionDef :: Internal.FunctionDef -> Statement
     goFunctionDef Internal.FunctionDef {..} = goDef _funDefName _funDefType _funDefArgsInfo (Just _funDefBody)
@@ -214,18 +232,18 @@ goModule onlyTypes infoTable Internal.Module {..} =
 
     goTypeIden :: Internal.Iden -> Type
     goTypeIden = \case
-      Internal.IdenFunction name -> mkIndType name []
+      Internal.IdenFunction name -> mkIndType (overNameText quote name) []
       Internal.IdenConstructor name -> error ("unsupported type: constructor " <> Internal.ppTrace name)
-      Internal.IdenVar name -> TyVar $ TypeVar name
-      Internal.IdenAxiom name -> mkIndType name []
-      Internal.IdenInductive name -> mkIndType name []
+      Internal.IdenVar name -> TyVar $ TypeVar (overNameText quote name)
+      Internal.IdenAxiom name -> mkIndType (overNameText quote name) []
+      Internal.IdenInductive name -> mkIndType (overNameText quote name) []
 
     goTypeApp :: Internal.Application -> Type
     goTypeApp app = mkIndType name params
       where
         (ind, args) = Internal.unfoldApplication app
         params = map goType (toList args)
-        name = case ind of
+        name = overNameText quote $ case ind of
           Internal.ExpressionIden (Internal.IdenFunction n) -> n
           Internal.ExpressionIden (Internal.IdenAxiom n) -> n
           Internal.ExpressionIden (Internal.IdenInductive n) -> n
@@ -238,20 +256,6 @@ goModule onlyTypes infoTable Internal.Module {..} =
           TyFun $ FunType (goType lty) (goType _functionRight)
       where
         lty = _functionLeft ^. Internal.paramType
-
-    goExpression :: Internal.Expression -> Expression
-    goExpression = \case
-      Internal.ExpressionIden x -> goIden x
-      Internal.ExpressionApplication x -> goApplication x
-      Internal.ExpressionFunction x -> goFunType x
-      Internal.ExpressionLiteral x -> goLiteral x
-      Internal.ExpressionHole x -> goHole x
-      Internal.ExpressionInstanceHole x -> goInstanceHole x
-      Internal.ExpressionLet x -> goLet x
-      Internal.ExpressionUniverse x -> goUniverse x
-      Internal.ExpressionSimpleLambda x -> goSimpleLambda x
-      Internal.ExpressionLambda x -> goLambda x
-      Internal.ExpressionCase x -> goCase x
 
     goConstrName :: Name -> Name
     goConstrName name =
@@ -274,391 +278,505 @@ goModule onlyTypes infoTable Internal.Module {..} =
     goFunName :: Name -> Name
     goFunName name = name
 
-    goIden :: Internal.Iden -> Expression
-    goIden = \case
-      Internal.IdenFunction name -> ExprIden (goFunName name)
-      Internal.IdenConstructor name ->
-        case HashMap.lookup name (infoTable ^. Internal.infoConstructors) of
-          Just ctrInfo ->
-            case ctrInfo ^. Internal.constructorInfoBuiltin of
-              Just Internal.BuiltinNatZero -> ExprLiteral (LitNumeric 0)
-              _ -> ExprIden (goConstrName name)
-          Nothing -> ExprIden (goConstrName name)
-      Internal.IdenVar name -> ExprIden name
-      Internal.IdenAxiom name -> ExprIden name
-      Internal.IdenInductive name -> ExprIden name
+    lookupName :: forall r. (Member (Reader NameMap) r) => Name -> Sem r Name
+    lookupName name = do
+      nmap <- asks (^. nameMap)
+      return $ fromMaybe name $ HashMap.lookup name nmap
 
-    goApplication :: Internal.Application -> Expression
-    goApplication app@Internal.Application {..}
-      | Just x <- getIsabelleOperator app = x
-      | Just x <- getLiteral app = x
-      | Just x <- getList app = ExprList (List x)
-      | Just x <- getCons app = x
-      | Just x <- getIf app = x
-      | Just (x, y) <- getPair app = ExprTuple (Tuple (x :| [y]))
-      | Just x <- getIdentApp app = x
-      | otherwise =
-          let l = goExpression _appLeft
-              r = goExpression _appRight
-           in ExprApp (Application l r)
+    goExpression' :: Internal.Expression -> Expression
+    goExpression' = goExpression'' (NameSet mempty) (NameMap mempty)
 
-    mkIsabelleOperator :: PragmaIsabelleOperator -> Internal.Expression -> Internal.Expression -> Expression
-    mkIsabelleOperator PragmaIsabelleOperator {..} arg1 arg2 =
-      ExprBinop
-        Binop
-          { _binopOperator = defaultName _pragmaIsabelleOperatorName,
-            _binopLeft = goExpression arg1,
-            _binopRight = goExpression arg2,
-            _binopFixity =
-              Fixity
-                { _fixityPrecedence = PrecNat (fromMaybe 0 _pragmaIsabelleOperatorPrec),
-                  _fixityArity = OpBinary (fromMaybe AssocNone _pragmaIsabelleOperatorAssoc),
-                  _fixityId = Nothing
+    goExpression'' :: NameSet -> NameMap -> Internal.Expression -> Expression
+    goExpression'' nset nmap e =
+      run $ runReader nset $ runReader nmap $ goExpression e
+
+    goExpression :: forall r. (Members '[Reader NameSet, Reader NameMap] r) => Internal.Expression -> Sem r Expression
+    goExpression = \case
+      Internal.ExpressionIden x -> goIden x
+      Internal.ExpressionApplication x -> goApplication x
+      Internal.ExpressionFunction x -> goFunType x
+      Internal.ExpressionLiteral x -> goLiteral x
+      Internal.ExpressionHole x -> goHole x
+      Internal.ExpressionInstanceHole x -> goInstanceHole x
+      Internal.ExpressionLet x -> goLet x
+      Internal.ExpressionUniverse x -> goUniverse x
+      Internal.ExpressionSimpleLambda x -> goSimpleLambda x
+      Internal.ExpressionLambda x -> goLambda x
+      Internal.ExpressionCase x -> goCase x
+      where
+        goIden :: Internal.Iden -> Sem r Expression
+        goIden iden = case iden of
+          Internal.IdenFunction name -> do
+            return $ ExprIden (goFunName name)
+          Internal.IdenConstructor name ->
+            case HashMap.lookup name (infoTable ^. Internal.infoConstructors) of
+              Just ctrInfo ->
+                case ctrInfo ^. Internal.constructorInfoBuiltin of
+                  Just Internal.BuiltinNatZero -> return $ ExprLiteral (LitNumeric 0)
+                  _ -> return $ ExprIden (goConstrName name)
+              Nothing -> return $ ExprIden (goConstrName name)
+          Internal.IdenVar name -> do
+            name' <- lookupName name
+            return $ ExprIden name'
+          Internal.IdenAxiom name -> return $ ExprIden (overNameText quote name)
+          Internal.IdenInductive name -> return $ ExprIden (overNameText quote name)
+
+        goApplication :: Internal.Application -> Sem r Expression
+        goApplication app@Internal.Application {..}
+          | Just (pragmas, arg1, arg2) <- getIsabelleOperator app =
+              mkIsabelleOperator pragmas arg1 arg2
+          | Just x <- getLiteral app =
+              return $ ExprLiteral $ LitNumeric x
+          | Just xs <- getList app = do
+              xs' <- mapM goExpression xs
+              return $ ExprList (List xs')
+          | Just (arg1, arg2) <- getCons app = do
+              arg1' <- goExpression arg1
+              arg2' <- goExpression arg2
+              return $ ExprCons $ Cons arg1' arg2'
+          | Just (val, br1, br2) <- getIf app = do
+              val' <- goExpression val
+              br1' <- goExpression br1
+              br2' <- goExpression br2
+              return $ ExprIf $ If val' br1' br2'
+          | Just (x, y) <- getPair app = do
+              x' <- goExpression x
+              y' <- goExpression y
+              return $ ExprTuple (Tuple (x' :| [y']))
+          | Just (fn, args) <- getIdentApp app = do
+              fn' <- goExpression fn
+              args' <- mapM goExpression args
+              return $ mkApp fn' args'
+          | otherwise = do
+              l <- goExpression _appLeft
+              r <- goExpression _appRight
+              return $ ExprApp (Application l r)
+
+        mkIsabelleOperator :: PragmaIsabelleOperator -> Internal.Expression -> Internal.Expression -> Sem r Expression
+        mkIsabelleOperator PragmaIsabelleOperator {..} arg1 arg2 = do
+          arg1' <- goExpression arg1
+          arg2' <- goExpression arg2
+          return $
+            ExprBinop
+              Binop
+                { _binopOperator = defaultName _pragmaIsabelleOperatorName,
+                  _binopLeft = arg1',
+                  _binopRight = arg2',
+                  _binopFixity =
+                    Fixity
+                      { _fixityPrecedence = PrecNat (fromMaybe 0 _pragmaIsabelleOperatorPrec),
+                        _fixityArity = OpBinary (fromMaybe AssocNone _pragmaIsabelleOperatorAssoc),
+                        _fixityId = Nothing
+                      }
                 }
-          }
 
-    getIsabelleOperator :: Internal.Application -> Maybe Expression
-    getIsabelleOperator app = case fn of
-      Internal.ExpressionIden (Internal.IdenFunction name) ->
-        case HashMap.lookup name (infoTable ^. Internal.infoFunctions) of
-          Just funInfo ->
-            case funInfo ^. Internal.functionInfoPragmas . pragmasIsabelleOperator of
-              Just pragma ->
-                case args of
-                  Internal.ExpressionIden (Internal.IdenInductive tyname) :| [_, arg1, arg2] ->
-                    case HashMap.lookup tyname (infoTable ^. Internal.infoInductives) of
-                      Just Internal.InductiveInfo {..} ->
-                        case _inductiveInfoBuiltin of
-                          Just Internal.BuiltinNat -> Just (mkIsabelleOperator pragma arg1 arg2)
-                          Just Internal.BuiltinInt -> Just (mkIsabelleOperator pragma arg1 arg2)
-                          _ -> Nothing
-                      Nothing -> Nothing
-                  _ -> Nothing
-              Nothing -> Nothing
-          Nothing -> Nothing
-      _ -> Nothing
-      where
-        (fn, args) = Internal.unfoldApplication app
-
-    getLiteral :: Internal.Application -> Maybe Expression
-    getLiteral app = case fn of
-      Internal.ExpressionIden (Internal.IdenFunction name) ->
-        case HashMap.lookup name (infoTable ^. Internal.infoFunctions) of
-          Just funInfo ->
-            case funInfo ^. Internal.functionInfoBuiltin of
-              Just Internal.BuiltinFromNat -> lit
-              Just Internal.BuiltinFromInt -> lit
-              _ -> Nothing
-          Nothing -> Nothing
-      _ -> Nothing
-      where
-        (fn, args) = Internal.unfoldApplication app
-
-        lit :: Maybe Expression
-        lit = case args of
-          _ :| [_, Internal.ExpressionLiteral l] ->
-            case l ^. Internal.withLocParam of
-              Internal.LitString {} -> Nothing
-              Internal.LitNumeric x -> Just $ ExprLiteral $ LitNumeric x
-              Internal.LitInteger x -> Just $ ExprLiteral $ LitNumeric x
-              Internal.LitNatural x -> Just $ ExprLiteral $ LitNumeric x
-          _ -> Nothing
-
-    getList :: Internal.Application -> Maybe [Expression]
-    getList app = case fn of
-      Internal.ExpressionIden (Internal.IdenConstructor name) ->
-        case HashMap.lookup name (infoTable ^. Internal.infoConstructors) of
-          Just ctrInfo ->
-            case ctrInfo ^. Internal.constructorInfoBuiltin of
-              Just Internal.BuiltinListNil -> Just []
-              Just Internal.BuiltinListCons
-                | (_ :| [arg1, Internal.ExpressionApplication app2]) <- args,
-                  Just lst <- getList app2 ->
-                    Just (goExpression arg1 : lst)
-              _ -> Nothing
-          Nothing -> Nothing
-      _ -> Nothing
-      where
-        (fn, args) = Internal.unfoldApplication app
-
-    getCons :: Internal.Application -> Maybe Expression
-    getCons app = case fn of
-      Internal.ExpressionIden (Internal.IdenConstructor name) ->
-        case HashMap.lookup name (infoTable ^. Internal.infoConstructors) of
-          Just ctrInfo ->
-            case ctrInfo ^. Internal.constructorInfoBuiltin of
-              Just Internal.BuiltinListCons
-                | (_ :| [arg1, arg2]) <- args ->
-                    Just $ ExprCons $ Cons (goExpression arg1) (goExpression arg2)
-              _ -> Nothing
-          Nothing -> Nothing
-      _ -> Nothing
-      where
-        (fn, args) = Internal.unfoldApplication app
-
-    getIf :: Internal.Application -> Maybe Expression
-    getIf app = case fn of
-      Internal.ExpressionIden (Internal.IdenFunction name) ->
-        case HashMap.lookup name (infoTable ^. Internal.infoFunctions) of
-          Just funInfo ->
-            case funInfo ^. Internal.functionInfoBuiltin of
-              Just Internal.BuiltinBoolIf
-                | (_ :| [val, br1, br2]) <- args ->
-                    Just $ ExprIf $ If (goExpression val) (goExpression br1) (goExpression br2)
-              _ -> Nothing
-          Nothing -> Nothing
-      _ -> Nothing
-      where
-        (fn, args) = Internal.unfoldApplication app
-
-    getPair :: Internal.Application -> Maybe (Expression, Expression)
-    getPair app = case fn of
-      Internal.ExpressionIden (Internal.IdenConstructor name) ->
-        case HashMap.lookup name (infoTable ^. Internal.infoConstructors) of
-          Just ctrInfo ->
-            case ctrInfo ^. Internal.constructorInfoBuiltin of
-              Just Internal.BuiltinPairConstr
-                | (_ :| [_, arg1, arg2]) <- args ->
-                    Just (goExpression arg1, goExpression arg2)
-              _ -> Nothing
-          Nothing -> Nothing
-      _ -> Nothing
-      where
-        (fn, args) = Internal.unfoldApplication app
-
-    getIdentApp :: Internal.Application -> Maybe Expression
-    getIdentApp app = case mty of
-      Just (ty, paramsNum) -> Just $ mkApp (goExpression fn) (map goExpression args')
-        where
-          args' = filterTypeArgs paramsNum ty (toList args)
-      Nothing -> Nothing
-      where
-        (fn, args) = Internal.unfoldApplication app
-        mty = case fn of
+        getIsabelleOperator :: Internal.Application -> Maybe (PragmaIsabelleOperator, Internal.Expression, Internal.Expression)
+        getIsabelleOperator app = case fn of
           Internal.ExpressionIden (Internal.IdenFunction name) ->
             case HashMap.lookup name (infoTable ^. Internal.infoFunctions) of
-              Just funInfo -> Just (funInfo ^. Internal.functionInfoType, 0)
+              Just funInfo ->
+                case funInfo ^. Internal.functionInfoPragmas . pragmasIsabelleOperator of
+                  Just pragma ->
+                    case args of
+                      Internal.ExpressionIden (Internal.IdenInductive tyname) :| [_, arg1, arg2] ->
+                        case HashMap.lookup tyname (infoTable ^. Internal.infoInductives) of
+                          Just Internal.InductiveInfo {..} ->
+                            case _inductiveInfoBuiltin of
+                              Just Internal.BuiltinNat -> Just (pragma, arg1, arg2)
+                              Just Internal.BuiltinInt -> Just (pragma, arg1, arg2)
+                              _ -> Nothing
+                          Nothing -> Nothing
+                      _ -> Nothing
+                  Nothing -> Nothing
               Nothing -> Nothing
+          _ -> Nothing
+          where
+            (fn, args) = Internal.unfoldApplication app
+
+        getLiteral :: Internal.Application -> Maybe Integer
+        getLiteral app = case fn of
+          Internal.ExpressionIden (Internal.IdenFunction name) ->
+            case HashMap.lookup name (infoTable ^. Internal.infoFunctions) of
+              Just funInfo ->
+                case funInfo ^. Internal.functionInfoBuiltin of
+                  Just Internal.BuiltinFromNat -> lit
+                  Just Internal.BuiltinFromInt -> lit
+                  _ -> Nothing
+              Nothing -> Nothing
+          _ -> Nothing
+          where
+            (fn, args) = Internal.unfoldApplication app
+
+            lit :: Maybe Integer
+            lit = case args of
+              _ :| [_, Internal.ExpressionLiteral l] ->
+                case l ^. Internal.withLocParam of
+                  Internal.LitString {} -> Nothing
+                  Internal.LitNumeric x -> Just x
+                  Internal.LitInteger x -> Just x
+                  Internal.LitNatural x -> Just x
+              _ -> Nothing
+
+        getList :: Internal.Application -> Maybe [Internal.Expression]
+        getList app = case fn of
           Internal.ExpressionIden (Internal.IdenConstructor name) ->
             case HashMap.lookup name (infoTable ^. Internal.infoConstructors) of
               Just ctrInfo ->
-                Just
-                  ( ctrInfo ^. Internal.constructorInfoType,
-                    length (ctrInfo ^. Internal.constructorInfoInductiveParameters)
-                  )
+                case ctrInfo ^. Internal.constructorInfoBuiltin of
+                  Just Internal.BuiltinListNil -> Just []
+                  Just Internal.BuiltinListCons
+                    | (_ :| [arg1, Internal.ExpressionApplication app2]) <- args,
+                      Just lst <- getList app2 ->
+                        Just (arg1 : lst)
+                  _ -> Nothing
               Nothing -> Nothing
           _ -> Nothing
+          where
+            (fn, args) = Internal.unfoldApplication app
 
-    goFunType :: Internal.Function -> Expression
-    goFunType _ = ExprUndefined
+        getCons :: Internal.Application -> Maybe (Internal.Expression, Internal.Expression)
+        getCons app = case fn of
+          Internal.ExpressionIden (Internal.IdenConstructor name) ->
+            case HashMap.lookup name (infoTable ^. Internal.infoConstructors) of
+              Just ctrInfo ->
+                case ctrInfo ^. Internal.constructorInfoBuiltin of
+                  Just Internal.BuiltinListCons
+                    | (_ :| [arg1, arg2]) <- args ->
+                        Just (arg1, arg2)
+                  _ -> Nothing
+              Nothing -> Nothing
+          _ -> Nothing
+          where
+            (fn, args) = Internal.unfoldApplication app
 
-    goLiteral :: Internal.LiteralLoc -> Expression
-    goLiteral lit = case lit ^. withLocParam of
-      Internal.LitString s -> ExprLiteral $ LitString s
-      Internal.LitNumeric n -> ExprLiteral $ LitNumeric n
-      Internal.LitInteger n -> ExprLiteral $ LitNumeric n
-      Internal.LitNatural n -> ExprLiteral $ LitNumeric n
+        getIf :: Internal.Application -> Maybe (Internal.Expression, Internal.Expression, Internal.Expression)
+        getIf app = case fn of
+          Internal.ExpressionIden (Internal.IdenFunction name) ->
+            case HashMap.lookup name (infoTable ^. Internal.infoFunctions) of
+              Just funInfo ->
+                case funInfo ^. Internal.functionInfoBuiltin of
+                  Just Internal.BuiltinBoolIf
+                    | (_ :| [val, br1, br2]) <- args ->
+                        Just (val, br1, br2)
+                  _ -> Nothing
+              Nothing -> Nothing
+          _ -> Nothing
+          where
+            (fn, args) = Internal.unfoldApplication app
 
-    goHole :: Internal.Hole -> Expression
-    goHole _ = ExprUndefined
+        getPair :: Internal.Application -> Maybe (Internal.Expression, Internal.Expression)
+        getPair app = case fn of
+          Internal.ExpressionIden (Internal.IdenConstructor name) ->
+            case HashMap.lookup name (infoTable ^. Internal.infoConstructors) of
+              Just ctrInfo ->
+                case ctrInfo ^. Internal.constructorInfoBuiltin of
+                  Just Internal.BuiltinPairConstr
+                    | (_ :| [_, arg1, arg2]) <- args ->
+                        Just (arg1, arg2)
+                  _ -> Nothing
+              Nothing -> Nothing
+          _ -> Nothing
+          where
+            (fn, args) = Internal.unfoldApplication app
 
-    goInstanceHole :: Internal.InstanceHole -> Expression
-    goInstanceHole _ = ExprUndefined
+        getIdentApp :: Internal.Application -> Maybe (Internal.Expression, [Internal.Expression])
+        getIdentApp app = case mty of
+          Just (ty, paramsNum) -> Just (fn, args')
+            where
+              args' = filterTypeArgs paramsNum ty (toList args)
+          Nothing -> Nothing
+          where
+            (fn, args) = Internal.unfoldApplication app
+            mty = case fn of
+              Internal.ExpressionIden (Internal.IdenFunction name) ->
+                case HashMap.lookup name (infoTable ^. Internal.infoFunctions) of
+                  Just funInfo -> Just (funInfo ^. Internal.functionInfoType, 0)
+                  Nothing -> Nothing
+              Internal.ExpressionIden (Internal.IdenConstructor name) ->
+                case HashMap.lookup name (infoTable ^. Internal.infoConstructors) of
+                  Just ctrInfo ->
+                    Just
+                      ( ctrInfo ^. Internal.constructorInfoType,
+                        length (ctrInfo ^. Internal.constructorInfoInductiveParameters)
+                      )
+                  Nothing -> Nothing
+              _ -> Nothing
 
-    goLet :: Internal.Let -> Expression
-    goLet Internal.Let {..} = go (concatMap toFunDefs (toList _letClauses))
-      where
-        toFunDefs :: Internal.LetClause -> [Internal.FunctionDef]
-        toFunDefs = \case
-          Internal.LetFunDef d -> [d]
-          Internal.LetMutualBlock Internal.MutualBlockLet {..} -> toList _mutualLet
+        goFunType :: Internal.Function -> Sem r Expression
+        goFunType _ = return ExprUndefined
 
-        go :: [Internal.FunctionDef] -> Expression
-        go = \case
-          d : defs' -> goFunDef d (go defs')
-          [] -> goExpression _letExpression
+        goLiteral :: Internal.LiteralLoc -> Sem r Expression
+        goLiteral lit = return $ ExprLiteral $ case lit ^. withLocParam of
+          Internal.LitString s -> LitString s
+          Internal.LitNumeric n -> LitNumeric n
+          Internal.LitInteger n -> LitNumeric n
+          Internal.LitNatural n -> LitNumeric n
 
-        goFunDef :: Internal.FunctionDef -> Expression -> Expression
-        goFunDef Internal.FunctionDef {..} expr =
-          ExprLet
-            Let
-              { _letVar = _funDefName,
-                _letValue = goExpression _funDefBody,
-                _letBody = expr
-              }
+        goHole :: Internal.Hole -> Sem r Expression
+        goHole _ = return ExprUndefined
 
-    goUniverse :: Internal.SmallUniverse -> Expression
-    goUniverse _ = ExprUndefined
+        goInstanceHole :: Internal.InstanceHole -> Sem r Expression
+        goInstanceHole _ = return ExprUndefined
 
-    goSimpleLambda :: Internal.SimpleLambda -> Expression
-    goSimpleLambda Internal.SimpleLambda {..} =
-      ExprLambda
-        Lambda
-          { _lambdaVar = _slambdaBinder ^. Internal.sbinderVar,
-            _lambdaType = Just $ goType $ _slambdaBinder ^. Internal.sbinderType,
-            _lambdaBody = goExpression _slambdaBody
-          }
+        -- TODO: binders
+        goLet :: Internal.Let -> Sem r Expression
+        goLet Internal.Let {..} = go (concatMap toFunDefs (toList _letClauses))
+          where
+            toFunDefs :: Internal.LetClause -> [Internal.FunctionDef]
+            toFunDefs = \case
+              Internal.LetFunDef d -> [d]
+              Internal.LetMutualBlock Internal.MutualBlockLet {..} -> toList _mutualLet
 
-    -- TODO: properly unique names for lambda-bound variables
-    goLambda :: Internal.Lambda -> Expression
-    goLambda Internal.Lambda {..}
-      | npats == 0 = goExpression (head _lambdaClauses ^. Internal.lambdaBody)
-      | otherwise = goLams vars
-      where
-        npats =
-          case _lambdaType of
-            Just ty ->
-              length
-                . filterTypeArgs 0 ty
-                . toList
-                $ head _lambdaClauses ^. Internal.lambdaPatterns
-            Nothing ->
-              length
-                . filter ((/= Internal.Implicit) . (^. Internal.patternArgIsImplicit))
-                . toList
-                $ head _lambdaClauses ^. Internal.lambdaPatterns
-        vars = map (\i -> defaultName ("X" <> show i)) [0 .. npats - 1]
+            go :: [Internal.FunctionDef] -> Sem r Expression
+            go = \case
+              d : defs' -> goFunDef d =<< go defs'
+              [] -> goExpression _letExpression
 
-        goLams :: [Name] -> Expression
-        goLams = \case
-          v : vs ->
+            goFunDef :: Internal.FunctionDef -> Expression -> Sem r Expression
+            goFunDef Internal.FunctionDef {..} expr = do
+              val <- goExpression _funDefBody
+              return $
+                ExprLet
+                  Let
+                    { _letVar = _funDefName,
+                      _letValue = val,
+                      _letBody = expr
+                    }
+
+        goUniverse :: Internal.SmallUniverse -> Sem r Expression
+        goUniverse _ = return ExprUndefined
+
+        -- TODO: binders
+        goSimpleLambda :: Internal.SimpleLambda -> Sem r Expression
+        goSimpleLambda Internal.SimpleLambda {..} = do
+          body <- goExpression _slambdaBody
+          return $
             ExprLambda
               Lambda
-                { _lambdaType = Nothing,
-                  _lambdaVar = v,
-                  _lambdaBody = goLams vs
+                { _lambdaVar = _slambdaBinder ^. Internal.sbinderVar,
+                  _lambdaType = Just $ goType $ _slambdaBinder ^. Internal.sbinderType,
+                  _lambdaBody = body
                 }
-          [] ->
+
+        goLambda :: Internal.Lambda -> Sem r Expression
+        goLambda Internal.Lambda {..}
+          | npats == 0 = goExpression (head _lambdaClauses ^. Internal.lambdaBody)
+          | otherwise = goLams vars
+          where
+            npats =
+              case _lambdaType of
+                Just ty ->
+                  length
+                    . filterTypeArgs 0 ty
+                    . toList
+                    $ head _lambdaClauses ^. Internal.lambdaPatterns
+                Nothing ->
+                  length
+                    . filter ((/= Internal.Implicit) . (^. Internal.patternArgIsImplicit))
+                    . toList
+                    $ head _lambdaClauses ^. Internal.lambdaPatterns
+            vars = map (\i -> defaultName ("x" <> show i)) [0 .. npats - 1]
+
+            goLams :: [Name] -> Sem r Expression
+            goLams = \case
+              v : vs -> do
+                nset <- asks (^. nameSet)
+                let v' = overNameText (disambiguate nset) v
+                body <-
+                  local (over nameSet (HashSet.insert (v' ^. namePretty)))
+                    . local (over nameMap (HashMap.insert v v'))
+                    $ goLams vs
+                return $
+                  ExprLambda
+                    Lambda
+                      { _lambdaType = Nothing,
+                        _lambdaVar = v',
+                        _lambdaBody = body
+                      }
+              [] -> do
+                val <-
+                  case vars of
+                    [v] -> do
+                      v' <- lookupName v
+                      return $ ExprIden v'
+                    _ -> do
+                      vars' <- mapM lookupName vars
+                      return $
+                        ExprTuple
+                          Tuple
+                            { _tupleComponents = nonEmpty' $ map ExprIden vars'
+                            }
+                brs <- mapM goClause _lambdaClauses
+                return $
+                  ExprCase
+                    Case
+                      { _caseValue = val,
+                        _caseBranches = brs
+                      }
+
+            goClause :: Internal.LambdaClause -> Sem r CaseBranch
+            goClause Internal.LambdaClause {..} = do
+              (pat, nset, nmap) <- case _lambdaPatterns of
+                p :| [] -> goPatternArg' p
+                _ -> do
+                  (pats, nset, nmap) <- goPatternArgs' (toList _lambdaPatterns)
+                  let pat =
+                        PatTuple
+                          Tuple
+                            { _tupleComponents = nonEmpty' pats
+                            }
+                  return (pat, nset, nmap)
+              body <- local (const nset) $ local (const nmap) $ goExpression _lambdaBody
+              return $
+                CaseBranch
+                  { _caseBranchPattern = pat,
+                    _caseBranchBody = body
+                  }
+
+        goCase :: Internal.Case -> Sem r Expression
+        goCase Internal.Case {..} = do
+          val <- goExpression _caseExpression
+          brs <- mapM goCaseBranch _caseBranches
+          return $
             ExprCase
               Case
                 { _caseValue = val,
-                  _caseBranches = fmap goClause _lambdaClauses
+                  _caseBranches = brs
                 }
-            where
-              val =
-                case vars of
-                  [v] -> ExprIden v
-                  _ ->
-                    ExprTuple
-                      Tuple
-                        { _tupleComponents = nonEmpty' $ map ExprIden vars
-                        }
 
-        goClause :: Internal.LambdaClause -> CaseBranch
-        goClause Internal.LambdaClause {..} =
-          CaseBranch
-            { _caseBranchPattern = pat,
-              _caseBranchBody = goExpression _lambdaBody
-            }
-          where
-            pat =
-              case _lambdaPatterns of
-                p :| [] -> goPatternArg p
-                _ ->
-                  PatTuple
-                    Tuple
-                      { _tupleComponents = fmap goPatternArg _lambdaPatterns
-                      }
-
-    goCase :: Internal.Case -> Expression
-    goCase Internal.Case {..} =
-      ExprCase
-        Case
-          { _caseValue = goExpression _caseExpression,
-            _caseBranches = fmap goCaseBranch _caseBranches
-          }
-
-    goCaseBranch :: Internal.CaseBranch -> CaseBranch
-    goCaseBranch Internal.CaseBranch {..} =
-      CaseBranch
-        { _caseBranchPattern = goPatternArg _caseBranchPattern,
-          _caseBranchBody = goCaseBranchRhs _caseBranchRhs
-        }
-
-    goCaseBranchRhs :: Internal.CaseBranchRhs -> Expression
-    goCaseBranchRhs = \case
-      Internal.CaseBranchRhsExpression e -> goExpression e
-      Internal.CaseBranchRhsIf {} -> error "unsupported: side conditions"
-
-    -- TODO: named patterns (`_patternArgName`) are not handled properly
-    goPatternArg :: Internal.PatternArg -> Pattern
-    goPatternArg Internal.PatternArg {..} =
-      goPattern _patternArgPattern
-
-    goPattern :: Internal.Pattern -> Pattern
-    goPattern = \case
-      Internal.PatternVariable x -> PatVar x
-      Internal.PatternConstructorApp x -> goPatternConstructorApp x
-      Internal.PatternWildcardConstructor {} -> impossible
-
-    goPatternConstructorApp :: Internal.ConstructorApp -> Pattern
-    goPatternConstructorApp Internal.ConstructorApp {..}
-      | Just lst <- getListPat _constrAppConstructor _constrAppParameters =
-          PatList (List lst)
-      | Just (x, y) <- getConsPat _constrAppConstructor _constrAppParameters =
-          PatCons (Cons x y)
-      | Just (x, y) <- getPairPat _constrAppConstructor _constrAppParameters =
-          PatTuple (Tuple (x :| [y]))
-      | Just p <- getNatPat _constrAppConstructor _constrAppParameters =
-          p
-      | otherwise =
-          PatConstrApp
-            ConstrApp
-              { _constrAppConstructor = goConstrName _constrAppConstructor,
-                _constrAppArgs = map goPatternArg _constrAppParameters
+        goCaseBranch :: Internal.CaseBranch -> Sem r CaseBranch
+        goCaseBranch Internal.CaseBranch {..} = do
+          (pat, nset, nmap) <- goPatternArg' _caseBranchPattern
+          rhs <- local (const nset) $ local (const nmap) $ goCaseBranchRhs _caseBranchRhs
+          return $
+            CaseBranch
+              { _caseBranchPattern = pat,
+                _caseBranchBody = rhs
               }
 
-    -- This function cannot be simply merged with `getList` because in patterns
-    -- the constructors don't get the type argument.
-    getListPat :: Name -> [Internal.PatternArg] -> Maybe [Pattern]
-    getListPat name args =
-      case HashMap.lookup name (infoTable ^. Internal.infoConstructors) of
-        Just funInfo ->
-          case funInfo ^. Internal.constructorInfoBuiltin of
-            Just Internal.BuiltinListNil -> Just []
-            Just Internal.BuiltinListCons
-              | [arg1, Internal.PatternArg {..}] <- args,
-                Internal.PatternConstructorApp Internal.ConstructorApp {..} <- _patternArgPattern,
-                Just lst <- getListPat _constrAppConstructor _constrAppParameters ->
-                  Just (goPatternArg arg1 : lst)
-            _ -> Nothing
-        Nothing -> Nothing
+        goCaseBranchRhs :: Internal.CaseBranchRhs -> Sem r Expression
+        goCaseBranchRhs = \case
+          Internal.CaseBranchRhsExpression e -> goExpression e
+          Internal.CaseBranchRhsIf {} -> error "unsupported: side conditions"
 
-    getConsPat :: Name -> [Internal.PatternArg] -> Maybe (Pattern, Pattern)
-    getConsPat name args =
-      case HashMap.lookup name (infoTable ^. Internal.infoConstructors) of
-        Just funInfo ->
-          case funInfo ^. Internal.constructorInfoBuiltin of
-            Just Internal.BuiltinListCons
-              | [arg1, arg2] <- args ->
-                  Just (goPatternArg arg1, goPatternArg arg2)
-            _ -> Nothing
-        Nothing -> Nothing
+    goPatternArgs'' :: [Internal.PatternArg] -> ([Pattern], NameSet, NameMap)
+    goPatternArgs'' pats =
+      (pats', nset, nmap)
+      where
+        (nset, (nmap, pats')) = run $ runState (NameSet mempty) $ runState (NameMap mempty) $ goPatternArgs pats
 
-    getNatPat :: Name -> [Internal.PatternArg] -> Maybe Pattern
-    getNatPat name args =
-      case HashMap.lookup name (infoTable ^. Internal.infoConstructors) of
-        Just funInfo ->
-          case funInfo ^. Internal.constructorInfoBuiltin of
-            Just Internal.BuiltinNatZero
-              | null args ->
-                  Just PatZero
-            Just Internal.BuiltinNatSuc
-              | [arg] <- args ->
-                  Just (PatConstrApp (ConstrApp (goConstrName name) [goPatternArg arg]))
-            _ -> Nothing
-        Nothing -> Nothing
+    goPatternArg' :: forall r. (Members '[Reader NameSet, Reader NameMap] r) => Internal.PatternArg -> Sem r (Pattern, NameSet, NameMap)
+    goPatternArg' pat = do
+      nset <- ask @NameSet
+      nmap <- ask @NameMap
+      let (nmap', (nset', pat')) = run $ runState nmap $ runState nset $ goPatternArg pat
+      return (pat', nset', nmap')
 
-    getPairPat :: Name -> [Internal.PatternArg] -> Maybe (Pattern, Pattern)
-    getPairPat name args =
-      case HashMap.lookup name (infoTable ^. Internal.infoConstructors) of
-        Just funInfo ->
-          case funInfo ^. Internal.constructorInfoBuiltin of
-            Just Internal.BuiltinPairConstr
-              | [arg1, arg2] <- args ->
-                  Just (goPatternArg arg1, goPatternArg arg2)
-            _ -> Nothing
-        Nothing -> Nothing
+    goPatternArgs' :: forall r. (Members '[Reader NameSet, Reader NameMap] r) => [Internal.PatternArg] -> Sem r ([Pattern], NameSet, NameMap)
+    goPatternArgs' pats = do
+      nset <- ask @NameSet
+      nmap <- ask @NameMap
+      let (nmap', (nset', pats')) = run $ runState nmap $ runState nset $ goPatternArgs pats
+      return (pats', nset', nmap')
+
+    goPatternArgs :: forall r. (Members '[State NameSet, State NameMap] r) => [Internal.PatternArg] -> Sem r [Pattern]
+    goPatternArgs = mapM goPatternArg
+
+    -- TODO: named patterns (`_patternArgName`) are not handled properly
+    goPatternArg :: forall r. (Members '[State NameSet, State NameMap] r) => Internal.PatternArg -> Sem r Pattern
+    goPatternArg Internal.PatternArg {..} =
+      goPattern _patternArgPattern
+      where
+        goPattern :: Internal.Pattern -> Sem r Pattern
+        goPattern = \case
+          Internal.PatternVariable name -> do
+            binders <- gets (^. nameSet)
+            let name' = overNameText (disambiguate binders) name
+            modify' (over nameSet (HashSet.insert (name' ^. namePretty)))
+            modify' (over nameMap (HashMap.insert name name'))
+            return $ PatVar name'
+          Internal.PatternConstructorApp x -> goPatternConstructorApp x
+          Internal.PatternWildcardConstructor {} -> impossible
+
+        goPatternConstructorApp :: Internal.ConstructorApp -> Sem r Pattern
+        goPatternConstructorApp Internal.ConstructorApp {..}
+          | Just lst <- getListPat _constrAppConstructor _constrAppParameters = do
+              pats <- goPatternArgs lst
+              return $ PatList (List pats)
+          | Just (x, y) <- getConsPat _constrAppConstructor _constrAppParameters = do
+              x' <- goPatternArg x
+              y' <- goPatternArg y
+              return $ PatCons (Cons x' y')
+          | Just (x, y) <- getPairPat _constrAppConstructor _constrAppParameters = do
+              x' <- goPatternArg x
+              y' <- goPatternArg y
+              return $ PatTuple (Tuple (x' :| [y']))
+          | Just p <- getNatPat _constrAppConstructor _constrAppParameters =
+              case p of
+                Left zero -> return zero
+                Right arg -> do
+                  arg' <- goPatternArg arg
+                  return (PatConstrApp (ConstrApp (goConstrName _constrAppConstructor) [arg']))
+          | otherwise = do
+              args <- mapM goPatternArg _constrAppParameters
+              return $
+                PatConstrApp
+                  ConstrApp
+                    { _constrAppConstructor = goConstrName _constrAppConstructor,
+                      _constrAppArgs = args
+                    }
+
+        -- This function cannot be simply merged with `getList` because in patterns
+        -- the constructors don't get the type argument.
+        getListPat :: Name -> [Internal.PatternArg] -> Maybe [Internal.PatternArg]
+        getListPat name args =
+          case HashMap.lookup name (infoTable ^. Internal.infoConstructors) of
+            Just funInfo ->
+              case funInfo ^. Internal.constructorInfoBuiltin of
+                Just Internal.BuiltinListNil -> Just []
+                Just Internal.BuiltinListCons
+                  | [arg1, Internal.PatternArg {..}] <- args,
+                    Internal.PatternConstructorApp Internal.ConstructorApp {..} <- _patternArgPattern,
+                    Just lst <- getListPat _constrAppConstructor _constrAppParameters ->
+                      Just (arg1 : lst)
+                _ -> Nothing
+            Nothing -> Nothing
+
+        getConsPat :: Name -> [Internal.PatternArg] -> Maybe (Internal.PatternArg, Internal.PatternArg)
+        getConsPat name args =
+          case HashMap.lookup name (infoTable ^. Internal.infoConstructors) of
+            Just funInfo ->
+              case funInfo ^. Internal.constructorInfoBuiltin of
+                Just Internal.BuiltinListCons
+                  | [arg1, arg2] <- args ->
+                      Just (arg1, arg2)
+                _ -> Nothing
+            Nothing -> Nothing
+
+        getNatPat :: Name -> [Internal.PatternArg] -> Maybe (Either Pattern Internal.PatternArg)
+        getNatPat name args =
+          case HashMap.lookup name (infoTable ^. Internal.infoConstructors) of
+            Just funInfo ->
+              case funInfo ^. Internal.constructorInfoBuiltin of
+                Just Internal.BuiltinNatZero
+                  | null args ->
+                      Just $ Left PatZero
+                Just Internal.BuiltinNatSuc
+                  | [arg] <- args ->
+                      Just $ Right arg
+                _ -> Nothing
+            Nothing -> Nothing
+
+        getPairPat :: Name -> [Internal.PatternArg] -> Maybe (Internal.PatternArg, Internal.PatternArg)
+        getPairPat name args =
+          case HashMap.lookup name (infoTable ^. Internal.infoConstructors) of
+            Just funInfo ->
+              case funInfo ^. Internal.constructorInfoBuiltin of
+                Just Internal.BuiltinPairConstr
+                  | [arg1, arg2] <- args ->
+                      Just (arg1, arg2)
+                _ -> Nothing
+            Nothing -> Nothing
 
     defaultName :: Text -> Name
     defaultName n =
@@ -684,6 +802,35 @@ goModule onlyTypes infoTable Internal.Module {..} =
       set namePretty txt
         . set nameText txt
         $ name
+
+    overNameText :: (Text -> Text) -> Name -> Name
+    overNameText f name =
+      over namePretty f
+        . over nameText f
+        $ name
+
+    disambiguate :: HashSet Text -> Text -> Text
+    disambiguate binders name
+      | name == "?" || name == "" || name == "_" =
+          disambiguate binders "X"
+      | HashSet.member name binders
+          || HashSet.member name names =
+          disambiguate binders (prime (quote name))
+      | otherwise =
+          quote name
+
+    names :: HashSet Text
+    names =
+      HashSet.fromList $
+        map (^. Internal.functionInfoName . namePretty) (HashMap.elems (infoTable ^. Internal.infoFunctions))
+          ++ map (^. Internal.constructorInfoName . namePretty) (HashMap.elems (infoTable ^. Internal.infoConstructors))
+          ++ map (^. Internal.inductiveInfoName . namePretty) (HashMap.elems (infoTable ^. Internal.infoInductives))
+          ++ map (^. Internal.axiomInfoDef . Internal.axiomName . namePretty) (HashMap.elems (infoTable ^. Internal.infoAxioms))
+
+    quote :: Text -> Text
+    quote txt = case Text.uncons txt of
+      Just ('_', txt') -> txt'
+      _ -> txt
 
     filterTypeArgs :: Int -> Internal.Expression -> [a] -> [a]
     filterTypeArgs paramsNum ty args =
