@@ -9,9 +9,7 @@ type T :=
   --- document constructor
   t : T;
 
---- blah ;id A; and ;A A id T A id; this is another ;id
-  id
-  id; example
+--- blah ;id A; and ;A A id T A id; this is another ;id id id; example
 --- hahahah
 --- and another one ;T;
 id : {A : Type} → A → A

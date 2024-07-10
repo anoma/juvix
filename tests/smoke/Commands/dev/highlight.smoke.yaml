@@ -10,7 +10,7 @@ tests:
       - positive/Internal/LiteralInt.juvix
 
     stdout:
-      contains: |
+      contains: |-
         add-text-properties
     exit-status: 0
 
@@ -23,7 +23,7 @@ tests:
       - negative/InfixError.juvix
 
     stdout:
-      contains: |
+      contains: |-
         juvix-goto
     exit-status: 0
 

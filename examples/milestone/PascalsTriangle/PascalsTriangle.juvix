@@ -15,27 +15,18 @@ scanIterate {A} : Nat → (A → A) → A → List A
 singleton {A} (a : A) : List A := a :: nil;
 
 --- Concatenates a list of strings
---- ;concat (("a" :: nil) :: "b" :: nil); evaluates to ;"a"
-  :: "b"
-  :: nil;
+--- ;concat (("a" :: nil) :: "b" :: nil); evaluates to ;"a" :: "b" :: nil;
 concat : List String → String := foldl (++str) "";
 
-intercalate (sep : String) (xs : List String) : String :=
-  concat (intersperse sep xs);
+intercalate (sep : String) (xs : List String) : String := concat (intersperse sep xs);
 
-showList (xs : List Nat) : String :=
-  "[" ++str intercalate "," (map natToString xs) ++str "]";
+showList (xs : List Nat) : String := "[" ++str intercalate "," (map natToString xs) ++str "]";
 
 --- Compute the next row of Pascal's triangle
 pascalNextRow (row : List Nat) : List Nat :=
-  zipWith
-    (+)
-    (singleton zero ++ row)
-    (row ++ singleton zero);
+  zipWith (+) (singleton zero ++ row) (row ++ singleton zero);
 
 --- Produce Pascal's triangle to a given depth
-pascal (rows : Nat) : List (List Nat) :=
-  scanIterate rows pascalNextRow (singleton 1);
+pascal (rows : Nat) : List (List Nat) := scanIterate rows pascalNextRow (singleton 1);
 
-main : IO :=
-  printStringLn (unlines (map showList (pascal 10)));
+main : IO := printStringLn (unlines (map showList (pascal 10)));
