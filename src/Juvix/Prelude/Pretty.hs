@@ -19,12 +19,12 @@ import Prettyprinter.Render.Text qualified as Text
 import Prettyprinter.Util (reflow)
 import Prelude
 
--- | The page width is 150 with the desired length (not counting indent spaces)
--- being 150*0.4 = 60
+-- | The page width is 100 with the desired length (not counting indent spaces)
+-- being 100*0.8 = 80
 defaultLayoutOptions :: LayoutOptions
 defaultLayoutOptions =
   LayoutOptions
-    { layoutPageWidth = AvailablePerLine 150 0.4
+    { layoutPageWidth = AvailablePerLine 100 0.8
     }
 
 class HasAnsiBackend a where
