@@ -10,7 +10,6 @@ import Data.Yaml hiding ((.=))
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude hiding ((.=))
 import Juvix.Prelude.Pretty
-import Lens.Micro.Platform qualified as Lens
 
 data Dependency
   = DependencyPath PathDependency
@@ -90,7 +89,7 @@ instance FromJSON PathDependency where
 gitDependencyOptions :: Options
 gitDependencyOptions =
   defaultOptions
-    { fieldLabelModifier = over Lens._head toLower . dropPrefix "_gitDependency",
+    { fieldLabelModifier = over _head toLower . dropPrefix "_gitDependency",
       rejectUnknownFields = True,
       omitNothingFields = True
     }

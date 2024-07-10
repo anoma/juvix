@@ -138,6 +138,7 @@ data TypedExpression = TypedExpression
   { _typedType :: Expression,
     _typedExpression :: Expression
   }
+  deriving stock (Generic, Data)
 
 data LetClause
   = -- | Non-recursive let definition
@@ -468,6 +469,7 @@ data NormalizedExpression = NormalizedExpression
     _normalizedExpressionOriginal :: Expression
   }
 
+makePrisms ''Expression
 makeLenses ''SideIfBranch
 makeLenses ''SideIfs
 makeLenses ''CaseBranchRhs

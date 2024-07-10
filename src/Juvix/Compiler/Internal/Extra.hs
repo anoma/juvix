@@ -228,3 +228,42 @@ cloneFunctionDefSameName :: (Members '[NameIdGen] r) => FunctionDef -> Sem r Fun
 cloneFunctionDefSameName f = do
   f' <- clone f
   return (set funDefName (f ^. funDefName) f')
+
+subsInstanceHoles :: forall r a. (HasExpressions a, Member NameIdGen r) => HashMap InstanceHole Expression -> a -> Sem r a
+subsInstanceHoles s = umapM helper
+  where
+    helper :: Expression -> Sem r Expression
+    helper le = case le of
+      ExpressionInstanceHole h -> clone (fromMaybe e (s ^. at h))
+      _ -> return e
+      where
+        e = toExpression le
+
+subsHoles :: forall r a. (HasExpressions a, Member NameIdGen r) => HashMap Hole Expression -> a -> Sem r a
+subsHoles s = umapM helper
+  where
+    helper :: Expression -> Sem r Expression
+    helper le = case le of
+      ExpressionHole h -> clone (fromMaybe e (s ^. at h))
+      _ -> return e
+      where
+        e = toExpression le
+
+substitutionE :: forall r expr. (Member NameIdGen r, HasExpressions expr) => Subs -> expr -> Sem r expr
+substitutionE m expr
+  | null m = pure expr
+  | otherwise = umapM go expr
+  where
+    go :: Expression -> Sem r Expression
+    go = \case
+      ExpressionIden i -> goName (i ^. idenName)
+      e -> return (toExpression e)
+
+    goName :: Name -> Sem r Expression
+    goName n =
+      case HashMap.lookup n m of
+        Just e -> clone e
+        Nothing -> return (toExpression n)
+
+substituteIndParams :: forall r. (Member NameIdGen r) => [(InductiveParameter, Expression)] -> Expression -> Sem r Expression
+substituteIndParams = substitutionE . HashMap.fromList . map (first (^. inductiveParamName))

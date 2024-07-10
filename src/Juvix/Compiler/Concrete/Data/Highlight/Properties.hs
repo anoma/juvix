@@ -6,7 +6,6 @@ import Data.Aeson.TH
 import Juvix.Data.Emacs
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
-import Lens.Micro.Platform qualified as Lens
 
 data GenericProperty = GenericProperty
   { _gpropProperty :: Text,
@@ -111,7 +110,7 @@ type RawType = Text
 
 $( deriveToJSON
      defaultOptions
-       { fieldLabelModifier = over Lens._head toLower . dropPrefix "_rawProperties",
+       { fieldLabelModifier = over _head toLower . dropPrefix "_rawProperties",
          constructorTagModifier = map toLower
        }
      ''RawProperties
