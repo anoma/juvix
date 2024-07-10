@@ -2143,37 +2143,37 @@ deriving stock instance Ord (List 'Parsed)
 
 deriving stock instance Ord (List 'Scoped)
 
-data NamedArgument (s :: Stage) = NamedArgument
-  { _namedArgName :: Symbol,
+data NamedArgumentAssign (s :: Stage) = NamedArgumentAssign
+  { _namedArgName :: SymbolType s,
     _namedArgAssignKw :: Irrelevant KeywordRef,
     _namedArgValue :: ExpressionType s
   }
   deriving stock (Generic)
 
-instance Serialize (NamedArgument 'Scoped)
+instance Serialize (NamedArgumentAssign 'Scoped)
 
-instance NFData (NamedArgument 'Scoped)
+instance NFData (NamedArgumentAssign 'Scoped)
 
-instance Serialize (NamedArgument 'Parsed)
+instance Serialize (NamedArgumentAssign 'Parsed)
 
-instance NFData (NamedArgument 'Parsed)
+instance NFData (NamedArgumentAssign 'Parsed)
 
-deriving stock instance Show (NamedArgument 'Parsed)
+deriving stock instance Show (NamedArgumentAssign 'Parsed)
 
-deriving stock instance Show (NamedArgument 'Scoped)
+deriving stock instance Show (NamedArgumentAssign 'Scoped)
 
-deriving stock instance Eq (NamedArgument 'Parsed)
+deriving stock instance Eq (NamedArgumentAssign 'Parsed)
 
-deriving stock instance Eq (NamedArgument 'Scoped)
+deriving stock instance Eq (NamedArgumentAssign 'Scoped)
 
-deriving stock instance Ord (NamedArgument 'Parsed)
+deriving stock instance Ord (NamedArgumentAssign 'Parsed)
 
-deriving stock instance Ord (NamedArgument 'Scoped)
+deriving stock instance Ord (NamedArgumentAssign 'Scoped)
 
 data ArgumentBlock (s :: Stage) = ArgumentBlock
   { _argBlockDelims :: Irrelevant (Maybe (KeywordRef, KeywordRef)),
     _argBlockImplicit :: IsImplicit,
-    _argBlockArgs :: NonEmpty (NamedArgument s)
+    _argBlockArgs :: NonEmpty (NamedArgumentAssign s)
   }
   deriving stock (Generic)
 
@@ -2307,10 +2307,19 @@ deriving stock instance Ord (NamedArgumentNew 'Parsed)
 
 deriving stock instance Ord (NamedArgumentNew 'Scoped)
 
+data IsExhaustive = IsExhaustive
+  { _isExhaustive :: Bool,
+    _isExhaustiveKw :: Irrelevant KeywordRef
+  }
+  deriving stock (Eq, Show, Ord, Generic)
+
+instance Serialize IsExhaustive
+
+instance NFData IsExhaustive
+
 data NamedApplicationNew (s :: Stage) = NamedApplicationNew
   { _namedApplicationNewName :: IdentifierType s,
-    _namedApplicationNewAtKw :: Irrelevant KeywordRef,
-    _namedApplicationNewExhaustive :: Bool,
+    _namedApplicationNewExhaustive :: IsExhaustive,
     _namedApplicationNewArguments :: [NamedArgumentNew s]
   }
   deriving stock (Generic)
@@ -2597,6 +2606,7 @@ deriving stock instance Ord (JudocAtom 'Parsed)
 deriving stock instance Ord (JudocAtom 'Scoped)
 
 makeLenses ''SideIfs
+makeLenses ''IsExhaustive
 makeLenses ''SideIfBranch
 makeLenses ''RhsExpression
 makeLenses ''PatternArg
@@ -2664,7 +2674,7 @@ makeLenses ''Iterator
 makeLenses ''Initializer
 makeLenses ''Range
 makeLenses ''ArgumentBlock
-makeLenses ''NamedArgument
+makeLenses ''NamedArgumentAssign
 makeLenses ''NamedApplication
 makeLenses ''NamedArgumentNew
 makeLenses ''NamedApplicationNew
@@ -2715,8 +2725,8 @@ instance (SingI s) => HasLoc (SyntaxDef s) where
     SyntaxIterator t -> getLoc t
     SyntaxAlias t -> getLoc t
 
-instance (SingI s) => HasLoc (NamedArgument s) where
-  getLoc NamedArgument {..} = getLocSymbolType _namedArgName <> getLocExpressionType _namedArgValue
+instance (SingI s) => HasLoc (NamedArgumentAssign s) where
+  getLoc NamedArgumentAssign {..} = getLocSymbolType _namedArgName <> getLocExpressionType _namedArgValue
 
 instance (SingI s) => HasLoc (ArgumentBlock s) where
   getLoc ArgumentBlock {..} = case d of
@@ -3344,21 +3354,19 @@ instance IsApe Expression ApeLeaf where
     where
       leaf =
         ApeLeaf
-          ( Leaf
-              { _leafAtomicity = atomicity e,
-                _leafExpr = ApeLeafExpression e
-              }
-          )
+          Leaf
+            { _leafAtomicity = atomicity e,
+              _leafExpr = ApeLeafExpression e
+            }
 
 instance IsApe (FunctionParameters 'Scoped) ApeLeaf where
   toApe f
     | atomicity f == Atom =
         ApeLeaf
-          ( Leaf
-              { _leafAtomicity = Atom,
-                _leafExpr = ApeLeafFunctionParams f
-              }
-          )
+          Leaf
+            { _leafAtomicity = Atom,
+              _leafExpr = ApeLeafFunctionParams f
+            }
     | otherwise = toApe (f ^. paramType)
 
 instance HasAtomicity PatternArg where

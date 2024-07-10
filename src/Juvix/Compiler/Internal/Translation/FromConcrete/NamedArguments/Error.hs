@@ -39,7 +39,7 @@ instance ToGenericError DuplicateArgument where
     return GenericError {..}
 
 newtype UnexpectedArguments = UnexpectedArguments
-  { _unexpectedArguments :: NonEmpty (NamedArgument 'Scoped)
+  { _unexpectedArguments :: NonEmpty (NamedArgumentAssign 'Scoped)
   }
   deriving stock (Show)
 

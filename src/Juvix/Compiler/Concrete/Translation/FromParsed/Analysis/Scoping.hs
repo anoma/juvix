@@ -1562,8 +1562,8 @@ checkSections sec = topBindings helper
                                 failMaybe $
                                   mkRec
                                     ^? constructorRhs
-                                    . _ConstructorRhsRecord
-                                    . to mkRecordNameSignature
+                                      . _ConstructorRhsRecord
+                                      . to mkRecordNameSignature
                               let info =
                                     RecordInfo
                                       { _recordInfoSignature = fs,
@@ -2581,13 +2581,12 @@ checkNamedApplicationNew napp = do
   let enames = HashSet.fromList (concatMap (HashMap.keys . (^. nameBlock)) (filter (not . isImplicitOrInstance . (^. nameImplicit)) (sig ^. nameSignatureArgs)))
       sargs = HashSet.fromList (map (^. namedArgumentNewFunDef . signName . nameConcrete) (toList args'))
       missingArgs = HashSet.difference enames sargs
-  unless (null missingArgs || not (napp ^. namedApplicationNewExhaustive)) $
+  unless (null missingArgs || not (napp ^. namedApplicationNewExhaustive . isExhaustive)) $
     throw (ErrMissingArgs (MissingArgs (aname ^. scopedIdenFinal . nameConcrete) missingArgs))
   return
     NamedApplicationNew
       { _namedApplicationNewName = aname,
         _namedApplicationNewArguments = args',
-        _namedApplicationNewAtKw = napp ^. namedApplicationNewAtKw,
         _namedApplicationNewExhaustive = napp ^. namedApplicationNewExhaustive
       }
 
@@ -2658,12 +2657,12 @@ checkNamedApplication napp = do
   _namedAppArgs <- mapM checkArgumentBlock (napp ^. namedAppArgs)
   return NamedApplication {..}
   where
-    checkNamedArg :: NamedArgument 'Parsed -> Sem r (NamedArgument 'Scoped)
+    checkNamedArg :: NamedArgumentAssign 'Parsed -> Sem r (NamedArgumentAssign 'Scoped)
     checkNamedArg n = do
-      let _namedArgName = n ^. namedArgName
-          _namedArgAssignKw = n ^. namedArgAssignKw
+      let _namedArgAssignKw = n ^. namedArgAssignKw
+      _namedArgName <- withLocalScope (bindVariableSymbol (n ^. namedArgName))
       _namedArgValue <- checkParseExpressionAtoms (n ^. namedArgValue)
-      return NamedArgument {..}
+      return NamedArgumentAssign {..}
 
     checkArgumentBlock :: ArgumentBlock 'Parsed -> Sem r (ArgumentBlock 'Scoped)
     checkArgumentBlock b = do

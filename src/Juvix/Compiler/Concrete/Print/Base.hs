@@ -294,9 +294,9 @@ instance (SingI s) => PrettyPrint (List s) where
         es = vcatPreSemicolon (map ppExpressionType _listItems)
     grouped (align (l <> spaceOrEmpty <> es <> lineOrEmpty <> r))
 
-instance (SingI s) => PrettyPrint (NamedArgument s) where
-  ppCode NamedArgument {..} = do
-    let s = ppCode _namedArgName
+instance (SingI s) => PrettyPrint (NamedArgumentAssign s) where
+  ppCode NamedArgumentAssign {..} = do
+    let s = ppSymbolType _namedArgName
         kwassign = ppCode _namedArgAssignKw
         val = ppExpressionType _namedArgValue
     s <+> kwassign <+> val
@@ -314,22 +314,24 @@ instance (SingI s) => PrettyPrint (ArgumentBlock s) where
 instance (SingI s) => PrettyPrint (NamedApplication s) where
   ppCode = apeHelper
 
+instance PrettyPrint IsExhaustive where
+  ppCode IsExhaustive {..} = ppCode _isExhaustiveKw
+
 instance (SingI s) => PrettyPrint (NamedApplicationNew s) where
   ppCode NamedApplicationNew {..} = do
     let args'
           | null _namedApplicationNewArguments = mempty
           | otherwise =
-              blockIndent
-                ( sequenceWith
-                    (semicolon >> line)
-                    (ppCode <$> _namedApplicationNewArguments)
-                )
+              blockIndent $
+                sequenceWith
+                  (semicolon >> line)
+                  (ppCode <$> _namedApplicationNewArguments)
     ppIdentifierType _namedApplicationNewName
-      <> ppCode _namedApplicationNewAtKw
+      <> ppCode _namedApplicationNewExhaustive
       <> braces args'
 
 instance (SingI s) => PrettyPrint (NamedArgumentNew s) where
-  ppCode NamedArgumentNew {..} = ppCode _namedArgumentNewFunDef
+  ppCode (NamedArgumentNew f) = ppCode f
 
 instance (SingI s) => PrettyPrint (RecordStatement s) where
   ppCode = \case
@@ -631,9 +633,7 @@ ppIfBranchElse ::
   Sem r ()
 ppIfBranchElse isTop IfBranch {..} = do
   let e' = ppMaybeTopExpression isTop _ifBranchExpression
-  ppCode _ifBranchPipe
-    <+> ppCode _ifBranchCondition
-    <+> ppCode _ifBranchAssignKw <> oneLineOrNext e'
+  ppCode _ifBranchCondition <+> ppCode _ifBranchAssignKw <> oneLineOrNext e'
 
 ppIf :: forall r s. (Members '[ExactPrint, Reader Options] r, SingI s) => IsTop -> If s -> Sem r ()
 ppIf isTop If {..} = do

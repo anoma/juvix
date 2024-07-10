@@ -750,10 +750,10 @@ createArgumentBlocks appargs =
         modify (HashSet.filter (not . flip HashSet.member namesInBlock . (^. S.nameConcrete)))
         output block'
       where
-        goArg :: S.Symbol -> NamedArgument 'Scoped
+        goArg :: S.Symbol -> NamedArgumentAssign 'Scoped
         goArg sym =
-          NamedArgument
-            { _namedArgName = sym ^. S.nameConcrete,
+          NamedArgumentAssign
+            { _namedArgName = sym,
               _namedArgAssignKw = Irrelevant dummyKw,
               _namedArgValue = Concrete.ExpressionIdentifier (ScopedIden name Nothing)
             }
