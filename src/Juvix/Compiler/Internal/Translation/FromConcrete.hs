@@ -719,6 +719,49 @@ goListPattern l = do
   where
     loc = getLoc l
 
+createArgumentBlocks :: NonEmpty (NamedArgumentNew 'Scoped) -> [NameBlock 'Scoped] -> [ArgumentBlock 'Scoped]
+createArgumentBlocks appargs =
+  run
+    . execOutputList
+    . evalState args0
+    . mapM_ goBlock
+  where
+    args0 :: HashSet S.Symbol = hashSet ((^. namedArgumentNewFunDef . signName) <$> appargs)
+    goBlock ::
+      forall r.
+      (Members '[State (HashSet S.Symbol), Output (ArgumentBlock 'Scoped)] r) =>
+      NameBlock 'Scoped ->
+      Sem r ()
+    goBlock NameBlock {..} = do
+      args <- get
+      let namesInBlock :: HashSet Symbol =
+            HashSet.intersection
+              (HashMap.keysSet _nameBlock)
+              (HashSet.map (^. S.nameConcrete) args)
+          argNames :: HashMap Symbol S.Symbol = hashMap . map (\n -> (n ^. S.nameConcrete, n)) $ toList args
+          getName sym = fromJust (argNames ^. at sym)
+      whenJust (nonEmpty namesInBlock) $ \(namesInBlock1 :: NonEmpty Symbol) -> do
+        let block' =
+              ArgumentBlock
+                { _argBlockDelims = Irrelevant Nothing,
+                  _argBlockImplicit = _nameImplicit,
+                  _argBlockArgs = goArg . getName <$> namesInBlock1
+                }
+        modify (HashSet.filter (not . flip HashSet.member namesInBlock . (^. S.nameConcrete)))
+        output block'
+      where
+        goArg :: S.Symbol -> NamedArgument 'Scoped
+        goArg sym =
+          NamedArgument
+            { _namedArgName = sym ^. S.nameConcrete,
+              _namedArgAssignKw = Irrelevant dummyKw,
+              _namedArgValue = Concrete.ExpressionIdentifier (ScopedIden name Nothing)
+            }
+          where
+            name :: S.Name = over S.nameConcrete NameUnqualified sym
+            dummyKw = run (runReader dummyLoc (Gen.kw Gen.kwAssign))
+            dummyLoc = getLoc sym
+
 goExpression ::
   forall r.
   (Members '[Reader DefaultArgsStack, Builtins, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) =>
@@ -753,71 +796,41 @@ goExpression = \case
       s <- asks (^. S.infoNameSigs)
       runReader s (runNamedArguments w extraArgs) >>= goDesugaredNamedApplication
 
-    goNamedApplicationNew :: Concrete.NamedApplicationNew 'Scoped -> [Internal.ApplicationArg] -> Sem r Internal.Expression
+    goNamedApplicationNew ::
+      Concrete.NamedApplicationNew 'Scoped ->
+      [Internal.ApplicationArg] ->
+      Sem r Internal.Expression
     goNamedApplicationNew napp extraArgs = case nonEmpty (napp ^. namedApplicationNewArguments) of
       Nothing -> return (goIden (napp ^. namedApplicationNewName))
       Just appargs -> do
         let name = napp ^. namedApplicationNewName . scopedIdenFinal
         sig <- fromJust <$> asks (^. S.infoNameSigs . at (name ^. S.nameId))
-        cls <- goArgs appargs
-        let args :: [Internal.Name] = appargs ^.. each . namedArgumentNewFunDef . signName . to goSymbol
-            -- changes the kind from Variable to Function
-            updateKind :: Internal.Subs = Internal.subsKind args KNameFunction
-            napp' =
+        let napp' =
               Concrete.NamedApplication
                 { _namedAppName = napp ^. namedApplicationNewName,
-                  _namedAppArgs = nonEmpty' (createArgumentBlocks (sig ^. nameSignatureArgs))
+                  _namedAppArgs = nonEmpty' (createArgumentBlocks appargs (sig ^. nameSignatureArgs))
                 }
-        e <- goNamedApplication napp' extraArgs
-        let l =
-              Internal.Let
-                { _letClauses = cls,
-                  _letExpression = e
-                }
-        expr <-
-          Internal.substitutionE updateKind l
-            >>= Internal.inlineLet
-        Internal.clone expr
-        where
-          goArgs :: NonEmpty (NamedArgumentNew 'Scoped) -> Sem r (NonEmpty Internal.LetClause)
-          goArgs args = nonEmpty' . mkLetClauses <$> mapM goArg args
+        compiledNameApp <- goNamedApplication napp' extraArgs
+        case nonEmpty (appargs ^.. each . namedArgumentNewFunDef) of
+          Nothing -> return compiledNameApp
+          Just funs -> do
+            cls <- funDefsToClauses funs
+            let funsNames :: [Internal.Name] = funs ^.. each . signName . to goSymbol
+                -- changes the kind from Variable to Function
+                updateKind :: Internal.Subs = Internal.subsKind funsNames KNameFunction
+            let l =
+                  Internal.Let
+                    { _letClauses = cls,
+                      _letExpression = compiledNameApp
+                    }
+            expr <- Internal.substitutionE updateKind l >>= Internal.inlineLet
+            Internal.clone expr
             where
-              goArg :: NamedArgumentNew 'Scoped -> Sem r Internal.PreLetStatement
-              goArg = fmap Internal.PreLetFunctionDef . goFunctionDef . (^. namedArgumentNewFunDef)
-
-          createArgumentBlocks :: [NameBlock 'Scoped] -> [ArgumentBlock 'Scoped]
-          createArgumentBlocks = snd . foldr goBlock (args0, [])
-            where
-              args0 :: HashSet S.Symbol = HashSet.fromList $ fmap (^. namedArgumentNewFunDef . signName) (toList appargs)
-              goBlock :: NameBlock 'Scoped -> (HashSet S.Symbol, [ArgumentBlock 'Scoped]) -> (HashSet S.Symbol, [ArgumentBlock 'Scoped])
-              goBlock NameBlock {..} (args, blocks)
-                | null namesInBlock = (args', blocks)
-                | otherwise = (args', block' : blocks)
+              funDefsToClauses :: NonEmpty (FunctionDef 'Scoped) -> Sem r (NonEmpty Internal.LetClause)
+              funDefsToClauses args = mkLetClauses <$> mapM goArg args
                 where
-                  namesInBlock =
-                    HashSet.intersection
-                      (HashSet.fromList (HashMap.keys _nameBlock))
-                      (HashSet.map (^. S.nameConcrete) args)
-                  argNames = HashMap.fromList . map (\n -> (n ^. S.nameConcrete, n)) $ toList args
-                  args' = HashSet.filter (not . flip HashSet.member namesInBlock . (^. S.nameConcrete)) args
-                  _argBlockArgs = nonEmpty' (map goArg (toList namesInBlock))
-                  block' =
-                    ArgumentBlock
-                      { _argBlockDelims = Irrelevant Nothing,
-                        _argBlockImplicit = _nameImplicit,
-                        _argBlockArgs
-                      }
-                  goArg :: Symbol -> NamedArgument 'Scoped
-                  goArg sym =
-                    NamedArgument
-                      { _namedArgName = sym,
-                        _namedArgAssignKw = Irrelevant dummyKw,
-                        _namedArgValue = Concrete.ExpressionIdentifier (ScopedIden name Nothing)
-                      }
-                    where
-                      name = over S.nameConcrete NameUnqualified $ fromJust $ HashMap.lookup sym argNames
-                      dummyKw = run (runReader dummyLoc (Gen.kw Gen.kwAssign))
-                      dummyLoc = getLoc sym
+                  goArg :: FunctionDef 'Scoped -> Sem r Internal.PreLetStatement
+                  goArg = fmap Internal.PreLetFunctionDef . goFunctionDef
 
     goDesugaredNamedApplication :: DesugaredNamedApplication -> Sem r Internal.Expression
     goDesugaredNamedApplication a = do
@@ -977,7 +990,7 @@ goExpression = \case
         Nothing -> _letExpression
 
     goLetFunDefs :: NonEmpty (LetStatement 'Scoped) -> Sem r [Internal.LetClause]
-    goLetFunDefs clauses = maybe [] mkLetClauses . nonEmpty <$> preLetStatements clauses
+    goLetFunDefs clauses = maybe [] (toList . mkLetClauses) . nonEmpty <$> preLetStatements clauses
       where
         preLetStatements :: NonEmpty (LetStatement 'Scoped) -> Sem r [Internal.PreLetStatement]
         preLetStatements cl = mapMaybeM preLetStatement (toList cl)
