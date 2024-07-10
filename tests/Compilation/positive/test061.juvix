@@ -59,8 +59,7 @@ f'3 {A} {{M : Show A}} : A → String := Show.show {{M}};
 
 f'4 {A} {{_ : Show A}} : A → String := Show.show;
 
-f5 {A} {{Show' A}} (n : String) (a : A) : String :=
-  n ++str Show.show a;
+f5 {A} {{Show' A}} (n : String) (a : A) : String := n ++str Show.show a;
 
 instance
 showBoolFunI : Show (Bool → Bool) :=
@@ -69,17 +68,12 @@ showBoolFunI : Show (Bool → Bool) :=
       let
         b1 : Bool := f true;
         b2 : Bool := f false;
-      in "\\{ true := "
-        ++str Show.show b1
-        ++str " | false := "
-        ++str Show.show b2
-        ++str " }"
+      in "\\{ true := " ++str Show.show b1 ++str " | false := " ++str Show.show b2 ++str " }"
   };
 
 instance
 showPairI {A B} {{Show A}} {{Show' B}} : Show' (Pair A B) :=
-  mkShow
-    λ {(x, y) := Show.show x ++str ", " ++str Show.show y};
+  mkShow λ {(x, y) := Show.show x ++str ", " ++str Show.show y};
 
 trait
 type T A := mkT {a : A};
@@ -103,7 +97,10 @@ main : IO :=
     >>> printStringLn (f'4 [just [1]; nothing; just [2; 3]])
     >>> printStringLn (f'3 "abba")
     >>> printStringLn
-      (f'3 {{M := mkShow λ {x := x ++str "!"}}} "abba")
+      (f'3@?{
+          M := mkShow λ {x := x ++str "!"}
+        }
+        "abba")
     >>> printStringLn (f5 "abba" 3)
     >>> printStringLn (Show.show {{_}} ["a"; "b"; "c"; "d"])
     >>> printStringLn (Show.show λ {x := not x})
