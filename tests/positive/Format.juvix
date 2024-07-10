@@ -117,15 +117,7 @@ g : (_ : Type) -> Nat
 
 -- grouping of type arguments
 exampleFunction1
-  : {A : Type}
-    -> List A
-    -> List A
-    -> List A
-    -> List A
-    -> List A
-    -> List A
-    -> List A
-    -> Nat
+  : {A : Type} -> List A -> List A -> List A -> List A -> List A -> List A -> List A -> Nat
   | _ _ _ _ _ _ _ := 1;
 
 axiom undefined : {A : Type} -> A;
@@ -133,15 +125,7 @@ axiom undefined : {A : Type} -> A;
 -- 200 in the body is indented with respect to the start of the chain
 -- (at {A : Type})
 exampleFunction2
-  : {A : Type}
-    -> List A
-    -> List A
-    -> List A
-    -> List A
-    -> List A
-    -> List A
-    -> List A
-    -> Nat :=
+  : {A : Type} -> List A -> List A -> List A -> List A -> List A -> List A -> List A -> Nat :=
   λ {_ _ _ _ _ _ _ :=
     undefined
       -- comment after first
@@ -345,13 +329,11 @@ longLongLongArg : Int := 0;
 
 longLongLongListArg : List Int := [];
 
-l1 : List Int :=
-  [1; 2; longLongLongArg; longLongLongArg; longLongLongArg; longLongLongArg];
+l1 : List Int := [1; 2; longLongLongArg; longLongLongArg; longLongLongArg; longLongLongArg];
 
 l2 : List Int := [1; 2; 3];
 
-l3 : List (List Int) :=
-  [[1; 2; 3]; longLongLongListArg; longLongLongListArg; longLongLongListArg];
+l3 : List (List Int) := [[1; 2; 3]; longLongLongListArg; longLongLongListArg; longLongLongListArg];
 
 l4 : List (List Int) :=
   [ [1; 2; 3]
