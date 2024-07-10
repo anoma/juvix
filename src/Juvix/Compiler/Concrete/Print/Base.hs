@@ -631,7 +631,9 @@ ppIfBranchElse ::
   Sem r ()
 ppIfBranchElse isTop IfBranch {..} = do
   let e' = ppMaybeTopExpression isTop _ifBranchExpression
-  ppCode _ifBranchCondition <+> ppCode _ifBranchAssignKw <> oneLineOrNext e'
+  ppCode _ifBranchPipe
+    <+> ppCode _ifBranchCondition
+    <+> ppCode _ifBranchAssignKw <> oneLineOrNext e'
 
 ppIf :: forall r s. (Members '[ExactPrint, Reader Options] r, SingI s) => IsTop -> If s -> Sem r ()
 ppIf isTop If {..} = do
