@@ -10,13 +10,11 @@ type List (A : Type) :=
 match : {A : Type} → {B : Type} → A → (A → B) → B
   | x f := f x;
 
-foldr
-  : (a : Type) → (b : Type) → (a → b → b) → b → List a → b
+foldr : (a : Type) → (b : Type) → (a → b → b) → b → List a → b
   | _ _ _ z nil := z
   | a b f z (:: h hs) := f h (foldr a b f z hs);
 
-foldl
-  : (a : Type) → (b : Type) → (b → a → b) → b → List a → b
+foldl : (a : Type) → (b : Type) → (b → a → b) → b → List a → b
   | a b f z nil := z
   | a b f z (:: h hs) := foldl a b f (f z h) hs;
 
@@ -67,18 +65,10 @@ splitAt : (a : Type) → ℕ → List a → List a × List a
   | a _ nil := , nil nil
   | a zero xs := , nil xs
   | a (suc zero) (:: x xs) := , (:: x nil) xs
-  | a (suc (suc m)) (:: x xs) :=
-    match
-      (splitAt a m xs)
-      λ {(, xs' xs'') := , (:: x xs') xs''};
+  | a (suc (suc m)) (:: x xs) := match (splitAt a m xs) λ {(, xs' xs'') := , (:: x xs') xs''};
 
 terminating
-merge
-  : (a : Type)
-    → (a → a → Ordering)
-    → List a
-    → List a
-    → List a
+merge : (a : Type) → (a → a → Ordering) → List a → List a → List a
   | a cmp (:: x xs) (:: y ys) :=
     match
       (cmp x y)
@@ -94,8 +84,7 @@ merge
   | a (:: x xs) ys := :: x (++ a xs ys);
 
 terminating
-quickSort
-  : (a : Type) → (a → a → Ordering) → List a → List a
+quickSort : (a : Type) → (a → a → Ordering) → List a → List a
   | a _ nil := nil
   | a _ (:: x nil) := :: x nil
   | a cmp (:: x ys) :=

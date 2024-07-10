@@ -14,11 +14,7 @@ pow : Nat -> Nat
 --- `hash' N` hashes a number with max N bits (i.e. smaller than 2^N) into 6 bits
 --- (i.e. smaller than 64) using the mid-square algorithm.
 hash' : Nat -> Nat -> Nat
-  | (suc n@(suc (suc m))) x :=
-    ite
-      (x < pow n)
-      (hash' n x)
-      (mod (div (x * x) (pow m)) (pow 6))
+  | (suc n@(suc (suc m))) x := ite (x < pow n) (hash' n x) (mod (div (x * x) (pow m)) (pow 6))
   | _ x := x * x;
 
 hash : Nat -> Nat := hash' 16;

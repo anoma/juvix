@@ -57,56 +57,43 @@ hash3 : Nat -> Nat
   | x := x * x;
 
 hash4 : Nat -> Nat
-  | x :=
-    ite (x < pow3) (hash3 x) (mod (div (x * x) pow1) pow6);
+  | x := ite (x < pow3) (hash3 x) (mod (div (x * x) pow1) pow6);
 
 hash5 : Nat -> Nat
-  | x :=
-    ite (x < pow4) (hash4 x) (mod (div (x * x) pow2) pow6);
+  | x := ite (x < pow4) (hash4 x) (mod (div (x * x) pow2) pow6);
 
 hash6 : Nat -> Nat
-  | x :=
-    ite (x < pow5) (hash5 x) (mod (div (x * x) pow3) pow6);
+  | x := ite (x < pow5) (hash5 x) (mod (div (x * x) pow3) pow6);
 
 hash7 : Nat -> Nat
-  | x :=
-    ite (x < pow6) (hash6 x) (mod (div (x * x) pow4) pow6);
+  | x := ite (x < pow6) (hash6 x) (mod (div (x * x) pow4) pow6);
 
 hash8 : Nat -> Nat
-  | x :=
-    ite (x < pow7) (hash7 x) (mod (div (x * x) pow5) pow6);
+  | x := ite (x < pow7) (hash7 x) (mod (div (x * x) pow5) pow6);
 
 hash9 : Nat -> Nat
-  | x :=
-    ite (x < pow8) (hash8 x) (mod (div (x * x) pow6) pow6);
+  | x := ite (x < pow8) (hash8 x) (mod (div (x * x) pow6) pow6);
 
 hash10 : Nat -> Nat
-  | x :=
-    ite (x < pow9) (hash9 x) (mod (div (x * x) pow7) pow6);
+  | x := ite (x < pow9) (hash9 x) (mod (div (x * x) pow7) pow6);
 
 hash11 : Nat -> Nat
-  | x :=
-    ite (x < pow10) (hash10 x) (mod (div (x * x) pow8) pow6);
+  | x := ite (x < pow10) (hash10 x) (mod (div (x * x) pow8) pow6);
 
 hash12 : Nat -> Nat
-  | x :=
-    ite (x < pow11) (hash11 x) (mod (div (x * x) pow9) pow6);
+  | x := ite (x < pow11) (hash11 x) (mod (div (x * x) pow9) pow6);
 
 hash13 : Nat -> Nat
-  | x :=
-    ite (x < pow12) (hash12 x) (mod (div (x * x) pow10) pow6);
+  | x := ite (x < pow12) (hash12 x) (mod (div (x * x) pow10) pow6);
 
 hash14 : Nat -> Nat
-  | x :=
-    ite (x < pow13) (hash13 x) (mod (div (x * x) pow11) pow6);
+  | x := ite (x < pow13) (hash13 x) (mod (div (x * x) pow11) pow6);
 
 hash15 : Nat -> Nat
-  | x :=
-    ite (x < pow14) (hash14 x) (mod (div (x * x) pow12) pow6);
+  | x := ite (x < pow14) (hash14 x) (mod (div (x * x) pow12) pow6);
 
 hash16 : Nat -> Nat
-  | x :=
-    ite (x < pow15) (hash15 x) (mod (div (x * x) pow13) pow6);
+  | x := ite (x < pow15) (hash15 x) (mod (div (x * x) pow13) pow6);
 
 hash : Nat -> Nat := hash16;
 

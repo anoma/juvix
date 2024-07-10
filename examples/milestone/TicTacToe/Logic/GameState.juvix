@@ -12,8 +12,7 @@ type Error :=
   | --- a fatal occurred
     terminate : String → Error;
 
-type GameState :=
-  state : Board → Symbol → Error → GameState;
+type GameState := state : Board → Symbol → Error → GameState;
 
 --- Textual representation of a ;GameState;
 showGameState : GameState → String
@@ -29,21 +28,14 @@ beginState : GameState :=
     (board
       (map
         (map empty)
-        ((1 :: 2 :: 3 :: nil)
-          :: (4 :: 5 :: 6 :: nil)
-          :: (7 :: 8 :: 9 :: nil)
-          :: nil)))
+        ((1 :: 2 :: 3 :: nil) :: (4 :: 5 :: 6 :: nil) :: (7 :: 8 :: 9 :: nil) :: nil)))
     X
     noError;
 
 --- ;true; if some player has won the game
 won : GameState → Bool
-  | (state (board squares) _ _) :=
-    any
-      full
-      (diagonals squares ++ rows squares ++ columns squares);
+  | (state (board squares) _ _) := any full (diagonals squares ++ rows squares ++ columns squares);
 
 --- ;true; if there is a draw
 draw : GameState → Bool
-  | (state (board squares) _ _) :=
-    null (possibleMoves (flatten squares));
+  | (state (board squares) _ _) := null (possibleMoves (flatten squares));
