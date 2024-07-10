@@ -1,3 +1,5 @@
+```juvix
 module B;
 
-axiom D : Type;
+axiom D : Type; 
+```
