@@ -336,7 +336,6 @@ instance (SingI s) => PrettyPrint (NamedArgumentFunctionDef s) where
 instance (SingI s) => PrettyPrint (NamedArgumentNew s) where
   ppCode = \case
     NamedArgumentNewFunction f -> ppCode f
-    NamedArgumentRegular f -> ppCode f
 
 instance (SingI s) => PrettyPrint (RecordStatement s) where
   ppCode = \case

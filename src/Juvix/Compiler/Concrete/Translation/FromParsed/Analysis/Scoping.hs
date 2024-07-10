@@ -2573,8 +2573,6 @@ checkExpressionAtom e = case e of
 reserveNamedArgumentName :: (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable] r) => NamedArgumentNew 'Parsed -> Sem r ()
 reserveNamedArgumentName a = case a of
   NamedArgumentNewFunction f -> void (reserveFunctionSymbol (f ^. namedArgumentFunctionDef))
-  -- NamedArgumentRegular f -> reserveSymbolOf SKNameFunction Nothing (f ^. namedArgName)
-  NamedArgumentRegular {} -> return ()
 
 checkNamedApplicationNew :: forall r. (Members '[HighlightBuilder, Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader Package] r) => NamedApplicationNew 'Parsed -> Sem r (NamedApplicationNew 'Scoped)
 checkNamedApplicationNew napp = do
@@ -2608,8 +2606,6 @@ checkNamedArgumentNew ::
   Sem r (NamedArgumentNew 'Scoped)
 checkNamedArgumentNew snames = \case
   NamedArgumentNewFunction f -> NamedArgumentNewFunction <$> checkNamedArgumentFunctionDef snames f
-  -- NamedArgumentRegular f -> NamedArgumentRegular <$> checkNamedArgumentAssign True f
-  NamedArgumentRegular {} -> error "TODO"
 
 checkNamedArgumentFunctionDef ::
   (Members '[HighlightBuilder, Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader Package] r) =>
@@ -2682,7 +2678,7 @@ checkNamedApplication napp = do
     checkArgumentBlock b = do
       let _argBlockDelims = b ^. argBlockDelims
           _argBlockImplicit = b ^. argBlockImplicit
-      _argBlockArgs <- mapM (checkNamedArgumentAssign False) (b ^. argBlockArgs)
+      _argBlockArgs <- mapM checkNamedArgumentAssign (b ^. argBlockArgs)
       return ArgumentBlock {..}
 
 -- | NOTE the argument `isNew` indicates whether the caller is using the new
@@ -2692,20 +2688,10 @@ checkNamedApplication napp = do
 checkNamedArgumentAssign ::
   forall r.
   (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader Package] r) =>
-  Bool ->
   NamedArgumentAssign 'Parsed ->
   Sem r (NamedArgumentAssign 'Scoped)
-checkNamedArgumentAssign isNew n = do
-  _namedArgName <-
-    if
-        | isNew -> error "TODO isnew"
-        -- localBindings
-        --   . ignoreSyntax
-        --   $ bindFunctionSymbol (n ^. namedArgName)
-        | otherwise ->
-            -- NOTE we use withLocalScope because we don't want to bind anything,
-            -- as this is the behaviour of the old syntax.
-            withLocalScope (bindVariableSymbol (n ^. namedArgName))
+checkNamedArgumentAssign n = do
+  _namedArgName <- withLocalScope (bindVariableSymbol (n ^. namedArgName))
   let _namedArgAssignKw = n ^. namedArgAssignKw
   _namedArgValue <- checkParseExpressionAtoms (n ^. namedArgValue)
   return NamedArgumentAssign {..}

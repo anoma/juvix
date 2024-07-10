@@ -2307,10 +2307,8 @@ deriving stock instance Ord (NamedArgumentFunctionDef 'Parsed)
 
 deriving stock instance Ord (NamedArgumentFunctionDef 'Scoped)
 
--- TODO rename NamedArgumentRegular
-data NamedArgumentNew (s :: Stage)
+newtype NamedArgumentNew (s :: Stage)
   = NamedArgumentNewFunction (NamedArgumentFunctionDef s)
-  | NamedArgumentRegular (NamedArgumentAssign s)
   deriving stock (Generic)
 
 instance Serialize (NamedArgumentNew 'Scoped)
@@ -3430,7 +3428,6 @@ _RecordStatementField f x = case x of
 
 namedArgumentNewSymbol :: Lens' (NamedArgumentNew s) (SymbolType s)
 namedArgumentNewSymbol f = \case
-  NamedArgumentRegular a -> NamedArgumentRegular <$> namedArgName f a
   NamedArgumentNewFunction a ->
     NamedArgumentNewFunction
       <$> (namedArgumentFunctionDef . signName) f a
