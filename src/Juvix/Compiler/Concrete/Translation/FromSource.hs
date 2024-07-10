@@ -823,7 +823,7 @@ expressionAtom =
     AtomLiteral <$> P.try literal
       <|> either AtomIterator AtomNamedApplication <$> iterator
       <|> AtomNamedApplicationNew <$> namedApplicationNew
-      -- <|> AtomNamedApplication <$> namedApplication
+      -- <|> AtomNamedApplication <$> namedApplication -- TODO remove
       <|> AtomList <$> parseList
       <|> AtomIf <$> multiwayIf
       <|> AtomIdentifier <$> name

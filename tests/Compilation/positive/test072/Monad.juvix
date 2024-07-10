@@ -17,7 +17,13 @@ type Monad (f : Type -> Type) :=
 open Monad public;
 
 syntax operator >>> bind;
->>> {M : Type → Type} {A B : Type} {{Monad M}} (x : M
-  A) (y : M B) : M B := x >>= λ {_ := y};
+>>>
+  {M : Type → Type}
+  {A B : Type}
+  {{Monad M}}
+  (x : M A)
+  (y : M B)
+  : M B := x >>= λ {_ := y};
 
-getFunctor {M : Type -> Type} (_ : Monad M) : Functor M := Monad.functor;
+getFunctor {M : Type -> Type} (_ : Monad M) : Functor M :=
+  Monad.functor;
