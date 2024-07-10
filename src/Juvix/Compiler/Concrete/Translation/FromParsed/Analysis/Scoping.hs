@@ -1099,6 +1099,7 @@ checkFunctionDef FunctionDef {..} = do
     checkBody = case _signBody of
       SigBodyExpression e -> SigBodyExpression <$> checkParseExpressionAtoms e
       SigBodyClauses cls -> SigBodyClauses <$> mapM checkClause cls
+
     checkClause :: FunctionClause 'Parsed -> Sem r (FunctionClause 'Scoped)
     checkClause FunctionClause {..} = do
       (patterns', body') <- withLocalScope $ do
@@ -2569,6 +2570,12 @@ checkExpressionAtom e = case e of
   AtomNamedApplicationNew i -> pure . AtomNamedApplicationNew <$> checkNamedApplicationNew i
   AtomRecordUpdate i -> pure . AtomRecordUpdate <$> checkRecordUpdate i
 
+reserveNamedArgumentName :: (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable] r) => NamedArgumentNew 'Parsed -> Sem r ()
+reserveNamedArgumentName a = case a of
+  NamedArgumentNewFunction f -> void (reserveFunctionSymbol (f ^. namedArgumentFunctionDef))
+  -- NamedArgumentRegular f -> reserveSymbolOf SKNameFunction Nothing (f ^. namedArgName)
+  NamedArgumentRegular {} -> return ()
+
 checkNamedApplicationNew :: forall r. (Members '[HighlightBuilder, Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader Package] r) => NamedApplicationNew 'Parsed -> Sem r (NamedApplicationNew 'Scoped)
 checkNamedApplicationNew napp = do
   let nargs = napp ^. namedApplicationNewArguments
@@ -2576,10 +2583,14 @@ checkNamedApplicationNew napp = do
   sig <- if null nargs then return $ NameSignature [] else getNameSignature aname
   let snames = HashSet.fromList (concatMap (HashMap.keys . (^. nameBlock)) (sig ^. nameSignatureArgs))
   args' <- withLocalScope . localBindings . ignoreSyntax $ do
-    mapM_ (reserveFunctionSymbol . (^. namedArgumentNewFunDef)) nargs
+    mapM_ reserveNamedArgumentName nargs
     mapM (checkNamedArgumentNew snames) nargs
-  let enames = HashSet.fromList (concatMap (HashMap.keys . (^. nameBlock)) (filter (not . isImplicitOrInstance . (^. nameImplicit)) (sig ^. nameSignatureArgs)))
-      sargs = HashSet.fromList (map (^. namedArgumentNewFunDef . signName . nameConcrete) (toList args'))
+  let enames =
+        HashSet.fromList
+          . concatMap (HashMap.keys . (^. nameBlock))
+          . filter (not . isImplicitOrInstance . (^. nameImplicit))
+          $ sig ^. nameSignatureArgs
+      sargs :: HashSet Symbol = hashSet (map (^. namedArgumentNewSymbol) nargs)
       missingArgs = HashSet.difference enames sargs
   unless (null missingArgs || not (napp ^. namedApplicationNewExhaustive . isExhaustive)) $
     throw (ErrMissingArgs (MissingArgs (aname ^. scopedIdenFinal . nameConcrete) missingArgs))
@@ -2595,14 +2606,24 @@ checkNamedArgumentNew ::
   HashSet Symbol ->
   NamedArgumentNew 'Parsed ->
   Sem r (NamedArgumentNew 'Scoped)
-checkNamedArgumentNew snames NamedArgumentNew {..} = do
-  def <- localBindings . ignoreSyntax $ checkFunctionDef _namedArgumentNewFunDef
+checkNamedArgumentNew snames = \case
+  NamedArgumentNewFunction f -> NamedArgumentNewFunction <$> checkNamedArgumentFunctionDef snames f
+  -- NamedArgumentRegular f -> NamedArgumentRegular <$> checkNamedArgumentAssign True f
+  NamedArgumentRegular {} -> error "TODO"
+
+checkNamedArgumentFunctionDef ::
+  (Members '[HighlightBuilder, Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader Package] r) =>
+  HashSet Symbol ->
+  NamedArgumentFunctionDef 'Parsed ->
+  Sem r (NamedArgumentFunctionDef 'Scoped)
+checkNamedArgumentFunctionDef snames NamedArgumentFunctionDef {..} = do
+  def <- localBindings . ignoreSyntax $ checkFunctionDef _namedArgumentFunctionDef
   let fname = def ^. signName . nameConcrete
   unless (HashSet.member fname snames) $
     throw (ErrUnexpectedArgument (UnexpectedArgument fname))
   return
-    NamedArgumentNew
-      { _namedArgumentNewFunDef = def
+    NamedArgumentFunctionDef
+      { _namedArgumentFunctionDef = def
       }
 
 checkRecordUpdate :: forall r. (Members '[HighlightBuilder, Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader Package] r) => RecordUpdate 'Parsed -> Sem r (RecordUpdate 'Scoped)
@@ -2657,19 +2678,37 @@ checkNamedApplication napp = do
   _namedAppArgs <- mapM checkArgumentBlock (napp ^. namedAppArgs)
   return NamedApplication {..}
   where
-    checkNamedArg :: NamedArgumentAssign 'Parsed -> Sem r (NamedArgumentAssign 'Scoped)
-    checkNamedArg n = do
-      let _namedArgAssignKw = n ^. namedArgAssignKw
-      _namedArgName <- withLocalScope (bindVariableSymbol (n ^. namedArgName))
-      _namedArgValue <- checkParseExpressionAtoms (n ^. namedArgValue)
-      return NamedArgumentAssign {..}
-
     checkArgumentBlock :: ArgumentBlock 'Parsed -> Sem r (ArgumentBlock 'Scoped)
     checkArgumentBlock b = do
       let _argBlockDelims = b ^. argBlockDelims
           _argBlockImplicit = b ^. argBlockImplicit
-      _argBlockArgs <- mapM checkNamedArg (b ^. argBlockArgs)
+      _argBlockArgs <- mapM (checkNamedArgumentAssign False) (b ^. argBlockArgs)
       return ArgumentBlock {..}
+
+-- | NOTE the argument `isNew` indicates whether the caller is using the new
+-- syntax for NamedArgument. This argument is temporary. When the old named
+-- argument syntax is removed, the behaviour of this function should be the same
+-- as passing isNew = True.
+checkNamedArgumentAssign ::
+  forall r.
+  (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader Package] r) =>
+  Bool ->
+  NamedArgumentAssign 'Parsed ->
+  Sem r (NamedArgumentAssign 'Scoped)
+checkNamedArgumentAssign isNew n = do
+  _namedArgName <-
+    if
+        | isNew -> error "TODO isnew"
+        -- localBindings
+        --   . ignoreSyntax
+        --   $ bindFunctionSymbol (n ^. namedArgName)
+        | otherwise ->
+            -- NOTE we use withLocalScope because we don't want to bind anything,
+            -- as this is the behaviour of the old syntax.
+            withLocalScope (bindVariableSymbol (n ^. namedArgName))
+  let _namedArgAssignKw = n ^. namedArgAssignKw
+  _namedArgValue <- checkParseExpressionAtoms (n ^. namedArgValue)
+  return NamedArgumentAssign {..}
 
 getRecordInfo ::
   forall r.

@@ -330,8 +330,13 @@ instance (SingI s) => PrettyPrint (NamedApplicationNew s) where
       <> ppCode _namedApplicationNewExhaustive
       <> braces args'
 
+instance (SingI s) => PrettyPrint (NamedArgumentFunctionDef s) where
+  ppCode (NamedArgumentFunctionDef f) = ppCode f
+
 instance (SingI s) => PrettyPrint (NamedArgumentNew s) where
-  ppCode (NamedArgumentNew f) = ppCode f
+  ppCode = \case
+    NamedArgumentNewFunction f -> ppCode f
+    NamedArgumentRegular f -> ppCode f
 
 instance (SingI s) => PrettyPrint (RecordStatement s) where
   ppCode = \case
@@ -633,7 +638,9 @@ ppIfBranchElse ::
   Sem r ()
 ppIfBranchElse isTop IfBranch {..} = do
   let e' = ppMaybeTopExpression isTop _ifBranchExpression
-  ppCode _ifBranchCondition <+> ppCode _ifBranchAssignKw <> oneLineOrNext e'
+  ppCode _ifBranchPipe
+    <+> ppCode _ifBranchCondition
+    <+> ppCode _ifBranchAssignKw <> oneLineOrNext e'
 
 ppIf :: forall r s. (Members '[ExactPrint, Reader Options] r, SingI s) => IsTop -> If s -> Sem r ()
 ppIf isTop If {..} = do

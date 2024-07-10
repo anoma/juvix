@@ -726,7 +726,7 @@ createArgumentBlocks appargs =
     . evalState args0
     . mapM_ goBlock
   where
-    args0 :: HashSet S.Symbol = hashSet ((^. namedArgumentNewFunDef . signName) <$> appargs)
+    args0 :: HashSet S.Symbol = hashSet ((^. namedArgumentNewSymbol) <$> appargs)
     goBlock ::
       forall r.
       (Members '[State (HashSet S.Symbol), Output (ArgumentBlock 'Scoped)] r) =>
@@ -811,11 +811,11 @@ goExpression = \case
                   _namedAppArgs = nonEmpty' (createArgumentBlocks appargs (sig ^. nameSignatureArgs))
                 }
         compiledNameApp <- goNamedApplication napp' extraArgs
-        case nonEmpty (appargs ^.. each . namedArgumentNewFunDef) of
+        case nonEmpty (appargs ^.. each . _NamedArgumentNewFunction) of
           Nothing -> return compiledNameApp
           Just funs -> do
             cls <- funDefsToClauses funs
-            let funsNames :: [Internal.Name] = funs ^.. each . signName . to goSymbol
+            let funsNames :: [Internal.Name] = funs ^.. each . namedArgumentFunctionDef . signName . to goSymbol
                 -- changes the kind from Variable to Function
                 updateKind :: Internal.Subs = Internal.subsKind funsNames KNameFunction
             let l =
@@ -826,11 +826,11 @@ goExpression = \case
             expr <- Internal.substitutionE updateKind l >>= Internal.inlineLet
             Internal.clone expr
             where
-              funDefsToClauses :: NonEmpty (FunctionDef 'Scoped) -> Sem r (NonEmpty Internal.LetClause)
+              funDefsToClauses :: NonEmpty (NamedArgumentFunctionDef 'Scoped) -> Sem r (NonEmpty Internal.LetClause)
               funDefsToClauses args = mkLetClauses <$> mapM goArg args
                 where
-                  goArg :: FunctionDef 'Scoped -> Sem r Internal.PreLetStatement
-                  goArg = fmap Internal.PreLetFunctionDef . goFunctionDef
+                  goArg :: NamedArgumentFunctionDef 'Scoped -> Sem r Internal.PreLetStatement
+                  goArg = fmap Internal.PreLetFunctionDef . goFunctionDef . (^. namedArgumentFunctionDef)
 
     goDesugaredNamedApplication :: DesugaredNamedApplication -> Sem r Internal.Expression
     goDesugaredNamedApplication a = do

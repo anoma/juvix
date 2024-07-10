@@ -976,6 +976,25 @@ iterator = do
         _ -> parseFailure off "an iterator must have at least one range"
       return NamedArgumentAssign {..}
 
+pnamedArgumentFunctionDef ::
+  forall r.
+  (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) =>
+  ParsecS r (NamedArgumentFunctionDef 'Parsed)
+pnamedArgumentFunctionDef = do
+  fun <- functionDefinition True False Nothing
+  return
+    NamedArgumentFunctionDef
+      { _namedArgumentFunctionDef = fun
+      }
+
+namedArgumentNew ::
+  forall r.
+  (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) =>
+  ParsecS r (NamedArgumentNew 'Parsed)
+namedArgumentNew =
+  -- P.try (NamedArgumentRegular <$> namedArgumentAssign) -- TODO this try should be optimized
+  NamedArgumentNewFunction <$> pnamedArgumentFunctionDef
+
 pisExhaustive ::
   forall r.
   (Members '[ParserResultBuilder] r) =>
@@ -997,20 +1016,13 @@ namedApplicationNew ::
 namedApplicationNew = P.label "<named application>" $ do
   (_namedApplicationNewName, _namedApplicationNewExhaustive) <- P.try $ do
     n <- name
-    exh <- pisExhaustive
+    exhaustive <- pisExhaustive
     lbrace
-    return (n, exh)
-  defs <- P.sepEndBy (functionDefinition True False Nothing) semicolon
+    return (n, exhaustive)
+  _namedApplicationNewArguments <- P.sepEndBy namedArgumentNew semicolon
   rbrace
-  let _namedApplicationNewArguments = fmap mkArg defs
-      _namedApplicationNewExtra = Irrelevant ()
+  let _namedApplicationNewExtra = Irrelevant ()
   return NamedApplicationNew {..}
-  where
-    mkArg :: FunctionDef 'Parsed -> NamedArgumentNew 'Parsed
-    mkArg f =
-      NamedArgumentNew
-        { _namedArgumentNewFunDef = f
-        }
 
 namedApplication ::
   forall r.
@@ -1027,11 +1039,11 @@ namedApplication = P.label "<named application>" $ do
       _namedAppSignature = Irrelevant ()
   return NamedApplication {..}
 
-namedArgument ::
+namedArgumentAssign ::
   forall r.
   (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) =>
   ParsecS r (NamedArgumentAssign 'Parsed)
-namedArgument = do
+namedArgumentAssign = do
   _namedArgName <- symbol
   _namedArgAssignKw <- Irrelevant <$> kw kwAssign
   _namedArgValue <- parseExpressionAtoms
@@ -1055,7 +1067,7 @@ argumentBlockCont ::
 argumentBlockCont (l, _argBlockImplicit, _namedArgName, _namedArgAssignKw) = do
   _namedArgValue <- parseExpressionAtoms
   let arg = NamedArgumentAssign {..}
-  _argBlockArgs <- nonEmpty' . (arg :) <$> many (semicolon >> namedArgument)
+  _argBlockArgs <- nonEmpty' . (arg :) <$> many (semicolon >> namedArgumentAssign)
   r <- implicitClose _argBlockImplicit
   let _argBlockDelims = Irrelevant (Just (l, r))
   return ArgumentBlock {..}

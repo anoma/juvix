@@ -2282,10 +2282,36 @@ deriving stock instance Ord (NamedApplication 'Parsed)
 
 deriving stock instance Ord (NamedApplication 'Scoped)
 
-newtype NamedArgumentNew (s :: Stage) = NamedArgumentNew
-  { _namedArgumentNewFunDef :: FunctionDef s
+newtype NamedArgumentFunctionDef (s :: Stage) = NamedArgumentFunctionDef
+  { _namedArgumentFunctionDef :: FunctionDef s
   }
-  deriving newtype (Generic)
+  deriving stock (Generic)
+
+instance Serialize (NamedArgumentFunctionDef 'Scoped)
+
+instance NFData (NamedArgumentFunctionDef 'Scoped)
+
+instance Serialize (NamedArgumentFunctionDef 'Parsed)
+
+instance NFData (NamedArgumentFunctionDef 'Parsed)
+
+deriving stock instance Show (NamedArgumentFunctionDef 'Parsed)
+
+deriving stock instance Show (NamedArgumentFunctionDef 'Scoped)
+
+deriving stock instance Eq (NamedArgumentFunctionDef 'Parsed)
+
+deriving stock instance Eq (NamedArgumentFunctionDef 'Scoped)
+
+deriving stock instance Ord (NamedArgumentFunctionDef 'Parsed)
+
+deriving stock instance Ord (NamedArgumentFunctionDef 'Scoped)
+
+-- TODO rename NamedArgumentRegular
+data NamedArgumentNew (s :: Stage)
+  = NamedArgumentNewFunction (NamedArgumentFunctionDef s)
+  | NamedArgumentRegular (NamedArgumentAssign s)
+  deriving stock (Generic)
 
 instance Serialize (NamedArgumentNew 'Scoped)
 
@@ -2606,6 +2632,7 @@ deriving stock instance Ord (JudocAtom 'Parsed)
 deriving stock instance Ord (JudocAtom 'Scoped)
 
 makeLenses ''SideIfs
+makeLenses ''NamedArgumentFunctionDef
 makeLenses ''IsExhaustive
 makeLenses ''SideIfBranch
 makeLenses ''RhsExpression
@@ -2688,6 +2715,7 @@ makeLenses ''NameBlock
 makeLenses ''NameItem
 makeLenses ''RecordInfo
 makeLenses ''MarkdownInfo
+makePrisms ''NamedArgumentNew
 
 fixityFieldHelper :: SimpleGetter (ParsedFixityFields s) (Maybe a) -> SimpleGetter (ParsedFixityInfo s) (Maybe a)
 fixityFieldHelper l = to (^? fixityFields . _Just . l . _Just)
@@ -3399,6 +3427,13 @@ _RecordStatementField :: Traversal' (RecordStatement s) (RecordField s)
 _RecordStatementField f x = case x of
   RecordStatementField p -> RecordStatementField <$> f p
   _ -> pure x
+
+namedArgumentNewSymbol :: Lens' (NamedArgumentNew s) (SymbolType s)
+namedArgumentNewSymbol f = \case
+  NamedArgumentRegular a -> NamedArgumentRegular <$> namedArgName f a
+  NamedArgumentNewFunction a ->
+    NamedArgumentNewFunction
+      <$> (namedArgumentFunctionDef . signName) f a
 
 scopedIdenSrcName :: Lens' ScopedIden S.Name
 scopedIdenSrcName f n = case n ^. scopedIdenAlias of
