@@ -31,4 +31,5 @@ main : IO :=
     >>> printNatLn (head 0 (tail lst))
     >>> printNatListLn (map ((+) 1) lst)
     >>> printNatListLn (map' ((+) 1) lst)
-    >>> printNatListLn (runPartial (λ{{{_}} := map'' ((+) 1) lst}));
+    >>> printNatListLn
+      (runPartial λ {{{_}} := map'' ((+) 1) lst});

@@ -16,7 +16,8 @@ gen : Nat → Tree
     if
       | mod n 3 == 0 := node1 (gen (sub n 1))
       | mod n 3 == 1 := node2 (gen (sub n 1)) (gen (sub n 1))
-      | else := node3 (gen (sub n 1)) (gen (sub n 1)) (gen (sub n 1));
+      | else :=
+        node3 (gen (sub n 1)) (gen (sub n 1)) (gen (sub n 1));
 
 preorder : Tree → IO
   | leaf := printNat 0

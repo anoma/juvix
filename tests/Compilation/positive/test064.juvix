@@ -36,6 +36,7 @@ even' : Nat -> Bool := even;
 
 main : Nat :=
   sum 3
-    + case even' 6 || g true || h true of
+    + case even' 6 || g true || h true of {
         | true := ite (g false) (f 1 2 + sum 7 + j 0) 0
-        | false := f (3 + 4) (f 0 8) + loop;
+        | false := f (3 + 4) (f 0 8) + loop
+      };
