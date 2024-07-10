@@ -17,6 +17,7 @@ import Juvix.Compiler.Concrete.Gen qualified as Gen
 import Juvix.Compiler.Concrete.Keywords
 import Juvix.Compiler.Concrete.Keywords qualified as Kw
 import Juvix.Compiler.Concrete.Language
+import Juvix.Compiler.Concrete.MigrateNamedApplication
 import Juvix.Compiler.Concrete.Pretty.Options
 import Juvix.Compiler.Concrete.Translation.ImportScanner.Base
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Data
@@ -312,7 +313,7 @@ instance (SingI s) => PrettyPrint (ArgumentBlock s) where
       Irrelevant d = _argBlockDelims
 
 instance (SingI s) => PrettyPrint (NamedApplication s) where
-  ppCode = apeHelper
+  ppCode = ppCode . migrateNamedApplication
 
 instance PrettyPrint IsExhaustive where
   ppCode IsExhaustive {..} = ppCode _isExhaustiveKw

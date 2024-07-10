@@ -18,6 +18,22 @@ kw k = do
         _keywordRefInterval = loc
       }
 
+simplestFunctionDef :: FunctionName s -> ExpressionType s -> FunctionDef s
+simplestFunctionDef funName funBody =
+  FunctionDef
+    { _signName = funName,
+      _signBody = SigBodyExpression funBody,
+      _signColonKw = Irrelevant Nothing,
+      _signArgs = [],
+      _signRetType = Nothing,
+      _signDoc = Nothing,
+      _signPragmas = Nothing,
+      _signBuiltin = Nothing,
+      _signTerminating = Nothing,
+      _signInstance = Nothing,
+      _signCoercion = Nothing
+    }
+
 smallUniverseExpression :: forall s r. (SingI s) => (Members '[Reader Interval] r) => Sem r (ExpressionType s)
 smallUniverseExpression = do
   loc <- ask @Interval
