@@ -2,6 +2,7 @@ module Juvix.Prelude
   ( module Juvix.Prelude.Base,
     module Juvix.Prelude.Lens,
     module Juvix.Prelude.Stream,
+    module Juvix.Prelude.Generic,
     module Juvix.Prelude.Trace,
     module Juvix.Prelude.Path,
     module Juvix.Prelude.Prepath,
@@ -11,6 +12,7 @@ where
 
 import Juvix.Data
 import Juvix.Prelude.Base
+import Juvix.Prelude.Generic
 import Juvix.Prelude.Lens
 import Juvix.Prelude.Path
 import Juvix.Prelude.Prepath
