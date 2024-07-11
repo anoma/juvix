@@ -12,7 +12,10 @@ type Pair (A B : Type) :=
   };
 
 p1 : Pair T T :=
-  mkPair (fst := constructT; snd := constructT);
+  mkPair@{
+    fst := constructT;
+    snd := constructT
+  };
 
 type EnumRecord :=
   | --- doc for C1
@@ -26,9 +29,18 @@ type EnumRecord :=
     };
 
 p2 : Pair EnumRecord EnumRecord :=
-  mkPair
-    (fst := C1 (c1a := constructT; c1b := constructT);
-    snd := C2 (c2a := constructT; c2b := constructT));
+  mkPair@{
+    fst :=
+      C1@?{
+        c1a := constructT;
+        c1b := constructT
+      };
+    snd :=
+      C2@{
+        c2a := constructT;
+        c2b := constructT
+      }
+  };
 
 type newtype := mknewtype {f : T};
 
@@ -43,6 +55,5 @@ type Bool :=
   | true;
 
 module Update;
-  f {A B : Type} (p : Pair A B) : Pair Bool B :=
-    p@Pair{fst := true};
+  f {A B : Type} (p : Pair A B) : Pair Bool B := p@Pair{fst := true};
 end;
