@@ -2,7 +2,6 @@ module Main (main) where
 
 import Anoma qualified
 import Asm qualified
-import BackendGeb qualified
 import BackendMarkdown qualified
 import Base
 import Casm qualified
@@ -31,8 +30,7 @@ slowTests =
   sequentialTestGroup
     "Juvix slow tests"
     AllFinish
-    [ BackendGeb.allTests,
-      Runtime.allTests,
+    [ Runtime.allTests,
       Reg.allTests,
       Asm.allTests,
       Tree.allTests,

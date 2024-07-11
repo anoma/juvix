@@ -1,7 +1,0 @@
-(lamb
-  (list
-    so1)
-  (lamb
-    (list
-      so1)
-    (index 1)))

@@ -10,7 +10,6 @@ import Prelude (show)
 data FileExt
   = FileExtJuvix
   | FileExtJuvixMarkdown
-  | FileExtJuvixGeb
   | FileExtJuvixCore
   | FileExtJuvixAsm
   | FileExtJuvixReg
@@ -41,9 +40,6 @@ juvixMarkdownFileExt = ".juvix.md"
 
 juvixMarkdownFileExts :: (IsString a) => NonEmpty a
 juvixMarkdownFileExts = ".juvix" :| [".md"]
-
-juvixGebFileExt :: (IsString a) => a
-juvixGebFileExt = ".geb"
 
 juvixCoreFileExt :: (IsString a) => a
 juvixCoreFileExt = ".jvc"
@@ -109,7 +105,6 @@ fileExtToIsString :: (IsString a) => FileExt -> a
 fileExtToIsString = \case
   FileExtJuvix -> juvixFileExt
   FileExtJuvixMarkdown -> juvixMarkdownFileExt
-  FileExtJuvixGeb -> juvixGebFileExt
   FileExtJuvixCore -> juvixCoreFileExt
   FileExtJuvixAsm -> juvixAsmFileExt
   FileExtJuvixReg -> juvixRegFileExt
@@ -136,7 +131,6 @@ toMetavar :: FileExt -> String
 toMetavar = \case
   FileExtJuvix -> "JUVIX_FILE"
   FileExtJuvixMarkdown -> "JUVIX_MARKDOWN_FILE"
-  FileExtJuvixGeb -> "JUVIX_GEB_FILE"
   FileExtJuvixCore -> "JUVIX_CORE_FILE"
   FileExtJuvixAsm -> "JUVIX_ASM_FILE"
   FileExtJuvixReg -> "JUVIX_REG_FILE"
@@ -172,9 +166,6 @@ isJuvixMarkdownFile :: Path b File -> Bool
 isJuvixMarkdownFile p = case splitExtension p of
   Just (f, ext) -> ext == markdownFileExt && isJuvixFile f
   _ -> False
-
-isJuvixGebFile :: Path b File -> Bool
-isJuvixGebFile = (== Just juvixGebFileExt) . fileExtension
 
 isJuvixCoreFile :: Path b File -> Bool
 isJuvixCoreFile = (== Just juvixCoreFileExt) . fileExtension
@@ -228,7 +219,6 @@ toFileExt :: Path b File -> Maybe FileExt
 toFileExt p
   | isJuvixFile p = Just FileExtJuvix
   | isJuvixMarkdownFile p = Just FileExtJuvixMarkdown
-  | isJuvixGebFile p = Just FileExtJuvixGeb
   | isJuvixCoreFile p = Just FileExtJuvixCore
   | isJuvixAsmFile p = Just FileExtJuvixAsm
   | isJuvixRegFile p = Just FileExtJuvixReg

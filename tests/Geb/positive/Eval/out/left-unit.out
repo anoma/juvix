@@ -1,9 +1,0 @@
-(cls
-  (env
-    nil)
-  (lamb
-    (list
-      so1)
-    (left
-      so1
-      (unit))))

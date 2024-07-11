@@ -143,20 +143,6 @@ tests:
     stdout: ""
     exit-status: 0
 
-  - name: target-geb
-    command:
-      shell:
-        - bash
-      script: |
-        temp=$(mktemp -d)
-        trap 'rm -rf -- "$temp"' EXIT
-        testdir=$PWD/tests/Geb/positive/Compilation
-        cd $temp
-        juvix --only-errors compile geb $testdir/test001.juvix
-        [ -f test001.lisp ]
-    stdout: ""
-    exit-status: 0
-
   - name: target-anoma
     command:
       shell:

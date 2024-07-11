@@ -71,7 +71,6 @@ runCommand opts = do
       AppTargetReg -> err "JuvixReg"
       AppTargetAnoma -> err "Anoma"
       AppTargetTree -> err "JuvixTree"
-      AppTargetGeb -> err "GEB"
       AppTargetVampIR -> err "VampIR"
       AppTargetCore -> err "JuvixCore"
       AppTargetAsm -> err "JuvixAsm"

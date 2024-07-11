@@ -8,7 +8,6 @@ import Data.Aeson qualified as JSON
 import Juvix.Compiler.Asm.Pretty qualified as Asm
 import Juvix.Compiler.Backend qualified as Backend
 import Juvix.Compiler.Backend.C qualified as C
-import Juvix.Compiler.Backend.Geb qualified as Geb
 import Juvix.Compiler.Backend.Rust.Data.Result qualified as Rust
 import Juvix.Compiler.Backend.VampIR.Translation qualified as VampIR
 import Juvix.Compiler.Casm.Data.Result qualified as Casm
@@ -18,7 +17,6 @@ import Juvix.Compiler.Core.Data.TransformationId qualified as Core
 import Juvix.Compiler.Reg.Pretty qualified as Reg
 import Juvix.Compiler.Tree.Pretty qualified as Tree
 import Juvix.Prelude.Pretty
-import System.FilePath (takeBaseName)
 
 data PipelineArg = PipelineArg
   { _pipelineArgOptions :: CompileOptions,
@@ -41,7 +39,6 @@ getEntry PipelineArg {..} = do
     getTarget = \case
       AppTargetWasm32Wasi -> Backend.TargetCWasm32Wasi
       AppTargetNative64 -> Backend.TargetCNative64
-      AppTargetGeb -> Backend.TargetGeb
       AppTargetVampIR -> Backend.TargetVampIR
       AppTargetCore -> Backend.TargetCore
       AppTargetAsm -> Backend.TargetAsm
@@ -85,30 +82,6 @@ runCPipeline pa@PipelineArg {..} = do
       buildDir <- askBuildDir
       ensureDir buildDir
       return (buildDir <//> replaceExtension' ".c" (filename inputFileCompile))
-
-runGebPipeline ::
-  forall r.
-  (Members '[EmbedIO, App, TaggedLock] r) =>
-  PipelineArg ->
-  Sem r ()
-runGebPipeline pa@PipelineArg {..} = do
-  entryPoint <- getEntry pa
-  gebFile <- Compile.outputFile _pipelineArgOptions
-  let spec
-        | _pipelineArgOptions ^. compileTerm = Geb.OnlyTerm
-        | otherwise =
-            Geb.LispPackage
-              Geb.LispPackageSpec
-                { _lispPackageName = fromString . takeBaseName $ toFilePath gebFile,
-                  _lispPackageEntry = "*entry*"
-                }
-  Geb.Result {..} <-
-    getRight
-      . run
-      . runReader entryPoint
-      . runError @JuvixError
-      $ coreToGeb spec _pipelineArgModule
-  writeFileEnsureLn gebFile _resultCode
 
 runVampIRPipeline ::
   forall r.
