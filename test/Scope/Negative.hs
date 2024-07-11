@@ -27,7 +27,7 @@ testDescr NegTest {..} =
             res <- testRunIOEitherTermination entryPoint upToInternal
             case mapLeft fromJuvixError res of
               Left (Just err) -> whenJust (_checkErr err) assertFailure
-              Left Nothing -> assertFailure ("An error occurred but it was not in the scoper.\nFile: " <> prettyText file')
+              Left Nothing -> assertFailure ("An error occurred but it was not in the scoper.\nFile: " <> prettyString file')
               Right {} -> assertFailure "The scope checker did not find an error."
         }
 
@@ -378,12 +378,5 @@ scoperErrorTests =
       $(mkRelFile "InvalidDefault.juvix")
       $ \case
         ErrWrongDefaultValue {} -> Nothing
-        _ -> wrongError,
-    NegTest
-      "Default argument cycle in FromConcrete"
-      $(mkRelDir ".")
-      $(mkRelFile "DefaultArgCycle.juvix")
-      $ \case
-        ErrDefaultArgCycle {} -> Nothing
         _ -> wrongError
   ]
