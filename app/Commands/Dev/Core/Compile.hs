@@ -19,7 +19,6 @@ runCommand opts = do
   case opts ^. compileTarget of
     AppTargetWasm32Wasi -> runCPipeline arg
     AppTargetNative64 -> runCPipeline arg
-    AppTargetGeb -> runGebPipeline arg
     AppTargetVampIR -> runVampIRPipeline arg
     AppTargetCore -> return ()
     AppTargetAsm -> runAsmPipeline arg

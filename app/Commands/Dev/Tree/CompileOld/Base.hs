@@ -37,7 +37,6 @@ getEntry PipelineArg {..} = do
     getTarget = \case
       AppTargetWasm32Wasi -> Backend.TargetCWasm32Wasi
       AppTargetNative64 -> Backend.TargetCNative64
-      AppTargetGeb -> Backend.TargetGeb
       AppTargetVampIR -> Backend.TargetVampIR
       AppTargetCore -> Backend.TargetCore
       AppTargetAsm -> Backend.TargetAsm

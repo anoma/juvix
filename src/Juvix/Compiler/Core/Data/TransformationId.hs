@@ -21,7 +21,6 @@ data TransformationId
   | EtaExpandApps
   | DisambiguateNames
   | CombineInfoTables
-  | CheckGeb
   | CheckExec
   | CheckRust
   | CheckVampIR
@@ -43,7 +42,6 @@ data TransformationId
   | FilterUnreachable
   | OptPhaseEval
   | OptPhaseExec
-  | OptPhaseGeb
   | OptPhaseVampIR
   | OptPhaseMain
   deriving stock (Data, Bounded, Enum, Show)
@@ -51,7 +49,6 @@ data TransformationId
 data PipelineId
   = PipelineStored
   | PipelineNormalize
-  | PipelineGeb
   | PipelineVampIR
   | PipelineStripped
   | PipelineExec
@@ -79,10 +76,6 @@ toStrippedTransformations :: TransformationId -> [TransformationId]
 toStrippedTransformations checkId =
   combineInfoTablesTransformations ++ [checkId, LambdaLetRecLifting, TopEtaExpand, OptPhaseExec, MoveApps, RemoveTypeArgs]
 
-toGebTransformations :: [TransformationId]
-toGebTransformations =
-  combineInfoTablesTransformations ++ [CheckGeb, LetRecLifting, OptPhaseGeb, UnrollRecursion, FoldTypeSynonyms, ComputeTypeInfo]
-
 instance TransformationId' TransformationId where
   transformationText :: TransformationId -> Text
   transformationText = \case
@@ -102,7 +95,6 @@ instance TransformationId' TransformationId where
     UnrollRecursion -> strUnrollRecursion
     DisambiguateNames -> strDisambiguateNames
     CombineInfoTables -> strCombineInfoTables
-    CheckGeb -> strCheckGeb
     CheckExec -> strCheckExec
     CheckRust -> strCheckRust
     CheckVampIR -> strCheckVampIR
@@ -124,7 +116,6 @@ instance TransformationId' TransformationId where
     FilterUnreachable -> strFilterUnreachable
     OptPhaseEval -> strOptPhaseEval
     OptPhaseExec -> strOptPhaseExec
-    OptPhaseGeb -> strOptPhaseGeb
     OptPhaseVampIR -> strOptPhaseVampIR
     OptPhaseMain -> strOptPhaseMain
 
@@ -133,7 +124,6 @@ instance PipelineId' TransformationId PipelineId where
   pipelineText = \case
     PipelineStored -> strStoredPipeline
     PipelineNormalize -> strNormalizePipeline
-    PipelineGeb -> strGebPipeline
     PipelineVampIR -> strVampIRPipeline
     PipelineStripped -> strStrippedPipeline
     PipelineExec -> strExecPipeline
@@ -142,7 +132,6 @@ instance PipelineId' TransformationId PipelineId where
   pipeline = \case
     PipelineStored -> toStoredTransformations
     PipelineNormalize -> toNormalizeTransformations
-    PipelineGeb -> toGebTransformations
     PipelineVampIR -> toVampIRTransformations
     PipelineStripped -> toStrippedTransformations IdentityTrans
     PipelineExec -> toStrippedTransformations CheckExec

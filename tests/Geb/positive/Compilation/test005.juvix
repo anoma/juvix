@@ -1,6 +1,0 @@
--- basic arithmetic
-module test005;
-
-import Stdlib.Prelude open;
-
-main : Nat := 5 + 2 * 3;

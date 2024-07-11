@@ -1,3 +1,0 @@
--- not function
-
-(\(x : Bool) if x then false else true) true
