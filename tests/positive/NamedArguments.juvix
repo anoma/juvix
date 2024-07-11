@@ -142,5 +142,5 @@ module FakeRecord;
     : Pair@?{
       B := Unit;
       A := Type
-    } := mkPair (fst := Type) (unit);
+    } := mkPair@?{fst := Type} (unit);
 end;
