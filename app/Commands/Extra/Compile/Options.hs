@@ -12,7 +12,6 @@ import Prelude (Show (show))
 data CompileTarget
   = AppTargetNative64
   | AppTargetWasm32Wasi
-  | AppTargetGeb
   | AppTargetVampIR
   | AppTargetCore
   | AppTargetAsm
@@ -28,7 +27,6 @@ instance Show CompileTarget where
   show = \case
     AppTargetWasm32Wasi -> "wasi"
     AppTargetNative64 -> "native"
-    AppTargetGeb -> "geb"
     AppTargetVampIR -> "vampir"
     AppTargetCore -> "core"
     AppTargetAsm -> "asm"
@@ -50,7 +48,6 @@ data CompileOptions' inputFile = CompileOptions
     _compileCOutput :: Bool,
     _compilePreprocess :: Bool,
     _compileAssembly :: Bool,
-    _compileTerm :: Bool,
     _compileUnsafe :: Bool,
     _compileOutputFile :: Maybe (AppPath File),
     _compileTarget :: CompileTarget,
@@ -72,7 +69,6 @@ compileTargetDescription = \case
   AppTargetWasm32Wasi -> "Compile to WASI (WebAssembly System Interface)"
   AppTargetAnoma -> "Compile to Anoma"
   AppTargetCairo -> "Compile to Cairo"
-  AppTargetGeb -> "Compile to Geb"
   AppTargetVampIR -> "Compile to VampIR"
   AppTargetCasm -> "Compile to JuvixCasm"
   AppTargetCore -> "Compile to VampIR"
@@ -129,16 +125,6 @@ parseCompileOptions' supportedTargets parserFile = do
           <> long "only-assemble"
           <> help "Produce assembly output only (for targets: wasi, native)"
       )
-  _compileTerm <-
-    if
-        | elem AppTargetGeb supportedTargets ->
-            switch
-              ( short 'G'
-                  <> long "only-term"
-                  <> help "Produce term output only (for targets: geb)"
-              )
-        | otherwise ->
-            pure False
   _compileNockmaUsePrettySymbols <-
     switch
       ( long "nockma-pretty"

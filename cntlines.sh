@@ -19,7 +19,6 @@ RUNTIME=$((RUNTIME_C+RUNTIME_RUST+RUNTIME_VAMPIR+RUNTIME_JVT+RUNTIME_CASM))
 BACKENDC=$(count src/Juvix/Compiler/Backend/C/)
 BACKENDRUST=$(count src/Juvix/Compiler/Backend/Rust/)
 CAIRO=$(count src/Juvix/Compiler/Backend/Cairo/)
-GEB=$(count src/Juvix/Compiler/Backend/Geb/)
 VAMPIR=$(count src/Juvix/Compiler/Backend/VampIR/)
 CASM=$(count src/Juvix/Compiler/Casm/)
 NOCK=$(count src/Juvix/Compiler/Nockma)
@@ -43,7 +42,7 @@ PRELUDE=$(count src/Juvix/Prelude/)
 STORE=$(count src/Juvix/Compiler/Store/)
 
 FRONT=$((CONCRETE + INTERNAL + BUILTINS + PIPELINE))
-BACK=$((BACKENDC + BACKENDRUST + GEB + VAMPIR + NOCK + REG + ASM + TREE + CORE + CASM + CAIRO))
+BACK=$((BACKENDC + BACKENDRUST + VAMPIR + NOCK + REG + ASM + TREE + CORE + CASM + CAIRO))
 OTHER=$((APP + STORE + HTML + MARKDOWN + ISABELLE + EXTRA + DATA + PRELUDE))
 TESTS=$(count test/)
 
@@ -56,7 +55,6 @@ echo "   Builtins: $BUILTINS LOC"
 echo "   Pipeline: $PIPELINE LOC"
 echo "Middle and back end: $BACK LOC"
 echo "   VampIR backend: $VAMPIR LOC"
-echo "   GEB backend: $GEB LOC"
 echo "   C backend: $BACKENDC LOC"
 echo "   Rust backend: $BACKENDRUST LOC"
 echo "   Cairo backend: $((CASM + CAIRO)) LOC"

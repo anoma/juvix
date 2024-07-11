@@ -1,6 +1,0 @@
--- not function
-module test001;
-
-import Stdlib.Prelude open;
-
-main : Bool := λ {x := ite x false true} true;

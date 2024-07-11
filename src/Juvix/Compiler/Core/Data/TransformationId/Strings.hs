@@ -11,9 +11,6 @@ strStoredPipeline = "pipeline-stored"
 strNormalizePipeline :: Text
 strNormalizePipeline = "pipeline-normalize"
 
-strGebPipeline :: Text
-strGebPipeline = "pipeline-geb"
-
 strVampIRPipeline :: Text
 strVampIRPipeline = "pipeline-vampir"
 
@@ -70,9 +67,6 @@ strDisambiguateNames = "disambiguate-names"
 
 strCombineInfoTables :: Text
 strCombineInfoTables = "combine-info-tables"
-
-strCheckGeb :: Text
-strCheckGeb = "check-geb"
 
 strCheckExec :: Text
 strCheckExec = "check-exec"
@@ -133,9 +127,6 @@ strOptPhaseEval = "opt-phase-eval"
 
 strOptPhaseExec :: Text
 strOptPhaseExec = "opt-phase-exec"
-
-strOptPhaseGeb :: Text
-strOptPhaseGeb = "opt-phase-geb"
 
 strOptPhaseVampIR :: Text
 strOptPhaseVampIR = "opt-phase-vampir"

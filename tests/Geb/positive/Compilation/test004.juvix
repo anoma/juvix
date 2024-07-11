@@ -1,6 +1,0 @@
--- definitions
-module test004;
-
-import Stdlib.Prelude open;
-
-main : Bool := and (not false) (not (not true));

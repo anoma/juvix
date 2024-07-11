@@ -27,7 +27,6 @@ runCompile opts = do
   case opts ^. compileTarget of
     AppTargetWasm32Wasi -> clangWasmWasiCompile opts
     AppTargetNative64 -> clangNativeCompile opts
-    AppTargetGeb -> return (())
     AppTargetVampIR -> return ()
     AppTargetCore -> return ()
     AppTargetAsm -> return ()
@@ -48,7 +47,6 @@ prepareRuntime buildDir o = do
     AppTargetNative64
       | o ^. compileDebug -> writeRuntime nativeDebugRuntime
     AppTargetNative64 -> writeRuntime nativeReleaseRuntime
-    AppTargetGeb -> return ()
     AppTargetVampIR -> return ()
     AppTargetCore -> return ()
     AppTargetAsm -> return ()
@@ -107,9 +105,6 @@ outputFile opts = do
           | opts ^. compilePreprocess -> addExtension' cFileExt (addExtension' ".out" (removeExtension' inputFile))
           | opts ^. compileAssembly -> replaceExtension' ".wat" inputFile
           | otherwise -> replaceExtension' ".wasm" baseOutputFile
-        AppTargetGeb
-          | opts ^. compileTerm -> replaceExtension' juvixGebFileExt inputFile
-          | otherwise -> replaceExtension' lispFileExt baseOutputFile
         AppTargetVampIR ->
           replaceExtension' vampIRFileExt baseOutputFile
         AppTargetCore ->

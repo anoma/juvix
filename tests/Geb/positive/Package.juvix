@@ -1,8 +1,0 @@
-module Package;
-
-import PackageDescription.V2 open;
-
-package : Package :=
-  defaultPackage@?{
-    name := "positive"
-  };
