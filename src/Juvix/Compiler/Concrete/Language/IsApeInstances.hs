@@ -26,19 +26,19 @@ instance IsApe Pattern ApeLeaf where
     PatternPostfixApplication a -> toApe a
     e ->
       ApeLeaf
-         Leaf
-            { _leafAtomicity = atomicity e,
-              _leafExpr = ApeLeafPattern e
-            }
+        Leaf
+          { _leafAtomicity = atomicity e,
+            _leafExpr = ApeLeafPattern e
+          }
 
 instance IsApe PatternArg ApeLeaf where
   toApe pa
     | Atom == atomicity pa =
         ApeLeaf
-           Leaf
-              { _leafAtomicity = Atom,
-                _leafExpr = ApeLeafPatternArg pa
-              }
+          Leaf
+            { _leafAtomicity = Atom,
+              _leafExpr = ApeLeafPatternArg pa
+            }
     | otherwise = toApe (pa ^. patternArgPattern)
 
 instance IsApe PatternPostfixApp ApeLeaf where
@@ -64,10 +64,10 @@ instance IsApe PatternInfixApp ApeLeaf where
 instance IsApe ScopedIden ApeLeaf where
   toApe iden =
     ApeLeaf
-       Leaf
-          { _leafAtomicity = Atom,
-            _leafExpr = ApeLeafExpression (ExpressionIdentifier iden)
-          }
+      Leaf
+        { _leafAtomicity = Atom,
+          _leafExpr = ApeLeafExpression (ExpressionIdentifier iden)
+        }
 
 toApeIdentifierType :: forall s. (SingI s) => IdentifierType s -> Ape ApeLeaf
 toApeIdentifierType = case sing :: SStage s of
