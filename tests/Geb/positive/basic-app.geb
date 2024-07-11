@@ -1,9 +1,0 @@
-(app
-  (lamb
-    (list
-      int)
-    (index 0))
-  (list
-    (plus
-      (bit-choice 1000)
-      (bit-choice 2000))))

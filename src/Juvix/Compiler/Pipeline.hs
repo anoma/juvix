@@ -14,7 +14,6 @@ import Juvix.Compiler.Asm.Translation.FromTree qualified as Asm
 import Juvix.Compiler.Backend qualified as Backend
 import Juvix.Compiler.Backend.C qualified as C
 import Juvix.Compiler.Backend.Cairo qualified as Cairo
-import Juvix.Compiler.Backend.Geb qualified as Geb
 import Juvix.Compiler.Backend.Isabelle.Data.Result qualified as Isabelle
 import Juvix.Compiler.Backend.Isabelle.Translation.FromTyped qualified as Isabelle
 import Juvix.Compiler.Backend.Rust.Translation.FromReg qualified as Rust
@@ -198,13 +197,6 @@ upToVampIR ::
 upToVampIR =
   upToStoredCore >>= \Core.CoreResult {..} -> storedCoreToVampIR _coreResultModule
 
-upToGeb ::
-  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError] r) =>
-  Geb.ResultSpec ->
-  Sem r Geb.Result
-upToGeb spec =
-  upToStoredCore >>= \Core.CoreResult {..} -> storedCoreToGeb spec _coreResultModule
-
 upToAnoma ::
   (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError] r) =>
   Sem r NockmaTree.AnomaResult
@@ -265,9 +257,6 @@ storedCoreToCasm = local (set entryPointFieldSize cairoFieldSize) . storedCoreTo
 storedCoreToCairo :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Cairo.Result
 storedCoreToCairo = storedCoreToCasm >=> casmToCairo
 
-storedCoreToGeb :: (Members '[Error JuvixError, Reader EntryPoint] r) => Geb.ResultSpec -> Core.Module -> Sem r Geb.Result
-storedCoreToGeb spec = Core.toGeb >=> return . uncurry (Geb.toResult spec) . Geb.fromCore . Core.computeCombinedInfoTable
-
 storedCoreToVampIR :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r VampIR.Result
 storedCoreToVampIR = Core.toVampIR >=> VampIR.fromCore . Core.computeCombinedInfoTable
 
@@ -301,9 +290,6 @@ coreToRiscZeroRust = Core.toStored >=> storedCoreToRiscZeroRust
 
 coreToMiniC :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r C.MiniCResult
 coreToMiniC = coreToAsm >=> asmToMiniC
-
-coreToGeb :: (Members '[Error JuvixError, Reader EntryPoint] r) => Geb.ResultSpec -> Core.Module -> Sem r Geb.Result
-coreToGeb spec = Core.toStored >=> storedCoreToGeb spec
 
 coreToVampIR :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r VampIR.Result
 coreToVampIR = Core.toStored >=> storedCoreToVampIR

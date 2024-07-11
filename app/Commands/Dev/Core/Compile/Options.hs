@@ -15,7 +15,6 @@ coreSupportedTargets =
   NonEmpty.fromList
     [ AppTargetNative64,
       AppTargetWasm32Wasi,
-      AppTargetGeb,
       AppTargetVampIR,
       AppTargetTree,
       AppTargetAsm,

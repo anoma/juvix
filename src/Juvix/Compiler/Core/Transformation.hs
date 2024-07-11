@@ -16,7 +16,6 @@ import Juvix.Compiler.Core.Transformation.Base
 import Juvix.Compiler.Core.Transformation.Check.Anoma
 import Juvix.Compiler.Core.Transformation.Check.Cairo
 import Juvix.Compiler.Core.Transformation.Check.Exec
-import Juvix.Compiler.Core.Transformation.Check.Geb
 import Juvix.Compiler.Core.Transformation.Check.Rust
 import Juvix.Compiler.Core.Transformation.Check.VampIR
 import Juvix.Compiler.Core.Transformation.CombineInfoTables (combineInfoTables)
@@ -44,7 +43,6 @@ import Juvix.Compiler.Core.Transformation.Optimize.LetFolding
 import Juvix.Compiler.Core.Transformation.Optimize.MandatoryInlining
 import Juvix.Compiler.Core.Transformation.Optimize.Phase.Eval qualified as Phase.Eval
 import Juvix.Compiler.Core.Transformation.Optimize.Phase.Exec qualified as Phase.Exec
-import Juvix.Compiler.Core.Transformation.Optimize.Phase.Geb qualified as Phase.Geb
 import Juvix.Compiler.Core.Transformation.Optimize.Phase.Main qualified as Phase.Main
 import Juvix.Compiler.Core.Transformation.Optimize.Phase.VampIR qualified as Phase.VampIR
 import Juvix.Compiler.Core.Transformation.Optimize.SimplifyComparisons (simplifyComparisons)
@@ -80,7 +78,6 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
       EtaExpandApps -> return . etaExpansionApps
       DisambiguateNames -> return . disambiguateNames
       CombineInfoTables -> return . combineInfoTables
-      CheckGeb -> mapError (JuvixError @CoreError) . checkGeb
       CheckExec -> mapError (JuvixError @CoreError) . checkExec
       CheckRust -> mapError (JuvixError @CoreError) . checkRust
       CheckVampIR -> mapError (JuvixError @CoreError) . checkVampIR
@@ -102,6 +99,5 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
       FilterUnreachable -> return . filterUnreachable
       OptPhaseEval -> Phase.Eval.optimize
       OptPhaseExec -> Phase.Exec.optimize
-      OptPhaseGeb -> Phase.Geb.optimize
       OptPhaseVampIR -> Phase.VampIR.optimize
       OptPhaseMain -> Phase.Main.optimize

@@ -10,7 +10,6 @@ import Commands.Dev.Casm qualified as Casm
 import Commands.Dev.Core qualified as Core
 import Commands.Dev.DevCompile qualified as DevCompile
 import Commands.Dev.DisplayRoot qualified as DisplayRoot
-import Commands.Dev.Geb qualified as Geb
 import Commands.Dev.Highlight qualified as Highlight
 import Commands.Dev.ImportTree qualified as ImportTree
 import Commands.Dev.Internal qualified as Internal
@@ -35,7 +34,6 @@ runCommand = \case
   Internal opts -> Internal.runCommand opts
   Termination opts -> Termination.runCommand opts
   Core opts -> Core.runCommand opts
-  Geb opts -> Geb.runCommand opts
   Asm opts -> Asm.runCommand opts
   Reg opts -> Reg.runCommand opts
   Tree opts -> Tree.runCommand opts
