@@ -66,6 +66,11 @@ data PragmaIsabelleOperator = PragmaIsabelleOperator
   }
   deriving stock (Show, Eq, Ord, Data, Generic)
 
+newtype PragmaIsabelleFunction = PragmaIsabelleFunction
+  { _pragmaIsabelleFunctionName :: Text
+  }
+  deriving stock (Show, Eq, Ord, Data, Generic)
+
 data Pragmas = Pragmas
   { _pragmasInline :: Maybe PragmaInline,
     _pragmasUnroll :: Maybe PragmaUnroll,
@@ -76,7 +81,8 @@ data Pragmas = Pragmas
     _pragmasSpecialiseArgs :: Maybe PragmaSpecialiseArgs,
     _pragmasSpecialiseBy :: Maybe PragmaSpecialiseBy,
     _pragmasEval :: Maybe PragmaEval,
-    _pragmasIsabelleOperator :: Maybe PragmaIsabelleOperator
+    _pragmasIsabelleOperator :: Maybe PragmaIsabelleOperator,
+    _pragmasIsabelleFunction :: Maybe PragmaIsabelleFunction
   }
   deriving stock (Show, Eq, Ord, Data, Generic)
 
@@ -87,6 +93,8 @@ makeLenses ''PragmaFormat
 makeLenses ''PragmaSpecialiseArgs
 makeLenses ''PragmaSpecialiseBy
 makeLenses ''PragmaEval
+makeLenses ''PragmaIsabelleOperator
+makeLenses ''PragmaIsabelleFunction
 makeLenses ''Pragmas
 
 instance Hashable PragmaInline
@@ -110,6 +118,8 @@ instance Hashable PragmaSpecialiseBy
 instance Hashable PragmaEval
 
 instance Hashable PragmaIsabelleOperator
+
+instance Hashable PragmaIsabelleFunction
 
 instance Hashable Pragmas
 
@@ -157,6 +167,10 @@ instance Serialize PragmaIsabelleOperator
 
 instance NFData PragmaIsabelleOperator
 
+instance Serialize PragmaIsabelleFunction
+
+instance NFData PragmaIsabelleFunction
+
 instance Serialize Pragmas
 
 instance NFData Pragmas
@@ -186,6 +200,7 @@ instance FromJSON Pragmas where
         let _pragmasSpecialiseBy = specby <|> specby'
         _pragmasEval <- keyMay "eval" parseEval
         _pragmasIsabelleOperator <- keyMay "isabelle-operator" parseIsabelleOperator
+        _pragmasIsabelleFunction <- keyMay "isabelle-function" parseIsabelleFunction
         return Pragmas {..}
 
       parseInline :: Parse YamlError PragmaInline
@@ -253,6 +268,11 @@ instance FromJSON Pragmas where
           "none" -> return AssocNone
           _ -> throwCustomError "unknown associativity"
 
+      parseIsabelleFunction :: Parse YamlError PragmaIsabelleFunction
+      parseIsabelleFunction = do
+        _pragmaIsabelleFunctionName <- key "name" asText
+        return PragmaIsabelleFunction {..}
+
       parseSpecialiseArg :: Parse YamlError PragmaSpecialiseArg
       parseSpecialiseArg =
         (SpecialiseArgNum <$> asIntegral)
@@ -295,7 +315,8 @@ instance Semigroup Pragmas where
         _pragmasSpecialise = p2 ^. pragmasSpecialise <|> p1 ^. pragmasSpecialise,
         _pragmasSpecialiseArgs = p2 ^. pragmasSpecialiseArgs <|> p1 ^. pragmasSpecialiseArgs,
         _pragmasSpecialiseBy = p2 ^. pragmasSpecialiseBy <|> p1 ^. pragmasSpecialiseBy,
-        _pragmasIsabelleOperator = p2 ^. pragmasIsabelleOperator
+        _pragmasIsabelleOperator = p2 ^. pragmasIsabelleOperator,
+        _pragmasIsabelleFunction = p2 ^. pragmasIsabelleFunction
       }
 
 instance Monoid Pragmas where
@@ -310,7 +331,8 @@ instance Monoid Pragmas where
         _pragmasSpecialiseArgs = Nothing,
         _pragmasSpecialiseBy = Nothing,
         _pragmasEval = Nothing,
-        _pragmasIsabelleOperator = Nothing
+        _pragmasIsabelleOperator = Nothing,
+        _pragmasIsabelleFunction = Nothing
       }
 
 adjustPragmaInline :: Int -> PragmaInline -> PragmaInline

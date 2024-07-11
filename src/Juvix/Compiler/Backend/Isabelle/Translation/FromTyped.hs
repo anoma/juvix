@@ -128,27 +128,28 @@ goModule onlyTypes infoTable Internal.Module {..} =
       Internal.ExpressionUniverse {} ->
         StmtSynonym
           Synonym
-            { _synonymName = name,
+            { _synonymName = name',
               _synonymType = goType $ fromMaybe (error "unsupported axiomatic type") body
             }
       _
         | isFunction argnames ty body ->
             StmtFunction
               Function
-                { _functionName = name,
+                { _functionName = name',
                   _functionType = goType ty,
                   _functionClauses = goBody argnames ty body
                 }
         | otherwise ->
             StmtDefinition
               Definition
-                { _definitionName = name,
+                { _definitionName = name',
                   _definitionType = goType ty,
                   _definitionBody = maybe ExprUndefined goExpression' body
                 }
-        where
-          argnames =
-            map (overNameText quote) $ filterTypeArgs 0 ty $ map (fromMaybe (defaultName "_") . (^. Internal.argInfoName)) argsInfo
+      where
+        argnames =
+          map (overNameText quote) $ filterTypeArgs 0 ty $ map (fromMaybe (defaultName "_") . (^. Internal.argInfoName)) argsInfo
+        name' = overNameText quote name
 
     isFunction :: [Name] -> Internal.Expression -> Maybe Internal.Expression -> Bool
     isFunction argnames ty = \case
@@ -272,11 +273,17 @@ goModule onlyTypes infoTable Internal.Module {..} =
               setNameText "None" name
             Just Internal.BuiltinMaybeJust ->
               setNameText "Some" name
-            _ -> name
-        Nothing -> name
+            _ -> overNameText quote name
+        Nothing -> overNameText quote name
 
     goFunName :: Name -> Name
-    goFunName name = name
+    goFunName name =
+      case HashMap.lookup name (infoTable ^. Internal.infoFunctions) of
+        Just funInfo ->
+          case funInfo ^. Internal.functionInfoPragmas . pragmasIsabelleFunction of
+            Just PragmaIsabelleFunction {..} -> setNameText _pragmaIsabelleFunctionName name
+            Nothing -> overNameText quote name
+        Nothing -> overNameText quote name
 
     lookupName :: forall r. (Member (Reader NameMap) r) => Name -> Sem r Name
     lookupName name = do
@@ -839,14 +846,17 @@ goModule onlyTypes infoTable Internal.Module {..} =
         $ name
 
     disambiguate :: HashSet Text -> Text -> Text
-    disambiguate binders name
+    disambiguate binders = disambiguate' binders . quote
+
+    disambiguate' :: HashSet Text -> Text -> Text
+    disambiguate' binders name
       | name == "?" || name == "" || name == "_" =
-          disambiguate binders "X"
+          disambiguate' binders "X"
       | HashSet.member name binders
           || HashSet.member name names =
-          disambiguate binders (prime (quote name))
+          disambiguate' binders (prime name)
       | otherwise =
-          quote name
+          name
 
     names :: HashSet Text
     names =
