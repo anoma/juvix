@@ -242,7 +242,23 @@ letFixity =
 consFixity :: Fixity
 consFixity =
   Fixity
-    { _fixityPrecedence = PrecNat 20,
+    { _fixityPrecedence = PrecNat 80,
+      _fixityArity = OpBinary AssocRight,
+      _fixityId = Nothing
+    }
+
+andFixity :: Fixity
+andFixity =
+  Fixity
+    { _fixityPrecedence = PrecNat 35,
+      _fixityArity = OpBinary AssocRight,
+      _fixityId = Nothing
+    }
+
+orFixity :: Fixity
+orFixity =
+  Fixity
+    { _fixityPrecedence = PrecNat 30,
       _fixityArity = OpBinary AssocRight,
       _fixityId = Nothing
     }

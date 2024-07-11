@@ -339,6 +339,17 @@ goModule onlyTypes infoTable Internal.Module {..} =
               br1' <- goExpression br1
               br2' <- goExpression br2
               return $ ExprIf $ If val' br1' br2'
+          | Just (op, fixity, arg1, arg2) <- getBoolOperator app = do
+              arg1' <- goExpression arg1
+              arg2' <- goExpression arg2
+              return $
+                ExprBinop
+                  Binop
+                    { _binopOperator = op,
+                      _binopLeft = arg1',
+                      _binopRight = arg2',
+                      _binopFixity = fixity
+                    }
           | Just (x, y) <- getPair app = do
               x' <- goExpression x
               y' <- goExpression y
@@ -458,6 +469,24 @@ goModule onlyTypes infoTable Internal.Module {..} =
                   Just Internal.BuiltinBoolIf
                     | (_ :| [val, br1, br2]) <- args ->
                         Just (val, br1, br2)
+                  _ -> Nothing
+              Nothing -> Nothing
+          _ -> Nothing
+          where
+            (fn, args) = Internal.unfoldApplication app
+
+        getBoolOperator :: Internal.Application -> Maybe (Name, Fixity, Internal.Expression, Internal.Expression)
+        getBoolOperator app = case fn of
+          Internal.ExpressionIden (Internal.IdenFunction name) ->
+            case HashMap.lookup name (infoTable ^. Internal.infoFunctions) of
+              Just funInfo ->
+                case funInfo ^. Internal.functionInfoBuiltin of
+                  Just Internal.BuiltinBoolAnd
+                    | (arg1 :| [arg2]) <- args ->
+                        Just (defaultName "∧", andFixity, arg1, arg2)
+                  Just Internal.BuiltinBoolOr
+                    | (arg1 :| [arg2]) <- args ->
+                        Just (defaultName "∨", orFixity, arg1, arg2)
                   _ -> Nothing
               Nothing -> Nothing
           _ -> Nothing
