@@ -71,6 +71,11 @@ type family ModuleIdType s t = res where
   ModuleIdType 'Scoped 'ModuleLocal = ()
   ModuleIdType 'Scoped 'ModuleTop = ModuleId
 
+type PunSymbolType :: Stage -> GHCType
+type family PunSymbolType s = res | res -> s where
+  PunSymbolType 'Parsed = ()
+  PunSymbolType 'Scoped = ScopedIden
+
 type SymbolType :: Stage -> GHCType
 type family SymbolType s = res | res -> s where
   SymbolType 'Parsed = Symbol
@@ -2304,8 +2309,35 @@ deriving stock instance Ord (NamedArgumentFunctionDef 'Parsed)
 
 deriving stock instance Ord (NamedArgumentFunctionDef 'Scoped)
 
-newtype NamedArgumentNew (s :: Stage)
+data NamedArgumentPun (s :: Stage) = NamedArgumentPun
+  { _namedArgumentPunSymbol :: SymbolType s,
+    _namedArgumentReferencedSymbol :: PunSymbolType s
+  }
+  deriving stock (Generic)
+
+instance Serialize (NamedArgumentPun 'Scoped)
+
+instance NFData (NamedArgumentPun 'Scoped)
+
+instance Serialize (NamedArgumentPun 'Parsed)
+
+instance NFData (NamedArgumentPun 'Parsed)
+
+deriving stock instance Show (NamedArgumentPun 'Parsed)
+
+deriving stock instance Show (NamedArgumentPun 'Scoped)
+
+deriving stock instance Eq (NamedArgumentPun 'Parsed)
+
+deriving stock instance Eq (NamedArgumentPun 'Scoped)
+
+deriving stock instance Ord (NamedArgumentPun 'Parsed)
+
+deriving stock instance Ord (NamedArgumentPun 'Scoped)
+
+data NamedArgumentNew (s :: Stage)
   = NamedArgumentNewFunction (NamedArgumentFunctionDef s)
+  | NamedArgumentItemPun (NamedArgumentPun s)
   deriving stock (Generic)
 
 instance Serialize (NamedArgumentNew 'Scoped)
@@ -2628,6 +2660,7 @@ deriving stock instance Ord (JudocAtom 'Scoped)
 
 makeLenses ''SideIfs
 makeLenses ''NamedArgumentFunctionDef
+makeLenses ''NamedArgumentPun
 makeLenses ''IsExhaustive
 makeLenses ''SideIfBranch
 makeLenses ''RhsExpression
@@ -2938,6 +2971,9 @@ instance HasLoc (List s) where
 instance (SingI s) => HasLoc (NamedApplication s) where
   getLoc NamedApplication {..} = getLocIdentifierType _namedAppName <> getLoc (last _namedAppArgs)
 
+instance (SingI s) => HasLoc (NamedArgumentPun s) where
+  getLoc NamedArgumentPun {..} = getLocSymbolType _namedArgumentPunSymbol
+
 instance (SingI s) => HasLoc (NamedApplicationNew s) where
   getLoc NamedApplicationNew {..} = getLocIdentifierType _namedApplicationNewName
 
@@ -3223,8 +3259,9 @@ _RecordStatementField f x = case x of
   RecordStatementField p -> RecordStatementField <$> f p
   _ -> pure x
 
-namedArgumentNewSymbol :: Lens' (NamedArgumentNew s) (SymbolType s)
+namedArgumentNewSymbol :: Lens' (NamedArgumentNew 'Parsed) Symbol
 namedArgumentNewSymbol f = \case
+  NamedArgumentItemPun a -> NamedArgumentItemPun <$> namedArgumentPunSymbol f a
   NamedArgumentNewFunction a ->
     NamedArgumentNewFunction
       <$> (namedArgumentFunctionDef . signName) f a

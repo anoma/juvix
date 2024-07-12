@@ -983,11 +983,25 @@ pnamedArgumentFunctionDef = do
       { _namedArgumentFunctionDef = fun
       }
 
+pnamedArgumentItemPun ::
+  forall r.
+  (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) =>
+  ParsecS r (NamedArgumentPun 'Parsed)
+pnamedArgumentItemPun = do
+  sym <- symbol
+  return
+    NamedArgumentPun
+      { _namedArgumentPunSymbol = sym,
+        _namedArgumentReferencedSymbol = ()
+      }
+
 namedArgumentNew ::
   forall r.
   (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) =>
   ParsecS r (NamedArgumentNew 'Parsed)
-namedArgumentNew = NamedArgumentNewFunction <$> pnamedArgumentFunctionDef
+namedArgumentNew =
+  P.try (NamedArgumentItemPun <$> pnamedArgumentItemPun)
+    <|> NamedArgumentNewFunction <$> pnamedArgumentFunctionDef
 
 pisExhaustive ::
   forall r.
