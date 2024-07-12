@@ -1563,8 +1563,8 @@ checkSections sec = topBindings helper
                                 failMaybe $
                                   mkRec
                                     ^? constructorRhs
-                                      . _ConstructorRhsRecord
-                                      . to mkRecordNameSignature
+                                    . _ConstructorRhsRecord
+                                    . to mkRecordNameSignature
                               let info =
                                     RecordInfo
                                       { _recordInfoSignature = fs,
