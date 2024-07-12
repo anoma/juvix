@@ -88,5 +88,8 @@ ExceptT-MonadError
       mkExceptT (MMonad.return (left err))
   };
 
-runExcept {Err A} {M : Type -> Type} : ExceptT Err M A -> M (Either Err A)
- | (mkExceptT x) := x;
+runExcept
+  {Err A}
+  {M : Type -> Type}
+  : ExceptT Err M A -> M (Either Err A)
+  | (mkExceptT x) := x;

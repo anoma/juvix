@@ -12,10 +12,16 @@ trait
 type T2 A := mkT2 {pp : A → A};
 
 instance
-unitT1 : T1 Unit := mkT1 (pp := λ {_ := unit});
+unitT1 : T1 Unit :=
+  mkT1@{
+    pp := λ {_ := unit}
+  };
 
 instance
-unitT2 : T2 Unit := mkT2 (pp := λ {_ := unit});
+unitT2 : T2 Unit :=
+  mkT2@{
+    pp := λ {_ := unit}
+  };
 
 coercion instance
 fromT1toT {A} {{T1 A}} : T A :=

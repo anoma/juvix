@@ -20,24 +20,49 @@ mkOrdHelper
   (cmp : A -> A -> Ordering)
   {lt : A -> A -> Bool := λ {a b := isLT (cmp a b)}}
   {gt : A -> A -> Bool := λ {a b := isGT (cmp a b)}}
-  : Ord A :=
-  mkOrd cmp lt gt;
+  : Ord A := mkOrd cmp lt gt;
 
 instance
-ordNat : Ord Nat := mkOrdHelper@{
-  cmp (x y : Nat) : Ordering := Ord.compare x y
-};
+ordNat : Ord Nat :=
+  mkOrdHelper@{
+    cmp (x y : Nat) : Ordering := Ord.compare x y
+  };
 
-fun {a : Nat := 1} {b : Nat := a + 1} {c : Nat := b + a + 1}
+fun
+  {a : Nat := 1}
+  {b : Nat := a + 1}
+  {c : Nat := b + a + 1}
   : Nat := a * b + c;
 
-f {a : Nat := 2} {b : Nat := a + 1} {c : Nat} : Nat := a * b * c;
+f {a : Nat := 2} {b : Nat := a + 1} {c : Nat} : Nat :=
+  a * b * c;
 
-g {a : Nat := 2} {b : Nat := a + 1} (c : Nat) : Nat := a * b * c;
+g {a : Nat := 2} {b : Nat := a + 1} (c : Nat) : Nat :=
+  a * b * c;
 
-h {a : Nat := 2} (b c : Nat) {d : Nat := 3} : Nat := a * b + c * d;
+h {a : Nat := 2} (b c : Nat) {d : Nat := 3} : Nat :=
+  a * b + c * d;
 
 main : Nat :=
-  fun@{a := fun; b := fun@{b := 3} * fun@{b := fun {2}}} +
-  f@{c := 5} + g@?{b := 4} 3 + ite (Ord.lt 1 0) 1 0 +
-  h@?{b := 4} 1;
+  fun@{
+      a := fun;
+      b :=
+        fun@{
+            b := 3
+          }
+          * fun@{
+            b := fun {2}
+          }
+    }
+    + f@{
+      c := 5
+    }
+    + g@?{
+        b := 4
+      }
+      3
+    + ite (Ord.lt 1 0) 1 0
+    + h@?{
+        b := 4
+      }
+      1;

@@ -5,7 +5,7 @@ module Juvix.Compiler.Concrete.Gen
 where
 
 import Juvix.Compiler.Concrete.Keywords
-import Juvix.Compiler.Concrete.Language
+import Juvix.Compiler.Concrete.Language.Base
 import Juvix.Prelude
 
 kw :: (Members '[Reader Interval] r) => Keyword -> Sem r KeywordRef
@@ -18,6 +18,22 @@ kw k = do
         _keywordRefInterval = loc
       }
 
+simplestFunctionDef :: FunctionName s -> ExpressionType s -> FunctionDef s
+simplestFunctionDef funName funBody =
+  FunctionDef
+    { _signName = funName,
+      _signBody = SigBodyExpression funBody,
+      _signColonKw = Irrelevant Nothing,
+      _signArgs = [],
+      _signRetType = Nothing,
+      _signDoc = Nothing,
+      _signPragmas = Nothing,
+      _signBuiltin = Nothing,
+      _signTerminating = Nothing,
+      _signInstance = Nothing,
+      _signCoercion = Nothing
+    }
+
 smallUniverseExpression :: forall s r. (SingI s) => (Members '[Reader Interval] r) => Sem r (ExpressionType s)
 smallUniverseExpression = do
   loc <- ask @Interval
@@ -29,6 +45,16 @@ smallUniverseExpression = do
           _expressionAtoms = pure (AtomUniverse (smallUniverse loc))
         }
 
+isExhaustive :: (Member (Reader Interval) r) => Bool -> Sem r IsExhaustive
+isExhaustive _isExhaustive = do
+  _isExhaustiveKw <-
+    Irrelevant
+      <$> if
+          | _isExhaustive -> kw kwAt
+          | otherwise -> kw kwAtQuestion
+
+  return IsExhaustive {..}
+
 symbol :: (Member (Reader Interval) r) => Text -> Sem r Symbol
 symbol t = do
   l <- ask
@@ -39,12 +65,12 @@ expressionAtoms' _expressionAtoms = do
   _expressionAtomsLoc <- Irrelevant <$> ask
   return ExpressionAtoms {..}
 
-namedArgument :: (Member (Reader Interval) r) => Text -> NonEmpty (ExpressionAtom 'Parsed) -> Sem r (NamedArgument 'Parsed)
+namedArgument :: (Member (Reader Interval) r) => Text -> NonEmpty (ExpressionAtom 'Parsed) -> Sem r (NamedArgumentAssign 'Parsed)
 namedArgument n as = do
   _namedArgValue <- expressionAtoms' as
   _namedArgName <- symbol n
   _namedArgAssignKw <- Irrelevant <$> kw kwAssign
-  return NamedArgument {..}
+  return NamedArgumentAssign {..}
 
 literalString :: (Member (Reader Interval) r) => Text -> Sem r (ExpressionAtom s)
 literalString t = do
@@ -59,7 +85,7 @@ braced a = do
   l <- ask
   AtomBraces . WithLoc l <$> expressionAtoms' a
 
-argumentBlock :: (Member (Reader Interval) r) => IsImplicit -> NonEmpty (NamedArgument 'Parsed) -> Sem r (ArgumentBlock 'Parsed)
+argumentBlock :: (Member (Reader Interval) r) => IsImplicit -> NonEmpty (NamedArgumentAssign 'Parsed) -> Sem r (ArgumentBlock 'Parsed)
 argumentBlock i as = do
   parenL <- kw delimL
   parenR <- kw delimR
@@ -109,5 +135,8 @@ mkList as = do
           }
     )
 
-functionDefExpression :: (Member (Reader Interval) r) => NonEmpty (ExpressionAtom 'Parsed) -> Sem r (FunctionDefBody 'Parsed)
+functionDefExpression ::
+  (Member (Reader Interval) r) =>
+  NonEmpty (ExpressionAtom 'Parsed) ->
+  Sem r (FunctionDefBody 'Parsed)
 functionDefExpression exp = SigBodyExpression <$> expressionAtoms' exp

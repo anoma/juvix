@@ -25,4 +25,3 @@ main : IO :=
     >>> printListNatLn (reverse (map (flip sub 1) (gen 10)))
     >>> printNatLn (sum 10000)
     >>> printNatLn (sum' 10000);
-

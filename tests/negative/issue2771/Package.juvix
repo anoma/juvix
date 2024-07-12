@@ -2,4 +2,7 @@ module Package;
 
 import PackageDescription.V2 open;
 
-package : Package := defaultPackage {name := "issue2771"};
+package : Package :=
+  defaultPackage@?{
+    name := "issue2771"
+  };

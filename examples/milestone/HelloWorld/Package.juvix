@@ -3,7 +3,8 @@ module Package;
 import PackageDescription.V2 open;
 
 package : Package :=
-  defaultPackage
-    {name := "HelloWorld";
-     version := mkVersion 0 1 0;
-     main := just "HelloWorld.juvix"};
+  defaultPackage@?{
+    name := "HelloWorld";
+    version := mkVersion 0 1 0;
+    main := just "HelloWorld.juvix"
+  };

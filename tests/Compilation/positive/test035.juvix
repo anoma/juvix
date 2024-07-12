@@ -55,4 +55,3 @@ main : IO :=
     >>> printNatLn (f (gen 20))
     >>> printNatLn (h 5)
     >>> printNatLn (h 3);
-

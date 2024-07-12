@@ -4,4 +4,7 @@ type T := t : T;
 
 f (a : T) : T := t;
 
-x : T := f (x := t);
+x : T :=
+  f@?{
+    x := t
+  };

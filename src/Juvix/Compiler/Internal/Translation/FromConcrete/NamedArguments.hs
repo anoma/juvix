@@ -137,7 +137,7 @@ helper loc = do
             (Implicit, Explicit) -> return mempty
             (ImplicitInstance, Explicit) -> return mempty
 
-    nextArgumentGroup :: Sem r (Maybe (IsImplicit, [NamedArgument 'Scoped], Bool))
+    nextArgumentGroup :: Sem r (Maybe (IsImplicit, [NamedArgumentAssign 'Scoped], Bool))
     nextArgumentGroup = do
       remb <- gets (^. stateRemainingArgs)
       case remb of
@@ -149,8 +149,8 @@ helper loc = do
           modify' (set stateRemainingArgs rem')
           return (Just (impl, concatMap (toList . (^. argBlockArgs)) (b : c), isLastBlock))
 
-    checkRepeated :: [NamedArgument 'Scoped] -> Sem r ()
-    checkRepeated args = whenJust (nonEmpty (findRepeated (map (^. namedArgName) args))) $ \reps ->
+    checkRepeated :: [NamedArgumentAssign 'Scoped] -> Sem r ()
+    checkRepeated args = whenJust (nonEmpty (findRepeated (map (^. namedArgName . S.nameConcrete) args))) $ \reps ->
       throw . ErrDuplicateArgument $ DuplicateArgument reps
 
     emitArgs :: IsImplicit -> Bool -> NamesByIndex -> [NameItem 'Scoped] -> IntMap Arg -> Sem r ()
@@ -231,8 +231,8 @@ helper loc = do
     scanGroup ::
       IsImplicit ->
       [NameItem 'Scoped] ->
-      [NamedArgument 'Scoped] ->
-      Sem r ([NamedArgument 'Scoped], ([NameItem 'Scoped], IntMap Arg))
+      [NamedArgumentAssign 'Scoped] ->
+      Sem r ([NamedArgumentAssign 'Scoped], ([NameItem 'Scoped], IntMap Arg))
     scanGroup impl names =
       fmap (second (first toList))
         . runOutputList
@@ -243,11 +243,11 @@ helper loc = do
         namesBySymbol :: HashMap Symbol (NameItem 'Scoped)
         namesBySymbol = HashMap.fromList [(symbolParsed (i ^. nameItemSymbol), i) | i <- names]
         go ::
-          (Members '[State (IntMap Arg), State (HashMap Symbol (NameItem 'Scoped)), State BuilderState, Output (NamedArgument 'Scoped), Error NamedArgumentsError] r') =>
-          NamedArgument 'Scoped ->
+          (Members '[State (IntMap Arg), State (HashMap Symbol (NameItem 'Scoped)), State BuilderState, Output (NamedArgumentAssign 'Scoped), Error NamedArgumentsError] r') =>
+          NamedArgumentAssign 'Scoped ->
           Sem r' ()
         go arg = do
-          let sym = arg ^. namedArgName
+          let sym = arg ^. namedArgName . S.nameConcrete
           midx :: Maybe (NameItem 'Scoped) <- gets @(HashMap Symbol (NameItem 'Scoped)) (^. at sym)
           case midx of
             Just idx -> do

@@ -21,4 +21,3 @@ j : Nat → Nat → Nat := g';
 k : Nat → Nat → Nat → Nat := expand j;
 
 main : IO := printNatLn (h 13 + j 2 3 + k 9 4 7);
-

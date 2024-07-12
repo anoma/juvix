@@ -11,4 +11,7 @@ ppBox {A} {{T A}} : Box A → Box A
   | (box x) := box (T.pp x);
 
 instance
-boxT {A} {{T A}} : T (Box A) := mkT (pp := ppBox);
+boxT {A} {{T A}} : T (Box A) :=
+  mkT@{
+    pp := ppBox
+  };

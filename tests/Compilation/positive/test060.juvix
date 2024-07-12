@@ -33,11 +33,10 @@ main : Triple Nat Nat Nat :=
       (@Triple{fst := fst * 10});
   in if
     | mf
-        mkPair@{
-          fst := mkPair true nil;
-          snd := 0 :: nil
-        } :=
-      (f p')
+      mkPair@{
+        fst := mkPair true nil;
+        snd := 0 :: nil
+      } := f p'
     | else :=
       mkTriple@{
         fst := 0;

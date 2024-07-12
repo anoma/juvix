@@ -19,7 +19,8 @@ Reader-Monad {R : Type} : Monad (Reader R) :=
     functor := Reader-Functor;
     return {A : Type} (a : A) : Reader R A :=
       mkReader (const a);
-    >>= {A B : Type}
+    >>=
+      {A B : Type}
       : Reader R A -> (A -> Reader R B) -> Reader R B
       | (mkReader ra) arb :=
         let
