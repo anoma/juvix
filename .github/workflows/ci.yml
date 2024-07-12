@@ -145,7 +145,7 @@ jobs:
         shell: bash
         run: |
           cargo install cargo-binstall@1.6.9 --force
-          cargo binstall cargo-risczero@1.0.1 --no-confirm --force
+          cargo binstall cargo-risczero@1.0.2 --no-confirm --force
           cargo risczero install
 
       - name: Checkout CairoVM
@@ -360,8 +360,8 @@ jobs:
       - name: Install RISC0 VM
         shell: bash
         run: |
-          cargo install cargo-binstall
-          cargo binstall cargo-risczero@1.0.1 --no-confirm --rate-limit 1/10
+          cargo install cargo-binstall@1.6.9 --force
+          cargo binstall cargo-risczero@1.0.2 --no-confirm --force
           cargo risczero install
 
       - name: Checkout CairoVM
