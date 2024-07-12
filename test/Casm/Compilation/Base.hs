@@ -1,4 +1,8 @@
-module Casm.Compilation.Base where
+module Casm.Compilation.Base
+  ( module Casm.Compilation.Base,
+    cairoVmPrecondition,
+  )
+where
 
 import Base
 import Casm.Run.Base

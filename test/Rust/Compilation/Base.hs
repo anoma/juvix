@@ -7,6 +7,10 @@ import Juvix.Compiler.Backend.Rust.Pretty
 import Juvix.Compiler.Core qualified as Core
 import System.Process qualified as P
 
+precondition :: Assertion
+precondition = do
+  assertCmdExists $(mkRelFile "rustc")
+
 compileAssertion ::
   Path Abs Dir ->
   Int ->
@@ -26,9 +30,6 @@ compileAssertion root' optLevel mainFile expectedFile step = do
         ( \dirPath -> do
             let inputFile = dirPath <//> $(mkRelFile "Program.rs")
             writeFileEnsureLn inputFile _resultRustCode
-
-            step "Check rustc is on path"
-            assertCmdExists $(mkRelFile "rustc")
 
             expected <- readFile expectedFile
 

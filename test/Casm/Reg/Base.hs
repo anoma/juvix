@@ -13,7 +13,7 @@ import Reg.Run.Base qualified as Reg
 compileAssertion' :: EntryPoint -> Maybe (Path Abs File) -> Path Abs Dir -> Path Abs File -> Symbol -> Reg.InfoTable -> (String -> IO ()) -> Assertion
 compileAssertion' entryPoint inputFile _ outputFile _ tab step = do
   step "Translate to CASM"
-  case run $ runError @JuvixError $ runReader entryPoint $ regToCasm tab of
+  case run . runError @JuvixError . runReader entryPoint $ regToCasm tab of
     Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
     Right Result {..} -> do
       step "Interpret"
@@ -30,7 +30,7 @@ compileAssertion' entryPoint inputFile _ outputFile _ tab step = do
 cairoAssertion' :: EntryPoint -> Maybe (Path Abs File) -> Path Abs Dir -> Path Abs File -> Symbol -> Reg.InfoTable -> (String -> IO ()) -> Assertion
 cairoAssertion' entryPoint inputFile dirPath outputFile _ tab step = do
   step "Translate to Cairo"
-  case run $ runError @JuvixError $ runReader entryPoint $ regToCairo tab of
+  case run . runError @JuvixError . runReader entryPoint $ regToCairo tab of
     Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
     Right res -> do
       step "Serialize to Cairo bytecode"

@@ -10,6 +10,11 @@ import System.Directory
 import System.Environment
 import System.Process qualified as P
 
+precondition :: Assertion
+precondition = do
+  assertCmdExists $(mkRelFile "cargo")
+  assertCmdExists $(mkRelFile "r0vm")
+
 compileAssertion ::
   IO (Path Abs Dir) ->
   Path Abs Dir ->
@@ -40,12 +45,6 @@ compileAssertion tmpDir' root' optLevel mainFile expectedFile step = do
               <//> $(mkRelDir "src")
               <//> $(mkRelFile "main.rs")
       writeFileEnsureLn outFile _resultRustCode
-
-      step "Check cargo is on path"
-      assertCmdExists $(mkRelFile "cargo")
-
-      step "Check r0vm is on path"
-      assertCmdExists $(mkRelFile "r0vm")
 
       expected <- readFile expectedFile
 

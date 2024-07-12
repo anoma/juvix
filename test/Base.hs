@@ -10,6 +10,7 @@ module Base
   )
 where
 
+import Control.Exception qualified as E
 import Control.Monad.Extra as Monad
 import Data.Algorithm.Diff
 import Data.Algorithm.DiffOutput
@@ -59,6 +60,11 @@ mkTest :: TestDescr -> TestTree
 mkTest TestDescr {..} = case _testAssertion of
   Single assertion -> testCase _testName (withCurrentDir _testRoot assertion)
   Steps steps -> testCaseSteps _testName (withCurrentDir _testRoot . steps)
+
+withPrecondition :: Assertion -> IO TestTree -> IO TestTree
+withPrecondition assertion ifSuccess = do
+  E.catch (assertion >> ifSuccess) $ \case
+    E.SomeException e -> return (testCase "Precondition failed" (assertFailure (show e)))
 
 assertEqDiffText :: String -> Text -> Text -> Assertion
 assertEqDiffText = assertEqDiff unpack

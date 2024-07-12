@@ -31,17 +31,22 @@ toTestDescr optLevel PosTest {..} =
           _testAssertion = Steps $ compileAssertion _dir _interp _runVM optLevel file' input' expected'
         }
 
-allTests :: TestTree
-allTests =
-  testGroup
-    "Juvix to CASM positive tests"
-    (map (mkTest . toTestDescr 3) tests)
+mkAllTests :: String -> Int -> IO TestTree
+mkAllTests title optimLevel = do
+  let (vmTests, nonVmTests) = partition (^. runVM) tests
+      vmGroup = testGroup "With VM" (mkTest . toTestDescr optimLevel <$> vmTests)
+  vmTestTree <- withPrecondition cairoVmPrecondition (return vmGroup)
+  let nonVmTestTree = testGroup "Without VM" (mkTest . toTestDescr optimLevel <$> nonVmTests)
+  return $
+    testGroup
+      title
+      [vmTestTree, nonVmTestTree]
 
-allTestsNoOptimize :: TestTree
-allTestsNoOptimize =
-  testGroup
-    "Juvix to CASM positive tests (no optimization)"
-    (map (mkTest . toTestDescr 0) tests)
+allTests :: IO TestTree
+allTests = mkAllTests "CASM run positive tests" 3
+
+allTestsNoOptimize :: IO TestTree
+allTestsNoOptimize = mkAllTests "Juvix to CASM positive tests (no optimization)" 0
 
 posTest :: String -> Bool -> Bool -> Path Rel Dir -> Path Rel File -> Maybe (Path Rel File) -> Path Rel File -> PosTest
 posTest _name _interp _runVM rdir rfile rinfile routfile =
