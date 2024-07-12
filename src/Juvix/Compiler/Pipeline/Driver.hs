@@ -4,6 +4,7 @@ module Juvix.Compiler.Pipeline.Driver
     JvoCache,
     evalJvoCache,
     processFileUpTo,
+    processProject,
     evalModuleInfoCache,
     evalModuleInfoCacheSetup,
     processFileToStoredCore,
@@ -37,6 +38,7 @@ import Juvix.Compiler.Pipeline.Loader.PathResolver
 import Juvix.Compiler.Pipeline.ModuleInfoCache
 import Juvix.Compiler.Store.Core.Extra
 import Juvix.Compiler.Store.Extra qualified as Store
+import Juvix.Compiler.Store.Language
 import Juvix.Compiler.Store.Language qualified as Store
 import Juvix.Compiler.Store.Options qualified as StoredModule
 import Juvix.Compiler.Store.Options qualified as StoredOptions
@@ -122,6 +124,12 @@ processModuleCacheMiss entryIx = do
       res <- processModuleToStoredCore sha256 entry
       Serialize.saveToFile absPath (res ^. pipelineResult)
       return res
+
+processProject :: (Members '[ModuleInfoCache, Reader EntryPoint, Reader ImportTree] r) => Sem r [(ImportNode, PipelineResult ModuleInfo)]
+processProject = do
+  rootDir <- asks (^. entryPointRoot)
+  nodes <- toList <$> asks (importTreeProjectNodes rootDir)
+  forWithM nodes (mkEntryIndex >=> processModule)
 
 processRecursiveUpToTyped ::
   forall r.
