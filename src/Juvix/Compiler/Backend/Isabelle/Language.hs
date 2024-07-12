@@ -77,9 +77,13 @@ data Binop = Binop
   }
 
 data Let = Let
-  { _letVar :: Name,
-    _letValue :: Expression,
+  { _letClauses :: NonEmpty LetClause,
     _letBody :: Expression
+  }
+
+data LetClause = LetClause
+  { _letClauseName :: Name,
+    _letClauseValue :: Expression
   }
 
 data If = If
@@ -132,6 +136,7 @@ data ConstrApp = ConstrApp
 
 makeLenses ''Application
 makeLenses ''Let
+makeLenses ''LetClause
 makeLenses ''If
 makeLenses ''Case
 makeLenses ''CaseBranch

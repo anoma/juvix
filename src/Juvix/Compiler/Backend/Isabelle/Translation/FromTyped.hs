@@ -290,6 +290,18 @@ goModule onlyTypes infoTable Internal.Module {..} =
       nmap <- asks (^. nameMap)
       return $ fromMaybe name $ HashMap.lookup name nmap
 
+    localName :: forall a r. (Members '[Reader NameSet, Reader NameMap] r) => Name -> Name -> Sem r a -> Sem r a
+    localName v v' =
+      local (over nameSet (HashSet.insert (v' ^. namePretty)))
+        . local (over nameMap (HashMap.insert v v'))
+
+    localNames :: forall a r. (Members '[Reader NameSet, Reader NameMap] r) => [(Name, Name)] -> Sem r a -> Sem r a
+    localNames vs e = foldl' (flip (uncurry localName)) e vs
+
+    withLocalNames :: forall a r. (Members '[Reader NameSet, Reader NameMap] r) => NameSet -> NameMap -> Sem r a -> Sem r a
+    withLocalNames nset nmap =
+      local (const nset) . local (const nmap)
+
     goExpression' :: Internal.Expression -> Expression
     goExpression' = goExpression'' (NameSet mempty) (NameMap mempty)
 
@@ -314,7 +326,8 @@ goModule onlyTypes infoTable Internal.Module {..} =
         goIden :: Internal.Iden -> Sem r Expression
         goIden iden = case iden of
           Internal.IdenFunction name -> do
-            return $ ExprIden (goFunName name)
+            name' <- lookupName name
+            return $ ExprIden (goFunName name')
           Internal.IdenConstructor name ->
             case HashMap.lookup name (infoTable ^. Internal.infoConstructors) of
               Just ctrInfo ->
@@ -556,40 +569,49 @@ goModule onlyTypes infoTable Internal.Module {..} =
 
         -- TODO: binders
         goLet :: Internal.Let -> Sem r Expression
-        goLet Internal.Let {..} = go (concatMap toFunDefs (toList _letClauses))
+        goLet Internal.Let {..} = do
+          let fdefs = concatMap toFunDefs (toList _letClauses)
+          cls <- mapM goFunDef fdefs
+          let ns = zipExact (map (^. Internal.funDefName) fdefs) (map (^. letClauseName) cls)
+          expr <- localNames ns $ goExpression _letExpression
+          return $
+            ExprLet
+              Let
+                { _letClauses = nonEmpty' cls,
+                  _letBody = expr
+                }
           where
             toFunDefs :: Internal.LetClause -> [Internal.FunctionDef]
             toFunDefs = \case
               Internal.LetFunDef d -> [d]
               Internal.LetMutualBlock Internal.MutualBlockLet {..} -> toList _mutualLet
 
-            go :: [Internal.FunctionDef] -> Sem r Expression
-            go = \case
-              d : defs' -> goFunDef d =<< go defs'
-              [] -> goExpression _letExpression
-
-            goFunDef :: Internal.FunctionDef -> Expression -> Sem r Expression
-            goFunDef Internal.FunctionDef {..} expr = do
-              val <- goExpression _funDefBody
+            goFunDef :: Internal.FunctionDef -> Sem r LetClause
+            goFunDef Internal.FunctionDef {..} = do
+              nset <- asks (^. nameSet)
+              let name' = overNameText (disambiguate nset) _funDefName
+              val <- localName _funDefName name' $ goExpression _funDefBody
               return $
-                ExprLet
-                  Let
-                    { _letVar = _funDefName,
-                      _letValue = val,
-                      _letBody = expr
-                    }
+                LetClause
+                  { _letClauseName = name',
+                    _letClauseValue = val
+                  }
 
         goUniverse :: Internal.SmallUniverse -> Sem r Expression
         goUniverse _ = return ExprUndefined
 
-        -- TODO: binders
         goSimpleLambda :: Internal.SimpleLambda -> Sem r Expression
         goSimpleLambda Internal.SimpleLambda {..} = do
-          body <- goExpression _slambdaBody
+          nset <- asks (^. nameSet)
+          let v = _slambdaBinder ^. Internal.sbinderVar
+              v' = overNameText (disambiguate nset) v
+          body <-
+            localName v v' $
+              goExpression _slambdaBody
           return $
             ExprLambda
               Lambda
-                { _lambdaVar = _slambdaBinder ^. Internal.sbinderVar,
+                { _lambdaVar = v',
                   _lambdaType = Just $ goType $ _slambdaBinder ^. Internal.sbinderType,
                   _lambdaBody = body
                 }
@@ -619,9 +641,8 @@ goModule onlyTypes infoTable Internal.Module {..} =
                 nset <- asks (^. nameSet)
                 let v' = overNameText (disambiguate nset) v
                 body <-
-                  local (over nameSet (HashSet.insert (v' ^. namePretty)))
-                    . local (over nameMap (HashMap.insert v v'))
-                    $ goLams vs
+                  localName v v' $
+                    goLams vs
                 return $
                   ExprLambda
                     Lambda
@@ -662,7 +683,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
                             { _tupleComponents = nonEmpty' pats
                             }
                   return (pat, nset, nmap)
-              body <- local (const nset) $ local (const nmap) $ goExpression _lambdaBody
+              body <- withLocalNames nset nmap $ goExpression _lambdaBody
               return $
                 CaseBranch
                   { _caseBranchPattern = pat,
@@ -683,7 +704,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
         goCaseBranch :: Internal.CaseBranch -> Sem r CaseBranch
         goCaseBranch Internal.CaseBranch {..} = do
           (pat, nset, nmap) <- goPatternArg' _caseBranchPattern
-          rhs <- local (const nset) $ local (const nmap) $ goCaseBranchRhs _caseBranchRhs
+          rhs <- withLocalNames nset nmap $ goCaseBranchRhs _caseBranchRhs
           return $
             CaseBranch
               { _caseBranchPattern = pat,
@@ -861,7 +882,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
     names :: HashSet Text
     names =
       HashSet.fromList $
-        map (^. Internal.functionInfoName . namePretty) (HashMap.elems (infoTable ^. Internal.infoFunctions))
+        map (^. Internal.functionInfoName . namePretty) (filter (not . (^. Internal.functionInfoIsLocal)) (HashMap.elems (infoTable ^. Internal.infoFunctions)))
           ++ map (^. Internal.constructorInfoName . namePretty) (HashMap.elems (infoTable ^. Internal.infoConstructors))
           ++ map (^. Internal.inductiveInfoName . namePretty) (HashMap.elems (infoTable ^. Internal.infoInductives))
           ++ map (^. Internal.axiomInfoDef . Internal.axiomName . namePretty) (HashMap.elems (infoTable ^. Internal.infoAxioms))

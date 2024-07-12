@@ -104,12 +104,17 @@ instance PrettyCode Binop where
     r <- ppRightExpression _binopFixity _binopRight
     return $ l <+> op <+> r
 
+instance PrettyCode LetClause where
+  ppCode LetClause {..} = do
+    name <- ppCode _letClauseName
+    val <- ppCode _letClauseValue
+    return $ name <+> "=" <+> align val
+
 instance PrettyCode Let where
   ppCode Let {..} = do
-    name <- ppCode _letVar
-    val <- ppCode _letValue
+    cls <- mapM ppCode _letClauses
     body <- ppCode _letBody
-    return $ align $ kwLet <> blockIndent (name <+> "=" <+> align val) <> kwIn <+> body
+    return $ align $ kwLet <> blockIndent (vsep (punctuate semi (toList cls))) <> kwIn <+> body
 
 instance PrettyCode If where
   ppCode If {..} = do

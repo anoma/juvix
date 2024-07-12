@@ -30,8 +30,8 @@ import Juvix.Compiler.Store.Internal.Data.TypesTable
 import Juvix.Compiler.Store.Internal.Language
 import Juvix.Prelude
 
-functionInfoFromFunctionDef :: FunctionDef -> FunctionInfo
-functionInfoFromFunctionDef FunctionDef {..} =
+functionInfoFromFunctionDef :: Bool -> FunctionDef -> FunctionInfo
+functionInfoFromFunctionDef isLocal FunctionDef {..} =
   FunctionInfo
     { _functionInfoName = _funDefName,
       _functionInfoType = _funDefType,
@@ -40,7 +40,8 @@ functionInfoFromFunctionDef FunctionDef {..} =
       _functionInfoCoercion = _funDefCoercion,
       _functionInfoInstance = _funDefInstance,
       _functionInfoTerminating = _funDefTerminating,
-      _functionInfoPragmas = _funDefPragmas
+      _functionInfoPragmas = _funDefPragmas,
+      _functionInfoIsLocal = isLocal
     }
 
 inductiveInfoFromInductiveDef :: InductiveDef -> InductiveInfo
@@ -62,7 +63,7 @@ extendWithReplExpression e =
     infoFunctions
     ( HashMap.union
         ( HashMap.fromList
-            [ (f ^. funDefName, functionInfoFromFunctionDef f)
+            [ (f ^. funDefName, functionInfoFromFunctionDef True f)
               | f <- letFunctionDefs e
             ]
         )
@@ -127,10 +128,10 @@ computeInternalModuleInfoTable m = InfoTable {..}
     _infoFunctions :: HashMap Name FunctionInfo
     _infoFunctions =
       HashMap.fromList $
-        [ (f ^. funDefName, functionInfoFromFunctionDef f)
+        [ (f ^. funDefName, functionInfoFromFunctionDef False f)
           | StatementFunction f <- mutuals
         ]
-          <> [ (f ^. funDefName, functionInfoFromFunctionDef f)
+          <> [ (f ^. funDefName, functionInfoFromFunctionDef True f)
                | s <- ss,
                  f <- letFunctionDefs s
              ]

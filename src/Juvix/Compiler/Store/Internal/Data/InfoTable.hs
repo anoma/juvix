@@ -26,7 +26,8 @@ data FunctionInfo = FunctionInfo
     _functionInfoCoercion :: Bool,
     _functionInfoBuiltin :: Maybe BuiltinFunction,
     _functionInfoArgsInfo :: [ArgInfo],
-    _functionInfoPragmas :: Pragmas
+    _functionInfoPragmas :: Pragmas,
+    _functionInfoIsLocal :: Bool
   }
   deriving stock (Generic)
 
