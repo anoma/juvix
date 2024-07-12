@@ -109,27 +109,27 @@ instance PrettyCode Let where
     name <- ppCode _letVar
     val <- ppCode _letValue
     body <- ppCode _letBody
-    return $ kwLet <+> name <+> "=" <+> val <+> kwIn <+> body
+    return $ align $ kwLet <> blockIndent (name <+> "=" <+> align val) <> kwIn <+> body
 
 instance PrettyCode If where
   ppCode If {..} = do
     val <- ppCode _ifValue
     br1 <- ppCode _ifBranchTrue
     br2 <- ppCode _ifBranchFalse
-    return $ kwIf <+> val <+> kwThen <+> br1 <+> kwElse <+> br2
+    return $ align $ kwIf <> oneLineOrNextBlock val <> kwThen <> oneLineOrNextBlock br1 <> kwElse <> oneLineOrNext br2
 
 instance PrettyCode Case where
   ppCode Case {..} = do
     val <- ppCode _caseValue
     brs <- toList <$> mapM ppCode _caseBranches
     let brs' = punctuate (space <> kwPipe) brs
-    return $ kwCase <+> val <+> kwOf <+> hsep brs'
+    return $ align $ kwCase <> oneLineOrNextBlock val <> kwOf <> hardline <> indent' (vsepHard brs')
 
 instance PrettyCode CaseBranch where
   ppCode CaseBranch {..} = do
     pat <- ppTopCode _caseBranchPattern
     body <- ppRightExpression caseFixity _caseBranchBody
-    return $ pat <+> arrow <+> body
+    return $ pat <+> arrow <> oneLineOrNext body
 
 instance (PrettyCode a) => PrettyCode (Tuple a) where
   ppCode Tuple {..} = do
@@ -187,7 +187,7 @@ instance PrettyCode Definition where
     n <- ppCode _definitionName
     ty <- ppCodeQuoted _definitionType
     body <- ppCode _definitionBody
-    return $ kwDefinition <+> n <+> "::" <+> ty <+> kwWhere <> line <> dquotes (n <+> "=" <+> body)
+    return $ kwDefinition <+> n <+> "::" <+> ty <+> kwWhere <> line <> indent' (dquotes (n <+> "=" <> oneLineOrNext body))
 
 instance PrettyCode Function where
   ppCode Function {..} = do
@@ -201,20 +201,20 @@ instance PrettyCode Clause where
   ppCode Clause {..} = do
     pats <- mapM ppTopCode _clausePatterns
     body <- ppTopCode _clauseBody
-    return $ hsep pats <+> "=" <+> body
+    return $ hsep pats <+> "=" <> oneLineOrNext body
 
 instance PrettyCode Synonym where
   ppCode Synonym {..} = do
     n <- ppCode _synonymName
     ty <- ppCodeQuoted _synonymType
-    return $ kwTypeSynonym <+> n <+> "=" <+> ty
+    return $ kwTypeSynonym <+> n <+> "=" <> oneLineOrNext ty
 
 instance PrettyCode Datatype where
   ppCode Datatype {..} = do
     n <- ppCode _datatypeName
     params <- ppParams _datatypeParams
     ctrs <- mapM ppCode _datatypeConstructors
-    return $ kwDatatype <+> params <?+> n <> line <> indent' ("=" <+> vsep (punctuate "|" ctrs))
+    return $ kwDatatype <+> params <?+> n <> line <> indent' ("=" <+> align (vsep (punctuate (space <> kwPipe) ctrs)))
 
 instance PrettyCode Constructor where
   ppCode Constructor {..} = do

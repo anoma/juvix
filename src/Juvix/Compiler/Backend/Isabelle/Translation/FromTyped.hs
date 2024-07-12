@@ -763,7 +763,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
                     }
 
         -- This function cannot be simply merged with `getList` because in patterns
-        -- the constructors don't get the type argument.
+        -- the constructors don't get the type arguments.
         getListPat :: Name -> [Internal.PatternArg] -> Maybe [Internal.PatternArg]
         getListPat name args =
           case HashMap.lookup name (infoTable ^. Internal.infoConstructors) of
