@@ -250,6 +250,18 @@ traverseM ::
   f (m a2)
 traverseM f = fmap join . traverse f
 
+forWith :: (Functor f) => f key -> (key -> val) -> f (key, val)
+forWith = flip mapWith
+
+forWithM :: (Traversable l, Applicative f) => l key -> (key -> f val) -> f (l (key, val))
+forWithM = flip mapWithM
+
+mapWith :: (Functor f) => (key -> val) -> f key -> f (key, val)
+mapWith f = fmap (\x -> (x, f x))
+
+mapWithM :: (Traversable l, Applicative f) => (key -> f val) -> l key -> f (l (key, val))
+mapWithM f = traverse (\x -> (x,) <$> f x)
+
 composeM :: (Monad m) => Int -> (a -> m a) -> a -> m a
 composeM 0 _ a = return a
 composeM n f a = composeM (n - 1) f a >>= f

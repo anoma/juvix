@@ -3,9 +3,7 @@ module Commands.Format where
 import Commands.Base
 import Commands.Format.Options
 import Data.Text qualified as Text
-import Juvix.Compiler.Pipeline.Driver (processModule)
 import Juvix.Compiler.Pipeline.Loader.PathResolver.ImportTree.Base
-import Juvix.Compiler.Pipeline.ModuleInfoCache
 import Juvix.Compiler.Store.Language (ModuleInfo)
 import Juvix.Formatter
 
@@ -55,11 +53,7 @@ formatProject ::
   Sem r FormatResult
 formatProject = runPipelineOptions . runPipelineSetup $ do
   pkg <- askPackage
-  root <- (^. rootRootDir) <$> askRoot
-  nodes <- toList <$> asks (importTreeProjectNodes root)
-  res :: [(ImportNode, PipelineResult ModuleInfo)] <- forM nodes $ \node -> do
-    res <- mkEntryIndex node >>= processModule
-    return (node, res)
+  res :: [(ImportNode, PipelineResult ModuleInfo)] <- processProject
   res' :: [(ImportNode, SourceCode)] <- runReader pkg . forM res $ \(node, nfo) -> do
     src <- formatModuleInfo node nfo
     return (node, src)
