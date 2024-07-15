@@ -1000,8 +1000,9 @@ namedArgumentNew ::
   (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) =>
   ParsecS r (NamedArgumentNew 'Parsed)
 namedArgumentNew =
-  P.try (NamedArgumentItemPun <$> pnamedArgumentItemPun)
-    <|> NamedArgumentNewFunction <$> pnamedArgumentFunctionDef
+  -- TODO this Try should be removed somehow
+  P.try (NamedArgumentNewFunction <$> pnamedArgumentFunctionDef)
+    <|> NamedArgumentItemPun <$> pnamedArgumentItemPun
 
 pisExhaustive ::
   forall r.
