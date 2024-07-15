@@ -119,6 +119,9 @@ strCaseFolding = "case-folding"
 strCasePermutation :: Text
 strCasePermutation = "case-permutation"
 
+strConstantFolding :: Text
+strConstantFolding = "constant-folding"
+
 strFilterUnreachable :: Text
 strFilterUnreachable = "filter-unreachable"
 
