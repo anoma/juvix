@@ -7,7 +7,7 @@ trait
 type MonadError (Err : Type) (M : Type -> Type) :=
   mkMonadError {
     monad : Monad M;
-    throw : {A : Type} -> Err -> M A;
+    throw : {A : Type} -> Err -> M A
   };
 
 open MonadError public;

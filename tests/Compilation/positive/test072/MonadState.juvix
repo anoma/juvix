@@ -13,6 +13,10 @@ type MonadState (S : Type) (M : Type -> Type) :=
 
 open MonadState public;
 
-modify {S : Type} {M : Type → Type} {{Monad M}} {{MonadState
-  S
-  M}} (f : S → S) : M Unit := get >>= λ {s := put (f s)};
+modify
+  {S : Type}
+  {M : Type → Type}
+  {{Monad M}}
+  {{MonadState S M}}
+  (f : S → S)
+  : M Unit := get >>= λ {s := put (f s)};

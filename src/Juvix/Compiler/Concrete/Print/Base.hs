@@ -17,6 +17,7 @@ import Juvix.Compiler.Concrete.Gen qualified as Gen
 import Juvix.Compiler.Concrete.Keywords
 import Juvix.Compiler.Concrete.Keywords qualified as Kw
 import Juvix.Compiler.Concrete.Language
+import Juvix.Compiler.Concrete.MigrateNamedApplication
 import Juvix.Compiler.Concrete.Pretty.Options
 import Juvix.Compiler.Concrete.Translation.ImportScanner.Base
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Data
@@ -294,9 +295,9 @@ instance (SingI s) => PrettyPrint (List s) where
         es = vcatPreSemicolon (map ppExpressionType _listItems)
     grouped (align (l <> spaceOrEmpty <> es <> lineOrEmpty <> r))
 
-instance (SingI s) => PrettyPrint (NamedArgument s) where
-  ppCode NamedArgument {..} = do
-    let s = ppCode _namedArgName
+instance (SingI s) => PrettyPrint (NamedArgumentAssign s) where
+  ppCode NamedArgumentAssign {..} = do
+    let s = ppSymbolType _namedArgName
         kwassign = ppCode _namedArgAssignKw
         val = ppExpressionType _namedArgValue
     s <+> kwassign <+> val
@@ -312,24 +313,30 @@ instance (SingI s) => PrettyPrint (ArgumentBlock s) where
       Irrelevant d = _argBlockDelims
 
 instance (SingI s) => PrettyPrint (NamedApplication s) where
-  ppCode = apeHelper
+  ppCode = ppCode . migrateNamedApplication
+
+instance PrettyPrint IsExhaustive where
+  ppCode IsExhaustive {..} = ppCode _isExhaustiveKw
 
 instance (SingI s) => PrettyPrint (NamedApplicationNew s) where
   ppCode NamedApplicationNew {..} = do
     let args'
           | null _namedApplicationNewArguments = mempty
           | otherwise =
-              blockIndent
-                ( sequenceWith
-                    (semicolon >> line)
-                    (ppCode <$> _namedApplicationNewArguments)
-                )
+              blockIndent $
+                sequenceWith
+                  (semicolon >> line)
+                  (ppCode <$> _namedApplicationNewArguments)
     ppIdentifierType _namedApplicationNewName
-      <> ppCode _namedApplicationNewAtKw
+      <> ppCode _namedApplicationNewExhaustive
       <> braces args'
 
+instance (SingI s) => PrettyPrint (NamedArgumentFunctionDef s) where
+  ppCode (NamedArgumentFunctionDef f) = ppCode f
+
 instance (SingI s) => PrettyPrint (NamedArgumentNew s) where
-  ppCode NamedArgumentNew {..} = ppCode _namedArgumentNewFunDef
+  ppCode = \case
+    NamedArgumentNewFunction f -> ppCode f
 
 instance (SingI s) => PrettyPrint (RecordStatement s) where
   ppCode = \case
@@ -668,7 +675,6 @@ instance PrettyPrint ApeLeaf where
     ApeLeafPattern r -> ppCode r
     ApeLeafPatternArg r -> ppCode r
     ApeLeafAtom r -> ppAnyStage r
-    ApeLeafArgumentBlock r -> ppAnyStage r
 
 annDef :: forall s r. (SingI s, Members '[ExactPrint] r) => SymbolType s -> Sem r () -> Sem r ()
 annDef nm = case sing :: SStage s of

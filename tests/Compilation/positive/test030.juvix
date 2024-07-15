@@ -25,4 +25,3 @@ main : IO :=
     >>> printNatLn (mult 3 7)
     >>> printNatLn (exp 3 7)
     >>> printNatLn (ackermann 3 7);
-

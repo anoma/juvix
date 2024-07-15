@@ -8,9 +8,15 @@ trait
 type T A := mkT {pp : A → A};
 
 instance
-unitT : T Unit := mkT (pp := λ {_ := unit});
+unitT : T Unit :=
+  mkT@{
+    pp := λ {_ := unit}
+  };
 
 instance
-boxT {A} (x : Box A) : T (Box A) := mkT (pp := \ {_ := x});
+boxT {A} (x : Box A) : T (Box A) :=
+  mkT@{
+    pp := \ {_ := x}
+  };
 
 main : Box Unit := T.pp (box unit);

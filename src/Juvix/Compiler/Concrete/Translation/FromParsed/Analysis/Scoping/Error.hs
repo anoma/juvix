@@ -10,6 +10,7 @@ import Juvix.Compiler.Concrete.Data.NameSignature.Error
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Pretty
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Types
 import Juvix.Compiler.Internal.Translation.FromConcrete.NamedArguments.Error
+import Juvix.Prelude.Base.Foundation
 
 data ScoperError
   = ErrInfixParser InfixError
@@ -55,6 +56,7 @@ data ScoperError
   | ErrWrongDefaultValue WrongDefaultValue
   | ErrUnsupported Unsupported
   | ErrDefaultArgCycle DefaultArgCycle
+  deriving stock (Generic)
 
 instance ToGenericError ScoperError where
   genericError = \case

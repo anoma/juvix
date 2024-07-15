@@ -8,6 +8,7 @@ loop : Nat := loop;
 
 main : IO :=
   printNatLn
-      (ite (3 > 0) 1 loop + ite (2 < 1) loop (ite (7 >= 8) loop 1))
+      (ite (3 > 0) 1 loop
+        + ite (2 < 1) loop (ite (7 >= 8) loop 1))
     >>> printBoolLn (2 > 0 || loop == 0)
     >>> printBoolLn (2 < 0 && loop == 0);

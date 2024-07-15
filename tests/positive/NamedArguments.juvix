@@ -1,30 +1,39 @@
 module NamedArguments;
 
-axiom a : Type;
+axiom A : Type;
 
-axiom b : Type;
+axiom B : Type;
 
-axiom c : Type;
+axiom C : Type;
 
-axiom d : Type;
+axiom D : Type;
 
-axiom e : Type;
+axiom E : Type;
 
-axiom f : Type;
+axiom F : Type;
 
-axiom g : Type;
+axiom G : Type;
 
-axiom h : Type;
+axiom H : Type;
 
 type Unit := unit : Unit;
 
 axiom fun1 : (a : Type) -> (b : Type) -> {c : Type} -> Type;
 
 -- all provided by name
-t1 : Type := fun1 (a := a) (b := b) {c := c};
+t1 : Type :=
+  fun1@?{
+    a := A;
+    b := B;
+    c := C
+  };
 
 -- skip implicit at the end
-t1' : {_ : Type} -> Type := fun1 (b := b) (a := a);
+t1' : {_ : Type} -> Type :=
+  fun1@?{
+    b := B;
+    a := A
+  };
 
 axiom fun2 : (a : Type)
   -> (b : Type)
@@ -33,7 +42,12 @@ axiom fun2 : (a : Type)
   -> Type;
 
 -- skip implicit in implicit group
-t2 : {_ : Type} -> Type := fun2 (a := a) (b := b) {c := d};
+t2 : {_ : Type} -> Type :=
+  fun2@?{
+    a := A;
+    b := B;
+    c := D
+  };
 
 axiom fun3 : (a : Type)
   -> (b : Type)
@@ -42,7 +56,12 @@ axiom fun3 : (a : Type)
   -> Type;
 
 -- skip implicit in the middle
-t3 : Type := fun3 (a := a) (b := b) {d := unit};
+t3 : Type :=
+  fun3@?{
+    a := A;
+    b := B;
+    d := unit
+  };
 
 axiom fun4 : (a : Type)
   -> (b : Type)
@@ -51,7 +70,12 @@ axiom fun4 : (a : Type)
   -> Type;
 
 -- skip implicit in the middle
-t4 : Type := fun4 (a := a) (b := b) (d := unit);
+t4 : Type :=
+  fun4@?{
+    a := A;
+    b := B;
+    d := unit
+  };
 
 axiom fun5 : (a : Type)
   -> (b : Type)
@@ -61,10 +85,20 @@ axiom fun5 : (a : Type)
   -> Type;
 
 t5 : Type :=
-  fun5 (a := a) (b := b) (d' := unit) (d := unit);
+  fun5@?{
+    a := A;
+    b := B;
+    d' := unit;
+    d := unit
+  };
 
 t5' : Type :=
-  fun5 (a := a; b := b) (d' := unit) (d := unit);
+  fun5@?{
+    a := A;
+    b := B;
+    d' := unit;
+    d := unit
+  };
 
 axiom fun6 : {a : Type}
   -> (b : Type)
@@ -75,18 +109,38 @@ axiom fun6 : {a : Type}
   -> Type;
 
 t6 : Type :=
-  fun6 (b := b) (d' := unit) (d := unit) (a' := unit);
+  fun6@?{
+    b := B;
+    d' := unit;
+    d := unit;
+    a' := unit
+  };
 
 t6' : Type :=
-  fun6 (d' := unit; d := unit; a' := unit; b := b);
+  fun6@?{
+    d' := unit;
+    d := unit;
+    a' := unit;
+    b := B
+  };
 
 module FakeRecord;
   type Pair (A B : Type) :=
     mkPair : (fst : A) -> (snd : B) -> Pair A B;
 
-  pp : Pair (B := Unit; A := Type) :=
-    mkPair (snd := unit; fst := Type);
+  pp
+    : Pair@?{
+      B := Unit;
+      A := Type
+    } :=
+    mkPair@?{
+      snd := unit;
+      fst := Type
+    };
 
-  pp2 : Pair (B := Unit; A := Type) :=
-    mkPair (fst := Type) (unit);
+  pp2
+    : Pair@?{
+      B := Unit;
+      A := Type
+    } := mkPair@?{fst := Type} (unit);
 end;

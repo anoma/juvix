@@ -13,6 +13,8 @@ data PosTest = PosTest
     _inputFile :: Maybe (Path Rel File)
   }
 
+makeLenses ''PosTest
+
 root :: Path Abs Dir
 root = relToProject $(mkRelDir "tests/Casm/positive")
 
@@ -28,14 +30,16 @@ testDescr PosTest {..} =
           _testAssertion = Steps $ casmRunAssertion _interp _runVM tRoot file' input' expected'
         }
 
-filterTests :: [String] -> [PosTest] -> [PosTest]
-filterTests incl = filter (\PosTest {..} -> _name `elem` incl)
-
-allTests :: TestTree
-allTests =
-  testGroup
-    "CASM run positive tests"
-    (map (mkTest . testDescr) tests)
+allTests :: IO TestTree
+allTests = do
+  let (vmTests, nonVmTests) = partition (^. runVM) tests
+      vmGroup = testGroup "With VM" (mkTest . testDescr <$> vmTests)
+  vmTestTree <- withPrecondition cairoVmPrecondition (return vmGroup)
+  let nonVmTestTree = testGroup "Without VM" (mkTest . testDescr <$> nonVmTests)
+  return $
+    testGroup
+      "CASM run positive tests"
+      [vmTestTree, nonVmTestTree]
 
 tests :: [PosTest]
 tests =

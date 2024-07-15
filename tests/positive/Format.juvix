@@ -297,13 +297,22 @@ module Traits;
   type Show A := mkShow {show : A → String};
 
   instance
-  showStringI : Show String := mkShow (show := id);
+  showStringI : Show String :=
+    mkShow@{
+      show := id
+    };
 
   instance
-  showBoolI : Show Bool := mkShow (show := λ {x := ite x "true" "false"});
+  showBoolI : Show Bool :=
+    mkShow@{
+      show := λ {x := ite x "true" "false"}
+    };
 
   instance
-  showNatI : Show Nat := mkShow (show := natToString);
+  showNatI : Show Nat :=
+    mkShow@{
+      show := natToString
+    };
 
   showList {A} : {{Show A}} → List A → String
     | nil := "nil"
@@ -312,14 +321,20 @@ module Traits;
   g : {A : Type} → {{Show A}} → Nat := 5;
 
   instance
-  showListI {A} {{Show A}} : Show (List A) := mkShow (show := showList);
+  showListI {A} {{Show A}} : Show (List A) :=
+    mkShow@{
+      show := showList
+    };
 
   showMaybe {A} {{Show A}} : Maybe A → String
     | (just x) := "just (" ++str Show.show x ++str ")"
     | nothing := "nothing";
 
   instance
-  showMaybeI {A} {{Show A}} : Show (Maybe A) := mkShow (show := showMaybe);
+  showMaybeI {A} {{Show A}} : Show (Maybe A) :=
+    mkShow@{
+      show := showMaybe
+    };
 
   f {A} {{Show A}} : A → String
     | x := Show.show x;

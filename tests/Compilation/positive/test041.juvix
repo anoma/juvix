@@ -3,8 +3,7 @@ module test041;
 
 import Stdlib.Prelude open;
 
-type BoxedString :=
-  | boxed : String -> BoxedString;
+type BoxedString := boxed : String -> BoxedString;
 
 printBoxedString : BoxedString -> IO
   | (boxed s) := printStringLn s;

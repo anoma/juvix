@@ -9,5 +9,10 @@ type Functor (f : Type -> Type) :=
     <$> : {A B : Type} -> (A -> B) -> f A -> f B
   };
 
-fmap {f : Type -> Type} {{Functor f}} {A B : Type} (fun : A -> B) (x : f A) : f B :=
-  fun Functor.<$> x
+fmap
+  {f : Type -> Type}
+  {{Functor f}}
+  {A B : Type}
+  (fun : A -> B)
+  (x : f A)
+  : f B := fun Functor.<$> x;

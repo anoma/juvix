@@ -2,4 +2,7 @@ module Package;
 
 import PackageDescription.V2 open;
 
-package : Package := defaultPackage {dependencies := []};
+package : Package :=
+  defaultPackage@?{
+    dependencies := []
+  };

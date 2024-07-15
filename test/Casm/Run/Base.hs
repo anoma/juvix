@@ -18,24 +18,25 @@ casmRunVM' dirPath outputFile inputFile = do
   let args = maybe [] (\f -> ["--program_input", toFilePath f]) inputFile
   readProcessCwd (toFilePath dirPath) "run_cairo_vm.sh" (toFilePath outputFile : args) ""
 
+cairoVmPrecondition :: Assertion
+cairoVmPrecondition = do
+  assertCmdExists $(mkRelFile "run_cairo_vm.sh")
+
 casmRunVM :: EntryPoint -> LabelInfo -> Code -> [Builtin] -> Int -> Maybe (Path Abs File) -> Path Abs File -> (String -> IO ()) -> Assertion
 casmRunVM entryPoint labi instrs blts outputSize inputFile expectedFile step = do
-  step "Check run_cairo_vm.sh is on path"
-  assertCmdExists $(mkRelFile "run_cairo_vm.sh")
   withTempDir'
     ( \dirPath -> do
         step "Serialize to Cairo bytecode"
         let res =
-              run $
-                runReader entryPoint $
-                  casmToCairo
-                    ( Casm.Result
-                        { _resultLabelInfo = labi,
-                          _resultCode = instrs,
-                          _resultBuiltins = blts,
-                          _resultOutputSize = outputSize
-                        }
-                    )
+              run
+                . runReader entryPoint
+                $ casmToCairo
+                  Casm.Result
+                    { _resultLabelInfo = labi,
+                      _resultCode = instrs,
+                      _resultBuiltins = blts,
+                      _resultOutputSize = outputSize
+                    }
             outputFile = dirPath <//> $(mkRelFile "out.json")
         encodeFile (toFilePath outputFile) res
         step "Run Cairo VM"
@@ -66,7 +67,18 @@ casmInterpret labi instrs inputFile expectedFile step =
             assertEqDiffText ("Check: RUN output = " <> toFilePath expectedFile) actualOutput expected
     )
 
-casmRunAssertion' :: EntryPoint -> Bool -> Bool -> LabelInfo -> Code -> [Builtin] -> Int -> Maybe (Path Abs File) -> Path Abs File -> (String -> IO ()) -> Assertion
+casmRunAssertion' ::
+  EntryPoint ->
+  Bool ->
+  Bool ->
+  LabelInfo ->
+  Code ->
+  [Builtin] ->
+  Int ->
+  Maybe (Path Abs File) ->
+  Path Abs File ->
+  (String -> IO ()) ->
+  Assertion
 casmRunAssertion' entryPoint bInterp bRunVM labi instrs blts outputSize inputFile expectedFile step =
   case validate labi instrs of
     Left err -> do

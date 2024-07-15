@@ -10,9 +10,11 @@ module Base
   )
 where
 
+import Control.Exception qualified as E
 import Control.Monad.Extra as Monad
 import Data.Algorithm.Diff
 import Data.Algorithm.DiffOutput
+import GHC.Generics qualified as GHC
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination
 import Juvix.Compiler.Pipeline.EntryPoint.IO
 import Juvix.Compiler.Pipeline.Loader.PathResolver
@@ -21,6 +23,7 @@ import Juvix.Data.Effect.TaggedLock
 import Juvix.Extra.Paths hiding (rootBuildDir)
 import Juvix.Prelude hiding (assert)
 import Juvix.Prelude.Env
+import Juvix.Prelude.Pretty (prettyString)
 import Parallel.ProgressLog
 import System.Process qualified as P
 import Test.Tasty
@@ -57,6 +60,11 @@ mkTest :: TestDescr -> TestTree
 mkTest TestDescr {..} = case _testAssertion of
   Single assertion -> testCase _testName (withCurrentDir _testRoot assertion)
   Steps steps -> testCaseSteps _testName (withCurrentDir _testRoot . steps)
+
+withPrecondition :: Assertion -> IO TestTree -> IO TestTree
+withPrecondition assertion ifSuccess = do
+  E.catch (assertion >> ifSuccess) $ \case
+    E.SomeException e -> return (testCase "Precondition failed" (assertFailure (show e)))
 
 assertEqDiffText :: String -> Text -> Text -> Assertion
 assertEqDiffText = assertEqDiff unpack
@@ -124,6 +132,28 @@ testRunIOEitherTermination entry =
 
 assertFailure :: (MonadIO m) => String -> m a
 assertFailure = liftIO . HUnit.assertFailure
+
+wantsError ::
+  forall err b.
+  (Generic err, GenericHasConstructor (GHC.Rep err)) =>
+  (b -> err) ->
+  Path Abs File ->
+  err ->
+  Maybe String
+wantsError wanted file actualErr
+  | genericSameConstructor wantedErr actualErr = Nothing
+  | otherwise =
+      Just
+        ( "In "
+            <> prettyString file
+            <> "\nExpected "
+            <> genericConstructorName wantedErr
+            <> "\nFound    "
+            <> genericConstructorName actualErr
+        )
+  where
+    wantedErr :: err
+    wantedErr = wanted impossible
 
 -- | The same as `P.readProcess` but instead of inheriting `stderr` redirects it
 -- to the child's `stdout`.

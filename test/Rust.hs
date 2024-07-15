@@ -4,5 +4,7 @@ import Base
 import Rust.Compilation qualified as Compilation
 import Rust.RiscZero qualified as RiscZero
 
-allTests :: TestTree
-allTests = sequentialTestGroup "Juvix to Rust tests" AllFinish [Compilation.allTests, RiscZero.allTests]
+allTests :: IO TestTree
+allTests =
+  sequentialTestGroup "Juvix to Rust tests" AllFinish
+    <$> sequence [Compilation.allTests, RiscZero.allTests]

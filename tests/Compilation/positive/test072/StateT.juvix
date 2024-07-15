@@ -9,18 +9,27 @@ import Stdlib.Data.Pair open;
 type StateT (S : Type) (M : Type → Type) (A : Type) :=
   mkStateT {runStateT : S → M (Pair A S)};
 
-runState {S A : Type} {M : Type → Type} (s : S) (m : StateT
-  S
-  M
-  A) : M (Pair A S) := StateT.runStateT m s;
+runState
+  {S A : Type}
+  {M : Type → Type}
+  (s : S)
+  (m : StateT S M A)
+  : M (Pair A S) := StateT.runStateT m s;
 
-evalState {S A : Type} {M : Type → Type} {{Functor
-  M}} (s : S) (m : StateT S M A) : M A :=
-  fst Functor.<$> runState s m;
+evalState
+  {S A : Type}
+  {M : Type → Type}
+  {{Functor M}}
+  (s : S)
+  (m : StateT S M A)
+  : M A := fst Functor.<$> runState s m;
 
 instance
-StateT-Functor {S : Type} {M : Type → Type} {{func : Functor
-  M}} : Functor (StateT S M) :=
+StateT-Functor
+  {S : Type}
+  {M : Type → Type}
+  {{func : Functor M}}
+  : Functor (StateT S M) :=
   mkFunctor@{
     <$> {A B : Type} (f : A → B) : StateT S M A → StateT S M B
       | (mkStateT S→M⟨A×S⟩) :=
@@ -31,7 +40,10 @@ StateT-Functor {S : Type} {M : Type → Type} {{func : Functor
   };
 
 instance
-StateT-Monad {S : Type} {M : Type → Type} {{mon : Monad M}}
+StateT-Monad
+  {S : Type}
+  {M : Type → Type}
+  {{mon : Monad M}}
   : Monad (StateT S M) :=
   mkMonad@{
     functor :=
@@ -40,7 +52,10 @@ StateT-Monad {S : Type} {M : Type → Type} {{mon : Monad M}}
       };
     return {A : Type} (a : A) : StateT S M A :=
       mkStateT λ {s := MMonad.return (a, s)};
-    >>= {A B : Type} (x : StateT S M A) (f : A → StateT S M B)
+    >>=
+      {A B : Type}
+      (x : StateT S M A)
+      (f : A → StateT S M B)
       : StateT S M B :=
       mkStateT
         λ {s :=
@@ -52,7 +67,10 @@ import MonadState open;
 import Stdlib.Data.Unit open;
 
 instance
-StateT-MonadState {S : Type} {M : Type → Type} {{Monad M}}
+StateT-MonadState
+  {S : Type}
+  {M : Type → Type}
+  {{Monad M}}
   : MonadState S (StateT S M) :=
   mkMonadState@{
     monad := StateT-Monad;

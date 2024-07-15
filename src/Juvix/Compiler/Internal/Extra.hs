@@ -170,8 +170,8 @@ buildLetMutualBlocks ss = nonEmpty' . mapMaybe nameToPreStatement $ scomponents
           AcyclicSCC a -> AcyclicSCC <$> a
           CyclicSCC p -> CyclicSCC . toList <$> nonEmpty (catMaybes p)
 
-mkLetClauses :: NonEmpty PreLetStatement -> [LetClause]
-mkLetClauses pre = goSCC <$> (toList (buildLetMutualBlocks pre))
+mkLetClauses :: NonEmpty PreLetStatement -> NonEmpty LetClause
+mkLetClauses pre = goSCC <$> buildLetMutualBlocks pre
   where
     goSCC :: SCC PreLetStatement -> LetClause
     goSCC = \case

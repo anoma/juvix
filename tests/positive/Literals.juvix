@@ -1,17 +1,13 @@
 module Literals;
 
-axiom Int : Type;
-
-axiom String : Type;
-
-axiom + : Int → Int → Int;
+import Stdlib.Prelude open;
 
 a : Int := 12313;
 
 b : Int := -8;
 
-- : Int := 10;
+c : Int := 10;
 
--+-- : Int := - + -+--;
+-+-- : Int := c + c;
 
-c : String := "hellooooo";
+d : String := "hellooooo";
