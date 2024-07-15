@@ -1,0 +1,19 @@
+module Puns;
+
+type A := a;
+
+type B := b;
+
+type S :=
+  mkS {
+    fieldA : A;
+    fieldB : B;
+    fieldC : A
+  };
+
+f (fieldA : A) (fieldB : B) : S :=
+  mkS@{
+    fieldC := fieldA;
+    fieldA;
+    fieldB
+  };
