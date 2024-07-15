@@ -101,3 +101,6 @@ nonRecursiveIdents' tab =
   HashSet.difference
     (HashSet.fromList (HashMap.keys (tab ^. infoIdentifiers)))
     (recursiveIdentsClosure tab)
+
+nonRecursiveIdents :: Module -> HashSet Symbol
+nonRecursiveIdents = nonRecursiveIdents' . computeCombinedInfoTable

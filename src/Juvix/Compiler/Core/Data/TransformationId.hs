@@ -39,6 +39,7 @@ data TransformationId
   | SpecializeArgs
   | CaseFolding
   | CasePermutation
+  | ConstantFolding
   | FilterUnreachable
   | OptPhaseEval
   | OptPhaseExec
@@ -113,6 +114,7 @@ instance TransformationId' TransformationId where
     SpecializeArgs -> strSpecializeArgs
     CaseFolding -> strCaseFolding
     CasePermutation -> strCasePermutation
+    ConstantFolding -> strConstantFolding
     FilterUnreachable -> strFilterUnreachable
     OptPhaseEval -> strOptPhaseEval
     OptPhaseExec -> strOptPhaseExec

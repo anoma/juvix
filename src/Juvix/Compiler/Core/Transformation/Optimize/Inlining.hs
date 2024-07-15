@@ -17,7 +17,7 @@ isInlineableLambda inlineDepth md bl node = case node of
     False
 
 convertNode :: Int -> HashSet Symbol -> Module -> Node -> Node
-convertNode inlineDepth recSyms md = dmapL go
+convertNode inlineDepth nonRecSyms md = dmapL go
   where
     go :: BinderList Binder -> Node -> Node
     go bl node = case node of
@@ -37,7 +37,7 @@ convertNode inlineDepth recSyms md = dmapL go
                   Just InlineNever ->
                     node
                   _
-                    | not (HashSet.member _identSymbol recSyms)
+                    | HashSet.member _identSymbol nonRecSyms
                         && isInlineableLambda inlineDepth md bl def
                         && length args >= argsNum ->
                         mkApps def args
@@ -57,7 +57,7 @@ convertNode inlineDepth recSyms md = dmapL go
           Just InlineAlways -> def
           Just InlineNever -> node
           _
-            | not (HashSet.member _identSymbol recSyms)
+            | HashSet.member _identSymbol nonRecSyms
                 && isImmediate md def ->
                 def
             | otherwise ->
@@ -76,7 +76,7 @@ convertNode inlineDepth recSyms md = dmapL go
                 Just InlineCase ->
                   NCase cs {_caseValue = mkApps def args}
                 Nothing
-                  | not (HashSet.member _identSymbol recSyms)
+                  | HashSet.member _identSymbol nonRecSyms
                       && isConstructorApp def
                       && checkDepth md bl inlineDepth def ->
                       NCase cs {_caseValue = mkApps def args}
@@ -92,9 +92,9 @@ convertNode inlineDepth recSyms md = dmapL go
         node
 
 inlining' :: Int -> HashSet Symbol -> Module -> Module
-inlining' inliningDepth recSyms md = mapT (const (convertNode inliningDepth recSyms md)) md
+inlining' inliningDepth nonRecSyms md = mapT (const (convertNode inliningDepth nonRecSyms md)) md
 
 inlining :: (Member (Reader CoreOptions) r) => Module -> Sem r Module
 inlining md = do
   d <- asks (^. optInliningDepth)
-  return $ inlining' d (recursiveIdents md) md
+  return $ inlining' d (nonRecursiveIdents md) md
