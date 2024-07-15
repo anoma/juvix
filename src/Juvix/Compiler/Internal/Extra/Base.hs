@@ -441,8 +441,8 @@ patternCosmos f p = case p of
   PatternConstructorApp ConstructorApp {..} ->
     f p *> do
       args' <- traverse (traverseOf patternArgPattern (patternCosmos f)) _constrAppParameters
-      pure $
-        PatternConstructorApp
+      pure
+        $ PatternConstructorApp
           ConstructorApp
             { _constrAppParameters = args',
               _constrAppConstructor,
@@ -470,8 +470,8 @@ patternSubCosmos f p = case p of
   PatternWildcardConstructor {} -> pure p
   PatternConstructorApp ConstructorApp {..} -> do
     args' <- traverse (patternArgCosmos f) _constrAppParameters
-    pure $
-      PatternConstructorApp
+    pure
+      $ PatternConstructorApp
         ConstructorApp
           { _constrAppParameters = args',
             _constrAppConstructor,

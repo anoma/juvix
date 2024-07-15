@@ -148,8 +148,8 @@ genModuleText ::
   Sem r Text
 genModuleText GenModuleTextArgs {..} = do
   outputHtml <-
-    genModuleHtml $
-      GenModuleHtmlArgs
+    genModuleHtml
+      $ GenModuleHtmlArgs
         { _genModuleHtmlArgsConcreteOpts = _genModuleTextArgsConcreteOpts,
           _genModuleHtmlArgsUTC = _genModuleTextArgsUTC,
           _genModuleHtmlArgsComments = _genModuleTextArgsComments,
@@ -165,22 +165,24 @@ genModuleHtml ::
 genModuleHtml o = do
   onlyCode <- asks (^. htmlOptionsOnlyCode)
   if
-      | onlyCode -> justCode
-      | otherwise -> do
-          hd <- mhead
-          bd <- mbody
-          return $
-            docTypeHtml ! Attr.xmlns "http://www.w3.org/1999/xhtml" $
-              hd <> bd
+    | onlyCode -> justCode
+    | otherwise -> do
+        hd <- mhead
+        bd <- mbody
+        return
+          $ docTypeHtml
+          ! Attr.xmlns "http://www.w3.org/1999/xhtml"
+          $ hd
+          <> bd
   where
     mhead :: Sem r Html
     mhead = do
       css <- themeCss
       js <- highlightJs
-      return $
-        metaUtf8
-          <> css
-          <> js
+      return
+        $ metaUtf8
+        <> css
+        <> js
 
     mbody :: Sem r Html
     mbody =
@@ -193,13 +195,14 @@ genModuleHtml o = do
 
     formattedTime :: Sem r Html
     formattedTime =
-      return $
-        Html.span . toHtml $
-          "Last modified on "
-            <> formatTime
-              defaultTimeLocale
-              "%Y-%m-%d %-H:%M %Z"
-              (o ^. genModuleHtmlArgsUTC)
+      return
+        $ Html.span
+        . toHtml
+        $ "Last modified on "
+        <> formatTime
+          defaultTimeLocale
+          "%Y-%m-%d %-H:%M %Z"
+          (o ^. genModuleHtmlArgsUTC)
 
     justCode :: Sem r Html
     justCode =
@@ -213,9 +216,10 @@ genModuleHtml o = do
 
     mheader :: Sem r Html
     mheader =
-      return $
-        Html.div ! Attr.id "package-header" $
-          (Html.span ! Attr.class_ "caption" $ "")
+      return
+        $ Html.div
+        ! Attr.id "package-header"
+        $ (Html.span ! Attr.class_ "caption" $ "")
 
 renderTree :: (Members '[Reader HtmlOptions] r) => SimpleDocTree Ann -> Sem r Html
 renderTree = go
@@ -344,10 +348,12 @@ putTag ann x = case ann of
     tagRef :: TopModulePath -> S.NameId -> Sem r Html
     tagRef tmp ni = do
       pth <- nameIdAttrRef tmp (Just ni)
-      return $
-        Html.span ! Attr.class_ "annot" $
-          a ! Attr.href pth $
-            x
+      return
+        $ Html.span
+        ! Attr.class_ "annot"
+        $ a
+        ! Attr.href pth
+        $ x
 
     tagKind k =
       Html.span
@@ -370,12 +376,12 @@ moduleDocRelativePath m = do
         | otherwise = topModulePathToRelativePathDot ext suff
   let relpath :: Path Rel File = pathgen m
   if
-      | null fixPrefix -> return relpath
-      | otherwise -> do
-          return $
-            fromMaybe
-              relpath
-              (stripProperPrefix (fromJust (parseRelDir fixPrefix)) relpath)
+    | null fixPrefix -> return relpath
+    | otherwise -> do
+        return
+          $ fromMaybe
+            relpath
+            (stripProperPrefix (fromJust (parseRelDir fixPrefix)) relpath)
 
 nameIdAttrRef :: (Members '[Reader HtmlOptions] r) => TopModulePath -> Maybe S.NameId -> Sem r AttributeValue
 nameIdAttrRef tp mid = do

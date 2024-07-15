@@ -40,8 +40,11 @@ runTermination ini m = do
   where
     checkNonTerminating :: TerminationState -> Sem r ()
     checkNonTerminating i =
-      whenJust (i ^. terminationFailedSet . to (nonEmpty . toList)) $
-        throw . JuvixError . ErrNoLexOrder . NoLexOrder
+      whenJust (i ^. terminationFailedSet . to (nonEmpty . toList))
+        $ throw
+        . JuvixError
+        . ErrNoLexOrder
+        . NoLexOrder
 
 evalTermination :: (Members '[Error JuvixError] r) => TerminationState -> Sem (Termination ': r) a -> Sem r a
 evalTermination s = fmap snd . runTermination s
@@ -93,11 +96,11 @@ checkTerminationShallow' topModule = do
           where
             err = error ("Impossible: function not found: " <> funName ^. nameText)
         order = findOrder rb
-    addTerminating funName $
-      if
-          | Just {} <- order -> TerminatingChecked
-          | markedTerminating -> TerminatingFailedMarked
-          | Nothing <- order -> TerminatingFailed
+    addTerminating funName
+      $ if
+        | Just {} <- order -> TerminatingChecked
+        | markedTerminating -> TerminatingFailedMarked
+        | Nothing <- order -> TerminatingFailed
 
 scanModule ::
   (Members '[State CallMap] r) =>

@@ -39,8 +39,9 @@ checkPositivity ::
   InductiveInfo ->
   Sem r ()
 checkPositivity indInfo = do
-  unlessM (asks (^. E.entryPointNoPositivity)) $
-    forM_ (indInfo ^. inductiveInfoConstructors) $ \ctorName -> do
+  unlessM (asks (^. E.entryPointNoPositivity))
+    $ forM_ (indInfo ^. inductiveInfoConstructors)
+    $ \ctorName -> do
       ctor <- asks (fromJust . HashMap.lookup ctorName . (^. infoConstructors))
       unless (indInfo ^. inductiveInfoPositive) $ do
         numInductives <- HashMap.size <$> asks (^. infoInductives)
@@ -169,11 +170,11 @@ checkStrictlyPositiveOccurrences p = do
           let (hdExpr, args) = unfoldApplication tyApp
           case hdExpr of
             ax@(ExpressionIden IdenAxiom {}) -> do
-              when (isJust $ find (varOrInductiveInExpression name) args) $
-                throwTypeAsArgumentOfBoundVarError ax
+              when (isJust $ find (varOrInductiveInExpression name) args)
+                $ throwTypeAsArgumentOfBoundVarError ax
             var@(ExpressionIden IdenVar {}) -> do
-              when (isJust $ find (varOrInductiveInExpression name) args) $
-                throwTypeAsArgumentOfBoundVarError var
+              when (isJust $ find (varOrInductiveInExpression name) args)
+                $ throwTypeAsArgumentOfBoundVarError var
             ExpressionIden (IdenInductive ty') -> do
               when (inside && name == ty') (throwNegativePositonError expr)
               indInfo' <- lookupInductive ty'
@@ -195,8 +196,9 @@ checkStrictlyPositiveOccurrences p = do
               when
                 (HashSet.member pName' negParms)
                 (throwNegativePositonError tyArg)
-              when (recLimit > 0) $
-                forM_ (indInfo' ^. inductiveInfoConstructors) $ \ctorName' -> do
+              when (recLimit > 0)
+                $ forM_ (indInfo' ^. inductiveInfoConstructors)
+                $ \ctorName' -> do
                   ctorType' <- lookupConstructorType ctorName'
                   let errorRef = fromMaybe tyArg ref
                       args = constructorArgs ctorType'

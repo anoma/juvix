@@ -94,8 +94,8 @@ setSubTerm :: forall a r. (Members '[Error (NockEvalError a), Reader EvalCtx] r)
 setSubTerm term pos repTerm =
   let (old, new) = setAndRemember (subTermT' pos) repTerm term
    in if
-          | isNothing (getFirst old) -> throwInvalidPath term pos
-          | otherwise -> return new
+        | isNothing (getFirst old) -> throwInvalidPath term pos
+        | otherwise -> return new
 
 parseCell ::
   forall r a.
@@ -179,8 +179,8 @@ evalProfile ::
   Term a ->
   Sem s (Term a)
 evalProfile inistack initerm =
-  topEvalCtx $
-    recEval inistack initerm
+  topEvalCtx
+    $ recEval inistack initerm
   where
     recEval ::
       forall r.
@@ -197,8 +197,8 @@ evalProfile inistack initerm =
           ParsedStdlibCallCell o -> do
             intercept' <- asks (^. evalInterceptStdlibCalls)
             if
-                | intercept' -> goStdlibCall (o ^. stdlibCallCell)
-                | otherwise -> goOperatorCell (o ^. stdlibCallRaw)
+              | intercept' -> goStdlibCall (o ^. stdlibCallCell)
+              | otherwise -> goOperatorCell (o ^. stdlibCallRaw)
       where
         loc :: Maybe Interval
         loc = term ^. termLoc
@@ -294,8 +294,8 @@ evalProfile inistack initerm =
               pubKey <- PublicKey <$> atomToByteStringLen publicKeyLength pubKeyT
               signedMessage <- atomToByteString signedMessageT
               if
-                  | verify pubKey signedMessage -> mkMaybeJust . TermAtom <$> byteStringToAtom (removeSignature signedMessage)
-                  | otherwise -> return mkMaybeNothing
+                | verify pubKey signedMessage -> mkMaybeJust . TermAtom <$> byteStringToAtom (removeSignature signedMessage)
+                | otherwise -> return mkMaybeNothing
 
         mkMaybeNothing :: Term a
         mkMaybeNothing = TermAtom nockNil
@@ -335,8 +335,8 @@ evalProfile inistack initerm =
             OpTrace -> goOpTrace
           where
             crumb crumbTag =
-              EvalCrumbOperator $
-                CrumbOperator
+              EvalCrumbOperator
+                $ CrumbOperator
                   { _crumbOperatorOp = c ^. operatorCellOp,
                     _crumbOperatorCellTag = c ^. operatorCellTag,
                     _crumbOperatorTag = crumbTag,
@@ -408,14 +408,16 @@ evalProfile inistack initerm =
               Cell' t1 t2 _ <- withCrumb (crumb crumbDecodeSecond) (asCell (cellTerm ^. cellRight))
               cond <- evalArg crumbEvalFirst stack t0 >>= asBool
               if
-                  | cond -> evalArg crumbTrueBranch stack t1
-                  | otherwise -> evalArg crumbFalseBranch stack t2
+                | cond -> evalArg crumbTrueBranch stack t1
+                | otherwise -> evalArg crumbFalseBranch stack t2
 
             goOpInc :: Sem r (Term a)
             goOpInc =
-              TermAtom . nockSucc
+              TermAtom
+                . nockSucc
                 <$> ( evalArg crumbEvalFirst stack (c ^. operatorCellTerm)
-                        >>= withCrumb (crumb crumbDecodeFirst) . asAtom
+                        >>= withCrumb (crumb crumbDecodeFirst)
+                        . asAtom
                     )
 
             goOpEq :: Sem r (Term a)
@@ -423,10 +425,11 @@ evalProfile inistack initerm =
               cellTerm <- withCrumb (crumb crumbDecodeFirst) (asCell (c ^. operatorCellTerm))
               l <- evalArg crumbEvalFirst stack (cellTerm ^. cellLeft)
               r <- evalArg crumbEvalSecond stack (cellTerm ^. cellRight)
-              return . TermAtom $
-                if
-                    | nockmaEq l r -> nockTrue
-                    | otherwise -> nockFalse
+              return
+                . TermAtom
+                $ if
+                  | nockmaEq l r -> nockTrue
+                  | otherwise -> nockFalse
 
             goOpCall :: Sem r (Term a)
             goOpCall = do

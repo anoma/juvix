@@ -12,7 +12,8 @@ createTypeDependencyInfo tab = createDependencyInfo graph startVertices
   where
     graph :: HashMap Symbol (HashSet Symbol)
     graph =
-      HashSet.fromList . (^.. inductiveSymbols)
+      HashSet.fromList
+        . (^.. inductiveSymbols)
         <$> HashMap.filter (isNothing . (^. inductiveBuiltin)) (tab ^. infoInductives)
 
     constructorTypes :: SimpleFold Tag Type

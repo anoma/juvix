@@ -122,8 +122,8 @@ overValueRefs'' f = \case
     goCall InstrCall {..} = do
       ct <- goCallType _instrCallType
       args <- mapM goValue _instrCallArgs
-      return $
-        InstrCall
+      return
+        $ InstrCall
           { _instrCallType = ct,
             _instrCallArgs = args,
             ..
@@ -133,8 +133,8 @@ overValueRefs'' f = \case
     goCallClosures InstrCallClosures {..} = do
       args <- mapM goValue _instrCallClosuresArgs
       val <- f _instrCallClosuresValue
-      return $
-        InstrCallClosures
+      return
+        $ InstrCallClosures
           { _instrCallClosuresArgs = args,
             _instrCallClosuresValue = fromVarRef val,
             ..

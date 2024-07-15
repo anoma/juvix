@@ -103,8 +103,8 @@ helper loc = do
       emitImplicit False (mkNamesIndex sig) sig mempty
       moreNames <- not . null <$> gets (^. stateRemainingNames)
       if
-          | moreNames -> modify' (over stateRemainingArgs (ArgumentBlock (Irrelevant Nothing) Explicit (nonEmpty' pendingArgs) :))
-          | otherwise -> throw . ErrUnexpectedArguments $ UnexpectedArguments pendingArgs'
+        | moreNames -> modify' (over stateRemainingArgs (ArgumentBlock (Irrelevant Nothing) Explicit (nonEmpty' pendingArgs) :))
+        | otherwise -> throw . ErrUnexpectedArguments $ UnexpectedArguments pendingArgs'
     helper loc
   where
     nextNameGroup :: IsImplicit -> Sem r [NameItem 'Scoped]
@@ -163,11 +163,11 @@ helper loc = do
         emitExplicit :: Bool -> NamesByIndex -> [NameItem 'Scoped] -> IntMap Arg -> Sem r ()
         emitExplicit lastBlock _ omittedArgs args = do
           if
-              | lastBlock ->
-                  unless
-                    (IntMap.keys args == [0 .. IntMap.size args - 1])
-                    (missingErr (nonEmpty' (map (^. nameItemSymbol) (filterMissing omittedArgs))))
-              | otherwise -> whenJust (nonEmpty (map (^. nameItemSymbol) omittedArgs)) missingErr
+            | lastBlock ->
+                unless
+                  (IntMap.keys args == [0 .. IntMap.size args - 1])
+                  (missingErr (nonEmpty' (map (^. nameItemSymbol) (filterMissing omittedArgs))))
+            | otherwise -> whenJust (nonEmpty (map (^. nameItemSymbol) omittedArgs)) missingErr
           forM_ args output
           where
             filterMissing :: [NameItem 'Scoped] -> [NameItem 'Scoped]
@@ -266,14 +266,14 @@ helper loc = do
                 -- the arg may belong to the next explicit group
                 output arg
               Implicit ->
-                throw $
-                  ErrUnexpectedArguments $
-                    UnexpectedArguments
-                      { _unexpectedArguments = pure arg
-                      }
+                throw
+                  $ ErrUnexpectedArguments
+                  $ UnexpectedArguments
+                    { _unexpectedArguments = pure arg
+                    }
               ImplicitInstance ->
-                throw $
-                  ErrUnexpectedArguments $
-                    UnexpectedArguments
-                      { _unexpectedArguments = pure arg
-                      }
+                throw
+                  $ ErrUnexpectedArguments
+                  $ UnexpectedArguments
+                    { _unexpectedArguments = pure arg
+                    }

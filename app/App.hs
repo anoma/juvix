@@ -156,8 +156,8 @@ getEntryPoint' RunAppIOArgs {..} inputFile = do
       root = _runAppIOArgsRoot
   estdin <-
     if
-        | opts ^. globalStdin -> Just <$> liftIO getContents
-        | otherwise -> return Nothing
+      | opts ^. globalStdin -> Just <$> liftIO getContents
+      | otherwise -> return Nothing
   mainFile <- getMainAppFileMaybe inputFile
   set entryPointStdin estdin <$> entryPointFromGlobalOptionsPre root ((^. pathPath) <$> mainFile) opts
 
@@ -178,8 +178,8 @@ getEntryPointStdin' RunAppIOArgs {..} = do
       root = _runAppIOArgsRoot
   estdin <-
     if
-        | opts ^. globalStdin -> Just <$> liftIO getContents
-        | otherwise -> return Nothing
+      | opts ^. globalStdin -> Just <$> liftIO getContents
+      | otherwise -> return Nothing
   set entryPointStdin estdin <$> entryPointFromGlobalOptionsNoFile root opts
 
 fromRightGenericError :: (Members '[App] r, ToGenericError err, Typeable err) => Either err a -> Sem r a
@@ -237,8 +237,8 @@ appRunProgressLog m = do
             _progressLogOptionsShowThreadId = g ^. globalDevShowThreadIds
           }
   if
-      | g ^. globalOnlyErrors -> ignoreProgressLog m
-      | otherwise -> runProgressLogIO opts m
+    | g ^. globalOnlyErrors -> ignoreProgressLog m
+    | otherwise -> runProgressLogIO opts m
 
 runPipelineNoOptions ::
   (Members '[App, EmbedIO, TaggedLock] r) =>
@@ -274,15 +274,15 @@ runPipelineHtml ::
   Maybe (AppPath File) ->
   Sem r (InternalTypedResult, [InternalTypedResult])
 runPipelineHtml bNonRecursive input_ =
-  appRunProgressLog $
-    if
-        | bNonRecursive -> do
-            r <- runPipelineNoOptions input_ upToInternalTyped
-            return (r, [])
-        | otherwise -> do
-            args <- askArgs
-            entry <- getEntryPoint' args input_
-            runReader defaultPipelineOptions (runPipelineHtmlEither entry) >>= fromRightJuvixError
+  appRunProgressLog
+    $ if
+      | bNonRecursive -> do
+          r <- runPipelineNoOptions input_ upToInternalTyped
+          return (r, [])
+      | otherwise -> do
+          args <- askArgs
+          entry <- getEntryPoint' args input_
+          runReader defaultPipelineOptions (runPipelineHtmlEither entry) >>= fromRightJuvixError
 
 runPipelineOptions :: (Members '[App] r) => Sem (Reader PipelineOptions ': r) a -> Sem r a
 runPipelineOptions m = do

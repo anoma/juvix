@@ -95,8 +95,8 @@ readYamlPackage root buildDir = mapError (JuvixError @PackageLoaderError) $ do
   bs <- readFileBS' yamlPath
   mLockfile <- mayReadLockfile root
   if
-      | ByteString.null bs -> return (emptyPackage buildDir yamlPath)
-      | otherwise -> either (throwErr . pack . prettyPrintParseException) (processPackage yamlPath buildDir mLockfile) (decodeEither' bs)
+    | ByteString.null bs -> return (emptyPackage buildDir yamlPath)
+    | otherwise -> either (throwErr . pack . prettyPrintParseException) (processPackage yamlPath buildDir mLockfile) (decodeEither' bs)
   where
     yamlPath = mkPackageFilePath root
 

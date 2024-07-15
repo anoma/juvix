@@ -118,8 +118,8 @@ fromCore fsize tab =
 
 translateFunctionInfo :: InfoTable -> IdentifierInfo -> Stripped.FunctionInfo
 translateFunctionInfo tab IdentifierInfo {..} =
-  assert (length (typeArgsBinders _identifierType) == _identifierArgsNum) $
-    Stripped.FunctionInfo
+  assert (length (typeArgsBinders _identifierType) == _identifierArgsNum)
+    $ Stripped.FunctionInfo
       { _functionName = _identifierName,
         _functionLocation = _identifierLocation,
         _functionSymbol = _identifierSymbol,
@@ -178,16 +178,16 @@ translateFunction :: Int -> Node -> Stripped.Node
 translateFunction argsNum node =
   let (k, body) = unfoldLambdas' node
    in if
-          | k /= argsNum ->
-              error
-                ( "wrong number of arguments. argsNum = "
-                    <> show argsNum
-                    <> ", unfoldLambdas = "
-                    <> show k
-                    <> "\nNode = "
-                    <> ppTrace node
-                )
-          | otherwise -> translateNode body
+        | k /= argsNum ->
+            error
+              ( "wrong number of arguments. argsNum = "
+                  <> show argsNum
+                  <> ", unfoldLambdas = "
+                  <> show k
+                  <> "\nNode = "
+                  <> ppTrace node
+              )
+        | otherwise -> translateNode body
 
 translateNode :: Node -> Stripped.Node
 translateNode node = case node of
@@ -296,8 +296,8 @@ translateType node = case node of
   NUniv Univ {} ->
     Stripped.TyDynamic
   NTyp TypeConstr {..} ->
-    Stripped.TyApp $
-      Stripped.TypeApp
+    Stripped.TyApp
+      $ Stripped.TypeApp
         { _typeAppName = getInfoName _typeConstrInfo,
           _typeAppLocation = getInfoLocation _typeConstrInfo,
           _typeAppSymbol = _typeConstrSymbol,

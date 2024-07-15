@@ -18,9 +18,9 @@ overSubBlocks f block = block'
       Branch x ->
         Branch $ over instrBranchTrue f $ over instrBranchFalse f x
       Case x ->
-        Case $
-          over instrCaseDefault (fmap f) $
-            over instrCaseBranches (map (over caseBranchCode f)) x
+        Case
+          $ over instrCaseDefault (fmap f)
+          $ over instrCaseBranches (map (over caseBranchCode f)) x
 
 getSubBlocks :: Block -> [Block]
 getSubBlocks block = maybe [] goFinal (block ^. blockFinal)

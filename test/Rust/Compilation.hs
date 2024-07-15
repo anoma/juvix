@@ -6,5 +6,6 @@ import Rust.Compilation.Positive qualified as P
 
 allTests :: IO TestTree
 allTests =
-  withPrecondition precondition . return $
-    testGroup "Juvix to native Rust compilation tests" [P.allTests, P.allTestsNoOptimize]
+  withPrecondition precondition
+    . return
+    $ testGroup "Juvix to native Rust compilation tests" [P.allTests, P.allTestsNoOptimize]

@@ -20,14 +20,14 @@ parseImportTree =
 
 commandScanFile :: Mod CommandFields ImportTreeCommand
 commandScanFile =
-  command "scan" $
-    info
+  command "scan"
+    $ info
       (ScanFile <$> parseScanFile)
       (progDesc "Scan a single Juvix file and print its imports")
 
 commandPrint :: Mod CommandFields ImportTreeCommand
 commandPrint =
-  command "print" $
-    info
+  command "print"
+    $ info
       (Print <$> parsePrint)
       (progDesc "Print the import tree for the current package")

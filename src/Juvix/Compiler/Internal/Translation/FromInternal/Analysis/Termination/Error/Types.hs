@@ -32,8 +32,8 @@ instance ToGenericError NoLexOrder where
           <+> function
           <+> fails
           <+> "the termination checker:"
-            <> line
-            <> itemize (fmap (code . pretty) names)
+          <> line
+          <> itemize (fmap (code . pretty) names)
         where
           function :: Doc Ann
           function

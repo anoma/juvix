@@ -27,7 +27,8 @@ isConstructorTree md c node = case run $ runFail $ go mempty node of
     checkDefault :: HashMap Tag Int -> Maybe Node -> Bool
     checkDefault ctrsMap = \case
       Just d ->
-        sum (HashMap.filterWithKey (\k _ -> not (HashSet.member k tags')) ctrsMap) <= 1
+        sum (HashMap.filterWithKey (\k _ -> not (HashSet.member k tags')) ctrsMap)
+          <= 1
           || isImmediate md d
         where
           tags' = HashSet.fromList tags

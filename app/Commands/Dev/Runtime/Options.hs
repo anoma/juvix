@@ -21,8 +21,8 @@ parseRuntimeOptions =
 
 parseRuntimeCommand :: Parser RuntimeCommand
 parseRuntimeCommand =
-  hsubparser $
-    mconcat
+  hsubparser
+    $ mconcat
       [ commandCompile
       ]
   where

@@ -49,8 +49,8 @@ optimize' opts@CoreOptions {..} md =
       where
         nonRecs' =
           if
-              | _optOptimizationLevel > 1 -> nonRecursiveIdents md'
-              | otherwise -> nonRecs
+            | _optOptimizationLevel > 1 -> nonRecursiveIdents md'
+            | otherwise -> nonRecs
 
     doSimplification :: Int -> Module -> Module
     doSimplification n =

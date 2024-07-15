@@ -69,8 +69,8 @@ parseCoreFromConcreteOptions = do
       )
   _coreFromConcreteInputFile <- parseInputFile FileExtJuvixCore
   _coreFromConcreteSymbolName <-
-    optional $
-      strOption
+    optional
+      $ strOption
         ( long "symbol-name"
             <> short 's'
             <> help "Print/eval a specific function identifier (default for eval: main)"

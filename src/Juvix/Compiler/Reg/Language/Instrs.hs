@@ -45,8 +45,14 @@ instance Hashable VarRef where
 
 instance Eq VarRef where
   vr1 == vr2 =
-    vr1 ^. varRefGroup == vr2 ^. varRefGroup
-      && vr1 ^. varRefIndex == vr2 ^. varRefIndex
+    vr1
+      ^. varRefGroup
+      == vr2
+      ^. varRefGroup
+      && vr1
+      ^. varRefIndex
+      == vr2
+      ^. varRefIndex
 
 deriving stock instance (Eq ConstrField)
 

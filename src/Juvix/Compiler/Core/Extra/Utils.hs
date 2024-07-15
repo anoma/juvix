@@ -443,11 +443,19 @@ translateCase translateIfFun dflt Case {..} = case _caseBranches of
     | _caseBranchTag == BuiltinTag TagFalse ->
         translateIfFun _caseValue (fromMaybe branchFailure _caseDefault) (br ^. caseBranchBody)
   [br1, br2]
-    | br1 ^. caseBranchTag == BuiltinTag TagTrue
-        && br2 ^. caseBranchTag == BuiltinTag TagFalse ->
+    | br1
+        ^. caseBranchTag
+        == BuiltinTag TagTrue
+        && br2
+        ^. caseBranchTag
+        == BuiltinTag TagFalse ->
         translateIfFun _caseValue (br1 ^. caseBranchBody) (br2 ^. caseBranchBody)
-    | br1 ^. caseBranchTag == BuiltinTag TagFalse
-        && br2 ^. caseBranchTag == BuiltinTag TagTrue ->
+    | br1
+        ^. caseBranchTag
+        == BuiltinTag TagFalse
+        && br2
+        ^. caseBranchTag
+        == BuiltinTag TagTrue ->
         translateIfFun _caseValue (br2 ^. caseBranchBody) (br1 ^. caseBranchBody)
   _ ->
     dflt
@@ -477,11 +485,19 @@ isCaseBoolean = \case
   [CaseBranch {..}]
     | _caseBranchTag == BuiltinTag TagFalse -> True
   [br1, br2]
-    | br1 ^. caseBranchTag == BuiltinTag TagTrue
-        && br2 ^. caseBranchTag == BuiltinTag TagFalse ->
+    | br1
+        ^. caseBranchTag
+        == BuiltinTag TagTrue
+        && br2
+        ^. caseBranchTag
+        == BuiltinTag TagFalse ->
         True
-    | br1 ^. caseBranchTag == BuiltinTag TagFalse
-        && br2 ^. caseBranchTag == BuiltinTag TagTrue ->
+    | br1
+        ^. caseBranchTag
+        == BuiltinTag TagFalse
+        && br2
+        ^. caseBranchTag
+        == BuiltinTag TagTrue ->
         True
   _ ->
     False

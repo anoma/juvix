@@ -126,14 +126,14 @@ computeInternalModuleInfoTable m = InfoTable {..}
 
     _infoFunctions :: HashMap Name FunctionInfo
     _infoFunctions =
-      HashMap.fromList $
-        [ (f ^. funDefName, functionInfoFromFunctionDef f)
-          | StatementFunction f <- mutuals
-        ]
-          <> [ (f ^. funDefName, functionInfoFromFunctionDef f)
-               | s <- ss,
-                 f <- letFunctionDefs s
-             ]
+      HashMap.fromList
+        $ [ (f ^. funDefName, functionInfoFromFunctionDef f)
+            | StatementFunction f <- mutuals
+          ]
+        <> [ (f ^. funDefName, functionInfoFromFunctionDef f)
+             | s <- ss,
+               f <- letFunctionDefs s
+           ]
 
     _infoAxioms :: HashMap Name AxiomInfo
     _infoAxioms =
@@ -144,11 +144,11 @@ computeInternalModuleInfoTable m = InfoTable {..}
 
     _infoBuiltins :: HashMap BuiltinPrim Name
     _infoBuiltins =
-      HashMap.fromList $
-        mapMaybe goInd (HashMap.elems _infoInductives)
-          <> mapMaybe goConstr (HashMap.elems _infoConstructors)
-          <> mapMaybe goFun (HashMap.elems _infoFunctions)
-          <> mapMaybe goAxiom (HashMap.elems _infoAxioms)
+      HashMap.fromList
+        $ mapMaybe goInd (HashMap.elems _infoInductives)
+        <> mapMaybe goConstr (HashMap.elems _infoConstructors)
+        <> mapMaybe goFun (HashMap.elems _infoFunctions)
+        <> mapMaybe goAxiom (HashMap.elems _infoAxioms)
       where
         goInd :: InductiveInfo -> Maybe (BuiltinPrim, Name)
         goInd InductiveInfo {..} =
@@ -167,7 +167,8 @@ computeInternalModuleInfoTable m = InfoTable {..}
 
         goAxiom :: AxiomInfo -> Maybe (BuiltinPrim, Name)
         goAxiom AxiomInfo {..} =
-          _axiomInfoDef ^. axiomBuiltin
+          _axiomInfoDef
+            ^. axiomBuiltin
             >>= (\b -> Just (BuiltinsAxiom b, _axiomInfoDef ^. axiomName))
 
     ss :: [MutualBlock]
@@ -184,10 +185,10 @@ lookupConstructor f = do
       return
         . error
         $ "impossible: "
-          <> ppTrace f
-          <> " is not in the InfoTable\n"
-          <> "\nThe registered constructors are: "
-          <> ppTrace (HashMap.keys tbl)
+        <> ppTrace f
+        <> " is not in the InfoTable\n"
+        <> "\nThe registered constructors are: "
+        <> ppTrace (HashMap.keys tbl)
 
 lookupConstructorArgTypes :: (Member (Reader InfoTable) r) => Name -> Sem r ([InductiveParameter], [Expression])
 lookupConstructorArgTypes = fmap constructorArgTypes . lookupConstructor
@@ -203,10 +204,10 @@ lookupInductive f = do
       return
         . error
         $ "impossible: "
-          <> ppTrace f
-          <> " is not in the InfoTable\n"
-          <> "\nThe registered inductives are: "
-          <> ppTrace (HashMap.keys tbl)
+        <> ppTrace f
+        <> " is not in the InfoTable\n"
+        <> "\nThe registered inductives are: "
+        <> ppTrace (HashMap.keys tbl)
 
 lookupFunctionMaybe :: forall r. (Member (Reader InfoTable) r) => Name -> Sem r (Maybe FunctionInfo)
 lookupFunctionMaybe f = HashMap.lookup f <$> asks (^. infoFunctions)
@@ -222,11 +223,11 @@ lookupFunction f = do
       return
         . error
         $ "impossible: "
-          <> ppTrace f
-          <> " is not in the InfoTable\n"
-          <> ppTrace (getLoc f)
-          <> "\nThe registered functions are: "
-          <> ppTrace (HashMap.keys tbl)
+        <> ppTrace f
+        <> " is not in the InfoTable\n"
+        <> ppTrace (getLoc f)
+        <> "\nThe registered functions are: "
+        <> ppTrace (HashMap.keys tbl)
 
 lookupAxiom :: (Member (Reader InfoTable) r) => Name -> Sem r AxiomInfo
 lookupAxiom f = HashMap.lookupDefault (error ("impossible: couldn't find axiom " <> ppTrace f)) f <$> asks (^. infoAxioms)

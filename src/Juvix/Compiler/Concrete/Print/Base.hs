@@ -199,7 +199,9 @@ instance (SingI s) => PrettyPrint (NameItem s) where
     let defaultVal = do
           d <- _nameItemDefault
           return (noLoc C.kwAssign <+> ppExpressionType (d ^. argDefaultValue))
-    ppSymbolType _nameItemSymbol <> ppCode Kw.kwExclamation <> noLoc (pretty _nameItemIndex)
+    ppSymbolType _nameItemSymbol
+      <> ppCode Kw.kwExclamation
+      <> noLoc (pretty _nameItemIndex)
       <+> ppCode Kw.kwColon
       <+> ppExpressionType _nameItemType
       <+?> defaultVal
@@ -282,8 +284,8 @@ ppIterator isTop Iterator {..} = do
       b
         | _iteratorBodyBraces = braces (oneLineOrNextNoIndent (ppTopExpressionType _iteratorBody))
         | otherwise = line <> ppMaybeTopExpression isTop _iteratorBody
-  parensIf _iteratorParens $
-    hang (n <+?> is' <+?> rngs' <> b)
+  parensIf _iteratorParens
+    $ hang (n <+?> is' <+?> rngs' <> b)
 
 instance PrettyPrint S.AName where
   ppCode n = annotated (AnnKind (S.getNameKind n)) (noLoc (pretty (n ^. S.anameVerbatim)))
@@ -323,8 +325,8 @@ instance (SingI s) => PrettyPrint (NamedApplicationNew s) where
     let args'
           | null _namedApplicationNewArguments = mempty
           | otherwise =
-              blockIndent $
-                sequenceWith
+              blockIndent
+                $ sequenceWith
                   (semicolon >> line)
                   (ppCode <$> _namedApplicationNewArguments)
     ppIdentifierType _namedApplicationNewName
@@ -560,7 +562,7 @@ instance (SingI s, SingI k) => PrettyPrint (SideIfBranch s k) where
       <?+> ( kwIfElse'
                <+?> condition'
                <+> kwAssign'
-                 <> oneLineOrNext body'
+               <> oneLineOrNext body'
            )
 
 instance (SingI s) => PrettyPrint (SideIfs s) where
@@ -640,17 +642,18 @@ ppIfBranchElse isTop IfBranch {..} = do
   let e' = ppMaybeTopExpression isTop _ifBranchExpression
   ppCode _ifBranchPipe
     <+> ppCode _ifBranchCondition
-    <+> ppCode _ifBranchAssignKw <> oneLineOrNext e'
+    <+> ppCode _ifBranchAssignKw
+    <> oneLineOrNext e'
 
 ppIf :: forall r s. (Members '[ExactPrint, Reader Options] r, SingI s) => IsTop -> If s -> Sem r ()
 ppIf isTop If {..} = do
   ppCode _ifKw
     <+> hardline
-      <> indent
-        ( vsepHard (ppIfBranch <$> _ifBranches)
-            <> hardline
-            <> ppIfBranch _ifBranchElse
-        )
+    <> indent
+      ( vsepHard (ppIfBranch <$> _ifBranches)
+          <> hardline
+          <> ppIfBranch _ifBranchElse
+      )
   where
     ppIfBranch :: forall k. (SingI k) => IfBranch s k -> Sem r ()
     ppIfBranch b = case sing :: SIfBranchKind k of
@@ -895,16 +898,16 @@ instance PrettyPrint Expression where
 instance PrettyPrint (WithSource Pragmas) where
   ppCode pragma = do
     b <- asks (^. optPrintPragmas)
-    when b $
-      let txt = pretty (Str.pragmasStart <> pragma ^. withSourceText <> Str.pragmasEnd)
-       in annotated AnnComment (noLoc txt) <> line
+    when b
+      $ let txt = pretty (Str.pragmasStart <> pragma ^. withSourceText <> Str.pragmasEnd)
+         in annotated AnnComment (noLoc txt) <> line
 
 ppJudocStart :: (Members '[ExactPrint, Reader Options] r) => Sem r (Maybe ())
 ppJudocStart = do
   inBlock <- asks (^. optInJudocBlock)
   if
-      | inBlock -> return Nothing
-      | otherwise -> ppCode Kw.delimJudocStart $> Just ()
+    | inBlock -> return Nothing
+    | otherwise -> ppCode Kw.delimJudocStart $> Just ()
 
 instance (PrettyPrint a) => PrettyPrint (WithLoc a) where
   ppCode a = morphemeM (getLoc a) (ppCode (a ^. withLocParam))
@@ -1384,7 +1387,7 @@ instance (SingI s) => PrettyPrint (InductiveDef s) where
       ?<> pragmas'
       ?<> sig'
       <+> ppCode _inductiveAssignKw
-        <> constrs'
+      <> constrs'
     where
       ppConstructorBlock :: NonEmpty (ConstructorDef s) -> Sem r ()
       ppConstructorBlock = \case

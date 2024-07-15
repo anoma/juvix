@@ -136,8 +136,9 @@ genFieldProjection _funDefName _funDefBuiltin mpragmas info fieldIx = do
               { _lambdaPatterns = pure pat,
                 _lambdaBody = body
               }
-      return . ExpressionLambda $
-        Lambda
+      return
+        . ExpressionLambda
+        $ Lambda
           { _lambdaType = Nothing,
             _lambdaClauses = pure cl
           }

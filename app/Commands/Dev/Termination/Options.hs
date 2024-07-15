@@ -17,8 +17,8 @@ data TerminationCommand
 
 parseTerminationCommand :: Parser TerminationCommand
 parseTerminationCommand =
-  hsubparser $
-    mconcat
+  hsubparser
+    $ mconcat
       [ commandCalls,
         commandGraph
       ]

@@ -37,8 +37,8 @@ mkAllTests title optimLevel = do
       vmGroup = testGroup "With VM" (mkTest . toTestDescr optimLevel <$> vmTests)
   vmTestTree <- withPrecondition cairoVmPrecondition (return vmGroup)
   let nonVmTestTree = testGroup "Without VM" (mkTest . toTestDescr optimLevel <$> nonVmTests)
-  return $
-    testGroup
+  return
+    $ testGroup
       title
       [vmTestTree, nonVmTestTree]
 

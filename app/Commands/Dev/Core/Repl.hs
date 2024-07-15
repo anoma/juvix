@@ -118,12 +118,12 @@ runRepl opts tab = do
       let md' = Core.moduleFromInfoTable tab'
           node' = normalize (maximum allowedFieldSizes) md' node
        in if
-              | Info.member Info.kNoDisplayInfo (Core.getInfo node') ->
-                  runRepl opts tab'
-              | otherwise -> do
-                  renderStdOut (Core.ppOut opts (Core.disambiguateNodeNames md' node'))
-                  putStrLn ""
-                  runRepl opts tab'
+            | Info.member Info.kNoDisplayInfo (Core.getInfo node') ->
+                runRepl opts tab'
+            | otherwise -> do
+                renderStdOut (Core.ppOut opts (Core.disambiguateNodeNames md' node'))
+                putStrLn ""
+                runRepl opts tab'
 
     replType :: Core.InfoTable -> Core.Node -> Sem r ()
     replType tab' node = do

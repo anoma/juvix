@@ -115,8 +115,8 @@ toConcrete t p = run . runReader l $ do
                 _openModulePublic = NoPublic,
                 _openModuleKw
               }
-      return $
-        StatementImport
+      return
+        $ StatementImport
           Import
             { _importOpen = Just openShort,
               _importPublic = NoPublic,
@@ -138,6 +138,6 @@ packageDescriptionDir' :: Path Abs Dir
 packageDescriptionDir' =
   $( FE.makeRelativeToProject (toFilePath packageDescriptionDir)
        >>= runIO
-         . parseAbsDir
+       . parseAbsDir
        >>= lift
    )

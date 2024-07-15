@@ -139,9 +139,9 @@ convertNode md = rmap go
               convertIdentApp
                 node
                 ( \g ->
-                    mkLet' mkTypeInteger' l $
-                      mkLambda' mkTypeInteger' $
-                        g info (mkVar' 1) (mkVar' 0)
+                    mkLet' mkTypeInteger' l
+                      $ mkLambda' mkTypeInteger'
+                      $ g info (mkVar' 1) (mkVar' 0)
                 )
                 sym
 
@@ -156,9 +156,9 @@ convertNode md = rmap go
               convertIdentApp
                 node
                 ( \g ->
-                    mkLambda' mkTypeInteger' $
-                      mkLambda' mkTypeInteger' $
-                        g info (mkVar' 1) (mkVar' 0)
+                    mkLambda' mkTypeInteger'
+                      $ mkLambda' mkTypeInteger'
+                      $ g info (mkVar' 1) (mkVar' 0)
                 )
                 sym
 

@@ -38,7 +38,7 @@ allTests =
         "Test036: Streams without memoization"
       ]
       P.tests
-      ++ cairoTests
+    ++ cairoTests
 
 cairoTests :: [P.PosTest]
 cairoTests =

@@ -103,13 +103,17 @@ atomPath mtag = do
 
 direction :: Parser Direction
 direction =
-  symbol "L" $> L
-    <|> symbol "R" $> R
+  symbol "L"
+    $> L
+    <|> symbol "R"
+    $> R
 
 pPath :: Parser Path
 pPath =
-  symbol "S" $> []
-    <|> NonEmpty.toList <$> some direction
+  symbol "S"
+    $> []
+    <|> NonEmpty.toList
+    <$> some direction
 
 atomNat :: Maybe Tag -> Parser (Atom Natural)
 atomNat mtag = do
@@ -216,8 +220,10 @@ cell = do
 
 term :: Parser (Term Natural)
 term =
-  TermAtom <$> patom
-    <|> TermCell <$> cell
+  TermAtom
+    <$> patom
+    <|> TermCell
+    <$> cell
 
 assig :: Parser (Assignment Natural)
 assig = do
@@ -236,7 +242,8 @@ program = Program <$> many statement <* eof
     statement :: Parser (Statement Natural)
     statement =
       P.try (StatementAssignment <$> assig)
-        <|> StatementStandalone <$> term
+        <|> StatementStandalone
+        <$> term
 
 name :: Parser Text
 name = lexeme $ do
@@ -257,15 +264,21 @@ withStack = do
 
 replExpression :: Parser (ReplExpression Natural)
 replExpression =
-  ReplExpressionWithStack <$> P.try withStack
-    <|> ReplExpressionTerm <$> replTerm
+  ReplExpressionWithStack
+    <$> P.try withStack
+    <|> ReplExpressionTerm
+    <$> replTerm
 
 replStatement :: Parser (ReplStatement Natural)
 replStatement =
-  ReplStatementAssignment <$> P.try assig
-    <|> ReplStatementExpression <$> replExpression
+  ReplStatementAssignment
+    <$> P.try assig
+    <|> ReplStatementExpression
+    <$> replExpression
 
 replTerm :: Parser (ReplTerm Natural)
 replTerm =
-  ReplName <$> name
-    <|> ReplTerm <$> term
+  ReplName
+    <$> name
+    <|> ReplTerm
+    <$> term

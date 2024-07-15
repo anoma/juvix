@@ -202,7 +202,8 @@ runCompilerFunction ctx fun =
   run
     . runReader (FunctionCtx (fun ^. compilerFunctionArity))
     . runReader ctx
-    $ fun ^. compilerFunction
+    $ fun
+    ^. compilerFunction
 
 pathToArg :: (Members '[Reader FunctionCtx] r) => Natural -> Sem r Path
 pathToArg n = do
@@ -328,8 +329,8 @@ anomaCallableClosureWrapper =
   let closureArgsNum :: Term Natural = getClosureFieldInSubject ClosureArgsNum
       closureTotalArgsNum :: Term Natural = getClosureFieldInSubject ClosureTotalArgsNum
       appendAndReplaceArgsTuple =
-        replaceArgsWithTerm "anomaCallableClosureWrapper" $
-          appendToTuple
+        replaceArgsWithTerm "anomaCallableClosureWrapper"
+          $ appendToTuple
             (getClosureFieldInSubject ClosureArgs)
             closureArgsNum
             (getClosureFieldInSubject ArgsTuple)
@@ -579,10 +580,10 @@ compile = \case
     goTrace :: Term Natural -> Sem r (Term Natural)
     goTrace arg = do
       enabled <- asks (^. compilerOptions . compilerOptionsEnableTrace)
-      return $
-        if
-            | enabled -> OpTrace # arg # arg
-            | otherwise -> arg
+      return
+        $ if
+          | enabled -> OpTrace # arg # arg
+          | otherwise -> arg
 
     goBinop :: Tree.NodeBinop -> Sem r (Term Natural)
     goBinop Tree.NodeBinop {..} = do
@@ -688,8 +689,8 @@ withTemp toBePushed body =
       remakeList
         [ let p = opAddress "pushTemp" (stackPath s)
            in if
-                  | TempStack == s -> toBePushed # p
-                  | otherwise -> p
+                | TempStack == s -> toBePushed # p
+                | otherwise -> p
           | s <- allElements
         ]
 
@@ -1107,8 +1108,8 @@ caseCmd arg defaultBranch = \case
     goBoolTag v b bs =
       let otherBranch = fromMaybe crash (firstJust f bs <|> defaultBranch)
        in if
-              | v -> branch arg b otherBranch
-              | otherwise -> branch arg otherBranch b
+            | v -> branch arg b otherBranch
+            | otherwise -> branch arg otherBranch b
       where
         f :: (Tree.Tag, Term Natural) -> Maybe (Term Natural)
         f (tag', br) = case tag' of

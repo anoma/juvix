@@ -13,11 +13,11 @@ literalIntToIntNode = do
       tagOfNatM = (^. constructorTag) <$> lookupBuiltinConstructor md BuiltinIntOfNat
       tagNegSucM = (^. constructorTag) <$> lookupBuiltinConstructor md BuiltinIntNegSuc
       boolSymM = (^. inductiveSymbol) <$> lookupBuiltinInductive md BuiltinBool
-  return $
-    case (tagOfNatM, tagNegSucM, boolSymM, intToNatSymM) of
+  return
+    $ case (tagOfNatM, tagNegSucM, boolSymM, intToNatSymM) of
       (Just tagOfNat, Just tagNegSuc, Just boolSym, Just intToNatSym) ->
-        mkLambda' mkTypeInteger' $
-          mkIf'
+        mkLambda' mkTypeInteger'
+          $ mkIf'
             boolSym
             (mkBuiltinApp' OpIntLt [mkVar' 0, mkConstant' (ConstInteger 0)])
             ( mkConstr

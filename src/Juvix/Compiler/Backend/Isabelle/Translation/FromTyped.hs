@@ -31,8 +31,8 @@ fromInternal Internal.InternalTypedResult {..} = do
   where
     go :: Bool -> Internal.InfoTable -> Internal.Module -> Sem r Result
     go onlyTypes tab md =
-      return $
-        Result
+      return
+        $ Result
           { _resultTheory = goModule onlyTypes tab md,
             _resultModuleId = md ^. Internal.moduleId
           }
@@ -60,8 +60,8 @@ goModule onlyTypes infoTable Internal.Module {..} =
 
     goMutualBlock :: Internal.MutualBlock -> [Statement]
     goMutualBlock Internal.MutualBlock {..} =
-      filter (\stmt -> not onlyTypes || isTypeDef stmt) $
-        map goMutualStatement (toList _mutualStatements)
+      filter (\stmt -> not onlyTypes || isTypeDef stmt)
+        $ map goMutualStatement (toList _mutualStatements)
 
     goMutualStatement :: Internal.MutualStatement -> Statement
     goMutualStatement = \case
@@ -71,8 +71,10 @@ goModule onlyTypes infoTable Internal.Module {..} =
 
     goInductiveDef :: Internal.InductiveDef -> Statement
     goInductiveDef Internal.InductiveDef {..}
-      | length _inductiveConstructors == 1
-          && head' _inductiveConstructors ^. Internal.inductiveConstructorIsRecord =
+      | length _inductiveConstructors
+          == 1
+          && head' _inductiveConstructors
+          ^. Internal.inductiveConstructorIsRecord =
           let tyargs = fst $ Internal.unfoldFunType $ head' _inductiveConstructors ^. Internal.inductiveConstructorType
            in StmtRecord
                 Record

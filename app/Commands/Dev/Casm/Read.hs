@@ -27,8 +27,8 @@ runCommand opts = do
           case r of
             Left err -> exitJuvixError (JuvixError err)
             Right code' -> do
-              unless (project opts ^. casmReadNoPrint) $
-                renderStdOut (Casm.Pretty.ppProgram code')
+              unless (project opts ^. casmReadNoPrint)
+                $ renderStdOut (Casm.Pretty.ppProgram code')
               doRun code'
   where
     file :: AppPath File

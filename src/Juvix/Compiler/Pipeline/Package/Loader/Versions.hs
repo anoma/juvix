@@ -138,8 +138,8 @@ v1v2FromPackage p = run . runReader l $ do
           case deps of
             [d] ->
               if
-                  | d == defaultStdlibDep DefaultBuildDir -> return Nothing
-                  | otherwise -> dependenciesArg
+                | d == defaultStdlibDep DefaultBuildDir -> return Nothing
+                | otherwise -> dependenciesArg
             _ -> dependenciesArg
           where
             mkDependenciesArg' :: [Dependency] -> Sem r (NamedArgumentAssign 'Parsed)

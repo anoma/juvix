@@ -60,7 +60,7 @@ compileErrorAssertion root' mainFile step = do
               . runError @JuvixError
               . runReader entryPoint
               $ Core.toStored (core ^. pipelineResult . Core.coreResultModule)
-                >>= Core.toStripped Core.CheckExec
+              >>= Core.toStripped Core.CheckExec
       case res' of
         Left {} -> return ()
         Right {} -> noError
