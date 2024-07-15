@@ -33,9 +33,6 @@ optimize' opts@CoreOptions {..} md =
     tab :: InfoTable
     tab = computeCombinedInfoTable md
 
-    recs :: HashSet Symbol
-    recs = recursiveIdents' tab
-
     nonRecs :: HashSet Symbol
     nonRecs = nonRecursiveIdents' tab
 
@@ -48,12 +45,12 @@ optimize' opts@CoreOptions {..} md =
           | otherwise = nonRecs
 
     doInlining :: Module -> Module
-    doInlining md' = inlining' _optInliningDepth recs' md'
+    doInlining md' = inlining' _optInliningDepth nonRecs' md'
       where
-        recs' =
+        nonRecs' =
           if
-              | _optOptimizationLevel > 1 -> recursiveIdents md'
-              | otherwise -> recs
+              | _optOptimizationLevel > 1 -> nonRecursiveIdents md'
+              | otherwise -> nonRecs
 
     doSimplification :: Int -> Module -> Module
     doSimplification n =
