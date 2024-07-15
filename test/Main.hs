@@ -25,41 +25,45 @@ import Tree qualified
 import Typecheck qualified
 import VampIR qualified
 
-slowTests :: TestTree
+slowTests :: IO TestTree
 slowTests =
   sequentialTestGroup
     "Juvix slow tests"
     AllFinish
-    [ Runtime.allTests,
-      Reg.allTests,
-      Asm.allTests,
-      Tree.allTests,
-      Core.allTests,
-      Internal.allTests,
-      Compilation.allTests,
-      Examples.allTests,
-      Rust.allTests,
-      Casm.allTests,
-      VampIR.allTests,
-      Anoma.allTests,
-      Repl.allTests
-    ]
+    <$> sequence
+      [ return Runtime.allTests,
+        return Reg.allTests,
+        return Asm.allTests,
+        return Tree.allTests,
+        return Core.allTests,
+        return Internal.allTests,
+        return Compilation.allTests,
+        return Examples.allTests,
+        Rust.allTests,
+        Casm.allTests,
+        VampIR.allTests,
+        return Anoma.allTests,
+        return Repl.allTests
+      ]
 
-fastTests :: TestTree
+fastTests :: IO TestTree
 fastTests =
-  testGroup
-    "Juvix fast tests"
-    [ Parsing.allTests,
-      Resolver.allTests,
-      Scope.allTests,
-      Termination.allTests,
-      Typecheck.allTests,
-      Format.allTests,
-      Formatter.allTests,
-      Package.allTests,
-      BackendMarkdown.allTests,
-      Nockma.allTests
-    ]
+  return $
+    testGroup
+      "Juvix fast tests"
+      [ Parsing.allTests,
+        Resolver.allTests,
+        Scope.allTests,
+        Termination.allTests,
+        Typecheck.allTests,
+        Format.allTests,
+        Formatter.allTests,
+        Package.allTests,
+        BackendMarkdown.allTests,
+        Nockma.allTests
+      ]
 
 main :: IO ()
-main = defaultMain (testGroup "Juvix tests" [fastTests, slowTests])
+main = do
+  tests <- sequence [fastTests, slowTests]
+  defaultMain (testGroup "Juvix tests" tests)

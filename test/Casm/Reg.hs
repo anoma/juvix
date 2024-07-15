@@ -1,8 +1,14 @@
 module Casm.Reg where
 
 import Base
-import Casm.Reg.Cairo qualified as C
-import Casm.Reg.Positive qualified as P
+import Casm.Reg.Cairo qualified as Cairo
+import Casm.Reg.Positive qualified as Positive
 
-allTests :: TestTree
-allTests = testGroup "JuvixReg to CASM translation" [P.allTests, C.allTests]
+allTests :: IO TestTree
+allTests =
+  testGroup
+    "JuvixReg to CASM translation"
+    <$> sequence
+      [ return Positive.allTests,
+        Cairo.allTests
+      ]

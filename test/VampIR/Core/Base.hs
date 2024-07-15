@@ -18,6 +18,10 @@ vampirAssertion backend root mainFile dataFile step = do
       entryPoint <- testDefaultEntryPointIO root mainFile
       vampirAssertion' entryPoint backend tab dataFile step
 
+precondition :: Assertion
+precondition = do
+  assertCmdExists $(mkRelFile "vamp-ir")
+
 vampirAssertion' :: EntryPoint -> VampirBackend -> InfoTable -> Path Abs File -> (String -> IO ()) -> Assertion
 vampirAssertion' entryPoint backend tab dataFile step = do
   withTempDir'
@@ -28,9 +32,6 @@ vampirAssertion' entryPoint backend tab dataFile step = do
           Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
           Right VampIR.Result {..} -> do
             writeFileEnsureLn vampirFile _resultCode
-
-            step "Check vamp-ir on path"
-            assertCmdExists $(mkRelFile "vamp-ir")
 
             vampirSetupArgs backend dirPath step
 
