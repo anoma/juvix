@@ -56,7 +56,7 @@ jobs:
         run: stack install ormolu
 
       - name: Run ormolu
-        run: ormolu
+        run: make check-ormolu
 
   build-and-test-linux:
     runs-on: ubuntu-22.04
