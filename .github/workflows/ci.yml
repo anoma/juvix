@@ -52,6 +52,9 @@ jobs:
       - name: Generate juvix.cabal
         run: hpack
 
+      - name: Install Ormolu
+        run: stack install ormolu
+
       - name: Run ormolu
         run: ormolu
 
