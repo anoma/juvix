@@ -995,14 +995,38 @@ pnamedArgumentItemPun = do
         _namedArgumentReferencedSymbol = ()
       }
 
-namedArgumentNew ::
+-- | Parses zero or more named arguments. This function is necessary to avoid
+-- using excessive backtracking.
+manyNamedArgumentNewRBrace ::
   forall r.
   (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) =>
-  ParsecS r (NamedArgumentNew 'Parsed)
-namedArgumentNew =
-  -- TODO this Try should be removed somehow
-  P.try (NamedArgumentNewFunction <$> pnamedArgumentFunctionDef)
-    <|> NamedArgumentItemPun <$> pnamedArgumentItemPun
+  ParsecS r [NamedArgumentNew 'Parsed]
+manyNamedArgumentNewRBrace = reverse <$> go []
+  where
+    go :: [NamedArgumentNew 'Parsed] -> ParsecS r [NamedArgumentNew 'Parsed]
+    go acc =
+      rbrace $> acc
+        <|> itemHelper (P.try (withIsLast (NamedArgumentItemPun <$> pnamedArgumentItemPun)))
+        <|> itemHelper (withIsLast (NamedArgumentNewFunction <$> pnamedArgumentFunctionDef))
+      where
+        itemHelper :: ParsecS r (Bool, NamedArgumentNew 'Parsed) -> ParsecS r [NamedArgumentNew 'Parsed]
+        itemHelper p = do
+          (isLast, item) <- p
+          let acc' = item : acc
+          if
+              | isLast -> return acc'
+              | otherwise -> go acc'
+
+    pIsLast :: ParsecS r Bool
+    pIsLast =
+      rbrace $> True
+        <|> semicolon $> False
+
+    withIsLast :: ParsecS r a -> ParsecS r (Bool, a)
+    withIsLast p = do
+      res <- p
+      isLast <- pIsLast
+      return (isLast, res)
 
 pisExhaustive ::
   forall r.
@@ -1028,8 +1052,7 @@ namedApplicationNew = P.label "<named application>" $ do
     exhaustive <- pisExhaustive
     lbrace
     return (n, exhaustive)
-  _namedApplicationNewArguments <- P.sepEndBy namedArgumentNew semicolon
-  rbrace
+  _namedApplicationNewArguments <- manyNamedArgumentNewRBrace
   let _namedApplicationNewExtra = Irrelevant ()
   return NamedApplicationNew {..}
 

@@ -8,12 +8,18 @@ type S :=
   mkS {
     fieldA : A;
     fieldB : B;
-    fieldC : A
+    fieldC : A;
+    fieldD : B;
+    fieldE : B
   };
 
 f (fieldA : A) (fieldB : B) : S :=
-  mkS@{
+  let
+    fieldD := b;
+  in mkS@{
     fieldC := fieldA;
     fieldA;
-    fieldB
+    fieldB;
+    fieldE := b;
+    fieldD
   };
