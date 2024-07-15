@@ -52,11 +52,15 @@ jobs:
       - name: Generate juvix.cabal
         run: hpack
 
-      - name: Install Ormolu
+      - name: Install ormolu
         run: stack install ormolu
 
       - name: Run ormolu
         run: make check-ormolu
+
+     - name: Report formatting error
+        if: failure()
+        run: echo "Some Haskell files are not formatted. Please run 'just format'."
 
   build-and-test-linux:
     runs-on: ubuntu-22.04
