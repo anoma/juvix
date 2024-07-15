@@ -58,6 +58,14 @@ jobs:
       - name: Run ormolu
         run: make check-ormolu
 
+     - name: Cache stack
+        id: stack-cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.stack
+          key: ${{ runner.os }}-stack-${{ hashFiles('stack.yaml') }}
+
      - name: Report formatting error
         if: failure()
         run: echo "Some Haskell files are not formatted. Please run 'just format'."
