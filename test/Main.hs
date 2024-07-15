@@ -49,20 +49,21 @@ slowTests =
 
 fastTests :: IO TestTree
 fastTests =
-  testGroup
-    "Juvix fast tests"
-    [ Parsing.allTests,
-      Resolver.allTests,
-      Scope.allTests,
-      Termination.allTests,
-      Typecheck.allTests,
-      Format.allTests,
-      Formatter.allTests,
-      Package.allTests,
-      BackendMarkdown.allTests,
-      Isabelle.allTests,
-      Nockma.allTests
-    ]
+  return $
+    testGroup
+      "Juvix fast tests"
+      [ Parsing.allTests,
+        Resolver.allTests,
+        Scope.allTests,
+        Termination.allTests,
+        Typecheck.allTests,
+        Format.allTests,
+        Formatter.allTests,
+        Package.allTests,
+        BackendMarkdown.allTests,
+        Isabelle.allTests,
+        Nockma.allTests
+      ]
 
 main :: IO ()
 main = do
