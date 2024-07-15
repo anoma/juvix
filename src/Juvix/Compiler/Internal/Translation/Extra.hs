@@ -27,9 +27,9 @@ filterCompileTimeArgsOrPatterns idenname lst = do
   tab <- asks (^. typesTable)
   let funParams = fst (unfoldFunType (ty tab))
       typedArgs =
-        map fst $
-          filter (not . isUniverse . snd) $
-            zip lst (map (^. paramType) funParams)
+        map fst
+          $ filter (not . isUniverse . snd)
+          $ zip lst (map (^. paramType) funParams)
   return $ typedArgs ++ drop (length funParams) lst
   where
     ty = HashMap.lookupDefault impossible (idenname ^. nameId)

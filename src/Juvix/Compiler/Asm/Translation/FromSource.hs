@@ -152,8 +152,8 @@ parseSave loc isTail = do
   let updateNames :: LocalNameMap DirectRef -> LocalNameMap DirectRef
       updateNames mp = maybe mp (\n -> HashMap.insert n (mkTempRef (OffsetRef tmpNum (Just n))) mp) mn
   c <- braces (localS @LocalParams (over localParamsTempIndex (+ 1)) $ localS @LocalParams (over localParamsNameMap updateNames) parseCode)
-  return $
-    Save
+  return
+    $ Save
       ( CmdSave
           { _cmdSaveInfo = CommandInfo loc,
             _cmdSaveIsTail = isTail,

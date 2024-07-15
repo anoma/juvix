@@ -48,8 +48,8 @@ slowTests =
 
 fastTests :: IO TestTree
 fastTests =
-  return $
-    testGroup
+  return
+    $ testGroup
       "Juvix fast tests"
       [ Parsing.allTests,
         Resolver.allTests,

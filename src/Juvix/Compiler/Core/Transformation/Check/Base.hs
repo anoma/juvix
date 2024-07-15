@@ -58,9 +58,9 @@ checkBuiltins allowUntypedFail = dmapRM go
           OpTrace -> throw $ unsupportedError "tracing" node (getInfoLocation _builtinAppInfo)
           OpFail | not allowUntypedFail -> do
             let ty = Info.getInfoType _builtinAppInfo
-            when (isDynamic ty) $
-              throw $
-                unsupportedError "failing without type info" node (getInfoLocation _builtinAppInfo)
+            when (isDynamic ty)
+              $ throw
+              $ unsupportedError "failing without type info" node (getInfoLocation _builtinAppInfo)
             return $ Recur node
           OpFail -> do
             return $ End node
@@ -145,8 +145,8 @@ checkTypes allowPolymorphism md = dmapM go
 
 checkNoRecursiveTypes :: forall r. (Member (Error CoreError) r) => Module -> Sem r ()
 checkNoRecursiveTypes md =
-  when (isCyclic (createTypeDependencyInfo (md ^. moduleInfoTable))) $
-    throw
+  when (isCyclic (createTypeDependencyInfo (md ^. moduleInfoTable)))
+    $ throw
       CoreError
         { _coreErrorMsg = ppOutput "recursive types not supported for this target",
           _coreErrorNode = Nothing,
@@ -155,8 +155,8 @@ checkNoRecursiveTypes md =
 
 checkMainExists :: forall r. (Member (Error CoreError) r) => Module -> Sem r ()
 checkMainExists md =
-  when (isNothing (md ^. moduleInfoTable . infoMain)) $
-    throw
+  when (isNothing (md ^. moduleInfoTable . infoMain))
+    $ throw
       CoreError
         { _coreErrorMsg = ppOutput "no `main` function",
           _coreErrorNode = Nothing,

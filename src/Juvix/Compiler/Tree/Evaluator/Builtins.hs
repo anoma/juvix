@@ -126,10 +126,10 @@ valueToConstant = \case
 
 evalBinop' :: BinaryOp -> Constant -> Constant -> Either ErrorMsg Constant
 evalBinop' op arg1 arg2 =
-  mapRight valueToConstant $
-    evalBinop op (constantToValue arg1) (constantToValue arg2)
+  mapRight valueToConstant
+    $ evalBinop op (constantToValue arg1) (constantToValue arg2)
 
 evalUnop' :: InfoTable' t e -> UnaryOp -> Constant -> Either ErrorMsg Constant
 evalUnop' tab op v =
-  mapRight valueToConstant $
-    evalUnop tab op (constantToValue v)
+  mapRight valueToConstant
+    $ evalUnop tab op (constantToValue v)

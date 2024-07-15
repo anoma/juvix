@@ -18,8 +18,8 @@ makeLenses ''TempSize
 fromAsm :: (Member (Error TreeError) r) => Asm.InfoTable -> Sem r InfoTable
 fromAsm tab = do
   fns <- mapM (goFunction tab) (tab ^. Asm.infoFunctions)
-  return $
-    InfoTable
+  return
+    $ InfoTable
       { _infoMainFunction = tab ^. Asm.infoMainFunction,
         _infoFunctions = fns,
         _infoInductives = tab ^. Asm.infoInductives,
@@ -30,8 +30,8 @@ fromAsm tab = do
 goFunction :: (Member (Error TreeError) r') => Asm.InfoTable -> Asm.FunctionInfo -> Sem r' FunctionInfo
 goFunction infoTab fi = do
   node' <- runReader (TempSize 0) $ goCodeBlock (fi ^. Asm.functionCode)
-  return $
-    FunctionInfo
+  return
+    $ FunctionInfo
       { _functionName = fi ^. Asm.functionName,
         _functionLocation = fi ^. Asm.functionLocation,
         _functionSymbol = fi ^. Asm.functionSymbol,
@@ -53,27 +53,27 @@ goFunction infoTab fi = do
           node <- goCode
           hasMore <- hasNextCommand
           if
-              | hasMore -> do
-                  cmd <- nextCommand
-                  case cmd of
-                    Asm.Instr (Asm.CmdInstr _ Asm.Pop) -> do
-                      node' <- go
-                      return $
-                        Binop
-                          NodeBinop
-                            { _nodeBinopInfo = mempty,
-                              _nodeBinopOpcode = OpSeq,
-                              _nodeBinopArg1 = node',
-                              _nodeBinopArg2 = node
-                            }
-                    _ ->
-                      throw $
-                        TreeError
-                          { _treeErrorLoc = Asm.getCommandLocation cmd,
-                            _treeErrorMsg = "extra instructions"
+            | hasMore -> do
+                cmd <- nextCommand
+                case cmd of
+                  Asm.Instr (Asm.CmdInstr _ Asm.Pop) -> do
+                    node' <- go
+                    return
+                      $ Binop
+                        NodeBinop
+                          { _nodeBinopInfo = mempty,
+                            _nodeBinopOpcode = OpSeq,
+                            _nodeBinopArg1 = node',
+                            _nodeBinopArg2 = node
                           }
-              | otherwise ->
-                  return node
+                  _ ->
+                    throw
+                      $ TreeError
+                        { _treeErrorLoc = Asm.getCommandLocation cmd,
+                          _treeErrorMsg = "extra instructions"
+                        }
+            | otherwise ->
+                return node
 
     goCode :: forall r. (Members '[Error TreeError, Translator, Reader TempSize] r) => Sem r Node
     goCode = do
@@ -110,8 +110,8 @@ goFunction infoTab fi = do
           arg <- goCode
           br1 <- goCodeBlock _cmdBranchTrue
           br2 <- goCodeBlock _cmdBranchFalse
-          return $
-            Branch
+          return
+            $ Branch
               NodeBranch
                 { _nodeBranchInfo = mempty,
                   _nodeBranchArg = arg,
@@ -124,8 +124,8 @@ goFunction infoTab fi = do
           arg <- goCode
           brs <- mapM (goCaseBranch loc) _cmdCaseBranches
           def <- maybe (return Nothing) (fmap Just . goDefaultBranch loc) _cmdCaseDefault
-          return $
-            Case
+          return
+            $ Case
               NodeCase
                 { _nodeCaseInfo = mempty,
                   _nodeCaseInductive = _cmdCaseInductive,
@@ -140,8 +140,8 @@ goFunction infoTab fi = do
         goCaseBranch loc Asm.CaseBranch {..} = case _caseBranchCode of
           [Asm.Save Asm.CmdSave {..}] -> do
             body <- pushTempStack $ goCodeBlock _cmdSaveCode
-            return $
-              CaseBranch
+            return
+              $ CaseBranch
                 { _caseBranchLocation = Nothing,
                   _caseBranchTag,
                   _caseBranchBody = body,
@@ -149,8 +149,8 @@ goFunction infoTab fi = do
                 }
           Asm.Instr (Asm.CmdInstr _ Asm.Pop) : cmds -> do
             body <- goCodeBlock cmds
-            return $
-              CaseBranch
+            return
+              $ CaseBranch
                 { _caseBranchLocation = Nothing,
                   _caseBranchTag,
                   _caseBranchBody = body,
@@ -158,8 +158,8 @@ goFunction infoTab fi = do
                 }
           [Asm.Instr (Asm.CmdInstr _ Asm.Return)] -> do
             off <- asks (^. tempSize)
-            return $
-              CaseBranch
+            return
+              $ CaseBranch
                 { _caseBranchLocation = Nothing,
                   _caseBranchTag,
                   _caseBranchBody = mkMemRef $ DRef $ mkTempRef $ OffsetRef off Nothing,
@@ -177,8 +177,8 @@ goFunction infoTab fi = do
           Asm.Instr (Asm.CmdInstr _ Asm.Pop) : cmds ->
             goCodeBlock cmds
           _ ->
-            throw $
-              TreeError
+            throw
+              $ TreeError
                 { _treeErrorMsg = "expected 'pop' at the beginning of default case branch code",
                   _treeErrorLoc = loc
                 }
@@ -187,8 +187,8 @@ goFunction infoTab fi = do
         goSave Asm.CmdSave {..} = do
           arg <- goCode
           body <- pushTempStack $ goCodeBlock _cmdSaveCode
-          return $
-            Save
+          return
+            $ Save
               NodeSave
                 { _nodeSaveInfo = mempty,
                   _nodeSaveTempVar = TempVar _cmdSaveName (_cmdSaveInfo ^. Asm.commandInfoLocation),
@@ -200,8 +200,8 @@ goFunction infoTab fi = do
         goBinop op = do
           arg1 <- goCode
           arg2 <- goCode
-          return $
-            Binop
+          return
+            $ Binop
               NodeBinop
                 { _nodeBinopInfo = mempty,
                   _nodeBinopOpcode = op,
@@ -212,8 +212,8 @@ goFunction infoTab fi = do
         goUnop :: UnaryOpcode -> Sem r Node
         goUnop op = do
           arg <- goCode
-          return $
-            Unop
+          return
+            $ Unop
               NodeUnop
                 { _nodeUnopInfo = mempty,
                   _nodeUnopArg = arg,
@@ -223,8 +223,8 @@ goFunction infoTab fi = do
         goCairo :: CairoOp -> Sem r Node
         goCairo op = do
           args <- replicateM (cairoOpArgsNum op) goCode
-          return $
-            Cairo
+          return
+            $ Cairo
               NodeCairo
                 { _nodeCairoInfo = mempty,
                   _nodeCairoOpcode = op,
@@ -235,8 +235,8 @@ goFunction infoTab fi = do
         goPop = do
           arg2 <- goCode
           arg1 <- goCode
-          return $
-            Binop
+          return
+            $ Binop
               NodeBinop
                 { _nodeBinopInfo = mempty,
                   _nodeBinopOpcode = OpSeq,
@@ -249,8 +249,8 @@ goFunction infoTab fi = do
           arg <- goCode
           off <- asks (^. tempSize)
           let ref = mkMemRef $ DRef $ mkTempRef $ OffsetRef off Nothing
-          return $
-            Save
+          return
+            $ Save
               NodeSave
                 { _nodeSaveInfo = mempty,
                   _nodeSaveArg = arg,
@@ -277,8 +277,8 @@ goFunction infoTab fi = do
         goAllocConstr :: Tag -> Sem r Node
         goAllocConstr tag = do
           args <- goArgs argsNum
-          return $
-            AllocConstr
+          return
+            $ AllocConstr
               NodeAllocConstr
                 { _nodeAllocConstrInfo = mempty,
                   _nodeAllocConstrTag = tag,
@@ -290,8 +290,8 @@ goFunction infoTab fi = do
         goAllocClosure :: Asm.InstrAllocClosure -> Sem r Node
         goAllocClosure Asm.InstrAllocClosure {..} = do
           args <- goArgs _allocClosureArgsNum
-          return $
-            AllocClosure
+          return
+            $ AllocClosure
               NodeAllocClosure
                 { _nodeAllocClosureInfo = mempty,
                   _nodeAllocClosureArgs = args,
@@ -302,8 +302,8 @@ goFunction infoTab fi = do
         goExtendClosure Asm.InstrExtendClosure {..} = do
           cl <- goCode
           args <- goArgs _extendClosureArgsNum
-          return $
-            ExtendClosure
+          return
+            $ ExtendClosure
               NodeExtendClosure
                 { _nodeExtendClosureInfo = mempty,
                   _nodeExtendClosureArgs = nonEmpty' args,
@@ -314,8 +314,8 @@ goFunction infoTab fi = do
         goCall Asm.InstrCall {..} = case _callType of
           Asm.CallFun sym -> do
             args <- goArgs _callArgsNum
-            return $
-              Call
+            return
+              $ Call
                 NodeCall
                   { _nodeCallInfo = mempty,
                     _nodeCallType = CallFun sym,
@@ -324,8 +324,8 @@ goFunction infoTab fi = do
           Asm.CallClosure -> do
             cl <- goCode
             args <- goArgs _callArgsNum
-            return $
-              Call
+            return
+              $ Call
                 NodeCall
                   { _nodeCallInfo = mempty,
                     _nodeCallType = CallClosure cl,
@@ -336,8 +336,8 @@ goFunction infoTab fi = do
         goCallClosures Asm.InstrCallClosures {..} = do
           cl <- goCode
           args <- goArgs _callClosuresArgsNum
-          return $
-            CallClosures
+          return
+            $ CallClosures
               NodeCallClosures
                 { _nodeCallClosuresInfo = mempty,
                   _nodeCallClosuresFun = cl,

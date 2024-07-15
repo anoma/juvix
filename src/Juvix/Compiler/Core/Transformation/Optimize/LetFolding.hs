@@ -24,7 +24,8 @@ convertNode isFoldable md = rmapL go
     go recur bl = \case
       NLet Let {..}
         | isImmediate md (_letItem ^. letItemValue)
-            || Info.freeVarOccurrences 0 _letBody <= 1
+            || Info.freeVarOccurrences 0 _letBody
+            <= 1
             || isFoldable md bl (_letItem ^. letItemValue) ->
             go (recur . (mkBCRemove b val' :)) (BL.cons b bl) _letBody
         where

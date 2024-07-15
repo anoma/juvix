@@ -9,5 +9,10 @@ import Juvix.Compiler.Core.Transformation.Optimize.SimplifyIfs
 
 optimize :: (Member (Reader CoreOptions) r) => Module -> Sem r Module
 optimize =
-  withOptimizationLevel 1 $
-    return . letFolding . simplifyIfs . caseCallLifting . letFolding . lambdaFolding
+  withOptimizationLevel 1
+    $ return
+    . letFolding
+    . simplifyIfs
+    . caseCallLifting
+    . letFolding
+    . lambdaFolding

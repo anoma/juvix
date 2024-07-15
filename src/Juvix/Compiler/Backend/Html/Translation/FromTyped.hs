@@ -104,20 +104,20 @@ createIndexFile ps = do
       tree' <- root tree
       return
         $ Html.div
-          ! Attr.id "content"
+        ! Attr.id "content"
         $ Html.div
-          ! Attr.id "module-list"
+        ! Attr.id "module-list"
         $ (p ! Attr.class_ "caption" $ "Modules")
-          <> ( button
-                 ! Attr.id "toggle-all-button"
-                 ! Attr.class_ "toggle-button opened"
-                 ! Attr.onclick "toggle()"
-                 $ Html.span
-                   ! Attr.id "toggle-button-text"
-                   ! Attr.class_ "toggle-icon"
-                 $ "▼ Hide all modules"
-             )
-          <> tree'
+        <> ( button
+               ! Attr.id "toggle-all-button"
+               ! Attr.class_ "toggle-button opened"
+               ! Attr.onclick "toggle()"
+               $ Html.span
+               ! Attr.id "toggle-button-text"
+               ! Attr.class_ "toggle-icon"
+               $ "▼ Hide all modules"
+           )
+        <> tree'
 
     tree :: ModuleTree
     tree = indexTree ps
@@ -135,13 +135,13 @@ createIndexFile ps = do
           Nothing ->
             return
               $ Html.span
-                ! Attr.class_ attrBare
+              ! Attr.class_ attrBare
               $ toHtml (prettyText sym)
           Just lbl' -> do
             lnk <- nameIdAttrRef lbl' Nothing
             return
               $ Html.span
-                ! Attr.class_ attrBare
+              ! Attr.class_ attrBare
               $ (a ! Attr.href lnk $ toHtml (prettyText lbl'))
 
         attrBase :: Html.AttributeValue
@@ -160,9 +160,9 @@ createIndexFile ps = do
                   c' <- mapM (uncurry goChild) (HashMap.toList children)
                   return
                     $ details
-                      ! Attr.open "open"
+                    ! Attr.open "open"
                     $ summary row'
-                      <> ul (mconcatMap li c')
+                    <> ul (mconcatMap li c')
 
 writeHtml :: (Members '[EmbedIO] r) => Path Abs File -> Html -> Sem r ()
 writeHtml f h = liftIO $ do
@@ -227,19 +227,19 @@ topTemplate rightMenu' content' = do
   toggle <- toggleJs
   let mhead :: Html
       mhead =
-        Html.head $
-          title titleStr
-            <> Html.meta
-              ! Attr.httpEquiv "Content-Type"
-              ! Attr.content "text/html; charset=UTF-8"
-            <> Html.meta
-              ! Attr.name "viewport"
-              ! Attr.content "width=device-width, initial-scale=1"
-            <> mathJax
-            <> livejs
-            <> ayuTheme
-            <> judocTheme
-            <> toggle
+        Html.head
+          $ title titleStr
+          <> Html.meta
+          ! Attr.httpEquiv "Content-Type"
+          ! Attr.content "text/html; charset=UTF-8"
+          <> Html.meta
+          ! Attr.name "viewport"
+          ! Attr.content "width=device-width, initial-scale=1"
+          <> mathJax
+          <> livejs
+          <> ayuTheme
+          <> judocTheme
+          <> toggle
 
       titleStr :: Html
       titleStr = "Juvix Documentation"
@@ -250,14 +250,14 @@ topTemplate rightMenu' content' = do
         version' <- toHtml <$> asks (^. entryPointPackage . packageVersion . to prettySemVer)
         return
           $ Html.div
-            ! Attr.id "package-header"
+          ! Attr.id "package-header"
           $ ( Html.span
                 ! Attr.class_ "caption"
                 $ pkgName'
-                  <> " - "
-                  <> version'
+                <> " - "
+                <> version'
             )
-            <> rightMenu'
+          <> rightMenu'
 
       mbody :: Sem r Html
       mbody = do
@@ -265,10 +265,10 @@ topTemplate rightMenu' content' = do
         footer' <- htmlJuvixFooter
         return
           $ body
-            ! Attr.class_ "js-enabled"
+          ! Attr.class_ "js-enabled"
           $ bodyHeader'
-            <> content'
-            <> footer'
+          <> content'
+          <> footer'
 
   body' <- mbody
   return $ docTypeHtml (mhead <> body')
@@ -316,10 +316,10 @@ goTopModule cs m = do
           sourceRef' <- local (set htmlOptionsKind HtmlSrc) (nameIdAttrRef tmp Nothing)
           return
             $ ul
-              ! Attr.id "page-menu"
-              ! Attr.class_ "links"
+            ! Attr.id "page-menu"
+            ! Attr.class_ "links"
             $ li (a ! Attr.href sourceRef' $ "Source")
-              <> li (a ! Attr.href (fromString (toFilePath indexFileName)) $ "Index")
+            <> li (a ! Attr.href (fromString (toFilePath indexFileName)) $ "Index")
 
         content :: Sem s Html
         content = do
@@ -327,46 +327,46 @@ goTopModule cs m = do
           interface' <- moduleInterface
           return
             $ Html.div
-              ! Attr.id "content"
+            ! Attr.id "content"
             $ moduleHeader
-              <> toc
-              <> preface'
-              -- <> synopsis
-              <> interface'
+            <> toc
+            <> preface'
+            -- <> synopsis
+            <> interface'
 
         docPreface :: Sem s Html
         docPreface = do
           pref <- goJudocMay (m ^. moduleDoc)
           return
             $ Html.div
-              ! Attr.id "description"
+            ! Attr.id "description"
             $ Html.div
-              ! Attr.class_ "doc"
+            ! Attr.class_ "doc"
             $ ( a
                   ! Attr.id "sec:description"
                   ! Attr.href "sec:description"
                   $ h1 "Description"
               )
-              <> pref
+            <> pref
 
         toc :: Html
         toc =
           Html.div
             ! Attr.id "table-of-contents"
             $ Html.div
-              ! Attr.id "contents-list"
+            ! Attr.id "contents-list"
             $ ( p
                   ! Attr.class_ "caption"
                   ! Attr.onclick "window.scrollTo(0,0)"
                   $ "Contents"
               )
-              <> tocEntries
+            <> tocEntries
           where
             tocEntries :: Html
             tocEntries =
-              ul $
-                li (a ! Attr.href "#sec:description" $ "Description")
-                  <> li (a ! Attr.href "#sec:interface" $ "Definitions")
+              ul
+                $ li (a ! Attr.href "#sec:description" $ "Description")
+                <> li (a ! Attr.href "#sec:interface" $ "Definitions")
 
         moduleHeader :: Html
         moduleHeader =
@@ -379,13 +379,13 @@ goTopModule cs m = do
           sigs' <- mconcatMapM goStatement (m ^. moduleBody)
           return
             $ Html.div
-              ! Attr.id "interface"
+            ! Attr.id "interface"
             $ ( a
                   ! Attr.id "sec:interface"
                   ! Attr.href "sec:interface"
                   $ h1 "Definitions"
               )
-              <> sigs'
+            <> sigs'
 
 goJudocMay :: (Members '[Reader HtmlOptions] r) => Maybe (Judoc 'Scoped) -> Sem r Html
 goJudocMay = maybe (return mempty) goJudoc
@@ -437,13 +437,13 @@ goFixity def = do
   header' <- defHeader (def ^. fixitySymbol) sig' (def ^. fixityDoc)
   prec' <- mkPrec
   let tbl' = table . tbody $ ari <> prec'
-  return $
-    header'
-      <> ( Html.div
-             ! Attr.class_ "subs"
-             $ (p ! Attr.class_ "caption" $ "Fixity details")
-               <> tbl'
-         )
+  return
+    $ header'
+    <> ( Html.div
+           ! Attr.class_ "subs"
+           $ (p ! Attr.class_ "caption" $ "Fixity details")
+           <> tbl'
+       )
   where
     info :: ParsedFixityInfo 'Scoped
     info = def ^. fixityInfo
@@ -474,9 +474,9 @@ goFixity def = do
             AssocNone -> ""
             AssocRight -> ", right-associative"
             AssocLeft -> ", left-associative"
-       in row $
-            arit
-              <> assoc
+       in row
+            $ arit
+            <> assoc
 
 goAlias :: forall r. (Members '[Reader HtmlOptions] r) => AliasDef 'Scoped -> Sem r Html
 goAlias def = do
@@ -551,9 +551,9 @@ goConstructors cc = do
   tbl' <- table . tbody <$> mconcatMapM goConstructor cc
   return
     $ Html.div
-      ! Attr.class_ "subs constructors"
+    ! Attr.class_ "subs constructors"
     $ (p ! Attr.class_ "caption" $ "Constructors")
-      <> tbl'
+    <> tbl'
   where
     goConstructor :: ConstructorDef 'Scoped -> Sem r Html
     goConstructor c = do
@@ -572,7 +572,7 @@ goConstructors cc = do
           sig' <- ppHelper (ppConstructorDef False (set constructorDoc Nothing c))
           return
             $ td
-              ! Attr.class_ "src"
+            ! Attr.class_ "src"
             $ sig'
 
 noDefHeader :: Html -> Html
@@ -590,9 +590,9 @@ defHeader name sig mjudoc = do
   judoc' <- judoc
   return
     $ Html.div
-      ! Attr.class_ "top"
+    ! Attr.class_ "top"
     $ funHeader'
-      <> judoc'
+    <> judoc'
   where
     uid :: NameId
     uid = name ^. S.nameId
@@ -613,17 +613,17 @@ defHeader name sig mjudoc = do
 sourceAndSelfLink :: (Members '[Reader HtmlOptions] r) => TopModulePath -> NameId -> Sem r Html
 sourceAndSelfLink tmp name = do
   ref' <- local (set htmlOptionsKind HtmlSrc) (nameIdAttrRef tmp (Just name))
-  return $
-    ( a
-        ! Attr.href ref'
-        ! Attr.class_ "link"
-        $ "Source"
-    )
-      <> ( a
-             ! Attr.href (selfLinkName name)
-             ! Attr.class_ "selflink"
-             $ "#"
-         )
+  return
+    $ ( a
+          ! Attr.href ref'
+          ! Attr.class_ "link"
+          $ "Source"
+      )
+    <> ( a
+           ! Attr.href (selfLinkName name)
+           ! Attr.class_ "selflink"
+           $ "#"
+       )
 
 tagIden :: (IsString c) => NameId -> c
 tagIden = fromText . prettyText

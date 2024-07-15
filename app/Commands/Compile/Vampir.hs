@@ -19,6 +19,7 @@ runCommand opts = do
     runReader entryPoint
       . runError @JuvixError
       . coreToVampIR
-      $ coreRes ^. coreResultModule
+      $ coreRes
+      ^. coreResultModule
   VampIR.Result {..} <- getRight r
   writeFileEnsureLn vampirFile _resultCode

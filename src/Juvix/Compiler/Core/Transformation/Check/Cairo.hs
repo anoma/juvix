@@ -16,8 +16,8 @@ checkCairo md = do
   where
     checkMainType :: Sem r ()
     checkMainType =
-      unless (checkType (ii ^. identifierType)) $
-        throw
+      unless (checkType (ii ^. identifierType))
+        $ throw
           CoreError
             { _coreErrorMsg = ppOutput "for this target the arguments the `main` function need to be field elements, numbers, booleans, records or lists, and the result needs to be a field element, number, boolean or a record of field elements, numbers and booleans",
               _coreErrorLoc = fromMaybe defaultLoc (ii ^. identifierLocation),

@@ -32,8 +32,10 @@ coreVampIRAssertion' ::
   Assertion
 coreVampIRAssertion' tab transforms mainFile expectedFile step = do
   step "Transform and normalize"
-  case run . runReader defaultCoreOptions . runError @JuvixError $
-    applyTransformations transforms (moduleFromInfoTable tab) of
+  case run
+    . runReader defaultCoreOptions
+    . runError @JuvixError
+    $ applyTransformations transforms (moduleFromInfoTable tab) of
     Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
     Right m -> do
       let tab' = computeCombinedInfoTable m

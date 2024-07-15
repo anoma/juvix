@@ -11,8 +11,8 @@ data InternalCommand
 
 parseInternalCommand :: Parser InternalCommand
 parseInternalCommand =
-  hsubparser $
-    mconcat
+  hsubparser
+    $ mconcat
       [ commandPretty,
         commandTypeCheck
       ]

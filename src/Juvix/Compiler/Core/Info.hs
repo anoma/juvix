@@ -54,8 +54,8 @@ delete k i = Info (HashMap.delete (typeRep k) (i ^. infoMap))
 
 adjust :: forall a. (IsInfo a) => (a -> a) -> Info -> Info
 adjust f i =
-  Info $
-    HashMap.adjust
+  Info
+    $ HashMap.adjust
       (\x -> toDyn $ f $ fromDyn x impossible)
       (typeRep (Proxy :: Proxy a))
       (i ^. infoMap)

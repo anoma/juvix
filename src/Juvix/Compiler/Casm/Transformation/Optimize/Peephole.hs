@@ -19,20 +19,20 @@ peephole = mapT go
         | _instrCallRel,
           Imm 3 <- _instrCallTarget,
           Just k1 <- getAssignApFp a1 ->
-            fixAssignAp $
-              mkAssignAp (Val (Ref (MemRef Ap k1)))
-                : Return
-                : is
+            fixAssignAp
+              $ mkAssignAp (Val (Ref (MemRef Ap k1)))
+              : Return
+              : is
       Call InstrCall {..} : Return : Assign a1 : Assign a2 : Return : is
         | _instrCallRel,
           Imm 3 <- _instrCallTarget,
           Just k1 <- getAssignApFp a1,
           Just k2 <- getAssignApFp a2 ->
-            fixAssignAp $
-              mkAssignAp (Val (Ref (MemRef Ap k1)))
-                : mkAssignAp (Val (Ref (MemRef Ap (k2 - 1))))
-                : Return
-                : is
+            fixAssignAp
+              $ mkAssignAp (Val (Ref (MemRef Ap k1)))
+              : mkAssignAp (Val (Ref (MemRef Ap (k2 - 1))))
+              : Return
+              : is
       Call InstrCall {..} : Return : Jump InstrJump {..} : is
         | _instrCallRel,
           Imm 3 <- _instrCallTarget,

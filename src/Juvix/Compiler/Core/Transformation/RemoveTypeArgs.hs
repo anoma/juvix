@@ -23,17 +23,17 @@ convertNode md = convert mempty
       NVar v@(Var {..}) ->
         let ty = BL.lookup _varIndex vars ^. binderType
          in if
-                | isTypeConstr md ty -> End (mkDynamic _varInfo)
-                | otherwise -> End (NVar (shiftVar (-k) v))
+              | isTypeConstr md ty -> End (mkDynamic _varInfo)
+              | otherwise -> End (NVar (shiftVar (-k) v))
         where
           k = length (filter (isTypeConstr md . (^. binderType)) (take _varIndex (toList vars)))
       NIdt Ident {..} ->
         let fi = lookupIdentifierInfo md _identSymbol
          in if
-                | isTypeConstr md (fi ^. identifierType) ->
-                    Recur (lookupIdentifierNode md _identSymbol)
-                | otherwise ->
-                    Recur node
+              | isTypeConstr md (fi ^. identifierType) ->
+                  Recur (lookupIdentifierNode md _identSymbol)
+              | otherwise ->
+                  Recur node
       NApp App {..} ->
         let (h, args) = unfoldApps node
             ty =
@@ -46,12 +46,12 @@ convertNode md = convert mempty
                 _ -> unsupported node
             args' = filterArgs snd ty args
          in if
-                | isTypeConstr md ty ->
-                    End (mkDynamic _appInfo)
-                | null args' ->
-                    End (convert vars h)
-                | otherwise ->
-                    End (mkApps (convert vars h) (map (second (convert vars)) args'))
+              | isTypeConstr md ty ->
+                  End (mkDynamic _appInfo)
+              | null args' ->
+                  End (convert vars h)
+              | otherwise ->
+                  End (mkApps (convert vars h) (map (second (convert vars)) args'))
       NCtr (Constr {..}) ->
         let ci = lookupConstructorInfo md _constrTag
             ty = ci ^. constructorType
@@ -105,10 +105,10 @@ convertNode md = convert mempty
             let ty' = subst (getNode arg) _piBody
                 args'' = filterArgs getNode ty' args'
              in if
-                    | isTypeConstr md (_piBinder ^. binderType) ->
-                        args''
-                    | otherwise ->
-                        arg : args''
+                  | isTypeConstr md (_piBinder ^. binderType) ->
+                      args''
+                  | otherwise ->
+                      arg : args''
           _ ->
             args
 
@@ -157,9 +157,9 @@ convertAxiom md = over axiomType (convertNode md)
 
 removeTypeArgs :: Module -> Module
 removeTypeArgs md =
-  filterOutTypeSynonyms $
-    mapAxioms (convertAxiom md) $
-      mapInductives (convertInductive md) $
-        mapConstructors (convertConstructor md) $
-          mapIdents (convertIdent md) $
-            mapT (const (convertNode md)) md
+  filterOutTypeSynonyms
+    $ mapAxioms (convertAxiom md)
+    $ mapInductives (convertInductive md)
+    $ mapConstructors (convertConstructor md)
+    $ mapIdents (convertIdent md)
+    $ mapT (const (convertNode md)) md

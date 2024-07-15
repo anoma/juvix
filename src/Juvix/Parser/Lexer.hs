@@ -42,8 +42,10 @@ spaceMsg = "white space (only spaces and newlines allowed)"
 -- | `special` is set when judoc comments or pragmas are supported
 space' :: forall e m. (MonadParsec e Text m) => Bool -> m (Maybe SpaceSpan)
 space' special =
-  hidden $
-    fmap SpaceSpan . nonEmpty <$> spaceSections
+  hidden
+    $ fmap SpaceSpan
+    . nonEmpty
+    <$> spaceSections
   where
     spaceSections :: m [SpaceSection]
     spaceSections = catMaybes <$> go []
@@ -63,13 +65,13 @@ space' special =
         pred . length <$> whileJustM (P.try (optional (newline >> hspace_)))
       return
         if
-            | k > 0 ->
-                Just
-                  EmptyLines
-                    { _emptyLinesLoc = i,
-                      _emptyLinesNum = k
-                    }
-            | otherwise -> mzero
+          | k > 0 ->
+              Just
+                EmptyLines
+                  { _emptyLinesLoc = i,
+                    _emptyLinesNum = k
+                  }
+          | otherwise -> mzero
 
     comment :: m Comment
     comment = lineComment <|> blockComment

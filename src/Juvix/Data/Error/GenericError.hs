@@ -41,8 +41,8 @@ genericErrorHeader g =
   pretty (g ^. genericErrorLoc)
     <> colon
     <+> "error"
-      <> colon
-      <> line
+    <> colon
+    <> line
 
 class ToGenericError a where
   genericError :: (Member (Reader GenericOptions) r) => a -> Sem r GenericError
@@ -62,8 +62,8 @@ render ansi endChar err = do
       header = genericErrorHeader g
       helper f x = (f . layoutPretty defaultLayoutOptions) (header <> x <> lastChar)
   if
-      | ansi -> return $ helper Ansi.renderStrict (toAnsiDoc gMsg)
-      | otherwise -> return $ helper renderStrict (toTextDoc gMsg)
+    | ansi -> return $ helper Ansi.renderStrict (toAnsiDoc gMsg)
+    | otherwise -> return $ helper renderStrict (toTextDoc gMsg)
   where
     lastChar :: Doc a
     lastChar

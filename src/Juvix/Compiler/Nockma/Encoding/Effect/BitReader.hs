@@ -26,8 +26,8 @@ countBitsUntil p = go 0
     go n = do
       b <- nextBit
       if
-          | p b -> return n
-          | otherwise -> go (n + 1)
+        | p b -> return n
+        | otherwise -> go (n + 1)
 
 countBitsUntilOne :: (Members '[BitReader, Error BitReadError] r) => Sem r Int
 countBitsUntilOne = countBitsUntil (== Bit True)

@@ -58,9 +58,12 @@ expandPrepath (Prepath p) =
       where
         prepathPart :: m PrepathPart
         prepathPart =
-          PrepathVar <$> evar
-            <|> PrepathHome <$ home
-            <|> PrepathString <$> str
+          PrepathVar
+            <$> evar
+            <|> PrepathHome
+            <$ home
+            <|> PrepathString
+            <$> str
           where
             reserved :: [Char]
             reserved = "$()~"
@@ -124,8 +127,8 @@ fromPreFileOrDir cwd fp = do
   absPath <- prepathToFilePath cwd fp
   isDirectory <- liftIO (System.doesDirectoryExist absPath)
   if
-      | isDirectory -> Right <$> parseAbsDir absPath
-      | otherwise -> Left <$> parseAbsFile absPath
+    | isDirectory -> Right <$> parseAbsDir absPath
+    | otherwise -> Left <$> parseAbsFile absPath
 
 preFileFromAbs :: Path Abs File -> Prepath File
 preFileFromAbs = mkPrepath . toFilePath

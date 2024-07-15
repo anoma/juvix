@@ -47,8 +47,8 @@ walkDirRel ::
 walkDirRel handler topdir = do
   let walkAvoidLoop :: Path Rel Dir -> Sem (State (HashSet Uid) ': r) ()
       walkAvoidLoop curdir =
-        unlessM (checkLoop (topdir <//> curdir)) $
-          walktree curdir
+        unlessM (checkLoop (topdir <//> curdir))
+          $ walktree curdir
       walktree :: Path Rel Dir -> Sem (State (HashSet Uid) ': r) ()
       walktree curdir = do
         let fullDir :: Path Abs Dir = topdir <//> curdir
@@ -76,8 +76,8 @@ walkDirRel handler topdir = do
         visited <- get
         ufid <- pathUid dir
         if
-            | HashSet.member ufid visited -> return True
-            | otherwise -> modify' (HashSet.insert ufid) $> False
+          | HashSet.member ufid visited -> return True
+          | otherwise -> modify' (HashSet.insert ufid) $> False
   evalState mempty (walkAvoidLoop $(mkRelDir "."))
 
 -- | Find all files relative to a root directory

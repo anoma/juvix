@@ -19,9 +19,9 @@ runCommand opts = do
   r <- runReader ep . runError @JuvixError $ coreToAsm (Core.moduleFromInfoTable tab)
   tab' <- getRight r
   if
-      | project opts ^. coreAsmPrint ->
-          renderStdOut (Asm.ppOutDefault tab' tab')
-      | otherwise -> runAsm True tab'
+    | project opts ^. coreAsmPrint ->
+        renderStdOut (Asm.ppOutDefault tab' tab')
+    | otherwise -> runAsm True tab'
   where
     sinputFile :: AppPath File
     sinputFile = project opts ^. coreAsmInputFile

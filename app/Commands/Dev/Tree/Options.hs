@@ -19,8 +19,8 @@ data TreeCommand
 
 parseTreeCommand :: Parser TreeCommand
 parseTreeCommand =
-  hsubparser $
-    mconcat
+  hsubparser
+    $ mconcat
       [ commandRepl,
         commandEval,
         commandCompileOld,

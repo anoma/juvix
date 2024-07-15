@@ -36,8 +36,8 @@ runBuiltins ini = reinterpret (runState ini) $ \case
     where
       notDefined :: Sem (State BuiltinsState ': r) x
       notDefined =
-        throw $
-          JuvixError
+        throw
+          $ JuvixError
             NotDefined
               { _notDefinedBuiltin = b,
                 _notDefinedLoc = i
@@ -51,8 +51,8 @@ runBuiltins ini = reinterpret (runState ini) $ \case
     where
       alreadyDefined :: Sem (State BuiltinsState ': r) x
       alreadyDefined =
-        throw $
-          JuvixError
+        throw
+          $ JuvixError
             AlreadyDefined
               { _alreadyDefinedBuiltin = b,
                 _alreadyDefinedLoc = getLoc n

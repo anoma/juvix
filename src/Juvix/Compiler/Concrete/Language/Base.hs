@@ -2815,8 +2815,12 @@ instance HasAtomicity (PatternAtom 'Parsed) where
 instance (SingI s) => HasAtomicity (FunctionParameters s) where
   atomicity p
     | not (null (p ^. paramNames))
-        || p ^. paramImplicit == Implicit
-        || p ^. paramImplicit == ImplicitInstance =
+        || p
+        ^. paramImplicit
+        == Implicit
+        || p
+        ^. paramImplicit
+        == ImplicitInstance =
         Atom
     | otherwise = case sing :: SStage s of
         SParsed -> atomicity (p ^. paramType)

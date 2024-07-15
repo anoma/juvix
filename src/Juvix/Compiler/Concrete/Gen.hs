@@ -50,8 +50,8 @@ isExhaustive _isExhaustive = do
   _isExhaustiveKw <-
     Irrelevant
       <$> if
-          | _isExhaustive -> kw kwAt
-          | otherwise -> kw kwAtQuestion
+        | _isExhaustive -> kw kwAt
+        | otherwise -> kw kwAtQuestion
 
   return IsExhaustive {..}
 

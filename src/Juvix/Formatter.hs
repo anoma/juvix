@@ -122,19 +122,19 @@ formatModuleInfo node moduleInfo =
     $ do
       pkg :: Package <- ask
       parseRes :: ParserResult <-
-        runTopModuleNameChecker $
-          fromSource Nothing (Just (node ^. importNodeAbsFile))
+        runTopModuleNameChecker
+          $ fromSource Nothing (Just (node ^. importNodeAbsFile))
       let modules = moduleInfo ^. pipelineResultImports
           scopedModules :: ScopedModuleTable = getScopedModuleTable modules
           tmp :: TopModulePathKey = relPathtoTopModulePathKey (node ^. importNodeFile)
           moduleid :: ModuleId = run (runReader pkg (getModuleId tmp))
       scopeRes :: ScoperResult <-
-        evalTopNameIdGen moduleid $
-          scopeCheck pkg scopedModules parseRes
+        evalTopNameIdGen moduleid
+          $ scopeCheck pkg scopedModules parseRes
       originalSource :: Text <- readFile' (node ^. importNodeAbsFile)
       formattedTxt <-
-        runReader originalSource $
-          formatScoperResult False scopeRes
+        runReader originalSource
+          $ formatScoperResult False scopeRes
       let formatRes =
             SourceCode
               { _sourceCodeFormatted = formattedTxt,
@@ -172,8 +172,8 @@ formatResultSourceCode ::
   Sem r FormatResult
 formatResultSourceCode filepath src = do
   if
-      | src ^. sourceCodeOriginal /= src ^. sourceCodeFormatted -> mkResult FormatResultNotFormatted
-      | otherwise -> mkResult FormatResultOK
+    | src ^. sourceCodeOriginal /= src ^. sourceCodeFormatted -> mkResult FormatResultNotFormatted
+    | otherwise -> mkResult FormatResultOK
   where
     mkResult :: FormatResult -> Sem r FormatResult
     mkResult res = do

@@ -6,6 +6,6 @@ import Juvix.Prelude.Base
 
 stdlib :: Term Natural
 stdlib =
-  fromRight impossible $
-    parseText $
-      decodeUtf8 $(FE.makeRelativeToProject "runtime/nockma/stdlib.nockma" >>= FE.embedFile)
+  fromRight impossible
+    $ parseText
+    $ decodeUtf8 $(FE.makeRelativeToProject "runtime/nockma/stdlib.nockma" >>= FE.embedFile)

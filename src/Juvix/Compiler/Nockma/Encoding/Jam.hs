@@ -78,8 +78,8 @@ jamSem t = do
         let idxBitLength = finiteBitSize idx - countLeadingZeros idx
             atomBitLength = bitLength (a ^. atom)
         if
-            | atomBitLength <= idxBitLength -> writeAtom a
-            | otherwise -> writeBackref idx
+          | atomBitLength <= idxBitLength -> writeAtom a
+          | otherwise -> writeBackref idx
       TermCell {} -> writeBackref idx
     Nothing -> do
       cacheTerm t

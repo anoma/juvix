@@ -34,4 +34,6 @@ toCasm = mapReader fromEntryPoint . toCasm'
     toCasm' :: (Member (Reader Options) r) => InfoTable -> Sem r Blocks.InfoTable
     toCasm' =
       applyTransformations toCasmTransformations
-        >=> return . Blocks.computeLiveness . Blocks.fromReg
+        >=> return
+        . Blocks.computeLiveness
+        . Blocks.fromReg

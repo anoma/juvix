@@ -42,9 +42,9 @@ createDependencyInfo edges startNames =
     edgeList = map (\(x, y) -> (x, x, HashSet.toList y)) (HashMap.toList edges)
     reachableNames :: HashSet n
     reachableNames =
-      HashSet.fromList $
-        map (\v -> case nodeFromVertex v of (_, x, _) -> x) $
-          concatMap (Graph.reachable graph) startVertices
+      HashSet.fromList
+        $ map (\v -> case nodeFromVertex v of (_, x, _) -> x)
+        $ concatMap (Graph.reachable graph) startVertices
     startVertices :: [Vertex]
     startVertices = mapMaybe vertexFromName (HashSet.toList startNames)
     topSortedNames :: [n]

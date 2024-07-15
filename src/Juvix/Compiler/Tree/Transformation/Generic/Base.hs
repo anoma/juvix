@@ -29,11 +29,11 @@ mapT f = over infoFunctions (HashMap.mapWithKey (over functionCode . f))
 
 mapT' :: forall a e r. (Symbol -> a -> Sem (InfoTableBuilder' a e ': r) a) -> InfoTable' a e -> Sem r (InfoTable' a e)
 mapT' f tab =
-  fmap fst $
-    runInfoTableBuilderWithInfoTable tab $
-      mapM_
-        (\(sym, fi) -> overM functionCode (f sym) fi >>= registerFunction' @a @e)
-        (HashMap.toList (tab ^. infoFunctions))
+  fmap fst
+    $ runInfoTableBuilderWithInfoTable tab
+    $ mapM_
+      (\(sym, fi) -> overM functionCode (f sym) fi >>= registerFunction' @a @e)
+      (HashMap.toList (tab ^. infoFunctions))
 
 walkT :: (Applicative f) => (Symbol -> a -> f ()) -> InfoTable' a e -> f ()
 walkT f tab = for_ (HashMap.toList (tab ^. infoFunctions)) (\(k, v) -> f k (v ^. functionCode))
@@ -42,8 +42,8 @@ withOptimizationLevel :: (Member (Reader Options) r) => Int -> (InfoTable' a e -
 withOptimizationLevel n f tab = do
   l <- asks (^. optOptimizationLevel)
   if
-      | l >= n -> f tab
-      | otherwise -> return tab
+    | l >= n -> f tab
+    | otherwise -> return tab
 
 withOptimizationLevel' :: (Member (Reader Options) r) => InfoTable' a e -> Int -> (InfoTable' a e -> Sem r (InfoTable' a e)) -> Sem r (InfoTable' a e)
 withOptimizationLevel' tab n f = withOptimizationLevel n f tab

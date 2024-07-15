@@ -40,10 +40,10 @@ instance ToGenericError MultipleDeclarations where
       msg =
         "Multiple declarations of"
           <+> pretty _multipleDeclSecond
-            <> line
-            <> "Declared at:"
-            <> line
-            <> itemize (map pretty [i1, i2])
+          <> line
+          <> "Declared at:"
+          <> line
+          <> itemize (map pretty [i1, i2])
 
 -- | megaparsec error while resolving infixities.
 newtype InfixError = InfixError
@@ -210,9 +210,9 @@ instance ToGenericError DuplicateOperator where
           msg =
             "Multiple operator declarations for symbol"
               <+> ppCode opts' sym
-                <> ":"
-                <> line
-                <> indent' (align locs)
+              <> ":"
+              <> line
+              <> indent' (align locs)
             where
               sym = _dupOperatorFirst ^. opSymbol
               locs = vsep $ map (pretty . getLoc) [_dupOperatorFirst, _dupOperatorSecond]
@@ -241,9 +241,9 @@ instance ToGenericError DuplicateIterator where
           msg =
             "Multiple iterator declarations for symbol"
               <+> ppCode opts' sym
-                <> ":"
-                <> line
-                <> indent' (align locs)
+              <> ":"
+              <> line
+              <> indent' (align locs)
             where
               sym = _dupIteratorFirst ^. iterSymbol
               locs = vsep $ map (pretty . getLoc) [_dupIteratorFirst, _dupIteratorFirst]
@@ -303,7 +303,7 @@ instance ToGenericError NotInScope where
           msg =
             "Symbol not in scope:"
               <+> ppCode opts' _notInScopeSymbol
-                <>? ((line <>) <$> suggestion)
+              <>? ((line <>) <$> suggestion)
           suggestion :: Maybe (Doc a)
           suggestion
             | null suggestions = Nothing
@@ -313,8 +313,8 @@ instance ToGenericError NotInScope where
           maxDist = 2
           suggestions :: [Doc a]
           suggestions =
-            map (pretty . fst) $
-              sortOn
+            map (pretty . fst)
+              $ sortOn
                 snd
                 [ (c, dist) | c <- toList candidates, let dist = textDistance sym c, dist <= maxDist
                 ]
@@ -349,8 +349,8 @@ instance ToGenericError AppLeftImplicit where
             "The expression"
               <+> ppCode opts' (e ^. appLeftImplicit)
               <+> "cannot appear by itself."
-                <> line
-                <> "It needs to be the argument of a function expecting an implicit argument."
+              <> line
+              <> "It needs to be the argument of a function expecting an implicit argument."
 
 newtype DanglingDoubleBrace = DanglingDoubleBrace
   { _danglingDoubleBrace :: DoubleBracesExpression 'Scoped
@@ -377,8 +377,8 @@ instance ToGenericError DanglingDoubleBrace where
             "The expression"
               <+> ppCode opts' expr
               <+> "cannot appear by itself."
-                <> line
-                <> "It needs to be on the left of a function arrow."
+              <> line
+              <> "It needs to be on the left of a function arrow."
 
 newtype ModuleNotInScope = ModuleNotInScope
   { _moduleNotInScopeName :: Name
@@ -497,9 +497,9 @@ infixErrorAux :: Doc Ann -> Doc Ann -> Doc Ann
 infixErrorAux kind pp =
   "Error while resolving infixities in the"
     <+> kind
-      <> ":"
-      <> line
-      <> indent' pp
+    <> ":"
+    <> line
+    <> indent' pp
 
 ambiguousMessage :: Options -> Name -> [Doc Ann] -> Doc Ann
 ambiguousMessage opts' n es =
@@ -508,10 +508,10 @@ ambiguousMessage opts' n es =
     <+> "at"
     <+> pretty (getLoc n)
     <+> "is ambiguous."
-      <> line
-      <> "It could be any of:"
-      <> line
-      <> itemize es
+    <> line
+    <> "It could be any of:"
+    <> line
+    <> itemize es
 
 data DoubleBracesPattern = DoubleBracesPattern
   { _doubleBracesPatternArg :: PatternArg,
@@ -910,9 +910,9 @@ instance ToGenericError MissingArgs where
     let msg =
           "Missing arguments for"
             <+> ppCode opts _missingArgsName
-              <> ":"
-              <> line
-              <> itemize (map (ppCode opts) (toList _missingArgs))
+            <> ":"
+            <> line
+            <> itemize (map (ppCode opts) (toList _missingArgs))
     return
       GenericError
         { _genericErrorLoc = i,

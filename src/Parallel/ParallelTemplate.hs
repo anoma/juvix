@@ -178,8 +178,8 @@ compile args@CompileArgs {..} = do
     . crashOnError
     $ do
       withAsync handleLogs $ \logHandler -> do
-        replicateConcurrently_ _compileArgsNumWorkers $
-          lookForWork @nodeId @node @compileProof
+        replicateConcurrently_ _compileArgsNumWorkers
+          $ lookForWork @nodeId @node @compileProof
         wait logHandler
   (^. compilationState) <$> readTVarIO varCompilationState
 
@@ -233,13 +233,15 @@ getTask = do
               kwBracketL
                 <> annotate AnnLiteralInteger (pretty num)
                 <+> kwOf
-                <+> annotate AnnLiteralInteger (pretty total) <> kwBracketR <> " "
+                <+> annotate AnnLiteralInteger (pretty total)
+                <> kwBracketR
+                <> " "
             kwCompiling = annotate AnnKeyword "Compiling"
             isLast = num == total
         logMsg tid logs (progress <> kwCompiling <> " " <> name)
         when isLast (logClose logs)
-        return $
-          Just
+        return
+          $ Just
             Task
               { _taskNum = num,
                 _taskTotal = total,

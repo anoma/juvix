@@ -51,8 +51,8 @@ coreEvalAssertion' ::
   (String -> IO ()) ->
   Assertion
 coreEvalAssertion' mode tab mainFile expectedFile step =
-  length (fromText (ppPrint tab) :: String) `seq`
-    case HashMap.lookup sym (tab ^. identContext) of
+  length (fromText (ppPrint tab) :: String)
+    `seq` case HashMap.lookup sym (tab ^. identContext) of
       Just node -> do
         d <- readEvalData (ii ^. identifierArgNames)
         case d of
@@ -102,12 +102,12 @@ coreEvalAssertion' mode tab mainFile expectedFile step =
     readEvalData argnames = case mode of
       EvalModePlain -> do
         expected <- readFile expectedFile
-        return $
-          Right $
-            EvalData
-              { _evalDataInput = [],
-                _evalDataOutput = expected
-              }
+        return
+          $ Right
+          $ EvalData
+            { _evalDataInput = [],
+              _evalDataOutput = expected
+            }
       EvalModeJSON -> do
         fmap
           ( over evalDataInput sortArgs
@@ -127,10 +127,10 @@ coreEvalAssertion' mode tab mainFile expectedFile step =
 
               argnames' =
                 if
-                    | length args == 1 ->
-                        [fromMaybe "in" (head (nonEmpty' argnames))]
-                    | otherwise ->
-                        zipWith (\n -> fromMaybe ("in" <> show n)) [1 .. length args] (argnames ++ repeat Nothing)
+                  | length args == 1 ->
+                      [fromMaybe "in" (head (nonEmpty' argnames))]
+                  | otherwise ->
+                      zipWith (\n -> fromMaybe ("in" <> show n)) [1 .. length args] (argnames ++ repeat Nothing)
 
 coreEvalAssertion ::
   Path Abs File ->

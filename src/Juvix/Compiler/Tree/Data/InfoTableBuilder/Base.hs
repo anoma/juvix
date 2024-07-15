@@ -56,10 +56,10 @@ builderStateFromInfoTable tab =
       _stateNextUserTag = getNextUserTag tab,
       _stateInfoTable = tab,
       _stateIdents =
-        HashMap.fromList $
-          map (\fi -> (fi ^. functionName, IdentFun (fi ^. functionSymbol))) (HashMap.elems (tab ^. infoFunctions))
-            ++ map (\ii -> (ii ^. inductiveName, IdentInd (ii ^. inductiveSymbol))) (HashMap.elems (tab ^. infoInductives))
-            ++ map (\ci -> (ci ^. constructorName, IdentConstr (ci ^. constructorTag))) (HashMap.elems (tab ^. infoConstrs))
+        HashMap.fromList
+          $ map (\fi -> (fi ^. functionName, IdentFun (fi ^. functionSymbol))) (HashMap.elems (tab ^. infoFunctions))
+          ++ map (\ii -> (ii ^. inductiveName, IdentInd (ii ^. inductiveSymbol))) (HashMap.elems (tab ^. infoInductives))
+          ++ map (\ci -> (ci ^. constructorName, IdentConstr (ci ^. constructorTag))) (HashMap.elems (tab ^. infoConstrs))
     }
 
 runInfoTableBuilderWithInfoTable :: InfoTable' t e -> Sem (InfoTableBuilder' t e ': r) b -> Sem r (InfoTable' t e, b)

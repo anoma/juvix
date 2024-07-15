@@ -266,12 +266,12 @@ expandType :: [Binder] -> Type -> Type
 expandType argtys ty =
   let (tyargs, target) = unfoldPi ty
    in if
-          | length tyargs >= length argtys ->
-              ty
-          | isDynamic target ->
-              rePis tyargs (mkPis (drop (length tyargs) argtys) target)
-          | otherwise ->
-              impossible
+        | length tyargs >= length argtys ->
+            ty
+        | isDynamic target ->
+            rePis tyargs (mkPis (drop (length tyargs) argtys) target)
+        | otherwise ->
+            impossible
 
 {------------------------------------------------------------------------}
 {- functions on Node -}
@@ -624,12 +624,12 @@ destruct = \case
         allNodes =
           noBinders rty
             : map noBinders (toList vtys)
-            ++ map noBinders (toList vs)
-            ++ concat
-              [ br
-                  : reverse (foldl' (\acc b -> manyBinders (take (length acc) bis) (b ^. binderType) : acc) [] bis)
-                | (bis, br) <- branchChildren
-              ]
+              ++ map noBinders (toList vs)
+              ++ concat
+                [ br
+                    : reverse (foldl' (\acc b -> manyBinders (take (length acc) bis) (b ^. binderType) : acc) [] bis)
+                  | (bis, br) <- branchChildren
+                ]
           where
             branchChildren :: [([Binder], NodeChild)]
             branchChildren =
@@ -687,10 +687,10 @@ destruct = \case
                   (values', branchesChildren') = first nonEmpty' (splitAtExact numVals chs'')
                   branches' :: [MatchBranch]
                   branches' =
-                    run $
-                      runInputList is' $
-                        runInputList branchesChildren' $
-                          mapM mkBranch branches
+                    run
+                      $ runInputList is'
+                      $ runInputList branchesChildren'
+                      $ mapM mkBranch branches
                in mkMatch
                     i'
                     valueTypes'

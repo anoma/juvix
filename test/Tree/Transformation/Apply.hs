@@ -10,8 +10,8 @@ allTests :: TestTree
 allTests =
   testGroup
     "Apply"
-    ( map liftTest $
-        Eval.filterTests
+    ( map liftTest
+        $ Eval.filterTests
           [ "Test007: Higher-order functions",
             "Test022: Self-application",
             "Test025: Dynamic closure extension",

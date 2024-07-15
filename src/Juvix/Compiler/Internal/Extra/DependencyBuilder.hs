@@ -84,8 +84,9 @@ addEdgeMayRev n2 = whenJustM ask $ \n1 -> addEdge n2 n1
 
 addNode :: (Member (State DependencyGraph) r) => Name -> Sem r ()
 addNode n =
-  modify @DependencyGraph . over (at n) $
-    \case
+  modify @DependencyGraph
+    . over (at n)
+    $ \case
       Just x -> Just x
       Nothing -> Just (mempty :: HashSet Name)
 

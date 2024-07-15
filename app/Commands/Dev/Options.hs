@@ -77,99 +77,99 @@ parseDevCommand =
 
 commandImportTree :: Mod CommandFields DevCommand
 commandImportTree =
-  command "import-tree" $
-    info
+  command "import-tree"
+    $ info
       (ImportTree <$> parseImportTree)
       (progDesc "Subcommands related to the import dependency tree")
 
 commandDevCompile :: Mod CommandFields DevCommand
 commandDevCompile =
-  command "compile" $
-    info
+  command "compile"
+    $ info
       (DevCompile <$> parseDevCompileCommand)
       (progDesc "Compile a Juvix file to an internal language")
 
 commandHighlight :: Mod CommandFields DevCommand
 commandHighlight =
-  command "highlight" $
-    info
+  command "highlight"
+    $ info
       (Highlight <$> parseHighlight)
       (progDesc "Highlight a Juvix file")
 
 commandInternal :: Mod CommandFields DevCommand
 commandInternal =
-  command "internal" $
-    info
+  command "internal"
+    $ info
       (Internal <$> parseInternalCommand)
       (progDesc "Subcommands related to Internal")
 
 commandCore :: Mod CommandFields DevCommand
 commandCore =
-  command "core" $
-    info
+  command "core"
+    $ info
       (Core <$> parseCoreCommand)
       (progDesc "Subcommands related to JuvixCore")
 
 commandAsm :: Mod CommandFields DevCommand
 commandAsm =
-  command "asm" $
-    info
+  command "asm"
+    $ info
       (Asm <$> parseAsmCommand)
       (progDesc "Subcommands related to JuvixAsm")
 
 commandReg :: Mod CommandFields DevCommand
 commandReg =
-  command "reg" $
-    info
+  command "reg"
+    $ info
       (Reg <$> parseRegCommand)
       (progDesc "Subcommands related to JuvixReg")
 
 commandTree :: Mod CommandFields DevCommand
 commandTree =
-  command "tree" $
-    info
+  command "tree"
+    $ info
       (Tree <$> parseTreeCommand)
       (progDesc "Subcommands related to JuvixTree")
 
 commandCasm :: Mod CommandFields DevCommand
 commandCasm =
-  command "casm" $
-    info
+  command "casm"
+    $ info
       (Casm <$> parseCasmCommand)
       (progDesc "Subcommands related to Cairo Assembly")
 
 commandRuntime :: Mod CommandFields DevCommand
 commandRuntime =
-  command "runtime" $
-    info
+  command "runtime"
+    $ info
       (Runtime <$> parseRuntimeCommand)
       (progDesc "Subcommands related to the Juvix runtime")
 
 commandParse :: Mod CommandFields DevCommand
 commandParse =
-  command "parse" $
-    info
+  command "parse"
+    $ info
       (Parse <$> parseParse)
       (progDesc "Parse a Juvix file")
 
 commandScope :: Mod CommandFields DevCommand
 commandScope =
-  command "scope" $
-    info
+  command "scope"
+    $ info
       (Scope <$> parseScope)
       (progDesc "Parse and scope a Juvix file")
 
 commandShowRoot :: Mod CommandFields DevCommand
 commandShowRoot =
-  command "root" $
-    info
+  command "root"
+    $ info
       (DisplayRoot <$> parseRoot)
       (progDesc "Show the root path for a Juvix project")
 
 commandTermination :: Mod CommandFields DevCommand
 commandTermination =
-  command "termination" $
-    info
+  command "termination"
+    $ info
       (Termination <$> parseTerminationCommand)
       (progDesc "Subcommands related to termination checking")
 
@@ -184,14 +184,14 @@ commandJuvixDevRepl =
 
 commandMigrateJuvixYaml :: Mod CommandFields DevCommand
 commandMigrateJuvixYaml =
-  command "migrate-juvix-yaml" $
-    info
+  command "migrate-juvix-yaml"
+    $ info
       (MigrateJuvixYaml <$> parseMigrateJuvixYaml)
       (progDesc "Migrate juvix.yaml to Package.juvix in the current project")
 
 commandNockma :: Mod CommandFields DevCommand
 commandNockma =
-  command "nockma" $
-    info
+  command "nockma"
+    $ info
       (Nockma <$> parseNockmaCommand)
       (progDesc "Subcommands related to the nockma backend")

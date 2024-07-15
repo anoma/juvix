@@ -133,14 +133,14 @@ checkImportTreeCycles tree = do
       find cond edges
       where
         unexpected =
-          error $
-            "Impossible: Could not find edge between\n"
-              <> prettyText fromN
-              <> "\nand\n"
-              <> prettyText toN
-              <> "\n"
-              <> "Available Edges:\n"
-              <> prettyText (toList (tree ^. importTreeEdges . at fromN . _Just))
+          error
+            $ "Impossible: Could not find edge between\n"
+            <> prettyText fromN
+            <> "\nand\n"
+            <> prettyText toN
+            <> "\n"
+            <> "Available Edges:\n"
+            <> prettyText (toList (tree ^. importTreeEdges . at fromN . _Just))
 
     getCycle :: SCC ImportNode -> Maybe (NonEmpty ImportNode)
     getCycle = \case

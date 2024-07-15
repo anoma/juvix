@@ -19,26 +19,26 @@ convertNode md = rmap go
       NApp (App _ (NApp (App _ (NIdt (Ident {..})) l)) r) ->
         recur [] $ convertIdentApp node (\g -> g _identInfo l r) _identSymbol
       NApp (App _ (NIdt (Ident {..})) l) ->
-        recur [] $
-          convertIdentApp
+        recur []
+          $ convertIdentApp
             node
             ( \g ->
-                mkLet' mkTypeInteger' l $
-                  mkLambda' mkTypeInteger' $
-                    g _identInfo (mkVar' 1) (mkVar' 0)
+                mkLet' mkTypeInteger' l
+                  $ mkLambda' mkTypeInteger'
+                  $ g _identInfo (mkVar' 1) (mkVar' 0)
             )
             _identSymbol
       NIdt (Ident {..})
         | Just _identSymbol == intToNat ->
             mkLambda' mkTypeInteger' (mkVar' 0)
       NIdt (Ident {..}) ->
-        recur [] $
-          convertIdentApp
+        recur []
+          $ convertIdentApp
             node
             ( \g ->
-                mkLambda' mkTypeInteger' $
-                  mkLambda' mkTypeInteger' $
-                    g _identInfo (mkVar' 1) (mkVar' 0)
+                mkLambda' mkTypeInteger'
+                  $ mkLambda' mkTypeInteger'
+                  $ g _identInfo (mkVar' 1) (mkVar' 0)
             )
             _identSymbol
       NCtr (Constr {..}) ->
@@ -57,12 +57,12 @@ convertNode md = rmap go
                   [br] -> makeIf br (maybeBranch _caseDefault)
                   [br1, br2] ->
                     if
-                        | br1 ^. caseBranchBindersNum == 1 && br2 ^. caseBranchBindersNum == 0 ->
-                            makeIf br1 (br2 ^. caseBranchBody)
-                        | br2 ^. caseBranchBindersNum == 1 && br1 ^. caseBranchBindersNum == 0 ->
-                            makeIf br2 (br1 ^. caseBranchBody)
-                        | otherwise ->
-                            impossible
+                      | br1 ^. caseBranchBindersNum == 1 && br2 ^. caseBranchBindersNum == 0 ->
+                          makeIf br1 (br2 ^. caseBranchBody)
+                      | br2 ^. caseBranchBindersNum == 1 && br1 ^. caseBranchBindersNum == 0 ->
+                          makeIf br2 (br1 ^. caseBranchBody)
+                      | otherwise ->
+                          impossible
                   [] -> recur [] $ fromJust _caseDefault
                   _ -> impossible
               _ -> recur [] node
@@ -75,8 +75,8 @@ convertNode md = rmap go
                   0 ->
                     recur [] $ mkIf _caseInfo sym (mkBuiltinApp' OpEq [_caseValue, mkConstant' (ConstInteger 0)]) _caseBranchBody br
                   1 ->
-                    mkLet mempty binder' (go recur _caseValue) $
-                      mkIf
+                    mkLet mempty binder' (go recur _caseValue)
+                      $ mkIf
                         _caseInfo
                         sym
                         (mkBuiltinApp' OpEq [mkConstant' (ConstInteger 0), mkVar (Info.singleton (NameInfo name)) 0])
@@ -106,8 +106,8 @@ convertNode md = rmap go
             Just BuiltinNatSub ->
               f
                 ( \info x y ->
-                    mkLet' mkTypeInteger' (mkBuiltinApp info OpIntSub [x, y]) $
-                      mkIf'
+                    mkLet' mkTypeInteger' (mkBuiltinApp info OpIntSub [x, y])
+                      $ mkIf'
                         boolSymbol
                         (mkBuiltinApp' OpIntLe [mkConstant' (ConstInteger 0), mkVar' 0])
                         (mkVar' 0)

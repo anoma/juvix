@@ -24,8 +24,10 @@ instance ToGenericError DuplicateName where
     let _genericErrorLoc = getLoc _dupNameSecond
         _genericErrorMessage :: AnsiText
         _genericErrorMessage =
-          prettyError $
-            "The symbol" <+> ppCode opts _dupNameFirst <+> "cannot be repeated"
+          prettyError
+            $ "The symbol"
+            <+> ppCode opts _dupNameFirst
+            <+> "cannot be repeated"
         _genericErrorIntervals = map getLoc [_dupNameFirst, _dupNameSecond]
 
     return GenericError {..}

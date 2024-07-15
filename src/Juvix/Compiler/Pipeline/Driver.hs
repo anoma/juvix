@@ -98,20 +98,27 @@ processModuleCacheMiss entryIx = do
   m :: Maybe Store.ModuleInfo <- loadFromFile absPath
   case m of
     Just info
-      | info ^. Store.moduleInfoSHA256 == sha256
-          && info ^. Store.moduleInfoOptions == opts
-          && info ^. Store.moduleInfoFieldSize == entry ^. entryPointFieldSize -> do
+      | info
+          ^. Store.moduleInfoSHA256
+          == sha256
+          && info
+          ^. Store.moduleInfoOptions
+          == opts
+          && info
+          ^. Store.moduleInfoFieldSize
+          == entry
+          ^. entryPointFieldSize -> do
           CompileResult {..} <- runReader entry (processImports (info ^. Store.moduleInfoImports))
           if
-              | _compileResultChanged ->
-                  recompile sha256 absPath
-              | otherwise ->
-                  return
-                    PipelineResult
-                      { _pipelineResult = info,
-                        _pipelineResultImports = _compileResultModuleTable,
-                        _pipelineResultChanged = False
-                      }
+            | _compileResultChanged ->
+                recompile sha256 absPath
+            | otherwise ->
+                return
+                  PipelineResult
+                    { _pipelineResult = info,
+                      _pipelineResultImports = _compileResultModuleTable,
+                      _pipelineResultChanged = False
+                    }
     _ ->
       recompile sha256 absPath
   where
@@ -183,10 +190,10 @@ processImport p = withPathFile p getCachedImport
       b <- supportsParallel
       eix <- mkEntryIndex node
       if
-          | b -> do
-              res <- cacheGetResult eix
-              return (res ^. cacheResult)
-          | otherwise -> processModule eix
+        | b -> do
+            res <- cacheGetResult eix
+            return (res ^. cacheResult)
+        | otherwise -> processModule eix
 
 processFileUpToParsing ::
   forall r.

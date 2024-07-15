@@ -57,8 +57,14 @@ isSubtype ty1 ty2 = case (ty1, ty2) of
   (TyConstr TypeConstr {..}, TyInductive TypeInductive {..}) ->
     _typeConstrInductive == _typeInductiveSymbol
   (TyConstr c1, TyConstr c2) ->
-    c1 ^. typeConstrInductive == c2 ^. typeConstrInductive
-      && c1 ^. typeConstrTag == c2 ^. typeConstrTag
+    c1
+      ^. typeConstrInductive
+      == c2
+      ^. typeConstrInductive
+      && c1
+      ^. typeConstrTag
+      == c2
+      ^. typeConstrTag
       && all (uncurry isSubtype) (zip (c1 ^. typeConstrFields) (c2 ^. typeConstrFields))
   (TyFun t1, TyFun t2) ->
     let l1 = toList (t1 ^. typeFunArgs)
@@ -119,8 +125,14 @@ unifyTypes ty1 ty2 = case (ty1, ty2) of
         return ty1
   (TyConstr {}, TyInductive {}) -> unifyTypes @t @e ty2 ty1
   (TyConstr c1, TyConstr c2)
-    | c1 ^. typeConstrInductive == c2 ^. typeConstrInductive
-        && c1 ^. typeConstrTag == c2 ^. typeConstrTag -> do
+    | c1
+        ^. typeConstrInductive
+        == c2
+        ^. typeConstrInductive
+        && c1
+        ^. typeConstrTag
+        == c2
+        ^. typeConstrTag -> do
         flds <- zipWithM (unifyTypes @t @e) (c1 ^. typeConstrFields) (c2 ^. typeConstrFields)
         return $ TyConstr (set typeConstrFields flds c1)
   (TyConstr c1, TyConstr c2)
@@ -175,15 +187,16 @@ unifyTypes ty1 ty2 = case (ty1, ty2) of
 
 unifyTypes' :: forall t e r. (Member (Error TreeError) r) => Maybe Location -> InfoTable' t e -> Type -> Type -> Sem r Type
 unifyTypes' loc tab ty1 ty2 =
-  runReader loc $
-    runReader tab $
-      -- The `if` is to ensure correct behaviour with dynamic type targets. E.g.
-      -- `(A, B) -> *` should unify with `A -> B -> C -> D`.
-      if
-          | tgt1 == TyDynamic || tgt2 == TyDynamic ->
-              unifyTypes @t @e (curryType ty1) (curryType ty2)
-          | otherwise ->
-              unifyTypes @t @e ty1 ty2
+  runReader loc
+    $ runReader tab
+    $
+    -- The `if` is to ensure correct behaviour with dynamic type targets. E.g.
+    -- `(A, B) -> *` should unify with `A -> B -> C -> D`.
+    if
+      | tgt1 == TyDynamic || tgt2 == TyDynamic ->
+          unifyTypes @t @e (curryType ty1) (curryType ty2)
+      | otherwise ->
+          unifyTypes @t @e ty1 ty2
   where
     tgt1 = typeTarget (uncurryType ty1)
     tgt2 = typeTarget (uncurryType ty2)

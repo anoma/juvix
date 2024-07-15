@@ -26,9 +26,9 @@ import Text.Megaparsec qualified as P
 -- generated during parsing
 runParser :: Path Abs File -> ModuleId -> InfoTable -> Text -> Either MegaparsecError (InfoTable, Maybe Node)
 runParser fileName mid tab input_ =
-  case run $
-    runInfoTableBuilder (Module mid tab mempty) $
-      P.runParserT parseToplevel (fromAbsFile fileName) input_ of
+  case run
+    $ runInfoTableBuilder (Module mid tab mempty)
+    $ P.runParserT parseToplevel (fromAbsFile fileName) input_ of
     (_, Left err) -> Left (MegaparsecError err)
     (md, Right r) -> Right (md ^. moduleInfoTable, r)
 
@@ -99,25 +99,25 @@ statementBuiltin = do
   sym <- statementDef
   ii <- lift $ getIdentifierInfo sym
   if
-      | ii ^. identifierName == Str.natPlus ->
-          lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatPlus}
-      | ii ^. identifierName == Str.natSub ->
-          lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatSub}
-      | ii ^. identifierName == Str.natMul ->
-          lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatMul}
-      | ii ^. identifierName == Str.natDiv ->
-          lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatDiv}
-      | ii ^. identifierName == Str.natMod ->
-          lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatMod}
-      | ii ^. identifierName == Str.natUDiv ->
-          lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatUDiv}
-      | ii ^. identifierName == Str.natLe ->
-          lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatLe}
-      | ii ^. identifierName == Str.natLt ->
-          lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatLt}
-      | ii ^. identifierName == Str.natEq ->
-          lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatEq}
-      | otherwise -> parseFailure off "unrecorgnized builtin definition"
+    | ii ^. identifierName == Str.natPlus ->
+        lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatPlus}
+    | ii ^. identifierName == Str.natSub ->
+        lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatSub}
+    | ii ^. identifierName == Str.natMul ->
+        lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatMul}
+    | ii ^. identifierName == Str.natDiv ->
+        lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatDiv}
+    | ii ^. identifierName == Str.natMod ->
+        lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatMod}
+    | ii ^. identifierName == Str.natUDiv ->
+        lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatUDiv}
+    | ii ^. identifierName == Str.natLe ->
+        lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatLe}
+    | ii ^. identifierName == Str.natLt ->
+        lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatLt}
+    | ii ^. identifierName == Str.natEq ->
+        lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatEq}
+    | otherwise -> parseFailure off "unrecorgnized builtin definition"
 
 statementDef ::
   (Member InfoTableBuilder r) =>
@@ -136,8 +136,8 @@ statementDef = do
       mty <- optional typeAnnotation
       let fi = fromMaybe impossible $ HashMap.lookup sym (tab ^. infoIdentifiers)
           ty = fromMaybe (fi ^. identifierType) mty
-      unless (isDynamic (fi ^. identifierType) || ty == fi ^. identifierType) $
-        parseFailure off "type signature doesn't match earlier definition"
+      unless (isDynamic (fi ^. identifierType) || ty == fi ^. identifierType)
+        $ parseFailure off "type signature doesn't match earlier definition"
       parseDefinition sym ty
       return sym
     Just IdentInd {} ->
@@ -176,7 +176,8 @@ parseDefinition sym ty = do
   lift $ registerIdentNode sym node
   let (is, _) = unfoldLambdas node
   when
-    ( length is > length (typeArgs ty)
+    ( length is
+        > length (typeArgs ty)
         && not (isDynamic (typeTarget ty))
     )
     $ parseFailure off "type mismatch: too many lambdas"
@@ -190,8 +191,8 @@ statementInductive = do
   off <- P.getOffset
   (txt, i) <- identifierL
   idt <- lift $ getIdent txt
-  when (isJust idt) $
-    parseFailure off ("duplicate identifier: " ++ fromText txt)
+  when (isJust idt)
+    $ parseFailure off ("duplicate identifier: " ++ fromText txt)
   mty <- optional typeAnnotation
   sym <- lift freshSymbol
   let ii =
@@ -218,8 +219,8 @@ constrDecl symInd = do
   off <- P.getOffset
   (txt, i) <- identifierL
   idt <- lift $ getIdent txt
-  when (isJust idt) $
-    parseFailure off ("duplicate identifier: " ++ fromText txt)
+  when (isJust idt)
+    $ parseFailure off ("duplicate identifier: " ++ fromText txt)
   tag <- lift freshTag
   ty <- typeAnnotation
   let argsNum = length (typeArgs ty)
@@ -365,8 +366,8 @@ seqExpr' ::
 seqExpr' varsNum vars node = do
   ((), i) <- interval (kw kwSeq)
   node' <- cmpExpr (varsNum + 1) vars
-  ioExpr' varsNum vars $
-    mkConstr
+  ioExpr' varsNum vars
+    $ mkConstr
       Info.empty
       (BuiltinTag TagBind)
       [node, mkLambda mempty (Binder "_" (Just i) mkDynamic') node']
@@ -714,7 +715,8 @@ exprLambda varsNum vars = do
             ty <- typeAnnot varsNum vars
             return (n, Just ty)
         )
-        <|> (\n -> (n, Nothing)) <$> parseLocalName
+        <|> (\n -> (n, Nothing))
+        <$> parseLocalName
 
 exprLetrecOne ::
   (Member InfoTableBuilder r) =>
@@ -742,8 +744,8 @@ exprLetrecMany ::
 exprLetrecMany varsNum vars = do
   off <- P.getOffset
   defNames <- P.try (kw kwLetRec >> letrecNames)
-  when (null defNames) $
-    parseFailure off "expected at least one identifier name in letrec signature"
+  when (null defNames)
+    $ parseFailure off "expected at least one identifier name in letrec signature"
   let (vars', varsNum') = foldl' (\(vs, k) txt -> (HashMap.insert txt k vs, k + 1)) (vars, varsNum) defNames
   defs <- letrecDefs defNames varsNum vars varsNum' vars'
   kw kwIn
@@ -769,8 +771,8 @@ letrecDefs names varsNum0 vars0 varsNum vars = forM names letrecItem
       off <- P.getOffset
       (txt, i) <- identifierL
       mty <- optional (typeAnnot varsNum0 vars0)
-      when (n /= txt) $
-        parseFailure off "identifier name doesn't match letrec signature"
+      when (n /= txt)
+        $ parseFailure off "identifier name doesn't match letrec signature"
       kw kwAssign
       v <- bracedExpr varsNum vars
       kw delimSemicolon
@@ -905,8 +907,8 @@ caseMatchingBranch varsNum vars = do
         (parseFailure off "wrong number of constructor arguments")
       kw kwAssign
       let vars' =
-            fst $
-              foldl'
+            fst
+              $ foldl'
                 ( \(vs, k) ((name, _), _) ->
                     (HashMap.insert name k vs, k + 1)
                 )
@@ -994,8 +996,8 @@ matchBranch patsNum varsNum vars = do
   off <- P.getOffset
   pats <- branchPatterns varsNum vars
   kw kwAssign
-  unless (length pats == patsNum) $
-    parseFailure off "wrong number of patterns"
+  unless (length pats == patsNum)
+    $ parseFailure off "wrong number of patterns"
   let pis :: [Binder]
       pis = concatMap getPatternBinders pats
       (vars', varsNum') =

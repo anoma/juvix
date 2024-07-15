@@ -47,8 +47,8 @@ lambdaLiftNode aboveBl top =
         goLambda l = do
           onlyLetRec <- ask @OnlyLetRec
           if
-              | onlyLetRec -> return (Recur (NLam l))
-              | otherwise -> goLambdaGo l
+            | onlyLetRec -> return (Recur (NLam l))
+            | otherwise -> goLambdaGo l
           where
             goLambdaGo :: Lambda -> Sem r Recur
             goLambdaGo lm = do

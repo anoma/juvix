@@ -89,8 +89,8 @@ instance (SingI s) => IsApe (NamedApplication s) ApeLeaf where
 
 instance (SingI s) => IsApe (NamedApplicationNew s) ApeLeaf where
   toApe a =
-    ApeLeaf $
-      Leaf
+    ApeLeaf
+      $ Leaf
         { _leafAtomicity = atomicity a,
           _leafExpr = ApeLeafAtom (sing :&: AtomNamedApplicationNew a)
         }

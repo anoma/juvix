@@ -21,8 +21,8 @@ newtype instance StaticRep (Input i) = Input
 
 input :: (Member (Input i) r) => Sem r (Maybe i)
 input =
-  stateStaticRep $
-    \case
+  stateStaticRep
+    $ \case
       Input [] -> (Nothing, Input [])
       Input (i : is) -> (Just i, Input is)
 

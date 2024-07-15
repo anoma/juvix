@@ -87,14 +87,14 @@ parseCStage = do
                 <> toPlainString (itemize ["'" <> Juvix.show s <> "'" <> ": " <> cstageHelp s | s <- allElements @CStage])
             )
       )
-  pure $
-    if
-        | onlySource -> CSource
-        | onlyPreprocess -> CPreprocess
-        | onlyAssemble -> CAssembly
-        | otherwise -> case mcstage of
-            Nothing -> defaultCStage
-            Just x -> x
+  pure
+    $ if
+      | onlySource -> CSource
+      | onlyPreprocess -> CPreprocess
+      | onlyAssemble -> CAssembly
+      | otherwise -> case mcstage of
+          Nothing -> defaultCStage
+          Just x -> x
 
 defaultCStage :: CStage
 defaultCStage = CExecutable

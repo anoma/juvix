@@ -244,8 +244,8 @@ instance FromJSON Pragmas where
       checkArgName :: Text -> Parse YamlError ()
       checkArgName name = do
         let name' = unpack name
-        unless (isFirstLetter name' && all isValidIdentChar name') $
-          throwCustomError ("invalid argument name: " <> name)
+        unless (isFirstLetter name' && all isValidIdentChar name')
+          $ throwCustomError ("invalid argument name: " <> name)
 
 -- | The Semigroup `<>` is used to propagate pragmas from an enclosing context.
 -- For example, if `p1` are the pragmas declared for a module `M`, and `p2` the
@@ -294,8 +294,8 @@ adjustPragmaSpecialiseArg n = \case
 
 adjustPragmas :: Int -> Pragmas -> Pragmas
 adjustPragmas fvnum pragmas =
-  over pragmasInline (fmap (adjustPragmaInline fvnum)) $
-    over
+  over pragmasInline (fmap (adjustPragmaInline fvnum))
+    $ over
       pragmasSpecialiseArgs
       (fmap (over pragmaSpecialiseArgs (map (adjustPragmaSpecialiseArg fvnum))))
       pragmas

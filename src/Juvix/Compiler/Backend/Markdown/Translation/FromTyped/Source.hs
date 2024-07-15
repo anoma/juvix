@@ -72,8 +72,8 @@ fromJuvixMarkdown opts = do
       let mk :: Mk = mkInfo ^. Concrete.markdownInfo
           sepr :: [Int] = mkInfo ^. Concrete.markdownInfoBlockLengths
 
-      when (nullMk mk || null sepr) $
-        throw
+      when (nullMk mk || null sepr)
+        $ throw
           ( ErrNoJuvixCodeBlocks
               NoJuvixCodeBlocksError
                 { _noJuvixCodeBlocksErrorFilepath = fname
@@ -164,10 +164,10 @@ go fname = do
                     let m' = set Concrete.moduleBody stmts' m
                     goRender m'
                   else
-                    return $
-                      Html.preEscapedText $
-                        Text.intercalate "\n\n" $
-                          map (toStrict . Html.renderHtml) htmlStatements
+                    return
+                      $ Html.preEscapedText
+                      $ Text.intercalate "\n\n"
+                      $ map (toStrict . Html.renderHtml) htmlStatements
 
           let _processingStateMk = case opts of
                 MkJuvixBlockOptionsHide -> MkNull

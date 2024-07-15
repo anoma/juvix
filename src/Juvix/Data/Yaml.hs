@@ -20,8 +20,8 @@ checkYamlKeys :: [Text] -> Parse YamlError ()
 checkYamlKeys keys = do
   forEachInObject
     ( \k ->
-        unless (k `elem` keys) $
-          throwCustomError ("unknown key: " <> k)
+        unless (k `elem` keys)
+          $ throwCustomError ("unknown key: " <> k)
     )
   return ()
 

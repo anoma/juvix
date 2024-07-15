@@ -117,20 +117,20 @@ instance PrettyCode Theory where
   ppCode Theory {..} = do
     n <- ppCode _theoryName
     stmts <- mapM ppCode _theoryStatements
-    return $
-      kwTheory
-        <+> n
-          <> line
-          <> kwImports
-        <+> "Main"
-          <> line
-          <> kwBegin
-          <> line
-          <> line
-          <> vsep (punctuate line stmts)
-          <> line
-          <> line
-          <> kwEnd
+    return
+      $ kwTheory
+      <+> n
+      <> line
+      <> kwImports
+      <+> "Main"
+      <> line
+      <> kwBegin
+      <> line
+      <> line
+      <> vsep (punctuate line stmts)
+      <> line
+      <> line
+      <> kwEnd
 
 ppRightExpression ::
   (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>

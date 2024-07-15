@@ -64,7 +64,8 @@ fromConcrete _resultScoper = do
           (^. Store.moduleInfoInternalModule . internalModuleInfoTable . infoBuiltins)
           ms
       exportTbl =
-        _resultScoper ^. Scoper.resultExports
+        _resultScoper
+          ^. Scoper.resultExports
           <> mconcatMap (createExportsTable . (^. Store.moduleInfoScopedModule . S.scopedModuleExportInfo)) ms
       tab =
         S.getCombinedInfoTable (_resultScoper ^. Scoper.resultScopedModule)
@@ -588,8 +589,8 @@ goInductive ty@InductiveDef {..} = do
   let inductiveName' = goSymbol _inductiveName
       constrRetType = Internal.foldExplicitApplication (Internal.toExpression inductiveName') (map (Internal.ExpressionIden . Internal.IdenVar . (^. Internal.inductiveParamName)) _inductiveParameters')
   _inductiveConstructors' <-
-    local (const _inductivePragmas') $
-      mapM (goConstructorDef constrRetType) _inductiveConstructors
+    local (const _inductivePragmas')
+      $ mapM (goConstructorDef constrRetType) _inductiveConstructors
   let loc = getLoc _inductiveName
       indDef =
         Internal.InductiveDef
@@ -654,8 +655,8 @@ goConstructorDef retTy ConstructorDef {..} = do
           Concrete.RecordStatementOperator {} -> return Nothing
           Concrete.RecordStatementField RecordField {..} -> do
             ty' <- goExpression _fieldType
-            return $
-              Just
+            return
+              $ Just
                 Internal.FunctionParameter
                   { _paramName = Just (goSymbol _fieldName),
                     _paramImplicit = Explicit,
@@ -847,8 +848,8 @@ goExpression = \case
           app = Internal.foldApplication (Internal.toExpression fun) allArgs
       clauses <- mapM mkClause (a ^. dnamedAppArgs)
       expr <-
-        Internal.substitutionE updateKind $
-          Internal.ExpressionLet
+        Internal.substitutionE updateKind
+          $ Internal.ExpressionLet
             Internal.Let
               { _letExpression = app,
                 _letClauses = clauses
@@ -865,8 +866,8 @@ goExpression = \case
           local adjust $ do
             body' <- goExpression (arg ^. argValue)
             ty <- goExpression (arg ^. argType)
-            return $
-              Internal.LetFunDef
+            return
+              $ Internal.LetFunDef
                 (Internal.simpleFunDef (goSymbol name) ty body')
           where
             checkCycle :: Sem r ()
@@ -903,8 +904,8 @@ goExpression = \case
         mkArgs :: [Indexed Internal.VarName] -> Sem r [Internal.Expression]
         mkArgs vs = do
           fieldMap <- mkFieldmap
-          execOutputList $
-            go (uncurry Indexed <$> IntMap.toAscList fieldMap) vs
+          execOutputList
+            $ go (uncurry Indexed <$> IntMap.toAscList fieldMap) vs
           where
             go :: [Indexed (RecordUpdateField 'Scoped)] -> [Indexed Internal.VarName] -> Sem (Output Internal.Expression ': r) ()
             go fields = \case
@@ -1052,8 +1053,8 @@ goExpression = \case
       rngpats' <- mapM goPatternArg rngpats
       expr <- goExpression _iteratorBody
       let lam =
-            Internal.ExpressionLambda $
-              Internal.Lambda
+            Internal.ExpressionLambda
+              $ Internal.Lambda
                 { _lambdaClauses = Internal.LambdaClause (nonEmpty' (inipats' ++ rngpats')) expr :| [],
                   _lambdaType = Nothing
                 }
@@ -1161,8 +1162,8 @@ goFunction :: (Members '[Reader DefaultArgsStack, Builtins, NameIdGen, Error Sco
 goFunction f = do
   headParam :| tailParams <- goFunctionParameters (f ^. funParameters)
   ret <- goExpression (f ^. funReturn)
-  return $
-    Internal.Function
+  return
+    $ Internal.Function
       { _functionLeft = headParam,
         _functionRight = foldr (\param acc -> Internal.ExpressionFunction $ Internal.Function param acc) ret tailParams
       }
@@ -1183,8 +1184,8 @@ goFunctionParameters FunctionParameters {..} = do
     . fromMaybe (pure (mkParam Nothing))
     . nonEmpty
     $ mkParam
-      . goFunctionParameter
-      <$> _paramNames
+    . goFunctionParameter
+    <$> _paramNames
   where
     goFunctionParameter :: FunctionParameter 'Scoped -> Maybe (SymbolType 'Scoped)
     goFunctionParameter = \case
@@ -1321,10 +1322,10 @@ goRecordPattern r = do
     mkPatterns :: Sem r [Internal.PatternArg]
     mkPatterns = do
       sig <-
-        asks $
-          fromJust
-            . HashMap.lookup (constr ^. Internal.nameId)
-            . (^. S.infoConstructorSigs)
+        asks
+          $ fromJust
+          . HashMap.lookup (constr ^. Internal.nameId)
+          . (^. S.infoConstructorSigs)
       let maxIdx = length (sig ^. recordNames) - 1
       args <- IntMap.toAscList <$> byIndex
       execOutputList (go maxIdx 0 args)

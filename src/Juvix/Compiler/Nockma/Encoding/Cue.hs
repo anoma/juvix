@@ -103,12 +103,12 @@ consumeTag ::
 consumeTag = do
   Bit b0 <- nextBit'
   if
-      | b0 -> do
-          Bit b1 <- nextBit'
-          if
-              | b1 -> return JamTagBackref
-              | otherwise -> return JamTagCell
-      | otherwise -> return JamTagAtom
+    | b0 -> do
+        Bit b1 <- nextBit'
+        if
+          | b1 -> return JamTagBackref
+          | otherwise -> return JamTagCell
+    | otherwise -> return JamTagAtom
   where
     nextBit' :: Sem r Bit
     nextBit' = handleBitError DecodingErrorInvalidTag nextBit
@@ -211,22 +211,22 @@ cueFromBitsSem = registerElementStart $ do
     consumeNatAtom = do
       len <- consumeLength'
       if
-          | len == 0 -> return (Atom 0 emptyAtomInfo)
-          | otherwise -> do
-              a <- consumeInteger DecodingErrorInvalidAtom len
-              return (Atom (fromInteger a) emptyAtomInfo)
+        | len == 0 -> return (Atom 0 emptyAtomInfo)
+        | otherwise -> do
+            a <- consumeInteger DecodingErrorInvalidAtom len
+            return (Atom (fromInteger a) emptyAtomInfo)
 
     consumeAtom :: Sem r (Atom a)
     consumeAtom = do
       len <- consumeLength'
       if
-          | len == 0 -> do
-              z <- fromNatural' @a 0
-              return (Atom z emptyAtomInfo)
-          | otherwise -> do
-              a <- consumeInteger DecodingErrorInvalidAtom len
-              n <- fromNatural' (fromInteger a)
-              return (Atom n emptyAtomInfo)
+        | len == 0 -> do
+            z <- fromNatural' @a 0
+            return (Atom z emptyAtomInfo)
+        | otherwise -> do
+            a <- consumeInteger DecodingErrorInvalidAtom len
+            n <- fromNatural' (fromInteger a)
+            return (Atom n emptyAtomInfo)
 
 -- | Decode an nock Atom to a nock term
 cue ::

@@ -45,9 +45,9 @@ runCommand opts = do
       | opts ^. markdownStdout -> liftIO . putStrLn $ md
       | otherwise -> do
           ensureDir outputDir
-          when (opts ^. markdownWriteAssets) $
-            liftIO $
-              writeAssets outputDir
+          when (opts ^. markdownWriteAssets)
+            $ liftIO
+            $ writeAssets outputDir
 
           let mdFile :: Path Rel File
               mdFile =

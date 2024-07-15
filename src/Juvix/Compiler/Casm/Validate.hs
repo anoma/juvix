@@ -25,12 +25,12 @@ validate labi instrs = mapM_ go instrs
 
     goLabelRef :: LabelRef -> Either CasmError ()
     goLabelRef l@LabelRef {..} = do
-      unless (HashMap.member _labelRefSymbol (labi ^. labelInfoTable)) $
-        Left $
-          CasmError
-            { _casmErrorMsg = "undefined label: " <> ppPrint l,
-              _casmErrorLoc = Nothing
-            }
+      unless (HashMap.member _labelRefSymbol (labi ^. labelInfoTable))
+        $ Left
+        $ CasmError
+          { _casmErrorMsg = "undefined label: " <> ppPrint l,
+            _casmErrorLoc = Nothing
+          }
 
     goValue :: Value -> Either CasmError ()
     goValue = \case

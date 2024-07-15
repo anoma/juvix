@@ -143,9 +143,9 @@ instance FromJSON VersionedLockfile where
           parseVersion' = do
             n <- asIntegral
             if
-                | lockfileVersionNumber LockfileV1Tag == n -> return LockfileV1Tag
-                | lockfileVersionNumber LockfileV2Tag == n -> return LockfileV2Tag
-                | otherwise -> throwCustomError LockfileUnsupportedVersion
+              | lockfileVersionNumber LockfileV1Tag == n -> return LockfileV1Tag
+              | lockfileVersionNumber LockfileV2Tag == n -> return LockfileV2Tag
+              | otherwise -> throwCustomError LockfileUnsupportedVersion
 
       displayErr :: LockfileParseErr -> Text
       displayErr = \case
@@ -162,10 +162,10 @@ mayReadLockfile ::
 mayReadLockfile root = do
   lockfileExists <- fileExists' lockfilePath
   if
-      | lockfileExists -> do
-          bs <- readFileBS' lockfilePath
-          either (throwErr . pack . prettyPrintParseException) ((return . Just) . mkLockfileInfo lockfilePath) (decodeEither' @VersionedLockfile bs)
-      | otherwise -> return Nothing
+    | lockfileExists -> do
+        bs <- readFileBS' lockfilePath
+        either (throwErr . pack . prettyPrintParseException) ((return . Just) . mkLockfileInfo lockfilePath) (decodeEither' @VersionedLockfile bs)
+    | otherwise -> return Nothing
   where
     mkLockfileInfo :: Path Abs File -> VersionedLockfile -> LockfileInfo
     mkLockfileInfo _lockfileInfoPath vl =
@@ -196,11 +196,11 @@ lockfileEncodeConfig = setConfCompare keyCompare defConfig
     keyCompare :: Text -> Text -> Ordering
     keyCompare x y =
       if
-          | y == Str.dependencies -> LT
-          | x == Str.dependencies -> GT
-          | x == Str.version -> LT
-          | y == Str.version -> GT
-          | otherwise -> compare x y
+        | y == Str.dependencies -> LT
+        | x == Str.dependencies -> GT
+        | x == Str.version -> LT
+        | y == Str.version -> GT
+        | otherwise -> compare x y
 
 writeLockfile :: (Members '[Files] r) => Path Abs File -> Text -> Lockfile -> Sem r ()
 writeLockfile lockfilePath checksum' lf = do

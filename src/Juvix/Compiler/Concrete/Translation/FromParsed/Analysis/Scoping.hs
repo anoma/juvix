@@ -794,8 +794,8 @@ entryToScopedIden name e = do
     PreSymbolAlias {} -> do
       e' <- normalizePreSymbolEntry e
       let scopedName' =
-            over S.nameFixity (maybe (e' ^. symbolEntry . S.nameFixity) Just) $
-              set S.nameKind (getNameKind e') scopedName
+            over S.nameFixity (maybe (e' ^. symbolEntry . S.nameFixity) Just)
+              $ set S.nameKind (getNameKind e') scopedName
       return
         ScopedIden
           { _scopedIdenAlias = Just scopedName',
@@ -956,10 +956,10 @@ resolveFixitySyntaxDef fdef@FixitySyntaxDef {..} = topBindings $ do
       belowPrec = fromIntegral $ maximum (minInt + 1 : abovePrecs)
       abovePrec :: Integer
       abovePrec = fromIntegral $ minimum (maxInt - 1 : belowPrecs)
-  when (belowPrec + 1 >= abovePrec) $
-    throw (ErrPrecedenceInconsistency (PrecedenceInconsistencyError fdef))
-  when (isJust same && not (null below && null above)) $
-    throw (ErrPrecedenceInconsistency (PrecedenceInconsistencyError fdef))
+  when (belowPrec + 1 >= abovePrec)
+    $ throw (ErrPrecedenceInconsistency (PrecedenceInconsistencyError fdef))
+  when (isJust same && not (null below && null above))
+    $ throw (ErrPrecedenceInconsistency (PrecedenceInconsistencyError fdef))
   -- we need Integer to avoid overflow when computing prec
   let prec = fromMaybe (fromInteger $ (abovePrec + belowPrec) `div` 2) samePrec
       fx =
@@ -1482,8 +1482,8 @@ checkSections sec = topBindings helper
                     case _definitionsNext of
                       Nothing -> do
                         ms'' <- goInductiveModules ms'
-                        return $
-                          Just
+                        return
+                          $ Just
                             NonDefinitionsSection
                               { _nonDefinitionsSection = ms'',
                                 _nonDefinitionsNext = Nothing
@@ -1560,11 +1560,11 @@ checkSections sec = topBindings helper
                           | not (null cs) -> fail
                           | otherwise -> do
                               fs <-
-                                failMaybe $
-                                  mkRec
-                                    ^? constructorRhs
-                                    . _ConstructorRhsRecord
-                                    . to mkRecordNameSignature
+                                failMaybe
+                                  $ mkRec
+                                  ^? constructorRhs
+                                  . _ConstructorRhsRecord
+                                  . to mkRecordNameSignature
                               let info =
                                     RecordInfo
                                       { _recordInfoSignature = fs,
@@ -1894,8 +1894,8 @@ checkUsingHiding modulepath exportInfo = \case
       let s = h ^. hidingSymbol
       scopedSym <-
         if
-            | isJust (h ^. hidingModuleKw) -> scopeSymbol SNameSpaceModules s
-            | otherwise -> scopeSymbol SNameSpaceSymbols s
+          | isJust (h ^. hidingModuleKw) -> scopeSymbol SNameSpaceModules s
+          | otherwise -> scopeSymbol SNameSpaceSymbols s
       return
         HidingItem
           { _hidingSymbol = scopedSym,
@@ -1907,8 +1907,8 @@ checkUsingHiding modulepath exportInfo = \case
       let s = i ^. usingSymbol
       scopedSym <-
         if
-            | isJust (i ^. usingModuleKw) -> scopeSymbol SNameSpaceModules s
-            | otherwise -> scopeSymbol SNameSpaceSymbols s
+          | isJust (i ^. usingModuleKw) -> scopeSymbol SNameSpaceModules s
+          | otherwise -> scopeSymbol SNameSpaceSymbols s
       let scopedAs = do
             c <- i ^. usingAs
             return (set S.nameConcrete c scopedSym)
@@ -2101,10 +2101,10 @@ checkRecordPattern r = do
   fields <- fromMaybeM (return (RecordNameSignature mempty)) (gets (^. scoperConstructorFields . at (c' ^. scopedIdenFinal . S.nameId)))
   l' <-
     if
-        | null (r ^. recordPatternItems) -> return []
-        | otherwise -> do
-            when (null (fields ^. recordNames)) (throw (noFields c'))
-            runReader fields (mapM checkItem (r ^. recordPatternItems))
+      | null (r ^. recordPatternItems) -> return []
+      | otherwise -> do
+          when (null (fields ^. recordNames)) (throw (noFields c'))
+          runReader fields (mapM checkItem (r ^. recordPatternItems))
   return
     RecordPattern
       { _recordPatternConstructor = c',
@@ -2124,8 +2124,8 @@ checkRecordPattern r = do
       where
         findField :: Symbol -> Sem r' Int
         findField f =
-          fromMaybeM (throw err) $
-            asks @(RecordNameSignature 'Parsed) (^? recordNames . at f . _Just . nameItemIndex)
+          fromMaybeM (throw err)
+            $ asks @(RecordNameSignature 'Parsed) (^? recordNames . at f . _Just . nameItemIndex)
           where
             err :: ScoperError
             err = ErrUnexpectedField (UnexpectedField f)
@@ -2290,8 +2290,8 @@ checkCaseBranch ::
 checkCaseBranch CaseBranch {..} = withLocalScope $ do
   pattern' <- checkParsePatternAtoms _caseBranchPattern
   rhs' <- checkCaseBranchRhs _caseBranchRhs
-  return $
-    CaseBranch
+  return
+    $ CaseBranch
       { _caseBranchPattern = pattern',
         _caseBranchRhs = rhs',
         ..
@@ -2304,8 +2304,8 @@ checkCase ::
 checkCase Case {..} = do
   caseBranches' <- mapM checkCaseBranch _caseBranches
   caseExpression' <- checkParseExpressionAtoms _caseExpression
-  return $
-    Case
+  return
+    $ Case
       { _caseExpression = caseExpression',
         _caseBranches = caseBranches',
         _caseKw,
@@ -2322,8 +2322,8 @@ checkIfBranch IfBranch {..} = withLocalScope $ do
     SBranchIfBool -> checkParseExpressionAtoms _ifBranchCondition
     SBranchIfElse -> return _ifBranchCondition
   expression' <- checkParseExpressionAtoms _ifBranchExpression
-  return $
-    IfBranch
+  return
+    $ IfBranch
       { _ifBranchCondition = cond',
         _ifBranchExpression = expression',
         ..
@@ -2336,8 +2336,8 @@ checkIf ::
 checkIf If {..} = do
   ifBranches' <- mapM checkIfBranch _ifBranches
   ifBranchElse' <- checkIfBranch _ifBranchElse
-  return $
-    If
+  return
+    $ If
       { _ifBranchElse = ifBranchElse',
         _ifBranches = ifBranches',
         _ifKw
@@ -2490,8 +2490,8 @@ checkPatternBinding PatternBinding {..} = do
   p' <- checkParsePatternAtom _patternBindingPattern
   n' <- bindVariableSymbol _patternBindingName
   if
-      | isJust (p' ^. patternArgName) -> throw (ErrDoubleBinderPattern (DoubleBinderPattern n' p'))
-      | otherwise -> return (set patternArgName (Just n') p')
+    | isJust (p' ^. patternArgName) -> throw (ErrDoubleBinderPattern (DoubleBinderPattern n' p'))
+    | otherwise -> return (set patternArgName (Just n') p')
 
 checkPatternAtoms ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen] r) =>
@@ -2587,11 +2587,12 @@ checkNamedApplicationNew napp = do
         HashSet.fromList
           . concatMap (HashMap.keys . (^. nameBlock))
           . filter (not . isImplicitOrInstance . (^. nameImplicit))
-          $ sig ^. nameSignatureArgs
+          $ sig
+          ^. nameSignatureArgs
       sargs :: HashSet Symbol = hashSet (map (^. namedArgumentNewSymbol) nargs)
       missingArgs = HashSet.difference enames sargs
-  unless (null missingArgs || not (napp ^. namedApplicationNewExhaustive . isExhaustive)) $
-    throw (ErrMissingArgs (MissingArgs (aname ^. scopedIdenFinal . nameConcrete) missingArgs))
+  unless (null missingArgs || not (napp ^. namedApplicationNewExhaustive . isExhaustive))
+    $ throw (ErrMissingArgs (MissingArgs (aname ^. scopedIdenFinal . nameConcrete) missingArgs))
   return
     NamedApplicationNew
       { _namedApplicationNewName = aname,
@@ -2615,8 +2616,8 @@ checkNamedArgumentFunctionDef ::
 checkNamedArgumentFunctionDef snames NamedArgumentFunctionDef {..} = do
   def <- localBindings . ignoreSyntax $ checkFunctionDef _namedArgumentFunctionDef
   let fname = def ^. signName . nameConcrete
-  unless (HashSet.member fname snames) $
-    throw (ErrUnexpectedArgument (UnexpectedArgument fname))
+  unless (HashSet.member fname snames)
+    $ throw (ErrUnexpectedArgument (UnexpectedArgument fname))
   return
     NamedArgumentFunctionDef
       { _namedArgumentFunctionDef = def
@@ -2833,7 +2834,8 @@ checkJudoc ::
 checkJudoc (Judoc groups) =
   ignoreHighlightBuilder
     . ignoreInfoTableBuilder
-    $ Judoc <$> mapM checkJudocGroup groups
+    $ Judoc
+    <$> mapM checkJudocGroup groups
 
 checkJudocGroup ::
   (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader Package] r) =>
@@ -2936,18 +2938,18 @@ checkPrecedences opers = do
   graph <- getPrecedenceGraph
   let fids = mapMaybe (^. fixityId) $ mapMaybe (^. S.nameFixity) opers
       deps = createDependencyInfo graph mempty
-  mapM_ (uncurry (checkPath deps)) $
-    [(fid1, fid2) | fid1 <- fids, fid2 <- fids, fid1 /= fid2]
+  mapM_ (uncurry (checkPath deps))
+    $ [(fid1, fid2) | fid1 <- fids, fid2 <- fids, fid1 /= fid2]
   where
     checkPath :: DependencyInfo S.NameId -> S.NameId -> S.NameId -> Sem r ()
     checkPath deps fid1 fid2 =
-      unless (isPath deps fid1 fid2 || isPath deps fid2 fid1) $
-        throw (ErrIncomparablePrecedences (IncomaprablePrecedences (findOper fid1) (findOper fid2)))
+      unless (isPath deps fid1 fid2 || isPath deps fid2 fid1)
+        $ throw (ErrIncomparablePrecedences (IncomaprablePrecedences (findOper fid1) (findOper fid2)))
 
     findOper :: S.NameId -> S.Name
     findOper fid =
-      fromJust $
-        find
+      fromJust
+        $ find
           (maybe False (\fx -> Just fid == (fx ^. fixityId)) . (^. S.nameFixity))
           opers
 
@@ -3035,8 +3037,8 @@ makeExpressionTable (ExpressionAtoms atoms _) = [recordUpdate] : [appOpExplicit]
       where
         app :: Expression -> Expression -> Expression
         app f x =
-          ExpressionApplication $
-            Application
+          ExpressionApplication
+            $ Application
               { _applicationFunction = f,
                 _applicationParameter = x
               }

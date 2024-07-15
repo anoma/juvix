@@ -150,7 +150,8 @@ ppCodeConstr' name c = do
 instance (Pretty k, PrettyCode a) => PrettyCode (Map k a) where
   ppCode m = do
     m' <-
-      sep . punctuate ","
+      sep
+        . punctuate ","
         <$> sequence
           [ do
               a' <- ppCode a
@@ -309,10 +310,10 @@ instance PrettyCode LetRec where
       [hbs] -> kwLetRec <+> hbs <+> kwAssign <+> head vs <+> kwIn <+> b'
       _ ->
         let bss =
-              indent' $
-                align $
-                  concatWith (\a b -> a <> kwSemicolon <> line <> b) $
-                    zipWithExact (\b val -> b <+> kwAssign <+> val) (toList bs) (toList vs)
+              indent'
+                $ align
+                $ concatWith (\a b -> a <> kwSemicolon <> line <> b)
+                $ zipWithExact (\b val -> b <+> kwAssign <+> val) (toList bs) (toList vs)
             nss = enclose kwSquareL kwSquareR (concatWith (<+>) names)
          in kwLetRec <> nss <> line <> bss <> kwSemicolon <> line <> kwIn <> line <> b'
     where
@@ -386,22 +387,22 @@ instance PrettyCode Pi where
   ppCode Pi {..} =
     let piType = _piBinder ^. binderType
      in if
-            | varOccurs 0 _piBody -> do
-                n <- ppName KNameLocal (_piBinder ^. binderName)
-                ty <- ppCode piType
-                b <- ppCode _piBody
-                return $ kwPi <+> n <+> kwColon <+> ty <> comma <+> b
-            | otherwise -> do
-                ty <- ppLeftExpression funFixity piType
-                b <- ppRightExpression funFixity _piBody
-                return $ ty <+> kwArrow <+> b
+          | varOccurs 0 _piBody -> do
+              n <- ppName KNameLocal (_piBinder ^. binderName)
+              ty <- ppCode piType
+              b <- ppCode _piBody
+              return $ kwPi <+> n <+> kwColon <+> ty <> comma <+> b
+          | otherwise -> do
+              ty <- ppLeftExpression funFixity piType
+              b <- ppRightExpression funFixity _piBody
+              return $ ty <+> kwArrow <+> b
 
 instance PrettyCode (Univ' i) where
   ppCode Univ {..} =
-    return $
-      if
-          | _univLevel == 0 -> kwType
-          | otherwise -> kwType <+> pretty _univLevel
+    return
+      $ if
+        | _univLevel == 0 -> kwType
+        | otherwise -> kwType <+> pretty _univLevel
 
 instance PrettyCode Stripped.TypeApp where
   ppCode Stripped.TypeApp {..} = do
@@ -611,10 +612,10 @@ goBinary isComma fixity name = \case
     arg1' <- ppLeftExpression fixity arg1
     arg2' <- ppRightExpression fixity arg2
     if
-        | isComma ->
-            return $ arg1' <> name <+> arg2'
-        | otherwise ->
-            return $ arg1' <+> name <+> arg2'
+      | isComma ->
+          return $ arg1' <> name <+> arg2'
+      | otherwise ->
+          return $ arg1' <+> name <+> arg2'
   _ ->
     impossible
 

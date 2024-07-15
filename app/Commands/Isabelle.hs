@@ -16,17 +16,17 @@ runCommand opts = do
   let thy = res ^. resultTheory
   outputDir <- fromAppPathDir (opts ^. isabelleOutputDir)
   if
-      | opts ^. isabelleStdout -> do
-          renderStdOut (ppOutDefault thy)
-          putStrLn ""
-      | otherwise -> do
-          ensureDir outputDir
-          let file :: Path Rel File
-              file =
-                relFile
-                  ( unpack (thy ^. theoryName . namePretty)
-                      <.> isabelleFileExt
-                  )
-              absPath :: Path Abs File
-              absPath = outputDir <//> file
-          writeFileEnsureLn absPath (ppPrint thy <> "\n")
+    | opts ^. isabelleStdout -> do
+        renderStdOut (ppOutDefault thy)
+        putStrLn ""
+    | otherwise -> do
+        ensureDir outputDir
+        let file :: Path Rel File
+            file =
+              relFile
+                ( unpack (thy ^. theoryName . namePretty)
+                    <.> isabelleFileExt
+                )
+            absPath :: Path Abs File
+            absPath = outputDir <//> file
+        writeFileEnsureLn absPath (ppPrint thy <> "\n")

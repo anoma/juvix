@@ -44,12 +44,12 @@ push a s =
 pop :: Stack a -> Stack a
 pop s =
   if
-      | null s -> error "popping an empty stack"
-      | otherwise ->
-          Stack
-            { _stackValues = IntMap.delete (s ^. stackHeight - 1) (s ^. stackValues),
-              _stackHeight = s ^. stackHeight - 1
-            }
+    | null s -> error "popping an empty stack"
+    | otherwise ->
+        Stack
+          { _stackValues = IntMap.delete (s ^. stackHeight - 1) (s ^. stackValues),
+            _stackHeight = s ^. stackHeight - 1
+          }
 
 top :: Stack a -> Maybe a
 top s = IntMap.lookup (s ^. stackHeight - 1) (s ^. stackValues)
