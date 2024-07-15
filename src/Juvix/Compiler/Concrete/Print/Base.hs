@@ -334,8 +334,8 @@ instance (SingI s) => PrettyPrint (NamedApplicationNew s) where
 instance (SingI s) => PrettyPrint (NamedArgumentFunctionDef s) where
   ppCode (NamedArgumentFunctionDef f) = ppCode f
 
-instance (SingI s) => PrettyPrint (NamedArgumentPun s) where
-  ppCode = ppSymbolType . (^. namedArgumentPunSymbol)
+instance PrettyPrint (NamedArgumentPun s) where
+  ppCode = ppCode . (^. namedArgumentPunSymbol)
 
 instance (SingI s) => PrettyPrint (NamedArgumentNew s) where
   ppCode = \case

@@ -2628,20 +2628,17 @@ checkNamedArgumentNew ::
   Sem r (NamedArgumentNew 'Scoped)
 checkNamedArgumentNew puns = \case
   NamedArgumentNewFunction f -> NamedArgumentNewFunction <$> checkNamedArgumentFunctionDef f
-  NamedArgumentItemPun f -> NamedArgumentItemPun <$> checkNamedArgumentItemPun puns f
+  NamedArgumentItemPun f -> return (NamedArgumentItemPun (checkNamedArgumentItemPun puns f))
 
 checkNamedArgumentItemPun ::
-  (Members '[Error ScoperError, NameIdGen, State Scope, InfoTableBuilder, Reader InfoTable, State ScoperState] r) =>
   HashMap Symbol ScopedIden ->
   NamedArgumentPun 'Parsed ->
-  Sem r (NamedArgumentPun 'Scoped)
-checkNamedArgumentItemPun puns NamedArgumentPun {..} = localBindings . ignoreSyntax $ do
-  sym' <- getReservedDefinitionSymbol _namedArgumentPunSymbol
-  return
-    NamedArgumentPun
-      { _namedArgumentPunSymbol = sym',
-        _namedArgumentReferencedSymbol = fromJust (puns ^. at _namedArgumentPunSymbol)
-      }
+  (NamedArgumentPun 'Scoped)
+checkNamedArgumentItemPun puns NamedArgumentPun {..} =
+  NamedArgumentPun
+    { _namedArgumentPunSymbol = _namedArgumentPunSymbol,
+      _namedArgumentReferencedSymbol = fromJust (puns ^. at _namedArgumentPunSymbol)
+    }
 
 checkNamedArgumentFunctionDef ::
   (Members '[HighlightBuilder, Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader Package] r) =>

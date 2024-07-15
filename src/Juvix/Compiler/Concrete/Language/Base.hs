@@ -2310,7 +2310,7 @@ deriving stock instance Ord (NamedArgumentFunctionDef 'Parsed)
 deriving stock instance Ord (NamedArgumentFunctionDef 'Scoped)
 
 data NamedArgumentPun (s :: Stage) = NamedArgumentPun
-  { _namedArgumentPunSymbol :: SymbolType s,
+  { _namedArgumentPunSymbol :: Symbol,
     _namedArgumentReferencedSymbol :: PunSymbolType s
   }
   deriving stock (Generic)
@@ -2971,7 +2971,7 @@ instance HasLoc (List s) where
 instance (SingI s) => HasLoc (NamedApplication s) where
   getLoc NamedApplication {..} = getLocIdentifierType _namedAppName <> getLoc (last _namedAppArgs)
 
-instance (SingI s) => HasLoc (NamedArgumentPun s) where
+instance HasLoc (NamedArgumentPun s) where
   getLoc NamedArgumentPun {..} = getLocSymbolType _namedArgumentPunSymbol
 
 instance (SingI s) => HasLoc (NamedApplicationNew s) where
