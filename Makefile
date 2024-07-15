@@ -90,15 +90,7 @@ ORMOLUMODE?=inplace
 .PHONY: ormolu
 ormolu:
 	@${ORMOLU} ${ORMOLUFLAGS} \
-		--ghc-opt -XStandaloneDeriving \
-		--ghc-opt -XUnicodeSyntax \
-		--ghc-opt -XDerivingStrategies \
-		--ghc-opt -XPatternSynonyms \
-		--ghc-opt -XMultiParamTypeClasses  \
-		--ghc-opt -XTemplateHaskell \
-		--ghc-opt -XImportQualifiedPost \
-		--ghc-opt -XBangPatterns \
-			--mode ${ORMOLUMODE} \
+		--mode ${ORMOLUMODE} \
 		$(ORMOLUFILES)
 
 .PHONY: format
