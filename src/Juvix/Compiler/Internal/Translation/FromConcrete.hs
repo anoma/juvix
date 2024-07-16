@@ -728,7 +728,11 @@ createArgumentBlocks appargs =
     . evalState args0
     . mapM_ goBlock
   where
-    args0 :: HashSet S.Symbol = hashSet ((^. namedArgumentNewSymbol) <$> appargs)
+    namedArgumentRefSymbol :: NamedArgumentNew 'Scoped -> S.Symbol
+    namedArgumentRefSymbol = \case
+      NamedArgumentNewFunction p -> p ^. namedArgumentFunctionDef . signName
+      NamedArgumentItemPun p -> over S.nameConcrete fromUnqualified' (p ^. namedArgumentReferencedSymbol . scopedIdenFinal)
+    args0 :: HashSet S.Symbol = hashSet (namedArgumentRefSymbol <$> appargs)
     goBlock ::
       forall r.
       (Members '[State (HashSet S.Symbol), Output (ArgumentBlock 'Scoped)] r) =>
@@ -740,7 +744,7 @@ createArgumentBlocks appargs =
             HashSet.intersection
               (HashMap.keysSet _nameBlock)
               (HashSet.map (^. S.nameConcrete) args)
-          argNames :: HashMap Symbol S.Symbol = hashMap . map (\n -> (n ^. S.nameConcrete, n)) $ toList args
+          argNames :: HashMap Symbol S.Symbol = indexedByHash (^. S.nameConcrete) args
           getName sym = fromJust (argNames ^. at sym)
       whenJust (nonEmpty namesInBlock) $ \(namesInBlock1 :: NonEmpty Symbol) -> do
         let block' =
@@ -757,7 +761,12 @@ createArgumentBlocks appargs =
           NamedArgumentAssign
             { _namedArgName = sym,
               _namedArgAssignKw = Irrelevant dummyKw,
-              _namedArgValue = Concrete.ExpressionIdentifier (ScopedIden name Nothing)
+              _namedArgValue =
+                Concrete.ExpressionIdentifier
+                  ScopedIden
+                    { _scopedIdenFinal = name,
+                      _scopedIdenAlias = Nothing
+                    }
             }
           where
             name :: S.Name = over S.nameConcrete NameUnqualified sym

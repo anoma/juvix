@@ -245,5 +245,9 @@ tests =
     posTest
       "Public import"
       $(mkRelDir "PublicImports")
-      $(mkRelFile "Main.juvix")
+      $(mkRelFile "Main.juvix"),
+    posTest
+      "Named argument puns"
+      $(mkRelDir ".")
+      $(mkRelFile "Puns.juvix")
   ]
