@@ -123,6 +123,11 @@ moduleNameToTopModulePath = \case
   NameUnqualified s -> TopModulePath [] s
   NameQualified (QualifiedName (SymbolPath p) s) -> TopModulePath (toList p) s
 
+fromUnqualified' :: Name -> Symbol
+fromUnqualified' = \case
+  NameUnqualified s -> s
+  NameQualified {} -> impossible
+
 splitName :: Name -> ([Symbol], Symbol)
 splitName = \case
   NameQualified (QualifiedName (SymbolPath p) s) -> (toList p, s)

@@ -2573,16 +2573,23 @@ checkExpressionAtom e = case e of
 reserveNamedArgumentName :: (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable] r) => NamedArgumentNew 'Parsed -> Sem r ()
 reserveNamedArgumentName a = case a of
   NamedArgumentNewFunction f -> void (reserveFunctionSymbol (f ^. namedArgumentFunctionDef))
+  NamedArgumentItemPun {} -> return ()
 
-checkNamedApplicationNew :: forall r. (Members '[HighlightBuilder, Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader Package] r) => NamedApplicationNew 'Parsed -> Sem r (NamedApplicationNew 'Scoped)
+checkNamedApplicationNew ::
+  forall r.
+  (Members '[HighlightBuilder, Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader Package] r) =>
+  NamedApplicationNew 'Parsed ->
+  Sem r (NamedApplicationNew 'Scoped)
 checkNamedApplicationNew napp = do
   let nargs = napp ^. namedApplicationNewArguments
   aname <- checkScopedIden (napp ^. namedApplicationNewName)
   sig <- if null nargs then return $ NameSignature [] else getNameSignature aname
-  let snames = HashSet.fromList (concatMap (HashMap.keys . (^. nameBlock)) (sig ^. nameSignatureArgs))
+  let namesInSignature = hashSet (concatMap (HashMap.keys . (^. nameBlock)) (sig ^. nameSignatureArgs))
+  forM_ nargs (checkNameInSignature namesInSignature . (^. namedArgumentNewSymbol))
+  puns <- scopePuns
   args' <- withLocalScope . localBindings . ignoreSyntax $ do
     mapM_ reserveNamedArgumentName nargs
-    mapM (checkNamedArgumentNew snames) nargs
+    mapM (checkNamedArgumentNew puns) nargs
   let enames =
         HashSet.fromList
           . concatMap (HashMap.keys . (^. nameBlock))
@@ -2598,25 +2605,47 @@ checkNamedApplicationNew napp = do
         _namedApplicationNewArguments = args',
         _namedApplicationNewExhaustive = napp ^. namedApplicationNewExhaustive
       }
+  where
+    checkNameInSignature :: HashSet Symbol -> Symbol -> Sem r ()
+    checkNameInSignature namesInSig fname =
+      unless (HashSet.member fname namesInSig) $
+        throw (ErrUnexpectedArgument (UnexpectedArgument fname))
+
+    scopePuns :: Sem r (HashMap Symbol ScopedIden)
+    scopePuns =
+      hashMap
+        <$> mapWithM
+          scopePun
+          (napp ^.. namedApplicationNewArguments . each . _NamedArgumentItemPun . namedArgumentPunSymbol)
+      where
+        scopePun :: Symbol -> Sem r ScopedIden
+        scopePun = checkScopedIden . NameUnqualified
 
 checkNamedArgumentNew ::
   (Members '[HighlightBuilder, Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader Package] r) =>
-  HashSet Symbol ->
+  HashMap Symbol ScopedIden ->
   NamedArgumentNew 'Parsed ->
   Sem r (NamedArgumentNew 'Scoped)
-checkNamedArgumentNew snames = \case
-  NamedArgumentNewFunction f -> NamedArgumentNewFunction <$> checkNamedArgumentFunctionDef snames f
+checkNamedArgumentNew puns = \case
+  NamedArgumentNewFunction f -> NamedArgumentNewFunction <$> checkNamedArgumentFunctionDef f
+  NamedArgumentItemPun f -> return (NamedArgumentItemPun (checkNamedArgumentItemPun puns f))
+
+checkNamedArgumentItemPun ::
+  HashMap Symbol ScopedIden ->
+  NamedArgumentPun 'Parsed ->
+  (NamedArgumentPun 'Scoped)
+checkNamedArgumentItemPun puns NamedArgumentPun {..} =
+  NamedArgumentPun
+    { _namedArgumentPunSymbol = _namedArgumentPunSymbol,
+      _namedArgumentReferencedSymbol = fromJust (puns ^. at _namedArgumentPunSymbol)
+    }
 
 checkNamedArgumentFunctionDef ::
   (Members '[HighlightBuilder, Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader Package] r) =>
-  HashSet Symbol ->
   NamedArgumentFunctionDef 'Parsed ->
   Sem r (NamedArgumentFunctionDef 'Scoped)
-checkNamedArgumentFunctionDef snames NamedArgumentFunctionDef {..} = do
+checkNamedArgumentFunctionDef NamedArgumentFunctionDef {..} = do
   def <- localBindings . ignoreSyntax $ checkFunctionDef _namedArgumentFunctionDef
-  let fname = def ^. signName . nameConcrete
-  unless (HashSet.member fname snames) $
-    throw (ErrUnexpectedArgument (UnexpectedArgument fname))
   return
     NamedArgumentFunctionDef
       { _namedArgumentFunctionDef = def

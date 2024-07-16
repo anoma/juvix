@@ -55,16 +55,16 @@ defaultPackage
 
 --- Construct a ;SemVer; with useful default arguments.
 mkVersion
-  (major' minor' patch' : Nat)
-  {release' : Maybe String := nothing}
-  {meta' : Maybe String := nothing}
+  (major minor patch : Nat)
+  {release : Maybe String := nothing}
+  {meta : Maybe String := nothing}
   : SemVer :=
   mkSemVer@?{
-    major := major';
-    minor := minor';
-    patch := patch';
-    release := release';
-    meta := meta'
+    major;
+    minor;
+    patch;
+    release;
+    meta;
   };
 
 --- The default version used in `defaultPackage`.
