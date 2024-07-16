@@ -56,9 +56,9 @@ bashDebugArg := if enableDebug == '' { '' } else { 'x' }
 default:
     @just --list
 
-@_ormoluCmd filesCmd:
+@_ormoluCmd filesCmd mode:
     {{ trim(filesCmd) }} \
-     | xargs -r {{ ormolu }} --mode inplace
+     | xargs -r {{ ormolu }} --mode {{ mode }}
 
 # Formats all Haskell files in the project. `format changed` formats only changed files. `format FILES` formats individual files.
 format *opts:
@@ -74,11 +74,15 @@ format *opts:
 
     case $opts in
         "")
-            just _ormoluCmd "git ls-files '*.hs'"
+            just _ormoluCmd "git ls-files '*.hs'" inplace
             ;;
         changed)
             just _ormoluCmd \
-              "(git --no-pager diff --name-only --diff-filter=AM && git --no-pager diff --cached --name-only --diff-filter=AM) | grep '\\.hs\$'"
+              "(git --no-pager diff --name-only --diff-filter=AM && git --no-pager diff --cached --name-only --diff-filter=AM) | grep '\\.hs\$'" \
+              inplace
+            ;;
+        check)
+            just _ormoluCmd "git ls-files '*.hs'" check
             ;;
         *)
             just _ormoluCmd "echo {{ opts }}"
