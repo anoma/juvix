@@ -55,15 +55,16 @@ jobs:
       - name: Generate juvix.cabal
         run: hpack
 
-      - name: Cache stack
-        id: stack-cache
+      - name: Cache ormolu
+        id: ormolu-cache
         uses: actions/cache@v3
         with:
           path: |
-            ~/.stack
-          key: ${{ runner.os }}-stack-${{ env.STACK_RESOLVER }}
+            ~/.local/bin/ormolu
+          key: ${{ runner.os }}-ormolu-${{ env.STACK_RESOLVER }}
 
       - name: Install ormolu
+        if: steps.ormolu-cache.outputs.cache-hit != 'true'
         run: stack install ormolu --resolver=${{ env.STACK_RESOLVER }}
 
       - name: Run ormolu
