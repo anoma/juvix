@@ -208,7 +208,7 @@ commandDev =
   command "dev" $
     info
       (Dev <$> Dev.parseDevCommand)
-      (progDesc "Commands for the developers")
+      (progDesc "Commands for developers")
 
 parseCompilerCommand :: Parser TopCommand
 parseCompilerCommand =
