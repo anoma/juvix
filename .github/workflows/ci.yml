@@ -45,6 +45,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      - uses: extractions/setup-just@v2
 
       - name: Install hpack
         run: sudo apt install -y hpack
@@ -56,7 +57,7 @@ jobs:
         run: stack install ormolu --resolver=lts-21.25
 
       - name: Run ormolu
-        run: make check-ormolu
+        run: just format check
 
       - name: Cache stack
         id: stack-cache
