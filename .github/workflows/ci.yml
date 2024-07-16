@@ -43,6 +43,8 @@ jobs:
 
   ormolu:
     runs-on: ubuntu-latest
+    env:
+      STACK_RESOLVER: lts-21.25
     steps:
       - uses: actions/checkout@v3
       - uses: extractions/setup-just@v2
@@ -59,18 +61,17 @@ jobs:
         with:
           path: |
             ~/.stack
-          # key: ${{ runner.os }}-stack-${{ hashFiles('stack.yaml') }}
-          key: ${{ runner.os }}-stack-21.25
+          key: ${{ runner.os }}-stack-${{ env.STACK_RESOLVER }}
 
       - name: Install ormolu
-        run: stack install ormolu --resolver=lts-21.25
+        run: stack install ormolu --resolver=${{ env.STACK_RESOLVER }}
 
       - name: Run ormolu
         run: just format check
 
       - name: Report formatting error
         if: failure()
-        run: echo "Some Haskell files are not formatted. Please run 'just format'."
+        run: echo "Some Haskell files are not formatted. Please run 'just format'"
 
   build-and-test-linux:
     runs-on: ubuntu-22.04
