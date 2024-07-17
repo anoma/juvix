@@ -9,7 +9,7 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Da
 import Juvix.Compiler.Store.Extra qualified as Stored
 import Juvix.Prelude.Pretty
 
-runCommand :: (Members '[EmbedIO, TaggedLock, App] r) => CallGraphOptions -> Sem r ()
+runCommand :: (Members AppEffects r) => CallGraphOptions -> Sem r ()
 runCommand CallGraphOptions {..} = do
   globalOpts <- askGlobalOptions
   PipelineResult {..} <- runPipelineTermination _graphInputFile upToInternalTyped
@@ -18,7 +18,9 @@ runCommand CallGraphOptions {..} = do
       toAnsiText' = toAnsiText (not (globalOpts ^. globalNoColors))
       infotable =
         Internal.computeCombinedInfoTable (Stored.getInternalModuleTable _pipelineResultImports)
-          <> _pipelineResult ^. Internal.resultInternalModule . Internal.internalModuleInfoTable
+          <> _pipelineResult
+          ^. Internal.resultInternalModule
+          . Internal.internalModuleInfoTable
       callMap = Termination.buildCallMap mainModule
       completeGraph = Termination.completeCallGraph callMap
       filteredGraph =
@@ -42,11 +44,11 @@ runCommand CallGraphOptions {..} = do
     renderStdOut (Internal.ppOut globalOpts r)
     newline
     if
-        | markedTerminating ->
-            printSuccessExit (n <> " Terminates by assumption")
-        | otherwise ->
-            case Termination.findOrder r of
-              Nothing ->
-                exitFailMsg (n <> " Fails the termination checking")
-              Just (Termination.LexOrder k) ->
-                printSuccessExit (n <> " Terminates with order " <> show (toList k))
+      | markedTerminating ->
+          printSuccessExit (n <> " Terminates by assumption")
+      | otherwise ->
+          case Termination.findOrder r of
+            Nothing ->
+              exitFailMsg (n <> " Fails the termination checking")
+            Just (Termination.LexOrder k) ->
+              printSuccessExit (n <> " Terminates with order " <> show (toList k))

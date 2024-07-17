@@ -6,7 +6,7 @@ import Commands.Compile.Wasi.Options
 
 runCommand ::
   forall r.
-  (Members '[App, TaggedLock, EmbedIO] r) =>
+  (Members AppEffects r) =>
   WasiOptions 'InputMain ->
   Sem r ()
 runCommand = Helper.runCommand . wasiHelperOptions

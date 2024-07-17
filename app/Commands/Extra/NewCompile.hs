@@ -42,7 +42,7 @@ getOutputDir ext inp = \case
     return $ pathFileToPathDir baseOutputDir
 
 compileToCore ::
-  (Members '[App, EmbedIO, TaggedLock] r) =>
+  (Members '[App, EmbedIO, Logger, TaggedLock] r) =>
   CompileCommonOptions ('InputExtension 'FileExtJuvix) ->
   Sem r CoreResult
 compileToCore opts = runPipeline opts (Just (opts ^. compileInputFile)) upToCore
@@ -55,8 +55,8 @@ commandTargetHelper t parseCommand =
 
 commandTargetsHelper :: [(CompileTarget, Parser a)] -> Parser a
 commandTargetsHelper supportedTargets =
-  hsubparser $
-    mconcat
+  hsubparser
+    $ mconcat
       [ commandTargetHelper backend parser
         | (backend, parser) <- supportedTargets
       ]

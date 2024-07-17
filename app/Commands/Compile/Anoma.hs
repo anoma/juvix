@@ -6,7 +6,7 @@ import Commands.Extra.NewCompile
 import Juvix.Compiler.Nockma.Pretty qualified as Nockma
 import Juvix.Compiler.Nockma.Translation.FromTree qualified as Nockma
 
-runCommand :: (Members '[App, EmbedIO, TaggedLock] r) => AnomaOptions 'InputMain -> Sem r ()
+runCommand :: (Members AppEffects r) => AnomaOptions 'InputMain -> Sem r ()
 runCommand opts = do
   let opts' = opts ^. anomaCompileCommonOptions
       inputFile = opts' ^. compileInputFile
@@ -20,7 +20,8 @@ runCommand opts = do
     runReader entryPoint
       . runError @JuvixError
       . coreToAnoma
-      $ coreRes ^. coreResultModule
+      $ coreRes
+      ^. coreResultModule
   res <- getRight r
   outputAnomaResult nockmaFile res
 

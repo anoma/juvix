@@ -7,7 +7,7 @@ import Juvix.Compiler.Reg.Data.InfoTable
 import Juvix.Compiler.Reg.Pretty
 
 runCommand ::
-  (Members '[App, EmbedIO, TaggedLock] r) =>
+  (Members AppEffects r) =>
   RegOptions 'InputMain ->
   Sem r ()
 runCommand opts = do

@@ -7,7 +7,7 @@ import Juvix.Compiler.Backend.Isabelle.Language
 import Juvix.Compiler.Backend.Isabelle.Pretty
 
 runCommand ::
-  (Members '[EmbedIO, TaggedLock, App] r) =>
+  (Members AppEffects r) =>
   IsabelleOptions ->
   Sem r ()
 runCommand opts = do
@@ -16,17 +16,17 @@ runCommand opts = do
   let thy = res ^. resultTheory
   outputDir <- fromAppPathDir (opts ^. isabelleOutputDir)
   if
-      | opts ^. isabelleStdout -> do
-          renderStdOut (ppOutDefault thy)
-          putStrLn ""
-      | otherwise -> do
-          ensureDir outputDir
-          let file :: Path Rel File
-              file =
-                relFile
-                  ( unpack (thy ^. theoryName . namePretty)
-                      <.> isabelleFileExt
-                  )
-              absPath :: Path Abs File
-              absPath = outputDir <//> file
-          writeFileEnsureLn absPath (ppPrint thy <> "\n")
+    | opts ^. isabelleStdout -> do
+        renderStdOut (ppOutDefault thy)
+        putStrLn ""
+    | otherwise -> do
+        ensureDir outputDir
+        let file :: Path Rel File
+            file =
+              relFile
+                ( unpack (thy ^. theoryName . namePretty)
+                    <.> isabelleFileExt
+                )
+            absPath :: Path Abs File
+            absPath = outputDir <//> file
+        writeFileEnsureLn absPath (ppPrint thy <> "\n")

@@ -6,7 +6,7 @@ import Commands.Compile.NativeWasiHelper as Helper
 
 runCommand ::
   forall r.
-  (Members '[App, TaggedLock, EmbedIO] r) =>
+  (Members AppEffects r) =>
   NativeOptions 'InputMain ->
   Sem r ()
 runCommand = Helper.runCommand . nativeHelperOptions

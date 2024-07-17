@@ -56,7 +56,7 @@ import Juvix.Data.Effect.Process
 import Juvix.Data.Field
 import Parallel.ProgressLog (ProgressLog)
 
-type PipelineAppEffects = '[TaggedLock, Reader PipelineOptions, ProgressLog, EmbedIO]
+type PipelineAppEffects = '[TaggedLock, Reader PipelineOptions, Logger, EmbedIO]
 
 type PipelineLocalEff =
   '[ ModuleInfoCache,
@@ -74,6 +74,7 @@ type PipelineLocalEff =
      Error GitProcessError,
      Process,
      Log,
+     ProgressLog,
      Reader EntryPoint,
      Files,
      Error JuvixError,

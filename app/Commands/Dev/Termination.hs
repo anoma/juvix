@@ -5,7 +5,7 @@ import Commands.Dev.Termination.CallGraph qualified as CallGraph
 import Commands.Dev.Termination.Calls qualified as Calls
 import Commands.Dev.Termination.Options
 
-runCommand :: (Members '[EmbedIO, TaggedLock, App] r) => TerminationCommand -> Sem r ()
+runCommand :: (Members AppEffects r) => TerminationCommand -> Sem r ()
 runCommand = \case
   Calls opts -> Calls.runCommand opts
   CallGraph opts -> CallGraph.runCommand opts

@@ -37,19 +37,19 @@ targetFromOptions opts = do
     Nothing -> do
       isPackageGlobal <- askPackageGlobal
       if
-          | isStdin -> return TargetStdin
-          | not isPackageGlobal -> return TargetProject
-          | otherwise -> do
-              exitFailMsg $
-                Text.unlines
-                  [ "juvix format error: either 'JUVIX_FILE_OR_PROJECT' or '--stdin' option must be specified",
-                    "Use the --help option to display more usage information."
-                  ]
+        | isStdin -> return TargetStdin
+        | not isPackageGlobal -> return TargetProject
+        | otherwise -> do
+            exitFailMsg
+              $ Text.unlines
+                [ "juvix format error: either 'JUVIX_FILE_OR_PROJECT' or '--stdin' option must be specified",
+                  "Use the --help option to display more usage information."
+                ]
 
 -- | Formats the project on the root
 formatProject ::
   forall r.
-  (Members '[App, EmbedIO, TaggedLock, Files, Output FormattedFileInfo] r) =>
+  (Members '[App, EmbedIO, TaggedLock, Logger, Files, Output FormattedFileInfo] r) =>
   Sem r FormatResult
 formatProject = runPipelineOptions . runPipelineSetup $ do
   pkg <- askPackage
@@ -59,7 +59,7 @@ formatProject = runPipelineOptions . runPipelineSetup $ do
     return (node, src)
   formatProjectSourceCode res'
 
-runCommand :: forall r. (Members '[EmbedIO, App, TaggedLock, Files] r) => FormatOptions -> Sem r ()
+runCommand :: forall r. (Members AppEffects r) => FormatOptions -> Sem r ()
 runCommand opts = do
   target <- targetFromOptions opts
   runOutputSem (renderFormattedOutput target opts) . runScopeFileApp $ do
@@ -109,7 +109,7 @@ renderFormattedOutput target opts fInfo = do
         InputPath p -> say (pack (toFilePath p))
         Silent -> return ()
 
-runScopeFileApp :: (Members '[App, EmbedIO, TaggedLock] r) => Sem (ScopeEff ': r) a -> Sem r a
+runScopeFileApp :: (Members AppEffects r) => Sem (ScopeEff ': r) a -> Sem r a
 runScopeFileApp = interpret $ \case
   ScopeFile p -> do
     let appFile =
@@ -117,5 +117,5 @@ runScopeFileApp = interpret $ \case
             { _pathPath = mkPrepath (toFilePath p),
               _pathIsInput = False
             }
-    ignoreProgressLog (runPipelineProgress () (Just appFile) upToScopingEntry)
+    ignoreProgressLog (runPipelineLogger () (Just appFile) upToScopingEntry)
   ScopeStdin e -> ignoreProgressLog (runPipelineEntry e upToScopingEntry)

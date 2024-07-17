@@ -101,12 +101,12 @@ runPathResolverInput ::
 runPathResolverInput m = do
   entry <- ask
   if
-      | mainIsPackageFile entry -> runPackagePathResolver' (entry ^. entryPointResolverRoot) m
-      | otherwise -> runPathResolverPipe m
+    | mainIsPackageFile entry -> runPackagePathResolver' (entry ^. entryPointResolverRoot) m
+    | otherwise -> runPathResolverPipe m
 
 runIOEitherPipeline' ::
   forall a r.
-  (Members '[Reader PipelineOptions, ProgressLog, TaggedLock, EmbedIO] r) =>
+  (Members '[Reader PipelineOptions, Logger, TaggedLock, EmbedIO] r) =>
   EntryPoint ->
   Sem (PipelineEff' r) a ->
   Sem r (HighlightInput, (Either JuvixError (ResolverState, a)))
@@ -120,6 +120,7 @@ runIOEitherPipeline' entry a = do
     . runJuvixError
     . runFilesIO
     . runReader entry
+    . runProgressLog defaultProgressLogOptions
     . runLogIO
     . runProcessIO
     . mapError (JuvixError @GitProcessError)
@@ -160,8 +161,8 @@ evalModuleInfoCacheHelper m = do
   b <- supportsParallel
   threads <- ask >>= numThreads
   if
-      | b && threads > 1 -> DriverPar.evalModuleInfoCache m
-      | otherwise -> evalModuleInfoCache m
+    | b && threads > 1 -> DriverPar.evalModuleInfoCache m
+    | otherwise -> evalModuleInfoCache m
 
 mainIsPackageFile :: EntryPoint -> Bool
 mainIsPackageFile entry = case entry ^. entryPointModulePath of
@@ -280,26 +281,26 @@ runReplPipelineIOEither' lockMode entry = do
 
           resultScoperTable :: InfoTable
           resultScoperTable = Scoped.getCombinedInfoTable (scopedResult ^. Scoped.resultScopedModule)
-       in Right $
-            appendArtifactsModuleTable _pipelineResultImports $
-              Artifacts
-                { _artifactMainModuleScope = Just $ scopedResult ^. Scoped.resultScope,
-                  _artifactParsing = parserResult ^. P.resultParserState,
-                  _artifactInternalTypedTable = typedTable,
-                  _artifactTerminationState = typedResult ^. Typed.resultTermination,
-                  _artifactCoreModule = coreModule,
-                  _artifactScopeTable = resultScoperTable,
-                  _artifactScopeExports = scopedResult ^. Scoped.resultExports,
-                  _artifactTypes = typesTable,
-                  _artifactFunctions = functionsTable,
-                  _artifactInstances = instanceTable,
-                  _artifactCoercions = coercionTable,
-                  _artifactScoperState = scopedResult ^. Scoped.resultScoperState,
-                  _artifactResolver = art ^. artifactResolver,
-                  _artifactBuiltins = art ^. artifactBuiltins,
-                  _artifactNameIdState = art ^. artifactNameIdState,
-                  _artifactModuleTable = mempty
-                }
+       in Right
+            $ appendArtifactsModuleTable _pipelineResultImports
+            $ Artifacts
+              { _artifactMainModuleScope = Just $ scopedResult ^. Scoped.resultScope,
+                _artifactParsing = parserResult ^. P.resultParserState,
+                _artifactInternalTypedTable = typedTable,
+                _artifactTerminationState = typedResult ^. Typed.resultTermination,
+                _artifactCoreModule = coreModule,
+                _artifactScopeTable = resultScoperTable,
+                _artifactScopeExports = scopedResult ^. Scoped.resultExports,
+                _artifactTypes = typesTable,
+                _artifactFunctions = functionsTable,
+                _artifactInstances = instanceTable,
+                _artifactCoercions = coercionTable,
+                _artifactScoperState = scopedResult ^. Scoped.resultScoperState,
+                _artifactResolver = art ^. artifactResolver,
+                _artifactBuiltins = art ^. artifactBuiltins,
+                _artifactNameIdState = art ^. artifactNameIdState,
+                _artifactModuleTable = mempty
+              }
   where
     initialArtifacts :: Artifacts
     initialArtifacts =

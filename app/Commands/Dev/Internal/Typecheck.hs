@@ -5,7 +5,7 @@ import Commands.Dev.Internal.Typecheck.Options
 import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qualified as InternalTyped
 
-runCommand :: (Members '[EmbedIO, TaggedLock, App] r) => InternalTypeOptions -> Sem r ()
+runCommand :: (Members AppEffects r) => InternalTypeOptions -> Sem r ()
 runCommand localOpts = do
   globalOpts <- askGlobalOptions
   res <- runPipelineNoOptions (localOpts ^. internalTypeInputFile) upToInternalTyped

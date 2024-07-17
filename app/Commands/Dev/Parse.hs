@@ -5,7 +5,7 @@ import Commands.Dev.Parse.Options
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Text.Show.Pretty (ppShow)
 
-runCommand :: (Members '[EmbedIO, App, TaggedLock] r) => ParseOptions -> Sem r ()
+runCommand :: (Members AppEffects r) => ParseOptions -> Sem r ()
 runCommand opts = do
   m <-
     (^. Parser.resultModule)

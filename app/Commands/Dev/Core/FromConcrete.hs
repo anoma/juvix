@@ -11,10 +11,10 @@ import Juvix.Compiler.Core.Transformation qualified as Core
 import Juvix.Compiler.Core.Transformation.DisambiguateNames (disambiguateNames')
 import Juvix.Compiler.Core.Translation
 
-runCommand :: forall r. (Members '[EmbedIO, TaggedLock, App] r) => CoreFromConcreteOptions -> Sem r ()
+runCommand :: forall r. (Members AppEffects r) => CoreFromConcreteOptions -> Sem r ()
 runCommand coreOpts = do
   gopts <- askGlobalOptions
-  md <- (^. coreResultModule) <$> ignoreProgressLog (runPipelineProgress () (Just (coreOpts ^. coreFromConcreteInputFile)) upToCore)
+  md <- (^. coreResultModule) <$> silenceLogger (runPipelineLogger () (Just (coreOpts ^. coreFromConcreteInputFile)) upToCore)
   path :: Path Abs File <- fromAppPathFile (coreOpts ^. coreFromConcreteInputFile)
   let r =
         run
@@ -86,6 +86,6 @@ runCommand coreOpts = do
       err = error "function not found"
 
   if
-      | coreOpts ^. coreFromConcreteEval -> goEval
-      | coreOpts ^. coreFromConcreteNormalize -> goNormalize
-      | otherwise -> goPrint
+    | coreOpts ^. coreFromConcreteEval -> goEval
+    | coreOpts ^. coreFromConcreteNormalize -> goNormalize
+    | otherwise -> goPrint
