@@ -20,5 +20,5 @@ runCommand opts = do
   when (opts ^. scopeListComments) $ do
     newline
     newline
-    say "Comments:"
-    say (prettyText (Scoper.getScoperResultComments res))
+    renderStdOutLn @Text "Comments:"
+    renderStdOutLn (prettyText (Scoper.getScoperResultComments res))

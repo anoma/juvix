@@ -77,7 +77,7 @@ runCommand HtmlOptions {..}
             _judocArgsFolderStructure = _htmlFolderStructure
           }
       when _htmlOpen $ case openCmd of
-        Nothing -> say "Could not recognize the 'open' command for your OS"
+        Nothing -> logError "Could not recognize the 'open' command for your operating system"
         Just opencmd ->
           liftIO
             . void

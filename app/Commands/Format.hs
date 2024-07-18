@@ -106,7 +106,7 @@ renderFormattedOutput target opts fInfo = do
           $ writeFileEnsureLn' _formattedFileInfoPath (i ^. formattedFileInfoContents)
       NoEdit m -> case m of
         ReformattedFile ts -> renderStdOut ts
-        InputPath p -> say (pack (toFilePath p))
+        InputPath p -> renderStdOutLn @String (toFilePath p)
         Silent -> return ()
 
 runScopeFileApp :: (Members AppEffects r) => Sem (ScopeEff ': r) a -> Sem r a

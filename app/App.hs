@@ -297,11 +297,14 @@ runPipelineSetup p = do
   r <- runIOEitherPipeline entry (inject p) >>= fromRightJuvixError
   return (snd r)
 
-say :: (Member App r) => Text -> Sem r ()
-say = renderStdOut
+-- say :: (Member App r) => Text -> Sem r ()
+-- say = renderStdOut
+
+renderStdOutLn :: forall a r. (Member App r, HasAnsiBackend a, HasTextBackend a) => a -> Sem r ()
+renderStdOutLn txt = renderStdOut txt >> newline
 
 newline :: (Member App r) => Sem r ()
-newline = say ""
+newline = renderStdOut @Text "\n"
 
 printSuccessExit :: (Member App r) => Text -> Sem r a
 printSuccessExit = exitMsg ExitSuccess

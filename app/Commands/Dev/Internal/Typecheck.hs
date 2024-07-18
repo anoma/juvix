@@ -9,7 +9,7 @@ runCommand :: (Members AppEffects r) => InternalTypeOptions -> Sem r ()
 runCommand localOpts = do
   globalOpts <- askGlobalOptions
   res <- runPipelineNoOptions (localOpts ^. internalTypeInputFile) upToInternalTyped
-  say "Well done! It type checks"
+  logInfo "Well done! It type checks"
   when (localOpts ^. internalTypePrint) $ do
     let checkedModule = res ^. InternalTyped.resultModule
     renderStdOut (Internal.ppOut globalOpts checkedModule)

@@ -10,6 +10,7 @@ module Juvix.Data.Logger
     logWarn,
     logDebug,
     runLoggerIO,
+    ignoreLogger,
     localLogger,
     loggerUseColors,
     loggerLevel,

@@ -10,4 +10,4 @@ runCommand opts = do
   m <-
     (^. Parser.resultModule)
       <$> runPipelineNoOptions (opts ^. parseOptionsInputFile) upToParsing
-  if opts ^. parseOptionsNoPrettyShow then say (show m) else say (pack (ppShow m))
+  if opts ^. parseOptionsNoPrettyShow then renderStdOutLn @String (show m) else renderStdOut (pack (ppShow m))

@@ -6,10 +6,10 @@ import Commands.Extra.Package
 
 runCommand :: forall r. (Members '[EmbedIO, App] r) => RootOptions -> Sem r ()
 runCommand RootOptions {..} = do
-  askPkgDir >>= say . pack . toFilePath
+  askPkgDir >>= renderStdOutLn . pack . toFilePath
   when _rootPrintPackage printPackage
   where
     printPackage :: Sem r ()
     printPackage = do
-      say "+----------------------------+"
-      askPackage >>= say . renderPackage
+      renderStdOutLn @Text "+----------------------------+"
+      askPackage >>= renderStdOutLn . renderPackage
