@@ -37,7 +37,6 @@ data App :: Effect where
   GetMainFileMaybe :: Maybe (AppPath File) -> App m (Maybe (Path Abs File))
   FromAppPathDir :: AppPath Dir -> App m (Path Abs Dir)
   RenderStdOut :: (HasAnsiBackend a, HasTextBackend a) => a -> App m ()
-  Say :: Text -> App m ()
   SayRaw :: ByteString -> App m ()
 
 data RunAppIOArgs = RunAppIOArgs
@@ -88,9 +87,6 @@ reAppIO args@RunAppIOArgs {..} =
     AskInvokeDir -> return invDir
     AskPkgDir -> return (_runAppIOArgsRoot ^. rootRootDir)
     AskBuildDir -> return (resolveAbsBuildDir (_runAppIOArgsRoot ^. rootRootDir) (_runAppIOArgsRoot ^. rootBuildDir))
-    Say t
-      | g ^. globalOnlyErrors -> return ()
-      | otherwise -> putStrLn t
     PrintJuvixError e -> printErr e
     ExitJuvixError e -> do
       printErr e
@@ -300,6 +296,9 @@ runPipelineSetup p = silenceProgressLog $ do
   entry <- getEntryPointStdin' args
   r <- runIOEitherPipeline entry (inject p) >>= fromRightJuvixError
   return (snd r)
+
+say :: (Member App r) => Text -> Sem r ()
+say = renderStdOut
 
 newline :: (Member App r) => Sem r ()
 newline = say ""
