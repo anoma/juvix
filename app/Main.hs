@@ -6,6 +6,7 @@ import Data.String.Interpolate (i)
 import GHC.Conc qualified as GHC
 import GlobalOptions
 import Juvix.Compiler.Pipeline.Root
+import Juvix.Prelude.Pretty (mkAnsiText)
 import TopCommand
 import TopCommand.Options
 
@@ -17,7 +18,6 @@ main = do
   numThreads (_runAppIOArgsGlobalOptions ^. globalNumThreads) >>= GHC.setNumCapabilities
   mbuildDir <- mapM (prepathToAbsDir invokeDir) (_runAppIOArgsGlobalOptions ^? globalBuildDir . _Just . pathPath)
   mainFile <- topCommandInputPath cli
-  mapM_ checkMainFile mainFile
   let loggerOpts =
         LoggerOptions
           { _loggerLevel = _runAppIOArgsGlobalOptions ^. globalLogLevel,
@@ -28,13 +28,14 @@ main = do
     . runLoggerIO loggerOpts
     . runFilesIO
     $ do
+      mapM_ checkMainFile mainFile
       _runAppIOArgsRoot <- findRootAndChangeDir (containingDir <$> mainFile) mbuildDir invokeDir
       runAppIO RunAppIOArgs {..} (runTopCommand cli)
   where
-    checkMainFile :: SomePath b -> IO ()
-    checkMainFile p = unlessM (doesSomePathExist p) err
+    checkMainFile :: forall r b. (Members '[Logger, EmbedIO] r) => SomePath b -> Sem r ()
+    checkMainFile p = unlessM (liftIO (doesSomePathExist p)) err
       where
-        err :: IO ()
+        err :: Sem r ()
         err = do
-          hPutStrLn stderr [i|The input path #{p} does not exist|]
+          logError (mkAnsiText @Text [i|The input path #{p} does not exist|])
           exitFailure

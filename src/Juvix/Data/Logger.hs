@@ -80,7 +80,7 @@ logDebug :: (Members '[Logger] r) => AnsiText -> Sem r ()
 logDebug = logMessage LogLevelDebug
 
 silenceProgressLog :: (Members '[Logger] r) => Sem r a -> Sem r a
-silenceProgressLog = localLogger (\f -> f .||. (/= LogLevelProgress))
+silenceProgressLog = localLogger (\f -> f .&&. (/= LogLevelProgress))
 
 runLoggerIO :: forall r a. (Members '[EmbedIO] r) => LoggerOptions -> Sem (Logger ': r) a -> Sem r a
 runLoggerIO opts = interp . re
@@ -102,5 +102,5 @@ handler localEnv =
       localSeqUnlift localEnv $ \unlift ->
         local adjustPred (unlift localLog)
     LogMessage lvl msg -> do
-      loggerLvl <- ask
-      when (loggerLvl lvl) (output msg)
+      loggerPredicate <- ask
+      when (loggerPredicate lvl) (output msg)

@@ -214,7 +214,6 @@ runReplPipelineIOEither' lockMode entry = do
   eith <-
     runM
       . runConcurrent
-      . runLoggerIO defaultLoggerOptions
       . runReader defaultNumThreads
       . evalInternet hasInternet
       . ignoreHighlightBuilder
@@ -238,8 +237,7 @@ runReplPipelineIOEither' lockMode entry = do
       . runTopModuleNameChecker
       . runReader defaultImportScanStrategy
       . withImportTree (entry ^. entryPointModulePath)
-      . silenceProgressLog
-      . runProgressLog defaultProgressLogOptions
+      . ignoreProgressLog
       . evalModuleInfoCacheHelper
       $ processFileToStoredCore entry
   return $ case eith of

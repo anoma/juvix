@@ -62,7 +62,7 @@ runAppIO args = evalSingletonCache (readPackageRootIO root) . reAppIO args
 
 reAppIO ::
   forall r a.
-  (Members '[EmbedIO, TaggedLock] r) =>
+  (Members '[EmbedIO, TaggedLock, Logger] r) =>
   RunAppIOArgs ->
   Sem (App ': r) a ->
   Sem (SCache Package ': r) a
@@ -139,11 +139,16 @@ reAppIO args@RunAppIOArgs {..} =
             <> pack (toFilePath juvixYamlFile)
             <> " file"
         )
+
     invDir = _runAppIOArgsRoot ^. rootInvokeDir
+
     g :: GlobalOptions
     g = _runAppIOArgsGlobalOptions
+
+    printErr :: forall r'. (Members '[Logger] r') => JuvixError -> Sem r' ()
     printErr e =
-      hPutStrLn stderr
+      logError
+        . mkAnsiText
         . run
         . runReader (project' @GenericOptions g)
         $ Error.render (not (_runAppIOArgsGlobalOptions ^. globalNoColors)) (g ^. globalOnlyErrors) e
