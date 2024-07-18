@@ -1,5 +1,6 @@
 module Juvix.Compiler.Backend.Isabelle.Pretty.Base where
 
+import Data.Text qualified as Text
 import Juvix.Compiler.Backend.Isabelle.Language
 import Juvix.Compiler.Backend.Isabelle.Pretty.Keywords
 import Juvix.Compiler.Backend.Isabelle.Pretty.Options
@@ -240,16 +241,21 @@ instance PrettyCode RecordField where
     ty <- ppCodeQuoted _recordFieldType
     return $ n <+> "::" <+> ty
 
+ppImports :: [Name] -> Sem r [Doc Ann]
+ppImports ns =
+  return $ map (dquotes . pretty) $ filter (not . Text.isPrefixOf "Stdlib/") $ map (Text.replace "." "/" . (^. namePretty)) ns
+
 instance PrettyCode Theory where
   ppCode Theory {..} = do
     n <- ppCode _theoryName
+    imports <- ppImports _theoryImports
     stmts <- mapM ppCode _theoryStatements
     return $
       kwTheory
         <+> n
           <> line
           <> kwImports
-        <+> "Main"
+        <+> align (vsep ("Main" : imports))
           <> line
           <> kwBegin
           <> line
