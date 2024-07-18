@@ -21,7 +21,7 @@ runCommand opts = do
       . runError @JuvixError
       . coreToAnoma
       $ coreRes
-      ^. coreResultModule
+        ^. coreResultModule
   res <- getRight r
   outputAnomaResult nockmaFile res
 

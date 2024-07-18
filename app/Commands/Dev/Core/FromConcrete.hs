@@ -86,6 +86,6 @@ runCommand coreOpts = do
       err = error "function not found"
 
   if
-    | coreOpts ^. coreFromConcreteEval -> goEval
-    | coreOpts ^. coreFromConcreteNormalize -> goNormalize
-    | otherwise -> goPrint
+      | coreOpts ^. coreFromConcreteEval -> goEval
+      | coreOpts ^. coreFromConcreteNormalize -> goNormalize
+      | otherwise -> goPrint

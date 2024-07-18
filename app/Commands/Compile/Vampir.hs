@@ -20,6 +20,6 @@ runCommand opts = do
       . runError @JuvixError
       . coreToVampIR
       $ coreRes
-      ^. coreResultModule
+        ^. coreResultModule
   VampIR.Result {..} <- getRight r
   writeFileEnsureLn vampirFile _resultCode

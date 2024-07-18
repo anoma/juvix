@@ -13,10 +13,10 @@ runCommand opts = do
   res :: Scoper.ScoperResult <- runPipelineNoOptions (opts ^. scopeInputFile) upToScopingEntry
   let m :: Module 'Scoped 'ModuleTop = res ^. Scoper.resultModule
   if
-    | opts ^. scopeWithComments ->
-        renderStdOut (Print.ppOut (globalOpts, opts) (Scoper.getScoperResultComments res) m)
-    | otherwise ->
-        renderStdOut (Print.ppOutNoComments (globalOpts, opts) m)
+      | opts ^. scopeWithComments ->
+          renderStdOut (Print.ppOut (globalOpts, opts) (Scoper.getScoperResultComments res) m)
+      | otherwise ->
+          renderStdOut (Print.ppOutNoComments (globalOpts, opts) m)
   when (opts ^. scopeListComments) $ do
     newline
     newline

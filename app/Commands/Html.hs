@@ -19,8 +19,8 @@ runGenOnlySourceHtml HtmlOptions {..} = do
   res <- runPipelineNoOptions _htmlInputFile upToScopingEntry
   let m = res ^. Scoper.resultModule
   outputDir <- fromAppPathDir _htmlOutputDir
-  liftIO
-    $ Html.genSourceHtml
+  liftIO $
+    Html.genSourceHtml
       GenSourceHtmlArgs
         { _genSourceHtmlArgsAssetsDir = _htmlAssetsPrefix,
           _genSourceHtmlArgsHtmlKind = Html.HtmlOnly,
