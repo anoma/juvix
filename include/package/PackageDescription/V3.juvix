@@ -1,0 +1,126 @@
+module PackageDescription.V3;
+
+import PackageDescription.V2 open hiding {Package; module Package; mkPackage; defaultPackage} public;
+import Juvix.Builtin.V1 open public;
+
+--- A ;RegistryLocation; defines the location of a dependency registry.
+type RegistryLocation :=
+  | --- A filesystem path to a registry
+    pathLocation {path : String}
+  | --- A git repository containing a registry
+    gitLocation {-- The URL to the git repository
+    url : String}
+  | --- A git repository containing a registry with ref
+    gitLocationRef {
+      -- The URL to the git repository
+      url : String;
+      -- The git ref to checkout
+      ref : String
+    }
+  | --- The default Registry location defined by the Juvix compiler
+    defaultLocation;
+
+githubLocation (org repo : String) : RegistryLocation :=
+  gitLocation ("https://github.com/" ++str org ++str "/" ++str repo);
+
+--- A ;Registry; defines a collection of packages that are known to work together.
+type Registry :=
+  mkRegistry {
+    registryLocation : RegistryLocation;
+    registryVersion : SemVer
+  };
+
+type PackageDependencies :=
+  | --- Dependencies from a package registy
+    registryDependencies {
+      registry : Registry;
+      dependencies : List String;
+      extraDependencies : List Dependency
+    }
+  | --- Individually declared dependencies
+    packageDependencies {dependencies : List Dependency};
+
+dependenciesInRegistry
+  (registry : Registry)
+  (dependencies : List String)
+  {extraDependencies : List Dependency := []}
+  : PackageDependencies :=
+  registryDependencies@{
+    registry;
+    dependencies;
+    extraDependencies
+  };
+
+--- A ;Package; defines the configuration for a Juvix package
+type Package :=
+  mkPackage {
+    -- The name of the package
+    name : String;
+    -- The version for the package
+    version : SemVer;
+    -- The dependencies of this package
+    dependencies : PackageDependencies;
+    -- A path to the Main module for this package
+    main : Maybe String;
+    -- A path to a directory where Juvix should output intermediate build products
+    buildDir : Maybe String
+  };
+
+--- Construct a ;Package; with useful default arguments.
+defaultPackage
+  {name : String := "my-project"}
+  {version : SemVer := defaultVersion}
+  {dependencies : PackageDependencies := packageDependencies [defaultStdlib]}
+  {main : Maybe String := nothing}
+  {buildDir : Maybe String := nothing}
+  : Package := mkPackage name version dependencies main buildDir;
+
+usingRegistry
+  (registry : Registry)
+  (dependencies : List String)
+  {extraDependencies : List Dependency := []}
+  {name : String := "my-project"}
+  {version : SemVer := defaultVersion}
+  {main : Maybe String := nothing}
+  {buildDir : Maybe String := nothing}
+  : Package :=
+  let
+    packageDependencies :=
+      dependenciesInRegistry@{
+        registry;
+        dependencies;
+        extraDependencies
+      };
+  in mkPackage@{
+    name;
+    version;
+    dependencies := packageDependencies;
+    main;
+    buildDir
+  };
+
+--- Construct a ;Package; using the default registry for dependencies.
+usingDefaultRegistry
+  (registryVersion : SemVer)
+  (dependencies : List String)
+  {extraDependencies : List Dependency := []}
+  {name : String := "my-project"}
+  {version : SemVer := defaultVersion}
+  {main : Maybe String := nothing}
+  {buildDir : Maybe String := nothing}
+  : Package :=
+  let
+    registry :=
+      mkRegistry@{
+        registryLocation := defaultLocation;
+        registryVersion
+      };
+  in usingRegistry@{
+    registry;
+    dependencies;
+    extraDependencies;
+    name;
+    version;
+    main;
+    buildDir
+  };
