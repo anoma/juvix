@@ -75,6 +75,7 @@ defaultPackage
   {buildDir : Maybe String := nothing}
   : Package := mkPackage name version dependencies main buildDir;
 
+--- Construct a ;Package; with dependencies from a ;PackageSet;.
 usingPackageSet
   (packageSet : PackageSet)
   (dependencies : List String)
