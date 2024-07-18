@@ -42,7 +42,7 @@ tests:
         configDir="$config/juvix/$version"
         cd $temp
         cp "$baseDir/examples/milestone/HelloWorld/HelloWorld.juvix" .
-        juvix --only-errors compile native HelloWorld.juvix
+        juvix --log-level error compile native HelloWorld.juvix
         [ -d $configDir ]
         juvix clean
         [ -d $configDir ]
@@ -59,7 +59,7 @@ tests:
         temp=$(mktemp -d)
         trap 'rm -rf -- "$temp"' EXIT
         cd ./examples/milestone/HelloWorld
-        juvix --only-errors compile native -o $temp/Hello HelloWorld.juvix
+        juvix --log-level error compile native -o $temp/Hello HelloWorld.juvix
         juvix clean
         [ -d $temp/.juvix-build ]
     stdout: ""
@@ -75,7 +75,7 @@ tests:
         temp_build_dir=$(mktemp -d)
         trap 'rm -rf -- "$temp_build_dir"' EXIT
         cd ./examples/milestone/HelloWorld
-        juvix --only-errors compile native -o $temp/Hello HelloWorld.juvix --internal-build-dir "$temp_build_dir"
+        juvix --log-level error compile native -o $temp/Hello HelloWorld.juvix --internal-build-dir "$temp_build_dir"
         juvix --internal-build-dir "$temp_build_dir" clean
         [ -d $temp_build_dir ]
     stdout: ""
@@ -92,7 +92,7 @@ tests:
         trap 'rm -rf -- "$temp_build_dir"' EXIT
         cp -r ./examples/milestone/HelloWorld/. $temp
         cd $temp
-        juvix --only-errors compile native HelloWorld.juvix
+        juvix --log-level error compile native HelloWorld.juvix
         juvix --internal-build-dir "$temp_build_dir" clean
         [ -d $temp/.juvix-build ]
     stdout: ""

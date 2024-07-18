@@ -22,7 +22,7 @@ tests:
   - name: flag-only-errors
     command:
       - juvix
-      - --only-errors
+      - --log-level error
       - typecheck
     args:
       - positive/Internal/Simple.juvix
