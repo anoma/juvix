@@ -35,6 +35,6 @@ runProgressLog ProgressLogOptions {..} = interpret $ \case
           return (kwBracketL <> show _logItemThreadId <> kwBracketR)
     logProgress (mkAnsiText (threadDoc <?+> _logItemMessage <> hardline))
 
-ignoreProgressLog :: Sem (ProgressLog ': r) a -> Sem r a
-ignoreProgressLog = interpret $ \case
+ignoreProgressLog2 :: Sem (ProgressLog ': r) a -> Sem r a
+ignoreProgressLog2 = interpret $ \case
   ProgressLog {} -> return ()

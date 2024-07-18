@@ -44,7 +44,9 @@ upToInternalExpression p = do
     . runStateArtifacts artifactScoperState
     . runReader pkg
     $ runNameIdGenArtifacts (Scoper.scopeCheckExpression (Store.getScopedModuleTable mtab) scopeTable p)
-      >>= runNameIdGenArtifacts . runReader scopeTable . Internal.fromConcreteExpression
+    >>= runNameIdGenArtifacts
+    . runReader scopeTable
+    . Internal.fromConcreteExpression
 
 expressionUpToAtomsParsed ::
   (Members '[State Artifacts, Error JuvixError] r) =>
@@ -71,7 +73,7 @@ expressionUpToAtomsScoped fp txt = do
     . runNameIdGenArtifacts
     . runReader pkg
     $ Parser.expressionFromTextSource fp txt
-      >>= Scoper.scopeCheckExpressionAtoms (Store.getScopedModuleTable mtab) scopeTable
+    >>= Scoper.scopeCheckExpressionAtoms (Store.getScopedModuleTable mtab) scopeTable
 
 scopeCheckExpression ::
   (Members '[Reader EntryPoint, Error JuvixError, State Artifacts] r) =>
@@ -167,6 +169,7 @@ compileReplInputIO fp txt = do
   hasInternet <- not <$> asks (^. entryPointOffline)
   runError
     . runConcurrent
+    . runLoggerIO defaultLoggerOptions
     . runReader defaultNumThreads
     . evalInternet hasInternet
     . runTaggedLockPermissive
@@ -184,7 +187,8 @@ compileReplInputIO fp txt = do
     . runTopModuleNameChecker
     . runReader defaultImportScanStrategy
     . withImportTree (Just fp)
-    . ignoreProgressLog
+    . silenceProgressLog
+    . runProgressLog defaultProgressLogOptions
     . evalModuleInfoCacheHelper
     $ do
       p <- parseReplInput fp txt
@@ -234,8 +238,8 @@ runTransformations shouldDisambiguate ts n = runCoreInfoTableBuilderArtifacts $ 
       md' <- mapReader Core.fromEntryPoint $ Core.applyTransformations ts' md
       let md'' =
             if
-                | shouldDisambiguate' -> disambiguateNames md'
-                | otherwise -> md'
+              | shouldDisambiguate' -> disambiguateNames md'
+              | otherwise -> md'
       Core.setModule md''
 
     getNode :: Core.Symbol -> Sem (Core.InfoTableBuilder ': r) Core.Node

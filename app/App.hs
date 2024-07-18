@@ -226,7 +226,7 @@ runPipelineTermination ::
   Maybe (AppPath File) ->
   Sem (Termination ': PipelineEff r) a ->
   Sem r (PipelineResult a)
-runPipelineTermination input_ p = ignoreProgressLog $ do
+runPipelineTermination input_ p = silenceProgressLog $ do
   r <- runPipelineEither () input_ (evalTermination iniTerminationState (inject p)) >>= fromRightJuvixError
   return (snd r)
 
@@ -290,7 +290,7 @@ runPipelineSetup ::
   (Members '[App, EmbedIO, Logger, Reader PipelineOptions, TaggedLock] r) =>
   Sem (PipelineEff' r) a ->
   Sem r a
-runPipelineSetup p = ignoreProgressLog $ do
+runPipelineSetup p = silenceProgressLog $ do
   args <- askArgs
   entry <- getEntryPointStdin' args
   r <- runIOEitherPipeline entry (inject p) >>= fromRightJuvixError

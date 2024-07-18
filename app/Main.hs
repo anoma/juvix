@@ -18,8 +18,15 @@ main = do
   mbuildDir <- mapM (prepathToAbsDir invokeDir) (_runAppIOArgsGlobalOptions ^? globalBuildDir . _Just . pathPath)
   mainFile <- topCommandInputPath cli
   mapM_ checkMainFile mainFile
+  let loggerOpts =
+        LoggerOptions
+          { _loggerLevel = _runAppIOArgsGlobalOptions ^. globalLogLevel,
+            _loggerUseColors = not (_runAppIOArgsGlobalOptions ^. globalNoColors)
+          }
   runM
     . runTaggedLockPermissive
+    . runLoggerIO loggerOpts
+    . runFilesIO
     $ do
       _runAppIOArgsRoot <- findRootAndChangeDir (containingDir <$> mainFile) mbuildDir invokeDir
       runAppIO RunAppIOArgs {..} (runTopCommand cli)

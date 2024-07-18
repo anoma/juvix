@@ -14,7 +14,7 @@ import Juvix.Compiler.Core.Translation
 runCommand :: forall r. (Members AppEffects r) => CoreFromConcreteOptions -> Sem r ()
 runCommand coreOpts = do
   gopts <- askGlobalOptions
-  md <- (^. coreResultModule) <$> silenceLogger (runPipelineLogger () (Just (coreOpts ^. coreFromConcreteInputFile)) upToCore)
+  md <- (^. coreResultModule) <$> silenceProgressLog (runPipelineLogger () (Just (coreOpts ^. coreFromConcreteInputFile)) upToCore)
   path :: Path Abs File <- fromAppPathFile (coreOpts ^. coreFromConcreteInputFile)
   let r =
         run

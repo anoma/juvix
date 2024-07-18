@@ -11,7 +11,7 @@ runCommand opts@EvalOptions {..} = do
   gopts <- askGlobalOptions
   root <- askRoot
   entryPoint <- maybe (entryPointFromGlobalOptionsNoFile root gopts) (fromAppPathFile >=> \f -> entryPointFromGlobalOptions root (Just f) gopts) _evalInputFile
-  Core.CoreResult {..} <- ignoreProgressLog (runPipelineLogger () _evalInputFile upToCore)
+  Core.CoreResult {..} <- silenceProgressLog (runPipelineLogger () _evalInputFile upToCore)
   let r =
         run
           . runReader entryPoint

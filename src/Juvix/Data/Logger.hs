@@ -1,6 +1,6 @@
 module Juvix.Data.Logger
   ( defaultLoggerOptions,
-    defaultLoggerLevel,
+    defaultLogLevel,
     Logger,
     LoggerOptions (..),
     LogLevel (..),
@@ -13,6 +13,7 @@ module Juvix.Data.Logger
     localLogger,
     loggerUseColors,
     loggerLevel,
+    silenceProgressLog,
   )
 where
 
@@ -43,21 +44,21 @@ instance Pretty LogLevel where
 
 data Logger :: Effect where
   LogMessage :: LogLevel -> AnsiText -> Logger m ()
-  LocalLogger :: LogLevel -> m () -> Logger m ()
+  LocalLogger :: ((LogLevel -> Bool) -> LogLevel -> Bool) -> m a -> Logger m a
 
 data LoggerOptions = LoggerOptions
   { _loggerUseColors :: Bool,
     _loggerLevel :: LogLevel
   }
 
-defaultLoggerLevel :: LogLevel
-defaultLoggerLevel = LogLevelProgress
+defaultLogLevel :: LogLevel
+defaultLogLevel = LogLevelProgress
 
 defaultLoggerOptions :: LoggerOptions
 defaultLoggerOptions =
   LoggerOptions
     { _loggerUseColors = True,
-      _loggerLevel = defaultLoggerLevel
+      _loggerLevel = defaultLogLevel
     }
 
 makeSem ''Logger
@@ -78,25 +79,28 @@ logProgress = logMessage LogLevelProgress
 logDebug :: (Members '[Logger] r) => AnsiText -> Sem r ()
 logDebug = logMessage LogLevelDebug
 
+silenceProgressLog :: (Members '[Logger] r) => Sem r a -> Sem r a
+silenceProgressLog = localLogger (\f -> f .||. (/= LogLevelProgress))
+
 runLoggerIO :: forall r a. (Members '[EmbedIO] r) => LoggerOptions -> Sem (Logger ': r) a -> Sem r a
 runLoggerIO opts = interp . re
   where
-    interp :: Sem (Output AnsiText ': Reader LogLevel ': r) a -> Sem r a
-    interp = runReader (opts ^. loggerLevel) . runOutputSem printMsg
+    interp :: Sem (Output AnsiText ': Reader (LogLevel -> Bool) ': r) a -> Sem r a
+    interp = runReader (<= (opts ^. loggerLevel)) . runOutputSem printMsg
 
     printMsg :: forall r'. (Members '[EmbedIO] r') => AnsiText -> Sem r' ()
     printMsg = hRenderIO (opts ^. loggerUseColors) stderr
 
-re :: Sem (Logger ': r) a -> Sem (Output AnsiText ': Reader LogLevel ': r) a
+re :: Sem (Logger ': r) a -> Sem (Output AnsiText ': Reader (LogLevel -> Bool) ': r) a
 re = interpretTop2H handler
 
 handler ::
-  EffectHandler Logger (Output AnsiText ': Reader LogLevel ': r)
+  EffectHandler Logger (Output AnsiText ': Reader (LogLevel -> Bool) ': r)
 handler localEnv =
   \case
-    LocalLogger localLevel localLog ->
+    LocalLogger adjustPred localLog ->
       localSeqUnlift localEnv $ \unlift ->
-        local (const localLevel) (unlift localLog)
+        local adjustPred (unlift localLog)
     LogMessage lvl msg -> do
       loggerLvl <- ask
-      when (lvl <= loggerLvl) (output msg)
+      when (loggerLvl lvl) (output msg)

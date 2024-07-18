@@ -24,7 +24,7 @@ import Commands.Dev.Termination qualified as Termination
 import Commands.Dev.Tree qualified as Tree
 import Commands.Repl qualified as Repl
 
-runCommand :: (Members '[EmbedIO, App, TaggedLock] r) => DevCommand -> Sem r ()
+runCommand :: (Members AppEffects r) => DevCommand -> Sem r ()
 runCommand = \case
   ImportTree opts -> ImportTree.runCommand opts
   Highlight opts -> Highlight.runCommand opts

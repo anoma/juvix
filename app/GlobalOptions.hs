@@ -27,6 +27,7 @@ data GlobalOptions = GlobalOptions
     _globalNumThreads :: NumThreads,
     _globalFieldSize :: Maybe Natural,
     _globalOffline :: Bool,
+    _globalLogLevel :: LogLevel,
     _globalDevShowThreadIds :: Bool
   }
   deriving stock (Eq, Show)
@@ -66,6 +67,7 @@ defaultGlobalOptions =
       _globalBuildDir = Nothing,
       _globalStdin = False,
       _globalNoPositivity = False,
+      _globalLogLevel = LogLevelProgress,
       _globalNoCoverage = False,
       _globalNoStdlib = False,
       _globalUnrollLimit = defaultUnrollLimit,
@@ -138,6 +140,15 @@ parseGlobalFlags = do
     switch
       ( long "offline"
           <> help "Disable access to network resources"
+      )
+  _globalLogLevel <-
+    option
+      (enumReader Proxy)
+      ( long "log-level"
+          <> metavar "LOG_LEVEL"
+          <> completer (enumCompleter @LogLevel Proxy)
+          <> value defaultLogLevel
+          <> help "Determines how much log the compiler produces"
       )
   _globalShowNameIds <-
     switch
