@@ -889,7 +889,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
 
     quote :: Text -> Text
     quote txt = case Text.uncons txt of
-      Just ('_', txt') -> txt'
+      Just (c, txt') | not (isLetter c) -> txt'
       _ -> txt
 
     filterTypeArgs :: Int -> Internal.Expression -> [a] -> [a]
