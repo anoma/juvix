@@ -12,4 +12,4 @@ runCommand HighlightOptions {..} = silenceProgressLog . runPipelineOptions $ do
     Highlight.filterInput
       inputFile
       <$> runPipelineHighlight entry upToInternalTyped
-  sayRaw (Highlight.highlight _highlightBackend hinput)
+  renderStdOutRaw (Highlight.highlight _highlightBackend hinput)

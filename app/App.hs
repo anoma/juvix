@@ -37,7 +37,7 @@ data App :: Effect where
   GetMainFileMaybe :: Maybe (AppPath File) -> App m (Maybe (Path Abs File))
   FromAppPathDir :: AppPath Dir -> App m (Path Abs Dir)
   RenderStdOut :: (HasAnsiBackend a, HasTextBackend a) => a -> App m ()
-  SayRaw :: ByteString -> App m ()
+  RenderStdOutRaw :: ByteString -> App m ()
 
 data RunAppIOArgs = RunAppIOArgs
   { _runAppIOArgsGlobalOptions :: GlobalOptions,
@@ -78,6 +78,7 @@ reAppIO args@RunAppIOArgs {..} =
     RenderStdOut t -> do
       sup <- liftIO (Ansi.hSupportsANSIColor stdout)
       renderIO (not (_runAppIOArgsGlobalOptions ^. globalNoColors) && sup) t
+    RenderStdOutRaw b -> liftIO (ByteString.putStr b)
     AskGlobalOptions -> return _runAppIOArgsGlobalOptions
     AskPackage -> getPkg
     AskArgs -> return args
@@ -91,18 +92,19 @@ reAppIO args@RunAppIOArgs {..} =
       exitFailure
     ExitMsg exitCode t -> exitMsg' (exitWith exitCode) t
     ExitFailMsg t -> exitMsg' exitFailure t
-    SayRaw b -> liftIO (ByteString.putStr b)
   where
     getPkg :: (Members '[SCache Package] r') => Sem r' Package
     getPkg = cacheSingletonGet
 
-    exitMsg' :: (Members '[EmbedIO] r') => IO x -> Text -> Sem r' x
-    exitMsg' onExit t = liftIO (putStrLn t >> hFlush stdout >> onExit)
+    exitMsg' :: forall r' x. (Members '[EmbedIO, Logger] r') => IO x -> Text -> Sem r' x
+    exitMsg' onExit t = do
+      logError (mkAnsiText t)
+      liftIO (hFlush stderr >> onExit)
 
     fromAppFile' :: (Members '[EmbedIO] r') => AppPath File -> Sem r' (Path Abs File)
     fromAppFile' f = prepathToAbsFile invDir (f ^. pathPath)
 
-    getMainFile' :: (Members '[SCache Package, EmbedIO] r') => Maybe (AppPath File) -> Sem r' (Path Abs File)
+    getMainFile' :: (Members '[Logger, SCache Package, EmbedIO] r') => Maybe (AppPath File) -> Sem r' (Path Abs File)
     getMainFile' = getMainAppFile' >=> fromAppFile'
 
     getMainFileMaybe' :: (Members '[SCache Package, EmbedIO] r') => Maybe (AppPath File) -> Sem r' (Maybe (Path Abs File))
@@ -122,10 +124,10 @@ reAppIO args@RunAppIOArgs {..} =
                 }
           Nothing -> Nothing
 
-    getMainAppFile' :: (Members '[SCache Package, EmbedIO] r') => Maybe (AppPath File) -> Sem r' (AppPath File)
+    getMainAppFile' :: (Members '[SCache Package, EmbedIO, Logger] r') => Maybe (AppPath File) -> Sem r' (AppPath File)
     getMainAppFile' = fromMaybeM missingMainErr . getMainAppFileMaybe'
 
-    missingMainErr :: (Members '[EmbedIO] r') => Sem r' x
+    missingMainErr :: (Members '[EmbedIO, Logger] r') => Sem r' x
     missingMainErr =
       exitMsg'
         exitFailure

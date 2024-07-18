@@ -37,7 +37,7 @@ runTopCommand = \case
   DisplayHelp -> showHelpText
   Doctor opts -> runLogIO (Doctor.runCommand opts)
   Isabelle opts -> Isabelle.runCommand opts
-  Init opts -> runLogIO (Init.init opts)
+  Init opts -> Init.init opts
   Dev opts -> Dev.runCommand opts
   Typecheck opts -> Typecheck.runCommand opts
   Compile opts -> Compile.runCommand opts
