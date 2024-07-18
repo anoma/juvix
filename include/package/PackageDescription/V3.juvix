@@ -23,30 +23,30 @@ type RegistryLocation :=
 githubLocation (org repo : String) : RegistryLocation :=
   gitLocation ("https://github.com/" ++str org ++str "/" ++str repo);
 
---- A ;Registry; defines a collection of packages that are known to work together.
-type Registry :=
-  mkRegistry {
+--- A ;PackageSet; defines a collection of packages that are known to work together.
+type PackageSet :=
+  mkPackageSet {
     registryLocation : RegistryLocation;
-    packageSet : SemVer
+    packageSetVersion : SemVer
   };
 
 type PackageDependencies :=
-  | --- Dependencies from a package registy
-    registryDependencies {
-      registry : Registry;
+  | --- Dependencies from a package-set
+    packageSetDependencies {
+      packageSet : PackageSet;
       dependencies : List String;
       extraDependencies : List Dependency
     }
   | --- Individually declared dependencies
     packageDependencies {dependencies : List Dependency};
 
-dependenciesInRegistry
-  (registry : Registry)
+dependenciesInPackageSet
+  (packageSet : PackageSet)
   (dependencies : List String)
   {extraDependencies : List Dependency := []}
   : PackageDependencies :=
-  registryDependencies@{
-    registry;
+  packageSetDependencies@{
+    packageSet;
     dependencies;
     extraDependencies
   };
@@ -75,8 +75,8 @@ defaultPackage
   {buildDir : Maybe String := nothing}
   : Package := mkPackage name version dependencies main buildDir;
 
-usingRegistry
-  (registry : Registry)
+usingPackageSet
+  (packageSet : PackageSet)
   (dependencies : List String)
   {extraDependencies : List Dependency := []}
   {name : String := "my-project"}
@@ -86,8 +86,8 @@ usingRegistry
   : Package :=
   let
     packageDependencies :=
-      dependenciesInRegistry@{
-        registry;
+      dependenciesInPackageSet@{
+        packageSet;
         dependencies;
         extraDependencies
       };
@@ -101,7 +101,7 @@ usingRegistry
 
 --- Construct a ;Package; using the default registry for dependencies.
 usingDefaultRegistry
-  (packageSet : SemVer)
+  (packageSetVersion : SemVer)
   (dependencies : List String)
   {extraDependencies : List Dependency := []}
   {name : String := "my-project"}
@@ -110,13 +110,13 @@ usingDefaultRegistry
   {buildDir : Maybe String := nothing}
   : Package :=
   let
-    registry :=
-      mkRegistry@{
+    packageSet :=
+      mkPackageSet@{
         registryLocation := defaultLocation;
-        packageSet
+        packageSetVersion
       };
-  in usingRegistry@{
-    registry;
+  in usingPackageSet@{
+    packageSet;
     dependencies;
     extraDependencies;
     name;
