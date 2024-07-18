@@ -27,7 +27,7 @@ githubLocation (org repo : String) : RegistryLocation :=
 type Registry :=
   mkRegistry {
     registryLocation : RegistryLocation;
-    registryVersion : SemVer
+    packageSet : SemVer
   };
 
 type PackageDependencies :=
@@ -101,7 +101,7 @@ usingRegistry
 
 --- Construct a ;Package; using the default registry for dependencies.
 usingDefaultRegistry
-  (registryVersion : SemVer)
+  (packageSet : SemVer)
   (dependencies : List String)
   {extraDependencies : List Dependency := []}
   {name : String := "my-project"}
@@ -113,7 +113,7 @@ usingDefaultRegistry
     registry :=
       mkRegistry@{
         registryLocation := defaultLocation;
-        registryVersion
+        packageSet
       };
   in usingRegistry@{
     registry;
