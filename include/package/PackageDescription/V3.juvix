@@ -24,13 +24,17 @@ githubLocation (org repo : String) : RegistryLocation :=
 --- A ;PackageSet; defines a collection of packages that are known to work together.
 type PackageSet :=
   mkPackageSet {
+    --- The location of the registry containing the package set
     registryLocation : RegistryLocation;
+    --- The version of the package set in the registry
     packageSetVersion : SemVer
   };
 
 type OverridingDependency :=
   mkOverridingDependency {
+    --- The dependency to override
     dependency : String;
+    --- The overriding dependency version
     overridingVersion : String
   };
 
@@ -41,11 +45,15 @@ dependencyOverride (dependency version : String) : OverridingDependency :=
   };
 
 type PackageDependencies :=
-  | --- Dependencies from a package-set
+  | --- Dependencies from a package set
     packageSetDependencies {
+      --- A dependency package set
       packageSet : PackageSet;
+      --- Packages to depend on from the package set
       dependencies : List String;
+      --- Packages to depend on that are not in the package set
       extraDependencies : List Dependency;
+      --- Packages to depend on from the package set with version overrides
       overridingDependencies : List OverridingDependency
     }
   | --- Individually declared dependencies
@@ -54,15 +62,15 @@ type PackageDependencies :=
 --- A ;Package; defines the configuration for a Juvix package
 type Package :=
   mkPackage {
-    -- The name of the package
+    --- The name of the package
     name : String;
-    -- The version for the package
+    --- The version for the package
     version : SemVer;
-    -- The dependencies of this package
+    --- The dependencies of this package
     dependencies : PackageDependencies;
-    -- A path to the Main module for this package
+    --- A path to the Main module for this package
     main : Maybe String;
-    -- A path to a directory where Juvix should output intermediate build products
+    --- A path to a directory where Juvix should output intermediate build products
     buildDir : Maybe String
   };
 
