@@ -55,7 +55,7 @@ errorIntervals e = do
   e' <- genericError e
   return (e' ^. genericErrorIntervals)
 
-render :: (ToGenericError e, Member (Reader GenericOptions) r) => Bool -> Bool -> e -> Sem r Text
+render :: (ToGenericError e, Member (Reader GenericOptions) r) => Bool -> Maybe Char -> e -> Sem r Text
 render ansi endChar err = do
   g <- genericError err
   let gMsg = g ^. genericErrorMessage
@@ -66,20 +66,18 @@ render ansi endChar err = do
       | otherwise -> return $ helper renderStrict (toTextDoc gMsg)
   where
     lastChar :: Doc a
-    lastChar
-      | endChar = "ת"
-      | otherwise = ""
+    lastChar = maybe "" pretty endChar
 
 -- | Render the error to Text.
 renderText :: (ToGenericError e, Member (Reader GenericOptions) r) => e -> Sem r Text
-renderText = render False False
+renderText = render False Nothing
 
 renderTextDefault :: (ToGenericError e) => e -> Text
 renderTextDefault = run . runReader defaultGenericOptions . renderText
 
 -- | Render the error with Ansi formatting (if any).
 renderAnsiText :: (ToGenericError e, Member (Reader GenericOptions) r) => e -> Sem r Text
-renderAnsiText = render True False
+renderAnsiText = render True Nothing
 
 printErrorAnsi :: (ToGenericError e, Members '[EmbedIO, Reader GenericOptions] r) => e -> Sem r ()
 printErrorAnsi e = renderAnsiText e >>= \txt -> hPutStrLn stderr txt

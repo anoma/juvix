@@ -17,7 +17,7 @@ data GlobalOptions = GlobalOptions
   { _globalNoColors :: Bool,
     _globalShowNameIds :: Bool,
     _globalBuildDir :: Maybe (AppPath Dir),
-    _globalOnlyErrors :: Bool,
+    _globalIdeEndErrorChar :: Maybe Char,
     _globalStdin :: Bool,
     _globalNoTermination :: Bool,
     _globalNoPositivity :: Bool,
@@ -62,7 +62,7 @@ defaultGlobalOptions =
     { _globalNoColors = False,
       _globalNumThreads = defaultNumThreads,
       _globalShowNameIds = False,
-      _globalOnlyErrors = False,
+      _globalIdeEndErrorChar = Nothing,
       _globalNoTermination = False,
       _globalBuildDir = Nothing,
       _globalStdin = False,
@@ -97,11 +97,13 @@ parseGlobalFlags = do
       ( long "stdin"
           <> help "Read from Stdin"
       )
-  _globalOnlyErrors <-
-    switch
-      ( long "only-errors"
-          <> help "Only print errors in a uniform format (used by juvix-mode)"
-      )
+  _globalIdeEndErrorChar <-
+    optional $
+      option
+        readMChar
+        ( long "ide-end-error-char"
+            <> help "End error message with the given character in order to facilitate parsing"
+        )
   _globalNoTermination <-
     switch
       ( long "no-termination"
@@ -148,7 +150,10 @@ parseGlobalFlags = do
           <> metavar "LOG_LEVEL"
           <> completer (enumCompleter @LogLevel Proxy)
           <> value defaultLogLevel
-          <> help "Determines how much log the compiler produces"
+          <> help
+            ( "Determines how much log the compiler produces."
+                <> intercalate " < " [show l | l <- allElements @LogLevel]
+            )
       )
   _globalShowNameIds <-
     switch

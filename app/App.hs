@@ -75,11 +75,9 @@ reAppIO args@RunAppIOArgs {..} =
     GetMainFile m -> getMainFile' m
     GetMainFileMaybe m -> getMainFileMaybe' m
     FromAppPathDir p -> liftIO (prepathToAbsDir invDir (p ^. pathPath))
-    RenderStdOut t
-      | _runAppIOArgsGlobalOptions ^. globalOnlyErrors -> return ()
-      | otherwise -> do
-          sup <- liftIO (Ansi.hSupportsANSIColor stdout)
-          renderIO (not (_runAppIOArgsGlobalOptions ^. globalNoColors) && sup) t
+    RenderStdOut t -> do
+      sup <- liftIO (Ansi.hSupportsANSIColor stdout)
+      renderIO (not (_runAppIOArgsGlobalOptions ^. globalNoColors) && sup) t
     AskGlobalOptions -> return _runAppIOArgsGlobalOptions
     AskPackage -> getPkg
     AskArgs -> return args
@@ -147,7 +145,7 @@ reAppIO args@RunAppIOArgs {..} =
         . mkAnsiText
         . run
         . runReader (project' @GenericOptions g)
-        $ Error.render (not (_runAppIOArgsGlobalOptions ^. globalNoColors)) (g ^. globalOnlyErrors) e
+        $ Error.render (not (_runAppIOArgsGlobalOptions ^. globalNoColors)) (g ^. globalIdeEndErrorChar) e
 
 getEntryPoint' ::
   (Members '[App, EmbedIO, TaggedLock] r) =>

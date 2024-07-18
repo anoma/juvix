@@ -428,7 +428,7 @@ catchAll = Repline.dontCrash . catchJuvixError
             . hPutStrLn stderr
             . run
             . runReader (project' @GenericOptions opts)
-            $ Error.render (not (opts ^. globalNoColors) && hasAnsi) False e
+            $ Error.render (not (opts ^. globalNoColors) && hasAnsi) Nothing e
 
         catchErrorS :: ReplS () -> ReplS ()
         catchErrorS = (`Except.catchError` printErrorS)

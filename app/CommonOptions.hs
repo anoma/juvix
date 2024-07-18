@@ -136,6 +136,14 @@ somePreFileOrDirOpt = mkPrepath <$> str
 somePreFileOpt :: ReadM (Prepath File)
 somePreFileOpt = mkPrepath <$> str
 
+readMChar :: ReadM Char
+readMChar = eitherReader aux
+  where
+    aux :: String -> Either String Char
+    aux = \case
+      [c] -> Right c
+      s -> Left $ s <> " is not a single character"
+
 someFileOpt :: ReadM (SomeBase File)
 someFileOpt = eitherReader aux
   where
