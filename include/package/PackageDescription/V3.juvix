@@ -35,7 +35,8 @@ type PackageDependencies :=
     packageSetDependencies {
       packageSet : PackageSet;
       dependencies : List String;
-      extraDependencies : List Dependency
+      extraDependencies : List Dependency;
+      overridingDependencies : List Dependency
     }
   | --- Individually declared dependencies
     packageDependencies {dependencies : List Dependency};
@@ -43,12 +44,13 @@ type PackageDependencies :=
 dependenciesInPackageSet
   (packageSet : PackageSet)
   (dependencies : List String)
-  {extraDependencies : List Dependency := []}
+  (extraDependencies overridingDependencies : List Dependency)
   : PackageDependencies :=
   packageSetDependencies@{
     packageSet;
     dependencies;
-    extraDependencies
+    extraDependencies;
+    overridingDependencies
   };
 
 --- A ;Package; defines the configuration for a Juvix package
@@ -79,6 +81,7 @@ usingPackageSet
   (packageSet : PackageSet)
   (dependencies : List String)
   {extraDependencies : List Dependency := []}
+  {overridingDependencies : List Dependency := []}
   {name : String := "my-project"}
   {version : SemVer := defaultVersion}
   {main : Maybe String := nothing}
@@ -89,7 +92,8 @@ usingPackageSet
       dependenciesInPackageSet@{
         packageSet;
         dependencies;
-        extraDependencies
+        extraDependencies;
+        overridingDependencies
       };
   in mkPackage@{
     name;
@@ -104,6 +108,7 @@ usingDefaultRegistry
   (packageSetVersion : SemVer)
   (dependencies : List String)
   {extraDependencies : List Dependency := []}
+  {overridingDependencies : List Dependency := []}
   {name : String := "my-project"}
   {version : SemVer := defaultVersion}
   {main : Maybe String := nothing}
@@ -119,6 +124,7 @@ usingDefaultRegistry
     packageSet;
     dependencies;
     extraDependencies;
+    overridingDependencies;
     name;
     version;
     main;
