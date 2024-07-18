@@ -51,19 +51,6 @@ type PackageDependencies :=
   | --- Individually declared dependencies
     packageDependencies {dependencies : List Dependency};
 
-dependenciesInPackageSet
-  (packageSet : PackageSet)
-  (dependencies : List String)
-  (extraDependencies : List Dependency)
-  (overridingDependencies : List OverridingDependency)
-  : PackageDependencies :=
-  packageSetDependencies@{
-    packageSet;
-    dependencies;
-    extraDependencies;
-    overridingDependencies
-  };
-
 --- A ;Package; defines the configuration for a Juvix package
 type Package :=
   mkPackage {
@@ -100,7 +87,7 @@ usingPackageSet
   : Package :=
   let
     packageDependencies :=
-      dependenciesInPackageSet@{
+      packageSetDependencies@{
         packageSet;
         dependencies;
         extraDependencies;
