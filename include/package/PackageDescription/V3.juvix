@@ -30,13 +30,25 @@ type PackageSet :=
     packageSetVersion : SemVer
   };
 
+type OverridingDependency :=
+  mkOverridingDependency {
+    dependency : String;
+    overridingVersion : String
+  };
+
+dependencyOverride (dependency version : String) : OverridingDependency :=
+  mkOverridingDependency@{
+    dependency;
+    overridingVersion := version
+  };
+
 type PackageDependencies :=
   | --- Dependencies from a package-set
     packageSetDependencies {
       packageSet : PackageSet;
       dependencies : List String;
       extraDependencies : List Dependency;
-      overridingDependencies : List Dependency
+      overridingDependencies : List OverridingDependency
     }
   | --- Individually declared dependencies
     packageDependencies {dependencies : List Dependency};
@@ -44,7 +56,8 @@ type PackageDependencies :=
 dependenciesInPackageSet
   (packageSet : PackageSet)
   (dependencies : List String)
-  (extraDependencies overridingDependencies : List Dependency)
+  (extraDependencies : List Dependency)
+  (overridingDependencies : List OverridingDependency)
   : PackageDependencies :=
   packageSetDependencies@{
     packageSet;
@@ -81,7 +94,7 @@ usingPackageSet
   (packageSet : PackageSet)
   (dependencies : List String)
   {extraDependencies : List Dependency := []}
-  {overridingDependencies : List Dependency := []}
+  {overridingDependencies : List OverridingDependency := []}
   {name : String := "my-project"}
   {version : SemVer := defaultVersion}
   {main : Maybe String := nothing}
@@ -108,7 +121,7 @@ usingDefaultRegistry
   (packageSetVersion : SemVer)
   (dependencies : List String)
   {extraDependencies : List Dependency := []}
-  {overridingDependencies : List Dependency := []}
+  {overridingDependencies : List OverridingDependency := []}
   {name : String := "my-project"}
   {version : SemVer := defaultVersion}
   {main : Maybe String := nothing}
