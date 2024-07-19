@@ -291,7 +291,7 @@ runPipelineSetup ::
   (Members '[App, EmbedIO, Logger, Reader PipelineOptions, TaggedLock] r) =>
   Sem (PipelineEff' r) a ->
   Sem r a
-runPipelineSetup p = silenceProgressLog $ do
+runPipelineSetup p = do
   args <- askArgs
   entry <- getEntryPointStdin' args
   r <- runIOEitherPipeline entry (inject p) >>= fromRightJuvixError
