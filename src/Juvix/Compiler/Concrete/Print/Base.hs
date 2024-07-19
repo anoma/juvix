@@ -346,6 +346,7 @@ instance (SingI s) => PrettyPrint (RecordStatement s) where
   ppCode = \case
     RecordStatementField f -> ppCode f
     RecordStatementOperator f -> ppCode f
+    RecordStatementIterator f -> ppCode f
 
 instance (SingI s) => PrettyPrint (RecordUpdateField s) where
   ppCode RecordUpdateField {..} =

@@ -1206,6 +1206,8 @@ checkInductiveDef InductiveDef {..} = do
             checkRecordStatements = \case
               [] -> return []
               f : fs -> case f of
+                RecordStatementIterator d ->
+                  (RecordStatementIterator d :) <$> checkRecordStatements fs
                 RecordStatementOperator d ->
                   (RecordStatementOperator d :) <$> checkRecordStatements fs
                 RecordStatementField d -> do
@@ -1612,10 +1614,14 @@ checkSections sec = topBindings helper
                             goRecordStatement :: RecordStatement 'Parsed -> Sem '[State Int] (Statement 'Parsed)
                             goRecordStatement = \case
                               RecordStatementOperator f -> StatementSyntax . SyntaxOperator <$> goOperator f
+                              RecordStatementIterator f -> StatementSyntax . SyntaxIterator <$> goIterator f
                               RecordStatementField f -> goField f
                               where
-                                goOperator :: OperatorSyntaxDef -> Sem '[State Int] OperatorSyntaxDef
+                                goOperator :: OperatorSyntaxDef -> Sem s OperatorSyntaxDef
                                 goOperator = pure
+
+                                goIterator :: IteratorSyntaxDef -> Sem s IteratorSyntaxDef
+                                goIterator = pure
 
                                 goField :: RecordField 'Parsed -> Sem '[State Int] (Statement 'Parsed)
                                 goField f = do

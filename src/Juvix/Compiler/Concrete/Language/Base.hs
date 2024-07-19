@@ -378,6 +378,10 @@ data ParsedIteratorInfo = ParsedIteratorInfo
   }
   deriving stock (Show, Eq, Ord, Generic)
 
+instance Serialize ParsedIteratorInfo
+
+instance NFData ParsedIteratorInfo
+
 data SyntaxDef (s :: Stage)
   = SyntaxFixity (FixitySyntaxDef s)
   | SyntaxOperator OperatorSyntaxDef
@@ -487,7 +491,11 @@ data IteratorSyntaxDef = IteratorSyntaxDef
     _iterSyntaxKw :: KeywordRef,
     _iterIteratorKw :: KeywordRef
   }
-  deriving stock (Show, Eq, Ord)
+  deriving stock (Show, Eq, Ord, Generic)
+
+instance Serialize IteratorSyntaxDef
+
+instance NFData IteratorSyntaxDef
 
 instance HasLoc IteratorSyntaxDef where
   getLoc IteratorSyntaxDef {..} = getLoc _iterSyntaxKw <> getLoc _iterSymbol
@@ -2400,6 +2408,7 @@ deriving stock instance Ord (NamedApplicationNew 'Scoped)
 data RecordStatement (s :: Stage)
   = RecordStatementField (RecordField s)
   | RecordStatementOperator OperatorSyntaxDef
+  | RecordStatementIterator IteratorSyntaxDef
   deriving stock (Generic)
 
 instance Serialize (RecordStatement 'Scoped)

@@ -654,6 +654,7 @@ goConstructorDef retTy ConstructorDef {..} = do
         goRecordStatement :: Concrete.RecordStatement 'Scoped -> Sem r (Maybe Internal.FunctionParameter)
         goRecordStatement = \case
           Concrete.RecordStatementOperator {} -> return Nothing
+          Concrete.RecordStatementIterator {} -> return Nothing
           Concrete.RecordStatementField RecordField {..} -> do
             ty' <- goExpression _fieldType
             return $

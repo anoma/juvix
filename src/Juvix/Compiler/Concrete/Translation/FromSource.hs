@@ -1549,13 +1549,14 @@ rhsRecord = P.label "<constructor record>" $ do
 
 recordStatement :: forall r. (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (RecordStatement 'Parsed)
 recordStatement =
-  RecordStatementOperator <$> operator
+  syntax
     <|> RecordStatementField <$> recordField
   where
-    operator :: ParsecS r OperatorSyntaxDef
-    operator = do
+    syntax :: ParsecS r (RecordStatement 'Parsed)
+    syntax = do
       syn <- kw kwSyntax
-      operatorSyntaxDef syn
+      RecordStatementIterator <$> iteratorSyntaxDef syn
+        <|> RecordStatementOperator <$> operatorSyntaxDef syn
 
 pconstructorRhs :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (ConstructorRhs 'Parsed)
 pconstructorRhs =
