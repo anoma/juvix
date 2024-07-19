@@ -361,7 +361,7 @@ tests:
       - juvix
       - format
     stdin: 'module OtherFormat; import Stdlib.Prelude open; main : Nat := 5module OtherFormat; import Stdlib.Prelude open; main : Nat := 5;; '
-    stdout:
+    stderr:
       contains: juvix format error
     exit-status: 1
 

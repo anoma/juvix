@@ -11,8 +11,8 @@ tests:
         cd $temp
         echo -e 'abc\n\n\n' | juvix init
         juvix typecheck Package.juvix
-    stdout:
-      contains: type checks
+    stderr:
+      contains: Well done! It type checks
     exit-status: 0
   - name: init-non-interactive-name
     command:

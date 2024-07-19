@@ -37,7 +37,7 @@ tests:
         sed -i'.bak' 's/just \"HelloWorld.juvix\"/nothing/' Package.juvix
         juvix --log-level error compile native
     exit-status: 1
-    stdout: |
+    stderr: |
      A path to the main file must be given in the CLI or specified in the `main` field of the juvix.yaml file
 
   - name: hello-world

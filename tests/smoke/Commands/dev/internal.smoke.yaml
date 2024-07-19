@@ -19,7 +19,7 @@ tests:
       - typecheck
     args:
       - positive/Internal/Simple.juvix
-    stdout:
+    stderr:
       contains: |
           Well done! It type checks
     exit-status: 0

@@ -16,5 +16,5 @@ tests:
       - eval
       - positive/LambdaCalculus.juvix
     stdin: ""
-    stdout: "function not found: main\n"
+    stderr: "function not found: main\n"
     exit-status: 1
