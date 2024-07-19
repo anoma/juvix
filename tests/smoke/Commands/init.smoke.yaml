@@ -13,6 +13,11 @@ tests:
         juvix typecheck Package.juvix
     stderr:
       contains: Well done! It type checks
+    stdout:
+      matches:
+        regex: .*
+        options:
+          - dot-all
     exit-status: 0
   - name: init-non-interactive-name
     command:
