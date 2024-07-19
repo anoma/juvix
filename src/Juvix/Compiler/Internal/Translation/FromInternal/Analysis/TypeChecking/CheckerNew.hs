@@ -1024,7 +1024,6 @@ inferLeftAppExpression mhint e = case e of
               funty :: Expression
               funty = ExpressionFunction (mkFunction (typedCaseExpression ^. typedType) ty)
       _caseBranches <- mapM goBranch (c ^. caseBranches)
-      let _caseParens = c ^. caseParens
       return
         TypedExpression
           { _typedType = ty,

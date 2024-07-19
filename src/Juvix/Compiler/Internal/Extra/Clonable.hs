@@ -140,8 +140,7 @@ instance Clonable Case where
         { _caseExpression = e',
           _caseExpressionType = ety',
           _caseExpressionWholeType = wholetype',
-          _caseBranches = branches',
-          _caseParens
+          _caseBranches = branches'
         }
 
 instance Clonable Function where

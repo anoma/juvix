@@ -19,18 +19,18 @@ parseIsabelle = do
     parseGenericOutputDir
       ( value "isabelle"
           <> showDefault
-          <> help "Isabelle/HOL output directory."
+          <> help "Isabelle/HOL output directory"
           <> action "directory"
       )
   _isabelleStdout <-
     switch
       ( long "stdout"
-          <> help "Write the output to stdout instead of a file."
+          <> help "Write the output to stdout instead of a file"
       )
   _isabelleOnlyTypes <-
     switch
       ( long "only-types"
-          <> help "Translate types only. Omit function signatures."
+          <> help "Translate types only"
       )
   _isabelleInputFile <- optional (parseInputFile FileExtJuvix)
   pure IsabelleOptions {..}

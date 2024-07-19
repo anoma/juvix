@@ -14,6 +14,7 @@ import Data.HashSet qualified as HashSet
 import Data.IntMap.Strict qualified as IntMap
 import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Builtins
+import Juvix.Compiler.Builtins.Pair
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra qualified as Concrete
 import Juvix.Compiler.Concrete.Gen qualified as Gen
@@ -500,6 +501,7 @@ registerBuiltinInductive d = \case
   BuiltinInt -> registerIntDef d
   BuiltinList -> registerListDef d
   BuiltinMaybe -> registerMaybeDef d
+  BuiltinPair -> registerPairDef d
   BuiltinPoseidonState -> registerPoseidonStateDef d
   BuiltinEcPoint -> registerEcPointDef d
 
@@ -1084,8 +1086,7 @@ goCase :: forall r. (Members '[Reader DefaultArgsStack, Builtins, NameIdGen, Err
 goCase c = do
   _caseExpression <- goExpression (c ^. caseExpression)
   _caseBranches <- mapM goBranch (c ^. caseBranches)
-  let _caseParens = False
-      _caseExpressionType :: Maybe Internal.Expression = Nothing
+  let _caseExpressionType :: Maybe Internal.Expression = Nothing
       _caseExpressionWholeType :: Maybe Internal.Expression = Nothing
   return Internal.Case {..}
   where

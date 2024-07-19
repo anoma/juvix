@@ -201,14 +201,14 @@ commandIsabelle =
   command "isabelle" $
     info
       (Isabelle <$> parseIsabelle)
-      (progDesc "Generate Isabelle/HOL types for a Juvix file")
+      (progDesc "Translate a Juvix file to Isabelle/HOL")
 
 commandDev :: Mod CommandFields TopCommand
 commandDev =
   command "dev" $
     info
       (Dev <$> Dev.parseDevCommand)
-      (progDesc "Commands for the developers")
+      (progDesc "Commands for the Juvix compiler developers")
 
 parseCompilerCommand :: Parser TopCommand
 parseCompilerCommand =

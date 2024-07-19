@@ -22,6 +22,8 @@ data BinaryAssoc
   | AssocRight
   deriving stock (Show, Eq, Ord, Data, Generic)
 
+instance Hashable BinaryAssoc
+
 data OperatorArity
   = OpUnary UnaryAssoc
   | OpBinary BinaryAssoc

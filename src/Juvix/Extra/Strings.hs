@@ -905,6 +905,9 @@ nothing = "nothing"
 just :: (IsString s) => s
 just = "just"
 
+pair :: (IsString s) => s
+pair = "pair"
+
 unary :: (IsString s) => s
 unary = "unary"
 

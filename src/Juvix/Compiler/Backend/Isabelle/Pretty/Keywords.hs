@@ -28,3 +28,9 @@ kwImports = keyword "imports"
 
 kwBegin :: Doc Ann
 kwBegin = keyword "begin"
+
+kwThen :: Doc Ann
+kwThen = keyword "then"
+
+kwElse :: Doc Ann
+kwElse = keyword "else"

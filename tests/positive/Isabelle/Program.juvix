@@ -1,0 +1,97 @@
+module Program;
+
+import Stdlib.Prelude open;
+
+id0 : Nat -> Nat := id;
+
+id1 : List Nat -> List Nat := id;
+
+id2 {A : Type} : A -> A := id;
+
+add_one : List Nat -> List Nat
+  | [] := []
+  | (x :: xs) := (x + 1) :: add_one xs;
+
+sum : List Nat -> Nat
+  | [] := 0
+  | (x :: xs) := x + sum xs;
+
+f (x y : Nat) : Nat -> Nat
+  | z := (z + 1) * x + y;
+
+g (x y : Nat) : Bool :=
+  if
+    | x == y := false
+    | else := true;
+
+inc (x : Nat) : Nat := suc x;
+
+dec : Nat -> Nat
+  | zero := zero
+  | (suc x) := x;
+
+dec' (x : Nat) : Nat :=
+  case x of zero := zero | suc y := y;
+
+optmap {A} (f : A -> A) : Maybe A -> Maybe A
+  | nothing := nothing
+  | (just x) := just (f x);
+
+pboth {A B A' B'} (f : A -> A') (g : B -> B') : Pair A B -> Pair A' B'
+  | (x, y) := (f x, g y);
+
+bool_fun (x y z : Bool) : Bool := x && y || z;
+
+bool_fun' (x y z : Bool) : Bool := (x && y) || z;
+
+-- Queues
+
+--- A type of Queues
+type Queue (A : Type) := queue : List A -> List A -> Queue A;
+
+qfst : {A : Type} → Queue A → List A
+  | (queue x _) := x;
+
+qsnd : {A : Type} → Queue A → List A
+  | (queue _ x) := x;
+
+pop_front {A} (q : Queue A) : Queue A :=
+    let
+      q' : Queue A := queue (tail (qfst q)) (qsnd q);
+    in case qfst q' of
+         | nil := queue (reverse (qsnd q')) nil
+         | _ := q';
+
+push_back {A} (q : Queue A) (x : A) : Queue A :=
+    case qfst q of
+      | nil := queue (x :: nil) (qsnd q)
+      | q' := queue q' (x :: qsnd q);
+
+is_empty {A} (q : Queue A) : Bool :=
+    case qfst q of
+      | nil :=
+        case qsnd q of {
+          | nil := true
+          | _ := false
+        }
+      | _ := false;
+
+empty : {A : Type} → Queue A := queue nil nil;
+
+-- Multiple let expressions
+
+funkcja (n : Nat) : Nat :=
+  let
+    nat1 : Nat := 1;
+    nat2 : Nat := 2;
+    plusOne (n : Nat) : Nat := n + 1;
+  in plusOne n + nat1 + nat2;
+
+type Either' A B := Left' A | Right' B;
+
+-- Records
+
+type R := mkR {
+  r1 : Nat;
+  r2 : Nat;
+};
