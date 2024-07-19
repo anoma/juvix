@@ -43,20 +43,36 @@ jobs:
 
   ormolu:
     runs-on: ubuntu-latest
+    env:
+      STACK_RESOLVER: lts-21.25
     steps:
       - uses: actions/checkout@v3
-      - uses: mrkkrp/ormolu-action@v11
+      - uses: extractions/setup-just@v2
+
+      - name: Install hpack
+        run: sudo apt install -y hpack
+
+      - name: Generate juvix.cabal
+        run: hpack
+
+      - name: Cache ormolu
+        id: ormolu-cache
+        uses: actions/cache@v3
         with:
-          version: 0.5.3.0
-          extra-args: >-
-            --ghc-opt -XDerivingStrategies
-            --ghc-opt -XImportQualifiedPost
-            --ghc-opt -XMultiParamTypeClasses
-            --ghc-opt -XPatternSynonyms
-            --ghc-opt -XStandaloneDeriving
-            --ghc-opt -XTemplateHaskell
-            --ghc-opt -XUnicodeSyntax
-            --ghc-opt -XBangPatterns
+          path: |
+            ~/.local/bin/ormolu
+          key: ${{ runner.os }}-ormolu-${{ env.STACK_RESOLVER }}
+
+      - name: Install ormolu
+        if: steps.ormolu-cache.outputs.cache-hit != 'true'
+        run: stack install ormolu --resolver=${{ env.STACK_RESOLVER }}
+
+      - name: Run ormolu
+        run: just format check
+
+      - name: Report formatting error
+        if: failure()
+        run: echo "Some Haskell files are not formatted. Please run 'just format'"
 
   build-and-test-linux:
     runs-on: ubuntu-22.04
