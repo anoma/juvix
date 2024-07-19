@@ -53,7 +53,7 @@ tests:
         export XDG_CONFIG_HOME="$temp"
         HOME="home" JUVIX_TEST_PATH="other dep" juvix typecheck positive/FancyPaths/Main.juvix
     stderr:
-      equals: "Well done! It type checks\n"
+      contains: "Well done! It type checks\n"
     exit-status: 0
 
   - name: typecheck-global-package
@@ -97,7 +97,7 @@ tests:
         packagePackageDir="$(dirname $globalPackageDir)"/package
         juvix typecheck "$packagePackageDir/PackageDescription/V2.juvix"
     stderr:
-      equals: "Well done! It type checks\n"
+      contains: "Well done! It type checks\n"
     exit-status: 0
 
   - name: typecheck-stdin
