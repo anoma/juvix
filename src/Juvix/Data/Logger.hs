@@ -103,4 +103,11 @@ handler localEnv =
         local adjustPred (unlift localLog)
     LogMessage lvl msg -> do
       loggerPredicate <- ask
-      when (loggerPredicate lvl) (output msg)
+      when (loggerPredicate lvl) (output (msg <> ansiTextNewline))
+
+ignoreLogger :: forall r a. Sem (Logger ': r) a -> Sem r a
+ignoreLogger = interpretH $ \localEnv -> \case
+  LogMessage {} -> return ()
+  LocalLogger _ localLog ->
+    localSeqUnlift localEnv $ \unlift ->
+      unlift localLog

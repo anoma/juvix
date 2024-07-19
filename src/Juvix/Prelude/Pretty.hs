@@ -58,6 +58,12 @@ mkAnsiText = AnsiText . pure . AnsiTextAtom
 
 makeLenses ''AnsiText
 
+ansiTextNewline :: AnsiText
+ansiTextNewline = mkAnsiText @Text "\n"
+
+instance IsString AnsiText where
+  fromString = mkAnsiText
+
 instance HasTextBackend String where
   toTextStream = toTextStream . pretty
   toTextDoc = toTextDoc . pretty
