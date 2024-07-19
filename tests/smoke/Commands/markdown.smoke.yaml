@@ -4,7 +4,8 @@ tests:
   - name: markdown-help-theme
     command:
       - juvix
-      - --log-level error
+      - --log-level
+      - error
       - markdown
       - --help
     stdout:

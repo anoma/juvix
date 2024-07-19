@@ -27,7 +27,8 @@ tests:
   - name: internal-typecheck-only-errors
     command: 
       - juvix
-      - --log-level error 
+      - --log-level
+      - error
       - dev 
       - internal 
       - typecheck
