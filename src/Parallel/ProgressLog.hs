@@ -33,7 +33,7 @@ runProgressLog ProgressLogOptions {..} = interpret $ \case
     let threadDoc :: Maybe (Doc CodeAnn) = do
           guard _progressLogOptionsShowThreadId
           return (kwBracketL <> show _logItemThreadId <> kwBracketR)
-    logProgress (mkAnsiText (threadDoc <?+> _logItemMessage <> hardline))
+    logProgress (mkAnsiText (threadDoc <?+> _logItemMessage))
 
 ignoreProgressLog :: Sem (ProgressLog ': r) a -> Sem r a
 ignoreProgressLog = interpret $ \case

@@ -169,7 +169,6 @@ compileReplInputIO fp txt = do
   hasInternet <- not <$> asks (^. entryPointOffline)
   runError
     . runConcurrent
-    . runLoggerIO defaultLoggerOptions
     . runReader defaultNumThreads
     . evalInternet hasInternet
     . runTaggedLockPermissive
@@ -187,8 +186,7 @@ compileReplInputIO fp txt = do
     . runTopModuleNameChecker
     . runReader defaultImportScanStrategy
     . withImportTree (Just fp)
-    . silenceProgressLog
-    . runProgressLog defaultProgressLogOptions
+    . ignoreProgressLog
     . evalModuleInfoCacheHelper
     $ do
       p <- parseReplInput fp txt
