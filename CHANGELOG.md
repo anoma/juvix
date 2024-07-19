@@ -4,6 +4,31 @@
 <img align="right" width="300" height="300" alt="Juvix Mascot" src="../assets/images/tara-smiling.svg" />
 </a>
 
+## [v0.6.4](https://github.com/anoma/juvix/tree/v0.6.4) (2024-07-19)
+
+[Full Changelog](https://github.com/anoma/juvix/compare/v0.6.3...v0.6.4)
+
+**Implemented enhancements:**
+
+- Puns for named application [\#2890](https://github.com/anoma/juvix/pull/2890) ([janmasrovira](https://github.com/janmasrovira))
+- `juvix typecheck` with no file argument typechecks all project [\#2889](https://github.com/anoma/juvix/pull/2889) ([janmasrovira](https://github.com/janmasrovira))
+- Update juvix-stdlib submodule reference to add Result [\#2885](https://github.com/anoma/juvix/pull/2885) ([paulcadman](https://github.com/paulcadman))
+- Make `juvix format` line width 100 with ribbon width 100 [\#2883](https://github.com/anoma/juvix/pull/2883) ([paulcadman](https://github.com/paulcadman))
+- Translate function bodies to Isabelle/HOL [\#2868](https://github.com/anoma/juvix/pull/2868) ([lukaszcz](https://github.com/lukaszcz))
+- Add front-end support for case expressions boolean side conditions [\#2852](https://github.com/anoma/juvix/pull/2852) ([janmasrovira](https://github.com/janmasrovira))
+
+**Merged pull requests:**
+
+- Bugfix: compiler looping with the `specialize` pragma [\#2899](https://github.com/anoma/juvix/pull/2899) ([lukaszcz](https://github.com/lukaszcz))
+- Fix CI for RISC0 version 1.0.2 [\#2888](https://github.com/anoma/juvix/pull/2888) ([lukaszcz](https://github.com/lukaszcz))
+- Add precondition to run tests [\#2887](https://github.com/anoma/juvix/pull/2887) ([janmasrovira](https://github.com/janmasrovira))
+- Remove Geb backend [\#2886](https://github.com/anoma/juvix/pull/2886) ([paulcadman](https://github.com/paulcadman))
+- Print pipe for else branch in multi if expression [\#2881](https://github.com/anoma/juvix/pull/2881) ([janmasrovira](https://github.com/janmasrovira))
+- Add `ExceptT`, `MonadError`, `MonadTrans` as a test [\#2880](https://github.com/anoma/juvix/pull/2880) ([janmasrovira](https://github.com/janmasrovira))
+- Migrate old named application syntax [\#2876](https://github.com/anoma/juvix/pull/2876) ([janmasrovira](https://github.com/janmasrovira))
+- Pragmas for record fields [\#2875](https://github.com/anoma/juvix/pull/2875) ([lukaszcz](https://github.com/lukaszcz))
+- Reduce Internal boilerplate [\#2874](https://github.com/anoma/juvix/pull/2874) ([janmasrovira](https://github.com/janmasrovira))
+
 ## [v0.6.3](https://github.com/anoma/juvix/tree/v0.6.3) (2024-07-02)
 
 [Full Changelog](https://github.com/anoma/juvix/compare/v0.6.2...v0.6.3)
