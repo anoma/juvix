@@ -1,0 +1,15 @@
+working-directory: ../../tests
+
+tests:
+  - name: ide-end-error-char
+    command:
+      - juvix
+      - --ide-end-error-char
+      - ת
+      - typecheck
+    args:
+      - negative/NoDependencies/InvalidImport.juvix
+    stderr:
+      contains: |
+        ת
+    exit-status: 1
