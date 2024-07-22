@@ -49,9 +49,9 @@ targetFromOptions opts = do
 -- | Formats the project on the root
 formatProject ::
   forall r.
-  (Members '[App, EmbedIO, TaggedLock, Files, Output FormattedFileInfo] r) =>
+  (Members '[App, EmbedIO, TaggedLock, Logger, Files, Output FormattedFileInfo] r) =>
   Sem r FormatResult
-formatProject = runPipelineOptions . runPipelineSetup $ do
+formatProject = silenceProgressLog . runPipelineOptions . runPipelineSetup $ do
   pkg <- askPackage
   res :: [(ImportNode, PipelineResult ModuleInfo)] <- processProject
   res' :: [(ImportNode, SourceCode)] <- runReader pkg . forM res $ \(node, nfo) -> do
@@ -59,7 +59,7 @@ formatProject = runPipelineOptions . runPipelineSetup $ do
     return (node, src)
   formatProjectSourceCode res'
 
-runCommand :: forall r. (Members '[EmbedIO, App, TaggedLock, Files] r) => FormatOptions -> Sem r ()
+runCommand :: forall r. (Members AppEffects r) => FormatOptions -> Sem r ()
 runCommand opts = do
   target <- targetFromOptions opts
   runOutputSem (renderFormattedOutput target opts) . runScopeFileApp $ do
@@ -106,10 +106,10 @@ renderFormattedOutput target opts fInfo = do
           $ writeFileEnsureLn' _formattedFileInfoPath (i ^. formattedFileInfoContents)
       NoEdit m -> case m of
         ReformattedFile ts -> renderStdOut ts
-        InputPath p -> say (pack (toFilePath p))
+        InputPath p -> renderStdOutLn @String (toFilePath p)
         Silent -> return ()
 
-runScopeFileApp :: (Members '[App, EmbedIO, TaggedLock] r) => Sem (ScopeEff ': r) a -> Sem r a
+runScopeFileApp :: (Members AppEffects r) => Sem (ScopeEff ': r) a -> Sem r a
 runScopeFileApp = interpret $ \case
   ScopeFile p -> do
     let appFile =
@@ -117,5 +117,5 @@ runScopeFileApp = interpret $ \case
             { _pathPath = mkPrepath (toFilePath p),
               _pathIsInput = False
             }
-    ignoreProgressLog (runPipelineProgress () (Just appFile) upToScopingEntry)
-  ScopeStdin e -> ignoreProgressLog (runPipelineEntry e upToScopingEntry)
+    silenceProgressLog (runPipelineLogger () (Just appFile) upToScopingEntry)
+  ScopeStdin e -> silenceProgressLog (runPipelineEntry e upToScopingEntry)

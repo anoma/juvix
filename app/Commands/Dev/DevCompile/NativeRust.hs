@@ -8,7 +8,7 @@ import Data.FileEmbed qualified as FE
 import Juvix.Compiler.Backend.Rust.Data.Result
 
 runCommand ::
-  (Members '[App, EmbedIO, TaggedLock] r) =>
+  (Members AppEffects r) =>
   NativeRustOptions 'InputMain ->
   Sem r ()
 runCommand opts = do

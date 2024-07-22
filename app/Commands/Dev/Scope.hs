@@ -7,7 +7,7 @@ import Juvix.Compiler.Concrete.Print qualified as Print
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Prelude.Pretty
 
-runCommand :: (Members '[EmbedIO, TaggedLock, App] r) => ScopeOptions -> Sem r ()
+runCommand :: (Members AppEffects r) => ScopeOptions -> Sem r ()
 runCommand opts = do
   globalOpts <- askGlobalOptions
   res :: Scoper.ScoperResult <- runPipelineNoOptions (opts ^. scopeInputFile) upToScopingEntry
@@ -20,5 +20,5 @@ runCommand opts = do
   when (opts ^. scopeListComments) $ do
     newline
     newline
-    say "Comments:"
-    say (prettyText (Scoper.getScoperResultComments res))
+    renderStdOutLn @Text "Comments:"
+    renderStdOutLn (prettyText (Scoper.getScoperResultComments res))

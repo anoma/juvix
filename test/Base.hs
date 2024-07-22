@@ -24,7 +24,6 @@ import Juvix.Extra.Paths hiding (rootBuildDir)
 import Juvix.Prelude hiding (assert)
 import Juvix.Prelude.Env
 import Juvix.Prelude.Pretty (prettyString)
-import Parallel.ProgressLog
 import System.Process qualified as P
 import Test.Tasty
 import Test.Tasty.HUnit hiding (assertFailure)
@@ -92,7 +91,7 @@ assertCmdExists cmd =
 testTaggedLockedToIO :: (MonadIO m) => Sem PipelineAppEffects a -> m a
 testTaggedLockedToIO =
   runM
-    . ignoreProgressLog
+    . ignoreLogger
     . runReader testPipelineOptions
     . runTaggedLock LockModeExclusive
 

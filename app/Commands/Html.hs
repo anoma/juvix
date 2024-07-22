@@ -14,7 +14,7 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Da
 import Juvix.Extra.Process
 import System.Process qualified as Process
 
-runGenOnlySourceHtml :: (Members '[EmbedIO, TaggedLock, App] r) => HtmlOptions -> Sem r ()
+runGenOnlySourceHtml :: (Members AppEffects r) => HtmlOptions -> Sem r ()
 runGenOnlySourceHtml HtmlOptions {..} = do
   res <- runPipelineNoOptions _htmlInputFile upToScopingEntry
   let m = res ^. Scoper.resultModule
@@ -50,7 +50,7 @@ resultToJudocCtx res =
   where
     sres = res ^. resultInternal . resultScoper
 
-runCommand :: forall r. (Members '[EmbedIO, TaggedLock, App] r) => HtmlOptions -> Sem r ()
+runCommand :: forall r. (Members AppEffects r) => HtmlOptions -> Sem r ()
 runCommand HtmlOptions {..}
   | _htmlOnlySource = runGenOnlySourceHtml HtmlOptions {..}
   | otherwise = do
@@ -77,7 +77,7 @@ runCommand HtmlOptions {..}
             _judocArgsFolderStructure = _htmlFolderStructure
           }
       when _htmlOpen $ case openCmd of
-        Nothing -> say "Could not recognize the 'open' command for your OS"
+        Nothing -> logError "Could not recognize the 'open' command for your operating system"
         Just opencmd ->
           liftIO
             . void

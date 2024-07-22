@@ -19,7 +19,7 @@ tests:
       - typecheck
     args:
       - positive/Internal/Simple.juvix
-    stdout:
+    stderr:
       contains: |
           Well done! It type checks
     exit-status: 0
@@ -27,7 +27,8 @@ tests:
   - name: internal-typecheck-only-errors
     command: 
       - juvix
-      - --only-errors 
+      - --log-level
+      - error
       - dev 
       - internal 
       - typecheck

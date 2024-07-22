@@ -14,6 +14,7 @@ module Juvix.Data
     module Juvix.Data.Pragmas,
     module Juvix.Data.Processed,
     module Juvix.Data.Uid,
+    module Juvix.Data.Logger,
     module Juvix.Data.Universe,
     module Juvix.Data.Wildcard,
     module Juvix.Data.WithLoc,
@@ -36,6 +37,7 @@ import Juvix.Data.Irrelevant
 import Juvix.Data.IsImplicit
 import Juvix.Data.Keyword
 import Juvix.Data.Loc
+import Juvix.Data.Logger
 import Juvix.Data.NameId qualified
 import Juvix.Data.NumThreads
 import Juvix.Data.Pragmas

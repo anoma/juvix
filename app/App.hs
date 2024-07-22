@@ -37,8 +37,7 @@ data App :: Effect where
   GetMainFileMaybe :: Maybe (AppPath File) -> App m (Maybe (Path Abs File))
   FromAppPathDir :: AppPath Dir -> App m (Path Abs Dir)
   RenderStdOut :: (HasAnsiBackend a, HasTextBackend a) => a -> App m ()
-  Say :: Text -> App m ()
-  SayRaw :: ByteString -> App m ()
+  RenderStdOutRaw :: ByteString -> App m ()
 
 data RunAppIOArgs = RunAppIOArgs
   { _runAppIOArgsGlobalOptions :: GlobalOptions,
@@ -48,9 +47,11 @@ data RunAppIOArgs = RunAppIOArgs
 makeSem ''App
 makeLenses ''RunAppIOArgs
 
+type AppEffects = '[Logger, TaggedLock, Files, App, EmbedIO]
+
 runAppIO ::
   forall r a.
-  (Members '[EmbedIO, TaggedLock] r) =>
+  (Members '[EmbedIO, Logger, TaggedLock] r) =>
   RunAppIOArgs ->
   Sem (App ': r) a ->
   Sem r a
@@ -60,7 +61,7 @@ runAppIO args = evalSingletonCache (readPackageRootIO root) . reAppIO args
 
 reAppIO ::
   forall r a.
-  (Members '[EmbedIO, TaggedLock] r) =>
+  (Members '[EmbedIO, TaggedLock, Logger] r) =>
   RunAppIOArgs ->
   Sem (App ': r) a ->
   Sem (SCache Package ': r) a
@@ -74,11 +75,10 @@ reAppIO args@RunAppIOArgs {..} =
     GetMainFile m -> getMainFile' m
     GetMainFileMaybe m -> getMainFileMaybe' m
     FromAppPathDir p -> liftIO (prepathToAbsDir invDir (p ^. pathPath))
-    RenderStdOut t
-      | _runAppIOArgsGlobalOptions ^. globalOnlyErrors -> return ()
-      | otherwise -> do
-          sup <- liftIO (Ansi.hSupportsANSIColor stdout)
-          renderIO (not (_runAppIOArgsGlobalOptions ^. globalNoColors) && sup) t
+    RenderStdOut t -> do
+      sup <- liftIO (Ansi.hSupportsANSIColor stdout)
+      renderIO (not (_runAppIOArgsGlobalOptions ^. globalNoColors) && sup) t
+    RenderStdOutRaw b -> liftIO (ByteString.putStr b)
     AskGlobalOptions -> return _runAppIOArgsGlobalOptions
     AskPackage -> getPkg
     AskArgs -> return args
@@ -86,27 +86,25 @@ reAppIO args@RunAppIOArgs {..} =
     AskInvokeDir -> return invDir
     AskPkgDir -> return (_runAppIOArgsRoot ^. rootRootDir)
     AskBuildDir -> return (resolveAbsBuildDir (_runAppIOArgsRoot ^. rootRootDir) (_runAppIOArgsRoot ^. rootBuildDir))
-    Say t
-      | g ^. globalOnlyErrors -> return ()
-      | otherwise -> putStrLn t
     PrintJuvixError e -> printErr e
     ExitJuvixError e -> do
       printErr e
       exitFailure
     ExitMsg exitCode t -> exitMsg' (exitWith exitCode) t
     ExitFailMsg t -> exitMsg' exitFailure t
-    SayRaw b -> liftIO (ByteString.putStr b)
   where
     getPkg :: (Members '[SCache Package] r') => Sem r' Package
     getPkg = cacheSingletonGet
 
-    exitMsg' :: (Members '[EmbedIO] r') => IO x -> Text -> Sem r' x
-    exitMsg' onExit t = liftIO (putStrLn t >> hFlush stdout >> onExit)
+    exitMsg' :: forall r' x. (Members '[EmbedIO, Logger] r') => IO x -> Text -> Sem r' x
+    exitMsg' onExit t = do
+      logError (mkAnsiText t)
+      liftIO (hFlush stderr >> onExit)
 
     fromAppFile' :: (Members '[EmbedIO] r') => AppPath File -> Sem r' (Path Abs File)
     fromAppFile' f = prepathToAbsFile invDir (f ^. pathPath)
 
-    getMainFile' :: (Members '[SCache Package, EmbedIO] r') => Maybe (AppPath File) -> Sem r' (Path Abs File)
+    getMainFile' :: (Members '[Logger, SCache Package, EmbedIO] r') => Maybe (AppPath File) -> Sem r' (Path Abs File)
     getMainFile' = getMainAppFile' >=> fromAppFile'
 
     getMainFileMaybe' :: (Members '[SCache Package, EmbedIO] r') => Maybe (AppPath File) -> Sem r' (Maybe (Path Abs File))
@@ -126,10 +124,10 @@ reAppIO args@RunAppIOArgs {..} =
                 }
           Nothing -> Nothing
 
-    getMainAppFile' :: (Members '[SCache Package, EmbedIO] r') => Maybe (AppPath File) -> Sem r' (AppPath File)
+    getMainAppFile' :: (Members '[SCache Package, EmbedIO, Logger] r') => Maybe (AppPath File) -> Sem r' (AppPath File)
     getMainAppFile' = fromMaybeM missingMainErr . getMainAppFileMaybe'
 
-    missingMainErr :: (Members '[EmbedIO] r') => Sem r' x
+    missingMainErr :: (Members '[EmbedIO, Logger] r') => Sem r' x
     missingMainErr =
       exitMsg'
         exitFailure
@@ -137,14 +135,19 @@ reAppIO args@RunAppIOArgs {..} =
             <> pack (toFilePath juvixYamlFile)
             <> " file"
         )
+
     invDir = _runAppIOArgsRoot ^. rootInvokeDir
+
     g :: GlobalOptions
     g = _runAppIOArgsGlobalOptions
+
+    printErr :: forall r'. (Members '[Logger] r') => JuvixError -> Sem r' ()
     printErr e =
-      hPutStrLn stderr
+      logError
+        . mkAnsiText
         . run
         . runReader (project' @GenericOptions g)
-        $ Error.render (not (_runAppIOArgsGlobalOptions ^. globalNoColors)) (g ^. globalOnlyErrors) e
+        $ Error.render (not (_runAppIOArgsGlobalOptions ^. globalNoColors)) (g ^. globalIdeEndErrorChar) e
 
 getEntryPoint' ::
   (Members '[App, EmbedIO, TaggedLock] r) =>
@@ -162,7 +165,7 @@ getEntryPoint' RunAppIOArgs {..} inputFile = do
   set entryPointStdin estdin <$> entryPointFromGlobalOptionsPre root ((^. pathPath) <$> mainFile) opts
 
 runPipelineEither ::
-  (Members '[EmbedIO, TaggedLock, ProgressLog, App] r, EntryPointOptions opts) =>
+  (Members '[EmbedIO, TaggedLock, Logger, App] r, EntryPointOptions opts) =>
   opts ->
   Maybe (AppPath File) ->
   Sem (PipelineEff r) a ->
@@ -220,69 +223,55 @@ getEntryPointStdin = do
   getEntryPointStdin' RunAppIOArgs {..}
 
 runPipelineTermination ::
-  (Members '[EmbedIO, App, TaggedLock] r) =>
+  (Members '[EmbedIO, App, Logger, TaggedLock] r) =>
   Maybe (AppPath File) ->
   Sem (Termination ': PipelineEff r) a ->
   Sem r (PipelineResult a)
-runPipelineTermination input_ p = ignoreProgressLog $ do
+runPipelineTermination input_ p = silenceProgressLog $ do
   r <- runPipelineEither () input_ (evalTermination iniTerminationState (inject p)) >>= fromRightJuvixError
   return (snd r)
 
-appRunProgressLog :: (Members '[EmbedIO, App] r) => Sem (ProgressLog ': r) a -> Sem r a
-appRunProgressLog m = do
-  g <- askGlobalOptions
-  let opts =
-        ProgressLogOptions
-          { _progressLogOptionsUseColors = not (g ^. globalNoColors),
-            _progressLogOptionsShowThreadId = g ^. globalDevShowThreadIds
-          }
-  if
-      | g ^. globalOnlyErrors -> ignoreProgressLog m
-      | otherwise -> runProgressLogIO opts m
-
 runPipelineNoOptions ::
-  (Members '[App, EmbedIO, TaggedLock] r) =>
+  (Members '[App, EmbedIO, Logger, TaggedLock] r) =>
   Maybe (AppPath File) ->
   Sem (PipelineEff r) a ->
   Sem r a
 runPipelineNoOptions = runPipeline ()
 
-runPipelineProgress ::
-  (Members '[App, EmbedIO, ProgressLog, TaggedLock] r, EntryPointOptions opts) =>
+runPipelineLogger ::
+  (Members '[App, EmbedIO, Logger, TaggedLock] r, EntryPointOptions opts) =>
   opts ->
   Maybe (AppPath File) ->
   Sem (PipelineEff r) a ->
   Sem r a
-runPipelineProgress opts input_ p = do
+runPipelineLogger opts input_ p = do
   r <- runPipelineEither opts input_ (inject p) >>= fromRightJuvixError
   return (snd r ^. pipelineResult)
 
 runPipeline ::
-  (Members '[App, EmbedIO, TaggedLock] r, EntryPointOptions opts) =>
+  (Members '[App, EmbedIO, Logger, TaggedLock] r, EntryPointOptions opts) =>
   opts ->
   Maybe (AppPath File) ->
   Sem (PipelineEff r) a ->
   Sem r a
 runPipeline opts input_ =
-  appRunProgressLog
-    . runPipelineProgress opts input_
+  runPipelineLogger opts input_
     . inject
 
 runPipelineHtml ::
-  (Members '[App, EmbedIO, TaggedLock] r) =>
+  (Members '[App, EmbedIO, Logger, TaggedLock] r) =>
   Bool ->
   Maybe (AppPath File) ->
   Sem r (InternalTypedResult, [InternalTypedResult])
 runPipelineHtml bNonRecursive input_ =
-  appRunProgressLog $
-    if
-        | bNonRecursive -> do
-            r <- runPipelineNoOptions input_ upToInternalTyped
-            return (r, [])
-        | otherwise -> do
-            args <- askArgs
-            entry <- getEntryPoint' args input_
-            runReader defaultPipelineOptions (runPipelineHtmlEither entry) >>= fromRightJuvixError
+  if
+      | bNonRecursive -> do
+          r <- runPipelineNoOptions input_ upToInternalTyped
+          return (r, [])
+      | otherwise -> do
+          args <- askArgs
+          entry <- getEntryPoint' args input_
+          runReader defaultPipelineOptions (runPipelineHtmlEither entry) >>= fromRightJuvixError
 
 runPipelineOptions :: (Members '[App] r) => Sem (Reader PipelineOptions ': r) a -> Sem r a
 runPipelineOptions m = do
@@ -293,23 +282,26 @@ runPipelineOptions m = do
           }
   runReader opt m
 
-runPipelineEntry :: (Members '[App, ProgressLog, EmbedIO, TaggedLock] r) => EntryPoint -> Sem (PipelineEff r) a -> Sem r a
+runPipelineEntry :: (Members '[App, Logger, EmbedIO, TaggedLock] r) => EntryPoint -> Sem (PipelineEff r) a -> Sem r a
 runPipelineEntry entry p = runPipelineOptions $ do
   r <- runIOEither entry (inject p) >>= fromRightJuvixError
   return (snd r ^. pipelineResult)
 
 runPipelineSetup ::
-  (Members '[App, EmbedIO, Reader PipelineOptions, TaggedLock] r) =>
+  (Members '[App, EmbedIO, Logger, Reader PipelineOptions, TaggedLock] r) =>
   Sem (PipelineEff' r) a ->
   Sem r a
-runPipelineSetup p = ignoreProgressLog $ do
+runPipelineSetup p = do
   args <- askArgs
   entry <- getEntryPointStdin' args
   r <- runIOEitherPipeline entry (inject p) >>= fromRightJuvixError
   return (snd r)
 
+renderStdOutLn :: forall a r. (Member App r, HasAnsiBackend a, HasTextBackend a) => a -> Sem r ()
+renderStdOutLn txt = renderStdOut txt >> newline
+
 newline :: (Member App r) => Sem r ()
-newline = say ""
+newline = renderStdOut @Text "\n"
 
 printSuccessExit :: (Member App r) => Text -> Sem r a
 printSuccessExit = exitMsg ExitSuccess

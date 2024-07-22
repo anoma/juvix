@@ -7,7 +7,7 @@ import Commands.Dev.Nockma.Options
 import Commands.Dev.Nockma.Repl as Repl
 import Commands.Dev.Nockma.Run as Run
 
-runCommand :: forall r. (Members '[EmbedIO, App] r) => NockmaCommand -> Sem r ()
+runCommand :: forall r. (Members AppEffects r) => NockmaCommand -> Sem r ()
 runCommand = \case
   NockmaRepl opts -> Repl.runCommand opts
   NockmaEval opts -> Eval.runCommand opts

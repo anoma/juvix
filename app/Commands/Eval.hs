@@ -6,12 +6,12 @@ import Evaluator qualified as Eval
 import Juvix.Compiler.Core qualified as Core
 import Juvix.Extra.Strings qualified as Str
 
-runCommand :: (Members '[EmbedIO, TaggedLock, App] r) => EvalOptions -> Sem r ()
+runCommand :: (Members AppEffects r) => EvalOptions -> Sem r ()
 runCommand opts@EvalOptions {..} = do
   gopts <- askGlobalOptions
   root <- askRoot
   entryPoint <- maybe (entryPointFromGlobalOptionsNoFile root gopts) (fromAppPathFile >=> \f -> entryPointFromGlobalOptions root (Just f) gopts) _evalInputFile
-  Core.CoreResult {..} <- ignoreProgressLog (runPipelineProgress () _evalInputFile upToCore)
+  Core.CoreResult {..} <- silenceProgressLog (runPipelineLogger () _evalInputFile upToCore)
   let r =
         run
           . runReader entryPoint

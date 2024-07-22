@@ -6,7 +6,7 @@ import Commands.Extra.NewCompile
 import Juvix.Compiler.Asm.Data.InfoTable
 import Juvix.Compiler.Asm.Pretty
 
-runCommand :: (Members '[App, TaggedLock, EmbedIO] r) => AsmOptions 'InputMain -> Sem r ()
+runCommand :: (Members AppEffects r) => AsmOptions 'InputMain -> Sem r ()
 runCommand opts = do
   let inputFile = opts ^. asmCompileCommonOptions . compileInputFile
       moutputFile = opts ^. asmCompileCommonOptions . compileOutputFile

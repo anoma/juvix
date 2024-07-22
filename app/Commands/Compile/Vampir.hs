@@ -5,7 +5,7 @@ import Commands.Compile.Vampir.Options
 import Commands.Extra.NewCompile
 import Juvix.Compiler.Backend.VampIR.Translation qualified as VampIR
 
-runCommand :: (Members '[App, TaggedLock, EmbedIO] r) => VampirOptions 'InputMain -> Sem r ()
+runCommand :: (Members AppEffects r) => VampirOptions 'InputMain -> Sem r ()
 runCommand opts = do
   let opts' = opts ^. vampirCompileCommonOptions
       inputFile = opts' ^. compileInputFile
@@ -19,6 +19,7 @@ runCommand opts = do
     runReader entryPoint
       . runError @JuvixError
       . coreToVampIR
-      $ coreRes ^. coreResultModule
+      $ coreRes
+        ^. coreResultModule
   VampIR.Result {..} <- getRight r
   writeFileEnsureLn vampirFile _resultCode

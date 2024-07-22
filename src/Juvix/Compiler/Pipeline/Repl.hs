@@ -44,7 +44,9 @@ upToInternalExpression p = do
     . runStateArtifacts artifactScoperState
     . runReader pkg
     $ runNameIdGenArtifacts (Scoper.scopeCheckExpression (Store.getScopedModuleTable mtab) scopeTable p)
-      >>= runNameIdGenArtifacts . runReader scopeTable . Internal.fromConcreteExpression
+      >>= runNameIdGenArtifacts
+        . runReader scopeTable
+        . Internal.fromConcreteExpression
 
 expressionUpToAtomsParsed ::
   (Members '[State Artifacts, Error JuvixError] r) =>

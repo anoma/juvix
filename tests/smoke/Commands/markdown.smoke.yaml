@@ -4,7 +4,8 @@ tests:
   - name: markdown-help-theme
     command:
       - juvix
-      - --only-errors
+      - --log-level
+      - error
       - markdown
       - --help
     stdout:
@@ -21,7 +22,7 @@ tests:
         cp Test.juvix.md $temp
         cd $temp
         touch juvix.yaml
-        juvix --only-errors markdown Test.juvix.md --stdout
+        juvix --log-level error markdown Test.juvix.md --stdout
     stdout:
       contains:
         <pre class="highlight"><code class="juvix">
@@ -37,7 +38,7 @@ tests:
         cp Test.juvix.md $temp
         cd $temp
         touch juvix.yaml
-        juvix --only-errors markdown Test.juvix.md --output-dir=OUT
+        juvix --log-level error markdown Test.juvix.md --output-dir=OUT
         [ -d OUT ]
         [ -f OUT/Test.md ]
     stdout: ''
@@ -53,7 +54,7 @@ tests:
         cp Test.juvix.md $temp
         cd $temp
         touch juvix.yaml
-        juvix --only-errors markdown Test.juvix.md --prefix-id="XYZ"
+        juvix --log-level error markdown Test.juvix.md --prefix-id="XYZ"
         cat markdown/Test.md
     stdout:
       matches: |
@@ -70,7 +71,7 @@ tests:
         cp Test.juvix.md $temp
         cd $temp
         touch juvix.yaml
-        juvix --only-errors markdown Test.juvix.md --no-path --stdout
+        juvix --log-level error markdown Test.juvix.md --no-path --stdout
     stdout:
       matches: |
         .*href="#Test:[0-9]+".*
@@ -86,7 +87,7 @@ tests:
         cp Test.juvix.md $temp
         cd $temp
         touch juvix.yaml
-        juvix --only-errors markdown Test.juvix.md --no-path --prefix-url Y --prefix-id X --stdout
+        juvix --log-level error markdown Test.juvix.md --no-path --prefix-url Y --prefix-id X --stdout
     stdout:
       matches: |
         .*href="Y#XTest:[0-9]+".*

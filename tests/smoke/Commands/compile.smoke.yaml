@@ -18,7 +18,7 @@ tests:
         - bash
       script: |
         cd ./examples/milestone/HelloWorld
-        juvix --only-errors compile native
+        juvix --log-level error compile native
         ./HelloWorld
     exit-status: 0
     stdout: |
@@ -35,9 +35,9 @@ tests:
         cp -r HelloWorld "$temp"
         cd "$temp/HelloWorld"
         sed -i'.bak' 's/just \"HelloWorld.juvix\"/nothing/' Package.juvix
-        juvix --only-errors compile native
+        juvix --log-level error compile native
     exit-status: 1
-    stdout: |
+    stderr: |
      A path to the main file must be given in the CLI or specified in the `main` field of the juvix.yaml file
 
   - name: hello-world
@@ -46,7 +46,7 @@ tests:
         - bash
       script: |
         cd ./examples/milestone/HelloWorld
-        juvix --only-errors compile native HelloWorld.juvix
+        juvix --log-level error compile native HelloWorld.juvix
         ./HelloWorld
     exit-status: 0
     stdout: |
@@ -60,7 +60,7 @@ tests:
         temp=$(mktemp -d)
         trap 'rm -rf -- "$temp"' EXIT
         cd ./examples/milestone/HelloWorld
-        juvix --only-errors compile native -o $temp/Hello HelloWorld.juvix
+        juvix --log-level error compile native -o $temp/Hello HelloWorld.juvix
         $temp/Hello
     exit-status: 0
     stdout: |
@@ -80,7 +80,7 @@ tests:
         touch "$rootDir/juvix.yaml"
 
         cd "$rootDir"
-        juvix --only-errors compile native HelloWorld.juvix --internal-build-dir "$buildDir"
+        juvix --log-level error compile native HelloWorld.juvix --internal-build-dir "$buildDir"
 
         num_files=$(ls -1qA "$buildDir" | wc -l)
         if [ $num_files -le 0 ]; then
@@ -106,7 +106,7 @@ tests:
         echo "dependencies: [.juvix-build/stdlib]" >> "$rootDir/juvix.yaml"
 
         cd "$rootDir"
-        juvix --only-errors compile native HelloWorld.juvix
+        juvix --log-level error compile native HelloWorld.juvix
 
         if [ ! -d "$rootDir/.juvix-build" ]; then
           exit 1
@@ -123,7 +123,7 @@ tests:
         trap 'rm -rf -- "$temp"' EXIT
         testdir=$PWD/examples/milestone/HelloWorld
         cd $temp
-        juvix --only-errors compile native $testdir/HelloWorld.juvix
+        juvix --log-level error compile native $testdir/HelloWorld.juvix
         ./HelloWorld
     stdout: |
       hello world!
@@ -138,7 +138,7 @@ tests:
         trap 'rm -rf -- "$temp"' EXIT
         testdir=$PWD/examples/milestone/HelloWorld
         cd $temp
-        juvix --only-errors compile wasi $testdir/HelloWorld.juvix
+        juvix --log-level error compile wasi $testdir/HelloWorld.juvix
         [ -f HelloWorld.wasm ]
     stdout: ""
     exit-status: 0
@@ -152,7 +152,7 @@ tests:
         trap 'rm -rf -- "$temp"' EXIT
         testdir=$PWD/tests/Anoma/Compilation/positive
         cd $temp
-        juvix --only-errors compile anoma $testdir/test001.juvix
+        juvix --log-level error compile anoma $testdir/test001.juvix
         [ -f test001.nockma ]
         juvix dev nockma repl test001.nockma
     stdout:
@@ -170,7 +170,7 @@ tests:
         trap 'rm -rf -- "$temp"' EXIT
         testdir=$PWD/tests/VampIR/positive/Compilation
         cd $temp
-        juvix --only-errors compile vampir $testdir/test001.juvix
+        juvix --log-level error compile vampir $testdir/test001.juvix
         grep -q 'VampIR runtime for Juvix (safe version)' test001.pir
     stdout: ""
     exit-status: 0
@@ -184,7 +184,7 @@ tests:
         trap 'rm -rf -- "$temp"' EXIT
         testdir=$PWD/tests/VampIR/positive/Compilation
         cd $temp
-        juvix --only-errors compile vampir $testdir/test001.juvix --unsafe
+        juvix --log-level error compile vampir $testdir/test001.juvix --unsafe
         grep -q 'VampIR runtime for Juvix (unsafe version)' test001.pir
     stdout: ""
     exit-status: 0
@@ -215,7 +215,7 @@ tests:
         cd $temp
         cp "$base"/examples/milestone/HelloWorld/HelloWorld.juvix .
         export XDG_CONFIG_HOME="$config/symlink"
-        juvix --only-errors compile native HelloWorld.juvix
+        juvix --log-level error compile native HelloWorld.juvix
         ./HelloWorld
     exit-status: 0
     stdout: |

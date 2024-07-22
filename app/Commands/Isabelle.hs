@@ -7,7 +7,7 @@ import Juvix.Compiler.Backend.Isabelle.Language
 import Juvix.Compiler.Backend.Isabelle.Pretty
 
 runCommand ::
-  (Members '[EmbedIO, TaggedLock, App] r) =>
+  (Members AppEffects r) =>
   IsabelleOptions ->
   Sem r ()
 runCommand opts = do

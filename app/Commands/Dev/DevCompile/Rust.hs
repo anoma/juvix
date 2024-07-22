@@ -6,7 +6,7 @@ import Commands.Extra.NewCompile
 import Juvix.Compiler.Backend.Rust.Data.Result
 
 runCommand ::
-  (Members '[App, EmbedIO, TaggedLock] r) =>
+  (Members AppEffects r) =>
   RustOptions 'InputMain ->
   Sem r ()
 runCommand opts = do

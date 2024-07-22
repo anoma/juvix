@@ -28,7 +28,7 @@ showHelpText = do
 
 runTopCommand ::
   forall r.
-  (Members '[EmbedIO, App, TaggedLock] r) =>
+  (Members AppEffects r) =>
   TopCommand ->
   Sem r ()
 runTopCommand = \case
@@ -37,14 +37,14 @@ runTopCommand = \case
   DisplayHelp -> showHelpText
   Doctor opts -> runLogIO (Doctor.runCommand opts)
   Isabelle opts -> Isabelle.runCommand opts
-  Init opts -> runLogIO (Init.init opts)
+  Init opts -> Init.init opts
   Dev opts -> Dev.runCommand opts
   Typecheck opts -> Typecheck.runCommand opts
   Compile opts -> Compile.runCommand opts
-  Clean opts -> runFilesIO (Clean.runCommand opts)
+  Clean opts -> Clean.runCommand opts
   Eval opts -> Eval.runCommand opts
   Html opts -> Html.runCommand opts
   Markdown opts -> Markdown.runCommand opts
   JuvixRepl opts -> Repl.runCommand opts
-  JuvixFormat opts -> runFilesIO (Format.runCommand opts)
+  JuvixFormat opts -> Format.runCommand opts
   Dependencies opts -> Dependencies.runCommand opts

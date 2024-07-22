@@ -12,7 +12,7 @@ compileTransformations = [Core.CombineInfoTables, Core.FilterUnreachable, Core.D
 
 runCommand ::
   forall r.
-  (Members '[App, TaggedLock, EmbedIO] r) =>
+  (Members AppEffects r) =>
   CoreOptions 'InputMain ->
   Sem r ()
 runCommand opts = do

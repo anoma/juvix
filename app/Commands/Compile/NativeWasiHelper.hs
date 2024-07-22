@@ -36,12 +36,12 @@ helperOutputFile opts =
       let baseOutputFile = invokeDir <//> filename inputFile
       return ((opts ^. helperDefaultOutputFile) inputFile baseOutputFile)
 
-runCommand :: forall r. (Members '[App, TaggedLock, EmbedIO] r) => HelperOptions 'InputMain -> Sem r ()
+runCommand :: forall r. (Members AppEffects r) => HelperOptions 'InputMain -> Sem r ()
 runCommand opts = concreteToC opts >>= fromC opts
 
 concreteToC ::
   forall r.
-  (Members '[App, TaggedLock, EmbedIO] r) =>
+  (Members AppEffects r) =>
   HelperOptions 'InputMain ->
   Sem r C.MiniCResult
 concreteToC opts = do

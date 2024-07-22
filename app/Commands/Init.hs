@@ -1,5 +1,6 @@
 module Commands.Init where
 
+import App
 import Commands.Extra.Package
 import Commands.Init.Options
 import Data.Text qualified as Text
@@ -23,19 +24,19 @@ parse p t = mapLeft ppErr (P.runParser p "<stdin>" t)
 ppErr :: P.ParseErrorBundle Text Void -> Text
 ppErr = pack . errorBundlePretty
 
-init :: forall r. (Members '[EmbedIO] r) => InitOptions -> Sem r ()
+init :: forall r. (Members '[EmbedIO, App] r) => InitOptions -> Sem r ()
 init opts = do
   checkNotInProject
   cwd <- getCurrentDir
-  when isInteractive (say ("creating " <> pack (toFilePath packageFilePath)))
+  when isInteractive (renderStdOutLn ("creating " <> pack (toFilePath packageFilePath)))
   if
       | opts ^. initOptionsBasic -> writeBasicPackage cwd
       | otherwise -> do
           pkg <-
             if
                 | isInteractive -> do
-                    say "✨ Your next Juvix adventure is about to begin! ✨"
-                    say "I will help you set it up"
+                    renderStdOutLn @Text "✨ Your next Juvix adventure is about to begin! ✨"
+                    renderStdOutLn @Text "I will help you set it up"
                     getPackage
                 | otherwise -> do
                     projectName <- getDefaultProjectName
@@ -45,34 +46,34 @@ init opts = do
                       Just n -> emptyPkg {_packageName = n}
           writePackageFile cwd pkg
   checkPackage
-  when isInteractive (say "you are all set")
+  when isInteractive (renderStdOutLn @Text "you are all set")
   where
     isInteractive :: Bool
     isInteractive = not (opts ^. initOptionsNonInteractive) && not (opts ^. initOptionsBasic)
 
-checkNotInProject :: forall r. (Members '[EmbedIO] r) => Sem r ()
+checkNotInProject :: forall r. (Members '[EmbedIO, App] r) => Sem r ()
 checkNotInProject =
   whenM (orM [doesFileExist juvixYamlFile, doesFileExist packageFilePath]) err
   where
     err :: Sem r ()
     err = do
-      say "You are already in a Juvix project"
+      renderStdOutLn @Text "You are already in a Juvix project"
       exitFailure
 
-checkPackage :: forall r. (Members '[EmbedIO] r) => Sem r ()
+checkPackage :: forall r. (Members '[EmbedIO, App] r) => Sem r ()
 checkPackage = do
   cwd <- getCurrentDir
   ep <- runError @JuvixError (runTaggedLockPermissive (loadPackageFileIO cwd DefaultBuildDir))
   case ep of
     Left {} -> do
-      say "Package.juvix is invalid. Please raise an issue at https://github.com/anoma/juvix/issues"
+      renderStdOutLn @Text "Package.juvix is invalid. Please raise an issue at https://github.com/anoma/juvix/issues"
       exitFailure
     Right {} -> return ()
 
-getPackage :: forall r. (Members '[EmbedIO] r) => Sem r Package
+getPackage :: forall r. (Members '[EmbedIO, App] r) => Sem r Package
 getPackage = do
   tproj <- getProjName
-  say "Write the version of your project [leave empty for 0.0.0]"
+  renderStdOutLn @Text "Write the version of your project [leave empty for 0.0.0]"
   tversion :: SemVer <- getVersion
   cwd <- getCurrentDir
   return
@@ -91,17 +92,17 @@ getDefaultProjectName = runFail $ do
   dir <- map toLower . dropTrailingPathSeparator . toFilePath . dirname <$> getCurrentDir
   Fail.fromRight (parse projectNameParser (pack dir))
 
-getProjName :: forall r. (Members '[EmbedIO] r) => Sem r Text
+getProjName :: forall r. (Members '[EmbedIO, App] r) => Sem r Text
 getProjName = do
   d <- getDefaultProjectName
   let defMsg :: Text
       defMsg = case d of
         Nothing -> mempty
         Just d' -> " [leave empty for '" <> d' <> "']"
-  say
+  renderStdOutLn
     ( "Write the name of your project"
         <> defMsg
-        <> " (lower case letters, numbers and dashes are allowed): "
+        <> " (lower case letters, numbers and dashes are allowed):"
     )
   readName d
   where
@@ -118,10 +119,10 @@ getProjName = do
                     Right p
                       | Text.length p <= projextNameMaxLength -> return p
                       | otherwise -> do
-                          say ("The project name cannot exceed " <> prettyText projextNameMaxLength <> " characters")
+                          renderStdOutLn ("The project name cannot exceed " <> prettyText projextNameMaxLength <> " characters")
                           retry
                     Left err -> do
-                      say err
+                      renderStdOut err
                       retry
           where
             retry :: Sem r Text
@@ -129,13 +130,10 @@ getProjName = do
               tryAgain
               go
 
-say :: (Members '[EmbedIO] r) => Text -> Sem r ()
-say = putStrLn
+tryAgain :: (Members '[App] r) => Sem r ()
+tryAgain = renderStdOutLn @Text "Please, try again:"
 
-tryAgain :: (Members '[EmbedIO] r) => Sem r ()
-tryAgain = say "Please, try again:"
-
-getVersion :: forall r. (Members '[EmbedIO] r) => Sem r SemVer
+getVersion :: forall r. (Members '[App, EmbedIO] r) => Sem r SemVer
 getVersion = do
   txt <- getLine
   if
@@ -143,8 +141,8 @@ getVersion = do
       | otherwise -> case parse semver' txt of
           Right r -> return r
           Left err -> do
-            say err
-            say "The version must follow the 'Semantic Versioning 2.0.0' specification"
+            renderStdOutLn err
+            renderStdOutLn @Text "The version must follow the 'Semantic Versioning 2.0.0' specification"
             retry
   where
     retry :: Sem r SemVer

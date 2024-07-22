@@ -106,7 +106,7 @@ runPathResolverInput m = do
 
 runIOEitherPipeline' ::
   forall a r.
-  (Members '[Reader PipelineOptions, ProgressLog, TaggedLock, EmbedIO] r) =>
+  (Members '[Reader PipelineOptions, Logger, TaggedLock, EmbedIO] r) =>
   EntryPoint ->
   Sem (PipelineEff' r) a ->
   Sem r (HighlightInput, (Either JuvixError (ResolverState, a)))
@@ -120,6 +120,7 @@ runIOEitherPipeline' entry a = do
     . runJuvixError
     . runFilesIO
     . runReader entry
+    . runProgressLog defaultProgressLogOptions
     . runLogIO
     . runProcessIO
     . mapError (JuvixError @GitProcessError)

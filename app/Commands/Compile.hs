@@ -13,7 +13,7 @@ import Commands.Compile.RiscZeroRust qualified as RiscZeroRust
 import Commands.Compile.Vampir qualified as Vampir
 import Commands.Compile.Wasi qualified as Wasi
 
-runCommand :: (Members '[EmbedIO, App, TaggedLock] r) => CompileCommand -> Sem r ()
+runCommand :: (Members AppEffects r) => CompileCommand -> Sem r ()
 runCommand = \case
   Native opts -> Native.runCommand opts
   Wasi opts -> Wasi.runCommand opts

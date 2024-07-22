@@ -6,7 +6,7 @@ import Commands.Extra.NewCompile
 import Data.FileEmbed qualified as FE
 import Juvix.Compiler.Backend.Rust.Data.Result
 
-runCommand :: forall r. (Members '[App, TaggedLock, EmbedIO] r) => RiscZeroRustOptions 'InputMain -> Sem r ()
+runCommand :: forall r. (Members AppEffects r) => RiscZeroRustOptions 'InputMain -> Sem r ()
 runCommand opts = do
   let opts' = opts ^. riscZeroRustCompileCommonOptions
       inputFile = opts' ^. compileInputFile

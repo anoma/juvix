@@ -111,7 +111,7 @@ JUVIX_PACKAGES_IN_REPO=$(shell find \
 	| awk -F'/Package.juvix' '{print $$1}' | sort -u)
 
 JUVIXFORMATFLAGS?=--in-place
-JUVIXTYPECHECKFLAGS?=--only-errors
+JUVIXTYPECHECKFLAGS?=--log-level warn
 
 .PHONY: format-juvix-files
 format-juvix-files:

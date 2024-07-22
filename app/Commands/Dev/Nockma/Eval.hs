@@ -7,7 +7,7 @@ import Juvix.Compiler.Nockma.Evaluator
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Translation.FromSource qualified as Nockma
 
-runCommand :: forall r. (Members '[EmbedIO, App] r) => NockmaEvalOptions -> Sem r ()
+runCommand :: forall r. (Members AppEffects r) => NockmaEvalOptions -> Sem r ()
 runCommand opts = do
   afile <- fromAppPathFile file
   parsedTerm <- Nockma.parseTermFile afile
@@ -17,7 +17,7 @@ runCommand opts = do
       (counts, res) <-
         runOpCounts
           . runReader defaultEvalOptions
-          . runOutputSem @(Term Natural) (say . ppTrace)
+          . runOutputSem @(Term Natural) (logInfo . mkAnsiText . ppTrace)
           $ evalCompiledNock' (c ^. cellLeft) (c ^. cellRight)
       putStrLn (ppPrint res)
       let statsFile = replaceExtension' ".profile" afile

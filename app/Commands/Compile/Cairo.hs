@@ -5,7 +5,7 @@ import Commands.Compile.Cairo.Options
 import Commands.Extra.NewCompile
 import Data.Aeson qualified as JSON
 
-runCommand :: (Members '[App, TaggedLock, EmbedIO] r) => CairoOptions 'InputMain -> Sem r ()
+runCommand :: (Members AppEffects r) => CairoOptions 'InputMain -> Sem r ()
 runCommand opts = do
   let opts' = opts ^. cairoCompileCommonOptions
       inputFile = opts' ^. compileInputFile
@@ -19,6 +19,7 @@ runCommand opts = do
     runReader entryPoint
       . runError @JuvixError
       . coreToCairo
-      $ coreRes ^. coreResultModule
+      $ coreRes
+        ^. coreResultModule
   res <- getRight r
   liftIO (JSON.encodeFile (toFilePath cairoFile) res)

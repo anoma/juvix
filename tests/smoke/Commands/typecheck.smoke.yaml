@@ -15,14 +15,15 @@ tests:
       - typecheck
     args:
       - positive/Internal/Simple.juvix
-    stdout:
+    stderr:
       equals: "Well done! It type checks\n"
     exit-status: 0
 
   - name: flag-only-errors
     command:
       - juvix
-      - --only-errors
+      - --log-level
+      - error
       - typecheck
     args:
       - positive/Internal/Simple.juvix
@@ -51,13 +52,8 @@ tests:
         trap 'rm -rf -- "$temp"' EXIT
         export XDG_CONFIG_HOME="$temp"
         HOME="home" JUVIX_TEST_PATH="other dep" juvix typecheck positive/FancyPaths/Main.juvix
-    stdout:
-      equals: "Well done! It type checks\n"
     stderr:
-      matches:
-        regex: .*
-        options:
-          - dot-all
+      contains: "Well done! It type checks\n"
     exit-status: 0
 
   - name: typecheck-global-package
@@ -76,7 +72,7 @@ tests:
         cd $projDir
         echo 'module foo;' > foo.juvix
         juvix typecheck foo.juvix
-    stdout:
+    stderr:
       equals: "Well done! It type checks\n"
     exit-status: 0
 
@@ -100,13 +96,8 @@ tests:
         globalPackageDir=$(juvix dev root)
         packagePackageDir="$(dirname $globalPackageDir)"/package
         juvix typecheck "$packagePackageDir/PackageDescription/V2.juvix"
-    stdout:
-      equals: "Well done! It type checks\n"
     stderr:
-      matches:
-        regex: .*
-        options:
-          - dot-all
+      contains: "Well done! It type checks\n"
     exit-status: 0
 
   - name: typecheck-stdin
