@@ -9,10 +9,16 @@ type Foldable (container elem : Type) :=
     for : {B : Type} -> (B -> elem -> B) -> B -> container -> B;
 
     syntax iterator rfor {init := 1; range := 1};
-    rfor : {B : Type} -> (B -> elem -> B) -> B → container → B;
+    rfor : {B : Type} -> (B -> elem -> B) -> B → container → B
   };
 
 open Foldable;
 
-foldl {container elem} {{Foldable container elem}} {B : Type} (g : B -> elem -> B) (ini : B) (ls : container) : B :=
-  for (acc := ini) (x in ls) {g acc x};
+foldl
+  {container elem}
+  {{Foldable container elem}}
+  {B : Type}
+  (g : B -> elem -> B)
+  (ini : B)
+  (ls : container)
+  : B := for (acc := ini) (x in ls) {g acc x};
