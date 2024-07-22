@@ -758,7 +758,10 @@ lookupQualifiedSymbol sms = do
 normalizePreSymbolEntry :: (Members '[State ScoperState] r) => PreSymbolEntry -> Sem r SymbolEntry
 normalizePreSymbolEntry = \case
   PreSymbolFinal a -> return a
-  PreSymbolAlias a -> gets (^?! scoperAlias . at (a ^. aliasName . S.nameId) . _Just) >>= normalizePreSymbolEntry
+  PreSymbolAlias a -> gets (^. scoperAlias . at (a ^. aliasName . S.nameId)) >>= normalizePreSymbolEntry . fromMaybe err
+    where
+      err :: forall a. a
+      err = impossibleError ("The alias " <> ppTrace (a ^. aliasName) <> " was not found in the ScoperState ")
 
 checkQualifiedName ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable] r) =>
