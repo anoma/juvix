@@ -63,8 +63,13 @@ instance (SingI s) => HasNameSignature s (InductiveDef s, ConstructorDef s) wher
           addField :: RecordStatement s -> Sem r ()
           addField = \case
             RecordStatementField RecordField {..} -> addSymbol @s Explicit Nothing _fieldName _fieldType
-            RecordStatementOperator {} -> return ()
-            RecordStatementIterator {} -> return ()
+            RecordStatementSyntax d -> goSyntax d
+
+          goSyntax :: RecordSyntaxDef s -> Sem r ()
+          goSyntax = \case
+            RecordSyntaxOperator {} -> return ()
+            RecordSyntaxIterator {} -> return ()
+
       addRhs :: ConstructorRhs s -> Sem r ()
       addRhs = \case
         ConstructorRhsGadt g -> addExpressionType (g ^. rhsGadtType)

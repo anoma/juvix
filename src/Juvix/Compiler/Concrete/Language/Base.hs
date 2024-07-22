@@ -2405,10 +2405,30 @@ deriving stock instance Ord (NamedApplicationNew 'Parsed)
 
 deriving stock instance Ord (NamedApplicationNew 'Scoped)
 
+data RecordSyntaxDef (s :: Stage)
+  = RecordSyntaxOperator OperatorSyntaxDef
+  | RecordSyntaxIterator IteratorSyntaxDef
+  deriving stock (Generic)
+
+instance Serialize (RecordSyntaxDef 'Scoped)
+
+instance NFData (RecordSyntaxDef 'Scoped)
+
+deriving stock instance Show (RecordSyntaxDef 'Parsed)
+
+deriving stock instance Show (RecordSyntaxDef 'Scoped)
+
+deriving stock instance Eq (RecordSyntaxDef 'Parsed)
+
+deriving stock instance Eq (RecordSyntaxDef 'Scoped)
+
+deriving stock instance Ord (RecordSyntaxDef 'Parsed)
+
+deriving stock instance Ord (RecordSyntaxDef 'Scoped)
+
 data RecordStatement (s :: Stage)
   = RecordStatementField (RecordField s)
-  | RecordStatementOperator OperatorSyntaxDef
-  | RecordStatementIterator IteratorSyntaxDef
+  | RecordStatementSyntax (RecordSyntaxDef s)
   deriving stock (Generic)
 
 instance Serialize (RecordStatement 'Scoped)

@@ -1203,16 +1203,17 @@ checkInductiveDef InductiveDef {..} = do
           return rhs'
           where
             checkRecordStatements :: [RecordStatement 'Parsed] -> Sem r [RecordStatement 'Scoped]
-            checkRecordStatements = \case
-              [] -> return []
-              f : fs -> case f of
-                RecordStatementIterator d ->
-                  (RecordStatementIterator d :) <$> checkRecordStatements fs
-                RecordStatementOperator d ->
-                  (RecordStatementOperator d :) <$> checkRecordStatements fs
-                RecordStatementField d -> do
-                  d' <- checkField d
-                  (RecordStatementField d' :) <$> checkRecordStatements fs
+            checkRecordStatements = mapM checkRecordStatement
+
+            checkRecordSyntaxDef :: RecordSyntaxDef 'Parsed -> Sem r (RecordSyntaxDef 'Scoped)
+            checkRecordSyntaxDef = \case
+              RecordSyntaxOperator d -> return (RecordSyntaxOperator d)
+              RecordSyntaxIterator d -> return (RecordSyntaxIterator d)
+
+            checkRecordStatement :: RecordStatement 'Parsed -> Sem r (RecordStatement 'Scoped)
+            checkRecordStatement = \case
+              RecordStatementField d -> RecordStatementField <$> checkField d
+              RecordStatementSyntax s -> RecordStatementSyntax <$> checkRecordSyntaxDef s
 
             checkField :: RecordField 'Parsed -> Sem r (RecordField 'Scoped)
             checkField RecordField {..} = do
@@ -1613,15 +1614,13 @@ checkSections sec = topBindings helper
                           where
                             goRecordStatement :: RecordStatement 'Parsed -> Sem '[State Int] (Statement 'Parsed)
                             goRecordStatement = \case
-                              RecordStatementOperator f -> StatementSyntax . SyntaxOperator <$> goOperator f
-                              RecordStatementIterator f -> StatementSyntax . SyntaxIterator <$> goIterator f
+                              RecordStatementSyntax f -> StatementSyntax <$> goSyntax f
                               RecordStatementField f -> goField f
                               where
-                                goOperator :: OperatorSyntaxDef -> Sem s OperatorSyntaxDef
-                                goOperator = pure
-
-                                goIterator :: IteratorSyntaxDef -> Sem s IteratorSyntaxDef
-                                goIterator = pure
+                                goSyntax :: RecordSyntaxDef 'Parsed -> Sem s (SyntaxDef 'Parsed)
+                                goSyntax = \case
+                                  RecordSyntaxOperator d -> return (SyntaxOperator d)
+                                  RecordSyntaxIterator d -> return (SyntaxIterator d)
 
                                 goField :: RecordField 'Parsed -> Sem '[State Int] (Statement 'Parsed)
                                 goField f = do

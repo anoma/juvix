@@ -342,11 +342,15 @@ instance (SingI s) => PrettyPrint (NamedArgumentNew s) where
     NamedArgumentNewFunction f -> ppCode f
     NamedArgumentItemPun f -> ppCode f
 
+instance PrettyPrint (RecordSyntaxDef s) where
+  ppCode = \case
+    RecordSyntaxOperator d -> ppCode d
+    RecordSyntaxIterator d -> ppCode d
+
 instance (SingI s) => PrettyPrint (RecordStatement s) where
   ppCode = \case
     RecordStatementField f -> ppCode f
-    RecordStatementOperator f -> ppCode f
-    RecordStatementIterator f -> ppCode f
+    RecordStatementSyntax f -> ppCode f
 
 instance (SingI s) => PrettyPrint (RecordUpdateField s) where
   ppCode RecordUpdateField {..} =
