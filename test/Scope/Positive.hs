@@ -249,5 +249,9 @@ tests =
     posTest
       "Named argument puns"
       $(mkRelDir ".")
-      $(mkRelFile "Puns.juvix")
+      $(mkRelFile "Puns.juvix"),
+    posTest
+      "Record field iterator"
+      $(mkRelDir ".")
+      $(mkRelFile "RecordIterator.juvix")
   ]
