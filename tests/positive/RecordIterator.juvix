@@ -1,7 +1,5 @@
 module RecordIterator;
 
-import Stdlib.Function open;
-
 trait
 type Foldable (container elem : Type) :=
   mkFoldable {
