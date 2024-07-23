@@ -477,6 +477,9 @@ undefined = Err.error "undefined"
 impossible :: (HasCallStack) => a
 impossible = Err.error "impossible"
 
+impossibleError :: (HasCallStack) => Text -> a
+impossibleError msg = Err.error ("impossible: " <> unpack msg)
+
 --------------------------------------------------------------------------------
 
 infixl 7 <+?>

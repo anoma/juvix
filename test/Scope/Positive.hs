@@ -251,6 +251,10 @@ tests =
       $(mkRelDir ".")
       $(mkRelFile "Puns.juvix"),
     posTest
+      "Confluent imports"
+      $(mkRelDir "ConfluentScoping")
+      $(mkRelFile "Main.juvix"),
+    posTest
       "Record field iterator"
       $(mkRelDir ".")
       $(mkRelFile "RecordIterator.juvix")

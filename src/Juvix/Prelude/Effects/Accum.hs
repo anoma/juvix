@@ -1,6 +1,7 @@
 module Juvix.Prelude.Effects.Accum
   ( Accum,
     runAccumList,
+    runAccumListReverse,
     execAccumList,
     ignoreAccum,
     accum,
@@ -21,10 +22,13 @@ newtype instance StaticRep (Accum o) = Accum
 accum :: (Member (Accum o) r) => o -> Sem r ()
 accum o = overStaticRep (\(Accum l) -> Accum (o : l))
 
-runAccumList :: Sem (Accum o ': r) a -> Sem r ([o], a)
-runAccumList m = do
+runAccumListReverse :: Sem (Accum o ': r) a -> Sem r ([o], a)
+runAccumListReverse m = do
   (a, Accum s) <- runStaticRep (Accum mempty) m
-  return (reverse s, a)
+  return (s, a)
+
+runAccumList :: Sem (Accum o ': r) a -> Sem r ([o], a)
+runAccumList m = first reverse <$> runAccumListReverse m
 
 execAccumList :: Sem (Accum o ': r) a -> Sem r [o]
 execAccumList = fmap fst . runAccumList

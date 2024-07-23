@@ -1,0 +1,6 @@
+module Main;
+
+import A open;
+import B;
+
+axiom X : B.Axiom;

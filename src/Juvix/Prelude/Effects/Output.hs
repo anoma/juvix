@@ -27,9 +27,21 @@ runOutputSem handle =
   interpret $ \case
     Output x -> handle x
 
+runOutputHashSet :: (Hashable o) => Sem (Output o ': r) a -> Sem r (HashSet o, a)
+runOutputHashSet =
+  fmap (first hashSet)
+    . reinterpret
+      runAccumListReverse
+      ( \case
+          Output x -> accum x
+      )
+
 runOutputList :: Sem (Output o ': r) a -> Sem r ([o], a)
 runOutputList = reinterpret runAccumList $ \case
   Output x -> accum x
+
+execOutputHashSet :: (Hashable o) => Sem (Output o ': r) a -> Sem r (HashSet o)
+execOutputHashSet = fmap fst . runOutputHashSet
 
 execOutputList :: Sem (Output o ': r) a -> Sem r [o]
 execOutputList = fmap fst . runOutputList
