@@ -711,9 +711,9 @@ lookupQualifiedSymbol ::
   forall r.
   (Members '[State Scope, State ScoperState] r) =>
   ([Symbol], Symbol) ->
-  Sem r ([PreSymbolEntry], [ModuleSymbolEntry], [FixitySymbolEntry])
+  Sem r (HashSet PreSymbolEntry, HashSet ModuleSymbolEntry, HashSet FixitySymbolEntry)
 lookupQualifiedSymbol sms = do
-  (es, (ms, fs)) <- runOutputList . runOutputList . execOutputList $ go sms
+  (es, (ms, fs)) <- runOutputHashSet . runOutputHashSet . execOutputHashSet $ go sms
   return (es, ms, fs)
   where
     go ::
@@ -769,10 +769,10 @@ checkQualifiedName ::
   Sem r PreSymbolEntry
 checkQualifiedName q@(QualifiedName (SymbolPath p) sym) = do
   es <- fst3 <$> lookupQualifiedSymbol (toList p, sym)
-  case es of
+  case toList es of
     [] -> notInScope
     [e] -> return e
-    _ -> throw (ErrAmbiguousSym (AmbiguousSym q' es))
+    _ -> throw (ErrAmbiguousSym (AmbiguousSym q' (toList es)))
   where
     q' = NameQualified q
     notInScope = throw (ErrQualSymNotInScope (QualSymNotInScope q))
@@ -1823,7 +1823,7 @@ lookupModuleSymbol ::
   Sem r ScopedModule
 lookupModuleSymbol n = do
   es <- snd3 <$> lookupQualifiedSymbol (path, sym)
-  case nonEmpty (resolveShadowing es) of
+  case nonEmpty (resolveShadowing (toList es)) of
     Nothing -> notInScope
     Just (x :| []) -> getModule x n
     Just more -> throw (ErrAmbiguousModuleSym (AmbiguousModuleSym n more))
@@ -2387,7 +2387,7 @@ checkUnqualifiedName s = do
   scope <- get
   -- Lookup at the global scope
   entries <- fst3 <$> lookupQualifiedSymbol ([], s)
-  case resolveShadowing entries of
+  case resolveShadowing (toList entries) of
     [] -> throw (ErrSymNotInScope (NotInScope s scope))
     [x] -> return x
     es -> throw (ErrAmbiguousSym (AmbiguousSym n es))
@@ -2402,7 +2402,7 @@ checkFixitySymbol s = do
   scope <- get
   -- Lookup at the global scope
   entries <- thd3 <$> lookupQualifiedSymbol ([], s)
-  case resolveShadowing entries of
+  case resolveShadowing (toList entries) of
     [] -> throw (ErrSymNotInScope (NotInScope s scope))
     [x] -> do
       let res = entryToSymbol x s
@@ -2476,13 +2476,14 @@ lookupNameOfKind ::
   Name ->
   Sem r (Maybe ScopedIden)
 lookupNameOfKind nameKind n = do
-  entries <- lookupQualifiedSymbol (path, sym) >>= mapMaybeM filterEntry . fst3
+  entries <- lookupQualifiedSymbol (path, sym) >>= mapMaybeM filterEntry . toList . fst3
   case entries of
     [] -> return Nothing
     [(_, s)] -> return (Just s) -- There is one constructor with such a name
     es -> throw (ErrAmbiguousSym (AmbiguousSym n (map fst es)))
   where
     (path, sym) = splitName n
+
     filterEntry :: PreSymbolEntry -> Sem r (Maybe (PreSymbolEntry, ScopedIden))
     filterEntry e = do
       e' <- entryToScopedIden n e
