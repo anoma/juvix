@@ -28,7 +28,7 @@ data CheckPositivityArgs = CheckPositivityArgs
     _checkPositivityArgsInductiveName :: Name,
     _checkPositivityArgsRecursionLimit :: Int,
     _checkPositivityArgsErrorReference :: Maybe Expression,
-    _checkPositivityArgsTypeOfConstructor :: Expression
+    _checkPositivityArgsTypeOfConstructorArg :: Expression
   }
 
 makeLenses ''CheckPositivityArgs
@@ -54,7 +54,7 @@ checkPositivity indInfo = do
                     _checkPositivityArgsInductiveName = indInfo ^. inductiveInfoName,
                     _checkPositivityArgsRecursionLimit = numInductives,
                     _checkPositivityArgsErrorReference = Nothing,
-                    _checkPositivityArgsTypeOfConstructor = typeOfConstr
+                    _checkPositivityArgsTypeOfConstructorArg = typeOfConstr ^. paramType
                   }
               )
 
@@ -64,8 +64,8 @@ checkStrictlyPositiveOccurrences ::
   CheckPositivityArgs ->
   Sem r ()
 checkStrictlyPositiveOccurrences p = do
-  typeOfConstr <- strongNormalize_ (p ^. checkPositivityArgsTypeOfConstructor)
-  goExpression False typeOfConstr
+  typeOfConstrArg <- strongNormalize_ (p ^. checkPositivityArgsTypeOfConstructorArg)
+  goExpression False typeOfConstrArg
   where
     indInfo = p ^. checkPositivityArgsInductive
     ctorName = p ^. checkPositivityArgsConstructorName
@@ -209,7 +209,7 @@ checkStrictlyPositiveOccurrences p = do
                               _checkPositivityArgsInductiveName = pName',
                               _checkPositivityArgsRecursionLimit = recLimit - 1,
                               _checkPositivityArgsErrorReference = Just errorRef,
-                              _checkPositivityArgsTypeOfConstructor = tyConstr'
+                              _checkPositivityArgsTypeOfConstructorArg = tyConstr' ^. paramType
                             }
                     )
                     args

@@ -7,7 +7,6 @@ module Juvix.Compiler.Internal.Extra
 where
 
 import Data.HashMap.Strict qualified as HashMap
-import Data.Stream qualified as Stream
 import Juvix.Compiler.Internal.Extra.Base
 import Juvix.Compiler.Internal.Extra.Clonable
 import Juvix.Compiler.Internal.Extra.DependencyBuilder
@@ -15,7 +14,7 @@ import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Store.Internal.Data.InfoTable
 import Juvix.Prelude
 
-constructorArgTypes :: ConstructorInfo -> ([InductiveParameter], [Expression])
+constructorArgTypes :: ConstructorInfo -> ([InductiveParameter], [FunctionParameter])
 constructorArgTypes i =
   ( i ^. constructorInfoInductiveParameters,
     constructorArgs (i ^. constructorInfoType)
@@ -42,7 +41,7 @@ constructorType info =
   let (inductiveParams, constrArgs) = constructorArgTypes info
       args =
         map inductiveToFunctionParam inductiveParams
-          ++ map unnamedParameter constrArgs
+          ++ constrArgs
       saturatedTy = constructorReturnType info
    in foldFunType args saturatedTy
 
@@ -54,10 +53,6 @@ inductiveToFunctionParam InductiveParameter {..} =
       _paramType = _inductiveParamType
     }
 
-constructorImplicity :: ConstructorInfo -> IsImplicit
-constructorImplicity info =
-  if info ^. constructorInfoTrait then ImplicitInstance else Explicit
-
 patternArgFromVar :: IsImplicit -> VarName -> PatternArg
 patternArgFromVar i v =
   PatternArg
@@ -66,19 +61,32 @@ patternArgFromVar i v =
       _patternArgPattern = PatternVariable v
     }
 
--- | Given `mkPair`, returns (mkPair a b, [a, b])
-genConstructorPattern :: (Members '[NameIdGen] r) => Interval -> ConstructorInfo -> Sem r (PatternArg, [VarName])
-genConstructorPattern loc info = genConstructorPattern' impl loc (info ^. constructorInfoName) (length (snd (constructorArgTypes info)))
-  where
-    impl = constructorImplicity info
+-- | Given `mkApplicative`, returns {{mkApplicative {{funct}}}} var_pure var_ap, [var_pure, var_ap]
+genConstructorPattern ::
+  (Members '[NameIdGen] r) =>
+  Interval ->
+  IsImplicit ->
+  ConstructorInfo ->
+  Sem r (PatternArg, [VarName])
+genConstructorPattern loc traitImplicity info =
+  genConstructorPattern' traitImplicity loc (info ^. constructorInfoName) (snd (constructorArgTypes info))
 
 -- | Given `mkPair`, returns (mkPair a b, [a, b])
-genConstructorPattern' :: (Members '[NameIdGen] r) => IsImplicit -> Interval -> Name -> Int -> Sem r (PatternArg, [VarName])
-genConstructorPattern' impl loc cname cargs = do
-  vars <- mapM (freshVar loc) (Stream.take cargs allWords)
-  return (mkConstructorVarPattern impl cname vars, vars)
+genConstructorPattern' ::
+  (Members '[NameIdGen] r) =>
+  IsImplicit ->
+  Interval ->
+  Name ->
+  [FunctionParameter] ->
+  Sem r (PatternArg, [VarName])
+genConstructorPattern' traitImplicity loc concstrName cargs = do
+  vars :: [(IsImplicit, VarName)] <- runStreamOf allWords . forM cargs $ \p -> do
+    varTxt <- maybe yield return (p ^? paramName . _Just . nameText)
+    var <- freshVar loc ("fieldProjectionVar_" <> varTxt)
+    return (p ^. paramImplicit, var)
+  return (mkConstructorVarPattern traitImplicity concstrName vars, snd <$> vars)
 
-mkConstructorVarPattern :: IsImplicit -> Name -> [VarName] -> PatternArg
+mkConstructorVarPattern :: IsImplicit -> Name -> [(IsImplicit, VarName)] -> PatternArg
 mkConstructorVarPattern impl c vars =
   PatternArg
     { _patternArgIsImplicit = impl,
@@ -88,12 +96,11 @@ mkConstructorVarPattern impl c vars =
           ConstructorApp
             { _constrAppConstructor = c,
               _constrAppType = Nothing,
-              _constrAppParameters = map (patternArgFromVar Explicit) vars
+              _constrAppParameters = map (uncurry patternArgFromVar) vars
             }
     }
 
--- | Assumes the constructor does not have implicit arguments (which is not
--- allowed at the moment).
+-- | Generates a projection function for the given constructor and field index.
 genFieldProjection ::
   forall r.
   (Members '[NameIdGen] r) =>
@@ -106,10 +113,10 @@ genFieldProjection ::
 genFieldProjection _funDefName _funDefBuiltin mpragmas info fieldIx = do
   body' <- genBody
   let (inductiveParams, constrArgs) = constructorArgTypes info
-      implicity = constructorImplicity info
-      saturatedTy = unnamedParameter' implicity (constructorReturnType info)
+      saturatedTy :: FunctionParameter = unnamedParameter' constructorImplicity (constructorReturnType info)
       inductiveArgs = map inductiveToFunctionParam inductiveParams
-      retTy = constrArgs !! fieldIx
+      param = constrArgs !! fieldIx
+      retTy = param ^. paramType
   cloneFunctionDefSameName
     FunctionDef
       { _funDefTerminating = False,
@@ -127,9 +134,14 @@ genFieldProjection _funDefName _funDefBuiltin mpragmas info fieldIx = do
         _funDefBuiltin
       }
   where
+    constructorImplicity :: IsImplicit
+    constructorImplicity
+      | info ^. constructorInfoTrait = ImplicitInstance
+      | otherwise = Explicit
+
     genBody :: Sem r Expression
     genBody = do
-      (pat, vars) <- genConstructorPattern (getLoc _funDefName) info
+      (pat, vars) <- genConstructorPattern (getLoc _funDefName) constructorImplicity info
       let body = toExpression (vars !! fieldIx)
           cl =
             LambdaClause
@@ -265,5 +277,10 @@ substitutionE m expr
         Just e -> clone e
         Nothing -> return (toExpression n)
 
-substituteIndParams :: forall r. (Member NameIdGen r) => [(InductiveParameter, Expression)] -> Expression -> Sem r Expression
+substituteIndParams ::
+  forall r expr.
+  (Member NameIdGen r, HasExpressions expr) =>
+  [(InductiveParameter, Expression)] ->
+  expr ->
+  Sem r expr
 substituteIndParams = substitutionE . HashMap.fromList . map (first (^. inductiveParamName))

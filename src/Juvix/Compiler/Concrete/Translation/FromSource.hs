@@ -1529,7 +1529,10 @@ recordField = do
   _fieldDoc <- optional stashJudoc >> getJudoc
   _fieldPragmas <- optional stashPragmas >> getPragmas
   _fieldBuiltin <- optional builtinRecordField
+  mayImpl <- optional (snd <$> implicitOpen)
   _fieldName <- symbol
+  whenJust mayImpl (void . implicitClose)
+  let _fieldIsImplicit = fromMaybe Explicit mayImpl
   _fieldColon <- Irrelevant <$> kw kwColon
   _fieldType <- parseExpressionAtoms
   return RecordField {..}

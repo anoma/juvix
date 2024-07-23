@@ -1,0 +1,17 @@
+module InstanceFields;
+
+type T := t;
+
+type R := r;
+
+trait
+type HasT (y : Type) :=
+  hasT {
+    giveT : T
+  };
+
+trait
+type HasR (x : Type) :=
+  hasR {
+    {{fieldHasT}} : HasT x;
+  };
