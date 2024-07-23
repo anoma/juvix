@@ -1,0 +1,3 @@
+module B;
+
+axiom Axiom : Type;
