@@ -2665,8 +2665,8 @@ checkRecordUpdate RecordUpdate {..} = do
   tyName' <- getNameOfKind KNameInductive _recordUpdateTypeName
   info <- getRecordInfo tyName'
   let sig = info ^. recordInfoSignature
-  (vars', fields') <- withLocalScope $ do
-    vs <- mapM bindVariableSymbol (toList (recordNameSignatureByIndex sig))
+  (vars' :: IntMap (IsImplicit, S.Symbol), fields') <- withLocalScope $ do
+    vs <- mapM bindRecordUpdateVariable (recordNameSignatureByIndex sig)
     fs <- mapM (checkUpdateField sig) _recordUpdateFields
     return (vs, fs)
   let extra' =
@@ -2682,6 +2682,11 @@ checkRecordUpdate RecordUpdate {..} = do
         _recordUpdateAtKw,
         _recordUpdateDelims
       }
+  where
+    bindRecordUpdateVariable :: NameItem 'Parsed -> Sem r (IsImplicit, S.Symbol)
+    bindRecordUpdateVariable NameItem {..} = do
+      v <- bindVariableSymbol _nameItemSymbol
+      return (_nameItemImplicit, v)
 
 checkUpdateField ::
   (Members '[HighlightBuilder, Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader Package] r) =>

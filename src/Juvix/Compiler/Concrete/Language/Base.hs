@@ -158,6 +158,7 @@ type ParsedPragmas = WithLoc (WithSource Pragmas)
 data NameItem (s :: Stage) = NameItem
   { _nameItemSymbol :: SymbolType s,
     _nameItemIndex :: Int,
+    _nameItemImplicit :: IsImplicit,
     _nameItemType :: ExpressionType s,
     _nameItemDefault :: Maybe (ArgDefault s)
   }
@@ -2212,7 +2213,7 @@ deriving stock instance Ord (ArgumentBlock 'Scoped)
 data RecordUpdateExtra = RecordUpdateExtra
   { _recordUpdateExtraConstructor :: S.Symbol,
     -- | Implicitly bound fields sorted by index
-    _recordUpdateExtraVars :: [S.Symbol]
+    _recordUpdateExtraVars :: IntMap (IsImplicit, S.Symbol)
   }
   deriving stock (Generic)
 
