@@ -247,7 +247,7 @@ mkRecordNameSignature rhs =
             { _nameItemSymbol,
               _nameItemIndex,
               _nameItemType = field ^. fieldType,
-              _nameItemImplicit = field ^. fieldIsImplicit,
+              _nameItemImplicit = fromIsImplicitField (field ^. fieldIsImplicit),
               _nameItemDefault = Nothing
             }
         )

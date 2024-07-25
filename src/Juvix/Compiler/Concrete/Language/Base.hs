@@ -305,6 +305,7 @@ deriving stock instance Ord (Statement 'Scoped)
 data ProjectionDef s = ProjectionDef
   { _projectionConstructor :: S.Symbol,
     _projectionField :: SymbolType s,
+    _projectionKind :: ProjectionKind,
     _projectionFieldIx :: Int,
     _projectionFieldBuiltin :: Maybe (WithLoc BuiltinFunction),
     _projectionDoc :: Maybe (Judoc s),
@@ -735,8 +736,7 @@ deriving stock instance Ord (RecordUpdateField 'Scoped)
 
 data RecordField (s :: Stage) = RecordField
   { _fieldName :: SymbolType s,
-    -- Only Explicit and ImplicitInstance is allowed
-    _fieldIsImplicit :: IsImplicit,
+    _fieldIsImplicit :: IsImplicitField,
     _fieldColon :: Irrelevant (KeywordRef),
     _fieldType :: ExpressionType s,
     _fieldBuiltin :: Maybe (WithLoc BuiltinFunction),

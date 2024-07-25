@@ -10,7 +10,11 @@ import Juvix.Prelude.Base
 import Prettyprinter
 
 fromHole :: Hole.Hole -> InstanceHole
-fromHole (Hole.Hole a b) = InstanceHole a b
+fromHole Hole.Hole {..} =
+  InstanceHole
+    { _iholeId = _holeId,
+      _iholeKw = _holeKw
+    }
 
 data InstanceHole = InstanceHole
   { _iholeId :: NameId,

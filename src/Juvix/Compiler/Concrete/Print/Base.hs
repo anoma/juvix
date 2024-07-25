@@ -1300,9 +1300,8 @@ instance (SingI s) => PrettyPrint (RecordField s) where
         builtin' = (<> line) . ppCode <$> _fieldBuiltin
         mayBraces :: forall r'. (Members '[ExactPrint] r') => Sem r' () -> Sem r' ()
         mayBraces = case _fieldIsImplicit of
-          Explicit -> id
-          Implicit -> impossible
-          ImplicitInstance -> doubleBraces
+          ExplicitField -> id
+          ImplicitInstanceField -> doubleBraces
     doc'
       ?<> pragmas'
       ?<> builtin'

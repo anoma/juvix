@@ -355,6 +355,7 @@ goProjectionDef ProjectionDef {..} = do
   info <- gets (^?! constructorInfos . at c . _Just)
   fun <-
     Internal.genFieldProjection
+      _projectionKind
       (goSymbol _projectionField)
       ( (^. withLocParam)
           <$> _projectionFieldBuiltin
@@ -668,7 +669,7 @@ goConstructorDef retTy ConstructorDef {..} = do
               Just
                 Internal.FunctionParameter
                   { _paramName = Just (goSymbol _fieldName),
-                    _paramImplicit = _fieldIsImplicit,
+                    _paramImplicit = fromIsImplicitField _fieldIsImplicit,
                     _paramType = ty'
                   }
 

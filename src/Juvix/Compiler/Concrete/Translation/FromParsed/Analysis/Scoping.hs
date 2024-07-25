@@ -170,6 +170,7 @@ checkProjectionDef p = do
         _projectionConstructor = p ^. projectionConstructor,
         _projectionFieldBuiltin = p ^. projectionFieldBuiltin,
         _projectionPragmas = p ^. projectionPragmas,
+        _projectionKind = p ^. projectionKind,
         _projectionField,
         _projectionDoc
       }
@@ -1643,10 +1644,16 @@ checkSections sec = topBindings helper
                                 { _projectionConstructor = headConstr,
                                   _projectionField = field ^. fieldName,
                                   _projectionFieldIx = idx,
+                                  _projectionKind = kind,
                                   _projectionFieldBuiltin = field ^. fieldBuiltin,
                                   _projectionDoc = field ^. fieldDoc,
                                   _projectionPragmas = field ^. fieldPragmas
                                 }
+                              where
+                                kind :: ProjectionKind
+                                kind = case field ^. fieldIsImplicit of
+                                  ExplicitField -> ProjectionExplicit
+                                  ImplicitInstanceField -> ProjectionCoercion
 
                             getFields :: Sem (Fail ': s') [RecordStatement 'Parsed]
                             getFields = case i ^. inductiveConstructors of

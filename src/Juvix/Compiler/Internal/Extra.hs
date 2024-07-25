@@ -104,13 +104,14 @@ mkConstructorVarPattern impl c vars =
 genFieldProjection ::
   forall r.
   (Members '[NameIdGen] r) =>
+  ProjectionKind ->
   FunctionName ->
   Maybe BuiltinFunction ->
   Maybe Pragmas ->
   ConstructorInfo ->
   Int ->
   Sem r FunctionDef
-genFieldProjection _funDefName _funDefBuiltin mpragmas info fieldIx = do
+genFieldProjection kind _funDefName _funDefBuiltin mpragmas info fieldIx = do
   body' <- genBody
   let (inductiveParams, constrArgs) = constructorArgTypes info
       saturatedTy :: FunctionParameter = unnamedParameter' constructorImplicity (constructorReturnType info)
@@ -121,7 +122,7 @@ genFieldProjection _funDefName _funDefBuiltin mpragmas info fieldIx = do
     FunctionDef
       { _funDefTerminating = False,
         _funDefInstance = False,
-        _funDefCoercion = False,
+        _funDefCoercion = kind == ProjectionCoercion,
         _funDefArgsInfo = mempty,
         _funDefPragmas =
           maybe
