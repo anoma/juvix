@@ -36,6 +36,7 @@ data BuiltinOp
   | OpPoseidonHash
   | OpEc
   | OpRandomEcPoint
+  | OpUInt8FromInt
   deriving stock (Eq, Generic)
 
 instance Serialize BuiltinOp
@@ -90,6 +91,7 @@ builtinOpArgsNum = \case
   OpPoseidonHash -> 1
   OpEc -> 3
   OpRandomEcPoint -> 0
+  OpUInt8FromInt -> 1
 
 builtinConstrArgsNum :: BuiltinDataTag -> Int
 builtinConstrArgsNum = \case
@@ -133,6 +135,7 @@ builtinIsFoldable = \case
   OpPoseidonHash -> False
   OpEc -> False
   OpRandomEcPoint -> False
+  OpUInt8FromInt -> True
 
 builtinIsCairo :: BuiltinOp -> Bool
 builtinIsCairo op = op `elem` builtinsCairo
@@ -156,3 +159,6 @@ builtinsAnoma =
     OpAnomaVerifyWithMessage,
     OpAnomaSignDetached
   ]
+
+builtinsUInt8 :: [BuiltinOp]
+builtinsUInt8 = [OpUInt8FromInt]

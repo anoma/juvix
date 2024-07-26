@@ -1,0 +1,13 @@
+module test081;
+
+import Stdlib.Data.Nat open hiding {fromNat};
+import Stdlib.Debug.Trace open;
+import Stdlib.Function open using {>->};
+
+builtin uint8
+axiom UInt8 : Type;
+
+builtin uint8-from-nat
+axiom fromNat : Nat -> UInt8;
+
+main : UInt8 := trace (fromNat 0xff) >-> fromNat 0x100;

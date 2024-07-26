@@ -440,6 +440,7 @@ compile = \case
       Tree.ConstUnit -> OpQuote # constUnit
       Tree.ConstVoid -> OpQuote # constVoid
       Tree.ConstField {} -> fieldErr
+      Tree.ConstUInt8 i -> nockIntegralLiteral i
 
     goConstString :: Text -> Term Natural
     goConstString t =
@@ -508,6 +509,10 @@ compile = \case
          in sub (getF ClosureTotalArgsNum) (getF ClosureArgsNum)
       Tree.OpIntToField -> fieldErr
       Tree.OpFieldToInt -> fieldErr
+      Tree.OpIntToUInt8 -> callStdlib StdlibMod [arg, nockIntegralLiteral @Natural (2 ^ uint8Size)]
+        where
+          uint8Size :: Natural
+          uint8Size = 8
 
     goAnomaGet :: [Term Natural] -> Sem r (Term Natural)
     goAnomaGet key = do

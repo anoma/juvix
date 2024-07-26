@@ -62,6 +62,7 @@ instance PrettyCode BuiltinOp where
     OpPoseidonHash -> return primPoseidonHash
     OpEc -> return primEc
     OpRandomEcPoint -> return primRandomEcPoint
+    OpUInt8FromInt -> return primFieldFromInt
 
 instance PrettyCode BuiltinDataTag where
   ppCode = \case
@@ -107,6 +108,8 @@ instance PrettyCode ConstantValue where
       return $ annotate AnnLiteralInteger (pretty int)
     ConstField fld ->
       return $ annotate AnnLiteralInteger (pretty fld)
+    ConstUInt8 i ->
+      return $ annotate AnnLiteralInteger (pretty i)
     ConstString txt ->
       return $ annotate AnnLiteralString (pretty (show txt :: String))
 
@@ -114,6 +117,8 @@ instance PrettyCode (Constant' i) where
   ppCode Constant {..} = case _constantValue of
     ConstField fld ->
       return $ annotate AnnLiteralInteger (pretty fld <> "F")
+    ConstUInt8 i ->
+      return $ annotate AnnLiteralInteger (pretty i <> "u8")
     _ -> ppCode _constantValue
 
 instance (PrettyCode a, HasAtomicity a) => PrettyCode (App' i a) where
@@ -731,6 +736,9 @@ primFieldDiv = primitive Str.fdiv
 
 primFieldFromInt :: Doc Ann
 primFieldFromInt = primitive Str.itof
+
+primUInt8FromInt :: Doc Ann
+primUInt8FromInt = primitive Str.itou8
 
 primFieldToInt :: Doc Ann
 primFieldToInt = primitive Str.ftoi

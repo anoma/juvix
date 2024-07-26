@@ -594,5 +594,14 @@ allTests =
             [nock| 2 |],
             [nock| 3 |],
             [nock| nil |]
+          ],
+      mkAnomaCallTest
+        "Test081: UInt8"
+        $(mkRelDir ".")
+        $(mkRelFile "test081.juvix")
+        []
+        $ checkOutput
+          [ [nock| 255 |],
+            [nock| 0 |]
           ]
     ]

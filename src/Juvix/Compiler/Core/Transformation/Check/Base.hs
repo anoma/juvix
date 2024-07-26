@@ -53,6 +53,8 @@ checkBuiltins allowUntypedFail = dmapRM go
       NPrim TypePrim {..}
         | _typePrimPrimitive == PrimString ->
             throw $ unsupportedError "strings" node (getInfoLocation _typePrimInfo)
+        | _typePrimPrimitive == primitiveUInt8 ->
+            throw $ unsupportedError "uint8" node (getInfoLocation _typePrimInfo)
       NBlt BuiltinApp {..} ->
         case _builtinAppOp of
           OpTrace -> throw $ unsupportedError "tracing" node (getInfoLocation _builtinAppInfo)
@@ -71,6 +73,8 @@ checkBuiltins allowUntypedFail = dmapRM go
                 throw $ unsupportedError "cairo" node (getInfoLocation _builtinAppInfo)
             | _builtinAppOp `elem` builtinsAnoma ->
                 throw $ unsupportedError "anoma" node (getInfoLocation _builtinAppInfo)
+            | _builtinAppOp `elem` builtinsUInt8 ->
+                throw $ unsupportedError "uint8" node (getInfoLocation _builtinAppInfo)
             | otherwise ->
                 return $ Recur node
       _ -> return $ Recur node

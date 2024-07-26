@@ -18,6 +18,7 @@ data Constant
   | ConstField FField
   | ConstUnit
   | ConstVoid
+  | ConstUInt8 Word8
   deriving stock (Eq, Generic)
 
 instance (Hashable Constant)

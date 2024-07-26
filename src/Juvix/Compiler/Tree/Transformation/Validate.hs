@@ -82,6 +82,7 @@ inferType tab funInfo = goInfer mempty
           OpArgsNum -> checkUnop TyDynamic mkTypeInteger
           OpIntToField -> checkUnop mkTypeInteger TyField
           OpFieldToInt -> checkUnop TyField mkTypeInteger
+          OpIntToUInt8 -> checkUnop mkTypeInteger mkTypeUInt8
 
     goCairo :: BinderList Type -> NodeCairo -> Sem r Type
     goCairo bl NodeCairo {..} = do
@@ -101,6 +102,7 @@ inferType tab funInfo = goInfer mempty
       ConstField {} -> return TyField
       ConstUnit {} -> return TyUnit
       ConstVoid {} -> return TyVoid
+      ConstUInt8 {} -> return mkTypeUInt8
 
     goMemRef :: BinderList Type -> NodeMemRef -> Sem r Type
     goMemRef bl NodeMemRef {..} = case _nodeMemRef of

@@ -85,6 +85,8 @@ genCode infoTable fi =
         mkConst (ConstString s)
       Core.Constant _ (Core.ConstField fld) ->
         mkConst (ConstField fld)
+      Core.Constant _ (Core.ConstUInt8 i) ->
+        mkConst (ConstUInt8 i)
 
     goApps :: Int -> BinderList MemRef -> Core.Apps -> Node
     goApps tempSize refs Core.Apps {..} =
@@ -302,6 +304,7 @@ genCode infoTable fi =
       Core.OpFieldToInt -> PrimUnop OpFieldToInt
       Core.OpTrace -> OpTrace
       Core.OpFail -> OpFail
+      Core.OpUInt8FromInt -> PrimUnop OpIntToUInt8
       _ -> impossible
 
     genCairoOp :: Core.BuiltinOp -> CairoOp

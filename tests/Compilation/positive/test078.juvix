@@ -1,0 +1,52 @@
+module test078;
+
+import Stdlib.Data.Nat open hiding {fromNat};
+import Stdlib.Debug.Trace open;
+import Stdlib.Function open using {>->};
+import Stdlib.Data.List open;
+import Stdlib.Trait.FromNatural open;
+
+builtin uint8
+axiom UInt8 : Type;
+
+builtin uint8-from-nat
+axiom fromNat : Nat -> UInt8;
+
+builtin uint8-to-nat
+axiom toNat : UInt8 -> Nat;
+
+instance
+UInt8FromNaturalI : FromNatural UInt8 :=
+  mkFromNatural@{
+    fromNat
+  };
+
+n1 : UInt8 := fromNat 1;
+
+n2 : UInt8 := fromNat 0xff;
+
+n3 : UInt8 := fromNat 0x101;
+
+l1 : UInt8 := 1;
+
+l2 : UInt8 := 0xee;
+
+l3 : UInt8 := 0x101;
+
+xs : List UInt8 := [l1; l2; l3; 2];
+
+main : List UInt8 :=
+  trace n1
+    >-> trace n2
+    >-> trace n3
+    >-> trace l1
+    >-> trace l2
+    >-> trace l3
+    >-> trace (toNat n1)
+    >-> trace (toNat n2)
+    >-> trace (toNat n3)
+    >-> trace (toNat l1)
+    >-> trace (toNat l2)
+    >-> trace (toNat l3)
+    >-> trace (toNat 0xf0)
+    >-> xs;

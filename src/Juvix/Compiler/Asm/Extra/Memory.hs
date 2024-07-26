@@ -109,6 +109,7 @@ getConstantType = \case
   ConstString {} -> TyString
   ConstUnit -> TyUnit
   ConstVoid -> TyVoid
+  ConstUInt8 {} -> mkTypeUInt8
 
 getValueType' :: (Member (Error AsmError) r) => Maybe Location -> InfoTable -> Memory -> Value -> Sem r Type
 getValueType' loc tab mem = \case

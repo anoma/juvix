@@ -231,6 +231,7 @@ valueToNode = \case
           _nodeAllocClosureFunSymbol = _closureSymbol,
           _nodeAllocClosureArgs = map valueToNode _closureArgs
         }
+  ValUInt8 i -> mkConst $ ConstUInt8 i
 
 hEvalIO :: (MonadIO m) => Handle -> Handle -> InfoTable -> FunctionInfo -> m Value
 hEvalIO hin hout infoTable funInfo = do

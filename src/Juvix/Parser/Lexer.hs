@@ -166,6 +166,12 @@ field' = do
   P.chunk "F"
   return d
 
+uint8' :: ParsecS r Integer
+uint8' = do
+  d <- L.decimal
+  P.chunk "u8"
+  return d
+
 -- | The caller is responsible of consuming space after it.
 delim' :: Text -> ParsecS r Interval
 delim' d = P.label (unpack d) . fmap snd . interval $ chunk d

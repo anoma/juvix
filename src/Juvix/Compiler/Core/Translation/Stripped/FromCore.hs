@@ -108,6 +108,8 @@ fromCore fsize tab =
         BuiltinPoseidon -> False
         BuiltinEcOp -> False
         BuiltinRandomEcPoint -> False
+        BuiltinUInt8 -> False
+        BuiltinUInt8FromNat -> False
       BuiltinTypeInductive i -> case i of
         BuiltinList -> True
         BuiltinMaybe -> True

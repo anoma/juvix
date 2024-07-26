@@ -23,6 +23,7 @@ data Value
   | ValVoid
   | ValConstr Constr
   | ValClosure Closure
+  | ValUInt8 Word8
   deriving stock (Eq)
 
 data Constr = Constr
@@ -60,3 +61,4 @@ instance HasAtomicity Value where
     ValVoid -> Atom
     ValConstr c -> atomicity c
     ValClosure cl -> atomicity cl
+    ValUInt8 {} -> Atom

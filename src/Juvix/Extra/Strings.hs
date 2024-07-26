@@ -173,6 +173,12 @@ error = "error"
 string :: (IsString s) => s
 string = "string"
 
+uint8 :: (IsString s) => s
+uint8 = "uint8"
+
+uint8FromNat :: (IsString s) => s
+uint8FromNat = "uint8-from-nat"
+
 nat :: (IsString s) => s
 nat = "nat"
 
@@ -388,6 +394,9 @@ ftoi = "ftoi"
 
 itof :: (IsString s) => s
 itof = "itof"
+
+itou8 :: (IsString s) => s
+itou8 = "itou8"
 
 delimiter :: (IsString s) => s
 delimiter = "delimiter"
@@ -769,6 +778,9 @@ instrFieldToInt = "ftoi"
 
 instrIntToField :: (IsString s) => s
 instrIntToField = "itof"
+
+instrIntToUInt8 :: (IsString s) => s
+instrIntToUInt8 = "itou8"
 
 instrShow :: (IsString s) => s
 instrShow = "show"

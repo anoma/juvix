@@ -63,6 +63,7 @@ evalUnop tab op v = case op of
   OpFieldToInt -> goFieldToInt v
   OpIntToField -> goIntToField v
   OpArgsNum -> goArgsNum v
+  OpIntToUInt8 -> goIntToUInt8 v
   where
     strToInt :: Text -> Either ErrorMsg Value
     strToInt s = case T.readMaybe (fromText s) of
@@ -100,6 +101,13 @@ evalUnop tab op v = case op of
       _ ->
         Left "expected an integer"
 
+    goIntToUInt8 :: Value -> Either ErrorMsg Value
+    goIntToUInt8 = \case
+      ValInteger i ->
+        Right $ ValUInt8 $ fromIntegral i
+      _ ->
+        Left "expected an integer"
+
 printValue :: InfoTable' t e -> Value -> Text
 printValue tab = \case
   ValString s -> s
@@ -113,6 +121,7 @@ constantToValue = \case
   ConstString s -> ValString s
   ConstUnit -> ValUnit
   ConstVoid -> ValVoid
+  ConstUInt8 i -> ValUInt8 i
 
 valueToConstant :: Value -> Constant
 valueToConstant = \case

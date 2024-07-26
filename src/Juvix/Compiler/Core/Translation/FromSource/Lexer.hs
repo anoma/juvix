@@ -30,6 +30,9 @@ kw = void . lexeme . kw'
 field :: ParsecS r (Integer, Interval)
 field = lexemeInterval field'
 
+uint8 :: ParsecS r (Integer, Interval)
+uint8 = lexemeInterval uint8'
+
 integer :: ParsecS r (WithLoc Integer)
 integer = lexeme integer'
 
