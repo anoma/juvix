@@ -25,22 +25,24 @@ data LatexColor
   | JuJudoc
   | JuModule
 
-genSourceLatex :: forall m. (MonadIO m) => Module 'Scoped 'ModuleTop -> m ()
-genSourceLatex = putStrLn . genModuleText
+genSourceLatex :: forall m. (MonadIO m) => Comments -> Module 'Scoped 'ModuleTop -> m ()
+genSourceLatex c = putStrLn . genModuleText c
 
 genModuleText ::
+  Comments ->
   Module 'Scoped 'ModuleTop ->
   Text
-genModuleText = toStrict . Builder.toLazyText . genModuleLatex
+genModuleText c = toStrict . Builder.toLazyText . genModuleLatex c
 
 genModuleLatex ::
+  Comments ->
   Module 'Scoped 'ModuleTop ->
   TextBuilder
-genModuleLatex =
+genModuleLatex c =
   renderTree
     . treeForm
     . layoutPretty defaultLayoutOptions
-    . docNoComments defaultOptions
+    . doc defaultOptions c
 
 renderTree :: SimpleDocTree Ann -> TextBuilder
 renderTree = go

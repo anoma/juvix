@@ -14,4 +14,5 @@ runCommand :: (Members AppEffects r) => LatexOptions -> Sem r ()
 runCommand LatexOptions {..} = do
   res :: Scoper.ScoperResult <- silenceProgressLog (runPipelineNoOptions (Just _latexInputFile) upToScopingEntry)
   let m :: Module 'Scoped 'ModuleTop = res ^. Scoper.resultModule
-  genSourceLatex m
+      c :: Comments = Scoper.getScoperResultComments res
+  genSourceLatex c m
