@@ -47,12 +47,22 @@ renderTree = go
 go :: SimpleDocTree Ann -> TextBuilder
 go sdt = case sdt of
   STEmpty -> mempty
-  STChar c -> Builder.singleton c
-  STText _ (t :: Text) -> Builder.fromText t
+  STChar c -> Builder.fromText (escapeCharacter c)
+  STText _ (t :: Text) -> Builder.fromText (escape t)
   STLine n -> ("\n" <> textSpaces n)
   STAnn ann content -> putTag ann (go content)
   STConcat l -> mconcatMap go l
   where
+    escapeCharacter :: Char -> Text
+    escapeCharacter = \case
+      '\\' -> "\\\\"
+      '{' -> "\\{"
+      '}' -> "\\}"
+      c -> Text.singleton c
+
+    escape :: Text -> Text
+    escape = Text.concatMap escapeCharacter
+
     textSpaces :: Int -> TextBuilder
     textSpaces n = fromText (Text.replicate n (Text.singleton ' '))
 
