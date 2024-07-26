@@ -82,7 +82,7 @@ genConstructorPattern' ::
 genConstructorPattern' traitImplicity loc concstrName cargs = do
   vars :: [(IsImplicit, VarName)] <- runStreamOf allWords . forM cargs $ \p -> do
     varTxt <- maybe yield return (p ^? paramName . _Just . nameText)
-    var <- freshVar loc ("fieldProjectionVar_" <> varTxt)
+    var <- freshVar loc varTxt
     return (p ^. paramImplicit, var)
   return (mkConstructorVarPattern traitImplicity concstrName vars, snd <$> vars)
 
