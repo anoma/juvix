@@ -23,6 +23,7 @@ data LatexColor
   | JuNumber
   | JuComment
   | JuJudoc
+  | JuModule
 
 genSourceLatex :: forall m. (MonadIO m) => Module 'Scoped 'ModuleTop -> m ()
 genSourceLatex = putStrLn . genModuleText
@@ -83,6 +84,7 @@ juColor c txt = "\\textcolor{" <> toStr c <> "}{" <> txt <> "}"
       JuFixity -> "ju-fixity"
       JuVar -> "ju-var"
       JuNumber -> "ju-number"
+      JuModule -> "ju-module"
 
 juKindColor :: S.NameKind -> LatexColor
 juKindColor = \case
@@ -91,9 +93,9 @@ juKindColor = \case
   S.KNameFunction -> JuFunction
   S.KNameLocal -> JuVar
   S.KNameAxiom -> JuAxiom
-  S.KNameLocalModule -> JuVar
+  S.KNameLocalModule -> JuModule
   S.KNameAlias -> JuVar
-  S.KNameTopModule -> JuVar
+  S.KNameTopModule -> JuModule
   S.KNameFixity -> JuFixity
 
 putTag :: Ann -> TextBuilder -> TextBuilder
