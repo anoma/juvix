@@ -18,6 +18,9 @@ assetsDir = map (first relFile) $(assetsDirQ)
 cssDir :: [(Path Rel File, ByteString)]
 cssDir = map (first relFile) $(cssDirQ)
 
+juvixSty :: ByteString
+juvixSty = $(juvixStyQ)
+
 jsDir :: [(Path Rel File, ByteString)]
 jsDir = map (first relFile) $(jsDirQ)
 
