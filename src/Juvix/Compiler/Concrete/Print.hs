@@ -15,10 +15,10 @@ ppOutDefaultNoComments :: (PrettyPrint c) => c -> AnsiText
 ppOutDefaultNoComments = mkAnsiText . PPOutput . docNoComments defaultOptions
 
 ppOutDefault :: (HasLoc c, PrettyPrint c) => Comments -> c -> AnsiText
-ppOutDefault cs = mkAnsiText . PPOutput . docDefault cs
+ppOutDefault cs = mkAnsiText . PPOutput . docDefault (Just cs)
 
 ppOut :: (CanonicalProjection a Options, PrettyPrint c, HasLoc c) => a -> Comments -> c -> AnsiText
-ppOut o cs = mkAnsiText . PPOutput . doc (project o) cs
+ppOut o cs = mkAnsiText . PPOutput . doc (project o) (Just cs)
 
 ppOutNoComments :: (CanonicalProjection a Options, PrettyPrint c) => a -> c -> AnsiText
 ppOutNoComments o = mkAnsiText . PPOutput . docNoLoc (project o)

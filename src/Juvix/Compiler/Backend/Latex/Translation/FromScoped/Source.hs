@@ -25,17 +25,22 @@ data LatexColor
   | JuJudoc
   | JuModule
 
-genSourceLatex :: forall m. (MonadIO m) => Comments -> Module 'Scoped 'ModuleTop -> m ()
+genSourceLatex ::
+  forall m.
+  (MonadIO m) =>
+  Maybe Comments ->
+  Module 'Scoped 'ModuleTop ->
+  m ()
 genSourceLatex c = putStrLn . genModuleText c
 
 genModuleText ::
-  Comments ->
+  Maybe Comments ->
   Module 'Scoped 'ModuleTop ->
   Text
 genModuleText c = toStrict . Builder.toLazyText . genModuleLatex c
 
 genModuleLatex ::
-  Comments ->
+  Maybe Comments ->
   Module 'Scoped 'ModuleTop ->
   TextBuilder
 genModuleLatex c =
