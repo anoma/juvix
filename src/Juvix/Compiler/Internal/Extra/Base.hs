@@ -367,10 +367,10 @@ foldFunType l r = go l
 foldFunTypeExplicit :: [Expression] -> Expression -> Expression
 foldFunTypeExplicit = foldFunType . map unnamedParameter
 
-viewConstructorType :: Expression -> ([Expression], Expression)
-viewConstructorType = first (map (^. paramType)) . unfoldFunType
+viewConstructorType :: Expression -> ([FunctionParameter], Expression)
+viewConstructorType = unfoldFunType
 
-constructorArgs :: Expression -> [Expression]
+constructorArgs :: Expression -> [FunctionParameter]
 constructorArgs = fst . viewConstructorType
 
 unfoldLambdaClauses :: Expression -> Maybe (NonEmpty (NonEmpty PatternArg, Expression))

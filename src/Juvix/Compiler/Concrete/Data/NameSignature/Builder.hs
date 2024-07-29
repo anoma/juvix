@@ -10,7 +10,6 @@ module Juvix.Compiler.Concrete.Data.NameSignature.Builder
   )
 where
 
-import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Concrete.Data.NameSignature.Error
 import Juvix.Compiler.Concrete.Extra (symbolParsed)
 import Juvix.Compiler.Concrete.Gen qualified as Gen
@@ -215,6 +214,7 @@ addSymbol' impl mdef sym ty = do
             NameItem
               { _nameItemDefault = mdef,
                 _nameItemSymbol = sym,
+                _nameItemImplicit = impl,
                 _nameItemIndex = idx,
                 _nameItemType = ty
               }
@@ -241,10 +241,16 @@ endBuild' = get @(BuilderState s) >>= throw
 mkRecordNameSignature :: forall s. (SingI s) => RhsRecord s -> RecordNameSignature s
 mkRecordNameSignature rhs =
   RecordNameSignature $
-    HashMap.fromList
-      [ (symbolParsed _nameItemSymbol, NameItem {..})
+    hashMap
+      [ ( symbolParsed _nameItemSymbol,
+          NameItem
+            { _nameItemSymbol,
+              _nameItemIndex,
+              _nameItemType = field ^. fieldType,
+              _nameItemImplicit = fromIsImplicitField (field ^. fieldIsImplicit),
+              _nameItemDefault = Nothing
+            }
+        )
         | (Indexed _nameItemIndex field) <- indexFrom 0 (toList (rhs ^.. rhsRecordStatements . each . _RecordStatementField)),
           let _nameItemSymbol :: SymbolType s = field ^. fieldName
-              _nameItemType = field ^. fieldType
-              _nameItemDefault :: Maybe (ArgDefault s) = Nothing
       ]

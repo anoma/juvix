@@ -170,6 +170,7 @@ checkProjectionDef p = do
         _projectionConstructor = p ^. projectionConstructor,
         _projectionFieldBuiltin = p ^. projectionFieldBuiltin,
         _projectionPragmas = p ^. projectionPragmas,
+        _projectionKind = p ^. projectionKind,
         _projectionField,
         _projectionDoc
       }
@@ -1643,10 +1644,16 @@ checkSections sec = topBindings helper
                                 { _projectionConstructor = headConstr,
                                   _projectionField = field ^. fieldName,
                                   _projectionFieldIx = idx,
+                                  _projectionKind = kind,
                                   _projectionFieldBuiltin = field ^. fieldBuiltin,
                                   _projectionDoc = field ^. fieldDoc,
                                   _projectionPragmas = field ^. fieldPragmas
                                 }
+                              where
+                                kind :: ProjectionKind
+                                kind = case field ^. fieldIsImplicit of
+                                  ExplicitField -> ProjectionExplicit
+                                  ImplicitInstanceField -> ProjectionCoercion
 
                             getFields :: Sem (Fail ': s') [RecordStatement 'Parsed]
                             getFields = case i ^. inductiveConstructors of
@@ -2665,8 +2672,8 @@ checkRecordUpdate RecordUpdate {..} = do
   tyName' <- getNameOfKind KNameInductive _recordUpdateTypeName
   info <- getRecordInfo tyName'
   let sig = info ^. recordInfoSignature
-  (vars', fields') <- withLocalScope $ do
-    vs <- mapM bindVariableSymbol (toList (recordNameSignatureByIndex sig))
+  (vars' :: IntMap (IsImplicit, S.Symbol), fields') <- withLocalScope $ do
+    vs <- mapM bindRecordUpdateVariable (recordNameSignatureByIndex sig)
     fs <- mapM (checkUpdateField sig) _recordUpdateFields
     return (vs, fs)
   let extra' =
@@ -2682,6 +2689,11 @@ checkRecordUpdate RecordUpdate {..} = do
         _recordUpdateAtKw,
         _recordUpdateDelims
       }
+  where
+    bindRecordUpdateVariable :: NameItem 'Parsed -> Sem r (IsImplicit, S.Symbol)
+    bindRecordUpdateVariable NameItem {..} = do
+      v <- bindVariableSymbol _nameItemSymbol
+      return (_nameItemImplicit, v)
 
 checkUpdateField ::
   (Members '[HighlightBuilder, Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader Package] r) =>

@@ -12,7 +12,6 @@ module Juvix.Compiler.Concrete.Extra
   )
 where
 
-import Data.IntMap.Strict qualified as IntMap
 import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
@@ -93,11 +92,8 @@ flattenStatement = \case
   StatementModule m -> concatMap flattenStatement (m ^. moduleBody)
   s -> [s]
 
-recordNameSignatureByIndex :: forall s. (SingI s) => RecordNameSignature s -> IntMap Symbol
-recordNameSignatureByIndex = IntMap.fromList . (^.. recordNames . each . to mkAssoc)
-  where
-    mkAssoc :: NameItem s -> (Int, Symbol)
-    mkAssoc NameItem {..} = (_nameItemIndex, symbolParsed _nameItemSymbol)
+recordNameSignatureByIndex :: RecordNameSignature s -> IntMap (NameItem s)
+recordNameSignatureByIndex = indexedByInt (^. nameItemIndex) . (^. recordNames)
 
 getExpressionAtomIden :: ExpressionAtom 'Scoped -> Maybe S.Name
 getExpressionAtomIden = \case

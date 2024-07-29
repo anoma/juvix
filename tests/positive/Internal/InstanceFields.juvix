@@ -1,0 +1,28 @@
+module InstanceFields;
+
+trait
+type Functor (f : Type -> Type) :=
+  mkFunctor {
+    map : {A B : Type} -> (A -> B) -> f A -> f B
+  };
+
+trait
+type Applicative (f : Type -> Type) :=
+  mkApplicative {
+    {{ApplicativeFunctor}} : Functor f;
+    pure : {A : Type} -> A -> f A;
+    ap : {A B : Type} -> f (A -> B) -> f A -> f B
+  };
+
+trait
+type Monad (f : Type -> Type) :=
+  mkMonad {
+    {{MonadApplicative}} : Applicative f;
+    bind : {A B : Type} -> f A -> (A -> f B) -> f B
+  };
+
+open Functor;
+open Applicative;
+open Monad;
+
+monadMap {A B} {f : Type -> Type} {{Monad f}} (g : A -> B) (x : f A) : f B := map g x;

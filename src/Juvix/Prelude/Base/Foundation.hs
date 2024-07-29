@@ -672,11 +672,17 @@ popFirstJust f = \case
 uncurryF :: (Functor f) => (a -> b -> c) -> f (a, b) -> f c
 uncurryF g input_ = uncurry g <$> input_
 
+intMapToList :: IntMap a -> [Indexed a]
+intMapToList = map (uncurry Indexed) . IntMap.toList
+
+intMap :: (Foldable f) => f (Int, a) -> IntMap a
+intMap = IntMap.fromList . toList
+
 indexedByInt :: (Foldable f) => (a -> Int) -> f a -> IntMap a
-indexedByInt getIx l = IntMap.fromList [(getIx i, i) | i <- toList l]
+indexedByInt getIx l = intMap [(getIx i, i) | i <- toList l]
 
 indexedByHash :: (Foldable f, Hashable k) => (a -> k) -> f a -> HashMap k a
-indexedByHash getIx l = HashMap.fromList [(getIx i, i) | i <- toList l]
+indexedByHash getIx l = hashMap [(getIx i, i) | i <- toList l]
 
 ordSet :: (Foldable f, Ord k) => f k -> Set k
 ordSet = Set.fromList . toList

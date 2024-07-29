@@ -1298,10 +1298,14 @@ instance (SingI s) => PrettyPrint (RecordField s) where
     let doc' = ppCode <$> _fieldDoc
         pragmas' = ppCode <$> _fieldPragmas
         builtin' = (<> line) . ppCode <$> _fieldBuiltin
+        mayBraces :: forall r'. (Members '[ExactPrint] r') => Sem r' () -> Sem r' ()
+        mayBraces = case _fieldIsImplicit of
+          ExplicitField -> id
+          ImplicitInstanceField -> doubleBraces
     doc'
       ?<> pragmas'
       ?<> builtin'
-      ?<> ppSymbolType _fieldName
+      ?<> mayBraces (ppSymbolType _fieldName)
       <+> ppCode _fieldColon
       <+> ppExpressionType _fieldType
 

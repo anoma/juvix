@@ -353,7 +353,16 @@ goProjectionDef ::
 goProjectionDef ProjectionDef {..} = do
   let c = goSymbol _projectionConstructor
   info <- gets (^?! constructorInfos . at c . _Just)
-  fun <- Internal.genFieldProjection (goSymbol _projectionField) ((^. withLocParam) <$> _projectionFieldBuiltin) (fmap (^. withLocParam . withSourceValue) _projectionPragmas) info _projectionFieldIx
+  fun <-
+    Internal.genFieldProjection
+      _projectionKind
+      (goSymbol _projectionField)
+      ( (^. withLocParam)
+          <$> _projectionFieldBuiltin
+      )
+      (fmap (^. withLocParam . withSourceValue) _projectionPragmas)
+      info
+      _projectionFieldIx
   whenJust (fun ^. Internal.funDefBuiltin) (registerBuiltinFunction fun)
   return fun
 
@@ -660,7 +669,7 @@ goConstructorDef retTy ConstructorDef {..} = do
               Just
                 Internal.FunctionParameter
                   { _paramName = Just (goSymbol _fieldName),
-                    _paramImplicit = Explicit,
+                    _paramImplicit = fromIsImplicitField _fieldIsImplicit,
                     _paramType = ty'
                   }
 
@@ -911,22 +920,30 @@ goExpression = \case
                 repeated :: ScoperError
                 repeated = ErrRepeatedField (RepeatedField (f ^. fieldUpdateName))
 
-        mkArgs :: [Indexed Internal.VarName] -> Sem r [Internal.Expression]
+        mkArgs :: IntMap (IsImplicit, Internal.VarName) -> Sem r [Internal.ApplicationArg]
         mkArgs vs = do
           fieldMap <- mkFieldmap
           execOutputList $
-            go (uncurry Indexed <$> IntMap.toAscList fieldMap) vs
+            go (uncurry Indexed <$> IntMap.toAscList fieldMap) (intMapToList vs)
           where
-            go :: [Indexed (RecordUpdateField 'Scoped)] -> [Indexed Internal.VarName] -> Sem (Output Internal.Expression ': r) ()
+            go :: [Indexed (RecordUpdateField 'Scoped)] -> [Indexed (IsImplicit, Internal.VarName)] -> Sem (Output Internal.ApplicationArg ': r) ()
             go fields = \case
               [] -> return ()
-              Indexed idx var : vars' -> case getArg idx of
+              Indexed idx (impl, var) : vars' -> case getArg idx of
                 Nothing -> do
-                  output (Internal.toExpression var)
+                  output
+                    Internal.ApplicationArg
+                      { _appArg = Internal.toExpression var,
+                        _appArgIsImplicit = impl
+                      }
                   go fields vars'
                 Just (arg, fields') -> do
                   val' <- goExpression (arg ^. fieldUpdateValue)
-                  output val'
+                  output
+                    Internal.ApplicationArg
+                      { _appArg = val',
+                        _appArgIsImplicit = impl
+                      }
                   go fields' vars'
               where
                 getArg :: Int -> Maybe (RecordUpdateField 'Scoped, [Indexed (RecordUpdateField 'Scoped)])
@@ -939,13 +956,13 @@ goExpression = \case
         mkClause = do
           let extra = r ^. recordUpdateExtra . unIrrelevant
               constr = goSymbol (extra ^. recordUpdateExtraConstructor)
-              vars = map goSymbol (extra ^. recordUpdateExtraVars)
-              patArg = Internal.mkConstructorVarPattern Explicit constr vars
-          args <- mkArgs (indexFrom 0 vars)
+              vars :: IntMap (IsImplicit, Internal.Name) = second goSymbol <$> extra ^. recordUpdateExtraVars
+              patArg = Internal.mkConstructorVarPattern Explicit constr (toList vars)
+          args <- mkArgs vars
           return
             Internal.LambdaClause
               { _lambdaPatterns = pure patArg,
-                _lambdaBody = Internal.foldExplicitApplication (Internal.toExpression constr) args
+                _lambdaBody = Internal.foldApplication (Internal.toExpression constr) args
               }
 
     goRecordUpdateApp :: Concrete.RecordUpdateApp -> Sem r Internal.Expression

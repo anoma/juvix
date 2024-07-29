@@ -1409,11 +1409,26 @@ axiomDef _axiomBuiltin = do
 -- Function expression
 --------------------------------------------------------------------------------
 
+implicitOpenField ::
+  (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) =>
+  ParsecS r (KeywordRef, IsImplicitField)
+implicitOpenField =
+  (,ImplicitInstanceField) <$> kw delimDoubleBraceL
+    <|> (,ExplicitField) <$> kw delimParenL
+
 implicitOpen :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (KeywordRef, IsImplicit)
 implicitOpen =
   (,ImplicitInstance) <$> kw delimDoubleBraceL
     <|> (,Implicit) <$> kw delimBraceL
     <|> (,Explicit) <$> kw delimParenL
+
+implicitCloseField ::
+  (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) =>
+  IsImplicitField ->
+  ParsecS r KeywordRef
+implicitCloseField = \case
+  ExplicitField -> kw delimParenR
+  ImplicitInstanceField -> kw delimDoubleBraceR
 
 implicitClose :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => IsImplicit -> ParsecS r KeywordRef
 implicitClose = \case
@@ -1529,7 +1544,10 @@ recordField = do
   _fieldDoc <- optional stashJudoc >> getJudoc
   _fieldPragmas <- optional stashPragmas >> getPragmas
   _fieldBuiltin <- optional builtinRecordField
+  mayImpl <- optional (snd <$> implicitOpenField)
   _fieldName <- symbol
+  whenJust mayImpl (void . implicitCloseField)
+  let _fieldIsImplicit = fromMaybe ExplicitField mayImpl
   _fieldColon <- Irrelevant <$> kw kwColon
   _fieldType <- parseExpressionAtoms
   return RecordField {..}

@@ -865,7 +865,7 @@ checkPattern = go
           (_, psTys) <- constructorArgTypes <$> lookupConstructor c
           psTys' <- mapM (substituteIndParams ctx) psTys
           let expectedNum = length psTys
-              w = map unnamedParameter psTys'
+              w :: [FunctionParameter] = psTys'
           when (expectedNum /= length ps) (throw (appErr app expectedNum))
           pis <- zipWithM go w ps
           let appTy = foldExplicitApplication (ExpressionIden inductivename) (map snd ctx)
@@ -873,14 +873,12 @@ checkPattern = go
 
         appErr :: ConstructorApp -> Int -> TypeCheckerError
         appErr app expected =
-          ErrArityCheckerError
-            ( ErrWrongConstructorAppLength
-                ( WrongConstructorAppLength
-                    { _wrongConstructorAppLength = app,
-                      _wrongConstructorAppLengthExpected = expected
-                    }
-                )
-            )
+          ErrArityCheckerError $
+            ErrWrongConstructorAppLength
+              WrongConstructorAppLength
+                { _wrongConstructorAppLength = app,
+                  _wrongConstructorAppLengthExpected = expected
+                }
 
     checkSaturatedInductive :: Expression -> Sem r (Either Hole (InductiveName, [(InductiveParameter, Expression)]))
     checkSaturatedInductive ty = do

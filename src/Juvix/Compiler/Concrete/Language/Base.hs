@@ -158,6 +158,7 @@ type ParsedPragmas = WithLoc (WithSource Pragmas)
 data NameItem (s :: Stage) = NameItem
   { _nameItemSymbol :: SymbolType s,
     _nameItemIndex :: Int,
+    _nameItemImplicit :: IsImplicit,
     _nameItemType :: ExpressionType s,
     _nameItemDefault :: Maybe (ArgDefault s)
   }
@@ -304,6 +305,7 @@ deriving stock instance Ord (Statement 'Scoped)
 data ProjectionDef s = ProjectionDef
   { _projectionConstructor :: S.Symbol,
     _projectionField :: SymbolType s,
+    _projectionKind :: ProjectionKind,
     _projectionFieldIx :: Int,
     _projectionFieldBuiltin :: Maybe (WithLoc BuiltinFunction),
     _projectionDoc :: Maybe (Judoc s),
@@ -734,6 +736,7 @@ deriving stock instance Ord (RecordUpdateField 'Scoped)
 
 data RecordField (s :: Stage) = RecordField
   { _fieldName :: SymbolType s,
+    _fieldIsImplicit :: IsImplicitField,
     _fieldColon :: Irrelevant (KeywordRef),
     _fieldType :: ExpressionType s,
     _fieldBuiltin :: Maybe (WithLoc BuiltinFunction),
@@ -2210,7 +2213,7 @@ deriving stock instance Ord (ArgumentBlock 'Scoped)
 data RecordUpdateExtra = RecordUpdateExtra
   { _recordUpdateExtraConstructor :: S.Symbol,
     -- | Implicitly bound fields sorted by index
-    _recordUpdateExtraVars :: [S.Symbol]
+    _recordUpdateExtraVars :: IntMap (IsImplicit, S.Symbol)
   }
   deriving stock (Generic)
 
