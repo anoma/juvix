@@ -42,6 +42,7 @@ data Theme
   | Macchiato
   | Latte
   | Frappe
+  | Mocha
   deriving stock (Enum, Eq, Ord, Bounded, Data)
 
 instance Show Theme where
@@ -50,6 +51,7 @@ instance Show Theme where
     Macchiato -> "macchiato"
     Latte -> "latte"
     Frappe -> "frappe"
+    Mocha -> "mocha"
 
 data ThemeLight
   = Dark
@@ -62,6 +64,7 @@ themeLight = \case
   Macchiato -> Dark
   Latte -> Light
   Frappe -> Dark
+  Mocha -> Dark
 
 data HtmlKind
   = HtmlDoc
