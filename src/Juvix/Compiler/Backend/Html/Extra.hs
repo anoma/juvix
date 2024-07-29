@@ -66,6 +66,9 @@ latteCss = cssLink "source-latte.css"
 macchiatoCss :: (Members '[Reader HtmlOptions] r) => Sem r Html
 macchiatoCss = cssLink "source-macchiato.css"
 
+frappeCss :: (Members '[Reader HtmlOptions] r) => Sem r Html
+frappeCss = cssLink "source-frappe.css"
+
 themeCss :: (Members '[Reader HtmlOptions] r) => Sem r Html
 themeCss = do
   theme <- asks (^. htmlOptionsTheme)
@@ -73,6 +76,7 @@ themeCss = do
     Nord -> nordCss
     Macchiato -> macchiatoCss
     Latte -> latteCss
+    Frappe -> frappeCss
 
 highlightJs :: (Members '[Reader HtmlOptions] r) => Sem r Html
 highlightJs = jsLink "highlight.js"
