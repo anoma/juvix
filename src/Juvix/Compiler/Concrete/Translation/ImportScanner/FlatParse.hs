@@ -12,7 +12,9 @@ import Juvix.Prelude.FlatParse qualified as FP
 import Juvix.Prelude.FlatParse.Lexer qualified as L
 
 scanBSImports :: Path Abs File -> ByteString -> Maybe ScanResult
-scanBSImports fp = fromResult . scanner fp
+scanBSImports fp
+  | isJuvixFile fp = fromResult . scanner fp
+  | otherwise = const Nothing
   where
     fromResult :: Result () ok -> Maybe ok
     fromResult = \case
