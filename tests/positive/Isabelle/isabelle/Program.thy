@@ -104,9 +104,9 @@ record R =
   r2 :: nat
 
 fun r1 :: "R ⇒ nat" where
-  "r1 (mkR a b) = a"
+  "r1 (mkR r1' r2') = r1'"
 
 fun r2 :: "R ⇒ nat" where
-  "r2 (mkR a b) = b"
+  "r2 (mkR r1' r2') = r2'"
 
 end
