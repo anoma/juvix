@@ -332,7 +332,6 @@ goTopModule cs m = do
             $ moduleHeader
               <> toc
               <> preface'
-              -- <> synopsis
               <> interface'
 
         docPreface :: Sem s Html
