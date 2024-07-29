@@ -1,54 +1,84 @@
 /* Color palette based on https://github.com/catppuccin/catppuccin#-palette */
+
+:root {
+  --ctp-macchiato-rosewater: #f4dbd6;
+  --ctp-macchiato-flamingo: #f0c6c6;
+  --ctp-macchiato-pink: #f5bde6;
+  --ctp-macchiato-mauve: #c6a0f6;
+  --ctp-macchiato-red: #ed8796;
+  --ctp-macchiato-maroon: #ee99a0;
+  --ctp-macchiato-peach: #f5a97f;
+  --ctp-macchiato-yellow: #eed49f;
+  --ctp-macchiato-green: #a6da95;
+  --ctp-macchiato-teal: #8bd5ca;
+  --ctp-macchiato-sky: #91d7e3;
+  --ctp-macchiato-sapphire: #7dc4e4;
+  --ctp-macchiato-blue: #8aadf4;
+  --ctp-macchiato-lavender: #b7bdf8;
+  --ctp-macchiato-text: #cad3f5;
+  --ctp-macchiato-subtext1: #b8c0e0;
+  --ctp-macchiato-subtext0: #a5adcb;
+  --ctp-macchiato-overlay2: #939ab7;
+  --ctp-macchiato-overlay1: #8087a2;
+  --ctp-macchiato-overlay0: #6e738d;
+  --ctp-macchiato-surface2: #5b6078;
+  --ctp-macchiato-surface1: #494d64;
+  --ctp-macchiato-surface0: #363a4f;
+  --ctp-macchiato-base: #24273a;
+  --ctp-macchiato-mantle: #1e2030;
+  --ctp-macchiato-crust: #181926;
+}
+
 body {
-    background-color: #24273a;
+    background-color: var(--ctp-macchiato-base);
 }
 
 .ju-inductive {
-    color: #a6da95;
+    color: var(--ctp-macchiato-green);
 }
 
 .ju-constructor {
-    color: #c6a0f6;
+    color: var(--ctp-macchiato-mauve);
 }
 
 .ju-function {
-    color: #eed49f;
+    color: var(--ctp-macchiato-yellow);
 }
 
 .ju-axiom {
-    color: #ed8796;
+    color: var(--ctp-macchiato-red);
 }
 
 .ju-string {
-    color: #ee99a0;
+    color: var(--ctp-macchiato-flamingo);
 }
 
 .ju-keyword {
-    color: #7dc4e4;
+    color: var(--ctp-macchiato-sky);
 }
 
 .ju-delimiter {
-    color: #939ab7	;
+    color: var(--ctp-macchiato-overlay2);
 }
 
 .ju-var {
-    color: #cad3f5;
+    color: var(--ctp-macchiato-text);
 }
 
 .ju-fixity {
-    color: #f5a97f;
+    color: var(--ctp-macchiato-sapphire);
 }
 
 .ju-comment {
-    color: #a5adcb;
+    color: var(--ctp-macchiato-rosewater);
 }
 
 .ju-judoc {
-    color: #8bd5ca;
+    color: var(--ctp-macchiato-teal);
 }
 
 .ju-number {
-    color: #b8c0e0;
+    color: var(--ctp-macchiato-subtext1);
 }
 
 .ju-define {
@@ -62,15 +92,15 @@ a:visited {
 
 a:hover,
 a.hover-highlight {
-    background-color: #4c566a;
+    background-color: var(--ctp-macchiato-mantle);
 }
 
 footer {
-    color: gray
+    color: var(--ctp-macchiato-subtext1);
 }
 
 footer a {
-    color: gray;
+    color: var(--ctp-macchiato-subtext1);
     font-size: small;
     font-weight: bold;
 }
