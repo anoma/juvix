@@ -57,9 +57,6 @@ toggleJs = jsLink "toggle.js"
 linuwialCss :: (Members '[Reader HtmlOptions] r) => Sem r Html
 linuwialCss = cssLink "linuwial.css"
 
-ayuCss :: (Members '[Reader HtmlOptions] r) => Sem r Html
-ayuCss = cssLink "source-ayu-light.css"
-
 nordCss :: (Members '[Reader HtmlOptions] r) => Sem r Html
 nordCss = cssLink "source-nord.css"
 
@@ -73,7 +70,6 @@ themeCss :: (Members '[Reader HtmlOptions] r) => Sem r Html
 themeCss = do
   theme <- asks (^. htmlOptionsTheme)
   case theme of
-    Ayu -> ayuCss
     Nord -> nordCss
     Macchiato -> macchiatoCss
     Latte -> latteCss

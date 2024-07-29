@@ -39,7 +39,6 @@ defaultHtmlOptions =
 
 data Theme
   = Nord
-  | Ayu
   | Macchiato
   | Latte
   deriving stock (Enum, Eq, Ord, Bounded, Data)
@@ -47,7 +46,6 @@ data Theme
 instance Show Theme where
   show = \case
     Nord -> "nord"
-    Ayu -> "ayu"
     Macchiato -> "macchiato"
     Latte -> "latte"
 
@@ -60,7 +58,6 @@ themeLight :: Theme -> ThemeLight
 themeLight = \case
   Nord -> Dark
   Macchiato -> Dark
-  Ayu -> Light
   Latte -> Light
 
 data HtmlKind
