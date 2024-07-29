@@ -189,6 +189,8 @@ recurse' sig = go True
             checkUnop mkTypeInteger TyField
           OpFieldToInt ->
             checkUnop TyField mkTypeInteger
+          OpUInt8ToInt ->
+            checkUnop mkTypeUInt8 mkTypeInteger
           OpIntToUInt8 ->
             checkUnop mkTypeInteger mkTypeUInt8
           where

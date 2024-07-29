@@ -205,6 +205,7 @@ fromRegInstr info = \case
           (mkCall "mem.get_closure_largs" [fromValue _instrUnopArg])
       Reg.OpFieldToInt -> unsupported "field type"
       Reg.OpIntToField -> unsupported "field type"
+      Reg.OpUInt8ToInt -> unsupported "uint8 type"
       Reg.OpIntToUInt8 -> unsupported "uint8 type"
 
     mkVarRef :: Reg.VarRef -> Text

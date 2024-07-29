@@ -213,6 +213,7 @@ geval opts herr tab env0 = eval' env0
       OpPoseidonHash -> poseidonHashOp
       OpEc -> ecOp
       OpRandomEcPoint -> randomEcPointOp
+      OpUInt8ToInt -> uint8ToIntOp
       OpUInt8FromInt -> uint8FromIntOp
       where
         err :: Text -> a
@@ -521,6 +522,17 @@ geval opts herr tab env0 = eval' env0
                   . integerFromNode
                   $ v
         {-# INLINE uint8FromIntOp #-}
+
+        uint8ToIntOp :: [Node] -> Node
+        uint8ToIntOp =
+          unary $ \node ->
+            let !v = eval' env node
+             in nodeFromInteger
+                  . toInteger
+                  . fromMaybe (evalError "expected field element" v)
+                  . uint8FromNode
+                  $ v
+        {-# INLINE uint8ToIntOp #-}
     {-# INLINE applyBuiltin #-}
 
     -- secretKey, publicKey are not encoded with their length as
@@ -592,6 +604,12 @@ geval opts herr tab env0 = eval' env0
       NCst (Constant _ (ConstField fld)) -> Just fld
       _ -> Nothing
     {-# INLINE fieldFromNode #-}
+
+    uint8FromNode :: Node -> Maybe Word8
+    uint8FromNode = \case
+      NCst (Constant _ (ConstUInt8 i)) -> Just i
+      _ -> Nothing
+    {-# INLINE uint8FromNode #-}
 
     printNode :: Node -> Text
     printNode = \case

@@ -36,6 +36,7 @@ data BuiltinOp
   | OpPoseidonHash
   | OpEc
   | OpRandomEcPoint
+  | OpUInt8ToInt
   | OpUInt8FromInt
   deriving stock (Eq, Generic)
 
@@ -91,6 +92,7 @@ builtinOpArgsNum = \case
   OpPoseidonHash -> 1
   OpEc -> 3
   OpRandomEcPoint -> 0
+  OpUInt8ToInt -> 1
   OpUInt8FromInt -> 1
 
 builtinConstrArgsNum :: BuiltinDataTag -> Int
@@ -135,6 +137,7 @@ builtinIsFoldable = \case
   OpPoseidonHash -> False
   OpEc -> False
   OpRandomEcPoint -> False
+  OpUInt8ToInt -> True
   OpUInt8FromInt -> True
 
 builtinIsCairo :: BuiltinOp -> Bool

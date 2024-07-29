@@ -82,6 +82,7 @@ inferType tab funInfo = goInfer mempty
           OpArgsNum -> checkUnop TyDynamic mkTypeInteger
           OpIntToField -> checkUnop mkTypeInteger TyField
           OpFieldToInt -> checkUnop TyField mkTypeInteger
+          OpUInt8ToInt -> checkUnop mkTypeUInt8 mkTypeInteger
           OpIntToUInt8 -> checkUnop mkTypeInteger mkTypeUInt8
 
     goCairo :: BinderList Type -> NodeCairo -> Sem r Type

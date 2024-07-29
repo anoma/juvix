@@ -63,6 +63,7 @@ evalUnop tab op v = case op of
   OpFieldToInt -> goFieldToInt v
   OpIntToField -> goIntToField v
   OpArgsNum -> goArgsNum v
+  OpUInt8ToInt -> goUInt8ToInt v
   OpIntToUInt8 -> goIntToUInt8 v
   where
     strToInt :: Text -> Either ErrorMsg Value
@@ -108,6 +109,13 @@ evalUnop tab op v = case op of
       _ ->
         Left "expected an integer"
 
+    goUInt8ToInt :: Value -> Either ErrorMsg Value
+    goUInt8ToInt = \case
+      ValUInt8 i ->
+        Right $ ValInteger $ toInteger i
+      _ ->
+        Left "expected a uint8"
+
 printValue :: InfoTable' t e -> Value -> Text
 printValue tab = \case
   ValString s -> s
@@ -131,6 +139,7 @@ valueToConstant = \case
   ValString s -> ConstString s
   ValUnit -> ConstUnit
   ValVoid -> ConstVoid
+  ValUInt8 i -> ConstUInt8 i
   _ -> impossible
 
 evalBinop' :: BinaryOp -> Constant -> Constant -> Either ErrorMsg Constant

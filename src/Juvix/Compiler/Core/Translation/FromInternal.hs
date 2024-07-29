@@ -615,6 +615,8 @@ goAxiomInductive a = whenJust (a ^. Internal.axiomBuiltin) builtinInductive
       Internal.BuiltinEcOp -> return ()
       Internal.BuiltinRandomEcPoint -> return ()
       Internal.BuiltinUInt8 -> registerInductiveAxiom (Just BuiltinUInt8) []
+      Internal.BuiltinUInt8Eq -> return ()
+      Internal.BuiltinUInt8ToNat -> return ()
       Internal.BuiltinUInt8FromNat -> return ()
 
     registerInductiveAxiom :: Maybe BuiltinAxiom -> [(Tag, Text, Type -> Type, Maybe BuiltinConstructor)] -> Sem r ()
@@ -818,6 +820,10 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
       Internal.BuiltinRandomEcPoint -> do
         registerAxiomDef (mkBuiltinApp' OpRandomEcPoint [])
       Internal.BuiltinUInt8 -> return ()
+      Internal.BuiltinUInt8Eq ->
+        registerAxiomDef (mkLambda' mkTypeUInt8' (mkLambda' mkTypeUInt8' (mkBuiltinApp' OpEq [mkVar' 1, mkVar' 0])))
+      Internal.BuiltinUInt8ToNat ->
+        registerAxiomDef (mkLambda' mkTypeUInt8' (mkBuiltinApp' OpUInt8ToInt [mkVar' 0]))
       Internal.BuiltinUInt8FromNat ->
         registerAxiomDef (mkLambda' mkTypeInteger' (mkBuiltinApp' OpUInt8FromInt [mkVar' 0]))
 
@@ -1218,6 +1224,8 @@ goApplication a = do
         Just Internal.BuiltinEcOp -> app
         Just Internal.BuiltinRandomEcPoint -> app
         Just Internal.BuiltinUInt8 -> app
+        Just Internal.BuiltinUInt8Eq -> app
+        Just Internal.BuiltinUInt8ToNat -> app
         Just Internal.BuiltinUInt8FromNat -> app
         Nothing -> app
     Internal.ExpressionIden (Internal.IdenFunction n) -> do

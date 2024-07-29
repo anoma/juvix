@@ -311,6 +311,7 @@ fromRegInstr bNoStack info = \case
       Reg.OpArgsNum -> "JUVIX_ARGS_NUM"
       Reg.OpFieldToInt -> unsupported "field type"
       Reg.OpIntToField -> unsupported "field type"
+      Reg.OpUInt8ToInt -> unsupported "uint8 type"
       Reg.OpIntToUInt8 -> unsupported "uint8 type"
 
     fromVarRef :: Reg.VarRef -> Expression

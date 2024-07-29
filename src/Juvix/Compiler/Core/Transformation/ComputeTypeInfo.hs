@@ -83,6 +83,7 @@ computeNodeTypeInfo md = umapL go
           OpRandomEcPoint -> case _builtinAppArgs of
             [] -> mkDynamic'
             _ -> error "incorrect random_ec_point builtin application"
+          OpUInt8ToInt -> mkTypeInteger'
           OpUInt8FromInt -> mkTypeUInt8'
       NCtr Constr {..} ->
         let ci = lookupConstructorInfo md _constrTag

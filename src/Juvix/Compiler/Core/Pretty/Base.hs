@@ -62,6 +62,7 @@ instance PrettyCode BuiltinOp where
     OpPoseidonHash -> return primPoseidonHash
     OpEc -> return primEc
     OpRandomEcPoint -> return primRandomEcPoint
+    OpUInt8ToInt -> return primUInt8ToInt
     OpUInt8FromInt -> return primFieldFromInt
 
 instance PrettyCode BuiltinDataTag where
@@ -736,6 +737,9 @@ primFieldDiv = primitive Str.fdiv
 
 primFieldFromInt :: Doc Ann
 primFieldFromInt = primitive Str.itof
+
+primUInt8ToInt :: Doc Ann
+primUInt8ToInt = primitive Str.u8toi
 
 primUInt8FromInt :: Doc Ann
 primUInt8FromInt = primitive Str.itou8

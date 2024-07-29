@@ -244,6 +244,7 @@ instance PrettyCode UnaryOp where
     OpIntToField -> Str.instrIntToField
     OpArgsNum -> Str.instrArgsNum
     OpIntToUInt8 -> Str.instrIntToUInt8
+    OpUInt8ToInt -> Str.instrUInt8ToInt
 
 instance PrettyCode CairoOp where
   ppCode op = return $ primitive $ case op of

@@ -588,6 +588,8 @@ registerBuiltinAxiom d = \case
   BuiltinEcOp -> registerEcOp d
   BuiltinRandomEcPoint -> registerRandomEcPoint d
   BuiltinUInt8 -> registerUInt8 d
+  BuiltinUInt8Eq -> registerUInt8Eq d
+  BuiltinUInt8ToNat -> registerUInt8ToNat d
   BuiltinUInt8FromNat -> registerUInt8FromNat d
 
 goInductive ::
