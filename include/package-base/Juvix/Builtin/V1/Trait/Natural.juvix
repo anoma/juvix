@@ -2,6 +2,7 @@ module Juvix.Builtin.V1.Trait.Natural;
 
 import Juvix.Builtin.V1.Nat.Base open using {Nat};
 import Juvix.Builtin.V1.Fixity open;
+import Juvix.Builtin.V1.Trait.FromNatural open;
 
 trait
 type Natural A :=
@@ -12,8 +13,10 @@ type Natural A :=
     syntax operator * multiplicative;
     {-# isabelle-operator: {name: "*", prec: 70, assoc: left} #-}
     * : A -> A -> A;
-    builtin from-nat
     fromNat : Nat -> A
   };
 
 open Natural public;
+
+coercion instance
+FromNaturalNaturalI {A} {{N : Natural A}} : FromNatural A := mkFromNatural@{fromNat};

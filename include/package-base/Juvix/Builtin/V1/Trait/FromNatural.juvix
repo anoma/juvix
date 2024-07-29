@@ -1,0 +1,10 @@
+module Juvix.Builtin.V1.Trait.FromNatural;
+
+import Juvix.Builtin.V1.Nat.Base open using {Nat};
+
+trait
+type FromNatural A :=
+  mkFromNatural {
+    builtin from-nat
+    fromNat : Nat -> A
+};
