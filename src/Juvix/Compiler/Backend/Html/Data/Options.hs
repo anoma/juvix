@@ -63,7 +63,16 @@ themeLight = \case
 data HtmlKind
   = HtmlDoc
   | HtmlSrc
-  | HtmlOnly
+  | -- | Only source is generated but without the -src suffix. TODO I think this
+   -- option is only useful in VSCode. This constructor should be removed and
+   -- the logic should be handled from the VSCode plugin.
+    HtmlOnly
   deriving stock (Data)
+
+kindSuffix :: HtmlKind -> String
+kindSuffix = \case
+  HtmlDoc -> ""
+  HtmlSrc -> "-src"
+  HtmlOnly -> ""
 
 makeLenses ''HtmlOptions

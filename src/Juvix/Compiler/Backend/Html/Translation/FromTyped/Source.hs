@@ -36,12 +36,6 @@ data CssColor
   | JuComment
   | JuJudoc
 
-kindSuffix :: HtmlKind -> String
-kindSuffix = \case
-  HtmlDoc -> ""
-  HtmlSrc -> "-src"
-  HtmlOnly -> ""
-
 data GenSourceHtmlArgs = GenSourceHtmlArgs
   { _genSourceHtmlArgsConcreteOpts :: Options,
     _genSourceHtmlArgsAssetsDir :: Text,
