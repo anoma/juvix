@@ -41,6 +41,7 @@ data Theme
   = Nord
   | Ayu
   | Macchiato
+  | Latte
   deriving stock (Enum, Eq, Ord, Bounded, Data)
 
 instance Show Theme where
@@ -48,6 +49,7 @@ instance Show Theme where
     Nord -> "nord"
     Ayu -> "ayu"
     Macchiato -> "macchiato"
+    Latte -> "latte"
 
 data ThemeLight
   = Dark
@@ -59,13 +61,14 @@ themeLight = \case
   Nord -> Dark
   Macchiato -> Dark
   Ayu -> Light
+  Latte -> Light
 
 data HtmlKind
   = HtmlDoc
   | HtmlSrc
   | -- | Only source is generated but without the -src suffix. TODO I think this
-   -- option is only useful in VSCode. This constructor should be removed and
-   -- the logic should be handled from the VSCode plugin.
+    -- option is only useful in VSCode. This constructor should be removed and
+    -- the logic should be handled from the VSCode plugin.
     HtmlOnly
   deriving stock (Data)
 

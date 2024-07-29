@@ -63,6 +63,9 @@ ayuCss = cssLink "source-ayu-light.css"
 nordCss :: (Members '[Reader HtmlOptions] r) => Sem r Html
 nordCss = cssLink "source-nord.css"
 
+latteCss :: (Members '[Reader HtmlOptions] r) => Sem r Html
+latteCss = cssLink "source-latte.css"
+
 macchiatoCss :: (Members '[Reader HtmlOptions] r) => Sem r Html
 macchiatoCss = cssLink "source-macchiato.css"
 
@@ -73,6 +76,7 @@ themeCss = do
     Ayu -> ayuCss
     Nord -> nordCss
     Macchiato -> macchiatoCss
+    Latte -> latteCss
 
 highlightJs :: (Members '[Reader HtmlOptions] r) => Sem r Html
 highlightJs = jsLink "highlight.js"
