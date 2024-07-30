@@ -199,19 +199,35 @@ instance (SingI s) => PrettyPrint (NameItem s) where
     let defaultVal = do
           d <- _nameItemDefault
           return (noLoc C.kwAssign <+> ppExpressionType (d ^. argDefaultValue))
-    ppSymbolType _nameItemSymbol <> ppCode Kw.kwExclamation <> noLoc (pretty _nameItemIndex)
+    isImplicitDelims _nameItemImplicit (ppSymbolType _nameItemSymbol)
+      <> ppCode Kw.kwExclamation
+      <> noLoc (pretty _nameItemIndex)
       <+> ppCode Kw.kwColon
       <+> ppExpressionType _nameItemType
       <+?> defaultVal
 
+isImplicitDelims :: (Member ExactPrint r) => IsImplicit -> Sem r () -> Sem r ()
+isImplicitDelims = \case
+  Implicit -> braces
+  ImplicitInstance -> doubleBraces
+  Explicit -> parens
+
 instance (SingI s) => PrettyPrint (NameBlock s) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => NameBlock s -> Sem r ()
-  ppCode NameBlock {..} = do
-    let delims = case _nameImplicit of
-          Implicit -> braces
-          ImplicitInstance -> doubleBraces
-          Explicit -> parens
-    delims (hsepSemicolon (map ppCode (toList _nameBlock)))
+  ppCode NameBlock {..} = isImplicitDelims _nameImplicit (vsepSemicolon (map ppCode (toList _nameBlock)))
+
+instance (PrettyPrint a, PrettyPrint b) => PrettyPrint (HashMap a b) where
+  ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => HashMap a b -> Sem r ()
+  ppCode m = do
+    let ppAssoc :: (a, b) -> Sem r ()
+        ppAssoc (k, v) =
+          ppCode k
+            <+> ppCode Kw.kwAssign
+            <+> ppCode v
+    braces (vsepSemicolon (map ppAssoc (HashMap.toList m)))
+
+instance (SingI s) => PrettyPrint (RecordNameSignature s) where
+  ppCode RecordNameSignature {..} = ppCode _recordNames
 
 instance (PrettyPrint a, PrettyPrint b) => PrettyPrint (a, b) where
   ppCode (a, b) = tuple [ppCode a, ppCode b]

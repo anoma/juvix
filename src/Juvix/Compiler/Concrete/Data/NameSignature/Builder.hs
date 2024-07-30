@@ -61,7 +61,8 @@ instance (SingI s) => HasNameSignature s (InductiveDef s, ConstructorDef s) wher
         where
           addField :: RecordStatement s -> Sem r ()
           addField = \case
-            RecordStatementField RecordField {..} -> addSymbol @s Explicit Nothing _fieldName _fieldType
+            RecordStatementField RecordField {..} ->
+              addSymbol @s (fromIsImplicitField _fieldIsImplicit) Nothing _fieldName _fieldType
             RecordStatementSyntax d -> goSyntax d
 
           goSyntax :: RecordSyntaxDef s -> Sem r ()

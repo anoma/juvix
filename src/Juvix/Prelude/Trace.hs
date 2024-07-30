@@ -5,7 +5,7 @@ module Juvix.Prelude.Trace
 where
 
 import Data.Text qualified as Text
-import Debug.Trace hiding (trace, traceM, traceShow)
+import Debug.Trace hiding (trace, traceM, traceShow, traceWith)
 import Debug.Trace qualified as T
 import GHC.IO (unsafePerformIO)
 import Juvix.Prelude.Base
@@ -20,6 +20,10 @@ setDebugMsg msg = "[debug] " <> fmsg <> "\n"
 traceLabel :: Text -> Text -> a -> a
 traceLabel msg a = T.trace (unpack $ setDebugMsg msg <> a)
 {-# WARNING traceLabel "Using traceLabel" #-}
+
+traceWith :: (a -> Text) -> a -> a
+traceWith f a = trace (f a) a
+{-# WARNING traceWith "Using traceWith" #-}
 
 trace :: Text -> a -> a
 trace = traceLabel ""
