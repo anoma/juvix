@@ -7,4 +7,6 @@ type FromNatural A :=
   mkFromNatural {
     builtin from-nat
     fromNat : Nat -> A
-};
+  };
+
+open FromNatural public;
