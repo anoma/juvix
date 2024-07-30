@@ -456,7 +456,7 @@ tests =
         $(mkRelDir ".")
         $(mkRelFile "test076.juvix")
         $(mkRelFile "out/test076.out"),
-      posTestEval
+      posTest
         "Test077: Instance fields"
         $(mkRelDir ".")
         $(mkRelFile "test077.juvix")
