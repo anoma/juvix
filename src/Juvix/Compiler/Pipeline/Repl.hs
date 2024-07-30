@@ -169,6 +169,7 @@ compileReplInputIO fp txt = do
   hasInternet <- not <$> asks (^. entryPointOffline)
   runError
     . runConcurrent
+    . runLoggerIO defaultLoggerOptions
     . runReader defaultNumThreads
     . evalInternet hasInternet
     . runTaggedLockPermissive

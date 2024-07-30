@@ -16,6 +16,7 @@ mkImportTree ::
       '[ Reader ImportScanStrategy,
          Error JuvixError,
          PathResolver,
+         Logger,
          Files
        ]
       r
@@ -56,7 +57,7 @@ mkImportTree mentrypointModulePath =
 
     getNodeImports ::
       forall r'.
-      (Members '[Reader ImportScanStrategy, Files, Error ParserError] r') =>
+      (Members '[Reader ImportScanStrategy, Files, Logger, Error ParserError] r') =>
       ImportNode ->
       Sem r' (HashSet ImportScan)
     getNodeImports n = (^. scanResultImports) <$> scanFileImports (n ^. importNodeAbsFile)
@@ -68,6 +69,7 @@ mkImportTree mentrypointModulePath =
              Reader ImportScanStrategy,
              Error ParserError,
              Files,
+             Logger,
              PathResolver,
              Visit ImportNode
            ]
@@ -98,6 +100,7 @@ withImportTree ::
       '[ Reader ImportScanStrategy,
          Error JuvixError,
          PathResolver,
+         Logger,
          Files
        ]
       r

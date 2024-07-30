@@ -6,7 +6,7 @@ import Juvix.Compiler.Concrete.Print
 import Juvix.Compiler.Concrete.Translation.ImportScanner
 import Juvix.Compiler.Concrete.Translation.ImportScanner.Base
 
-runCommand :: (Members '[App, EmbedIO] r) => ScanFileOptions -> Sem r ()
+runCommand :: (Members AppEffects r) => ScanFileOptions -> Sem r ()
 runCommand ScanFileOptions {..} =
   runFilesIO
     . runAppError @ParserError

@@ -213,6 +213,7 @@ runReplPipelineIOEither' lockMode entry = do
         | otherwise = runPathResolverArtifacts
   eith <-
     runM
+      . runLoggerIO defaultLoggerOptions
       . runConcurrent
       . runReader defaultNumThreads
       . evalInternet hasInternet
