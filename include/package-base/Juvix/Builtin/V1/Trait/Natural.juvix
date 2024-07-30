@@ -18,5 +18,9 @@ type Natural A :=
 
 open Natural public;
 
+{-# specialize: true, inline: case #-}
 coercion instance
-FromNaturalNaturalI {A} {{N : Natural A}} : FromNatural A := mkFromNatural@{fromNat};
+fromNaturalNatI {A} {{Natural A}} : FromNatural A :=
+  mkFromNatural@{
+    fromNat := Natural.fromNat
+  };
