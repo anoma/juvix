@@ -1,5 +1,7 @@
 # Example
 
+What is important is seldom urgent.
+
 A Juvix Markdown file name ends with `.juvix.md`. This kind of file must contain
 a module declaration at the top, as shown below ---in the first code block.
 
