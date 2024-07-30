@@ -1556,15 +1556,18 @@ checkSections sec = topBindings helper
                       c' <- reserveConstructorSymbol d c
                       let storeSig :: RecordNameSignature 'Parsed -> Sem r' ()
                           storeSig sig = modify' (set (scoperConstructorFields . at (c' ^. S.nameId)) (Just sig))
-                      whenJust (c ^? constructorRhs . _ConstructorRhsRecord) (storeSig . mkRecordNameSignature)
-                      whenJust (c ^? constructorRhs . _ConstructorRhsRecord) (registerParsedConstructorSig (c' ^. S.nameId) . mkRecordNameSignature)
+                          mrecord :: Maybe (RhsRecord 'Parsed) = c ^? constructorRhs . _ConstructorRhsRecord
+                      whenJust mrecord $ \r -> do
+                        let sig = mkRecordNameSignature r
+                        storeSig sig
+                        registerParsedConstructorSig (c' ^. S.nameId) sig
                       return c'
 
                     registerRecordType :: S.Symbol -> S.Symbol -> Sem (Fail ': r') ()
-                    registerRecordType mconstr ind = do
+                    registerRecordType mconstr ind =
                       case d ^. inductiveConstructors of
                         mkRec :| cs
-                          | not (null cs) -> fail
+                          | notNull cs -> fail
                           | otherwise -> do
                               fs <-
                                 failMaybe $
@@ -2606,13 +2609,13 @@ checkNamedApplicationNew napp = do
   args' <- withLocalScope . localBindings . ignoreSyntax $ do
     mapM_ reserveNamedArgumentName nargs
     mapM (checkNamedArgumentNew puns) nargs
-  let enames =
-        HashSet.fromList
+  let signatureExplicitNames =
+        hashSet
           . concatMap (HashMap.keys . (^. nameBlock))
           . filter (not . isImplicitOrInstance . (^. nameImplicit))
           $ sig ^. nameSignatureArgs
-      sargs :: HashSet Symbol = hashSet (map (^. namedArgumentNewSymbol) nargs)
-      missingArgs = HashSet.difference enames sargs
+      givenNames :: HashSet Symbol = hashSet (map (^. namedArgumentNewSymbol) nargs)
+      missingArgs = HashSet.difference signatureExplicitNames givenNames
   unless (null missingArgs || not (napp ^. namedApplicationNewExhaustive . isExhaustive)) $
     throw (ErrMissingArgs (MissingArgs (aname ^. scopedIdenFinal . nameConcrete) missingArgs))
   return

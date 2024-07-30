@@ -455,5 +455,10 @@ tests =
         "Test076: Builtin Maybe"
         $(mkRelDir ".")
         $(mkRelFile "test076.juvix")
-        $(mkRelFile "out/test076.out")
+        $(mkRelFile "out/test076.out"),
+      posTestEval
+        "Test077: Instance fields"
+        $(mkRelDir ".")
+        $(mkRelFile "test077.juvix")
+        $(mkRelFile "out/test077.out")
     ]
