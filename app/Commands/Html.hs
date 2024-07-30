@@ -51,39 +51,40 @@ resultToJudocCtx res =
     sres = res ^. resultInternal . resultScoper
 
 runCommand :: forall r. (Members AppEffects r) => HtmlOptions -> Sem r ()
-runCommand HtmlOptions {..}
-  | _htmlOnlySource = runGenOnlySourceHtml HtmlOptions {..}
-  | otherwise = do
-      entry <- getEntryPoint _htmlInputFile
-      (r, rs) <- runPipelineHtml _htmlNonRecursive _htmlInputFile
-      outputDir <- fromAppPathDir _htmlOutputDir
-      let ctx = resultToJudocCtx r <> mconcatMap resultToJudocCtx rs
-      Html.genJudocHtml
-        entry
-        JudocArgs
-          { _judocArgsAssetsPrefix = _htmlAssetsPrefix,
-            _judocArgsBaseName = "proj",
-            _judocArgsCtx = ctx,
-            _judocArgsMainModule = r ^. resultInternal . resultScoper . Scoper.resultModule,
-            _judocArgsOutputDir = outputDir,
-            _judocArgsUrlPrefix = _htmlUrlPrefix,
-            _judocArgsIdPrefix = _htmlIdPrefix,
-            _judocArgsTheme = _htmlTheme,
-            _judocArgsNonRecursive = _htmlNonRecursive,
-            _judocArgsNoFooter = _htmlNoFooter,
-            _judocArgsNoPath = _htmlNoPath,
-            _judocArgsExt = _htmlExt,
-            _judocArgsStripPrefix = _htmlStripPrefix,
-            _judocArgsFolderStructure = _htmlFolderStructure
-          }
-      when _htmlOpen $ case openCmd of
-        Nothing -> logError "Could not recognize the 'open' command for your operating system"
-        Just opencmd ->
-          liftIO
-            . void
-            $ Process.spawnProcess
-              opencmd
-              [ toFilePath
-                  ( outputDir <//> Html.indexFileName
-                  )
-              ]
+runCommand HtmlOptions {..} = silenceProgressLog $ do
+  if
+      | _htmlOnlySource -> runGenOnlySourceHtml HtmlOptions {..}
+      | otherwise -> do
+          entry <- getEntryPoint _htmlInputFile
+          (r, rs) <- runPipelineHtml _htmlNonRecursive _htmlInputFile
+          outputDir <- fromAppPathDir _htmlOutputDir
+          let ctx = resultToJudocCtx r <> mconcatMap resultToJudocCtx rs
+          Html.genJudocHtml
+            entry
+            JudocArgs
+              { _judocArgsAssetsPrefix = _htmlAssetsPrefix,
+                _judocArgsBaseName = "proj",
+                _judocArgsCtx = ctx,
+                _judocArgsMainModule = r ^. resultInternal . resultScoper . Scoper.resultModule,
+                _judocArgsOutputDir = outputDir,
+                _judocArgsUrlPrefix = _htmlUrlPrefix,
+                _judocArgsIdPrefix = _htmlIdPrefix,
+                _judocArgsTheme = _htmlTheme,
+                _judocArgsNonRecursive = _htmlNonRecursive,
+                _judocArgsNoFooter = _htmlNoFooter,
+                _judocArgsNoPath = _htmlNoPath,
+                _judocArgsExt = _htmlExt,
+                _judocArgsStripPrefix = _htmlStripPrefix,
+                _judocArgsFolderStructure = _htmlFolderStructure
+              }
+          when _htmlOpen $ case openCmd of
+            Nothing -> logError "Could not recognize the 'open' command for your operating system"
+            Just opencmd ->
+              liftIO
+                . void
+                $ Process.spawnProcess
+                  opencmd
+                  [ toFilePath
+                      ( outputDir <//> Html.indexFileName
+                      )
+                  ]
