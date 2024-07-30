@@ -99,8 +99,9 @@ pImport = do
     return ImportScan {..}
   where
     helper :: Parser e (NonEmpty String)
-    helper = P.try $ do
-      lexeme $(string Str.import_)
+    helper = do
+      iden <- lexeme bareIdentifier
+      guard (iden == Str.import_)
       dottedIdentifier
 
 pToken :: Parser e Token
