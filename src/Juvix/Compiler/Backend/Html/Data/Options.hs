@@ -70,7 +70,7 @@ data HtmlKind
   = HtmlDoc
   | HtmlSrc
   | -- | Only source is generated but without the -src suffix. TODO I think this
-    -- option is only useful in VSCode. This constructor should be removed and
+    -- option is only useful for mkDocs. This constructor should be removed and
     -- the logic should be handled from the VSCode plugin.
     HtmlOnly
   deriving stock (Data)
