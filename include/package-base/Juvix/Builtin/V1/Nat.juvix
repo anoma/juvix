@@ -1,8 +1,16 @@
 module Juvix.Builtin.V1.Nat;
 
 import Juvix.Builtin.V1.Trait.Natural open public;
+import Juvix.Builtin.V1.Trait.FromNatural open public;
 import Juvix.Builtin.V1.Nat.Base open hiding {+; *; div; mod} public;
 import Juvix.Builtin.V1.Nat.Base as Nat;
+
+{-# specialize: true, inline: case #-}
+instance
+fromNaturalNatI : FromNatural Nat :=
+  mkFromNatural@{
+    fromNat (x : Nat) : Nat := x
+  };
 
 {-# specialize: true, inline: case #-}
 instance
@@ -10,5 +18,4 @@ naturalNatI : Natural Nat :=
   mkNatural@{
     + := (Nat.+);
     * := (Nat.*);
-    fromNat (x : Nat) : Nat := x
   };

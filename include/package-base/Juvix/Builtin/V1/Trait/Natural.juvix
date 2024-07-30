@@ -7,20 +7,13 @@ import Juvix.Builtin.V1.Trait.FromNatural open;
 trait
 type Natural A :=
   mkNatural {
+    {{FromNaturalI}} : FromNatural A;
     syntax operator + additive;
     {-# isabelle-operator: {name: "+", prec: 65, assoc: left} #-}
     + : A -> A -> A;
     syntax operator * multiplicative;
     {-# isabelle-operator: {name: "*", prec: 70, assoc: left} #-}
     * : A -> A -> A;
-    fromNat : Nat -> A
   };
 
 open Natural public;
-
-{-# specialize: true, inline: case #-}
-coercion instance
-fromNaturalNatI {A} {{Natural A}} : FromNatural A :=
-  mkFromNatural@{
-    fromNat := Natural.fromNat
-  };
