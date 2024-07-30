@@ -13,7 +13,7 @@ import Juvix.Prelude.FlatParse.Lexer qualified as L
 
 scanBSImports :: Path Abs File -> ByteString -> Maybe ScanResult
 scanBSImports fp
-   -- FlatParse only supports .juvix files
+  -- FlatParse only supports .juvix files
   | isJuvixFile fp = fromResult . scanner fp
   | otherwise = const Nothing
   where
