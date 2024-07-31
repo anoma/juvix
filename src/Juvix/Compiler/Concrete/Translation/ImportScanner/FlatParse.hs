@@ -88,7 +88,7 @@ bareIdentifier = do
   return (h : t)
 
 dottedIdentifier :: Parser e (NonEmpty String)
-dottedIdentifier = nonEmpty' <$> sepBy1 bareIdentifier dot
+dottedIdentifier = lexeme (nonEmpty' <$> sepBy1 bareIdentifier dot)
   where
     dot :: Parser e ()
     dot = $(char '.')
@@ -100,7 +100,8 @@ pImport = do
   where
     helper :: Parser e (NonEmpty String)
     helper = do
-      lexeme $(string Str.import_)
+      iden <- lexeme bareIdentifier
+      guard (iden == Str.import_)
       dottedIdentifier
 
 pToken :: Parser e Token

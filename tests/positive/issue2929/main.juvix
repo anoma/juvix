@@ -1,0 +1,5 @@
+module main;
+
+import important;
+
+axiom imports : important.imports;

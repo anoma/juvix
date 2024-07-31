@@ -9,6 +9,7 @@ import Juvix.Compiler.Concrete.Translation.ImportScanner.FlatParse qualified as 
 import Juvix.Compiler.Concrete.Translation.ImportScanner.Megaparsec qualified as Megaparsec
 import Juvix.Parser.Error
 import Juvix.Prelude
+import Juvix.Prelude.Pretty
 import Prelude (show)
 
 data ImportScanStrategy
@@ -29,13 +30,13 @@ defaultImportScanStrategy :: ImportScanStrategy
 defaultImportScanStrategy = ImportScanStrategyFallback
 
 scanFileImports ::
-  (Members '[Reader ImportScanStrategy, Files, Error ParserError] r) =>
+  (Members '[Reader ImportScanStrategy, Logger, Files, Error ParserError] r) =>
   Path Abs File ->
   Sem r ScanResult
 scanFileImports file = readFileBS' file >>= scanBSImports file
 
 scanBSImports ::
-  (Members '[Reader ImportScanStrategy, Error ParserError] r) =>
+  (Members '[Reader ImportScanStrategy, Logger, Error ParserError] r) =>
   Path Abs File ->
   ByteString ->
   Sem r ScanResult
@@ -45,7 +46,9 @@ scanBSImports fp inputBS = do
     ImportScanStrategyFallback ->
       case FlatParse.scanBSImports fp inputBS of
         Just x -> return x
-        Nothing -> Megaparsec.scanBSImports fp inputBS
+        Nothing -> do
+          logWarn (mkAnsiText ("The FlatParse parser failed to scan the file " <> toFilePath @Text fp <> ". Falling back to MegaParsec."))
+          Megaparsec.scanBSImports fp inputBS
     ImportScanStrategyFlatParse -> case FlatParse.scanBSImports fp inputBS of
       Nothing ->
         throw $

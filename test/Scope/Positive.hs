@@ -257,5 +257,9 @@ tests =
     posTest
       "Record field iterator"
       $(mkRelDir ".")
-      $(mkRelFile "RecordIterator.juvix")
+      $(mkRelFile "RecordIterator.juvix"),
+    posTest
+      "Scan name with 'import' prefix"
+      $(mkRelDir "issue2929")
+      $(mkRelFile "main.juvix")
   ]
