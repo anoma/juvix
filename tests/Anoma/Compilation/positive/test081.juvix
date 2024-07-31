@@ -4,10 +4,10 @@ import Stdlib.Data.Nat open hiding {fromNat};
 import Stdlib.Debug.Trace open;
 import Stdlib.Function open using {>->};
 
-builtin uint8
-axiom UInt8 : Type;
+builtin byte
+axiom Byte : Type;
 
-builtin uint8-from-nat
-axiom fromNat : Nat -> UInt8;
+builtin byte-from-nat
+axiom fromNat : Nat -> Byte;
 
-main : UInt8 := trace (fromNat 0xff) >-> fromNat 0x100;
+main : Byte := trace (fromNat 0xff) >-> fromNat 0x100;
