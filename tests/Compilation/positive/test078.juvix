@@ -10,7 +10,7 @@ builtin uint8
 axiom UInt8 : Type;
 
 builtin uint8-from-nat
-axiom fromNat : Nat -> UInt8;
+axiom uint8FromNat : Nat -> UInt8;
 
 builtin uint8-to-nat
 axiom toNat : UInt8 -> Nat;
@@ -18,7 +18,7 @@ axiom toNat : UInt8 -> Nat;
 instance
 UInt8FromNaturalI : FromNatural UInt8 :=
   mkFromNatural@{
-    fromNat
+    fromNat := uint8FromNat
   };
 
 n1 : UInt8 := fromNat 1;
