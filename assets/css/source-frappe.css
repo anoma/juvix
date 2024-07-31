@@ -1,84 +1,84 @@
 /* Color palette based on https://github.com/catppuccin/catppuccin#-palette */
 
 :root {
-  --ctp-frappe-rosewater: #f2d5cf;
-  --ctp-frappe-flamingo: #eebebe;
-  --ctp-frappe-pink: #f4b8e4;
-  --ctp-frappe-mauve: #ca9ee6;
-  --ctp-frappe-red: #e78284;
-  --ctp-frappe-maroon: #ea999c;
-  --ctp-frappe-peach: #ef9f76;
-  --ctp-frappe-yellow: #e5c890;
-  --ctp-frappe-green: #a6d189;
-  --ctp-frappe-teal: #81c8be;
-  --ctp-frappe-sky: #99d1db;
-  --ctp-frappe-sapphire: #85c1dc;
-  --ctp-frappe-blue: #8caaee;
-  --ctp-frappe-lavender: #babbf1;
-  --ctp-frappe-text: #c6d0f5;
-  --ctp-frappe-subtext1: #b5bfe2;
-  --ctp-frappe-subtext0: #a5adce;
-  --ctp-frappe-overlay2: #949cbb;
-  --ctp-frappe-overlay1: #838ba7;
-  --ctp-frappe-overlay0: #737994;
-  --ctp-frappe-surface2: #626880;
-  --ctp-frappe-surface1: #51576d;
-  --ctp-frappe-surface0: #414559;
-  --ctp-frappe-base: #303446;
-  --ctp-frappe-mantle: #292c3c;
-  --ctp-frappe-crust: #232634;
+  --ctp-rosewater: #f2d5cf;
+  --ctp-flamingo: #eebebe;
+  --ctp-pink: #f4b8e4;
+  --ctp-mauve: #ca9ee6;
+  --ctp-red: #e78284;
+  --ctp-maroon: #ea999c;
+  --ctp-peach: #ef9f76;
+  --ctp-yellow: #e5c890;
+  --ctp-green: #a6d189;
+  --ctp-teal: #81c8be;
+  --ctp-sky: #99d1db;
+  --ctp-sapphire: #85c1dc;
+  --ctp-blue: #8caaee;
+  --ctp-lavender: #babbf1;
+  --ctp-text: #c6d0f5;
+  --ctp-subtext1: #b5bfe2;
+  --ctp-subtext0: #a5adce;
+  --ctp-overlay2: #949cbb;
+  --ctp-overlay1: #838ba7;
+  --ctp-overlay0: #737994;
+  --ctp-surface2: #626880;
+  --ctp-surface1: #51576d;
+  --ctp-surface0: #414559;
+  --ctp-base: #303446;
+  --ctp-mantle: #292c3c;
+  --ctp-crust: #232634;
 }
 
 body {
-    background-color: var(--ctp-frappe-base);
+    background-color: var(--ctp-base);
 }
 
 .ju-inductive {
-    color: var(--ctp-frappe-green);
+    color: var(--ctp-green);
 }
 
 .ju-constructor {
-    color: var(--ctp-frappe-mauve);
+    color: var(--ctp-mauve);
 }
 
 .ju-function {
-    color: var(--ctp-frappe-yellow);
+    color: var(--ctp-yellow);
 }
 
 .ju-axiom {
-    color: var(--ctp-frappe-red);
+    color: var(--ctp-red);
 }
 
 .ju-string {
-    color: var(--ctp-frappe-flamingo);
+    color: var(--ctp-flamingo);
 }
 
 .ju-keyword {
-    color: var(--ctp-frappe-sky);
+    color: var(--ctp-sky);
 }
 
 .ju-delimiter {
-    color: var(--ctp-frappe-overlay2);
+    color: var(--ctp-overlay2);
 }
 
 .ju-var {
-    color: var(--ctp-frappe-text);
+    color: var(--ctp-text);
 }
 
 .ju-fixity {
-    color: var(--ctp-frappe-sapphire);
+    color: var(--ctp-sapphire);
 }
 
 .ju-comment {
-    color: var(--ctp-frappe-rosewater);
+    color: var(--ctp-rosewater);
 }
 
 .ju-judoc {
-    color: var(--ctp-frappe-teal);
+    color: var(--ctp-teal);
 }
 
 .ju-number {
-    color: var(--ctp-frappe-subtext1);
+    color: var(--ctp-subtext1);
 }
 
 .ju-define {
@@ -92,15 +92,15 @@ a:visited {
 
 a:hover,
 a.hover-highlight {
-    background-color: var(--ctp-frappe-mantle);
+    background-color: var(--ctp-mantle);
 }
 
 footer {
-    color: var(--ctp-frappe-subtext1);
+    color: var(--ctp-subtext1);
 }
 
 footer a {
-    color: var(--ctp-frappe-subtext1);
+    color: var(--ctp-subtext1);
     font-size: small;
     font-weight: bold;
 }
