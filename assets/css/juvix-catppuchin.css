@@ -13,25 +13,25 @@
   --ju-judoc: var(--ctp-teal);
   --ju-number: var(--ctp-peach);
 
-  /* Panes */
-  --ju-base: var(--ctp-base);
-  --ju-mantle: var(--ctp-mantle);
-  --ju-crust: var(--ctp-mantle);
-
   /* Text */
   --ju-text: var(--ctp-text);
   --ju-subtext1: var(--ctp-subtext1);
   --ju-subtext0: var(--ctp-subtext0);
+
+  /* Overlay */
+  --ju-overlay0: var(--ctp-overlay0);
+  --ju-overlay1: var(--ctp-overlay1);
+  --ju-overlay2: var(--ctp-overlay2);
 
   /* Surface */
   --ju-surface0: var(--ctp-surface0);
   --ju-surface1: var(--ctp-surface1);
   --ju-surface2: var(--ctp-surface2);
 
-  /* Overlay */
-  --ju-overlay0: var(--ctp-overlay0);
-  --ju-overlay1: var(--ctp-overlay1);
-  --ju-overlay2: var(--ctp-overlay2);
+  /* Panes */
+  --ju-base: var(--ctp-base);
+  --ju-mantle: var(--ctp-mantle);
+  --ju-crust: var(--ctp-mantle);
 
   /* Theme */
   --ju-main: var(--ctp-maroon);

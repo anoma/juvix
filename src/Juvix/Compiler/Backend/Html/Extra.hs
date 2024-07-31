@@ -63,8 +63,11 @@ juvixCatppuchinCss = cssLink "juvix-catppuchin.css"
 juvixSourceCss :: (Members '[Reader HtmlOptions] r) => Sem r Html
 juvixSourceCss = cssLink "juvix-source.css"
 
+juvixNordCss :: (Members '[Reader HtmlOptions] r) => Sem r Html
+juvixNordCss = cssLink "juvix-nord.css"
+
 nordCss :: (Members '[Reader HtmlOptions] r) => Sem r Html
-nordCss = cssLink "source-nord.css"
+nordCss = cssLink "nord.css"
 
 latteCss :: (Members '[Reader HtmlOptions] r) => Sem r Html
 latteCss = cssLink "latte.css"
@@ -92,7 +95,7 @@ themeCss :: (Members '[Reader HtmlOptions] r) => Sem r Html
 themeCss = do
   theme <- asks (^. htmlOptionsTheme)
   case theme of
-    Nord -> error "TODO"
+    Nord -> juvixNordCss
     Macchiato -> juvixCatppuchinCss
     Latte -> juvixCatppuchinCss
     Frappe -> juvixCatppuchinCss
