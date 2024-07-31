@@ -169,11 +169,15 @@ genModuleHtml o = do
   where
     mhead :: Sem r Html
     mhead = do
-      css <- themeCss
+      flavour <- flavourCss
+      theme <- themeCss
+      srcCss <- juvixSourceCss
       js <- highlightJs
       return $
         metaUtf8
-          <> css
+          <> theme
+          <> flavour
+          <> srcCss
           <> js
 
     mbody :: Sem r Html

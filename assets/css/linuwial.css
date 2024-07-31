@@ -44,13 +44,34 @@ dd {
 }
 
 a { text-decoration: none; }
-a[href]:link { color: var(--ju-main-link); }
-a[href]:visited {color: var(--ju-main-link-visited); }
+
+a[href]:link {
+  color: var(--ju-main-link);
+}
+
+a[href]:visited {
+  color: var(--ju-main-link-visited);
+}
+
 a[href]:hover {
   text-decoration: underline;
 }
 
-a[href].def:hover { color: var(--ju-mantle); }
+#package-header a[href]:link {
+  color: inherit;
+}
+
+#package-header a[href]:visited {
+  color: inherit;
+}
+
+#package-header
+a:hover,
+a.hover-highlight {
+  background-color: inherit;
+  text-decoration: underline;
+  text-decoration-color: inherit;
+}
 
 /* @end */
 
@@ -244,12 +265,6 @@ pre, code, kbd, samp, tt, .src {
 #module-header .caption sup {
   font-size: 80%;
   font-weight: normal;
-}
-
-/* FIXME fix color of visited links in header */
-#package-header #page-menu a:link, #package-header #page-menu {
-  color: var(--ju-base);
-  text-decoration: none;
 }
 
 .info {
@@ -786,7 +801,7 @@ p.directory {
 }
 
 .toggle-button:hover {
-  background-color: var(--ju-main-visited);
+  background-color: var(--ju-main-link-visited);
 }
 
 /* Styles for the toggle icon */

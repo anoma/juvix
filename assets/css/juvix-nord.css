@@ -37,7 +37,7 @@
 
   /* Theme */
   --ju-main: var(--nord7);
-  --ju-main-link: var(--nord10);
+  --ju-main-link: var(--nord8);
   --ju-main-link-visited: var(--nord9);
   --ju-warning: var(--nord11);
 }
