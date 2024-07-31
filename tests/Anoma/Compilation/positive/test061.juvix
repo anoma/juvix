@@ -38,7 +38,7 @@ tListI {A} {{T A}} : T (List A) :=
   mkT@{
     toNat {A} {{T A}} (xs : List A) : Nat :=
       for (acc := 0) (x in xs)
-        acc + T.toNat x
+        acc + T.toNat {A} x
   };
 
 g : {A : Type} → {{T A}} → Nat := 5;
