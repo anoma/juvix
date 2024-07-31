@@ -13,6 +13,7 @@ import Juvix.Compiler.Backend.Html.Data
 import Juvix.Compiler.Backend.Html.Extra
 import Juvix.Compiler.Backend.Html.Translation.FromTyped.Source hiding (go)
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
+import Juvix.Compiler.Concrete.Keywords qualified as Kw
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Print
 import Juvix.Compiler.Pipeline.EntryPoint
@@ -436,7 +437,8 @@ goFixity def = do
   sig' <- ppHelper (ppFixityDefHeaderNew def)
   header' <- defHeader (def ^. fixitySymbol) sig' (def ^. fixityDoc)
   prec' <- mkPrec
-  let tbl' = table . tbody $ ari <> prec'
+  ari' <- ari
+  let tbl' = table . tbody $ ari' <> prec'
   return $
     header'
       <> ( Html.div
@@ -453,7 +455,7 @@ goFixity def = do
 
     mkPrec :: Sem r Html
     mkPrec = case info ^. fixityPrecSame of
-      Just txt -> do
+      Just (txt :: S.Symbol) -> do
         d <- ppCodeHtml defaultOptions txt
         return (row $ toHtml ("Same precedence as " <> d))
       Nothing ->
@@ -461,22 +463,29 @@ goFixity def = do
           <> goPrec "Lower" (info ^. fixityPrecBelow)
         where
           goPrec :: Html -> Maybe [S.Symbol] -> Sem r Html
-          goPrec above ls = case ls >>= nonEmpty of
-            Nothing -> mempty
-            Just l -> do
-              l' <- foldr (\x acc -> x <> ", " <> acc) mempty <$> mapM (ppCodeHtml defaultOptions) l
-              return (row $ above <> " precedence than: " <> l')
+          goPrec above ls = do
+            semicolon' <- semiSeparator
+            case ls >>= nonEmpty of
+              Nothing -> mempty
+              Just l -> do
+                l' <- concatWith (\x y -> x <> semicolon' <> y) <$> mapM (ppCodeHtml defaultOptions) l
+                return (row $ above <> " precedence than: " <> l')
 
-    ari :: Html
-    ari =
-      let arit = toHtml @String $ show (info ^. fixityParsedArity)
-          assoc = toHtml @String $ case fromMaybe AssocNone (info ^. fixityAssoc) of
+    -- returns "; "
+    semiSeparator :: Sem r Html
+    semiSeparator = do
+      semic <- ppCodeHtml defaultOptions Kw.delimSemicolon
+      return (semic <> " ")
+
+    ari :: Sem r Html
+    ari = do
+      arit <- ppCodeHtml defaultOptions (info ^. fixityParsedArity)
+      semicolon' <- semiSeparator
+      let assoc = case fromMaybe AssocNone (info ^. fixityAssoc) of
             AssocNone -> ""
-            AssocRight -> ", right-associative"
-            AssocLeft -> ", left-associative"
-       in row $
-            arit
-              <> assoc
+            AssocRight -> semicolon' <> "right-associative"
+            AssocLeft -> semicolon' <> "left-associative"
+      return (row $ arit <> assoc)
 
 goAlias :: forall r. (Members '[Reader HtmlOptions] r) => AliasDef 'Scoped -> Sem r Html
 goAlias def = do
