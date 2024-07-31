@@ -100,6 +100,9 @@ closure_label:
 
 #define JUVIX_ASSIGN(var0, val) (var0 = val)
 
+#define JUVIX_UINT8_TO_INT(var0, var1) (var0 = var1)
+#define JUVIX_INT_TO_UINT8(var0, var1) (var0 = make_smallint((word_t)((uint8_t)(get_unboxed_int(var1) & 0xFF))))
+
 #define JUVIX_TRACE(val) (io_trace(val))
 #define JUVIX_DUMP (stacktrace_dump())
 #define JUVIX_FAILURE(val) \

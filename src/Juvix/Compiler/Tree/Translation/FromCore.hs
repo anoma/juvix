@@ -305,6 +305,7 @@ genCode infoTable fi =
       Core.OpTrace -> OpTrace
       Core.OpFail -> OpFail
       Core.OpUInt8FromInt -> PrimUnop OpIntToUInt8
+      Core.OpUInt8ToInt -> PrimUnop OpUInt8ToInt
       _ -> impossible
 
     genCairoOp :: Core.BuiltinOp -> CairoOp
