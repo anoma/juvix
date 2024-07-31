@@ -12,12 +12,13 @@ module Juvix.Compiler.Builtins
     module Juvix.Compiler.Builtins.Control,
     module Juvix.Compiler.Builtins.Anoma,
     module Juvix.Compiler.Builtins.Cairo,
-    module Juvix.Compiler.Builtins.UInt8,
+    module Juvix.Compiler.Builtins.Byte,
   )
 where
 
 import Juvix.Compiler.Builtins.Anoma
 import Juvix.Compiler.Builtins.Bool
+import Juvix.Compiler.Builtins.Byte
 import Juvix.Compiler.Builtins.Cairo
 import Juvix.Compiler.Builtins.Control
 import Juvix.Compiler.Builtins.Debug
@@ -29,4 +30,3 @@ import Juvix.Compiler.Builtins.List
 import Juvix.Compiler.Builtins.Maybe
 import Juvix.Compiler.Builtins.Nat
 import Juvix.Compiler.Builtins.String
-import Juvix.Compiler.Builtins.UInt8

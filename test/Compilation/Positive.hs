@@ -462,7 +462,7 @@ tests =
         $(mkRelFile "test077.juvix")
         $(mkRelFile "out/test077.out"),
       posTestEval
-        "Test078: Builtin UInt8"
+        "Test078: Builtin Byte"
         $(mkRelDir ".")
         $(mkRelFile "test078.juvix")
         $(mkRelFile "out/test078.out")

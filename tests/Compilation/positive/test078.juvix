@@ -8,45 +8,45 @@ import Stdlib.Trait.FromNatural open;
 import Stdlib.Trait.Functor open;
 import Stdlib.System.IO open;
 
-builtin uint8
-axiom UInt8 : Type;
+builtin byte
+axiom Byte : Type;
 
-builtin uint8-from-nat
-axiom uint8FromNat : Nat -> UInt8;
+builtin byte-from-nat
+axiom byteFromNat : Nat -> Byte;
 
-builtin uint8-to-nat
-axiom toNat : UInt8 -> Nat;
+builtin byte-to-nat
+axiom toNat : Byte -> Nat;
 
 instance
-UInt8FromNaturalI : FromNatural UInt8 :=
+ByteFromNaturalI : FromNatural Byte :=
   mkFromNatural@{
-    fromNat := uint8FromNat
+    fromNat := byteFromNat
   };
 
-n1 : UInt8 := fromNat 1;
+n1 : Byte := fromNat 1;
 
-n2 : UInt8 := fromNat 0xff;
+n2 : Byte := fromNat 0xff;
 
-n3 : UInt8 := fromNat 0x102;
+n3 : Byte := fromNat 0x102;
 
-l1 : UInt8 := 1;
+l1 : Byte := 1;
 
-l2 : UInt8 := 0xee;
+l2 : Byte := 0xee;
 
-l3 : UInt8 := 0x103;
+l3 : Byte := 0x103;
 
-xs : List UInt8 := [l1; l2; l3; 2];
+xs : List Byte := [l1; l2; l3; 2];
 
-printUInt8Ln : UInt8 -> IO := toNat >> printNatLn;
+printByteLn : Byte -> IO := toNat >> printNatLn;
 
-printListUInt8Ln : List UInt8 -> IO := map toNat >> Show.show >> printStringLn;
+printListByteLn : List Byte -> IO := map toNat >> Show.show >> printStringLn;
 
 main : IO :=
-  printUInt8Ln n1
-    >>> printUInt8Ln n2
-    >>> printUInt8Ln n3
+  printByteLn n1
+    >>> printByteLn n2
+    >>> printByteLn n3
     >>> printNatLn (toNat l1)
     >>> printNatLn (toNat l2)
     >>> printNatLn (toNat l3)
     >>> printNatLn (toNat 0xf0)
-    >>> printListUInt8Ln xs;
+    >>> printListByteLn xs;

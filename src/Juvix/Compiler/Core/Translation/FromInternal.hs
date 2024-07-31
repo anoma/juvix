@@ -614,10 +614,10 @@ goAxiomInductive a = whenJust (a ^. Internal.axiomBuiltin) builtinInductive
       Internal.BuiltinPoseidon -> return ()
       Internal.BuiltinEcOp -> return ()
       Internal.BuiltinRandomEcPoint -> return ()
-      Internal.BuiltinUInt8 -> registerInductiveAxiom (Just BuiltinUInt8) []
-      Internal.BuiltinUInt8Eq -> return ()
-      Internal.BuiltinUInt8ToNat -> return ()
-      Internal.BuiltinUInt8FromNat -> return ()
+      Internal.BuiltinByte -> registerInductiveAxiom (Just BuiltinByte) []
+      Internal.BuiltinByteEq -> return ()
+      Internal.BuiltinByteToNat -> return ()
+      Internal.BuiltinByteFromNat -> return ()
 
     registerInductiveAxiom :: Maybe BuiltinAxiom -> [(Tag, Text, Type -> Type, Maybe BuiltinConstructor)] -> Sem r ()
     registerInductiveAxiom ax ctrs = do
@@ -819,12 +819,12 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
           $ mkBuiltinApp' OpEc [mkVar' 2, mkVar' 1, mkVar' 0]
       Internal.BuiltinRandomEcPoint -> do
         registerAxiomDef (mkBuiltinApp' OpRandomEcPoint [])
-      Internal.BuiltinUInt8 -> return ()
-      Internal.BuiltinUInt8Eq ->
+      Internal.BuiltinByte -> return ()
+      Internal.BuiltinByteEq ->
         registerAxiomDef (mkLambda' mkTypeUInt8' (mkLambda' mkTypeUInt8' (mkBuiltinApp' OpEq [mkVar' 1, mkVar' 0])))
-      Internal.BuiltinUInt8ToNat ->
+      Internal.BuiltinByteToNat ->
         registerAxiomDef (mkLambda' mkTypeUInt8' (mkBuiltinApp' OpUInt8ToInt [mkVar' 0]))
-      Internal.BuiltinUInt8FromNat ->
+      Internal.BuiltinByteFromNat ->
         registerAxiomDef (mkLambda' mkTypeInteger' (mkBuiltinApp' OpUInt8FromInt [mkVar' 0]))
 
     axiomType' :: Sem r Type
@@ -1223,10 +1223,10 @@ goApplication a = do
         Just Internal.BuiltinPoseidon -> app
         Just Internal.BuiltinEcOp -> app
         Just Internal.BuiltinRandomEcPoint -> app
-        Just Internal.BuiltinUInt8 -> app
-        Just Internal.BuiltinUInt8Eq -> app
-        Just Internal.BuiltinUInt8ToNat -> app
-        Just Internal.BuiltinUInt8FromNat -> app
+        Just Internal.BuiltinByte -> app
+        Just Internal.BuiltinByteEq -> app
+        Just Internal.BuiltinByteToNat -> app
+        Just Internal.BuiltinByteFromNat -> app
         Nothing -> app
     Internal.ExpressionIden (Internal.IdenFunction n) -> do
       funInfoBuiltin <- Internal.getFunctionBuiltinInfo n

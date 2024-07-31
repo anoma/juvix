@@ -218,10 +218,10 @@ data BuiltinAxiom
   | BuiltinPoseidon
   | BuiltinEcOp
   | BuiltinRandomEcPoint
-  | BuiltinUInt8
-  | BuiltinUInt8Eq
-  | BuiltinUInt8ToNat
-  | BuiltinUInt8FromNat
+  | BuiltinByte
+  | BuiltinByteEq
+  | BuiltinByteToNat
+  | BuiltinByteFromNat
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic, Data)
 
 instance HasNameKind BuiltinAxiom where
@@ -259,10 +259,10 @@ instance HasNameKind BuiltinAxiom where
     BuiltinPoseidon -> KNameFunction
     BuiltinEcOp -> KNameFunction
     BuiltinRandomEcPoint -> KNameFunction
-    BuiltinUInt8 -> KNameInductive
-    BuiltinUInt8Eq -> KNameFunction
-    BuiltinUInt8ToNat -> KNameFunction
-    BuiltinUInt8FromNat -> KNameFunction
+    BuiltinByte -> KNameInductive
+    BuiltinByteEq -> KNameFunction
+    BuiltinByteToNat -> KNameFunction
+    BuiltinByteFromNat -> KNameFunction
 
   getNameKindPretty :: BuiltinAxiom -> NameKind
   getNameKindPretty = getNameKind
@@ -308,10 +308,10 @@ instance Pretty BuiltinAxiom where
     BuiltinPoseidon -> Str.cairoPoseidon
     BuiltinEcOp -> Str.cairoEcOp
     BuiltinRandomEcPoint -> Str.cairoRandomEcPoint
-    BuiltinUInt8 -> Str.uint8
-    BuiltinUInt8Eq -> Str.uint8Eq
-    BuiltinUInt8ToNat -> Str.uint8ToNat
-    BuiltinUInt8FromNat -> Str.uint8FromNat
+    BuiltinByte -> Str.byte_
+    BuiltinByteEq -> Str.byteEq
+    BuiltinByteToNat -> Str.byteToNat
+    BuiltinByteFromNat -> Str.byteFromNat
 
 data BuiltinType
   = BuiltinTypeInductive BuiltinInductive

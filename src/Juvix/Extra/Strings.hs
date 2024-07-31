@@ -173,17 +173,17 @@ error = "error"
 string :: (IsString s) => s
 string = "string"
 
-uint8 :: (IsString s) => s
-uint8 = "uint8"
+byte_ :: (IsString s) => s
+byte_ = "byte"
 
-uint8Eq :: (IsString s) => s
-uint8Eq = "uint8-eq"
+byteEq :: (IsString s) => s
+byteEq = "byte-eq"
 
-uint8ToNat :: (IsString s) => s
-uint8ToNat = "uint8-to-nat"
+byteToNat :: (IsString s) => s
+byteToNat = "byte-to-nat"
 
-uint8FromNat :: (IsString s) => s
-uint8FromNat = "uint8-from-nat"
+byteFromNat :: (IsString s) => s
+byteFromNat = "byte-from-nat"
 
 nat :: (IsString s) => s
 nat = "nat"
