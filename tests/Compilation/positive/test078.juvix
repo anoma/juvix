@@ -2,9 +2,11 @@ module test078;
 
 import Stdlib.Data.Nat open hiding {fromNat};
 import Stdlib.Debug.Trace open;
-import Stdlib.Function open using {>->};
+import Stdlib.Function open using {>->; >>};
 import Stdlib.Data.List open;
 import Stdlib.Trait.FromNatural open;
+import Stdlib.Trait.Functor open;
+import Stdlib.System.IO open;
 
 builtin uint8
 axiom UInt8 : Type;
@@ -25,28 +27,26 @@ n1 : UInt8 := fromNat 1;
 
 n2 : UInt8 := fromNat 0xff;
 
-n3 : UInt8 := fromNat 0x101;
+n3 : UInt8 := fromNat 0x102;
 
 l1 : UInt8 := 1;
 
 l2 : UInt8 := 0xee;
 
-l3 : UInt8 := 0x101;
+l3 : UInt8 := 0x103;
 
 xs : List UInt8 := [l1; l2; l3; 2];
 
-main : List UInt8 :=
-  trace n1
-    >-> trace n2
-    >-> trace n3
-    >-> trace l1
-    >-> trace l2
-    >-> trace l3
-    >-> trace (toNat n1)
-    >-> trace (toNat n2)
-    >-> trace (toNat n3)
-    >-> trace (toNat l1)
-    >-> trace (toNat l2)
-    >-> trace (toNat l3)
-    >-> trace (toNat 0xf0)
-    >-> xs;
+printUInt8Ln : UInt8 -> IO := toNat >> printNatLn;
+
+printListUInt8Ln : List UInt8 -> IO := map toNat >> Show.show >> printStringLn;
+
+main : IO :=
+  printUInt8Ln n1
+    >>> printUInt8Ln n2
+    >>> printUInt8Ln n3
+    >>> printNatLn (toNat l1)
+    >>> printNatLn (toNat l2)
+    >>> printNatLn (toNat l3)
+    >>> printNatLn (toNat 0xf0)
+    >>> printListUInt8Ln xs;
