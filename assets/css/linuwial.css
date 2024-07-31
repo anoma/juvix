@@ -1,14 +1,14 @@
 * { margin: 0; padding: 0 }
 
 html {
-  background-color: var(--ctp-base);
+  background-color: var(--ju-base);
   width: 100%;
   height: 100%;
 }
 
 body {
-  background: var(--ctp-base);
-  color: var(--ctp-text);
+  background: var(--ju-base);
+  color: var(--ju-text);
   text-align: left;
   min-height: 100vh;
   position: relative;
@@ -44,13 +44,13 @@ dd {
 }
 
 a { text-decoration: none; }
-a[href]:link { color: var(--ctp-maroon); }
-a[href]:visited {color: var(--ctp-flamingo); }
+a[href]:link { color: var(--ju-main-link); }
+a[href]:visited {color: var(--ju-main-link-visited); }
 a[href]:hover {
   text-decoration: underline;
 }
 
-a[href].def:hover { color: var(--ctp-mantle); }
+a[href].def:hover { color: var(--ju-mantle); }
 
 /* @end */
 
@@ -248,7 +248,7 @@ pre, code, kbd, samp, tt, .src {
 
 /* FIXME fix color of visited links in header */
 #package-header #page-menu a:link, #package-header #page-menu {
-  color: var(--ctp-base);
+  color: var(--ju-base);
   text-decoration: none;
 }
 
@@ -263,7 +263,7 @@ pre, code, kbd, samp, tt, .src {
 
 .caption, h1, h2, h3, h4, h5, h6, summary {
   font-weight: bold;
-  color: var(--ctp-maroon);
+  color: var(--ju-main);
   margin: 1.5em 0 1em 0;
 }
 
@@ -332,9 +332,9 @@ summary {
 pre {
   padding: 0.5rem 1rem;
   margin: 1em 0 0 0;
-  background-color: var(--ctp-mantle);
+  background-color: var(--ju-mantle);
   overflow: auto;
-  border: 1px solid var(--ctp-surface0);
+  border: 1px solid var(--ju-surface0);
   border-radius: 0.3em;
 }
 
@@ -348,13 +348,13 @@ pre + pre {
 
 blockquote {
   border-left: 3px solid var(--ctp-lavender);
-  background-color: var(--ctp-crust);
+  background-color: var(--ju-crust);
   margin: 0.5em;
   padding: 0.0005em 0.3em 0.5em 0.5em;
 }
 
 .src {
-  background: var(--ctp-mantle);
+  background: var(--ju-mantle);
   padding: 0.2em 0.5em;
 }
 
@@ -375,9 +375,9 @@ blockquote {
 }
 
 #package-header {
-  background: var(--ctp-maroon);
-  border-bottom: 4px solid var(--ctp-overlay0);
-  color: var(--ctp-base);
+  background: var(--ju-main);
+  border-bottom: 4px solid var(--ju-overlay0);
+  color: var(--ju-base);
   position: relative;
   font-size: 1.2em;
   text-align: left;
@@ -385,7 +385,7 @@ blockquote {
 }
 
 #package-header .caption {
-  color: var(--ctp-base);
+  color: var(--ju-base);
   font-style: normal;
   font-size: 1.2rem;
   font-weight: bold;
@@ -393,15 +393,15 @@ blockquote {
 
 #module-header .caption {
   font-weight: bold;
-  border-bottom: 1px solid var(--ctp-text);
+  border-bottom: 1px solid var(--ju-text);
 }
 
 table.info {
   float: right;
   padding: 0.5em 1em;
-  border: 1px solid var(--ctp-overlay0);
+  border: 1px solid var(--ju-overlay0);
   color: rgb(78,98,114);
-  background-color: var(--ctp-mantle);
+  background-color: var(--ju-mantle);
   max-width: 60%;
   border-spacing: 0;
   position: relative;
@@ -421,10 +421,10 @@ table.info {
 }
 
 #footer {
-  background: var(--ctp-crust);
-  border-top: 1px solid var(--ctp-subtext1);
+  background: var(--ju-crust);
+  border-top: 1px solid var(--ju-subtext1);
   padding: 0.5em 0;
-  color: var(--ctp-subtext0);
+  color: var(--ju-subtext0);
   text-align: center;
   width: 100%;
   height: 7em;
@@ -451,7 +451,7 @@ table.info {
 }
 
 #contents-list {
-  background: var(--ctp-mantle);
+  background: var(--ju-mantle);
   padding: 1em;
   margin: 0;
 }
@@ -499,7 +499,7 @@ table.info {
 #interface .src .selflink,
 #interface .src .link {
   float: right;
-  color: var(--ctp-subtext0);
+  color: var(--ju-subtext0);
   padding: 0 7px;
   -moz-user-select: none;
   font-weight: bold;
@@ -530,11 +530,11 @@ table.info {
 .doc th,
 .doc td {
   padding: 5px;
-  border: 1px solid var(--ctp-surface0);
+  border: 1px solid var(--ju-surface0);
 }
 
 .doc th {
-  background-color: var(--ctp-mantle);
+  background-color: var(--ju-mantle);
 }
 
 .clearfix:after {
@@ -547,7 +547,7 @@ table.info {
 
 .subs, .top > .doc, .subs > .doc {
   padding-left: 1em;
-  border-left: 1px solid var(--ctp-surface1);
+  border-left: 1px solid var(--ju-surface1);
   margin-bottom: 1em;
 }
 
@@ -585,7 +585,7 @@ table.info {
 
 .subs .subs p.src {
   border: none;
-  background-color: var(--ctp-mantle);
+  background-color: var(--ju-mantle);
 }
 
 .subs .subs .caption {
@@ -624,13 +624,13 @@ table.info {
 }
 
 .top p.src {
-  border-bottom: 3px solid var(--ctp-surface0);
+  border-bottom: 3px solid var(--ju-surface0);
   line-height: 2rem;
   margin-bottom: 1em;
 }
 
 .warning {
-  color: var(--ctp-red);
+  color: var(--ju-warning);
 }
 
 .arguments {
@@ -777,8 +777,8 @@ p.directory {
 .toggle-button {
   display: inline-block;
   padding: 5px 10px;
-  background-color: var(--ctp-maroon);
-  color: var(--ctp-mantle);
+  background-color: var(--ju-main);
+  color: var(--ju-mantle);
   border: none;
   cursor: pointer;
   width: 165px;
@@ -786,7 +786,7 @@ p.directory {
 }
 
 .toggle-button:hover {
-  background-color: var(--ctp-flamingo);
+  background-color: var(--ju-main-visited);
 }
 
 /* Styles for the toggle icon */
