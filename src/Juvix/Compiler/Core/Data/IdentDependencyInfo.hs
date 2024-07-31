@@ -38,7 +38,8 @@ createSymbolDependencyInfo tab = createDependencyInfo graph startVertices
     graph =
       fmap
         ( \IdentifierInfo {..} ->
-            getSymbols' tab (lookupTabIdentifierNode tab _identifierSymbol)
+            getSymbols' tab _identifierType
+              <> getSymbols' tab (lookupTabIdentifierNode tab _identifierSymbol)
         )
         (tab ^. infoIdentifiers)
         <> foldr

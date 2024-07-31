@@ -155,6 +155,24 @@ convertInductive md ii =
 convertAxiom :: Module -> AxiomInfo -> AxiomInfo
 convertAxiom md = over axiomType (convertNode md)
 
+-- | Remove type arguments and type abstractions.
+--
+-- Also adjusts the types, removing quantification over types and replacing all
+-- type variables with the dynamic type.
+--
+-- For example,
+--
+-- `\\A : Type \\f : ((B : Type) -> A -> B -> Pair A B) \\x : A { f A x x }`
+--
+-- is transformed to
+--
+-- `\\f : (Any -> Any -> Pair Any Any) \\x : Any { f x x }`
+--
+-- References:
+--  - https://github.com/anoma/juvix/issues/1512
+--  - https://github.com/anoma/juvix/pull/1655
+--  - https://github.com/anoma/juvix/issues/1930
+--  - https://github.com/anoma/juvix/pull/1954
 removeTypeArgs :: Module -> Module
 removeTypeArgs md =
   filterOutTypeSynonyms $

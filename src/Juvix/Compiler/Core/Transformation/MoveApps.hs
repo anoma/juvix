@@ -52,5 +52,29 @@ convertNode = dmap go
               _ -> node
       _ -> node
 
+-- | Move applications inside let bindings and case branches.
+--
+-- The translation from Core to Core.Stripped requires that only variables or
+-- function symbols be present at the head of an application.
+--
+-- We transform
+--
+-- `(let x := M in N) Q`
+--
+-- to
+--
+-- `let x := M in N Q`
+--
+-- and e.g.
+--
+-- `(case M of { c1 x := N1; c2 x y := N2 }) Q`
+--
+-- to
+--
+-- `case M of { c1 x := N1 Q; c2 x y := N2 Q }`
+--
+-- References:
+--  - https://github.com/anoma/juvix/issues/1654
+--  - https://github.com/anoma/juvix/pull/1659
 moveApps :: Module -> Module
 moveApps = mapT (const convertNode)
