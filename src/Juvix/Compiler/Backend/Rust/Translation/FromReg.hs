@@ -205,8 +205,14 @@ fromRegInstr info = \case
           (mkCall "mem.get_closure_largs" [fromValue _instrUnopArg])
       Reg.OpFieldToInt -> unsupported "field type"
       Reg.OpIntToField -> unsupported "field type"
-      Reg.OpUInt8ToInt -> unsupported "uint8 type"
-      Reg.OpIntToUInt8 -> unsupported "uint8 type"
+      Reg.OpUInt8ToInt ->
+        stmtAssign
+          (mkVarRef _instrUnopResult)
+          (mkCall "uint8_to_int" [fromValue _instrUnopArg])
+      Reg.OpIntToUInt8 ->
+        stmtAssign
+          (mkVarRef _instrUnopResult)
+          (mkCall "int_to_uint8" [fromValue _instrUnopArg])
 
     mkVarRef :: Reg.VarRef -> Text
     mkVarRef Reg.VarRef {..} = case _varRefGroup of
@@ -244,7 +250,7 @@ fromRegInstr info = \case
       Reg.ConstString {} -> unsupported "strings"
       Reg.ConstUnit -> mkVar "OBJ_UNIT"
       Reg.ConstVoid -> mkVar "OBJ_VOID"
-      Reg.ConstUInt8 {} -> impossible
+      Reg.ConstUInt8 x -> mkCall "make_smallint" [mkInteger x]
 
     fromAlloc :: Reg.InstrAlloc -> [Statement]
     fromAlloc Reg.InstrAlloc {..} =

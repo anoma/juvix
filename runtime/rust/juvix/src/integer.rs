@@ -38,6 +38,15 @@ pub fn smallint_le(x: Word, y: Word) -> Word {
     bool_to_word(smallint_value(x) <= smallint_value(y))
 }
 
+
+pub fn uint8_to_int(x : Word) -> Word {
+    x
+}
+
+pub fn int_to_uint8(x : Word) -> Word {
+    make_smallint((smallint_value(x) & 0xFF) as i32)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -64,5 +73,13 @@ mod tests {
             );
             assert_eq!(make_smallint(x), y);
         }
+    }
+
+    #[test]
+    fn test_int_to_uint8() {
+        assert_eq!(smallint_value(int_to_uint8(make_smallint(-1))), 255);
+        assert_eq!(smallint_value(int_to_uint8(make_smallint(255))), 255);
+        assert_eq!(smallint_value(int_to_uint8(make_smallint(-256))), 0);
+        assert_eq!(smallint_value(int_to_uint8(make_smallint(256))), 0);
     }
 }

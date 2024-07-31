@@ -36,3 +36,11 @@ pub fn word_to_bool(x: Word) -> bool {
         true
     }
 }
+
+pub fn uint8_to_int(x : Word) -> Word {
+    x
+}
+
+pub fn int_to_uint8(x : Word) -> Word {
+    x
+}
