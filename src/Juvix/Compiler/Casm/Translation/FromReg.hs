@@ -249,7 +249,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
           Reg.ConstUnit -> 0
           Reg.ConstVoid -> 0
           Reg.ConstString {} -> unsupported "strings"
-          Reg.ConstUInt8 {} -> unsupported "uint8"
+          Reg.ConstUInt8 x -> toInteger x
 
         mkLoad :: Reg.ConstrField -> Sem r RValue
         mkLoad Reg.ConstrField {..} = do
