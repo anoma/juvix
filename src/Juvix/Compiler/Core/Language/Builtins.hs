@@ -164,4 +164,4 @@ builtinsAnoma =
   ]
 
 builtinsUInt8 :: [BuiltinOp]
-builtinsUInt8 = [OpUInt8FromInt]
+builtinsUInt8 = [OpUInt8FromInt, OpUInt8ToInt]
