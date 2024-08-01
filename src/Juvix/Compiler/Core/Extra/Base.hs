@@ -200,6 +200,12 @@ mkTypeUInt8 i = mkTypePrim i primitiveUInt8
 mkTypeUInt8' :: Type
 mkTypeUInt8' = mkTypeUInt8 Info.empty
 
+mkTypeByteArray :: Info -> Type
+mkTypeByteArray i = mkTypePrim i PrimByteArray
+
+mkTypeByteArray' :: Type
+mkTypeByteArray' = mkTypeByteArray Info.empty
+
 mkDynamic :: Info -> Type
 mkDynamic i = NDyn (DynamicTy i)
 

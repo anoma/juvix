@@ -185,6 +185,9 @@ byteToNat = "byte-to-nat"
 byteFromNat :: (IsString s) => s
 byteFromNat = "byte-from-nat"
 
+byteArray :: (IsString s) => s
+byteArray = "byteArray"
+
 nat :: (IsString s) => s
 nat = "nat"
 

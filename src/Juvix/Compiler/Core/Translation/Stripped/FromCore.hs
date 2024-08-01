@@ -112,6 +112,7 @@ fromCore fsize tab =
         BuiltinByteEq -> False
         BuiltinByteToNat -> False
         BuiltinByteFromNat -> False
+        BuiltinByteArray -> False
       BuiltinTypeInductive i -> case i of
         BuiltinList -> True
         BuiltinMaybe -> True

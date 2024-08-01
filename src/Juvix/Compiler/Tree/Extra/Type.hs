@@ -80,6 +80,7 @@ isSubtype ty1 ty2 = case (ty1, ty2) of
   (TyBool {}, TyBool {}) -> True
   (TyString, TyString) -> True
   (TyField, TyField) -> True
+  (TyByteArray, TyByteArray) -> True
   (TyUnit, TyUnit) -> True
   (TyVoid, TyVoid) -> True
   (TyInductive {}, TyInductive {}) -> ty1 == ty2
@@ -93,6 +94,8 @@ isSubtype ty1 ty2 = case (ty1, ty2) of
   (_, TyString) -> False
   (TyField, _) -> False
   (_, TyField) -> False
+  (TyByteArray, _) -> False
+  (_, TyByteArray) -> False
   (TyBool {}, _) -> False
   (_, TyBool {}) -> False
   (TyFun {}, _) -> False
@@ -149,6 +152,7 @@ unifyTypes ty1 ty2 = case (ty1, ty2) of
     | ty1 == ty2 -> return ty1
   (TyString, TyString) -> return TyString
   (TyField, TyField) -> return TyField
+  (TyByteArray, TyByteArray) -> return TyByteArray
   (TyUnit, TyUnit) -> return TyUnit
   (TyVoid, TyVoid) -> return TyVoid
   (TyInductive {}, TyInductive {})
@@ -163,6 +167,8 @@ unifyTypes ty1 ty2 = case (ty1, ty2) of
   (_, TyString) -> err
   (TyField, _) -> err
   (_, TyField) -> err
+  (TyByteArray, _) -> err
+  (_, TyByteArray) -> err
   (TyBool {}, _) -> err
   (_, TyBool {}) -> err
   (TyFun {}, _) -> err

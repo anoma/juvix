@@ -20,6 +20,7 @@ convertNode md = umap go
           Just (BuiltinTypeAxiom BuiltinString) -> mkTypeString'
           Just (BuiltinTypeAxiom BuiltinField) -> mkTypeField'
           Just (BuiltinTypeAxiom BuiltinByte) -> mkTypeUInt8'
+          Just (BuiltinTypeAxiom BuiltinByteArray) -> mkTypeUInt8'
           _ -> node
         where
           ii = lookupInductiveInfo md _typeConstrSymbol

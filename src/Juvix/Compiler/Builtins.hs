@@ -13,12 +13,14 @@ module Juvix.Compiler.Builtins
     module Juvix.Compiler.Builtins.Anoma,
     module Juvix.Compiler.Builtins.Cairo,
     module Juvix.Compiler.Builtins.Byte,
+    module Juvix.Compiler.Builtins.ByteArray,
   )
 where
 
 import Juvix.Compiler.Builtins.Anoma
 import Juvix.Compiler.Builtins.Bool
 import Juvix.Compiler.Builtins.Byte
+import Juvix.Compiler.Builtins.ByteArray
 import Juvix.Compiler.Builtins.Cairo
 import Juvix.Compiler.Builtins.Control
 import Juvix.Compiler.Builtins.Debug
