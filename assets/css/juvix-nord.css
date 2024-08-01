@@ -1,11 +1,10 @@
-/* Color palette based on https://www.nordtheme.com/ */
-
 :root {
   /* Code */
   --ju-inductive: var(--nord14);
   --ju-constructor: var(--nord15);
   --ju-function: var(--nord13);
   --ju-axiom: var(--nord11);
+  --ju-module: var(--nord8);
   --ju-string: var(--nord12);
   --ju-keyword: var(--nord9);
   --ju-delimiter: var(--nord4);

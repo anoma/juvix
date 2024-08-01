@@ -3,6 +3,7 @@
   --ju-inductive: var(--ctp-green);
   --ju-constructor: var(--ctp-mauve);
   --ju-function: var(--ctp-yellow);
+  --ju-module: var(--ctp-lavender);
   --ju-axiom: var(--ctp-red);
   --ju-string: var(--ctp-flamingo);
   --ju-keyword: var(--ctp-sky);

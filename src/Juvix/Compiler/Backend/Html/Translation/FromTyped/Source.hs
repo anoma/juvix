@@ -31,6 +31,7 @@ data CssColor
   | JuKeyword
   | JuDelimiter
   | JuVar
+  | JuModule
   | JuFixity
   | JuNumber
   | JuComment
@@ -291,6 +292,7 @@ juColor = Attr.class_ . toStr
       JuInductive -> "ju-inductive"
       JuConstructor -> "ju-constructor"
       JuFunction -> "ju-function"
+      JuModule -> "ju-module"
       JuComment -> "ju-comment"
       JuJudoc -> "ju-judoc"
       JuAxiom -> "ju-axiom"
@@ -308,9 +310,9 @@ juKindColor = \case
   S.KNameFunction -> JuFunction
   S.KNameLocal -> JuVar
   S.KNameAxiom -> JuAxiom
-  S.KNameLocalModule -> JuVar
+  S.KNameLocalModule -> JuModule
   S.KNameAlias -> JuVar
-  S.KNameTopModule -> JuVar
+  S.KNameTopModule -> JuModule
   S.KNameFixity -> JuFixity
 
 putTag :: forall r. (Members '[Reader HtmlOptions] r) => Ann -> Html -> Sem r Html

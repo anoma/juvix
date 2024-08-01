@@ -496,8 +496,11 @@ ppStatements ss = paragraphs (ppGroup <$> Concrete.groupStatements (filter shoul
     ppGroup = vsep . sepEndSemicolon . fmap ppCode
 
 instance PrettyPrint TopModulePath where
-  ppCode TopModulePath {..} =
-    dotted (map ppSymbolType (_modulePathDir ++ [_modulePathName]))
+  ppCode m =
+    morpheme (getLoc m)
+      . annotate (AnnKind KNameTopModule)
+      . topModulePathToDottedPath
+      $ m
 
 instance (PrettyPrint n) => PrettyPrint (S.Name' n) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => S.Name' n -> Sem r ()
