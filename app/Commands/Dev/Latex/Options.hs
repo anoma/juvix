@@ -10,16 +10,16 @@ import Commands.Dev.Latex.GetJuvixSty.Options
 import CommonOptions
 
 data LatexCommand
-  = Export CallsOptions
-  | GetJuvixStyOptions GetJuvixStyOptions
+  = Export ExportOptions
+  | GetJuvixSty GetJuvixStyOptions
   deriving stock (Data)
 
-parseLatexCommand :: Parser LatexCommand
-parseLatexCommand =
+parseLatex :: Parser LatexCommand
+parseLatex =
   hsubparser $
     mconcat
       [ commandExport,
-        commandGetSty
+        commandGetJuvixSty
       ]
   where
     commandExport :: Mod CommandFields LatexCommand
@@ -37,5 +37,5 @@ parseLatexCommand =
         minfo :: ParserInfo LatexCommand
         minfo =
           info
-            (CallGraph <$> parseGetJuvixSty)
+            (GetJuvixSty <$> parseGetJuvixSty)
             (progDesc "Print juvix.sty to stdout")

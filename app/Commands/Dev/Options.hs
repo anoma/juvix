@@ -36,7 +36,7 @@ import CommonOptions
 data DevCommand
   = DisplayRoot RootOptions
   | ImportTree ImportTreeCommand
-  | Latex LatexOptions
+  | Latex LatexCommand
   | Highlight HighlightOptions
   | Internal InternalCommand
   | DevCompile DevCompileCommand
@@ -84,7 +84,7 @@ commandLatex =
   command "latex" $
     info
       (Latex <$> parseLatex)
-      (progDesc "Print the source code typeset in LaTeX")
+      (progDesc "Subcommands related to LaTeX")
 
 commandImportTree :: Mod CommandFields DevCommand
 commandImportTree =
