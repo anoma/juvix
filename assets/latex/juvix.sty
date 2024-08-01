@@ -112,7 +112,7 @@
   \definecolor{ctpCrust}     {RGB} {35, 38, 52}
 }
 
-\newcommand{\macchiatto}{
+\newcommand{\macchiato}{
   \definecolor{ctpRosewater} {RGB} {244, 219, 214}
   \definecolor{ctpFlamingo}  {RGB} {240, 198, 198}
   \definecolor{ctpPink}      {RGB} {245, 189, 230}
@@ -143,10 +143,10 @@
 
 \newcommand{\settheme}[1]{%
   \ifthenelse{\equal{#1}{mocha}}{\mocha{}}{%
-  \ifthenelse{\equal{#1}{macchiatto}}{\macchiatto{}}{%
+  \ifthenelse{\equal{#1}{macchiato}}{\macchiato{}}{%
   \ifthenelse{\equal{#1}{latte}}{\latte{}}{%
   \ifthenelse{\equal{#1}{frappe}}{\frappe{}}{%
-  \PackageError{juvix}{Invalid theme `#1'}{The theme should be one of: latte, mocha, macchiatto, frappe.}%
+  \PackageError{juvix}{Invalid theme `#1'}{The theme should be one of: latte, mocha, macchiato, frappe.}%
   }}}}
 }
 

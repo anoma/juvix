@@ -1,17 +1,36 @@
 module Commands.Dev.Latex.Export.Options where
 
 import CommonOptions
+import Prelude qualified
 
 data ExportOptions = ExportOptions
   { _exportInputFile :: AppPath File,
-    _exportStandalone :: Bool,
+    _exportMode :: ExportMode,
     _exportNoComments :: Bool,
     _exportFromLine :: Maybe Int,
     _exportToLine :: Maybe Int
   }
   deriving stock (Data)
 
+data ExportMode
+  = ExportStandalone
+  | ExportEnv
+  | ExportRaw
+  deriving stock (Enum, Bounded, Ord, Eq, Data, Generic)
+
+instance Show ExportMode where
+  show = \case
+    ExportEnv -> "env"
+    ExportStandalone -> "standalone"
+    ExportRaw -> "raw"
+
 makeLenses ''ExportOptions
+
+exportModeHelp :: ExportMode -> String
+exportModeHelp = \case
+  ExportEnv -> "Wrap the code in a Verbatim environment"
+  ExportStandalone -> "Output a ready to compile LaTeX file"
+  ExportRaw -> "Output only the code"
 
 parseExport :: Parser ExportOptions
 parseExport = do
@@ -21,10 +40,14 @@ parseExport = do
       ( long "no-comments"
           <> help "Do not print comments"
       )
-  _exportStandalone <-
-    switch
-      ( long "standalone"
-          <> help "Output a ready to compile LaTeX file"
+  _exportMode <-
+    option
+      (enumReader Proxy)
+      ( long "mode"
+          <> help ("How to deliver the output:\n" <> enumHelp exportModeHelp)
+          <> showDefault
+          <> completer (enumCompleter @ExportMode Proxy)
+          <> value ExportStandalone
       )
   _exportFromLine <-
     optional $

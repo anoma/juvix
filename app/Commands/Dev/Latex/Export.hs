@@ -22,24 +22,28 @@ runCommand ExportOptions {..} = do
           . Text.lines
           $ moduleToLatex c m
   renderStdOut $
-    if
-        | _exportStandalone -> standalone ltx
-        | otherwise -> verb ltx
+    case _exportMode of
+      ExportStandalone -> standalone ltx
+      ExportRaw -> ltx
+      ExportEnv -> verb ltx
 
 verb :: Text -> Text
 verb code =
   Text.unlines
-    [ "\\begin{Verbatim}[commandchars=\\\\\\{\\}]",
+    [ "\\begin{tcolorbox}[colback=ctpBase, colframe=ctpCrust]",
+      "\\begin{Verbatim}[commandchars=\\\\\\{\\}]",
       code,
-      "\\end{Verbatim}"
+      "\\end{Verbatim}",
+      "\\end{tcolorbox}"
     ]
 
 standalone :: Text -> Text
 standalone code =
   Text.unlines
     [ "\\documentclass{article}",
+      "\\usepackage{tcolorbox}",
       "\\usepackage{fvextra}",
-      "\\usepackage{juvix}",
+      "\\usepackage[theme=latte]{juvix}",
       "\\begin{document}",
       verb code,
       "\\end{document}"

@@ -179,6 +179,9 @@ fieldSizeOpt = eitherReader aux
       | n `elem` allowedFieldSizes = Right n
       | otherwise = Left $ Prelude.show n <> " is not a recognized field size"
 
+enumHelp :: forall a. (Bounded a, Enum a) => (a -> String) -> String
+enumHelp showHelp = unlines (map showHelp allElements)
+
 enumReader :: forall a. (Bounded a, Enum a, Show a) => Proxy a -> ReadM a
 enumReader _ = eitherReader $ \val ->
   case lookup val assocs of
