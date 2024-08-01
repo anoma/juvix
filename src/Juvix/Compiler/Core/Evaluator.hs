@@ -529,7 +529,7 @@ geval opts herr tab env0 = eval' env0
             let !v = eval' env node
              in nodeFromInteger
                   . toInteger
-                  . fromMaybe (evalError "expected field element" v)
+                  . fromMaybe (evalError "expected uint8" v)
                   . uint8FromNode
                   $ v
         {-# INLINE uint8ToIntOp #-}
