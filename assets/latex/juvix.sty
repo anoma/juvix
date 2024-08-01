@@ -2,15 +2,28 @@
 \ProvidesPackage{juvix}[Juvix code in LaTeX]
 
 \RequirePackage{xcolor}
+\RequirePackage{expkv-opt}
+\RequirePackage{expkv-def}
+\RequirePackage{ifthen}
 
-\RequirePackage{keyval}
+\ekvdefinekeys{juvix}
+  {
+    store   theme = \juvix@theme,
+    initial theme = latte,
+    % specify what happens for unknown keys
+    unknown code  =
+      \PackageWarning{juvix}
+        {Unknown option `\detokenize{#1}' received `\detokenize{#2}'},
+    unknown noval =
+      \PackageWarning{juvix}{Unknown option `\detokenize{#1}'}
+  }
 
-% Define a new key for the theme
-\define@key{juvix}{theme}{%
-  \def\juvix@theme{#1}%
-}
-
-\ProcessOptions\relax
+% process options given to \documentclass
+\ekvoProcessGlobalOptions{juvix}
+% for the next ekvoProcess... use the unknown handlers like defined for the set
+\ekvoUseUnknownHandlers*
+% process options given to this package
+\ekvoProcessLocalOptions{juvix}
 
 \newcommand{\mocha}{
   \definecolor{ctpRosewater} {RGB} {245, 224, 220}
@@ -129,12 +142,12 @@
 }
 
 \newcommand{\settheme}[1]{%
-  \ifx#1mocha \mocha{}
-  \else \ifx#1macchiatto \macchiatto{}
-  \else \ifx#1latte \latte{}
-  \else \ifx#1frappe \frappe{}
-  \else \latte{}
-  \fi \fi \fi \fi
+  \ifthenelse{\equal{#1}{mocha}}{\mocha{}}{%
+  \ifthenelse{\equal{#1}{macchiatto}}{\macchiatto{}}{%
+  \ifthenelse{\equal{#1}{latte}}{\latte{}}{%
+  \ifthenelse{\equal{#1}{frappe}}{\frappe{}}{%
+  \PackageError{juvix}{Invalid theme `#1'}{The theme should be one of: latte, mocha, macchiatto, frappe.}%
+  }}}}
 }
 
 \settheme{\juvix@theme}
@@ -152,16 +165,3 @@
 \colorlet{ju-fixity}{ctpSapphire}
 \colorlet{ju-number}{ctpText}
 \colorlet{ju-module}{ctpLavender}
-
-% \definecolor{ju-inductive}{HTML}{86b300}
-% \definecolor{ju-constructor}{HTML}{a37acc}
-% \definecolor{ju-function}{HTML}{f2ae49}
-% \definecolor{ju-axiom}{HTML}{f07171}
-% \definecolor{ju-string}{HTML}{f07171}
-% \definecolor{ju-keyword}{HTML}{399ee6}
-% \definecolor{ju-delimiter}{HTML}{787b80}
-% \definecolor{ju-comment}{HTML}{ba9966}
-% \definecolor{ju-judoc}{HTML}{8b2252}
-% \definecolor{ju-var}{HTML}{5c6166}
-% \definecolor{ju-fixity}{HTML}{ed9366}
-% \definecolor{ju-number}{HTML}{000000}
