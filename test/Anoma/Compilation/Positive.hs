@@ -601,7 +601,16 @@ allTests =
         $(mkRelFile "test081.juvix")
         []
         $ checkOutput
-          [ [nock| 255 |],
-            [nock| 0 |]
+          [ [nock| 1 |],
+            [nock| 255 |],
+            [nock| 2 |],
+            [nock| true |],
+            [nock| true |],
+            [nock| false |],
+            [nock| 1 |],
+            [nock| 238 |],
+            [nock| 3 |],
+            [nock| 240 |],
+            [nock| [1 238 3 2 nil] |]
           ]
     ]

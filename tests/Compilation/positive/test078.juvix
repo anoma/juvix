@@ -1,27 +1,6 @@
 module test078;
 
-import Stdlib.Data.Nat open hiding {fromNat};
-import Stdlib.Debug.Trace open;
-import Stdlib.Function open using {>->; >>};
-import Stdlib.Data.List open;
-import Stdlib.Trait.FromNatural open;
-import Stdlib.Trait.Functor open;
-import Stdlib.System.IO open;
-
-builtin byte
-axiom Byte : Type;
-
-builtin byte-from-nat
-axiom byteFromNat : Nat -> Byte;
-
-builtin byte-to-nat
-axiom toNat : Byte -> Nat;
-
-instance
-ByteFromNaturalI : FromNatural Byte :=
-  mkFromNatural@{
-    fromNat := byteFromNat
-  };
+import Stdlib.Prelude open;
 
 n1 : Byte := fromNat 1;
 
@@ -37,16 +16,19 @@ l3 : Byte := 0x103;
 
 xs : List Byte := [l1; l2; l3; 2];
 
-printByteLn : Byte -> IO := toNat >> printNatLn;
+printByteLn : Byte -> IO := Show.show >> printStringLn;
 
-printListByteLn : List Byte -> IO := map toNat >> Show.show >> printStringLn;
+printListByteLn : List Byte -> IO := Show.show >> printStringLn;
 
 main : IO :=
   printByteLn n1
     >>> printByteLn n2
     >>> printByteLn n3
-    >>> printNatLn (toNat l1)
-    >>> printNatLn (toNat l2)
-    >>> printNatLn (toNat l3)
-    >>> printNatLn (toNat 0xf0)
+    >>> printBoolLn (n1 == l1)
+    >>> printBoolLn (l1 == 0x101)
+    >>> printBoolLn (l2 == n2)
+    >>> printNatLn (Byte.toNat l1)
+    >>> printNatLn (Byte.toNat l2)
+    >>> printNatLn (Byte.toNat l3)
+    >>> printNatLn (Byte.toNat 0xf0)
     >>> printListByteLn xs;

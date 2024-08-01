@@ -1,13 +1,35 @@
 module test081;
 
-import Stdlib.Data.Nat open hiding {fromNat};
+import Stdlib.Prelude open;
 import Stdlib.Debug.Trace open;
-import Stdlib.Function open using {>->};
 
-builtin byte
-axiom Byte : Type;
+n1 : Byte := fromNat 1;
 
-builtin byte-from-nat
-axiom fromNat : Nat -> Byte;
+n2 : Byte := fromNat 0xff;
 
-main : Byte := trace (fromNat 0xff) >-> fromNat 0x100;
+n3 : Byte := fromNat 0x102;
+
+l1 : Byte := 1;
+
+l2 : Byte := 0xee;
+
+l3 : Byte := 0x103;
+
+xs : List Byte := [l1; l2; l3; 2];
+
+printByteLn : Byte -> IO := Show.show >> printStringLn;
+
+printListByteLn : List Byte -> IO := Show.show >> printStringLn;
+
+main : List Byte :=
+  trace n1
+    >-> trace n2
+    >-> trace n3
+    >-> trace (n1 == l1)
+    >-> trace (l1 == 0x101)
+    >-> trace (l2 == n2)
+    >-> trace (Byte.toNat l1)
+    >-> trace (Byte.toNat l2)
+    >-> trace (Byte.toNat l3)
+    >-> trace (Byte.toNat 0xf0)
+    >-> xs;
