@@ -1,21 +1,41 @@
-module Commands.Dev.Latex.Options where
+module Commands.Dev.Latex.Options
+  ( module Commands.Dev.Latex.Options,
+    module Commands.Dev.Latex.Export.Options,
+    module Commands.Dev.Latex.GetJuvixSty.Options,
+  )
+where
 
+import Commands.Dev.Latex.Export.Options
+import Commands.Dev.Latex.GetJuvixSty.Options
 import CommonOptions
 
-data LatexOptions = LatexOptions
-  { _latexInputFile :: AppPath File,
-    _latexNoComments :: Bool
-  }
+data LatexCommand
+  = Export CallsOptions
+  | GetJuvixStyOptions GetJuvixStyOptions
   deriving stock (Data)
 
-makeLenses ''LatexOptions
+parseLatexCommand :: Parser LatexCommand
+parseLatexCommand =
+  hsubparser $
+    mconcat
+      [ commandExport,
+        commandGetSty
+      ]
+  where
+    commandExport :: Mod CommandFields LatexCommand
+    commandExport = command "export" minfo
+      where
+        minfo :: ParserInfo LatexCommand
+        minfo =
+          info
+            (Export <$> parseExport)
+            (progDesc "Export a Juvix module to LaTeX")
 
-parseLatex :: Parser LatexOptions
-parseLatex = do
-  _latexInputFile <- parseInputFiles (pure FileExtJuvix)
-  _latexNoComments <-
-    switch
-      ( long "no-comments"
-          <> help "Do not print comments"
-      )
-  pure LatexOptions {..}
+    commandGetJuvixSty :: Mod CommandFields LatexCommand
+    commandGetJuvixSty = command "getJuvixSty" minfo
+      where
+        minfo :: ParserInfo LatexCommand
+        minfo =
+          info
+            (CallGraph <$> parseGetJuvixSty)
+            (progDesc "Print juvix.sty to stdout")
