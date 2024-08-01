@@ -460,10 +460,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
           Reg.OpIntToField -> goAssignValue _instrUnopResult _instrUnopArg
           Reg.OpArgsNum -> goUnop' goOpArgsNum _instrUnopResult _instrUnopArg
           Reg.OpUInt8ToInt -> goAssignValue _instrUnopResult _instrUnopArg
-          Reg.OpIntToUInt8 -> goUnop' mod256 _instrUnopResult _instrUnopArg
-            where
-              mod256 :: Reg.VarRef -> MemRef -> Sem r ()
-              mod256 res arg1 = goExtraBinop IntMod res arg1 (Imm 256)
+          Reg.OpIntToUInt8 -> unsupported "OpIntTOUInt8"
 
         goCairo :: Reg.InstrCairo -> Sem r ()
         goCairo Reg.InstrCairo {..} = case _instrCairoOpcode of
