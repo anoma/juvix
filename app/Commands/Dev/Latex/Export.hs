@@ -21,7 +21,29 @@ runCommand ExportOptions {..} = do
           . sublist (pred <$> _exportFromLine) (pred <$> _exportToLine)
           . Text.lines
           $ moduleToLatex c m
-  renderStdOut ltx
+  renderStdOut $
+    if
+        | _exportStandalone -> standalone ltx
+        | otherwise -> verb ltx
+
+verb :: Text -> Text
+verb code =
+  Text.unlines
+    [ "\\begin{Verbatim}[commandchars=\\\\\\{\\}]",
+      code,
+      "\\end{Verbatim}"
+    ]
+
+standalone :: Text -> Text
+standalone code =
+  Text.unlines
+    [ "\\documentclass{article}",
+      "\\usepackage{fvextra}",
+      "\\usepackage{juvix}",
+      "\\begin{document}",
+      verb code,
+      "\\end{document}"
+    ]
 
 sublist :: Maybe Int -> Maybe Int -> [a] -> [a]
 sublist mfromIx mtoIx l =
