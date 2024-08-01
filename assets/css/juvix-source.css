@@ -63,6 +63,11 @@ a:visited {
     text-decoration: none;
 }
 
+a:hover {
+    text-decoration: underline;
+    text-decoration-color: inherit;
+}
+
 a:hover,
 a.hover-highlight {
     background-color: var(--ju-mantle);

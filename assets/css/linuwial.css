@@ -45,15 +45,15 @@ dd {
 
 a { text-decoration: none; }
 
-a[href]:link {
+a[href]:link:not(.ju-code-link) {
   color: var(--ju-main-link);
 }
 
-a[href]:visited {
+a[href]:visited:not(.ju-code-link) {
   color: var(--ju-main-link-visited);
 }
 
-a[href]:hover {
+a[href]:hover:not(.ju-code-link) {
   text-decoration: underline;
 }
 

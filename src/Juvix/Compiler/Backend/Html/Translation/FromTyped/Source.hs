@@ -13,6 +13,7 @@ import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Print
 import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Compiler.Pipeline.Loader.PathResolver
+import Juvix.Data.CodeAnn (codeAnnReferenceModule, codeAnnReferenceNameId)
 import Juvix.Extra.Assets (writeAssets)
 import Juvix.Prelude
 import Prettyprinter
@@ -284,24 +285,24 @@ go sdt = case sdt of
     textSpaces :: Int -> Text
     textSpaces n = Text.replicate n (Text.singleton ' ')
 
-juColor :: CssColor -> Attribute
-juColor = Attr.class_ . toStr
-  where
-    toStr :: CssColor -> AttributeValue
-    toStr = \case
-      JuInductive -> "ju-inductive"
-      JuConstructor -> "ju-constructor"
-      JuFunction -> "ju-function"
-      JuModule -> "ju-module"
-      JuComment -> "ju-comment"
-      JuJudoc -> "ju-judoc"
-      JuAxiom -> "ju-axiom"
-      JuString -> "ju-string"
-      JuKeyword -> "ju-keyword"
-      JuDelimiter -> "ju-delimiter"
-      JuFixity -> "ju-fixity"
-      JuVar -> "ju-var"
-      JuNumber -> "ju-number"
+juClass :: CssColor -> Attribute
+juClass = Attr.class_ . cssColorAttribute
+
+cssColorAttribute :: CssColor -> AttributeValue
+cssColorAttribute = \case
+  JuInductive -> "ju-inductive"
+  JuConstructor -> "ju-constructor"
+  JuFunction -> "ju-function"
+  JuModule -> "ju-module"
+  JuComment -> "ju-comment"
+  JuJudoc -> "ju-judoc"
+  JuAxiom -> "ju-axiom"
+  JuString -> "ju-string"
+  JuKeyword -> "ju-keyword"
+  JuDelimiter -> "ju-delimiter"
+  JuFixity -> "ju-fixity"
+  JuVar -> "ju-var"
+  JuNumber -> "ju-number"
 
 juKindColor :: S.NameKind -> CssColor
 juKindColor = \case
@@ -318,15 +319,15 @@ juKindColor = \case
 putTag :: forall r. (Members '[Reader HtmlOptions] r) => Ann -> Html -> Sem r Html
 putTag ann x = case ann of
   AnnKind k -> return (tagKind k x)
-  AnnLiteralInteger -> return (Html.span ! juColor JuNumber $ x)
-  AnnLiteralString -> return (Html.span ! juColor JuString $ x)
-  AnnKeyword -> return (Html.span ! juColor JuKeyword $ x)
-  AnnUnkindedSym -> return (Html.span ! juColor JuVar $ x)
-  AnnComment -> return (Html.span ! juColor JuComment $ x)
-  AnnJudoc -> return (Html.span ! juColor JuJudoc $ x)
-  AnnDelimiter -> return (Html.span ! juColor JuDelimiter $ x)
-  AnnDef tmp ni -> boldDefine <*> tagDef tmp ni
-  AnnRef tmp ni -> tagRef tmp ni
+  AnnLiteralInteger -> return (Html.span ! juClass JuNumber $ x)
+  AnnLiteralString -> return (Html.span ! juClass JuString $ x)
+  AnnKeyword -> return (Html.span ! juClass JuKeyword $ x)
+  AnnUnkindedSym -> return (Html.span ! juClass JuVar $ x)
+  AnnComment -> return (Html.span ! juClass JuComment $ x)
+  AnnJudoc -> return (Html.span ! juClass JuJudoc $ x)
+  AnnDelimiter -> return (Html.span ! juClass JuDelimiter $ x)
+  AnnDef r -> boldDefine <*> tagDef r
+  AnnRef r -> tagRef r
   AnnCode -> return x
   AnnImportant -> return x
   where
@@ -337,23 +338,27 @@ putTag ann x = case ann of
         HtmlSrc -> id
         HtmlOnly -> id
 
-    tagDef :: TopModulePath -> S.NameId -> Sem r Html
-    tagDef tmp nid = do
-      ref' <- tagRef tmp nid
-      attrId <- nameIdAttr nid
+    tagDef :: CodeAnnReference -> Sem r Html
+    tagDef ref = do
+      ref' <- tagRef ref
+      attrId <- nameIdAttr (ref ^. codeAnnReferenceNameId)
       return $ (Html.span ! Attr.id attrId) ref'
 
-    tagRef :: TopModulePath -> S.NameId -> Sem r Html
-    tagRef tmp ni = do
-      pth <- nameIdAttrRef tmp (Just ni)
-      return $
-        Html.span ! Attr.class_ "annot" $
-          a ! Attr.href pth $
-            x
+    tagRef :: CodeAnnReference -> Sem r Html
+    tagRef ref = do
+      pth <- nameIdAttrRef (ref ^. codeAnnReferenceModule) (Just (ref ^. codeAnnReferenceNameId))
+      return
+        . (Html.span ! Attr.class_ "annot")
+        . ( a
+              ! Attr.href pth
+              ! Attr.class_ ("ju-code-link " <> cssColorAttribute (juKindColor (S.getNameKindPretty ref)))
+          )
+        $ x
 
+    tagKind :: S.NameKind -> Html -> Html
     tagKind k =
       Html.span
-        ! juColor (juKindColor k)
+        ! juClass (juKindColor k)
 
 nameIdAttr :: (Members '[Reader HtmlOptions] r) => S.NameId -> Sem r AttributeValue
 nameIdAttr nid = do

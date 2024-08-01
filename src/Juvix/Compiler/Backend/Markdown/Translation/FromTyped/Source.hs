@@ -98,7 +98,7 @@ fromJuvixMarkdown opts = do
         )
 
 htmlSemicolon :: Html
-htmlSemicolon = Html.span ! HtmlRender.juColor HtmlRender.JuDelimiter $ ";"
+htmlSemicolon = Html.span ! HtmlRender.juClass HtmlRender.JuDelimiter $ ";"
 
 go ::
   forall r.
