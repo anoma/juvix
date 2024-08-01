@@ -12,7 +12,7 @@ checkCairo md = do
   checkMainType
   checkNoAxioms md
   mapAllNodesM checkNoIO md
-  mapAllNodesM (checkBuiltins' builtinsString [PrimString, primitiveUInt8]) md
+  mapAllNodesM (checkBuiltins' (builtinsString ++ builtinsUInt8) [PrimString, primitiveUInt8]) md
   where
     checkMainType :: Sem r ()
     checkMainType =
