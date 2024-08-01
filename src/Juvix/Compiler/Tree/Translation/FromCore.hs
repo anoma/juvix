@@ -361,6 +361,8 @@ convertPrimitiveType = \case
     TyString
   Core.PrimField ->
     TyField
+  Core.PrimByteArray ->
+    TyByteArray
 
 -- | `convertNestedType` ensures that the conversion of a type with Dynamic in the
 -- target is curried. The result of `convertType 0 ty` is always uncurried.
