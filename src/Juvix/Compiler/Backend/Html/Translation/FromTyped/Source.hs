@@ -187,13 +187,15 @@ genModuleHtml o = do
 
     formattedTime :: Sem r Html
     formattedTime =
-      return $
-        Html.span . toHtml $
-          "Last modified on "
-            <> formatTime
-              defaultTimeLocale
-              "%Y-%m-%d %-H:%M %Z"
-              (o ^. genModuleHtmlArgsUTC)
+      return
+        . Html.footer
+        . Html.pre
+        . toHtml
+        $ "Last modified on "
+          <> formatTime
+            defaultTimeLocale
+            "%Y-%m-%d %-H:%M %Z"
+            (o ^. genModuleHtmlArgsUTC)
 
     justCode :: Sem r Html
     justCode =
