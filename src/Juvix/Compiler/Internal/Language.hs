@@ -172,7 +172,7 @@ data Literal
     LitNumeric Integer
   | -- | `LitInteger` represents a literal with trait `Integral`
     LitInteger Integer
-  | -- | `LitNatural` represents a literal with trait `Natural`
+  | -- | `LitNatural` represents a literal with trait `FromNatural`
     LitNatural Integer
   deriving stock (Show, Eq, Ord, Generic, Data)
 
