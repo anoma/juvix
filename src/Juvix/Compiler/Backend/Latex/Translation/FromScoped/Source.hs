@@ -1,4 +1,7 @@
-module Juvix.Compiler.Backend.Latex.Translation.FromScoped.Source where
+module Juvix.Compiler.Backend.Latex.Translation.FromScoped.Source
+  ( moduleToLatex,
+  )
+where
 
 import Data.Text qualified as Text
 import Data.Text.Lazy (toStrict)
@@ -25,19 +28,11 @@ data LatexColor
   | JuJudoc
   | JuModule
 
-genSourceLatex ::
-  forall m.
-  (MonadIO m) =>
-  Maybe Comments ->
-  Module 'Scoped 'ModuleTop ->
-  m ()
-genSourceLatex c = putStrLn . genModuleText c
-
-genModuleText ::
+moduleToLatex ::
   Maybe Comments ->
   Module 'Scoped 'ModuleTop ->
   Text
-genModuleText c = toStrict . Builder.toLazyText . genModuleLatex c
+moduleToLatex c = toStrict . Builder.toLazyText . genModuleLatex c
 
 genModuleLatex ::
   Maybe Comments ->
