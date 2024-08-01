@@ -44,7 +44,7 @@ pub fn uint8_to_int(x : Word) -> Word {
 }
 
 pub fn int_to_uint8(x : Word) -> Word {
-    make_smallint((smallint_value(x) & 0xFF) as i32)
+    make_smallint(smallint_value(x).rem_euclid(256))
 }
 
 #[cfg(test)]
