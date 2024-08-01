@@ -39,15 +39,19 @@ defaultHtmlOptions =
 
 data Theme
   = Nord
-  | Ayu
   | Macchiato
+  | Latte
+  | Frappe
+  | Mocha
   deriving stock (Enum, Eq, Ord, Bounded, Data)
 
 instance Show Theme where
   show = \case
     Nord -> "nord"
-    Ayu -> "ayu"
     Macchiato -> "macchiato"
+    Latte -> "latte"
+    Frappe -> "frappe"
+    Mocha -> "mocha"
 
 data ThemeLight
   = Dark
@@ -58,12 +62,23 @@ themeLight :: Theme -> ThemeLight
 themeLight = \case
   Nord -> Dark
   Macchiato -> Dark
-  Ayu -> Light
+  Latte -> Light
+  Frappe -> Dark
+  Mocha -> Dark
 
 data HtmlKind
   = HtmlDoc
   | HtmlSrc
-  | HtmlOnly
+  | -- | Only source is generated but without the -src suffix. TODO I think this
+    -- option is only useful for mkDocs. This constructor should be removed and
+    -- the logic should be handled from the VSCode plugin.
+    HtmlOnly
   deriving stock (Data)
+
+kindSuffix :: HtmlKind -> String
+kindSuffix = \case
+  HtmlDoc -> ""
+  HtmlSrc -> "-src"
+  HtmlOnly -> ""
 
 makeLenses ''HtmlOptions

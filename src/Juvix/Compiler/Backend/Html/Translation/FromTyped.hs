@@ -223,7 +223,7 @@ topModulePath = (^. modulePath . S.nameConcrete)
 topTemplate :: forall r. (Members '[Reader EntryPoint, Reader HtmlOptions] r) => Html -> Html -> Sem r Html
 topTemplate rightMenu' content' = do
   mathJax <- mathJaxCdn
-  ayuTheme <- ayuCss
+  latteTheme <- latteCss
   judocTheme <- linuwialCss
   toggle <- toggleJs
   let mhead :: Html
@@ -238,7 +238,7 @@ topTemplate rightMenu' content' = do
               ! Attr.content "width=device-width, initial-scale=1"
             <> mathJax
             <> livejs
-            <> ayuTheme
+            <> latteTheme
             <> judocTheme
             <> toggle
 
