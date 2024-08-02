@@ -13,6 +13,14 @@ import Juvix.Prelude
 import Juvix.Prelude.Pretty hiding (braces, brackets, group, list, parens)
 import Prettyprinter.Render.Terminal (Color (..), bold, colorDull)
 
+data CodeAnnReference = CodeAnnReference
+  { _codeAnnReferenceModule :: TopModulePath,
+    _codeAnnReferenceNameId :: NameId,
+    _codeAnnReferenceNameKindPretty :: NameKind
+  }
+
+makeLenses ''CodeAnnReference
+
 type Ann = CodeAnn
 
 data CodeAnn
@@ -26,8 +34,12 @@ data CodeAnn
   | AnnLiteralString
   | AnnLiteralInteger
   | AnnUnkindedSym
-  | AnnDef TopModulePath NameId
-  | AnnRef TopModulePath NameId
+  | AnnDef CodeAnnReference
+  | AnnRef CodeAnnReference
+
+instance HasNameKind CodeAnnReference where
+  getNameKind = (^. codeAnnReferenceNameKindPretty)
+  getNameKindPretty = (^. codeAnnReferenceNameKindPretty)
 
 instance HasNameKindAnn Ann where
   annNameKind = AnnKind

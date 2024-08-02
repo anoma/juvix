@@ -24,7 +24,7 @@ import Juvix.Compiler.Pipeline.Loader.PathResolver.Data
 import Juvix.Compiler.Store.Scoped.Language (Alias, ModuleSymbolEntry, PreSymbolEntry (..), ScopedModule, SymbolEntry, aliasName, moduleEntry, scopedModuleName, symbolEntry)
 import Juvix.Data.Ape.Base
 import Juvix.Data.Ape.Print
-import Juvix.Data.CodeAnn (Ann, CodeAnn (..), ppStringLit)
+import Juvix.Data.CodeAnn (Ann, CodeAnn (..), CodeAnnReference (..), ppStringLit)
 import Juvix.Data.CodeAnn qualified as C
 import Juvix.Data.Effect.ExactPrint
 import Juvix.Data.Keyword.All qualified as Kw
@@ -496,17 +496,20 @@ ppStatements ss = paragraphs (ppGroup <$> Concrete.groupStatements (filter shoul
     ppGroup = vsep . sepEndSemicolon . fmap ppCode
 
 instance PrettyPrint TopModulePath where
-  ppCode TopModulePath {..} =
-    dotted (map ppSymbolType (_modulePathDir ++ [_modulePathName]))
+  ppCode m =
+    morpheme (getLoc m)
+      . annotate (AnnKind KNameTopModule)
+      . topModulePathToDottedPath
+      $ m
 
 instance (PrettyPrint n) => PrettyPrint (S.Name' n) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => S.Name' n -> Sem r ()
-  ppCode S.Name' {..} = do
+  ppCode n@S.Name' {..} = do
     let nameConcrete' = region (C.annotateKind _nameKind) (ppCode _nameConcrete)
     annSRef (withNameIdSuffix _nameId nameConcrete')
     where
       annSRef :: Sem r () -> Sem r ()
-      annSRef = annotated (AnnRef (_nameDefinedIn ^. S.absTopModulePath) _nameId)
+      annSRef = annotated (AnnRef (nameReference n))
 
 instance PrettyPrint Name where
   ppCode n = case n of
@@ -706,8 +709,16 @@ annDef nm = case sing :: SStage s of
   SScoped -> annSDef nm
   SParsed -> id
 
+nameReference :: S.Name' n -> CodeAnnReference
+nameReference n@S.Name' {..} =
+  CodeAnnReference
+    { _codeAnnReferenceNameId = _nameId,
+      _codeAnnReferenceModule = _nameDefinedIn ^. S.absTopModulePath,
+      _codeAnnReferenceNameKindPretty = getNameKindPretty n
+    }
+
 annSDef :: (Members '[ExactPrint] r) => S.Name' n -> Sem r () -> Sem r ()
-annSDef S.Name' {..} = annotated (AnnDef (_nameDefinedIn ^. S.absTopModulePath) _nameId)
+annSDef = annotated . AnnDef . nameReference
 
 instance (SingI s) => PrettyPrint (FunctionParameters s) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => FunctionParameters s -> Sem r ()

@@ -1,17 +1,14 @@
-/* @group Fundamentals */
-
 * { margin: 0; padding: 0 }
 
-/* Is this portable? */
 html {
-  background-color: white;
+  background-color: var(--ju-base);
   width: 100%;
   height: 100%;
 }
 
 body {
-  background: #fefefe;
-  color: #111;
+  background: var(--ju-base);
+  color: var(--ju-text);
   text-align: left;
   min-height: 100vh;
   position: relative;
@@ -47,12 +44,34 @@ dd {
 }
 
 a { text-decoration: none; }
-a[href]:link { color: #D54E54; }
-a[href]:visited {color: #802e31; }
-a[href]:hover { text-decoration:underline; }
 
-a[href].def:link, a[href].def:visited { color: rgba(69, 59, 97, 0.8); }
-a[href].def:hover { color: rgb(78, 98, 114); }
+a[href]:link:not(.ju-code-link) {
+  color: var(--ju-main-link);
+}
+
+a[href]:visited:not(.ju-code-link) {
+  color: var(--ju-main-link-visited);
+}
+
+a[href]:hover:not(.ju-code-link) {
+  text-decoration: underline;
+}
+
+#package-header a[href]:link {
+  color: inherit;
+}
+
+#package-header a[href]:visited {
+  color: inherit;
+}
+
+#package-header
+a:hover,
+a.hover-highlight {
+  background-color: inherit;
+  text-decoration: underline;
+  text-decoration-color: inherit;
+}
 
 /* @end */
 
@@ -85,39 +104,11 @@ body.js-enabled .hide-when-js-enabled {
     bottom: 1em;
     overflow-y: auto;
   }
-
-  #synopsis {
-    display: block;
-    position: fixed;
-    float: left;
-    top: 5em;
-    bottom: 1em;
-    right: 0;
-    max-width: 65vw;
-    overflow-y: auto;
-    /* Ensure that synopsis covers everything (including MathJAX markup) */
-    z-index: 1;
-  }
-
-  #synopsis .show {
-    border: 1px solid #5E5184;
-    padding: 0.7em;
-    max-height: 65vh;
-  }
-
 }
 
 @media only screen and (max-width: 1279px) {
   #content {
     width: 80vw;
-  }
-
-  #synopsis {
-    display: block;
-    padding: 0;
-    position: relative;
-    margin: 0;
-    width: 100%;
   }
 }
 
@@ -276,9 +267,6 @@ pre, code, kbd, samp, tt, .src {
   font-weight: normal;
 }
 
-#package-header #page-menu a:link, #package-header #page-menu a:visited { color: white; }
-
-
 .info {
   font-size: 90%;
 }
@@ -290,7 +278,7 @@ pre, code, kbd, samp, tt, .src {
 
 .caption, h1, h2, h3, h4, h5, h6, summary {
   font-weight: bold;
-  color: #D84E53;
+  color: var(--ju-main);
   margin: 1.5em 0 1em 0;
 }
 
@@ -351,35 +339,6 @@ ul.links li a {
 .show { display: inherit; }
 .clear { clear: both; }
 
-.collapser:before, .expander:before, .noexpander:before {
-  font-size: 1.2em;
-  color: #9C5791;
-  display: inline-block;
-  padding-right: 7px;
-}
-
-.collapser:before {
-  content: '▿';
-}
-.expander:before {
-  content: '▹';
-}
-.noexpander:before {
-  content: '▿';
-  visibility: hidden;
-}
-
-.collapser, .expander {
-  cursor: pointer;
-}
-
-.instance.collapser, .instance.expander {
-  margin-left: 0px;
-  background-position: left center;
-  min-width: 9px;
-  min-height: 9px;
-}
-
 summary {
   cursor: pointer;
   outline: none;
@@ -388,9 +347,9 @@ summary {
 pre {
   padding: 0.5rem 1rem;
   margin: 1em 0 0 0;
-  background-color: #f7f7f7;
+  background-color: var(--ju-mantle);
   overflow: auto;
-  border: 1px solid #ddd;
+  border: 1px solid var(--ju-surface0);
   border-radius: 0.3em;
 }
 
@@ -403,14 +362,14 @@ pre + pre {
 }
 
 blockquote {
-  border-left: 3px solid #c7a5d3;
-  background-color: #eee4f1;
+  border-left: 3px solid var(--ctp-lavender);
+  background-color: var(--ju-crust);
   margin: 0.5em;
   padding: 0.0005em 0.3em 0.5em 0.5em;
 }
 
 .src {
-  background: #f2f2f2;
+  background: var(--ju-mantle);
   padding: 0.2em 0.5em;
 }
 
@@ -431,9 +390,9 @@ blockquote {
 }
 
 #package-header {
-  background: #803353;
-  border-bottom: 5px solid rgba(69, 59, 97, 0.5);
-  color: #ddd;
+  background: var(--ju-main);
+  border-bottom: 4px solid var(--ju-overlay0);
+  color: var(--ju-base);
   position: relative;
   font-size: 1.2em;
   text-align: left;
@@ -441,23 +400,23 @@ blockquote {
 }
 
 #package-header .caption {
-  color: white;
+  color: var(--ju-base);
   font-style: normal;
-  font-size: 1rem;
+  font-size: 1.2rem;
   font-weight: bold;
 }
 
 #module-header .caption {
   font-weight: bold;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid var(--ju-text);
 }
 
 table.info {
   float: right;
   padding: 0.5em 1em;
-  border: 1px solid #ddd;
+  border: 1px solid var(--ju-overlay0);
   color: rgb(78,98,114);
-  background-color: #fff;
+  background-color: var(--ju-mantle);
   max-width: 60%;
   border-spacing: 0;
   position: relative;
@@ -477,10 +436,10 @@ table.info {
 }
 
 #footer {
-  background: #ededed;
-  border-top: 1px solid #aaa;
+  background: var(--ju-crust);
+  border-top: 1px solid var(--ju-subtext1);
   padding: 0.5em 0;
-  color: #222;
+  color: var(--ju-subtext0);
   text-align: center;
   width: 100%;
   height: 7em;
@@ -507,7 +466,7 @@ table.info {
 }
 
 #contents-list {
-  background: #f4f4f4;
+  background: var(--ju-mantle);
   padding: 1em;
   margin: 0;
 }
@@ -530,41 +489,6 @@ table.info {
 
 #description .caption {
   display: none;
-}
-
-#synopsis summary {
-  display: block;
-  float: right;
-  width: 29px;
-  color: rgba(255,255,255,0);
-  height: 110px;
-  margin: 0;
-  font-size: 1px;
-  padding: 0;
-  background: url(synopsis.png) no-repeat 0px -8px;
-}
-
-#synopsis details[open] > summary {
-  background: url(synopsis.png) no-repeat -75px -8px;
-}
-
-#synopsis ul {
-  height: 100%;
-  overflow: auto;
-  padding: 0.5em;
-  margin: 0;
-}
-
-#synopsis ul ul {
-  overflow: hidden;
-}
-
-#synopsis ul,
-#synopsis ul li.src {
-  background-color: rgb(250,247,224);
-  white-space: nowrap;
-  list-style: none;
-  margin-left: 0;
 }
 
 #interface td.src {
@@ -590,7 +514,7 @@ table.info {
 #interface .src .selflink,
 #interface .src .link {
   float: right;
-  color: #888;
+  color: var(--ju-subtext0);
   padding: 0 7px;
   -moz-user-select: none;
   font-weight: bold;
@@ -598,19 +522,6 @@ table.info {
 }
 #interface .src .selflink {
   margin: 0 -0.5em 0 0.5em;
-}
-
-#interface span.fixity {
-  color: #919191;
-  border-left: 1px solid #919191;
-  padding: 0.2em 0.5em 0.2em 0.5em;
-  margin: 0 -1em 0 1em;
-}
-
-#interface span.rightedge {
-  border-left: 1px solid #919191;
-  padding: 0.2em 0 0.2em 0;
-  margin: 0 0 0 1em;
 }
 
 #interface table { border-spacing: 2px; }
@@ -634,11 +545,11 @@ table.info {
 .doc th,
 .doc td {
   padding: 5px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--ju-surface0);
 }
 
 .doc th {
-  background-color: #f0f0f0;
+  background-color: var(--ju-mantle);
 }
 
 .clearfix:after {
@@ -651,7 +562,7 @@ table.info {
 
 .subs, .top > .doc, .subs > .doc {
   padding-left: 1em;
-  border-left: 1px solid gainsboro;
+  border-left: 1px solid var(--ju-surface1);
   margin-bottom: 1em;
 }
 
@@ -689,7 +600,7 @@ table.info {
 
 .subs .subs p.src {
   border: none;
-  background-color: #f8f8f8;
+  background-color: var(--ju-mantle);
 }
 
 .subs .subs .caption {
@@ -728,13 +639,13 @@ table.info {
 }
 
 .top p.src {
-  border-bottom: 3px solid #e5e5e5;
+  border-bottom: 3px solid var(--ju-surface0);
   line-height: 2rem;
   margin-bottom: 1em;
 }
 
 .warning {
-  color: red;
+  color: var(--ju-warning);
 }
 
 .arguments {
@@ -749,13 +660,6 @@ table.info {
 .fields .caption { display: none; }
 
 .fields p { margin: 0 0; }
-
-/* this seems bulky to me
-.methods, .constructors {
-  background: #f8f8f8;
-  border: 1px solid #eee;
-}
-*/
 
 /* @end */
 
@@ -888,8 +792,8 @@ p.directory {
 .toggle-button {
   display: inline-block;
   padding: 5px 10px;
-  background-color: #D84E53;
-  color: #fff;
+  background-color: var(--ju-main);
+  color: var(--ju-mantle);
   border: none;
   cursor: pointer;
   width: 165px;
@@ -897,7 +801,7 @@ p.directory {
 }
 
 .toggle-button:hover {
-  background-color: #803353;
+  background-color: var(--ju-main-link-visited);
 }
 
 /* Styles for the toggle icon */

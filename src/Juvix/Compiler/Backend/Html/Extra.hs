@@ -57,23 +57,32 @@ toggleJs = jsLink "toggle.js"
 linuwialCss :: (Members '[Reader HtmlOptions] r) => Sem r Html
 linuwialCss = cssLink "linuwial.css"
 
+juvixCatppuchinCss :: (Members '[Reader HtmlOptions] r) => Sem r Html
+juvixCatppuchinCss = cssLink "juvix-catppuchin.css"
+
+juvixSourceCss :: (Members '[Reader HtmlOptions] r) => Sem r Html
+juvixSourceCss = cssLink "juvix-source.css"
+
+juvixNordCss :: (Members '[Reader HtmlOptions] r) => Sem r Html
+juvixNordCss = cssLink "juvix-nord.css"
+
 nordCss :: (Members '[Reader HtmlOptions] r) => Sem r Html
-nordCss = cssLink "source-nord.css"
+nordCss = cssLink "nord.css"
 
 latteCss :: (Members '[Reader HtmlOptions] r) => Sem r Html
-latteCss = cssLink "source-latte.css"
+latteCss = cssLink "latte.css"
 
 macchiatoCss :: (Members '[Reader HtmlOptions] r) => Sem r Html
-macchiatoCss = cssLink "source-macchiato.css"
+macchiatoCss = cssLink "macchiato.css"
 
 frappeCss :: (Members '[Reader HtmlOptions] r) => Sem r Html
-frappeCss = cssLink "source-frappe.css"
+frappeCss = cssLink "frappe.css"
 
 mochaCss :: (Members '[Reader HtmlOptions] r) => Sem r Html
-mochaCss = cssLink "source-mocha.css"
+mochaCss = cssLink "mocha.css"
 
-themeCss :: (Members '[Reader HtmlOptions] r) => Sem r Html
-themeCss = do
+flavourCss :: (Members '[Reader HtmlOptions] r) => Sem r Html
+flavourCss = do
   theme <- asks (^. htmlOptionsTheme)
   case theme of
     Nord -> nordCss
@@ -81,6 +90,16 @@ themeCss = do
     Latte -> latteCss
     Frappe -> frappeCss
     Mocha -> mochaCss
+
+themeCss :: (Members '[Reader HtmlOptions] r) => Sem r Html
+themeCss = do
+  theme <- asks (^. htmlOptionsTheme)
+  case theme of
+    Nord -> juvixNordCss
+    Macchiato -> juvixCatppuchinCss
+    Latte -> juvixCatppuchinCss
+    Frappe -> juvixCatppuchinCss
+    Mocha -> juvixCatppuchinCss
 
 highlightJs :: (Members '[Reader HtmlOptions] r) => Sem r Html
 highlightJs = jsLink "highlight.js"

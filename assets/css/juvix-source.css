@@ -1,0 +1,84 @@
+body {
+    background-color: var(--ju-base);
+}
+
+.ju-inductive {
+    color: var(--ju-inductive);
+}
+
+.ju-constructor {
+    color: var(--ju-constructor);
+}
+
+.ju-function {
+    color: var(--ju-function);
+}
+
+.ju-module {
+    color: var(--ju-module);
+}
+
+.ju-axiom {
+    color: var(--ju-axiom);
+}
+
+.ju-string {
+    color: var(--ju-string);
+}
+
+.ju-keyword {
+    color: var(--ju-keyword);
+}
+
+.ju-delimiter {
+    color: var(--ju-delimiter);
+}
+
+.ju-var {
+    color: var(--ju-var);
+}
+
+.ju-fixity {
+    color: var(--ju-fixity);
+}
+
+.ju-comment {
+    color: var(--ju-comment);
+}
+
+.ju-judoc {
+    color: var(--ju-judoc);
+}
+
+.ju-number {
+    color: var(--ju-number);
+}
+
+.ju-define {
+    font-weight: bold;
+}
+
+a:link,
+a:visited {
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+    text-decoration-color: inherit;
+}
+
+a:hover,
+a.hover-highlight {
+    background-color: var(--ju-mantle);
+}
+
+footer {
+    color: var(--ju-subtext1);
+}
+
+footer a {
+    color: var(--ju-subtext1);
+    font-size: small;
+    font-weight: bold;
+}

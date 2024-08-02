@@ -1,0 +1,42 @@
+:root {
+  /* Code */
+  --ju-inductive: var(--nord14);
+  --ju-constructor: var(--nord15);
+  --ju-function: var(--nord13);
+  --ju-axiom: var(--nord11);
+  --ju-module: var(--nord8);
+  --ju-string: var(--nord12);
+  --ju-keyword: var(--nord9);
+  --ju-delimiter: var(--nord4);
+  --ju-var: var(--nord5);
+  --ju-fixity: var(--nord12);
+  --ju-comment: var(--nord3);
+  --ju-judoc: var(--nord7);
+  --ju-number: var(--nord8);
+
+  /* Text */
+  --ju-text: var(--nord6);
+  --ju-subtext1: var(--nord5);
+  --ju-subtext0: var(--nord4);
+
+  /* Surface */
+  --ju-surface0: var(--nord3);
+  --ju-surface1: var(--nord3);
+  --ju-surface2: var(--nord3);
+
+  /* Overlay */
+  --ju-overlay0: var(--nord2);
+  --ju-overlay1: var(--nord2);
+  --ju-overlay2: var(--nord2);
+
+  /* Panes */
+  --ju-base: var(--nord0);
+  --ju-mantle: var(--nord1);
+  --ju-crust: var(--nord2);
+
+  /* Theme */
+  --ju-main: var(--nord7);
+  --ju-main-link: var(--nord8);
+  --ju-main-link-visited: var(--nord9);
+  --ju-warning: var(--nord11);
+}

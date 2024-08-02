@@ -1,0 +1,42 @@
+:root {
+  /* Code */
+  --ju-inductive: var(--ctp-green);
+  --ju-constructor: var(--ctp-mauve);
+  --ju-function: var(--ctp-yellow);
+  --ju-module: var(--ctp-lavender);
+  --ju-axiom: var(--ctp-red);
+  --ju-string: var(--ctp-flamingo);
+  --ju-keyword: var(--ctp-sky);
+  --ju-delimiter: var(--ctp-overlay2);
+  --ju-var: var(--ctp-text);
+  --ju-fixity: var(--ctp-sapphire);
+  --ju-comment: var(--ctp-rosewater);
+  --ju-judoc: var(--ctp-teal);
+  --ju-number: var(--ctp-peach);
+
+  /* Text */
+  --ju-text: var(--ctp-text);
+  --ju-subtext1: var(--ctp-subtext1);
+  --ju-subtext0: var(--ctp-subtext0);
+
+  /* Overlay */
+  --ju-overlay0: var(--ctp-overlay0);
+  --ju-overlay1: var(--ctp-overlay1);
+  --ju-overlay2: var(--ctp-overlay2);
+
+  /* Surface */
+  --ju-surface0: var(--ctp-surface0);
+  --ju-surface1: var(--ctp-surface1);
+  --ju-surface2: var(--ctp-surface2);
+
+  /* Panes */
+  --ju-base: var(--ctp-base);
+  --ju-mantle: var(--ctp-mantle);
+  --ju-crust: var(--ctp-mantle);
+
+  /* Theme */
+  --ju-main: var(--ctp-maroon);
+  --ju-main-link: var(--ctp-maroon);
+  --ju-main-link-visited: var(--ctp-flamingo);
+  --ju-warning: var(--ctp-red);
+}
