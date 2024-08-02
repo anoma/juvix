@@ -2,8 +2,10 @@
 module CommonOptions
   ( module CommonOptions,
     module Juvix.Prelude,
+    module Juvix.Prelude.Pretty,
     module Parallel.ProgressLog,
     module Options.Applicative,
+    module Prettyprinter.Render.Terminal,
   )
 where
 
@@ -19,11 +21,16 @@ import Juvix.Compiler.Tree.Data.TransformationId.Parser qualified as Tree
 import Juvix.Data.Field
 import Juvix.Prelude
 import Juvix.Prelude as Juvix
-import Options.Applicative
+import Juvix.Prelude.Pretty hiding (group, list)
+import Options.Applicative hiding (helpDoc)
+import Options.Applicative qualified as Opt
 import Parallel.ProgressLog
+import Prettyprinter.Render.Terminal hiding (renderIO, renderStrict)
 import System.Process
 import Text.Read (readMaybe)
-import Prelude (show)
+import Prelude qualified
+
+type AnsiDoc = Doc AnsiStyle
 
 -- | Paths that are input are used to detect the root of the project.
 data AppPath f = AppPath
@@ -54,6 +61,9 @@ parseInputFilesMod exts' mods = do
           <> mods
       )
   pure AppPath {_pathIsInput = True, ..}
+
+helpDoc :: AnsiDoc -> Mod f a
+helpDoc = Opt.helpDoc . Just
 
 parseInputFiles :: NonEmpty FileExt -> Parser (AppPath File)
 parseInputFiles exts' = parseInputFilesMod exts' mempty
@@ -179,8 +189,8 @@ fieldSizeOpt = eitherReader aux
       | n `elem` allowedFieldSizes = Right n
       | otherwise = Left $ Prelude.show n <> " is not a recognized field size"
 
-enumHelp :: forall a. (Bounded a, Enum a) => (a -> String) -> String
-enumHelp showHelp = unlines (map showHelp allElements)
+enumHelp :: forall a. (Bounded a, Enum a, Show a) => (a -> AnsiDoc) -> AnsiDoc
+enumHelp showHelp = vsep ["• " <> show x <> ": " <> showHelp x | x <- allElements]
 
 enumReader :: forall a. (Bounded a, Enum a, Show a) => Proxy a -> ReadM a
 enumReader _ = eitherReader $ \val ->

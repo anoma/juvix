@@ -11,9 +11,6 @@ import Juvix.Compiler.Pipeline.Run
 import Juvix.Data.Error qualified as Error
 import Juvix.Extra.Paths.Base hiding (rootBuildDir)
 import Juvix.Parser.Error
-import Juvix.Prelude.Pretty hiding
-  ( Doc,
-  )
 import System.Console.ANSI qualified as Ansi
 
 data App :: Effect where

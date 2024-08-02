@@ -10,7 +10,6 @@ import Juvix.Compiler.Backend.C qualified as C
 import Juvix.Compiler.Casm.Data.Result qualified as Casm
 import Juvix.Compiler.Casm.Pretty qualified as Casm
 import Juvix.Compiler.Reg.Pretty qualified as Reg
-import Juvix.Prelude.Pretty
 
 runCommand :: forall r. (Members '[EmbedIO, App, TaggedLock] r) => AsmCompileOptions -> Sem r ()
 runCommand opts = do

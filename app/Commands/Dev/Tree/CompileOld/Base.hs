@@ -13,7 +13,6 @@ import Juvix.Compiler.Nockma.Pretty qualified as Nockma
 import Juvix.Compiler.Nockma.Translation.FromTree qualified as Nockma
 import Juvix.Compiler.Reg.Pretty qualified as Reg
 import Juvix.Compiler.Tree.Data.InfoTable qualified as Tree
-import Juvix.Prelude.Pretty
 
 data PipelineArg = PipelineArg
   { _pipelineArgOptions :: CompileOptions,

@@ -16,7 +16,6 @@ import Juvix.Compiler.Core.Data.Module qualified as Core
 import Juvix.Compiler.Core.Data.TransformationId qualified as Core
 import Juvix.Compiler.Reg.Pretty qualified as Reg
 import Juvix.Compiler.Tree.Pretty qualified as Tree
-import Juvix.Prelude.Pretty
 
 data PipelineArg = PipelineArg
   { _pipelineArgOptions :: CompileOptions,

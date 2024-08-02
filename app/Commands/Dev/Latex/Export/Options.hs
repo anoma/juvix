@@ -26,7 +26,7 @@ instance Show ExportMode where
 
 makeLenses ''ExportOptions
 
-exportModeHelp :: ExportMode -> String
+exportModeHelp :: ExportMode -> AnsiDoc
 exportModeHelp = \case
   ExportEnv -> "Wrap the code in a Verbatim environment"
   ExportStandalone -> "Output a ready to compile LaTeX file"
@@ -44,7 +44,7 @@ parseExport = do
     option
       (enumReader Proxy)
       ( long "mode"
-          <> help ("How to deliver the output:\n" <> enumHelp exportModeHelp)
+          <> helpDoc ("How to deliver the output:\n" <> enumHelp exportModeHelp)
           <> showDefault
           <> completer (enumCompleter @ExportMode Proxy)
           <> value ExportStandalone
