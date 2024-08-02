@@ -52,7 +52,7 @@ go sdt = case sdt of
   STEmpty -> mempty
   STChar c -> Builder.fromText (escapeCharacter c)
   STText _ (t :: Text) -> Builder.fromText (escape t)
-  STLine n -> ("\n" <> textSpaces n)
+  STLine n -> "\n" <> textSpaces n
   STAnn ann content -> putTag ann (go content)
   STConcat l -> mconcatMap go l
   where
