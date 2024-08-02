@@ -14,13 +14,13 @@ data ExportOptions = ExportOptions
 
 data ExportMode
   = ExportStandalone
-  | ExportEnv
+  | ExportWrap
   | ExportRaw
   deriving stock (Enum, Bounded, Ord, Eq, Data, Generic)
 
 instance Show ExportMode where
   show = \case
-    ExportEnv -> "env"
+    ExportWrap -> "wrap"
     ExportStandalone -> "standalone"
     ExportRaw -> "raw"
 
@@ -28,7 +28,7 @@ makeLenses ''ExportOptions
 
 exportModeHelp :: ExportMode -> AnsiDoc
 exportModeHelp = \case
-  ExportEnv -> "Wrap the code in a Verbatim environment"
+  ExportWrap -> "Wrap the code in a Verbatim environment"
   ExportStandalone -> "Output a ready to compile LaTeX file"
   ExportRaw -> "Output only the code"
 

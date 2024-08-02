@@ -25,7 +25,7 @@ runCommand ExportOptions {..} = do
     case _exportMode of
       ExportStandalone -> standalone ltx
       ExportRaw -> ltx
-      ExportEnv -> verb ltx
+      ExportWrap -> verb ltx
 
 verb :: Text -> Text
 verb code =
