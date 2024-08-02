@@ -41,7 +41,7 @@ scanBSImports ::
   ByteString ->
   Sem r ScanResult
 scanBSImports fp inputBS = do
-  strat <- ask
+  strat <- adaptStrategy <$> ask
   case strat of
     ImportScanStrategyFallback ->
       case FlatParse.scanBSImports fp inputBS of
@@ -59,6 +59,12 @@ scanBSImports fp inputBS = do
       Just r -> return r
     ImportScanStrategyMegaparsec -> Megaparsec.scanBSImports fp inputBS
   where
+    adaptStrategy :: ImportScanStrategy -> ImportScanStrategy
+    adaptStrategy = \case
+      ImportScanStrategyFallback
+        | not (isJuvixFile fp) -> ImportScanStrategyMegaparsec
+      s -> s
+
     fileLoc :: Interval
     fileLoc =
       Interval
@@ -66,6 +72,7 @@ scanBSImports fp inputBS = do
           _intervalStart = tmpFileLoc,
           _intervalEnd = tmpFileLoc
         }
+
     tmpFileLoc :: FileLoc
     tmpFileLoc =
       FileLoc
