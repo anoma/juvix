@@ -19,6 +19,8 @@ import Juvix.Data.Keyword.All
     kwBind,
     kwBottom,
     kwBuiltin,
+    kwByteArrayFromListByte,
+    kwByteArraySize,
     kwCase,
     kwColon,
     kwComma,

@@ -186,7 +186,13 @@ byteFromNat :: (IsString s) => s
 byteFromNat = "byte-from-nat"
 
 byteArray :: (IsString s) => s
-byteArray = "byteArray"
+byteArray = "bytearray"
+
+byteArrayFromListByte :: (IsString s) => s
+byteArrayFromListByte = "bytearray-from-list-byte"
+
+byteArraySize :: (IsString s) => s
+byteArraySize = "bytearray-size"
 
 nat :: (IsString s) => s
 nat = "nat"

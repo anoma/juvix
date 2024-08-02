@@ -463,6 +463,12 @@ kwAnomaSignDetached = asciiKw Str.anomaSignDetached
 kwAnomaVerifyWithMessage :: Keyword
 kwAnomaVerifyWithMessage = asciiKw Str.anomaVerifyWithMessage
 
+kwByteArrayFromListByte :: Keyword
+kwByteArrayFromListByte = asciiKw Str.byteArrayFromListByte
+
+kwByteArraySize :: Keyword
+kwByteArraySize = asciiKw Str.byteArraySize
+
 delimBraceL :: Keyword
 delimBraceL = mkDelim Str.braceL
 

@@ -2,6 +2,7 @@ module Juvix.Compiler.Core.Evaluator where
 
 import Control.Exception qualified as Exception
 import Crypto.Sign.Ed25519 qualified as E
+import Data.ByteString qualified as BS
 import Data.HashMap.Strict qualified as HashMap
 import Data.Serialize qualified as S
 import GHC.Base (seq)
@@ -215,6 +216,8 @@ geval opts herr tab env0 = eval' env0
       OpRandomEcPoint -> randomEcPointOp
       OpUInt8ToInt -> uint8ToIntOp
       OpUInt8FromInt -> uint8FromIntOp
+      OpByteArrayFromListByte -> byteArrayFromListByteOp
+      OpByteArraySize -> byteArraySizeOp
       where
         err :: Text -> a
         err msg = evalError msg n
@@ -533,6 +536,30 @@ geval opts herr tab env0 = eval' env0
                   . uint8FromNode
                   $ v
         {-# INLINE uint8ToIntOp #-}
+
+        byteArrayFromListByteOp :: [Node] -> Node
+        byteArrayFromListByteOp =
+          unary $ \node ->
+            let !v = eval' env node
+             in nodeFromByteString
+                  . BS.pack
+                  . fromMaybe (evalError "expected list byte" v)
+                  . listUInt8FromNode
+                  $ v
+        {-# INLINE byteArrayFromListByteOp #-}
+
+        byteArraySizeOp :: [Node] -> Node
+        byteArraySizeOp =
+          unary $ \node ->
+            let !v = eval' env node
+             in nodeFromInteger
+                  . fromIntegral
+                  . BS.length
+                  . fromMaybe (evalError "expected bytearray" v)
+                  . byteArrayFromNode
+                  $ v
+        {-# INLINE byteArraySizeOp #-}
+
     {-# INLINE applyBuiltin #-}
 
     -- secretKey, publicKey are not encoded with their length as
@@ -558,6 +585,10 @@ geval opts herr tab env0 = eval' env0
     nodeFromUInt8 !w = mkConstant' (ConstUInt8 w)
     {-# INLINE nodeFromUInt8 #-}
 
+    nodeFromByteString :: ByteString -> Node
+    nodeFromByteString !b = mkConstant' (ConstByteArray b)
+    {-# INLINE nodeFromByteString #-}
+
     nodeFromBool :: Bool -> Node
     nodeFromBool b = mkConstr' (BuiltinTag tag) []
       where
@@ -567,10 +598,10 @@ geval opts herr tab env0 = eval' env0
     {-# INLINE nodeFromBool #-}
 
     mkBuiltinConstructor :: BuiltinConstructor -> [Node] -> Maybe Node
-    mkBuiltinConstructor ctor args =
-      (\tag -> mkConstr' tag args)
-        . (^. constructorTag)
-        <$> lookupTabBuiltinConstructor tab ctor
+    mkBuiltinConstructor ctor args = (\tag -> mkConstr' tag args) <$> builtinConstructorTag ctor
+
+    builtinConstructorTag :: BuiltinConstructor -> Maybe Tag
+    builtinConstructorTag ctor = (^. constructorTag) <$> lookupTabBuiltinConstructor tab ctor
 
     nodeMaybeNothing :: Node
     nodeMaybeNothing =
@@ -610,6 +641,29 @@ geval opts herr tab env0 = eval' env0
       NCst (Constant _ (ConstUInt8 i)) -> Just i
       _ -> Nothing
     {-# INLINE uint8FromNode #-}
+
+    byteArrayFromNode :: Node -> Maybe ByteString
+    byteArrayFromNode = \case
+      NCst (Constant _ (ConstByteArray b)) -> Just b
+      _ -> Nothing
+    {-# INLINE byteArrayFromNode #-}
+
+    listUInt8FromNode :: Node -> Maybe [Word8]
+    listUInt8FromNode = \case
+      NCtr (Constr _ t xs) -> do
+        consTag <- builtinConstructorTag BuiltinListCons
+        nilTag <- builtinConstructorTag BuiltinListNil
+        if
+            | t == nilTag -> return []
+            | t == consTag -> case xs of
+                (hd : tl) -> do
+                  uint8Hd <- uint8FromNode hd
+                  uint8Tl <- concatMapM listUInt8FromNode tl
+                  return (uint8Hd : uint8Tl)
+                _ -> Nothing
+            | otherwise -> Nothing
+      _ -> Nothing
+    {-# INLINE listUInt8FromNode #-}
 
     printNode :: Node -> Text
     printNode = \case
