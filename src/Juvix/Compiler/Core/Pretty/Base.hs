@@ -5,6 +5,7 @@ module Juvix.Compiler.Core.Pretty.Base
   )
 where
 
+import Data.ByteString qualified as BS
 import Data.HashMap.Strict qualified as HashMap
 import Data.Map.Strict qualified as Map
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
@@ -64,6 +65,8 @@ instance PrettyCode BuiltinOp where
     OpRandomEcPoint -> return primRandomEcPoint
     OpUInt8ToInt -> return primUInt8ToInt
     OpUInt8FromInt -> return primFieldFromInt
+    OpByteArrayFromListByte -> return primByteArrayFromListByte
+    OpByteArraySize -> return primByteArraySize
 
 instance PrettyCode BuiltinDataTag where
   ppCode = \case
@@ -114,13 +117,28 @@ instance PrettyCode ConstantValue where
       return $ annotate AnnLiteralInteger (pretty i)
     ConstString txt ->
       return $ annotate AnnLiteralString (pretty (show txt :: String))
+    ConstByteArray bs -> do
+      let bytes = BS.unpack bs
+      codeBs <- mapM ppCode bytes
+      bytesList <- go codeBs
+      return (primByteArrayFromListByte <+> bytesList)
+      where
+        go :: [Doc Ann] -> Sem r (Doc Ann)
+        go = \case
+          [] -> return kwNil
+          (d : ds) -> do
+            next <- go ds
+            return (parens (kwCons <+> d <+> next))
+
+instance PrettyCode Word8 where
+  ppCode i = return (pretty i <> "u8")
 
 instance PrettyCode (Constant' i) where
   ppCode Constant {..} = case _constantValue of
     ConstField fld ->
       return $ annotate AnnLiteralInteger (pretty fld <> "F")
     ConstUInt8 i ->
-      return $ annotate AnnLiteralInteger (pretty i <> "u8")
+      annotate AnnLiteralInteger <$> ppCode i
     _ -> ppCode _constantValue
 
 instance (PrettyCode a, HasAtomicity a) => PrettyCode (App' i a) where
@@ -762,6 +780,12 @@ primUInt8FromInt = primitive Str.itou8
 primFieldToInt :: Doc Ann
 primFieldToInt = primitive Str.ftoi
 
+primByteArrayFromListByte :: Doc Ann
+primByteArrayFromListByte = primitive Str.byteArrayFromListByte
+
+primByteArraySize :: Doc Ann
+primByteArraySize = primitive Str.byteArraySize
+
 primLess :: Doc Ann
 primLess = primitive Str.less
 
@@ -869,3 +893,9 @@ kwBottomAscii = keyword Str.bottomAscii
 
 kwBottom :: Doc Ann
 kwBottom = keyword Str.bottom
+
+kwCons :: Doc Ann
+kwCons = constructor Str.cons
+
+kwNil :: Doc Ann
+kwNil = constructor Str.nil

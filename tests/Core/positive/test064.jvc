@@ -1,0 +1,6 @@
+
+def writeLn := \x write x >> write "\n";
+
+def bs : ByteArray := bytearray-from-list-byte (cons 257u8 (cons 2u8 nil));
+
+writeLn bs >> writeLn (bytearray-size bs)

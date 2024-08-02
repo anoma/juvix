@@ -223,6 +223,8 @@ data BuiltinAxiom
   | BuiltinByteToNat
   | BuiltinByteFromNat
   | BuiltinByteArray
+  | BuiltinByteArrayFromListByte
+  | BuiltinByteArraySize
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic, Data)
 
 instance HasNameKind BuiltinAxiom where
@@ -265,7 +267,8 @@ instance HasNameKind BuiltinAxiom where
     BuiltinByteToNat -> KNameFunction
     BuiltinByteFromNat -> KNameFunction
     BuiltinByteArray -> KNameInductive
-
+    BuiltinByteArrayFromListByte -> KNameFunction
+    BuiltinByteArraySize -> KNameFunction
   getNameKindPretty :: BuiltinAxiom -> NameKind
   getNameKindPretty = getNameKind
 
@@ -315,6 +318,8 @@ instance Pretty BuiltinAxiom where
     BuiltinByteToNat -> Str.byteToNat
     BuiltinByteFromNat -> Str.byteFromNat
     BuiltinByteArray -> Str.byteArray
+    BuiltinByteArrayFromListByte -> Str.byteArrayFromListByte
+    BuiltinByteArraySize -> Str.byteArraySize
 
 data BuiltinType
   = BuiltinTypeInductive BuiltinInductive

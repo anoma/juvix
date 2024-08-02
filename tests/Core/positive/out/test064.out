@@ -1,0 +1,2 @@
+bytearray-from-list-byte (cons 1u8 (cons 2u8 nil))
+2
