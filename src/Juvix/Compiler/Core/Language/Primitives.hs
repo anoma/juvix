@@ -17,6 +17,15 @@ data Primitive
   | PrimField
   deriving stock (Eq, Generic)
 
+primitiveUInt8 :: Primitive
+primitiveUInt8 =
+  PrimInteger
+    ( PrimIntegerInfo
+        { _infoMinValue = Just 0,
+          _infoMaxValue = Just 255
+        }
+    )
+
 -- | Info about a type represented as an integer.
 data PrimIntegerInfo = PrimIntegerInfo
   { _infoMinValue :: Maybe Integer,

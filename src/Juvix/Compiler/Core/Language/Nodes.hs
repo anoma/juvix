@@ -38,6 +38,7 @@ data ConstantValue
   = ConstInteger !Integer
   | ConstField !FField
   | ConstString !Text
+  | ConstUInt8 !Word8
   deriving stock (Eq, Generic)
 
 -- | Info about a single binder. Associated with Lambda, Pi, Let, Case or Match.

@@ -189,6 +189,10 @@ recurse' sig = go True
             checkUnop mkTypeInteger TyField
           OpFieldToInt ->
             checkUnop TyField mkTypeInteger
+          OpUInt8ToInt ->
+            checkUnop mkTypeUInt8 mkTypeInteger
+          OpIntToUInt8 ->
+            checkUnop mkTypeInteger mkTypeUInt8
           where
             checkUnop :: Type -> Type -> Sem r Memory
             checkUnop ty1 ty2 = do

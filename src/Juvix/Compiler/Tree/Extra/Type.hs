@@ -14,6 +14,9 @@ import Juvix.Compiler.Tree.Pretty
 mkTypeInteger :: Type
 mkTypeInteger = TyInteger (TypeInteger Nothing Nothing)
 
+mkTypeUInt8 :: Type
+mkTypeUInt8 = TyInteger (TypeInteger (Just 0) (Just 255))
+
 mkTypeBool :: Type
 mkTypeBool = TyBool (TypeBool (BuiltinTag TagTrue) (BuiltinTag TagFalse))
 

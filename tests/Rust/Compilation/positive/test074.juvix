@@ -1,0 +1,7 @@
+module test074;
+
+import Stdlib.Prelude open;
+
+n1 : Byte := Byte.fromNat 0xff;
+
+main : Byte := Byte.fromNat (Byte.toNat 0x103 + Byte.toNat n1);

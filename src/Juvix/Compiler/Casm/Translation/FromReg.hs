@@ -249,6 +249,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
           Reg.ConstUnit -> 0
           Reg.ConstVoid -> 0
           Reg.ConstString {} -> unsupported "strings"
+          Reg.ConstUInt8 {} -> unsupported "uint8"
 
         mkLoad :: Reg.ConstrField -> Sem r RValue
         mkLoad Reg.ConstrField {..} = do
@@ -458,6 +459,8 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
           Reg.OpFieldToInt -> goAssignValue _instrUnopResult _instrUnopArg
           Reg.OpIntToField -> goAssignValue _instrUnopResult _instrUnopArg
           Reg.OpArgsNum -> goUnop' goOpArgsNum _instrUnopResult _instrUnopArg
+          Reg.OpUInt8ToInt -> unsupported "OpUInt8ToInt"
+          Reg.OpIntToUInt8 -> unsupported "OpIntToUInt8"
 
         goCairo :: Reg.InstrCairo -> Sem r ()
         goCairo Reg.InstrCairo {..} = case _instrCairoOpcode of

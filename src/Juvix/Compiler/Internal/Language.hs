@@ -170,9 +170,9 @@ data Literal
   = LitString Text
   | -- | `LitNumeric` represents a numeric literal of undetermined type
     LitNumeric Integer
-  | -- | `LitInteger` represents a literal of type `Int`
+  | -- | `LitInteger` represents a literal with trait `Integral`
     LitInteger Integer
-  | -- | `LitNatural` represents a literal of type `Nat`
+  | -- | `LitNatural` represents a literal with trait `FromNatural`
     LitNatural Integer
   deriving stock (Show, Eq, Ord, Generic, Data)
 

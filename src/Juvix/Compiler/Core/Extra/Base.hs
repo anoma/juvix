@@ -194,6 +194,12 @@ mkTypeField i = mkTypePrim i PrimField
 mkTypeField' :: Type
 mkTypeField' = mkTypeField Info.empty
 
+mkTypeUInt8 :: Info -> Type
+mkTypeUInt8 i = mkTypePrim i primitiveUInt8
+
+mkTypeUInt8' :: Type
+mkTypeUInt8' = mkTypeUInt8 Info.empty
+
 mkDynamic :: Info -> Type
 mkDynamic i = NDyn (DynamicTy i)
 

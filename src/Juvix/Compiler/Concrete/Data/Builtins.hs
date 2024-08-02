@@ -218,6 +218,10 @@ data BuiltinAxiom
   | BuiltinPoseidon
   | BuiltinEcOp
   | BuiltinRandomEcPoint
+  | BuiltinByte
+  | BuiltinByteEq
+  | BuiltinByteToNat
+  | BuiltinByteFromNat
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic, Data)
 
 instance HasNameKind BuiltinAxiom where
@@ -255,6 +259,10 @@ instance HasNameKind BuiltinAxiom where
     BuiltinPoseidon -> KNameFunction
     BuiltinEcOp -> KNameFunction
     BuiltinRandomEcPoint -> KNameFunction
+    BuiltinByte -> KNameInductive
+    BuiltinByteEq -> KNameFunction
+    BuiltinByteToNat -> KNameFunction
+    BuiltinByteFromNat -> KNameFunction
 
   getNameKindPretty :: BuiltinAxiom -> NameKind
   getNameKindPretty = getNameKind
@@ -300,6 +308,10 @@ instance Pretty BuiltinAxiom where
     BuiltinPoseidon -> Str.cairoPoseidon
     BuiltinEcOp -> Str.cairoEcOp
     BuiltinRandomEcPoint -> Str.cairoRandomEcPoint
+    BuiltinByte -> Str.byte_
+    BuiltinByteEq -> Str.byteEq
+    BuiltinByteToNat -> Str.byteToNat
+    BuiltinByteFromNat -> Str.byteFromNat
 
 data BuiltinType
   = BuiltinTypeInductive BuiltinInductive

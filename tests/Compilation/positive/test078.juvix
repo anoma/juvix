@@ -1,0 +1,34 @@
+module test078;
+
+import Stdlib.Prelude open;
+
+n1 : Byte := fromNat 1;
+
+n2 : Byte := fromNat 0xff;
+
+n3 : Byte := fromNat 0x102;
+
+l1 : Byte := 1;
+
+l2 : Byte := 0xee;
+
+l3 : Byte := 0x103;
+
+xs : List Byte := [l1; l2; l3; 2];
+
+printByteLn : Byte -> IO := Show.show >> printStringLn;
+
+printListByteLn : List Byte -> IO := Show.show >> printStringLn;
+
+main : IO :=
+  printByteLn n1
+    >>> printByteLn n2
+    >>> printByteLn n3
+    >>> printBoolLn (n1 == l1)
+    >>> printBoolLn (l1 == 0x101)
+    >>> printBoolLn (l2 == n2)
+    >>> printNatLn (Byte.toNat l1)
+    >>> printNatLn (Byte.toNat l2)
+    >>> printNatLn (Byte.toNat l3)
+    >>> printNatLn (Byte.toNat 0xf0)
+    >>> printListByteLn xs;

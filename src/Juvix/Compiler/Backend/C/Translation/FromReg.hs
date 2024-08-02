@@ -311,6 +311,8 @@ fromRegInstr bNoStack info = \case
       Reg.OpArgsNum -> "JUVIX_ARGS_NUM"
       Reg.OpFieldToInt -> unsupported "field type"
       Reg.OpIntToField -> unsupported "field type"
+      Reg.OpUInt8ToInt -> "JUVIX_UINT8_TO_INT"
+      Reg.OpIntToUInt8 -> "JUVIX_INT_TO_UINT8"
 
     fromVarRef :: Reg.VarRef -> Expression
     fromVarRef Reg.VarRef {..} =
@@ -347,6 +349,7 @@ fromRegInstr bNoStack info = \case
       Reg.ConstString x -> macroCall "GET_CONST_CSTRING" [integer (getStringId info x)]
       Reg.ConstUnit -> macroVar "OBJ_UNIT"
       Reg.ConstVoid -> macroVar "OBJ_VOID"
+      Reg.ConstUInt8 x -> macroCall "make_smallint" [integer x]
 
     fromPrealloc :: Reg.InstrPrealloc -> Statement
     fromPrealloc Reg.InstrPrealloc {..} =

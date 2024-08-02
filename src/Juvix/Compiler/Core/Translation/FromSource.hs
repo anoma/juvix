@@ -599,6 +599,7 @@ atom ::
   ParsecS r Node
 atom varsNum vars =
   exprConstField
+    <|> exprConstUInt8
     <|> exprConstInt
     <|> exprConstString
     <|> exprUniverse
@@ -629,6 +630,11 @@ exprConstField :: ParsecS r Node
 exprConstField = P.try $ do
   (n, i) <- field
   return $ mkConstant (Info.singleton (LocationInfo i)) (ConstField (fieldFromInteger defaultFieldSize n))
+
+exprConstUInt8 :: ParsecS r Node
+exprConstUInt8 = P.try $ do
+  (n, i) <- uint8
+  return $ mkConstant (Info.singleton (LocationInfo i)) (ConstUInt8 (fromIntegral n))
 
 exprUniverse :: ParsecS r Type
 exprUniverse = do

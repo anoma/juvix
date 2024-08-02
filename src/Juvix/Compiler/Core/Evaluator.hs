@@ -213,6 +213,8 @@ geval opts herr tab env0 = eval' env0
       OpPoseidonHash -> poseidonHashOp
       OpEc -> ecOp
       OpRandomEcPoint -> randomEcPointOp
+      OpUInt8ToInt -> uint8ToIntOp
+      OpUInt8FromInt -> uint8FromIntOp
       where
         err :: Text -> a
         err msg = evalError msg n
@@ -509,6 +511,28 @@ geval opts herr tab env0 = eval' env0
               !publicKey = publicKeyFromInteger publicKeyInt
            in nodeFromBool (E.dverify publicKey message sig)
         {-# INLINE verifyDetached #-}
+
+        uint8FromIntOp :: [Node] -> Node
+        uint8FromIntOp =
+          unary $ \node ->
+            let !v = eval' env node
+             in nodeFromUInt8
+                  . fromIntegral
+                  . fromMaybe (evalError "expected integer" v)
+                  . integerFromNode
+                  $ v
+        {-# INLINE uint8FromIntOp #-}
+
+        uint8ToIntOp :: [Node] -> Node
+        uint8ToIntOp =
+          unary $ \node ->
+            let !v = eval' env node
+             in nodeFromInteger
+                  . toInteger
+                  . fromMaybe (evalError "expected uint8" v)
+                  . uint8FromNode
+                  $ v
+        {-# INLINE uint8ToIntOp #-}
     {-# INLINE applyBuiltin #-}
 
     -- secretKey, publicKey are not encoded with their length as
@@ -529,6 +553,10 @@ geval opts herr tab env0 = eval' env0
     nodeFromField :: FField -> Node
     nodeFromField !fld = mkConstant' (ConstField fld)
     {-# INLINE nodeFromField #-}
+
+    nodeFromUInt8 :: Word8 -> Node
+    nodeFromUInt8 !w = mkConstant' (ConstUInt8 w)
+    {-# INLINE nodeFromUInt8 #-}
 
     nodeFromBool :: Bool -> Node
     nodeFromBool b = mkConstr' (BuiltinTag tag) []
@@ -576,6 +604,12 @@ geval opts herr tab env0 = eval' env0
       NCst (Constant _ (ConstField fld)) -> Just fld
       _ -> Nothing
     {-# INLINE fieldFromNode #-}
+
+    uint8FromNode :: Node -> Maybe Word8
+    uint8FromNode = \case
+      NCst (Constant _ (ConstUInt8 i)) -> Just i
+      _ -> Nothing
+    {-# INLINE uint8FromNode #-}
 
     printNode :: Node -> Text
     printNode = \case

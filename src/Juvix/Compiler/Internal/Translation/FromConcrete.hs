@@ -587,6 +587,10 @@ registerBuiltinAxiom d = \case
   BuiltinPoseidon -> registerPoseidon d
   BuiltinEcOp -> registerEcOp d
   BuiltinRandomEcPoint -> registerRandomEcPoint d
+  BuiltinByte -> registerByte d
+  BuiltinByteEq -> registerByteEq d
+  BuiltinByteToNat -> registerByteToNat d
+  BuiltinByteFromNat -> registerByteFromNat d
 
 goInductive ::
   (Members '[Reader EntryPoint, Reader DefaultArgsStack, NameIdGen, Reader Pragmas, Builtins, Error ScoperError, State ConstructorInfos, Reader S.InfoTable] r) =>

@@ -173,6 +173,18 @@ error = "error"
 string :: (IsString s) => s
 string = "string"
 
+byte_ :: (IsString s) => s
+byte_ = "byte"
+
+byteEq :: (IsString s) => s
+byteEq = "byte-eq"
+
+byteToNat :: (IsString s) => s
+byteToNat = "byte-to-nat"
+
+byteFromNat :: (IsString s) => s
+byteFromNat = "byte-from-nat"
+
 nat :: (IsString s) => s
 nat = "nat"
 
@@ -388,6 +400,12 @@ ftoi = "ftoi"
 
 itof :: (IsString s) => s
 itof = "itof"
+
+u8toi :: (IsString s) => s
+u8toi = "u8toi"
+
+itou8 :: (IsString s) => s
+itou8 = "itou8"
 
 delimiter :: (IsString s) => s
 delimiter = "delimiter"
@@ -769,6 +787,12 @@ instrFieldToInt = "ftoi"
 
 instrIntToField :: (IsString s) => s
 instrIntToField = "itof"
+
+instrUInt8ToInt :: (IsString s) => s
+instrUInt8ToInt = "u8toi"
+
+instrIntToUInt8 :: (IsString s) => s
+instrIntToUInt8 = "itou8"
 
 instrShow :: (IsString s) => s
 instrShow = "show"

@@ -99,6 +99,8 @@ instance PrettyCode Value where
       ppCode c
     ValClosure cl ->
       ppCode cl
+    ValUInt8 i ->
+      return $ integer i
 
 instance PrettyCode TypeInductive where
   ppCode :: (Member (Reader Options) r) => TypeInductive -> Sem r (Doc Ann)
@@ -197,6 +199,8 @@ instance PrettyCode Constant where
       return $ annotate (AnnKind KNameConstructor) Str.unit
     ConstVoid {} ->
       return $ annotate (AnnKind KNameConstructor) Str.void
+    ConstUInt8 v ->
+      return $ annotate AnnLiteralInteger (pretty v)
 
 instance PrettyCode BoolOp where
   ppCode op = return $ primitive $ case op of
@@ -239,6 +243,8 @@ instance PrettyCode UnaryOp where
     OpFieldToInt -> Str.instrFieldToInt
     OpIntToField -> Str.instrIntToField
     OpArgsNum -> Str.instrArgsNum
+    OpIntToUInt8 -> Str.instrIntToUInt8
+    OpUInt8ToInt -> Str.instrUInt8ToInt
 
 instance PrettyCode CairoOp where
   ppCode op = return $ primitive $ case op of

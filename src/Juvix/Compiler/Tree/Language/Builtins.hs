@@ -47,6 +47,10 @@ data UnaryOp
     OpIntToField
   | -- | Convert a field element to an integer. JV* opcode: `ftoi`.
     OpFieldToInt
+  | -- | Convert an integer to a UInt8. JV* opcode: `itou8`
+    OpIntToUInt8
+  | -- | Convert an UInt8 to an integer. JV* opcode: `u8toi`
+    OpUInt8ToInt
   | -- | Compute the number of expected arguments for the given closure. JV*
     -- opcode: `argsnum`.
     OpArgsNum

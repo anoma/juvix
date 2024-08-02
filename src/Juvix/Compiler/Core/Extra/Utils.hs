@@ -433,6 +433,8 @@ builtinOpArgTypes = \case
   OpPoseidonHash -> [mkDynamic']
   OpEc -> [mkDynamic', mkTypeField', mkDynamic']
   OpRandomEcPoint -> []
+  OpUInt8ToInt -> [mkTypeUInt8']
+  OpUInt8FromInt -> [mkTypeInteger']
 
 translateCase :: (Node -> Node -> Node -> a) -> a -> Case -> a
 translateCase translateIfFun dflt Case {..} = case _caseBranches of
