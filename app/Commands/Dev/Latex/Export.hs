@@ -6,6 +6,7 @@ where
 
 import Commands.Base
 import Commands.Dev.Latex.Export.Options
+import Data.String.Interpolate (__i)
 import Data.Text qualified as Text
 import Juvix.Compiler.Backend.Latex.Translation.FromScoped.Source
 import Juvix.Compiler.Concrete.Language
@@ -29,25 +30,25 @@ runCommand ExportOptions {..} = do
 
 verb :: Text -> Text
 verb code =
-  Text.unlines
-    [ "\\begin{tcolorbox}[colback=ju-base, colframe=ju-crust]",
-      "\\begin{Verbatim}[commandchars=\\\\\\{\\}]",
-      code,
-      "\\end{Verbatim}",
-      "\\end{tcolorbox}"
-    ]
+  [__i|
+  \\begin{tcolorbox}[colback=ju-base, colframe=ju-crust]
+  \\begin{Verbatim}[commandchars=\\\\\\{\\}]
+  #{code}
+  \\end{Verbatim}
+  \\end{tcolorbox}
+  |]
 
 standalone :: Text -> Text
 standalone code =
-  Text.unlines
-    [ "\\documentclass{article}",
-      "\\usepackage{tcolorbox}",
-      "\\usepackage{fvextra}",
-      "\\usepackage[theme=latte]{juvix}",
-      "\\begin{document}",
-      verb code,
-      "\\end{document}"
-    ]
+  [__i|
+  \\documentclass{article}
+  \\usepackage{tcolorbox}
+  \\usepackage{fvextra}
+  \\usepackage[theme=latte]{juvix}
+  \\begin{document}
+  #{verb code}
+  \\end{document}
+ |]
 
 sublist :: Maybe Int -> Maybe Int -> [a] -> [a]
 sublist mfromIx mtoIx l =
