@@ -30,7 +30,7 @@ runCommand ExportOptions {..} = do
 verb :: Text -> Text
 verb code =
   Text.unlines
-    [ "\\begin{tcolorbox}[colback=ctpBase, colframe=ctpCrust]",
+    [ "\\begin{tcolorbox}[colback=ju-base, colframe=ju-crust]",
       "\\begin{Verbatim}[commandchars=\\\\\\{\\}]",
       code,
       "\\end{Verbatim}",
