@@ -190,7 +190,7 @@ fieldSizeOpt = eitherReader aux
       | otherwise = Left $ Prelude.show n <> " is not a recognized field size"
 
 enumHelp :: forall a. (Bounded a, Enum a, Show a) => (a -> AnsiDoc) -> AnsiDoc
-enumHelp showHelp = vsep ["• " <> show x <> ": " <> showHelp x | x <- allElements]
+enumHelp showHelp = vsep ["• " <> annotate bold (show x) <> ": " <> showHelp x | x <- allElements]
 
 enumReader :: forall a. (Bounded a, Enum a, Show a) => Proxy a -> ReadM a
 enumReader _ = eitherReader $ \val ->
