@@ -1,10 +1,5 @@
 -- lists
 
-type list {
-  nil : list;
-  cons : Any -> list -> list;
-};
-
 def head := \l case l of { cons h _ := h };
 def tail := \l case l of { cons _ t := t };
 def null := \l case l of { nil := true; cons _ _ := false };

@@ -79,6 +79,7 @@ parseToplevel = do
   lift declareBoolBuiltins
   lift declareNatBuiltins
   lift declareMaybeBuiltins
+  lift declareListBuiltins
   space
   P.endBy statement (kw delimSemicolon)
   r <- optional expression
