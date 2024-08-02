@@ -22,7 +22,7 @@ runCommand ExportOptions {..} = do
           . sublist (pred <$> _exportFromLine) (pred <$> _exportToLine)
           . Text.lines
           $ moduleToLatex c m
-  renderStdOut $
+  renderStdOutLn $
     case _exportMode of
       ExportStandalone -> standalone ltx
       ExportRaw -> ltx
