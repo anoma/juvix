@@ -2315,6 +2315,13 @@ checkCaseBranch CaseBranch {..} = withLocalScope $ do
         ..
       }
 
+checkDo ::
+  (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader Package] r) =>
+  Do 'Parsed ->
+  Sem r (Do 'Scoped)
+checkDo Do {..} = do
+  undefined
+
 checkCase ::
   (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader Package] r) =>
   Case 'Parsed ->
@@ -2571,6 +2578,7 @@ checkExpressionAtom ::
 checkExpressionAtom e = case e of
   AtomIdentifier n -> pure . AtomIdentifier <$> checkScopedIden n
   AtomLambda lam -> pure . AtomLambda <$> checkLambda lam
+  AtomDo a -> pure . AtomDo <$> checkDo a
   AtomCase c -> pure . AtomCase <$> checkCase c
   AtomIf c -> pure . AtomIf <$> checkIf c
   AtomLet letBlock -> pure . AtomLet <$> checkLet letBlock
