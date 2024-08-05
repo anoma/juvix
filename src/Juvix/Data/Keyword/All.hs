@@ -250,8 +250,8 @@ kwAtoi = asciiKw Str.instrStrToInt
 kwStrcat :: Keyword
 kwStrcat = asciiKw Str.instrStrConcat
 
-kwBind :: Keyword
-kwBind = asciiKw Str.bind
+kwBindOperator :: Keyword
+kwBindOperator = asciiKw Str.bindOperator
 
 kwSeq :: Keyword
 kwSeq = asciiKw Str.seq_

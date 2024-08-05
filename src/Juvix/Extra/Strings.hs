@@ -461,8 +461,8 @@ greater = ">"
 greaterEqual :: (IsString s) => s
 greaterEqual = ">="
 
-bind :: (IsString s) => s
-bind = ">>="
+bindOperator :: (IsString s) => s
+bindOperator = ">>="
 
 seq_ :: (IsString s) => s
 seq_ = ">>"
