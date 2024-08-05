@@ -55,6 +55,11 @@ type family FieldArgIxType s = res | res -> s where
   FieldArgIxType 'Parsed = ()
   FieldArgIxType 'Scoped = Int
 
+type DoBindIdenType :: Stage -> GHCType
+type family DoBindIdenType s = res | res -> s where
+  DoBindIdenType 'Parsed = ()
+  DoBindIdenType 'Scoped = ScopedIden
+
 type SideIfBranchConditionType :: Stage -> IfBranchKind -> GHCType
 type family SideIfBranchConditionType s k = res where
   SideIfBranchConditionType s 'BranchIfBool = ExpressionType s
@@ -1706,6 +1711,32 @@ deriving stock instance Ord (LetStatement 'Parsed)
 
 deriving stock instance Ord (LetStatement 'Scoped)
 
+data DoLet (s :: Stage) = DoLet
+  { _doLetKw :: KeywordRef,
+    _doLetFunDefs :: NonEmpty (LetStatement s)
+  }
+  deriving stock (Generic)
+
+instance Serialize (DoLet 'Scoped)
+
+instance NFData (DoLet 'Scoped)
+
+instance Serialize (DoLet 'Parsed)
+
+instance NFData (DoLet 'Parsed)
+
+deriving stock instance Show (DoLet 'Parsed)
+
+deriving stock instance Show (DoLet 'Scoped)
+
+deriving stock instance Eq (DoLet 'Parsed)
+
+deriving stock instance Eq (DoLet 'Scoped)
+
+deriving stock instance Ord (DoLet 'Parsed)
+
+deriving stock instance Ord (DoLet 'Scoped)
+
 data Let (s :: Stage) = Let
   { _letKw :: KeywordRef,
     _letInKw :: Irrelevant KeywordRef,
@@ -2454,6 +2485,87 @@ deriving stock instance Ord (RecordStatement 'Parsed)
 
 deriving stock instance Ord (RecordStatement 'Scoped)
 
+data Do (s :: Stage) = Do
+  { _doKeyword :: Irrelevant KeywordRef,
+    _doDelims :: Irrelevant (KeywordRef, KeywordRef),
+    _doBindIden :: DoBindIdenType s,
+    _doStatements :: [DoStatement s]
+  }
+  deriving stock (Generic)
+
+instance Serialize (Do 'Parsed)
+
+instance Serialize (Do 'Scoped)
+
+instance NFData (Do 'Scoped)
+
+instance NFData (Do 'Parsed)
+
+deriving stock instance Show (Do 'Parsed)
+
+deriving stock instance Show (Do 'Scoped)
+
+deriving stock instance Eq (Do 'Parsed)
+
+deriving stock instance Eq (Do 'Scoped)
+
+deriving stock instance Ord (Do 'Parsed)
+
+deriving stock instance Ord (Do 'Scoped)
+
+data DoBind (s :: Stage) = DoBind
+  { _doBindPattern :: PatternParensType s,
+    _doBindArrowKw :: Irrelevant KeywordRef,
+    _doBindExpression :: ExpressionType s
+  }
+  deriving stock (Generic)
+
+instance Serialize (DoBind 'Scoped)
+
+instance Serialize (DoBind 'Parsed)
+
+instance NFData (DoBind 'Scoped)
+
+instance NFData (DoBind 'Parsed)
+
+deriving stock instance Show (DoBind 'Parsed)
+
+deriving stock instance Show (DoBind 'Scoped)
+
+deriving stock instance Eq (DoBind 'Parsed)
+
+deriving stock instance Eq (DoBind 'Scoped)
+
+deriving stock instance Ord (DoBind 'Parsed)
+
+deriving stock instance Ord (DoBind 'Scoped)
+
+data DoStatement (s :: Stage)
+  = DoStatementBind (DoBind s)
+  | DoStatementLet (DoLet s)
+  | DoStatementExpression (ExpressionType s)
+  deriving stock (Generic)
+
+instance Serialize (DoStatement 'Scoped)
+
+instance Serialize (DoStatement 'Parsed)
+
+instance NFData (DoStatement 'Scoped)
+
+instance NFData (DoStatement 'Parsed)
+
+deriving stock instance Show (DoStatement 'Parsed)
+
+deriving stock instance Show (DoStatement 'Scoped)
+
+deriving stock instance Eq (DoStatement 'Parsed)
+
+deriving stock instance Eq (DoStatement 'Scoped)
+
+deriving stock instance Ord (DoStatement 'Parsed)
+
+deriving stock instance Ord (DoStatement 'Scoped)
+
 -- | Expressions without application
 data ExpressionAtom (s :: Stage)
   = AtomIdentifier (IdentifierType s)
@@ -2465,6 +2577,7 @@ data ExpressionAtom (s :: Stage)
   | AtomInstanceHole (HoleType s)
   | AtomDoubleBraces (DoubleBracesExpression s)
   | AtomBraces (WithLoc (ExpressionType s))
+  | AtomDo (Do s)
   | AtomLet (Let s)
   | AtomRecordUpdate (RecordUpdate s)
   | AtomUniverse Universe
