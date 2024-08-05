@@ -1,0 +1,188 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{juvix}[Juvix code in LaTeX]
+
+\RequirePackage{xcolor}
+\RequirePackage{expkv-opt}
+\RequirePackage{expkv-def}
+\RequirePackage{ifthen}
+
+\ekvdefinekeys{juvix}
+  {
+    store   theme = \juvix@theme,
+    initial theme = latte,
+    % specify what happens for unknown keys
+    unknown code  =
+      \PackageWarning{juvix}
+        {Unknown option `\detokenize{#1}' received `\detokenize{#2}'},
+    unknown noval =
+      \PackageWarning{juvix}{Unknown option `\detokenize{#1}'}
+  }
+
+% process options given to \documentclass
+\ekvoProcessGlobalOptions{juvix}
+% for the next ekvoProcess... use the unknown handlers like defined for the set
+\ekvoUseUnknownHandlers*
+% process options given to this package
+\ekvoProcessLocalOptions{juvix}
+
+\newcommand{\mocha}{
+  \definecolor{ctpRosewater} {RGB} {245, 224, 220}
+  \definecolor{ctpFlamingo}  {RGB} {242, 205, 205}
+  \definecolor{ctpPink}      {RGB} {245, 194, 231}
+  \definecolor{ctpMauve}     {RGB} {203, 166, 247}
+  \definecolor{ctpRed}       {RGB} {243, 139, 168}
+  \definecolor{ctpMaroon}    {RGB} {235, 160, 172}
+  \definecolor{ctpPeach}     {RGB} {250, 179, 135}
+  \definecolor{ctpYellow}    {RGB} {249, 226, 175}
+  \definecolor{ctpGreen}     {RGB} {166, 227, 161}
+  \definecolor{ctpTeal}      {RGB} {148, 226, 213}
+  \definecolor{ctpSky}       {RGB} {137, 220, 235}
+  \definecolor{ctpSapphire}  {RGB} {116, 199, 236}
+  \definecolor{ctpBlue}      {RGB} {137, 180, 250}
+  \definecolor{ctpLavender}  {RGB} {180, 190, 254}
+  \definecolor{ctpText}      {RGB} {205, 214, 244}
+  \definecolor{ctpSubtext1}  {RGB} {186, 194, 222}
+  \definecolor{ctpSubtext0}  {RGB} {166, 173, 200}
+  \definecolor{ctpOverlay2}  {RGB} {147, 153, 178}
+  \definecolor{ctpOverlay1}  {RGB} {127, 132, 156}
+  \definecolor{ctpOverlay0}  {RGB} {108, 112, 134}
+  \definecolor{ctpSurface2}  {RGB} {88, 91, 112}
+  \definecolor{ctpSurface1}  {RGB} {69, 71, 90}
+  \definecolor{ctpSurface0}  {RGB} {49, 50, 68}
+  \definecolor{ctpBase}      {RGB} {30, 30, 46}
+  \definecolor{ctpMantle}    {RGB} {24, 24, 37}
+  \definecolor{ctpCrust}     {RGB} {17, 17, 27}
+}
+
+\newcommand{\latte}{
+  \definecolor{ctpRosewater} {RGB} {220, 138, 120}
+  \definecolor{ctpFlamingo}  {RGB} {221, 120, 120}
+  \definecolor{ctpPink}      {RGB} {234, 118, 203}
+  \definecolor{ctpMauve}     {RGB} {136, 57, 239}
+  \definecolor{ctpRed}       {RGB} {210, 15, 57}
+  \definecolor{ctpMaroon}    {RGB} {230, 69, 83}
+  \definecolor{ctpPeach}     {RGB} {254, 100, 11}
+  \definecolor{ctpYellow}    {RGB} {223, 142, 29}
+  \definecolor{ctpGreen}     {RGB} {64, 160, 43}
+  \definecolor{ctpTeal}      {RGB} {23, 146, 153}
+  \definecolor{ctpSky}       {RGB} {4, 165, 229}
+  \definecolor{ctpSapphire}  {RGB} {32, 159, 181}
+  \definecolor{ctpBlue}      {RGB} {30, 102, 245}
+  \definecolor{ctpLavender}  {RGB} {114, 135, 253}
+  \definecolor{ctpText}      {RGB} {76, 79, 105}
+  \definecolor{ctpSubtext1}  {RGB} {92, 95, 119}
+  \definecolor{ctpSubtext0}  {RGB} {108, 111, 133}
+  \definecolor{ctpOverlay2}  {RGB} {124, 127, 147}
+  \definecolor{ctpOverlay1}  {RGB} {140, 143, 161}
+  \definecolor{ctpOverlay0}  {RGB} {156, 160, 176}
+  \definecolor{ctpSurface2}  {RGB} {172, 176, 190}
+  \definecolor{ctpSurface1}  {RGB} {188, 192, 204}
+  \definecolor{ctpSurface0}  {RGB} {204, 208, 218}
+  \definecolor{ctpBase}      {RGB} {239, 241, 245}
+  \definecolor{ctpMantle}    {RGB} {230, 233, 239}
+  \definecolor{ctpCrust}     {RGB} {220, 224, 232}
+}
+
+\newcommand{\frappe}{
+  \definecolor{ctpRosewater} {RGB} {242, 213, 207}
+  \definecolor{ctpFlamingo}  {RGB} {238, 190, 190}
+  \definecolor{ctpPink}      {RGB} {244, 184, 228}
+  \definecolor{ctpMauve}     {RGB} {202, 158, 230}
+  \definecolor{ctpRed}       {RGB} {231, 130, 132}
+  \definecolor{ctpMaroon}    {RGB} {234, 153, 156}
+  \definecolor{ctpPeach}     {RGB} {239, 159, 118}
+  \definecolor{ctpYellow}    {RGB} {229, 200, 144}
+  \definecolor{ctpGreen}     {RGB} {166, 209, 137}
+  \definecolor{ctpTeal}      {RGB} {129, 200, 190}
+  \definecolor{ctpSky}       {RGB} {153, 209, 219}
+  \definecolor{ctpSapphire}  {RGB} {133, 193, 220}
+  \definecolor{ctpBlue}      {RGB} {140, 170, 238}
+  \definecolor{ctpLavender}  {RGB} {186, 187, 241}
+  \definecolor{ctpText}      {RGB} {198, 208, 245}
+  \definecolor{ctpSubtext1}  {RGB} {181, 191, 226}
+  \definecolor{ctpSubtext0}  {RGB} {165, 173, 206}
+  \definecolor{ctpOverlay2}  {RGB} {148, 156, 187}
+  \definecolor{ctpOverlay1}  {RGB} {131, 139, 167}
+  \definecolor{ctpOverlay0}  {RGB} {115, 121, 148}
+  \definecolor{ctpSurface2}  {RGB} {98, 104, 128}
+  \definecolor{ctpSurface1}  {RGB} {81, 87, 109}
+  \definecolor{ctpSurface0}  {RGB} {65, 69, 89}
+  \definecolor{ctpBase}      {RGB} {48, 52, 70}
+  \definecolor{ctpMantle}    {RGB} {41, 44, 60}
+  \definecolor{ctpCrust}     {RGB} {35, 38, 52}
+}
+
+\newcommand{\macchiato}{
+  \definecolor{ctpRosewater} {RGB} {244, 219, 214}
+  \definecolor{ctpFlamingo}  {RGB} {240, 198, 198}
+  \definecolor{ctpPink}      {RGB} {245, 189, 230}
+  \definecolor{ctpMauve}     {RGB} {198, 160, 246}
+  \definecolor{ctpRed}       {RGB} {237, 135, 150}
+  \definecolor{ctpMaroon}    {RGB} {238, 153, 160}
+  \definecolor{ctpPeach}     {RGB} {245, 169, 127}
+  \definecolor{ctpYellow}    {RGB} {238, 212, 159}
+  \definecolor{ctpGreen}     {RGB} {166, 218, 149}
+  \definecolor{ctpTeal}      {RGB} {139, 213, 202}
+  \definecolor{ctpSky}       {RGB} {145, 215, 227}
+  \definecolor{ctpSapphire}  {RGB} {125, 196, 228}
+  \definecolor{ctpBlue}      {RGB} {138, 173, 244}
+  \definecolor{ctpLavender}  {RGB} {183, 189, 248}
+  \definecolor{ctpText}      {RGB} {202, 211, 245}
+  \definecolor{ctpSubtext1}  {RGB} {184, 192, 224}
+  \definecolor{ctpSubtext0}  {RGB} {165, 173, 203}
+  \definecolor{ctpOverlay2}  {RGB} {147, 154, 183}
+  \definecolor{ctpOverlay1}  {RGB} {128, 135, 162}
+  \definecolor{ctpOverlay0}  {RGB} {110, 115, 141}
+  \definecolor{ctpSurface2}  {RGB} {91, 96, 120}
+  \definecolor{ctpSurface1}  {RGB} {73, 77, 100}
+  \definecolor{ctpSurface0}  {RGB} {54, 58, 79}
+  \definecolor{ctpBase}      {RGB} {36, 39, 58}
+  \definecolor{ctpMantle}    {RGB} {30, 32, 48}
+  \definecolor{ctpCrust}     {RGB} {24, 25, 38}
+}
+
+\newcommand{\settheme}[1]{%
+  \ifthenelse{\equal{#1}{mocha}}{\mocha{}}{%
+  \ifthenelse{\equal{#1}{macchiato}}{\macchiato{}}{%
+  \ifthenelse{\equal{#1}{latte}}{\latte{}}{%
+  \ifthenelse{\equal{#1}{frappe}}{\frappe{}}{%
+  \PackageError{juvix}{Invalid theme `#1'}{The theme should be one of: latte, mocha, macchiato, frappe.}%
+  }}}}
+}
+
+\settheme{\juvix@theme}
+
+% Code
+\colorlet{ju-function}{ctpYellow}
+\colorlet{ju-inductive}{ctpGreen}
+\colorlet{ju-constructor}{ctpMauve}
+\colorlet{ju-axiom}{ctpRed}
+\colorlet{ju-string}{ctpFlamingo}
+\colorlet{ju-keyword}{ctpSky}
+\colorlet{ju-delimiter}{ctpOverlay2}
+\colorlet{ju-comment}{ctpRosewater}
+\colorlet{ju-judoc}{ctpTeal}
+\colorlet{ju-var}{ctpText}
+\colorlet{ju-fixity}{ctpSapphire}
+\colorlet{ju-number}{ctpText}
+\colorlet{ju-module}{ctpLavender}
+
+% Text
+\colorlet{ju-text}{ctpText}
+\colorlet{ju-subtext1}{ctpSubtext1}
+\colorlet{ju-subtext0}{ctpSubtext0}
+
+% Overlay
+\colorlet{ju-overlay2}{ctpOverlay2}
+\colorlet{ju-overlay1}{ctpOverlay1}
+\colorlet{ju-overlay0}{ctpOverlay0}
+
+% Surface
+\colorlet{ju-surface2}{ctpSurface2}
+\colorlet{ju-surface1}{ctpSurface1}
+\colorlet{ju-surface0}{ctpSurface0}
+
+% Panes
+\colorlet{ju-base}{ctpBase}
+\colorlet{ju-mantle}{ctpMantle}
+\colorlet{ju-crust}{ctpCrust}

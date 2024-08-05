@@ -16,7 +16,6 @@ import Commands.Typecheck.Options
 import CommonOptions hiding (Doc)
 import Data.Generics.Uniplate.Data
 import GlobalOptions
-import Options.Applicative.Help.Pretty
 
 data TopCommand
   = DisplayVersion
@@ -246,5 +245,5 @@ descr =
         <> footerDoc (Just foot)
     )
   where
-    foot :: Doc
+    foot :: AnsiDoc
     foot = annotate bold "maintainers: " <> "The Juvix Team"

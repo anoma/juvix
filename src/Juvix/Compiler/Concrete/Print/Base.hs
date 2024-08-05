@@ -82,13 +82,13 @@ docHelper cs opts =
 docNoLoc :: (PrettyPrint c) => Options -> c -> Doc Ann
 docNoLoc = docHelper Nothing
 
-doc :: (PrettyPrint c, HasLoc c) => Options -> Comments -> c -> Doc Ann
-doc opts cs x = docHelper (Just (fileComments file cs)) opts x
+doc :: (PrettyPrint c, HasLoc c) => Options -> Maybe Comments -> c -> Doc Ann
+doc opts cs x = docHelper (fileComments file <$> cs) opts x
   where
     file :: Path Abs File
     file = getLoc x ^. intervalFile
 
-docDefault :: (PrettyPrint c, HasLoc c) => Comments -> c -> Doc Ann
+docDefault :: (PrettyPrint c, HasLoc c) => Maybe Comments -> c -> Doc Ann
 docDefault cs = doc defaultOptions cs
 
 ppModulePathType ::

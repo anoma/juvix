@@ -11,6 +11,9 @@ assetsDirQ = FE.makeRelativeToProject "assets" >>= FE.embedDir
 cssDirQ :: Q Exp
 cssDirQ = FE.makeRelativeToProject "assets/css" >>= FE.embedDir
 
+juvixStyQ :: Q Exp
+juvixStyQ = FE.embedFileRelative "include/latex/juvix.sty"
+
 jsDirQ :: Q Exp
 jsDirQ = FE.makeRelativeToProject "assets/js" >>= FE.embedDir
 

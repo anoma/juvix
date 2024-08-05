@@ -34,7 +34,6 @@ import Juvix.Data.NameKind
 import Juvix.Extra.Paths qualified as P
 import Juvix.Extra.Stdlib
 import Juvix.Extra.Version
-import Juvix.Prelude.Pretty
 import Juvix.Prelude.Pretty qualified as P
 import System.Console.ANSI qualified as Ansi
 import System.Console.Haskeline

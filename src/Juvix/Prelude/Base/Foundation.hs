@@ -181,6 +181,7 @@ import Data.Text.IO hiding (appendFile, getContents, getLine, hGetContents, hGet
 import Data.Text.IO qualified as Text
 import Data.Text.IO.Utf8 hiding (getLine, hPutStr, hPutStrLn, putStr, putStrLn, readFile, writeFile)
 import Data.Text.IO.Utf8 qualified as Utf8
+import Data.Text.Lazy.Builder qualified as LazyText
 import Data.Traversable
 import Data.Tuple.Extra hiding (both)
 import Data.Type.Equality (type (~))
@@ -232,6 +233,8 @@ import Text.Show (Show)
 import Text.Show qualified as Show
 import Text.Show.Unicode (urecover, ushow)
 import Prelude (Double)
+
+type TextBuilder = LazyText.Builder
 
 type GHCType = GHC.Type
 

@@ -5,7 +5,6 @@ import Commands.Dev.Scope.Options
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Print qualified as Print
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
-import Juvix.Prelude.Pretty
 
 runCommand :: (Members AppEffects r) => ScopeOptions -> Sem r ()
 runCommand opts = do

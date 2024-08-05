@@ -1,7 +1,6 @@
 module Commands.Dev.Tree.Eval.Options where
 
 import CommonOptions
-import Juvix.Prelude.Pretty
 import Prelude (show)
 
 data Evaluator

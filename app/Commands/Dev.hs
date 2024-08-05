@@ -13,6 +13,7 @@ import Commands.Dev.DisplayRoot qualified as DisplayRoot
 import Commands.Dev.Highlight qualified as Highlight
 import Commands.Dev.ImportTree qualified as ImportTree
 import Commands.Dev.Internal qualified as Internal
+import Commands.Dev.Latex qualified as Latex
 import Commands.Dev.MigrateJuvixYaml qualified as MigrateJuvixYaml
 import Commands.Dev.Nockma qualified as Nockma
 import Commands.Dev.Options
@@ -27,6 +28,7 @@ import Commands.Repl qualified as Repl
 runCommand :: (Members AppEffects r) => DevCommand -> Sem r ()
 runCommand = \case
   ImportTree opts -> ImportTree.runCommand opts
+  Latex opts -> Latex.runCommand opts
   Highlight opts -> Highlight.runCommand opts
   DevCompile opts -> DevCompile.runCommand opts
   Parse opts -> Parse.runCommand opts

@@ -7,7 +7,6 @@ import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination qualified as Termination
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as Internal
 import Juvix.Compiler.Store.Extra qualified as Stored
-import Juvix.Prelude.Pretty
 
 runCommand :: (Members AppEffects r) => CallGraphOptions -> Sem r ()
 runCommand CallGraphOptions {..} = do

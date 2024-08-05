@@ -6,7 +6,6 @@ import Data.String.Interpolate (i)
 import GHC.Conc qualified as GHC
 import GlobalOptions
 import Juvix.Compiler.Pipeline.Root
-import Juvix.Prelude.Pretty (mkAnsiText)
 import TopCommand
 import TopCommand.Options
 

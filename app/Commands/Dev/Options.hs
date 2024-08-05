@@ -2,6 +2,7 @@ module Commands.Dev.Options
   ( module Commands.Dev.Options,
     module Commands.Dev.Asm.Options,
     module Commands.Dev.Core.Options,
+    module Commands.Dev.Latex.Options,
     module Commands.Dev.Internal.Options,
     module Commands.Dev.Parse.Options,
     module Commands.Dev.Highlight.Options,
@@ -19,6 +20,7 @@ import Commands.Dev.DisplayRoot.Options
 import Commands.Dev.Highlight.Options
 import Commands.Dev.ImportTree.Options
 import Commands.Dev.Internal.Options
+import Commands.Dev.Latex.Options
 import Commands.Dev.MigrateJuvixYaml.Options
 import Commands.Dev.Nockma.Options
 import Commands.Dev.Parse.Options
@@ -34,6 +36,7 @@ import CommonOptions
 data DevCommand
   = DisplayRoot RootOptions
   | ImportTree ImportTreeCommand
+  | Latex LatexCommand
   | Highlight HighlightOptions
   | Internal InternalCommand
   | DevCompile DevCompileCommand
@@ -71,9 +74,17 @@ parseDevCommand =
           commandTermination,
           commandJuvixDevRepl,
           commandMigrateJuvixYaml,
+          commandLatex,
           commandNockma
         ]
     )
+
+commandLatex :: Mod CommandFields DevCommand
+commandLatex =
+  command "latex" $
+    info
+      (Latex <$> parseLatex)
+      (progDesc "Subcommands related to LaTeX")
 
 commandImportTree :: Mod CommandFields DevCommand
 commandImportTree =

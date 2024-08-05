@@ -3,7 +3,6 @@ module Commands.Compile.CStage where
 
 import CommonOptions
 import Juvix.Prelude as Juvix
-import Juvix.Prelude.Pretty
 import Prelude (show)
 
 data CStage
