@@ -352,7 +352,7 @@ bindExpr' ::
   Node ->
   ParsecS r Node
 bindExpr' varsNum vars node = do
-  kw kwBind
+  kw kwBindOperator
   node' <- cmpExpr varsNum vars
   ioExpr' varsNum vars (mkConstr Info.empty (BuiltinTag TagBind) [node, node'])
 
