@@ -205,7 +205,7 @@ instance PrettyCode Constant where
     ConstVoid {} ->
       return $ annotate (AnnKind KNameConstructor) Str.void
     ConstUInt8 v ->
-      return $ annotate AnnLiteralInteger (pretty v)
+      return $ annotate AnnLiteralInteger (pretty v <> "u8")
 
 instance PrettyCode BoolOp where
   ppCode op = return $ primitive $ case op of
