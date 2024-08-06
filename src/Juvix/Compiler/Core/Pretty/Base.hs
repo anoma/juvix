@@ -84,6 +84,7 @@ instance PrettyCode Tag where
 
 instance PrettyCode Primitive where
   ppCode = \case
+    p@(PrimInteger _) | p == primitiveUInt8 -> return $ annotate (AnnKind KNameInductive) (pretty ("UInt8" :: String))
     PrimInteger _ -> return $ annotate (AnnKind KNameInductive) (pretty ("Int" :: String))
     PrimField -> return $ annotate (AnnKind KNameInductive) (pretty ("Field" :: String))
     PrimBool _ -> return $ annotate (AnnKind KNameInductive) (pretty ("Bool" :: String))

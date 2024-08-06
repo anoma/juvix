@@ -1122,6 +1122,7 @@ exprNamed varsNum vars = do
     "Int" -> return mkTypeInteger'
     "Field" -> return mkTypeField'
     "String" -> return mkTypeString'
+    "UInt8" -> return mkTypeUInt8'
     "ByteArray" -> return mkTypeByteArray'
     _ ->
       case HashMap.lookup txt vars of
