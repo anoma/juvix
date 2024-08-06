@@ -156,8 +156,9 @@ runInfoTableBuilder' st = reinterpret (runState st) interp
         modify' (over (builderStateModule . moduleInfoTable . infoIdentifiers) (HashMap.adjust (over identifierType (expandType args)) sym))
       GetIdent txt -> do
         s <- get
-        let r1 = HashMap.lookup txt (s ^. builderStateModule . moduleInfoTable . identMap)
-            r2 = HashMap.lookup txt (s ^. builderStateModule . moduleImportsTable . identMap)
+        let modSt = s ^. builderStateModule
+            r1 = modSt ^. moduleInfoTable . identMap . at txt
+            r2 = modSt ^. moduleImportsTable . identMap . at txt
         return (r1 <|> r2)
       GetModule ->
         (^. builderStateModule) <$> get

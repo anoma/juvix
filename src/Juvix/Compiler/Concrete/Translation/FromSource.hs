@@ -1194,8 +1194,7 @@ doBlock = do
   let
   return
     Do
-      { _doBindIden = (),
-        _doDelims = Irrelevant (lbr, rbr),
+      { _doDelims = Irrelevant (lbr, rbr),
         ..
       }
 
