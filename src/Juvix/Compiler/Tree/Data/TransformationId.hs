@@ -13,6 +13,7 @@ data TransformationId
   | FilterUnreachable
   | Validate
   | CheckNoAnoma
+  | CheckNoByteArray
   deriving stock (Data, Bounded, Enum, Show)
 
 data PipelineId
@@ -27,7 +28,7 @@ toNockmaTransformations :: [TransformationId]
 toNockmaTransformations = [Validate, Apply, FilterUnreachable, TempHeight]
 
 toAsmTransformations :: [TransformationId]
-toAsmTransformations = [Validate, CheckNoAnoma]
+toAsmTransformations = [Validate, CheckNoAnoma, CheckNoByteArray]
 
 toCairoAsmTransformations :: [TransformationId]
 toCairoAsmTransformations = [Validate, Apply, FilterUnreachable]
@@ -43,6 +44,7 @@ instance TransformationId' TransformationId where
     FilterUnreachable -> strFilterUnreachable
     Validate -> strValidate
     CheckNoAnoma -> strCheckNoAnoma
+    CheckNoByteArray -> strCheckNoByteArray
 
 instance PipelineId' TransformationId PipelineId where
   pipelineText :: PipelineId -> Text

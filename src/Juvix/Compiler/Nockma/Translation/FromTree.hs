@@ -33,6 +33,7 @@ module Juvix.Compiler.Nockma.Translation.FromTree
   )
 where
 
+import Data.ByteString qualified as BS
 import Juvix.Compiler.Nockma.Encoding
 import Juvix.Compiler.Nockma.Language.Path
 import Juvix.Compiler.Nockma.Pretty
@@ -360,6 +361,7 @@ compile :: forall r. (Members '[Reader FunctionCtx, Reader CompilerCtx] r) => Tr
 compile = \case
   Tree.Binop b -> goBinop b
   Tree.Unop b -> goUnop b
+  Tree.ByteArray b -> goByteArrayOp b
   Tree.Cairo {} -> cairoErr
   Tree.Anoma b -> goAnomaOp b
   Tree.Constant c -> return (goConstant (c ^. Tree.nodeConstant))
@@ -441,6 +443,7 @@ compile = \case
       Tree.ConstVoid -> OpQuote # constVoid
       Tree.ConstField {} -> fieldErr
       Tree.ConstUInt8 i -> nockIntegralLiteral i
+      Tree.ConstByteArray bs -> OpQuote # (toNock @Natural (fromIntegral (BS.length bs)) # toNock (byteStringToNatural bs))
 
     goConstString :: Text -> Term Natural
     goConstString t =
@@ -491,6 +494,23 @@ compile = \case
         Tree.OpAnomaSign -> return (goAnomaSign args)
         Tree.OpAnomaVerifyWithMessage -> return (goAnomaVerifyWithMessage args)
         Tree.OpAnomaSignDetached -> return (goAnomaSignDetached args)
+
+    goByteArrayOp :: Tree.NodeByteArray -> Sem r (Term Natural)
+    goByteArrayOp Tree.NodeByteArray {..} = do
+      args <- mapM compile _nodeByteArrayArgs
+      case _nodeByteArrayOpcode of
+        Tree.OpByteArraySize -> return (goByteArraySize args)
+        Tree.OpByteArrayFromListUInt8 -> goByteArrayFromListUInt8 args
+      where
+        goByteArraySize :: [Term Natural] -> Term Natural
+        goByteArraySize = \case
+          [ba] -> ba >># opAddress "head of the bytestring" [L]
+          _ -> impossible
+
+        goByteArrayFromListUInt8 :: [Term Natural] -> Sem r (Term Natural)
+        goByteArrayFromListUInt8 = \case
+          [xs] -> undefined
+          _ -> undefined
 
     goUnop :: Tree.NodeUnop -> Sem r (Term Natural)
     goUnop Tree.NodeUnop {..} = do

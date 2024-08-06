@@ -251,6 +251,7 @@ fromRegInstr info = \case
       Reg.ConstUnit -> mkVar "OBJ_UNIT"
       Reg.ConstVoid -> mkVar "OBJ_VOID"
       Reg.ConstUInt8 x -> mkCall "make_smallint" [mkInteger x]
+      Reg.ConstByteArray {} -> impossible
 
     fromAlloc :: Reg.InstrAlloc -> [Statement]
     fromAlloc Reg.InstrAlloc {..} =
