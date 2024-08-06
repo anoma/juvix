@@ -832,6 +832,7 @@ expressionAtom =
       <|> AtomCase <$> case_
       <|> AtomFunction <$> function
       <|> AtomLet <$> letBlock
+      <|> AtomDo <$> doBlock
       <|> AtomFunArrow <$> kw kwRightArrow
       <|> AtomHole <$> hole
       <|> AtomParens <$> parens parseExpressionAtoms
@@ -1163,6 +1164,42 @@ letStatement =
   LetFunctionDef <$> letFunDef
     <|> LetAliasDef <$> (kw kwSyntax >>= aliasDef)
     <|> LetOpen <$> openModule
+
+doBind :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (DoBind 'Parsed)
+doBind = do
+  (_doBindPattern, _doBindArrowKw) <- P.try $ do
+    pat <- parsePatternAtoms
+    arrowkw <- Irrelevant <$> kw kwLeftArrow
+    return (pat, arrowkw)
+  _doBindExpression <- parseExpressionAtoms
+  return DoBind {..}
+
+doLet :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (DoLet 'Parsed)
+doLet = do
+  _doLetKw <- Irrelevant <$> kw kwLet
+  -- TODO think about this P.try
+  _doLetStatements <- P.sepEndBy1 (P.try letStatement) semicolon
+  return DoLet {..}
+
+doStatement :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (DoStatement 'Parsed)
+doStatement =
+  DoStatementLet <$> doLet
+    <|> DoStatementBind <$> doBind
+    <|> DoStatementExpression <$> parseExpressionAtoms
+
+doBlock :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (Do 'Parsed)
+doBlock = do
+  _doKeyword <- Irrelevant <$> kw kwDo
+  lbr <- kw delimBraceL
+  _doStatements <- P.sepEndBy1 doStatement semicolon
+  rbr <- kw delimBraceR
+  let
+  return
+    Do
+      { _doBindIden = (),
+        _doDelims = Irrelevant (lbr, rbr),
+        ..
+      }
 
 letBlock :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (Let 'Parsed)
 letBlock = do

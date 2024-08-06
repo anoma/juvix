@@ -5,6 +5,9 @@ import Juvix.Prelude.Base
 auto :: (IsString s) => s
 auto = "auto"
 
+do_ :: (IsString s) => s
+do_ = "do"
+
 binaryPrefix :: (IsString s) => s
 binaryPrefix = "0b"
 
@@ -536,8 +539,14 @@ lambdaAscii = "\\"
 toUnicode :: (IsString s) => s
 toUnicode = "→"
 
+leftArrowUnicode :: (IsString s) => s
+leftArrowUnicode = "←"
+
 toAscii :: (IsString s) => s
 toAscii = "->"
+
+leftArrowAscii :: (IsString s) => s
+leftArrowAscii = "<-"
 
 mapstoUnicode :: (IsString s) => s
 mapstoUnicode = "↦"

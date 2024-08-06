@@ -46,6 +46,26 @@ instance ToGenericError MultipleDeclarations where
             <> line
             <> itemize (map pretty [i1, i2])
 
+newtype DoLastStatement = DoLastStatement
+  { _doLastStatement :: DoStatement 'Scoped
+  }
+
+instance ToGenericError DoLastStatement where
+  genericError DoLastStatement {..} = generr
+    where
+      generr =
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = prettyError msg,
+              _genericErrorIntervals = [i]
+            }
+        where
+          i = getLoc _doLastStatement
+          msg :: Doc Ann
+          msg =
+            "The last statement of a do block must be an expression"
+
 -- | megaparsec error while resolving infixities.
 newtype InfixError = InfixError
   { _infixErrorAtoms :: ExpressionAtoms 'Scoped

@@ -2375,6 +2375,7 @@ checkDoBind ::
 checkDoBind DoBind {..} = do
   expr' <- checkParseExpressionAtoms _doBindExpression
   pat' <- checkParsePatternAtoms _doBindPattern
+  -- TODO check no implicit pattern
   return
     DoBind
       { _doBindArrowKw,
@@ -2387,11 +2388,11 @@ checkDoLet ::
   DoLet 'Parsed ->
   Sem r (DoLet 'Scoped)
 checkDoLet DoLet {..} = do
-  defs' <- checkLetStatements _doLetFunDefs
+  defs' <- checkLetStatements _doLetStatements
   return
     DoLet
       { _doLetKw,
-        _doLetFunDefs = defs'
+        _doLetStatements = defs'
       }
 
 checkDoStatement ::
@@ -3280,6 +3281,7 @@ parseTerm =
     <|> parseList
     <|> parseLiteral
     <|> parseLet
+    <|> parseDo
     <|> parseIterator
     <|> parseDoubleBraces
     <|> parseBraces
@@ -3373,12 +3375,21 @@ parseTerm =
         namedApp s = case s of
           AtomNamedApplicationNew u -> Just u
           _ -> Nothing
+
     parseLet :: Parse Expression
     parseLet = ExpressionLet <$> P.token letBlock mempty
       where
         letBlock :: ExpressionAtom 'Scoped -> Maybe (Let 'Scoped)
         letBlock s = case s of
           AtomLet u -> Just u
+          _ -> Nothing
+
+    parseDo :: Parse Expression
+    parseDo = ExpressionDo <$> P.token letBlock mempty
+      where
+        letBlock :: ExpressionAtom 'Scoped -> Maybe (Do 'Scoped)
+        letBlock s = case s of
+          AtomDo u -> Just u
           _ -> Nothing
 
     parseIterator :: Parse Expression

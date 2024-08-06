@@ -400,7 +400,7 @@ instance (SingI s) => PrettyPrint (DoubleBracesExpression s) where
 
 instance (SingI s) => PrettyPrint (DoLet s) where
   ppCode DoLet {..} = do
-    let letFunDefs' = blockIndent (ppBlock _doLetFunDefs)
+    let letFunDefs' = blockIndent (ppBlock _doLetStatements)
     ppCode _doLetKw
       <+> letFunDefs'
 
@@ -957,6 +957,7 @@ instance PrettyPrint Expression where
     ExpressionPostfixApplication a -> ppCode a
     ExpressionLambda l -> ppCode l
     ExpressionLet lb -> ppLet NotTop lb
+    ExpressionDo d -> ppCode d
     ExpressionUniverse u -> ppCode u
     ExpressionLiteral l -> ppCode l
     ExpressionFunction f -> ppCode f

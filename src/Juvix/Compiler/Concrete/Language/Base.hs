@@ -1470,6 +1470,7 @@ data Expression
   | ExpressionIf (If 'Scoped)
   | ExpressionLambda (Lambda 'Scoped)
   | ExpressionLet (Let 'Scoped)
+  | ExpressionDo (Do 'Scoped)
   | ExpressionUniverse Universe
   | ExpressionLiteral LiteralLoc
   | ExpressionFunction (Function 'Scoped)
@@ -1712,8 +1713,8 @@ deriving stock instance Ord (LetStatement 'Parsed)
 deriving stock instance Ord (LetStatement 'Scoped)
 
 data DoLet (s :: Stage) = DoLet
-  { _doLetKw :: KeywordRef,
-    _doLetFunDefs :: NonEmpty (LetStatement s)
+  { _doLetKw :: Irrelevant KeywordRef,
+    _doLetStatements :: NonEmpty (LetStatement s)
   }
   deriving stock (Generic)
 
@@ -2489,7 +2490,7 @@ data Do (s :: Stage) = Do
   { _doKeyword :: Irrelevant KeywordRef,
     _doDelims :: Irrelevant (KeywordRef, KeywordRef),
     _doBindIden :: DoBindIdenType s,
-    _doStatements :: [DoStatement s]
+    _doStatements :: NonEmpty (DoStatement s)
   }
   deriving stock (Generic)
 
@@ -2910,6 +2911,28 @@ fixityPrecAbove = fixityFieldHelper fixityFieldsPrecAbove
 fixityPrecBelow :: SimpleGetter (ParsedFixityInfo s) (Maybe [SymbolType s])
 fixityPrecBelow = fixityFieldHelper fixityFieldsPrecBelow
 
+instance (SingI s) => HasLoc (LetStatement s) where
+  getLoc = \case
+    LetOpen o -> getLoc o
+    LetAliasDef d -> getLoc d
+    LetFunctionDef d -> getLoc d
+
+instance (SingI s) => HasLoc (DoBind s) where
+  getLoc DoBind {..} =
+    getLocPatternParensType _doBindPattern
+      <> getLocExpressionType _doBindExpression
+
+instance (SingI s) => HasLoc (DoLet s) where
+  getLoc DoLet {..} =
+    getLoc _doLetKw
+      <> getLoc (last _doLetStatements)
+
+instance (SingI s) => HasLoc (DoStatement s) where
+  getLoc = \case
+    DoStatementExpression e -> getLocExpressionType e
+    DoStatementBind b -> getLoc b
+    DoStatementLet b -> getLoc b
+
 instance (SingI s) => HasLoc (AliasDef s) where
   getLoc AliasDef {..} = getLoc _aliasDefSyntaxKw <> getLocIdentifierType _aliasDefAsName
 
@@ -2950,10 +2973,14 @@ instance HasAtomicity (NamedApplication s) where
 instance HasAtomicity (NamedApplicationNew s) where
   atomicity = const (Aggregate updateFixity)
 
+instance HasAtomicity (Do s) where
+  atomicity = const Atom
+
 instance HasAtomicity Expression where
   atomicity e = case e of
     ExpressionIdentifier {} -> Atom
     ExpressionHole {} -> Atom
+    ExpressionDo d -> atomicity d
     ExpressionInstanceHole {} -> Atom
     ExpressionParensIdentifier {} -> Atom
     ExpressionApplication {} -> Aggregate appFixity
@@ -3147,6 +3174,10 @@ instance HasLoc (DoubleBracesExpression s) where
 instance HasAtomicity (DoubleBracesExpression s) where
   atomicity = const Atom
 
+instance HasLoc (Do s) where
+  getLoc Do {..} =
+    getLoc _doKeyword <> getLoc (_doDelims ^. unIrrelevant . _2)
+
 instance HasLoc Expression where
   getLoc = \case
     ExpressionIdentifier i -> getLoc i
@@ -3159,6 +3190,7 @@ instance HasLoc Expression where
     ExpressionCase i -> getLoc i
     ExpressionIf x -> getLoc x
     ExpressionLet i -> getLoc i
+    ExpressionDo i -> getLoc i
     ExpressionUniverse i -> getLoc i
     ExpressionLiteral i -> getLoc i
     ExpressionFunction i -> getLoc i

@@ -618,6 +618,20 @@ infixl 9 @@
 (@@) :: (IsExpression a, IsExpression b) => a -> b -> Expression
 a @@ b = toExpression (Application (toExpression a) (toExpression b) Explicit)
 
+-- | \{p := b}
+(==>) :: (IsExpression a) => PatternArg -> a -> Expression
+p ==> b =
+  ExpressionLambda
+    Lambda
+      { _lambdaClauses =
+          pure
+            LambdaClause
+              { _lambdaPatterns = pure p,
+                _lambdaBody = toExpression b
+              },
+        _lambdaType = Nothing
+      }
+
 freshFunVar :: (Member NameIdGen r) => Interval -> Text -> Sem r VarName
 freshFunVar i n = set nameKind KNameFunction <$> freshVar i n
 
