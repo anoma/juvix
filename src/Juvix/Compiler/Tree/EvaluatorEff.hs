@@ -1,6 +1,7 @@
 module Juvix.Compiler.Tree.EvaluatorEff (eval, hEvalIOEither) where
 
 import Control.Exception qualified as Exception
+import Data.ByteString qualified as BS
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Tree.Data.InfoTable
 import Juvix.Compiler.Tree.Error
@@ -33,6 +34,7 @@ eval tab = runReader emptyEvalCtx . eval'
     eval' node = case node of
       Binop x -> goBinop x
       Unop x -> goUnop x
+      ByteArray x -> goByteArrayOp x
       Anoma {} -> evalError "unsupported: Anoma builtins"
       Cairo {} -> evalError "unsupported: Cairo builtins"
       Constant c -> return (goConstant c)
@@ -70,6 +72,33 @@ eval tab = runReader emptyEvalCtx . eval'
             PrimUnop op -> eitherToError $ evalUnop tab op v
             OpTrace -> goTrace v
             OpFail -> goFail v
+
+        goByteArrayOp :: NodeByteArray -> Sem r' Value
+        goByteArrayOp NodeByteArray {..} =
+          case _nodeByteArrayOpcode of
+            OpByteArraySize -> case _nodeByteArrayArgs of
+              [nodeArg] -> do
+                arg <- eval' nodeArg
+                case arg of
+                  (ValByteArray bs) -> return $ ValInteger (fromIntegral (BS.length bs))
+                  _ -> evalError "expected argument to be a ByteString"
+              _ -> evalError "expected exactly one argument"
+            OpByteArrayFromListUInt8 -> case _nodeByteArrayArgs of
+              [nodeArg] -> do
+                arg <- eval' nodeArg
+                listUInt8 :: [Word8] <- checkListUInt8 arg
+                return $ ValByteArray (BS.pack listUInt8)
+              _ -> evalError "expected exactly one argument"
+              where
+                checkListUInt8 :: Value -> Sem r' [Word8]
+                checkListUInt8 = \case
+                  ValConstr c -> case c ^. constrArgs of
+                    -- is nil
+                    [] -> return []
+                    -- is cons
+                    [ValUInt8 w, t] -> (w :) <$> checkListUInt8 t
+                    _ -> evalError "expected either a nullary or a binary constructor"
+                  _ -> evalError "expected a constructor"
 
         goFail :: Value -> Sem r' Value
         goFail v = evalError ("failure: " <> printValue tab v)

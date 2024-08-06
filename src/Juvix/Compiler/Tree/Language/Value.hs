@@ -24,6 +24,7 @@ data Value
   | ValConstr Constr
   | ValClosure Closure
   | ValUInt8 Word8
+  | ValByteArray ByteString
   deriving stock (Eq)
 
 data Constr = Constr
@@ -62,3 +63,4 @@ instance HasAtomicity Value where
     ValConstr c -> atomicity c
     ValClosure cl -> atomicity cl
     ValUInt8 {} -> Atom
+    ValByteArray {} -> Atom

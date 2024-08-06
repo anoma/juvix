@@ -806,6 +806,12 @@ instrUInt8ToInt = "u8toi"
 instrIntToUInt8 :: (IsString s) => s
 instrIntToUInt8 = "itou8"
 
+instrByteArrayFromListUInt8 :: (IsString s) => s
+instrByteArrayFromListUInt8 = "bytearray-from-list-uint8"
+
+instrByteArraySize :: (IsString s) => s
+instrByteArraySize = "bytearray-size"
+
 instrShow :: (IsString s) => s
 instrShow = "show"
 

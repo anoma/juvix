@@ -18,6 +18,7 @@ data Node
   | Unop NodeUnop
   | Cairo NodeCairo
   | Anoma NodeAnoma
+  | ByteArray NodeByteArray
   | -- | A constant value.
     Constant NodeConstant
   | -- | A memory reference.
@@ -80,6 +81,12 @@ data NodeUnop = NodeUnop
   { _nodeUnopInfo :: NodeInfo,
     _nodeUnopOpcode :: UnaryOpcode,
     _nodeUnopArg :: Node
+  }
+
+data NodeByteArray = NodeByteArray
+  { _nodeByteArrayInfo :: NodeInfo,
+    _nodeByteArrayOpcode :: ByteArrayOp,
+    _nodeByteArrayArgs :: [Node]
   }
 
 data NodeCairo = NodeCairo

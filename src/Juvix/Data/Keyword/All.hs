@@ -277,6 +277,9 @@ kwPrealloc = asciiKw Str.prealloc
 kwArgsNum :: Keyword
 kwArgsNum = asciiKw Str.instrArgsNum
 
+kwByteArrayFromListUInt8 :: Keyword
+kwByteArrayFromListUInt8 = asciiKw Str.instrByteArrayFromListUInt8
+
 kwPoseidon :: Keyword
 kwPoseidon = asciiKw Str.instrPoseidon
 
