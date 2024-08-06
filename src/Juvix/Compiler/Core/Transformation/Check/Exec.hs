@@ -10,4 +10,4 @@ checkExec md = do
   checkNoAxioms md
   checkMainExists md
   checkMainTypeExec md
-  mapAllNodesM (checkBuiltins' (builtinsCairo ++ builtinsAnoma) []) md
+  mapAllNodesM (checkBuiltins' (builtinsCairo ++ builtinsAnoma ++ builtinsByteArray) [PrimByteArray]) md

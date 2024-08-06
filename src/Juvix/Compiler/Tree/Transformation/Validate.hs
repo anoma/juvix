@@ -15,6 +15,7 @@ inferType tab funInfo = goInfer mempty
     goInfer bl = \case
       Binop x -> goBinop bl x
       Unop x -> goUnop bl x
+      ByteArray x -> goByteArray bl x
       Cairo x -> goCairo bl x
       Anoma x -> goAnoma bl x
       Constant x -> goConst bl x
@@ -85,6 +86,11 @@ inferType tab funInfo = goInfer mempty
           OpUInt8ToInt -> checkUnop mkTypeUInt8 mkTypeInteger
           OpIntToUInt8 -> checkUnop mkTypeInteger mkTypeUInt8
 
+    goByteArray :: BinderList Type -> NodeByteArray -> Sem r Type
+    goByteArray bl NodeByteArray {..} = do
+      mapM_ (\arg -> checkType bl arg TyDynamic) _nodeByteArrayArgs
+      return TyDynamic
+
     goCairo :: BinderList Type -> NodeCairo -> Sem r Type
     goCairo bl NodeCairo {..} = do
       mapM_ (\arg -> checkType bl arg TyDynamic) _nodeCairoArgs
@@ -104,6 +110,7 @@ inferType tab funInfo = goInfer mempty
       ConstUnit {} -> return TyUnit
       ConstVoid {} -> return TyVoid
       ConstUInt8 {} -> return mkTypeUInt8
+      ConstByteArray {} -> return TyByteArray
 
     goMemRef :: BinderList Type -> NodeMemRef -> Sem r Type
     goMemRef bl NodeMemRef {..} = case _nodeMemRef of

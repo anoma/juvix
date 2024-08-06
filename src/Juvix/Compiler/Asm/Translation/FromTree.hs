@@ -39,6 +39,7 @@ genCode fi =
       Tree.Binop x -> goBinop isTail x
       Tree.Unop x -> goUnop isTail x
       Tree.Cairo x -> goCairo isTail x
+      Tree.ByteArray {} -> error "ByteArray instructions are not supported in the Asm backend"
       Tree.Anoma {} -> error "Anoma instructions are not supported in the Asm backend"
       Tree.Constant x -> goConstant isTail x
       Tree.MemRef x -> goMemRef isTail x

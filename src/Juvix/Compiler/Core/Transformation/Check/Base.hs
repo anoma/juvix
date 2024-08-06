@@ -71,6 +71,8 @@ checkBuiltins allowUntypedFail = dmapRM go
                 throw $ unsupportedError "cairo" node (getInfoLocation _builtinAppInfo)
             | _builtinAppOp `elem` builtinsAnoma ->
                 throw $ unsupportedError "anoma" node (getInfoLocation _builtinAppInfo)
+            | _builtinAppOp `elem` builtinsByteArray ->
+                throw $ unsupportedError "bytearray" node (getInfoLocation _builtinAppInfo)
             | otherwise ->
                 return $ Recur node
       _ -> return $ Recur node
