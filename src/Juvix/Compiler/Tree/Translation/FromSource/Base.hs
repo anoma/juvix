@@ -309,6 +309,7 @@ typeNamed = do
     "bool" -> return mkTypeBool
     "string" -> return TyString
     "unit" -> return TyUnit
+    "uint8" -> return mkTypeUInt8
     _ -> do
       idt <- lift $ getIdent' @t @e txt
       case idt of
@@ -316,12 +317,17 @@ typeNamed = do
         _ -> parseFailure off ("not a type: " ++ fromText txt)
 
 constant :: ParsecS r Constant
-constant = fieldValue <|> integerValue <|> boolValue <|> stringValue <|> unitValue <|> voidValue
+constant = fieldValue <|> uint8Value <|> integerValue <|> boolValue <|> stringValue <|> unitValue <|> voidValue
 
 fieldValue :: ParsecS r Constant
 fieldValue = P.try $ do
   (i, _) <- field
   return $ ConstField (fieldFromInteger defaultFieldSize i)
+
+uint8Value :: ParsecS r Constant
+uint8Value = P.try $ do
+  (i, _) <- uint8
+  return $ ConstUInt8 (fromInteger i)
 
 integerValue :: ParsecS r Constant
 integerValue = do

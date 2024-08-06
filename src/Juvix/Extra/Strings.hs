@@ -737,6 +737,9 @@ fun_ = "function"
 integer :: (IsString s) => s
 integer = "integer"
 
+uint8 :: (IsString s) => s
+uint8 = "uint8"
+
 bool :: (IsString s) => s
 bool = "bool"
 
