@@ -88,6 +88,9 @@ kwPublic = asciiKw Str.public
 kwRightArrow :: Keyword
 kwRightArrow = unicodeKw Str.toAscii Str.toUnicode
 
+kwLeftArrow :: Keyword
+kwLeftArrow = unicodeKw Str.leftArrowAscii Str.leftArrowUnicode
+
 kwSyntax :: Keyword
 kwSyntax = asciiKw Str.syntax
 
@@ -267,6 +270,9 @@ kwTrace = asciiKw Str.trace_
 
 kwFail :: Keyword
 kwFail = asciiKw Str.fail_
+
+kwDo :: Keyword
+kwDo = asciiKw Str.do_
 
 kwDump :: Keyword
 kwDump = asciiKw Str.dump
