@@ -423,8 +423,10 @@ instance (SingI s) => PrettyPrint (Do s) where
         statements' = ppBlock _doStatements
     dokw
       <+> openbr
-      <+> statements'
-      <+> closebr
+        <> hardline
+        <> indent statements'
+        <> hardline
+        <> closebr
 
 instance (SingI s) => PrettyPrint (ExpressionAtom s) where
   ppCode = \case
@@ -828,7 +830,7 @@ ppLRExpression associates fixlr e =
     (ppCode e)
 
 ppBlock :: (PrettyPrint a, Members '[Reader Options, ExactPrint] r, Traversable t) => t a -> Sem r ()
-ppBlock items = vsep (sepEndSemicolon (fmap ppCode items))
+ppBlock items = vsepHard (sepEndSemicolon (fmap ppCode items))
 
 instance (SingI s) => PrettyPrint (Lambda s) where
   ppCode Lambda {..} = do

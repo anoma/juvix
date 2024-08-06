@@ -20,7 +20,6 @@ import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra (recordNameSignatureByIndex)
 import Juvix.Compiler.Concrete.Extra qualified as P
 import Juvix.Compiler.Concrete.Gen qualified as G
-import Juvix.Compiler.Concrete.Gen qualified as Gen
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty (ppTrace)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context
@@ -29,7 +28,6 @@ import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context qualified as 
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Store.Scoped.Language as Store
 import Juvix.Data.FixityInfo qualified as FI
-import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
 
 scopeCheck ::
@@ -2409,16 +2407,10 @@ checkDo ::
   Do 'Parsed ->
   Sem r (Do 'Scoped)
 checkDo Do {..} = do
-  let bindSym :: Symbol =
-        run
-          . runReader (getLoc _doKeyword)
-          $ Gen.symbol Str.bindOperator
-  bindIden <- checkScopedIden (NameUnqualified bindSym)
   stmts' <- mapM checkDoStatement _doStatements
   return
     Do
       { _doStatements = stmts',
-        _doBindIden = bindIden,
         _doKeyword,
         _doDelims
       }

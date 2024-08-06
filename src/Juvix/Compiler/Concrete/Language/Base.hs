@@ -55,11 +55,6 @@ type family FieldArgIxType s = res | res -> s where
   FieldArgIxType 'Parsed = ()
   FieldArgIxType 'Scoped = Int
 
-type DoBindIdenType :: Stage -> GHCType
-type family DoBindIdenType s = res | res -> s where
-  DoBindIdenType 'Parsed = ()
-  DoBindIdenType 'Scoped = ScopedIden
-
 type SideIfBranchConditionType :: Stage -> IfBranchKind -> GHCType
 type family SideIfBranchConditionType s k = res where
   SideIfBranchConditionType s 'BranchIfBool = ExpressionType s
@@ -2489,7 +2484,6 @@ deriving stock instance Ord (RecordStatement 'Scoped)
 data Do (s :: Stage) = Do
   { _doKeyword :: Irrelevant KeywordRef,
     _doDelims :: Irrelevant (KeywordRef, KeywordRef),
-    _doBindIden :: DoBindIdenType s,
     _doStatements :: NonEmpty (DoStatement s)
   }
   deriving stock (Generic)

@@ -371,6 +371,9 @@ anomaVerifyDetached = "anoma-verify-detached"
 anomaSign :: (IsString s) => s
 anomaSign = "anoma-sign"
 
+builtinMonadBind :: (IsString s) => s
+builtinMonadBind = "monad-bind"
+
 anomaSignDetached :: (IsString s) => s
 anomaSignDetached = "anoma-sign-detached"
 
@@ -967,6 +970,9 @@ nothing = "nothing"
 
 just :: (IsString s) => s
 just = "just"
+
+monad :: (IsString s) => s
+monad = "monad"
 
 pair :: (IsString s) => s
 pair = "pair"
