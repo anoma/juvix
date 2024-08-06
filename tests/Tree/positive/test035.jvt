@@ -1,8 +1,3 @@
-type list {
-  nil : list;
-  cons : (*, list) → list;
-}
-
 function mklst(integer) : list;
 function mklst2(integer) : list;
 function append(list, list) : list;

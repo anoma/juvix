@@ -1,10 +1,5 @@
 -- no matching case branch
 
-type list {
-  nil : list;
-  cons : * -> list -> list;
-}
-
 function main() : * {
   case[list](alloc[nil]()) {
     cons: 1
