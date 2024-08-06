@@ -24,6 +24,7 @@ import Juvix.Compiler.Tree.Language.Base
 import Juvix.Compiler.Tree.Translation.FromSource.Lexer.Base
 import Juvix.Compiler.Tree.Translation.FromSource.Sig
 import Juvix.Data.Field
+import Juvix.Extra.Strings qualified as Str
 import Juvix.Parser.Error
 import Text.Megaparsec qualified as P
 
@@ -127,9 +128,9 @@ declareBuiltinList = do
   tagNil <- lift (freshTag' @t @e)
   tagCons <- lift (freshTag' @t @e)
   declareInductiveBuiltins @t @e
-    "list"
-    [ (tagNil, "nil", id),
-      (tagCons, "cons", \ty -> mkTypeFun [TyDynamic, ty] ty)
+    Str.list
+    [ (tagNil, Str.nil, id),
+      (tagCons, Str.cons, \ty -> mkTypeFun [TyDynamic, ty] ty)
     ]
 
 declareBuiltins :: forall t e r. (Members '[InfoTableBuilder' t e] r) => ParsecS r ()
