@@ -10,6 +10,7 @@ import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Core.Pretty.Base qualified as Core
 import Juvix.Compiler.Internal.Data.Name
 import Juvix.Compiler.Tree.Data.InfoTable
+import Juvix.Compiler.Tree.Extra.Type.Base
 import Juvix.Compiler.Tree.Language
 import Juvix.Compiler.Tree.Language.Value
 import Juvix.Compiler.Tree.Pretty.Extra
@@ -139,8 +140,10 @@ instance PrettyCode Type where
   ppCode = \case
     TyDynamic ->
       return $ annotate (AnnKind KNameInductive) Str.mul
-    TyInteger {} ->
-      return $ annotate (AnnKind KNameInductive) Str.integer
+    t@(TyInteger {})
+      | t == mkTypeUInt8 ->
+          return $ annotate (AnnKind KNameInductive) Str.uint8
+    TyInteger {} -> return $ annotate (AnnKind KNameInductive) Str.integer
     TyField {} ->
       return $ annotate (AnnKind KNameInductive) Str.field
     TyByteArray {} ->

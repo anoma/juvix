@@ -4,32 +4,17 @@
 {-# HLINT ignore "Avoid restricted extensions" #-}
 {-# HLINT ignore "Avoid restricted flags" #-}
 
-module Juvix.Compiler.Tree.Extra.Type where
+module Juvix.Compiler.Tree.Extra.Type
+  ( module Juvix.Compiler.Tree.Extra.Type,
+    module Juvix.Compiler.Tree.Extra.Type.Base,
+  )
+where
 
 import Juvix.Compiler.Tree.Data.InfoTable.Base
 import Juvix.Compiler.Tree.Error
+import Juvix.Compiler.Tree.Extra.Type.Base
 import Juvix.Compiler.Tree.Language.Base
 import Juvix.Compiler.Tree.Pretty
-
-mkTypeInteger :: Type
-mkTypeInteger = TyInteger (TypeInteger Nothing Nothing)
-
-mkTypeUInt8 :: Type
-mkTypeUInt8 = TyInteger (TypeInteger (Just 0) (Just 255))
-
-mkTypeBool :: Type
-mkTypeBool = TyBool (TypeBool (BuiltinTag TagTrue) (BuiltinTag TagFalse))
-
-mkTypeConstr :: Symbol -> Tag -> [Type] -> Type
-mkTypeConstr ind tag argTypes = TyConstr (TypeConstr ind tag argTypes)
-
-mkTypeInductive :: Symbol -> Type
-mkTypeInductive ind = TyInductive (TypeInductive ind)
-
-mkTypeFun :: [Type] -> Type -> Type
-mkTypeFun args tgt = case args of
-  [] -> tgt
-  a : args' -> TyFun (TypeFun (a :| args') tgt)
 
 unfoldType :: Type -> ([Type], Type)
 unfoldType ty = (typeArgs ty, typeTarget ty)

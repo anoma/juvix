@@ -229,5 +229,10 @@ tests =
       "Test038: Apply & argsnum"
       $(mkRelDir ".")
       $(mkRelFile "test038.jvt")
-      $(mkRelFile "out/test038.out")
+      $(mkRelFile "out/test038.out"),
+    PosTest
+      "Test039: UInt8"
+      $(mkRelDir ".")
+      $(mkRelFile "test039.jvt")
+      $(mkRelFile "out/test039.out")
   ]
