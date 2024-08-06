@@ -234,5 +234,10 @@ tests =
       "Test039: UInt8"
       $(mkRelDir ".")
       $(mkRelFile "test039.jvt")
-      $(mkRelFile "out/test039.out")
+      $(mkRelFile "out/test039.out"),
+    PosTest
+      "Test040: ByteArray"
+      $(mkRelDir ".")
+      $(mkRelFile "test040.jvt")
+      $(mkRelFile "out/test040.out")
   ]

@@ -19,6 +19,8 @@ import Juvix.Data.Keyword.All
     kwArgsNum,
     kwAtoi,
     kwBr,
+    kwByteArrayFromListUInt8,
+    kwByteArraySize,
     kwCAlloc,
     kwCCall,
     kwCExtend,
@@ -88,5 +90,7 @@ allKeywords =
          kwAnomaVerifyWithMessage,
          kwPoseidon,
          kwEcOp,
-         kwRandomEcPoint
+         kwRandomEcPoint,
+         kwByteArraySize,
+         kwByteArrayFromListUInt8
        ]

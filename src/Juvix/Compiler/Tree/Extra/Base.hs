@@ -18,6 +18,7 @@ getNodeInfo :: Node -> NodeInfo
 getNodeInfo = \case
   Binop NodeBinop {..} -> _nodeBinopInfo
   Unop NodeUnop {..} -> _nodeUnopInfo
+  ByteArray NodeByteArray {..} -> _nodeByteArrayInfo
   Cairo NodeCairo {..} -> _nodeCairoInfo
   Anoma NodeAnoma {..} -> _nodeAnomaInfo
   Constant NodeConstant {..} -> _nodeConstantInfo
@@ -140,6 +141,17 @@ destruct = \case
               { _nodeUnopArg = arg,
                 _nodeUnopOpcode,
                 _nodeUnopInfo
+              }
+      }
+  ByteArray NodeByteArray {..} ->
+    NodeDetails
+      { _nodeChildren = map noTempVar _nodeByteArrayArgs,
+        _nodeReassemble = manyChildren $ \args ->
+          ByteArray
+            NodeByteArray
+              { _nodeByteArrayArgs = args,
+                _nodeByteArrayOpcode,
+                _nodeByteArrayInfo
               }
       }
   Cairo NodeCairo {..} ->
