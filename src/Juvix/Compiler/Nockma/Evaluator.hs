@@ -253,9 +253,15 @@ evalProfile inistack initerm =
             StdlibCatBytes -> case args' of
               TCell (TermAtom arg1) (TermAtom arg2) -> goCat arg1 arg2
               _ -> error "expected a term with two atoms"
+            StdlibFoldBytes -> case args' of
+              TermCell c -> TermAtom <$> goFoldBytes c
+              TermAtom {} -> error "expected a cell"
           where
             goCat :: Atom a -> Atom a -> Sem r (Term a)
             goCat arg1 arg2 = TermAtom . setAtomHint AtomHintString <$> atomConcatenateBytes arg1 arg2
+
+            goFoldBytes :: Cell a -> Sem r (Atom a)
+            goFoldBytes c = undefined
 
             signatureLength :: Int
             signatureLength = 64
