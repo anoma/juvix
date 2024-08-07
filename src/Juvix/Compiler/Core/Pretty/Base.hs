@@ -87,11 +87,7 @@ instance PrettyCode Primitive where
     PrimString -> return $ annotate (AnnKind KNameInductive) (pretty ("String" :: String))
 
 ppName :: NameKind -> Text -> Sem r (Doc Ann)
-ppName kind name = return $ annotate (AnnKind kind) (pretty name')
-  where
-    name' = case name of
-      "," -> "pair"
-      _ -> name
+ppName kind name = return $ annotate (AnnKind kind) (pretty name)
 
 ppIdentName :: (Member (Reader Options) r) => Text -> Symbol -> Sem r (Doc Ann)
 ppIdentName name sym = do
