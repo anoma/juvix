@@ -2322,7 +2322,8 @@ checkDoBind ::
 checkDoBind DoBind {..} = do
   expr' <- checkParseExpressionAtoms _doBindExpression
   pat' <- checkParsePatternAtoms _doBindPattern
-  -- TODO check no implicit pattern
+  unless (Explicit == pat' ^. patternArgIsImplicit) $
+    throw (ErrDoBindImplicitPattern (DoBindImplicitPattern pat'))
   return
     DoBind
       { _doBindArrowKw,
