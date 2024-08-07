@@ -68,7 +68,19 @@ minusThree (n : Nat) : Maybe Nat :=
   do {
     x1 <- minusOne n;
     x2 <- minusOne x1;
-    pure x2;
+    let
+      x2' : Nat := x2;
+      num := 3;
+      num1 := 4;
+    in
+    let
+      z :=
+        let
+          xx := 4;
+        in xx;
+    in
+    x3 <- minusOne x2';
+    pure x3;
   };
 
 main : IO := printLn (minusThree 1) >>> printLn (minusThree 4);

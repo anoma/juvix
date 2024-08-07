@@ -2339,6 +2339,7 @@ checkDoLet DoLet {..} = do
   return
     DoLet
       { _doLetKw,
+        _doLetInKw,
         _doLetStatements = defs'
       }
 
