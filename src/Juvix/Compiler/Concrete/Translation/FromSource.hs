@@ -1177,21 +1177,39 @@ doBind = do
 doLet :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (DoLet 'Parsed)
 doLet = do
   _doLetKw <- Irrelevant <$> kw kwLet
-  -- TODO think about this P.try
-  _doLetStatements <- P.sepEndBy1 (P.try letStatement) semicolon
+  _doLetStatements <- P.sepEndBy1 letStatement semicolon
+  _doLetInKw <- Irrelevant <$> kw kwIn
   return DoLet {..}
 
-doStatement :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (DoStatement 'Parsed)
-doStatement =
-  DoStatementLet <$> doLet
-    <|> DoStatementBind <$> doBind
-    <|> DoStatementExpression <$> parseExpressionAtoms
+doStatements :: forall r. (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (NonEmpty (DoStatement 'Parsed))
+doStatements =
+  P.label "<do statement>" $
+    plet
+      <|> pother
+  where
+    plet :: ParsecS r (NonEmpty (DoStatement 'Parsed))
+    plet = do
+      s <- DoStatementLet <$> doLet
+      ss <- doStatements
+      return (s :| toList ss)
+
+    pother :: ParsecS r (NonEmpty (DoStatement 'Parsed))
+    pother = do
+      s <-
+        DoStatementBind <$> doBind
+          <|> DoStatementExpression <$> parseExpressionAtoms
+      semi <- isJust <$> optional semicolon
+      if
+          | semi -> do
+              ss <- maybe [] toList <$> optional doStatements
+              return (s :| ss)
+          | otherwise -> return (pure s)
 
 doBlock :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (Do 'Parsed)
 doBlock = do
   _doKeyword <- Irrelevant <$> kw kwDo
   lbr <- kw delimBraceL
-  _doStatements <- P.sepEndBy1 doStatement semicolon
+  _doStatements <- doStatements
   rbr <- kw delimBraceR
   let
   return

@@ -401,14 +401,26 @@ instance (SingI s) => PrettyPrint (DoubleBracesExpression s) where
 instance (SingI s) => PrettyPrint (DoLet s) where
   ppCode DoLet {..} = do
     let letFunDefs' = blockIndent (ppBlock _doLetStatements)
+    -- blockIndent d = hardline <> indent d <> line
     ppCode _doLetKw
-      <+> letFunDefs'
+      <> letFunDefs'
+      <> ppCode _doLetInKw
 
 instance (SingI s) => PrettyPrint (DoBind s) where
   ppCode DoBind {..} = do
     ppPatternParensType _doBindPattern
       <+> ppCode _doBindArrowKw
       <+> ppTopExpressionType _doBindExpression
+
+instance (Foldable l, SingI s) => PrettyPrint (l (DoStatement s)) where
+  ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => l (DoStatement s) -> Sem r ()
+  ppCode = vsepHard . map go . toList
+    where
+      go :: DoStatement s -> Sem r ()
+      go = \case
+        DoStatementBind b -> ppCode b >> semicolon
+        DoStatementExpression b -> ppExpressionType b >> semicolon
+        DoStatementLet b -> ppCode b
 
 instance (SingI s) => PrettyPrint (DoStatement s) where
   ppCode = \case
@@ -418,13 +430,11 @@ instance (SingI s) => PrettyPrint (DoStatement s) where
 
 instance (SingI s) => PrettyPrint (Do s) where
   ppCode Do {..} = do
-    let dokw = ppCode _doKeyword
-        (openbr, closebr) = over both ppCode (_doDelims ^. unIrrelevant)
-        statements' = ppBlock _doStatements
-    dokw
+    let (openbr, closebr) = over both ppCode (_doDelims ^. unIrrelevant)
+    ppCode _doKeyword
       <+> openbr
         <> hardline
-        <> indent statements'
+        <> indent (ppCode _doStatements)
         <> hardline
         <> closebr
 

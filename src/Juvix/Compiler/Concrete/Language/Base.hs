@@ -1709,7 +1709,8 @@ deriving stock instance Ord (LetStatement 'Scoped)
 
 data DoLet (s :: Stage) = DoLet
   { _doLetKw :: Irrelevant KeywordRef,
-    _doLetStatements :: NonEmpty (LetStatement s)
+    _doLetStatements :: NonEmpty (LetStatement s),
+    _doLetInKw :: Irrelevant KeywordRef
   }
   deriving stock (Generic)
 
