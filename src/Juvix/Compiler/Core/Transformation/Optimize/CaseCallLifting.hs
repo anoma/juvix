@@ -131,5 +131,51 @@ convertNode md = umap go
                   _ -> node
           _ -> node
 
+-- | Lifts calls in case branches out of the case expression, for functions that
+-- are called exactly once in each branch.
+--
+-- Transforms, e.g.,
+--
+-- case M
+-- | C1 x y := R1 (f A1 A2)
+-- | C2 z := R2 (f B1 B2)
+--
+-- to
+--
+-- let m := M;
+--      r := f (case m | C1 x y := A1 | C2 z := B1) (case m | C1 x y := A2 | C2 z := B2);
+-- in
+-- case m
+-- | C1 x y := R1 r
+-- | C2 z := R2 r
+--
+-- This allows to compile more Juvix programs to VampIR by automatically
+-- translating a large class of non-linearly-recursive programs into
+-- linearly-recursive ones.
+--
+-- For example,
+--
+-- def power' : Int → Int → Int → Int :=
+--   λ(acc : Int) λ(a : Int) λ(b : Int)
+--     if = b 0 then
+--       acc
+--     else if = (% b 2) 0 then
+--       power' acc (* a a) (/ b 2)
+--     else
+--       power' (* acc a) (* a a) (/ b 2);
+--
+-- is transformed into
+--
+-- def power' : Int → Int → Int → Int :=
+--   λ(acc : Int) λ(a : Int) λ(b : Int)
+--     if = b 0 then
+--       acc
+--     else
+--       let _X : Bool := = (% b 2) 0
+--       in power' (if _X then acc else * acc a) (* a a) (/ b 2);
+--
+-- References:
+--  - https://github.com/anoma/juvix/issues/2200
+--  - https://github.com/anoma/juvix/pull/2218
 caseCallLifting :: Module -> Module
 caseCallLifting md = mapAllNodes (convertNode md) md

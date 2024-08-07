@@ -28,5 +28,17 @@ convertNode = dmap go
       _ ->
         impossible
 
+-- | Fold constant cases, i.e., convert
+--
+-- case C a b
+-- | A := ..
+-- | B x := ..
+-- | C x y := M
+--
+-- to
+--
+-- let x := a;
+--     y := b;
+-- in M
 caseFolding :: Module -> Module
 caseFolding = mapAllNodes convertNode

@@ -71,6 +71,15 @@ constantFolding' opts nonRecSyms tab md =
     )
     md
 
+-- | Evaluates closed applications with value arguments when the result type is
+-- zero-order. For example, `3 + 4` is evaluated to `7`, and `id 3` is evaluated
+-- to `3`, but `id id` is not evaluated because the target type is not
+-- zero-order (it's a function type). This optimization is only applied to
+-- non-recursive symbols.
+--
+-- References:
+--  - https://github.com/anoma/juvix/pull/2450
+--  - https://github.com/anoma/juvix/issues/2154
 constantFolding :: (Member (Reader CoreOptions) r) => Module -> Sem r Module
 constantFolding md = do
   opts <- ask

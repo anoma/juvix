@@ -536,7 +536,7 @@ instance PrettyCode InfoTable where
 
       ppInductives :: [InductiveInfo] -> Sem r (Doc Ann)
       ppInductives inds = do
-        inds' <- mapM ppInductive (filter (isNothing . (^. inductiveBuiltin)) inds)
+        inds' <- mapM ppInductive (filter (shouldPrintInductive . (^. inductiveBuiltin)) inds)
         return (vsep inds')
         where
           ppInductive :: InductiveInfo -> Sem r (Doc Ann)
@@ -544,6 +544,20 @@ instance PrettyCode InfoTable where
             name <- ppName KNameInductive (ii ^. inductiveName)
             ctrs <- mapM (fmap (<> semi) . ppCode . lookupTabConstructorInfo tbl) (ii ^. inductiveConstructors)
             return (kwInductive <+> name <+> braces (line <> indent' (vsep ctrs) <> line) <> kwSemicolon)
+
+          shouldPrintInductive :: Maybe BuiltinType -> Bool
+          shouldPrintInductive = \case
+            Just (BuiltinTypeInductive i) -> case i of
+              BuiltinList -> True
+              BuiltinMaybe -> False
+              BuiltinPair -> True
+              BuiltinPoseidonState -> True
+              BuiltinEcPoint -> True
+              BuiltinNat -> False
+              BuiltinInt -> False
+              BuiltinBool -> False
+            Just _ -> False
+            Nothing -> True
 
 instance PrettyCode AxiomInfo where
   ppCode ii = do
