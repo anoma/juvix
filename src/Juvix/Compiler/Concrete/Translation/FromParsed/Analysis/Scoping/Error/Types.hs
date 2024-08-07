@@ -618,6 +618,33 @@ instance ToGenericError AliasBinderPattern where
             "As-Patterns cannot be used to alias pattern variables:"
               <+> code (ppCode opts' pat)
 
+newtype DoBindImplicitPattern = DoBindImplicitPattern
+  { _doBindImplicitPattern :: PatternArg
+  }
+  deriving stock (Show)
+
+makeLenses ''DoBindImplicitPattern
+
+instance ToGenericError DoBindImplicitPattern where
+  genericError e = ask >>= generr
+    where
+      generr opts =
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = prettyError msg,
+              _genericErrorIntervals = [i]
+            }
+        where
+          opts' = fromGenericOptions opts
+          pat :: PatternArg
+          pat = e ^. doBindImplicitPattern
+          i = getLoc pat
+          msg =
+            "Illegal pattern "
+              <> ppCode opts' pat
+              <> "\nImplicit patterns are not allowed on the left hand side of a bind arrow inside a do block"
+
 newtype ImplicitPatternLeftApplication = ImplicitPatternLeftApplication
   { _implicitPatternLeftApplication :: PatternApp
   }
