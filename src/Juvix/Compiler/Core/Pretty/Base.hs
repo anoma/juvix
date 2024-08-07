@@ -549,7 +549,7 @@ instance PrettyCode InfoTable where
           shouldPrintInductive = \case
             Just (BuiltinTypeInductive i) -> case i of
               BuiltinList -> True
-              BuiltinMaybe -> True
+              BuiltinMaybe -> False
               BuiltinPair -> True
               BuiltinPoseidonState -> True
               BuiltinEcPoint -> True
