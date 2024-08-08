@@ -4,14 +4,17 @@ module Juvix.Compiler.Internal.Translation.FromInternal
 where
 
 import Juvix.Compiler.Concrete.Data.Highlight.Input
-import Juvix.Compiler.Internal.Data.InfoTable
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context
+import Juvix.Compiler.Internal.Data.InfoTable as Internal
 import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Store.Extra
 import Juvix.Compiler.Store.Language
-import Juvix.Compiler.Store.Scoped.Data.InfoTable qualified as S
+import Juvix.Compiler.Store.Scoped.Data.InfoTable qualified as Scoped
+import Juvix.Compiler.Store.Scoped.Language
+import Juvix.Compiler.Store.Scoped.Language qualified as Scoped
 import Juvix.Data.Effect.NameIdGen
 import Juvix.Prelude hiding (fromEither)
 
@@ -22,10 +25,13 @@ typeCheckingNew ::
   Sem r InternalTypedResult
 typeCheckingNew a = do
   (termin, (res, (bst, checkedModule))) <- runTermination iniTerminationState $ do
-    res <- a
-    itab <- getInternalModuleTable <$> ask
+    res :: InternalResult <- a
+    itab :: InternalModuleTable <- getInternalModuleTable <$> ask
+    stab :: ScopedModuleTable <- getScopedModuleTable <$> ask
     let table :: InfoTable
-        table = computeCombinedInfoTable itab <> computeInternalModuleInfoTable (res ^. Internal.resultModule)
+        table = Internal.computeCombinedInfoTable itab <> computeInternalModuleInfoTable (res ^. Internal.resultModule)
+        stable :: Scoped.InfoTable
+        stable = Scoped.computeCombinedInfoTable stab <> (res ^. Internal.resultScoper . resultScopedModule . scopedModuleInfoTable)
         importCtx =
           ImportContext
             { _importContextTypesTable = computeTypesTable itab,
@@ -35,7 +41,7 @@ typeCheckingNew a = do
             }
     fmap (res,)
       . runReader table
-      . runReader (error "TODO" :: S.InfoTable)
+      . runReader stable
       . runResultBuilder importCtx
       . mapError (JuvixError @TypeCheckerError)
       $ checkTopModule (res ^. Internal.resultModule)

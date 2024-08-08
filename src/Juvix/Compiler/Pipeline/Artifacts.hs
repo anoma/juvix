@@ -50,7 +50,8 @@ tmpCoreInfoTableBuilderArtifacts m = do
   return a
 
 runBuiltinsArtifacts :: (Members '[Error JuvixError, State Artifacts] r) => Sem (Builtins ': r) a -> Sem r a
-runBuiltinsArtifacts = runStateLikeArtifacts runBuiltins artifactBuiltins
+runBuiltinsArtifacts =
+  runStateLikeArtifacts runBuiltins artifactBuiltins
 
 runScoperInfoTableBuilderArtifacts :: (Members '[State Artifacts] r) => Sem (Scoped.InfoTableBuilder ': r) a -> Sem r a
 runScoperInfoTableBuilderArtifacts = runStateLikeArtifacts Scoped.runInfoTableBuilderRepl artifactScopeTable
