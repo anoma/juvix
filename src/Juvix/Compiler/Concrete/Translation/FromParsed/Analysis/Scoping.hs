@@ -39,6 +39,7 @@ scopeCheck ::
   Sem r ScoperResult
 scopeCheck pkg importMap pr =
   mapError (JuvixError @ScoperError)
+    . mapError (JuvixError @BuiltinsError)
     . runReader pkg
     $ scopeCheck' importMap pr m
   where
@@ -58,7 +59,7 @@ iniScoperState tab =
     }
 
 scopeCheck' ::
-  (Members '[HighlightBuilder, Error ScoperError, NameIdGen, Reader Package] r) =>
+  (Members '[HighlightBuilder, Error BuiltinsError, Error ScoperError, NameIdGen, Reader Package] r) =>
   ScopedModuleTable ->
   Parser.ParserResult ->
   Module 'Parsed 'ModuleTop ->
@@ -66,12 +67,19 @@ scopeCheck' ::
 scopeCheck' importTab pr m = do
   fmap mkResult
     . runReader tab
+    . evalBuiltins builtinsState
     . runReader iniScopeParameters
     . runState (iniScoperState tab)
     $ checkTopModule m
   where
     tab :: InfoTable
     tab = computeCombinedInfoTable importTab
+
+    builtinsState :: BuiltinsState
+    builtinsState =
+      BuiltinsState
+        { _builtinsTable = tab ^. infoBuiltins
+        }
 
     iniScopeParameters :: ScopeParameters
     iniScopeParameters =
