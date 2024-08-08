@@ -7,6 +7,7 @@ module Juvix.Compiler.Nockma.Evaluator
 where
 
 import Crypto.Sign.Ed25519
+import Data.ByteString qualified as BS
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Nockma.Encoding
 import Juvix.Compiler.Nockma.Encoding qualified as Encoding
@@ -253,15 +254,25 @@ evalProfile inistack initerm =
             StdlibCatBytes -> case args' of
               TCell (TermAtom arg1) (TermAtom arg2) -> goCat arg1 arg2
               _ -> error "expected a term with two atoms"
-            StdlibFoldBytes -> case args' of
-              TermCell c -> TermAtom <$> goFoldBytes c
-              TermAtom {} -> error "expected a cell"
+            StdlibFoldBytes -> TermAtom <$> goFoldBytes args'
           where
             goCat :: Atom a -> Atom a -> Sem r (Term a)
             goCat arg1 arg2 = TermAtom . setAtomHint AtomHintString <$> atomConcatenateBytes arg1 arg2
 
-            goFoldBytes :: Cell a -> Sem r (Atom a)
-            goFoldBytes c = undefined
+            goFoldBytes :: Term a -> Sem r (Atom a)
+            goFoldBytes c = do
+              bs <- mapM nockNatural (checkTermToListAtom c)
+              byteStringToAtom (BS.pack (fromIntegral <$> bs))
+
+            checkTermToListAtom :: Term a -> [Atom a]
+            checkTermToListAtom = \case
+              TermAtom x ->
+                if
+                    | x `nockmaEq` nockNil -> []
+                    | otherwise -> error "expected a list to be terminated by nil"
+              TermCell c -> case c ^. cellLeft of
+                TermAtom x -> x : checkTermToListAtom (c ^. cellRight)
+                TermCell {} -> error "expect list element to be an atom"
 
             signatureLength :: Int
             signatureLength = 64
