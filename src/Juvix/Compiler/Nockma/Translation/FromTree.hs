@@ -498,19 +498,14 @@ compile = \case
     goByteArrayOp :: Tree.NodeByteArray -> Sem r (Term Natural)
     goByteArrayOp Tree.NodeByteArray {..} = do
       args <- mapM compile _nodeByteArrayArgs
-      case _nodeByteArrayOpcode of
-        Tree.OpByteArraySize -> return (goByteArraySize args)
-        Tree.OpByteArrayFromListUInt8 -> goByteArrayFromListUInt8 args
+      return $ case _nodeByteArrayOpcode of
+        Tree.OpByteArraySize -> goByteArraySize args
+        Tree.OpByteArrayFromListUInt8 -> callStdlib StdlibLengthList args # callStdlib StdlibFoldBytes args
       where
         goByteArraySize :: [Term Natural] -> Term Natural
         goByteArraySize = \case
           [ba] -> ba >># opAddress "head of the bytestring" [L]
           _ -> impossible
-
-        goByteArrayFromListUInt8 :: [Term Natural] -> Sem r (Term Natural)
-        goByteArrayFromListUInt8 = \case
-          [xs] -> undefined
-          _ -> undefined
 
     goUnop :: Tree.NodeUnop -> Sem r (Term Natural)
     goUnop Tree.NodeUnop {..} = do
