@@ -1,43 +1,32 @@
-module Juvix.Compiler.Builtins.Error where
+module Juvix.Compiler.Builtins.Error
+  ( module Juvix.Compiler.Builtins.Error,
+    module Juvix.Compiler.Builtins.Error.Types,
+  )
+where
 
-import Juvix.Compiler.Concrete.Data.Builtins
-import Juvix.Data.PPOutput
+import Juvix.Compiler.Builtins.Error.Types
 import Juvix.Prelude
+import Juvix.Prelude.Pretty
 
-data AlreadyDefined = AlreadyDefined
-  { _alreadyDefinedBuiltin :: BuiltinPrim,
-    _alreadyDefinedLoc :: Interval
-  }
+data BuiltinsError
+  = ErrAlreadyDefined AlreadyDefined
+  | ErrNotDefined NotDefined
+  | ErrBuiltinsErrorMessage BuiltinsErrorMessage
 
-makeLenses ''AlreadyDefined
+instance ToGenericError BuiltinsError where
+  genericError = \case
+    ErrAlreadyDefined e -> genericError e
+    ErrNotDefined e -> genericError e
+    ErrBuiltinsErrorMessage e -> genericError e
 
-instance ToGenericError AlreadyDefined where
-  genericError e =
-    return
-      GenericError
-        { _genericErrorLoc = i,
-          _genericErrorMessage = ppOutput msg,
-          _genericErrorIntervals = [i]
+builtinsErrorMsg :: (Members '[Error BuiltinsError] r) => Interval -> AnsiText -> Sem r a
+builtinsErrorMsg loc msg =
+  throw $
+    ErrBuiltinsErrorMessage
+      BuiltinsErrorMessage
+        { _builtinsErrorMessageLoc = loc,
+          _builtinsErrorMessage = msg
         }
-    where
-      i = e ^. alreadyDefinedLoc
-      msg = "The builtin" <+> code (pretty (e ^. alreadyDefinedBuiltin)) <+> "has already been defined"
 
-data NotDefined = NotDefined
-  { _notDefinedBuiltin :: BuiltinPrim,
-    _notDefinedLoc :: Interval
-  }
-
-makeLenses ''NotDefined
-
-instance ToGenericError NotDefined where
-  genericError e =
-    return
-      GenericError
-        { _genericErrorLoc = i,
-          _genericErrorMessage = ppOutput msg,
-          _genericErrorIntervals = [i]
-        }
-    where
-      i = e ^. notDefinedLoc
-      msg = "The builtin" <+> code (pretty (e ^. notDefinedBuiltin)) <+> "has not been defined"
+builtinsErrorText :: (Members '[Error BuiltinsError] r) => Interval -> Text -> Sem r a
+builtinsErrorText loc = builtinsErrorMsg loc . mkAnsiText

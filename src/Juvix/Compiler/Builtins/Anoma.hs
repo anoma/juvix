@@ -1,51 +1,45 @@
 module Juvix.Compiler.Builtins.Anoma where
 
 import Data.HashSet qualified as HashSet
-import Juvix.Compiler.Builtins.Effect
+import Juvix.Compiler.Internal.Builtins
 import Juvix.Compiler.Internal.Extra
 import Juvix.Prelude
 
-registerAnomaGet :: (Members '[Builtins, NameIdGen] r) => AxiomDef -> Sem r ()
-registerAnomaGet f = do
+checkAnomaGet :: (Members '[Builtins, Error BuiltinsError, NameIdGen] r) => AxiomDef -> Sem r ()
+checkAnomaGet f = do
   let ftype = f ^. axiomType
       u = ExpressionUniverse smallUniverseNoLoc
       l = getLoc f
   keyT <- freshVar l "keyT"
   valueT <- freshVar l "valueT"
   let freeVars = HashSet.fromList [keyT, valueT]
-  unless
-    ((ftype ==% (u <>--> u <>--> keyT --> valueT)) freeVars)
-    (error "anomaGet must be of type {Value Key : Type} -> Key -> Value")
-  registerBuiltin BuiltinAnomaGet (f ^. axiomName)
+  unless ((ftype ==% (u <>--> u <>--> keyT --> valueT)) freeVars) $
+    builtinsErrorText (getLoc f) "anomaGet must be of type {Value Key : Type} -> Key -> Value"
 
-registerAnomaEncode :: (Members '[Builtins, NameIdGen] r) => AxiomDef -> Sem r ()
-registerAnomaEncode f = do
+checkAnomaEncode :: (Members '[Builtins, Error BuiltinsError, NameIdGen] r) => AxiomDef -> Sem r ()
+checkAnomaEncode f = do
   let ftype = f ^. axiomType
       u = ExpressionUniverse smallUniverseNoLoc
       l = getLoc f
   encodeT <- freshVar l "encodeT"
   nat <- getBuiltinName (getLoc f) BuiltinNat
   let freeVars = HashSet.fromList [encodeT]
-  unless
-    ((ftype ==% (u <>--> encodeT --> nat)) freeVars)
-    (error "anomaEncode must be of type {A : Type} -> A -> Nat")
-  registerBuiltin BuiltinAnomaEncode (f ^. axiomName)
+  unless ((ftype ==% (u <>--> encodeT --> nat)) freeVars) $
+    builtinsErrorText (getLoc f) "anomaEncode must be of type {A : Type} -> A -> Nat"
 
-registerAnomaDecode :: (Members '[Builtins, NameIdGen] r) => AxiomDef -> Sem r ()
-registerAnomaDecode f = do
+checkAnomaDecode :: (Members '[Builtins, Error BuiltinsError, NameIdGen] r) => AxiomDef -> Sem r ()
+checkAnomaDecode f = do
   let ftype = f ^. axiomType
       u = ExpressionUniverse smallUniverseNoLoc
       l = getLoc f
   decodeT <- freshVar l "decodeT"
   nat <- getBuiltinName (getLoc f) BuiltinNat
   let freeVars = HashSet.fromList [decodeT]
-  unless
-    ((ftype ==% (u <>--> nat --> decodeT)) freeVars)
-    (error "anomaEncode must be of type {A : Type} -> Nat -> A")
-  registerBuiltin BuiltinAnomaDecode (f ^. axiomName)
+  unless ((ftype ==% (u <>--> nat --> decodeT)) freeVars) $
+    builtinsErrorText (getLoc f) "anomaEncode must be of type {A : Type} -> Nat -> A"
 
-registerAnomaVerifyDetached :: (Members '[Builtins, NameIdGen] r) => AxiomDef -> Sem r ()
-registerAnomaVerifyDetached f = do
+checkAnomaVerifyDetached :: (Members '[Builtins, Error BuiltinsError, NameIdGen] r) => AxiomDef -> Sem r ()
+checkAnomaVerifyDetached f = do
   let ftype = f ^. axiomType
       u = ExpressionUniverse smallUniverseNoLoc
       l = getLoc f
@@ -53,26 +47,22 @@ registerAnomaVerifyDetached f = do
   nat <- getBuiltinName (getLoc f) BuiltinNat
   bool_ <- getBuiltinName (getLoc f) BuiltinBool
   let freeVars = HashSet.fromList [decodeT]
-  unless
-    ((ftype ==% (u <>--> nat --> decodeT --> nat --> bool_)) freeVars)
-    (error "anomaVerifyDetached must be of type {A : Type} -> Nat -> A -> Nat -> Bool")
-  registerBuiltin BuiltinAnomaVerifyDetached (f ^. axiomName)
+  unless ((ftype ==% (u <>--> nat --> decodeT --> nat --> bool_)) freeVars) $
+    builtinsErrorText (getLoc f) "anomaVerifyDetached must be of type {A : Type} -> Nat -> A -> Nat -> Bool"
 
-registerAnomaSign :: (Members '[Builtins, NameIdGen] r) => AxiomDef -> Sem r ()
-registerAnomaSign f = do
+checkAnomaSign :: (Members '[Builtins, Error BuiltinsError, NameIdGen] r) => AxiomDef -> Sem r ()
+checkAnomaSign f = do
   let ftype = f ^. axiomType
       u = ExpressionUniverse smallUniverseNoLoc
       l = getLoc f
   dataT <- freshVar l "dataT"
   nat <- getBuiltinName (getLoc f) BuiltinNat
   let freeVars = HashSet.fromList [dataT]
-  unless
-    ((ftype ==% (u <>--> dataT --> nat --> nat)) freeVars)
-    (error "anomaSign must be of type {A : Type} -> A -> Nat -> Nat")
-  registerBuiltin BuiltinAnomaSign (f ^. axiomName)
+  unless ((ftype ==% (u <>--> dataT --> nat --> nat)) freeVars) $
+    builtinsErrorText (getLoc f) "anomaSign must be of type {A : Type} -> A -> Nat -> Nat"
 
-registerAnomaVerifyWithMessage :: (Members '[Builtins, NameIdGen] r) => AxiomDef -> Sem r ()
-registerAnomaVerifyWithMessage f = do
+checkAnomaVerifyWithMessage :: (Members '[Builtins, Error BuiltinsError, NameIdGen] r) => AxiomDef -> Sem r ()
+checkAnomaVerifyWithMessage f = do
   let ftype = f ^. axiomType
       u = ExpressionUniverse smallUniverseNoLoc
       l = getLoc f
@@ -80,20 +70,16 @@ registerAnomaVerifyWithMessage f = do
   nat <- getBuiltinName (getLoc f) BuiltinNat
   maybe_ <- getBuiltinName (getLoc f) BuiltinMaybe
   let freeVars = HashSet.fromList [dataT]
-  unless
-    ((ftype ==% (u <>--> nat --> nat --> maybe_ @@ dataT)) freeVars)
-    (error "anomaVerify must be of type {A : Type} -> Nat -> Nat -> Maybe A")
-  registerBuiltin BuiltinAnomaVerifyWithMessage (f ^. axiomName)
+  unless ((ftype ==% (u <>--> nat --> nat --> maybe_ @@ dataT)) freeVars) $
+    builtinsErrorText (getLoc f) "anomaVerify must be of type {A : Type} -> Nat -> Nat -> Maybe A"
 
-registerAnomaSignDetached :: (Members '[Builtins, NameIdGen] r) => AxiomDef -> Sem r ()
-registerAnomaSignDetached f = do
+checkAnomaSignDetached :: (Members '[Builtins, Error BuiltinsError, NameIdGen] r) => AxiomDef -> Sem r ()
+checkAnomaSignDetached f = do
   let ftype = f ^. axiomType
       u = ExpressionUniverse smallUniverseNoLoc
       l = getLoc f
   dataT <- freshVar l "dataT"
   nat <- getBuiltinName (getLoc f) BuiltinNat
   let freeVars = HashSet.fromList [dataT]
-  unless
-    ((ftype ==% (u <>--> dataT --> nat --> nat)) freeVars)
-    (error "anomaSignDetached must be of type {A : Type} -> A -> Nat -> Nat")
-  registerBuiltin BuiltinAnomaSignDetached (f ^. axiomName)
+  unless ((ftype ==% (u <>--> dataT --> nat --> nat)) freeVars) $
+    builtinsErrorText (getLoc f) "anomaSignDetached must be of type {A : Type} -> A -> Nat -> Nat"

@@ -1,69 +1,61 @@
 module Juvix.Compiler.Builtins.Cairo where
 
-import Juvix.Compiler.Builtins.Effect
+import Juvix.Compiler.Internal.Builtins
 import Juvix.Compiler.Internal.Extra
 import Juvix.Prelude
 
-registerPoseidonStateDef :: (Member Builtins r) => InductiveDef -> Sem r ()
-registerPoseidonStateDef d = do
-  unless (null (d ^. inductiveParameters)) (error "PoseidonState should have no type parameters")
-  unless (isSmallUniverse' (d ^. inductiveType)) (error "PoseidonState should be in the small universe")
-  registerBuiltin BuiltinPoseidonState (d ^. inductiveName)
+checkPoseidonStateDef :: (Members '[Builtins, Error BuiltinsError] r) => InductiveDef -> Sem r ()
+checkPoseidonStateDef d = do
+  let err = builtinsErrorText (getLoc d)
+  unless (null (d ^. inductiveParameters)) (err "PoseidonState should have no type parameters")
+  unless (isSmallUniverse' (d ^. inductiveType)) (err "PoseidonState should be in the small universe")
   case d ^. inductiveConstructors of
-    [c] -> registerMkPoseidonState c
-    _ -> error "PoseidonState should have exactly one constructor"
+    [c] -> checkMkPoseidonState c
+    _ -> err "PoseidonState should have exactly one constructor"
 
-registerMkPoseidonState :: (Member Builtins r) => ConstructorDef -> Sem r ()
-registerMkPoseidonState d@ConstructorDef {..} = do
-  let mkps = _inductiveConstructorName
-      ty = _inductiveConstructorType
+checkMkPoseidonState :: (Members '[Builtins, Error BuiltinsError] r) => ConstructorDef -> Sem r ()
+checkMkPoseidonState d@ConstructorDef {..} = do
+  let ty = _inductiveConstructorType
   field_ <- getBuiltinName (getLoc d) BuiltinField
   ps <- getBuiltinName (getLoc d) BuiltinPoseidonState
-  unless (ty === (field_ --> field_ --> field_ --> ps)) (error "mkPoseidonState has the wrong type")
-  registerBuiltin BuiltinMkPoseidonState mkps
+  unless (ty === (field_ --> field_ --> field_ --> ps)) $
+    builtinsErrorText (getLoc d) "mkPoseidonState has the wrong type"
 
-registerPoseidon :: (Members '[Builtins, NameIdGen] r) => AxiomDef -> Sem r ()
-registerPoseidon f = do
+checkPoseidon :: (Members '[Builtins, Error BuiltinsError, NameIdGen] r) => AxiomDef -> Sem r ()
+checkPoseidon f = do
   let ftype = f ^. axiomType
   ps <- getBuiltinName (getLoc f) BuiltinPoseidonState
-  unless
-    (ftype === (ps --> ps))
-    (error "poseidon must be of type PoseidonState -> PoseidonState")
-  registerBuiltin BuiltinPoseidon (f ^. axiomName)
+  unless (ftype === (ps --> ps)) $
+    builtinsErrorText (getLoc f) "poseidon must be of type PoseidonState -> PoseidonState"
 
-registerEcPointDef :: (Member Builtins r) => InductiveDef -> Sem r ()
-registerEcPointDef d = do
-  unless (null (d ^. inductiveParameters)) (error "Ec.Point should have no type parameters")
-  unless (isSmallUniverse' (d ^. inductiveType)) (error "Ec.Point should be in the small universe")
-  registerBuiltin BuiltinEcPoint (d ^. inductiveName)
+checkEcPointDef :: (Members '[Builtins, Error BuiltinsError] r) => InductiveDef -> Sem r ()
+checkEcPointDef d = do
+  let err = builtinsErrorText (getLoc d)
+  unless (null (d ^. inductiveParameters)) (err "Ec.Point should have no type parameters")
+  unless (isSmallUniverse' (d ^. inductiveType)) (err "Ec.Point should be in the small universe")
   case d ^. inductiveConstructors of
-    [c] -> registerMkEcPoint c
-    _ -> error "Ec.Point should have exactly one constructor"
+    [c] -> checkMkEcPoint c
+    _ -> err "Ec.Point should have exactly one constructor"
 
-registerMkEcPoint :: (Member Builtins r) => ConstructorDef -> Sem r ()
-registerMkEcPoint d@ConstructorDef {..} = do
-  let mkpt = _inductiveConstructorName
-      ty = _inductiveConstructorType
+checkMkEcPoint :: (Members '[Builtins, Error BuiltinsError] r) => ConstructorDef -> Sem r ()
+checkMkEcPoint d@ConstructorDef {..} = do
+  let ty = _inductiveConstructorType
   field_ <- getBuiltinName (getLoc d) BuiltinField
   pt <- getBuiltinName (getLoc d) BuiltinEcPoint
-  unless (ty === (field_ --> field_ --> pt)) (error "EC.mkPoint has the wrong type")
-  registerBuiltin BuiltinMkEcPoint mkpt
+  unless (ty === (field_ --> field_ --> pt)) $
+    builtinsErrorText (getLoc d) "EC.mkPoint has the wrong type"
 
-registerEcOp :: (Members '[Builtins, NameIdGen] r) => AxiomDef -> Sem r ()
-registerEcOp f = do
+checkEcOp :: (Members '[Builtins, Error BuiltinsError, NameIdGen] r) => AxiomDef -> Sem r ()
+checkEcOp f = do
   let ftype = f ^. axiomType
   pt <- getBuiltinName (getLoc f) BuiltinEcPoint
   field_ <- getBuiltinName (getLoc f) BuiltinField
-  unless
-    (ftype === (pt --> field_ --> pt --> pt))
-    (error "ecOp must be of type Ec.Point -> Field -> Ec.Point -> Ec.Point")
-  registerBuiltin BuiltinEcOp (f ^. axiomName)
+  unless (ftype === (pt --> field_ --> pt --> pt)) $
+    builtinsErrorText (getLoc f) "ecOp must be of type Ec.Point -> Field -> Ec.Point -> Ec.Point"
 
-registerRandomEcPoint :: (Members '[Builtins, NameIdGen] r) => AxiomDef -> Sem r ()
-registerRandomEcPoint f = do
+checkRandomEcPoint :: (Members '[Builtins, Error BuiltinsError, NameIdGen] r) => AxiomDef -> Sem r ()
+checkRandomEcPoint f = do
   let ftype = f ^. axiomType
   pt <- getBuiltinName (getLoc f) BuiltinEcPoint
-  unless
-    (ftype === pt)
-    (error "randomEcPoint must be of type Ec.Point")
-  registerBuiltin BuiltinRandomEcPoint (f ^. axiomName)
+  unless (ftype === pt) $
+    builtinsErrorText (getLoc f) "randomEcPoint must be of type Ec.Point"

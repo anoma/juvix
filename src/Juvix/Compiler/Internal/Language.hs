@@ -501,6 +501,11 @@ makeLenses ''ConstructorDef
 makeLenses ''ConstructorApp
 makeLenses ''NormalizedExpression
 
+instance HasLoc InductiveDef where
+  getLoc d =
+    getLoc (d ^. inductiveName)
+      <>? (getLoc . (^. last1) <$> (nonEmpty (d ^. inductiveConstructors)))
+
 instance HasLoc NormalizedExpression where
   getLoc = getLoc . (^. normalizedExpressionOriginal)
 

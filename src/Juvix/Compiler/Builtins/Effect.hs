@@ -1,28 +1,28 @@
 module Juvix.Compiler.Builtins.Effect
   ( module Juvix.Compiler.Builtins.Effect,
+    module Juvix.Compiler.Builtins.Error,
   )
 where
 
-import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Builtins.Error
-import Juvix.Compiler.Internal.Extra
-import Juvix.Compiler.Internal.Pretty
+import Juvix.Compiler.Concrete.Data.Builtins
+import Juvix.Compiler.Concrete.Data.ScopedName
 import Juvix.Prelude
 
 data Builtins :: Effect where
-  GetBuiltinName' :: Interval -> BuiltinPrim -> Builtins m Name
-  RegisterBuiltin' :: BuiltinPrim -> Name -> Builtins m ()
+  GetBuiltinSymbol' :: Interval -> BuiltinPrim -> Builtins m Symbol
+  RegisterBuiltin' :: BuiltinPrim -> Symbol -> Builtins m ()
 
 makeSem ''Builtins
 
-registerBuiltin :: (IsBuiltin a, Member Builtins r) => a -> Name -> Sem r ()
+registerBuiltin :: (IsBuiltin a, Member Builtins r) => a -> Symbol -> Sem r ()
 registerBuiltin = registerBuiltin' . toBuiltinPrim
 
-getBuiltinName :: (IsBuiltin a, Member Builtins r) => Interval -> a -> Sem r Name
-getBuiltinName i = getBuiltinName' i . toBuiltinPrim
+getBuiltinSymbol :: (IsBuiltin a, Member Builtins r) => Interval -> a -> Sem r Symbol
+getBuiltinSymbol i = getBuiltinSymbol' i . toBuiltinPrim
 
 newtype BuiltinsState = BuiltinsState
-  { _builtinsTable :: HashMap BuiltinPrim Name
+  { _builtinsTable :: HashMap BuiltinPrim Symbol
   }
 
 makeLenses ''BuiltinsState
@@ -32,7 +32,7 @@ iniBuiltins = BuiltinsState mempty
 
 runBuiltins :: forall r a. (Member (Error JuvixError) r) => BuiltinsState -> Sem (Builtins ': r) a -> Sem r (BuiltinsState, a)
 runBuiltins ini = reinterpret (runState ini) $ \case
-  GetBuiltinName' i b -> fromMaybeM notDefined (gets (^. builtinsTable . at b))
+  GetBuiltinSymbol' i b -> fromMaybeM notDefined (gets (^. builtinsTable . at b))
     where
       notDefined :: Sem (State BuiltinsState ': r) x
       notDefined =
@@ -60,48 +60,3 @@ runBuiltins ini = reinterpret (runState ini) $ \case
 
 evalBuiltins :: (Member (Error JuvixError) r) => BuiltinsState -> Sem (Builtins ': r) a -> Sem r a
 evalBuiltins s = fmap snd . runBuiltins s
-
-data FunInfo = FunInfo
-  { _funInfoDef :: FunctionDef,
-    _funInfoBuiltin :: BuiltinFunction,
-    _funInfoSignature :: Expression,
-    _funInfoClauses :: [(Expression, Expression)],
-    _funInfoFreeVars :: [VarName],
-    _funInfoFreeTypeVars :: [VarName]
-  }
-
-makeLenses ''FunInfo
-
-registerFun ::
-  (Members '[Builtins, NameIdGen] r) =>
-  FunInfo ->
-  Sem r ()
-registerFun fi = do
-  let op = fi ^. funInfoDef . funDefName
-      ty = fi ^. funInfoDef . funDefType
-      sig = fi ^. funInfoSignature
-  unless ((sig ==% ty) (HashSet.fromList (fi ^. funInfoFreeTypeVars))) (error "builtin has the wrong type signature")
-  registerBuiltin (fi ^. funInfoBuiltin) op
-  let freeVars = HashSet.fromList (fi ^. funInfoFreeVars)
-      a =% b = (a ==% b) freeVars
-      clauses :: [(Expression, Expression)]
-      clauses =
-        [ (clauseLhsAsExpression op (toList pats), body)
-          | Just cls <- [unfoldLambdaClauses (fi ^. funInfoDef . funDefBody)],
-            (pats, body) <- toList cls
-        ]
-  case zipExactMay (fi ^. funInfoClauses) clauses of
-    Nothing -> error "builtin has the wrong number of clauses"
-    Just z -> forM_ z $ \((exLhs, exBody), (lhs, body)) -> do
-      unless
-        (exLhs =% lhs)
-        ( error
-            ( "clause lhs does not match for "
-                <> ppTrace op
-                <> "\nExpected: "
-                <> ppTrace exLhs
-                <> "\nActual: "
-                <> ppTrace lhs
-            )
-        )
-      unless (exBody =% body) (error $ "clause body does not match " <> ppTrace exBody <> " | " <> ppTrace body)

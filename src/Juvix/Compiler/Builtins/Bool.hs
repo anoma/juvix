@@ -1,37 +1,37 @@
 module Juvix.Compiler.Builtins.Bool where
 
-import Juvix.Compiler.Builtins.Effect
+import Juvix.Compiler.Internal.Builtins
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty
 import Juvix.Prelude
 
-registerBoolDef :: (Member Builtins r) => InductiveDef -> Sem r ()
-registerBoolDef d = do
-  unless (null (d ^. inductiveParameters)) (error "Bool should have no type parameters")
-  unless (isSmallUniverse' (d ^. inductiveType)) (error "Bool should be in the small universe")
-  registerBuiltin BuiltinBool (d ^. inductiveName)
+checkBoolDef :: (Members '[Builtins, Error BuiltinsError] r) => InductiveDef -> Sem r ()
+checkBoolDef d = do
+  let err = builtinsErrorText (getLoc d)
+  unless (null (d ^. inductiveParameters)) (err "Bool should have no type parameters")
+  unless (isSmallUniverse' (d ^. inductiveType)) (err "Bool should be in the small universe")
   case d ^. inductiveConstructors of
-    [c1, c2] -> registerTrue c1 >> registerFalse c2
-    _ -> error "Bool should have exactly two constructors"
+    [c1, c2] -> checkTrue c1 >> checkFalse c2
+    _ -> err "Bool should have exactly two constructors"
 
-registerTrue :: (Member Builtins r) => ConstructorDef -> Sem r ()
-registerTrue d@ConstructorDef {..} = do
-  let ctorTrue = _inductiveConstructorName
-      ctorTy = _inductiveConstructorType
+checkTrue :: (Members '[Builtins, Error BuiltinsError] r) => ConstructorDef -> Sem r ()
+checkTrue d@ConstructorDef {..} = do
+  let ctorTy = _inductiveConstructorType
   boolTy <- getBuiltinName (getLoc d) BuiltinBool
-  unless (ctorTy === boolTy) (error $ "true has the wrong type " <> ppTrace ctorTy <> " | " <> ppTrace boolTy)
-  registerBuiltin BuiltinBoolTrue ctorTrue
+  unless (ctorTy === boolTy) $
+    builtinsErrorMsg (getLoc d) $
+      "true has the wrong type " <> ppOutDefault ctorTy <> " | " <> ppOutDefault boolTy
 
-registerFalse :: (Member Builtins r) => ConstructorDef -> Sem r ()
-registerFalse d@ConstructorDef {..} = do
-  let ctorFalse = _inductiveConstructorName
-      ctorTy = _inductiveConstructorType
+checkFalse :: (Members '[Builtins, Error BuiltinsError] r) => ConstructorDef -> Sem r ()
+checkFalse d@ConstructorDef {..} = do
+  let ctorTy = _inductiveConstructorType
   boolTy <- getBuiltinName (getLoc d) BuiltinBool
-  unless (ctorTy === boolTy) (error $ "false has the wrong type " <> ppTrace ctorTy <> " | " <> ppTrace boolTy)
-  registerBuiltin BuiltinBoolFalse ctorFalse
+  unless (ctorTy === boolTy) $
+    builtinsErrorMsg (getLoc d) $
+      "false has the wrong type " <> ppOutDefault ctorTy <> " | " <> ppOutDefault boolTy
 
-registerIf :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
-registerIf f = do
+checkIf :: (Members '[Builtins, Error BuiltinsError, NameIdGen] r) => FunctionDef -> Sem r ()
+checkIf f = do
   bool_ <- getBuiltinName (getLoc f) BuiltinBool
   true_ <- toExpression <$> getBuiltinName (getLoc f) BuiltinBoolTrue
   false_ <- toExpression <$> getBuiltinName (getLoc f) BuiltinBoolFalse
@@ -47,7 +47,7 @@ registerIf f = do
         [ (if_ @@ true_ @@ e @@ hole, e),
           (if_ @@ false_ @@ hole @@ e, e)
         ]
-  registerFun
+  checkBuiltinFunctionInfo
     FunInfo
       { _funInfoDef = f,
         _funInfoBuiltin = BuiltinBoolIf,
@@ -57,8 +57,8 @@ registerIf f = do
         _funInfoFreeTypeVars = [vart]
       }
 
-registerOr :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
-registerOr f = do
+checkOr :: (Members '[Builtins, Error BuiltinsError, NameIdGen] r) => FunctionDef -> Sem r ()
+checkOr f = do
   bool_ <- getBuiltinName (getLoc f) BuiltinBool
   true_ <- toExpression <$> getBuiltinName (getLoc f) BuiltinBoolTrue
   false_ <- toExpression <$> getBuiltinName (getLoc f) BuiltinBoolFalse
@@ -72,7 +72,7 @@ registerOr f = do
         [ (or_ @@ true_ @@ hole, true_),
           (or_ @@ false_ @@ e, e)
         ]
-  registerFun
+  checkBuiltinFunctionInfo
     FunInfo
       { _funInfoDef = f,
         _funInfoBuiltin = BuiltinBoolOr,
@@ -82,8 +82,8 @@ registerOr f = do
         _funInfoFreeTypeVars = []
       }
 
-registerAnd :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
-registerAnd f = do
+checkAnd :: (Members '[Builtins, Error BuiltinsError, NameIdGen] r) => FunctionDef -> Sem r ()
+checkAnd f = do
   bool_ <- getBuiltinName (getLoc f) BuiltinBool
   true_ <- toExpression <$> getBuiltinName (getLoc f) BuiltinBoolTrue
   false_ <- toExpression <$> getBuiltinName (getLoc f) BuiltinBoolFalse
@@ -97,7 +97,7 @@ registerAnd f = do
         [ (and_ @@ true_ @@ e, e),
           (and_ @@ false_ @@ hole, false_)
         ]
-  registerFun
+  checkBuiltinFunctionInfo
     FunInfo
       { _funInfoDef = f,
         _funInfoBuiltin = BuiltinBoolAnd,
@@ -107,9 +107,9 @@ registerAnd f = do
         _funInfoFreeTypeVars = []
       }
 
-registerBoolPrint :: (Members '[Builtins] r) => AxiomDef -> Sem r ()
-registerBoolPrint f = do
+checkBoolPrint :: (Members '[Builtins, Error BuiltinsError] r) => AxiomDef -> Sem r ()
+checkBoolPrint f = do
   bool_ <- getBuiltinName (getLoc f) BuiltinBool
   io <- getBuiltinName (getLoc f) BuiltinIO
-  unless (f ^. axiomType === (bool_ --> io)) (error "Bool print has the wrong type signature")
-  registerBuiltin BuiltinBoolPrint (f ^. axiomName)
+  unless (f ^. axiomType === (bool_ --> io)) $
+    builtinsErrorText (getLoc f) "Bool print has the wrong type signature"
