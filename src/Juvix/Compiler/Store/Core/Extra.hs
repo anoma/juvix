@@ -2,6 +2,7 @@ module Juvix.Compiler.Store.Core.Extra where
 
 import Juvix.Compiler.Core.Data.InfoTable qualified as Core
 import Juvix.Compiler.Core.Extra qualified as Core
+import Juvix.Compiler.Core.Info.PragmaInfo
 import Juvix.Compiler.Store.Core.Data.InfoTable
 import Juvix.Compiler.Store.Core.Language
 
@@ -72,9 +73,9 @@ toCoreNode = \case
   NApp App {..} -> Core.mkApp' (toCoreNode _appLeft) (toCoreNode _appRight)
   NBlt BuiltinApp {..} -> Core.mkBuiltinApp' _builtinAppOp (map toCoreNode _builtinAppArgs)
   NCtr Constr {..} -> Core.mkConstr' _constrTag (map toCoreNode _constrArgs)
-  NLam Lambda {..} -> Core.mkLambda mempty (goBinder _lambdaBinder) (toCoreNode _lambdaBody)
+  NLam Lambda {..} -> Core.mkLambda (setInfoPragma (_lambdaInfo ^. lambdaInfoPragma) mempty) (goBinder _lambdaBinder) (toCoreNode _lambdaBody)
   NLet Let {..} -> Core.NLet $ Core.Let mempty (goLetItem _letItem) (toCoreNode _letBody)
-  NRec LetRec {..} -> Core.NRec $ Core.LetRec mempty (fmap goLetItem _letRecValues) (toCoreNode _letRecBody)
+  NRec LetRec {..} -> Core.NRec $ Core.LetRec (setInfoPragmas (_letRecInfo ^. letRecInfoPragmas) mempty) (fmap goLetItem _letRecValues) (toCoreNode _letRecBody)
   NCase Case {..} -> Core.mkCase' _caseInductive (toCoreNode _caseValue) (map goCaseBranch _caseBranches) (fmap toCoreNode _caseDefault)
   NPi Pi {..} -> Core.mkPi mempty (goBinder _piBinder) (toCoreNode _piBody)
   NUniv Univ {..} -> Core.mkUniv' _univLevel
@@ -159,9 +160,9 @@ fromCoreNode = \case
   Core.NApp Core.App {..} -> NApp $ App () (fromCoreNode _appLeft) (fromCoreNode _appRight)
   Core.NBlt Core.BuiltinApp {..} -> NBlt $ BuiltinApp () _builtinAppOp (map fromCoreNode _builtinAppArgs)
   Core.NCtr Core.Constr {..} -> NCtr $ Constr () _constrTag (map fromCoreNode _constrArgs)
-  Core.NLam Core.Lambda {..} -> NLam $ Lambda () (goBinder _lambdaBinder) (fromCoreNode _lambdaBody)
+  Core.NLam Core.Lambda {..} -> NLam $ Lambda (LambdaInfo (getInfoPragma _lambdaInfo)) (goBinder _lambdaBinder) (fromCoreNode _lambdaBody)
   Core.NLet Core.Let {..} -> NLet $ Let () (goLetItem _letItem) (fromCoreNode _letBody)
-  Core.NRec Core.LetRec {..} -> NRec $ LetRec () (fmap goLetItem _letRecValues) (fromCoreNode _letRecBody)
+  Core.NRec Core.LetRec {..} -> NRec $ LetRec (LetRecInfo (getInfoPragmas _letRecInfo)) (fmap goLetItem _letRecValues) (fromCoreNode _letRecBody)
   Core.NCase Core.Case {..} -> NCase $ Case () _caseInductive (fromCoreNode _caseValue) (map goCaseBranch _caseBranches) (fmap fromCoreNode _caseDefault)
   Core.NPi Core.Pi {..} -> NPi $ Pi () (goBinder _piBinder) (fromCoreNode _piBody)
   Core.NUniv Core.Univ {..} -> NUniv $ Univ () _univLevel
