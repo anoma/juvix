@@ -24,8 +24,8 @@ bs4 : ByteArray := mkByteArray [0x100];
 
 main : ByteArray :=
   trace (size bs0)
-   >-> trace bs0
-   >-> trace (size bs1)
+    >-> trace bs0
+    >-> trace (size bs1)
     >-> trace bs1
     >-> trace (size bs2)
     >-> trace bs2
