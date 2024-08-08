@@ -655,7 +655,7 @@ geval opts herr tab env0 = eval' env0
         nilTag <- builtinConstructorTag BuiltinListNil
         if
             | t == nilTag -> return []
-            | t == consTag -> case xs of
+            | t == consTag -> case (filter (not . isType') xs) of
                 (hd : tl) -> do
                   uint8Hd <- uint8FromNode hd
                   uint8Tl <- concatMapM listUInt8FromNode tl
