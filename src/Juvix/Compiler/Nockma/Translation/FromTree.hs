@@ -504,7 +504,7 @@ compile = \case
       where
         goByteArraySize :: [Term Natural] -> Term Natural
         goByteArraySize = \case
-          [ba] -> ba >># opAddress "head of the bytestring" [L]
+          [ba] -> ba >># opAddress "head-of-the-bytestring" [L]
           _ -> impossible
 
     goUnop :: Tree.NodeUnop -> Sem r (Term Natural)
