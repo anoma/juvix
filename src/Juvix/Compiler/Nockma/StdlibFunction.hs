@@ -26,6 +26,7 @@ stdlibPath = \case
   StdlibSign -> [nock| [9 10 0 1] |]
   StdlibSignDetached -> [nock| [9 23 0 1] |]
   StdlibVerify -> [nock| [9 4 0 1] |]
+  StdlibLengthList -> [nock| [9 1.406 0 31] |]
   -- Obtained from the urbit dojo using:
   --
   -- =>  anoma  !=(~(cat block 3))
