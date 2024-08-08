@@ -2,6 +2,7 @@
 
 module Juvix.Formatter where
 
+import Juvix.Compiler.Builtins.Effect
 import Juvix.Compiler.Concrete.Data.Highlight.Input (ignoreHighlightBuilder)
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Print (ppOutDefault)
@@ -109,7 +110,8 @@ formatModuleInfo ::
       '[ PathResolver,
          Error JuvixError,
          Files,
-         Reader Package
+         Reader Package,
+         Builtins
        ]
       r
   ) =>

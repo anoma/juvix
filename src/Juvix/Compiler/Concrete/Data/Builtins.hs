@@ -9,6 +9,12 @@ import Juvix.Prelude.Pretty
 class IsBuiltin a where
   toBuiltinPrim :: a -> BuiltinPrim
 
+instance (IsBuiltin a) => IsBuiltin (WithLoc a) where
+  toBuiltinPrim = toBuiltinPrim . (^. withLocParam)
+
+instance IsBuiltin BuiltinPrim where
+  toBuiltinPrim = id
+
 instance IsBuiltin BuiltinInductive where
   toBuiltinPrim = BuiltinsInductive
 

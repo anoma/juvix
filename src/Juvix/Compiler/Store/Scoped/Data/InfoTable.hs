@@ -24,6 +24,7 @@ data InfoTable = InfoTable
     _infoInductives :: HashMap NameId (InductiveDef 'Scoped),
     _infoConstructors :: HashMap NameId (ConstructorDef 'Scoped),
     _infoAxioms :: HashMap NameId (AxiomDef 'Scoped),
+    _infoBuiltins :: HashMap BuiltinPrim S.Symbol,
     _infoScoperAlias :: HashMap S.NameId PreSymbolEntry
   }
   deriving stock (Generic)
@@ -43,6 +44,7 @@ instance Semigroup InfoTable where
         _infoNameSigs = tab1 ^. infoNameSigs <> tab2 ^. infoNameSigs,
         _infoParsedConstructorSigs = tab1 ^. infoParsedConstructorSigs <> tab2 ^. infoParsedConstructorSigs,
         _infoParsedNameSigs = tab1 ^. infoParsedNameSigs <> tab2 ^. infoParsedNameSigs,
+        _infoBuiltins = tab1 ^. infoBuiltins <> tab2 ^. infoBuiltins,
         _infoRecords = tab1 ^. infoRecords <> tab2 ^. infoRecords,
         _infoFunctions = tab1 ^. infoFunctions <> tab2 ^. infoFunctions,
         _infoInductives = tab1 ^. infoInductives <> tab2 ^. infoInductives,
@@ -65,6 +67,7 @@ instance Monoid InfoTable where
         _infoInductives = mempty,
         _infoConstructors = mempty,
         _infoAxioms = mempty,
+        _infoBuiltins = mempty,
         _infoScoperAlias = mempty
       }
 

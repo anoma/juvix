@@ -5,6 +5,7 @@ module Juvix.Compiler.Concrete.Translation.FromParsed
   )
 where
 
+import Juvix.Compiler.Builtins.Effect
 import Juvix.Compiler.Concrete.Data.Highlight
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping
@@ -22,7 +23,8 @@ fromParsed ::
          Reader ModuleTable,
          Reader Parsed.ParserResult,
          Error JuvixError,
-         NameIdGen
+         NameIdGen,
+         Builtins
        ]
       r
   ) =>
