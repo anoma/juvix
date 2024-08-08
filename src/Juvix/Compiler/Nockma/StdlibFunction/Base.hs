@@ -22,6 +22,7 @@ instance Pretty StdlibFunction where
     StdlibVerify -> "verify"
     StdlibCatBytes -> "cat"
     StdlibFoldBytes -> "fold-bytes"
+    StdlibLengthList -> "length-list"
 
 data StdlibFunction
   = StdlibDec
@@ -41,6 +42,7 @@ data StdlibFunction
   | StdlibVerify
   | StdlibCatBytes
   | StdlibFoldBytes
+  | StdlibLengthList
   deriving stock (Show, Lift, Eq, Bounded, Enum, Generic)
 
 instance Hashable StdlibFunction

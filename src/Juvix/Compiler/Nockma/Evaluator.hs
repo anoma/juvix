@@ -255,6 +255,10 @@ evalProfile inistack initerm =
               TCell (TermAtom arg1) (TermAtom arg2) -> goCat arg1 arg2
               _ -> error "expected a term with two atoms"
             StdlibFoldBytes -> TermAtom <$> goFoldBytes args'
+            StdlibLengthList -> do
+              let xs = checkTermToList args'
+              let len = integerToNatural (toInteger (length xs))
+              TermAtom . mkEmptyAtom <$> fromNatural len
           where
             goCat :: Atom a -> Atom a -> Sem r (Term a)
             goCat arg1 arg2 = TermAtom . setAtomHint AtomHintString <$> atomConcatenateBytes arg1 arg2
@@ -264,15 +268,21 @@ evalProfile inistack initerm =
               bs <- mapM nockNatural (checkTermToListAtom c)
               byteStringToAtom (BS.pack (fromIntegral <$> bs))
 
-            checkTermToListAtom :: Term a -> [Atom a]
-            checkTermToListAtom = \case
+            checkTermToList :: Term a -> [Term a]
+            checkTermToList = \case
               TermAtom x ->
                 if
                     | x `nockmaEq` nockNil -> []
                     | otherwise -> error "expected a list to be terminated by nil"
-              TermCell c -> case c ^. cellLeft of
-                TermAtom x -> x : checkTermToListAtom (c ^. cellRight)
-                TermCell {} -> error "expect list element to be an atom"
+              TermCell c -> c ^. cellLeft : checkTermToList (c ^. cellRight)
+
+            checkTermToListAtom :: Term a -> [Atom a]
+            checkTermToListAtom = map check . checkTermToList
+              where
+                check :: Term a -> Atom a
+                check = \case
+                  TermAtom x -> x
+                  TermCell {} -> error "expect list element to be an atom"
 
             signatureLength :: Int
             signatureLength = 64
