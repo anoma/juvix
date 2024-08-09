@@ -139,6 +139,7 @@ checkCoercionCycles = do
       . ErrCoercionCycles
       . CoercionCycles
 
+-- TODO consider passing only builtin information instead of the whole S.InfoTable
 checkTopModule ::
   (Members '[HighlightBuilder, Reader S.InfoTable, Reader EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, ResultBuilder, Termination] r) =>
   Module ->

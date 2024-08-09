@@ -2,6 +2,7 @@ module Juvix.Compiler.Store.Scoped.Data.InfoTable where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
+import Juvix.Compiler.Builtins.Effect (BuiltinsTable)
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Store.Scoped.Data.SymbolEntry
@@ -24,7 +25,7 @@ data InfoTable = InfoTable
     _infoInductives :: HashMap NameId (InductiveDef 'Scoped),
     _infoConstructors :: HashMap NameId (ConstructorDef 'Scoped),
     _infoAxioms :: HashMap NameId (AxiomDef 'Scoped),
-    _infoBuiltins :: HashMap BuiltinPrim S.Symbol,
+    _infoBuiltins :: BuiltinsTable,
     _infoScoperAlias :: HashMap S.NameId PreSymbolEntry
   }
   deriving stock (Generic)

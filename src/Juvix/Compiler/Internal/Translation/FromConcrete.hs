@@ -55,7 +55,7 @@ newtype DefaultArgsStack = DefaultArgsStack
 makeLenses ''DefaultArgsStack
 
 fromConcrete ::
-  (Members '[Reader EntryPoint, Builtins, Error JuvixError, Reader Store.ModuleTable, NameIdGen, Termination] r) =>
+  (Members '[Reader EntryPoint, Error JuvixError, Reader Store.ModuleTable, NameIdGen, Termination] r) =>
   Scoper.ScoperResult ->
   Sem r InternalResult
 fromConcrete _resultScoper = do
@@ -80,7 +80,7 @@ fromConcrete _resultScoper = do
   where
     m = _resultScoper ^. Scoper.resultModule
 
-fromConcreteExpression :: (Members '[Builtins, Error JuvixError, NameIdGen, Termination, Reader S.InfoTable] r) => Scoper.Expression -> Sem r Internal.Expression
+fromConcreteExpression :: (Members '[Error JuvixError, NameIdGen, Termination, Reader S.InfoTable] r) => Scoper.Expression -> Sem r Internal.Expression
 fromConcreteExpression e = do
   e' <-
     mapError (JuvixError @BuiltinsError)
@@ -93,7 +93,7 @@ fromConcreteExpression e = do
   return e'
 
 fromConcreteImport ::
-  (Members '[Reader ExportsTable, Error JuvixError, NameIdGen, Builtins, Termination] r) =>
+  (Members '[Reader ExportsTable, Error JuvixError, NameIdGen, Termination] r) =>
   Scoper.Import 'Scoped ->
   Sem r Internal.Import
 fromConcreteImport i = do
@@ -149,13 +149,13 @@ buildMutualBlocks ss = do
           CyclicSCC p -> CyclicSCC . toList <$> nonEmpty (catMaybes p)
 
 goLocalModule ::
-  (Members '[Reader EntryPoint, Error BuiltinsError, Reader DefaultArgsStack, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ConstructorInfos, Reader S.InfoTable] r) =>
+  (Members '[Reader EntryPoint, Error BuiltinsError, Reader DefaultArgsStack, Error ScoperError, NameIdGen, Reader Pragmas, State ConstructorInfos, Reader S.InfoTable] r) =>
   Module 'Scoped 'ModuleLocal ->
   Sem r [Internal.PreStatement]
 goLocalModule = concatMapM goAxiomInductive . (^. moduleBody)
 
 goTopModule ::
-  (Members '[Reader DefaultArgsStack, Error BuiltinsError, Reader EntryPoint, Reader ExportsTable, Error JuvixError, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ConstructorInfos, Termination, Reader S.InfoTable] r) =>
+  (Members '[Reader DefaultArgsStack, Error BuiltinsError, Reader EntryPoint, Reader ExportsTable, Error JuvixError, Error ScoperError, NameIdGen, Reader Pragmas, State ConstructorInfos, Termination, Reader S.InfoTable] r) =>
   Module 'Scoped 'ModuleTop ->
   Sem r Internal.Module
 goTopModule m = do
@@ -208,7 +208,7 @@ traverseM' f x = sequence <$> traverse f x
 
 toPreModule ::
   forall r.
-  (Members '[Reader EntryPoint, Error BuiltinsError, Reader DefaultArgsStack, Reader ExportsTable, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ConstructorInfos, Reader S.InfoTable] r) =>
+  (Members '[Reader EntryPoint, Error BuiltinsError, Reader DefaultArgsStack, Reader ExportsTable, Error ScoperError, NameIdGen, Reader Pragmas, State ConstructorInfos, Reader S.InfoTable] r) =>
   Module 'Scoped 'ModuleTop ->
   Sem r Internal.PreModule
 toPreModule Module {..} = do
@@ -228,14 +228,14 @@ goTopModulePath p = goSymbolPretty (prettyText p) (S.topModulePathSymbol p)
 
 fromPreModule ::
   forall r.
-  (Members '[Reader Internal.NameDependencyInfo, Error ScoperError, Builtins, NameIdGen, Reader Pragmas] r) =>
+  (Members '[Reader Internal.NameDependencyInfo, Error ScoperError, NameIdGen, Reader Pragmas] r) =>
   Internal.PreModule ->
   Sem r Internal.Module
 fromPreModule = traverseOf Internal.moduleBody fromPreModuleBody
 
 fromPreModuleBody ::
   forall r.
-  (Members '[Reader Internal.NameDependencyInfo, Error ScoperError, Builtins, NameIdGen, Reader Pragmas] r) =>
+  (Members '[Reader Internal.NameDependencyInfo, Error ScoperError, NameIdGen, Reader Pragmas] r) =>
   Internal.PreModuleBody ->
   Sem r Internal.ModuleBody
 fromPreModuleBody b = do
@@ -268,7 +268,7 @@ fromPreModuleBody b = do
 
 goModuleBody ::
   forall r.
-  (Members '[Reader EntryPoint, Error BuiltinsError, Reader DefaultArgsStack, Reader ExportsTable, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ConstructorInfos, Reader S.InfoTable] r) =>
+  (Members '[Reader EntryPoint, Error BuiltinsError, Reader DefaultArgsStack, Reader ExportsTable, Error ScoperError, NameIdGen, Reader Pragmas, State ConstructorInfos, Reader S.InfoTable] r) =>
   [Statement 'Scoped] ->
   Sem r Internal.PreModuleBody
 goModuleBody stmts = do
@@ -330,7 +330,7 @@ goImport Import {..} =
 -- | Ignores functions
 goAxiomInductive ::
   forall r.
-  (Members '[Reader EntryPoint, Reader DefaultArgsStack, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ConstructorInfos, Reader S.InfoTable, Error BuiltinsError] r) =>
+  (Members '[Reader EntryPoint, Reader DefaultArgsStack, Error ScoperError, NameIdGen, Reader Pragmas, State ConstructorInfos, Reader S.InfoTable, Error BuiltinsError] r) =>
   Statement 'Scoped ->
   Sem r [Internal.PreStatement]
 goAxiomInductive = \case
@@ -345,7 +345,7 @@ goAxiomInductive = \case
 
 goProjectionDef ::
   forall r.
-  (Members '[NameIdGen, Error ScoperError, Error BuiltinsError, Builtins, State ConstructorInfos] r) =>
+  (Members '[NameIdGen, Error ScoperError, Error BuiltinsError, State ConstructorInfos, Reader S.InfoTable] r) =>
   ProjectionDef 'Scoped ->
   Sem r Internal.FunctionDef
 goProjectionDef ProjectionDef {..} = do
@@ -366,7 +366,7 @@ goProjectionDef ProjectionDef {..} = do
 
 goFunctionDef ::
   forall r.
-  (Members '[Reader DefaultArgsStack, Reader Pragmas, Error BuiltinsError, Error ScoperError, Builtins, NameIdGen, Reader S.InfoTable] r) =>
+  (Members '[Reader DefaultArgsStack, Reader Pragmas, Error BuiltinsError, Error ScoperError, NameIdGen, Reader S.InfoTable] r) =>
   FunctionDef 'Scoped ->
   Sem r Internal.FunctionDef
 goFunctionDef FunctionDef {..} = do
@@ -479,7 +479,7 @@ goFunctionDef FunctionDef {..} = do
 
 goInductiveParameters ::
   forall r.
-  (Members '[Reader EntryPoint, Error BuiltinsError, Reader DefaultArgsStack, Builtins, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) =>
+  (Members '[Reader EntryPoint, Error BuiltinsError, Reader DefaultArgsStack, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) =>
   InductiveParameters 'Scoped ->
   Sem r [Internal.InductiveParameter]
 goInductiveParameters params@InductiveParameters {..} = do
@@ -498,11 +498,11 @@ goInductiveParameters params@InductiveParameters {..} = do
       Just rhs -> goExpression (rhs ^. inductiveParametersType)
 
 checkBuiltinInductive ::
-  (Members '[Error BuiltinsError, Builtins] r) =>
+  (Members '[Error BuiltinsError, Reader S.InfoTable] r) =>
   Internal.InductiveDef ->
   BuiltinInductive ->
   Sem r ()
-checkBuiltinInductive d = \case
+checkBuiltinInductive d b = localBuiltins $ case b of
   BuiltinNat -> checkNatDef d
   BuiltinBool -> checkBoolDef d
   BuiltinInt -> checkIntDef d
@@ -512,12 +512,17 @@ checkBuiltinInductive d = \case
   BuiltinPoseidonState -> checkPoseidonStateDef d
   BuiltinEcPoint -> checkEcPointDef d
 
+localBuiltins :: (Members '[Error BuiltinsError, Reader S.InfoTable] r) => Sem (Builtins ': r) a -> Sem r a
+localBuiltins m = do
+  t <- asks (^. S.infoBuiltins)
+  evalBuiltins t m
+
 checkBuiltinFunction ::
-  (Members '[Error BuiltinsError, Builtins, NameIdGen] r) =>
+  (Members '[Error BuiltinsError, NameIdGen, Reader S.InfoTable] r) =>
   Internal.FunctionDef ->
   BuiltinFunction ->
   Sem r ()
-checkBuiltinFunction d = \case
+checkBuiltinFunction d f = localBuiltins $ case f of
   BuiltinNatPlus -> checkNatPlus d
   BuiltinNatSub -> checkNatSub d
   BuiltinNatMul -> checkNatMul d
@@ -547,11 +552,11 @@ checkBuiltinFunction d = \case
   BuiltinSeq -> checkSeq d
 
 checkBuiltinAxiom ::
-  (Members '[Error BuiltinsError, Builtins, NameIdGen] r) =>
+  (Members '[Error BuiltinsError, NameIdGen, Reader S.InfoTable] r) =>
   Internal.AxiomDef ->
   BuiltinAxiom ->
   Sem r ()
-checkBuiltinAxiom d = \case
+checkBuiltinAxiom d b = localBuiltins $ case b of
   BuiltinIO -> checkIO d
   BuiltinIOSequence -> checkIOSequence d
   BuiltinIOReadline -> checkIOReadline d
@@ -591,7 +596,7 @@ checkBuiltinAxiom d = \case
   BuiltinByteFromNat -> checkByteFromNat d
 
 goInductive ::
-  (Members '[Reader EntryPoint, Reader DefaultArgsStack, NameIdGen, Reader Pragmas, Builtins, Error ScoperError, State ConstructorInfos, Reader S.InfoTable, Error BuiltinsError] r) =>
+  (Members '[Reader EntryPoint, Reader DefaultArgsStack, NameIdGen, Reader Pragmas, Error ScoperError, State ConstructorInfos, Reader S.InfoTable, Error BuiltinsError] r) =>
   InductiveDef 'Scoped ->
   Sem r Internal.InductiveDef
 goInductive ty@InductiveDef {..} = do
@@ -627,7 +632,7 @@ checkInductiveConstructors indDef = do
 
 goConstructorDef ::
   forall r.
-  (Members '[Reader DefaultArgsStack, Error BuiltinsError, Builtins, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) =>
+  (Members '[Reader DefaultArgsStack, Error BuiltinsError, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) =>
   Internal.Expression ->
   ConstructorDef 'Scoped ->
   Sem r Internal.ConstructorDef
@@ -698,8 +703,8 @@ goLiteral = fmap go
       LitString s -> Internal.LitString s
       LitIntegerWithBase i -> Internal.LitNumeric (i ^. integerWithBaseValue)
 
-goListPattern :: (Members '[Builtins, Error ScoperError, NameIdGen, Reader S.InfoTable] r) => Concrete.ListPattern 'Scoped -> Sem r Internal.Pattern
-goListPattern l = do
+goListPattern :: (Members '[Error ScoperError, Error BuiltinsError, NameIdGen, Reader S.InfoTable] r) => Concrete.ListPattern 'Scoped -> Sem r Internal.Pattern
+goListPattern l = localBuiltins $ do
   nil_ <- getBuiltinName loc BuiltinListNil
   cons_ <- getBuiltinName loc BuiltinListCons
   let mkcons :: Internal.Pattern -> Internal.Pattern -> Internal.Pattern
@@ -786,7 +791,7 @@ createArgumentBlocks appargs =
 
 goExpression ::
   forall r.
-  (Members '[Reader DefaultArgsStack, Builtins, Error BuiltinsError, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) =>
+  (Members '[Reader DefaultArgsStack, Error BuiltinsError, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) =>
   Expression ->
   Sem r Internal.Expression
 goExpression = \case
@@ -974,7 +979,7 @@ goExpression = \case
       return $ Internal.foldExplicitApplication lam [expr']
 
     goList :: Concrete.List 'Scoped -> Sem r Internal.Expression
-    goList l = do
+    goList l = localBuiltins $ do
       nil_ <- getBuiltinName loc BuiltinListNil
       cons_ <- getBuiltinName loc BuiltinListCons
       items <- mapM goExpression (l ^. Concrete.listItems)
@@ -984,7 +989,7 @@ goExpression = \case
 
     goIf :: Concrete.If 'Scoped -> Sem r Internal.Expression
     goIf e@Concrete.If {..} = do
-      if_ <- getBuiltinName (getLoc e) BuiltinBoolIf
+      if_ <- localBuiltins $ getBuiltinName (getLoc e) BuiltinBoolIf
       go if_ _ifBranches
       where
         go :: Internal.Name -> [Concrete.IfBranch 'Scoped 'BranchIfBool] -> Sem r Internal.Expression
@@ -1101,7 +1106,7 @@ goExpression = \case
         mkApp :: Internal.Expression -> Internal.Expression -> Internal.Expression
         mkApp a1 a2 = Internal.ExpressionApplication $ Internal.Application a1 a2 Explicit
 
-goCase :: forall r. (Members '[Error BuiltinsError, Reader DefaultArgsStack, Builtins, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) => Case 'Scoped -> Sem r Internal.Case
+goCase :: forall r. (Members '[Error BuiltinsError, Reader DefaultArgsStack, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) => Case 'Scoped -> Sem r Internal.Case
 goCase c = do
   _caseExpression <- goExpression (c ^. caseExpression)
   _caseBranches <- mapM goBranch (c ^. caseBranches)
@@ -1117,14 +1122,14 @@ goCase c = do
 
 gRhsExpression ::
   forall r.
-  (Members '[Reader DefaultArgsStack, Error BuiltinsError, Builtins, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) =>
+  (Members '[Reader DefaultArgsStack, Error BuiltinsError, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) =>
   RhsExpression 'Scoped ->
   Sem r Internal.Expression
 gRhsExpression RhsExpression {..} = goExpression _rhsExpression
 
 goSideIfBranch ::
   forall r.
-  (Members '[Reader DefaultArgsStack, Error BuiltinsError, Builtins, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) =>
+  (Members '[Reader DefaultArgsStack, Error BuiltinsError, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) =>
   SideIfBranch 'Scoped 'BranchIfBool ->
   Sem r Internal.SideIfBranch
 goSideIfBranch s = do
@@ -1138,14 +1143,14 @@ goSideIfBranch s = do
 
 goSideIfBranchElse ::
   forall r.
-  (Members '[Reader DefaultArgsStack, Error BuiltinsError, Builtins, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) =>
+  (Members '[Reader DefaultArgsStack, Error BuiltinsError, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) =>
   SideIfBranch 'Scoped 'BranchIfElse ->
   Sem r Internal.Expression
 goSideIfBranchElse s = goExpression (s ^. sideIfBranchBody)
 
 goSideIfs ::
   forall r.
-  (Members '[Reader DefaultArgsStack, Error BuiltinsError, Builtins, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) =>
+  (Members '[Reader DefaultArgsStack, Error BuiltinsError, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) =>
   SideIfs 'Scoped ->
   Sem r Internal.SideIfs
 goSideIfs s = do
@@ -1159,14 +1164,14 @@ goSideIfs s = do
 
 goCaseBranchRhs ::
   forall r.
-  (Members '[Reader DefaultArgsStack, Error BuiltinsError, Builtins, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) =>
+  (Members '[Reader DefaultArgsStack, Error BuiltinsError, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) =>
   CaseBranchRhs 'Scoped ->
   Sem r Internal.CaseBranchRhs
 goCaseBranchRhs = \case
   CaseBranchRhsExpression e -> Internal.CaseBranchRhsExpression <$> gRhsExpression e
   CaseBranchRhsIf s -> Internal.CaseBranchRhsIf <$> goSideIfs s
 
-goLambda :: forall r. (Members '[Reader DefaultArgsStack, Error BuiltinsError, Builtins, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) => Lambda 'Scoped -> Sem r Internal.Lambda
+goLambda :: forall r. (Members '[Reader DefaultArgsStack, Error BuiltinsError, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) => Lambda 'Scoped -> Sem r Internal.Lambda
 goLambda l = do
   clauses' <- mapM goClause (l ^. lambdaClauses)
   return
@@ -1186,7 +1191,7 @@ goUniverse u
   | isSmallUniverse u = SmallUniverse (getLoc u)
   | otherwise = error "only small universe is supported"
 
-goFunction :: (Members '[Reader DefaultArgsStack, Error BuiltinsError, Builtins, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) => Function 'Scoped -> Sem r Internal.Function
+goFunction :: (Members '[Reader DefaultArgsStack, Error BuiltinsError, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) => Function 'Scoped -> Sem r Internal.Function
 goFunction f = do
   headParam :| tailParams <- goFunctionParameters (f ^. funParameters)
   ret <- goExpression (f ^. funReturn)
@@ -1197,7 +1202,7 @@ goFunction f = do
       }
 
 goFunctionParameters ::
-  (Members '[Reader DefaultArgsStack, Error BuiltinsError, Builtins, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) =>
+  (Members '[Reader DefaultArgsStack, Error BuiltinsError, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) =>
   FunctionParameters 'Scoped ->
   Sem r (NonEmpty Internal.FunctionParameter)
 goFunctionParameters FunctionParameters {..} = do
@@ -1224,7 +1229,7 @@ mkConstructorApp :: Internal.ConstrName -> [Internal.PatternArg] -> Internal.Con
 mkConstructorApp a b = Internal.ConstructorApp a b Nothing
 
 goPatternApplication ::
-  (Members '[Builtins, NameIdGen, Error ScoperError, Reader S.InfoTable] r) =>
+  (Members '[NameIdGen, Error BuiltinsError, Error ScoperError, Reader S.InfoTable] r) =>
   PatternApp ->
   Sem r Internal.ConstructorApp
 goPatternApplication a = uncurry mkConstructorApp <$> viewApp (PatternApplication a)
@@ -1235,24 +1240,24 @@ goWildcardConstructor ::
 goWildcardConstructor a = Internal.WildcardConstructor (goScopedIden (a ^. wildcardConstructor))
 
 goPatternConstructor ::
-  (Members '[Builtins, NameIdGen, Error ScoperError, Reader S.InfoTable] r) =>
+  (Members '[NameIdGen, Error BuiltinsError, Error ScoperError, Reader S.InfoTable] r) =>
   ScopedIden ->
   Sem r Internal.ConstructorApp
 goPatternConstructor a = uncurry mkConstructorApp <$> viewApp (PatternConstructor a)
 
 goInfixPatternApplication ::
-  (Members '[Builtins, NameIdGen, Error ScoperError, Reader S.InfoTable] r) =>
+  (Members '[NameIdGen, Error BuiltinsError, Error ScoperError, Reader S.InfoTable] r) =>
   PatternInfixApp ->
   Sem r Internal.ConstructorApp
 goInfixPatternApplication a = uncurry mkConstructorApp <$> viewApp (PatternInfixApplication a)
 
 goPostfixPatternApplication ::
-  (Members '[Builtins, NameIdGen, Error ScoperError, Reader S.InfoTable] r) =>
+  (Members '[NameIdGen, Error BuiltinsError, Error ScoperError, Reader S.InfoTable] r) =>
   PatternPostfixApp ->
   Sem r Internal.ConstructorApp
 goPostfixPatternApplication a = uncurry mkConstructorApp <$> viewApp (PatternPostfixApplication a)
 
-viewApp :: forall r. (Members '[Builtins, NameIdGen, Error ScoperError, Reader S.InfoTable] r) => Pattern -> Sem r (Internal.ConstrName, [Internal.PatternArg])
+viewApp :: forall r. (Members '[Error BuiltinsError, NameIdGen, Error ScoperError, Reader S.InfoTable] r) => Pattern -> Sem r (Internal.ConstrName, [Internal.PatternArg])
 viewApp p = case p of
   PatternConstructor c -> return (goScopedIden c, [])
   PatternWildcardConstructor c -> return (goScopedIden (c ^. wildcardConstructor), [])
@@ -1278,7 +1283,7 @@ viewApp p = case p of
       | otherwise = viewApp (l ^. patternArgPattern)
     err = throw (ErrConstructorExpectedLeftApplication (ConstructorExpectedLeftApplication p))
 
-goPatternArg :: (Members '[Builtins, NameIdGen, Error ScoperError, Reader S.InfoTable] r) => PatternArg -> Sem r Internal.PatternArg
+goPatternArg :: (Members '[Error BuiltinsError, NameIdGen, Error ScoperError, Reader S.InfoTable] r) => PatternArg -> Sem r Internal.PatternArg
 goPatternArg p = do
   pat' <- goPattern (p ^. patternArgPattern)
   return
@@ -1288,7 +1293,7 @@ goPatternArg p = do
         _patternArgPattern = pat'
       }
 
-goPattern :: (Members '[Builtins, NameIdGen, Error ScoperError, Reader S.InfoTable] r) => Pattern -> Sem r Internal.Pattern
+goPattern :: (Members '[Error BuiltinsError, NameIdGen, Error ScoperError, Reader S.InfoTable] r) => Pattern -> Sem r Internal.Pattern
 goPattern p = case p of
   PatternVariable a -> return $ Internal.PatternVariable (goSymbol a)
   PatternList a -> goListPattern a
@@ -1301,7 +1306,7 @@ goPattern p = case p of
   PatternRecord i -> goRecordPattern i
   PatternEmpty {} -> error "unsupported empty pattern"
 
-goRecordPattern :: forall r. (Members '[NameIdGen, Error ScoperError, Builtins, Reader S.InfoTable] r) => RecordPattern 'Scoped -> Sem r Internal.Pattern
+goRecordPattern :: forall r. (Members '[Error BuiltinsError, NameIdGen, Error ScoperError, Reader S.InfoTable] r) => RecordPattern 'Scoped -> Sem r Internal.Pattern
 goRecordPattern r = do
   params' <- mkPatterns
   return
@@ -1371,7 +1376,7 @@ goRecordPattern r = do
               output (Internal.patternArgFromVar Internal.Explicit v)
               go maxIdx (idx + 1) args
 
-goAxiom :: (Members '[Reader DefaultArgsStack, Error BuiltinsError, Reader Pragmas, Error ScoperError, Builtins, NameIdGen, Reader S.InfoTable] r) => AxiomDef 'Scoped -> Sem r Internal.AxiomDef
+goAxiom :: (Members '[Reader DefaultArgsStack, Error BuiltinsError, Reader Pragmas, Error ScoperError, NameIdGen, Reader S.InfoTable] r) => AxiomDef 'Scoped -> Sem r Internal.AxiomDef
 goAxiom a = do
   _axiomType' <- goExpression (a ^. axiomType)
   _axiomPragmas' <- goPragmas (a ^. axiomPragmas)

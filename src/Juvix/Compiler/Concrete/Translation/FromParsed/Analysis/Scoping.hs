@@ -67,19 +67,13 @@ scopeCheck' ::
 scopeCheck' importTab pr m = do
   fmap mkResult
     . runReader tab
-    . evalBuiltins builtinsState
+    . evalBuiltins (tab ^. infoBuiltins)
     . runReader iniScopeParameters
     . runState (iniScoperState tab)
     $ checkTopModule m
   where
     tab :: InfoTable
     tab = computeCombinedInfoTable importTab
-
-    builtinsState :: BuiltinsState
-    builtinsState =
-      BuiltinsState
-        { _builtinsTable = tab ^. infoBuiltins
-        }
 
     iniScopeParameters :: ScopeParameters
     iniScopeParameters =

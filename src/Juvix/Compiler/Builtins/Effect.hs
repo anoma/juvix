@@ -21,20 +21,18 @@ registerBuiltin = registerBuiltin' . toBuiltinPrim
 getBuiltinSymbol :: (IsBuiltin a, Member Builtins r) => Interval -> a -> Sem r Symbol
 getBuiltinSymbol i = getBuiltinSymbol' i . toBuiltinPrim
 
-newtype BuiltinsState = BuiltinsState
-  { _builtinsTable :: HashMap BuiltinPrim Symbol
-  }
+type BuiltinsTable = HashMap BuiltinPrim Symbol
 
-makeLenses ''BuiltinsState
-
-iniBuiltins :: BuiltinsState
-iniBuiltins = BuiltinsState mempty
-
-runBuiltins :: forall r a. (Member (Error BuiltinsError) r) => BuiltinsState -> Sem (Builtins ': r) a -> Sem r (BuiltinsState, a)
+runBuiltins ::
+  forall r a.
+  (Member (Error BuiltinsError) r) =>
+  BuiltinsTable ->
+  Sem (Builtins ': r) a ->
+  Sem r (BuiltinsTable, a)
 runBuiltins ini = reinterpret (runState ini) $ \case
-  GetBuiltinSymbol' i b -> fromMaybeM notDefined (gets (^. builtinsTable . at b))
+  GetBuiltinSymbol' i b -> fromMaybeM notDefined (gets @BuiltinsTable (^. at b))
     where
-      notDefined :: Sem (State BuiltinsState ': r) x
+      notDefined :: Sem (State BuiltinsTable ': r) x
       notDefined =
         throw $
           ErrNotDefined
@@ -43,13 +41,12 @@ runBuiltins ini = reinterpret (runState ini) $ \case
                 _notDefinedLoc = i
               }
   RegisterBuiltin' b n -> do
-    s <- gets (^. builtinsTable . at b)
+    s <- gets @BuiltinsTable (^. at b)
     case s of
-      Nothing -> do
-        modify (over builtinsTable (set (at b) (Just n)))
+      Nothing -> modify @BuiltinsTable (set (at b) (Just n))
       Just {} -> alreadyDefined
     where
-      alreadyDefined :: Sem (State BuiltinsState ': r) x
+      alreadyDefined :: Sem (State BuiltinsTable ': r) x
       alreadyDefined =
         throw $
           ErrAlreadyDefined
@@ -58,5 +55,5 @@ runBuiltins ini = reinterpret (runState ini) $ \case
                 _alreadyDefinedLoc = getLoc n
               }
 
-evalBuiltins :: (Member (Error BuiltinsError) r) => BuiltinsState -> Sem (Builtins ': r) a -> Sem r a
+evalBuiltins :: (Member (Error BuiltinsError) r) => BuiltinsTable -> Sem (Builtins ': r) a -> Sem r a
 evalBuiltins s = fmap snd . runBuiltins s

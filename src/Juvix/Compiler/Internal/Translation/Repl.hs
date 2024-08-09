@@ -5,10 +5,13 @@ module Juvix.Compiler.Internal.Translation.Repl
   )
 where
 
+import Juvix.Compiler.Concrete.Data.Highlight
 import Juvix.Compiler.Internal.Data.LocalVars
 import Juvix.Compiler.Internal.Language
-import Juvix.Compiler.Internal.Translation.FromInternal
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking
 import Juvix.Compiler.Pipeline.Artifacts
+import Juvix.Prelude
 
 typeCheckExpressionType ::
   forall r.
@@ -17,11 +20,13 @@ typeCheckExpressionType ::
   Sem r TypedExpression
 typeCheckExpressionType exp = do
   table <- extendedTableReplArtifacts exp
+  stable <- gets (^. artifactScopeTable)
   runResultBuilderArtifacts
     . runBuiltinsArtifacts
     . runNameIdGenArtifacts
     . ignoreHighlightBuilder
     . runReader table
+    . runReader stable
     . withEmptyLocalVars
     . withEmptyInsertedArgsStack
     . mapError (JuvixError @TypeCheckerError)

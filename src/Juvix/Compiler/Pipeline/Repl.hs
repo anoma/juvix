@@ -13,6 +13,7 @@ import Juvix.Compiler.Core.Transformation.DisambiguateNames (disambiguateNames)
 import Juvix.Compiler.Internal qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error
+import Juvix.Compiler.Internal.Translation.Repl qualified as Repl
 import Juvix.Compiler.Pipeline.Artifacts
 import Juvix.Compiler.Pipeline.Artifacts.PathResolver
 import Juvix.Compiler.Pipeline.Driver
@@ -110,7 +111,7 @@ expressionUpToTyped fp txt = do
   p <- expressionUpToAtomsParsed fp txt
   runTerminationArtifacts
     ( upToInternalExpression p
-        >>= Internal.typeCheckExpressionType
+        >>= Repl.typeCheckExpressionType
     )
 
 compileExpression ::
@@ -120,7 +121,7 @@ compileExpression ::
 compileExpression p =
   runTerminationArtifacts
     ( upToInternalExpression p
-        >>= Internal.typeCheckExpression
+        >>= Repl.typeCheckExpression
     )
     >>= fromInternalExpression
 
