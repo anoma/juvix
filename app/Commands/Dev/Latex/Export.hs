@@ -21,7 +21,7 @@ runCommand ExportOptions {..} = do
         guard (not _exportNoComments)
         return (fromJust (Scoper.getScoperResultComments res ^. commentsByFile . at inputAbs))
   ltx :: Text <- case _exportFilter of
-    ExportFilterNames names -> goNames c m names
+    ExportFilterNames names -> goNames m names
     ExportFilterRange ExportRange {..} ->
       return
         . Text.unlines
@@ -34,10 +34,10 @@ runCommand ExportOptions {..} = do
       ExportRaw -> ltx
       ExportWrap -> verb ltx
   where
-    goNames :: Maybe FileComments -> Module 'Scoped 'ModuleTop -> [Text] -> Sem r Text
-    goNames c m ns = do
+    goNames :: Module 'Scoped 'ModuleTop -> [Text] -> Sem r Text
+    goNames m ns = do
       stms :: [Statement 'Scoped] <- mapM getStatement ns
-      return (concreteToLatex c (Statements stms))
+      return (concreteToLatex Nothing (Statements stms))
       where
         getStatement :: Text -> Sem r (Statement 'Scoped)
         getStatement lbl = case tbl ^. at lbl of
