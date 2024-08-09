@@ -185,6 +185,15 @@ byteToNat = "byte-to-nat"
 byteFromNat :: (IsString s) => s
 byteFromNat = "byte-from-nat"
 
+byteArray :: (IsString s) => s
+byteArray = "bytearray"
+
+byteArrayFromListByte :: (IsString s) => s
+byteArrayFromListByte = "bytearray-from-list-byte"
+
+byteArrayLength :: (IsString s) => s
+byteArrayLength = "bytearray-length"
+
 nat :: (IsString s) => s
 nat = "nat"
 
@@ -728,6 +737,9 @@ fun_ = "function"
 integer :: (IsString s) => s
 integer = "integer"
 
+uint8 :: (IsString s) => s
+uint8 = "uint8"
+
 bool :: (IsString s) => s
 bool = "bool"
 
@@ -793,6 +805,12 @@ instrUInt8ToInt = "u8toi"
 
 instrIntToUInt8 :: (IsString s) => s
 instrIntToUInt8 = "itou8"
+
+instrByteArrayFromListUInt8 :: (IsString s) => s
+instrByteArrayFromListUInt8 = "bytearray-from-list-uint8"
+
+instrByteArrayLength :: (IsString s) => s
+instrByteArrayLength = "bytearray-length"
 
 instrShow :: (IsString s) => s
 instrShow = "show"
@@ -922,6 +940,12 @@ nil = "nil"
 
 cons :: (IsString s) => s
 cons = "cons"
+
+builtinListCons :: (IsString s) => s
+builtinListCons = "builtinListCons"
+
+builtinListNil :: (IsString s) => s
+builtinListNil = "builtinListNil"
 
 nothing :: (IsString s) => s
 nothing = "nothing"

@@ -8,6 +8,7 @@ data Type
   | TyBool TypeBool
   | TyString
   | TyField
+  | TyByteArray
   | TyUnit
   | TyVoid
   | TyInductive TypeInductive
@@ -81,6 +82,7 @@ instance HasAtomicity Type where
     TyField -> Atom
     TyUnit -> Atom
     TyVoid -> Atom
+    TyByteArray -> Atom
     TyInductive x -> atomicity x
     TyConstr x -> atomicity x
     TyFun x -> atomicity x

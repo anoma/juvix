@@ -130,6 +130,7 @@ constantToValue = \case
   ConstUnit -> ValUnit
   ConstVoid -> ValVoid
   ConstUInt8 i -> ValUInt8 i
+  ConstByteArray b -> ValByteArray b
 
 valueToConstant :: Value -> Constant
 valueToConstant = \case

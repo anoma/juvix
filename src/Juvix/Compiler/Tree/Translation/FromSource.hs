@@ -53,6 +53,7 @@ parseNode ::
 parseNode =
   (Binop <$> parseBinop)
     <|> (Unop <$> parseUnop)
+    <|> (ByteArray <$> parseByteArray)
     <|> (Anoma <$> parseAnoma)
     <|> (Cairo <$> parseCairo)
     <|> (Constant <$> parseConst)
@@ -118,6 +119,23 @@ parseUnaryOp kwd op = do
   loc <- onlyInterval (kw kwd)
   arg <- parens parseNode
   return $ NodeUnop (NodeInfo (Just loc)) op arg
+
+parseByteArray ::
+  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  ParsecS r NodeByteArray
+parseByteArray =
+  parseByteArrayOp kwByteArrayFromListUInt8 OpByteArrayFromListUInt8
+    <|> parseByteArrayOp kwByteArrayLength OpByteArrayLength
+
+parseByteArrayOp ::
+  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  Keyword ->
+  ByteArrayOp ->
+  ParsecS r NodeByteArray
+parseByteArrayOp kwd op = do
+  loc <- onlyInterval (kw kwd)
+  args <- parseArgs
+  return $ NodeByteArray (NodeInfo (Just loc)) op args
 
 parseAnoma ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>

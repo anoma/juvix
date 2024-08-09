@@ -352,5 +352,15 @@ tests =
       "Test062: Anoma"
       $(mkRelDir ".")
       $(mkRelFile "test062.jvc")
-      $(mkRelFile "out/test062.out")
+      $(mkRelFile "out/test062.out"),
+    PosTest
+      "Test063: UInt8"
+      $(mkRelDir ".")
+      $(mkRelFile "test063.jvc")
+      $(mkRelFile "out/test063.out"),
+    PosTest
+      "Test064: ByteArray"
+      $(mkRelDir ".")
+      $(mkRelFile "test064.jvc")
+      $(mkRelFile "out/test064.out")
   ]

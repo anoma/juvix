@@ -35,6 +35,7 @@ computeNodeTypeInfo md = umapL go
           ConstField {} -> mkTypeField'
           ConstString {} -> mkTypeString'
           ConstUInt8 {} -> mkTypeUInt8'
+          ConstByteArray {} -> mkDynamic'
       NApp {} ->
         let (fn, args) = unfoldApps' node
             fty = Info.getNodeType fn
@@ -85,6 +86,8 @@ computeNodeTypeInfo md = umapL go
             _ -> error "incorrect random_ec_point builtin application"
           OpUInt8ToInt -> mkTypeInteger'
           OpUInt8FromInt -> mkTypeUInt8'
+          OpByteArrayFromListByte -> mkDynamic'
+          OpByteArrayLength -> mkTypeInteger'
       NCtr Constr {..} ->
         let ci = lookupConstructorInfo md _constrTag
             ii = lookupInductiveInfo md (ci ^. constructorInductive)

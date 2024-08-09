@@ -21,6 +21,8 @@ instance Pretty StdlibFunction where
     StdlibSignDetached -> "sign-detached"
     StdlibVerify -> "verify"
     StdlibCatBytes -> "cat"
+    StdlibFoldBytes -> "fold-bytes"
+    StdlibLengthList -> "length-list"
 
 data StdlibFunction
   = StdlibDec
@@ -39,6 +41,8 @@ data StdlibFunction
   | StdlibSignDetached
   | StdlibVerify
   | StdlibCatBytes
+  | StdlibFoldBytes
+  | StdlibLengthList
   deriving stock (Show, Lift, Eq, Bounded, Enum, Generic)
 
 instance Hashable StdlibFunction

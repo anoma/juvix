@@ -350,6 +350,7 @@ fromRegInstr bNoStack info = \case
       Reg.ConstUnit -> macroVar "OBJ_UNIT"
       Reg.ConstVoid -> macroVar "OBJ_VOID"
       Reg.ConstUInt8 x -> macroCall "make_smallint" [integer x]
+      Reg.ConstByteArray {} -> impossible
 
     fromPrealloc :: Reg.InstrPrealloc -> Statement
     fromPrealloc Reg.InstrPrealloc {..} =

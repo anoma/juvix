@@ -4,12 +4,14 @@ module Juvix.Compiler.Tree.Pretty.Base
   )
 where
 
+import Data.ByteString qualified as BS
 import Data.Foldable
 import Data.HashMap.Strict qualified as HashMap
 import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Core.Pretty.Base qualified as Core
 import Juvix.Compiler.Internal.Data.Name
 import Juvix.Compiler.Tree.Data.InfoTable
+import Juvix.Compiler.Tree.Extra.Type.Base
 import Juvix.Compiler.Tree.Language
 import Juvix.Compiler.Tree.Language.Value
 import Juvix.Compiler.Tree.Pretty.Extra
@@ -101,6 +103,7 @@ instance PrettyCode Value where
       ppCode cl
     ValUInt8 i ->
       return $ integer i
+    ValByteArray bs -> ppCode bs
 
 instance PrettyCode TypeInductive where
   ppCode :: (Member (Reader Options) r) => TypeInductive -> Sem r (Doc Ann)
@@ -139,10 +142,14 @@ instance PrettyCode Type where
   ppCode = \case
     TyDynamic ->
       return $ annotate (AnnKind KNameInductive) Str.mul
-    TyInteger {} ->
-      return $ annotate (AnnKind KNameInductive) Str.integer
+    t@(TyInteger {})
+      | t == mkTypeUInt8 ->
+          return $ annotate (AnnKind KNameInductive) Str.uint8
+    TyInteger {} -> return $ annotate (AnnKind KNameInductive) Str.integer
     TyField {} ->
       return $ annotate (AnnKind KNameInductive) Str.field
+    TyByteArray {} ->
+      return $ annotate (AnnKind KNameInductive) Str.byteArray
     TyBool {} ->
       return $ annotate (AnnKind KNameInductive) Str.bool
     TyString ->
@@ -200,7 +207,24 @@ instance PrettyCode Constant where
     ConstVoid {} ->
       return $ annotate (AnnKind KNameConstructor) Str.void
     ConstUInt8 v ->
-      return $ annotate AnnLiteralInteger (pretty v)
+      return $ annotate AnnLiteralInteger (pretty v <> "u8")
+    ConstByteArray v -> do
+      ctorOp <- ppCode OpByteArrayFromListUInt8
+      bs <- ppCode v
+      return (ctorOp <> parens bs)
+
+instance PrettyCode ByteString where
+  ppCode bs = do
+    ppBytes <- mapM ppCode (ConstUInt8 <$> BS.unpack bs)
+    return (toListCtors ppBytes)
+    where
+      toListCtors :: [Doc Ann] -> Doc Ann
+      toListCtors = \case
+        [] -> nodeAllocCtor Str.nil []
+        (x : xs) -> nodeAllocCtor Str.cons [x, toListCtors xs]
+
+      nodeAllocCtor :: Text -> [Doc Ann] -> Doc Ann
+      nodeAllocCtor n args = primitive Str.instrAlloc <> brackets (pretty n) <> parens (ppCodeArgs' args)
 
 instance PrettyCode BoolOp where
   ppCode op = return $ primitive $ case op of
@@ -246,6 +270,12 @@ instance PrettyCode UnaryOp where
     OpIntToUInt8 -> Str.instrIntToUInt8
     OpUInt8ToInt -> Str.instrUInt8ToInt
 
+instance PrettyCode ByteArrayOp where
+  ppCode =
+    return . \case
+      OpByteArrayFromListUInt8 -> Str.instrByteArrayFromListUInt8
+      OpByteArrayLength -> Str.instrByteArrayLength
+
 instance PrettyCode CairoOp where
   ppCode op = return $ primitive $ case op of
     OpCairoPoseidon -> Str.instrPoseidon
@@ -286,6 +316,12 @@ instance PrettyCode NodeAnoma where
     args <- ppCodeArgs _nodeAnomaArgs
     return (op <> parens args)
 
+instance PrettyCode NodeByteArray where
+  ppCode NodeByteArray {..} = do
+    op <- ppCode _nodeByteArrayOpcode
+    args <- ppCodeArgs _nodeByteArrayArgs
+    return (op <> parens args)
+
 instance PrettyCode NodeConstant where
   ppCode NodeConstant {..} = ppCode _nodeConstant
 
@@ -295,7 +331,10 @@ instance PrettyCode NodeMemRef where
 ppCodeArgs :: (Member (Reader Options) r) => [Node] -> Sem r (Doc Ann)
 ppCodeArgs args = do
   args' <- mapM ppCode args
-  return $ hsep $ punctuate comma args'
+  return $ ppCodeArgs' args'
+
+ppCodeArgs' :: [Doc Ann] -> Doc Ann
+ppCodeArgs' args = hsep $ punctuate comma args
 
 instance PrettyCode NodeAllocConstr where
   ppCode NodeAllocConstr {..} = do
@@ -378,6 +417,7 @@ instance PrettyCode Node where
   ppCode = \case
     Binop x -> ppCode x
     Unop x -> ppCode x
+    ByteArray x -> ppCode x
     Anoma x -> ppCode x
     Cairo x -> ppCode x
     Constant x -> ppCode x
