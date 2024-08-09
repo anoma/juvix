@@ -19,7 +19,9 @@ isSpecializable md node =
           _ -> True
       NLam {} -> True
       NCst {} -> True
-      NCtr Constr {..} -> all (isSpecializable md) _constrArgs
+      NCtr Constr {..} ->
+        -- TODO: rethink this
+        all (isSpecializable md) _constrArgs
       NApp {} ->
         let (h, _) = unfoldApps' node
          in isSpecializable md h
@@ -102,7 +104,11 @@ convertNode = dmapLRM go
           (tyargs, tgt) = unfoldPi' (ii ^. identifierType)
           def = lookupIdentifierNode md _identSymbol
           (lams, body) = unfoldLambdas def
-          argnames = map (^. lambdaLhsBinder . binderName) lams
+          argnames =
+            zipWith
+              (\mn lhs -> fromMaybe (lhs ^. lambdaLhsBinder . binderName) mn)
+              (ii ^. identifierArgNames)
+              lams
 
           -- arguments marked for specialisation with `specialize: true`
           psargs0 =
@@ -118,9 +124,10 @@ convertNode = dmapLRM go
           | (isJust pspec || isJust pspecby || not (null psargs0)) && length args == argsNum -> do
               let psargs1 = mapMaybe getArgIndex $ maybe [] (^. pragmaSpecialiseArgs) pspec
                   psargs2 = maybe [] (map (+ 1) . mapMaybe (`elemIndex` argnames) . (^. pragmaSpecialiseBy)) pspecby
+                  -- psargs are the arguments explicitly marked for specialization
                   psargs = nubSort (psargs0 ++ psargs1 ++ psargs2)
-              -- assumption: all type variables are at the front
-              let specargs0 =
+              let -- specargs0 are the arguments actually selected for specialization
+                  specargs0 =
                     filter
                       ( \argNum ->
                           argNum <= argsNum
@@ -128,13 +135,10 @@ convertNode = dmapLRM go
                             && isArgSpecializable md _identSymbol argNum
                       )
                       psargs
-                  tyargsNum = length (takeWhile (isTypeConstr md) tyargs)
+                  tyargnums = map fst $ filter (isTypeConstr md . snd) $ zip [1 .. argsNum] tyargs
                   -- in addition to the arguments explicitly marked for
                   -- specialisation, also specialise all type arguments
-                  specargs =
-                    nub $
-                      [1 .. tyargsNum]
-                        ++ specargs0
+                  specargs = nub $ tyargnums ++ specargs0
                   -- the arguments marked for specialisation which we don't
                   -- specialise now
                   remainingSpecargs =
@@ -165,12 +169,9 @@ convertNode = dmapLRM go
                   | null specargs0 ->
                       return $ End (mkApps' (NIdt idt) args')
                   | otherwise -> do
-                      eassert (tyargsNum < argsNum)
-                      eassert (length lams == argsNum)
-                      eassert (length args' == argsNum)
-                      eassert (argsNum <= length tyargs)
-                      -- assumption: all type variables are at the front
-                      eassert (not $ any (isTypeConstr md) (drop tyargsNum tyargs))
+                      massert (length lams == argsNum)
+                      massert (length args' == argsNum)
+                      massert (argsNum <= length tyargs)
                       -- the specialisation signature: the values we specialise the arguments by
                       let specSigArgs = selectSpecargs specargs args'
                           specSig = (specSigArgs, specargs)
@@ -237,8 +238,8 @@ convertNode = dmapLRM go
           | otherwise ->
               return $ End $ mkApps' (NIdt idt) args'
 
-    -- assumption: all type arguments are substituted, so no binders in the type
-    -- list refer to other elements in the list
+    -- Because all type arguments are substituted (specialized), in the end no
+    -- binders in the resulting type list refer to other elements in the list
     removeSpecTypeArgs :: [Int] -> [Node] -> [Type] -> [Type]
     removeSpecTypeArgs = goRemove 1
       where
@@ -269,7 +270,7 @@ convertNode = dmapLRM go
 
     shiftSpecargs :: [Int] -> [Int] -> [Int]
     shiftSpecargs specargs =
-      map (\argNum -> argNum - length (filter (argNum <) specargs))
+      map (\argNum -> argNum - length (filter (argNum >) specargs))
 
     -- Replace the calls to the function being specialised with the specialised
     -- version (omitting the specialised arguments). We need to first replace
