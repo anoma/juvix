@@ -107,7 +107,7 @@ convertNode = dmapLRM go
           argnames =
             zipWith
               (\mn lhs -> fromMaybe (lhs ^. lambdaLhsBinder . binderName) mn)
-              (ii ^. identifierArgNames)
+              (ii ^. identifierArgNames ++ repeat Nothing)
               lams
 
           -- arguments marked for specialisation with `specialize: true`
