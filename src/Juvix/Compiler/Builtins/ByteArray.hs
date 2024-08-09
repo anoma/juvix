@@ -18,10 +18,10 @@ registerByteArrayFromListByte d = do
   unless (d ^. axiomType == (list_ @@ byte_ --> byteArray)) (error "bytearray-from-list-byte has the wrong type")
   registerBuiltin BuiltinByteArrayFromListByte (d ^. axiomName)
 
-registerByteArraySize :: (Member Builtins r) => AxiomDef -> Sem r ()
-registerByteArraySize d = do
+registerByteArrayLength :: (Member Builtins r) => AxiomDef -> Sem r ()
+registerByteArrayLength d = do
   let loc = getLoc d
   byteArray <- getBuiltinName loc BuiltinByteArray
   nat_ <- getBuiltinName loc BuiltinNat
-  unless (d ^. axiomType == (byteArray --> nat_)) (error "bytearray-size has the wrong type")
-  registerBuiltin BuiltinByteArraySize (d ^. axiomName)
+  unless (d ^. axiomType == (byteArray --> nat_)) (error "bytearray-length has the wrong type")
+  registerBuiltin BuiltinByteArrayLength (d ^. axiomName)

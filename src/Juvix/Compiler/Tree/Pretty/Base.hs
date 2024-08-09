@@ -274,7 +274,7 @@ instance PrettyCode ByteArrayOp where
   ppCode =
     return . \case
       OpByteArrayFromListUInt8 -> Str.instrByteArrayFromListUInt8
-      OpByteArraySize -> Str.instrByteArraySize
+      OpByteArrayLength -> Str.instrByteArrayLength
 
 instance PrettyCode CairoOp where
   ppCode op = return $ primitive $ case op of

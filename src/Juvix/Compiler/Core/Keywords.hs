@@ -20,7 +20,7 @@ import Juvix.Data.Keyword.All
     kwBottom,
     kwBuiltin,
     kwByteArrayFromListByte,
-    kwByteArraySize,
+    kwByteArrayLength,
     kwCase,
     kwColon,
     kwComma,

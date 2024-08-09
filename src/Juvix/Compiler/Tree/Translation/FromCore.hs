@@ -320,7 +320,7 @@ genCode infoTable fi =
     genByteArrayOp :: Core.BuiltinOp -> ByteArrayOp
     genByteArrayOp = \case
       Core.OpByteArrayFromListByte -> OpByteArrayFromListUInt8
-      Core.OpByteArraySize -> OpByteArraySize
+      Core.OpByteArrayLength -> OpByteArrayLength
       _ -> impossible
 
     genCairoOp :: Core.BuiltinOp -> CairoOp

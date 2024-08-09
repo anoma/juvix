@@ -11,7 +11,7 @@ checkNoByteArray = walkT checkNode
     checkNode :: Symbol -> Node -> Sem r ()
     checkNode _ = \case
       ByteArray NodeByteArray {..} -> case _nodeByteArrayOpcode of
-        OpByteArraySize -> unsupportedErr "OpByteArraySize"
+        OpByteArrayLength -> unsupportedErr "OpByteArrayLength"
         OpByteArrayFromListUInt8 -> unsupportedErr "OpByteArrayFromListUInt8"
         where
           unsupportedErr :: Text -> Sem r ()

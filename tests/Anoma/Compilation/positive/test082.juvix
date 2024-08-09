@@ -9,7 +9,7 @@ axiom ByteArray : Type;
 builtin bytearray-from-list-byte
 axiom mkByteArray : List Byte -> ByteArray;
 
-builtin bytearray-size
+builtin bytearray-length
 axiom size : ByteArray -> Nat;
 
 bs0 : ByteArray := mkByteArray [];

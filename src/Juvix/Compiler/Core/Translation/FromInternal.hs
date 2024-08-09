@@ -620,7 +620,7 @@ goAxiomInductive a = whenJust (a ^. Internal.axiomBuiltin) builtinInductive
       Internal.BuiltinByteFromNat -> return ()
       Internal.BuiltinByteArray -> registerInductiveAxiom (Just BuiltinByteArray) []
       Internal.BuiltinByteArrayFromListByte -> return ()
-      Internal.BuiltinByteArraySize -> return ()
+      Internal.BuiltinByteArrayLength -> return ()
 
     registerInductiveAxiom :: Maybe BuiltinAxiom -> [(Tag, Text, Type -> Type, Maybe BuiltinConstructor)] -> Sem r ()
     registerInductiveAxiom ax ctrs = do
@@ -832,8 +832,8 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
       Internal.BuiltinByteArray -> return ()
       Internal.BuiltinByteArrayFromListByte ->
         registerAxiomDef (mkLambda' mkDynamic' (mkBuiltinApp' OpByteArrayFromListByte [mkVar' 0]))
-      Internal.BuiltinByteArraySize ->
-        registerAxiomDef (mkLambda' mkTypeInteger' (mkBuiltinApp' OpByteArraySize [mkVar' 0]))
+      Internal.BuiltinByteArrayLength ->
+        registerAxiomDef (mkLambda' mkTypeInteger' (mkBuiltinApp' OpByteArrayLength [mkVar' 0]))
 
     axiomType' :: Sem r Type
     axiomType' = fromTopIndex (goType (a ^. Internal.axiomType))
@@ -1237,7 +1237,7 @@ goApplication a = do
         Just Internal.BuiltinByteFromNat -> app
         Just Internal.BuiltinByteArray -> app
         Just Internal.BuiltinByteArrayFromListByte -> app
-        Just Internal.BuiltinByteArraySize -> app
+        Just Internal.BuiltinByteArrayLength -> app
         Nothing -> app
     Internal.ExpressionIden (Internal.IdenFunction n) -> do
       funInfoBuiltin <- Internal.getFunctionBuiltinInfo n

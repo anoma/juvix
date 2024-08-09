@@ -582,7 +582,7 @@ builtinAppExpr varsNum vars = do
       <|> (kw kwAnomaSignDetached $> OpAnomaSignDetached)
       <|> (kw kwAnomaVerifyDetached $> OpAnomaVerifyDetached)
       <|> (kw kwByteArrayFromListByte $> OpByteArrayFromListByte)
-      <|> (kw kwByteArraySize $> OpByteArraySize)
+      <|> (kw kwByteArrayLength $> OpByteArrayLength)
   args <- P.many (atom varsNum vars)
   return $ mkBuiltinApp' op args
 
@@ -1123,7 +1123,7 @@ exprNamed varsNum vars = do
     "Field" -> return mkTypeField'
     "String" -> return mkTypeString'
     "UInt8" -> return mkTypeUInt8'
-    "ByteArray" -> return mkTypeByteArray'
+    "ByteArray" -> return mkDynamic'
     _ ->
       case HashMap.lookup txt vars of
         Just k -> do

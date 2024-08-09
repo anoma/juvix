@@ -81,7 +81,7 @@ hEval hout tab = eval' [] mempty
         goByteArrayOp :: NodeByteArray -> Value
         goByteArrayOp NodeByteArray {..} =
           case _nodeByteArrayOpcode of
-            OpByteArraySize -> case _nodeByteArrayArgs of
+            OpByteArrayLength -> case _nodeByteArrayArgs of
               [nodeArg] ->
                 let !arg = eval' args temps nodeArg
                  in case arg of
