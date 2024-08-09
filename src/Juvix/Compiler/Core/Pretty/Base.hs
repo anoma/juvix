@@ -109,6 +109,7 @@ ppCodeVar' name v = do
     else return name'
 
 instance PrettyCode ConstantValue where
+  ppCode :: forall r. (Member (Reader Options) r) => ConstantValue -> Sem r (Doc Ann)
   ppCode = \case
     ConstInteger int ->
       return $ annotate AnnLiteralInteger (pretty int)
@@ -119,17 +120,20 @@ instance PrettyCode ConstantValue where
     ConstString txt ->
       return $ annotate AnnLiteralString (pretty (show txt :: String))
     ConstByteArray bs -> do
-      let bytes = BS.unpack bs
+      let bytes = ConstUInt8 <$> BS.unpack bs
       codeBs <- mapM ppCode bytes
       bytesList <- go codeBs
-      return (primByteArrayFromListByte <+> bytesList)
+      op <- ppCode OpByteArrayFromListByte
+      return (op <+> bytesList)
       where
         go :: [Doc Ann] -> Sem r (Doc Ann)
-        go = \case
-          [] -> return kwNil
-          (d : ds) -> do
-            next <- go ds
-            return (parens (kwCons <+> d <+> next))
+        go xs = do
+          uint8Ty <- ppCode mkTypeUInt8'
+          case xs of
+            [] -> return (parens (kwBuiltinNil <+> uint8Ty))
+            (d : ds) -> do
+              next <- go ds
+              return (parens (kwBuiltinCons <+> uint8Ty <+> d <+> next))
 
 instance PrettyCode Word8 where
   ppCode i = return (pretty i <> "u8")
@@ -881,8 +885,8 @@ kwBottomAscii = keyword Str.bottomAscii
 kwBottom :: Doc Ann
 kwBottom = keyword Str.bottom
 
-kwCons :: Doc Ann
-kwCons = constructor Str.cons
+kwBuiltinCons :: Doc Ann
+kwBuiltinCons = constructor Str.builtinListCons
 
-kwNil :: Doc Ann
-kwNil = constructor Str.nil
+kwBuiltinNil :: Doc Ann
+kwBuiltinNil = constructor Str.builtinListNil
