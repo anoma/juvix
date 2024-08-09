@@ -5,13 +5,14 @@ import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info.NameInfo (setInfoName)
+import Juvix.Compiler.Core.Info.PragmaInfo
 import Juvix.Compiler.Core.Transformation.Base
 
 disambiguateNodeNames' :: (BinderList Binder -> Text -> Text) -> Module -> Node -> Node
 disambiguateNodeNames' disambiguate md = dmapL go
   where
     go :: BinderList Binder -> Node -> Node
-    go bl node = case node of
+    go bl node = case node' of
       NVar Var {..} ->
         mkVar (setInfoName (BL.lookup _varIndex bl ^. binderName) _varInfo) _varIndex
       NIdt Ident {..} ->
@@ -56,7 +57,28 @@ disambiguateNodeNames' disambiguate md = dmapL go
       NPi pi
         | varOccurs 0 (pi ^. piBody) ->
             NPi (over piBinder (over binderName (disambiguate bl)) pi)
-      _ -> node
+      _ -> node'
+      where
+        node' = modifyInfo (overInfoPragma disambiguatePragmas . overInfoPragmas disambiguatePragmas) node
+
+        disambiguatePragmas :: Pragmas -> Pragmas
+        disambiguatePragmas =
+          over
+            pragmasSpecialiseArgs
+            (fmap $ over pragmaSpecialiseArgs (map disambiguateArg))
+            . over
+              pragmasSpecialiseBy
+              (fmap $ over pragmaSpecialiseBy (map (disambiguate' bl)))
+
+        disambiguateArg :: PragmaSpecialiseArg -> PragmaSpecialiseArg
+        disambiguateArg = \case
+          SpecialiseArgNum i -> SpecialiseArgNum i
+          SpecialiseArgNamed n -> SpecialiseArgNamed (disambiguate' bl n)
+
+    disambiguate' :: BinderList Binder -> Text -> Text
+    disambiguate' bl n
+      | elem n (map (^. binderName) (toList bl)) = n
+      | otherwise = disambiguate mempty n
 
     disambiguateBinders :: BinderList Binder -> [Binder] -> [Binder]
     disambiguateBinders bl = \case
