@@ -8,9 +8,14 @@ type tClosure : Type {
    ctorCl : (Int -> Int) -> tClosure;
 };
 
-def privKey : Int := 11617894433197913967256772080085224292574263152640782716628013903136761875218972825378605552167075549144813844196048766885080313195607865362963533894031960;
+def cons : UInt8 -> BuiltinList -> BuiltinList := \x \l builtinListCons UInt8 x l;
+def nil : BuiltinList := builtinListNil UInt8;
 
-def pubKey : Int := 100334094580390620383139794340338190270834129828455530198518726236886616013505;
+def privKey : ByteArray := bytearray-from-list-byte (cons 162u8 (cons 93u8 (cons 186u8 (cons 174u8 (cons 61u8 (cons 123u8 (cons 31u8 (cons 32u8 (cons 2u8 (cons 255u8 (cons 32u8 (cons 34u8 (cons 195u8 (cons 2u8 (cons 116u8 (cons 15u8 (cons 93u8 (cons 36u8 (cons 230u8 (cons 90u8 (cons 163u8 (cons 149u8 (cons 249u8 (cons 41u8 (cons 148u8 (cons 34u8 (cons 86u8 (cons 102u8 (cons 53u8 (cons 44u8 (cons 16u8 (cons 80u8 (cons 253u8 (cons 178u8 (cons 149u8 (cons 247u8 (cons 146u8 (cons 59u8 (cons 105u8 (cons 89u8 (cons 57u8 (cons 42u8 (cons 212u8 (cons 65u8 (cons 142u8 (cons 237u8 (cons 232u8 (cons 88u8 (cons 112u8 (cons 95u8 (cons 142u8 (cons 49u8 (cons 238u8 (cons 122u8 (cons 220u8 (cons 193u8 (cons 206u8 (cons 180u8 (cons 48u8 (cons 147u8 (cons 80u8 (cons 41u8 (cons 143u8 (cons 207u8 nil))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))));
+def pubKey : ByteArray := bytearray-from-list-byte (cons 253u8 (cons 178u8 (cons 149u8 (cons 247u8 (cons 146u8 (cons 59u8 (cons 105u8 (cons 89u8 (cons 57u8 (cons 42u8 (cons 212u8 (cons 65u8 (cons 142u8 (cons 237u8 (cons 232u8 (cons 88u8 (cons 112u8 (cons 95u8 (cons 142u8 (cons 49u8 (cons 238u8 (cons 122u8 (cons 220u8 (cons 193u8 (cons 206u8 (cons 180u8 (cons 48u8 (cons 147u8 (cons 80u8 (cons 41u8 (cons 143u8 (cons 207u8 nil))))))))))))))))))))))))))))))));
+
+def privKeyInt : Int := 11617894433197913967256772080085224292574263152640782716628013903136761875218972825378605552167075549144813844196048766885080313195607865362963533894031960;
+def pubKeyInt : Int := 100334094580390620383139794340338190270834129828455530198518726236886616013505;
 
 def v1 : t := ctor 10;
 def v2 : t := ctor 0;
@@ -25,7 +30,7 @@ def projectClosure := \t match t with {
 
 writeLn (anoma-decode (anoma-encode v1) = v1)
 >> writeLn (projectClosure (anoma-decode (anoma-encode v3)) 10 = 20)
->> writeLn (anoma-verify-with-message (anoma-sign v1 privKey) pubKey = just v1)
->> writeLn (anoma-verify-with-message (anoma-sign v1 privKey) privKey = nothing)
+>> writeLn (anoma-verify-with-message (anoma-sign v1 privKeyInt) pubKeyInt = just v1)
+>> writeLn (anoma-verify-with-message (anoma-sign v1 privKeyInt) privKeyInt = nothing)
 >> writeLn (anoma-verify-detached (anoma-sign-detached v1 privKey) v1 pubKey)
 >> writeLn (anoma-verify-detached (anoma-sign-detached v1 privKey) v2 pubKey)
