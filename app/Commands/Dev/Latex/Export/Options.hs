@@ -81,7 +81,7 @@ parseExport = do
         readMIdentifierList
         ( long "statements"
             <> metavar "[STATEMENT_NAME]"
-            <> help "Export a list of statements"
+            <> help "Export a list of statements. E.g. --statements \"List; foldl; foldr; map\""
         )
 
   pure $
