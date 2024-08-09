@@ -1,6 +1,6 @@
 
 def writeLn := \x write x >> write "\n";
 
-def bs : ByteArray := bytearray-from-list-byte (cons 257u8 (cons 2u8 nil));
+def bs : ByteArray := bytearray-from-list-byte (builtinListCons UInt8 257u8 (builtinListCons UInt8 2u8 (builtinListNil UInt8)));
 
 writeLn bs >> writeLn (bytearray-length bs)

@@ -941,6 +941,12 @@ nil = "nil"
 cons :: (IsString s) => s
 cons = "cons"
 
+builtinListCons :: (IsString s) => s
+builtinListCons = "builtinListCons"
+
+builtinListNil :: (IsString s) => s
+builtinListNil = "builtinListNil"
+
 nothing :: (IsString s) => s
 nothing = "nothing"
 

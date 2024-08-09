@@ -293,10 +293,10 @@ declareListBuiltins = do
   tagNil <- freshTag
   tagCons <- freshTag
   declareInductiveBuiltins
-    "List"
+    "BuiltinList"
     (Just (BuiltinTypeInductive BuiltinList))
-    [ (tagNil, "nil", id, Just BuiltinListNil),
-      (tagCons, "cons", \x -> mkPis' [mkDynamic', x] x, Just BuiltinListCons)
+    [ (tagNil, "builtinListNil", mkPis' [mkSmallUniv], Just BuiltinListNil),
+      (tagCons, "builtinListCons", \x -> mkPis' [mkSmallUniv, mkDynamic', x] x, Just BuiltinListCons)
     ]
 
 reserveLiteralIntToNatSymbol :: (Member InfoTableBuilder r) => Sem r ()
