@@ -7,7 +7,7 @@ import Core.Eval.Positive qualified as Eval
 allTests :: TestTree
 allTests = testGroup "JuvixCore compilation tests" (map liftTest (Eval.filterOutTests ignoredTests Eval.compilableTests))
 
--- Arbitrary precision integers and fields not yet supported
+-- Arbitrary precision integers, fields, Anoma ops, and bytearrayss not yet supported
 ignoredTests :: [String]
 ignoredTests =
   [ "Test011: Tail recursion: Fibonacci numbers in linear time",
@@ -17,7 +17,8 @@ ignoredTests =
     "Test036: Big numbers",
     "Test040: LetRec - fib, fact",
     "Test061: Fields",
-    "Test062: Anoma"
+    "Test062: Anoma",
+    "Test064: ByteArray"
   ]
 
 liftTest :: Eval.PosTest -> TestTree

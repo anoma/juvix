@@ -1,6 +1,7 @@
 module Juvix.Compiler.Tree.Evaluator where
 
 import Control.Exception qualified as Exception
+import Data.ByteString qualified as BS
 import GHC.IO (unsafePerformIO)
 import GHC.Show qualified as S
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
@@ -37,6 +38,7 @@ hEval hout tab = eval' [] mempty
     eval' args temps node = case node of
       Binop x -> goBinop x
       Unop x -> goUnop x
+      ByteArray x -> goByteArrayOp x
       Anoma {} -> evalError "unsupported: Anoma builtin"
       Cairo {} -> evalError "unsupported: Cairo builtin"
       Constant c -> goConstant c
@@ -75,6 +77,33 @@ hEval hout tab = eval' [] mempty
                 PrimUnop op -> eitherToError $ evalUnop tab op v
                 OpTrace -> goTrace v
                 OpFail -> goFail v
+
+        goByteArrayOp :: NodeByteArray -> Value
+        goByteArrayOp NodeByteArray {..} =
+          case _nodeByteArrayOpcode of
+            OpByteArrayLength -> case _nodeByteArrayArgs of
+              [nodeArg] ->
+                let !arg = eval' args temps nodeArg
+                 in case arg of
+                      (ValByteArray bs) -> ValInteger (fromIntegral (BS.length bs))
+                      _ -> evalError "expected argument to be a ByteString"
+              _ -> evalError "expected exactly one argument"
+            OpByteArrayFromListUInt8 -> case _nodeByteArrayArgs of
+              [nodeArg] ->
+                let !arg = eval' args temps nodeArg
+                    !listUInt8 :: [Word8] = checkListUInt8 arg
+                 in ValByteArray (BS.pack listUInt8)
+              _ -> evalError "expected exactly one argument"
+              where
+                checkListUInt8 :: Value -> [Word8]
+                checkListUInt8 = \case
+                  ValConstr c -> case c ^. constrArgs of
+                    -- is nil
+                    [] -> []
+                    -- is cons
+                    [ValUInt8 w, t] -> w : checkListUInt8 t
+                    _ -> evalError "expected either a nullary or a binary constructor"
+                  _ -> evalError "expected a constructor"
 
         goFail :: Value -> Value
         goFail v = evalError ("failure: " <> printValue tab v)
@@ -232,6 +261,7 @@ valueToNode = \case
           _nodeAllocClosureArgs = map valueToNode _closureArgs
         }
   ValUInt8 i -> mkConst $ ConstUInt8 i
+  ValByteArray b -> mkConst $ ConstByteArray b
 
 hEvalIO :: (MonadIO m) => Handle -> Handle -> InfoTable -> FunctionInfo -> m Value
 hEvalIO hin hout infoTable funInfo = do

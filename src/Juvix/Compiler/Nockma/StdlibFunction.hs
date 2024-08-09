@@ -26,6 +26,14 @@ stdlibPath = \case
   StdlibSign -> [nock| [9 10 0 1] |]
   StdlibSignDetached -> [nock| [9 23 0 1] |]
   StdlibVerify -> [nock| [9 4 0 1] |]
+  StdlibLengthList -> [nock| [9 1.406 0 31] |]
+  -- Obtained from the urbit dojo using:
+  --
+  -- =>  anoma  !=(~(met block 3))
+  --
+  -- The `3` here is because we want to treat each atom as sequences of 2^3
+  -- bits, i.e bytes.
+  StdlibLengthBytes -> [nock| [8 [9 10 0 7] 9 190 10 [6 7 [0 3] 1 3] 0 2] |]
   -- Obtained from the urbit dojo using:
   --
   -- =>  anoma  !=(~(cat block 3))
@@ -33,3 +41,44 @@ stdlibPath = \case
   -- The `3` here is because we want to treat each atom as sequences of 2^3
   -- bits, i.e bytes.
   StdlibCatBytes -> [nock| [8 [9 10 0 7] 9 4 10 [6 7 [0 3] 1 3] 0 2] |]
+  -- Obtained from the urbit dojo using:
+  --
+  -- =>(anoma !=(|=([l=(list @)] (foldr l |=([fst=@ snd=@] (add (~(lsh block 3) 1 snd) fst))))))
+  --
+  -- The `3` here is because we want to shift left in byte = 2^3 bit steps.
+  StdlibFoldBytes ->
+    [nock|
+            [ 8
+              [1 0]
+              [ 1
+                8
+                [9 46 0 127]
+                9
+                2
+                10
+                [ 6
+                  [0 14]
+                  7
+                  [0 3]
+                  8
+                  [1 0 0]
+                  [ 1
+                    8
+                    [9 20 0 1.023]
+                    9
+                    2
+                    10
+                    [6 [7 [0 3] 8 [8 [9 10 0 127] 9 90 10 [6 7 [0 3] 1 3] 0 2] 9 2 10 [6 [7 [0 3] 1 1] 0 29] 0 2] 0 28]
+                    0
+                    2
+                  ]
+                  0
+                  1
+                ]
+                0
+                2
+              ]
+              0
+              1
+            ]
+     |]

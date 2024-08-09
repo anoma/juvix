@@ -1,0 +1,2 @@
+2
+alloc[cons](2u8, alloc[cons](1u8, alloc[nil]()))

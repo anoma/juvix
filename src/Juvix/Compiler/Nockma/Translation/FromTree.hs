@@ -33,7 +33,9 @@ module Juvix.Compiler.Nockma.Translation.FromTree
   )
 where
 
+import Data.ByteString qualified as BS
 import Juvix.Compiler.Nockma.Encoding
+import Juvix.Compiler.Nockma.Encoding.Ed25519 qualified as E
 import Juvix.Compiler.Nockma.Language.Path
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Stdlib
@@ -360,6 +362,7 @@ compile :: forall r. (Members '[Reader FunctionCtx, Reader CompilerCtx] r) => Tr
 compile = \case
   Tree.Binop b -> goBinop b
   Tree.Unop b -> goUnop b
+  Tree.ByteArray b -> goByteArrayOp b
   Tree.Cairo {} -> cairoErr
   Tree.Anoma b -> goAnomaOp b
   Tree.Constant c -> return (goConstant (c ^. Tree.nodeConstant))
@@ -441,6 +444,7 @@ compile = \case
       Tree.ConstVoid -> OpQuote # constVoid
       Tree.ConstField {} -> fieldErr
       Tree.ConstUInt8 i -> nockIntegralLiteral i
+      Tree.ConstByteArray bs -> OpQuote # (toNock @Natural (fromIntegral (BS.length bs)) # toNock (byteStringToNatural bs))
 
     goConstString :: Text -> Term Natural
     goConstString t =
@@ -492,6 +496,18 @@ compile = \case
         Tree.OpAnomaVerifyWithMessage -> return (goAnomaVerifyWithMessage args)
         Tree.OpAnomaSignDetached -> return (goAnomaSignDetached args)
 
+    goByteArrayOp :: Tree.NodeByteArray -> Sem r (Term Natural)
+    goByteArrayOp Tree.NodeByteArray {..} = do
+      args <- mapM compile _nodeByteArrayArgs
+      return $ case _nodeByteArrayOpcode of
+        Tree.OpByteArrayLength -> goByteArrayLength args
+        Tree.OpByteArrayFromListUInt8 -> callStdlib StdlibLengthList args # callStdlib StdlibFoldBytes args
+      where
+        goByteArrayLength :: [Term Natural] -> Term Natural
+        goByteArrayLength = \case
+          [ba] -> ba >># opAddress "head-of-the-bytestring" [L]
+          _ -> impossible
+
     goUnop :: Tree.NodeUnop -> Sem r (Term Natural)
     goUnop Tree.NodeUnop {..} = do
       arg <- compile _nodeUnopArg
@@ -523,9 +539,21 @@ compile = \case
     goAnomaDecode :: [Term Natural] -> Term Natural
     goAnomaDecode = callStdlib StdlibDecode
 
+    byteArrayPayload :: Text -> Term Natural -> Term Natural
+    byteArrayPayload msg ba = ba >># opAddress msg [R]
+
+    mkByteArray :: Int -> Term Natural -> Term Natural
+    mkByteArray len payload = nockNatLiteral (integerToNatural (toInteger len)) # payload
+
     goAnomaVerifyDetached :: [Term Natural] -> Term Natural
     goAnomaVerifyDetached = \case
-      [sig, message, pubKey] -> callStdlib StdlibVerifyDetached [sig, goAnomaEncode [message], pubKey]
+      [sig, message, pubKey] ->
+        callStdlib
+          StdlibVerifyDetached
+          [ byteArrayPayload "verifyDetachedSig" sig,
+            goAnomaEncode [message],
+            byteArrayPayload "verifyDetachedPubKey" pubKey
+          ]
       _ -> impossible
 
     goAnomaSign :: [Term Natural] -> Term Natural
@@ -535,7 +563,15 @@ compile = \case
 
     goAnomaSignDetached :: [Term Natural] -> Term Natural
     goAnomaSignDetached = \case
-      [message, privKey] -> callStdlib StdlibSignDetached [goAnomaEncode [message], privKey]
+      [message, privKeyByteArray] ->
+        mkByteArray
+          E.signatureLength
+          ( callStdlib
+              StdlibSignDetached
+              [ goAnomaEncode [message],
+                byteArrayPayload "privKeyByteArrayTail" privKeyByteArray
+              ]
+          )
       _ -> impossible
 
     -- Conceptually this function is:

@@ -1,0 +1,2 @@
+bytearray-from-list-byte (builtinListCons UInt8 1 (builtinListCons UInt8 2 (builtinListNil UInt8)))
+2

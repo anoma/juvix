@@ -5,6 +5,7 @@ module Juvix.Compiler.Core.Pretty.Base
   )
 where
 
+import Data.ByteString qualified as BS
 import Data.HashMap.Strict qualified as HashMap
 import Data.Map.Strict qualified as Map
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
@@ -64,6 +65,8 @@ instance PrettyCode BuiltinOp where
     OpRandomEcPoint -> return primRandomEcPoint
     OpUInt8ToInt -> return primUInt8ToInt
     OpUInt8FromInt -> return primFieldFromInt
+    OpByteArrayFromListByte -> return primByteArrayFromListByte
+    OpByteArrayLength -> return primByteArrayLength
 
 instance PrettyCode BuiltinDataTag where
   ppCode = \case
@@ -81,10 +84,12 @@ instance PrettyCode Tag where
 
 instance PrettyCode Primitive where
   ppCode = \case
+    p@(PrimInteger _) | p == primitiveUInt8 -> return $ annotate (AnnKind KNameInductive) (pretty ("UInt8" :: String))
     PrimInteger _ -> return $ annotate (AnnKind KNameInductive) (pretty ("Int" :: String))
     PrimField -> return $ annotate (AnnKind KNameInductive) (pretty ("Field" :: String))
     PrimBool _ -> return $ annotate (AnnKind KNameInductive) (pretty ("Bool" :: String))
     PrimString -> return $ annotate (AnnKind KNameInductive) (pretty ("String" :: String))
+    PrimByteArray -> return $ annotate (AnnKind KNameInductive) (pretty ("ByteArray" :: String))
 
 ppName :: NameKind -> Text -> Sem r (Doc Ann)
 ppName kind name = return $ annotate (AnnKind kind) (pretty name)
@@ -104,6 +109,7 @@ ppCodeVar' name v = do
     else return name'
 
 instance PrettyCode ConstantValue where
+  ppCode :: forall r. (Member (Reader Options) r) => ConstantValue -> Sem r (Doc Ann)
   ppCode = \case
     ConstInteger int ->
       return $ annotate AnnLiteralInteger (pretty int)
@@ -113,13 +119,31 @@ instance PrettyCode ConstantValue where
       return $ annotate AnnLiteralInteger (pretty i)
     ConstString txt ->
       return $ annotate AnnLiteralString (pretty (show txt :: String))
+    ConstByteArray bs -> do
+      let bytes = ConstUInt8 <$> BS.unpack bs
+      codeBs <- mapM ppCode bytes
+      bytesList <- go codeBs
+      op <- ppCode OpByteArrayFromListByte
+      return (op <+> bytesList)
+      where
+        go :: [Doc Ann] -> Sem r (Doc Ann)
+        go xs = do
+          uint8Ty <- ppCode mkTypeUInt8'
+          case xs of
+            [] -> return (parens (kwBuiltinNil <+> uint8Ty))
+            (d : ds) -> do
+              next <- go ds
+              return (parens (kwBuiltinCons <+> uint8Ty <+> d <+> next))
+
+instance PrettyCode Word8 where
+  ppCode i = return (pretty i <> "u8")
 
 instance PrettyCode (Constant' i) where
   ppCode Constant {..} = case _constantValue of
     ConstField fld ->
       return $ annotate AnnLiteralInteger (pretty fld <> "F")
     ConstUInt8 i ->
-      return $ annotate AnnLiteralInteger (pretty i <> "u8")
+      annotate AnnLiteralInteger <$> ppCode i
     _ -> ppCode _constantValue
 
 instance (PrettyCode a, HasAtomicity a) => PrettyCode (App' i a) where
@@ -548,7 +572,7 @@ instance PrettyCode InfoTable where
           shouldPrintInductive :: Maybe BuiltinType -> Bool
           shouldPrintInductive = \case
             Just (BuiltinTypeInductive i) -> case i of
-              BuiltinList -> True
+              BuiltinList -> False
               BuiltinMaybe -> False
               BuiltinPair -> True
               BuiltinPoseidonState -> True
@@ -761,6 +785,12 @@ primUInt8FromInt = primitive Str.itou8
 primFieldToInt :: Doc Ann
 primFieldToInt = primitive Str.ftoi
 
+primByteArrayFromListByte :: Doc Ann
+primByteArrayFromListByte = primitive Str.byteArrayFromListByte
+
+primByteArrayLength :: Doc Ann
+primByteArrayLength = primitive Str.byteArrayLength
+
 primLess :: Doc Ann
 primLess = primitive Str.less
 
@@ -868,3 +898,9 @@ kwBottomAscii = keyword Str.bottomAscii
 
 kwBottom :: Doc Ann
 kwBottom = keyword Str.bottom
+
+kwBuiltinCons :: Doc Ann
+kwBuiltinCons = constructor Str.builtinListCons
+
+kwBuiltinNil :: Doc Ann
+kwBuiltinNil = constructor Str.builtinListNil

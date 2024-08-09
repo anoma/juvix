@@ -288,6 +288,17 @@ declareMaybeBuiltins = do
       (tagJust, "just", mkPi' mkDynamic', Just BuiltinMaybeJust)
     ]
 
+declareListBuiltins :: (Member InfoTableBuilder r) => Sem r ()
+declareListBuiltins = do
+  tagNil <- freshTag
+  tagCons <- freshTag
+  declareInductiveBuiltins
+    "BuiltinList"
+    (Just (BuiltinTypeInductive BuiltinList))
+    [ (tagNil, "builtinListNil", mkPis' [mkSmallUniv], Just BuiltinListNil),
+      (tagCons, "builtinListCons", \x -> mkPis' [mkSmallUniv, mkDynamic', x] x, Just BuiltinListCons)
+    ]
+
 reserveLiteralIntToNatSymbol :: (Member InfoTableBuilder r) => Sem r ()
 reserveLiteralIntToNatSymbol = do
   sym <- freshSymbol
