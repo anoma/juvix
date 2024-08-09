@@ -16,7 +16,7 @@ import Juvix.Compiler.Concrete.Extra qualified as Concrete
 import Juvix.Compiler.Concrete.Gen qualified as Gen
 import Juvix.Compiler.Concrete.Keywords
 import Juvix.Compiler.Concrete.Keywords qualified as Kw
-import Juvix.Compiler.Concrete.Language
+import Juvix.Compiler.Concrete.Language.Base
 import Juvix.Compiler.Concrete.MigrateNamedApplication
 import Juvix.Compiler.Concrete.Pretty.Options
 import Juvix.Compiler.Concrete.Translation.ImportScanner.Base

@@ -147,10 +147,16 @@ toPlainTextTrim :: (HasTextBackend a) => a -> Text
 toPlainTextTrim = trimText . toPlainText
 
 prettyString :: (Pretty a) => a -> String
-prettyString = renderString . layoutPretty defaultLayoutOptions . pretty
+prettyString = renderString . prettySimpleDoc
+
+prettyIsString :: (Pretty a, IsString str) => a -> str
+prettyIsString = fromString . prettyString
+
+prettySimpleDoc :: (Pretty a) => a -> SimpleDocStream ann
+prettySimpleDoc = layoutPretty defaultLayoutOptions . pretty
 
 prettyText :: (Pretty a) => a -> Text
-prettyText = Text.renderStrict . layoutPretty defaultLayoutOptions . pretty
+prettyText = Text.renderStrict . prettySimpleDoc
 
 hsepSoft' :: (Foldable f) => f (Doc a) -> Doc a
 hsepSoft' = concatWith (\a b -> a <> softline' <> b)

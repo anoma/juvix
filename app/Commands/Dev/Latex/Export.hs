@@ -16,12 +16,17 @@ runCommand :: (Members AppEffects r) => ExportOptions -> Sem r ()
 runCommand ExportOptions {..} = do
   res :: Scoper.ScoperResult <- silenceProgressLog (runPipelineNoOptions (Just _exportInputFile) upToScopingEntry)
   let m :: Module 'Scoped 'ModuleTop = res ^. Scoper.resultModule
-      c :: Maybe Comments = guard (not _exportNoComments) $> Scoper.getScoperResultComments res
-      ltx :: Text =
-        Text.unlines
-          . sublist (pred <$> _exportFromLine) (pred <$> _exportToLine)
-          . Text.lines
-          $ moduleToLatex c m
+      c :: Maybe Comments = do
+        guard (not _exportNoComments)
+        return (Scoper.getScoperResultComments res)
+  ltx :: Text <- case _exportFilter of
+    ExportFilterNames names -> undefined
+    ExportFilterRange ExportRange {..} ->
+      return
+        . Text.unlines
+        . sublist (pred <$> _exportFromLine) (pred <$> _exportToLine)
+        . Text.lines
+        $ moduleToLatex c m
   renderStdOutLn $
     case _exportMode of
       ExportStandalone -> standalone ltx

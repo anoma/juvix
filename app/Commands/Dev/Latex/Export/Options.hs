@@ -3,12 +3,22 @@ module Commands.Dev.Latex.Export.Options where
 import CommonOptions
 import Prelude qualified
 
+data ExportFilter
+  = ExportFilterRange ExportRange
+  | ExportFilterNames [Text]
+  deriving stock (Data)
+
+data ExportRange = ExportRange
+  { _exportFromLine :: Maybe Int,
+    _exportToLine :: Maybe Int
+  }
+  deriving stock (Data)
+
 data ExportOptions = ExportOptions
   { _exportInputFile :: AppPath File,
     _exportMode :: ExportMode,
-    _exportNoComments :: Bool,
-    _exportFromLine :: Maybe Int,
-    _exportToLine :: Maybe Int
+    _exportFilter :: ExportFilter,
+    _exportNoComments :: Bool
   }
   deriving stock (Data)
 
@@ -65,6 +75,7 @@ parseExport = do
             <> metavar "LINE"
             <> help "Output until the given line (included)"
         )
+  let _exportFilter :: ExportFilter = error "ha"
   pure ExportOptions {..}
   where
     readLineNumber :: ReadM Int
