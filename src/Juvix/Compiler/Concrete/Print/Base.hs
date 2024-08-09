@@ -16,7 +16,7 @@ import Juvix.Compiler.Concrete.Extra qualified as Concrete
 import Juvix.Compiler.Concrete.Gen qualified as Gen
 import Juvix.Compiler.Concrete.Keywords
 import Juvix.Compiler.Concrete.Keywords qualified as Kw
-import Juvix.Compiler.Concrete.Language
+import Juvix.Compiler.Concrete.Language.Base
 import Juvix.Compiler.Concrete.MigrateNamedApplication
 import Juvix.Compiler.Concrete.Pretty.Options
 import Juvix.Compiler.Concrete.Translation.ImportScanner.Base
@@ -483,6 +483,9 @@ instance (PrettyPrint a) => PrettyPrint [a] where
   ppCode x = do
     let cs = map ppCode (toList x)
     encloseSep (ppCode @Text "[") (ppCode @Text "]") (ppCode @Text ", ") cs
+
+instance (SingI s) => PrettyPrint (Statements s) where
+  ppCode = ppStatements . (^. statements)
 
 ppStatements :: forall s r. (SingI s, Members '[ExactPrint, Reader Options] r) => [Statement s] -> Sem r ()
 ppStatements ss = paragraphs (ppGroup <$> Concrete.groupStatements (filter shouldBePrinted ss))

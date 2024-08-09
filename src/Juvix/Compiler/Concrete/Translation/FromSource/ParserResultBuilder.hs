@@ -94,3 +94,9 @@ runParserResultBuilder s =
             { _parsedLoc = getLoc c,
               _parsedTag = ParsedTagComment
             }
+
+ignoreParserResultBuilder :: Sem (ParserResultBuilder ': r) a -> Sem r a
+ignoreParserResultBuilder = interpret $ \case
+  RegisterImport {} -> return ()
+  RegisterItem {} -> return ()
+  RegisterSpaceSpan {} -> return ()

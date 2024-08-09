@@ -13,14 +13,18 @@ import Control.Exception qualified as GHC
 import Data.List.NonEmpty qualified as NonEmpty
 import GHC.Conc
 import Juvix.Compiler.Casm.Data.TransformationId.Parser qualified as Casm
+import Juvix.Compiler.Concrete.Translation.FromSource.Lexer
+import Juvix.Compiler.Concrete.Translation.FromSource.ParserResultBuilder
 import Juvix.Compiler.Concrete.Translation.ImportScanner
 import Juvix.Compiler.Core.Data.TransformationId.Parser qualified as Core
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Reg.Data.TransformationId.Parser qualified as Reg
 import Juvix.Compiler.Tree.Data.TransformationId.Parser qualified as Tree
 import Juvix.Data.Field
+import Juvix.Data.Keyword.All qualified as Kw
 import Juvix.Prelude
 import Juvix.Prelude as Juvix
+import Juvix.Prelude.Parsing qualified as P
 import Juvix.Prelude.Pretty hiding (group, list)
 import Options.Applicative hiding (helpDoc)
 import Options.Applicative qualified as Opt
@@ -371,3 +375,15 @@ instance EntryPointOptions (EntryPoint -> EntryPoint) where
 
 instance EntryPointOptions () where
   applyOptions () = id
+
+readMParsecS :: ParsecS '[ParserResultBuilder] a -> ReadM a
+readMParsecS p = eitherReader $ \strInput ->
+  run (ignoreParserResultBuilder (P.parseHelperS p (pack strInput)))
+
+readMIdentifier :: ReadM Text
+readMIdentifier = readMParsecS identifier
+
+readMIdentifierList :: ReadM [Text]
+readMIdentifierList =
+  readMParsecS $
+    P.sepEndBy identifier (kw Kw.delimSemicolon)

@@ -12,21 +12,40 @@ import Juvix.Compiler.Backend.Latex.Translation.FromScoped.Source
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 
-runCommand :: (Members AppEffects r) => ExportOptions -> Sem r ()
+runCommand :: forall r. (Members AppEffects r) => ExportOptions -> Sem r ()
 runCommand ExportOptions {..} = do
   res :: Scoper.ScoperResult <- silenceProgressLog (runPipelineNoOptions (Just _exportInputFile) upToScopingEntry)
+  inputAbs :: Path Abs File <- fromAppPathFile _exportInputFile
   let m :: Module 'Scoped 'ModuleTop = res ^. Scoper.resultModule
-      c :: Maybe Comments = guard (not _exportNoComments) $> Scoper.getScoperResultComments res
-      ltx :: Text =
-        Text.unlines
-          . sublist (pred <$> _exportFromLine) (pred <$> _exportToLine)
-          . Text.lines
-          $ moduleToLatex c m
+      c :: Maybe FileComments = do
+        guard (not _exportNoComments)
+        return (fromJust (Scoper.getScoperResultComments res ^. commentsByFile . at inputAbs))
+  ltx :: Text <- case _exportFilter of
+    ExportFilterNames names -> goNames m names
+    ExportFilterRange ExportRange {..} ->
+      return
+        . Text.unlines
+        . sublist (pred <$> _exportFromLine) (pred <$> _exportToLine)
+        . Text.lines
+        $ concreteToLatex c m
   renderStdOutLn $
     case _exportMode of
       ExportStandalone -> standalone ltx
       ExportRaw -> ltx
       ExportWrap -> verb ltx
+  where
+    goNames :: Module 'Scoped 'ModuleTop -> [Text] -> Sem r Text
+    goNames m ns = do
+      stms :: [Statement 'Scoped] <- mapM getStatement ns
+      return (concreteToLatex Nothing (Statements stms))
+      where
+        getStatement :: Text -> Sem r (Statement 'Scoped)
+        getStatement lbl = case tbl ^. at lbl of
+          Nothing -> exitFailMsg ("The statement " <> lbl <> " does not exist")
+          Just s -> return s
+
+        tbl :: HashMap Text (Statement 'Scoped)
+        tbl = topStatementsByLabel m
 
 verb :: Text -> Text
 verb code =
