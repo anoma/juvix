@@ -20,8 +20,9 @@ isSpecializable md node =
       NLam {} -> True
       NCst {} -> True
       NCtr Constr {..} ->
-        -- TODO: rethink this
-        all (isSpecializable md) _constrArgs
+        case lookupConstructorInfo md _constrTag ^. constructorPragmas . pragmasSpecialise of
+          Just (PragmaSpecialise False) -> False
+          _ -> True
       NApp {} ->
         let (h, _) = unfoldApps' node
          in isSpecializable md h
