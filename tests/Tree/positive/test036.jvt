@@ -1,5 +1,5 @@
 type stream {
-  scons : (integer, unit → stream) → stream;
+  cons : (integer, unit → stream) → stream;
 }
 
 function force(unit → stream) : stream;
@@ -17,9 +17,9 @@ function force(f : unit → stream) : stream {
 
 function filter(f : integer → bool, s : unit → stream, unit) : stream {
   save[s1](call[force](s)) {
-    br(call(f, s1.scons[0])) {
-      true: alloc[scons](s1.scons[0], calloc[filter](f, s1.scons[1]))
-      false: call[filter](f, s1.scons[1], unit)
+    br(call(f, s1.cons[0])) {
+      true: alloc[cons](s1.cons[0], calloc[filter](f, s1.cons[1]))
+      false: call[filter](f, s1.cons[1], unit)
     }
   }
 }
@@ -27,14 +27,14 @@ function filter(f : integer → bool, s : unit → stream, unit) : stream {
 function nth(n : integer, s : unit → stream) : integer {
   save[s1](call[force](s)) {
     br(eq(0, n)) {
-      true: s1.scons[0]
-      false: call[nth](sub(n, 1), s1.scons[1])
+      true: s1.cons[0]
+      false: call[nth](sub(n, 1), s1.cons[1])
     }
   }
 }
 
 function numbers(n : integer, unit) : stream {
-  alloc[scons](n, calloc[numbers](add(1, n)))
+  alloc[cons](n, calloc[numbers](add(1, n)))
 }
 
 function indivisible(n : integer, m : integer) : bool {
@@ -46,7 +46,7 @@ function indivisible(n : integer, m : integer) : bool {
 
 function eratostenes(s : unit → stream, unit) : stream {
   save[s1](call[force](s)) {
-    alloc[scons](s1.scons[0], calloc[eratostenes](calloc[filter](calloc[indivisible](s1.scons[0]), s1.scons[1])))
+    alloc[cons](s1.cons[0], calloc[eratostenes](calloc[filter](calloc[indivisible](s1.cons[0]), s1.cons[1])))
   }
 }
 

@@ -1,5 +1,10 @@
 -- ByteArray
 
+type list {
+  nil : list;
+  cons : * -> list -> list;
+}
+
 function main() : * {
   save(bytearray-from-list-uint8(alloc[cons](258u8, alloc[cons](1u8, alloc[nil]())))) {
     seq(trace(bytearray-length(tmp[0])), tmp[0])

@@ -1,3 +1,8 @@
+type list {
+  nil : list;
+  cons : (*, list) → list;
+}
+
 function sum''(integer) : integer;
 function gt5(integer) : bool;
 function dec(integer) : integer;

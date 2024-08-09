@@ -24,7 +24,6 @@ import Juvix.Compiler.Tree.Language.Base
 import Juvix.Compiler.Tree.Translation.FromSource.Lexer.Base
 import Juvix.Compiler.Tree.Translation.FromSource.Sig
 import Juvix.Data.Field
-import Juvix.Extra.Strings qualified as Str
 import Juvix.Parser.Error
 import Text.Megaparsec qualified as P
 
@@ -66,17 +65,17 @@ runParserS'' parser sig bs fileName input_ =
 
 createBuiltinConstr ::
   Symbol ->
-  Tag ->
+  BuiltinDataTag ->
   Text ->
   Type ->
   Location ->
   ConstructorInfo
-createBuiltinConstr sym tag name ty i =
-  let n = length (typeArgs ty)
+createBuiltinConstr sym btag name ty i =
+  let n = builtinConstrArgsNum btag
    in ConstructorInfo
         { _constructorName = name,
           _constructorLocation = Just i,
-          _constructorTag = tag,
+          _constructorTag = BuiltinTag btag,
           _constructorType = ty,
           _constructorArgsNum = n,
           _constructorArgNames = replicate n Nothing,
@@ -85,22 +84,22 @@ createBuiltinConstr sym tag name ty i =
           _constructorFixity = Nothing
         }
 
-declareInductiveBuiltins ::
-  forall t e r.
-  ((Member (InfoTableBuilder' t e)) r) =>
-  Text ->
-  [(Tag, Text, Type -> Type)] ->
-  ParsecS r ()
-declareInductiveBuiltins indName ctrs = do
+declareBuiltins :: forall t e r. (Members '[InfoTableBuilder' t e] r) => ParsecS r ()
+declareBuiltins = do
   loc <- curLoc
   let i = mkInterval loc loc
   sym <- lift $ freshSymbol' @t @e
-  let indTy = mkTypeInductive sym
-      constrs = map (builtinConstr i sym indTy) ctrs
+  let tyio = mkTypeInductive sym
+      constrs =
+        [ createBuiltinConstr sym TagReturn "return" (mkTypeFun [TyDynamic] tyio) i,
+          createBuiltinConstr sym TagBind "bind" (mkTypeFun [tyio, mkTypeFun [TyDynamic] tyio] tyio) i,
+          createBuiltinConstr sym TagWrite "write" (mkTypeFun [TyDynamic] tyio) i,
+          createBuiltinConstr sym TagReadLn "readLn" tyio i
+        ]
   lift $
     registerInductive' @t @e
       ( InductiveInfo
-          { _inductiveName = indName,
+          { _inductiveName = "IO",
             _inductiveSymbol = sym,
             _inductiveLocation = Just i,
             _inductiveKind = TyDynamic,
@@ -109,34 +108,6 @@ declareInductiveBuiltins indName ctrs = do
           }
       )
   lift $ mapM_ (registerConstr' @t @e) constrs
-  where
-    builtinConstr :: Interval -> Symbol -> Type -> (Tag, Text, Type -> Type) -> ConstructorInfo
-    builtinConstr i sym indTy (tag, ctorName, ctorTyFn) = createBuiltinConstr sym tag ctorName (ctorTyFn indTy) i
-
-declareBuiltinIO :: forall t e r. (Members '[InfoTableBuilder' t e] r) => ParsecS r ()
-declareBuiltinIO =
-  declareInductiveBuiltins @t @e
-    "IO"
-    [ (BuiltinTag TagReturn, "return", mkTypeFun [TyDynamic]),
-      (BuiltinTag TagBind, "bind", \ty -> mkTypeFun [ty, mkTypeFun [TyDynamic] ty] ty),
-      (BuiltinTag TagWrite, "write", mkTypeFun [TyDynamic]),
-      (BuiltinTag TagReadLn, "readLn", id)
-    ]
-
-declareBuiltinList :: forall t e r. (Members '[InfoTableBuilder' t e] r) => ParsecS r ()
-declareBuiltinList = do
-  tagNil <- lift (freshTag' @t @e)
-  tagCons <- lift (freshTag' @t @e)
-  declareInductiveBuiltins @t @e
-    Str.list
-    [ (tagNil, Str.nil, id),
-      (tagCons, Str.cons, \ty -> mkTypeFun [TyDynamic, ty] ty)
-    ]
-
-declareBuiltins :: forall t e r. (Members '[InfoTableBuilder' t e] r) => ParsecS r ()
-declareBuiltins = do
-  declareBuiltinIO @t @e
-  declareBuiltinList @t @e
 
 parseToplevel ::
   forall t e d.
