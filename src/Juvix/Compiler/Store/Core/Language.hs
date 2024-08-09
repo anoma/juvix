@@ -9,6 +9,29 @@ import Juvix.Extra.Serialize
 
 {---------------------------------------------------------------------------------}
 
+data LetRecInfo = LetRecInfo
+  { _letRecInfoPragmas :: [Pragmas]
+  }
+  deriving stock (Generic)
+
+instance Serialize LetRecInfo
+
+instance NFData LetRecInfo
+
+data LambdaInfo = LambdaInfo
+  { _lambdaInfoPragma :: Pragmas
+  }
+  deriving stock (Generic)
+
+instance Serialize LambdaInfo
+
+instance NFData LambdaInfo
+
+makeLenses ''LetRecInfo
+makeLenses ''LambdaInfo
+
+{---------------------------------------------------------------------------------}
+
 type Type = Node
 
 type Var = Var' ()
@@ -23,13 +46,13 @@ type BuiltinApp = BuiltinApp' () Node
 
 type Constr = Constr' () Node
 
-type Lambda = Lambda' () Node Type
+type Lambda = Lambda' LambdaInfo Node Type
 
 type LetItem = LetItem' Node Type
 
 type Let = Let' () Node Type
 
-type LetRec = LetRec' () Node Type
+type LetRec = LetRec' LetRecInfo Node Type
 
 type Case = Case' () () Node Type
 

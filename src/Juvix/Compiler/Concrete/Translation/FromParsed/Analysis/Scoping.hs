@@ -588,7 +588,7 @@ checkImportNoPublic ::
   Import 'Parsed ->
   Sem r (Import 'Scoped)
 checkImportNoPublic import_@Import {..} = do
-  eassert (_importPublic == NoPublic)
+  massert (_importPublic == NoPublic)
   smodule <- readScopeModule import_
   let sname :: S.TopModulePath = smodule ^. scopedModulePath
       sname' :: S.Name = set S.nameConcrete (topModulePathToName _importModulePath) sname
@@ -1460,7 +1460,7 @@ checkSections sec = topBindings helper
               -- section and start a new one
               def@DefinitionFunctionDef {} : defs
                 | not (null ms) -> do
-                    eassert (not (null acc))
+                    massert (not (null acc))
                     sec' <- goDefsSection (nonEmpty' (reverse acc))
                     ms' <- goInductiveModules (nonEmpty' (reverse ms))
                     next' <- goDefs [] [] (def : defs)
@@ -1481,7 +1481,7 @@ checkSections sec = topBindings helper
                 let ms' = maybeToList m ++ ms
                 goDefs (def : acc) ms' defs
               [] -> do
-                eassert (not (null acc))
+                massert (not (null acc))
                 sec' <- goDefsSection (nonEmpty' (reverse acc))
                 next' <- case nonEmpty (reverse ms) of
                   Nothing -> mapM goNonDefinitions _definitionsNext
@@ -1573,8 +1573,8 @@ checkSections sec = topBindings helper
                                 failMaybe $
                                   mkRec
                                     ^? constructorRhs
-                                      . _ConstructorRhsRecord
-                                      . to mkRecordNameSignature
+                                    . _ConstructorRhsRecord
+                                    . to mkRecordNameSignature
                               let info =
                                     RecordInfo
                                       { _recordInfoSignature = fs,
