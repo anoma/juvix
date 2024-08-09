@@ -519,45 +519,61 @@ geval opts herr tab env0 = eval' env0
         uint8FromIntOp =
           unary $ \node ->
             let !v = eval' env node
-             in nodeFromUInt8
-                  . fromIntegral
-                  . fromMaybe (evalError "expected integer" v)
-                  . integerFromNode
-                  $ v
+             in if
+                    | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                        mkBuiltinApp' OpUInt8FromInt [v]
+                    | otherwise ->
+                        nodeFromUInt8
+                          . fromIntegral
+                          . fromMaybe (evalError "expected integer" v)
+                          . integerFromNode
+                          $ v
         {-# INLINE uint8FromIntOp #-}
 
         uint8ToIntOp :: [Node] -> Node
         uint8ToIntOp =
           unary $ \node ->
             let !v = eval' env node
-             in nodeFromInteger
-                  . toInteger
-                  . fromMaybe (evalError "expected uint8" v)
-                  . uint8FromNode
-                  $ v
+             in if
+                    | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                        mkBuiltinApp' OpUInt8ToInt [v]
+                    | otherwise ->
+                        nodeFromInteger
+                          . toInteger
+                          . fromMaybe (evalError "expected uint8" v)
+                          . uint8FromNode
+                          $ v
         {-# INLINE uint8ToIntOp #-}
 
         byteArrayFromListByteOp :: [Node] -> Node
         byteArrayFromListByteOp =
           unary $ \node ->
             let !v = eval' env node
-             in nodeFromByteString
-                  . BS.pack
-                  . fromMaybe (evalError "expected list byte" v)
-                  . listUInt8FromNode
-                  $ v
+             in if
+                    | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                        mkBuiltinApp' OpByteArrayFromListByte [v]
+                    | otherwise ->
+                        nodeFromByteString
+                          . BS.pack
+                          . fromMaybe (evalError "expected list byte" v)
+                          . listUInt8FromNode
+                          $ v
         {-# INLINE byteArrayFromListByteOp #-}
 
         byteArrayLengthOp :: [Node] -> Node
         byteArrayLengthOp =
           unary $ \node ->
             let !v = eval' env node
-             in nodeFromInteger
-                  . fromIntegral
-                  . BS.length
-                  . fromMaybe (evalError "expected bytestring" v)
-                  . byteStringFromNode
-                  $ v
+             in if
+                    | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                        mkBuiltinApp' OpByteArrayLength [v]
+                    | otherwise ->
+                        nodeFromInteger
+                          . fromIntegral
+                          . BS.length
+                          . fromMaybe (evalError "ByteArrayLengthOp expected bytestring" v)
+                          . byteStringFromNode
+                          $ v
         {-# INLINE byteArrayLengthOp #-}
 
     {-# INLINE applyBuiltin #-}
