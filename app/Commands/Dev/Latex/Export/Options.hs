@@ -75,8 +75,20 @@ parseExport = do
             <> metavar "LINE"
             <> help "Output until the given line (included)"
         )
-  let _exportFilter :: ExportFilter = error "ha"
-  pure ExportOptions {..}
+  mexportNames <-
+    optional $
+      option
+        readMIdentifierList
+        ( long "statements"
+            <> metavar "[STATEMENT_NAME]"
+            <> help "Export a list of statements"
+        )
+
+  pure $
+    let _exportFilter :: ExportFilter = case mexportNames of
+          Nothing -> ExportFilterRange ExportRange {..}
+          Just names -> ExportFilterNames names
+     in ExportOptions {..}
   where
     readLineNumber :: ReadM Int
     readLineNumber = eitherReader readr

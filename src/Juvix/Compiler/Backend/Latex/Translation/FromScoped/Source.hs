@@ -1,5 +1,5 @@
 module Juvix.Compiler.Backend.Latex.Translation.FromScoped.Source
-  ( moduleToLatex,
+  ( concreteToLatex,
   )
 where
 
@@ -28,21 +28,19 @@ data LatexColor
   | JuJudoc
   | JuModule
 
-moduleToLatex ::
-  Maybe Comments ->
-  Module 'Scoped 'ModuleTop ->
+concreteToLatex ::
+  (PrettyPrint a) =>
+  Maybe FileComments ->
+  a ->
   Text
-moduleToLatex c = toStrict . Builder.toLazyText . genModuleLatex c
+concreteToLatex c = toStrict . Builder.toLazyText . genLatex c
 
-genModuleLatex ::
-  Maybe Comments ->
-  Module 'Scoped 'ModuleTop ->
-  TextBuilder
-genModuleLatex c =
+genLatex :: (PrettyPrint a) => Maybe FileComments -> a -> TextBuilder
+genLatex c =
   renderTree
     . treeForm
     . layoutPretty defaultLayoutOptions
-    . doc defaultOptions c
+    . docHelper c defaultOptions
 
 renderTree :: SimpleDocTree Ann -> TextBuilder
 renderTree = go

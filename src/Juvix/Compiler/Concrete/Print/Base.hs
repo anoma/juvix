@@ -484,6 +484,9 @@ instance (PrettyPrint a) => PrettyPrint [a] where
     let cs = map ppCode (toList x)
     encloseSep (ppCode @Text "[") (ppCode @Text "]") (ppCode @Text ", ") cs
 
+instance (SingI s) => PrettyPrint (Statements s) where
+  ppCode = ppStatements . (^. statements)
+
 ppStatements :: forall s r. (SingI s, Members '[ExactPrint, Reader Options] r) => [Statement s] -> Sem r ()
 ppStatements ss = paragraphs (ppGroup <$> Concrete.groupStatements (filter shouldBePrinted ss))
   where
