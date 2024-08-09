@@ -29,6 +29,13 @@ stdlibPath = \case
   StdlibLengthList -> [nock| [9 1.406 0 31] |]
   -- Obtained from the urbit dojo using:
   --
+  -- =>  anoma  !=(~(met block 3))
+  --
+  -- The `3` here is because we want to treat each atom as sequences of 2^3
+  -- bits, i.e bytes.
+  StdlibLengthBytes -> [nock| [8 [9 10 0 7] 9 190 10 [6 7 [0 3] 1 3] 0 2] |]
+  -- Obtained from the urbit dojo using:
+  --
   -- =>  anoma  !=(~(cat block 3))
   --
   -- The `3` here is because we want to treat each atom as sequences of 2^3
