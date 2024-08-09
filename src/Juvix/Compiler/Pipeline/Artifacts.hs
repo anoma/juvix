@@ -10,7 +10,6 @@ module Juvix.Compiler.Pipeline.Artifacts
 where
 
 import Juvix.Compiler.Builtins
-import Juvix.Compiler.Builtins.Effect qualified as Builtins
 import Juvix.Compiler.Concrete.Data.InfoTableBuilder qualified as Scoped
 import Juvix.Compiler.Concrete.Data.Scope qualified as S
 import Juvix.Compiler.Core.Data.InfoTableBuilder qualified as Core
@@ -28,7 +27,7 @@ import Juvix.Prelude
 appendArtifactsModuleTable :: ModuleTable -> Artifacts -> Artifacts
 appendArtifactsModuleTable mtab =
   over artifactInternalTypedTable (computeCombinedInfoTable importTab <>)
-    . over (artifactBuiltins . Builtins.builtinsTable) (computeCombinedBuiltins mtab <>)
+    . over (artifactBuiltins) (computeCombinedBuiltins mtab <>)
     . over (artifactCoreModule . Core.moduleImportsTable) (computeCombinedCoreInfoTable mtab <>)
     . over artifactModuleTable (mtab <>)
   where
@@ -49,9 +48,11 @@ tmpCoreInfoTableBuilderArtifacts m = do
   modify' (set artifactCoreModule md)
   return a
 
-runBuiltinsArtifacts :: (Members '[Error JuvixError, State Artifacts] r) => Sem (Builtins ': r) a -> Sem r a
+runBuiltinsArtifacts :: forall r a. (Members '[Error JuvixError, State Artifacts] r) => Sem (Builtins ': r) a -> Sem r a
 runBuiltinsArtifacts =
-  runStateLikeArtifacts runBuiltins artifactBuiltins
+  mapError (JuvixError @BuiltinsError)
+    . runStateLikeArtifacts runBuiltins artifactBuiltins
+    . inject
 
 runScoperInfoTableBuilderArtifacts :: (Members '[State Artifacts] r) => Sem (Scoped.InfoTableBuilder ': r) a -> Sem r a
 runScoperInfoTableBuilderArtifacts = runStateLikeArtifacts Scoped.runInfoTableBuilderRepl artifactScopeTable

@@ -4,7 +4,6 @@ module Juvix.Compiler.Pipeline.Run
   )
 where
 
-import Juvix.Compiler.Builtins
 import Juvix.Compiler.Concrete.Data.Highlight
 import Juvix.Compiler.Concrete.Data.Scope
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoped
@@ -318,7 +317,7 @@ runReplPipelineIOEither' lockMode entry = do
           _artifactCoercions = mempty,
           _artifactCoreModule = Core.emptyModule,
           _artifactScopeTable = mempty,
-          _artifactBuiltins = iniBuiltins,
+          _artifactBuiltins = mempty,
           _artifactScopeExports = mempty,
           _artifactScoperState = Scoper.iniScoperState mempty,
           _artifactModuleTable = mempty
