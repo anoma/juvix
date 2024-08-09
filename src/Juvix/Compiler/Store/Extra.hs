@@ -5,10 +5,10 @@ import Juvix.Compiler.Concrete.Data.Builtins
 import Juvix.Compiler.Concrete.Data.Name qualified as C
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Core.Data.InfoTable qualified as Core
-import Juvix.Compiler.Internal.Data.Name
 import Juvix.Compiler.Store.Core.Extra
 import Juvix.Compiler.Store.Internal.Language
 import Juvix.Compiler.Store.Language
+import Juvix.Compiler.Store.Scoped.Data.InfoTable
 import Juvix.Compiler.Store.Scoped.Data.InfoTable qualified as Scoped
 import Juvix.Compiler.Store.Scoped.Language
 import Juvix.Prelude
@@ -26,7 +26,10 @@ getScopedModuleTable mtab =
 getInternalModuleTable :: ModuleTable -> InternalModuleTable
 getInternalModuleTable mtab =
   InternalModuleTable $
-    HashMap.fromList (map (\mi -> (mi ^. moduleInfoInternalModule . internalModuleName, mi ^. moduleInfoInternalModule)) (HashMap.elems (mtab ^. moduleTable)))
+    hashMap
+      [ (mi ^. moduleInfoInternalModule . internalModuleName, mi ^. moduleInfoInternalModule)
+        | mi <- toList (mtab ^. moduleTable)
+      ]
 
 mkModuleTable :: [ModuleInfo] -> ModuleTable
 mkModuleTable = ModuleTable . hashMap . map (\mi -> (getModulePath mi, mi))
@@ -45,8 +48,8 @@ computeCombinedCoreInfoTable :: ModuleTable -> Core.InfoTable
 computeCombinedCoreInfoTable mtab =
   mconcatMap (toCore . (^. moduleInfoCoreTable)) (HashMap.elems (mtab ^. moduleTable))
 
-computeCombinedBuiltins :: ModuleTable -> HashMap BuiltinPrim Name
+computeCombinedBuiltins :: ModuleTable -> HashMap BuiltinPrim S.Symbol
 computeCombinedBuiltins mtab =
   mconcatMap
-    (^. moduleInfoInternalModule . internalModuleInfoTable . infoBuiltins)
+    (^. moduleInfoScopedModule . scopedModuleInfoTable . infoBuiltins)
     (HashMap.elems (mtab ^. moduleTable))

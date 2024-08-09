@@ -6,6 +6,7 @@ module Juvix.Compiler.Internal.Data.Name
   )
 where
 
+import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Data.Fixity
 import Juvix.Data.NameId
 import Juvix.Data.NameKind
@@ -101,3 +102,18 @@ type VarName = Name
 type ConstrName = Name
 
 type InductiveName = Name
+
+fromConcreteSymbol :: S.Symbol -> Name
+fromConcreteSymbol s = fromConcreteSymbolPretty (S.symbolText s) s
+
+fromConcreteSymbolPretty :: Text -> S.Symbol -> Name
+fromConcreteSymbolPretty pp s =
+  Name
+    { _nameText = S.symbolText s,
+      _nameId = s ^. S.nameId,
+      _nameKind = getNameKind s,
+      _nameKindPretty = getNameKindPretty s,
+      _namePretty = pp,
+      _nameLoc = getLoc (s ^. S.nameConcrete),
+      _nameFixity = s ^. S.nameFixity
+    }

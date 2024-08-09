@@ -1,16 +1,16 @@
 module Juvix.Compiler.Builtins.IO where
 
-import Juvix.Compiler.Builtins.Effect
+import Juvix.Compiler.Internal.Builtins
 import Juvix.Compiler.Internal.Extra
 import Juvix.Prelude
 
-registerIO :: (Member Builtins r) => AxiomDef -> Sem r ()
-registerIO d = do
-  unless (isSmallUniverse' (d ^. axiomType)) (error "IO should be in the small universe")
-  registerBuiltin BuiltinIO (d ^. axiomName)
+checkIO :: (Members '[Builtins, Error BuiltinsError] r) => AxiomDef -> Sem r ()
+checkIO d =
+  unless (isSmallUniverse' (d ^. axiomType)) $
+    builtinsErrorText (getLoc d) "IO should be in the small universe"
 
-registerIOSequence :: (Member Builtins r) => AxiomDef -> Sem r ()
-registerIOSequence d = do
+checkIOSequence :: (Members '[Builtins, Error BuiltinsError] r) => AxiomDef -> Sem r ()
+checkIOSequence d = do
   io <- getBuiltinName (getLoc d) BuiltinIO
-  unless (d ^. axiomType === (io --> io --> io)) (error "IO sequence has type IO → IO")
-  registerBuiltin BuiltinIOSequence (d ^. axiomName)
+  unless (d ^. axiomType === (io --> io --> io)) $
+    builtinsErrorText (getLoc d) "IO sequence has type IO → IO"
