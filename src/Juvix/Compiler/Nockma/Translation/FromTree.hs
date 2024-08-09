@@ -35,6 +35,7 @@ where
 
 import Data.ByteString qualified as BS
 import Juvix.Compiler.Nockma.Encoding
+import Juvix.Compiler.Nockma.Encoding.Ed25519 qualified as E
 import Juvix.Compiler.Nockma.Language.Path
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Stdlib
@@ -538,9 +539,21 @@ compile = \case
     goAnomaDecode :: [Term Natural] -> Term Natural
     goAnomaDecode = callStdlib StdlibDecode
 
+    byteArrayPayload :: Text -> Term Natural -> Term Natural
+    byteArrayPayload msg ba = ba >># opAddress msg [R]
+
+    mkByteArray :: Int -> Term Natural -> Term Natural
+    mkByteArray len payload = nockNatLiteral (integerToNatural (toInteger len)) # payload
+
     goAnomaVerifyDetached :: [Term Natural] -> Term Natural
     goAnomaVerifyDetached = \case
-      [sig, message, pubKey] -> callStdlib StdlibVerifyDetached [sig, goAnomaEncode [message], pubKey]
+      [sig, message, pubKey] ->
+        callStdlib
+          StdlibVerifyDetached
+          [ byteArrayPayload "verifyDetachedSig" sig,
+            goAnomaEncode [message],
+            byteArrayPayload "verifyDetachedPubKey" pubKey
+          ]
       _ -> impossible
 
     goAnomaSign :: [Term Natural] -> Term Natural
@@ -550,7 +563,15 @@ compile = \case
 
     goAnomaSignDetached :: [Term Natural] -> Term Natural
     goAnomaSignDetached = \case
-      [message, privKey] -> callStdlib StdlibSignDetached [goAnomaEncode [message], privKey]
+      [message, privKeyByteArray] ->
+        mkByteArray
+          E.signatureLength
+          ( callStdlib
+              StdlibSignDetached
+              [ goAnomaEncode [message],
+                byteArrayPayload "privKeyByteArrayTail" privKeyByteArray
+              ]
+          )
       _ -> impossible
 
     -- Conceptually this function is:

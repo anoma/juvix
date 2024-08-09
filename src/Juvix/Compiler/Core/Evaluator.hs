@@ -390,9 +390,9 @@ geval opts herr tab env0 = eval' env0
                   | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
                       mkBuiltinApp' OpAnomaVerifyDetached [v1, v2, v3]
                   | otherwise ->
-                      case (integerFromNode v1, integerFromNode v3) of
-                        (Just i1, Just i3) -> verifyDetached i1 v2 i3
-                        _ -> err "OpAnomaVerifyDetached: first and third arguments must be integers"
+                      case (byteStringFromNode v1, byteStringFromNode v3) of
+                        (Just bs1, Just bs3) -> verifyDetached bs1 v2 bs3
+                        _ -> err "OpAnomaVerifyDetached: first and third arguments must be bytearrays"
         {-# INLINE anomaVerifyDetachedOp #-}
 
         anomaSignOp :: [Node] -> Node
@@ -414,9 +414,9 @@ geval opts herr tab env0 = eval' env0
            in if
                   | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
                       mkBuiltinApp' OpAnomaSignDetached [v1, v2]
-                  | otherwise -> case integerFromNode v2 of
+                  | otherwise -> case byteStringFromNode v2 of
                       Just i -> signDetached v1 i
-                      Nothing -> err "anomaSignDetachedOp: second argument not an integer"
+                      Nothing -> err "anomaSignDetachedOp: second argument not a bytearray"
         {-# INLINE anomaSignDetachedOp #-}
 
         anomaVerifyWithMessageOp :: [Node] -> Node
@@ -499,19 +499,19 @@ geval opts herr tab env0 = eval' env0
                   | otherwise -> nodeMaybeNothing
         {-# INLINE verify #-}
 
-        signDetached :: Node -> Integer -> Node
-        signDetached !messageNode !secretKeyInt =
+        signDetached :: Node -> ByteString -> Node
+        signDetached !messageNode !secretKeyBs =
           let !message = serializeNode messageNode
-              !secretKey = secretKeyFromInteger secretKeyInt
+              !secretKey = E.SecretKey secretKeyBs
               (E.Signature !sig) = E.dsign secretKey message
-           in nodeFromInteger (Encoding.encodeByteString sig)
+           in nodeFromByteString sig
         {-# INLINE signDetached #-}
 
-        verifyDetached :: Integer -> Node -> Integer -> Node
-        verifyDetached !signatureInt !messageNode !publicKeyInt =
-          let !sig = E.Signature (decodeByteString signatureInt)
+        verifyDetached :: ByteString -> Node -> ByteString -> Node
+        verifyDetached !signatureBs !messageNode !publicKeyBs =
+          let !sig = E.Signature signatureBs
               !message = serializeNode messageNode
-              !publicKey = publicKeyFromInteger publicKeyInt
+              !publicKey = E.PublicKey publicKeyBs
            in nodeFromBool (E.dverify publicKey message sig)
         {-# INLINE verifyDetached #-}
 
@@ -555,8 +555,8 @@ geval opts herr tab env0 = eval' env0
              in nodeFromInteger
                   . fromIntegral
                   . BS.length
-                  . fromMaybe (evalError "expected bytearray" v)
-                  . byteArrayFromNode
+                  . fromMaybe (evalError "expected bytestring" v)
+                  . byteStringFromNode
                   $ v
         {-# INLINE byteArrayLengthOp #-}
 
@@ -642,11 +642,11 @@ geval opts herr tab env0 = eval' env0
       _ -> Nothing
     {-# INLINE uint8FromNode #-}
 
-    byteArrayFromNode :: Node -> Maybe ByteString
-    byteArrayFromNode = \case
+    byteStringFromNode :: Node -> Maybe ByteString
+    byteStringFromNode = \case
       NCst (Constant _ (ConstByteArray b)) -> Just b
       _ -> Nothing
-    {-# INLINE byteArrayFromNode #-}
+    {-# INLINE byteStringFromNode #-}
 
     listUInt8FromNode :: Node -> Maybe [Word8]
     listUInt8FromNode = \case

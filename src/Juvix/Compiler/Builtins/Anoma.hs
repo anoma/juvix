@@ -50,12 +50,12 @@ registerAnomaVerifyDetached f = do
       u = ExpressionUniverse smallUniverseNoLoc
       l = getLoc f
   decodeT <- freshVar l "signedDataT"
-  nat <- getBuiltinName (getLoc f) BuiltinNat
+  byteArray <- getBuiltinName (getLoc f) BuiltinByteArray
   bool_ <- getBuiltinName (getLoc f) BuiltinBool
   let freeVars = HashSet.fromList [decodeT]
   unless
-    ((ftype ==% (u <>--> nat --> decodeT --> nat --> bool_)) freeVars)
-    (error "anomaVerifyDetached must be of type {A : Type} -> Nat -> A -> Nat -> Bool")
+    ((ftype ==% (u <>--> byteArray --> decodeT --> byteArray --> bool_)) freeVars)
+    (error "anomaVerifyDetached must be of type {A : Type} -> ByteArray -> A -> ByteArray -> Bool")
   registerBuiltin BuiltinAnomaVerifyDetached (f ^. axiomName)
 
 registerAnomaSign :: (Members '[Builtins, NameIdGen] r) => AxiomDef -> Sem r ()
@@ -91,9 +91,9 @@ registerAnomaSignDetached f = do
       u = ExpressionUniverse smallUniverseNoLoc
       l = getLoc f
   dataT <- freshVar l "dataT"
-  nat <- getBuiltinName (getLoc f) BuiltinNat
+  byteArray <- getBuiltinName (getLoc f) BuiltinByteArray
   let freeVars = HashSet.fromList [dataT]
   unless
-    ((ftype ==% (u <>--> dataT --> nat --> nat)) freeVars)
-    (error "anomaSignDetached must be of type {A : Type} -> A -> Nat -> Nat")
+    ((ftype ==% (u <>--> dataT --> byteArray --> byteArray)) freeVars)
+    (error "anomaSignDetached must be of type {A : Type} -> A -> ByteArray -> ByteArray")
   registerBuiltin BuiltinAnomaSignDetached (f ^. axiomName)

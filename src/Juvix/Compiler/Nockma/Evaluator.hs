@@ -292,15 +292,6 @@ evalProfile inistack initerm =
                   TermAtom x -> x
                   TermCell {} -> error "expect list element to be an atom"
 
-            signatureLength :: Int
-            signatureLength = 64
-
-            publicKeyLength :: Int
-            publicKeyLength = 32
-
-            privateKeyLength :: Int
-            privateKeyLength = 64
-
             goVerifyDetached :: Atom a -> Atom a -> Atom a -> Sem r (Term a)
             goVerifyDetached sigT messageT pubKeyT = do
               sig <- Signature <$> atomToByteStringLen signatureLength sigT
