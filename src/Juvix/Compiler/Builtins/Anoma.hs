@@ -64,11 +64,11 @@ registerAnomaSign f = do
       u = ExpressionUniverse smallUniverseNoLoc
       l = getLoc f
   dataT <- freshVar l "dataT"
-  nat <- getBuiltinName (getLoc f) BuiltinNat
+  byteArray <- getBuiltinName (getLoc f) BuiltinByteArray
   let freeVars = HashSet.fromList [dataT]
   unless
-    ((ftype ==% (u <>--> dataT --> nat --> nat)) freeVars)
-    (error "anomaSign must be of type {A : Type} -> A -> Nat -> Nat")
+    ((ftype ==% (u <>--> dataT --> byteArray --> byteArray)) freeVars)
+    (error "anomaSign must be of type {A : Type} -> A -> ByteArray -> ByteArray")
   registerBuiltin BuiltinAnomaSign (f ^. axiomName)
 
 registerAnomaVerifyWithMessage :: (Members '[Builtins, NameIdGen] r) => AxiomDef -> Sem r ()
@@ -77,12 +77,12 @@ registerAnomaVerifyWithMessage f = do
       u = ExpressionUniverse smallUniverseNoLoc
       l = getLoc f
   dataT <- freshVar l "dataT"
-  nat <- getBuiltinName (getLoc f) BuiltinNat
+  byteArray <- getBuiltinName (getLoc f) BuiltinByteArray
   maybe_ <- getBuiltinName (getLoc f) BuiltinMaybe
   let freeVars = HashSet.fromList [dataT]
   unless
-    ((ftype ==% (u <>--> nat --> nat --> maybe_ @@ dataT)) freeVars)
-    (error "anomaVerify must be of type {A : Type} -> Nat -> Nat -> Maybe A")
+    ((ftype ==% (u <>--> byteArray --> byteArray --> maybe_ @@ dataT)) freeVars)
+    (error "anomaVerify must be of type {A : Type} -> byteArray -> byteArray -> Maybe A")
   registerBuiltin BuiltinAnomaVerifyWithMessage (f ^. axiomName)
 
 registerAnomaSignDetached :: (Members '[Builtins, NameIdGen] r) => AxiomDef -> Sem r ()

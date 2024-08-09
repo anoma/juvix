@@ -542,8 +542,8 @@ compile = \case
     byteArrayPayload :: Text -> Term Natural -> Term Natural
     byteArrayPayload msg ba = ba >># opAddress msg [R]
 
-    mkByteArray :: Int -> Term Natural -> Term Natural
-    mkByteArray len payload = nockNatLiteral (integerToNatural (toInteger len)) # payload
+    mkByteArray :: Term Natural -> Term Natural -> Term Natural
+    mkByteArray len payload = len # payload
 
     goAnomaVerifyDetached :: [Term Natural] -> Term Natural
     goAnomaVerifyDetached = \case
@@ -558,14 +558,31 @@ compile = \case
 
     goAnomaSign :: [Term Natural] -> Term Natural
     goAnomaSign = \case
-      [message, privKey] -> callStdlib StdlibSign [goAnomaEncode [message], privKey]
+      [message, privKey] ->
+        opReplace
+          "callMkByteArrayOnSignResult"
+          (closurePath ArgsTuple)
+          ( callStdlib
+              StdlibSign
+              [ goAnomaEncode [message],
+                byteArrayPayload "anomaSignPrivKeyTail" privKey
+              ]
+          )
+          (opAddress "stack" emptyPath)
+          >># goReturnByteArray
       _ -> impossible
+      where
+        goReturnByteArray :: Term Natural
+        goReturnByteArray = mkByteArray (callStdlib StdlibLengthBytes [signResult]) signResult
+
+        signResult :: Term Natural
+        signResult = opAddress "sign-result" (closurePath ArgsTuple)
 
     goAnomaSignDetached :: [Term Natural] -> Term Natural
     goAnomaSignDetached = \case
       [message, privKeyByteArray] ->
         mkByteArray
-          E.signatureLength
+          (nockNatLiteral (integerToNatural (toInteger E.signatureLength)))
           ( callStdlib
               StdlibSignDetached
               [ goAnomaEncode [message],
@@ -584,7 +601,7 @@ compile = \case
         opReplace
           "callDecodeFromVerify-args"
           (closurePath ArgsTuple)
-          (callStdlib StdlibVerify [signedMessage, pubKey])
+          (callStdlib StdlibVerify [byteArrayPayload "signedMessageByteArray" signedMessage, byteArrayPayload "pubKeyByteArray" pubKey])
           (opAddress "stack" emptyPath)
           >># goDecodeResult
       _ -> impossible

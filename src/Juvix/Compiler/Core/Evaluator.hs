@@ -402,9 +402,9 @@ geval opts herr tab env0 = eval' env0
            in if
                   | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
                       mkBuiltinApp' OpAnomaSign [v1, v2]
-                  | otherwise -> case integerFromNode v2 of
-                      Just i -> sign v1 i
-                      Nothing -> err "anomaSignOp: second argument not an integer"
+                  | otherwise -> case byteStringFromNode v2 of
+                      Just bs -> sign v1 bs
+                      Nothing -> err "anomaSignOp: second argument not an bytearray"
         {-# INLINE anomaSignOp #-}
 
         anomaSignDetachedOp :: [Node] -> Node
@@ -427,9 +427,9 @@ geval opts herr tab env0 = eval' env0
                   | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
                       mkBuiltinApp' OpAnomaVerifyWithMessage [v1, v2]
                   | otherwise ->
-                      case (integerFromNode v1, integerFromNode v2) of
-                        (Just i1, Just i2) -> verify i1 i2
-                        _ -> err "anomaVerifyWithMessageOp: both arguments are not integers"
+                      case (byteStringFromNode v1, byteStringFromNode v2) of
+                        (Just bs1, Just bs2) -> verify bs1 bs2
+                        _ -> err "anomaVerifyWithMessageOp: both arguments are not bytearrays"
         {-# INLINE anomaVerifyWithMessageOp #-}
 
         poseidonHashOp :: [Node] -> Node
@@ -483,17 +483,16 @@ geval opts herr tab env0 = eval' env0
             decodeErr = err "failed to decode Integer"
         {-# INLINE decodeByteString #-}
 
-        sign :: Node -> Integer -> Node
-        sign !messageNode !secretKeyInt =
+        sign :: Node -> ByteString -> Node
+        sign !messageNode !secretKeyBs =
           let !message = serializeNode messageNode
-              !secretKey = secretKeyFromInteger secretKeyInt
-           in nodeFromInteger (Encoding.encodeByteString (E.sign secretKey message))
+              !secretKey = E.SecretKey secretKeyBs
+           in nodeFromByteString (E.sign secretKey message)
         {-# INLINE sign #-}
 
-        verify :: Integer -> Integer -> Node
-        verify !signedMessageInt !publicKeyInt =
-          let !signedMessage = decodeByteString signedMessageInt
-              !publicKey = publicKeyFromInteger publicKeyInt
+        verify :: ByteString -> ByteString -> Node
+        verify !signedMessage !publicKeyBs =
+          let !publicKey = E.PublicKey publicKeyBs
            in if
                   | E.verify publicKey signedMessage -> nodeMaybeJust (deserializeNode (E.removeSignature signedMessage))
                   | otherwise -> nodeMaybeNothing
@@ -577,17 +576,6 @@ geval opts herr tab env0 = eval' env0
         {-# INLINE byteArrayLengthOp #-}
 
     {-# INLINE applyBuiltin #-}
-
-    -- secretKey, publicKey are not encoded with their length as
-    -- a bytestring in order to be compatible with Anoma sign. Therefore the
-    -- expected length of each must be specified.
-    secretKeyFromInteger :: Integer -> E.SecretKey
-    secretKeyFromInteger = E.SecretKey . Encoding.integerToByteStringLELen 64
-    {-# INLINE secretKeyFromInteger #-}
-
-    publicKeyFromInteger :: Integer -> E.PublicKey
-    publicKeyFromInteger = E.PublicKey . Encoding.integerToByteStringLELen 32
-    {-# INLINE publicKeyFromInteger #-}
 
     nodeFromInteger :: Integer -> Node
     nodeFromInteger !int = mkConstant' (ConstInteger int)
