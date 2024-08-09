@@ -4,6 +4,15 @@ module test058;
 import Stdlib.Prelude open hiding {for};
 import Stdlib.Data.Range open;
 
+{-# specialize: [1, 2, 3, 5] #-}
+myfor {A N} {{Ord N}} {{Natural N}} (f : A → N → A) (a : A) : Range N → A
+  | mkRange@{low; high; step} :=
+    let
+      {-# specialize-by: [f, high, step] #-}
+      terminating
+      go (acc : A) (n : N) : A := ite (n > high) acc (go (f acc n) (n + step));
+    in go a low;
+
 sum (x : Nat) : Nat :=
   for (acc := 0) (n in 1 to x) {acc + n};
 
