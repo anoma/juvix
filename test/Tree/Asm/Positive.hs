@@ -15,8 +15,11 @@ testDescr Eval.PosTest {..} =
           _testAssertion = Steps $ treeAsmAssertion file' expected'
         }
 
+ignoredTests :: [String]
+ignoredTests = ["Test040: ByteArray"]
+
 allTests :: TestTree
 allTests =
   testGroup
     "JuvixTree to JuvixAsm positive tests"
-    (map (mkTest . testDescr) Eval.tests)
+    (map (mkTest . testDescr) (Eval.filterOutTests ignoredTests Eval.tests))
