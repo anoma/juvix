@@ -67,7 +67,6 @@ scopeCheck' ::
 scopeCheck' importTab pr m = do
   fmap mkResult
     . runReader tab
-    . evalBuiltins (tab ^. infoBuiltins)
     . runReader iniScopeParameters
     . runState (iniScoperState tab)
     $ checkTopModule m
@@ -417,13 +416,14 @@ reserveProjectionSymbol d =
     (toBuiltinPrim <$> d ^. projectionFieldBuiltin)
     (d ^. projectionField)
 
--- TODO how to handle registration of constructor builtins?
 reserveConstructorSymbol ::
   (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable, Builtins] r) =>
   InductiveDef 'Parsed ->
   ConstructorDef 'Parsed ->
+  Maybe BuiltinConstructor ->
   Sem r S.Symbol
-reserveConstructorSymbol d c = reserveSymbolSignatureOf SKNameConstructor (d, c) (error "TODO") (c ^. constructorName)
+reserveConstructorSymbol d c b = do
+  reserveSymbolSignatureOf SKNameConstructor (d, c) (toBuiltinPrim <$> b) (c ^. constructorName)
 
 reserveFunctionSymbol ::
   (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable, Builtins] r) =>
@@ -1288,7 +1288,7 @@ localBindings = runReader BindingLocal
 
 checkTopModule ::
   forall r.
-  (Members '[HighlightBuilder, Error ScoperError, Reader ScopeParameters, State ScoperState, Reader InfoTable, NameIdGen, Reader Package, Builtins] r) =>
+  (Members '[HighlightBuilder, Error BuiltinsError, Error ScoperError, Reader ScopeParameters, State ScoperState, Reader InfoTable, NameIdGen, Reader Package] r) =>
   Module 'Parsed 'ModuleTop ->
   Sem r (Module 'Scoped 'ModuleTop, ScopedModule, Scope)
 checkTopModule m@Module {..} = checkedModule
@@ -1321,16 +1321,30 @@ checkTopModule m@Module {..} = checkedModule
 
     checkedModule :: Sem r (Module 'Scoped 'ModuleTop, ScopedModule, Scope)
     checkedModule = do
-      (sc, (tab, (e, body', path', doc'))) <- runState iniScope . runInfoTableBuilder mempty $ do
-        path' <- freshTopModulePath
-        withTopScope $ do
-          (e, body') <- topBindings (checkModuleBody _moduleBody)
-          doc' <- mapM checkJudoc _moduleDoc
-          registerModuleDoc (path' ^. S.nameId) doc'
-          return (e, body', path', doc')
+      ( sc :: Scope,
+        ( tab0 :: InfoTable,
+          ( builtins :: BuiltinsTable,
+            ( e :: ExportInfo,
+              body' :: [Statement 'Scoped],
+              path' :: S.TopModulePath,
+              doc' :: Maybe (Judoc 'Scoped)
+              )
+            )
+          )
+        ) <- runState iniScope
+        . runInfoTableBuilder mempty
+        . runBuiltins mempty
+        $ do
+          path' <- freshTopModulePath
+          withTopScope $ do
+            (e, body') <- topBindings (checkModuleBody _moduleBody)
+            doc' <- mapM checkJudoc _moduleDoc
+            registerModuleDoc (path' ^. S.nameId) doc'
+            return (e, body', path', doc')
       localModules <- getLocalModules e
       _moduleId <- getModuleId (topModulePathKey (path' ^. S.nameConcrete))
-      let md =
+      let tab = set infoBuiltins builtins tab0
+          md =
             Module
               { _modulePath = path',
                 _moduleBody = body',
@@ -1574,14 +1588,19 @@ checkSections sec = topBindings helper
                 reserveInductive :: InductiveDef 'Parsed -> Sem r' (Module 'Parsed 'ModuleLocal)
                 reserveInductive d = do
                   i <- reserveInductiveSymbol d
-                  constrs <- mapM reserveConstructor (d ^. inductiveConstructors)
+                  let builtinConstrs :: NonEmpty (Maybe BuiltinConstructor)
+                      builtinConstrs =
+                        NonEmpty.prependList
+                          (maybe [] ((map Just . builtinConstructors) . (^. withLocParam)) (d ^. inductiveBuiltin))
+                          (NonEmpty.repeat Nothing)
+                  constrs <- mapM (uncurry reserveConstructor) (mzip builtinConstrs (d ^. inductiveConstructors))
                   m <- defineInductiveModule (head constrs) d
                   ignoreFail (registerRecordType (head constrs) i)
                   return m
                   where
-                    reserveConstructor :: ConstructorDef 'Parsed -> Sem r' S.Symbol
-                    reserveConstructor c = do
-                      c' <- reserveConstructorSymbol d c
+                    reserveConstructor :: Maybe BuiltinConstructor -> ConstructorDef 'Parsed -> Sem r' S.Symbol
+                    reserveConstructor b c = do
+                      c' <- reserveConstructorSymbol d c b
                       let storeSig :: RecordNameSignature 'Parsed -> Sem r' ()
                           storeSig sig = modify' (set (scoperConstructorFields . at (c' ^. S.nameId)) (Just sig))
                           mrecord :: Maybe (RhsRecord 'Parsed) = c ^? constructorRhs . _ConstructorRhsRecord
