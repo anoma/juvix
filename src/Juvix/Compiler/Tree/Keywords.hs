@@ -20,7 +20,7 @@ import Juvix.Data.Keyword.All
     kwAtoi,
     kwBr,
     kwByteArrayFromListUInt8,
-    kwByteArraySize,
+    kwByteArrayLength,
     kwCAlloc,
     kwCCall,
     kwCExtend,
@@ -91,6 +91,6 @@ allKeywords =
          kwPoseidon,
          kwEcOp,
          kwRandomEcPoint,
-         kwByteArraySize,
+         kwByteArrayLength,
          kwByteArrayFromListUInt8
        ]

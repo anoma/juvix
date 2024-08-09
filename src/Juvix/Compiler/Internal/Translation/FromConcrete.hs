@@ -593,7 +593,7 @@ registerBuiltinAxiom d = \case
   BuiltinByteFromNat -> registerByteFromNat d
   BuiltinByteArray -> registerByteArray d
   BuiltinByteArrayFromListByte -> registerByteArrayFromListByte d
-  BuiltinByteArraySize -> registerByteArraySize d
+  BuiltinByteArrayLength -> registerByteArrayLength d
 
 goInductive ::
   (Members '[Reader EntryPoint, Reader DefaultArgsStack, NameIdGen, Reader Pragmas, Builtins, Error ScoperError, State ConstructorInfos, Reader S.InfoTable] r) =>

@@ -191,8 +191,8 @@ byteArray = "bytearray"
 byteArrayFromListByte :: (IsString s) => s
 byteArrayFromListByte = "bytearray-from-list-byte"
 
-byteArraySize :: (IsString s) => s
-byteArraySize = "bytearray-size"
+byteArrayLength :: (IsString s) => s
+byteArrayLength = "bytearray-length"
 
 nat :: (IsString s) => s
 nat = "nat"
@@ -809,8 +809,8 @@ instrIntToUInt8 = "itou8"
 instrByteArrayFromListUInt8 :: (IsString s) => s
 instrByteArrayFromListUInt8 = "bytearray-from-list-uint8"
 
-instrByteArraySize :: (IsString s) => s
-instrByteArraySize = "bytearray-size"
+instrByteArrayLength :: (IsString s) => s
+instrByteArrayLength = "bytearray-length"
 
 instrShow :: (IsString s) => s
 instrShow = "show"

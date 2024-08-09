@@ -217,7 +217,7 @@ geval opts herr tab env0 = eval' env0
       OpUInt8ToInt -> uint8ToIntOp
       OpUInt8FromInt -> uint8FromIntOp
       OpByteArrayFromListByte -> byteArrayFromListByteOp
-      OpByteArraySize -> byteArraySizeOp
+      OpByteArrayLength -> byteArrayLengthOp
       where
         err :: Text -> a
         err msg = evalError msg n
@@ -548,8 +548,8 @@ geval opts herr tab env0 = eval' env0
                   $ v
         {-# INLINE byteArrayFromListByteOp #-}
 
-        byteArraySizeOp :: [Node] -> Node
-        byteArraySizeOp =
+        byteArrayLengthOp :: [Node] -> Node
+        byteArrayLengthOp =
           unary $ \node ->
             let !v = eval' env node
              in nodeFromInteger
@@ -558,7 +558,7 @@ geval opts herr tab env0 = eval' env0
                   . fromMaybe (evalError "expected bytearray" v)
                   . byteArrayFromNode
                   $ v
-        {-# INLINE byteArraySizeOp #-}
+        {-# INLINE byteArrayLengthOp #-}
 
     {-# INLINE applyBuiltin #-}
 

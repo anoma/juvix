@@ -76,7 +76,7 @@ eval tab = runReader emptyEvalCtx . eval'
         goByteArrayOp :: NodeByteArray -> Sem r' Value
         goByteArrayOp NodeByteArray {..} =
           case _nodeByteArrayOpcode of
-            OpByteArraySize -> case _nodeByteArrayArgs of
+            OpByteArrayLength -> case _nodeByteArrayArgs of
               [nodeArg] -> do
                 arg <- eval' nodeArg
                 case arg of

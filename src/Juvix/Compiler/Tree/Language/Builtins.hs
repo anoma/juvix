@@ -71,7 +71,7 @@ data ByteArrayOp
   = -- | Convert a list of UInt8 to a ByteArray
     OpByteArrayFromListUInt8
   | -- | Get the size of a ByteArray
-    OpByteArraySize
+    OpByteArrayLength
   deriving stock (Eq)
 
 cairoOpArgsNum :: CairoOp -> Int

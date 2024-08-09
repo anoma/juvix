@@ -125,7 +125,7 @@ parseByteArray ::
   ParsecS r NodeByteArray
 parseByteArray =
   parseByteArrayOp kwByteArrayFromListUInt8 OpByteArrayFromListUInt8
-    <|> parseByteArrayOp kwByteArraySize OpByteArraySize
+    <|> parseByteArrayOp kwByteArrayLength OpByteArrayLength
 
 parseByteArrayOp ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>

@@ -66,7 +66,7 @@ instance PrettyCode BuiltinOp where
     OpUInt8ToInt -> return primUInt8ToInt
     OpUInt8FromInt -> return primFieldFromInt
     OpByteArrayFromListByte -> return primByteArrayFromListByte
-    OpByteArraySize -> return primByteArraySize
+    OpByteArrayLength -> return primByteArrayLength
 
 instance PrettyCode BuiltinDataTag where
   ppCode = \case
@@ -556,7 +556,7 @@ instance PrettyCode InfoTable where
 
       ppInductives :: [InductiveInfo] -> Sem r (Doc Ann)
       ppInductives inds = do
-        inds' <- mapM ppInductive (filter (shouldPrintInductive . (^. inductiveBuiltin)) inds)
+        inds' <- mapM ppInductive (filter (isNothing . (^. inductiveBuiltin)) inds)
         return (vsep inds')
         where
           ppInductive :: InductiveInfo -> Sem r (Doc Ann)
@@ -564,20 +564,6 @@ instance PrettyCode InfoTable where
             name <- ppName KNameInductive (ii ^. inductiveName)
             ctrs <- mapM (fmap (<> semi) . ppCode . lookupTabConstructorInfo tbl) (ii ^. inductiveConstructors)
             return (kwInductive <+> name <+> braces (line <> indent' (vsep ctrs) <> line) <> kwSemicolon)
-
-          shouldPrintInductive :: Maybe BuiltinType -> Bool
-          shouldPrintInductive = \case
-            Just (BuiltinTypeInductive i) -> case i of
-              BuiltinList -> True
-              BuiltinMaybe -> False
-              BuiltinPair -> True
-              BuiltinPoseidonState -> True
-              BuiltinEcPoint -> True
-              BuiltinNat -> False
-              BuiltinInt -> False
-              BuiltinBool -> False
-            Just _ -> False
-            Nothing -> True
 
 instance PrettyCode AxiomInfo where
   ppCode ii = do
@@ -784,8 +770,8 @@ primFieldToInt = primitive Str.ftoi
 primByteArrayFromListByte :: Doc Ann
 primByteArrayFromListByte = primitive Str.byteArrayFromListByte
 
-primByteArraySize :: Doc Ann
-primByteArraySize = primitive Str.byteArraySize
+primByteArrayLength :: Doc Ann
+primByteArrayLength = primitive Str.byteArrayLength
 
 primLess :: Doc Ann
 primLess = primitive Str.less

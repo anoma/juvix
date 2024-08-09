@@ -436,7 +436,7 @@ builtinOpArgTypes = \case
   OpUInt8ToInt -> [mkTypeUInt8']
   OpUInt8FromInt -> [mkTypeInteger']
   OpByteArrayFromListByte -> [mkDynamic']
-  OpByteArraySize -> [mkTypeByteArray']
+  OpByteArrayLength -> [mkTypeByteArray']
 
 translateCase :: (Node -> Node -> Node -> a) -> a -> Case -> a
 translateCase translateIfFun dflt Case {..} = case _caseBranches of
