@@ -4,7 +4,7 @@ import GHC.Show qualified as S
 import Juvix.Compiler.Core.Language hiding (cons, drop, lookup, uncons)
 import Juvix.Prelude qualified as Prelude
 
--- | if we have \x\y. b, the binderlist in b is [y, x]
+-- | if we have `\\x\\y. b`, the binderlist in b is `[y, x]`
 data BinderList a = BinderList
   { _blLength :: Int,
     _blMap :: [a]

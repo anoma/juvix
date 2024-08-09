@@ -580,8 +580,8 @@ optional_ = void . optional
 -- Misc
 --------------------------------------------------------------------------------
 
-eassert :: (HasCallStack, Applicative f) => Bool -> f ()
-eassert b = assert b (pure ())
+massert :: (HasCallStack, Applicative f) => Bool -> f ()
+massert b = assert b (pure ())
 
 -- | applies a function n times
 iterateN :: Int -> (a -> a) -> a -> a
