@@ -45,8 +45,7 @@ runBuiltins ini = reinterpret (runState ini) $ \case
   RegisterBuiltin' b n -> do
     s <- gets (^. builtinsTable . at b)
     case s of
-      Nothing -> do
-        modify (over builtinsTable (set (at b) (Just n)))
+      Nothing -> modify (set (builtinsTable . at b) (Just n))
       Just {} -> alreadyDefined
     where
       alreadyDefined :: Sem (State BuiltinsState ': r) x

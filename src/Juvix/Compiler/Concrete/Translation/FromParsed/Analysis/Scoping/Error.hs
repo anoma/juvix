@@ -56,6 +56,8 @@ data ScoperError
   | ErrWrongDefaultValue WrongDefaultValue
   | ErrUnsupported Unsupported
   | ErrDefaultArgCycle DefaultArgCycle
+  | ErrDoLastStatement DoLastStatement
+  | ErrDoBindImplicitPattern DoBindImplicitPattern
   deriving stock (Generic)
 
 instance ToGenericError ScoperError where
@@ -103,3 +105,5 @@ instance ToGenericError ScoperError where
     ErrWrongDefaultValue e -> genericError e
     ErrUnsupported e -> genericError e
     ErrDefaultArgCycle e -> genericError e
+    ErrDoLastStatement e -> genericError e
+    ErrDoBindImplicitPattern e -> genericError e
