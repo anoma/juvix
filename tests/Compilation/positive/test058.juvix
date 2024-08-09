@@ -4,6 +4,8 @@ module test058;
 import Stdlib.Prelude open hiding {for};
 import Stdlib.Data.Range open;
 
+syntax iterator myfor;
+
 {-# specialize: [1, 2, 3, 5] #-}
 myfor {A N} {{Ord N}} {{Natural N}} (f : A → N → A) (a : A) : Range N → A
   | mkRange@{low; high; step} :=
@@ -14,9 +16,9 @@ myfor {A N} {{Ord N}} {{Natural N}} (f : A → N → A) (a : A) : Range N → A
     in go a low;
 
 sum (x : Nat) : Nat :=
-  for (acc := 0) (n in 1 to x) {acc + n};
+  myfor (acc := 0) (n in 1 to x) {acc + n};
 
 sum' (x : Nat) : Nat :=
-  for (acc := 0) (n in 1 to x step 2) {acc + n};
+  myfor (acc := 0) (n in 1 to x step 2) {acc + n};
 
 main : Nat := sum 100 + sum' 100;

@@ -35,6 +35,11 @@ getInfoPragmas i =
 setInfoPragmas :: [Pragmas] -> Info -> Info
 setInfoPragmas = Info.insert . PragmasInfo
 
+overInfoPragmas :: (Pragmas -> Pragmas) -> Info -> Info
+overInfoPragmas f i = case Info.lookup kPragmasInfo i of
+  Just PragmasInfo {..} -> setInfoPragmas (map f _infoPragmas) i
+  Nothing -> i
+
 getInfoPragma :: Info -> Pragmas
 getInfoPragma i =
   case Info.lookup kPragmaInfo i of
@@ -43,6 +48,11 @@ getInfoPragma i =
 
 setInfoPragma :: Pragmas -> Info -> Info
 setInfoPragma = Info.insert . PragmaInfo
+
+overInfoPragma :: (Pragmas -> Pragmas) -> Info -> Info
+overInfoPragma f i = case Info.lookup kPragmaInfo i of
+  Just PragmaInfo {..} -> setInfoPragma (f _infoPragma) i
+  Nothing -> i
 
 getNodePragmas :: Node -> Pragmas
 getNodePragmas = getInfoPragma . getInfo
