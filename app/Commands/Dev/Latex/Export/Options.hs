@@ -3,12 +3,22 @@ module Commands.Dev.Latex.Export.Options where
 import CommonOptions
 import Prelude qualified
 
+data ExportFilter
+  = ExportFilterRange ExportRange
+  | ExportFilterNames [Text]
+  deriving stock (Data)
+
+data ExportRange = ExportRange
+  { _exportFromLine :: Maybe Int,
+    _exportToLine :: Maybe Int
+  }
+  deriving stock (Data)
+
 data ExportOptions = ExportOptions
   { _exportInputFile :: AppPath File,
     _exportMode :: ExportMode,
-    _exportNoComments :: Bool,
-    _exportFromLine :: Maybe Int,
-    _exportToLine :: Maybe Int
+    _exportFilter :: ExportFilter,
+    _exportNoComments :: Bool
   }
   deriving stock (Data)
 
@@ -65,7 +75,20 @@ parseExport = do
             <> metavar "LINE"
             <> help "Output until the given line (included)"
         )
-  pure ExportOptions {..}
+  mexportNames <-
+    optional $
+      option
+        readMIdentifierList
+        ( long "statements"
+            <> metavar "[STATEMENT_NAME]"
+            <> help "Export a list of statements. E.g. --statements \"List; foldl; foldr; map\". Comments are not printed"
+        )
+
+  pure $
+    let _exportFilter :: ExportFilter = case mexportNames of
+          Nothing -> ExportFilterRange ExportRange {..}
+          Just names -> ExportFilterNames names
+     in ExportOptions {..}
   where
     readLineNumber :: ReadM Int
     readLineNumber = eitherReader readr

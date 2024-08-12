@@ -280,6 +280,10 @@ data NonDefinition (s :: Stage)
   | NonDefinitionModule (Module s 'ModuleLocal)
   | NonDefinitionOpenModule (OpenModule s 'OpenFull)
 
+newtype Statements (s :: Stage) = Statements
+  { _statements :: [Statement s]
+  }
+
 data Statement (s :: Stage)
   = StatementSyntax (SyntaxDef s)
   | StatementFunctionDef (FunctionDef s)
@@ -2691,6 +2695,7 @@ deriving stock instance Ord (JudocAtom 'Parsed)
 deriving stock instance Ord (JudocAtom 'Scoped)
 
 makeLenses ''SideIfs
+makeLenses ''Statements
 makeLenses ''NamedArgumentFunctionDef
 makeLenses ''NamedArgumentPun
 makeLenses ''IsExhaustive

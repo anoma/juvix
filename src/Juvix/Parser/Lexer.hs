@@ -1,6 +1,10 @@
 -- | This module contains lexing functions common to all parsers in the pipeline
 -- (Juvix, JuvixCore, JuvixAsm).
-module Juvix.Parser.Lexer where
+module Juvix.Parser.Lexer
+  ( module Juvix.Parser.Lexer,
+    ParsecS,
+  )
+where
 
 import Data.HashSet qualified as HashSet
 import Data.Set qualified as Set
@@ -12,8 +16,6 @@ import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
 import Juvix.Prelude.Parsing as P hiding (hspace, space, space1)
 import Text.Megaparsec.Char.Lexer qualified as L
-
-type ParsecS r = ParsecT Void Text (Sem r)
 
 parseFailure :: Int -> String -> ParsecS r a
 parseFailure off str = P.parseError $ P.FancyError off (Set.singleton (P.ErrorFail str))

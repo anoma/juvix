@@ -20,7 +20,7 @@ completionsString' :: forall t p. (PipelineId' t p) => String -> [String]
 completionsString' = map unpack . completions' @t @p . pack
 
 completions' :: forall t p. (PipelineId' t p) => Text -> [Text]
-completions' = fromRight [] . P.parseHelper (pcompletions @t @p)
+completions' = fromRight [] . P.parseHelper @String (pcompletions @t @p)
 
 transformations :: (PipelineId' t p, MonadParsec e Text m) => m [TransformationLikeId' t p]
 transformations = do
