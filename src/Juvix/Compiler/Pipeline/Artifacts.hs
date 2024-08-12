@@ -22,12 +22,13 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Da
 import Juvix.Compiler.Pipeline.Artifacts.Base
 import Juvix.Compiler.Store.Extra
 import Juvix.Compiler.Store.Language
+import Juvix.Compiler.Store.Scoped.Data.InfoTable
 import Juvix.Prelude
 
 appendArtifactsModuleTable :: ModuleTable -> Artifacts -> Artifacts
 appendArtifactsModuleTable mtab =
   over artifactInternalTypedTable (computeCombinedInfoTable importTab <>)
-    . over (artifactBuiltins) (computeCombinedBuiltins mtab <>)
+    . over (artifactScopeTable . infoBuiltins) (computeCombinedBuiltins mtab <>)
     . over (artifactCoreModule . Core.moduleImportsTable) (computeCombinedCoreInfoTable mtab <>)
     . over artifactModuleTable (mtab <>)
   where

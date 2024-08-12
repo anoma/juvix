@@ -296,7 +296,6 @@ runReplPipelineIOEither' lockMode entry = do
                   _artifactCoercions = coercionTable,
                   _artifactScoperState = scopedResult ^. Scoped.resultScoperState,
                   _artifactResolver = art ^. artifactResolver,
-                  _artifactBuiltins = art ^. artifactBuiltins,
                   _artifactNameIdState = art ^. artifactNameIdState,
                   _artifactModuleTable = mempty
                 }
@@ -316,7 +315,6 @@ runReplPipelineIOEither' lockMode entry = do
           _artifactCoercions = mempty,
           _artifactCoreModule = Core.emptyModule,
           _artifactScopeTable = mempty,
-          _artifactBuiltins = mempty,
           _artifactScopeExports = mempty,
           _artifactScoperState = Scoper.iniScoperState mempty,
           _artifactModuleTable = mempty

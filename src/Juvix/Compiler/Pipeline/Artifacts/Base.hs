@@ -19,7 +19,6 @@ data Artifacts = Artifacts
   { _artifactParsing :: ParserState,
     -- Scoping
     _artifactResolver :: ResolverState,
-    _artifactBuiltins :: BuiltinsTable,
     _artifactNameIdState :: NameIdGenState,
     _artifactScopeTable :: Scoped.InfoTable,
     _artifactScopeExports :: HashSet NameId,
