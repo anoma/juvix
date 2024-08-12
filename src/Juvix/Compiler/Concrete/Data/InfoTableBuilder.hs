@@ -6,7 +6,7 @@ import Juvix.Compiler.Concrete.Data.Highlight.Input
 import Juvix.Compiler.Concrete.Data.Scope
 import Juvix.Compiler.Concrete.Data.ScopedName
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
-import Juvix.Compiler.Concrete.Language
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Compiler.Store.Scoped.Language
 import Juvix.Prelude
 
@@ -28,14 +28,21 @@ data InfoTableBuilder :: Effect where
   RegisterRecordInfo :: S.NameId -> RecordInfo -> InfoTableBuilder m ()
   RegisterAlias :: S.NameId -> PreSymbolEntry -> InfoTableBuilder m ()
   GetInfoTable :: InfoTableBuilder m InfoTable
+  GetBuiltinSymbol' :: Interval -> BuiltinPrim -> InfoTableBuilder m S.Symbol
+  RegisterBuiltin' :: BuiltinPrim -> S.Symbol -> InfoTableBuilder m ()
 
 makeSem ''InfoTableBuilder
 
-registerDoc :: forall r. (Members '[HighlightBuilder, State InfoTable] r) => NameId -> Maybe (Judoc 'Scoped) -> Sem r ()
-registerDoc k md = do
-  modify (set (highlightDoc . at k) md)
+registerBuiltin :: (IsBuiltin a, Member InfoTableBuilder r) => a -> S.Symbol -> Sem r ()
+registerBuiltin = registerBuiltin' . toBuiltinPrim
 
-runInfoTableBuilder :: (Member HighlightBuilder r) => InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
+getBuiltinSymbol :: (IsBuiltin a, Member InfoTableBuilder r) => Interval -> a -> Sem r S.Symbol
+getBuiltinSymbol i = getBuiltinSymbol' i . toBuiltinPrim
+
+registerDoc :: forall r. (Members '[HighlightBuilder, State InfoTable] r) => NameId -> Maybe (Judoc 'Scoped) -> Sem r ()
+registerDoc k md = modify (set (highlightDoc . at k) md)
+
+runInfoTableBuilder :: (Members '[Error ScoperError, HighlightBuilder] r) => InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
 runInfoTableBuilder ini = reinterpret (runState ini) $ \case
   RegisterAxiom d ->
     let j = d ^. axiomDoc
@@ -87,11 +94,35 @@ runInfoTableBuilder ini = reinterpret (runState ini) $ \case
     modify (over infoScoperAlias (HashMap.insert uid a))
   GetInfoTable ->
     get
+  GetBuiltinSymbol' i b -> fromMaybeM notDefined (gets (^. infoBuiltins . at b))
+    where
+      notDefined :: forall r' x. (Members '[Error ScoperError] r') => Sem r' x
+      notDefined =
+        throw $
+          ErrBuiltinNotDefined
+            BuiltinNotDefined
+              { _notDefinedBuiltin = b,
+                _notDefinedLoc = i
+              }
+  RegisterBuiltin' b n -> do
+    s <- gets (^. infoBuiltins . at b)
+    case s of
+      Nothing -> modify (set (infoBuiltins . at b) (Just n))
+      Just {} -> alreadyDefined
+    where
+      alreadyDefined :: forall r' x. (Members '[Error ScoperError] r') => Sem r' x
+      alreadyDefined =
+        throw $
+          ErrBuiltinAlreadyDefined
+            BuiltinAlreadyDefined
+              { _builtinAlreadyDefined = b,
+                _builtinAlreadyDefinedLoc = getLoc n
+              }
 
-runInfoTableBuilderRepl :: InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
+runInfoTableBuilderRepl :: (Members '[Error ScoperError] r) => InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
 runInfoTableBuilderRepl tab = ignoreHighlightBuilder . runInfoTableBuilder tab . raiseUnder
 
-ignoreInfoTableBuilder :: (Member HighlightBuilder r) => Sem (InfoTableBuilder ': r) a -> Sem r a
+ignoreInfoTableBuilder :: (Members '[Error ScoperError, HighlightBuilder] r) => Sem (InfoTableBuilder ': r) a -> Sem r a
 ignoreInfoTableBuilder = fmap snd . runInfoTableBuilder mempty
 
 anameFromScopedIden :: ScopedIden -> AName

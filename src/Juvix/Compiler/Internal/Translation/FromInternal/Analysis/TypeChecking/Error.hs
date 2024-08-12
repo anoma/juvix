@@ -6,7 +6,7 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Er
   )
 where
 
-import Juvix.Compiler.Builtins.Error (NotDefined)
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Types (BuiltinNotDefined)
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Error
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.Error
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error.Pretty
@@ -36,7 +36,7 @@ data TypeCheckerError
   | ErrSubsumedInstance SubsumedInstance
   | ErrExplicitInstanceArgument ExplicitInstanceArgument
   | ErrTraitNotTerminating TraitNotTerminating
-  | ErrBuiltinNotDefined NotDefined
+  | ErrBuiltinNotDefined BuiltinNotDefined
   | ErrArityCheckerError ArityCheckerError
   | ErrDefaultArgLoop DefaultArgLoop
   | ErrBadScope BadScope

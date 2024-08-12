@@ -219,7 +219,6 @@ runReplPipelineIOEither' lockMode entry = do
       . ignoreHighlightBuilder
       . runError
       . runState initialArtifacts
-      . runBuiltinsArtifacts
       . runNameIdGenArtifacts
       . runFilesIO
       . runReader entry

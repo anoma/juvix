@@ -4,7 +4,7 @@ import Juvix.Compiler.Internal.Builtins
 import Juvix.Compiler.Internal.Extra
 import Juvix.Prelude
 
-checkSeq :: (Members '[Builtins, Error BuiltinsError, NameIdGen] r) => FunctionDef -> Sem r ()
+checkSeq :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => FunctionDef -> Sem r ()
 checkSeq f = do
   let u = ExpressionUniverse smallUniverseNoLoc
       l = getLoc f

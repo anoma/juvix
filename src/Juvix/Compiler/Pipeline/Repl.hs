@@ -40,8 +40,7 @@ upToInternalExpression p = do
   scopeTable <- gets (^. artifactScopeTable)
   mtab <- gets (^. artifactModuleTable)
   pkg <- asks (^. entryPointPackage)
-  runBuiltinsArtifacts
-    . runScoperScopeArtifacts
+  runScoperScopeArtifacts
     . runStateArtifacts artifactScoperState
     . runReader pkg
     $ runNameIdGenArtifacts (Scoper.scopeCheckExpression (Store.getScopedModuleTable mtab) scopeTable p)
@@ -55,9 +54,8 @@ expressionUpToAtomsParsed ::
   Text ->
   Sem r (ExpressionAtoms 'Parsed)
 expressionUpToAtomsParsed fp txt =
-  runNameIdGenArtifacts
-    . runBuiltinsArtifacts
-    $ Parser.expressionFromTextSource fp txt
+  runNameIdGenArtifacts $
+    Parser.expressionFromTextSource fp txt
 
 expressionUpToAtomsScoped ::
   (Members '[Reader EntryPoint, State Artifacts, Error JuvixError] r) =>
@@ -68,8 +66,7 @@ expressionUpToAtomsScoped fp txt = do
   scopeTable <- gets (^. artifactScopeTable)
   mtab <- gets (^. artifactModuleTable)
   pkg <- asks (^. entryPointPackage)
-  runBuiltinsArtifacts
-    . runScoperScopeArtifacts
+  runScoperScopeArtifacts
     . runStateArtifacts artifactScoperState
     . runNameIdGenArtifacts
     . runReader pkg
@@ -85,7 +82,6 @@ scopeCheckExpression p = do
   mtab <- gets (^. artifactModuleTable)
   pkg <- asks (^. entryPointPackage)
   runNameIdGenArtifacts
-    . runBuiltinsArtifacts
     . runScoperScopeArtifacts
     . runStateArtifacts artifactScoperState
     . runReader pkg
@@ -138,7 +134,6 @@ registerImport i = do
   pkg <- asks (^. entryPointPackage)
   void
     . runNameIdGenArtifacts
-    . runBuiltinsArtifacts
     . runScoperScopeArtifacts
     . runStateArtifacts artifactScoperState
     . runReader pkg

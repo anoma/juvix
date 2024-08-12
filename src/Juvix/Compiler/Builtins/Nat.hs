@@ -6,7 +6,7 @@ import Juvix.Compiler.Internal.Pretty
 import Juvix.Data.Effect.NameIdGen
 import Juvix.Prelude
 
-checkNatDef :: forall r. (Members '[Builtins, Error BuiltinsError] r) => InductiveDef -> Sem r ()
+checkNatDef :: forall r. (Members '[Reader BuiltinsTable, Error ScoperError] r) => InductiveDef -> Sem r ()
 checkNatDef d = do
   let err :: forall a. Text -> Sem r a
       err = builtinsErrorText (getLoc d)
@@ -16,33 +16,33 @@ checkNatDef d = do
     [c1, c2] -> checkZero c1 >> checkSuc c2
     _ -> err "Nat numbers should have exactly two constructors"
 
-checkZero :: (Members '[Builtins, Error BuiltinsError] r) => ConstructorDef -> Sem r ()
+checkZero :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => ConstructorDef -> Sem r ()
 checkZero d@ConstructorDef {..} = do
   let ty = _inductiveConstructorType
-  nat <- getBuiltinName (getLoc d) BuiltinNat
+  nat <- getBuiltinNameScoper (getLoc d) BuiltinNat
   unless (ty === nat) $
     builtinsErrorMsg (getLoc d) $
       "zero has the wrong type " <> ppOutDefault ty <> " | " <> ppOutDefault nat
 
-checkSuc :: (Members '[Builtins, Error BuiltinsError] r) => ConstructorDef -> Sem r ()
+checkSuc :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => ConstructorDef -> Sem r ()
 checkSuc d@ConstructorDef {..} = do
   let ty = _inductiveConstructorType
-  nat <- getBuiltinName (getLoc d) BuiltinNat
+  nat <- getBuiltinNameScoper (getLoc d) BuiltinNat
   unless (ty === (nat --> nat)) $
     builtinsErrorText (getLoc d) "suc has the wrong type"
 
-checkNatPrint :: (Members '[Builtins, Error BuiltinsError] r) => AxiomDef -> Sem r ()
+checkNatPrint :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
 checkNatPrint f = do
-  nat <- getBuiltinName (getLoc f) BuiltinNat
-  io <- getBuiltinName (getLoc f) BuiltinIO
+  nat <- getBuiltinNameScoper (getLoc f) BuiltinNat
+  io <- getBuiltinNameScoper (getLoc f) BuiltinIO
   unless (f ^. axiomType === (nat --> io)) $
     builtinsErrorText (getLoc f) "Nat print has the wrong type signature"
 
-checkNatPlus :: (Members '[Builtins, Error BuiltinsError, NameIdGen] r) => FunctionDef -> Sem r ()
+checkNatPlus :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => FunctionDef -> Sem r ()
 checkNatPlus f = do
-  nat <- getBuiltinName (getLoc f) BuiltinNat
-  zero <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatZero
-  suc <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatSuc
+  nat <- getBuiltinNameScoper (getLoc f) BuiltinNat
+  zero <- toExpression <$> getBuiltinNameScoper (getLoc f) BuiltinNatZero
+  suc <- toExpression <$> getBuiltinNameScoper (getLoc f) BuiltinNatSuc
   let plus = f ^. funDefName
       l = getLoc f
   varn <- freshVar l "n"
@@ -66,12 +66,12 @@ checkNatPlus f = do
         _funInfoFreeTypeVars = []
       }
 
-checkNatMul :: (Members '[Builtins, Error BuiltinsError, NameIdGen] r) => FunctionDef -> Sem r ()
+checkNatMul :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => FunctionDef -> Sem r ()
 checkNatMul f = do
-  nat <- getBuiltinName (getLoc f) BuiltinNat
-  zero <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatZero
-  suc <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatSuc
-  plus <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatPlus
+  nat <- getBuiltinNameScoper (getLoc f) BuiltinNat
+  zero <- toExpression <$> getBuiltinNameScoper (getLoc f) BuiltinNatZero
+  suc <- toExpression <$> getBuiltinNameScoper (getLoc f) BuiltinNatSuc
+  plus <- toExpression <$> getBuiltinNameScoper (getLoc f) BuiltinNatPlus
   let mul = f ^. funDefName
       l = getLoc f
   varn <- freshVar l "n"
@@ -96,11 +96,11 @@ checkNatMul f = do
         _funInfoFreeTypeVars = []
       }
 
-checkNatSub :: (Members '[Builtins, Error BuiltinsError, NameIdGen] r) => FunctionDef -> Sem r ()
+checkNatSub :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => FunctionDef -> Sem r ()
 checkNatSub f = do
-  nat <- getBuiltinName (getLoc f) BuiltinNat
-  zero <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatZero
-  suc <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatSuc
+  nat <- getBuiltinNameScoper (getLoc f) BuiltinNat
+  zero <- toExpression <$> getBuiltinNameScoper (getLoc f) BuiltinNatZero
+  suc <- toExpression <$> getBuiltinNameScoper (getLoc f) BuiltinNatSuc
   let sub = f ^. funDefName
       l = getLoc f
   varn <- freshVar l "n"
@@ -126,12 +126,12 @@ checkNatSub f = do
         _funInfoFreeTypeVars = []
       }
 
-checkNatUDiv :: (Members '[Builtins, Error BuiltinsError, NameIdGen] r) => FunctionDef -> Sem r ()
+checkNatUDiv :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => FunctionDef -> Sem r ()
 checkNatUDiv f = do
-  nat <- getBuiltinName (getLoc f) BuiltinNat
-  zero <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatZero
-  suc <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatSuc
-  sub <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatSub
+  nat <- getBuiltinNameScoper (getLoc f) BuiltinNat
+  zero <- toExpression <$> getBuiltinNameScoper (getLoc f) BuiltinNatZero
+  suc <- toExpression <$> getBuiltinNameScoper (getLoc f) BuiltinNatSuc
+  sub <- toExpression <$> getBuiltinNameScoper (getLoc f) BuiltinNatSub
   let divop = f ^. funDefName
       l = getLoc l
   varn <- freshVar l "n"
@@ -156,12 +156,12 @@ checkNatUDiv f = do
         _funInfoFreeTypeVars = []
       }
 
-checkNatDiv :: (Members '[Builtins, Error BuiltinsError, NameIdGen] r) => FunctionDef -> Sem r ()
+checkNatDiv :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => FunctionDef -> Sem r ()
 checkNatDiv f = do
-  nat <- getBuiltinName (getLoc f) BuiltinNat
-  suc <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatSuc
-  udiv <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatUDiv
-  sub <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatSub
+  nat <- getBuiltinNameScoper (getLoc f) BuiltinNat
+  suc <- toExpression <$> getBuiltinNameScoper (getLoc f) BuiltinNatSuc
+  udiv <- toExpression <$> getBuiltinNameScoper (getLoc f) BuiltinNatUDiv
+  sub <- toExpression <$> getBuiltinNameScoper (getLoc f) BuiltinNatSub
   let divop = f ^. funDefName
       l = getLoc f
   varn <- freshVar l "n"
@@ -184,12 +184,12 @@ checkNatDiv f = do
         _funInfoFreeTypeVars = []
       }
 
-checkNatMod :: (Members '[Builtins, Error BuiltinsError, NameIdGen] r) => FunctionDef -> Sem r ()
+checkNatMod :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => FunctionDef -> Sem r ()
 checkNatMod f = do
-  nat <- getBuiltinName (getLoc f) BuiltinNat
-  sub <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatSub
-  divop <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatDiv
-  mul <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatMul
+  nat <- getBuiltinNameScoper (getLoc f) BuiltinNat
+  sub <- toExpression <$> getBuiltinNameScoper (getLoc f) BuiltinNatSub
+  divop <- toExpression <$> getBuiltinNameScoper (getLoc f) BuiltinNatDiv
+  mul <- toExpression <$> getBuiltinNameScoper (getLoc f) BuiltinNatMul
   let modop = f ^. funDefName
       l = getLoc f
   varn <- freshVar l "n"
@@ -209,14 +209,14 @@ checkNatMod f = do
         _funInfoFreeTypeVars = []
       }
 
-checkNatLe :: (Members '[Builtins, Error BuiltinsError, NameIdGen] r) => FunctionDef -> Sem r ()
+checkNatLe :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => FunctionDef -> Sem r ()
 checkNatLe f = do
-  nat <- getBuiltinName (getLoc f) BuiltinNat
-  zero <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatZero
-  suc <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatSuc
-  tybool <- getBuiltinName (getLoc f) BuiltinBool
-  true <- toExpression <$> getBuiltinName (getLoc f) BuiltinBoolTrue
-  false <- toExpression <$> getBuiltinName (getLoc f) BuiltinBoolFalse
+  nat <- getBuiltinNameScoper (getLoc f) BuiltinNat
+  zero <- toExpression <$> getBuiltinNameScoper (getLoc f) BuiltinNatZero
+  suc <- toExpression <$> getBuiltinNameScoper (getLoc f) BuiltinNatSuc
+  tybool <- getBuiltinNameScoper (getLoc f) BuiltinBool
+  true <- toExpression <$> getBuiltinNameScoper (getLoc f) BuiltinBoolTrue
+  false <- toExpression <$> getBuiltinNameScoper (getLoc f) BuiltinBoolFalse
   let le = f ^. funDefName
       l = getLoc f
   varn <- freshVar l "n"
@@ -242,12 +242,12 @@ checkNatLe f = do
         _funInfoFreeTypeVars = []
       }
 
-checkNatLt :: (Members '[Builtins, Error BuiltinsError, NameIdGen] r) => FunctionDef -> Sem r ()
+checkNatLt :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => FunctionDef -> Sem r ()
 checkNatLt f = do
-  nat <- getBuiltinName (getLoc f) BuiltinNat
-  suc <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatSuc
-  le <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatLe
-  tybool <- getBuiltinName (getLoc f) BuiltinBool
+  nat <- getBuiltinNameScoper (getLoc f) BuiltinNat
+  suc <- toExpression <$> getBuiltinNameScoper (getLoc f) BuiltinNatSuc
+  le <- toExpression <$> getBuiltinNameScoper (getLoc f) BuiltinNatLe
+  tybool <- getBuiltinNameScoper (getLoc f) BuiltinBool
   let lt = f ^. funDefName
       l = getLoc f
   varn <- freshVar l "n"
@@ -268,14 +268,14 @@ checkNatLt f = do
         _funInfoFreeTypeVars = []
       }
 
-checkNatEq :: (Members '[Builtins, Error BuiltinsError, NameIdGen] r) => FunctionDef -> Sem r ()
+checkNatEq :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => FunctionDef -> Sem r ()
 checkNatEq f = do
-  nat <- getBuiltinName (getLoc f) BuiltinNat
-  zero <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatZero
-  suc <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatSuc
-  tybool <- getBuiltinName (getLoc f) BuiltinBool
-  true <- toExpression <$> getBuiltinName (getLoc f) BuiltinBoolTrue
-  false <- toExpression <$> getBuiltinName (getLoc f) BuiltinBoolFalse
+  nat <- getBuiltinNameScoper (getLoc f) BuiltinNat
+  zero <- toExpression <$> getBuiltinNameScoper (getLoc f) BuiltinNatZero
+  suc <- toExpression <$> getBuiltinNameScoper (getLoc f) BuiltinNatSuc
+  tybool <- getBuiltinNameScoper (getLoc f) BuiltinBool
+  true <- toExpression <$> getBuiltinNameScoper (getLoc f) BuiltinBoolTrue
+  false <- toExpression <$> getBuiltinNameScoper (getLoc f) BuiltinBoolFalse
   let eq = f ^. funDefName
       l = getLoc f
   varn <- freshVar l "n"

@@ -4,7 +4,7 @@ import Juvix.Compiler.Internal.Builtins
 import Juvix.Compiler.Internal.Extra
 import Juvix.Prelude
 
-checkPoseidonStateDef :: (Members '[Builtins, Error BuiltinsError] r) => InductiveDef -> Sem r ()
+checkPoseidonStateDef :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => InductiveDef -> Sem r ()
 checkPoseidonStateDef d = do
   let err = builtinsErrorText (getLoc d)
   unless (null (d ^. inductiveParameters)) (err "PoseidonState should have no type parameters")
@@ -13,22 +13,22 @@ checkPoseidonStateDef d = do
     [c] -> checkMkPoseidonState c
     _ -> err "PoseidonState should have exactly one constructor"
 
-checkMkPoseidonState :: (Members '[Builtins, Error BuiltinsError] r) => ConstructorDef -> Sem r ()
+checkMkPoseidonState :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => ConstructorDef -> Sem r ()
 checkMkPoseidonState d@ConstructorDef {..} = do
   let ty = _inductiveConstructorType
-  field_ <- getBuiltinName (getLoc d) BuiltinField
-  ps <- getBuiltinName (getLoc d) BuiltinPoseidonState
+  field_ <- getBuiltinNameScoper (getLoc d) BuiltinField
+  ps <- getBuiltinNameScoper (getLoc d) BuiltinPoseidonState
   unless (ty === (field_ --> field_ --> field_ --> ps)) $
     builtinsErrorText (getLoc d) "mkPoseidonState has the wrong type"
 
-checkPoseidon :: (Members '[Builtins, Error BuiltinsError, NameIdGen] r) => AxiomDef -> Sem r ()
+checkPoseidon :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => AxiomDef -> Sem r ()
 checkPoseidon f = do
   let ftype = f ^. axiomType
-  ps <- getBuiltinName (getLoc f) BuiltinPoseidonState
+  ps <- getBuiltinNameScoper (getLoc f) BuiltinPoseidonState
   unless (ftype === (ps --> ps)) $
     builtinsErrorText (getLoc f) "poseidon must be of type PoseidonState -> PoseidonState"
 
-checkEcPointDef :: (Members '[Builtins, Error BuiltinsError] r) => InductiveDef -> Sem r ()
+checkEcPointDef :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => InductiveDef -> Sem r ()
 checkEcPointDef d = do
   let err = builtinsErrorText (getLoc d)
   unless (null (d ^. inductiveParameters)) (err "Ec.Point should have no type parameters")
@@ -37,25 +37,25 @@ checkEcPointDef d = do
     [c] -> checkMkEcPoint c
     _ -> err "Ec.Point should have exactly one constructor"
 
-checkMkEcPoint :: (Members '[Builtins, Error BuiltinsError] r) => ConstructorDef -> Sem r ()
+checkMkEcPoint :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => ConstructorDef -> Sem r ()
 checkMkEcPoint d@ConstructorDef {..} = do
   let ty = _inductiveConstructorType
-  field_ <- getBuiltinName (getLoc d) BuiltinField
-  pt <- getBuiltinName (getLoc d) BuiltinEcPoint
+  field_ <- getBuiltinNameScoper (getLoc d) BuiltinField
+  pt <- getBuiltinNameScoper (getLoc d) BuiltinEcPoint
   unless (ty === (field_ --> field_ --> pt)) $
     builtinsErrorText (getLoc d) "EC.mkPoint has the wrong type"
 
-checkEcOp :: (Members '[Builtins, Error BuiltinsError, NameIdGen] r) => AxiomDef -> Sem r ()
+checkEcOp :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => AxiomDef -> Sem r ()
 checkEcOp f = do
   let ftype = f ^. axiomType
-  pt <- getBuiltinName (getLoc f) BuiltinEcPoint
-  field_ <- getBuiltinName (getLoc f) BuiltinField
+  pt <- getBuiltinNameScoper (getLoc f) BuiltinEcPoint
+  field_ <- getBuiltinNameScoper (getLoc f) BuiltinField
   unless (ftype === (pt --> field_ --> pt --> pt)) $
     builtinsErrorText (getLoc f) "ecOp must be of type Ec.Point -> Field -> Ec.Point -> Ec.Point"
 
-checkRandomEcPoint :: (Members '[Builtins, Error BuiltinsError, NameIdGen] r) => AxiomDef -> Sem r ()
+checkRandomEcPoint :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => AxiomDef -> Sem r ()
 checkRandomEcPoint f = do
   let ftype = f ^. axiomType
-  pt <- getBuiltinName (getLoc f) BuiltinEcPoint
+  pt <- getBuiltinNameScoper (getLoc f) BuiltinEcPoint
   unless (ftype === pt) $
     builtinsErrorText (getLoc f) "randomEcPoint must be of type Ec.Point"

@@ -5,7 +5,7 @@ import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty
 import Juvix.Prelude
 
-checkBoolDef :: (Members '[Builtins, Error BuiltinsError] r) => InductiveDef -> Sem r ()
+checkBoolDef :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => InductiveDef -> Sem r ()
 checkBoolDef d = do
   let err = builtinsErrorText (getLoc d)
   unless (null (d ^. inductiveParameters)) (err "Bool should have no type parameters")
@@ -14,27 +14,27 @@ checkBoolDef d = do
     [c1, c2] -> checkTrue c1 >> checkFalse c2
     _ -> err "Bool should have exactly two constructors"
 
-checkTrue :: (Members '[Builtins, Error BuiltinsError] r) => ConstructorDef -> Sem r ()
+checkTrue :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => ConstructorDef -> Sem r ()
 checkTrue d@ConstructorDef {..} = do
   let ctorTy = _inductiveConstructorType
-  boolTy <- getBuiltinName (getLoc d) BuiltinBool
+  boolTy <- getBuiltinNameScoper (getLoc d) BuiltinBool
   unless (ctorTy === boolTy) $
     builtinsErrorMsg (getLoc d) $
       "true has the wrong type " <> ppOutDefault ctorTy <> " | " <> ppOutDefault boolTy
 
-checkFalse :: (Members '[Builtins, Error BuiltinsError] r) => ConstructorDef -> Sem r ()
+checkFalse :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => ConstructorDef -> Sem r ()
 checkFalse d@ConstructorDef {..} = do
   let ctorTy = _inductiveConstructorType
-  boolTy <- getBuiltinName (getLoc d) BuiltinBool
+  boolTy <- getBuiltinNameScoper (getLoc d) BuiltinBool
   unless (ctorTy === boolTy) $
     builtinsErrorMsg (getLoc d) $
       "false has the wrong type " <> ppOutDefault ctorTy <> " | " <> ppOutDefault boolTy
 
-checkIf :: (Members '[Builtins, Error BuiltinsError, NameIdGen] r) => FunctionDef -> Sem r ()
+checkIf :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => FunctionDef -> Sem r ()
 checkIf f = do
-  bool_ <- getBuiltinName (getLoc f) BuiltinBool
-  true_ <- toExpression <$> getBuiltinName (getLoc f) BuiltinBoolTrue
-  false_ <- toExpression <$> getBuiltinName (getLoc f) BuiltinBoolFalse
+  bool_ <- getBuiltinNameScoper (getLoc f) BuiltinBool
+  true_ <- toExpression <$> getBuiltinNameScoper (getLoc f) BuiltinBoolTrue
+  false_ <- toExpression <$> getBuiltinNameScoper (getLoc f) BuiltinBoolFalse
   let if_ = f ^. funDefName
       u = ExpressionUniverse smallUniverseNoLoc
       l = getLoc f
@@ -57,11 +57,11 @@ checkIf f = do
         _funInfoFreeTypeVars = [vart]
       }
 
-checkOr :: (Members '[Builtins, Error BuiltinsError, NameIdGen] r) => FunctionDef -> Sem r ()
+checkOr :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => FunctionDef -> Sem r ()
 checkOr f = do
-  bool_ <- getBuiltinName (getLoc f) BuiltinBool
-  true_ <- toExpression <$> getBuiltinName (getLoc f) BuiltinBoolTrue
-  false_ <- toExpression <$> getBuiltinName (getLoc f) BuiltinBoolFalse
+  bool_ <- getBuiltinNameScoper (getLoc f) BuiltinBool
+  true_ <- toExpression <$> getBuiltinNameScoper (getLoc f) BuiltinBoolTrue
+  false_ <- toExpression <$> getBuiltinNameScoper (getLoc f) BuiltinBoolFalse
   let or_ = f ^. funDefName
       l = getLoc f
   vare <- freshVar l "e"
@@ -82,11 +82,11 @@ checkOr f = do
         _funInfoFreeTypeVars = []
       }
 
-checkAnd :: (Members '[Builtins, Error BuiltinsError, NameIdGen] r) => FunctionDef -> Sem r ()
+checkAnd :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => FunctionDef -> Sem r ()
 checkAnd f = do
-  bool_ <- getBuiltinName (getLoc f) BuiltinBool
-  true_ <- toExpression <$> getBuiltinName (getLoc f) BuiltinBoolTrue
-  false_ <- toExpression <$> getBuiltinName (getLoc f) BuiltinBoolFalse
+  bool_ <- getBuiltinNameScoper (getLoc f) BuiltinBool
+  true_ <- toExpression <$> getBuiltinNameScoper (getLoc f) BuiltinBoolTrue
+  false_ <- toExpression <$> getBuiltinNameScoper (getLoc f) BuiltinBoolFalse
   let and_ = f ^. funDefName
       l = getLoc f
   vare <- freshVar l "e"
@@ -107,9 +107,9 @@ checkAnd f = do
         _funInfoFreeTypeVars = []
       }
 
-checkBoolPrint :: (Members '[Builtins, Error BuiltinsError] r) => AxiomDef -> Sem r ()
+checkBoolPrint :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
 checkBoolPrint f = do
-  bool_ <- getBuiltinName (getLoc f) BuiltinBool
-  io <- getBuiltinName (getLoc f) BuiltinIO
+  bool_ <- getBuiltinNameScoper (getLoc f) BuiltinBool
+  io <- getBuiltinNameScoper (getLoc f) BuiltinIO
   unless (f ^. axiomType === (bool_ --> io)) $
     builtinsErrorText (getLoc f) "Bool print has the wrong type signature"

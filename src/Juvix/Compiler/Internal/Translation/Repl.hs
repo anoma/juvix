@@ -11,6 +11,7 @@ import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking
 import Juvix.Compiler.Pipeline.Artifacts
+import Juvix.Compiler.Store.Scoped.Data.InfoTable (infoBuiltins)
 import Juvix.Prelude
 
 typeCheckExpressionType ::
@@ -22,10 +23,10 @@ typeCheckExpressionType exp = do
   table <- extendedTableReplArtifacts exp
   stable <- gets (^. artifactScopeTable)
   runResultBuilderArtifacts
-    . runBuiltinsArtifacts
     . runNameIdGenArtifacts
     . ignoreHighlightBuilder
     . runReader table
+    . runReader (stable ^. infoBuiltins)
     . runReader stable
     . withEmptyLocalVars
     . withEmptyInsertedArgsStack

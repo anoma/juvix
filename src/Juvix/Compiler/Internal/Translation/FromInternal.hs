@@ -41,7 +41,7 @@ typeCheckingNew a = do
             }
     fmap (res,)
       . runReader table
-      . runReader stable
+      . runReader (stable ^. Scoped.infoBuiltins)
       . runResultBuilder importCtx
       . mapError (JuvixError @TypeCheckerError)
       $ checkTopModule (res ^. Internal.resultModule)

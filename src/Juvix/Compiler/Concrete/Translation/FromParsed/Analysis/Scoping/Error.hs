@@ -10,7 +10,7 @@ import Juvix.Compiler.Concrete.Data.NameSignature.Error
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Pretty
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Types
 import Juvix.Compiler.Internal.Translation.FromConcrete.NamedArguments.Error
-import Juvix.Prelude.Base.Foundation
+import Juvix.Prelude
 
 data ScoperError
   = ErrInfixParser InfixError
@@ -56,6 +56,9 @@ data ScoperError
   | ErrWrongDefaultValue WrongDefaultValue
   | ErrUnsupported Unsupported
   | ErrDefaultArgCycle DefaultArgCycle
+  | ErrBuiltinAlreadyDefined BuiltinAlreadyDefined
+  | ErrBuiltinNotDefined BuiltinNotDefined
+  | ErrBuiltinErrorMessage BuiltinErrorMessage
   deriving stock (Generic)
 
 instance ToGenericError ScoperError where
@@ -103,3 +106,18 @@ instance ToGenericError ScoperError where
     ErrWrongDefaultValue e -> genericError e
     ErrUnsupported e -> genericError e
     ErrDefaultArgCycle e -> genericError e
+    ErrBuiltinAlreadyDefined e -> genericError e
+    ErrBuiltinNotDefined e -> genericError e
+    ErrBuiltinErrorMessage e -> genericError e
+
+builtinsErrorMsg :: (Members '[Error ScoperError] r) => Interval -> AnsiText -> Sem r a
+builtinsErrorMsg loc msg =
+  throw $
+    ErrBuiltinErrorMessage
+      BuiltinErrorMessage
+        { _builtinErrorMessageLoc = loc,
+          _builtinErrorMessage = msg
+        }
+
+builtinsErrorText :: (Members '[Error ScoperError] r) => Interval -> Text -> Sem r a
+builtinsErrorText loc = builtinsErrorMsg loc . mkAnsiText

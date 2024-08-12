@@ -2,7 +2,6 @@ module Juvix.Compiler.Store.Scoped.Data.InfoTable where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
-import Juvix.Compiler.Builtins.Effect (BuiltinsTable)
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Store.Scoped.Data.SymbolEntry
@@ -12,6 +11,8 @@ import Juvix.Prelude
 type DocTable = HashMap NameId (Judoc 'Scoped)
 
 type PrecedenceGraph = HashMap S.NameId (HashSet S.NameId)
+
+type BuiltinsTable = HashMap BuiltinPrim S.Symbol
 
 data InfoTable = InfoTable
   { _infoFixities :: HashMap S.NameId FixityDef,

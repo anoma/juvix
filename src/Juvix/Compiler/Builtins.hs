@@ -1,6 +1,5 @@
 module Juvix.Compiler.Builtins
-  ( module Juvix.Compiler.Builtins.Effect,
-    module Juvix.Compiler.Builtins.Nat,
+  ( module Juvix.Compiler.Builtins.Nat,
     module Juvix.Compiler.Builtins.IO,
     module Juvix.Compiler.Builtins.Int,
     module Juvix.Compiler.Builtins.Bool,
@@ -22,7 +21,6 @@ import Juvix.Compiler.Builtins.Byte
 import Juvix.Compiler.Builtins.Cairo
 import Juvix.Compiler.Builtins.Control
 import Juvix.Compiler.Builtins.Debug
-import Juvix.Compiler.Builtins.Effect
 import Juvix.Compiler.Builtins.Field
 import Juvix.Compiler.Builtins.IO
 import Juvix.Compiler.Builtins.Int

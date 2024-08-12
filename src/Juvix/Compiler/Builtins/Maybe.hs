@@ -5,7 +5,7 @@ import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty
 import Juvix.Prelude
 
-checkMaybeDef :: forall r. (Members '[Builtins, Error BuiltinsError] r) => InductiveDef -> Sem r ()
+checkMaybeDef :: forall r. (Members '[Reader BuiltinsTable, Error ScoperError] r) => InductiveDef -> Sem r ()
 checkMaybeDef d = do
   let err :: forall a. Text -> Sem r a
       err = builtinsErrorText (getLoc d)
@@ -17,19 +17,19 @@ checkMaybeDef d = do
     [c1, c2] -> checkNothing param c1 >> checkJust param c2
     _ -> err "Maybe should have exactly two constructors"
 
-checkNothing :: (Members '[Builtins, Error BuiltinsError] r) => VarName -> ConstructorDef -> Sem r ()
+checkNothing :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => VarName -> ConstructorDef -> Sem r ()
 checkNothing a d@ConstructorDef {..} = do
   let ty = _inductiveConstructorType
-  maybe_ <- getBuiltinName (getLoc d) BuiltinMaybe
+  maybe_ <- getBuiltinNameScoper (getLoc d) BuiltinMaybe
   let nothingty = maybe_ @@ a
   unless (ty === nothingty) $
     builtinsErrorMsg (getLoc d) $
       "nothing has the wrong type " <> ppOutDefault ty <> " | " <> ppOutDefault nothingty
 
-checkJust :: (Members '[Builtins, Error BuiltinsError] r) => VarName -> ConstructorDef -> Sem r ()
+checkJust :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => VarName -> ConstructorDef -> Sem r ()
 checkJust a d@ConstructorDef {..} = do
   let ty = _inductiveConstructorType
-  maybe_ <- getBuiltinName (getLoc d) BuiltinMaybe
+  maybe_ <- getBuiltinNameScoper (getLoc d) BuiltinMaybe
   let justty = a --> maybe_ @@ a
   unless (ty === justty) $
     builtinsErrorText (getLoc d) "just has the wrong type"
