@@ -1,8 +1,8 @@
 -- ranges
 module test058;
 
-import Stdlib.Prelude open hiding {for};
-import Stdlib.Data.Range open;
+import Stdlib.Prelude open;
+import Stdlib.Data.Range open hiding {for};
 
 syntax iterator myfor;
 
