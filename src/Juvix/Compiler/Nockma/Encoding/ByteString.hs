@@ -61,28 +61,6 @@ mkEmptyAtom x =
       _atom = x
     }
 
--- mkEmptyCell :: Term a -> Term a -> Cell a
--- mkEmptyCell l r =
---   Cell'
---     { _cellRight = r,
---       _cellLeft = l,
---       _cellInfo = emptyCellInfo
---     }
-
--- byteArrayToByteString :: (NockNatural a, Member (Error (ErrNockNatural a)) r) => Atom a -> Atom a -> Sem r ByteString
--- byteArrayToByteString lenAtom bytesAtom = do
---   len <- nockNatural lenAtom
---   atomToByteStringLen (fromJust (safeNaturalToInt len)) bytesAtom
-
--- --- Transform an Int to an Atom. The function returns ann atom representing the absolute value of the input Int.
--- intToAtom :: (NockNatural a, Member (Error (ErrNockNatural a)) r) => Int -> Sem r (Atom a)
--- intToAtom i = mkEmptyAtom <$> fromNatural (integerToNatural (toInteger i))
-
--- byteStringToByteArray :: (NockNatural a, Member (Error (ErrNockNatural a)) r) => ByteString -> Sem r (Cell a)
--- byteStringToByteArray bs = do
---   len <- TermAtom <$> intToAtom (BS.length bs)
---   mkEmptyCell len . TermAtom <$> byteStringToAtom bs
-
 -- | Pad a ByteString with zeros up to a specified length
 padByteString :: Int -> ByteString -> ByteString
 padByteString n bs
