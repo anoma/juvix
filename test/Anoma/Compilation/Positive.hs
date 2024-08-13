@@ -567,7 +567,8 @@ allTests =
         $(mkRelFile "test077.juvix")
         []
         $ checkOutput
-          [ [nock| true |]
+          [ [nock| 64 |],
+            [nock| true |]
           ],
       let toSignAndVerify :: Term Natural = [nock| [1 2 nil] |]
        in mkAnomaCallTest

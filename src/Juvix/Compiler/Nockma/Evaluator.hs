@@ -259,6 +259,9 @@ evalProfile inistack initerm =
               let xs = checkTermToList args'
               let len = integerToNatural (toInteger (length xs))
               TermAtom . mkEmptyAtom <$> fromNatural len
+            StdlibLengthBytes -> case args' of
+              TermAtom a -> TermAtom <$> goLengthBytes a
+              _ -> error "expected an atom"
           where
             goCat :: Atom a -> Atom a -> Sem r (Term a)
             goCat arg1 arg2 = TermAtom . setAtomHint AtomHintString <$> atomConcatenateBytes arg1 arg2
@@ -267,6 +270,11 @@ evalProfile inistack initerm =
             goFoldBytes c = do
               bs <- mapM nockNatural (checkTermToListAtom c)
               byteStringToAtom (BS.pack (fromIntegral <$> bs))
+
+            goLengthBytes :: Atom a -> Sem r (Atom a)
+            goLengthBytes x = do
+              bs <- atomToByteString x
+              return (mkEmptyAtom (fromIntegral (BS.length bs)))
 
             checkTermToList :: Term a -> [Term a]
             checkTermToList = \case
@@ -283,15 +291,6 @@ evalProfile inistack initerm =
                 check = \case
                   TermAtom x -> x
                   TermCell {} -> error "expect list element to be an atom"
-
-            signatureLength :: Int
-            signatureLength = 64
-
-            publicKeyLength :: Int
-            publicKeyLength = 32
-
-            privateKeyLength :: Int
-            privateKeyLength = 64
 
             goVerifyDetached :: Atom a -> Atom a -> Atom a -> Sem r (Term a)
             goVerifyDetached sigT messageT pubKeyT = do

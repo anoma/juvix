@@ -35,6 +35,7 @@ where
 
 import Data.ByteString qualified as BS
 import Juvix.Compiler.Nockma.Encoding
+import Juvix.Compiler.Nockma.Encoding.Ed25519 qualified as E
 import Juvix.Compiler.Nockma.Language.Path
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Stdlib
@@ -538,19 +539,56 @@ compile = \case
     goAnomaDecode :: [Term Natural] -> Term Natural
     goAnomaDecode = callStdlib StdlibDecode
 
+    byteArrayPayload :: Text -> Term Natural -> Term Natural
+    byteArrayPayload msg ba = ba >># opAddress msg [R]
+
+    mkByteArray :: Term Natural -> Term Natural -> Term Natural
+    mkByteArray len payload = len # payload
+
     goAnomaVerifyDetached :: [Term Natural] -> Term Natural
     goAnomaVerifyDetached = \case
-      [sig, message, pubKey] -> callStdlib StdlibVerifyDetached [sig, goAnomaEncode [message], pubKey]
+      [sig, message, pubKey] ->
+        callStdlib
+          StdlibVerifyDetached
+          [ byteArrayPayload "verifyDetachedSig" sig,
+            goAnomaEncode [message],
+            byteArrayPayload "verifyDetachedPubKey" pubKey
+          ]
       _ -> impossible
 
     goAnomaSign :: [Term Natural] -> Term Natural
     goAnomaSign = \case
-      [message, privKey] -> callStdlib StdlibSign [goAnomaEncode [message], privKey]
+      [message, privKey] ->
+        opReplace
+          "callMkByteArrayOnSignResult"
+          (closurePath ArgsTuple)
+          ( callStdlib
+              StdlibSign
+              [ goAnomaEncode [message],
+                byteArrayPayload "anomaSignPrivKeyTail" privKey
+              ]
+          )
+          (opAddress "stack" emptyPath)
+          >># goReturnByteArray
       _ -> impossible
+      where
+        goReturnByteArray :: Term Natural
+        goReturnByteArray = mkByteArray (callStdlib StdlibLengthBytes [signResult]) signResult
+
+        signResult :: Term Natural
+        signResult = opAddress "sign-result" (closurePath ArgsTuple)
 
     goAnomaSignDetached :: [Term Natural] -> Term Natural
     goAnomaSignDetached = \case
-      [message, privKey] -> callStdlib StdlibSignDetached [goAnomaEncode [message], privKey]
+      [message, privKeyByteArray] ->
+        mkByteArray
+          (nockNatLiteral (integerToNatural (toInteger E.signatureLength)))
+          ( callStdlib
+              StdlibSignDetached
+              [ goAnomaEncode [message],
+                byteArrayPayload "privKeyByteArrayTail" privKeyByteArray
+              ]
+          )
       _ -> impossible
 
     -- Conceptually this function is:
@@ -563,7 +601,7 @@ compile = \case
         opReplace
           "callDecodeFromVerify-args"
           (closurePath ArgsTuple)
-          (callStdlib StdlibVerify [signedMessage, pubKey])
+          (callStdlib StdlibVerify [byteArrayPayload "signedMessageByteArray" signedMessage, byteArrayPayload "pubKeyByteArray" pubKey])
           (opAddress "stack" emptyPath)
           >># goDecodeResult
       _ -> impossible
