@@ -882,15 +882,27 @@ goModule onlyTypes infoTable Internal.Module {..} =
     names :: HashSet Text
     names =
       HashSet.fromList $
-        map (^. Internal.functionInfoName . namePretty) (filter (not . (^. Internal.functionInfoIsLocal)) (HashMap.elems (infoTable ^. Internal.infoFunctions)))
-          ++ map (^. Internal.constructorInfoName . namePretty) (HashMap.elems (infoTable ^. Internal.infoConstructors))
-          ++ map (^. Internal.inductiveInfoName . namePretty) (HashMap.elems (infoTable ^. Internal.infoInductives))
-          ++ map (^. Internal.axiomInfoDef . Internal.axiomName . namePretty) (HashMap.elems (infoTable ^. Internal.infoAxioms))
+        map quote $
+          map (^. Internal.functionInfoName . namePretty) (filter (not . (^. Internal.functionInfoIsLocal)) (HashMap.elems (infoTable ^. Internal.infoFunctions)))
+            ++ map (^. Internal.constructorInfoName . namePretty) (HashMap.elems (infoTable ^. Internal.infoConstructors))
+            ++ map (^. Internal.inductiveInfoName . namePretty) (HashMap.elems (infoTable ^. Internal.infoInductives))
+            ++ map (^. Internal.axiomInfoDef . Internal.axiomName . namePretty) (HashMap.elems (infoTable ^. Internal.infoAxioms))
 
     quote :: Text -> Text
-    quote txt = case Text.uncons txt of
-      Just (c, txt') | not (isLetter c) -> txt'
-      _ -> txt
+    quote = quote' . Text.filter isLatin1 . Text.filter (isLetter .||. isDigit .||. (== '_') .||. (== '\''))
+
+    quote' :: Text -> Text
+    quote' txt
+      | HashSet.member txt reservedNames = quote' (prime txt)
+      | txt == "_" = "v"
+      | otherwise = case Text.uncons txt of
+          Just (c, _) | not (isLetter c) -> quote' ("v_" <> txt)
+          _ -> case Text.unsnoc txt of
+            Just (_, c) | not (isAlphaNum c || c == '\'') -> quote' (txt <> "'")
+            _ -> txt
+
+    reservedNames :: HashSet Text
+    reservedNames = HashSet.fromList ["let", "in", "if", "then", "else", "case", "of", "theory", "imports", "begin", "end"]
 
     filterTypeArgs :: Int -> Internal.Expression -> [a] -> [a]
     filterTypeArgs paramsNum ty args =
