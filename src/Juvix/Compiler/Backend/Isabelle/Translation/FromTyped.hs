@@ -902,7 +902,9 @@ goModule onlyTypes infoTable Internal.Module {..} =
             _ -> txt
 
     reservedNames :: HashSet Text
-    reservedNames = HashSet.fromList ["let", "in", "if", "then", "else", "case", "of", "theory", "imports", "begin", "end"]
+    reservedNames =
+      HashSet.fromList
+        ["let", "in", "if", "then", "else", "case", "of", "theory", "imports", "begin", "end", "nat", "int", "bool", "list", "option"]
 
     filterTypeArgs :: Int -> Internal.Expression -> [a] -> [a]
     filterTypeArgs paramsNum ty args =
