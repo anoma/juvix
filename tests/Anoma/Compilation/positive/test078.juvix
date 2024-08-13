@@ -21,8 +21,7 @@ axiom anomaVerifyWithMessage : {A : Type} -> ByteArray -> ByteArray -> Maybe A;
 main' (input : List Nat) : List Nat :=
   let
     signedMessage : ByteArray := anomaSign input privKey;
-  in trace (byteArrayLength signedMessage) >-> fromMaybe []
-    <| anomaVerifyWithMessage signedMessage pubKey;
+  in fromMaybe [] <| anomaVerifyWithMessage signedMessage pubKey;
 
 main : List Nat := main' [1; 2; 3];
 
