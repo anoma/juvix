@@ -127,8 +127,6 @@ loadFile :: Prepath File -> Repl ()
 loadFile f = do
   entryPoint <- getReplEntryPointFromPrepath f
   loadEntryPoint entryPoint
-  t <- getScopedInfoTable
-  putStrLn ("Loaded File: " <> Concrete.ppTrace (t ^. Scoped.infoBuiltins))
 
 loadDefaultPrelude :: Repl ()
 loadDefaultPrelude =
@@ -151,9 +149,6 @@ getReplEntryPointFromPath = getReplEntryPoint (\r a -> runM . runTaggedLockPermi
 displayVersion :: String -> Repl ()
 displayVersion _ = liftIO (putStrLn versionTag)
 
-getArtifacts :: Repl Artifacts
-getArtifacts = (^. replContextArtifacts) <$> replGetContext
-
 replCommand :: ReplOptions -> String -> Repl ()
 replCommand opts input_ = catchAll $ do
   ctx <- replGetContext
@@ -167,9 +162,7 @@ replCommand opts input_ = catchAll $ do
         | otherwise -> renderOutLn (Core.ppOut opts n)
   where
     compileThenEval :: ReplContext -> String -> Repl (Maybe Core.Node)
-    compileThenEval ctx s = do
-      putStrLn (Concrete.ppTrace (artif ^. artifactScopeTable . Scoped.infoBuiltins))
-      compileString >>= mapM eval
+    compileThenEval ctx s = compileString >>= mapM eval
       where
         artif :: Artifacts
         artif = ctx ^. replContextArtifacts
