@@ -95,3 +95,9 @@ type R := mkR {
   r1 : Nat;
   r2 : Nat;
 };
+
+-- Standard library
+
+bf (b1 b2 : Bool) : Bool := not (b1 && b2);
+
+nf (n1 n2 : Int) : Bool := n1 - n2 >= n1 || n2 <= n1 + n2;
