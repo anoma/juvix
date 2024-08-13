@@ -51,7 +51,8 @@ getBuiltinName loc p = do
       throw $
         BuiltinNotDefined
           { _notDefinedBuiltin = b,
-            _notDefinedLoc = loc
+            _notDefinedLoc = loc,
+            _notDefinedDebug = "internal typechecker"
           }
     Just x -> return (fromConcreteSymbol x)
 

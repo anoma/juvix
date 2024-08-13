@@ -6,6 +6,7 @@ import Juvix.Compiler.Concrete.Data.Highlight.Input
 import Juvix.Compiler.Concrete.Data.Scope
 import Juvix.Compiler.Concrete.Data.ScopedName
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
+import Juvix.Compiler.Concrete.Pretty (ppTrace)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Compiler.Store.Scoped.Language
 import Juvix.Prelude
@@ -34,13 +35,16 @@ data InfoTableBuilder :: Effect where
 makeSem ''InfoTableBuilder
 
 registerBuiltin :: (IsBuiltin a, Member InfoTableBuilder r) => a -> S.Symbol -> Sem r ()
-registerBuiltin = registerBuiltin' . toBuiltinPrim
+registerBuiltin b sym = registerBuiltin' (toBuiltinPrim b) sym
 
 getBuiltinSymbol :: (IsBuiltin a, Member InfoTableBuilder r) => Interval -> a -> Sem r S.Symbol
 getBuiltinSymbol i = getBuiltinSymbol' i . toBuiltinPrim
 
 registerDoc :: forall r. (Members '[HighlightBuilder, State InfoTable] r) => NameId -> Maybe (Judoc 'Scoped) -> Sem r ()
 registerDoc k md = modify (set (highlightDoc . at k) md)
+
+evalInfoTableBuilder :: (Members '[Error ScoperError, HighlightBuilder] r) => InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r a
+evalInfoTableBuilder ini = fmap snd . runInfoTableBuilder ini
 
 runInfoTableBuilder :: (Members '[Error ScoperError, HighlightBuilder] r) => InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
 runInfoTableBuilder ini = reinterpret (runState ini) $ \case
@@ -102,9 +106,11 @@ runInfoTableBuilder ini = reinterpret (runState ini) $ \case
           ErrBuiltinNotDefined
             BuiltinNotDefined
               { _notDefinedBuiltin = b,
-                _notDefinedLoc = i
+                _notDefinedLoc = i,
+                _notDefinedDebug = "scoper"
               }
   RegisterBuiltin' b n -> do
+    traceM ("register: " <> ppTrace b)
     s <- gets (^. infoBuiltins . at b)
     case s of
       Nothing -> modify (set (infoBuiltins . at b) (Just n))

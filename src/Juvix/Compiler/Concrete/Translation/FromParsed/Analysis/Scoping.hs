@@ -80,15 +80,21 @@ scopeCheck' importTab pr m = do
 
     mkResult :: (ScoperState, (Module 'Scoped 'ModuleTop, ScopedModule, Scope)) -> ScoperResult
     mkResult (scoperSt, (md, sm, sc)) =
-      let exp = createExportsTable (sm ^. scopedModuleExportInfo)
-       in ScoperResult
-            { _resultParserResult = pr,
-              _resultModule = md,
-              _resultScopedModule = sm,
-              _resultExports = exp,
-              _resultScoperState = scoperSt,
-              _resultScope = sc
-            }
+      trace
+        ( "mkResult for "
+            <> ppTrace (md ^. modulePath)
+            <> ": "
+            <> ppTrace (sm ^. scopedModuleInfoTable . infoBuiltins)
+        )
+        $ let exp = createExportsTable (sm ^. scopedModuleExportInfo)
+           in ScoperResult
+                { _resultParserResult = pr,
+                  _resultModule = md,
+                  _resultScopedModule = sm,
+                  _resultExports = exp,
+                  _resultScoperState = scoperSt,
+                  _resultScope = sc
+                }
 
 scopeCheckRepl ::
   forall r a b.
@@ -102,10 +108,10 @@ scopeCheckRepl ::
   InfoTable ->
   a ->
   Sem r b
-scopeCheckRepl check importTab tab a = mapError (JuvixError @ScoperError) $ do
-  fmap snd
+scopeCheckRepl check importTab tab a =
+  mapError (JuvixError @ScoperError)
     . ignoreHighlightBuilder
-    . runInfoTableBuilder tab
+    . evalInfoTableBuilder tab
     . runReader iniScopeParameters
     . runReader tab'
     . localBindings
@@ -1355,6 +1361,12 @@ checkTopModule m@Module {..} = checkedModule
                 _scopedModuleLocalModules = localModules,
                 _scopedModuleInfoTable = tab
               }
+      traceM
+        ( "checkedModule path"
+            <> ppTrace path'
+            <> "\nTable : "
+            <> ppTrace (tab ^. infoBuiltins)
+        )
       return (md, smd, sc)
 
 withTopScope :: (Members '[State Scope] r) => Sem r a -> Sem r a
@@ -2909,6 +2921,7 @@ checkParens e@(ExpressionAtoms as _) = case as of
     _ -> checkParseExpressionAtoms e
   _ -> checkParseExpressionAtoms e
 
+-- TODO Question: why do we need both InfoTableBuilder, Reader InfoTable. Is the Reader for the imports only?
 checkExpressionAtoms ::
   forall r.
   (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader Package] r) =>

@@ -1077,7 +1077,8 @@ instance ToGenericError BuiltinAlreadyDefined where
 
 data BuiltinNotDefined = BuiltinNotDefined
   { _notDefinedBuiltin :: BuiltinPrim,
-    _notDefinedLoc :: Interval
+    _notDefinedLoc :: Interval,
+    _notDefinedDebug :: Doc CodeAnn
   }
 
 makeLenses ''BuiltinNotDefined
@@ -1092,7 +1093,7 @@ instance ToGenericError BuiltinNotDefined where
         }
     where
       i = e ^. notDefinedLoc
-      msg = "The builtin" <+> code (pretty (e ^. notDefinedBuiltin)) <+> "has not been defined"
+      msg = e ^. notDefinedDebug <> " " <> "The builtin" <+> code (pretty (e ^. notDefinedBuiltin)) <+> "has not been defined"
 
 -- | Generic error message related to builtins
 data BuiltinErrorMessage = BuiltinErrorMessage

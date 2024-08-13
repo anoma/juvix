@@ -31,7 +31,9 @@ typeCheckingNew a = do
     let table :: InfoTable
         table = Internal.computeCombinedInfoTable itab <> computeInternalModuleInfoTable (res ^. Internal.resultModule)
         stable :: Scoped.InfoTable
-        stable = Scoped.computeCombinedInfoTable stab <> (res ^. Internal.resultScoper . resultScopedModule . scopedModuleInfoTable)
+        stable =
+          Scoped.computeCombinedInfoTable stab
+            <> res ^. Internal.resultScoper . resultScopedModule . scopedModuleInfoTable
         importCtx =
           ImportContext
             { _importContextTypesTable = computeTypesTable itab,

@@ -20,7 +20,7 @@ getModulePathKey = C.topModulePathKey . getModulePath
 
 getScopedModuleTable :: ModuleTable -> ScopedModuleTable
 getScopedModuleTable mtab =
-  ScopedModuleTable $ HashMap.mapKeys C.topModulePathKey (fmap (^. moduleInfoScopedModule) (mtab ^. moduleTable))
+  ScopedModuleTable $ HashMap.mapKeys C.topModulePathKey ((^. moduleInfoScopedModule) <$> mtab ^. moduleTable)
 
 getInternalModuleTable :: ModuleTable -> InternalModuleTable
 getInternalModuleTable mtab =
