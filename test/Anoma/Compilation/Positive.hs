@@ -567,7 +567,8 @@ allTests =
         $(mkRelFile "test077.juvix")
         []
         $ checkOutput
-          [ [nock| true |]
+          [ [nock| 64 |],
+            [nock| true |]
           ],
       let toSignAndVerify :: Term Natural = [nock| [1 2 nil] |]
        in mkAnomaCallTest
@@ -612,5 +613,22 @@ allTests =
             [nock| 3 |],
             [nock| 240 |],
             [nock| [1 238 3 2 nil] |]
+          ],
+      mkAnomaCallTest
+        "Test082: ByteArray"
+        $(mkRelDir ".")
+        $(mkRelFile "test082.juvix")
+        []
+        $ checkOutput
+          [ [nock| 0 |],
+            [nock| [0 0] |],
+            [nock| 3 |],
+            [nock| [3 0] |],
+            [nock| 4 |],
+            [nock| [4 1] |],
+            [nock| 2 |],
+            [nock| [2 258] |],
+            [nock| 1 |],
+            [nock| [1 0] |]
           ]
     ]

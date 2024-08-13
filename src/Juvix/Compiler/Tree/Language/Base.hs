@@ -19,6 +19,7 @@ data Constant
   | ConstUnit
   | ConstVoid
   | ConstUInt8 Word8
+  | ConstByteArray ByteString
   deriving stock (Eq, Generic)
 
 instance (Hashable Constant)

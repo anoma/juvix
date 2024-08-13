@@ -44,11 +44,12 @@ checkAnomaVerifyDetached f = do
       u = ExpressionUniverse smallUniverseNoLoc
       l = getLoc f
   decodeT <- freshVar l "signedDataT"
-  nat <- getBuiltinNameScoper (getLoc f) BuiltinNat
+  byteArray <- getBuiltinNameScoper (getLoc f) BuiltinByteArray
   bool_ <- getBuiltinNameScoper (getLoc f) BuiltinBool
   let freeVars = HashSet.fromList [decodeT]
-  unless ((ftype ==% (u <>--> nat --> decodeT --> nat --> bool_)) freeVars) $
-    builtinsErrorText (getLoc f) "anomaVerifyDetached must be of type {A : Type} -> Nat -> A -> Nat -> Bool"
+  unless
+    ((ftype ==% (u <>--> byteArray --> decodeT --> byteArray --> bool_)) freeVars)
+    $ builtinsErrorText (getLoc f) "anomaVerifyDetached must be of type {A : Type} -> ByteArray -> A -> ByteArray -> Bool"
 
 checkAnomaSign :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => AxiomDef -> Sem r ()
 checkAnomaSign f = do
@@ -56,10 +57,11 @@ checkAnomaSign f = do
       u = ExpressionUniverse smallUniverseNoLoc
       l = getLoc f
   dataT <- freshVar l "dataT"
-  nat <- getBuiltinNameScoper (getLoc f) BuiltinNat
+  byteArray <- getBuiltinNameScoper (getLoc f) BuiltinByteArray
   let freeVars = HashSet.fromList [dataT]
-  unless ((ftype ==% (u <>--> dataT --> nat --> nat)) freeVars) $
-    builtinsErrorText (getLoc f) "anomaSign must be of type {A : Type} -> A -> Nat -> Nat"
+  unless
+    ((ftype ==% (u <>--> dataT --> byteArray --> byteArray)) freeVars)
+    $ builtinsErrorText (getLoc f) "anomaSign must be of type {A : Type} -> A -> ByteArray -> ByteArray"
 
 checkAnomaVerifyWithMessage :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => AxiomDef -> Sem r ()
 checkAnomaVerifyWithMessage f = do
@@ -67,11 +69,12 @@ checkAnomaVerifyWithMessage f = do
       u = ExpressionUniverse smallUniverseNoLoc
       l = getLoc f
   dataT <- freshVar l "dataT"
-  nat <- getBuiltinNameScoper (getLoc f) BuiltinNat
+  byteArray <- getBuiltinNameScoper (getLoc f) BuiltinByteArray
   maybe_ <- getBuiltinNameScoper (getLoc f) BuiltinMaybe
   let freeVars = HashSet.fromList [dataT]
-  unless ((ftype ==% (u <>--> nat --> nat --> maybe_ @@ dataT)) freeVars) $
-    builtinsErrorText (getLoc f) "anomaVerify must be of type {A : Type} -> Nat -> Nat -> Maybe A"
+  unless
+    ((ftype ==% (u <>--> byteArray --> byteArray --> maybe_ @@ dataT)) freeVars)
+    $ builtinsErrorText (getLoc f) "anomaVerify must be of type {A : Type} -> byteArray -> byteArray -> Maybe A"
 
 checkAnomaSignDetached :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => AxiomDef -> Sem r ()
 checkAnomaSignDetached f = do
@@ -79,7 +82,8 @@ checkAnomaSignDetached f = do
       u = ExpressionUniverse smallUniverseNoLoc
       l = getLoc f
   dataT <- freshVar l "dataT"
-  nat <- getBuiltinNameScoper (getLoc f) BuiltinNat
+  byteArray <- getBuiltinNameScoper (getLoc f) BuiltinByteArray
   let freeVars = HashSet.fromList [dataT]
-  unless ((ftype ==% (u <>--> dataT --> nat --> nat)) freeVars) $
-    builtinsErrorText (getLoc f) "anomaSignDetached must be of type {A : Type} -> A -> Nat -> Nat"
+  unless
+    ((ftype ==% (u <>--> dataT --> byteArray --> byteArray)) freeVars)
+    $ builtinsErrorText (getLoc f) "anomaSignDetached must be of type {A : Type} -> A -> ByteArray -> ByteArray"

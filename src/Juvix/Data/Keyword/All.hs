@@ -277,6 +277,9 @@ kwPrealloc = asciiKw Str.prealloc
 kwArgsNum :: Keyword
 kwArgsNum = asciiKw Str.instrArgsNum
 
+kwByteArrayFromListUInt8 :: Keyword
+kwByteArrayFromListUInt8 = asciiKw Str.instrByteArrayFromListUInt8
+
 kwPoseidon :: Keyword
 kwPoseidon = asciiKw Str.instrPoseidon
 
@@ -462,6 +465,12 @@ kwAnomaSignDetached = asciiKw Str.anomaSignDetached
 
 kwAnomaVerifyWithMessage :: Keyword
 kwAnomaVerifyWithMessage = asciiKw Str.anomaVerifyWithMessage
+
+kwByteArrayFromListByte :: Keyword
+kwByteArrayFromListByte = asciiKw Str.byteArrayFromListByte
+
+kwByteArrayLength :: Keyword
+kwByteArrayLength = asciiKw Str.byteArrayLength
 
 delimBraceL :: Keyword
 delimBraceL = mkDelim Str.braceL

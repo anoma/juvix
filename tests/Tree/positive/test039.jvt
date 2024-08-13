@@ -1,0 +1,11 @@
+
+function id(uint8) : uint8;
+function main() : *
+
+function id(uint8) : uint8 {
+  arg[0]
+}
+
+function main() : * {
+  call[id](257u8)
+}

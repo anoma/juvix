@@ -31,6 +31,9 @@ number = number' integer
 field :: ParsecS r (Integer, Interval)
 field = lexemeInterval field'
 
+uint8 :: ParsecS r (Integer, Interval)
+uint8 = lexemeInterval uint8'
+
 string :: ParsecS r (Text, Interval)
 string = lexemeInterval string'
 

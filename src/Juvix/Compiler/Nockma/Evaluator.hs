@@ -7,6 +7,7 @@ module Juvix.Compiler.Nockma.Evaluator
 where
 
 import Crypto.Sign.Ed25519
+import Data.ByteString qualified as BS
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Nockma.Encoding
 import Juvix.Compiler.Nockma.Encoding qualified as Encoding
@@ -253,18 +254,43 @@ evalProfile inistack initerm =
             StdlibCatBytes -> case args' of
               TCell (TermAtom arg1) (TermAtom arg2) -> goCat arg1 arg2
               _ -> error "expected a term with two atoms"
+            StdlibFoldBytes -> TermAtom <$> goFoldBytes args'
+            StdlibLengthList -> do
+              let xs = checkTermToList args'
+              let len = integerToNatural (toInteger (length xs))
+              TermAtom . mkEmptyAtom <$> fromNatural len
+            StdlibLengthBytes -> case args' of
+              TermAtom a -> TermAtom <$> goLengthBytes a
+              _ -> error "expected an atom"
           where
             goCat :: Atom a -> Atom a -> Sem r (Term a)
             goCat arg1 arg2 = TermAtom . setAtomHint AtomHintString <$> atomConcatenateBytes arg1 arg2
 
-            signatureLength :: Int
-            signatureLength = 64
+            goFoldBytes :: Term a -> Sem r (Atom a)
+            goFoldBytes c = do
+              bs <- mapM nockNatural (checkTermToListAtom c)
+              byteStringToAtom (BS.pack (fromIntegral <$> bs))
 
-            publicKeyLength :: Int
-            publicKeyLength = 32
+            goLengthBytes :: Atom a -> Sem r (Atom a)
+            goLengthBytes x = do
+              bs <- atomToByteString x
+              return (mkEmptyAtom (fromIntegral (BS.length bs)))
 
-            privateKeyLength :: Int
-            privateKeyLength = 64
+            checkTermToList :: Term a -> [Term a]
+            checkTermToList = \case
+              TermAtom x ->
+                if
+                    | x `nockmaEq` nockNil -> []
+                    | otherwise -> error "expected a list to be terminated by nil"
+              TermCell c -> c ^. cellLeft : checkTermToList (c ^. cellRight)
+
+            checkTermToListAtom :: Term a -> [Atom a]
+            checkTermToListAtom = map check . checkTermToList
+              where
+                check :: Term a -> Atom a
+                check = \case
+                  TermAtom x -> x
+                  TermCell {} -> error "expect list element to be an atom"
 
             goVerifyDetached :: Atom a -> Atom a -> Atom a -> Sem r (Term a)
             goVerifyDetached sigT messageT pubKeyT = do

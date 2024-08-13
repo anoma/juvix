@@ -2,6 +2,7 @@ module Juvix.Compiler.Core.Evaluator where
 
 import Control.Exception qualified as Exception
 import Crypto.Sign.Ed25519 qualified as E
+import Data.ByteString qualified as BS
 import Data.HashMap.Strict qualified as HashMap
 import Data.Serialize qualified as S
 import GHC.Base (seq)
@@ -215,6 +216,8 @@ geval opts herr tab env0 = eval' env0
       OpRandomEcPoint -> randomEcPointOp
       OpUInt8ToInt -> uint8ToIntOp
       OpUInt8FromInt -> uint8FromIntOp
+      OpByteArrayFromListByte -> byteArrayFromListByteOp
+      OpByteArrayLength -> byteArrayLengthOp
       where
         err :: Text -> a
         err msg = evalError msg n
@@ -387,9 +390,9 @@ geval opts herr tab env0 = eval' env0
                   | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
                       mkBuiltinApp' OpAnomaVerifyDetached [v1, v2, v3]
                   | otherwise ->
-                      case (integerFromNode v1, integerFromNode v3) of
-                        (Just i1, Just i3) -> verifyDetached i1 v2 i3
-                        _ -> err "OpAnomaVerifyDetached: first and third arguments must be integers"
+                      case (byteStringFromNode v1, byteStringFromNode v3) of
+                        (Just bs1, Just bs3) -> verifyDetached bs1 v2 bs3
+                        _ -> err "OpAnomaVerifyDetached: first and third arguments must be bytearrays"
         {-# INLINE anomaVerifyDetachedOp #-}
 
         anomaSignOp :: [Node] -> Node
@@ -399,9 +402,9 @@ geval opts herr tab env0 = eval' env0
            in if
                   | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
                       mkBuiltinApp' OpAnomaSign [v1, v2]
-                  | otherwise -> case integerFromNode v2 of
-                      Just i -> sign v1 i
-                      Nothing -> err "anomaSignOp: second argument not an integer"
+                  | otherwise -> case byteStringFromNode v2 of
+                      Just bs -> sign v1 bs
+                      Nothing -> err "anomaSignOp: second argument not an bytearray"
         {-# INLINE anomaSignOp #-}
 
         anomaSignDetachedOp :: [Node] -> Node
@@ -411,9 +414,9 @@ geval opts herr tab env0 = eval' env0
            in if
                   | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
                       mkBuiltinApp' OpAnomaSignDetached [v1, v2]
-                  | otherwise -> case integerFromNode v2 of
+                  | otherwise -> case byteStringFromNode v2 of
                       Just i -> signDetached v1 i
-                      Nothing -> err "anomaSignDetachedOp: second argument not an integer"
+                      Nothing -> err "anomaSignDetachedOp: second argument not a bytearray"
         {-# INLINE anomaSignDetachedOp #-}
 
         anomaVerifyWithMessageOp :: [Node] -> Node
@@ -424,9 +427,9 @@ geval opts herr tab env0 = eval' env0
                   | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
                       mkBuiltinApp' OpAnomaVerifyWithMessage [v1, v2]
                   | otherwise ->
-                      case (integerFromNode v1, integerFromNode v2) of
-                        (Just i1, Just i2) -> verify i1 i2
-                        _ -> err "anomaVerifyWithMessageOp: both arguments are not integers"
+                      case (byteStringFromNode v1, byteStringFromNode v2) of
+                        (Just bs1, Just bs2) -> verify bs1 bs2
+                        _ -> err "anomaVerifyWithMessageOp: both arguments are not bytearrays"
         {-# INLINE anomaVerifyWithMessageOp #-}
 
         poseidonHashOp :: [Node] -> Node
@@ -480,35 +483,34 @@ geval opts herr tab env0 = eval' env0
             decodeErr = err "failed to decode Integer"
         {-# INLINE decodeByteString #-}
 
-        sign :: Node -> Integer -> Node
-        sign !messageNode !secretKeyInt =
+        sign :: Node -> ByteString -> Node
+        sign !messageNode !secretKeyBs =
           let !message = serializeNode messageNode
-              !secretKey = secretKeyFromInteger secretKeyInt
-           in nodeFromInteger (Encoding.encodeByteString (E.sign secretKey message))
+              !secretKey = E.SecretKey secretKeyBs
+           in nodeFromByteString (E.sign secretKey message)
         {-# INLINE sign #-}
 
-        verify :: Integer -> Integer -> Node
-        verify !signedMessageInt !publicKeyInt =
-          let !signedMessage = decodeByteString signedMessageInt
-              !publicKey = publicKeyFromInteger publicKeyInt
+        verify :: ByteString -> ByteString -> Node
+        verify !signedMessage !publicKeyBs =
+          let !publicKey = E.PublicKey publicKeyBs
            in if
                   | E.verify publicKey signedMessage -> nodeMaybeJust (deserializeNode (E.removeSignature signedMessage))
                   | otherwise -> nodeMaybeNothing
         {-# INLINE verify #-}
 
-        signDetached :: Node -> Integer -> Node
-        signDetached !messageNode !secretKeyInt =
+        signDetached :: Node -> ByteString -> Node
+        signDetached !messageNode !secretKeyBs =
           let !message = serializeNode messageNode
-              !secretKey = secretKeyFromInteger secretKeyInt
+              !secretKey = E.SecretKey secretKeyBs
               (E.Signature !sig) = E.dsign secretKey message
-           in nodeFromInteger (Encoding.encodeByteString sig)
+           in nodeFromByteString sig
         {-# INLINE signDetached #-}
 
-        verifyDetached :: Integer -> Node -> Integer -> Node
-        verifyDetached !signatureInt !messageNode !publicKeyInt =
-          let !sig = E.Signature (decodeByteString signatureInt)
+        verifyDetached :: ByteString -> Node -> ByteString -> Node
+        verifyDetached !signatureBs !messageNode !publicKeyBs =
+          let !sig = E.Signature signatureBs
               !message = serializeNode messageNode
-              !publicKey = publicKeyFromInteger publicKeyInt
+              !publicKey = E.PublicKey publicKeyBs
            in nodeFromBool (E.dverify publicKey message sig)
         {-# INLINE verifyDetached #-}
 
@@ -516,35 +518,64 @@ geval opts herr tab env0 = eval' env0
         uint8FromIntOp =
           unary $ \node ->
             let !v = eval' env node
-             in nodeFromUInt8
-                  . fromIntegral
-                  . fromMaybe (evalError "expected integer" v)
-                  . integerFromNode
-                  $ v
+             in if
+                    | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                        mkBuiltinApp' OpUInt8FromInt [v]
+                    | otherwise ->
+                        nodeFromUInt8
+                          . fromIntegral
+                          . fromMaybe (evalError "expected integer" v)
+                          . integerFromNode
+                          $ v
         {-# INLINE uint8FromIntOp #-}
 
         uint8ToIntOp :: [Node] -> Node
         uint8ToIntOp =
           unary $ \node ->
             let !v = eval' env node
-             in nodeFromInteger
-                  . toInteger
-                  . fromMaybe (evalError "expected uint8" v)
-                  . uint8FromNode
-                  $ v
+             in if
+                    | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                        mkBuiltinApp' OpUInt8ToInt [v]
+                    | otherwise ->
+                        nodeFromInteger
+                          . toInteger
+                          . fromMaybe (evalError "expected uint8" v)
+                          . uint8FromNode
+                          $ v
         {-# INLINE uint8ToIntOp #-}
+
+        byteArrayFromListByteOp :: [Node] -> Node
+        byteArrayFromListByteOp =
+          unary $ \node ->
+            let !v = eval' env node
+             in if
+                    | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                        mkBuiltinApp' OpByteArrayFromListByte [v]
+                    | otherwise ->
+                        nodeFromByteString
+                          . BS.pack
+                          . fromMaybe (evalError "expected list byte" v)
+                          . listUInt8FromNode
+                          $ v
+        {-# INLINE byteArrayFromListByteOp #-}
+
+        byteArrayLengthOp :: [Node] -> Node
+        byteArrayLengthOp =
+          unary $ \node ->
+            let !v = eval' env node
+             in if
+                    | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                        mkBuiltinApp' OpByteArrayLength [v]
+                    | otherwise ->
+                        nodeFromInteger
+                          . fromIntegral
+                          . BS.length
+                          . fromMaybe (evalError "ByteArrayLengthOp expected bytestring" v)
+                          . byteStringFromNode
+                          $ v
+        {-# INLINE byteArrayLengthOp #-}
+
     {-# INLINE applyBuiltin #-}
-
-    -- secretKey, publicKey are not encoded with their length as
-    -- a bytestring in order to be compatible with Anoma sign. Therefore the
-    -- expected length of each must be specified.
-    secretKeyFromInteger :: Integer -> E.SecretKey
-    secretKeyFromInteger = E.SecretKey . Encoding.integerToByteStringLELen 64
-    {-# INLINE secretKeyFromInteger #-}
-
-    publicKeyFromInteger :: Integer -> E.PublicKey
-    publicKeyFromInteger = E.PublicKey . Encoding.integerToByteStringLELen 32
-    {-# INLINE publicKeyFromInteger #-}
 
     nodeFromInteger :: Integer -> Node
     nodeFromInteger !int = mkConstant' (ConstInteger int)
@@ -558,6 +589,10 @@ geval opts herr tab env0 = eval' env0
     nodeFromUInt8 !w = mkConstant' (ConstUInt8 w)
     {-# INLINE nodeFromUInt8 #-}
 
+    nodeFromByteString :: ByteString -> Node
+    nodeFromByteString !b = mkConstant' (ConstByteArray b)
+    {-# INLINE nodeFromByteString #-}
+
     nodeFromBool :: Bool -> Node
     nodeFromBool b = mkConstr' (BuiltinTag tag) []
       where
@@ -567,10 +602,10 @@ geval opts herr tab env0 = eval' env0
     {-# INLINE nodeFromBool #-}
 
     mkBuiltinConstructor :: BuiltinConstructor -> [Node] -> Maybe Node
-    mkBuiltinConstructor ctor args =
-      (\tag -> mkConstr' tag args)
-        . (^. constructorTag)
-        <$> lookupTabBuiltinConstructor tab ctor
+    mkBuiltinConstructor ctor args = (\tag -> mkConstr' tag args) <$> builtinConstructorTag ctor
+
+    builtinConstructorTag :: BuiltinConstructor -> Maybe Tag
+    builtinConstructorTag ctor = (^. constructorTag) <$> lookupTabBuiltinConstructor tab ctor
 
     nodeMaybeNothing :: Node
     nodeMaybeNothing =
@@ -610,6 +645,29 @@ geval opts herr tab env0 = eval' env0
       NCst (Constant _ (ConstUInt8 i)) -> Just i
       _ -> Nothing
     {-# INLINE uint8FromNode #-}
+
+    byteStringFromNode :: Node -> Maybe ByteString
+    byteStringFromNode = \case
+      NCst (Constant _ (ConstByteArray b)) -> Just b
+      _ -> Nothing
+    {-# INLINE byteStringFromNode #-}
+
+    listUInt8FromNode :: Node -> Maybe [Word8]
+    listUInt8FromNode = \case
+      NCtr (Constr _ t xs) -> do
+        consTag <- builtinConstructorTag BuiltinListCons
+        nilTag <- builtinConstructorTag BuiltinListNil
+        if
+            | t == nilTag -> return []
+            | t == consTag -> case (filter (not . isType') xs) of
+                (hd : tl) -> do
+                  uint8Hd <- uint8FromNode hd
+                  uint8Tl <- concatMapM listUInt8FromNode tl
+                  return (uint8Hd : uint8Tl)
+                _ -> Nothing
+            | otherwise -> Nothing
+      _ -> Nothing
+    {-# INLINE listUInt8FromNode #-}
 
     printNode :: Node -> Text
     printNode = \case

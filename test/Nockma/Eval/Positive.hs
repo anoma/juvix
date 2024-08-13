@@ -269,7 +269,20 @@ juvixCallingConventionTests =
                lenR :: Term Natural = nockIntegralLiteral (length r)
                tupR = OpQuote # foldTerms (toNock <$> r)
             in compilerTest "appendToTuple (left empty, right-nonempty)" (appendToTuple (OpQuote # nockNilTagged "test-appendtotuple") (nockNatLiteral 0) tupR lenR) (eqNock res),
-           compilerTest "stdlib cat" (callStdlib StdlibCatBytes [nockNatLiteral 2, nockNatLiteral 1]) (eqNock [nock| 258 |])
+           compilerTest "stdlib cat" (callStdlib StdlibCatBytes [nockNatLiteral 2, nockNatLiteral 1]) (eqNock [nock| 258 |]),
+           compilerTest "fold bytes empty" (callStdlib StdlibFoldBytes [OpQuote # makeList []]) (eqNock [nock| 0 |]),
+           compilerTest "fold bytes [1, 0, 0] == 1" (callStdlib StdlibFoldBytes [OpQuote # makeList (toNock @Natural <$> [1, 0, 0])]) (eqNock [nock| 1 |]),
+           compilerTest "fold bytes single byte" (callStdlib StdlibFoldBytes [OpQuote # makeList (toNock @Natural <$> [123])]) (eqNock [nock| 123 |]),
+           compilerTest "fold bytes [0, 1] == 256" (callStdlib StdlibFoldBytes [OpQuote # makeList (toNock @Natural <$> [0, 1])]) (eqNock [nock| 256 |]),
+           compilerTest "fold bytes [5, 1] == 261" (callStdlib StdlibFoldBytes [OpQuote # makeList (toNock @Natural <$> [5, 1])]) (eqNock [nock| 261 |]),
+           compilerTest "fold bytes [0, 1, 0] == 256" (callStdlib StdlibFoldBytes [OpQuote # makeList (toNock @Natural <$> [0, 1, 0])]) (eqNock [nock| 256 |]),
+           compilerTest "length [] == 0" (callStdlib StdlibLengthList [OpQuote # makeList []]) (eqNock [nock| 0 |]),
+           compilerTest "length [10] == 1" (callStdlib StdlibLengthList [OpQuote # makeList [[nock| 10 |]]]) (eqNock [nock| 1 |]),
+           compilerTest "length [[1 2, 3], 0] == 2" (callStdlib StdlibLengthList [OpQuote # makeList [[nock| [1 2 3] |], [nock| 0 |]]]) (eqNock [nock| 2 |]),
+           compilerTest "length-bytes 256 == 2" (callStdlib StdlibLengthBytes [nockNatLiteral 256]) (eqNock [nock| 2 |]),
+           compilerTest "length-bytes 255 == 1" (callStdlib StdlibLengthBytes [nockNatLiteral 255]) (eqNock [nock| 1 |]),
+           compilerTest "length-bytes 1 == 1" (callStdlib StdlibLengthBytes [nockNatLiteral 1]) (eqNock [nock| 1 |]),
+           compilerTest "length-bytes 0 == 0" (callStdlib StdlibLengthBytes [nockNatLiteral 0]) (eqNock [nock| 0 |])
          ]
 
 unitTests :: [Test]

@@ -503,10 +503,10 @@ goModule onlyTypes infoTable Internal.Module {..} =
                 case funInfo ^. Internal.functionInfoBuiltin of
                   Just Internal.BuiltinBoolAnd
                     | (arg1 :| [arg2]) <- args ->
-                        Just (defaultName "∧", andFixity, arg1, arg2)
+                        Just (defaultName "\\<and>", andFixity, arg1, arg2)
                   Just Internal.BuiltinBoolOr
                     | (arg1 :| [arg2]) <- args ->
-                        Just (defaultName "∨", orFixity, arg1, arg2)
+                        Just (defaultName "\\<or>", orFixity, arg1, arg2)
                   _ -> Nothing
               Nothing -> Nothing
           _ -> Nothing

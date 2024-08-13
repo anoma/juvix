@@ -79,6 +79,7 @@ parseToplevel = do
   lift declareBoolBuiltins
   lift declareNatBuiltins
   lift declareMaybeBuiltins
+  lift declareListBuiltins
   space
   P.endBy statement (kw delimSemicolon)
   r <- optional expression
@@ -580,6 +581,8 @@ builtinAppExpr varsNum vars = do
       <|> (kw kwAnomaVerifyWithMessage $> OpAnomaVerifyWithMessage)
       <|> (kw kwAnomaSignDetached $> OpAnomaSignDetached)
       <|> (kw kwAnomaVerifyDetached $> OpAnomaVerifyDetached)
+      <|> (kw kwByteArrayFromListByte $> OpByteArrayFromListByte)
+      <|> (kw kwByteArrayLength $> OpByteArrayLength)
   args <- P.many (atom varsNum vars)
   return $ mkBuiltinApp' op args
 
@@ -1119,6 +1122,8 @@ exprNamed varsNum vars = do
     "Int" -> return mkTypeInteger'
     "Field" -> return mkTypeField'
     "String" -> return mkTypeString'
+    "UInt8" -> return mkTypeUInt8'
+    "ByteArray" -> return mkDynamic'
     _ ->
       case HashMap.lookup txt vars of
         Just k -> do

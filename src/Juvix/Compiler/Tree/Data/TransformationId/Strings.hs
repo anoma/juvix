@@ -34,3 +34,6 @@ strValidate = "validate"
 
 strCheckNoAnoma :: Text
 strCheckNoAnoma = "check-no-anoma"
+
+strCheckNoByteArray :: Text
+strCheckNoByteArray = "check-no-bytearray"

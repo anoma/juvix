@@ -592,6 +592,9 @@ checkBuiltinAxiom d b = localBuiltins $ case b of
   BuiltinByteEq -> checkByteEq d
   BuiltinByteToNat -> checkByteToNat d
   BuiltinByteFromNat -> checkByteFromNat d
+  BuiltinByteArray -> checkByteArray d
+  BuiltinByteArrayFromListByte -> checkByteArrayFromListByte d
+  BuiltinByteArrayLength -> checkByteArrayLength d
 
 goInductive ::
   (Members '[Reader EntryPoint, Reader DefaultArgsStack, NameIdGen, Reader Pragmas, Error ScoperError, State ConstructorInfos, Reader S.InfoTable] r) =>

@@ -15,6 +15,7 @@ data Primitive
   | PrimBool PrimBoolInfo
   | PrimString
   | PrimField
+  | PrimByteArray
   deriving stock (Eq, Generic)
 
 primitiveUInt8 :: Primitive

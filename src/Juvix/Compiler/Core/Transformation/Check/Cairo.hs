@@ -12,7 +12,7 @@ checkCairo md = do
   checkMainType
   checkNoAxioms md
   mapAllNodesM checkNoIO md
-  mapAllNodesM (checkBuiltins' (builtinsString ++ builtinsUInt8) [PrimString, primitiveUInt8]) md
+  mapAllNodesM (checkBuiltins' (builtinsString ++ builtinsUInt8 ++ builtinsByteArray) [PrimString, primitiveUInt8, PrimByteArray]) md
   where
     checkMainType :: Sem r ()
     checkMainType =
@@ -60,6 +60,7 @@ checkCairo md = do
           PrimBool {} -> True
           PrimField {} -> True
           PrimString {} -> False
+          PrimByteArray {} -> False
 
         isRecordOrList :: TypeConstr -> Bool
         isRecordOrList TypeConstr {..} = case ii ^. inductiveBuiltin of
