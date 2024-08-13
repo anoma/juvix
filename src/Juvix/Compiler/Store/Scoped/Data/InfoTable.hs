@@ -26,6 +26,7 @@ data InfoTable = InfoTable
     _infoInductives :: HashMap NameId (InductiveDef 'Scoped),
     _infoConstructors :: HashMap NameId (ConstructorDef 'Scoped),
     _infoAxioms :: HashMap NameId (AxiomDef 'Scoped),
+    -- | Contains the builtins defined in itself *and* its local modules
     _infoBuiltins :: BuiltinsTable,
     _infoScoperAlias :: HashMap S.NameId PreSymbolEntry
   }
