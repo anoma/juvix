@@ -7,7 +7,7 @@ import Juvix.Compiler.Backend.Isabelle.Pretty.Options
 import Juvix.Data.CodeAnn
 
 arrow :: Doc Ann
-arrow = "⇒"
+arrow = "\\<Rightarrow>"
 
 class PrettyCode c where
   ppCode :: (Member (Reader Options) r) => c -> Sem r (Doc Ann)
@@ -58,7 +58,7 @@ instance PrettyCode Inductive where
     IndList -> return $ primitive "list"
     IndString -> return $ primitive "string"
     IndOption -> return $ primitive "option"
-    IndTuple -> return $ primitive "×"
+    IndTuple -> return $ primitive "\\<times>"
     IndUser name -> ppCode name
 
 instance PrettyCode IndApp where
@@ -178,7 +178,7 @@ instance PrettyCode Lambda where
     mty <- maybe (return Nothing) (ppCode >=> return . Just) _lambdaType
     body <- ppCode _lambdaBody
     let ty = fmap (\t -> colon <> colon <+> t) mty
-    return $ kwLambda <+> name <+?> ty <+> dot <+> body
+    return $ "\\<lambda>" <+> name <+?> ty <+> dot <+> body
 
 instance PrettyCode Statement where
   ppCode = \case
