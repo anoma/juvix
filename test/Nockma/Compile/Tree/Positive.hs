@@ -49,7 +49,7 @@ testDescr Tree.PosTest {..} =
 
 -- | Tests which require Nockma-specific expected output files
 testsConstr :: [Int]
-testsConstr = [9, 28, 35]
+testsConstr = [9, 28, 35, 40]
 
 testsNegativeInteger :: [Int]
 testsNegativeInteger = [16]

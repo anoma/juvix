@@ -87,6 +87,8 @@ genCode infoTable fi =
         mkConst (ConstField fld)
       Core.Constant _ (Core.ConstUInt8 i) ->
         mkConst (ConstUInt8 i)
+      Core.Constant _ (Core.ConstByteArray bs) ->
+        mkConst (ConstByteArray bs)
 
     goApps :: Int -> BinderList MemRef -> Core.Apps -> Node
     goApps tempSize refs Core.Apps {..} =
@@ -140,6 +142,13 @@ genCode infoTable fi =
 
     goBuiltinApp :: Int -> BinderList MemRef -> Core.BuiltinApp -> Node
     goBuiltinApp tempSize refs Core.BuiltinApp {..}
+      | Core.builtinIsByteArray _builtinAppOp =
+          ByteArray $
+            NodeByteArray
+              { _nodeByteArrayInfo = mempty,
+                _nodeByteArrayOpcode = genByteArrayOp _builtinAppOp,
+                _nodeByteArrayArgs = args
+              }
       | Core.builtinIsCairo _builtinAppOp =
           Cairo $
             NodeCairo
@@ -308,6 +317,12 @@ genCode infoTable fi =
       Core.OpUInt8ToInt -> PrimUnop OpUInt8ToInt
       _ -> impossible
 
+    genByteArrayOp :: Core.BuiltinOp -> ByteArrayOp
+    genByteArrayOp = \case
+      Core.OpByteArrayFromListByte -> OpByteArrayFromListUInt8
+      Core.OpByteArrayLength -> OpByteArrayLength
+      _ -> impossible
+
     genCairoOp :: Core.BuiltinOp -> CairoOp
     genCairoOp = \case
       Core.OpPoseidonHash -> OpCairoPoseidon
@@ -361,6 +376,8 @@ convertPrimitiveType = \case
     TyString
   Core.PrimField ->
     TyField
+  Core.PrimByteArray ->
+    TyByteArray
 
 -- | `convertNestedType` ensures that the conversion of a type with Dynamic in the
 -- target is curried. The result of `convertType 0 ty` is always uncurried.

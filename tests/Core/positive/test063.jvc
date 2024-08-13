@@ -1,5 +1,5 @@
 -- UInt8
 
-def f := \x x;
+def f : UInt8 -> UInt8 := \x x;
 
 f 257u8

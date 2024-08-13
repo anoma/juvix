@@ -1,0 +1,35 @@
+module test082;
+
+import Stdlib.Prelude open;
+import Stdlib.Debug.Trace open;
+
+builtin bytearray
+axiom ByteArray : Type;
+
+builtin bytearray-from-list-byte
+axiom mkByteArray : List Byte -> ByteArray;
+
+builtin bytearray-length
+axiom size : ByteArray -> Nat;
+
+bs0 : ByteArray := mkByteArray [];
+
+bs1 : ByteArray := mkByteArray [0x0; 0x0; 0x0];
+
+bs2 : ByteArray := mkByteArray [0x1; 0x0; 0x0; 0x0];
+
+bs3 : ByteArray := mkByteArray [0x2; 0x1];
+
+bs4 : ByteArray := mkByteArray [0x100];
+
+main : ByteArray :=
+  trace (size bs0)
+    >-> trace bs0
+    >-> trace (size bs1)
+    >-> trace bs1
+    >-> trace (size bs2)
+    >-> trace bs2
+    >-> trace (size bs3)
+    >-> trace bs3
+    >-> trace (size bs4)
+    >-> bs4;

@@ -38,6 +38,8 @@ data BuiltinOp
   | OpRandomEcPoint
   | OpUInt8ToInt
   | OpUInt8FromInt
+  | OpByteArrayFromListByte
+  | OpByteArrayLength
   deriving stock (Eq, Generic)
 
 instance Serialize BuiltinOp
@@ -94,6 +96,8 @@ builtinOpArgsNum = \case
   OpRandomEcPoint -> 0
   OpUInt8ToInt -> 1
   OpUInt8FromInt -> 1
+  OpByteArrayFromListByte -> 1
+  OpByteArrayLength -> 1
 
 builtinConstrArgsNum :: BuiltinDataTag -> Int
 builtinConstrArgsNum = \case
@@ -139,12 +143,17 @@ builtinIsFoldable = \case
   OpRandomEcPoint -> False
   OpUInt8ToInt -> True
   OpUInt8FromInt -> True
+  OpByteArrayFromListByte -> False
+  OpByteArrayLength -> False
 
 builtinIsCairo :: BuiltinOp -> Bool
 builtinIsCairo op = op `elem` builtinsCairo
 
 builtinIsAnoma :: BuiltinOp -> Bool
 builtinIsAnoma op = op `elem` builtinsAnoma
+
+builtinIsByteArray :: BuiltinOp -> Bool
+builtinIsByteArray op = op `elem` builtinsByteArray
 
 builtinsString :: [BuiltinOp]
 builtinsString = [OpStrConcat, OpStrToInt, OpShow]
@@ -165,3 +174,6 @@ builtinsAnoma =
 
 builtinsUInt8 :: [BuiltinOp]
 builtinsUInt8 = [OpUInt8FromInt, OpUInt8ToInt]
+
+builtinsByteArray :: [BuiltinOp]
+builtinsByteArray = [OpByteArrayFromListByte, OpByteArrayLength]
