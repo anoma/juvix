@@ -19,7 +19,6 @@ import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra qualified as Concrete
 import Juvix.Compiler.Concrete.Gen qualified as Gen
 import Juvix.Compiler.Concrete.Language qualified as Concrete
-import Juvix.Compiler.Concrete.Pretty (ppTrace)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Compiler.Internal.Builtins
@@ -68,13 +67,6 @@ fromConcrete _resultScoper = do
       tab :: S.InfoTable =
         S.getCombinedInfoTable (_resultScoper ^. Scoper.resultScopedModule)
           <> mconcatMap (S.getCombinedInfoTable . (^. Store.moduleInfoScopedModule)) ms
-  traceM
-    ( "fromConcrete available builtins "
-        <> ppTrace (_resultScoper ^. Scoper.resultModule . modulePath)
-        <> ppTrace (tab ^. S.infoBuiltins)
-        <> "\nInfoTable :"
-        <> ppTrace (_resultScoper ^. Scoper.resultScopedModule . S.scopedModuleInfoTable . S.infoBuiltins)
-    )
   _resultModule <-
     runReader @Pragmas mempty
       . runReader @ExportsTable exportTbl

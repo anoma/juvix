@@ -20,7 +20,6 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Concrete.Data.Highlight
 import Juvix.Compiler.Concrete.Language
-import Juvix.Compiler.Concrete.Pretty (ppTrace)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping (getModuleId)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
@@ -43,8 +42,6 @@ import Juvix.Compiler.Store.Language
 import Juvix.Compiler.Store.Language qualified as Store
 import Juvix.Compiler.Store.Options qualified as StoredModule
 import Juvix.Compiler.Store.Options qualified as StoredOptions
-import Juvix.Compiler.Store.Scoped.Data.InfoTable (infoBuiltins)
-import Juvix.Compiler.Store.Scoped.Language (scopedModuleInfoTable)
 import Juvix.Data.CodeAnn
 import Juvix.Data.SHA256 qualified as SHA256
 import Juvix.Extra.Serialize qualified as Serialize

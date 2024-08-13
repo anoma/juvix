@@ -80,21 +80,15 @@ scopeCheck' importTab pr m = do
 
     mkResult :: (ScoperState, (Module 'Scoped 'ModuleTop, ScopedModule, Scope)) -> ScoperResult
     mkResult (scoperSt, (md, sm, sc)) =
-      trace
-        ( "mkResult for "
-            <> ppTrace (md ^. modulePath)
-            <> ": "
-            <> ppTrace (sm ^. scopedModuleInfoTable . infoBuiltins)
-        )
-        $ let exp = createExportsTable (sm ^. scopedModuleExportInfo)
-           in ScoperResult
-                { _resultParserResult = pr,
-                  _resultModule = md,
-                  _resultScopedModule = sm,
-                  _resultExports = exp,
-                  _resultScoperState = scoperSt,
-                  _resultScope = sc
-                }
+      let exp = createExportsTable (sm ^. scopedModuleExportInfo)
+       in ScoperResult
+            { _resultParserResult = pr,
+              _resultModule = md,
+              _resultScopedModule = sm,
+              _resultExports = exp,
+              _resultScoperState = scoperSt,
+              _resultScope = sc
+            }
 
 scopeCheckRepl ::
   forall r a b.
@@ -1361,12 +1355,6 @@ checkTopModule m@Module {..} = checkedModule
                 _scopedModuleLocalModules = localModules,
                 _scopedModuleInfoTable = tab
               }
-      traceM
-        ( "checkedModule path"
-            <> ppTrace path'
-            <> "\nTable : "
-            <> ppTrace (tab ^. infoBuiltins)
-        )
       return (md, smd, sc)
 
 withTopScope :: (Members '[State Scope] r) => Sem r a -> Sem r a
@@ -1829,6 +1817,7 @@ checkLocalModule md@Module {..} = do
             _scopedModuleInfoTable = tab
           }
   modify (over scoperModules (HashMap.insert mid smod))
+  registerLocalModule smod
   registerName _modulePath'
   return m
   where

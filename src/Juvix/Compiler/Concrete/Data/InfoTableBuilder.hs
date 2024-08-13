@@ -6,7 +6,6 @@ import Juvix.Compiler.Concrete.Data.Highlight.Input
 import Juvix.Compiler.Concrete.Data.Scope
 import Juvix.Compiler.Concrete.Data.ScopedName
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
-import Juvix.Compiler.Concrete.Pretty (ppTrace)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Compiler.Store.Scoped.Language
 import Juvix.Prelude
@@ -28,6 +27,7 @@ data InfoTableBuilder :: Effect where
   RegisterParsedConstructorSig :: S.NameId -> RecordNameSignature 'Parsed -> InfoTableBuilder m ()
   RegisterRecordInfo :: S.NameId -> RecordInfo -> InfoTableBuilder m ()
   RegisterAlias :: S.NameId -> PreSymbolEntry -> InfoTableBuilder m ()
+  RegisterLocalModule :: ScopedModule -> InfoTableBuilder m ()
   GetInfoTable :: InfoTableBuilder m InfoTable
   GetBuiltinSymbol' :: Interval -> BuiltinPrim -> InfoTableBuilder m S.Symbol
   RegisterBuiltin' :: BuiltinPrim -> S.Symbol -> InfoTableBuilder m ()
@@ -96,6 +96,8 @@ runInfoTableBuilder ini = reinterpret (runState ini) $ \case
     modify (over infoRecords (HashMap.insert uid recInfo))
   RegisterAlias uid a ->
     modify (over infoScoperAlias (HashMap.insert uid a))
+  RegisterLocalModule m ->
+    mapM_ (uncurry registerBuiltinHelper) (m ^. scopedModuleInfoTable . infoBuiltins . to HashMap.toList)
   GetInfoTable ->
     get
   GetBuiltinSymbol' i b -> fromMaybeM notDefined (gets (^. infoBuiltins . at b))
@@ -109,21 +111,23 @@ runInfoTableBuilder ini = reinterpret (runState ini) $ \case
                 _notDefinedLoc = i,
                 _notDefinedDebug = "scoper"
               }
-  RegisterBuiltin' b n -> do
-    traceM ("register: " <> ppTrace b)
-    s <- gets (^. infoBuiltins . at b)
-    case s of
-      Nothing -> modify (set (infoBuiltins . at b) (Just n))
-      Just {} -> alreadyDefined
-    where
-      alreadyDefined :: forall r' x. (Members '[Error ScoperError] r') => Sem r' x
-      alreadyDefined =
-        throw $
-          ErrBuiltinAlreadyDefined
-            BuiltinAlreadyDefined
-              { _builtinAlreadyDefined = b,
-                _builtinAlreadyDefinedLoc = getLoc n
-              }
+  RegisterBuiltin' b n -> registerBuiltinHelper b n
+
+registerBuiltinHelper :: (Members '[Error ScoperError, State InfoTable] r) => BuiltinPrim -> S.Symbol -> Sem r ()
+registerBuiltinHelper b n = do
+  s <- gets (^. infoBuiltins . at b)
+  case s of
+    Nothing -> modify (set (infoBuiltins . at b) (Just n))
+    Just {} -> alreadyDefined
+  where
+    alreadyDefined :: forall r' x. (Members '[Error ScoperError] r') => Sem r' x
+    alreadyDefined =
+      throw $
+        ErrBuiltinAlreadyDefined
+          BuiltinAlreadyDefined
+            { _builtinAlreadyDefined = b,
+              _builtinAlreadyDefinedLoc = getLoc n
+            }
 
 runInfoTableBuilderRepl :: (Members '[Error ScoperError] r) => InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
 runInfoTableBuilderRepl tab = ignoreHighlightBuilder . runInfoTableBuilder tab . raiseUnder
