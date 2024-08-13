@@ -18,12 +18,10 @@ axiom anomaSign : {A : Type} -> A -> ByteArray -> ByteArray;
 builtin anoma-verify-with-message
 axiom anomaVerifyWithMessage : {A : Type} -> ByteArray -> ByteArray -> Maybe A;
 
-main' (input : List Nat) : List Nat :=
+main (input : List Nat) : List Nat :=
   let
     signedMessage : ByteArray := anomaSign input privKey;
   in fromMaybe [] <| anomaVerifyWithMessage signedMessage pubKey;
-
-main : List Nat := main' [1; 2; 3];
 
 privKey : ByteArray :=
   mkByteArray
