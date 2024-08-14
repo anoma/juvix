@@ -5,6 +5,7 @@ module Juvix.Compiler.Internal.Builtins
   )
 where
 
+import Juvix.Compiler.Concrete.Data.InfoTableBuilder (getBuiltinSymbolHelper)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error (BuiltinNotDefined (..), ScoperError (ErrBuiltinNotDefined), builtinsErrorMsg, builtinsErrorText)
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty
@@ -43,18 +44,7 @@ getBuiltinName ::
   Interval ->
   a ->
   Sem r Name
-getBuiltinName loc p = do
-  let b = toBuiltinPrim p
-  m <- asks @BuiltinsTable (^. at b)
-  case m of
-    Nothing ->
-      throw $
-        BuiltinNotDefined
-          { _notDefinedBuiltin = b,
-            _notDefinedLoc = loc,
-            _notDefinedDebug = "internal typechecker"
-          }
-    Just x -> return (fromConcreteSymbol x)
+getBuiltinName loc p = fromConcreteSymbol <$> getBuiltinSymbolHelper loc (toBuiltinPrim p)
 
 checkBuiltinFunctionInfo ::
   forall r.

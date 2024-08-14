@@ -100,18 +100,32 @@ runInfoTableBuilder ini = reinterpret (runState ini) $ \case
     mapM_ (uncurry registerBuiltinHelper) (m ^. scopedModuleInfoTable . infoBuiltins . to HashMap.toList)
   GetInfoTable ->
     get
-  GetBuiltinSymbol' i b -> fromMaybeM notDefined (gets (^. infoBuiltins . at b))
-    where
-      notDefined :: forall r' x. (Members '[Error ScoperError] r') => Sem r' x
-      notDefined =
-        throw $
-          ErrBuiltinNotDefined
-            BuiltinNotDefined
-              { _notDefinedBuiltin = b,
-                _notDefinedLoc = i,
-                _notDefinedDebug = "scoper"
-              }
+  GetBuiltinSymbol' i b -> do
+    tbl <- get @InfoTable
+    mapError ErrBuiltinNotDefined
+      . runReader (tbl ^. infoBuiltins)
+      $ getBuiltinSymbolHelper i b
   RegisterBuiltin' b n -> registerBuiltinHelper b n
+
+getBuiltinSymbolHelper ::
+  forall r.
+  ( Members
+      '[Error BuiltinNotDefined, Reader BuiltinsTable]
+      r
+  ) =>
+  Interval ->
+  BuiltinPrim ->
+  Sem r S.Symbol
+getBuiltinSymbolHelper i b =
+  fromMaybeM notDefined (asks @BuiltinsTable (^. at b))
+  where
+    notDefined :: forall r' x. (Members '[Error BuiltinNotDefined] r') => Sem r' x
+    notDefined =
+      throw $
+        BuiltinNotDefined
+          { _notDefinedBuiltin = b,
+            _notDefinedLoc = i
+          }
 
 registerBuiltinHelper :: (Members '[Error ScoperError, State InfoTable] r) => BuiltinPrim -> S.Symbol -> Sem r ()
 registerBuiltinHelper b n = do
