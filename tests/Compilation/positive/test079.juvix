@@ -15,15 +15,15 @@ one : Nat := zero;
 
 open Foldable public;
 
-const {A} (a b : A) : A := a;
-
 foldableBoxNatI : Foldable :=
   mkFoldable@{
     for {B : Type} (f : B -> Nat -> B) (ini : B) : Box -> B
       | (mkBox x) :=
         let
           terminating
-          go (x : Nat) : B := const ini (go x);
+          go : Nat -> B
+            | zero := ini
+            | _ := go x;
         in go x
   };
 
