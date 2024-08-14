@@ -41,20 +41,26 @@ makeLenses ''InfoTable
 instance Semigroup InfoTable where
   tab1 <> tab2 =
     InfoTable
-      { _infoFixities = tab1 ^. infoFixities <> tab2 ^. infoFixities,
-        _infoPrecedenceGraph = combinePrecedenceGraphs (tab1 ^. infoPrecedenceGraph) (tab2 ^. infoPrecedenceGraph),
-        _infoConstructorSigs = tab1 ^. infoConstructorSigs <> tab2 ^. infoConstructorSigs,
-        _infoNameSigs = tab1 ^. infoNameSigs <> tab2 ^. infoNameSigs,
-        _infoParsedConstructorSigs = tab1 ^. infoParsedConstructorSigs <> tab2 ^. infoParsedConstructorSigs,
-        _infoParsedNameSigs = tab1 ^. infoParsedNameSigs <> tab2 ^. infoParsedNameSigs,
-        _infoBuiltins = tab1 ^. infoBuiltins <> tab2 ^. infoBuiltins,
-        _infoRecords = tab1 ^. infoRecords <> tab2 ^. infoRecords,
-        _infoFunctions = tab1 ^. infoFunctions <> tab2 ^. infoFunctions,
-        _infoInductives = tab1 ^. infoInductives <> tab2 ^. infoInductives,
-        _infoConstructors = tab1 ^. infoConstructors <> tab2 ^. infoConstructors,
-        _infoAxioms = tab1 ^. infoAxioms <> tab2 ^. infoAxioms,
-        _infoScoperAlias = tab1 ^. infoScoperAlias <> tab2 ^. infoScoperAlias
+      { _infoFixities = mappendField infoFixities,
+        _infoPrecedenceGraph = appendFieldWith combinePrecedenceGraphs infoPrecedenceGraph,
+        _infoConstructorSigs = mappendField infoConstructorSigs,
+        _infoNameSigs = mappendField infoNameSigs,
+        _infoParsedConstructorSigs = mappendField infoParsedConstructorSigs,
+        _infoParsedNameSigs = mappendField infoParsedNameSigs,
+        _infoBuiltins = mappendField infoBuiltins,
+        _infoRecords = mappendField infoRecords,
+        _infoFunctions = mappendField infoFunctions,
+        _infoInductives = mappendField infoInductives,
+        _infoConstructors = mappendField infoConstructors,
+        _infoAxioms = mappendField infoAxioms,
+        _infoScoperAlias = mappendField infoScoperAlias
       }
+    where
+      mappendField :: (Semigroup f) => Lens' InfoTable f -> f
+      mappendField = appendFieldWith (<>)
+
+      appendFieldWith :: (f -> f -> f) -> Lens' InfoTable f -> f
+      appendFieldWith joinfun l = joinfun (tab1 ^. l) (tab2 ^. l)
 
 instance Monoid InfoTable where
   mempty =
