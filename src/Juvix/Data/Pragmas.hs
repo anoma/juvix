@@ -71,6 +71,11 @@ newtype PragmaIsabelleFunction = PragmaIsabelleFunction
   }
   deriving stock (Show, Eq, Ord, Data, Generic)
 
+newtype PragmaIsabelleIgnore = PragmaIsabelleIgnore
+  { _pragmaIsabelleIgnore :: Bool
+  }
+  deriving stock (Show, Eq, Ord, Data, Generic)
+
 data Pragmas = Pragmas
   { _pragmasInline :: Maybe PragmaInline,
     _pragmasUnroll :: Maybe PragmaUnroll,
@@ -82,7 +87,8 @@ data Pragmas = Pragmas
     _pragmasSpecialiseBy :: Maybe PragmaSpecialiseBy,
     _pragmasEval :: Maybe PragmaEval,
     _pragmasIsabelleOperator :: Maybe PragmaIsabelleOperator,
-    _pragmasIsabelleFunction :: Maybe PragmaIsabelleFunction
+    _pragmasIsabelleFunction :: Maybe PragmaIsabelleFunction,
+    _pragmasIsabelleIgnore :: Maybe PragmaIsabelleIgnore
   }
   deriving stock (Show, Eq, Ord, Data, Generic)
 
@@ -120,6 +126,8 @@ instance Hashable PragmaEval
 instance Hashable PragmaIsabelleOperator
 
 instance Hashable PragmaIsabelleFunction
+
+instance Hashable PragmaIsabelleIgnore
 
 instance Hashable Pragmas
 
@@ -171,6 +179,10 @@ instance Serialize PragmaIsabelleFunction
 
 instance NFData PragmaIsabelleFunction
 
+instance Serialize PragmaIsabelleIgnore
+
+instance NFData PragmaIsabelleIgnore
+
 instance Serialize Pragmas
 
 instance NFData Pragmas
@@ -201,6 +213,7 @@ instance FromJSON Pragmas where
         _pragmasEval <- keyMay "eval" parseEval
         _pragmasIsabelleOperator <- keyMay "isabelle-operator" parseIsabelleOperator
         _pragmasIsabelleFunction <- keyMay "isabelle-function" parseIsabelleFunction
+        _pragmasIsabelleIgnore <- keyMay "isabelle-ignore" parseIsabelleIgnore
         return Pragmas {..}
 
       parseInline :: Parse YamlError PragmaInline
@@ -273,6 +286,11 @@ instance FromJSON Pragmas where
         _pragmaIsabelleFunctionName <- key "name" asText
         return PragmaIsabelleFunction {..}
 
+      parseIsabelleIgnore :: Parse YamlError PragmaIsabelleIgnore
+      parseIsabelleIgnore = do
+        _pragmaIsabelleIgnore <- asBool
+        return PragmaIsabelleIgnore {..}
+
       parseSpecialiseArg :: Parse YamlError PragmaSpecialiseArg
       parseSpecialiseArg =
         (SpecialiseArgNum <$> asIntegral)
@@ -316,7 +334,8 @@ instance Semigroup Pragmas where
         _pragmasSpecialiseArgs = p2 ^. pragmasSpecialiseArgs <|> p1 ^. pragmasSpecialiseArgs,
         _pragmasSpecialiseBy = p2 ^. pragmasSpecialiseBy <|> p1 ^. pragmasSpecialiseBy,
         _pragmasIsabelleOperator = p2 ^. pragmasIsabelleOperator,
-        _pragmasIsabelleFunction = p2 ^. pragmasIsabelleFunction
+        _pragmasIsabelleFunction = p2 ^. pragmasIsabelleFunction,
+        _pragmasIsabelleIgnore = p2 ^. pragmasIsabelleIgnore <|> p1 ^. pragmasIsabelleIgnore
       }
 
 instance Monoid Pragmas where
@@ -332,7 +351,8 @@ instance Monoid Pragmas where
         _pragmasSpecialiseBy = Nothing,
         _pragmasEval = Nothing,
         _pragmasIsabelleOperator = Nothing,
-        _pragmasIsabelleFunction = Nothing
+        _pragmasIsabelleFunction = Nothing,
+        _pragmasIsabelleIgnore = Nothing
       }
 
 adjustPragmaInline :: Int -> PragmaInline -> PragmaInline
