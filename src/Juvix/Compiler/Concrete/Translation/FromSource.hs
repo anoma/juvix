@@ -977,6 +977,8 @@ pnamedArgumentFunctionDef ::
   (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) =>
   ParsecS r (NamedArgumentFunctionDef 'Parsed)
 pnamedArgumentFunctionDef = do
+  optional_ stashJudoc
+  optional_ stashPragmas
   fun <- functionDefinition True False Nothing
   return
     NamedArgumentFunctionDef
