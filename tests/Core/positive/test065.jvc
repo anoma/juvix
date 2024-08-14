@@ -1,0 +1,27 @@
+type nat {
+  Zero : nat;
+  Suc : nat -> nat;
+};
+
+type Box {
+ mkBox : nat -> Box;
+};
+
+def id := λ(x : Any) x;
+
+def f := λ(x : nat) λ(y : nat) x;
+
+def topGo : Π B : Type, B → nat → B := λ(B : Type) λ(b : B) λ(x' : nat) b;
+
+def const : Π A : Type, A -> A -> A := λ(A : Type) λ(x : A) λ(y : A) x;
+
+def lam := id (λ(B : Type)
+    λ(f : B → nat → B)
+      λ(ini : B)
+        λ(_X : Box)
+          case _X of {
+            mkBox (x : nat) := let go : nat → B := topGo B ini in
+            const B (go x) (go x)
+          });
+
+lam nat f Zero (mkBox (Suc Zero))
