@@ -288,7 +288,8 @@ instance HasExpressions ConstructorDef where
         { _inductiveConstructorType = ty',
           _inductiveConstructorName,
           _inductiveConstructorIsRecord,
-          _inductiveConstructorPragmas
+          _inductiveConstructorPragmas,
+          _inductiveConstructorComment
         }
 
 typeAbstraction :: IsImplicit -> Name -> FunctionParameter

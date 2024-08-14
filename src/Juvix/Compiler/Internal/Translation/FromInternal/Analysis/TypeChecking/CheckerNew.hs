@@ -230,7 +230,8 @@ checkInductiveDef InductiveDef {..} = runInferenceDef $ do
               { _inductiveConstructorType = cty',
                 _inductiveConstructorName,
                 _inductiveConstructorIsRecord,
-                _inductiveConstructorPragmas
+                _inductiveConstructorPragmas,
+                _inductiveConstructorComment
               }
       registerConstructor c'
       return c'

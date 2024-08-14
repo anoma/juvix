@@ -413,7 +413,8 @@ data ConstructorDef = ConstructorDef
   { _inductiveConstructorName :: ConstrName,
     _inductiveConstructorType :: Expression,
     _inductiveConstructorIsRecord :: Bool,
-    _inductiveConstructorPragmas :: Pragmas
+    _inductiveConstructorPragmas :: Pragmas,
+    _inductiveConstructorComment :: Maybe Text
   }
   deriving stock (Data)
 

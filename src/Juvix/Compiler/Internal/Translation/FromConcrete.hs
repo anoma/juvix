@@ -649,7 +649,8 @@ goConstructorDef retTy ConstructorDef {..} = do
       { _inductiveConstructorType = ty',
         _inductiveConstructorName = goSymbol _constructorName,
         _inductiveConstructorIsRecord = isRhsRecord _constructorRhs,
-        _inductiveConstructorPragmas = pragmas'
+        _inductiveConstructorPragmas = pragmas',
+        _inductiveConstructorComment = fmap ppPrint _constructorDoc
       }
   where
     goAdtType :: Concrete.RhsAdt 'Scoped -> Sem r Internal.Expression
