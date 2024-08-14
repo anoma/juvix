@@ -1,0 +1,30 @@
+module test079;
+
++ : Nat -> Nat -> Nat
+  | _ _ := zero;
+
+type Nat :=
+  | zero
+  | suc Nat;
+
+type Foldable := mkFoldable {for : {B : Type} -> (B -> Nat -> B) -> B -> Box -> B};
+
+type Box := mkBox {unbox : Nat};
+
+one : Nat := zero;
+
+open Foldable public;
+
+const {A} (a b : A) : A := a;
+
+foldableBoxNatI : Foldable :=
+  mkFoldable@{
+    for {B : Type} (f : B -> Nat -> B) (ini : B) : Box -> B
+      | (mkBox x) :=
+        let
+          terminating
+          go (x : Nat) : B := const ini (go x);
+        in go x
+  };
+
+main : Nat := for foldableBoxNatI λ {_ y := y} one (mkBox zero);
