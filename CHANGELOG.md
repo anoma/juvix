@@ -4,6 +4,43 @@
 <img align="right" width="300" height="300" alt="Juvix Mascot" src="../assets/images/tara-smiling.svg" />
 </a>
 
+## [v0.6.5](https://github.com/anoma/juvix/tree/v0.6.5) (2024-08-14)
+
+[Full Changelog](https://github.com/anoma/juvix/compare/v0.6.4...v0.6.5)
+
+**Implemented enhancements:**
+
+- Add `--statements` flag to `juvix dev latex export` [\#2946](https://github.com/anoma/juvix/pull/2946) ([janmasrovira](https://github.com/janmasrovira))
+- Improve specialization optimization [\#2944](https://github.com/anoma/juvix/pull/2944) ([lukaszcz](https://github.com/lukaszcz))
+- Export Juvix source code to latex [\#2917](https://github.com/anoma/juvix/pull/2917) ([janmasrovira](https://github.com/janmasrovira))
+- Allow instance field declarations [\#2916](https://github.com/anoma/juvix/pull/2916) ([janmasrovira](https://github.com/janmasrovira))
+- Add ByteArray builtin and Byte literal [\#2865](https://github.com/anoma/juvix/issues/2865) ([paulcadman](https://github.com/paulcadman))
+
+**Merged pull requests:**
+
+- Fix inference of let and letrec in core [\#2953](https://github.com/anoma/juvix/pull/2953) ([janmasrovira](https://github.com/janmasrovira))
+- Isabelle/HOL name quoting [\#2951](https://github.com/anoma/juvix/pull/2951) ([lukaszcz](https://github.com/lukaszcz))
+- Remove unicode from Isabelle/HOL output [\#2950](https://github.com/anoma/juvix/pull/2950) ([lukaszcz](https://github.com/lukaszcz))
+- Use ByteArray for Anoma cryptographic builtins [\#2947](https://github.com/anoma/juvix/pull/2947) ([paulcadman](https://github.com/paulcadman))
+- Add more comments in the source code [\#2938](https://github.com/anoma/juvix/pull/2938) ([lukaszcz](https://github.com/lukaszcz))
+- Update stdlib submodule reference to juvix-stdlib main [\#2936](https://github.com/anoma/juvix/pull/2936) ([paulcadman](https://github.com/paulcadman))
+- Do not try flatparse scanner for .md files [\#2934](https://github.com/anoma/juvix/pull/2934) ([janmasrovira](https://github.com/janmasrovira))
+- Add builtin ByteArray type [\#2933](https://github.com/anoma/juvix/pull/2933) ([paulcadman](https://github.com/paulcadman))
+- Update juvix-stdlib to include Foldable and Functor traits [\#2932](https://github.com/anoma/juvix/pull/2932) ([paulcadman](https://github.com/paulcadman))
+- Improve css of html documentation and allow different themes [\#2931](https://github.com/anoma/juvix/pull/2931) ([janmasrovira](https://github.com/janmasrovira))
+- Fix html rendering of fixities [\#2930](https://github.com/anoma/juvix/pull/2930) ([janmasrovira](https://github.com/janmasrovira))
+- Fix scanning of names with `import` prefix [\#2929](https://github.com/anoma/juvix/pull/2929) ([janmasrovira](https://github.com/janmasrovira))
+- Fix name signature bug and extend test for instance fields [\#2928](https://github.com/anoma/juvix/pull/2928) ([janmasrovira](https://github.com/janmasrovira))
+- Add FromNatural trait in `package-base` [\#2926](https://github.com/anoma/juvix/pull/2926) ([paulcadman](https://github.com/paulcadman))
+- Fix \#2924. Use MegaParsec scanner for Markdown files [\#2925](https://github.com/anoma/juvix/pull/2925) ([jonaprieto](https://github.com/jonaprieto))
+- Put `Last modified` message inside footer tag [\#2922](https://github.com/anoma/juvix/pull/2922) ([janmasrovira](https://github.com/janmasrovira))
+- Improve css themes [\#2921](https://github.com/anoma/juvix/pull/2921) ([janmasrovira](https://github.com/janmasrovira))
+- Do not show progress log for `juvix html` [\#2920](https://github.com/anoma/juvix/pull/2920) ([janmasrovira](https://github.com/janmasrovira))
+- Add support for unsigned 8-bit integer type Byte [\#2918](https://github.com/anoma/juvix/pull/2918) ([paulcadman](https://github.com/paulcadman))
+- Properly handle confluent imports [\#2915](https://github.com/anoma/juvix/pull/2915) ([janmasrovira](https://github.com/janmasrovira))
+- Allow record fields to be iterators [\#2909](https://github.com/anoma/juvix/pull/2909) ([janmasrovira](https://github.com/janmasrovira))
+- Logger [\#2908](https://github.com/anoma/juvix/pull/2908) ([janmasrovira](https://github.com/janmasrovira))
+
 ## [v0.6.4](https://github.com/anoma/juvix/tree/v0.6.4) (2024-07-19)
 
 [Full Changelog](https://github.com/anoma/juvix/compare/v0.6.3...v0.6.4)
