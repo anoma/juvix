@@ -465,5 +465,10 @@ tests =
         "Test078: Builtin Byte"
         $(mkRelDir ".")
         $(mkRelFile "test078.juvix")
-        $(mkRelFile "out/test078.out")
+        $(mkRelFile "out/test078.out"),
+      posTestEval
+        "Test079: Let / LetRec type inference (during lambda lifting) in Core"
+        $(mkRelDir ".")
+        $(mkRelFile "test079.juvix")
+        $(mkRelFile "out/test079.out")
     ]

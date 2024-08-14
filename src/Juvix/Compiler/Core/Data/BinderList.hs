@@ -78,7 +78,7 @@ lookupMay idx bl
   | idx < bl ^. blLength = Just $ (bl ^. blMap) !! idx
   | otherwise = Nothing
 
--- | lookup de Bruijn Index
+-- | lookup de Bruijn index
 lookup :: Index -> BinderList a -> a
 lookup idx bl = fromMaybe err (lookupMay idx bl)
   where
@@ -93,7 +93,7 @@ lookup idx bl = fromMaybe err (lookupMay idx bl)
             <> show (length (bl ^. blMap))
         )
 
--- | lookup de Bruijn Level
+-- | lookup de Bruijn level
 lookupLevel :: Level -> BinderList a -> a
 lookupLevel lvl bl
   | target < bl ^. blLength = (bl ^. blMap) !! target

@@ -362,5 +362,10 @@ tests =
       "Test064: ByteArray"
       $(mkRelDir ".")
       $(mkRelFile "test064.jvc")
-      $(mkRelFile "out/test064.out")
+      $(mkRelFile "out/test064.out"),
+    PosTest
+      "Test065: Let / LetRec type inference"
+      $(mkRelDir ".")
+      $(mkRelFile "test065.jvc")
+      $(mkRelFile "out/test065.out")
   ]

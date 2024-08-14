@@ -99,9 +99,13 @@ computeNodeTypeInfo md = umapL go
       NLam Lambda {..} ->
         mkPi mempty _lambdaBinder (Info.getNodeType _lambdaBody)
       NLet Let {..} ->
-        Info.getNodeType _letBody
+        shift
+          (-1)
+          (Info.getNodeType _letBody)
       NRec LetRec {..} ->
-        Info.getNodeType _letRecBody
+        shift
+          (-(length _letRecValues))
+          (Info.getNodeType _letRecBody)
       NCase Case {..} -> case _caseDefault of
         Just nd -> Info.getNodeType nd
         Nothing -> case _caseBranches of
