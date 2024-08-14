@@ -3,7 +3,7 @@ module Juvix.Compiler.Internal.Translation.FromInternal
   )
 where
 
-import Juvix.Compiler.Concrete.Data.Highlight.Input
+import Juvix.Compiler.Concrete.Data.Highlight.Builder
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context
 import Juvix.Compiler.Internal.Data.InfoTable as Internal
 import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context as Internal

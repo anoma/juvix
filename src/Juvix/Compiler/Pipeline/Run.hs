@@ -67,9 +67,7 @@ runIOEitherHelper ::
   EntryPoint ->
   Sem (PipelineEff r) a ->
   Sem r (HighlightInput, (Either JuvixError (ResolverState, PipelineResult a)))
-runIOEitherHelper entry a =
-  runIOEitherPipeline' entry $ do
-    processFileUpTo a
+runIOEitherHelper entry = runIOEitherPipeline' entry . processFileUpTo
 
 runIOEitherPipeline ::
   forall a r.

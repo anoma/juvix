@@ -125,7 +125,7 @@ registerConstructor ctr = do
 registerNameIdType :: (Members '[HighlightBuilder, ResultBuilder] r) => NameId -> Expression -> Sem r ()
 registerNameIdType uid ty = do
   addIdenType uid ty
-  modify (over (highlightTypes . typesTable) (HashMap.insert uid ty))
+  highlightType uid ty
 
 checkCoercionCycles ::
   (Members '[ResultBuilder, Error TypeCheckerError] r) =>
