@@ -135,12 +135,14 @@ translateFunctionInfo tab IdentifierInfo {..} =
         _functionBody =
           translateFunction
             _identifierArgsNum
-            (fromJust $ HashMap.lookup _identifierSymbol (tab ^. identContext)),
+            body,
         _functionType = translateType _identifierType,
         _functionArgsNum = _identifierArgsNum,
-        _functionArgsInfo = map translateArgInfo (typeArgsBinders _identifierType),
+        _functionArgsInfo = map translateArgInfo (lambdaBinders body),
         _functionIsExported = _identifierIsExported
       }
+  where
+    body = fromJust $ HashMap.lookup _identifierSymbol (tab ^. identContext)
 
 translateArgInfo :: Binder -> Stripped.ArgumentInfo
 translateArgInfo Binder {..} =

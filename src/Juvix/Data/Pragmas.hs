@@ -355,3 +355,32 @@ adjustPragmas fvnum pragmas =
       pragmasSpecialiseArgs
       (fmap (over pragmaSpecialiseArgs (map (adjustPragmaSpecialiseArg fvnum))))
       pragmas
+
+getNthArg :: Int -> [Bool] -> Int
+getNthArg n
+  | n == 0 = const 0
+  | otherwise = \case
+      True : args' -> 1 + getNthArg n args'
+      False : args' -> 1 + getNthArg (n - 1) args'
+      [] -> n
+
+adjustPragmaInline' :: [Bool] -> PragmaInline -> PragmaInline
+adjustPragmaInline' implArgs = \case
+  InlinePartiallyApplied k -> InlinePartiallyApplied (getNthArg k implArgs)
+  InlineAlways -> InlineAlways
+  InlineNever -> InlineNever
+  InlineCase -> InlineCase
+  InlineFullyApplied -> InlineFullyApplied
+
+adjustPragmaSpecialiseArg' :: [Bool] -> PragmaSpecialiseArg -> PragmaSpecialiseArg
+adjustPragmaSpecialiseArg' implArgs = \case
+  SpecialiseArgNum i -> SpecialiseArgNum (getNthArg i implArgs)
+  SpecialiseArgNamed txt -> SpecialiseArgNamed txt
+
+adjustPragmas' :: [Bool] -> Pragmas -> Pragmas
+adjustPragmas' implArgs pragmas =
+  over pragmasInline (fmap (adjustPragmaInline' implArgs)) $
+    over
+      pragmasSpecialiseArgs
+      (fmap (over pragmaSpecialiseArgs (map (adjustPragmaSpecialiseArg' implArgs))))
+      pragmas

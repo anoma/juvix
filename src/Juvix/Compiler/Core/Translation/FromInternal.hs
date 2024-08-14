@@ -46,6 +46,15 @@ makeLenses ''PreMutual
 mkIdentIndex :: Name -> Text
 mkIdentIndex = show . (^. Internal.nameId)
 
+computeImplicitArgs :: Internal.Expression -> [Bool]
+computeImplicitArgs = \case
+  Internal.ExpressionFunction Internal.Function {..}
+    | _functionLeft ^. Internal.paramImplicit == Implicit ->
+        True : computeImplicitArgs _functionRight
+    | otherwise ->
+        False : computeImplicitArgs _functionRight
+  _ -> []
+
 fromInternal :: (Members '[NameIdGen, Reader Store.ModuleTable, Error JuvixError] k) => Internal.InternalTypedResult -> Sem k CoreResult
 fromInternal i = mapError (JuvixError . ErrBadScope) $ do
   importTab <- asks Store.getInternalModuleTable
@@ -277,7 +286,7 @@ preFunctionDef f = do
   sym <- freshSymbol
   funTy <- fromTopIndex (goType (f ^. Internal.funDefType))
   let _identifierName = f ^. Internal.funDefName . nameText
-      implParamsNum = implicitParametersNum (f ^. Internal.funDefType)
+      implArgs = computeImplicitArgs (f ^. Internal.funDefType)
       info =
         IdentifierInfo
           { _identifierName = normalizeBuiltinName (f ^. Internal.funDefBuiltin) (f ^. Internal.funDefName . nameText),
@@ -290,7 +299,7 @@ preFunctionDef f = do
             _identifierIsExported = False,
             _identifierBuiltin = f ^. Internal.funDefBuiltin,
             _identifierPragmas =
-              adjustPragmas implParamsNum (f ^. Internal.funDefPragmas),
+              adjustPragmas' implArgs (f ^. Internal.funDefPragmas),
             _identifierArgNames = argnames
           }
   case f ^. Internal.funDefBuiltin of
@@ -322,13 +331,6 @@ preFunctionDef f = do
         ">" -> Str.natGt
         ">=" -> Str.natGe
         _ -> name
-
-    implicitParametersNum :: Internal.Expression -> Int
-    implicitParametersNum = \case
-      Internal.ExpressionFunction Internal.Function {..}
-        | _functionLeft ^. Internal.paramImplicit == Implicit ->
-            implicitParametersNum _functionRight + 1
-      _ -> 0
 
     getPatternName :: Internal.PatternArg -> Maybe Text
     getPatternName pat = case pat ^. Internal.patternArgName of
@@ -554,17 +556,20 @@ goLet l = goClauses (toList (l ^. Internal.letClauses))
               funTy <- goType (f ^. Internal.funDefType)
               funBody <- mkFunBody funTy f
               rest <- localAddName (f ^. Internal.funDefName) (goClauses cs)
-              let name = f ^. Internal.funDefName . nameText
+              let implArgs = computeImplicitArgs (f ^. Internal.funDefType)
+                  name = f ^. Internal.funDefName . nameText
                   loc = f ^. Internal.funDefName . nameLoc
-                  info = setInfoPragma (f ^. Internal.funDefPragmas) mempty
-                  body = modifyInfo (setInfoPragma (f ^. Internal.funDefPragmas)) funBody
+                  pragmas = adjustPragmas' implArgs (f ^. Internal.funDefPragmas)
+                  info = setInfoPragma pragmas mempty
+                  body = modifyInfo (setInfoPragma pragmas) funBody
               return $ mkLet info (Binder name (Just loc) funTy) body rest
           goMutual :: Internal.MutualBlockLet -> Sem r Node
           goMutual (Internal.MutualBlockLet funs) = do
             let lfuns = toList funs
                 names = map (^. Internal.funDefName) lfuns
                 tys = map (^. Internal.funDefType) lfuns
-                pragmas = map (^. Internal.funDefPragmas) lfuns
+                implArgs = map (computeImplicitArgs . (^. Internal.funDefType)) lfuns
+                pragmas = zipWith adjustPragmas' implArgs (map (^. Internal.funDefPragmas) lfuns)
             tys' <- mapM goType tys
             localAddNames names $ do
               vals' <- sequence [mkFunBody (shift (length names) ty) f | (ty, f) <- zipExact tys' lfuns]
