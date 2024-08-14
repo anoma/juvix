@@ -140,7 +140,8 @@ goModule onlyTypes infoTable Internal.Module {..} =
         StmtSynonym
           Synonym
             { _synonymName = name',
-              _synonymType = goType $ fromMaybe (error "unsupported axiomatic type") body
+              _synonymType = goType $ fromMaybe (error "unsupported axiomatic type") body,
+              _synonymComment = comment
             }
       _
         | isFunction argnames ty body ->

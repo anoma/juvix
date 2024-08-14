@@ -383,7 +383,7 @@ goFunctionDef FunctionDef {..} = do
   _funDefBody <- goBody
   msig <- asks (^. S.infoNameSigs . at (_funDefName ^. Internal.nameId))
   _funDefArgsInfo <- maybe (return mempty) goNameSignature msig
-  let _funDefComment = fmap ppPrint _signDoc
+  let _funDefComment = fmap ppPrintJudoc _signDoc
       fun = Internal.FunctionDef {..}
   whenJust _signBuiltin (registerBuiltinFunction fun . (^. withLocParam))
   return fun
@@ -623,7 +623,7 @@ goInductive ty@InductiveDef {..} = do
             _inductivePragmas = _inductivePragmas',
             _inductivePositive = isJust (ty ^. inductivePositive),
             _inductiveTrait = isJust (ty ^. inductiveTrait),
-            _inductiveComment = fmap ppPrint _inductiveDoc
+            _inductiveComment = fmap ppPrintJudoc _inductiveDoc
           }
   whenJust ((^. withLocParam) <$> _inductiveBuiltin) (registerBuiltinInductive indDef)
   registerInductiveConstructors indDef
@@ -650,7 +650,7 @@ goConstructorDef retTy ConstructorDef {..} = do
         _inductiveConstructorName = goSymbol _constructorName,
         _inductiveConstructorIsRecord = isRhsRecord _constructorRhs,
         _inductiveConstructorPragmas = pragmas',
-        _inductiveConstructorComment = fmap ppPrint _constructorDoc
+        _inductiveConstructorComment = fmap ppPrintJudoc _constructorDoc
       }
   where
     goAdtType :: Concrete.RhsAdt 'Scoped -> Sem r Internal.Expression
@@ -1392,7 +1392,7 @@ goAxiom a = do
             _axiomBuiltin = (^. withLocParam) <$> a ^. axiomBuiltin,
             _axiomName = goSymbol (a ^. axiomName),
             _axiomPragmas = _axiomPragmas',
-            _axiomComment = fmap ppPrint (a ^. axiomDoc)
+            _axiomComment = fmap ppPrintJudoc (a ^. axiomDoc)
           }
   whenJust (a ^. axiomBuiltin) (registerBuiltinAxiom axiom . (^. withLocParam))
   return axiom

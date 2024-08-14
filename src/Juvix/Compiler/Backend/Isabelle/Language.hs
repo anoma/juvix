@@ -172,7 +172,8 @@ data Clause = Clause
 
 data Synonym = Synonym
   { _synonymName :: Name,
-    _synonymType :: Type
+    _synonymType :: Type,
+    _synonymComment :: Maybe Text
   }
 
 data Datatype = Datatype

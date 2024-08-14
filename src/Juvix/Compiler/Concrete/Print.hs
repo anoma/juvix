@@ -5,6 +5,7 @@ module Juvix.Compiler.Concrete.Print
   )
 where
 
+import Juvix.Compiler.Concrete.Language.Base
 import Juvix.Compiler.Concrete.Pretty.Options
 import Juvix.Compiler.Concrete.Print.Base
 import Juvix.Data.Effect.ExactPrint
@@ -22,3 +23,6 @@ ppOut o cs = mkAnsiText . PPOutput . doc (project o) (Just cs)
 
 ppOutNoComments :: (CanonicalProjection a Options, PrettyPrint c) => a -> c -> AnsiText
 ppOutNoComments o = mkAnsiText . PPOutput . docNoLoc (project o)
+
+ppOutJudoc :: (SingI s) => Judoc s -> AnsiText
+ppOutJudoc = mkAnsiText . PPOutput . docJudoc
