@@ -56,7 +56,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
   (blts, binstrs) <- addStdlibBuiltins (length pinstrs)
   let cinstrs = concatMap (mkFunCall . fst) $ sortOn snd $ HashMap.toList (info ^. Reg.extraInfoFUIDs)
   (addr, instrs) <- second (concat . reverse) <$> foldM (goFun blts endLab) (length pinstrs + length binstrs + length cinstrs, []) (tab ^. Reg.infoFunctions)
-  eassert (addr == length instrs + length cinstrs + length binstrs + length pinstrs)
+  massert (addr == length instrs + length cinstrs + length binstrs + length pinstrs)
   registerLabelName endSym endName
   registerLabelAddress endSym addr
   return
@@ -181,15 +181,15 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
       mapM_ goInstr _blockBody
       case _blockNext of
         Just block' -> do
-          eassert (isJust _blockFinal)
+          massert (isJust _blockFinal)
           goFinalInstr (block' ^. Reg.blockLiveVars) (fromJust _blockFinal)
           goBlock blts failLab liveVars0 mout block'
         Nothing -> case _blockFinal of
           Just instr ->
             goFinalInstr liveVars0 instr
           Nothing -> do
-            eassert (isJust mout)
-            eassert (HashSet.member (fromJust mout) liveVars0)
+            massert (isJust mout)
+            massert (HashSet.member (fromJust mout) liveVars0)
             goCallBlock False Nothing liveVars0
       where
         output'' :: Instruction -> Sem r ()
@@ -634,7 +634,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
 
         goCase :: HashSet Reg.VarRef -> Reg.InstrCase -> Sem r ()
         goCase liveVars Reg.InstrCase {..} = do
-          eassert (not (Reg.isInductiveRecord tab _instrCaseInductive))
+          massert (not (Reg.isInductiveRecord tab _instrCaseInductive))
           syms <- replicateM (length tags) freshSymbol
           symEnd <- freshSymbol
           let symMap = HashMap.fromList $ zip tags syms

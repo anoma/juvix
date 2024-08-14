@@ -339,6 +339,9 @@ unfoldLambdas' = first length . unfoldLambdas
 lambdaTypes :: Node -> [Type]
 lambdaTypes = map (\LambdaLhs {..} -> _lambdaLhsBinder ^. binderType) . fst . unfoldLambdas
 
+lambdaBinders :: Node -> [Binder]
+lambdaBinders = map (^. lambdaLhsBinder) . fst . unfoldLambdas
+
 isConstructorApp :: Node -> Bool
 isConstructorApp node = case node of
   NCtr {} -> True

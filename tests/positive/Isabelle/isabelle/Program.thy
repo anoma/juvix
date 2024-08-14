@@ -55,10 +55,10 @@ datatype 'A Queue
   = queue "'A list" "'A list"
 
 fun qfst :: "'A Queue \<Rightarrow> 'A list" where
-  "qfst (queue x ω) = x"
+  "qfst (queue x v) = x"
 
 fun qsnd :: "'A Queue \<Rightarrow> 'A list" where
-  "qsnd (queue ω x) = x"
+  "qsnd (queue v v') = v'"
 
 fun pop_front :: "'A Queue \<Rightarrow> 'A Queue" where
   "pop_front q =
@@ -66,7 +66,7 @@ fun pop_front :: "'A Queue \<Rightarrow> 'A Queue" where
        q' = queue (tl (qfst q)) (qsnd q)
      in case qfst q' of
           [] \<Rightarrow> queue (rev (qsnd q')) [] |
-          ω \<Rightarrow> q')"
+          v \<Rightarrow> q')"
 
 fun push_back :: "'A Queue \<Rightarrow> 'A \<Rightarrow> 'A Queue" where
   "push_back q x =
@@ -80,8 +80,8 @@ fun is_empty :: "'A Queue \<Rightarrow> bool" where
        [] \<Rightarrow>
          (case qsnd q of
             [] \<Rightarrow> True |
-            ω \<Rightarrow> False) |
-       ω \<Rightarrow> False)"
+            v \<Rightarrow> False) |
+       v \<Rightarrow> False)"
 
 definition empty :: "'A Queue" where
   "empty = queue [] []"
