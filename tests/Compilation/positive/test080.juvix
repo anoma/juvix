@@ -22,6 +22,7 @@ type Monad (f : Type -> Type) :=
   mkMonad {
     {{MonadApplicative}} : Applicative f;
 
+    builtin monad-bind
     bind : {A B : Type} -> f A -> (A -> f B) -> f B
   };
 
@@ -30,7 +31,6 @@ open Applicative;
 open Monad;
 
 syntax operator >>= seq;
-builtin monad-bind
 >>= {A B} {f : Type -> Type} {{Monad f}} (x : f A) (g : A -> f B) : f B := bind x g;
 
 monadMap {A B} {f : Type -> Type} {{Monad f}} (g : A -> B) (x : f A) : f B := map g x;
@@ -68,7 +68,13 @@ minusThree (n : Nat) : Maybe Nat :=
   do {
     x1 <- minusOne n;
     x2 <- minusOne x1;
-    pure x2;
+    let
+      x2' : Nat := x2;
+      num := 3;
+      num1 := 4;
+    in
+    x3 <- minusOne x2';
+    pure x3;
   };
 
 main : IO := printLn (minusThree 1) >>> printLn (minusThree 4);

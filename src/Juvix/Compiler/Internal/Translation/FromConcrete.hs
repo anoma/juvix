@@ -1101,7 +1101,7 @@ goExpression = \case
 
 goLetFunDefs ::
   forall r.
-  (Members '[Reader DefaultArgsStack, Builtins, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) =>
+  (Members '[Reader DefaultArgsStack, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) =>
   NonEmpty (LetStatement 'Scoped) ->
   Sem r [Internal.LetClause]
 goLetFunDefs clauses = maybe [] (toList . mkLetClauses) . nonEmpty <$> preLetStatements clauses
@@ -1117,7 +1117,7 @@ goLetFunDefs clauses = maybe [] (toList . mkLetClauses) . nonEmpty <$> preLetSta
 
 goDo ::
   forall r.
-  (Members '[Reader DefaultArgsStack, Builtins, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) =>
+  (Members '[Reader DefaultArgsStack, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) =>
   Do 'Scoped ->
   Sem r Internal.Expression
 goDo Do {..} = do
@@ -1164,7 +1164,7 @@ goDo Do {..} = do
         goDoBindHelper p l r = do
           p' <- goPatternArg p
           l' <- goExpression l
-          bindIden <- getBuiltinName (getLoc _doKeyword) BuiltinMonadBind
+          bindIden <- localBuiltins (getBuiltinNameScoper (getLoc _doKeyword) BuiltinMonadBind)
           return (bindIden Internal.@@ l' Internal.@@ (p' Internal.==> r))
 
         goLastStatement :: DoStatement 'Scoped -> Sem r Internal.Expression
