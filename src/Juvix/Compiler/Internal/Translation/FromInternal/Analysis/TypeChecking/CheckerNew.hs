@@ -206,7 +206,8 @@ checkInductiveDef InductiveDef {..} = runInferenceDef $ do
               _inductivePositive,
               _inductiveParameters,
               _inductiveTrait,
-              _inductivePragmas
+              _inductivePragmas,
+              _inductiveComment
             }
     checkPositivity (inductiveInfoFromInductiveDef d)
     return d
@@ -332,7 +333,8 @@ checkFunctionDef FunctionDef {..} = do
           _funDefInstance,
           _funDefCoercion,
           _funDefBuiltin,
-          _funDefPragmas
+          _funDefPragmas,
+          _funDefComment
         }
   when _funDefInstance $
     checkInstanceType funDef

@@ -19,6 +19,7 @@ import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra qualified as Concrete
 import Juvix.Compiler.Concrete.Gen qualified as Gen
 import Juvix.Compiler.Concrete.Language qualified as Concrete
+import Juvix.Compiler.Concrete.Pretty
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Compiler.Internal.Data.NameDependencyInfo qualified as Internal
@@ -382,7 +383,8 @@ goFunctionDef FunctionDef {..} = do
   _funDefBody <- goBody
   msig <- asks (^. S.infoNameSigs . at (_funDefName ^. Internal.nameId))
   _funDefArgsInfo <- maybe (return mempty) goNameSignature msig
-  let fun = Internal.FunctionDef {..}
+  let _funDefComment = fmap ppPrint _signDoc
+      fun = Internal.FunctionDef {..}
   whenJust _signBuiltin (registerBuiltinFunction fun . (^. withLocParam))
   return fun
   where
@@ -620,7 +622,8 @@ goInductive ty@InductiveDef {..} = do
             _inductiveConstructors = toList _inductiveConstructors',
             _inductivePragmas = _inductivePragmas',
             _inductivePositive = isJust (ty ^. inductivePositive),
-            _inductiveTrait = isJust (ty ^. inductiveTrait)
+            _inductiveTrait = isJust (ty ^. inductiveTrait),
+            _inductiveComment = fmap ppPrint _inductiveDoc
           }
   whenJust ((^. withLocParam) <$> _inductiveBuiltin) (registerBuiltinInductive indDef)
   registerInductiveConstructors indDef
@@ -1387,7 +1390,8 @@ goAxiom a = do
           { _axiomType = _axiomType',
             _axiomBuiltin = (^. withLocParam) <$> a ^. axiomBuiltin,
             _axiomName = goSymbol (a ^. axiomName),
-            _axiomPragmas = _axiomPragmas'
+            _axiomPragmas = _axiomPragmas',
+            _axiomComment = fmap ppPrint (a ^. axiomDoc)
           }
   whenJust (a ^. axiomBuiltin) (registerBuiltinAxiom axiom . (^. withLocParam))
   return axiom

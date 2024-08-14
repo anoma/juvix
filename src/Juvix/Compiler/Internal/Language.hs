@@ -85,7 +85,8 @@ data AxiomDef = AxiomDef
   { _axiomName :: AxiomName,
     _axiomBuiltin :: Maybe BuiltinAxiom,
     _axiomType :: Expression,
-    _axiomPragmas :: Pragmas
+    _axiomPragmas :: Pragmas,
+    _axiomComment :: Maybe Text
   }
   deriving stock (Data, Generic)
 
@@ -102,7 +103,8 @@ data FunctionDef = FunctionDef
     _funDefCoercion :: Bool,
     _funDefBuiltin :: Maybe BuiltinFunction,
     _funDefArgsInfo :: [ArgInfo],
-    _funDefPragmas :: Pragmas
+    _funDefPragmas :: Pragmas,
+    _funDefComment :: Maybe Text
   }
   deriving stock (Eq, Generic, Data)
 
@@ -402,7 +404,8 @@ data InductiveDef = InductiveDef
     _inductiveConstructors :: [ConstructorDef],
     _inductivePositive :: Bool,
     _inductiveTrait :: Bool,
-    _inductivePragmas :: Pragmas
+    _inductivePragmas :: Pragmas,
+    _inductiveComment :: Maybe Text
   }
   deriving stock (Data)
 
