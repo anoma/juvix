@@ -53,7 +53,7 @@ qfst : {A : Type} → Queue A → List A
   | (queue x _) := x;
 
 qsnd : {A : Type} → Queue A → List A
-  | (queue _ x) := x;
+  | (queue _ v) := v;
 
 pop_front {A} (q : Queue A) : Queue A :=
     let
