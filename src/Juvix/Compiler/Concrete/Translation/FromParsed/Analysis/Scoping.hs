@@ -2910,7 +2910,6 @@ checkParens e@(ExpressionAtoms as _) = case as of
     _ -> checkParseExpressionAtoms e
   _ -> checkParseExpressionAtoms e
 
--- TODO Question: why do we need both InfoTableBuilder, Reader InfoTable. Is the Reader for the imports only?
 checkExpressionAtoms ::
   forall r.
   (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader Package] r) =>
