@@ -145,6 +145,7 @@ evalModuleInfoCacheHelper ::
          TaggedLock,
          TopModuleNameChecker,
          Error JuvixError,
+         HighlightBuilder,
          PathResolver,
          Reader ImportScanStrategy,
          Reader NumThreads,

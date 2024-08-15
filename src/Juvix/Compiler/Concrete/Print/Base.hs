@@ -401,7 +401,6 @@ instance (SingI s) => PrettyPrint (DoubleBracesExpression s) where
 instance (SingI s) => PrettyPrint (DoLet s) where
   ppCode DoLet {..} = do
     let letFunDefs' = blockIndent (ppBlock _doLetStatements)
-    -- blockIndent d = hardline <> indent d <> line
     ppCode _doLetKw
       <> letFunDefs'
       <> ppCode _doLetInKw
