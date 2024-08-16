@@ -97,3 +97,23 @@ registerAnomaSignDetached f = do
     ((ftype ==% (u <>--> dataT --> byteArray --> byteArray)) freeVars)
     (error "anomaSignDetached must be of type {A : Type} -> A -> ByteArray -> ByteArray")
   registerBuiltin BuiltinAnomaSignDetached (f ^. axiomName)
+
+registerByteArrayToAnomaContents :: (Members '[Builtins, NameIdGen] r) => AxiomDef -> Sem r ()
+registerByteArrayToAnomaContents f = do
+  let loc = getLoc f
+  byteArray <- getBuiltinName loc BuiltinByteArray
+  nat_ <- getBuiltinName loc BuiltinNat
+  unless
+    (f ^. axiomType == (byteArray --> nat_))
+    (error "toAnomaContents must be of type ByteArray -> Nat")
+  registerBuiltin BuiltinAnomaByteArrayToAnomaContents (f ^. axiomName)
+
+registerByteArrayFromAnomaContents :: (Members '[Builtins, NameIdGen] r) => AxiomDef -> Sem r ()
+registerByteArrayFromAnomaContents f = do
+  let loc = getLoc f
+  byteArray <- getBuiltinName loc BuiltinByteArray
+  nat_ <- getBuiltinName loc BuiltinNat
+  unless
+    (f ^. axiomType == (nat_ --> nat_ --> byteArray))
+    (error "fromAnomaContents must be of type Nat -> Nat -> ByteArray")
+  registerBuiltin BuiltinAnomaByteArrayFromAnomaContents (f ^. axiomName)

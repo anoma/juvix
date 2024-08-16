@@ -616,6 +616,8 @@ goAxiomInductive a = whenJust (a ^. Internal.axiomBuiltin) builtinInductive
       Internal.BuiltinAnomaSign -> return ()
       Internal.BuiltinAnomaSignDetached -> return ()
       Internal.BuiltinAnomaVerifyWithMessage -> return ()
+      BuiltinAnomaByteArrayToAnomaContents -> return ()
+      BuiltinAnomaByteArrayFromAnomaContents -> return ()
       Internal.BuiltinPoseidon -> return ()
       Internal.BuiltinEcOp -> return ()
       Internal.BuiltinRandomEcPoint -> return ()
@@ -809,6 +811,18 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
                       natType
                       (mkBuiltinApp' OpAnomaVerifyWithMessage [mkVar' 1, mkVar' 0])
                   )
+              )
+          )
+      Internal.BuiltinAnomaByteArrayToAnomaContents ->
+        registerAxiomDef (mkLambda' mkDynamic' (mkBuiltinApp' OpAnomaByteArrayToAnomaContents [mkVar' 0]))
+      Internal.BuiltinAnomaByteArrayFromAnomaContents -> do
+        natType <- getNatType
+        registerAxiomDef
+          ( mkLambda'
+              natType
+              ( mkLambda'
+                  natType
+                  (mkBuiltinApp' OpAnomaByteArrayFromAnomaContents [mkVar' 1, mkVar' 0])
               )
           )
       Internal.BuiltinPoseidon -> do
@@ -1233,6 +1247,8 @@ goApplication a = do
         Just Internal.BuiltinAnomaSign -> app
         Just Internal.BuiltinAnomaSignDetached -> app
         Just Internal.BuiltinAnomaVerifyWithMessage -> app
+        Just Internal.BuiltinAnomaByteArrayToAnomaContents -> app
+        Just Internal.BuiltinAnomaByteArrayFromAnomaContents -> app
         Just Internal.BuiltinPoseidon -> app
         Just Internal.BuiltinEcOp -> app
         Just Internal.BuiltinRandomEcPoint -> app

@@ -584,6 +584,8 @@ registerBuiltinAxiom d = \case
   BuiltinAnomaSign -> registerAnomaSign d
   BuiltinAnomaSignDetached -> registerAnomaSignDetached d
   BuiltinAnomaVerifyWithMessage -> registerAnomaVerifyWithMessage d
+  BuiltinAnomaByteArrayToAnomaContents -> registerByteArrayToAnomaContents d
+  BuiltinAnomaByteArrayFromAnomaContents -> registerByteArrayFromAnomaContents d
   BuiltinPoseidon -> registerPoseidon d
   BuiltinEcOp -> registerEcOp d
   BuiltinRandomEcPoint -> registerRandomEcPoint d

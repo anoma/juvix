@@ -630,5 +630,17 @@ allTests =
             [nock| [2 258] |],
             [nock| 1 |],
             [nock| [1 0] |]
+          ],
+      mkAnomaCallTest
+        "Test083: Anoma ByteArray"
+        $(mkRelDir ".")
+        $(mkRelFile "test083.juvix")
+        []
+        $ checkOutput
+          [ [nock| [[0 0] 0] |],
+            [nock| [[3 0] 0] |],
+            [nock| [[4 1] 1] |],
+            [nock| [[2 258] 258] |],
+            [nock| [[1 0] 0] |]
           ]
     ]

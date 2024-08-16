@@ -291,6 +291,8 @@ instance PrettyCode AnomaOp where
     OpAnomaSign -> Str.anomaSign
     OpAnomaVerifyWithMessage -> Str.anomaVerifyWithMessage
     OpAnomaSignDetached -> Str.anomaSignDetached
+    OpAnomaByteArrayFromAnomaContents -> Str.anomaByteArrayFromAnomaContents
+    OpAnomaByteArrayToAnomaContents -> Str.anomaByteArrayToAnomaContents
 
 instance PrettyCode UnaryOpcode where
   ppCode = \case

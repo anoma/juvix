@@ -495,6 +495,8 @@ compile = \case
         Tree.OpAnomaSign -> return (goAnomaSign args)
         Tree.OpAnomaVerifyWithMessage -> return (goAnomaVerifyWithMessage args)
         Tree.OpAnomaSignDetached -> return (goAnomaSignDetached args)
+        Tree.OpAnomaByteArrayFromAnomaContents -> return (goAnomaByteArrayFromAnomaContents args)
+        Tree.OpAnomaByteArrayToAnomaContents -> return (goAnomaByteArrayToAnomaContents args)
 
     goByteArrayOp :: Tree.NodeByteArray -> Sem r (Term Natural)
     goByteArrayOp Tree.NodeByteArray {..} = do
@@ -589,6 +591,16 @@ compile = \case
                 byteArrayPayload "privKeyByteArrayTail" privKeyByteArray
               ]
           )
+      _ -> impossible
+
+    goAnomaByteArrayToAnomaContents :: [Term Natural] -> Term Natural
+    goAnomaByteArrayToAnomaContents = \case
+      [ba] -> byteArrayPayload "bytearryToAnomaContents-payload" ba
+      _ -> impossible
+
+    goAnomaByteArrayFromAnomaContents :: [Term Natural] -> Term Natural
+    goAnomaByteArrayFromAnomaContents = \case
+      [len, contents] -> mkByteArray len contents
       _ -> impossible
 
     -- Conceptually this function is:
