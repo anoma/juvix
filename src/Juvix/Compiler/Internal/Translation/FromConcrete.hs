@@ -585,6 +585,8 @@ checkBuiltinAxiom d b = localBuiltins $ case b of
   BuiltinAnomaSign -> checkAnomaSign d
   BuiltinAnomaSignDetached -> checkAnomaSignDetached d
   BuiltinAnomaVerifyWithMessage -> checkAnomaVerifyWithMessage d
+  BuiltinAnomaByteArrayFromAnomaContents -> checkAnomaByteArrayFromAnomaContents d
+  BuiltinAnomaByteArrayToAnomaContents -> checkAnomaByteArrayToAnomaContents d
   BuiltinPoseidon -> checkPoseidon d
   BuiltinEcOp -> checkEcOp d
   BuiltinRandomEcPoint -> checkRandomEcPoint d

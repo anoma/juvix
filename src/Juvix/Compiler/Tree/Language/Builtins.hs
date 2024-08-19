@@ -96,4 +96,8 @@ data AnomaOp
     OpAnomaVerifyWithMessage
   | -- | Produce a cryptographic signature of an Anoma value
     OpAnomaSignDetached
+  | -- | Construct an Anoma atom from a ByteArray with LSB ordering
+    OpAnomaByteArrayToAnomaContents
+  | -- | Construct a ByteArray from the bytes of an Anoma atom with LSB ordering
+    OpAnomaByteArrayFromAnomaContents
   deriving stock (Eq)

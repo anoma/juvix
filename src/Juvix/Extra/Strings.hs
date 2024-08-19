@@ -374,6 +374,12 @@ anomaSignDetached = "anoma-sign-detached"
 anomaVerifyWithMessage :: (IsString s) => s
 anomaVerifyWithMessage = "anoma-verify-with-message"
 
+anomaByteArrayToAnomaContents :: (IsString s) => s
+anomaByteArrayToAnomaContents = "anoma-bytearray-to-anoma-contents"
+
+anomaByteArrayFromAnomaContents :: (IsString s) => s
+anomaByteArrayFromAnomaContents = "anoma-bytearray-from-anoma-contents"
+
 builtinSeq :: (IsString s) => s
 builtinSeq = "seq"
 

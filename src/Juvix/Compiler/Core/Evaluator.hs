@@ -16,6 +16,7 @@ import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.NoDisplayInfo
 import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Nockma.Encoding qualified as Encoding
+import Juvix.Compiler.Nockma.Encoding.ByteString (byteStringToIntegerLE, integerToByteStringLELen)
 import Juvix.Compiler.Nockma.Encoding.Ed25519 qualified as E
 import Juvix.Compiler.Store.Core.Extra qualified as Store
 import Juvix.Data.Field
@@ -211,6 +212,8 @@ geval opts herr tab env0 = eval' env0
       OpAnomaSign -> anomaSignOp
       OpAnomaSignDetached -> anomaSignDetachedOp
       OpAnomaVerifyWithMessage -> anomaVerifyWithMessageOp
+      OpAnomaByteArrayToAnomaContents -> anomaByteArrayToAnomaContents
+      OpAnomaByteArrayFromAnomaContents -> anomaByteArrayFromAnomaContents
       OpPoseidonHash -> poseidonHashOp
       OpEc -> ecOp
       OpRandomEcPoint -> randomEcPointOp
@@ -431,6 +434,31 @@ geval opts herr tab env0 = eval' env0
                         (Just bs1, Just bs2) -> verify bs1 bs2
                         _ -> err "anomaVerifyWithMessageOp: both arguments are not bytearrays"
         {-# INLINE anomaVerifyWithMessageOp #-}
+
+        anomaByteArrayToAnomaContents :: [Node] -> Node
+        anomaByteArrayToAnomaContents = checkApply $ \arg ->
+          let !v = eval' env arg
+           in if
+                  | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                      mkBuiltinApp' OpAnomaByteArrayToAnomaContents [v]
+                  | otherwise ->
+                      case (byteStringFromNode v) of
+                        (Just bs) -> nodeFromInteger (byteStringToIntegerLE bs)
+                        _ -> err "anomaByteArrayToAnomaContents: expected argument to be a bytearray"
+        {-# INLINE anomaByteArrayToAnomaContents #-}
+
+        anomaByteArrayFromAnomaContents :: [Node] -> Node
+        anomaByteArrayFromAnomaContents = checkApply $ \arg1 arg2 ->
+          let !v1 = eval' env arg1
+              !v2 = eval' env arg2
+           in if
+                  | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                      mkBuiltinApp' OpAnomaByteArrayFromAnomaContents [v1, v2]
+                  | otherwise ->
+                      case (integerFromNode v1, integerFromNode v2) of
+                        (Just i1, Just i2) -> nodeFromByteString (integerToByteStringLELen (fromIntegral i1) i2)
+                        _ -> err "anomaByteArrayFromAnomaContents: expected both argmuments to be integers"
+        {-# INLINE anomaByteArrayFromAnomaContents #-}
 
         poseidonHashOp :: [Node] -> Node
         poseidonHashOp = unary $ \arg ->

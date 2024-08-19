@@ -87,3 +87,23 @@ checkAnomaSignDetached f = do
   unless
     ((ftype ==% (u <>--> dataT --> byteArray --> byteArray)) freeVars)
     $ builtinsErrorText (getLoc f) "anomaSignDetached must be of type {A : Type} -> A -> ByteArray -> ByteArray"
+
+checkAnomaByteArrayToAnomaContents :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => AxiomDef -> Sem r ()
+checkAnomaByteArrayToAnomaContents f = do
+  let ftype = f ^. axiomType
+      l = getLoc f
+  byteArray <- getBuiltinNameScoper l BuiltinByteArray
+  nat_ <- getBuiltinNameScoper l BuiltinNat
+  unless
+    (ftype == (byteArray --> nat_))
+    $ builtinsErrorText l "toAnomaContents must be of type ByteArray -> Nat"
+
+checkAnomaByteArrayFromAnomaContents :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => AxiomDef -> Sem r ()
+checkAnomaByteArrayFromAnomaContents f = do
+  let ftype = f ^. axiomType
+      l = getLoc f
+  byteArray <- getBuiltinNameScoper l BuiltinByteArray
+  nat_ <- getBuiltinNameScoper l BuiltinNat
+  unless
+    (ftype == (nat_ --> nat_ --> byteArray))
+    $ builtinsErrorText l "fromAnomaContents must be of type Nat -> Nat -> ByteArray"

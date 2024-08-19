@@ -1,0 +1,41 @@
+module test083;
+
+import Stdlib.Prelude open;
+import Stdlib.Debug.Trace open;
+
+builtin bytearray
+axiom ByteArray : Type;
+
+builtin bytearray-from-list-byte
+axiom mkByteArray : List Byte -> ByteArray;
+
+builtin bytearray-length
+axiom size : ByteArray -> Nat;
+
+builtin anoma-bytearray-to-anoma-contents
+axiom toAnomaContents : ByteArray -> Nat;
+
+builtin anoma-bytearray-from-anoma-contents
+axiom fromAnomaContents : Nat -> Nat -> ByteArray;
+
+bs0 : ByteArray := mkByteArray [];
+
+bs1 : ByteArray := mkByteArray [0x0; 0x0; 0x0];
+
+bs2 : ByteArray := mkByteArray [0x1; 0x0; 0x0; 0x0];
+
+bs3 : ByteArray := mkByteArray [0x2; 0x1];
+
+bs4 : ByteArray := mkByteArray [0x100];
+
+testByteArray (ba : ByteArray) : Pair ByteArray Nat :=
+  let
+    anomaContents := toAnomaContents ba;
+  in fromAnomaContents (size ba) anomaContents, anomaContents;
+
+main : Pair ByteArray Nat :=
+  trace (testByteArray bs0)
+    >-> trace (testByteArray bs1)
+    >-> trace (testByteArray bs2)
+    >-> trace (testByteArray bs3)
+    >-> testByteArray bs4;

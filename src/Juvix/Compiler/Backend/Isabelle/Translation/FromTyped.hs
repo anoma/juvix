@@ -56,7 +56,9 @@ goModule onlyTypes infoTable Internal.Module {..} =
   Theory
     { _theoryName = over nameText toIsabelleName $ over namePretty toIsabelleName _moduleName,
       _theoryImports = map (^. Internal.importModuleName) (_moduleBody ^. Internal.moduleImports),
-      _theoryStatements = concatMap goMutualBlock (_moduleBody ^. Internal.moduleStatements)
+      _theoryStatements = case _modulePragmas ^. pragmasIsabelleIgnore of
+        Just (PragmaIsabelleIgnore True) -> []
+        _ -> concatMap goMutualBlock (_moduleBody ^. Internal.moduleStatements)
     }
   where
     toIsabelleName :: Text -> Text
@@ -75,13 +77,18 @@ goModule onlyTypes infoTable Internal.Module {..} =
     goMutualBlock :: Internal.MutualBlock -> [Statement]
     goMutualBlock Internal.MutualBlock {..} =
       filter (\stmt -> not onlyTypes || isTypeDef stmt) $
-        map goMutualStatement (toList _mutualStatements)
+        mapMaybe goMutualStatement (toList _mutualStatements)
 
-    goMutualStatement :: Internal.MutualStatement -> Statement
+    checkNotIgnored :: Pragmas -> a -> Maybe a
+    checkNotIgnored pragmas x = case pragmas ^. pragmasIsabelleIgnore of
+      Just (PragmaIsabelleIgnore True) -> Nothing
+      _ -> Just x
+
+    goMutualStatement :: Internal.MutualStatement -> Maybe Statement
     goMutualStatement = \case
-      Internal.StatementInductive x -> goInductiveDef x
-      Internal.StatementFunction x -> goFunctionDef x
-      Internal.StatementAxiom x -> goAxiomDef x
+      Internal.StatementInductive x -> checkNotIgnored (x ^. Internal.inductivePragmas) $ goInductiveDef x
+      Internal.StatementFunction x -> checkNotIgnored (x ^. Internal.funDefPragmas) $ goFunctionDef x
+      Internal.StatementAxiom x -> checkNotIgnored (x ^. Internal.axiomPragmas) $ goAxiomDef x
 
     goInductiveDef :: Internal.InductiveDef -> Statement
     goInductiveDef Internal.InductiveDef {..}
