@@ -69,13 +69,6 @@ instance PrettyPrint KeywordRef where
           $ p
       )
 
-docJudoc :: (SingI s) => Judoc s -> Doc Ann
-docJudoc =
-  run
-    . execExactPrint Nothing
-    . runReader defaultOptions
-    . ppJudoc False
-
 docNoComments :: (PrettyPrint c) => Options -> c -> Doc Ann
 docNoComments = docHelper Nothing
 
@@ -971,35 +964,43 @@ instance (SingI s) => PrettyPrint (JudocLine s) where
   ppCode (JudocLine deli atoms) = do
     let start' :: Maybe (Sem r ()) = ppCode <$> deli
         atoms' = mapM_ ppCode atoms
-    start' <?+> atoms'
-
-ppJudoc :: forall s r. (SingI s, Members '[ExactPrint, Reader Options] r) => Bool -> Judoc s -> Sem r ()
-ppJudoc bJuvix (Judoc groups) = ppGroups groups <> if bJuvix then hardline else mempty
-  where
-    ppGroups :: NonEmpty (JudocGroup s) -> Sem r ()
-    ppGroups = \case
-      g :| [] -> ppCode g
-      g :| b : bs -> ppCode g <> groupSep <> ppGroups (b :| bs)
-        where
-          groupSep :: Sem r ()
-          groupSep = line <> extraLine
-          extraLine :: Sem r ()
-          extraLine = case (g, b) of
-            (JudocGroupLines {}, JudocGroupLines {}) -> delim <> line
-              where
-                delim = if bJuvix then ppCode Kw.delimJudocStart else mempty
-            _ -> return ()
+    bJudoc <- asks (^. optJudoc)
+    if
+        | bJudoc -> atoms'
+        | otherwise -> start' <?+> atoms'
 
 instance (SingI s) => PrettyPrint (Judoc s) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => Judoc s -> Sem r ()
-  ppCode = ppJudoc True
+  ppCode (Judoc groups) = do
+    bJudoc <- asks (^. optJudoc)
+    ppGroups groups <> if bJudoc then mempty else hardline
+    where
+      ppGroups :: NonEmpty (JudocGroup s) -> Sem r ()
+      ppGroups = \case
+        g :| [] -> ppCode g
+        g :| b : bs -> ppCode g <> groupSep <> ppGroups (b :| bs)
+          where
+            groupSep :: Sem r ()
+            groupSep = line <> extraLine
+            extraLine :: Sem r ()
+            extraLine = case (g, b) of
+              (JudocGroupLines {}, JudocGroupLines {}) -> delim <> line
+                where
+                  delim :: Sem r ()
+                  delim = do
+                    bJudoc <- asks (^. optJudoc)
+                    if bJudoc then mempty else ppCode Kw.delimJudocStart
+              _ -> return ()
 
 instance (SingI s) => PrettyPrint (JudocBlockParagraph s) where
   ppCode p = do
     let start' = ppCode (p ^. judocBlockParagraphStart)
         contents' = inJudocBlock (vsep2 (ppCode <$> p ^. judocBlockParagraphBlocks))
         endpar' = ppCode (p ^. judocBlockParagraphEnd)
-    start' <+> contents' <+> endpar'
+    bJudoc <- asks (^. optJudoc)
+    if
+        | bJudoc -> contents'
+        | otherwise -> start' <+> contents' <+> endpar'
 
 instance (SingI s) => PrettyPrint (JudocGroup s) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => JudocGroup s -> Sem r ()

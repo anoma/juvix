@@ -5,7 +5,8 @@ import Juvix.Prelude
 data Options = Options
   { _optShowNameIds :: Bool,
     _optInJudocBlock :: Bool,
-    _optPrintPragmas :: Bool
+    _optPrintPragmas :: Bool,
+    _optJudoc :: Bool
   }
 
 defaultOptions :: Options
@@ -13,7 +14,8 @@ defaultOptions =
   Options
     { _optShowNameIds = False,
       _optInJudocBlock = False,
-      _optPrintPragmas = True
+      _optPrintPragmas = True,
+      _optJudoc = False
     }
 
 traceOptions :: Options
@@ -21,7 +23,8 @@ traceOptions =
   Options
     { _optShowNameIds = True,
       _optInJudocBlock = False,
-      _optPrintPragmas = True
+      _optPrintPragmas = True,
+      _optJudoc = False
     }
 
 makeLenses ''Options

@@ -34,7 +34,7 @@ ppParams = \case
 ppComment :: Maybe Text -> Sem r (Doc Ann)
 ppComment = \case
   Nothing -> return ""
-  Just c -> return $ "text {*" <> line <> pretty c <> line <> "*}" <> line
+  Just c -> return $ annotate AnnComment "text {*" <> line <> pretty c <> line <> annotate AnnComment "*}" <> line
 
 instance PrettyCode Name where
   ppCode = return . prettyName False

@@ -25,4 +25,4 @@ ppOutNoComments :: (CanonicalProjection a Options, PrettyPrint c) => a -> c -> A
 ppOutNoComments o = mkAnsiText . PPOutput . docNoLoc (project o)
 
 ppOutJudoc :: (SingI s) => Judoc s -> AnsiText
-ppOutJudoc = mkAnsiText . PPOutput . docJudoc
+ppOutJudoc = ppOutNoComments defaultOptions {_optJudoc = True}
