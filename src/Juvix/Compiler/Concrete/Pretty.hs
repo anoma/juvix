@@ -25,4 +25,4 @@ ppTrace :: (PrettyPrint c) => c -> Text
 ppTrace = toAnsiText True . ppOut traceOptions
 
 ppPrintJudoc :: (SingI s) => Judoc s -> Text
-ppPrintJudoc = toAnsiText True . Print.ppOutJudoc
+ppPrintJudoc = toAnsiText False . Print.ppOutJudoc
