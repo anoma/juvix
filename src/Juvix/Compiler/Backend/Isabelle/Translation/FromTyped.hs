@@ -96,10 +96,10 @@ goModule onlyTypes infoTable Internal.Module {..} =
           && head' _inductiveConstructors ^. Internal.inductiveConstructorIsRecord =
           let tyargs = fst $ Internal.unfoldFunType $ head' _inductiveConstructors ^. Internal.inductiveConstructorType
            in StmtRecord
-                Record
-                  { _recordName = _inductiveName,
-                    _recordParams = params,
-                    _recordFields = map goRecordField tyargs
+                RecordDef
+                  { _recordDefName = _inductiveName,
+                    _recordDefParams = params,
+                    _recordDefFields = map goRecordField tyargs
                   }
       | otherwise =
           StmtDatatype

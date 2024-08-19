@@ -55,6 +55,8 @@ data Expression
   | ExprTuple (Tuple Expression)
   | ExprList (List Expression)
   | ExprCons (Cons Expression)
+  | ExprRecord (Record Expression)
+  | ExprRecordUpdate RecordUpdate
   | ExprLet Let
   | ExprIf If
   | ExprCase Case
@@ -74,6 +76,11 @@ data Binop = Binop
     _binopLeft :: Expression,
     _binopRight :: Expression,
     _binopFixity :: Fixity
+  }
+
+data RecordUpdate = RecordUpdate
+  { _recordUpdateRecord :: Expression,
+    _recordUpdateFields :: Record Expression
   }
 
 data Let = Let
@@ -115,6 +122,7 @@ data Pattern
   | PatTuple (Tuple Pattern)
   | PatList (List Pattern)
   | PatCons (Cons Pattern)
+  | PatRecord (Record Pattern)
 
 newtype Tuple a = Tuple
   { _tupleComponents :: NonEmpty a
@@ -127,6 +135,10 @@ newtype List a = List
 data Cons a = Cons
   { _consHead :: a,
     _consTail :: a
+  }
+
+newtype Record a = Record
+  { _recordFields :: [(Name, a)]
   }
 
 data ConstrApp = ConstrApp
@@ -143,13 +155,19 @@ makeLenses ''CaseBranch
 makeLenses ''Lambda
 makeLenses ''ConstrApp
 makeLenses ''Expression
+makeLenses ''Binop
+makeLenses ''RecordUpdate
+makeLenses ''Tuple
+makeLenses ''List
+makeLenses ''Cons
+makeLenses ''Record
 
 data Statement
   = StmtDefinition Definition
   | StmtFunction Function
   | StmtSynonym Synonym
   | StmtDatatype Datatype
-  | StmtRecord Record
+  | StmtRecord RecordDef
 
 data Definition = Definition
   { _definitionName :: Name,
@@ -184,10 +202,10 @@ data Constructor = Constructor
     _constructorArgTypes :: [Type]
   }
 
-data Record = Record
-  { _recordName :: Name,
-    _recordParams :: [TypeVar],
-    _recordFields :: [RecordField]
+data RecordDef = RecordDef
+  { _recordDefName :: Name,
+    _recordDefParams :: [TypeVar],
+    _recordDefFields :: [RecordField]
   }
 
 data RecordField = RecordField
@@ -200,9 +218,7 @@ makeLenses ''Function
 makeLenses ''Synonym
 makeLenses ''Datatype
 makeLenses ''Constructor
-makeLenses ''Record
 makeLenses ''RecordField
-makeLenses ''Tuple
 
 data Theory = Theory
   { _theoryName :: Name,
@@ -289,6 +305,8 @@ instance HasAtomicity Expression where
     ExprTuple {} -> Atom
     ExprList {} -> Atom
     ExprCons {} -> Aggregate consFixity
+    ExprRecord {} -> Aggregate appFixity
+    ExprRecordUpdate {} -> Aggregate appFixity
     ExprLet {} -> Aggregate letFixity
     ExprIf {} -> Aggregate ifFixity
     ExprCase {} -> Aggregate caseFixity
@@ -304,3 +322,4 @@ instance HasAtomicity Pattern where
     PatTuple {} -> Atom
     PatList {} -> Atom
     PatCons {} -> Aggregate consFixity
+    PatRecord {} -> Atom

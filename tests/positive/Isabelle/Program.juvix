@@ -92,6 +92,11 @@ type Either' A B := Left' A | Right' B;
 -- Records
 
 {-# isabelle-ignore: true #-}
+type R' := mkR' {
+  r1' : Nat;
+  r2' : Nat;
+};
+
 type R := mkR {
   r1 : Nat;
   r2 : Nat;
