@@ -89,7 +89,11 @@ funkcja (n : Nat) : Nat :=
   in plusOne n + nat1 + nat2;
 
 --- An Either' type
-type Either' A B := Left' A | Right' B;
+type Either' A B :=
+  --- Left constructor
+  Left' A
+| --- Right constructor
+  Right' B;
 
 -- Records
 

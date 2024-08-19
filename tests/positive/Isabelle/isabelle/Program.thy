@@ -105,7 +105,9 @@ text \<open>
 An Either' type
 \<close>
 datatype ('A, 'B) Either'
-  = Left' 'A |
+  = (* Left constructor *)
+    Left' 'A |
+    (* Right constructor *)
     Right' 'B
 
 fun bf :: "bool \<Rightarrow> bool \<Rightarrow> bool" where
