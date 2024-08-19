@@ -10,7 +10,8 @@ data ConstructorInfo = ConstructorInfo
     _constructorInfoInductive :: InductiveName,
     _constructorInfoName :: ConstructorName,
     _constructorInfoBuiltin :: Maybe BuiltinConstructor,
-    _constructorInfoTrait :: Bool
+    _constructorInfoTrait :: Bool,
+    _constructorInfoRecord :: Bool
   }
   deriving stock (Generic)
 

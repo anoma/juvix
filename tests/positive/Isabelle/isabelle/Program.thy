@@ -99,6 +99,18 @@ datatype ('A, 'B) Either'
   = Left' 'A |
     Right' 'B
 
+record R =
+  r1 :: nat
+  r2 :: nat
+
+fun r1 :: "R \<Rightarrow> nat"  where
+  "r1 \<lparr> r1 = r1', r2 = _  \<rparr> = r1'"
+
+fun funR :: "R \<Rightarrow> R" where
+  "funR r =
+    (case r of
+      _ \<Rightarrow> r\<lparr>r1 := R.r1 r + R.r2 r\<rparr>)"
+
 fun bf :: "bool \<Rightarrow> bool \<Rightarrow> bool" where
   "bf b1 b2 = (\<not> (b1 \<and> b2))"
 

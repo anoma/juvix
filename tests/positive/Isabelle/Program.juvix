@@ -102,6 +102,13 @@ type R := mkR {
   r2 : Nat;
 };
 
+funR (r : R) : R :=
+  case r of
+  | mkR@{r1; r2} := r@R{r1 := r1 + r2};
+
+funR' : R -> R
+  | mkR@{r1 := rr1; r2 := rr2} := mkR@{r1 := rr1 + rr2; r2 := rr2};
+
 -- Standard library
 
 bf (b1 b2 : Bool) : Bool := not (b1 && b2);

@@ -283,6 +283,9 @@ goModule onlyTypes infoTable Internal.Module {..} =
             _ -> overNameText quote name
         Nothing -> overNameText quote name
 
+    getArgtys :: Internal.ConstructorInfo -> [Internal.FunctionParameter]
+    getArgtys ctrInfo = fst $ Internal.unfoldFunType $ ctrInfo ^. Internal.constructorInfoType
+
     goFunName :: Name -> Name
     goFunName name =
       case HashMap.lookup name (infoTable ^. Internal.infoFunctions) of
@@ -308,6 +311,11 @@ goModule onlyTypes infoTable Internal.Module {..} =
     withLocalNames :: forall a r. (Members '[Reader NameSet, Reader NameMap] r) => NameSet -> NameMap -> Sem r a -> Sem r a
     withLocalNames nset nmap =
       local (const nset) . local (const nmap)
+
+    goRecordFields :: [Internal.FunctionParameter] -> [a] -> [(Name, a)]
+    goRecordFields argtys args = case (argtys, args) of
+      (ty : argtys', arg' : args') -> (fromMaybe (defaultName "_") (ty ^. Internal.paramName), arg') : goRecordFields argtys' args'
+      _ -> []
 
     goExpression' :: Internal.Expression -> Expression
     goExpression' = goExpression'' (NameSet mempty) (NameMap mempty)
@@ -381,6 +389,9 @@ goModule onlyTypes infoTable Internal.Module {..} =
               x' <- goExpression x
               y' <- goExpression y
               return $ ExprTuple (Tuple (x' :| [y']))
+          | Just fields <- getRecordCreation app = do
+              fields' <- mapM (secondM goExpression) fields
+              return $ ExprRecord (Record fields')
           | Just (fn, args) <- getIdentApp app = do
               fn' <- goExpression fn
               args' <- mapM goExpression args
@@ -535,6 +546,17 @@ goModule onlyTypes infoTable Internal.Module {..} =
           where
             (fn, args) = Internal.unfoldApplication app
 
+        getRecordCreation :: Internal.Application -> Maybe [(Name, Internal.Expression)]
+        getRecordCreation app = case fn of
+          Internal.ExpressionIden (Internal.IdenConstructor name) ->
+            case HashMap.lookup name (infoTable ^. Internal.infoConstructors) of
+              Just ctrInfo
+                | ctrInfo ^. Internal.constructorInfoRecord -> Just (goRecordFields (getArgtys ctrInfo) (toList args))
+              _ -> Nothing
+          _ -> Nothing
+          where
+            (fn, args) = Internal.unfoldApplication app
+
         getIdentApp :: Internal.Application -> Maybe (Internal.Expression, [Internal.Expression])
         getIdentApp app = case mty of
           Just (ty, paramsNum) -> Just (fn, args')
@@ -574,7 +596,6 @@ goModule onlyTypes infoTable Internal.Module {..} =
         goInstanceHole :: Internal.InstanceHole -> Sem r Expression
         goInstanceHole _ = return ExprUndefined
 
-        -- TODO: binders
         goLet :: Internal.Let -> Sem r Expression
         goLet Internal.Let {..} = do
           let fdefs = concatMap toFunDefs (toList _letClauses)
@@ -771,6 +792,9 @@ goModule onlyTypes infoTable Internal.Module {..} =
               x' <- goPatternArg x
               y' <- goPatternArg y
               return $ PatCons (Cons x' y')
+          | Just fields <- getRecordPat _constrAppConstructor _constrAppParameters = do
+              fields' <- mapM (secondM goPatternArg) fields
+              return $ PatRecord (Record fields')
           | Just (x, y) <- getPairPat _constrAppConstructor _constrAppParameters = do
               x' <- goPatternArg x
               y' <- goPatternArg y
@@ -816,6 +840,13 @@ goModule onlyTypes infoTable Internal.Module {..} =
                       Just (arg1, arg2)
                 _ -> Nothing
             Nothing -> Nothing
+
+        getRecordPat :: Name -> [Internal.PatternArg] -> Maybe [(Name, Internal.PatternArg)]
+        getRecordPat name args =
+          case HashMap.lookup name (infoTable ^. Internal.infoConstructors) of
+            Just ctrInfo
+              | ctrInfo ^. Internal.constructorInfoRecord -> Just (goRecordFields (getArgtys ctrInfo) args)
+            _ -> Nothing
 
         getNatPat :: Name -> [Internal.PatternArg] -> Maybe (Either Pattern Internal.PatternArg)
         getNatPat name args =
