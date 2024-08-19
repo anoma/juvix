@@ -1650,13 +1650,26 @@ checkSections sec = topBindings helper
                                   _projectionKind = kind,
                                   _projectionFieldBuiltin = field ^. fieldBuiltin,
                                   _projectionDoc = field ^. fieldDoc,
-                                  _projectionPragmas = field ^. fieldPragmas
+                                  _projectionPragmas = combinePragmas (i ^. inductivePragmas) (field ^. fieldPragmas)
                                 }
                               where
                                 kind :: ProjectionKind
                                 kind = case field ^. fieldIsImplicit of
                                   ExplicitField -> ProjectionExplicit
                                   ImplicitInstanceField -> ProjectionCoercion
+
+                                combinePragmas :: Maybe ParsedPragmas -> Maybe ParsedPragmas -> Maybe ParsedPragmas
+                                combinePragmas p1 p2 = case (p1, p2) of
+                                  (Nothing, Nothing) -> Nothing
+                                  (Just p, Nothing) -> Just p
+                                  (Nothing, Just p) -> Just p
+                                  (Just p1', Just p2') ->
+                                    Just
+                                      ( over
+                                          (withLocParam . withSourceValue . pragmasIsabelleIgnore)
+                                          (\i2 -> i2 <|> (p1' ^. withLocParam . withSourceValue . pragmasIsabelleIgnore))
+                                          p2'
+                                      )
 
                             getFields :: Sem (Fail ': s') [RecordStatement 'Parsed]
                             getFields = case i ^. inductiveConstructors of
