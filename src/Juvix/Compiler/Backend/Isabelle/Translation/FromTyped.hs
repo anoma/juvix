@@ -195,7 +195,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
               _clauseBody = goExpression'' nset' nmap' _lambdaBody
             }
           where
-            (pats, nset', nmap') = goPatternArgs'' (filterTypeArgs 0 ty (toList _lambdaPatterns))
+            (pats, nset', nmap') = goPatternArgsTop (filterTypeArgs 0 ty (toList _lambdaPatterns))
 
     goFunctionDef :: Internal.FunctionDef -> Statement
     goFunctionDef Internal.FunctionDef {..} = goDef _funDefName _funDefType _funDefArgsInfo (Just _funDefBody)
@@ -389,9 +389,9 @@ goModule onlyTypes infoTable Internal.Module {..} =
               x' <- goExpression x
               y' <- goExpression y
               return $ ExprTuple (Tuple (x' :| [y']))
-          | Just fields <- getRecordCreation app = do
+          | Just (name, fields) <- getRecordCreation app = do
               fields' <- mapM (secondM goExpression) fields
-              return $ ExprRecord (Record fields')
+              return $ ExprRecord (Record name fields')
           | Just (fn, args) <- getIdentApp app = do
               fn' <- goExpression fn
               args' <- mapM goExpression args
@@ -546,12 +546,15 @@ goModule onlyTypes infoTable Internal.Module {..} =
           where
             (fn, args) = Internal.unfoldApplication app
 
-        getRecordCreation :: Internal.Application -> Maybe [(Name, Internal.Expression)]
+        getRecordCreation :: Internal.Application -> Maybe (Name, [(Name, Internal.Expression)])
         getRecordCreation app = case fn of
           Internal.ExpressionIden (Internal.IdenConstructor name) ->
             case HashMap.lookup name (infoTable ^. Internal.infoConstructors) of
               Just ctrInfo
-                | ctrInfo ^. Internal.constructorInfoRecord -> Just (goRecordFields (getArgtys ctrInfo) (toList args))
+                | ctrInfo ^. Internal.constructorInfoRecord ->
+                    Just (indName, goRecordFields (getArgtys ctrInfo) (toList args))
+                where
+                  indName = ctrInfo ^. Internal.constructorInfoInductive
               _ -> Nothing
           _ -> Nothing
           where
@@ -702,9 +705,9 @@ goModule onlyTypes infoTable Internal.Module {..} =
             goClause :: Internal.LambdaClause -> Sem r CaseBranch
             goClause Internal.LambdaClause {..} = do
               (pat, nset, nmap) <- case _lambdaPatterns of
-                p :| [] -> goPatternArg' p
+                p :| [] -> goPatternArgCase p
                 _ -> do
-                  (pats, nset, nmap) <- goPatternArgs' (toList _lambdaPatterns)
+                  (pats, nset, nmap) <- goPatternArgsCase (toList _lambdaPatterns)
                   let pat =
                         PatTuple
                           Tuple
@@ -731,7 +734,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
 
         goCaseBranch :: Internal.CaseBranch -> Sem r CaseBranch
         goCaseBranch Internal.CaseBranch {..} = do
-          (pat, nset, nmap) <- goPatternArg' _caseBranchPattern
+          (pat, nset, nmap) <- goPatternArgCase _caseBranchPattern
           rhs <- withLocalNames nset nmap $ goCaseBranchRhs _caseBranchRhs
           return $
             CaseBranch
@@ -744,32 +747,32 @@ goModule onlyTypes infoTable Internal.Module {..} =
           Internal.CaseBranchRhsExpression e -> goExpression e
           Internal.CaseBranchRhsIf {} -> error "unsupported: side conditions"
 
-    goPatternArgs'' :: [Internal.PatternArg] -> ([Pattern], NameSet, NameMap)
-    goPatternArgs'' pats =
+    goPatternArgsTop :: [Internal.PatternArg] -> ([Pattern], NameSet, NameMap)
+    goPatternArgsTop pats =
       (pats', nset, nmap)
       where
-        (nset, (nmap, pats')) = run $ runState (NameSet mempty) $ runState (NameMap mempty) $ goPatternArgs pats
+        (nset, (nmap, pats')) = run $ runState (NameSet mempty) $ runState (NameMap mempty) $ goPatternArgs True pats
 
-    goPatternArg' :: forall r. (Members '[Reader NameSet, Reader NameMap] r) => Internal.PatternArg -> Sem r (Pattern, NameSet, NameMap)
-    goPatternArg' pat = do
+    goPatternArgCase :: forall r. (Members '[Reader NameSet, Reader NameMap] r) => Internal.PatternArg -> Sem r (Pattern, NameSet, NameMap)
+    goPatternArgCase pat = do
       nset <- ask @NameSet
       nmap <- ask @NameMap
-      let (nmap', (nset', pat')) = run $ runState nmap $ runState nset $ goPatternArg pat
+      let (nmap', (nset', pat')) = run $ runState nmap $ runState nset $ goPatternArg False pat
       return (pat', nset', nmap')
 
-    goPatternArgs' :: forall r. (Members '[Reader NameSet, Reader NameMap] r) => [Internal.PatternArg] -> Sem r ([Pattern], NameSet, NameMap)
-    goPatternArgs' pats = do
+    goPatternArgsCase :: forall r. (Members '[Reader NameSet, Reader NameMap] r) => [Internal.PatternArg] -> Sem r ([Pattern], NameSet, NameMap)
+    goPatternArgsCase pats = do
       nset <- ask @NameSet
       nmap <- ask @NameMap
-      let (nmap', (nset', pats')) = run $ runState nmap $ runState nset $ goPatternArgs pats
+      let (nmap', (nset', pats')) = run $ runState nmap $ runState nset $ goPatternArgs False pats
       return (pats', nset', nmap')
 
-    goPatternArgs :: forall r. (Members '[State NameSet, State NameMap] r) => [Internal.PatternArg] -> Sem r [Pattern]
-    goPatternArgs = mapM goPatternArg
+    goPatternArgs :: forall r. (Members '[State NameSet, State NameMap] r) => Bool -> [Internal.PatternArg] -> Sem r [Pattern]
+    goPatternArgs isTop = mapM (goPatternArg isTop)
 
     -- TODO: named patterns (`_patternArgName`) are not handled properly
-    goPatternArg :: forall r. (Members '[State NameSet, State NameMap] r) => Internal.PatternArg -> Sem r Pattern
-    goPatternArg Internal.PatternArg {..} =
+    goPatternArg :: forall r. (Members '[State NameSet, State NameMap] r) => Bool -> Internal.PatternArg -> Sem r Pattern
+    goPatternArg isTop Internal.PatternArg {..} =
       goPattern _patternArgPattern
       where
         goPattern :: Internal.Pattern -> Sem r Pattern
@@ -786,27 +789,32 @@ goModule onlyTypes infoTable Internal.Module {..} =
         goPatternConstructorApp :: Internal.ConstructorApp -> Sem r Pattern
         goPatternConstructorApp Internal.ConstructorApp {..}
           | Just lst <- getListPat _constrAppConstructor _constrAppParameters = do
-              pats <- goPatternArgs lst
+              pats <- goPatternArgs False lst
               return $ PatList (List pats)
           | Just (x, y) <- getConsPat _constrAppConstructor _constrAppParameters = do
-              x' <- goPatternArg x
-              y' <- goPatternArg y
+              x' <- goPatternArg False x
+              y' <- goPatternArg False y
               return $ PatCons (Cons x' y')
-          | Just fields <- getRecordPat _constrAppConstructor _constrAppParameters = do
-              fields' <- mapM (secondM goPatternArg) fields
-              return $ PatRecord (Record fields')
+          | Just (name, fields) <- getRecordPat _constrAppConstructor _constrAppParameters =
+              if
+                  | isTop -> do
+                      fields' <- mapM (secondM (goPatternArg False)) fields
+                      return $ PatRecord (Record name fields')
+                  | otherwise ->
+                      -- TODO: record patterns are not supported in non-top-level patterns
+                      return $ PatVar (defaultName "_")
           | Just (x, y) <- getPairPat _constrAppConstructor _constrAppParameters = do
-              x' <- goPatternArg x
-              y' <- goPatternArg y
+              x' <- goPatternArg False x
+              y' <- goPatternArg False y
               return $ PatTuple (Tuple (x' :| [y']))
           | Just p <- getNatPat _constrAppConstructor _constrAppParameters =
               case p of
                 Left zero -> return zero
                 Right arg -> do
-                  arg' <- goPatternArg arg
+                  arg' <- goPatternArg False arg
                   return (PatConstrApp (ConstrApp (goConstrName _constrAppConstructor) [arg']))
           | otherwise = do
-              args <- mapM goPatternArg _constrAppParameters
+              args <- mapM (goPatternArg False) _constrAppParameters
               return $
                 PatConstrApp
                   ConstrApp
@@ -841,11 +849,14 @@ goModule onlyTypes infoTable Internal.Module {..} =
                 _ -> Nothing
             Nothing -> Nothing
 
-        getRecordPat :: Name -> [Internal.PatternArg] -> Maybe [(Name, Internal.PatternArg)]
+        getRecordPat :: Name -> [Internal.PatternArg] -> Maybe (Name, [(Name, Internal.PatternArg)])
         getRecordPat name args =
           case HashMap.lookup name (infoTable ^. Internal.infoConstructors) of
             Just ctrInfo
-              | ctrInfo ^. Internal.constructorInfoRecord -> Just (goRecordFields (getArgtys ctrInfo) args)
+              | ctrInfo ^. Internal.constructorInfoRecord ->
+                  Just (indName, goRecordFields (getArgtys ctrInfo) args)
+              where
+                indName = ctrInfo ^. Internal.constructorInfoInductive
             _ -> Nothing
 
         getNatPat :: Name -> [Internal.PatternArg] -> Maybe (Either Pattern Internal.PatternArg)

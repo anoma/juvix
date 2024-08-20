@@ -137,8 +137,9 @@ data Cons a = Cons
     _consTail :: a
   }
 
-newtype Record a = Record
-  { _recordFields :: [(Name, a)]
+data Record a = Record
+  { _recordName :: Name,
+    _recordFields :: [(Name, a)]
   }
 
 data ConstrApp = ConstrApp

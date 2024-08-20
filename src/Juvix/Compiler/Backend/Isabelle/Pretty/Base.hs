@@ -157,9 +157,11 @@ instance (PrettyCode a) => PrettyCode (List a) where
 
 instance (PrettyCode a) => PrettyCode (Record a) where
   ppCode Record {..} = do
+    recName <- ppCode _recordName
     names <- mapM (ppCode . fst) _recordFields
     elems <- mapM (ppCode . snd) _recordFields
-    let fields = zipWithExact (\n e -> n <+> "=" <+> e) names elems
+    let names' = map (\n -> recName <> "." <> n) names
+        fields = zipWithExact (\n e -> n <+> "=" <+> e) names' elems
     return $ "(|" <+> hsep (punctuate comma fields) <+> "|)"
 
 instance (PrettyCode a, HasAtomicity a) => PrettyCode (Cons a) where

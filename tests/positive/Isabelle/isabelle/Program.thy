@@ -103,13 +103,25 @@ record R =
   r1 :: nat
   r2 :: nat
 
-fun r1 :: "R \<Rightarrow> nat"  where
-  "r1 \<lparr> r1 = r1', r2 = _  \<rparr> = r1'"
+fun r1 :: "R \<Rightarrow> nat" where
+  "r1 (| R.r1 = r1'0, R.r2 = r2'0 |) = r1'0"
+
+fun r2 :: "R \<Rightarrow> nat" where
+  "r2 (| R.r1 = r1'0, R.r2 = r2'0 |) = r2'0"
 
 fun funR :: "R \<Rightarrow> R" where
   "funR r =
     (case r of
-      _ \<Rightarrow> r\<lparr>r1 := R.r1 r + R.r2 r\<rparr>)"
+       _ \<Rightarrow>
+         (\<lambda> x0 . case x0 of
+                           _ \<Rightarrow> (| R.r1 = r1 + r2, R.r2 = r2 |)) r)"
+
+fun funR' :: "R \<Rightarrow> R" where
+  "funR' (| R.r1 = rr1, R.r2 = rr2 |) =
+    (let
+       r1'0 = rr1 + rr2;
+       r2'0 = rr2
+     in (| R.r1 = r1'0, R.r2 = r2'0 |))"
 
 fun bf :: "bool \<Rightarrow> bool \<Rightarrow> bool" where
   "bf b1 b2 = (\<not> (b1 \<and> b2))"
