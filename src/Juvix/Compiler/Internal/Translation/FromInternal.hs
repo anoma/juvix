@@ -1,53 +1,22 @@
 module Juvix.Compiler.Internal.Translation.FromInternal
   ( typeCheckingNew,
-    typeCheckExpression,
-    typeCheckExpressionType,
-    typeCheckImport,
   )
 where
 
 import Juvix.Compiler.Concrete.Data.Highlight.Input
-import Juvix.Compiler.Internal.Data.InfoTable
-import Juvix.Compiler.Internal.Data.LocalVars
-import Juvix.Compiler.Internal.Language
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context
+import Juvix.Compiler.Internal.Data.InfoTable as Internal
 import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking
-import Juvix.Compiler.Pipeline.Artifacts
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Store.Extra
 import Juvix.Compiler.Store.Language
+import Juvix.Compiler.Store.Scoped.Data.InfoTable qualified as Scoped
+import Juvix.Compiler.Store.Scoped.Language
+import Juvix.Compiler.Store.Scoped.Language qualified as Scoped
 import Juvix.Data.Effect.NameIdGen
 import Juvix.Prelude hiding (fromEither)
-
-typeCheckExpressionType ::
-  forall r.
-  (Members '[Error JuvixError, State Artifacts, Termination] r) =>
-  Expression ->
-  Sem r TypedExpression
-typeCheckExpressionType exp = do
-  -- TODO: refactor: modules outside of REPL should not refer to Artifacts
-  table <- extendedTableReplArtifacts exp
-  runResultBuilderArtifacts
-    . runBuiltinsArtifacts
-    . runNameIdGenArtifacts
-    . ignoreHighlightBuilder
-    . runReader table
-    . withEmptyLocalVars
-    . withEmptyInsertedArgsStack
-    . mapError (JuvixError @TypeCheckerError)
-    . runInferenceDef
-    $ inferExpression Nothing exp
-      >>= traverseOf typedType strongNormalize_
-
-typeCheckExpression ::
-  (Members '[Error JuvixError, State Artifacts, Termination] r) =>
-  Expression ->
-  Sem r Expression
-typeCheckExpression exp = (^. typedExpression) <$> typeCheckExpressionType exp
-
-typeCheckImport :: Import -> Sem r Import
-typeCheckImport = return
 
 typeCheckingNew ::
   forall r.
@@ -56,10 +25,15 @@ typeCheckingNew ::
   Sem r InternalTypedResult
 typeCheckingNew a = do
   (termin, (res, (bst, checkedModule))) <- runTermination iniTerminationState $ do
-    res <- a
-    itab <- getInternalModuleTable <$> ask
+    res :: InternalResult <- a
+    itab :: InternalModuleTable <- getInternalModuleTable <$> ask
+    stab :: ScopedModuleTable <- getScopedModuleTable <$> ask
     let table :: InfoTable
-        table = computeCombinedInfoTable itab <> computeInternalModuleInfoTable (res ^. Internal.resultModule)
+        table = Internal.computeCombinedInfoTable itab <> computeInternalModuleInfoTable (res ^. Internal.resultModule)
+        stable :: Scoped.InfoTable
+        stable =
+          Scoped.computeCombinedInfoTable stab
+            <> res ^. Internal.resultScoper . resultScopedModule . scopedModuleInfoTable
         importCtx =
           ImportContext
             { _importContextTypesTable = computeTypesTable itab,
@@ -69,6 +43,7 @@ typeCheckingNew a = do
             }
     fmap (res,)
       . runReader table
+      . runReader (stable ^. Scoped.infoBuiltins)
       . runResultBuilder importCtx
       . mapError (JuvixError @TypeCheckerError)
       $ checkTopModule (res ^. Internal.resultModule)

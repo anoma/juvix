@@ -260,15 +260,14 @@ runPipelineHtml ::
   Bool ->
   Maybe (AppPath File) ->
   Sem r (InternalTypedResult, [InternalTypedResult])
-runPipelineHtml bNonRecursive input_ =
-  if
-      | bNonRecursive -> do
-          r <- runPipelineNoOptions input_ upToInternalTyped
-          return (r, [])
-      | otherwise -> do
-          args <- askArgs
-          entry <- getEntryPoint' args input_
-          runReader defaultPipelineOptions (runPipelineHtmlEither entry) >>= fromRightJuvixError
+runPipelineHtml bNonRecursive input_
+  | bNonRecursive = do
+      r <- runPipelineNoOptions input_ upToInternalTyped
+      return (r, [])
+  | otherwise = do
+      args <- askArgs
+      entry <- getEntryPoint' args input_
+      runReader defaultPipelineOptions (runPipelineHtmlEither entry) >>= fromRightJuvixError
 
 runPipelineOptions :: (Members '[App] r) => Sem (Reader PipelineOptions ': r) a -> Sem r a
 runPipelineOptions m = do

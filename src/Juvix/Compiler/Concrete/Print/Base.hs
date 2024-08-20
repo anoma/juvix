@@ -479,10 +479,16 @@ instance (SingI t, SingI s) => PrettyPrint (Module s t) where
         SModuleLocal -> ppCode _moduleKwEnd
         SModuleTop -> end
 
+instance PrettyPrint BuiltinPrim where
+  ppCode = noLoc . annotate AnnKeyword . pretty
+
 instance (PrettyPrint a) => PrettyPrint [a] where
   ppCode x = do
     let cs = map ppCode (toList x)
     encloseSep (ppCode @Text "[") (ppCode @Text "]") (ppCode @Text ", ") cs
+
+instance PrettyPrint TopModulePathKey where
+  ppCode = noLoc . annotate (AnnKind KNameTopModule) . pretty
 
 instance (SingI s) => PrettyPrint (Statements s) where
   ppCode = ppStatements . (^. statements)
