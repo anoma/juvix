@@ -923,6 +923,8 @@ goModule onlyTypes infoTable Internal.Module {..} =
           "let",
           "list",
           "nat",
+          "O",
+          "OO",
           "of",
           "option",
           "theory",
