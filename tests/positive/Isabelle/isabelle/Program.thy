@@ -109,12 +109,8 @@ fun r1 :: "R \<Rightarrow> nat" where
 fun r2 :: "R \<Rightarrow> nat" where
   "r2 (| R.r1 = r1'0, R.r2 = r2'0 |) = r2'0"
 
-fun funR :: "R \<Rightarrow> R" where
-  "funR r =
-    (case r of
-       _ \<Rightarrow>
-         (\<lambda> x0 . case x0 of
-                           _ \<Rightarrow> (| R.r1 = r1 + r2, R.r2 = r2 |)) r)"
+fun funR :: "R \<Rightarrow> nat" where
+  "funR r = R.r1 r"
 
 fun funR' :: "R \<Rightarrow> R" where
   "funR' (| R.r1 = rr1, R.r2 = rr2 |) =

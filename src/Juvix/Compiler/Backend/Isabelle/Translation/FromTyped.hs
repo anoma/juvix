@@ -21,11 +21,21 @@ newtype NameSet = NameSet
   }
 
 newtype NameMap = NameMap
-  { _nameMap :: HashMap Name Name
+  { _nameMap :: HashMap Name Expression
   }
 
 makeLenses ''NameSet
 makeLenses ''NameMap
+
+data Nested a = Nested
+  { _nestedElem :: a,
+    _nestedPatterns :: NestedPatterns
+  }
+  deriving stock (Functor)
+
+type NestedPatterns = [(Expression, Nested Pattern)]
+
+makeLenses ''Nested
 
 fromInternal ::
   forall r.
@@ -171,7 +181,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
       -- We assume here that all clauses have the same number of patterns
       Just (Internal.ExpressionLambda Internal.Lambda {..})
         | not $ null $ filterTypeArgs 0 ty $ toList $ head _lambdaClauses ^. Internal.lambdaPatterns ->
-            fmap goClause _lambdaClauses
+            nonEmpty' $ goClauses $ toList _lambdaClauses
         | otherwise ->
             oneClause (goExpression'' nset (NameMap mempty) (head _lambdaClauses ^. Internal.lambdaBody))
       Just body -> oneClause (goExpression'' nset (NameMap mempty) body)
@@ -188,14 +198,20 @@ goModule onlyTypes infoTable Internal.Module {..} =
                 }
             ]
 
-        goClause :: Internal.LambdaClause -> Clause
-        goClause Internal.LambdaClause {..} =
-          Clause
-            { _clausePatterns = nonEmpty' pats,
-              _clauseBody = goExpression'' nset' nmap' _lambdaBody
-            }
-          where
-            (pats, nset', nmap') = goPatternArgsTop (filterTypeArgs 0 ty (toList _lambdaPatterns))
+        goClauses :: [Internal.LambdaClause] -> [Clause]
+        goClauses = \case
+          Internal.LambdaClause {..} : cls ->
+            case npats0 of
+              Nested pats [] ->
+                Clause
+                  { _clausePatterns = nonEmpty' pats,
+                    _clauseBody = goExpression'' nset' nmap' _lambdaBody
+                  }
+                  : goClauses cls
+              Nested pats npats -> undefined
+            where
+              (npats0, nset', nmap') = goPatternArgsTop (filterTypeArgs 0 ty (toList _lambdaPatterns))
+          [] -> []
 
     goFunctionDef :: Internal.FunctionDef -> Statement
     goFunctionDef Internal.FunctionDef {..} = goDef _funDefName _funDefType _funDefArgsInfo (Just _funDefBody)
@@ -286,24 +302,27 @@ goModule onlyTypes infoTable Internal.Module {..} =
     getArgtys :: Internal.ConstructorInfo -> [Internal.FunctionParameter]
     getArgtys ctrInfo = fst $ Internal.unfoldFunType $ ctrInfo ^. Internal.constructorInfoType
 
-    goFunName :: Name -> Name
-    goFunName name =
-      case HashMap.lookup name (infoTable ^. Internal.infoFunctions) of
-        Just funInfo ->
-          case funInfo ^. Internal.functionInfoPragmas . pragmasIsabelleFunction of
-            Just PragmaIsabelleFunction {..} -> setNameText _pragmaIsabelleFunctionName name
+    goFunName :: Expression -> Expression
+    goFunName = \case
+      ExprIden name ->
+        ExprIden $
+          case HashMap.lookup name (infoTable ^. Internal.infoFunctions) of
+            Just funInfo ->
+              case funInfo ^. Internal.functionInfoPragmas . pragmasIsabelleFunction of
+                Just PragmaIsabelleFunction {..} -> setNameText _pragmaIsabelleFunctionName name
+                Nothing -> overNameText quote name
             Nothing -> overNameText quote name
-        Nothing -> overNameText quote name
+      x -> x
 
-    lookupName :: forall r. (Member (Reader NameMap) r) => Name -> Sem r Name
+    lookupName :: forall r. (Member (Reader NameMap) r) => Name -> Sem r Expression
     lookupName name = do
       nmap <- asks (^. nameMap)
-      return $ fromMaybe name $ HashMap.lookup name nmap
+      return $ fromMaybe (ExprIden name) $ HashMap.lookup name nmap
 
     localName :: forall a r. (Members '[Reader NameSet, Reader NameMap] r) => Name -> Name -> Sem r a -> Sem r a
     localName v v' =
       local (over nameSet (HashSet.insert (v' ^. namePretty)))
-        . local (over nameMap (HashMap.insert v v'))
+        . local (over nameMap (HashMap.insert v (ExprIden v')))
 
     localNames :: forall a r. (Members '[Reader NameSet, Reader NameMap] r) => [(Name, Name)] -> Sem r a -> Sem r a
     localNames vs e = foldl' (flip (uncurry localName)) e vs
@@ -341,8 +360,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
         goIden :: Internal.Iden -> Sem r Expression
         goIden iden = case iden of
           Internal.IdenFunction name -> do
-            name' <- lookupName name
-            return $ ExprIden (goFunName name')
+            goFunName <$> lookupName name
           Internal.IdenConstructor name ->
             case HashMap.lookup name (infoTable ^. Internal.infoConstructors) of
               Just ctrInfo ->
@@ -351,8 +369,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
                   _ -> return $ ExprIden (goConstrName name)
               Nothing -> return $ ExprIden (goConstrName name)
           Internal.IdenVar name -> do
-            name' <- lookupName name
-            return $ ExprIden name'
+            lookupName name
           Internal.IdenAxiom name -> return $ ExprIden (overNameText quote name)
           Internal.IdenInductive name -> return $ ExprIden (overNameText quote name)
 
@@ -649,10 +666,10 @@ goModule onlyTypes infoTable Internal.Module {..} =
 
         goLambda :: Internal.Lambda -> Sem r Expression
         goLambda Internal.Lambda {..}
-          | npats == 0 = goExpression (head _lambdaClauses ^. Internal.lambdaBody)
+          | patsNum == 0 = goExpression (head _lambdaClauses ^. Internal.lambdaBody)
           | otherwise = goLams vars
           where
-            npats =
+            patsNum =
               case _lambdaType of
                 Just ty ->
                   length
@@ -664,7 +681,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
                     . filter ((/= Internal.Implicit) . (^. Internal.patternArgIsImplicit))
                     . toList
                     $ head _lambdaClauses ^. Internal.lambdaPatterns
-            vars = map (\i -> defaultName ("x" <> show i)) [0 .. npats - 1]
+            vars = map (\i -> defaultName ("x" <> show i)) [0 .. patsNum - 1]
 
             goLams :: [Name] -> Sem r Expression
             goLams = \case
@@ -685,107 +702,178 @@ goModule onlyTypes infoTable Internal.Module {..} =
                 val <-
                   case vars of
                     [v] -> do
-                      v' <- lookupName v
-                      return $ ExprIden v'
+                      lookupName v
                     _ -> do
                       vars' <- mapM lookupName vars
                       return $
                         ExprTuple
                           Tuple
-                            { _tupleComponents = nonEmpty' $ map ExprIden vars'
+                            { _tupleComponents = nonEmpty' vars'
                             }
-                brs <- mapM goClause _lambdaClauses
+                brs <- goClauses (toList _lambdaClauses)
                 return $
                   ExprCase
                     Case
                       { _caseValue = val,
-                        _caseBranches = brs
+                        _caseBranches = nonEmpty' brs
                       }
 
-            goClause :: Internal.LambdaClause -> Sem r CaseBranch
-            goClause Internal.LambdaClause {..} = do
-              (pat, nset, nmap) <- case _lambdaPatterns of
-                p :| [] -> goPatternArgCase p
-                _ -> do
-                  (pats, nset, nmap) <- goPatternArgsCase (toList _lambdaPatterns)
-                  let pat =
-                        PatTuple
-                          Tuple
-                            { _tupleComponents = nonEmpty' pats
-                            }
-                  return (pat, nset, nmap)
-              body <- withLocalNames nset nmap $ goExpression _lambdaBody
-              return $
-                CaseBranch
-                  { _caseBranchPattern = pat,
-                    _caseBranchBody = body
-                  }
+            goClauses :: [Internal.LambdaClause] -> Sem r [CaseBranch]
+            goClauses = \case
+              Internal.LambdaClause {..} : cls -> do
+                (npat, nset, nmap) <- case _lambdaPatterns of
+                  p :| [] -> goPatternArgCase p
+                  _ -> do
+                    (npats, nset, nmap) <- goPatternArgsCase (toList _lambdaPatterns)
+                    let npat =
+                          fmap
+                            ( \pats ->
+                                PatTuple
+                                  Tuple
+                                    { _tupleComponents = nonEmpty' pats
+                                    }
+                            )
+                            npats
+                    return (npat, nset, nmap)
+                case npat of
+                  Nested pat [] -> do
+                    body <- withLocalNames nset nmap $ goExpression _lambdaBody
+                    brs <- goClauses cls
+                    return $
+                      CaseBranch
+                        { _caseBranchPattern = pat,
+                          _caseBranchBody = body
+                        }
+                        : brs
+                  Nested pat npats -> undefined
+              [] -> return []
 
         goCase :: Internal.Case -> Sem r Expression
         goCase Internal.Case {..} = do
           val <- goExpression _caseExpression
-          brs <- mapM goCaseBranch _caseBranches
+          brs <- goCaseBranches (toList _caseBranches)
           return $
             ExprCase
               Case
                 { _caseValue = val,
-                  _caseBranches = brs
+                  _caseBranches = nonEmpty' brs
                 }
 
-        goCaseBranch :: Internal.CaseBranch -> Sem r CaseBranch
-        goCaseBranch Internal.CaseBranch {..} = do
-          (pat, nset, nmap) <- goPatternArgCase _caseBranchPattern
-          rhs <- withLocalNames nset nmap $ goCaseBranchRhs _caseBranchRhs
-          return $
-            CaseBranch
-              { _caseBranchPattern = pat,
-                _caseBranchBody = rhs
-              }
+        goCaseBranches :: [Internal.CaseBranch] -> Sem r [CaseBranch]
+        goCaseBranches = \case
+          Internal.CaseBranch {..} : brs -> do
+            (npat, nset, nmap) <- goPatternArgCase _caseBranchPattern
+            case npat of
+              Nested pat [] -> do
+                rhs <- withLocalNames nset nmap $ goCaseBranchRhs _caseBranchRhs
+                brs' <- goCaseBranches brs
+                return $
+                  CaseBranch
+                    { _caseBranchPattern = pat,
+                      _caseBranchBody = rhs
+                    }
+                    : brs'
+              Nested pat npats -> do
+                let name = defaultName (disambiguate (nset ^. nameSet) "v")
+                rhs <- withLocalNames nset nmap $ goCaseBranchRhs _caseBranchRhs
+                brs' <- goCaseBranches brs
+                let defaultBranch =
+                      case nonEmpty brs' of
+                        Just brs'' ->
+                          [ CaseBranch
+                              { _caseBranchPattern = PatVar name,
+                                _caseBranchBody =
+                                  ExprCase
+                                    Case
+                                      { _caseValue = ExprIden name,
+                                        _caseBranches = brs''
+                                      }
+                              }
+                          ]
+                        Nothing -> []
+                toList <$> goNestedCaseBranches rhs defaultBranch (Nested pat npats)
+          [] -> return []
+
+        goNestedCaseBranches :: Expression -> [CaseBranch] -> Nested Pattern -> Sem r (NonEmpty CaseBranch)
+        goNestedCaseBranches rhs defaultBranch = \case
+          Nested pat [] ->
+            return $
+              CaseBranch
+                { _caseBranchPattern = pat,
+                  _caseBranchBody = rhs
+                }
+                :| defaultBranch
+          Nested pat npats -> do
+            let val = ExprTuple (Tuple (nonEmpty' (map fst npats)))
+                pat' = PatTuple (Tuple (nonEmpty' (map ((^. nestedElem) . snd) npats)))
+                npats' = concatMap ((^. nestedPatterns) . snd) npats
+            brs <- goNestedCaseBranches rhs defaultBranch (Nested pat' npats')
+            return $
+              CaseBranch
+                { _caseBranchPattern = pat,
+                  _caseBranchBody =
+                    ExprCase
+                      Case
+                        { _caseValue = val,
+                          _caseBranches = brs
+                        }
+                }
+                :| defaultBranch
 
         goCaseBranchRhs :: Internal.CaseBranchRhs -> Sem r Expression
         goCaseBranchRhs = \case
           Internal.CaseBranchRhsExpression e -> goExpression e
           Internal.CaseBranchRhsIf {} -> error "unsupported: side conditions"
 
-    goPatternArgsTop :: [Internal.PatternArg] -> ([Pattern], NameSet, NameMap)
+    goPatternArgsTop :: [Internal.PatternArg] -> (Nested [Pattern], NameSet, NameMap)
     goPatternArgsTop pats =
-      (pats', nset, nmap)
+      (Nested pats' npats, nset, nmap)
       where
-        (nset, (nmap, pats')) = run $ runState (NameSet mempty) $ runState (NameMap mempty) $ goPatternArgs True pats
+        (npats, (nset, (nmap, pats'))) = run $ runOutputList $ runState (NameSet mempty) $ runState (NameMap mempty) $ goPatternArgs True pats
 
-    goPatternArgCase :: forall r. (Members '[Reader NameSet, Reader NameMap] r) => Internal.PatternArg -> Sem r (Pattern, NameSet, NameMap)
+    goPatternArgCase :: forall r. (Members '[Reader NameSet, Reader NameMap] r) => Internal.PatternArg -> Sem r (Nested Pattern, NameSet, NameMap)
     goPatternArgCase pat = do
       nset <- ask @NameSet
       nmap <- ask @NameMap
-      let (nmap', (nset', pat')) = run $ runState nmap $ runState nset $ goPatternArg False pat
-      return (pat', nset', nmap')
+      let (npats, (nmap', (nset', pat'))) = run $ runOutputList $ runState nmap $ runState nset $ goPatternArg False pat
+      return (Nested pat' npats, nset', nmap')
 
-    goPatternArgsCase :: forall r. (Members '[Reader NameSet, Reader NameMap] r) => [Internal.PatternArg] -> Sem r ([Pattern], NameSet, NameMap)
+    goPatternArgsCase :: forall r. (Members '[Reader NameSet, Reader NameMap] r) => [Internal.PatternArg] -> Sem r (Nested [Pattern], NameSet, NameMap)
     goPatternArgsCase pats = do
       nset <- ask @NameSet
       nmap <- ask @NameMap
-      let (nmap', (nset', pats')) = run $ runState nmap $ runState nset $ goPatternArgs False pats
-      return (pats', nset', nmap')
+      let (npats, (nmap', (nset', pats'))) = run $ runOutputList $ runState nmap $ runState nset $ goPatternArgs False pats
+      return (Nested pats' npats, nset', nmap')
 
-    goPatternArgs :: forall r. (Members '[State NameSet, State NameMap] r) => Bool -> [Internal.PatternArg] -> Sem r [Pattern]
+    goPatternArgs :: forall r. (Members '[State NameSet, State NameMap, Output (Expression, Nested Pattern)] r) => Bool -> [Internal.PatternArg] -> Sem r [Pattern]
     goPatternArgs isTop = mapM (goPatternArg isTop)
 
-    -- TODO: named patterns (`_patternArgName`) are not handled properly
-    goPatternArg :: forall r. (Members '[State NameSet, State NameMap] r) => Bool -> Internal.PatternArg -> Sem r Pattern
+    goPatternArg :: forall r. (Members '[State NameSet, State NameMap, Output (Expression, Nested Pattern)] r) => Bool -> Internal.PatternArg -> Sem r Pattern
     goPatternArg isTop Internal.PatternArg {..} =
-      goPattern _patternArgPattern
-      where
-        goPattern :: Internal.Pattern -> Sem r Pattern
-        goPattern = \case
-          Internal.PatternVariable name -> do
-            binders <- gets (^. nameSet)
-            let name' = overNameText (disambiguate binders) name
-            modify' (over nameSet (HashSet.insert (name' ^. namePretty)))
-            modify' (over nameMap (HashMap.insert name name'))
-            return $ PatVar name'
-          Internal.PatternConstructorApp x -> goPatternConstructorApp x
-          Internal.PatternWildcardConstructor {} -> impossible
+      -- TODO: named patterns
+      goPattern isTop _patternArgPattern
 
+    goNestedPatternArg :: forall r. (Members '[State NameSet, State NameMap, Output (Expression, Nested Pattern)] r) => Bool -> Internal.PatternArg -> Sem r (Nested Pattern)
+    goNestedPatternArg isTop Internal.PatternArg {..} =
+      -- TODO: named patterns
+      goNestedPattern isTop _patternArgPattern
+
+    goNestedPattern :: forall r. (Members '[State NameSet, State NameMap, Output (Expression, Nested Pattern)] r) => Bool -> Internal.Pattern -> Sem r (Nested Pattern)
+    goNestedPattern isTop pat = do
+      (npats, pat') <- runOutputList $ goPattern isTop pat
+      return $ Nested pat' npats
+
+    goPattern :: forall r. (Members '[State NameSet, State NameMap, Output (Expression, Nested Pattern)] r) => Bool -> Internal.Pattern -> Sem r Pattern
+    goPattern isTop = \case
+      Internal.PatternVariable name -> do
+        binders <- gets (^. nameSet)
+        let name' = overNameText (disambiguate binders) name
+        modify' (over nameSet (HashSet.insert (name' ^. namePretty)))
+        modify' (over nameMap (HashMap.insert name (ExprIden name')))
+        return $ PatVar name'
+      Internal.PatternConstructorApp x -> goPatternConstructorApp x
+      Internal.PatternWildcardConstructor {} -> impossible
+      where
         goPatternConstructorApp :: Internal.ConstructorApp -> Sem r Pattern
         goPatternConstructorApp Internal.ConstructorApp {..}
           | Just lst <- getListPat _constrAppConstructor _constrAppParameters = do
@@ -795,14 +883,27 @@ goModule onlyTypes infoTable Internal.Module {..} =
               x' <- goPatternArg False x
               y' <- goPatternArg False y
               return $ PatCons (Cons x' y')
-          | Just (name, fields) <- getRecordPat _constrAppConstructor _constrAppParameters =
+          | Just (indName, fields) <- getRecordPat _constrAppConstructor _constrAppParameters =
               if
                   | isTop -> do
                       fields' <- mapM (secondM (goPatternArg False)) fields
-                      return $ PatRecord (Record name fields')
-                  | otherwise ->
-                      -- TODO: record patterns are not supported in non-top-level patterns
-                      return $ PatVar (defaultName "_")
+                      return $ PatRecord (Record indName fields')
+                  | otherwise -> do
+                      binders <- gets (^. nameSet)
+                      let adjustName :: Name -> Expression
+                          adjustName name =
+                            let name' = overNameText (\n -> indName ^. nameText <> "." <> n) name
+                             in ExprApp (Application (ExprIden name') (ExprIden vname))
+                          vname = defaultName (disambiguate binders "v")
+                          fieldsVars = map (second getPatternArgVar) $ map (first adjustName) $ filter (isPatternArgVar . snd) fields
+                          fieldsNonVars = map (first adjustName) $ filter (not . isPatternArgVar . snd) fields
+                      modify' (over nameSet (HashSet.insert (vname ^. namePretty)))
+                      forM fieldsVars $ \(e, fname) -> do
+                        modify' (over nameSet (HashSet.insert (fname ^. namePretty)))
+                        modify' (over nameMap (HashMap.insert fname e))
+                      fieldsNonVars' <- mapM (secondM (goNestedPatternArg False)) fieldsNonVars
+                      forM fieldsNonVars' output
+                      return (PatVar vname)
           | Just (x, y) <- getPairPat _constrAppConstructor _constrAppParameters = do
               x' <- goPatternArg False x
               y' <- goPatternArg False y
@@ -821,6 +922,19 @@ goModule onlyTypes infoTable Internal.Module {..} =
                     { _constrAppConstructor = goConstrName _constrAppConstructor,
                       _constrAppArgs = args
                     }
+
+        isPatternArgVar :: Internal.PatternArg -> Bool
+        isPatternArgVar Internal.PatternArg {..} =
+          isNothing _patternArgName
+            && case _patternArgPattern of
+              Internal.PatternVariable {} -> True
+              _ -> False
+
+        getPatternArgVar :: Internal.PatternArg -> Name
+        getPatternArgVar Internal.PatternArg {..} =
+          case _patternArgPattern of
+            Internal.PatternVariable name -> name
+            _ -> impossible
 
         -- This function cannot be simply merged with `getList` because in patterns
         -- the constructors don't get the type arguments.
