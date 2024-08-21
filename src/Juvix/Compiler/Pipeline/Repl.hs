@@ -168,6 +168,7 @@ compileReplInputIO fp txt = do
     . runLoggerIO defaultLoggerOptions
     . runReader defaultNumThreads
     . evalInternet hasInternet
+    . ignoreHighlightBuilder
     . runTaggedLockPermissive
     . runLogIO
     . runFilesIO

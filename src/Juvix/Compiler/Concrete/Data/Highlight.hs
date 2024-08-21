@@ -1,6 +1,6 @@
 module Juvix.Compiler.Concrete.Data.Highlight
   ( module Juvix.Compiler.Concrete.Data.Highlight,
-    module Juvix.Compiler.Concrete.Data.Highlight.Input,
+    module Juvix.Compiler.Concrete.Data.Highlight.Builder,
     module Juvix.Compiler.Concrete.Data.Highlight.Properties,
   )
 where
@@ -8,7 +8,7 @@ where
 import Data.Aeson qualified as Aeson
 import Data.ByteString.Lazy qualified as ByteString
 import Data.Text.Encoding qualified as Text
-import Juvix.Compiler.Concrete.Data.Highlight.Input
+import Juvix.Compiler.Concrete.Data.Highlight.Builder
 import Juvix.Compiler.Concrete.Data.Highlight.PrettyJudoc
 import Juvix.Compiler.Concrete.Data.Highlight.Properties
 import Juvix.Compiler.Concrete.Data.Highlight.RenderEmacs
@@ -40,11 +40,11 @@ buildProperties :: HighlightInput -> LocProperties
 buildProperties HighlightInput {..} =
   LocProperties
     { _propertiesFace =
-        map goFaceParsedItem _highlightParsed
+        map goFaceParsedItem _highlightParsedItems
           <> mapMaybe goFaceName _highlightNames
           <> map goFaceError _highlightErrors,
       _propertiesGoto = map goGotoProperty _highlightNames,
-      _propertiesDoc = mapMaybe (goDocProperty _highlightDoc _highlightTypes) _highlightNames
+      _propertiesDoc = mapMaybe (goDocProperty _highlightDocTable _highlightTypes) _highlightNames
     }
 
 goFaceError :: Interval -> WithLoc PropertyFace

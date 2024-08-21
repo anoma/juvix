@@ -4,7 +4,7 @@ module Juvix.Compiler.Concrete.Translation.ImportScanner.Megaparsec
   )
 where
 
-import Juvix.Compiler.Concrete.Data.Highlight.Input
+import Juvix.Compiler.Concrete.Data.Highlight.Builder
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromSource
 import Juvix.Compiler.Concrete.Translation.FromSource.Data.ParserState

@@ -1,6 +1,6 @@
 module Juvix.Compiler.Concrete.Translation.FromSource.ParserResultBuilder where
 
-import Juvix.Compiler.Concrete.Data.Highlight.Input
+import Juvix.Compiler.Concrete.Data.Highlight.Builder
 import Juvix.Compiler.Concrete.Data.Literal
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromSource.Data.ParserState
@@ -84,7 +84,7 @@ runParserResultBuilder s =
   reinterpret (runState s) $ \case
     RegisterImport i -> modify' (over parserStateImports (i :))
     RegisterItem i -> do
-      modify (over highlightParsed (i :))
+      highlightParsedItem i
       registerItem' i
     RegisterSpaceSpan g -> do
       modify' (over parserStateComments (g :))

@@ -2,7 +2,7 @@ module Juvix.Compiler.Concrete.Data.InfoTableBuilder where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
-import Juvix.Compiler.Concrete.Data.Highlight.Input
+import Juvix.Compiler.Concrete.Data.Highlight.Builder
 import Juvix.Compiler.Concrete.Data.Scope
 import Juvix.Compiler.Concrete.Data.ScopedName
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
@@ -40,9 +40,6 @@ registerBuiltin b sym = registerBuiltin' (toBuiltinPrim b) sym
 getBuiltinSymbol :: (IsBuiltin a, Member InfoTableBuilder r) => Interval -> a -> Sem r S.Symbol
 getBuiltinSymbol i = getBuiltinSymbol' i . toBuiltinPrim
 
-registerDoc :: forall r. (Members '[HighlightBuilder, State InfoTable] r) => NameId -> Maybe (Judoc 'Scoped) -> Sem r ()
-registerDoc k md = modify (set (highlightDoc . at k) md)
-
 evalInfoTableBuilder :: (Members '[Error ScoperError, HighlightBuilder] r) => InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r a
 evalInfoTableBuilder ini = fmap snd . runInfoTableBuilder ini
 
@@ -52,28 +49,25 @@ runInfoTableBuilder ini = reinterpret (runState ini) $ \case
     let j = d ^. axiomDoc
      in do
           modify' (over infoAxioms (HashMap.insert (d ^. axiomName . nameId) d))
-          registerDoc (d ^. axiomName . nameId) j
+          highlightDoc (d ^. axiomName . nameId) j
   RegisterConstructor c ->
     let j = c ^. constructorDoc
      in do
           modify' (over infoConstructors (HashMap.insert (c ^. constructorName . nameId) c))
-          registerDoc (c ^. constructorName . nameId) j
+          highlightDoc (c ^. constructorName . nameId) j
   RegisterInductive ity ->
     let j = ity ^. inductiveDoc
      in do
           modify' (over infoInductives (HashMap.insert (ity ^. inductiveName . nameId) ity))
-          registerDoc (ity ^. inductiveName . nameId) j
+          highlightDoc (ity ^. inductiveName . nameId) j
   RegisterFunctionDef f ->
     let j = f ^. signDoc
      in do
           modify' (over infoFunctions (HashMap.insert (f ^. signName . nameId) f))
-          registerDoc (f ^. signName . nameId) j
-  RegisterName n -> do
-    modify (over highlightNames (cons (S.anameFromName n)))
-  RegisterScopedIden n -> do
-    modify (over highlightNames (cons (anameFromScopedIden n)))
-  RegisterModuleDoc uid doc -> do
-    registerDoc uid doc
+          highlightDoc (f ^. signName . nameId) j
+  RegisterName n -> highlightName (S.anameFromName n)
+  RegisterScopedIden n -> highlightName (anameFromScopedIden n)
+  RegisterModuleDoc uid doc -> highlightDoc uid doc
   RegisterFixity f -> do
     let sid = f ^. fixityDefSymbol . S.nameId
     modify (over infoFixities (HashMap.insert sid f))
@@ -83,7 +77,7 @@ runInfoTableBuilder ini = reinterpret (runState ini) $ \case
   RegisterPrecedence l h ->
     modify (over infoPrecedenceGraph (HashMap.alter (Just . HashSet.insert h . fromMaybe mempty) l))
   RegisterHighlightDoc fid doc ->
-    registerDoc fid doc
+    highlightDoc fid doc
   RegisterNameSig uid sig ->
     modify (over infoNameSigs (HashMap.insert uid sig))
   RegisterConstructorSig uid sig ->

@@ -56,7 +56,7 @@ processModule = cacheGet
 
 evalModuleInfoCache ::
   forall r a.
-  (Members '[TaggedLock, TopModuleNameChecker, Error JuvixError, Files, PathResolver] r) =>
+  (Members '[TaggedLock, HighlightBuilder, TopModuleNameChecker, Error JuvixError, Files, PathResolver] r) =>
   Sem (ModuleInfoCache ': JvoCache ': r) a ->
   Sem r a
 evalModuleInfoCache = evalJvoCache . evalCacheEmpty processModuleCacheMiss
@@ -64,7 +64,7 @@ evalModuleInfoCache = evalJvoCache . evalCacheEmpty processModuleCacheMiss
 -- | Used for parallel compilation
 evalModuleInfoCacheSetup ::
   forall r a.
-  (Members '[TaggedLock, TopModuleNameChecker, Error JuvixError, Files, PathResolver] r) =>
+  (Members '[TaggedLock, HighlightBuilder, TopModuleNameChecker, Error JuvixError, Files, PathResolver] r) =>
   (EntryIndex -> Sem (ModuleInfoCache ': JvoCache ': r) ()) ->
   Sem (ModuleInfoCache ': JvoCache ': r) a ->
   Sem r a
@@ -75,6 +75,7 @@ processModuleCacheMiss ::
   ( Members
       '[ ModuleInfoCache,
          TaggedLock,
+         HighlightBuilder,
          TopModuleNameChecker,
          Error JuvixError,
          Files,
@@ -240,7 +241,7 @@ processImports imports = do
 
 processModuleToStoredCore ::
   forall r.
-  (Members '[ModuleInfoCache, PathResolver, TopModuleNameChecker, Error JuvixError, Files] r) =>
+  (Members '[ModuleInfoCache, PathResolver, HighlightBuilder, TopModuleNameChecker, Error JuvixError, Files] r) =>
   Text ->
   EntryPoint ->
   Sem r (PipelineResult Store.ModuleInfo)
@@ -262,10 +263,10 @@ processModuleToStoredCore sha256 entry = over pipelineResult mkModuleInfo <$> pr
 
 processFileToStoredCore ::
   forall r.
-  (Members '[ModuleInfoCache, PathResolver, TopModuleNameChecker, Error JuvixError, Files] r) =>
+  (Members '[ModuleInfoCache, HighlightBuilder, PathResolver, TopModuleNameChecker, Error JuvixError, Files] r) =>
   EntryPoint ->
   Sem r (PipelineResult Core.CoreResult)
-processFileToStoredCore entry = ignoreHighlightBuilder . runReader entry $ do
+processFileToStoredCore entry = runReader entry $ do
   res <- processFileUpToParsing entry
   let pkg = entry ^. entryPointPackage
   mid <- runReader pkg (getModuleId (res ^. pipelineResult . Parser.resultModule . modulePath . to topModulePathKey))
