@@ -1,4 +1,8 @@
-module Juvix.Compiler.Core.Data.TransformationId where
+module Juvix.Compiler.Core.Data.TransformationId
+  ( module Juvix.Compiler.Core.Data.TransformationId,
+    module Juvix.Compiler.Core.Data.TransformationId.Base,
+  )
+where
 
 import Juvix.Compiler.Core.Data.TransformationId.Base
 import Juvix.Compiler.Core.Data.TransformationId.Strings

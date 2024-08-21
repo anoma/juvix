@@ -6,6 +6,7 @@ import Juvix.Compiler.Tree.Error
 import Juvix.Compiler.Tree.Extra.Base (getNodeLocation)
 import Juvix.Compiler.Tree.Extra.Recursors
 import Juvix.Compiler.Tree.Extra.Type
+import Juvix.Compiler.Tree.Pretty (ppTrace)
 import Juvix.Compiler.Tree.Transformation.Base
 
 inferType :: forall r. (Member (Error TreeError) r) => InfoTable -> FunctionInfo -> Node -> Sem r Type
@@ -265,11 +266,16 @@ inferType tab funInfo = goInfer mempty
     goCase :: BinderList Type -> NodeCase -> Sem r Type
     goCase bl NodeCase {..} = do
       ity <- goInfer bl _nodeCaseArg
-      unless (ity == mkTypeInductive _nodeCaseInductive || ity == TyDynamic) $
-        throw $
+      let caseIndTy = mkTypeInductive _nodeCaseInductive
+      unless (ity == caseIndTy || ity == TyDynamic) $
+        throw
           TreeError
             { _treeErrorLoc = _nodeCaseInfo ^. nodeInfoLocation,
-              _treeErrorMsg = "Inductive type mismatch"
+              _treeErrorMsg =
+                "Inductive type mismatch.\nCase node inductive type:\n"
+                  <> ppTrace tab ity
+                  <> "\nActual argument type:\n"
+                  <> ppTrace tab caseIndTy
             }
       ty <- maybe (return TyDynamic) (goInfer bl) _nodeCaseDefault
       go ity ty _nodeCaseBranches

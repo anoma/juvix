@@ -5,6 +5,7 @@ module Juvix.Compiler.Core.Transformation.RemoveTypeArgs
 where
 
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
+import Juvix.Compiler.Core.Data.TransformationId
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation.Base
@@ -13,14 +14,16 @@ convertNode :: Module -> Node -> Node
 convertNode md = convert mempty
   where
     unsupported :: forall a. Node -> a
-    unsupported node = error ("remove type arguments: unsupported node\n\t" <> ppTrace node)
+    unsupported node =
+      error
+        (transformationText RemoveTypeArgs <> ": unsupported node\n\t" <> ppTrace node)
 
     convert :: BinderList Binder -> Node -> Node
     convert vars = dmapLR' (vars, go)
 
     go :: BinderList Binder -> Node -> Recur
     go vars node = case node of
-      NVar v@(Var {..}) ->
+      NVar v@Var {..} ->
         let ty = BL.lookup _varIndex vars ^. binderType
          in if
                 | isTypeConstr md ty -> End (mkDynamic _varInfo)
@@ -38,9 +41,9 @@ convertNode md = convert mempty
         let (h, args) = unfoldApps node
             ty =
               case h of
-                NVar (Var {..}) ->
+                NVar Var {..} ->
                   BL.lookup _varIndex vars ^. binderType
-                NIdt (Ident {..}) ->
+                NIdt Ident {..} ->
                   let fi = lookupIdentifierInfo md _identSymbol
                    in fi ^. identifierType
                 _ -> unsupported node
