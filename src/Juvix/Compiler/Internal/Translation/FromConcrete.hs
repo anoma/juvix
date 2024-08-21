@@ -548,6 +548,7 @@ checkBuiltinFunction d f = localBuiltins $ case f of
   BuiltinFromNat -> checkFromNat d
   BuiltinFromInt -> checkFromInt d
   BuiltinSeq -> checkSeq d
+  BuiltinMonadBind -> checkMonadBind d
 
 checkBuiltinAxiom ::
   (Members '[Error ScoperError, NameIdGen, Reader S.InfoTable] r) =>
@@ -810,6 +811,7 @@ goExpression = \case
   ExpressionBraces b -> throw (ErrAppLeftImplicit (AppLeftImplicit b))
   ExpressionDoubleBraces b -> throw (ErrDanglingDoubleBrace (DanglingDoubleBrace b))
   ExpressionLet l -> goLet l
+  ExpressionDo l -> goDo l
   ExpressionList l -> goList l
   ExpressionUniverse uni -> return (Internal.ExpressionUniverse (goUniverse uni))
   ExpressionFunction func -> Internal.ExpressionFunction <$> goFunction func
@@ -1027,18 +1029,6 @@ goExpression = \case
         Just _letClauses -> Internal.ExpressionLet Internal.Let {..}
         Nothing -> _letExpression
 
-    goLetFunDefs :: NonEmpty (LetStatement 'Scoped) -> Sem r [Internal.LetClause]
-    goLetFunDefs clauses = maybe [] (toList . mkLetClauses) . nonEmpty <$> preLetStatements clauses
-      where
-        preLetStatements :: NonEmpty (LetStatement 'Scoped) -> Sem r [Internal.PreLetStatement]
-        preLetStatements cl = mapMaybeM preLetStatement (toList cl)
-          where
-            preLetStatement :: LetStatement 'Scoped -> Sem r (Maybe Internal.PreLetStatement)
-            preLetStatement = \case
-              LetFunctionDef f -> Just . Internal.PreLetFunctionDef <$> goFunctionDef f
-              LetAliasDef {} -> return Nothing
-              LetOpen {} -> return Nothing
-
     goApplicationArg :: Expression -> Sem r Internal.ApplicationArg
     goApplicationArg arg =
       let (e, i) = case arg of
@@ -1108,6 +1098,79 @@ goExpression = \case
 
         mkApp :: Internal.Expression -> Internal.Expression -> Internal.Expression
         mkApp a1 a2 = Internal.ExpressionApplication $ Internal.Application a1 a2 Explicit
+
+goLetFunDefs ::
+  forall r.
+  (Members '[Reader DefaultArgsStack, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) =>
+  NonEmpty (LetStatement 'Scoped) ->
+  Sem r [Internal.LetClause]
+goLetFunDefs clauses = maybe [] (toList . mkLetClauses) . nonEmpty <$> preLetStatements clauses
+  where
+    preLetStatements :: NonEmpty (LetStatement 'Scoped) -> Sem r [Internal.PreLetStatement]
+    preLetStatements cl = mapMaybeM preLetStatement (toList cl)
+      where
+        preLetStatement :: LetStatement 'Scoped -> Sem r (Maybe Internal.PreLetStatement)
+        preLetStatement = \case
+          LetFunctionDef f -> Just . Internal.PreLetFunctionDef <$> goFunctionDef f
+          LetAliasDef {} -> return Nothing
+          LetOpen {} -> return Nothing
+
+goDo ::
+  forall r.
+  (Members '[Reader DefaultArgsStack, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) =>
+  Do 'Scoped ->
+  Sem r Internal.Expression
+goDo Do {..} = do
+  goStatements _doStatements
+  where
+    goStatements :: NonEmpty (DoStatement 'Scoped) -> Sem r Internal.Expression
+    goStatements (s :| ss) = case nonEmpty ss of
+      Nothing -> goLastStatement s
+      Just ss1 -> do
+        ss1' <- goStatements ss1
+        case s of
+          DoStatementExpression e -> goDoExpression e ss1'
+          DoStatementBind b -> goDoBind b ss1'
+          DoStatementLet b -> goDoLet b ss1'
+      where
+        -- l >>= \{_ := r}
+        goDoExpression :: Expression -> Internal.Expression -> Sem r Internal.Expression
+        goDoExpression l r = do
+          let p =
+                PatternArg
+                  { _patternArgIsImplicit = Explicit,
+                    _patternArgName = Nothing,
+                    _patternArgPattern = PatternWildcard (Wildcard (getLoc l <> getLoc r))
+                  }
+          goDoBindHelper p l r
+
+        goDoLet :: DoLet 'Scoped -> Internal.Expression -> Sem r Internal.Expression
+        goDoLet DoLet {..} r = do
+          defs <- goLetFunDefs _doLetStatements
+          return $ case nonEmpty defs of
+            Nothing -> r
+            Just defs1 ->
+              Internal.ExpressionLet
+                Internal.Let
+                  { _letClauses = defs1,
+                    _letExpression = r
+                  }
+
+        goDoBind :: DoBind 'Scoped -> Internal.Expression -> Sem r Internal.Expression
+        goDoBind DoBind {..} r = goDoBindHelper _doBindPattern _doBindExpression r
+
+        -- l >>= \{p := r}
+        goDoBindHelper :: PatternArg -> Expression -> Internal.Expression -> Sem r Internal.Expression
+        goDoBindHelper p l r = do
+          p' <- goPatternArg p
+          l' <- goExpression l
+          bindIden <- localBuiltins (getBuiltinNameScoper (getLoc _doKeyword) BuiltinMonadBind)
+          return (bindIden Internal.@@ l' Internal.@@ (p' Internal.==> r))
+
+        goLastStatement :: DoStatement 'Scoped -> Sem r Internal.Expression
+        goLastStatement = \case
+          DoStatementExpression e -> goExpression e
+          d -> throw (ErrDoLastStatement (DoLastStatement d))
 
 goCase :: forall r. (Members '[Reader DefaultArgsStack, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) => Case 'Scoped -> Sem r Internal.Case
 goCase c = do

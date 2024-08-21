@@ -13,6 +13,7 @@ module Juvix.Compiler.Builtins
     module Juvix.Compiler.Builtins.Cairo,
     module Juvix.Compiler.Builtins.Byte,
     module Juvix.Compiler.Builtins.ByteArray,
+    module Juvix.Compiler.Builtins.Monad,
   )
 where
 
@@ -28,5 +29,6 @@ import Juvix.Compiler.Builtins.IO
 import Juvix.Compiler.Builtins.Int
 import Juvix.Compiler.Builtins.List
 import Juvix.Compiler.Builtins.Maybe
+import Juvix.Compiler.Builtins.Monad
 import Juvix.Compiler.Builtins.Nat
 import Juvix.Compiler.Builtins.String

@@ -42,7 +42,9 @@ import Juvix.Prelude.Pretty qualified as P
 --- * the body of a `Top` iterator,
 --- * the else branch body of a `Top` if expression,
 --- * the last branch body of a `Top` case expresssion.
-data IsTop = Top | NotTop
+data IsTop
+  = Top
+  | NotTop
 
 type PrettyPrintingMaybe a = forall r. (Members '[ExactPrint, Reader Options] r) => a -> Maybe (Sem r ())
 
@@ -396,10 +398,51 @@ instance (SingI s) => PrettyPrint (DoubleBracesExpression s) where
     let (l, r) = _doubleBracesDelims ^. unIrrelevant
     ppCode l <> ppTopExpressionType _doubleBracesExpression <> ppCode r
 
+instance (SingI s) => PrettyPrint (DoLet s) where
+  ppCode DoLet {..} = do
+    let letFunDefs' = blockIndent (ppBlock _doLetStatements)
+    -- blockIndent d = hardline <> indent d <> line
+    ppCode _doLetKw
+      <> letFunDefs'
+      <> ppCode _doLetInKw
+
+instance (SingI s) => PrettyPrint (DoBind s) where
+  ppCode DoBind {..} = do
+    ppPatternParensType _doBindPattern
+      <+> ppCode _doBindArrowKw
+      <+> ppTopExpressionType _doBindExpression
+
+instance (Foldable l, SingI s) => PrettyPrint (l (DoStatement s)) where
+  ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => l (DoStatement s) -> Sem r ()
+  ppCode = vsepHard . map go . toList
+    where
+      go :: DoStatement s -> Sem r ()
+      go = \case
+        DoStatementBind b -> ppCode b >> semicolon
+        DoStatementExpression b -> ppExpressionType b >> semicolon
+        DoStatementLet b -> ppCode b
+
+instance (SingI s) => PrettyPrint (DoStatement s) where
+  ppCode = \case
+    DoStatementExpression e -> ppExpressionType e
+    DoStatementLet l -> ppCode l
+    DoStatementBind l -> ppCode l
+
+instance (SingI s) => PrettyPrint (Do s) where
+  ppCode Do {..} = do
+    let (openbr, closebr) = over both ppCode (_doDelims ^. unIrrelevant)
+    ppCode _doKeyword
+      <+> openbr
+        <> hardline
+        <> indent (ppCode _doStatements)
+        <> hardline
+        <> closebr
+
 instance (SingI s) => PrettyPrint (ExpressionAtom s) where
   ppCode = \case
     AtomIdentifier n -> ppIdentifierType n
     AtomLambda l -> ppCode l
+    AtomDo l -> ppCode l
     AtomLet lb -> ppLet NotTop lb
     AtomCase c -> ppCase NotTop c
     AtomIf c -> ppIf NotTop c
@@ -797,7 +840,7 @@ ppLRExpression associates fixlr e =
     (ppCode e)
 
 ppBlock :: (PrettyPrint a, Members '[Reader Options, ExactPrint] r, Traversable t) => t a -> Sem r ()
-ppBlock items = vsep (sepEndSemicolon (fmap ppCode items))
+ppBlock items = vsepHard (sepEndSemicolon (fmap ppCode items))
 
 instance (SingI s) => PrettyPrint (Lambda s) where
   ppCode Lambda {..} = do
@@ -926,6 +969,7 @@ instance PrettyPrint Expression where
     ExpressionPostfixApplication a -> ppCode a
     ExpressionLambda l -> ppCode l
     ExpressionLet lb -> ppLet NotTop lb
+    ExpressionDo d -> ppCode d
     ExpressionUniverse u -> ppCode u
     ExpressionLiteral l -> ppCode l
     ExpressionFunction f -> ppCode f

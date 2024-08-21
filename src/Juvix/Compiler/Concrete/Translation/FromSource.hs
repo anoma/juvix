@@ -832,6 +832,7 @@ expressionAtom =
       <|> AtomCase <$> case_
       <|> AtomFunction <$> function
       <|> AtomLet <$> letBlock
+      <|> AtomDo <$> doBlock
       <|> AtomFunArrow <$> kw kwRightArrow
       <|> AtomHole <$> hole
       <|> AtomParens <$> parens parseExpressionAtoms
@@ -1163,6 +1164,59 @@ letStatement =
   LetFunctionDef <$> letFunDef
     <|> LetAliasDef <$> (kw kwSyntax >>= aliasDef)
     <|> LetOpen <$> openModule
+
+doBind :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (DoBind 'Parsed)
+doBind = do
+  (_doBindPattern, _doBindArrowKw) <- P.try $ do
+    pat <- parsePatternAtoms
+    arrowkw <- Irrelevant <$> kw kwLeftArrow
+    return (pat, arrowkw)
+  _doBindExpression <- parseExpressionAtoms
+  return DoBind {..}
+
+doLet :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (DoLet 'Parsed)
+doLet = do
+  _doLetKw <- Irrelevant <$> kw kwLet
+  _doLetStatements <- P.sepEndBy1 letStatement semicolon
+  _doLetInKw <- Irrelevant <$> kw kwIn
+  return DoLet {..}
+
+doStatements :: forall r. (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (NonEmpty (DoStatement 'Parsed))
+doStatements =
+  P.label "<do statement>" $
+    plet
+      <|> pother
+  where
+    plet :: ParsecS r (NonEmpty (DoStatement 'Parsed))
+    plet = do
+      s <- DoStatementLet <$> doLet
+      ss <- doStatements
+      return (s :| toList ss)
+
+    pother :: ParsecS r (NonEmpty (DoStatement 'Parsed))
+    pother = do
+      s <-
+        DoStatementBind <$> doBind
+          <|> DoStatementExpression <$> parseExpressionAtoms
+      semi <- isJust <$> optional semicolon
+      if
+          | semi -> do
+              ss <- maybe [] toList <$> optional doStatements
+              return (s :| ss)
+          | otherwise -> return (pure s)
+
+doBlock :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (Do 'Parsed)
+doBlock = do
+  _doKeyword <- Irrelevant <$> kw kwDo
+  lbr <- kw delimBraceL
+  _doStatements <- doStatements
+  rbr <- kw delimBraceR
+  let
+  return
+    Do
+      { _doDelims = Irrelevant (lbr, rbr),
+        ..
+      }
 
 letBlock :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (Let 'Parsed)
 letBlock = do

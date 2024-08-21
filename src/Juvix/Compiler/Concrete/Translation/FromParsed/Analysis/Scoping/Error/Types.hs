@@ -46,6 +46,26 @@ instance ToGenericError MultipleDeclarations where
             <> line
             <> itemize (map pretty [i1, i2])
 
+newtype DoLastStatement = DoLastStatement
+  { _doLastStatement :: DoStatement 'Scoped
+  }
+
+instance ToGenericError DoLastStatement where
+  genericError DoLastStatement {..} = generr
+    where
+      generr =
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = prettyError msg,
+              _genericErrorIntervals = [i]
+            }
+        where
+          i = getLoc _doLastStatement
+          msg :: Doc Ann
+          msg =
+            "The last statement of a do block must be an expression"
+
 -- | megaparsec error while resolving infixities.
 newtype InfixError = InfixError
   { _infixErrorAtoms :: ExpressionAtoms 'Scoped
@@ -597,6 +617,33 @@ instance ToGenericError AliasBinderPattern where
           msg =
             "As-Patterns cannot be used to alias pattern variables:"
               <+> code (ppCode opts' pat)
+
+newtype DoBindImplicitPattern = DoBindImplicitPattern
+  { _doBindImplicitPattern :: PatternArg
+  }
+  deriving stock (Show)
+
+makeLenses ''DoBindImplicitPattern
+
+instance ToGenericError DoBindImplicitPattern where
+  genericError e = ask >>= generr
+    where
+      generr opts =
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = prettyError msg,
+              _genericErrorIntervals = [i]
+            }
+        where
+          opts' = fromGenericOptions opts
+          pat :: PatternArg
+          pat = e ^. doBindImplicitPattern
+          i = getLoc pat
+          msg =
+            "Illegal pattern "
+              <> ppCode opts' pat
+              <> "\nImplicit patterns are not allowed on the left hand side of a bind arrow inside a do block"
 
 newtype ImplicitPatternLeftApplication = ImplicitPatternLeftApplication
   { _implicitPatternLeftApplication :: PatternApp

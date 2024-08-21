@@ -152,6 +152,7 @@ data BuiltinFunction
   | BuiltinFromNat
   | BuiltinFromInt
   | BuiltinSeq
+  | BuiltinMonadBind
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic, Data)
 
 instance Hashable BuiltinFunction
@@ -189,6 +190,7 @@ instance Pretty BuiltinFunction where
     BuiltinFromNat -> Str.fromNat
     BuiltinFromInt -> Str.fromInt
     BuiltinSeq -> Str.builtinSeq
+    BuiltinMonadBind -> Str.builtinMonadBind
 
 data BuiltinAxiom
   = BuiltinNatPrint
@@ -365,7 +367,26 @@ isNatBuiltin = \case
   BuiltinNatLe -> True
   BuiltinNatLt -> True
   BuiltinNatEq -> True
-  _ -> False
+  --
+  BuiltinBoolIf -> False
+  BuiltinBoolOr -> False
+  BuiltinBoolAnd -> False
+  BuiltinIntEq -> False
+  BuiltinIntPlus -> False
+  BuiltinIntSubNat -> False
+  BuiltinIntNegNat -> False
+  BuiltinIntNeg -> False
+  BuiltinIntMul -> False
+  BuiltinIntDiv -> False
+  BuiltinIntMod -> False
+  BuiltinIntSub -> False
+  BuiltinIntNonNeg -> False
+  BuiltinIntLe -> False
+  BuiltinIntLt -> False
+  BuiltinFromNat -> False
+  BuiltinFromInt -> False
+  BuiltinSeq -> False
+  BuiltinMonadBind -> False
 
 isIntBuiltin :: BuiltinFunction -> Bool
 isIntBuiltin = \case
@@ -381,13 +402,101 @@ isIntBuiltin = \case
   BuiltinIntNonNeg -> True
   BuiltinIntLe -> True
   BuiltinIntLt -> True
-  _ -> False
+  --
+  BuiltinNatPlus -> False
+  BuiltinNatSub -> False
+  BuiltinNatMul -> False
+  BuiltinNatUDiv -> False
+  BuiltinNatDiv -> False
+  BuiltinNatMod -> False
+  BuiltinNatLe -> False
+  BuiltinNatLt -> False
+  BuiltinNatEq -> False
+  BuiltinBoolIf -> False
+  BuiltinBoolOr -> False
+  BuiltinBoolAnd -> False
+  BuiltinFromNat -> False
+  BuiltinFromInt -> False
+  BuiltinSeq -> False
+  BuiltinMonadBind -> False
 
 isCastBuiltin :: BuiltinFunction -> Bool
 isCastBuiltin = \case
   BuiltinFromNat -> True
   BuiltinFromInt -> True
-  _ -> False
+  --
+  BuiltinIntEq -> False
+  BuiltinIntPlus -> False
+  BuiltinIntSubNat -> False
+  BuiltinIntNegNat -> False
+  BuiltinIntNeg -> False
+  BuiltinIntMul -> False
+  BuiltinIntDiv -> False
+  BuiltinIntMod -> False
+  BuiltinIntSub -> False
+  BuiltinIntNonNeg -> False
+  BuiltinIntLe -> False
+  BuiltinIntLt -> False
+  BuiltinNatPlus -> False
+  BuiltinNatSub -> False
+  BuiltinNatMul -> False
+  BuiltinNatUDiv -> False
+  BuiltinNatDiv -> False
+  BuiltinNatMod -> False
+  BuiltinNatLe -> False
+  BuiltinNatLt -> False
+  BuiltinNatEq -> False
+  BuiltinBoolIf -> False
+  BuiltinBoolOr -> False
+  BuiltinBoolAnd -> False
+  BuiltinSeq -> False
+  BuiltinMonadBind -> False
 
 isIgnoredBuiltin :: BuiltinFunction -> Bool
-isIgnoredBuiltin f = not (isNatBuiltin f) && not (isIntBuiltin f) && not (isCastBuiltin f)
+isIgnoredBuiltin f
+  | spec == explicit = spec
+  | otherwise = impossible
+  where
+    spec :: Bool
+    spec =
+      (not . isNatBuiltin)
+        .&&. (not . isIntBuiltin)
+        .&&. (not . isCastBuiltin)
+        .&&. (/= BuiltinMonadBind)
+        $ f
+
+    explicit :: Bool
+    explicit = case f of
+      -- Cast
+      BuiltinFromNat -> False
+      BuiltinFromInt -> False
+      -- Int
+      BuiltinIntEq -> False
+      BuiltinIntPlus -> False
+      BuiltinIntSubNat -> False
+      BuiltinIntNegNat -> False
+      BuiltinIntNeg -> False
+      BuiltinIntMul -> False
+      BuiltinIntDiv -> False
+      BuiltinIntMod -> False
+      BuiltinIntSub -> False
+      BuiltinIntNonNeg -> False
+      BuiltinIntLe -> False
+      BuiltinIntLt -> False
+      -- Nat
+      BuiltinNatPlus -> False
+      BuiltinNatSub -> False
+      BuiltinNatMul -> False
+      BuiltinNatUDiv -> False
+      BuiltinNatDiv -> False
+      BuiltinNatMod -> False
+      BuiltinNatLe -> False
+      BuiltinNatLt -> False
+      BuiltinNatEq -> False
+      -- Monad
+      BuiltinMonadBind -> False
+      -- Ignored
+      BuiltinBoolIf -> True
+      BuiltinBoolOr -> True
+      BuiltinBoolAnd -> True
+      BuiltinSeq -> True

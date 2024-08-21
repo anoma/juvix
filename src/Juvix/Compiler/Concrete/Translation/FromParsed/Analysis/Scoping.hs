@@ -2366,6 +2366,57 @@ checkCaseBranch CaseBranch {..} = withLocalScope $ do
         ..
       }
 
+checkDoBind ::
+  (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader Package] r) =>
+  DoBind 'Parsed ->
+  Sem r (DoBind 'Scoped)
+checkDoBind DoBind {..} = do
+  expr' <- checkParseExpressionAtoms _doBindExpression
+  pat' <- checkParsePatternAtoms _doBindPattern
+  unless (Explicit == pat' ^. patternArgIsImplicit) $
+    throw (ErrDoBindImplicitPattern (DoBindImplicitPattern pat'))
+  return
+    DoBind
+      { _doBindArrowKw,
+        _doBindPattern = pat',
+        _doBindExpression = expr'
+      }
+
+checkDoLet ::
+  (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader Package] r) =>
+  DoLet 'Parsed ->
+  Sem r (DoLet 'Scoped)
+checkDoLet DoLet {..} = do
+  defs' <- checkLetStatements _doLetStatements
+  return
+    DoLet
+      { _doLetKw,
+        _doLetInKw,
+        _doLetStatements = defs'
+      }
+
+checkDoStatement ::
+  (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader Package] r) =>
+  DoStatement 'Parsed ->
+  Sem r (DoStatement 'Scoped)
+checkDoStatement = \case
+  DoStatementExpression e -> DoStatementExpression <$> checkParseExpressionAtoms e
+  DoStatementBind b -> DoStatementBind <$> checkDoBind b
+  DoStatementLet b -> DoStatementLet <$> checkDoLet b
+
+checkDo ::
+  (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader Package] r) =>
+  Do 'Parsed ->
+  Sem r (Do 'Scoped)
+checkDo Do {..} = do
+  stmts' <- mapM checkDoStatement _doStatements
+  return
+    Do
+      { _doStatements = stmts',
+        _doKeyword,
+        _doDelims
+      }
+
 checkCase ::
   (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader Package] r) =>
   Case 'Parsed ->
@@ -2622,6 +2673,7 @@ checkExpressionAtom ::
 checkExpressionAtom e = case e of
   AtomIdentifier n -> pure . AtomIdentifier <$> checkScopedIden n
   AtomLambda lam -> pure . AtomLambda <$> checkLambda lam
+  AtomDo a -> pure . AtomDo <$> checkDo a
   AtomCase c -> pure . AtomCase <$> checkCase c
   AtomIf c -> pure . AtomIf <$> checkIf c
   AtomLet letBlock -> pure . AtomLet <$> checkLet letBlock
@@ -3223,6 +3275,7 @@ parseTerm =
     <|> parseList
     <|> parseLiteral
     <|> parseLet
+    <|> parseDo
     <|> parseIterator
     <|> parseDoubleBraces
     <|> parseBraces
@@ -3316,12 +3369,21 @@ parseTerm =
         namedApp s = case s of
           AtomNamedApplicationNew u -> Just u
           _ -> Nothing
+
     parseLet :: Parse Expression
     parseLet = ExpressionLet <$> P.token letBlock mempty
       where
         letBlock :: ExpressionAtom 'Scoped -> Maybe (Let 'Scoped)
         letBlock s = case s of
           AtomLet u -> Just u
+          _ -> Nothing
+
+    parseDo :: Parse Expression
+    parseDo = ExpressionDo <$> P.token letBlock mempty
+      where
+        letBlock :: ExpressionAtom 'Scoped -> Maybe (Do 'Scoped)
+        letBlock s = case s of
+          AtomDo u -> Just u
           _ -> Nothing
 
     parseIterator :: Parse Expression

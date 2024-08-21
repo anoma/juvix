@@ -59,6 +59,8 @@ data ScoperError
   | ErrBuiltinAlreadyDefined BuiltinAlreadyDefined
   | ErrBuiltinNotDefined BuiltinNotDefined
   | ErrBuiltinErrorMessage BuiltinErrorMessage
+  | ErrDoLastStatement DoLastStatement
+  | ErrDoBindImplicitPattern DoBindImplicitPattern
   deriving stock (Generic)
 
 instance ToGenericError ScoperError where
@@ -109,6 +111,8 @@ instance ToGenericError ScoperError where
     ErrBuiltinAlreadyDefined e -> genericError e
     ErrBuiltinNotDefined e -> genericError e
     ErrBuiltinErrorMessage e -> genericError e
+    ErrDoLastStatement e -> genericError e
+    ErrDoBindImplicitPattern e -> genericError e
 
 builtinsErrorMsg :: (Members '[Error ScoperError] r) => Interval -> AnsiText -> Sem r a
 builtinsErrorMsg loc msg =
