@@ -82,7 +82,7 @@ instance PrettyCode Expression where
     ExprTuple x -> ppCode x
     ExprList x -> ppCode x
     ExprCons x -> ppCode x
-    ExprRecord x -> ppCode x
+    ExprRecord x -> ppRecord False x
     ExprRecordUpdate x -> ppCode x
     ExprLet x -> ppCode x
     ExprIf x -> ppCode x
@@ -110,7 +110,7 @@ instance PrettyCode Binop where
 instance PrettyCode RecordUpdate where
   ppCode RecordUpdate {..} = do
     r <- ppCode _recordUpdateRecord
-    fields <- ppCode _recordUpdateFields
+    fields <- ppRecord True _recordUpdateFields
     return $ r <+> fields
 
 instance PrettyCode LetClause where
@@ -155,14 +155,15 @@ instance (PrettyCode a) => PrettyCode (List a) where
     elems <- mapM ppCode _listElements
     return $ brackets $ hsep (punctuate comma elems)
 
-instance (PrettyCode a) => PrettyCode (Record a) where
-  ppCode Record {..} = do
-    recName <- ppCode _recordName
-    names <- mapM (ppCode . fst) _recordFields
-    elems <- mapM (ppCode . snd) _recordFields
-    let names' = map (\n -> recName <> "." <> n) names
-        fields = zipWithExact (\n e -> n <+> "=" <+> e) names' elems
-    return $ "(|" <+> hsep (punctuate comma fields) <+> "|)"
+ppRecord :: (PrettyCode a, Member (Reader Options) r) => Bool -> Record a -> Sem r (Doc Ann)
+ppRecord bUpdate Record {..} = do
+  recName <- ppCode _recordName
+  names <- mapM (ppCode . fst) _recordFields
+  elems <- mapM (ppCode . snd) _recordFields
+  let names' = map (\n -> recName <> "." <> n) names
+      eq = if bUpdate then ":=" else "="
+      fields = zipWithExact (\n e -> n <+> eq <+> e) names' elems
+  return $ "(|" <+> hsep (punctuate comma fields) <+> "|)"
 
 instance (PrettyCode a, HasAtomicity a) => PrettyCode (Cons a) where
   ppCode Cons {..} = do
@@ -178,7 +179,7 @@ instance PrettyCode Pattern where
     PatTuple x -> ppCode x
     PatList x -> ppCode x
     PatCons x -> ppCode x
-    PatRecord x -> ppCode x
+    PatRecord x -> ppRecord False x
 
 instance PrettyCode ConstrApp where
   ppCode ConstrApp {..} = do
