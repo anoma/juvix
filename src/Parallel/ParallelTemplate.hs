@@ -12,6 +12,7 @@ module Parallel.ParallelTemplate
     compileArgsDependencies,
     compileArgsNodesIndex,
     compileArgsNodeName,
+    compileArgsNodeSilent,
     compileArgsNumWorkers,
     compileArgsCompileNode,
     compileArgsPreProcess,
@@ -33,6 +34,8 @@ data CompileArgs (s :: [Effect]) nodeId node compileProof = CompileArgs
   { _compileArgsNodesIndex :: NodesIndex nodeId node,
     _compileArgsDependencies :: Dependencies nodeId,
     _compileArgsNodeName :: node -> Text,
+    -- | When compiling a silent node we do not emit a progress message
+    _compileArgsNodeSilent :: nodeId -> Bool,
     _compileArgsNumWorkers :: Int,
     -- | Called concurrently on every node without any specific order before
     -- compilation starts.
@@ -47,8 +50,10 @@ data CompilationState nodeId compiledProof = CompilationState
     -- this module is enqueued for compilation.
     _compilationPending :: HashMap nodeId (HashSet nodeId),
     _compilationStartedNum :: Natural,
+    _compilationStartedNumNoSilent :: Natural,
     _compilationFinishedNum :: Natural,
-    _compilationTotalNum :: Natural
+    _compilationTotalNum :: Natural,
+    _compilationTotalNumNotSilent :: Natural
   }
 
 data Dependencies nodeId = Dependencies
@@ -153,6 +158,7 @@ compile args@CompileArgs {..} = do
       allNodesIds :: [nodeId] = HashMap.keys (nodesIx ^. nodesIndex)
       deps = _compileArgsDependencies
       numMods :: Natural = fromIntegral (length allNodesIds)
+      notSilent :: Natural = fromIntegral (length (filter (not . _compileArgsNodeSilent) allNodesIds))
       startingModules :: [nodeId] =
         [m | m <- allNodesIds, null (nodeDependencies deps m)]
   logs <- Logs <$> newTQueueIO
@@ -164,8 +170,10 @@ compile args@CompileArgs {..} = do
   let iniCompilationState :: CompilationState nodeId compileProof =
         CompilationState
           { _compilationStartedNum = 0,
+            _compilationStartedNumNoSilent = 0,
             _compilationFinishedNum = 0,
             _compilationTotalNum = numMods,
+            _compilationTotalNumNotSilent = notSilent,
             _compilationPending = deps ^. dependenciesTable,
             _compilationState = mempty
           }
@@ -226,18 +234,23 @@ getTask = do
                 . runReader idx
                 $ getNode nextModuleId
         compSt <- readTVar stVar
+        let silent = (args ^. compileArgsNodeSilent) nextModuleId
         modifyTVar stVar (over compilationStartedNum succ)
+        unless silent (modifyTVar stVar (over compilationStartedNumNoSilent succ))
         let num = succ (compSt ^. compilationStartedNum)
+            numNoSilent = succ (compSt ^. compilationStartedNumNoSilent)
             total = compSt ^. compilationTotalNum
+            totalNotSilent = compSt ^. compilationTotalNumNotSilent
             name = annotate (AnnKind KNameTopModule) (pretty ((args ^. compileArgsNodeName) n))
             progress :: Doc CodeAnn =
               kwBracketL
-                <> annotate AnnLiteralInteger (pretty num)
+                <> annotate AnnLiteralInteger (pretty numNoSilent)
                 <+> kwOf
-                <+> annotate AnnLiteralInteger (pretty total) <> kwBracketR <> " "
+                <+> annotate AnnLiteralInteger (pretty totalNotSilent) <> kwBracketR <> " "
             kwCompiling = annotate AnnKeyword "Compiling"
             isLast = num == total
-        logMsg tid logs (progress <> kwCompiling <> " " <> name)
+        unless silent $
+          logMsg tid logs (progress <> kwCompiling <> " " <> name)
         when isLast (logClose logs)
         return $
           Just
@@ -266,7 +279,7 @@ lookForWork ::
     Subset s r
   ) =>
   Sem r ()
-lookForWork = do
+lookForWork =
   whenJustM (getTask @nodeId @node @compileProof @s) $ \Task {..} -> do
     compileNode @s @nodeId @node @compileProof _taskNodeId
     lookForWork @nodeId @node @compileProof @s @r
@@ -334,11 +347,10 @@ logClose (Logs q) = do
 
 logMsg :: ThreadId -> Logs -> Doc CodeAnn -> STM ()
 logMsg tid (Logs q) msg = do
-  STM.writeTQueue
-    q
-    ( LogQueueItem
-        LogItem
-          { _logItemMessage = msg,
-            _logItemThreadId = tid
-          }
-    )
+  let logitem =
+        LogQueueItem
+          LogItem
+            { _logItemMessage = msg,
+              _logItemThreadId = tid
+            }
+  STM.writeTQueue q logitem
