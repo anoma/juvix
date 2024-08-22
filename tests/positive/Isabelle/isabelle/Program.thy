@@ -190,12 +190,60 @@ fun funR3 :: "(R, R) Either' \<Rightarrow> R" where
                           r1'0 = R.r2 v'1;
                           r2'0 = R.r1 v'1
                         in (| R.r1 = r1'0, R.r2 = r2'0 |) |
+                      v'2 \<Rightarrow>
+                        (case v'2 of
+                           (Right' v'1) \<Rightarrow>
+                             (case (R.r2 v'1) of
+                                (0) \<Rightarrow>
+                                  let
+                                    r1'0 = 7;
+                                    r2'0 = 7
+                                  in (| R.r1 = r1'0, R.r2 = r2'0 |) |
+                                _ \<Rightarrow>
+                                  (case v'2 of
+                                     v'4 \<Rightarrow>
+                                       (case v'4 of
+                                          (Right' r') \<Rightarrow>
+                                            (case (r') of
+                                               (v'3) \<Rightarrow>
+                                                 (\<lambda> x0 . case x0 of
+                                                                   v'5 \<Rightarrow>
+                                                                     (| R.r1 = R.r2 v'5 + 2, R.r2 = R.r1 v'5 + 3 |)) r')))) |
+                           v'4 \<Rightarrow>
+                             (case v'4 of
+                                (Right' r') \<Rightarrow>
+                                  (case (r') of
+                                     (v'3) \<Rightarrow>
+                                       (\<lambda> x0 . case x0 of
+                                                         v'5 \<Rightarrow>
+                                                           (| R.r1 = R.r2 v'5 + 2, R.r2 = R.r1 v'5 + 3 |)) r'))))) |
+            v'2 \<Rightarrow>
+              (case v'2 of
+                 (Right' v'1) \<Rightarrow>
+                   (case (R.r2 v'1) of
+                      (0) \<Rightarrow>
+                        let
+                          r1'0 = 7;
+                          r2'0 = 7
+                        in (| R.r1 = r1'0, R.r2 = r2'0 |) |
+                      _ \<Rightarrow>
+                        (case v'2 of
+                           v'4 \<Rightarrow>
+                             (case v'4 of
+                                (Right' r') \<Rightarrow>
+                                  (case (r') of
+                                     (v'3) \<Rightarrow>
+                                       (\<lambda> x0 . case x0 of
+                                                         v'5 \<Rightarrow>
+                                                           (| R.r1 = R.r2 v'5 + 2, R.r2 = R.r1 v'5 + 3 |)) r')))) |
+                 v'4 \<Rightarrow>
+                   (case v'4 of
                       (Right' r') \<Rightarrow>
-                        (\<lambda> x0 . case x0 of
-                                          v'1 \<Rightarrow> (| R.r1 = 2, R.r2 = R.r2 v'1 |)) r')) |
-            (Right' r') \<Rightarrow>
-              (\<lambda> x0 . case x0 of
-                                v'1 \<Rightarrow> (| R.r1 = 2, R.r2 = R.r2 v'1 |)) r'))"
+                        (case (r') of
+                           (v'3) \<Rightarrow>
+                             (\<lambda> x0 . case x0 of
+                                               v'5 \<Rightarrow>
+                                                 (| R.r1 = R.r2 v'5 + 2, R.r2 = R.r1 v'5 + 3 |)) r')))))"
 
 fun bf :: "bool \<Rightarrow> bool \<Rightarrow> bool" where
   "bf b1 b2 = (\<not> (b1 \<and> b2))"

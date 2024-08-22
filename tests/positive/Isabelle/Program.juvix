@@ -126,9 +126,10 @@ funR2 (r : R) : R :=
 
 funR3 (er : Either' R R) : R :=
   case er of
-  | Left' (mkR@{r1 := zero; r2}) := mkR@{r1 := r2; r2}
-  | Left' (mkR@{r1 := rr1; r2 := rr2}) := mkR@{r1 := rr2; r2 := rr1}
-  | Right' r := r@R{r1 := 2};
+  | Left' mkR@{r1 := zero; r2} := mkR@{r1 := r2; r2}
+  | Left' mkR@{r1 := rr1; r2 := rr2} := mkR@{r1 := rr2; r2 := rr1}
+  | Right' mkR@{r1; r2 := zero} := mkR@{r1 := 7; r2 := r1}
+  | Right' r@(mkR@{r1; r2}) := r@R{r1 := r2 + 2; r2 := r1 + 3};
 
 -- Standard library
 

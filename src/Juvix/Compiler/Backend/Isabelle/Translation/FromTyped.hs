@@ -833,9 +833,9 @@ goModule onlyTypes infoTable Internal.Module {..} =
                     }
                     : brs'
               Nested pat npats -> do
-                rhs <- withLocalNames nset nmap $ goCaseBranchRhs _caseBranchRhs
                 let vname = defaultName (disambiguate (nset ^. nameSet) "v")
                     nset' = over nameSet (HashSet.insert (vname ^. namePretty)) nset
+                rhs <- withLocalNames nset' nmap $ goCaseBranchRhs _caseBranchRhs
                 remainingBranches <- withLocalNames nset' nmap $ goCaseBranches brs
                 let brs' = goNestedBranches (ExprIden vname) rhs remainingBranches pat (nonEmpty' npats)
                 return
@@ -888,9 +888,9 @@ goModule onlyTypes infoTable Internal.Module {..} =
                 }
                 : brs
           Nested pat npats -> do
-            rhs <- withLocalNames nset nmap $ goExpression _lambdaBody
             let vname = defaultName (disambiguate (nset ^. nameSet) "v")
                 nset' = over nameSet (HashSet.insert (vname ^. namePretty)) nset
+            rhs <- withLocalNames nset' nmap $ goExpression _lambdaBody
             remainingBranches <- withLocalNames nset' nmap $ goLambdaClauses cls
             let brs' = goNestedBranches (ExprIden vname) rhs remainingBranches pat (nonEmpty' npats)
             return
