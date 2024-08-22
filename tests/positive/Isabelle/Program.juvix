@@ -131,6 +131,9 @@ funR3 (er : Either' R R) : R :=
   | Right' mkR@{r1; r2 := zero} := mkR@{r1 := 7; r2 := r1}
   | Right' r@(mkR@{r1; r2}) := r@R{r1 := r2 + 2; r2 := r1 + 3};
 
+funR4 : R -> R
+  | r@mkR@{r1} := r@R{r2 := r1};
+
 -- Standard library
 
 bf (b1 b2 : Bool) : Bool := not (b1 && b2);

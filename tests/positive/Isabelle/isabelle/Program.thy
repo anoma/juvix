@@ -118,19 +118,14 @@ definition v :: nat where
 fun funR :: "R \<Rightarrow> R" where
   "funR r' =
     (case r' of
-       v' \<Rightarrow>
-         (\<lambda> x0 . case x0 of
-                           v'0 \<Rightarrow> (| R.r1 = R.r1 v'0 + R.r2 v'0, R.r2 = R.r2 v'0 |)) r')"
+       v' \<Rightarrow> r' (| R.r1 := R.r1 r' + R.r2 r' |))"
 
 fun funRR :: "R \<Rightarrow> R" where
   "funRR r'0 =
     (case (r'0) of
        (r') \<Rightarrow>
          (case (r') of
-            (v') \<Rightarrow>
-              (\<lambda> x0 . case x0 of
-                                v'0 \<Rightarrow>
-                                  (| R.r1 = R.r1 v'0 + R.r2 v'0, R.r2 = R.r2 v'0 |)) r'))"
+            (v') \<Rightarrow> r' (| R.r1 := R.r1 r' + R.r2 r' |)))"
 
 fun funR' :: "R \<Rightarrow> R" where
   "funR' (| R.r1 = rr1, R.r2 = rr2 |) =
@@ -206,17 +201,13 @@ fun funR3 :: "(R, R) Either' \<Rightarrow> R" where
                                           (Right' r') \<Rightarrow>
                                             (case (r') of
                                                (v'3) \<Rightarrow>
-                                                 (\<lambda> x0 . case x0 of
-                                                                   v'5 \<Rightarrow>
-                                                                     (| R.r1 = R.r2 v'5 + 2, R.r2 = R.r1 v'5 + 3 |)) r')))) |
+                                                 r' (| R.r1 := R.r2 r' + 2, R.r2 := R.r1 r' + 3 |))))) |
                            v'4 \<Rightarrow>
                              (case v'4 of
                                 (Right' r') \<Rightarrow>
                                   (case (r') of
                                      (v'3) \<Rightarrow>
-                                       (\<lambda> x0 . case x0 of
-                                                         v'5 \<Rightarrow>
-                                                           (| R.r1 = R.r2 v'5 + 2, R.r2 = R.r1 v'5 + 3 |)) r'))))) |
+                                       r' (| R.r1 := R.r2 r' + 2, R.r2 := R.r1 r' + 3 |)))))) |
             v'2 \<Rightarrow>
               (case v'2 of
                  (Right' v'1) \<Rightarrow>
@@ -233,17 +224,19 @@ fun funR3 :: "(R, R) Either' \<Rightarrow> R" where
                                 (Right' r') \<Rightarrow>
                                   (case (r') of
                                      (v'3) \<Rightarrow>
-                                       (\<lambda> x0 . case x0 of
-                                                         v'5 \<Rightarrow>
-                                                           (| R.r1 = R.r2 v'5 + 2, R.r2 = R.r1 v'5 + 3 |)) r')))) |
+                                       r' (| R.r1 := R.r2 r' + 2, R.r2 := R.r1 r' + 3 |))))) |
                  v'4 \<Rightarrow>
                    (case v'4 of
                       (Right' r') \<Rightarrow>
                         (case (r') of
-                           (v'3) \<Rightarrow>
-                             (\<lambda> x0 . case x0 of
-                                               v'5 \<Rightarrow>
-                                                 (| R.r1 = R.r2 v'5 + 2, R.r2 = R.r1 v'5 + 3 |)) r')))))"
+                           (v'3) \<Rightarrow> r' (| R.r1 := R.r2 r' + 2, R.r2 := R.r1 r' + 3 |))))))"
+
+fun funR4 :: "R \<Rightarrow> R" where
+  "funR4 r'0 =
+    (case (r'0) of
+       (r') \<Rightarrow>
+         (case (r') of
+            (v') \<Rightarrow> r' (| R.r2 := R.r1 r' |)))"
 
 fun bf :: "bool \<Rightarrow> bool \<Rightarrow> bool" where
   "bf b1 b2 = (\<not> (b1 \<and> b2))"

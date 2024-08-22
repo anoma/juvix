@@ -65,7 +65,7 @@ fromInternal Internal.InternalTypedResult {..} = do
 goModule :: Bool -> Internal.InfoTable -> Internal.Module -> Theory
 goModule onlyTypes infoTable Internal.Module {..} =
   Theory
-    { _theoryName = over nameText toIsabelleName $ over namePretty toIsabelleName _moduleName,
+    { _theoryName = overNameText toIsabelleName _moduleName,
       _theoryImports = map (^. Internal.importModuleName) (_moduleBody ^. Internal.moduleImports),
       _theoryStatements = case _modulePragmas ^. pragmasIsabelleIgnore of
         Just (PragmaIsabelleIgnore True) -> []
@@ -498,6 +498,16 @@ goModule onlyTypes infoTable Internal.Module {..} =
           | Just (name, fields) <- getRecordCreation app = do
               fields' <- mapM (secondM goExpression) fields
               return $ ExprRecord (Record name fields')
+          | Just (indName, names, record, fields) <- getRecordUpdate app = do
+              record' <- goExpression record
+              let names' = map (qualifyRecordProjection indName) names
+              nset <- ask @NameSet
+              nmap <- ask @NameMap
+              let nset' = foldl' (flip (over nameSet . HashSet.insert . (^. namePretty))) nset names'
+                  exprs = map (\n -> ExprApp (Application (ExprIden n) record')) names'
+                  nmap' = foldl' (flip (over nameMap . uncurry HashMap.insert)) nmap (zipExact names exprs)
+              fields' <- mapM (secondM (withLocalNames nset' nmap' . goExpression)) fields
+              return $ ExprRecordUpdate (RecordUpdate record' (Record indName fields'))
           | Just (fn, args) <- getIdentApp app = do
               fn' <- goExpression fn
               args' <- mapM goExpression args
@@ -665,6 +675,33 @@ goModule onlyTypes infoTable Internal.Module {..} =
           _ -> Nothing
           where
             (fn, args) = Internal.unfoldApplication app
+
+        getRecordUpdate :: Internal.Application -> Maybe (Name, [Name], Internal.Expression, [(Name, Internal.Expression)])
+        getRecordUpdate Internal.Application {..} = case _appLeft of
+          Internal.ExpressionLambda Internal.Lambda {..} -> case _lambdaClauses of
+            Internal.LambdaClause {..} :| [] -> case fmap (^. Internal.patternArgPattern) _lambdaPatterns of
+              Internal.PatternConstructorApp Internal.ConstructorApp {..} :| []
+                | all isPatternArgVar _constrAppParameters ->
+                    case _lambdaBody of
+                      Internal.ExpressionApplication app -> case fn of
+                        Internal.ExpressionIden (Internal.IdenConstructor name')
+                          | name' == _constrAppConstructor ->
+                              case HashMap.lookup name' (infoTable ^. Internal.infoConstructors) of
+                                Just ctrInfo
+                                  | ctrInfo ^. Internal.constructorInfoRecord ->
+                                      let names = map (fromJust . getPatternArgName) _constrAppParameters
+                                          fields = goRecordFields (getArgtys ctrInfo) (toList args)
+                                          fields' = zipWithExact (\n (n', e) -> (setNameText (n' ^. namePretty) n, e)) names fields
+                                          fields'' = filter (\(n, e) -> e /= Internal.ExpressionIden (Internal.IdenVar n)) fields'
+                                       in Just (ctrInfo ^. Internal.constructorInfoInductive, map fst fields', _appRight, fields'')
+                                _ -> Nothing
+                        _ -> Nothing
+                        where
+                          (fn, args) = Internal.unfoldApplication app
+                      _ -> Nothing
+              _ -> Nothing
+            _ -> Nothing
+          _ -> Nothing
 
         getIdentApp :: Internal.Application -> Maybe (Internal.Expression, [Internal.Expression])
         getIdentApp app = case mty of
@@ -1000,7 +1037,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
                       binders <- gets (^. nameSet)
                       let adjustName :: Name -> Expression
                           adjustName name =
-                            let name' = overNameText (\n -> indName ^. nameText <> "." <> n) name
+                            let name' = qualifyRecordProjection indName name
                              in ExprApp (Application (ExprIden name') (ExprIden vname))
                           vname = defaultName (disambiguate binders "v")
                           fieldsVars = map (second (fromJust . getPatternArgName)) $ map (first adjustName) $ filter (isPatternArgVar . snd) fields
@@ -1111,6 +1148,10 @@ goModule onlyTypes infoTable Internal.Module {..} =
             { _nameIdUid = 0,
               _nameIdModuleId = defaultModuleId
             }
+
+    qualifyRecordProjection :: Name -> Name -> Name
+    qualifyRecordProjection indName name =
+      setNameText (indName ^. namePretty <> "." <> name ^. namePretty) name
 
     setNameText :: Text -> Name -> Name
     setNameText txt name =
