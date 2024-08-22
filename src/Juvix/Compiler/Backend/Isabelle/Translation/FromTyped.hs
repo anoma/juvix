@@ -208,10 +208,82 @@ goModule onlyTypes infoTable Internal.Module {..} =
                     _clauseBody = goExpression'' nset' nmap' _lambdaBody
                   }
                   : goClauses cls
-              Nested pats npats -> undefined
+              Nested pats npats ->
+                let rhs = goExpression'' nset' nmap' _lambdaBody
+                    vnames = map (overNameText (disambiguate (nset' ^. nameSet))) argnames
+                    nset'' = foldl' (flip (over nameSet . HashSet.insert . (^. namePretty))) nset' vnames
+                    remainingBranches = goLambdaClauses'' nset'' nmap' cls
+                    valTuple = ExprTuple (Tuple (nonEmpty' (map ExprIden vnames)))
+                    brs = goNestedBranches valTuple rhs remainingBranches (PatTuple (Tuple (nonEmpty' pats))) (nonEmpty' npats)
+                 in [ Clause
+                        { _clausePatterns = nonEmpty' $ map PatVar vnames,
+                          _clauseBody =
+                            ExprCase
+                              Case
+                                { _caseValue = valTuple,
+                                  _caseBranches = brs
+                                }
+                        }
+                    ]
             where
               (npats0, nset', nmap') = goPatternArgsTop (filterTypeArgs 0 ty (toList _lambdaPatterns))
           [] -> []
+
+    goNestedBranches :: Expression -> Expression -> [CaseBranch] -> Pattern -> NonEmpty (Expression, Nested Pattern) -> NonEmpty CaseBranch
+    goNestedBranches caseVal rhs remainingBranches pat npats =
+      let val = ExprTuple (Tuple (fmap fst npats))
+          pat' = PatTuple (Tuple (fmap ((^. nestedElem) . snd) npats))
+          npats' = concatMap ((^. nestedPatterns) . snd) npats
+          brs = goNestedBranches' rhs (mkDefaultBranch caseVal remainingBranches) (Nested pat' npats')
+       in CaseBranch
+            { _caseBranchPattern = pat,
+              _caseBranchBody =
+                ExprCase
+                  Case
+                    { _caseValue = val,
+                      _caseBranches = brs
+                    }
+            }
+            :| remainingBranches
+
+    mkDefaultBranch :: Expression -> [CaseBranch] -> Maybe CaseBranch
+    mkDefaultBranch val remainingBranches = case remainingBranches of
+      [] -> Nothing
+      _ ->
+        Just $
+          CaseBranch
+            { _caseBranchPattern = PatVar (defaultName "_"),
+              _caseBranchBody =
+                ExprCase
+                  Case
+                    { _caseValue = val,
+                      _caseBranches = nonEmpty' remainingBranches
+                    }
+            }
+
+    goNestedBranches' :: Expression -> Maybe CaseBranch -> Nested Pattern -> NonEmpty CaseBranch
+    goNestedBranches' rhs defaultBranch = \case
+      Nested pat [] ->
+        CaseBranch
+          { _caseBranchPattern = pat,
+            _caseBranchBody = rhs
+          }
+          :| toList defaultBranch
+      Nested pat npats -> do
+        let val = ExprTuple (Tuple (nonEmpty' (map fst npats)))
+            pat' = PatTuple (Tuple (nonEmpty' (map ((^. nestedElem) . snd) npats)))
+            npats' = concatMap ((^. nestedPatterns) . snd) npats
+            brs = goNestedBranches' rhs defaultBranch (Nested pat' npats')
+         in CaseBranch
+              { _caseBranchPattern = pat,
+                _caseBranchBody =
+                  ExprCase
+                    Case
+                      { _caseValue = val,
+                        _caseBranches = brs
+                      }
+              }
+              :| toList defaultBranch
 
     goFunctionDef :: Internal.FunctionDef -> Statement
     goFunctionDef Internal.FunctionDef {..} = goDef _funDefName _funDefType _funDefArgsInfo (Just _funDefBody)
@@ -710,43 +782,13 @@ goModule onlyTypes infoTable Internal.Module {..} =
                           Tuple
                             { _tupleComponents = nonEmpty' vars'
                             }
-                brs <- goClauses (toList _lambdaClauses)
+                brs <- goLambdaClauses (toList _lambdaClauses)
                 return $
                   ExprCase
                     Case
                       { _caseValue = val,
                         _caseBranches = nonEmpty' brs
                       }
-
-            goClauses :: [Internal.LambdaClause] -> Sem r [CaseBranch]
-            goClauses = \case
-              Internal.LambdaClause {..} : cls -> do
-                (npat, nset, nmap) <- case _lambdaPatterns of
-                  p :| [] -> goPatternArgCase p
-                  _ -> do
-                    (npats, nset, nmap) <- goPatternArgsCase (toList _lambdaPatterns)
-                    let npat =
-                          fmap
-                            ( \pats ->
-                                PatTuple
-                                  Tuple
-                                    { _tupleComponents = nonEmpty' pats
-                                    }
-                            )
-                            npats
-                    return (npat, nset, nmap)
-                case npat of
-                  Nested pat [] -> do
-                    body <- withLocalNames nset nmap $ goExpression _lambdaBody
-                    brs <- goClauses cls
-                    return $
-                      CaseBranch
-                        { _caseBranchPattern = pat,
-                          _caseBranchBody = body
-                        }
-                        : brs
-                  Nested pat npats -> undefined
-              [] -> return []
 
         goCase :: Internal.Case -> Sem r Expression
         goCase Internal.Case {..} = do
@@ -774,56 +816,78 @@ goModule onlyTypes infoTable Internal.Module {..} =
                     }
                     : brs'
               Nested pat npats -> do
-                let name = defaultName (disambiguate (nset ^. nameSet) "v")
                 rhs <- withLocalNames nset nmap $ goCaseBranchRhs _caseBranchRhs
-                brs' <- goCaseBranches brs
-                let defaultBranch =
-                      case nonEmpty brs' of
-                        Just brs'' ->
-                          [ CaseBranch
-                              { _caseBranchPattern = PatVar name,
-                                _caseBranchBody =
-                                  ExprCase
-                                    Case
-                                      { _caseValue = ExprIden name,
-                                        _caseBranches = brs''
-                                      }
+                let vname = defaultName (disambiguate (nset ^. nameSet) "v")
+                    nset' = over nameSet (HashSet.insert (vname ^. namePretty)) nset
+                remainingBranches <- withLocalNames nset' nmap $ goCaseBranches brs
+                let brs' = goNestedBranches (ExprIden vname) rhs remainingBranches pat (nonEmpty' npats)
+                return
+                  [ CaseBranch
+                      { _caseBranchPattern = PatVar vname,
+                        _caseBranchBody =
+                          ExprCase
+                            Case
+                              { _caseValue = ExprIden vname,
+                                _caseBranches = brs'
                               }
-                          ]
-                        Nothing -> []
-                toList <$> goNestedCaseBranches rhs defaultBranch (Nested pat npats)
+                      }
+                  ]
           [] -> return []
-
-        goNestedCaseBranches :: Expression -> [CaseBranch] -> Nested Pattern -> Sem r (NonEmpty CaseBranch)
-        goNestedCaseBranches rhs defaultBranch = \case
-          Nested pat [] ->
-            return $
-              CaseBranch
-                { _caseBranchPattern = pat,
-                  _caseBranchBody = rhs
-                }
-                :| defaultBranch
-          Nested pat npats -> do
-            let val = ExprTuple (Tuple (nonEmpty' (map fst npats)))
-                pat' = PatTuple (Tuple (nonEmpty' (map ((^. nestedElem) . snd) npats)))
-                npats' = concatMap ((^. nestedPatterns) . snd) npats
-            brs <- goNestedCaseBranches rhs defaultBranch (Nested pat' npats')
-            return $
-              CaseBranch
-                { _caseBranchPattern = pat,
-                  _caseBranchBody =
-                    ExprCase
-                      Case
-                        { _caseValue = val,
-                          _caseBranches = brs
-                        }
-                }
-                :| defaultBranch
 
         goCaseBranchRhs :: Internal.CaseBranchRhs -> Sem r Expression
         goCaseBranchRhs = \case
           Internal.CaseBranchRhsExpression e -> goExpression e
           Internal.CaseBranchRhsIf {} -> error "unsupported: side conditions"
+
+    goLambdaClauses'' :: NameSet -> NameMap -> [Internal.LambdaClause] -> [CaseBranch]
+    goLambdaClauses'' nset nmap cls =
+      run $ runReader nset $ runReader nmap $ goLambdaClauses cls
+
+    goLambdaClauses :: forall r. (Members '[Reader NameSet, Reader NameMap] r) => [Internal.LambdaClause] -> Sem r [CaseBranch]
+    goLambdaClauses = \case
+      Internal.LambdaClause {..} : cls -> do
+        (npat, nset, nmap) <- case _lambdaPatterns of
+          p :| [] -> goPatternArgCase p
+          _ -> do
+            (npats, nset, nmap) <- goPatternArgsCase (toList _lambdaPatterns)
+            let npat =
+                  fmap
+                    ( \pats ->
+                        PatTuple
+                          Tuple
+                            { _tupleComponents = nonEmpty' pats
+                            }
+                    )
+                    npats
+            return (npat, nset, nmap)
+        case npat of
+          Nested pat [] -> do
+            body <- withLocalNames nset nmap $ goExpression _lambdaBody
+            brs <- goLambdaClauses cls
+            return $
+              CaseBranch
+                { _caseBranchPattern = pat,
+                  _caseBranchBody = body
+                }
+                : brs
+          Nested pat npats -> do
+            rhs <- withLocalNames nset nmap $ goExpression _lambdaBody
+            let vname = defaultName (disambiguate (nset ^. nameSet) "v")
+                nset' = over nameSet (HashSet.insert (vname ^. namePretty)) nset
+            remainingBranches <- withLocalNames nset' nmap $ goLambdaClauses cls
+            let brs' = goNestedBranches (ExprIden vname) rhs remainingBranches pat (nonEmpty' npats)
+            return
+              [ CaseBranch
+                  { _caseBranchPattern = PatVar vname,
+                    _caseBranchBody =
+                      ExprCase
+                        Case
+                          { _caseValue = ExprIden vname,
+                            _caseBranches = brs'
+                          }
+                  }
+              ]
+      [] -> return []
 
     goPatternArgsTop :: [Internal.PatternArg] -> (Nested [Pattern], NameSet, NameMap)
     goPatternArgsTop pats =

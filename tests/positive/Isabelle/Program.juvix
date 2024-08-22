@@ -106,8 +106,20 @@ funR (r : R) : R :=
   case r of
   | mkR@{r1; r2} := r@R{r1 := r1 + r2};
 
+funRR : R -> R
+  | r@mkR@{r1; r2} := r@R{r1 := r1 + r2};
+
 funR' : R -> R
   | mkR@{r1 := rr1; r2 := rr2} := mkR@{r1 := rr1 + rr2; r2 := rr2};
+
+funR1 : R -> R
+  | mkR@{r1 := zero; r2} := mkR@{r1 := r2; r2}
+  | mkR@{r1 := rr1; r2 := rr2} := mkR@{r1 := rr2; r2 := rr1};
+
+funR2 (r : R) : R :=
+  case r of
+  | mkR@{r1 := zero; r2} := mkR@{r1 := r2; r2}
+  | mkR@{r1 := rr1; r2 := rr2} := mkR@{r1 := rr2; r2 := rr1};
 
 -- Standard library
 
