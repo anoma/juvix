@@ -118,7 +118,7 @@ compileInParallel = do
         CompileArgs
           { _compileArgsNodesIndex = idx,
             _compileArgsNodeName = getNodeName,
-            _compileArgsPreProcess = Just preLoadFromFile,
+            _compileArgsPreProcess = Just preLoadFromJvoFile,
             _compileArgsDependencies = mkDependencies t,
             _compileArgsNumWorkers = numWorkers,
             _compileArgsCompileNode = compileNode

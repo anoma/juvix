@@ -70,6 +70,70 @@ evalModuleInfoCacheSetup ::
   Sem r a
 evalModuleInfoCacheSetup setup = evalJvoCache . evalCacheEmptySetup setup processModuleCacheMiss
 
+processModuleCacheMissPeek ::
+  forall r rrecompile.
+  ( Members
+      '[ ModuleInfoCache,
+         Error JuvixError,
+         Files,
+         JvoCache,
+         PathResolver
+       ]
+      r,
+    Members
+      '[ ModuleInfoCache,
+         Error JuvixError,
+         Files,
+         TaggedLock,
+         TopModuleNameChecker,
+         HighlightBuilder,
+         PathResolver
+       ]
+      rrecompile
+  ) =>
+  EntryIndex ->
+  Sem r (Either (Sem rrecompile (PipelineResult Store.ModuleInfo)) (PipelineResult Store.ModuleInfo))
+processModuleCacheMissPeek entryIx = do
+  let buildDir = resolveAbsBuildDir root (entry ^. entryPointBuildDir)
+      sourcePath = fromJust (entry ^. entryPointModulePath)
+      relPath =
+        fromJust
+          . replaceExtension ".jvo"
+          . fromJust
+          $ stripProperPrefix $(mkAbsDir "/") sourcePath
+      absPath = buildDir Path.</> relPath
+  sha256 <- SHA256.digestFile sourcePath
+  m :: Maybe Store.ModuleInfo <- loadFromJvoFile absPath
+
+  let recompile :: Sem rrecompile (PipelineResult Store.ModuleInfo)
+      recompile = do
+        res <- processModuleToStoredCore sha256 entry
+        Serialize.saveToFile absPath (res ^. pipelineResult)
+        return res
+
+  case m of
+    Just info
+      | info ^. Store.moduleInfoSHA256 == sha256
+          && info ^. Store.moduleInfoOptions == opts
+          && info ^. Store.moduleInfoFieldSize == entry ^. entryPointFieldSize ->
+          do
+            CompileResult {..} <- runReader entry (processImports (info ^. Store.moduleInfoImports))
+            return $
+              if
+                  | _compileResultChanged -> Left recompile
+                  | otherwise ->
+                      Right
+                        PipelineResult
+                          { _pipelineResult = info,
+                            _pipelineResultImports = _compileResultModuleTable,
+                            _pipelineResultChanged = False
+                          }
+    _ -> return (Left recompile)
+  where
+    entry = entryIx ^. entryIxEntry
+    root = entry ^. entryPointRoot
+    opts = StoredModule.fromEntryPoint entry
+
 processModuleCacheMiss ::
   forall r.
   ( Members
@@ -87,44 +151,10 @@ processModuleCacheMiss ::
   EntryIndex ->
   Sem r (PipelineResult Store.ModuleInfo)
 processModuleCacheMiss entryIx = do
-  let buildDir = resolveAbsBuildDir root (entry ^. entryPointBuildDir)
-      sourcePath = fromJust (entry ^. entryPointModulePath)
-      relPath =
-        fromJust
-          . replaceExtension ".jvo"
-          . fromJust
-          $ stripProperPrefix $(mkAbsDir "/") sourcePath
-      absPath = buildDir Path.</> relPath
-  sha256 <- SHA256.digestFile sourcePath
-  m :: Maybe Store.ModuleInfo <- loadFromFile absPath
-  case m of
-    Just info
-      | info ^. Store.moduleInfoSHA256 == sha256
-          && info ^. Store.moduleInfoOptions == opts
-          && info ^. Store.moduleInfoFieldSize == entry ^. entryPointFieldSize -> do
-          CompileResult {..} <- runReader entry (processImports (info ^. Store.moduleInfoImports))
-          if
-              | _compileResultChanged ->
-                  recompile sha256 absPath
-              | otherwise ->
-                  return
-                    PipelineResult
-                      { _pipelineResult = info,
-                        _pipelineResultImports = _compileResultModuleTable,
-                        _pipelineResultChanged = False
-                      }
-    _ ->
-      recompile sha256 absPath
-  where
-    entry = entryIx ^. entryIxEntry
-    root = entry ^. entryPointRoot
-    opts = StoredModule.fromEntryPoint entry
-
-    recompile :: Text -> Path Abs File -> Sem r (PipelineResult Store.ModuleInfo)
-    recompile sha256 absPath = do
-      res <- processModuleToStoredCore sha256 entry
-      Serialize.saveToFile absPath (res ^. pipelineResult)
-      return res
+  p <- processModuleCacheMissPeek entryIx
+  case p of
+    Right r -> return r
+    Left recomp -> recomp
 
 processProject :: (Members '[ModuleInfoCache, Reader EntryPoint, Reader ImportTree] r) => Sem r [(ImportNode, PipelineResult ModuleInfo)]
 processProject = do

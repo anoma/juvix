@@ -11,8 +11,12 @@ evalJvoCache :: (Members '[TaggedLock, Files] r) => Sem (JvoCache ': r) a -> Sem
 evalJvoCache = evalCacheEmpty Serialize.loadFromFile
 
 -- | Used to fill the cache in parallel
-preLoadFromFile :: (Members '[JvoCache] r) => ImportNode -> Sem r ()
-preLoadFromFile = void . fmap force . cacheGetResult @(Path Abs File) @(Maybe Store.ModuleInfo) . (^. importNodeAbsFile)
+preLoadFromJvoFile :: (Members '[JvoCache] r) => ImportNode -> Sem r ()
+preLoadFromJvoFile =
+  void
+    . fmap force
+    . cacheGetResult @(Path Abs File) @(Maybe Store.ModuleInfo)
+    . (^. importNodeAbsFile)
 
-loadFromFile :: (Members '[JvoCache] r) => Path Abs File -> Sem r (Maybe Store.ModuleInfo)
-loadFromFile = cacheGet
+loadFromJvoFile :: (Members '[JvoCache] r) => Path Abs File -> Sem r (Maybe Store.ModuleInfo)
+loadFromJvoFile = cacheGet
