@@ -158,12 +158,33 @@ fun funR2 :: "R \<Rightarrow> R" where
                         let
                           r1'0 = R.r2 v'0;
                           r2'0 = R.r1 v'0
-                        in (| R.r1 = r1'0, R.r2 = r2'0 |))) |
-            v'0 \<Rightarrow>
-              let
-                r1'0 = R.r2 v'0;
-                r2'0 = R.r1 v'0
-              in (| R.r1 = r1'0, R.r2 = r2'0 |)))"
+                        in (| R.r1 = r1'0, R.r2 = r2'0 |)))))"
+
+fun funR3 :: "(R, R) Either' \<Rightarrow> R" where
+  "funR3 er =
+    (case er of
+       v' \<Rightarrow>
+         (case v' of
+            (Left' v) \<Rightarrow>
+              (case (R.r1 v) of
+                 (0) \<Rightarrow>
+                   let
+                     r1'0 = R.r2 v;
+                     r2'0 = R.r2 v
+                   in (| R.r1 = r1'0, R.r2 = r2'0 |) |
+                 _ \<Rightarrow>
+                   (case v' of
+                      (Left' v'0) \<Rightarrow>
+                        let
+                          r1'0 = R.r2 v'0;
+                          r2'0 = R.r1 v'0
+                        in (| R.r1 = r1'0, R.r2 = r2'0 |) |
+                      (Right' r) \<Rightarrow>
+                        (\<lambda> x0 . case x0 of
+                                          v'0 \<Rightarrow> (| R.r1 = 2, R.r2 = R.r2 v'0 |)) r)) |
+            (Right' r) \<Rightarrow>
+              (\<lambda> x0 . case x0 of
+                                v'0 \<Rightarrow> (| R.r1 = 2, R.r2 = R.r2 v'0 |)) r))"
 
 fun bf :: "bool \<Rightarrow> bool \<Rightarrow> bool" where
   "bf b1 b2 = (\<not> (b1 \<and> b2))"

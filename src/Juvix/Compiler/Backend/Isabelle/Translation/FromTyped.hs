@@ -235,6 +235,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
           pat' = PatTuple (Tuple (fmap ((^. nestedElem) . snd) npats))
           npats' = concatMap ((^. nestedPatterns) . snd) npats
           brs = goNestedBranches' rhs (mkDefaultBranch caseVal remainingBranches) (Nested pat' npats')
+          remainingBranches' = filter (not . subsumesPattern pat . (^. caseBranchPattern)) remainingBranches
        in CaseBranch
             { _caseBranchPattern = pat,
               _caseBranchBody =
@@ -244,7 +245,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
                       _caseBranches = brs
                     }
             }
-            :| remainingBranches
+            :| remainingBranches'
 
     mkDefaultBranch :: Expression -> [CaseBranch] -> Maybe CaseBranch
     mkDefaultBranch val remainingBranches = case remainingBranches of
@@ -1094,39 +1095,39 @@ goModule onlyTypes infoTable Internal.Module {..} =
         $ name
 
     disambiguate :: HashSet Text -> Text -> Text
-    disambiguate binders = disambiguate' binders . quote
+    disambiguate binders = disambiguate' . quote
+      where
+        disambiguate' :: Text -> Text
+        disambiguate' name
+          | name == "?" || name == "" || name == "_" =
+              disambiguate' "X"
+          | HashSet.member name binders
+              || HashSet.member name names =
+              disambiguate' (prime name)
+          | otherwise =
+              name
 
-    disambiguate' :: HashSet Text -> Text -> Text
-    disambiguate' binders name
-      | name == "?" || name == "" || name == "_" =
-          disambiguate' binders "X"
-      | HashSet.member name binders
-          || HashSet.member name names =
-          disambiguate' binders (prime name)
-      | otherwise =
-          name
-
-    names :: HashSet Text
-    names =
-      HashSet.fromList $
-        map quote $
-          map (^. Internal.functionInfoName . namePretty) (filter (not . (^. Internal.functionInfoIsLocal)) (HashMap.elems (infoTable ^. Internal.infoFunctions)))
-            ++ map (^. Internal.constructorInfoName . namePretty) (HashMap.elems (infoTable ^. Internal.infoConstructors))
-            ++ map (^. Internal.inductiveInfoName . namePretty) (HashMap.elems (infoTable ^. Internal.infoInductives))
-            ++ map (^. Internal.axiomInfoDef . Internal.axiomName . namePretty) (HashMap.elems (infoTable ^. Internal.infoAxioms))
+        names :: HashSet Text
+        names =
+          HashSet.fromList $
+            map quote $
+              map (^. Internal.functionInfoName . namePretty) (filter (not . (^. Internal.functionInfoIsLocal)) (HashMap.elems (infoTable ^. Internal.infoFunctions)))
+                ++ map (^. Internal.constructorInfoName . namePretty) (HashMap.elems (infoTable ^. Internal.infoConstructors))
+                ++ map (^. Internal.inductiveInfoName . namePretty) (HashMap.elems (infoTable ^. Internal.infoInductives))
+                ++ map (^. Internal.axiomInfoDef . Internal.axiomName . namePretty) (HashMap.elems (infoTable ^. Internal.infoAxioms))
 
     quote :: Text -> Text
     quote = quote' . Text.filter isLatin1 . Text.filter (isLetter .||. isDigit .||. (== '_') .||. (== '\''))
-
-    quote' :: Text -> Text
-    quote' txt
-      | HashSet.member txt reservedNames = quote' (prime txt)
-      | txt == "_" = "v"
-      | otherwise = case Text.uncons txt of
-          Just (c, _) | not (isLetter c) -> quote' ("v_" <> txt)
-          _ -> case Text.unsnoc txt of
-            Just (_, c) | not (isAlphaNum c || c == '\'') -> quote' (txt <> "'")
-            _ -> txt
+      where
+        quote' :: Text -> Text
+        quote' txt
+          | HashSet.member txt reservedNames = quote' (prime txt)
+          | txt == "_" = "v"
+          | otherwise = case Text.uncons txt of
+              Just (c, _) | not (isLetter c) -> quote' ("v_" <> txt)
+              _ -> case Text.unsnoc txt of
+                Just (_, c) | not (isAlphaNum c || c == '\'') -> quote' (txt <> "'")
+                _ -> txt
 
     reservedNames :: HashSet Text
     reservedNames =
