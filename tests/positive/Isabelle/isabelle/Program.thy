@@ -55,10 +55,10 @@ datatype 'A Queue
   = queue "'A list" "'A list"
 
 fun qfst :: "'A Queue \<Rightarrow> 'A list" where
-  "qfst (queue x v) = x"
+  "qfst (queue x v') = x"
 
 fun qsnd :: "'A Queue \<Rightarrow> 'A list" where
-  "qsnd (queue v v') = v'"
+  "qsnd (queue v' v'0) = v'0"
 
 fun pop_front :: "'A Queue \<Rightarrow> 'A Queue" where
   "pop_front q =
@@ -66,7 +66,7 @@ fun pop_front :: "'A Queue \<Rightarrow> 'A Queue" where
        q' = queue (tl (qfst q)) (qsnd q)
      in case qfst q' of
           [] \<Rightarrow> queue (rev (qsnd q')) [] |
-          v \<Rightarrow> q')"
+          v' \<Rightarrow> q')"
 
 fun push_back :: "'A Queue \<Rightarrow> 'A \<Rightarrow> 'A Queue" where
   "push_back q x =
@@ -80,8 +80,8 @@ fun is_empty :: "'A Queue \<Rightarrow> bool" where
        [] \<Rightarrow>
          (case qsnd q of
             [] \<Rightarrow> True |
-            v \<Rightarrow> False) |
-       v \<Rightarrow> False)"
+            v' \<Rightarrow> False) |
+       v' \<Rightarrow> False)"
 
 definition empty :: "'A Queue" where
   "empty = queue [] []"
@@ -109,17 +109,28 @@ fun r1 :: "R \<Rightarrow> nat" where
 fun r2 :: "R \<Rightarrow> nat" where
   "r2 (| R.r1 = r1'0, R.r2 = r2'0 |) = r2'0"
 
+definition r :: R where
+  "r = (| R.r1 = 0, R.r2 = 1 |)"
+
+definition v :: nat where
+  "v = 0"
+
 fun funR :: "R \<Rightarrow> R" where
-  "funR r =
-    (case r of
-       v \<Rightarrow>
+  "funR r' =
+    (case r' of
+       v' \<Rightarrow>
          (\<lambda> x0 . case x0 of
-                           v' \<Rightarrow> (| R.r1 = R.r1 v' + R.r2 v', R.r2 = R.r2 v' |)) r)"
+                           v'0 \<Rightarrow> (| R.r1 = R.r1 v'0 + R.r2 v'0, R.r2 = R.r2 v'0 |)) r')"
 
 fun funRR :: "R \<Rightarrow> R" where
-  "funRR (| R.r1 = r1'0, R.r2 = r2'0 |) =
-    ((\<lambda> x0 . case x0 of
-                       v \<Rightarrow> (| R.r1 = R.r1 v + R.r2 v, R.r2 = R.r2 v |)) r)"
+  "funRR r'0 =
+    (case (r'0) of
+       (r') \<Rightarrow>
+         (case (r') of
+            (v') \<Rightarrow>
+              (\<lambda> x0 . case x0 of
+                                v'0 \<Rightarrow>
+                                  (| R.r1 = R.r1 v'0 + R.r2 v'0, R.r2 = R.r2 v'0 |)) r'))"
 
 fun funR' :: "R \<Rightarrow> R" where
   "funR' (| R.r1 = rr1, R.r2 = rr2 |) =
@@ -141,50 +152,50 @@ fun funR1 :: "R \<Rightarrow> R" where
      in (| R.r1 = r1'0, R.r2 = r2'0 |))"
 
 fun funR2 :: "R \<Rightarrow> R" where
-  "funR2 r =
-    (case r of
-       v' \<Rightarrow>
-         (case v' of
-            v \<Rightarrow>
-              (case (R.r1 v) of
+  "funR2 r' =
+    (case r' of
+       v'0 \<Rightarrow>
+         (case v'0 of
+            v' \<Rightarrow>
+              (case (R.r1 v') of
                  (0) \<Rightarrow>
                    let
-                     r1'0 = R.r2 v;
-                     r2'0 = R.r2 v
+                     r1'0 = R.r2 v';
+                     r2'0 = R.r2 v'
                    in (| R.r1 = r1'0, R.r2 = r2'0 |) |
                  _ \<Rightarrow>
-                   (case v' of
-                      v'0 \<Rightarrow>
+                   (case v'0 of
+                      v'1 \<Rightarrow>
                         let
-                          r1'0 = R.r2 v'0;
-                          r2'0 = R.r1 v'0
+                          r1'0 = R.r2 v'1;
+                          r2'0 = R.r1 v'1
                         in (| R.r1 = r1'0, R.r2 = r2'0 |)))))"
 
 fun funR3 :: "(R, R) Either' \<Rightarrow> R" where
   "funR3 er =
     (case er of
-       v' \<Rightarrow>
-         (case v' of
-            (Left' v) \<Rightarrow>
-              (case (R.r1 v) of
+       v'0 \<Rightarrow>
+         (case v'0 of
+            (Left' v') \<Rightarrow>
+              (case (R.r1 v') of
                  (0) \<Rightarrow>
                    let
-                     r1'0 = R.r2 v;
-                     r2'0 = R.r2 v
+                     r1'0 = R.r2 v';
+                     r2'0 = R.r2 v'
                    in (| R.r1 = r1'0, R.r2 = r2'0 |) |
                  _ \<Rightarrow>
-                   (case v' of
-                      (Left' v'0) \<Rightarrow>
+                   (case v'0 of
+                      (Left' v'1) \<Rightarrow>
                         let
-                          r1'0 = R.r2 v'0;
-                          r2'0 = R.r1 v'0
+                          r1'0 = R.r2 v'1;
+                          r2'0 = R.r1 v'1
                         in (| R.r1 = r1'0, R.r2 = r2'0 |) |
-                      (Right' r) \<Rightarrow>
+                      (Right' r') \<Rightarrow>
                         (\<lambda> x0 . case x0 of
-                                          v'0 \<Rightarrow> (| R.r1 = 2, R.r2 = R.r2 v'0 |)) r)) |
-            (Right' r) \<Rightarrow>
+                                          v'1 \<Rightarrow> (| R.r1 = 2, R.r2 = R.r2 v'1 |)) r')) |
+            (Right' r') \<Rightarrow>
               (\<lambda> x0 . case x0 of
-                                v'0 \<Rightarrow> (| R.r1 = 2, R.r2 = R.r2 v'0 |)) r))"
+                                v'1 \<Rightarrow> (| R.r1 = 2, R.r2 = R.r2 v'1 |)) r'))"
 
 fun bf :: "bool \<Rightarrow> bool \<Rightarrow> bool" where
   "bf b1 b2 = (\<not> (b1 \<and> b2))"

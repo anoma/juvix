@@ -102,6 +102,9 @@ type R := mkR {
   r2 : Nat;
 };
 
+r : R := mkR 0 1;
+v : Nat := 0;
+
 funR (r : R) : R :=
   case r of
   | mkR@{r1; r2} := r@R{r1 := r1 + r2};

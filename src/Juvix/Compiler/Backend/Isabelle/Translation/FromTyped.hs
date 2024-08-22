@@ -2,6 +2,7 @@ module Juvix.Compiler.Backend.Isabelle.Translation.FromTyped where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
+import Data.List.NonEmpty.Extra qualified as NonEmpty
 import Data.Text qualified as T
 import Data.Text qualified as Text
 import Juvix.Compiler.Backend.Isabelle.Data.Result
@@ -193,7 +194,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
         oneClause expr =
           nonEmpty'
             [ Clause
-                { _clausePatterns = nonEmpty' $ map PatVar argnames,
+                { _clausePatterns = nonEmpty' (map PatVar argnames),
                   _clauseBody = expr
                 }
             ]
@@ -210,13 +211,28 @@ goModule onlyTypes infoTable Internal.Module {..} =
                   : goClauses cls
               Nested pats npats ->
                 let rhs = goExpression'' nset' nmap' _lambdaBody
-                    vnames = map (overNameText (disambiguate (nset' ^. nameSet))) argnames
+                    argnames' = fmap getPatternArgName _lambdaPatterns
+                    vnames =
+                      fmap
+                        ( \(idx :: Int, mname) ->
+                            maybe
+                              ( defaultName
+                                  ( disambiguate
+                                      (nset' ^. nameSet)
+                                      ("v_" <> show idx)
+                                  )
+                              )
+                              (overNameText (disambiguate (nset' ^. nameSet)))
+                              mname
+                        )
+                        (NonEmpty.zip (nonEmpty' [0 ..]) argnames')
                     nset'' = foldl' (flip (over nameSet . HashSet.insert . (^. namePretty))) nset' vnames
                     remainingBranches = goLambdaClauses'' nset'' nmap' cls
-                    valTuple = ExprTuple (Tuple (nonEmpty' (map ExprIden vnames)))
-                    brs = goNestedBranches valTuple rhs remainingBranches (PatTuple (Tuple (nonEmpty' pats))) (nonEmpty' npats)
+                    valTuple = ExprTuple (Tuple (fmap ExprIden vnames))
+                    patTuple = PatTuple (Tuple (nonEmpty' pats))
+                    brs = goNestedBranches valTuple rhs remainingBranches patTuple (nonEmpty' npats)
                  in [ Clause
-                        { _clausePatterns = nonEmpty' $ map PatVar vnames,
+                        { _clausePatterns = fmap PatVar vnames,
                           _clauseBody =
                             ExprCase
                               Case
@@ -890,6 +906,18 @@ goModule onlyTypes infoTable Internal.Module {..} =
               ]
       [] -> return []
 
+    isPatternArgVar :: Internal.PatternArg -> Bool
+    isPatternArgVar Internal.PatternArg {..} =
+      case _patternArgPattern of
+        Internal.PatternVariable {} -> True
+        _ -> False
+
+    getPatternArgName :: Internal.PatternArg -> Maybe Name
+    getPatternArgName Internal.PatternArg {..} =
+      case _patternArgPattern of
+        Internal.PatternVariable name -> Just name
+        _ -> _patternArgName
+
     goPatternArgsTop :: [Internal.PatternArg] -> (Nested [Pattern], NameSet, NameMap)
     goPatternArgsTop pats =
       (Nested pats' npats, nset, nmap)
@@ -914,18 +942,33 @@ goModule onlyTypes infoTable Internal.Module {..} =
     goPatternArgs isTop = mapM (goPatternArg isTop)
 
     goPatternArg :: forall r. (Members '[State NameSet, State NameMap, Output (Expression, Nested Pattern)] r) => Bool -> Internal.PatternArg -> Sem r Pattern
-    goPatternArg isTop Internal.PatternArg {..} =
-      -- TODO: named patterns
-      goPattern isTop _patternArgPattern
+    goPatternArg isTop Internal.PatternArg {..}
+      | Just name <- _patternArgName = do
+          binders <- gets (^. nameSet)
+          let name' = overNameText (disambiguate binders) name
+          modify' (over nameSet (HashSet.insert (name' ^. namePretty)))
+          modify' (over nameMap (HashMap.insert name (ExprIden name')))
+          npat <- goNestedPattern _patternArgPattern
+          output (ExprIden name', npat)
+          return $ PatVar name'
+      | otherwise =
+          goPattern isTop _patternArgPattern
 
-    goNestedPatternArg :: forall r. (Members '[State NameSet, State NameMap, Output (Expression, Nested Pattern)] r) => Bool -> Internal.PatternArg -> Sem r (Nested Pattern)
-    goNestedPatternArg isTop Internal.PatternArg {..} =
-      -- TODO: named patterns
-      goNestedPattern isTop _patternArgPattern
+    goNestedPatternArg :: forall r. (Members '[State NameSet, State NameMap] r) => Internal.PatternArg -> Sem r (Nested Pattern)
+    goNestedPatternArg Internal.PatternArg {..}
+      | Just name <- _patternArgName = do
+          binders <- gets (^. nameSet)
+          let name' = overNameText (disambiguate binders) name
+          modify' (over nameSet (HashSet.insert (name' ^. namePretty)))
+          modify' (over nameMap (HashMap.insert name (ExprIden name')))
+          npat <- goNestedPattern _patternArgPattern
+          return $ Nested (PatVar name') [(ExprIden name', npat)]
+      | otherwise =
+          goNestedPattern _patternArgPattern
 
-    goNestedPattern :: forall r. (Members '[State NameSet, State NameMap, Output (Expression, Nested Pattern)] r) => Bool -> Internal.Pattern -> Sem r (Nested Pattern)
-    goNestedPattern isTop pat = do
-      (npats, pat') <- runOutputList $ goPattern isTop pat
+    goNestedPattern :: forall r. (Members '[State NameSet, State NameMap] r) => Internal.Pattern -> Sem r (Nested Pattern)
+    goNestedPattern pat = do
+      (npats, pat') <- runOutputList $ goPattern False pat
       return $ Nested pat' npats
 
     goPattern :: forall r. (Members '[State NameSet, State NameMap, Output (Expression, Nested Pattern)] r) => Bool -> Internal.Pattern -> Sem r Pattern
@@ -960,13 +1003,13 @@ goModule onlyTypes infoTable Internal.Module {..} =
                             let name' = overNameText (\n -> indName ^. nameText <> "." <> n) name
                              in ExprApp (Application (ExprIden name') (ExprIden vname))
                           vname = defaultName (disambiguate binders "v")
-                          fieldsVars = map (second getPatternArgVar) $ map (first adjustName) $ filter (isPatternArgVar . snd) fields
+                          fieldsVars = map (second (fromJust . getPatternArgName)) $ map (first adjustName) $ filter (isPatternArgVar . snd) fields
                           fieldsNonVars = map (first adjustName) $ filter (not . isPatternArgVar . snd) fields
                       modify' (over nameSet (HashSet.insert (vname ^. namePretty)))
                       forM fieldsVars $ \(e, fname) -> do
                         modify' (over nameSet (HashSet.insert (fname ^. namePretty)))
                         modify' (over nameMap (HashMap.insert fname e))
-                      fieldsNonVars' <- mapM (secondM (goNestedPatternArg False)) fieldsNonVars
+                      fieldsNonVars' <- mapM (secondM goNestedPatternArg) fieldsNonVars
                       forM fieldsNonVars' output
                       return (PatVar vname)
           | Just (x, y) <- getPairPat _constrAppConstructor _constrAppParameters = do
@@ -987,19 +1030,6 @@ goModule onlyTypes infoTable Internal.Module {..} =
                     { _constrAppConstructor = goConstrName _constrAppConstructor,
                       _constrAppArgs = args
                     }
-
-        isPatternArgVar :: Internal.PatternArg -> Bool
-        isPatternArgVar Internal.PatternArg {..} =
-          isNothing _patternArgName
-            && case _patternArgPattern of
-              Internal.PatternVariable {} -> True
-              _ -> False
-
-        getPatternArgVar :: Internal.PatternArg -> Name
-        getPatternArgVar Internal.PatternArg {..} =
-          case _patternArgPattern of
-            Internal.PatternVariable name -> name
-            _ -> impossible
 
         -- This function cannot be simply merged with `getList` because in patterns
         -- the constructors don't get the type arguments.
