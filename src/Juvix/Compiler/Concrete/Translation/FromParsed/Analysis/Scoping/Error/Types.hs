@@ -16,6 +16,7 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Pre
 import Juvix.Compiler.Concrete.Translation.ImportScanner.Base
 import Juvix.Compiler.Store.Scoped.Language (FixitySymbolEntry, ModuleSymbolEntry, PreSymbolEntry)
 import Juvix.Data.CodeAnn
+import Juvix.Data.PPOutput
 import Juvix.Prelude
 
 data MultipleDeclarations = MultipleDeclarations
@@ -44,6 +45,26 @@ instance ToGenericError MultipleDeclarations where
             <> "Declared at:"
             <> line
             <> itemize (map pretty [i1, i2])
+
+newtype DoLastStatement = DoLastStatement
+  { _doLastStatement :: DoStatement 'Scoped
+  }
+
+instance ToGenericError DoLastStatement where
+  genericError DoLastStatement {..} = generr
+    where
+      generr =
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = prettyError msg,
+              _genericErrorIntervals = [i]
+            }
+        where
+          i = getLoc _doLastStatement
+          msg :: Doc Ann
+          msg =
+            "The last statement of a do block must be an expression"
 
 -- | megaparsec error while resolving infixities.
 newtype InfixError = InfixError
@@ -597,6 +618,33 @@ instance ToGenericError AliasBinderPattern where
             "As-Patterns cannot be used to alias pattern variables:"
               <+> code (ppCode opts' pat)
 
+newtype DoBindImplicitPattern = DoBindImplicitPattern
+  { _doBindImplicitPattern :: PatternArg
+  }
+  deriving stock (Show)
+
+makeLenses ''DoBindImplicitPattern
+
+instance ToGenericError DoBindImplicitPattern where
+  genericError e = ask >>= generr
+    where
+      generr opts =
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = prettyError msg,
+              _genericErrorIntervals = [i]
+            }
+        where
+          opts' = fromGenericOptions opts
+          pat :: PatternArg
+          pat = e ^. doBindImplicitPattern
+          i = getLoc pat
+          msg =
+            "Illegal pattern "
+              <> ppCode opts' pat
+              <> "\nImplicit patterns are not allowed on the left hand side of a bind arrow inside a do block"
+
 newtype ImplicitPatternLeftApplication = ImplicitPatternLeftApplication
   { _implicitPatternLeftApplication :: PatternApp
   }
@@ -1054,3 +1102,59 @@ instance ToGenericError DefaultArgCycle where
     where
       i :: Interval
       i = getLoc (head _defaultArgCycle)
+
+data BuiltinAlreadyDefined = BuiltinAlreadyDefined
+  { _builtinAlreadyDefined :: BuiltinPrim,
+    _builtinAlreadyDefinedLoc :: Interval
+  }
+
+makeLenses ''BuiltinAlreadyDefined
+
+instance ToGenericError BuiltinAlreadyDefined where
+  genericError e =
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = ppOutput msg,
+          _genericErrorIntervals = [i]
+        }
+    where
+      i = e ^. builtinAlreadyDefinedLoc
+      msg = "The builtin" <+> code (pretty (e ^. builtinAlreadyDefined)) <+> "has already been defined"
+
+data BuiltinNotDefined = BuiltinNotDefined
+  { _notDefinedBuiltin :: BuiltinPrim,
+    _notDefinedLoc :: Interval
+  }
+
+makeLenses ''BuiltinNotDefined
+
+instance ToGenericError BuiltinNotDefined where
+  genericError e =
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = ppOutput msg,
+          _genericErrorIntervals = [i]
+        }
+    where
+      i = e ^. notDefinedLoc
+      msg = "The builtin" <+> code (pretty (e ^. notDefinedBuiltin)) <+> "has not been defined"
+
+-- | Generic error message related to builtins
+data BuiltinErrorMessage = BuiltinErrorMessage
+  { _builtinErrorMessage :: AnsiText,
+    _builtinErrorMessageLoc :: Interval
+  }
+
+instance ToGenericError BuiltinErrorMessage where
+  genericError BuiltinErrorMessage {..} =
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = _builtinErrorMessage,
+          _genericErrorIntervals = [i]
+        }
+    where
+      i :: Interval
+      i = _builtinErrorMessageLoc

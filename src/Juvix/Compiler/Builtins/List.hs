@@ -1,37 +1,35 @@
 module Juvix.Compiler.Builtins.List where
 
-import Juvix.Compiler.Builtins.Effect
+import Juvix.Compiler.Internal.Builtins
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty
 import Juvix.Prelude
 
-registerListDef :: (Member Builtins r) => InductiveDef -> Sem r ()
-registerListDef d = do
-  unless (isSmallUniverse' (d ^. inductiveType)) (error "Lists should be in the small universe")
-  registerBuiltin BuiltinList (d ^. inductiveName)
+checkListDef :: forall r. (Members '[Reader BuiltinsTable, Error ScoperError] r) => InductiveDef -> Sem r ()
+checkListDef d = do
+  let err :: forall a. Text -> Sem r a
+      err = builtinsErrorText (getLoc d)
+  unless (isSmallUniverse' (d ^. inductiveType)) (err "Lists should be in the small universe")
+  param :: VarName <- case d ^. inductiveParameters of
+    [v] -> return (v ^. inductiveParamName)
+    _ -> err "List should have exactly one type parameter"
+
   case d ^. inductiveConstructors of
-    [c1, c2] -> registerNil param c1 >> registerCons param c2
-    _ -> error "List should have exactly two constructors"
-  where
-    param :: VarName
-    param = case d ^. inductiveParameters of
-      [v] -> v ^. inductiveParamName
-      _ -> error "List should have exactly one type parameter"
+    [c1, c2] -> checkNil param c1 >> checkCons param c2
+    _ -> err "List should have exactly two constructors"
 
-registerNil :: (Member Builtins r) => VarName -> ConstructorDef -> Sem r ()
-registerNil a d@ConstructorDef {..} = do
-  let nil = _inductiveConstructorName
-      ty = _inductiveConstructorType
-  list_ <- getBuiltinName (getLoc d) BuiltinList
+checkNil :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => VarName -> ConstructorDef -> Sem r ()
+checkNil a d@ConstructorDef {..} = do
+  let ty = _inductiveConstructorType
+  list_ <- getBuiltinNameScoper (getLoc d) BuiltinList
   let nilty = list_ @@ a
-  unless (ty === nilty) (error $ "nil has the wrong type " <> ppTrace ty <> " | " <> ppTrace nilty)
-  registerBuiltin BuiltinListNil nil
+  unless (ty === nilty) $
+    builtinsErrorMsg (getLoc d) ("nil has the wrong type " <> ppOutDefault ty <> " | " <> ppOutDefault nilty)
 
-registerCons :: (Member Builtins r) => VarName -> ConstructorDef -> Sem r ()
-registerCons a d@ConstructorDef {..} = do
-  let cons_ = _inductiveConstructorName
-      ty = _inductiveConstructorType
-  list_ <- getBuiltinName (getLoc d) BuiltinList
+checkCons :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => VarName -> ConstructorDef -> Sem r ()
+checkCons a d@ConstructorDef {..} = do
+  let ty = _inductiveConstructorType
+  list_ <- getBuiltinNameScoper (getLoc d) BuiltinList
   let consty = a --> list_ @@ a --> list_ @@ a
-  unless (ty === consty) (error "cons has the wrong type")
-  registerBuiltin BuiltinListCons cons_
+  unless (ty === consty) $
+    builtinsErrorText (getLoc d) "cons has the wrong type"

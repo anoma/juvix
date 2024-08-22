@@ -13,6 +13,7 @@ import Juvix.Compiler.Core.Transformation.DisambiguateNames (disambiguateNames)
 import Juvix.Compiler.Internal qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error
+import Juvix.Compiler.Internal.Translation.Repl qualified as Repl
 import Juvix.Compiler.Pipeline.Artifacts
 import Juvix.Compiler.Pipeline.Artifacts.PathResolver
 import Juvix.Compiler.Pipeline.Driver
@@ -39,8 +40,7 @@ upToInternalExpression p = do
   scopeTable <- gets (^. artifactScopeTable)
   mtab <- gets (^. artifactModuleTable)
   pkg <- asks (^. entryPointPackage)
-  runBuiltinsArtifacts
-    . runScoperScopeArtifacts
+  runScoperScopeArtifacts
     . runStateArtifacts artifactScoperState
     . runReader pkg
     $ runNameIdGenArtifacts (Scoper.scopeCheckExpression (Store.getScopedModuleTable mtab) scopeTable p)
@@ -54,9 +54,8 @@ expressionUpToAtomsParsed ::
   Text ->
   Sem r (ExpressionAtoms 'Parsed)
 expressionUpToAtomsParsed fp txt =
-  runNameIdGenArtifacts
-    . runBuiltinsArtifacts
-    $ Parser.expressionFromTextSource fp txt
+  runNameIdGenArtifacts $
+    Parser.expressionFromTextSource fp txt
 
 expressionUpToAtomsScoped ::
   (Members '[Reader EntryPoint, State Artifacts, Error JuvixError] r) =>
@@ -67,8 +66,7 @@ expressionUpToAtomsScoped fp txt = do
   scopeTable <- gets (^. artifactScopeTable)
   mtab <- gets (^. artifactModuleTable)
   pkg <- asks (^. entryPointPackage)
-  runBuiltinsArtifacts
-    . runScoperScopeArtifacts
+  runScoperScopeArtifacts
     . runStateArtifacts artifactScoperState
     . runNameIdGenArtifacts
     . runReader pkg
@@ -84,7 +82,6 @@ scopeCheckExpression p = do
   mtab <- gets (^. artifactModuleTable)
   pkg <- asks (^. entryPointPackage)
   runNameIdGenArtifacts
-    . runBuiltinsArtifacts
     . runScoperScopeArtifacts
     . runStateArtifacts artifactScoperState
     . runReader pkg
@@ -110,7 +107,7 @@ expressionUpToTyped fp txt = do
   p <- expressionUpToAtomsParsed fp txt
   runTerminationArtifacts
     ( upToInternalExpression p
-        >>= Internal.typeCheckExpressionType
+        >>= Repl.typeCheckExpressionType
     )
 
 compileExpression ::
@@ -120,7 +117,7 @@ compileExpression ::
 compileExpression p =
   runTerminationArtifacts
     ( upToInternalExpression p
-        >>= Internal.typeCheckExpression
+        >>= Repl.typeCheckExpression
     )
     >>= fromInternalExpression
 
@@ -137,7 +134,6 @@ registerImport i = do
   pkg <- asks (^. entryPointPackage)
   void
     . runNameIdGenArtifacts
-    . runBuiltinsArtifacts
     . runScoperScopeArtifacts
     . runStateArtifacts artifactScoperState
     . runReader pkg
@@ -172,6 +168,7 @@ compileReplInputIO fp txt = do
     . runLoggerIO defaultLoggerOptions
     . runReader defaultNumThreads
     . evalInternet hasInternet
+    . ignoreHighlightBuilder
     . runTaggedLockPermissive
     . runLogIO
     . runFilesIO

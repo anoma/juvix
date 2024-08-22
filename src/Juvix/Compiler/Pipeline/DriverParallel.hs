@@ -9,6 +9,7 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import Effectful.Concurrent
+import Juvix.Compiler.Concrete.Data.Highlight.Builder (HighlightBuilder)
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromSource.TopModuleNameChecker
 import Juvix.Compiler.Concrete.Translation.ImportScanner (ImportScanStrategy)
@@ -151,6 +152,7 @@ evalModuleInfoCache ::
   forall r a.
   ( Members
       '[ Reader EntryPoint,
+         HighlightBuilder,
          IOE,
          ProgressLog,
          Reader ImportTree,

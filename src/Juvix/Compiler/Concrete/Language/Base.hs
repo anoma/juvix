@@ -1465,6 +1465,7 @@ data Expression
   | ExpressionIf (If 'Scoped)
   | ExpressionLambda (Lambda 'Scoped)
   | ExpressionLet (Let 'Scoped)
+  | ExpressionDo (Do 'Scoped)
   | ExpressionUniverse Universe
   | ExpressionLiteral LiteralLoc
   | ExpressionFunction (Function 'Scoped)
@@ -1705,6 +1706,33 @@ deriving stock instance Eq (LetStatement 'Scoped)
 deriving stock instance Ord (LetStatement 'Parsed)
 
 deriving stock instance Ord (LetStatement 'Scoped)
+
+data DoLet (s :: Stage) = DoLet
+  { _doLetKw :: Irrelevant KeywordRef,
+    _doLetStatements :: NonEmpty (LetStatement s),
+    _doLetInKw :: Irrelevant KeywordRef
+  }
+  deriving stock (Generic)
+
+instance Serialize (DoLet 'Scoped)
+
+instance NFData (DoLet 'Scoped)
+
+instance Serialize (DoLet 'Parsed)
+
+instance NFData (DoLet 'Parsed)
+
+deriving stock instance Show (DoLet 'Parsed)
+
+deriving stock instance Show (DoLet 'Scoped)
+
+deriving stock instance Eq (DoLet 'Parsed)
+
+deriving stock instance Eq (DoLet 'Scoped)
+
+deriving stock instance Ord (DoLet 'Parsed)
+
+deriving stock instance Ord (DoLet 'Scoped)
 
 data Let (s :: Stage) = Let
   { _letKw :: KeywordRef,
@@ -2454,6 +2482,86 @@ deriving stock instance Ord (RecordStatement 'Parsed)
 
 deriving stock instance Ord (RecordStatement 'Scoped)
 
+data Do (s :: Stage) = Do
+  { _doKeyword :: Irrelevant KeywordRef,
+    _doDelims :: Irrelevant (KeywordRef, KeywordRef),
+    _doStatements :: NonEmpty (DoStatement s)
+  }
+  deriving stock (Generic)
+
+instance Serialize (Do 'Parsed)
+
+instance Serialize (Do 'Scoped)
+
+instance NFData (Do 'Scoped)
+
+instance NFData (Do 'Parsed)
+
+deriving stock instance Show (Do 'Parsed)
+
+deriving stock instance Show (Do 'Scoped)
+
+deriving stock instance Eq (Do 'Parsed)
+
+deriving stock instance Eq (Do 'Scoped)
+
+deriving stock instance Ord (Do 'Parsed)
+
+deriving stock instance Ord (Do 'Scoped)
+
+data DoBind (s :: Stage) = DoBind
+  { _doBindPattern :: PatternParensType s,
+    _doBindArrowKw :: Irrelevant KeywordRef,
+    _doBindExpression :: ExpressionType s
+  }
+  deriving stock (Generic)
+
+instance Serialize (DoBind 'Scoped)
+
+instance Serialize (DoBind 'Parsed)
+
+instance NFData (DoBind 'Scoped)
+
+instance NFData (DoBind 'Parsed)
+
+deriving stock instance Show (DoBind 'Parsed)
+
+deriving stock instance Show (DoBind 'Scoped)
+
+deriving stock instance Eq (DoBind 'Parsed)
+
+deriving stock instance Eq (DoBind 'Scoped)
+
+deriving stock instance Ord (DoBind 'Parsed)
+
+deriving stock instance Ord (DoBind 'Scoped)
+
+data DoStatement (s :: Stage)
+  = DoStatementBind (DoBind s)
+  | DoStatementLet (DoLet s)
+  | DoStatementExpression (ExpressionType s)
+  deriving stock (Generic)
+
+instance Serialize (DoStatement 'Scoped)
+
+instance Serialize (DoStatement 'Parsed)
+
+instance NFData (DoStatement 'Scoped)
+
+instance NFData (DoStatement 'Parsed)
+
+deriving stock instance Show (DoStatement 'Parsed)
+
+deriving stock instance Show (DoStatement 'Scoped)
+
+deriving stock instance Eq (DoStatement 'Parsed)
+
+deriving stock instance Eq (DoStatement 'Scoped)
+
+deriving stock instance Ord (DoStatement 'Parsed)
+
+deriving stock instance Ord (DoStatement 'Scoped)
+
 -- | Expressions without application
 data ExpressionAtom (s :: Stage)
   = AtomIdentifier (IdentifierType s)
@@ -2465,6 +2573,7 @@ data ExpressionAtom (s :: Stage)
   | AtomInstanceHole (HoleType s)
   | AtomDoubleBraces (DoubleBracesExpression s)
   | AtomBraces (WithLoc (ExpressionType s))
+  | AtomDo (Do s)
   | AtomLet (Let s)
   | AtomRecordUpdate (RecordUpdate s)
   | AtomUniverse Universe
@@ -2797,6 +2906,28 @@ fixityPrecAbove = fixityFieldHelper fixityFieldsPrecAbove
 fixityPrecBelow :: SimpleGetter (ParsedFixityInfo s) (Maybe [SymbolType s])
 fixityPrecBelow = fixityFieldHelper fixityFieldsPrecBelow
 
+instance (SingI s) => HasLoc (LetStatement s) where
+  getLoc = \case
+    LetOpen o -> getLoc o
+    LetAliasDef d -> getLoc d
+    LetFunctionDef d -> getLoc d
+
+instance (SingI s) => HasLoc (DoBind s) where
+  getLoc DoBind {..} =
+    getLocPatternParensType _doBindPattern
+      <> getLocExpressionType _doBindExpression
+
+instance (SingI s) => HasLoc (DoLet s) where
+  getLoc DoLet {..} =
+    getLoc _doLetKw
+      <> getLoc (last _doLetStatements)
+
+instance (SingI s) => HasLoc (DoStatement s) where
+  getLoc = \case
+    DoStatementExpression e -> getLocExpressionType e
+    DoStatementBind b -> getLoc b
+    DoStatementLet b -> getLoc b
+
 instance (SingI s) => HasLoc (AliasDef s) where
   getLoc AliasDef {..} = getLoc _aliasDefSyntaxKw <> getLocIdentifierType _aliasDefAsName
 
@@ -2837,10 +2968,14 @@ instance HasAtomicity (NamedApplication s) where
 instance HasAtomicity (NamedApplicationNew s) where
   atomicity = const (Aggregate updateFixity)
 
+instance HasAtomicity (Do s) where
+  atomicity = const Atom
+
 instance HasAtomicity Expression where
   atomicity e = case e of
     ExpressionIdentifier {} -> Atom
     ExpressionHole {} -> Atom
+    ExpressionDo d -> atomicity d
     ExpressionInstanceHole {} -> Atom
     ExpressionParensIdentifier {} -> Atom
     ExpressionApplication {} -> Aggregate appFixity
@@ -3034,6 +3169,10 @@ instance HasLoc (DoubleBracesExpression s) where
 instance HasAtomicity (DoubleBracesExpression s) where
   atomicity = const Atom
 
+instance HasLoc (Do s) where
+  getLoc Do {..} =
+    getLoc _doKeyword <> getLoc (_doDelims ^. unIrrelevant . _2)
+
 instance HasLoc Expression where
   getLoc = \case
     ExpressionIdentifier i -> getLoc i
@@ -3046,6 +3185,7 @@ instance HasLoc Expression where
     ExpressionCase i -> getLoc i
     ExpressionIf x -> getLoc x
     ExpressionLet i -> getLoc i
+    ExpressionDo i -> getLoc i
     ExpressionUniverse i -> getLoc i
     ExpressionLiteral i -> getLoc i
     ExpressionFunction i -> getLoc i

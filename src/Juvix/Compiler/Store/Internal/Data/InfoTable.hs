@@ -64,8 +64,7 @@ data InfoTable = InfoTable
   { _infoConstructors :: HashMap Name ConstructorInfo,
     _infoAxioms :: HashMap Name AxiomInfo,
     _infoFunctions :: HashMap Name FunctionInfo,
-    _infoInductives :: HashMap Name InductiveInfo,
-    _infoBuiltins :: HashMap BuiltinPrim Name
+    _infoInductives :: HashMap Name InductiveInfo
   }
   deriving stock (Generic)
 
@@ -85,8 +84,7 @@ instance Semigroup InfoTable where
       { _infoConstructors = a ^. infoConstructors <> b ^. infoConstructors,
         _infoAxioms = a ^. infoAxioms <> b ^. infoAxioms,
         _infoFunctions = a ^. infoFunctions <> b ^. infoFunctions,
-        _infoInductives = a ^. infoInductives <> b ^. infoInductives,
-        _infoBuiltins = a ^. infoBuiltins <> b ^. infoBuiltins
+        _infoInductives = a ^. infoInductives <> b ^. infoInductives
       }
 
 instance Monoid InfoTable where
@@ -95,6 +93,5 @@ instance Monoid InfoTable where
       { _infoConstructors = mempty,
         _infoAxioms = mempty,
         _infoFunctions = mempty,
-        _infoInductives = mempty,
-        _infoBuiltins = mempty
+        _infoInductives = mempty
       }

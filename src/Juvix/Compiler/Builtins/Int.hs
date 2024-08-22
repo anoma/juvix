@@ -1,37 +1,37 @@
 module Juvix.Compiler.Builtins.Int where
 
-import Juvix.Compiler.Builtins.Effect
+import Juvix.Compiler.Internal.Builtins
 import Juvix.Compiler.Internal.Extra
 import Juvix.Prelude
 
-registerIntDef :: (Member Builtins r) => InductiveDef -> Sem r ()
-registerIntDef d = do
-  unless (null (d ^. inductiveParameters)) (error "Int should have no type parameters")
-  unless (isSmallUniverse' (d ^. inductiveType)) (error "Int should be in the small universe")
-  registerBuiltin BuiltinInt (d ^. inductiveName)
+checkIntDef :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => InductiveDef -> Sem r ()
+checkIntDef d = do
+  let err msg = builtinsErrorText (getLoc d) msg
+  unless (null (d ^. inductiveParameters)) (err "Int should have no type parameters")
+  unless (isSmallUniverse' (d ^. inductiveType)) (err "Int should be in the small universe")
   case d ^. inductiveConstructors of
-    [c1, c2] -> registerIntCtor BuiltinIntOfNat c1 >> registerIntCtor BuiltinIntNegSuc c2
-    _ -> error "Int should have exactly two constructors"
+    [c1, c2] -> checkIntCtor BuiltinIntOfNat c1 >> checkIntCtor BuiltinIntNegSuc c2
+    _ -> err "Int should have exactly two constructors"
 
-registerIntCtor :: (Member Builtins r) => BuiltinConstructor -> ConstructorDef -> Sem r ()
-registerIntCtor ctor d@ConstructorDef {..} = do
+checkIntCtor :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => BuiltinConstructor -> ConstructorDef -> Sem r ()
+checkIntCtor _ctor d@ConstructorDef {..} = do
   let ctorName = _inductiveConstructorName
       ty = _inductiveConstructorType
       loc = getLoc d
-  int <- getBuiltinName loc BuiltinInt
-  nat <- getBuiltinName loc BuiltinNat
-  unless (ty === (nat --> int)) (error (ctorName ^. nameText <> " has the wrong type"))
-  registerBuiltin ctor ctorName
+  int <- getBuiltinNameScoper loc BuiltinInt
+  nat <- getBuiltinNameScoper loc BuiltinNat
+  unless (ty === (nat --> int)) $
+    builtinsErrorText (getLoc d) (ctorName ^. nameText <> " has the wrong type")
 
-registerIntToString :: (Member Builtins r) => AxiomDef -> Sem r ()
-registerIntToString f = do
-  string_ <- getBuiltinName (getLoc f) BuiltinString
-  int <- getBuiltinName (getLoc f) BuiltinInt
-  unless (f ^. axiomType === (int --> string_)) (error "intToString has the wrong type signature")
-  registerBuiltin BuiltinIntToString (f ^. axiomName)
+checkIntToString :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
+checkIntToString f = do
+  string_ <- getBuiltinNameScoper (getLoc f) BuiltinString
+  int <- getBuiltinNameScoper (getLoc f) BuiltinInt
+  unless (f ^. axiomType === (int --> string_)) $
+    builtinsErrorText (getLoc f) "intToString has the wrong type signature"
 
-registerIntEq :: forall r. (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
-registerIntEq f = do
+checkIntEq :: forall r. (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => FunctionDef -> Sem r ()
+checkIntEq f = do
   int <- builtinName BuiltinInt
   ofNat <- toExpression <$> builtinName BuiltinIntOfNat
   negSuc <- toExpression <$> builtinName BuiltinIntNegSuc
@@ -54,7 +54,7 @@ registerIntEq f = do
           ((negSuc @@ m) .==. (negSuc @@ n), (natEq @@ m @@ n)),
           (h1 .==. h2, false)
         ]
-  registerFun
+  checkBuiltinFunctionInfo
     FunInfo
       { _funInfoDef = f,
         _funInfoBuiltin = BuiltinIntEq,
@@ -65,25 +65,25 @@ registerIntEq f = do
       }
   where
     builtinName :: (IsBuiltin a) => a -> Sem r Name
-    builtinName = getBuiltinName (getLoc f)
+    builtinName = getBuiltinNameScoper (getLoc f)
 
-registerIntSubNat :: forall r. (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
-registerIntSubNat f = do
+checkIntSubNat :: forall r. (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => FunctionDef -> Sem r ()
+checkIntSubNat f = do
   let loc = getLoc f
-  int <- getBuiltinName loc BuiltinInt
-  nat <- getBuiltinName loc BuiltinNat
-  unless (f ^. funDefType === (nat --> nat --> int)) (error "int-sub-nat has the wrong type signature")
-  registerBuiltin BuiltinIntSubNat (f ^. funDefName)
+  int <- getBuiltinNameScoper loc BuiltinInt
+  nat <- getBuiltinNameScoper loc BuiltinNat
+  unless (f ^. funDefType === (nat --> nat --> int)) $
+    builtinsErrorText (getLoc f) "int-sub-nat has the wrong type signature"
 
-registerIntPlus :: forall r. (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
-registerIntPlus f = do
+checkIntPlus :: forall r. (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => FunctionDef -> Sem r ()
+checkIntPlus f = do
   let loc = getLoc f
-  int <- getBuiltinName loc BuiltinInt
-  ofNat <- toExpression <$> getBuiltinName loc BuiltinIntOfNat
-  negSuc <- toExpression <$> getBuiltinName loc BuiltinIntNegSuc
-  suc <- toExpression <$> getBuiltinName loc BuiltinNatSuc
-  natPlus <- toExpression <$> getBuiltinName loc BuiltinNatPlus
-  intSubNat <- toExpression <$> getBuiltinName loc BuiltinIntSubNat
+  int <- getBuiltinNameScoper loc BuiltinInt
+  ofNat <- toExpression <$> getBuiltinNameScoper loc BuiltinIntOfNat
+  negSuc <- toExpression <$> getBuiltinNameScoper loc BuiltinIntNegSuc
+  suc <- toExpression <$> getBuiltinNameScoper loc BuiltinNatSuc
+  natPlus <- toExpression <$> getBuiltinNameScoper loc BuiltinNatPlus
+  intSubNat <- toExpression <$> getBuiltinNameScoper loc BuiltinIntSubNat
   let plus = f ^. funDefName
       l = getLoc f
   varn <- freshVar l "m"
@@ -99,7 +99,7 @@ registerIntPlus f = do
           ((negSuc @@ m) .+. (ofNat @@ n), intSubNat @@ n @@ (suc @@ m)),
           ((negSuc @@ m) .+. (negSuc @@ n), negSuc @@ (suc @@ (natPlus @@ m @@ n)))
         ]
-  registerFun
+  checkBuiltinFunctionInfo
     FunInfo
       { _funInfoDef = f,
         _funInfoBuiltin = BuiltinIntPlus,
@@ -109,8 +109,8 @@ registerIntPlus f = do
         _funInfoFreeTypeVars = []
       }
 
-registerIntNegNat :: forall r. (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
-registerIntNegNat f = do
+checkIntNegNat :: forall r. (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => FunctionDef -> Sem r ()
+checkIntNegNat f = do
   int <- builtinName BuiltinInt
   nat <- builtinName BuiltinNat
   ofNat <- toExpression <$> builtinName BuiltinIntOfNat
@@ -126,7 +126,7 @@ registerIntNegNat f = do
         [ (negNat @@ zero, ofNat @@ zero),
           (negNat @@ (suc @@ n), negSuc @@ n)
         ]
-  registerFun
+  checkBuiltinFunctionInfo
     FunInfo
       { _funInfoDef = f,
         _funInfoBuiltin = BuiltinIntNegNat,
@@ -137,10 +137,10 @@ registerIntNegNat f = do
       }
   where
     builtinName :: (IsBuiltin a) => a -> Sem r Name
-    builtinName = getBuiltinName (getLoc f)
+    builtinName = getBuiltinNameScoper (getLoc f)
 
-registerIntNeg :: forall r. (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
-registerIntNeg f = do
+checkIntNeg :: forall r. (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => FunctionDef -> Sem r ()
+checkIntNeg f = do
   int <- builtinName BuiltinInt
   ofNat <- toExpression <$> builtinName BuiltinIntOfNat
   negSuc <- toExpression <$> builtinName BuiltinIntNegSuc
@@ -155,7 +155,7 @@ registerIntNeg f = do
         [ (neg @@ (ofNat @@ n), negNat @@ n),
           (neg @@ (negSuc @@ n), ofNat @@ (suc @@ n))
         ]
-  registerFun
+  checkBuiltinFunctionInfo
     FunInfo
       { _funInfoDef = f,
         _funInfoBuiltin = BuiltinIntNeg,
@@ -166,10 +166,10 @@ registerIntNeg f = do
       }
   where
     builtinName :: (IsBuiltin a) => a -> Sem r Name
-    builtinName = getBuiltinName (getLoc f)
+    builtinName = getBuiltinNameScoper (getLoc f)
 
-registerIntMul :: forall r. (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
-registerIntMul f = do
+checkIntMul :: forall r. (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => FunctionDef -> Sem r ()
+checkIntMul f = do
   int <- builtinName BuiltinInt
   ofNat <- toExpression <$> builtinName BuiltinIntOfNat
   negSuc <- toExpression <$> builtinName BuiltinIntNegSuc
@@ -189,7 +189,7 @@ registerIntMul f = do
           (mul @@ (negSuc @@ m) @@ (ofNat @@ n), negNat @@ (natMul @@ (natSuc @@ m) @@ n)),
           (mul @@ (negSuc @@ m) @@ (negSuc @@ n), ofNat @@ (natMul @@ (natSuc @@ m) @@ (natSuc @@ n)))
         ]
-  registerFun
+  checkBuiltinFunctionInfo
     FunInfo
       { _funInfoDef = f,
         _funInfoBuiltin = BuiltinIntMul,
@@ -200,10 +200,10 @@ registerIntMul f = do
       }
   where
     builtinName :: (IsBuiltin a) => a -> Sem r Name
-    builtinName = getBuiltinName (getLoc f)
+    builtinName = getBuiltinNameScoper (getLoc f)
 
-registerIntDiv :: forall r. (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
-registerIntDiv f = do
+checkIntDiv :: forall r. (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => FunctionDef -> Sem r ()
+checkIntDiv f = do
   int <- builtinName BuiltinInt
   ofNat <- toExpression <$> builtinName BuiltinIntOfNat
   negSuc <- toExpression <$> builtinName BuiltinIntNegSuc
@@ -223,7 +223,7 @@ registerIntDiv f = do
           (intDiv @@ (negSuc @@ m) @@ (ofNat @@ n), negNat @@ (natDiv @@ (natSuc @@ m) @@ n)),
           (intDiv @@ (negSuc @@ m) @@ (negSuc @@ n), ofNat @@ (natDiv @@ (natSuc @@ m) @@ (natSuc @@ n)))
         ]
-  registerFun
+  checkBuiltinFunctionInfo
     FunInfo
       { _funInfoDef = f,
         _funInfoBuiltin = BuiltinIntDiv,
@@ -234,10 +234,10 @@ registerIntDiv f = do
       }
   where
     builtinName :: (IsBuiltin a) => a -> Sem r Name
-    builtinName = getBuiltinName (getLoc f)
+    builtinName = getBuiltinNameScoper (getLoc f)
 
-registerIntMod :: forall r. (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
-registerIntMod f = do
+checkIntMod :: forall r. (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => FunctionDef -> Sem r ()
+checkIntMod f = do
   int <- builtinName BuiltinInt
   ofNat <- toExpression <$> builtinName BuiltinIntOfNat
   negSuc <- toExpression <$> builtinName BuiltinIntNegSuc
@@ -257,7 +257,7 @@ registerIntMod f = do
           (intMod @@ (negSuc @@ m) @@ (ofNat @@ n), negNat @@ (natMod @@ (natSuc @@ m) @@ n)),
           (intMod @@ (negSuc @@ m) @@ (negSuc @@ n), negNat @@ (natMod @@ (natSuc @@ m) @@ (natSuc @@ n)))
         ]
-  registerFun
+  checkBuiltinFunctionInfo
     FunInfo
       { _funInfoDef = f,
         _funInfoBuiltin = BuiltinIntMod,
@@ -268,10 +268,10 @@ registerIntMod f = do
       }
   where
     builtinName :: (IsBuiltin a) => a -> Sem r Name
-    builtinName = getBuiltinName (getLoc f)
+    builtinName = getBuiltinNameScoper (getLoc f)
 
-registerIntSub :: forall r. (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
-registerIntSub f = do
+checkIntSub :: forall r. (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => FunctionDef -> Sem r ()
+checkIntSub f = do
   int <- builtinName BuiltinInt
   neg <- toExpression <$> builtinName BuiltinIntNeg
   intPlus <- toExpression <$> builtinName BuiltinIntPlus
@@ -285,7 +285,7 @@ registerIntSub f = do
       exClauses =
         [ (intSub @@ m @@ n, intPlus @@ m @@ (neg @@ n))
         ]
-  registerFun
+  checkBuiltinFunctionInfo
     FunInfo
       { _funInfoDef = f,
         _funInfoBuiltin = BuiltinIntSub,
@@ -296,10 +296,10 @@ registerIntSub f = do
       }
   where
     builtinName :: (IsBuiltin a) => a -> Sem r Name
-    builtinName = getBuiltinName (getLoc f)
+    builtinName = getBuiltinNameScoper (getLoc f)
 
-registerIntNonNeg :: forall r. (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
-registerIntNonNeg f = do
+checkIntNonNeg :: forall r. (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => FunctionDef -> Sem r ()
+checkIntNonNeg f = do
   int <- builtinName BuiltinInt
   bool_ <- builtinName BuiltinBool
   ofNat <- toExpression <$> builtinName BuiltinIntOfNat
@@ -317,7 +317,7 @@ registerIntNonNeg f = do
         [ (intNonNeg @@ (ofNat @@ n), true),
           (intNonNeg @@ (negSuc @@ h), false)
         ]
-  registerFun
+  checkBuiltinFunctionInfo
     FunInfo
       { _funInfoDef = f,
         _funInfoBuiltin = BuiltinIntNonNeg,
@@ -328,17 +328,17 @@ registerIntNonNeg f = do
       }
   where
     builtinName :: (IsBuiltin a) => a -> Sem r Name
-    builtinName = getBuiltinName (getLoc f)
+    builtinName = getBuiltinNameScoper (getLoc f)
 
-registerIntPrint :: (Members '[Builtins] r) => AxiomDef -> Sem r ()
-registerIntPrint f = do
-  int <- getBuiltinName (getLoc f) BuiltinInt
-  io <- getBuiltinName (getLoc f) BuiltinIO
-  unless (f ^. axiomType === (int --> io)) (error "Int print has the wrong type signature")
-  registerBuiltin BuiltinIntPrint (f ^. axiomName)
+checkIntPrint :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
+checkIntPrint f = do
+  int <- getBuiltinNameScoper (getLoc f) BuiltinInt
+  io <- getBuiltinNameScoper (getLoc f) BuiltinIO
+  unless (f ^. axiomType === (int --> io)) $
+    builtinsErrorText (getLoc f) "Int print has the wrong type signature"
 
-registerIntLe :: forall r. (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
-registerIntLe f = do
+checkIntLe :: forall r. (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => FunctionDef -> Sem r ()
+checkIntLe f = do
   int <- builtinName BuiltinInt
   bool_ <- builtinName BuiltinBool
   nonNeg <- toExpression <$> builtinName BuiltinIntNonNeg
@@ -354,7 +354,7 @@ registerIntLe f = do
       exClauses :: [(Expression, Expression)]
       exClauses =
         [(intLe @@ m @@ n, nonNeg @@ (n .-. m))]
-  registerFun
+  checkBuiltinFunctionInfo
     FunInfo
       { _funInfoDef = f,
         _funInfoBuiltin = BuiltinIntLe,
@@ -365,15 +365,15 @@ registerIntLe f = do
       }
   where
     builtinName :: (IsBuiltin a) => a -> Sem r Name
-    builtinName = getBuiltinName (getLoc f)
+    builtinName = getBuiltinNameScoper (getLoc f)
 
-registerIntLt :: forall r. (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
-registerIntLt f = do
+checkIntLt :: forall r. (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => FunctionDef -> Sem r ()
+checkIntLt f = do
   int <- builtinName BuiltinInt
   bool_ <- builtinName BuiltinBool
   ofNat <- toExpression <$> builtinName BuiltinIntOfNat
-  suc <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatSuc
-  zero <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatZero
+  suc <- toExpression <$> getBuiltinNameScoper (getLoc f) BuiltinNatSuc
+  zero <- toExpression <$> getBuiltinNameScoper (getLoc f) BuiltinNatZero
   intLe <- toExpression <$> builtinName BuiltinIntLe
   intPlus <- toExpression <$> builtinName BuiltinIntPlus
   let l = getLoc f
@@ -390,7 +390,7 @@ registerIntLt f = do
       exClauses :: [(Expression, Expression)]
       exClauses =
         [(intLt @@ m @@ n, (m .+. lit1) .<=. n)]
-  registerFun
+  checkBuiltinFunctionInfo
     FunInfo
       { _funInfoDef = f,
         _funInfoBuiltin = BuiltinIntLt,
@@ -401,8 +401,7 @@ registerIntLt f = do
       }
   where
     builtinName :: (IsBuiltin a) => a -> Sem r Name
-    builtinName = getBuiltinName (getLoc f)
+    builtinName = getBuiltinNameScoper (getLoc f)
 
-registerFromInt :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
-registerFromInt f = do
-  registerBuiltin BuiltinFromInt (f ^. funDefName)
+checkFromInt :: FunctionDef -> Sem r ()
+checkFromInt = const (return ())

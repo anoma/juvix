@@ -326,7 +326,8 @@ preFunctionDef f = do
 
     normalizeBuiltinName :: Maybe BuiltinFunction -> Text -> Text
     normalizeBuiltinName blt name = case blt of
-      Just b | isNatBuiltin b -> show (pretty b)
+      Just b
+        | isNatBuiltin b -> show (pretty b)
       _ -> case name of
         ">" -> Str.natGt
         ">=" -> Str.natGe
@@ -955,13 +956,12 @@ fromPatternArg pa = case pa ^. Internal.patternArgName of
           Just (IdentConstr tag) ->
             return $
               PatConstr
-                ( PatternConstr
-                    { _patternConstrInfo = setInfoName (ctrName ^. nameText) mempty,
-                      _patternConstrBinder = binder ctorTy,
-                      _patternConstrTag = tag,
-                      _patternConstrArgs = args
-                    }
-                )
+                PatternConstr
+                  { _patternConstrInfo = setInfoName (ctrName ^. nameText) mempty,
+                    _patternConstrBinder = binder ctorTy,
+                    _patternConstrTag = tag,
+                    _patternConstrArgs = args
+                  }
           Just _ -> error ("internal to core: not a constructor " <> txt)
           Nothing -> error ("internal to core: undeclared identifier: " <> txt)
         where

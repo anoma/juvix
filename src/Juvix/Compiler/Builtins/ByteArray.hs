@@ -1,27 +1,26 @@
 module Juvix.Compiler.Builtins.ByteArray where
 
-import Juvix.Compiler.Builtins.Effect
+import Juvix.Compiler.Internal.Builtins
 import Juvix.Compiler.Internal.Extra
 import Juvix.Prelude
 
-registerByteArray :: (Member Builtins r) => AxiomDef -> Sem r ()
-registerByteArray d = do
-  unless (isSmallUniverse' (d ^. axiomType)) (error "ByteArray should be in the small universe")
-  registerBuiltin BuiltinByteArray (d ^. axiomName)
+checkByteArray :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
+checkByteArray d = do
+  unless (isSmallUniverse' (d ^. axiomType)) (builtinsErrorText (getLoc d) "ByteArray should be in the small universe")
 
-registerByteArrayFromListByte :: (Member Builtins r) => AxiomDef -> Sem r ()
-registerByteArrayFromListByte d = do
+checkByteArrayFromListByte :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
+checkByteArrayFromListByte d = do
   let loc = getLoc d
-  byte_ <- getBuiltinName loc BuiltinByte
-  list_ <- getBuiltinName loc BuiltinList
-  byteArray <- getBuiltinName loc BuiltinByteArray
-  unless (d ^. axiomType == (list_ @@ byte_ --> byteArray)) (error "bytearray-from-list-byte has the wrong type")
-  registerBuiltin BuiltinByteArrayFromListByte (d ^. axiomName)
+  byte_ <- getBuiltinNameScoper loc BuiltinByte
+  list_ <- getBuiltinNameScoper loc BuiltinList
+  byteArray <- getBuiltinNameScoper loc BuiltinByteArray
+  unless (d ^. axiomType == (list_ @@ byte_ --> byteArray)) $
+    builtinsErrorText (getLoc d) "bytearray-from-list-byte has the wrong type"
 
-registerByteArrayLength :: (Member Builtins r) => AxiomDef -> Sem r ()
-registerByteArrayLength d = do
+checkByteArrayLength :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
+checkByteArrayLength d = do
   let loc = getLoc d
-  byteArray <- getBuiltinName loc BuiltinByteArray
-  nat_ <- getBuiltinName loc BuiltinNat
-  unless (d ^. axiomType == (byteArray --> nat_)) (error "bytearray-length has the wrong type")
-  registerBuiltin BuiltinByteArrayLength (d ^. axiomName)
+  byteArray <- getBuiltinNameScoper loc BuiltinByteArray
+  nat_ <- getBuiltinNameScoper loc BuiltinNat
+  unless (d ^. axiomType == (byteArray --> nat_)) $
+    builtinsErrorText (getLoc d) "bytearray-length has the wrong type"

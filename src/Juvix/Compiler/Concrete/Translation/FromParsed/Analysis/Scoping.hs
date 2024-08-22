@@ -10,7 +10,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Data.List.NonEmpty qualified as NonEmpty
 import GHC.Base (maxInt, minInt)
-import Juvix.Compiler.Concrete.Data.Highlight.Input
+import Juvix.Compiler.Concrete.Data.Highlight.Builder
 import Juvix.Compiler.Concrete.Data.InfoTableBuilder
 import Juvix.Compiler.Concrete.Data.Name qualified as N
 import Juvix.Compiler.Concrete.Data.NameSignature
@@ -77,6 +77,7 @@ scopeCheck' importTab pr m = do
       ScopeParameters
         { _scopeImportedModules = importTab ^. scopedModuleTable
         }
+
     mkResult :: (ScoperState, (Module 'Scoped 'ModuleTop, ScopedModule, Scope)) -> ScoperResult
     mkResult (scoperSt, (md, sm, sc)) =
       let exp = createExportsTable (sm ^. scopedModuleExportInfo)
@@ -101,10 +102,10 @@ scopeCheckRepl ::
   InfoTable ->
   a ->
   Sem r b
-scopeCheckRepl check importTab tab a = mapError (JuvixError @ScoperError) $ do
-  fmap snd
+scopeCheckRepl check importTab tab a =
+  mapError (JuvixError @ScoperError)
     . ignoreHighlightBuilder
-    . runInfoTableBuilder tab
+    . evalInfoTableBuilder tab
     . runReader iniScopeParameters
     . runReader tab'
     . localBindings
@@ -222,11 +223,12 @@ reserveSymbolSignatureOfNameSpace ::
   NameKind ->
   NameKind ->
   d ->
+  Maybe BuiltinPrim ->
   Symbol ->
   Sem r S.Symbol
-reserveSymbolSignatureOfNameSpace ns kind kindPretty d s = do
+reserveSymbolSignatureOfNameSpace ns kind kindPretty d builtin s = do
   sig <- mkNameSignature d
-  reserveSymbolOfNameSpace ns kind kindPretty (Just sig) s
+  reserveSymbolOfNameSpace ns kind kindPretty (Just sig) builtin s
 
 reserveSymbolSignatureOf ::
   forall (k :: NameKind) r d.
@@ -236,11 +238,12 @@ reserveSymbolSignatureOf ::
   ) =>
   Sing k ->
   d ->
+  Maybe BuiltinPrim ->
   Symbol ->
   Sem r S.Symbol
-reserveSymbolSignatureOf k d s = do
+reserveSymbolSignatureOf k d builtin s = do
   sig <- mkNameSignature d
-  reserveSymbolOf k (Just sig) s
+  reserveSymbolOf k (Just sig) builtin s
 
 registerNameSignature ::
   (Members '[State ScoperState, Error ScoperError, InfoTableBuilder] r, HasNameSignature 'Scoped d) =>
@@ -280,13 +283,15 @@ reserveSymbolOfNameSpace ::
   NameKind ->
   NameKind ->
   Maybe (NameSignature 'Parsed) ->
+  Maybe BuiltinPrim ->
   Symbol ->
   Sem r S.Symbol
-reserveSymbolOfNameSpace ns kind kindPretty nameSig s = do
+reserveSymbolOfNameSpace ns kind kindPretty nameSig builtin s = do
   checkNotBound
   path <- gets (^. scopePath)
   strat <- ask
   s' <- freshSymbol kind kindPretty s
+  whenJust builtin (`registerBuiltin` s')
   whenJust nameSig (modify' . set (scoperSignatures . at (s' ^. S.nameId)) . Just)
   whenJust nameSig (registerParsedNameSig (s' ^. S.nameId))
   modify (set (scopeNameSpaceLocal sns . at s) (Just s'))
@@ -346,9 +351,14 @@ reserveSymbolOf ::
   ) =>
   Sing nameKind ->
   Maybe (NameSignature 'Parsed) ->
+  Maybe BuiltinPrim ->
   Symbol ->
   Sem r S.Symbol
-reserveSymbolOf k = reserveSymbolOfNameSpace (sing :: Sing (NameKindNameSpace nameKind)) (fromSing k) (fromSing k)
+reserveSymbolOf k =
+  reserveSymbolOfNameSpace
+    (sing :: Sing (NameKindNameSpace nameKind))
+    (fromSing k)
+    (fromSing k)
 
 getReservedDefinitionSymbol ::
   forall r.
@@ -369,20 +379,25 @@ bindVariableSymbol ::
   (Members '[Error ScoperError, NameIdGen, State Scope, InfoTableBuilder, Reader InfoTable, State ScoperState] r) =>
   Symbol ->
   Sem r S.Symbol
-bindVariableSymbol = localBindings . ignoreSyntax . reserveSymbolOf SKNameLocal Nothing
+bindVariableSymbol = localBindings . ignoreSyntax . reserveSymbolOf SKNameLocal Nothing Nothing
 
 reserveInductiveSymbol ::
   (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable] r) =>
   InductiveDef 'Parsed ->
   Sem r S.Symbol
-reserveInductiveSymbol d = reserveSymbolSignatureOf SKNameInductive d (d ^. inductiveName)
+reserveInductiveSymbol d =
+  reserveSymbolSignatureOf
+    SKNameInductive
+    d
+    (toBuiltinPrim <$> d ^. inductiveBuiltin)
+    (d ^. inductiveName)
 
 reserveAliasSymbol ::
   (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable, State ScoperState] r) =>
   AliasDef 'Parsed ->
   Sem r S.Symbol
 reserveAliasSymbol a = do
-  s <- reserveSymbolOf SKNameAlias Nothing (a ^. aliasDefName)
+  s <- reserveSymbolOf SKNameAlias Nothing Nothing (a ^. aliasDefName)
   let locAliasDef = getLoc a
   return (set S.nameDefined locAliasDef s)
 
@@ -390,28 +405,35 @@ reserveProjectionSymbol ::
   (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable, State ScoperState] r) =>
   ProjectionDef 'Parsed ->
   Sem r S.Symbol
-reserveProjectionSymbol d = reserveSymbolOf SKNameFunction Nothing (d ^. projectionField)
+reserveProjectionSymbol d =
+  reserveSymbolOf
+    SKNameFunction
+    Nothing
+    (toBuiltinPrim <$> d ^. projectionFieldBuiltin)
+    (d ^. projectionField)
 
 reserveConstructorSymbol ::
   (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable] r) =>
   InductiveDef 'Parsed ->
   ConstructorDef 'Parsed ->
+  Maybe BuiltinConstructor ->
   Sem r S.Symbol
-reserveConstructorSymbol d c = reserveSymbolSignatureOf SKNameConstructor (d, c) (c ^. constructorName)
+reserveConstructorSymbol d c b = do
+  reserveSymbolSignatureOf SKNameConstructor (d, c) (toBuiltinPrim <$> b) (c ^. constructorName)
 
 reserveFunctionSymbol ::
   (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable] r) =>
   FunctionDef 'Parsed ->
   Sem r S.Symbol
 reserveFunctionSymbol f =
-  reserveSymbolSignatureOf SKNameFunction f (f ^. signName)
+  reserveSymbolSignatureOf SKNameFunction f (toBuiltinPrim <$> f ^. signBuiltin) (f ^. signName)
 
 reserveAxiomSymbol ::
   (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable] r) =>
   AxiomDef 'Parsed ->
   Sem r S.Symbol
 reserveAxiomSymbol a =
-  reserveSymbolSignatureOfNameSpace SNameSpaceSymbols KNameAxiom kindPretty a (a ^. axiomName)
+  reserveSymbolSignatureOfNameSpace SNameSpaceSymbols KNameAxiom kindPretty a (toBuiltinPrim <$> a ^. axiomBuiltin) (a ^. axiomName)
   where
     kindPretty :: NameKind
     kindPretty = maybe KNameAxiom getNameKind (a ^? axiomBuiltin . _Just . withLocParam)
@@ -943,7 +965,7 @@ resolveFixitySyntaxDef ::
   FixitySyntaxDef 'Parsed ->
   Sem r ()
 resolveFixitySyntaxDef fdef@FixitySyntaxDef {..} = topBindings $ do
-  sym <- reserveSymbolOf SKNameFixity Nothing _fixitySymbol
+  sym <- reserveSymbolOf SKNameFixity Nothing Nothing _fixitySymbol
   let fi :: ParsedFixityInfo 'Parsed = _fixityInfo
   same <- mapM checkFixitySymbol (fi ^. fixityPrecSame)
   below <- mapM checkFixitySymbol (fromMaybe [] $ fi ^. fixityPrecBelow)
@@ -1293,13 +1315,23 @@ checkTopModule m@Module {..} = checkedModule
 
     checkedModule :: Sem r (Module 'Scoped 'ModuleTop, ScopedModule, Scope)
     checkedModule = do
-      (sc, (tab, (e, body', path', doc'))) <- runState iniScope . runInfoTableBuilder mempty $ do
-        path' <- freshTopModulePath
-        withTopScope $ do
-          (e, body') <- topBindings (checkModuleBody _moduleBody)
-          doc' <- mapM checkJudoc _moduleDoc
-          registerModuleDoc (path' ^. S.nameId) doc'
-          return (e, body', path', doc')
+      ( sc :: Scope,
+        ( tab :: InfoTable,
+          ( e :: ExportInfo,
+            body' :: [Statement 'Scoped],
+            path' :: S.TopModulePath,
+            doc' :: Maybe (Judoc 'Scoped)
+            )
+          )
+        ) <- runState iniScope
+        . runInfoTableBuilder mempty
+        $ do
+          path' <- freshTopModulePath
+          withTopScope $ do
+            (e, body') <- topBindings (checkModuleBody _moduleBody)
+            doc' <- mapM checkJudoc _moduleDoc
+            registerModuleDoc (path' ^. S.nameId) doc'
+            return (e, body', path', doc')
       localModules <- getLocalModules e
       _moduleId <- getModuleId (topModulePathKey (path' ^. S.nameConcrete))
       let md =
@@ -1546,14 +1578,19 @@ checkSections sec = topBindings helper
                 reserveInductive :: InductiveDef 'Parsed -> Sem r' (Module 'Parsed 'ModuleLocal)
                 reserveInductive d = do
                   i <- reserveInductiveSymbol d
-                  constrs <- mapM reserveConstructor (d ^. inductiveConstructors)
+                  let builtinConstrs :: NonEmpty (Maybe BuiltinConstructor)
+                      builtinConstrs =
+                        NonEmpty.prependList
+                          (maybe [] ((map Just . builtinConstructors) . (^. withLocParam)) (d ^. inductiveBuiltin))
+                          (NonEmpty.repeat Nothing)
+                  constrs <- mapM (uncurry reserveConstructor) (mzip builtinConstrs (d ^. inductiveConstructors))
                   m <- defineInductiveModule (head constrs) d
                   ignoreFail (registerRecordType (head constrs) i)
                   return m
                   where
-                    reserveConstructor :: ConstructorDef 'Parsed -> Sem r' S.Symbol
-                    reserveConstructor c = do
-                      c' <- reserveConstructorSymbol d c
+                    reserveConstructor :: Maybe BuiltinConstructor -> ConstructorDef 'Parsed -> Sem r' S.Symbol
+                    reserveConstructor b c = do
+                      c' <- reserveConstructorSymbol d c b
                       let storeSig :: RecordNameSignature 'Parsed -> Sem r' ()
                           storeSig sig = modify' (set (scoperConstructorFields . at (c' ^. S.nameId)) (Just sig))
                           mrecord :: Maybe (RhsRecord 'Parsed) = c ^? constructorRhs . _ConstructorRhsRecord
@@ -1738,7 +1775,7 @@ reserveLocalModuleSymbol ::
   Symbol ->
   Sem r S.Symbol
 reserveLocalModuleSymbol =
-  ignoreSyntax . reserveSymbolOf SKNameLocalModule Nothing
+  ignoreSyntax . reserveSymbolOf SKNameLocalModule Nothing Nothing
 
 checkLocalModule ::
   forall r.
@@ -1793,6 +1830,7 @@ checkLocalModule md@Module {..} = do
             _scopedModuleInfoTable = tab
           }
   modify (over scoperModules (HashMap.insert mid smod))
+  registerLocalModule smod
   registerName _modulePath'
   return m
   where
@@ -2328,6 +2366,57 @@ checkCaseBranch CaseBranch {..} = withLocalScope $ do
         ..
       }
 
+checkDoBind ::
+  (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader Package] r) =>
+  DoBind 'Parsed ->
+  Sem r (DoBind 'Scoped)
+checkDoBind DoBind {..} = do
+  expr' <- checkParseExpressionAtoms _doBindExpression
+  pat' <- checkParsePatternAtoms _doBindPattern
+  unless (Explicit == pat' ^. patternArgIsImplicit) $
+    throw (ErrDoBindImplicitPattern (DoBindImplicitPattern pat'))
+  return
+    DoBind
+      { _doBindArrowKw,
+        _doBindPattern = pat',
+        _doBindExpression = expr'
+      }
+
+checkDoLet ::
+  (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader Package] r) =>
+  DoLet 'Parsed ->
+  Sem r (DoLet 'Scoped)
+checkDoLet DoLet {..} = do
+  defs' <- checkLetStatements _doLetStatements
+  return
+    DoLet
+      { _doLetKw,
+        _doLetInKw,
+        _doLetStatements = defs'
+      }
+
+checkDoStatement ::
+  (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader Package] r) =>
+  DoStatement 'Parsed ->
+  Sem r (DoStatement 'Scoped)
+checkDoStatement = \case
+  DoStatementExpression e -> DoStatementExpression <$> checkParseExpressionAtoms e
+  DoStatementBind b -> DoStatementBind <$> checkDoBind b
+  DoStatementLet b -> DoStatementLet <$> checkDoLet b
+
+checkDo ::
+  (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader Package] r) =>
+  Do 'Parsed ->
+  Sem r (Do 'Scoped)
+checkDo Do {..} = do
+  stmts' <- mapM checkDoStatement _doStatements
+  return
+    Do
+      { _doStatements = stmts',
+        _doKeyword,
+        _doDelims
+      }
+
 checkCase ::
   (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader Package] r) =>
   Case 'Parsed ->
@@ -2584,6 +2673,7 @@ checkExpressionAtom ::
 checkExpressionAtom e = case e of
   AtomIdentifier n -> pure . AtomIdentifier <$> checkScopedIden n
   AtomLambda lam -> pure . AtomLambda <$> checkLambda lam
+  AtomDo a -> pure . AtomDo <$> checkDo a
   AtomCase c -> pure . AtomCase <$> checkCase c
   AtomIf c -> pure . AtomIf <$> checkIf c
   AtomLet letBlock -> pure . AtomLet <$> checkLet letBlock
@@ -3185,6 +3275,7 @@ parseTerm =
     <|> parseList
     <|> parseLiteral
     <|> parseLet
+    <|> parseDo
     <|> parseIterator
     <|> parseDoubleBraces
     <|> parseBraces
@@ -3278,12 +3369,21 @@ parseTerm =
         namedApp s = case s of
           AtomNamedApplicationNew u -> Just u
           _ -> Nothing
+
     parseLet :: Parse Expression
     parseLet = ExpressionLet <$> P.token letBlock mempty
       where
         letBlock :: ExpressionAtom 'Scoped -> Maybe (Let 'Scoped)
         letBlock s = case s of
           AtomLet u -> Just u
+          _ -> Nothing
+
+    parseDo :: Parse Expression
+    parseDo = ExpressionDo <$> P.token letBlock mempty
+      where
+        letBlock :: ExpressionAtom 'Scoped -> Maybe (Do 'Scoped)
+        letBlock s = case s of
+          AtomDo u -> Just u
           _ -> Nothing
 
     parseIterator :: Parse Expression

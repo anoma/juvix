@@ -22,7 +22,7 @@ import Juvix.Compiler.Casm.Data.Builtins qualified as Casm
 import Juvix.Compiler.Casm.Data.Result qualified as Casm
 import Juvix.Compiler.Casm.Pipeline qualified as Casm
 import Juvix.Compiler.Casm.Translation.FromReg qualified as Casm
-import Juvix.Compiler.Concrete.Data.Highlight.Input
+import Juvix.Compiler.Concrete.Data.Highlight.Builder
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromParsed qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser

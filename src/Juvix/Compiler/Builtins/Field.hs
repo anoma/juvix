@@ -1,55 +1,55 @@
 module Juvix.Compiler.Builtins.Field where
 
-import Juvix.Compiler.Builtins.Effect
+import Juvix.Compiler.Internal.Builtins
 import Juvix.Compiler.Internal.Extra
 import Juvix.Prelude
 
-registerField :: (Member Builtins r) => AxiomDef -> Sem r ()
-registerField d = do
-  unless (isSmallUniverse' (d ^. axiomType)) (error "String should be in the small universe")
-  registerBuiltin BuiltinField (d ^. axiomName)
+checkField :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
+checkField d = do
+  unless (isSmallUniverse' (d ^. axiomType)) $
+    builtinsErrorText (getLoc d) "String should be in the small universe"
 
-registerFieldEq :: (Member Builtins r) => AxiomDef -> Sem r ()
-registerFieldEq f = do
-  field_ <- getBuiltinName (getLoc f) BuiltinField
-  bool_ <- getBuiltinName (getLoc f) BuiltinBool
-  unless (f ^. axiomType === (field_ --> field_ --> bool_)) (error "field equality has the wrong type signature")
-  registerBuiltin BuiltinFieldEq (f ^. axiomName)
+checkFieldEq :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
+checkFieldEq f = do
+  field_ <- getBuiltinNameScoper (getLoc f) BuiltinField
+  bool_ <- getBuiltinNameScoper (getLoc f) BuiltinBool
+  unless (f ^. axiomType === (field_ --> field_ --> bool_)) $
+    builtinsErrorText (getLoc f) "field equality has the wrong type signature"
 
-registerFieldAdd :: (Member Builtins r) => AxiomDef -> Sem r ()
-registerFieldAdd f = do
-  field_ <- getBuiltinName (getLoc f) BuiltinField
-  unless (f ^. axiomType === (field_ --> field_ --> field_)) (error "field addition has the wrong type signature")
-  registerBuiltin BuiltinFieldAdd (f ^. axiomName)
+checkFieldAdd :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
+checkFieldAdd f = do
+  field_ <- getBuiltinNameScoper (getLoc f) BuiltinField
+  unless (f ^. axiomType === (field_ --> field_ --> field_)) $
+    builtinsErrorText (getLoc f) "field addition has the wrong type signature"
 
-registerFieldSub :: (Member Builtins r) => AxiomDef -> Sem r ()
-registerFieldSub f = do
-  field_ <- getBuiltinName (getLoc f) BuiltinField
-  unless (f ^. axiomType === (field_ --> field_ --> field_)) (error "field subtraction has the wrong type signature")
-  registerBuiltin BuiltinFieldSub (f ^. axiomName)
+checkFieldSub :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
+checkFieldSub f = do
+  field_ <- getBuiltinNameScoper (getLoc f) BuiltinField
+  unless (f ^. axiomType === (field_ --> field_ --> field_)) $
+    builtinsErrorText (getLoc f) "field subtraction has the wrong type signature"
 
-registerFieldMul :: (Member Builtins r) => AxiomDef -> Sem r ()
-registerFieldMul f = do
-  field_ <- getBuiltinName (getLoc f) BuiltinField
-  unless (f ^. axiomType === (field_ --> field_ --> field_)) (error "field multiplication has the wrong type signature")
-  registerBuiltin BuiltinFieldMul (f ^. axiomName)
+checkFieldMul :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
+checkFieldMul f = do
+  field_ <- getBuiltinNameScoper (getLoc f) BuiltinField
+  unless (f ^. axiomType === (field_ --> field_ --> field_)) $
+    builtinsErrorText (getLoc f) "field multiplication has the wrong type signature"
 
-registerFieldDiv :: (Member Builtins r) => AxiomDef -> Sem r ()
-registerFieldDiv f = do
-  field_ <- getBuiltinName (getLoc f) BuiltinField
-  unless (f ^. axiomType === (field_ --> field_ --> field_)) (error "field division has the wrong type signature")
-  registerBuiltin BuiltinFieldDiv (f ^. axiomName)
+checkFieldDiv :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
+checkFieldDiv f = do
+  field_ <- getBuiltinNameScoper (getLoc f) BuiltinField
+  unless (f ^. axiomType === (field_ --> field_ --> field_)) $
+    builtinsErrorText (getLoc f) "field division has the wrong type signature"
 
-registerFieldFromInt :: (Member Builtins r) => AxiomDef -> Sem r ()
-registerFieldFromInt f = do
-  field_ <- getBuiltinName (getLoc f) BuiltinField
-  int_ <- getBuiltinName (getLoc f) BuiltinInt
-  unless (f ^. axiomType === (int_ --> field_)) (error "integer to field conversion has the wrong type signature")
-  registerBuiltin BuiltinFieldFromInt (f ^. axiomName)
+checkFieldFromInt :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
+checkFieldFromInt f = do
+  field_ <- getBuiltinNameScoper (getLoc f) BuiltinField
+  int_ <- getBuiltinNameScoper (getLoc f) BuiltinInt
+  unless (f ^. axiomType === (int_ --> field_)) $
+    builtinsErrorText (getLoc f) "integer to field conversion has the wrong type signature"
 
-registerFieldToNat :: (Member Builtins r) => AxiomDef -> Sem r ()
-registerFieldToNat f = do
-  field_ <- getBuiltinName (getLoc f) BuiltinField
-  nat_ <- getBuiltinName (getLoc f) BuiltinNat
-  unless (f ^. axiomType === (field_ --> nat_)) (error "field to nat conversion has the wrong type signature")
-  registerBuiltin BuiltinFieldToNat (f ^. axiomName)
+checkFieldToNat :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
+checkFieldToNat f = do
+  field_ <- getBuiltinNameScoper (getLoc f) BuiltinField
+  nat_ <- getBuiltinNameScoper (getLoc f) BuiltinNat
+  unless (f ^. axiomType === (field_ --> nat_)) $
+    builtinsErrorText (getLoc f) "field to nat conversion has the wrong type signature"

@@ -2,11 +2,11 @@ module Juvix.Compiler.Concrete.Data.InfoTableBuilder where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
-import Juvix.Compiler.Concrete.Data.Highlight.Input
+import Juvix.Compiler.Concrete.Data.Highlight.Builder
 import Juvix.Compiler.Concrete.Data.Scope
 import Juvix.Compiler.Concrete.Data.ScopedName
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
-import Juvix.Compiler.Concrete.Language
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Compiler.Store.Scoped.Language
 import Juvix.Prelude
 
@@ -27,42 +27,47 @@ data InfoTableBuilder :: Effect where
   RegisterParsedConstructorSig :: S.NameId -> RecordNameSignature 'Parsed -> InfoTableBuilder m ()
   RegisterRecordInfo :: S.NameId -> RecordInfo -> InfoTableBuilder m ()
   RegisterAlias :: S.NameId -> PreSymbolEntry -> InfoTableBuilder m ()
+  RegisterLocalModule :: ScopedModule -> InfoTableBuilder m ()
   GetInfoTable :: InfoTableBuilder m InfoTable
+  GetBuiltinSymbol' :: Interval -> BuiltinPrim -> InfoTableBuilder m S.Symbol
+  RegisterBuiltin' :: BuiltinPrim -> S.Symbol -> InfoTableBuilder m ()
 
 makeSem ''InfoTableBuilder
 
-registerDoc :: forall r. (Members '[HighlightBuilder, State InfoTable] r) => NameId -> Maybe (Judoc 'Scoped) -> Sem r ()
-registerDoc k md = do
-  modify (set (highlightDoc . at k) md)
+registerBuiltin :: (IsBuiltin a, Member InfoTableBuilder r) => a -> S.Symbol -> Sem r ()
+registerBuiltin b sym = registerBuiltin' (toBuiltinPrim b) sym
 
-runInfoTableBuilder :: (Member HighlightBuilder r) => InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
+getBuiltinSymbol :: (IsBuiltin a, Member InfoTableBuilder r) => Interval -> a -> Sem r S.Symbol
+getBuiltinSymbol i = getBuiltinSymbol' i . toBuiltinPrim
+
+evalInfoTableBuilder :: (Members '[Error ScoperError, HighlightBuilder] r) => InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r a
+evalInfoTableBuilder ini = fmap snd . runInfoTableBuilder ini
+
+runInfoTableBuilder :: (Members '[Error ScoperError, HighlightBuilder] r) => InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
 runInfoTableBuilder ini = reinterpret (runState ini) $ \case
   RegisterAxiom d ->
     let j = d ^. axiomDoc
      in do
           modify' (over infoAxioms (HashMap.insert (d ^. axiomName . nameId) d))
-          registerDoc (d ^. axiomName . nameId) j
+          highlightDoc (d ^. axiomName . nameId) j
   RegisterConstructor c ->
     let j = c ^. constructorDoc
      in do
           modify' (over infoConstructors (HashMap.insert (c ^. constructorName . nameId) c))
-          registerDoc (c ^. constructorName . nameId) j
+          highlightDoc (c ^. constructorName . nameId) j
   RegisterInductive ity ->
     let j = ity ^. inductiveDoc
      in do
           modify' (over infoInductives (HashMap.insert (ity ^. inductiveName . nameId) ity))
-          registerDoc (ity ^. inductiveName . nameId) j
+          highlightDoc (ity ^. inductiveName . nameId) j
   RegisterFunctionDef f ->
     let j = f ^. signDoc
      in do
           modify' (over infoFunctions (HashMap.insert (f ^. signName . nameId) f))
-          registerDoc (f ^. signName . nameId) j
-  RegisterName n -> do
-    modify (over highlightNames (cons (S.anameFromName n)))
-  RegisterScopedIden n -> do
-    modify (over highlightNames (cons (anameFromScopedIden n)))
-  RegisterModuleDoc uid doc -> do
-    registerDoc uid doc
+          highlightDoc (f ^. signName . nameId) j
+  RegisterName n -> highlightName (S.anameFromName n)
+  RegisterScopedIden n -> highlightName (anameFromScopedIden n)
+  RegisterModuleDoc uid doc -> highlightDoc uid doc
   RegisterFixity f -> do
     let sid = f ^. fixityDefSymbol . S.nameId
     modify (over infoFixities (HashMap.insert sid f))
@@ -72,7 +77,7 @@ runInfoTableBuilder ini = reinterpret (runState ini) $ \case
   RegisterPrecedence l h ->
     modify (over infoPrecedenceGraph (HashMap.alter (Just . HashSet.insert h . fromMaybe mempty) l))
   RegisterHighlightDoc fid doc ->
-    registerDoc fid doc
+    highlightDoc fid doc
   RegisterNameSig uid sig ->
     modify (over infoNameSigs (HashMap.insert uid sig))
   RegisterConstructorSig uid sig ->
@@ -85,13 +90,57 @@ runInfoTableBuilder ini = reinterpret (runState ini) $ \case
     modify (over infoRecords (HashMap.insert uid recInfo))
   RegisterAlias uid a ->
     modify (over infoScoperAlias (HashMap.insert uid a))
+  RegisterLocalModule m ->
+    mapM_ (uncurry registerBuiltinHelper) (m ^. scopedModuleInfoTable . infoBuiltins . to HashMap.toList)
   GetInfoTable ->
     get
+  GetBuiltinSymbol' i b -> do
+    tbl <- get @InfoTable
+    mapError ErrBuiltinNotDefined
+      . runReader (tbl ^. infoBuiltins)
+      $ getBuiltinSymbolHelper i b
+  RegisterBuiltin' b n -> registerBuiltinHelper b n
 
-runInfoTableBuilderRepl :: InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
+getBuiltinSymbolHelper ::
+  forall r.
+  ( Members
+      '[Error BuiltinNotDefined, Reader BuiltinsTable]
+      r
+  ) =>
+  Interval ->
+  BuiltinPrim ->
+  Sem r S.Symbol
+getBuiltinSymbolHelper i b =
+  fromMaybeM notDefined (asks @BuiltinsTable (^. at b))
+  where
+    notDefined :: forall r' x. (Members '[Error BuiltinNotDefined] r') => Sem r' x
+    notDefined =
+      throw $
+        BuiltinNotDefined
+          { _notDefinedBuiltin = b,
+            _notDefinedLoc = i
+          }
+
+registerBuiltinHelper :: (Members '[Error ScoperError, State InfoTable] r) => BuiltinPrim -> S.Symbol -> Sem r ()
+registerBuiltinHelper b n = do
+  s <- gets (^. infoBuiltins . at b)
+  case s of
+    Nothing -> modify (set (infoBuiltins . at b) (Just n))
+    Just {} -> alreadyDefined
+  where
+    alreadyDefined :: forall r' x. (Members '[Error ScoperError] r') => Sem r' x
+    alreadyDefined =
+      throw $
+        ErrBuiltinAlreadyDefined
+          BuiltinAlreadyDefined
+            { _builtinAlreadyDefined = b,
+              _builtinAlreadyDefinedLoc = getLoc n
+            }
+
+runInfoTableBuilderRepl :: (Members '[Error ScoperError] r) => InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
 runInfoTableBuilderRepl tab = ignoreHighlightBuilder . runInfoTableBuilder tab . raiseUnder
 
-ignoreInfoTableBuilder :: (Member HighlightBuilder r) => Sem (InfoTableBuilder ': r) a -> Sem r a
+ignoreInfoTableBuilder :: (Members '[Error ScoperError, HighlightBuilder] r) => Sem (InfoTableBuilder ': r) a -> Sem r a
 ignoreInfoTableBuilder = fmap snd . runInfoTableBuilder mempty
 
 anameFromScopedIden :: ScopedIden -> AName

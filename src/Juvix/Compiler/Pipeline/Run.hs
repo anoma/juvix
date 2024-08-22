@@ -4,7 +4,6 @@ module Juvix.Compiler.Pipeline.Run
   )
 where
 
-import Juvix.Compiler.Builtins
 import Juvix.Compiler.Concrete.Data.Highlight
 import Juvix.Compiler.Concrete.Data.Scope
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoped
@@ -68,9 +67,7 @@ runIOEitherHelper ::
   EntryPoint ->
   Sem (PipelineEff r) a ->
   Sem r (HighlightInput, (Either JuvixError (ResolverState, PipelineResult a)))
-runIOEitherHelper entry a =
-  runIOEitherPipeline' entry $ do
-    processFileUpTo a
+runIOEitherHelper entry = runIOEitherPipeline' entry . processFileUpTo
 
 runIOEitherPipeline ::
   forall a r.
@@ -148,6 +145,7 @@ evalModuleInfoCacheHelper ::
          TaggedLock,
          TopModuleNameChecker,
          Error JuvixError,
+         HighlightBuilder,
          PathResolver,
          Reader ImportScanStrategy,
          Reader NumThreads,
@@ -220,7 +218,6 @@ runReplPipelineIOEither' lockMode entry = do
       . ignoreHighlightBuilder
       . runError
       . runState initialArtifacts
-      . runBuiltinsArtifacts
       . runNameIdGenArtifacts
       . runFilesIO
       . runReader entry
@@ -298,7 +295,6 @@ runReplPipelineIOEither' lockMode entry = do
                   _artifactCoercions = coercionTable,
                   _artifactScoperState = scopedResult ^. Scoped.resultScoperState,
                   _artifactResolver = art ^. artifactResolver,
-                  _artifactBuiltins = art ^. artifactBuiltins,
                   _artifactNameIdState = art ^. artifactNameIdState,
                   _artifactModuleTable = mempty
                 }
@@ -318,7 +314,6 @@ runReplPipelineIOEither' lockMode entry = do
           _artifactCoercions = mempty,
           _artifactCoreModule = Core.emptyModule,
           _artifactScopeTable = mempty,
-          _artifactBuiltins = iniBuiltins,
           _artifactScopeExports = mempty,
           _artifactScoperState = Scoper.iniScoperState mempty,
           _artifactModuleTable = mempty

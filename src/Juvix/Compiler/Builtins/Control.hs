@@ -1,11 +1,11 @@
 module Juvix.Compiler.Builtins.Control where
 
-import Juvix.Compiler.Builtins.Effect
+import Juvix.Compiler.Internal.Builtins
 import Juvix.Compiler.Internal.Extra
 import Juvix.Prelude
 
-registerSeq :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
-registerSeq f = do
+checkSeq :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => FunctionDef -> Sem r ()
+checkSeq f = do
   let u = ExpressionUniverse smallUniverseNoLoc
       l = getLoc f
   a <- freshVar l "a"
@@ -17,7 +17,7 @@ registerSeq f = do
       m = toExpression varm
       exClauses :: [(Expression, Expression)]
       exClauses = [(seq @@ n @@ m, m)]
-  registerFun
+  checkBuiltinFunctionInfo
     FunInfo
       { _funInfoDef = f,
         _funInfoBuiltin = BuiltinSeq,

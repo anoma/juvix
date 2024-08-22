@@ -1,37 +1,35 @@
 module Juvix.Compiler.Builtins.Maybe where
 
-import Juvix.Compiler.Builtins.Effect
+import Juvix.Compiler.Internal.Builtins
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty
 import Juvix.Prelude
 
-registerMaybeDef :: (Member Builtins r) => InductiveDef -> Sem r ()
-registerMaybeDef d = do
-  unless (isSmallUniverse' (d ^. inductiveType)) (error "Maybe should be in the small universe")
-  registerBuiltin BuiltinMaybe (d ^. inductiveName)
+checkMaybeDef :: forall r. (Members '[Reader BuiltinsTable, Error ScoperError] r) => InductiveDef -> Sem r ()
+checkMaybeDef d = do
+  let err :: forall a. Text -> Sem r a
+      err = builtinsErrorText (getLoc d)
+  unless (isSmallUniverse' (d ^. inductiveType)) (err "Maybe should be in the small universe")
+  param :: VarName <- case d ^. inductiveParameters of
+    [v] -> return (v ^. inductiveParamName)
+    _ -> err "Maybe should have exactly one type parameter"
   case d ^. inductiveConstructors of
-    [c1, c2] -> registerNothing param c1 >> registerJust param c2
-    _ -> error "Maybe should have exactly two constructors"
-  where
-    param :: VarName
-    param = case d ^. inductiveParameters of
-      [v] -> v ^. inductiveParamName
-      _ -> error "Maybe should have exactly one type parameter"
+    [c1, c2] -> checkNothing param c1 >> checkJust param c2
+    _ -> err "Maybe should have exactly two constructors"
 
-registerNothing :: (Member Builtins r) => VarName -> ConstructorDef -> Sem r ()
-registerNothing a d@ConstructorDef {..} = do
-  let nothing = _inductiveConstructorName
-      ty = _inductiveConstructorType
-  maybe_ <- getBuiltinName (getLoc d) BuiltinMaybe
+checkNothing :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => VarName -> ConstructorDef -> Sem r ()
+checkNothing a d@ConstructorDef {..} = do
+  let ty = _inductiveConstructorType
+  maybe_ <- getBuiltinNameScoper (getLoc d) BuiltinMaybe
   let nothingty = maybe_ @@ a
-  unless (ty === nothingty) (error $ "nothing has the wrong type " <> ppTrace ty <> " | " <> ppTrace nothingty)
-  registerBuiltin BuiltinMaybeNothing nothing
+  unless (ty === nothingty) $
+    builtinsErrorMsg (getLoc d) $
+      "nothing has the wrong type " <> ppOutDefault ty <> " | " <> ppOutDefault nothingty
 
-registerJust :: (Member Builtins r) => VarName -> ConstructorDef -> Sem r ()
-registerJust a d@ConstructorDef {..} = do
-  let just_ = _inductiveConstructorName
-      ty = _inductiveConstructorType
-  maybe_ <- getBuiltinName (getLoc d) BuiltinMaybe
+checkJust :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => VarName -> ConstructorDef -> Sem r ()
+checkJust a d@ConstructorDef {..} = do
+  let ty = _inductiveConstructorType
+  maybe_ <- getBuiltinNameScoper (getLoc d) BuiltinMaybe
   let justty = a --> maybe_ @@ a
-  unless (ty === justty) (error "just has the wrong type")
-  registerBuiltin BuiltinMaybeJust just_
+  unless (ty === justty) $
+    builtinsErrorText (getLoc d) "just has the wrong type"

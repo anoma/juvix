@@ -1,32 +1,32 @@
 module Juvix.Compiler.Builtins.Byte where
 
-import Juvix.Compiler.Builtins.Effect
+import Juvix.Compiler.Internal.Builtins
 import Juvix.Compiler.Internal.Extra
 import Juvix.Prelude
 
-registerByte :: (Member Builtins r) => AxiomDef -> Sem r ()
-registerByte d = do
-  unless (isSmallUniverse' (d ^. axiomType)) (error "Byte should be in the small universe")
-  registerBuiltin BuiltinByte (d ^. axiomName)
+checkByte :: (Members '[Error ScoperError] r) => AxiomDef -> Sem r ()
+checkByte d = do
+  unless (isSmallUniverse' (d ^. axiomType)) $
+    builtinsErrorText (getLoc d) "Byte should be in the small universe"
 
-registerByteEq :: (Member Builtins r) => AxiomDef -> Sem r ()
-registerByteEq f = do
-  byte_ <- getBuiltinName (getLoc f) BuiltinByte
-  bool_ <- getBuiltinName (getLoc f) BuiltinBool
-  unless (f ^. axiomType === (byte_ --> byte_ --> bool_)) (error "Byte equality has the wrong type signature")
-  registerBuiltin BuiltinByteEq (f ^. axiomName)
+checkByteEq :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
+checkByteEq f = do
+  byte_ <- getBuiltinNameScoper (getLoc f) BuiltinByte
+  bool_ <- getBuiltinNameScoper (getLoc f) BuiltinBool
+  unless (f ^. axiomType === (byte_ --> byte_ --> bool_)) $
+    builtinsErrorText (getLoc f) "Byte equality has the wrong type signature"
 
-registerByteFromNat :: (Member Builtins r) => AxiomDef -> Sem r ()
-registerByteFromNat d = do
+checkByteFromNat :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
+checkByteFromNat d = do
   let l = getLoc d
-  byte_ <- getBuiltinName l BuiltinByte
-  nat <- getBuiltinName l BuiltinNat
-  unless (d ^. axiomType === (nat --> byte_)) (error "byte-from-nat has the wrong type signature")
-  registerBuiltin BuiltinByteFromNat (d ^. axiomName)
+  byte_ <- getBuiltinNameScoper l BuiltinByte
+  nat <- getBuiltinNameScoper l BuiltinNat
+  unless (d ^. axiomType === (nat --> byte_)) $
+    builtinsErrorText (getLoc d) "byte-from-nat has the wrong type signature"
 
-registerByteToNat :: (Member Builtins r) => AxiomDef -> Sem r ()
-registerByteToNat f = do
-  byte_ <- getBuiltinName (getLoc f) BuiltinByte
-  nat_ <- getBuiltinName (getLoc f) BuiltinNat
-  unless (f ^. axiomType === (byte_ --> nat_)) (error "byte-to-nat has the wrong type signature")
-  registerBuiltin BuiltinByteToNat (f ^. axiomName)
+checkByteToNat :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
+checkByteToNat f = do
+  byte_ <- getBuiltinNameScoper (getLoc f) BuiltinByte
+  nat_ <- getBuiltinNameScoper (getLoc f) BuiltinNat
+  unless (f ^. axiomType === (byte_ --> nat_)) $
+    builtinsErrorText (getLoc f) "byte-to-nat has the wrong type signature"

@@ -13,3 +13,4 @@ runCommand HighlightOptions {..} = silenceProgressLog . runPipelineOptions $ do
       inputFile
       <$> runPipelineHighlight entry upToInternalTyped
   renderStdOutRaw (Highlight.highlight _highlightBackend hinput)
+  newline
