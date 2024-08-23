@@ -67,6 +67,7 @@ push_back {A} (q : Queue A) (x : A) : Queue A :=
       | nil := queue (x :: nil) (qsnd q)
       | q' := queue q' (x :: qsnd q);
 
+--- Checks if the queue is empty
 is_empty {A} (q : Queue A) : Bool :=
     case qfst q of
       | nil :=
@@ -87,7 +88,12 @@ funkcja (n : Nat) : Nat :=
     plusOne (n : Nat) : Nat := n + 1;
   in plusOne n + nat1 + nat2;
 
-type Either' A B := Left' A | Right' B;
+--- An Either' type
+type Either' A B :=
+  --- Left constructor
+  Left' A
+| --- Right constructor
+  Right' B;
 
 -- Records
 

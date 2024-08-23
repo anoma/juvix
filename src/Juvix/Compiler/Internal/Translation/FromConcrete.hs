@@ -19,6 +19,7 @@ import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra qualified as Concrete
 import Juvix.Compiler.Concrete.Gen qualified as Gen
 import Juvix.Compiler.Concrete.Language qualified as Concrete
+import Juvix.Compiler.Concrete.Pretty
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Compiler.Internal.Builtins
@@ -378,7 +379,8 @@ goFunctionDef FunctionDef {..} = do
   _funDefBody <- goBody
   msig <- asks (^. S.infoNameSigs . at (_funDefName ^. Internal.nameId))
   _funDefArgsInfo <- maybe (return mempty) goNameSignature msig
-  let fun = Internal.FunctionDef {..}
+  let _funDefDocComment = fmap ppPrintJudoc _signDoc
+      fun = Internal.FunctionDef {..}
   whenJust _signBuiltin (checkBuiltinFunction fun . (^. withLocParam))
   return fun
   where
@@ -622,7 +624,8 @@ goInductive ty@InductiveDef {..} = do
             _inductiveConstructors = toList _inductiveConstructors',
             _inductivePragmas = _inductivePragmas',
             _inductivePositive = isJust (ty ^. inductivePositive),
-            _inductiveTrait = isJust (ty ^. inductiveTrait)
+            _inductiveTrait = isJust (ty ^. inductiveTrait),
+            _inductiveDocComment = fmap ppPrintJudoc _inductiveDoc
           }
   whenJust ((^. withLocParam) <$> _inductiveBuiltin) (checkBuiltinInductive indDef)
   checkInductiveConstructors indDef
@@ -648,7 +651,8 @@ goConstructorDef retTy ConstructorDef {..} = do
       { _inductiveConstructorType = ty',
         _inductiveConstructorName = goSymbol _constructorName,
         _inductiveConstructorIsRecord = isRhsRecord _constructorRhs,
-        _inductiveConstructorPragmas = pragmas'
+        _inductiveConstructorPragmas = pragmas',
+        _inductiveConstructorDocComment = fmap ppPrintJudoc _constructorDoc
       }
   where
     goAdtType :: Concrete.RhsAdt 'Scoped -> Sem r Internal.Expression
@@ -1451,7 +1455,8 @@ goAxiom a = do
           { _axiomType = _axiomType',
             _axiomBuiltin = (^. withLocParam) <$> a ^. axiomBuiltin,
             _axiomName = goSymbol (a ^. axiomName),
-            _axiomPragmas = _axiomPragmas'
+            _axiomPragmas = _axiomPragmas',
+            _axiomDocComment = fmap ppPrintJudoc (a ^. axiomDoc)
           }
   whenJust (a ^. axiomBuiltin) (checkBuiltinAxiom axiom . (^. withLocParam))
   return axiom

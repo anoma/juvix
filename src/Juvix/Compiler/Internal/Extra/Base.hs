@@ -231,7 +231,8 @@ instance HasExpressions FunctionDef where
           _funDefCoercion,
           _funDefName,
           _funDefBuiltin,
-          _funDefPragmas
+          _funDefPragmas,
+          _funDefDocComment
         }
 
 instance HasExpressions MutualStatement where
@@ -248,7 +249,8 @@ instance HasExpressions AxiomDef where
         { _axiomType = ty',
           _axiomName,
           _axiomBuiltin,
-          _axiomPragmas
+          _axiomPragmas,
+          _axiomDocComment
         }
 
 instance HasExpressions InductiveParameter where
@@ -274,7 +276,8 @@ instance HasExpressions InductiveDef where
           _inductiveBuiltin,
           _inductivePositive,
           _inductiveTrait,
-          _inductivePragmas
+          _inductivePragmas,
+          _inductiveDocComment
         }
 
 instance HasExpressions ConstructorDef where
@@ -285,7 +288,8 @@ instance HasExpressions ConstructorDef where
         { _inductiveConstructorType = ty',
           _inductiveConstructorName,
           _inductiveConstructorIsRecord,
-          _inductiveConstructorPragmas
+          _inductiveConstructorPragmas,
+          _inductiveConstructorDocComment
         }
 
 typeAbstraction :: IsImplicit -> Name -> FunctionParameter
@@ -803,7 +807,8 @@ simpleFunDef funName ty body =
       _funDefArgsInfo = mempty,
       _funDefTerminating = False,
       _funDefBuiltin = Nothing,
-      _funDefBody = body
+      _funDefBody = body,
+      _funDefDocComment = Nothing
     }
 
 umapM :: (Monad m, HasExpressions expr) => (Expression -> m Expression) -> expr -> m expr

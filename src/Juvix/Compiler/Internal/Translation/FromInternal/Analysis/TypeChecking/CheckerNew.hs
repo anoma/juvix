@@ -206,7 +206,8 @@ checkInductiveDef InductiveDef {..} = runInferenceDef $ do
               _inductivePositive,
               _inductiveParameters,
               _inductiveTrait,
-              _inductivePragmas
+              _inductivePragmas,
+              _inductiveDocComment
             }
     checkPositivity (inductiveInfoFromInductiveDef d)
     return d
@@ -229,7 +230,8 @@ checkInductiveDef InductiveDef {..} = runInferenceDef $ do
               { _inductiveConstructorType = cty',
                 _inductiveConstructorName,
                 _inductiveConstructorIsRecord,
-                _inductiveConstructorPragmas
+                _inductiveConstructorPragmas,
+                _inductiveConstructorDocComment
               }
       registerConstructor c'
       return c'
@@ -332,7 +334,8 @@ checkFunctionDef FunctionDef {..} = do
           _funDefInstance,
           _funDefCoercion,
           _funDefBuiltin,
-          _funDefPragmas
+          _funDefPragmas,
+          _funDefDocComment
         }
   when _funDefInstance $
     checkInstanceType funDef

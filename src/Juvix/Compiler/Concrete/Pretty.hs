@@ -5,6 +5,7 @@ module Juvix.Compiler.Concrete.Pretty
   )
 where
 
+import Juvix.Compiler.Concrete.Language.Base
 import Juvix.Compiler.Concrete.Pretty.Options
 import Juvix.Compiler.Concrete.Print (PrettyPrint, doc, docNoComments)
 import Juvix.Compiler.Concrete.Print qualified as Print
@@ -19,3 +20,6 @@ ppOut = Print.ppOutNoComments
 
 ppTrace :: (PrettyPrint c) => c -> Text
 ppTrace = toAnsiText True . ppOut traceOptions
+
+ppPrintJudoc :: (SingI s) => Judoc s -> Text
+ppPrintJudoc = toAnsiText False . Print.ppOutJudoc
