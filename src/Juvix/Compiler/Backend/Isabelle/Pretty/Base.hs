@@ -31,6 +31,26 @@ ppParams = \case
     ps <- mapM ppCode params
     return $ Just $ parens (hsep (punctuate comma ps))
 
+prettyTextComment :: Maybe Text -> Doc Ann
+prettyTextComment = \case
+  Nothing -> ""
+  Just c ->
+    annotate AnnComment "text \\<open>"
+      <> line
+      <> annotate AnnComment (pretty c)
+      <> line
+      <> annotate AnnComment "\\<close>"
+      <> line
+
+prettyComment :: Maybe Text -> Doc Ann
+prettyComment = \case
+  Nothing -> ""
+  Just c ->
+    annotate AnnComment "(* "
+      <> annotate AnnComment (pretty c)
+      <> annotate AnnComment " *)"
+      <> line
+
 instance PrettyCode Name where
   ppCode = return . prettyName False
 
@@ -190,18 +210,20 @@ instance PrettyCode Statement where
 
 instance PrettyCode Definition where
   ppCode Definition {..} = do
+    let comment = prettyTextComment _definitionDocComment
     n <- ppCode _definitionName
     ty <- ppCodeQuoted _definitionType
     body <- ppCode _definitionBody
-    return $ kwDefinition <+> n <+> "::" <+> ty <+> kwWhere <> line <> indent' (dquotes (n <+> "=" <> oneLineOrNext body))
+    return $ comment <> kwDefinition <+> n <+> "::" <+> ty <+> kwWhere <> line <> indent' (dquotes (n <+> "=" <> oneLineOrNext body))
 
 instance PrettyCode Function where
   ppCode Function {..} = do
+    let comment = prettyTextComment _functionDocComment
     n <- ppCode _functionName
     ty <- ppCodeQuoted _functionType
     cls <- mapM ppCode _functionClauses
     let cls' = punctuate (space <> kwPipe) $ map (dquotes . (n <+>)) (toList cls)
-    return $ kwFun <+> n <+> "::" <+> ty <+> kwWhere <> line <> indent' (vsep cls')
+    return $ comment <> kwFun <+> n <+> "::" <+> ty <+> kwWhere <> line <> indent' (vsep cls')
 
 instance PrettyCode Clause where
   ppCode Clause {..} = do
@@ -211,35 +233,40 @@ instance PrettyCode Clause where
 
 instance PrettyCode Synonym where
   ppCode Synonym {..} = do
+    let comment = prettyTextComment _synonymDocComment
     n <- ppCode _synonymName
     ty <- ppCodeQuoted _synonymType
-    return $ kwTypeSynonym <+> n <+> "=" <> oneLineOrNext ty
+    return $ comment <> kwTypeSynonym <+> n <+> "=" <> oneLineOrNext ty
 
 instance PrettyCode Datatype where
   ppCode Datatype {..} = do
+    let comment = prettyTextComment _datatypeDocComment
     n <- ppCode _datatypeName
     params <- ppParams _datatypeParams
     ctrs <- mapM ppCode _datatypeConstructors
-    return $ kwDatatype <+> params <?+> n <> line <> indent' ("=" <+> align (vsep (punctuate (space <> kwPipe) ctrs)))
+    return $ comment <> kwDatatype <+> params <?+> n <> line <> indent' ("=" <+> align (vsep (punctuate (space <> kwPipe) ctrs)))
 
 instance PrettyCode Constructor where
   ppCode Constructor {..} = do
+    let comment = prettyComment _constructorDocComment
     n <- ppCode _constructorName
     tys <- mapM ppCodeQuoted _constructorArgTypes
-    return $ hsep (n : tys)
+    return $ comment <> hsep (n : tys)
 
 instance PrettyCode Record where
   ppCode Record {..} = do
+    let comment = prettyTextComment _recordDocComment
     n <- ppCode _recordName
     params <- ppParams _recordParams
     fields <- mapM ppCode _recordFields
-    return $ kwRecord <+> params <?+> n <+> "=" <> line <> indent' (vsep fields)
+    return $ comment <> kwRecord <+> params <?+> n <+> "=" <> line <> indent' (vsep fields)
 
 instance PrettyCode RecordField where
   ppCode RecordField {..} = do
+    let comment = prettyComment _recordFieldDocComment
     n <- ppCode _recordFieldName
     ty <- ppCodeQuoted _recordFieldType
-    return $ n <+> "::" <+> ty
+    return $ comment <> n <+> "::" <+> ty
 
 ppImports :: [Name] -> Sem r [Doc Ann]
 ppImports ns =

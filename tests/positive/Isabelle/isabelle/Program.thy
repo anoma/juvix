@@ -51,6 +51,9 @@ fun bool_fun :: "bool \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow> bool" 
 fun bool_fun' :: "bool \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow> bool" where
   "bool_fun' x y z = (x \<and> y \<or> z)"
 
+text \<open>
+A type of Queues
+\<close>
 datatype 'A Queue
   = queue "'A list" "'A list"
 
@@ -74,6 +77,9 @@ fun push_back :: "'A Queue \<Rightarrow> 'A \<Rightarrow> 'A Queue" where
        [] \<Rightarrow> queue [x] (qsnd q) |
        q' \<Rightarrow> queue q' (x # qsnd q))"
 
+text \<open>
+Checks if the queue is empty
+\<close>
 fun is_empty :: "'A Queue \<Rightarrow> bool" where
   "is_empty q =
     (case qfst q of
@@ -95,8 +101,13 @@ fun funkcja :: "nat \<Rightarrow> nat" where
                                   n' \<Rightarrow> n' + 1
      in plusOne n + nat1 + nat2)"
 
+text \<open>
+An Either' type
+\<close>
 datatype ('A, 'B) Either'
-  = Left' 'A |
+  = (* Left constructor *)
+    Left' 'A |
+    (* Right constructor *)
     Right' 'B
 
 fun bf :: "bool \<Rightarrow> bool \<Rightarrow> bool" where

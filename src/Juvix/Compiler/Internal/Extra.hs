@@ -131,6 +131,7 @@ genFieldProjection kind _funDefName _funDefBuiltin mpragmas info fieldIx = do
             mpragmas,
         _funDefBody = body',
         _funDefType = foldFunType (inductiveArgs ++ [saturatedTy]) retTy,
+        _funDefDocComment = Nothing,
         _funDefName,
         _funDefBuiltin
       }
