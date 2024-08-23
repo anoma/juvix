@@ -85,6 +85,24 @@ goModule onlyTypes infoTable Internal.Module {..} =
       StmtDatatype {} -> True
       StmtRecord {} -> True
 
+    mkExprCase :: Case -> Expression
+    mkExprCase c@Case {..} = case _caseValue of
+      ExprIden v ->
+        case _caseBranches of
+          CaseBranch {..} :| [] ->
+            case _caseBranchPattern of
+              PatVar v' -> substVar v' v _caseBranchBody
+              _ -> ExprCase c
+          _ -> ExprCase c
+      ExprTuple (Tuple (ExprIden v :| [])) ->
+        case _caseBranches of
+          CaseBranch {..} :| [] ->
+            case _caseBranchPattern of
+              PatTuple (Tuple (PatVar v' :| [])) -> substVar v' v _caseBranchBody
+              _ -> ExprCase c
+          _ -> ExprCase c
+      _ -> ExprCase c
+
     goMutualBlock :: Internal.MutualBlock -> [Statement]
     goMutualBlock Internal.MutualBlock {..} =
       filter (\stmt -> not onlyTypes || isTypeDef stmt) $
@@ -234,7 +252,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
                  in [ Clause
                         { _clausePatterns = fmap PatVar vnames,
                           _clauseBody =
-                            ExprCase
+                            mkExprCase
                               Case
                                 { _caseValue = valTuple,
                                   _caseBranches = brs
@@ -255,7 +273,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
        in CaseBranch
             { _caseBranchPattern = pat,
               _caseBranchBody =
-                ExprCase
+                mkExprCase
                   Case
                     { _caseValue = val,
                       _caseBranches = brs
@@ -271,7 +289,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
           CaseBranch
             { _caseBranchPattern = PatVar (defaultName "_"),
               _caseBranchBody =
-                ExprCase
+                mkExprCase
                   Case
                     { _caseValue = val,
                       _caseBranches = nonEmpty' remainingBranches
@@ -294,7 +312,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
          in CaseBranch
               { _caseBranchPattern = pat,
                 _caseBranchBody =
-                  ExprCase
+                  mkExprCase
                     Case
                       { _caseValue = val,
                         _caseBranches = brs
@@ -838,7 +856,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
                             }
                 brs <- goLambdaClauses (toList _lambdaClauses)
                 return $
-                  ExprCase
+                  mkExprCase
                     Case
                       { _caseValue = val,
                         _caseBranches = nonEmpty' brs
@@ -849,7 +867,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
           val <- goExpression _caseExpression
           brs <- goCaseBranches (toList _caseBranches)
           return $
-            ExprCase
+            mkExprCase
               Case
                 { _caseValue = val,
                   _caseBranches = nonEmpty' brs
@@ -879,7 +897,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
                   [ CaseBranch
                       { _caseBranchPattern = PatVar vname,
                         _caseBranchBody =
-                          ExprCase
+                          mkExprCase
                             Case
                               { _caseValue = ExprIden vname,
                                 _caseBranches = brs'
@@ -934,7 +952,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
               [ CaseBranch
                   { _caseBranchPattern = PatVar vname,
                     _caseBranchBody =
-                      ExprCase
+                      mkExprCase
                         Case
                           { _caseValue = ExprIden vname,
                             _caseBranches = brs'

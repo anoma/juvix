@@ -91,8 +91,7 @@ fun funkcja :: "nat \<Rightarrow> nat" where
     (let
        nat1 = 1;
        nat2 = 2;
-       plusOne = \<lambda> x0 . case x0 of
-                                  n' \<Rightarrow> n' + 1
+       plusOne = \<lambda> x0 . x0 + 1
      in plusOne n + nat1 + nat2)"
 
 datatype ('A, 'B) Either'
@@ -116,16 +115,10 @@ definition v :: nat where
   "v = 0"
 
 fun funR :: "R \<Rightarrow> R" where
-  "funR r' =
-    (case r' of
-       v' \<Rightarrow> r' (| R.r1 := R.r1 r' + R.r2 r' |))"
+  "funR r' = (r' (| R.r1 := R.r1 r' + R.r2 r' |))"
 
 fun funRR :: "R \<Rightarrow> R" where
-  "funRR r'0 =
-    (case (r'0) of
-       (r') \<Rightarrow>
-         (case (r') of
-            (v') \<Rightarrow> r' (| R.r1 := R.r1 r' + R.r2 r' |)))"
+  "funRR r'0 = (r'0 (| R.r1 := R.r1 r'0 + R.r2 r'0 |))"
 
 fun funR' :: "R \<Rightarrow> R" where
   "funR' (| R.r1 = rr1, R.r2 = rr2 |) =
@@ -148,95 +141,71 @@ fun funR1 :: "R \<Rightarrow> R" where
 
 fun funR2 :: "R \<Rightarrow> R" where
   "funR2 r' =
-    (case r' of
-       v'0 \<Rightarrow>
-         (case v'0 of
-            v' \<Rightarrow>
-              (case (R.r1 v') of
-                 (0) \<Rightarrow>
-                   let
-                     r1'0 = R.r2 v';
-                     r2'0 = R.r2 v'
-                   in (| R.r1 = r1'0, R.r2 = r2'0 |) |
-                 _ \<Rightarrow>
-                   (case v'0 of
-                      v'1 \<Rightarrow>
-                        let
-                          r1'0 = R.r2 v'1;
-                          r2'0 = R.r1 v'1
-                        in (| R.r1 = r1'0, R.r2 = r2'0 |)))))"
+    (case (R.r1 r') of
+       (0) \<Rightarrow>
+         let
+           r1'0 = R.r2 r';
+           r2'0 = R.r2 r'
+         in (| R.r1 = r1'0, R.r2 = r2'0 |) |
+       _ \<Rightarrow>
+         let
+           r1'0 = R.r2 r';
+           r2'0 = R.r1 r'
+         in (| R.r1 = r1'0, R.r2 = r2'0 |))"
 
 fun funR3 :: "(R, R) Either' \<Rightarrow> R" where
   "funR3 er =
     (case er of
-       v'0 \<Rightarrow>
-         (case v'0 of
-            (Left' v') \<Rightarrow>
-              (case (R.r1 v') of
+       (Left' v') \<Rightarrow>
+         (case (R.r1 v') of
+            (0) \<Rightarrow>
+              let
+                r1'0 = R.r2 v';
+                r2'0 = R.r2 v'
+              in (| R.r1 = r1'0, R.r2 = r2'0 |) |
+            _ \<Rightarrow>
+              (case er of
+                 (Left' v'1) \<Rightarrow>
+                   let
+                     r1'0 = R.r2 v'1;
+                     r2'0 = R.r1 v'1
+                   in (| R.r1 = r1'0, R.r2 = r2'0 |) |
+                 v'2 \<Rightarrow>
+                   (case v'2 of
+                      (Right' v'1) \<Rightarrow>
+                        (case (R.r2 v'1) of
+                           (0) \<Rightarrow>
+                             let
+                               r1'0 = 7;
+                               r2'0 = 7
+                             in (| R.r1 = r1'0, R.r2 = r2'0 |) |
+                           _ \<Rightarrow>
+                             (case v'2 of
+                                (Right' r') \<Rightarrow>
+                                  r' (| R.r1 := R.r2 r' + 2, R.r2 := R.r1 r' + 3 |))) |
+                      v'4 \<Rightarrow>
+                        (case v'4 of
+                           (Right' r') \<Rightarrow>
+                             r' (| R.r1 := R.r2 r' + 2, R.r2 := R.r1 r' + 3 |))))) |
+       v'2 \<Rightarrow>
+         (case v'2 of
+            (Right' v'1) \<Rightarrow>
+              (case (R.r2 v'1) of
                  (0) \<Rightarrow>
                    let
-                     r1'0 = R.r2 v';
-                     r2'0 = R.r2 v'
+                     r1'0 = 7;
+                     r2'0 = 7
                    in (| R.r1 = r1'0, R.r2 = r2'0 |) |
                  _ \<Rightarrow>
-                   (case v'0 of
-                      (Left' v'1) \<Rightarrow>
-                        let
-                          r1'0 = R.r2 v'1;
-                          r2'0 = R.r1 v'1
-                        in (| R.r1 = r1'0, R.r2 = r2'0 |) |
-                      v'2 \<Rightarrow>
-                        (case v'2 of
-                           (Right' v'1) \<Rightarrow>
-                             (case (R.r2 v'1) of
-                                (0) \<Rightarrow>
-                                  let
-                                    r1'0 = 7;
-                                    r2'0 = 7
-                                  in (| R.r1 = r1'0, R.r2 = r2'0 |) |
-                                _ \<Rightarrow>
-                                  (case v'2 of
-                                     v'4 \<Rightarrow>
-                                       (case v'4 of
-                                          (Right' r') \<Rightarrow>
-                                            (case (r') of
-                                               (v'3) \<Rightarrow>
-                                                 r' (| R.r1 := R.r2 r' + 2, R.r2 := R.r1 r' + 3 |))))) |
-                           v'4 \<Rightarrow>
-                             (case v'4 of
-                                (Right' r') \<Rightarrow>
-                                  (case (r') of
-                                     (v'3) \<Rightarrow>
-                                       r' (| R.r1 := R.r2 r' + 2, R.r2 := R.r1 r' + 3 |)))))) |
-            v'2 \<Rightarrow>
-              (case v'2 of
-                 (Right' v'1) \<Rightarrow>
-                   (case (R.r2 v'1) of
-                      (0) \<Rightarrow>
-                        let
-                          r1'0 = 7;
-                          r2'0 = 7
-                        in (| R.r1 = r1'0, R.r2 = r2'0 |) |
-                      _ \<Rightarrow>
-                        (case v'2 of
-                           v'4 \<Rightarrow>
-                             (case v'4 of
-                                (Right' r') \<Rightarrow>
-                                  (case (r') of
-                                     (v'3) \<Rightarrow>
-                                       r' (| R.r1 := R.r2 r' + 2, R.r2 := R.r1 r' + 3 |))))) |
-                 v'4 \<Rightarrow>
-                   (case v'4 of
+                   (case v'2 of
                       (Right' r') \<Rightarrow>
-                        (case (r') of
-                           (v'3) \<Rightarrow> r' (| R.r1 := R.r2 r' + 2, R.r2 := R.r1 r' + 3 |))))))"
+                        r' (| R.r1 := R.r2 r' + 2, R.r2 := R.r1 r' + 3 |))) |
+            v'4 \<Rightarrow>
+              (case v'4 of
+                 (Right' r') \<Rightarrow> r' (| R.r1 := R.r2 r' + 2, R.r2 := R.r1 r' + 3 |))))"
 
 fun funR4 :: "R \<Rightarrow> R" where
-  "funR4 r'0 =
-    (case (r'0) of
-       (r') \<Rightarrow>
-         (case (r') of
-            (v') \<Rightarrow> r' (| R.r2 := R.r1 r' |)))"
+  "funR4 r'0 = (r'0 (| R.r2 := R.r1 r'0 |))"
 
 fun bf :: "bool \<Rightarrow> bool \<Rightarrow> bool" where
   "bf b1 b2 = (\<not> (b1 \<and> b2))"
