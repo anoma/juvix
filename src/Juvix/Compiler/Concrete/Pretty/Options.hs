@@ -6,6 +6,8 @@ data Options = Options
   { _optShowNameIds :: Bool,
     _optInJudocBlock :: Bool,
     _optPrintPragmas :: Bool,
+    -- | Whether to print judoc annotations without the judoc start string
+    -- (`---`), i.e., print the content of the judoc comments only.
     _optJudoc :: Bool
   }
 

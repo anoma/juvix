@@ -18,9 +18,6 @@ ppOutDefault = Print.ppOutNoComments defaultOptions
 ppOut :: (CanonicalProjection a Options, PrettyPrint c) => a -> c -> AnsiText
 ppOut = Print.ppOutNoComments
 
-ppPrint :: (PrettyPrint c) => c -> Text
-ppPrint = toAnsiText True . ppOutDefault
-
 ppTrace :: (PrettyPrint c) => c -> Text
 ppTrace = toAnsiText True . ppOut traceOptions
 

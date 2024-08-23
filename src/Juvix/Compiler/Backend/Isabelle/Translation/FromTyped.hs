@@ -100,7 +100,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
                   { _recordName = _inductiveName,
                     _recordParams = params,
                     _recordFields = map goRecordField tyargs,
-                    _recordComment = _inductiveComment
+                    _recordDocComment = _inductiveDocComment
                   }
       | otherwise =
           StmtDatatype
@@ -108,7 +108,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
               { _datatypeName = _inductiveName,
                 _datatypeParams = params,
                 _datatypeConstructors = map goConstructorDef _inductiveConstructors,
-                _datatypeComment = _inductiveComment
+                _datatypeDocComment = _inductiveDocComment
               }
       where
         params = map goInductiveParameter _inductiveParameters
@@ -121,7 +121,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
       RecordField
         { _recordFieldName = fromMaybe (defaultName "_") _paramName,
           _recordFieldType = goType _paramType,
-          _recordFieldComment = Nothing
+          _recordFieldDocComment = Nothing
         }
 
     goConstructorDef :: Internal.ConstructorDef -> Constructor
@@ -129,7 +129,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
       Constructor
         { _constructorName = _inductiveConstructorName,
           _constructorArgTypes = tyargs,
-          _constructorComment = _inductiveConstructorComment
+          _constructorDocComment = _inductiveConstructorDocComment
         }
       where
         tyargs = map (goType . (^. Internal.paramType)) (fst $ Internal.unfoldFunType _inductiveConstructorType)
@@ -141,7 +141,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
           Synonym
             { _synonymName = name',
               _synonymType = goType $ fromMaybe (error "unsupported axiomatic type") body,
-              _synonymComment = comment
+              _synonymDocComment = comment
             }
       _
         | isFunction argnames ty body ->
@@ -150,7 +150,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
                 { _functionName = name',
                   _functionType = goType ty,
                   _functionClauses = goBody argnames ty body,
-                  _functionComment = comment
+                  _functionDocComment = comment
                 }
         | otherwise ->
             StmtDefinition
@@ -158,7 +158,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
                 { _definitionName = name',
                   _definitionType = goType ty,
                   _definitionBody = maybe ExprUndefined goExpression' body,
-                  _definitionComment = comment
+                  _definitionDocComment = comment
                 }
       where
         argnames =
@@ -205,10 +205,10 @@ goModule onlyTypes infoTable Internal.Module {..} =
             (pats, nset', nmap') = goPatternArgs'' (filterTypeArgs 0 ty (toList _lambdaPatterns))
 
     goFunctionDef :: Internal.FunctionDef -> Statement
-    goFunctionDef Internal.FunctionDef {..} = goDef _funDefName _funDefType _funDefArgsInfo (Just _funDefBody) _funDefComment
+    goFunctionDef Internal.FunctionDef {..} = goDef _funDefName _funDefType _funDefArgsInfo (Just _funDefBody) _funDefDocComment
 
     goAxiomDef :: Internal.AxiomDef -> Statement
-    goAxiomDef Internal.AxiomDef {..} = goDef _axiomName _axiomType [] Nothing _axiomComment
+    goAxiomDef Internal.AxiomDef {..} = goDef _axiomName _axiomType [] Nothing _axiomDocComment
 
     goType :: Internal.Expression -> Type
     goType ty = case ty of

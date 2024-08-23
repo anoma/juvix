@@ -155,14 +155,14 @@ data Definition = Definition
   { _definitionName :: Name,
     _definitionType :: Type,
     _definitionBody :: Expression,
-    _definitionComment :: Maybe Text
+    _definitionDocComment :: Maybe Text
   }
 
 data Function = Function
   { _functionName :: Name,
     _functionType :: Type,
     _functionClauses :: NonEmpty Clause,
-    _functionComment :: Maybe Text
+    _functionDocComment :: Maybe Text
   }
 
 data Clause = Clause
@@ -173,33 +173,33 @@ data Clause = Clause
 data Synonym = Synonym
   { _synonymName :: Name,
     _synonymType :: Type,
-    _synonymComment :: Maybe Text
+    _synonymDocComment :: Maybe Text
   }
 
 data Datatype = Datatype
   { _datatypeName :: Name,
     _datatypeParams :: [TypeVar],
     _datatypeConstructors :: [Constructor],
-    _datatypeComment :: Maybe Text
+    _datatypeDocComment :: Maybe Text
   }
 
 data Constructor = Constructor
   { _constructorName :: Name,
     _constructorArgTypes :: [Type],
-    _constructorComment :: Maybe Text
+    _constructorDocComment :: Maybe Text
   }
 
 data Record = Record
   { _recordName :: Name,
     _recordParams :: [TypeVar],
     _recordFields :: [RecordField],
-    _recordComment :: Maybe Text
+    _recordDocComment :: Maybe Text
   }
 
 data RecordField = RecordField
   { _recordFieldName :: Name,
     _recordFieldType :: Type,
-    _recordFieldComment :: Maybe Text
+    _recordFieldDocComment :: Maybe Text
   }
 
 makeLenses ''Definition

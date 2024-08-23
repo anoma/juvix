@@ -265,5 +265,5 @@ instance Clonable FunctionDef where
             _funDefCoercion,
             _funDefBuiltin,
             _funDefPragmas,
-            _funDefComment
+            _funDefDocComment
           }
