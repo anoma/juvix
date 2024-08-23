@@ -94,20 +94,6 @@ isSubtype ty1 ty2 =
         (_, TyFun {}) -> False
         (_, TyConstr {}) -> False
 
-isSubtype' :: Type -> Type -> Bool
-isSubtype' ty1 ty2
-  -- The guard is to ensure correct behaviour with dynamic type targets. E.g.
-  -- `A -> B -> C -> D` should be a subtype of `(A, B) -> *`.
-  | tgt1 == TyDynamic || tgt2 == TyDynamic =
-      isSubtype
-        (curryType ty1)
-        (curryType ty2)
-  where
-    tgt1 = typeTarget (uncurryType ty1)
-    tgt2 = typeTarget (uncurryType ty2)
-isSubtype' ty1 ty2 =
-  isSubtype ty1 ty2
-
 unifyTypes :: forall t e r. (Members '[Error TreeError, Reader (Maybe Location), Reader (InfoTable' t e)] r) => Type -> Type -> Sem r Type
 unifyTypes ty1 ty2 =
   let (ty1', ty2') =
