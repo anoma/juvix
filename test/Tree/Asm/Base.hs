@@ -3,6 +3,7 @@ module Tree.Asm.Base where
 import Asm.Run.Base qualified as Asm
 import Base
 import Juvix.Compiler.Asm.Translation.FromTree qualified as Asm
+import Juvix.Compiler.Tree.Pipeline qualified as Tree
 import Juvix.Compiler.Tree.Translation.FromSource
 import Juvix.Data.PPOutput
 
@@ -18,5 +19,8 @@ treeAsmAssertion mainFile expectedFile step = do
     Left err -> assertFailure (prettyString err)
     Right tabIni -> do
       step "Translate"
-      let tab = Asm.fromTree tabIni
-      Asm.asmRunAssertion' tab expectedFile step
+      case run $ runError @JuvixError $ Tree.toAsm tabIni of
+        Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
+        Right tab -> do
+          let tab' = Asm.fromTree tab
+          Asm.asmRunAssertion' tab' expectedFile step

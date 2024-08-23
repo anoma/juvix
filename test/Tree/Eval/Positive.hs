@@ -239,5 +239,10 @@ tests =
       "Test040: ByteArray"
       $(mkRelDir ".")
       $(mkRelFile "test040.jvt")
-      $(mkRelFile "out/test040.out")
+      $(mkRelFile "out/test040.out"),
+    PosTest
+      "Test041: Type unification"
+      $(mkRelDir ".")
+      $(mkRelFile "test041.jvt")
+      $(mkRelFile "out/test041.out")
   ]
