@@ -23,6 +23,7 @@ import Juvix.Compiler.Store.Language qualified as Store
 import Juvix.Prelude
 import Parallel.ParallelTemplate
 import Parallel.ProgressLog
+import Parallel.ProgressLog2
 
 data CompileResult = CompileResult
   { _compileResultModuleTable :: Store.ModuleTable,
@@ -133,7 +134,7 @@ nodeIsSilent e i = e ^. entryPointRoot /= i ^. importNodePackageRoot
 compileNode ::
   (Members '[ModuleInfoCache, PathResolver] r) =>
   EntryIndex ->
-  Sem r (PipelineResult Store.ModuleInfo)
+  Sem (Reader Logs ': r) (PipelineResult Store.ModuleInfo)
 compileNode e =
   withResolverRoot (e ^. entryIxImportNode . importNodePackageRoot)
     . fmap force
@@ -168,10 +169,11 @@ evalModuleInfoCache ::
          PathResolver,
          Reader ImportScanStrategy,
          Reader NumThreads,
+         Logger,
          Files
        ]
       r
   ) =>
-  Sem (ModuleInfoCache ': JvoCache ': r) a ->
+  Sem (ModuleInfoCache ': ProgressLog2 ': JvoCache ': r) a ->
   Sem r a
 evalModuleInfoCache = Driver.evalModuleInfoCacheSetup (const (compileInParallel_))

@@ -32,6 +32,7 @@ import Juvix.Data.Effect.Process
 import Juvix.Data.Effect.TaggedLock
 import Juvix.Prelude
 import Parallel.ProgressLog
+import Parallel.ProgressLog2
 
 -- | It returns `ResolverState` so that we can retrieve the `juvix.yaml` files,
 -- which we require for `Scope` tests.
@@ -149,17 +150,18 @@ evalModuleInfoCacheHelper ::
          PathResolver,
          Reader ImportScanStrategy,
          Reader NumThreads,
+         Logger,
          Files
        ]
       r
   ) =>
-  Sem (ModuleInfoCache ': JvoCache ': r) a ->
+  Sem (ModuleInfoCache ': ProgressLog2 ': JvoCache ': r) a ->
   Sem r a
 evalModuleInfoCacheHelper m = do
-  b <- supportsParallel
+  hasParallelSupport <- supportsParallel
   threads <- ask >>= numThreads
   if
-      | b && threads > 1 -> DriverPar.evalModuleInfoCache m
+      | hasParallelSupport && threads > 1 -> DriverPar.evalModuleInfoCache m
       | otherwise -> evalModuleInfoCache m
 
 mainIsPackageFile :: EntryPoint -> Bool

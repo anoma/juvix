@@ -129,6 +129,7 @@ loadPackage' packagePath = do
               _packageLoaderErrorCause = ErrPackageJuvixError (PackageJuvixError e)
             }
       )
+      . ignoreLogger
       . evalInternetOffline
       . ignoreHighlightBuilder
       . runProcessIO

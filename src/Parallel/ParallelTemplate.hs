@@ -17,6 +17,10 @@ module Parallel.ParallelTemplate
     compileArgsCompileNode,
     compileArgsPreProcess,
     compile,
+    -- TODO temporary
+    Logs,
+    ParProgressLogs,
+    parLogProgress,
   )
 where
 
@@ -30,6 +34,11 @@ import Juvix.Data.CodeAnn
 import Juvix.Prelude
 import Parallel.ProgressLog
 
+data ParProgressLogs :: Effect where
+  ParLogProgress :: Text -> ParProgressLogs m ()
+
+makeSem ''ParProgressLogs
+
 data CompileArgs (s :: [Effect]) nodeId node compileProof = CompileArgs
   { _compileArgsNodesIndex :: NodesIndex nodeId node,
     _compileArgsDependencies :: Dependencies nodeId,
@@ -40,7 +49,7 @@ data CompileArgs (s :: [Effect]) nodeId node compileProof = CompileArgs
     -- | Called concurrently on every node without any specific order before
     -- compilation starts.
     _compileArgsPreProcess :: Maybe (nodeId -> Sem s ()),
-    _compileArgsCompileNode :: node -> Sem s compileProof
+    _compileArgsCompileNode :: node -> Sem (Reader Logs ': s) compileProof
   }
 
 data CompilationState nodeId compiledProof = CompilationState
@@ -342,8 +351,7 @@ registerCompiledModule m proof = do
     forM_ toQueue (writeTBQueue qq)
 
 logClose :: Logs -> STM ()
-logClose (Logs q) = do
-  STM.writeTQueue q LogQueueClose
+logClose (Logs q) = STM.writeTQueue q LogQueueClose
 
 logMsg :: ThreadId -> Logs -> Doc CodeAnn -> STM ()
 logMsg tid (Logs q) msg = do

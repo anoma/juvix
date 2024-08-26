@@ -24,7 +24,6 @@ import Juvix.Compiler.Pipeline.Loader.PathResolver.Error
 import Juvix.Compiler.Pipeline.Loader.PathResolver.ImportTree (withImportTree)
 import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
-import Juvix.Compiler.Pipeline.Result
 import Juvix.Compiler.Pipeline.Run (evalModuleInfoCacheHelper)
 import Juvix.Compiler.Store.Extra qualified as Store
 import Juvix.Data.Effect.Git

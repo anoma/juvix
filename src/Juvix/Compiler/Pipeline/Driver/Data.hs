@@ -1,5 +1,10 @@
-module Juvix.Compiler.Pipeline.Driver.Data where
+module Juvix.Compiler.Pipeline.Driver.Data
+  ( module Juvix.Compiler.Pipeline.Driver.Data,
+    module Juvix.Compiler.Pipeline.Result,
+  )
+where
 
+import Juvix.Compiler.Pipeline.Result
 import Juvix.Compiler.Store.Language qualified as Store
 import Juvix.Prelude
 
@@ -23,3 +28,14 @@ instance Monoid CompileResult where
       { _compileResultChanged = False,
         _compileResultModuleTable = mempty
       }
+
+data ProcessModuleDecision (r :: [Effect])
+  = ProcessModuleReuse (PipelineResult Store.ModuleInfo)
+  | ProcessModuleRecompile (Recompile r)
+
+data Recompile (r :: [Effect]) = Recompile
+  { _recompileDo :: Sem r (PipelineResult Store.ModuleInfo),
+    _recompileReason :: Int
+  }
+
+makeLenses ''Recompile

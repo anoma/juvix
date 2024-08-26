@@ -46,6 +46,7 @@ import Juvix.Data.CodeAnn
 import Juvix.Data.SHA256 qualified as SHA256
 import Juvix.Extra.Serialize qualified as Serialize
 import Juvix.Prelude
+import Parallel.ProgressLog2
 import Path.Posix qualified as Path
 
 processModule ::
@@ -56,21 +57,55 @@ processModule = cacheGet
 
 evalModuleInfoCache ::
   forall r a.
-  (Members '[TaggedLock, HighlightBuilder, TopModuleNameChecker, Error JuvixError, Files, PathResolver] r) =>
-  Sem (ModuleInfoCache ': JvoCache ': r) a ->
+  ( Members
+      '[ TaggedLock,
+         HighlightBuilder,
+         TopModuleNameChecker,
+         Error JuvixError,
+         Files,
+         Logger,
+         PathResolver
+       ]
+      r
+  ) =>
+  Sem (ModuleInfoCache ': ProgressLog2 ': JvoCache ': r) a ->
   Sem r a
-evalModuleInfoCache = evalJvoCache . evalCacheEmpty processModuleCacheMiss
+evalModuleInfoCache =
+  evalJvoCache
+    . runProgressLog2 defaultProgressLogOptions2
+    . evalCacheEmpty processModuleCacheMiss
 
 -- | Used for parallel compilation
 evalModuleInfoCacheSetup ::
   forall r a.
-  (Members '[TaggedLock, HighlightBuilder, TopModuleNameChecker, Error JuvixError, Files, PathResolver] r) =>
-  (EntryIndex -> Sem (ModuleInfoCache ': JvoCache ': r) ()) ->
-  Sem (ModuleInfoCache ': JvoCache ': r) a ->
+  ( Members
+      '[ TaggedLock,
+         Logger,
+         HighlightBuilder,
+         TopModuleNameChecker,
+         Error JuvixError,
+         Files,
+         PathResolver
+       ]
+      r
+  ) =>
+  (EntryIndex -> Sem (ModuleInfoCache ': ProgressLog2 ': JvoCache ': r) ()) ->
+  Sem (ModuleInfoCache ': ProgressLog2 ': JvoCache ': r) a ->
   Sem r a
-evalModuleInfoCacheSetup setup = evalJvoCache . evalCacheEmptySetup setup processModuleCacheMiss
+evalModuleInfoCacheSetup setup =
+  evalJvoCache
+    . runProgressLog2 defaultProgressLogOptions2
+    . evalCacheEmptySetup setup processModuleCacheMiss
 
-processModuleCacheMissPeek ::
+logDecision :: (Members '[ProgressLog2] r) => TopModulePathKey -> ProcessModuleDecision x -> Sem r ()
+logDecision _logItem2Module _d =
+  progressLog2
+    LogItem2
+      { _logItem2Message = "hi",
+        _logItem2Module
+      }
+
+processModuleCacheMissDecide ::
   forall r rrecompile.
   ( Members
       '[ ModuleInfoCache,
@@ -92,8 +127,8 @@ processModuleCacheMissPeek ::
       rrecompile
   ) =>
   EntryIndex ->
-  Sem r (Either (Sem rrecompile (PipelineResult Store.ModuleInfo)) (PipelineResult Store.ModuleInfo))
-processModuleCacheMissPeek entryIx = do
+  Sem r (ProcessModuleDecision rrecompile)
+processModuleCacheMissDecide entryIx = do
   let buildDir = resolveAbsBuildDir root (entry ^. entryPointBuildDir)
       sourcePath = fromJust (entry ^. entryPointModulePath)
       relPath =
@@ -120,15 +155,26 @@ processModuleCacheMissPeek entryIx = do
             CompileResult {..} <- runReader entry (processImports (info ^. Store.moduleInfoImports))
             return $
               if
-                  | _compileResultChanged -> Left recompile
+                  | _compileResultChanged ->
+                      ProcessModuleRecompile
+                        Recompile
+                          { _recompileDo = recompile,
+                            _recompileReason = 333
+                          }
                   | otherwise ->
-                      Right
+                      ProcessModuleReuse
                         PipelineResult
                           { _pipelineResult = info,
                             _pipelineResultImports = _compileResultModuleTable,
                             _pipelineResultChanged = False
                           }
-    _ -> return (Left recompile)
+    _ ->
+      return $
+        ProcessModuleRecompile
+          Recompile
+            { _recompileDo = recompile,
+              _recompileReason = 333
+            }
   where
     entry = entryIx ^. entryIxEntry
     root = entry ^. entryPointRoot
@@ -144,6 +190,7 @@ processModuleCacheMiss ::
          Error JuvixError,
          Files,
          JvoCache,
+         ProgressLog2,
          PathResolver
        ]
       r
@@ -151,10 +198,11 @@ processModuleCacheMiss ::
   EntryIndex ->
   Sem r (PipelineResult Store.ModuleInfo)
 processModuleCacheMiss entryIx = do
-  p <- processModuleCacheMissPeek entryIx
+  p <- processModuleCacheMissDecide entryIx
+  logDecision (entryIx ^. entryIxImportNode . importNodeTopModulePathKey) p
   case p of
-    Right r -> return r
-    Left recomp -> recomp
+    ProcessModuleReuse r -> return r
+    ProcessModuleRecompile recomp -> recomp ^. recompileDo
 
 processProject :: (Members '[ModuleInfoCache, Reader EntryPoint, Reader ImportTree] r) => Sem r [(ImportNode, PipelineResult ModuleInfo)]
 processProject = do
