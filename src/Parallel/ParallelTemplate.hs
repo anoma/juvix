@@ -17,10 +17,6 @@ module Parallel.ParallelTemplate
     compileArgsCompileNode,
     compileArgsPreProcess,
     compile,
-    -- TODO temporary
-    Logs,
-    ParProgressLogs,
-    parLogProgress,
   )
 where
 
@@ -33,11 +29,6 @@ import Effectful.Concurrent.STM as STM
 import Juvix.Data.CodeAnn
 import Juvix.Prelude
 import Parallel.ProgressLog
-
-data ParProgressLogs :: Effect where
-  ParLogProgress :: Text -> ParProgressLogs m ()
-
-makeSem ''ParProgressLogs
 
 data CompileArgs (s :: [Effect]) nodeId node compileProof = CompileArgs
   { _compileArgsNodesIndex :: NodesIndex nodeId node,
@@ -355,10 +346,11 @@ logClose (Logs q) = STM.writeTQueue q LogQueueClose
 
 logMsg :: ThreadId -> Logs -> Doc CodeAnn -> STM ()
 logMsg tid (Logs q) msg = do
-  let logitem =
+  let _logitem =
         LogQueueItem
           LogItem
             { _logItemMessage = msg,
               _logItemThreadId = tid
             }
-  STM.writeTQueue q logitem
+  -- STM.writeTQueue q logitem
+  return ()

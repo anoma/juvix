@@ -2,7 +2,7 @@ module Juvix.Compiler.Pipeline.DriverParallel
   ( compileInParallel,
     compileInParallel_,
     ModuleInfoCache,
-    evalModuleInfoCache,
+    evalModuleInfoCacheParallel,
     module Parallel.ProgressLog,
   )
 where
@@ -129,12 +129,13 @@ compileInParallel = do
   compile args
 
 nodeIsSilent :: EntryPoint -> ImportNode -> Bool
-nodeIsSilent e i = e ^. entryPointRoot /= i ^. importNodePackageRoot
+-- nodeIsSilent e i = e ^. entryPointRoot /= i ^. importNodePackageRoot
+nodeIsSilent _e _i = False
 
 compileNode ::
   (Members '[ModuleInfoCache, PathResolver] r) =>
   EntryIndex ->
-  Sem (Reader Logs ': r) (PipelineResult Store.ModuleInfo)
+  Sem r (PipelineResult Store.ModuleInfo)
 compileNode e =
   withResolverRoot (e ^. entryIxImportNode . importNodePackageRoot)
     . fmap force
@@ -154,7 +155,7 @@ instance Monoid CompileResult where
         _compileResultModuleTable = mempty
       }
 
-evalModuleInfoCache ::
+evalModuleInfoCacheParallel ::
   forall r a.
   ( Members
       '[ Reader EntryPoint,
@@ -176,4 +177,4 @@ evalModuleInfoCache ::
   ) =>
   Sem (ModuleInfoCache ': ProgressLog2 ': JvoCache ': r) a ->
   Sem r a
-evalModuleInfoCache = Driver.evalModuleInfoCacheSetup (const (compileInParallel_))
+evalModuleInfoCacheParallel = Driver.evalModuleInfoCacheSetup (const (compileInParallel_))

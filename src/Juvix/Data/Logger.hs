@@ -84,7 +84,9 @@ silenceProgressLog :: (Members '[Logger] r) => Sem r a -> Sem r a
 silenceProgressLog = localLogger (\f -> f .&&. (/= LogLevelProgress))
 
 runLoggerIO :: forall r a. (Members '[EmbedIO] r) => LoggerOptions -> Sem (Logger ': r) a -> Sem r a
-runLoggerIO opts = interp . re
+runLoggerIO opts m = do
+  liftIO (hSetBuffering stderr LineBuffering)
+  interp (re m)
   where
     interp :: Sem (Output AnsiText ': Reader (LogLevel -> Bool) ': r) a -> Sem r a
     interp = runReader (<= (opts ^. loggerLevel)) . runOutputSem printMsg

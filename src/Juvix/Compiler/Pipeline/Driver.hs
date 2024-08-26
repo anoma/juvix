@@ -5,7 +5,7 @@ module Juvix.Compiler.Pipeline.Driver
     evalJvoCache,
     processFileUpTo,
     processProject,
-    evalModuleInfoCache,
+    evalModuleInfoCacheSilent,
     evalModuleInfoCacheSetup,
     processFileToStoredCore,
     processFileUpToParsing,
@@ -55,7 +55,7 @@ processModule ::
   Sem r (PipelineResult Store.ModuleInfo)
 processModule = cacheGet
 
-evalModuleInfoCache ::
+evalModuleInfoCacheSilent ::
   forall r a.
   ( Members
       '[ TaggedLock,
@@ -63,6 +63,7 @@ evalModuleInfoCache ::
          TopModuleNameChecker,
          Error JuvixError,
          Files,
+         Concurrent,
          Logger,
          PathResolver
        ]
@@ -70,9 +71,9 @@ evalModuleInfoCache ::
   ) =>
   Sem (ModuleInfoCache ': ProgressLog2 ': JvoCache ': r) a ->
   Sem r a
-evalModuleInfoCache =
+evalModuleInfoCacheSilent =
   evalJvoCache
-    . runProgressLog2 defaultProgressLogOptions2
+    . ignoreProgressLog2
     . evalCacheEmpty processModuleCacheMiss
 
 -- | Used for parallel compilation
@@ -83,8 +84,10 @@ evalModuleInfoCacheSetup ::
          Logger,
          HighlightBuilder,
          TopModuleNameChecker,
+         Concurrent,
          Error JuvixError,
          Files,
+         Reader ImportTree,
          PathResolver
        ]
       r
@@ -92,16 +95,21 @@ evalModuleInfoCacheSetup ::
   (EntryIndex -> Sem (ModuleInfoCache ': ProgressLog2 ': JvoCache ': r) ()) ->
   Sem (ModuleInfoCache ': ProgressLog2 ': JvoCache ': r) a ->
   Sem r a
-evalModuleInfoCacheSetup setup =
+evalModuleInfoCacheSetup setup m = do
+  num <- asks importTreeSize
   evalJvoCache
-    . runProgressLog2 defaultProgressLogOptions2
+    . runProgressLog2 (defaultProgressLogOptions2 num)
     . evalCacheEmptySetup setup processModuleCacheMiss
+    $ m
 
 logDecision :: (Members '[ProgressLog2] r) => TopModulePathKey -> ProcessModuleDecision x -> Sem r ()
-logDecision _logItem2Module _d =
+logDecision _logItem2Module _d = do
+  let msg :: Doc CodeAnn = case _d of
+        ProcessModuleReuse {} -> "disk cache"
+        ProcessModuleRecompile {} -> "recompile"
   progressLog2
     LogItem2
-      { _logItem2Message = "hi",
+      { _logItem2Message = msg,
         _logItem2Module
       }
 
@@ -259,10 +267,10 @@ processImport p = withPathFile p getCachedImport
   where
     getCachedImport :: ImportNode -> Sem r (PipelineResult Store.ModuleInfo)
     getCachedImport node = do
-      b <- supportsParallel
+      hasParallelSupport <- supportsParallel
       eix <- mkEntryIndex node
       if
-          | b -> do
+          | hasParallelSupport -> do
               res <- cacheGetResult eix
               return (res ^. cacheResult)
           | otherwise -> processModule eix

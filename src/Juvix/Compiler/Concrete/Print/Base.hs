@@ -71,6 +71,9 @@ instance PrettyPrint KeywordRef where
           $ p
       )
 
+docNoCommentsDefault :: (PrettyPrint c) => c -> Doc Ann
+docNoCommentsDefault = docHelper Nothing defaultOptions
+
 docNoComments :: (PrettyPrint c) => Options -> c -> Doc Ann
 docNoComments = docHelper Nothing
 
