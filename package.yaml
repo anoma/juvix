@@ -119,6 +119,8 @@ dependencies:
   - tasty-hunit
   - Diff == 0.5.*
   - pretty-show == 1.10.*
+  - hedgehog == 1.4.*
+  - tasty-hedgehog == 1.4.*
 
   # benchmarks
   - criterion == 1.6.*
