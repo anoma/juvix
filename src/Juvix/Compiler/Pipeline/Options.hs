@@ -11,6 +11,8 @@ data PipelineOptions = PipelineOptions
     _pipelineShowThreadId :: Bool
   }
 
+makeLenses ''PipelineOptions
+
 defaultPipelineOptions :: PipelineOptions
 defaultPipelineOptions =
   PipelineOptions
