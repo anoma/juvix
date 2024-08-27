@@ -164,6 +164,7 @@ evalModuleInfoCacheParallel ::
          PathResolver,
          Reader ImportScanStrategy,
          Reader NumThreads,
+         Reader PipelineOptions,
          Logger,
          Files
        ]

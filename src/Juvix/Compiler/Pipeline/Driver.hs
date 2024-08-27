@@ -89,6 +89,7 @@ evalModuleInfoCacheSetup ::
          Error JuvixError,
          Files,
          Reader ImportTree,
+         Reader PipelineOptions,
          PathResolver
        ]
       r
@@ -99,13 +100,20 @@ evalModuleInfoCacheSetup ::
 evalModuleInfoCacheSetup setup m = do
   tree <- ask
   root <- resolverInitialRoot
+  popts :: PipelineOptions <- ask
+  let opts :: ProgressLogOptions2 =
+        ProgressLogOptions2
+          { _progressLogOptions2ImportTree = tree,
+            _progressLogOptions2PackageRoot = root,
+            _progressLogOptions2ShowThreadId = popts ^. pipelineShowThreadId
+          }
   evalJvoCache
-    . runProgressLog2 (defaultProgressLogOptions2 root tree)
+    . runProgressLog2 opts
     . evalCacheEmptySetup setup processModuleCacheMiss
     $ m
 
-logDecision :: (Members '[ProgressLog2] r) => ImportNode -> ProcessModuleDecision x -> Sem r ()
-logDecision _logItem2Module dec = do
+logDecision :: (Members '[ProgressLog2] r) => ThreadId -> ImportNode -> ProcessModuleDecision x -> Sem r ()
+logDecision _logItem2ThreadId _logItem2Module dec = do
   let reason :: Maybe (Doc CodeAnn) = case dec of
         ProcessModuleReuse {} -> Nothing
         ProcessModuleRecompile r -> case r ^. recompileReason of
@@ -123,6 +131,7 @@ logDecision _logItem2Module dec = do
     LogItem2
       { _logItem2Message = msg,
         _logItem2Action = processModuleDecisionAction dec,
+        _logItem2ThreadId,
         _logItem2Module
       }
 
@@ -207,6 +216,7 @@ processModuleCacheMiss ::
          Files,
          JvoCache,
          ProgressLog2,
+         Concurrent,
          PathResolver
        ]
       r
@@ -215,7 +225,8 @@ processModuleCacheMiss ::
   Sem r (PipelineResult Store.ModuleInfo)
 processModuleCacheMiss entryIx = do
   p <- processModuleCacheMissDecide entryIx
-  logDecision (entryIx ^. entryIxImportNode) p
+  tid <- myThreadId
+  logDecision tid (entryIx ^. entryIxImportNode) p
   case p of
     ProcessModuleReuse r -> return r
     ProcessModuleRecompile recomp -> recomp ^. recompileDo

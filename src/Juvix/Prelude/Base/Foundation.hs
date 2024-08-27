@@ -43,6 +43,7 @@ module Juvix.Prelude.Base.Foundation
     module Data.Traversable,
     module Data.Functor.Identity,
     module Data.Tuple.Extra,
+    module GHC.Conc,
     module Data.Typeable,
     module Data.Void,
     module Data.Word,
@@ -189,6 +190,7 @@ import Data.Typeable hiding (TyCon)
 import Data.Void
 import Data.Word
 import GHC.Base (assert)
+import GHC.Conc (ThreadId)
 import GHC.Enum
 import GHC.Err qualified as Err
 import GHC.Generics (Generic)

@@ -150,6 +150,7 @@ evalModuleInfoCacheHelper ::
          PathResolver,
          Reader ImportScanStrategy,
          Reader NumThreads,
+         Reader PipelineOptions,
          Logger,
          Files
        ]
@@ -214,6 +215,7 @@ runReplPipelineIOEither' lockMode entry = do
         | otherwise = runPathResolverArtifacts
   eith <-
     runM
+      . runReader defaultPipelineOptions
       . runLoggerIO defaultLoggerOptions
       . runConcurrent
       . runReader defaultNumThreads

@@ -21,6 +21,7 @@ data ProgressLogOptions2 = ProgressLogOptions2
 
 data LogItem2 = LogItem2
   { _logItem2Module :: ImportNode,
+    _logItem2ThreadId :: ThreadId,
     _logItem2Action :: CompileAction,
     _logItem2Message :: Doc CodeAnn
   }
@@ -51,13 +52,13 @@ makeLenses ''LogItem2
 makeLenses ''ProgressLogState
 makeLenses ''LogItemDetails
 
-defaultProgressLogOptions2 :: Path Abs Dir -> ImportTree -> ProgressLogOptions2
-defaultProgressLogOptions2 root tree =
-  ProgressLogOptions2
-    { _progressLogOptions2ShowThreadId = False,
-      _progressLogOptions2ImportTree = tree,
-      _progressLogOptions2PackageRoot = root
-    }
+-- defaultProgressLogOptions2 :: Path Abs Dir -> ImportTree -> ProgressLogOptions2
+-- defaultProgressLogOptions2 root tree =
+--   ProgressLogOptions2
+--     { _progressLogOptions2ShowThreadId = False,
+--       _progressLogOptions2ImportTree = tree,
+--       _progressLogOptions2PackageRoot = root
+--     }
 
 iniProgressLogState :: ProgressLogState
 iniProgressLogState =
@@ -113,10 +114,15 @@ runProgressLog2 opts m = do
                 <+> kwOf
                 <+> annotate AnnLiteralInteger (pretty (packageSize (node ^. importNodePackageRoot)))
 
+            tid :: Maybe (Doc CodeAnn) = do
+              guard (opts ^. progressLogOptions2ShowThreadId)
+              return (annotate AnnImportant (pretty @String (show (l ^. logItem2ThreadId))))
+
             msg :: AnsiText
             msg =
               mkAnsiText $
-                (brackets <$> dependencyTag)
+                (brackets <$> tid)
+                  <?+> (brackets <$> dependencyTag)
                   <?+> brackets num
                     <+> annotate AnnKeyword (pretty (l ^. logItem2Action))
                     <+> l ^. logItem2Message

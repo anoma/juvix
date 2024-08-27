@@ -1,6 +1,5 @@
 module Parallel.ProgressLog where
 
-import GHC.Conc (ThreadId)
 import Juvix.Data.CodeAnn
 import Juvix.Data.Logger
 import Juvix.Prelude.Base
