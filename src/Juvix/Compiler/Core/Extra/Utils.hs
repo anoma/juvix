@@ -183,7 +183,44 @@ containsDebugOperations = ufold (\x xs -> x || or xs) isDebugOp
   where
     isDebugOp :: Node -> Bool
     isDebugOp = \case
-      NBlt (BuiltinApp {..}) -> _builtinAppOp `elem` [OpTrace, OpFail, OpSeq]
+      NBlt BuiltinApp {..} ->
+        case _builtinAppOp of
+          OpTrace -> True
+          OpFail -> True
+          OpSeq -> True
+          OpAnomaByteArrayFromAnomaContents -> False
+          OpAnomaByteArrayToAnomaContents -> False
+          OpAnomaDecode -> False
+          OpAnomaEncode -> False
+          OpAnomaGet -> False
+          OpAnomaSign -> False
+          OpAnomaSignDetached -> False
+          OpAnomaVerifyDetached -> False
+          OpAnomaVerifyWithMessage -> False
+          OpEc -> False
+          OpFieldAdd -> False
+          OpFieldDiv -> False
+          OpFieldFromInt -> False
+          OpFieldMul -> False
+          OpFieldSub -> False
+          OpPoseidonHash -> False
+          OpRandomEcPoint -> False
+          OpStrConcat -> False
+          OpStrToInt -> False
+          OpUInt8FromInt -> False
+          OpUInt8ToInt -> False
+          OpByteArrayFromListByte -> False
+          OpByteArrayLength -> False
+          OpEq -> False
+          OpIntAdd -> False
+          OpIntDiv -> False
+          OpIntLe -> False
+          OpIntLt -> False
+          OpIntMod -> False
+          OpIntMul -> False
+          OpIntSub -> False
+          OpFieldToInt -> False
+          OpShow -> False
       _ -> False
 
 freeVarsSortedMany :: [Node] -> Set Var
