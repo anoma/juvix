@@ -4,6 +4,7 @@ module Juvix.Data.Logger
     Logger,
     LoggerOptions (..),
     LogLevel (..),
+    logMessage,
     logError,
     logProgress,
     logInfo,

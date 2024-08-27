@@ -21,7 +21,7 @@ import Effectful.Concurrent.Async
 import Effectful.Dispatch.Dynamic (LocalEnv, SharedSuffix, impose, interpose, localLift, localLiftUnlift, localLiftUnliftIO, localSeqLift, localSeqUnlift, localSeqUnliftIO, localUnlift, localUnliftIO, withLiftMap, withLiftMapIO)
 import Effectful.Dispatch.Dynamic qualified as E
 import Effectful.Dispatch.Static
-import Effectful.Error.Static hiding (runError)
+import Effectful.Error.Static hiding (runError, runErrorWith)
 import Effectful.Internal.Env (getEnv, putEnv)
 import Effectful.Provider
 import Effectful.Reader.Static
@@ -110,7 +110,7 @@ modify' :: (Member (State s) r) => (s -> s) -> Sem r ()
 modify' = State.modify
 
 mapError :: (Member (Error b) r) => (a -> b) -> Sem (Error a ': r) x -> Sem r x
-mapError f = runErrorWith (\_ e -> throwError (f e))
+mapError f = runErrorWith (throwError . f)
 
 runM :: (MonadIO m) => Sem '[EmbedIO] a -> m a
 runM = liftIO . E.runEff
@@ -123,6 +123,12 @@ throw = throwError
 
 runError :: Sem (Error err ': r) x -> Sem r (Either err x)
 runError = runErrorNoCallStack
+
+runErrorWith :: (err -> Sem r x) -> Sem (Error err ': r) x -> Sem r x
+runErrorWith = runErrorNoCallStackWith
+
+errorMaybe :: (Members '[Error err] r) => err -> Maybe x -> Sem r x
+errorMaybe err = maybe (throw err) return
 
 catch ::
   forall e r a.

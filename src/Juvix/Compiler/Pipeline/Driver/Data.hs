@@ -33,9 +33,16 @@ data ProcessModuleDecision (r :: [Effect])
   = ProcessModuleReuse (PipelineResult Store.ModuleInfo)
   | ProcessModuleRecompile (Recompile r)
 
+data RecompileReason
+  = RecompileImportsChanged
+  | RecompileNoJvoFile
+  | RecompileSourceChanged
+  | RecompileOptionsChanged
+  | RecompileFieldSizeChanged
+
 data Recompile (r :: [Effect]) = Recompile
   { _recompileDo :: Sem r (PipelineResult Store.ModuleInfo),
-    _recompileReason :: Int
+    _recompileReason :: RecompileReason
   }
 
 makeLenses ''Recompile

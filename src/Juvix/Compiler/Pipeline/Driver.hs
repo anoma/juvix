@@ -104,12 +104,16 @@ evalModuleInfoCacheSetup setup m = do
 
 logDecision :: (Members '[ProgressLog2] r) => TopModulePathKey -> ProcessModuleDecision x -> Sem r ()
 logDecision _logItem2Module _d = do
-  let msg :: Doc CodeAnn = case _d of
-        ProcessModuleReuse {} -> "disk cache"
-        ProcessModuleRecompile {} -> "recompile"
+  let msg :: Doc CodeAnn = annotate AnnKeyword $ case _d of
+        ProcessModuleReuse {} -> "Loading"
+        ProcessModuleRecompile {} -> "Compiling"
+      loglvl :: Maybe LogLevel = case _d of
+        ProcessModuleReuse {} -> Nothing
+        ProcessModuleRecompile {} -> Nothing
   progressLog2
     LogItem2
       { _logItem2Message = msg,
+        -- _logItem2LogLevel = loglvl,
         _logItem2Module
       }
 
@@ -167,7 +171,7 @@ processModuleCacheMissDecide entryIx = do
                       ProcessModuleRecompile
                         Recompile
                           { _recompileDo = recompile,
-                            _recompileReason = 333
+                            _recompileReason = RecompileImportsChanged
                           }
                   | otherwise ->
                       ProcessModuleReuse
@@ -181,7 +185,7 @@ processModuleCacheMissDecide entryIx = do
         ProcessModuleRecompile
           Recompile
             { _recompileDo = recompile,
-              _recompileReason = 333
+              _recompileReason = RecompileNoJvoFile
             }
   where
     entry = entryIx ^. entryIxEntry

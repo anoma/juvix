@@ -345,7 +345,7 @@ logClose :: Logs -> STM ()
 logClose (Logs q) = STM.writeTQueue q LogQueueClose
 
 logMsg :: ThreadId -> Logs -> Doc CodeAnn -> STM ()
-logMsg tid (Logs q) msg = do
+logMsg tid (Logs _) msg = do
   let _logitem =
         LogQueueItem
           LogItem
