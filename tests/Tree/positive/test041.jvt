@@ -1,0 +1,41 @@
+type Foldable {
+  mkFoldable : ((* → * → *) → * → * → *) → Foldable;
+}
+
+type Box {
+  mkBox : * → Box;
+}
+
+function lambda_16(integer, integer) : integer;
+function lambda_18((integer, integer) → integer, integer, Box) : integer;
+function foldableBoxintegerI() : Foldable;
+function go_17(integer) : integer;
+function main() : integer;
+
+function lambda_16(_X : integer, _X' : integer) : integer {
+  _X'
+}
+
+function lambda_18(f : (integer, integer) → integer, ini : integer, _X : Box) : integer {
+  case[Box](_X) {
+    mkBox: save {
+      call[go_17](tmp[0].mkBox[0])
+    }
+  }
+}
+
+function foldableBoxintegerI() : Foldable {
+  alloc[mkFoldable](calloc[lambda_18]())
+}
+
+function go_17(x' : integer) : integer {
+  x'
+}
+
+function main() : integer {
+  case[Foldable](call[foldableBoxintegerI]()) {
+    mkFoldable: save {
+      ccall(tmp[0].mkFoldable[0], calloc[lambda_16](), 0, alloc[mkBox](0))
+    }
+  }
+}
