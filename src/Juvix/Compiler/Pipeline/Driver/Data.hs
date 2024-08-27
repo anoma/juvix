@@ -7,6 +7,8 @@ where
 import Juvix.Compiler.Pipeline.Result
 import Juvix.Compiler.Store.Language qualified as Store
 import Juvix.Prelude
+import Juvix.Prelude.Pretty
+import Prelude (show)
 
 data CompileResult = CompileResult
   { _compileResultModuleTable :: Store.ModuleTable,
@@ -46,3 +48,30 @@ data Recompile (r :: [Effect]) = Recompile
   }
 
 makeLenses ''Recompile
+
+processModuleDecisionAction :: ProcessModuleDecision r -> CompileAction
+processModuleDecisionAction = \case
+  ProcessModuleReuse {} -> CompileActionReuseJvo
+  ProcessModuleRecompile r -> case r ^. recompileReason of
+    RecompileNoJvoFile -> CompileActionCompile
+    _ -> CompileActionRecompile
+
+data CompileAction
+  = CompileActionReuseJvo
+  | CompileActionRecompile
+  | CompileActionCompile
+
+instance Show CompileAction where
+  show = \case
+    CompileActionReuseJvo -> "Loading"
+    CompileActionRecompile -> "Recompiling"
+    CompileActionCompile -> "Compiling"
+
+instance Pretty CompileAction where
+  pretty = pretty . Prelude.show
+
+compileActionLogLevel :: CompileAction -> LogLevel
+compileActionLogLevel = \case
+  CompileActionReuseJvo -> LogLevelDebug
+  CompileActionRecompile -> LogLevelProgress
+  CompileActionCompile -> LogLevelProgress

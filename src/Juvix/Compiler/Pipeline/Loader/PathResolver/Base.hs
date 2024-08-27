@@ -40,6 +40,7 @@ data PathResolver :: Effect where
   WithResolverRoot :: Path Abs Dir -> m a -> PathResolver m a
   SupportsParallel :: PathResolver m Bool
   ResolverRoot :: PathResolver m (Path Abs Dir)
+  ResolverInitialRoot :: PathResolver m (Path Abs Dir)
 
 makeLenses ''RootInfo
 makeLenses ''PathInfoTopModule

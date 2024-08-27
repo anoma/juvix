@@ -97,21 +97,16 @@ evalModuleInfoCacheSetup ::
   Sem (ModuleInfoCache ': ProgressLog2 ': JvoCache ': r) a ->
   Sem r a
 evalModuleInfoCacheSetup setup m = do
-  num <- asks importTreeSize
+  tree <- ask
+  root <- resolverInitialRoot
   evalJvoCache
-    . runProgressLog2 (defaultProgressLogOptions2 num)
+    . runProgressLog2 (defaultProgressLogOptions2 root tree)
     . evalCacheEmptySetup setup processModuleCacheMiss
     $ m
 
-logDecision :: (Members '[ProgressLog2] r) => TopModulePathKey -> ProcessModuleDecision x -> Sem r ()
-logDecision _logItem2Module _d = do
-  let word :: Doc CodeAnn = annotate AnnKeyword $ case _d of
-        ProcessModuleReuse {} -> "Loading"
-        ProcessModuleRecompile r -> case r ^. recompileReason of
-          RecompileNoJvoFile -> "Compiling"
-          _ -> "Recompiling"
-
-      reason :: Maybe (Doc CodeAnn) = case _d of
+logDecision :: (Members '[ProgressLog2] r) => ImportNode -> ProcessModuleDecision x -> Sem r ()
+logDecision _logItem2Module dec = do
+  let reason :: Maybe (Doc CodeAnn) = case dec of
         ProcessModuleReuse {} -> Nothing
         ProcessModuleRecompile r -> case r ^. recompileReason of
           RecompileNoJvoFile -> Nothing
@@ -121,18 +116,13 @@ logDecision _logItem2Module _d = do
           RecompileFieldSizeChanged -> Just "Because the field size changed"
 
       msg :: Doc CodeAnn =
-        word
-          <+> docNoCommentsDefault _logItem2Module
+        docNoCommentsDefault (_logItem2Module ^. importNodeTopModulePathKey)
           <+?> (parens <$> reason)
-
-      loglvl :: Maybe LogLevel = case _d of
-        ProcessModuleReuse {} -> Just LogLevelDebug
-        ProcessModuleRecompile {} -> Nothing
 
   progressLog2
     LogItem2
       { _logItem2Message = msg,
-        _logItem2LogLevel = loglvl,
+        _logItem2Action = processModuleDecisionAction dec,
         _logItem2Module
       }
 
@@ -225,7 +215,7 @@ processModuleCacheMiss ::
   Sem r (PipelineResult Store.ModuleInfo)
 processModuleCacheMiss entryIx = do
   p <- processModuleCacheMissDecide entryIx
-  logDecision (entryIx ^. entryIxImportNode . importNodeTopModulePathKey) p
+  logDecision (entryIx ^. entryIxImportNode) p
   case p of
     ProcessModuleReuse r -> return r
     ProcessModuleRecompile recomp -> recomp ^. recompileDo

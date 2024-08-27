@@ -416,6 +416,7 @@ runPathResolver2 st topEnv arg = do
     handler localEnv = \case
       SupportsParallel -> return True
       ResolverRoot -> asks (^. envRoot)
+      ResolverInitialRoot -> asks (^. envInitialRoot)
       RegisterDependencies forceUpdateLockfile -> registerDependencies' forceUpdateLockfile
       GetPackageInfos -> gets allPackageInfos
       ExpectedPathInfoTopModule m -> expectedPath' m
