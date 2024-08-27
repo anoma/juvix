@@ -15,7 +15,6 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Da
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Store.Extra
 import Juvix.Compiler.Store.Language
-import Juvix.Extra.Paths qualified as P
 
 newtype NameSet = NameSet
   { _nameSet :: HashSet Text
@@ -1160,9 +1159,6 @@ goModule onlyTypes infoTable Internal.Module {..} =
                       Just (arg1, arg2)
                 _ -> Nothing
             Nothing -> Nothing
-
-    defaultLoc :: Interval
-    defaultLoc = singletonInterval $ mkInitialLoc P.noFile
 
     defaultName :: Interval -> Text -> Name
     defaultName loc n =
