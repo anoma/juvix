@@ -43,7 +43,7 @@ fromInternal ::
   (Members '[Error JuvixError, Reader EntryPoint, Reader ModuleTable, NameIdGen] r) =>
   Internal.InternalTypedResult ->
   Sem r Result
-fromInternal Internal.InternalTypedResult {..} = do
+fromInternal res@Internal.InternalTypedResult {..} = do
   onlyTypes <- (^. entryPointIsabelleOnlyTypes) <$> ask
   itab <- getInternalModuleTable <$> ask
   let md :: Internal.InternalModule
@@ -52,15 +52,20 @@ fromInternal Internal.InternalTypedResult {..} = do
       itab' = Internal.insertInternalModule itab md
       table :: Internal.InfoTable
       table = Internal.computeCombinedInfoTable itab'
-  go onlyTypes table _resultModule
+      comments :: [Comment]
+      comments = allComments (Internal.getInternalTypedResultComments res)
+  go onlyTypes comments table _resultModule
   where
-    go :: Bool -> Internal.InfoTable -> Internal.Module -> Sem r Result
-    go onlyTypes tab md =
+    go :: Bool -> [Comment] -> Internal.InfoTable -> Internal.Module -> Sem r Result
+    go onlyTypes comments tab md =
       return $
         Result
           { _resultTheory = goModule onlyTypes tab md,
-            _resultModuleId = md ^. Internal.moduleId
+            _resultModuleId = md ^. Internal.moduleId,
+            _resultComments = filter (\c -> c ^. commentInterval . intervalFile == file) comments
           }
+      where
+        file = getLoc md ^. intervalFile
 
 goModule :: Bool -> Internal.InfoTable -> Internal.Module -> Theory
 goModule onlyTypes infoTable Internal.Module {..} =
@@ -146,9 +151,9 @@ goModule onlyTypes infoTable Internal.Module {..} =
     goInductiveParameter Internal.InductiveParameter {..} = TypeVar _inductiveParamName
 
     goRecordField :: Internal.FunctionParameter -> RecordField
-    goRecordField Internal.FunctionParameter {..} =
+    goRecordField param@Internal.FunctionParameter {..} =
       RecordField
-        { _recordFieldName = fromMaybe (defaultName "_") _paramName,
+        { _recordFieldName = fromMaybe (defaultName (getLoc param) "_") _paramName,
           _recordFieldType = goType _paramType,
           _recordFieldDocComment = Nothing
         }
@@ -191,7 +196,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
                 }
       where
         argnames =
-          map (overNameText quote) $ filterTypeArgs 0 ty $ map (fromMaybe (defaultName "_") . (^. Internal.argInfoName)) argsInfo
+          map (overNameText quote) $ filterTypeArgs 0 ty $ map (fromMaybe (defaultName (getLoc name) "_") . (^. Internal.argInfoName)) argsInfo
         name' = overNameText quote name
 
     isFunction :: [Name] -> Internal.Expression -> Maybe Internal.Expression -> Bool
@@ -226,7 +231,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
 
         goClauses :: [Internal.LambdaClause] -> [Clause]
         goClauses = \case
-          Internal.LambdaClause {..} : cls ->
+          cl@Internal.LambdaClause {..} : cls ->
             case npats0 of
               Nested pats [] ->
                 Clause
@@ -242,6 +247,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
                         ( \(idx :: Int, mname) ->
                             maybe
                               ( defaultName
+                                  (getLoc cl)
                                   ( disambiguate
                                       (nset' ^. nameSet)
                                       ("v_" <> show idx)
@@ -294,7 +300,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
       _ ->
         Just $
           CaseBranch
-            { _caseBranchPattern = PatVar (defaultName "_"),
+            { _caseBranchPattern = PatVar (defaultName defaultLoc "_"),
               _caseBranchBody =
                 mkExprCase
                   Case
@@ -447,7 +453,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
 
     goRecordFields :: [Internal.FunctionParameter] -> [a] -> [(Name, a)]
     goRecordFields argtys args = case (argtys, args) of
-      (ty : argtys', arg' : args') -> (fromMaybe (defaultName "_") (ty ^. Internal.paramName), arg') : goRecordFields argtys' args'
+      (ty : argtys', arg' : args') -> (fromMaybe (defaultName defaultLoc "_") (ty ^. Internal.paramName), arg') : goRecordFields argtys' args'
       _ -> []
 
     goExpression' :: Internal.Expression -> Expression
@@ -490,7 +496,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
         goApplication :: Internal.Application -> Sem r Expression
         goApplication app@Internal.Application {..}
           | Just (pragmas, arg1, arg2) <- getIsabelleOperator app =
-              mkIsabelleOperator pragmas arg1 arg2
+              mkIsabelleOperator (getLoc app) pragmas arg1 arg2
           | Just x <- getLiteral app =
               return $ ExprLiteral $ LitNumeric x
           | Just xs <- getList app = do
@@ -542,14 +548,14 @@ goModule onlyTypes infoTable Internal.Module {..} =
               r <- goExpression _appRight
               return $ ExprApp (Application l r)
 
-        mkIsabelleOperator :: PragmaIsabelleOperator -> Internal.Expression -> Internal.Expression -> Sem r Expression
-        mkIsabelleOperator PragmaIsabelleOperator {..} arg1 arg2 = do
+        mkIsabelleOperator :: Interval -> PragmaIsabelleOperator -> Internal.Expression -> Internal.Expression -> Sem r Expression
+        mkIsabelleOperator loc PragmaIsabelleOperator {..} arg1 arg2 = do
           arg1' <- goExpression arg1
           arg2' <- goExpression arg2
           return $
             ExprBinop
               Binop
-                { _binopOperator = defaultName _pragmaIsabelleOperatorName,
+                { _binopOperator = defaultName loc _pragmaIsabelleOperatorName,
                   _binopLeft = arg1',
                   _binopRight = arg2',
                   _binopFixity =
@@ -662,10 +668,10 @@ goModule onlyTypes infoTable Internal.Module {..} =
                 case funInfo ^. Internal.functionInfoBuiltin of
                   Just Internal.BuiltinBoolAnd
                     | (arg1 :| [arg2]) <- args ->
-                        Just (defaultName "\\<and>", andFixity, arg1, arg2)
+                        Just (defaultName defaultLoc "\\<and>", andFixity, arg1, arg2)
                   Just Internal.BuiltinBoolOr
                     | (arg1 :| [arg2]) <- args ->
-                        Just (defaultName "\\<or>", orFixity, arg1, arg2)
+                        Just (defaultName defaultLoc "\\<or>", orFixity, arg1, arg2)
                   _ -> Nothing
               Nothing -> Nothing
           _ -> Nothing
@@ -832,7 +838,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
                     . filter ((/= Internal.Implicit) . (^. Internal.patternArgIsImplicit))
                     . toList
                     $ head _lambdaClauses ^. Internal.lambdaPatterns
-            vars = map (\i -> defaultName ("x" <> show i)) [0 .. patsNum - 1]
+            vars = map (\i -> defaultName defaultLoc ("x" <> show i)) [0 .. patsNum - 1]
 
             goLams :: [Name] -> Sem r Expression
             goLams = \case
@@ -882,7 +888,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
 
         goCaseBranches :: [Internal.CaseBranch] -> Sem r [CaseBranch]
         goCaseBranches = \case
-          Internal.CaseBranch {..} : brs -> do
+          br@Internal.CaseBranch {..} : brs -> do
             (npat, nset, nmap) <- goPatternArgCase _caseBranchPattern
             case npat of
               Nested pat [] -> do
@@ -895,7 +901,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
                     }
                     : brs'
               Nested pat npats -> do
-                let vname = defaultName (disambiguate (nset ^. nameSet) "v")
+                let vname = defaultName (getLoc br) (disambiguate (nset ^. nameSet) "v")
                     nset' = over nameSet (HashSet.insert (vname ^. namePretty)) nset
                 rhs <- withLocalNames nset' nmap $ goCaseBranchRhs _caseBranchRhs
                 remainingBranches <- withLocalNames nset' nmap $ goCaseBranches brs
@@ -924,7 +930,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
 
     goLambdaClauses :: forall r. (Members '[Reader NameSet, Reader NameMap] r) => [Internal.LambdaClause] -> Sem r [CaseBranch]
     goLambdaClauses = \case
-      Internal.LambdaClause {..} : cls -> do
+      cl@Internal.LambdaClause {..} : cls -> do
         (npat, nset, nmap) <- case _lambdaPatterns of
           p :| [] -> goPatternArgCase p
           _ -> do
@@ -950,7 +956,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
                 }
                 : brs
           Nested pat npats -> do
-            let vname = defaultName (disambiguate (nset ^. nameSet) "v")
+            let vname = defaultName (getLoc cl) (disambiguate (nset ^. nameSet) "v")
                 nset' = over nameSet (HashSet.insert (vname ^. namePretty)) nset
             rhs <- withLocalNames nset' nmap $ goExpression _lambdaBody
             remainingBranches <- withLocalNames nset' nmap $ goLambdaClauses cls
@@ -1045,7 +1051,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
       Internal.PatternWildcardConstructor {} -> impossible
       where
         goPatternConstructorApp :: Internal.ConstructorApp -> Sem r Pattern
-        goPatternConstructorApp Internal.ConstructorApp {..}
+        goPatternConstructorApp app@Internal.ConstructorApp {..}
           | Just lst <- getListPat _constrAppConstructor _constrAppParameters = do
               pats <- goPatternArgs False lst
               return $ PatList (List pats)
@@ -1064,7 +1070,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
                           adjustName name =
                             let name' = qualifyRecordProjection indName name
                              in ExprApp (Application (ExprIden name') (ExprIden vname))
-                          vname = defaultName (disambiguate binders "v")
+                          vname = defaultName (getLoc app) (disambiguate binders "v")
                           fieldsVars = map (second (fromJust . getPatternArgName)) $ map (first adjustName) $ filter (isPatternArgVar . snd) fields
                           fieldsNonVars = map (first adjustName) $ filter (not . isPatternArgVar . snd) fields
                       modify' (over nameSet (HashSet.insert (vname ^. namePretty)))
@@ -1155,19 +1161,21 @@ goModule onlyTypes infoTable Internal.Module {..} =
                 _ -> Nothing
             Nothing -> Nothing
 
-    defaultName :: Text -> Name
-    defaultName n =
+    defaultLoc :: Interval
+    defaultLoc = singletonInterval $ mkInitialLoc P.noFile
+
+    defaultName :: Interval -> Text -> Name
+    defaultName loc n =
       Name
         { _nameText = n,
           _nameId = defaultId,
           _nameKind = KNameLocal,
           _nameKindPretty = KNameLocal,
           _namePretty = n,
-          _nameLoc = defaultLoc,
+          _nameLoc = loc,
           _nameFixity = Nothing
         }
       where
-        defaultLoc = singletonInterval $ mkInitialLoc P.noFile
         defaultId =
           NameId
             { _nameIdUid = 0,
