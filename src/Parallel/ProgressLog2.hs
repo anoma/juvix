@@ -65,26 +65,29 @@ runProgressLog2 ::
 runProgressLog2 opts m = do
   logs <- newTQueueIO
   st :: TVar ProgressLogState <- newTVarIO iniProgressLogState
-  withAsync (handleLogs opts logs) $ \_logHandler -> do
-    interpret (handler st logs) m
+  withAsync (handleLogs opts logs) $ \logHandler -> do
+    x <- interpret (handler st logs) m
+    wait logHandler
+    return x
   where
     handler :: TVar ProgressLogState -> TQueue LogQueueItem -> EffectHandlerFO ProgressLog2 r
     handler st logs = \case
       ProgressLog2 i ->
         atomically $ do
-          n <- getNextNumber
+          (n, isLast) <- getNextNumber
           let d =
                 LogItemDetails
                   { _logItemDetailsNumber = n,
                     _logItemDetailsLog = i
                   }
           STM.writeTQueue logs (LogQueueItem d)
+          when isLast (STM.writeTQueue logs LogQueueClose)
       where
-        getNextNumber :: STM Natural
+        getNextNumber :: STM (Natural, Bool)
         getNextNumber = do
           stateTVar st $ \old ->
-            let n = old ^. stateProcessed + 1
-             in (n, set stateProcessed n old)
+            let new = old ^. stateProcessed + 1
+             in ((new, new == opts ^. progressLogOptions2TotalModules), set stateProcessed new old)
 
 queueLoopWhile :: (Members '[Concurrent] r) => TQueue a -> (a -> Sem r Bool) -> Sem r ()
 queueLoopWhile q f = do
@@ -93,7 +96,9 @@ queueLoopWhile q f = do
 
 handleLogs :: (Members '[Logger, Concurrent] r) => ProgressLogOptions2 -> TQueue LogQueueItem -> Sem r ()
 handleLogs opts q = queueLoopWhile q $ \case
-  LogQueueClose -> return False
+  LogQueueClose -> do
+    logDebug (mkAnsiText (annotate AnnKeyword "Finished compilation"))
+    return False
   LogQueueItem d -> do
     let l :: LogItem2
         l = d ^. logItemDetailsLog
