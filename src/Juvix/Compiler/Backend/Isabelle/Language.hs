@@ -6,6 +6,7 @@ module Juvix.Compiler.Backend.Isabelle.Language
 where
 
 import Juvix.Compiler.Internal.Data.Name hiding (letFixity)
+import Juvix.Extra.Paths qualified as P
 import Juvix.Prelude hiding (Cons, letFixity)
 
 data Type
@@ -331,3 +332,88 @@ instance HasAtomicity Pattern where
     PatList {} -> Atom
     PatCons {} -> Aggregate consFixity
     PatRecord {} -> Atom
+
+defaultLoc :: Interval
+defaultLoc = singletonInterval $ mkInitialLoc P.noFile
+
+instance HasLoc Expression where
+  getLoc = \case
+    ExprIden n -> getLoc n
+    ExprUndefined -> defaultLoc
+    ExprLiteral {} -> defaultLoc
+    ExprApp x -> getLoc x
+    ExprBinop x -> getLoc x
+    ExprTuple x -> getLoc x
+    ExprList x -> getLoc x
+    ExprCons x -> getLoc x
+    ExprRecord x -> getLoc x
+    ExprRecordUpdate x -> getLoc x
+    ExprLet x -> getLoc x
+    ExprIf x -> getLoc x
+    ExprCase x -> getLoc x
+    ExprLambda x -> getLoc x
+
+instance HasLoc Application where
+  getLoc Application {..} = getLoc _appLeft <> getLoc _appRight
+
+instance HasLoc Binop where
+  getLoc Binop {..} = getLoc _binopLeft <> getLoc _binopRight
+
+instance (HasLoc a) => HasLoc (Tuple a) where
+  getLoc = getLocSpan . (^. tupleComponents)
+
+instance (HasLoc a) => HasLoc (List a) where
+  getLoc = maybe defaultLoc getLocSpan . nonEmpty . (^. listElements)
+
+instance (HasLoc a) => HasLoc (Cons a) where
+  getLoc Cons {..} = getLoc _consHead <> getLoc _consTail
+
+instance HasLoc (Record a) where
+  getLoc Record {..} =
+    getLoc _recordName
+      <>? maybe Nothing (Just . getLocSpan) (nonEmpty (map fst _recordFields))
+
+instance HasLoc RecordUpdate where
+  getLoc RecordUpdate {..} = getLoc _recordUpdateRecord <> getLoc _recordUpdateFields
+
+instance HasLoc RecordField where
+  getLoc RecordField {..} = getLoc _recordFieldName
+
+instance HasLoc Let where
+  getLoc Let {..} = getLocSpan _letClauses <> getLoc _letBody
+
+instance HasLoc LetClause where
+  getLoc LetClause {..} = getLoc _letClauseName <> getLoc _letClauseValue
+
+instance HasLoc If where
+  getLoc If {..} = getLoc _ifValue <> getLoc _ifBranchTrue <> getLoc _ifBranchFalse
+
+instance HasLoc Case where
+  getLoc Case {..} = getLoc _caseValue <> getLocSpan _caseBranches
+
+instance HasLoc Lambda where
+  getLoc Lambda {..} = getLoc _lambdaVar <> getLoc _lambdaBody
+
+instance HasLoc CaseBranch where
+  getLoc CaseBranch {..} = getLoc _caseBranchPattern <> getLoc _caseBranchBody
+
+instance HasLoc Pattern where
+  getLoc = \case
+    PatVar n -> getLoc n
+    PatZero -> defaultLoc
+    PatConstrApp x -> getLoc x
+    PatTuple x -> getLoc x
+    PatList x -> getLoc x
+    PatCons x -> getLoc x
+    PatRecord x -> getLoc x
+
+instance HasLoc ConstrApp where
+  getLoc ConstrApp {..} = getLoc _constrAppConstructor
+
+instance HasLoc Statement where
+  getLoc = \case
+    StmtDefinition Definition {..} -> getLoc _definitionName
+    StmtFunction Function {..} -> getLoc _functionName
+    StmtSynonym Synonym {..} -> getLoc _synonymName
+    StmtDatatype Datatype {..} -> getLoc _datatypeName
+    StmtRecord RecordDef {..} -> getLoc _recordDefName
