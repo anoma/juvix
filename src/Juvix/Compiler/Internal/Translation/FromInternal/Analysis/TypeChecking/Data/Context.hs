@@ -36,3 +36,6 @@ data ImportContext = ImportContext
 
 makeLenses ''InternalTypedResult
 makeLenses ''ImportContext
+
+getInternalTypedResultComments :: InternalTypedResult -> Comments
+getInternalTypedResultComments = Internal.getInternalResultComments . (^. resultInternal)
