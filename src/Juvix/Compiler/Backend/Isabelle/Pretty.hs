@@ -6,8 +6,8 @@ import Juvix.Data.PPOutput
 import Juvix.Prelude
 import Prettyprinter.Render.Terminal qualified as Ansi
 
-ppOutDefault :: (PrettyCode c) => c -> AnsiText
-ppOutDefault = mkAnsiText . PPOutput . doc defaultOptions
+ppOutDefault :: (PrettyCode c) => [Comment] -> c -> AnsiText
+ppOutDefault comments = mkAnsiText . PPOutput . doc (defaultOptions comments)
 
 ppOut :: (CanonicalProjection a Options, PrettyCode c) => a -> c -> AnsiText
 ppOut o = mkAnsiText . PPOutput . doc (project o)
@@ -18,5 +18,5 @@ ppTrace' opts = Ansi.renderStrict . reAnnotateS stylize . layoutPretty defaultLa
 ppTrace :: (PrettyCode c) => c -> Text
 ppTrace = ppTrace' traceOptions
 
-ppPrint :: (PrettyCode c) => c -> Text
-ppPrint = show . ppOutDefault
+ppPrint :: (PrettyCode c) => [Comment] -> c -> Text
+ppPrint comments = show . ppOutDefault comments
