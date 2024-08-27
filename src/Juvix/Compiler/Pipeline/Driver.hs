@@ -5,7 +5,8 @@ module Juvix.Compiler.Pipeline.Driver
     evalJvoCache,
     processFileUpTo,
     processProject,
-    evalModuleInfoCacheSilent,
+    evalModuleInfoCachePackageDotJuvix,
+    evalModuleInfoCacheSequential,
     evalModuleInfoCacheSetup,
     processFileToStoredCore,
     processFileUpToParsing,
@@ -56,7 +57,29 @@ processModule ::
   Sem r (PipelineResult Store.ModuleInfo)
 processModule = cacheGet
 
-evalModuleInfoCacheSilent ::
+evalModuleInfoCacheSequential ::
+  forall r a.
+  ( Members
+      '[ TaggedLock,
+         HighlightBuilder,
+         TopModuleNameChecker,
+         Error JuvixError,
+         Files,
+         Concurrent,
+         Logger,
+         Reader EntryPoint,
+         Reader ImportTree,
+         Reader PipelineOptions,
+         PathResolver
+       ]
+      r
+  ) =>
+  Sem (ModuleInfoCache ': ProgressLog ': JvoCache ': r) a ->
+  Sem r a
+evalModuleInfoCacheSequential = evalModuleInfoCacheSetup (const (void (compileSequentially)))
+
+-- | Use only to compile package.juvix
+evalModuleInfoCachePackageDotJuvix ::
   forall r a.
   ( Members
       '[ TaggedLock,
@@ -72,10 +95,36 @@ evalModuleInfoCacheSilent ::
   ) =>
   Sem (ModuleInfoCache ': ProgressLog ': JvoCache ': r) a ->
   Sem r a
-evalModuleInfoCacheSilent =
+evalModuleInfoCachePackageDotJuvix =
   evalJvoCache
     . ignoreProgressLog
     . evalCacheEmpty processModuleCacheMiss
+
+-- | Compiles the whole project sequentially (i.e. all modules in the ImportTree).
+compileSequentially ::
+  forall r.
+  ( Members
+      '[ ModuleInfoCache,
+         Reader EntryPoint,
+         PathResolver,
+         Reader ImportTree
+       ]
+      r
+  ) =>
+  Sem r (HashMap ImportNode (PipelineResult Store.ModuleInfo))
+compileSequentially = do
+  nodes :: HashSet ImportNode <- asks (^. importTreeNodes)
+  hashMapFromHashSetM nodes (mkEntryIndex >=> compileNode)
+
+compileNode ::
+  (Members '[ModuleInfoCache, PathResolver] r) =>
+  EntryIndex ->
+  Sem r (PipelineResult Store.ModuleInfo)
+compileNode e =
+  withResolverRoot (e ^. entryIxImportNode . importNodePackageRoot)
+  -- As opposed to parallel compilation, here we don't force the result
+  $
+    processModule e
 
 -- | Used for parallel compilation
 evalModuleInfoCacheSetup ::

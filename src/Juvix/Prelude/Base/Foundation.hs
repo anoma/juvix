@@ -695,8 +695,8 @@ ordSet = Set.fromList . toList
 hashSet :: (Foldable f, Hashable k) => f k -> HashSet k
 hashSet = HashSet.fromList . toList
 
-hashMapFromHashSetM :: (Monad m, Hashable k) => (k -> m v) -> HashSet k -> m (HashMap k v)
-hashMapFromHashSetM fun s =
+hashMapFromHashSetM :: (Monad m, Hashable k) => HashSet k -> (k -> m v) -> m (HashMap k v)
+hashMapFromHashSetM s fun =
   hashMap
     <$> sequence
       [ do
@@ -705,8 +705,8 @@ hashMapFromHashSetM fun s =
         | x <- toList s
       ]
 
-hashMapFromHashSet :: (Hashable k) => (k -> v) -> HashSet k -> HashMap k v
-hashMapFromHashSet fun s = hashMap [(x, fun x) | x <- toList s]
+hashMapFromHashSet :: (Hashable k) => HashSet k -> (k -> v) -> HashMap k v
+hashMapFromHashSet s fun = hashMap [(x, fun x) | x <- toList s]
 
 ordMap :: (Foldable f, Ord k) => f (k, v) -> Map k v
 ordMap = Map.fromList . toList

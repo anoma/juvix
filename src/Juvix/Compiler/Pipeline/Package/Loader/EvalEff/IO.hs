@@ -13,7 +13,7 @@ import Juvix.Compiler.Core.Evaluator
 import Juvix.Compiler.Core.Extra.Value
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Pipeline
-import Juvix.Compiler.Pipeline.Driver (evalModuleInfoCacheSilent, processFileToStoredCore)
+import Juvix.Compiler.Pipeline.Driver (evalModuleInfoCachePackageDotJuvix, processFileToStoredCore)
 import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
 import Juvix.Compiler.Pipeline.Package.Loader.PathResolver
@@ -137,7 +137,7 @@ loadPackage' packagePath = do
     . runEvalFileEffIO
     . runPackagePathResolver rootPath
     . runTopModuleNameChecker
-    . evalModuleInfoCacheSilent
+    . evalModuleInfoCachePackageDotJuvix
     $ (^. pipelineResult) <$> processFileToStoredCore packageEntryPoint
   where
     toPackageError :: JuvixError -> PackageLoaderError

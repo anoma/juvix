@@ -160,8 +160,7 @@ evalModuleInfoCacheHelper m = do
   threads <- ask >>= numThreads
   if
       | hasParallelSupport && threads > 1 -> DriverPar.evalModuleInfoCacheParallel m
-      -- FIXME This should not be silent
-      | otherwise -> evalModuleInfoCacheSilent m
+      | otherwise -> evalModuleInfoCacheSequential m
 
 mainIsPackageFile :: EntryPoint -> Bool
 mainIsPackageFile entry = case entry ^. entryPointModulePath of
