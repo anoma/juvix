@@ -177,6 +177,15 @@ isFalseConstr = \case
   NCtr Constr {..} | _constrTag == BuiltinTag TagFalse -> True
   _ -> False
 
+-- | Check if the node contains `trace`, `fail` or `seq` (`>->`).
+containsDebugOperations :: Node -> Bool
+containsDebugOperations = ufold (\x xs -> x || or xs) isDebugOp
+  where
+    isDebugOp :: Node -> Bool
+    isDebugOp = \case
+      NBlt (BuiltinApp {..}) -> _builtinAppOp `elem` [OpTrace, OpFail, OpSeq]
+      _ -> False
+
 freeVarsSortedMany :: [Node] -> Set Var
 freeVarsSortedMany n = Set.fromList (n ^.. each . freeVars)
 
