@@ -1,4 +1,4 @@
-module Parallel.ProgressLog2 where
+module Parallel.ProgressLog where
 
 import Control.Concurrent.STM.TVar (stateTVar)
 import Effectful.Concurrent
@@ -10,20 +10,20 @@ import Juvix.Data.CodeAnn
 import Juvix.Data.Logger
 import Juvix.Prelude
 
-data ProgressLog2 :: Effect where
-  ProgressLog2 :: LogItem2 -> ProgressLog2 m ()
+data ProgressLog :: Effect where
+  ProgressLog :: LogItem -> ProgressLog m ()
 
-data ProgressLogOptions2 = ProgressLogOptions2
-  { _progressLogOptions2ShowThreadId :: Bool,
-    _progressLogOptions2PackageRoot :: Path Abs Dir,
-    _progressLogOptions2ImportTree :: ImportTree
+data ProgressLogOptions = ProgressLogOptions
+  { _progressLogOptionsShowThreadId :: Bool,
+    _progressLogOptionsPackageRoot :: Path Abs Dir,
+    _progressLogOptionsImportTree :: ImportTree
   }
 
-data LogItem2 = LogItem2
-  { _logItem2Module :: ImportNode,
-    _logItem2ThreadId :: ThreadId,
-    _logItem2Action :: CompileAction,
-    _logItem2Message :: Doc CodeAnn
+data LogItem = LogItem
+  { _logItemModule :: ImportNode,
+    _logItemThreadId :: ThreadId,
+    _logItemAction :: CompileAction,
+    _logItemMessage :: Doc CodeAnn
   }
 
 data ProgressLogState = ProgressLogState
@@ -43,21 +43,21 @@ data LogKind
 data LogItemDetails = LogItemDetails
   { _logItemDetailsNumber :: Natural,
     _logItemDetailsKind :: LogKind,
-    _logItemDetailsLog :: LogItem2
+    _logItemDetailsLog :: LogItem
   }
 
-makeSem ''ProgressLog2
-makeLenses ''ProgressLogOptions2
-makeLenses ''LogItem2
+makeSem ''ProgressLog
+makeLenses ''ProgressLogOptions
+makeLenses ''LogItem
 makeLenses ''ProgressLogState
 makeLenses ''LogItemDetails
 
--- defaultProgressLogOptions2 :: Path Abs Dir -> ImportTree -> ProgressLogOptions2
--- defaultProgressLogOptions2 root tree =
---   ProgressLogOptions2
---     { _progressLogOptions2ShowThreadId = False,
---       _progressLogOptions2ImportTree = tree,
---       _progressLogOptions2PackageRoot = root
+-- defaultProgressLogOptions :: Path Abs Dir -> ImportTree -> ProgressLogOptions
+-- defaultProgressLogOptions root tree =
+--   ProgressLogOptions
+--     { _progressLogOptionsShowThreadId = False,
+--       _progressLogOptionsImportTree = tree,
+--       _progressLogOptionsPackageRoot = root
 --     }
 
 iniProgressLogState :: ProgressLogState
@@ -67,13 +67,13 @@ iniProgressLogState =
       _stateProcessedPerPackage = mempty
     }
 
-runProgressLog2 ::
+runProgressLog ::
   forall r a.
   (Members '[Logger, Concurrent] r) =>
-  ProgressLogOptions2 ->
-  Sem (ProgressLog2 ': r) a ->
+  ProgressLogOptions ->
+  Sem (ProgressLog ': r) a ->
   Sem r a
-runProgressLog2 opts m = do
+runProgressLog opts m = do
   logs <- newTQueueIO
   st :: TVar ProgressLogState <- newTVarIO iniProgressLogState
   withAsync (handleLogs logs) $ \logHandler -> do
@@ -82,7 +82,7 @@ runProgressLog2 opts m = do
     return x
   where
     tree :: ImportTree
-    tree = opts ^. progressLogOptions2ImportTree
+    tree = opts ^. progressLogOptionsImportTree
 
     numModulesByPackage :: HashMap (Path Abs Dir) Natural
     numModulesByPackage = fromIntegral . length <$> importTreeNodesByPackage tree
@@ -91,7 +91,7 @@ runProgressLog2 opts m = do
     packageSize pkg = fromJust (numModulesByPackage ^. at pkg)
 
     mainPackage :: Path Abs Dir
-    mainPackage = opts ^. progressLogOptions2PackageRoot
+    mainPackage = opts ^. progressLogOptionsPackageRoot
 
     handleLogs :: forall r'. (Members '[Logger, Concurrent] r') => TQueue LogQueueItem -> Sem r' ()
     handleLogs q = queueLoopWhile q $ \case
@@ -99,11 +99,11 @@ runProgressLog2 opts m = do
         logDebug (mkAnsiText (annotate AnnKeyword "Finished compilation"))
         return False
       LogQueueItem d -> do
-        let l :: LogItem2
+        let l :: LogItem
             l = d ^. logItemDetailsLog
 
             node :: ImportNode
-            node = l ^. logItem2Module
+            node = l ^. logItemModule
 
             dependencyTag = case d ^. logItemDetailsKind of
               LogMainPackage -> Nothing
@@ -115,8 +115,8 @@ runProgressLog2 opts m = do
                 <+> annotate AnnLiteralInteger (pretty (packageSize (node ^. importNodePackageRoot)))
 
             tid :: Maybe (Doc CodeAnn) = do
-              guard (opts ^. progressLogOptions2ShowThreadId)
-              return (annotate AnnImportant (pretty @String (show (l ^. logItem2ThreadId))))
+              guard (opts ^. progressLogOptionsShowThreadId)
+              return (annotate AnnImportant (pretty @String (show (l ^. logItemThreadId))))
 
             msg :: AnsiText
             msg =
@@ -124,16 +124,16 @@ runProgressLog2 opts m = do
                 (brackets <$> tid)
                   <?+> (brackets <$> dependencyTag)
                   <?+> brackets num
-                    <+> annotate AnnKeyword (pretty (l ^. logItem2Action))
-                    <+> l ^. logItem2Message
+                    <+> annotate AnnKeyword (pretty (l ^. logItemAction))
+                    <+> l ^. logItemMessage
 
-        let loglvl = compileActionLogLevel (l ^. logItem2Action)
+        let loglvl = compileActionLogLevel (l ^. logItemAction)
         logMessage loglvl msg
         return True
 
-    handler :: TVar ProgressLogState -> TQueue LogQueueItem -> EffectHandlerFO ProgressLog2 r
+    handler :: TVar ProgressLogState -> TQueue LogQueueItem -> EffectHandlerFO ProgressLog r
     handler st logs = \case
-      ProgressLog2 i ->
+      ProgressLog i ->
         atomically $ do
           (n, isLast) <- getNextNumber
           let k
@@ -149,13 +149,13 @@ runProgressLog2 opts m = do
           when isLast (STM.writeTQueue logs LogQueueClose)
         where
           fromPackage :: Path Abs Dir
-          fromPackage = i ^. logItem2Module . importNodePackageRoot
+          fromPackage = i ^. logItemModule . importNodePackageRoot
 
           fromMainPackage :: Bool
           fromMainPackage = fromPackage == mainPackage
 
           totalModules :: Natural
-          totalModules = importTreeSize (opts ^. progressLogOptions2ImportTree)
+          totalModules = importTreeSize (opts ^. progressLogOptionsImportTree)
 
           getNextNumber :: STM (Natural, Bool)
           getNextNumber = do
@@ -175,6 +175,6 @@ queueLoopWhile q f = do
   whileCond <- atomically (readTQueue q) >>= f
   when (whileCond) (queueLoopWhile q f)
 
-ignoreProgressLog2 :: Sem (ProgressLog2 ': r) a -> Sem r a
-ignoreProgressLog2 = interpret $ \case
-  ProgressLog2 {} -> return ()
+ignoreProgressLog :: Sem (ProgressLog ': r) a -> Sem r a
+ignoreProgressLog = interpret $ \case
+  ProgressLog {} -> return ()

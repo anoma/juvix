@@ -31,7 +31,7 @@ import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process
 import Juvix.Data.Effect.TaggedLock
 import Juvix.Prelude
-import Parallel.ProgressLog2
+import Parallel.ProgressLog
 
 -- | It returns `ResolverState` so that we can retrieve the `juvix.yaml` files,
 -- which we require for `Scope` tests.
@@ -153,7 +153,7 @@ evalModuleInfoCacheHelper ::
        ]
       r
   ) =>
-  Sem (ModuleInfoCache ': ProgressLog2 ': JvoCache ': r) a ->
+  Sem (ModuleInfoCache ': ProgressLog ': JvoCache ': r) a ->
   Sem r a
 evalModuleInfoCacheHelper m = do
   hasParallelSupport <- supportsParallel

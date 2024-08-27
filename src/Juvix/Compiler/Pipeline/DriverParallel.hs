@@ -21,7 +21,7 @@ import Juvix.Compiler.Pipeline.ModuleInfoCache
 import Juvix.Compiler.Store.Language qualified as Store
 import Juvix.Prelude
 import Parallel.ParallelTemplate
-import Parallel.ProgressLog2
+import Parallel.ProgressLog
 
 data CompileResult = CompileResult
   { _compileResultModuleTable :: Store.ModuleTable,
@@ -165,6 +165,6 @@ evalModuleInfoCacheParallel ::
        ]
       r
   ) =>
-  Sem (ModuleInfoCache ': ProgressLog2 ': JvoCache ': r) a ->
+  Sem (ModuleInfoCache ': ProgressLog ': JvoCache ': r) a ->
   Sem r a
 evalModuleInfoCacheParallel = Driver.evalModuleInfoCacheSetup (const (compileInParallel_))

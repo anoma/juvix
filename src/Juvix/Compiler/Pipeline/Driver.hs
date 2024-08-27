@@ -47,7 +47,7 @@ import Juvix.Data.CodeAnn
 import Juvix.Data.SHA256 qualified as SHA256
 import Juvix.Extra.Serialize qualified as Serialize
 import Juvix.Prelude
-import Parallel.ProgressLog2
+import Parallel.ProgressLog
 import Path.Posix qualified as Path
 
 processModule ::
@@ -70,11 +70,11 @@ evalModuleInfoCacheSilent ::
        ]
       r
   ) =>
-  Sem (ModuleInfoCache ': ProgressLog2 ': JvoCache ': r) a ->
+  Sem (ModuleInfoCache ': ProgressLog ': JvoCache ': r) a ->
   Sem r a
 evalModuleInfoCacheSilent =
   evalJvoCache
-    . ignoreProgressLog2
+    . ignoreProgressLog
     . evalCacheEmpty processModuleCacheMiss
 
 -- | Used for parallel compilation
@@ -94,26 +94,26 @@ evalModuleInfoCacheSetup ::
        ]
       r
   ) =>
-  (EntryIndex -> Sem (ModuleInfoCache ': ProgressLog2 ': JvoCache ': r) ()) ->
-  Sem (ModuleInfoCache ': ProgressLog2 ': JvoCache ': r) a ->
+  (EntryIndex -> Sem (ModuleInfoCache ': ProgressLog ': JvoCache ': r) ()) ->
+  Sem (ModuleInfoCache ': ProgressLog ': JvoCache ': r) a ->
   Sem r a
 evalModuleInfoCacheSetup setup m = do
   tree <- ask
   root <- resolverInitialRoot
   popts :: PipelineOptions <- ask
-  let opts :: ProgressLogOptions2 =
-        ProgressLogOptions2
-          { _progressLogOptions2ImportTree = tree,
-            _progressLogOptions2PackageRoot = root,
-            _progressLogOptions2ShowThreadId = popts ^. pipelineShowThreadId
+  let opts :: ProgressLogOptions =
+        ProgressLogOptions
+          { _progressLogOptionsImportTree = tree,
+            _progressLogOptionsPackageRoot = root,
+            _progressLogOptionsShowThreadId = popts ^. pipelineShowThreadId
           }
   evalJvoCache
-    . runProgressLog2 opts
+    . runProgressLog opts
     . evalCacheEmptySetup setup processModuleCacheMiss
     $ m
 
-logDecision :: (Members '[ProgressLog2] r) => ThreadId -> ImportNode -> ProcessModuleDecision x -> Sem r ()
-logDecision _logItem2ThreadId _logItem2Module dec = do
+logDecision :: (Members '[ProgressLog] r) => ThreadId -> ImportNode -> ProcessModuleDecision x -> Sem r ()
+logDecision _logItemThreadId _logItemModule dec = do
   let reason :: Maybe (Doc CodeAnn) = case dec of
         ProcessModuleReuse {} -> Nothing
         ProcessModuleRecompile r -> case r ^. recompileReason of
@@ -124,15 +124,15 @@ logDecision _logItem2ThreadId _logItem2Module dec = do
           RecompileFieldSizeChanged -> Just "Because the field size changed"
 
       msg :: Doc CodeAnn =
-        docNoCommentsDefault (_logItem2Module ^. importNodeTopModulePathKey)
+        docNoCommentsDefault (_logItemModule ^. importNodeTopModulePathKey)
           <+?> (parens <$> reason)
 
-  progressLog2
-    LogItem2
-      { _logItem2Message = msg,
-        _logItem2Action = processModuleDecisionAction dec,
-        _logItem2ThreadId,
-        _logItem2Module
+  progressLog
+    LogItem
+      { _logItemMessage = msg,
+        _logItemAction = processModuleDecisionAction dec,
+        _logItemThreadId,
+        _logItemModule
       }
 
 processModuleCacheMissDecide ::
@@ -215,7 +215,7 @@ processModuleCacheMiss ::
          Error JuvixError,
          Files,
          JvoCache,
-         ProgressLog2,
+         ProgressLog,
          Concurrent,
          PathResolver
        ]

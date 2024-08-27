@@ -54,13 +54,13 @@ import Juvix.Compiler.Tree qualified as Tree
 import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process
 import Juvix.Data.Field
-import Parallel.ProgressLog2
+import Parallel.ProgressLog
 
 type PipelineAppEffects = '[TaggedLock, Reader PipelineOptions, Logger, EmbedIO]
 
 type PipelineLocalEff =
   '[ ModuleInfoCache,
-     ProgressLog2,
+     ProgressLog,
      JvoCache,
      Reader ImportTree,
      Reader ImportScanStrategy,
