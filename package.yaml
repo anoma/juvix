@@ -180,6 +180,7 @@ executables:
       - juvix
       - tasty-bench == 0.3.*
       - polysemy == 1.9.*
+      - random
     verbatim:
       default-language: GHC2021
   juvix:
