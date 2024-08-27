@@ -106,7 +106,6 @@ handleLogs opts q = queueLoopWhile q $ \case
               <+> annotate AnnLiteralInteger (pretty (opts ^. progressLogOptions2TotalModules))
                 <> kwBracketR
               <+> l ^. logItem2Message
-              <+> docNoCommentsDefault (l ^. logItem2Module)
     case l ^. logItem2LogLevel of
       Nothing -> logProgress msg
       Just loglvl -> logMessage loglvl msg

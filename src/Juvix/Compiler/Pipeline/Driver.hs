@@ -20,6 +20,7 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Concrete.Data.Highlight
 import Juvix.Compiler.Concrete.Language
+import Juvix.Compiler.Concrete.Print.Base (docNoCommentsDefault)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping (getModuleId)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
@@ -104,12 +105,28 @@ evalModuleInfoCacheSetup setup m = do
 
 logDecision :: (Members '[ProgressLog2] r) => TopModulePathKey -> ProcessModuleDecision x -> Sem r ()
 logDecision _logItem2Module _d = do
-  let msg :: Doc CodeAnn = annotate AnnKeyword $ case _d of
+  let word :: Doc CodeAnn = annotate AnnKeyword $ case _d of
         ProcessModuleReuse {} -> "Loading"
         ProcessModuleRecompile {} -> "Compiling"
+
+      reason :: Maybe (Doc CodeAnn) = case _d of
+        ProcessModuleReuse {} -> Nothing
+        ProcessModuleRecompile r -> case r ^. recompileReason of
+          RecompileImportsChanged -> Just "An imported module changed"
+          RecompileNoJvoFile -> Nothing
+          RecompileSourceChanged -> Just "Source changed"
+          RecompileOptionsChanged -> Just "Compilation options changed"
+          RecompileFieldSizeChanged -> Just "Field size changed"
+
+      msg :: Doc CodeAnn =
+        word
+          <+> docNoCommentsDefault _logItem2Module
+          <+?> (parens <$> reason)
+
       loglvl :: Maybe LogLevel = case _d of
         ProcessModuleReuse {} -> Just LogLevelDebug
         ProcessModuleRecompile {} -> Nothing
+
   progressLog2
     LogItem2
       { _logItem2Message = msg,
