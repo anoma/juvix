@@ -27,7 +27,7 @@ data LogItem2 = LogItem2
 
 data ProgressLogState = ProgressLogState
   { _stateProcessed :: Natural,
-    _statePackageProcessed :: Natural
+    _stateProcessedPerPackage :: HashMap (Path Abs Dir) Natural
   }
 
 data LogQueueItem
@@ -36,11 +36,12 @@ data LogQueueItem
     LogQueueClose
 
 data LogKind
-  = LogMainPackage Natural
+  = LogMainPackage
   | LogDependency
 
 data LogItemDetails = LogItemDetails
-  { _logItemDetailsKind :: LogKind,
+  { _logItemDetailsNumber :: Natural,
+    _logItemDetailsKind :: LogKind,
     _logItemDetailsLog :: LogItem2
   }
 
@@ -62,7 +63,7 @@ iniProgressLogState :: ProgressLogState
 iniProgressLogState =
   ProgressLogState
     { _stateProcessed = 0,
-      _statePackageProcessed = 0
+      _stateProcessedPerPackage = mempty
     }
 
 runProgressLog2 ::
@@ -79,6 +80,18 @@ runProgressLog2 opts m = do
     wait logHandler
     return x
   where
+    tree :: ImportTree
+    tree = opts ^. progressLogOptions2ImportTree
+
+    numModulesByPackage :: HashMap (Path Abs Dir) Natural
+    numModulesByPackage = fromIntegral . length <$> importTreeNodesByPackage tree
+
+    packageSize :: Path Abs Dir -> Natural
+    packageSize pkg = fromJust (numModulesByPackage ^. at pkg)
+
+    mainPackage :: Path Abs Dir
+    mainPackage = opts ^. progressLogOptions2PackageRoot
+
     handleLogs :: forall r'. (Members '[Logger, Concurrent] r') => TQueue LogQueueItem -> Sem r' ()
     handleLogs q = queueLoopWhile q $ \case
       LogQueueClose -> do
@@ -88,27 +101,29 @@ runProgressLog2 opts m = do
         let l :: LogItem2
             l = d ^. logItemDetailsLog
 
-            iden = case d ^. logItemDetailsKind of
-              LogDependency -> annotate AnnKeyword "Dependency"
-              LogMainPackage num ->
-                annotate AnnLiteralInteger (pretty num)
-                  <+> kwOf
-                  <+> annotate AnnLiteralInteger (pretty packageNumModules)
+            node :: ImportNode
+            node = l ^. logItem2Module
+
+            dependencyTag = case d ^. logItemDetailsKind of
+              LogMainPackage -> Nothing
+              LogDependency -> Just (annotate AnnKeyword "Dependency" <+> pretty (node ^. importNodePackageRoot))
+
+            num =
+              annotate AnnLiteralInteger (pretty (d ^. logItemDetailsNumber))
+                <+> kwOf
+                <+> annotate AnnLiteralInteger (pretty (packageSize (node ^. importNodePackageRoot)))
 
             msg :: AnsiText
             msg =
               mkAnsiText $
-                kwBracketL
-                  <> iden
-                  <> kwBracketR
-                  <+> annotate AnnKeyword (pretty (l ^. logItem2Action))
-                  <+> l ^. logItem2Message
+                (brackets <$> dependencyTag)
+                  <?+> brackets num
+                    <+> annotate AnnKeyword (pretty (l ^. logItem2Action))
+                    <+> l ^. logItem2Message
+
         let loglvl = compileActionLogLevel (l ^. logItem2Action)
         logMessage loglvl msg
         return True
-        where
-          packageNumModules :: Natural
-          packageNumModules = fromIntegral (length (importTreeProjectNodes (opts ^. progressLogOptions2PackageRoot) (opts ^. progressLogOptions2ImportTree)))
 
     handler :: TVar ProgressLogState -> TQueue LogQueueItem -> EffectHandlerFO ProgressLog2 r
     handler st logs = \case
@@ -116,18 +131,22 @@ runProgressLog2 opts m = do
         atomically $ do
           (n, isLast) <- getNextNumber
           let k
-                | fromMainPackage = LogMainPackage n
+                | fromMainPackage = LogMainPackage
                 | otherwise = LogDependency
               d =
                 LogItemDetails
                   { _logItemDetailsKind = k,
+                    _logItemDetailsNumber = n,
                     _logItemDetailsLog = i
                   }
           STM.writeTQueue logs (LogQueueItem d)
           when isLast (STM.writeTQueue logs LogQueueClose)
         where
+          fromPackage :: Path Abs Dir
+          fromPackage = i ^. logItem2Module . importNodePackageRoot
+
           fromMainPackage :: Bool
-          fromMainPackage = i ^. logItem2Module . importNodePackageRoot == opts ^. progressLogOptions2PackageRoot
+          fromMainPackage = fromPackage == mainPackage
 
           totalModules :: Natural
           totalModules = importTreeSize (opts ^. progressLogOptions2ImportTree)
@@ -136,13 +155,13 @@ runProgressLog2 opts m = do
           getNextNumber = do
             stateTVar st $ \old ->
               let processed = old ^. stateProcessed + 1
-                  pkgProcessed = (if fromMainPackage then succ else id) (old ^. statePackageProcessed)
+                  pkgProcessed = over (at fromPackage) (Just . maybe 1 succ) (old ^. stateProcessedPerPackage)
                   st' =
                     old
                       { _stateProcessed = processed,
-                        _statePackageProcessed = pkgProcessed
+                        _stateProcessedPerPackage = pkgProcessed
                       }
-                  ret = (pkgProcessed, processed == totalModules)
+                  ret = (fromJust (pkgProcessed ^. at fromPackage), processed == totalModules)
                in (ret, st')
 
 queueLoopWhile :: (Members '[Concurrent] r) => TQueue a -> (a -> Sem r Bool) -> Sem r ()
