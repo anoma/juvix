@@ -3,7 +3,6 @@ module CommonOptions
   ( module CommonOptions,
     module Juvix.Prelude,
     module Juvix.Prelude.Pretty,
-    module Parallel.ProgressLog,
     module Options.Applicative,
     module Prettyprinter.Render.Terminal,
   )
@@ -28,7 +27,6 @@ import Juvix.Prelude.Parsing qualified as P
 import Juvix.Prelude.Pretty hiding (group, list)
 import Options.Applicative hiding (helpDoc)
 import Options.Applicative qualified as Opt
-import Parallel.ProgressLog
 import Prettyprinter.Render.Terminal hiding (renderIO, renderStrict)
 import System.Process
 import Text.Read (readMaybe)

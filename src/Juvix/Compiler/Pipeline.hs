@@ -54,7 +54,6 @@ import Juvix.Compiler.Tree qualified as Tree
 import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process
 import Juvix.Data.Field
-import Parallel.ProgressLog (ProgressLog)
 import Parallel.ProgressLog2
 
 type PipelineAppEffects = '[TaggedLock, Reader PipelineOptions, Logger, EmbedIO]
@@ -76,7 +75,6 @@ type PipelineLocalEff =
      Error GitProcessError,
      Process,
      Log,
-     ProgressLog,
      Reader EntryPoint,
      Files,
      Error JuvixError,

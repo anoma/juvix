@@ -29,7 +29,6 @@ import Juvix.Compiler.Store.Extra qualified as Store
 import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process (runProcessIO)
 import Juvix.Prelude
-import Parallel.ProgressLog
 
 upToInternalExpression ::
   (Members '[Reader EntryPoint, Error JuvixError, State Artifacts, Termination] r) =>
@@ -184,7 +183,6 @@ compileReplInputIO fp txt = do
     . runTopModuleNameChecker
     . runReader defaultImportScanStrategy
     . withImportTree (Just fp)
-    . ignoreProgressLog
     . evalModuleInfoCacheHelper
     $ do
       p <- parseReplInput fp txt

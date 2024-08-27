@@ -5,8 +5,7 @@
 {-# HLINT ignore "Avoid restricted flags" #-}
 
 module Parallel.ParallelTemplate
-  ( module Parallel.ProgressLog,
-    CompileArgs (..),
+  ( CompileArgs (..),
     NodesIndex (..),
     Dependencies (..),
     compileArgsDependencies,
@@ -26,7 +25,6 @@ import Effectful.Concurrent
 import Effectful.Concurrent.STM as STM
 import Juvix.Data.CodeAnn
 import Juvix.Prelude
-import Parallel.ProgressLog
 
 data CompileArgs (s :: [Effect]) nodeId node compileProof = CompileArgs
   { _compileArgsNodesIndex :: NodesIndex nodeId node,
@@ -133,7 +131,7 @@ nodeDependencies deps m = fromMaybe impossible (deps ^. dependenciesTable . at m
 compile ::
   forall nodeId node compileProof r.
   ( Hashable nodeId,
-    Members '[IOE, ProgressLog, Concurrent, Error JuvixError] r
+    Members '[IOE, Concurrent, Error JuvixError] r
   ) =>
   CompileArgs r nodeId node compileProof ->
   Sem r (HashMap nodeId compileProof)

@@ -31,7 +31,6 @@ import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process
 import Juvix.Data.Effect.TaggedLock
 import Juvix.Prelude
-import Parallel.ProgressLog
 import Parallel.ProgressLog2
 
 -- | It returns `ResolverState` so that we can retrieve the `juvix.yaml` files,
@@ -118,7 +117,6 @@ runIOEitherPipeline' entry a = do
     . runJuvixError
     . runFilesIO
     . runReader entry
-    . runProgressLog defaultProgressLogOptions
     . runLogIO
     . runProcessIO
     . mapError (JuvixError @GitProcessError)
@@ -141,7 +139,6 @@ evalModuleInfoCacheHelper ::
       '[ Reader EntryPoint,
          IOE,
          Reader ImportTree,
-         ProgressLog,
          Concurrent,
          TaggedLock,
          TopModuleNameChecker,
@@ -240,7 +237,6 @@ runReplPipelineIOEither' lockMode entry = do
       . runTopModuleNameChecker
       . runReader defaultImportScanStrategy
       . withImportTree (entry ^. entryPointModulePath)
-      . ignoreProgressLog
       . evalModuleInfoCacheHelper
       $ processFileToStoredCore entry
   return $ case eith of
