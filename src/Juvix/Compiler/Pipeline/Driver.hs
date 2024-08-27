@@ -108,12 +108,12 @@ logDecision _logItem2Module _d = do
         ProcessModuleReuse {} -> "Loading"
         ProcessModuleRecompile {} -> "Compiling"
       loglvl :: Maybe LogLevel = case _d of
-        ProcessModuleReuse {} -> Nothing
+        ProcessModuleReuse {} -> Just LogLevelDebug
         ProcessModuleRecompile {} -> Nothing
   progressLog2
     LogItem2
       { _logItem2Message = msg,
-        -- _logItem2LogLevel = loglvl,
+        _logItem2LogLevel = loglvl,
         _logItem2Module
       }
 
@@ -150,7 +150,6 @@ processModuleCacheMissDecide entryIx = do
           $ stripProperPrefix $(mkAbsDir "/") sourcePath
       absPath = buildDir Path.</> relPath
   sha256 <- SHA256.digestFile sourcePath
-  m :: Maybe Store.ModuleInfo <- loadFromJvoFile absPath
 
   let recompile :: Sem rrecompile (PipelineResult Store.ModuleInfo)
       recompile = do
@@ -158,35 +157,31 @@ processModuleCacheMissDecide entryIx = do
         Serialize.saveToFile absPath (res ^. pipelineResult)
         return res
 
-  case m of
-    Just info
-      | info ^. Store.moduleInfoSHA256 == sha256
-          && info ^. Store.moduleInfoOptions == opts
-          && info ^. Store.moduleInfoFieldSize == entry ^. entryPointFieldSize ->
-          do
-            CompileResult {..} <- runReader entry (processImports (info ^. Store.moduleInfoImports))
-            return $
-              if
-                  | _compileResultChanged ->
-                      ProcessModuleRecompile
-                        Recompile
-                          { _recompileDo = recompile,
-                            _recompileReason = RecompileImportsChanged
-                          }
-                  | otherwise ->
-                      ProcessModuleReuse
-                        PipelineResult
-                          { _pipelineResult = info,
-                            _pipelineResultImports = _compileResultModuleTable,
-                            _pipelineResultChanged = False
-                          }
-    _ ->
-      return $
+      recompileWithReason :: RecompileReason -> ProcessModuleDecision rrecompile
+      recompileWithReason reason =
         ProcessModuleRecompile
           Recompile
             { _recompileDo = recompile,
-              _recompileReason = RecompileNoJvoFile
+              _recompileReason = reason
             }
+
+  runErrorWith (return . recompileWithReason) $ do
+    info :: Store.ModuleInfo <- loadFromJvoFile absPath >>= errorMaybe RecompileNoJvoFile
+
+    unless (info ^. Store.moduleInfoSHA256 == sha256) (throw RecompileSourceChanged)
+    unless (info ^. Store.moduleInfoOptions == opts) (throw RecompileSourceChanged)
+    unless (info ^. Store.moduleInfoFieldSize == entry ^. entryPointFieldSize) (throw RecompileFieldSizeChanged)
+    CompileResult {..} <- runReader entry (processImports (info ^. Store.moduleInfoImports))
+    if
+        | _compileResultChanged -> throw RecompileImportsChanged
+        | otherwise ->
+            return $
+              ProcessModuleReuse
+                PipelineResult
+                  { _pipelineResult = info,
+                    _pipelineResultImports = _compileResultModuleTable,
+                    _pipelineResultChanged = False
+                  }
   where
     entry = entryIx ^. entryIxEntry
     root = entry ^. entryPointRoot

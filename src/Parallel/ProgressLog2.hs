@@ -17,10 +17,9 @@ data ProgressLogOptions2 = ProgressLogOptions2
     _progressLogOptions2TotalModules :: Natural
   }
 
-data RecompileReason
-
 data LogItem2 = LogItem2
   { _logItem2Module :: TopModulePathKey,
+    _logItem2LogLevel :: Maybe LogLevel,
     _logItem2Message :: Doc CodeAnn
   }
 
@@ -87,17 +86,20 @@ runProgressLog2 opts m = do
             let n = old ^. stateProcessed + 1
              in (n, set stateProcessed n old)
 
+queueLoopWhile :: (Members '[Concurrent] r) => TQueue a -> (a -> Sem r Bool) -> Sem r ()
+queueLoopWhile q f = do
+  whileCond <- atomically (readTQueue q) >>= f
+  when (whileCond) (queueLoopWhile q f)
+
 handleLogs :: (Members '[Logger, Concurrent] r) => ProgressLogOptions2 -> TQueue LogQueueItem -> Sem r ()
-handleLogs opts q = do
-  x <- atomically (readTQueue q)
-  case x of
-    LogQueueClose -> return ()
-    LogQueueItem d -> do
-      let l :: LogItem2
-          l = d ^. logItemDetailsLog
-          msg :: Doc CodeAnn
-          msg =
-            -- [48 of 60] Compiling /home/jan/projects/juvix/juvix-stdlib/Stdlib/System/IO/String.juvix
+handleLogs opts q = queueLoopWhile q $ \case
+  LogQueueClose -> return False
+  LogQueueItem d -> do
+    let l :: LogItem2
+        l = d ^. logItemDetailsLog
+        msg :: AnsiText
+        msg =
+          mkAnsiText $
             kwBracketL
               <> annotate AnnLiteralInteger (pretty (d ^. logItemDetailsNumber))
               <+> kwOf
@@ -105,8 +107,10 @@ handleLogs opts q = do
                 <> kwBracketR
               <+> l ^. logItem2Message
               <+> docNoCommentsDefault (l ^. logItem2Module)
-      logProgress (mkAnsiText msg)
-      handleLogs opts q
+    case l ^. logItem2LogLevel of
+      Nothing -> logProgress msg
+      Just loglvl -> logMessage loglvl msg
+    return True
 
 ignoreProgressLog2 :: Sem (ProgressLog2 ': r) a -> Sem r a
 ignoreProgressLog2 = interpret $ \case
