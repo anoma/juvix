@@ -12,7 +12,6 @@ module Parallel.ParallelTemplate
     compileArgsDependencies,
     compileArgsNodesIndex,
     compileArgsNodeName,
-    compileArgsNodeSilent,
     compileArgsNumWorkers,
     compileArgsCompileNode,
     compileArgsPreProcess,
@@ -20,7 +19,6 @@ module Parallel.ParallelTemplate
   )
 where
 
-import Control.Concurrent (ThreadId)
 import Control.Concurrent.STM.TVar (stateTVar)
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
@@ -34,13 +32,11 @@ data CompileArgs (s :: [Effect]) nodeId node compileProof = CompileArgs
   { _compileArgsNodesIndex :: NodesIndex nodeId node,
     _compileArgsDependencies :: Dependencies nodeId,
     _compileArgsNodeName :: node -> Text,
-    -- | When compiling a silent node we do not emit a progress message
-    _compileArgsNodeSilent :: nodeId -> Bool,
     _compileArgsNumWorkers :: Int,
     -- | Called concurrently on every node without any specific order before
     -- compilation starts.
     _compileArgsPreProcess :: Maybe (nodeId -> Sem s ()),
-    _compileArgsCompileNode :: node -> Sem (Reader Logs ': s) compileProof
+    _compileArgsCompileNode :: node -> Sem s compileProof
   }
 
 data CompilationState nodeId compiledProof = CompilationState
@@ -50,10 +46,8 @@ data CompilationState nodeId compiledProof = CompilationState
     -- this module is enqueued for compilation.
     _compilationPending :: HashMap nodeId (HashSet nodeId),
     _compilationStartedNum :: Natural,
-    _compilationStartedNumNoSilent :: Natural,
     _compilationFinishedNum :: Natural,
-    _compilationTotalNum :: Natural,
-    _compilationTotalNumNotSilent :: Natural
+    _compilationTotalNum :: Natural
   }
 
 data Dependencies nodeId = Dependencies
@@ -68,15 +62,6 @@ data ParallelError = Unexpected
 
 newtype CompileQueue nodeId = CompileQueue
   { _compileQueue :: TBQueue nodeId
-  }
-
-data LogQueueItem
-  = LogQueueItem LogItem
-  | -- | no more log items will be handled after this
-    LogQueueClose
-
-newtype Logs = Logs
-  { _logQueue :: TQueue LogQueueItem
   }
 
 newtype NodesIndex nodeId node = NodesIndex
@@ -95,7 +80,6 @@ data Finished
     FinishedNoPending
   | FinishedPending
 
-makeLenses ''Logs
 makeLenses ''NodesIndex
 makeLenses ''CompileQueue
 makeLenses ''Dependencies
@@ -158,10 +142,8 @@ compile args@CompileArgs {..} = do
       allNodesIds :: [nodeId] = HashMap.keys (nodesIx ^. nodesIndex)
       deps = _compileArgsDependencies
       numMods :: Natural = fromIntegral (length allNodesIds)
-      notSilent :: Natural = fromIntegral (length (filter (not . _compileArgsNodeSilent) allNodesIds))
       startingModules :: [nodeId] =
         [m | m <- allNodesIds, null (nodeDependencies deps m)]
-  logs <- Logs <$> newTQueueIO
   qq <- newTBQueueIO (max 1 numMods)
   let compileQ = CompileQueue qq
   whenJust _compileArgsPreProcess $ \preProcess ->
@@ -170,10 +152,8 @@ compile args@CompileArgs {..} = do
   let iniCompilationState :: CompilationState nodeId compileProof =
         CompilationState
           { _compilationStartedNum = 0,
-            _compilationStartedNumNoSilent = 0,
             _compilationFinishedNum = 0,
             _compilationTotalNum = numMods,
-            _compilationTotalNumNotSilent = notSilent,
             _compilationPending = deps ^. dependenciesTable,
             _compilationState = mempty
           }
@@ -181,25 +161,13 @@ compile args@CompileArgs {..} = do
   runReader varCompilationState
     . runReader nodesIx
     . runReader args
-    . runReader logs
     . runReader compileQ
     . runReader deps
     . crashOnError
     $ do
-      withAsync handleLogs $ \logHandler -> do
-        replicateConcurrently_ _compileArgsNumWorkers $
-          lookForWork @nodeId @node @compileProof
-        wait logHandler
+      replicateConcurrently_ _compileArgsNumWorkers $
+        lookForWork @nodeId @node @compileProof
   (^. compilationState) <$> readTVarIO varCompilationState
-
-handleLogs :: (Members '[ProgressLog, Concurrent, Reader Logs] r) => Sem r ()
-handleLogs = do
-  x <- asks (^. logQueue) >>= atomically . readTQueue
-  case x of
-    LogQueueClose -> return ()
-    LogQueueItem l -> do
-      progressLog l
-      handleLogs
 
 getTask ::
   forall nodeId (node :: GHCType) compileProof (s :: [Effect]) r.
@@ -209,8 +177,7 @@ getTask ::
          Reader (TVar (CompilationState nodeId compileProof)),
          Reader (CompileArgs s nodeId node compileProof),
          Reader (NodesIndex nodeId node),
-         Reader (CompileQueue nodeId),
-         Reader Logs
+         Reader (CompileQueue nodeId)
        ]
       r
   ) =>
@@ -220,9 +187,6 @@ getTask = do
   qq <- asks (^. compileQueue)
   cstVar <- ask @(TVar (CompilationState nodeId compileProof))
   idx <- ask @(NodesIndex nodeId node)
-  logs <- ask
-  args <- ask @(CompileArgs s nodeId node compileProof)
-  tid <- myThreadId
   atomically $ do
     finished <- compilationStateFinished <$> readTVar cstVar
     case finished of
@@ -234,24 +198,9 @@ getTask = do
                 . runReader idx
                 $ getNode nextModuleId
         compSt <- readTVar stVar
-        let silent = (args ^. compileArgsNodeSilent) nextModuleId
         modifyTVar stVar (over compilationStartedNum succ)
-        unless silent (modifyTVar stVar (over compilationStartedNumNoSilent succ))
         let num = succ (compSt ^. compilationStartedNum)
-            numNoSilent = succ (compSt ^. compilationStartedNumNoSilent)
             total = compSt ^. compilationTotalNum
-            totalNotSilent = compSt ^. compilationTotalNumNotSilent
-            name = annotate (AnnKind KNameTopModule) (pretty ((args ^. compileArgsNodeName) n))
-            progress :: Doc CodeAnn =
-              kwBracketL
-                <> annotate AnnLiteralInteger (pretty numNoSilent)
-                <+> kwOf
-                <+> annotate AnnLiteralInteger (pretty totalNotSilent) <> kwBracketR <> " "
-            kwCompiling = annotate AnnKeyword "Compiling"
-            isLast = num == total
-        unless silent $
-          logMsg tid logs (progress <> kwCompiling <> " " <> name)
-        when isLast (logClose logs)
         return $
           Just
             Task
@@ -272,8 +221,7 @@ lookForWork ::
          Reader (CompileArgs s nodeId node compileProof),
          Reader (Dependencies nodeId),
          Reader (TVar (CompilationState nodeId compileProof)),
-         Reader (CompileQueue nodeId),
-         Reader Logs
+         Reader (CompileQueue nodeId)
        ]
       r,
     Subset s r
@@ -302,8 +250,7 @@ compileNode ::
          Reader (NodesIndex nodeId node),
          Reader (Dependencies nodeId),
          Reader (TVar (CompilationState nodeId compileProof)),
-         Reader (CompileQueue nodeId),
-         Reader Logs
+         Reader (CompileQueue nodeId)
        ]
       r,
     Subset s r
@@ -325,8 +272,7 @@ registerCompiledModule ::
          Reader (Dependencies nodeId),
          Reader (CompileArgs s nodeId node compileProof),
          Reader (TVar (CompilationState nodeId compileProof)),
-         Reader (CompileQueue nodeId),
-         Reader Logs
+         Reader (CompileQueue nodeId)
        ]
       r
   ) =>
@@ -340,17 +286,3 @@ registerCompiledModule m proof = do
   atomically $ do
     toQueue <- stateTVar mutSt (swap . addCompiledModule deps m proof)
     forM_ toQueue (writeTBQueue qq)
-
-logClose :: Logs -> STM ()
-logClose (Logs q) = STM.writeTQueue q LogQueueClose
-
-logMsg :: ThreadId -> Logs -> Doc CodeAnn -> STM ()
-logMsg tid (Logs _) msg = do
-  let _logitem =
-        LogQueueItem
-          LogItem
-            { _logItemMessage = msg,
-              _logItemThreadId = tid
-            }
-  -- STM.writeTQueue q logitem
-  return ()

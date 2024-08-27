@@ -107,16 +107,18 @@ logDecision :: (Members '[ProgressLog2] r) => TopModulePathKey -> ProcessModuleD
 logDecision _logItem2Module _d = do
   let word :: Doc CodeAnn = annotate AnnKeyword $ case _d of
         ProcessModuleReuse {} -> "Loading"
-        ProcessModuleRecompile {} -> "Compiling"
+        ProcessModuleRecompile r -> case r ^. recompileReason of
+          RecompileNoJvoFile -> "Compiling"
+          _ -> "Recompiling"
 
       reason :: Maybe (Doc CodeAnn) = case _d of
         ProcessModuleReuse {} -> Nothing
         ProcessModuleRecompile r -> case r ^. recompileReason of
-          RecompileImportsChanged -> Just "An imported module changed"
           RecompileNoJvoFile -> Nothing
-          RecompileSourceChanged -> Just "Source changed"
-          RecompileOptionsChanged -> Just "Compilation options changed"
-          RecompileFieldSizeChanged -> Just "Field size changed"
+          RecompileImportsChanged -> Just "Because an imported module changed"
+          RecompileSourceChanged -> Just "Because the source changed"
+          RecompileOptionsChanged -> Just "Because compilation options changed"
+          RecompileFieldSizeChanged -> Just "Because the field size changed"
 
       msg :: Doc CodeAnn =
         word

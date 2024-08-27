@@ -112,7 +112,6 @@ compileInParallel = do
   -- At the moment we compile everything, so the EntryIndex is ignored, but in
   -- principle we could only compile what is reachable from the given EntryIndex
   t <- ask
-  e <- ask
   idx <- mkNodesIndex t
   numWorkers <- ask >>= numThreads
   let args :: CompileArgs r ImportNode Node (PipelineResult Store.ModuleInfo)
@@ -121,16 +120,11 @@ compileInParallel = do
           { _compileArgsNodesIndex = idx,
             _compileArgsNodeName = getNodeName,
             _compileArgsPreProcess = Just preLoadFromJvoFile,
-            _compileArgsNodeSilent = nodeIsSilent e,
             _compileArgsDependencies = mkDependencies t,
             _compileArgsNumWorkers = numWorkers,
             _compileArgsCompileNode = compileNode
           }
   compile args
-
-nodeIsSilent :: EntryPoint -> ImportNode -> Bool
--- nodeIsSilent e i = e ^. entryPointRoot /= i ^. importNodePackageRoot
-nodeIsSilent _e _i = False
 
 compileNode ::
   (Members '[ModuleInfoCache, PathResolver] r) =>
