@@ -72,6 +72,6 @@ instance Pretty CompileAction where
 
 compileActionLogLevel :: CompileAction -> LogLevel
 compileActionLogLevel = \case
-  CompileActionReuseJvo -> LogLevelDebug
+  CompileActionReuseJvo -> LogLevelVerbose
   CompileActionRecompile -> LogLevelProgress
   CompileActionCompile -> LogLevelProgress

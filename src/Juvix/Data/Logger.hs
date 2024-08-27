@@ -6,6 +6,7 @@ module Juvix.Data.Logger
     LogLevel (..),
     logMessage,
     logError,
+    logVerbose,
     logProgress,
     logInfo,
     logWarn,
@@ -30,6 +31,7 @@ data LogLevel
   | LogLevelWarn
   | LogLevelInfo
   | LogLevelProgress
+  | LogLevelVerbose
   | LogLevelDebug
   deriving stock (Eq, Ord, Enum, Bounded)
 
@@ -39,6 +41,7 @@ instance Show LogLevel where
     LogLevelWarn -> "warn"
     LogLevelInfo -> "info"
     LogLevelProgress -> "progress"
+    LogLevelVerbose -> "verbose"
     LogLevelDebug -> "debug"
 
 instance Pretty LogLevel where
@@ -77,6 +80,9 @@ logInfo = logMessage LogLevelInfo
 
 logProgress :: (Members '[Logger] r) => AnsiText -> Sem r ()
 logProgress = logMessage LogLevelProgress
+
+logVerbose :: (Members '[Logger] r) => AnsiText -> Sem r ()
+logVerbose = logMessage LogLevelVerbose
 
 logDebug :: (Members '[Logger] r) => AnsiText -> Sem r ()
 logDebug = logMessage LogLevelDebug

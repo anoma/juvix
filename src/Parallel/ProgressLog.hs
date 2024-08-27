@@ -52,14 +52,6 @@ makeLenses ''LogItem
 makeLenses ''ProgressLogState
 makeLenses ''LogItemDetails
 
--- defaultProgressLogOptions :: Path Abs Dir -> ImportTree -> ProgressLogOptions
--- defaultProgressLogOptions root tree =
---   ProgressLogOptions
---     { _progressLogOptionsShowThreadId = False,
---       _progressLogOptionsImportTree = tree,
---       _progressLogOptionsPackageRoot = root
---     }
-
 iniProgressLogState :: ProgressLogState
 iniProgressLogState =
   ProgressLogState
@@ -96,7 +88,7 @@ runProgressLog opts m = do
     handleLogs :: forall r'. (Members '[Logger, Concurrent] r') => TQueue LogQueueItem -> Sem r' ()
     handleLogs q = queueLoopWhile q $ \case
       LogQueueClose -> do
-        logDebug (mkAnsiText (annotate AnnKeyword "Finished compilation"))
+        logVerbose (mkAnsiText (annotate AnnKeyword "Finished compilation"))
         return False
       LogQueueItem d -> do
         let l :: LogItem
