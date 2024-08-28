@@ -7,6 +7,7 @@ import Juvix.Compiler.Concrete.Print.Base
 import Juvix.Compiler.Pipeline.Driver.Data
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Base
 import Juvix.Compiler.Pipeline.Loader.PathResolver.ImportTree.Base
+import Juvix.Compiler.Pipeline.Loader.PathResolver.PackageInfo
 import Juvix.Compiler.Pipeline.Options
 import Juvix.Data.CodeAnn
 import Juvix.Data.Logger
@@ -18,6 +19,7 @@ data ProgressLog :: Effect where
 data ProgressLogOptions = ProgressLogOptions
   { _progressLogOptionsShowThreadId :: Bool,
     _progressLogOptionsPackageRoot :: Path Abs Dir,
+    _progressLogOptionsPackages :: HashMap (Path Abs Dir) PackageInfo,
     _progressLogOptionsImportTree :: ImportTree
   }
 
@@ -41,7 +43,7 @@ type LogQueue = TQueue LogQueueItem
 
 data LogKind
   = LogMainPackage
-  | LogDependency
+  | LogDependency (Doc CodeAnn)
 
 data LogItemDetails = LogItemDetails
   { _logItemDetailsNumber :: Natural,
@@ -76,11 +78,13 @@ runProgressLog ::
 runProgressLog m = do
   tree <- ask
   root <- resolverInitialRoot
+  pkgs <- getPackageInfos
   popts :: PipelineOptions <- ask
   let opts :: ProgressLogOptions =
         ProgressLogOptions
           { _progressLogOptionsImportTree = tree,
             _progressLogOptionsPackageRoot = root,
+            _progressLogOptionsPackages = pkgs,
             _progressLogOptionsShowThreadId = popts ^. pipelineShowThreadId
           }
   runProgressLogOptions opts m
@@ -100,6 +104,9 @@ runProgressLogOptions opts m = do
     wait logHandler
     return x
   where
+    getPackageTag :: Path Abs Dir -> Doc CodeAnn
+    getPackageTag pkgRoot = opts ^. progressLogOptionsPackages . at pkgRoot . _Just . packagePackage . packageLikeNameAndVersion
+
     tree :: ImportTree
     tree = opts ^. progressLogOptionsImportTree
 
@@ -124,9 +131,10 @@ runProgressLogOptions opts m = do
             node :: ImportNode
             node = l ^. logItemModule
 
+            dependencyTag :: Maybe (Doc CodeAnn)
             dependencyTag = case d ^. logItemDetailsKind of
               LogMainPackage -> Nothing
-              LogDependency -> Just (annotate AnnKeyword "Dependency" <+> pretty (node ^. importNodePackageRoot))
+              LogDependency pkgName -> Just (annotate AnnComment "Dependency" <+> pkgName)
 
             num =
               annotate AnnLiteralInteger (pretty (d ^. logItemDetailsNumber))
@@ -157,7 +165,7 @@ runProgressLogOptions opts m = do
           n <- getNextNumber
           let k
                 | fromMainPackage = LogMainPackage
-                | otherwise = LogDependency
+                | otherwise = LogDependency (getPackageTag fromPackage)
               d =
                 LogItemDetails
                   { _logItemDetailsKind = k,
