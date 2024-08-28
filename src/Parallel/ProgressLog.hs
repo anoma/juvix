@@ -26,9 +26,8 @@ data LogItem = LogItem
     _logItemMessage :: Doc CodeAnn
   }
 
-data ProgressLogState = ProgressLogState
-  { _stateProcessed :: Natural,
-    _stateProcessedPerPackage :: HashMap (Path Abs Dir) Natural
+newtype ProgressLogState = ProgressLogState
+  { _stateProcessedPerPackage :: HashMap (Path Abs Dir) Natural
   }
 
 data LogQueueItem
@@ -57,8 +56,7 @@ makeLenses ''LogItemDetails
 iniProgressLogState :: ProgressLogState
 iniProgressLogState =
   ProgressLogState
-    { _stateProcessed = 0,
-      _stateProcessedPerPackage = mempty
+    { _stateProcessedPerPackage = mempty
     }
 
 runProgressLog ::
@@ -130,7 +128,7 @@ runProgressLog opts m = do
     handler st logs = \case
       ProgressLog i ->
         atomically $ do
-          (n, isLast) <- getNextNumber
+          n <- getNextNumber
           let k
                 | fromMainPackage = LogMainPackage
                 | otherwise = LogDependency
@@ -141,7 +139,6 @@ runProgressLog opts m = do
                     _logItemDetailsLog = i
                   }
           STM.writeTQueue logs (LogQueueItem d)
-          when isLast (STM.writeTQueue logs LogQueueClose)
         where
           fromPackage :: Path Abs Dir
           fromPackage = i ^. logItemModule . importNodePackageRoot
@@ -149,20 +146,15 @@ runProgressLog opts m = do
           fromMainPackage :: Bool
           fromMainPackage = fromPackage == mainPackage
 
-          totalModules :: Natural
-          totalModules = importTreeSize (opts ^. progressLogOptionsImportTree)
-
-          getNextNumber :: STM (Natural, Bool)
+          getNextNumber :: STM Natural
           getNextNumber =
             stateTVar st $ \old ->
-              let processed = old ^. stateProcessed + 1
-                  pkgProcessed = over (at fromPackage) (Just . maybe 1 succ) (old ^. stateProcessedPerPackage)
+              let pkgProcessed = over (at fromPackage) (Just . maybe 1 succ) (old ^. stateProcessedPerPackage)
                   st' =
                     old
-                      { _stateProcessed = processed,
-                        _stateProcessedPerPackage = pkgProcessed
+                      { _stateProcessedPerPackage = pkgProcessed
                       }
-                  ret = (fromJust (pkgProcessed ^. at fromPackage), processed == totalModules)
+                  ret = fromJust (pkgProcessed ^. at fromPackage)
                in (ret, st')
 
 queueLoopWhile :: (Members '[Concurrent] r) => TQueue a -> (a -> Sem r Bool) -> Sem r ()
