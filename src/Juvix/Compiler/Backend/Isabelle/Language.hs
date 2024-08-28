@@ -6,7 +6,6 @@ module Juvix.Compiler.Backend.Isabelle.Language
 where
 
 import Juvix.Compiler.Internal.Data.Name hiding (letFixity)
-import Juvix.Extra.Paths qualified as P
 import Juvix.Prelude hiding (Cons, letFixity)
 
 data Type
@@ -49,8 +48,8 @@ makeLenses ''IndApp
 
 data Expression
   = ExprIden Name
-  | ExprUndefined
-  | ExprLiteral Literal
+  | ExprUndefined Interval
+  | ExprLiteral (WithLoc Literal)
   | ExprApp Application
   | ExprBinop Binop
   | ExprTuple (Tuple Expression)
@@ -118,7 +117,7 @@ data Lambda = Lambda
 
 data Pattern
   = PatVar Name
-  | PatZero
+  | PatZero Interval
   | PatConstrApp ConstrApp
   | PatTuple (Tuple Pattern)
   | PatList (List Pattern)
@@ -129,8 +128,9 @@ newtype Tuple a = Tuple
   { _tupleComponents :: NonEmpty a
   }
 
-newtype List a = List
-  { _listElements :: [a]
+data List a = List
+  { _listLoc :: Interval,
+    _listElements :: [a]
   }
 
 data Cons a = Cons
@@ -307,7 +307,7 @@ instance HasAtomicity Type where
 instance HasAtomicity Expression where
   atomicity = \case
     ExprIden {} -> Atom
-    ExprUndefined -> Atom
+    ExprUndefined {} -> Atom
     ExprLiteral {} -> Atom
     ExprApp {} -> Aggregate appFixity
     ExprBinop Binop {..} -> Aggregate _binopFixity
@@ -324,7 +324,7 @@ instance HasAtomicity Expression where
 instance HasAtomicity Pattern where
   atomicity = \case
     PatVar {} -> Atom
-    PatZero -> Atom
+    PatZero {} -> Atom
     PatConstrApp ConstrApp {..}
       | null _constrAppArgs -> Atom
       | otherwise -> Aggregate appFixity
@@ -333,14 +333,11 @@ instance HasAtomicity Pattern where
     PatCons {} -> Aggregate consFixity
     PatRecord {} -> Atom
 
-defaultLoc :: Interval
-defaultLoc = singletonInterval $ mkInitialLoc P.noFile
-
 instance HasLoc Expression where
   getLoc = \case
     ExprIden n -> getLoc n
-    ExprUndefined -> defaultLoc
-    ExprLiteral {} -> defaultLoc
+    ExprUndefined x -> x
+    ExprLiteral x -> x ^. withLocInt
     ExprApp x -> getLoc x
     ExprBinop x -> getLoc x
     ExprTuple x -> getLoc x
@@ -362,8 +359,8 @@ instance HasLoc Binop where
 instance (HasLoc a) => HasLoc (Tuple a) where
   getLoc = getLocSpan . (^. tupleComponents)
 
-instance (HasLoc a) => HasLoc (List a) where
-  getLoc = maybe defaultLoc getLocSpan . nonEmpty . (^. listElements)
+instance HasLoc (List a) where
+  getLoc = (^. listLoc)
 
 instance (HasLoc a) => HasLoc (Cons a) where
   getLoc Cons {..} = getLoc _consHead <> getLoc _consTail
@@ -386,13 +383,13 @@ instance HasLoc LetClause where
   getLoc LetClause {..} = getLoc _letClauseName <> getLoc _letClauseValue
 
 instance HasLoc If where
-  getLoc If {..} = getLoc _ifValue <> getLoc _ifBranchTrue <> getLoc _ifBranchFalse
+  getLoc If {..} = getLoc _ifValue
 
 instance HasLoc Case where
-  getLoc Case {..} = getLoc _caseValue <> getLocSpan _caseBranches
+  getLoc Case {..} = getLoc _caseValue
 
 instance HasLoc Lambda where
-  getLoc Lambda {..} = getLoc _lambdaVar <> getLoc _lambdaBody
+  getLoc Lambda {..} = getLoc _lambdaVar
 
 instance HasLoc CaseBranch where
   getLoc CaseBranch {..} = getLoc _caseBranchPattern <> getLoc _caseBranchBody
@@ -400,7 +397,7 @@ instance HasLoc CaseBranch where
 instance HasLoc Pattern where
   getLoc = \case
     PatVar n -> getLoc n
-    PatZero -> defaultLoc
+    PatZero x -> x
     PatConstrApp x -> getLoc x
     PatTuple x -> getLoc x
     PatList x -> getLoc x
@@ -417,3 +414,6 @@ instance HasLoc Statement where
     StmtSynonym Synonym {..} -> getLoc _synonymName
     StmtDatatype Datatype {..} -> getLoc _datatypeName
     StmtRecord RecordDef {..} -> getLoc _recordDefName
+
+instance HasLoc Clause where
+  getLoc Clause {..} = getLocSpan _clausePatterns

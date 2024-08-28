@@ -182,7 +182,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
               Function
                 { _functionName = name',
                   _functionType = goType ty,
-                  _functionClauses = goBody argnames ty body,
+                  _functionClauses = goBody loc argnames ty body,
                   _functionDocComment = comment
                 }
         | otherwise ->
@@ -190,13 +190,14 @@ goModule onlyTypes infoTable Internal.Module {..} =
               Definition
                 { _definitionName = name',
                   _definitionType = goType ty,
-                  _definitionBody = maybe ExprUndefined goExpression' body,
+                  _definitionBody = maybe (ExprUndefined loc) goExpression' body,
                   _definitionDocComment = comment
                 }
       where
         argnames =
           map (overNameText quote) $ filterTypeArgs 0 ty $ map (fromMaybe (defaultName (getLoc name) "_") . (^. Internal.argInfoName)) argsInfo
         name' = overNameText quote name
+        loc = getLoc name
 
     isFunction :: [Name] -> Internal.Expression -> Maybe Internal.Expression -> Bool
     isFunction argnames ty = \case
@@ -205,9 +206,9 @@ goModule onlyTypes infoTable Internal.Module {..} =
             True
       _ -> not (null argnames)
 
-    goBody :: [Name] -> Internal.Expression -> Maybe Internal.Expression -> NonEmpty Clause
-    goBody argnames ty = \case
-      Nothing -> oneClause ExprUndefined
+    goBody :: Interval -> [Name] -> Internal.Expression -> Maybe Internal.Expression -> NonEmpty Clause
+    goBody defLoc argnames ty = \case
+      Nothing -> oneClause (ExprUndefined defLoc)
       -- We assume here that all clauses have the same number of patterns
       Just (Internal.ExpressionLambda Internal.Lambda {..})
         | not $ null $ filterTypeArgs 0 ty $ toList $ head _lambdaClauses ^. Internal.lambdaPatterns ->
@@ -260,7 +261,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
                     remainingBranches = goLambdaClauses'' nset'' nmap' cls
                     valTuple = ExprTuple (Tuple (fmap ExprIden vnames))
                     patTuple = PatTuple (Tuple (nonEmpty' pats))
-                    brs = goNestedBranches valTuple rhs remainingBranches patTuple (nonEmpty' npats)
+                    brs = goNestedBranches (getLoc cl) valTuple rhs remainingBranches patTuple (nonEmpty' npats)
                  in [ Clause
                         { _clausePatterns = fmap PatVar vnames,
                           _clauseBody =
@@ -275,12 +276,12 @@ goModule onlyTypes infoTable Internal.Module {..} =
               (npats0, nset', nmap') = goPatternArgsTop (filterTypeArgs 0 ty (toList _lambdaPatterns))
           [] -> []
 
-    goNestedBranches :: Expression -> Expression -> [CaseBranch] -> Pattern -> NonEmpty (Expression, Nested Pattern) -> NonEmpty CaseBranch
-    goNestedBranches caseVal rhs remainingBranches pat npats =
+    goNestedBranches :: Interval -> Expression -> Expression -> [CaseBranch] -> Pattern -> NonEmpty (Expression, Nested Pattern) -> NonEmpty CaseBranch
+    goNestedBranches loc caseVal rhs remainingBranches pat npats =
       let val = ExprTuple (Tuple (fmap fst npats))
           pat' = PatTuple (Tuple (fmap ((^. nestedElem) . snd) npats))
           npats' = concatMap ((^. nestedPatterns) . snd) npats
-          brs = goNestedBranches' rhs (mkDefaultBranch caseVal remainingBranches) (Nested pat' npats')
+          brs = goNestedBranches' rhs (mkDefaultBranch loc caseVal remainingBranches) (Nested pat' npats')
           remainingBranches' = filter (not . subsumesPattern pat . (^. caseBranchPattern)) remainingBranches
        in CaseBranch
             { _caseBranchPattern = pat,
@@ -293,13 +294,13 @@ goModule onlyTypes infoTable Internal.Module {..} =
             }
             :| remainingBranches'
 
-    mkDefaultBranch :: Expression -> [CaseBranch] -> Maybe CaseBranch
-    mkDefaultBranch val remainingBranches = case remainingBranches of
+    mkDefaultBranch :: Interval -> Expression -> [CaseBranch] -> Maybe CaseBranch
+    mkDefaultBranch loc val remainingBranches = case remainingBranches of
       [] -> Nothing
       _ ->
         Just $
           CaseBranch
-            { _caseBranchPattern = PatVar (defaultName defaultLoc "_"),
+            { _caseBranchPattern = PatVar (defaultName loc "_"),
               _caseBranchBody =
                 mkExprCase
                   Case
@@ -452,7 +453,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
 
     goRecordFields :: [Internal.FunctionParameter] -> [a] -> [(Name, a)]
     goRecordFields argtys args = case (argtys, args) of
-      (ty : argtys', arg' : args') -> (fromMaybe (defaultName defaultLoc "_") (ty ^. Internal.paramName), arg') : goRecordFields argtys' args'
+      (ty : argtys', arg' : args') -> (fromMaybe (defaultName (getLoc ty) "_") (ty ^. Internal.paramName), arg') : goRecordFields argtys' args'
       _ -> []
 
     goExpression' :: Internal.Expression -> Expression
@@ -484,7 +485,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
             case HashMap.lookup name (infoTable ^. Internal.infoConstructors) of
               Just ctrInfo ->
                 case ctrInfo ^. Internal.constructorInfoBuiltin of
-                  Just Internal.BuiltinNatZero -> return $ ExprLiteral (LitNumeric 0)
+                  Just Internal.BuiltinNatZero -> return $ ExprLiteral (WithLoc (getLoc name) (LitNumeric 0))
                   _ -> return $ ExprIden (goConstrName name)
               Nothing -> return $ ExprIden (goConstrName name)
           Internal.IdenVar name -> do
@@ -497,10 +498,10 @@ goModule onlyTypes infoTable Internal.Module {..} =
           | Just (pragmas, arg1, arg2) <- getIsabelleOperator app =
               mkIsabelleOperator (getLoc app) pragmas arg1 arg2
           | Just x <- getLiteral app =
-              return $ ExprLiteral $ LitNumeric x
+              return $ ExprLiteral $ WithLoc (getLoc app) (LitNumeric x)
           | Just xs <- getList app = do
               xs' <- mapM goExpression xs
-              return $ ExprList (List xs')
+              return $ ExprList (List (getLoc app) xs')
           | Just (arg1, arg2) <- getCons app = do
               arg1' <- goExpression arg1
               arg2' <- goExpression arg2
@@ -667,10 +668,10 @@ goModule onlyTypes infoTable Internal.Module {..} =
                 case funInfo ^. Internal.functionInfoBuiltin of
                   Just Internal.BuiltinBoolAnd
                     | (arg1 :| [arg2]) <- args ->
-                        Just (defaultName defaultLoc "\\<and>", andFixity, arg1, arg2)
+                        Just (defaultName (getLoc name) "\\<and>", andFixity, arg1, arg2)
                   Just Internal.BuiltinBoolOr
                     | (arg1 :| [arg2]) <- args ->
-                        Just (defaultName defaultLoc "\\<or>", orFixity, arg1, arg2)
+                        Just (defaultName (getLoc name) "\\<or>", orFixity, arg1, arg2)
                   _ -> Nothing
               Nothing -> Nothing
           _ -> Nothing
@@ -757,20 +758,20 @@ goModule onlyTypes infoTable Internal.Module {..} =
               _ -> Nothing
 
         goFunType :: Internal.Function -> Sem r Expression
-        goFunType _ = return ExprUndefined
+        goFunType f = return (ExprUndefined (getLoc f))
 
         goLiteral :: Internal.LiteralLoc -> Sem r Expression
-        goLiteral lit = return $ ExprLiteral $ case lit ^. withLocParam of
+        goLiteral lit = return $ ExprLiteral $ WithLoc (lit ^. withLocInt) $ case lit ^. withLocParam of
           Internal.LitString s -> LitString s
           Internal.LitNumeric n -> LitNumeric n
           Internal.LitInteger n -> LitNumeric n
           Internal.LitNatural n -> LitNumeric n
 
         goHole :: Internal.Hole -> Sem r Expression
-        goHole _ = return ExprUndefined
+        goHole h = return (ExprUndefined (getLoc h))
 
         goInstanceHole :: Internal.InstanceHole -> Sem r Expression
-        goInstanceHole _ = return ExprUndefined
+        goInstanceHole h = return (ExprUndefined (getLoc h))
 
         goLet :: Internal.Let -> Sem r Expression
         goLet Internal.Let {..} = do
@@ -802,7 +803,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
                   }
 
         goUniverse :: Internal.SmallUniverse -> Sem r Expression
-        goUniverse _ = return ExprUndefined
+        goUniverse u = return (ExprUndefined (getLoc u))
 
         goSimpleLambda :: Internal.SimpleLambda -> Sem r Expression
         goSimpleLambda Internal.SimpleLambda {..} = do
@@ -821,7 +822,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
                 }
 
         goLambda :: Internal.Lambda -> Sem r Expression
-        goLambda Internal.Lambda {..}
+        goLambda lam@Internal.Lambda {..}
           | patsNum == 0 = goExpression (head _lambdaClauses ^. Internal.lambdaBody)
           | otherwise = goLams vars
           where
@@ -837,7 +838,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
                     . filter ((/= Internal.Implicit) . (^. Internal.patternArgIsImplicit))
                     . toList
                     $ head _lambdaClauses ^. Internal.lambdaPatterns
-            vars = map (\i -> defaultName defaultLoc ("x" <> show i)) [0 .. patsNum - 1]
+            vars = map (\i -> defaultName (getLoc lam) ("x" <> show i)) [0 .. patsNum - 1]
 
             goLams :: [Name] -> Sem r Expression
             goLams = \case
@@ -904,7 +905,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
                     nset' = over nameSet (HashSet.insert (vname ^. namePretty)) nset
                 rhs <- withLocalNames nset' nmap $ goCaseBranchRhs _caseBranchRhs
                 remainingBranches <- withLocalNames nset' nmap $ goCaseBranches brs
-                let brs' = goNestedBranches (ExprIden vname) rhs remainingBranches pat (nonEmpty' npats)
+                let brs' = goNestedBranches (getLoc vname) (ExprIden vname) rhs remainingBranches pat (nonEmpty' npats)
                 return
                   [ CaseBranch
                       { _caseBranchPattern = PatVar vname,
@@ -959,7 +960,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
                 nset' = over nameSet (HashSet.insert (vname ^. namePretty)) nset
             rhs <- withLocalNames nset' nmap $ goExpression _lambdaBody
             remainingBranches <- withLocalNames nset' nmap $ goLambdaClauses cls
-            let brs' = goNestedBranches (ExprIden vname) rhs remainingBranches pat (nonEmpty' npats)
+            let brs' = goNestedBranches (getLoc vname) (ExprIden vname) rhs remainingBranches pat (nonEmpty' npats)
             return
               [ CaseBranch
                   { _caseBranchPattern = PatVar vname,
@@ -1053,7 +1054,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
         goPatternConstructorApp app@Internal.ConstructorApp {..}
           | Just lst <- getListPat _constrAppConstructor _constrAppParameters = do
               pats <- goPatternArgs False lst
-              return $ PatList (List pats)
+              return $ PatList (List (getLoc app) pats)
           | Just (x, y) <- getConsPat _constrAppConstructor _constrAppParameters = do
               x' <- goPatternArg False x
               y' <- goPatternArg False y
@@ -1142,7 +1143,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
               case funInfo ^. Internal.constructorInfoBuiltin of
                 Just Internal.BuiltinNatZero
                   | null args ->
-                      Just $ Left PatZero
+                      Just $ Left $ PatZero (getLoc name)
                 Just Internal.BuiltinNatSuc
                   | [arg] <- args ->
                       Just $ Right arg

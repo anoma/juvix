@@ -8,8 +8,10 @@ id1 : List Nat -> List Nat := id;
 
 id2 {A : Type} : A -> A := id;
 
+-- Add one to each element in a list
 add_one : List Nat -> List Nat
   | [] := []
+  -- hello!
   | (x :: xs) := (x + 1) :: add_one xs;
 
 sum : List Nat -> Nat
@@ -26,12 +28,16 @@ g (x y : Nat) : Bool :=
 
 inc (x : Nat) : Nat := suc x;
 
+-- dec function
 dec : Nat -> Nat
   | zero := zero
   | (suc x) := x;
 
+-- dec' function
 dec' (x : Nat) : Nat :=
-  case x of zero := zero | suc y := y;
+  -- Do case switch
+  -- pattern match on x
+  case x of {- the zero case -} zero := {- return zero -} zero | {- the suc case -} suc y := y;
 
 optmap {A} (f : A -> A) : Maybe A -> Maybe A
   | nothing := nothing
