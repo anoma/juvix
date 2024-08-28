@@ -371,28 +371,28 @@ instance HasLoc (Record a) where
       <>? maybe Nothing (Just . getLocSpan) (nonEmpty (map fst _recordFields))
 
 instance HasLoc RecordUpdate where
-  getLoc RecordUpdate {..} = getLoc _recordUpdateRecord
+  getLoc RecordUpdate {..} = getLoc _recordUpdateRecord <> getLoc _recordUpdateFields
 
 instance HasLoc RecordField where
   getLoc RecordField {..} = getLoc _recordFieldName
 
 instance HasLoc Let where
-  getLoc Let {..} = getLocSpan _letClauses
+  getLoc Let {..} = getLocSpan _letClauses <> getLoc _letBody
 
 instance HasLoc LetClause where
-  getLoc LetClause {..} = getLoc _letClauseName
+  getLoc LetClause {..} = getLoc _letClauseName <> getLoc _letClauseValue
 
 instance HasLoc If where
-  getLoc If {..} = getLoc _ifValue
+  getLoc If {..} = getLoc _ifValue <> getLoc _ifBranchTrue <> getLoc _ifBranchFalse
 
 instance HasLoc Case where
-  getLoc Case {..} = getLoc _caseValue
+  getLoc Case {..} = getLoc _caseValue <> getLocSpan _caseBranches
 
 instance HasLoc Lambda where
-  getLoc Lambda {..} = getLoc _lambdaVar
+  getLoc Lambda {..} = getLoc _lambdaVar <> getLoc _lambdaBody
 
 instance HasLoc CaseBranch where
-  getLoc CaseBranch {..} = getLoc _caseBranchPattern
+  getLoc CaseBranch {..} = getLoc _caseBranchPattern <> getLoc _caseBranchBody
 
 instance HasLoc Pattern where
   getLoc = \case
@@ -416,4 +416,4 @@ instance HasLoc Statement where
     StmtRecord RecordDef {..} -> getLoc _recordDefName
 
 instance HasLoc Clause where
-  getLoc Clause {..} = getLocSpan _clausePatterns
+  getLoc Clause {..} = getLocSpan _clausePatterns <> getLoc _clauseBody
