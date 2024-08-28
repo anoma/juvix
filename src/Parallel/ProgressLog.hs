@@ -36,6 +36,8 @@ data LogQueueItem
   | -- | no more log items will be handled after this
     LogQueueClose
 
+type LogQueue = TQueue LogQueueItem
+
 data LogKind
   = LogMainPackage
   | LogDependency
@@ -66,10 +68,11 @@ runProgressLog ::
   Sem (ProgressLog ': r) a ->
   Sem r a
 runProgressLog opts m = do
-  logs <- newTQueueIO
+  logs :: LogQueue <- newTQueueIO
   st :: TVar ProgressLogState <- newTVarIO iniProgressLogState
   withAsync (handleLogs logs) $ \logHandler -> do
     x <- interpret (handler st logs) m
+    atomically (STM.writeTQueue logs LogQueueClose)
     wait logHandler
     return x
   where
@@ -85,7 +88,7 @@ runProgressLog opts m = do
     mainPackage :: Path Abs Dir
     mainPackage = opts ^. progressLogOptionsPackageRoot
 
-    handleLogs :: forall r'. (Members '[Logger, Concurrent] r') => TQueue LogQueueItem -> Sem r' ()
+    handleLogs :: forall r'. (Members '[Logger, Concurrent] r') => LogQueue -> Sem r' ()
     handleLogs q = queueLoopWhile q $ \case
       LogQueueClose -> do
         logVerbose (mkAnsiText (annotate AnnKeyword "Finished compilation"))
@@ -123,7 +126,7 @@ runProgressLog opts m = do
         logMessage loglvl msg
         return True
 
-    handler :: TVar ProgressLogState -> TQueue LogQueueItem -> EffectHandlerFO ProgressLog r
+    handler :: TVar ProgressLogState -> LogQueue -> EffectHandlerFO ProgressLog r
     handler st logs = \case
       ProgressLog i ->
         atomically $ do
@@ -150,7 +153,7 @@ runProgressLog opts m = do
           totalModules = importTreeSize (opts ^. progressLogOptionsImportTree)
 
           getNextNumber :: STM (Natural, Bool)
-          getNextNumber = do
+          getNextNumber =
             stateTVar st $ \old ->
               let processed = old ^. stateProcessed + 1
                   pkgProcessed = over (at fromPackage) (Just . maybe 1 succ) (old ^. stateProcessedPerPackage)

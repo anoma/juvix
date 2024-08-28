@@ -1,6 +1,5 @@
 module Juvix.Compiler.Pipeline.DriverParallel
   ( compileInParallel,
-    compileInParallel_,
     ModuleInfoCache,
     evalModuleInfoCacheParallel,
   )
@@ -62,27 +61,6 @@ getNodePath = (^. entryIxImportNode)
 
 getNodeName :: Node -> Text
 getNodeName = toFilePath . (^. importNodeAbsFile) . getNodePath
-
-compileInParallel_ ::
-  forall r.
-  ( Members
-      '[ Concurrent,
-         IOE,
-         ModuleInfoCache,
-         JvoCache,
-         TaggedLock,
-         Files,
-         TopModuleNameChecker,
-         Error JuvixError,
-         Reader EntryPoint,
-         PathResolver,
-         Reader NumThreads,
-         Reader ImportTree
-       ]
-      r
-  ) =>
-  Sem r ()
-compileInParallel_ = void compileInParallel
 
 -- | Compiles the whole project in parallel (i.e. all modules in the ImportTree).
 compileInParallel ::
@@ -167,4 +145,4 @@ evalModuleInfoCacheParallel ::
   ) =>
   Sem (ModuleInfoCache ': ProgressLog ': JvoCache ': r) a ->
   Sem r a
-evalModuleInfoCacheParallel = Driver.evalModuleInfoCacheSetup (const (compileInParallel_))
+evalModuleInfoCacheParallel = Driver.evalModuleInfoCacheSetup (const (void compileInParallel))
