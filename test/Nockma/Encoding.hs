@@ -9,9 +9,9 @@ import Test.Tasty.Hedgehog
 
 propEncodingRoundtrip :: Property
 propEncodingRoundtrip = property $ do
-  -- The range must be greater than the chunkSize in `byteStringToIntegerBE`
+  -- The range must be greater than the chunkSize in `byteStringToIntegerLEChunked`
   bs <- forAll (Gen.bytes (Range.linear 0 3000))
-  Encoding.decodeByteString (Encoding.encodeByteString bs) === bs
+  Encoding.decodeByteStringWithDefault (error "failed to decode") (Encoding.encodeByteString bs) === bs
 
 allTests :: TestTree
 allTests = testGroup "Nockma encoding" [testProperty "Roundtrip ByteArray to/from integer encoding" propEncodingRoundtrip]

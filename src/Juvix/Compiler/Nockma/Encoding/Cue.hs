@@ -2,6 +2,7 @@ module Juvix.Compiler.Nockma.Encoding.Cue where
 
 import Data.Bit as Bit
 import Juvix.Compiler.Nockma.Encoding.Base
+import Juvix.Compiler.Nockma.Encoding.ByteString
 import Juvix.Compiler.Nockma.Encoding.Effect.BitReader
 import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Pretty.Base

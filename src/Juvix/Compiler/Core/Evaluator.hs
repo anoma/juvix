@@ -497,12 +497,19 @@ geval opts herr tab env0 = eval' env0
 
         -- Deserialize a Integer, serialized using `serializeInteger` to a Node
         deserializeFromInteger :: Integer -> Node
-        deserializeFromInteger = deserializeNode . Encoding.decodeByteString
+        deserializeFromInteger = deserializeNode . decodeByteString
         {-# INLINE deserializeFromInteger #-}
 
         serializeToInteger :: Node -> Integer
         serializeToInteger = Encoding.encodeByteString . serializeNode
         {-# INLINE serializeToInteger #-}
+
+        decodeByteString :: Integer -> ByteString
+        decodeByteString = Encoding.decodeByteStringWithDefault decodeErr
+          where
+            decodeErr :: ByteString
+            decodeErr = err "failed to decode Integer"
+        {-# INLINE decodeByteString #-}
 
         sign :: Node -> ByteString -> Node
         sign !messageNode !secretKeyBs =
