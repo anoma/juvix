@@ -1257,7 +1257,7 @@ instance PrettyPrint ImportTreeStats where
     header "Import Tree Statistics:"
     header "======================="
     itemize
-      [ noLoc "Total number of modules:" <+> noLoc (pretty _importTreeStatsTotalModules),
+      [ noLoc "Total number of nodes:" <+> noLoc (pretty _importTreeStatsTotalModules),
         noLoc "Total number of edges:" <+> noLoc (pretty _importTreeStatsTotalEdges),
         noLoc "Height (longest chain of imports):" <+> noLoc (pretty _importTreeStatsHeight)
       ]
@@ -1268,21 +1268,33 @@ instance PrettyPrint ImportTree where
     header "Import Tree:"
     header "============"
     hardline
-    forM_ (Map.toList importsTable) $ \(pkgRoot, tbl) -> do
+
+    forM_ (Map.toList importsTable) $ \(pkgRoot, tbl :: Map (Path Rel File) (Set ImportNode)) -> do
       annotated AnnImportant (noLoc ("* Package at " <> pretty pkgRoot))
       hardline
+      let pkgNodes :: HashSet ImportNode = fromJust (nodesByRoot ^. at pkgRoot)
+      header ("Nodes (" <> show (length pkgNodes) <> ")")
+      forM_ pkgNodes $ \node -> do
+        noLoc (pMod (node ^. importNodeFile))
+        hardline
+      hardline
+      let numEdges = sum (map length (toList tbl))
+      header ("Edges (" <> show numEdges <> ")")
       forM_ (Map.toList tbl) $ \(fromFile, toFiles) -> do
-        forM_ toFiles $ \toFile -> do
-          let pMod :: Path x File -> Doc Ann
-              pMod = annotate (AnnKind KNameTopModule) . pretty
-              fromMod = pMod fromFile
-              toMod
+        noLoc (pMod fromFile P.<+> annotate AnnKeyword "imports" P.<+> "(" <> pretty (length toFiles) <> "):")
+        hardline
+        indent . itemize . (`map` (toList toFiles)) $ \toFile -> do
+          let toMod
                 | pkgRoot == toFile ^. importNodePackageRoot = pMod (toFile ^. importNodeFile)
                 | otherwise = pMod (toFile ^. importNodeAbsFile)
-          noLoc (fromMod P.<+> annotate AnnKeyword "imports" P.<+> toMod)
-          hardline
+          noLoc toMod
+        hardline
+        unless (null toFiles) hardline
       hardline
     where
+      pMod :: Path x File -> Doc Ann
+      pMod = annotate (AnnKind KNameTopModule) . pretty
+
       allNodes :: [ImportNode]
       allNodes = HashMap.keys (tree ^. importTree)
 
@@ -1290,11 +1302,7 @@ instance PrettyPrint ImportTree where
       allRoots = nubSort (map (^. importNodePackageRoot) allNodes)
 
       nodesByRoot :: HashMap (Path Abs Dir) (HashSet ImportNode)
-      nodesByRoot =
-        foldl'
-          (HashMap.unionWith (<>))
-          mempty
-          [hashMap [(node ^. importNodePackageRoot, hashSet [node])] | node <- allNodes]
+      nodesByRoot = importTreeNodesByPackage tree
 
       -- fromPackageRoot -> fromFile -> tofile
       importsTable :: Map (Path Abs Dir) (Map (Path Rel File) (Set ImportNode))
