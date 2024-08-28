@@ -97,15 +97,32 @@ encodeVarInt = \case
                   | otherwise -> byteChunk .|. 0x80 -- More bytes, so most significant bit for this chunk is 1
          in BB.word8 currentByte <> buildVarInt next
 
+byteStringToIntegerBE :: ByteString -> Integer
+byteStringToIntegerBE = foldl' go 0 . map (first byteStringChunkToInteger) . chunkByteString
+  where
+    chunkSize :: Int
+    chunkSize = 1024
+
+    go :: Integer -> (Integer, Int) -> Integer
+    go acc (i, size) = acc `shiftL` (8 * size) .|. i
+
+    -- Split the ByteString into chunks and store their sizes
+    chunkByteString :: ByteString -> [(ByteString, Int)]
+    chunkByteString bs
+      | BS.null bs = []
+      | otherwise =
+          let (chunk, rest) = BS.splitAt chunkSize bs
+           in (chunk, BS.length chunk) : chunkByteString rest
+
+    byteStringChunkToInteger :: ByteString -> Integer
+    byteStringChunkToInteger = BS.foldl' (\acc b -> acc `shiftL` 8 .|. fromIntegral b) 0
+
 -- | encode a ByteString to an Integer (in MSB ordering) with its length as part of the encoding.
 encodeByteString :: ByteString -> Integer
-encodeByteString bs = BS.foldl' go 0 (encodedLength <> bs)
+encodeByteString bs = byteStringToIntegerBE (encodedLength <> bs)
   where
     encodedLength :: ByteString
     encodedLength = encodeVarInt (BS.length bs)
-
-    go :: Integer -> Word8 -> Integer
-    go acc b = acc `shiftL` 8 .|. fromIntegral b
 
 -- | decode a ByteString that was encoded using `encodeByteString`
 decodeByteString :: Integer -> ByteString
