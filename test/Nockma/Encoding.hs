@@ -9,7 +9,8 @@ import Test.Tasty.Hedgehog
 
 propEncodingRoundtrip :: Property
 propEncodingRoundtrip = property $ do
-  bs <- forAll (Gen.bytes (Range.linear 0 1000))
+  -- The range must be greater than the chunkSize in `byteStringToIntegerBE`
+  bs <- forAll (Gen.bytes (Range.linear 0 3000))
   Encoding.decodeByteString (Encoding.encodeByteString bs) === bs
 
 allTests :: TestTree

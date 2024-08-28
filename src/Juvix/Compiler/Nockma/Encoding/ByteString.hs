@@ -106,7 +106,6 @@ byteStringToIntegerBE = foldl' go 0 . map (first byteStringChunkToInteger) . chu
     go :: Integer -> (Integer, Int) -> Integer
     go acc (i, size) = acc `shiftL` (8 * size) .|. i
 
-    -- Split the ByteString into chunks and store their sizes
     chunkByteString :: ByteString -> [(ByteString, Int)]
     chunkByteString bs
       | BS.null bs = []
