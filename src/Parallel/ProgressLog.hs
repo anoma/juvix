@@ -5,7 +5,9 @@ import Effectful.Concurrent
 import Effectful.Concurrent.STM as STM
 import Juvix.Compiler.Concrete.Print.Base
 import Juvix.Compiler.Pipeline.Driver.Data
+import Juvix.Compiler.Pipeline.Loader.PathResolver.Base
 import Juvix.Compiler.Pipeline.Loader.PathResolver.ImportTree.Base
+import Juvix.Compiler.Pipeline.Options
 import Juvix.Data.CodeAnn
 import Juvix.Data.Logger
 import Juvix.Prelude
@@ -60,12 +62,36 @@ iniProgressLogState =
     }
 
 runProgressLog ::
+  ( Members
+      '[ PathResolver,
+         Reader ImportTree,
+         Reader PipelineOptions,
+         Logger,
+         Concurrent
+       ]
+      r
+  ) =>
+  Sem (ProgressLog ': r) a ->
+  Sem r a
+runProgressLog m = do
+  tree <- ask
+  root <- resolverInitialRoot
+  popts :: PipelineOptions <- ask
+  let opts :: ProgressLogOptions =
+        ProgressLogOptions
+          { _progressLogOptionsImportTree = tree,
+            _progressLogOptionsPackageRoot = root,
+            _progressLogOptionsShowThreadId = popts ^. pipelineShowThreadId
+          }
+  runProgressLogOptions opts m
+
+runProgressLogOptions ::
   forall r a.
   (Members '[Logger, Concurrent] r) =>
   ProgressLogOptions ->
   Sem (ProgressLog ': r) a ->
   Sem r a
-runProgressLog opts m = do
+runProgressLogOptions opts m = do
   logs :: LogQueue <- newTQueueIO
   st :: TVar ProgressLogState <- newTVarIO iniProgressLogState
   withAsync (handleLogs logs) $ \logHandler -> do

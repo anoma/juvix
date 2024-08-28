@@ -147,17 +147,8 @@ evalModuleInfoCacheSetup ::
   Sem (ModuleInfoCache ': ProgressLog ': JvoCache ': r) a ->
   Sem r a
 evalModuleInfoCacheSetup setup m = do
-  tree <- ask
-  root <- resolverInitialRoot
-  popts :: PipelineOptions <- ask
-  let opts :: ProgressLogOptions =
-        ProgressLogOptions
-          { _progressLogOptionsImportTree = tree,
-            _progressLogOptionsPackageRoot = root,
-            _progressLogOptionsShowThreadId = popts ^. pipelineShowThreadId
-          }
   evalJvoCache
-    . runProgressLog opts
+    . runProgressLog
     . evalCacheEmptySetup setup processModuleCacheMiss
     $ m
 
