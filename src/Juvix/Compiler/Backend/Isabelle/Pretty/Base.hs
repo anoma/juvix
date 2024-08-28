@@ -33,11 +33,14 @@ ppParams = \case
 
 ppComments :: (Member (State Options) r) => Interval -> Sem r (Doc Ann)
 ppComments loc = do
-  comments <- gets (takeWhile (\c -> c ^. commentInterval < loc) . (^. optComments))
-  modify' $ over optComments (dropWhile (\c -> c ^. commentInterval < loc))
+  comments <- gets (takeWhile cmpLoc . (^. optComments))
+  modify' $ over optComments (dropWhile cmpLoc)
   return
     . mconcatMap (\c -> annotate AnnComment $ "(*" <> pretty (c ^. commentText) <+> "*)" <> line)
     $ comments
+  where
+    cmpLoc :: Comment -> Bool
+    cmpLoc c = c ^. commentInterval . intervalStart <= loc ^. intervalEnd
 
 ppCodeWithComments :: (PrettyCode a, HasLoc a, Member (State Options) r) => a -> Sem r (Doc Ann, Doc Ann)
 ppCodeWithComments a = do

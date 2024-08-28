@@ -37,16 +37,16 @@ fun dec :: "nat \<Rightarrow> nat" where
 
 (* dec' function *)
 fun dec' :: "nat \<Rightarrow> nat" where
+  (* Do case switch *)
+  (* pattern match on x *)
+  (* the zero case  *)
+  (* return zero  *)
+  (* the suc case  *)
   "dec' x =
     (case x of
        0 \<Rightarrow> 0 |
        (Suc y) \<Rightarrow> y)"
 
-(* Do case switch *)
-(* pattern match on x *)
-(* the zero case  *)
-(* return zero  *)
-(* the suc case  *)
 fun optmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'A option \<Rightarrow> 'A option" where
   "optmap f' None = None" |
   "optmap f' (Some x) = (Some (f' x))"
