@@ -6,6 +6,7 @@ module Juvix.Compiler.Pipeline.Loader.PathResolver.ImportTree.Base
     importTreeEdges,
     importTreeNodes,
     importTreeProjectNodes,
+    importTreeNodesByPackage,
     ImportTreeBuilder,
     runImportTreeBuilder,
     ignoreImportTreeBuilder,
@@ -88,6 +89,12 @@ withImportNode fromNode m = do
   internalRegisterNode fromNode
   (`interpret` m) $ \case
     ImportTreeAddEdge importScan toNode -> internalRegisterEdge importScan fromNode toNode
+
+importTreeNodesByPackage :: ImportTree -> HashMap (Path Abs Dir) (HashSet ImportNode)
+importTreeNodesByPackage tree = run . execState mempty $
+  forM_ (tree ^. importTreeNodes) $ \node ->
+    modify @(HashMap (Path Abs Dir) (HashSet ImportNode))
+      (over (at (node ^. importNodePackageRoot)) (Just . maybe (HashSet.singleton node) (HashSet.insert node)))
 
 importTree :: SimpleGetter ImportTree (HashMap ImportNode (HashSet ImportNode))
 importTree = fimportTree
