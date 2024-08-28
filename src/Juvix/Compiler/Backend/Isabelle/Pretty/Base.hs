@@ -5,7 +5,6 @@ import Juvix.Compiler.Backend.Isabelle.Language
 import Juvix.Compiler.Backend.Isabelle.Pretty.Keywords
 import Juvix.Compiler.Backend.Isabelle.Pretty.Options
 import Juvix.Data.CodeAnn
-import Juvix.Extra.Paths qualified as P
 
 arrow :: Doc Ann
 arrow = "\\<Rightarrow>"
@@ -33,15 +32,12 @@ ppParams = \case
     return $ Just $ parens (hsep (punctuate comma ps))
 
 ppComments :: (Member (State Options) r) => Interval -> Sem r (Doc Ann)
-ppComments loc
-  | loc ^. intervalFile == P.noFile =
-      return mempty
-  | otherwise = do
-      comments <- gets (takeWhile (\c -> c ^. commentInterval < loc) . (^. optComments))
-      modify' $ over optComments (dropWhile (\c -> c ^. commentInterval < loc))
-      return
-        . mconcatMap (\c -> annotate AnnComment $ "--" <> pretty (c ^. commentText) <> hardline)
-        $ comments
+ppComments loc = do
+  comments <- gets (takeWhile (\c -> c ^. commentInterval < loc) . (^. optComments))
+  modify' $ over optComments (dropWhile (\c -> c ^. commentInterval < loc))
+  return
+    . mconcatMap (\c -> annotate AnnComment $ "(*" <> pretty (c ^. commentText) <+> "*)" <> line)
+    $ comments
 
 ppCodeWithComments :: (PrettyCode a, HasLoc a, Member (State Options) r) => a -> Sem r (Doc Ann, Doc Ann)
 ppCodeWithComments a = do
@@ -111,24 +107,21 @@ instance PrettyCode IndApp where
         return $ params <?+> ind
 
 instance PrettyCode Expression where
-  ppCode expr = do
-    comments <- ppComments (getLoc expr)
-    expr' <- case expr of
-      ExprIden x -> ppCode x
-      ExprUndefined {} -> return kwUndefined
-      ExprLiteral x -> ppCode (x ^. withLocParam)
-      ExprApp x -> ppCode x
-      ExprBinop x -> ppCode x
-      ExprTuple x -> ppCode x
-      ExprList x -> ppCode x
-      ExprCons x -> ppCode x
-      ExprRecord x -> ppRecord False x
-      ExprRecordUpdate x -> ppCode x
-      ExprLet x -> ppCode x
-      ExprIf x -> ppCode x
-      ExprCase x -> ppCode x
-      ExprLambda x -> ppCode x
-    return $ comments <> expr'
+  ppCode = \case
+    ExprIden x -> ppCode x
+    ExprUndefined {} -> return kwUndefined
+    ExprLiteral x -> ppCode (x ^. withLocParam)
+    ExprApp x -> ppCode x
+    ExprBinop x -> ppCode x
+    ExprTuple x -> ppCode x
+    ExprList x -> ppCode x
+    ExprCons x -> ppCode x
+    ExprRecord x -> ppRecord False x
+    ExprRecordUpdate x -> ppCode x
+    ExprLet x -> ppCode x
+    ExprIf x -> ppCode x
+    ExprCase x -> ppCode x
+    ExprLambda x -> ppCode x
 
 instance PrettyCode Literal where
   ppCode = \case
@@ -181,11 +174,10 @@ instance PrettyCode Case where
     return $ align $ kwCase <> oneLineOrNextBlock val <> kwOf <> hardline <> indent' (vsepHard brs')
 
 instance PrettyCode CaseBranch where
-  ppCode br@CaseBranch {..} = do
-    comments <- ppComments (getLoc br)
+  ppCode CaseBranch {..} = do
     pat <- ppTopCode _caseBranchPattern
     body <- ppRightExpression caseFixity _caseBranchBody
-    return $ comments <> pat <+> arrow <> oneLineOrNext body
+    return $ pat <+> arrow <> oneLineOrNext body
 
 instance (PrettyCode a) => PrettyCode (Tuple a) where
   ppCode Tuple {..} = do
