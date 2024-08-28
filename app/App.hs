@@ -270,10 +270,13 @@ runPipelineHtml bNonRecursive input_
   | bNonRecursive = do
       r <- runPipelineNoOptions input_ upToInternalTyped
       return (r, [])
-  | otherwise = do
-      args <- askArgs
-      entry <- getEntryPoint' args input_
-      runReader defaultPipelineOptions (runPipelineHtmlEither entry) >>= fromRightJuvixError
+  | otherwise = runPipelineRecursive input_
+
+runPipelineRecursive :: (Members '[App, EmbedIO, Logger, TaggedLock] r) => Maybe (AppPath File) -> Sem r (InternalTypedResult, [InternalTypedResult])
+runPipelineRecursive input_ = do
+  args <- askArgs
+  entry <- getEntryPoint' args input_
+  runReader defaultPipelineOptions (runPipelineRecursiveEither entry) >>= fromRightJuvixError
 
 runPipelineOptions :: (Members '[App] r) => Sem (Reader PipelineOptions ': r) a -> Sem r a
 runPipelineOptions m = do

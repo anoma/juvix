@@ -51,12 +51,12 @@ runPipelineHighlight ::
   Sem r HighlightInput
 runPipelineHighlight entry = fmap fst . runIOEitherHelper entry
 
-runPipelineHtmlEither ::
+runPipelineRecursiveEither ::
   forall r.
   (Members PipelineAppEffects r) =>
   EntryPoint ->
   Sem r (Either JuvixError (Typed.InternalTypedResult, [Typed.InternalTypedResult]))
-runPipelineHtmlEither entry = do
+runPipelineRecursiveEither entry = do
   x <- runIOEitherPipeline' entry $ do
     processRecursiveUpToTyped
   return . mapRight snd $ snd x
