@@ -1,5 +1,6 @@
 module Juvix.Data.Logger
   ( defaultLoggerOptions,
+    replLoggerOptions,
     defaultLogLevel,
     Logger,
     LoggerOptions (..),
@@ -58,6 +59,13 @@ data LoggerOptions = LoggerOptions
 
 defaultLogLevel :: LogLevel
 defaultLogLevel = LogLevelProgress
+
+replLoggerOptions :: LoggerOptions
+replLoggerOptions =
+  LoggerOptions
+    { _loggerUseColors = True,
+      _loggerLevel = LogLevelWarn
+    }
 
 defaultLoggerOptions :: LoggerOptions
 defaultLoggerOptions =

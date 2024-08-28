@@ -212,7 +212,7 @@ runReplPipelineIOEither' lockMode entry = do
   eith <-
     runM
       . runReader defaultPipelineOptions
-      . runLoggerIO defaultLoggerOptions
+      . runLoggerIO replLoggerOptions
       . runConcurrent
       . runReader defaultNumThreads
       . evalInternet hasInternet
