@@ -65,7 +65,7 @@ substVar var var' = go
       ExprApp (Application (go fn) (go arg))
 
     goBinop :: Binop -> Expression
-    goBinop (Binop {..}) =
+    goBinop Binop {..} =
       ExprBinop
         Binop
           { _binopOperator,
