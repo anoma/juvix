@@ -51,29 +51,27 @@ fromInternal res@Internal.InternalTypedResult {..} = do
       itab' = Internal.insertInternalModule itab md
       table :: Internal.InfoTable
       table = Internal.computeCombinedInfoTable itab'
-      moduleNames :: [Name]
-      moduleNames = map (^. Internal.internalModuleName) (HashMap.elems (itab' ^. Internal.internalModuleTable))
       comments :: [Comment]
       comments = allComments (Internal.getInternalTypedResultComments res)
-  go onlyTypes comments moduleNames table _resultModule
+  go onlyTypes comments table _resultModule
   where
-    go :: Bool -> [Comment] -> [Name] -> Internal.InfoTable -> Internal.Module -> Sem r Result
-    go onlyTypes comments moduleNames tab md =
+    go :: Bool -> [Comment] -> Internal.InfoTable -> Internal.Module -> Sem r Result
+    go onlyTypes comments tab md =
       return $
         Result
-          { _resultTheory = goModule onlyTypes moduleNames tab md,
+          { _resultTheory = goModule onlyTypes tab md,
             _resultModuleId = md ^. Internal.moduleId,
             _resultComments = filter (\c -> c ^. commentInterval . intervalFile == file) comments
           }
       where
         file = getLoc md ^. intervalFile
 
-goModule :: Bool -> [Name] -> Internal.InfoTable -> Internal.Module -> Theory
-goModule onlyTypes moduleNames infoTable Internal.Module {..} =
+goModule :: Bool -> Internal.InfoTable -> Internal.Module -> Theory
+goModule onlyTypes infoTable Internal.Module {..} =
   Theory
-    { _theoryName = lookupTheoryName _moduleName,
+    { _theoryName = overNameText toIsabelleTheoryName _moduleName,
       _theoryImports =
-        map lookupTheoryName $
+        map (overNameText toIsabelleTheoryName) $
           map (^. Internal.importModuleName) (_moduleBody ^. Internal.moduleImports),
       _theoryStatements = case _modulePragmas ^. pragmasIsabelleIgnore of
         Just (PragmaIsabelleIgnore True) -> []
@@ -81,29 +79,8 @@ goModule onlyTypes moduleNames infoTable Internal.Module {..} =
     }
   where
     toIsabelleTheoryName :: Text -> Text
-    toIsabelleTheoryName name = case reverse $ filter (/= "") $ T.splitOn "." name of
-      h : _ -> h
-      [] -> impossible
-
-    moduleNameMap :: HashMap Name Name
-    moduleNameMap =
-      HashMap.fromList $ concatMap mapGroup groups
-      where
-        groups = groupSortOn (toIsabelleTheoryName . (^. nameText)) moduleNames
-
-        mapGroup :: NonEmpty Name -> [(Name, Name)]
-        mapGroup (name :| names) =
-          (name, overNameText toIsabelleTheoryName name) : names'
-          where
-            names' =
-              zipWith
-                (\n (idx :: Int) -> (n, overNameText (<> "_" <> show idx) n))
-                names
-                [0 ..]
-
-    lookupTheoryName :: Name -> Name
-    lookupTheoryName name =
-      fromMaybe (error "lookupTheoryName") $ HashMap.lookup name moduleNameMap
+    toIsabelleTheoryName name =
+      Text.intercalate "_" $ filter (/= "") $ T.splitOn "." name
 
     isTypeDef :: Statement -> Bool
     isTypeDef = \case
