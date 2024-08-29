@@ -24,13 +24,11 @@ import Juvix.Compiler.Pipeline.Loader.PathResolver.Error
 import Juvix.Compiler.Pipeline.Loader.PathResolver.ImportTree (withImportTree)
 import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
-import Juvix.Compiler.Pipeline.Result
-import Juvix.Compiler.Pipeline.Run (evalModuleInfoCacheHelper)
+import Juvix.Compiler.Pipeline.Run (defaultPipelineOptions, evalModuleInfoCacheHelper)
 import Juvix.Compiler.Store.Extra qualified as Store
 import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process (runProcessIO)
 import Juvix.Prelude
-import Parallel.ProgressLog
 
 upToInternalExpression ::
   (Members '[Reader EntryPoint, Error JuvixError, State Artifacts, Termination] r) =>
@@ -165,6 +163,7 @@ compileReplInputIO fp txt = do
   hasInternet <- not <$> asks (^. entryPointOffline)
   runError
     . runConcurrent
+    . runReader defaultPipelineOptions
     . runLoggerIO defaultLoggerOptions
     . runReader defaultNumThreads
     . evalInternet hasInternet
@@ -184,7 +183,6 @@ compileReplInputIO fp txt = do
     . runTopModuleNameChecker
     . runReader defaultImportScanStrategy
     . withImportTree (Just fp)
-    . ignoreProgressLog
     . evalModuleInfoCacheHelper
     $ do
       p <- parseReplInput fp txt

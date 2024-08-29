@@ -18,3 +18,6 @@ makeLenses ''ImportNode
 
 importNodeAbsFile :: SimpleGetter ImportNode (Path Abs File)
 importNodeAbsFile = to $ \ImportNode {..} -> _importNodePackageRoot <//> _importNodeFile
+
+importNodeTopModulePathKey :: SimpleGetter ImportNode TopModulePathKey
+importNodeTopModulePathKey = to $ \ImportNode {..} -> relPathtoTopModulePathKey _importNodeFile

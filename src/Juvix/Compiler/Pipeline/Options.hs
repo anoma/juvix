@@ -7,14 +7,18 @@ import Juvix.Prelude
 data PipelineOptions = PipelineOptions
   { _pipelineImportStrategy :: ImportScanStrategy,
     _pipelineDependenciesConfig :: DependenciesConfig,
-    _pipelineNumThreads :: NumThreads
+    _pipelineNumThreads :: NumThreads,
+    _pipelineShowThreadId :: Bool
   }
+
+makeLenses ''PipelineOptions
 
 defaultPipelineOptions :: PipelineOptions
 defaultPipelineOptions =
   PipelineOptions
     { _pipelineImportStrategy = defaultImportScanStrategy,
       _pipelineDependenciesConfig = defaultDependenciesConfig,
+      _pipelineShowThreadId = False,
       _pipelineNumThreads = defaultNumThreads
     }
 

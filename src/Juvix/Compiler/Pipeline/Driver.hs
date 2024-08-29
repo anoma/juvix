@@ -5,7 +5,8 @@ module Juvix.Compiler.Pipeline.Driver
     evalJvoCache,
     processFileUpTo,
     processProject,
-    evalModuleInfoCache,
+    evalModuleInfoCachePackageDotJuvix,
+    evalModuleInfoCacheSequential,
     evalModuleInfoCacheSetup,
     processFileToStoredCore,
     processFileUpToParsing,
@@ -20,6 +21,7 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Concrete.Data.Highlight
 import Juvix.Compiler.Concrete.Language
+import Juvix.Compiler.Concrete.Print.Base (docNoCommentsDefault)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping (getModuleId)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
@@ -46,6 +48,7 @@ import Juvix.Data.CodeAnn
 import Juvix.Data.SHA256 qualified as SHA256
 import Juvix.Extra.Serialize qualified as Serialize
 import Juvix.Prelude
+import Parallel.ProgressLog
 import Path.Posix qualified as Path
 
 processModule ::
@@ -54,21 +57,193 @@ processModule ::
   Sem r (PipelineResult Store.ModuleInfo)
 processModule = cacheGet
 
-evalModuleInfoCache ::
+evalModuleInfoCacheSequential ::
   forall r a.
-  (Members '[TaggedLock, HighlightBuilder, TopModuleNameChecker, Error JuvixError, Files, PathResolver] r) =>
-  Sem (ModuleInfoCache ': JvoCache ': r) a ->
+  ( Members
+      '[ TaggedLock,
+         HighlightBuilder,
+         TopModuleNameChecker,
+         Error JuvixError,
+         Files,
+         Concurrent,
+         Logger,
+         Reader EntryPoint,
+         Reader ImportTree,
+         Reader PipelineOptions,
+         PathResolver
+       ]
+      r
+  ) =>
+  Sem (ModuleInfoCache ': ProgressLog ': JvoCache ': r) a ->
   Sem r a
-evalModuleInfoCache = evalJvoCache . evalCacheEmpty processModuleCacheMiss
+evalModuleInfoCacheSequential = evalModuleInfoCacheSetup (const (void (compileSequentially)))
+
+-- | Use only to compile package.juvix
+evalModuleInfoCachePackageDotJuvix ::
+  forall r a.
+  ( Members
+      '[ TaggedLock,
+         HighlightBuilder,
+         TopModuleNameChecker,
+         Error JuvixError,
+         Files,
+         Concurrent,
+         Logger,
+         PathResolver
+       ]
+      r
+  ) =>
+  Sem (ModuleInfoCache ': ProgressLog ': JvoCache ': r) a ->
+  Sem r a
+evalModuleInfoCachePackageDotJuvix =
+  evalJvoCache
+    . ignoreProgressLog
+    . evalCacheEmpty processModuleCacheMiss
+
+-- | Compiles the whole project sequentially (i.e. all modules in the ImportTree).
+compileSequentially ::
+  forall r.
+  ( Members
+      '[ ModuleInfoCache,
+         Reader EntryPoint,
+         PathResolver,
+         Reader ImportTree
+       ]
+      r
+  ) =>
+  Sem r (HashMap ImportNode (PipelineResult Store.ModuleInfo))
+compileSequentially = do
+  nodes :: HashSet ImportNode <- asks (^. importTreeNodes)
+  hashMapFromHashSetM nodes (mkEntryIndex >=> compileNode)
+
+compileNode ::
+  (Members '[ModuleInfoCache, PathResolver] r) =>
+  EntryIndex ->
+  Sem r (PipelineResult Store.ModuleInfo)
+compileNode e =
+  withResolverRoot (e ^. entryIxImportNode . importNodePackageRoot)
+  -- As opposed to parallel compilation, here we don't force the result
+  $
+    processModule e
 
 -- | Used for parallel compilation
 evalModuleInfoCacheSetup ::
   forall r a.
-  (Members '[TaggedLock, HighlightBuilder, TopModuleNameChecker, Error JuvixError, Files, PathResolver] r) =>
-  (EntryIndex -> Sem (ModuleInfoCache ': JvoCache ': r) ()) ->
-  Sem (ModuleInfoCache ': JvoCache ': r) a ->
+  ( Members
+      '[ TaggedLock,
+         Logger,
+         HighlightBuilder,
+         TopModuleNameChecker,
+         Concurrent,
+         Error JuvixError,
+         Files,
+         Reader ImportTree,
+         Reader PipelineOptions,
+         PathResolver
+       ]
+      r
+  ) =>
+  (EntryIndex -> Sem (ModuleInfoCache ': ProgressLog ': JvoCache ': r) ()) ->
+  Sem (ModuleInfoCache ': ProgressLog ': JvoCache ': r) a ->
   Sem r a
-evalModuleInfoCacheSetup setup = evalJvoCache . evalCacheEmptySetup setup processModuleCacheMiss
+evalModuleInfoCacheSetup setup m = do
+  evalJvoCache
+    . runProgressLog
+    . evalCacheEmptySetup setup processModuleCacheMiss
+    $ m
+
+logDecision :: (Members '[ProgressLog] r) => ThreadId -> ImportNode -> ProcessModuleDecision x -> Sem r ()
+logDecision _logItemThreadId _logItemModule dec = do
+  let reason :: Maybe (Doc CodeAnn) = case dec of
+        ProcessModuleReuse {} -> Nothing
+        ProcessModuleRecompile r -> case r ^. recompileReason of
+          RecompileNoJvoFile -> Nothing
+          RecompileImportsChanged -> Just "Because an imported module changed"
+          RecompileSourceChanged -> Just "Because the source changed"
+          RecompileOptionsChanged -> Just "Because compilation options changed"
+          RecompileFieldSizeChanged -> Just "Because the field size changed"
+
+      msg :: Doc CodeAnn =
+        docNoCommentsDefault (_logItemModule ^. importNodeTopModulePathKey)
+          <+?> (parens <$> reason)
+
+  progressLog
+    LogItem
+      { _logItemMessage = msg,
+        _logItemAction = processModuleDecisionAction dec,
+        _logItemThreadId,
+        _logItemModule
+      }
+
+processModuleCacheMissDecide ::
+  forall r rrecompile.
+  ( Members
+      '[ ModuleInfoCache,
+         Error JuvixError,
+         Files,
+         JvoCache,
+         PathResolver
+       ]
+      r,
+    Members
+      '[ ModuleInfoCache,
+         Error JuvixError,
+         Files,
+         TaggedLock,
+         TopModuleNameChecker,
+         HighlightBuilder,
+         PathResolver
+       ]
+      rrecompile
+  ) =>
+  EntryIndex ->
+  Sem r (ProcessModuleDecision rrecompile)
+processModuleCacheMissDecide entryIx = do
+  let buildDir = resolveAbsBuildDir root (entry ^. entryPointBuildDir)
+      sourcePath = fromJust (entry ^. entryPointModulePath)
+      relPath =
+        fromJust
+          . replaceExtension ".jvo"
+          . fromJust
+          $ stripProperPrefix $(mkAbsDir "/") sourcePath
+      absPath = buildDir Path.</> relPath
+  sha256 <- SHA256.digestFile sourcePath
+
+  let recompile :: Sem rrecompile (PipelineResult Store.ModuleInfo)
+      recompile = do
+        res <- processModuleToStoredCore sha256 entry
+        Serialize.saveToFile absPath (res ^. pipelineResult)
+        return res
+
+      recompileWithReason :: RecompileReason -> ProcessModuleDecision rrecompile
+      recompileWithReason reason =
+        ProcessModuleRecompile
+          Recompile
+            { _recompileDo = recompile,
+              _recompileReason = reason
+            }
+
+  runErrorWith (return . recompileWithReason) $ do
+    info :: Store.ModuleInfo <- loadFromJvoFile absPath >>= errorMaybe RecompileNoJvoFile
+
+    unless (info ^. Store.moduleInfoSHA256 == sha256) (throw RecompileSourceChanged)
+    unless (info ^. Store.moduleInfoOptions == opts) (throw RecompileSourceChanged)
+    unless (info ^. Store.moduleInfoFieldSize == entry ^. entryPointFieldSize) (throw RecompileFieldSizeChanged)
+    CompileResult {..} <- runReader entry (processImports (info ^. Store.moduleInfoImports))
+    if
+        | _compileResultChanged -> throw RecompileImportsChanged
+        | otherwise ->
+            return $
+              ProcessModuleReuse
+                PipelineResult
+                  { _pipelineResult = info,
+                    _pipelineResultImports = _compileResultModuleTable,
+                    _pipelineResultChanged = False
+                  }
+  where
+    entry = entryIx ^. entryIxEntry
+    root = entry ^. entryPointRoot
+    opts = StoredModule.fromEntryPoint entry
 
 processModuleCacheMiss ::
   forall r.
@@ -80,6 +255,8 @@ processModuleCacheMiss ::
          Error JuvixError,
          Files,
          JvoCache,
+         ProgressLog,
+         Concurrent,
          PathResolver
        ]
       r
@@ -87,44 +264,12 @@ processModuleCacheMiss ::
   EntryIndex ->
   Sem r (PipelineResult Store.ModuleInfo)
 processModuleCacheMiss entryIx = do
-  let buildDir = resolveAbsBuildDir root (entry ^. entryPointBuildDir)
-      sourcePath = fromJust (entry ^. entryPointModulePath)
-      relPath =
-        fromJust
-          . replaceExtension ".jvo"
-          . fromJust
-          $ stripProperPrefix $(mkAbsDir "/") sourcePath
-      absPath = buildDir Path.</> relPath
-  sha256 <- SHA256.digestFile sourcePath
-  m :: Maybe Store.ModuleInfo <- loadFromFile absPath
-  case m of
-    Just info
-      | info ^. Store.moduleInfoSHA256 == sha256
-          && info ^. Store.moduleInfoOptions == opts
-          && info ^. Store.moduleInfoFieldSize == entry ^. entryPointFieldSize -> do
-          CompileResult {..} <- runReader entry (processImports (info ^. Store.moduleInfoImports))
-          if
-              | _compileResultChanged ->
-                  recompile sha256 absPath
-              | otherwise ->
-                  return
-                    PipelineResult
-                      { _pipelineResult = info,
-                        _pipelineResultImports = _compileResultModuleTable,
-                        _pipelineResultChanged = False
-                      }
-    _ ->
-      recompile sha256 absPath
-  where
-    entry = entryIx ^. entryIxEntry
-    root = entry ^. entryPointRoot
-    opts = StoredModule.fromEntryPoint entry
-
-    recompile :: Text -> Path Abs File -> Sem r (PipelineResult Store.ModuleInfo)
-    recompile sha256 absPath = do
-      res <- processModuleToStoredCore sha256 entry
-      Serialize.saveToFile absPath (res ^. pipelineResult)
-      return res
+  p <- processModuleCacheMissDecide entryIx
+  tid <- myThreadId
+  logDecision tid (entryIx ^. entryIxImportNode) p
+  case p of
+    ProcessModuleReuse r -> return r
+    ProcessModuleRecompile recomp -> recomp ^. recompileDo
 
 processProject :: (Members '[ModuleInfoCache, Reader EntryPoint, Reader ImportTree] r) => Sem r [(ImportNode, PipelineResult ModuleInfo)]
 processProject = do
@@ -181,10 +326,10 @@ processImport p = withPathFile p getCachedImport
   where
     getCachedImport :: ImportNode -> Sem r (PipelineResult Store.ModuleInfo)
     getCachedImport node = do
-      b <- supportsParallel
+      hasParallelSupport <- supportsParallel
       eix <- mkEntryIndex node
       if
-          | b -> do
+          | hasParallelSupport -> do
               res <- cacheGetResult eix
               return (res ^. cacheResult)
           | otherwise -> processModule eix

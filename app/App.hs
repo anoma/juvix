@@ -274,7 +274,8 @@ runPipelineOptions m = do
   g <- askGlobalOptions
   let opt =
         defaultPipelineOptions
-          { _pipelineNumThreads = g ^. globalNumThreads
+          { _pipelineNumThreads = g ^. globalNumThreads,
+            _pipelineShowThreadId = g ^. globalDevShowThreadIds
           }
   runReader opt m
 

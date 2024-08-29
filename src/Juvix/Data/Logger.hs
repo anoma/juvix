@@ -1,10 +1,13 @@
 module Juvix.Data.Logger
   ( defaultLoggerOptions,
+    replLoggerOptions,
     defaultLogLevel,
     Logger,
     LoggerOptions (..),
     LogLevel (..),
+    logMessage,
     logError,
+    logVerbose,
     logProgress,
     logInfo,
     logWarn,
@@ -29,6 +32,7 @@ data LogLevel
   | LogLevelWarn
   | LogLevelInfo
   | LogLevelProgress
+  | LogLevelVerbose
   | LogLevelDebug
   deriving stock (Eq, Ord, Enum, Bounded)
 
@@ -38,6 +42,7 @@ instance Show LogLevel where
     LogLevelWarn -> "warn"
     LogLevelInfo -> "info"
     LogLevelProgress -> "progress"
+    LogLevelVerbose -> "verbose"
     LogLevelDebug -> "debug"
 
 instance Pretty LogLevel where
@@ -54,6 +59,13 @@ data LoggerOptions = LoggerOptions
 
 defaultLogLevel :: LogLevel
 defaultLogLevel = LogLevelProgress
+
+replLoggerOptions :: LoggerOptions
+replLoggerOptions =
+  LoggerOptions
+    { _loggerUseColors = True,
+      _loggerLevel = LogLevelWarn
+    }
 
 defaultLoggerOptions :: LoggerOptions
 defaultLoggerOptions =
@@ -77,6 +89,9 @@ logInfo = logMessage LogLevelInfo
 logProgress :: (Members '[Logger] r) => AnsiText -> Sem r ()
 logProgress = logMessage LogLevelProgress
 
+logVerbose :: (Members '[Logger] r) => AnsiText -> Sem r ()
+logVerbose = logMessage LogLevelVerbose
+
 logDebug :: (Members '[Logger] r) => AnsiText -> Sem r ()
 logDebug = logMessage LogLevelDebug
 
@@ -84,7 +99,9 @@ silenceProgressLog :: (Members '[Logger] r) => Sem r a -> Sem r a
 silenceProgressLog = localLogger (\f -> f .&&. (/= LogLevelProgress))
 
 runLoggerIO :: forall r a. (Members '[EmbedIO] r) => LoggerOptions -> Sem (Logger ': r) a -> Sem r a
-runLoggerIO opts = interp . re
+runLoggerIO opts m = do
+  liftIO (hSetBuffering stderr LineBuffering)
+  interp (re m)
   where
     interp :: Sem (Output AnsiText ': Reader (LogLevel -> Bool) ': r) a -> Sem r a
     interp = runReader (<= (opts ^. loggerLevel)) . runOutputSem printMsg

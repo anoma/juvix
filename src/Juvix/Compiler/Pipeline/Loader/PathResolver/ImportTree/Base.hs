@@ -6,6 +6,7 @@ module Juvix.Compiler.Pipeline.Loader.PathResolver.ImportTree.Base
     importTreeEdges,
     importTreeNodes,
     importTreeProjectNodes,
+    importTreeSize,
     importTreeNodesByPackage,
     ImportTreeBuilder,
     runImportTreeBuilder,
@@ -115,6 +116,10 @@ importTreeProjectNodes pkgRoot tree = mapMaybe projectFile (toList (tree ^. impo
 
 importTreeEdges :: SimpleGetter ImportTree (HashMap ImportNode (HashSet ImportScan))
 importTreeEdges = fimportTreeEdges
+
+-- | Returns the number of modules
+importTreeSize :: (Integral n) => ImportTree -> n
+importTreeSize = fromIntegral . length . (^. importTreeNodes)
 
 -- | The import tree is assumed to have no cycles
 mkImportTreeStats :: ImportTree -> ImportTreeStats

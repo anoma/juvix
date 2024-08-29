@@ -5,7 +5,7 @@ module Juvix.Compiler.Asm.Interpreter.Base
   )
 where
 
-import Juvix.Compiler.Asm.Language
+import Juvix.Compiler.Asm.Language hiding (logMessage)
 import Juvix.Compiler.Tree.Language.Value hiding (Value)
 import Juvix.Compiler.Tree.Language.Value qualified as Tree
 

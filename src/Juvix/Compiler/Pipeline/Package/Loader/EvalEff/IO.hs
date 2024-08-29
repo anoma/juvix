@@ -13,7 +13,7 @@ import Juvix.Compiler.Core.Evaluator
 import Juvix.Compiler.Core.Extra.Value
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Pipeline
-import Juvix.Compiler.Pipeline.Driver (evalModuleInfoCache, processFileToStoredCore)
+import Juvix.Compiler.Pipeline.Driver (evalModuleInfoCachePackageDotJuvix, processFileToStoredCore)
 import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
 import Juvix.Compiler.Pipeline.Package.Loader.PathResolver
@@ -122,29 +122,31 @@ runEvalFileEffIO = runProvider_ helper
 
 loadPackage' :: (Members '[TaggedLock, Files, EmbedIO, Error PackageLoaderError] r) => Path Abs File -> Sem r CoreResult
 loadPackage' packagePath = do
-  ( mapError
-      ( \e ->
-          PackageLoaderError
-            { _packageLoaderErrorPath = packagePath,
-              _packageLoaderErrorCause = ErrPackageJuvixError (PackageJuvixError e)
-            }
-      )
-      . evalInternetOffline
-      . ignoreHighlightBuilder
-      . runProcessIO
-      . runFilesIO
-      . evalTopNameIdGen defaultModuleId
-      . runReader packageEntryPoint
-      . ignoreLog
-      . mapError (JuvixError @GitProcessError)
-      . runGitProcess
-      . runEvalFileEffIO
-      . runPackagePathResolver rootPath
-      . runTopModuleNameChecker
-      . evalModuleInfoCache
-      $ (^. pipelineResult) <$> processFileToStoredCore packageEntryPoint
-    )
+  mapError toPackageError
+    . runConcurrent
+    . ignoreLogger
+    . evalInternetOffline
+    . ignoreHighlightBuilder
+    . runProcessIO
+    . runFilesIO
+    . evalTopNameIdGen defaultModuleId
+    . runReader packageEntryPoint
+    . ignoreLog
+    . mapError (JuvixError @GitProcessError)
+    . runGitProcess
+    . runEvalFileEffIO
+    . runPackagePathResolver rootPath
+    . runTopModuleNameChecker
+    . evalModuleInfoCachePackageDotJuvix
+    $ (^. pipelineResult) <$> processFileToStoredCore packageEntryPoint
   where
+    toPackageError :: JuvixError -> PackageLoaderError
+    toPackageError e =
+      PackageLoaderError
+        { _packageLoaderErrorPath = packagePath,
+          _packageLoaderErrorCause = ErrPackageJuvixError (PackageJuvixError e)
+        }
+
     rootPath :: Path Abs Dir
     rootPath = parent packagePath
 

@@ -5,8 +5,10 @@ module Juvix.Compiler.Pipeline.Loader.PathResolver.PackageInfo
 where
 
 import Data.HashSet qualified as HashSet
+import Data.Versions
 import Juvix.Compiler.Concrete.Translation.ImportScanner.Base
 import Juvix.Compiler.Pipeline.EntryPoint
+import Juvix.Data.CodeAnn
 import Juvix.Prelude
 
 data PackageLike
@@ -47,6 +49,20 @@ packageLikeName = to $ \case
   PackageBase -> "package-base"
   PackageType -> "package-type"
   PackageDotJuvix -> "package-dot-juvix"
+
+-- | TODO perhaps we could versions for the non-real packages
+packageLikeVersion :: SimpleGetter PackageLike (Maybe SemVer)
+packageLikeVersion = to $ \case
+  PackageReal pkg -> Just (pkg ^. packageVersion)
+  PackageGlobalStdlib {} -> Nothing
+  PackageBase {} -> Nothing
+  PackageType {} -> Nothing
+  PackageDotJuvix {} -> Nothing
+
+packageLikeNameAndVersion :: SimpleGetter PackageLike (Doc CodeAnn)
+packageLikeNameAndVersion = to $ \n ->
+  annotate AnnImportant (pretty (n ^. packageLikeName))
+    <+?> (pretty . prettySemVer <$> n ^. packageLikeVersion)
 
 packageLikeDependencies :: SimpleGetter PackageLike [Dependency]
 packageLikeDependencies = to $ \case

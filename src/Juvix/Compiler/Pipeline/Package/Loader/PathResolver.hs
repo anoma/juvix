@@ -43,6 +43,7 @@ runPackagePathResolver rootPath sem = do
   (`interpretH` sem) $ \localEnv -> \case
     SupportsParallel -> return False
     ResolverRoot -> return rootPath
+    ResolverInitialRoot -> return rootPath
     RegisterDependencies {} -> return ()
     ResolvePath scan -> case mkRootInfo ds fs (addFileExt FileExtJuvix (importScanToRelPath scan)) of
       Nothing ->

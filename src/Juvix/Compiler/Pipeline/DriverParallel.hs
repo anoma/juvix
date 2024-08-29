@@ -1,9 +1,7 @@
 module Juvix.Compiler.Pipeline.DriverParallel
   ( compileInParallel,
-    compileInParallel_,
     ModuleInfoCache,
-    evalModuleInfoCache,
-    module Parallel.ProgressLog,
+    evalModuleInfoCacheParallel,
   )
 where
 
@@ -64,34 +62,11 @@ getNodePath = (^. entryIxImportNode)
 getNodeName :: Node -> Text
 getNodeName = toFilePath . (^. importNodeAbsFile) . getNodePath
 
-compileInParallel_ ::
-  forall r.
-  ( Members
-      '[ Concurrent,
-         ProgressLog,
-         IOE,
-         ModuleInfoCache,
-         JvoCache,
-         TaggedLock,
-         Files,
-         TopModuleNameChecker,
-         Error JuvixError,
-         Reader EntryPoint,
-         PathResolver,
-         Reader NumThreads,
-         Reader ImportTree
-       ]
-      r
-  ) =>
-  Sem r ()
-compileInParallel_ = void compileInParallel
-
 -- | Compiles the whole project in parallel (i.e. all modules in the ImportTree).
 compileInParallel ::
   forall r.
   ( Members
       '[ Concurrent,
-         ProgressLog,
          IOE,
          ModuleInfoCache,
          JvoCache,
@@ -118,7 +93,7 @@ compileInParallel = do
         CompileArgs
           { _compileArgsNodesIndex = idx,
             _compileArgsNodeName = getNodeName,
-            _compileArgsPreProcess = Just preLoadFromFile,
+            _compileArgsPreProcess = Just preLoadFromJvoFile,
             _compileArgsDependencies = mkDependencies t,
             _compileArgsNumWorkers = numWorkers,
             _compileArgsCompileNode = compileNode
@@ -148,13 +123,12 @@ instance Monoid CompileResult where
         _compileResultModuleTable = mempty
       }
 
-evalModuleInfoCache ::
+evalModuleInfoCacheParallel ::
   forall r a.
   ( Members
       '[ Reader EntryPoint,
          HighlightBuilder,
          IOE,
-         ProgressLog,
          Reader ImportTree,
          Concurrent,
          TaggedLock,
@@ -163,10 +137,12 @@ evalModuleInfoCache ::
          PathResolver,
          Reader ImportScanStrategy,
          Reader NumThreads,
+         Reader PipelineOptions,
+         Logger,
          Files
        ]
       r
   ) =>
-  Sem (ModuleInfoCache ': JvoCache ': r) a ->
+  Sem (ModuleInfoCache ': ProgressLog ': JvoCache ': r) a ->
   Sem r a
-evalModuleInfoCache = Driver.evalModuleInfoCacheSetup (const (compileInParallel_))
+evalModuleInfoCacheParallel = Driver.evalModuleInfoCacheSetup (const (void compileInParallel))

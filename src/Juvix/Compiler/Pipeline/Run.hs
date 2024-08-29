@@ -117,7 +117,6 @@ runIOEitherPipeline' entry a = do
     . runJuvixError
     . runFilesIO
     . runReader entry
-    . runProgressLog defaultProgressLogOptions
     . runLogIO
     . runProcessIO
     . mapError (JuvixError @GitProcessError)
@@ -140,7 +139,6 @@ evalModuleInfoCacheHelper ::
       '[ Reader EntryPoint,
          IOE,
          Reader ImportTree,
-         ProgressLog,
          Concurrent,
          TaggedLock,
          TopModuleNameChecker,
@@ -149,18 +147,20 @@ evalModuleInfoCacheHelper ::
          PathResolver,
          Reader ImportScanStrategy,
          Reader NumThreads,
+         Reader PipelineOptions,
+         Logger,
          Files
        ]
       r
   ) =>
-  Sem (ModuleInfoCache ': JvoCache ': r) a ->
+  Sem (ModuleInfoCache ': ProgressLog ': JvoCache ': r) a ->
   Sem r a
 evalModuleInfoCacheHelper m = do
-  b <- supportsParallel
+  hasParallelSupport <- supportsParallel
   threads <- ask >>= numThreads
   if
-      | b && threads > 1 -> DriverPar.evalModuleInfoCache m
-      | otherwise -> evalModuleInfoCache m
+      | hasParallelSupport && threads > 1 -> DriverPar.evalModuleInfoCacheParallel m
+      | otherwise -> evalModuleInfoCacheSequential m
 
 mainIsPackageFile :: EntryPoint -> Bool
 mainIsPackageFile entry = case entry ^. entryPointModulePath of
@@ -211,7 +211,8 @@ runReplPipelineIOEither' lockMode entry = do
         | otherwise = runPathResolverArtifacts
   eith <-
     runM
-      . runLoggerIO defaultLoggerOptions
+      . runReader defaultPipelineOptions
+      . runLoggerIO replLoggerOptions
       . runConcurrent
       . runReader defaultNumThreads
       . evalInternet hasInternet
@@ -235,7 +236,6 @@ runReplPipelineIOEither' lockMode entry = do
       . runTopModuleNameChecker
       . runReader defaultImportScanStrategy
       . withImportTree (entry ^. entryPointModulePath)
-      . ignoreProgressLog
       . evalModuleInfoCacheHelper
       $ processFileToStoredCore entry
   return $ case eith of
