@@ -119,7 +119,7 @@ substVar var var' = go
       PatRecord (Record n r) -> PatRecord (Record n (map (second goPattern) r))
 
     goLambda :: Lambda -> Expression
-    goLambda (Lambda {..}) =
+    goLambda Lambda {..} =
       ExprLambda
         Lambda
           { _lambdaVar = goName _lambdaVar,
