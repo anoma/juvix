@@ -102,6 +102,8 @@ instance PrettyCode Expression where
     ExprTuple x -> ppCode x
     ExprList x -> ppCode x
     ExprCons x -> ppCode x
+    ExprRecord x -> ppRecord False x
+    ExprRecordUpdate x -> ppCode x
     ExprLet x -> ppCode x
     ExprIf x -> ppCode x
     ExprCase x -> ppCode x
@@ -124,6 +126,12 @@ instance PrettyCode Binop where
     l <- ppLeftExpression _binopFixity _binopLeft
     r <- ppRightExpression _binopFixity _binopRight
     return $ l <+> op <+> r
+
+instance PrettyCode RecordUpdate where
+  ppCode RecordUpdate {..} = do
+    r <- ppCode _recordUpdateRecord
+    fields <- ppRecord True _recordUpdateFields
+    return $ r <+> fields
 
 instance PrettyCode LetClause where
   ppCode LetClause {..} = do
@@ -165,7 +173,17 @@ instance (PrettyCode a) => PrettyCode (Tuple a) where
 instance (PrettyCode a) => PrettyCode (List a) where
   ppCode List {..} = do
     elems <- mapM ppCode _listElements
-    return $ brackets $ hsep (punctuate comma (toList elems))
+    return $ brackets $ hsep (punctuate comma elems)
+
+ppRecord :: (PrettyCode a, Member (Reader Options) r) => Bool -> Record a -> Sem r (Doc Ann)
+ppRecord bUpdate Record {..} = do
+  recName <- ppCode _recordName
+  names <- mapM (ppCode . fst) _recordFields
+  elems <- mapM (ppCode . snd) _recordFields
+  let names' = map (\n -> recName <> "." <> n) names
+      eq = if bUpdate then ":=" else "="
+      fields = zipWithExact (\n e -> n <+> eq <+> e) names' elems
+  return $ "(|" <+> hsep (punctuate comma fields) <+> "|)"
 
 instance (PrettyCode a, HasAtomicity a) => PrettyCode (Cons a) where
   ppCode Cons {..} = do
@@ -181,6 +199,7 @@ instance PrettyCode Pattern where
     PatTuple x -> ppCode x
     PatList x -> ppCode x
     PatCons x -> ppCode x
+    PatRecord x -> ppRecord False x
 
 instance PrettyCode ConstrApp where
   ppCode ConstrApp {..} = do
@@ -253,12 +272,12 @@ instance PrettyCode Constructor where
     tys <- mapM ppCodeQuoted _constructorArgTypes
     return $ comment <> hsep (n : tys)
 
-instance PrettyCode Record where
-  ppCode Record {..} = do
-    let comment = prettyTextComment _recordDocComment
-    n <- ppCode _recordName
-    params <- ppParams _recordParams
-    fields <- mapM ppCode _recordFields
+instance PrettyCode RecordDef where
+  ppCode RecordDef {..} = do
+    let comment = prettyTextComment _recordDefDocComment
+    n <- ppCode _recordDefName
+    params <- ppParams _recordDefParams
+    fields <- mapM ppCode _recordDefFields
     return $ comment <> kwRecord <+> params <?+> n <+> "=" <> line <> indent' (vsep fields)
 
 instance PrettyCode RecordField where
