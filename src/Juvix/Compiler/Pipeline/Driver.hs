@@ -37,6 +37,7 @@ import Juvix.Compiler.Pipeline.Driver.Data
 import Juvix.Compiler.Pipeline.JvoCache
 import Juvix.Compiler.Pipeline.Loader.PathResolver
 import Juvix.Compiler.Pipeline.ModuleInfoCache
+import Juvix.Compiler.Pipeline.Package (readGlobalPackage)
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff (EvalFileEff)
 import Juvix.Compiler.Store.Core.Extra
 import Juvix.Compiler.Store.Extra qualified as Store
@@ -314,10 +315,15 @@ processRecursiveUpTo a = do
   where
     goImport :: ImportNode -> Sem r a
     goImport node = do
+      pkgInfo <- fromJust . HashMap.lookup (node ^. importNodePackageRoot) <$> getPackageInfos
+      pkg <- case pkgInfo ^. packagePackage of
+        PackageReal p -> return p
+        _ -> readGlobalPackage
       entry <- ask
       let entry' =
             entry
-              { _entryPointStdin = Nothing,
+              { _entryPointPackage = pkg,
+                _entryPointStdin = Nothing,
                 _entryPointModulePath = Just (node ^. importNodeAbsFile)
               }
       (^. pipelineResult) <$> local (const entry') (processFileUpTo a)
