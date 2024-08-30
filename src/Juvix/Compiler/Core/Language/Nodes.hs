@@ -183,7 +183,7 @@ data Match' i a = Match
 data MatchBranch' i a = MatchBranch
   { _matchBranchInfo :: i,
     _matchBranchPatterns :: !(NonEmpty (Pattern' i a)),
-    _matchBranchBody :: !a
+    _matchBranchRhs :: !(NonEmpty (SideIfBranch' i a))
   }
 
 data Pattern' i a
@@ -200,6 +200,12 @@ data PatternConstr' i a = PatternConstr
     _patternConstrBinder :: Binder' a,
     _patternConstrTag :: !Tag,
     _patternConstrArgs :: ![Pattern' i a]
+  }
+
+data SideIfBranch' i a = SideIfBranch
+  { _sizeIfBranchInfo :: i,
+    _sideIfBranchCondition :: !a,
+    _sideIfBranchBody :: !a
   }
 
 -- | Useful for unfolding Pi
@@ -439,6 +445,7 @@ makeLenses ''Match'
 makeLenses ''MatchBranch'
 makeLenses ''PatternWildcard'
 makeLenses ''PatternConstr'
+makeLenses ''SideIfBranch'
 makeLenses ''Pi'
 makeLenses ''Lambda'
 makeLenses ''Univ'
@@ -533,6 +540,9 @@ instance (Eq a) => Eq (MatchBranch' i a) where
 
 instance (Eq a) => Eq (PatternConstr' i a) where
   (PatternConstr _ _ tag1 ps1) == (PatternConstr _ _ tag2 ps2) = tag1 == tag2 && ps1 == ps2
+
+instance (Eq a) => Eq (SideIfBranch' i a) where
+  (SideIfBranch _ c1 b1) == (SideIfBranch _ c2 b2) = c1 == c2 && b1 == b2
 
 instance Hashable (Ident' i) where
   hashWithSalt s = hashWithSalt s . (^. identSymbol)

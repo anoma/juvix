@@ -101,12 +101,6 @@ mkMatch i vtys rty vs bs = NMatch (Match i vtys rty vs bs)
 mkMatch' :: NonEmpty Type -> Type -> NonEmpty Node -> [MatchBranch] -> Node
 mkMatch' = mkMatch Info.empty
 
-mkMatchBranch :: Info -> NonEmpty Pattern -> Node -> MatchBranch
-mkMatchBranch = MatchBranch
-
-mkMatchBranch' :: NonEmpty Pattern -> Node -> MatchBranch
-mkMatchBranch' = MatchBranch mempty
-
 mkIf :: Info -> Symbol -> Node -> Node -> Node -> Node
 mkIf i sym v b1 b2 = mkCase i sym v [br] (Just b2)
   where
@@ -641,17 +635,20 @@ destruct = \case
             : map noBinders (toList vtys)
             ++ map noBinders (toList vs)
             ++ concat
-              [ br
-                  : reverse (foldl' (\acc b -> manyBinders (take (length acc) bis) (b ^. binderType) : acc) [] bis)
-                | (bis, br) <- branchChildren
+              [ brs
+                  ++ reverse (foldl' (\acc b -> manyBinders (take (length acc) bis) (b ^. binderType) : acc) [] bis)
+                | (bis, brs) <- branchChildren
               ]
           where
-            branchChildren :: [([Binder], NodeChild)]
+            branchChildren :: [([Binder], [NodeChild])]
             branchChildren =
-              [ (binders, manyBinders binders (br ^. matchBranchBody))
+              [ (binders, map (manyBinders binders) (concatMap branchRhsChildren (br ^. matchBranchRhs)))
                 | br <- branches,
                   let binders = concatMap getPatternBinders (toList (br ^. matchBranchPatterns))
               ]
+
+            branchRhsChildren :: SideIfBranch -> [Node]
+            branchRhsChildren = undefined
 
         branchInfos :: [Info]
         branchInfos =
@@ -684,14 +681,20 @@ destruct = \case
               let mkBranch :: MatchBranch -> Sem '[Input Node, Input Info] MatchBranch
                   mkBranch br = do
                     bi' <- inputJust
-                    b' <- inputJust
+                    b' <- mkBranchRhs (br ^. matchBranchRhs)
                     pats' <- setPatternsInfos (br ^. matchBranchPatterns)
                     return
                       br
                         { _matchBranchInfo = bi',
                           _matchBranchPatterns = pats',
-                          _matchBranchBody = b'
+                          _matchBranchRhs = b'
                         }
+                  mkBranchRhs :: NonEmpty SideIfBranch -> Sem '[Input Node, Input Info] (NonEmpty SideIfBranch)
+                  mkBranchRhs brs =
+                    mapM mkSideIfBranch brs
+                  mkSideIfBranch :: SideIfBranch -> Sem '[Input Node, Input Info] SideIfBranch
+                  mkSideIfBranch =
+                    undefined
                   numVals = length vs
                   values' :: NonEmpty Node
                   valueTypes' :: NonEmpty Node
