@@ -1,7 +1,7 @@
 --- Simple lambda calculus
 module test052;
 
-import Stdlib.Prelude open;
+import Stdlib.Prelude open hiding {>>=};
 
 LambdaTy : Type -> Type := Lambda';
 
