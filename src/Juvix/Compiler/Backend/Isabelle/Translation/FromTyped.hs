@@ -80,7 +80,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
   where
     toIsabelleTheoryName :: Text -> Text
     toIsabelleTheoryName name =
-      Text.intercalate "_" $ filter (/= "") $ T.splitOn "." name
+      quote . Text.intercalate "_" $ filter (/= "") $ T.splitOn "." name
 
     isTypeDef :: Statement -> Bool
     isTypeDef = \case
@@ -1219,8 +1219,25 @@ goModule onlyTypes infoTable Internal.Module {..} =
                 ++ map (^. Internal.axiomInfoDef . Internal.axiomName . namePretty) (HashMap.elems (infoTable ^. Internal.infoAxioms))
 
     quote :: Text -> Text
-    quote = quote' . Text.filter isLatin1 . Text.filter (isLetter .||. isDigit .||. (== '_') .||. (== '\''))
+    quote txt0
+      | Text.elem '.' txt0 = moduleName' <> "." <> idenName'
+      | otherwise = quote'' txt0
       where
+        (moduleName, idenName) = Text.breakOnEnd "." txt0
+        moduleName' = toIsabelleTheoryName (removeLastDot moduleName)
+        idenName' = quote'' idenName
+
+        removeLastDot :: Text -> Text
+        removeLastDot txt
+          | Text.last txt == '.' = Text.init txt
+          | otherwise = txt
+
+        quote'' :: Text -> Text
+        quote'' =
+          quote'
+            . Text.filter isLatin1
+            . Text.filter (isLetter .||. isDigit .||. (== '_') .||. (== '\''))
+
         quote' :: Text -> Text
         quote' txt
           | HashSet.member txt reservedNames = quote' (prime txt)
