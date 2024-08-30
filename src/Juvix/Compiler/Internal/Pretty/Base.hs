@@ -14,6 +14,7 @@ import Juvix.Compiler.Internal.Pretty.Options
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.CheckerNew.Arity qualified as New
 import Juvix.Compiler.Store.Internal.Data.InfoTable
 import Juvix.Data.CodeAnn
+import Juvix.Data.Keyword.All qualified as Kw
 import Juvix.Prelude
 
 doc :: (PrettyCode c) => Options -> c -> Doc Ann
@@ -281,14 +282,27 @@ instance PrettyCode Pattern where
 instance PrettyCode BuiltinFunction where
   ppCode = return . annotate AnnKeyword . pretty
 
+instance PrettyCode Keyword where
+  ppCode = return . annotate AnnKeyword . pretty
+
+instance PrettyCode IsInstanceCoercion where
+  ppCode p = case p of
+    IsInstanceCoercionInstance -> ppCode Kw.kwInstance
+    IsInstanceCoercionCoercion -> do
+      c <- ppCode Kw.kwCoercion
+      i <- ppCode Kw.kwInstance
+      return (c <+> i)
+
 instance PrettyCode FunctionDef where
   ppCode f = do
     builtin' <- fmap (kwBuiltin <+>) <$> mapM ppCode (f ^. funDefBuiltin)
     funDefName' <- ppCode (f ^. funDefName)
     funDefType' <- ppCode (f ^. funDefType)
+    instanceCoercion' <- mapM ppCode (f ^. funDefIsInstanceCoercion)
     body' <- ppCode (f ^. funDefBody)
     return $
       builtin'
+        <?+> instanceCoercion'
         <?+> funDefName'
           <+> kwColon
           <+> funDefType'

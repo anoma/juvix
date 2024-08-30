@@ -121,8 +121,10 @@ genFieldProjection kind _funDefName _funDefBuiltin mpragmas info fieldIx = do
   cloneFunctionDefSameName
     FunctionDef
       { _funDefTerminating = False,
-        _funDefInstance = False,
-        _funDefCoercion = kind == ProjectionCoercion,
+        _funDefIsInstanceCoercion =
+          if
+              | kind == ProjectionCoercion -> Just IsInstanceCoercionCoercion
+              | otherwise -> Nothing,
         _funDefArgsInfo = mempty,
         _funDefPragmas =
           maybe

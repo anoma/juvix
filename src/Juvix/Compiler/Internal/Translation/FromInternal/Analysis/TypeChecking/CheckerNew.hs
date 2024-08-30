@@ -331,16 +331,15 @@ checkFunctionDef FunctionDef {..} = do
           _funDefArgsInfo = _funDefArgsInfo',
           _funDefName,
           _funDefTerminating,
-          _funDefInstance,
-          _funDefCoercion,
+          _funDefIsInstanceCoercion,
           _funDefBuiltin,
           _funDefPragmas,
           _funDefDocComment
         }
-  when _funDefInstance $
-    checkInstanceType funDef
-  when _funDefCoercion $
-    checkCoercionType funDef
+  whenJust _funDefIsInstanceCoercion $ \case
+    IsInstanceCoercionCoercion -> checkCoercionType funDef
+    IsInstanceCoercionInstance -> checkInstanceType funDef
+
   registerFunctionDef funDef
   rememberFunctionDef funDef
   return funDef
