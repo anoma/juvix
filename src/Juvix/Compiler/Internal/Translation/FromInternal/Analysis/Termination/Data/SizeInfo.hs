@@ -24,8 +24,11 @@ mkSizeInfo args = SizeInfo {..}
   where
     ps :: [Pattern]
     ps = map (^. patternArgPattern) (filter (not . isImplicit') args)
+
     isImplicit' :: PatternArg -> Bool
     isImplicit' = isImplicitOrInstance . (^. patternArgIsImplicit)
+
     _sizeEqual = ps
+
     _sizeSmaller :: [[Pattern]]
     _sizeSmaller = map (^.. patternSubCosmos) ps

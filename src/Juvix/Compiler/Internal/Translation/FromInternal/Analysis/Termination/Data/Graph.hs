@@ -53,6 +53,7 @@ instance PrettyCode Edge where
     where
       ppMatrices :: [(Int, Doc a)] -> Doc a
       ppMatrices = vsep2 . map ppMatrix
+
       ppMatrix :: (Int, Doc ann) -> Doc ann
       ppMatrix (i, t) =
         pretty ("Matrix" :: Text) <+> pretty i <> colon <> line <> t

@@ -8,11 +8,15 @@ import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Data
 import Juvix.Prelude
 
+-- type FunCall = FunCall' Expression
+-- type CallMap = CallMap' Expression
+-- type FunCallArg = FunCallArg' Expression
+
 viewCall ::
   forall r.
   (Members '[Reader SizeInfo] r) =>
   Expression ->
-  Sem r (Maybe FunCall)
+  Sem r (Maybe (FunCall' Expression))
 viewCall = \case
   ExpressionIden (IdenFunction x) ->
     return (Just (singletonCall x))
@@ -23,11 +27,16 @@ viewCall = \case
         x' <- callArg
         return $ over callArgs (`snoc` x') <$> c
     where
-      callArg :: Sem r (CallRow, Expression)
+      callArg :: Sem r (FunCallArg' Expression)
       callArg = do
         lt <- (^. callRow) <$> lessThan
         eq <- (^. callRow) <$> equalTo
-        return (CallRow (lt `mplus` eq), x)
+        let cr = CallRow (lt `mplus` eq)
+        return
+          FunCallArg
+            { _argRow = cr,
+              _argExpression = x
+            }
         where
           lessThan :: Sem r CallRow
           lessThan = case viewExpressionAsPattern x of
@@ -48,38 +57,41 @@ viewCall = \case
               Nothing -> return (CallRow Nothing)
   _ -> return Nothing
   where
-    singletonCall :: FunctionRef -> FunCall
+    singletonCall :: FunctionName -> FunCall' expr
     singletonCall r = FunCall r []
 
-addCall :: FunctionRef -> FunCall -> CallMap -> CallMap
+addCall :: forall expr. FunctionName -> FunCall' expr -> CallMap' expr -> CallMap' expr
 addCall fun c = over callMap (HashMap.alter (Just . insertCall c) fun)
   where
     insertCall ::
-      FunCall ->
-      Maybe (HashMap FunctionRef [FunCall]) ->
-      HashMap FunctionRef [FunCall]
+      FunCall' expr ->
+      Maybe (HashMap FunctionName [FunCall' expr]) ->
+      HashMap FunctionName [FunCall' expr]
     insertCall f = \case
       Nothing -> singl f
       Just m' -> addFunCall f m'
 
-    singl :: FunCall -> HashMap FunctionRef [FunCall]
+    singl :: FunCall' expr -> HashMap FunctionName [FunCall' expr]
     singl f = HashMap.singleton (f ^. callRef) [f]
 
     addFunCall ::
-      FunCall ->
-      HashMap FunctionRef [FunCall] ->
-      HashMap FunctionRef [FunCall]
+      FunCall' expr ->
+      HashMap FunctionName [FunCall' expr] ->
+      HashMap FunctionName [FunCall' expr]
     addFunCall fc = HashMap.insertWith (flip (<>)) (fc ^. callRef) [fc]
 
 registerFunctionDef ::
-  (Members '[State CallMap] r) =>
+  forall expr r.
+  (Members '[State (CallMap' expr)] r) =>
+  Proxy expr ->
   FunctionDef ->
   Sem r ()
-registerFunctionDef f = modify' (set (callMapScanned . at (f ^. funDefName)) (Just f))
+registerFunctionDef Proxy f = modify' @(CallMap' expr) (set (callMapScanned . at (f ^. funDefName)) (Just f))
 
 registerCall ::
-  (Members '[State CallMap, Reader FunctionRef] r) =>
-  FunCall ->
+  forall expr r.
+  (Members '[State (CallMap' expr), Reader FunctionName] r) =>
+  FunCall' expr ->
   Sem r ()
 registerCall c = do
   fun <- ask

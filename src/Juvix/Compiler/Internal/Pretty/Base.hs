@@ -8,7 +8,7 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Internal.Data.LocalVars
 import Juvix.Compiler.Internal.Data.NameDependencyInfo
-import Juvix.Compiler.Internal.Data.TypedHole
+import Juvix.Compiler.Internal.Data.TypedInstanceHole
 import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Internal.Pretty.Options
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.CheckerNew.Arity qualified as New
@@ -21,6 +21,12 @@ doc :: (PrettyCode c) => Options -> c -> Doc Ann
 doc opts =
   run
     . runReader opts
+    . ppCode
+
+docDefault :: (PrettyCode c) => c -> Doc Ann
+docDefault =
+  run
+    . runReader defaultOptions
     . ppCode
 
 class PrettyCode c where
@@ -400,8 +406,8 @@ instance (PrettyCode a, PrettyCode b) => PrettyCode (Either a b) where
 instance PrettyCode LocalVars where
   ppCode LocalVars {..} = ppCode (HashMap.toList _localTypes)
 
-instance PrettyCode TypedHole where
-  ppCode TypedHole {..} = do
+instance PrettyCode TypedInstanceHole where
+  ppCode TypedInstanceHole {..} = do
     h <- ppCode _typedHoleHole
     ty <- ppCode _typedHoleType
     vars <- ppCode _typedHoleLocalVars

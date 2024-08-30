@@ -6,7 +6,7 @@ import Stdlib.Data.Unit open;
 trait
 type MonadReader (S : Type) (M : Type -> Type) :=
   mkMonadReader {
-    monad : Monad M;
+    {{monad}} : Monad M;
     ask : M S;
     reader : {A : Type} → (S → A) → M A
   };

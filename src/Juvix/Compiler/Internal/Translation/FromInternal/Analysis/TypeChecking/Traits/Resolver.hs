@@ -8,7 +8,7 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Internal.Data.InfoTable
 import Juvix.Compiler.Internal.Data.LocalVars
-import Juvix.Compiler.Internal.Data.TypedHole
+import Juvix.Compiler.Internal.Data.TypedInstanceHole
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Extra.CoercionInfo
 import Juvix.Compiler.Internal.Extra.InstanceInfo
@@ -29,9 +29,9 @@ isTrait tab name = maybe False (^. inductiveInfoTrait) (HashMap.lookup name (tab
 
 resolveTraitInstance ::
   (Members '[Error TypeCheckerError, NameIdGen, Inference, ResultBuilder, Reader InfoTable] r) =>
-  TypedHole ->
+  TypedInstanceHole ->
   Sem r Expression
-resolveTraitInstance TypedHole {..} = do
+resolveTraitInstance TypedInstanceHole {..} = do
   vars <- overM localTypes (mapM strongNormalize_) _typedHoleLocalVars
   infoTab <- ask
   tab0 <- getCombinedInstanceTable

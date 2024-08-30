@@ -17,11 +17,9 @@ checkTraitTermination InstanceApp {..} InstanceInfo {..} =
   mapM_ checkArg _instanceAppArgs
   where
     checkArg :: InstanceParam -> Sem r ()
-    checkArg arg
-      | any (checkStrictSubterm arg) _instanceInfoParams =
-          return ()
-      | otherwise =
-          throw (ErrTraitNotTerminating (TraitNotTerminating (paramToExpression arg)))
+    checkArg arg =
+      unless (any (checkStrictSubterm arg) _instanceInfoParams) $
+        throw (ErrTraitNotTerminating (TraitNotTerminating (paramToExpression arg)))
 
 checkStrictSubterm :: InstanceParam -> InstanceParam -> Bool
 checkStrictSubterm p1 p2 = case p2 of

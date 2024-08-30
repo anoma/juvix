@@ -1,4 +1,4 @@
-module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Data.FunctionCall (module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Data.FunctionCall) where
+module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Data.Base where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Internal.Language
