@@ -1,6 +1,7 @@
 module Juvix.Compiler.Nockma.Encoding.ByteString where
 
-import Data.Bit
+import Data.Bit (Bit)
+import Data.Bit qualified as Bit
 import Data.Bits
 import Data.ByteString qualified as BS
 import Data.ByteString.Builder qualified as BS
@@ -29,6 +30,25 @@ naturalToByteString = integerToByteStringLE . toInteger
 
 byteStringToIntegerLE :: ByteString -> Integer
 byteStringToIntegerLE = BS.foldr (\b acc -> acc `shiftL` 8 .|. fromIntegral b) 0
+
+byteStringToIntegerLEChunked :: ByteString -> Integer
+byteStringToIntegerLEChunked = foldr' go 0 . map (first byteStringChunkToInteger) . chunkByteString
+  where
+    chunkSize :: Int
+    chunkSize = 1024
+
+    go :: (Integer, Int) -> Integer -> Integer
+    go (i, size) acc = acc `shiftL` (8 * size) .|. i
+
+    chunkByteString :: ByteString -> [(ByteString, Int)]
+    chunkByteString bs
+      | BS.null bs = []
+      | otherwise =
+          let (chunk, rest) = BS.splitAt chunkSize bs
+           in (chunk, BS.length chunk) : chunkByteString rest
+
+    byteStringChunkToInteger :: ByteString -> Integer
+    byteStringChunkToInteger = BS.foldr' (\b acc -> acc `shiftL` 8 .|. fromIntegral b) 0
 
 integerToByteStringLE :: Integer -> ByteString
 integerToByteStringLE = BS.toStrict . BS.toLazyByteString . go
@@ -67,6 +87,9 @@ padByteString n bs
   | BS.length bs >= n = bs
   | otherwise = BS.append bs (BS.replicate (n - BS.length bs) 0)
 
+vectorBitsToInteger :: Bit.Vector Bit -> Integer
+vectorBitsToInteger = byteStringToIntegerLEChunked . vectorBitsToByteString
+
 -- | encode a ByteString to an Integer with its length as part of the encoding.
 encodeByteString :: ByteString -> Integer
 encodeByteString = vectorBitsToInteger . run . execBitWriter . go
@@ -85,7 +108,7 @@ decodeByteString i = evalBitReader (integerToVectorBits i) go
     go = do
       len <- consumeLength
       v <- consumeRemaining
-      return (padByteString len (cloneToByteString v))
+      return (padByteString len (Bit.cloneToByteString v))
 
 -- | decode a ByteString that was encoded using `encodeByteString` with a default that's used if decoding fails.
 decodeByteStringWithDefault :: ByteString -> Integer -> ByteString

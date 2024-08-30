@@ -9,6 +9,7 @@ module Juvix.Compiler.Nockma.Encoding.Jam where
 import Data.Bit as Bit
 import Data.Bits
 import Juvix.Compiler.Nockma.Encoding.Base
+import Juvix.Compiler.Nockma.Encoding.ByteString
 import Juvix.Compiler.Nockma.Encoding.Effect.BitWriter
 import Juvix.Compiler.Nockma.Language
 import Juvix.Prelude.Base
