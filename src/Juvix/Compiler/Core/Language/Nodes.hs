@@ -183,7 +183,7 @@ data Match' i a = Match
 data MatchBranch' i a = MatchBranch
   { _matchBranchInfo :: i,
     _matchBranchPatterns :: !(NonEmpty (Pattern' i a)),
-    _matchBranchRhs :: !(NonEmpty (SideIfBranch' i a))
+    _matchBranchRhs :: !(MatchBranchRhs' i a)
   }
 
 data Pattern' i a
@@ -202,8 +202,12 @@ data PatternConstr' i a = PatternConstr
     _patternConstrArgs :: ![Pattern' i a]
   }
 
+data MatchBranchRhs' i a
+  = MatchBranchRhsExpression !a
+  | MatchBranchRhsIfs !(NonEmpty (SideIfBranch' i a))
+
 data SideIfBranch' i a = SideIfBranch
-  { _sizeIfBranchInfo :: i,
+  { _sideIfBranchInfo :: i,
     _sideIfBranchCondition :: !a,
     _sideIfBranchBody :: !a
   }
@@ -443,6 +447,7 @@ makeLenses ''Case'
 makeLenses ''CaseBranch'
 makeLenses ''Match'
 makeLenses ''MatchBranch'
+makeLenses ''MatchBranchRhs'
 makeLenses ''PatternWildcard'
 makeLenses ''PatternConstr'
 makeLenses ''SideIfBranch'
@@ -534,6 +539,11 @@ instance (Eq a) => Eq (Pi' i a) where
   (==) =
     eqOn (^. piBinder . binderType)
       ..&&.. eqOn (^. piBody)
+
+instance (Eq a) => Eq (MatchBranchRhs' i a) where
+  (MatchBranchRhsExpression e1) == (MatchBranchRhsExpression e2) = e1 == e2
+  (MatchBranchRhsIfs ifs1) == (MatchBranchRhsIfs ifs2) = ifs1 == ifs2
+  _ == _ = False
 
 instance (Eq a) => Eq (MatchBranch' i a) where
   (MatchBranch _ pats1 b1) == (MatchBranch _ pats2 b2) = pats1 == pats2 && b1 == b2

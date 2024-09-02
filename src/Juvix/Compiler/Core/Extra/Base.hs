@@ -642,13 +642,19 @@ destruct = \case
           where
             branchChildren :: [([Binder], [NodeChild])]
             branchChildren =
-              [ (binders, map (manyBinders binders) (concatMap branchRhsChildren (br ^. matchBranchRhs)))
+              [ (binders, map (manyBinders binders) (branchRhsChildren (br ^. matchBranchRhs)))
                 | br <- branches,
                   let binders = concatMap getPatternBinders (toList (br ^. matchBranchPatterns))
               ]
 
-            branchRhsChildren :: SideIfBranch -> [Node]
-            branchRhsChildren = undefined
+            branchRhsChildren :: MatchBranchRhs -> [Node]
+            branchRhsChildren = \case
+              MatchBranchRhsExpression e -> [e]
+              MatchBranchRhsIfs ifs -> concatMap sideIfBranchChildren ifs
+
+            sideIfBranchChildren :: SideIfBranch -> [Node]
+            sideIfBranchChildren SideIfBranch {..} =
+              [_sideIfBranchCondition, _sideIfBranchBody]
 
         branchInfos :: [Info]
         branchInfos =
@@ -689,12 +695,23 @@ destruct = \case
                           _matchBranchPatterns = pats',
                           _matchBranchRhs = b'
                         }
-                  mkBranchRhs :: NonEmpty SideIfBranch -> Sem '[Input Node, Input Info] (NonEmpty SideIfBranch)
-                  mkBranchRhs brs =
+                  mkBranchRhs :: MatchBranchRhs -> Sem '[Input Node, Input Info] MatchBranchRhs
+                  mkBranchRhs = \case
+                    MatchBranchRhsExpression _ -> do
+                      e' <- inputJust
+                      return (MatchBranchRhsExpression e')
+                    MatchBranchRhsIfs ifs -> do
+                      ifs' <- mkSideIfs ifs
+                      return (MatchBranchRhsIfs ifs')
+                  mkSideIfs :: NonEmpty SideIfBranch -> Sem '[Input Node, Input Info] (NonEmpty SideIfBranch)
+                  mkSideIfs brs =
                     mapM mkSideIfBranch brs
                   mkSideIfBranch :: SideIfBranch -> Sem '[Input Node, Input Info] SideIfBranch
-                  mkSideIfBranch =
-                    undefined
+                  mkSideIfBranch _ = do
+                    _sideIfBranchInfo <- inputJust
+                    _sideIfBranchCondition <- inputJust
+                    _sideIfBranchBody <- inputJust
+                    return SideIfBranch {..}
                   numVals = length vs
                   values' :: NonEmpty Node
                   valueTypes' :: NonEmpty Node

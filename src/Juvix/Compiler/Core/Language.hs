@@ -47,6 +47,8 @@ type PatternWildcard = PatternWildcard' Info Node
 
 type PatternConstr = PatternConstr' Info Node
 
+type MatchBranchRhs = MatchBranchRhs' Info Node
+
 type SideIfBranch = SideIfBranch' Info Node
 
 type Pattern = Pattern' Info Node
