@@ -116,6 +116,14 @@ mkIf i sym v b1 b2 = mkCase i sym v [br] (Just b2)
 mkIf' :: Symbol -> Node -> Node -> Node -> Node
 mkIf' = mkIf Info.empty
 
+mkIfs :: Symbol -> [(Info, Node, Node)] -> Node -> Node
+mkIfs sym = \case
+  [] -> id
+  ((i, v, b) : rest) -> mkIf i sym v b . mkIfs sym rest
+
+mkIfs' :: Symbol -> [(Node, Node)] -> Node -> Node
+mkIfs' sym = mkIfs sym . map (\(v, b) -> (Info.empty, v, b))
+
 mkBinder :: Text -> Type -> Binder
 mkBinder name ty = Binder name Nothing ty
 
