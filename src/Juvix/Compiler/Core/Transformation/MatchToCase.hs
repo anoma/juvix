@@ -58,7 +58,7 @@ goMatchToCase recur node = case node of
               matchBranchToPatternRow MatchBranch {..} =
                 PatternRow
                   { _patternRowPatterns = toList _matchBranchPatterns,
-                    _patternRowBody = _matchBranchBody,
+                    _patternRowBody = undefined,
                     _patternRowIgnoredPatternsNum = 0,
                     _patternRowBinderChangesRev = [BCAdd n]
                   }

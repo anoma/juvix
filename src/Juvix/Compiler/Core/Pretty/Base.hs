@@ -369,6 +369,23 @@ instance PrettyCode Bottom where
     ty' <- ppCode _bottomType
     return (parens (kwBottom <+> kwColon <+> ty'))
 
+instance PrettyCode SideIfBranch where
+  ppCode :: (Member (Reader Options) r) => SideIfBranch -> Sem r (Doc Ann)
+  ppCode SideIfBranch {..} = do
+    cond <- ppCode _sideIfBranchCondition
+    body <- ppCode _sideIfBranchBody
+    return $ kwIf <+> cond <+> kwAssign <+> body
+
+instance PrettyCode MatchBranchRhs where
+  ppCode :: (Member (Reader Options) r) => MatchBranchRhs -> Sem r (Doc Ann)
+  ppCode = \case
+    MatchBranchRhsExpression x -> do
+      e <- ppCode x
+      return $ kwAssign <+> e
+    MatchBranchRhsIfs x -> do
+      brs <- mapM ppCode x
+      return $ vsep brs
+
 instance PrettyCode Node where
   ppCode :: forall r. (Member (Reader Options) r) => Node -> Sem r (Doc Ann)
   ppCode node = case node of
@@ -394,11 +411,11 @@ instance PrettyCode Node where
       ppCodeCase' branchBinderNames branchBinderTypes branchTagNames x
     NMatch Match {..} -> do
       let branchPatterns = map (^. matchBranchPatterns) _matchBranches
-          branchBodies = map (^. matchBranchBody) _matchBranches
+          branchRhs = map (^. matchBranchRhs) _matchBranches
       pats <- mapM ppPatterns branchPatterns
       vs <- mapM ppCode _matchValues
       vs' <- zipWithM ppWithType (toList vs) (toList _matchValueTypes)
-      bs <- sequence $ zipWithExact (\ps br -> ppCode br >>= \br' -> return $ ps <+> kwAssign <+> br') pats branchBodies
+      bs <- sequence $ zipWithExact (\ps br -> ppCode br >>= \br' -> return $ ps <+> br') pats branchRhs
       let bss = bracesIndent $ align $ concatWith (\a b -> a <> kwSemicolon <> line <> b) bs
       rty <- ppTypeAnnot _matchReturnType
       return $ kwMatch <+> hsep (punctuate comma vs') <+> kwWith <> rty <+> bss
