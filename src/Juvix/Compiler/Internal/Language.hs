@@ -94,13 +94,23 @@ instance Serialize AxiomDef
 
 instance NFData AxiomDef
 
+data IsInstanceCoercion
+  = IsInstanceCoercionInstance
+  | IsInstanceCoercionCoercion
+  deriving stock (Eq, Generic, Data)
+
+instance Hashable IsInstanceCoercion
+
+instance Serialize IsInstanceCoercion
+
+instance NFData IsInstanceCoercion
+
 data FunctionDef = FunctionDef
   { _funDefName :: FunctionName,
     _funDefType :: Expression,
     _funDefBody :: Expression,
     _funDefTerminating :: Bool,
-    _funDefInstance :: Bool,
-    _funDefCoercion :: Bool,
+    _funDefIsInstanceCoercion :: Maybe IsInstanceCoercion,
     _funDefBuiltin :: Maybe BuiltinFunction,
     _funDefArgsInfo :: [ArgInfo],
     _funDefPragmas :: Pragmas,

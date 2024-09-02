@@ -371,7 +371,10 @@ goFunctionDef ::
 goFunctionDef FunctionDef {..} = do
   let _funDefName = goSymbol _signName
       _funDefTerminating = isJust _signTerminating
-      _funDefInstance = isJust _signInstance && isNothing _signCoercion
+      _funDefIsInstanceCoercion
+        | isJust _signCoercion = Just Internal.IsInstanceCoercionCoercion
+        | isJust _signInstance = Just Internal.IsInstanceCoercionInstance
+        | otherwise = Nothing
       _funDefCoercion = isJust _signCoercion
       _funDefBuiltin = (^. withLocParam) <$> _signBuiltin
   _funDefType <- goDefType
