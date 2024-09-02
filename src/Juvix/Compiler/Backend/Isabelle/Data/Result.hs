@@ -4,7 +4,8 @@ import Juvix.Compiler.Backend.Isabelle.Language
 
 data Result = Result
   { _resultTheory :: Theory,
-    _resultModuleId :: ModuleId
+    _resultModuleId :: ModuleId,
+    _resultComments :: [Comment]
   }
 
 makeLenses ''Result

@@ -76,13 +76,16 @@ data Interval = Interval
     _intervalStart :: FileLoc,
     _intervalEnd :: FileLoc
   }
-  deriving stock (Show, Ord, Eq, Generic, Data, Lift)
+  deriving stock (Show, Eq, Generic, Data, Lift)
 
 instance Hashable Interval
 
 instance Serialize Interval
 
 instance NFData Interval
+
+instance Ord Interval where
+  compare (Interval f s e) (Interval f' s' e') = compare (f, s, e) (f', s', e')
 
 class HasLoc t where
   getLoc :: t -> Interval

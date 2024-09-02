@@ -12,13 +12,13 @@ mkApp fn = \case
 subsumesPattern :: Pattern -> Pattern -> Bool
 subsumesPattern pat1 pat2 = case (pat1, pat2) of
   (PatVar _, _) -> True
-  (PatZero, PatZero) -> True
+  (PatZero {}, PatZero {}) -> True
   (PatConstrApp (ConstrApp c1 p1), PatConstrApp (ConstrApp c2 p2)) ->
     c1 == c2 && all (uncurry subsumesPattern) (zipExact p1 p2)
   (PatTuple (Tuple p1), PatTuple (Tuple p2)) ->
     length p1 == length p2
       && all (uncurry subsumesPattern) (NonEmpty.zip p1 p2)
-  (PatList (List p1), PatList (List p2)) ->
+  (PatList (List _ p1), PatList (List _ p2)) ->
     length p1 == length p2
       && all (uncurry subsumesPattern) (zipExact p1 p2)
   (PatCons (Cons c1 p1), PatCons (Cons c2 p2)) ->
@@ -40,7 +40,7 @@ substVar var var' = go
     go :: Expression -> Expression
     go = \case
       ExprIden x -> goIden x
-      ExprUndefined -> ExprUndefined
+      ExprUndefined x -> ExprUndefined x
       ExprLiteral x -> ExprLiteral x
       ExprApp x -> goApplication x
       ExprBinop x -> goBinop x
@@ -78,7 +78,7 @@ substVar var var' = go
     goTuple (Tuple xs) = ExprTuple (Tuple (fmap go xs))
 
     goList :: List Expression -> Expression
-    goList (List xs) = ExprList (List (map go xs))
+    goList (List loc xs) = ExprList (List loc (map go xs))
 
     goCons :: Cons Expression -> Expression
     goCons (Cons h t) = ExprCons (Cons (go h) (go t))
@@ -111,10 +111,10 @@ substVar var var' = go
     goPattern :: Pattern -> Pattern
     goPattern = \case
       PatVar x -> PatVar (goName x)
-      PatZero -> PatZero
+      PatZero x -> PatZero x
       PatConstrApp (ConstrApp c p) -> PatConstrApp (ConstrApp c (fmap goPattern p))
       PatTuple (Tuple p) -> PatTuple (Tuple (fmap goPattern p))
-      PatList (List p) -> PatList (List (fmap goPattern p))
+      PatList (List loc p) -> PatList (List loc (fmap goPattern p))
       PatCons (Cons h t) -> PatCons (Cons (goPattern h) (goPattern t))
       PatRecord (Record n r) -> PatRecord (Record n (map (second goPattern) r))
 

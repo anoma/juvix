@@ -515,14 +515,6 @@ makeLenses ''ConstructorDef
 makeLenses ''ConstructorApp
 makeLenses ''NormalizedExpression
 
-instance HasLoc InductiveDef where
-  getLoc d =
-    getLoc (d ^. inductiveName)
-      <>? (getLoc . (^. last1) <$> (nonEmpty (d ^. inductiveConstructors)))
-
-instance HasLoc NormalizedExpression where
-  getLoc = getLoc . (^. normalizedExpressionOriginal)
-
 instance Eq ModuleIndex where
   (==) = (==) `on` (^. moduleIxModule . moduleName)
 
@@ -588,6 +580,26 @@ instance HasAtomicity Pattern where
     PatternConstructorApp a -> atomicity a
     PatternVariable {} -> Atom
     PatternWildcardConstructor {} -> Atom
+
+instance HasLoc Module where
+  getLoc m = getLoc (m ^. moduleName) <>? maybe Nothing (Just . getLocSpan) (nonEmpty (m ^. moduleBody . moduleStatements))
+
+instance HasLoc MutualBlock where
+  getLoc = getLocSpan . (^. mutualStatements)
+
+instance HasLoc MutualStatement where
+  getLoc = \case
+    StatementInductive i -> getLoc i
+    StatementFunction f -> getLoc f
+    StatementAxiom a -> getLoc a
+
+instance HasLoc InductiveDef where
+  getLoc d =
+    getLoc (d ^. inductiveName)
+      <>? (getLoc . (^. last1) <$> (nonEmpty (d ^. inductiveConstructors)))
+
+instance HasLoc NormalizedExpression where
+  getLoc = getLoc . (^. normalizedExpressionOriginal)
 
 instance HasLoc AxiomDef where
   getLoc a = getLoc (a ^. axiomName) <> getLoc (a ^. axiomType)

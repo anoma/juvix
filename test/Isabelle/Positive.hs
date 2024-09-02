@@ -33,9 +33,10 @@ testDescr PosTest {..} =
         step "Translate"
         PipelineResult {..} <- snd <$> testRunIO entryPoint upToIsabelle
         let thy = _pipelineResult ^. resultTheory
+            comments = _pipelineResult ^. resultComments
         step "Checking against expected output file"
         expFile :: Text <- readFile _expectedFile
-        assertEqDiffText "Compare to expected output" (ppPrint thy <> "\n") expFile
+        assertEqDiffText "Compare to expected output" (ppPrint comments thy <> "\n") expFile
     }
 
 allTests :: TestTree

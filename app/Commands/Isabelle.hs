@@ -14,10 +14,11 @@ runCommand opts = do
   let inputFile = opts ^. isabelleInputFile
   res <- runPipeline opts inputFile upToIsabelle
   let thy = res ^. resultTheory
+      comments = res ^. resultComments
   outputDir <- fromAppPathDir (opts ^. isabelleOutputDir)
   if
       | opts ^. isabelleStdout -> do
-          renderStdOut (ppOutDefault thy)
+          renderStdOut (ppOutDefault comments thy)
           putStrLn ""
       | otherwise -> do
           ensureDir outputDir
@@ -29,4 +30,4 @@ runCommand opts = do
                   )
               absPath :: Path Abs File
               absPath = outputDir <//> file
-          writeFileEnsureLn absPath (ppPrint thy <> "\n")
+          writeFileEnsureLn absPath (ppPrint comments thy <> "\n")

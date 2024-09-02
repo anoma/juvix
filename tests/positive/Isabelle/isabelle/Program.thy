@@ -11,8 +11,10 @@ definition id1 :: "nat list \<Rightarrow> nat list" where
 definition id2 :: "'A \<Rightarrow> 'A" where
   "id2 = id"
 
+(* Add one to each element in a list *)
 fun add_one :: "nat list \<Rightarrow> nat list" where
   "add_one [] = []" |
+  (* hello! *)
   "add_one (x # xs) = ((x + 1) # add_one xs)"
 
 fun sum :: "nat list \<Rightarrow> nat" where
@@ -28,11 +30,18 @@ fun g :: "nat \<Rightarrow> nat \<Rightarrow> bool" where
 fun inc :: "nat \<Rightarrow> nat" where
   "inc x = (Suc x)"
 
+(* dec function *)
 fun dec :: "nat \<Rightarrow> nat" where
   "dec 0 = 0" |
   "dec (Suc x) = x"
 
+(* dec' function *)
 fun dec' :: "nat \<Rightarrow> nat" where
+  (* Do case switch *)
+  (* pattern match on x *)
+  (* the zero case  *)
+  (* return zero  *)
+  (* the suc case  *)
   "dec' x =
     (case x of
        0 \<Rightarrow> 0 |
@@ -51,6 +60,7 @@ fun bool_fun :: "bool \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow> bool" 
 fun bool_fun' :: "bool \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow> bool" where
   "bool_fun' x y z = (x \<and> y \<or> z)"
 
+(* Queues *)
 text \<open>
 A type of Queues
 \<close>
@@ -92,6 +102,7 @@ fun is_empty :: "'A Queue \<Rightarrow> bool" where
 definition empty :: "'A Queue" where
   "empty = queue [] []"
 
+(* Multiple let expressions *)
 fun funkcja :: "nat \<Rightarrow> nat" where
   "funkcja n =
     (let
@@ -109,6 +120,7 @@ datatype ('A, 'B) Either'
     (* Right constructor *)
     Right' 'B
 
+(* Records *)
 record R =
   r1 :: nat
   r2 :: nat
@@ -218,6 +230,7 @@ fun funR3 :: "(R, R) Either' \<Rightarrow> R" where
 fun funR4 :: "R \<Rightarrow> R" where
   "funR4 r'0 = (r'0 (| R.r2 := R.r1 r'0 |))"
 
+(* Standard library *)
 fun bf :: "bool \<Rightarrow> bool \<Rightarrow> bool" where
   "bf b1 b2 = (\<not> (b1 \<and> b2))"
 

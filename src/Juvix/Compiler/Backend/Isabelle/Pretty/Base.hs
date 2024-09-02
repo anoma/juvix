@@ -10,26 +10,46 @@ arrow :: Doc Ann
 arrow = "\\<Rightarrow>"
 
 class PrettyCode c where
-  ppCode :: (Member (Reader Options) r) => c -> Sem r (Doc Ann)
+  ppCode :: (Members '[Reader Options, Input Comment] r) => c -> Sem r (Doc Ann)
 
-doc :: (PrettyCode c) => Options -> c -> Doc Ann
-doc opts = run . runReader opts . ppCode
+doc :: (PrettyCode c) => Options -> [Comment] -> c -> Doc Ann
+doc opts comments =
+  run
+    . runReader opts
+    . runInputList comments
+    . ppCode
 
-ppCodeQuoted :: (HasAtomicity c, PrettyCode c, Member (Reader Options) r) => c -> Sem r (Doc Ann)
+ppCodeQuoted :: (HasAtomicity c, PrettyCode c, Members '[Reader Options, Input Comment] r) => c -> Sem r (Doc Ann)
 ppCodeQuoted c
   | atomicity c == Atom = ppCode c
   | otherwise = dquotes <$> ppCode c
 
-ppTopCode :: (HasAtomicity c, PrettyCode c, Member (Reader Options) r) => c -> Sem r (Doc Ann)
+ppTopCode :: (HasAtomicity c, PrettyCode c, Members '[Reader Options, Input Comment] r) => c -> Sem r (Doc Ann)
 ppTopCode c = parensIf (not (isAtomic c)) <$> ppCode c
 
-ppParams :: (HasAtomicity c, PrettyCode c, Member (Reader Options) r) => [c] -> Sem r (Maybe (Doc Ann))
+ppParams :: (HasAtomicity c, PrettyCode c, Members '[Reader Options, Input Comment] r) => [c] -> Sem r (Maybe (Doc Ann))
 ppParams = \case
   [] -> return Nothing
   [x] -> Just <$> ppRightExpression appFixity x
   params -> do
     ps <- mapM ppCode params
     return $ Just $ parens (hsep (punctuate comma ps))
+
+ppComments :: (Member (Input Comment) r) => Interval -> Sem r (Doc Ann)
+ppComments loc = do
+  comments <- inputWhile cmpLoc
+  return
+    . mconcatMap (\c -> annotate AnnComment $ "(*" <> pretty (c ^. commentText) <+> "*)" <> line)
+    $ comments
+  where
+    cmpLoc :: Comment -> Bool
+    cmpLoc c = c ^. commentInterval . intervalStart <= loc ^. intervalEnd
+
+ppCodeWithComments :: (PrettyCode a, HasLoc a, Members '[Reader Options, Input Comment] r) => a -> Sem r (Doc Ann, Doc Ann)
+ppCodeWithComments a = do
+  comments <- ppComments (getLoc a)
+  res <- ppCode a
+  return (comments, res)
 
 prettyTextComment :: Maybe Text -> Doc Ann
 prettyTextComment = \case
@@ -95,8 +115,8 @@ instance PrettyCode IndApp where
 instance PrettyCode Expression where
   ppCode = \case
     ExprIden x -> ppCode x
-    ExprUndefined -> return kwUndefined
-    ExprLiteral x -> ppCode x
+    ExprUndefined {} -> return kwUndefined
+    ExprLiteral x -> ppCode (x ^. withLocParam)
     ExprApp x -> ppCode x
     ExprBinop x -> ppCode x
     ExprTuple x -> ppCode x
@@ -175,7 +195,7 @@ instance (PrettyCode a) => PrettyCode (List a) where
     elems <- mapM ppCode _listElements
     return $ brackets $ hsep (punctuate comma elems)
 
-ppRecord :: (PrettyCode a, Member (Reader Options) r) => Bool -> Record a -> Sem r (Doc Ann)
+ppRecord :: (PrettyCode a, Members '[Reader Options, Input Comment] r) => Bool -> Record a -> Sem r (Doc Ann)
 ppRecord bUpdate Record {..} = do
   recName <- ppCode _recordName
   names <- mapM (ppCode . fst) _recordFields
@@ -194,7 +214,7 @@ instance (PrettyCode a, HasAtomicity a) => PrettyCode (Cons a) where
 instance PrettyCode Pattern where
   ppCode = \case
     PatVar x -> ppCode x
-    PatZero -> return $ annotate AnnLiteralInteger (pretty (0 :: Int))
+    PatZero {} -> return $ annotate AnnLiteralInteger (pretty (0 :: Int))
     PatConstrApp x -> ppCode x
     PatTuple x -> ppCode x
     PatList x -> ppCode x
@@ -220,12 +240,15 @@ instance PrettyCode Lambda where
     return $ "\\<lambda>" <+> name <+?> ty <+> dot <+> body
 
 instance PrettyCode Statement where
-  ppCode = \case
-    StmtDefinition x -> ppCode x
-    StmtFunction x -> ppCode x
-    StmtSynonym x -> ppCode x
-    StmtDatatype x -> ppCode x
-    StmtRecord x -> ppCode x
+  ppCode stmt = do
+    comments <- ppComments (getLoc stmt)
+    stmt' <- case stmt of
+      StmtDefinition x -> ppCode x
+      StmtFunction x -> ppCode x
+      StmtSynonym x -> ppCode x
+      StmtDatatype x -> ppCode x
+      StmtRecord x -> ppCode x
+    return $ comments <> stmt'
 
 instance PrettyCode Definition where
   ppCode Definition {..} = do
@@ -240,8 +263,9 @@ instance PrettyCode Function where
     let comment = prettyTextComment _functionDocComment
     n <- ppCode _functionName
     ty <- ppCodeQuoted _functionType
-    cls <- mapM ppCode _functionClauses
-    let cls' = punctuate (space <> kwPipe) $ map (dquotes . (n <+>)) (toList cls)
+    res <- mapM ppCodeWithComments _functionClauses
+    let cls = punctuate (space <> kwPipe) $ map (dquotes . (n <+>) . snd) (toList res)
+        cls' = zipWithExact (<>) (toList (fmap fst res)) cls
     return $ comment <> kwFun <+> n <+> "::" <+> ty <+> kwWhere <> line <> indent' (vsep cls')
 
 instance PrettyCode Clause where
@@ -267,10 +291,11 @@ instance PrettyCode Datatype where
 
 instance PrettyCode Constructor where
   ppCode Constructor {..} = do
+    comments <- ppComments (getLoc _constructorName)
     let comment = prettyComment _constructorDocComment
     n <- ppCode _constructorName
     tys <- mapM ppCodeQuoted _constructorArgTypes
-    return $ comment <> hsep (n : tys)
+    return $ comments <> comment <> hsep (n : tys)
 
 instance PrettyCode RecordDef where
   ppCode RecordDef {..} = do
@@ -282,10 +307,11 @@ instance PrettyCode RecordDef where
 
 instance PrettyCode RecordField where
   ppCode RecordField {..} = do
+    comments <- ppComments (getLoc _recordFieldName)
     let comment = prettyComment _recordFieldDocComment
     n <- ppCode _recordFieldName
     ty <- ppCodeQuoted _recordFieldType
-    return $ comment <> n <+> "::" <+> ty
+    return $ comments <> comment <> n <+> "::" <+> ty
 
 ppImports :: [Name] -> Sem r [Doc Ann]
 ppImports ns =
@@ -312,21 +338,21 @@ instance PrettyCode Theory where
           <> kwEnd
 
 ppRightExpression ::
-  (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>
+  (PrettyCode a, HasAtomicity a, Members '[Reader Options, Input Comment] r) =>
   Fixity ->
   a ->
   Sem r (Doc Ann)
 ppRightExpression = ppLRExpression isRightAssoc
 
 ppLeftExpression ::
-  (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>
+  (PrettyCode a, HasAtomicity a, Members '[Reader Options, Input Comment] r) =>
   Fixity ->
   a ->
   Sem r (Doc Ann)
 ppLeftExpression = ppLRExpression isLeftAssoc
 
 ppLRExpression ::
-  (HasAtomicity a, PrettyCode a, Member (Reader Options) r) =>
+  (HasAtomicity a, PrettyCode a, Members '[Reader Options, Input Comment] r) =>
   (Fixity -> Bool) ->
   Fixity ->
   a ->

@@ -48,8 +48,8 @@ makeLenses ''IndApp
 
 data Expression
   = ExprIden Name
-  | ExprUndefined
-  | ExprLiteral Literal
+  | ExprUndefined Interval
+  | ExprLiteral (WithLoc Literal)
   | ExprApp Application
   | ExprBinop Binop
   | ExprTuple (Tuple Expression)
@@ -117,7 +117,7 @@ data Lambda = Lambda
 
 data Pattern
   = PatVar Name
-  | PatZero
+  | PatZero Interval
   | PatConstrApp ConstrApp
   | PatTuple (Tuple Pattern)
   | PatList (List Pattern)
@@ -128,8 +128,9 @@ newtype Tuple a = Tuple
   { _tupleComponents :: NonEmpty a
   }
 
-newtype List a = List
-  { _listElements :: [a]
+data List a = List
+  { _listLoc :: Interval,
+    _listElements :: [a]
   }
 
 data Cons a = Cons
@@ -306,7 +307,7 @@ instance HasAtomicity Type where
 instance HasAtomicity Expression where
   atomicity = \case
     ExprIden {} -> Atom
-    ExprUndefined -> Atom
+    ExprUndefined {} -> Atom
     ExprLiteral {} -> Atom
     ExprApp {} -> Aggregate appFixity
     ExprBinop Binop {..} -> Aggregate _binopFixity
@@ -323,7 +324,7 @@ instance HasAtomicity Expression where
 instance HasAtomicity Pattern where
   atomicity = \case
     PatVar {} -> Atom
-    PatZero -> Atom
+    PatZero {} -> Atom
     PatConstrApp ConstrApp {..}
       | null _constrAppArgs -> Atom
       | otherwise -> Aggregate appFixity
@@ -331,3 +332,88 @@ instance HasAtomicity Pattern where
     PatList {} -> Atom
     PatCons {} -> Aggregate consFixity
     PatRecord {} -> Atom
+
+instance HasLoc Expression where
+  getLoc = \case
+    ExprIden n -> getLoc n
+    ExprUndefined x -> x
+    ExprLiteral x -> x ^. withLocInt
+    ExprApp x -> getLoc x
+    ExprBinop x -> getLoc x
+    ExprTuple x -> getLoc x
+    ExprList x -> getLoc x
+    ExprCons x -> getLoc x
+    ExprRecord x -> getLoc x
+    ExprRecordUpdate x -> getLoc x
+    ExprLet x -> getLoc x
+    ExprIf x -> getLoc x
+    ExprCase x -> getLoc x
+    ExprLambda x -> getLoc x
+
+instance HasLoc Application where
+  getLoc Application {..} = getLoc _appLeft <> getLoc _appRight
+
+instance HasLoc Binop where
+  getLoc Binop {..} = getLoc _binopLeft <> getLoc _binopRight
+
+instance (HasLoc a) => HasLoc (Tuple a) where
+  getLoc = getLocSpan . (^. tupleComponents)
+
+instance HasLoc (List a) where
+  getLoc = (^. listLoc)
+
+instance (HasLoc a) => HasLoc (Cons a) where
+  getLoc Cons {..} = getLoc _consHead <> getLoc _consTail
+
+instance HasLoc (Record a) where
+  getLoc Record {..} =
+    getLoc _recordName
+      <>? maybe Nothing (Just . getLocSpan) (nonEmpty (map fst _recordFields))
+
+instance HasLoc RecordUpdate where
+  getLoc RecordUpdate {..} = getLoc _recordUpdateRecord <> getLoc _recordUpdateFields
+
+instance HasLoc RecordField where
+  getLoc RecordField {..} = getLoc _recordFieldName
+
+instance HasLoc Let where
+  getLoc Let {..} = getLocSpan _letClauses <> getLoc _letBody
+
+instance HasLoc LetClause where
+  getLoc LetClause {..} = getLoc _letClauseName <> getLoc _letClauseValue
+
+instance HasLoc If where
+  getLoc If {..} = getLoc _ifValue <> getLoc _ifBranchTrue <> getLoc _ifBranchFalse
+
+instance HasLoc Case where
+  getLoc Case {..} = getLoc _caseValue <> getLocSpan _caseBranches
+
+instance HasLoc Lambda where
+  getLoc Lambda {..} = getLoc _lambdaVar <> getLoc _lambdaBody
+
+instance HasLoc CaseBranch where
+  getLoc CaseBranch {..} = getLoc _caseBranchPattern <> getLoc _caseBranchBody
+
+instance HasLoc Pattern where
+  getLoc = \case
+    PatVar n -> getLoc n
+    PatZero x -> x
+    PatConstrApp x -> getLoc x
+    PatTuple x -> getLoc x
+    PatList x -> getLoc x
+    PatCons x -> getLoc x
+    PatRecord x -> getLoc x
+
+instance HasLoc ConstrApp where
+  getLoc ConstrApp {..} = getLoc _constrAppConstructor
+
+instance HasLoc Statement where
+  getLoc = \case
+    StmtDefinition Definition {..} -> getLoc _definitionName
+    StmtFunction Function {..} -> getLoc _functionName
+    StmtSynonym Synonym {..} -> getLoc _synonymName
+    StmtDatatype Datatype {..} -> getLoc _datatypeName
+    StmtRecord RecordDef {..} -> getLoc _recordDefName
+
+instance HasLoc Clause where
+  getLoc Clause {..} = getLocSpan _clausePatterns <> getLoc _clauseBody
