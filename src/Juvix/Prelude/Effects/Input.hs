@@ -2,6 +2,7 @@ module Juvix.Prelude.Effects.Input
   ( Input,
     input,
     inputJust,
+    inputWhile,
     peekInput,
     runInputList,
   )
@@ -25,6 +26,14 @@ input =
     \case
       Input [] -> (Nothing, Input [])
       Input (i : is) -> (Just i, Input is)
+
+inputWhile :: (Member (Input i) r) => (i -> Bool) -> Sem r [i]
+inputWhile c =
+  stateStaticRep $
+    \case
+      Input l ->
+        let (sat, rest) = span c l
+         in (sat, Input rest)
 
 peekInput :: (Member (Input i) r) => Sem r (Maybe i)
 peekInput = do
