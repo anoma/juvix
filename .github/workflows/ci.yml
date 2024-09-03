@@ -44,7 +44,7 @@ jobs:
   ormolu:
     runs-on: ubuntu-latest
     env:
-      STACK_RESOLVER: lts-21.25
+      STACK_RESOLVER: nightly-2024-05-31
     steps:
       - uses: actions/checkout@v3
       - uses: extractions/setup-just@v2
