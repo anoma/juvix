@@ -4,6 +4,33 @@
 <img align="right" width="300" height="300" alt="Juvix Mascot" src="../assets/images/tara-smiling.svg" />
 </a>
 
+## [v0.6.6](https://github.com/anoma/juvix/tree/v0.6.6) (2024-09-03)
+
+[Full Changelog](https://github.com/anoma/juvix/compare/v0.6.5...v0.6.6)
+
+**Implemented enhancements:**
+
+- Improve output of `juvix dev import-tree print` [\#2976](https://github.com/anoma/juvix/pull/2976) ([janmasrovira](https://github.com/janmasrovira))
+- Isabelle/HOL translation: comments [\#2974](https://github.com/anoma/juvix/pull/2974) ([lukaszcz](https://github.com/lukaszcz))
+- Improve compilation progress log [\#2969](https://github.com/anoma/juvix/pull/2969) ([janmasrovira](https://github.com/janmasrovira))
+- Isabelle/HOL translation: records and named patterns [\#2963](https://github.com/anoma/juvix/pull/2963) ([lukaszcz](https://github.com/lukaszcz))
+- Translate Judoc comments to Isabelle/HOL [\#2958](https://github.com/anoma/juvix/pull/2958) ([lukaszcz](https://github.com/lukaszcz))
+- Isabelle/HOL translation: the `isabelle-ignore` pragma [\#2955](https://github.com/anoma/juvix/pull/2955) ([lukaszcz](https://github.com/lukaszcz))
+- Add do notation [\#2937](https://github.com/anoma/juvix/pull/2937) ([janmasrovira](https://github.com/janmasrovira))
+
+**Merged pull requests:**
+
+- Add `IsInstanceCoercion` to Internal [\#2981](https://github.com/anoma/juvix/pull/2981) ([janmasrovira](https://github.com/janmasrovira))
+- Monad and Applicative traits in juvix stdlib [\#2979](https://github.com/anoma/juvix/pull/2979) ([paulcadman](https://github.com/paulcadman))
+- Add `PartialDo` effect [\#2978](https://github.com/anoma/juvix/pull/2978) ([janmasrovira](https://github.com/janmasrovira))
+- Improve performance of anomaEncode / anomaDecode in the Core evaluator [\#2975](https://github.com/anoma/juvix/pull/2975) ([paulcadman](https://github.com/paulcadman))
+- Don't fold lets with `fail`, `trace` or `>->` in the body [\#2973](https://github.com/anoma/juvix/pull/2973) ([lukaszcz](https://github.com/lukaszcz))
+- Fix JuvixTree type unification [\#2972](https://github.com/anoma/juvix/pull/2972) ([lukaszcz](https://github.com/lukaszcz))
+- Isabelle/HOL translation: add 'O' and 'OO' to reserved names [\#2961](https://github.com/anoma/juvix/pull/2961) ([lukaszcz](https://github.com/lukaszcz))
+- Add `anoma-bytearray-{to, from}-anoma-contents` builtins [\#2960](https://github.com/anoma/juvix/pull/2960) ([paulcadman](https://github.com/paulcadman))
+- Fix bug where highlighting is not kept when the file has a type error and imports some other file [\#2959](https://github.com/anoma/juvix/pull/2959) ([janmasrovira](https://github.com/janmasrovira))
+- Register builtins during scoping and report proper errors instead of crashing [\#2943](https://github.com/anoma/juvix/pull/2943) ([janmasrovira](https://github.com/janmasrovira))
+
 ## [v0.6.5](https://github.com/anoma/juvix/tree/v0.6.5) (2024-08-14)
 
 [Full Changelog](https://github.com/anoma/juvix/compare/v0.6.4...v0.6.5)
