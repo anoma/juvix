@@ -34,3 +34,13 @@ allow-newer-deps:
   - aeson-better-errors
   - effectful-th
   - juvix
+  - cborg
+  - palette
+  - serialise
+  - string-interpolate
+  - tasty-hedgehog
+  - unicode-data
+  - unicode-transforms
+  - unliftio-core
+  - uuid-types
+  - versions
