@@ -1109,7 +1109,7 @@ inferLeftAppExpression mhint e = case e of
             typedLit litt blt ty = do
               from <- getBuiltinNameTypeChecker i blt
               ihole <- freshHoleImpl i ImplicitInstance
-              let ty' = fromMaybe ty mhint
+              let ty' = maybe ty (adjustLocation i) mhint
               inferExpression' (Just ty') $
                 foldApplication
                   (ExpressionIden (IdenFunction from))

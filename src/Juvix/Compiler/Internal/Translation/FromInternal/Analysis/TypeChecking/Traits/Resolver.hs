@@ -144,16 +144,8 @@ expandArity' ::
   [FunctionParameter] ->
   Iden ->
   Sem r Expression
-expandArity' loc subs params iden = case iden of
-  IdenFunction name ->
-    expandArity loc subs params (ExpressionIden (IdenFunction name'))
-    where
-      name' = name {_nameLoc = loc}
-  IdenVar name ->
-    expandArity loc subs params (ExpressionIden (IdenVar name'))
-    where
-      name' = name {_nameLoc = loc}
-  _ -> impossible
+expandArity' loc subs params iden =
+  expandArity loc subs params (ExpressionIden (set (idenName . nameLoc) loc iden))
 
 expandArity ::
   (Members '[Error TypeCheckerError, NameIdGen] r) =>
