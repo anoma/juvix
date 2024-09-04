@@ -465,7 +465,8 @@ module SideIfConditions;
       | suc (suc n)
         | if 0 < 0 := 3
         | else := n
-      | suc n if 0 < 0 := 3;
+      | suc n if 0 < 0 := 3
+      | suc zero := 5;
 end;
 
 module MultiIf;
