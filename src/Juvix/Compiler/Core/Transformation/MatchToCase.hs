@@ -12,7 +12,7 @@ import Juvix.Compiler.Core.Transformation.Base
 
 data PatternRow = PatternRow
   { _patternRowPatterns :: [Pattern],
-    _patternRowBody :: Node,
+    _patternRowRhs :: MatchBranchRhs,
     -- | The number of initial wildcard binders in `_patternRowPatterns` which
     -- don't originate from the input
     _patternRowIgnoredPatternsNum :: Int,
@@ -58,7 +58,7 @@ goMatchToCase recur node = case node of
               matchBranchToPatternRow MatchBranch {..} =
                 PatternRow
                   { _patternRowPatterns = toList _matchBranchPatterns,
-                    _patternRowBody = undefined,
+                    _patternRowRhs = _matchBranchRhs,
                     _patternRowIgnoredPatternsNum = 0,
                     _patternRowBinderChangesRev = [BCAdd n]
                   }
@@ -104,10 +104,10 @@ goMatchToCase recur node = case node of
           pat' = if length pat == 1 then doc defaultOptions (head' pat) else docValueSequence pat
           mockFile = $(mkAbsFile "/match-to-case")
           defaultLoc = singletonInterval (mkInitialLoc mockFile)
-      r@PatternRow {..} : _
+      r@PatternRow {..} : matrix'
         | all isPatWildcard _patternRowPatterns ->
             -- The first row matches all values (Section 4, case 2)
-            compileMatchingRow bindersNum vs r
+            compileMatchingRow err bindersNum vs matrix' r
       _ -> do
         -- Section 4, case 3
         -- Select the first column
@@ -181,9 +181,19 @@ goMatchToCase recur node = case node of
       where
         ii = lookupInductiveInfo md ind
 
-    compileMatchingRow :: Level -> [Level] -> PatternRow -> Sem r Node
-    compileMatchingRow bindersNum vs PatternRow {..} =
-      goMatchToCase (recur . (bcs ++)) _patternRowBody
+    compileMatchingRow :: ([Value] -> [Value]) -> Level -> [Level] -> PatternMatrix -> PatternRow -> Sem r Node
+    compileMatchingRow err bindersNum vs matrix PatternRow {..} =
+      case _patternRowRhs of
+        MatchBranchRhsExpression body ->
+          goMatchToCase (recur . (bcs ++)) body
+        MatchBranchRhsIfs ifs -> do
+          -- If the branch has side-conditions, then we need to continue pattern
+          -- matching when none of the conditions is satisfied.
+          body <- compile err bindersNum vs matrix
+          md <- ask
+          let boolSym = lookupConstructorInfo md (BuiltinTag TagTrue) ^. constructorInductive
+              ifs' = map (\(SideIfBranch i c b) -> (i, c, b)) (toList ifs)
+          return $ mkIfs boolSym ifs' body
       where
         bcs =
           reverse $

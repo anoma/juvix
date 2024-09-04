@@ -53,7 +53,7 @@ where
     _ ->
       recur [] node
     where
-      cont :: Level -> [BinderChange] -> Node -> Node
+      cont :: [BinderChange] -> Node -> Node
       cont bcs = go (recur . (bcs ++)) (k + bindersNumFromBinderChange bcs)
 ```
 produces
