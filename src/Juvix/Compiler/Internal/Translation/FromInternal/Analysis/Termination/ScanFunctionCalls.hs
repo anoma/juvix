@@ -8,34 +8,38 @@ import Juvix.Prelude
 
 type CallMap = CallMap' Expression
 
+type CallMapBuilder = CallMapBuilder' Expression
+
 class Scannable a where
-  buildCallMap :: a -> CallMap
+  buildCallMap :: a -> (CallMap, HashMap FunctionName FunctionDef)
 
 instance Scannable Module where
   buildCallMap =
     run
-      . execState emptyCallMap
+      . runCallMapBuilder
+      . execState mempty
       . scanModule
 
 instance Scannable Expression where
   buildCallMap =
     run
-      . execState emptyCallMap
+      . runCallMapBuilder
+      . execState mempty
       . scanTopExpression
 
 scanModule ::
-  (Members '[State (CallMap' Expression)] r) =>
+  (Members '[CallMapBuilder, State (HashMap FunctionName FunctionDef)] r) =>
   Module ->
   Sem r ()
 scanModule m = scanModuleBody (m ^. moduleBody)
 
-scanModuleBody :: (Members '[State CallMap] r) => ModuleBody -> Sem r ()
+scanModuleBody :: (Members '[CallMapBuilder, State (HashMap FunctionName FunctionDef)] r) => ModuleBody -> Sem r ()
 scanModuleBody body = mapM_ scanMutual (body ^. moduleStatements)
 
-scanMutual :: (Members '[State CallMap] r) => MutualBlock -> Sem r ()
+scanMutual :: (Members '[CallMapBuilder, State (HashMap FunctionName FunctionDef)] r) => MutualBlock -> Sem r ()
 scanMutual (MutualBlock ss) = mapM_ scanMutualStatement ss
 
-scanInductive :: forall r. (Members '[State CallMap] r) => InductiveDef -> Sem r ()
+scanInductive :: forall r. (Members '[CallMapBuilder, State (HashMap FunctionName FunctionDef)] r) => InductiveDef -> Sem r ()
 scanInductive i = do
   scanTopExpression (i ^. inductiveType)
   mapM_ scanConstructor (i ^. inductiveConstructors)
@@ -43,17 +47,17 @@ scanInductive i = do
     scanConstructor :: ConstructorDef -> Sem r ()
     scanConstructor c = scanTopExpression (c ^. inductiveConstructorType)
 
-scanMutualStatement :: (Members '[State CallMap] r) => MutualStatement -> Sem r ()
+scanMutualStatement :: (Members '[CallMapBuilder, State (HashMap FunctionName FunctionDef)] r) => MutualStatement -> Sem r ()
 scanMutualStatement = \case
   StatementInductive i -> scanInductive i
   StatementFunction i -> scanFunctionDef i
   StatementAxiom a -> scanAxiom a
 
-scanAxiom :: (Members '[State CallMap] r) => AxiomDef -> Sem r ()
+scanAxiom :: (Members '[CallMapBuilder, State (HashMap FunctionName FunctionDef)] r) => AxiomDef -> Sem r ()
 scanAxiom = scanTopExpression . (^. axiomType)
 
 scanFunctionDef ::
-  (Members '[State CallMap] r) =>
+  (Members '[CallMapBuilder, State (HashMap FunctionName FunctionDef)] r) =>
   FunctionDef ->
   Sem r ()
 scanFunctionDef f@FunctionDef {..} = do
@@ -65,7 +69,7 @@ scanFunctionDef f@FunctionDef {..} = do
 
 scanDefaultArgs ::
   forall r.
-  (Members '[Reader (Maybe FunctionName), State CallMap] r) =>
+  (Members '[Reader (Maybe FunctionName), CallMapBuilder, State (HashMap FunctionName FunctionDef)] r) =>
   [ArgInfo] ->
   Sem r ()
 scanDefaultArgs = mapM_ scanArgInfo
@@ -74,14 +78,14 @@ scanDefaultArgs = mapM_ scanArgInfo
     scanArgInfo = mapM_ scanTypeSignature . (^. argInfoDefault)
 
 scanTypeSignature ::
-  (Members '[State CallMap, Reader (Maybe FunctionName)] r) =>
+  (Members '[CallMapBuilder, Reader (Maybe FunctionName), State (HashMap FunctionName FunctionDef)] r) =>
   Expression ->
   Sem r ()
 scanTypeSignature = runReader emptySizeInfo . scanExpression
 
 scanFunctionBody ::
   forall r.
-  (Members '[State CallMap, Reader (Maybe FunctionName)] r) =>
+  (Members '[CallMapBuilder, Reader (Maybe FunctionName), State (HashMap FunctionName FunctionDef)] r) =>
   Expression ->
   Sem r ()
 scanFunctionBody topbody = go [] topbody
@@ -95,7 +99,7 @@ scanFunctionBody topbody = go [] topbody
         goClause (LambdaClause pats clBody) = go (reverse (toList pats) ++ revArgs) clBody
 
 scanLet ::
-  (Members '[State CallMap, Reader (Maybe FunctionName), Reader SizeInfo] r) =>
+  (Members '[CallMapBuilder, Reader (Maybe FunctionName), Reader SizeInfo, State (HashMap FunctionName FunctionDef)] r) =>
   Let ->
   Sem r ()
 scanLet l = do
@@ -103,16 +107,16 @@ scanLet l = do
   scanExpression (l ^. letExpression)
 
 -- NOTE that we forget about the arguments of the hosting function
-scanLetClause :: (Members '[State CallMap] r) => LetClause -> Sem r ()
+scanLetClause :: (Members '[CallMapBuilder, State (HashMap FunctionName FunctionDef)] r) => LetClause -> Sem r ()
 scanLetClause = \case
   LetFunDef d -> scanFunctionDef d
   LetMutualBlock m -> scanMutualBlockLet m
 
-scanMutualBlockLet :: (Members '[State CallMap] r) => MutualBlockLet -> Sem r ()
+scanMutualBlockLet :: (Members '[CallMapBuilder, State (HashMap FunctionName FunctionDef)] r) => MutualBlockLet -> Sem r ()
 scanMutualBlockLet MutualBlockLet {..} = mapM_ scanFunctionDef _mutualLet
 
 scanTopExpression ::
-  (Members '[State CallMap] r) =>
+  (Members '[CallMapBuilder, State (HashMap FunctionName FunctionDef)] r) =>
   Expression ->
   Sem r ()
 scanTopExpression =
@@ -121,7 +125,7 @@ scanTopExpression =
     . scanExpression
 
 scanExpression ::
-  (Members '[State CallMap, Reader (Maybe FunctionName), Reader SizeInfo] r) =>
+  (Members '[CallMapBuilder, Reader (Maybe FunctionName), Reader SizeInfo, State (HashMap FunctionName FunctionDef)] r) =>
   Expression ->
   Sem r ()
 scanExpression e =

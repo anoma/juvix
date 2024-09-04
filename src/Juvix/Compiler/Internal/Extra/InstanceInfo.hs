@@ -101,19 +101,18 @@ traitFromExpression metaVars e = case paramFromExpression metaVars e of
   Just (InstanceParamApp app) -> Just app
   _ -> Nothing
 
-instanceFromTypedIden :: TypedIden -> Maybe InstanceInfo
-instanceFromTypedIden TypedIden {..} = do
-  InstanceApp {..} <- traitFromExpression metaVars e
+mkInstanceInfo :: TypedIden -> Maybe InstanceInfo
+mkInstanceInfo TypedIden {..} = do
+  let (args, ret) = unfoldFunType _typedIdenType
+      metaVars = hashSet (mapMaybe (^. paramName) args)
+  InstanceApp {..} <- traitFromExpression metaVars ret
   return $
     InstanceInfo
       { _instanceInfoInductive = _instanceAppHead,
         _instanceInfoParams = _instanceAppArgs,
-        _instanceInfoResult = _typedIden,
+        _instanceInfoIden = _typedIden,
         _instanceInfoArgs = args
       }
-  where
-    (args, e) = unfoldFunType _typedIdenType
-    metaVars = HashSet.fromList $ mapMaybe (^. paramName) args
 
 checkNoMeta :: InstanceParam -> Bool
 checkNoMeta = \case

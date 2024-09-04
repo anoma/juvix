@@ -10,7 +10,6 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Che
   )
 where
 
-import Data.HashMap.Internal.Strict qualified as HashMap
 import Juvix.Compiler.Internal.Language as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Data
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Data.TerminationState
@@ -65,12 +64,12 @@ checkTerminationShallow' ::
   m ->
   Sem r ()
 checkTerminationShallow' topModule = do
-  let callmap = buildCallMap topModule
+  let (callmap, scannedFuns) = buildCallMap topModule
   forM_ (callMapRecursiveBehaviour callmap) $ \rb -> do
     let funName = rb ^. recursiveBehaviourFun
         markedTerminating :: Bool = funInfo ^. Internal.funDefTerminating
         funInfo :: FunctionDef
-        funInfo = HashMap.lookupDefault err funName (callmap ^. callMapScanned)
+        funInfo = fromMaybe err (scannedFuns ^. at funName)
           where
             err = error ("Impossible: function not found: " <> funName ^. nameText)
         order = findOrder rb

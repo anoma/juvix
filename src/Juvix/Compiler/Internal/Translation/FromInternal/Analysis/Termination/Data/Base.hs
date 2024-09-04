@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-unused-type-patterns #-}
+
 module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Data.Base where
 
 import Data.HashMap.Strict qualified as HashMap
@@ -7,9 +9,8 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Dat
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
 
-data CallMap' expr = CallMap
-  { _callMap :: HashMap FunctionName (HashMap FunctionName [FunCall' expr]),
-    _callMapScanned :: HashMap FunctionName FunctionDef
+newtype CallMap' expr = CallMap
+  { _callMap :: HashMap FunctionName (HashMap FunctionName [FunCall' expr])
   }
 
 data FunCall' expr = FunCall
@@ -42,11 +43,64 @@ data Call = Call
 
 newtype LexOrder = LexOrder (NonEmpty Int)
 
+data CallMapBuilder' expr :: Effect where
+  AddCall :: FunctionName -> FunCall' expr -> CallMapBuilder' expr m ()
+
+makeEffect ''CallMapBuilder'
+
 makeLenses ''CallMatrix
 makeLenses ''CallRow
 makeLenses ''FunCall'
 makeLenses ''CallMap'
 makeLenses ''FunCallArg'
+
+mkFunCall :: forall pattrn expr. (pattrn -> expr -> Maybe SizeRel') -> FunctionName -> [pattrn] -> [expr] -> FunCall' expr
+mkFunCall rel fun pats args =
+  FunCall
+    { _callRef = fun,
+      _callArgs = map (mkFunCallArg rel pats) args
+    }
+
+mkFunCallArg :: forall pattrn expr. (pattrn -> expr -> Maybe SizeRel') -> [pattrn] -> expr -> FunCallArg' expr
+mkFunCallArg rel pats arg =
+  let rels = map (`rel` arg) pats
+      helper srel = (,srel) <$> elemIndex (Just srel) rels
+      smaller = helper RLe
+      equal = helper REq
+   in FunCallArg
+        { _argExpression = arg,
+          _argRow =
+            CallRow $
+              smaller
+                <|> equal
+        }
+
+execCallMapBuilder :: Sem (CallMapBuilder' expr ': r) a -> Sem r (CallMap' expr)
+execCallMapBuilder = fmap fst . runCallMapBuilder
+
+runCallMapBuilder :: Sem (CallMapBuilder' expr ': r) a -> Sem r (CallMap' expr, a)
+runCallMapBuilder = reinterpret (runState emptyCallMap) $ \case
+  AddCall fun c -> modify (addCall' fun c)
+
+addCall' :: forall expr. FunctionName -> FunCall' expr -> CallMap' expr -> CallMap' expr
+addCall' fun c = over callMap (HashMap.alter (Just . insertCall c) fun)
+  where
+    insertCall ::
+      FunCall' expr ->
+      Maybe (HashMap FunctionName [FunCall' expr]) ->
+      HashMap FunctionName [FunCall' expr]
+    insertCall f = \case
+      Nothing -> singl f
+      Just m' -> addFunCall f m'
+
+    singl :: FunCall' expr -> HashMap FunctionName [FunCall' expr]
+    singl f = HashMap.singleton (f ^. callRef) [f]
+
+    addFunCall ::
+      FunCall' expr ->
+      HashMap FunctionName [FunCall' expr] ->
+      HashMap FunctionName [FunCall' expr]
+    addFunCall fc = HashMap.insertWith (flip (<>)) (fc ^. callRef) [fc]
 
 filterCallMap :: (Foldable f) => f Text -> CallMap' expr -> CallMap' expr
 filterCallMap funNames =
@@ -97,7 +151,7 @@ instance (HasAtomicity expr, PrettyCode expr) => PrettyCode (CallMap' expr) wher
     (Members '[Reader Options] r) =>
     CallMap' expr ->
     Sem r (Doc Ann)
-  ppCode (CallMap m _) = vsep <$> mapM ppEntry (HashMap.toList m)
+  ppCode (CallMap m) = vsep <$> mapM ppEntry (HashMap.toList m)
     where
       ppEntry :: (FunctionName, HashMap FunctionName [FunCall' expr]) -> Sem r (Doc Ann)
       ppEntry (fun, mcalls) = do
@@ -125,6 +179,5 @@ kwWaveArrow = keyword Str.waveArrow
 emptyCallMap :: CallMap' expr
 emptyCallMap =
   CallMap
-    { _callMap = mempty,
-      _callMapScanned = mempty
+    { _callMap = mempty
     }

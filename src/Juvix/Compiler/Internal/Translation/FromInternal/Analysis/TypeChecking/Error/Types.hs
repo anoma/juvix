@@ -529,7 +529,7 @@ instance ToGenericError AmbiguousInstances where
         where
           opts' = fromGenericOptions opts
           i = e ^. ambiguousInstancesLoc
-          locs = itemize $ map (pretty . getLoc . (^. instanceInfoResult)) (e ^. ambiguousInstancesInfos)
+          locs = itemize $ map (pretty . getLoc) (e ^. ambiguousInstancesInfos)
           msg =
             "Multiple trait instances found for"
               <+> ppCode opts' (e ^. ambiguousInstancesType . normalizedExpression)
@@ -559,10 +559,10 @@ instance ToGenericError SubsumedInstance where
         where
           opts' = fromGenericOptions opts
           i = e ^. subsumedInstanceLoc
-          locs = itemize $ map (pretty . getLoc . (^. instanceInfoResult)) (e ^. subsumedInstanceParents)
+          locs = itemize $ map (pretty . getLoc) (e ^. subsumedInstanceParents)
           msg =
             "The instance"
-              <+> ppCode opts' (e ^. subsumedInstance . instanceInfoResult)
+              <+> ppCode opts' (e ^. subsumedInstance . instanceInfoIden)
               <+> "is subsumed by instances at:"
                 <> line
                 <> indent' locs

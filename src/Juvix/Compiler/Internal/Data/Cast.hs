@@ -3,7 +3,9 @@ module Juvix.Compiler.Internal.Data.Cast where
 import Juvix.Compiler.Internal.Language
 import Juvix.Prelude
 
-data CastType = CastInt | CastNat
+data CastType
+  = CastInt
+  | CastNat
 
 data CastHole = CastHole
   { _castHoleHole :: Hole,

@@ -20,7 +20,7 @@ runCommand CallGraphOptions {..} = do
           <> _pipelineResult
             ^. Internal.resultInternalModule
               . Internal.internalModuleInfoTable
-      callMap = Termination.buildCallMap mainModule
+      callMap = fst (Termination.buildCallMap mainModule)
       completeGraph = Termination.completeCallGraph callMap
       filteredGraph =
         maybe

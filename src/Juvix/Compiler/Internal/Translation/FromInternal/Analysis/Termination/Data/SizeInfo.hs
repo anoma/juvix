@@ -5,9 +5,8 @@ import Juvix.Prelude
 
 -- | i = SizeInfo [v] ⇔ v is smaller than argument i of the caller function.
 -- The first (leftmost) argument has index 0
-data SizeInfo = SizeInfo
-  { _sizeSmaller :: [[Pattern]],
-    _sizeEqual :: [Pattern]
+newtype SizeInfo = SizeInfo
+  { _sizeEqual :: [Pattern]
   }
 
 makeLenses ''SizeInfo
@@ -15,20 +14,14 @@ makeLenses ''SizeInfo
 emptySizeInfo :: SizeInfo
 emptySizeInfo =
   SizeInfo
-    { _sizeEqual = mempty,
-      _sizeSmaller = mempty
+    { _sizeEqual = mempty
     }
 
 mkSizeInfo :: [PatternArg] -> SizeInfo
-mkSizeInfo args = SizeInfo {..}
+mkSizeInfo args = SizeInfo ps
   where
     ps :: [Pattern]
     ps = map (^. patternArgPattern) (filter (not . isImplicit') args)
 
     isImplicit' :: PatternArg -> Bool
     isImplicit' = isImplicitOrInstance . (^. patternArgIsImplicit)
-
-    _sizeEqual = ps
-
-    _sizeSmaller :: [[Pattern]]
-    _sizeSmaller = map (^.. patternSubCosmos) ps

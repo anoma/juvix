@@ -44,13 +44,16 @@ instance NFData InstanceFun
 data InstanceInfo = InstanceInfo
   { _instanceInfoInductive :: InductiveName,
     _instanceInfoParams :: [InstanceParam],
-    _instanceInfoResult :: Iden,
+    _instanceInfoIden :: Iden,
     _instanceInfoArgs :: [FunctionParameter]
   }
   deriving stock (Eq, Generic)
 
 instance Hashable InstanceInfo where
-  hashWithSalt salt InstanceInfo {..} = hashWithSalt salt _instanceInfoResult
+  hashWithSalt salt InstanceInfo {..} = hashWithSalt salt _instanceInfoIden
+
+instance HasLoc InstanceInfo where
+  getLoc InstanceInfo {..} = getLoc _instanceInfoIden
 
 instance Serialize InstanceInfo
 
