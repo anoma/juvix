@@ -41,7 +41,7 @@ resolveTraitInstance TypedHole {..} = do
   is <- lookupInstance ctab tab (ty ^. normalizedExpression)
   case is of
     [(cs, ii, subs)] ->
-      expandArity loc (subsIToE subs) (ii ^. instanceInfoArgs) (ii ^. instanceInfoResult)
+      expandArity' loc (subsIToE subs) (ii ^. instanceInfoArgs) (ii ^. instanceInfoResult)
         >>= applyCoercions loc cs
     [] ->
       throw (ErrNoInstance (NoInstance ty loc))
@@ -98,23 +98,23 @@ substitutionI subs p = case p of
     | otherwise ->
         return p
 
-instanceFromTypedExpression' :: InfoTable -> TypedExpression -> Maybe InstanceInfo
-instanceFromTypedExpression' tbl e = do
-  ii@InstanceInfo {..} <- instanceFromTypedExpression e
+instanceFromTypedIden' :: InfoTable -> TypedIden -> Maybe InstanceInfo
+instanceFromTypedIden' tbl e = do
+  ii@InstanceInfo {..} <- instanceFromTypedIden e
   guard (isTrait tbl _instanceInfoInductive)
   return ii
 
 varsToInstances :: InfoTable -> LocalVars -> [InstanceInfo]
 varsToInstances tbl LocalVars {..} =
   mapMaybe
-    (instanceFromTypedExpression' tbl . mkTyped)
+    (instanceFromTypedIden' tbl . mkTyped)
     (HashMap.toList _localTypes)
   where
-    mkTyped :: (VarName, Expression) -> TypedExpression
+    mkTyped :: (VarName, Expression) -> TypedIden
     mkTyped (v, ty) =
-      TypedExpression
-        { _typedType = ty,
-          _typedExpression = ExpressionIden (IdenVar v)
+      TypedIden
+        { _typedIdenType = ty,
+          _typedIden = IdenVar v
         }
 
 applyCoercions ::
@@ -133,9 +133,27 @@ applyCoercion ::
   Expression ->
   Sem r Expression
 applyCoercion loc (CoercionInfo {..}, subs) e = do
-  e' <- expandArity loc (subsIToE subs) _coercionInfoArgs _coercionInfoResult
+  e' <- expandArity' loc (subsIToE subs) _coercionInfoArgs _coercionInfoResult
   return $
     ExpressionApplication (Application e' e ImplicitInstance)
+
+expandArity' ::
+  (Members '[Error TypeCheckerError, NameIdGen] r) =>
+  Interval ->
+  Subs ->
+  [FunctionParameter] ->
+  Iden ->
+  Sem r Expression
+expandArity' loc subs params iden = case iden of
+  IdenFunction name ->
+    expandArity loc subs params (ExpressionIden (IdenFunction name'))
+    where
+      name' = name {_nameLoc = loc}
+  IdenVar name ->
+    expandArity loc subs params (ExpressionIden (IdenVar name'))
+    where
+      name' = name {_nameLoc = loc}
+  _ -> impossible
 
 expandArity ::
   (Members '[Error TypeCheckerError, NameIdGen] r) =>

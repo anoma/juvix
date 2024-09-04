@@ -1,12 +1,14 @@
 module Juvix.Compiler.Internal.Extra.CoercionInfo
   ( module Juvix.Compiler.Store.Internal.Data.CoercionInfo,
     module Juvix.Compiler.Internal.Extra.CoercionInfo,
+    module Juvix.Compiler.Internal.Data.TypedIden,
   )
 where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Data.List qualified as List
+import Juvix.Compiler.Internal.Data.TypedIden
 import Juvix.Compiler.Internal.Extra.Base
 import Juvix.Compiler.Internal.Extra.InstanceInfo
 import Juvix.Compiler.Internal.Language
@@ -25,8 +27,8 @@ updateCoercionTable tab ci@CoercionInfo {..} =
 lookupCoercionTable :: CoercionTable -> Name -> Maybe [CoercionInfo]
 lookupCoercionTable tab name = HashMap.lookup name (tab ^. coercionTableMap)
 
-coercionFromTypedExpression :: TypedExpression -> Maybe CoercionInfo
-coercionFromTypedExpression TypedExpression {..}
+coercionFromTypedIden :: TypedIden -> Maybe CoercionInfo
+coercionFromTypedIden TypedIden {..}
   | null args = Nothing
   | otherwise = do
       tgt <- traitFromExpression metaVars (t ^. paramType)
@@ -36,11 +38,11 @@ coercionFromTypedExpression TypedExpression {..}
           { _coercionInfoInductive = _instanceAppHead,
             _coercionInfoParams = _instanceAppArgs,
             _coercionInfoTarget = tgt,
-            _coercionInfoResult = _typedExpression,
+            _coercionInfoResult = _typedIden,
             _coercionInfoArgs = args'
           }
   where
-    (args, e) = unfoldFunType _typedType
+    (args, e) = unfoldFunType _typedIdenType
     args' = init args
     t = List.last args
     metaVars = HashSet.fromList $ mapMaybe (^. paramName) args'

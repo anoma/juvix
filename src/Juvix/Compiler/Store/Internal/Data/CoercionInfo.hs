@@ -10,7 +10,7 @@ data CoercionInfo = CoercionInfo
   { _coercionInfoInductive :: Name,
     _coercionInfoParams :: [InstanceParam],
     _coercionInfoTarget :: InstanceApp,
-    _coercionInfoResult :: Expression,
+    _coercionInfoResult :: Iden,
     _coercionInfoArgs :: [FunctionParameter]
   }
   deriving stock (Eq, Generic)
