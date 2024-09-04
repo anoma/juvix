@@ -20,7 +20,8 @@ import Juvix.Compiler.Internal.Extra.InstanceInfo
 import Juvix.Compiler.Internal.Pretty
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.Checker
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker (Termination)
--- import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Data
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Data
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.LexOrder
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.CheckerNew.Arity
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Inference
@@ -403,12 +404,6 @@ getInstanceInfoHelper funName funTy = do
   let err = throw (ErrInvalidInstanceType (InvalidInstanceType funTy))
   maybe err return (mkInstanceInfo (TypedIden (IdenFunction funName) funTy))
 
--- | Does not normalize the type. TODO should we completely forbid type synonyms in instance declarations?
--- getInstanceInfoTermination ::
---   (Members '[Error TypeCheckerError] r) =>
---   FunctionDef ->
---   Sem r InstanceInfo
--- getInstanceInfoTermination FunctionDef {..} = getInstanceInfoHelper _funDefName _funDefType
 checkInstanceType ::
   forall r.
   (Members '[Error TypeCheckerError, Reader InfoTable, Inference, NameIdGen, ResultBuilder] r) =>
@@ -581,60 +576,65 @@ checkExpression expectedTy e = do
 
 checkResolveInstanceHoles ::
   forall r.
-  ( Members '[Reader InfoTable, Reader BuiltinsTable, ResultBuilder, Error TypeCheckerError, NameIdGen, Inference, Termination, Reader InsertedArgsStack] r
+  ( Members
+      '[ Reader InfoTable,
+         Reader BuiltinsTable,
+         ResultBuilder,
+         Error TypeCheckerError,
+         NameIdGen,
+         Inference,
+         Termination,
+         Reader InsertedArgsStack
+       ]
+      r
   ) =>
   Sem (Output TypedInstanceHole ': r) (NonEmpty MutualStatement) ->
   Sem r (NonEmpty MutualStatement)
 checkResolveInstanceHoles s = do
   (holes, stmts :: NonEmpty MutualStatement) <- runOutputList s
-  -- infos <- mapM getInstanceInfo (stmts ^.. each . _StatementFunction . filtered isInstance)
-  -- checkInstanceTermination infos
+  infos <- mapM getInstanceInfo (stmts ^.. each . _StatementFunction . filtered isInstance)
+  checkInstanceTermination infos
   resolveInstanceHoles holes stmts
   where
-
--- isInstance :: FunctionDef -> Bool
--- isInstance f = case f ^. funDefIsInstanceCoercion of
---   Nothing -> False
---   Just k -> case k of
---     IsInstanceCoercionInstance -> True
---     IsInstanceCoercionCoercion -> False
+    isInstance :: FunctionDef -> Bool
+    isInstance f = case f ^. funDefIsInstanceCoercion of
+      Nothing -> False
+      Just k -> case k of
+        IsInstanceCoercionInstance -> True
+        IsInstanceCoercionCoercion -> False
 
 -- {Show a} : Show (List a)
--- checkInstanceTermination ::
---   ( Members
---       '[ Reader InfoTable,
---          Error TypeCheckerError
---        ]
---       r
---   ) =>
---   [InstanceInfo] ->
---   Sem r ()
--- checkInstanceTermination instances = do
---   -- TODO remove later calls to checkInstanceConstraints
---   x :: [(InstanceInfo, [InstanceApp])] <- mapWithM checkInstanceConstraints instances
---   undefined
---   where
---     cmpInstanceParam :: InstanceParam -> InstanceParam -> SizeRel'
---     cmpInstanceParam = undefined
+checkInstanceTermination ::
+  ( Members
+      '[ Reader InfoTable,
+         Error TypeCheckerError
+       ]
+      r
+  ) =>
+  [InstanceInfo] ->
+  Sem r ()
+checkInstanceTermination instances = do
+  -- TODO remove later calls to checkInstanceConstraints
+  cm :: CallMap' InstanceParam <- mkInstanceCallMap <$> mapWithM checkInstanceConstraints instances
+  forM_ (mapWith findOrder (callMapRecursiveBehaviour cm)) $ \(recBehav, morder) -> case morder of
+    Just {} -> return ()
+    Nothing ->
+      throw $
+        ErrTraitNotTerminatingNew
+          TraitNotTerminatingNew
+            { _traitNotTerminatingNew = nonEmpty' [i | i <- instances, i ^. instanceInfoInductive == recBehav ^. recursiveBehaviourFun]
+            }
+  where
+    mkInstanceCallMap :: [(InstanceInfo, [InstanceApp])] -> CallMap' InstanceParam
+    mkInstanceCallMap l = run (execCallMapBuilder (forM l (uncurry addInstance)))
+      where
+        addInstance :: (Members '[CallMapBuilder' InstanceParam] r) => InstanceInfo -> [InstanceApp] -> Sem r ()
+        addInstance i = mapM_ (addConstraint i)
 
---     instanceCallMap :: [(InstanceInfo, [InstanceApp])] -> CallMap' InstanceParam
---     instanceCallMap l = run . execCallMapBuilder . forM l $ \(ii, calls) ->
---       forM calls $ \(call :: InstanceApp) -> do
---         let arsg :: [FunCallArg' InstanceParam] =
---               [ FunCallArg
---                   { _argExpression = x
---                   }
---                 | x :: InstanceParam <- call ^. instanceAppArgs
---               ]
---         let r :: CallRow =
---               CallRow
---                 {
---                 }
---         let c :: FunCall' InstanceParam =
---               FunCall
---                 {
---                 }
---         undefined
+        addConstraint :: (Members '[CallMapBuilder' InstanceParam] r) => InstanceInfo -> InstanceApp -> Sem r ()
+        addConstraint InstanceInfo {..} InstanceApp {..} = do
+          let c :: FunCall' InstanceParam = mkFunCall cmpInstanceParam _instanceAppHead _instanceInfoParams _instanceAppArgs
+          addCall _instanceInfoInductive c
 
 resolveInstanceHoles ::
   forall a r.
@@ -1002,16 +1002,14 @@ checkPattern = go
                       _wrongNumberArgumentsIndTypeExpectedNumArgs = numParams
                     }
             )
-          when
-            (numArgs > numParams)
-            ( throw $
-                ErrTooManyArgumentsIndType
-                  WrongNumberArgumentsIndType
-                    { _wrongNumberArgumentsIndTypeActualType = ty,
-                      _wrongNumberArgumentsIndTypeActualNumArgs = numArgs,
-                      _wrongNumberArgumentsIndTypeExpectedNumArgs = numParams
-                    }
-            )
+          when (numArgs > numParams)
+            . throw
+            $ ErrTooManyArgumentsIndType
+              WrongNumberArgumentsIndType
+                { _wrongNumberArgumentsIndTypeActualType = ty,
+                  _wrongNumberArgumentsIndTypeActualNumArgs = numArgs,
+                  _wrongNumberArgumentsIndTypeExpectedNumArgs = numParams
+                }
           return (Right (ind, zipExact params args))
 
 inferExpression' ::

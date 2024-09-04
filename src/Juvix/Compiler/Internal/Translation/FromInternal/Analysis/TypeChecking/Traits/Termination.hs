@@ -1,9 +1,11 @@
 module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Traits.Termination
   ( checkTraitTermination,
+    cmpInstanceParam,
   )
 where
 
 import Juvix.Compiler.Internal.Extra.InstanceInfo
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Data.SizeRelation
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error
 import Juvix.Prelude
 
@@ -33,3 +35,9 @@ checkStrictSubterm p1 p2 = case p2 of
 
 checkSubterm :: InstanceParam -> InstanceParam -> Bool
 checkSubterm p1 p2 = p1 == p2 || checkStrictSubterm p1 p2
+
+cmpInstanceParam :: InstanceParam -> InstanceParam -> Maybe SizeRel'
+cmpInstanceParam l r
+  | checkStrictSubterm l r = Just RLe
+  | l == r = Just REq
+  | otherwise = Nothing

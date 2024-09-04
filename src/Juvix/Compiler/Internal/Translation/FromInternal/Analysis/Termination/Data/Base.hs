@@ -44,6 +44,7 @@ data Call = Call
 newtype LexOrder = LexOrder (NonEmpty Int)
 
 data CallMapBuilder' expr :: Effect where
+  -- | The first argument is the name of the caller
   AddCall :: FunctionName -> FunCall' expr -> CallMapBuilder' expr m ()
 
 makeEffect ''CallMapBuilder'

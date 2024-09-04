@@ -36,6 +36,7 @@ data TypeCheckerError
   | ErrSubsumedInstance SubsumedInstance
   | ErrExplicitInstanceArgument ExplicitInstanceArgument
   | ErrTraitNotTerminating TraitNotTerminating
+  | ErrTraitNotTerminatingNew TraitNotTerminatingNew
   | ErrBuiltinNotDefined BuiltinNotDefined
   | ErrArityCheckerError ArityCheckerError
   | ErrDefaultArgLoop DefaultArgLoop
@@ -65,6 +66,7 @@ instance ToGenericError TypeCheckerError where
     ErrSubsumedInstance e -> genericError e
     ErrExplicitInstanceArgument e -> genericError e
     ErrTraitNotTerminating e -> genericError e
+    ErrTraitNotTerminatingNew e -> genericError e
     ErrBuiltinNotDefined e -> genericError e
     ErrArityCheckerError e -> genericError e
     ErrDefaultArgLoop e -> genericError e
@@ -93,6 +95,7 @@ instance Show TypeCheckerError where
     ErrSubsumedInstance {} -> "ErrSubsumedInstance"
     ErrExplicitInstanceArgument {} -> "ErrExplicitInstanceArgument"
     ErrTraitNotTerminating {} -> "ErrTraitNotTerminating"
+    ErrTraitNotTerminatingNew {} -> "ErrTraitNotTerminatingNew"
     ErrArityCheckerError {} -> "ErrArityCheckerError"
     ErrDefaultArgLoop {} -> "ErrDefaultArgLoop"
     ErrBuiltinNotDefined {} -> "ErrBuiltinNotDefined"
