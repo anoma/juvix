@@ -44,7 +44,7 @@ getBuiltinName ::
   Interval ->
   a ->
   Sem r Name
-getBuiltinName loc p = fromConcreteSymbol <$> getBuiltinSymbolHelper loc (toBuiltinPrim p)
+getBuiltinName loc p = fromConcreteSymbol loc <$> getBuiltinSymbolHelper loc (toBuiltinPrim p)
 
 checkBuiltinFunctionInfo ::
   forall r.

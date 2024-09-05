@@ -14,6 +14,13 @@ import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Store.Internal.Data.InfoTable
 import Juvix.Prelude
 
+-- This is a hack to adjust location. It works only for identifiers. It should
+-- change the location of an arbitrary given expression to the given location.
+adjustLocation :: Interval -> Expression -> Expression
+adjustLocation loc = \case
+  ExpressionIden iden -> ExpressionIden (set (idenName . nameLoc) loc iden)
+  eh -> eh
+
 constructorArgTypes :: ConstructorInfo -> ([InductiveParameter], [FunctionParameter])
 constructorArgTypes i =
   ( i ^. constructorInfoInductiveParameters,
@@ -250,7 +257,9 @@ subsInstanceHoles s = umapM helper
   where
     helper :: Expression -> Sem r Expression
     helper le = case le of
-      ExpressionInstanceHole h -> clone (fromMaybe e (s ^. at h))
+      -- TODO: The location of the hole should be preserved
+      ExpressionInstanceHole h ->
+        adjustLocation (getLoc h) <$> clone (fromMaybe e (s ^. at h))
       _ -> return e
       where
         e = toExpression le
@@ -260,7 +269,9 @@ subsHoles s = umapM helper
   where
     helper :: Expression -> Sem r Expression
     helper le = case le of
-      ExpressionHole h -> clone (fromMaybe e (s ^. at h))
+      -- TODO: The location of the hole should be preserved
+      ExpressionHole h ->
+        adjustLocation (getLoc h) <$> clone (fromMaybe e (s ^. at h))
       _ -> return e
       where
         e = toExpression le

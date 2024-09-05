@@ -44,7 +44,7 @@ instance NFData InstanceFun
 data InstanceInfo = InstanceInfo
   { _instanceInfoInductive :: InductiveName,
     _instanceInfoParams :: [InstanceParam],
-    _instanceInfoResult :: Expression,
+    _instanceInfoResult :: Iden,
     _instanceInfoArgs :: [FunctionParameter]
   }
   deriving stock (Eq, Generic)

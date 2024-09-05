@@ -103,17 +103,17 @@ type ConstrName = Name
 
 type InductiveName = Name
 
-fromConcreteSymbol :: S.Symbol -> Name
-fromConcreteSymbol s = fromConcreteSymbolPretty (S.symbolText s) s
+fromConcreteSymbol :: Interval -> S.Symbol -> Name
+fromConcreteSymbol loc s = fromConcreteSymbolPretty loc (S.symbolText s) s
 
-fromConcreteSymbolPretty :: Text -> S.Symbol -> Name
-fromConcreteSymbolPretty pp s =
+fromConcreteSymbolPretty :: Interval -> Text -> S.Symbol -> Name
+fromConcreteSymbolPretty loc pp s =
   Name
     { _nameText = S.symbolText s,
       _nameId = s ^. S.nameId,
       _nameKind = getNameKind s,
       _nameKindPretty = getNameKindPretty s,
       _namePretty = pp,
-      _nameLoc = getLoc (s ^. S.nameConcrete),
+      _nameLoc = loc,
       _nameFixity = s ^. S.nameFixity
     }

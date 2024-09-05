@@ -1,11 +1,13 @@
 module Juvix.Compiler.Internal.Extra.InstanceInfo
   ( module Juvix.Compiler.Store.Internal.Data.InstanceInfo,
     module Juvix.Compiler.Internal.Extra.InstanceInfo,
+    module Juvix.Compiler.Internal.Data.TypedIden,
   )
 where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
+import Juvix.Compiler.Internal.Data.TypedIden
 import Juvix.Compiler.Internal.Extra.Base
 import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Store.Internal.Data.InstanceInfo
@@ -99,18 +101,18 @@ traitFromExpression metaVars e = case paramFromExpression metaVars e of
   Just (InstanceParamApp app) -> Just app
   _ -> Nothing
 
-instanceFromTypedExpression :: TypedExpression -> Maybe InstanceInfo
-instanceFromTypedExpression TypedExpression {..} = do
+instanceFromTypedIden :: TypedIden -> Maybe InstanceInfo
+instanceFromTypedIden TypedIden {..} = do
   InstanceApp {..} <- traitFromExpression metaVars e
   return $
     InstanceInfo
       { _instanceInfoInductive = _instanceAppHead,
         _instanceInfoParams = _instanceAppArgs,
-        _instanceInfoResult = _typedExpression,
+        _instanceInfoResult = _typedIden,
         _instanceInfoArgs = args
       }
   where
-    (args, e) = unfoldFunType _typedType
+    (args, e) = unfoldFunType _typedIdenType
     metaVars = HashSet.fromList $ mapMaybe (^. paramName) args
 
 checkNoMeta :: InstanceParam -> Bool

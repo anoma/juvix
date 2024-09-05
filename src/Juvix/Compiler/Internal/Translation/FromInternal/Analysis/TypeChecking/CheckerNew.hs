@@ -385,10 +385,10 @@ checkInstanceType ::
 checkInstanceType FunctionDef {..} = do
   ty <- strongNormalize _funDefType
   let mi =
-        instanceFromTypedExpression $
-          TypedExpression
-            { _typedType = ty ^. normalizedExpression,
-              _typedExpression = ExpressionIden (IdenFunction _funDefName)
+        instanceFromTypedIden $
+          TypedIden
+            { _typedIdenType = ty ^. normalizedExpression,
+              _typedIden = IdenFunction _funDefName
             }
   case mi of
     Just ii@InstanceInfo {..} -> do
@@ -435,10 +435,10 @@ checkCoercionType ::
 checkCoercionType FunctionDef {..} = do
   ty <- strongNormalize _funDefType
   let mi =
-        coercionFromTypedExpression
-          ( TypedExpression
-              { _typedType = ty ^. normalizedExpression,
-                _typedExpression = ExpressionIden (IdenFunction _funDefName)
+        coercionFromTypedIden
+          ( TypedIden
+              { _typedIdenType = ty ^. normalizedExpression,
+                _typedIden = IdenFunction _funDefName
               }
           )
   case mi of
@@ -1109,7 +1109,7 @@ inferLeftAppExpression mhint e = case e of
             typedLit litt blt ty = do
               from <- getBuiltinNameTypeChecker i blt
               ihole <- freshHoleImpl i ImplicitInstance
-              let ty' = fromMaybe ty mhint
+              let ty' = maybe ty (adjustLocation i) mhint
               inferExpression' (Just ty') $
                 foldApplication
                   (ExpressionIden (IdenFunction from))
