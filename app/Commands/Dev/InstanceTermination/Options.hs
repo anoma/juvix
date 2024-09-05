@@ -26,4 +26,4 @@ parseInstanceTerminationCommand =
         minfo =
           info
             (Calls <$> parseCalls)
-            (progDesc "Compute the calls table of a .juvix file")
+            (progDesc "Compute the instance constraints table of a .juvix file")

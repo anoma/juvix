@@ -1,5 +1,7 @@
 module Juvix.Compiler.Internal.Translation.FromInternal
   ( typeCheckingNew,
+    typeCheckingNewOptions,
+    computeImportContext,
   )
 where
 
@@ -18,13 +20,32 @@ import Juvix.Compiler.Store.Scoped.Language qualified as Scoped
 import Juvix.Data.Effect.NameIdGen
 import Juvix.Prelude hiding (fromEither)
 
+computeImportContext :: InternalModuleTable -> ImportContext
+computeImportContext itab =
+  ImportContext
+    { _importContextTypesTable = computeTypesTable itab,
+      _importContextFunctionsTable = computeFunctionsTable itab,
+      _importContextInstances = computeInstanceTable itab,
+      _importContextCoercions = computeCoercionTable itab
+    }
+
 typeCheckingNew ::
   forall r.
   (Members '[HighlightBuilder, Reader EntryPoint, Error JuvixError, NameIdGen, Reader ModuleTable] r) =>
   Sem (Termination ': r) InternalResult ->
   Sem r InternalTypedResult
-typeCheckingNew a = do
-  (termin, (res, (bst, checkedModule))) <- runTermination iniTerminationState $ do
+typeCheckingNew =
+  runReader defaultTypeCheckingOptions
+    . typeCheckingNewOptions
+    . inject
+
+typeCheckingNewOptions ::
+  forall r.
+  (Members '[Reader TypeCheckingOptions, HighlightBuilder, Reader EntryPoint, Error JuvixError, NameIdGen, Reader ModuleTable] r) =>
+  Sem (Termination ': r) InternalResult ->
+  Sem r InternalTypedResult
+typeCheckingNewOptions a = do
+  (termin, (res, (callmaps, (bst, checkedModule)))) <- runTermination iniTerminationState $ do
     res :: InternalResult <- a
     itab :: InternalModuleTable <- getInternalModuleTable <$> ask
     stab :: ScopedModuleTable <- getScopedModuleTable <$> ask
@@ -34,14 +55,9 @@ typeCheckingNew a = do
         stable =
           Scoped.computeCombinedInfoTable stab
             <> res ^. Internal.resultScoper . resultScopedModule . scopedModuleInfoTable
-        importCtx =
-          ImportContext
-            { _importContextTypesTable = computeTypesTable itab,
-              _importContextFunctionsTable = computeFunctionsTable itab,
-              _importContextInstances = computeInstanceTable itab,
-              _importContextCoercions = computeCoercionTable itab
-            }
+        importCtx = computeImportContext itab
     fmap (res,)
+      . runOutputList
       . runReader table
       . runReader (stable ^. Scoped.infoBuiltins)
       . runResultBuilder importCtx
@@ -58,6 +74,7 @@ typeCheckingNew a = do
     InternalTypedResult
       { _resultInternal = res,
         _resultModule = checkedModule,
+        _resultInstanceCallMaps = InstanceCallMaps callmaps,
         _resultInternalModule = md,
         _resultTermination = termin,
         _resultIdenTypes = bst ^. resultBuilderStateCombinedTypesTable,

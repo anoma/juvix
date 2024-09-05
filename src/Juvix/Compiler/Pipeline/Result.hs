@@ -19,3 +19,6 @@ data PipelineResult a = PipelineResult
 makeLenses ''PipelineResult
 
 instance (NFData a) => NFData (PipelineResult a)
+
+instance Functor PipelineResult where
+  fmap f = over pipelineResult f

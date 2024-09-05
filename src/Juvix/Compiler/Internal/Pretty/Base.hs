@@ -13,7 +13,6 @@ import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Internal.Pretty.Options
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.CheckerNew.Arity qualified as New
 import Juvix.Compiler.Store.Internal.Data.InfoTable
-import Juvix.Compiler.Store.Internal.Data.InstanceInfo
 import Juvix.Data.CodeAnn
 import Juvix.Data.Keyword.All qualified as Kw
 import Juvix.Prelude
@@ -403,9 +402,6 @@ instance (PrettyCode a, PrettyCode b) => PrettyCode (Either a b) where
     Right r -> do
       r' <- ppCode r
       return ("Right" <+> r')
-
-instance PrettyCode InstanceInfo where
-  ppCode = ppCode . (^. instanceInfoIden)
 
 instance PrettyCode LocalVars where
   ppCode LocalVars {..} = ppCode (HashMap.toList _localTypes)

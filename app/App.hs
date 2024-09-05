@@ -223,10 +223,17 @@ runPipelineTermination ::
   (Members '[EmbedIO, App, Logger, TaggedLock] r) =>
   Maybe (AppPath File) ->
   Sem (Termination ': PipelineEff r) a ->
-  Sem r (PipelineResult a)
+  Sem r (PipelineResult (TerminationState, a))
 runPipelineTermination input_ p = silenceProgressLog $ do
-  r <- runPipelineEither () input_ (evalTermination iniTerminationState (inject p)) >>= fromRightJuvixError
+  r <- runPipelineEither () input_ (runTermination iniTerminationState (inject p)) >>= fromRightJuvixError
   return (snd r)
+
+evalPipelineTermination ::
+  (Members '[EmbedIO, App, Logger, TaggedLock] r) =>
+  Maybe (AppPath File) ->
+  Sem (Termination ': PipelineEff r) a ->
+  Sem r (PipelineResult a)
+evalPipelineTermination input_ p = fmap snd <$> runPipelineTermination input_ p
 
 runPipelineNoOptions ::
   (Members '[App, EmbedIO, Logger, TaggedLock] r) =>

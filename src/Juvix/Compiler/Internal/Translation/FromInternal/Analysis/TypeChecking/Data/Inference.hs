@@ -13,7 +13,6 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Da
     strongNormalize,
     weakNormalize,
     runInferenceDefs,
-    runInferenceDef,
     rememberFunctionDef,
     matchTypes,
     queryMetavarFinal,
@@ -513,8 +512,8 @@ matchPatterns (PatternArg impl1 name1 pat1) (PatternArg impl2 name2 pat2) =
 
 runInferenceDefs ::
   (Members '[Termination, Error TypeCheckerError, ResultBuilder, NameIdGen] r, HasExpressions funDef) =>
-  Sem (Inference ': r) (NonEmpty funDef) ->
-  Sem r (NonEmpty funDef)
+  Sem (Inference ': r) funDef ->
+  Sem r funDef
 runInferenceDefs a = do
   (finalState, expr) <- runInferenceState iniState a
   (subs, idens) <- closeState finalState
@@ -522,13 +521,7 @@ runInferenceDefs a = do
   stash' <- mapM (subsHoles subs) (finalState ^. inferenceFunctionsStash)
   forM_ stash' registerFunctionDef
   addIdenTypes (TypesTable idens')
-  mapM (subsHoles subs) expr
-
-runInferenceDef ::
-  (Members '[Termination, Error TypeCheckerError, ResultBuilder, NameIdGen] r, HasExpressions funDef) =>
-  Sem (Inference ': r) funDef ->
-  Sem r funDef
-runInferenceDef = fmap head . runInferenceDefs . fmap pure
+  subsHoles subs expr
 
 -- | Assumes the given function has been type checked. Does *not* register the
 -- function.

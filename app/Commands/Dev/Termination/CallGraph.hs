@@ -11,7 +11,7 @@ import Juvix.Compiler.Store.Extra qualified as Stored
 runCommand :: (Members AppEffects r) => CallGraphOptions -> Sem r ()
 runCommand CallGraphOptions {..} = do
   globalOpts <- askGlobalOptions
-  PipelineResult {..} <- runPipelineTermination _graphInputFile upToInternalTyped
+  PipelineResult {..} <- evalPipelineTermination _graphInputFile upToInternalTyped
   let mainModule = _pipelineResult ^. Internal.resultModule
       toAnsiText' :: forall a. (HasAnsiBackend a, HasTextBackend a) => a -> Text
       toAnsiText' = toAnsiText (not (globalOpts ^. globalNoColors))

@@ -6,17 +6,21 @@ where
 
 import Juvix.Compiler.Internal.Extra.InstanceInfo
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Data.SizeRelation
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.CheckerNew.Options
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error
 import Juvix.Prelude
 
 checkTraitTermination ::
   forall r.
-  (Member (Error TypeCheckerError) r) =>
+  (Members '[Reader TypeCheckingOptions, Error TypeCheckerError] r) =>
   InstanceApp ->
   InstanceInfo ->
   Sem r ()
-checkTraitTermination InstanceApp {..} InstanceInfo {..} =
-  mapM_ checkArg _instanceAppArgs
+checkTraitTermination InstanceApp {..} InstanceInfo {..} = do
+  mode <- asks (^. typeCheckingMode)
+  case mode of
+    TypeCheckingNormal -> mapM_ checkArg _instanceAppArgs
+    TypeCheckingBuildCallMap -> return ()
   where
     checkArg :: InstanceParam -> Sem r ()
     checkArg arg =

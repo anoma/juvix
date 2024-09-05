@@ -12,6 +12,7 @@ import Commands.Dev.DevCompile qualified as DevCompile
 import Commands.Dev.DisplayRoot qualified as DisplayRoot
 import Commands.Dev.Highlight qualified as Highlight
 import Commands.Dev.ImportTree qualified as ImportTree
+import Commands.Dev.InstanceTermination qualified as InstanceTermination
 import Commands.Dev.Internal qualified as Internal
 import Commands.Dev.Latex qualified as Latex
 import Commands.Dev.MigrateJuvixYaml qualified as MigrateJuvixYaml
@@ -35,6 +36,7 @@ runCommand = \case
   Scope opts -> Scope.runCommand opts
   Internal opts -> Internal.runCommand opts
   Termination opts -> Termination.runCommand opts
+  InstanceTermination opts -> InstanceTermination.runCommand opts
   Core opts -> Core.runCommand opts
   Asm opts -> Asm.runCommand opts
   Reg opts -> Reg.runCommand opts

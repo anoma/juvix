@@ -19,6 +19,7 @@ import Commands.Dev.DevCompile.Options (DevCompileCommand, parseDevCompileComman
 import Commands.Dev.DisplayRoot.Options
 import Commands.Dev.Highlight.Options
 import Commands.Dev.ImportTree.Options
+import Commands.Dev.InstanceTermination.Options
 import Commands.Dev.Internal.Options
 import Commands.Dev.Latex.Options
 import Commands.Dev.MigrateJuvixYaml.Options
@@ -49,6 +50,7 @@ data DevCommand
   | Parse ParseOptions
   | Scope ScopeOptions
   | Termination TerminationCommand
+  | InstanceTermination InstanceTerminationCommand
   | JuvixDevRepl ReplOptions
   | MigrateJuvixYaml MigrateJuvixYamlOptions
   | Nockma NockmaCommand
@@ -72,6 +74,7 @@ parseDevCommand =
           commandScope,
           commandShowRoot,
           commandTermination,
+          commandInstanceTermination,
           commandJuvixDevRepl,
           commandMigrateJuvixYaml,
           commandLatex,
@@ -176,6 +179,13 @@ commandShowRoot =
     info
       (DisplayRoot <$> parseRoot)
       (progDesc "Show the root path for a Juvix project")
+
+commandInstanceTermination :: Mod CommandFields DevCommand
+commandInstanceTermination =
+  command "instance-termination" $
+    info
+      (InstanceTermination <$> parseInstanceTerminationCommand)
+      (progDesc "Subcommands related to instance termination checking")
 
 commandTermination :: Mod CommandFields DevCommand
 commandTermination =

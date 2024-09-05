@@ -33,6 +33,7 @@ import Juvix.Compiler.Core.Transformation
 import Juvix.Compiler.Core.Translation.Stripped.FromCore qualified as Stripped
 import Juvix.Compiler.Internal qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.CheckerNew.Options
 import Juvix.Compiler.Nockma.Translation.FromTree qualified as NockmaTree
 import Juvix.Compiler.Pipeline.Artifacts
 import Juvix.Compiler.Pipeline.EntryPoint
@@ -131,6 +132,11 @@ upToInternal ::
 upToInternal = do
   pkg <- asks (^. entryPointPackage)
   runReader pkg upToScoping >>= Internal.fromConcrete
+
+upToInternalTypedOptions ::
+  (Members '[Reader TypeCheckingOptions, HighlightBuilder, Reader Parser.ParserResult, Error JuvixError, Reader EntryPoint, Reader Store.ModuleTable, NameIdGen] r) =>
+  Sem r Internal.InternalTypedResult
+upToInternalTypedOptions = Internal.typeCheckingNewOptions upToInternal
 
 upToInternalTyped ::
   (Members '[HighlightBuilder, Reader Parser.ParserResult, Error JuvixError, Reader EntryPoint, Reader Store.ModuleTable, NameIdGen] r) =>

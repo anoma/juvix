@@ -25,19 +25,6 @@ updateInstanceTable tab ii@InstanceInfo {..} =
 lookupInstanceTable :: InstanceTable -> Name -> Maybe [InstanceInfo]
 lookupInstanceTable tab name = HashMap.lookup name (tab ^. instanceTableMap)
 
-paramToExpression :: InstanceParam -> Expression
-paramToExpression = \case
-  InstanceParamVar v ->
-    ExpressionIden (IdenVar v)
-  InstanceParamApp InstanceApp {..} ->
-    _instanceAppExpression
-  InstanceParamFun InstanceFun {..} ->
-    _instanceFunExpression
-  InstanceParamHole h ->
-    ExpressionHole h
-  InstanceParamMeta v ->
-    ExpressionIden (IdenVar v)
-
 paramFromExpression :: HashSet VarName -> Expression -> Maybe InstanceParam
 paramFromExpression metaVars e = case e of
   ExpressionIden (IdenInductive n) ->
