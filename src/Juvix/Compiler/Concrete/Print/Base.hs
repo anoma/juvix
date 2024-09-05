@@ -240,7 +240,7 @@ instance (PrettyPrint a, PrettyPrint b) => PrettyPrint (a, b) where
 instance (SingI s) => PrettyPrint (NameSignature s) where
   ppCode NameSignature {..}
     | null _nameSignatureArgs = noLoc (pretty @Text "<empty name signature>")
-    | otherwise = hsep . map ppCode $ _nameSignatureArgs
+    | otherwise = itemize . map ppCode $ _nameSignatureArgs
 
 instance (SingI s) => PrettyPrint (WildcardConstructor s) where
   ppCode WildcardConstructor {..} = do
@@ -1110,11 +1110,16 @@ instance (SingI s) => PrettyPrint (ArgDefault s) where
   ppCode ArgDefault {..} = do
     ppCode _argDefaultAssign <+> ppExpressionType _argDefaultValue
 
+instance (SingI s) => PrettyPrint (SigArgNames s) where
+  ppCode = \case
+    SigArgNamesInstance -> return ()
+    SigArgNames ns -> hsep (fmap ppCode ns)
+
 instance (SingI s) => PrettyPrint (SigArg s) where
   ppCode :: (Members '[ExactPrint, Reader Options] r) => SigArg s -> Sem r ()
   ppCode SigArg {..} = do
     let Irrelevant (l, r) = _sigArgDelims
-        names' = hsep (fmap ppCode _sigArgNames)
+        names' = ppCode _sigArgNames
         colon' = ppCode <$> _sigArgColon
         ty = ppExpressionType <$> _sigArgType
         arg = case _sigArgImplicit of

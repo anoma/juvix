@@ -37,6 +37,12 @@ instance PrettyCode Name where
     showNameId <- asks (^. optShowNameIds)
     return (prettyName showNameId n)
 
+instance PrettyCode ArgInfo where
+  ppCode ArgInfo {..} = do
+    name <- maybe (return kwWildcard) ppCode _argInfoName
+    defVal <- mapM (fmap (kwAssign <+>) . ppCode) _argInfoDefault
+    return (name <+?> defVal)
+
 instance PrettyCode Iden where
   ppCode :: (Member (Reader Options) r) => Iden -> Sem r (Doc Ann)
   ppCode i = case i of

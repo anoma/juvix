@@ -17,7 +17,12 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Prelude
 
 data NameSignatureBuilder s :: Effect where
-  AddSymbol :: IsImplicit -> Maybe (ArgDefault s) -> SymbolType s -> ExpressionType s -> NameSignatureBuilder s m ()
+  AddArgument ::
+    IsImplicit ->
+    Maybe (ArgDefault s) ->
+    Maybe (SymbolType s) ->
+    ExpressionType s ->
+    NameSignatureBuilder s m ()
   EndBuild :: Proxy s -> NameSignatureBuilder s m a
   -- | for debugging
   GetBuilder :: NameSignatureBuilder s m (BuilderState s)
@@ -33,6 +38,15 @@ data BuilderState (s :: Stage) = BuilderState
 
 makeLenses ''BuilderState
 makeSem ''NameSignatureBuilder
+
+addSymbol ::
+  (Members '[NameSignatureBuilder s] r) =>
+  IsImplicit ->
+  Maybe (ArgDefault s) ->
+  SymbolType s ->
+  ExpressionType s ->
+  Sem r ()
+addSymbol isImplicit mdefault sym ty = addArgument isImplicit mdefault (Just sym) ty
 
 class HasNameSignature (s :: Stage) d | d -> s where
   addArgs :: (Members '[NameSignatureBuilder s] r) => d -> Sem r ()
@@ -167,17 +181,23 @@ addInductiveParams = addInductiveParams' Explicit
 addConstructorParams :: (SingI s, Members '[NameSignatureBuilder s] r) => InductiveParameters s -> Sem r ()
 addConstructorParams = addInductiveParams' Implicit
 
-addSigArg :: (SingI s, Members '[NameSignatureBuilder s] r) => SigArg s -> Sem r ()
-addSigArg a = forM_ (a ^. sigArgNames) $ \case
-  ArgumentSymbol s ->
-    addSymbol
-      (a ^. sigArgImplicit)
-      (a ^. sigArgDefault)
-      s
-      (fromMaybe defaultType (a ^. sigArgType))
-    where
-      defaultType = run (runReader (getLoc a) Gen.smallUniverseExpression)
-  ArgumentWildcard {} -> return ()
+addSigArg :: forall s r. (SingI s, Members '[NameSignatureBuilder s] r) => SigArg s -> Sem r ()
+addSigArg a = case a ^. sigArgNames of
+  SigArgNamesInstance {} -> addArg (ArgumentWildcard (Wildcard (getLoc a)))
+  SigArgNames ns -> mapM_ addArg ns
+  where
+    defaultType = run (runReader (getLoc a) Gen.smallUniverseExpression)
+
+    addArg :: Argument s -> Sem r ()
+    addArg arg =
+      let sym :: Maybe (SymbolType s) = case arg of
+            ArgumentSymbol sy -> Just sy
+            ArgumentWildcard {} -> Nothing
+       in addArgument
+            (a ^. sigArgImplicit)
+            (a ^. sigArgDefault)
+            sym
+            (fromMaybe defaultType (a ^. sigArgType))
 
 type Re s r = State (BuilderState s) ': Error (BuilderState s) ': Error NameSignatureError ': r
 
@@ -187,20 +207,27 @@ re ::
   Sem (NameSignatureBuilder s ': r) a ->
   Sem (Re s r) a
 re = interpretTop3 $ \case
-  AddSymbol impl mdef k ty -> addSymbol' impl mdef k ty
+  AddArgument impl mdef k ty -> addArgument' impl mdef k ty
   EndBuild {} -> endBuild'
   GetBuilder -> get
 {-# INLINE re #-}
 
-addSymbol' :: forall s r. (SingI s) => IsImplicit -> Maybe (ArgDefault s) -> SymbolType s -> ExpressionType s -> Sem (Re s r) ()
-addSymbol' impl mdef sym ty = do
+addArgument' ::
+  forall s r.
+  (SingI s) =>
+  IsImplicit ->
+  Maybe (ArgDefault s) ->
+  Maybe (SymbolType s) ->
+  ExpressionType s ->
+  Sem (Re s r) ()
+addArgument' impl mdef msym ty = do
   curImpl <- gets @(BuilderState s) (^. stateCurrentImplicit)
   if
       | Just impl == curImpl -> addToCurrentBlock
       | otherwise -> startNewBlock
   where
-    errDuplicateName :: Symbol -> Sem (Re s r) ()
-    errDuplicateName _dupNameFirst =
+    errDuplicateName :: SymbolType s -> Symbol -> Sem (Re s r) ()
+    errDuplicateName sym _dupNameFirst =
       throw $
         ErrDuplicateName
           DuplicateName
@@ -208,22 +235,28 @@ addSymbol' impl mdef sym ty = do
               ..
             }
 
+    getNextIx :: (Members '[State (BuilderState s)] r') => Sem r' Int
+    getNextIx = do
+      idx <- gets @(BuilderState s) (^. stateNextIx)
+      modify' @(BuilderState s) (over stateNextIx succ)
+      return idx
+
     addToCurrentBlock :: Sem (Re s r) ()
     addToCurrentBlock = do
-      idx <- gets @(BuilderState s) (^. stateNextIx)
-      let itm =
-            NameItem
-              { _nameItemDefault = mdef,
-                _nameItemSymbol = sym,
-                _nameItemImplicit = impl,
-                _nameItemIndex = idx,
-                _nameItemType = ty
-              }
-          psym = symbolParsed sym
-      modify' @(BuilderState s) (over stateNextIx succ)
-      whenJustM (gets @(BuilderState s) (^. stateSymbols . at psym)) (errDuplicateName . symbolParsed)
-      modify' @(BuilderState s) (set (stateSymbols . at psym) (Just sym))
-      modify' @(BuilderState s) (set (stateCurrentBlock . at psym) (Just itm))
+      idx <- getNextIx
+      whenJust msym $ \(sym :: SymbolType s) -> do
+        let itm =
+              NameItem
+                { _nameItemDefault = mdef,
+                  _nameItemSymbol = sym,
+                  _nameItemImplicit = impl,
+                  _nameItemIndex = idx,
+                  _nameItemType = ty
+                }
+            psym = symbolParsed sym
+        whenJustM (gets @(BuilderState s) (^. stateSymbols . at psym)) (errDuplicateName sym . symbolParsed)
+        modify' @(BuilderState s) (set (stateSymbols . at psym) (Just sym))
+        modify' @(BuilderState s) (set (stateCurrentBlock . at psym) (Just itm))
 
     startNewBlock :: Sem (Re s r) ()
     startNewBlock = do
@@ -234,7 +267,7 @@ addSymbol' impl mdef sym ty = do
       modify' @(BuilderState s) (set stateNextIx 0)
       whenJust mcurImpl $ \curImpl ->
         modify' (over stateReverseClosedBlocks (NameBlock curBlock curImpl :))
-      addSymbol' impl mdef sym ty
+      addArgument' impl mdef msym ty
 
 endBuild' :: forall s r a. Sem (Re s r) a
 endBuild' = get @(BuilderState s) >>= throw
