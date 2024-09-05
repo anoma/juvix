@@ -53,5 +53,9 @@ tests =
     NegTest
       "Test006: Ill scoped term (This is a bug. It should be positive)"
       $(mkRelDir ".")
-      $(mkRelFile "test006.juvix")
+      $(mkRelFile "test006.juvix"),
+    NegTest
+      "Test007: Pattern matching coverage with side conditions"
+      $(mkRelDir ".")
+      $(mkRelFile "test007.juvix")
   ]

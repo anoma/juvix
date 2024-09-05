@@ -40,6 +40,14 @@ h : Nat -> Nat
   | (suc (suc (suc (suc n)))) := n
   | _ := 0;
 
+hh (x : Nat) : Nat :=
+  case x of
+  | zero := 1
+  | (suc n) if h n == 0 := n
+  | (suc zero) := 17
+  | (suc (suc (suc (suc (suc (suc zero)))))) := 9
+  | _ := 0;
+
 printListNatLn : List Nat → IO
   | nil := printStringLn "nil"
   | (x :: xs) :=
@@ -54,4 +62,9 @@ main : IO :=
     >>> printNatLn (f (gen 18))
     >>> printNatLn (f (gen 20))
     >>> printNatLn (h 5)
-    >>> printNatLn (h 3);
+    >>> printNatLn (h 3)
+    >>> printNatLn (hh 0)
+    >>> printNatLn (hh 1)
+    >>> printNatLn (hh 5)
+    >>> printNatLn (hh 6)
+    >>> printNatLn (hh 7);

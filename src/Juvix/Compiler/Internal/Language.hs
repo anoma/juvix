@@ -669,7 +669,7 @@ instance HasLoc CaseBranch where
   getLoc c = getLoc (c ^. caseBranchPattern) <> getLoc (c ^. caseBranchRhs)
 
 instance HasLoc Case where
-  getLoc c = getLoc (c ^. caseExpression) <> getLocSpan (c ^. caseBranches)
+  getLoc c = getLocSpan (c ^. caseBranches)
 
 instance HasLoc Expression where
   getLoc = \case
