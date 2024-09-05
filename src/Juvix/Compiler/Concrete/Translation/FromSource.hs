@@ -1400,18 +1400,18 @@ functionDefinition allowOmitType allowInstance _signBuiltin = P.label "<function
               n <- parseArgumentName
               c <- Irrelevant <$> kw kwColon
               return (n, c)
-        (ns, c) <- case impl of
+        (ns :: SigArgNames 'Parsed, c) <- case impl of
           ImplicitInstance -> do
             ma <- optional parseArgumentNameColon
             return $ case ma of
-              Just (ns', c') -> ([ns'], Just c')
-              Nothing -> ([], Nothing)
+              Just (ns', c') -> (SigArgNames (pure ns'), Just c')
+              Nothing -> (SigArgNamesInstance, Nothing)
           Implicit -> do
-            ns <- some parseArgumentName
+            ns <- SigArgNames <$> some1 parseArgumentName
             c <- optional (Irrelevant <$> kw kwColon)
             return (ns, c)
           Explicit -> do
-            ns <- some parseArgumentName
+            ns <- SigArgNames <$> some1 parseArgumentName
             c <- Just . Irrelevant <$> kw kwColon
             return (ns, c)
         return (opn, ns, impl, c)

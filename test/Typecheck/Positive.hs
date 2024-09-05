@@ -326,7 +326,11 @@ tests =
     posTestAbsDir
       "Typecheck orphan file"
       (relToProject $(mkRelDir "tests/WithoutPackageFile"))
-      $(mkRelFile "Good.juvix")
+      $(mkRelFile "Good.juvix"),
+    posTest
+      "Default argument with trait in signature"
+      $(mkRelDir ".")
+      $(mkRelFile "issue2994.juvix")
   ]
     <> [ compilationTest t | t <- Compilation.tests
        ]

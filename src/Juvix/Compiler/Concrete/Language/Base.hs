@@ -532,11 +532,37 @@ deriving stock instance Ord (ArgDefault 'Parsed)
 
 deriving stock instance Ord (ArgDefault 'Scoped)
 
+-- | This type makes explicit that only instance arguments are allowed to not
+-- have a name
+data SigArgNames (s :: Stage)
+  = SigArgNamesInstance
+  | SigArgNames (NonEmpty (Argument s))
+  deriving stock (Generic)
+
+instance Serialize (SigArgNames 'Scoped)
+
+instance NFData (SigArgNames 'Scoped)
+
+instance Serialize (SigArgNames 'Parsed)
+
+instance NFData (SigArgNames 'Parsed)
+
+deriving stock instance Show (SigArgNames 'Parsed)
+
+deriving stock instance Show (SigArgNames 'Scoped)
+
+deriving stock instance Eq (SigArgNames 'Parsed)
+
+deriving stock instance Eq (SigArgNames 'Scoped)
+
+deriving stock instance Ord (SigArgNames 'Parsed)
+
+deriving stock instance Ord (SigArgNames 'Scoped)
+
 data SigArg (s :: Stage) = SigArg
   { _sigArgDelims :: Irrelevant (KeywordRef, KeywordRef),
     _sigArgImplicit :: IsImplicit,
-    -- | Allowed to be empty only for Instance arguments
-    _sigArgNames :: [Argument s],
+    _sigArgNames :: SigArgNames s,
     _sigArgColon :: Maybe (Irrelevant KeywordRef),
     -- | The type is only optional for implicit arguments. Omitting the rhs is
     -- equivalent to writing `: Type`.

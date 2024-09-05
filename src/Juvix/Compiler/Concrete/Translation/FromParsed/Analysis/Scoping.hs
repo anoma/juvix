@@ -1098,11 +1098,16 @@ checkFunctionDef FunctionDef {..} = do
   registerNameSignature (sigName' ^. S.nameId) def
   registerFunctionDef @$> def
   where
+    checkSigArgNames :: SigArgNames 'Parsed -> Sem r (SigArgNames 'Scoped)
+    checkSigArgNames = \case
+      SigArgNamesInstance -> return SigArgNamesInstance
+      SigArgNames ns -> fmap SigArgNames . forM ns $ \case
+        ArgumentSymbol s -> ArgumentSymbol <$> bindVariableSymbol s
+        ArgumentWildcard w -> return (ArgumentWildcard w)
+
     checkArg :: SigArg 'Parsed -> Sem r (SigArg 'Scoped)
     checkArg arg@SigArg {..} = do
-      names' <- forM _sigArgNames $ \case
-        ArgumentSymbol s -> ArgumentSymbol <$> bindVariableSymbol s
-        ArgumentWildcard w -> return $ ArgumentWildcard w
+      names' <- checkSigArgNames _sigArgNames
       ty' <- mapM checkParseExpressionAtoms _sigArgType
       default' <- case _sigArgDefault of
         Nothing -> return Nothing

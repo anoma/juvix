@@ -20,6 +20,7 @@ import Juvix.Compiler.Concrete.Extra qualified as Concrete
 import Juvix.Compiler.Concrete.Gen qualified as Gen
 import Juvix.Compiler.Concrete.Language qualified as Concrete
 import Juvix.Compiler.Concrete.Pretty
+import Juvix.Compiler.Concrete.Print
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Compiler.Internal.Builtins
@@ -393,11 +394,11 @@ goFunctionDef FunctionDef {..} = do
         goBlock :: NameBlock 'Scoped -> Sem r [Internal.ArgInfo]
         goBlock blk = do
           let tbl = indexedByInt (^. nameItemIndex) (blk ^. nameBlock)
-              mmaxIx = fst <$> IntMap.lookupMax tbl
-          case mmaxIx of
-            Nothing -> return []
+              mmaxIx :: Maybe Int = fst <$> IntMap.lookupMax tbl
+          execOutputList $ case mmaxIx of
+            Nothing -> output Internal.emptyArgInfo
             Just maxIx ->
-              execOutputList $ forM_ [0 .. maxIx] $ \idx ->
+              forM_ [0 .. maxIx] $ \idx ->
                 case tbl ^. at idx of
                   Nothing -> output Internal.emptyArgInfo
                   Just i -> do
@@ -462,7 +463,12 @@ goFunctionDef FunctionDef {..} = do
                         Concrete.ArgumentWildcard {} -> Nothing
                  in Internal.FunctionParameter {..}
 
-          return . fromMaybe (pure noName) $ nonEmpty (mk <$> _sigArgNames)
+              arguments :: Maybe (NonEmpty (Argument 'Scoped))
+              arguments = case _sigArgNames of
+                SigArgNamesInstance -> Nothing
+                SigArgNames ns -> Just ns
+
+          return (maybe (pure noName) (fmap mk) arguments)
 
     argToPattern :: SigArg 'Scoped -> Sem r (NonEmpty Internal.PatternArg)
     argToPattern arg@SigArg {..} = do
@@ -478,7 +484,12 @@ goFunctionDef FunctionDef {..} = do
               let _patternArgPattern = Internal.PatternVariable (goSymbol s)
                in return Internal.PatternArg {..}
             Concrete.ArgumentWildcard w -> goWildcard w
-      maybe (pure <$> noName) (mapM mk) (nonEmpty _sigArgNames)
+
+          arguments :: Maybe (NonEmpty (Argument 'Scoped))
+          arguments = case _sigArgNames of
+            SigArgNamesInstance -> Nothing
+            SigArgNames ns -> Just ns
+      maybe (pure <$> noName) (mapM mk) arguments
 
 goInductiveParameters ::
   forall r.
