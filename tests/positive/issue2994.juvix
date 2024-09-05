@@ -1,0 +1,12 @@
+module issue2994;
+
+type T := t;
+
+type Maybe (a : Type) :=
+  | nothing
+  | just a;
+
+trait
+type SomeTrait A := mkSomeTrait {baz : A -> T};
+
+bar {{SomeTrait T}} (value : T) {maybeValue : Maybe T := nothing} : T := t;
