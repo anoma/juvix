@@ -2,6 +2,9 @@ module issue2999;
 
 type T := t;
 
-fun : T := namedFun@{x := t};
+fun : T :=
+  namedFun@{
+    x := t
+  };
 
 namedFun (x : T) : T := t;
