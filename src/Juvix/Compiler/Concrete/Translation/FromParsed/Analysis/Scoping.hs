@@ -48,8 +48,8 @@ iniScoperState :: InfoTable -> ScoperState
 iniScoperState tab =
   ScoperState
     { _scoperModules = mempty,
-      _scoperSignatures = tab ^. infoParsedNameSigs,
-      _scoperScopedSignatures = tab ^. infoNameSigs,
+      _scoperScopedNameSignatures = tab ^. infoNameSigs,
+      _scoperNameSignatures = tab ^. infoParsedNameSigs,
       _scoperRecordFields = tab ^. infoRecords,
       _scoperAlias = tab ^. infoScoperAlias,
       _scoperConstructorFields = tab ^. infoParsedConstructorSigs,
@@ -252,7 +252,7 @@ registerNameSignature ::
   Sem r ()
 registerNameSignature uid d = do
   sig <- mkNameSignature d
-  modify (set (scoperScopedSignatures . at uid) (Just sig))
+  modify (set (scoperScopedNameSignatures . at uid) (Just sig))
   registerNameSig uid sig
 
 registerConstructorSignature ::
@@ -292,7 +292,7 @@ reserveSymbolOfNameSpace ns kind kindPretty nameSig builtin s = do
   strat <- ask
   s' <- freshSymbol kind kindPretty s
   whenJust builtin (`registerBuiltin` s')
-  whenJust nameSig (modify' . set (scoperSignatures . at (s' ^. S.nameId)) . Just)
+  whenJust nameSig (modify' . set (scoperNameSignatures . at (s' ^. S.nameId)) . Just)
   whenJust nameSig (registerParsedNameSig (s' ^. S.nameId))
   modify (set (scopeNameSpaceLocal sns . at s) (Just s'))
   registerName s'
@@ -2710,7 +2710,10 @@ checkNamedApplicationNew ::
 checkNamedApplicationNew napp = do
   let nargs = napp ^. namedApplicationNewArguments
   aname <- checkScopedIden (napp ^. namedApplicationNewName)
-  sig <- if null nargs then return $ NameSignature [] else getNameSignature aname
+  sig :: NameSignature 'Parsed <-
+    if
+        | null nargs -> return (NameSignature [])
+        | otherwise -> getNameSignatureParsed aname
   let namesInSignature = hashSet (concatMap (HashMap.keys . (^. nameBlock)) (sig ^. nameSignatureArgs))
   forM_ nargs (checkNameInSignature namesInSignature . (^. namedArgumentNewSymbol))
   puns <- scopePuns
@@ -2873,16 +2876,16 @@ getRecordInfo' loc name nameId =
     err :: Sem r a
     err = throw (ErrNotARecord (NotARecord name loc))
 
-getNameSignature :: (Members '[State ScoperState, Error ScoperError] r) => ScopedIden -> Sem r (NameSignature 'Scoped)
-getNameSignature s = do
+getNameSignatureParsed :: (Members '[State ScoperState, Error ScoperError] r) => ScopedIden -> Sem r (NameSignature 'Parsed)
+getNameSignatureParsed s = do
   sig <- maybeM (throw err) return (lookupNameSignature (s ^. scopedIdenFinal . S.nameId))
   when (null (sig ^. nameSignatureArgs)) (throw err)
   return sig
   where
     err = ErrNoNameSignature (NoNameSignature s)
 
-    lookupNameSignature :: (Members '[State ScoperState] r) => S.NameId -> Sem r (Maybe (NameSignature 'Scoped))
-    lookupNameSignature s' = gets (^. scoperScopedSignatures . at s')
+    lookupNameSignature :: (Members '[State ScoperState] r) => S.NameId -> Sem r (Maybe (NameSignature 'Parsed))
+    lookupNameSignature s' = gets (^. scoperNameSignatures . at s')
 
 checkIterator ::
   (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader Package] r) =>
