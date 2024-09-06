@@ -635,7 +635,12 @@ mutualBlockInstanceCallMap stmts = do
 
         addConstraint :: (Members '[CallMapBuilder' InstanceParam] r) => InstanceInfo -> InstanceApp -> Sem r ()
         addConstraint InstanceInfo {..} InstanceApp {..} = do
-          let c :: FunCall' InstanceParam = mkFunCall cmpInstanceParam _instanceAppHead _instanceInfoParams _instanceAppArgs
+          let c :: FunCall' InstanceParam =
+                mkFunCall
+                  (flip cmpInstanceParam)
+                  _instanceAppHead
+                  _instanceInfoParams
+                  _instanceAppArgs
           addCall _instanceInfoInductive c
 
 checkInstanceTermination ::

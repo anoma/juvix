@@ -11,6 +11,7 @@ import Juvix.Compiler.Internal.Data.NameDependencyInfo
 import Juvix.Compiler.Internal.Data.TypedInstanceHole
 import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Internal.Pretty.Options
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Data.SizeRelation
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.CheckerNew.Arity qualified as New
 import Juvix.Compiler.Store.Internal.Data.InfoTable
 import Juvix.Data.CodeAnn
@@ -63,6 +64,9 @@ instance PrettyCode SimpleLambda where
     b' <- ppCode (l ^. slambdaBody)
     v' <- ppCode (l ^. slambdaBinder . sbinderVar)
     return $ kwSimpleLambda <+> braces (v' <+> kwAssign <+> b')
+
+instance PrettyCode SizeRel' where
+  ppCode = return . annotate AnnKeyword . pretty
 
 instance PrettyCode Application where
   ppCode a = do

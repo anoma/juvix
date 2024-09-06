@@ -27,6 +27,7 @@ checkTraitTermination InstanceApp {..} InstanceInfo {..} = do
       unless (any (checkStrictSubterm arg) _instanceInfoParams) $
         throw (ErrTraitNotTerminating (TraitNotTerminating (paramToExpression arg)))
 
+-- | Checks that p1 is a strict subterm of p2
 checkStrictSubterm :: InstanceParam -> InstanceParam -> Bool
 checkStrictSubterm p1 p2 = case p2 of
   InstanceParamApp InstanceApp {..} ->
