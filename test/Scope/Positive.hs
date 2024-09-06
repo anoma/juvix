@@ -259,6 +259,10 @@ tests =
       $(mkRelDir ".")
       $(mkRelFile "RecordIterator.juvix"),
     posTest
+      "Forward reference name signature"
+      $(mkRelDir ".")
+      $(mkRelFile "issue2999.juvix"),
+    posTest
       "Scan name with 'import' prefix"
       $(mkRelDir "issue2929")
       $(mkRelFile "main.juvix")
