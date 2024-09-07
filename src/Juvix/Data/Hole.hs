@@ -1,5 +1,6 @@
 module Juvix.Data.Hole where
 
+import Juvix.Data.Fixity
 import Juvix.Data.Keyword
 import Juvix.Data.Keyword.All (kwWildcard)
 import Juvix.Data.Loc
@@ -13,6 +14,9 @@ data Hole = Hole
     _holeKw :: KeywordRef
   }
   deriving stock (Show, Data, Generic)
+
+instance HasAtomicity Hole where
+  atomicity = const Atom
 
 mkHole :: Interval -> NameId -> Hole
 mkHole loc uid =

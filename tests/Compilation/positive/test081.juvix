@@ -1,0 +1,15 @@
+module test081;
+
+trait
+type Monad (f : Type -> Type) := mkMonad {return : {A : Type} -> A -> f A};
+
+open Monad public;
+
+trait
+type MonadS (S : Type) (M : Type -> Type) :=
+  mkMonadReader {
+    {{monad}} : Monad M;
+    getS : S
+  };
+
+projMonad {B S} {M : Type -> Type} {{MonadS S M}} : {A : Type} -> A -> M A := return {{MonadS.monad {S}}};

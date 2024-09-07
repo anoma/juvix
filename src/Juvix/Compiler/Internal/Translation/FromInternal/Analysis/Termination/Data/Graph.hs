@@ -6,7 +6,7 @@ where
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty.Base
-import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Data.FunctionCall
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Data.Base
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Data.SizeRelation
 import Juvix.Prelude
 import Prettyprinter qualified as PP
@@ -53,6 +53,7 @@ instance PrettyCode Edge where
     where
       ppMatrices :: [(Int, Doc a)] -> Doc a
       ppMatrices = vsep2 . map ppMatrix
+
       ppMatrix :: (Int, Doc ann) -> Doc ann
       ppMatrix (i, t) =
         pretty ("Matrix" :: Text) <+> pretty i <> colon <> line <> t

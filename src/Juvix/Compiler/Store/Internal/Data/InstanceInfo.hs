@@ -2,6 +2,7 @@ module Juvix.Compiler.Store.Internal.Data.InstanceInfo where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Internal.Language
+import Juvix.Compiler.Internal.Pretty.Base
 import Juvix.Extra.Serialize
 import Juvix.Prelude
 
@@ -17,6 +18,14 @@ instance Serialize InstanceParam
 
 instance NFData InstanceParam
 
+instance HasAtomicity InstanceParam where
+  atomicity = \case
+    InstanceParamVar v -> atomicity v
+    InstanceParamMeta v -> atomicity v
+    InstanceParamHole h -> atomicity h
+    InstanceParamApp h -> atomicity h
+    InstanceParamFun h -> atomicity h
+
 data InstanceApp = InstanceApp
   { _instanceAppHead :: Name,
     _instanceAppArgs :: [InstanceParam],
@@ -24,6 +33,9 @@ data InstanceApp = InstanceApp
     _instanceAppExpression :: Expression
   }
   deriving stock (Eq, Generic)
+
+instance HasAtomicity InstanceApp where
+  atomicity = const (Aggregate appFixity)
 
 instance Serialize InstanceApp
 
@@ -37,6 +49,9 @@ data InstanceFun = InstanceFun
   }
   deriving stock (Eq, Generic)
 
+instance HasAtomicity InstanceFun where
+  atomicity = const (Aggregate funFixity)
+
 instance Serialize InstanceFun
 
 instance NFData InstanceFun
@@ -44,13 +59,16 @@ instance NFData InstanceFun
 data InstanceInfo = InstanceInfo
   { _instanceInfoInductive :: InductiveName,
     _instanceInfoParams :: [InstanceParam],
-    _instanceInfoResult :: Iden,
+    _instanceInfoIden :: Iden,
     _instanceInfoArgs :: [FunctionParameter]
   }
   deriving stock (Eq, Generic)
 
 instance Hashable InstanceInfo where
-  hashWithSalt salt InstanceInfo {..} = hashWithSalt salt _instanceInfoResult
+  hashWithSalt salt InstanceInfo {..} = hashWithSalt salt _instanceInfoIden
+
+instance HasLoc InstanceInfo where
+  getLoc InstanceInfo {..} = getLoc _instanceInfoIden
 
 instance Serialize InstanceInfo
 
@@ -71,6 +89,9 @@ makeLenses ''InstanceFun
 makeLenses ''InstanceInfo
 makeLenses ''InstanceTable
 
+instance PrettyCode InstanceInfo where
+  ppCode = ppCode . (^. instanceInfoIden)
+
 instance Semigroup InstanceTable where
   t1 <> t2 =
     InstanceTable $
@@ -81,3 +102,19 @@ instance Semigroup InstanceTable where
 
 instance Monoid InstanceTable where
   mempty = InstanceTable mempty
+
+paramToExpression :: InstanceParam -> Expression
+paramToExpression = \case
+  InstanceParamVar v ->
+    ExpressionIden (IdenVar v)
+  InstanceParamApp InstanceApp {..} ->
+    _instanceAppExpression
+  InstanceParamFun InstanceFun {..} ->
+    _instanceFunExpression
+  InstanceParamHole h ->
+    ExpressionHole h
+  InstanceParamMeta v ->
+    ExpressionIden (IdenVar v)
+
+instance PrettyCode InstanceParam where
+  ppCode = ppCode . paramToExpression

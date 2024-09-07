@@ -25,19 +25,6 @@ updateInstanceTable tab ii@InstanceInfo {..} =
 lookupInstanceTable :: InstanceTable -> Name -> Maybe [InstanceInfo]
 lookupInstanceTable tab name = HashMap.lookup name (tab ^. instanceTableMap)
 
-paramToExpression :: InstanceParam -> Expression
-paramToExpression = \case
-  InstanceParamVar v ->
-    ExpressionIden (IdenVar v)
-  InstanceParamApp InstanceApp {..} ->
-    _instanceAppExpression
-  InstanceParamFun InstanceFun {..} ->
-    _instanceFunExpression
-  InstanceParamHole h ->
-    ExpressionHole h
-  InstanceParamMeta v ->
-    ExpressionIden (IdenVar v)
-
 paramFromExpression :: HashSet VarName -> Expression -> Maybe InstanceParam
 paramFromExpression metaVars e = case e of
   ExpressionIden (IdenInductive n) ->
@@ -101,19 +88,18 @@ traitFromExpression metaVars e = case paramFromExpression metaVars e of
   Just (InstanceParamApp app) -> Just app
   _ -> Nothing
 
-instanceFromTypedIden :: TypedIden -> Maybe InstanceInfo
-instanceFromTypedIden TypedIden {..} = do
-  InstanceApp {..} <- traitFromExpression metaVars e
+mkInstanceInfo :: TypedIden -> Maybe InstanceInfo
+mkInstanceInfo TypedIden {..} = do
+  let (args, ret) = unfoldFunType _typedIdenType
+      metaVars = hashSet (mapMaybe (^. paramName) args)
+  InstanceApp {..} <- traitFromExpression metaVars ret
   return $
     InstanceInfo
       { _instanceInfoInductive = _instanceAppHead,
         _instanceInfoParams = _instanceAppArgs,
-        _instanceInfoResult = _typedIden,
+        _instanceInfoIden = _typedIden,
         _instanceInfoArgs = args
       }
-  where
-    (args, e) = unfoldFunType _typedIdenType
-    metaVars = HashSet.fromList $ mapMaybe (^. paramName) args
 
 checkNoMeta :: InstanceParam -> Bool
 checkNoMeta = \case

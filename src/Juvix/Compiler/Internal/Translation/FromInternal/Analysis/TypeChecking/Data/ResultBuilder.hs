@@ -48,6 +48,9 @@ initResultBuilderState ctx =
       _resultBuilderStateCombinedCoercionTable = ctx ^. importContextCoercions
     }
 
+evalResultBuilder :: ImportContext -> Sem (ResultBuilder ': r) a -> Sem r a
+evalResultBuilder ctx = fmap snd . runResultBuilder ctx
+
 runResultBuilder' ::
   ResultBuilderState ->
   Sem (ResultBuilder ': r) a ->

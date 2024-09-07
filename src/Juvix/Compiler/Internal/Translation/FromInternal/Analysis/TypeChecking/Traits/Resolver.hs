@@ -8,7 +8,7 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Internal.Data.InfoTable
 import Juvix.Compiler.Internal.Data.LocalVars
-import Juvix.Compiler.Internal.Data.TypedHole
+import Juvix.Compiler.Internal.Data.TypedInstanceHole
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Extra.CoercionInfo
 import Juvix.Compiler.Internal.Extra.InstanceInfo
@@ -29,9 +29,9 @@ isTrait tab name = maybe False (^. inductiveInfoTrait) (HashMap.lookup name (tab
 
 resolveTraitInstance ::
   (Members '[Error TypeCheckerError, NameIdGen, Inference, ResultBuilder, Reader InfoTable] r) =>
-  TypedHole ->
+  TypedInstanceHole ->
   Sem r Expression
-resolveTraitInstance TypedHole {..} = do
+resolveTraitInstance TypedInstanceHole {..} = do
   vars <- overM localTypes (mapM strongNormalize_) _typedHoleLocalVars
   infoTab <- ask
   tab0 <- getCombinedInstanceTable
@@ -41,7 +41,7 @@ resolveTraitInstance TypedHole {..} = do
   is <- lookupInstance ctab tab (ty ^. normalizedExpression)
   case is of
     [(cs, ii, subs)] ->
-      expandArity' loc (subsIToE subs) (ii ^. instanceInfoArgs) (ii ^. instanceInfoResult)
+      expandArity' loc (subsIToE subs) (ii ^. instanceInfoArgs) (ii ^. instanceInfoIden)
         >>= applyCoercions loc cs
     [] ->
       throw (ErrNoInstance (NoInstance ty loc))
@@ -58,9 +58,7 @@ subsumingInstances ::
   Sem r [(InstanceInfo)]
 subsumingInstances tab InstanceInfo {..} = do
   is <- lookupInstance' [] False mempty tab _instanceInfoInductive _instanceInfoParams
-  return $
-    map snd3 $
-      filter (\(_, x, _) -> x ^. instanceInfoResult /= _instanceInfoResult) is
+  return [x | (_, x, _) <- is, x ^. instanceInfoIden /= _instanceInfoIden]
 
 -------------------------------------------------------------------------------------
 -- Local functions
@@ -98,24 +96,18 @@ substitutionI subs p = case p of
     | otherwise ->
         return p
 
-instanceFromTypedIden' :: InfoTable -> TypedIden -> Maybe InstanceInfo
-instanceFromTypedIden' tbl e = do
-  ii@InstanceInfo {..} <- instanceFromTypedIden e
+mkInstanceInfo' :: InfoTable -> TypedIden -> Maybe InstanceInfo
+mkInstanceInfo' tbl tyIden = do
+  ii@InstanceInfo {..} <- mkInstanceInfo tyIden
   guard (isTrait tbl _instanceInfoInductive)
   return ii
 
 varsToInstances :: InfoTable -> LocalVars -> [InstanceInfo]
 varsToInstances tbl LocalVars {..} =
-  mapMaybe
-    (instanceFromTypedIden' tbl . mkTyped)
-    (HashMap.toList _localTypes)
-  where
-    mkTyped :: (VarName, Expression) -> TypedIden
-    mkTyped (v, ty) =
-      TypedIden
-        { _typedIdenType = ty,
-          _typedIden = IdenVar v
-        }
+  catMaybes
+    [ mkInstanceInfo' tbl (TypedIden (IdenVar var) varTy)
+      | (var, varTy) <- HashMap.toList _localTypes
+    ]
 
 applyCoercions ::
   (Members '[Error TypeCheckerError, NameIdGen] r) =>

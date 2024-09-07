@@ -152,13 +152,14 @@ exampleClassy
 
 -- runClassy : Either Nat Nat := runIdentity (evalState 0 (runExcept exampleClassy))
 
--- FIXME fails instance termination
--- instance
--- StateT-MonadReader {R S : Type}
---   {M : Type → Type}
---   {{mreader : MonadReader R M}} : MonadReader R (StateT S M) :=
---   mkMonadReader@{
---     monad := StateT-Monad@{mon := MMonadReader.monad {{mreader}}};
---     reader {A : Type} : (R → A) → StateT S M A := liftStateT << MMonadReader.reader;
---     ask : StateT S M R := liftStateT MMonadReader.ask;
---   };
+StateT-MonadReader {R S : Type}
+  {M : Type → Type}
+  {{mreader : MonadReader R M}} : MonadReader R (StateT S M) :=
+  let
+  monadM : Monad M := MonadReader.monad {{mreader}};
+  in
+  mkMonadReader@{
+    monad := StateT-Monad@{mon := MMonadReader.monad {{mreader}}};
+    reader {A : Type} : (R → A) → StateT S M A := liftStateT {{monadM}} << MMonadReader.reader;
+    ask : StateT S M R := liftStateT {{monadM}} MMonadReader.ask;
+  };

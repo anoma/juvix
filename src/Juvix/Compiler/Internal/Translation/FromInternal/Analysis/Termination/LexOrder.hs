@@ -60,12 +60,12 @@ multiply (CallMatrix a) (CallMatrix b) = CallMatrix (map sumProdRow a)
 multiplyMany :: HashSet CallMatrix -> HashSet CallMatrix -> HashSet CallMatrix
 multiplyMany r s = HashSet.fromList [multiply a b | a <- toList r, b <- toList s]
 
-fromFunCall :: FunctionRef -> FunCall -> Call
+fromFunCall :: FunctionName -> FunCall' expr -> Call
 fromFunCall caller fc =
   Call
     { _callFrom = caller,
       _callTo = fc ^. callRef,
-      _callMatrix = CallMatrix (map fst (fc ^. callArgs))
+      _callMatrix = CallMatrix (map (^. argRow) (fc ^. callArgs))
     }
 
 -- | IMPORTANT: the resulting call graph is not complete. Use this function
@@ -74,7 +74,7 @@ unsafeFilterGraph :: (Foldable f) => f Text -> CompleteCallGraph -> CompleteCall
 unsafeFilterGraph funNames (CompleteCallGraph g) =
   CompleteCallGraph (HashMap.filterWithKey (\(f, _) _ -> f ^. nameText `elem` funNames) g)
 
-completeCallGraph :: CallMap -> CompleteCallGraph
+completeCallGraph :: CallMap' expr -> CompleteCallGraph
 completeCallGraph CallMap {..} = CompleteCallGraph (go startingEdges)
   where
     startingEdges :: EdgeMap
@@ -130,6 +130,13 @@ recursiveBehaviour re =
   RecursiveBehaviour
     (re ^. reflexiveEdgeFun)
     (map callMatrixDiag (toList $ re ^. reflexiveEdgeMatrices))
+
+callMapRecursiveBehaviour :: CallMap' expr -> [RecursiveBehaviour]
+callMapRecursiveBehaviour callmap =
+  let completeGraph = completeCallGraph callmap
+      rEdges = reflexiveEdges completeGraph
+      recBehav = map recursiveBehaviour rEdges
+   in recBehav
 
 findOrder :: RecursiveBehaviour -> Maybe LexOrder
 findOrder rb = LexOrder <$> listToMaybe (mapMaybe (isLexOrder >=> nonEmpty) allPerms)

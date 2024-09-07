@@ -8,5 +8,5 @@ import Juvix.Compiler.Internal.Translation.FromConcrete qualified as Internal
 runCommand :: (Members AppEffects r) => InternalPrettyOptions -> Sem r ()
 runCommand opts = do
   globalOpts <- askGlobalOptions
-  intern <- (^. pipelineResult . Internal.resultModule) <$> runPipelineTermination (opts ^. internalPrettyInputFile) upToInternal
+  intern <- (^. pipelineResult . Internal.resultModule) <$> evalPipelineTermination (opts ^. internalPrettyInputFile) upToInternal
   renderStdOut (Internal.ppOut globalOpts intern)

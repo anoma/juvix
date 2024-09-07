@@ -484,6 +484,8 @@ data NormalizedExpression = NormalizedExpression
   }
 
 makePrisms ''Expression
+makePrisms ''MutualStatement
+
 makeLenses ''SideIfBranch
 makeLenses ''SideIfs
 makeLenses ''CaseBranchRhs
@@ -582,7 +584,7 @@ instance HasAtomicity Pattern where
     PatternWildcardConstructor {} -> Atom
 
 instance HasLoc Module where
-  getLoc m = getLoc (m ^. moduleName) <>? maybe Nothing (Just . getLocSpan) (nonEmpty (m ^. moduleBody . moduleStatements))
+  getLoc m = getLoc (m ^. moduleName) <>? fmap getLocSpan (nonEmpty (m ^. moduleBody . moduleStatements))
 
 instance HasLoc MutualBlock where
   getLoc = getLocSpan . (^. mutualStatements)

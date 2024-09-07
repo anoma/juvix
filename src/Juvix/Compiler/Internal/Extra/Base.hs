@@ -2,6 +2,7 @@
 
 module Juvix.Compiler.Internal.Extra.Base where
 
+import Control.Lens.Combinators (cosmos)
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Internal.Data.LocalVars
@@ -53,6 +54,13 @@ instance Plated Expression where
     ExpressionUniverse {} -> pure e
     ExpressionHole {} -> pure e
     ExpressionInstanceHole {} -> pure e
+
+subExpressions :: Expression -> [Expression]
+subExpressions e = e ^.. subCosmos
+
+-- | Fold over all transitive descendants, excluding self
+subCosmos :: (Plated a) => Fold a a
+subCosmos = dropping 1 cosmos
 
 class HasExpressions a where
   -- | Traverses itself if `a` is an Expression. Otherwise traverses children `Expression`s (not transitive).
@@ -339,17 +347,6 @@ subsKind uids k =
   HashMap.fromList
     [ (s, toExpression s') | s <- uids, let s' = toExpression (set nameKind k s)
     ]
-
-data Expr
-  = Val Int
-  | Neg Expr
-  | Add Expr Expr
-  deriving stock (Eq, Ord, Show, Data)
-
-instance Plated Expr where
-  plate f (Neg e) = Neg <$> f e
-  plate f (Add a b) = Add <$> f a <*> f b
-  plate _ a = pure a
 
 -- | A Fold over all subexressions, including self
 allExpressions :: (HasExpressions expr) => Fold expr Expression

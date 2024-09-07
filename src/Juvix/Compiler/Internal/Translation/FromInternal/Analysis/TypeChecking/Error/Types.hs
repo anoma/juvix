@@ -529,7 +529,7 @@ instance ToGenericError AmbiguousInstances where
         where
           opts' = fromGenericOptions opts
           i = e ^. ambiguousInstancesLoc
-          locs = itemize $ map (pretty . getLoc . (^. instanceInfoResult)) (e ^. ambiguousInstancesInfos)
+          locs = itemize $ map (pretty . getLoc) (e ^. ambiguousInstancesInfos)
           msg =
             "Multiple trait instances found for"
               <+> ppCode opts' (e ^. ambiguousInstancesType . normalizedExpression)
@@ -559,10 +559,10 @@ instance ToGenericError SubsumedInstance where
         where
           opts' = fromGenericOptions opts
           i = e ^. subsumedInstanceLoc
-          locs = itemize $ map (pretty . getLoc . (^. instanceInfoResult)) (e ^. subsumedInstanceParents)
+          locs = itemize $ map (pretty . getLoc) (e ^. subsumedInstanceParents)
           msg =
             "The instance"
-              <+> ppCode opts' (e ^. subsumedInstance . instanceInfoResult)
+              <+> ppCode opts' (e ^. subsumedInstance . instanceInfoIden)
               <+> "is subsumed by instances at:"
                 <> line
                 <> indent' locs
@@ -585,6 +585,31 @@ instance ToGenericError ExplicitInstanceArgument where
             }
         where
           i = getLoc (e ^. explicitInstanceArgumentParameter)
+
+newtype TraitNotTerminatingNew = TraitNotTerminatingNew
+  { _traitNotTerminatingNew :: NonEmpty InstanceInfo
+  }
+
+makeLenses ''TraitNotTerminatingNew
+
+instance ToGenericError TraitNotTerminatingNew where
+  genericError e = ask >>= generr
+    where
+      generr opts =
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = ppOutput msg,
+              _genericErrorIntervals = [i]
+            }
+        where
+          opts' = fromGenericOptions opts
+          i = getLoc (head (e ^. traitNotTerminatingNew))
+          msg :: Doc CodeAnn =
+            "Unable to prove instance-termination."
+              <+> "Make sure that the constraints are decreasing on the following instances:"
+                <> line
+                <> itemize (ppCode opts' <$> (e ^. traitNotTerminatingNew))
 
 newtype TraitNotTerminating = TraitNotTerminating
   { _traitNotTerminating :: Expression
