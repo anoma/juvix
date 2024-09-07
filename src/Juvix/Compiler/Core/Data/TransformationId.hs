@@ -17,7 +17,6 @@ data TransformationId
   | UnrollRecursion
   | ComputeTypeInfo
   | MatchToCase
-  | NaiveMatchToCase
   | EtaExpandApps
   | DisambiguateNames
   | CombineInfoTables
@@ -84,7 +83,6 @@ instance TransformationId' TransformationId where
     LetRecLifting -> strLetRecLifting
     TopEtaExpand -> strTopEtaExpand
     MatchToCase -> strMatchToCase
-    NaiveMatchToCase -> strNaiveMatchToCase
     EtaExpandApps -> strEtaExpandApps
     IdentityTrans -> strIdentity
     RemoveTypeArgs -> strRemoveTypeArgs

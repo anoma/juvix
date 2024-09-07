@@ -30,7 +30,6 @@ import Juvix.Compiler.Core.Transformation.LambdaLetRecLifting
 import Juvix.Compiler.Core.Transformation.LetHoisting
 import Juvix.Compiler.Core.Transformation.MatchToCase
 import Juvix.Compiler.Core.Transformation.MoveApps
-import Juvix.Compiler.Core.Transformation.NaiveMatchToCase qualified as Naive
 import Juvix.Compiler.Core.Transformation.NatToPrimInt
 import Juvix.Compiler.Core.Transformation.Normalize
 import Juvix.Compiler.Core.Transformation.Optimize.CaseCallLifting
@@ -75,7 +74,6 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
       ComputeTypeInfo -> return . computeTypeInfo
       UnrollRecursion -> unrollRecursion
       MatchToCase -> mapError (JuvixError @CoreError) . matchToCase
-      NaiveMatchToCase -> return . Naive.matchToCase
       EtaExpandApps -> return . etaExpansionApps
       DisambiguateNames -> return . disambiguateNames
       CombineInfoTables -> return . combineInfoTables
