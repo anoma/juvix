@@ -1,0 +1,23 @@
+module test083;
+
+trait
+type Suc (a : Type) := mkSuc a;
+
+trait
+type Zero := mkZero;
+
+trait
+type Add (a : Type) (b : Type) := mkAdd a b;
+
+trait
+type Add' (a : Type) (b : Type) := mkAdd' a b;
+
+
+instance
+addZeroI {B} {b : B} : Add Zero B := mkAdd mkZero b;
+
+instance
+addSucI' {B} {b : B} {{Add' (Suc Zero) B}} : Add (Suc Zero) B := mkAdd (mkSuc mkZero) b;
+
+instance
+addSucI {B} {b : B} {{Add Zero B}} : Add (Suc Zero) B := mkAdd (mkSuc mkZero) b;
