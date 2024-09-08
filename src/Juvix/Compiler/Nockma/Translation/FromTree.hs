@@ -133,13 +133,14 @@ data CompilerFunction = CompilerFunction
     _compilerFunction :: Sem '[Reader CompilerCtx, Reader FunctionCtx] (Term Natural)
   }
 
--- The Code and Args constructors must be first and second respectively. This is
+-- | The Code and Args constructors must be first and second respectively. This is
 -- because the stack must have the structure of a Nock function,
 -- i.e [code args env]
 data AnomaCallablePathId
   = WrapperCode
   | ArgsTuple
-  | FunctionsLibrary
+  | ---
+    FunctionsLibrary
   | RawCode
   | TempStack
   | StandardLibrary
@@ -340,8 +341,8 @@ anomaCallableClosureWrapper =
       adjustArgs = OpIf # closureArgsIsEmpty # (opAddress "wrapperSubject" emptyPath) # appendAndReplaceArgsTuple
    in opCall "closureWrapper" (closurePath RawCode) adjustArgs
 
-mainFunctionWrapper :: Term Natural
-mainFunctionWrapper =
+mainFunctionWrapper :: Term Natural -> Term Natural
+mainFunctionWrapper funslib =
   -- 1. The Anoma system expects to receive a function of type `ScryId -> Transaction`
   --
   -- 2. The ScryId is only used to construct the argument to the Scry operation (i.e the anomaGet builtin in the Juvix frontend),
@@ -355,6 +356,7 @@ mainFunctionWrapper =
   let captureAnomaGetOrder :: Term Natural
       captureAnomaGetOrder = replaceSubject $ \case
         AnomaGetOrder -> Just (getClosureFieldInSubject ArgsTuple)
+        FunctionsLibrary -> Just (OpQuote # funslib)
         _ -> Nothing
    in opCall "mainFunctionWrapper" (closurePath RawCode) captureAnomaGetOrder
 
@@ -934,20 +936,21 @@ runCompilerWith opts constrs moduleFuns mainFun = makeAnomaFun
     mainClosure :: Term Natural
     mainClosure = makeMainFunction (runCompilerFunction compilerCtx mainFun)
 
-    compiledFuns :: NonEmpty (Term Natural)
-    compiledFuns =
-      mainClosure
-        :| ( makeLibraryFunction
-               <$> [(f ^. compilerFunctionName, runCompilerFunction compilerCtx f) | f <- libFuns]
-           )
-
     funcsLib :: Term Natural
     funcsLib = Str.theFunctionsLibrary @ makeList compiledFuns
+      where
+        compiledFuns :: [Term Natural]
+        compiledFuns =
+          (OpQuote # (666 :: Natural)) -- TODO we have this unused term so that indices match. Remove it and adjust as needed
+            : ( makeLibraryFunction
+                  <$> [(f ^. compilerFunctionName, runCompilerFunction compilerCtx f) | f <- libFuns]
+              )
 
     makeLibraryFunction :: (Text, Term Natural) -> Term Natural
     makeLibraryFunction (funName, c) =
       ("def-" <> funName)
-        @ ( makeClosure $ \p ->
+        @ makeClosure
+          ( \p ->
               let nockNilHere = nockNilTagged ("makeLibraryFunction-" <> show p)
                in case p of
                     WrapperCode -> ("wrapperCode-" <> funName) @ c
@@ -966,7 +969,7 @@ runCompilerWith opts constrs moduleFuns mainFun = makeAnomaFun
     makeMainFunction c = makeClosure $ \p ->
       let nockNilHere = nockNilTagged ("makeMainFunction-" <> show p)
        in case p of
-            WrapperCode -> mainFunctionWrapper
+            WrapperCode -> mainFunctionWrapper funcsLib
             ArgsTuple -> argsTuplePlaceholder "mainFunction"
             FunctionsLibrary -> functionsLibraryPlaceHolder
             RawCode -> c
@@ -992,23 +995,10 @@ runCompilerWith opts constrs moduleFuns mainFun = makeAnomaFun
             }
         )
 
-    -- Replaces all instances of functionsLibraryPlaceHolder by the actual
-    -- functions library. Note that the functions library will have
-    -- functionsLibraryPlaceHolders, but this is not an issue because they
-    -- are not directly accessible from anoma so they'll never be entrypoints.
-    substFuncsLib :: Term Natural -> Term Natural
-    substFuncsLib = \case
-      TermAtom a
-        | a ^. atomHint == Just AtomHintFunctionsPlaceholder -> funcsLib
-        | otherwise -> TermAtom a
-      TermCell (Cell' l r i) ->
-        -- note that we do not need to recurse into terms inside the CellInfo because those terms will never be an entry point from anoma
-        TermCell (Cell' (substFuncsLib l) (substFuncsLib r) i)
-
     makeAnomaFun :: AnomaResult
     makeAnomaFun =
       AnomaResult
-        { _anomaClosure = substFuncsLib (substFuncsLib mainClosure)
+        { _anomaClosure = mainClosure
         }
 
 functionsLibraryPlaceHolder :: Term Natural
