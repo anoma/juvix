@@ -32,9 +32,6 @@ strTopEtaExpand = "top-eta-expand"
 strMatchToCase :: Text
 strMatchToCase = "match-to-case"
 
-strNaiveMatchToCase :: Text
-strNaiveMatchToCase = "naive-match-to-case"
-
 strEtaExpandApps :: Text
 strEtaExpandApps = "eta-expand-apps"
 
