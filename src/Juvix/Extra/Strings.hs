@@ -260,6 +260,9 @@ ioSequence = "IO-sequence"
 ioReadline :: (IsString s) => s
 ioReadline = "IO-readline"
 
+assert :: (IsString s) => s
+assert = "assert"
+
 natPrint :: (IsString s) => s
 natPrint = "nat-print"
 

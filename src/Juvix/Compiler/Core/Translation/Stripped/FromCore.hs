@@ -54,6 +54,7 @@ fromCore fsize tab =
       BuiltinIntLt -> False
       BuiltinSeq -> False
       BuiltinMonadBind -> True -- TODO revise
+      BuiltinAssert -> True
       BuiltinFromNat -> True
       BuiltinFromInt -> True
 

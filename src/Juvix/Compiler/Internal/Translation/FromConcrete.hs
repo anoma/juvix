@@ -14,6 +14,7 @@ import Data.HashSet qualified as HashSet
 import Data.IntMap.Strict qualified as IntMap
 import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Builtins
+import Juvix.Compiler.Builtins.Assert
 import Juvix.Compiler.Builtins.Pair
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra qualified as Concrete
@@ -537,6 +538,7 @@ checkBuiltinFunction ::
   BuiltinFunction ->
   Sem r ()
 checkBuiltinFunction d f = localBuiltins $ case f of
+  BuiltinAssert -> checkAssert d
   BuiltinNatPlus -> checkNatPlus d
   BuiltinNatSub -> checkNatSub d
   BuiltinNatMul -> checkNatMul d
