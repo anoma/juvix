@@ -19,6 +19,7 @@ import Juvix.Compiler.Core.Transformation.Check.Exec
 import Juvix.Compiler.Core.Transformation.Check.Rust
 import Juvix.Compiler.Core.Transformation.Check.VampIR
 import Juvix.Compiler.Core.Transformation.CombineInfoTables (combineInfoTables)
+import Juvix.Compiler.Core.Transformation.ComputeCaseANF
 import Juvix.Compiler.Core.Transformation.ComputeTypeInfo
 import Juvix.Compiler.Core.Transformation.ConvertBuiltinTypes
 import Juvix.Compiler.Core.Transformation.DisambiguateNames
@@ -72,6 +73,7 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
       IntToPrimInt -> return . intToPrimInt
       ConvertBuiltinTypes -> return . convertBuiltinTypes
       ComputeTypeInfo -> return . computeTypeInfo
+      ComputeCaseANF -> return . computeCaseANF
       UnrollRecursion -> unrollRecursion
       MatchToCase -> mapError (JuvixError @CoreError) . matchToCase
       EtaExpandApps -> return . etaExpansionApps

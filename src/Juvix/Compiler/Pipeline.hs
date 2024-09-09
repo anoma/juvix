@@ -165,7 +165,7 @@ upToTree ::
   (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError] r) =>
   Sem r Tree.InfoTable
 upToTree =
-  upToStoredCore >>= \Core.CoreResult {..} -> storedCoreToTree Core.IdentityTrans _coreResultModule
+  upToStoredCore >>= \Core.CoreResult {..} -> storedCoreToTree Core.IdentityTrans [] _coreResultModule
 
 upToAsm ::
   (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError] r) =>
@@ -226,17 +226,21 @@ upToCoreTypecheck = do
 storedCoreToTree ::
   (Members '[Error JuvixError, Reader EntryPoint] r) =>
   Core.TransformationId ->
+  [Core.TransformationId] ->
   Core.Module ->
   Sem r Tree.InfoTable
-storedCoreToTree checkId md = do
+storedCoreToTree checkId extraTransforms md = do
   fsize <- asks (^. entryPointFieldSize)
-  Tree.fromCore . Stripped.fromCore fsize . Core.computeCombinedInfoTable <$> Core.toStripped checkId md
+  Tree.fromCore
+    . Stripped.fromCore fsize
+    . Core.computeCombinedInfoTable
+    <$> (Core.toStripped checkId md >>= Core.applyExtraTransformations extraTransforms)
 
 storedCoreToAnoma :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r NockmaTree.AnomaResult
-storedCoreToAnoma = storedCoreToTree Core.CheckAnoma >=> treeToAnoma
+storedCoreToAnoma = storedCoreToTree Core.CheckAnoma Core.extraAnomaTransformations >=> treeToAnoma
 
 storedCoreToAsm :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Asm.InfoTable
-storedCoreToAsm = storedCoreToTree Core.CheckExec >=> treeToAsm
+storedCoreToAsm = storedCoreToTree Core.CheckExec [] >=> treeToAsm
 
 storedCoreToReg :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Reg.InfoTable
 storedCoreToReg = storedCoreToAsm >=> asmToReg
@@ -245,13 +249,13 @@ storedCoreToMiniC :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.
 storedCoreToMiniC = storedCoreToAsm >=> asmToMiniC
 
 storedCoreToRust :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Rust.Result
-storedCoreToRust = storedCoreToTree Core.CheckRust >=> treeToReg >=> regToRust
+storedCoreToRust = storedCoreToTree Core.CheckRust [] >=> treeToReg >=> regToRust
 
 storedCoreToRiscZeroRust :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Rust.Result
-storedCoreToRiscZeroRust = storedCoreToTree Core.CheckRust >=> treeToReg >=> regToRiscZeroRust
+storedCoreToRiscZeroRust = storedCoreToTree Core.CheckRust [] >=> treeToReg >=> regToRiscZeroRust
 
 storedCoreToCasm :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Casm.Result
-storedCoreToCasm = local (set entryPointFieldSize cairoFieldSize) . storedCoreToTree Core.CheckCairo >=> treeToCasm
+storedCoreToCasm = local (set entryPointFieldSize cairoFieldSize) . storedCoreToTree Core.CheckCairo [] >=> treeToCasm
 
 storedCoreToCairo :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Cairo.Result
 storedCoreToCairo = storedCoreToCasm >=> casmToCairo
@@ -263,8 +267,8 @@ storedCoreToVampIR = Core.toVampIR >=> VampIR.fromCore . Core.computeCombinedInf
 -- Workflows from Core
 --------------------------------------------------------------------------------
 
-coreToTree :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.TransformationId -> Core.Module -> Sem r Tree.InfoTable
-coreToTree checkId = Core.toStored >=> storedCoreToTree checkId
+coreToTree :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.TransformationId -> [Core.TransformationId] -> Core.Module -> Sem r Tree.InfoTable
+coreToTree checkId extraTransforms = Core.toStored >=> storedCoreToTree checkId extraTransforms
 
 coreToAsm :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Asm.InfoTable
 coreToAsm = Core.toStored >=> storedCoreToAsm
@@ -279,7 +283,7 @@ coreToCairo :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module
 coreToCairo = Core.toStored >=> storedCoreToCairo
 
 coreToAnoma :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r NockmaTree.AnomaResult
-coreToAnoma = coreToTree Core.CheckAnoma >=> treeToAnoma
+coreToAnoma = coreToTree Core.CheckAnoma Core.extraAnomaTransformations >=> treeToAnoma
 
 coreToRust :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Rust.Result
 coreToRust = Core.toStored >=> storedCoreToRust
