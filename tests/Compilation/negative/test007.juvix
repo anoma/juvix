@@ -1,0 +1,10 @@
+module test007;
+
+import Stdlib.Prelude open;
+
+f (x : List Nat) : Nat :=
+  case x of
+    | nil := 0
+    | x :: _ if true := x;
+
+main : Nat := f (1 :: 2 :: nil);

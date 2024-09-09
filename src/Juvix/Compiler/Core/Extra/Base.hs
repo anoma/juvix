@@ -101,12 +101,6 @@ mkMatch i vtys rty vs bs = NMatch (Match i vtys rty vs bs)
 mkMatch' :: NonEmpty Type -> Type -> NonEmpty Node -> [MatchBranch] -> Node
 mkMatch' = mkMatch Info.empty
 
-mkMatchBranch :: Info -> NonEmpty Pattern -> Node -> MatchBranch
-mkMatchBranch = MatchBranch
-
-mkMatchBranch' :: NonEmpty Pattern -> Node -> MatchBranch
-mkMatchBranch' = MatchBranch mempty
-
 mkIf :: Info -> Symbol -> Node -> Node -> Node -> Node
 mkIf i sym v b1 b2 = mkCase i sym v [br] (Just b2)
   where
@@ -121,6 +115,14 @@ mkIf i sym v b1 b2 = mkCase i sym v [br] (Just b2)
 
 mkIf' :: Symbol -> Node -> Node -> Node -> Node
 mkIf' = mkIf Info.empty
+
+mkIfs :: Symbol -> [(Info, Node, Node)] -> Node -> Node
+mkIfs sym = \case
+  [] -> id
+  ((i, v, b) : rest) -> mkIf i sym v b . mkIfs sym rest
+
+mkIfs' :: Symbol -> [(Node, Node)] -> Node -> Node
+mkIfs' sym = mkIfs sym . map (\(v, b) -> (Info.empty, v, b))
 
 mkBinder :: Text -> Type -> Binder
 mkBinder name ty = Binder name Nothing ty
@@ -641,17 +643,26 @@ destruct = \case
             : map noBinders (toList vtys)
             ++ map noBinders (toList vs)
             ++ concat
-              [ br
-                  : reverse (foldl' (\acc b -> manyBinders (take (length acc) bis) (b ^. binderType) : acc) [] bis)
-                | (bis, br) <- branchChildren
+              [ brs
+                  ++ reverse (foldl' (\acc b -> manyBinders (take (length acc) bis) (b ^. binderType) : acc) [] bis)
+                | (bis, brs) <- branchChildren
               ]
           where
-            branchChildren :: [([Binder], NodeChild)]
+            branchChildren :: [([Binder], [NodeChild])]
             branchChildren =
-              [ (binders, manyBinders binders (br ^. matchBranchBody))
+              [ (binders, map (manyBinders binders) (branchRhsChildren (br ^. matchBranchRhs)))
                 | br <- branches,
                   let binders = concatMap getPatternBinders (toList (br ^. matchBranchPatterns))
               ]
+
+            branchRhsChildren :: MatchBranchRhs -> [Node]
+            branchRhsChildren = \case
+              MatchBranchRhsExpression e -> [e]
+              MatchBranchRhsIfs ifs -> concatMap sideIfBranchChildren ifs
+
+            sideIfBranchChildren :: SideIfBranch -> [Node]
+            sideIfBranchChildren SideIfBranch {..} =
+              [_sideIfBranchCondition, _sideIfBranchBody]
 
         branchInfos :: [Info]
         branchInfos =
@@ -684,14 +695,31 @@ destruct = \case
               let mkBranch :: MatchBranch -> Sem '[Input Node, Input Info] MatchBranch
                   mkBranch br = do
                     bi' <- inputJust
-                    b' <- inputJust
+                    b' <- mkBranchRhs (br ^. matchBranchRhs)
                     pats' <- setPatternsInfos (br ^. matchBranchPatterns)
                     return
                       br
                         { _matchBranchInfo = bi',
                           _matchBranchPatterns = pats',
-                          _matchBranchBody = b'
+                          _matchBranchRhs = b'
                         }
+                  mkBranchRhs :: MatchBranchRhs -> Sem '[Input Node, Input Info] MatchBranchRhs
+                  mkBranchRhs = \case
+                    MatchBranchRhsExpression _ -> do
+                      e' <- inputJust
+                      return (MatchBranchRhsExpression e')
+                    MatchBranchRhsIfs ifs -> do
+                      ifs' <- mkSideIfs ifs
+                      return (MatchBranchRhsIfs ifs')
+                  mkSideIfs :: NonEmpty SideIfBranch -> Sem '[Input Node, Input Info] (NonEmpty SideIfBranch)
+                  mkSideIfs brs =
+                    mapM mkSideIfBranch brs
+                  mkSideIfBranch :: SideIfBranch -> Sem '[Input Node, Input Info] SideIfBranch
+                  mkSideIfBranch _ = do
+                    _sideIfBranchInfo <- inputJust
+                    _sideIfBranchCondition <- inputJust
+                    _sideIfBranchBody <- inputJust
+                    return SideIfBranch {..}
                   numVals = length vs
                   values' :: NonEmpty Node
                   valueTypes' :: NonEmpty Node

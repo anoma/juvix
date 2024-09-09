@@ -492,6 +492,8 @@ goCase c = do
       rty <- goType (fromJust $ c ^. Internal.caseExpressionWholeType)
       return (mkMatch i (pure ty) rty (pure expr) branches)
     _ ->
+      -- If the type of the value matched on is not an inductive type, then the
+      -- case expression has one branch with a variable pattern.
       case c ^. Internal.caseBranches of
         Internal.CaseBranch {..} :| _ ->
           case _caseBranchPattern ^. Internal.patternArgPattern of
@@ -499,34 +501,54 @@ goCase c = do
               vars <- asks (^. indexTableVars)
               varsNum <- asks (^. indexTableVarsNum)
               let vars' = addPatternVariableNames _caseBranchPattern varsNum vars
-              body <-
+              rhs <-
                 local
                   (set indexTableVars vars')
                   (underBinders 1 (goCaseBranchRhs _caseBranchRhs))
-              return $ mkLet i (Binder (name ^. nameText) (Just $ name ^. nameLoc) ty) expr body
+              case rhs of
+                MatchBranchRhsExpression body ->
+                  return $ mkLet i (Binder (name ^. nameText) (Just $ name ^. nameLoc) ty) expr body
+                _ ->
+                  impossible
             _ ->
               impossible
   where
     goCaseBranch :: Type -> Internal.CaseBranch -> Sem r MatchBranch
     goCaseBranch ty b = goPatternArgs 0 (b ^. Internal.caseBranchRhs) [b ^. Internal.caseBranchPattern] [ty]
 
--- | FIXME Fix this as soon as side if conditions are implemented in Core. This
--- is needed so that we can test typechecking without a crash.
-todoSideIfs ::
-  forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen, Error BadScope] r) =>
-  Internal.SideIfs ->
-  Sem r Node
-todoSideIfs s = goExpression (s ^. Internal.sideIfBranches . _head1 . Internal.sideIfBranchBody)
-
 goCaseBranchRhs ::
   forall r.
   (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen, Error BadScope] r) =>
   Internal.CaseBranchRhs ->
-  Sem r Node
+  Sem r MatchBranchRhs
 goCaseBranchRhs = \case
-  Internal.CaseBranchRhsExpression e -> goExpression e
-  Internal.CaseBranchRhsIf i -> todoSideIfs i
+  Internal.CaseBranchRhsExpression e -> MatchBranchRhsExpression <$> goExpression e
+  Internal.CaseBranchRhsIf Internal.SideIfs {..} -> case _sideIfElse of
+    Just elseBranch -> do
+      branches <- toList <$> mapM goSideIfBranch _sideIfBranches
+      elseBranch' <- goExpression elseBranch
+      boolSym <- getBoolSymbol
+      return $ MatchBranchRhsExpression $ mkIfs' boolSym branches elseBranch'
+      where
+        goSideIfBranch :: Internal.SideIfBranch -> Sem r (Node, Node)
+        goSideIfBranch Internal.SideIfBranch {..} = do
+          cond <- goExpression _sideIfBranchCondition
+          body <- goExpression _sideIfBranchBody
+          return (cond, body)
+    Nothing -> do
+      branches <- mapM goSideIfBranch _sideIfBranches
+      return $ MatchBranchRhsIfs branches
+      where
+        goSideIfBranch :: Internal.SideIfBranch -> Sem r SideIfBranch
+        goSideIfBranch Internal.SideIfBranch {..} = do
+          cond <- goExpression _sideIfBranchCondition
+          body <- goExpression _sideIfBranchBody
+          return $
+            SideIfBranch
+              { _sideIfBranchInfo = setInfoLocation (getLoc _sideIfBranchCondition) mempty,
+                _sideIfBranchCondition = cond,
+                _sideIfBranchBody = body
+              }
 
 goLambda ::
   forall r.

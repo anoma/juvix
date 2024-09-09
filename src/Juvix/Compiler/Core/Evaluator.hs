@@ -149,7 +149,7 @@ geval opts herr tab env0 = eval' env0
     match n env vs = \case
       br : brs ->
         case matchPatterns [] vs (toList (br ^. matchBranchPatterns)) of
-          Just args -> eval' (args ++ env) (br ^. matchBranchBody)
+          Just args -> matchRhs (args ++ env) (br ^. matchBranchRhs)
           Nothing -> match n env vs brs
         where
           matchPatterns :: [Node] -> [Node] -> [Pattern] -> Maybe [Node]
@@ -169,6 +169,18 @@ geval opts herr tab env0 = eval' env0
             | tag == _patternConstrTag =
                 matchPatterns (v : acc) args _patternConstrArgs
           patmatch _ _ _ = Nothing
+
+          matchRhs :: [Node] -> MatchBranchRhs -> Node
+          matchRhs env' = \case
+            MatchBranchRhsExpression e -> eval' env' e
+            MatchBranchRhsIfs ifs -> matchIfs env' (toList ifs)
+
+          matchIfs :: [Node] -> [SideIfBranch] -> Node
+          matchIfs env' = \case
+            SideIfBranch {..} : ifs -> case eval' env' _sideIfBranchCondition of
+              NCtr (Constr _ (BuiltinTag TagTrue) []) -> eval' env' _sideIfBranchBody
+              _ -> matchIfs env' ifs
+            [] -> match n env vs brs
       [] ->
         evalError "no matching pattern" (substEnv env n)
 

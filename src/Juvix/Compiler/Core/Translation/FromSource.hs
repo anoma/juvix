@@ -1002,6 +1002,30 @@ matchBranch ::
 matchBranch patsNum varsNum vars = do
   off <- P.getOffset
   pats <- branchPatterns varsNum vars
+  rhs <- branchRhs off pats patsNum varsNum vars
+  return $ MatchBranch Info.empty (fromList pats) rhs
+
+branchRhs ::
+  (Member InfoTableBuilder r) =>
+  Int ->
+  [Pattern] ->
+  Int ->
+  Index ->
+  HashMap Text Level ->
+  ParsecS r MatchBranchRhs
+branchRhs off pats patsNum varsNum vars =
+  branchRhsExpr off pats patsNum varsNum vars
+    <|> branchRhsIf off pats patsNum varsNum vars
+
+branchRhsExpr ::
+  (Member InfoTableBuilder r) =>
+  Int ->
+  [Pattern] ->
+  Int ->
+  Index ->
+  HashMap Text Level ->
+  ParsecS r MatchBranchRhs
+branchRhsExpr off pats patsNum varsNum vars = do
   kw kwAssign
   unless (length pats == patsNum) $
     parseFailure off "wrong number of patterns"
@@ -1015,7 +1039,54 @@ matchBranch patsNum varsNum vars = do
           (vars, varsNum)
           (map (^. binderName) pis)
   br <- bracedExpr varsNum' vars'
-  return $ MatchBranch Info.empty (fromList pats) br
+  return $ MatchBranchRhsExpression br
+
+branchRhsIf ::
+  (Member InfoTableBuilder r) =>
+  Int ->
+  [Pattern] ->
+  Int ->
+  Index ->
+  HashMap Text Level ->
+  ParsecS r MatchBranchRhs
+branchRhsIf off pats patsNum varsNum vars = do
+  ifs <- sideIfs off pats patsNum varsNum vars
+  return $ MatchBranchRhsIfs ifs
+
+sideIfs ::
+  (Member InfoTableBuilder r) =>
+  Int ->
+  [Pattern] ->
+  Int ->
+  Index ->
+  HashMap Text Level ->
+  ParsecS r (NonEmpty SideIfBranch)
+sideIfs off pats patsNum varsNum vars = do
+  cond <- branchCond varsNum vars
+  kw kwAssign
+  unless (length pats == patsNum) $
+    parseFailure off "wrong number of patterns"
+  let pis :: [Binder]
+      pis = concatMap getPatternBinders pats
+      (vars', varsNum') =
+        foldl'
+          ( \(vs, k) name ->
+              (HashMap.insert name k vs, k + 1)
+          )
+          (vars, varsNum)
+          (map (^. binderName) pis)
+  br <- bracedExpr varsNum' vars'
+  conds <- optional (sideIfs off pats patsNum varsNum vars)
+  return $ SideIfBranch Info.empty cond br :| maybe [] toList conds
+
+branchCond ::
+  (Member InfoTableBuilder r) =>
+  Index ->
+  HashMap Text Level ->
+  ParsecS r Node
+branchCond varsNum vars = do
+  kw kwIf
+  expr varsNum vars
 
 branchPatterns ::
   (Member InfoTableBuilder r) =>
