@@ -265,5 +265,9 @@ tests =
     posTest
       "Scan name with 'import' prefix"
       $(mkRelDir "issue2929")
+      $(mkRelFile "main.juvix"),
+    posTest
+      "Proper formatting of import module path"
+      $(mkRelDir "issue2737")
       $(mkRelFile "main.juvix")
   ]

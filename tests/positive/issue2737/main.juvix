@@ -1,0 +1,5 @@
+module main;
+
+import M as N;
+
+-- comment at the end
