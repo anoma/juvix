@@ -56,6 +56,9 @@ strConvertBuiltinTypes = "convert-builtin-types"
 strComputeTypeInfo :: Text
 strComputeTypeInfo = "compute-type-info"
 
+strComputeCaseANF :: Text
+strComputeCaseANF = "compute-case-anf"
+
 strUnrollRecursion :: Text
 strUnrollRecursion = "unroll-recursion"
 

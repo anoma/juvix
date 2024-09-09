@@ -16,6 +16,7 @@ data TransformationId
   | IdentityTrans
   | UnrollRecursion
   | ComputeTypeInfo
+  | ComputeCaseANF
   | MatchToCase
   | EtaExpandApps
   | DisambiguateNames
@@ -91,6 +92,7 @@ instance TransformationId' TransformationId where
     IntToPrimInt -> strIntToPrimInt
     ConvertBuiltinTypes -> strConvertBuiltinTypes
     ComputeTypeInfo -> strComputeTypeInfo
+    ComputeCaseANF -> strComputeCaseANF
     UnrollRecursion -> strUnrollRecursion
     DisambiguateNames -> strDisambiguateNames
     CombineInfoTables -> strCombineInfoTables
