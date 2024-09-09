@@ -44,6 +44,7 @@ instance forall a. (PrettyCode a, NockNatural a) => PrettyCode (Atom a) where
           AtomHintNil -> return (annotate (AnnKind KNameConstructor) Str.nil)
           AtomHintVoid -> return (annotate (AnnKind KNameAxiom) Str.void)
           AtomHintFunctionsPlaceholder -> return (annotate (AnnKind KNameAxiom) Str.functionsPlaceholder)
+          AtomHintStdlibPlaceholder -> return (annotate (AnnKind KNameAxiom) Str.stdlibPlaceholder)
           AtomHintString -> atomToText atm >>= ppCode
 
 instance PrettyCode Text where

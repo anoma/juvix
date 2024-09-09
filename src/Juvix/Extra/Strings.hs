@@ -1022,6 +1022,9 @@ version = "version"
 functionsPlaceholder :: (IsString s) => s
 functionsPlaceholder = "functionsLibrary_placeholder"
 
+stdlibPlaceholder :: (IsString s) => s
+stdlibPlaceholder = "stdlib_placeholder"
+
 theFunctionsLibrary :: (IsString s) => s
 theFunctionsLibrary = "the_functionsLibrary"
 

@@ -1009,7 +1009,7 @@ stdlibPlaceHolder =
           AtomInfo
             { _atomInfoLoc = Irrelevant Nothing,
               _atomInfoTag = Nothing,
-              _atomInfoHint = Just AtomHintFunctionsPlaceholder
+              _atomInfoHint = Just AtomHintStdlibPlaceholder
             },
         _atom = 0 :: Natural
       }
