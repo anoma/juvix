@@ -612,7 +612,7 @@ checkImportNoPublic ::
 checkImportNoPublic import_@Import {..} = do
   massert (_importPublic == NoPublic)
   smodule <- readScopeModule import_
-  let sname :: S.TopModulePath = smodule ^. scopedModulePath
+  let sname :: S.TopModulePath = set nameConcrete _importModulePath (smodule ^. scopedModulePath)
       sname' :: S.Name = set S.nameConcrete (topModulePathToName _importModulePath) sname
       scopedModule :: ScopedModule = set scopedModuleName sname' smodule
       exportInfoOriginal = scopedModule ^. scopedModuleExportInfo
@@ -638,7 +638,8 @@ checkImportNoPublic import_@Import {..} = do
         _importAsName = qual',
         _importOpen = importOpen',
         _importUsingHiding = usingHiding',
-        ..
+        _importKw,
+        _importPublic
       }
   where
     addModuleToScope :: ScopedModule -> Sem r ()
