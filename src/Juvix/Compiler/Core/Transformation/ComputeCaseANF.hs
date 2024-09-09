@@ -2,7 +2,7 @@ module Juvix.Compiler.Core.Transformation.ComputeCaseANF (computeCaseANF) where
 
 -- A transformation which lifts out non-immediate values matched on in case
 -- expressions by introducing let-bindings for them. In essence, this is a
--- partial ANF transfromation for case expressions only.
+-- partial ANF transformation for case expressions only.
 --
 -- For example, transforms
 -- ```
