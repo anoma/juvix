@@ -690,7 +690,7 @@ compile = \case
         FunctionsLibrary -> OpQuote # functionsLibraryPlaceHolder
         RawCode -> opAddress "allocClosureFunPath" (fpath <> closurePath RawCode)
         TempStack -> remakeList []
-        StandardLibrary -> OpQuote # stdlib
+        StandardLibrary -> OpQuote # stdlibPlaceHolder
         ClosureTotalArgsNum -> nockNatLiteral farity
         ClosureArgsNum -> nockIntegralLiteral (length args)
         ClosureArgs -> remakeList args
@@ -958,7 +958,7 @@ runCompilerWith opts constrs moduleFuns mainFun = makeAnomaFun
                     FunctionsLibrary -> ("functionsLibrary-" <> funName) @ functionsLibraryPlaceHolder
                     RawCode -> ("rawCode-" <> funName) @ c
                     TempStack -> ("tempStack-" <> funName) @ nockNilHere
-                    StandardLibrary -> ("stdlib-" <> funName) @ stdlib
+                    StandardLibrary -> ("stdlib-" <> funName) @ stdlibPlaceHolder
                     ClosureTotalArgsNum -> ("closureTotalArgsNum-" <> funName) @ nockNilHere
                     ClosureArgsNum -> ("closureArgsNum-" <> funName) @ nockNilHere
                     ClosureArgs -> ("closureArgs-" <> funName) @ nockNilHere
@@ -1000,6 +1000,19 @@ runCompilerWith opts constrs moduleFuns mainFun = makeAnomaFun
       AnomaResult
         { _anomaClosure = mainClosure
         }
+
+stdlibPlaceHolder :: Term Natural
+stdlibPlaceHolder =
+  TermAtom
+    Atom
+      { _atomInfo =
+          AtomInfo
+            { _atomInfoLoc = Irrelevant Nothing,
+              _atomInfoTag = Nothing,
+              _atomInfoHint = Just AtomHintStdlibPlaceholder
+            },
+        _atom = 0 :: Natural
+      }
 
 functionsLibraryPlaceHolder :: Term Natural
 functionsLibraryPlaceHolder =

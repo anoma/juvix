@@ -122,6 +122,7 @@ data AtomHint
   | AtomHintNil
   | AtomHintVoid
   | AtomHintFunctionsPlaceholder
+  | AtomHintStdlibPlaceholder
   | AtomHintString
   deriving stock (Show, Eq, Lift, Generic)
 
