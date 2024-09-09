@@ -23,11 +23,11 @@ runCommand opts = do
       $ coreRes
         ^. coreResultModule
   res <- getRight r
-  outputAnomaResult nockmaFile res
+  outputAnomaResult (opts' ^. compileDebug) nockmaFile res
 
-outputAnomaResult :: (Members '[EmbedIO, App] r) => Path Abs File -> Nockma.AnomaResult -> Sem r ()
-outputAnomaResult nockmaFile Nockma.AnomaResult {..} = do
+outputAnomaResult :: (Members '[EmbedIO, App] r) => Bool -> Path Abs File -> Nockma.AnomaResult -> Sem r ()
+outputAnomaResult debugOutput nockmaFile Nockma.AnomaResult {..} = do
   let code = Nockma.ppSerialize _anomaClosure
-      prettyNockmaFile = replaceExtensions' [".pretty", ".nockma"] nockmaFile
+      prettyNockmaFile = replaceExtensions' [".debug", ".nockma"] nockmaFile
   writeFileEnsureLn nockmaFile code
-  writeFileEnsureLn prettyNockmaFile (Nockma.ppPrint _anomaClosure)
+  when debugOutput (writeFileEnsureLn prettyNockmaFile (Nockma.ppPrint _anomaClosure))
