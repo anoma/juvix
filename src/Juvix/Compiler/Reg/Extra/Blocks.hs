@@ -79,6 +79,7 @@ getValueRefs = \case
   Assign x -> goAssign x
   Alloc x -> goAlloc x
   AllocClosure x -> goAllocClosure x
+  Assert x -> goAssert x
   Trace x -> goTrace x
   Dump -> []
   Failure x -> goFailure x
@@ -102,6 +103,9 @@ getValueRefs = \case
 
     goAllocClosure :: InstrAllocClosure -> [VarRef]
     goAllocClosure InstrAllocClosure {..} = concatMap getValueRefs'' _instrAllocClosureArgs
+
+    goAssert :: InstrAssert -> [VarRef]
+    goAssert InstrAssert {..} = getValueRefs'' _instrAssertValue
 
     goTrace :: InstrTrace -> [VarRef]
     goTrace InstrTrace {..} = getValueRefs'' _instrTraceValue

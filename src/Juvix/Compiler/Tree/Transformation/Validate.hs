@@ -65,6 +65,7 @@ inferType tab funInfo = goInfer mempty
     goUnop :: BinderList Type -> NodeUnop -> Sem r Type
     goUnop bl NodeUnop {..} = case _nodeUnopOpcode of
       PrimUnop x -> checkPrimUnop x
+      OpAssert -> goInfer bl _nodeUnopArg
       OpTrace -> goInfer bl _nodeUnopArg
       OpFail -> checkUnop TyDynamic TyDynamic
       where

@@ -50,6 +50,7 @@ instance PrettyCode BuiltinOp where
     OpShow -> return primShow
     OpStrConcat -> return primStrConcat
     OpStrToInt -> return primStrToInt
+    OpAssert -> return primAssert
     OpSeq -> return primSeq
     OpTrace -> return primTrace
     OpFail -> return primFail
@@ -866,6 +867,9 @@ kwPi = keyword Str.piUnicode
 
 kwDef :: Doc Ann
 kwDef = keyword Str.def
+
+primAssert :: Doc Ann
+primAssert = primitive Str.assert_
 
 primSeq :: Doc Ann
 primSeq = primitive Str.seqq_

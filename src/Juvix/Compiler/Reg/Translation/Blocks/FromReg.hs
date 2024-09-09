@@ -30,6 +30,7 @@ fromReg = over infoFunctions (fmap (over functionCode goCode))
         Reg.Case x -> mkBlock (Case (fmap goCode x))
         Reg.CallClosures {} -> impossible
         Reg.TailCallClosures {} -> impossible
+        Reg.Assert x -> over blockBody (Assert x :) (goCode is)
         Reg.Trace x -> over blockBody (Trace x :) (goCode is)
         Reg.Dump -> over blockBody (Dump :) (goCode is)
         Reg.Failure x -> over blockBody (Failure x :) (goCode is)

@@ -297,6 +297,7 @@ instance PrettyCode AnomaOp where
 instance PrettyCode UnaryOpcode where
   ppCode = \case
     PrimUnop x -> ppCode x
+    OpAssert -> return $ primitive Str.instrAssert
     OpTrace -> return $ primitive Str.instrTrace
     OpFail -> return $ primitive Str.instrFailure
 

@@ -130,6 +130,8 @@ fromRegInstr info = \case
     unsupported "Cairo builtin"
   Reg.Assign Reg.InstrAssign {..} ->
     stmtsAssign (mkVarRef _instrAssignResult) (fromValue _instrAssignValue)
+  Reg.Assert {} ->
+    unsupported "assert"
   Reg.Trace {} ->
     unsupported "trace"
   Reg.Dump ->

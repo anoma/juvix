@@ -20,6 +20,7 @@ data Instruction
   | Assign InstrAssign
   | Alloc InstrAlloc
   | AllocClosure InstrAllocClosure
+  | Assert InstrAssert
   | Trace InstrTrace
   | Dump
   | Failure InstrFailure

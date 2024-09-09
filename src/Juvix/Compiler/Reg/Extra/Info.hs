@@ -21,6 +21,7 @@ computeMaxStackHeight lims = maximum . map go
       Unop {} -> 0
       Cairo {} -> 0
       Assign {} -> 0
+      Assert {} -> 0
       Trace {} -> 0
       Dump -> 0
       Failure {} -> 0
@@ -73,6 +74,7 @@ computeMaxCallClosuresArgsNum = maximum . map go
       Unop {} -> 0
       Cairo {} -> 0
       Assign {} -> 0
+      Assert {} -> 0
       Trace {} -> 0
       Dump -> 0
       Failure {} -> 0
@@ -121,6 +123,8 @@ computeStringMap strs = snd . run . execState (HashMap.size strs, strs) . mapM g
         mapM_ goVal _instrCairoArgs
       Assign InstrAssign {..} ->
         goVal _instrAssignValue
+      Assert InstrAssert {..} ->
+        goVal _instrAssertValue
       Trace InstrTrace {..} ->
         goVal _instrTraceValue
       Dump -> return ()
@@ -180,6 +184,7 @@ computeLocalVarsNum = maximum . map go
       Unop InstrUnop {..} -> goVarRef _instrUnopResult
       Cairo InstrCairo {..} -> goVarRef _instrCairoResult
       Assign InstrAssign {..} -> goVarRef _instrAssignResult
+      Assert {} -> 0
       Trace {} -> 0
       Dump -> 0
       Failure {} -> 0

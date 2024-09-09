@@ -233,6 +233,7 @@ genCode fi =
     genUnOp :: Tree.UnaryOpcode -> Command
     genUnOp op = case op of
       Tree.PrimUnop op' -> mkUnop op'
+      Tree.OpAssert -> mkInstr Assert
       Tree.OpTrace -> mkInstr Trace
       Tree.OpFail -> mkInstr Failure
 

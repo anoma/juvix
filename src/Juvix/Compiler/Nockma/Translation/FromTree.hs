@@ -517,6 +517,9 @@ compile = \case
       arg <- compile _nodeUnopArg
       case _nodeUnopOpcode of
         Tree.PrimUnop op -> return $ goPrimUnop op arg
+        Tree.OpAssert ->
+          -- TODO: remove duplication of `arg` here
+          return (branch arg arg crash)
         Tree.OpFail -> return crash
         Tree.OpTrace -> goTrace arg
 
@@ -525,6 +528,7 @@ compile = \case
       Tree.OpShow -> stringsErr "show"
       Tree.OpStrToInt -> stringsErr "strToInt"
       Tree.OpArgsNum ->
+        -- TODO: remove duplication of `arg` here!!!
         let getF f = getClosureField f arg
          in sub (getF ClosureTotalArgsNum) (getF ClosureArgsNum)
       Tree.OpIntToField -> fieldErr
@@ -651,6 +655,7 @@ compile = \case
       enabled <- asks (^. compilerOptions . compilerOptionsEnableTrace)
       return $
         if
+            -- TODO: remove duplication of `arg` here
             | enabled -> OpTrace # arg # arg
             | otherwise -> arg
 

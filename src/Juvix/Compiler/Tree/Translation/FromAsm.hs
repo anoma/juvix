@@ -92,6 +92,7 @@ goFunction infoTab fi = do
           Asm.Push (Asm.Constant c) -> return (mkConst c)
           Asm.Push (Asm.Ref r) -> return (mkMemRef r)
           Asm.Pop -> goPop
+          Asm.Assert -> goAssert
           Asm.Trace -> goTrace
           Asm.Dump -> unsupported (_cmdInstrInfo ^. Asm.commandInfoLocation)
           Asm.Failure -> goUnop OpFail
@@ -244,8 +245,8 @@ goFunction infoTab fi = do
                   _nodeBinopArg2 = arg2
                 }
 
-        goTrace :: Sem r Node
-        goTrace = do
+        goSeqOp :: UnaryOpcode -> Sem r Node
+        goSeqOp op = do
           arg <- goCode
           off <- asks (^. tempSize)
           let ref = mkMemRef $ DRef $ mkTempRef $ OffsetRef off Nothing
@@ -264,12 +265,18 @@ goFunction infoTab fi = do
                             Unop
                               NodeUnop
                                 { _nodeUnopInfo = mempty,
-                                  _nodeUnopOpcode = OpTrace,
+                                  _nodeUnopOpcode = op,
                                   _nodeUnopArg = ref
                                 },
                           _nodeBinopArg2 = ref
                         }
                 }
+
+        goAssert :: Sem r Node
+        goAssert = goSeqOp OpAssert
+
+        goTrace :: Sem r Node
+        goTrace = goSeqOp OpTrace
 
         goArgs :: Int -> Sem r [Node]
         goArgs n = mapM (const goCode) [1 .. n]

@@ -53,6 +53,7 @@ instruction ::
   ParsecS r Instruction
 instruction =
   (instrNop >> return Nop)
+    <|> (Assert <$> instrAssert)
     <|> (Trace <$> instrTrace)
     <|> (instrDump >> return Dump)
     <|> (Failure <$> instrFailure)
@@ -193,6 +194,17 @@ instrTrace = do
   return
     InstrTrace
       { _instrTraceValue = val
+      }
+
+instrAssert ::
+  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  ParsecS r InstrAssert
+instrAssert = do
+  kw kwAssert
+  val <- value
+  return
+    InstrAssert
+      { _instrAssertValue = val
       }
 
 instrDump :: ParsecS r ()

@@ -265,6 +265,9 @@ kwSeqq = asciiKw Str.seqq_
 kwSSeq :: Keyword
 kwSSeq = asciiKw Str.sseq_
 
+kwAssert :: Keyword
+kwAssert = asciiKw Str.assert_
+
 kwTrace :: Keyword
 kwTrace = asciiKw Str.trace_
 

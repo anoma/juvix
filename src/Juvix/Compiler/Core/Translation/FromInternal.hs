@@ -1309,6 +1309,11 @@ goApplication a = do
             (_ : _ : arg1 : arg2 : xs) ->
               return (mkApps' (mkBuiltinApp' OpSeq [arg1, arg2]) xs)
             _ -> error "internal to core: seq must be called with 2 arguments"
+        Just Internal.BuiltinAssert -> do
+          as <- exprArgs
+          case as of
+            (x : xs) -> return (mkApps' (mkBuiltinApp' OpAssert [x]) xs)
+            _ -> error "internal to core: assert must be called with 1 argument"
         _ -> app
     _ -> app
 

@@ -91,6 +91,8 @@ command = do
       mkInstr' loc . Push <$> value
     "pop" ->
       return $ mkInstr' loc Pop
+    "assert" ->
+      return $ mkInstr' loc Assert
     "trace" ->
       return $ mkInstr' loc Trace
     "dump" ->

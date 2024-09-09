@@ -468,7 +468,6 @@ isIgnoredBuiltin f
         .&&. (not . isIntBuiltin)
         .&&. (not . isCastBuiltin)
         .&&. (/= BuiltinMonadBind)
-        .&&. (/= BuiltinAssert)
         $ f
 
     explicit :: Bool
@@ -501,9 +500,8 @@ isIgnoredBuiltin f
       BuiltinNatEq -> False
       -- Monad
       BuiltinMonadBind -> False
-      -- Assert
-      BuiltinAssert -> False
       -- Ignored
+      BuiltinAssert -> True
       BuiltinBoolIf -> True
       BuiltinBoolOr -> True
       BuiltinBoolAnd -> True

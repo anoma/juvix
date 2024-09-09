@@ -15,6 +15,7 @@ import Juvix.Data.Keyword.All
     kwAnomaVerifyDetached,
     kwAnomaVerifyWithMessage,
     kwAny,
+    kwAssert,
     kwAssign,
     kwBindOperator,
     kwBottom,
@@ -72,6 +73,7 @@ allKeywordStrings = keywordsStrings allKeywords
 allKeywords :: [Keyword]
 allKeywords =
   [ delimSemicolon,
+    kwAssert,
     kwAssign,
     kwBottom,
     kwBuiltin,

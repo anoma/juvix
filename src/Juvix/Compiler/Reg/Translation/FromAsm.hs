@@ -69,6 +69,7 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
     Asm.Cairo op -> return $ mkCairo op
     Asm.Push val -> return $ mkAssign (mkVarRef VarGroupLocal (ntmps + n + 1)) (mkValue val)
     Asm.Pop -> return Nop
+    Asm.Assert -> return $ Assert $ InstrAssert (VRef $ mkVarRef VarGroupLocal (ntmps + n))
     Asm.Trace -> return $ Trace $ InstrTrace (VRef $ mkVarRef VarGroupLocal (ntmps + n))
     Asm.Dump -> return Dump
     Asm.Failure -> return $ Failure $ InstrFailure (VRef $ mkVarRef VarGroupLocal (ntmps + n))

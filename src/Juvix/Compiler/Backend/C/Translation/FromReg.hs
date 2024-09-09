@@ -227,6 +227,8 @@ fromRegInstr bNoStack info = \case
     unsupported "Cairo builtin"
   Reg.Assign Reg.InstrAssign {..} ->
     return $ stmtsAssign (fromVarRef _instrAssignResult) (fromValue _instrAssignValue)
+  Reg.Assert Reg.InstrAssert {..} ->
+    return [StatementExpr $ macroCall "JUVIX_ASSERT" [fromValue _instrAssertValue]]
   Reg.Trace Reg.InstrTrace {..} ->
     return [StatementExpr $ macroCall "JUVIX_TRACE" [fromValue _instrTraceValue]]
   Reg.Dump ->

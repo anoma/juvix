@@ -217,6 +217,7 @@ geval opts herr tab env0 = eval' env0
       OpSeq -> seqOp
       OpFail -> failOp
       OpTrace -> traceOp
+      OpAssert -> assertOp
       OpAnomaGet -> anomaGetOp
       OpAnomaEncode -> anomaEncodeOp
       OpAnomaDecode -> anomaDecodeOp
@@ -366,6 +367,21 @@ geval opts herr tab env0 = eval' env0
                   | otherwise ->
                       unsafePerformIO (hPutStrLn herr (printNode v) >> return v)
         {-# INLINE traceOp #-}
+
+        assertOp :: [Node] -> Node
+        assertOp = unary $ \val ->
+          let !v = eval' env val
+           in if
+                  | opts ^. evalOptionsSilent ->
+                      v
+                  | otherwise ->
+                      case v of
+                        NCtr Constr {..}
+                          | _constrTag == BuiltinTag TagTrue ->
+                              v
+                        _ ->
+                          Exception.throw (EvalError ("assertion failed: " <> printNode val) Nothing)
+        {-# INLINE assertOp #-}
 
         anomaGetOp :: [Node] -> Node
         anomaGetOp = unary $ \arg ->

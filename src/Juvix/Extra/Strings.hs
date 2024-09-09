@@ -485,6 +485,9 @@ sseq_ = "seq"
 eq :: (IsString s) => s
 eq = "eq"
 
+assert_ :: (IsString s) => s
+assert_ = "assert"
+
 trace_ :: (IsString s) => s
 trace_ = "trace"
 
@@ -847,6 +850,9 @@ instrPusht = "pusht"
 
 instrPopt :: (IsString s) => s
 instrPopt = "popt"
+
+instrAssert :: (IsString s) => s
+instrAssert = "assert"
 
 instrTrace :: (IsString s) => s
 instrTrace = "trace"

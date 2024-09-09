@@ -82,6 +82,11 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
         goCode cont
       Pop ->
         popValueStack >> goCode cont
+      Assert -> do
+        v <- topValueStack
+        unless (v == ValBool True) $
+          runtimeError "assertion failed"
+        goCode cont
       Trace -> do
         v <- topValueStack
         logMessage (printValue infoTable v)

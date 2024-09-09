@@ -53,6 +53,7 @@ overValueRefs'' f = \case
   If x -> If <$> goIf x
   Branch x -> Branch <$> goBranch x
   Case x -> Case <$> goCase x
+  Assert x -> Assert <$> goAssert x
   Trace x -> Trace <$> goTrace x
   Dump -> return Dump
   Failure x -> Failure <$> goFailure x
@@ -173,6 +174,9 @@ overValueRefs'' f = \case
 
     goCase :: InstrCase -> m InstrCase
     goCase = overM instrCaseValue goValue
+
+    goAssert :: InstrAssert -> m InstrAssert
+    goAssert = overM instrAssertValue goValue
 
     goTrace :: InstrTrace -> m InstrTrace
     goTrace = overM instrTraceValue goValue

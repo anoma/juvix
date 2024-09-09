@@ -64,6 +64,9 @@ computeNodeTypeInfo md = umapL go
           OpSeq -> case _builtinAppArgs of
             [_, arg2] -> Info.getNodeType arg2
             _ -> error "incorrect seq builtin application"
+          OpAssert -> case _builtinAppArgs of
+            [arg] -> Info.getNodeType arg
+            _ -> error "incorrect assert builtin application"
           OpTrace -> case _builtinAppArgs of
             [arg] -> Info.getNodeType arg
             _ -> error "incorrect trace builtin application"

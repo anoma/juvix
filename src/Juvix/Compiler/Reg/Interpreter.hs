@@ -48,6 +48,7 @@ runFunction hout infoTable args0 info0 = do
         Unop x -> goUnop args tmps instrs x
         Cairo {} -> throwRunError "unsupported: Cairo builtin" Nothing
         Assign x -> goAssign args tmps instrs x
+        Assert x -> goAssert args tmps instrs x
         Trace x -> goTrace args tmps instrs x
         Dump -> goDump args tmps instrs
         Failure x -> goFailure args tmps instrs x
@@ -129,6 +130,15 @@ runFunction hout infoTable args0 info0 = do
       val <- readValue args tmps _instrAssignValue
       writeVarRef args tmps _instrAssignResult val
       go args tmps instrs
+
+    goAssert :: Args -> Vars s -> Code -> InstrAssert -> ST s Val
+    goAssert args tmps instrs InstrAssert {..} = do
+      val <- readValue args tmps _instrAssertValue
+      case val of
+        ValBool True ->
+          go args tmps instrs
+        _ ->
+          throwRunError "assertion failed" Nothing
 
     goTrace :: Args -> Vars s -> Code -> InstrTrace -> ST s Val
     goTrace args tmps instrs InstrTrace {..} = do

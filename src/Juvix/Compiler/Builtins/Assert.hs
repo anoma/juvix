@@ -6,11 +6,19 @@ import Juvix.Prelude
 
 checkAssert :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => FunctionDef -> Sem r ()
 checkAssert f = do
-  let ftype = f ^. funDefType
-      u = ExpressionUniverse smallUniverseNoLoc
-      l = getLoc f
   bool_ <- getBuiltinNameScoper (getLoc f) BuiltinBool
-  valueT <- freshVar l "valueT"
-  let freeVars = hashSet [valueT]
-  unless ((ftype ==% (u <>--> bool_ --> valueT --> valueT)) freeVars) $
-    builtinsErrorText (getLoc f) "assert must be of type {Value : Type} -> Bool -> Value -> Value"
+  let assert_ = f ^. funDefName
+      l = getLoc f
+  varx <- freshVar l "x"
+  let x = toExpression varx
+      assertClauses :: [(Expression, Expression)]
+      assertClauses = [(assert_ @@ x, x)]
+  checkBuiltinFunctionInfo
+    FunInfo
+      { _funInfoDef = f,
+        _funInfoBuiltin = BuiltinAssert,
+        _funInfoSignature = bool_ --> bool_,
+        _funInfoClauses = assertClauses,
+        _funInfoFreeVars = [varx],
+        _funInfoFreeTypeVars = []
+      }

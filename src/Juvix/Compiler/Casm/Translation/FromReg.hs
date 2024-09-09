@@ -286,6 +286,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
           Reg.Assign x -> goAssign x
           Reg.Alloc x -> goAlloc x
           Reg.AllocClosure x -> goAllocClosure x
+          Reg.Assert x -> goAssert x
           Reg.Trace x -> goTrace x
           Reg.Dump -> unsupported "dump"
           Reg.Failure x -> goFail x
@@ -511,6 +512,18 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
             fuid = fromJust $ HashMap.lookup _instrAllocClosureSymbol (info ^. Reg.extraInfoFUIDs)
             storedArgsNum = length _instrAllocClosureArgs
             leftArgsNum = _instrAllocClosureExpectedArgsNum - storedArgsNum
+
+        goAssert :: Reg.InstrAssert -> Sem r ()
+        goAssert Reg.InstrAssert {..} = do
+          v <- goValue _instrAssertValue
+          case v of
+            Imm c
+              | c == 0 -> return ()
+              | otherwise ->
+                  output' 0 $ mkAssign (MemRef Ap 0) (Binop $ BinopValue FieldAdd (MemRef Ap 0) (Imm 1))
+            Ref r ->
+              output' 0 $ Assert (InstrAssert r)
+            Lab {} -> unsupported "assert label"
 
         goTrace :: Reg.InstrTrace -> Sem r ()
         goTrace Reg.InstrTrace {..} = do

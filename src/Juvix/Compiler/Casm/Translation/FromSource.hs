@@ -74,6 +74,7 @@ instruction =
     <|> parseJump
     <|> parseCall
     <|> parseReturn
+    <|> parseAssert
     <|> parseTrace
     <|> parseAssign
 
@@ -248,6 +249,12 @@ parseReturn :: ParsecS r Instruction
 parseReturn = do
   kw kwRet
   return Return
+
+parseAssert :: ParsecS r Instruction
+parseAssert = do
+  kw kwAssert
+  r <- parseMemRef
+  return $ Assert $ InstrAssert {_instrAssertValue = r}
 
 parseTrace :: (Member LabelInfoBuilder r) => ParsecS r Instruction
 parseTrace = do

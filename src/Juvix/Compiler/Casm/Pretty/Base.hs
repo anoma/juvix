@@ -171,6 +171,11 @@ instance PrettyCode InstrAlloc where
     s <- ppCode _instrAllocSize
     return $ Str.ap <+> Str.plusequal <+> s
 
+instance PrettyCode InstrAssert where
+  ppCode InstrAssert {..} = do
+    v <- ppCode _instrAssertValue
+    return $ Str.assert_ <+> v
+
 instance PrettyCode InstrTrace where
   ppCode InstrTrace {..} = do
     v <- ppCode _instrTraceValue
@@ -185,6 +190,7 @@ instance PrettyCode Instruction where
     Call x -> ppCode x
     Return -> return Str.ret
     Alloc x -> ppCode x
+    Assert x -> ppCode x
     Trace x -> ppCode x
     Hint x -> ppCode x
     Label x -> (<> colon) <$> ppCode x

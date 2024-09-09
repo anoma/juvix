@@ -98,6 +98,7 @@ instance PrettyCode Instruction where
     Cairo op -> Tree.ppCode op
     Push val -> (primitive Str.instrPush <+>) <$> ppCode val
     Pop -> return $ primitive Str.instrPop
+    Assert -> return $ primitive Str.instrAssert
     Trace -> return $ primitive Str.instrTrace
     Dump -> return $ primitive Str.instrDump
     Failure -> return $ primitive Str.instrFailure
