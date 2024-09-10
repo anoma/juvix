@@ -70,6 +70,7 @@ eval tab = runReader emptyEvalCtx . eval'
           v <- eval' _nodeUnopArg
           case _nodeUnopOpcode of
             PrimUnop op -> eitherToError $ evalUnop tab op v
+            OpAssert -> goAssert v
             OpTrace -> goTrace v
             OpFail -> goFail v
 
@@ -99,6 +100,12 @@ eval tab = runReader emptyEvalCtx . eval'
                     [ValUInt8 w, t] -> (w :) <$> checkListUInt8 t
                     _ -> evalError "expected either a nullary or a binary constructor"
                   _ -> evalError "expected a constructor"
+
+        goAssert :: Value -> Sem r' Value
+        goAssert = \case
+          ValBool True -> return $ ValBool True
+          ValBool False -> evalError "assertion failed"
+          v -> evalError ("expected a boolean: " <> printValue tab v)
 
         goFail :: Value -> Sem r' Value
         goFail v = evalError ("failure: " <> printValue tab v)
