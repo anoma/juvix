@@ -188,6 +188,7 @@ containsDebugOperations = ufold (\x xs -> x || or xs) isDebugOp
           OpTrace -> True
           OpFail -> True
           OpSeq -> True
+          OpAssert -> False
           OpAnomaByteArrayFromAnomaContents -> False
           OpAnomaByteArrayToAnomaContents -> False
           OpAnomaDecode -> False
@@ -466,6 +467,7 @@ builtinOpArgTypes = \case
   OpShow -> [mkDynamic']
   OpStrConcat -> [mkTypeString', mkTypeString']
   OpStrToInt -> [mkTypeString']
+  OpAssert -> [mkTypeBool']
   OpSeq -> [mkDynamic', mkDynamic']
   OpTrace -> [mkDynamic']
   OpFail -> [mkTypeString']
