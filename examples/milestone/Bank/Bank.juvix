@@ -70,10 +70,6 @@ calculateInterest : Nat -> Nat -> Nat -> Nat
       incrAmount (a : Nat) : Nat := div (a * rate) 10000;
     in iterate (min 100 periods) incrAmount amount;
 
---- Asserts some ;Bool; condition.
-assert : {A : Type} -> Bool -> A -> A
-  | c a := ite c a (failwith "assertion failed");
-
 --- Returns a new ;Token;. Arguments are:
 ---
 --- `owner`: The address of the account to issue the token to
@@ -82,7 +78,7 @@ assert : {A : Type} -> Bool -> A -> A
 ---
 --- `caller`: Who is creating the transaction. It must be the bank.
 issue : Address -> Address -> Nat -> Token
-  | caller owner amount := assert (caller == bankAddress) (mkToken owner 0 amount);
+  | caller owner amount := assert (caller == bankAddress) >-> mkToken owner 0 amount;
 
 --- Deposits some amount of money into the bank.
 deposit (bal : Balances) (token : Token) (amount : Nat) : Token :=
@@ -102,11 +98,10 @@ withdraw
   (rate : Nat)
   (periods : Nat)
   : Token :=
-  assert
-    (caller == bankAddress)
-    (let
-      hash : Field := hashAddress recipient;
-      total : Nat := calculateInterest amount rate periods;
-      token : Token := mkToken recipient 0 total;
-      bal' : Balances := decrement hash amount bal;
-    in runOnChain (commitBalances bal') token);
+  assert (caller == bankAddress)
+    >-> let
+          hash : Field := hashAddress recipient;
+          total : Nat := calculateInterest amount rate periods;
+          token : Token := mkToken recipient 0 total;
+          bal' : Balances := decrement hash amount bal;
+        in runOnChain (commitBalances bal') token;
