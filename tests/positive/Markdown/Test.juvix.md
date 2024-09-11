@@ -1,9 +1,9 @@
 # Example
 
-What is important is seldom urgent. 
+What is important is seldom urgent.
 
 A Juvix Markdown file name ends with `.juvix.md`. This kind of file must contain
-a module declaration at the top, as shown below ---in the first code block. 
+a module declaration at the top, as shown below ---in the first code block.
 
 ```juvix
 module Test;
@@ -18,7 +18,6 @@ import Stdlib.Prelude open;
 ```juvix
 fib : Nat → Nat → Nat → Nat
   | zero x1 _ := x1
-  
   | (suc n) x1 x2 := fib n x2 (x1 + x2);
 
 fibonacci (n : Nat) : Nat := fib n 0 1;

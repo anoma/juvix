@@ -67,6 +67,14 @@ mkLoc offset M.SourcePos {..} =
 mkInitialLoc :: Path Abs File -> Loc
 mkInitialLoc = mkLoc 0 . M.initialPos . fromAbsFile
 
+mkInitialFileLoc :: FileLoc
+mkInitialFileLoc =
+  FileLoc
+    { _locLine = 0,
+      _locCol = 0,
+      _locOffset = 0
+    }
+
 fromPos :: M.Pos -> Pos
 fromPos = Pos . fromIntegral . M.unPos
 
