@@ -177,8 +177,7 @@ processCodeBlock info t loc =
       let b = "```" <> info <> t <> "```"
        in MkTextBlock TextBlock {_textBlock = b, _textBlockInterval = loc}
 
-instance-- (MK.IsInline TextBlock) =>
-  MK.IsBlock TextBlock Mk where
+instance MK.IsBlock TextBlock Mk where
   paragraph a = MkTextBlock a
   plain a = MkTextBlock a
   thematicBreak = toMK "---"

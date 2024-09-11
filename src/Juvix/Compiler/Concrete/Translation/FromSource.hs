@@ -193,24 +193,32 @@ runMarkdownModuleParser fpath mk =
           P.sourceColumn = P.mkPos (intervalStartCol i)
         }
 
+    getInitFileLoc :: Interval -> FileLoc
+    getInitFileLoc = (^. intervalStart)
+
     getInitialParserState :: forall a. MK.JuvixCodeBlock -> P.State Text a
     getInitialParserState code =
-      let initPos =
+      let initPos :: P.SourcePos =
             maybe
               (P.initialPos (toFilePath fpath))
               getInitPos
+              (code ^. MK.juvixCodeBlockInterval)
+          initFileLoc :: FileLoc =
+            maybe
+              mkInitialFileLoc
+              getInitFileLoc
               (code ^. MK.juvixCodeBlockInterval)
        in P.State
             { P.stateInput = code ^. MK.juvixCodeBlock,
               P.statePosState =
                 P.PosState
                   { P.pstateInput = code ^. MK.juvixCodeBlock,
-                    P.pstateOffset = 0,
+                    P.pstateOffset = fromIntegral (initFileLoc ^. locOffset),
                     P.pstateSourcePos = initPos,
                     P.pstateTabWidth = P.defaultTabWidth,
                     P.pstateLinePrefix = ""
                   },
-              P.stateOffset = 0,
+              P.stateOffset = fromIntegral (initFileLoc ^. locOffset),
               P.stateParseErrors = []
             }
     parseHelper ::
