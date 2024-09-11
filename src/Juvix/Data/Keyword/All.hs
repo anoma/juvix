@@ -289,6 +289,15 @@ kwArgsNum = asciiKw Str.instrArgsNum
 kwIntToUInt8 :: Keyword
 kwIntToUInt8 = asciiKw Str.instrIntToUInt8
 
+kwUInt8ToInt :: Keyword
+kwUInt8ToInt = asciiKw Str.instrUInt8ToInt
+
+kwIntToField :: Keyword
+kwIntToField = asciiKw Str.instrIntToField
+
+kwFieldToInt :: Keyword
+kwFieldToInt = asciiKw Str.instrFieldToInt
+
 kwByteArrayFromListUInt8 :: Keyword
 kwByteArrayFromListUInt8 = asciiKw Str.instrByteArrayFromListUInt8
 

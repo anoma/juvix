@@ -37,6 +37,8 @@ import Juvix.Data.Keyword.All
     kwFieldDiv,
     kwFieldMul,
     kwFieldSub,
+    kwFieldToInt,
+    kwIntToField,
     kwIntToUInt8,
     kwLe_,
     kwLt_,
@@ -50,6 +52,7 @@ import Juvix.Data.Keyword.All
     kwStrcat,
     kwSub_,
     kwTrace,
+    kwUInt8ToInt,
   )
 import Juvix.Prelude
 
@@ -100,5 +103,8 @@ allKeywords =
          kwRandomEcPoint,
          kwByteArrayLength,
          kwByteArrayFromListUInt8,
-         kwIntToUInt8
+         kwIntToUInt8,
+         kwUInt8ToInt,
+         kwIntToField,
+         kwFieldToInt
        ]

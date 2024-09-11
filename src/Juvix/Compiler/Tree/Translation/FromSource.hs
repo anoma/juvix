@@ -111,6 +111,9 @@ parseUnop =
     <|> parseUnaryOp kwFail OpFail
     <|> parseUnaryOp kwArgsNum (PrimUnop OpArgsNum)
     <|> parseUnaryOp kwIntToUInt8 (PrimUnop OpIntToUInt8)
+    <|> parseUnaryOp kwUInt8ToInt (PrimUnop OpUInt8ToInt)
+    <|> parseUnaryOp kwIntToField (PrimUnop OpIntToField)
+    <|> parseUnaryOp kwFieldToInt (PrimUnop OpFieldToInt)
 
 parseUnaryOp ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
