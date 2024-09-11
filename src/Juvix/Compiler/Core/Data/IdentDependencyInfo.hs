@@ -44,7 +44,7 @@ createSymbolDependencyInfo tab = createDependencyInfo graph startVertices
         (tab ^. infoIdentifiers)
         <> foldr
           ( \ConstructorInfo {..} ->
-              HashMap.insert _constructorInductive (getSymbols' tab _constructorType)
+              HashMap.insertWith (<>) _constructorInductive (getSymbols' tab _constructorType)
           )
           mempty
           (tab ^. infoConstructors)

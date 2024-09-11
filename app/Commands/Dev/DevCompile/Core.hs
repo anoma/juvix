@@ -8,7 +8,7 @@ import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation qualified as Core
 
 compileTransformations :: [Core.TransformationId]
-compileTransformations = [Core.CombineInfoTables, Core.FilterUnreachable, Core.DisambiguateNames]
+compileTransformations = [Core.CombineInfoTables, Core.DisambiguateNames, Core.FilterUnreachable]
 
 runCommand ::
   forall r.
