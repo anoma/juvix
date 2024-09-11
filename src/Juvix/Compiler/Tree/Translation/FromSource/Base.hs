@@ -310,6 +310,7 @@ typeNamed = do
     "string" -> return TyString
     "unit" -> return TyUnit
     "uint8" -> return mkTypeUInt8
+    "bytearray" -> return TyByteArray
     _ -> do
       idt <- lift $ getIdent' @t @e txt
       case idt of

@@ -110,6 +110,7 @@ parseUnop =
     <|> parseUnaryOp kwTrace OpTrace
     <|> parseUnaryOp kwFail OpFail
     <|> parseUnaryOp kwArgsNum (PrimUnop OpArgsNum)
+    <|> parseUnaryOp kwIntToUInt8 (PrimUnop OpIntToUInt8)
 
 parseUnaryOp ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
@@ -149,6 +150,8 @@ parseAnoma =
     <|> parseAnoma' kwAnomaSign OpAnomaSign
     <|> parseAnoma' kwAnomaSignDetached OpAnomaSignDetached
     <|> parseAnoma' kwAnomaVerifyWithMessage OpAnomaVerifyWithMessage
+    <|> parseAnoma' kwAnomaByteArrayToAnomaContents OpAnomaByteArrayToAnomaContents
+    <|> parseAnoma' kwAnomaByteArrayFromAnomaContents OpAnomaByteArrayFromAnomaContents
 
 parseAnoma' ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>

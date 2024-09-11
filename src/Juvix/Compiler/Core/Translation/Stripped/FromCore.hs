@@ -136,10 +136,7 @@ translateFunctionInfo tab IdentifierInfo {..} =
       { _functionName = _identifierName,
         _functionLocation = _identifierLocation,
         _functionSymbol = _identifierSymbol,
-        _functionBody =
-          translateFunction
-            _identifierArgsNum
-            body,
+        _functionBody = translateFunction _identifierArgsNum body,
         _functionType = translateType _identifierType,
         _functionArgsNum = _identifierArgsNum,
         _functionArgsInfo = map translateArgInfo (lambdaBinders body),
