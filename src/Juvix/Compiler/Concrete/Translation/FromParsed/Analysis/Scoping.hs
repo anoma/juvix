@@ -1340,6 +1340,7 @@ checkTopModule m@Module {..} = checkedModule
             return (e, body', path', doc')
       localModules <- getLocalModules e
       _moduleId <- getModuleId (topModulePathKey (path' ^. S.nameConcrete))
+      doctbl <- getDocTable _moduleId
       let md =
             Module
               { _modulePath = path',
@@ -1359,7 +1360,8 @@ checkTopModule m@Module {..} = checkedModule
                 _scopedModuleFilePath = P.getModuleFilePath m,
                 _scopedModuleExportInfo = e,
                 _scopedModuleLocalModules = localModules,
-                _scopedModuleInfoTable = tab
+                _scopedModuleInfoTable = tab,
+                _scopedModuleDocTable = doctbl
               }
       return (md, smd, sc)
 
@@ -1830,6 +1832,7 @@ checkLocalModule md@Module {..} = do
         ScopedModule
           { _scopedModulePath = set nameConcrete (moduleNameToTopModulePath (NameUnqualified _modulePath)) moduleName,
             _scopedModuleName = moduleName,
+            _scopedModuleDocTable = mempty,
             _scopedModuleFilePath = P.getModuleFilePath md,
             _scopedModuleExportInfo = moduleExportInfo,
             _scopedModuleLocalModules = localModules,
