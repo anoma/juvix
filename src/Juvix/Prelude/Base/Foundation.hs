@@ -286,6 +286,9 @@ toUpperFirst :: String -> String
 toUpperFirst [] = []
 toUpperFirst (x : xs) = Char.toUpper x : xs
 
+uniqueName :: (Show a) => Text -> a -> Text
+uniqueName txt sym = txt <> "_" <> show sym
+
 --------------------------------------------------------------------------------
 -- Text
 --------------------------------------------------------------------------------

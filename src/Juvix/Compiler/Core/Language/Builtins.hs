@@ -1,7 +1,10 @@
 module Juvix.Compiler.Core.Language.Builtins where
 
+import GHC.Show qualified as Show
 import Juvix.Extra.Serialize
+import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
+import Prettyprinter
 
 -- Builtin operations which the evaluator and the code generator treat
 -- specially and non-uniformly.
@@ -57,13 +60,25 @@ data BuiltinDataTag
   | TagBind
   | TagWrite
   | TagReadLn
-  deriving stock (Eq, Generic, Ord, Show)
+  deriving stock (Eq, Generic, Ord)
 
 instance Hashable BuiltinDataTag
 
 instance Serialize BuiltinDataTag
 
 instance NFData BuiltinDataTag
+
+instance Pretty BuiltinDataTag where
+  pretty = \case
+    TagTrue -> Str.true_
+    TagFalse -> Str.false_
+    TagReturn -> Str.return
+    TagBind -> Str.bind
+    TagWrite -> Str.write
+    TagReadLn -> Str.readLn
+
+instance Show BuiltinDataTag where
+  show = show . pretty
 
 builtinOpArgsNum :: BuiltinOp -> Int
 builtinOpArgsNum = \case

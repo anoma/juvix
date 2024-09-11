@@ -24,8 +24,15 @@ quoteName txt =
     [ ("$", "__dollar__"),
       (":", "__colon__"),
       ("@", "__at__"),
+      (".", "__dot__"),
+      (",", "__comma__"),
+      (";", "__semicolon__"),
       ("arg", "__arg__"),
-      ("tmp", "__tmp__")
+      ("tmp", "__tmp__"),
+      ("sub", "__sub__"),
+      ("add", "__add__"),
+      ("mul", "__mul__"),
+      ("div", "__div__")
     ]
 
 quoteFunName :: Text -> Text
