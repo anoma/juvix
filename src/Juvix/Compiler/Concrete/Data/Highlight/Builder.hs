@@ -5,12 +5,14 @@ module Juvix.Compiler.Concrete.Data.Highlight.Builder
   )
 where
 
+import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Concrete.Data.Highlight.Input
 import Juvix.Compiler.Concrete.Data.ParsedItem
 import Juvix.Compiler.Concrete.Data.ScopedName
 import Juvix.Compiler.Concrete.Language.Base
 import Juvix.Compiler.Internal.Language qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context
+import Juvix.Compiler.Store.Scoped.Data.InfoTable
 import Juvix.Prelude
 
 data HighlightBuilder :: Effect where
@@ -19,6 +21,8 @@ data HighlightBuilder :: Effect where
   HighlightName :: AName -> HighlightBuilder m ()
   HighlightParsedItem :: ParsedItem -> HighlightBuilder m ()
   HighlightType :: NameId -> Internal.Expression -> HighlightBuilder m ()
+  HighlightMergeDocTable :: DocTable -> HighlightBuilder m ()
+  GetDocTable :: ModuleId -> HighlightBuilder m DocTable
 
 makeSem ''HighlightBuilder
 
@@ -29,6 +33,8 @@ runHighlightBuilder = reinterpret (runStateShared emptyHighlightInput) $ \case
   HighlightParsedItem p -> modifyShared (over (highlightParsedItems) (p :))
   HighlightDoc k md -> modifyShared (set (highlightDocTable . at k) md)
   HighlightType uid ty -> modifyShared (set (highlightTypes . typesTable . at uid) (Just ty))
+  HighlightMergeDocTable tbl -> modifyShared (over highlightDocTable (HashMap.union tbl))
+  GetDocTable uid -> filterByTopModule uid <$> getsShared (^. highlightDocTable)
 
 ignoreHighlightBuilder :: Sem (HighlightBuilder ': r) a -> Sem r a
 ignoreHighlightBuilder = fmap snd . runHighlightBuilder

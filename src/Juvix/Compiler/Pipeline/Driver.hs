@@ -44,6 +44,7 @@ import Juvix.Compiler.Store.Language
 import Juvix.Compiler.Store.Language qualified as Store
 import Juvix.Compiler.Store.Options qualified as StoredModule
 import Juvix.Compiler.Store.Options qualified as StoredOptions
+import Juvix.Compiler.Store.Scoped.Language qualified as Scoped
 import Juvix.Data.CodeAnn
 import Juvix.Data.SHA256 qualified as SHA256
 import Juvix.Extra.Serialize qualified as Serialize
@@ -268,7 +269,9 @@ processModuleCacheMiss entryIx = do
   tid <- myThreadId
   logDecision tid (entryIx ^. entryIxImportNode) p
   case p of
-    ProcessModuleReuse r -> return r
+    ProcessModuleReuse r -> do
+      highlightMergeDocTable (r ^. pipelineResult . Store.moduleInfoScopedModule . Scoped.scopedModuleDocTable)
+      return r
     ProcessModuleRecompile recomp -> recomp ^. recompileDo
 
 processProject :: (Members '[ModuleInfoCache, Reader EntryPoint, Reader ImportTree] r) => Sem r [(ImportNode, PipelineResult ModuleInfo)]

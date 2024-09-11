@@ -29,6 +29,9 @@ data ScopedModule = ScopedModule
     _scopedModuleName :: S.Name,
     _scopedModuleFilePath :: Path Abs File,
     _scopedModuleExportInfo :: ExportInfo,
+    -- | It contains documentation for stuff defined in this module if this
+    -- corresponds to a top module. It is empty for local modules
+    _scopedModuleDocTable :: DocTable,
     _scopedModuleLocalModules :: HashMap S.NameId ScopedModule,
     _scopedModuleInfoTable :: InfoTable
   }

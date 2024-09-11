@@ -83,3 +83,9 @@ instance Monoid InfoTable where
 combinePrecedenceGraphs :: PrecedenceGraph -> PrecedenceGraph -> PrecedenceGraph
 combinePrecedenceGraphs g1 g2 =
   HashMap.unionWith HashSet.union g1 g2
+
+filterByTopModule :: ModuleId -> HashMap NameId b -> HashMap NameId b
+filterByTopModule m = HashMap.filterWithKey (\k _v -> sameModule k)
+  where
+    sameModule :: NameId -> Bool
+    sameModule n = m == n ^. nameIdModuleId
