@@ -80,6 +80,11 @@ data InstrAssign = InstrAssign
   }
   deriving stock (Eq)
 
+newtype InstrAssert = InstrAssert
+  { _instrAssertValue :: Value
+  }
+  deriving stock (Eq)
+
 newtype InstrTrace = InstrTrace
   { _instrTraceValue :: Value
   }
@@ -184,6 +189,7 @@ makeLenses ''InstrBinop
 makeLenses ''InstrUnop
 makeLenses ''InstrCairo
 makeLenses ''InstrAssign
+makeLenses ''InstrAssert
 makeLenses ''InstrTrace
 makeLenses ''InstrFailure
 makeLenses ''InstrAlloc

@@ -64,6 +64,7 @@ hRunCode hout inputInfo (LabelInfo labelInfo) instrs0 = runST goCode
             Call x -> goCall x pc ap fp mem
             Return -> goReturn pc ap fp mem
             Alloc x -> goAlloc x pc ap fp mem
+            Assert x -> goAssert x pc ap fp mem
             Trace x -> goTrace x pc ap fp mem
             Hint x -> goHint x pc ap fp mem
             Label {} -> go (pc + 1) ap fp mem
@@ -243,6 +244,13 @@ hRunCode hout inputInfo (LabelInfo labelInfo) instrs0 = runST goCode
     goAlloc InstrAlloc {..} pc ap fp mem = do
       v <- readRValue ap fp mem _instrAllocSize
       go (pc + 1) (ap + fromInteger (fieldToInteger v)) fp mem
+
+    goAssert :: InstrAssert -> Address -> Address -> Address -> Memory s -> ST s FField
+    goAssert InstrAssert {..} pc ap fp mem = do
+      v <- readMemRef ap fp mem _instrAssertValue
+      when (fieldToInteger v /= 0) $
+        throwRunError "assertion failed"
+      go (pc + 1) ap fp mem
 
     goTrace :: InstrTrace -> Address -> Address -> Address -> Memory s -> ST s FField
     goTrace InstrTrace {..} pc ap fp mem = do

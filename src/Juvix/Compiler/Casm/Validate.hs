@@ -18,6 +18,7 @@ validate labi instrs = mapM_ go instrs
       Call x -> goCall x
       Return -> return ()
       Alloc x -> goAlloc x
+      Assert x -> goAssert x
       Trace x -> goTrace x
       Hint {} -> return ()
       Label {} -> return ()
@@ -66,3 +67,6 @@ validate labi instrs = mapM_ go instrs
 
     goTrace :: InstrTrace -> Either CasmError ()
     goTrace InstrTrace {..} = goRValue _instrTraceValue
+
+    goAssert :: InstrAssert -> Either CasmError ()
+    goAssert InstrAssert {} = return ()

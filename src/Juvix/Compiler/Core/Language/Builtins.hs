@@ -24,6 +24,7 @@ data BuiltinOp
   | OpStrConcat
   | OpStrToInt
   | OpSeq
+  | OpAssert
   | OpTrace
   | OpFail
   | OpAnomaGet
@@ -84,6 +85,7 @@ builtinOpArgsNum = \case
   OpStrConcat -> 2
   OpStrToInt -> 1
   OpSeq -> 2
+  OpAssert -> 1
   OpTrace -> 1
   OpFail -> 1
   OpAnomaGet -> 1
@@ -133,6 +135,7 @@ builtinIsFoldable = \case
   OpStrConcat -> True
   OpStrToInt -> True
   OpSeq -> False
+  OpAssert -> False
   OpTrace -> False
   OpFail -> False
   OpAnomaGet -> False

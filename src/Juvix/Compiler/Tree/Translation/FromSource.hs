@@ -106,6 +106,7 @@ parseUnop ::
 parseUnop =
   parseUnaryOp kwShow (PrimUnop OpShow)
     <|> parseUnaryOp kwAtoi (PrimUnop OpStrToInt)
+    <|> parseUnaryOp kwAssert OpAssert
     <|> parseUnaryOp kwTrace OpTrace
     <|> parseUnaryOp kwFail OpFail
     <|> parseUnaryOp kwArgsNum (PrimUnop OpArgsNum)

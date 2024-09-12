@@ -28,6 +28,7 @@ fromCore fsize tab =
 
     shouldKeepFunction :: BuiltinFunction -> Bool
     shouldKeepFunction = \case
+      BuiltinAssert -> False
       BuiltinNatPlus -> False
       BuiltinNatSub -> False
       BuiltinNatMul -> False

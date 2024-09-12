@@ -125,7 +125,8 @@ instance Serialize BuiltinConstructor
 instance NFData BuiltinConstructor
 
 data BuiltinFunction
-  = BuiltinNatPlus
+  = BuiltinAssert
+  | BuiltinNatPlus
   | BuiltinNatSub
   | BuiltinNatMul
   | BuiltinNatUDiv
@@ -163,6 +164,7 @@ instance NFData BuiltinFunction
 
 instance Pretty BuiltinFunction where
   pretty = \case
+    BuiltinAssert -> Str.assert
     BuiltinNatPlus -> Str.natPlus
     BuiltinNatSub -> Str.natSub
     BuiltinNatMul -> Str.natMul
@@ -368,6 +370,7 @@ isNatBuiltin = \case
   BuiltinNatLt -> True
   BuiltinNatEq -> True
   --
+  BuiltinAssert -> False
   BuiltinBoolIf -> False
   BuiltinBoolOr -> False
   BuiltinBoolAnd -> False
@@ -403,6 +406,7 @@ isIntBuiltin = \case
   BuiltinIntLe -> True
   BuiltinIntLt -> True
   --
+  BuiltinAssert -> False
   BuiltinNatPlus -> False
   BuiltinNatSub -> False
   BuiltinNatMul -> False
@@ -425,6 +429,7 @@ isCastBuiltin = \case
   BuiltinFromNat -> True
   BuiltinFromInt -> True
   --
+  BuiltinAssert -> False
   BuiltinIntEq -> False
   BuiltinIntPlus -> False
   BuiltinIntSubNat -> False
@@ -496,6 +501,7 @@ isIgnoredBuiltin f
       -- Monad
       BuiltinMonadBind -> False
       -- Ignored
+      BuiltinAssert -> True
       BuiltinBoolIf -> True
       BuiltinBoolOr -> True
       BuiltinBoolAnd -> True

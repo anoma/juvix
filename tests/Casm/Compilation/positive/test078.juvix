@@ -1,0 +1,11 @@
+module test078;
+
+import Stdlib.Prelude open;
+
+fact' (acc : Nat) : Nat → Nat
+  | zero := acc
+  | (suc x) := assert (acc /= 0) >-> fact' (acc * suc x) x;
+
+fact : Nat → Nat := fact' 1;
+
+main : Nat := assert (fact 10 == 10 * fact 9) >-> fact 5 + fact 10 + fact 12;

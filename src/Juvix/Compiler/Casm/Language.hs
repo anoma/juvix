@@ -90,6 +90,7 @@ data Instruction
   | Call InstrCall
   | Return
   | Alloc InstrAlloc
+  | Assert InstrAssert
   | Trace InstrTrace
   | Hint Hint
   | Label LabelRef
@@ -132,6 +133,10 @@ newtype InstrAlloc = InstrAlloc
   { _instrAllocSize :: RValue
   }
 
+newtype InstrAssert = InstrAssert
+  { _instrAssertValue :: MemRef
+  }
+
 newtype InstrTrace = InstrTrace
   { _instrTraceValue :: RValue
   }
@@ -148,4 +153,5 @@ makeLenses ''InstrJump
 makeLenses ''InstrJumpIf
 makeLenses ''InstrCall
 makeLenses ''InstrAlloc
+makeLenses ''InstrAssert
 makeLenses ''InstrTrace

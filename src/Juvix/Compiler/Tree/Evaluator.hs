@@ -75,6 +75,7 @@ hEval hout tab = eval' [] mempty
           let !v = eval' args temps _nodeUnopArg
            in case _nodeUnopOpcode of
                 PrimUnop op -> eitherToError $ evalUnop tab op v
+                OpAssert -> goAssert v
                 OpTrace -> goTrace v
                 OpFail -> goFail v
 
@@ -104,6 +105,11 @@ hEval hout tab = eval' [] mempty
                     [ValUInt8 w, t] -> w : checkListUInt8 t
                     _ -> evalError "expected either a nullary or a binary constructor"
                   _ -> evalError "expected a constructor"
+
+        goAssert :: Value -> Value
+        goAssert = \case
+          ValBool True -> ValBool True
+          _ -> evalError "assertion failed"
 
         goFail :: Value -> Value
         goFail v = evalError ("failure: " <> printValue tab v)

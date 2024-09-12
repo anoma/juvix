@@ -43,6 +43,7 @@ fromCasm instrs0 =
       Casm.Return -> goReturn
       Casm.Alloc x -> goAlloc x
       Casm.Hint x -> goHint x
+      Casm.Assert x -> goAssert x
       Casm.Trace {} -> []
       Casm.Label {} -> []
       Casm.Nop -> []
@@ -228,6 +229,14 @@ fromCasm instrs0 =
           toElems
             . updateOps False _instrAllocSize
             . set instrApUpdate ApUpdateAdd
+            $ defaultInstruction
+
+        goAssert :: Casm.InstrAssert -> [Element]
+        goAssert Casm.InstrAssert {..} =
+          toElems
+            . updateOps False (Casm.Val (Casm.Imm 0))
+            . updateDst _instrAssertValue
+            . set instrOpcode AssertEq
             $ defaultInstruction
 
         goHint :: Casm.Hint -> [Element]

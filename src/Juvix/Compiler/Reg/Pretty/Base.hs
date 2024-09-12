@@ -75,6 +75,11 @@ instance PrettyCode InstrAssign where
     val <- ppCode _instrAssignValue
     return $ res <+> primitive Str.equal <+> val
 
+instance PrettyCode InstrAssert where
+  ppCode InstrAssert {..} = do
+    val <- ppCode _instrAssertValue
+    return $ primitive Str.assert_ <+> val
+
 instance PrettyCode InstrTrace where
   ppCode InstrTrace {..} = do
     val <- ppCode _instrTraceValue
@@ -271,6 +276,7 @@ instance PrettyCode Instruction where
     Unop x -> ppCode x
     Cairo x -> ppCode x
     Assign x -> ppCode x
+    Assert x -> ppCode x
     Trace x -> ppCode x
     Dump -> return $ primitive Str.dump
     Failure x -> ppCode x

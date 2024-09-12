@@ -1,0 +1,13 @@
+-- assertions
+
+start:
+  [ap] = 10
+  [ap + 1] = 1
+  ap += 2
+loop:
+  [ap] = [ap - 2] - 1
+  [ap + 1] = [ap - 1] * [ap - 2]
+  ap += 2
+  jmp loop if [ap - 2] != 0
+  [ap] = [ap - 1] - 3628800; ap++
+  assert [ap - 1]

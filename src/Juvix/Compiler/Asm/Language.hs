@@ -49,6 +49,9 @@ data Instruction
     Push Value
   | -- | Pop the stack. JVA opcode: 'pop'.
     Pop
+  | -- | Assert a boolean on top of the stack. Does not pop the stack. JVA
+    -- opcode: 'assert'.
+    Assert
   | -- | Print a debug log of the object on top of the stack. Does not pop the
     -- stack. JVA opcode: 'trace'.
     Trace

@@ -163,6 +163,16 @@ genCode infoTable fi =
                 _nodeAnomaOpcode = genAnomaOp _builtinAppOp,
                 _nodeAnomaArgs = args
               }
+      | _builtinAppOp == Core.OpAssert =
+          case args of
+            [arg] ->
+              Unop $
+                NodeUnop
+                  { _nodeUnopInfo = mempty,
+                    _nodeUnopOpcode = OpAssert,
+                    _nodeUnopArg = arg
+                  }
+            _ -> impossible
       | otherwise =
           case args of
             [arg] ->

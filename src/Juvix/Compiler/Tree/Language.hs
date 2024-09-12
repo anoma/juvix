@@ -65,6 +65,8 @@ data BinaryOpcode
 
 data UnaryOpcode
   = PrimUnop UnaryOp
+  | -- | Assert a boolean and return it
+    OpAssert
   | -- | Print a debug log of the argument and return it.
     OpTrace
   | -- | Interrupt execution with a runtime error printing the argument.

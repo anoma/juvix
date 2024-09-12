@@ -40,11 +40,3 @@ main
         | else := Resource.fld0 input;
     y := Resource.fld1 input
   };
-
-{-
-main
-  (input : Resource)
-  (path : List (Pair Field Bool))
-  : Field :=
-  count path;
--}

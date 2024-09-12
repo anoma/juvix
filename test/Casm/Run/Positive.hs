@@ -178,5 +178,13 @@ tests =
       $(mkRelDir ".")
       $(mkRelFile "test017.casm")
       $(mkRelFile "out/test017.out")
+      Nothing,
+    PosTest
+      "Test018: Assertions"
+      True
+      True
+      $(mkRelDir ".")
+      $(mkRelFile "test018.casm")
+      $(mkRelFile "out/test018.out")
       Nothing
   ]

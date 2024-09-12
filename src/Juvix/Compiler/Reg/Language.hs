@@ -25,7 +25,8 @@ data Instruction
   | Branch InstrBranch
   | Case InstrCase
   | ----
-    Trace InstrTrace
+    Assert InstrAssert
+  | Trace InstrTrace
   | Dump
   | Failure InstrFailure
   | Prealloc InstrPrealloc

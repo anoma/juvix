@@ -92,6 +92,8 @@ recurse' sig = go True
                 throw $
                   AsmError loc "popping empty value stack"
               return (popValueStack 1 mem)
+            Assert ->
+              return mem
             Trace ->
               return mem
             Dump ->
@@ -412,6 +414,8 @@ recurseS' sig = go True
               return (stackInfoPushValueStack 1 si)
             Pop -> do
               return (stackInfoPopValueStack 1 si)
+            Assert ->
+              return si
             Trace ->
               return si
             Dump ->
