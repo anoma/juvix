@@ -82,11 +82,6 @@ groupStatements = \case
                     ^. S.nameConcrete
                     : map (^. constructorName . S.nameConcrete) constructors
 
-symbolParsed :: forall s. (SingI s) => SymbolType s -> Symbol
-symbolParsed sym = case sing :: SStage s of
-  SParsed -> sym
-  SScoped -> sym ^. S.nameConcrete
-
 flattenStatement :: Statement s -> [Statement s]
 flattenStatement = \case
   StatementModule m -> concatMap flattenStatement (m ^. moduleBody)

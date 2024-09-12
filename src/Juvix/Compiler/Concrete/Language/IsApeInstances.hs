@@ -4,7 +4,6 @@ module Juvix.Compiler.Concrete.Language.IsApeInstances where
 
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language.Base
-import Juvix.Compiler.Concrete.MigrateNamedApplication
 import Juvix.Data.Ape.Base as Ape
 import Juvix.Data.NameKind
 import Juvix.Parser.Lexer (isDelimiterStr)
@@ -82,11 +81,6 @@ instance IsApe Name ApeLeaf where
           _leafExpr = ApeLeafAtom (sing :&: AtomIdentifier n)
         }
 
-instance (SingI s) => IsApe (NamedApplication s) ApeLeaf where
-  toApe = toApe . migrateNamedApplication
-
--- f = toApeIdentifierType _namedAppName
-
 instance (SingI s) => IsApe (NamedApplicationNew s) ApeLeaf where
   toApe a =
     ApeLeaf $
@@ -150,7 +144,6 @@ instance IsApe Expression ApeLeaf where
     ExpressionInfixApplication a -> toApe a
     ExpressionPostfixApplication a -> toApe a
     ExpressionFunction a -> toApe a
-    ExpressionNamedApplication a -> toApe a
     ExpressionNamedApplicationNew a -> toApe a
     ExpressionRecordUpdate a -> toApe a
     ExpressionParensRecordUpdate {} -> leaf
