@@ -2801,7 +2801,19 @@ deriving stock instance Ord (JudocAtom 'Parsed)
 
 deriving stock instance Ord (JudocAtom 'Scoped)
 
+data FunctionLhs = FunctionLhs
+  { _funLhsInstance :: Maybe KeywordRef,
+    _funLhsCoercion :: Maybe KeywordRef,
+    _funLhsName :: FunctionName 'Parsed,
+    _funLhsArgs :: [SigArg 'Parsed],
+    _funLhsColonKw :: Irrelevant (Maybe KeywordRef),
+    _funLhsRetType :: Maybe (ExpressionType 'Parsed),
+    _funLhsTerminating :: Maybe KeywordRef,
+    _funLhsAfterLastArgOff :: Int
+  }
+
 makeLenses ''SideIfs
+makeLenses ''FunctionLhs
 makeLenses ''Statements
 makeLenses ''NamedArgumentFunctionDef
 makeLenses ''NamedArgumentPun
