@@ -18,6 +18,11 @@ kw k = do
         _keywordRefInterval = loc
       }
 
+simplestFunctionDefParsed :: (Member (Reader Interval) r) => Text -> NonEmpty (ExpressionAtom 'Parsed) -> Sem r (FunctionDef 'Parsed)
+simplestFunctionDefParsed funNameTxt funBody = do
+  funName <- symbol funNameTxt
+  return (simplestFunctionDef funName (mkExpressionAtoms funBody))
+
 simplestFunctionDef :: FunctionName s -> ExpressionType s -> FunctionDef s
 simplestFunctionDef funName funBody =
   FunctionDef
@@ -60,17 +65,17 @@ symbol t = do
   l <- ask
   return (WithLoc l t)
 
+mkExpressionAtoms :: NonEmpty (ExpressionAtom 'Parsed) -> ExpressionAtoms 'Parsed
+mkExpressionAtoms _expressionAtoms =
+  ExpressionAtoms
+    { _expressionAtoms,
+      _expressionAtomsLoc = Irrelevant (getLocSpan _expressionAtoms)
+    }
+
 expressionAtoms' :: (Member (Reader Interval) r) => NonEmpty (ExpressionAtom 'Parsed) -> Sem r (ExpressionAtoms 'Parsed)
 expressionAtoms' _expressionAtoms = do
   _expressionAtomsLoc <- Irrelevant <$> ask
   return ExpressionAtoms {..}
-
-namedArgument :: (Member (Reader Interval) r) => Text -> NonEmpty (ExpressionAtom 'Parsed) -> Sem r (NamedArgumentAssign 'Parsed)
-namedArgument n as = do
-  _namedArgValue <- expressionAtoms' as
-  _namedArgName <- symbol n
-  _namedArgAssignKw <- Irrelevant <$> kw kwAssign
-  return NamedArgumentAssign {..}
 
 literalString :: (Member (Reader Interval) r) => Text -> Sem r (ExpressionAtom s)
 literalString t = do
@@ -85,35 +90,25 @@ braced a = do
   l <- ask
   AtomBraces . WithLoc l <$> expressionAtoms' a
 
-argumentBlock :: (Member (Reader Interval) r) => IsImplicit -> NonEmpty (NamedArgumentAssign 'Parsed) -> Sem r (ArgumentBlock 'Parsed)
-argumentBlock i as = do
-  parenL <- kw delimL
-  parenR <- kw delimR
+mkIsExhaustive :: (Member (Reader Interval) r) => Bool -> Sem r IsExhaustive
+mkIsExhaustive _isExhaustive = do
+  keyw <-
+    if
+        | _isExhaustive -> kw kwAt
+        | otherwise -> kw kwAtQuestion
   return
-    ArgumentBlock
-      { _argBlockImplicit = i,
-        _argBlockDelims = Irrelevant (Just (parenL, parenR)),
-        _argBlockArgs = as
+    IsExhaustive
+      { _isExhaustiveKw = Irrelevant keyw,
+        _isExhaustive
       }
-  where
-    delimL :: Keyword
-    delimL = case i of
-      Explicit -> kwBracketL
-      Implicit -> delimBraceL
-      ImplicitInstance -> delimDoubleBraceL
 
-    delimR :: Keyword
-    delimR = case i of
-      Explicit -> kwBracketR
-      Implicit -> delimBraceR
-      ImplicitInstance -> delimDoubleBraceR
-
-namedApplication :: Name -> NonEmpty (ArgumentBlock 'Parsed) -> ExpressionAtom 'Parsed
-namedApplication n as =
-  AtomNamedApplication
-    NamedApplication
-      { _namedAppName = n,
-        _namedAppArgs = as
+namedApplication :: Name -> IsExhaustive -> [NamedArgumentNew 'Parsed] -> ExpressionAtom 'Parsed
+namedApplication n exh as =
+  AtomNamedApplicationNew
+    NamedApplicationNew
+      { _namedApplicationNewName = n,
+        _namedApplicationNewExhaustive = exh,
+        _namedApplicationNewArguments = as
       }
 
 literalInteger :: (Member (Reader Interval) r, Integral a) => a -> Sem r (ExpressionAtom 'Parsed)

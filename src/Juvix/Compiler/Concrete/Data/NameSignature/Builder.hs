@@ -11,7 +11,6 @@ module Juvix.Compiler.Concrete.Data.NameSignature.Builder
 where
 
 import Juvix.Compiler.Concrete.Data.NameSignature.Error
-import Juvix.Compiler.Concrete.Extra (symbolParsed)
 import Juvix.Compiler.Concrete.Gen qualified as Gen
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Prelude

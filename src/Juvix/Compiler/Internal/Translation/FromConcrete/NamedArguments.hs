@@ -16,7 +16,6 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Data.IntMap.Strict qualified as IntMap
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
-import Juvix.Compiler.Concrete.Extra (symbolParsed)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Compiler.Internal.Extra.Base qualified as Internal
 import Juvix.Prelude
@@ -50,34 +49,35 @@ makeLenses ''DesugaredNamedApplication
 runNamedArguments ::
   forall r.
   (Members '[NameIdGen, Error ScoperError, Reader NameSignatures] r) =>
-  NamedApplication 'Scoped ->
+  IdentifierType 'Scoped ->
+  NonEmpty (ArgumentBlock 'Scoped) ->
   [Internal.ApplicationArg] ->
   Sem r DesugaredNamedApplication
-runNamedArguments napp extraArgs = do
+runNamedArguments funName args extraArgs = do
   iniSt <- mkIniBuilderState
   namedArgs <-
     fmap nonEmpty'
       . execOutputList
       . mapError ErrNamedArgumentsError
       . execState iniSt
-      $ helper (getLoc napp)
+      $ helper (getLoc funName <> getLocSpan args)
   return
     DesugaredNamedApplication
-      { _dnamedAppIdentifier = napp ^. namedAppName,
+      { _dnamedAppIdentifier = funName,
         _dnamedAppArgs = namedArgs,
         _dnamedExtraArgs = extraArgs
       }
   where
     mkIniBuilderState :: Sem r BuilderState
     mkIniBuilderState = do
-      let name = napp ^. namedAppName . scopedIdenFinal
+      let name = funName ^. scopedIdenFinal
       msig <- asks @NameSignatures (^. at (name ^. S.nameId))
       let sig = fromMaybe err msig
             where
               err = error ("impossible: could not find name signature for " <> prettyText name)
       return
         BuilderState
-          { _stateRemainingArgs = toList (napp ^. namedAppArgs),
+          { _stateRemainingArgs = toList args,
             _stateRemainingNames = sig ^. nameSignatureArgs
           }
 
@@ -95,7 +95,6 @@ helper loc = do
   whenJustM nextArgumentGroup $ \(impl, args, isLastBlock) -> do
     checkRepeated args
     names :: [NameItem 'Scoped] <- nextNameGroup impl
-
     (pendingArgs, (omittedNames, argmap)) <- scanGroup impl names args
     emitArgs impl isLastBlock (mkNamesIndex names) omittedNames argmap
     whenJust (nonEmpty pendingArgs) $ \pendingArgs' -> do

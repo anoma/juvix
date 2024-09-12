@@ -1502,7 +1502,6 @@ data Expression
   | ExpressionBraces (WithLoc Expression)
   | ExpressionDoubleBraces (DoubleBracesExpression 'Scoped)
   | ExpressionIterator (Iterator 'Scoped)
-  | ExpressionNamedApplication (NamedApplication 'Scoped)
   | ExpressionNamedApplicationNew (NamedApplicationNew 'Scoped)
   deriving stock (Show, Eq, Ord, Generic)
 
@@ -2327,32 +2326,6 @@ instance Serialize RecordUpdateApp
 
 instance NFData RecordUpdateApp
 
-data NamedApplication (s :: Stage) = NamedApplication
-  { _namedAppName :: IdentifierType s,
-    _namedAppArgs :: NonEmpty (ArgumentBlock s)
-  }
-  deriving stock (Generic)
-
-instance Serialize (NamedApplication 'Scoped)
-
-instance NFData (NamedApplication 'Scoped)
-
-instance Serialize (NamedApplication 'Parsed)
-
-instance NFData (NamedApplication 'Parsed)
-
-deriving stock instance Show (NamedApplication 'Parsed)
-
-deriving stock instance Show (NamedApplication 'Scoped)
-
-deriving stock instance Eq (NamedApplication 'Parsed)
-
-deriving stock instance Eq (NamedApplication 'Scoped)
-
-deriving stock instance Ord (NamedApplication 'Parsed)
-
-deriving stock instance Ord (NamedApplication 'Scoped)
-
 newtype NamedArgumentFunctionDef (s :: Stage) = NamedArgumentFunctionDef
   { _namedArgumentFunctionDef :: FunctionDef s
   }
@@ -2608,7 +2581,6 @@ data ExpressionAtom (s :: Stage)
   | AtomLiteral LiteralLoc
   | AtomParens (ExpressionType s)
   | AtomIterator (Iterator s)
-  | AtomNamedApplication (NamedApplication s)
   | AtomNamedApplicationNew (NamedApplicationNew s)
   deriving stock (Generic)
 
@@ -2902,7 +2874,6 @@ makeLenses ''Initializer
 makeLenses ''Range
 makeLenses ''ArgumentBlock
 makeLenses ''NamedArgumentAssign
-makeLenses ''NamedApplication
 makeLenses ''NamedArgumentNew
 makeLenses ''NamedApplicationNew
 makeLenses ''AliasDef
@@ -2988,9 +2959,6 @@ instance (SingI s) => HasLoc (ArgumentBlock s) where
 instance HasAtomicity (ArgumentBlock s) where
   atomicity = const Atom
 
-instance HasAtomicity (NamedApplication s) where
-  atomicity = const (Aggregate appFixity)
-
 instance HasAtomicity (NamedApplicationNew s) where
   atomicity = const (Aggregate updateFixity)
 
@@ -3018,7 +2986,6 @@ instance HasAtomicity Expression where
     ExpressionCase c -> atomicity c
     ExpressionIf x -> atomicity x
     ExpressionIterator i -> atomicity i
-    ExpressionNamedApplication i -> atomicity i
     ExpressionNamedApplicationNew i -> atomicity i
     ExpressionRecordUpdate {} -> Aggregate updateFixity
     ExpressionParensRecordUpdate {} -> Atom
@@ -3101,30 +3068,33 @@ instance HasLoc InfixApplication where
 instance HasLoc PostfixApplication where
   getLoc (PostfixApplication l o) = getLoc l <> getLoc o
 
-instance HasLoc (LambdaClause 'Scoped) where
+instance (SingI s) => HasLoc (LambdaClause s) where
   getLoc c =
-    fmap getLoc (c ^. lambdaPipe . unIrrelevant)
-      ?<> getLocSpan (c ^. lambdaParameters)
-      <> getLoc (c ^. lambdaBody)
+    let locparams = case sing :: SStage s of
+          SParsed -> getLocSpan (c ^. lambdaParameters)
+          SScoped -> getLocSpan (c ^. lambdaParameters)
+     in fmap getLoc (c ^. lambdaPipe . unIrrelevant)
+          ?<> locparams
+          <> getLocExpressionType (c ^. lambdaBody)
 
-instance HasLoc (Lambda 'Scoped) where
+instance HasLoc (Lambda s) where
   getLoc l = getLoc (l ^. lambdaKw) <> getLoc (l ^. lambdaBraces . unIrrelevant . _2)
 
-instance HasLoc (FunctionParameter 'Scoped) where
+instance (SingI s) => HasLoc (FunctionParameter s) where
   getLoc = \case
-    FunctionParameterName n -> getLoc n
+    FunctionParameterName n -> getLocSymbolType n
     FunctionParameterWildcard w -> getLoc w
 
-instance HasLoc (FunctionParameters 'Scoped) where
+instance (SingI s) => HasLoc (FunctionParameters s) where
   getLoc p = case p ^. paramDelims . unIrrelevant of
-    Nothing -> (getLoc <$> listToMaybe (p ^. paramNames)) ?<> getLoc (p ^. paramType)
+    Nothing -> (getLoc <$> listToMaybe (p ^. paramNames)) ?<> getLocExpressionType (p ^. paramType)
     Just (l, r) -> getLoc l <> getLoc r
 
-instance HasLoc (Function 'Scoped) where
-  getLoc f = getLoc (f ^. funParameters) <> getLoc (f ^. funReturn)
+instance (SingI s) => HasLoc (Function s) where
+  getLoc f = getLoc (f ^. funParameters) <> getLocExpressionType (f ^. funReturn)
 
-instance HasLoc (Let 'Scoped) where
-  getLoc l = getLoc (l ^. letKw) <> getLoc (l ^. letExpression)
+instance (SingI s) => HasLoc (Let s) where
+  getLoc l = getLoc (l ^. letKw) <> getLocExpressionType (l ^. letExpression)
 
 instance (SingI s) => HasLoc (SideIfBranch s k) where
   getLoc SideIfBranch {..} =
@@ -3166,8 +3136,13 @@ instance (SingI s) => HasLoc (If s) where
 instance HasLoc (List s) where
   getLoc List {..} = getLoc _listBracketL <> getLoc _listBracketR
 
-instance (SingI s) => HasLoc (NamedApplication s) where
-  getLoc NamedApplication {..} = getLocIdentifierType _namedAppName <> getLoc (last _namedAppArgs)
+instance (SingI s) => HasLoc (NamedArgumentFunctionDef s) where
+  getLoc (NamedArgumentFunctionDef f) = getLoc f
+
+instance (SingI s) => HasLoc (NamedArgumentNew s) where
+  getLoc = \case
+    NamedArgumentNewFunction f -> getLoc f
+    NamedArgumentItemPun f -> getLoc f
 
 instance HasLoc (NamedArgumentPun s) where
   getLoc NamedArgumentPun {..} = getLocSymbolType _namedArgumentPunSymbol
@@ -3220,7 +3195,6 @@ instance HasLoc Expression where
     ExpressionBraces i -> getLoc i
     ExpressionDoubleBraces i -> getLoc i
     ExpressionIterator i -> getLoc i
-    ExpressionNamedApplication i -> getLoc i
     ExpressionNamedApplicationNew i -> getLoc i
     ExpressionRecordUpdate i -> getLoc i
     ExpressionParensRecordUpdate i -> getLoc i
@@ -3272,6 +3246,11 @@ instance (SingI s, SingI t) => HasLoc (Module s t) where
 
 getLocSymbolType :: forall s. (SingI s) => SymbolType s -> Interval
 getLocSymbolType = case sing :: SStage s of
+  SParsed -> getLoc
+  SScoped -> getLoc
+
+getLocHoleType :: forall s. (SingI s) => HoleType s -> Interval
+getLocHoleType = case sing :: SStage s of
   SParsed -> getLoc
   SScoped -> getLoc
 
@@ -3419,6 +3398,28 @@ instance HasLoc Pattern where
     PatternPostfixApplication i -> getLoc i
     PatternRecord i -> getLoc i
 
+instance (SingI s) => HasLoc (ExpressionAtom s) where
+  getLoc = \case
+    AtomIdentifier i -> getLocIdentifierType i
+    AtomLambda x -> getLoc x
+    AtomList x -> getLoc x
+    AtomCase x -> getLoc x
+    AtomIf x -> getLoc x
+    AtomHole x -> getLocHoleType x
+    AtomInstanceHole x -> getLocHoleType x
+    AtomDoubleBraces x -> getLoc x
+    AtomBraces x -> getLoc x
+    AtomDo x -> getLoc x
+    AtomLet x -> getLoc x
+    AtomRecordUpdate x -> getLoc x
+    AtomUniverse x -> getLoc x
+    AtomFunction x -> getLoc x
+    AtomFunArrow x -> getLoc x
+    AtomLiteral x -> getLoc x
+    AtomParens x -> getLocExpressionType x
+    AtomIterator x -> getLoc x
+    AtomNamedApplicationNew x -> getLoc x
+
 instance HasLoc (ExpressionAtoms s) where
   getLoc = getLoc . (^. expressionAtomsLoc)
 
@@ -3461,6 +3462,16 @@ _RecordStatementField :: Traversal' (RecordStatement s) (RecordField s)
 _RecordStatementField f x = case x of
   RecordStatementField p -> RecordStatementField <$> f p
   _ -> pure x
+
+symbolParsed :: forall s. (SingI s) => SymbolType s -> Symbol
+symbolParsed sym = case sing :: SStage s of
+  SParsed -> sym
+  SScoped -> sym ^. S.nameConcrete
+
+namedArgumentNewSymbolParsed :: (SingI s) => SimpleGetter (NamedArgumentNew s) Symbol
+namedArgumentNewSymbolParsed = to $ \case
+  NamedArgumentItemPun a -> a ^. namedArgumentPunSymbol
+  NamedArgumentNewFunction a -> symbolParsed (a ^. namedArgumentFunctionDef . signName)
 
 namedArgumentNewSymbol :: Lens' (NamedArgumentNew 'Parsed) Symbol
 namedArgumentNewSymbol f = \case

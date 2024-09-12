@@ -1,11 +1,14 @@
 module Juvix.Compiler.Concrete.Translation.FromSource
-  ( module Juvix.Compiler.Concrete.Translation.FromSource,
-    module Juvix.Compiler.Concrete.Translation.FromSource.Data.Context,
+  ( module Juvix.Compiler.Concrete.Translation.FromSource.Data.Context,
     module Juvix.Parser.Error,
+    expressionFromTextSource,
+    runModuleParser,
+    fromSource,
+    replInputFromTextSource,
+    ReplInput (..),
   )
 where
 
-import Commonmark qualified as MK
 import Control.Applicative.Permutations
 import Data.ByteString.UTF8 qualified as BS
 import Data.List.NonEmpty.Extra qualified as NonEmpty
@@ -352,19 +355,6 @@ juvixCodeBlockParser = do
           (t ^. withLocParam)
           (Just $ t ^. withLocInt)
 
--- Keep it. Intended to be used later for processing Markdown inside TextBlocks
--- or (Judoc) comments.
-commanMarkParser ::
-  (Members '[ParserResultBuilder, Error ParserError] r) =>
-  Path Abs File ->
-  Text ->
-  Sem r (Either ParserError (Module 'Parsed 'ModuleTop))
-commanMarkParser fileName input_ = do
-  res <- MK.commonmarkWith MK.defaultSyntaxSpec (toFilePath fileName) input_
-  case res of
-    Right (r :: Mk) -> runMarkdownModuleParser fileName r
-    Left r -> return . Left . ErrCommonmark . CommonmarkError $ r
-
 topMarkdownModuleDef ::
   (Members '[ParserResultBuilder, Error ParserError, PragmasStash, JudocStash] r) =>
   ParsecS r (Module 'Parsed 'ModuleTop)
@@ -402,9 +392,6 @@ name = do
   return $ case nonEmptyUnsnoc parts of
     (Just p, n) -> NameQualified (QualifiedName (SymbolPath p) n)
     (Nothing, n) -> NameUnqualified n
-
-mkTopModulePath :: NonEmpty Symbol -> TopModulePath
-mkTopModulePath l = TopModulePath (NonEmpty.init l) (NonEmpty.last l)
 
 usingItem :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (UsingItem 'Parsed)
 usingItem = do
@@ -453,19 +440,6 @@ topModulePath = mkTopModulePath <$> dottedSymbol
 --------------------------------------------------------------------------------
 -- Top level statement
 --------------------------------------------------------------------------------
-
-infixl 3 <?|>
-
--- | Tries the left alternative. If it fails, backtracks and restores the contents of the pragmas and judoc stashes. Then parses the right alternative
-(<?|>) :: (Members '[PragmasStash, JudocStash] r) => ParsecS r a -> ParsecS r a -> ParsecS r a
-l <?|> r = do
-  p <- P.lift (get @(Maybe ParsedPragmas))
-  j <- P.lift (get @(Maybe (Judoc 'Parsed)))
-  let recover = do
-        P.lift (put p)
-        P.lift (put j)
-        r
-  P.withRecovery (const recover) (P.try l)
 
 statement :: (Members '[Error ParserError, ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (Statement 'Parsed)
 statement = P.label "<top level statement>" $ do
@@ -829,9 +803,8 @@ expressionAtom :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) =
 expressionAtom =
   P.label "<expression>" $
     AtomLiteral <$> P.try literal
-      <|> either AtomIterator AtomNamedApplication <$> iterator
+      <|> AtomIterator <$> iterator
       <|> AtomNamedApplicationNew <$> namedApplicationNew
-      <|> AtomNamedApplication <$> namedApplication
       <|> AtomList <$> parseList
       <|> AtomIf <$> multiwayIf
       <|> AtomIdentifier <$> name
@@ -881,9 +854,8 @@ pdoubleBracesExpression = do
 iterator ::
   forall r.
   (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) =>
-  ParsecS r (Either (Iterator 'Parsed) (NamedApplication 'Parsed))
+  ParsecS r (Iterator 'Parsed)
 iterator = do
-  off <- P.getOffset
   (firstIsInit, keywordRef, _iteratorName, pat) <- P.try $ do
     n <- name
     lparen
@@ -926,26 +898,12 @@ iterator = do
             rngs <- (r :) <$> many (semicolon >> range)
             rparen
             return rngs
-  if
-      | null _iteratorRanges -> do
-          args <- nonEmpty' <$> mapM (mkNamedArgument off) _iteratorInitializers
-          tailBlocks <- many argumentBlock
-          let firstBlock =
-                ArgumentBlock
-                  { _argBlockDelims = Irrelevant Nothing,
-                    _argBlockImplicit = Explicit,
-                    _argBlockArgs = args
-                  }
-              _namedAppName = _iteratorName
-              _namedAppArgs = firstBlock :| tailBlocks
-              _namedAppSignature = Irrelevant ()
-          return $ Right NamedApplication {..}
-      | otherwise -> do
-          (_iteratorBody, _iteratorBodyBraces) <-
-            (,True) <$> braces parseExpressionAtoms
-              <|> (,False) <$> parseExpressionAtoms
-          let _iteratorParens = False
-          return $ Left Iterator {..}
+  do
+    (_iteratorBody, _iteratorBodyBraces) <-
+      (,True) <$> braces parseExpressionAtoms
+        <|> (,False) <$> parseExpressionAtoms
+    let _iteratorParens = False
+    return $ Iterator {..}
   where
     initializer :: ParsecS r (Initializer 'Parsed)
     initializer = do
@@ -971,15 +929,6 @@ iterator = do
     range = do
       s <- P.try rangeStart
       rangeCont s
-
-    mkNamedArgument :: Int -> Initializer 'Parsed -> ParsecS r (NamedArgumentAssign 'Parsed)
-    mkNamedArgument off Initializer {..} = do
-      let _namedArgAssignKw = _initializerAssignKw
-          _namedArgValue = _initializerExpression
-      _namedArgName <- case _initializerPattern ^. patternAtoms of
-        PatternAtomIden (NameUnqualified n) :| [] -> return n
-        _ -> parseFailure off "an iterator must have at least one range"
-      return NamedArgumentAssign {..}
 
 pnamedArgumentFunctionDef ::
   forall r.
@@ -1066,62 +1015,6 @@ namedApplicationNew = P.label "<named application>" $ do
   _namedApplicationNewArguments <- manyNamedArgumentNewRBrace
   let _namedApplicationNewExtra = Irrelevant ()
   return NamedApplicationNew {..}
-
-namedApplication ::
-  forall r.
-  (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) =>
-  ParsecS r (NamedApplication 'Parsed)
-namedApplication = P.label "<named application>" $ do
-  (_namedAppName, firstBlockStart) <- P.try $ do
-    n <- name
-    bs <- argumentBlockStart
-    return (n, bs)
-  firstBlock <- argumentBlockCont firstBlockStart
-  tailBlocks <- many argumentBlock
-  let _namedAppArgs = firstBlock :| tailBlocks
-      _namedAppSignature = Irrelevant ()
-  return NamedApplication {..}
-
-namedArgumentAssign ::
-  forall r.
-  (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) =>
-  ParsecS r (NamedArgumentAssign 'Parsed)
-namedArgumentAssign = do
-  _namedArgName <- symbol
-  _namedArgAssignKw <- Irrelevant <$> kw kwAssign
-  _namedArgValue <- parseExpressionAtoms
-  return NamedArgumentAssign {..}
-
-argumentBlockStart ::
-  forall r.
-  (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) =>
-  ParsecS r (KeywordRef, IsImplicit, Symbol, Irrelevant KeywordRef)
-argumentBlockStart = do
-  (l, impl) <- implicitOpen
-  n <- symbol
-  a <- Irrelevant <$> kw kwAssign
-  return (l, impl, n, a)
-
-argumentBlockCont ::
-  forall r.
-  (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) =>
-  (KeywordRef, IsImplicit, Symbol, Irrelevant KeywordRef) ->
-  ParsecS r (ArgumentBlock 'Parsed)
-argumentBlockCont (l, _argBlockImplicit, _namedArgName, _namedArgAssignKw) = do
-  _namedArgValue <- parseExpressionAtoms
-  let arg = NamedArgumentAssign {..}
-  _argBlockArgs <- nonEmpty' . (arg :) <$> many (semicolon >> namedArgumentAssign)
-  r <- implicitClose _argBlockImplicit
-  let _argBlockDelims = Irrelevant (Just (l, r))
-  return ArgumentBlock {..}
-
-argumentBlock ::
-  forall r.
-  (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) =>
-  ParsecS r (ArgumentBlock 'Parsed)
-argumentBlock = do
-  s <- P.try argumentBlockStart
-  argumentBlockCont s
 
 hole :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (HoleType 'Parsed)
 hole = kw kwHole
@@ -1269,12 +1162,6 @@ sideIfs = do
     SideIfs
       { ..
       }
-
-prhsExpression :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (RhsExpression 'Parsed)
-prhsExpression = do
-  _rhsExpressionAssignKw <- Irrelevant <$> kw kwAssign
-  _rhsExpression <- parseExpressionAtoms
-  return RhsExpression {..}
 
 pcaseBranchRhs :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (CaseBranchRhs 'Parsed)
 pcaseBranchRhs =

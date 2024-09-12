@@ -2697,7 +2697,6 @@ checkExpressionAtom e = case e of
   AtomLiteral l -> return (pure (AtomLiteral l))
   AtomList l -> pure . AtomList <$> checkList l
   AtomIterator i -> pure . AtomIterator <$> checkIterator i
-  AtomNamedApplication i -> pure . AtomNamedApplication <$> checkNamedApplication i
   AtomNamedApplicationNew i -> pure . AtomNamedApplicationNew <$> checkNamedApplicationNew i
   AtomRecordUpdate i -> pure . AtomRecordUpdate <$> checkRecordUpdate i
 
@@ -2831,34 +2830,6 @@ checkUpdateField sig f = do
   where
     unexpectedField :: ScoperError
     unexpectedField = ErrUnexpectedField (UnexpectedField (f ^. fieldUpdateName))
-
-checkNamedApplication ::
-  forall r.
-  (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader Package] r) =>
-  NamedApplication 'Parsed ->
-  Sem r (NamedApplication 'Scoped)
-checkNamedApplication napp = do
-  _namedAppName <- checkScopedIden (napp ^. namedAppName)
-  _namedAppArgs <- mapM checkArgumentBlock (napp ^. namedAppArgs)
-  return NamedApplication {..}
-  where
-    checkArgumentBlock :: ArgumentBlock 'Parsed -> Sem r (ArgumentBlock 'Scoped)
-    checkArgumentBlock b = do
-      let _argBlockDelims = b ^. argBlockDelims
-          _argBlockImplicit = b ^. argBlockImplicit
-      _argBlockArgs <- mapM checkNamedArgumentAssign (b ^. argBlockArgs)
-      return ArgumentBlock {..}
-
-checkNamedArgumentAssign ::
-  forall r.
-  (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader Package] r) =>
-  NamedArgumentAssign 'Parsed ->
-  Sem r (NamedArgumentAssign 'Scoped)
-checkNamedArgumentAssign n = do
-  _namedArgName <- withLocalScope (bindVariableSymbol (n ^. namedArgName))
-  let _namedArgAssignKw = n ^. namedArgAssignKw
-  _namedArgValue <- checkParseExpressionAtoms (n ^. namedArgValue)
-  return NamedArgumentAssign {..}
 
 getRecordInfo ::
   forall r.
@@ -3291,7 +3262,6 @@ parseTerm =
     <|> parseIterator
     <|> parseDoubleBraces
     <|> parseBraces
-    <|> parseNamedApplication
     <|> parseNamedApplicationNew
   where
     parseHole :: Parse Expression
@@ -3364,14 +3334,6 @@ parseTerm =
         function :: ExpressionAtom 'Scoped -> Maybe (Function 'Scoped)
         function s = case s of
           AtomFunction u -> Just u
-          _ -> Nothing
-
-    parseNamedApplication :: Parse Expression
-    parseNamedApplication = ExpressionNamedApplication <$> P.token namedApp mempty
-      where
-        namedApp :: ExpressionAtom 'Scoped -> Maybe (NamedApplication 'Scoped)
-        namedApp s = case s of
-          AtomNamedApplication u -> Just u
           _ -> Nothing
 
     parseNamedApplicationNew :: Parse Expression

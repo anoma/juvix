@@ -17,7 +17,6 @@ import Juvix.Compiler.Concrete.Gen qualified as Gen
 import Juvix.Compiler.Concrete.Keywords
 import Juvix.Compiler.Concrete.Keywords qualified as Kw
 import Juvix.Compiler.Concrete.Language.Base
-import Juvix.Compiler.Concrete.MigrateNamedApplication
 import Juvix.Compiler.Concrete.Pretty.Options
 import Juvix.Compiler.Concrete.Translation.ImportScanner.Base
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Data
@@ -333,9 +332,6 @@ instance (SingI s) => PrettyPrint (ArgumentBlock s) where
     where
       Irrelevant d = _argBlockDelims
 
-instance (SingI s) => PrettyPrint (NamedApplication s) where
-  ppCode = ppCode . migrateNamedApplication
-
 instance PrettyPrint IsExhaustive where
   ppCode IsExhaustive {..} = ppCode _isExhaustiveKw
 
@@ -460,7 +456,6 @@ instance (SingI s) => PrettyPrint (ExpressionAtom s) where
     AtomHole w -> ppHoleType w
     AtomInstanceHole w -> ppHoleType w
     AtomIterator i -> ppIterator NotTop i
-    AtomNamedApplication i -> ppCode i
     AtomNamedApplicationNew i -> ppCode i
 
 instance PrettyPrint PatternScopedIden where
@@ -978,7 +973,6 @@ instance PrettyPrint Expression where
     ExpressionCase c -> ppCase NotTop c
     ExpressionIf c -> ppIf NotTop c
     ExpressionIterator i -> ppIterator NotTop i
-    ExpressionNamedApplication i -> ppCode i
     ExpressionNamedApplicationNew i -> ppCode i
     ExpressionRecordUpdate i -> ppCode i
     ExpressionParensRecordUpdate i -> ppCode i

@@ -8,7 +8,6 @@ import Data.FileEmbed qualified as FE
 import Juvix.Compiler.Concrete.Gen
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Print (ppOutDefaultNoComments)
-import Juvix.Compiler.Concrete.Translation.FromSource hiding (symbol)
 import Juvix.Compiler.Core.Language qualified as Core
 import Juvix.Compiler.Pipeline.Package.Base
 import Juvix.Compiler.Pipeline.Package.Loader.Error
