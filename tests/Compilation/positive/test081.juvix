@@ -1,0 +1,18 @@
+-- Non-duplication in let-folding
+module test081;
+
+import Stdlib.Prelude open;
+
+{-# inline: false #-}
+g (h : Nat -> Nat) : Nat := h 0 * h 0;
+
+terminating
+f (n : Nat) : Nat :=
+  if
+    | n == 0 := 0
+    | else :=
+      let terminating x := f (sub n 1)
+      in
+      g \{_ := x};
+
+main : Nat := f 10000;
