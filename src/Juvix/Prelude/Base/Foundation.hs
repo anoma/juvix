@@ -286,9 +286,6 @@ toUpperFirst :: String -> String
 toUpperFirst [] = []
 toUpperFirst (x : xs) = Char.toUpper x : xs
 
-uniqueName :: (Show a) => Text -> a -> Text
-uniqueName txt sym = txt <> "_" <> show sym
-
 --------------------------------------------------------------------------------
 -- Text
 --------------------------------------------------------------------------------
@@ -312,6 +309,15 @@ isFirstLetter :: String -> Bool
 isFirstLetter = \case
   h : _ -> isLetter h
   _ -> False
+
+uniqueName :: (Show a) => Text -> a -> Text
+uniqueName txt sym = txt <> "_" <> show sym
+
+replaceSubtext :: [(Text, Text)] -> Text -> Text
+replaceSubtext texts txt = foldr (uncurry Text.replace) txt texts
+
+replaceText :: [(Text, Text)] -> Text -> Text
+replaceText texts txt = fromMaybe txt (HashMap.lookup txt (HashMap.fromList texts))
 
 --------------------------------------------------------------------------------
 -- Foldable
