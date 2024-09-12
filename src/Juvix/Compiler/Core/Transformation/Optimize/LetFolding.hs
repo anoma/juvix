@@ -27,7 +27,7 @@ convertNode isFoldable md = rmapL go
               || Info.freeVarOccurrences 0 _letBody <= 1
               || isFoldable md bl (_letItem ^. letItemValue)
           )
-            && not (containsDebugOperations _letBody) ->
+            && not (containsDebugOps _letBody) ->
             go (recur . (mkBCRemove b val' :)) (BL.cons b bl) _letBody
         where
           val' = go recur bl (_letItem ^. letItemValue)
