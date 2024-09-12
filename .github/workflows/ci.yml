@@ -77,6 +77,42 @@ jobs:
   build-and-test-linux:
     runs-on: ubuntu-22.04
     steps:
+      - name: Free disk space
+        run: |
+          df -h
+          echo "/usr/local"
+          du -hsc /usr/local/*
+          sudo rm -rf \
+            /usr/local/aws-sam-cil \
+            /usr/local/julia* || :
+          echo "end /usr/local"
+          echo "/usr/local/lib"
+          du -hsc /usr/local/lib/*
+          sudo rm -rf \
+            /usr/local/lib/android \
+            /usr/local/lib/heroku \
+            /usr/local/lib/node_modules || :
+          echo "end /usr/local/lib"
+          echo "/usr/local/share"
+          du -hsc /usr/local/share/*
+          sudo rm -rf \
+            /usr/local/share/chromium \
+            /usr/local/share/powershell || :
+          echo "end /usr/local/share"
+          echo "/opt/hostedtoolcache/"
+          du -hsc /opt/hostedtoolcache/*
+          sudo rm -rf \
+            /opt/hostedtoolcache/CodeQL \
+            /opt/hostedtoolcache/go \
+            /opt/hostedtoolcache/PyPy \
+            /opt/hostedtoolcache/node || :
+          echo "end /opt/hostedtoolcache/*"
+          sudo apt purge -y \
+            firefox \
+            google-chrome-stable \
+            microsoft-edge-stable
+          df -h
+
       - uses: extractions/setup-just@v2
 
       - name: Checkout our repository
