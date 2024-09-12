@@ -107,6 +107,9 @@ instance HasLoc TopModulePath where
       [] -> getLoc _modulePathName
       (x : _) -> getLoc x <> getLoc _modulePathName
 
+mkTopModulePath :: NonEmpty Symbol -> TopModulePath
+mkTopModulePath l = TopModulePath (NonEmpty.init l) (NonEmpty.last l)
+
 topModulePathToName :: TopModulePath -> Name
 topModulePathToName (TopModulePath ms m) = case nonEmpty ms of
   Nothing -> NameUnqualified m

@@ -1,11 +1,14 @@
 module Juvix.Compiler.Concrete.Translation.FromSource
-  ( module Juvix.Compiler.Concrete.Translation.FromSource,
-    module Juvix.Compiler.Concrete.Translation.FromSource.Data.Context,
+  ( module Juvix.Compiler.Concrete.Translation.FromSource.Data.Context,
     module Juvix.Parser.Error,
+    expressionFromTextSource,
+    runModuleParser,
+    fromSource,
+    replInputFromTextSource,
+    ReplInput (..),
   )
 where
 
-import Commonmark qualified as MK
 import Control.Applicative.Permutations
 import Data.ByteString.UTF8 qualified as BS
 import Data.List.NonEmpty.Extra qualified as NonEmpty
@@ -352,19 +355,6 @@ juvixCodeBlockParser = do
           (t ^. withLocParam)
           (Just $ t ^. withLocInt)
 
--- Keep it. Intended to be used later for processing Markdown inside TextBlocks
--- or (Judoc) comments.
-commanMarkParser ::
-  (Members '[ParserResultBuilder, Error ParserError] r) =>
-  Path Abs File ->
-  Text ->
-  Sem r (Either ParserError (Module 'Parsed 'ModuleTop))
-commanMarkParser fileName input_ = do
-  res <- MK.commonmarkWith MK.defaultSyntaxSpec (toFilePath fileName) input_
-  case res of
-    Right (r :: Mk) -> runMarkdownModuleParser fileName r
-    Left r -> return . Left . ErrCommonmark . CommonmarkError $ r
-
 topMarkdownModuleDef ::
   (Members '[ParserResultBuilder, Error ParserError, PragmasStash, JudocStash] r) =>
   ParsecS r (Module 'Parsed 'ModuleTop)
@@ -402,9 +392,6 @@ name = do
   return $ case nonEmptyUnsnoc parts of
     (Just p, n) -> NameQualified (QualifiedName (SymbolPath p) n)
     (Nothing, n) -> NameUnqualified n
-
-mkTopModulePath :: NonEmpty Symbol -> TopModulePath
-mkTopModulePath l = TopModulePath (NonEmpty.init l) (NonEmpty.last l)
 
 usingItem :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (UsingItem 'Parsed)
 usingItem = do
@@ -453,19 +440,6 @@ topModulePath = mkTopModulePath <$> dottedSymbol
 --------------------------------------------------------------------------------
 -- Top level statement
 --------------------------------------------------------------------------------
-
-infixl 3 <?|>
-
--- | Tries the left alternative. If it fails, backtracks and restores the contents of the pragmas and judoc stashes. Then parses the right alternative
-(<?|>) :: (Members '[PragmasStash, JudocStash] r) => ParsecS r a -> ParsecS r a -> ParsecS r a
-l <?|> r = do
-  p <- P.lift (get @(Maybe ParsedPragmas))
-  j <- P.lift (get @(Maybe (Judoc 'Parsed)))
-  let recover = do
-        P.lift (put p)
-        P.lift (put j)
-        r
-  P.withRecovery (const recover) (P.try l)
 
 statement :: (Members '[Error ParserError, ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (Statement 'Parsed)
 statement = P.label "<top level statement>" $ do
@@ -1042,16 +1016,6 @@ namedApplicationNew = P.label "<named application>" $ do
   let _namedApplicationNewExtra = Irrelevant ()
   return NamedApplicationNew {..}
 
-argumentBlockStart ::
-  forall r.
-  (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) =>
-  ParsecS r (KeywordRef, IsImplicit, Symbol, Irrelevant KeywordRef)
-argumentBlockStart = do
-  (l, impl) <- implicitOpen
-  n <- symbol
-  a <- Irrelevant <$> kw kwAssign
-  return (l, impl, n, a)
-
 hole :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (HoleType 'Parsed)
 hole = kw kwHole
 
@@ -1198,12 +1162,6 @@ sideIfs = do
     SideIfs
       { ..
       }
-
-prhsExpression :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (RhsExpression 'Parsed)
-prhsExpression = do
-  _rhsExpressionAssignKw <- Irrelevant <$> kw kwAssign
-  _rhsExpression <- parseExpressionAtoms
-  return RhsExpression {..}
 
 pcaseBranchRhs :: (Members '[ParserResultBuilder, PragmasStash, JudocStash] r) => ParsecS r (CaseBranchRhs 'Parsed)
 pcaseBranchRhs =
