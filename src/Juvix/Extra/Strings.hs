@@ -614,6 +614,18 @@ false_ = "false"
 default_ :: (IsString s) => s
 default_ = "default"
 
+return :: (IsString s) => s
+return = "return"
+
+bind :: (IsString s) => s
+bind = "bind"
+
+write :: (IsString s) => s
+write = "write"
+
+readLn :: (IsString s) => s
+readLn = "readLn"
+
 plus :: (IsString s) => s
 plus = "+"
 

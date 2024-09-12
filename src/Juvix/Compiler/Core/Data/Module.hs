@@ -110,6 +110,9 @@ constrName md tag = lookupConstructorInfo md tag ^. constructorName
 identNames :: Module -> HashSet Text
 identNames m = identNames' (computeCombinedInfoTable m)
 
+identNamesList :: Module -> [Text]
+identNamesList m = identNamesList' (computeCombinedInfoTable m)
+
 freshIdentName :: Module -> Text -> Text
 freshIdentName m = freshName (identNames m)
 

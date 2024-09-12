@@ -122,6 +122,28 @@ disambiguateNodeNames md = disambiguateNodeNames' disambiguate md
     names :: HashSet Text
     names = identNames md
 
+disambiguateTopNames :: Module -> Module
+disambiguateTopNames md =
+  mapInductives (\i -> over inductiveName (renameDuplicated (i ^. inductiveSymbol)) i)
+    . mapConstructors (\i -> over constructorName (renameDuplicated (i ^. constructorTag)) i)
+    . mapIdents (\i -> over identifierName (renameDuplicated (i ^. identifierSymbol)) i)
+    $ md
+  where
+    duplicatedNames :: HashSet Text
+    duplicatedNames =
+      HashSet.fromList
+        . map head
+        . filter (\x -> length x > 1)
+        . NonEmpty.group
+        . sort
+        . identNamesList
+        $ md
+
+    renameDuplicated :: (Show a) => a -> Text -> Text
+    renameDuplicated sym name
+      | HashSet.member name duplicatedNames = uniqueName name sym
+      | otherwise = name
+
 setArgNames :: Module -> Symbol -> Node -> Node
 setArgNames md sym node = reLambdas lhs' body
   where
@@ -135,8 +157,9 @@ setArgNames md sym node = reLambdas lhs' body
 
 disambiguateNames :: Module -> Module
 disambiguateNames md =
-  let md' = mapT (setArgNames md) md
-   in mapAllNodes (disambiguateNodeNames md') md'
+  let md1 = disambiguateTopNames md
+      md2 = mapT (setArgNames md1) md1
+   in mapAllNodes (disambiguateNodeNames md2) md2
 
 disambiguateNames' :: InfoTable -> InfoTable
 disambiguateNames' = withInfoTable disambiguateNames

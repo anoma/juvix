@@ -91,10 +91,10 @@ declareBuiltins = do
   sym <- lift $ freshSymbol' @t @e
   let tyio = mkTypeInductive sym
       constrs =
-        [ createBuiltinConstr sym TagReturn "return" (mkTypeFun [TyDynamic] tyio) i,
-          createBuiltinConstr sym TagBind "bind" (mkTypeFun [tyio, mkTypeFun [TyDynamic] tyio] tyio) i,
-          createBuiltinConstr sym TagWrite "write" (mkTypeFun [TyDynamic] tyio) i,
-          createBuiltinConstr sym TagReadLn "readLn" tyio i
+        [ createBuiltinConstr sym TagReturn (show TagReturn) (mkTypeFun [TyDynamic] tyio) i,
+          createBuiltinConstr sym TagBind (show TagBind) (mkTypeFun [tyio, mkTypeFun [TyDynamic] tyio] tyio) i,
+          createBuiltinConstr sym TagWrite (show TagWrite) (mkTypeFun [TyDynamic] tyio) i,
+          createBuiltinConstr sym TagReadLn (show TagReadLn) tyio i
         ]
   lift $
     registerInductive' @t @e
@@ -310,6 +310,7 @@ typeNamed = do
     "string" -> return TyString
     "unit" -> return TyUnit
     "uint8" -> return mkTypeUInt8
+    "bytearray" -> return TyByteArray
     _ -> do
       idt <- lift $ getIdent' @t @e txt
       case idt of

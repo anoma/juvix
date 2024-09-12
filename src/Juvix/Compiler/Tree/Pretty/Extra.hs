@@ -1,6 +1,5 @@
 module Juvix.Compiler.Tree.Pretty.Extra where
 
-import Data.Text qualified as Text
 import Juvix.Data.CodeAnn
 import Juvix.Prelude
 
@@ -17,21 +16,33 @@ variable :: Text -> Doc Ann
 variable a = annotate (AnnKind KNameLocal) (pretty a)
 
 quoteName :: Text -> Text
-quoteName txt =
-  foldr
-    (uncurry Text.replace)
-    txt
-    [ ("$", "__dollar__"),
-      (":", "__colon__"),
-      ("@", "__at__"),
-      ("arg", "__arg__"),
-      ("tmp", "__tmp__")
-    ]
+quoteName =
+  quote1 . quote0
+  where
+    quote0 :: Text -> Text
+    quote0 =
+      replaceSubtext
+        [ ("$", "__dollar__"),
+          (":", "__colon__"),
+          ("@", "__at__"),
+          (".", "__dot__"),
+          (",", "__comma__"),
+          (";", "__semicolon__")
+        ]
+
+    quote1 :: Text -> Text
+    quote1 =
+      replaceText
+        [ ("arg", "__arg__"),
+          ("tmp", "__tmp__"),
+          ("sub", "__sub__"),
+          ("add", "__add__"),
+          ("mul", "__mul__"),
+          ("div", "__div__")
+        ]
 
 quoteFunName :: Text -> Text
-quoteFunName txt =
-  foldr
-    (uncurry Text.replace)
-    txt
+quoteFunName =
+  replaceText
     [ ("readLn", "__readLn__")
     ]

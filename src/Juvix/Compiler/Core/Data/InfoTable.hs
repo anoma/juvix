@@ -106,11 +106,13 @@ typeName' :: InfoTable -> Symbol -> Text
 typeName' tab sym = lookupTabInductiveInfo tab sym ^. inductiveName
 
 identNames' :: InfoTable -> HashSet Text
-identNames' tab =
-  HashSet.fromList $
-    map (^. identifierName) (HashMap.elems (tab ^. infoIdentifiers))
-      ++ map (^. constructorName) (HashMap.elems (tab ^. infoConstructors))
-      ++ map (^. inductiveName) (HashMap.elems (tab ^. infoInductives))
+identNames' = HashSet.fromList . identNamesList'
+
+identNamesList' :: InfoTable -> [Text]
+identNamesList' tab =
+  map (^. identifierName) (HashMap.elems (tab ^. infoIdentifiers))
+    ++ map (^. constructorName) (HashMap.elems (tab ^. infoConstructors))
+    ++ map (^. inductiveName) (HashMap.elems (tab ^. infoInductives))
 
 freshIdentName' :: InfoTable -> Text -> Text
 freshIdentName' tab = freshName (identNames' tab)

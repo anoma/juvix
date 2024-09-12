@@ -9,6 +9,8 @@ import Juvix.Compiler.Tree.Keywords.Base
 import Juvix.Data.Keyword.All
   ( kwAdd_,
     kwAlloc,
+    kwAnomaByteArrayFromAnomaContents,
+    kwAnomaByteArrayToAnomaContents,
     kwAnomaDecode,
     kwAnomaEncode,
     kwAnomaGet,
@@ -35,6 +37,9 @@ import Juvix.Data.Keyword.All
     kwFieldDiv,
     kwFieldMul,
     kwFieldSub,
+    kwFieldToInt,
+    kwIntToField,
+    kwIntToUInt8,
     kwLe_,
     kwLt_,
     kwMod_,
@@ -47,6 +52,7 @@ import Juvix.Data.Keyword.All
     kwStrcat,
     kwSub_,
     kwTrace,
+    kwUInt8ToInt,
   )
 import Juvix.Prelude
 
@@ -90,9 +96,15 @@ allKeywords =
          kwAnomaSign,
          kwAnomaSignDetached,
          kwAnomaVerifyWithMessage,
+         kwAnomaByteArrayFromAnomaContents,
+         kwAnomaByteArrayToAnomaContents,
          kwPoseidon,
          kwEcOp,
          kwRandomEcPoint,
          kwByteArrayLength,
-         kwByteArrayFromListUInt8
+         kwByteArrayFromListUInt8,
+         kwIntToUInt8,
+         kwUInt8ToInt,
+         kwIntToField,
+         kwFieldToInt
        ]

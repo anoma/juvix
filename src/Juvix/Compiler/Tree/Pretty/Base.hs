@@ -107,20 +107,13 @@ instance PrettyCode Value where
 
 instance PrettyCode TypeInductive where
   ppCode :: (Member (Reader Options) r) => TypeInductive -> Sem r (Doc Ann)
-  ppCode TypeInductive {..} = do
-    names <- asks (^. optSymbolNames)
-    let name = fromJust (HashMap.lookup _typeInductiveSymbol names)
-    return $ annotate (AnnKind KNameInductive) (pretty name)
+  ppCode TypeInductive {..} = ppIndName _typeInductiveSymbol
 
 instance PrettyCode TypeConstr where
   ppCode :: (Member (Reader Options) r) => TypeConstr -> Sem r (Doc Ann)
   ppCode TypeConstr {..} = do
-    symNames <- asks (^. optSymbolNames)
-    let indname = fromJust (HashMap.lookup _typeConstrInductive symNames)
-    let iname = annotate (AnnKind KNameInductive) (pretty indname)
-    tagNames <- asks (^. optTagNames)
-    let ctrname = fromJust (HashMap.lookup _typeConstrTag tagNames)
-    let cname = annotate (AnnKind KNameConstructor) (pretty ctrname)
+    iname <- ppIndName _typeConstrInductive
+    cname <- ppConstrName _typeConstrTag
     args <- mapM ppCode _typeConstrFields
     return $ iname <> kwColon <> cname <> parens (hsep (punctuate comma args))
 
@@ -442,7 +435,7 @@ instance (PrettyCode a) => PrettyCode [a] where
 ppFunInfo :: (Member (Reader Options) r) => (t -> Sem r (Doc Ann)) -> FunctionInfo' t e -> Sem r (Doc Ann)
 ppFunInfo ppCode' FunctionInfo {..} = do
   argtys <- mapM ppCode (take _functionArgsNum (typeArgs _functionType))
-  let argnames = map (fmap variable) _functionArgNames
+  let argnames = map (fmap (variable . quoteName)) _functionArgNames
       args = zipWithExact (\mn ty -> maybe mempty (\n -> n <+> colon <> space) mn <> ty) argnames argtys
   targetty <- ppCode (if _functionArgsNum == 0 then _functionType else typeTarget _functionType)
   c <- ppCode' _functionCode

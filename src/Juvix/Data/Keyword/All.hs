@@ -286,6 +286,18 @@ kwPrealloc = asciiKw Str.prealloc
 kwArgsNum :: Keyword
 kwArgsNum = asciiKw Str.instrArgsNum
 
+kwIntToUInt8 :: Keyword
+kwIntToUInt8 = asciiKw Str.instrIntToUInt8
+
+kwUInt8ToInt :: Keyword
+kwUInt8ToInt = asciiKw Str.instrUInt8ToInt
+
+kwIntToField :: Keyword
+kwIntToField = asciiKw Str.instrIntToField
+
+kwFieldToInt :: Keyword
+kwFieldToInt = asciiKw Str.instrFieldToInt
+
 kwByteArrayFromListUInt8 :: Keyword
 kwByteArrayFromListUInt8 = asciiKw Str.instrByteArrayFromListUInt8
 
@@ -477,6 +489,12 @@ kwAnomaVerifyWithMessage = asciiKw Str.anomaVerifyWithMessage
 
 kwByteArrayFromListByte :: Keyword
 kwByteArrayFromListByte = asciiKw Str.byteArrayFromListByte
+
+kwAnomaByteArrayToAnomaContents :: Keyword
+kwAnomaByteArrayToAnomaContents = asciiKw Str.anomaByteArrayToAnomaContents
+
+kwAnomaByteArrayFromAnomaContents :: Keyword
+kwAnomaByteArrayFromAnomaContents = asciiKw Str.anomaByteArrayFromAnomaContents
 
 kwByteArrayLength :: Keyword
 kwByteArrayLength = asciiKw Str.byteArrayLength

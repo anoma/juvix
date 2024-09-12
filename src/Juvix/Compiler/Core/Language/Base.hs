@@ -39,20 +39,23 @@ instance Show Symbol where
 defaultSymbol :: Word -> Symbol
 defaultSymbol = Symbol defaultModuleId
 
-uniqueName :: Text -> Symbol -> Text
-uniqueName txt sym = txt <> "_" <> show sym
-
 data TagUser = TagUser
   { _tagUserModuleId :: ModuleId,
     _tagUserWord :: Word
   }
-  deriving stock (Eq, Generic, Ord, Show)
+  deriving stock (Eq, Generic, Ord)
 
 instance Hashable TagUser
 
 instance Serialize TagUser
 
 instance NFData TagUser
+
+instance Pretty TagUser where
+  pretty TagUser {..} = pretty _tagUserWord <> "@" <> pretty _tagUserModuleId
+
+instance Show TagUser where
+  show = show . pretty
 
 -- | Tag of a constructor, uniquely identifying it. Tag values are consecutive
 -- and separate from symbol IDs. We might need fixed special tags in Core for
@@ -61,13 +64,21 @@ instance NFData TagUser
 data Tag
   = BuiltinTag BuiltinDataTag
   | UserTag TagUser
-  deriving stock (Eq, Generic, Ord, Show)
+  deriving stock (Eq, Generic, Ord)
 
 instance Hashable Tag
 
 instance Serialize Tag
 
 instance NFData Tag
+
+instance Pretty Tag where
+  pretty = \case
+    BuiltinTag b -> pretty b
+    UserTag u -> pretty u
+
+instance Show Tag where
+  show = show . pretty
 
 isBuiltinTag :: Tag -> Bool
 isBuiltinTag = \case
