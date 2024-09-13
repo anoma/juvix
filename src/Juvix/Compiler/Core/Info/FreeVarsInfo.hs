@@ -19,7 +19,10 @@ makeLenses ''FreeVarsInfo
 -- | Computes free variable info for each subnode. Assumption: no subnode is a
 -- closure.
 computeFreeVarsInfo :: Node -> Node
-computeFreeVarsInfo = umap go
+computeFreeVarsInfo = computeFreeVarsInfo' 1
+
+computeFreeVarsInfo' :: Int -> Node -> Node
+computeFreeVarsInfo' lambdaMultiplier = umap go
   where
     go :: Node -> Node
     go node = case node of
@@ -27,6 +30,15 @@ computeFreeVarsInfo = umap go
         mkVar (Info.insert fvi _varInfo) _varIndex
         where
           fvi = FreeVarsInfo (Map.singleton _varIndex 1)
+      NLam Lambda {..} ->
+        modifyInfo (Info.insert fvi) node
+        where
+          fvi =
+            FreeVarsInfo
+              . fmap (* lambdaMultiplier)
+              . Map.mapKeysMonotonic (\idx -> idx - 1)
+              . Map.filterWithKey (\idx _ -> idx >= 1)
+              $ getFreeVarsInfo _lambdaBody ^. infoFreeVars
       _ ->
         modifyInfo (Info.insert fvi) node
         where
@@ -34,11 +46,11 @@ computeFreeVarsInfo = umap go
             FreeVarsInfo $
               foldr
                 ( \NodeChild {..} acc ->
-                    Map.unionWith (+) acc $
-                      Map.mapKeysMonotonic (\idx -> idx - _childBindersNum) $
-                        Map.filterWithKey
-                          (\idx _ -> idx >= _childBindersNum)
-                          (getFreeVarsInfo _childNode ^. infoFreeVars)
+                    Map.unionWith (+) acc
+                      . Map.mapKeysMonotonic (\idx -> idx - _childBindersNum)
+                      . Map.filterWithKey
+                        (\idx _ -> idx >= _childBindersNum)
+                      $ getFreeVarsInfo _childNode ^. infoFreeVars
                 )
                 mempty
                 (children node)

@@ -40,7 +40,7 @@ letFolding' isFoldable tab =
   mapAllNodes
     ( removeInfo kFreeVarsInfo
         . convertNode isFoldable tab
-        . computeFreeVarsInfo
+        . computeFreeVarsInfo' 2
     )
     tab
 
