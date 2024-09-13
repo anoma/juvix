@@ -11,7 +11,7 @@ module Juvix.Prelude
 where
 
 import Juvix.Data
-import Juvix.Prelude.Base
+import Juvix.Prelude.Base hiding (List)
 import Juvix.Prelude.Generic
 import Juvix.Prelude.Lens
 import Juvix.Prelude.Path
