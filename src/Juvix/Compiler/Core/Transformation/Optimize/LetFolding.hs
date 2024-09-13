@@ -1,6 +1,7 @@
 -- An optimizing transformation that folds lets whose values are immediate,
 -- i.e., they don't require evaluation or memory allocation (variables or
--- constants), or when the bound variable occurs at most once in the body.
+-- constants), or when the bound variable occurs at most once in the body but
+-- not under a lambda-abstraction.
 --
 -- For example, transforms
 -- ```
@@ -27,7 +28,7 @@ convertNode isFoldable md = rmapL go
               || Info.freeVarOccurrences 0 _letBody <= 1
               || isFoldable md bl (_letItem ^. letItemValue)
           )
-            && not (containsDebugOperations _letBody) ->
+            && not (containsDebugOps _letBody) ->
             go (recur . (mkBCRemove b val' :)) (BL.cons b bl) _letBody
         where
           val' = go recur bl (_letItem ^. letItemValue)
@@ -40,7 +41,11 @@ letFolding' isFoldable tab =
   mapAllNodes
     ( removeInfo kFreeVarsInfo
         . convertNode isFoldable tab
-        . computeFreeVarsInfo
+        . computeFreeVarsInfo' 2
+        -- 2 is the lambda multiplier factor which guarantees that every free
+        -- variable under a lambda is counted at least twice, preventing let
+        -- folding for let-bound variables (with non-immediate values) that
+        -- occur under lambdas
     )
     tab
 

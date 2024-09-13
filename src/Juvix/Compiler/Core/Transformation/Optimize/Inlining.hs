@@ -75,6 +75,8 @@ convertNode inlineDepth nonRecSyms md = dmapL go
               NIdt Ident {..} -> case pi of
                 Just InlineCase ->
                   NCase cs {_caseValue = mkApps def args}
+                Just InlineNever ->
+                  node
                 Nothing
                   | HashSet.member _identSymbol nonRecSyms
                       && isConstructorApp def

@@ -1,15 +1,15 @@
 -- builtin list
 module test059;
 
-import Stdlib.Prelude open hiding {head};
+import Stdlib.Prelude open;
 
 mylist : List Nat := [1; 2; 3 + 1];
 
 mylist2 : List (List Nat) := [[10]; [2]; 3 + 1 :: nil];
 
-head : {a : Type} -> a -> List a -> a
+head' : {a : Type} -> a -> List a -> a
   | a [] := a
   | a [x; _] := x
   | _ (h :: _) := h;
 
-main : Nat := head 50 mylist + head 50 (head [] mylist2);
+main : Nat := head' 50 mylist + head' 50 (head' [] mylist2);

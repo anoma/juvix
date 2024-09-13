@@ -77,4 +77,4 @@ convertNode = dmap go
 --  - https://github.com/anoma/juvix/issues/1654
 --  - https://github.com/anoma/juvix/pull/1659
 moveApps :: Module -> Module
-moveApps = mapT (const convertNode)
+moveApps = mapAllNodes convertNode
