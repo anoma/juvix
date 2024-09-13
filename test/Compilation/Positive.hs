@@ -470,5 +470,15 @@ tests =
         "Test079: Let / LetRec type inference (during lambda lifting) in Core"
         $(mkRelDir ".")
         $(mkRelFile "test079.juvix")
-        $(mkRelFile "out/test079.out")
+        $(mkRelFile "out/test079.out"),
+      posTest
+        "Test080: Do notation"
+        $(mkRelDir ".")
+        $(mkRelFile "test080.juvix")
+        $(mkRelFile "out/test080.out"),
+      posTest
+        "Test081: Non-duplication in let-folding"
+        $(mkRelDir ".")
+        $(mkRelFile "test081.juvix")
+        $(mkRelFile "out/test081.out")
     ]
