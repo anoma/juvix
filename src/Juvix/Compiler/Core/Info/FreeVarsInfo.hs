@@ -21,6 +21,8 @@ makeLenses ''FreeVarsInfo
 computeFreeVarsInfo :: Node -> Node
 computeFreeVarsInfo = computeFreeVarsInfo' 1
 
+-- | `lambdaMultiplier` specifies how much to multiply the free variable count
+-- for variables under lambdas
 computeFreeVarsInfo' :: Int -> Node -> Node
 computeFreeVarsInfo' lambdaMultiplier = umap go
   where
@@ -36,9 +38,7 @@ computeFreeVarsInfo' lambdaMultiplier = umap go
           fvi =
             FreeVarsInfo
               . fmap (* lambdaMultiplier)
-              . Map.mapKeysMonotonic (\idx -> idx - 1)
-              . Map.filterWithKey (\idx _ -> idx >= 1)
-              $ getFreeVarsInfo _lambdaBody ^. infoFreeVars
+              $ getFreeVars 1 _lambdaBody
       _ ->
         modifyInfo (Info.insert fvi) node
         where
@@ -46,14 +46,17 @@ computeFreeVarsInfo' lambdaMultiplier = umap go
             FreeVarsInfo $
               foldr
                 ( \NodeChild {..} acc ->
-                    Map.unionWith (+) acc
-                      . Map.mapKeysMonotonic (\idx -> idx - _childBindersNum)
-                      . Map.filterWithKey
-                        (\idx _ -> idx >= _childBindersNum)
-                      $ getFreeVarsInfo _childNode ^. infoFreeVars
+                    Map.unionWith (+) acc $
+                      getFreeVars _childBindersNum _childNode
                 )
                 mempty
                 (children node)
+
+    getFreeVars :: Int -> Node -> Map Index Int
+    getFreeVars bindersNum node =
+      Map.mapKeysMonotonic (\idx -> idx - bindersNum)
+        . Map.filterWithKey (\idx _ -> idx >= bindersNum)
+        $ getFreeVarsInfo node ^. infoFreeVars
 
 getFreeVarsInfo :: Node -> FreeVarsInfo
 getFreeVarsInfo = fromJust . Info.lookup kFreeVarsInfo . getInfo
