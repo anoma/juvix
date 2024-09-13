@@ -23,10 +23,10 @@ data ParserError
   | ErrWrongTopModuleName WrongTopModuleName
   | ErrWrongTopModuleNameOrphan WrongTopModuleNameOrphan
   | ErrStdinOrFile StdinOrFileError
+  | ErrNamedApplicationMissingAt NamedApplicationMissingAt
   | ErrDanglingJudoc DanglingJudoc
   | ErrMarkdownBackend MarkdownBackendError
   | ErrFlatParseError FlatParseError
-  deriving stock (Show)
 
 instance ToGenericError ParserError where
   genericError = \case
@@ -38,6 +38,7 @@ instance ToGenericError ParserError where
     ErrDanglingJudoc e -> genericError e
     ErrMarkdownBackend e -> genericError e
     ErrFlatParseError e -> genericError e
+    ErrNamedApplicationMissingAt e -> genericError e
 
 newtype FlatParseError = FlatParseError
   { _flatParseErrorLoc :: Interval
@@ -201,3 +202,29 @@ instance ToGenericError DanglingJudoc where
     where
       i :: Interval
       i = getLoc _danglingJudoc
+
+data NamedApplicationMissingAt = NamedApplicationMissingAt
+  { _namedApplicationMissingAtLoc :: Interval,
+    _namedApplicationMissingAtLhs :: FunctionLhs
+  }
+
+instance ToGenericError NamedApplicationMissingAt where
+  genericError NamedApplicationMissingAt {..} = do
+    let lhs :: FunctionLhs = _namedApplicationMissingAtLhs
+    let funWord :: Text
+          | null (lhs ^. funLhsArgs) = "assignment"
+          | otherwise = "function definition"
+
+    let msg =
+          "Unexpected "
+            <> funWord
+            <> ".\nPerhaps you intended to use the @{ .. } syntax for named applications?"
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = mkAnsiText msg,
+          _genericErrorIntervals = [i]
+        }
+    where
+      i :: Interval
+      i = _namedApplicationMissingAtLoc
