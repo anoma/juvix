@@ -1,6 +1,7 @@
 -- An optimizing transformation that folds lets whose values are immediate,
 -- i.e., they don't require evaluation or memory allocation (variables or
--- constants), or when the bound variable occurs at most once in the body.
+-- constants), or when the bound variable occurs at most once in the body but
+-- not under a lambda-abstraction.
 --
 -- For example, transforms
 -- ```
