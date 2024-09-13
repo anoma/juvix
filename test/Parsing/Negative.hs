@@ -83,6 +83,13 @@ parserErrorTests =
         ErrMegaparsec {} -> Nothing
         _ -> wrongError,
     negTest
+      "Missing @ in named application"
+      $(mkRelDir ".")
+      $(mkRelFile "NamedApplicationMissingAt.juvix")
+      $ \case
+        ErrNamedApplicationMissingAt {} -> Nothing
+        _ -> wrongError,
+    negTest
       "Error on local instances"
       $(mkRelDir ".")
       $(mkRelFile "ErrorOnLocalInstances.juvix")

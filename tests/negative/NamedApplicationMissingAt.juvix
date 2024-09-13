@@ -1,0 +1,8 @@
+module NamedApplicationMissingAt;
+
+type T := t;
+
+fun (a : T)
+ : T := t;
+
+main : T := fun {a := t};
