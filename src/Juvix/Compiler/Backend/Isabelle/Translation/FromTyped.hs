@@ -71,8 +71,9 @@ goModule onlyTypes infoTable Internal.Module {..} =
   Theory
     { _theoryName = overNameText toIsabelleTheoryName _moduleName,
       _theoryImports =
-        map (overNameText toIsabelleTheoryName) $
-          map (^. Internal.importModuleName) (_moduleBody ^. Internal.moduleImports),
+        map
+          (overNameText toIsabelleTheoryName . (^. Internal.importModuleName))
+          (_moduleBody ^. Internal.moduleImports),
       _theoryStatements = case _modulePragmas ^. pragmasIsabelleIgnore of
         Just (PragmaIsabelleIgnore True) -> []
         _ -> concatMap goMutualBlock (_moduleBody ^. Internal.moduleStatements)
