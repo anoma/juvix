@@ -245,7 +245,7 @@ kwDot :: Doc Ann
 kwDot = delimiter "."
 
 kwAt :: Doc Ann
-kwAt = delimiter Str.at_
+kwAt = keyword Str.at_
 
 code :: Doc Ann -> Doc Ann
 code = annotate AnnCode

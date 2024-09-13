@@ -2801,15 +2801,15 @@ deriving stock instance Ord (JudocAtom 'Parsed)
 
 deriving stock instance Ord (JudocAtom 'Scoped)
 
-data FunctionLhs = FunctionLhs
-  { _funLhsInstance :: Maybe KeywordRef,
-    _funLhsCoercion :: Maybe KeywordRef,
-    _funLhsName :: FunctionName 'Parsed,
-    _funLhsArgs :: [SigArg 'Parsed],
-    _funLhsColonKw :: Irrelevant (Maybe KeywordRef),
-    _funLhsRetType :: Maybe (ExpressionType 'Parsed),
+data FunctionLhs (s :: Stage) = FunctionLhs
+  { _funLhsBuiltin :: Maybe (WithLoc BuiltinFunction),
     _funLhsTerminating :: Maybe KeywordRef,
-    _funLhsAfterLastArgOff :: Int
+    _funLhsInstance :: Maybe KeywordRef,
+    _funLhsCoercion :: Maybe KeywordRef,
+    _funLhsName :: FunctionName s,
+    _funLhsArgs :: [SigArg s],
+    _funLhsColonKw :: Irrelevant (Maybe KeywordRef),
+    _funLhsRetType :: Maybe (ExpressionType s)
   }
 
 makeLenses ''SideIfs
@@ -2899,6 +2899,19 @@ makeLenses ''NameItem
 makeLenses ''RecordInfo
 makeLenses ''MarkdownInfo
 makePrisms ''NamedArgumentNew
+
+functionDefLhs :: FunctionDef s -> FunctionLhs s
+functionDefLhs FunctionDef {..} =
+  FunctionLhs
+    { _funLhsBuiltin = _signBuiltin,
+      _funLhsTerminating = _signTerminating,
+      _funLhsInstance = _signInstance,
+      _funLhsCoercion = _signCoercion,
+      _funLhsName = _signName,
+      _funLhsArgs = _signArgs,
+      _funLhsColonKw = _signColonKw,
+      _funLhsRetType = _signRetType
+    }
 
 fixityFieldHelper :: SimpleGetter (ParsedFixityFields s) (Maybe a) -> SimpleGetter (ParsedFixityInfo s) (Maybe a)
 fixityFieldHelper l = to (^? fixityFields . _Just . l . _Just)

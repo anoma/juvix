@@ -543,7 +543,7 @@ goFunctionDef def = do
   defHeader (def ^. signName) sig' (def ^. signDoc)
   where
     funSig :: Sem r Html
-    funSig = ppHelper (ppFunctionSignature def)
+    funSig = ppHelper (ppCode (functionDefLhs def))
 
 goInductive :: forall r. (Members '[Reader HtmlOptions] r) => InductiveDef 'Scoped -> Sem r Html
 goInductive def = do

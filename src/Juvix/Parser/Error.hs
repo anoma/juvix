@@ -205,20 +205,30 @@ instance ToGenericError DanglingJudoc where
 
 data NamedApplicationMissingAt = NamedApplicationMissingAt
   { _namedApplicationMissingAtLoc :: Interval,
-    _namedApplicationMissingAtLhs :: FunctionLhs
+    _namedApplicationMissingAtFun :: Symbol,
+    _namedApplicationMissingAtLhs :: FunctionLhs 'Parsed
   }
 
 instance ToGenericError NamedApplicationMissingAt where
   genericError NamedApplicationMissingAt {..} = do
-    let lhs :: FunctionLhs = _namedApplicationMissingAtLhs
-    let funWord :: Text
+    opts <- fromGenericOptions <$> ask @GenericOptions
+    let lhs :: FunctionLhs 'Parsed = _namedApplicationMissingAtLhs
+        funWord :: Text
           | null (lhs ^. funLhsArgs) = "assignment"
           | otherwise = "function definition"
-
-    let msg =
+        fun' = ppCode opts _namedApplicationMissingAtFun
+        msg :: Doc CodeAnn =
           "Unexpected "
-            <> funWord
-            <> ".\nPerhaps you intended to use the @{ .. } syntax for named applications?"
+            <> pretty funWord
+            <+> ppCode opts _namedApplicationMissingAtLhs
+            <+> kwAssign
+              <> "\nPerhaps you intended to write a named application and missed the"
+            <+> kwAt
+            <+> "symbol? That would be something like"
+              <> line
+              <> fun'
+              <> kwAt
+              <> "{arg1 := ...; arg2 := ...; ... }"
     return
       GenericError
         { _genericErrorLoc = i,

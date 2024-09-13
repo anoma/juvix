@@ -849,10 +849,7 @@ expressionAtom =
       <|> AtomParens <$> parens parseExpressionAtoms
       <|> AtomDoubleBraces <$> pdoubleBracesExpression
       <|> AtomRecordUpdate <$> recordUpdate
-      <|> ( do
-              checkNoNamedApplication
-              AtomBraces <$> withLoc (braces parseExpressionAtoms)
-          )
+      <|> AtomBraces <$> withLoc (braces parseExpressionAtoms)
 
 parseExpressionAtoms ::
   (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) =>
@@ -1045,6 +1042,7 @@ namedApplicationNew ::
   (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) =>
   ParsecS r (NamedApplicationNew 'Parsed)
 namedApplicationNew = P.label "<named application>" $ do
+  checkNoNamedApplicationMissingAt
   (_namedApplicationNewName, _namedApplicationNewExhaustive) <- P.try $ do
     n <- name
     exhaustive <- pisExhaustive
@@ -1287,8 +1285,13 @@ getPragmas = P.lift $ do
   put (Nothing @ParsedPragmas)
   return j
 
-functionDefinitionLhs :: forall r. (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => FunctionSyntaxOptions -> ParsecS r FunctionLhs
-functionDefinitionLhs opts = P.label "<function definition>" $ do
+functionDefinitionLhs ::
+  forall r.
+  (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) =>
+  FunctionSyntaxOptions ->
+  Maybe (WithLoc BuiltinFunction) ->
+  ParsecS r (FunctionLhs 'Parsed)
+functionDefinitionLhs opts _funLhsBuiltin = P.label "<function definition>" $ do
   let allowInstance = opts ^. funAllowInstance
       allowOmitType = opts ^. funAllowOmitType
   _funLhsTerminating <- optional (kw kwTerminating)
@@ -1304,7 +1307,6 @@ functionDefinitionLhs opts = P.label "<function definition>" $ do
     parseFailure off0 "expected: instance"
   _funLhsName <- symbol
   _funLhsArgs <- many parseArg
-  _funLhsAfterLastArgOff <- P.getOffset
   _funLhsColonKw <-
     Irrelevant
       <$> if
@@ -1317,8 +1319,8 @@ functionDefinitionLhs opts = P.label "<function definition>" $ do
   return
     FunctionLhs
       { _funLhsInstance,
+        _funLhsBuiltin,
         _funLhsCoercion,
-        _funLhsAfterLastArgOff,
         _funLhsName,
         _funLhsArgs,
         _funLhsColonKw,
@@ -1373,7 +1375,8 @@ functionDefinition ::
   Maybe (WithLoc BuiltinFunction) ->
   ParsecS r (FunctionDef 'Parsed)
 functionDefinition opts _signBuiltin = P.label "<function definition>" $ do
-  FunctionLhs {..} <- functionDefinitionLhs opts
+  FunctionLhs {..} <- functionDefinitionLhs opts _signBuiltin
+  off <- P.getOffset
   _signDoc <- getJudoc
   _signPragmas <- getPragmas
   _signBody <- parseBody
@@ -1381,7 +1384,7 @@ functionDefinition opts _signBuiltin = P.label "<function definition>" $ do
     ( isJust (_funLhsColonKw ^. unIrrelevant)
         || (P.isBodyExpression _signBody && null _funLhsArgs)
     )
-    $ parseFailure _funLhsAfterLastArgOff "expected result type"
+    $ parseFailure off "expected result type"
   return
     FunctionDef
       { _signName = _funLhsName,
@@ -1391,7 +1394,10 @@ functionDefinition opts _signBuiltin = P.label "<function definition>" $ do
         _signTerminating = _funLhsTerminating,
         _signInstance = _funLhsInstance,
         _signCoercion = _funLhsCoercion,
-        ..
+        _signBuiltin = _funLhsBuiltin,
+        _signDoc,
+        _signPragmas,
+        _signBody
       }
   where
     parseBody :: ParsecS r (FunctionDefBody 'Parsed)
@@ -1464,17 +1470,13 @@ functionParams = P.label "<function type parameters>" $ do
   (openDelim, _paramNames, _paramImplicit, _paramColon) <- P.try $ do
     (opn, impl) <- implicitOpen
     -- checking that there is a : and not a := is needed to give a better error for missing @ in named application.
-    let kwColon' :: ParsecS r KeywordRef =
-          do
-            P.notFollowedBy (kw kwAssign)
-            kw kwColon
     case impl of
       ImplicitInstance -> do
-        n <- pName <* kwColon'
+        n <- pName <* kw kwColon
         return (opn, [n], impl, Irrelevant Nothing)
       _ -> do
         n <- some pName
-        c <- Irrelevant . Just <$> kwColon'
+        c <- Irrelevant . Just <$> kw kwColon
         return (opn, n, impl, c)
   _paramType <- parseExpressionAtoms
   closeDelim <- implicitClose _paramImplicit
@@ -1633,8 +1635,8 @@ patternAtomWildcardConstructor = P.try $ do
 -- | Used to report better errors when the user forgets the @ on a named
 -- application. It tries to parse the lhs of a function definition (up to the
 -- :=). If it succeeds, it reports an error.
-checkNoNamedApplication :: forall r. (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r ()
-checkNoNamedApplication = recoverStashes $ do
+checkNoNamedApplicationMissingAt :: forall r. (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r ()
+checkNoNamedApplicationMissingAt = recoverStashes $ do
   let funSyntax =
         FunctionSyntaxOptions
           { _funAllowOmitType = True,
@@ -1644,15 +1646,21 @@ checkNoNamedApplication = recoverStashes $ do
     P.observing
       . P.try
       . interval
-      $ lbrace >> functionDefinitionLhs funSyntax <* kw kwAssign
+      $ do
+        fun <- symbol
+        lbrace
+        lhs <- functionDefinitionLhs funSyntax Nothing
+        kw kwAssign
+        return (fun, lhs)
   case x of
     Left {} -> return ()
-    Right (lhs, loc) ->
+    Right ((fun, lhs), loc) ->
       P.lift . throw $
         ErrNamedApplicationMissingAt
           NamedApplicationMissingAt
             { _namedApplicationMissingAtLoc = loc,
-              _namedApplicationMissingAtLhs = lhs
+              _namedApplicationMissingAtLhs = lhs,
+              _namedApplicationMissingAtFun = fun
             }
 
 patternAtomAnon :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r (PatternAtom 'Parsed)
