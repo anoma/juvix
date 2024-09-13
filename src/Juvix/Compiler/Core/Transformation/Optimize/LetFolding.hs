@@ -41,6 +41,10 @@ letFolding' isFoldable tab =
     ( removeInfo kFreeVarsInfo
         . convertNode isFoldable tab
         . computeFreeVarsInfo' 2
+        -- 2 is the lambda multiplier factor which guarantees that every free
+        -- variable under a lambda is counted at least twice, preventing let
+        -- folding for let-bound variables (with non-immediate values) that
+        -- occur under lambdas
     )
     tab
 
