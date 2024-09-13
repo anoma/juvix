@@ -9,13 +9,13 @@ on:
         default: "main"
 
 env:
-  STACK_VERSION: 2.11.1
+  STACK_VERSION: 3.1.1
 
 jobs:
   build:
     name: Build static binary
     runs-on: ubuntu-latest
-    container: quay.io/benz0li/ghc-musl:9.8.2
+    container: quay.io/benz0li/ghc-musl:9.10.1
     steps:
       - name: checkout code
         uses: actions/checkout@v3
@@ -33,7 +33,7 @@ jobs:
 
       - name: install stack
         run: |
-          TAR_BASE_NAME=stack-$STACK_VERSION-linux-x86_64-static
+          TAR_BASE_NAME=stack-$STACK_VERSION-linux-x86_64
           TAR_FILE_NAME=$TAR_BASE_NAME.tar.gz
           curl https://github.com/commercialhaskell/stack/releases/download/v$STACK_VERSION/$TAR_FILE_NAME -OL
           tar xf $TAR_FILE_NAME
