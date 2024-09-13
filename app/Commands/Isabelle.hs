@@ -23,9 +23,8 @@ translateTyped opts pkg res
           comments = res ^. resultComments
       outputDir <- fromAppPathDir (opts ^. isabelleOutputDir)
       if
-          | opts ^. isabelleStdout -> do
-              renderStdOut (ppOutDefault comments thy)
-              putStrLn ""
+          | opts ^. isabelleStdout ->
+              renderStdOutLn (ppOutDefault comments thy)
           | otherwise -> do
               ensureDir outputDir
               let file :: Path Rel File
