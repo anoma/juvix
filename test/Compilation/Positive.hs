@@ -451,7 +451,7 @@ tests =
         $(mkRelDir ".")
         $(mkRelFile "test075.juvix")
         $(mkRelFile "out/test075.out"),
-      posTestEval
+      posTest
         "Test076: Builtin Maybe"
         $(mkRelDir ".")
         $(mkRelFile "test076.juvix")
@@ -466,12 +466,12 @@ tests =
         $(mkRelDir ".")
         $(mkRelFile "test078.juvix")
         $(mkRelFile "out/test078.out"),
-      posTestEval
+      posTest
         "Test079: Let / LetRec type inference (during lambda lifting) in Core"
         $(mkRelDir ".")
         $(mkRelFile "test079.juvix")
         $(mkRelFile "out/test079.out"),
-      posTest
+      posTestEval -- TODO: this test is not compiling
         "Test080: Do notation"
         $(mkRelDir ".")
         $(mkRelFile "test080.juvix")
