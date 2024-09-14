@@ -202,10 +202,15 @@ nullMk :: Mk -> Bool
 nullMk = \case
   MkConcat a b -> nullMk a && nullMk b
   MkNull -> True
-  _ -> False
+  MkTextBlock {} -> False
+  MkJuvixCodeBlock {} -> False
 
 extractJuvixCodeBlock :: Mk -> [JuvixCodeBlock]
-extractJuvixCodeBlock = \case
-  MkJuvixCodeBlock j -> [j]
-  MkConcat a b -> extractJuvixCodeBlock a <> extractJuvixCodeBlock b
-  _ -> []
+extractJuvixCodeBlock = run . execAccumList . go
+  where
+    go :: Mk -> Sem '[Accum JuvixCodeBlock] ()
+    go = \case
+      MkJuvixCodeBlock j -> accum j
+      MkConcat a b -> go a <> go b
+      MkTextBlock {} -> return ()
+      MkNull -> return ()

@@ -7,7 +7,6 @@ import Juvix.Compiler.Backend.Html.Data.Options qualified as HtmlRender
 import Juvix.Compiler.Backend.Html.Translation.FromTyped.Source qualified as HtmlRender
 import Juvix.Compiler.Backend.Markdown.Data.Types
 import Juvix.Compiler.Backend.Markdown.Error
-import Juvix.Compiler.Concrete.Data.LocalModuleOrigin
 import Juvix.Compiler.Concrete.Language qualified as Concrete
 import Juvix.Compiler.Concrete.Pretty qualified as Concrete
 import Juvix.Prelude
@@ -43,6 +42,7 @@ fromJuvixMarkdown' :: ProcessJuvixBlocksArgs -> Either MarkdownBackendError Text
 fromJuvixMarkdown' = run . runError . fromJuvixMarkdown
 
 fromJuvixMarkdown ::
+  forall r.
   (Members '[Error MarkdownBackendError] r) =>
   ProcessJuvixBlocksArgs ->
   Sem r Text
@@ -67,35 +67,38 @@ fromJuvixMarkdown opts = do
       fname :: Path Abs File
       fname = getLoc m ^. intervalFile
 
-  case m ^. Concrete.moduleMarkdownInfo of
-    Just mkInfo -> do
-      let mk :: Mk = mkInfo ^. Concrete.markdownInfo
-          sepr :: [Int] = mkInfo ^. Concrete.markdownInfoBlockLengths
-
-      when (nullMk mk || null sepr) $
-        throw
-          ( ErrNoJuvixCodeBlocks
-              NoJuvixCodeBlocksError
-                { _noJuvixCodeBlocksErrorFilepath = fname
-                }
-          )
-
-      let st =
-            ProcessingState
-              { _processingStateMk = mk,
-                _processingStateFirstBlock = True,
-                _processingStateStmtsSeparation = sepr,
-                _processingStateStmts = indModuleFilter $ m ^. Concrete.moduleBody
-              }
-      (_, r) <- runState st . runReader htmlOptions . runReader opts $ go fname
-      return $ MK.toPlainText r
-    Nothing ->
-      throw
-        ( ErrInternalNoMarkdownInfo
+  let err :: forall a. Sem r a
+      err =
+        throw $
+          ErrInternalNoMarkdownInfo
             NoMarkdownInfoError
               { _noMarkdownInfoFilepath = fname
               }
-        )
+
+  mkInfo :: Concrete.MarkdownInfo <- maybe err return (m ^. Concrete.moduleMarkdownInfo)
+  let mk :: Mk = mkInfo ^. Concrete.markdownInfo
+      sepr :: [Int] = mkInfo ^. Concrete.markdownInfoBlockLengths
+
+  when (nullMk mk || null sepr)
+    . throw
+    $ ErrNoJuvixCodeBlocks
+      NoJuvixCodeBlocksError
+        { _noJuvixCodeBlocksErrorFilepath = fname
+        }
+
+  let iniState =
+        ProcessingState
+          { _processingStateMk = mk,
+            _processingStateFirstBlock = True,
+            _processingStateStmtsSeparation = sepr,
+            _processingStateStmts = indModuleFilter $ m ^. Concrete.moduleBody
+          }
+  r :: Mk <-
+    evalState iniState
+      . runReader htmlOptions
+      . runReader opts
+      $ go fname
+  return (MK.toPlainText r)
 
 htmlSemicolon :: Html
 htmlSemicolon = Html.span ! HtmlRender.juClass HtmlRender.JuDelimiter $ ";"
@@ -118,7 +121,7 @@ go fname = do
   mk <- gets @ProcessingState (^. processingStateMk)
   case sepr of
     [] -> return mk
-    (n : ns) -> do
+    n : ns -> do
       case mk of
         MkNull -> return mk
         MkTextBlock _ -> return mk
@@ -210,15 +213,4 @@ goRender xs = do
   HtmlRender.ppCodeHtml concreteOpts xs
 
 indModuleFilter :: forall s. [Concrete.Statement s] -> [Concrete.Statement s]
-indModuleFilter =
-  filter
-    ( \case
-        Concrete.StatementSyntax _ -> True
-        Concrete.StatementFunctionDef _ -> True
-        Concrete.StatementImport _ -> True
-        Concrete.StatementInductive _ -> True
-        Concrete.StatementModule o -> o ^. Concrete.moduleOrigin == LocalModuleSource
-        Concrete.StatementOpenModule _ -> True
-        Concrete.StatementAxiom _ -> True
-        Concrete.StatementProjectionDef _ -> True
-    )
+indModuleFilter = filter Concrete.statementShouldBePrinted

@@ -3494,6 +3494,11 @@ fromParsedIteratorInfo ParsedIteratorInfo {..} =
       _iteratorInfoRangeNum = (^. withLocParam) <$> _parsedIteratorInfoRangeNum
     }
 
+statementSshouldBePrinted :: Statement s -> Bool
+statementSshouldBePrinted = \case
+  StatementModule m -> m ^. moduleOrigin == LocalModuleSource
+  _ -> True
+
 instance HasFixity PostfixApplication where
   getFixity (PostfixApplication _ op) = fromMaybe impossible (op ^. scopedIdenSrcName . S.nameFixity)
 
