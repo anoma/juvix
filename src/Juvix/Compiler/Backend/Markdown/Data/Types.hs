@@ -15,21 +15,38 @@ import Text.Show qualified as Show
 data JuvixCodeBlock = JuvixCodeBlock
   { _juvixCodeBlock :: Text,
     _juvixCodeBlockOptions :: Text,
-    _juvixCodeBlockInterval :: Maybe Interval
+    _juvixCodeBlockLoc :: Maybe Interval
   }
   deriving stock (Eq, Ord)
+
+data JuvixExpression = JuvixExpression
+  { _juvixExpression :: Text,
+    _juvixExpressionOptions :: Text,
+    _juvixExpressionLoc :: Maybe Interval
+  }
+  deriving stock (Eq, Ord, Show)
+
+data Inline
+  = InlineTextBlock TextBlock
+  | InlineJuvixExpression Text
+  deriving stock (Eq, Ord, Show)
+
+newtype Inlines = Inlines
+  { _inlines :: [Inline]
+  }
+  deriving newtype (Semigroup, Monoid, Show, Eq)
 
 data TextBlock = TextBlock
   { _textBlock :: !Text,
-    _textBlockInterval :: Maybe Interval
+    _textBlockLoc :: Maybe Interval
   }
   deriving stock (Eq, Ord)
 
+instance Show TextBlock where
+  show TextBlock {..} = T.unpack _textBlock
+
 makeLenses ''JuvixCodeBlock
 makeLenses ''TextBlock
-
-instance Show TextBlock where
-  show t = T.unpack (t ^. textBlock)
 
 textJuvixCodeBlock :: JuvixCodeBlock -> Text
 textJuvixCodeBlock cb =
@@ -46,23 +63,23 @@ instance Show JuvixCodeBlock where
 
 data Mk
   = MkJuvixCodeBlock JuvixCodeBlock
-  | MkTextBlock TextBlock
+  | MkInlines Inlines
   | MkNull
   | MkConcat Mk Mk
-  deriving stock (Eq, Show, Ord)
+  deriving stock (Eq, Show)
 
 instance Semigroup TextBlock where
   a <> b =
     TextBlock
       { _textBlock = a ^. textBlock <> b ^. textBlock,
-        _textBlockInterval = a ^. textBlockInterval <> b ^. textBlockInterval
+        _textBlockLoc = a ^. textBlockLoc <> b ^. textBlockLoc
       }
 
 instance Monoid TextBlock where
   mempty =
     TextBlock
       { _textBlock = mempty,
-        _textBlockInterval = Nothing
+        _textBlockLoc = Nothing
       }
   mappend = (<>)
 
@@ -93,7 +110,8 @@ instance MK.ToPlainText Mk where
 builder :: Mk -> [Text]
 builder = \case
   MkConcat a b -> builder a <> builder b
-  MkTextBlock t -> [t ^. textBlock]
+  -- MkInlines t -> [t ^. textBlock]
+  MkInlines {} -> error "TODO"
   MkJuvixCodeBlock j -> [textJuvixCodeBlock j]
   MkNull -> mempty
 
@@ -107,57 +125,63 @@ toTextBlock :: Text -> TextBlock
 toTextBlock t =
   TextBlock
     { _textBlock = t,
-      _textBlockInterval = mempty
+      _textBlockLoc = mempty
     }
 
 toMK :: Text -> Mk
-toMK = MkTextBlock . toTextBlock
+toMK = MkInlines . mkInlinesTextBlock
 
 toMK' :: Text -> Interval -> Mk
 toMK' t i =
-  MkTextBlock
-    TextBlock
+  MkInlines
+    . Inlines
+    . pure
+    . InlineTextBlock
+    $ TextBlock
       { _textBlock = t,
-        _textBlockInterval = Just i
+        _textBlockLoc = Just i
       }
 
-wrap' :: Text -> Text -> TextBlock -> TextBlock
-wrap' t1 t2 a = toTextBlock t1 <> a <> toTextBlock t2
+wrap' :: Text -> Text -> Inlines -> Inlines
+wrap' t1 t2 a = mkInlinesTextBlock t1 <> a <> mkInlinesTextBlock t2
 
-wrap :: Text -> TextBlock -> TextBlock
+wrap :: Text -> Inlines -> Inlines
 wrap t = wrap' t t
 
-paren :: TextBlock -> TextBlock
+paren :: Inlines -> Inlines
 paren = wrap' "(" ")"
 
-brack :: TextBlock -> TextBlock
+brack :: Inlines -> Inlines
 brack = wrap' "[" "]"
 
-instance MK.HasAttributes TextBlock where
+instance MK.HasAttributes Inlines where
   addAttributes _ = id
 
-instance MK.Rangeable TextBlock where
+instance MK.Rangeable Inlines where
   ranged _ r = r
 
 instance MK.HasAttributes Mk where
   addAttributes _ = id
 
-instance MK.IsInline TextBlock where
-  lineBreak = toTextBlock nl
-  softBreak = toTextBlock " "
-  str = toTextBlock
-  entity = toTextBlock
-  escapedChar = toTextBlock . T.singleton
+mkInlinesTextBlock :: Text -> Inlines
+mkInlinesTextBlock = Inlines . pure . InlineTextBlock . toTextBlock
+
+instance MK.IsInline Inlines where
+  lineBreak = mkInlinesTextBlock nl
+  softBreak = mkInlinesTextBlock " "
+  str = mkInlinesTextBlock
+  entity = mkInlinesTextBlock
+  escapedChar = mkInlinesTextBlock . T.singleton
   emph = wrap "*"
   strong = wrap "**"
   link dest _ desc =
-    brack desc <> paren (toTextBlock dest)
+    brack desc <> paren (mkInlinesTextBlock dest)
   image src _ desc =
-    toTextBlock "!" <> brack desc <> paren (toTextBlock src)
-  code = wrap "`" . toTextBlock
+    mkInlinesTextBlock "!" <> brack desc <> paren (mkInlinesTextBlock src)
+  code = wrap "`" . mkInlinesTextBlock
   rawInline f t
     | f == MK.Format "html" =
-        toTextBlock t
+        mkInlinesTextBlock t
     | otherwise = mempty
 
 nl' :: Mk
@@ -171,13 +195,13 @@ processCodeBlock info t loc =
         JuvixCodeBlock
           { _juvixCodeBlock = t,
             _juvixCodeBlockOptions = opts,
-            _juvixCodeBlockInterval = loc
+            _juvixCodeBlockLoc = loc
           }
     Nothing ->
       let b = "```" <> info <> t <> "```"
-       in MkTextBlock TextBlock {_textBlock = b, _textBlockInterval = loc}
+       in MkTextBlock TextBlock {_textBlock = b, _textBlockLoc = loc}
 
-instance MK.IsBlock TextBlock Mk where
+instance MK.IsBlock Inline Mk where
   paragraph a = MkTextBlock a
   plain a = MkTextBlock a
   thematicBreak = toMK "---"
@@ -190,7 +214,7 @@ instance MK.IsBlock TextBlock Mk where
     mconcat
       ( map
           ( \b -> case b of
-              MkTextBlock tb ->
+              MkInlines tb ->
                 MkTextBlock
                   (tb {_textBlock = "- " <> tb ^. textBlock})
               _ -> b
@@ -202,7 +226,7 @@ nullMk :: Mk -> Bool
 nullMk = \case
   MkConcat a b -> nullMk a && nullMk b
   MkNull -> True
-  MkTextBlock {} -> False
+  MkInlines {} -> False
   MkJuvixCodeBlock {} -> False
 
 extractJuvixCodeBlock :: Mk -> [JuvixCodeBlock]
@@ -212,5 +236,5 @@ extractJuvixCodeBlock = run . execAccumList . go
     go = \case
       MkJuvixCodeBlock j -> accum j
       MkConcat a b -> go a <> go b
-      MkTextBlock {} -> return ()
+      MkInlines {} -> return ()
       MkNull -> return ()

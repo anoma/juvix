@@ -205,12 +205,12 @@ runMarkdownModuleParser fpath mk =
             maybe
               (P.initialPos (toFilePath fpath))
               getInitPos
-              (code ^. MK.juvixCodeBlockInterval)
+              (code ^. MK.juvixCodeBlockLoc)
           initFileLoc :: FileLoc =
             maybe
               mkInitialFileLoc
               getInitFileLoc
-              (code ^. MK.juvixCodeBlockInterval)
+              (code ^. MK.juvixCodeBlockLoc)
        in P.State
             { P.stateInput = code ^. MK.juvixCodeBlock,
               P.statePosState =

@@ -3494,8 +3494,8 @@ fromParsedIteratorInfo ParsedIteratorInfo {..} =
       _iteratorInfoRangeNum = (^. withLocParam) <$> _parsedIteratorInfoRangeNum
     }
 
-statementSshouldBePrinted :: Statement s -> Bool
-statementSshouldBePrinted = \case
+statementShouldBePrinted :: Statement s -> Bool
+statementShouldBePrinted = \case
   StatementModule m -> m ^. moduleOrigin == LocalModuleSource
   _ -> True
 

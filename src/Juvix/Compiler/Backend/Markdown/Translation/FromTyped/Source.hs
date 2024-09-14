@@ -178,7 +178,7 @@ go fname = do
                   MkTextBlock
                     TextBlock
                       { _textBlock = Text.replace "\n" "<br/>" resHtml,
-                        _textBlockInterval = j ^. juvixCodeBlockInterval
+                        _textBlockLoc = j ^. juvixCodeBlockLoc
                       }
           let newState =
                 ProcessingState
@@ -199,7 +199,7 @@ go fname = do
               ( ErrInvalidExtractModuleBlock
                   ( InvalidExtractModuleBlockError
                       { _invalidExtractModuleBlockErrorPath = fname,
-                        _invalidExtractModuleBlockErrorInterval = j ^. juvixCodeBlockInterval
+                        _invalidExtractModuleBlockErrorLoc = j ^. juvixCodeBlockLoc
                       }
                   )
               )

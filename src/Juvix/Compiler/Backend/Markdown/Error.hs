@@ -57,7 +57,7 @@ instance ToGenericError NoJuvixCodeBlocksError where
       i = singletonInterval . mkInitialLoc $ _noJuvixCodeBlocksErrorFilepath
 
 data InvalidExtractModuleBlockError = InvalidExtractModuleBlockError
-  { _invalidExtractModuleBlockErrorInterval :: Maybe Interval,
+  { _invalidExtractModuleBlockErrorLoc :: Maybe Interval,
     _invalidExtractModuleBlockErrorPath :: Path Abs File
   }
   deriving stock (Show)
@@ -77,7 +77,7 @@ instance ToGenericError InvalidExtractModuleBlockError where
       i =
         fromMaybe
           (singletonInterval (mkInitialLoc (_invalidExtractModuleBlockErrorPath)))
-          _invalidExtractModuleBlockErrorInterval
+          _invalidExtractModuleBlockErrorLoc
 
 newtype InvalidCodeBlockAttributesError = InvalidCodeBlockAttributesError
   { _invalidCodeBlockAttributesErrorMegaparsecError :: MegaparsecError
