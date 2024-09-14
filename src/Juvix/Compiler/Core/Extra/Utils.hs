@@ -184,7 +184,7 @@ isDebugOp = \case
       OpTrace -> True
       OpFail -> True
       OpSeq -> True
-      OpAssert -> False
+      OpAssert -> True
       OpAnomaByteArrayFromAnomaContents -> False
       OpAnomaByteArrayToAnomaContents -> False
       OpAnomaDecode -> False

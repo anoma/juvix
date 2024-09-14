@@ -15,6 +15,7 @@ module Juvix.Compiler.Core.Transformation.Optimize.LetFolding (letFolding, letFo
 
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Core.Extra
+import Juvix.Compiler.Core.Info.DebugOpsInfo as Info
 import Juvix.Compiler.Core.Info.FreeVarsInfo as Info
 import Juvix.Compiler.Core.Transformation.Base
 
@@ -28,7 +29,7 @@ convertNode isFoldable md = rmapL go
               || Info.freeVarOccurrences 0 _letBody <= 1
               || isFoldable md bl (_letItem ^. letItemValue)
           )
-            && not (containsDebugOps _letBody) ->
+            && not (Info.hasDebugOps _letBody) ->
             go (recur . (mkBCRemove b val' :)) (BL.cons b bl) _letBody
         where
           val' = go recur bl (_letItem ^. letItemValue)
@@ -39,13 +40,15 @@ convertNode isFoldable md = rmapL go
 letFolding' :: (Module -> BinderList Binder -> Node -> Bool) -> Module -> Module
 letFolding' isFoldable tab =
   mapAllNodes
-    ( removeInfo kFreeVarsInfo
+    ( removeInfo kDebugOpsInfo
+        . removeInfo kFreeVarsInfo
         . convertNode isFoldable tab
-        . computeFreeVarsInfo' 2
         -- 2 is the lambda multiplier factor which guarantees that every free
         -- variable under a lambda is counted at least twice, preventing let
         -- folding for let-bound variables (with non-immediate values) that
         -- occur under lambdas
+        . computeFreeVarsInfo' 2
+        . computeDebugOpsInfo
     )
     tab
 
