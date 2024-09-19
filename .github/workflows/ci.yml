@@ -29,7 +29,7 @@ env:
   CAIRO_VM_VERSION: 06e8ddbfa14eef85f56c4d7b7631c17c9b0a248e
   RISC0_VM_VERSION: v1.0.1
   JUST_ARGS: runtimeCcArg=$CC runtimeLibtoolArg=$LIBTOOL
-  STACK_BUILD_ARGS: --pedantic -j4 --ghc-options=-j --stack-yaml=stack.yaml
+  STACK_BUILD_ARGS: --pedantic -j4 --ghc-options=-j
 
 jobs:
   pre-commit:
