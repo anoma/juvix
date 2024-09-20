@@ -1123,34 +1123,34 @@ instance (SingI s) => PrettyPrint (SigArg s) where
         defaultVal = ppCode <$> _sigArgDefault
     ppCode l <> arg <+?> defaultVal <> ppCode r
 
-ppFunctionSignature :: (SingI s) => PrettyPrinting (FunctionDef s)
-ppFunctionSignature FunctionDef {..} = do
-  let termin' = (<> line) . ppCode <$> _signTerminating
-      coercion' = (<> if isJust instance' then space else line) . ppCode <$> _signCoercion
-      instance' = (<> line) . ppCode <$> _signInstance
-      builtin' = (<> line) . ppCode <$> _signBuiltin
-      margs' = fmap ppCode <$> nonEmpty _signArgs
-      mtype' = case _signColonKw ^. unIrrelevant of
-        Just col -> Just (ppCode col <+> ppExpressionType (fromJust _signRetType))
-        Nothing -> Nothing
-      argsAndType' = case mtype' of
-        Nothing -> margs'
-        Just ty' -> case margs' of
-          Nothing -> Just (pure ty')
-          Just args' -> Just (args' <> pure ty')
-      name' = annDef _signName (ppSymbolType _signName)
-   in builtin'
-        ?<> termin'
-        ?<> coercion'
-        ?<> instance'
-        ?<> (name' <>? (oneLineOrNext . sep <$> argsAndType'))
+instance (SingI s) => PrettyPrint (FunctionLhs s) where
+  ppCode FunctionLhs {..} = do
+    let termin' = (<> line) . ppCode <$> _funLhsTerminating
+        coercion' = (<> if isJust instance' then space else line) . ppCode <$> _funLhsCoercion
+        instance' = (<> line) . ppCode <$> _funLhsInstance
+        builtin' = (<> line) . ppCode <$> _funLhsBuiltin
+        margs' = fmap ppCode <$> nonEmpty _funLhsArgs
+        mtype' = case _funLhsColonKw ^. unIrrelevant of
+          Just col -> Just (ppCode col <+> ppExpressionType (fromJust _funLhsRetType))
+          Nothing -> Nothing
+        argsAndType' = case mtype' of
+          Nothing -> margs'
+          Just ty' -> case margs' of
+            Nothing -> Just (pure ty')
+            Just args' -> Just (args' <> pure ty')
+        name' = annDef _funLhsName (ppSymbolType _funLhsName)
+    builtin'
+      ?<> termin'
+      ?<> coercion'
+      ?<> instance'
+      ?<> (name' <>? (oneLineOrNext . sep <$> argsAndType'))
 
 instance (SingI s) => PrettyPrint (FunctionDef s) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => FunctionDef s -> Sem r ()
   ppCode fun@FunctionDef {..} = do
     let doc' :: Maybe (Sem r ()) = ppCode <$> _signDoc
         pragmas' :: Maybe (Sem r ()) = ppCode <$> _signPragmas
-        sig' = ppFunctionSignature fun
+        sig' = ppCode (functionDefLhs fun)
         body' = case _signBody of
           SigBodyExpression e -> space <> ppCode Kw.kwAssign <> oneLineOrNext (ppTopExpressionType e)
           SigBodyClauses k -> line <> indent (vsep (ppCode <$> k))

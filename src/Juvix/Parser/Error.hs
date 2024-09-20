@@ -23,10 +23,10 @@ data ParserError
   | ErrWrongTopModuleName WrongTopModuleName
   | ErrWrongTopModuleNameOrphan WrongTopModuleNameOrphan
   | ErrStdinOrFile StdinOrFileError
+  | ErrNamedApplicationMissingAt NamedApplicationMissingAt
   | ErrDanglingJudoc DanglingJudoc
   | ErrMarkdownBackend MarkdownBackendError
   | ErrFlatParseError FlatParseError
-  deriving stock (Show)
 
 instance ToGenericError ParserError where
   genericError = \case
@@ -38,6 +38,7 @@ instance ToGenericError ParserError where
     ErrDanglingJudoc e -> genericError e
     ErrMarkdownBackend e -> genericError e
     ErrFlatParseError e -> genericError e
+    ErrNamedApplicationMissingAt e -> genericError e
 
 newtype FlatParseError = FlatParseError
   { _flatParseErrorLoc :: Interval
@@ -201,3 +202,39 @@ instance ToGenericError DanglingJudoc where
     where
       i :: Interval
       i = getLoc _danglingJudoc
+
+data NamedApplicationMissingAt = NamedApplicationMissingAt
+  { _namedApplicationMissingAtLoc :: Interval,
+    _namedApplicationMissingAtFun :: Symbol,
+    _namedApplicationMissingAtLhs :: FunctionLhs 'Parsed
+  }
+
+instance ToGenericError NamedApplicationMissingAt where
+  genericError NamedApplicationMissingAt {..} = do
+    opts <- fromGenericOptions <$> ask @GenericOptions
+    let lhs :: FunctionLhs 'Parsed = _namedApplicationMissingAtLhs
+        funWord :: Text
+          | null (lhs ^. funLhsArgs) = "assignment"
+          | otherwise = "function definition"
+        fun' = ppCode opts _namedApplicationMissingAtFun
+        msg :: Doc CodeAnn =
+          "Unexpected "
+            <> pretty funWord
+            <+> ppCode opts _namedApplicationMissingAtLhs
+            <+> kwAssign
+              <> "\nPerhaps you intended to write a named application and missed the"
+            <+> kwAt
+            <+> "symbol? That would be something like"
+              <> line
+              <> fun'
+              <> kwAt
+              <> "{arg1 := ...; arg2 := ...; ... }"
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = mkAnsiText msg,
+          _genericErrorIntervals = [i]
+        }
+    where
+      i :: Interval
+      i = _namedApplicationMissingAtLoc

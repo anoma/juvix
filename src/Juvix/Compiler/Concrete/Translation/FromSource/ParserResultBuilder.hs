@@ -68,6 +68,13 @@ registerLiteral l =
 registerItem' :: (Member (State ParserState) r) => ParsedItem -> Sem r ()
 registerItem' i = modify' (over parserStateParsedItems (i :))
 
+evalParserResultBuilder ::
+  (Member HighlightBuilder r) =>
+  ParserState ->
+  Sem (ParserResultBuilder ': r) a ->
+  Sem r a
+evalParserResultBuilder s = fmap snd . runParserResultBuilder s
+
 execParserResultBuilder ::
   (Member HighlightBuilder r) =>
   ParserState ->
