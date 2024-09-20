@@ -656,7 +656,8 @@ compile = \case
       return $
         if
             -- TODO: remove duplication of `arg` here
-            | enabled -> OpTrace # arg # arg
+            | enabled ->
+                OpHint # (nockHintAtom NockHintPuts # arg) # arg
             | otherwise -> arg
 
     goBinop :: Tree.NodeBinop -> Sem r (Term Natural)

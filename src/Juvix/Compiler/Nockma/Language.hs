@@ -166,6 +166,8 @@ instance Pretty NockOp where
     OpScry -> "scry"
     OpTrace -> "trace"
 
+data NockHint = NockHintPuts
+
 textToStdlibFunctionMap :: HashMap Text StdlibFunction
 textToStdlibFunctionMap =
   hashMap
@@ -324,6 +326,23 @@ nockBoolLiteral :: Bool -> Term Natural
 nockBoolLiteral b
   | b = nockTrueLiteral
   | otherwise = nockFalseLiteral
+
+nockHintValue :: NockHint -> Natural
+nockHintValue = \case
+  NockHintPuts -> 0x73747570
+
+nockHintAtom :: NockHint -> Term Natural
+nockHintAtom hint =
+  TermAtom
+    Atom
+      { _atomInfo =
+          AtomInfo
+            { _atomInfoLoc = Irrelevant Nothing,
+              _atomInfoTag = Nothing,
+              _atomInfoHint = Just AtomHintStdlibPlaceholder
+            },
+        _atom = nockHintValue hint
+      }
 
 instance NockNatural Natural where
   type ErrNockNatural Natural = NockNaturalNaturalError

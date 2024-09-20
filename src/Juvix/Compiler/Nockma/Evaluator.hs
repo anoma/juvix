@@ -16,8 +16,8 @@ import Juvix.Compiler.Nockma.Evaluator.Error
 import Juvix.Compiler.Nockma.Evaluator.Options
 import Juvix.Compiler.Nockma.Evaluator.Storage
 import Juvix.Compiler.Nockma.Language
+import Juvix.Compiler.Nockma.Pretty
 import Juvix.Prelude hiding (Atom, Path)
-import Juvix.Prelude.Pretty
 
 newtype OpCounts = OpCounts
   { _opCountsMap :: HashMap NockOp Int
@@ -400,8 +400,14 @@ evalProfile inistack initerm =
               Cell' l r _ <- withCrumb (crumb crumbDecodeFirst) (asCell (c ^. operatorCellTerm))
               case l of
                 TAtom {} -> evalArg crumbEvalFirst stack r
-                TCell _t1 t2 -> do
-                  void (evalArg crumbEvalFirst stack t2)
+                TCell t1 t2 -> do
+                  t2' <- evalArg crumbEvalFirst stack t2
+                  putsHint <- fromNatural (nockHintValue NockHintPuts)
+                  case t1 of
+                    TAtom a
+                      | a == putsHint ->
+                          output t2'
+                    _ -> return ()
                   evalArg crumbEvalSecond stack r
 
             goOpPush :: Sem r (Term a)
