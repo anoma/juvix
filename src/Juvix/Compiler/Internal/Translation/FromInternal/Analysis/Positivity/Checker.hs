@@ -188,33 +188,32 @@ checkStrictlyPositiveOccurrences p = do
             _ -> return ()
 
         goInductiveApp :: InductiveInfo -> [(InductiveParameter, Expression)] -> Sem r ()
-        goInductiveApp indInfo' = \case
-          [] -> return ()
-          (InductiveParameter pName' _ty', tyArg) : ps -> do
-            negParms :: NegativeTypeParameters <- get
-            when (varOrInductiveInExpression name tyArg) $ do
-              when
-                (HashSet.member pName' negParms)
-                (throwNegativePositonError tyArg)
-              when (recLimit > 0) $
-                forM_ (indInfo' ^. inductiveInfoConstructors) $ \ctorName' -> do
-                  ctorType' <- lookupConstructorType ctorName'
-                  let errorRef = fromMaybe tyArg ref
-                      args = constructorArgs ctorType'
-                  mapM_
-                    ( \tyConstr' ->
+        goInductiveApp indInfo' = mapM_ (uncurry goInductiveAppArg)
+          where
+            goInductiveAppArg :: InductiveParameter -> Expression -> Sem r ()
+            goInductiveAppArg param tyArg = do
+              let parName = param ^. inductiveParamName
+              negParms :: NegativeTypeParameters <- get
+              when (varOrInductiveInExpression name tyArg) $ do
+                when
+                  (HashSet.member parName negParms)
+                  (throwNegativePositonError tyArg)
+                when (recLimit > 0) $
+                  forM_ (indInfo' ^. inductiveInfoConstructors) $ \ctorName' -> do
+                    ctorType' <- lookupConstructorType ctorName'
+                    let errorRef = fromMaybe tyArg ref
+                        args = constructorArgs ctorType'
+                    forM_ args $
+                      \tyConstr' ->
                         checkStrictlyPositiveOccurrences
                           CheckPositivityArgs
                             { _checkPositivityArgsInductive = indInfo',
                               _checkPositivityArgsConstructorName = ctorName',
-                              _checkPositivityArgsInductiveName = pName',
+                              _checkPositivityArgsInductiveName = parName,
                               _checkPositivityArgsRecursionLimit = recLimit - 1,
                               _checkPositivityArgsErrorReference = Just errorRef,
                               _checkPositivityArgsTypeOfConstructorArg = tyConstr' ^. paramType
                             }
-                    )
-                    args
-            goInductiveApp indInfo' ps
 
     throwNegativePositonError :: Expression -> Sem r ()
     throwNegativePositonError expr = do
