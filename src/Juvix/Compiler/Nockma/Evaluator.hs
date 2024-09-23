@@ -358,7 +358,6 @@ evalProfile inistack initerm =
             OpReplace -> goOpReplace
             OpHint -> goOpHint
             OpScry -> goOpScry
-            OpTrace -> goOpTrace
           where
             crumb crumbTag =
               EvalCrumbOperator $
@@ -387,13 +386,6 @@ evalProfile inistack initerm =
               return . TermAtom $ case cr of
                 TermCell {} -> nockTrue
                 TermAtom {} -> nockFalse
-
-            goOpTrace :: Sem r (Term a)
-            goOpTrace = do
-              Cell' tr a _ <- withCrumb (crumb crumbDecodeFirst) (asCell (c ^. operatorCellTerm))
-              tr' <- evalArg crumbEvalFirst stack tr
-              output tr'
-              evalArg crumbEvalSecond stack a
 
             goOpHint :: Sem r (Term a)
             goOpHint = do

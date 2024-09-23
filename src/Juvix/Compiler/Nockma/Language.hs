@@ -144,7 +144,6 @@ data NockOp
   | OpReplace
   | OpHint
   | OpScry
-  | OpTrace
   deriving stock (Bounded, Enum, Eq, Generic)
 
 instance Hashable NockOp
@@ -164,7 +163,6 @@ instance Pretty NockOp where
     OpReplace -> "replace"
     OpHint -> "hint"
     OpScry -> "scry"
-    OpTrace -> "trace"
 
 data NockHint = NockHintPuts
 
@@ -269,7 +267,6 @@ serializeOp = \case
   OpReplace -> 10
   OpHint -> 11
   OpScry -> 12
-  OpTrace -> 100
 
 class (NockmaEq a) => NockNatural a where
   type ErrNockNatural a :: Type
