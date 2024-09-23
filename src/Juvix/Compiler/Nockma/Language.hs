@@ -165,6 +165,7 @@ instance Pretty NockOp where
     OpScry -> "scry"
 
 data NockHint = NockHintPuts
+  deriving stock (Show, Eq, Enum, Bounded)
 
 textToStdlibFunctionMap :: HashMap Text StdlibFunction
 textToStdlibFunctionMap =
@@ -324,6 +325,10 @@ nockBoolLiteral b
   | b = nockTrueLiteral
   | otherwise = nockFalseLiteral
 
+nockHintName :: NockHint -> Text
+nockHintName = \case
+  NockHintPuts -> "puts"
+
 nockHintValue :: NockHint -> Natural
 nockHintValue = \case
   NockHintPuts -> 0x73747570
@@ -332,12 +337,7 @@ nockHintAtom :: NockHint -> Term Natural
 nockHintAtom hint =
   TermAtom
     Atom
-      { _atomInfo =
-          AtomInfo
-            { _atomInfoLoc = Irrelevant Nothing,
-              _atomInfoTag = Nothing,
-              _atomInfoHint = Just AtomHintStdlibPlaceholder
-            },
+      { _atomInfo = emptyAtomInfo,
         _atom = nockHintValue hint
       }
 

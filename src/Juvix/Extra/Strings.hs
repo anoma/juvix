@@ -803,6 +803,9 @@ tagTag = "tag@"
 stdlibTag :: (IsString s) => s
 stdlibTag = "stdlib@"
 
+percent :: (IsString s) => s
+percent = "%"
+
 instrSub :: (IsString s) => s
 instrSub = "sub"
 
