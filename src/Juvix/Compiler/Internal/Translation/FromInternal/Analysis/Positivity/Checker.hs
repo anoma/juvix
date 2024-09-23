@@ -43,20 +43,19 @@ checkPositivity indInfo = do
     forM_ (indInfo ^. inductiveInfoConstructors) $ \ctorName -> do
       ctor <- asks (fromJust . HashMap.lookup ctorName . (^. infoConstructors))
       unless (indInfo ^. inductiveInfoPositive) $ do
-        numInductives <- HashMap.size <$> asks (^. infoInductives)
+        numInductives <- length <$> asks (^. infoInductives)
         forM_
           (constructorArgs (ctor ^. constructorInfoType))
           $ \typeOfConstr ->
             checkStrictlyPositiveOccurrences
-              ( CheckPositivityArgs
-                  { _checkPositivityArgsInductive = indInfo,
-                    _checkPositivityArgsConstructorName = ctorName,
-                    _checkPositivityArgsInductiveName = indInfo ^. inductiveInfoName,
-                    _checkPositivityArgsRecursionLimit = numInductives,
-                    _checkPositivityArgsErrorReference = Nothing,
-                    _checkPositivityArgsTypeOfConstructorArg = typeOfConstr ^. paramType
-                  }
-              )
+              CheckPositivityArgs
+                { _checkPositivityArgsInductive = indInfo,
+                  _checkPositivityArgsConstructorName = ctorName,
+                  _checkPositivityArgsInductiveName = indInfo ^. inductiveInfoName,
+                  _checkPositivityArgsRecursionLimit = numInductives,
+                  _checkPositivityArgsErrorReference = Nothing,
+                  _checkPositivityArgsTypeOfConstructorArg = typeOfConstr ^. paramType
+                }
 
 checkStrictlyPositiveOccurrences ::
   forall r.
@@ -183,7 +182,7 @@ checkStrictlyPositiveOccurrences p = do
                no negative.
               -}
               let paramsTy' = indInfo' ^. inductiveInfoParameters
-              goInductiveApp indInfo' (zip paramsTy' (toList args))
+              goInductiveApp indInfo' (zipExact paramsTy' (toList args))
             _ -> return ()
 
         goInductiveApp :: InductiveInfo -> [(InductiveParameter, Expression)] -> Sem r ()
