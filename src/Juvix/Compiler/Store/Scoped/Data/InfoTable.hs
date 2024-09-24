@@ -41,26 +41,26 @@ makeLenses ''InfoTable
 instance Semigroup InfoTable where
   tab1 <> tab2 =
     InfoTable
-      { _infoFixities = mappendField infoFixities,
-        _infoPrecedenceGraph = appendFieldWith combinePrecedenceGraphs infoPrecedenceGraph,
-        _infoConstructorSigs = mappendField infoConstructorSigs,
-        _infoNameSigs = mappendField infoNameSigs,
-        _infoParsedConstructorSigs = mappendField infoParsedConstructorSigs,
-        _infoParsedNameSigs = mappendField infoParsedNameSigs,
-        _infoBuiltins = mappendField infoBuiltins,
-        _infoRecords = mappendField infoRecords,
-        _infoFunctions = mappendField infoFunctions,
-        _infoInductives = mappendField infoInductives,
-        _infoConstructors = mappendField infoConstructors,
-        _infoAxioms = mappendField infoAxioms,
-        _infoScoperAlias = mappendField infoScoperAlias
+      { _infoFixities = mappendField' infoFixities,
+        _infoPrecedenceGraph = appendFieldWith' combinePrecedenceGraphs infoPrecedenceGraph,
+        _infoConstructorSigs = mappendField' infoConstructorSigs,
+        _infoNameSigs = mappendField' infoNameSigs,
+        _infoParsedConstructorSigs = mappendField' infoParsedConstructorSigs,
+        _infoParsedNameSigs = mappendField' infoParsedNameSigs,
+        _infoBuiltins = mappendField' infoBuiltins,
+        _infoRecords = mappendField' infoRecords,
+        _infoFunctions = mappendField' infoFunctions,
+        _infoInductives = mappendField' infoInductives,
+        _infoConstructors = mappendField' infoConstructors,
+        _infoAxioms = mappendField' infoAxioms,
+        _infoScoperAlias = mappendField' infoScoperAlias
       }
     where
-      mappendField :: (Semigroup f) => Lens' InfoTable f -> f
-      mappendField = appendFieldWith (<>)
+      mappendField' :: (Semigroup f) => Lens' InfoTable f -> f
+      mappendField' = appendFieldWith' (<>)
 
-      appendFieldWith :: (f -> f -> f) -> Lens' InfoTable f -> f
-      appendFieldWith joinfun l = joinfun (tab1 ^. l) (tab2 ^. l)
+      appendFieldWith' :: (f -> f -> f) -> Lens' InfoTable f -> f
+      appendFieldWith' = appendFieldWith tab1 tab2
 
 instance Monoid InfoTable where
   mempty =

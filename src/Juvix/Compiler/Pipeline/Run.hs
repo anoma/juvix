@@ -246,17 +246,8 @@ runReplPipelineIOEither' lockMode entry = do
             _pipelineResult
               ^. Core.coreResultInternalTypedResult
 
-          typesTable :: Typed.TypesTable
-          typesTable = typedResult ^. Typed.resultIdenTypes
-
-          functionsTable :: Typed.FunctionsTable
-          functionsTable = typedResult ^. Typed.resultFunctions
-
-          instanceTable :: Typed.InstanceTable
-          instanceTable = typedResult ^. Typed.resultInstances
-
-          coercionTable :: Typed.CoercionTable
-          coercionTable = typedResult ^. Typed.resultCoercions
+          typesTable :: Typed.TypeCheckingTables
+          typesTable = typedResult ^. Typed.resultTypeCheckingTables
 
           typedTable :: Internal.InfoTable
           typedTable = typedResult ^. Typed.resultInternalModule . Typed.internalModuleInfoTable
@@ -289,10 +280,7 @@ runReplPipelineIOEither' lockMode entry = do
                   _artifactCoreModule = coreModule,
                   _artifactScopeTable = resultScoperTable,
                   _artifactScopeExports = scopedResult ^. Scoped.resultExports,
-                  _artifactTypes = typesTable,
-                  _artifactFunctions = functionsTable,
-                  _artifactInstances = instanceTable,
-                  _artifactCoercions = coercionTable,
+                  _artifactTypeCheckingTables = typesTable,
                   _artifactScoperState = scopedResult ^. Scoped.resultScoperState,
                   _artifactResolver = art ^. artifactResolver,
                   _artifactNameIdState = art ^. artifactNameIdState,
@@ -308,10 +296,7 @@ runReplPipelineIOEither' lockMode entry = do
           _artifactTerminationState = iniTerminationState,
           _artifactResolver = iniResolverState,
           _artifactNameIdState = genNameIdState defaultModuleId,
-          _artifactTypes = mempty,
-          _artifactFunctions = mempty,
-          _artifactInstances = mempty,
-          _artifactCoercions = mempty,
+          _artifactTypeCheckingTables = mempty,
           _artifactCoreModule = Core.emptyModule,
           _artifactScopeTable = mempty,
           _artifactScopeExports = mempty,

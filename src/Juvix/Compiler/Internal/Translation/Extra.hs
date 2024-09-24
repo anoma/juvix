@@ -7,7 +7,6 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Translation
-import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context
 import Juvix.Prelude
 
 unfoldPolyApplication :: (Member (Reader TypesTable) r) => Application -> Sem r (Expression, [Expression])

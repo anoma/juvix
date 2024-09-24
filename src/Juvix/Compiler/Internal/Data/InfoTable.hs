@@ -80,17 +80,14 @@ letFunctionDefs e =
       LetFunDef f -> pure f
       LetMutualBlock (MutualBlockLet fs) -> fs
 
-computeInternalModule :: InstanceTable -> CoercionTable -> TypesTable -> FunctionsTable -> Module -> InternalModule
-computeInternalModule instTab coeTab tysTab funsTab m@Module {..} =
+computeInternalModule :: TypeCheckingTables -> Module -> InternalModule
+computeInternalModule tabs m@Module {..} =
   InternalModule
     { _internalModuleId = _moduleId,
       _internalModuleName = _moduleName,
       _internalModuleImports = _moduleBody ^. moduleImports,
       _internalModuleInfoTable = computeInternalModuleInfoTable m,
-      _internalModuleTypesTable = tysTab,
-      _internalModuleFunctionsTable = funsTab,
-      _internalModuleInstanceTable = instTab,
-      _internalModuleCoercionTable = coeTab
+      _internalModuleTypeCheckingTables = tabs
     }
 
 computeInternalModuleInfoTable :: Module -> InfoTable

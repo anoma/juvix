@@ -69,10 +69,10 @@ runNameIdGenArtifacts ::
 runNameIdGenArtifacts = runStateLikeArtifacts runNameIdGen artifactNameIdState
 
 readerFunctionsTableArtifacts :: (Members '[State Artifacts] r) => Sem (Reader FunctionsTable ': r) a -> Sem r a
-readerFunctionsTableArtifacts = runReaderArtifacts artifactFunctions
+readerFunctionsTableArtifacts = runReaderArtifacts (artifactTypeCheckingTables . typeCheckingTablesFunctionsTable)
 
 readerTypesTableArtifacts :: (Members '[State Artifacts] r) => Sem (Reader TypesTable ': r) a -> Sem r a
-readerTypesTableArtifacts = runReaderArtifacts artifactTypes
+readerTypesTableArtifacts = runReaderArtifacts (artifactTypeCheckingTables . typeCheckingTablesTypesTable)
 
 runTerminationArtifacts :: (Members '[Error JuvixError, State Artifacts] r) => Sem (Termination ': r) a -> Sem r a
 runTerminationArtifacts = runStateLikeArtifacts runTermination artifactTerminationState
@@ -99,20 +99,8 @@ runStateLikeArtifacts runner l m = do
 
 runResultBuilderArtifacts :: forall r a. (Members '[State Artifacts] r) => Sem (ResultBuilder ': r) a -> Sem r a
 runResultBuilderArtifacts m = do
-  ftab <- gets (^. artifactFunctions)
-  ttab <- gets (^. artifactTypes)
-  itab <- gets (^. artifactInstances)
-  ctab <- gets (^. artifactCoercions)
-  let importCtx =
-        ImportContext
-          { _importContextCoercions = ctab,
-            _importContextInstances = itab,
-            _importContextFunctionsTable = ftab,
-            _importContextTypesTable = ttab
-          }
+  tabs <- gets (^. artifactTypeCheckingTables)
+  let importCtx = ImportContext tabs
   (s, a) <- runResultBuilder importCtx m
-  modify' (set artifactFunctions (s ^. resultBuilderStateCombinedFunctionsTable))
-  modify' (set artifactTypes (s ^. resultBuilderStateCombinedTypesTable))
-  modify' (set artifactInstances (s ^. resultBuilderStateCombinedInstanceTable))
-  modify' (set artifactCoercions (s ^. resultBuilderStateCombinedCoercionTable))
+  modify' (set artifactTypeCheckingTables (s ^. resultBuilderStateCombinedTables))
   return a

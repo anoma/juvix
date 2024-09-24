@@ -617,10 +617,13 @@ strongNormalize'' ty = do
   ftab <- ask
   let importCtx =
         ImportContext
-          { _importContextCoercions = mempty,
-            _importContextInstances = mempty,
-            _importContextTypesTable = mempty,
-            _importContextFunctionsTable = ftab
+          { _importContextTables =
+              TypeCheckingTables
+                { _typeCheckingTablesCoercionTable = mempty,
+                  _typeCheckingTablesInstanceTable = mempty,
+                  _typeCheckingTablesTypesTable = mempty,
+                  _typeCheckingTablesFunctionsTable = ftab
+                }
           }
   fmap snd
     . runResultBuilder importCtx
