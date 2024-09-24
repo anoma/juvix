@@ -64,7 +64,6 @@ checkStrictlyPositiveOccurrences ::
   Sem r ()
 checkStrictlyPositiveOccurrences p = do
   traceM (prettyText (p ^. checkPositivityArgsInductiveName) <> " # " <> prettyText (p ^. checkPositivityArgsConstructorName))
-  traceM ("reclimit = " <> prettyText recLimit)
   typeOfConstrArg <- strongNormalize_ (p ^. checkPositivityArgsTypeOfConstructorArg)
   goExpression False typeOfConstrArg
   where

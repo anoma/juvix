@@ -209,7 +209,6 @@ checkInductiveDef InductiveDef {..} = runInferenceDef $ do
               _inductivePragmas,
               _inductiveDocComment
             }
-    checkPositivity (inductiveInfoFromInductiveDef d)
     return d
   where
     checkParams :: Sem (Inference ': r) [(Name, Expression)]
@@ -252,8 +251,31 @@ checkTopMutualBlock ::
   (Members '[HighlightBuilder, Reader BuiltinsTable, State NegativeTypeParameters, Reader EntryPoint, Reader LocalVars, Reader InfoTable, Error TypeCheckerError, NameIdGen, ResultBuilder, Termination, Reader InsertedArgsStack] r) =>
   MutualBlock ->
   Sem r MutualBlock
-checkTopMutualBlock (MutualBlock ds) =
-  MutualBlock <$> runInferenceDefs (mapM checkMutualStatement ds)
+checkTopMutualBlock (MutualBlock ds) = do
+  m <- MutualBlock <$> runInferenceDefs (mapM checkMutualStatement ds)
+  checkBlockPositivity m
+  return m
+
+checkBlockPositivity ::
+  -- ( Members
+  --     '[
+  --     HighlightBuilder,
+  --        Reader BuiltinsTable,
+  --        State NegativeTypeParameters,
+  --        Reader EntryPoint,
+  --        Reader LocalVars,
+  --        Reader InfoTable,
+  --        Error TypeCheckerError,
+  --        NameIdGen,
+  --        ResultBuilder,
+  --        Termination,
+  --        Reader InsertedArgsStack
+  --      ]
+  --     r
+  -- ) =>
+  MutualBlock ->
+  Sem r ()
+checkBlockPositivity _ = return ()
 
 resolveCastHoles ::
   forall a r.
