@@ -23,7 +23,7 @@ type Transferability := Transferable | NonTransferable
 - functions, constructors, etc: lower camel case (`tokenLogic`, `transferLogic`)
 - instances: lower came case with `I` at the end (`instance eqNatI : Eq Nat := ..`)
 - boolean check functions: start with `is` (`isWhatever`)
-- constructors: `mk` + type name (`mkResource`)
+- record constructors: `mk` + type name (`mkResource`)
 - meaningful descriptive long names for arguments of public functions, e.g., `element`, `list`, `initialValue`
   - exception: common abbreviations allowed: `fun`, `acc`
 - short names like `x` are okay for local definitions
