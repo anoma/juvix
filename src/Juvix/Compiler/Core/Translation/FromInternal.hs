@@ -55,7 +55,10 @@ computeImplicitArgs = \case
         False : computeImplicitArgs _functionRight
   _ -> []
 
-fromInternal :: (Members '[NameIdGen, Reader Store.ModuleTable, Error JuvixError] k) => Internal.InternalTypedResult -> Sem k CoreResult
+fromInternal ::
+  (Members '[NameIdGen, Reader Store.ModuleTable, Error JuvixError] k) =>
+  InternalTyped.InternalTypedResult ->
+  Sem k CoreResult
 fromInternal i = mapError (JuvixError . ErrBadScope) $ do
   importTab <- asks Store.getInternalModuleTable
   coreImportsTab <- asks Store.computeCombinedCoreInfoTable
@@ -65,10 +68,11 @@ fromInternal i = mapError (JuvixError . ErrBadScope) $ do
             _moduleInfoTable = mempty,
             _moduleImportsTable = coreImportsTab
           }
+      tabs = i ^. InternalTyped.resultTypeCheckingTables
   res <-
     execInfoTableBuilder md
-      . runReader (i ^. InternalTyped.resultFunctions)
-      . runReader (i ^. InternalTyped.resultIdenTypes)
+      . runReader (tabs ^. InternalTyped.typeCheckingTablesFunctionsTable)
+      . runReader (tabs ^. InternalTyped.typeCheckingTablesTypesTable)
       $ do
         when
           (isNothing (coreImportsTab ^. infoLiteralIntToNat))
@@ -101,11 +105,12 @@ fromInternalExpression importTab res exp = do
   let mtab =
         res ^. coreResultInternalTypedResult . InternalTyped.resultInternalModule . Internal.internalModuleInfoTable
           <> Internal.computeCombinedInfoTable importTab
+      tabs = res ^. coreResultInternalTypedResult . InternalTyped.resultTypeCheckingTables
   fmap snd
     . runReader mtab
     . runInfoTableBuilder (res ^. coreResultModule)
-    . runReader (res ^. coreResultInternalTypedResult . InternalTyped.resultFunctions)
-    . runReader (res ^. coreResultInternalTypedResult . InternalTyped.resultIdenTypes)
+    . runReader (tabs ^. InternalTyped.typeCheckingTablesFunctionsTable)
+    . runReader (tabs ^. InternalTyped.typeCheckingTablesTypesTable)
     $ fromTopIndex (goExpression exp)
 
 goModule ::

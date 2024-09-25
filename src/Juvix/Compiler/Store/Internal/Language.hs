@@ -1,6 +1,7 @@
 module Juvix.Compiler.Store.Internal.Language
   ( module Juvix.Compiler.Store.Internal.Data.InfoTable,
     module Juvix.Compiler.Store.Internal.Language,
+    module Juvix.Compiler.Store.Internal.Data.TypeCheckingTables,
   )
 where
 
@@ -10,7 +11,7 @@ import Juvix.Compiler.Store.Internal.Data.CoercionInfo
 import Juvix.Compiler.Store.Internal.Data.FunctionsTable
 import Juvix.Compiler.Store.Internal.Data.InfoTable
 import Juvix.Compiler.Store.Internal.Data.InstanceInfo
-import Juvix.Compiler.Store.Internal.Data.TypesTable
+import Juvix.Compiler.Store.Internal.Data.TypeCheckingTables
 import Juvix.Extra.Serialize
 import Juvix.Prelude
 
@@ -19,10 +20,7 @@ data InternalModule = InternalModule
     _internalModuleName :: Name,
     _internalModuleImports :: [Import],
     _internalModuleInfoTable :: InfoTable,
-    _internalModuleInstanceTable :: InstanceTable,
-    _internalModuleCoercionTable :: CoercionTable,
-    _internalModuleTypesTable :: TypesTable,
-    _internalModuleFunctionsTable :: FunctionsTable
+    _internalModuleTypeCheckingTables :: TypeCheckingTables
   }
   deriving stock (Generic)
 
@@ -52,14 +50,26 @@ insertInternalModule tab sm = over internalModuleTable (HashMap.insert (sm ^. in
 computeCombinedInfoTable :: InternalModuleTable -> InfoTable
 computeCombinedInfoTable = mconcatMap (^. internalModuleInfoTable) . HashMap.elems . (^. internalModuleTable)
 
-computeTypesTable :: InternalModuleTable -> TypesTable
-computeTypesTable = mconcatMap (^. internalModuleTypesTable) . (^. internalModuleTable)
+computeTypeCheckingTables :: InternalModuleTable -> TypeCheckingTables
+computeTypeCheckingTables itab =
+  TypeCheckingTables
+    { _typeCheckingTablesTypesTable = computeTypesTable,
+      _typeCheckingTablesInstanceTable = computeInstanceTable,
+      _typeCheckingTablesFunctionsTable = computeFunctionsTable,
+      _typeCheckingTablesCoercionTable = computeCoercionTable
+    }
+  where
+    computeTypesTable :: TypesTable
+    computeTypesTable = mconcatMap (^. internalModuleTypeCheckingTables . typeCheckingTablesTypesTable) (itab ^. internalModuleTable)
 
-computeFunctionsTable :: InternalModuleTable -> FunctionsTable
-computeFunctionsTable = mconcatMap (^. internalModuleFunctionsTable) . (^. internalModuleTable)
+    computeFunctionsTable :: FunctionsTable
+    computeFunctionsTable =
+      mconcatMap
+        (^. internalModuleTypeCheckingTables . typeCheckingTablesFunctionsTable)
+        (itab ^. internalModuleTable)
 
-computeInstanceTable :: InternalModuleTable -> InstanceTable
-computeInstanceTable = mconcatMap (^. internalModuleInstanceTable) . (^. internalModuleTable)
+    computeInstanceTable :: InstanceTable
+    computeInstanceTable = mconcatMap (^. internalModuleTypeCheckingTables . typeCheckingTablesInstanceTable) (itab ^. internalModuleTable)
 
-computeCoercionTable :: InternalModuleTable -> CoercionTable
-computeCoercionTable = mconcatMap (^. internalModuleCoercionTable) . (^. internalModuleTable)
+    computeCoercionTable :: CoercionTable
+    computeCoercionTable = mconcatMap (^. internalModuleTypeCheckingTables . typeCheckingTablesCoercionTable) (itab ^. internalModuleTable)

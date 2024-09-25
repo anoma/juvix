@@ -760,3 +760,9 @@ zipWithNextLoop l = NonEmpty.reverse (go [] l)
     go acc = \case
       lastA :| [] -> (lastA, h) :| acc
       x :| y : as -> go ((x, y) : acc) (y :| as)
+
+mappendField :: (Semigroup f) => t -> t -> Lens' t f -> f
+mappendField t1 t2 = appendFieldWith t1 t2 (<>)
+
+appendFieldWith :: t -> t -> (f -> f -> f) -> Lens' t f -> f
+appendFieldWith t1 t2 joinfun l = joinfun (t1 ^. l) (t2 ^. l)

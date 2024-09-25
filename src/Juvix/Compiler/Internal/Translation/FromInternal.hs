@@ -34,34 +34,19 @@ typeCheckingNew a = do
         stable =
           Scoped.computeCombinedInfoTable stab
             <> res ^. Internal.resultScoper . resultScopedModule . scopedModuleInfoTable
-        importCtx =
-          ImportContext
-            { _importContextTypesTable = computeTypesTable itab,
-              _importContextFunctionsTable = computeFunctionsTable itab,
-              _importContextInstances = computeInstanceTable itab,
-              _importContextCoercions = computeCoercionTable itab
-            }
+        importCtx = ImportContext (computeTypeCheckingTables itab)
     fmap (res,)
       . runReader table
       . runReader (stable ^. Scoped.infoBuiltins)
       . runResultBuilder importCtx
       . mapError (JuvixError @TypeCheckerError)
       $ checkTopModule (res ^. Internal.resultModule)
-  let md =
-        computeInternalModule
-          (bst ^. resultBuilderStateInstanceTable)
-          (bst ^. resultBuilderStateCoercionTable)
-          (bst ^. resultBuilderStateTypesTable)
-          (bst ^. resultBuilderStateFunctionsTable)
-          checkedModule
+  let md = computeInternalModule (bst ^. resultBuilderStateTables) checkedModule
   return
     InternalTypedResult
       { _resultInternal = res,
         _resultModule = checkedModule,
         _resultInternalModule = md,
         _resultTermination = termin,
-        _resultIdenTypes = bst ^. resultBuilderStateCombinedTypesTable,
-        _resultFunctions = bst ^. resultBuilderStateCombinedFunctionsTable,
-        _resultInstances = bst ^. resultBuilderStateCombinedInstanceTable,
-        _resultCoercions = bst ^. resultBuilderStateCombinedCoercionTable
+        _resultTypeCheckingTables = bst ^. resultBuilderStateCombinedTables
       }
