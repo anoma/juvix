@@ -30,7 +30,7 @@ type Transferability := Transferable | NonTransferable
 
 ## Function signatures
 
-- put everything to the left of `:` in type signatures, with *full* meaningful names for arguments
+- put everything to the left of `:` in type signatures, with _full_ meaningful names for arguments
   - temporary exception: when needed for termination, argument can be moved to the right of `:`
   - even when the argument type is moved to the right, give a descriptive argument name in the type:
 
