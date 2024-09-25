@@ -35,7 +35,7 @@ type Transferability := Transferable | NonTransferable
   - even when the argument type is moved to the right, give a descriptive argument name in the type:
 
 ```
-elem {A} (testEq : A -> A -> Bool) (element : A) : (list : List A) -> Bool
+isMember {A} (testEq : A -> A -> Bool) (element : A) : (list : List A) -> Bool
 ```
 
 ## Type variables
