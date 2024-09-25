@@ -6,15 +6,16 @@
 - don't use unicode, except perhaps for judoc
 - avoid `Pair`
 - prefer enumarations with meaningful names over booleans, e.g., instead of using `Bool` define:
+
 ```
-	type Transferability := Transferable | NonTransferable
+type Transferability := Transferable | NonTransferable
 ```
 
 ## Imports
 
 - all imports at the beginning of the file
 - explicit names for imported identifiers (`import X open using {iden1; iden2}`)
-    - exception: `import Stdlib.Prelude open`, `import Anoma open` are allowed
+  - exception: `import Stdlib.Prelude open`, `import Anoma open` are allowed
 
 ## Names
 
@@ -24,16 +25,17 @@
 - boolean check functions: start with `is` (`isWhatever`)
 - constructors: `mk` + type name (`mkResource`)
 - meaningful descriptive long names for arguments of public functions, e.g., `element`, `list`, `initialValue`
-	- exception: common abbreviations allowed: `fun`, `acc`
+  - exception: common abbreviations allowed: `fun`, `acc`
 - short names like `x` are okay for local definitions
 
 ## Function signatures
 
 - put everything to the left of `:` in type signatures, with *full* meaningful names for arguments
-	- temporary exception: when needed for termination, argument can be moved to the right of `:`
-	- even when the argument type is moved to the right, give a descriptive argument name in the type:
+  - temporary exception: when needed for termination, argument can be moved to the right of `:`
+  - even when the argument type is moved to the right, give a descriptive argument name in the type:
+
 ```
-		elem {A} (testEq : A -> A -> Bool) (element : A) : (list : List A) -> Bool
+elem {A} (testEq : A -> A -> Bool) (element : A) : (list : List A) -> Bool
 ```
 
 ## Type variables
@@ -44,6 +46,7 @@
 - meaningful type variable names for more "high-level" functions where this makes sense
 
 Example:
+
 ```
 split
   {ResourceType}
@@ -60,6 +63,7 @@ split
 ```
 
 But we can use a short name `A` in:
+
 ```
 find {A} (predicate : A -> Bool) : (list : List A) -> Maybe A
 ```
@@ -73,7 +77,7 @@ find {A} (predicate : A -> Bool) : (list : List A) -> Maybe A
 ## Application
 
 - don't use "pipes" (i.e., `|>`, `<|`, `>>`, `<<`, etc.)
-	- weak exception: there is a "natural" data processing pipeline in several steps
+  - weak exception: there is a "natural" data processing pipeline in several steps
 - use iterators `for` , `map`, etc., instead of the function application syntax with `fold`, etc.
 - use named application when reasonable
 
