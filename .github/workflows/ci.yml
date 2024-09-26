@@ -197,7 +197,7 @@ jobs:
         shell: bash
         run: |
           cargo install cargo-binstall@1.6.9 --force
-          cargo binstall cargo-risczero@1.0.5 --no-confirm --force
+          cargo binstall cargo-risczero@1.1.1 --no-confirm --force
           cargo risczero install
 
       - name: Checkout CairoVM
