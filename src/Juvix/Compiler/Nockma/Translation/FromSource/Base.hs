@@ -135,13 +135,10 @@ atomWithLoc p n = do
   return (set atomLoc (Just loc) n)
 
 atomNil :: Parser (Atom Natural)
-atomNil = symbol Str.nil $> nockNil
+atomNil = choice (map symbol [Str.nil, Str.functionsPlaceholder, Str.stdlibPlaceholder]) $> nockNil
 
 atomVoid :: Parser (Atom Natural)
 atomVoid = symbol Str.void $> nockVoid
-
-atomFunctionsPlaceholder :: Parser (Atom Natural)
-atomFunctionsPlaceholder = symbol Str.functionsPlaceholder $> nockNil
 
 atomStringLiteral :: Parser (Atom Natural)
 atomStringLiteral = do
@@ -163,7 +160,6 @@ patom = do
     <|> atomBool
     <|> atomNil
     <|> atomVoid
-    <|> atomFunctionsPlaceholder
     <|> try atomStringLiteral
 
 iden :: Parser Text
