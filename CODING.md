@@ -21,7 +21,7 @@ type Transferability := Transferable | NonTransferable
 
 - types: upper camel case (`Nat`, `PublicKey`)
 - functions, constructors, etc: lower camel case (`tokenLogic`, `transferLogic`)
-- instances: lower came case with `I` at the end (`instance eqNatI : Eq Nat := ..`)
+- instances: lower camel case with `I` at the end (`instance eqNatI : Eq Nat := ..`)
 - boolean check functions: start with `is` (`isWhatever`)
 - record constructors: `mk` + type name (`mkResource`)
 - meaningful descriptive long names for arguments of public functions, e.g., `element`, `list`, `initialValue`
