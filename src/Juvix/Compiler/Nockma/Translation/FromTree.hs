@@ -34,6 +34,7 @@ module Juvix.Compiler.Nockma.Translation.FromTree
 where
 
 import Data.ByteString qualified as BS
+import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Nockma.Encoding
 import Juvix.Compiler.Nockma.Encoding.Ed25519 qualified as E
 import Juvix.Compiler.Nockma.Language.Path
@@ -113,9 +114,17 @@ newtype FunctionCtx = FunctionCtx
   { _functionCtxArity :: Natural
   }
 
+newtype TempRef = TempRef
+  { _tempRefIndex :: Int
+  }
+
 data CompilerCtx = CompilerCtx
   { _compilerFunctionInfos :: HashMap FunctionId FunctionInfo,
     _compilerConstructorInfos :: ConstructorInfos,
+    -- | Maps temporary variables to their stack indices.
+    _compilerTempVarMap :: HashMap Int TempRef,
+    _compilerTempVarsNum :: Int,
+    _compilerStackHeight :: Int,
     _compilerOptions :: CompilerOptions
   }
 
@@ -158,6 +167,7 @@ data AnomaCallablePathId
 -- 3. argsNum is the number of arguments that have been applied to the closure.
 -- 4. args is the list of args that have been applied.
 --    The length of the list should be argsNum.
+-- TODO: this comment seems outdated
 pathFromEnum :: (Enum a) => a -> Path
 pathFromEnum = indexStack . fromIntegral . fromEnum
 
@@ -195,6 +205,7 @@ indexInStack s idx = stackPath s ++ indexStack idx
 makeLenses ''CompilerOptions
 makeLenses ''AnomaResult
 makeLenses ''CompilerFunction
+makeLenses ''TempRef
 makeLenses ''CompilerCtx
 makeLenses ''FunctionCtx
 makeLenses ''ConstructorInfo
@@ -458,26 +469,22 @@ compile = \case
 
     goSave :: Tree.NodeSave -> Sem r (Term Natural)
     goSave Tree.NodeSave {..} = do
-      arg <- compile _nodeSaveArg
-      body <- compile _nodeSaveBody
-      return (withTemp arg body)
+      withTempVar _nodeSaveArg (compile _nodeSaveBody)
 
     goCase :: Tree.NodeCase -> Sem r (Term Natural)
     goCase c = do
       def <- mapM compile (c ^. Tree.nodeCaseDefault)
       arg <- compile (c ^. Tree.nodeCaseArg)
-      branches <-
-        sequence
-          [ do
-              let withTemp' t
-                    | b ^. Tree.caseBranchSave = withTemp arg t
-                    | otherwise = t
-
-              body' <- withTemp' <$> compile (b ^. Tree.caseBranchBody)
-              return (b ^. Tree.caseBranchTag, body')
-            | b <- c ^. Tree.nodeCaseBranches
-          ]
+      branches <- mapM goCaseBranch (c ^. Tree.nodeCaseBranches)
       caseCmd arg def branches
+
+    goCaseBranch :: Tree.CaseBranch -> Sem r (Tree.Tag, Term Natural)
+    goCaseBranch b = do
+      let withSave t
+            | b ^. Tree.caseBranchSave = t
+            | otherwise = popTempVar t
+      body' <- withSave $ compile (b ^. Tree.caseBranchBody)
+      return (b ^. Tree.caseBranchTag, body')
 
     goBranch :: Tree.NodeBranch -> Sem r (Term Natural)
     goBranch Tree.NodeBranch {..} = do
@@ -754,19 +761,37 @@ argsTuplePlaceholder txt = nockNilTagged ("argsTuplePlaceholder-" <> txt)
 appendRights :: Path -> Term Natural -> Term Natural
 appendRights path n = dec (mul (pow2 n) (OpInc # OpQuote # path))
 
-withTemp :: Term Natural -> Term Natural -> Term Natural
-withTemp toBePushed body =
-  OpSequence # pushTemp # body
-  where
-    pushTemp :: Term Natural
-    pushTemp =
-      remakeList
-        [ let p = opAddress "pushTemp" (stackPath s)
-           in if
-                  | TempStack == s -> toBePushed # p
-                  | otherwise -> p
-          | s <- allElements
-        ]
+withTemp ::
+  (Members '[Reader FunctionCtx, Reader CompilerCtx] r) =>
+  Tree.Node ->
+  (TempRef -> Sem r (Term Natural)) ->
+  Sem r (Term Natural)
+withTemp value f = do
+  value' <- compile value
+  stackHeight <- asks (^. compilerStackHeight)
+  body' <- local (over compilerStackHeight (+ 1)) $ f (TempRef stackHeight)
+  return $ OpPush # value' # body'
+
+withTempVar ::
+  (Members '[Reader FunctionCtx, Reader CompilerCtx] r) =>
+  Tree.Node ->
+  (Sem r (Term Natural)) ->
+  Sem r (Term Natural)
+withTempVar value cont = withTemp value $ \temp -> do
+  tempVar <- asks (^. compilerTempVarsNum)
+  local (over compilerTempVarMap (HashMap.insert tempVar temp))
+    . local (over compilerTempVarsNum (+ 1))
+    $ cont
+
+popTempVar ::
+  (Members '[Reader FunctionCtx, Reader CompilerCtx] r) =>
+  (Sem r (Term Natural)) ->
+  Sem r (Term Natural)
+popTempVar cont = do
+  tempVar <- asks (^. compilerTempVarsNum)
+  local (over compilerTempVarMap (HashMap.delete (tempVar - 1)))
+    . local (over compilerTempVarsNum (\x -> x - 1))
+    $ cont
 
 testEq :: (Members '[Reader FunctionCtx, Reader CompilerCtx] r) => Tree.Node -> Tree.Node -> Sem r (Term Natural)
 testEq a b = do
@@ -783,6 +808,8 @@ nockIntegralLiteral = (OpQuote #) . toNock @Natural . fromIntegral
 -- | xs must be a list.
 -- ys is a (possibly empty) tuple.
 -- the result is a tuple.
+-- NOTE: xs occurs twice, but that's fine because each occurrence is in a
+-- different if branch.
 appendToTuple :: Term Natural -> Term Natural -> Term Natural -> Term Natural -> Term Natural
 appendToTuple xs lenXs ys lenYs =
   OpIf # isZero lenYs # listToTuple xs lenXs # append xs lenXs ys
@@ -850,18 +877,15 @@ constUnit = constVoid
 constVoid :: Term Natural
 constVoid = TermAtom nockVoid
 
-directRefPath :: forall r. (Members '[Reader FunctionCtx] r) => Tree.DirectRef -> Sem r Path
+directRefPath :: forall r. (Members '[Reader FunctionCtx, Reader CompilerCtx] r) => Tree.DirectRef -> Sem r Path
 directRefPath = \case
   Tree.ArgRef a -> pathToArg (fromOffsetRef a)
-  Tree.TempRef Tree.RefTemp {..} ->
-    return
-      ( tempRefPath
-          (fromIntegral (fromJust _refTempTempHeight))
-          (fromOffsetRef _refTempOffsetRef)
-      )
-
-tempRefPath :: Natural -> Natural -> Path
-tempRefPath tempHeight off = indexInStack TempStack (tempHeight - off - 1)
+  Tree.TempRef Tree.RefTemp {..} -> do
+    stackHeight <- asks (^. compilerStackHeight)
+    varMap <- asks (^. compilerTempVarMap)
+    let tempIdx = _refTempOffsetRef ^. Tree.offsetRefOffset
+        ref = fromJust $ HashMap.lookup tempIdx varMap
+    return $ indexStack $ fromIntegral $ (stackHeight - ref ^. tempRefIndex - 1)
 
 nockmaBuiltinTag :: Tree.BuiltinDataTag -> NockmaBuiltinTag
 nockmaBuiltinTag = \case
@@ -935,6 +959,9 @@ runCompilerWith opts constrs moduleFuns mainFun = makeAnomaFun
       CompilerCtx
         { _compilerFunctionInfos = functionInfos,
           _compilerConstructorInfos = constrs,
+          _compilerTempVarMap = mempty,
+          _compilerTempVarsNum = 0,
+          _compilerStackHeight = 0,
           _compilerOptions = opts
         }
 
@@ -1113,6 +1140,9 @@ constructorTagToTerm = \case
   Tree.UserTag t -> OpQuote # toNock (fromIntegral (t ^. Tree.tagUserWord) :: Natural)
   Tree.BuiltinTag b -> builtinTagToTerm (nockmaBuiltinTag b)
 
+-- Creates a case command from the compiled value `arg` and the compiled
+-- branches. Note: `arg` is duplicated, so it should be a reference -- not
+-- perform any non-trivial computation!
 caseCmd ::
   forall r.
   (Members '[Reader CompilerCtx] r) =>
