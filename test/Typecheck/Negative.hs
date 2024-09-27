@@ -1,7 +1,6 @@
 module Typecheck.Negative where
 
 import Base
-import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.Error
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error
 
 type FailMsg = String

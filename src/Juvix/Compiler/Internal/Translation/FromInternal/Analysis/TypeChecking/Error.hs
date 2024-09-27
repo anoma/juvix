@@ -8,7 +8,6 @@ where
 
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Types (BuiltinNotDefined)
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Error
-import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.Error
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error.Pretty
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error.Types
 import Juvix.Prelude
@@ -23,7 +22,6 @@ data TypeCheckerError
   | ErrTooManyArgumentsIndType WrongNumberArgumentsIndType
   | ErrTooFewArgumentsIndType WrongNumberArgumentsIndType
   | ErrInvalidPatternMatching InvalidPatternMatching
-  | ErrNonStrictlyPositive NonStrictlyPositiveError
   | ErrNonStrictlyPositiveNew NonStrictlyPositiveNew
   | ErrUnsupportedTypeFunction UnsupportedTypeFunction
   | ErrInvalidInstanceType InvalidInstanceType
@@ -54,7 +52,6 @@ instance ToGenericError TypeCheckerError where
     ErrTooManyArgumentsIndType e -> genericError e
     ErrTooFewArgumentsIndType e -> genericError e
     ErrInvalidPatternMatching e -> genericError e
-    ErrNonStrictlyPositive e -> genericError e
     ErrUnsupportedTypeFunction e -> genericError e
     ErrInvalidInstanceType e -> genericError e
     ErrInvalidCoercionType e -> genericError e
@@ -85,7 +82,6 @@ instance Show TypeCheckerError where
     ErrTooFewArgumentsIndType {} -> "ErrTooFewArgumentsIndType"
     ErrInvalidPatternMatching {} -> "ErrInvalidPatternMatching"
     ErrUnsupportedTypeFunction {} -> "ErrUnsupportedTypeFunction"
-    ErrNonStrictlyPositive {} -> "ErrNonStrictlyPositive"
     ErrInvalidInstanceType {} -> "ErrInvalidInstanceType"
     ErrInvalidCoercionType {} -> "ErrInvalidCoercionType"
     ErrWrongCoercionArgument {} -> "ErrWrongCoercionArgument"
