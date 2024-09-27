@@ -14,7 +14,7 @@ runCommand opts = do
   afile <- fromAppPathFile inputFile
   argsFile <- mapM fromAppPathFile (opts ^. nockmaRunArgs)
   parsedArgs <- mapM (Nockma.parseTermFile >=> checkParsed) argsFile
-  parsedTerm <- Nockma.parseTermFile afile >>= checkParsed
+  parsedTerm <- Nockma.parseJammedFile afile
   case parsedTerm of
     t@(TermCell {}) -> do
       let formula = anomaCallTuple parsedArgs
