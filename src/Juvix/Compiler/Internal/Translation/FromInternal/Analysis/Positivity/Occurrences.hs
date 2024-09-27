@@ -1,11 +1,16 @@
 module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.Occurrences
-  ( module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.Occurrences,
-    module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.ConstructorArg,
+  ( module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.ConstructorArg.Base,
+    Occurrences (..),
+    mkOccurrences,
+    occurrencesPolarity,
+    occurrencesTree,
+    occurrencesAggregatePolarities,
   )
 where
 
+import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Internal.Language
-import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.ConstructorArg
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.ConstructorArg.Base
 import Juvix.Prelude
 
 data FunctionSide
@@ -22,9 +27,10 @@ instance Monoid FunctionSide where
   mempty = FunctionRight
 
 data Occurrences = Occurrences
-  { _occurrencesPolarity :: HashMap VarName Polarity,
+  { _occurrencesPolarity :: HashMap InductiveParam Polarity,
     _occurrencesTree :: HashMap AppLhs [Occurrences]
   }
+  deriving stock (Show)
 
 makeLenses ''Occurrences
 
@@ -35,6 +41,14 @@ emptyOccurrences =
       _occurrencesTree = mempty
     }
 
+occurrencesAggregatePolarities :: Occurrences -> HashMap InductiveParam Polarity
+occurrencesAggregatePolarities = run . execState mempty . go
+  where
+    go :: Occurrences -> Sem '[State (HashMap InductiveParam Polarity)] ()
+    go o = do
+      modify (HashMap.unionWith (<>) (o ^. occurrencesPolarity))
+      mapM_ go (concat (toList (o ^. occurrencesTree)))
+
 mkOccurrences :: [ConstructorArg] -> Occurrences
 mkOccurrences =
   run
@@ -44,16 +58,16 @@ mkOccurrences =
   where
     getPolarity :: forall r'. (Members '[Reader FunctionSide] r') => Sem r' Polarity
     getPolarity =
-          ask <&> \case
-            FunctionLeft -> PolarityNegative
-            FunctionRight -> PolarityStrictlyPositive
+      ask <&> \case
+        FunctionLeft -> PolarityNegative
+        FunctionRight -> PolarityStrictlyPositive
 
     addArg :: forall r'. (Members '[Reader FunctionSide, State Occurrences] r') => ConstructorArg -> Sem r' ()
     addArg = \case
       ConstructorArgFun fun -> goFun fun
       ConstructorArgApp a -> goApp a
       where
-        registerOccurrence :: VarName -> Sem r' ()
+        registerOccurrence :: InductiveParam -> Sem r' ()
         registerOccurrence v = do
           pol <- getPolarity
           modify (over (occurrencesPolarity . at v) (Just . maybe pol (<> pol)))
@@ -64,7 +78,7 @@ mkOccurrences =
           AppAxiom {} -> goArgs
           AppInductive {} -> goArgs
           where
-            goVar :: VarName -> Sem r' ()
+            goVar :: InductiveParam -> Sem r' ()
             goVar v = do
               registerOccurrence v
               goArgs

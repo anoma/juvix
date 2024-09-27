@@ -13,10 +13,10 @@ data ResultBuilder :: Effect where
   AddIdenTypes :: TypesTable -> ResultBuilder m ()
   AddInstanceInfo :: InstanceInfo -> ResultBuilder m ()
   AddCoercionInfo :: CoercionInfo -> ResultBuilder m ()
+  AddPolarities :: InductiveId -> [Polarity] -> ResultBuilder m ()
   LookupFunctionDef :: FunctionName -> ResultBuilder m (Maybe Expression)
   LookupIdenType :: NameId -> ResultBuilder m (Maybe Expression)
-  GetCombinedInstanceTable :: ResultBuilder m InstanceTable
-  GetCombinedCoercionTable :: ResultBuilder m CoercionTable
+  GetCombinedTables :: ResultBuilder m TypeCheckingTables
 
 makeSem ''ResultBuilder
 
@@ -42,6 +42,8 @@ runResultBuilder' ::
   Sem (ResultBuilder ': r) a ->
   Sem r (ResultBuilderState, a)
 runResultBuilder' inis = reinterpret (runState inis) $ \case
+  AddPolarities name pol ->
+    overBothTables (set (typeCheckingTablesPolarityTable . polarityTable . at name) (Just pol))
   AddFunctionDef name def ->
     overBothTables (set (typeCheckingTablesFunctionsTable . functionsTable . at name) (Just def))
   AddIdenType nid ty ->
@@ -56,10 +58,8 @@ runResultBuilder' inis = reinterpret (runState inis) $ \case
     gets (^. resultBuilderStateCombinedTables . typeCheckingTablesFunctionsTable . functionsTable . at name)
   LookupIdenType nid ->
     gets (^. resultBuilderStateCombinedTables . typeCheckingTablesTypesTable . typesTable . at nid)
-  GetCombinedInstanceTable ->
-    gets (^. resultBuilderStateCombinedTables . typeCheckingTablesInstanceTable)
-  GetCombinedCoercionTable ->
-    gets (^. resultBuilderStateCombinedTables . typeCheckingTablesCoercionTable)
+  GetCombinedTables ->
+    gets (^. resultBuilderStateCombinedTables)
   where
     overBothTables :: (Members '[State ResultBuilderState] r') => (TypeCheckingTables -> TypeCheckingTables) -> Sem r' ()
     overBothTables f = modify $ \res ->
@@ -70,12 +70,12 @@ runResultBuilder' inis = reinterpret (runState inis) $ \case
 
 lookupInstanceInfo :: (Members '[ResultBuilder] r) => Name -> Sem r (Maybe [InstanceInfo])
 lookupInstanceInfo name = do
-  tab <- getCombinedInstanceTable
+  tab <- (^. typeCheckingTablesInstanceTable) <$> getCombinedTables
   return $ lookupInstanceTable tab name
 
 lookupCoercionInfo :: (Members '[ResultBuilder] r) => Name -> Sem r (Maybe [CoercionInfo])
 lookupCoercionInfo name = do
-  tab <- getCombinedCoercionTable
+  tab <- (^. typeCheckingTablesCoercionTable) <$> getCombinedTables
   return $ lookupCoercionTable tab name
 
 runResultBuilder :: ImportContext -> Sem (ResultBuilder ': r) a -> Sem r (ResultBuilderState, a)

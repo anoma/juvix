@@ -279,7 +279,7 @@ negPositivityTests =
     mk "E9" $(mkRelFile "E9.juvix"),
     mk "E10 uses type synonym" $(mkRelFile "E10.juvix"),
     mk "E11 uses type synonym" $(mkRelFile "E11.juvix"),
-    mk "Phantom parameter" $(mkRelFile "phantom.juvix")
+    mk "Box left hand side" $(mkRelFile "box.juvix")
   ]
   where
     mk :: String -> Path Rel File -> NegTest

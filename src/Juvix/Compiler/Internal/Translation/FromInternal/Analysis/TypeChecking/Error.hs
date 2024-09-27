@@ -40,6 +40,7 @@ data TypeCheckerError
   | ErrArityCheckerError ArityCheckerError
   | ErrDefaultArgLoop DefaultArgLoop
   | ErrBadScope BadScope
+  | ErrInvalidConstructorArgType InvalidConstructorArgType
 
 instance ToGenericError TypeCheckerError where
   genericError :: (Member (Reader GenericOptions) r) => TypeCheckerError -> Sem r GenericError
@@ -69,6 +70,7 @@ instance ToGenericError TypeCheckerError where
     ErrArityCheckerError e -> genericError e
     ErrDefaultArgLoop e -> genericError e
     ErrBadScope e -> genericError e
+    ErrInvalidConstructorArgType e -> genericError e
 
 instance Show TypeCheckerError where
   show = \case
@@ -97,3 +99,4 @@ instance Show TypeCheckerError where
     ErrDefaultArgLoop {} -> "ErrDefaultArgLoop"
     ErrBuiltinNotDefined {} -> "ErrBuiltinNotDefined"
     ErrBadScope {} -> "ErrBadScope"
+    ErrInvalidConstructorArgType {} -> "ErrInvalidConstructorArgType"

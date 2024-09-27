@@ -665,3 +665,28 @@ instance ToGenericError BadScope where
                 <> "As a workaround, explicitly provide a type in the place where you think the variable got inserted."
                 <> line
                 <> "More information at https://github.com/anoma/juvix/issues/2247"
+
+newtype InvalidConstructorArgType = InvalidConstructorArgType
+  { _invalidConstructorArgType :: Expression
+  }
+
+makeLenses ''InvalidConstructorArgType
+
+instance ToGenericError InvalidConstructorArgType where
+  genericError e = ask >>= generr
+    where
+      generr opts =
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = ppOutput msg,
+              _genericErrorIntervals = [i]
+            }
+        where
+          opts' = fromGenericOptions opts
+          ty = e ^. invalidConstructorArgType
+          i = getLoc ty
+          msg :: Doc Ann =
+            "The type of this constructor argument is not valid:"
+              <> line
+              <> ppCode opts' ty

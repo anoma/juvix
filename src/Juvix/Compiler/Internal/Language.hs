@@ -484,6 +484,8 @@ data NormalizedExpression = NormalizedExpression
   }
 
 makePrisms ''Expression
+makePrisms ''MutualStatement
+
 makeLenses ''SideIfBranch
 makeLenses ''SideIfs
 makeLenses ''CaseBranchRhs

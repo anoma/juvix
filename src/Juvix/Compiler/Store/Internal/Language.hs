@@ -53,23 +53,13 @@ computeCombinedInfoTable = mconcatMap (^. internalModuleInfoTable) . HashMap.ele
 computeTypeCheckingTables :: InternalModuleTable -> TypeCheckingTables
 computeTypeCheckingTables itab =
   TypeCheckingTables
-    { _typeCheckingTablesTypesTable = computeTypesTable,
-      _typeCheckingTablesInstanceTable = computeInstanceTable,
-      _typeCheckingTablesFunctionsTable = computeFunctionsTable,
-      _typeCheckingTablesCoercionTable = computeCoercionTable
+    { _typeCheckingTablesTypesTable = computeTable typeCheckingTablesTypesTable,
+      _typeCheckingTablesInstanceTable = computeTable typeCheckingTablesInstanceTable,
+      _typeCheckingTablesFunctionsTable = computeTable typeCheckingTablesFunctionsTable,
+      _typeCheckingTablesPolarityTable = computeTable typeCheckingTablesPolarityTable,
+      _typeCheckingTablesCoercionTable = computeTable typeCheckingTablesCoercionTable
     }
   where
-    computeTypesTable :: TypesTable
-    computeTypesTable = mconcatMap (^. internalModuleTypeCheckingTables . typeCheckingTablesTypesTable) (itab ^. internalModuleTable)
-
-    computeFunctionsTable :: FunctionsTable
-    computeFunctionsTable =
-      mconcatMap
-        (^. internalModuleTypeCheckingTables . typeCheckingTablesFunctionsTable)
-        (itab ^. internalModuleTable)
-
-    computeInstanceTable :: InstanceTable
-    computeInstanceTable = mconcatMap (^. internalModuleTypeCheckingTables . typeCheckingTablesInstanceTable) (itab ^. internalModuleTable)
-
-    computeCoercionTable :: CoercionTable
-    computeCoercionTable = mconcatMap (^. internalModuleTypeCheckingTables . typeCheckingTablesCoercionTable) (itab ^. internalModuleTable)
+    computeTable :: (Monoid tbl) => Lens' TypeCheckingTables tbl -> tbl
+    computeTable l =
+      mconcatMap (^. internalModuleTypeCheckingTables . l) (itab ^. internalModuleTable)

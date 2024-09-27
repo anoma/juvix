@@ -20,6 +20,7 @@ import Juvix.Compiler.Internal.Extra.CoercionInfo
 import Juvix.Compiler.Internal.Extra.InstanceInfo
 import Juvix.Compiler.Internal.Pretty
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.Checker
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.CheckerNew qualified as New
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker (Termination)
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.CheckerNew.Arity
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context
@@ -131,7 +132,7 @@ checkCoercionCycles ::
   (Members '[ResultBuilder, Error TypeCheckerError] r) =>
   Sem r ()
 checkCoercionCycles = do
-  ctab <- getCombinedCoercionTable
+  ctab <- (^. typeCheckingTablesCoercionTable) <$> getCombinedTables
   let s = toList $ cyclicCoercions ctab
   whenJust (nonEmpty s) $
     throw
@@ -251,31 +252,27 @@ checkTopMutualBlock ::
   (Members '[HighlightBuilder, Reader BuiltinsTable, State NegativeTypeParameters, Reader EntryPoint, Reader LocalVars, Reader InfoTable, Error TypeCheckerError, NameIdGen, ResultBuilder, Termination, Reader InsertedArgsStack] r) =>
   MutualBlock ->
   Sem r MutualBlock
-checkTopMutualBlock (MutualBlock ds) = do
-  m <- MutualBlock <$> runInferenceDefs (mapM checkMutualStatement ds)
-  checkBlockPositivity m
-  return m
+checkTopMutualBlock (MutualBlock ds) =
+  MutualBlock
+    <$> runInferenceDefs
+      ( do
+          ls <- mapM checkMutualStatement ds
+          checkBlockPositivity (MutualBlock ls) -- TODO uncomment
+          return ls
+      )
 
 checkBlockPositivity ::
-  -- ( Members
-  --     '[
-  --     HighlightBuilder,
-  --        Reader BuiltinsTable,
-  --        State NegativeTypeParameters,
-  --        Reader EntryPoint,
-  --        Reader LocalVars,
-  --        Reader InfoTable,
-  --        Error TypeCheckerError,
-  --        NameIdGen,
-  --        ResultBuilder,
-  --        Termination,
-  --        Reader InsertedArgsStack
-  --      ]
-  --     r
-  -- ) =>
+  ( Members
+      '[ Reader InfoTable,
+         Error TypeCheckerError,
+         ResultBuilder,
+         Inference
+       ]
+      r
+  ) =>
   MutualBlock ->
   Sem r ()
-checkBlockPositivity _ = return ()
+checkBlockPositivity = New.checkPositivity
 
 resolveCastHoles ::
   forall a r.
@@ -417,7 +414,7 @@ checkInstanceType FunctionDef {..} = do
       tab <- ask
       unless (isTrait tab _instanceInfoInductive) $
         throw (ErrTargetNotATrait (TargetNotATrait _funDefType))
-      itab <- getCombinedInstanceTable
+      itab <- (^. typeCheckingTablesInstanceTable) <$> getCombinedTables
       is <- subsumingInstances itab ii
       unless (null is) $
         throw (ErrSubsumedInstance (SubsumedInstance ii is (getLoc _funDefName)))

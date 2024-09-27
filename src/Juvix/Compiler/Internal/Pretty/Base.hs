@@ -11,6 +11,7 @@ import Juvix.Compiler.Internal.Data.NameDependencyInfo
 import Juvix.Compiler.Internal.Data.TypedHole
 import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Internal.Pretty.Options
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.Occurrences
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.CheckerNew.Arity qualified as New
 import Juvix.Compiler.Store.Internal.Data.InfoTable
 import Juvix.Data.CodeAnn
@@ -407,6 +408,34 @@ instance PrettyCode TypedHole where
     vars <- ppCode _typedHoleLocalVars
     return (h <+> kwColon <+> ty <> kwAt <> vars)
 
+instance PrettyCode Polarity where
+  ppCode = return . annotate AnnKeyword . pretty
+
+instance (PrettyCode k, PrettyCode v) => PrettyCode (HashMap k v) where
+  ppCode m = do
+    res <- forM (HashMap.toList m) $ \(k, v) -> do
+      k' <- ppCode k
+      v' <- ppCode v
+      return (k' <+> "↦" <+> v')
+    return (bracesEnclose res)
+
+instance PrettyCode AppLhs where
+  ppCode = \case
+    AppVar v -> ppCode v
+    AppAxiom v -> ppCode v
+    AppInductive v -> ppCode v
+
+instance PrettyCode Occurrences where
+  ppCode Occurrences {..} = do
+    ps <- ppCode _occurrencesPolarity
+    args <- ppCode _occurrencesTree
+    return
+      ( bracesEnclose
+          [ header "occurrences" <+> kwAssign <+> ps,
+            header "recursive-args" <+> kwAssign <+> args
+          ]
+      )
+
 instance PrettyCode InfoTable where
   ppCode tbl = do
     inds <- ppCode (HashMap.keys (tbl ^. infoInductives))
@@ -462,6 +491,9 @@ instance (PrettyCode a) => PrettyCode (Maybe a) where
   ppCode = \case
     Nothing -> return "Nothing"
     Just p -> ("Just" <+>) <$> ppCode p
+
+bracesEnclose :: (Foldable l) => l (Doc ann) -> Doc ann
+bracesEnclose = encloseSep "{" "}" "; " . toList
 
 tuple :: [Doc ann] -> Doc ann
 tuple = encloseSep "(" ")" ", "

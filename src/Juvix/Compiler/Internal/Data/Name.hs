@@ -105,6 +105,8 @@ type InductiveName = Name
 
 type InductiveId = NameId
 
+type InductiveParam = Name
+
 fromConcreteSymbol :: Interval -> S.Symbol -> Name
 fromConcreteSymbol loc s = fromConcreteSymbolPretty loc (S.symbolText s) s
 

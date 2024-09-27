@@ -34,10 +34,11 @@ resolveTraitInstance ::
 resolveTraitInstance TypedHole {..} = do
   vars <- overM localTypes (mapM strongNormalize_) _typedHoleLocalVars
   infoTab <- ask
-  tab0 <- getCombinedInstanceTable
-  let tab = foldr (flip updateInstanceTable) tab0 (varsToInstances infoTab vars)
+  combtabs <- getCombinedTables
+  let tab0 = combtabs ^. typeCheckingTablesInstanceTable
+      tab = foldr (flip updateInstanceTable) tab0 (varsToInstances infoTab vars)
+      ctab = combtabs ^. typeCheckingTablesCoercionTable
   ty <- strongNormalize _typedHoleType
-  ctab <- getCombinedCoercionTable
   is <- lookupInstance ctab tab (ty ^. normalizedExpression)
   case is of
     [(cs, ii, subs)] ->

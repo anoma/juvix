@@ -1,58 +1,49 @@
-module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.ConstructorArg where
+module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.ConstructorArg
+  ( mkConstructorArg,
+    module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.ConstructorArg.Base,
+  )
+where
 
 import Juvix.Compiler.Internal.Extra.Base
 import Juvix.Compiler.Internal.Language
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.ConstructorArg.Base
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error
 import Juvix.Prelude
 
-data ConstructorArg
-  = ConstructorArgFun Fun
-  | ConstructorArgApp App
+mkConstructorArg :: (Members '[Error TypeCheckerError] r) => NormalizedExpression -> Sem r [ConstructorArg]
+mkConstructorArg = mapM (goArg . (^. paramType)) . fst . unfoldFunType . (^. normalizedExpression)
 
-data Fun = Fun
-  { _funLeft :: ConstructorArg,
-    _funRight :: ConstructorArg
-  }
-
-data AppLhs
-  = AppVar VarName
-  | AppAxiom AxiomName
-  | AppInductive InductiveName
-  deriving stock (Eq, Generic)
-
-instance Hashable AppLhs
-
-data App = App
-  { _appLhs :: AppLhs,
-    _appArgs :: [ConstructorArg]
-  }
-
--- | The
-mkConstructorArg :: (Members '[Error ()] r) => NormalizedExpression -> Sem r ConstructorArg
-mkConstructorArg = mkConstructorArg' . (^. normalizedExpression)
-
-mkConstructorArg' :: forall r. (Members '[Error ()] r) => Expression -> Sem r ConstructorArg
-mkConstructorArg' = \case
+goArg :: forall r. (Members '[Error TypeCheckerError] r) => Expression -> Sem r ConstructorArg
+goArg ty = case ty of
   ExpressionIden i -> goApplicationHelper (ExpressionIden i, [])
   ExpressionApplication i -> goApplication i
   ExpressionFunction i -> goFunction i
-  ExpressionLiteral {} -> throw ()
-  ExpressionHole {} -> throw ()
-  ExpressionInstanceHole {} -> throw ()
-  ExpressionLet {} -> throw ()
-  ExpressionUniverse {} -> throw ()
-  ExpressionSimpleLambda {} -> throw ()
-  ExpressionLambda {} -> throw ()
-  ExpressionCase {} -> throw ()
+  ExpressionLiteral {} -> invalid
+  ExpressionHole {} -> invalid
+  ExpressionInstanceHole {} -> invalid
+  ExpressionLet {} -> invalid
+  ExpressionUniverse {} -> invalid
+  ExpressionSimpleLambda {} -> invalid
+  ExpressionLambda {} -> invalid
+  ExpressionCase {} -> invalid
   where
+    invalid :: forall a. Sem r a
+    invalid =
+      throw $
+        ErrInvalidConstructorArgType
+          InvalidConstructorArgType
+            { _invalidConstructorArgType = ty
+            }
+
     getIden :: Expression -> Sem r Iden
     getIden = \case
       ExpressionIden i -> return i
-      _ -> throw ()
+      _ -> invalid
 
     goFunction :: Function -> Sem r ConstructorArg
     goFunction fun = do
-      l <- mkConstructorArg' (fun ^. functionLeft . paramType)
-      r <- mkConstructorArg' (fun ^. functionRight)
+      l <- goArg (fun ^. functionLeft . paramType)
+      r <- goArg (fun ^. functionRight)
       return $
         ConstructorArgFun
           Fun
@@ -66,10 +57,10 @@ mkConstructorArg' = \case
     goApplicationHelper :: (Expression, [Expression]) -> Sem r ConstructorArg
     goApplicationHelper (f, args) = do
       i <- getIden f
-      cargs <- mapM mkConstructorArg' args
+      cargs <- mapM goArg args
       lhs :: AppLhs <- case i of
-        IdenFunction {} -> throw ()
-        IdenConstructor {} -> throw ()
+        IdenFunction {} -> invalid
+        IdenConstructor {} -> invalid
         IdenVar v -> return (AppVar v)
         IdenAxiom v -> return (AppAxiom v)
         IdenInductive v -> return (AppInductive v)

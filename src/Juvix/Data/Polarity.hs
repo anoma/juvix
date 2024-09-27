@@ -4,12 +4,13 @@ import Juvix.Extra.Serialize
 import Juvix.Prelude.Base
 import Juvix.Prelude.Pretty
 
+-- | NOTE that Order of constructors is relevant for the derived instances
 data Polarity
-  = -- TODO rename PolarityNegative to PolarityNotStrictlyPositive
-    PolarityNegative
+  = PolarityUnused
   | PolarityStrictlyPositive
-  | PolarityUnused
-  deriving stock (Eq, Generic, Data, Show)
+  | -- TODO rename PolarityNegative to PolarityNotStrictlyPositive
+    PolarityNegative
+  deriving stock (Ord, Enum, Bounded, Eq, Generic, Data, Show)
 
 instance Hashable Polarity
 
@@ -18,12 +19,7 @@ instance Serialize Polarity
 instance NFData Polarity
 
 instance Semigroup Polarity where
-  a <> b = case (a, b) of
-    (PolarityUnused, p) -> p
-    (p, PolarityUnused) -> p
-    (PolarityNegative, _) -> PolarityNegative
-    (_, PolarityNegative) -> PolarityNegative
-    (PolarityStrictlyPositive, PolarityStrictlyPositive) -> PolarityStrictlyPositive
+  a <> b = max a b
 
 instance Monoid Polarity where
   mempty = PolarityUnused
