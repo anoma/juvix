@@ -17,12 +17,12 @@ goArg :: forall r. (Members '[Error TypeCheckerError] r) => Expression -> Sem r 
 goArg ty = case ty of
   ExpressionIden i -> goApplicationHelper (ExpressionIden i, [])
   ExpressionApplication i -> goApplication i
+  ExpressionUniverse {} -> return ConstructorArgType
   ExpressionFunction i -> goFunction i
   ExpressionLiteral {} -> invalid
   ExpressionHole {} -> invalid
   ExpressionInstanceHole {} -> invalid
   ExpressionLet {} -> invalid
-  ExpressionUniverse {} -> invalid
   ExpressionSimpleLambda {} -> invalid
   ExpressionLambda {} -> invalid
   ExpressionCase {} -> invalid

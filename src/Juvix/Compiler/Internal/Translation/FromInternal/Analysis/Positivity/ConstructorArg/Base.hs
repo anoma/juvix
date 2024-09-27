@@ -6,6 +6,7 @@ import Juvix.Prelude
 data ConstructorArg
   = ConstructorArgFun Fun
   | ConstructorArgApp App
+  | ConstructorArgType
 
 data Fun = Fun
   { _funLeft :: ConstructorArg,

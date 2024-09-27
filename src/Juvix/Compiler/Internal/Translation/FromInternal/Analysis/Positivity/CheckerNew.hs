@@ -34,6 +34,7 @@ data Blocking = Blocking
   }
 
 makeLenses ''CheckPositivityArgs
+makeLenses ''Blocking
 makeLenses ''Builder
 
 emptyBuilder :: Builder
@@ -126,8 +127,18 @@ computePolarities tab defs topOccurrences =
           modify (set (builderPolarities . at var) (Just new))
           when (old < Just new) (unblock var new)
 
-    unblock :: InductiveParam -> Polarity -> Sem r ()
-    unblock p newPol = undefined
+    unblock :: forall r. (Members '[State Builder] r) => InductiveParam -> Polarity -> Sem r ()
+    unblock p newPol = do
+      b <- gets (^. builderBlocking)
+      let (triggered, rest) = partition isTriggered b
+      mapM_ runBlocking triggered
+      modify (set builderBlocking rest)
+      where
+        isTriggered :: Blocking -> Bool
+        isTriggered b = (b ^. blockingUnblockerMinimum <= newPol) && (b ^. blockingUnblocker == p)
+
+        runBlocking :: Blocking -> Sem r ()
+        runBlocking b = runReader (b ^. blockingContext) (go (b ^. blockingOccurrences))
 
     goApp :: forall r. (Members '[State Builder, Reader Polarity] r) => AppLhs -> [Occurrences] -> Sem r ()
     goApp lhs os = case lhs of
@@ -173,9 +184,8 @@ computePolarities tab defs topOccurrences =
             localPolarity pol (go o)
         Nothing -> do
           pols :: [(InductiveParam, Maybe Polarity)] <- getInductivePolarities d
-          traceM ("mutually recursive TODO" <> ppTrace d <> "\n" <> ppTrace topOccurrences <> "\n" <> ppTrace pols)
+          traceM ("mutually recursive" <> ppTrace d <> "\n" <> ppTrace topOccurrences <> "\n" <> ppTrace pols)
           forM_ (zipExact pols os) $ \((p :: InductiveParam, mpol :: Maybe Polarity), o :: Occurrences) -> do
-            traceM ("mpol " <> ppTrace mpol)
             case mpol of
               Nothing -> blockOn PolarityStrictlyPositive p o
               Just pol -> case pol of

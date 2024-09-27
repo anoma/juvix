@@ -66,6 +66,7 @@ mkOccurrences =
     addArg = \case
       ConstructorArgFun fun -> goFun fun
       ConstructorArgApp a -> goApp a
+      ConstructorArgType -> return ()
       where
         registerOccurrence :: InductiveParam -> Sem r' ()
         registerOccurrence v = do
