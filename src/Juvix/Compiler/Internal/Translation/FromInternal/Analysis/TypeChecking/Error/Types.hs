@@ -690,3 +690,30 @@ instance ToGenericError InvalidConstructorArgType where
             "The type of this constructor argument is not valid:"
               <> line
               <> ppCode opts' ty
+
+newtype NonStrictlyPositiveNew = NonStrictlyPositiveNew
+  { _nonStrictlyPositiveNew :: InductiveName
+  }
+
+makeLenses ''NonStrictlyPositiveNew
+
+instance ToGenericError NonStrictlyPositiveNew where
+  genericError e = ask >>= generr
+    where
+      generr opts =
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = ppOutput msg,
+              _genericErrorIntervals = [i]
+            }
+        where
+          opts' = fromGenericOptions opts
+          ty = e ^. nonStrictlyPositiveNew
+          i = getLoc ty
+          msg :: Doc Ann =
+            "The inductive type"
+              <+> ppCode opts' ty
+              <+> "is not strictly positive."
+                <> line
+                <> "It cannot appear on the left of an arrow in one of the constructors arguments and it cannot appear applied to a type parameter."

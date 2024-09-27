@@ -82,7 +82,7 @@ mkOccurrences =
             goVar :: InductiveParam -> Sem r' ()
             goVar v = do
               registerOccurrence v
-              goArgs
+              local (const FunctionLeft) goArgs
 
             goArgs :: Sem r' ()
             goArgs = do

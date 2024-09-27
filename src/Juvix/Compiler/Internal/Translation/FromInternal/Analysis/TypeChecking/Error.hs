@@ -24,6 +24,7 @@ data TypeCheckerError
   | ErrTooFewArgumentsIndType WrongNumberArgumentsIndType
   | ErrInvalidPatternMatching InvalidPatternMatching
   | ErrNonStrictlyPositive NonStrictlyPositiveError
+  | ErrNonStrictlyPositiveNew NonStrictlyPositiveNew
   | ErrUnsupportedTypeFunction UnsupportedTypeFunction
   | ErrInvalidInstanceType InvalidInstanceType
   | ErrInvalidCoercionType InvalidCoercionType
@@ -71,6 +72,7 @@ instance ToGenericError TypeCheckerError where
     ErrDefaultArgLoop e -> genericError e
     ErrBadScope e -> genericError e
     ErrInvalidConstructorArgType e -> genericError e
+    ErrNonStrictlyPositiveNew e -> genericError e
 
 instance Show TypeCheckerError where
   show = \case
@@ -100,3 +102,4 @@ instance Show TypeCheckerError where
     ErrBuiltinNotDefined {} -> "ErrBuiltinNotDefined"
     ErrBadScope {} -> "ErrBadScope"
     ErrInvalidConstructorArgType {} -> "ErrInvalidConstructorArgType"
+    ErrNonStrictlyPositiveNew {} -> "ErrNonStrictlyPositiveNew"
