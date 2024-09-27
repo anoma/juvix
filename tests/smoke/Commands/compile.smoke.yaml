@@ -100,10 +100,11 @@ tests:
       script: |
         rootDir=$(mktemp -d)
         trap 'rm -rf -- "$rootDir"' EXIT
+        version=$(juvix --numeric-version)
 
         cp ./examples/milestone/HelloWorld/HelloWorld.juvix "$rootDir"
         touch "$rootDir/juvix.yaml"
-        echo "dependencies: [.juvix-build/stdlib]" >> "$rootDir/juvix.yaml"
+        echo "dependencies: [.juvix-build/$version/stdlib]" >> "$rootDir/juvix.yaml"
 
         cd "$rootDir"
         juvix --log-level error compile native HelloWorld.juvix
