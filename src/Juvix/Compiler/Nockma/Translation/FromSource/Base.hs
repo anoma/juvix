@@ -14,6 +14,8 @@ import Juvix.Prelude qualified as Prelude
 import Juvix.Prelude.Parsing hiding (runParser)
 import Text.Megaparsec qualified as P
 import Text.Megaparsec.Char.Lexer qualified as L
+import Juvix.Compiler.Nockma.Encoding.Cue qualified as Cue
+import Data.ByteString qualified as BS
 
 type Parser = Parsec Void Text
 
@@ -22,6 +24,14 @@ parseText = runParser noFile
 
 parseReplText :: Text -> Either MegaparsecError (ReplTerm Natural)
 parseReplText = runParserFor replTerm noFile
+
+parseJammedFile :: (MonadIO m) => Prelude.Path Abs File -> m (Term Natural)
+parseJammedFile fp = do
+  bs <- liftIO (BS.readFile (toFilePath fp))
+  case Cue.cueFromByteString'' @Natural bs of
+    Left _ -> error "nock natural error"
+    Right (Left _) -> error "cue decoding error"
+    Right (Right t) -> return t
 
 parseTermFile :: (MonadIO m) => Prelude.Path Abs File -> m (Either MegaparsecError (Term Natural))
 parseTermFile fp = do
