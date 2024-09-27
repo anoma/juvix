@@ -1,6 +1,7 @@
 module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.CheckerNew where
 
 import Data.HashMap.Strict qualified as HashMap
+import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Internal.Data.InfoTable
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty
@@ -84,10 +85,11 @@ checkPositivity mut = do
       -- traceM ("add polarities " <> ppTrace defName <> ": " <> prettyText polarities)
       addPolarities (defName ^. nameId) polarities
     poltab' <- (^. typeCheckingTablesPolarityTable) <$> getCombinedTables
-    checkStrictlyPositive poltab' occ
+    let names :: NonEmpty InductiveName = (^. inductiveName) <$> defs
+    checkStrictlyPositive poltab' names occ
 
-checkStrictlyPositive :: (Members '[Error TypeCheckerError] r) => PolarityTable -> Occurrences -> Sem r ()
-checkStrictlyPositive tbl = runReader PolarityStrictlyPositive . go
+checkStrictlyPositive :: (Members '[Error TypeCheckerError] r) => PolarityTable -> NonEmpty InductiveName -> Occurrences -> Sem r ()
+checkStrictlyPositive tbl mutual = runReader PolarityStrictlyPositive . go
   where
     getPolarities :: InductiveName -> [Polarity]
     getPolarities n = fromMaybe err (tbl ^. polarityTable . at (n ^. nameId))
@@ -97,6 +99,12 @@ checkStrictlyPositive tbl = runReader PolarityStrictlyPositive . go
 
     go :: forall r'. (Members '[Error TypeCheckerError, Reader Polarity] r') => Occurrences -> Sem r' ()
     go occ = forM_ (HashMap.toList (occ ^. occurrencesTree)) (uncurry goApp)
+
+    mutualSet :: HashSet InductiveName
+    mutualSet = hashSet mutual
+
+    isMutual :: InductiveName -> Bool
+    isMutual d = HashSet.member d mutualSet
 
     goArg ::
       forall r'.
@@ -117,18 +125,19 @@ checkStrictlyPositive tbl = runReader PolarityStrictlyPositive . go
       AppAxiom {} -> mapM_ go occ
       AppInductive d -> do
         p <- ask
+        let pols = getPolarities d
         case p of
           PolarityUnused -> impossible
-          PolarityStrictlyPositive -> do
-            let pols = getPolarities d
-            mapM_ (uncurry goArg) (zipExact pols occ)
-          PolarityNegative ->
-            throw
-              ( ErrNonStrictlyPositiveNew
-                  NonStrictlyPositiveNew
-                    { _nonStrictlyPositiveNew = d
-                    }
-              )
+          PolarityStrictlyPositive -> mapM_ (uncurry goArg) (zipExact pols occ)
+          PolarityNegative
+            | isMutual d ->
+                throw
+                  ( ErrNonStrictlyPositiveNew
+                      NonStrictlyPositiveNew
+                        { _nonStrictlyPositiveNew = d
+                        }
+                  )
+            | otherwise -> mapM_ go occ
 
 localPolarity :: (Members '[Reader Polarity] r) => Polarity -> Sem r () -> Sem r ()
 localPolarity = \case
