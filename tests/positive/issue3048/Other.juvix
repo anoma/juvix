@@ -1,0 +1,5 @@
+module Other;
+
+type T1 := mkT1;
+type T2 := mkT2;
+type T3 := mkT3;
