@@ -1,6 +1,7 @@
 module Juvix.Extra.Paths.Base where
 
 import Data.FileEmbed qualified as FE
+import Juvix.Extra.Version
 import Juvix.Prelude.Base
 import Juvix.Prelude.Path
 import Language.Haskell.TH.Syntax
@@ -60,7 +61,7 @@ packageFilePath :: Path Rel File
 packageFilePath = $(mkRelFile "Package.juvix")
 
 relBuildDir :: Path Rel Dir
-relBuildDir = $(mkRelDir ".juvix-build")
+relBuildDir = $(mkRelDir ".juvix-build") <//> versionDir
 
 relStdlibDir :: Path Rel Dir
 relStdlibDir = $(mkRelDir "stdlib")
