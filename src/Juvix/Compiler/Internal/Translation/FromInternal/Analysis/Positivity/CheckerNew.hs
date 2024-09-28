@@ -88,7 +88,6 @@ checkPositivity noPositivityFlag mut = do
           getPol p = fromMaybe PolarityUnused (inferredPolarities ^. at p)
           polarities :: [Polarity] = map getPol params
           defName = def ^. inductiveName
-      traceM ("add polarities " <> ppTrace defName <> ": " <> prettyText polarities)
       addPolarities (defName ^. nameId) polarities
     poltab' <- (^. typeCheckingTablesPolarityTable) <$> getCombinedTables
     let names :: NonEmpty InductiveName = (^. inductiveName) <$> defs
@@ -117,12 +116,9 @@ checkStrictlyPositive tbl mutual =
     . execOutputList
     . runReader PolarityStrictlyPositive
     . go
-    . traceWith (\o -> "Checking for " <> ppTrace (toList mutual) <> " ... " <> ppTrace o)
   where
     go :: forall r'. (Members '[Output InductiveName, Reader Polarity] r') => Occurrences -> Sem r' ()
-    go occ = do
-      traceM ("GO " <> prettyText (length (occ ^. occurrences)))
-      forM_ (HashMap.toList (occ ^. occurrences)) (uncurry goApp)
+    go occ = forM_ (HashMap.toList (occ ^. occurrences)) (uncurry goApp)
 
     mutualSet :: HashSet InductiveName
     mutualSet = hashSet mutual
@@ -136,9 +132,7 @@ checkStrictlyPositive tbl mutual =
       Polarity ->
       Occurrences ->
       Sem r' ()
-    goArg p occ = do
-      traceM ("goArg " <> ppTrace p <> " " <> ppTrace occ)
-      localPolarity p (go occ)
+    goArg p occ = localPolarity p (go occ)
 
     goApp ::
       forall r'.
@@ -147,20 +141,15 @@ checkStrictlyPositive tbl mutual =
       [Occurrences] ->
       Sem r' ()
     goApp (side, lhs) occ = local (functionSidePolarity side <>) $ case lhs of
-      AppVar {} -> do
-        traceM "appVar"
-        local (const PolarityNegative) (mapM_ go occ)
-      AppAxiom {} -> do
-        traceM "appAxiom"
-        local (<> axiomPolarity) (mapM_ go occ)
+      AppVar {} -> local (const PolarityNegative) (mapM_ go occ)
+      AppAxiom {} -> local (<> axiomPolarity) (mapM_ go occ)
       AppInductive d -> do
         ctx <- ask
         let pols = getPolarities d
-        traceM ("polarities of " <> ppTrace d <> " = " <> ppTrace pols <> " with args = " <> ppTrace occ)
         case ctx of
           PolarityUnused -> impossible
           PolarityStrictlyPositive -> return ()
-          PolarityNegative -> when (isMutual d) (traceM ("register " <> ppTrace d) >> output d)
+          PolarityNegative -> when (isMutual d) (output d)
         mapM_ (uncurry goArg) (zipExact pols occ)
       where
         getPolarities :: InductiveName -> [Polarity]
