@@ -692,7 +692,9 @@ instance ToGenericError InvalidConstructorArgType where
               <> ppCode opts' ty
 
 newtype NonStrictlyPositiveNew = NonStrictlyPositiveNew
-  { _nonStrictlyPositiveNew :: NonEmpty InductiveName
+  { -- This list contains occurrences of the inductive types in non-strictly
+    -- positive positions. Thus it may contain repeated names
+    _nonStrictlyPositiveNewOccurrences :: NonEmpty InductiveName
   }
 
 makeLenses ''NonStrictlyPositiveNew
@@ -705,18 +707,19 @@ instance ToGenericError NonStrictlyPositiveNew where
           GenericError
             { _genericErrorLoc = i,
               _genericErrorMessage = ppOutput msg,
-              _genericErrorIntervals = map getLoc (toList tys)
+              _genericErrorIntervals = map getLoc (toList occs)
             }
         where
           opts' = fromGenericOptions opts
-          tys = e ^. nonStrictlyPositiveNew
+          occs :: NonEmpty InductiveName = e ^. nonStrictlyPositiveNewOccurrences
+          tys = nubHashableNonEmpty occs
           i = getLoc (tys ^. _head1)
           msg :: Doc Ann =
             "The positivity checker failed because the inductive"
-             <+> (case tys of
-                    d :| [] -> "type" <+> ppCode opts' d <+> "is"
-                    _ -> "types" <> line <> itemize (ppCode opts' <$> tys) <> line <> "are"
-                 )
+              <+> ( case tys of
+                      d :| [] -> "type" <+> ppCode opts' d <+> "is"
+                      _ -> "types" <> line <> itemize (ppCode opts' <$> tys) <> line <> "are"
+                  )
               <+> "not strictly positive."
                 <> line
                 <> line

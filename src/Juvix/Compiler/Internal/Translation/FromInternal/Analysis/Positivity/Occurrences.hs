@@ -2,7 +2,6 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.Occu
   ( module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.ConstructorArg.Base,
     Occurrences (..),
     FunctionSide (..),
-    functionSidePolarity,
     mkOccurrences,
     occurrences,
   )
@@ -39,11 +38,6 @@ newtype Occurrences = Occurrences
   deriving stock (Show)
 
 makeLenses ''Occurrences
-
-functionSidePolarity :: FunctionSide -> Polarity
-functionSidePolarity = \case
-  FunctionLeft -> PolarityNegative
-  FunctionRight -> PolarityStrictlyPositive
 
 emptyOccurrences :: Occurrences
 emptyOccurrences =

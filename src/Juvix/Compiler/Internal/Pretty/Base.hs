@@ -17,6 +17,7 @@ import Juvix.Compiler.Store.Internal.Data.InfoTable
 import Juvix.Data.CodeAnn
 import Juvix.Data.Keyword.All qualified as Kw
 import Juvix.Prelude
+import Prettyprinter qualified as PP
 
 doc :: (PrettyCode c) => Options -> c -> Doc Ann
 doc opts =
@@ -417,7 +418,7 @@ instance (PrettyCode k, PrettyCode v) => PrettyCode (HashMap k v) where
       k' <- ppCode k
       v' <- ppCode v
       return (k' <+> "↦" <+> v')
-    return (bracesEnclose res)
+    return (bracesEncloseIndent res)
 
 instance PrettyCode AppLhs where
   ppCode = \case
@@ -432,7 +433,7 @@ instance PrettyCode Occurrences where
   ppCode Occurrences {..} = do
     ps <- ppCode _occurrences
     return
-      ( bracesEnclose
+      ( bracesEncloseIndent
           [ header "occurrences" <+> kwAssign <+> ps
           ]
       )
@@ -493,8 +494,14 @@ instance (PrettyCode a) => PrettyCode (Maybe a) where
     Nothing -> return "Nothing"
     Just p -> ("Just" <+>) <$> ppCode p
 
-bracesEnclose :: (Foldable l) => l (Doc ann) -> Doc ann
-bracesEnclose = encloseSep "{" "}" "; " . toList
+bracesEncloseIndent :: forall l ann. (Foldable l) => l (Doc ann) -> Doc ann
+bracesEncloseIndent ls =
+  PP.group $
+    "{"
+      <> line'
+      <> indent' (concatWith (\x y -> x <> ";" <> line <> y) ls)
+      <> line'
+      <> "}"
 
 tuple :: [Doc ann] -> Doc ann
 tuple = encloseSep "(" ")" ", "
