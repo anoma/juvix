@@ -425,14 +425,15 @@ instance PrettyCode AppLhs where
     AppAxiom v -> ppCode v
     AppInductive v -> ppCode v
 
+instance PrettyCode FunctionSide where
+  ppCode = return . annotate AnnKeyword . pretty
+
 instance PrettyCode Occurrences where
   ppCode Occurrences {..} = do
-    ps <- ppCode _occurrencesPolarity
-    args <- ppCode _occurrencesTree
+    ps <- ppCode _occurrences
     return
       ( bracesEnclose
-          [ header "occurrences" <+> kwAssign <+> ps,
-            header "recursive-args" <+> kwAssign <+> args
+          [ header "occurrences" <+> kwAssign <+> ps
           ]
       )
 

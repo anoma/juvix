@@ -98,7 +98,7 @@ checkStrictlyPositive tbl mutual = runReader PolarityStrictlyPositive . go
         err = impossibleError ("Didn't find polarities for inductive " <> ppTrace n)
 
     go :: forall r'. (Members '[Error TypeCheckerError, Reader Polarity] r') => Occurrences -> Sem r' ()
-    go occ = forM_ (HashMap.toList (occ ^. occurrencesTree)) (uncurry goApp)
+    go occ = forM_ (HashMap.toList (occ ^. occurrences)) (uncurry goApp)
 
     mutualSet :: HashSet InductiveName
     mutualSet = hashSet mutual
@@ -117,16 +117,16 @@ checkStrictlyPositive tbl mutual = runReader PolarityStrictlyPositive . go
     goApp ::
       forall r'.
       (Members '[Error TypeCheckerError, Reader Polarity] r') =>
-      AppLhs ->
+      (FunctionSide, AppLhs) ->
       [Occurrences] ->
       Sem r' ()
-    goApp lhs occ = case lhs of
+    goApp (side, lhs) occ = case lhs of
       AppVar {} -> local (const PolarityNegative) (mapM_ go occ)
       AppAxiom {} -> mapM_ go occ
       AppInductive d -> do
         p <- ask
         let pols = getPolarities d
-        case p of
+        case functionSidePolarity side <> p of
           PolarityUnused -> impossible
           PolarityStrictlyPositive -> mapM_ (uncurry goArg) (zipExact pols occ)
           PolarityNegative
@@ -176,17 +176,18 @@ computePolarities tab defs topOccurrences =
 
     go :: forall r. (Members '[State Builder, Reader Polarity] r) => Occurrences -> Sem r ()
     go o = do
-      forM_ (HashMap.toList (o ^. occurrencesPolarity)) (uncurry addPolarity)
-      forM_ (HashMap.toList (o ^. occurrencesTree)) (uncurry goApp)
+      sequence_
+        [ addPolarity param (functionSidePolarity side)
+          | ((side, AppVar param), _) <- HashMap.toList (o ^. occurrences)
+        ]
+      forM_ (HashMap.toList (o ^. occurrences)) (uncurry goApp)
       where
         addPolarity :: InductiveParam -> Polarity -> Sem r ()
         addPolarity var p = do
           modif <- ask
-          b <- get
-          let old :: Maybe Polarity = b ^. builderPolarities . at var
-              new :: Polarity = maybe id (<>) old (p <> modif)
-          modify (set (builderPolarities . at var) (Just new))
-          when (old < Just new) (unblock var new)
+          let new :: Polarity = p <> modif
+          modify (over (builderPolarities . at var) (Just . maybe new (new <>)))
+          unblock var new
 
     unblock :: forall r. (Members '[State Builder] r) => InductiveParam -> Polarity -> Sem r ()
     unblock p newPol = do
@@ -201,8 +202,13 @@ computePolarities tab defs topOccurrences =
         runBlocking :: Blocking -> Sem r ()
         runBlocking b = runReader (b ^. blockingContext) (go (b ^. blockingOccurrences))
 
-    goApp :: forall r. (Members '[State Builder, Reader Polarity] r) => AppLhs -> [Occurrences] -> Sem r ()
-    goApp lhs os = case lhs of
+    goApp ::
+      forall r.
+      (Members '[State Builder, Reader Polarity] r) =>
+      (FunctionSide, AppLhs) ->
+      [Occurrences] ->
+      Sem r ()
+    goApp (side, lhs) os = local (functionSidePolarity side <>) $ case lhs of
       AppVar {} -> goVarArgs os
       AppAxiom {} -> goAxiomArgs os
       AppInductive a -> goInductive a os
@@ -232,19 +238,20 @@ computePolarities tab defs topOccurrences =
       modify (over builderBlocking (b :))
 
     goInductive :: (Members '[State Builder, Reader Polarity] r) => InductiveName -> [Occurrences] -> Sem r ()
-    goInductive d os =
+    goInductive d os = do
+      modif <- ask
       case tab ^. polarityTable . at (d ^. nameId) of
         Just pols ->
           forM_ (zipExact pols os) $ \(pol :: Polarity, o :: Occurrences) -> do
-            localPolarity pol (go o)
+            localPolarity (modif <> pol) (go o)
         Nothing -> do
           pols :: [(InductiveParam, Maybe Polarity)] <- getInductivePolarities d
           forM_ (zipExact pols os) $ \((p :: InductiveParam, mpol :: Maybe Polarity), o :: Occurrences) -> do
             case mpol of
               Nothing -> block PolarityStrictlyPositive p o
-              Just pol -> case pol of
+              Just pol -> case modif <> pol of
                 PolarityUnused -> impossible
                 PolarityStrictlyPositive -> do
                   block PolarityNegative p o
-                  localPolarity pol (go o)
-                PolarityNegative -> localPolarity pol (go o)
+                  localPolarity PolarityStrictlyPositive (go o)
+                PolarityNegative -> localPolarity PolarityNegative (go o)

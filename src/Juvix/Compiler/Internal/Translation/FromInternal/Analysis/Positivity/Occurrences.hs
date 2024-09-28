@@ -1,21 +1,28 @@
 module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.Occurrences
   ( module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.ConstructorArg.Base,
     Occurrences (..),
+    FunctionSide (..),
+    functionSidePolarity,
     mkOccurrences,
-    occurrencesPolarity,
-    occurrencesTree,
-    occurrencesAggregatePolarities,
+    occurrences,
   )
 where
 
-import Data.HashMap.Strict qualified as HashMap
-import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.ConstructorArg.Base
 import Juvix.Prelude
+import Juvix.Prelude.Pretty
 
 data FunctionSide
   = FunctionLeft
   | FunctionRight
+  deriving stock (Show, Eq, Generic)
+
+instance Pretty FunctionSide where
+  pretty = \case
+    FunctionLeft -> "left"
+    FunctionRight -> "right"
+
+instance Hashable FunctionSide
 
 instance Semigroup FunctionSide where
   a <> b = case (a, b) of
@@ -26,28 +33,23 @@ instance Semigroup FunctionSide where
 instance Monoid FunctionSide where
   mempty = FunctionRight
 
-data Occurrences = Occurrences
-  { _occurrencesPolarity :: HashMap InductiveParam Polarity,
-    _occurrencesTree :: HashMap AppLhs [Occurrences]
+newtype Occurrences = Occurrences
+  { _occurrences :: HashMap (FunctionSide, AppLhs) [Occurrences]
   }
   deriving stock (Show)
 
 makeLenses ''Occurrences
 
+functionSidePolarity :: FunctionSide -> Polarity
+functionSidePolarity = \case
+  FunctionLeft -> PolarityNegative
+  FunctionRight -> PolarityStrictlyPositive
+
 emptyOccurrences :: Occurrences
 emptyOccurrences =
   Occurrences
-    { _occurrencesPolarity = mempty,
-      _occurrencesTree = mempty
+    { _occurrences = mempty
     }
-
-occurrencesAggregatePolarities :: Occurrences -> HashMap InductiveParam Polarity
-occurrencesAggregatePolarities = run . execState mempty . go
-  where
-    go :: Occurrences -> Sem '[State (HashMap InductiveParam Polarity)] ()
-    go o = do
-      modify (HashMap.unionWith (<>) (o ^. occurrencesPolarity))
-      mapM_ go (concat (toList (o ^. occurrencesTree)))
 
 mkOccurrences :: [ConstructorArg] -> Occurrences
 mkOccurrences =
@@ -56,45 +58,31 @@ mkOccurrences =
     . execState emptyOccurrences
     . mapM_ addArg
   where
-    getPolarity :: forall r'. (Members '[Reader FunctionSide] r') => Sem r' Polarity
-    getPolarity =
-      ask <&> \case
-        FunctionLeft -> PolarityNegative
-        FunctionRight -> PolarityStrictlyPositive
-
     addArg :: forall r'. (Members '[Reader FunctionSide, State Occurrences] r') => ConstructorArg -> Sem r' ()
     addArg = \case
       ConstructorArgFun fun -> goFun fun
       ConstructorArgApp a -> goApp a
       ConstructorArgType -> return ()
       where
-        registerOccurrence :: InductiveParam -> Sem r' ()
-        registerOccurrence v = do
-          pol <- getPolarity
-          modify (over (occurrencesPolarity . at v) (Just . maybe pol (<> pol)))
-
         goApp :: App -> Sem r' ()
         goApp (App lhs args) = case lhs of
-          AppVar v -> goVar v
-          AppAxiom {} -> goArgs
-          AppInductive {} -> goArgs
+          AppVar {} -> goArgs (<> FunctionLeft)
+          AppAxiom {} -> goArgs id
+          AppInductive {} -> goArgs id
           where
-            goVar :: InductiveParam -> Sem r' ()
-            goVar v = do
-              registerOccurrence v
-              local (const FunctionLeft) goArgs
-
-            goArgs :: Sem r' ()
-            goArgs = do
+            goArgs :: (FunctionSide -> FunctionSide) -> Sem r' ()
+            goArgs recurModif = do
+              side <- ask
               let numArgs = length args
                   iniOccs = replicate numArgs emptyOccurrences
-              occs :: [Occurrences] <- fromMaybe iniOccs <$> gets (^. occurrencesTree . at lhs)
+                  k = (side, lhs)
+              occs :: [Occurrences] <- fromMaybe iniOccs <$> gets (^. occurrences . at k)
               st :: Occurrences <- get
-              occs' :: [Occurrences] <- for (zipExact occs args) $ \(occ, arg) -> do
+              occs' :: [Occurrences] <- local recurModif . for (zipExact occs args) $ \(occ, arg) -> do
                 put occ
                 addArg arg
                 get
-              put (set (occurrencesTree . at lhs) (Just occs') st)
+              put (set (occurrences . at k) (Just occs') st)
 
         goFun :: Fun -> Sem r' ()
         goFun (Fun funl funr) = do
