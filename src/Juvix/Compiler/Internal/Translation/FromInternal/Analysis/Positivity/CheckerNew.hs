@@ -55,9 +55,10 @@ checkPositivity ::
        ]
       r
   ) =>
+  Bool ->
   MutualBlock ->
   Sem r ()
-checkPositivity mut = do
+checkPositivity noPositivityFlag mut = do
   let ldefs :: [InductiveDef] =
         mut
           ^.. mutualStatements
@@ -86,9 +87,14 @@ checkPositivity mut = do
       addPolarities (defName ^. nameId) polarities
     poltab' <- (^. typeCheckingTablesPolarityTable) <$> getCombinedTables
     let names :: NonEmpty InductiveName = (^. inductiveName) <$> defs
-    checkStrictlyPositive poltab' names occ
+    unless noPositivityFlag (checkStrictlyPositive poltab' names occ)
 
-checkStrictlyPositive :: (Members '[Error TypeCheckerError] r) => PolarityTable -> NonEmpty InductiveName -> Occurrences -> Sem r ()
+checkStrictlyPositive ::
+  (Members '[Error TypeCheckerError] r) =>
+  PolarityTable ->
+  NonEmpty InductiveName ->
+  Occurrences ->
+  Sem r ()
 checkStrictlyPositive tbl mutual = runReader PolarityStrictlyPositive . go
   where
     getPolarities :: InductiveName -> [Polarity]

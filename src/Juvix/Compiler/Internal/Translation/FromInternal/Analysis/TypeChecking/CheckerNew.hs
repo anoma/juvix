@@ -151,9 +151,7 @@ checkModule ::
   Module ->
   Sem r Module
 checkModule Module {..} = runReader (mempty @InsertedArgsStack) $ do
-  _moduleBody' <-
-    checkModuleBody $
-      _moduleBody
+  _moduleBody' <- checkModuleBody _moduleBody
   return
     Module
       { _moduleBody = _moduleBody',
@@ -264,13 +262,16 @@ checkBlockPositivity ::
       '[ Reader InfoTable,
          Error TypeCheckerError,
          ResultBuilder,
+         Reader EntryPoint,
          Inference
        ]
       r
   ) =>
   MutualBlock ->
   Sem r ()
-checkBlockPositivity = New.checkPositivity
+checkBlockPositivity m = do
+  noPos <- asks (^. entryPointNoPositivity)
+  New.checkPositivity noPos m
 
 resolveCastHoles ::
   forall a r.
