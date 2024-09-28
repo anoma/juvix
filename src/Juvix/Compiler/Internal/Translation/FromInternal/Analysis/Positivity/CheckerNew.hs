@@ -213,8 +213,14 @@ computePolarities tab defs topOccurrences =
       b <- gets (^. builderBlocking)
       let (triggered, rest) = partition isTriggered b
       mapM_ runBlocking triggered
-      modify (set builderBlocking rest)
+      modify (set builderBlocking (increaseMinimum triggered ++ rest))
       where
+        increaseMinimum :: [Blocking] -> [Blocking]
+        increaseMinimum = case newPol of
+          PolarityNegative -> const []
+          PolarityStrictlyPositive -> map (set blockingUnblockerMinimum PolarityNegative)
+          PolarityUnused -> impossible
+
         isTriggered :: Blocking -> Bool
         isTriggered b = (b ^. blockingUnblockerMinimum <= newPol) && (b ^. blockingUnblocker == p)
 
