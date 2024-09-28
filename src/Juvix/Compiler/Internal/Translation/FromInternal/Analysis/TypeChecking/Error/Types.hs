@@ -705,27 +705,24 @@ instance ToGenericError NonStrictlyPositiveNew where
           GenericError
             { _genericErrorLoc = i,
               _genericErrorMessage = ppOutput msg,
-              _genericErrorIntervals = [i]
+              _genericErrorIntervals = map getLoc (toList tys)
             }
         where
           opts' = fromGenericOptions opts
           tys = e ^. nonStrictlyPositiveNew
-          i = getLocSpan tys
-          isPlural = notNull (drop 1 (toList tys))
-          plural' a b
-            | not isPlural = a
-            | otherwise = b
+          i = getLoc (tys ^. _head1)
           msg :: Doc Ann =
-            "The positivity checker failed. The inductive"
-              <+> plural' "type" "types"
-              <+> itemize (ppCode opts' <$> tys)
-                <> line
-                <> plural' "is" "are"
+            "The positivity checker failed because the inductive"
+             <+> (case tys of
+                    d :| [] -> "type" <+> ppCode opts' d <+> "is"
+                    _ -> "types" <> line <> itemize (ppCode opts' <$> tys) <> line <> "are"
+                 )
               <+> "not strictly positive."
+                <> line
                 <> line
                 <> "A type D is strictly positive iff two conditions hold:"
                 <> line
                 <> itemize
                   [ "D does not appear applied to a bound variable",
-                    "D does not appear on the left of an arrow in any argument type of a constructor"
+                    "D does not appear on the left of an arrow in any argument type of its constructors"
                   ]
