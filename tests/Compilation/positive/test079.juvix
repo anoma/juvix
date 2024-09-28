@@ -7,9 +7,9 @@ type Nat :=
   | zero
   | suc Nat;
 
-type Foldable := mkFoldable {for : {B : Type} -> (B -> Nat -> B) -> B -> Box -> B};
-
 type Box := mkBox {unbox : Nat};
+
+type Foldable := mkFoldable {for : {B : Type} -> (B -> Nat -> B) -> B -> Box -> B};
 
 one : Nat := zero;
 
