@@ -87,15 +87,23 @@ checkPositivity noPositivityFlag mut = do
       addPolarities (defName ^. nameId) polarities
     poltab' <- (^. typeCheckingTablesPolarityTable) <$> getCombinedTables
     let names :: NonEmpty InductiveName = (^. inductiveName) <$> defs
-    unless noPositivityFlag (checkStrictlyPositive poltab' names occ)
+    unless noPositivityFlag $ do
+      let neg = checkStrictlyPositive poltab' names occ
+          markedPositive d = fromJust (find ((== d) . (^. inductiveName)) defs) ^. inductivePositive
+      whenJust (nonEmpty (filter (not . markedPositive) neg)) $ \negTys ->
+        throw $
+          ErrNonStrictlyPositiveNew
+            NonStrictlyPositiveNew
+              { _nonStrictlyPositiveNew = negTys
+              }
 
+-- | Returns the list of non-strictly positive types
 checkStrictlyPositive ::
-  (Members '[Error TypeCheckerError] r) =>
   PolarityTable ->
   NonEmpty InductiveName ->
   Occurrences ->
-  Sem r ()
-checkStrictlyPositive tbl mutual = runReader PolarityStrictlyPositive . go
+  [InductiveName]
+checkStrictlyPositive tbl mutual = run . execOutputList . runReader PolarityStrictlyPositive . go
   where
     getPolarities :: InductiveName -> [Polarity]
     getPolarities n = fromMaybe err (tbl ^. polarityTable . at (n ^. nameId))
@@ -103,7 +111,7 @@ checkStrictlyPositive tbl mutual = runReader PolarityStrictlyPositive . go
         err :: a
         err = impossibleError ("Didn't find polarities for inductive " <> ppTrace n)
 
-    go :: forall r'. (Members '[Error TypeCheckerError, Reader Polarity] r') => Occurrences -> Sem r' ()
+    go :: forall r'. (Members '[Output InductiveName, Reader Polarity] r') => Occurrences -> Sem r' ()
     go occ = forM_ (HashMap.toList (occ ^. occurrences)) (uncurry goApp)
 
     mutualSet :: HashSet InductiveName
@@ -114,7 +122,7 @@ checkStrictlyPositive tbl mutual = runReader PolarityStrictlyPositive . go
 
     goArg ::
       forall r'.
-      (Members '[Error TypeCheckerError, Reader Polarity] r') =>
+      (Members '[Output InductiveName, Reader Polarity] r') =>
       Polarity ->
       Occurrences ->
       Sem r' ()
@@ -122,7 +130,7 @@ checkStrictlyPositive tbl mutual = runReader PolarityStrictlyPositive . go
 
     goApp ::
       forall r'.
-      (Members '[Error TypeCheckerError, Reader Polarity] r') =>
+      (Members '[Output InductiveName, Reader Polarity] r') =>
       (FunctionSide, AppLhs) ->
       [Occurrences] ->
       Sem r' ()
@@ -135,15 +143,9 @@ checkStrictlyPositive tbl mutual = runReader PolarityStrictlyPositive . go
         case functionSidePolarity side <> p of
           PolarityUnused -> impossible
           PolarityStrictlyPositive -> mapM_ (uncurry goArg) (zipExact pols occ)
-          PolarityNegative
-            | isMutual d ->
-                throw
-                  ( ErrNonStrictlyPositiveNew
-                      NonStrictlyPositiveNew
-                        { _nonStrictlyPositiveNew = d
-                        }
-                  )
-            | otherwise -> mapM_ go occ
+          PolarityNegative -> do
+            when (isMutual d) (output d)
+            mapM_ go occ
 
 localPolarity :: (Members '[Reader Polarity] r) => Polarity -> Sem r () -> Sem r ()
 localPolarity = \case

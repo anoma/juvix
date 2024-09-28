@@ -66,7 +66,7 @@ testWellDefinedInductiveDefs =
       $(mkRelFile "RoseTree.juvix"),
     posTest
       "Issue 3048"
-      $(mkRelDir ".")
+      $(mkRelDir "issue3048")
       $(mkRelFile "main.juvix")
   ]
 

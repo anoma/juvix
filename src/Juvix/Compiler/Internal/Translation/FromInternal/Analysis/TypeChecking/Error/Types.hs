@@ -692,7 +692,7 @@ instance ToGenericError InvalidConstructorArgType where
               <> ppCode opts' ty
 
 newtype NonStrictlyPositiveNew = NonStrictlyPositiveNew
-  { _nonStrictlyPositiveNew :: InductiveName
+  { _nonStrictlyPositiveNew :: NonEmpty InductiveName
   }
 
 makeLenses ''NonStrictlyPositiveNew
@@ -709,11 +709,23 @@ instance ToGenericError NonStrictlyPositiveNew where
             }
         where
           opts' = fromGenericOptions opts
-          ty = e ^. nonStrictlyPositiveNew
-          i = getLoc ty
+          tys = e ^. nonStrictlyPositiveNew
+          i = getLocSpan tys
+          isPlural = notNull (drop 1 (toList tys))
+          plural' a b
+            | not isPlural = a
+            | otherwise = b
           msg :: Doc Ann =
-            "The inductive type"
-              <+> ppCode opts' ty
-              <+> "is not strictly positive."
+            "The positivity checker failed. The inductive"
+              <+> plural' "type" "types"
+              <+> itemize (ppCode opts' <$> tys)
                 <> line
-                <> "It cannot appear on the left of an arrow in one of the constructors arguments and it cannot appear applied to a type parameter."
+                <> plural' "is" "are"
+              <+> "not strictly positive."
+                <> line
+                <> "A type D is strictly positive iff two conditions hold:"
+                <> line
+                <> itemize
+                  [ "D does not appear applied to a bound variable",
+                    "D does not appear on the left of an arrow in any argument type of a constructor"
+                  ]
