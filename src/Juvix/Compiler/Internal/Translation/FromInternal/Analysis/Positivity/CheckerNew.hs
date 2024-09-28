@@ -1,4 +1,7 @@
-module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.CheckerNew where
+module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.CheckerNew
+  ( checkPositivity,
+  )
+where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
@@ -11,15 +14,6 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Da
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.ResultBuilder
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error
 import Juvix.Prelude hiding (fromEither)
-
-data CheckPositivityArgs = CheckPositivityArgs
-  { _checkPositivityArgsInductive :: InductiveInfo,
-    _checkPositivityArgsConstructorName :: Name,
-    _checkPositivityArgsInductiveName :: Name,
-    _checkPositivityArgsRecursionLimit :: Int,
-    _checkPositivityArgsErrorReference :: Maybe Expression,
-    _checkPositivityArgsTypeOfConstructorArg :: Expression
-  }
 
 data Builder = Builder
   { _builderPolarities :: HashMap InductiveParam Polarity,
@@ -34,7 +28,6 @@ data Blocking = Blocking
     _blockingOccurrences :: Occurrences
   }
 
-makeLenses ''CheckPositivityArgs
 makeLenses ''Blocking
 makeLenses ''Builder
 
