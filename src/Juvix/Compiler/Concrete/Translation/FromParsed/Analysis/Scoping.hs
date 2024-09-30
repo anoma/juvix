@@ -48,7 +48,6 @@ iniScoperState :: InfoTable -> ScoperState
 iniScoperState tab =
   ScoperState
     { _scoperModules = mempty,
-      _scoperScopedNameSignatures = tab ^. infoNameSigs,
       _scoperNameSignatures = tab ^. infoParsedNameSigs,
       _scoperRecordFields = tab ^. infoRecords,
       _scoperAlias = tab ^. infoScoperAlias,
@@ -252,7 +251,6 @@ registerNameSignature ::
   Sem r ()
 registerNameSignature uid d = do
   sig <- mkNameSignature d
-  modify (set (scoperScopedNameSignatures . at uid) (Just sig))
   registerNameSig uid sig
 
 registerConstructorSignature ::
