@@ -65,6 +65,10 @@ testWellDefinedInductiveDefs =
       $(mkRelDir "Internal/Positivity")
       $(mkRelFile "RoseTree.juvix"),
     posTest
+      "Mutually recursive types and phantom types"
+      $(mkRelDir "Internal/Positivity2")
+      $(mkRelFile "main.juvix"),
+    posTest
       "Issue 3048"
       $(mkRelDir "issue3048")
       $(mkRelFile "main.juvix")

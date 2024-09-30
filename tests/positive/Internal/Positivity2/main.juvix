@@ -1,0 +1,53 @@
+module main;
+
+type T := mkT;
+
+type Phantom (H : Type) := phantom;
+
+type Phantom2 (H : Type) := phantom2 (Phantom H);
+
+type Box (A : Type) := box A;
+
+module M1;
+  type T1 (x y : Type) := mkT1 (x -> x) x;
+end;
+
+module M2;
+  type T2 (x : Type) := mkT2 (x -> T);
+
+  type T1 (x : Type) := mkT1 (T2 x);
+end;
+
+module M3;
+  type List (x : Type) :=
+    | nil
+    | cons x (List x);
+end;
+
+module E1;
+  type Alice (A : Type) := alice (Phantom2 (Alice A) -> Alice A);
+
+  type Bob (C : Type) := bob (Carol C) (Bob C) (Phantom (Bob C) -> T);
+
+  type Carol (C : Type) := carol (Alice C);
+end;
+
+module E3;
+  type NotBad (A : Type) := notBad (A -> NotBad A);
+end;
+
+module E5;
+  type Ghost1 (A : Type) := ghost1 (Ghost2 A);
+
+  type Ghost2 (A : Type) := ghost2 (Ghost1 A);
+end;
+
+module E6;
+  type Nat :=
+    | zero
+    | suc Nat;
+
+  type Box := mkBox {unbox : Nat};
+
+  type Foldable := mkFoldable {for : {B : Type} -> (B -> Nat -> B) -> B -> Box -> B};
+end;
