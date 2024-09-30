@@ -694,7 +694,7 @@ instance ToGenericError InvalidConstructorArgType where
 newtype NonStrictlyPositive = NonStrictlyPositive
   { -- This list contains occurrences of the inductive types in non-strictly
     -- positive positions. Thus it may contain repeated names
-    _nonStrictlyPositiveNewOccurrences :: NonEmpty InductiveName
+    _nonStrictlyPositiveOccurrences :: NonEmpty InductiveName
   }
 
 makeLenses ''NonStrictlyPositive
@@ -711,7 +711,7 @@ instance ToGenericError NonStrictlyPositive where
             }
         where
           opts' = fromGenericOptions opts
-          occs :: NonEmpty InductiveName = e ^. nonStrictlyPositiveNewOccurrences
+          occs :: NonEmpty InductiveName = e ^. nonStrictlyPositiveOccurrences
           tys = nubHashableNonEmpty occs
           i = getLoc (tys ^. _head1)
           msg :: Doc Ann =

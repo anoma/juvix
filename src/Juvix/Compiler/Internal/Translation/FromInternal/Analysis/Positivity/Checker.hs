@@ -91,7 +91,7 @@ checkPositivity noPositivityFlag mut = do
         throw $
           ErrNonStrictlyPositive
             NonStrictlyPositive
-              { _nonStrictlyPositiveNewOccurrences = negTys
+              { _nonStrictlyPositiveOccurrences = negTys
               }
 
 -- NOTE we conservatively assume that axioms have all variables in negative positions
@@ -196,10 +196,9 @@ computePolarities tab defs topOccurrences =
       where
         addPolarity :: InductiveParam -> Polarity -> Sem r ()
         addPolarity var p = do
-          modif <- ask
-          let new :: Polarity = p <> modif
-          modify (over (builderPolarities . at var) (Just . maybe new (new <>)))
-          unblock var new
+          newPol <- (p <>) <$> ask
+          modify (over (builderPolarities . at var) (Just . maybe newPol (newPol <>)))
+          unblock var newPol
 
     unblock :: forall r. (Members '[State Builder] r) => InductiveParam -> Polarity -> Sem r ()
     unblock p newPol = unblockGo
@@ -236,7 +235,7 @@ computePolarities tab defs topOccurrences =
       AppInductive a -> goInductive a os
 
     goAxiomArgs :: (Members '[State Builder, Reader Polarity] r) => [Occurrences] -> Sem r ()
-    goAxiomArgs os = local (const axiomPolarity) (mapM_ go os)
+    goAxiomArgs os = local (<> axiomPolarity) (mapM_ go os)
 
     goVarArgs :: (Members '[State Builder, Reader Polarity] r) => [Occurrences] -> Sem r ()
     goVarArgs os = local (const PolarityNonStrictlyPositive) (mapM_ go os)
