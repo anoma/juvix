@@ -15,7 +15,6 @@ module Juvix.Compiler.Nockma.Translation.FromTree
     add,
     dec,
     mul,
-    sub,
     pow2,
     nockNatLiteral,
     nockIntegralLiteral,
@@ -159,6 +158,9 @@ data AnomaCallablePathId
   | AnomaGetOrder
   deriving stock (Enum, Bounded, Eq, Show)
 
+indexStack :: Natural -> Path
+indexStack idx = replicate idx R ++ [L]
+
 -- | A closure has the following structure:
 -- [code totalArgsNum argsNum args], where
 -- 1. code is code to run when fully applied.
@@ -179,8 +181,8 @@ data ConstructorPathId
 constructorPath :: ConstructorPathId -> Path
 constructorPath = pathFromEnum
 
-stackPath :: AnomaCallablePathId -> Path
-stackPath s = indexStack (fromIntegral (fromEnum s))
+closurePath :: AnomaCallablePathId -> Path
+closurePath = pathFromEnum
 
 data IndexTupleArgs = IndexTupleArgs
   { _indexTupleArgsLength :: Natural,
@@ -196,12 +198,6 @@ indexTuple IndexTupleArgs {..}
             | otherwise = [L]
        in replicate _indexTupleArgsIndex R ++ lastL
 
-indexStack :: Natural -> Path
-indexStack idx = replicate idx R ++ [L]
-
-indexInStack :: AnomaCallablePathId -> Natural -> Path
-indexInStack s idx = stackPath s ++ indexStack idx
-
 makeLenses ''CompilerOptions
 makeLenses ''AnomaResult
 makeLenses ''CompilerFunction
@@ -211,6 +207,16 @@ makeLenses ''FunctionCtx
 makeLenses ''ConstructorInfo
 makeLenses ''FunctionInfo
 
+stackPath :: (Member (Reader CompilerCtx) r) => AnomaCallablePathId -> Sem r Path
+stackPath s = do
+  h <- asks (^. compilerStackHeight)
+  return $ indexStack (fromIntegral (h + fromEnum s))
+
+indexInStack :: (Member (Reader CompilerCtx) r) => AnomaCallablePathId -> Natural -> Sem r Path
+indexInStack s idx = do
+  sp <- stackPath s
+  return $ sp ++ indexStack idx
+
 runCompilerFunction :: CompilerCtx -> CompilerFunction -> Term Natural
 runCompilerFunction ctx fun =
   run
@@ -218,11 +224,12 @@ runCompilerFunction ctx fun =
     . runReader ctx
     $ fun ^. compilerFunction
 
-pathToArg :: (Members '[Reader FunctionCtx] r) => Natural -> Sem r Path
+pathToArg :: (Members '[Reader FunctionCtx, Reader CompilerCtx] r) => Natural -> Sem r Path
 pathToArg n = do
   ari <- asks (^. functionCtxArity)
+  path <- stackPath ArgsTuple
   return
-    ( stackPath ArgsTuple
+    ( path
         <> indexTuple
           IndexTupleArgs
             { _indexTupleArgsLength = ari,
@@ -337,26 +344,38 @@ fromTreeTable t = case t ^. Tree.infoMainFunction of
 fromOffsetRef :: Tree.OffsetRef -> Natural
 fromOffsetRef = fromIntegral . (^. Tree.offsetRefOffset)
 
-anomaCallableClosureWrapper :: Term Natural
-anomaCallableClosureWrapper =
+tempRefPath :: (Member (Reader CompilerCtx) r) => TempRef -> Sem r Path
+tempRefPath (TempRef idx) = do
+  h <- asks (^. compilerStackHeight)
+  return $ indexStack (fromIntegral (h - idx - 1))
+
+addressTempRef :: (Member (Reader CompilerCtx) r) => TempRef -> Sem r (Term Natural)
+addressTempRef tr = do
+  p <- tempRefPath tr
+  return $ opAddress "tempRef" p
+
+anomaCallableClosureWrapper :: (Member (Reader CompilerCtx) r) => Sem r (Term Natural)
+anomaCallableClosureWrapper = do
   let closureArgsNum :: Term Natural = getClosureFieldInSubject ClosureArgsNum
       closureTotalArgsNum :: Term Natural = getClosureFieldInSubject ClosureTotalArgsNum
-      appendAndReplaceArgsTuple =
+  remainingArgsNum <- sub closureTotalArgsNum closureArgsNum
+  let appendAndReplaceArgsTuple =
         replaceArgsWithTerm "anomaCallableClosureWrapper" $
           appendToTuple
             (getClosureFieldInSubject ClosureArgs)
             closureArgsNum
             (getClosureFieldInSubject ArgsTuple)
-            (sub closureTotalArgsNum closureArgsNum)
+            remainingArgsNum
       closureArgsIsEmpty = isZero closureArgsNum
       adjustArgs = OpIf # closureArgsIsEmpty # (opAddress "wrapperSubject" emptyPath) # appendAndReplaceArgsTuple
-   in opCall "closureWrapper" (closurePath RawCode) adjustArgs
+   in return $ opCall "closureWrapper" (closurePath RawCode) adjustArgs
 
 mainFunctionWrapper :: Term Natural -> Term Natural
 mainFunctionWrapper funslib =
   -- 1. The Anoma system expects to receive a function of type `ScryId -> Transaction`
   --
-  -- 2. The ScryId is only used to construct the argument to the Scry operation (i.e the anomaGet builtin in the Juvix frontend),
+  -- 2. The ScryId is only used to construct the argument to the Scry operation
+  --    (i.e the anomaGet builtin in the Juvix frontend),
   --
   -- 3. When the Juvix developer writes a function to submit to Anoma they use
   -- type `() -> Transaction`, this wrapper is used to capture the ScryId
@@ -498,21 +517,24 @@ compile = \case
       args <- mapM compile _nodeAnomaArgs
       case _nodeAnomaOpcode of
         Tree.OpAnomaGet -> goAnomaGet args
-        Tree.OpAnomaEncode -> return (goAnomaEncode args)
-        Tree.OpAnomaDecode -> return (goAnomaDecode args)
-        Tree.OpAnomaVerifyDetached -> return (goAnomaVerifyDetached args)
-        Tree.OpAnomaSign -> return (goAnomaSign args)
-        Tree.OpAnomaVerifyWithMessage -> return (goAnomaVerifyWithMessage args)
-        Tree.OpAnomaSignDetached -> return (goAnomaSignDetached args)
+        Tree.OpAnomaEncode -> goAnomaEncode args
+        Tree.OpAnomaDecode -> goAnomaDecode args
+        Tree.OpAnomaVerifyDetached -> goAnomaVerifyDetached args
+        Tree.OpAnomaSign -> goAnomaSign args
+        Tree.OpAnomaVerifyWithMessage -> goAnomaVerifyWithMessage args
+        Tree.OpAnomaSignDetached -> goAnomaSignDetached args
         Tree.OpAnomaByteArrayFromAnomaContents -> return (goAnomaByteArrayFromAnomaContents args)
         Tree.OpAnomaByteArrayToAnomaContents -> return (goAnomaByteArrayToAnomaContents args)
 
     goByteArrayOp :: Tree.NodeByteArray -> Sem r (Term Natural)
     goByteArrayOp Tree.NodeByteArray {..} = do
       args <- mapM compile _nodeByteArrayArgs
-      return $ case _nodeByteArrayOpcode of
-        Tree.OpByteArrayLength -> goByteArrayLength args
-        Tree.OpByteArrayFromListUInt8 -> callStdlib StdlibLengthList args # callStdlib StdlibFoldBytes args
+      case _nodeByteArrayOpcode of
+        Tree.OpByteArrayLength -> return $ goByteArrayLength args
+        Tree.OpByteArrayFromListUInt8 -> do
+          len <- callStdlib StdlibLengthList args
+          args' <- callStdlib StdlibFoldBytes args
+          return $ len # args'
       where
         goByteArrayLength :: [Term Natural] -> Term Natural
         goByteArrayLength = \case
@@ -520,38 +542,43 @@ compile = \case
           _ -> impossible
 
     goUnop :: Tree.NodeUnop -> Sem r (Term Natural)
-    goUnop Tree.NodeUnop {..} = do
-      arg <- compile _nodeUnopArg
+    goUnop Tree.NodeUnop {..} =
       case _nodeUnopOpcode of
-        Tree.PrimUnop op -> return $ goPrimUnop op arg
+        Tree.PrimUnop op -> goPrimUnop op _nodeUnopArg
         Tree.OpAssert ->
-          -- TODO: remove duplication of `arg` here
-          return (branch arg arg crash)
+          withTemp _nodeUnopArg $ \ref -> do
+            arg <- addressTempRef ref
+            return (branch arg arg crash)
         Tree.OpFail -> return crash
-        Tree.OpTrace -> goTrace arg
+        Tree.OpTrace -> do
+          arg <- compile _nodeUnopArg
+          goTrace arg
 
-    goPrimUnop :: Tree.UnaryOp -> Term Natural -> Term Natural
+    goPrimUnop :: Tree.UnaryOp -> Tree.Node -> Sem r (Term Natural)
     goPrimUnop op arg = case op of
       Tree.OpShow -> stringsErr "show"
       Tree.OpStrToInt -> stringsErr "strToInt"
       Tree.OpArgsNum ->
-        -- TODO: remove duplication of `arg` here!!!
-        let getF f = getClosureField f arg
-         in sub (getF ClosureTotalArgsNum) (getF ClosureArgsNum)
+        withTemp
+          arg
+          ( \ref -> do
+              arg' <- addressTempRef ref
+              sub (getClosureField ClosureTotalArgsNum arg') (getClosureField ClosureArgsNum arg')
+          )
       Tree.OpIntToField -> fieldErr
       Tree.OpFieldToInt -> fieldErr
-      Tree.OpIntToUInt8 -> intToUInt8 arg
-      Tree.OpUInt8ToInt -> arg
+      Tree.OpIntToUInt8 -> intToUInt8 =<< compile arg
+      Tree.OpUInt8ToInt -> compile arg
 
     goAnomaGet :: [Term Natural] -> Sem r (Term Natural)
     goAnomaGet key = do
       let arg = remakeList [getFieldInSubject AnomaGetOrder, foldTermsOrNil key]
       return (OpScry # (OpQuote # nockNilTagged "OpScry-typehint") # arg)
 
-    goAnomaEncode :: [Term Natural] -> Term Natural
+    goAnomaEncode :: [Term Natural] -> Sem r (Term Natural)
     goAnomaEncode = callStdlib StdlibEncode
 
-    goAnomaDecode :: [Term Natural] -> Term Natural
+    goAnomaDecode :: [Term Natural] -> Sem r (Term Natural)
     goAnomaDecode = callStdlib StdlibDecode
 
     byteArrayPayload :: Text -> Term Natural -> Term Natural
@@ -560,50 +587,59 @@ compile = \case
     mkByteArray :: Term Natural -> Term Natural -> Term Natural
     mkByteArray len payload = len # payload
 
-    goAnomaVerifyDetached :: [Term Natural] -> Term Natural
+    goAnomaVerifyDetached :: [Term Natural] -> Sem r (Term Natural)
     goAnomaVerifyDetached = \case
-      [sig, message, pubKey] ->
+      [sig, message, pubKey] -> do
+        enc <- goAnomaEncode [message]
         callStdlib
           StdlibVerifyDetached
           [ byteArrayPayload "verifyDetachedSig" sig,
-            goAnomaEncode [message],
+            enc,
             byteArrayPayload "verifyDetachedPubKey" pubKey
           ]
       _ -> impossible
 
-    goAnomaSign :: [Term Natural] -> Term Natural
+    goAnomaSign :: [Term Natural] -> Sem r (Term Natural)
     goAnomaSign = \case
-      [message, privKey] ->
-        opReplace
-          "callMkByteArrayOnSignResult"
-          (closurePath ArgsTuple)
-          ( callStdlib
-              StdlibSign
-              [ goAnomaEncode [message],
-                byteArrayPayload "anomaSignPrivKeyTail" privKey
-              ]
-          )
-          (opAddress "stack" emptyPath)
-          >># goReturnByteArray
+      [message, privKey] -> do
+        enc <- goAnomaEncode [message]
+        stdcall <-
+          callStdlib
+            StdlibSign
+            [ enc,
+              byteArrayPayload "anomaSignPrivKeyTail" privKey
+            ]
+        return $
+          opReplace
+            "callMkByteArrayOnSignResult"
+            (closurePath ArgsTuple)
+            stdcall
+            (opAddress "stack" emptyPath)
+            >># goReturnByteArray
       _ -> impossible
       where
-        goReturnByteArray :: Term Natural
-        goReturnByteArray = mkByteArray (callStdlib StdlibLengthBytes [signResult]) signResult
+        goReturnByteArray :: Sem r (Term Natural)
+        goReturnByteArray = do
+          res <- callStdlib StdlibLengthBytes [signResult]
+          return $ mkByteArray res signResult
 
         signResult :: Term Natural
         signResult = opAddress "sign-result" (closurePath ArgsTuple)
 
-    goAnomaSignDetached :: [Term Natural] -> Term Natural
+    goAnomaSignDetached :: [Term Natural] -> Sem r (Term Natural)
     goAnomaSignDetached = \case
-      [message, privKeyByteArray] ->
-        mkByteArray
-          (nockNatLiteral (integerToNatural (toInteger E.signatureLength)))
-          ( callStdlib
-              StdlibSignDetached
-              [ goAnomaEncode [message],
-                byteArrayPayload "privKeyByteArrayTail" privKeyByteArray
-              ]
-          )
+      [message, privKeyByteArray] -> do
+        enc <- goAnomaEncode [message]
+        stdcall <-
+          callStdlib
+            StdlibSignDetached
+            [ enc,
+              byteArrayPayload "privKeyByteArrayTail" privKeyByteArray
+            ]
+        return $
+          mkByteArray
+            (nockNatLiteral (integerToNatural (toInteger E.signatureLength)))
+            stdcall
       _ -> impossible
 
     goAnomaByteArrayToAnomaContents :: [Term Natural] -> Term Natural
@@ -620,19 +656,24 @@ compile = \case
     -- anomaDecode <$> verify signedMessage pubKey
     --
     -- verify returns a `Maybe Nat` that is `Just msg` if the signedMessage is verified.
-    goAnomaVerifyWithMessage :: [Term Natural] -> Term Natural
+    goAnomaVerifyWithMessage :: [Term Natural] -> Sem r (Term Natural)
     goAnomaVerifyWithMessage = \case
-      [signedMessage, pubKey] ->
-        opReplace
-          "callDecodeFromVerify-args"
-          (closurePath ArgsTuple)
-          (callStdlib StdlibVerify [byteArrayPayload "signedMessageByteArray" signedMessage, byteArrayPayload "pubKeyByteArray" pubKey])
-          (opAddress "stack" emptyPath)
-          >># goDecodeResult
+      [signedMessage, pubKey] -> do
+        stdcall <- callStdlib StdlibVerify [byteArrayPayload "signedMessageByteArray" signedMessage, byteArrayPayload "pubKeyByteArray" pubKey]
+        return $
+          opReplace
+            "callDecodeFromVerify-args"
+            (closurePath ArgsTuple)
+            stdcall
+            (opAddress "stack" emptyPath)
+            >># goDecodeResult
       _ -> impossible
       where
-        goDecodeResult :: Term Natural
-        goDecodeResult = branch (OpIsCell # verifyResult) goDecodeResultJust goDecodeResultNothing
+        goDecodeResult :: Sem r (Term Natural)
+        goDecodeResult = do
+          decJust <- goDecodeResultJust
+          return $
+            branch (OpIsCell # verifyResult) decJust goDecodeResultNothing
 
         -- just x is represented as [nil x] so the payload of just is always at index 1.
         justPayloadPath :: Path
@@ -643,13 +684,15 @@ compile = \case
                 _indexTupleArgsIndex = 1
               }
 
-        goDecodeResultJust :: Term Natural
-        goDecodeResultJust =
-          opReplace
-            "putDecodeResultInJust"
-            justPayloadPath
-            (callStdlib StdlibDecode [opAddress "verify-result-just" (closurePath ArgsTuple ++ justPayloadPath)])
-            verifyResult
+        goDecodeResultJust :: Sem r (Term Natural)
+        goDecodeResultJust = do
+          stdcall <- callStdlib StdlibDecode [opAddress "verify-result-just" (closurePath ArgsTuple ++ justPayloadPath)]
+          return $
+            opReplace
+              "putDecodeResultInJust"
+              justPayloadPath
+              stdcall
+              verifyResult
 
         goDecodeResultNothing :: Term Natural
         goDecodeResultNothing = verifyResult
@@ -676,15 +719,15 @@ compile = \case
       where
         goPrimBinop :: Tree.BinaryOp -> [Term Natural] -> Sem r (Term Natural)
         goPrimBinop op args = case op of
-          Tree.OpIntAdd -> return (callStdlib StdlibAdd args)
-          Tree.OpIntSub -> return (callStdlib StdlibSub args)
-          Tree.OpIntMul -> return (callStdlib StdlibMul args)
-          Tree.OpIntDiv -> return (callStdlib StdlibDiv args)
-          Tree.OpIntMod -> return (callStdlib StdlibMod args)
-          Tree.OpBool Tree.OpIntLt -> return (callStdlib StdlibLt args)
-          Tree.OpBool Tree.OpIntLe -> return (callStdlib StdlibLe args)
+          Tree.OpIntAdd -> callStdlib StdlibAdd args
+          Tree.OpIntSub -> callStdlib StdlibSub args
+          Tree.OpIntMul -> callStdlib StdlibMul args
+          Tree.OpIntDiv -> callStdlib StdlibDiv args
+          Tree.OpIntMod -> callStdlib StdlibMod args
+          Tree.OpBool Tree.OpIntLt -> callStdlib StdlibLt args
+          Tree.OpBool Tree.OpIntLe -> callStdlib StdlibLe args
           Tree.OpBool Tree.OpEq -> testEq _nodeBinopArg1 _nodeBinopArg2
-          Tree.OpStrConcat -> return (callStdlib StdlibCatBytes args)
+          Tree.OpStrConcat -> callStdlib StdlibCatBytes args
           Tree.OpFieldAdd -> fieldErr
           Tree.OpFieldSub -> fieldErr
           Tree.OpFieldMul -> fieldErr
@@ -743,23 +786,26 @@ opAddress' x = evaluated $ (opQuote "opAddress'" OpAddress) # x
 -- [a [b [c 0]]] -> [a [b c]]
 -- len = quote 3
 -- TODO lst is being evaluated three times!
-listToTuple :: Term Natural -> Term Natural -> Term Natural
-listToTuple lst len =
+listToTuple :: (Member (Reader CompilerCtx) r) => Term Natural -> Term Natural -> Sem r (Term Natural)
+listToTuple lst len = do
   -- posOfLast uses stdlib so when it is evaulated the stdlib must be in the
   -- subject lst must also be evaluated against the standard subject. We achieve
   -- this by evaluating `lst #. posOfLastOffset` in `t1`. The address that
   -- posOfLastOffset now points to must be shifted by [L] to make it relative to
   -- `lst`.
-  let posOfLastOffset = appendRights [L] (dec len)
-      posOfLast = appendRights emptyPath (dec len)
-      t1 = (lst #. posOfLastOffset) >># (opAddress' (OpAddress # [R])) >># (opAddress "listToTupleLast" [L])
-   in OpIf # isZero len # lst # (replaceSubterm' lst posOfLast t1)
+  posOfLastOffset <- appendRights [L] =<< dec len
+  posOfLast <- appendRights emptyPath =<< dec len
+  let t1 = (lst #. posOfLastOffset) >># (opAddress' (OpAddress # [R])) >># (opAddress "listToTupleLast" [L])
+  return $
+    OpIf # isZero len # lst # (replaceSubterm' lst posOfLast t1)
 
 argsTuplePlaceholder :: Text -> Term Natural
 argsTuplePlaceholder txt = nockNilTagged ("argsTuplePlaceholder-" <> txt)
 
-appendRights :: Path -> Term Natural -> Term Natural
-appendRights path n = dec (mul (pow2 n) (OpInc # OpQuote # path))
+appendRights :: (Member (Reader CompilerCtx) r) => Path -> Term Natural -> Sem r (Term Natural)
+appendRights path n = do
+  n' <- pow2 n
+  mul n' (OpInc # OpQuote # path) >>= dec
 
 withTemp ::
   (Members '[Reader FunctionCtx, Reader CompilerCtx] r) =>
@@ -814,10 +860,10 @@ appendToTuple :: Term Natural -> Term Natural -> Term Natural -> Term Natural ->
 appendToTuple xs lenXs ys lenYs =
   OpIf # isZero lenYs # listToTuple xs lenXs # append xs lenXs ys
 
-append :: Term Natural -> Term Natural -> Term Natural -> Term Natural
-append xs lenXs ys =
-  let posOfXsNil = appendRights emptyPath lenXs
-   in replaceSubterm' xs posOfXsNil ys
+append :: (Member (Reader CompilerCtx) r) => Term Natural -> Term Natural -> Term Natural -> Sem r (Term Natural)
+append xs lenXs ys = do
+  posOfXsNil <- appendRights emptyPath lenXs
+  return $ replaceSubterm' xs posOfXsNil ys
 
 extendClosure ::
   (Members '[Reader FunctionCtx, Reader CompilerCtx] r) =>
@@ -828,8 +874,8 @@ extendClosure Tree.NodeExtendClosure {..} = do
   closure <- compile _nodeExtendClosureFun
   let argsNum = getClosureField ClosureArgsNum closure
       oldArgs = getClosureField ClosureArgs closure
-      allArgs = append oldArgs argsNum (remakeList args)
-      newArgsNum = add argsNum (nockIntegralLiteral (length _nodeExtendClosureArgs))
+  allArgs <- append oldArgs argsNum (remakeList args)
+  newArgsNum <- add argsNum (nockIntegralLiteral (length _nodeExtendClosureArgs))
   return . makeClosure $ \case
     WrapperCode -> getClosureField WrapperCode closure
     RawCode -> getClosureField RawCode closure
@@ -855,21 +901,23 @@ extendClosure Tree.NodeExtendClosure {..} = do
 --      @ L]                      ::  this whole replace is editing what's at axis L, i.e. what was pushed
 --   ]
 -- ]
-callStdlib :: StdlibFunction -> [Term Natural] -> Term Natural
-callStdlib fun args =
+callStdlib :: (Member (Reader CompilerCtx) r) => StdlibFunction -> [Term Natural] -> Sem r (Term Natural)
+callStdlib fun args = do
+  stdpath <- stackPath StandardLibrary
   let fPath = stdlibPath fun
-      getFunCode = opAddress "callStdlibFunCode" (stackPath StandardLibrary) >># fPath
-      adjustArgs = case nonEmpty args of
-        Just args' -> opReplace "callStdlib-args" (closurePath ArgsTuple) ((opAddress "stdlibR" [R]) >># foldTerms args') (opAddress "stdlibL" [L])
+      getFunCode = opAddress "callStdlibFunCode" stdpath >># fPath
+  argsPath <- stackPath ArgsTuple
+  let adjustArgs = case nonEmpty args of
+        Just args' -> opReplace "callStdlib-args" argsPath ((opAddress "stdlibR" [R]) >># foldTerms args') (opAddress "stdlibL" [L])
         Nothing -> opAddress "adjustArgsNothing" [L]
       callFn = opCall "callStdlib" (closurePath WrapperCode) adjustArgs
-      callCell = set cellCall (Just meta) (OpPush #. (getFunCode # callFn))
       meta =
         StdlibCall
           { _stdlibCallArgs = foldTermsOrNil args,
             _stdlibCallFunction = fun
           }
-   in TermCell callCell
+      callCell = set cellCall (Just meta) (OpPush #. (getFunCode # callFn))
+   in return $ TermCell callCell
 
 constUnit :: Term Natural
 constUnit = constVoid
@@ -934,10 +982,6 @@ fieldErr = unsupported "the field type"
 
 cairoErr :: a
 cairoErr = unsupported "cairo builtins"
-
--- | Computes a - b
-sub :: Term Natural -> Term Natural -> Term Natural
-sub a b = callStdlib StdlibSub [a, b]
 
 makeList :: (Foldable f) => f (Term Natural) -> Term Natural
 makeList ts = foldTerms (toList ts `prependList` pure (nockNilTagged "makeList"))
@@ -1021,7 +1065,7 @@ runCompilerWith opts constrs moduleFuns mainFun = makeAnomaFun
       return
         ( _compilerFunctionId,
           FunctionInfo
-            { _functionInfoPath = indexInStack FunctionsLibrary i,
+            { _functionInfoPath = indexStack FunctionsLibrary i,
               _functionInfoArity = _compilerFunctionArity,
               _functionInfoName = _compilerFunctionName
             }
@@ -1068,9 +1112,6 @@ builtinFunction = \case
         _compilerFunction = return crash,
         _compilerFunctionName = "builtinPlaceholderName"
       }
-
-closurePath :: AnomaCallablePathId -> Path
-closurePath = stackPath
 
 -- | Call a function. Arguments to the function are assumed to be in the ArgsTuple stack
 -- TODO what about temporary stack?
@@ -1278,19 +1319,22 @@ getConstructorMemRep tag = (^. constructorInfoMemRep) <$> getConstructorInfo tag
 crash :: Term Natural
 crash = ("crash" @ OpAddress # OpAddress # OpAddress)
 
-mul :: Term Natural -> Term Natural -> Term Natural
+mul :: (Member (Reader CompilerCtx) r) => Term Natural -> Term Natural -> Sem r (Term Natural)
 mul a b = callStdlib StdlibMul [a, b]
 
-pow2 :: Term Natural -> Term Natural
-pow2 = callStdlib StdlibPow2 . pure
+pow2 :: (Member (Reader CompilerCtx) r) => Term Natural -> Sem r (Term Natural)
+pow2 x = callStdlib StdlibPow2 [x]
 
-add :: Term Natural -> Term Natural -> Term Natural
+add :: (Member (Reader CompilerCtx) r) => Term Natural -> Term Natural -> Sem r (Term Natural)
 add a b = callStdlib StdlibAdd [a, b]
 
-dec :: Term Natural -> Term Natural
-dec = callStdlib StdlibDec . pure
+sub :: (Member (Reader CompilerCtx) r) => Term Natural -> Term Natural -> Sem r (Term Natural)
+sub a b = callStdlib StdlibSub [a, b]
 
-intToUInt8 :: Term Natural -> Term Natural
+dec :: (Member (Reader CompilerCtx) r) => Term Natural -> Sem r (Term Natural)
+dec x = callStdlib StdlibDec [x]
+
+intToUInt8 :: (Member (Reader CompilerCtx) r) => Term Natural -> Sem r (Term Natural)
 intToUInt8 i = callStdlib StdlibMod [i, nockIntegralLiteral @Natural (2 ^ uint8Size)]
   where
     uint8Size :: Natural
