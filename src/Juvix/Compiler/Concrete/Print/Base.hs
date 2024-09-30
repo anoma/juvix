@@ -195,15 +195,23 @@ instance (SingI s) => PrettyPrint (ListPattern s) where
 instance PrettyPrint Interval where
   ppCode = noLoc . pretty
 
+instance PrettyPrint Int where
+  ppCode = noLoc . pretty
+
 instance PrettyPrint Void where
   ppCode = absurd
 
 instance (SingI s) => PrettyPrint (NameItem s) where
+  ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => NameItem s -> Sem r ()
   ppCode NameItem {..} = do
     let defaultVal = do
           d <- _nameItemDefault
           return (noLoc C.kwAssign <+> ppExpressionType (d ^. argDefaultValue))
-    isImplicitDelims _nameItemImplicit (ppSymbolType _nameItemSymbol)
+        ppSym :: Maybe (SymbolType s) -> Sem r ()
+        ppSym = \case
+          Nothing -> ppCode Kw.kwWildcard
+          Just s -> ppSymbolType s
+    isImplicitDelims _nameItemImplicit (ppSym _nameItemSymbol)
       <> ppCode Kw.kwExclamation
       <> noLoc (pretty _nameItemIndex)
       <+> ppCode Kw.kwColon
@@ -218,7 +226,10 @@ isImplicitDelims = \case
 
 instance (SingI s) => PrettyPrint (NameBlock s) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => NameBlock s -> Sem r ()
-  ppCode NameBlock {..} = isImplicitDelims _nameImplicit (vsepSemicolon (map ppCode (toList _nameBlock)))
+  ppCode NameBlock {..} =
+    isImplicitDelims _nameBlockImplicit
+      . vsepSemicolon
+      $ fmap ppCode _nameBlockItems
 
 instance (PrettyPrint a, PrettyPrint b) => PrettyPrint (HashMap a b) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => HashMap a b -> Sem r ()

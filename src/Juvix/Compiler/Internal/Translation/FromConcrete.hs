@@ -383,32 +383,26 @@ goFunctionDef FunctionDef {..} = do
   _funDefPragmas <- goPragmas _signPragmas
   _funDefBody <- goBody
   msig <- asks (^. S.infoNameSigs . at (_funDefName ^. Internal.nameId))
-  _funDefArgsInfo <- maybe (return mempty) goNameSignature msig
+  _funDefArgsInfo <- maybe (return mempty) (fmap toList . goNameSignature) msig
   let _funDefDocComment = fmap ppPrintJudoc _signDoc
       fun = Internal.FunctionDef {..}
   whenJust _signBuiltin (checkBuiltinFunction fun . (^. withLocParam))
   return fun
   where
     goNameSignature :: NameSignature 'Scoped -> Sem r [Internal.ArgInfo]
-    goNameSignature = concatMapM goBlock . (^. nameSignatureArgs)
+    goNameSignature = mconcatMapM (fmap toList . goBlock) . (^. nameSignatureArgs)
       where
-        goBlock :: NameBlock 'Scoped -> Sem r [Internal.ArgInfo]
-        goBlock blk = do
-          let tbl = indexedByInt (^. nameItemIndex) (blk ^. nameBlock)
-              mmaxIx :: Maybe Int = fst <$> IntMap.lookupMax tbl
-          execOutputList $ case mmaxIx of
-            Nothing -> output Internal.emptyArgInfo
-            Just maxIx ->
-              forM_ [0 .. maxIx] $ \idx ->
-                case tbl ^. at idx of
-                  Nothing -> output Internal.emptyArgInfo
-                  Just i -> do
-                    _argInfoDefault' <- mapM goExpression (i ^? nameItemDefault . _Just . argDefaultValue)
-                    output
-                      Internal.ArgInfo
-                        { _argInfoDefault = _argInfoDefault',
-                          _argInfoName = Just (goSymbol (i ^. nameItemSymbol))
-                        }
+        goBlock :: NameBlock 'Scoped -> Sem r (NonEmpty Internal.ArgInfo)
+        goBlock blk = mapM goItem (blk ^. nameBlockItems)
+          where
+            goItem :: NameItem 'Scoped -> Sem r Internal.ArgInfo
+            goItem i = do
+              _argInfoDefault' <- mapM goExpression (i ^? nameItemDefault . _Just . argDefaultValue)
+              return
+                Internal.ArgInfo
+                  { _argInfoDefault = _argInfoDefault',
+                    _argInfoName = goSymbol <$> (i ^. nameItemSymbol)
+                  }
 
     goBody :: Sem r Internal.Expression
     goBody = do
@@ -761,9 +755,10 @@ goListPattern l = localBuiltins $ do
   where
     loc = getLoc l
 
-createArgumentBlocks :: NonEmpty (NamedArgumentNew 'Scoped) -> [NameBlock 'Scoped] -> [ArgumentBlock 'Scoped]
+createArgumentBlocks :: NonEmpty (NamedArgumentNew 'Scoped) -> [NameBlock 'Scoped] -> NonEmpty (ArgumentBlock 'Scoped)
 createArgumentBlocks appargs =
-  run
+  nonEmpty'
+    . run
     . execOutputList
     . evalState args0
     . mapM_ goBlock
@@ -778,11 +773,11 @@ createArgumentBlocks appargs =
       (Members '[State (HashSet S.Symbol), Output (ArgumentBlock 'Scoped)] r) =>
       NameBlock 'Scoped ->
       Sem r ()
-    goBlock NameBlock {..} = do
+    goBlock b@NameBlock {..} = do
       args <- get
       let namesInBlock :: HashSet Symbol =
             HashSet.intersection
-              (HashMap.keysSet _nameBlock)
+              (hashSet (symbolParsed <$> b ^.. nameBlockSymbols))
               (HashSet.map (^. S.nameConcrete) args)
           argNames :: HashMap Symbol S.Symbol = indexedByHash (^. S.nameConcrete) args
           getName sym = fromJust (argNames ^. at sym)
@@ -790,7 +785,7 @@ createArgumentBlocks appargs =
         let block' =
               ArgumentBlock
                 { _argBlockDelims = Irrelevant Nothing,
-                  _argBlockImplicit = _nameImplicit,
+                  _argBlockImplicit = _nameBlockImplicit,
                   _argBlockArgs = goArg . getName <$> namesInBlock1
                 }
         modify (HashSet.filter (not . flip HashSet.member namesInBlock . (^. S.nameConcrete)))
@@ -857,7 +852,7 @@ goExpression = \case
         let name = napp ^. namedApplicationNewName . scopedIdenFinal
         sig <- fromJust <$> asks (^. S.infoNameSigs . at (name ^. S.nameId))
         let fun = napp ^. namedApplicationNewName
-            blocks = nonEmpty' (createArgumentBlocks appargs (sig ^. nameSignatureArgs))
+            blocks = createArgumentBlocks appargs (sig ^. nameSignatureArgs)
         compiledNameApp <- goNamedApplication fun blocks extraArgs
         case nonEmpty (appargs ^.. each . _NamedArgumentNewFunction) of
           Nothing -> return compiledNameApp
@@ -883,48 +878,69 @@ goExpression = \case
     goDesugaredNamedApplication :: DesugaredNamedApplication -> Sem r Internal.Expression
     goDesugaredNamedApplication a = do
       let fun = goScopedIden (a ^. dnamedAppIdentifier)
-          updateKind :: Internal.Subs = Internal.subsKind (a ^.. dnamedAppArgs . each . argName . to goSymbol) KNameFunction
-          mkAppArg :: Arg -> Internal.ApplicationArg
-          mkAppArg arg =
-            Internal.ApplicationArg
-              { _appArgIsImplicit = arg ^. argImplicit,
-                _appArg = Internal.toExpression (goSymbol (arg ^. argName))
-              }
-          namedArgNames :: NonEmpty Internal.ApplicationArg = mkAppArg <$> a ^. dnamedAppArgs
-          allArgs = toList namedArgNames <> a ^. dnamedExtraArgs
+          updateKind :: Internal.Subs =
+            Internal.subsKind
+              ( a
+                  ^.. dnamedAppArgs
+                    . each
+                    . argName
+                    . _Just
+                    . to goSymbol
+              )
+              KNameFunction
+          mkAppArg :: Arg -> Sem r Internal.ApplicationArg
+          mkAppArg arg = do
+            expr <- case arg ^. argName of
+              Nothing -> goExpression (arg ^. argValue)
+              Just argname -> return (Internal.toExpression (goSymbol argname))
+
+            return
+              Internal.ApplicationArg
+                { _appArgIsImplicit = arg ^. argImplicit,
+                  _appArg = expr
+                }
+      namedArgNames :: NonEmpty Internal.ApplicationArg <- mapM mkAppArg (a ^. dnamedAppArgs)
+      let allArgs = toList namedArgNames <> a ^. dnamedExtraArgs
           app = Internal.foldApplication (Internal.toExpression fun) allArgs
-      clauses <- mapM mkClause (a ^. dnamedAppArgs)
+      clauses :: [Internal.LetClause] <- mapMaybeM mkClause (toList (a ^. dnamedAppArgs))
+
       expr <-
         Internal.substitutionE updateKind $
-          Internal.ExpressionLet
-            Internal.Let
-              { _letExpression = app,
-                _letClauses = clauses
-              }
+          case nonEmpty clauses of
+            Nothing -> app
+            Just clauses1 ->
+              Internal.ExpressionLet
+                Internal.Let
+                  { _letExpression = app,
+                    _letClauses = clauses1
+                  }
       Internal.clone expr
       where
-        mkClause :: Arg -> Sem r Internal.LetClause
-        mkClause arg = do
-          checkCycle
-          let name = arg ^. argName
-              adjust
-                | arg ^. argAutoInserted = over defaultArgsStack (name :)
-                | otherwise = id
-          local adjust $ do
-            body' <- goExpression (arg ^. argValue)
-            ty <- goExpression (arg ^. argType)
-            return $
-              Internal.LetFunDef
-                (Internal.simpleFunDef (goSymbol name) ty body')
-          where
-            checkCycle :: Sem r ()
-            checkCycle = do
-              st <- asks (^. defaultArgsStack)
-              case span (/= (arg ^. argName)) st of
-                (_, []) -> return ()
-                (c, _) ->
-                  let cyc = NonEmpty.reverse ((arg ^. argName) :| c)
-                   in throw (ErrDefaultArgCycle (DefaultArgCycle cyc))
+        mkClause :: Arg -> Sem r (Maybe Internal.LetClause)
+        mkClause arg = case arg ^. argName of
+          Nothing -> return Nothing
+          Just name -> do
+            checkCycle
+            let adjust :: DefaultArgsStack -> DefaultArgsStack
+                  | arg ^. argAutoInserted = over defaultArgsStack (name :)
+                  | otherwise = id
+            local adjust $ do
+              body' <- goExpression (arg ^. argValue)
+              ty <- goExpression (arg ^. argType)
+              return $
+                Just
+                  ( Internal.LetFunDef
+                      (Internal.simpleFunDef (goSymbol name) ty body')
+                  )
+            where
+              checkCycle :: Sem r ()
+              checkCycle = do
+                st <- asks (^. defaultArgsStack)
+                case span (/= name) st of
+                  (_, []) -> return ()
+                  (c, _) ->
+                    let cyc = NonEmpty.reverse (name :| c)
+                     in throw (ErrDefaultArgCycle (DefaultArgCycle cyc))
 
     goRecordUpdate :: Concrete.RecordUpdate 'Scoped -> Sem r Internal.Lambda
     goRecordUpdate r = do

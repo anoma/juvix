@@ -346,6 +346,9 @@ nonEmpty = NonEmpty.nonEmpty . toList
 foldr1 :: (a -> a -> a) -> NonEmpty a -> a
 foldr1 = List.foldr1
 
+sconcatMapM :: (Semigroup c, Monad m) => (a -> m c) -> NonEmpty a -> m c
+sconcatMapM f = fmap sconcat . mapM f
+
 sconcatMap :: (Semigroup c) => (a -> c) -> NonEmpty a -> c
 sconcatMap f = sconcat . fmap f
 
