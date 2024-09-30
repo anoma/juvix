@@ -1,4 +1,4 @@
-# Juvix coding style guidelines
+# Juvix coding style guidelines for the standard library and Anoma apps
 
 ## General rules
 
