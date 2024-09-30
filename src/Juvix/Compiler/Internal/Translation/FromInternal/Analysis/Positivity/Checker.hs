@@ -1,4 +1,4 @@
-module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.CheckerNew
+module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.Checker
   ( checkPositivity,
   )
 where

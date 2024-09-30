@@ -19,7 +19,7 @@ import Juvix.Compiler.Internal.Extra qualified as Extra
 import Juvix.Compiler.Internal.Extra.CoercionInfo
 import Juvix.Compiler.Internal.Extra.InstanceInfo
 import Juvix.Compiler.Internal.Pretty
-import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.CheckerNew qualified as New
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.Checker
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker (Termination)
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.CheckerNew.Arity
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context
@@ -271,7 +271,7 @@ checkBlockPositivity ::
   Sem r ()
 checkBlockPositivity m = do
   noPos <- asks (^. entryPointNoPositivity)
-  New.checkPositivity noPos m
+  checkPositivity noPos m
 
 resolveCastHoles ::
   forall a r.
