@@ -284,5 +284,5 @@ negPositivityTests =
     mk :: String -> Path Rel File -> NegTest
     mk testname testfile = negTest testname $(mkRelDir "Internal/Positivity") testfile $
       \case
-        ErrNonStrictlyPositiveNew NonStrictlyPositiveNew {} -> Nothing
+        ErrNonStrictlyPositive NonStrictlyPositive {} -> Nothing
         _ -> wrongError

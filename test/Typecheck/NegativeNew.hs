@@ -148,14 +148,14 @@ arityTests =
         _ -> wrongError,
     negTest "Evil: issue 2540" $(mkRelDir "Internal/Positivity") $(mkRelFile "Evil.juvix") $
       \case
-        ErrNonStrictlyPositiveNew {} -> Nothing
+        ErrNonStrictlyPositive {} -> Nothing
         _ -> wrongError,
     negTest "Evil: issue 2540 using Axiom" $(mkRelDir "Internal/Positivity") $(mkRelFile "EvilWithAxiom.juvix") $
       \case
-        ErrNonStrictlyPositiveNew {} -> Nothing
+        ErrNonStrictlyPositive {} -> Nothing
         _ -> wrongError,
     negTest "FreeT: issue 2540" $(mkRelDir "Internal/Positivity") $(mkRelFile "FreeT.juvix") $
       \case
-        ErrNonStrictlyPositiveNew {} -> Nothing
+        ErrNonStrictlyPositive {} -> Nothing
         _ -> wrongError
   ]

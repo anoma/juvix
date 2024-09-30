@@ -691,15 +691,15 @@ instance ToGenericError InvalidConstructorArgType where
               <> line
               <> ppCode opts' ty
 
-newtype NonStrictlyPositiveNew = NonStrictlyPositiveNew
+newtype NonStrictlyPositive = NonStrictlyPositive
   { -- This list contains occurrences of the inductive types in non-strictly
     -- positive positions. Thus it may contain repeated names
     _nonStrictlyPositiveNewOccurrences :: NonEmpty InductiveName
   }
 
-makeLenses ''NonStrictlyPositiveNew
+makeLenses ''NonStrictlyPositive
 
-instance ToGenericError NonStrictlyPositiveNew where
+instance ToGenericError NonStrictlyPositive where
   genericError e = ask >>= generr
     where
       generr opts =

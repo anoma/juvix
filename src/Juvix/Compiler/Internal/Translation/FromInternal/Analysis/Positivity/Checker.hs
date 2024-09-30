@@ -89,8 +89,8 @@ checkPositivity noPositivityFlag mut = do
           markedPositive d = fromJust (find ((== d) . (^. inductiveName)) defs) ^. inductivePositive
       whenJust (nonEmpty (filter (not . markedPositive) neg)) $ \negTys ->
         throw $
-          ErrNonStrictlyPositiveNew
-            NonStrictlyPositiveNew
+          ErrNonStrictlyPositive
+            NonStrictlyPositive
               { _nonStrictlyPositiveNewOccurrences = negTys
               }
 
