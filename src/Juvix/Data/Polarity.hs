@@ -8,8 +8,7 @@ import Juvix.Prelude.Pretty
 data Polarity
   = PolarityUnused
   | PolarityStrictlyPositive
-  | -- TODO rename PolarityNegative to PolarityNotStrictlyPositive
-    PolarityNegative
+  | PolarityNonStrictlyPositive
   deriving stock (Ord, Enum, Bounded, Eq, Generic, Data, Show)
 
 instance Hashable Polarity
@@ -26,6 +25,6 @@ instance Monoid Polarity where
 
 instance Pretty Polarity where
   pretty = \case
-    PolarityNegative -> "negative"
+    PolarityNonStrictlyPositive -> "non-strictly-positive"
     PolarityStrictlyPositive -> "strictly-positive"
     PolarityUnused -> "unused"

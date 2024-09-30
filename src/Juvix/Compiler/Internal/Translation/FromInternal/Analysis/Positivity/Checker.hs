@@ -40,7 +40,7 @@ emptyBuilder =
 
 functionSidePolarity :: FunctionSide -> Polarity
 functionSidePolarity = \case
-  FunctionLeft -> PolarityNegative
+  FunctionLeft -> PolarityNonStrictlyPositive
   FunctionRight -> PolarityStrictlyPositive
 
 checkPositivity ::
@@ -96,7 +96,7 @@ checkPositivity noPositivityFlag mut = do
 
 -- NOTE we conservatively assume that axioms have all variables in negative positions
 axiomPolarity :: Polarity
-axiomPolarity = PolarityNegative
+axiomPolarity = PolarityNonStrictlyPositive
 
 -- | Returns the list of non-strictly positive types
 checkStrictlyPositive ::
@@ -134,7 +134,7 @@ checkStrictlyPositive tbl mutual =
       [Occurrences] ->
       Sem r' ()
     goApp (side, lhs) occ = local (functionSidePolarity side <>) $ case lhs of
-      AppVar {} -> local (const PolarityNegative) (mapM_ go occ)
+      AppVar {} -> local (const PolarityNonStrictlyPositive) (mapM_ go occ)
       AppAxiom {} -> local (<> axiomPolarity) (mapM_ go occ)
       AppInductive d -> do
         ctx <- ask
@@ -142,7 +142,7 @@ checkStrictlyPositive tbl mutual =
         case ctx of
           PolarityUnused -> impossible
           PolarityStrictlyPositive -> return ()
-          PolarityNegative -> when (isMutual d) (output d)
+          PolarityNonStrictlyPositive -> when (isMutual d) (output d)
         mapM_ (uncurry goArg) (zipExact pols occ)
       where
         getPolarities :: InductiveName -> [Polarity]
@@ -154,7 +154,7 @@ checkStrictlyPositive tbl mutual =
 localPolarity :: (Members '[Reader Polarity] r) => Polarity -> Sem r () -> Sem r ()
 localPolarity p = case p of
   PolarityUnused -> const (return ())
-  PolarityNegative -> local (p <>)
+  PolarityNonStrictlyPositive -> local (p <>)
   PolarityStrictlyPositive -> local (p <>)
 
 computePolarities :: PolarityTable -> NonEmpty InductiveDef -> Occurrences -> HashMap InductiveParam Polarity
@@ -214,8 +214,8 @@ computePolarities tab defs topOccurrences =
 
         increaseMinimum :: Blocking -> Maybe Blocking
         increaseMinimum = case newPol of
-          PolarityNegative -> const Nothing
-          PolarityStrictlyPositive -> Just . set blockingUnblockerMinimum PolarityNegative
+          PolarityNonStrictlyPositive -> const Nothing
+          PolarityStrictlyPositive -> Just . set blockingUnblockerMinimum PolarityNonStrictlyPositive
           PolarityUnused -> impossible
 
         isTriggered :: Blocking -> Bool
@@ -239,7 +239,7 @@ computePolarities tab defs topOccurrences =
     goAxiomArgs os = local (const axiomPolarity) (mapM_ go os)
 
     goVarArgs :: (Members '[State Builder, Reader Polarity] r) => [Occurrences] -> Sem r ()
-    goVarArgs os = local (const PolarityNegative) (mapM_ go os)
+    goVarArgs os = local (const PolarityNonStrictlyPositive) (mapM_ go os)
 
     block ::
       (Members '[State Builder, Reader Polarity] r) =>
@@ -272,6 +272,6 @@ computePolarities tab defs topOccurrences =
               Just pol -> case pol of
                 PolarityUnused -> impossible
                 PolarityStrictlyPositive -> do
-                  block PolarityNegative p o
+                  block PolarityNonStrictlyPositive p o
                   localPolarity PolarityStrictlyPositive (go o)
-                PolarityNegative -> localPolarity PolarityNegative (go o)
+                PolarityNonStrictlyPositive -> localPolarity PolarityNonStrictlyPositive (go o)

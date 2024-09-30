@@ -253,7 +253,7 @@ checkTopMutualBlock (MutualBlock ds) =
     <$> runInferenceDefs
       ( do
           ls <- mapM checkMutualStatement ds
-          checkBlockPositivity (MutualBlock ls) -- TODO uncomment
+          checkBlockPositivity (MutualBlock ls)
           return ls
       )
 
