@@ -40,7 +40,7 @@ tests:
           defaultPackage@?{name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
-               [path ".juvix-build/stdlib";
+               [defaultStdlib;
                 git "dep1" "$temp/dep" "$dep1hash"];
             main := just "HelloWorld.juvix"};
         EOF
@@ -104,7 +104,7 @@ tests:
           defaultPackage@?{name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
-               [path ".juvix-build/stdlib";
+               [defaultStdlib;
                 git "dep1" "$temp/dep" "$dep1hash"];
             main := just "HelloWorld.juvix"};
         EOF
@@ -172,7 +172,7 @@ tests:
           defaultPackage@?{name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
-               [path ".juvix-build/stdlib";
+               [defaultStdlib;
                 git "dep1" "$temp/dep" "$dep1hash"];
             main := just "HelloWorld.juvix"};
         EOF
@@ -217,7 +217,7 @@ tests:
           defaultPackage@?{name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
-               [path ".juvix-build/stdlib";
+               [defaultStdlib;
                 git "dep1" "$temp/dep" "$dep1hash"];
             main := just "HelloWorld.juvix"};
         EOF
@@ -277,7 +277,7 @@ tests:
           defaultPackage@?{name := "Dep1";
             version := mkVersion 0 1 0;
             dependencies :=
-               [path ".juvix-build/stdlib/";
+               [defaultStdlib;
                 git "dep2" "$temp/dep2" "main"]};
         EOF
 
@@ -300,32 +300,33 @@ tests:
           defaultPackage@?{name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
-               [path ".juvix-build/stdlib/";
+               [defaultStdlib;
                 git "dep1" "$temp/dep1" "main"];
             main := just "HelloWorld.juvix"};
         EOF
 
         checksum=$(sha256sum Package.juvix | cut -d " " -f 1)
+        version=$(juvix --numeric-version)
 
         cat <<-EOF > juvix.lock.yaml
         version: 2
         checksum: $checksum
         dependencies:
-          - path: .juvix-build/stdlib/
+          - path: .juvix-build/$version/stdlib/
             dependencies: []
           - git:
               url: $temp/dep1
               ref: $dep1hash
               name: dep1
             dependencies:
-              - path: .juvix-build/stdlib/
+              - path: .juvix-build/$version/stdlib/
                 dependencies: []
               - git:
                   url: $temp/dep2
                   ref: $dep2hash
                   name: dep2
                 dependencies:
-                  - path: .juvix-build/stdlib/
+                  - path: .juvix-build/$version/stdlib/
                     dependencies: []
         EOF
 
@@ -414,7 +415,7 @@ tests:
           defaultPackage@?{name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
-               [path ".juvix-build/stdlib";
+               [defaultStdlib;
                 git "dep1" "$temp/dep" "main"];
             main := just "HelloWorld.juvix"};
         EOF
@@ -507,7 +508,7 @@ tests:
           defaultPackage@?{name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
-               [path ".juvix-build/stdlib";
+               [defaultStdlib;
                 git "dep1" "$temp/dep" "$dep1hash1"];
             main := just "HelloWorld.juvix"};
         EOF
@@ -538,7 +539,7 @@ tests:
           defaultPackage@?{name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
-               [path ".juvix-build/stdlib";
+               [defaultStdlib;
                 git "dep1" "$temp/dep" "$dep1hash2"];
             main := just "HelloWorld.juvix"};
         EOF
@@ -560,6 +561,8 @@ tests:
       script: |
         temp=$(mktemp -d)
         trap 'rm -rf -- "$temp"' EXIT
+
+        version=$(juvix --numeric-version)
 
         # create dependency2
         mkdir $temp/dep2
@@ -611,20 +614,20 @@ tests:
           defaultPackage@?{name := "Dep1";
             version := mkVersion 0 1 0;
             dependencies :=
-               [path ".juvix-build/stdlib/";
+               [defaultStdlib;
                 git "dep2" "$temp/dep2" "main"]};
         EOF
 
         cat <<-EOF > juvix.lock.yaml
         dependencies:
-          - path: .juvix-build/stdlib/
+          - path: .juvix-build/$version/stdlib/
             dependencies: []
           - git:
               url: $temp/dep2
               ref: $dep2hash
               name: dep2
             dependencies:
-              - path: .juvix-build/stdlib/
+              - path: .juvix-build/$version/stdlib/
                 dependencies: []
         EOF
 
@@ -647,7 +650,7 @@ tests:
           defaultPackage@?{name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
-               [path ".juvix-build/stdlib/";
+               [defaultStdlib;
                 git "dep1" "$temp/dep1" "$dep1hash"];
             main := just "HelloWorld.juvix"};
         EOF
@@ -721,7 +724,7 @@ tests:
           defaultPackage@?{name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
-               [path ".juvix-build/stdlib";
+               [defaultStdlib;
                 git "dep1" "$temp/dep" "$dep1hash1"];
             main := just "HelloWorld.juvix"};
         EOF
@@ -757,7 +760,7 @@ tests:
           defaultPackage@?{name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
-               [path ".juvix-build/stdlib";
+               [defaultStdlib;
                 git "dep1" "$temp/dep" "$dep1hash2"];
             main := just "HelloWorld.juvix"};
         EOF
@@ -806,7 +809,7 @@ tests:
           defaultPackage@?{name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
-               [path ".juvix-build/stdlib";
+               [defaultStdlib;
                 git "dep1" "$temp/dep" "invalid-ref"];
             main := just "HelloWorld.juvix"};
         EOF
@@ -851,7 +854,7 @@ tests:
           defaultPackage@?{name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
-               [path ".juvix-build/stdlib";
+               [defaultStdlib;
                 git "dep1" "$temp/dep" "main"];
             main := just "HelloWorld.juvix"};
         EOF
@@ -896,7 +899,7 @@ tests:
           defaultPackage@?{name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
-               [path ".juvix-build/stdlib";
+               [defaultStdlib;
                 git "dep1" "$temp/dep" "main"];
             main := just "HelloWorld.juvix"};
         EOF
@@ -966,7 +969,7 @@ tests:
           defaultPackage@?{name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
-               [path ".juvix-build/stdlib";
+               [defaultStdlib;
                 git "dep1" "$temp/dep" "$dep1hash"];
             main := just "HelloWorld.juvix"};
         EOF
@@ -1017,7 +1020,7 @@ tests:
           defaultPackage@?{name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
-               [path ".juvix-build/stdlib";
+               [defaultStdlib;
                 git "dep1" "$temp/dep1" "main";
                 git "dep1" "$temp/dep2" "main"];
             main := just "HelloWorld.juvix"};
@@ -1080,7 +1083,7 @@ tests:
           defaultPackage@?{name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
-               [path ".juvix-build/stdlib";
+               [defaultStdlib;
                 git "dep1" "$temp/dep" "$dep1hash"];
             main := just "HelloWorld.juvix"};
         EOF

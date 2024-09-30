@@ -96,7 +96,7 @@ instance FromJSON RawPackage where
 
 resolveBuildDir :: BuildDir -> SomeBase Dir
 resolveBuildDir = \case
-  DefaultBuildDir -> Rel (relBuildDir)
+  DefaultBuildDir -> Rel relBuildDir
   CustomBuildDir d -> d
 
 resolveAbsBuildDir :: Path Abs Dir -> BuildDir -> Path Abs Dir
