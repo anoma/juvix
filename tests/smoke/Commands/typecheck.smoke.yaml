@@ -1,5 +1,14 @@
 working-directory: ./../../../tests/
 tests:
+  - name: ignore-dot-file
+    working-directory: ./../../../tests/positive/issue3068
+    command:
+      - juvix
+      - typecheck
+    stderr:
+      equals: "Well done! It type checks\n"
+    exit-status: 0
+
   - name: flag-help-shows-juvix-file-for-autocompletion
     command:
       - juvix
