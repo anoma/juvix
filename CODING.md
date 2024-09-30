@@ -5,7 +5,7 @@
 - always use the formatter
 - don't use unicode, except perhaps for judoc
 - avoid `Pair`
-- prefer enumarations with meaningful names over booleans, e.g., instead of using `Bool` define:
+- prefer enumerations with meaningful names over booleans, e.g., instead of using `Bool` define:
 
 ```
 type Transferability := Transferable | NonTransferable
