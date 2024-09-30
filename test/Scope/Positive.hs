@@ -269,5 +269,9 @@ tests =
     posTest
       "Proper formatting of import module path"
       $(mkRelDir "issue2737")
+      $(mkRelFile "main.juvix"),
+    posTest
+      "Ignore dot files"
+      $(mkRelDir "issue3068")
       $(mkRelFile "main.juvix")
   ]

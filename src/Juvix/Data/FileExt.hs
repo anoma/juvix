@@ -156,11 +156,14 @@ instance Show FileExt where
 instance Pretty FileExt where
   pretty = pretty . fileExtToText
 
+isHidden :: Path b File -> Bool
+isHidden = (== ".") . take 1 . toFilePath
+
 isJuvixOrJuvixMdFile :: Path b File -> Bool
 isJuvixOrJuvixMdFile = isJuvixFile .||. isJuvixMarkdownFile
 
 isJuvixFile :: Path b File -> Bool
-isJuvixFile = (== Just juvixFileExt) . fileExtension
+isJuvixFile = (not . isHidden) .&&. ((== Just juvixFileExt) . fileExtension)
 
 isJuvixMarkdownFile :: Path b File -> Bool
 isJuvixMarkdownFile p = case splitExtension p of
