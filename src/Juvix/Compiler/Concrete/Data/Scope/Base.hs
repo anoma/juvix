@@ -59,7 +59,6 @@ data ScoperState = ScoperState
   { -- | Local and top modules currently in scope - used to look up qualified symbols
     _scoperModules :: HashMap S.NameId ScopedModule,
     _scoperAlias :: HashMap S.NameId PreSymbolEntry,
-    _scoperScopedNameSignatures :: HashMap S.NameId (NameSignature 'Scoped),
     _scoperNameSignatures :: HashMap S.NameId (NameSignature 'Parsed),
     -- | Indexed by the inductive type. This is used for record updates
     _scoperRecordFields :: HashMap S.NameId RecordInfo,
