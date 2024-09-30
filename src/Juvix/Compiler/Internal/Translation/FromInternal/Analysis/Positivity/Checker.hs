@@ -202,16 +202,20 @@ computePolarities tab defs topOccurrences =
           unblock var new
 
     unblock :: forall r. (Members '[State Builder] r) => InductiveParam -> Polarity -> Sem r ()
-    unblock p newPol = do
-      b <- gets (^. builderBlocking)
-      let (triggered, rest) = partition isTriggered b
-      mapM_ runBlocking triggered
-      modify (set builderBlocking (increaseMinimum triggered ++ rest))
+    unblock p newPol = unblockGo
       where
-        increaseMinimum :: [Blocking] -> [Blocking]
+        unblockGo :: Sem r ()
+        unblockGo = do
+          b <- gets (^. builderBlocking)
+          whenJust (findAndRemove isTriggered b) $ \(triggered, rest) -> do
+            modify (set builderBlocking (maybeToList (increaseMinimum triggered) ++ rest))
+            runBlocking triggered
+            unblockGo
+
+        increaseMinimum :: Blocking -> Maybe Blocking
         increaseMinimum = case newPol of
-          PolarityNegative -> const []
-          PolarityStrictlyPositive -> map (set blockingUnblockerMinimum PolarityNegative)
+          PolarityNegative -> const Nothing
+          PolarityStrictlyPositive -> Just . set blockingUnblockerMinimum PolarityNegative
           PolarityUnused -> impossible
 
         isTriggered :: Blocking -> Bool

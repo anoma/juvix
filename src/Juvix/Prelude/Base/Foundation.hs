@@ -447,6 +447,20 @@ zip4Exact [] [] [] [] = []
 zip4Exact (x1 : t1) (x2 : t2) (x3 : t3) (x4 : t4) = (x1, x2, x3, x4) : zip4Exact t1 t2 t3 t4
 zip4Exact _ _ _ _ = error "zip4Exact"
 
+-- | Returns the first element that returns Just and the list with the remaining elements
+findJustAndRemove :: forall a b. (a -> Maybe b) -> [a] -> Maybe (b, [a])
+findJustAndRemove p = go []
+  where
+    go :: [a] -> [a] -> Maybe (b, [a])
+    go acc = \case
+      [] -> Nothing
+      x : xs -> case p x of
+        Just b -> Just (b, reverse acc ++ xs)
+        Nothing -> go (x : acc) xs
+
+findAndRemove :: (a -> Bool) -> [a] -> Maybe (a, [a])
+findAndRemove p = findJustAndRemove (\a -> guard (p a) $> a)
+
 --------------------------------------------------------------------------------
 -- NonEmpty
 --------------------------------------------------------------------------------
