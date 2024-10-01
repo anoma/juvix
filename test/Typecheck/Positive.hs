@@ -339,7 +339,11 @@ tests =
     posTest
       "Default argument with trait in signature"
       $(mkRelDir ".")
-      $(mkRelFile "issue2994.juvix")
+      $(mkRelFile "issue2994.juvix"),
+    posTest
+      "Termination crash because of empty permutation"
+      $(mkRelDir ".")
+      $(mkRelFile "3064.juvix")
   ]
     <> [ compilationTest t | t <- Compilation.tests
        ]
