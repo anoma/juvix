@@ -35,7 +35,8 @@ data BuilderState (s :: Stage) = BuilderState
     -- | maps to itself
     _stateSymbols :: HashMap Symbol (SymbolType s),
     _stateReverseClosedBlocks :: [NameBlock s],
-    _stateCurrentBlock :: [NameItem s]
+    -- | Items stored in reverse order
+    _stateCurrentBlockReverse :: [NameItem s]
   }
 
 makeLenses ''BuilderState
@@ -119,7 +120,7 @@ iniBuilderState =
       _stateNextIx = 0,
       _stateSymbols = mempty,
       _stateReverseClosedBlocks = [],
-      _stateCurrentBlock = mempty
+      _stateCurrentBlockReverse = mempty
     }
 
 fromBuilderState :: forall s. BuilderState s -> NameSignature s
@@ -129,7 +130,7 @@ fromBuilderState b =
     }
   where
     addCurrent :: [NameBlock s] -> [NameBlock s]
-    addCurrent = case (nonEmpty (b ^. stateCurrentBlock), b ^. stateCurrentImplicit) of
+    addCurrent = case (nonEmpty (reverse (b ^. stateCurrentBlockReverse)), b ^. stateCurrentImplicit) of
       (Just newBlock, Just i) -> (mkNameBlock newBlock i :)
       _ -> id
 
@@ -193,6 +194,7 @@ addSigArg a = case a ^. sigArgNames of
   SigArgNamesInstance {} -> addArg (ArgumentWildcard (Wildcard (getLoc a)))
   SigArgNames ns -> mapM_ addArg ns
   where
+    defaultType :: ExpressionType s
     defaultType = run (runReader (getLoc a) Gen.smallUniverseExpression)
 
     addArg :: Argument s -> Sem r ()
@@ -263,17 +265,17 @@ addArgument' impl mdef msym ty = do
                 _nameItemIndex = idx,
                 _nameItemType = ty
               }
-      modify' @(BuilderState s) (over (stateCurrentBlock) (itm :))
+      modify' @(BuilderState s) (over (stateCurrentBlockReverse) (itm :))
 
     startNewBlock :: Sem (Re s r) ()
     startNewBlock = do
-      curBlock <- gets @(BuilderState s) (^. stateCurrentBlock)
+      curBlock <- nonEmpty' . reverse <$> gets @(BuilderState s) (^. stateCurrentBlockReverse)
       mcurImpl <- gets @(BuilderState s) (^. stateCurrentImplicit)
       modify' @(BuilderState s) (set stateCurrentImplicit (Just impl))
-      modify' @(BuilderState s) (set stateCurrentBlock mempty)
+      modify' @(BuilderState s) (set stateCurrentBlockReverse mempty)
       modify' @(BuilderState s) (set stateNextIx 0)
       whenJust mcurImpl $ \curImpl ->
-        let newBlock = mkNameBlock (nonEmpty' curBlock) curImpl
+        let newBlock = mkNameBlock curBlock curImpl
          in modify' (over stateReverseClosedBlocks (newBlock :))
       addArgument' impl mdef msym ty
 
