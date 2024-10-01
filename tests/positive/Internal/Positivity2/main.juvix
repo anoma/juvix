@@ -9,13 +9,16 @@ type Phantom2 (H : Type) := phantom2 (Phantom H);
 type Box (A : Type) := box A;
 
 module M1;
-  type T1 (x y : Type) := mkT1 (x -> x) x;
+  type T1 (x y : Type) := mkT1 y (x -> x) x;
+  type T2 (x : (Type -> Type) -> Type) := mkT2 (x (T1 T));
 end;
 
 module M2;
+  type T1 (x : Type) := mkT1 (T2 x);
+
   type T2 (x : Type) := mkT2 (x -> T);
 
-  type T1 (x : Type) := mkT1 (T2 x);
+  -- type T3 := mkT3 (T1 T3);
 end;
 
 module M3;
@@ -37,9 +40,11 @@ module E3;
 end;
 
 module E5;
-  type Ghost1 (A : Type) := ghost1 (Ghost2 A);
+  type Ghost1 (A : Type) := ghost1 (Ghost2 ((Ghost1 (A -> A)) -> Ghost2 A));
 
-  type Ghost2 (A : Type) := ghost2 (Ghost1 A);
+  type Ghost2 (B : Type) := ghost2 Ok (Ghost1 B);
+
+  type Ok  := mkOk (Ghost1 (Ok -> Ok));
 end;
 
 module E6;

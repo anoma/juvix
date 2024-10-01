@@ -143,7 +143,7 @@ checkStrictlyPositive tbl mutual =
           PolarityUnused -> impossible
           PolarityStrictlyPositive -> return ()
           PolarityNonStrictlyPositive -> when (isMutual d) (output d)
-        mapM_ (uncurry goArg) (zipExact pols occ)
+        mapM_ (uncurry goArg) (zip pols occ)
       where
         getPolarities :: InductiveName -> [Polarity]
         getPolarities n = fromMaybe err (tbl ^. polarityTable . at (n ^. nameId))
@@ -157,14 +157,17 @@ localPolarity p = case p of
   PolarityNonStrictlyPositive -> local (p <>)
   PolarityStrictlyPositive -> local (p <>)
 
-computePolarities :: PolarityTable -> NonEmpty InductiveDef -> Occurrences -> HashMap InductiveParam Polarity
+computePolarities ::
+  PolarityTable ->
+  NonEmpty InductiveDef ->
+  Occurrences ->
+  HashMap InductiveParam Polarity
 computePolarities tab defs topOccurrences =
   (^. builderPolarities)
     . run
     . runReader PolarityStrictlyPositive
     . execState emptyBuilder
-    . go
-    $ topOccurrences
+    $ go topOccurrences
   where
     defsByName :: HashMap InductiveName InductiveDef
     defsByName = indexedByHash (^. inductiveName) defs
@@ -257,15 +260,19 @@ computePolarities tab defs topOccurrences =
               }
       modify (over builderBlocking (b :))
 
-    goInductive :: (Members '[State Builder, Reader Polarity] r) => InductiveName -> [Occurrences] -> Sem r ()
+    goInductive ::
+      (Members '[State Builder, Reader Polarity] r) =>
+      InductiveName ->
+      [Occurrences] ->
+      Sem r ()
     goInductive d os = do
       case tab ^. polarityTable . at (d ^. nameId) of
-        Just pols ->
-          forM_ (zipExact pols os) $ \(pol :: Polarity, o :: Occurrences) -> do
+        Just (pols :: [Polarity]) ->
+          forM_ (zip pols os) $ \(pol :: Polarity, o :: Occurrences) -> do
             localPolarity pol (go o)
         Nothing -> do
           pols :: [(InductiveParam, Maybe Polarity)] <- getInductivePolarities d
-          forM_ (zipExact pols os) $ \((p :: InductiveParam, mpol :: Maybe Polarity), o :: Occurrences) -> do
+          forM_ (zip pols os) $ \((p :: InductiveParam, mpol :: Maybe Polarity), o :: Occurrences) ->
             case mpol of
               Nothing -> block PolarityStrictlyPositive p o
               Just pol -> case pol of
