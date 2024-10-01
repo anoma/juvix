@@ -343,7 +343,7 @@ tests =
     posTest
       "Termination crash because of empty permutation"
       $(mkRelDir ".")
-      $(mkRelFile "3064.juvix")
+      $(mkRelFile "issue3064.juvix")
   ]
     <> [ compilationTest t | t <- Compilation.tests
        ]
