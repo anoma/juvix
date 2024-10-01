@@ -11,11 +11,13 @@ import Juvix.Compiler.Internal.Data.NameDependencyInfo
 import Juvix.Compiler.Internal.Data.TypedHole
 import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Internal.Pretty.Options
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.Occurrences
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.CheckerNew.Arity qualified as New
 import Juvix.Compiler.Store.Internal.Data.InfoTable
 import Juvix.Data.CodeAnn
 import Juvix.Data.Keyword.All qualified as Kw
 import Juvix.Prelude
+import Prettyprinter qualified as PP
 
 doc :: (PrettyCode c) => Options -> c -> Doc Ann
 doc opts =
@@ -407,6 +409,35 @@ instance PrettyCode TypedHole where
     vars <- ppCode _typedHoleLocalVars
     return (h <+> kwColon <+> ty <> kwAt <> vars)
 
+instance PrettyCode Polarity where
+  ppCode = return . annotate AnnKeyword . pretty
+
+instance (PrettyCode k, PrettyCode v) => PrettyCode (HashMap k v) where
+  ppCode m = do
+    res <- forM (HashMap.toList m) $ \(k, v) -> do
+      k' <- ppCode k
+      v' <- ppCode v
+      return (k' <+> "↦" <+> v')
+    return (bracesEncloseIndent res)
+
+instance PrettyCode AppLhs where
+  ppCode = \case
+    AppVar v -> ppCode v
+    AppAxiom v -> ppCode v
+    AppInductive v -> ppCode v
+
+instance PrettyCode FunctionSide where
+  ppCode = return . annotate AnnKeyword . pretty
+
+instance PrettyCode Occurrences where
+  ppCode Occurrences {..} = do
+    ps <- ppCode _occurrences
+    return
+      ( bracesEncloseIndent
+          [ header "occurrences" <+> kwAssign <+> ps
+          ]
+      )
+
 instance PrettyCode InfoTable where
   ppCode tbl = do
     inds <- ppCode (HashMap.keys (tbl ^. infoInductives))
@@ -462,6 +493,15 @@ instance (PrettyCode a) => PrettyCode (Maybe a) where
   ppCode = \case
     Nothing -> return "Nothing"
     Just p -> ("Just" <+>) <$> ppCode p
+
+bracesEncloseIndent :: forall l ann. (Foldable l) => l (Doc ann) -> Doc ann
+bracesEncloseIndent ls =
+  PP.group $
+    "{"
+      <> line'
+      <> indent' (concatWith (\x y -> x <> ";" <> line <> y) ls)
+      <> line'
+      <> "}"
 
 tuple :: [Doc ann] -> Doc ann
 tuple = encloseSep "(" ")" ", "

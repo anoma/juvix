@@ -1,251 +1,283 @@
-module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.Checker where
+module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.Checker
+  ( checkPositivity,
+  )
+where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Internal.Data.InfoTable
 import Juvix.Compiler.Internal.Extra
-import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.Error
+import Juvix.Compiler.Internal.Pretty
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.ConstructorArg
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.Occurrences
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Inference
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.ResultBuilder
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error
-import Juvix.Compiler.Pipeline.EntryPoint qualified as E
 import Juvix.Prelude hiding (fromEither)
 
-type NegativeTypeParameters = HashSet VarName
-
-type CheckPositivityEffects r =
-  Members
-    '[ Reader E.EntryPoint,
-       Reader InfoTable,
-       Error TypeCheckerError,
-       Inference,
-       State NegativeTypeParameters
-     ]
-    r
-
-data CheckPositivityArgs = CheckPositivityArgs
-  { _checkPositivityArgsInductive :: InductiveInfo,
-    _checkPositivityArgsConstructorName :: Name,
-    _checkPositivityArgsInductiveName :: Name,
-    _checkPositivityArgsRecursionLimit :: Int,
-    _checkPositivityArgsErrorReference :: Maybe Expression,
-    _checkPositivityArgsTypeOfConstructorArg :: Expression
+data Builder = Builder
+  { _builderPolarities :: HashMap InductiveParam Polarity,
+    _builderBlocking :: [Blocking]
   }
 
-makeLenses ''CheckPositivityArgs
+data Blocking = Blocking
+  { _blockingContext :: Polarity,
+    _blockingUnblocker :: InductiveParam,
+    -- | The unblocker has to have at least this polarity to unblock
+    _blockingUnblockerMinimum :: Polarity,
+    _blockingOccurrences :: Occurrences
+  }
+
+makeLenses ''Blocking
+makeLenses ''Builder
+
+emptyBuilder :: Builder
+emptyBuilder =
+  Builder
+    { _builderPolarities = mempty,
+      _builderBlocking = mempty
+    }
+
+functionSidePolarity :: FunctionSide -> Polarity
+functionSidePolarity = \case
+  FunctionLeft -> PolarityNonStrictlyPositive
+  FunctionRight -> PolarityStrictlyPositive
 
 checkPositivity ::
   forall r.
-  (CheckPositivityEffects r) =>
-  InductiveInfo ->
+  ( Members
+      '[ Reader InfoTable,
+         Error TypeCheckerError,
+         ResultBuilder,
+         Inference
+       ]
+      r
+  ) =>
+  Bool ->
+  MutualBlock ->
   Sem r ()
-checkPositivity indInfo = do
-  unlessM (asks (^. E.entryPointNoPositivity)) $
-    forM_ (indInfo ^. inductiveInfoConstructors) $ \ctorName -> do
-      ctor <- asks (fromJust . HashMap.lookup ctorName . (^. infoConstructors))
-      unless (indInfo ^. inductiveInfoPositive) $ do
-        numInductives <- HashMap.size <$> asks (^. infoInductives)
-        forM_
-          (constructorArgs (ctor ^. constructorInfoType))
-          $ \typeOfConstr ->
-            checkStrictlyPositiveOccurrences
-              ( CheckPositivityArgs
-                  { _checkPositivityArgsInductive = indInfo,
-                    _checkPositivityArgsConstructorName = ctorName,
-                    _checkPositivityArgsInductiveName = indInfo ^. inductiveInfoName,
-                    _checkPositivityArgsRecursionLimit = numInductives,
-                    _checkPositivityArgsErrorReference = Nothing,
-                    _checkPositivityArgsTypeOfConstructorArg = typeOfConstr ^. paramType
-                  }
-              )
+checkPositivity noPositivityFlag mut = do
+  let ldefs :: [InductiveDef] =
+        mut
+          ^.. mutualStatements
+            . each
+            . _StatementInductive
 
-checkStrictlyPositiveOccurrences ::
-  forall r.
-  (CheckPositivityEffects r) =>
-  CheckPositivityArgs ->
-  Sem r ()
-checkStrictlyPositiveOccurrences p = do
-  typeOfConstrArg <- strongNormalize_ (p ^. checkPositivityArgsTypeOfConstructorArg)
-  goExpression False typeOfConstrArg
+  whenJust (nonEmpty ldefs) $ \defs -> do
+    args :: [ConstructorArg] <-
+      concatMapM
+        (strongNormalize >=> mkConstructorArg)
+        ( defs
+            ^.. each
+              . inductiveConstructors
+              . each
+              . inductiveConstructorType
+        )
+    poltab <- (^. typeCheckingTablesPolarityTable) <$> getCombinedTables
+    let occ :: Occurrences = mkOccurrences args
+        inferredPolarities = computePolarities poltab defs occ
+    forM_ defs $ \def -> do
+      let params :: [InductiveParam] = def ^.. inductiveParameters . each . inductiveParamName
+          getPol p = fromMaybe PolarityUnused (inferredPolarities ^. at p)
+          polarities :: [Polarity] = map getPol params
+          defName = def ^. inductiveName
+      addPolarities (defName ^. nameId) polarities
+    poltab' <- (^. typeCheckingTablesPolarityTable) <$> getCombinedTables
+    let names :: NonEmpty InductiveName = (^. inductiveName) <$> defs
+    unless noPositivityFlag $ do
+      let neg = checkStrictlyPositive poltab' names occ
+          markedPositive d = fromJust (find ((== d) . (^. inductiveName)) defs) ^. inductivePositive
+      whenJust (nonEmpty (filter (not . markedPositive) neg)) $ \negTys ->
+        throw $
+          ErrNonStrictlyPositive
+            NonStrictlyPositive
+              { _nonStrictlyPositiveOccurrences = negTys
+              }
+
+-- NOTE we conservatively assume that axioms have all variables in negative positions
+axiomPolarity :: Polarity
+axiomPolarity = PolarityNonStrictlyPositive
+
+-- | Returns the list of non-strictly positive types
+checkStrictlyPositive ::
+  PolarityTable ->
+  NonEmpty InductiveName ->
+  Occurrences ->
+  [InductiveName]
+checkStrictlyPositive tbl mutual =
+  run
+    . execOutputList
+    . runReader PolarityStrictlyPositive
+    . go
   where
-    indInfo = p ^. checkPositivityArgsInductive
-    ctorName = p ^. checkPositivityArgsConstructorName
-    name = p ^. checkPositivityArgsInductiveName
-    recLimit = p ^. checkPositivityArgsRecursionLimit
-    ref = p ^. checkPositivityArgsErrorReference
+    go :: forall r'. (Members '[Output InductiveName, Reader Polarity] r') => Occurrences -> Sem r' ()
+    go occ = forM_ (HashMap.toList (occ ^. occurrences)) (uncurry goApp)
 
-    indName :: Name
-    indName = indInfo ^. inductiveInfoName
+    mutualSet :: HashSet InductiveName
+    mutualSet = hashSet mutual
 
-    {- The following `go` function determines if there is any negative
-     occurrence of the symbol `name` in the given expression. The `inside` flag
-     used below indicates whether the current search is performed on the left of
-     an inner arrow or not.
-    -}
-    goExpression :: Bool -> Expression -> Sem r ()
-    goExpression inside expr = case expr of
-      ExpressionApplication tyApp -> goApp tyApp
-      ExpressionCase l -> goCase l
-      ExpressionFunction (Function l r) -> goLeft (l ^. paramType) >> go r
-      ExpressionHole {} -> return ()
-      ExpressionInstanceHole {} -> return ()
-      ExpressionIden i -> goIden i
-      ExpressionLambda l -> goLambda l
-      ExpressionLet l -> goLet l
-      ExpressionLiteral {} -> return ()
-      ExpressionSimpleLambda l -> goSimpleLambda l
-      ExpressionUniverse {} -> return ()
+    isMutual :: InductiveName -> Bool
+    isMutual d = HashSet.member d mutualSet
+
+    goArg ::
+      forall r'.
+      (Members '[Output InductiveName, Reader Polarity] r') =>
+      Polarity ->
+      Occurrences ->
+      Sem r' ()
+    goArg p occ = localPolarity p (go occ)
+
+    goApp ::
+      forall r'.
+      (Members '[Output InductiveName, Reader Polarity] r') =>
+      (FunctionSide, AppLhs) ->
+      [Occurrences] ->
+      Sem r' ()
+    goApp (side, lhs) occ = local (functionSidePolarity side <>) $ case lhs of
+      AppVar {} -> local (const PolarityNonStrictlyPositive) (mapM_ go occ)
+      AppAxiom {} -> local (<> axiomPolarity) (mapM_ go occ)
+      AppInductive d -> do
+        ctx <- ask
+        let pols = getPolarities d
+        case ctx of
+          PolarityUnused -> impossible
+          PolarityStrictlyPositive -> return ()
+          PolarityNonStrictlyPositive -> when (isMutual d) (output d)
+        mapM_ (uncurry goArg) (zip pols occ)
       where
-        go :: Expression -> Sem r ()
-        go = goExpression inside
-
-        goLeft :: Expression -> Sem r ()
-        goLeft = goExpression True
-
-        goCase :: Case -> Sem r ()
-        goCase l = do
-          go (l ^. caseExpression)
-          mapM_ goCaseBranch (l ^. caseBranches)
-
-        goSideIfBranch :: SideIfBranch -> Sem r ()
-        goSideIfBranch b = do
-          go (b ^. sideIfBranchCondition)
-          go (b ^. sideIfBranchBody)
-
-        goSideIfs :: SideIfs -> Sem r ()
-        goSideIfs s = do
-          mapM_ goSideIfBranch (s ^. sideIfBranches)
-          mapM_ go (s ^. sideIfElse)
-
-        goCaseBranchRhs :: CaseBranchRhs -> Sem r ()
-        goCaseBranchRhs = \case
-          CaseBranchRhsExpression e -> go e
-          CaseBranchRhsIf s -> goSideIfs s
-
-        goCaseBranch :: CaseBranch -> Sem r ()
-        goCaseBranch b = goCaseBranchRhs (b ^. caseBranchRhs)
-
-        goLet :: Let -> Sem r ()
-        goLet l = do
-          go (l ^. letExpression)
-          mapM_ goLetClause (l ^. letClauses)
-
-        goLetClause :: LetClause -> Sem r ()
-        goLetClause = \case
-          LetFunDef f -> goFunctionDef f
-          LetMutualBlock b -> goMutualBlockLet b
-
-        goMutualBlockLet :: MutualBlockLet -> Sem r ()
-        goMutualBlockLet b = mapM_ goFunctionDef (b ^. mutualLet)
-
-        goFunctionDef :: FunctionDef -> Sem r ()
-        goFunctionDef d = do
-          go (d ^. funDefType)
-          go (d ^. funDefBody)
-
-        goSimpleLambda :: SimpleLambda -> Sem r ()
-        goSimpleLambda (SimpleLambda (SimpleBinder _ lamVarTy) lamBody) = do
-          go lamVarTy
-          go lamBody
-
-        goLambda :: Lambda -> Sem r ()
-        goLambda l = mapM_ goClause (l ^. lambdaClauses)
+        getPolarities :: InductiveName -> [Polarity]
+        getPolarities n = fromMaybe err (tbl ^. polarityTable . at (n ^. nameId))
           where
-            goClause :: LambdaClause -> Sem r ()
-            goClause (LambdaClause _ b) = go b
+            err :: a
+            err = impossibleError ("Didn't find polarities for inductive " <> ppTrace n)
 
-        goIden :: Iden -> Sem r ()
-        goIden = \case
-          IdenInductive ty' ->
-            when (inside && name == ty') (throwNegativePositonError expr)
-          IdenVar name'
-            | not inside -> return ()
-            | name == name' -> throwNegativePositonError expr
-            | name' `elem` indInfo ^.. inductiveInfoParameters . each . inductiveParamName -> modify (HashSet.insert name')
-            | otherwise -> return ()
-          _ -> return ()
+localPolarity :: (Members '[Reader Polarity] r) => Polarity -> Sem r () -> Sem r ()
+localPolarity p = case p of
+  PolarityUnused -> const (return ())
+  PolarityNonStrictlyPositive -> local (p <>)
+  PolarityStrictlyPositive -> local (p <>)
 
-        goApp :: Application -> Sem r ()
-        goApp tyApp = do
-          let (hdExpr, args) = unfoldApplication tyApp
-          case hdExpr of
-            ax@(ExpressionIden IdenAxiom {}) -> do
-              when (isJust $ find (varOrInductiveInExpression name) args) $
-                throwTypeAsArgumentOfBoundVarError ax
-            var@(ExpressionIden IdenVar {}) -> do
-              when (isJust $ find (varOrInductiveInExpression name) args) $
-                throwTypeAsArgumentOfBoundVarError var
-            ExpressionIden (IdenInductive ty') -> do
-              when (inside && name == ty') (throwNegativePositonError expr)
-              indInfo' <- lookupInductive ty'
-              {- We now need to know whether `name` negatively occurs at
-               `indTy'` or not. The way to know is by checking that the type ty'
-               preserves the positivity condition, i.e., its type parameters are
-               no negative.
-              -}
-              let paramsTy' = indInfo' ^. inductiveInfoParameters
-              goInductiveApp indInfo' (zip paramsTy' (toList args))
-            _ -> return ()
+computePolarities ::
+  PolarityTable ->
+  NonEmpty InductiveDef ->
+  Occurrences ->
+  HashMap InductiveParam Polarity
+computePolarities tab defs topOccurrences =
+  (^. builderPolarities)
+    . run
+    . runReader PolarityStrictlyPositive
+    . execState emptyBuilder
+    $ go topOccurrences
+  where
+    defsByName :: HashMap InductiveName InductiveDef
+    defsByName = indexedByHash (^. inductiveName) defs
 
-        goInductiveApp :: InductiveInfo -> [(InductiveParameter, Expression)] -> Sem r ()
-        goInductiveApp indInfo' = \case
-          [] -> return ()
-          (InductiveParameter pName' _ty', tyArg) : ps -> do
-            negParms :: NegativeTypeParameters <- get
-            when (varOrInductiveInExpression name tyArg) $ do
-              when
-                (HashSet.member pName' negParms)
-                (throwNegativePositonError tyArg)
-              when (recLimit > 0) $
-                forM_ (indInfo' ^. inductiveInfoConstructors) $ \ctorName' -> do
-                  ctorType' <- lookupConstructorType ctorName'
-                  let errorRef = fromMaybe tyArg ref
-                      args = constructorArgs ctorType'
-                  mapM_
-                    ( \tyConstr' ->
-                        checkStrictlyPositiveOccurrences
-                          CheckPositivityArgs
-                            { _checkPositivityArgsInductive = indInfo',
-                              _checkPositivityArgsConstructorName = ctorName',
-                              _checkPositivityArgsInductiveName = pName',
-                              _checkPositivityArgsRecursionLimit = recLimit - 1,
-                              _checkPositivityArgsErrorReference = Just errorRef,
-                              _checkPositivityArgsTypeOfConstructorArg = tyConstr' ^. paramType
-                            }
-                    )
-                    args
-            goInductiveApp indInfo' ps
+    getDef :: InductiveName -> InductiveDef
+    getDef d = fromJust (defsByName ^. at d)
 
-    throwNegativePositonError :: Expression -> Sem r ()
-    throwNegativePositonError expr = do
-      let errLoc = fromMaybe expr ref
-      throw
-        . ErrNonStrictlyPositive
-        . ErrTypeInNegativePosition
-        $ TypeInNegativePosition
-          { _typeInNegativePositionType = indName,
-            _typeInNegativePositionConstructor = ctorName,
-            _typeInNegativePositionArgument = errLoc
-          }
+    -- Gets the current polarities of an inductive definition in the current mutual block
+    getInductivePolarities ::
+      (Members '[State Builder] r) =>
+      InductiveName ->
+      Sem r [(InductiveParam, Maybe Polarity)]
+    getInductivePolarities d = do
+      b <- get
+      let params = getDef d ^. inductiveParameters
+      return
+        [ (name, b ^. builderPolarities . at name)
+          | p :: InductiveParameter <- params,
+            let name = p ^. inductiveParamName
+        ]
 
-    throwTypeAsArgumentOfBoundVarError :: Expression -> Sem r ()
-    throwTypeAsArgumentOfBoundVarError expr = do
-      let errLoc = fromMaybe expr ref
-      throw
-        . ErrNonStrictlyPositive
-        . ErrTypeAsArgumentOfBoundVar
-        $ TypeAsArgumentOfBoundVar
-          { _typeAsArgumentOfBoundVarType = indName,
-            _typeAsArgumentOfBoundVarConstructor = ctorName,
-            _typeAsArgumentOfBoundVarReference = errLoc
-          }
+    go :: forall r. (Members '[State Builder, Reader Polarity] r) => Occurrences -> Sem r ()
+    go o = do
+      sequence_
+        [ addPolarity param (functionSidePolarity side)
+          | ((side, AppVar param), _) <- HashMap.toList (o ^. occurrences)
+        ]
+      forM_ (HashMap.toList (o ^. occurrences)) (uncurry goApp)
+      where
+        addPolarity :: InductiveParam -> Polarity -> Sem r ()
+        addPolarity var p = do
+          newPol <- (p <>) <$> ask
+          modify (over (builderPolarities . at var) (Just . maybe newPol (newPol <>)))
+          unblock var newPol
 
-varOrInductiveInExpression :: Name -> Expression -> Bool
-varOrInductiveInExpression n = \case
-  ExpressionIden (IdenVar var) -> n == var
-  ExpressionIden (IdenInductive ty) -> n == ty
-  ExpressionApplication (Application l r _) ->
-    varOrInductiveInExpression n l || varOrInductiveInExpression n r
-  ExpressionFunction (Function l r) ->
-    varOrInductiveInExpression n (l ^. paramType)
-      || varOrInductiveInExpression n r
-  _ -> False
+    unblock :: forall r. (Members '[State Builder] r) => InductiveParam -> Polarity -> Sem r ()
+    unblock p newPol = unblockGo
+      where
+        unblockGo :: Sem r ()
+        unblockGo = do
+          b <- gets (^. builderBlocking)
+          whenJust (findAndRemove isTriggered b) $ \(triggered, rest) -> do
+            modify (set builderBlocking (maybeToList (increaseMinimum triggered) ++ rest))
+            runBlocking triggered
+            unblockGo
+
+        increaseMinimum :: Blocking -> Maybe Blocking
+        increaseMinimum = case newPol of
+          PolarityNonStrictlyPositive -> const Nothing
+          PolarityStrictlyPositive -> Just . set blockingUnblockerMinimum PolarityNonStrictlyPositive
+          PolarityUnused -> impossible
+
+        isTriggered :: Blocking -> Bool
+        isTriggered b = (b ^. blockingUnblockerMinimum <= newPol) && (b ^. blockingUnblocker == p)
+
+        runBlocking :: Blocking -> Sem r ()
+        runBlocking b = runReader (b ^. blockingContext) (go (b ^. blockingOccurrences))
+
+    goApp ::
+      forall r.
+      (Members '[State Builder, Reader Polarity] r) =>
+      (FunctionSide, AppLhs) ->
+      [Occurrences] ->
+      Sem r ()
+    goApp (side, lhs) os = local (functionSidePolarity side <>) $ case lhs of
+      AppVar {} -> goVarArgs os
+      AppAxiom {} -> goAxiomArgs os
+      AppInductive a -> goInductive a os
+
+    goAxiomArgs :: (Members '[State Builder, Reader Polarity] r) => [Occurrences] -> Sem r ()
+    goAxiomArgs os = local (<> axiomPolarity) (mapM_ go os)
+
+    goVarArgs :: (Members '[State Builder, Reader Polarity] r) => [Occurrences] -> Sem r ()
+    goVarArgs os = local (const PolarityNonStrictlyPositive) (mapM_ go os)
+
+    block ::
+      (Members '[State Builder, Reader Polarity] r) =>
+      Polarity ->
+      InductiveParam ->
+      Occurrences ->
+      Sem r ()
+    block minPol param o = do
+      ctx <- ask
+      let b =
+            Blocking
+              { _blockingContext = ctx,
+                _blockingUnblocker = param,
+                _blockingOccurrences = o,
+                _blockingUnblockerMinimum = minPol
+              }
+      modify (over builderBlocking (b :))
+
+    goInductive ::
+      (Members '[State Builder, Reader Polarity] r) =>
+      InductiveName ->
+      [Occurrences] ->
+      Sem r ()
+    goInductive d os = do
+      case tab ^. polarityTable . at (d ^. nameId) of
+        Just (pols :: [Polarity]) ->
+          forM_ (zip pols os) $ \(pol :: Polarity, o :: Occurrences) -> do
+            localPolarity pol (go o)
+        Nothing -> do
+          pols :: [(InductiveParam, Maybe Polarity)] <- getInductivePolarities d
+          forM_ (zip pols os) $ \((p :: InductiveParam, mpol :: Maybe Polarity), o :: Occurrences) ->
+            case mpol of
+              Nothing -> block PolarityStrictlyPositive p o
+              Just pol -> case pol of
+                PolarityUnused -> impossible
+                PolarityStrictlyPositive -> do
+                  block PolarityNonStrictlyPositive p o
+                  localPolarity PolarityStrictlyPositive (go o)
+                PolarityNonStrictlyPositive -> localPolarity PolarityNonStrictlyPositive (go o)

@@ -1,0 +1,5 @@
+module box;
+
+type Box (A : Type) := mkBox A;
+
+type P (A : Type) := mkP : (Box (P A) -> P A) -> P A;

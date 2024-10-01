@@ -23,6 +23,7 @@ module Juvix.Data
     module Juvix.Data.DependencyInfo,
     module Juvix.Data.TopModulePathKey,
     module Juvix.Data.Keyword,
+    module Juvix.Data.Polarity,
   )
 where
 
@@ -41,6 +42,7 @@ import Juvix.Data.Loc
 import Juvix.Data.Logger
 import Juvix.Data.NameId qualified
 import Juvix.Data.NumThreads
+import Juvix.Data.Polarity
 import Juvix.Data.Pragmas
 import Juvix.Data.Processed
 import Juvix.Data.ProjectionKind

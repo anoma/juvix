@@ -57,12 +57,21 @@ testNoPositivityFlag N.NegTest {..} =
 negPositivityTests :: [N.NegTest]
 negPositivityTests = N.negPositivityTests
 
+-- | Positive tests for the positivity checker
 testWellDefinedInductiveDefs :: [PosTest]
 testWellDefinedInductiveDefs =
   [ posTest
       "Rose tree definition is well-defined"
       $(mkRelDir "Internal/Positivity")
-      $(mkRelFile "RoseTree.juvix")
+      $(mkRelFile "RoseTree.juvix"),
+    posTest
+      "Mutually recursive types and phantom types"
+      $(mkRelDir "Internal/Positivity2")
+      $(mkRelFile "main.juvix"),
+    posTest
+      "Issue 3048"
+      $(mkRelDir "issue3048")
+      $(mkRelFile "main.juvix")
   ]
 
 testPositivityKeyword :: [PosTest]

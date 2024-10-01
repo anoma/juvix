@@ -622,6 +622,7 @@ strongNormalize'' ty = do
                 { _typeCheckingTablesCoercionTable = mempty,
                   _typeCheckingTablesInstanceTable = mempty,
                   _typeCheckingTablesTypesTable = mempty,
+                  _typeCheckingTablesPolarityTable = mempty,
                   _typeCheckingTablesFunctionsTable = ftab
                 }
           }

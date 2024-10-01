@@ -1,7 +1,6 @@
 module Typecheck.Negative where
 
 import Base
-import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.Error
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error
 
 type FailMsg = String
@@ -268,48 +267,22 @@ tests =
 
 negPositivityTests :: [NegTest]
 negPositivityTests =
-  [ negTest "E1" $(mkRelDir "Internal/Positivity") $(mkRelFile "E1.juvix") $
-      \case
-        ErrNonStrictlyPositive ErrTypeInNegativePosition {} -> Nothing
-        _ -> wrongError,
-    negTest "E2" $(mkRelDir "Internal/Positivity") $(mkRelFile "E2.juvix") $
-      \case
-        ErrNonStrictlyPositive (ErrTypeInNegativePosition {}) -> Nothing
-        _ -> wrongError,
-    negTest "E3" $(mkRelDir "Internal/Positivity") $(mkRelFile "E3.juvix") $
-      \case
-        ErrNonStrictlyPositive (ErrTypeInNegativePosition {}) -> Nothing
-        _ -> wrongError,
-    negTest "E4" $(mkRelDir "Internal/Positivity") $(mkRelFile "E4.juvix") $
-      \case
-        ErrNonStrictlyPositive (ErrTypeInNegativePosition {}) -> Nothing
-        _ -> wrongError,
-    negTest "E5" $(mkRelDir "Internal/Positivity") $(mkRelFile "E5.juvix") $
-      \case
-        ErrNonStrictlyPositive (ErrTypeInNegativePosition {}) -> Nothing
-        _ -> wrongError,
-    negTest "E6" $(mkRelDir "Internal/Positivity") $(mkRelFile "E6.juvix") $
-      \case
-        ErrNonStrictlyPositive (ErrTypeInNegativePosition {}) -> Nothing
-        _ -> wrongError,
-    negTest "E7" $(mkRelDir "Internal/Positivity") $(mkRelFile "E7.juvix") $
-      \case
-        ErrNonStrictlyPositive (ErrTypeInNegativePosition {}) -> Nothing
-        _ -> wrongError,
-    negTest "E8" $(mkRelDir "Internal/Positivity") $(mkRelFile "E8.juvix") $
-      \case
-        ErrNonStrictlyPositive (ErrTypeInNegativePosition {}) -> Nothing
-        _ -> wrongError,
-    negTest "E9" $(mkRelDir "Internal/Positivity") $(mkRelFile "E9.juvix") $
-      \case
-        ErrNonStrictlyPositive (ErrTypeInNegativePosition {}) -> Nothing
-        _ -> wrongError,
-    negTest "E10 uses type synonym" $(mkRelDir "Internal/Positivity") $(mkRelFile "E10.juvix") $
-      \case
-        ErrNonStrictlyPositive (ErrTypeInNegativePosition {}) -> Nothing
-        _ -> wrongError,
-    negTest "E11 uses type synonym" $(mkRelDir "Internal/Positivity") $(mkRelFile "E11.juvix") $
-      \case
-        ErrNonStrictlyPositive (ErrTypeInNegativePosition {}) -> Nothing
-        _ -> wrongError
+  [ mk "E1" $(mkRelFile "E1.juvix"),
+    mk "E2" $(mkRelFile "E2.juvix"),
+    mk "E3" $(mkRelFile "E3.juvix"),
+    mk "E4" $(mkRelFile "E4.juvix"),
+    mk "E5" $(mkRelFile "E5.juvix"),
+    mk "E6" $(mkRelFile "E6.juvix"),
+    mk "E7" $(mkRelFile "E7.juvix"),
+    mk "E8" $(mkRelFile "E8.juvix"),
+    mk "E9" $(mkRelFile "E9.juvix"),
+    mk "E10 uses type synonym" $(mkRelFile "E10.juvix"),
+    mk "E11 uses type synonym" $(mkRelFile "E11.juvix"),
+    mk "Box left hand side" $(mkRelFile "box.juvix")
   ]
+  where
+    mk :: String -> Path Rel File -> NegTest
+    mk testname testfile = negTest testname $(mkRelDir "Internal/Positivity") testfile $
+      \case
+        ErrNonStrictlyPositive NonStrictlyPositive {} -> Nothing
+        _ -> wrongError

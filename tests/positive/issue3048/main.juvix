@@ -1,0 +1,16 @@
+module main;
+
+import Other;
+
+type AVLTree (A : Type) :=
+  node (AVLTree A)
+       (AVLTree A)
+       (AVLTree A)
+       (AVLTree A)
+       (AVLTree A)
+       (AVLTree A)
+       (AVLTree A)
+       (AVLTree A)
+       (AVLTree A);
+
+type Foo := mkFoo (AVLTree Foo);

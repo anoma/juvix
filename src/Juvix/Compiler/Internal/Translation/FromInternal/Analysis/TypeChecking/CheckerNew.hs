@@ -131,7 +131,7 @@ checkCoercionCycles ::
   (Members '[ResultBuilder, Error TypeCheckerError] r) =>
   Sem r ()
 checkCoercionCycles = do
-  ctab <- getCombinedCoercionTable
+  ctab <- (^. typeCheckingTablesCoercionTable) <$> getCombinedTables
   let s = toList $ cyclicCoercions ctab
   whenJust (nonEmpty s) $
     throw
@@ -151,10 +151,7 @@ checkModule ::
   Module ->
   Sem r Module
 checkModule Module {..} = runReader (mempty @InsertedArgsStack) $ do
-  _moduleBody' <-
-    evalState (mempty :: NegativeTypeParameters)
-      . checkModuleBody
-      $ _moduleBody
+  _moduleBody' <- checkModuleBody _moduleBody
   return
     Module
       { _moduleBody = _moduleBody',
@@ -164,7 +161,7 @@ checkModule Module {..} = runReader (mempty @InsertedArgsStack) $ do
       }
 
 checkModuleBody ::
-  (Members '[HighlightBuilder, Reader BuiltinsTable, Reader EntryPoint, State NegativeTypeParameters, Reader InfoTable, Error TypeCheckerError, NameIdGen, ResultBuilder, Termination, Reader InsertedArgsStack] r) =>
+  (Members '[HighlightBuilder, Reader BuiltinsTable, Reader EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, ResultBuilder, Termination, Reader InsertedArgsStack] r) =>
   ModuleBody ->
   Sem r ModuleBody
 checkModuleBody ModuleBody {..} = do
@@ -180,14 +177,14 @@ checkImport :: Import -> Sem r Import
 checkImport = return
 
 checkMutualBlock ::
-  (Members '[HighlightBuilder, Reader BuiltinsTable, Reader EntryPoint, State NegativeTypeParameters, Reader InfoTable, Error TypeCheckerError, NameIdGen, ResultBuilder, Termination, Reader InsertedArgsStack] r) =>
+  (Members '[HighlightBuilder, Reader BuiltinsTable, Reader EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, ResultBuilder, Termination, Reader InsertedArgsStack] r) =>
   MutualBlock ->
   Sem r MutualBlock
 checkMutualBlock s = runReader emptyLocalVars (checkTopMutualBlock s)
 
 checkInductiveDef ::
   forall r.
-  (Members '[HighlightBuilder, Reader BuiltinsTable, Reader EntryPoint, Reader InfoTable, ResultBuilder, Error TypeCheckerError, NameIdGen, State NegativeTypeParameters, Termination, Output TypedHole, Output CastHole, Reader InsertedArgsStack, Reader LocalVars] r) =>
+  (Members '[HighlightBuilder, Reader BuiltinsTable, Reader EntryPoint, Reader InfoTable, ResultBuilder, Error TypeCheckerError, NameIdGen, Termination, Output TypedHole, Output CastHole, Reader InsertedArgsStack, Reader LocalVars] r) =>
   InductiveDef ->
   Sem r InductiveDef
 checkInductiveDef InductiveDef {..} = runInferenceDef $ do
@@ -209,7 +206,6 @@ checkInductiveDef InductiveDef {..} = runInferenceDef $ do
               _inductivePragmas,
               _inductiveDocComment
             }
-    checkPositivity (inductiveInfoFromInductiveDef d)
     return d
   where
     checkParams :: Sem (Inference ': r) [(Name, Expression)]
@@ -249,11 +245,33 @@ checkInductiveDef InductiveDef {..} = runInferenceDef $ do
             )
 
 checkTopMutualBlock ::
-  (Members '[HighlightBuilder, Reader BuiltinsTable, State NegativeTypeParameters, Reader EntryPoint, Reader LocalVars, Reader InfoTable, Error TypeCheckerError, NameIdGen, ResultBuilder, Termination, Reader InsertedArgsStack] r) =>
+  (Members '[HighlightBuilder, Reader BuiltinsTable, Reader EntryPoint, Reader LocalVars, Reader InfoTable, Error TypeCheckerError, NameIdGen, ResultBuilder, Termination, Reader InsertedArgsStack] r) =>
   MutualBlock ->
   Sem r MutualBlock
 checkTopMutualBlock (MutualBlock ds) =
-  MutualBlock <$> runInferenceDefs (mapM checkMutualStatement ds)
+  MutualBlock
+    <$> runInferenceDefs
+      ( do
+          ls <- mapM checkMutualStatement ds
+          checkBlockPositivity (MutualBlock ls)
+          return ls
+      )
+
+checkBlockPositivity ::
+  ( Members
+      '[ Reader InfoTable,
+         Error TypeCheckerError,
+         ResultBuilder,
+         Reader EntryPoint,
+         Inference
+       ]
+      r
+  ) =>
+  MutualBlock ->
+  Sem r ()
+checkBlockPositivity m = do
+  noPos <- asks (^. entryPointNoPositivity)
+  checkPositivity noPos m
 
 resolveCastHoles ::
   forall a r.
@@ -286,7 +304,7 @@ resolveCastHoles s = do
     getNatTy = mkBuiltinInductive BuiltinNat
 
 checkMutualStatement ::
-  (Members '[HighlightBuilder, Reader BuiltinsTable, State NegativeTypeParameters, Reader EntryPoint, Inference, Reader LocalVars, Reader InfoTable, Error TypeCheckerError, NameIdGen, ResultBuilder, Termination, Reader InsertedArgsStack] r) =>
+  (Members '[HighlightBuilder, Reader BuiltinsTable, Reader EntryPoint, Inference, Reader LocalVars, Reader InfoTable, Error TypeCheckerError, NameIdGen, ResultBuilder, Termination, Reader InsertedArgsStack] r) =>
   MutualStatement ->
   Sem r MutualStatement
 checkMutualStatement = \case
@@ -395,7 +413,7 @@ checkInstanceType FunctionDef {..} = do
       tab <- ask
       unless (isTrait tab _instanceInfoInductive) $
         throw (ErrTargetNotATrait (TargetNotATrait _funDefType))
-      itab <- getCombinedInstanceTable
+      itab <- (^. typeCheckingTablesInstanceTable) <$> getCombinedTables
       is <- subsumingInstances itab ii
       unless (null is) $
         throw (ErrSubsumedInstance (SubsumedInstance ii is (getLoc _funDefName)))
