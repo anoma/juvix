@@ -13,6 +13,7 @@ module Juvix.Compiler.Nockma.Translation.FromTree
     closurePath,
     foldTermsOrNil,
     add,
+    sub,
     dec,
     mul,
     pow2,
@@ -29,6 +30,8 @@ module Juvix.Compiler.Nockma.Translation.FromTree
     opAddress',
     replaceSubterm',
     runCompilerWith,
+    emptyCompilerCtx,
+    CompilerCtx (..),
   )
 where
 
@@ -127,6 +130,17 @@ data CompilerCtx = CompilerCtx
     _compilerOptions :: CompilerOptions
   }
 
+emptyCompilerCtx :: CompilerCtx
+emptyCompilerCtx =
+  CompilerCtx
+    { _compilerFunctionInfos = mempty,
+      _compilerConstructorInfos = mempty,
+      _compilerTempVarMap = mempty,
+      _compilerTempVarsNum = 0,
+      _compilerStackHeight = 0,
+      _compilerOptions = CompilerOptions True
+    }
+
 data ConstructorInfo = ConstructorInfo
   { _constructorInfoArity :: Natural,
     _constructorInfoMemRep :: NockmaMemRep
@@ -211,11 +225,6 @@ stackPath :: (Member (Reader CompilerCtx) r) => AnomaCallablePathId -> Sem r Pat
 stackPath s = do
   h <- asks (^. compilerStackHeight)
   return $ indexStack (fromIntegral (h + fromEnum s))
-
-indexInStack :: (Member (Reader CompilerCtx) r) => AnomaCallablePathId -> Natural -> Sem r Path
-indexInStack s idx = do
-  sp <- stackPath s
-  return $ sp ++ indexStack idx
 
 runCompilerFunction :: CompilerCtx -> CompilerFunction -> Term Natural
 runCompilerFunction ctx fun =
@@ -359,13 +368,13 @@ anomaCallableClosureWrapper = do
   let closureArgsNum :: Term Natural = getClosureFieldInSubject ClosureArgsNum
       closureTotalArgsNum :: Term Natural = getClosureFieldInSubject ClosureTotalArgsNum
   remainingArgsNum <- sub closureTotalArgsNum closureArgsNum
-  let appendAndReplaceArgsTuple =
-        replaceArgsWithTerm "anomaCallableClosureWrapper" $
-          appendToTuple
-            (getClosureFieldInSubject ClosureArgs)
-            closureArgsNum
-            (getClosureFieldInSubject ArgsTuple)
-            remainingArgsNum
+  tup <-
+    appendToTuple
+      (getClosureFieldInSubject ClosureArgs)
+      closureArgsNum
+      (getClosureFieldInSubject ArgsTuple)
+      remainingArgsNum
+  let appendAndReplaceArgsTuple = replaceArgsWithTerm "anomaCallableClosureWrapper" tup
       closureArgsIsEmpty = isZero closureArgsNum
       adjustArgs = OpIf # closureArgsIsEmpty # (opAddress "wrapperSubject" emptyPath) # appendAndReplaceArgsTuple
    in return $ opCall "closureWrapper" (closurePath RawCode) adjustArgs
@@ -609,13 +618,14 @@ compile = \case
             [ enc,
               byteArrayPayload "anomaSignPrivKeyTail" privKey
             ]
+        ret <- goReturnByteArray
         return $
           opReplace
             "callMkByteArrayOnSignResult"
             (closurePath ArgsTuple)
             stdcall
             (opAddress "stack" emptyPath)
-            >># goReturnByteArray
+            >># ret
       _ -> impossible
       where
         goReturnByteArray :: Sem r (Term Natural)
@@ -660,13 +670,14 @@ compile = \case
     goAnomaVerifyWithMessage = \case
       [signedMessage, pubKey] -> do
         stdcall <- callStdlib StdlibVerify [byteArrayPayload "signedMessageByteArray" signedMessage, byteArrayPayload "pubKeyByteArray" pubKey]
+        res <- goDecodeResult
         return $
           opReplace
             "callDecodeFromVerify-args"
             (closurePath ArgsTuple)
             stdcall
             (opAddress "stack" emptyPath)
-            >># goDecodeResult
+            >># res
       _ -> impossible
       where
         goDecodeResult :: Sem r (Term Natural)
@@ -739,8 +750,9 @@ compile = \case
       fpath <- getFunctionPath fun
       farity <- getFunctionArity fun
       args <- mapM compile _nodeAllocClosureArgs
+      wrapper <- anomaCallableClosureWrapper
       return . makeClosure $ \case
-        WrapperCode -> OpQuote # anomaCallableClosureWrapper
+        WrapperCode -> OpQuote # wrapper
         ArgsTuple -> OpQuote # argsTuplePlaceholder "goAllocClosure"
         FunctionsLibrary -> OpQuote # functionsLibraryPlaceHolder
         RawCode -> opAddress "allocClosureFunPath" (fpath <> closurePath RawCode)
@@ -763,8 +775,8 @@ compile = \case
           closure <- compile f
           let argsNum = getClosureField ClosureArgsNum closure
               oldArgs = getClosureField ClosureArgs closure
-              allArgs = appendToTuple oldArgs argsNum (foldTermsOrNil newargs) (nockIntegralLiteral (length newargs))
-              newSubject = replaceSubject $ \case
+          allArgs <- appendToTuple oldArgs argsNum (foldTermsOrNil newargs) (nockIntegralLiteral (length newargs))
+          let newSubject = replaceSubject $ \case
                 WrapperCode -> Just (getClosureField RawCode closure) -- We Want RawCode because we already have all args.
                 ArgsTuple -> Just allArgs
                 RawCode -> Just (OpQuote # nockNilTagged "callClosure-RawCode")
@@ -856,9 +868,17 @@ nockIntegralLiteral = (OpQuote #) . toNock @Natural . fromIntegral
 -- the result is a tuple.
 -- NOTE: xs occurs twice, but that's fine because each occurrence is in a
 -- different if branch.
-appendToTuple :: Term Natural -> Term Natural -> Term Natural -> Term Natural -> Term Natural
-appendToTuple xs lenXs ys lenYs =
-  OpIf # isZero lenYs # listToTuple xs lenXs # append xs lenXs ys
+appendToTuple ::
+  (Member (Reader CompilerCtx) r) =>
+  Term Natural ->
+  Term Natural ->
+  Term Natural ->
+  Term Natural ->
+  Sem r (Term Natural)
+appendToTuple xs lenXs ys lenYs = do
+  tp1 <- listToTuple xs lenXs
+  tp2 <- append xs lenXs ys
+  return $ OpIf # isZero lenYs # tp1 # tp2
 
 append :: (Member (Reader CompilerCtx) r) => Term Natural -> Term Natural -> Term Natural -> Sem r (Term Natural)
 append xs lenXs ys = do
@@ -1000,12 +1020,9 @@ runCompilerWith opts constrs moduleFuns mainFun = makeAnomaFun
 
     compilerCtx :: CompilerCtx
     compilerCtx =
-      CompilerCtx
+      emptyCompilerCtx
         { _compilerFunctionInfos = functionInfos,
           _compilerConstructorInfos = constrs,
-          _compilerTempVarMap = mempty,
-          _compilerTempVarsNum = 0,
-          _compilerStackHeight = 0,
           _compilerOptions = opts
         }
 
@@ -1065,7 +1082,7 @@ runCompilerWith opts constrs moduleFuns mainFun = makeAnomaFun
       return
         ( _compilerFunctionId,
           FunctionInfo
-            { _functionInfoPath = indexStack FunctionsLibrary i,
+            { _functionInfoPath = pathFromEnum FunctionsLibrary ++ indexStack i,
               _functionInfoArity = _compilerFunctionArity,
               _functionInfoName = _compilerFunctionName
             }
