@@ -1,0 +1,7 @@
+module issue3074;
+
+type T := mkT;
+
+fun {_ : T} : {A : Type} -> T := mkT;
+
+x : T := fun@{A := T};
