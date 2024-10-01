@@ -56,7 +56,6 @@ runNamedArguments ::
   [Internal.ApplicationArg] ->
   Sem r DesugaredNamedApplication
 runNamedArguments funName args extraArgs = do
-  traceM (ppTrace (toList args))
   iniSt <- mkIniBuilderState
   namedArgs <-
     fmap nonEmpty'
@@ -87,7 +86,7 @@ runNamedArguments funName args extraArgs = do
 type NamesByIndex = IntMap (NameItem 'Scoped)
 
 mkNamesIndex :: [NameItem 'Scoped] -> NamesByIndex
-mkNamesIndex = traceWith (prettyText . length) . indexedByInt (^. nameItemIndex)
+mkNamesIndex = indexedByInt (^. nameItemIndex)
 
 helper ::
   forall r.
