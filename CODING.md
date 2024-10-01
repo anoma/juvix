@@ -8,7 +8,7 @@
 - prefer enumerations with meaningful names over booleans, e.g., instead of using `Bool` define:
 
 ```
-type Transferability := Transferable | NonTransferable
+type Transferability := Transferable | NonTransferable;
 ```
 
 ## Imports
