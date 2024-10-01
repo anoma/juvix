@@ -198,15 +198,15 @@ addSigArg a = case a ^. sigArgNames of
     defaultType = run (runReader (getLoc a) Gen.smallUniverseExpression)
 
     addArg :: Argument s -> Sem r ()
-    addArg arg =
+    addArg arg = do
       let sym :: Maybe (SymbolType s) = case arg of
             ArgumentSymbol sy -> Just sy
             ArgumentWildcard {} -> Nothing
-       in addArgument
-            (a ^. sigArgImplicit)
-            (a ^. sigArgDefault)
-            sym
-            (fromMaybe defaultType (a ^. sigArgType))
+      addArgument
+        (a ^. sigArgImplicit)
+        (a ^. sigArgDefault)
+        sym
+        (fromMaybe defaultType (a ^. sigArgType))
 
 type Re s r = State (BuilderState s) ': Error (BuilderState s) ': Error NameSignatureError ': r
 

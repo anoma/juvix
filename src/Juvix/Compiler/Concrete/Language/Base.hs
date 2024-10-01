@@ -158,6 +158,7 @@ type ParsedPragmas = WithLoc (WithSource Pragmas)
 data NameItem (s :: Stage) = NameItem
   { -- | The symbol cannot be omitted for explicit arguments
     _nameItemSymbol :: Maybe (SymbolType s),
+    -- | NOTE the index is wrt to the block, not the whole signature
     _nameItemIndex :: Int,
     _nameItemImplicit :: IsImplicit,
     _nameItemType :: ExpressionType s,
@@ -174,12 +175,7 @@ instance Serialize (NameItem 'Parsed)
 instance NFData (NameItem 'Parsed)
 
 data NameBlock (s :: Stage) = NameBlock
-  { -- | NOTE the index is wrt to the block, not the whole signature.
-    _nameBlockItems :: NonEmpty (NameItem s),
-    -- | The number of elements in this block. It cannot be 0. It may be
-    -- different than the size of _nameBlock because we may omit the argument
-    -- name in Implicit or ImplicitInstance arguments.
-    -- _nameBlockSize :: Int,
+  { _nameBlockItems :: NonEmpty (NameItem s),
     _nameBlockImplicit :: IsImplicit
   }
   deriving stock (Generic)
@@ -3523,7 +3519,6 @@ fromParsedIteratorInfo ParsedIteratorInfo {..} =
       _iteratorInfoRangeNum = (^. withLocParam) <$> _parsedIteratorInfoRangeNum
     }
 
--- | The returned list has _nameBlockSize items
 nameBlockSymbols :: forall s. Traversal' (NameBlock s) (SymbolType s)
 nameBlockSymbols = nameBlockItems . each . nameItemSymbol . _Just
 
