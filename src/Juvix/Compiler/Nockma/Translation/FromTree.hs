@@ -503,14 +503,15 @@ compile = \case
     goSave :: Tree.NodeSave -> Sem r (Term Natural)
     goSave Tree.NodeSave {..} = do
       arg <- compile _nodeSaveArg
-      withTempVar arg (compile _nodeSaveBody)
+      withTempVar arg (const (compile _nodeSaveBody))
 
     goCase :: Tree.NodeCase -> Sem r (Term Natural)
     goCase c = do
       def <- mapM compile (c ^. Tree.nodeCaseDefault)
       arg <- compile (c ^. Tree.nodeCaseArg)
-      branches <- mapM goCaseBranch (c ^. Tree.nodeCaseBranches)
-      caseCmd arg def branches
+      withTempVar arg $ \ref -> do
+        branches <- mapM goCaseBranch (c ^. Tree.nodeCaseBranches)
+        caseCmd ref def branches
 
     goCaseBranch :: Tree.CaseBranch -> Sem r (Tree.Tag, Term Natural)
     goCaseBranch b = do
@@ -830,13 +831,13 @@ withTemp value f = do
 withTempVar ::
   (Members '[Reader FunctionCtx, Reader CompilerCtx] r) =>
   Term Natural ->
-  (Sem r (Term Natural)) ->
+  (TempRef -> Sem r (Term Natural)) ->
   Sem r (Term Natural)
 withTempVar value cont = withTemp value $ \temp -> do
   tempVar <- asks (^. compilerTempVarsNum)
   local (over compilerTempVarMap (HashMap.insert tempVar temp))
     . local (over compilerTempVarsNum (+ 1))
-    $ cont
+    $ cont (TempRef tempVar)
 
 popTempVar ::
   (Members '[Reader FunctionCtx, Reader CompilerCtx] r) =>
@@ -1199,15 +1200,15 @@ constructorTagToTerm = \case
 caseCmd ::
   forall r.
   (Members '[Reader CompilerCtx] r) =>
-  Term Natural ->
+  TempRef ->
   Maybe (Term Natural) ->
   [(Tree.Tag, Term Natural)] ->
   Sem r (Term Natural)
-caseCmd arg defaultBranch = \case
+caseCmd ref defaultBranch = \case
   [] -> return (fromJust defaultBranch)
   (tag, b) : bs -> case tag of
     Tree.BuiltinTag t -> case nockmaBuiltinTag t of
-      NockmaBuiltinBool v -> return (goBoolTag v b bs)
+      NockmaBuiltinBool v -> goBoolTag v b bs
     Tree.UserTag {} -> do
       rep <- getConstructorMemRep tag
       case rep of
@@ -1217,10 +1218,10 @@ caseCmd arg defaultBranch = \case
           | otherwise -> error "redundant branch. Impossible?"
         NockmaMemRepList constr -> do
           bs' <- mapM (firstM asNockmaMemRepListConstr) bs
-          return (goRepList ((constr, b) :| bs'))
+          goRepList ((constr, b) :| bs')
         NockmaMemRepMaybe constr -> do
           bs' <- mapM (firstM asNockmaMemRepMaybeConstr) bs
-          return (goRepMaybe ((constr, b) :| bs'))
+          goRepMaybe ((constr, b) :| bs')
   where
     goRepConstr ::
       Tree.Tag ->
@@ -1228,6 +1229,7 @@ caseCmd arg defaultBranch = \case
       [(Tree.Tag, Term Natural)] ->
       Sem r (Term Natural)
     goRepConstr tag b bs = do
+      arg <- addressTempRef ref
       let cond :: Term Natural =
             OpEq
               # constructorTagToTerm tag
@@ -1262,12 +1264,14 @@ caseCmd arg defaultBranch = \case
       Bool ->
       Term Natural ->
       [(Tree.Tag, Term Natural)] ->
-      (Term Natural)
-    goBoolTag v b bs =
+      Sem r (Term Natural)
+    goBoolTag v b bs = do
+      arg <- addressTempRef ref
       let otherBranch = fromMaybe crash (firstJust f bs <|> defaultBranch)
-       in if
-              | v -> branch arg b otherBranch
-              | otherwise -> branch arg otherBranch b
+      return $
+        if
+            | v -> branch arg b otherBranch
+            | otherwise -> branch arg otherBranch b
       where
         f :: (Tree.Tag, Term Natural) -> Maybe (Term Natural)
         f (tag', br) = case tag' of
@@ -1275,24 +1279,26 @@ caseCmd arg defaultBranch = \case
           Tree.BuiltinTag tag -> case nockmaBuiltinTag tag of
             NockmaBuiltinBool v' -> guard (v /= v') $> br
 
-    goRepList :: NonEmpty (NockmaMemRepListConstr, Term Natural) -> Term Natural
-    goRepList ((c, b) :| bs) =
+    goRepList :: NonEmpty (NockmaMemRepListConstr, Term Natural) -> Sem r (Term Natural)
+    goRepList ((c, b) :| bs) = do
+      arg <- addressTempRef ref
       let cond = OpIsCell # arg
           otherBranch = fromMaybe crash (firstJust f bs <|> defaultBranch)
-       in case c of
-            NockmaMemRepListConstrCons -> branch cond b otherBranch
-            NockmaMemRepListConstrNil -> branch cond otherBranch b
+      return $ case c of
+        NockmaMemRepListConstrCons -> branch cond b otherBranch
+        NockmaMemRepListConstrNil -> branch cond otherBranch b
       where
         f :: (NockmaMemRepListConstr, Term Natural) -> Maybe (Term Natural)
         f (c', br) = guard (c /= c') $> br
 
-    goRepMaybe :: NonEmpty (NockmaMemRepMaybeConstr, Term Natural) -> Term Natural
-    goRepMaybe ((c, b) :| bs) =
+    goRepMaybe :: NonEmpty (NockmaMemRepMaybeConstr, Term Natural) -> Sem r (Term Natural)
+    goRepMaybe ((c, b) :| bs) = do
+      arg <- addressTempRef ref
       let cond = OpIsCell # arg
           otherBranch = fromMaybe crash (firstJust f bs <|> defaultBranch)
-       in case c of
-            NockmaMemRepMaybeConstrJust -> branch cond b otherBranch
-            NockmaMemRepMaybeConstrNothing -> branch cond otherBranch b
+      return $ case c of
+        NockmaMemRepMaybeConstrJust -> branch cond b otherBranch
+        NockmaMemRepMaybeConstrNothing -> branch cond otherBranch b
       where
         f :: (NockmaMemRepMaybeConstr, Term Natural) -> Maybe (Term Natural)
         f (c', br) = guard (c /= c') $> br
