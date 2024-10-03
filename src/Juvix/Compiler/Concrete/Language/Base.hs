@@ -156,7 +156,9 @@ type family ModuleEndType t = res | res -> t where
 type ParsedPragmas = WithLoc (WithSource Pragmas)
 
 data NameItem (s :: Stage) = NameItem
-  { _nameItemSymbol :: SymbolType s,
+  { -- | The symbol cannot be omitted for explicit arguments
+    _nameItemSymbol :: Maybe (SymbolType s),
+    -- | NOTE the index is wrt to the block, not the whole signature
     _nameItemIndex :: Int,
     _nameItemImplicit :: IsImplicit,
     _nameItemType :: ExpressionType s,
@@ -173,10 +175,8 @@ instance Serialize (NameItem 'Parsed)
 instance NFData (NameItem 'Parsed)
 
 data NameBlock (s :: Stage) = NameBlock
-  { -- | Symbols map to themselves so we can retrieve the location
-    -- | NOTE the index is wrt to the block, not the whole signature.
-    _nameBlock :: HashMap Symbol (NameItem s),
-    _nameImplicit :: IsImplicit
+  { _nameBlockItems :: NonEmpty (NameItem s),
+    _nameBlockImplicit :: IsImplicit
   }
   deriving stock (Generic)
 
@@ -3518,6 +3518,9 @@ fromParsedIteratorInfo ParsedIteratorInfo {..} =
     { _iteratorInfoInitNum = (^. withLocParam) <$> _parsedIteratorInfoInitNum,
       _iteratorInfoRangeNum = (^. withLocParam) <$> _parsedIteratorInfoRangeNum
     }
+
+nameBlockSymbols :: forall s. Traversal' (NameBlock s) (SymbolType s)
+nameBlockSymbols = nameBlockItems . each . nameItemSymbol . _Just
 
 instance HasFixity PostfixApplication where
   getFixity (PostfixApplication _ op) = fromMaybe impossible (op ^. scopedIdenSrcName . S.nameFixity)

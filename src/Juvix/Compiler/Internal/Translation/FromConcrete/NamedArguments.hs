@@ -16,6 +16,7 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Data.IntMap.Strict qualified as IntMap
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
+import Juvix.Compiler.Concrete.Pretty (ppTrace)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Compiler.Internal.Extra.Base qualified as Internal
 import Juvix.Prelude
@@ -28,7 +29,8 @@ data BuilderState = BuilderState
   }
 
 data Arg = Arg
-  { _argName :: S.Symbol,
+  { -- | Explicit arguments cannot omit the name
+    _argName :: Maybe S.Symbol,
     _argImplicit :: IsImplicit,
     _argType :: Expression,
     _argAutoInserted :: Bool,
@@ -95,8 +97,8 @@ helper loc = do
   whenJustM nextArgumentGroup $ \(impl, args, isLastBlock) -> do
     checkRepeated args
     names :: [NameItem 'Scoped] <- nextNameGroup impl
-    (pendingArgs, (omittedNames, argmap)) <- scanGroup impl names args
-    emitArgs impl isLastBlock (mkNamesIndex names) omittedNames argmap
+    (pendingArgs, (omittedItems, argmap)) <- scanGroup impl names args
+    emitArgs impl isLastBlock (mkNamesIndex names) omittedItems argmap
     whenJust (nonEmpty pendingArgs) $ \pendingArgs' -> do
       sig <- nextNameGroup Implicit
       emitImplicit False (mkNamesIndex sig) sig mempty
@@ -112,10 +114,11 @@ helper loc = do
       case remb of
         [] -> return mempty
         (b :: NameBlock 'Scoped) : bs -> do
-          let implSig = b ^. nameImplicit
-              namesByIx = mkNamesIndex (toList (b ^. nameBlock))
+          let implSig = b ^. nameBlockImplicit
+              itemsList = toList (b ^. nameBlockItems)
+              namesByIx :: NamesByIndex = mkNamesIndex itemsList
           modify' (set stateRemainingNames bs)
-          let r = toList (b ^. nameBlock)
+          let r = itemsList
               matches = return r
           case (implArgs, implSig) of
             (Explicit, Explicit) -> matches
@@ -161,12 +164,15 @@ helper loc = do
         -- omitting arguments is only allowed at the end
         emitExplicit :: Bool -> NamesByIndex -> [NameItem 'Scoped] -> IntMap Arg -> Sem r ()
         emitExplicit lastBlock _ omittedArgs args = do
+          -- Explicit arguments must have a name, so it is safe to use fromJust
+          let itemName :: NameItem 'Scoped -> SymbolType 'Scoped
+              itemName = fromJust . (^. nameItemSymbol)
           if
               | lastBlock ->
                   unless
                     (IntMap.keys args == [0 .. IntMap.size args - 1])
-                    (missingErr (nonEmpty' (map (^. nameItemSymbol) (filterMissing omittedArgs))))
-              | otherwise -> whenJust (nonEmpty (map (^. nameItemSymbol) omittedArgs)) missingErr
+                    (missingErr (nonEmpty' (map itemName (filterMissing omittedArgs))))
+              | otherwise -> whenJust (nonEmpty (map itemName omittedArgs)) missingErr
           forM_ args output
           where
             filterMissing :: [NameItem 'Scoped] -> [NameItem 'Scoped]
@@ -204,12 +210,20 @@ helper loc = do
 
             fillPosition :: (Members '[NameIdGen] r') => Int -> Sem r' Arg
             fillPosition idx = do
-              let nm :: NameItem 'Scoped = namesByIx ^?! at idx . _Just
+              let nm :: NameItem 'Scoped = fromMaybe err (namesByIx ^. at idx)
+                  err :: forall x. x
+                  err =
+                    impossibleError
+                      ( "namesByIx ^. at "
+                          <> prettyText idx
+                          <> " = Nothing"
+                          <> "\nnamesByIx = "
+                          <> ppTrace (IntMap.toList namesByIx)
+                      )
               _argValue <- case nm ^. nameItemDefault of
                 Nothing -> exprHole . mkHole loc <$> freshNameId
                 -- TODO update location
                 Just d -> return (d ^. argDefaultValue)
-
               return
                 Arg
                   { _argName = nm ^. nameItemSymbol,
@@ -218,6 +232,7 @@ helper loc = do
                     _argAutoInserted = True,
                     _argValue
                   }
+
         maxIx :: Maybe Int
         maxIx = fmap maximum1 . nonEmpty . map (^. nameItemIndex) $ omittedArgs
 
@@ -233,14 +248,24 @@ helper loc = do
       [NamedArgumentAssign 'Scoped] ->
       Sem r ([NamedArgumentAssign 'Scoped], ([NameItem 'Scoped], IntMap Arg))
     scanGroup impl names =
-      fmap (second (first toList))
+      fmap (second (first ((<> noNameItems) . toList)))
         . runOutputList
         . runState namesBySymbol
         . execState mempty
         . mapM_ go
       where
+        -- Symbols omitted because they don't have a name
+        noNameItems :: [NameItem 'Scoped]
+        noNameItems = filter (isNothing . (^. nameItemSymbol)) names
+
         namesBySymbol :: HashMap Symbol (NameItem 'Scoped)
-        namesBySymbol = HashMap.fromList [(symbolParsed (i ^. nameItemSymbol), i) | i <- names]
+        namesBySymbol =
+          hashMap
+            [ (symbolParsed sym, i)
+              | i <- names,
+                Just sym <- [i ^. nameItemSymbol]
+            ]
+
         go ::
           (Members '[State (IntMap Arg), State (HashMap Symbol (NameItem 'Scoped)), State BuilderState, Output (NamedArgumentAssign 'Scoped), Error NamedArgumentsError] r') =>
           NamedArgumentAssign 'Scoped ->

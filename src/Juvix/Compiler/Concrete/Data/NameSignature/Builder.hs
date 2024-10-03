@@ -1,5 +1,8 @@
 {-# LANGUAGE FunctionalDependencies #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# OPTIONS_GHC -Wno-unused-type-patterns #-}
+
+{-# HLINT ignore "Avoid restricted flags" #-}
 
 module Juvix.Compiler.Concrete.Data.NameSignature.Builder
   ( mkNameSignature,
@@ -32,7 +35,8 @@ data BuilderState (s :: Stage) = BuilderState
     -- | maps to itself
     _stateSymbols :: HashMap Symbol (SymbolType s),
     _stateReverseClosedBlocks :: [NameBlock s],
-    _stateCurrentBlock :: HashMap Symbol (NameItem s)
+    -- | Items stored in reverse order
+    _stateCurrentBlockReverse :: [NameItem s]
   }
 
 makeLenses ''BuilderState
@@ -116,7 +120,7 @@ iniBuilderState =
       _stateNextIx = 0,
       _stateSymbols = mempty,
       _stateReverseClosedBlocks = [],
-      _stateCurrentBlock = mempty
+      _stateCurrentBlockReverse = mempty
     }
 
 fromBuilderState :: forall s. BuilderState s -> NameSignature s
@@ -126,11 +130,16 @@ fromBuilderState b =
     }
   where
     addCurrent :: [NameBlock s] -> [NameBlock s]
-    addCurrent
-      | null (b ^. stateCurrentBlock) = id
-      | Just i <- b ^. stateCurrentImplicit =
-          (NameBlock (b ^. stateCurrentBlock) i :)
-      | otherwise = id
+    addCurrent = case (nonEmpty (reverse (b ^. stateCurrentBlockReverse)), b ^. stateCurrentImplicit) of
+      (Just newBlock, Just i) -> (mkNameBlock newBlock i :)
+      _ -> id
+
+mkNameBlock :: NonEmpty (NameItem s) -> IsImplicit -> NameBlock s
+mkNameBlock items impl =
+  NameBlock
+    { _nameBlockItems = items,
+      _nameBlockImplicit = impl
+    }
 
 addExpression :: forall r. (Members '[NameSignatureBuilder 'Scoped] r) => Expression -> Sem r ()
 addExpression = \case
@@ -185,18 +194,19 @@ addSigArg a = case a ^. sigArgNames of
   SigArgNamesInstance {} -> addArg (ArgumentWildcard (Wildcard (getLoc a)))
   SigArgNames ns -> mapM_ addArg ns
   where
+    defaultType :: ExpressionType s
     defaultType = run (runReader (getLoc a) Gen.smallUniverseExpression)
 
     addArg :: Argument s -> Sem r ()
-    addArg arg =
+    addArg arg = do
       let sym :: Maybe (SymbolType s) = case arg of
             ArgumentSymbol sy -> Just sy
             ArgumentWildcard {} -> Nothing
-       in addArgument
-            (a ^. sigArgImplicit)
-            (a ^. sigArgDefault)
-            sym
-            (fromMaybe defaultType (a ^. sigArgType))
+      addArgument
+        (a ^. sigArgImplicit)
+        (a ^. sigArgDefault)
+        sym
+        (fromMaybe defaultType (a ^. sigArgType))
 
 type Re s r = State (BuilderState s) ': Error (BuilderState s) ': Error NameSignatureError ': r
 
@@ -244,28 +254,29 @@ addArgument' impl mdef msym ty = do
     addToCurrentBlock = do
       idx <- getNextIx
       whenJust msym $ \(sym :: SymbolType s) -> do
-        let itm =
-              NameItem
-                { _nameItemDefault = mdef,
-                  _nameItemSymbol = sym,
-                  _nameItemImplicit = impl,
-                  _nameItemIndex = idx,
-                  _nameItemType = ty
-                }
-            psym = symbolParsed sym
+        let psym = symbolParsed sym
         whenJustM (gets @(BuilderState s) (^. stateSymbols . at psym)) (errDuplicateName sym . symbolParsed)
         modify' @(BuilderState s) (set (stateSymbols . at psym) (Just sym))
-        modify' @(BuilderState s) (set (stateCurrentBlock . at psym) (Just itm))
+      let itm =
+            NameItem
+              { _nameItemDefault = mdef,
+                _nameItemSymbol = msym,
+                _nameItemImplicit = impl,
+                _nameItemIndex = idx,
+                _nameItemType = ty
+              }
+      modify' @(BuilderState s) (over (stateCurrentBlockReverse) (itm :))
 
     startNewBlock :: Sem (Re s r) ()
     startNewBlock = do
-      curBlock <- gets @(BuilderState s) (^. stateCurrentBlock)
+      curBlock <- nonEmpty' . reverse <$> gets @(BuilderState s) (^. stateCurrentBlockReverse)
       mcurImpl <- gets @(BuilderState s) (^. stateCurrentImplicit)
       modify' @(BuilderState s) (set stateCurrentImplicit (Just impl))
-      modify' @(BuilderState s) (set stateCurrentBlock mempty)
+      modify' @(BuilderState s) (set stateCurrentBlockReverse mempty)
       modify' @(BuilderState s) (set stateNextIx 0)
       whenJust mcurImpl $ \curImpl ->
-        modify' (over stateReverseClosedBlocks (NameBlock curBlock curImpl :))
+        let newBlock = mkNameBlock curBlock curImpl
+         in modify' (over stateReverseClosedBlocks (newBlock :))
       addArgument' impl mdef msym ty
 
 endBuild' :: forall s r a. Sem (Re s r) a
@@ -275,9 +286,9 @@ mkRecordNameSignature :: forall s. (SingI s) => RhsRecord s -> RecordNameSignatu
 mkRecordNameSignature rhs =
   RecordNameSignature $
     hashMap
-      [ ( symbolParsed _nameItemSymbol,
+      [ ( symbolParsed sym,
           NameItem
-            { _nameItemSymbol,
+            { _nameItemSymbol = Just sym,
               _nameItemIndex,
               _nameItemType = field ^. fieldType,
               _nameItemImplicit = fromIsImplicitField (field ^. fieldIsImplicit),
@@ -285,5 +296,5 @@ mkRecordNameSignature rhs =
             }
         )
         | (Indexed _nameItemIndex field) <- indexFrom 0 (toList (rhs ^.. rhsRecordStatements . each . _RecordStatementField)),
-          let _nameItemSymbol :: SymbolType s = field ^. fieldName
+          let sym :: SymbolType s = field ^. fieldName
       ]

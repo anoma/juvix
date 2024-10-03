@@ -265,6 +265,13 @@ tests =
       $(mkRelFile "Main.juvix")
       $ \case
         ErrWrongType {} -> Nothing
+        _ -> wrongError,
+    negTest
+      "Implicit name argument without name"
+      $(mkRelDir "Internal")
+      $(mkRelFile "issue3074.juvix")
+      $ \case
+        ErrUnsolvedMeta {} -> Nothing
         _ -> wrongError
   ]
 

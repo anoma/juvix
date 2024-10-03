@@ -2715,7 +2715,12 @@ checkNamedApplicationNew napp = do
     if
         | null nargs -> return (NameSignature [])
         | otherwise -> getNameSignatureParsed aname
-  let namesInSignature = hashSet (concatMap (HashMap.keys . (^. nameBlock)) (sig ^. nameSignatureArgs))
+  let namesInSignature =
+        hashSet $
+          sig
+            ^.. nameSignatureArgs
+              . each
+              . nameBlockSymbols
   forM_ nargs (checkNameInSignature namesInSignature . (^. namedArgumentNewSymbol))
   puns <- scopePuns
   args' <- withLocalScope . localBindings . ignoreSyntax $ do
@@ -2723,8 +2728,8 @@ checkNamedApplicationNew napp = do
     mapM (checkNamedArgumentNew puns) nargs
   let signatureExplicitNames =
         hashSet
-          . concatMap (HashMap.keys . (^. nameBlock))
-          . filter (not . isImplicitOrInstance . (^. nameImplicit))
+          . concatMap (^.. nameBlockSymbols)
+          . filter (not . isImplicitOrInstance . (^. nameBlockImplicit))
           $ sig ^. nameSignatureArgs
       givenNames :: HashSet Symbol = hashSet (map (^. namedArgumentNewSymbol) nargs)
       missingArgs = HashSet.difference signatureExplicitNames givenNames
@@ -2807,7 +2812,8 @@ checkRecordUpdate RecordUpdate {..} = do
   where
     bindRecordUpdateVariable :: NameItem 'Parsed -> Sem r (IsImplicit, S.Symbol)
     bindRecordUpdateVariable NameItem {..} = do
-      v <- bindVariableSymbol _nameItemSymbol
+      -- all fields have names so it is safe to use fromJust
+      v <- bindVariableSymbol (fromJust _nameItemSymbol)
       return (_nameItemImplicit, v)
 
 checkUpdateField ::
