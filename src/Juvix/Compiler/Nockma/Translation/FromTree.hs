@@ -159,12 +159,10 @@ data CompilerFunction = CompilerFunction
 -- because the stack must have the structure of a Nock function,
 -- i.e [code args env]
 data AnomaCallablePathId
-  = WrapperCode
+  = FunCode
   | ArgsTuple
   | ---
     FunctionsLibrary
-  | RawCode
-  | TempStack
   | StandardLibrary
   | ClosureTotalArgsNum
   | ClosureArgsNum
@@ -229,7 +227,7 @@ stackPath s = do
 getSubjectBasePath :: (Member (Reader CompilerCtx) r) => Sem r Path
 getSubjectBasePath = do
   h <- asks (^. compilerStackHeight)
-  return $ indexStack (fromIntegral h)
+  return $ replicate h R
 
 runCompilerFunction :: CompilerCtx -> CompilerFunction -> Term Natural
 runCompilerFunction ctx fun =
@@ -368,25 +366,8 @@ addressTempRef tr = do
   p <- tempRefPath tr
   return $ opAddress "tempRef" p
 
-anomaCallableClosureWrapper :: (Member (Reader CompilerCtx) r) => Sem r (Term Natural)
-anomaCallableClosureWrapper = do
-  let closureArgsNum :: Term Natural = getClosureFieldInSubject ClosureArgsNum
-      closureTotalArgsNum :: Term Natural = getClosureFieldInSubject ClosureTotalArgsNum
-  remainingArgsNum <- sub closureTotalArgsNum closureArgsNum
-  tup <-
-    appendToTuple
-      (getClosureFieldInSubject ClosureArgs)
-      closureArgsNum
-      (getClosureFieldInSubject ArgsTuple)
-      remainingArgsNum
-  appendAndReplaceArgsTuple <- replaceArgsWithTerm "anomaCallableClosureWrapper" tup
-  subjectBasePath <- getSubjectBasePath
-  let closureArgsIsEmpty = isZero closureArgsNum
-      adjustArgs = OpIf # closureArgsIsEmpty # (opAddress "wrapperSubject" subjectBasePath) # appendAndReplaceArgsTuple
-  return $ opCall "closureWrapper" (closurePath RawCode) adjustArgs
-
-mainFunctionWrapper :: (Member (Reader CompilerCtx) r) => Term Natural -> Sem r (Term Natural)
-mainFunctionWrapper funslib = do
+mainFunctionWrapper :: (Member (Reader CompilerCtx) r) => Term Natural -> Term Natural -> Sem r (Term Natural)
+mainFunctionWrapper funslib funCode = do
   -- 1. The Anoma system expects to receive a function of type `ScryId -> Transaction`
   --
   -- 2. The ScryId is only used to construct the argument to the Scry operation
@@ -399,10 +380,11 @@ mainFunctionWrapper funslib = do
   --
   -- 4. If the Anoma system expectation changes then this code must be changed.
   captureAnomaGetOrder <- replaceSubject $ \case
+    FunCode -> Just (OpQuote # funCode)
     AnomaGetOrder -> Just (getClosureFieldInSubject ArgsTuple)
     FunctionsLibrary -> Just (OpQuote # funslib)
     _ -> Nothing
-  return $ opCall "mainFunctionWrapper" (closurePath RawCode) captureAnomaGetOrder
+  return $ opCall "mainFunctionWrapper" (closurePath FunCode) captureAnomaGetOrder
 
 compile :: forall r. (Members '[Reader FunctionCtx, Reader CompilerCtx] r) => Tree.Node -> Sem r (Term Natural)
 compile = \case
@@ -746,16 +728,14 @@ compile = \case
     goAllocClosure :: Tree.NodeAllocClosure -> Sem r (Term Natural)
     goAllocClosure Tree.NodeAllocClosure {..} = do
       let fun = UserFunction _nodeAllocClosureFunSymbol
+      base <- getSubjectBasePath
       fpath <- getFunctionPath fun
       farity <- getFunctionArity fun
       args <- mapM compile _nodeAllocClosureArgs
-      wrapper <- anomaCallableClosureWrapper
       return . makeClosure $ \case
-        WrapperCode -> OpQuote # wrapper
+        FunCode -> opAddress "allocClosureFunPath" (base <> fpath <> closurePath FunCode)
         ArgsTuple -> OpQuote # argsTuplePlaceholder "goAllocClosure"
         FunctionsLibrary -> OpQuote # functionsLibraryPlaceHolder
-        RawCode -> opAddress "allocClosureFunPath" (fpath <> closurePath RawCode)
-        TempStack -> remakeList []
         StandardLibrary -> OpQuote # stdlibPlaceHolder
         ClosureTotalArgsNum -> nockNatLiteral farity
         ClosureArgsNum -> nockIntegralLiteral (length args)
@@ -766,27 +746,16 @@ compile = \case
     goExtendClosure = extendClosure
 
     goCall :: Tree.NodeCall -> Sem r (Term Natural)
-    goCall Tree.NodeCall {..} = do
-      newargs <- mapM compile _nodeCallArgs
+    goCall Tree.NodeCall {..} =
       case _nodeCallType of
-        Tree.CallFun fun -> callFunWithArgs (UserFunction fun) newargs
+        Tree.CallFun fun -> do
+          newargs <- mapM compile _nodeCallArgs
+          callFunWithArgs (UserFunction fun) newargs
         Tree.CallClosure f -> do
           closure <- compile f
-          let argsNum = getClosureField ClosureArgsNum closure
-              oldArgs = getClosureField ClosureArgs closure
-          allArgs <- appendToTuple oldArgs argsNum (foldTermsOrNil newargs) (nockIntegralLiteral (length newargs))
-          newSubject <- replaceSubject $ \case
-            WrapperCode -> Just (getClosureField RawCode closure) -- We Want RawCode because we already have all args.
-            ArgsTuple -> Just allArgs
-            RawCode -> Just (OpQuote # nockNilTagged "callClosure-RawCode")
-            TempStack -> Just (OpQuote # nockNilTagged "callClosure-TempStack")
-            FunctionsLibrary -> Nothing
-            StandardLibrary -> Nothing
-            ClosureArgs -> Nothing
-            ClosureTotalArgsNum -> Nothing
-            ClosureArgsNum -> Nothing
-            AnomaGetOrder -> Nothing
-          return (opCall "callClosure" (closurePath WrapperCode) newSubject)
+          withTemp closure $ \ref -> do
+            newargs <- mapM compile _nodeCallArgs
+            callClosure ref newargs
 
 isZero :: Term Natural -> Term Natural
 isZero a = OpEq # a # nockNatLiteral 0
@@ -796,7 +765,7 @@ opAddress' x = evaluated $ (opQuote "opAddress'" OpAddress) # x
 
 -- [a [b [c 0]]] -> [a [b c]]
 -- len = quote 3
--- TODO lst is being evaluated three times!
+-- TODO: lst is being evaluated three times!
 listToTuple :: (Member (Reader CompilerCtx) r) => Term Natural -> Term Natural -> Sem r (Term Natural)
 listToTuple lst len = do
   -- posOfLast uses stdlib so when it is evaulated the stdlib must be in the
@@ -895,14 +864,12 @@ extendClosure Tree.NodeExtendClosure {..} = do
   allArgs <- append oldArgs argsNum (remakeList args)
   newArgsNum <- add argsNum (nockIntegralLiteral (length _nodeExtendClosureArgs))
   return . makeClosure $ \case
-    WrapperCode -> getClosureField WrapperCode closure
-    RawCode -> getClosureField RawCode closure
+    FunCode -> getClosureField FunCode closure
     ClosureTotalArgsNum -> getClosureField ClosureTotalArgsNum closure
     ClosureArgsNum -> newArgsNum
     ClosureArgs -> allArgs
     ArgsTuple -> getClosureField ArgsTuple closure
     FunctionsLibrary -> getClosureField FunctionsLibrary closure
-    TempStack -> getClosureField TempStack closure
     StandardLibrary -> getClosureField StandardLibrary closure
     AnomaGetOrder -> getClosureField AnomaGetOrder closure
 
@@ -928,7 +895,7 @@ callStdlib fun args = do
   let adjustArgs = case nonEmpty args of
         Just args' -> opReplace "callStdlib-args" argsPath ((opAddress "stdlibR" [R]) >># foldTerms args') (opAddress "stdlibL" [L])
         Nothing -> opAddress "adjustArgsNothing" [L]
-      callFn = opCall "callStdlib" (closurePath WrapperCode) adjustArgs
+      callFn = opCall "callStdlib" (closurePath FunCode) adjustArgs
       meta =
         StdlibCall
           { _stdlibCallArgs = foldTermsOrNil args,
@@ -1047,11 +1014,9 @@ runCompilerWith opts constrs moduleFuns mainFun =
           ( \p ->
               let nockNilHere = nockNilTagged ("makeLibraryFunction-" <> show p)
                in case p of
-                    WrapperCode -> ("wrapperCode-" <> funName) @ c
+                    FunCode -> ("funCode-" <> funName) @ c
                     ArgsTuple -> ("argsTuple-" <> funName) @ argsTuplePlaceholder "libraryFunction"
                     FunctionsLibrary -> ("functionsLibrary-" <> funName) @ functionsLibraryPlaceHolder
-                    RawCode -> ("rawCode-" <> funName) @ c
-                    TempStack -> ("tempStack-" <> funName) @ nockNilHere
                     StandardLibrary -> ("stdlib-" <> funName) @ stdlibPlaceHolder
                     ClosureTotalArgsNum -> ("closureTotalArgsNum-" <> funName) @ nockNilHere
                     ClosureArgsNum -> ("closureArgsNum-" <> funName) @ nockNilHere
@@ -1063,11 +1028,9 @@ runCompilerWith opts constrs moduleFuns mainFun =
     makeMainFunction c = makeClosure $ \p ->
       let nockNilHere = nockNilTagged ("makeMainFunction-" <> show p)
        in case p of
-            WrapperCode -> run . runReader compilerCtx $ mainFunctionWrapper funcsLib
+            FunCode -> run . runReader compilerCtx $ mainFunctionWrapper funcsLib c
             ArgsTuple -> argsTuplePlaceholder "mainFunction"
             FunctionsLibrary -> functionsLibraryPlaceHolder
-            RawCode -> c
-            TempStack -> nockNilHere
             StandardLibrary -> stdlib
             ClosureTotalArgsNum -> nockNilHere
             ClosureArgsNum -> nockNilHere
@@ -1125,27 +1088,42 @@ builtinFunction = \case
         _compilerFunctionName = "builtinPlaceholderName"
       }
 
--- | Call a function. Arguments to the function are assumed to be in the ArgsTuple stack
--- TODO what about temporary stack?
-callFun ::
-  (Members '[Reader CompilerCtx] r) =>
-  FunctionId ->
-  Sem r (Term Natural)
-callFun fun = do
-  fpath <- getFunctionPath fun
-  fname <- getFunctionName fun
-  let p' = fpath ++ closurePath WrapperCode
-  return (opCall ("callFun-" <> fname) p' (opAddress "callFunSubject" emptyPath))
-
 -- | Call a function with the passed arguments
 callFunWithArgs ::
+  forall r.
   (Members '[Reader CompilerCtx] r) =>
   FunctionId ->
   [Term Natural] ->
   Sem r (Term Natural)
 callFunWithArgs fun args = do
   replArgs <- replaceArgs args
-  (replArgs >>#) <$> callFun fun
+  -- after `replArgs` the temporary stack is empty
+  (replArgs >>#) <$> mkFunCall
+  where
+    mkFunCall :: Sem r (Term Natural)
+    mkFunCall = do
+      -- here the temporary stack has been deleted
+      fpath <- getFunctionPath fun
+      fname <- getFunctionName fun
+      let p' = fpath ++ closurePath FunCode
+      return (opCall ("callFun-" <> fname) p' (opAddress "callFunSubject" emptyPath))
+
+callClosure :: (Members '[Reader CompilerCtx] r) => TempRef -> [Term Natural] -> Sem r (Term Natural)
+callClosure ref newArgs = do
+  closure <- addressTempRef ref
+  let oldArgsNum = getClosureField ClosureArgsNum closure
+      oldArgs = getClosureField ClosureArgs closure
+  allArgs <- appendToTuple oldArgs oldArgsNum (foldTermsOrNil newArgs) (nockIntegralLiteral (length newArgs))
+  newSubject <- replaceSubject $ \case
+    FunCode -> Just (getClosureField FunCode closure)
+    ArgsTuple -> Just allArgs
+    FunctionsLibrary -> Nothing
+    StandardLibrary -> Nothing
+    ClosureArgs -> Nothing
+    ClosureTotalArgsNum -> Nothing
+    ClosureArgsNum -> Nothing
+    AnomaGetOrder -> Nothing
+  return (opCall "callClosure" (closurePath FunCode) newSubject)
 
 replaceSubject :: (Member (Reader CompilerCtx) r) => (AnomaCallablePathId -> Maybe (Term Natural)) -> Sem r (Term Natural)
 replaceSubject = replaceSubject' "replaceSubject"
@@ -1164,6 +1142,8 @@ replaceArgsWithTerm tag term =
     ArgsTuple -> Just term
     _ -> Nothing
 
+-- | Replace the arguments in the ArgsTuple stack with the passed arguments.
+-- Resets the temporary stack to empty.
 replaceArgs :: (Member (Reader CompilerCtx) r) => [Term Natural] -> Sem r (Term Natural)
 replaceArgs = replaceArgsWithTerm "replaceArgs" . foldTermsOrNil
 

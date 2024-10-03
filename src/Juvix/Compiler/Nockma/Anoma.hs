@@ -16,9 +16,9 @@ anomaCallTuple = \case
     helper replaceArgs =
       opCall
         "anomaCall"
-        (closurePath WrapperCode)
-        (repArgs (OpAddress # emptyPath))
+        (closurePath FunCode)
+        (replArgs (OpAddress # emptyPath))
       where
-        repArgs x = case replaceArgs of
+        replArgs x = case replaceArgs of
           Nothing -> x
           Just r -> r x
