@@ -489,9 +489,9 @@ compile = \case
 
     goCase :: Tree.NodeCase -> Sem r (Term Natural)
     goCase c = do
-      def <- mapM compile (c ^. Tree.nodeCaseDefault)
       arg <- compile (c ^. Tree.nodeCaseArg)
       withTempVar arg $ \ref -> do
+        def <- mapM (popTempVar . compile) (c ^. Tree.nodeCaseDefault)
         branches <- mapM goCaseBranch (c ^. Tree.nodeCaseBranches)
         caseCmd ref def branches
 
@@ -1106,17 +1106,11 @@ callFunWithArgs ::
   [Term Natural] ->
   Sem r (Term Natural)
 callFunWithArgs fun args = do
-  replArgs <- replaceArgs args
-  -- after `replArgs` the temporary stack is empty
-  (replArgs >>#) <$> mkFunCall
-  where
-    mkFunCall :: Sem r (Term Natural)
-    mkFunCall = do
-      -- here the temporary stack has been deleted
-      fpath <- getFunctionPath fun
-      fname <- getFunctionName fun
-      let p' = fpath ++ closurePath FunCode
-      return (opCall ("callFun-" <> fname) p' (opAddress "callFunSubject" emptyPath))
+  newSubject <- replaceArgs args
+  fpath <- getFunctionPath fun
+  fname <- getFunctionName fun
+  let p' = fpath ++ closurePath FunCode
+  return (opCall ("callFun-" <> fname) p' newSubject)
 
 callClosure :: (Members '[Reader CompilerCtx] r) => TempRef -> [Term Natural] -> Sem r (Term Natural)
 callClosure ref newArgs = do
@@ -1153,7 +1147,7 @@ replaceArgsWithTerm tag term =
     _ -> Nothing
 
 -- | Replace the arguments in the ArgsTuple stack with the passed arguments.
--- Resets the temporary stack to empty.
+-- Resets the temporary stack to empty. Returns the new subject.
 replaceArgs :: (Member (Reader CompilerCtx) r) => [Term Natural] -> Sem r (Term Natural)
 replaceArgs = replaceArgsWithTerm "replaceArgs" . foldTermsOrNil
 
@@ -1184,9 +1178,8 @@ constructorTagToTerm = \case
   Tree.UserTag t -> OpQuote # toNock (fromIntegral (t ^. Tree.tagUserWord) :: Natural)
   Tree.BuiltinTag b -> builtinTagToTerm (nockmaBuiltinTag b)
 
--- Creates a case command from the compiled value `arg` and the compiled
--- branches. Note: `arg` is duplicated, so it should be a reference -- not
--- perform any non-trivial computation!
+-- Creates a case command from the reference `ref` to the compiled value and the
+-- compiled branches.
 caseCmd ::
   forall r.
   (Members '[Reader CompilerCtx] r) =>
