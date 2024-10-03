@@ -773,6 +773,12 @@ listToTuple lst len = do
   -- this by evaluating `lst #. posOfLastOffset` in `t1`. The address that
   -- posOfLastOffset now points to must be shifted by [L] to make it relative to
   -- `lst`.
+  --
+  -- TODO: dec and the pow2 in appendRights are being evaluated twice. We should
+  -- have appendRights' which takes 2^n instead of n
+  --
+  -- TODO: there is way too much arithmetic here with many calls to stdlib; this
+  -- makes the generated code very inefficient
   posOfLastOffset <- appendRights [L] =<< dec len
   posOfLast <- appendRights emptyPath =<< dec len
   let t1 = (lst #. posOfLastOffset) >># (opAddress' (OpAddress # [R])) >># (opAddress "listToTupleLast" [L])
@@ -835,6 +841,7 @@ nockIntegralLiteral = (OpQuote #) . toNock @Natural . fromIntegral
 -- the result is a tuple.
 -- NOTE: xs occurs twice, but that's fine because each occurrence is in a
 -- different if branch.
+-- TODO: this function generates extremely inefficient code
 appendToTuple ::
   (Member (Reader CompilerCtx) r) =>
   Term Natural ->
@@ -845,8 +852,11 @@ appendToTuple ::
 appendToTuple xs lenXs ys lenYs = do
   tp1 <- listToTuple xs lenXs
   tp2 <- append xs lenXs ys
+  -- TODO: omit the if when lenYs is known at compile-time
   return $ OpIf # isZero lenYs # tp1 # tp2
 
+-- TODO: what does this function do? what are the arguments?
+-- TODO: this function generates inefficient code
 append :: (Member (Reader CompilerCtx) r) => Term Natural -> Term Natural -> Term Natural -> Sem r (Term Natural)
 append xs lenXs ys = do
   posOfXsNil <- appendRights emptyPath lenXs
