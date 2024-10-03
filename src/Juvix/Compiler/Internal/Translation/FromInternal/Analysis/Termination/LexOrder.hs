@@ -131,37 +131,48 @@ recursiveBehaviour re =
     (re ^. reflexiveEdgeFun)
     (map callMatrixDiag (toList $ re ^. reflexiveEdgeMatrices))
 
+type SparseMatrix = [[Indexed SizeRel]]
+
 findOrder :: RecursiveBehaviour -> Maybe LexOrder
 findOrder rb = LexOrder <$> listToMaybe (mapMaybe (isLexOrder >=> nonEmpty) allPerms)
   where
     b0 :: [[SizeRel]]
     b0 = rb ^. recursiveBehaviourMatrix
 
-    indexed = map (zip [0 :: Int ..] . take minLength) b0
+    indexed = map (indexFrom 0 . take minLength) b0
       where
         minLength = minimum (map length b0)
 
+    startB :: SparseMatrix
     startB = removeUselessColumns indexed
 
-    -- removes columns that don't have at least one ≺ in them
-    removeUselessColumns :: [[(Int, SizeRel)]] -> [[(Int, SizeRel)]]
-    removeUselessColumns = transpose . filter (any (isLess . snd)) . transpose
+    -- removes columns that don't have at least one ≺ in them because we know
+    -- they'll never contribute to finding a decreasing lex order
+    removeUselessColumns :: SparseMatrix -> SparseMatrix
+    removeUselessColumns = transpose . filter (any (isLess . getRel)) . transpose
+
+    getIx :: Indexed SizeRel -> Int
+    getIx = (^. indexedIx)
+
+    getRel :: Indexed SizeRel -> SizeRel
+    getRel = (^. indexedThing)
 
     isLexOrder :: [Int] -> Maybe [Int]
     isLexOrder = go startB
       where
-        go :: [[(Int, SizeRel)]] -> [Int] -> Maybe [Int]
+        go :: SparseMatrix -> [Int] -> Maybe [Int]
         go [] _ = Just []
         go b perm = case perm of
-          [] -> error "The permutation should have one element at least!"
-          (p0 : ptail)
-            | Just r <- find (isLess . snd . (!! p0)) b,
-              all (notNothing . snd . (!! p0)) b,
+          [] -> Nothing
+          p0 : ptail
+            | Just r <- find (isLess . getRel . (!! p0)) b,
+              all (notNothing . getRel . (!! p0)) b,
               Just perm' <- go (b' p0) (map pred ptail) ->
-                Just (fst (r !! p0) : perm')
+                Just (getIx (r !! p0) : perm')
             | otherwise -> Nothing
           where
-            b' i = map r' (filter (not . isLess . snd . (!! i)) b)
+            b' :: Int -> SparseMatrix
+            b' i = map r' (filter (not . isLess . getRel . (!! i)) b)
               where
                 r' r = case splitAt i r of
                   (x, y) -> x ++ drop 1 y
