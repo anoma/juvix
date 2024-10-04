@@ -1,8 +1,8 @@
 module Juvix.Compiler.Nockma.Translation.FromSource.Error where
 
-import Juvix.Prelude.Base
 import Juvix.Compiler.Nockma.Encoding.Cue qualified as Cue
 import Juvix.Compiler.Nockma.Language (NockNaturalNaturalError)
+import Juvix.Prelude.Base
 import Juvix.Prelude.Pretty
 
 data CueDecodingError
