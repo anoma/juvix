@@ -173,15 +173,6 @@ data AnomaCallablePathId
 indexStack :: Natural -> Path
 indexStack idx = replicate idx R ++ [L]
 
--- | A closure has the following structure:
--- [code totalArgsNum argsNum args], where
--- 1. code is code to run when fully applied.
--- 2. totalArgsNum is the number of arguments that the function
---     which created the closure expects.
--- 3. argsNum is the number of arguments that have been applied to the closure.
--- 4. args is the list of args that have been applied.
---    The length of the list should be argsNum.
--- TODO: this comment seems outdated
 pathFromEnum :: (Enum a) => a -> Path
 pathFromEnum = indexStack . fromIntegral . fromEnum
 
@@ -227,6 +218,53 @@ getSubjectBasePath :: (Member (Reader CompilerCtx) r) => Sem r Path
 getSubjectBasePath = do
   h <- asks (^. compilerStackHeight)
   return $ replicate h R
+
+-- | Pushes a temporary value onto the subject stack and continues compilation
+-- with the provided continuation function.
+--
+-- NOTE: It is *important* to *never* duplicate any compilation steps, e.g.,
+-- ```
+-- doSth <- compile something
+-- return $ doSth # doSth
+-- ```
+-- is incorrect. Duplication of `doSth` in the returned generated code may
+-- result in changing the asymptotic complexity of the compiled program
+-- exponentially. The above code should be replaced with:
+-- ```
+-- doSth <- compile something
+-- withTemp doSth $ \ref -> do
+--   val <- addressTempRef ref
+--   return $ val # val
+withTemp ::
+  (Members '[Reader FunctionCtx, Reader CompilerCtx] r) =>
+  Term Natural ->
+  (TempRef -> Sem r (Term Natural)) ->
+  Sem r (Term Natural)
+withTemp value f = do
+  stackHeight <- asks (^. compilerStackHeight)
+  body' <- local (over compilerStackHeight (+ 1)) $ f (TempRef stackHeight)
+  return $ OpPush # value # body'
+
+withTempVar ::
+  (Members '[Reader FunctionCtx, Reader CompilerCtx] r) =>
+  Term Natural ->
+  (TempRef -> Sem r (Term Natural)) ->
+  Sem r (Term Natural)
+withTempVar value cont = withTemp value $ \temp -> do
+  tempVar <- asks (^. compilerTempVarsNum)
+  local (over compilerTempVarMap (HashMap.insert tempVar temp))
+    . local (over compilerTempVarsNum (+ 1))
+    $ cont temp
+
+popTempVar ::
+  (Members '[Reader FunctionCtx, Reader CompilerCtx] r) =>
+  (Sem r (Term Natural)) ->
+  Sem r (Term Natural)
+popTempVar cont = do
+  tempVar <- asks (^. compilerTempVarsNum)
+  local (over compilerTempVarMap (HashMap.delete (tempVar - 1)))
+    . local (over compilerTempVarsNum (\x -> x - 1))
+    $ cont
 
 runCompilerFunction :: CompilerCtx -> CompilerFunction -> Term Natural
 runCompilerFunction ctx fun =
@@ -610,24 +648,14 @@ compile = \case
             [ enc,
               byteArrayPayload "anomaSignPrivKeyTail" privKey
             ]
-        ret <- goReturnByteArray
-        -- TODO: is this correct? should we adjust paths?
-        return $
-          opReplace
-            "callMkByteArrayOnSignResult"
-            (closurePath ArgsTuple)
-            stdcall
-            (opAddress "stack" emptyPath)
-            >># ret
+        withTemp stdcall goReturnByteArray
       _ -> impossible
       where
-        goReturnByteArray :: Sem r (Term Natural)
-        goReturnByteArray = do
+        goReturnByteArray :: TempRef -> Sem r (Term Natural)
+        goReturnByteArray ref = do
+          signResult <- addressTempRef ref
           res <- callStdlib StdlibLengthBytes [signResult]
           return $ mkByteArray res signResult
-
-        signResult :: Term Natural
-        signResult = opAddress "sign-result" (closurePath ArgsTuple)
 
     goAnomaSignDetached :: [Term Natural] -> Sem r (Term Natural)
     goAnomaSignDetached = \case
@@ -793,37 +821,6 @@ appendRights :: (Member (Reader CompilerCtx) r) => Path -> Term Natural -> Sem r
 appendRights path n = do
   n' <- pow2 n
   mul n' (OpInc # OpQuote # path) >>= dec
-
-withTemp ::
-  (Members '[Reader FunctionCtx, Reader CompilerCtx] r) =>
-  Term Natural ->
-  (TempRef -> Sem r (Term Natural)) ->
-  Sem r (Term Natural)
-withTemp value f = do
-  stackHeight <- asks (^. compilerStackHeight)
-  body' <- local (over compilerStackHeight (+ 1)) $ f (TempRef stackHeight)
-  return $ OpPush # value # body'
-
-withTempVar ::
-  (Members '[Reader FunctionCtx, Reader CompilerCtx] r) =>
-  Term Natural ->
-  (TempRef -> Sem r (Term Natural)) ->
-  Sem r (Term Natural)
-withTempVar value cont = withTemp value $ \temp -> do
-  tempVar <- asks (^. compilerTempVarsNum)
-  local (over compilerTempVarMap (HashMap.insert tempVar temp))
-    . local (over compilerTempVarsNum (+ 1))
-    $ cont temp
-
-popTempVar ::
-  (Members '[Reader FunctionCtx, Reader CompilerCtx] r) =>
-  (Sem r (Term Natural)) ->
-  Sem r (Term Natural)
-popTempVar cont = do
-  tempVar <- asks (^. compilerTempVarsNum)
-  local (over compilerTempVarMap (HashMap.delete (tempVar - 1)))
-    . local (over compilerTempVarsNum (\x -> x - 1))
-    $ cont
 
 testEq :: (Members '[Reader FunctionCtx, Reader CompilerCtx] r) => Tree.Node -> Tree.Node -> Sem r (Term Natural)
 testEq a b = do
