@@ -26,13 +26,6 @@ data NockEvalError a
   | ErrDecodingFailed (DecodingFailed a)
   | ErrVerificationFailed (VerificationFailed a)
 
-newtype GenericNockEvalError = GenericNockEvalError
-  { _genericNockEvalErrorMessage :: AnsiText
-  }
-
-class ToGenericNockEvalError a where
-  toGenericNockEvalError :: a -> GenericNockEvalError
-
 data ExpectedCell a = ExpectedCell
   { _expectedCellCtx :: EvalCtx,
     _expectedCellAtom :: Atom a

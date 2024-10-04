@@ -4,6 +4,7 @@ import Data.HashMap.Internal.Strict qualified as HashMap
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.Text qualified as Text
 import Juvix.Compiler.Nockma.Encoding.ByteString (textToNatural)
+import Juvix.Compiler.Nockma.Encoding.Cue qualified as Cue
 import Juvix.Compiler.Nockma.Language
 import Juvix.Extra.Paths
 import Juvix.Extra.Strings qualified as Str
@@ -22,6 +23,14 @@ parseText = runParser noFile
 
 parseReplText :: Text -> Either MegaparsecError (ReplTerm Natural)
 parseReplText = runParserFor replTerm noFile
+
+cueJammedFile :: (Members '[Files, Error JuvixError] r) => Prelude.Path Abs File -> Sem r (Term Natural)
+cueJammedFile fp = do
+  bs <- readFileBS' fp
+  case Cue.cueFromByteString'' @Natural bs of
+    Left _ -> error "nock natural error"
+    Right (Left _) -> error "cue decoding error"
+    Right (Right t) -> return t
 
 parseTermFile :: (MonadIO m) => Prelude.Path Abs File -> m (Either MegaparsecError (Term Natural))
 parseTermFile fp = do

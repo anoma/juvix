@@ -95,6 +95,10 @@ jamToBits =
     . evalState (initJamState @a)
     . jamSem
 
+-- | jam encode a Nock term to the bytes encoding of an atom
+jamToByteString :: forall a. (Integral a, Hashable a) => Term a -> ByteString
+jamToByteString = vectorBitsToByteString . jamToBits
+
 -- | jam encode a Nock term to an atom
 jam :: forall a r. (Integral a, Hashable a, NockNatural a, Member (Error (ErrNockNatural a)) r) => Term a -> Sem r (Atom a)
 jam t = do
