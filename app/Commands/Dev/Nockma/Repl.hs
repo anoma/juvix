@@ -181,7 +181,7 @@ replAction =
         banner
       }
 
-runCommand :: forall r. (Members '[EmbedIO, App] r) => NockmaReplOptions -> Sem r ()
+runCommand :: forall r. (Members '[Files, EmbedIO, App] r) => NockmaReplOptions -> Sem r ()
 runCommand opts = do
   mt :: Maybe (Term Natural) <- mapM iniStack (opts ^. nockmaReplOptionsStackFile)
   liftIO . (`State.evalStateT` (iniState mt)) $ replAction
@@ -189,10 +189,7 @@ runCommand opts = do
     iniStack :: AppPath File -> Sem r (Term Natural)
     iniStack af = do
       afile <- fromAppPathFile af
-      parsedTerm <- Nockma.parseTermFile afile
-      case parsedTerm of
-        Left err -> exitJuvixError (JuvixError err)
-        Right t -> return t
+      checkCued (Nockma.cueJammedFile afile)
 
     iniState :: Maybe (Term Natural) -> ReplState
     iniState mt =
@@ -202,3 +199,6 @@ runCommand opts = do
           _replStateLoadedFile = Nothing,
           _replStateLastResult = nockNilTagged "repl-result"
         }
+
+    checkCued :: Sem (Error JuvixError ': r) a -> Sem r a
+    checkCued = runErrorNoCallStackWith exitJuvixError

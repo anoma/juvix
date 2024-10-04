@@ -14,7 +14,7 @@ runCommand opts = do
   afile <- fromAppPathFile inputFile
   argsFile <- mapM fromAppPathFile (opts ^. nockmaRunArgs)
   parsedArgs <- mapM (Nockma.parseTermFile >=> checkParsed) argsFile
-  parsedTerm <- Nockma.parseJammedFile afile
+  parsedTerm <- checkCued (Nockma.cueJammedFile afile)
   case parsedTerm of
     t@(TermCell {}) -> do
       let formula = anomaCallTuple parsedArgs
@@ -35,3 +35,6 @@ runCommand opts = do
     checkParsed = \case
       Left err -> exitJuvixError (JuvixError err)
       Right tm -> return tm
+
+    checkCued :: Sem (Error JuvixError ': r) a -> Sem r a
+    checkCued = runErrorNoCallStackWith exitJuvixError
