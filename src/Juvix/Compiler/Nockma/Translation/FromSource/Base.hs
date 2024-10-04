@@ -1,9 +1,11 @@
 module Juvix.Compiler.Nockma.Translation.FromSource.Base where
 
+import Data.ByteString qualified as BS
 import Data.HashMap.Internal.Strict qualified as HashMap
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.Text qualified as Text
 import Juvix.Compiler.Nockma.Encoding.ByteString (textToNatural)
+import Juvix.Compiler.Nockma.Encoding.Cue qualified as Cue
 import Juvix.Compiler.Nockma.Language
 import Juvix.Extra.Paths
 import Juvix.Extra.Strings qualified as Str
@@ -14,8 +16,6 @@ import Juvix.Prelude qualified as Prelude
 import Juvix.Prelude.Parsing hiding (runParser)
 import Text.Megaparsec qualified as P
 import Text.Megaparsec.Char.Lexer qualified as L
-import Juvix.Compiler.Nockma.Encoding.Cue qualified as Cue
-import Data.ByteString qualified as BS
 
 type Parser = Parsec Void Text
 
