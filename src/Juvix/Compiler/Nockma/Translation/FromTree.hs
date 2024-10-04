@@ -229,7 +229,8 @@ getSubjectBasePath = do
 -- ```
 -- is incorrect. Duplication of `doSth` in the returned generated code may
 -- result in changing the asymptotic complexity of the compiled program
--- exponentially. The above code should be replaced with:
+-- exponentially, because `doSth` will be evaluated twice. The above code should
+-- be replaced with:
 -- ```
 -- doSth <- compile something
 -- withTemp doSth $ \ref -> do
@@ -245,6 +246,9 @@ withTemp value f = do
   body' <- local (over compilerStackHeight (+ 1)) $ f (TempRef stackHeight)
   return $ OpPush # value # body'
 
+-- | Pushes a temporary value onto the subject stack, associates the resulting
+-- stack reference with the next JuvixTree temporary variable, and continues
+-- compilation.
 withTempVar ::
   (Member (Reader CompilerCtx) r) =>
   Term Natural ->
