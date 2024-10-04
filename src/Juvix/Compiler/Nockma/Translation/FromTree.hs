@@ -218,7 +218,7 @@ makeLenses ''FunctionCtx
 makeLenses ''ConstructorInfo
 makeLenses ''FunctionInfo
 
-stackPath :: (Member (Reader CompilerCtx) r) => AnomaCallablePathId -> Sem r Path
+stackPath :: (Member (Reader CompilerCtx) r, Enum field) => field -> Sem r Path
 stackPath s = do
   h <- asks (^. compilerStackHeight)
   return $ indexStack (fromIntegral (h + fromEnum s))
@@ -378,9 +378,10 @@ mainFunctionWrapper funslib funCode = do
   -- when anomaGet is compiled.
   --
   -- 4. If the Anoma system expectation changes then this code must be changed.
+  anomaGet <- getFieldInSubject ArgsTuple
   captureAnomaGetOrder <- replaceSubject $ \case
     FunCode -> Just (OpQuote # funCode)
-    AnomaGetOrder -> Just (getClosureFieldInSubject ArgsTuple)
+    AnomaGetOrder -> Just anomaGet
     FunctionsLibrary -> Just (OpQuote # funslib)
     _ -> Nothing
   return $ opCall "mainFunctionWrapper" (closurePath FunCode) captureAnomaGetOrder
@@ -571,7 +572,8 @@ compile = \case
 
     goAnomaGet :: [Term Natural] -> Sem r (Term Natural)
     goAnomaGet key = do
-      let arg = remakeList [getFieldInSubject AnomaGetOrder, foldTermsOrNil key]
+      anomaGet <- getFieldInSubject AnomaGetOrder
+      let arg = remakeList [anomaGet, foldTermsOrNil key]
       return (OpScry # (OpQuote # nockNilTagged "OpScry-typehint") # arg)
 
     goAnomaEncode :: [Term Natural] -> Sem r (Term Natural)
@@ -867,6 +869,7 @@ extendClosure ::
   Sem r (Term Natural)
 extendClosure Tree.NodeExtendClosure {..} = do
   args <- mapM compile _nodeExtendClosureArgs
+  -- TODO: closure is evaluated multiple times
   closure <- compile _nodeExtendClosureFun
   let argsNum = getClosureField ClosureArgsNum closure
       oldArgs = getClosureField ClosureArgs closure
@@ -1300,17 +1303,16 @@ getConstructorInfo tag = asks (^?! compilerConstructorInfos . at tag . _Just)
 getClosureField :: AnomaCallablePathId -> Term Natural -> Term Natural
 getClosureField = getField
 
-getClosureFieldInSubject :: AnomaCallablePathId -> Term Natural
-getClosureFieldInSubject = getFieldInSubject
-
 getConstructorField :: ConstructorPathId -> Term Natural -> Term Natural
 getConstructorField = getField
 
 getField :: (Enum field) => field -> Term Natural -> Term Natural
-getField field t = t >># getFieldInSubject field
+getField field t = t >># opAddress "getField" (pathFromEnum field)
 
-getFieldInSubject :: (Enum field) => field -> Term Natural
-getFieldInSubject field = opAddress "getFieldInSubject" (pathFromEnum field)
+getFieldInSubject :: (Member (Reader CompilerCtx) r) => (Enum field) => field -> Sem r (Term Natural)
+getFieldInSubject field = do
+  path <- stackPath field
+  return $ opAddress "getFieldInSubject" path
 
 getConstructorMemRep :: (Members '[Reader CompilerCtx] r) => Tree.Tag -> Sem r NockmaMemRep
 getConstructorMemRep tag = (^. constructorInfoMemRep) <$> getConstructorInfo tag
