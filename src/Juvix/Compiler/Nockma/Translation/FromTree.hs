@@ -236,7 +236,7 @@ getSubjectBasePath = do
 --   val <- addressTempRef ref
 --   return $ val # val
 withTemp ::
-  (Members '[Reader FunctionCtx, Reader CompilerCtx] r) =>
+  (Member (Reader CompilerCtx) r) =>
   Term Natural ->
   (TempRef -> Sem r (Term Natural)) ->
   Sem r (Term Natural)
@@ -246,7 +246,7 @@ withTemp value f = do
   return $ OpPush # value # body'
 
 withTempVar ::
-  (Members '[Reader FunctionCtx, Reader CompilerCtx] r) =>
+  (Member (Reader CompilerCtx) r) =>
   Term Natural ->
   (TempRef -> Sem r (Term Natural)) ->
   Sem r (Term Natural)
@@ -257,7 +257,7 @@ withTempVar value cont = withTemp value $ \temp -> do
     $ cont temp
 
 popTempVar ::
-  (Members '[Reader FunctionCtx, Reader CompilerCtx] r) =>
+  (Member (Reader CompilerCtx) r) =>
   (Sem r (Term Natural)) ->
   Sem r (Term Natural)
 popTempVar cont = do
@@ -724,11 +724,12 @@ compile = \case
     goTrace :: Term Natural -> Sem r (Term Natural)
     goTrace arg = do
       enabled <- asks (^. compilerOptions . compilerOptionsEnableTrace)
-      return $
-        if
-            -- TODO: remove duplication of `arg` here
-            | enabled -> OpTrace # arg # arg
-            | otherwise -> arg
+      if
+          | enabled ->
+              withTemp arg $ \ref -> do
+                val <- addressTempRef ref
+                return $ OpTrace # val # val
+          | otherwise -> return arg
 
     goBinop :: Tree.NodeBinop -> Sem r (Term Natural)
     goBinop Tree.NodeBinop {..} = do
@@ -794,7 +795,6 @@ opAddress' x = evaluated $ (opQuote "opAddress'" OpAddress) # x
 
 -- [a [b [c 0]]] -> [a [b c]]
 -- len = quote 3
--- TODO: lst is being evaluated three times!
 listToTuple :: (Member (Reader CompilerCtx) r) => Term Natural -> Term Natural -> Sem r (Term Natural)
 listToTuple lst len = do
   -- posOfLast uses stdlib so when it is evaulated the stdlib must be in the
@@ -808,11 +808,15 @@ listToTuple lst len = do
   --
   -- TODO: there is way too much arithmetic here with many calls to stdlib; this
   -- makes the generated code very inefficient
-  posOfLastOffset <- appendRights [L] =<< dec len
-  posOfLast <- appendRights emptyPath =<< dec len
-  let t1 = (lst #. posOfLastOffset) >># (opAddress' (OpAddress # [R])) >># (opAddress "listToTupleLast" [L])
-  return $
-    OpIf # isZero len # lst # (replaceSubterm' lst posOfLast t1)
+  withTemp lst $ \lstRef ->
+    withTemp len $ \lenRef -> do
+      lstVal <- addressTempRef lstRef
+      lenVal <- addressTempRef lenRef
+      posOfLastOffset <- appendRights [L] =<< dec lenVal
+      posOfLast <- appendRights emptyPath =<< dec lenVal
+      let t1 = (lstVal #. posOfLastOffset) >># (opAddress' (OpAddress # [R])) >># (opAddress "listToTupleLast" [L])
+      return $
+        OpIf # isZero lenVal # lstVal # (replaceSubterm' lstVal posOfLast t1)
 
 argsTuplePlaceholder :: Text -> Term Natural
 argsTuplePlaceholder txt = nockNilTagged ("argsTuplePlaceholder-" <> txt)
