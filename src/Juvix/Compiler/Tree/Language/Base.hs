@@ -51,20 +51,10 @@ data DirectRef
   deriving stock (Eq)
 
 mkTempRef :: OffsetRef -> DirectRef
-mkTempRef o = TempRef (RefTemp o Nothing)
+mkTempRef o = TempRef (RefTemp o)
 
-mkTempRef' :: Int -> Int -> DirectRef
-mkTempRef' height idx =
-  TempRef
-    ( RefTemp
-        { _refTempOffsetRef = OffsetRef {_offsetRefOffset = idx, _offsetRefName = Nothing},
-          _refTempTempHeight = Just height
-        }
-    )
-
-data RefTemp = RefTemp
-  { _refTempOffsetRef :: OffsetRef,
-    _refTempTempHeight :: Maybe Int
+newtype RefTemp = RefTemp
+  { _refTempOffsetRef :: OffsetRef
   }
   deriving stock (Eq)
 

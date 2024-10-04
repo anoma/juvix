@@ -9,7 +9,6 @@ data TransformationId
   | IdentityU
   | IdentityD
   | Apply
-  | TempHeight
   | FilterUnreachable
   | Validate
   | CheckNoAnoma
@@ -25,7 +24,7 @@ data PipelineId
 type TransformationLikeId = TransformationLikeId' TransformationId PipelineId
 
 toNockmaTransformations :: [TransformationId]
-toNockmaTransformations = [Validate, Apply, FilterUnreachable, TempHeight]
+toNockmaTransformations = [Validate, Apply, FilterUnreachable]
 
 toAsmTransformations :: [TransformationId]
 toAsmTransformations = [Validate, CheckNoAnoma, CheckNoByteArray]
@@ -40,7 +39,6 @@ instance TransformationId' TransformationId where
     IdentityU -> strIdentityU
     IdentityD -> strIdentityD
     Apply -> strApply
-    TempHeight -> strTempHeight
     FilterUnreachable -> strFilterUnreachable
     Validate -> strValidate
     CheckNoAnoma -> strCheckNoAnoma

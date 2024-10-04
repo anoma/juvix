@@ -14,7 +14,6 @@ import Juvix.Compiler.Tree.Transformation.CheckNoAnoma
 import Juvix.Compiler.Tree.Transformation.CheckNoByteArray
 import Juvix.Compiler.Tree.Transformation.FilterUnreachable
 import Juvix.Compiler.Tree.Transformation.IdentityTrans
-import Juvix.Compiler.Tree.Transformation.TempHeight
 import Juvix.Compiler.Tree.Transformation.Validate
 
 applyTransformations :: forall r. (Member (Error JuvixError) r) => [TransformationId] -> InfoTable -> Sem r InfoTable
@@ -26,7 +25,6 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
       IdentityU -> return . identityU
       IdentityD -> return . identityD
       Apply -> return . computeApply
-      TempHeight -> return . computeTempHeight
       FilterUnreachable -> return . filterUnreachable
       Validate -> mapError (JuvixError @TreeError) . validate
       CheckNoAnoma -> \tbl' -> mapError (JuvixError @TreeError) (checkNoAnoma tbl') $> tbl'
