@@ -213,7 +213,6 @@ indexTuple IndexTupleArgs {..}
 makeLenses ''CompilerOptions
 makeLenses ''AnomaResult
 makeLenses ''CompilerFunction
-makeLenses ''TempRef
 makeLenses ''CompilerCtx
 makeLenses ''FunctionCtx
 makeLenses ''ConstructorInfo
@@ -812,7 +811,7 @@ withTempVar value cont = withTemp value $ \temp -> do
   tempVar <- asks (^. compilerTempVarsNum)
   local (over compilerTempVarMap (HashMap.insert tempVar temp))
     . local (over compilerTempVarsNum (+ 1))
-    $ cont (TempRef tempVar)
+    $ cont temp
 
 popTempVar ::
   (Members '[Reader FunctionCtx, Reader CompilerCtx] r) =>
@@ -924,11 +923,10 @@ directRefPath :: forall r. (Members '[Reader FunctionCtx, Reader CompilerCtx] r)
 directRefPath = \case
   Tree.ArgRef a -> pathToArg (fromOffsetRef a)
   Tree.TempRef Tree.RefTemp {..} -> do
-    stackHeight <- asks (^. compilerStackHeight)
     varMap <- asks (^. compilerTempVarMap)
     let tempIdx = _refTempOffsetRef ^. Tree.offsetRefOffset
         ref = fromJust $ HashMap.lookup tempIdx varMap
-    return $ indexStack $ fromIntegral $ (stackHeight - ref ^. tempRefIndex - 1)
+    tempRefPath ref
 
 nockmaBuiltinTag :: Tree.BuiltinDataTag -> NockmaBuiltinTag
 nockmaBuiltinTag = \case
