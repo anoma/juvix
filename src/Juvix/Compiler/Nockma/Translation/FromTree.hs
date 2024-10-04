@@ -868,22 +868,23 @@ extendClosure ::
   Tree.NodeExtendClosure ->
   Sem r (Term Natural)
 extendClosure Tree.NodeExtendClosure {..} = do
-  args <- mapM compile _nodeExtendClosureArgs
-  -- TODO: closure is evaluated multiple times
-  closure <- compile _nodeExtendClosureFun
-  let argsNum = getClosureField ClosureArgsNum closure
-      oldArgs = getClosureField ClosureArgs closure
-  allArgs <- append oldArgs argsNum (remakeList args)
-  newArgsNum <- add argsNum (nockIntegralLiteral (length _nodeExtendClosureArgs))
-  return . makeClosure $ \case
-    FunCode -> getClosureField FunCode closure
-    ClosureTotalArgsNum -> getClosureField ClosureTotalArgsNum closure
-    ClosureArgsNum -> newArgsNum
-    ClosureArgs -> allArgs
-    ArgsTuple -> getClosureField ArgsTuple closure
-    FunctionsLibrary -> getClosureField FunctionsLibrary closure
-    StandardLibrary -> getClosureField StandardLibrary closure
-    AnomaGetOrder -> getClosureField AnomaGetOrder closure
+  closureFun <- compile _nodeExtendClosureFun
+  withTemp closureFun $ \ref -> do
+    args <- mapM compile _nodeExtendClosureArgs
+    closure <- addressTempRef ref
+    let argsNum = getClosureField ClosureArgsNum closure
+        oldArgs = getClosureField ClosureArgs closure
+    allArgs <- append oldArgs argsNum (remakeList args)
+    newArgsNum <- add argsNum (nockIntegralLiteral (length _nodeExtendClosureArgs))
+    return . makeClosure $ \case
+      FunCode -> getClosureField FunCode closure
+      ClosureTotalArgsNum -> getClosureField ClosureTotalArgsNum closure
+      ClosureArgsNum -> newArgsNum
+      ClosureArgs -> allArgs
+      ArgsTuple -> getClosureField ArgsTuple closure
+      FunctionsLibrary -> getClosureField FunctionsLibrary closure
+      StandardLibrary -> getClosureField StandardLibrary closure
+      AnomaGetOrder -> getClosureField AnomaGetOrder closure
 
 -- Calling convention for Anoma stdlib
 --
