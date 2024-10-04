@@ -1,6 +1,5 @@
 module Juvix.Compiler.Nockma.Translation.FromSource.Base where
 
-import Data.ByteString qualified as BS
 import Data.HashMap.Internal.Strict qualified as HashMap
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.Text qualified as Text
@@ -25,9 +24,9 @@ parseText = runParser noFile
 parseReplText :: Text -> Either MegaparsecError (ReplTerm Natural)
 parseReplText = runParserFor replTerm noFile
 
-parseJammedFile :: (MonadIO m) => Prelude.Path Abs File -> m (Term Natural)
-parseJammedFile fp = do
-  bs <- liftIO (BS.readFile (toFilePath fp))
+cueJammedFile :: (Members '[Files, Error JuvixError] r) => Prelude.Path Abs File -> Sem r (Term Natural)
+cueJammedFile fp = do
+  bs <- readFileBS' fp
   case Cue.cueFromByteString'' @Natural bs of
     Left _ -> error "nock natural error"
     Right (Left _) -> error "cue decoding error"
