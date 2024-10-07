@@ -122,8 +122,7 @@ data CompilerCtx = CompilerCtx
     -- | Maps temporary variables to their stack indices.
     _compilerTempVarMap :: HashMap Int TempRef,
     _compilerTempVarsNum :: Int,
-    _compilerStackHeight :: Int,
-    _compilerOptions :: CompilerOptions
+    _compilerStackHeight :: Int
   }
 
 emptyCompilerCtx :: CompilerCtx
@@ -133,8 +132,7 @@ emptyCompilerCtx =
       _compilerConstructorInfos = mempty,
       _compilerTempVarMap = mempty,
       _compilerTempVarsNum = 0,
-      _compilerStackHeight = 0,
-      _compilerOptions = CompilerOptions True
+      _compilerStackHeight = 0
     }
 
 data ConstructorInfo = ConstructorInfo
@@ -723,13 +721,9 @@ compile = \case
 
     goTrace :: Term Natural -> Sem r (Term Natural)
     goTrace arg = do
-      enabled <- asks (^. compilerOptions . compilerOptionsEnableTrace)
-      if
-          | enabled ->
-              withTemp arg $ \ref -> do
-                val <- addressTempRef ref
-                return $ OpHint # (nockHintAtom NockHintPuts # val) # val
-          | otherwise -> return arg
+      withTemp arg $ \ref -> do
+        val <- addressTempRef ref
+        return $ OpHint # (nockHintAtom NockHintPuts # val) # val
 
     goBinop :: Tree.NodeBinop -> Sem r (Term Natural)
     goBinop Tree.NodeBinop {..} = do
@@ -953,7 +947,7 @@ remakeList :: (Foldable l) => l (Term Natural) -> Term Natural
 remakeList ts = foldTerms (toList ts `prependList` pure (OpQuote # nockNilTagged "remakeList"))
 
 runCompilerWith :: CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> AnomaResult
-runCompilerWith opts constrs moduleFuns mainFun =
+runCompilerWith _opts constrs moduleFuns mainFun =
   AnomaResult
     { _anomaClosure = mainClosure
     }
