@@ -16,8 +16,8 @@ import Juvix.Compiler.Nockma.Evaluator.Error
 import Juvix.Compiler.Nockma.Evaluator.Options
 import Juvix.Compiler.Nockma.Evaluator.Storage
 import Juvix.Compiler.Nockma.Language
+import Juvix.Compiler.Nockma.Pretty
 import Juvix.Prelude hiding (Atom, Path)
-import Juvix.Prelude.Pretty
 
 newtype OpCounts = OpCounts
   { _opCountsMap :: HashMap NockOp Int

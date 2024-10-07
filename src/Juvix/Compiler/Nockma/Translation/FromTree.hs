@@ -24,7 +24,6 @@ module Juvix.Compiler.Nockma.Translation.FromTree
     foldTerms,
     pathToArg,
     makeList,
-    listToTuple,
     appendToTuple,
     append,
     opAddress',
@@ -791,36 +790,8 @@ compile = \case
             newargs <- mapM compile _nodeCallArgs
             callClosure ref newargs
 
-isZero :: Term Natural -> Term Natural
-isZero a = OpEq # a # nockNatLiteral 0
-
 opAddress' :: Term Natural -> Term Natural
 opAddress' x = evaluated $ (opQuote "opAddress'" OpAddress) # x
-
--- [a [b [c 0]]] -> [a [b c]]
--- len = quote 3
-listToTuple :: (Member (Reader CompilerCtx) r) => Term Natural -> Term Natural -> Sem r (Term Natural)
-listToTuple lst len = do
-  -- posOfLast uses stdlib so when it is evaulated the stdlib must be in the
-  -- subject lst must also be evaluated against the standard subject. We achieve
-  -- this by evaluating `lst #. posOfLastOffset` in `t1`. The address that
-  -- posOfLastOffset now points to must be shifted by [L] to make it relative to
-  -- `lst`.
-  --
-  -- TODO: dec and the pow2 in appendRights are being evaluated twice. We should
-  -- have appendRights' which takes 2^n instead of n
-  --
-  -- TODO: there is way too much arithmetic here with many calls to stdlib; this
-  -- makes the generated code very inefficient
-  withTemp lst $ \lstRef ->
-    withTemp len $ \lenRef -> do
-      lstVal <- addressTempRef lstRef
-      lenVal <- addressTempRef lenRef
-      posOfLastOffset <- appendRights [L] =<< dec lenVal
-      posOfLast <- appendRights emptyPath =<< dec lenVal
-      let t1 = (lstVal #. posOfLastOffset) >># (opAddress' (OpAddress # [R])) >># (opAddress "listToTupleLast" [L])
-      return $
-        OpIf # isZero lenVal # lstVal # (replaceSubterm' lstVal posOfLast t1)
 
 argsTuplePlaceholder :: Text -> Term Natural
 argsTuplePlaceholder txt = nockNilTagged ("argsTuplePlaceholder-" <> txt)
@@ -843,23 +814,16 @@ nockIntegralLiteral :: (Integral a) => a -> Term Natural
 nockIntegralLiteral = (OpQuote #) . toNock @Natural . fromIntegral
 
 -- | xs must be a list.
--- ys is a (possibly empty) tuple.
+-- ys is a non-empty tuple.
 -- the result is a tuple.
--- NOTE: xs occurs twice, but that's fine because each occurrence is in a
--- different if branch.
--- TODO: this function generates extremely inefficient code
+-- TODO: this function generates inefficient code
 appendToTuple ::
   (Member (Reader CompilerCtx) r) =>
   Term Natural ->
   Term Natural ->
   Term Natural ->
-  Term Natural ->
   Sem r (Term Natural)
-appendToTuple xs lenXs ys lenYs = do
-  tp1 <- listToTuple xs lenXs
-  tp2 <- append xs lenXs ys
-  -- TODO: omit the if when lenYs is known at compile-time
-  return $ OpIf # isZero lenYs # tp1 # tp2
+appendToTuple xs lenXs ys = append xs lenXs ys
 
 -- TODO: what does this function do? what are the arguments?
 -- TODO: this function generates inefficient code
@@ -1121,10 +1085,14 @@ callFunWithArgs fun args = do
 
 callClosure :: (Members '[Reader CompilerCtx] r) => TempRef -> [Term Natural] -> Sem r (Term Natural)
 callClosure ref newArgs = do
+  -- We never call a closure with zero arguments: if there are no arguments then
+  -- there is no application and the closure is just returned. This differs from
+  -- the behaviour with calls to known functions which may have zero arguments.
+  massert (not (null newArgs))
   closure <- addressTempRef ref
   let oldArgsNum = getClosureField ClosureArgsNum closure
       oldArgs = getClosureField ClosureArgs closure
-  allArgs <- appendToTuple oldArgs oldArgsNum (foldTermsOrNil newArgs) (nockIntegralLiteral (length newArgs))
+  allArgs <- appendToTuple oldArgs oldArgsNum (foldTermsOrNil newArgs)
   newSubject <- replaceSubject $ \case
     FunCode -> Just (getClosureField FunCode closure)
     ArgsTuple -> Just allArgs
