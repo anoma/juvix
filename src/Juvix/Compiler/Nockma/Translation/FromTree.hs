@@ -96,14 +96,11 @@ data BuiltinFunctionId
 
 instance Hashable BuiltinFunctionId
 
-newtype CompilerOptions = CompilerOptions
-  {_compilerOptionsEnableTrace :: Bool}
+data CompilerOptions = CompilerOptions
 
 fromEntryPoint :: EntryPoint -> CompilerOptions
-fromEntryPoint EntryPoint {..} =
+fromEntryPoint EntryPoint {} =
   CompilerOptions
-    { _compilerOptionsEnableTrace = _entryPointDebug
-    }
 
 data FunctionInfo = FunctionInfo
   { _functionInfoPath :: Path,
@@ -731,7 +728,7 @@ compile = \case
           | enabled ->
               withTemp arg $ \ref -> do
                 val <- addressTempRef ref
-                return $ OpTrace # val # val
+                return $ OpHint # (nockHintAtom NockHintPuts # val) # val
           | otherwise -> return arg
 
     goBinop :: Tree.NodeBinop -> Sem r (Term Natural)
@@ -971,8 +968,7 @@ runCompilerWith opts constrs moduleFuns mainFun =
     compilerCtx =
       emptyCompilerCtx
         { _compilerFunctionInfos = functionInfos,
-          _compilerConstructorInfos = constrs,
-          _compilerOptions = opts
+          _compilerConstructorInfos = constrs
         }
 
     mainClosure :: Term Natural

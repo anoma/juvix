@@ -40,8 +40,8 @@ mkAnomaCallTest' enableDebug _testProgramStorage _testName relRoot mainFile args
           <$> testDefaultEntryPointIO testRootDir (testRootDir <//> mainFile)
       (^. pipelineResult) . snd <$> testRunIO entryPoint upToAnoma
 
-mkAnomaCallTestNoTrace :: Text -> Prelude.Path Rel Dir -> Prelude.Path Rel File -> [Term Natural] -> Check () -> TestTree
-mkAnomaCallTestNoTrace = mkAnomaCallTest' False emptyStorage
+mkAnomaCallTestNoDebug :: Text -> Prelude.Path Rel Dir -> Prelude.Path Rel File -> [Term Natural] -> Check () -> TestTree
+mkAnomaCallTestNoDebug = mkAnomaCallTest' False emptyStorage
 
 mkAnomaCallTest :: Text -> Prelude.Path Rel Dir -> Prelude.Path Rel File -> [Term Natural] -> Check () -> TestTree
 mkAnomaCallTest = mkAnomaCallTest' True emptyStorage
@@ -78,12 +78,12 @@ allTests =
         $(mkRelFile "test003.juvix")
         []
         (checkNatOutput [1, 4, 2, 4, 0]),
-      mkAnomaCallTestNoTrace
-        "Test003: Integer arithmetic - no trace"
+      mkAnomaCallTestNoDebug
+        "Test003: Integer arithmetic - no debug"
         $(mkRelDir ".")
         $(mkRelFile "test003.juvix")
         []
-        (checkNatOutput [0]),
+        (checkNatOutput [1, 4, 2, 4, 0]),
       mkAnomaCallTest
         "Test005: Higher-order functions"
         $(mkRelDir ".")

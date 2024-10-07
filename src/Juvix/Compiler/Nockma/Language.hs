@@ -144,7 +144,6 @@ data NockOp
   | OpReplace
   | OpHint
   | OpScry
-  | OpTrace
   deriving stock (Bounded, Enum, Eq, Generic)
 
 instance Hashable NockOp
@@ -164,7 +163,9 @@ instance Pretty NockOp where
     OpReplace -> "replace"
     OpHint -> "hint"
     OpScry -> "scry"
-    OpTrace -> "trace"
+
+data NockHint = NockHintPuts
+  deriving stock (Show, Eq, Enum, Bounded)
 
 textToStdlibFunctionMap :: HashMap Text StdlibFunction
 textToStdlibFunctionMap =
@@ -267,7 +268,6 @@ serializeOp = \case
   OpReplace -> 10
   OpHint -> 11
   OpScry -> 12
-  OpTrace -> 100
 
 class (NockmaEq a) => NockNatural a where
   type ErrNockNatural a :: Type
@@ -324,6 +324,22 @@ nockBoolLiteral :: Bool -> Term Natural
 nockBoolLiteral b
   | b = nockTrueLiteral
   | otherwise = nockFalseLiteral
+
+nockHintName :: NockHint -> Text
+nockHintName = \case
+  NockHintPuts -> "puts"
+
+nockHintValue :: NockHint -> Natural
+nockHintValue = \case
+  NockHintPuts -> 0x73747570
+
+nockHintAtom :: NockHint -> Term Natural
+nockHintAtom hint =
+  TermAtom
+    Atom
+      { _atomInfo = emptyAtomInfo,
+        _atom = nockHintValue hint
+      }
 
 instance NockNatural Natural where
   type ErrNockNatural Natural = NockNaturalNaturalError

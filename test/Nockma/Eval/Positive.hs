@@ -138,7 +138,7 @@ anomaTest n mainFun args _testCheck _evalInterceptStdlibCalls =
         | _evalInterceptStdlibCalls = n <> " - intercept stdlib"
         | otherwise = n
 
-      opts = CompilerOptions {_compilerOptionsEnableTrace = False}
+      opts = CompilerOptions
 
       res :: AnomaResult = runCompilerWith opts mempty [] f
       _testProgramSubject = res ^. anomaClosure
@@ -302,7 +302,7 @@ unitTests =
     test "push" [nock| [0 1] |] [nock| [push [[suc [@ L]] [@ S]]] |] (eqNock [nock| [1 0 1] |]),
     test "call" [nock| [quote 1] |] [nock| [call [S [@ S]]] |] (eqNock [nock| 1 |]),
     test "replace" [nock| [0 1] |] [nock| [replace [[L [quote 1]] [@ S]]] |] (eqNock [nock| [1 1] |]),
-    test "hint" [nock| [0 1] |] [nock| [hint [nil [trace [quote 2] [quote 3]]] [quote 1]] |] (eqTraces [[nock| 2 |]] >> eqNock [nock| 1 |]),
+    test "hint" [nock| [0 1] |] [nock| [hint [1937012080 [quote 2]] [quote 1]] |] (eqTraces [[nock| 2 |]] >> eqNock [nock| 1 |]),
     testWithStorage [([nock| 111 |], [nock| 222 |])] "scry" [nock| nil |] [nock| [scry [quote nil] [quote 111]] |] (eqNock [nock| 222 |]),
     withAssertErrKeyNotInStorage $ testWithStorage [([nock| 333 |], [nock| 222 |]), ([nock| 3 |], [nock| 222 |])] "scry" [nock| nil |] [nock| [scry [quote nil] [quote 111]] |] (eqNock [nock| 222 |])
   ]

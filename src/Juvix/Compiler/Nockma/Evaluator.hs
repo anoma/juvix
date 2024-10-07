@@ -358,7 +358,6 @@ evalProfile inistack initerm =
             OpReplace -> goOpReplace
             OpHint -> goOpHint
             OpScry -> goOpScry
-            OpTrace -> goOpTrace
           where
             crumb crumbTag =
               EvalCrumbOperator $
@@ -388,20 +387,19 @@ evalProfile inistack initerm =
                 TermCell {} -> nockTrue
                 TermAtom {} -> nockFalse
 
-            goOpTrace :: Sem r (Term a)
-            goOpTrace = do
-              Cell' tr a _ <- withCrumb (crumb crumbDecodeFirst) (asCell (c ^. operatorCellTerm))
-              tr' <- evalArg crumbEvalFirst stack tr
-              output tr'
-              evalArg crumbEvalSecond stack a
-
             goOpHint :: Sem r (Term a)
             goOpHint = do
               Cell' l r _ <- withCrumb (crumb crumbDecodeFirst) (asCell (c ^. operatorCellTerm))
               case l of
                 TAtom {} -> evalArg crumbEvalFirst stack r
-                TCell _t1 t2 -> do
-                  void (evalArg crumbEvalFirst stack t2)
+                TCell t1 t2 -> do
+                  t2' <- evalArg crumbEvalFirst stack t2
+                  putsHint <- fromNatural (nockHintValue NockHintPuts)
+                  case t1 of
+                    TAtom a
+                      | a == putsHint ->
+                          output t2'
+                    _ -> return ()
                   evalArg crumbEvalSecond stack r
 
             goOpPush :: Sem r (Term a)
