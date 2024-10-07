@@ -94,14 +94,11 @@ data BuiltinFunctionId
 
 instance Hashable BuiltinFunctionId
 
-newtype CompilerOptions = CompilerOptions
-  {_compilerOptionsEnableTrace :: Bool}
+data CompilerOptions = CompilerOptions
 
 fromEntryPoint :: EntryPoint -> CompilerOptions
-fromEntryPoint EntryPoint {..} =
+fromEntryPoint EntryPoint {} =
   CompilerOptions
-    { _compilerOptionsEnableTrace = _entryPointDebug
-    }
 
 data FunctionInfo = FunctionInfo
   { _functionInfoPath :: Path,
@@ -115,8 +112,7 @@ newtype FunctionCtx = FunctionCtx
 
 data CompilerCtx = CompilerCtx
   { _compilerFunctionInfos :: HashMap FunctionId FunctionInfo,
-    _compilerConstructorInfos :: ConstructorInfos,
-    _compilerOptions :: CompilerOptions
+    _compilerConstructorInfos :: ConstructorInfos
   }
 
 data ConstructorInfo = ConstructorInfo
@@ -652,12 +648,8 @@ compile = \case
 
     goTrace :: Term Natural -> Sem r (Term Natural)
     goTrace arg = do
-      enabled <- asks (^. compilerOptions . compilerOptionsEnableTrace)
-      return $
-        if
-            -- TODO: remove duplication of `arg` here
-            | enabled -> OpTrace # arg # arg
-            | otherwise -> arg
+      -- TODO: remove duplication of `arg` here
+      return $ OpHint # (nockHintAtom NockHintPuts # arg) # arg
 
     goBinop :: Tree.NodeBinop -> Sem r (Term Natural)
     goBinop Tree.NodeBinop {..} = do
@@ -922,7 +914,7 @@ remakeList :: (Foldable l) => l (Term Natural) -> Term Natural
 remakeList ts = foldTerms (toList ts `prependList` pure (OpQuote # nockNilTagged "remakeList"))
 
 runCompilerWith :: CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> AnomaResult
-runCompilerWith opts constrs moduleFuns mainFun = makeAnomaFun
+runCompilerWith _opts constrs moduleFuns mainFun = makeAnomaFun
   where
     libFuns :: [CompilerFunction]
     libFuns = moduleFuns ++ (builtinFunction <$> allElements)
@@ -934,8 +926,7 @@ runCompilerWith opts constrs moduleFuns mainFun = makeAnomaFun
     compilerCtx =
       CompilerCtx
         { _compilerFunctionInfos = functionInfos,
-          _compilerConstructorInfos = constrs,
-          _compilerOptions = opts
+          _compilerConstructorInfos = constrs
         }
 
     mainClosure :: Term Natural

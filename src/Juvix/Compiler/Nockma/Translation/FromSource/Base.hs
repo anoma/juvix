@@ -151,10 +151,18 @@ atomStringLiteral = do
           }
   return (Atom (textToNatural s) info)
 
+atomNockHint :: Maybe Tag -> Parser (Atom Natural)
+atomNockHint mtag = do
+  symbol Str.percent
+  let hints :: [NockHint] = enumerate
+  val <- choice (map (\hnt -> symbol (nockHintName hnt) >> return (nockHintValue hnt)) hints)
+  return (Atom val emptyAtomInfo {_atomInfoTag = mtag})
+
 patom :: Parser (Atom Natural)
 patom = do
   mtag <- optional pTag
   atomOp mtag
+    <|> atomNockHint mtag
     <|> atomNat mtag
     <|> atomPath mtag
     <|> atomBool
