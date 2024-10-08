@@ -26,6 +26,12 @@ type Transferability := Transferable | NonTransferable;
 - record constructors: `mk` + type name (`mkResource`)
 - meaningful descriptive long names for arguments of public functions, e.g., `element`, `list`, `initialValue`
   - exception: common abbreviations allowed: `fun`, `acc`
+  - exception: generic functions whose arguments have no specific meaning, e.g.,
+
+```
+id {A} (x : A) := x
+```
+
 - short names like `x` are okay for local definitions
 
 ## Function signatures
@@ -41,6 +47,7 @@ isMember {A} (testEq : A -> A -> Bool) (element : A) : (list : List A) -> Bool
 ## Type variables
 
 - type variables uppercase (upper camel case, like with types)
+- higher-order type variables also upper camel case (`F : Type -> Type`)
 - implicit type variables: use short version `{A}` in function signatures on the left
 - prefer `{A B}` over `{A} {B}` in function signatures
 - meaningful type variable names for more "high-level" functions where this makes sense
@@ -80,6 +87,10 @@ find {A} (predicate : A -> Bool) : (list : List A) -> Maybe A
   - weak exception: there is a "natural" data processing pipeline in several steps
 - use iterators `for` , `map`, etc., instead of the function application syntax with `fold`, etc.
 - use named application when reasonable
+
+## Type definitions
+
+- give meaningful names to constructor arguments
 
 ## Documentation
 
