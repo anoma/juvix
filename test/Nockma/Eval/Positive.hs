@@ -91,23 +91,29 @@ compilerTest :: Text -> Term Natural -> Check () -> Bool -> Test
 compilerTest n mainFun _testCheck _evalInterceptStdlibCalls =
   anomaTest n mainFun [] _testCheck _evalInterceptStdlibCalls
 
+compilerTestM :: Text -> Sem '[Reader CompilerCtx] (Term Natural) -> Check () -> Bool -> Test
+compilerTestM n mainFun =
+  compilerTest n (run . runReader emptyCompilerCtx $ mainFun)
+
 serializationTest :: Term Natural -> Term Natural -> [Test]
-serializationTest jamTerm cueTerm =
+serializationTest jamTerm cueTerm = run . runReader emptyCompilerCtx $ do
   let jamCheck :: Check () = eqNock cueTerm
-      jamCall :: Term Natural = callStdlib StdlibEncode [OpQuote # jamTerm]
-      cueCall :: Term Natural = callStdlib StdlibDecode [OpQuote # cueTerm]
-      cueCheck :: Check () = eqNock jamTerm
+  jamCall :: Term Natural <- callStdlib StdlibEncode [OpQuote # jamTerm]
+  cueCall :: Term Natural <- callStdlib StdlibDecode [OpQuote # cueTerm]
+  let cueCheck :: Check () = eqNock jamTerm
       ppJamTerm :: Text = ppPrint jamTerm
       ppCueTerm :: Text = ppPrint cueTerm
-   in [ anomaTest ("jam " <> ppJamTerm <> " == " <> ppCueTerm) jamCall [] jamCheck True,
-        anomaTest ("cue " <> ppCueTerm <> " == " <> ppJamTerm) cueCall [] cueCheck True
-      ]
+  return
+    [ anomaTest ("jam " <> ppJamTerm <> " == " <> ppCueTerm) jamCall [] jamCheck True,
+      anomaTest ("cue " <> ppCueTerm <> " == " <> ppJamTerm) cueCall [] cueCheck True
+    ]
 
 -- | Test decode (encode t) = t
 serializationIdTest :: Text -> Term Natural -> Test
-serializationIdTest n jamTerm =
-  let call :: Term Natural = callStdlib StdlibDecode [callStdlib StdlibEncode [OpQuote # jamTerm]]
-   in anomaTest (n <> ": " <> "cue . jam = id") call [] (eqNock jamTerm) True
+serializationIdTest n jamTerm = run . runReader emptyCompilerCtx $ do
+  arg <- callStdlib StdlibEncode [OpQuote # jamTerm]
+  call <- callStdlib StdlibDecode [arg]
+  return $ anomaTest (n <> ": " <> "cue . jam = id") call [] (eqNock jamTerm) True
 
 withAssertErrKeyNotInStorage :: Test -> Test
 withAssertErrKeyNotInStorage Test {..} =
@@ -143,6 +149,10 @@ anomaTest n mainFun args _testCheck _evalInterceptStdlibCalls =
       _testAssertEvalError :: Maybe (NockEvalError Natural -> Assertion) = Nothing
    in Test {..}
 
+anomaTestM :: Text -> Sem '[Reader CompilerCtx] (Term Natural) -> [Term Natural] -> Check () -> Bool -> Test
+anomaTestM n mainFun =
+  anomaTest n (run . runReader emptyCompilerCtx $ mainFun)
+
 testWithStorage :: [(Term Natural, Term Natural)] -> Text -> Term Natural -> Term Natural -> Check () -> Test
 testWithStorage s = Test defaultEvalOptions Nothing (Storage (HashMap.fromList (first StorageKey <$> s)))
 
@@ -152,17 +162,17 @@ test = testWithStorage []
 anomaCallingConventionTests :: [Test]
 anomaCallingConventionTests =
   [True, False]
-    <**> [ anomaTest "stdlib add" (add (nockNatLiteral 1) (nockNatLiteral 2)) [] (eqNock [nock| 3 |]),
-           anomaTest "stdlib add with arg" (add (nockNatLiteral 1) (nockNatLiteral 2)) [nockNatLiteral 1] (eqNock [nock| 3 |]),
+    <**> [ anomaTestM "stdlib add" (add (nockNatLiteral 1) (nockNatLiteral 2)) [] (eqNock [nock| 3 |]),
+           anomaTestM "stdlib add with arg" (add (nockNatLiteral 1) (nockNatLiteral 2)) [nockNatLiteral 1] (eqNock [nock| 3 |]),
            let args = [nockNatLiteral 3, nockNatLiteral 1]
                fx =
                  FunctionCtx
                    { _functionCtxArity = fromIntegral (length args)
                    }
-            in run . runReader fx $ do
+            in run . runReader fx . runReader emptyCompilerCtx $ do
                  p0 <- pathToArg 0
                  p1 <- pathToArg 1
-                 return (anomaTest "stdlib sub args" (sub (OpAddress # p0) (OpAddress # p1)) args (eqNock [nock| 2 |]))
+                 return (anomaTestM "stdlib sub args" (sub (OpAddress # p0) (OpAddress # p1)) args (eqNock [nock| 2 |]))
          ]
 
 serializationTests :: [Test]
@@ -225,64 +235,54 @@ serializationTests =
 juvixCallingConventionTests :: [Test]
 juvixCallingConventionTests =
   [True, False]
-    <**> [ compilerTest "stdlib add" (add (nockNatLiteral 1) (nockNatLiteral 2)) (eqNock [nock| 3 |]),
-           compilerTest "stdlib dec" (dec (nockNatLiteral 1)) (eqNock [nock| 0 |]),
-           compilerTest "stdlib mul" (mul (nockNatLiteral 2) (nockNatLiteral 3)) (eqNock [nock| 6 |]),
-           compilerTest "stdlib sub" (sub (nockNatLiteral 2) (nockNatLiteral 1)) (eqNock [nock| 1 |]),
-           compilerTest "stdlib div" (callStdlib StdlibDiv [nockNatLiteral 10, nockNatLiteral 3]) (eqNock [nock| 3 |]),
-           compilerTest "stdlib mod" (callStdlib StdlibMod [nockNatLiteral 3, nockNatLiteral 2]) (eqNock [nock| 1 |]),
-           compilerTest "stdlib le" (callStdlib StdlibLe [nockNatLiteral 3, nockNatLiteral 3]) (eqNock [nock| true |]),
-           compilerTest "stdlib lt" (callStdlib StdlibLt [nockNatLiteral 3, nockNatLiteral 3]) (eqNock [nock| false |]),
-           compilerTest "stdlib pow2" (pow2 (nockNatLiteral 3)) (eqNock [nock| 8 |]),
-           compilerTest "stdlib nested" (dec (dec (nockNatLiteral 20))) (eqNock [nock| 18 |]),
-           compilerTest "append rights - empty" (appendRights emptyPath (nockNatLiteral 3)) (eqNock (toNock [R, R, R])),
-           compilerTest "append rights" (appendRights [L, L] (nockNatLiteral 3)) (eqNock (toNock [L, L, R, R, R])),
+    <**> [ compilerTestM "stdlib add" (add (nockNatLiteral 1) (nockNatLiteral 2)) (eqNock [nock| 3 |]),
+           compilerTestM "stdlib dec" (dec (nockNatLiteral 1)) (eqNock [nock| 0 |]),
+           compilerTestM "stdlib mul" (mul (nockNatLiteral 2) (nockNatLiteral 3)) (eqNock [nock| 6 |]),
+           compilerTestM "stdlib sub" (sub (nockNatLiteral 2) (nockNatLiteral 1)) (eqNock [nock| 1 |]),
+           compilerTestM "stdlib div" (callStdlib StdlibDiv [nockNatLiteral 10, nockNatLiteral 3]) (eqNock [nock| 3 |]),
+           compilerTestM "stdlib mod" (callStdlib StdlibMod [nockNatLiteral 3, nockNatLiteral 2]) (eqNock [nock| 1 |]),
+           compilerTestM "stdlib le" (callStdlib StdlibLe [nockNatLiteral 3, nockNatLiteral 3]) (eqNock [nock| true |]),
+           compilerTestM "stdlib lt" (callStdlib StdlibLt [nockNatLiteral 3, nockNatLiteral 3]) (eqNock [nock| false |]),
+           compilerTestM "stdlib pow2" (pow2 (nockNatLiteral 3)) (eqNock [nock| 8 |]),
+           compilerTestM "stdlib nested" (dec =<< (dec (nockNatLiteral 20))) (eqNock [nock| 18 |]),
+           compilerTestM "append rights - empty" (appendRights emptyPath (nockNatLiteral 3)) (eqNock (toNock [R, R, R])),
+           compilerTestM "append rights" (appendRights [L, L] (nockNatLiteral 3)) (eqNock (toNock [L, L, R, R, R])),
            compilerTest "opAddress" ((OpQuote # (foldTerms (toNock @Natural <$> (5 :| [6, 1])))) >># opAddress' (OpQuote # [R, R])) (eqNock (toNock @Natural 1)),
            compilerTest "foldTermsOrNil (empty)" (foldTermsOrNil []) (eqNock (nockNilTagged "expected-result")),
            let l :: NonEmpty Natural = 1 :| [2]
                l' :: NonEmpty (Term Natural) = nockNatLiteral <$> l
             in compilerTest "foldTermsOrNil (non-empty)" (foldTermsOrNil (toList l')) (eqNock (foldTerms (toNock @Natural <$> l))),
-           let l :: NonEmpty (Term Natural) = toNock <$> nonEmpty' [1 :: Natural .. 3]
-            in compilerTest "list to tuple" (listToTuple (OpQuote # makeList (toList l)) (nockIntegralLiteral (length l))) $
-                 eqNock (foldTerms l),
            let l :: Term Natural = OpQuote # foldTerms (toNock @Natural <$> (1 :| [2, 3]))
             in compilerTest "replaceSubterm'" (replaceSubterm' l (OpQuote # toNock [R]) (OpQuote # (toNock @Natural 999))) (eqNock (toNock @Natural 1 # toNock @Natural 999)),
            let lst :: [Term Natural] = toNock @Natural <$> [1, 2, 3]
                len = nockIntegralLiteral (length lst)
                l :: Term Natural = OpQuote # makeList lst
-            in compilerTest "append" (append l len l) (eqNock (makeList (lst ++ lst))),
+            in compilerTestM "append" (append l len l) (eqNock (makeList (lst ++ lst))),
            let l :: [Natural] = [1, 2]
                r :: NonEmpty Natural = 3 :| [4]
                res :: Term Natural = foldTerms (toNock <$> prependList l r)
                lenL :: Term Natural = nockIntegralLiteral (length l)
-               lenR :: Term Natural = nockIntegralLiteral (length r)
                lstL = OpQuote # makeList (map toNock l)
                tupR = OpQuote # foldTerms (toNock <$> r)
-            in compilerTest "appendToTuple (left non-empty, right non-empty)" (appendToTuple lstL lenL tupR lenR) (eqNock res),
-           let l :: NonEmpty Natural = 1 :| [2]
-               res :: Term Natural = foldTerms (toNock <$> l)
-               lenL :: Term Natural = nockIntegralLiteral (length l)
-               lstL = OpQuote # makeList (toNock <$> (toList l))
-            in compilerTest "appendToTuple (left non-empty, right empty)" (appendToTuple lstL lenL (OpQuote # nockNilTagged "appendToTuple") (nockNatLiteral 0)) (eqNock res),
+            in compilerTestM "appendToTuple (left non-empty, right non-empty)" (appendToTuple lstL lenL tupR) (eqNock res),
            let r :: NonEmpty Natural = 3 :| [4]
                res :: Term Natural = foldTerms (toNock <$> r)
-               lenR :: Term Natural = nockIntegralLiteral (length r)
                tupR = OpQuote # foldTerms (toNock <$> r)
-            in compilerTest "appendToTuple (left empty, right-nonempty)" (appendToTuple (OpQuote # nockNilTagged "test-appendtotuple") (nockNatLiteral 0) tupR lenR) (eqNock res),
-           compilerTest "stdlib cat" (callStdlib StdlibCatBytes [nockNatLiteral 2, nockNatLiteral 1]) (eqNock [nock| 258 |]),
-           compilerTest "fold bytes empty" (callStdlib StdlibFoldBytes [OpQuote # makeList []]) (eqNock [nock| 0 |]),
-           compilerTest "fold bytes [1, 0, 0] == 1" (callStdlib StdlibFoldBytes [OpQuote # makeList (toNock @Natural <$> [1, 0, 0])]) (eqNock [nock| 1 |]),
-           compilerTest "fold bytes single byte" (callStdlib StdlibFoldBytes [OpQuote # makeList (toNock @Natural <$> [123])]) (eqNock [nock| 123 |]),
-           compilerTest "fold bytes [0, 1] == 256" (callStdlib StdlibFoldBytes [OpQuote # makeList (toNock @Natural <$> [0, 1])]) (eqNock [nock| 256 |]),
-           compilerTest "fold bytes [5, 1] == 261" (callStdlib StdlibFoldBytes [OpQuote # makeList (toNock @Natural <$> [5, 1])]) (eqNock [nock| 261 |]),
-           compilerTest "fold bytes [0, 1, 0] == 256" (callStdlib StdlibFoldBytes [OpQuote # makeList (toNock @Natural <$> [0, 1, 0])]) (eqNock [nock| 256 |]),
-           compilerTest "length [] == 0" (callStdlib StdlibLengthList [OpQuote # makeList []]) (eqNock [nock| 0 |]),
-           compilerTest "length [10] == 1" (callStdlib StdlibLengthList [OpQuote # makeList [[nock| 10 |]]]) (eqNock [nock| 1 |]),
-           compilerTest "length [[1 2, 3], 0] == 2" (callStdlib StdlibLengthList [OpQuote # makeList [[nock| [1 2 3] |], [nock| 0 |]]]) (eqNock [nock| 2 |]),
-           compilerTest "length-bytes 256 == 2" (callStdlib StdlibLengthBytes [nockNatLiteral 256]) (eqNock [nock| 2 |]),
-           compilerTest "length-bytes 255 == 1" (callStdlib StdlibLengthBytes [nockNatLiteral 255]) (eqNock [nock| 1 |]),
-           compilerTest "length-bytes 1 == 1" (callStdlib StdlibLengthBytes [nockNatLiteral 1]) (eqNock [nock| 1 |]),
-           compilerTest "length-bytes 0 == 0" (callStdlib StdlibLengthBytes [nockNatLiteral 0]) (eqNock [nock| 0 |])
+            in compilerTestM "appendToTuple (left empty, right-nonempty)" (appendToTuple (OpQuote # nockNilTagged "test-appendtotuple") (nockNatLiteral 0) tupR) (eqNock res),
+           compilerTestM "stdlib cat" (callStdlib StdlibCatBytes [nockNatLiteral 2, nockNatLiteral 1]) (eqNock [nock| 258 |]),
+           compilerTestM "fold bytes empty" (callStdlib StdlibFoldBytes [OpQuote # makeList []]) (eqNock [nock| 0 |]),
+           compilerTestM "fold bytes [1, 0, 0] == 1" (callStdlib StdlibFoldBytes [OpQuote # makeList (toNock @Natural <$> [1, 0, 0])]) (eqNock [nock| 1 |]),
+           compilerTestM "fold bytes single byte" (callStdlib StdlibFoldBytes [OpQuote # makeList (toNock @Natural <$> [123])]) (eqNock [nock| 123 |]),
+           compilerTestM "fold bytes [0, 1] == 256" (callStdlib StdlibFoldBytes [OpQuote # makeList (toNock @Natural <$> [0, 1])]) (eqNock [nock| 256 |]),
+           compilerTestM "fold bytes [5, 1] == 261" (callStdlib StdlibFoldBytes [OpQuote # makeList (toNock @Natural <$> [5, 1])]) (eqNock [nock| 261 |]),
+           compilerTestM "fold bytes [0, 1, 0] == 256" (callStdlib StdlibFoldBytes [OpQuote # makeList (toNock @Natural <$> [0, 1, 0])]) (eqNock [nock| 256 |]),
+           compilerTestM "length [] == 0" (callStdlib StdlibLengthList [OpQuote # makeList []]) (eqNock [nock| 0 |]),
+           compilerTestM "length [10] == 1" (callStdlib StdlibLengthList [OpQuote # makeList [[nock| 10 |]]]) (eqNock [nock| 1 |]),
+           compilerTestM "length [[1 2, 3], 0] == 2" (callStdlib StdlibLengthList [OpQuote # makeList [[nock| [1 2 3] |], [nock| 0 |]]]) (eqNock [nock| 2 |]),
+           compilerTestM "length-bytes 256 == 2" (callStdlib StdlibLengthBytes [nockNatLiteral 256]) (eqNock [nock| 2 |]),
+           compilerTestM "length-bytes 255 == 1" (callStdlib StdlibLengthBytes [nockNatLiteral 255]) (eqNock [nock| 1 |]),
+           compilerTestM "length-bytes 1 == 1" (callStdlib StdlibLengthBytes [nockNatLiteral 1]) (eqNock [nock| 1 |]),
+           compilerTestM "length-bytes 0 == 0" (callStdlib StdlibLengthBytes [nockNatLiteral 0]) (eqNock [nock| 0 |])
          ]
 
 unitTests :: [Test]
