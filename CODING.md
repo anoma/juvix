@@ -33,11 +33,11 @@ type Transferability :=
 
 ```
 type BalanceFactor :=
-  | --- Left children is higher.
+  | --- Left child is higher.
     LeanLeft
   | --- Equal heights of children.
     LeanNone
-  | --- Right children is higher.
+  | --- Right child is higher.
     LeanRight;
 
 type Ordering :=

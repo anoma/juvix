@@ -3,40 +3,46 @@ module Demo;
 -- standard library prelude
 import Stdlib.Prelude open;
 
-even : Nat → Bool
+even : (n : Nat) -> Bool
   | zero := true
   | (suc zero) := false
   | (suc (suc n)) := even n;
 
-even' : Nat → Bool
-  | n := mod n 2 == 0;
+even' (n : Nat) : Bool := mod n 2 == 0;
 
--- base 2 logarithm rounded down
+--- Returns base 2 logarithm of `n` rounded down
 terminating
-log2 : Nat → Nat
-  | n := ite (n <= 1) 0 (suc (log2 (div n 2)));
+log2 (n : Nat) : Nat :=
+  if
+    | n <= 1 := 0
+    | else := log2 (div n 2) + 1;
 
 type Tree (A : Type) :=
-  | leaf : A → Tree A
-  | node : A → Tree A → Tree A → Tree A;
+  | leaf {element : A}
+  | node {
+      element : A;
+      left : Tree A;
+      right : Tree A
+    };
 
-mirror : {A : Type} → Tree A → Tree A
-  | t@(leaf _) := t
+mirror {A} : (tree : Tree A) -> Tree A
+  | tree@(leaf _) := tree
   | (node x l r) := node x (mirror r) (mirror l);
 
 tree : Tree Nat := node 2 (node 3 (leaf 0) (leaf 1)) (leaf 7);
 
-preorder : {A : Type} → Tree A → List A
+preorder : {A : Type} -> Tree A -> List A
   | (leaf x) := x :: nil
   | (node x l r) := x :: nil ++ preorder l ++ preorder r;
 
 terminating
-sort {A} {{Ord A}} : List A → List A
-  | nil := nil
-  | xs@(_ :: nil) := xs
-  | xs := uncurry merge (both sort (splitAt (div (length xs) 2) xs));
+sort {A} {{Ord A}} (list : List A) : List A :=
+  case list of
+    | nil := nil
+    | xs@(_ :: nil) := xs
+    | xs := uncurry merge (both sort (splitAt (div (length xs) 2) xs));
 
-printNatListLn : List Nat → IO
+printNatListLn : (list : List Nat) -> IO
   | nil := printStringLn "nil"
   | (x :: xs) := printNat x >>> printString " :: " >>> printNatListLn xs;
 
