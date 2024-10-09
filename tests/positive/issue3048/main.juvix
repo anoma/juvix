@@ -2,15 +2,15 @@ module main;
 
 import Other;
 
-type AVLTree (A : Type) :=
-  node (AVLTree A)
-       (AVLTree A)
-       (AVLTree A)
-       (AVLTree A)
-       (AVLTree A)
-       (AVLTree A)
-       (AVLTree A)
-       (AVLTree A)
-       (AVLTree A);
+type Tree (A : Type) :=
+  node (Tree A)
+       (Tree A)
+       (Tree A)
+       (Tree A)
+       (Tree A)
+       (Tree A)
+       (Tree A)
+       (Tree A)
+       (Tree A);
 
-type Foo := mkFoo (AVLTree Foo);
+type Foo := mkFoo (Tree Foo);
