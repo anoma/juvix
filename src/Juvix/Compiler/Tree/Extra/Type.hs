@@ -35,17 +35,11 @@ curryType ty = case typeArgs ty of
   [] ->
     ty
   tyargs ->
-    let ty' = curryType (typeTarget ty)
-     in foldr (\tyarg ty'' -> mkTypeFun [tyarg] ty'') (typeTarget ty') tyargs
+    foldr (\tyarg ty'' -> mkTypeFun [tyarg] ty'') (curryType (typeTarget ty)) tyargs
 
 isSubtype :: Type -> Type -> Bool
 isSubtype ty1 ty2 =
-  let (ty1', ty2') =
-        if
-            | typeTarget (uncurryType ty1) == TyDynamic || typeTarget (uncurryType ty2) == TyDynamic ->
-                (curryType ty1, curryType ty2)
-            | otherwise ->
-                (ty1, ty2)
+  let (ty1', ty2') = (curryType ty1, curryType ty2)
    in case (ty1', ty2') of
         (TyDynamic, _) -> True
         (_, TyDynamic) -> True
@@ -96,12 +90,7 @@ isSubtype ty1 ty2 =
 
 unifyTypes :: forall t e r. (Members '[Error TreeError, Reader (Maybe Location), Reader (InfoTable' t e)] r) => Type -> Type -> Sem r Type
 unifyTypes ty1 ty2 =
-  let (ty1', ty2') =
-        if
-            | typeTarget (uncurryType ty1) == TyDynamic || typeTarget (uncurryType ty2) == TyDynamic ->
-                (curryType ty1, curryType ty2)
-            | otherwise ->
-                (ty1, ty2)
+  let (ty1', ty2') = (curryType ty1, curryType ty2)
    in case (ty1', ty2') of
         (TyDynamic, x) -> return x
         (x, TyDynamic) -> return x
@@ -171,13 +160,4 @@ unifyTypes' :: forall t e r. (Member (Error TreeError) r) => Maybe Location -> I
 unifyTypes' loc tab ty1 ty2 =
   runReader loc $
     runReader tab $
-      -- The `if` is to ensure correct behaviour with dynamic type targets. E.g.
-      -- `(A, B) -> *` should unify with `A -> B -> C -> D`.
-      if
-          | tgt1 == TyDynamic || tgt2 == TyDynamic ->
-              unifyTypes @t @e (curryType ty1) (curryType ty2)
-          | otherwise ->
-              unifyTypes @t @e ty1 ty2
-  where
-    tgt1 = typeTarget (uncurryType ty1)
-    tgt2 = typeTarget (uncurryType ty2)
+      unifyTypes @t @e ty1 ty2

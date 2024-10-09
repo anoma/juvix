@@ -244,5 +244,10 @@ tests =
       "Test041: Type unification"
       $(mkRelDir ".")
       $(mkRelFile "test041.jvt")
-      $(mkRelFile "out/test041.out")
+      $(mkRelFile "out/test041.out"),
+    PosTest
+      "Test042: Uncurried function type unification"
+      $(mkRelDir ".")
+      $(mkRelFile "test042.jvt")
+      $(mkRelFile "out/test042.out")
   ]

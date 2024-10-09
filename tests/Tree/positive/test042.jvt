@@ -1,0 +1,25 @@
+type Eq {
+  mkEq : ((*, *) → bool) → Eq;
+}
+
+function lambda_app(f : (*, *) → bool, a : *, b : *) : bool {
+  ccall(f, a, b)
+}
+
+function spec(Eq) : Eq {
+  alloc[mkEq](calloc[lambda_app](case[Eq](arg[0]) {
+    mkEq: save {
+      tmp[0].mkEq[0]
+    }
+  }))
+}
+
+function cmp(integer, integer) : bool {
+  lt(arg[0], arg[1])
+}
+
+function main() : bool {
+  save(call[spec](alloc[mkEq](calloc[cmp]()))) {
+    ccall(tmp[0].mkEq[0], 1, 2)
+  }
+}
