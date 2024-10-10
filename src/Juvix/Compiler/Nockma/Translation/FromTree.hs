@@ -31,6 +31,7 @@ module Juvix.Compiler.Nockma.Translation.FromTree
     runCompilerWith,
     emptyCompilerCtx,
     CompilerCtx (..),
+    stdlibCurry,
   )
 where
 
@@ -1304,3 +1305,6 @@ intToUInt8 i = callStdlib StdlibMod [i, nockIntegralLiteral @Natural (2 ^ uint8S
   where
     uint8Size :: Natural
     uint8Size = 8
+
+stdlibCurry :: (Member (Reader CompilerCtx) r) => Term Natural -> Term Natural -> Sem r (Term Natural)
+stdlibCurry f arg = callStdlib StdlibCurry [f, arg]
