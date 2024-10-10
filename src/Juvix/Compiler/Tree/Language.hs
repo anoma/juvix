@@ -131,6 +131,7 @@ data NodeExtendClosure = NodeExtendClosure
     _nodeExtendClosureArgs :: NonEmpty Node
   }
 
+-- | If _nodeCallType is 'CallClosure', then _nodeCallArgs must be non-empty.
 data NodeCall = NodeCall
   { _nodeCallInfo :: NodeInfo,
     _nodeCallType :: CallType,

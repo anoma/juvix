@@ -385,7 +385,7 @@ caseBranch = do
     saveBranch :: ParsecS r (Bool, Node)
     saveBranch = do
       kw kwSave
-      (True,) <$> braces parseNode
+      (True,) <$> braces (withSave Nothing parseNode)
 
     discardBranch :: ParsecS r (Bool, Node)
     discardBranch = do
@@ -407,10 +407,7 @@ parseSave = do
   loc' <- onlyInterval (kw kwSave)
   (mname, loc) <- interval $ optional (brackets identifier)
   arg <- parens parseNode
-  tmpNum <- lift $ gets @LocalParams (^. localParamsTempIndex)
-  let updateNames :: LocalNameMap DirectRef -> LocalNameMap DirectRef
-      updateNames mp = maybe mp (\n -> HashMap.insert n (mkTempRef (OffsetRef tmpNum (Just n))) mp) mname
-  body <- braces (localS @LocalParams (over localParamsTempIndex (+ 1)) $ localS @LocalParams (over localParamsNameMap updateNames) parseNode)
+  body <- braces (withSave mname parseNode)
   return
     NodeSave
       { _nodeSaveInfo = NodeInfo (Just loc'),
@@ -418,3 +415,14 @@ parseSave = do
         _nodeSaveBody = body,
         _nodeSaveTempVar = TempVar mname (Just loc)
       }
+
+withSave ::
+  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  Maybe Text ->
+  ParsecS r Node ->
+  ParsecS r Node
+withSave mname a = do
+  tmpNum <- lift $ gets @LocalParams (^. localParamsTempIndex)
+  let updateNames :: LocalNameMap DirectRef -> LocalNameMap DirectRef
+      updateNames mp = maybe mp (\n -> HashMap.insert n (mkTempRef (OffsetRef tmpNum (Just n))) mp) mname
+  localS @LocalParams (over localParamsTempIndex (+ 1)) $ localS @LocalParams (over localParamsNameMap updateNames) a

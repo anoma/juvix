@@ -26,7 +26,7 @@ toVampIR :: (Members '[Error JuvixError, Reader EntryPoint] r) => Module -> Sem 
 toVampIR = mapReader fromEntryPoint . applyTransformations toVampIRTransformations
 
 extraAnomaTransformations :: [TransformationId]
-extraAnomaTransformations = [ComputeCaseANF]
+extraAnomaTransformations = []
 
 applyExtraTransformations :: (Members '[Error JuvixError, Reader EntryPoint] r) => [TransformationId] -> Module -> Sem r Module
 applyExtraTransformations transforms = mapReader fromEntryPoint . applyTransformations transforms
