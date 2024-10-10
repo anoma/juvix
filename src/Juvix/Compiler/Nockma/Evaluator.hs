@@ -197,15 +197,16 @@ evalProfile inistack initerm =
           ParsedOperatorCell o -> goOperatorCell o
           ParsedStdlibCallCell o -> do
             intercept' <- asks (^. evalInterceptStdlibCalls)
+            let nonInterceptCall = goOperatorCell (o ^. stdlibCallRaw)
             if
-                | intercept' -> goStdlibCall (o ^. stdlibCallCell)
-                | otherwise -> goOperatorCell (o ^. stdlibCallRaw)
+                | intercept' -> goStdlibCall nonInterceptCall (o ^. stdlibCallCell)
+                | otherwise -> nonInterceptCall
       where
         loc :: Maybe Interval
         loc = term ^. termLoc
 
-        goStdlibCall :: StdlibCall a -> Sem r (Term a)
-        goStdlibCall StdlibCall {..} = do
+        goStdlibCall :: Sem r (Term a) -> StdlibCall a -> Sem r (Term a)
+        goStdlibCall nonInterceptCall StdlibCall {..} = do
           let w = EvalCrumbStdlibCallArgs (CrumbStdlibCallArgs _stdlibCallFunction)
           args' <- withCrumb w (recEval stack _stdlibCallArgs)
           let binArith :: (a -> a -> a) -> Sem r (Term a)
@@ -262,6 +263,7 @@ evalProfile inistack initerm =
             StdlibLengthBytes -> case args' of
               TermAtom a -> TermAtom <$> goLengthBytes a
               _ -> error "expected an atom"
+            StdlibCurry -> nonInterceptCall
           where
             goCat :: Atom a -> Atom a -> Sem r (Term a)
             goCat arg1 arg2 = TermAtom . setAtomHint AtomHintString <$> atomConcatenateBytes arg1 arg2
