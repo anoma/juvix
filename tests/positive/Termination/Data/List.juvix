@@ -11,13 +11,11 @@ type List (A : Type) :=
   | cons : A → List A → List A;
 
 -- Do not remove implicit arguments. Useful for testing.
-foldr
-  : {A : Type} → {B : Type} → (A → B → B) → B → List A → B
+foldr : {A : Type} → {B : Type} → (A → B → B) → B → List A → B
   | _ z nil := z
   | f z (cons h hs) := f h (foldr {_} f z hs);
 
-foldl
-  : {A : Type} → {B : Type} → (B → A → B) → B → List A → B
+foldl : {A : Type} → {B : Type} → (B → A → B) → B → List A → B
   | f z nil := z
   | {_} {_} f z (cons h hs) := foldl {_} f (f z h) hs;
 
@@ -27,8 +25,7 @@ map : {A : Type} → {B : Type} → (A → B) → List A → List B
 
 filter : {A : Type} → (A → Bool) → List A → List A
   | f nil := nil
-  | f (cons h hs) :=
-    ite (f h) (cons h (filter {_} f hs)) (filter f hs);
+  | f (cons h hs) := ite (f h) (cons h (filter {_} f hs)) (filter f hs);
 
 length : {A : Type} → List A → ℕ
   | nil := zero

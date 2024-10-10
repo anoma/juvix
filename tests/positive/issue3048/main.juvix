@@ -3,14 +3,6 @@ module main;
 import Other;
 
 type Tree (A : Type) :=
-  node (Tree A)
-       (Tree A)
-       (Tree A)
-       (Tree A)
-       (Tree A)
-       (Tree A)
-       (Tree A)
-       (Tree A)
-       (Tree A);
+  node (Tree A) (Tree A) (Tree A) (Tree A) (Tree A) (Tree A) (Tree A) (Tree A) (Tree A);
 
 type Foo := mkFoo (Tree Foo);

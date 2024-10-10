@@ -44,8 +44,8 @@ type Move :=
     to : Peg
   };
 
-showMove (move : Move) : String
- := showPeg (Move.from move) ++str " -> " ++str showPeg (Move.to move);
+showMove (move : Move) : String :=
+  showPeg (Move.from move) ++str " -> " ++str showPeg (Move.to move);
 
 --- Produce a list of ;Move;s that solves the towers of Hanoi game
 hanoi : Nat -> Peg -> Peg -> Peg -> List Move
