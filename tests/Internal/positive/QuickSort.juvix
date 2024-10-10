@@ -13,7 +13,7 @@ quickSort
   | cmp (x :: xs) :=
     qsHelper
       x
-      (both (quickSort cmp) (partition (isGT << cmp x) xs));
+      (both (quickSort cmp) (partition (isGreaterThan << cmp x) xs));
 
 uniq
   : {A : Type} -> (A -> A -> Ordering) -> List A -> List A
@@ -21,7 +21,7 @@ uniq
   | _ y@(x :: nil) := y
   | cmp (x :: x' :: xs) :=
     ite
-      (isEQ (cmp x x'))
+      (isEqual (cmp x x'))
       (uniq cmp (x' :: xs))
       (x :: uniq cmp (x' :: xs));
 

@@ -4,7 +4,5 @@ import PackageDescription.V2 open;
 
 package : Package :=
   defaultPackage@?{
-    name := "issue3048";
-    dependencies :=
-      [github "anoma" "juvix-stdlib" "v0.7.0"; github "anoma" "juvix-containers" "v0.15.0"]
+    name := "issue3048"
   };

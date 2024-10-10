@@ -6,7 +6,4 @@ import Stdlib.System.IO open;
 builtin fail
 axiom fail : {A : Type} → String → A;
 
-main : IO :=
-  printStringLn "Get"
-    >>> fail "Enough"
-    >>> printStringLn "Sleep";
+main : IO := printStringLn "Get" >>> fail "Enough" >>> printStringLn "Sleep";

@@ -2,14 +2,7 @@ module M;
 
 import Stdlib.Prelude open;
 
-S
-  : {A : Type}
-    → {B : Type}
-    → {C : Type}
-    → (A → B → C)
-    → (A → B)
-    → A
-    → C
+S : {A : Type} → {B : Type} → {C : Type} → (A → B → C) → (A → B) → A → C
   | x y z := x z (y z);
 
 K : {A : Type} → {B : Type} → A → B → A

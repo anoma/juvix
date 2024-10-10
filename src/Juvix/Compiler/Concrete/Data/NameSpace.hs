@@ -61,7 +61,5 @@ resolveNameSpaceEntry = case sing :: SNameSpace ns of
     resolveFixitySymbolEntry (FixitySymbolEntry n1) (FixitySymbolEntry n2) = FixitySymbolEntry (resolveName n1 n2)
 
     resolveName :: S.Name -> S.Name -> S.Name
-    resolveName n1 n2
-      | n1 ^. S.nameId == n2 ^. S.nameId =
-          over S.nameVisibilityAnn (resolveVisibility (n2 ^. S.nameVisibilityAnn)) n1
-      | otherwise = impossible
+    resolveName n1 n2 =
+      over S.nameVisibilityAnn (resolveVisibility (n2 ^. S.nameVisibilityAnn)) n1

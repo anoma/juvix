@@ -2,7 +2,7 @@ module Fibonacci;
 
 import Stdlib.Prelude open;
 
-fib : Nat → Nat → Nat → Nat
+fib : (n : Nat) -> (x1 : Nat) -> (x2 : Nat) -> Nat
   | zero x1 _ := x1
   | (suc n) x1 x2 := fib n x2 (x1 + x2);
 

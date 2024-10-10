@@ -6,15 +6,18 @@ module MidSquareHash;
 
 import Stdlib.Prelude open;
 
---- `pow N` is 2 ^ N
-pow : Nat -> Nat
+--- `pow n` is 2 ^ n
+pow : (n : Nat) -> Nat
   | zero := 1
   | (suc n) := 2 * pow n;
 
---- `hash' N` hashes a number with max N bits (i.e. smaller than 2^N) into 6 bits
+--- `hash' n x` hashes a number x with max n bits (i.e. smaller than 2^n) into 6 bits
 --- (i.e. smaller than 64) using the mid-square algorithm.
-hash' : Nat -> Nat -> Nat
-  | (suc n@(suc (suc m))) x := ite (x < pow n) (hash' n x) (mod (div (x * x) (pow m)) (pow 6))
+hash' : (n : Nat) -> (x : Nat) -> Nat
+  | (suc n'@(suc (suc m))) x :=
+    if
+      | x < pow n' := hash' n' x
+      | else := mod (div (x * x) (pow m)) (pow 6)
   | _ x := x * x;
 
 hash : Nat -> Nat := hash' 16;

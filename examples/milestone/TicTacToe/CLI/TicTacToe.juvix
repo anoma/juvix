@@ -9,20 +9,28 @@ import Stdlib.Prelude open;
 import Logic.Game open;
 
 --- A ;String; that prompts the user for their input
-prompt (x : GameState) : String :=
-  "\n" ++str showGameState x ++str "\nPlayer " ++str showSymbol (player x) ++str ": ";
+prompt (state : GameState) : String :=
+  "\n"
+    ++str showGameState state
+    ++str "\nPlayer "
+    ++str showSymbol (GameState.player state)
+    ++str ": ";
 
-nextMove (s : GameState) : String → GameState := stringToNat >> validMove >> flip playMove s;
+nextMove (state : GameState) (string : String) : GameState :=
+  string |> stringToNat |> validMove |> flip playMove state;
 
 --- Main loop
 terminating
-run : GameState → IO
-  | (state b p (terminate msg)) :=
-    printStringLn ("\n" ++str showGameState (state b p noError) ++str "\n" ++str msg)
-  | (state b p (continue msg)) :=
-    printString (msg ++str prompt (state b p noError))
-      >>> readLn (run << nextMove (state b p noError))
-  | x := printString (prompt x) >>> readLn (run << nextMove x);
+run (state : GameState) : IO :=
+  case GameState.error state of
+    | terminate msg :=
+      printStringLn
+        ("\n" ++str showGameState state@GameState{error := noError} ++str "\n" ++str msg)
+    | continue msg :=
+      let
+        state' := state@GameState{error := noError};
+      in printString (msg ++str prompt state') >>> readLn (nextMove state' >> run)
+    | _ := printString (prompt state) >>> readLn (nextMove state >> run);
 
 --- The welcome message
 welcome : String := "MiniTicTacToe\n-------------\n\nType a number then ENTER to make a move";

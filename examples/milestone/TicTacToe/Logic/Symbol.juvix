@@ -6,22 +6,28 @@ import Stdlib.Prelude open;
 --- A symbol represents a token that can be placed in a square
 type Symbol :=
   | --- The circle token
-    O : Symbol
+    O
   | --- The cross token
-    X : Symbol;
+    X;
 
---- Equality for ;Symbol;s
-==Symbol : Symbol → Symbol → Bool
-  | O O := true
-  | X X := true
-  | _ _ := false;
+instance
+eqSymbolI : Eq Symbol :=
+  mkEq@{
+    eq (sym1 sym2 : Symbol) : Bool :=
+      case sym1, sym2 of
+        | O, O := true
+        | X, X := true
+        | _, _ := false
+  };
 
 --- Turns ;O; into ;X; and ;X; into ;O;
-switch : Symbol → Symbol
-  | O := X
-  | X := O;
+switch (sym : Symbol) : Symbol :=
+  case sym of
+    | O := X
+    | X := O;
 
 --- Textual representation of a ;Symbol;
-showSymbol : Symbol → String
-  | O := "O"
-  | X := "X";
+showSymbol (sym : Symbol) : String :=
+  case sym of
+    | O := "O"
+    | X := "X";

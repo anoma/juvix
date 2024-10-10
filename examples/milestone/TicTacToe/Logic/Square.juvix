@@ -7,21 +7,30 @@ import Logic.Extra open;
 --- A square is each of the holes in a board
 type Square :=
   | --- An empty square has a ;Nat; that uniquely identifies it
-    empty : Nat → Square
+    empty {id : Nat}
   | --- An occupied square has a ;Symbol; in it
-    occupied : Symbol → Square;
+    occupied {player : Symbol};
 
---- Equality for ;Square;s
-==Square : Square → Square → Bool
-  | (empty m) (empty n) := m == n
-  | (occupied s) (occupied t) := ==Symbol s t
-  | _ _ := false;
+instance
+eqSquareI : Eq Square :=
+  mkEq@{
+    eq (square1 square2 : Square) : Bool :=
+      case square1, square2 of
+        | empty m, empty n := m == n
+        | occupied s, occupied t := s == t
+        | _, _ := false
+  };
 
 --- Textual representation of a ;Square;
-showSquare : Square → String
-  | (empty n) := " " ++str natToString n ++str " "
-  | (occupied s) := " " ++str showSymbol s ++str " ";
+showSquare (square : Square) : String :=
+  case square of
+    | empty n := " " ++str natToString n ++str " "
+    | occupied s := " " ++str showSymbol s ++str " ";
 
-replace (player : Symbol) (k : Nat) : Square → Square
-  | (empty n) := ite (n == k) (occupied player) (empty n)
-  | s := s;
+replace (player : Symbol) (k : Nat) (square : Square) : Square :=
+  case square of
+    | empty n :=
+      if
+        | n == k := occupied player
+        | else := empty n
+    | s := s;

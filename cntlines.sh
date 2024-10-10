@@ -45,6 +45,7 @@ FRONT=$((CONCRETE + INTERNAL + BUILTINS + PIPELINE))
 BACK=$((BACKENDC + BACKENDRUST + VAMPIR + NOCK + REG + ASM + TREE + CORE + CASM + CAIRO))
 OTHER=$((APP + STORE + HTML + MARKDOWN + ISABELLE + EXTRA + DATA + PRELUDE))
 TESTS=$(count test/)
+STDLIB=$(count_ext '*.juvix' juvix-stdlib/Stdlib)
 
 TOTAL=$((FRONT+BACK+OTHER+TESTS))
 
@@ -79,5 +80,6 @@ echo "   Extra: $EXTRA LOC"
 echo "   Data: $DATA LOC"
 echo "   Prelude: $PRELUDE LOC"
 echo "Tests: $TESTS LOC"
+echo "Standard library: $STDLIB LOC"
 echo ""
-echo "Total: $TOTAL Haskell LOC + $RUNTIME_C C LOC + $RUNTIME_RUST Rust LOC + $RUNTIME_JVT JuvixTree LOC + $RUNTIME_CASM CASM LOC + $RUNTIME_VAMPIR VampIR LOC"
+echo "Total: $TOTAL Haskell LOC + $RUNTIME_C C LOC + $RUNTIME_RUST Rust LOC + $RUNTIME_JVT JuvixTree LOC + $RUNTIME_CASM CASM LOC + $RUNTIME_VAMPIR VampIR LOC + $STDLIB Juvix LOC"
