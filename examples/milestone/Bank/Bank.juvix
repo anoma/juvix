@@ -12,41 +12,35 @@ Address : Type := Nat;
 
 bankAddress : Address := 1234;
 
-module Token;
-  type Token :=
-    --- Arguments are: owner, gates, amount.
-    mkToken : Address -> Nat -> Nat -> Token;
-
-  --- Retrieves the owner from a ;Token;
-  getOwner : Token -> Address
-    | (mkToken o _ _) := o;
-
-  --- Retrieves the amount from a ;Token;
-  getAmount : Token -> Nat
-    | (mkToken _ _ a) := a;
-
-  --- Retrieves the gates from a ;Token;
-  getGates : Token -> Nat
-    | (mkToken _ g _) := g;
-end;
-
-open Token;
+type Token :=
+  --- Arguments are: owner, gates, amount.
+  mkToken {
+    owner : Address;
+    gates : Nat;
+    amount : Nat
+  };
 
 --- This module defines the type for balances and its associated operations.
 module Balances;
   Balances : Type := List (Pair Field Nat);
 
   --- Increments the amount associated with a certain ;Field;.
-  increment : Field -> Nat -> Balances -> Balances
-    | f n nil := (f, n) :: nil
-    | f n ((b, bn) :: bs) := ite (f == b) ((b, bn + n) :: bs) ((b, bn) :: increment f n bs);
+  increment (fld : Field) (n : Nat) : (balances : Balances) -> Balances
+    | nil := (fld, n) :: nil
+    | ((b, bn) :: bs) :=
+      if
+        | fld == b := (b, bn + n) :: bs
+        | else := (b, bn) :: increment fld n bs;
 
   --- Decrements the amount associated with a certain ;Field;.
   --- If the ;Field; is not found, it does nothing.
   --- Subtraction is truncated to ;zero;.
-  decrement : Field -> Nat -> Balances -> Balances
-    | _ _ nil := nil
-    | f n ((b, bn) :: bs) := ite (f == b) ((b, sub bn n) :: bs) ((b, bn) :: decrement f n bs);
+  decrement (fld : Field) (n : Nat) : (balances : Balances) -> Balances
+    | nil := nil
+    | ((b, bn) :: bs) :=
+      if
+        | fld == b := (b, sub bn n) :: bs
+        | else := (b, bn) :: decrement fld n bs;
 
   emtpyBalances : Balances := nil;
 
@@ -63,12 +57,11 @@ axiom runOnChain : {B : Type} -> IO -> B -> B;
 axiom hashAddress : Address -> Field;
 
 --- Returns the total amount of tokens after compounding interest.
-calculateInterest : Nat -> Nat -> Nat -> Nat
-  | principal rate periods :=
-    let
-      amount : Nat := principal;
-      incrAmount (a : Nat) : Nat := div (a * rate) 10000;
-    in iterate (min 100 periods) incrAmount amount;
+calculateInterest (principal rate periods : Nat) : Nat :=
+  let
+    amount : Nat := principal;
+    incrAmount (a : Nat) : Nat := div (a * rate) 10000;
+  in iterate (min 100 periods) incrAmount amount;
 
 --- Returns a new ;Token;. Arguments are:
 ---
@@ -77,15 +70,15 @@ calculateInterest : Nat -> Nat -> Nat -> Nat
 --- `amount`: The amount of  tokens to issue
 ---
 --- `caller`: Who is creating the transaction. It must be the bank.
-issue : Address -> Address -> Nat -> Token
-  | caller owner amount := assert (caller == bankAddress) >-> mkToken owner 0 amount;
+issue (caller owner : Address) (amount : Nat) : Token :=
+  assert (caller == bankAddress) >-> mkToken owner 0 amount;
 
 --- Deposits some amount of money into the bank.
 deposit (bal : Balances) (token : Token) (amount : Nat) : Token :=
   let
-    difference : Nat := sub (getAmount token) amount;
-    remaining : Token := mkToken (getOwner token) (getGates token) difference;
-    hash : Field := hashAddress (getOwner token);
+    difference : Nat := sub (Token.amount token) amount;
+    remaining : Token := mkToken (Token.owner token) (Token.gates token) difference;
+    hash : Field := hashAddress (Token.owner token);
     bal' : Balances := increment hash amount bal;
   in runOnChain (commitBalances bal') remaining;
 

@@ -7,30 +7,32 @@ import Logic.Symbol open public;
 import Logic.Extra open;
 
 --- A 3x3 grid of ;Square;s
-type Board := board : List (List Square) → Board;
+type Board := mkBoard {squares : List (List Square)};
 
 --- Returns the list of numbers corresponding to the empty ;Square;s
-possibleMoves : List Square → List Nat
+possibleMoves : (list : List Square) -> List Nat
   | nil := nil
   | (empty n :: xs) := n :: possibleMoves xs
   | (_ :: xs) := possibleMoves xs;
 
 --- ;true; if all the ;Square;s in the list are equal
-full : List Square → Bool
-  | (a :: b :: c :: nil) := ==Square a b && ==Square b c
-  | _ := failwith "full";
+full (list : List Square) : Bool :=
+  case list of
+    | a :: b :: c :: nil := a == b && b == c
+    | _ := failwith "full";
 
-diagonals : List (List Square) → List (List Square)
-  | ((a1 :: _ :: b1 :: nil) :: (_ :: c :: _ :: nil) :: (b2 :: _ :: a2 :: nil) :: nil) :=
-    (a1 :: c :: a2 :: nil) :: (b1 :: c :: b2 :: nil) :: nil
-  | _ := failwith "diagonals";
+diagonals (squares : List (List Square)) : List (List Square) :=
+  case squares of
+    | (a1 :: _ :: b1 :: nil) :: (_ :: c :: _ :: nil) :: (b2 :: _ :: a2 :: nil) :: nil :=
+      (a1 :: c :: a2 :: nil) :: (b1 :: c :: b2 :: nil) :: nil
+    | _ := failwith "diagonals";
 
-columns : List (List Square) → List (List Square) := transpose;
+columns (squares : List (List Square)) : List (List Square) := transpose squares;
 
-rows : List (List Square) → List (List Square) := id;
+rows (squares : List (List Square)) : List (List Square) := squares;
 
 --- Textual representation of a ;List Square;
 showRow (xs : List Square) : String := concat (surround "|" (map showSquare xs));
 
-showBoard : Board → String
-  | (board squares) := unlines (surround "+---+---+---+" (map showRow squares));
+showBoard (board : Board) : String :=
+  unlines (surround "+---+---+---+" (map showRow (Board.squares board)));
