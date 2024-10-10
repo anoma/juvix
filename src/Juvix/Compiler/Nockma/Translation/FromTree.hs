@@ -786,7 +786,10 @@ opAddress' :: Term Natural -> Term Natural
 opAddress' x = evaluated $ (opQuote "opAddress'" OpAddress) # x
 
 argsTuplePlaceholder :: Text -> Natural -> Term Natural
-argsTuplePlaceholder txt arity = ("argsTuplePlaceholder-" <> txt) @ foldTermsOrNil (replicate (fromIntegral arity) (TermAtom nockNil))
+argsTuplePlaceholder txt arity = ("argsTuplePlaceholder-" <> txt) @ foldTermsOrNil (replicate arityInt (TermAtom nockNil))
+  where
+    arityInt :: Int
+    arityInt = fromIntegral arity
 
 appendRights :: (Member (Reader CompilerCtx) r) => Path -> Term Natural -> Sem r (Term Natural)
 appendRights path n = do
