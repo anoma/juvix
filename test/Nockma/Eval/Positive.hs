@@ -161,11 +161,31 @@ test = testWithStorage []
 
 --- A Nock formula that computes logical and
 nockAnd :: Term Natural
-nockAnd = [nock| [6 [0 12] [6 [0 13] [1 0] [1 1]] [1 1]] |]
+nockAnd =
+  OpIf
+    # (OpAddress # argPath 0)
+    # ( OpIf
+          # (OpAddress # argPath 1)
+          # nockTrueLiteral
+          # nockFalseLiteral
+      )
+    # nockFalseLiteral
+  where
+    argPath :: Natural -> Path
+    argPath idx =
+      closurePath ArgsTuple
+        ++ indexTuple
+          ( IndexTupleArgs
+              { _indexTupleArgsIndex = idx,
+                _indexTupleArgsLength = funArity
+              }
+          )
+    funArity :: Natural
+    funArity = 2
 
 --- A nock function that computes logical and
-nockAndArgs :: Term Natural
-nockAndArgs = nockAnd # args # env
+nockAndFun :: Term Natural
+nockAndFun = nockAnd # args # env
   where
     arg :: Term Natural
     arg = nockNilTagged "placeholder argument"
@@ -223,10 +243,10 @@ anomaCallingConventionTests =
            anomaTestM "(and true false) == false" (return nockAnd) [nockTrueLiteral, nockFalseLiteral] (eqNock [nock| false |]),
            anomaTestM "(and true true) == true" (return nockAnd) [nockTrueLiteral, nockTrueLiteral] (eqNock [nock| true |]),
            --- test curry with and
-           anomaTestM "(curry and true) false == false" (applyFun <$> stdlibCurry (OpQuote # nockAndArgs) nockTrueLiteral) [nockFalseLiteral] (eqNock [nock| false |]),
-           anomaTestM "(curry and true) true == true" (applyFun <$> stdlibCurry (OpQuote # nockAndArgs) nockTrueLiteral) [nockTrueLiteral] (eqNock [nock| true |]),
-           anomaTestM "(curry and false) true == false" (applyFun <$> stdlibCurry (OpQuote # nockAndArgs) nockFalseLiteral) [nockTrueLiteral] (eqNock [nock| false |]),
-           anomaTestM "(curry and false) false == false" (applyFun <$> stdlibCurry (OpQuote # nockAndArgs) nockFalseLiteral) [nockFalseLiteral] (eqNock [nock| false |])
+           anomaTestM "(curry and true) false == false" (applyFun <$> stdlibCurry (OpQuote # nockAndFun) nockTrueLiteral) [nockFalseLiteral] (eqNock [nock| false |]),
+           anomaTestM "(curry and true) true == true" (applyFun <$> stdlibCurry (OpQuote # nockAndFun) nockTrueLiteral) [nockTrueLiteral] (eqNock [nock| true |]),
+           anomaTestM "(curry and false) true == false" (applyFun <$> stdlibCurry (OpQuote # nockAndFun) nockFalseLiteral) [nockTrueLiteral] (eqNock [nock| false |]),
+           anomaTestM "(curry and false) false == false" (applyFun <$> stdlibCurry (OpQuote # nockAndFun) nockFalseLiteral) [nockFalseLiteral] (eqNock [nock| false |])
          ]
 
 serializationTests :: [Test]

@@ -32,6 +32,8 @@ module Juvix.Compiler.Nockma.Translation.FromTree
     emptyCompilerCtx,
     CompilerCtx (..),
     stdlibCurry,
+    IndexTupleArgs (..),
+    indexTuple,
   )
 where
 
