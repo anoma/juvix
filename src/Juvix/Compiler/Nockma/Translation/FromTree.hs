@@ -31,6 +31,9 @@ module Juvix.Compiler.Nockma.Translation.FromTree
     runCompilerWith,
     emptyCompilerCtx,
     CompilerCtx (..),
+    stdlibCurry,
+    IndexTupleArgs (..),
+    indexTuple,
   )
 where
 
@@ -758,7 +761,7 @@ compile = \case
       args <- mapM compile _nodeAllocClosureArgs
       return . makeClosure $ \case
         FunCode -> opAddress "allocClosureFunPath" (base <> fpath <> closurePath FunCode)
-        ArgsTuple -> OpQuote # argsTuplePlaceholder "goAllocClosure"
+        ArgsTuple -> OpQuote # argsTuplePlaceholder "goAllocClosure" farity
         FunctionsLibrary -> OpQuote # functionsLibraryPlaceHolder
         StandardLibrary -> OpQuote # stdlibPlaceHolder
         ClosureTotalArgsNum -> nockNatLiteral farity
@@ -784,8 +787,11 @@ compile = \case
 opAddress' :: Term Natural -> Term Natural
 opAddress' x = evaluated $ (opQuote "opAddress'" OpAddress) # x
 
-argsTuplePlaceholder :: Text -> Term Natural
-argsTuplePlaceholder txt = nockNilTagged ("argsTuplePlaceholder-" <> txt)
+argsTuplePlaceholder :: Text -> Natural -> Term Natural
+argsTuplePlaceholder txt arity = ("argsTuplePlaceholder-" <> txt) @ foldTermsOrNil (replicate arityInt (TermAtom nockNil))
+  where
+    arityInt :: Int
+    arityInt = fromIntegral arity
 
 appendRights :: (Member (Reader CompilerCtx) r) => Path -> Term Natural -> Sem r (Term Natural)
 appendRights path n = do
@@ -975,18 +981,18 @@ runCompilerWith _opts constrs moduleFuns mainFun =
         compiledFuns =
           (OpQuote # (666 :: Natural)) -- TODO we have this unused term so that indices match. Remove it and adjust as needed
             : ( makeLibraryFunction
-                  <$> [(f ^. compilerFunctionName, runCompilerFunction compilerCtx f) | f <- libFuns]
+                  <$> [(f ^. compilerFunctionName, f ^. compilerFunctionArity, runCompilerFunction compilerCtx f) | f <- libFuns]
               )
 
-    makeLibraryFunction :: (Text, Term Natural) -> Term Natural
-    makeLibraryFunction (funName, c) =
+    makeLibraryFunction :: (Text, Natural, Term Natural) -> Term Natural
+    makeLibraryFunction (funName, funArity, c) =
       ("def-" <> funName)
         @ makeClosure
           ( \p ->
               let nockNilHere = nockNilTagged ("makeLibraryFunction-" <> show p)
                in case p of
                     FunCode -> ("funCode-" <> funName) @ c
-                    ArgsTuple -> ("argsTuple-" <> funName) @ argsTuplePlaceholder "libraryFunction"
+                    ArgsTuple -> ("argsTuple-" <> funName) @ argsTuplePlaceholder "libraryFunction" funArity
                     FunctionsLibrary -> ("functionsLibrary-" <> funName) @ functionsLibraryPlaceHolder
                     StandardLibrary -> ("stdlib-" <> funName) @ stdlibPlaceHolder
                     ClosureTotalArgsNum -> ("closureTotalArgsNum-" <> funName) @ nockNilHere
@@ -1000,7 +1006,7 @@ runCompilerWith _opts constrs moduleFuns mainFun =
       let nockNilHere = nockNilTagged ("makeMainFunction-" <> show p)
        in case p of
             FunCode -> run . runReader compilerCtx $ mainFunctionWrapper funcsLib c
-            ArgsTuple -> argsTuplePlaceholder "mainFunction"
+            ArgsTuple -> argsTuplePlaceholder "mainFunction" (mainFun ^. compilerFunctionArity)
             FunctionsLibrary -> functionsLibraryPlaceHolder
             StandardLibrary -> stdlib
             ClosureTotalArgsNum -> nockNilHere
@@ -1304,3 +1310,6 @@ intToUInt8 i = callStdlib StdlibMod [i, nockIntegralLiteral @Natural (2 ^ uint8S
   where
     uint8Size :: Natural
     uint8Size = 8
+
+stdlibCurry :: (Member (Reader CompilerCtx) r) => Term Natural -> Term Natural -> Sem r (Term Natural)
+stdlibCurry f arg = callStdlib StdlibCurry [f, arg]

@@ -197,15 +197,18 @@ evalProfile inistack initerm =
           ParsedOperatorCell o -> goOperatorCell o
           ParsedStdlibCallCell o -> do
             intercept' <- asks (^. evalInterceptStdlibCalls)
+            let nonInterceptCall = goOperatorCell (o ^. stdlibCallRaw)
+            -- Pass the raw call to goStdlibCall so that stdlib intercepts
+            -- can choose to use the raw call instead.
             if
-                | intercept' -> goStdlibCall (o ^. stdlibCallCell)
-                | otherwise -> goOperatorCell (o ^. stdlibCallRaw)
+                | intercept' -> goStdlibCall nonInterceptCall (o ^. stdlibCallCell)
+                | otherwise -> nonInterceptCall
       where
         loc :: Maybe Interval
         loc = term ^. termLoc
 
-        goStdlibCall :: StdlibCall a -> Sem r (Term a)
-        goStdlibCall StdlibCall {..} = do
+        goStdlibCall :: Sem r (Term a) -> StdlibCall a -> Sem r (Term a)
+        goStdlibCall nonInterceptCall StdlibCall {..} = do
           let w = EvalCrumbStdlibCallArgs (CrumbStdlibCallArgs _stdlibCallFunction)
           args' <- withCrumb w (recEval stack _stdlibCallArgs)
           let binArith :: (a -> a -> a) -> Sem r (Term a)
@@ -262,6 +265,9 @@ evalProfile inistack initerm =
             StdlibLengthBytes -> case args' of
               TermAtom a -> TermAtom <$> goLengthBytes a
               _ -> error "expected an atom"
+            -- Use the raw nock code for curry. The nock stdlib curry function is
+            -- small. There's no benefit in implementing it separately in the evaluator.
+            StdlibCurry -> nonInterceptCall
           where
             goCat :: Atom a -> Atom a -> Sem r (Term a)
             goCat arg1 arg2 = TermAtom . setAtomHint AtomHintString <$> atomConcatenateBytes arg1 arg2
