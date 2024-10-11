@@ -117,7 +117,6 @@ find {A} (predicate : A -> Bool) : (list : List A) -> Maybe A
 
 - use ADT syntax
 - every constructor on a separate line
-  - possible exception: enumeration types?
 - give meaningful names to constructor arguments
 
 Example:
