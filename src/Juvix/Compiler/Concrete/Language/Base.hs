@@ -813,7 +813,7 @@ deriving stock instance Ord (RhsAdt 'Parsed)
 deriving stock instance Ord (RhsAdt 'Scoped)
 
 data RhsRecord (s :: Stage) = RhsRecord
-  { _rhsRecordDelim :: Irrelevant (KeywordRef, KeywordRef),
+  { _rhsRecordDelim :: Irrelevant (Maybe KeywordRef, KeywordRef, KeywordRef),
     _rhsRecordStatements :: [RecordStatement s]
   }
   deriving stock (Generic)

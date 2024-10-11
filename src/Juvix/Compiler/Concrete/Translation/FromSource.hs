@@ -1589,10 +1589,11 @@ rhsAdt = P.label "<constructor arguments>" $ do
 
 rhsRecord :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r (RhsRecord 'Parsed)
 rhsRecord = P.label "<constructor record>" $ do
+  a <- optional (kw kwAt)
   l <- kw delimBraceL
   _rhsRecordStatements <- P.sepEndBy recordStatement semicolon
   r <- kw delimBraceR
-  let _rhsRecordDelim = Irrelevant (l, r)
+  let _rhsRecordDelim = Irrelevant (a, l, r)
   return RhsRecord {..}
 
 recordStatement :: forall r. (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r (RecordStatement 'Parsed)
