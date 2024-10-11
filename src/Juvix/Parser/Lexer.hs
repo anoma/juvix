@@ -119,7 +119,7 @@ space' special =
                   | otherwise -> return (acc <> pack txt)
 
 integerWithBase' :: ParsecS r (WithLoc IntegerWithBase)
-integerWithBase' = withLoc $ do
+integerWithBase' = P.try $ withLoc $ do
   minus <- optional (char '-')
   b <- integerBase'
   num :: Integer <- case b of

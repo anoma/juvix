@@ -2,32 +2,32 @@
 
 def fun :
    Π A : Type,
-   A → A :=
+   A -> A :=
    λ(A : Type)
    λ(x : A)
-   let f : (A → A) → A := λ(h : A → A) h (h x) in
+   let f : (A -> A) -> A := λ(h : A -> A) h (h x) in
    f (λ(y : A) x);
 
-def helper : Int → Int → Int :=
+def helper : Int -> Int -> Int :=
   λ(a : Int)
   λ(b : Int)
   a * b - b;
 
-def fun' : Π T : Type → Type,
+def fun' : Π T : Type -> Type,
            Π unused : Type,
            Π C : Type,
            Π A : Type,
-           (T A → A → C)
-           → A
-           → C :=
-  λ(T : Type → Type)
+           (T A -> A -> C)
+           -> A
+           -> C :=
+  λ(T : Type -> Type)
   λ(unused : Type)
   λ(C : Type)
   λ(A : Type)
-  λ(mhelper : T A → A → C)
+  λ(mhelper : T A -> A -> C)
   λ(a' : A)
-  let f : (A → A) → A := λ(g : A → A) g (g a') in
-  let h : A → A → C := λ(a1 : A) λ(a2 : A) mhelper a2 a1 in
+  let f : (A -> A) -> A := λ(g : A -> A) g (g a') in
+  let h : A -> A -> C := λ(a1 : A) λ(a2 : A) mhelper a2 a1 in
   f (λ(y : A) h y a');
 
 fun Int 2 + fun' (λ(A : Type) A) Bool Int Int helper 3

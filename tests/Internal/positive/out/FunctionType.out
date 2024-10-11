@@ -1,1 +1,1 @@
-Π A : Type, Π B : Type, A → B
+Π A : Type, Π B : Type, A -> B
