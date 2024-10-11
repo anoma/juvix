@@ -159,6 +159,113 @@ testWithStorage s = Test defaultEvalOptions Nothing (Storage (HashMap.fromList (
 test :: Text -> Term Natural -> Term Natural -> Check () -> Test
 test = testWithStorage []
 
+--- A Nock formula that computes logical and
+nockAnd :: Term Natural
+nockAnd =
+  OpIf
+    # (OpAddress # argPath 0)
+    # ( OpIf
+          # (OpAddress # argPath 1)
+          # nockTrueLiteral
+          # nockFalseLiteral
+      )
+    # nockFalseLiteral
+  where
+    argPath :: Natural -> Path
+    argPath idx =
+      closurePath ArgsTuple
+        ++ indexTuple
+          ( IndexTupleArgs
+              { _indexTupleArgsIndex = idx,
+                _indexTupleArgsLength = funArity
+              }
+          )
+    funArity :: Natural
+    funArity = 2
+
+--- A nock function that computes logical and
+nockAndFun :: Term Natural
+nockAndFun = nockAnd # args # env
+  where
+    arg :: Term Natural
+    arg = nockNilTagged "placeholder argument"
+
+    args :: Term Natural
+    args = arg # arg
+
+    env :: Term Natural
+    env = nockNilTagged "environment"
+
+--- A Nock formula that computes logical and of 3 arguments
+nockAnd3 :: Term Natural
+nockAnd3 =
+  OpIf
+    # (OpAddress # argPath 0)
+    # ( OpIf
+          # (OpAddress # argPath 1)
+          # ( OpIf
+                # (OpAddress # argPath 2)
+                # nockTrueLiteral
+                # nockFalseLiteral
+            )
+          # nockFalseLiteral
+      )
+    # nockFalseLiteral
+  where
+    argPath :: Natural -> Path
+    argPath idx =
+      closurePath ArgsTuple
+        ++ indexTuple
+          ( IndexTupleArgs
+              { _indexTupleArgsIndex = idx,
+                _indexTupleArgsLength = funArity
+              }
+          )
+    funArity :: Natural
+    funArity = 3
+
+--- A nock function that computes logical and for 3 arguments
+nockAnd3Fun :: Term Natural
+nockAnd3Fun = nockAnd3 # args # env
+  where
+    arg :: Term Natural
+    arg = nockNilTagged "placeholder argument"
+
+    args :: Term Natural
+    args = arg # arg # arg
+
+    env :: Term Natural
+    env = nockNilTagged "environment"
+
+-- | Wrap a function in a formula that calls the function with arguments from the subject.
+applyFun :: Term Natural -> Term Natural
+applyFun f =
+  OpPush
+    # f
+    # ( OpCall
+          # codePath
+          # ( OpReplace
+                # ( argsPath
+                      # (OpAddress # subjectPath >># (OpAddress # argsPath))
+                  )
+                # (OpAddress # fPath)
+            )
+      )
+  where
+    codePath :: Path
+    codePath = closurePath FunCode
+
+    argsPath :: Path
+    argsPath = closurePath ArgsTuple
+
+    -- Path to the function being applied after pushing
+    fPath :: Path
+    fPath = [L]
+
+    -- Path to the original subject after pushing
+    subjectPath :: Path
+    subjectPath = [R]
+
 anomaCallingConventionTests :: [Test]
 anomaCallingConventionTests =
   [True, False]
@@ -172,7 +279,24 @@ anomaCallingConventionTests =
             in run . runReader fx . runReader emptyCompilerCtx $ do
                  p0 <- pathToArg 0
                  p1 <- pathToArg 1
-                 return (anomaTestM "stdlib sub args" (sub (OpAddress # p0) (OpAddress # p1)) args (eqNock [nock| 2 |]))
+                 return (anomaTestM "stdlib sub args" (sub (OpAddress # p0) (OpAddress # p1)) args (eqNock [nock| 2 |])),
+           --- sanity check nockAnd
+           anomaTestM "(and true false) == false" (return nockAnd) [nockTrueLiteral, nockFalseLiteral] (eqNock [nock| false |]),
+           anomaTestM "(and true true) == true" (return nockAnd) [nockTrueLiteral, nockTrueLiteral] (eqNock [nock| true |]),
+           --- test curry with and
+           anomaTestM "(curry and true) false == false" (applyFun <$> stdlibCurry (OpQuote # nockAndFun) nockTrueLiteral) [nockFalseLiteral] (eqNock [nock| false |]),
+           anomaTestM "(curry and true) true == true" (applyFun <$> stdlibCurry (OpQuote # nockAndFun) nockTrueLiteral) [nockTrueLiteral] (eqNock [nock| true |]),
+           anomaTestM "(curry and false) true == false" (applyFun <$> stdlibCurry (OpQuote # nockAndFun) nockFalseLiteral) [nockTrueLiteral] (eqNock [nock| false |]),
+           anomaTestM "(curry and false) false == false" (applyFun <$> stdlibCurry (OpQuote # nockAndFun) nockFalseLiteral) [nockFalseLiteral] (eqNock [nock| false |]),
+           --- sanity check nockAnd3
+           anomaTestM "(and3 true false true) == false" (return nockAnd3) [nockTrueLiteral, nockFalseLiteral, nockTrueLiteral] (eqNock [nock| false |]),
+           anomaTestM "(and3 true true false) == false" (return nockAnd3) [nockTrueLiteral, nockTrueLiteral, nockFalseLiteral] (eqNock [nock| false |]),
+           anomaTestM "(and3 true true true) == true" (return nockAnd3) [nockTrueLiteral, nockTrueLiteral, nockTrueLiteral] (eqNock [nock| true |]),
+           --- test curry with and3
+           anomaTestM "(curry and3 true) false true == false" (applyFun <$> stdlibCurry (OpQuote # nockAnd3Fun) nockTrueLiteral) [nockFalseLiteral, nockTrueLiteral] (eqNock [nock| false |]),
+           anomaTestM "(curry and3 true) true true == true" (applyFun <$> stdlibCurry (OpQuote # nockAnd3Fun) nockTrueLiteral) [nockTrueLiteral, nockTrueLiteral] (eqNock [nock| true |]),
+           anomaTestM "(curry and3 false) true true == false" (applyFun <$> stdlibCurry (OpQuote # nockAnd3Fun) nockFalseLiteral) [nockTrueLiteral, nockTrueLiteral] (eqNock [nock| false |]),
+           anomaTestM "(curry and3 false) false true == false" (applyFun <$> stdlibCurry (OpQuote # nockAnd3Fun) nockFalseLiteral) [nockFalseLiteral, nockTrueLiteral] (eqNock [nock| false |])
          ]
 
 serializationTests :: [Test]
@@ -231,6 +355,10 @@ serializationTests =
       <> serializationTest
         [nock| [[0 1] [2 3] [4 5] [6 7] [8 9] [10 11] [12 13] [14 15] [16 17] [18 19] [20 21] 0] |]
         [nock| 308.947.677.754.874.070.959.300.747.182.056.036.528.545.493.781.368.831.595.479.491.505.523.344.414.501 |]
+
+-- Call a formula with specified arguments
+nockCall :: Term Natural -> NonEmpty (Term Natural) -> Term Natural
+nockCall formula args = (OpReplace # ([R, L] # foldTerms args) # (OpQuote # formula)) >># (OpCall # [L] # (OpAddress # emptyPath))
 
 juvixCallingConventionTests :: [Test]
 juvixCallingConventionTests =
