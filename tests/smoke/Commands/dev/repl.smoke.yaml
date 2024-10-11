@@ -74,7 +74,7 @@ tests:
       - dev
       - repl
     stdout:
-      contains: "{A : Type} → List A → Bool"
+      contains: "{A : Type} -> List A -> Bool"
     stdin: ":type null"
     exit-status: 0
 
@@ -84,7 +84,7 @@ tests:
       - dev
       - repl
     stdout:
-      contains: "Nat → Nat"
+      contains: "Nat -> Nat"
     stdin: ":type suc"
     exit-status: 0
 
@@ -94,7 +94,7 @@ tests:
       - dev
       - repl
     stdout:
-      contains: "Nat → Nat"
+      contains: "Nat -> Nat"
     stdin: ":t suc"
     exit-status: 0
 
@@ -105,7 +105,7 @@ tests:
       script: |
         cd ./../juvix-stdlib && juvix repl Stdlib/Prelude.juvix
     stdout:
-      contains: "Nat → Nat"
+      contains: "Nat -> Nat"
     stdin: ":t suc"
     exit-status: 0
 

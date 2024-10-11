@@ -104,7 +104,7 @@ kwInclude :: Doc Ann
 kwInclude = keyword Str.include
 
 kwArrow :: Doc Ann
-kwArrow = keyword Str.toUnicode
+kwArrow = keyword Str.toAscii
 
 kwMapsto :: Doc Ann
 kwMapsto = keyword Str.mapstoUnicode
