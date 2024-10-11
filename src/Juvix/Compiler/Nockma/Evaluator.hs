@@ -198,6 +198,8 @@ evalProfile inistack initerm =
           ParsedStdlibCallCell o -> do
             intercept' <- asks (^. evalInterceptStdlibCalls)
             let nonInterceptCall = goOperatorCell (o ^. stdlibCallRaw)
+            -- Pass the raw call to goStdlibCall so that stdlib intercepts
+            -- can choose to use the raw call instead.
             if
                 | intercept' -> goStdlibCall nonInterceptCall (o ^. stdlibCallCell)
                 | otherwise -> nonInterceptCall
@@ -263,6 +265,8 @@ evalProfile inistack initerm =
             StdlibLengthBytes -> case args' of
               TermAtom a -> TermAtom <$> goLengthBytes a
               _ -> error "expected an atom"
+            -- Use the raw nock code for curry. The nock stdlib curry function is
+            -- small. There's no benefit in implementing it separately in the evaluator.
             StdlibCurry -> nonInterceptCall
           where
             goCat :: Atom a -> Atom a -> Sem r (Term a)
