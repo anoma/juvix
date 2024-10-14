@@ -1,0 +1,4 @@
+{
+    "wasm": true,
+    "rust": true
+}

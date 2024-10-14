@@ -43,6 +43,8 @@ extra-source-files:
   - runtime/vampir/*.pir
   - runtime/casm/*.casm
   - runtime/nockma/*.nockma
+  - config/config.json
+  - config/configure.sh
 
 dependencies:
   - aeson-better-errors == 0.9.*
