@@ -731,18 +731,21 @@ instance PrettyCode Value where
     ValueFun -> return "<function>"
     ValueType -> return "<type>"
 
-ppValueSequence :: (Member (Reader Options) r) => [Value] -> Sem r (Doc Ann)
-ppValueSequence vs = hsep <$> mapM (ppRightExpression appFixity) vs
-
-docValueSequence :: [Value] -> Doc Ann
-docValueSequence =
-  run
-    . runReader defaultOptions
-    . ppValueSequence
-
 --------------------------------------------------------------------------------
 -- helper functions
 --------------------------------------------------------------------------------
+
+ppSequence ::
+  (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>
+  [a] ->
+  Sem r (Doc Ann)
+ppSequence vs = hsep <$> mapM (ppRightExpression appFixity) vs
+
+docSequence :: (PrettyCode a, HasAtomicity a) => [a] -> Doc Ann
+docSequence =
+  run
+    . runReader defaultOptions
+    . ppSequence
 
 ppPostExpression ::
   (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>
