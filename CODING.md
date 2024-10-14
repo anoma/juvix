@@ -23,7 +23,7 @@ type Transferability :=
 
 - all imports at the beginning of the file
 - explicit names for imported identifiers (`import X open using {iden1; iden2}`)
-  - exception: `import Stdlib.Prelude open`, `import Anoma open` are allowed
+  - exception: `import Stdlib.Prelude open` and `import Anoma open` are allowed
 
 ## Names
 
@@ -50,7 +50,7 @@ type Ordering :=
 - boolean check functions: start with `is` (`isWhatever`)
 - record constructors: `mk` + type name (`mkResource`)
 - meaningful descriptive long names for arguments of public functions, e.g., `element`, `list`, `initialValue`
-  - exception: common abbreviations allowed: `fun`, `acc`. `elem`
+  - exception: common abbreviations allowed: `fun`, `acc`, `elem`
   - exception: generic functions whose arguments have no specific meaning, e.g.,
 
 ```
@@ -109,7 +109,12 @@ find {A} (predicate : A -> Bool) : (list : List A) -> Maybe A
 ## Application
 
 - don't use "pipes" (i.e., `|>`, `<|`, `>>`, `<<`, etc.)
-  - weak exception: there is a "natural" data processing pipeline in several steps
+  - weak exception: there is a "natural" data processing pipeline in several steps, e.g.,
+
+```
+map (+ 1) >> filter (< 0) >> sum
+```
+
 - use iterators `for` , `map`, etc., instead of the function application syntax with `fold`, etc.
 - use named application when reasonable
 
