@@ -7,16 +7,16 @@ module PascalsTriangle;
 import Stdlib.Prelude open;
 
 --- Return a list of repeated applications of a given function
-scanIterate {A} : Nat → (A → A) → A → List A
+scanIterate {A} : (n : Nat) -> (fun : A -> A) -> (value : A) -> List A
   | zero _ _ := nil
   | (suc n) f a := a :: scanIterate n f (f a);
 
 --- Produce a singleton List
-singleton {A} (a : A) : List A := a :: nil;
+singleton {A} (value : A) : List A := value :: nil;
 
 --- Concatenates a list of strings
 --- ;concat (("a" :: nil) :: "b" :: nil); evaluates to ;"a" :: "b" :: nil;
-concat : List String → String := foldl (++str) "";
+concat (list : List String) : String := foldl (++str) "" list;
 
 intercalate (sep : String) (xs : List String) : String := concat (intersperse sep xs);
 

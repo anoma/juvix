@@ -12,30 +12,36 @@ type Error :=
   | --- a fatal occurred
     terminate : String → Error;
 
-type GameState := state : Board → Symbol → Error → GameState;
+type GameState :=
+  mkGameState {
+    board : Board;
+    player : Symbol;
+    error : Error
+  };
 
 --- Textual representation of a ;GameState;
-showGameState : GameState → String
-  | (state b _ _) := showBoard b;
-
---- Projects the player
-player : GameState → Symbol
-  | (state _ p _) := p;
+showGameState (state : GameState) : String := showBoard (GameState.board state);
 
 --- initial ;GameState;
 beginState : GameState :=
-  state
-    (board
-      (map
-        (map empty)
-        ((1 :: 2 :: 3 :: nil) :: (4 :: 5 :: 6 :: nil) :: (7 :: 8 :: 9 :: nil) :: nil)))
-    X
-    noError;
+  mkGameState@{
+    board :=
+      mkBoard
+        (map
+          (map empty)
+          ((1 :: 2 :: 3 :: nil) :: (4 :: 5 :: 6 :: nil) :: (7 :: 8 :: 9 :: nil) :: nil));
+    player := X;
+    error := noError
+  };
 
 --- ;true; if some player has won the game
-won : GameState → Bool
-  | (state (board squares) _ _) := any full (diagonals squares ++ rows squares ++ columns squares);
+won (state : GameState) : Bool :=
+  let
+    squares := Board.squares (GameState.board state);
+  in any full (diagonals squares ++ rows squares ++ columns squares);
 
 --- ;true; if there is a draw
-draw : GameState → Bool
-  | (state (board squares) _ _) := null (possibleMoves (flatten squares));
+draw (state : GameState) : Bool :=
+  let
+    squares := Board.squares (GameState.board state);
+  in null (possibleMoves (flatten squares));

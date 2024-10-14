@@ -5,7 +5,7 @@ import Stdlib.Prelude open;
 
 --- Concatenates a list of strings
 --- ;concat (("a" :: nil) :: "b" :: nil); evaluates to ;"a" :: "b" :: nil;
-concat : List String → String := foldl (++str) "";
+concat (list : List String) : String := foldl (++str) "" list;
 
 --- It inserts the first ;String; at the beginning, in between, and at the end of the second list
 surround (x : String) (xs : List String) : List String := (x :: intersperse x xs) ++ x :: nil;

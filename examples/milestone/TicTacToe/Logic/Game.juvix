@@ -10,21 +10,32 @@ import Logic.Board open public;
 import Logic.GameState open public;
 
 --- Checks if we reached the end of the game.
-checkState : GameState → GameState
-  | (state b p e) :=
-    ite
-      (won (state b p e))
-      (state b p (terminate ("Player " ++str showSymbol (switch p) ++str " wins!")))
-      (ite (draw (state b p e)) (state b p (terminate "It's a draw!")) (state b p e));
+checkState (state : GameState) : GameState :=
+  if
+    | won state :=
+      state@GameState{error := terminate
+        ("Player " ++str showSymbol (switch (GameState.player state)) ++str " wins!")}
+    | draw state := state@GameState{error := terminate "It's a draw!"}
+    | else := state;
 
 --- Given a player attempted move, updates the state accordingly.
-playMove : Maybe Nat → GameState → GameState
-  | nothing (state b p _) := state b p (continue "\nInvalid number, try again\n")
-  | (just k) (state (board s) player e) :=
-    ite
-      (not (elem (==) k (possibleMoves (flatten s))))
-      (state (board s) player (continue "\nThe square is already occupied, try again\n"))
-      (checkState (state (board (map (map (replace player k)) s)) (switch player) noError));
+playMove (attemptedMove : Maybe Nat) (state : GameState) : GameState :=
+  case attemptedMove of
+    | nothing := state@GameState{error := continue "\nInvalid number, try again\n"}
+    | just k :=
+      let
+        squares := Board.squares (GameState.board state);
+        player' := GameState.player state;
+      in if
+        | not (isMember k (possibleMoves (flatten squares))) :=
+          state@GameState{error := continue "\nThe square is already occupied, try again\n"}
+        | else :=
+          checkState
+            mkGameState@{
+              board := mkBoard (map (map (replace player' k)) squares);
+              player := switch player';
+              error := noError
+            };
 
 --- Returns ;just; if the given ;Nat; is in range of 1..9
 validMove (n : Nat) : Maybe Nat := ite (n <= 9 && n >= 1) (just n) nothing;

@@ -12,7 +12,7 @@ id2 {A : Type} : A -> A := id;
 add_one : List Nat -> List Nat
   | [] := []
   -- hello!
-  | (x :: xs) := (x + 1) :: add_one xs;
+  | (x :: xs) := x + 1 :: add_one xs;
 
 sum : List Nat -> Nat
   | [] := 0
@@ -37,14 +37,20 @@ dec : Nat -> Nat
 dec' (x : Nat) : Nat :=
   -- Do case switch
   -- pattern match on x
-  case x of {- the zero case -} zero := {- return zero -} zero | {- the suc case -} suc y := y;
+  case x of
+    | {- the zero case -}
+    zero :=
+      {- return zero -}
+      zero
+    | {- the suc case -}
+    suc y := y;
 
 optmap {A} (f : A -> A) : Maybe A -> Maybe A
   | nothing := nothing
   | (just x) := just (f x);
 
 pboth {A B A' B'} (f : A -> A') (g : B -> B') : Pair A B -> Pair A' B'
-  | (x, y) := (f x, g y);
+  | (x, y) := f x, g y;
 
 bool_fun (x y z : Bool) : Bool := x && y || z;
 
@@ -62,26 +68,26 @@ qsnd : {A : Type} → Queue A → List A
   | (queue _ v) := v;
 
 pop_front {A} (q : Queue A) : Queue A :=
-    let
-      q' : Queue A := queue (tail (qfst q)) (qsnd q);
-    in case qfst q' of
-         | nil := queue (reverse (qsnd q')) nil
-         | _ := q';
+  let
+    q' : Queue A := queue (tail (qfst q)) (qsnd q);
+  in case qfst q' of
+       | nil := queue (reverse (qsnd q')) nil
+       | _ := q';
 
 push_back {A} (q : Queue A) (x : A) : Queue A :=
-    case qfst q of
-      | nil := queue (x :: nil) (qsnd q)
-      | q' := queue q' (x :: qsnd q);
+  case qfst q of
+    | nil := queue (x :: nil) (qsnd q)
+    | q' := queue q' (x :: qsnd q);
 
 --- Checks if the queue is empty
 is_empty {A} (q : Queue A) : Bool :=
-    case qfst q of
-      | nil :=
-        case qsnd q of {
-          | nil := true
-          | _ := false
-        }
-      | _ := false;
+  case qfst q of
+    | nil :=
+      case qsnd q of {
+        | nil := true
+        | _ := false
+      }
+    | _ := false;
 
 empty : {A : Type} → Queue A := queue nil nil;
 
@@ -96,52 +102,85 @@ funkcja (n : Nat) : Nat :=
 
 --- An Either' type
 type Either' A B :=
-  --- Left constructor
-  Left' A
-| --- Right constructor
-  Right' B;
+  | --- Left constructor
+    Left' A
+  | --- Right constructor
+    Right' B;
 
 -- Records
 
 {-# isabelle-ignore: true #-}
-type R' := mkR' {
-  r1' : Nat;
-  r2' : Nat;
-};
+type R' :=
+  mkR' {
+    r1' : Nat;
+    r2' : Nat
+  };
 
-type R := mkR {
-  r1 : Nat;
-  r2 : Nat;
-};
+type R :=
+  mkR {
+    r1 : Nat;
+    r2 : Nat
+  };
 
 r : R := mkR 0 1;
+
 v : Nat := 0;
 
-funR (r : R) : R :=
-  case r of
-  | mkR@{r1; r2} := r@R{r1 := r1 + r2};
+funR (r : R) : R := case r of mkR@{r1; r2} := r@R{r1 := r1 + r2};
 
 funRR : R -> R
   | r@mkR@{r1; r2} := r@R{r1 := r1 + r2};
 
 funR' : R -> R
-  | mkR@{r1 := rr1; r2 := rr2} := mkR@{r1 := rr1 + rr2; r2 := rr2};
+  | mkR@{r1 := rr1; r2 := rr2} :=
+    mkR@{
+      r1 := rr1 + rr2;
+      r2 := rr2
+    };
 
 funR1 : R -> R
-  | mkR@{r1 := zero; r2} := mkR@{r1 := r2; r2}
-  | mkR@{r1 := rr1; r2 := rr2} := mkR@{r1 := rr2; r2 := rr1};
+  | mkR@{r1 := zero; r2} :=
+    mkR@{
+      r1 := r2;
+      r2
+    }
+  | mkR@{r1 := rr1; r2 := rr2} :=
+    mkR@{
+      r1 := rr2;
+      r2 := rr1
+    };
 
 funR2 (r : R) : R :=
   case r of
-  | mkR@{r1 := zero; r2} := mkR@{r1 := r2; r2}
-  | mkR@{r1 := rr1; r2 := rr2} := mkR@{r1 := rr2; r2 := rr1};
+    | mkR@{r1 := zero; r2} :=
+      mkR@{
+        r1 := r2;
+        r2
+      }
+    | mkR@{r1 := rr1; r2 := rr2} :=
+      mkR@{
+        r1 := rr2;
+        r2 := rr1
+      };
 
 funR3 (er : Either' R R) : R :=
   case er of
-  | Left' mkR@{r1 := zero; r2} := mkR@{r1 := r2; r2}
-  | Left' mkR@{r1 := rr1; r2 := rr2} := mkR@{r1 := rr2; r2 := rr1}
-  | Right' mkR@{r1; r2 := zero} := mkR@{r1 := 7; r2 := r1}
-  | Right' r@(mkR@{r1; r2}) := r@R{r1 := r2 + 2; r2 := r1 + 3};
+    | Left' mkR@{r1 := zero; r2} :=
+      mkR@{
+        r1 := r2;
+        r2
+      }
+    | Left' mkR@{r1 := rr1; r2 := rr2} :=
+      mkR@{
+        r1 := rr2;
+        r2 := rr1
+      }
+    | Right' mkR@{r1; r2 := zero} :=
+      mkR@{
+        r1 := 7;
+        r2 := r1
+      }
+    | Right' r@mkR@{r1; r2} := r@R{   r1 := r2 + 2; r2 := r1 + 3 };
 
 funR4 : R -> R
   | r@mkR@{r1} := r@R{r2 := r1};
