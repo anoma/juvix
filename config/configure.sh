@@ -3,7 +3,7 @@
 # This script should be run from the root of the project
 
 if [ `basename "$PWD"` != "juvix" ] || [ ! -d "config" ]; then
-    echo "This script should be run from the root of the project"
+    printf "This script should be run from the root of the project\n" 1>&2
     exit 1
 fi
 
