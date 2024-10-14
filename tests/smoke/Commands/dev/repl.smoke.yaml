@@ -74,7 +74,7 @@ tests:
       - dev
       - repl
     stdout:
-      contains: "{A : Type} -> List A -> Bool"
+      contains: "{A : Type} -> (list : List A) -> Bool"
     stdin: ":type null"
     exit-status: 0
 
