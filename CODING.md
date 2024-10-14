@@ -109,7 +109,7 @@ find {A} (predicate : A -> Bool) : (list : List A) -> Maybe A
 ## Application
 
 - don't use "pipes" (i.e., `|>`, `<|`, `>>`, `<<`, etc.)
-  - weak exception: there is a "natural" data processing pipeline in several steps, e.g.,
+  - exception: there is a "natural" data processing pipeline in several steps, e.g.,
 
 ```
 map (+ 1) >> filter (< 0) >> sum
