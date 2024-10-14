@@ -19,4 +19,4 @@ else
     RUST="false"
 fi
 
-printf "{\n    \"wasm\": $WASM,\n    \"rust\": $RUST\n}\n" > config/config.json
+printf "{\n  \"wasm\": $WASM,\n  \"rust\": $RUST\n}\n" > config/config.json
