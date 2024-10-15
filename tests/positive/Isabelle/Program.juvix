@@ -111,13 +111,13 @@ type Either' A B :=
 
 {-# isabelle-ignore: true #-}
 type R' :=
-  mkR' {
+  mkR'@{
     r1' : Nat;
     r2' : Nat
   };
 
 type R :=
-  mkR {
+  mkR@{
     r1 : Nat;
     r2 : Nat
   };

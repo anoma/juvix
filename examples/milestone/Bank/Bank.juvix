@@ -14,7 +14,7 @@ bankAddress : Address := 1234;
 
 type Token :=
   --- Arguments are: owner, gates, amount.
-  mkToken {
+  mkToken@{
     owner : Address;
     gates : Nat;
     amount : Nat

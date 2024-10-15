@@ -13,7 +13,7 @@ type Error :=
     terminate : String → Error;
 
 type GameState :=
-  mkGameState {
+  mkGameState@{
     board : Board;
     player : Symbol;
     error : Error

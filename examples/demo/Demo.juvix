@@ -18,8 +18,8 @@ log2 (n : Nat) : Nat :=
     | else := log2 (div n 2) + 1;
 
 type Tree (A : Type) :=
-  | leaf {element : A}
-  | node {
+  | leaf@{element : A}
+  | node@{
       element : A;
       left : Tree A;
       right : Tree A
