@@ -2,8 +2,8 @@
 
 # This script should be run from the root of the project
 
-if [ `basename "$PWD"` != "juvix" ] || [ ! -d "config" ]; then
-    printf "This script should be run from the root of the project\n" 1>&2
+if [ ! -d "config" ]; then
+    printf "This script should be run from the root of the project.\n" 1>&2
     exit 1
 fi
 
@@ -13,7 +13,7 @@ else
     WASM="false"
 fi
 
-if rustc --version >/dev/null 2>&1; then
+if cargo --version >/dev/null 2>&1; then
     RUST="true"
 else
     RUST="false"
