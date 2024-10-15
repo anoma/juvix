@@ -39,7 +39,7 @@ showPeg : Peg -> String
 
 --- A Move represents a move between pegs
 type Move :=
-  mkMove {
+  mkMove@{
     from : Peg;
     to : Peg
   };

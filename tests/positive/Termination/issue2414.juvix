@@ -3,7 +3,7 @@ module issue2414;
 import Stdlib.Prelude open;
 
 trait
-type T := mkT {tt : T};
+type T := mkT@{tt : T};
 
 f {{T}} : Nat → Nat
   | zero := zero

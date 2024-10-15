@@ -2,7 +2,7 @@ module RecordIterator;
 
 trait
 type Foldable (container elem : Type) :=
-  mkFoldable {
+  mkFoldable@{
     syntax iterator for {init := 1; range := 1};
     for : {B : Type} -> (B -> elem -> B) -> B -> container -> B;
 
