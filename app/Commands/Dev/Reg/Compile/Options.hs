@@ -6,14 +6,16 @@ where
 
 import Commands.Extra.Compile.Options
 import CommonOptions
+import Juvix.Config qualified as Config
 
 regSupportedTargets :: NonEmpty CompileTarget
 regSupportedTargets =
   AppTargetNative64
-    :| [ AppTargetWasm32Wasi,
-         AppTargetCasm,
+    :| [ AppTargetCasm,
          AppTargetCairo
        ]
+      <> [AppTargetWasm32Wasi | Config.config ^. Config.configWasm]
+      <> [AppTargetRiscZeroRust | Config.config ^. Config.configRust]
 
 parseRegCompileOptions :: Parser CompileOptions
 parseRegCompileOptions =

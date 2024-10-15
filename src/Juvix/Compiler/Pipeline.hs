@@ -322,6 +322,15 @@ treeToCasm = treeToCairoAsm >=> asmToCasm
 treeToCairo :: (Members '[Error JuvixError, Reader EntryPoint] r) => Tree.InfoTable -> Sem r Cairo.Result
 treeToCairo = treeToCasm >=> casmToCairo
 
+treeToRust' :: (Members '[Error JuvixError, Reader EntryPoint] r) => Rust.Backend -> Tree.InfoTable -> Sem r Rust.Result
+treeToRust' backend = treeToReg >=> regToRust' backend
+
+treeToRust :: (Members '[Error JuvixError, Reader EntryPoint] r) => Tree.InfoTable -> Sem r Rust.Result
+treeToRust = treeToRust' Rust.BackendRust
+
+treeToRiscZeroRust :: (Members '[Error JuvixError, Reader EntryPoint] r) => Tree.InfoTable -> Sem r Rust.Result
+treeToRiscZeroRust = treeToRust' Rust.BackendRiscZero
+
 asmToReg :: (Members '[Error JuvixError, Reader EntryPoint] r) => Asm.InfoTable -> Sem r Reg.InfoTable
 asmToReg = Asm.toReg >=> return . Reg.fromAsm
 

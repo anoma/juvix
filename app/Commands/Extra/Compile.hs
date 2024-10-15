@@ -42,8 +42,8 @@ prepareRuntime buildDir o = do
   mapM_ writeHeader headersDir
   case o ^. compileTarget of
     AppTargetWasm32Wasi
-      | o ^. compileDebug -> writeRuntime wasiDebugRuntime
-    AppTargetWasm32Wasi -> writeRuntime wasiReleaseRuntime
+      | o ^. compileDebug -> writeRuntime (fromJust wasiDebugRuntime)
+    AppTargetWasm32Wasi -> writeRuntime (fromJust wasiReleaseRuntime)
     AppTargetNative64
       | o ^. compileDebug -> writeRuntime nativeDebugRuntime
     AppTargetNative64 -> writeRuntime nativeReleaseRuntime
@@ -57,14 +57,14 @@ prepareRuntime buildDir o = do
     AppTargetCairo -> return ()
     AppTargetRiscZeroRust -> return ()
   where
-    wasiReleaseRuntime :: BS.ByteString
-    wasiReleaseRuntime = $(FE.makeRelativeToProject "runtime/c/_build.wasm32-wasi/libjuvix.a" >>= FE.embedFile)
+    wasiReleaseRuntime :: Maybe BS.ByteString
+    wasiReleaseRuntime = $(FE.makeRelativeToProject "runtime/c/_build.wasm32-wasi/libjuvix.a" >>= FE.embedFileIfExists)
 
     nativeReleaseRuntime :: BS.ByteString
     nativeReleaseRuntime = $(FE.makeRelativeToProject "runtime/c/_build.native64/libjuvix.a" >>= FE.embedFile)
 
-    wasiDebugRuntime :: BS.ByteString
-    wasiDebugRuntime = $(FE.makeRelativeToProject "runtime/c/_build.wasm32-wasi-debug/libjuvix.a" >>= FE.embedFile)
+    wasiDebugRuntime :: Maybe BS.ByteString
+    wasiDebugRuntime = $(FE.makeRelativeToProject "runtime/c/_build.wasm32-wasi-debug/libjuvix.a" >>= FE.embedFileIfExists)
 
     nativeDebugRuntime :: BS.ByteString
     nativeDebugRuntime = $(FE.makeRelativeToProject "runtime/c/_build.native64-debug/libjuvix.a" >>= FE.embedFile)

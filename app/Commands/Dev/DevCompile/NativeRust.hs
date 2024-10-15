@@ -36,18 +36,18 @@ runCommand opts = do
       forall s.
       (Members '[App, EmbedIO] s) =>
       Sem s ()
-    prepareRuntime = writeRuntime runtime
+    prepareRuntime = writeRuntime (fromJust runtime)
       where
-        runtime :: BS.ByteString
+        runtime :: Maybe BS.ByteString
         runtime
           | opts ^. nativeRustCompileCommonOptions . compileDebug = rustDebugRuntime
           | otherwise = rustReleaseRuntime
           where
-            rustReleaseRuntime :: BS.ByteString
-            rustReleaseRuntime = $(FE.makeRelativeToProject "runtime/rust/juvix/target/release/libjuvix.rlib" >>= FE.embedFile)
+            rustReleaseRuntime :: Maybe BS.ByteString
+            rustReleaseRuntime = $(FE.makeRelativeToProject "runtime/rust/juvix/target/release/libjuvix.rlib" >>= FE.embedFileIfExists)
 
-            rustDebugRuntime :: BS.ByteString
-            rustDebugRuntime = $(FE.makeRelativeToProject "runtime/rust/juvix/target/debug/libjuvix.rlib" >>= FE.embedFile)
+            rustDebugRuntime :: Maybe BS.ByteString
+            rustDebugRuntime = $(FE.makeRelativeToProject "runtime/rust/juvix/target/debug/libjuvix.rlib" >>= FE.embedFileIfExists)
 
 inputRustFile :: (Members '[App, EmbedIO] r) => Path Abs File -> Sem r (Path Abs File)
 inputRustFile inputFileCompile = do

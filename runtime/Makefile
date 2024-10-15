@@ -16,7 +16,7 @@ juvix_c_native:
 
 .PHONY: juvix_c_wasm
 juvix_c_wasm:
-	if grep -q '"wasm": true' ../config/config.json; then cd c && $(MAKE) -s wasm32 wasm32-wasi-debug; fi
+	if grep -q '"wasm": true' ../config/config.json; then cd c && $(MAKE) -s wasm32-wasi wasm32-wasi-debug; fi
 
 .PHONY: juvix_rust
 juvix_rust:
