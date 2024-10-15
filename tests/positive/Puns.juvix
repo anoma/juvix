@@ -5,7 +5,7 @@ type A := a;
 type B := b;
 
 type S :=
-  mkS {
+  mkS@{
     fieldA : A;
     fieldB : B;
     fieldC : A;

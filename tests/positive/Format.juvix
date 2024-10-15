@@ -280,7 +280,7 @@ end;
 module EmptyRecords;
   import Stdlib.Data.Bool.Base open;
 
-  type T := mkT {};
+  type T := mkT@{};
 
   x : T := mkT@{};
 
@@ -294,7 +294,7 @@ module Traits;
   import Stdlib.Prelude open hiding {Show; mkShow; module Show};
 
   trait
-  type Show A := mkShow {show : A → String};
+  type Show A := mkShow@{show : A → String};
 
   instance
   showStringI : Show String :=
@@ -354,7 +354,7 @@ end;
 module OperatorRecord;
   trait
   type Natural A :=
-    myNatural {
+    myNatural@{
       syntax operator + additive;
       + : A -> A -> A;
 
@@ -372,7 +372,7 @@ end;
 
 module RecordFieldPragmas;
   type Pr (A B : Type) :=
-    mkPr {
+    mkPr@{
       --- Judoc for A
       {-# inline: false #-}
       pfst : A;
