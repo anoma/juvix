@@ -8,6 +8,7 @@ import Commands.Dev.DevCompile.Reg.Options
 import Commands.Dev.DevCompile.Rust.Options
 import Commands.Dev.DevCompile.Tree.Options
 import CommonOptions
+import Juvix.Config qualified as Config
 
 data DevCompileCommand
   = Core (CoreOptions 'InputMain)
@@ -22,15 +23,15 @@ data DevCompileCommand
 parseDevCompileCommand :: Parser DevCompileCommand
 parseDevCompileCommand =
   hsubparser
-    ( mconcat
+    ( mconcat $
         [ commandCore,
           commandReg,
           commandTree,
           commandCasm,
-          commandAsm,
-          commandRust,
-          commandNativeRust
+          commandAsm
         ]
+          <> [commandRust | Config.config ^. Config.configRust]
+          <> [commandNativeRust | Config.config ^. Config.configRust]
     )
 
 commandCore :: Mod CommandFields DevCompileCommand

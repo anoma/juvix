@@ -12,6 +12,7 @@ import Format qualified
 import Formatter qualified
 import Internal qualified
 import Isabelle qualified
+import Juvix.Config qualified as Config
 import Nockma qualified
 import Package qualified
 import Parsing qualified
@@ -40,12 +41,12 @@ slowTests =
         return Internal.allTests,
         return Compilation.allTests,
         return Examples.allTests,
-        Rust.allTests,
         Casm.allTests,
         VampIR.allTests,
         return Anoma.allTests,
         return Repl.allTests
       ]
+      <> sequence (if Config.config ^. Config.configRust then [Rust.allTests] else [])
 
 fastTests :: IO TestTree
 fastTests =
