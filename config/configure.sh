@@ -7,16 +7,24 @@ if [ ! -d "config" ]; then
     exit 1
 fi
 
-if clang -target wasm32-wasi --print-supported-cpus >/dev/null 2>&1; then
+if [ -z "$CC" ]; then
+    CC="clang"
+fi
+
+if [ -z "$CARGO" ]; then
+    CARGO="cargo"
+fi
+
+if $CC -target wasm32-wasi --print-supported-cpus >/dev/null 2>&1; then
     WASM="true"
 else
     WASM="false"
 fi
 
-if cargo --version >/dev/null 2>&1; then
+if $CARGO --version >/dev/null 2>&1; then
     RUST="true"
 else
     RUST="false"
 fi
 
-printf "{\n  \"wasm\": $WASM,\n  \"rust\": $RUST\n}\n" > config/config.json
+printf "{\n  \"wasm\": $WASM,\n  \"rust\": $RUST,\n  \"clang\": \"$CC\",\n  \"cargo\": \"$CARGO\"\n}\n" > config/config.json

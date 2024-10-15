@@ -7,7 +7,9 @@ import Juvix.Prelude
 
 data Config = Config
   { _configWasm :: Bool,
-    _configRust :: Bool
+    _configRust :: Bool,
+    _configClang :: Text,
+    _configCargo :: Text
   }
   deriving stock (Show, Eq, Generic)
 
@@ -21,8 +23,17 @@ instance FromJSON Config where
           { fieldLabelModifier = map toLower . dropPrefix "_config"
           }
 
+emptyConfig :: Config
+emptyConfig =
+  Config
+    { _configWasm = False,
+      _configRust = False,
+      _configClang = "",
+      _configCargo = ""
+    }
+
 config :: Config
 config =
-  fromMaybe (Config False False) $
+  fromMaybe emptyConfig $
     decode $
       BL.fromStrict $(FE.makeRelativeToProject "config/config.json" >>= FE.embedFile)

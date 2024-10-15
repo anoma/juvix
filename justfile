@@ -107,7 +107,7 @@ run-profile +cmd:
 
 # Compile-time configuration
 configure:
-    config/configure.sh
+    {{ runtimeCcFlag }} config/configure.sh
 
 # Build the juvix runtime
 _buildRuntime: configure
@@ -122,10 +122,10 @@ build *opts:
 
     case $opts in
         runtime)
-            just runtimeArgs="{{ runtimeArgs }}" _buildRuntime
+            just runtimeCcArg="{{ runtimeCcArg }}" runtimeArgs="{{ runtimeArgs }}" _buildRuntime
             ;;
         *)
-            just runtimeArgs="{{ runtimeArgs }}" _buildRuntime
+            just runtimeCcArg="{{ runtimeCcArg }}" runtimeArgs="{{ runtimeArgs }}" _buildRuntime
             set -x
             {{ stack }} build {{ stackArgs }}
             ;;
