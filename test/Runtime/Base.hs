@@ -3,6 +3,7 @@ module Runtime.Base where
 import Base
 import Data.FileEmbed
 import Juvix.Config qualified as Config
+import Juvix.Extra.Clang
 import System.Process qualified as P
 
 clangCompile ::
@@ -12,28 +13,27 @@ clangCompile ::
   (Path Abs File -> IO Text) ->
   (String -> IO ()) ->
   IO Text
-clangCompile mkClangArgs inputFile outputFile execute step =
-  withTempDir'
-    ( \dirPath -> do
-        let outputFile' = dirPath <//> outputFile
-        step "C compilation"
-        P.callProcess
-          "clang"
-          (mkClangArgs outputFile' inputFile)
-        step "Execution"
-        execute outputFile'
-    )
+clangCompile mkClangArgs inputFile outputFile execute step = do
+  mp <- fmap extractClangPath <$> runM findClang
+  case mp of
+    Just clangPath ->
+      withTempDir'
+        ( \dirPath -> do
+            let outputFile' = dirPath <//> outputFile
+            step "C compilation"
+            P.callProcess
+              (toFilePath clangPath)
+              (mkClangArgs outputFile' inputFile)
+            step "Execution"
+            execute outputFile'
+        )
+    Nothing -> assertFailure "clang not found"
 
 clangAssertion :: Int -> Path Abs File -> Path Abs File -> Text -> ((String -> IO ()) -> Assertion)
 clangAssertion optLevel inputFile expectedFile stdinText step = do
-  if
-      | Config.config ^. Config.configWasm -> do
-          step "Check clang and wasmer are on path"
-          assertCmdExists $(mkRelFile "clang")
-          assertCmdExists $(mkRelFile "wasmer")
-      | otherwise -> do
-          step "Check clang is on path"
-          assertCmdExists $(mkRelFile "clang")
+  when (Config.config ^. Config.configWasm) $ do
+    step "Check wasmer is on path"
+    assertCmdExists $(mkRelFile "wasmer")
 
   expected <- readFile expectedFile
 

@@ -7,9 +7,9 @@ where
 import Commands.Base
 import Commands.Compile.CStage
 import Commands.Extra.Clang.Backend
+import Juvix.Extra.Clang
 import Juvix.Extra.Paths
 import Juvix.Prelude.Env
-import System.Environment
 import System.Process qualified as P
 
 data ClangArgs = ClangArgs
@@ -135,42 +135,3 @@ runClang args = do
 
     clangNotFoundErr :: Text
     clangNotFoundErr = "Error: The clang executable was not found. Please install the LLVM toolchain"
-
-data ClangPath
-  = ClangSystemPath (Path Abs File)
-  | ClangEnvVarPath (Path Abs File)
-
--- | Try searching clang JUVIX_LLVM_DIST_PATH. Otherwise use the PATH
-findClang :: (Member EmbedIO r) => Sem r (Maybe ClangPath)
-findClang = do
-  envVarPath <- findClangUsingEnvVar
-  case envVarPath of
-    Just p -> return (Just (ClangEnvVarPath p))
-    Nothing -> (fmap . fmap) ClangSystemPath findClangOnPath
-
-findClangUsingEnvVar :: forall r. (Member EmbedIO r) => Sem r (Maybe (Path Abs File))
-findClangUsingEnvVar = do
-  p <- clangBinPath
-  join <$> mapM checkExecutable p
-  where
-    checkExecutable :: Path Abs File -> Sem r (Maybe (Path Abs File))
-    checkExecutable p = whenMaybeM (liftIO (isExecutable p)) (return p)
-
-    clangBinPath :: Sem r (Maybe (Path Abs File))
-    clangBinPath = fmap (<//> $(mkRelFile "bin/clang")) <$> llvmDistPath
-
-    llvmDistPath :: Sem r (Maybe (Path Abs Dir))
-    llvmDistPath = liftIO $ do
-      p <- lookupEnv llvmDistEnvironmentVar
-      mapM parseAbsDir p
-
-extractClangPath :: ClangPath -> Path Abs File
-extractClangPath = \case
-  ClangSystemPath p -> p
-  ClangEnvVarPath p -> p
-
-llvmDistEnvironmentVar :: String
-llvmDistEnvironmentVar = "JUVIX_LLVM_DIST_PATH"
-
-findClangOnPath :: (Member EmbedIO r) => Sem r (Maybe (Path Abs File))
-findClangOnPath = findExecutable $(mkRelFile "clang")

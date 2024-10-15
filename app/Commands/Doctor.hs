@@ -2,9 +2,9 @@ module Commands.Doctor where
 
 import Commands.Base hiding (info)
 import Commands.Doctor.Options
-import Commands.Extra.Compile
 import Data.Aeson
 import Data.Aeson.TH
+import Juvix.Extra.Clang
 import Juvix.Extra.Version qualified as V
 import Network.HTTP.Simple
 import Safe (headMay)
