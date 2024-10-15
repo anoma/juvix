@@ -129,7 +129,7 @@ Example:
 ```
 type BinaryTree (A : Type) :=
   | leaf
-  | node {
+  | node@{
       left : BinaryTree A;
       element : A;
       right : BinaryTree A

@@ -1424,7 +1424,7 @@ instance (SingI s) => PrettyPrint (RecordField s) where
 
 instance (SingI s) => PrettyPrint (RhsRecord s) where
   ppCode RhsRecord {..} = do
-    let Irrelevant (kwat, l, r) = _rhsRecordDelim
+    let Irrelevant (_, l, r) = _rhsRecordDelim
         fields'
           | [] <- _rhsRecordStatements = mempty
           | [f] <- _rhsRecordStatements = ppCode f
@@ -1436,8 +1436,7 @@ instance (SingI s) => PrettyPrint (RhsRecord s) where
                       (ppCode <$> _rhsRecordStatements)
                   )
                 <> hardline
-        a = ppCode <$> kwat
-    a ?<> ppCode l <> fields' <> ppCode r
+    ppCode kwAt <> ppCode l <> fields' <> ppCode r
 
 instance (SingI s) => PrettyPrint (RhsAdt s) where
   ppCode = align . sep . fmap ppExpressionAtomType . (^. rhsAdtArguments)
@@ -1462,9 +1461,7 @@ ppConstructorDef singleConstructor ConstructorDef {..} = do
       where
         spaceMay = case r of
           ConstructorRhsGadt {} -> space
-          ConstructorRhsRecord RhsRecord {..}
-            | isJust (fst3 (_rhsRecordDelim ^. unIrrelevant)) -> mempty
-            | otherwise -> space
+          ConstructorRhsRecord {} -> mempty
           ConstructorRhsAdt a
             | null (a ^. rhsAdtArguments) -> mempty
             | otherwise -> space
