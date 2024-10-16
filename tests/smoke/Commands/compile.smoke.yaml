@@ -162,34 +162,6 @@ tests:
     stdin: "[call [L [replace [RL [quote 0]] [@ S]]]]"
     exit-status: 0
 
-  - name: target-vampir
-    command:
-      shell:
-        - bash
-      script: |
-        temp=$(mktemp -d)
-        trap 'rm -rf -- "$temp"' EXIT
-        testdir=$PWD/tests/VampIR/positive/Compilation
-        cd $temp
-        juvix --log-level error compile vampir $testdir/test001.juvix
-        grep -q 'VampIR runtime for Juvix (safe version)' test001.pir
-    stdout: ""
-    exit-status: 0
-
-  - name: target-varmpir-unsafe
-    command:
-      shell:
-        - bash
-      script: |
-        temp=$(mktemp -d)
-        trap 'rm -rf -- "$temp"' EXIT
-        testdir=$PWD/tests/VampIR/positive/Compilation
-        cd $temp
-        juvix --log-level error compile vampir $testdir/test001.juvix --unsafe
-        grep -q 'VampIR runtime for Juvix (unsafe version)' test001.pir
-    stdout: ""
-    exit-status: 0
-
   - name: input-file-does-not-exist
     command:
       - juvix
