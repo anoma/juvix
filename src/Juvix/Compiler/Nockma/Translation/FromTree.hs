@@ -164,7 +164,6 @@ data AnomaCallablePathId
   | ClosureTotalArgsNum
   | ClosureArgsNum
   | ClosureArgs
-  | AnomaGetOrder
   deriving stock (Enum, Bounded, Eq, Show)
 
 indexStack :: Natural -> Path
@@ -183,6 +182,9 @@ constructorPath = pathFromEnum
 
 closurePath :: AnomaCallablePathId -> Path
 closurePath = pathFromEnum
+
+anomaGetPath :: Path
+anomaGetPath = [L]
 
 data IndexTupleArgs = IndexTupleArgs
   { _indexTupleArgsLength :: Natural,
@@ -420,8 +422,7 @@ mainFunctionWrapper funslib funCode = do
   anomaGet <- getFieldInSubject ArgsTuple
   captureAnomaGetOrder <- replaceSubject $ \case
     FunCode -> Just (OpQuote # funCode)
-    AnomaGetOrder -> Just anomaGet
-    FunctionsLibrary -> Just (OpQuote # funslib)
+    FunctionsLibrary -> Just (OpReplace # (anomaGetPath # anomaGet) # OpQuote # funslib)
     _ -> Nothing
   return $ opCall "mainFunctionWrapper" (closurePath FunCode) captureAnomaGetOrder
 
@@ -611,7 +612,8 @@ compile = \case
 
     goAnomaGet :: [Term Natural] -> Sem r (Term Natural)
     goAnomaGet key = do
-      anomaGet <- getFieldInSubject AnomaGetOrder
+      funlibPath <- stackPath FunctionsLibrary
+      let anomaGet = opAddress "anomaGet" (funlibPath <> anomaGetPath)
       let arg = remakeList [anomaGet, foldTermsOrNil key]
       return (OpScry # (OpQuote # nockNilTagged "OpScry-typehint") # arg)
 
@@ -767,7 +769,6 @@ compile = \case
         ClosureTotalArgsNum -> nockNatLiteral farity
         ClosureArgsNum -> nockIntegralLiteral (length args)
         ClosureArgs -> remakeList args
-        AnomaGetOrder -> OpQuote # nockNilTagged "goAllocClosure-AnomaGetOrder"
 
     goExtendClosure :: Tree.NodeExtendClosure -> Sem r (Term Natural)
     goExtendClosure = extendClosure
@@ -850,7 +851,6 @@ extendClosure Tree.NodeExtendClosure {..} = do
       ArgsTuple -> getClosureField ArgsTuple closure
       FunctionsLibrary -> getClosureField FunctionsLibrary closure
       StandardLibrary -> getClosureField StandardLibrary closure
-      AnomaGetOrder -> getClosureField AnomaGetOrder closure
 
 -- Calling convention for Anoma stdlib
 --
@@ -961,6 +961,11 @@ runCompilerWith _opts constrs moduleFuns mainFun =
     libFuns :: [CompilerFunction]
     libFuns = moduleFuns ++ (builtinFunction <$> allElements)
 
+    -- The number of "extra" functions at the front of the functions library
+    -- list. Currently, the only such function is anomaGet.
+    libFunShift :: Natural
+    libFunShift = 1
+
     allFuns :: NonEmpty CompilerFunction
     allFuns = mainFun :| libFuns
 
@@ -979,7 +984,8 @@ runCompilerWith _opts constrs moduleFuns mainFun =
       where
         compiledFuns :: [Term Natural]
         compiledFuns =
-          (OpQuote # (666 :: Natural)) -- TODO we have this unused term so that indices match. Remove it and adjust as needed
+          (OpQuote # (nockNilTagged "anomaGetPlaceholder"))
+            : (OpQuote # (nockNilTagged "mainFunctionPlaceholder"))
             : ( makeLibraryFunction
                   <$> [(f ^. compilerFunctionName, f ^. compilerFunctionArity, runCompilerFunction compilerCtx f) | f <- libFuns]
               )
@@ -998,7 +1004,6 @@ runCompilerWith _opts constrs moduleFuns mainFun =
                     ClosureTotalArgsNum -> ("closureTotalArgsNum-" <> funName) @ nockNilHere
                     ClosureArgsNum -> ("closureArgsNum-" <> funName) @ nockNilHere
                     ClosureArgs -> ("closureArgs-" <> funName) @ nockNilHere
-                    AnomaGetOrder -> ("anomaGetOrder-" <> funName) @ nockNilHere
           )
 
     makeMainFunction :: Term Natural -> Term Natural
@@ -1012,7 +1017,6 @@ runCompilerWith _opts constrs moduleFuns mainFun =
             ClosureTotalArgsNum -> nockNilHere
             ClosureArgsNum -> nockNilHere
             ClosureArgs -> nockNilHere
-            AnomaGetOrder -> nockNilHere
 
     functionInfos :: HashMap FunctionId FunctionInfo
     functionInfos = hashMap (run (runStreamOfNaturals (toList <$> userFunctions)))
@@ -1023,7 +1027,7 @@ runCompilerWith _opts constrs moduleFuns mainFun =
       return
         ( _compilerFunctionId,
           FunctionInfo
-            { _functionInfoPath = pathFromEnum FunctionsLibrary ++ indexStack i,
+            { _functionInfoPath = pathFromEnum FunctionsLibrary ++ indexStack (i + libFunShift),
               _functionInfoArity = _compilerFunctionArity,
               _functionInfoName = _compilerFunctionName
             }
@@ -1097,7 +1101,6 @@ callClosure ref newArgs = do
     ClosureArgs -> Nothing
     ClosureTotalArgsNum -> Nothing
     ClosureArgsNum -> Nothing
-    AnomaGetOrder -> Nothing
   return (opCall "callClosure" (closurePath FunCode) newSubject)
 
 replaceSubject :: (Member (Reader CompilerCtx) r) => (AnomaCallablePathId -> Maybe (Term Natural)) -> Sem r (Term Natural)
