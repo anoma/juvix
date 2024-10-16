@@ -7,7 +7,6 @@ import Commands.Compile.Anoma.Options
 import Commands.Compile.Cairo.Options
 import Commands.Compile.Native.Options
 import Commands.Compile.RiscZeroRust.Options
-import Commands.Compile.Vampir.Options
 import Commands.Compile.Wasi.Options
 import Commands.Extra.NewCompile
 import CommonOptions
@@ -16,7 +15,6 @@ import Juvix.Config qualified as Config
 data CompileCommand
   = Native (NativeOptions 'InputMain)
   | Wasi (WasiOptions 'InputMain)
-  | Vampir (VampirOptions 'InputMain)
   | Anoma (AnomaOptions 'InputMain)
   | Cairo (CairoOptions 'InputMain)
   | RiscZeroRust (RiscZeroRustOptions 'InputMain)
@@ -27,8 +25,7 @@ parseCompileCommand = commandTargetsHelper supportedTargets
 
 supportedTargets :: [(CompileTarget, Parser CompileCommand)]
 supportedTargets =
-  [ (AppTargetVampIR, Vampir <$> parseVampir),
-    (AppTargetAnoma, Anoma <$> parseAnoma),
+  [ (AppTargetAnoma, Anoma <$> parseAnoma),
     (AppTargetCairo, Cairo <$> parseCairo),
     (AppTargetNative64, Native <$> parseNative)
   ]

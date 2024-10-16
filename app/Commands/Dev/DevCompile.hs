@@ -9,6 +9,7 @@ import Commands.Dev.DevCompile.Options
 import Commands.Dev.DevCompile.Reg qualified as Reg
 import Commands.Dev.DevCompile.Rust qualified as Rust
 import Commands.Dev.DevCompile.Tree qualified as Tree
+import Commands.Dev.DevCompile.Vampir qualified as Vampir
 
 runCommand :: (Members AppEffects r) => DevCompileCommand -> Sem r ()
 runCommand = \case
@@ -19,3 +20,4 @@ runCommand = \case
   Casm opts -> Casm.runCommand opts
   Rust opts -> Rust.runCommand opts
   NativeRust opts -> NativeRust.runCommand opts
+  Vampir opts -> Vampir.runCommand opts

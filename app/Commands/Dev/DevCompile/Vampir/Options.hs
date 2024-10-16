@@ -1,7 +1,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 
-module Commands.Compile.Vampir.Options
-  ( module Commands.Compile.Vampir.Options,
+module Commands.Dev.DevCompile.Vampir.Options
+  ( module Commands.Dev.DevCompile.Vampir.Options,
     module Commands.Compile.CommonOptions,
   )
 where

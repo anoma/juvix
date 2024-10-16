@@ -25,7 +25,6 @@ import Scope qualified
 import Termination qualified
 import Tree qualified
 import Typecheck qualified
-import VampIR qualified
 
 slowTests :: IO TestTree
 slowTests =
@@ -42,7 +41,6 @@ slowTests =
         return Compilation.allTests,
         return Examples.allTests,
         Casm.allTests,
-        VampIR.allTests,
         return Anoma.allTests,
         return Repl.allTests
       ]

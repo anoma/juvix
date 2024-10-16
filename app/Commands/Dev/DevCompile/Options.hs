@@ -7,6 +7,7 @@ import Commands.Dev.DevCompile.NativeRust.Options
 import Commands.Dev.DevCompile.Reg.Options
 import Commands.Dev.DevCompile.Rust.Options
 import Commands.Dev.DevCompile.Tree.Options
+import Commands.Dev.DevCompile.Vampir.Options
 import CommonOptions
 import Juvix.Config qualified as Config
 
@@ -18,6 +19,7 @@ data DevCompileCommand
   | Casm (CasmOptions 'InputMain)
   | Rust (RustOptions 'InputMain)
   | NativeRust (NativeRustOptions 'InputMain)
+  | Vampir (VampirOptions 'InputMain)
   deriving stock (Data)
 
 parseDevCompileCommand :: Parser DevCompileCommand
@@ -28,7 +30,8 @@ parseDevCompileCommand =
           commandReg,
           commandTree,
           commandCasm,
-          commandAsm
+          commandAsm,
+          commandVampir
         ]
           <> [commandRust | Config.config ^. Config.configRust]
           <> [commandNativeRust | Config.config ^. Config.configRust]
@@ -82,3 +85,10 @@ commandNativeRust =
     info
       (NativeRust <$> parseNativeRust)
       (progDesc "Compile to native executable through Rust")
+
+commandVampir :: Mod CommandFields DevCompileCommand
+commandVampir =
+  command "vampir" $
+    info
+      (Vampir <$> parseVampir)
+      (progDesc "Compile to VampIR")

@@ -1,7 +1,7 @@
-module Commands.Compile.Vampir where
+module Commands.Dev.DevCompile.Vampir where
 
 import Commands.Base
-import Commands.Compile.Vampir.Options
+import Commands.Dev.DevCompile.Vampir.Options
 import Commands.Extra.NewCompile
 import Juvix.Compiler.Backend.VampIR.Translation qualified as VampIR
 
