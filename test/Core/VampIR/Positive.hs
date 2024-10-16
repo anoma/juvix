@@ -15,5 +15,5 @@ toTestDescr = Normalize.toTestDescr' (const (coreVampIRAssertion (toStoredTransf
 allTests :: TestTree
 allTests =
   testGroup
-    "JuvixCore VampIR positive tests"
+    "JuvixCore VampIR pipeline positive tests"
     (map (mkTest . toTestDescr) Normalize.tests)
