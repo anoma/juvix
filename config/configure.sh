@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-# This script should be run from the root of the project
-
 if [ ! -d "config" ]; then
     printf "This script should be run from the root of the project.\n" 1>&2
     exit 1
@@ -27,4 +25,11 @@ else
     RUST="false"
 fi
 
-printf "{\n  \"wasm\": $WASM,\n  \"rust\": $RUST,\n  \"clang\": \"$CC\",\n  \"cargo\": \"$CARGO\"\n}\n" > config/config.json
+cat <<EOF > config/config.json
+{
+  "wasm": $WASM,
+  "rust": $RUST,
+  "clang": "$CC",
+  "cargo": "$CARGO"
+}
+EOF
