@@ -2,6 +2,8 @@ module Runtime.Base where
 
 import Base
 import Data.FileEmbed
+import Juvix.Config qualified as Config
+import Juvix.Extra.Clang
 import System.Process qualified as P
 
 clangCompile ::
@@ -11,26 +13,27 @@ clangCompile ::
   (Path Abs File -> IO Text) ->
   (String -> IO ()) ->
   IO Text
-clangCompile mkClangArgs inputFile outputFile execute step =
-  withTempDir'
-    ( \dirPath -> do
-        let outputFile' = dirPath <//> outputFile
-        step "C compilation"
-        P.callProcess
-          "clang"
-          (mkClangArgs outputFile' inputFile)
-        step "Execution"
-        execute outputFile'
-    )
+clangCompile mkClangArgs inputFile outputFile execute step = do
+  mp <- fmap extractClangPath <$> runM findClang
+  case mp of
+    Just clangPath ->
+      withTempDir'
+        ( \dirPath -> do
+            let outputFile' = dirPath <//> outputFile
+            step "C compilation"
+            P.callProcess
+              (toFilePath clangPath)
+              (mkClangArgs outputFile' inputFile)
+            step "Execution"
+            execute outputFile'
+        )
+    Nothing -> assertFailure "clang not found"
 
 clangAssertion :: Int -> Path Abs File -> Path Abs File -> Text -> ((String -> IO ()) -> Assertion)
 clangAssertion optLevel inputFile expectedFile stdinText step = do
-  step "Check clang and wasmer are on path"
-  assertCmdExists $(mkRelFile "clang")
-  assertCmdExists $(mkRelFile "wasmer")
-
-  step "Lookup WASI_SYSROOT_PATH"
-  sysrootPath :: Path Abs Dir <- getWasiSysrootPath
+  when (Config.config ^. Config.configWasm) $ do
+    step "Check wasmer is on path"
+    assertCmdExists $(mkRelFile "wasmer")
 
   expected <- readFile expectedFile
 
@@ -40,10 +43,14 @@ clangAssertion optLevel inputFile expectedFile stdinText step = do
   let executeNative :: Path Abs File -> IO Text
       executeNative outputFile = readProcess (toFilePath outputFile) [] stdinText
 
-  step "Compile C to WASM32-WASI"
-  actualWasm <- clangCompile (wasiArgs optLevel sysrootPath) inputFile $(mkRelFile "Program.wasm") executeWasm step
-  step "Compare expected and actual program output"
-  assertEqDiffText ("check: WASM output = " <> toFilePath expectedFile) actualWasm expected
+  when (Config.config ^. Config.configWasm) $ do
+    step "Lookup WASI_SYSROOT_PATH"
+    sysrootPath :: Path Abs Dir <- getWasiSysrootPath
+
+    step "Compile C to WASM32-WASI"
+    actualWasm <- clangCompile (wasiArgs optLevel sysrootPath) inputFile $(mkRelFile "Program.wasm") executeWasm step
+    step "Compare expected and actual program output"
+    assertEqDiffText ("check: WASM output = " <> toFilePath expectedFile) actualWasm expected
 
   step "Compile C to native 64-bit code"
   actualNative <- clangCompile (native64Args optLevel) inputFile $(mkRelFile "Program") executeNative step

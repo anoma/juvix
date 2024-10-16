@@ -44,18 +44,18 @@ wasiHelperOptions opts =
       forall s.
       (Members '[App, EmbedIO] s) =>
       Sem s ()
-    prepareRuntime = writeRuntime runtime
+    prepareRuntime = writeRuntime (fromJust runtime)
       where
-        runtime :: BS.ByteString
+        runtime :: Maybe BS.ByteString
         runtime
           | opts ^. wasiCompileCommonOptions . compileDebug = wasiDebugRuntime
           | otherwise = wasiReleaseRuntime
           where
-            wasiReleaseRuntime :: BS.ByteString
-            wasiReleaseRuntime = $(FE.makeRelativeToProject "runtime/c/_build.wasm32-wasi/libjuvix.a" >>= FE.embedFile)
+            wasiReleaseRuntime :: Maybe BS.ByteString
+            wasiReleaseRuntime = $(FE.makeRelativeToProject "runtime/c/_build.wasm32-wasi/libjuvix.a" >>= FE.embedFileIfExists)
 
-            wasiDebugRuntime :: BS.ByteString
-            wasiDebugRuntime = $(FE.makeRelativeToProject "runtime/c/_build.wasm32-wasi-debug/libjuvix.a" >>= FE.embedFile)
+            wasiDebugRuntime :: Maybe BS.ByteString
+            wasiDebugRuntime = $(FE.makeRelativeToProject "runtime/c/_build.wasm32-wasi-debug/libjuvix.a" >>= FE.embedFileIfExists)
 
     wasiDefaultOutputFile :: Path Abs File -> Path Abs File -> Path Abs File
     wasiDefaultOutputFile inputFile baseOutputFile =

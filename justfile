@@ -105,8 +105,12 @@ test *filter:
 run-profile +cmd:
     cabal run --enable-profiling juvix -- {{ cmd }} +RTS -p
 
+# Compile-time configuration
+configure:
+    {{ runtimeCcFlag }} config/configure.sh
+
 # Build the juvix runtime
-_buildRuntime:
+_buildRuntime: configure
     cd runtime && make {{ runtimeArgs }}
 
 # Build the project. `build runtime` builds only the runtime.
@@ -118,10 +122,10 @@ build *opts:
 
     case $opts in
         runtime)
-            just runtimeArgs="{{ runtimeArgs }}" _buildRuntime
+            just runtimeCcArg="{{ runtimeCcArg }}" runtimeArgs="{{ runtimeArgs }}" _buildRuntime
             ;;
         *)
-            just runtimeArgs="{{ runtimeArgs }}" _buildRuntime
+            just runtimeCcArg="{{ runtimeCcArg }}" runtimeArgs="{{ runtimeArgs }}" _buildRuntime
             set -x
             {{ stack }} build {{ stackArgs }}
             ;;

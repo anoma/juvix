@@ -5,6 +5,7 @@ import Commands.Base
 import Commands.Extra.Compile.Options
 import Data.ByteString qualified as BS
 import Data.FileEmbed qualified as FE
+import Juvix.Extra.Clang
 import Juvix.Extra.Paths
 import System.Environment
 import System.Process qualified as P
@@ -42,8 +43,8 @@ prepareRuntime buildDir o = do
   mapM_ writeHeader headersDir
   case o ^. compileTarget of
     AppTargetWasm32Wasi
-      | o ^. compileDebug -> writeRuntime wasiDebugRuntime
-    AppTargetWasm32Wasi -> writeRuntime wasiReleaseRuntime
+      | o ^. compileDebug -> writeRuntime (fromJust wasiDebugRuntime)
+    AppTargetWasm32Wasi -> writeRuntime (fromJust wasiReleaseRuntime)
     AppTargetNative64
       | o ^. compileDebug -> writeRuntime nativeDebugRuntime
     AppTargetNative64 -> writeRuntime nativeReleaseRuntime
@@ -57,14 +58,14 @@ prepareRuntime buildDir o = do
     AppTargetCairo -> return ()
     AppTargetRiscZeroRust -> return ()
   where
-    wasiReleaseRuntime :: BS.ByteString
-    wasiReleaseRuntime = $(FE.makeRelativeToProject "runtime/c/_build.wasm32-wasi/libjuvix.a" >>= FE.embedFile)
+    wasiReleaseRuntime :: Maybe BS.ByteString
+    wasiReleaseRuntime = $(FE.makeRelativeToProject "runtime/c/_build.wasm32-wasi/libjuvix.a" >>= FE.embedFileIfExists)
 
     nativeReleaseRuntime :: BS.ByteString
     nativeReleaseRuntime = $(FE.makeRelativeToProject "runtime/c/_build.native64/libjuvix.a" >>= FE.embedFile)
 
-    wasiDebugRuntime :: BS.ByteString
-    wasiDebugRuntime = $(FE.makeRelativeToProject "runtime/c/_build.wasm32-wasi-debug/libjuvix.a" >>= FE.embedFile)
+    wasiDebugRuntime :: Maybe BS.ByteString
+    wasiDebugRuntime = $(FE.makeRelativeToProject "runtime/c/_build.wasm32-wasi-debug/libjuvix.a" >>= FE.embedFileIfExists)
 
     nativeDebugRuntime :: BS.ByteString
     nativeDebugRuntime = $(FE.makeRelativeToProject "runtime/c/_build.native64-debug/libjuvix.a" >>= FE.embedFile)
@@ -229,42 +230,6 @@ wasiArgs buildDir o outfile inputFile sysrootPath =
              | otherwise -> []
        )
 
-findClangOnPath :: (Member EmbedIO r) => Sem r (Maybe (Path Abs File))
-findClangOnPath = findExecutable $(mkRelFile "clang")
-
-findClangUsingEnvVar :: forall r. (Member EmbedIO r) => Sem r (Maybe (Path Abs File))
-findClangUsingEnvVar = do
-  p <- clangBinPath
-  join <$> mapM checkExecutable p
-  where
-    checkExecutable :: Path Abs File -> Sem r (Maybe (Path Abs File))
-    checkExecutable p = whenMaybeM (liftIO (isExecutable p)) (return p)
-
-    clangBinPath :: Sem r (Maybe (Path Abs File))
-    clangBinPath = fmap (<//> $(mkRelFile "bin/clang")) <$> llvmDistPath
-
-    llvmDistPath :: Sem r (Maybe (Path Abs Dir))
-    llvmDistPath = liftIO $ do
-      p <- lookupEnv llvmDistEnvironmentVar
-      mapM parseAbsDir p
-
-data ClangPath
-  = ClangSystemPath (Path Abs File)
-  | ClangEnvVarPath (Path Abs File)
-
-extractClangPath :: ClangPath -> Path Abs File
-extractClangPath = \case
-  ClangSystemPath p -> p
-  ClangEnvVarPath p -> p
-
---- Try searching clang JUVIX_LLVM_DIST_PATH. Otherwise use the PATH
-findClang :: (Member EmbedIO r) => Sem r (Maybe ClangPath)
-findClang = do
-  envVarPath <- findClangUsingEnvVar
-  case envVarPath of
-    Just p -> return (Just (ClangEnvVarPath p))
-    Nothing -> (fmap . fmap) ClangSystemPath findClangOnPath
-
 runClang ::
   forall r.
   (Members '[App, EmbedIO] r) =>
@@ -290,6 +255,3 @@ debugClangOptimizationLevel = 1
 
 defaultClangOptimizationLevel :: Int
 defaultClangOptimizationLevel = 1
-
-llvmDistEnvironmentVar :: String
-llvmDistEnvironmentVar = "JUVIX_LLVM_DIST_PATH"

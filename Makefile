@@ -29,6 +29,8 @@ STACK?=stack
 
 JUVIXBIN?=juvix
 
+CC=clang
+
 ifeq ($(UNAME), Darwin)
 	THREADS := $(shell sysctl -n hw.logicalcpu)
 else ifeq ($(UNAME), Linux)
@@ -201,8 +203,12 @@ build: submodules runtime
 fast-build: submodules runtime
 	@${STACK} build --fast ${STACKFLAGS}
 
+.PHONY: configure
+configure:
+	CC=${CC} config/configure.sh
+
 .PHONY: runtime
-runtime:
+runtime: configure
 	cd runtime && make
 
 # -- Install

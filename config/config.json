@@ -1,0 +1,6 @@
+{
+  "wasm": true,
+  "rust": true,
+  "clang": "clang",
+  "cargo": "cargo"
+}

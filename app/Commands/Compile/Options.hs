@@ -11,6 +11,7 @@ import Commands.Compile.Vampir.Options
 import Commands.Compile.Wasi.Options
 import Commands.Extra.NewCompile
 import CommonOptions
+import Juvix.Config qualified as Config
 
 data CompileCommand
   = Native (NativeOptions 'InputMain)
@@ -29,7 +30,7 @@ supportedTargets =
   [ (AppTargetVampIR, Vampir <$> parseVampir),
     (AppTargetAnoma, Anoma <$> parseAnoma),
     (AppTargetCairo, Cairo <$> parseCairo),
-    (AppTargetWasm32Wasi, Wasi <$> parseWasi),
-    (AppTargetNative64, Native <$> parseNative),
-    (AppTargetRiscZeroRust, RiscZeroRust <$> parseRiscZeroRust)
+    (AppTargetNative64, Native <$> parseNative)
   ]
+    <> [(AppTargetWasm32Wasi, Wasi <$> parseWasi) | Config.config ^. Config.configWasm]
+    <> [(AppTargetRiscZeroRust, RiscZeroRust <$> parseRiscZeroRust) | Config.config ^. Config.configRust]

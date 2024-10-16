@@ -2,6 +2,7 @@ module Commands.Dev.Runtime.Options where
 
 import Commands.Dev.Runtime.Compile.Options
 import CommonOptions
+import Juvix.Config qualified as Config
 
 newtype RuntimeCommand
   = Compile CompileOptions
@@ -10,8 +11,7 @@ newtype RuntimeCommand
 runtimeSupportedTargets :: NonEmpty CompileTarget
 runtimeSupportedTargets =
   AppTargetNative64
-    :| [ AppTargetWasm32Wasi
-       ]
+    :| [AppTargetWasm32Wasi | Config.config ^. Config.configWasm]
 
 parseRuntimeOptions :: Parser CompileOptions
 parseRuntimeOptions =

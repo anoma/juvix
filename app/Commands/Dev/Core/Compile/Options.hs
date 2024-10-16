@@ -7,22 +7,23 @@ where
 import Commands.Extra.Compile.Options
 import CommonOptions
 import Data.List.NonEmpty qualified as NonEmpty
+import Juvix.Config qualified as Config
 
 type CoreCompileOptions = CompileOptions
 
 coreSupportedTargets :: NonEmpty CompileTarget
 coreSupportedTargets =
-  NonEmpty.fromList
+  NonEmpty.fromList $
     [ AppTargetNative64,
-      AppTargetWasm32Wasi,
       AppTargetVampIR,
       AppTargetTree,
       AppTargetAsm,
       AppTargetReg,
       AppTargetCasm,
-      AppTargetCairo,
-      AppTargetRiscZeroRust
+      AppTargetCairo
     ]
+      <> [AppTargetWasm32Wasi | Config.config ^. Config.configWasm]
+      <> [AppTargetRiscZeroRust | Config.config ^. Config.configRust]
 
 parseCoreCompileOptions :: Parser CoreCompileOptions
 parseCoreCompileOptions =
