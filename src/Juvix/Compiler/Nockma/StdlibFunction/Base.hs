@@ -25,6 +25,7 @@ instance Pretty StdlibFunction where
     StdlibLengthList -> "length-list"
     StdlibLengthBytes -> "length-bytes"
     StdlibCurry -> "curry"
+    StdlibSha256 -> "sha256"
 
 data StdlibFunction
   = StdlibDec
@@ -47,6 +48,7 @@ data StdlibFunction
   | StdlibLengthList
   | StdlibLengthBytes
   | StdlibCurry
+  | StdlibSha256
   deriving stock (Show, Lift, Eq, Bounded, Enum, Generic)
 
 instance Hashable StdlibFunction

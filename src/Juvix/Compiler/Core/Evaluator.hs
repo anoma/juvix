@@ -20,6 +20,7 @@ import Juvix.Compiler.Nockma.Encoding.ByteString (byteStringToIntegerLE, integer
 import Juvix.Compiler.Nockma.Encoding.Ed25519 qualified as E
 import Juvix.Compiler.Store.Core.Extra qualified as Store
 import Juvix.Data.Field
+import Juvix.Data.SHA256 qualified as SHA256
 import Text.Read qualified as T
 
 data EvalOptions = EvalOptions
@@ -227,6 +228,7 @@ geval opts herr tab env0 = eval' env0
       OpAnomaVerifyWithMessage -> anomaVerifyWithMessageOp
       OpAnomaByteArrayToAnomaContents -> anomaByteArrayToAnomaContents
       OpAnomaByteArrayFromAnomaContents -> anomaByteArrayFromAnomaContents
+      OpAnomaSha256 -> anomaSha256
       OpPoseidonHash -> poseidonHashOp
       OpEc -> ecOp
       OpRandomEcPoint -> randomEcPointOp
@@ -487,6 +489,18 @@ geval opts herr tab env0 = eval' env0
                         (Just i1, Just i2) -> nodeFromByteString (integerToByteStringLELen (fromIntegral i1) i2)
                         _ -> err "anomaByteArrayFromAnomaContents: expected both argmuments to be integers"
         {-# INLINE anomaByteArrayFromAnomaContents #-}
+
+        anomaSha256 :: [Node] -> Node
+        anomaSha256 = checkApply $ \arg ->
+          let !v = eval' env arg
+           in if
+                  | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                      mkBuiltinApp' OpAnomaByteArrayFromAnomaContents [v]
+                  | otherwise ->
+                      case integerFromNode v of
+                        Just i -> nodeFromByteString (SHA256.hashInteger i)
+                        _ -> err "anomaSha256: expected 1 integer argument"
+        {-# INLINE anomaSha256 #-}
 
         poseidonHashOp :: [Node] -> Node
         poseidonHashOp = unary $ \arg ->

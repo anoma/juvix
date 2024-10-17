@@ -39,6 +39,7 @@ data BuiltinOp
   | OpAnomaVerifyWithMessage
   | OpAnomaByteArrayToAnomaContents
   | OpAnomaByteArrayFromAnomaContents
+  | OpAnomaSha256
   | OpPoseidonHash
   | OpEc
   | OpRandomEcPoint
