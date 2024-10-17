@@ -584,6 +584,7 @@ builtinAppExpr varsNum vars = do
       <|> (kw kwAnomaVerifyDetached $> OpAnomaVerifyDetached)
       <|> (kw kwByteArrayFromListByte $> OpByteArrayFromListByte)
       <|> (kw kwByteArrayLength $> OpByteArrayLength)
+      <|> (kw kwAnomaSha256 $> OpAnomaSha256)
   args <- P.many (atom varsNum vars)
   return $ mkBuiltinApp' op args
 

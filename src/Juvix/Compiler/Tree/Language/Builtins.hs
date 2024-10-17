@@ -100,4 +100,6 @@ data AnomaOp
     OpAnomaByteArrayToAnomaContents
   | -- | Construct a ByteArray from the bytes of an Anoma atom with LSB ordering
     OpAnomaByteArrayFromAnomaContents
+  | -- | Hash a value using SHA256
+    OpAnomaSha256
   deriving stock (Eq)

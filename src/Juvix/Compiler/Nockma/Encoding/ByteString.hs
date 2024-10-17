@@ -21,6 +21,9 @@ atomToByteString = fmap naturalToByteString . nockNatural
 atomToByteStringLen :: (NockNatural a, Member (Error (ErrNockNatural a)) r) => Int -> Atom a -> Sem r ByteString
 atomToByteStringLen len = fmap (padByteString len) . atomToByteString
 
+sha256Atom :: (NockNatural a, Member (Error (ErrNockNatural a)) r) => Atom a -> Sem r ByteString
+sha256Atom = fmap sha256Natural . nockNatural
+
 byteStringToAtom :: (NockNatural a, Member (Error (ErrNockNatural a)) r) => ByteString -> Sem r (Atom a)
 byteStringToAtom = fmap mkEmptyAtom . fromNatural . byteStringToNatural
 
@@ -116,8 +119,8 @@ decodeByteString i = evalBitReader (integerToVectorBits i) go
 decodeByteStringWithDefault :: ByteString -> Integer -> ByteString
 decodeByteStringWithDefault d = fromRight d . run . runErrorNoCallStack @BitReadError . decodeByteString
 
-sha256Integer :: Natural -> ByteString
-sha256Integer =
+sha256Natural :: Natural -> ByteString
+sha256Natural =
   Base16.encode
     . SHA256.hash
     . naturalToByteStringLE

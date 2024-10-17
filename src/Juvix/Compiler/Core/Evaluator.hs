@@ -494,10 +494,10 @@ geval opts herr tab env0 = eval' env0
           let !v = eval' env arg
            in if
                   | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
-                      mkBuiltinApp' OpAnomaByteArrayFromAnomaContents [v]
+                      mkBuiltinApp' OpAnomaSha256 [v]
                   | otherwise ->
                       case integerFromNode v of
-                        Just i -> nodeFromByteString (Encoding.sha256Integer (fromIntegral i))
+                        Just i -> nodeFromByteString (Encoding.sha256Natural (fromIntegral i))
                         _ -> err "anomaSha256: expected 1 integer argument"
         {-# INLINE anomaSha256 #-}
 
