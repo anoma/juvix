@@ -1,0 +1,21 @@
+module test084;
+
+import Stdlib.Prelude open;
+import Stdlib.Debug.Trace open;
+
+builtin bytearray
+axiom ByteArray : Type;
+
+builtin bytearray-from-list-byte
+axiom mkByteArray : List Byte -> ByteArray;
+
+builtin bytearray-length
+axiom size : ByteArray -> Nat;
+
+builtin anoma-sha256
+axiom anomaSha256 : Nat -> ByteArray;
+
+main : ByteArray :=
+  let
+    h := anomaSha256 1;
+  in trace (size h) >-> h;

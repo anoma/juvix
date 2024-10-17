@@ -155,6 +155,7 @@ parseAnoma =
     <|> parseAnoma' kwAnomaVerifyWithMessage OpAnomaVerifyWithMessage
     <|> parseAnoma' kwAnomaByteArrayToAnomaContents OpAnomaByteArrayToAnomaContents
     <|> parseAnoma' kwAnomaByteArrayFromAnomaContents OpAnomaByteArrayFromAnomaContents
+    <|> parseAnoma' kwAnomaSha256 OpAnomaSha256
 
 parseAnoma' ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>

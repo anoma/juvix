@@ -499,6 +499,9 @@ kwAnomaByteArrayFromAnomaContents = asciiKw Str.anomaByteArrayFromAnomaContents
 kwByteArrayLength :: Keyword
 kwByteArrayLength = asciiKw Str.byteArrayLength
 
+kwAnomaSha256 :: Keyword
+kwAnomaSha256 = asciiKw Str.anomaSha256
+
 delimBraceL :: Keyword
 delimBraceL = mkDelim Str.braceL
 

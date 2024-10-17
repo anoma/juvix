@@ -268,9 +268,15 @@ evalProfile inistack initerm =
             -- Use the raw nock code for curry. The nock stdlib curry function is
             -- small. There's no benefit in implementing it separately in the evaluator.
             StdlibCurry -> nonInterceptCall
+            StdlibSha256 -> case args' of
+              TermAtom a -> TermAtom <$> goSha256 a
+              _ -> error "StdlibSha256 expects to be called with an atom"
           where
             goCat :: Atom a -> Atom a -> Sem r (Term a)
             goCat arg1 arg2 = TermAtom . setAtomHint AtomHintString <$> atomConcatenateBytes arg1 arg2
+
+            goSha256 :: Atom a -> Sem r (Atom a)
+            goSha256 a = Encoding.sha256Atom a >>= byteStringToAtom
 
             goFoldBytes :: Term a -> Sem r (Atom a)
             goFoldBytes c = do

@@ -351,6 +351,7 @@ genCode infoTable fi =
       Core.OpAnomaVerifyWithMessage -> OpAnomaVerifyWithMessage
       Core.OpAnomaByteArrayToAnomaContents -> OpAnomaByteArrayToAnomaContents
       Core.OpAnomaByteArrayFromAnomaContents -> OpAnomaByteArrayFromAnomaContents
+      Core.OpAnomaSha256 -> OpAnomaSha256
       _ -> impossible
 
     getArgsNum :: Symbol -> Int

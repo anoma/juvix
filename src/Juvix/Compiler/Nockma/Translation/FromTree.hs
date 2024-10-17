@@ -566,6 +566,7 @@ compile = \case
         Tree.OpAnomaSignDetached -> goAnomaSignDetached args
         Tree.OpAnomaByteArrayFromAnomaContents -> return (goAnomaByteArrayFromAnomaContents args)
         Tree.OpAnomaByteArrayToAnomaContents -> return (goAnomaByteArrayToAnomaContents args)
+        Tree.OpAnomaSha256 -> goAnomaSha256 args
 
     goByteArrayOp :: Tree.NodeByteArray -> Sem r (Term Natural)
     goByteArrayOp Tree.NodeByteArray {..} = do
@@ -687,6 +688,14 @@ compile = \case
     goAnomaByteArrayFromAnomaContents = \case
       [len, contents] -> mkByteArray len contents
       _ -> impossible
+
+    goAnomaSha256 :: [Term Natural] -> Sem r (Term Natural)
+    goAnomaSha256 arg = do
+      stdcall <- callStdlib StdlibSha256 arg
+      return $ mkByteArray (nockNatLiteral (integerToNatural sha256HashLength)) stdcall
+      where
+        sha256HashLength :: Integer
+        sha256HashLength = 64
 
     -- Conceptually this function is:
     -- anomaDecode <$> verify signedMessage pubKey

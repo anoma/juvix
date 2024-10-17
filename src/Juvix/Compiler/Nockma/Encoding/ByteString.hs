@@ -1,9 +1,11 @@
 module Juvix.Compiler.Nockma.Encoding.ByteString where
 
+import Crypto.Hash.SHA256 qualified as SHA256
 import Data.Bit (Bit)
 import Data.Bit qualified as Bit
 import Data.Bits
 import Data.ByteString qualified as BS
+import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Builder qualified as BS
 import Juvix.Compiler.Nockma.Encoding.Base
 import Juvix.Compiler.Nockma.Encoding.Effect.BitReader
@@ -19,6 +21,9 @@ atomToByteString = fmap naturalToByteString . nockNatural
 atomToByteStringLen :: (NockNatural a, Member (Error (ErrNockNatural a)) r) => Int -> Atom a -> Sem r ByteString
 atomToByteStringLen len = fmap (padByteString len) . atomToByteString
 
+sha256Atom :: (NockNatural a, Member (Error (ErrNockNatural a)) r) => Atom a -> Sem r ByteString
+sha256Atom = fmap sha256Natural . nockNatural
+
 byteStringToAtom :: (NockNatural a, Member (Error (ErrNockNatural a)) r) => ByteString -> Sem r (Atom a)
 byteStringToAtom = fmap mkEmptyAtom . fromNatural . byteStringToNatural
 
@@ -26,7 +31,7 @@ byteStringToNatural :: ByteString -> Natural
 byteStringToNatural = fromInteger . byteStringToIntegerLE
 
 naturalToByteString :: Natural -> ByteString
-naturalToByteString = integerToByteStringLE . toInteger
+naturalToByteString = naturalToByteStringLE
 
 byteStringToIntegerLE :: ByteString -> Integer
 byteStringToIntegerLE = BS.foldr (\b acc -> acc `shiftL` 8 .|. fromIntegral b) 0
@@ -50,16 +55,16 @@ byteStringToIntegerLEChunked = foldr' go 0 . map (first byteStringChunkToInteger
     byteStringChunkToInteger :: ByteString -> Integer
     byteStringChunkToInteger = BS.foldr' (\b acc -> acc `shiftL` 8 .|. fromIntegral b) 0
 
-integerToByteStringLE :: Integer -> ByteString
-integerToByteStringLE = BS.toStrict . BS.toLazyByteString . go
+naturalToByteStringLE :: Natural -> ByteString
+naturalToByteStringLE = BS.toStrict . BS.toLazyByteString . go
   where
-    go :: Integer -> BS.Builder
+    go :: Natural -> BS.Builder
     go = \case
       0 -> mempty
       n -> BS.word8 (fromIntegral n) <> go (n `shiftR` 8)
 
-integerToByteStringLELen :: Int -> Integer -> ByteString
-integerToByteStringLELen len = padByteString len . integerToByteStringLE
+naturalToByteStringLELen :: Int -> Natural -> ByteString
+naturalToByteStringLELen len = padByteString len . naturalToByteStringLE
 
 textToNatural :: Text -> Natural
 textToNatural = byteStringToNatural . encodeUtf8
@@ -113,3 +118,9 @@ decodeByteString i = evalBitReader (integerToVectorBits i) go
 -- | decode a ByteString that was encoded using `encodeByteString` with a default that's used if decoding fails.
 decodeByteStringWithDefault :: ByteString -> Integer -> ByteString
 decodeByteStringWithDefault d = fromRight d . run . runErrorNoCallStack @BitReadError . decodeByteString
+
+sha256Natural :: Natural -> ByteString
+sha256Natural =
+  Base16.encode
+    . SHA256.hash
+    . naturalToByteStringLE

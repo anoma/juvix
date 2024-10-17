@@ -600,6 +600,7 @@ checkBuiltinAxiom d b = localBuiltins $ case b of
   BuiltinAnomaVerifyWithMessage -> checkAnomaVerifyWithMessage d
   BuiltinAnomaByteArrayFromAnomaContents -> checkAnomaByteArrayFromAnomaContents d
   BuiltinAnomaByteArrayToAnomaContents -> checkAnomaByteArrayToAnomaContents d
+  BuiltinAnomaSha256 -> checkAnomaSha256 d
   BuiltinPoseidon -> checkPoseidon d
   BuiltinEcOp -> checkEcOp d
   BuiltinRandomEcPoint -> checkRandomEcPoint d
