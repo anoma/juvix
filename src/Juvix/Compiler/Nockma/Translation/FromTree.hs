@@ -152,19 +152,23 @@ data CompilerFunction = CompilerFunction
     _compilerFunction :: Sem '[Reader CompilerCtx, Reader FunctionCtx] (Term Natural)
   }
 
--- | The Code and Args constructors must be first and second respectively. This is
--- because the stack must have the structure of a Nock function,
--- i.e [code args env]
+-- | The FunCode and ArgsTuple constructors must be first and second
+-- respectively. This is because the stack must have the structure of a Nock
+-- function, i.e [code args env]
+--
+-- The StandardLibrary constructor must be last. Anoma will replace the tail of
+-- the main function with the Anoma Resource Machine standard library when it
+-- calls it.
 data AnomaCallablePathId
   = FunCode
   | ArgsTuple
   | ---
     FunctionsLibrary
-  | StandardLibrary
   | ClosureTotalArgsNum
   | ClosureArgsNum
   | ClosureArgs
   | AnomaGetOrder
+  | StandardLibrary
   deriving stock (Enum, Bounded, Eq, Show)
 
 indexStack :: Natural -> Path
