@@ -221,6 +221,14 @@ makeLenses ''WithStack
 makeLenses ''AtomInfo
 makeLenses ''CellInfo
 
+isCell :: Term a -> Bool
+isCell = \case
+  TermCell {} -> True
+  _ -> False
+
+isAtom :: Term a -> Bool
+isAtom = not . isCell
+
 atomHint :: Lens' (Atom a) (Maybe AtomHint)
 atomHint = atomInfo . atomInfoHint
 
@@ -459,6 +467,12 @@ opAddress txt p = TermCell (txt @ OpAddress #. p)
 
 opQuote :: (IsNock x) => Text -> x -> Term Natural
 opQuote txt p = TermCell (txt @ OpQuote #. p)
+
+opTrace :: Term Natural -> Term Natural
+opTrace val = OpHint # (nockHintAtom NockHintPuts # val) # val
+
+opTrace' :: Term Natural -> Term Natural -> Term Natural
+opTrace' msg val = OpHint # (nockNilTagged "opTrace'" # msg) # val
 
 {-# COMPLETE Cell #-}
 

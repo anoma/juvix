@@ -373,30 +373,10 @@ juvixCallingConventionTests =
            compilerTestM "stdlib lt" (callStdlib StdlibLt [nockNatLiteral 3, nockNatLiteral 3]) (eqNock [nock| false |]),
            compilerTestM "stdlib pow2" (pow2 (nockNatLiteral 3)) (eqNock [nock| 8 |]),
            compilerTestM "stdlib nested" (dec =<< (dec (nockNatLiteral 20))) (eqNock [nock| 18 |]),
-           compilerTestM "append rights - empty" (appendRights emptyPath (nockNatLiteral 3)) (eqNock (toNock [R, R, R])),
-           compilerTestM "append rights" (appendRights [L, L] (nockNatLiteral 3)) (eqNock (toNock [L, L, R, R, R])),
-           compilerTest "opAddress" ((OpQuote # (foldTerms (toNock @Natural <$> (5 :| [6, 1])))) >># opAddress' (OpQuote # [R, R])) (eqNock (toNock @Natural 1)),
-           compilerTest "foldTermsOrNil (empty)" (foldTermsOrNil []) (eqNock (nockNilTagged "expected-result")),
+           compilerTest "foldTermsOrQuotedNil (empty)" (foldTermsOrQuotedNil []) (eqNock (nockNilTagged "expected-result")),
            let l :: NonEmpty Natural = 1 :| [2]
                l' :: NonEmpty (Term Natural) = nockNatLiteral <$> l
-            in compilerTest "foldTermsOrNil (non-empty)" (foldTermsOrNil (toList l')) (eqNock (foldTerms (toNock @Natural <$> l))),
-           let l :: Term Natural = OpQuote # foldTerms (toNock @Natural <$> (1 :| [2, 3]))
-            in compilerTest "replaceSubterm'" (replaceSubterm' l (OpQuote # toNock [R]) (OpQuote # (toNock @Natural 999))) (eqNock (toNock @Natural 1 # toNock @Natural 999)),
-           let lst :: [Term Natural] = toNock @Natural <$> [1, 2, 3]
-               len = nockIntegralLiteral (length lst)
-               l :: Term Natural = OpQuote # makeList lst
-            in compilerTestM "append" (append l len l) (eqNock (makeList (lst ++ lst))),
-           let l :: [Natural] = [1, 2]
-               r :: NonEmpty Natural = 3 :| [4]
-               res :: Term Natural = foldTerms (toNock <$> prependList l r)
-               lenL :: Term Natural = nockIntegralLiteral (length l)
-               lstL = OpQuote # makeList (map toNock l)
-               tupR = OpQuote # foldTerms (toNock <$> r)
-            in compilerTestM "appendToTuple (left non-empty, right non-empty)" (appendToTuple lstL lenL tupR) (eqNock res),
-           let r :: NonEmpty Natural = 3 :| [4]
-               res :: Term Natural = foldTerms (toNock <$> r)
-               tupR = OpQuote # foldTerms (toNock <$> r)
-            in compilerTestM "appendToTuple (left empty, right-nonempty)" (appendToTuple (OpQuote # nockNilTagged "test-appendtotuple") (nockNatLiteral 0) tupR) (eqNock res),
+            in compilerTest "foldTermsOrQuotedNil (non-empty)" (foldTermsOrQuotedNil (toList l')) (eqNock (foldTerms (toNock @Natural <$> l))),
            compilerTestM "stdlib cat" (callStdlib StdlibCatBytes [nockNatLiteral 2, nockNatLiteral 1]) (eqNock [nock| 258 |]),
            compilerTestM "fold bytes empty" (callStdlib StdlibFoldBytes [OpQuote # makeList []]) (eqNock [nock| 0 |]),
            compilerTestM "fold bytes [1, 0, 0] == 1" (callStdlib StdlibFoldBytes [OpQuote # makeList (toNock @Natural <$> [1, 0, 0])]) (eqNock [nock| 1 |]),
