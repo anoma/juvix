@@ -771,7 +771,7 @@ compile = \case
               $ opAddress "goAllocClosure-getFunction" (base <> fpath)
           newArity = farity - fromIntegral (length args)
       massert (newArity > 0)
-      curriedClosure <- curryClosure closure (nonEmpty' args)
+      curriedClosure <- curryClosure closure args
       return . makeClosure $ \case
         FunCode -> curriedClosure
         ArgsTuple -> OpQuote # argsTuplePlaceholder "goAllocClosure" newArity
@@ -824,7 +824,7 @@ extendClosure Tree.NodeExtendClosure {..} = do
     closure <- addressTempRef ref
     let remainingArgsNum = getClosureField ClosureRemainingArgsNum closure
     newArity <- sub remainingArgsNum (nockIntegralLiteral (length _nodeExtendClosureArgs))
-    curriedClosure <- curryClosure closure args
+    curriedClosure <- curryClosure closure (toList args)
     return . makeClosure $ \case
       FunCode -> curriedClosure
       ArgsTuple -> getClosureField ArgsTuple closure
@@ -1077,7 +1077,7 @@ callClosure ref args = do
   let closure' = OpReplace # (closurePath ArgsTuple # foldTermsOrQuotedNil args) # closure
   return (opCall "callClosure" (closurePath FunCode) closure')
 
-curryClosure :: (Member (Reader CompilerCtx) r) => Term Natural -> NonEmpty (Term Natural) -> Sem r (Term Natural)
+curryClosure :: (Member (Reader CompilerCtx) r) => Term Natural -> [Term Natural] -> Sem r (Term Natural)
 curryClosure closure args = do
   curriedClosure <- foldM stdlibCurry closure args
   -- We need to wrap the curried closure to be able to put in the correct
