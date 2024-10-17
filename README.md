@@ -35,7 +35,7 @@ alt="Nightly build, release and benchmark" /></a>
 </tr>
 <tr>
 <td>
-<a href="https://github.com/anoma/juvix/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0--only-blue.svg"/></a>
+<a href="https://github.com/anoma/juvix/blob/main/LICENSE.md"><img src="https://img.shields.io/badge/license-GPL--3.0--only-blue.svg"/></a>
 </td>
 </tr>
 <tr>
