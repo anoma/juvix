@@ -182,7 +182,7 @@ cell :: Parser (Cell Natural)
 cell = do
   lloc <- onlyInterval lsbracket
   lbl <- optional pTag
-  c <- optional stdlibCall
+  c <- optional anomaLibCall
   firstTerm <- term
   restTerms <- some term
   rloc <- onlyInterval rsbracket
@@ -195,23 +195,23 @@ cell = do
           }
   return (set cellInfo info r)
   where
-    stdlibCall :: Parser (StdlibCall Natural)
-    stdlibCall = do
+    anomaLibCall :: Parser (AnomaLibCall Natural)
+    anomaLibCall = do
       chunk Str.stdlibTag
       f <- stdlibFun
       chunk Str.argsTag
       args <- term
       return
-        StdlibCall
-          { _stdlibCallArgs = args,
-            _stdlibCallFunction = f
+        AnomaLibCall
+          { _anomaLibCallArgs = args,
+            _anomaLibCallRef = f
           }
 
-    stdlibFun :: Parser StdlibFunction
+    stdlibFun :: Parser AnomaLib
     stdlibFun = do
       i <- iden
       let err = error ("invalid stdlib function identifier: " <> i)
-      maybe err return (parseStdlibFunction i)
+      maybe err return (parseAnomaLib i)
 
     buildCell :: Term Natural -> NonEmpty (Term Natural) -> Cell Natural
     buildCell h = \case
