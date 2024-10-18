@@ -26,6 +26,18 @@ instance Pretty StdlibFunction where
     StdlibLengthBytes -> "length-bytes"
     StdlibCurry -> "curry"
     StdlibSha256 -> "sha256"
+    StdlibRmCommit -> "commit"
+    StdlibRmNullify -> "nullify"
+    StdlibRmKind -> "kind"
+    StdlibRmProveLogic -> "prove-logic"
+    StdlibRmProveAction -> "prove-action"
+    StdlibRmDeltaAdd -> "delta-add"
+    StdlibRmDeltaSub -> "delta-sub"
+    StdlibRmResourceDelta -> "resource-delta"
+    StdlibRmActionDelta -> "action-delta"
+    StdlibRmMakeDelta -> "make-delta"
+    StdlibRmProveDelta -> "prove-delta"
+    StdlibRmZeroDelta -> "zero-delta"
 
 data StdlibFunction
   = StdlibDec
@@ -49,6 +61,18 @@ data StdlibFunction
   | StdlibLengthBytes
   | StdlibCurry
   | StdlibSha256
+  | StdlibRmCommit
+  | StdlibRmNullify
+  | StdlibRmKind
+  | StdlibRmProveLogic
+  | StdlibRmProveAction
+  | StdlibRmDeltaAdd
+  | StdlibRmDeltaSub
+  | StdlibRmResourceDelta
+  | StdlibRmActionDelta
+  | StdlibRmMakeDelta
+  | StdlibRmProveDelta
+  | StdlibRmZeroDelta
   deriving stock (Show, Lift, Eq, Bounded, Enum, Generic)
 
 instance Hashable StdlibFunction
