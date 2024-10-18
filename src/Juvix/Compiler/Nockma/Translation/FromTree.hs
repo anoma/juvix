@@ -11,27 +11,18 @@ module Juvix.Compiler.Nockma.Translation.FromTree
     FunctionCtx (..),
     FunctionId (..),
     closurePath,
-    foldTermsOrNil,
-    add,
+    foldTermsOrQuotedNil,
     sub,
-    dec,
-    mul,
-    pow2,
     nockNatLiteral,
     nockIntegralLiteral,
     callStdlib,
-    appendRights,
     foldTerms,
     pathToArg,
     makeList,
-    appendToTuple,
-    append,
-    opAddress',
-    replaceSubterm',
     runCompilerWith,
     emptyCompilerCtx,
     CompilerCtx (..),
-    stdlibCurry,
+    curryClosure,
     IndexTupleArgs (..),
     indexTuple,
   )
@@ -163,11 +154,8 @@ data AnomaCallablePathId
   = FunCode
   | ArgsTuple
   | ---
-    FunctionsLibrary
-  | ClosureTotalArgsNum
-  | ClosureArgsNum
-  | ClosureArgs
-  | AnomaGetOrder
+    ClosureRemainingArgsNum
+  | FunctionsLibrary
   | StandardLibrary
   deriving stock (Enum, Bounded, Eq, Show)
 
@@ -187,6 +175,9 @@ constructorPath = pathFromEnum
 
 closurePath :: AnomaCallablePathId -> Path
 closurePath = pathFromEnum
+
+anomaGetPath :: Path
+anomaGetPath = [L]
 
 data IndexTupleArgs = IndexTupleArgs
   { _indexTupleArgsLength :: Natural,
@@ -300,8 +291,21 @@ makeClosure = termFromParts
 makeConstructor :: (ConstructorPathId -> Term Natural) -> Term Natural
 makeConstructor = termFromParts
 
+-- | The result is not quoted and cannot be evaluated.
+rawTermFromParts :: (Bounded p, Enum p) => (p -> Term Natural) -> Term Natural
+rawTermFromParts f = makeList [f pi | pi <- allElements]
+
+-- | The result is not quoted and cannot be evaluated.
+makeRawClosure :: (AnomaCallablePathId -> Term Natural) -> Term Natural
+makeRawClosure = rawTermFromParts
+
+-- | The provided terms cannot be evaluated.
 foldTermsOrNil :: [Term Natural] -> Term Natural
-foldTermsOrNil = maybe (OpQuote # nockNilTagged "foldTermsOrNil") foldTerms . nonEmpty
+foldTermsOrNil = maybe (nockNilTagged "foldTermsOrNil") foldTerms . nonEmpty
+
+-- | The provided terms can be evaluated.
+foldTermsOrQuotedNil :: [Term Natural] -> Term Natural
+foldTermsOrQuotedNil = maybe (OpQuote # nockNilTagged "foldTermsOrQuotedNil") foldTerms . nonEmpty
 
 foldTerms :: NonEmpty (Term Natural) -> Term Natural
 foldTerms = foldr1 (#)
@@ -339,7 +343,7 @@ supportsMaybeNockmaRep tab ci =
       | otherwise -> Nothing
     _ -> Nothing
 
--- | Use `Tree.toNockma` before calling this function
+-- | Use `Tree.toNockma` before calling this function. The result is an unquoted subject.
 fromTreeTable :: (Members '[Error JuvixError, Reader CompilerOptions] r) => Tree.InfoTable -> Sem r AnomaResult
 fromTreeTable t = case t ^. Tree.infoMainFunction of
   Just mainFun -> do
@@ -408,6 +412,7 @@ addressTempRef tr = do
   p <- tempRefPath tr
   return $ opAddress "tempRef" p
 
+-- `funsLib` is being quoted in this function
 mainFunctionWrapper :: (Member (Reader CompilerCtx) r) => Term Natural -> Term Natural -> Sem r (Term Natural)
 mainFunctionWrapper funslib funCode = do
   -- 1. The Anoma system expects to receive a function of type `ScryId -> Transaction`
@@ -424,8 +429,7 @@ mainFunctionWrapper funslib funCode = do
   anomaGet <- getFieldInSubject ArgsTuple
   captureAnomaGetOrder <- replaceSubject $ \case
     FunCode -> Just (OpQuote # funCode)
-    AnomaGetOrder -> Just anomaGet
-    FunctionsLibrary -> Just (OpQuote # funslib)
+    FunctionsLibrary -> Just (OpReplace # (anomaGetPath # anomaGet) # OpQuote # funslib)
     _ -> Nothing
   return $ opCall "mainFunctionWrapper" (closurePath FunCode) captureAnomaGetOrder
 
@@ -601,23 +605,19 @@ compile = \case
     goPrimUnop op arg = case op of
       Tree.OpShow -> stringsErr "show"
       Tree.OpStrToInt -> stringsErr "strToInt"
-      Tree.OpArgsNum -> do
-        arg' <- compile arg
-        withTemp
-          arg'
-          ( \ref -> do
-              tmp <- addressTempRef ref
-              sub (getClosureField ClosureTotalArgsNum tmp) (getClosureField ClosureArgsNum tmp)
-          )
+      Tree.OpArgsNum ->
+        compile arg
+          >>= return . getClosureField ClosureRemainingArgsNum
       Tree.OpIntToField -> fieldErr
       Tree.OpFieldToInt -> fieldErr
-      Tree.OpIntToUInt8 -> intToUInt8 =<< compile arg
+      Tree.OpIntToUInt8 -> compile arg >>= intToUInt8
       Tree.OpUInt8ToInt -> compile arg
 
     goAnomaGet :: [Term Natural] -> Sem r (Term Natural)
     goAnomaGet key = do
-      anomaGet <- getFieldInSubject AnomaGetOrder
-      let arg = remakeList [anomaGet, foldTermsOrNil key]
+      funlibPath <- stackPath FunctionsLibrary
+      let anomaGet = opAddress "anomaGet" (funlibPath <> anomaGetPath)
+      let arg = remakeList [anomaGet, foldTermsOrQuotedNil key]
       return (OpScry # (OpQuote # nockNilTagged "OpScry-typehint") # arg)
 
     goAnomaEncode :: [Term Natural] -> Sem r (Term Natural)
@@ -739,7 +739,7 @@ compile = \case
     goTrace arg = do
       withTemp arg $ \ref -> do
         val <- addressTempRef ref
-        return $ OpHint # (nockHintAtom NockHintPuts # val) # val
+        return $ opTrace val
 
     goBinop :: Tree.NodeBinop -> Sem r (Term Natural)
     goBinop Tree.NodeBinop {..} = do
@@ -772,18 +772,25 @@ compile = \case
       fpath <- getFunctionPath fun
       farity <- getFunctionArity fun
       args <- mapM compile _nodeAllocClosureArgs
-      return . makeClosure $ \case
-        FunCode -> opAddress "allocClosureFunPath" (base <> fpath <> closurePath FunCode)
-        ArgsTuple -> OpQuote # argsTuplePlaceholder "goAllocClosure" farity
-        FunctionsLibrary -> OpQuote # functionsLibraryPlaceHolder
-        StandardLibrary -> OpQuote # stdlibPlaceHolder
-        ClosureTotalArgsNum -> nockNatLiteral farity
-        ClosureArgsNum -> nockIntegralLiteral (length args)
-        ClosureArgs -> remakeList args
-        AnomaGetOrder -> OpQuote # nockNilTagged "goAllocClosure-AnomaGetOrder"
+      let funLib = opAddress "functionsLibrary" (base <> closurePath FunctionsLibrary)
+          stdLib = opAddress "standardLibrary" (base <> closurePath StandardLibrary)
+          closure =
+            opReplace "putStdLib" (closurePath StandardLibrary) stdLib
+              . opReplace "putFunLib" (closurePath FunctionsLibrary) funLib
+              $ opAddress "goAllocClosure-getFunction" (base <> fpath)
+          newArity = farity - fromIntegral (length args)
+      massert (newArity > 0)
+      curryClosure closure args (nockNatLiteral newArity)
 
     goExtendClosure :: Tree.NodeExtendClosure -> Sem r (Term Natural)
-    goExtendClosure = extendClosure
+    goExtendClosure Tree.NodeExtendClosure {..} = do
+      closureFun <- compile _nodeExtendClosureFun
+      withTemp closureFun $ \ref -> do
+        args <- mapM compile _nodeExtendClosureArgs
+        closure <- addressTempRef ref
+        let remainingArgsNum = getClosureField ClosureRemainingArgsNum closure
+        newArity <- sub remainingArgsNum (nockIntegralLiteral (length _nodeExtendClosureArgs))
+        curryClosure closure (toList args) newArity
 
     goCall :: Tree.NodeCall -> Sem r (Term Natural)
     goCall Tree.NodeCall {..} =
@@ -797,19 +804,12 @@ compile = \case
             newargs <- mapM compile _nodeCallArgs
             callClosure ref newargs
 
-opAddress' :: Term Natural -> Term Natural
-opAddress' x = evaluated $ (opQuote "opAddress'" OpAddress) # x
-
+-- | Creates a tuple that needs to be quoted before evaluation
 argsTuplePlaceholder :: Text -> Natural -> Term Natural
 argsTuplePlaceholder txt arity = ("argsTuplePlaceholder-" <> txt) @ foldTermsOrNil (replicate arityInt (TermAtom nockNil))
   where
     arityInt :: Int
     arityInt = fromIntegral arity
-
-appendRights :: (Member (Reader CompilerCtx) r) => Path -> Term Natural -> Sem r (Term Natural)
-appendRights path n = do
-  n' <- pow2 n
-  mul n' (OpInc # OpQuote # path) >>= dec
 
 testEq :: (Members '[Reader FunctionCtx, Reader CompilerCtx] r) => Tree.Node -> Tree.Node -> Sem r (Term Natural)
 testEq a b = do
@@ -823,48 +823,8 @@ nockNatLiteral = nockIntegralLiteral
 nockIntegralLiteral :: (Integral a) => a -> Term Natural
 nockIntegralLiteral = (OpQuote #) . toNock @Natural . fromIntegral
 
--- | xs must be a list.
--- ys is a non-empty tuple.
--- the result is a tuple.
--- TODO: this function generates inefficient code
-appendToTuple ::
-  (Member (Reader CompilerCtx) r) =>
-  Term Natural ->
-  Term Natural ->
-  Term Natural ->
-  Sem r (Term Natural)
-appendToTuple xs lenXs ys = append xs lenXs ys
-
--- TODO: what does this function do? what are the arguments?
--- TODO: this function generates inefficient code
-append :: (Member (Reader CompilerCtx) r) => Term Natural -> Term Natural -> Term Natural -> Sem r (Term Natural)
-append xs lenXs ys = do
-  posOfXsNil <- appendRights emptyPath lenXs
-  return $ replaceSubterm' xs posOfXsNil ys
-
-extendClosure ::
-  (Members '[Reader FunctionCtx, Reader CompilerCtx] r) =>
-  Tree.NodeExtendClosure ->
-  Sem r (Term Natural)
-extendClosure Tree.NodeExtendClosure {..} = do
-  closureFun <- compile _nodeExtendClosureFun
-  withTemp closureFun $ \ref -> do
-    args <- mapM compile _nodeExtendClosureArgs
-    closure <- addressTempRef ref
-    let argsNum = getClosureField ClosureArgsNum closure
-        oldArgs = getClosureField ClosureArgs closure
-    allArgs <- append oldArgs argsNum (remakeList args)
-    newArgsNum <- add argsNum (nockIntegralLiteral (length _nodeExtendClosureArgs))
-    return . makeClosure $ \case
-      FunCode -> getClosureField FunCode closure
-      ClosureTotalArgsNum -> getClosureField ClosureTotalArgsNum closure
-      ClosureArgsNum -> newArgsNum
-      ClosureArgs -> allArgs
-      ArgsTuple -> getClosureField ArgsTuple closure
-      FunctionsLibrary -> getClosureField FunctionsLibrary closure
-      StandardLibrary -> getClosureField StandardLibrary closure
-      AnomaGetOrder -> getClosureField AnomaGetOrder closure
-
+-- [call L [replace [RL [seq [@ R] a]] [@ (locStdlib <> fPath)]]] ?
+--
 -- Calling convention for Anoma stdlib
 --
 -- [push
@@ -890,7 +850,7 @@ callStdlib fun args = do
       callFn = opCall "callStdlib" (closurePath FunCode) adjustArgs
       meta =
         StdlibCall
-          { _stdlibCallArgs = foldTermsOrNil args,
+          { _stdlibCallArgs = foldTermsOrQuotedNil args,
             _stdlibCallFunction = fun
           }
       callCell = set cellCall (Just meta) (OpPush #. (getFunCode # callFn))
@@ -923,29 +883,31 @@ nockmaBuiltinTag = \case
 -- | Generic constructors are encoded as [tag args], where args is a
 -- nil terminated list.
 goConstructor :: NockmaMemRep -> Tree.Tag -> [Term Natural] -> Term Natural
-goConstructor mr t args = case t of
-  Tree.BuiltinTag b -> case nockmaBuiltinTag b of
-    NockmaBuiltinBool v -> nockBoolLiteral v
-  Tree.UserTag tag -> case mr of
-    NockmaMemRepConstr ->
-      makeConstructor $ \case
-        ConstructorTag -> OpQuote # (fromIntegral (tag ^. Tree.tagUserWord) :: Natural)
-        ConstructorArgs -> remakeList args
-    NockmaMemRepTuple -> foldTerms (nonEmpty' args)
-    NockmaMemRepList constr -> case constr of
-      NockmaMemRepListConstrNil
-        | null args -> remakeList []
-        | otherwise -> impossible
-      NockmaMemRepListConstrCons -> case args of
-        [l, r] -> TCell l r
-        _ -> impossible
-    NockmaMemRepMaybe constr -> case constr of
-      NockmaMemRepMaybeConstrNothing
-        | null args -> (OpQuote # nockNilTagged "maybe-constr-nothing")
-        | otherwise -> impossible
-      NockmaMemRepMaybeConstrJust -> case args of
-        [x] -> TCell (OpQuote # nockNilTagged "maybe-constr-just-head") x
-        _ -> impossible
+goConstructor mr t args = assert (all isCell args) $
+  case t of
+    Tree.BuiltinTag b -> case nockmaBuiltinTag b of
+      NockmaBuiltinBool v -> nockBoolLiteral v
+    Tree.UserTag tag -> case mr of
+      NockmaMemRepConstr ->
+        makeConstructor $ \case
+          ConstructorTag -> OpQuote # (fromIntegral (tag ^. Tree.tagUserWord) :: Natural)
+          ConstructorArgs -> remakeList args
+      NockmaMemRepTuple ->
+        foldTerms (nonEmpty' args)
+      NockmaMemRepList constr -> case constr of
+        NockmaMemRepListConstrNil
+          | null args -> remakeList []
+          | otherwise -> impossible
+        NockmaMemRepListConstrCons -> case args of
+          [l, r] -> TCell l r
+          _ -> impossible
+      NockmaMemRepMaybe constr -> case constr of
+        NockmaMemRepMaybeConstrNothing
+          | null args -> (OpQuote # nockNilTagged "maybe-constr-nothing")
+          | otherwise -> impossible
+        NockmaMemRepMaybeConstrJust -> case args of
+          [x] -> TCell (OpQuote # nockNilTagged "maybe-constr-just-head") x
+          _ -> impossible
 
 unsupported :: Text -> a
 unsupported thing = error ("The Nockma backend does not support " <> thing)
@@ -959,12 +921,15 @@ fieldErr = unsupported "the field type"
 cairoErr :: a
 cairoErr = unsupported "cairo builtins"
 
+-- | The elements will not be evaluated.
 makeList :: (Foldable f) => f (Term Natural) -> Term Natural
 makeList ts = foldTerms (toList ts `prependList` pure (nockNilTagged "makeList"))
 
+-- | The elements of the list will be evaluated to create the list.
 remakeList :: (Foldable l) => l (Term Natural) -> Term Natural
 remakeList ts = foldTerms (toList ts `prependList` pure (OpQuote # nockNilTagged "remakeList"))
 
+-- | The result is unquoted.
 runCompilerWith :: CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> AnomaResult
 runCompilerWith _opts constrs moduleFuns mainFun =
   AnomaResult
@@ -973,6 +938,13 @@ runCompilerWith _opts constrs moduleFuns mainFun =
   where
     libFuns :: [CompilerFunction]
     libFuns = moduleFuns ++ (builtinFunction <$> allElements)
+
+    -- The number of "extra" functions at the front of the functions library
+    -- list which are not defined by the user. Currently, the only such function
+    -- is anomaGet (the `main` function and the functions from `libFuns` are
+    -- defined by the user).
+    libFunShift :: Natural
+    libFunShift = 1
 
     allFuns :: NonEmpty CompilerFunction
     allFuns = mainFun :| libFuns
@@ -987,45 +959,43 @@ runCompilerWith _opts constrs moduleFuns mainFun =
     mainClosure :: Term Natural
     mainClosure = makeMainFunction (runCompilerFunction compilerCtx mainFun)
 
+    -- This term is not quoted and cannot be evaluated.
     funcsLib :: Term Natural
     funcsLib = Str.theFunctionsLibrary @ makeList compiledFuns
       where
         compiledFuns :: [Term Natural]
         compiledFuns =
-          (OpQuote # (666 :: Natural)) -- TODO we have this unused term so that indices match. Remove it and adjust as needed
+          (nockNilTagged "anomaGetPlaceholder")
+            : (nockNilTagged "mainFunctionPlaceholder")
             : ( makeLibraryFunction
                   <$> [(f ^. compilerFunctionName, f ^. compilerFunctionArity, runCompilerFunction compilerCtx f) | f <- libFuns]
               )
 
+    -- The result is not quoted and cannot be evaluated.
     makeLibraryFunction :: (Text, Natural, Term Natural) -> Term Natural
     makeLibraryFunction (funName, funArity, c) =
       ("def-" <> funName)
-        @ makeClosure
+        @ makeRawClosure
           ( \p ->
               let nockNilHere = nockNilTagged ("makeLibraryFunction-" <> show p)
                in case p of
                     FunCode -> ("funCode-" <> funName) @ c
                     ArgsTuple -> ("argsTuple-" <> funName) @ argsTuplePlaceholder "libraryFunction" funArity
+                    ClosureRemainingArgsNum -> ("closureRemainingArgsNum-" <> funName) @ nockNilHere
                     FunctionsLibrary -> ("functionsLibrary-" <> funName) @ functionsLibraryPlaceHolder
                     StandardLibrary -> ("stdlib-" <> funName) @ stdlibPlaceHolder
-                    ClosureTotalArgsNum -> ("closureTotalArgsNum-" <> funName) @ nockNilHere
-                    ClosureArgsNum -> ("closureArgsNum-" <> funName) @ nockNilHere
-                    ClosureArgs -> ("closureArgs-" <> funName) @ nockNilHere
-                    AnomaGetOrder -> ("anomaGetOrder-" <> funName) @ nockNilHere
           )
 
+    -- The result is not quoted and cannot be evaluated directly.
     makeMainFunction :: Term Natural -> Term Natural
-    makeMainFunction c = makeClosure $ \p ->
+    makeMainFunction c = makeRawClosure $ \p ->
       let nockNilHere = nockNilTagged ("makeMainFunction-" <> show p)
        in case p of
             FunCode -> run . runReader compilerCtx $ mainFunctionWrapper funcsLib c
             ArgsTuple -> argsTuplePlaceholder "mainFunction" (mainFun ^. compilerFunctionArity)
+            ClosureRemainingArgsNum -> nockNilHere
             FunctionsLibrary -> functionsLibraryPlaceHolder
             StandardLibrary -> stdlib
-            ClosureTotalArgsNum -> nockNilHere
-            ClosureArgsNum -> nockNilHere
-            ClosureArgs -> nockNilHere
-            AnomaGetOrder -> nockNilHere
 
     functionInfos :: HashMap FunctionId FunctionInfo
     functionInfos = hashMap (run (runStreamOfNaturals (toList <$> userFunctions)))
@@ -1036,7 +1006,7 @@ runCompilerWith _opts constrs moduleFuns mainFun =
       return
         ( _compilerFunctionId,
           FunctionInfo
-            { _functionInfoPath = pathFromEnum FunctionsLibrary ++ indexStack i,
+            { _functionInfoPath = pathFromEnum FunctionsLibrary ++ indexStack (i + libFunShift),
               _functionInfoArity = _compilerFunctionArity,
               _functionInfoName = _compilerFunctionName
             }
@@ -1081,7 +1051,7 @@ builtinFunction = \case
 -- | Call a function with the passed arguments
 callFunWithArgs ::
   forall r.
-  (Members '[Reader CompilerCtx] r) =>
+  (Member (Reader CompilerCtx) r) =>
   FunctionId ->
   [Term Natural] ->
   Sem r (Term Natural)
@@ -1092,26 +1062,27 @@ callFunWithArgs fun args = do
   let p' = fpath ++ closurePath FunCode
   return (opCall ("callFun-" <> fname) p' newSubject)
 
-callClosure :: (Members '[Reader CompilerCtx] r) => TempRef -> [Term Natural] -> Sem r (Term Natural)
-callClosure ref newArgs = do
+callClosure :: (Member (Reader CompilerCtx) r) => TempRef -> [Term Natural] -> Sem r (Term Natural)
+callClosure ref args = do
   -- We never call a closure with zero arguments: if there are no arguments then
   -- there is no application and the closure is just returned. This differs from
   -- the behaviour with calls to known functions which may have zero arguments.
-  massert (not (null newArgs))
+  massert (not (null args))
   closure <- addressTempRef ref
-  let oldArgsNum = getClosureField ClosureArgsNum closure
-      oldArgs = getClosureField ClosureArgs closure
-  allArgs <- appendToTuple oldArgs oldArgsNum (foldTermsOrNil newArgs)
-  newSubject <- replaceSubject $ \case
-    FunCode -> Just (getClosureField FunCode closure)
-    ArgsTuple -> Just allArgs
-    FunctionsLibrary -> Nothing
-    StandardLibrary -> Nothing
-    ClosureArgs -> Nothing
-    ClosureTotalArgsNum -> Nothing
-    ClosureArgsNum -> Nothing
-    AnomaGetOrder -> Nothing
-  return (opCall "callClosure" (closurePath FunCode) newSubject)
+  let closure' = OpReplace # (closurePath ArgsTuple # foldTermsOrQuotedNil args) # closure
+  return (opCall "callClosure" (closurePath FunCode) closure')
+
+curryClosure :: Term Natural -> [Term Natural] -> Term Natural -> Sem r (Term Natural)
+curryClosure f args newArity = do
+  let args' = (foldTerms (nonEmpty' $ map (\x -> (OpQuote # OpQuote) # x) args <> [OpQuote # OpAddress # closurePath ArgsTuple]))
+  return . makeClosure $ \case
+    FunCode -> (OpQuote # OpCall) # (OpQuote # closurePath FunCode) # (OpQuote # OpReplace) # ((OpQuote # closurePath ArgsTuple) # args') # (OpQuote # OpQuote) # f
+    ArgsTuple -> OpQuote # nockNilTagged "argsTuple" -- We assume the arguments tuple is never accessed before being replaced by the caller.
+    ClosureRemainingArgsNum -> newArity
+    -- The functions library and the standard library are always taken from the
+    -- closure `f`. The environment of `f` is used when evaluating the call.
+    FunctionsLibrary -> OpQuote # functionsLibraryPlaceHolder
+    StandardLibrary -> OpQuote # stdlibPlaceHolder
 
 replaceSubject :: (Member (Reader CompilerCtx) r) => (AnomaCallablePathId -> Maybe (Term Natural)) -> Sem r (Term Natural)
 replaceSubject = replaceSubject' "replaceSubject"
@@ -1133,7 +1104,7 @@ replaceArgsWithTerm tag term =
 -- | Replace the arguments in the ArgsTuple stack with the passed arguments.
 -- Resets the temporary stack to empty. Returns the new subject.
 replaceArgs :: (Member (Reader CompilerCtx) r) => [Term Natural] -> Sem r (Term Natural)
-replaceArgs = replaceArgsWithTerm "replaceArgs" . foldTermsOrNil
+replaceArgs = replaceArgsWithTerm "replaceArgs" . foldTermsOrQuotedNil
 
 getFunctionInfo :: (Members '[Reader CompilerCtx] r) => FunctionId -> Sem r FunctionInfo
 getFunctionInfo funId = asks (^?! compilerFunctionInfos . at funId . _Just)
@@ -1143,15 +1114,6 @@ getFunctionPath funId = (^. functionInfoPath) <$> getFunctionInfo funId
 
 getFunctionName :: (Members '[Reader CompilerCtx] r) => FunctionId -> Sem r Text
 getFunctionName funId = (^. functionInfoName) <$> getFunctionInfo funId
-
-evaluated :: Term Natural -> Term Natural
-evaluated t = OpApply # (opAddress "evaluated" emptyPath) # t
-
--- | obj[eval(relPath)] := newVal
--- relPath is relative to obj
-replaceSubterm' :: Term Natural -> Term Natural -> Term Natural -> Term Natural
-replaceSubterm' obj relPath newVal =
-  evaluated $ (OpQuote # OpReplace) # ((relPath # (OpQuote # newVal)) # (OpQuote # obj))
 
 builtinTagToTerm :: NockmaBuiltinTag -> Term Natural
 builtinTagToTerm = \case
@@ -1303,26 +1265,11 @@ getConstructorMemRep tag = (^. constructorInfoMemRep) <$> getConstructorInfo tag
 crash :: Term Natural
 crash = ("crash" @ OpAddress # OpAddress # OpAddress)
 
-mul :: (Member (Reader CompilerCtx) r) => Term Natural -> Term Natural -> Sem r (Term Natural)
-mul a b = callStdlib StdlibMul [a, b]
-
-pow2 :: (Member (Reader CompilerCtx) r) => Term Natural -> Sem r (Term Natural)
-pow2 x = callStdlib StdlibPow2 [x]
-
-add :: (Member (Reader CompilerCtx) r) => Term Natural -> Term Natural -> Sem r (Term Natural)
-add a b = callStdlib StdlibAdd [a, b]
-
 sub :: (Member (Reader CompilerCtx) r) => Term Natural -> Term Natural -> Sem r (Term Natural)
 sub a b = callStdlib StdlibSub [a, b]
-
-dec :: (Member (Reader CompilerCtx) r) => Term Natural -> Sem r (Term Natural)
-dec x = callStdlib StdlibDec [x]
 
 intToUInt8 :: (Member (Reader CompilerCtx) r) => Term Natural -> Sem r (Term Natural)
 intToUInt8 i = callStdlib StdlibMod [i, nockIntegralLiteral @Natural (2 ^ uint8Size)]
   where
     uint8Size :: Natural
     uint8Size = 8
-
-stdlibCurry :: (Member (Reader CompilerCtx) r) => Term Natural -> Term Natural -> Sem r (Term Natural)
-stdlibCurry f arg = callStdlib StdlibCurry [f, arg]

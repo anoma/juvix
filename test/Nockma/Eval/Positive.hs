@@ -269,8 +269,8 @@ applyFun f =
 anomaCallingConventionTests :: [Test]
 anomaCallingConventionTests =
   [True, False]
-    <**> [ anomaTestM "stdlib add" (add (nockNatLiteral 1) (nockNatLiteral 2)) [] (eqNock [nock| 3 |]),
-           anomaTestM "stdlib add with arg" (add (nockNatLiteral 1) (nockNatLiteral 2)) [nockNatLiteral 1] (eqNock [nock| 3 |]),
+    <**> [ anomaTestM "stdlib add" (callStdlib StdlibAdd [nockNatLiteral 1, nockNatLiteral 2]) [] (eqNock [nock| 3 |]),
+           anomaTestM "stdlib add with arg" (callStdlib StdlibAdd [nockNatLiteral 1, nockNatLiteral 2]) [nockNatLiteral 1] (eqNock [nock| 3 |]),
            let args = [nockNatLiteral 3, nockNatLiteral 1]
                fx =
                  FunctionCtx
@@ -283,20 +283,25 @@ anomaCallingConventionTests =
            --- sanity check nockAnd
            anomaTestM "(and true false) == false" (return nockAnd) [nockTrueLiteral, nockFalseLiteral] (eqNock [nock| false |]),
            anomaTestM "(and true true) == true" (return nockAnd) [nockTrueLiteral, nockTrueLiteral] (eqNock [nock| true |]),
-           --- test curry with and
-           anomaTestM "(curry and true) false == false" (applyFun <$> stdlibCurry (OpQuote # nockAndFun) nockTrueLiteral) [nockFalseLiteral] (eqNock [nock| false |]),
-           anomaTestM "(curry and true) true == true" (applyFun <$> stdlibCurry (OpQuote # nockAndFun) nockTrueLiteral) [nockTrueLiteral] (eqNock [nock| true |]),
-           anomaTestM "(curry and false) true == false" (applyFun <$> stdlibCurry (OpQuote # nockAndFun) nockFalseLiteral) [nockTrueLiteral] (eqNock [nock| false |]),
-           anomaTestM "(curry and false) false == false" (applyFun <$> stdlibCurry (OpQuote # nockAndFun) nockFalseLiteral) [nockFalseLiteral] (eqNock [nock| false |]),
+           --- test curry with "and"
+           anomaTestM "(curry and true) false == false" (applyFun <$> curryClosure (OpQuote # nockAndFun) [nockTrueLiteral] (nockNatLiteral 1)) [nockFalseLiteral] (eqNock [nock| false |]),
+           anomaTestM "(curry and true) true == true" (applyFun <$> curryClosure (OpQuote # nockAndFun) [nockTrueLiteral] (nockNatLiteral 1)) [nockTrueLiteral] (eqNock [nock| true |]),
+           anomaTestM "(curry and false) true == false" (applyFun <$> curryClosure (OpQuote # nockAndFun) [nockFalseLiteral] (nockNatLiteral 1)) [nockTrueLiteral] (eqNock [nock| false |]),
+           anomaTestM "(curry and false) false == false" (applyFun <$> curryClosure (OpQuote # nockAndFun) [nockFalseLiteral] (nockNatLiteral 1)) [nockFalseLiteral] (eqNock [nock| false |]),
+           --- test curry with "and" in non-empty stack
+           anomaTestM "((push 0 (curry and)) true) false == false" ((applyFun . (\x -> OpPush # nockNatLiteral 0 # x)) <$> curryClosure (OpQuote # nockAndFun) [nockTrueLiteral] (nockNatLiteral 1)) [nockFalseLiteral] (eqNock [nock| false |]),
+           anomaTestM "((push 0 (curry and)) true) true == true" ((applyFun . (\x -> OpPush # nockNatLiteral 0 # x)) <$> curryClosure (OpQuote # nockAndFun) [nockTrueLiteral] (nockNatLiteral 1)) [nockTrueLiteral] (eqNock [nock| true |]),
+           anomaTestM "((push 0 (curry and)) false) true == false" ((applyFun . (\x -> OpPush # nockNatLiteral 0 # x)) <$> curryClosure (OpQuote # nockAndFun) [nockFalseLiteral] (nockNatLiteral 1)) [nockTrueLiteral] (eqNock [nock| false |]),
+           anomaTestM "((push 0 (curry and)) false) false == false" ((applyFun . (\x -> OpPush # nockNatLiteral 0 # x)) <$> curryClosure (OpQuote # nockAndFun) [nockFalseLiteral] (nockNatLiteral 1)) [nockFalseLiteral] (eqNock [nock| false |]),
            --- sanity check nockAnd3
            anomaTestM "(and3 true false true) == false" (return nockAnd3) [nockTrueLiteral, nockFalseLiteral, nockTrueLiteral] (eqNock [nock| false |]),
            anomaTestM "(and3 true true false) == false" (return nockAnd3) [nockTrueLiteral, nockTrueLiteral, nockFalseLiteral] (eqNock [nock| false |]),
            anomaTestM "(and3 true true true) == true" (return nockAnd3) [nockTrueLiteral, nockTrueLiteral, nockTrueLiteral] (eqNock [nock| true |]),
-           --- test curry with and3
-           anomaTestM "(curry and3 true) false true == false" (applyFun <$> stdlibCurry (OpQuote # nockAnd3Fun) nockTrueLiteral) [nockFalseLiteral, nockTrueLiteral] (eqNock [nock| false |]),
-           anomaTestM "(curry and3 true) true true == true" (applyFun <$> stdlibCurry (OpQuote # nockAnd3Fun) nockTrueLiteral) [nockTrueLiteral, nockTrueLiteral] (eqNock [nock| true |]),
-           anomaTestM "(curry and3 false) true true == false" (applyFun <$> stdlibCurry (OpQuote # nockAnd3Fun) nockFalseLiteral) [nockTrueLiteral, nockTrueLiteral] (eqNock [nock| false |]),
-           anomaTestM "(curry and3 false) false true == false" (applyFun <$> stdlibCurry (OpQuote # nockAnd3Fun) nockFalseLiteral) [nockFalseLiteral, nockTrueLiteral] (eqNock [nock| false |])
+           --- test curry with "and3"
+           anomaTestM "(curry and3 true) false true == false" (applyFun <$> curryClosure (OpQuote # nockAnd3Fun) [nockTrueLiteral] (nockNatLiteral 2)) [nockFalseLiteral, nockTrueLiteral] (eqNock [nock| false |]),
+           anomaTestM "(curry and3 true) true true == true" (applyFun <$> curryClosure (OpQuote # nockAnd3Fun) [nockTrueLiteral] (nockNatLiteral 2)) [nockTrueLiteral, nockTrueLiteral] (eqNock [nock| true |]),
+           anomaTestM "(curry and3 false) true true == false" (applyFun <$> curryClosure (OpQuote # nockAnd3Fun) [nockFalseLiteral] (nockNatLiteral 2)) [nockTrueLiteral, nockTrueLiteral] (eqNock [nock| false |]),
+           anomaTestM "(curry and3 false) false true == false" (applyFun <$> curryClosure (OpQuote # nockAnd3Fun) [nockFalseLiteral] (nockNatLiteral 2)) [nockFalseLiteral, nockTrueLiteral] (eqNock [nock| false |])
          ]
 
 serializationTests :: [Test]
@@ -363,40 +368,20 @@ nockCall formula args = (OpReplace # ([R, L] # foldTerms args) # (OpQuote # form
 juvixCallingConventionTests :: [Test]
 juvixCallingConventionTests =
   [True, False]
-    <**> [ compilerTestM "stdlib add" (add (nockNatLiteral 1) (nockNatLiteral 2)) (eqNock [nock| 3 |]),
-           compilerTestM "stdlib dec" (dec (nockNatLiteral 1)) (eqNock [nock| 0 |]),
-           compilerTestM "stdlib mul" (mul (nockNatLiteral 2) (nockNatLiteral 3)) (eqNock [nock| 6 |]),
+    <**> [ compilerTestM "stdlib add" (callStdlib StdlibAdd [nockNatLiteral 1, nockNatLiteral 2]) (eqNock [nock| 3 |]),
+           compilerTestM "stdlib dec" (callStdlib StdlibDec [nockNatLiteral 1]) (eqNock [nock| 0 |]),
+           compilerTestM "stdlib mul" (callStdlib StdlibMul [nockNatLiteral 2, nockNatLiteral 3]) (eqNock [nock| 6 |]),
            compilerTestM "stdlib sub" (sub (nockNatLiteral 2) (nockNatLiteral 1)) (eqNock [nock| 1 |]),
            compilerTestM "stdlib div" (callStdlib StdlibDiv [nockNatLiteral 10, nockNatLiteral 3]) (eqNock [nock| 3 |]),
            compilerTestM "stdlib mod" (callStdlib StdlibMod [nockNatLiteral 3, nockNatLiteral 2]) (eqNock [nock| 1 |]),
            compilerTestM "stdlib le" (callStdlib StdlibLe [nockNatLiteral 3, nockNatLiteral 3]) (eqNock [nock| true |]),
            compilerTestM "stdlib lt" (callStdlib StdlibLt [nockNatLiteral 3, nockNatLiteral 3]) (eqNock [nock| false |]),
-           compilerTestM "stdlib pow2" (pow2 (nockNatLiteral 3)) (eqNock [nock| 8 |]),
-           compilerTestM "stdlib nested" (dec =<< (dec (nockNatLiteral 20))) (eqNock [nock| 18 |]),
-           compilerTestM "append rights - empty" (appendRights emptyPath (nockNatLiteral 3)) (eqNock (toNock [R, R, R])),
-           compilerTestM "append rights" (appendRights [L, L] (nockNatLiteral 3)) (eqNock (toNock [L, L, R, R, R])),
-           compilerTest "opAddress" ((OpQuote # (foldTerms (toNock @Natural <$> (5 :| [6, 1])))) >># opAddress' (OpQuote # [R, R])) (eqNock (toNock @Natural 1)),
-           compilerTest "foldTermsOrNil (empty)" (foldTermsOrNil []) (eqNock (nockNilTagged "expected-result")),
+           compilerTestM "stdlib pow2" (callStdlib StdlibPow2 [nockNatLiteral 3]) (eqNock [nock| 8 |]),
+           compilerTestM "stdlib nested" ((\x -> callStdlib StdlibDec [x]) =<< (callStdlib StdlibDec [nockNatLiteral 20])) (eqNock [nock| 18 |]),
+           compilerTest "foldTermsOrQuotedNil (empty)" (foldTermsOrQuotedNil []) (eqNock (nockNilTagged "expected-result")),
            let l :: NonEmpty Natural = 1 :| [2]
                l' :: NonEmpty (Term Natural) = nockNatLiteral <$> l
-            in compilerTest "foldTermsOrNil (non-empty)" (foldTermsOrNil (toList l')) (eqNock (foldTerms (toNock @Natural <$> l))),
-           let l :: Term Natural = OpQuote # foldTerms (toNock @Natural <$> (1 :| [2, 3]))
-            in compilerTest "replaceSubterm'" (replaceSubterm' l (OpQuote # toNock [R]) (OpQuote # (toNock @Natural 999))) (eqNock (toNock @Natural 1 # toNock @Natural 999)),
-           let lst :: [Term Natural] = toNock @Natural <$> [1, 2, 3]
-               len = nockIntegralLiteral (length lst)
-               l :: Term Natural = OpQuote # makeList lst
-            in compilerTestM "append" (append l len l) (eqNock (makeList (lst ++ lst))),
-           let l :: [Natural] = [1, 2]
-               r :: NonEmpty Natural = 3 :| [4]
-               res :: Term Natural = foldTerms (toNock <$> prependList l r)
-               lenL :: Term Natural = nockIntegralLiteral (length l)
-               lstL = OpQuote # makeList (map toNock l)
-               tupR = OpQuote # foldTerms (toNock <$> r)
-            in compilerTestM "appendToTuple (left non-empty, right non-empty)" (appendToTuple lstL lenL tupR) (eqNock res),
-           let r :: NonEmpty Natural = 3 :| [4]
-               res :: Term Natural = foldTerms (toNock <$> r)
-               tupR = OpQuote # foldTerms (toNock <$> r)
-            in compilerTestM "appendToTuple (left empty, right-nonempty)" (appendToTuple (OpQuote # nockNilTagged "test-appendtotuple") (nockNatLiteral 0) tupR) (eqNock res),
+            in compilerTest "foldTermsOrQuotedNil (non-empty)" (foldTermsOrQuotedNil (toList l')) (eqNock (foldTerms (toNock @Natural <$> l))),
            compilerTestM "stdlib cat" (callStdlib StdlibCatBytes [nockNatLiteral 2, nockNatLiteral 1]) (eqNock [nock| 258 |]),
            compilerTestM "fold bytes empty" (callStdlib StdlibFoldBytes [OpQuote # makeList []]) (eqNock [nock| 0 |]),
            compilerTestM "fold bytes [1, 0, 0] == 1" (callStdlib StdlibFoldBytes [OpQuote # makeList (toNock @Natural <$> [1, 0, 0])]) (eqNock [nock| 1 |]),
