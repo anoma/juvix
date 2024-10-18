@@ -71,13 +71,33 @@ instance PrettyCode NockOp where
   ppCode =
     return . annotate (AnnKind KNameFunction) . pretty
 
+instance PrettyCode AnomaFunction where
+  ppCode = \case
+    AnomaStdlibFunction f -> ppCode f
+    AnomaRmFunction f -> ppCode f
+
+instance PrettyCode AnomaValue where
+  ppCode = \case
+    AnomaRmValue v -> ppCode v
+
 instance PrettyCode StdlibFunction where
   ppCode = return . pretty
 
-instance (PrettyCode a, NockNatural a) => PrettyCode (StdlibCall a) where
+instance PrettyCode RmFunction where
+  ppCode = return . pretty
+
+instance PrettyCode RmValue where
+  ppCode = return . pretty
+
+instance PrettyCode AnomaLib where
+  ppCode = \case
+    AnomaLibFunction f -> ppCode f
+    AnomaLibValue v -> ppCode v
+
+instance (PrettyCode a, NockNatural a) => PrettyCode (AnomaLibCall a) where
   ppCode c = do
-    fun <- ppCode (c ^. stdlibCallFunction)
-    args <- ppCode (c ^. stdlibCallArgs)
+    fun <- ppCode (c ^. anomaLibCallRef)
+    args <- ppCode (c ^. anomaLibCallArgs)
     return (Str.stdlibTag <> fun <+> Str.argsTag <> args)
 
 instance PrettyCode Tag where
@@ -89,7 +109,7 @@ instance (PrettyCode a, NockNatural a) => PrettyCode (Cell a) where
     label <- runFail $ do
       failWhenM (asks (^. optIgnoreTags))
       failMaybe (c ^. cellTag) >>= ppCode
-    stdlibCall <- runFail $ do
+    anomaLibCall <- runFail $ do
       failWhenM (asks (^. optIgnoreHints))
       failMaybe (c ^. cellCall) >>= ppCode
     components <- case m of
@@ -98,7 +118,7 @@ instance (PrettyCode a, NockNatural a) => PrettyCode (Cell a) where
         r' <- ppCode (c ^. cellRight)
         return (l' <+> r')
       MinimizeDelimiters -> sep <$> mapM ppCode (unfoldCell c)
-    let inside = label <?+> stdlibCall <?+> components
+    let inside = label <?+> anomaLibCall <?+> components
     return (oneLineOrNextBrackets inside)
 
 unfoldCell :: Cell a -> NonEmpty (Term a)

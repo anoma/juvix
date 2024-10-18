@@ -16,6 +16,7 @@ module Juvix.Compiler.Nockma.Translation.FromTree
     nockNatLiteral,
     nockIntegralLiteral,
     callStdlib,
+    rmValue,
     foldTerms,
     pathToArg,
     makeList,
@@ -30,12 +31,11 @@ where
 
 import Data.ByteString qualified as BS
 import Data.HashMap.Strict qualified as HashMap
+import Juvix.Compiler.Nockma.AnomaLib
 import Juvix.Compiler.Nockma.Encoding
 import Juvix.Compiler.Nockma.Encoding.Ed25519 qualified as E
 import Juvix.Compiler.Nockma.Language.Path
 import Juvix.Compiler.Nockma.Pretty
-import Juvix.Compiler.Nockma.Stdlib
-import Juvix.Compiler.Nockma.StdlibFunction
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Tree.Data.InfoTable qualified as Tree
 import Juvix.Compiler.Tree.Language qualified as Tree
@@ -147,7 +147,7 @@ data CompilerFunction = CompilerFunction
 -- respectively. This is because the stack must have the structure of a Nock
 -- function, i.e [code args env]
 --
--- The StandardLibrary constructor must be last. Anoma will replace the tail of
+-- The AnomaLibrary constructor must be last. Anoma will replace the tail of
 -- the main function with the Anoma Resource Machine standard library when it
 -- calls it.
 data AnomaCallablePathId
@@ -156,7 +156,7 @@ data AnomaCallablePathId
   | ---
     ClosureRemainingArgsNum
   | FunctionsLibrary
-  | StandardLibrary
+  | AnomaLibrary
   deriving stock (Enum, Bounded, Eq, Show)
 
 indexStack :: Natural -> Path
@@ -773,9 +773,9 @@ compile = \case
       farity <- getFunctionArity fun
       args <- mapM compile _nodeAllocClosureArgs
       let funLib = opAddress "functionsLibrary" (base <> closurePath FunctionsLibrary)
-          stdLib = opAddress "standardLibrary" (base <> closurePath StandardLibrary)
+          anomaLibrary = opAddress "anomaLibrary" (base <> closurePath AnomaLibrary)
           closure =
-            opReplace "putStdLib" (closurePath StandardLibrary) stdLib
+            opReplace "putAnomaLib" (closurePath AnomaLibrary) anomaLibrary
               . opReplace "putFunLib" (closurePath FunctionsLibrary) funLib
               $ opAddress "goAllocClosure-getFunction" (base <> fpath)
           newArity = farity - fromIntegral (length args)
@@ -825,7 +825,7 @@ nockIntegralLiteral = (OpQuote #) . toNock @Natural . fromIntegral
 
 -- [call L [replace [RL [seq [@ R] a]] [@ (locStdlib <> fPath)]]] ?
 --
--- Calling convention for Anoma stdlib
+-- Calling convention for Anoma library
 --
 -- [push
 --   [seq [@ locStdlib] getF]     ::  Obtain the function f within the stdlib.
@@ -838,10 +838,11 @@ nockIntegralLiteral = (OpQuote #) . toNock @Natural . fromIntegral
 --      @ L]                      ::  this whole replace is editing what's at axis L, i.e. what was pushed
 --   ]
 -- ]
-callStdlib :: (Member (Reader CompilerCtx) r) => StdlibFunction -> [Term Natural] -> Sem r (Term Natural)
-callStdlib fun args = do
-  stdpath <- stackPath StandardLibrary
-  let fPath = stdlibPath fun
+callAnomaLib :: (Member (Reader CompilerCtx) r) => AnomaFunction -> [Term Natural] -> Sem r (Term Natural)
+callAnomaLib fun args = do
+  stdpath <- stackPath AnomaLibrary
+  let ref = AnomaLibFunction fun
+      fPath = anomaLibPath ref
       getFunCode = opAddress "callStdlibFunCode" stdpath >># fPath
   argsPath <- stackPath ArgsTuple
   let adjustArgs = case nonEmpty args of
@@ -849,12 +850,35 @@ callStdlib fun args = do
         Nothing -> opAddress "adjustArgsNothing" [L]
       callFn = opCall "callStdlib" (closurePath FunCode) adjustArgs
       meta =
-        StdlibCall
-          { _stdlibCallArgs = foldTermsOrQuotedNil args,
-            _stdlibCallFunction = fun
+        AnomaLibCall
+          { _anomaLibCallArgs = foldTermsOrQuotedNil args,
+            _anomaLibCallRef = ref
           }
       callCell = set cellCall (Just meta) (OpPush #. (getFunCode # callFn))
    in return $ TermCell callCell
+
+-- | Convenience function to call an Anoma stdlib function
+callStdlib :: (Member (Reader CompilerCtx) r) => StdlibFunction -> [Term Natural] -> Sem r (Term Natural)
+callStdlib f = callAnomaLib (AnomaStdlibFunction f)
+
+-- | Get a value from the Anoma library
+anomaLibValue :: (Member (Reader CompilerCtx) r) => AnomaValue -> Sem r (Term Natural)
+anomaLibValue v = do
+  stdpath <- stackPath AnomaLibrary
+  let ref = AnomaLibValue v
+      vPath = anomaLibPath ref
+      value = opAddress "rmValueValue" stdpath >>#. vPath
+      meta =
+        AnomaLibCall
+          { _anomaLibCallArgs = OpQuote # nockNilTagged "anomaLibCallValueArgs",
+            _anomaLibCallRef = ref
+          }
+      callCell = set cellCall (Just meta) value
+  return $ TermCell callCell
+
+-- | A Convenience function to get an Anoma resource machine value
+rmValue :: (Member (Reader CompilerCtx) r) => RmValue -> Sem r (Term Natural)
+rmValue v = anomaLibValue (AnomaRmValue v)
 
 constUnit :: Term Natural
 constUnit = constVoid
@@ -983,7 +1007,7 @@ runCompilerWith _opts constrs moduleFuns mainFun =
                     ArgsTuple -> ("argsTuple-" <> funName) @ argsTuplePlaceholder "libraryFunction" funArity
                     ClosureRemainingArgsNum -> ("closureRemainingArgsNum-" <> funName) @ nockNilHere
                     FunctionsLibrary -> ("functionsLibrary-" <> funName) @ functionsLibraryPlaceHolder
-                    StandardLibrary -> ("stdlib-" <> funName) @ stdlibPlaceHolder
+                    AnomaLibrary -> ("stdlib-" <> funName) @ anomaLibPlaceholder
           )
 
     -- The result is not quoted and cannot be evaluated directly.
@@ -995,7 +1019,7 @@ runCompilerWith _opts constrs moduleFuns mainFun =
             ArgsTuple -> argsTuplePlaceholder "mainFunction" (mainFun ^. compilerFunctionArity)
             ClosureRemainingArgsNum -> nockNilHere
             FunctionsLibrary -> functionsLibraryPlaceHolder
-            StandardLibrary -> stdlib
+            AnomaLibrary -> anomaLib
 
     functionInfos :: HashMap FunctionId FunctionInfo
     functionInfos = hashMap (run (runStreamOfNaturals (toList <$> userFunctions)))
@@ -1012,8 +1036,8 @@ runCompilerWith _opts constrs moduleFuns mainFun =
             }
         )
 
-stdlibPlaceHolder :: Term Natural
-stdlibPlaceHolder =
+anomaLibPlaceholder :: Term Natural
+anomaLibPlaceholder =
   TermAtom
     Atom
       { _atomInfo =
@@ -1082,7 +1106,7 @@ curryClosure f args newArity = do
     -- The functions library and the standard library are always taken from the
     -- closure `f`. The environment of `f` is used when evaluating the call.
     FunctionsLibrary -> OpQuote # functionsLibraryPlaceHolder
-    StandardLibrary -> OpQuote # stdlibPlaceHolder
+    AnomaLibrary -> OpQuote # anomaLibPlaceholder
 
 replaceSubject :: (Member (Reader CompilerCtx) r) => (AnomaCallablePathId -> Maybe (Term Natural)) -> Sem r (Term Natural)
 replaceSubject = replaceSubject' "replaceSubject"

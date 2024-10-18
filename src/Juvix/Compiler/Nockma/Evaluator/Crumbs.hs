@@ -5,7 +5,7 @@ import Juvix.Compiler.Nockma.Pretty.Base
 import Juvix.Prelude hiding (Atom)
 
 data EvalCrumb
-  = EvalCrumbStdlibCallArgs CrumbStdlibCallArgs
+  = EvalCrumbAnomaLibCallArgs CrumbAnomaLibCallArgs
   | EvalCrumbOperator CrumbOperator
   | EvalCrumbAutoCons CrumbAutoCons
 
@@ -16,8 +16,8 @@ newtype EvalCtx = EvalCtx
 topEvalCtx :: Sem (Reader EvalCtx ': r) a -> Sem r a
 topEvalCtx = runReader (EvalCtx [])
 
-newtype CrumbStdlibCallArgs = CrumbStdlibCallArgs
-  { _crumbStdlibCallArgsFunction :: StdlibFunction
+newtype CrumbAnomaLibCallArgs = CrumbAnomaLibCallArgs
+  { _crumbAnomaLibCallArgsFunction :: AnomaLib
   }
 
 newtype CrumbTag = CrumbTag {_crumbTag :: Text}
@@ -69,9 +69,9 @@ instance PrettyCode CrumbTag where
       . annotate AnnImportant
       $ pretty a
 
-instance PrettyCode CrumbStdlibCallArgs where
-  ppCode CrumbStdlibCallArgs {..} = do
-    op <- annotate AnnImportant <$> ppCode _crumbStdlibCallArgsFunction
+instance PrettyCode CrumbAnomaLibCallArgs where
+  ppCode CrumbAnomaLibCallArgs {..} = do
+    op <- annotate AnnImportant <$> ppCode _crumbAnomaLibCallArgsFunction
     return ("Evaluating address to arguments to stdlib call for" <+> op)
 
 ppCtx :: (Member (Reader Options) r) => EvalCtx -> Sem r (Doc Ann)
@@ -105,7 +105,7 @@ instance PrettyCode CrumbAutoCons where
 instance PrettyCode EvalCrumb where
   ppCode = \case
     EvalCrumbAutoCons a -> ppCode a
-    EvalCrumbStdlibCallArgs a -> ppCode a
+    EvalCrumbAnomaLibCallArgs a -> ppCode a
     EvalCrumbOperator a -> ppCode a
 
 instance PrettyCode EvalCtx where
