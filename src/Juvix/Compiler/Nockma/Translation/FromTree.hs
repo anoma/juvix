@@ -1087,6 +1087,8 @@ curryClosure f args newArity = do
     FunCode -> (OpQuote # OpCall) # (OpQuote # closurePath FunCode) # (OpQuote # OpReplace) # ((OpQuote # closurePath ArgsTuple) # args') # (OpQuote # OpQuote) # f
     ArgsTuple -> OpQuote # nockNilTagged "argsTuple" -- We assume the arguments tuple is never accessed before being replaced by the caller.
     ClosureRemainingArgsNum -> newArity
+    -- The functions library and the standard library are always taken from the
+    -- closure `f`. The environment of `f` is used when evaluating the call.
     FunctionsLibrary -> OpQuote # functionsLibraryPlaceHolder
     StandardLibrary -> OpQuote # stdlibPlaceHolder
 
