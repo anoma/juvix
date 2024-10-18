@@ -1,7 +1,7 @@
 module Juvix.Compiler.Nockma.Language
   ( module Juvix.Compiler.Nockma.Language,
     module Juvix.Compiler.Core.Language.Base,
-    module Juvix.Compiler.Nockma.StdlibFunction.Base,
+    module Juvix.Compiler.Nockma.AnomaLib.Base,
     module Juvix.Compiler.Nockma.Language.Path,
   )
 where
@@ -9,8 +9,8 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import GHC.Base (Type)
 import Juvix.Compiler.Core.Language.Base (Symbol)
+import Juvix.Compiler.Nockma.AnomaLib.Base
 import Juvix.Compiler.Nockma.Language.Path
-import Juvix.Compiler.Nockma.StdlibFunction.Base
 import Juvix.Prelude hiding (Atom, Path)
 import Juvix.Prelude.Pretty
 
@@ -53,15 +53,15 @@ instance (Hashable a) => Hashable (Term a)
 
 instance (NFData a) => NFData (Term a)
 
-data StdlibCall a = StdlibCall
-  { _stdlibCallFunction :: StdlibFunction,
-    _stdlibCallArgs :: Term a
+data AnomaLibCall a = AnomaLibCall
+  { _anomaLibCallRef :: AnomaLib,
+    _anomaLibCallArgs :: Term a
   }
   deriving stock (Show, Eq, Lift, Generic)
 
-instance (Hashable a) => Hashable (StdlibCall a)
+instance (Hashable a) => Hashable (AnomaLibCall a)
 
-instance (NFData a) => NFData (StdlibCall a)
+instance (NFData a) => NFData (AnomaLibCall a)
 
 newtype Tag = Tag
   { _unTag :: Text
@@ -75,7 +75,7 @@ instance NFData Tag
 data CellInfo a = CellInfo
   { _cellInfoLoc :: Irrelevant (Maybe Interval),
     _cellInfoTag :: Maybe Tag,
-    _cellInfoCall :: Maybe (StdlibCall a)
+    _cellInfoCall :: Maybe (AnomaLibCall a)
   }
   deriving stock (Show, Eq, Lift, Generic)
 
@@ -176,12 +176,36 @@ textToStdlibFunctionMap =
 parseStdlibFunction :: Text -> Maybe StdlibFunction
 parseStdlibFunction t = textToStdlibFunctionMap ^. at t
 
+textToRmFunctionMap :: HashMap Text RmFunction
+textToRmFunctionMap =
+  hashMap
+    [ (prettyText f, f) | f <- allElements
+    ]
+
+parseRmFunction :: Text -> Maybe RmFunction
+parseRmFunction t = textToRmFunctionMap ^. at t
+
+textToRmValueMap :: HashMap Text RmValue
+textToRmValueMap =
+  hashMap
+    [ (prettyText f, f) | f <- allElements
+    ]
+
+parseRmValue :: Text -> Maybe RmValue
+parseRmValue t = textToRmValueMap ^. at t
+
+parseAnomaLib :: Text -> Maybe AnomaLib
+parseAnomaLib t =
+  AnomaLibFunction . AnomaStdlibFunction <$> parseStdlibFunction t
+    <|> AnomaLibFunction . AnomaRmFunction <$> parseRmFunction t
+    <|> AnomaLibValue . AnomaRmValue <$> parseRmValue t
+
 atomOps :: HashMap Text NockOp
 atomOps = HashMap.fromList [(prettyText op, op) | op <- allElements]
 
-data StdlibCallCell a = StdlibCallCell
-  { _stdlibCallCell :: StdlibCall a,
-    _stdlibCallRaw :: OperatorCell a
+data AnomaLibCallCell a = AnomaLibCallCell
+  { _anomaLibCallCell :: AnomaLibCall a,
+    _anomaLibCallRaw :: OperatorCell a
   }
 
 data OperatorCell a = OperatorCell
@@ -198,7 +222,7 @@ data AutoConsCell a = AutoConsCell
 data ParsedCell a
   = ParsedOperatorCell (OperatorCell a)
   | ParsedAutoConsCell (AutoConsCell a)
-  | ParsedStdlibCallCell (StdlibCallCell a)
+  | ParsedAnomaLibCallCell (AnomaLibCallCell a)
 
 -- | appends n R
 encodedPathAppendRightN :: Natural -> EncodedPath -> EncodedPath
@@ -210,8 +234,8 @@ encodedPathAppendRightN n (EncodedPath p) = EncodedPath (f p)
 
 makeLenses ''Cell
 makeLenses ''Tag
-makeLenses ''StdlibCallCell
-makeLenses ''StdlibCall
+makeLenses ''AnomaLibCallCell
+makeLenses ''AnomaLibCall
 makeLenses ''Atom
 makeLenses ''OperatorCell
 makeLenses ''AutoConsCell
@@ -243,7 +267,7 @@ cellLoc = cellInfo . cellInfoLoc . unIrrelevant
 cellTag :: Lens' (Cell a) (Maybe Tag)
 cellTag = cellInfo . cellInfoTag
 
-cellCall :: Lens' (Cell a) (Maybe (StdlibCall a))
+cellCall :: Lens' (Cell a) (Maybe (AnomaLibCall a))
 cellCall = cellInfo . cellInfoCall
 
 atomTag :: Lens' (Atom a) (Maybe Tag)

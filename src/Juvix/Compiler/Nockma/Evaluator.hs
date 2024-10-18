@@ -104,18 +104,18 @@ parseCell ::
   Cell a ->
   Sem r (ParsedCell a)
 parseCell c = case c ^. cellLeft of
-  TermAtom a -> operatorOrStdlibCall a (c ^. cellRight) (c ^. cellCall)
+  TermAtom a -> operatorOrAnomaLibCall a (c ^. cellRight) (c ^. cellCall)
   TermCell l -> return (ParsedAutoConsCell (AutoConsCell l (c ^. cellRight)))
   where
-    operatorOrStdlibCall :: Atom a -> Term a -> Maybe (StdlibCall a) -> Sem r (ParsedCell a)
-    operatorOrStdlibCall a t mcall = do
+    operatorOrAnomaLibCall :: Atom a -> Term a -> Maybe (AnomaLibCall a) -> Sem r (ParsedCell a)
+    operatorOrAnomaLibCall a t mcall = do
       opCell <- parseOperatorCell a t
       return $ case mcall of
         Nothing -> ParsedOperatorCell opCell
-        Just call -> ParsedStdlibCallCell (parseStdlibCall opCell call)
+        Just call -> ParsedAnomaLibCallCell (parseAnomaLibCall opCell call)
 
-    parseStdlibCall :: OperatorCell a -> StdlibCall a -> StdlibCallCell a
-    parseStdlibCall op call = StdlibCallCell call op
+    parseAnomaLibCall :: OperatorCell a -> AnomaLibCall a -> AnomaLibCallCell a
+    parseAnomaLibCall op call = AnomaLibCallCell call op
 
     parseOperatorCell :: Atom a -> Term a -> Sem r (OperatorCell a)
     parseOperatorCell a t = do
@@ -195,22 +195,22 @@ evalProfile inistack initerm =
         parseCell c >>= \case
           ParsedAutoConsCell a -> goAutoConsCell a
           ParsedOperatorCell o -> goOperatorCell o
-          ParsedStdlibCallCell o -> do
-            intercept' <- asks (^. evalInterceptStdlibCalls)
-            let nonInterceptCall = goOperatorCell (o ^. stdlibCallRaw)
-            -- Pass the raw call to goStdlibCall so that stdlib intercepts
+          ParsedAnomaLibCallCell o -> do
+            intercept' <- asks (^. evalInterceptAnomaLibCalls)
+            let nonInterceptCall = goOperatorCell (o ^. anomaLibCallRaw)
+            -- Pass the raw call to goAnomaLibCall so that stdlib intercepts
             -- can choose to use the raw call instead.
             if
-                | intercept' -> goStdlibCall nonInterceptCall (o ^. stdlibCallCell)
+                | intercept' -> goAnomaLibCall nonInterceptCall (o ^. anomaLibCallCell)
                 | otherwise -> nonInterceptCall
       where
         loc :: Maybe Interval
         loc = term ^. termLoc
 
-        goStdlibCall :: Sem r (Term a) -> StdlibCall a -> Sem r (Term a)
-        goStdlibCall nonInterceptCall StdlibCall {..} = do
-          let w = EvalCrumbStdlibCallArgs (CrumbStdlibCallArgs _stdlibCallFunction)
-          args' <- withCrumb w (recEval stack _stdlibCallArgs)
+        goAnomaLibCall :: Sem r (Term a) -> AnomaLibCall a -> Sem r (Term a)
+        goAnomaLibCall nonInterceptCall AnomaLibCall {..} = do
+          let w = EvalCrumbAnomaLibCallArgs (CrumbAnomaLibCallArgs _anomaLibCallRef)
+          args' <- withCrumb w (recEval stack _anomaLibCallArgs)
           let binArith :: (a -> a -> a) -> Sem r (Term a)
               binArith f = case args' of
                 TCell (TAtom l) (TAtom r) -> return (TAtom (f l r))
@@ -226,51 +226,55 @@ evalProfile inistack initerm =
                 TCell (TAtom l) (TAtom r) -> return (TermAtom (nockBool (f l r)))
                 _ -> error "expected a cell with two atoms"
 
-          case _stdlibCallFunction of
-            StdlibDec -> unaArith pred
-            StdlibAdd -> binArith (+)
-            StdlibMul -> binArith (*)
-            StdlibSub -> binArith (-)
-            StdlibDiv -> binArith div
-            StdlibMod -> binArith mod
-            StdlibLt -> binCmp (<)
-            StdlibLe -> binCmp (<=)
-            StdlibPow2 -> unaArith (2 ^)
-            StdlibEncode -> TermAtom <$> Encoding.jam args'
-            StdlibDecode -> case args' of
-              TermAtom a -> do
-                r <- Encoding.cueEither a
-                either (throwDecodingFailed args') return r
-              TermCell {} -> throwDecodingFailed args' DecodingErrorExpectedAtom
-            StdlibVerifyDetached -> case args' of
-              TCell (TermAtom sig) (TCell (TermAtom message) (TermAtom pubKey)) -> goVerifyDetached sig message pubKey
-              _ -> error "expected a term of the form [signature (atom) message (encoded term) public_key (atom)]"
-            StdlibSign -> case args' of
-              TCell (TermAtom message) (TermAtom privKey) -> goSign message privKey
-              _ -> error "expected a term of the form [message (encoded term) private_key (atom)]"
-            StdlibSignDetached -> case args' of
-              TCell (TermAtom message) (TermAtom privKey) -> goSignDetached message privKey
-              _ -> error "expected a term of the form [message (encoded term) private_key (atom)]"
-            StdlibVerify -> case args' of
-              TCell (TermAtom signedMessage) (TermAtom pubKey) -> goVerify signedMessage pubKey
-              _ -> error "expected a term of the form [signedMessage (atom) public_key (atom)]"
-            StdlibCatBytes -> case args' of
-              TCell (TermAtom arg1) (TermAtom arg2) -> goCat arg1 arg2
-              _ -> error "expected a term with two atoms"
-            StdlibFoldBytes -> TermAtom <$> goFoldBytes args'
-            StdlibLengthList -> do
-              let xs = checkTermToList args'
-              let len = integerToNatural (toInteger (length xs))
-              TermAtom . mkEmptyAtom <$> fromNatural len
-            StdlibLengthBytes -> case args' of
-              TermAtom a -> TermAtom <$> goLengthBytes a
-              _ -> error "expected an atom"
-            -- Use the raw nock code for curry. The nock stdlib curry function is
-            -- small. There's no benefit in implementing it separately in the evaluator.
-            StdlibCurry -> nonInterceptCall
-            StdlibSha256 -> case args' of
-              TermAtom a -> TermAtom <$> goSha256 a
-              _ -> error "StdlibSha256 expects to be called with an atom"
+          case _anomaLibCallRef of
+            AnomaLibValue (AnomaRmValue v) -> case v of
+              RmZeroDelta -> nonInterceptCall
+            AnomaLibFunction (AnomaRmFunction _) -> error "Resource Machine client library functions are not supported"
+            AnomaLibFunction (AnomaStdlibFunction f) -> case f of
+              StdlibDec -> unaArith pred
+              StdlibAdd -> binArith (+)
+              StdlibMul -> binArith (*)
+              StdlibSub -> binArith (-)
+              StdlibDiv -> binArith div
+              StdlibMod -> binArith mod
+              StdlibLt -> binCmp (<)
+              StdlibLe -> binCmp (<=)
+              StdlibPow2 -> unaArith (2 ^)
+              StdlibEncode -> TermAtom <$> Encoding.jam args'
+              StdlibDecode -> case args' of
+                TermAtom a -> do
+                  r <- Encoding.cueEither a
+                  either (throwDecodingFailed args') return r
+                TermCell {} -> throwDecodingFailed args' DecodingErrorExpectedAtom
+              StdlibVerifyDetached -> case args' of
+                TCell (TermAtom sig) (TCell (TermAtom message) (TermAtom pubKey)) -> goVerifyDetached sig message pubKey
+                _ -> error "expected a term of the form [signature (atom) message (encoded term) public_key (atom)]"
+              StdlibSign -> case args' of
+                TCell (TermAtom message) (TermAtom privKey) -> goSign message privKey
+                _ -> error "expected a term of the form [message (encoded term) private_key (atom)]"
+              StdlibSignDetached -> case args' of
+                TCell (TermAtom message) (TermAtom privKey) -> goSignDetached message privKey
+                _ -> error "expected a term of the form [message (encoded term) private_key (atom)]"
+              StdlibVerify -> case args' of
+                TCell (TermAtom signedMessage) (TermAtom pubKey) -> goVerify signedMessage pubKey
+                _ -> error "expected a term of the form [signedMessage (atom) public_key (atom)]"
+              StdlibCatBytes -> case args' of
+                TCell (TermAtom arg1) (TermAtom arg2) -> goCat arg1 arg2
+                _ -> error "expected a term with two atoms"
+              StdlibFoldBytes -> TermAtom <$> goFoldBytes args'
+              StdlibLengthList -> do
+                let xs = checkTermToList args'
+                let len = integerToNatural (toInteger (length xs))
+                TermAtom . mkEmptyAtom <$> fromNatural len
+              StdlibLengthBytes -> case args' of
+                TermAtom a -> TermAtom <$> goLengthBytes a
+                _ -> error "expected an atom"
+              -- Use the raw nock code for curry. The nock stdlib curry function is
+              -- small. There's no benefit in implementing it separately in the evaluator.
+              StdlibCurry -> nonInterceptCall
+              StdlibSha256 -> case args' of
+                TermAtom a -> TermAtom <$> goSha256 a
+                _ -> error "StdlibSha256 expects to be called with an atom"
           where
             goCat :: Atom a -> Atom a -> Sem r (Term a)
             goCat arg1 arg2 = TermAtom . setAtomHint AtomHintString <$> atomConcatenateBytes arg1 arg2

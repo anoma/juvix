@@ -1,20 +1,20 @@
 module Benchmark.Nockma.Encoding where
 
+import Juvix.Compiler.Nockma.AnomaLib (anomaLib)
 import Juvix.Compiler.Nockma.Encoding
 import Juvix.Compiler.Nockma.Language
-import Juvix.Compiler.Nockma.Stdlib (stdlib)
 import Juvix.Prelude.Base
 import Test.Tasty.Bench
 
 jamStdlib :: Natural
-jamStdlib = runJam stdlib
+jamStdlib = runJam anomaLib
 
 bm :: Benchmark
 bm =
   bgroup
     "Jam"
-    [ bench "jam stdlib" $ nf runJam stdlib,
-      bench "cue (jam stdlib)" $ nf runCue jamStdlib
+    [ bench "jam anomaLib" $ nf runJam anomaLib,
+      bench "cue (jam anomaLib)" $ nf runCue jamStdlib
     ]
 
 runJam :: Term Natural -> Natural
