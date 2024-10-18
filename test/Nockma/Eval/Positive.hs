@@ -288,6 +288,11 @@ anomaCallingConventionTests =
            anomaTestM "(curry and true) true == true" (applyFun <$> stdlibCurry (OpQuote # nockAndFun) nockTrueLiteral) [nockTrueLiteral] (eqNock [nock| true |]),
            anomaTestM "(curry and false) true == false" (applyFun <$> stdlibCurry (OpQuote # nockAndFun) nockFalseLiteral) [nockTrueLiteral] (eqNock [nock| false |]),
            anomaTestM "(curry and false) false == false" (applyFun <$> stdlibCurry (OpQuote # nockAndFun) nockFalseLiteral) [nockFalseLiteral] (eqNock [nock| false |]),
+           --- test curry with and and non-empty stack
+           anomaTestM "((push 0 (curry and)) true) false == false" ((applyFun . (\x -> OpPush # nockNatLiteral 0 # x)) <$> stdlibCurry (OpQuote # nockAndFun) nockTrueLiteral) [nockFalseLiteral] (eqNock [nock| false |]),
+           anomaTestM "((push 0 (curry and)) true) true == true" ((applyFun . (\x -> OpPush # nockNatLiteral 0 # x)) <$> stdlibCurry (OpQuote # nockAndFun) nockTrueLiteral) [nockTrueLiteral] (eqNock [nock| true |]),
+           anomaTestM "((push 0 (curry and)) false) true == false" ((applyFun . (\x -> OpPush # nockNatLiteral 0 # x)) <$> stdlibCurry (OpQuote # nockAndFun) nockFalseLiteral) [nockTrueLiteral] (eqNock [nock| false |]),
+           anomaTestM "((push 0 (curry and)) false) false == false" ((applyFun . (\x -> OpPush # nockNatLiteral 0 # x)) <$> stdlibCurry (OpQuote # nockAndFun) nockFalseLiteral) [nockFalseLiteral] (eqNock [nock| false |]),
            --- sanity check nockAnd3
            anomaTestM "(and3 true false true) == false" (return nockAnd3) [nockTrueLiteral, nockFalseLiteral, nockTrueLiteral] (eqNock [nock| false |]),
            anomaTestM "(and3 true true false) == false" (return nockAnd3) [nockTrueLiteral, nockTrueLiteral, nockFalseLiteral] (eqNock [nock| false |]),

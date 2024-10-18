@@ -832,6 +832,8 @@ extendClosure Tree.NodeExtendClosure {..} = do
       FunctionsLibrary -> OpQuote # nockNilTagged "goAllocClosure-FunctionsLibrary"
       StandardLibrary -> OpQuote # nockNilTagged "goAllocClosure-StandardLibrary"
 
+-- [call L [replace [RL [seq [@ R] a]] [@ (locStdlib <> fPath)]]] ?
+--
 -- Calling convention for Anoma stdlib
 --
 -- [push
@@ -1293,4 +1295,12 @@ intToUInt8 i = callStdlib StdlibMod [i, nockIntegralLiteral @Natural (2 ^ uint8S
     uint8Size = 8
 
 stdlibCurry :: (Member (Reader CompilerCtx) r) => Term Natural -> Term Natural -> Sem r (Term Natural)
-stdlibCurry f arg = callStdlib StdlibCurry [f, arg]
+stdlibCurry = myCurry
+
+myCurry :: (Member (Reader CompilerCtx) r) => Term Natural -> Term Natural -> Sem r (Term Natural)
+myCurry f arg = do
+  let args' = ((OpQuote # OpQuote) # arg) # OpQuote # OpAddress # closurePath ArgsTuple
+  replaceSubject' "curry" $ \case
+    FunCode -> Just $ (OpQuote # OpCall) # (OpQuote # closurePath FunCode) # (OpQuote # OpReplace) # ((OpQuote # closurePath ArgsTuple) # args') # (OpQuote # OpQuote) # f
+    ArgsTuple -> Just $ f >># opAddress "curry-args" (closurePath ArgsTuple)
+    _ -> Nothing
