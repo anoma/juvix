@@ -10,6 +10,7 @@ import Juvix.Data.Keyword.All
   ( delimSemicolon,
     kwAnomaDecode,
     kwAnomaEncode,
+    kwAnomaSha256,
     kwAnomaSign,
     kwAnomaSignDetached,
     kwAnomaVerifyDetached,

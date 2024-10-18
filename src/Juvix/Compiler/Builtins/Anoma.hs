@@ -107,3 +107,13 @@ checkAnomaByteArrayFromAnomaContents f = do
   unless
     (ftype == (nat_ --> nat_ --> byteArray))
     $ builtinsErrorText l "fromAnomaContents must be of type Nat -> Nat -> ByteArray"
+
+checkAnomaSha256 :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => AxiomDef -> Sem r ()
+checkAnomaSha256 f = do
+  let ftype = f ^. axiomType
+      l = getLoc f
+  byteArray <- getBuiltinNameScoper l BuiltinByteArray
+  nat_ <- getBuiltinNameScoper l BuiltinNat
+  unless
+    (ftype == (nat_ --> byteArray))
+    $ builtinsErrorText l "anomaSha256 must be of type Nat -> ByteArray"

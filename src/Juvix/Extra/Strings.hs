@@ -389,6 +389,9 @@ anomaByteArrayToAnomaContents = "anoma-bytearray-to-anoma-contents"
 anomaByteArrayFromAnomaContents :: (IsString s) => s
 anomaByteArrayFromAnomaContents = "anoma-bytearray-from-anoma-contents"
 
+anomaSha256 :: (IsString s) => s
+anomaSha256 = "anoma-sha256"
+
 builtinSeq :: (IsString s) => s
 builtinSeq = "seq"
 

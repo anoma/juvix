@@ -185,6 +185,7 @@ isDebugOp = \case
       OpFail -> True
       OpSeq -> True
       OpAssert -> True
+      OpAnomaSha256 -> False
       OpAnomaByteArrayFromAnomaContents -> False
       OpAnomaByteArrayToAnomaContents -> False
       OpAnomaDecode -> False
@@ -480,6 +481,7 @@ builtinOpArgTypes = \case
   OpAnomaVerifyWithMessage -> [mkDynamic', mkDynamic']
   OpAnomaByteArrayToAnomaContents -> [mkDynamic']
   OpAnomaByteArrayFromAnomaContents -> [mkTypeInteger', mkTypeInteger']
+  OpAnomaSha256 -> [mkTypeInteger']
   OpPoseidonHash -> [mkDynamic']
   OpEc -> [mkDynamic', mkTypeField', mkDynamic']
   OpRandomEcPoint -> []

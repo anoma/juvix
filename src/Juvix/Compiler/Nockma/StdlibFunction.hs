@@ -32,6 +32,8 @@ stdlibPath = \case
   StdlibVerify -> [nock| [9 4 0 7] |]
   StdlibLengthList -> [nock| [9 1.406 0 127] |]
   StdlibCurry -> [nock| [9 4 0 127] |]
+  -- sha256 is called shax in hoon
+  StdlibSha256 -> [nock| [9 22 0 3] |]
   -- Obtained from the urbit dojo using:
   --
   -- =>  anoma  !=(~(met block 3))

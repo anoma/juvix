@@ -109,6 +109,7 @@ fromCore fsize tab =
         BuiltinAnomaVerifyWithMessage -> False
         BuiltinAnomaByteArrayToAnomaContents -> False
         BuiltinAnomaByteArrayFromAnomaContents -> False
+        BuiltinAnomaSha256 -> False
         BuiltinPoseidon -> False
         BuiltinEcOp -> False
         BuiltinRandomEcPoint -> False

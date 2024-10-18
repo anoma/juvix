@@ -227,6 +227,7 @@ data BuiltinAxiom
   | BuiltinAnomaVerifyWithMessage
   | BuiltinAnomaByteArrayToAnomaContents
   | BuiltinAnomaByteArrayFromAnomaContents
+  | BuiltinAnomaSha256
   | BuiltinPoseidon
   | BuiltinEcOp
   | BuiltinRandomEcPoint
@@ -273,6 +274,7 @@ instance HasNameKind BuiltinAxiom where
     BuiltinAnomaVerifyWithMessage -> KNameFunction
     BuiltinAnomaByteArrayToAnomaContents -> KNameFunction
     BuiltinAnomaByteArrayFromAnomaContents -> KNameFunction
+    BuiltinAnomaSha256 -> KNameFunction
     BuiltinPoseidon -> KNameFunction
     BuiltinEcOp -> KNameFunction
     BuiltinRandomEcPoint -> KNameFunction
@@ -326,6 +328,7 @@ instance Pretty BuiltinAxiom where
     BuiltinAnomaVerifyWithMessage -> Str.anomaVerifyWithMessage
     BuiltinAnomaByteArrayToAnomaContents -> Str.anomaByteArrayToAnomaContents
     BuiltinAnomaByteArrayFromAnomaContents -> Str.anomaByteArrayFromAnomaContents
+    BuiltinAnomaSha256 -> Str.anomaSha256
     BuiltinPoseidon -> Str.cairoPoseidon
     BuiltinEcOp -> Str.cairoEcOp
     BuiltinRandomEcPoint -> Str.cairoRandomEcPoint

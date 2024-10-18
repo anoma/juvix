@@ -14,6 +14,7 @@ import Juvix.Data.Keyword.All
     kwAnomaDecode,
     kwAnomaEncode,
     kwAnomaGet,
+    kwAnomaSha256,
     kwAnomaSign,
     kwAnomaSignDetached,
     kwAnomaVerifyDetached,
