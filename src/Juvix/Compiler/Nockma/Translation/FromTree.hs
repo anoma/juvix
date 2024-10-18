@@ -787,7 +787,14 @@ compile = \case
       curryClosure closure args (nockNatLiteral newArity)
 
     goExtendClosure :: Tree.NodeExtendClosure -> Sem r (Term Natural)
-    goExtendClosure = extendClosure
+    goExtendClosure Tree.NodeExtendClosure {..} = do
+      closureFun <- compile _nodeExtendClosureFun
+      withTemp closureFun $ \ref -> do
+        args <- mapM compile _nodeExtendClosureArgs
+        closure <- addressTempRef ref
+        let remainingArgsNum = getClosureField ClosureRemainingArgsNum closure
+        newArity <- sub remainingArgsNum (nockIntegralLiteral (length _nodeExtendClosureArgs))
+        curryClosure closure (toList args) newArity
 
     goCall :: Tree.NodeCall -> Sem r (Term Natural)
     goCall Tree.NodeCall {..} =
@@ -819,19 +826,6 @@ nockNatLiteral = nockIntegralLiteral
 
 nockIntegralLiteral :: (Integral a) => a -> Term Natural
 nockIntegralLiteral = (OpQuote #) . toNock @Natural . fromIntegral
-
-extendClosure ::
-  (Members '[Reader FunctionCtx, Reader CompilerCtx] r) =>
-  Tree.NodeExtendClosure ->
-  Sem r (Term Natural)
-extendClosure Tree.NodeExtendClosure {..} = do
-  closureFun <- compile _nodeExtendClosureFun
-  withTemp closureFun $ \ref -> do
-    args <- mapM compile _nodeExtendClosureArgs
-    closure <- addressTempRef ref
-    let remainingArgsNum = getClosureField ClosureRemainingArgsNum closure
-    newArity <- sub remainingArgsNum (nockIntegralLiteral (length _nodeExtendClosureArgs))
-    curryClosure closure (toList args) newArity
 
 -- [call L [replace [RL [seq [@ R] a]] [@ (locStdlib <> fPath)]]] ?
 --
