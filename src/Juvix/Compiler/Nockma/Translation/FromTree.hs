@@ -12,11 +12,7 @@ module Juvix.Compiler.Nockma.Translation.FromTree
     FunctionId (..),
     closurePath,
     foldTermsOrQuotedNil,
-    add,
     sub,
-    dec,
-    mul,
-    pow2,
     nockNatLiteral,
     nockIntegralLiteral,
     callStdlib,
@@ -944,7 +940,9 @@ runCompilerWith _opts constrs moduleFuns mainFun =
     libFuns = moduleFuns ++ (builtinFunction <$> allElements)
 
     -- The number of "extra" functions at the front of the functions library
-    -- list. Currently, the only such function is anomaGet.
+    -- list which are not defined by the user. Currently, the only such function
+    -- is anomaGet (the `main` function and the functions from `libFuns` are
+    -- defined by the user).
     libFunShift :: Natural
     libFunShift = 1
 
@@ -1267,20 +1265,8 @@ getConstructorMemRep tag = (^. constructorInfoMemRep) <$> getConstructorInfo tag
 crash :: Term Natural
 crash = ("crash" @ OpAddress # OpAddress # OpAddress)
 
-mul :: (Member (Reader CompilerCtx) r) => Term Natural -> Term Natural -> Sem r (Term Natural)
-mul a b = callStdlib StdlibMul [a, b]
-
-pow2 :: (Member (Reader CompilerCtx) r) => Term Natural -> Sem r (Term Natural)
-pow2 x = callStdlib StdlibPow2 [x]
-
-add :: (Member (Reader CompilerCtx) r) => Term Natural -> Term Natural -> Sem r (Term Natural)
-add a b = callStdlib StdlibAdd [a, b]
-
 sub :: (Member (Reader CompilerCtx) r) => Term Natural -> Term Natural -> Sem r (Term Natural)
 sub a b = callStdlib StdlibSub [a, b]
-
-dec :: (Member (Reader CompilerCtx) r) => Term Natural -> Sem r (Term Natural)
-dec x = callStdlib StdlibDec [x]
 
 intToUInt8 :: (Member (Reader CompilerCtx) r) => Term Natural -> Sem r (Term Natural)
 intToUInt8 i = callStdlib StdlibMod [i, nockIntegralLiteral @Natural (2 ^ uint8Size)]

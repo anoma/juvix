@@ -269,8 +269,8 @@ applyFun f =
 anomaCallingConventionTests :: [Test]
 anomaCallingConventionTests =
   [True, False]
-    <**> [ anomaTestM "stdlib add" (add (nockNatLiteral 1) (nockNatLiteral 2)) [] (eqNock [nock| 3 |]),
-           anomaTestM "stdlib add with arg" (add (nockNatLiteral 1) (nockNatLiteral 2)) [nockNatLiteral 1] (eqNock [nock| 3 |]),
+    <**> [ anomaTestM "stdlib add" (callStdlib StdlibAdd [nockNatLiteral 1, nockNatLiteral 2]) [] (eqNock [nock| 3 |]),
+           anomaTestM "stdlib add with arg" (callStdlib StdlibAdd [nockNatLiteral 1, nockNatLiteral 2]) [nockNatLiteral 1] (eqNock [nock| 3 |]),
            let args = [nockNatLiteral 3, nockNatLiteral 1]
                fx =
                  FunctionCtx
@@ -368,16 +368,16 @@ nockCall formula args = (OpReplace # ([R, L] # foldTerms args) # (OpQuote # form
 juvixCallingConventionTests :: [Test]
 juvixCallingConventionTests =
   [True, False]
-    <**> [ compilerTestM "stdlib add" (add (nockNatLiteral 1) (nockNatLiteral 2)) (eqNock [nock| 3 |]),
-           compilerTestM "stdlib dec" (dec (nockNatLiteral 1)) (eqNock [nock| 0 |]),
-           compilerTestM "stdlib mul" (mul (nockNatLiteral 2) (nockNatLiteral 3)) (eqNock [nock| 6 |]),
+    <**> [ compilerTestM "stdlib add" (callStdlib StdlibAdd [nockNatLiteral 1, nockNatLiteral 2]) (eqNock [nock| 3 |]),
+           compilerTestM "stdlib dec" (callStdlib StdlibDec [nockNatLiteral 1]) (eqNock [nock| 0 |]),
+           compilerTestM "stdlib mul" (callStdlib StdlibMul [nockNatLiteral 2, nockNatLiteral 3]) (eqNock [nock| 6 |]),
            compilerTestM "stdlib sub" (sub (nockNatLiteral 2) (nockNatLiteral 1)) (eqNock [nock| 1 |]),
            compilerTestM "stdlib div" (callStdlib StdlibDiv [nockNatLiteral 10, nockNatLiteral 3]) (eqNock [nock| 3 |]),
            compilerTestM "stdlib mod" (callStdlib StdlibMod [nockNatLiteral 3, nockNatLiteral 2]) (eqNock [nock| 1 |]),
            compilerTestM "stdlib le" (callStdlib StdlibLe [nockNatLiteral 3, nockNatLiteral 3]) (eqNock [nock| true |]),
            compilerTestM "stdlib lt" (callStdlib StdlibLt [nockNatLiteral 3, nockNatLiteral 3]) (eqNock [nock| false |]),
-           compilerTestM "stdlib pow2" (pow2 (nockNatLiteral 3)) (eqNock [nock| 8 |]),
-           compilerTestM "stdlib nested" (dec =<< (dec (nockNatLiteral 20))) (eqNock [nock| 18 |]),
+           compilerTestM "stdlib pow2" (callStdlib StdlibPow2 [nockNatLiteral 3]) (eqNock [nock| 8 |]),
+           compilerTestM "stdlib nested" ((\x -> callStdlib StdlibDec [x]) =<< (callStdlib StdlibDec [nockNatLiteral 20])) (eqNock [nock| 18 |]),
            compilerTest "foldTermsOrQuotedNil (empty)" (foldTermsOrQuotedNil []) (eqNock (nockNilTagged "expected-result")),
            let l :: NonEmpty Natural = 1 :| [2]
                l' :: NonEmpty (Term Natural) = nockNatLiteral <$> l
