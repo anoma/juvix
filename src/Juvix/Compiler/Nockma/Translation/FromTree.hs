@@ -26,7 +26,7 @@ module Juvix.Compiler.Nockma.Translation.FromTree
     runCompilerWith,
     emptyCompilerCtx,
     CompilerCtx (..),
-    stdlibCurry,
+    curryClosure,
     IndexTupleArgs (..),
     indexTuple,
   )
@@ -771,13 +771,7 @@ compile = \case
               $ opAddress "goAllocClosure-getFunction" (base <> fpath)
           newArity = farity - fromIntegral (length args)
       massert (newArity > 0)
-      curriedClosure <- curryClosure closure args
-      return . makeClosure $ \case
-        FunCode -> curriedClosure
-        ArgsTuple -> OpQuote # argsTuplePlaceholder "goAllocClosure" newArity
-        ClosureRemainingArgsNum -> nockNatLiteral newArity
-        FunctionsLibrary -> OpQuote # nockNilTagged "goAllocClosure-FunctionsLibrary"
-        StandardLibrary -> OpQuote # nockNilTagged "goAllocClosure-StandardLibrary"
+      curryClosure closure args (nockNatLiteral newArity)
 
     goExtendClosure :: Tree.NodeExtendClosure -> Sem r (Term Natural)
     goExtendClosure = extendClosure
@@ -824,13 +818,7 @@ extendClosure Tree.NodeExtendClosure {..} = do
     closure <- addressTempRef ref
     let remainingArgsNum = getClosureField ClosureRemainingArgsNum closure
     newArity <- sub remainingArgsNum (nockIntegralLiteral (length _nodeExtendClosureArgs))
-    curriedClosure <- curryClosure closure (toList args)
-    return . makeClosure $ \case
-      FunCode -> curriedClosure
-      ArgsTuple -> getClosureField ArgsTuple closure
-      ClosureRemainingArgsNum -> newArity
-      FunctionsLibrary -> OpQuote # nockNilTagged "goAllocClosure-FunctionsLibrary"
-      StandardLibrary -> OpQuote # nockNilTagged "goAllocClosure-StandardLibrary"
+    curryClosure closure (toList args) newArity
 
 -- [call L [replace [RL [seq [@ R] a]] [@ (locStdlib <> fPath)]]] ?
 --
@@ -1079,18 +1067,15 @@ callClosure ref args = do
   let closure' = OpReplace # (closurePath ArgsTuple # foldTermsOrQuotedNil args) # closure
   return (opCall "callClosure" (closurePath FunCode) closure')
 
-curryClosure :: (Member (Reader CompilerCtx) r) => Term Natural -> [Term Natural] -> Sem r (Term Natural)
-curryClosure closure args = do
-  curriedClosure <- foldM stdlibCurry closure args
-  -- We need to wrap the curried closure to be able to put in the correct
-  -- remaining arguments number. We cannot modify the curried closure
-  -- directly.
-  return $
-    (OpQuote # OpCall)
-      # (OpQuote # closurePath FunCode)
-      # (OpQuote # OpReplace)
-      # (OpQuote # closurePath ArgsTuple # OpAddress # closurePath ArgsTuple)
-      # ((OpQuote # OpQuote) # curriedClosure)
+curryClosure :: Term Natural -> [Term Natural] -> Term Natural -> Sem r (Term Natural)
+curryClosure f args newArity = do
+  let args' = (foldTerms (nonEmpty' $ map (\x -> (OpQuote # OpQuote) # x) args <> [OpQuote # OpAddress # closurePath ArgsTuple]))
+  return . makeClosure $ \case
+    FunCode -> (OpQuote # OpCall) # (OpQuote # closurePath FunCode) # (OpQuote # OpReplace) # ((OpQuote # closurePath ArgsTuple) # args') # (OpQuote # OpQuote) # f
+    ArgsTuple -> OpQuote # nockNilTagged "argsTuple" -- We assume the arguments tuple is never accessed before being replaced by the caller.
+    ClosureRemainingArgsNum -> newArity
+    FunctionsLibrary -> OpQuote # functionsLibraryPlaceHolder
+    StandardLibrary -> OpQuote # stdlibPlaceHolder
 
 replaceSubject :: (Member (Reader CompilerCtx) r) => (AnomaCallablePathId -> Maybe (Term Natural)) -> Sem r (Term Natural)
 replaceSubject = replaceSubject' "replaceSubject"
@@ -1293,14 +1278,3 @@ intToUInt8 i = callStdlib StdlibMod [i, nockIntegralLiteral @Natural (2 ^ uint8S
   where
     uint8Size :: Natural
     uint8Size = 8
-
-stdlibCurry :: (Member (Reader CompilerCtx) r) => Term Natural -> Term Natural -> Sem r (Term Natural)
-stdlibCurry = myCurry
-
-myCurry :: (Member (Reader CompilerCtx) r) => Term Natural -> Term Natural -> Sem r (Term Natural)
-myCurry f arg = do
-  let args' = ((OpQuote # OpQuote) # arg) # OpQuote # OpAddress # closurePath ArgsTuple
-  replaceSubject' "curry" $ \case
-    FunCode -> Just $ (OpQuote # OpCall) # (OpQuote # closurePath FunCode) # (OpQuote # OpReplace) # ((OpQuote # closurePath ArgsTuple) # args') # (OpQuote # OpQuote) # f
-    ArgsTuple -> Just $ f >># opAddress "curry-args" (closurePath ArgsTuple)
-    _ -> Nothing
