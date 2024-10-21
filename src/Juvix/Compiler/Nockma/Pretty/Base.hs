@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 module Juvix.Compiler.Nockma.Pretty.Base
   ( module Juvix.Compiler.Nockma.Pretty.Base,
     module Juvix.Data.CodeAnn,
@@ -12,6 +14,9 @@ import Juvix.Data.CodeAnn
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude hiding (Atom, Path)
 
+docDefault :: (PrettyCode c) => c -> Doc Ann
+docDefault = doc defaultOptions
+
 doc :: (PrettyCode c) => Options -> c -> Doc Ann
 doc opts =
   run
@@ -23,6 +28,11 @@ class PrettyCode c where
 
 runPrettyCode :: (PrettyCode c) => Options -> c -> Doc Ann
 runPrettyCode opts = run . runReader opts . ppCode
+
+instance PrettyCodeAnn NockNaturalNaturalError where
+  ppCodeAnn = \case
+    NaturalInvalidPath a -> "Invalid path" <+> docDefault a
+    NaturalInvalidOp a -> "Invalid operator code" <+> docDefault a
 
 instance forall a. (PrettyCode a, NockNatural a) => PrettyCode (Atom a) where
   ppCode atm = do
