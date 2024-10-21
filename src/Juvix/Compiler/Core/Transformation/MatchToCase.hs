@@ -11,7 +11,8 @@ import Juvix.Compiler.Core.Pretty hiding (Options)
 import Juvix.Compiler.Core.Transformation.Base
 
 data PatternRow = PatternRow
-  { _patternRowPatterns :: [Pattern],
+  { _patternRowOriginalPatterns :: [Pattern],
+    _patternRowPatterns :: [Pattern],
     _patternRowRhs :: MatchBranchRhs,
     -- | The number of initial wildcard binders in `_patternRowPatterns` which
     -- don't originate from the input
@@ -42,6 +43,9 @@ goMatchToCase recur node = case node of
   _ ->
     recur [] node
   where
+    mockFile = $(mkAbsFile "/match-to-case")
+    defaultLoc = singletonInterval (mkInitialLoc mockFile)
+
     compileMatch :: Match -> Sem r Node
     compileMatch Match {..} =
       go 0 (zipExact (toList _matchValues) (toList _matchValueTypes))
@@ -57,7 +61,8 @@ goMatchToCase recur node = case node of
               matchBranchToPatternRow :: MatchBranch -> PatternRow
               matchBranchToPatternRow MatchBranch {..} =
                 PatternRow
-                  { _patternRowPatterns = toList _matchBranchPatterns,
+                  { _patternRowOriginalPatterns = toList _matchBranchPatterns,
+                    _patternRowPatterns = toList _matchBranchPatterns,
                     _patternRowRhs = _matchBranchRhs,
                     _patternRowIgnoredPatternsNum = 0,
                     _patternRowBinderChangesRev = [BCAdd n]
@@ -101,9 +106,7 @@ goMatchToCase recur node = case node of
         where
           pat = err (replicate (length vs) ValueWildcard)
           seq = if length pat == 1 then "" else "sequence "
-          pat' = if length pat == 1 then doc defaultOptions (head' pat) else docValueSequence pat
-          mockFile = $(mkAbsFile "/match-to-case")
-          defaultLoc = singletonInterval (mkInitialLoc mockFile)
+          pat' = if length pat == 1 then doc defaultOptions (head' pat) else docSequence pat
       r@PatternRow {..} : matrix'
         | all isPatWildcard _patternRowPatterns ->
             -- The first row matches all values (Section 4, case 2)
@@ -185,16 +188,17 @@ goMatchToCase recur node = case node of
     compileMatchingRow err bindersNum vs matrix PatternRow {..} =
       case _patternRowRhs of
         MatchBranchRhsExpression body ->
-          goMatchToCase (recur . (bcs ++)) body
+          goMatchToCase recur' body
         MatchBranchRhsIfs ifs -> do
           -- If the branch has side-conditions, then we need to continue pattern
           -- matching when none of the conditions is satisfied.
           body <- compile err bindersNum vs matrix
           md <- ask
+          ifs' <- mapM goSideIfBranch (toList ifs)
           let boolSym = lookupConstructorInfo md (BuiltinTag TagTrue) ^. constructorInductive
-              ifs' = map (\(SideIfBranch i c b) -> (i, c, b)) (toList ifs)
           return $ mkIfs boolSym ifs' body
       where
+        recur' = recur . (bcs ++)
         bcs =
           reverse $
             foldl'
@@ -203,6 +207,12 @@ goMatchToCase recur node = case node of
               )
               _patternRowBinderChangesRev
               (drop _patternRowIgnoredPatternsNum (zipExact _patternRowPatterns vs))
+
+        goSideIfBranch :: SideIfBranch -> Sem r (Info, Node, Node)
+        goSideIfBranch SideIfBranch {..} = do
+          cond <- goMatchToCase recur' _sideIfBranchCondition
+          body <- goMatchToCase recur' _sideIfBranchBody
+          return (_sideIfBranchInfo, cond, body)
 
     -- `compileDefault` computes D(M) where `M = col:matrix`, as described in
     -- Section 2, Figure 1 in the paper. Then it continues compilation with the
@@ -238,6 +248,8 @@ goMatchToCase recur node = case node of
     compileBranch err bindersNum vs col matrix tag = do
       tab <- ask
       let ci = lookupConstructorInfo tab tag
+          -- TODO: this might not work if the constructor has additional type
+          -- arguments which are not at the front
           paramsNum = getTypeParamsNum tab (ci ^. constructorType)
           argsNum = length (typeArgs (ci ^. constructorType))
           bindersNum' = bindersNum + argsNum
