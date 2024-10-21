@@ -4,10 +4,10 @@ import Base hiding (Path, testName)
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Core.Language.Base (defaultSymbol)
 import Juvix.Compiler.Nockma.Anoma
+import Juvix.Compiler.Nockma.AnomaLib (anomaLib)
 import Juvix.Compiler.Nockma.Evaluator
 import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Pretty
-import Juvix.Compiler.Nockma.Stdlib (stdlib)
 import Juvix.Compiler.Nockma.Translation.FromSource.QQ
 import Juvix.Compiler.Nockma.Translation.FromTree
 
@@ -88,8 +88,8 @@ eqTraces expected = do
       assertFailure (unpack msg)
 
 compilerTest :: Text -> Term Natural -> Check () -> Bool -> Test
-compilerTest n mainFun _testCheck _evalInterceptStdlibCalls =
-  anomaTest n mainFun [] _testCheck _evalInterceptStdlibCalls
+compilerTest n mainFun _testCheck _evalInterceptAnomaLibCalls =
+  anomaTest n mainFun [] _testCheck _evalInterceptAnomaLibCalls
 
 compilerTestM :: Text -> Sem '[Reader CompilerCtx] (Term Natural) -> Check () -> Bool -> Test
 compilerTestM n mainFun =
@@ -126,7 +126,7 @@ withAssertErrKeyNotInStorage Test {..} =
       _ -> assertFailure "Expected ErrKeyNotInStorage error"
 
 anomaTest :: Text -> Term Natural -> [Term Natural] -> Check () -> Bool -> Test
-anomaTest n mainFun args _testCheck _evalInterceptStdlibCalls =
+anomaTest n mainFun args _testCheck _evalInterceptAnomaLibCalls =
   let f =
         CompilerFunction
           { _compilerFunctionId = UserFunction (defaultSymbol 0),
@@ -135,7 +135,7 @@ anomaTest n mainFun args _testCheck _evalInterceptStdlibCalls =
             _compilerFunctionName = "main"
           }
       _testName :: Text
-        | _evalInterceptStdlibCalls = n <> " - intercept stdlib"
+        | _evalInterceptAnomaLibCalls = n <> " - intercept stdlib"
         | otherwise = n
 
       opts = CompilerOptions
@@ -307,8 +307,8 @@ anomaCallingConventionTests =
 serializationTests :: [Test]
 serializationTests =
   serializationIdTest
-    "stdlib"
-    stdlib
+    "anomaLib"
+    anomaLib
     : serializationTest
       [nock| 0 |]
       [nock| 2 |]
@@ -395,7 +395,8 @@ juvixCallingConventionTests =
            compilerTestM "length-bytes 256 == 2" (callStdlib StdlibLengthBytes [nockNatLiteral 256]) (eqNock [nock| 2 |]),
            compilerTestM "length-bytes 255 == 1" (callStdlib StdlibLengthBytes [nockNatLiteral 255]) (eqNock [nock| 1 |]),
            compilerTestM "length-bytes 1 == 1" (callStdlib StdlibLengthBytes [nockNatLiteral 1]) (eqNock [nock| 1 |]),
-           compilerTestM "length-bytes 0 == 0" (callStdlib StdlibLengthBytes [nockNatLiteral 0]) (eqNock [nock| 0 |])
+           compilerTestM "length-bytes 0 == 0" (callStdlib StdlibLengthBytes [nockNatLiteral 0]) (eqNock [nock| 0 |]),
+           compilerTestM "zero-delta == 0" (rmValue RmZeroDelta) (eqNock [nock| 0 |])
          ]
 
 unitTests :: [Test]
