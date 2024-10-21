@@ -10,7 +10,7 @@ import Juvix.Prelude.Base
 import VectorBuilder.Builder as Builder
 import VectorBuilder.Vector
 
-data CueState a = CueState
+newtype CueState a = CueState
   { _cueStateCache :: HashMap Int (Term a)
   }
 
@@ -20,7 +20,7 @@ initCueState =
     { _cueStateCache = mempty
     }
 
-data CueEnv = CueEnv
+newtype CueEnv = CueEnv
   {_cueEnvStartPos :: Int}
 
 initCueEnv :: CueEnv
@@ -38,14 +38,20 @@ data DecodingError
   | DecodingErrorInvalidBackref
   deriving stock (Show)
 
+instance Pretty DecodingError where
+  pretty = unAnnotate . ppCodeAnn
+
+instance PrettyCodeAnn DecodingError where
+  ppCodeAnn = \case
+    DecodingErrorInvalidTag -> "Invalid tag"
+    DecodingErrorCacheMiss -> "Cache miss"
+    DecodingErrorInvalidLength -> "Invalid length"
+    DecodingErrorExpectedAtom -> "Expected atom"
+    DecodingErrorInvalidAtom -> "Invalid atom"
+    DecodingErrorInvalidBackref -> "Invalid backref"
+
 instance PrettyCode DecodingError where
-  ppCode = \case
-    DecodingErrorInvalidTag -> return "Invalid tag"
-    DecodingErrorCacheMiss -> return "Cache miss"
-    DecodingErrorInvalidLength -> return "Invalid length"
-    DecodingErrorExpectedAtom -> return "Expected atom"
-    DecodingErrorInvalidAtom -> return "Invalid atom"
-    DecodingErrorInvalidBackref -> return "Invalid backref"
+  ppCode = return . pretty
 
 -- | Register the start of processing a new entity
 registerElementStart ::
