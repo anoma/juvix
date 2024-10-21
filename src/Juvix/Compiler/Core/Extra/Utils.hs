@@ -195,6 +195,17 @@ isDebugOp = \case
       OpAnomaSignDetached -> False
       OpAnomaVerifyDetached -> False
       OpAnomaVerifyWithMessage -> False
+      OpAnomaResourceCommitment -> False
+      OpAnomaResourceNullifier -> False
+      OpAnomaResourceKind -> False
+      OpAnomaResourceDelta -> False
+      OpAnomaActionDelta -> False
+      OpAnomaActionsDelta -> False
+      OpAnomaProveAction -> False
+      OpAnomaProveDelta -> False
+      OpAnomaZeroDelta -> False
+      OpAnomaAddDelta -> False
+      OpAnomaSubDelta -> False
       OpEc -> False
       OpFieldAdd -> False
       OpFieldDiv -> False
@@ -482,6 +493,17 @@ builtinOpArgTypes = \case
   OpAnomaByteArrayToAnomaContents -> [mkDynamic']
   OpAnomaByteArrayFromAnomaContents -> [mkTypeInteger', mkTypeInteger']
   OpAnomaSha256 -> [mkTypeInteger']
+  OpAnomaResourceCommitment -> [mkDynamic']
+  OpAnomaResourceNullifier -> [mkDynamic']
+  OpAnomaResourceKind -> [mkDynamic']
+  OpAnomaResourceDelta -> [mkDynamic']
+  OpAnomaActionDelta -> [mkDynamic']
+  OpAnomaActionsDelta -> [mkDynamic']
+  OpAnomaProveAction -> [mkDynamic']
+  OpAnomaProveDelta -> [mkDynamic']
+  OpAnomaZeroDelta -> []
+  OpAnomaAddDelta -> [mkDynamic', mkDynamic']
+  OpAnomaSubDelta -> [mkDynamic', mkDynamic']
   OpPoseidonHash -> [mkDynamic']
   OpEc -> [mkDynamic', mkTypeField', mkDynamic']
   OpRandomEcPoint -> []

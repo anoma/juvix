@@ -64,6 +64,17 @@ instance PrettyCode BuiltinOp where
     OpAnomaByteArrayToAnomaContents -> return primAnomaByteArrayToAnomaContents
     OpAnomaByteArrayFromAnomaContents -> return primAnomaByteArrayFromAnomaContents
     OpAnomaSha256 -> return primAnomaSha256
+    OpAnomaResourceCommitment -> return primResourceCommitment
+    OpAnomaResourceNullifier -> return primResourceNullifier
+    OpAnomaResourceKind -> return primResourceKind
+    OpAnomaResourceDelta -> return primResourceDelta
+    OpAnomaActionDelta -> return primActionDelta
+    OpAnomaActionsDelta -> return primActionsDelta
+    OpAnomaProveAction -> return primProveAction
+    OpAnomaProveDelta -> return primProveDelta
+    OpAnomaZeroDelta -> return primZeroDelta
+    OpAnomaAddDelta -> return primAddDelta
+    OpAnomaSubDelta -> return primSubDelta
     OpPoseidonHash -> return primPoseidonHash
     OpEc -> return primEc
     OpRandomEcPoint -> return primRandomEcPoint
@@ -601,6 +612,8 @@ instance PrettyCode InfoTable where
               BuiltinNat -> False
               BuiltinInt -> False
               BuiltinBool -> False
+              BuiltinAnomaResource -> True
+              BuiltinAnomaAction -> True
             Just _ -> False
             Nothing -> True
 
@@ -907,6 +920,39 @@ primAnomaByteArrayFromAnomaContents = primitive Str.anomaByteArrayFromAnomaConte
 
 primAnomaSha256 :: Doc Ann
 primAnomaSha256 = primitive Str.anomaSha256
+
+primResourceCommitment :: Doc Ann
+primResourceCommitment = primitive Str.anomaResourceCommitment
+
+primResourceNullifier :: Doc Ann
+primResourceNullifier = primitive Str.anomaResourceNullifier
+
+primResourceKind :: Doc Ann
+primResourceKind = primitive Str.anomaResourceKind
+
+primResourceDelta :: Doc Ann
+primResourceDelta = primitive Str.anomaResourceDelta
+
+primActionDelta :: Doc Ann
+primActionDelta = primitive Str.anomaActionDelta
+
+primActionsDelta :: Doc Ann
+primActionsDelta = primitive Str.anomaActionsDelta
+
+primProveDelta :: Doc Ann
+primProveDelta = primitive Str.anomaProveDelta
+
+primProveAction :: Doc Ann
+primProveAction = primitive Str.anomaProveAction
+
+primZeroDelta :: Doc Ann
+primZeroDelta = primitive Str.anomaZeroDelta
+
+primAddDelta :: Doc Ann
+primAddDelta = primitive Str.anomaAddDelta
+
+primSubDelta :: Doc Ann
+primSubDelta = primitive Str.anomaSubDelta
 
 primPoseidonHash :: Doc Ann
 primPoseidonHash = primitive Str.cairoPoseidon

@@ -392,6 +392,45 @@ anomaByteArrayFromAnomaContents = "anoma-bytearray-from-anoma-contents"
 anomaSha256 :: (IsString s) => s
 anomaSha256 = "anoma-sha256"
 
+anomaDelta :: (IsString s) => s
+anomaDelta = "anoma-delta"
+
+anomaKind :: (IsString s) => s
+anomaKind = "anoma-kind"
+
+anomaResourceCommitment :: (IsString s) => s
+anomaResourceCommitment = "anoma-resource-commitment"
+
+anomaResourceNullifier :: (IsString s) => s
+anomaResourceNullifier = "anoma-resource-nullifier"
+
+anomaResourceKind :: (IsString s) => s
+anomaResourceKind = "anoma-resource-kind"
+
+anomaResourceDelta :: (IsString s) => s
+anomaResourceDelta = "anoma-resource-delta"
+
+anomaActionDelta :: (IsString s) => s
+anomaActionDelta = "anoma-action-delta"
+
+anomaActionsDelta :: (IsString s) => s
+anomaActionsDelta = "anoma-actions-delta"
+
+anomaZeroDelta :: (IsString s) => s
+anomaZeroDelta = "anoma-zero-delta"
+
+anomaAddDelta :: (IsString s) => s
+anomaAddDelta = "anoma-add-delta"
+
+anomaSubDelta :: (IsString s) => s
+anomaSubDelta = "anoma-sub-delta"
+
+anomaProveDelta :: (IsString s) => s
+anomaProveDelta = "anoma-prove-delta"
+
+anomaProveAction :: (IsString s) => s
+anomaProveAction = "anoma-prove-action"
+
 builtinSeq :: (IsString s) => s
 builtinSeq = "seq"
 
@@ -1078,6 +1117,18 @@ cairoEcPoint = "ec_point"
 
 cairoMkEcPoint :: (IsString s) => s
 cairoMkEcPoint = "mkEcPoint"
+
+anomaResource :: (IsString s) => s
+anomaResource = "anoma-resource"
+
+anomaAction :: (IsString s) => s
+anomaAction = "anoma-action"
+
+anomaMkResource :: (IsString s) => s
+anomaMkResource = "mkResource"
+
+anomaMkAction :: (IsString s) => s
+anomaMkAction = "mkAction"
 
 rustFn :: (IsString s) => s
 rustFn = "fn"

@@ -502,6 +502,39 @@ kwByteArrayLength = asciiKw Str.byteArrayLength
 kwAnomaSha256 :: Keyword
 kwAnomaSha256 = asciiKw Str.anomaSha256
 
+kwAnomaResourceCommitment :: Keyword
+kwAnomaResourceCommitment = asciiKw Str.anomaResourceCommitment
+
+kwAnomaResourceNullifier :: Keyword
+kwAnomaResourceNullifier = asciiKw Str.anomaResourceNullifier
+
+kwAnomaResourceKind :: Keyword
+kwAnomaResourceKind = asciiKw Str.anomaResourceKind
+
+kwAnomaResourceDelta :: Keyword
+kwAnomaResourceDelta = asciiKw Str.anomaResourceDelta
+
+kwAnomaActionDelta :: Keyword
+kwAnomaActionDelta = asciiKw Str.anomaActionDelta
+
+kwAnomaActionsDelta :: Keyword
+kwAnomaActionsDelta = asciiKw Str.anomaActionsDelta
+
+kwAnomaProveAction :: Keyword
+kwAnomaProveAction = asciiKw Str.anomaProveAction
+
+kwAnomaProveDelta :: Keyword
+kwAnomaProveDelta = asciiKw Str.anomaProveDelta
+
+kwAnomaZeroDelta :: Keyword
+kwAnomaZeroDelta = asciiKw Str.anomaZeroDelta
+
+kwAnomaAddDelta :: Keyword
+kwAnomaAddDelta = asciiKw Str.anomaAddDelta
+
+kwAnomaSubDelta :: Keyword
+kwAnomaSubDelta = asciiKw Str.anomaSubDelta
+
 delimBraceL :: Keyword
 delimBraceL = mkDelim Str.braceL
 

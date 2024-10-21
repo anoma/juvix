@@ -520,6 +520,8 @@ checkBuiltinInductive d b = localBuiltins $ case b of
   BuiltinPair -> checkPairDef d
   BuiltinPoseidonState -> checkPoseidonStateDef d
   BuiltinEcPoint -> checkEcPointDef d
+  BuiltinAnomaResource -> checkResource d
+  BuiltinAnomaAction -> checkAction d
 
 localBuiltins :: (Members '[Reader S.InfoTable] r) => Sem (Reader BuiltinsTable ': r) a -> Sem r a
 localBuiltins m = do
@@ -601,6 +603,19 @@ checkBuiltinAxiom d b = localBuiltins $ case b of
   BuiltinAnomaByteArrayFromAnomaContents -> checkAnomaByteArrayFromAnomaContents d
   BuiltinAnomaByteArrayToAnomaContents -> checkAnomaByteArrayToAnomaContents d
   BuiltinAnomaSha256 -> checkAnomaSha256 d
+  BuiltinAnomaDelta -> checkDelta d
+  BuiltinAnomaKind -> checkKind d
+  BuiltinAnomaResourceCommitment -> checkResourceCommitment d
+  BuiltinAnomaResourceNullifier -> checkResourceNullifier d
+  BuiltinAnomaResourceKind -> checkResourceKind d
+  BuiltinAnomaResourceDelta -> checkResourceDelta d
+  BuiltinAnomaActionDelta -> checkActionDelta d
+  BuiltinAnomaActionsDelta -> checkActionsDelta d
+  BuiltinAnomaZeroDelta -> checkZeroDelta d
+  BuiltinAnomaAddDelta -> checkDeltaBinaryOp d
+  BuiltinAnomaSubDelta -> checkDeltaBinaryOp d
+  BuiltinAnomaProveDelta -> checkProveDelta d
+  BuiltinAnomaProveAction -> checkProveAction d
   BuiltinPoseidon -> checkPoseidon d
   BuiltinEcOp -> checkEcOp d
   BuiltinRandomEcPoint -> checkRandomEcPoint d

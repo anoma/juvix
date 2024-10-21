@@ -571,6 +571,17 @@ compile = \case
         Tree.OpAnomaByteArrayFromAnomaContents -> return (goAnomaByteArrayFromAnomaContents args)
         Tree.OpAnomaByteArrayToAnomaContents -> return (goAnomaByteArrayToAnomaContents args)
         Tree.OpAnomaSha256 -> goAnomaSha256 args
+        Tree.OpAnomaResourceCommitment -> callRm RmCommit args
+        Tree.OpAnomaResourceNullifier -> callRm RmNullify args
+        Tree.OpAnomaResourceKind -> callRm RmKind args
+        Tree.OpAnomaResourceDelta -> callRm RmResourceDelta args
+        Tree.OpAnomaActionDelta -> callRm RmActionDelta args
+        Tree.OpAnomaActionsDelta -> callRm RmMakeDelta args
+        Tree.OpAnomaProveAction -> callRm RmProveAction args
+        Tree.OpAnomaProveDelta -> callRm RmProveDelta args
+        Tree.OpAnomaZeroDelta -> rmValue RmZeroDelta
+        Tree.OpAnomaAddDelta -> callRm RmDeltaAdd args
+        Tree.OpAnomaSubDelta -> callRm RmDeltaSub args
 
     goByteArrayOp :: Tree.NodeByteArray -> Sem r (Term Natural)
     goByteArrayOp Tree.NodeByteArray {..} = do
@@ -860,6 +871,10 @@ callAnomaLib fun args = do
 -- | Convenience function to call an Anoma stdlib function
 callStdlib :: (Member (Reader CompilerCtx) r) => StdlibFunction -> [Term Natural] -> Sem r (Term Natural)
 callStdlib f = callAnomaLib (AnomaStdlibFunction f)
+
+-- | Convenience function to call an Anoma Resource Machine function
+callRm :: (Member (Reader CompilerCtx) r) => RmFunction -> [Term Natural] -> Sem r (Term Natural)
+callRm f = callAnomaLib (AnomaRmFunction f)
 
 -- | Get a value from the Anoma library
 anomaLibValue :: (Member (Reader CompilerCtx) r) => AnomaValue -> Sem r (Term Natural)

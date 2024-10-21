@@ -102,4 +102,26 @@ data AnomaOp
     OpAnomaByteArrayFromAnomaContents
   | -- | Hash a value using SHA256
     OpAnomaSha256
-  deriving stock (Eq)
+  | -- | Compute the commitment of a Resource
+    OpAnomaResourceCommitment
+  | -- | Compute the nullifier of a Resource
+    OpAnomaResourceNullifier
+  | -- | Compute the kind of a Resource
+    OpAnomaResourceKind
+  | -- | Compute the delta of a Resource
+    OpAnomaResourceDelta
+  | -- | Compute the delta of an Action
+    OpAnomaActionDelta
+  | -- | Compute the delta of a list of Actions
+    OpAnomaActionsDelta
+  | -- | Compute the proof of an Action
+    OpAnomaProveAction
+  | -- | Compute the proof of a Delta
+    OpAnomaProveDelta
+  | -- | The zero Delta
+    OpAnomaZeroDelta
+  | -- | Add Deltas
+    OpAnomaAddDelta
+  | -- | Subtract Deltas
+    OpAnomaSubDelta
+  deriving stock (Eq, Show)

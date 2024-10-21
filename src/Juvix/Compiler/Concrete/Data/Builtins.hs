@@ -57,6 +57,8 @@ builtinConstructors = \case
   BuiltinPair -> [BuiltinPairConstr]
   BuiltinPoseidonState -> [BuiltinMkPoseidonState]
   BuiltinEcPoint -> [BuiltinMkEcPoint]
+  BuiltinAnomaResource -> [BuiltinMkAnomaResource]
+  BuiltinAnomaAction -> [BuiltinMkAnomaAction]
 
 data BuiltinInductive
   = BuiltinNat
@@ -67,6 +69,8 @@ data BuiltinInductive
   | BuiltinPair
   | BuiltinPoseidonState
   | BuiltinEcPoint
+  | BuiltinAnomaResource
+  | BuiltinAnomaAction
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic, Data)
 
 instance Hashable BuiltinInductive
@@ -85,6 +89,8 @@ instance Pretty BuiltinInductive where
     BuiltinPair -> Str.pair
     BuiltinPoseidonState -> Str.cairoPoseidonState
     BuiltinEcPoint -> Str.cairoEcPoint
+    BuiltinAnomaResource -> Str.anomaResource
+    BuiltinAnomaAction -> Str.anomaAction
 
 instance Pretty BuiltinConstructor where
   pretty = \case
@@ -101,6 +107,8 @@ instance Pretty BuiltinConstructor where
     BuiltinPairConstr -> Str.pair
     BuiltinMkPoseidonState -> Str.cairoMkPoseidonState
     BuiltinMkEcPoint -> Str.cairoMkEcPoint
+    BuiltinMkAnomaResource -> Str.anomaMkResource
+    BuiltinMkAnomaAction -> Str.anomaMkAction
 
 data BuiltinConstructor
   = BuiltinNatZero
@@ -116,6 +124,8 @@ data BuiltinConstructor
   | BuiltinPairConstr
   | BuiltinMkPoseidonState
   | BuiltinMkEcPoint
+  | BuiltinMkAnomaResource
+  | BuiltinMkAnomaAction
   deriving stock (Show, Eq, Ord, Generic, Data)
 
 instance Hashable BuiltinConstructor
@@ -228,6 +238,19 @@ data BuiltinAxiom
   | BuiltinAnomaByteArrayToAnomaContents
   | BuiltinAnomaByteArrayFromAnomaContents
   | BuiltinAnomaSha256
+  | BuiltinAnomaDelta
+  | BuiltinAnomaKind
+  | BuiltinAnomaResourceCommitment
+  | BuiltinAnomaResourceNullifier
+  | BuiltinAnomaResourceKind
+  | BuiltinAnomaResourceDelta
+  | BuiltinAnomaActionDelta
+  | BuiltinAnomaActionsDelta
+  | BuiltinAnomaZeroDelta
+  | BuiltinAnomaAddDelta
+  | BuiltinAnomaSubDelta
+  | BuiltinAnomaProveAction
+  | BuiltinAnomaProveDelta
   | BuiltinPoseidon
   | BuiltinEcOp
   | BuiltinRandomEcPoint
@@ -275,6 +298,19 @@ instance HasNameKind BuiltinAxiom where
     BuiltinAnomaByteArrayToAnomaContents -> KNameFunction
     BuiltinAnomaByteArrayFromAnomaContents -> KNameFunction
     BuiltinAnomaSha256 -> KNameFunction
+    BuiltinAnomaDelta -> KNameInductive
+    BuiltinAnomaKind -> KNameInductive
+    BuiltinAnomaResourceCommitment -> KNameFunction
+    BuiltinAnomaResourceNullifier -> KNameFunction
+    BuiltinAnomaResourceKind -> KNameFunction
+    BuiltinAnomaResourceDelta -> KNameFunction
+    BuiltinAnomaActionDelta -> KNameFunction
+    BuiltinAnomaActionsDelta -> KNameFunction
+    BuiltinAnomaZeroDelta -> KNameFunction
+    BuiltinAnomaAddDelta -> KNameFunction
+    BuiltinAnomaSubDelta -> KNameFunction
+    BuiltinAnomaProveAction -> KNameFunction
+    BuiltinAnomaProveDelta -> KNameFunction
     BuiltinPoseidon -> KNameFunction
     BuiltinEcOp -> KNameFunction
     BuiltinRandomEcPoint -> KNameFunction
@@ -329,6 +365,19 @@ instance Pretty BuiltinAxiom where
     BuiltinAnomaByteArrayToAnomaContents -> Str.anomaByteArrayToAnomaContents
     BuiltinAnomaByteArrayFromAnomaContents -> Str.anomaByteArrayFromAnomaContents
     BuiltinAnomaSha256 -> Str.anomaSha256
+    BuiltinAnomaDelta -> Str.anomaDelta
+    BuiltinAnomaKind -> Str.anomaKind
+    BuiltinAnomaResourceCommitment -> Str.anomaResourceCommitment
+    BuiltinAnomaResourceNullifier -> Str.anomaResourceNullifier
+    BuiltinAnomaResourceKind -> Str.anomaResourceKind
+    BuiltinAnomaResourceDelta -> Str.anomaResourceDelta
+    BuiltinAnomaActionDelta -> Str.anomaActionDelta
+    BuiltinAnomaActionsDelta -> Str.anomaActionsDelta
+    BuiltinAnomaZeroDelta -> Str.anomaZeroDelta
+    BuiltinAnomaAddDelta -> Str.anomaAddDelta
+    BuiltinAnomaSubDelta -> Str.anomaSubDelta
+    BuiltinAnomaProveDelta -> Str.anomaProveDelta
+    BuiltinAnomaProveAction -> Str.anomaProveAction
     BuiltinPoseidon -> Str.cairoPoseidon
     BuiltinEcOp -> Str.cairoEcOp
     BuiltinRandomEcPoint -> Str.cairoRandomEcPoint

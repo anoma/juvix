@@ -228,6 +228,17 @@ geval opts herr tab env0 = eval' env0
       OpAnomaByteArrayToAnomaContents -> anomaByteArrayToAnomaContents
       OpAnomaByteArrayFromAnomaContents -> anomaByteArrayFromAnomaContents
       OpAnomaSha256 -> anomaSha256
+      OpAnomaResourceCommitment -> normalizeOrUnsupported opcode
+      OpAnomaResourceNullifier -> normalizeOrUnsupported opcode
+      OpAnomaResourceKind -> normalizeOrUnsupported opcode
+      OpAnomaResourceDelta -> normalizeOrUnsupported opcode
+      OpAnomaActionDelta -> normalizeOrUnsupported opcode
+      OpAnomaActionsDelta -> normalizeOrUnsupported opcode
+      OpAnomaProveAction -> normalizeOrUnsupported opcode
+      OpAnomaProveDelta -> normalizeOrUnsupported opcode
+      OpAnomaZeroDelta -> normalizeOrUnsupported opcode
+      OpAnomaAddDelta -> normalizeOrUnsupported opcode
+      OpAnomaSubDelta -> normalizeOrUnsupported opcode
       OpPoseidonHash -> poseidonHashOp
       OpEc -> ecOp
       OpRandomEcPoint -> randomEcPointOp
@@ -383,6 +394,15 @@ geval opts herr tab env0 = eval' env0
                         _ ->
                           Exception.throw (EvalError ("assertion failed: " <> printNode val) Nothing)
         {-# INLINE assertOp #-}
+
+        normalizeOrUnsupported :: BuiltinOp -> [Node] -> Node
+        normalizeOrUnsupported op args =
+          if
+              | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                  mkBuiltinApp' op (eval' env <$> args)
+              | otherwise ->
+                  err ("unsupported builtin operation: " <> show op)
+        {-# INLINE normalizeOrUnsupported #-}
 
         anomaGetOp :: [Node] -> Node
         anomaGetOp = unary $ \arg ->

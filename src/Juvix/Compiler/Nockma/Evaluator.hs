@@ -229,7 +229,7 @@ evalProfile inistack initerm =
           case _anomaLibCallRef of
             AnomaLibValue (AnomaRmValue v) -> case v of
               RmZeroDelta -> nonInterceptCall
-            AnomaLibFunction (AnomaRmFunction _) -> error "Resource Machine client library functions are not supported"
+            AnomaLibFunction (AnomaRmFunction _) -> nonInterceptCall
             AnomaLibFunction (AnomaStdlibFunction f) -> case f of
               StdlibDec -> unaArith pred
               StdlibAdd -> binArith (+)

@@ -352,6 +352,17 @@ genCode infoTable fi =
       Core.OpAnomaByteArrayToAnomaContents -> OpAnomaByteArrayToAnomaContents
       Core.OpAnomaByteArrayFromAnomaContents -> OpAnomaByteArrayFromAnomaContents
       Core.OpAnomaSha256 -> OpAnomaSha256
+      Core.OpAnomaResourceCommitment -> OpAnomaResourceCommitment
+      Core.OpAnomaResourceNullifier -> OpAnomaResourceNullifier
+      Core.OpAnomaResourceKind -> OpAnomaResourceKind
+      Core.OpAnomaResourceDelta -> OpAnomaResourceDelta
+      Core.OpAnomaActionDelta -> OpAnomaActionDelta
+      Core.OpAnomaActionsDelta -> OpAnomaActionsDelta
+      Core.OpAnomaProveAction -> OpAnomaProveAction
+      Core.OpAnomaProveDelta -> OpAnomaProveDelta
+      Core.OpAnomaZeroDelta -> OpAnomaZeroDelta
+      Core.OpAnomaAddDelta -> OpAnomaAddDelta
+      Core.OpAnomaSubDelta -> OpAnomaSubDelta
       _ -> impossible
 
     getArgsNum :: Symbol -> Int

@@ -81,6 +81,17 @@ computeNodeTypeInfo md = umapL go
           OpAnomaByteArrayFromAnomaContents -> Info.getNodeType node
           OpAnomaByteArrayToAnomaContents -> mkTypeInteger'
           OpAnomaSha256 -> mkTypeByteArray'
+          OpAnomaResourceCommitment -> mkTypeInteger'
+          OpAnomaResourceNullifier -> mkTypeInteger'
+          OpAnomaResourceKind -> mkDynamic'
+          OpAnomaResourceDelta -> mkDynamic'
+          OpAnomaActionDelta -> mkDynamic'
+          OpAnomaActionsDelta -> mkDynamic'
+          OpAnomaProveAction -> mkTypeInteger'
+          OpAnomaProveDelta -> mkTypeInteger'
+          OpAnomaZeroDelta -> mkDynamic'
+          OpAnomaAddDelta -> mkDynamic'
+          OpAnomaSubDelta -> mkDynamic'
           OpPoseidonHash -> case _builtinAppArgs of
             [arg] -> Info.getNodeType arg
             _ -> error "incorrect poseidon builtin application"

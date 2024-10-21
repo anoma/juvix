@@ -117,3 +117,106 @@ checkAnomaSha256 f = do
   unless
     (ftype == (nat_ --> byteArray))
     $ builtinsErrorText l "anomaSha256 must be of type Nat -> ByteArray"
+
+checkResource :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => InductiveDef -> Sem r ()
+checkResource d = do
+  let err = builtinsErrorText (getLoc d)
+  unless (null (d ^. inductiveParameters)) (err "AnomaResource should have no type parameters")
+  unless (isSmallUniverse' (d ^. inductiveType)) (err "AnomaResource should be in the small universe")
+  unless (length (d ^. inductiveConstructors) == 1) (err "AnomaResource should have exactly one constructor")
+
+checkAction :: (Members '[Error ScoperError] r) => InductiveDef -> Sem r ()
+checkAction d = do
+  let err = builtinsErrorText (getLoc d)
+  unless (null (d ^. inductiveParameters)) (err "AnomaAction should have no type parameters")
+  unless (isSmallUniverse' (d ^. inductiveType)) (err "AnomaAction should be in the small universe")
+  unless (length (d ^. inductiveConstructors) == 1) (err "AnomaAction should have exactly one constructor")
+
+checkDelta :: (Members '[Error ScoperError] r) => AxiomDef -> Sem r ()
+checkDelta d =
+  unless (isSmallUniverse' (d ^. axiomType)) $
+    builtinsErrorText (getLoc d) "AnomaDelta should be in the small universe"
+
+checkKind :: (Members '[Error ScoperError] r) => AxiomDef -> Sem r ()
+checkKind d =
+  unless (isSmallUniverse' (d ^. axiomType)) $
+    builtinsErrorText (getLoc d) "AnomaDelta should be in the small universe"
+
+checkResourceCommitment :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
+checkResourceCommitment f = do
+  let l = getLoc f
+  resource <- getBuiltinNameScoper (getLoc f) BuiltinAnomaResource
+  nat_ <- getBuiltinNameScoper l BuiltinNat
+  unless (f ^. axiomType === (resource --> nat_)) $
+    builtinsErrorText (getLoc f) "resourceCommitment must be of type AnomaResource -> Nat"
+
+checkResourceNullifier :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
+checkResourceNullifier f = do
+  let l = getLoc f
+  resource <- getBuiltinNameScoper l BuiltinAnomaResource
+  nat_ <- getBuiltinNameScoper l BuiltinNat
+  unless (f ^. axiomType === (resource --> nat_)) $
+    builtinsErrorText l "resourceNullifier must be of type AnomaResource -> Nat"
+
+checkResourceKind :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
+checkResourceKind f = do
+  let l = getLoc f
+  resource <- getBuiltinNameScoper l BuiltinAnomaResource
+  kind <- getBuiltinNameScoper l BuiltinAnomaKind
+  unless (f ^. axiomType === (resource --> kind)) $
+    builtinsErrorText l "resourceNullifier must be of type AnomaResource -> Nat"
+
+checkResourceDelta :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
+checkResourceDelta f = do
+  let l = getLoc f
+  resource <- getBuiltinNameScoper l BuiltinAnomaResource
+  delta <- getBuiltinNameScoper l BuiltinAnomaDelta
+  unless (f ^. axiomType === (resource --> delta)) $
+    builtinsErrorText l "resourceDelta must be of type AnomaResource -> AnomaDelta"
+
+checkProveAction :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
+checkProveAction f = do
+  let l = getLoc f
+  action <- getBuiltinNameScoper l BuiltinAnomaAction
+  nat_ <- getBuiltinNameScoper l BuiltinNat
+  unless (f ^. axiomType === (action --> nat_)) $
+    builtinsErrorText l "proveAction must be of type AnomaAction -> Nat"
+
+checkProveDelta :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
+checkProveDelta f = do
+  let l = getLoc f
+  delta <- getBuiltinNameScoper l BuiltinAnomaDelta
+  nat_ <- getBuiltinNameScoper l BuiltinNat
+  unless (f ^. axiomType === (delta --> nat_)) $
+    builtinsErrorText l "proveDelta must be of type AnomaDelta -> Nat"
+
+checkActionDelta :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
+checkActionDelta f = do
+  let l = getLoc f
+  action <- getBuiltinNameScoper l BuiltinAnomaAction
+  delta <- getBuiltinNameScoper l BuiltinAnomaDelta
+  unless (f ^. axiomType === (action --> delta)) $
+    builtinsErrorText l "actionDelta must be of type AnomaAction -> AnomaDelta"
+
+checkActionsDelta :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
+checkActionsDelta f = do
+  let l = getLoc f
+  action <- getBuiltinNameScoper l BuiltinAnomaAction
+  delta <- getBuiltinNameScoper l BuiltinAnomaDelta
+  list_ <- getBuiltinNameScoper l BuiltinList
+  unless (f ^. axiomType === (list_ @@ action --> delta)) $
+    builtinsErrorText l "actionsDelta must be of type List AnomaAction -> AnomaDelta"
+
+checkDeltaBinaryOp :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
+checkDeltaBinaryOp f = do
+  let l = getLoc f
+  delta <- getBuiltinNameScoper l BuiltinAnomaDelta
+  unless (f ^. axiomType === (delta --> delta --> delta)) $
+    builtinsErrorText l "deltaAdd must be of type AnomaDelta -> AnomaDelta -> AnomaDelta"
+
+checkZeroDelta :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
+checkZeroDelta f = do
+  let l = getLoc f
+  delta <- getBuiltinNameScoper l BuiltinAnomaDelta
+  unless (f ^. axiomType === delta) $
+    builtinsErrorText (getLoc f) "zeroDelta must be of Delta"
