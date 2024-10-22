@@ -44,4 +44,4 @@ won (state : GameState) : Bool :=
 draw (state : GameState) : Bool :=
   let
     squares := Board.squares (GameState.board state);
-  in null (possibleMoves (flatten squares));
+  in isEmpty (possibleMoves (flatten squares));

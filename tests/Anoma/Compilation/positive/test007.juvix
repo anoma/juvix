@@ -14,13 +14,13 @@ map' {A B} (f : A → B) : List A → List B :=
 -- TODO: Restore when anoma backend supports strings
 -- terminating
 -- map'' {A B} {{Partial}} (f : A → B) (x : List A) : List B :=
---   if (null x) nil (f (phead x) :: map'' f (tail x));
+--   if (isEmpty x) nil (f (phead x) :: map'' f (tail x));
 
 lst : List Nat := 0 :: 1 :: nil;
 
 main : List Nat :=
-  trace (null lst)
-    >-> trace (null (nil {Nat}))
+  trace (isEmpty lst)
+    >-> trace (isEmpty (nil {Nat}))
     >-> trace (head 1 lst)
     >-> trace (tail lst)
     >-> trace (head 0 (tail lst))
