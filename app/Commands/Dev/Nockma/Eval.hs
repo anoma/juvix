@@ -10,10 +10,9 @@ import Juvix.Compiler.Nockma.Translation.FromSource qualified as Nockma
 runCommand :: forall r. (Members AppEffects r) => NockmaEvalOptions -> Sem r ()
 runCommand opts = do
   afile <- fromAppPathFile file
-  parsedTerm <- Nockma.parseTermFile afile
+  parsedTerm <- runAppError @JuvixError (Nockma.cueJammedFileOrPretty afile)
   case parsedTerm of
-    Left err -> exitJuvixError (JuvixError err)
-    Right (TermCell c) -> do
+    TermCell c -> do
       (counts, res) <-
         runOpCounts
           . runReader defaultEvalOptions
@@ -22,7 +21,7 @@ runCommand opts = do
       putStrLn (ppPrint res)
       let statsFile = replaceExtension' ".profile" afile
       writeFileEnsureLn statsFile (prettyText counts)
-    Right TermAtom {} -> exitFailMsg "Expected nockma input to be a cell"
+    TermAtom {} -> exitFailMsg "Expected nockma input to be a cell"
   where
     file :: AppPath File
     file = opts ^. nockmaEvalFile

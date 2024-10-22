@@ -51,7 +51,7 @@ instance PrettyCodeAnn DecodingError where
     DecodingErrorInvalidBackref -> "Invalid backref"
 
 instance PrettyCode DecodingError where
-  ppCode = return . pretty
+  ppCode = return . ppCodeAnn
 
 -- | Register the start of processing a new entity
 registerElementStart ::

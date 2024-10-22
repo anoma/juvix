@@ -32,8 +32,28 @@ data FileExt
 
 $(genSingletons [''FileExt])
 
+splitExtensions :: Path b File -> (Path b File, [String])
+splitExtensions =
+  swap
+    . run
+    . runAccumListReverse
+    . go
+  where
+    go :: (Members '[Accum String] r) => Path b File -> Sem r (Path b File)
+    go f = case splitExtension f of
+      Nothing -> return f
+      Just (f', ext) -> do
+        accum ext
+        go f'
+
+hasExtensions :: (Foldable l) => Path b File -> l String -> Bool
+hasExtensions f exts = toList exts == snd (splitExtensions f)
+
 juvixFileExt :: (IsString a) => a
 juvixFileExt = ".juvix"
+
+nockmaDebugFileExts :: (IsString a) => NonEmpty a
+nockmaDebugFileExts = ".debug" :| [".nockma"]
 
 juvixMarkdownFileExt :: (IsString a) => a
 juvixMarkdownFileExt = ".juvix.md"
