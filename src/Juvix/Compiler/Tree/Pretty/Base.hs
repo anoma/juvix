@@ -287,6 +287,17 @@ instance PrettyCode AnomaOp where
     OpAnomaByteArrayFromAnomaContents -> Str.anomaByteArrayFromAnomaContents
     OpAnomaByteArrayToAnomaContents -> Str.anomaByteArrayToAnomaContents
     OpAnomaSha256 -> Str.anomaSha256
+    OpAnomaResourceCommitment -> Str.anomaResourceCommitment
+    OpAnomaResourceNullifier -> Str.anomaResourceNullifier
+    OpAnomaResourceKind -> Str.anomaResourceKind
+    OpAnomaResourceDelta -> Str.anomaResourceDelta
+    OpAnomaActionDelta -> Str.anomaActionDelta
+    OpAnomaActionsDelta -> Str.anomaActionsDelta
+    OpAnomaProveAction -> Str.anomaProveAction
+    OpAnomaProveDelta -> Str.anomaProveDelta
+    OpAnomaZeroDelta -> Str.anomaZeroDelta
+    OpAnomaAddDelta -> Str.anomaAddDelta
+    OpAnomaSubDelta -> Str.anomaSubDelta
 
 instance PrettyCode UnaryOpcode where
   ppCode = \case

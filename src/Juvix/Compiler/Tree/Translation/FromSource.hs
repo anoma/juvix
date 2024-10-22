@@ -156,6 +156,17 @@ parseAnoma =
     <|> parseAnoma' kwAnomaByteArrayToAnomaContents OpAnomaByteArrayToAnomaContents
     <|> parseAnoma' kwAnomaByteArrayFromAnomaContents OpAnomaByteArrayFromAnomaContents
     <|> parseAnoma' kwAnomaSha256 OpAnomaSha256
+    <|> parseAnoma' kwAnomaResourceCommitment OpAnomaResourceCommitment
+    <|> parseAnoma' kwAnomaResourceNullifier OpAnomaResourceNullifier
+    <|> parseAnoma' kwAnomaResourceKind OpAnomaResourceKind
+    <|> parseAnoma' kwAnomaResourceDelta OpAnomaResourceDelta
+    <|> parseAnoma' kwAnomaActionDelta OpAnomaActionDelta
+    <|> parseAnoma' kwAnomaActionsDelta OpAnomaActionsDelta
+    <|> parseAnoma' kwAnomaProveAction OpAnomaProveAction
+    <|> parseAnoma' kwAnomaProveDelta OpAnomaProveDelta
+    <|> parseAnoma' kwAnomaZeroDelta OpAnomaZeroDelta
+    <|> parseAnoma' kwAnomaAddDelta OpAnomaAddDelta
+    <|> parseAnoma' kwAnomaSubDelta OpAnomaSubDelta
 
 parseAnoma' ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
