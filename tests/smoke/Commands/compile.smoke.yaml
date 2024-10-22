@@ -144,6 +144,38 @@ tests:
     stdout: ""
     exit-status: 0
 
+  - name: target-anoma-run-debug
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        testdir=$PWD/tests/Anoma/Compilation/positive
+        cd $temp
+        juvix --log-level error compile anoma $testdir/test001.juvix --debug
+        [ -f test001.debug.nockma ]
+        juvix dev nockma run test001.debug.nockma --args $testdir/test001-args.debug.nockma
+    stdout: |
+      106
+    exit-status: 0
+
+  - name: target-anoma-run
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        testdir=$PWD/tests/Anoma/Compilation/positive
+        cd $temp
+        juvix --log-level error compile anoma $testdir/test001.juvix
+        [ -f test001.nockma ]
+        juvix dev nockma run test001.nockma --args $testdir/test001-args.debug.nockma
+    stdout: |
+      106
+    exit-status: 0
+
   - name: target-anoma
     command:
       shell:
