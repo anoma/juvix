@@ -29,6 +29,6 @@ runCommand opts = do
 outputAnomaResult :: (Members '[EmbedIO, App, Files] r) => Bool -> Path Abs File -> Nockma.AnomaResult -> Sem r ()
 outputAnomaResult debugOutput nockmaFile Nockma.AnomaResult {..} = do
   let code = Encoding.jamToByteString _anomaClosure
-      prettyNockmaFile = replaceExtensions' [".debug", ".nockma"] nockmaFile
+      prettyNockmaFile = replaceExtensions' nockmaDebugFileExts nockmaFile
   writeFileBS nockmaFile code
   when debugOutput (writeFileEnsureLn prettyNockmaFile (Nockma.ppPrint _anomaClosure))

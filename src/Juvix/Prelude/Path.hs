@@ -88,18 +88,16 @@ removeExtension = fmap fst . splitExtension
 removeExtension' :: Path b File -> Path b File
 removeExtension' = fst . fromJust . splitExtension
 
-addExtensions :: (MonadThrow m) => [String] -> Path b File -> m (Path b File)
-addExtensions ext p = case ext of
-  [] -> return p
-  e : es -> addExtension e p >>= addExtensions es
+addExtensions :: forall m l b. (MonadThrow m, Foldable l) => l String -> Path b File -> m (Path b File)
+addExtensions exts p = foldM (flip addExtension) p exts
 
-replaceExtensions :: (MonadThrow m) => [String] -> Path b File -> m (Path b File)
+replaceExtensions :: (MonadThrow m, Foldable l) => l String -> Path b File -> m (Path b File)
 replaceExtensions ext = addExtensions ext . removeExtensions
 
-replaceExtensions' :: [String] -> Path b File -> Path b File
+replaceExtensions' :: (Foldable l) => l String -> Path b File -> Path b File
 replaceExtensions' ext = fromJust . replaceExtensions ext
 
-addExtensions' :: [String] -> Path b File -> Path b File
+addExtensions' :: (Foldable l) => l String -> Path b File -> Path b File
 addExtensions' ext = fromJust . addExtensions ext
 
 -- | TODO this is ugly. Please, fix it. FileExtJuvixMarkdown needs special

@@ -245,6 +245,9 @@ makeLenses ''WithStack
 makeLenses ''AtomInfo
 makeLenses ''CellInfo
 
+singletonProgram :: Term a -> Program a
+singletonProgram t = Program [StatementStandalone t]
+
 isCell :: Term a -> Bool
 isCell = \case
   TermCell {} -> True

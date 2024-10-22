@@ -25,6 +25,28 @@ parseText = runParser noFile
 parseReplText :: Text -> Either MegaparsecError (ReplTerm Natural)
 parseReplText = runParserFor replTerm noFile
 
+-- | If the file ends in .debug.nockma it parses an annotated unjammed term. Otherwise
+-- it is equivalent to cueJammedFile
+cueJammedFileOrPretty ::
+  forall r.
+  (Members '[Files, Error JuvixError] r) =>
+  Prelude.Path Abs File ->
+  Sem r (Term Natural)
+cueJammedFileOrPretty f
+  | f `hasExtensions` nockmaDebugFileExts = parseTermFile f
+  | otherwise = cueJammedFile f
+
+-- | If the file ends in .debug.nockma it parses an annotated unjammed program. Otherwise
+-- it parses program with a single jammed term
+cueJammedFileOrPrettyProgram ::
+  forall r.
+  (Members '[Files, Error JuvixError] r) =>
+  Prelude.Path Abs File ->
+  Sem r (Program Natural)
+cueJammedFileOrPrettyProgram f
+  | f `hasExtensions` nockmaDebugFileExts = parseProgramFile f
+  | otherwise = singletonProgram <$> cueJammedFile f
+
 cueJammedFile :: forall r. (Members '[Files, Error JuvixError] r) => Prelude.Path Abs File -> Sem r (Term Natural)
 cueJammedFile fp = do
   bs <- readFileBS' fp
@@ -55,15 +77,15 @@ cueJammedFile fp = do
         loc :: Loc
         loc = mkInitialLoc fp
 
-parseTermFile :: (MonadIO m) => Prelude.Path Abs File -> m (Either MegaparsecError (Term Natural))
+parseTermFile :: (Members '[Files, Error JuvixError] r) => Prelude.Path Abs File -> Sem r (Term Natural)
 parseTermFile fp = do
-  txt <- readFile fp
-  return (runParser fp txt)
+  txt <- readFile' fp
+  either (throw . JuvixError) return (runParser fp txt)
 
-parseProgramFile :: (MonadIO m) => Prelude.Path Abs File -> m (Either MegaparsecError (Program Natural))
+parseProgramFile :: (Members '[Files, Error JuvixError] r) => Prelude.Path Abs File -> Sem r (Program Natural)
 parseProgramFile fp = do
-  txt <- readFile fp
-  return (runParserProgram fp txt)
+  txt <- readFile' fp
+  either (throw . JuvixError) return (runParserProgram fp txt)
 
 parseReplStatement :: Text -> Either MegaparsecError (ReplStatement Natural)
 parseReplStatement = runParserFor replStatement noFile
