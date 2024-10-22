@@ -206,15 +206,6 @@ builtinIsFoldable = \case
   OpByteArrayFromListByte -> False
   OpByteArrayLength -> False
 
-builtinIsCairo :: BuiltinOp -> Bool
-builtinIsCairo op = op `elem` builtinsCairo
-
-builtinIsAnoma :: BuiltinOp -> Bool
-builtinIsAnoma op = op `elem` builtinsAnoma
-
-builtinIsByteArray :: BuiltinOp -> Bool
-builtinIsByteArray op = op `elem` builtinsByteArray
-
 builtinsString :: [BuiltinOp]
 builtinsString = [OpStrConcat, OpStrToInt, OpShow]
 

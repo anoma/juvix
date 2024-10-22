@@ -63,6 +63,13 @@ data BinaryOpcode
     -- argument. JVT code: 'seq(x1, x2)'.
     OpSeq
 
+data TreeOp
+  = TreeBinaryOpcode BinaryOpcode
+  | TreeUnaryOpcode UnaryOpcode
+  | TreeByteArrayOp ByteArrayOp
+  | TreeCairoOp CairoOp
+  | TreeAnomaOp AnomaOp
+
 data UnaryOpcode
   = PrimUnop UnaryOp
   | -- | Assert a boolean and return it
