@@ -228,6 +228,8 @@ goConstructor sym ctor = do
       Just Internal.BuiltinPairConstr -> freshTag
       Just Internal.BuiltinMkPoseidonState -> freshTag
       Just Internal.BuiltinMkEcPoint -> freshTag
+      Just Internal.BuiltinMkAnomaAction -> freshTag
+      Just Internal.BuiltinMkAnomaResource -> freshTag
       Nothing -> freshTag
 
     ctorType :: Sem r Type
@@ -647,6 +649,19 @@ goAxiomInductive a = whenJust (a ^. Internal.axiomBuiltin) builtinInductive
       Internal.BuiltinAnomaByteArrayToAnomaContents -> return ()
       Internal.BuiltinAnomaByteArrayFromAnomaContents -> return ()
       Internal.BuiltinAnomaSha256 -> return ()
+      Internal.BuiltinAnomaDelta -> registerInductiveAxiom (Just BuiltinAnomaDelta) []
+      Internal.BuiltinAnomaKind -> registerInductiveAxiom (Just BuiltinAnomaKind) []
+      Internal.BuiltinAnomaResourceCommitment -> return ()
+      Internal.BuiltinAnomaResourceNullifier -> return ()
+      Internal.BuiltinAnomaResourceDelta -> return ()
+      Internal.BuiltinAnomaResourceKind -> return ()
+      Internal.BuiltinAnomaActionDelta -> return ()
+      Internal.BuiltinAnomaActionsDelta -> return ()
+      Internal.BuiltinAnomaProveDelta -> return ()
+      Internal.BuiltinAnomaProveAction -> return ()
+      Internal.BuiltinAnomaZeroDelta -> return ()
+      Internal.BuiltinAnomaAddDelta -> return ()
+      Internal.BuiltinAnomaSubDelta -> return ()
       Internal.BuiltinPoseidon -> return ()
       Internal.BuiltinEcOp -> return ()
       Internal.BuiltinRandomEcPoint -> return ()
@@ -861,6 +876,82 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
               natType
               (mkBuiltinApp' OpAnomaSha256 [mkVar' 0])
           )
+      Internal.BuiltinAnomaDelta -> return ()
+      Internal.BuiltinAnomaKind -> return ()
+      Internal.BuiltinAnomaResourceCommitment -> do
+        resourceType <- getAnomaResourceType
+        registerAxiomDef
+          ( mkLambda'
+              resourceType
+              (mkBuiltinApp' OpAnomaResourceCommitment [mkVar' 0])
+          )
+      Internal.BuiltinAnomaResourceNullifier -> do
+        resourceType <- getAnomaResourceType
+        registerAxiomDef
+          ( mkLambda'
+              resourceType
+              (mkBuiltinApp' OpAnomaResourceNullifier [mkVar' 0])
+          )
+      Internal.BuiltinAnomaResourceKind -> do
+        resourceType <- getAnomaResourceType
+        registerAxiomDef
+          ( mkLambda'
+              resourceType
+              (mkBuiltinApp' OpAnomaResourceKind [mkVar' 0])
+          )
+      Internal.BuiltinAnomaResourceDelta -> do
+        resourceType <- getAnomaResourceType
+        registerAxiomDef
+          ( mkLambda'
+              resourceType
+              (mkBuiltinApp' OpAnomaResourceDelta [mkVar' 0])
+          )
+      Internal.BuiltinAnomaActionDelta -> do
+        actionType <- getAnomaActionType
+        registerAxiomDef
+          ( mkLambda'
+              actionType
+              (mkBuiltinApp' OpAnomaActionDelta [mkVar' 0])
+          )
+      Internal.BuiltinAnomaActionsDelta -> do
+        registerAxiomDef
+          ( mkLambda'
+              mkDynamic'
+              (mkBuiltinApp' OpAnomaActionsDelta [mkVar' 0])
+          )
+      Internal.BuiltinAnomaProveAction -> do
+        actionType <- getAnomaActionType
+        registerAxiomDef
+          ( mkLambda'
+              actionType
+              (mkBuiltinApp' OpAnomaProveAction [mkVar' 0])
+          )
+      Internal.BuiltinAnomaProveDelta -> do
+        registerAxiomDef
+          ( mkLambda'
+              mkDynamic'
+              (mkBuiltinApp' OpAnomaProveDelta [mkVar' 0])
+          )
+      Internal.BuiltinAnomaZeroDelta -> do
+        registerAxiomDef (mkBuiltinApp' OpAnomaZeroDelta [])
+      Internal.BuiltinAnomaAddDelta -> do
+        registerAxiomDef
+          ( mkLambda'
+              mkDynamic'
+              ( mkLambda'
+                  mkDynamic'
+                  (mkBuiltinApp' OpAnomaAddDelta [mkVar' 1, mkVar' 0])
+              )
+          )
+      Internal.BuiltinAnomaSubDelta -> do
+        registerAxiomDef
+          ( mkLambda'
+              mkDynamic'
+              ( mkLambda'
+                  mkDynamic'
+                  (mkBuiltinApp' OpAnomaSubDelta [mkVar' 1, mkVar' 0])
+              )
+          )
       Internal.BuiltinPoseidon -> do
         psName <- getPoseidonStateName
         psSym <- getPoseidonStateSymbol
@@ -913,6 +1004,24 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
 
     getEcPointName :: Sem r Text
     getEcPointName = (^. inductiveName) <$> getBuiltinInductiveInfo BuiltinEcPoint
+
+    getAnomaResourceName :: Sem r Text
+    getAnomaResourceName = (^. inductiveName) <$> getBuiltinInductiveInfo BuiltinAnomaResource
+
+    getAnomaActionName :: Sem r Text
+    getAnomaActionName = (^. inductiveName) <$> getBuiltinInductiveInfo BuiltinAnomaAction
+
+    getAnomaResourceType :: Sem r Type
+    getAnomaResourceType = do
+      resourceName <- getAnomaResourceName
+      resourceSymbol <- getAnomaResourceSymbol
+      return (mkTypeConstr (setInfoName resourceName mempty) resourceSymbol [])
+
+    getAnomaActionType :: Sem r Type
+    getAnomaActionType = do
+      actionName <- getAnomaActionName
+      actionSymbol <- getAnomaActionSymbol
+      return (mkTypeConstr (setInfoName actionName mempty) actionSymbol [])
 
     registerAxiomDef :: Node -> Sem r ()
     registerAxiomDef body = do
@@ -1285,6 +1394,19 @@ goApplication a = do
         Just Internal.BuiltinAnomaByteArrayToAnomaContents -> app
         Just Internal.BuiltinAnomaByteArrayFromAnomaContents -> app
         Just Internal.BuiltinAnomaSha256 -> app
+        Just Internal.BuiltinAnomaDelta -> app
+        Just Internal.BuiltinAnomaKind -> app
+        Just Internal.BuiltinAnomaResourceCommitment -> app
+        Just Internal.BuiltinAnomaResourceNullifier -> app
+        Just Internal.BuiltinAnomaResourceDelta -> app
+        Just Internal.BuiltinAnomaResourceKind -> app
+        Just Internal.BuiltinAnomaActionDelta -> app
+        Just Internal.BuiltinAnomaActionsDelta -> app
+        Just Internal.BuiltinAnomaZeroDelta -> app
+        Just Internal.BuiltinAnomaAddDelta -> app
+        Just Internal.BuiltinAnomaSubDelta -> app
+        Just Internal.BuiltinAnomaProveAction -> app
+        Just Internal.BuiltinAnomaProveDelta -> app
         Just Internal.BuiltinPoseidon -> app
         Just Internal.BuiltinEcOp -> app
         Just Internal.BuiltinRandomEcPoint -> app

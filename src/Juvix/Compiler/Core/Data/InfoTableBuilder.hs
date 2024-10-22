@@ -63,6 +63,12 @@ getIntSymbol = (^. inductiveSymbol) <$> getBuiltinInductiveInfo BuiltinInt
 getPoseidonStateSymbol :: (Member InfoTableBuilder r) => Sem r Symbol
 getPoseidonStateSymbol = (^. inductiveSymbol) <$> getBuiltinInductiveInfo BuiltinPoseidonState
 
+getAnomaResourceSymbol :: (Member InfoTableBuilder r) => Sem r Symbol
+getAnomaResourceSymbol = (^. inductiveSymbol) <$> getBuiltinInductiveInfo BuiltinAnomaResource
+
+getAnomaActionSymbol :: (Member InfoTableBuilder r) => Sem r Symbol
+getAnomaActionSymbol = (^. inductiveSymbol) <$> getBuiltinInductiveInfo BuiltinAnomaAction
+
 getEcPointSymbol :: (Member InfoTableBuilder r) => Sem r Symbol
 getEcPointSymbol = (^. inductiveSymbol) <$> getBuiltinInductiveInfo BuiltinEcPoint
 

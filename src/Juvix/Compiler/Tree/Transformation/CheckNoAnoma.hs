@@ -10,23 +10,10 @@ checkNoAnoma = walkT checkNode
   where
     checkNode :: Symbol -> Node -> Sem r ()
     checkNode _ = \case
-      Anoma NodeAnoma {..} -> case _nodeAnomaOpcode of
-        OpAnomaGet -> unsupportedErr "OpAnomaGet"
-        OpAnomaEncode -> unsupportedErr "OpAnomaEncode"
-        OpAnomaDecode -> unsupportedErr "OpAnomaDecode"
-        OpAnomaVerifyDetached -> unsupportedErr "OpAnomaVerifyDetached"
-        OpAnomaSign -> unsupportedErr "OpAnomaSign"
-        OpAnomaSignDetached -> unsupportedErr "OpAnomaSignDetached"
-        OpAnomaVerifyWithMessage -> unsupportedErr "OpAnomaVerifyWithMessage"
-        OpAnomaByteArrayFromAnomaContents -> unsupportedErr "OpAnomaByteArrayFromAnomaContents"
-        OpAnomaByteArrayToAnomaContents -> unsupportedErr "OpAnomaByteArrayToAnomaContents"
-        OpAnomaSha256 -> unsupportedErr "OpAnomaSha256"
-        where
-          unsupportedErr :: Text -> Sem r ()
-          unsupportedErr opName =
-            throw
-              TreeError
-                { _treeErrorMsg = opName <> " is unsupported",
-                  _treeErrorLoc = _nodeAnomaInfo ^. nodeInfoLocation
-                }
+      Anoma NodeAnoma {..} ->
+        throw
+          TreeError
+            { _treeErrorMsg = show _nodeAnomaOpcode <> " is unsupported",
+              _treeErrorLoc = _nodeAnomaInfo ^. nodeInfoLocation
+            }
       _ -> return ()

@@ -585,6 +585,18 @@ builtinAppExpr varsNum vars = do
       <|> (kw kwByteArrayFromListByte $> OpByteArrayFromListByte)
       <|> (kw kwByteArrayLength $> OpByteArrayLength)
       <|> (kw kwAnomaSha256 $> OpAnomaSha256)
+      <|> (kw kwAnomaResourceCommitment $> OpAnomaResourceCommitment)
+      <|> (kw kwAnomaResourceNullifier $> OpAnomaResourceNullifier)
+      <|> (kw kwAnomaResourceKind $> OpAnomaResourceKind)
+      <|> (kw kwAnomaResourceDelta $> OpAnomaResourceDelta)
+      <|> (kw kwAnomaActionDelta $> OpAnomaActionDelta)
+      <|> (kw kwAnomaActionsDelta $> OpAnomaActionsDelta)
+      <|> (kw kwAnomaProveAction $> OpAnomaProveAction)
+      <|> (kw kwAnomaProveDelta $> OpAnomaProveDelta)
+      <|> (kw kwAnomaZeroDelta $> OpAnomaZeroDelta)
+      <|> (kw kwAnomaAddDelta $> OpAnomaAddDelta)
+      <|> (kw kwAnomaSubDelta $> OpAnomaSubDelta)
+
   args <- P.many (atom varsNum vars)
   return $ mkBuiltinApp' op args
 

@@ -40,6 +40,17 @@ data BuiltinOp
   | OpAnomaByteArrayToAnomaContents
   | OpAnomaByteArrayFromAnomaContents
   | OpAnomaSha256
+  | OpAnomaResourceCommitment
+  | OpAnomaResourceNullifier
+  | OpAnomaResourceKind
+  | OpAnomaResourceDelta
+  | OpAnomaActionDelta
+  | OpAnomaActionsDelta
+  | OpAnomaProveAction
+  | OpAnomaProveDelta
+  | OpAnomaZeroDelta
+  | OpAnomaAddDelta
+  | OpAnomaSubDelta
   | OpPoseidonHash
   | OpEc
   | OpRandomEcPoint
@@ -47,7 +58,7 @@ data BuiltinOp
   | OpUInt8FromInt
   | OpByteArrayFromListByte
   | OpByteArrayLength
-  deriving stock (Eq, Generic)
+  deriving stock (Eq, Generic, Show)
 
 instance Serialize BuiltinOp
 
@@ -114,6 +125,17 @@ builtinOpArgsNum = \case
   OpAnomaByteArrayToAnomaContents -> 1
   OpAnomaByteArrayFromAnomaContents -> 2
   OpAnomaSha256 -> 1
+  OpAnomaResourceCommitment -> 1
+  OpAnomaResourceNullifier -> 1
+  OpAnomaResourceKind -> 1
+  OpAnomaResourceDelta -> 1
+  OpAnomaActionDelta -> 1
+  OpAnomaActionsDelta -> 1
+  OpAnomaProveAction -> 1
+  OpAnomaProveDelta -> 1
+  OpAnomaZeroDelta -> 0
+  OpAnomaAddDelta -> 2
+  OpAnomaSubDelta -> 2
   OpPoseidonHash -> 1
   OpEc -> 3
   OpRandomEcPoint -> 0
@@ -164,6 +186,17 @@ builtinIsFoldable = \case
   OpAnomaVerifyWithMessage -> False
   OpAnomaByteArrayToAnomaContents -> False
   OpAnomaByteArrayFromAnomaContents -> False
+  OpAnomaResourceCommitment -> False
+  OpAnomaResourceNullifier -> False
+  OpAnomaResourceKind -> False
+  OpAnomaResourceDelta -> False
+  OpAnomaActionDelta -> False
+  OpAnomaActionsDelta -> False
+  OpAnomaProveAction -> False
+  OpAnomaProveDelta -> False
+  OpAnomaZeroDelta -> False
+  OpAnomaAddDelta -> False
+  OpAnomaSubDelta -> False
   OpAnomaSha256 -> False
   OpPoseidonHash -> False
   OpEc -> False
@@ -199,7 +232,18 @@ builtinsAnoma =
     OpAnomaSignDetached,
     OpAnomaByteArrayToAnomaContents,
     OpAnomaByteArrayFromAnomaContents,
-    OpAnomaSha256
+    OpAnomaSha256,
+    OpAnomaResourceCommitment,
+    OpAnomaResourceNullifier,
+    OpAnomaResourceKind,
+    OpAnomaResourceDelta,
+    OpAnomaActionDelta,
+    OpAnomaActionsDelta,
+    OpAnomaProveAction,
+    OpAnomaProveDelta,
+    OpAnomaZeroDelta,
+    OpAnomaAddDelta,
+    OpAnomaSubDelta
   ]
 
 builtinsUInt8 :: [BuiltinOp]

@@ -73,6 +73,8 @@ fromCore fsize tab =
       BuiltinBoolFalse -> False
       BuiltinIntOfNat -> False
       BuiltinIntNegSuc -> False
+      BuiltinMkAnomaResource -> True
+      BuiltinMkAnomaAction -> True
 
     shouldKeepType :: BuiltinType -> Bool
     shouldKeepType = \case
@@ -110,6 +112,19 @@ fromCore fsize tab =
         BuiltinAnomaByteArrayToAnomaContents -> False
         BuiltinAnomaByteArrayFromAnomaContents -> False
         BuiltinAnomaSha256 -> False
+        BuiltinAnomaDelta -> False
+        BuiltinAnomaKind -> False
+        BuiltinAnomaResourceCommitment -> False
+        BuiltinAnomaResourceDelta -> False
+        BuiltinAnomaResourceNullifier -> False
+        BuiltinAnomaResourceKind -> False
+        BuiltinAnomaActionDelta -> False
+        BuiltinAnomaActionsDelta -> False
+        BuiltinAnomaAddDelta -> False
+        BuiltinAnomaSubDelta -> False
+        BuiltinAnomaZeroDelta -> False
+        BuiltinAnomaProveAction -> False
+        BuiltinAnomaProveDelta -> False
         BuiltinPoseidon -> False
         BuiltinEcOp -> False
         BuiltinRandomEcPoint -> False
@@ -129,6 +144,8 @@ fromCore fsize tab =
         BuiltinNat -> False
         BuiltinInt -> False
         BuiltinBool -> False
+        BuiltinAnomaResource -> True
+        BuiltinAnomaAction -> True
 
 translateFunctionInfo :: InfoTable -> IdentifierInfo -> Stripped.FunctionInfo
 translateFunctionInfo tab IdentifierInfo {..} =
