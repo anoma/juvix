@@ -3,7 +3,7 @@ module test085;
 import Stdlib.Prelude open;
 import Stdlib.Debug.Trace open;
 
--- -- This definition does not match the spec. For testing purposes only
+-- This definition does not match the spec. For testing purposes only
 builtin anoma-resource
 type Resource :=
   mkResource@{
@@ -29,7 +29,7 @@ mkResource' (label logic : Nat) {quantity : Nat := 0} : Resource :=
     rseed := 0
   };
 
--- -- This definition does not match the spec. For testing purposes only
+-- This definition does not match the spec. For testing purposes only
 builtin anoma-action
 type Action := mkAction Nat;
 
