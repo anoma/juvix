@@ -21,6 +21,63 @@ fromCore tab =
       _infoFieldSize = tab ^. Core.infoFieldSize
     }
 
+toTreeOp :: Core.BuiltinOp -> TreeOp
+toTreeOp = \case
+  -- TreeBinaryOpcode
+  Core.OpIntAdd -> TreeBinaryOpcode (PrimBinop OpIntAdd)
+  Core.OpIntSub -> TreeBinaryOpcode (PrimBinop OpIntSub)
+  Core.OpIntMul -> TreeBinaryOpcode (PrimBinop OpIntMul)
+  Core.OpIntDiv -> TreeBinaryOpcode (PrimBinop OpIntDiv)
+  Core.OpIntMod -> TreeBinaryOpcode (PrimBinop OpIntMod)
+  Core.OpIntLt -> TreeBinaryOpcode (PrimBinop (OpBool OpIntLt))
+  Core.OpIntLe -> TreeBinaryOpcode (PrimBinop (OpBool OpIntLe))
+  Core.OpFieldAdd -> TreeBinaryOpcode (PrimBinop OpFieldAdd)
+  Core.OpFieldSub -> TreeBinaryOpcode (PrimBinop OpFieldSub)
+  Core.OpFieldMul -> TreeBinaryOpcode (PrimBinop OpFieldMul)
+  Core.OpFieldDiv -> TreeBinaryOpcode (PrimBinop OpFieldDiv)
+  Core.OpEq -> TreeBinaryOpcode (PrimBinop (OpBool OpEq))
+  Core.OpStrConcat -> TreeBinaryOpcode (PrimBinop OpStrConcat)
+  Core.OpSeq -> TreeBinaryOpcode OpSeq
+  -- TreeUnaryOpcode
+  Core.OpShow -> TreeUnaryOpcode (PrimUnop OpShow)
+  Core.OpStrToInt -> TreeUnaryOpcode (PrimUnop OpStrToInt)
+  Core.OpFieldFromInt -> TreeUnaryOpcode (PrimUnop OpIntToField)
+  Core.OpFieldToInt -> TreeUnaryOpcode (PrimUnop OpFieldToInt)
+  Core.OpTrace -> TreeUnaryOpcode OpTrace
+  Core.OpFail -> TreeUnaryOpcode OpFail
+  Core.OpUInt8FromInt -> TreeUnaryOpcode (PrimUnop OpIntToUInt8)
+  Core.OpUInt8ToInt -> TreeUnaryOpcode (PrimUnop OpUInt8ToInt)
+  Core.OpAssert -> TreeUnaryOpcode OpAssert
+  -- TreeAnomaOp
+  Core.OpAnomaGet -> TreeAnomaOp OpAnomaGet
+  Core.OpAnomaEncode -> TreeAnomaOp OpAnomaEncode
+  Core.OpAnomaDecode -> TreeAnomaOp OpAnomaDecode
+  Core.OpAnomaVerifyDetached -> TreeAnomaOp OpAnomaVerifyDetached
+  Core.OpAnomaSign -> TreeAnomaOp OpAnomaSign
+  Core.OpAnomaSignDetached -> TreeAnomaOp OpAnomaSignDetached
+  Core.OpAnomaVerifyWithMessage -> TreeAnomaOp OpAnomaVerifyWithMessage
+  Core.OpAnomaByteArrayToAnomaContents -> TreeAnomaOp OpAnomaByteArrayToAnomaContents
+  Core.OpAnomaByteArrayFromAnomaContents -> TreeAnomaOp OpAnomaByteArrayFromAnomaContents
+  Core.OpAnomaSha256 -> TreeAnomaOp OpAnomaSha256
+  Core.OpAnomaResourceCommitment -> TreeAnomaOp OpAnomaResourceCommitment
+  Core.OpAnomaResourceNullifier -> TreeAnomaOp OpAnomaResourceNullifier
+  Core.OpAnomaResourceKind -> TreeAnomaOp OpAnomaResourceKind
+  Core.OpAnomaResourceDelta -> TreeAnomaOp OpAnomaResourceDelta
+  Core.OpAnomaActionDelta -> TreeAnomaOp OpAnomaActionDelta
+  Core.OpAnomaActionsDelta -> TreeAnomaOp OpAnomaActionsDelta
+  Core.OpAnomaProveAction -> TreeAnomaOp OpAnomaProveAction
+  Core.OpAnomaProveDelta -> TreeAnomaOp OpAnomaProveDelta
+  Core.OpAnomaZeroDelta -> TreeAnomaOp OpAnomaZeroDelta
+  Core.OpAnomaAddDelta -> TreeAnomaOp OpAnomaAddDelta
+  Core.OpAnomaSubDelta -> TreeAnomaOp OpAnomaSubDelta
+  -- TreeCairoOp
+  Core.OpPoseidonHash -> TreeCairoOp OpCairoPoseidon
+  Core.OpEc -> TreeCairoOp OpCairoEc
+  Core.OpRandomEcPoint -> TreeCairoOp OpCairoRandomEcPoint
+  -- TreeByteArrayOp
+  Core.OpByteArrayFromListByte -> TreeByteArrayOp OpByteArrayFromListUInt8
+  Core.OpByteArrayLength -> TreeByteArrayOp OpByteArrayLength
+
 -- Generate code for a single function.
 genCode :: Core.InfoTable -> Core.FunctionInfo -> FunctionInfo
 genCode infoTable fi =
@@ -141,56 +198,47 @@ genCode infoTable fi =
                   }
 
     goBuiltinApp :: Int -> BinderList MemRef -> Core.BuiltinApp -> Node
-    goBuiltinApp tempSize refs Core.BuiltinApp {..}
-      | Core.builtinIsByteArray _builtinAppOp =
-          ByteArray $
-            NodeByteArray
-              { _nodeByteArrayInfo = mempty,
-                _nodeByteArrayOpcode = genByteArrayOp _builtinAppOp,
-                _nodeByteArrayArgs = args
+    goBuiltinApp tempSize refs Core.BuiltinApp {..} = case toTreeOp _builtinAppOp of
+      TreeByteArrayOp op ->
+        ByteArray $
+          NodeByteArray
+            { _nodeByteArrayInfo = mempty,
+              _nodeByteArrayOpcode = op,
+              _nodeByteArrayArgs = args
+            }
+      TreeCairoOp op ->
+        Cairo $
+          NodeCairo
+            { _nodeCairoInfo = mempty,
+              _nodeCairoOpcode = op,
+              _nodeCairoArgs = args
+            }
+      TreeAnomaOp op ->
+        Anoma $
+          NodeAnoma
+            { _nodeAnomaInfo = mempty,
+              _nodeAnomaOpcode = op,
+              _nodeAnomaArgs = args
+            }
+      TreeBinaryOpcode op -> case args of
+        [arg1, arg2] ->
+          Binop $
+            NodeBinop
+              { _nodeBinopInfo = mempty,
+                _nodeBinopOpcode = op,
+                _nodeBinopArg1 = arg1,
+                _nodeBinopArg2 = arg2
               }
-      | Core.builtinIsCairo _builtinAppOp =
-          Cairo $
-            NodeCairo
-              { _nodeCairoInfo = mempty,
-                _nodeCairoOpcode = genCairoOp _builtinAppOp,
-                _nodeCairoArgs = args
+        _ -> impossible
+      TreeUnaryOpcode op -> case args of
+        [arg] ->
+          Unop $
+            NodeUnop
+              { _nodeUnopInfo = mempty,
+                _nodeUnopOpcode = op,
+                _nodeUnopArg = arg
               }
-      | Core.builtinIsAnoma _builtinAppOp =
-          Anoma $
-            NodeAnoma
-              { _nodeAnomaInfo = mempty,
-                _nodeAnomaOpcode = genAnomaOp _builtinAppOp,
-                _nodeAnomaArgs = args
-              }
-      | _builtinAppOp == Core.OpAssert =
-          case args of
-            [arg] ->
-              Unop $
-                NodeUnop
-                  { _nodeUnopInfo = mempty,
-                    _nodeUnopOpcode = OpAssert,
-                    _nodeUnopArg = arg
-                  }
-            _ -> impossible
-      | otherwise =
-          case args of
-            [arg] ->
-              Unop $
-                NodeUnop
-                  { _nodeUnopInfo = mempty,
-                    _nodeUnopOpcode = genUnOp _builtinAppOp,
-                    _nodeUnopArg = arg
-                  }
-            [arg1, arg2] ->
-              Binop $
-                NodeBinop
-                  { _nodeBinopInfo = mempty,
-                    _nodeBinopOpcode = genBinOp _builtinAppOp,
-                    _nodeBinopArg1 = arg1,
-                    _nodeBinopArg2 = arg2
-                  }
-            _ -> impossible
+        _ -> impossible
       where
         args = map (go tempSize refs) _builtinAppArgs
 
@@ -296,74 +344,6 @@ genCode infoTable fi =
             _nodeBranchTrue = go tempSize refs _ifTrue,
             _nodeBranchFalse = go tempSize refs _ifFalse
           }
-
-    genBinOp :: Core.BuiltinOp -> BinaryOpcode
-    genBinOp = \case
-      Core.OpIntAdd -> PrimBinop OpIntAdd
-      Core.OpIntSub -> PrimBinop OpIntSub
-      Core.OpIntMul -> PrimBinop OpIntMul
-      Core.OpIntDiv -> PrimBinop OpIntDiv
-      Core.OpIntMod -> PrimBinop OpIntMod
-      Core.OpIntLt -> PrimBinop (OpBool OpIntLt)
-      Core.OpIntLe -> PrimBinop (OpBool OpIntLe)
-      Core.OpFieldAdd -> PrimBinop OpFieldAdd
-      Core.OpFieldSub -> PrimBinop OpFieldSub
-      Core.OpFieldMul -> PrimBinop OpFieldMul
-      Core.OpFieldDiv -> PrimBinop OpFieldDiv
-      Core.OpEq -> PrimBinop (OpBool OpEq)
-      Core.OpStrConcat -> PrimBinop OpStrConcat
-      Core.OpSeq -> OpSeq
-      _ -> impossible
-
-    genUnOp :: Core.BuiltinOp -> UnaryOpcode
-    genUnOp = \case
-      Core.OpShow -> PrimUnop OpShow
-      Core.OpStrToInt -> PrimUnop OpStrToInt
-      Core.OpFieldFromInt -> PrimUnop OpIntToField
-      Core.OpFieldToInt -> PrimUnop OpFieldToInt
-      Core.OpTrace -> OpTrace
-      Core.OpFail -> OpFail
-      Core.OpUInt8FromInt -> PrimUnop OpIntToUInt8
-      Core.OpUInt8ToInt -> PrimUnop OpUInt8ToInt
-      _ -> impossible
-
-    genByteArrayOp :: Core.BuiltinOp -> ByteArrayOp
-    genByteArrayOp = \case
-      Core.OpByteArrayFromListByte -> OpByteArrayFromListUInt8
-      Core.OpByteArrayLength -> OpByteArrayLength
-      _ -> impossible
-
-    genCairoOp :: Core.BuiltinOp -> CairoOp
-    genCairoOp = \case
-      Core.OpPoseidonHash -> OpCairoPoseidon
-      Core.OpEc -> OpCairoEc
-      Core.OpRandomEcPoint -> OpCairoRandomEcPoint
-      _ -> impossible
-
-    genAnomaOp :: Core.BuiltinOp -> AnomaOp
-    genAnomaOp = \case
-      Core.OpAnomaGet -> OpAnomaGet
-      Core.OpAnomaEncode -> OpAnomaEncode
-      Core.OpAnomaDecode -> OpAnomaDecode
-      Core.OpAnomaVerifyDetached -> OpAnomaVerifyDetached
-      Core.OpAnomaSign -> OpAnomaSign
-      Core.OpAnomaSignDetached -> OpAnomaSignDetached
-      Core.OpAnomaVerifyWithMessage -> OpAnomaVerifyWithMessage
-      Core.OpAnomaByteArrayToAnomaContents -> OpAnomaByteArrayToAnomaContents
-      Core.OpAnomaByteArrayFromAnomaContents -> OpAnomaByteArrayFromAnomaContents
-      Core.OpAnomaSha256 -> OpAnomaSha256
-      Core.OpAnomaResourceCommitment -> OpAnomaResourceCommitment
-      Core.OpAnomaResourceNullifier -> OpAnomaResourceNullifier
-      Core.OpAnomaResourceKind -> OpAnomaResourceKind
-      Core.OpAnomaResourceDelta -> OpAnomaResourceDelta
-      Core.OpAnomaActionDelta -> OpAnomaActionDelta
-      Core.OpAnomaActionsDelta -> OpAnomaActionsDelta
-      Core.OpAnomaProveAction -> OpAnomaProveAction
-      Core.OpAnomaProveDelta -> OpAnomaProveDelta
-      Core.OpAnomaZeroDelta -> OpAnomaZeroDelta
-      Core.OpAnomaAddDelta -> OpAnomaAddDelta
-      Core.OpAnomaSubDelta -> OpAnomaSubDelta
-      _ -> impossible
 
     getArgsNum :: Symbol -> Int
     getArgsNum sym =
