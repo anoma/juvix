@@ -3,7 +3,7 @@ module SignatureWithBody;
 import Stdlib.Prelude open;
 
 isNull : {A : Type} → List A → Bool :=
-  λ {
+  λ{
     | nil := true
     | _ := false
   };
@@ -11,7 +11,7 @@ isNull : {A : Type} → List A → Bool :=
 isNull' : {A : Type} → List A → Bool :=
   let
     aux : {A : Type} → List A → Bool :=
-      λ {
+      λ{
         | nil := true
         | _ := false
       };

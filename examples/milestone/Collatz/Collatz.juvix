@@ -25,4 +25,4 @@ resultHeading : String := "Collatz sequence:";
 
 main : IO :=
   printStringLn welcome
-    >>> readLn λ {s := printStringLn resultHeading >>> run collatz (stringToNat s)};
+    >>> readLn λ{s := printStringLn resultHeading >>> run collatz (stringToNat s)};

@@ -854,10 +854,10 @@ instance (SingI s) => PrettyPrint (Lambda s) where
   ppCode Lambda {..} = do
     let lambdaKw' = ppCode _lambdaKw
         braces' = uncurry enclose (over both ppCode (_lambdaBraces ^. unIrrelevant))
-        lambdaClauses' = case _lambdaClauses of
-          s :| [] -> braces' (ppCode s)
-          _ -> braces' (blockIndent (vsepHard (ppCode <$> _lambdaClauses)))
-    lambdaKw' <+> lambdaClauses'
+        lambdaClauses' = braces' $ case _lambdaClauses of
+          s :| [] -> ppCode s
+          _ -> blockIndent (vsepHard (ppCode <$> _lambdaClauses))
+    lambdaKw' <> lambdaClauses'
 
 instance PrettyPrint Precedence where
   ppCode = \case

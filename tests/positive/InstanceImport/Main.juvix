@@ -8,6 +8,6 @@ type Bool :=
   | false;
 
 instance
-boolI : T Bool := mkT λ {x := x};
+boolI : T Bool := mkT λ{x := x};
 
 main : Bool := case T.pp unit of unit := T.pp true;
