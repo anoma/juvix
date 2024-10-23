@@ -167,7 +167,7 @@ exampleFunction2
     -> List A
     -> List A
     -> Nat :=
-  λ {_ _ _ _ _ _ _ _ _ _ :=
+  λ{_ _ _ _ _ _ _ _ _ _ :=
     undefined
       -- comment after first
       + undefined
@@ -186,11 +186,11 @@ positive
 type T0 (A : Type) := c0 : (A -> T0 A) -> T0 A;
 
 -- Single Lambda clause
-idLambda : {A : Type} -> A -> A := λ {x := x};
+idLambda : {A : Type} -> A -> A := λ{x := x};
 
 -- Lambda clauses
 f : Nat -> Nat :=
-  \ {
+  \{
     -- comment before lambda pipe
     | zero :=
       let
@@ -305,7 +305,7 @@ module Traits;
   instance
   showBoolI : Show Bool :=
     mkShow@{
-      show := λ {x := ite x "true" "false"}
+      show := λ{x := ite x "true" "false"}
     };
 
   instance
