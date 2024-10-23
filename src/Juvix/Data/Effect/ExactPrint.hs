@@ -94,6 +94,9 @@ align = region P.align
 indent :: (Members '[ExactPrint] r) => Sem r () -> Sem r ()
 indent = region (P.indent 2)
 
+flatAlt :: (Members '[ExactPrint] r) => Sem r () -> Sem r () -> Sem r ()
+flatAlt = regionAlt P.flatAlt (const id)
+
 softline :: (Members '[ExactPrint] r) => Sem r ()
 softline = noLoc P.softline
 

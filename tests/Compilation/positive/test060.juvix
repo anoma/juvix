@@ -29,11 +29,11 @@ main : Triple Nat Nat Nat :=
     | mf
       mkPair@{
         fst := mkPair true nil;
-        snd := 0 :: nil
+        snd := 0 :: nil;
       } := f p'
     | else :=
       mkTriple@{
         fst := 0;
         thd := 0;
-        snd := 0
+        snd := 0;
       };
