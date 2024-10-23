@@ -28,6 +28,7 @@ data ExactPrint :: Effect where
   PrintCommentsUntil :: Interval -> ExactPrint m (Maybe SpaceSpan)
   EnsureEmptyLine :: ExactPrint m ()
   Region :: (Doc Ann -> Doc Ann) -> m b -> ExactPrint m b
+  RegionAlt :: (Doc Ann -> Doc Ann -> Doc Ann) -> (b -> b -> b) -> m b -> m b -> ExactPrint m b
   End :: ExactPrint m ()
 
 makeSem ''ExactPrint
@@ -90,6 +91,31 @@ runExactPrint cs = reinterpretH (runPrivateStateAsDoc (initialBuilder cs)) handl
               _builderEnsureEmptyLine = st' ^. builderEnsureEmptyLine
             }
         return fx
+      RegionAlt regionModif alt (m1 :: Sem localEs x) (m2 :: Sem localEs x) -> do
+        st0 :: Builder <- set builderDoc mempty <$> get
+        let runner :: Sem (State Builder ': localEs) x -> Sem localEs (Builder, x)
+            runner = runState st0
+
+            helper :: Sem localEs x -> (forall w. Sem localEs w -> Sem r' w) -> Sem r' (Builder, x)
+            helper m unlift = unlift (impose runner handler m)
+
+            inner1 :: Sem r' (Builder, x)
+            inner1 = localSeqUnliftCommon locEnv (helper m1)
+
+            inner2 :: Sem r' (Builder, x)
+            inner2 = localSeqUnliftCommon locEnv (helper m2)
+        (st1 :: Builder, fx1) <- raise inner1
+        (st2 :: Builder, fx2) <- raise inner2
+        doc' <- gets (^. builderDoc)
+        put
+          Builder
+            { _builderDoc = doc' <> regionModif (st1 ^. builderDoc) (st2 ^. builderDoc),
+              _builderComments = st1 ^. builderComments,
+              _builderEnd = st1 ^. builderEnd,
+              _builderQueue = mempty,
+              _builderEnsureEmptyLine = st1 ^. builderEnsureEmptyLine
+            }
+        return (alt fx1 fx2)
 
 enqueue' :: forall r. (Members '[State Builder] r) => Doc Ann -> Sem r ()
 enqueue' d = modify (over builderQueue (d :))

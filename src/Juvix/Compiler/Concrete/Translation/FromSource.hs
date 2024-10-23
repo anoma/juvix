@@ -423,7 +423,7 @@ phidingList :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, 
 phidingList = do
   _hidingKw <- Irrelevant <$> kw kwHiding
   l <- kw delimBraceL
-  _hidingList <- P.sepBy1 hidingItem semicolon
+  _hidingList <- P.sepEndBy1 hidingItem semicolon
   r <- kw delimBraceR
   return
     HidingList
@@ -435,7 +435,7 @@ pusingList :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, J
 pusingList = do
   _usingKw <- Irrelevant <$> kw kwUsing
   l <- kw delimBraceL
-  _usingList <- P.sepBy1 usingItem semicolon
+  _usingList <- P.sepEndBy1 usingItem semicolon
   r <- kw delimBraceR
   return
     UsingList
@@ -1059,14 +1059,14 @@ hole = kw kwHole
 parseListPattern :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r (ListPattern 'Parsed)
 parseListPattern = do
   _listpBracketL <- Irrelevant <$> kw kwBracketL
-  _listpItems <- P.sepBy parsePatternAtoms (kw delimSemicolon)
+  _listpItems <- P.sepEndBy parsePatternAtoms (kw delimSemicolon)
   _listpBracketR <- Irrelevant <$> kw kwBracketR
   return ListPattern {..}
 
 parseList :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r (List 'Parsed)
 parseList = do
   _listBracketL <- Irrelevant <$> kw kwBracketL
-  _listItems <- P.sepBy parseExpressionAtoms (kw delimSemicolon)
+  _listItems <- P.sepEndBy parseExpressionAtoms (kw delimSemicolon)
   _listBracketR <- Irrelevant <$> kw kwBracketR
   return List {..}
 

@@ -351,10 +351,7 @@ instance (SingI s) => PrettyPrint (NamedApplicationNew s) where
     let args'
           | null _namedApplicationNewArguments = mempty
           | otherwise =
-              blockIndent $
-                sequenceWith
-                  (semicolon >> line)
-                  (ppCode <$> _namedApplicationNewArguments)
+              blockIndent (ppBlock _namedApplicationNewArguments)
     ppIdentifierType _namedApplicationNewName
       <> ppCode _namedApplicationNewExhaustive
       <> braces args'
@@ -390,13 +387,9 @@ instance (SingI s) => PrettyPrint (RecordUpdate s) where
         fields'
           | [f] <- _recordUpdateFields = ppCode f
           | otherwise =
-              line
-                <> indent
-                  ( sequenceWith
-                      (semicolon >> line)
-                      (ppCode <$> _recordUpdateFields)
-                  )
-                <> line
+              flatAlt
+                (blockIndent (ppBlock _recordUpdateFields))
+                (sepSemicolon (ppCode <$> _recordUpdateFields))
     ppCode _recordUpdateAtKw
       <> ppIdentifierType _recordUpdateTypeName
       <> ppCode l
