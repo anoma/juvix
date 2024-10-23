@@ -1615,9 +1615,10 @@ checkSections sec = topBindings helper
                               fs <-
                                 failMaybe $
                                   mkRec
-                                    ^? constructorRhs
-                                    . _ConstructorRhsRecord
-                                    . to mkRecordNameSignature
+                                    ^? ( constructorRhs
+                                           . _ConstructorRhsRecord
+                                           . to mkRecordNameSignature
+                                       )
                               let info =
                                     RecordInfo
                                       { _recordInfoSignature = fs,
