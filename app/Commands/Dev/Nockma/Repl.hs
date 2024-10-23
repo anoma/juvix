@@ -10,7 +10,7 @@ import Juvix.Compiler.Nockma.Evaluator.Options
 import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Pretty qualified as Nockma
-import Juvix.Compiler.Nockma.Translation.FromSource (parseProgramFile, parseReplStatement, parseReplText, parseText)
+import Juvix.Compiler.Nockma.Translation.FromSource (cueJammedFileOrPrettyProgram, parseReplStatement, parseReplText, parseText)
 import Juvix.Compiler.Nockma.Translation.FromSource qualified as Nockma
 import Juvix.Parser.Error
 import Juvix.Prelude qualified as Prelude
@@ -111,7 +111,8 @@ getProgram :: Repl (Maybe (Program Natural))
 getProgram = State.gets (^. replStateProgram)
 
 readProgram :: Prelude.Path Abs File -> Repl (Program Natural)
-readProgram s = fromMegaParsecError <$> parseProgramFile s
+readProgram s = runM . runFilesIO $ do
+  runErrorIO' @JuvixError (cueJammedFileOrPrettyProgram s)
 
 direction' :: String -> Repl ()
 direction' s = Repline.dontCrash $ do
@@ -181,7 +182,7 @@ replAction =
         banner
       }
 
-runCommand :: forall r. (Members '[EmbedIO, App] r) => NockmaReplOptions -> Sem r ()
+runCommand :: forall r. (Members '[Files, EmbedIO, App] r) => NockmaReplOptions -> Sem r ()
 runCommand opts = do
   mt :: Maybe (Term Natural) <- mapM iniStack (opts ^. nockmaReplOptionsStackFile)
   liftIO . (`State.evalStateT` (iniState mt)) $ replAction
@@ -189,10 +190,7 @@ runCommand opts = do
     iniStack :: AppPath File -> Sem r (Term Natural)
     iniStack af = do
       afile <- fromAppPathFile af
-      parsedTerm <- Nockma.parseTermFile afile
-      case parsedTerm of
-        Left err -> exitJuvixError (JuvixError err)
-        Right t -> return t
+      checkCued (Nockma.cueJammedFile afile)
 
     iniState :: Maybe (Term Natural) -> ReplState
     iniState mt =
@@ -202,3 +200,6 @@ runCommand opts = do
           _replStateLoadedFile = Nothing,
           _replStateLastResult = nockNilTagged "repl-result"
         }
+
+    checkCued :: Sem (Error JuvixError ': r) a -> Sem r a
+    checkCued = runErrorNoCallStackWith exitJuvixError

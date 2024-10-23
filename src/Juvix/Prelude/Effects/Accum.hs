@@ -22,6 +22,7 @@ newtype instance StaticRep (Accum o) = Accum
 accum :: (Member (Accum o) r) => o -> Sem r ()
 accum o = overStaticRep (\(Accum l) -> Accum (o : l))
 
+-- | Accumulates in LIFO order
 runAccumListReverse :: Sem (Accum o ': r) a -> Sem r ([o], a)
 runAccumListReverse m = do
   (a, Accum s) <- runStaticRep (Accum mempty) m

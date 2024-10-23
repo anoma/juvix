@@ -4,7 +4,9 @@ import Data.HashMap.Internal.Strict qualified as HashMap
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.Text qualified as Text
 import Juvix.Compiler.Nockma.Encoding.ByteString (textToNatural)
+import Juvix.Compiler.Nockma.Encoding.Cue qualified as Cue
 import Juvix.Compiler.Nockma.Language
+import Juvix.Data.CodeAnn
 import Juvix.Extra.Paths
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Parser.Error
@@ -23,15 +25,67 @@ parseText = runParser noFile
 parseReplText :: Text -> Either MegaparsecError (ReplTerm Natural)
 parseReplText = runParserFor replTerm noFile
 
-parseTermFile :: (MonadIO m) => Prelude.Path Abs File -> m (Either MegaparsecError (Term Natural))
-parseTermFile fp = do
-  txt <- readFile fp
-  return (runParser fp txt)
+-- | If the file ends in .debug.nockma it parses an annotated unjammed term. Otherwise
+-- it is equivalent to cueJammedFile
+cueJammedFileOrPretty ::
+  forall r.
+  (Members '[Files, Error JuvixError] r) =>
+  Prelude.Path Abs File ->
+  Sem r (Term Natural)
+cueJammedFileOrPretty f
+  | f `hasExtensions` nockmaDebugFileExts = parseTermFile f
+  | otherwise = cueJammedFile f
 
-parseProgramFile :: (MonadIO m) => Prelude.Path Abs File -> m (Either MegaparsecError (Program Natural))
+-- | If the file ends in .debug.nockma it parses an annotated unjammed program. Otherwise
+-- it parses program with a single jammed term
+cueJammedFileOrPrettyProgram ::
+  forall r.
+  (Members '[Files, Error JuvixError] r) =>
+  Prelude.Path Abs File ->
+  Sem r (Program Natural)
+cueJammedFileOrPrettyProgram f
+  | f `hasExtensions` nockmaDebugFileExts = parseProgramFile f
+  | otherwise = singletonProgram <$> cueJammedFile f
+
+cueJammedFile :: forall r. (Members '[Files, Error JuvixError] r) => Prelude.Path Abs File -> Sem r (Term Natural)
+cueJammedFile fp = do
+  bs <- readFileBS' fp
+  case Cue.cueFromByteString'' @Natural bs of
+    Left e -> natErr e
+    Right (Left e) -> decodingErr e
+    Right (Right t) -> return t
+  where
+    err :: AnsiText -> Sem r x
+    err msg =
+      throw $
+        JuvixError
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorIntervals = [i],
+              _genericErrorMessage = msg
+            }
+
+    decodingErr :: Cue.DecodingError -> Sem r x
+    decodingErr e = err (mkAnsiText (ppCodeAnn e))
+
+    natErr :: NockNaturalNaturalError -> Sem r x
+    natErr e = err (mkAnsiText (ppCodeAnn e))
+
+    i :: Interval
+    i = mkInterval loc loc
+      where
+        loc :: Loc
+        loc = mkInitialLoc fp
+
+parseTermFile :: (Members '[Files, Error JuvixError] r) => Prelude.Path Abs File -> Sem r (Term Natural)
+parseTermFile fp = do
+  txt <- readFile' fp
+  either (throw . JuvixError) return (runParser fp txt)
+
+parseProgramFile :: (Members '[Files, Error JuvixError] r) => Prelude.Path Abs File -> Sem r (Program Natural)
 parseProgramFile fp = do
-  txt <- readFile fp
-  return (runParserProgram fp txt)
+  txt <- readFile' fp
+  either (throw . JuvixError) return (runParserProgram fp txt)
 
 parseReplStatement :: Text -> Either MegaparsecError (ReplStatement Natural)
 parseReplStatement = runParserFor replStatement noFile

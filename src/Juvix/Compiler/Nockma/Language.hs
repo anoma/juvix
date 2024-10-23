@@ -11,8 +11,8 @@ import GHC.Base (Type)
 import Juvix.Compiler.Core.Language.Base (Symbol)
 import Juvix.Compiler.Nockma.AnomaLib.Base
 import Juvix.Compiler.Nockma.Language.Path
+import Juvix.Data.CodeAnn
 import Juvix.Prelude hiding (Atom, Path)
-import Juvix.Prelude.Pretty
 
 data ReplStatement a
   = ReplStatementExpression (ReplExpression a)
@@ -244,6 +244,9 @@ makeLenses ''Assignment
 makeLenses ''WithStack
 makeLenses ''AtomInfo
 makeLenses ''CellInfo
+
+singletonProgram :: Term a -> Program a
+singletonProgram t = Program [StatementStandalone t]
 
 isCell :: Term a -> Bool
 isCell = \case

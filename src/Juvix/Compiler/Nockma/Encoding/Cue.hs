@@ -10,7 +10,7 @@ import Juvix.Prelude.Base
 import VectorBuilder.Builder as Builder
 import VectorBuilder.Vector
 
-data CueState a = CueState
+newtype CueState a = CueState
   { _cueStateCache :: HashMap Int (Term a)
   }
 
@@ -20,7 +20,7 @@ initCueState =
     { _cueStateCache = mempty
     }
 
-data CueEnv = CueEnv
+newtype CueEnv = CueEnv
   {_cueEnvStartPos :: Int}
 
 initCueEnv :: CueEnv
@@ -38,14 +38,20 @@ data DecodingError
   | DecodingErrorInvalidBackref
   deriving stock (Show)
 
+instance Pretty DecodingError where
+  pretty = unAnnotate . ppCodeAnn
+
+instance PrettyCodeAnn DecodingError where
+  ppCodeAnn = \case
+    DecodingErrorInvalidTag -> "Invalid tag"
+    DecodingErrorCacheMiss -> "Cache miss"
+    DecodingErrorInvalidLength -> "Invalid length"
+    DecodingErrorExpectedAtom -> "Expected atom"
+    DecodingErrorInvalidAtom -> "Invalid atom"
+    DecodingErrorInvalidBackref -> "Invalid backref"
+
 instance PrettyCode DecodingError where
-  ppCode = \case
-    DecodingErrorInvalidTag -> return "Invalid tag"
-    DecodingErrorCacheMiss -> return "Cache miss"
-    DecodingErrorInvalidLength -> return "Invalid length"
-    DecodingErrorExpectedAtom -> return "Expected atom"
-    DecodingErrorInvalidAtom -> return "Invalid atom"
-    DecodingErrorInvalidBackref -> return "Invalid backref"
+  ppCode = return . ppCodeAnn
 
 -- | Register the start of processing a new entity
 registerElementStart ::
@@ -154,7 +160,7 @@ atomToBits a' = do
   n <- nockNatural' a'
   return (integerToVectorBits @Integer (fromIntegral n))
 
--- | Transfor a vector of bits to a decoded term
+-- | Transform a vector of bits to a decoded term
 cueFromBits ::
   forall a r.
   ( NockNatural a,
@@ -167,6 +173,19 @@ cueFromBits ::
   Bit.Vector Bit ->
   Sem r (Term a)
 cueFromBits v = evalBitReader v (evalState (initCueState @a) (runReader initCueEnv cueFromBitsSem))
+
+cueFromByteString' ::
+  forall a r.
+  ( NockNatural a,
+    Members
+      '[ Error DecodingError,
+         Error (ErrNockNatural' a)
+       ]
+      r
+  ) =>
+  ByteString ->
+  Sem r (Term a)
+cueFromByteString' = cueFromBits . cloneFromByteString
 
 cueFromBitsSem ::
   forall a r.
@@ -274,6 +293,28 @@ cueEither =
   runErrorNoCallStackWith @(ErrNockNatural' a) (\(ErrNockNatural' e) -> throw e)
     . runErrorNoCallStack @DecodingError
     . cue'
+
+cueFromByteString ::
+  -- NB: The signature returns the DecodingError in an Either to avoid
+  -- overlapping instances with `ErrNockNatural a` when errors are handled. See
+  -- the comment above `ErrNockNatural' a` for more explanation.
+  forall a r.
+  ( NockNatural a,
+    Member (Error (ErrNockNatural a)) r
+  ) =>
+  ByteString ->
+  Sem r (Either DecodingError (Term a))
+cueFromByteString =
+  runErrorNoCallStackWith @(ErrNockNatural' a) (\(ErrNockNatural' e) -> throw e)
+    . runErrorNoCallStack @DecodingError
+    . cueFromByteString'
+
+cueFromByteString'' ::
+  forall a.
+  (NockNatural a) =>
+  ByteString ->
+  Either (ErrNockNatural a) (Either DecodingError (Term a))
+cueFromByteString'' = run . runErrorNoCallStack . cueFromByteString
 
 {- `ErrNockNatural a` must be wrapped in a newtype to avoid overlapping instances
 with `DecodingError` when errors are handled before the type variable `a` is

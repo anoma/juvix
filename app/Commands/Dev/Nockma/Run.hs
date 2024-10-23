@@ -7,14 +7,13 @@ import Juvix.Compiler.Nockma.EvalCompiled
 import Juvix.Compiler.Nockma.Evaluator
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Translation.FromSource qualified as Nockma
-import Juvix.Parser.Error
 
 runCommand :: forall r. (Members AppEffects r) => NockmaRunOptions -> Sem r ()
 runCommand opts = do
   afile <- fromAppPathFile inputFile
   argsFile <- mapM fromAppPathFile (opts ^. nockmaRunArgs)
-  parsedArgs <- mapM (Nockma.parseTermFile >=> checkParsed) argsFile
-  parsedTerm <- Nockma.parseTermFile afile >>= checkParsed
+  parsedArgs <- runAppError @JuvixError (mapM Nockma.cueJammedFileOrPretty argsFile)
+  parsedTerm <- checkCued (Nockma.cueJammedFileOrPretty afile)
   case parsedTerm of
     t@(TermCell {}) -> do
       let formula = anomaCallTuple parsedArgs
@@ -31,7 +30,5 @@ runCommand opts = do
     inputFile :: AppPath File
     inputFile = opts ^. nockmaRunFile
 
-    checkParsed :: Either MegaparsecError (Term Natural) -> Sem r (Term Natural)
-    checkParsed = \case
-      Left err -> exitJuvixError (JuvixError err)
-      Right tm -> return tm
+    checkCued :: Sem (Error JuvixError ': r) a -> Sem r a
+    checkCued = runErrorNoCallStackWith exitJuvixError
