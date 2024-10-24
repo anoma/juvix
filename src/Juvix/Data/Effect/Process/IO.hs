@@ -10,7 +10,7 @@ import System.Process.Typed qualified as P
 runProcessIO ::
   forall r a.
   (Members '[EmbedIO] r) =>
-  Sem (Process ': r) a ->
+  Sem (ProcessE ': r) a ->
   Sem r a
 runProcessIO = interpret $ \case
   FindExecutable' n -> findExecutable n

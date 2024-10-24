@@ -180,7 +180,7 @@ import Data.Text qualified as Text
 import Data.Text.Encoding
 import Data.Text.IO hiding (appendFile, getContents, getLine, hGetContents, hGetLine, hPutStr, hPutStrLn, interact, putStr, putStrLn, readFile, writeFile)
 import Data.Text.IO qualified as Text
-import Data.Text.IO.Utf8 hiding (getLine, hPutStr, hPutStrLn, putStr, putStrLn, readFile, writeFile)
+import Data.Text.IO.Utf8 hiding (getLine, hGetLine, hPutStr, hPutStrLn, putStr, putStrLn, readFile, writeFile)
 import Data.Text.IO.Utf8 qualified as Utf8
 import Data.Text.Lazy.Builder qualified as LazyText
 import Data.Traversable
@@ -213,8 +213,11 @@ import System.IO hiding
   ( appendFile,
     getContents,
     getLine,
+    hClose,
+    hFlush,
     hGetContents,
     hGetLine,
+    hIsEOF,
     hPutStr,
     hPutStrLn,
     interact,
@@ -558,6 +561,18 @@ indexFrom :: Int -> [a] -> [Indexed a]
 indexFrom i = zipWith Indexed [i ..]
 
 makeLenses ''Indexed
+
+hClose :: (MonadIO m) => Handle -> m ()
+hClose = liftIO . IO.hClose
+
+hGetLine :: (MonadIO m) => Handle -> m Text
+hGetLine = liftIO . Utf8.hGetLine
+
+hIsEOF :: (MonadIO m) => Handle -> m Bool
+hIsEOF = liftIO . IO.hIsEOF
+
+hFlush :: (MonadIO m) => Handle -> m ()
+hFlush = liftIO . IO.hFlush
 
 toTuple :: Indexed a -> (Int, a)
 toTuple i = (i ^. indexedIx, i ^. indexedThing)

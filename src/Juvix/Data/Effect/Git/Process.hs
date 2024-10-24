@@ -13,7 +13,7 @@ newtype CloneEnv = CloneEnv
 makeLenses ''CloneEnv
 
 -- | Run a git command in the current working directory of the parent process.
-runGitCmd :: (Members '[Process, Error GitProcessError] r) => [Text] -> Sem r Text
+runGitCmd :: (Members '[ProcessE, Error GitProcessError] r) => [Text] -> Sem r Text
 runGitCmd args = do
   mcmd <- findExecutable' $(mkRelFile "git")
   case mcmd of
@@ -35,53 +35,53 @@ runGitCmd args = do
         ExitSuccess -> return (res ^. processResultStdout)
 
 -- | Run a git command within a directory, throws an error if the directory is not a valid clone
-runGitCmdInDir :: (Members '[Process, Error GitProcessError, Reader CloneEnv] r) => [Text] -> Sem r Text
+runGitCmdInDir :: (Members '[ProcessE, Error GitProcessError, Reader CloneEnv] r) => [Text] -> Sem r Text
 runGitCmdInDir args = do
   checkValidGitClone
   runGitCmdInDir' args
 
 -- | Run a git command within a directory
-runGitCmdInDir' :: (Members '[Process, Error GitProcessError, Reader CloneEnv] r) => [Text] -> Sem r Text
+runGitCmdInDir' :: (Members '[ProcessE, Error GitProcessError, Reader CloneEnv] r) => [Text] -> Sem r Text
 runGitCmdInDir' args = do
   p <- asks (^. cloneEnvDir)
   runGitCmd (["--git-dir", ".git", "-C", T.pack (toFilePath p)] <> args)
 
 -- | Throws an error if the directory is not a valid git clone
-checkValidGitClone :: (Members '[Process, Error GitProcessError, Reader CloneEnv] r) => Sem r ()
+checkValidGitClone :: (Members '[ProcessE, Error GitProcessError, Reader CloneEnv] r) => Sem r ()
 checkValidGitClone = void gitHeadRef
 
-isValidGitClone :: (Members '[Process, Reader CloneEnv] r) => Sem r Bool
+isValidGitClone :: (Members '[ProcessE, Reader CloneEnv] r) => Sem r Bool
 isValidGitClone = isRight <$> runError @GitProcessError checkValidGitClone
 
 -- | Return the normal form of the passed git reference
-gitNormalizeRef :: forall r. (Members '[Process, Error GitProcessError, Reader CloneEnv] r) => Text -> Sem r Text
+gitNormalizeRef :: forall r. (Members '[ProcessE, Error GitProcessError, Reader CloneEnv] r) => Text -> Sem r Text
 gitNormalizeRef ref = T.strip <$> runGitCmdInDir' ["rev-parse", "--verify", ref <> "^{commit}"]
 
 -- | Return the HEAD ref of the clone
-gitHeadRef :: (Members '[Process, Error GitProcessError, Reader CloneEnv] r) => Sem r Text
+gitHeadRef :: (Members '[ProcessE, Error GitProcessError, Reader CloneEnv] r) => Sem r Text
 gitHeadRef = gitNormalizeRef "HEAD"
 
 -- | Checkout the clone at a particular ref
-gitCheckout :: (Members '[TaggedLock, Process, Error GitProcessError, Reader CloneEnv] r) => Text -> Sem r ()
+gitCheckout :: (Members '[TaggedLock, ProcessE, Error GitProcessError, Reader CloneEnv] r) => Text -> Sem r ()
 gitCheckout ref = withTaggedLockDir' (void (runGitCmdInDir ["checkout", ref]))
 
 -- | Fetch in the clone
-gitFetch :: (Members '[TaggedLock, Process, Error GitProcessError, Reader CloneEnv, Internet] r) => Sem r ()
+gitFetch :: (Members '[TaggedLock, ProcessE, Error GitProcessError, Reader CloneEnv, Internet] r) => Sem r ()
 gitFetch = whenHasInternet gitFetchOnline
 
-gitFetchOnline :: (Members '[TaggedLock, Reader CloneEnv, Error GitProcessError, Process, Online] r) => Sem r ()
+gitFetchOnline :: (Members '[TaggedLock, Reader CloneEnv, Error GitProcessError, ProcessE, Online] r) => Sem r ()
 gitFetchOnline = withTaggedLockDir' (void (runGitCmdInDir ["fetch"]))
 
-gitCloneOnline :: (Members '[Log, Error GitProcessError, Process, Online, Reader CloneEnv] r) => Text -> Sem r ()
+gitCloneOnline :: (Members '[Log, Error GitProcessError, ProcessE, Online, Reader CloneEnv] r) => Text -> Sem r ()
 gitCloneOnline url = do
   p <- asks (^. cloneEnvDir)
   log ("Cloning " <> url <> " to " <> pack (toFilePath p))
   void (runGitCmd ["clone", url, T.pack (toFilePath p)])
 
-cloneGitRepo :: (Members '[Log, Files, Process, Error GitProcessError, Reader CloneEnv, Internet] r) => Text -> Sem r ()
+cloneGitRepo :: (Members '[Log, Files, ProcessE, Error GitProcessError, Reader CloneEnv, Internet] r) => Text -> Sem r ()
 cloneGitRepo = whenHasInternet . gitCloneOnline
 
-initGitRepo :: (Members '[TaggedLock, Log, Files, Process, Error GitProcessError, Reader CloneEnv, Internet] r) => Text -> Sem r (Path Abs Dir)
+initGitRepo :: (Members '[TaggedLock, Log, Files, ProcessE, Error GitProcessError, Reader CloneEnv, Internet] r) => Text -> Sem r (Path Abs Dir)
 initGitRepo url = do
   p <- asks (^. cloneEnvDir)
   withTaggedLockDir' (unlessM (directoryExists' p) (cloneGitRepo url))
@@ -112,7 +112,7 @@ withTaggedLockDir' ma = do
 
 runGitProcess ::
   forall r a.
-  (Members '[TaggedLock, Log, Files, Process, Error GitProcessError, Internet] r) =>
+  (Members '[TaggedLock, Log, Files, ProcessE, Error GitProcessError, Internet] r) =>
   Sem (GitClone ': r) a ->
   Sem r a
 runGitProcess = runProvider_ helper

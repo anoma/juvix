@@ -296,8 +296,8 @@ hRunIO hin hout infoTable = \case
     hPutStr hout (ppPrint infoTable arg)
     return ValVoid
   ValConstr (Constr (BuiltinTag TagReadLn) []) -> do
-    liftIO $ hFlush hout
-    s <- liftIO $ hGetLine hin
+    hFlush hout
+    s <- hGetLine hin
     return (ValString s)
   val ->
     return val
