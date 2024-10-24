@@ -7,10 +7,17 @@ Format;
 import Stdlib.Prelude -- Import a module of name:
 open -- Bring all names into scope but..
 hiding -- Hide some names
-{-- like this
-,; -- don't want , here
--- Bool either
-Bool; true; false; mkShow; module Show};
+{
+  -- like this
+  ,;
+  -- don't want , here
+  -- Bool either
+  Bool;
+  true;
+  false;
+  mkShow;
+  module Show;
+};
 
 -- Lorem ipsum dolor sit amet, consectetur adipiscing elit
 terminating
@@ -274,8 +281,11 @@ module Comments;
 
   open Patterns -- before using
   using -- before brace
-  {-- before first f
-  f; f};
+  {
+    -- before first f
+    f;
+    f;
+  };
 
   type list (A : Type) : Type := cons A (list A);
 end;
@@ -302,19 +312,19 @@ module Traits;
   instance
   showStringI : Show String :=
     mkShow@{
-      show := id
+      show := id;
     };
 
   instance
   showBoolI : Show Bool :=
     mkShow@{
-      show := λ{x := ite x "true" "false"}
+      show := λ{x := ite x "true" "false"};
     };
 
   instance
   showNatI : Show Nat :=
     mkShow@{
-      show := natToString
+      show := natToString;
     };
 
   showList {A} : {{Show A}} → List A → String
@@ -326,7 +336,7 @@ module Traits;
   instance
   showListI {A} {{Show A}} : Show (List A) :=
     mkShow@{
-      show := showList
+      show := showList;
     };
 
   showMaybe {A} {{Show A}} : Maybe A → String
@@ -336,7 +346,7 @@ module Traits;
   instance
   showMaybeI {A} {{Show A}} : Show (Maybe A) :=
     mkShow@{
-      show := showMaybe
+      show := showMaybe;
     };
 
   f {A} {{Show A}} : A → String
@@ -362,7 +372,7 @@ module OperatorRecord;
       + : A -> A -> A;
 
       syntax operator * multiplicative;
-      * : A -> A -> A
+      * : A -> A -> A;
     };
 
   open Natural;
@@ -380,7 +390,7 @@ module RecordFieldPragmas;
       {-# inline: false #-}
       pfst : A;
       {-# inline: false #-}
-      psnd : B
+      psnd : B;
     };
 end;
 
@@ -389,38 +399,42 @@ longLongLongArg : Int := 0;
 longLongLongListArg : List Int := [];
 
 l1 : List Int :=
-  [ 1
-  ; 2
-  ; longLongLongArg
-  ; longLongLongArg
-  ; longLongLongArg
-  ; longLongLongArg
-  ; longLongLongArg
-  ; longLongLongArg
+  [
+    1;
+    2;
+    longLongLongArg;
+    longLongLongArg;
+    longLongLongArg;
+    longLongLongArg;
+    longLongLongArg;
+    longLongLongArg;
   ];
 
 l2 : List Int := [1; 2; 3];
 
 l3 : List (List Int) :=
-  [ [1; 2; 3]
-  ; longLongLongListArg
-  ; longLongLongListArg
-  ; longLongLongListArg
-  ; longLongLongListArg
-  ; longLongLongListArg
+  [
+    [1; 2; 3];
+    longLongLongListArg;
+    longLongLongListArg;
+    longLongLongListArg;
+    longLongLongListArg;
+    longLongLongListArg;
   ];
 
 l4 : List (List Int) :=
-  [ [1; 2; 3]
-  ; longLongLongListArg
-  ; [ longLongLongArg
-    ; longLongLongArg
-    ; longLongLongArg
-    ; longLongLongArg
-    ; longLongLongArg
-    ; longLongLongArg
-    ]
-  ; longLongLongListArg
+  [
+    [1; 2; 3];
+    longLongLongListArg;
+    [
+      longLongLongArg;
+      longLongLongArg;
+      longLongLongArg;
+      longLongLongArg;
+      longLongLongArg;
+      longLongLongArg;
+    ];
+    longLongLongListArg;
   ];
 
 -- Format as-pattern interacting with implicit args.
