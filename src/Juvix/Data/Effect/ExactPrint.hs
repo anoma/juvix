@@ -124,9 +124,6 @@ sepSemicolon = grouped . vsepSemicolon
 vsepSemicolon :: (Members '[ExactPrint] r, Foldable l) => l (Sem r ()) -> Sem r ()
 vsepSemicolon = sequenceWith (semicolon <> line)
 
-vcatPreSemicolon :: (Members '[ExactPrint] r, Foldable l) => l (Sem r ()) -> Sem r ()
-vcatPreSemicolon = sequenceWith (lineOrEmpty <> semicolon <> space)
-
 hsepSemicolon :: (Members '[ExactPrint] r, Foldable l) => l (Sem r ()) -> Sem r ()
 hsepSemicolon = sequenceWith (semicolon <> space)
 
