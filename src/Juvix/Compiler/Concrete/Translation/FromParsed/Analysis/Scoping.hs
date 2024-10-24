@@ -2198,17 +2198,9 @@ checkRecordPattern r = do
       RecordPatternItemAssign a -> RecordPatternItemAssign <$> checkAssign a
       RecordPatternItemFieldPun a -> RecordPatternItemFieldPun <$> checkPun a
       where
-        findField :: Symbol -> Sem r' Int
-        findField f =
-          fromMaybeM (throw err) $
-            asks @(RecordNameSignature 'Parsed) (^? recordNames . at f . _Just . nameItemIndex)
-          where
-            err :: ScoperError
-            err = ErrUnexpectedField (UnexpectedField f)
-
         checkAssign :: RecordPatternAssign 'Parsed -> Sem r' (RecordPatternAssign 'Scoped)
         checkAssign RecordPatternAssign {..} = do
-          idx' <- findField _recordPatternAssignField
+          idx' <- findFieldIdx _recordPatternAssignField
           pat' <- checkParsePatternAtoms _recordPatternAssignPattern
           return
             RecordPatternAssign
@@ -2217,15 +2209,36 @@ checkRecordPattern r = do
                 ..
               }
 
-        checkPun :: FieldPun 'Parsed -> Sem r' (FieldPun 'Scoped)
-        checkPun f = do
-          idx' <- findField (f ^. fieldPunField)
-          f' <- bindVariableSymbol (f ^. fieldPunField)
-          return
-            FieldPun
-              { _fieldPunIx = idx',
-                _fieldPunField = f'
-              }
+findFieldIdx :: (Members '[Reader (RecordNameSignature 'Parsed), Error ScoperError] r) => Symbol -> Sem r Int
+findFieldIdx f =
+  fromMaybeM (throw err) $
+    asks @(RecordNameSignature 'Parsed) (^? recordNames . at f . _Just . nameItemIndex)
+  where
+    err :: ScoperError
+    err = ErrUnexpectedField (UnexpectedField f)
+
+checkPun ::
+  ( Members
+      '[ Reader (RecordNameSignature 'Parsed),
+         Error ScoperError,
+         Reader InfoTable,
+         State Scope,
+         State ScoperState,
+         NameIdGen,
+         InfoTableBuilder
+       ]
+      r
+  ) =>
+  FieldPun 'Parsed ->
+  Sem r (FieldPun 'Scoped)
+checkPun f = do
+  idx' <- findFieldIdx (f ^. fieldPunField)
+  f' <- bindVariableSymbol (f ^. fieldPunField)
+  return
+    FieldPun
+      { _fieldPunIx = idx',
+        _fieldPunField = f'
+      }
 
 checkListPattern ::
   forall r.
@@ -2794,7 +2807,7 @@ checkRecordUpdate RecordUpdate {..} = do
   let sig = info ^. recordInfoSignature
   (vars' :: IntMap (IsImplicit, S.Symbol), fields') <- withLocalScope $ do
     vs <- mapM bindRecordUpdateVariable (recordNameSignatureByIndex sig)
-    fs <- mapM (checkUpdateField sig) _recordUpdateFields
+    fs <- runReader sig (mapM checkUpdateField _recordUpdateFields)
     return (vs, fs)
   let extra' =
         RecordUpdateExtra
@@ -2817,23 +2830,39 @@ checkRecordUpdate RecordUpdate {..} = do
       return (_nameItemImplicit, v)
 
 checkUpdateField ::
-  (Members '[HighlightBuilder, Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader Package] r) =>
-  RecordNameSignature 'Parsed ->
+  (Members '[Reader (RecordNameSignature 'Parsed), HighlightBuilder, Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader Package] r) =>
   RecordUpdateField 'Parsed ->
   Sem r (RecordUpdateField 'Scoped)
-checkUpdateField sig f = do
+checkUpdateField = \case
+  RecordUpdateFieldAssign a -> RecordUpdateFieldAssign <$> checkUpdateFieldAssign a
+  RecordUpdateFieldPun a -> RecordUpdateFieldPun <$> checkPun a
+
+getUpdateFieldIdx ::
+  (Member (Error ScoperError) r) =>
+  RecordNameSignature s2 ->
+  RecordUpdateFieldItemAssign s ->
+  Sem r Int
+getUpdateFieldIdx sig f =
+  maybe (throw unexpectedField) return (sig ^? recordNames . at (f ^. fieldUpdateName) . _Just . nameItemIndex)
+  where
+    unexpectedField :: ScoperError
+    unexpectedField = ErrUnexpectedField (UnexpectedField (f ^. fieldUpdateName))
+
+checkUpdateFieldAssign ::
+  (Members '[Reader (RecordNameSignature 'Parsed), HighlightBuilder, Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader Package] r) =>
+  RecordUpdateFieldItemAssign 'Parsed ->
+  Sem r (RecordUpdateFieldItemAssign 'Scoped)
+checkUpdateFieldAssign f = do
+  sig <- ask @(RecordNameSignature 'Parsed)
   value' <- checkParseExpressionAtoms (f ^. fieldUpdateValue)
-  idx' <- maybe (throw unexpectedField) return (sig ^? recordNames . at (f ^. fieldUpdateName) . _Just . nameItemIndex)
+  idx' <- getUpdateFieldIdx sig f
   return
-    RecordUpdateField
+    RecordUpdateFieldItemAssign
       { _fieldUpdateName = f ^. fieldUpdateName,
         _fieldUpdateArgIx = idx',
         _fieldUpdateAssignKw = f ^. fieldUpdateAssignKw,
         _fieldUpdateValue = value'
       }
-  where
-    unexpectedField :: ScoperError
-    unexpectedField = ErrUnexpectedField (UnexpectedField (f ^. fieldUpdateName))
 
 getRecordInfo ::
   forall r.
