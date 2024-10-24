@@ -65,7 +65,8 @@ splitAt : (a : Type) → ℕ → List a → List a × List a
   | a _ nil := , nil nil
   | a zero xs := , nil xs
   | a (suc zero) (:: x xs) := , (:: x nil) xs
-  | a (suc (suc m)) (:: x xs) := match (splitAt a m xs) λ{(, xs' xs'') := , (:: x xs') xs''};
+  | a (suc (suc m)) (:: x xs) :=
+    match (splitAt a m xs) λ{(, xs' xs'') := , (:: x xs') xs''};
 
 terminating
 merge : (a : Type) → (a → a → Ordering) → List a → List a → List a

@@ -14,21 +14,25 @@ checkState (state : GameState) : GameState :=
   if
     | won state :=
       state@GameState{error := terminate
-        ("Player " ++str showSymbol (switch (GameState.player state)) ++str " wins!")}
+        ("Player "
+          ++str showSymbol (switch (GameState.player state))
+          ++str " wins!")}
     | draw state := state@GameState{error := terminate "It's a draw!"}
     | else := state;
 
 --- Given a player attempted move, updates the state accordingly.
 playMove (attemptedMove : Maybe Nat) (state : GameState) : GameState :=
   case attemptedMove of
-    | nothing := state@GameState{error := continue "\nInvalid number, try again\n"}
+    | nothing :=
+      state@GameState{error := continue "\nInvalid number, try again\n"}
     | just k :=
       let
         squares := Board.squares (GameState.board state);
         player' := GameState.player state;
       in if
         | not (isMember k (possibleMoves (flatten squares))) :=
-          state@GameState{error := continue "\nThe square is already occupied, try again\n"}
+          state@GameState{error := continue
+            "\nThe square is already occupied, try again\n"}
         | else :=
           checkState
             mkGameState@{

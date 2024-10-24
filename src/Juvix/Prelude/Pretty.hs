@@ -24,7 +24,7 @@ import Prelude
 defaultLayoutOptions :: LayoutOptions
 defaultLayoutOptions =
   LayoutOptions
-    { layoutPageWidth = AvailablePerLine 100 1.0
+    { layoutPageWidth = AvailablePerLine 80 1.0
     }
 
 class HasAnsiBackend a where
