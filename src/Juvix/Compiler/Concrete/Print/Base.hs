@@ -1244,14 +1244,14 @@ instance (SingI s) => PrettyPrint (HidingItem s) where
 instance (SingI s) => PrettyPrint (HidingList s) where
   ppCode HidingList {..} = do
     let (openb, closeb) = _hidingBraces ^. unIrrelevant
-        items' = sequenceWith (semicolon <> space) (ppCode <$> _hidingList)
-    ppCode _hidingKw <+> ppCode openb <> items' <> ppCode closeb
+        items' = ppBlockOrList _hidingList
+    grouped (ppCode _hidingKw <+> ppCode openb <> items' <> ppCode closeb)
 
 instance (SingI s) => PrettyPrint (UsingList s) where
   ppCode UsingList {..} = do
     let (openb, closeb) = _usingBraces ^. unIrrelevant
-        items' = sequenceWith (semicolon <> space) (ppCode <$> _usingList)
-    ppCode _usingKw <+> ppCode openb <> items' <> ppCode closeb
+        items' = ppBlockOrList _usingList
+    grouped (ppCode _usingKw <+> ppCode openb <> items' <> ppCode closeb)
 
 instance (SingI s) => PrettyPrint (UsingHiding s) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => UsingHiding s -> Sem r ()
