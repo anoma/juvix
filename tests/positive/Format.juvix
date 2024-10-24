@@ -126,7 +126,10 @@ t : String :=
         +l6 "Hellooooooooo"
         +l6 ("Hellooooooooo" +r6 "Hellooooooooo" +r6 "Hellooooooooo")
         +l6 "Hellooooooooo"
-        +l6 "Hellooooooooo" +l7 "Hellooooooooo" +l7 "Hellooooooooo" +l7 "Hellooooooooo"
+        +l6 "Hellooooooooo"
+          +l7 "Hellooooooooo"
+          +l7 "Hellooooooooo"
+          +l7 "Hellooooooooo"
       , "hi"
       , "hi";
 

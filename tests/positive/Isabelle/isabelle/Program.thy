@@ -225,7 +225,8 @@ fun funR3 :: "(R, R) Either' \<Rightarrow> R" where
                         r' (| R.r1 := R.r2 r' + 2, R.r2 := R.r1 r' + 3 |))) |
             v'4 \<Rightarrow>
               (case v'4 of
-                 (Right' r') \<Rightarrow> r' (| R.r1 := R.r2 r' + 2, R.r2 := R.r1 r' + 3 |))))"
+                 (Right' r') \<Rightarrow>
+                   r' (| R.r1 := R.r2 r' + 2, R.r2 := R.r1 r' + 3 |))))"
 
 fun funR4 :: "R \<Rightarrow> R" where
   "funR4 r'0 = (r'0 (| R.r2 := R.r1 r'0 |))"

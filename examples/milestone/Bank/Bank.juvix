@@ -77,7 +77,8 @@ issue (caller owner : Address) (amount : Nat) : Token :=
 deposit (bal : Balances) (token : Token) (amount : Nat) : Token :=
   let
     difference : Nat := sub (Token.amount token) amount;
-    remaining : Token := mkToken (Token.owner token) (Token.gates token) difference;
+    remaining : Token :=
+      mkToken (Token.owner token) (Token.gates token) difference;
     hash : Field := hashAddress (Token.owner token);
     bal' : Balances := increment hash amount bal;
   in runOnChain (commitBalances bal') remaining;
