@@ -18,7 +18,7 @@ eqSquareI : Eq Square :=
       case square1, square2 of
         | empty m, empty n := m == n
         | occupied s, occupied t := s == t
-        | _, _ := false
+        | _, _ := false;
   };
 
 --- Textual representation of a ;Square;

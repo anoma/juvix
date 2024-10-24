@@ -113,13 +113,13 @@ type Either' A B :=
 type R' :=
   mkR'@{
     r1' : Nat;
-    r2' : Nat
+    r2' : Nat;
   };
 
 type R :=
   mkR@{
     r1 : Nat;
-    r2 : Nat
+    r2 : Nat;
   };
 
 r : R := mkR 0 1;
@@ -135,19 +135,19 @@ funR' : R -> R
   | mkR@{r1 := rr1; r2 := rr2} :=
     mkR@{
       r1 := rr1 + rr2;
-      r2 := rr2
+      r2 := rr2;
     };
 
 funR1 : R -> R
   | mkR@{r1 := zero; r2} :=
     mkR@{
       r1 := r2;
-      r2
+      r2;
     }
   | mkR@{r1 := rr1; r2 := rr2} :=
     mkR@{
       r1 := rr2;
-      r2 := rr1
+      r2 := rr1;
     };
 
 funR2 (r : R) : R :=
@@ -155,12 +155,12 @@ funR2 (r : R) : R :=
     | mkR@{r1 := zero; r2} :=
       mkR@{
         r1 := r2;
-        r2
+        r2;
       }
     | mkR@{r1 := rr1; r2 := rr2} :=
       mkR@{
         r1 := rr2;
-        r2 := rr1
+        r2 := rr1;
       };
 
 funR3 (er : Either' R R) : R :=
@@ -168,19 +168,19 @@ funR3 (er : Either' R R) : R :=
     | Left' mkR@{r1 := zero; r2} :=
       mkR@{
         r1 := r2;
-        r2
+        r2;
       }
     | Left' mkR@{r1 := rr1; r2 := rr2} :=
       mkR@{
         r1 := rr2;
-        r2 := rr1
+        r2 := rr1;
       }
     | Right' mkR@{r1; r2 := zero} :=
       mkR@{
         r1 := 7;
-        r2 := r1
+        r2 := r1;
       }
-    | Right' r@mkR@{r1; r2} := r@R{   r1 := r2 + 2; r2 := r1 + 3 };
+    | Right' r@mkR@{r1; r2} := r@R{r1 := r2 + 2; r2 := r1 + 3};
 
 funR4 : R -> R
   | r@mkR@{r1} := r@R{r2 := r1};

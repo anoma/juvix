@@ -17,7 +17,7 @@ type Token :=
   mkToken@{
     owner : Address;
     gates : Nat;
-    amount : Nat
+    amount : Nat;
   };
 
 --- This module defines the type for balances and its associated operations.
