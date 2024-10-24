@@ -769,7 +769,9 @@ parsedIteratorInfo = do
   (_parsedIteratorInfoInitNum, _parsedIteratorInfoRangeNum) <- intercalateEffect semicolon $ do
     ini <- toPermutationWithDefault Nothing (Just <$> pinit)
     ran <- toPermutationWithDefault Nothing (Just <$> prangeNum)
+    toPermutationWithDefault Nothing (return (Just ()))
     pure (ini, ran)
+  optional semicolon
   r <- kw delimBraceR
   let _parsedIteratorInfoBraces = Irrelevant (l, r)
   return ParsedIteratorInfo {..}
