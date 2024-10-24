@@ -94,6 +94,9 @@ align = region P.align
 indent :: (Members '[ExactPrint] r) => Sem r () -> Sem r ()
 indent = region (P.indent 2)
 
+flatAlt :: (Members '[ExactPrint] r) => Sem r () -> Sem r () -> Sem r ()
+flatAlt = regionAlt P.flatAlt (const id)
+
 softline :: (Members '[ExactPrint] r) => Sem r ()
 softline = noLoc P.softline
 
@@ -120,9 +123,6 @@ sepSemicolon = grouped . vsepSemicolon
 
 vsepSemicolon :: (Members '[ExactPrint] r, Foldable l) => l (Sem r ()) -> Sem r ()
 vsepSemicolon = sequenceWith (semicolon <> line)
-
-vcatPreSemicolon :: (Members '[ExactPrint] r, Foldable l) => l (Sem r ()) -> Sem r ()
-vcatPreSemicolon = sequenceWith (lineOrEmpty <> semicolon <> space)
 
 hsepSemicolon :: (Members '[ExactPrint] r, Foldable l) => l (Sem r ()) -> Sem r ()
 hsepSemicolon = sequenceWith (semicolon <> space)
