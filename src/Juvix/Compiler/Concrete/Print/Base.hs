@@ -844,14 +844,20 @@ ppLRExpression associates fixlr e =
     (atomParens associates (atomicity e) fixlr)
     (ppCode e)
 
+ppBlock' :: (Members '[Reader Options, ExactPrint] r, Traversable t) => t (Sem r ()) -> Sem r ()
+ppBlock' items = blockIndent (vsepHard (sepEndSemicolon items))
+
 ppBlock :: (PrettyPrint a, Members '[Reader Options, ExactPrint] r, Traversable t) => t a -> Sem r ()
-ppBlock items = blockIndent (vsepHard (sepEndSemicolon (fmap ppCode items)))
+ppBlock items = ppBlock' (fmap ppCode items)
+
+ppBlockOrList' :: (Members '[Reader Options, ExactPrint] r, Traversable t) => t (Sem r ()) -> Sem r ()
+ppBlockOrList' items =
+  flatAlt
+    (ppBlock' items)
+    (hsepSemicolon items)
 
 ppBlockOrList :: (PrettyPrint a, Members '[Reader Options, ExactPrint] r, Traversable t) => t a -> Sem r ()
-ppBlockOrList items =
-  flatAlt
-    (ppBlock items)
-    (hsepSemicolon (fmap ppCode items))
+ppBlockOrList items = ppBlockOrList' (fmap ppCode items)
 
 instance (SingI s) => PrettyPrint (Lambda s) where
   ppCode Lambda {..} = do
@@ -949,8 +955,8 @@ instance PrettyPrint ParsedIteratorInfo where
         rangeItem = do
           a <- _parsedIteratorInfoRangeNum
           return (ppCode Kw.kwRange <+> ppCode Kw.kwAssign <+> ppInt a)
-        items = hsepSemicolon (catMaybes [iniItem, rangeItem])
-    ppCode l <> items <> ppCode r
+        items = ppBlockOrList' (catMaybes [iniItem, rangeItem])
+    grouped (ppCode l <> items <> ppCode r)
 
 instance PrettyPrint IteratorSyntaxDef where
   ppCode IteratorSyntaxDef {..} = do
