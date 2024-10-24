@@ -17,7 +17,7 @@ eqSymbolI : Eq Symbol :=
       case sym1, sym2 of
         | O, O := true
         | X, X := true
-        | _, _ := false
+        | _, _ := false;
   };
 
 --- Turns ;O; into ;X; and ;X; into ;O;

@@ -38,7 +38,7 @@ playMove (attemptedMove : Maybe Nat) (state : GameState) : GameState :=
             mkGameState@{
               board := mkBoard (map (map (replace player' k)) squares);
               player := switch player';
-              error := noError
+              error := noError;
             };
 
 --- Returns ;just; if the given ;Nat; is in range of 1..9
