@@ -1006,6 +1006,11 @@ goExpression = \case
                       }
                   go fields' vars'
               where
+                itemExpression :: RecordUpdateField 'Scoped -> Sem r Internal.Expression
+                itemExpression = \case
+                  RecordUpdateFieldAssign arg -> goExpression (arg ^. fieldUpdateValue)
+                  RecordUpdateFieldPun p -> undefined
+
                 getArg :: Int -> Maybe (RecordUpdateField 'Scoped, [Indexed (RecordUpdateField 'Scoped)])
                 getArg idx = do
                   Indexed fidx arg :| fs <- nonEmpty fields
