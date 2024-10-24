@@ -5,6 +5,7 @@ module Commands.Dev
 where
 
 import Commands.Base
+import Commands.Dev.Anoma qualified as Anoma
 import Commands.Dev.Asm qualified as Asm
 import Commands.Dev.Casm qualified as Casm
 import Commands.Dev.Core qualified as Core
@@ -45,3 +46,4 @@ runCommand = \case
   JuvixDevRepl opts -> Repl.runCommand opts
   MigrateJuvixYaml opts -> runFilesIO $ MigrateJuvixYaml.runCommand opts
   Nockma opts -> Nockma.runCommand opts
+  Anoma opts -> Anoma.runCommand opts
