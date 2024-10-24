@@ -875,8 +875,8 @@ instance PrettyPrint Precedence where
     PrecApp -> noLoc (pretty ("ω" :: Text))
     PrecUpdate -> noLoc (pretty ("ω₁" :: Text))
 
-ppFixityDefHeaderNew :: (SingI s) => PrettyPrinting (FixitySyntaxDef s)
-ppFixityDefHeaderNew FixitySyntaxDef {..} = do
+ppFixityDefHeader :: (SingI s) => PrettyPrinting (FixitySyntaxDef s)
+ppFixityDefHeader FixitySyntaxDef {..} = do
   let sym' = annotated (AnnKind KNameFixity) (ppSymbolType _fixitySymbol)
   ppCode _fixitySyntaxKw <+> ppCode _fixityKw <+> sym'
 
@@ -914,14 +914,14 @@ instance (SingI s) => PrettyPrint (ParsedFixityInfo s) where
               belowItem = do
                 a <- _fixityFieldsPrecBelow
                 return (ppCode Kw.kwBelow <+> ppCode Kw.kwAssign <+> ppSymbolList a)
-              items = hsepSemicolon (catMaybes [assocItem, sameItem, aboveItem, belowItem])
+              items = ppBlockOrList' (catMaybes [assocItem, sameItem, aboveItem, belowItem])
               (l, r) = _fixityFieldsBraces ^. unIrrelevant
-          return (ppCode l <> items <> ppCode r)
+          return (grouped (ppCode l <> items <> ppCode r))
     ppCode _fixityParsedArity <+?> rhs
 
 instance (SingI s) => PrettyPrint (FixitySyntaxDef s) where
   ppCode f@FixitySyntaxDef {..} = do
-    let header' = ppFixityDefHeaderNew f
+    let header' = ppFixityDefHeader f
         body' = ppCode _fixityInfo
     header' <+> ppCode _fixityAssignKw <+> body'
 

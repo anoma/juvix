@@ -699,6 +699,8 @@ parsedFixityFields = do
     bel <- toPermutationWithDefault Nothing (Just <$> belowAbove kwBelow)
     abov <- toPermutationWithDefault Nothing (Just <$> belowAbove kwAbove)
     sam <- toPermutationWithDefault Nothing (Just <$> same)
+    -- This is a hack to allow an optional semicolon at the end
+    toPermutationWithDefault Nothing (return (Just ()))
     pure (as, bel, abov, sam)
   r <- kw delimBraceR
   let _fixityFieldsBraces = Irrelevant (l, r)
@@ -769,9 +771,9 @@ parsedIteratorInfo = do
   (_parsedIteratorInfoInitNum, _parsedIteratorInfoRangeNum) <- intercalateEffect semicolon $ do
     ini <- toPermutationWithDefault Nothing (Just <$> pinit)
     ran <- toPermutationWithDefault Nothing (Just <$> prangeNum)
+    -- This is a hack to allow an optional semicolon at the end
     toPermutationWithDefault Nothing (return (Just ()))
     pure (ini, ran)
-  optional semicolon
   r <- kw delimBraceR
   let _parsedIteratorInfoBraces = Irrelevant (l, r)
   return ParsedIteratorInfo {..}

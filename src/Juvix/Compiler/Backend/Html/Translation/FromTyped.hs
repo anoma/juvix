@@ -437,7 +437,7 @@ goStatement = \case
 
 goFixity :: forall r. (Members '[Reader HtmlOptions] r) => FixitySyntaxDef 'Scoped -> Sem r Html
 goFixity def = do
-  sig' <- ppHelper (ppFixityDefHeaderNew def)
+  sig' <- ppHelper (ppFixityDefHeader def)
   header' <- defHeader (def ^. fixitySymbol) sig' (def ^. fixityDoc)
   prec' <- mkPrec
   ari' <- ari
