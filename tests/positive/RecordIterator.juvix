@@ -19,4 +19,7 @@ foldl
   (g : B -> elem -> B)
   (ini : B)
   (ls : container)
-  : B := for (acc := ini) (x in ls) {g acc x};
+  : B :=
+  for (acc := ini) (x in ls) {
+    g acc x
+  };

@@ -26,7 +26,7 @@ myf'
   | a0 f a b := myf a0 (f a0) a b true;
 
 sum : List Nat -> Nat
-  | xs := for (acc := 0) (x in xs) {x + acc};
+  | xs := for (acc := 0) (x in xs) (x + acc);
 
 funa : {A : Type} -> (A -> A) -> A -> A
   | {A} f a :=

@@ -24,11 +24,14 @@ gen : Nat → Tree
 
 preorder : Tree → List Nat
   | leaf := 0 :: nil
-  | (node1 c) :=  1 :: preorder c
-  | (node2 l r) :=  2 :: preorder l ++ preorder r
+  | (node1 c) := 1 :: preorder c
+  | (node2 l r) := 2 :: preorder l ++ preorder r
   | (node3 l m r) := 3 :: preorder l ++ preorder m ++ preorder r;
 
-combineDigits (xs : List Nat) : Nat := for (acc := 0) (x in xs) acc * 10 + x;
+combineDigits (xs : List Nat) : Nat :=
+  for (acc := 0) (x in xs) {
+    acc * 10 + x
+  };
 
 main : Nat :=
   trace (combineDigits (preorder (gen 3)))
