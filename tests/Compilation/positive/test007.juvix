@@ -11,7 +11,7 @@ map' {A B} (f : A → B) : List A → List B :=
 
 terminating
 map'' {A B} {{Partial}} (f : A → B) (x : List A) : List B :=
-  ite (null x) nil (f (phead x) :: map'' f (tail x));
+  ite (isEmpty x) nil (f (phead x) :: map'' f (tail x));
 
 lst : List Nat := 0 :: 1 :: nil;
 
@@ -24,8 +24,8 @@ printNatListLn (lst : List Nat) : IO :=
   printNatList lst >>> printString "\n";
 
 main : IO :=
-  printBoolLn (null lst)
-    >>> printBoolLn (null (nil {Nat}))
+  printBoolLn (isEmpty lst)
+    >>> printBoolLn (isEmpty (nil {Nat}))
     >>> printNatLn (head 1 lst)
     >>> printNatListLn (tail lst)
     >>> printNatLn (head 0 (tail lst))

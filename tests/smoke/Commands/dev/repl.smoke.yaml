@@ -68,14 +68,14 @@ tests:
           Stdlib.Prelude> \1
     exit-status: 0
 
-  - name: check-type-null
+  - name: check-type-isEmpty
     command:
       - juvix
       - dev
       - repl
     stdout:
       contains: "{A : Type} -> (list : List A) -> Bool"
-    stdin: ":type null"
+    stdin: ":type isEmpty"
     exit-status: 0
 
   - name: check-type-suc
