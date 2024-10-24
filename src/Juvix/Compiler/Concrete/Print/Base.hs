@@ -384,9 +384,14 @@ instance (SingI s) => PrettyPrint (RecordStatement s) where
     RecordStatementField f -> ppCode f
     RecordStatementSyntax f -> ppCode f
 
-instance (SingI s) => PrettyPrint (RecordUpdateField s) where
-  ppCode RecordUpdateField {..} =
+instance (SingI s) => PrettyPrint (RecordUpdateFieldItemAssign s) where
+  ppCode RecordUpdateFieldItemAssign {..} =
     ppSymbolType _fieldUpdateName <+> ppCode _fieldUpdateAssignKw <+> ppExpressionType _fieldUpdateValue
+
+instance (SingI s) => PrettyPrint (RecordUpdateField s) where
+  ppCode = \case
+    RecordUpdateFieldAssign a -> ppCode a
+    RecordUpdateFieldPun a -> ppCode a
 
 instance (SingI s) => PrettyPrint (RecordUpdate s) where
   ppCode RecordUpdate {..} = do

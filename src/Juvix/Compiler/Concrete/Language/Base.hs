@@ -814,12 +814,9 @@ deriving stock instance Ord (ConstructorDef 'Parsed)
 
 deriving stock instance Ord (ConstructorDef 'Scoped)
 
-data RecordUpdateField (s :: Stage) = RecordUpdateField
-  { _fieldUpdateName :: Symbol,
-    _fieldUpdateArgIx :: FieldArgIxType s,
-    _fieldUpdateAssignKw :: Irrelevant (KeywordRef),
-    _fieldUpdateValue :: ExpressionType s
-  }
+data RecordUpdateField (s :: Stage)
+  = RecordUpdateFieldAssign (RecordUpdateFieldItemAssign s)
+  | RecordUpdateFieldPun (NamedArgumentPun s)
   deriving stock (Generic)
 
 instance Serialize (RecordUpdateField 'Scoped)
@@ -841,6 +838,34 @@ deriving stock instance Eq (RecordUpdateField 'Scoped)
 deriving stock instance Ord (RecordUpdateField 'Parsed)
 
 deriving stock instance Ord (RecordUpdateField 'Scoped)
+
+data RecordUpdateFieldItemAssign (s :: Stage) = RecordUpdateFieldItemAssign
+  { _fieldUpdateName :: Symbol,
+    _fieldUpdateArgIx :: FieldArgIxType s,
+    _fieldUpdateAssignKw :: Irrelevant (KeywordRef),
+    _fieldUpdateValue :: ExpressionType s
+  }
+  deriving stock (Generic)
+
+instance Serialize (RecordUpdateFieldItemAssign 'Scoped)
+
+instance NFData (RecordUpdateFieldItemAssign 'Scoped)
+
+instance Serialize (RecordUpdateFieldItemAssign 'Parsed)
+
+instance NFData (RecordUpdateFieldItemAssign 'Parsed)
+
+deriving stock instance Show (RecordUpdateFieldItemAssign 'Parsed)
+
+deriving stock instance Show (RecordUpdateFieldItemAssign 'Scoped)
+
+deriving stock instance Eq (RecordUpdateFieldItemAssign 'Parsed)
+
+deriving stock instance Eq (RecordUpdateFieldItemAssign 'Scoped)
+
+deriving stock instance Ord (RecordUpdateFieldItemAssign 'Parsed)
+
+deriving stock instance Ord (RecordUpdateFieldItemAssign 'Scoped)
 
 data RecordField (s :: Stage) = RecordField
   { _fieldName :: SymbolType s,
@@ -2910,6 +2935,7 @@ deriving stock instance Ord (FunctionLhs 'Parsed)
 deriving stock instance Ord (FunctionLhs 'Scoped)
 
 makeLenses ''SideIfs
+makeLenses ''RecordUpdateFieldItemAssign
 makeLenses ''FunctionDefNameScoped
 makeLenses ''TypeSig
 makeLenses ''FunctionLhs
@@ -3335,6 +3361,11 @@ instance (SingI s) => HasLoc (NamedApplicationNew s) where
   getLoc NamedApplicationNew {..} = getLocIdentifierType _namedApplicationNewName
 
 instance (SingI s) => HasLoc (RecordUpdateField s) where
+  getLoc = \case
+    RecordUpdateFieldAssign a -> getLoc a
+    RecordUpdateFieldPun a -> getLoc a
+
+instance (SingI s) => HasLoc (RecordUpdateFieldItemAssign s) where
   getLoc f = getLocSymbolType (f ^. fieldUpdateName) <> getLocExpressionType (f ^. fieldUpdateValue)
 
 instance HasLoc (RecordUpdate s) where
