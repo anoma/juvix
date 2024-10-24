@@ -11,10 +11,14 @@ anomaLib =
       decodeUtf8 $(FE.makeRelativeToProject "runtime/nockma/anomalib.nockma" >>= FE.embedFile)
 
 -- | The anoma lib paths are obtained from the Urbit dojo
--- * Load the anoma lib file into the Urbit dojo
--- * Run: `=>  anoma  !=(s)` where s is an anoma lib symbol
+-- * Load the anoma lib files into the Urbit dojo
+--
+--      =anoma -build-file /=base=/lib/anoma/hoon
+--      =rm -build-file /=base=/lib/resource-machine/hoon
+--
+-- * Run: `=>  rm  !=(s)` where s is an anoma lib symbol
 -- eg:
---      =>  anoma  !=(add)
+--      =>  rm  !=(add)
 --      [9 20 0 15]
 anomaLibPath :: AnomaLib -> Term Natural
 anomaLibPath = \case
@@ -44,21 +48,21 @@ anomaLibPath = \case
     StdlibSha256 -> [nock| [9 22 0 7] |]
     -- Obtained from the urbit dojo using:
     --
-    -- =>  anoma  !=(~(met block 3))
+    -- =>  rm  !=(~(met block 3))
     --
     -- The `3` here is because we want to treat each atom as sequences of 2^3
     -- bits, i.e bytes.
     StdlibLengthBytes -> [nock| [8 [9 10 0 63] 9 190 10 [6 7 [0 3] 1 3] 0 2] |]
     -- Obtained from the urbit dojo using:
     --
-    -- =>  anoma  !=(~(cat block 3))
+    -- =>  rm  !=(~(cat block 3))
     --
     -- The `3` here is because we want to treat each atom as sequences of 2^3
     -- bits, i.e bytes.
     StdlibCatBytes -> [nock| [8 [9 10 0 63] 9 4 10 [6 7 [0 3] 1 3] 0 2] |]
     -- Obtained from the urbit dojo using:
     --
-    -- =>(anoma !=(|=([l=(list @)] (foldr l |=([fst=@ snd=@] (add (~(lsh block 3) 1 snd) fst))))))
+    -- =>(rm !=(|=([l=(list @)] (foldr l |=([fst=@ snd=@] (add (~(lsh block 3) 1 snd) fst))))))
     --
     -- The `3` here is because we want to shift left in byte = 2^3 bit steps.
     StdlibFoldBytes ->
