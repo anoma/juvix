@@ -189,8 +189,10 @@ instance (SingI s) => PrettyPrint (ListPattern s) where
   ppCode ListPattern {..} = do
     let l = ppCode _listpBracketL
         r = ppCode _listpBracketR
-        e = hsepSemicolon (map ppPatternParensType _listpItems)
-    l <> e <> r
+        e = case sing :: SStage s of
+          SParsed -> ppBlockOrList _listpItems
+          SScoped -> ppBlockOrList _listpItems
+    grouped (align (l <> e <> r))
 
 instance PrettyPrint Interval where
   ppCode = noLoc . pretty
@@ -323,8 +325,10 @@ instance (SingI s) => PrettyPrint (List s) where
   ppCode List {..} = do
     let l = ppCode _listBracketL
         r = ppCode _listBracketR
-        es = vcatPreSemicolon (map ppExpressionType _listItems)
-    grouped (align (l <> spaceOrEmpty <> es <> lineOrEmpty <> r))
+        es = case sing :: SStage s of
+          SParsed -> ppBlockOrList _listItems
+          SScoped -> ppBlockOrList _listItems
+    grouped (align (l <> es <> r))
 
 instance (SingI s) => PrettyPrint (NamedArgumentAssign s) where
   ppCode NamedArgumentAssign {..} = do
@@ -847,7 +851,7 @@ ppBlockOrList :: (PrettyPrint a, Members '[Reader Options, ExactPrint] r, Traver
 ppBlockOrList items =
   flatAlt
     (ppBlock items)
-    (sepSemicolon (fmap ppCode items))
+    (hsepSemicolon (fmap ppCode items))
 
 instance (SingI s) => PrettyPrint (Lambda s) where
   ppCode Lambda {..} = do
