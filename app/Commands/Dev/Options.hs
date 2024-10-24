@@ -12,6 +12,7 @@ module Commands.Dev.Options
   )
 where
 
+import Commands.Dev.Anoma.Options
 import Commands.Dev.Asm.Options hiding (Compile)
 import Commands.Dev.Casm.Options
 import Commands.Dev.Core.Options
@@ -52,6 +53,7 @@ data DevCommand
   | JuvixDevRepl ReplOptions
   | MigrateJuvixYaml MigrateJuvixYamlOptions
   | Nockma NockmaCommand
+  | Anoma AnomaCommand
   deriving stock (Data)
 
 parseDevCommand :: Parser DevCommand
@@ -75,6 +77,7 @@ parseDevCommand =
           commandJuvixDevRepl,
           commandMigrateJuvixYaml,
           commandLatex,
+          commandAnoma,
           commandNockma
         ]
     )
@@ -206,3 +209,10 @@ commandNockma =
     info
       (Nockma <$> parseNockmaCommand)
       (progDesc "Subcommands related to the nockma backend")
+
+commandAnoma :: Mod CommandFields DevCommand
+commandAnoma =
+  command "anoma" $
+    info
+      (Anoma <$> parseAnomaCommand)
+      (progDesc "Subcommands related to the anoma")
