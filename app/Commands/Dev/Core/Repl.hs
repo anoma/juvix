@@ -28,7 +28,7 @@ parseText = Core.runParser replPath defaultModuleId
 runRepl :: forall r. (Members '[EmbedIO, App] r) => CoreReplOptions -> Core.InfoTable -> Sem r ()
 runRepl opts tab = do
   putStr "> "
-  liftIO (hFlush stdout)
+  hFlush stdout
   done <- liftIO isEOF
   unless done $ do
     s <- getLine

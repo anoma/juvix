@@ -11,10 +11,20 @@ makeLenses ''NodeOptions
 
 parseNodeOptions :: Parser NodeOptions
 parseNodeOptions = do
-  _nodeAnomaPath <-
-    parseGenericOutputDir
-      ( help "Anoma repository directory"
+  path <-
+    option
+      somePreDirOpt
+      ( long "anoma-dir"
+          <> metavar "ANOMA_DIR"
+          <> help "Path to anoma repository"
           <> action "directory"
       )
-
-  pure NodeOptions {..}
+  pure
+    NodeOptions
+      { _nodeAnomaPath =
+          AppPath
+            { _pathIsInput = False,
+              _pathPath = path
+            },
+        ..
+      }

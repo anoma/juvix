@@ -10,6 +10,7 @@ module Juvix.Prelude.Effects.Base
     module Effectful.Dispatch.Static,
     module Effectful.Provider,
     module Effectful.Concurrent.Async,
+    module Effectful.Process,
   )
 where
 
@@ -23,6 +24,7 @@ import Effectful.Dispatch.Dynamic qualified as E
 import Effectful.Dispatch.Static
 import Effectful.Error.Static hiding (runError, runErrorWith)
 import Effectful.Internal.Env (getEnv, putEnv)
+import Effectful.Process hiding (env)
 import Effectful.Provider
 import Effectful.Reader.Static
 import Effectful.State.Static.Local hiding (runState, state)

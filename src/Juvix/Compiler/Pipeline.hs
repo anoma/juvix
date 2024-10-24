@@ -52,7 +52,7 @@ import Juvix.Compiler.Reg.Translation.FromAsm qualified as Reg
 import Juvix.Compiler.Store.Language qualified as Store
 import Juvix.Compiler.Tree qualified as Tree
 import Juvix.Data.Effect.Git
-import Juvix.Data.Effect.Process
+import Juvix.Data.Effect.Process.Base (ProcessE)
 import Juvix.Data.Field
 import Parallel.ProgressLog
 
@@ -73,7 +73,7 @@ type PipelineLocalEff =
      Error DependencyError,
      GitClone,
      Error GitProcessError,
-     Process,
+     ProcessE,
      Log,
      Reader EntryPoint,
      Files,
