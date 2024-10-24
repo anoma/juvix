@@ -10,16 +10,16 @@ type S :=
     fieldB : B;
     fieldC : A;
     fieldD : B;
-    fieldE : B
+    fieldE : B;
   };
 
 f (fieldA : A) (fieldB : B) : S :=
   let
     fieldD := b;
   in mkS@{
-    fieldC := fieldA;
-    fieldA;
-    fieldB;
-    fieldE := b;
-    fieldD
-  };
+       fieldC := fieldA;
+       fieldA;
+       fieldB;
+       fieldE := b;
+       fieldD;
+     };

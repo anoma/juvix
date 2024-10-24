@@ -4,7 +4,7 @@ type T := t;
 
 fun : T :=
   namedFun@{
-    x := t
+    x := t;
   };
 
 namedFun (x : T) : T := t;
