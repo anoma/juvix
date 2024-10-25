@@ -55,5 +55,6 @@ module E6;
 
   type Box := mkBox@{unbox : Nat};
 
-  type Foldable := mkFoldable@{for : {B : Type} -> (B -> Nat -> B) -> B -> Box -> B};
+  type Foldable :=
+    mkFoldable@{for : {B : Type} -> (B -> Nat -> B) -> B -> Box -> B};
 end;

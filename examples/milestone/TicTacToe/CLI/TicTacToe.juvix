@@ -25,15 +25,20 @@ run (state : GameState) : IO :=
   case GameState.error state of
     | terminate msg :=
       printStringLn
-        ("\n" ++str showGameState state@GameState{error := noError} ++str "\n" ++str msg)
+        ("\n"
+          ++str showGameState state@GameState{error := noError}
+          ++str "\n"
+          ++str msg)
     | continue msg :=
       let
         state' := state@GameState{error := noError};
-      in printString (msg ++str prompt state') >>> readLn (nextMove state' >> run)
+      in printString (msg ++str prompt state')
+        >>> readLn (nextMove state' >> run)
     | _ := printString (prompt state) >>> readLn (nextMove state >> run);
 
 --- The welcome message
-welcome : String := "MiniTicTacToe\n-------------\n\nType a number then ENTER to make a move";
+welcome : String :=
+  "MiniTicTacToe\n-------------\n\nType a number then ENTER to make a move";
 
 --- The entry point of the program
 main : IO := printStringLn welcome >>> run beginState;
