@@ -12,19 +12,31 @@ runCommand opts = do
   let opts' = opts ^. anomaCompileCommonOptions
       inputFile = opts' ^. compileInputFile
       moutputFile = opts' ^. compileOutputFile
+  nockmaFile :: Path Abs File <- getOutputFile FileExtNockma inputFile moutputFile
+  res <- compileAnomaOpts opts'
+  outputAnomaResult (opts' ^. compileDebug) nockmaFile res
+
+compileAnoma :: (Members AppEffects r) => Maybe (AppPath File) -> Sem r Nockma.AnomaResult
+compileAnoma inputFile = do
+  let opts' =
+        defaultCompileCommonOptionsMain
+          { _compileInputFile = inputFile
+          }
+  compileAnomaOpts opts'
+
+compileAnomaOpts :: (Members AppEffects r) => CompileCommonOptions 'InputMain -> Sem r Nockma.AnomaResult
+compileAnomaOpts opts' = do
   coreRes <- fromCompileCommonOptionsMain opts' >>= compileToCore
   entryPoint <-
-    applyOptions opts
+    applyOptions opts'
       <$> getEntryPoint (opts' ^. compileInputFile)
-  nockmaFile :: Path Abs File <- getOutputFile FileExtNockma inputFile moutputFile
   r <-
     runReader entryPoint
       . runError @JuvixError
       . coreToAnoma
       $ coreRes
         ^. coreResultModule
-  res <- getRight r
-  outputAnomaResult (opts' ^. compileDebug) nockmaFile res
+  getRight r
 
 outputAnomaResult :: (Members '[EmbedIO, App, Files] r) => Bool -> Path Abs File -> Nockma.AnomaResult -> Sem r ()
 outputAnomaResult debugOutput nockmaFile Nockma.AnomaResult {..} = do

@@ -232,7 +232,7 @@ import System.IO hiding
   )
 import System.IO qualified as IO
 import System.IO.Error
-import Text.Read (readEither)
+import Text.Read (Read, readEither)
 import Text.Read qualified as Text
 import Text.Show (Show)
 import Text.Show qualified as Show
@@ -250,6 +250,9 @@ type LazyHashMap = LazyHashMap.HashMap
 type SimpleFold s a = forall r. (Monoid r) => Getting r s a
 
 type SimpleGetter s a = forall r. Getting r s a
+
+readJust :: (Read a) => String -> a
+readJust = Text.read
 
 traverseM ::
   (Monad m, Traversable m, Applicative f) =>
