@@ -20,8 +20,13 @@ newtype GenericOptions = GenericOptions
   }
   deriving stock (Eq, Show)
 
+newtype SimpleError = SimpleError
+  { _simpleErrorMessage :: AnsiText
+  }
+
 makeLenses ''GenericError
 makeLenses ''GenericOptions
+makeLenses ''SimpleError
 
 defaultGenericOptions :: GenericOptions
 defaultGenericOptions =
@@ -35,6 +40,14 @@ instance Pretty GenericError where
 
 instance HasLoc GenericError where
   getLoc = (^. genericErrorLoc)
+
+instance HasAnsiBackend SimpleError where
+  toAnsiDoc (SimpleError msg) = toAnsiDoc msg
+  toAnsiStream (SimpleError msg) = toAnsiStream msg
+
+instance HasTextBackend SimpleError where
+  toTextStream (SimpleError msg) = toTextStream msg
+  toTextDoc (SimpleError msg) = toTextDoc msg
 
 genericErrorHeader :: GenericError -> Doc a
 genericErrorHeader g =

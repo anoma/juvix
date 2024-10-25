@@ -111,7 +111,7 @@ modifyShared = Shared.modify
 modify' :: (Member (State s) r) => (s -> s) -> Sem r ()
 modify' = State.modify
 
-mapError :: (Member (Error b) r) => (a -> b) -> Sem (Error a ': r) x -> Sem r x
+mapError :: forall a b r x. (Member (Error b) r) => (a -> b) -> Sem (Error a ': r) x -> Sem r x
 mapError f = runErrorWith (throwError . f)
 
 runM :: (MonadIO m) => Sem '[EmbedIO] a -> m a

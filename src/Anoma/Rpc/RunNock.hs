@@ -1,4 +1,4 @@
-module Anoma.Rpc.Base where
+module Anoma.Rpc.RunNock where
 
 import Juvix.Prelude
 import Juvix.Prelude.Aeson
@@ -35,6 +35,21 @@ $( deriveJSON
        }
      ''RunNock
  )
+
+newtype Response = Response
+  { _proof :: Text
+  }
+
+$( deriveJSON
+     defaultOptions
+       { fieldLabelModifier = \case
+           "_proof" -> "proof"
+           _ -> impossibleError "All fields must be covered"
+       }
+     ''Response
+ )
+
+makeLenses ''Response
 
 example :: RunNock
 example =
