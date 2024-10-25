@@ -7,6 +7,6 @@ type BoxedList :=
   | boxed (List Nat);
 
 sumBoxedList : BoxedList -> Nat
-  | (boxed l) := for (acc := 0) (x in l) acc + x;
+  | (boxed l) := for (acc := 0) (x in l) (acc + x);
 
 main : Nat := sumBoxedList (boxed [1;2;3]);

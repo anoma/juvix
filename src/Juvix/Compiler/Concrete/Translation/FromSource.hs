@@ -931,7 +931,8 @@ iterator = do
   do
     (_iteratorBody, _iteratorBodyBraces) <-
       (,True) <$> braces parseExpressionAtoms
-        <|> (,False) <$> parseExpressionAtoms
+        <|> (,False) <$> parens parseExpressionAtoms
+        <|> (,True) <$> parseExpressionAtoms
     let _iteratorParens = False
     return $ Iterator {..}
   where

@@ -304,17 +304,17 @@ instance (SingI s) => PrettyPrint (Range s) where
     n <+> ppCode _rangeInKw <+> e
 
 ppIterator :: forall r s. (Members '[ExactPrint, Reader Options] r, SingI s) => IsTop -> Iterator s -> Sem r ()
-ppIterator isTop Iterator {..} = do
+ppIterator _isTop Iterator {..} = do
   let n = ppIdentifierType _iteratorName
       is = ppCode <$> _iteratorInitializers
       rngs = ppCode <$> _iteratorRanges
       is' = parens . hsepSemicolon <$> nonEmpty is
       rngs' = parens . hsepSemicolon <$> nonEmpty rngs
       b
-        | _iteratorBodyBraces = braces (oneLineOrNextNoIndent (ppTopExpressionType _iteratorBody))
-        | otherwise = line <> ppMaybeTopExpression isTop _iteratorBody
+        | _iteratorBodyBraces = space <> braces (blockIndent (ppTopExpressionType _iteratorBody))
+        | otherwise = parens (oneLineOrNextNoIndent (ppTopExpressionType _iteratorBody))
   parensIf _iteratorParens $
-    hang (n <+?> is' <+?> rngs' <> b)
+    n <+?> is' <+?> rngs' <> b
 
 instance PrettyPrint S.AName where
   ppCode n = annotated (AnnKind (S.getNameKind n)) (noLoc (pretty (n ^. S.anameVerbatim)))

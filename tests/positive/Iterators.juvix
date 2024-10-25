@@ -15,8 +15,10 @@ type Bool :=
 main : Bool :=
   let
     z : Bool := false;
-  in itconst (a := true; b := false) (c in false; d in false)
-       for (x := true) (y in false)
-         case x of
-           | true := y
-           | false := z;
+  in itconst (a := true; b := false) (c in false; d in false) {
+    for (x := true) (y in false) {
+      case x of
+        | true := y
+        | false := z
+    }
+  };
