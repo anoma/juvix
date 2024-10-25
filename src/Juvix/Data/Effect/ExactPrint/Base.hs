@@ -28,6 +28,7 @@ data ExactPrint :: Effect where
   PrintCommentsUntil :: Interval -> ExactPrint m (Maybe SpaceSpan)
   EnsureEmptyLine :: ExactPrint m ()
   Region :: (Doc Ann -> Doc Ann) -> m b -> ExactPrint m b
+  -- | Both doc arguments are required to span the same region.
   RegionAlt :: (Doc Ann -> Doc Ann -> Doc Ann) -> (b -> b -> b) -> m b -> m b -> ExactPrint m b
   End :: ExactPrint m ()
 
@@ -91,6 +92,7 @@ runExactPrint cs = reinterpretH (runPrivateStateAsDoc (initialBuilder cs)) handl
               _builderEnsureEmptyLine = st' ^. builderEnsureEmptyLine
             }
         return fx
+      -- `m1` and `m2` are required to span the same region.
       RegionAlt regionModif alt (m1 :: Sem localEs x) (m2 :: Sem localEs x) -> do
         st0 :: Builder <- set builderDoc mempty <$> get
         let runner :: Sem (State Builder ': localEs) x -> Sem localEs (Builder, x)
@@ -106,6 +108,7 @@ runExactPrint cs = reinterpretH (runPrivateStateAsDoc (initialBuilder cs)) handl
             inner2 = localSeqUnliftCommon locEnv (helper m2)
         (st1 :: Builder, fx1) <- raise inner1
         (st2 :: Builder, fx2) <- raise inner2
+        massert (length (st1 ^. builderComments) == length (st2 ^. builderComments))
         doc' <- gets (^. builderDoc)
         put
           Builder
