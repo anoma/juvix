@@ -56,5 +56,6 @@ runNockma prog inputs = do
             _runNockPrivateInputs = args,
             _runNockPublicInputs = []
           }
-  res :: Rpc.Response <- anomaRpc (Aeson.toJSON msg) >>= fromJSON
+  let json = Aeson.toJSON msg
+  res :: Rpc.Response <- anomaRpc json >>= fromJSON
   decodeJam64 (res ^. Rpc.proof)

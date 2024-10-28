@@ -17,29 +17,21 @@ runCommand opts = do
   parsedTerm <- runAppError @JuvixError (Nockma.cueJammedFileOrPretty afile)
   case parsedTerm of
     TermAtom {} -> exitFailMsg "Expected nockma input to be a cell"
-    t@(TermCell {})
-      | opts ^. nockmaRunAnoma -> do
-          anomaDir <- getAnomaPath
-          runInAnoma anomaDir t (unfoldTuple parsedArgs)
-      | otherwise -> do
-          let formula = anomaCallTuple parsedArgs
-          (counts, res) <-
-            runOpCounts
-              . runReader defaultEvalOptions
-              . runOutputSem @(Term Natural) (logInfo . mkAnsiText . ppTrace)
-              $ evalCompiledNock' t formula
-          putStrLn (ppPrint res)
-          let statsFile = replaceExtension' ".profile" afile
-          writeFileEnsureLn statsFile (prettyText counts)
+    t@(TermCell {}) -> case opts ^. nockmaRunAnomaDir of
+      Just path -> do
+        anomaDir <- AnomaPath <$> fromAppPathDir path
+        runInAnoma anomaDir t (unfoldTuple parsedArgs)
+      Nothing -> do
+        let formula = anomaCallTuple parsedArgs
+        (counts, res) <-
+          runOpCounts
+            . runReader defaultEvalOptions
+            . runOutputSem @(Term Natural) (logInfo . mkAnsiText . ppTrace)
+            $ evalCompiledNock' t formula
+        putStrLn (ppPrint res)
+        let statsFile = replaceExtension' ".profile" afile
+        writeFileEnsureLn statsFile (prettyText counts)
   where
-    getAnomaPath :: Sem r AnomaPath
-    getAnomaPath = do
-      apppath <- maybe err return (opts ^. nockmaRunAnomaDir)
-      AnomaPath <$> fromAppPathDir apppath
-      where
-        err :: Sem r x
-        err = exitFailMsg ("The --" <> anomaDirOptLongStr <> " must be provided")
-
     inputFile :: AppPath File
     inputFile = opts ^. nockmaRunFile
 

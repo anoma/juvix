@@ -46,6 +46,6 @@ traceToFile fpath t a =
         return a
 {-# WARNING traceToFile "Using traceToFile" #-}
 
-traceToFileM :: (Applicative m) => Path Abs File -> Text -> a -> m ()
-traceToFileM fpath t a = pure (traceToFile fpath t a) $> ()
+traceToFileM :: (Applicative m) => Path Abs File -> Text -> m ()
+traceToFileM fpath t = pure (traceToFile fpath t ()) $> ()
 {-# WARNING traceToFileM "Using traceFileM" #-}

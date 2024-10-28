@@ -50,11 +50,3 @@ $( deriveJSON
  )
 
 makeLenses ''Response
-
-example :: RunNock
-example =
-  RunNock
-    { _runNockJammedProgram = "jamjam",
-      _runNockPrivateInputs = [NockInputText "input"],
-      _runNockPublicInputs = [NockInputJammed "public"]
-    }

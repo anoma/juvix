@@ -84,7 +84,7 @@ withSapwnAnomaNode ::
   Sem r a
 withSapwnAnomaNode body = withSystemTempFile "start.exs" $ \fp tmpHandle -> do
   liftIO (B.hPutStr tmpHandle anomaStartExs)
-  hFlush tmpHandle
+  hClose tmpHandle
   curDir <- getCurrentDir
   asks (^. anomaPath) >>= setCurrentDir
   withCreateProcess (cprocess (toFilePath fp)) $ \_stdin mstdout _stderr procHandle -> do
@@ -108,7 +108,7 @@ anomaRpc' msg = do
         stdoutH = fromJust mstdout
         inputbs = B.toStrict (encode msg)
     liftIO (B.hPutStr stdinH inputbs)
-    hFlush stdinH
+    hClose stdinH
     res <- eitherDecodeStrict <$> liftIO (B.hGetContents stdoutH)
     case res of
       Right r -> return r
@@ -116,15 +116,17 @@ anomaRpc' msg = do
 
 grpcCliProcess :: (Members '[Reader AnomaPath] r) => Sem r CreateProcess
 grpcCliProcess = do
-  protoFile <- relativeToAnomaDir relProtoFile
+  paths <- relativeToAnomaDir relProtoDir
   return
     ( proc
         "grpc_cli"
         [ "call",
           "--json_input",
           "--json_output",
+          "--proto_path",
+          toFilePath paths,
           "--protofiles",
-          toFilePath protoFile,
+          toFilePath relProtoFile,
           "localhost:" <> show listenPort,
           "Anoma.Protobuf.Intents.Prove"
         ]
@@ -133,8 +135,11 @@ grpcCliProcess = do
         std_out = CreatePipe
       }
   where
+    relProtoDir :: Path Rel Dir
+    relProtoDir = $(mkRelDir "apps/anoma_protobuf/priv/protobuf")
+
     relProtoFile :: Path Rel File
-    relProtoFile = $(mkRelFile "apps/anoma_protobuf/priv/protobuf/anoma.proto")
+    relProtoFile = $(mkRelFile "anoma.proto")
 
 runAnoma :: forall r a. (Members '[Logger, EmbedIO] r) => AnomaPath -> Sem (Anoma ': r) a -> Sem r a
 runAnoma anomapath body = runReader anomapath . runConcurrent . runProcess $

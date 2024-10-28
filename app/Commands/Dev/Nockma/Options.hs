@@ -30,7 +30,7 @@ parseNockmaCommand =
         runInfo =
           info
             (NockmaRun <$> parseNockmaRunOptions)
-            (progDesc "Run an Anoma program. It should be used with artefacts obtained from compilation with the anoma target.")
+            (progDesc ("Run an Anoma program. It should be used with artefacts obtained from compilation with the anoma target. If the --" <> anomaDirOptLongStr <> " is given, then it runs the code in an anoma node"))
 
     commandFromAsm :: Mod CommandFields NockmaCommand
     commandFromAsm = command "eval" fromAsmInfo
