@@ -5,8 +5,7 @@ module Anoma.Effect.RunNockma
 where
 
 import Anoma.Effect.Base
-import Anoma.Rpc.RunNock (RunNock (_runNockJammedProgram))
-import Anoma.Rpc.RunNock qualified as Rpc
+import Anoma.Rpc.RunNock
 import Data.ByteString.Base64 qualified as Base64
 import Juvix.Compiler.Nockma.Encoding.Cue (DecodingError, cueFromByteString'')
 import Juvix.Compiler.Nockma.Encoding.Jam (jamToByteString)
@@ -14,6 +13,7 @@ import Juvix.Compiler.Nockma.Language (NockNaturalNaturalError)
 import Juvix.Compiler.Nockma.Language qualified as Nockma
 import Juvix.Data.CodeAnn (simpleErrorCodeAnn)
 import Juvix.Prelude
+import Juvix.Prelude.Aeson (Value)
 import Juvix.Prelude.Aeson qualified as Aeson
 import Juvix.Prelude.Pretty
 
@@ -49,13 +49,13 @@ runNockma ::
   Sem r (Nockma.Term Natural)
 runNockma prog inputs = do
   let prog' = encodeJam64 prog
-      args = map (Rpc.NockInputJammed . encodeJam64) inputs
+      args = map (NockInputJammed . encodeJam64) inputs
       msg =
-        Rpc.RunNock
+        RunNock
           { _runNockJammedProgram = prog',
             _runNockPrivateInputs = args,
             _runNockPublicInputs = []
           }
   let json = Aeson.toJSON msg
-  res :: Rpc.Response <- anomaRpc json >>= fromJSON
-  decodeJam64 (res ^. Rpc.proof)
+  res :: Response <- anomaRpc runNockGrpcUrl json >>= fromJSON
+  decodeJam64 (res ^. proof)

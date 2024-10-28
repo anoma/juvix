@@ -5,7 +5,10 @@ import Commands.Base
 import Commands.Dev.Anoma.Node.Options
 
 runCommand :: forall r. (Members AppEffects r) => NodeOptions -> Sem r ()
-runCommand opts = runConcurrent . runProcess $ do
-  anomaDir :: AnomaPath <- AnomaPath <$> fromAppPathDir (opts ^. nodeAnomaPath)
-  runAnoma anomaDir $ do
-    void noHalt
+runCommand opts = runAppError @SimpleError
+  . runConcurrent
+  . runProcess
+  $ do
+    anomaDir :: AnomaPath <- AnomaPath <$> fromAppPathDir (opts ^. nodeAnomaPath)
+    runAnoma anomaDir $ do
+      void noHalt

@@ -1,7 +1,13 @@
 module Anoma.Rpc.RunNock where
 
+import Anoma.Rpc.Base
 import Juvix.Prelude
 import Juvix.Prelude.Aeson
+
+runNockGrpcUrl :: GrpcMethodUrl
+runNockGrpcUrl =
+  mkGrpcMethodUrl $
+    "Anoma" :| ["Protobuf", "Intents", "Prove"]
 
 data NockInput
   = NockInputText Text

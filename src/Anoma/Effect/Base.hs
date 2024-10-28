@@ -5,11 +5,13 @@ module Anoma.Effect.Base
     AnomaPath (..),
     anomaPath,
     runAnoma,
-    module Juvix.Prelude.Aeson,
+    module Anoma.Rpc.Base,
     module Juvix.Compiler.Nockma.Translation.FromTree,
   )
 where
 
+import Anoma.Effect.Paths
+import Anoma.Rpc.Base
 import Data.ByteString qualified as B
 import Juvix.Compiler.Nockma.Translation.FromTree (AnomaResult)
 import Juvix.Data.CodeAnn
@@ -21,7 +23,7 @@ data Anoma :: Effect where
   -- | Keep the node and client running
   NoHalt :: Anoma m ExitCode
   -- | Blocking rpc call
-  AnomaRpc :: Value -> Anoma m Value
+  AnomaRpc :: GrpcMethodUrl -> Value -> Anoma m Value
 
 makeSem ''Anoma
 
@@ -41,7 +43,7 @@ relativeToAnomaDir p = do
   return (anoma <//> p)
 
 withSpawnAnomaClient ::
-  (Members '[Process, Logger, EmbedIO, Reader AnomaPath, Reader GrpcPort] r) =>
+  (Members '[Process, Logger, EmbedIO, Reader AnomaPath, Reader GrpcPort, Error SimpleError] r) =>
   (ProcessHandle -> Sem r a) ->
   Sem r a
 withSpawnAnomaClient body = do
@@ -54,7 +56,7 @@ withSpawnAnomaClient body = do
         logInfo "Anoma client successfully started"
         logInfo (mkAnsiText ("Listening on port " <> annotate AnnImportant (pretty listenPort)))
         body procHandle
-      _ -> error "Something went wrong when starting the anoma client"
+      _ -> throw (SimpleError (mkAnsiText @Text "Something went wrong when starting the anoma client"))
   where
     mkProcess :: (Members '[Reader AnomaPath, Reader GrpcPort] r') => Sem r' CreateProcess
     mkProcess = do
@@ -73,10 +75,6 @@ withSpawnAnomaClient body = do
         )
           { std_out = CreatePipe
           }
-
-    -- Relative to the anoma repository
-    clientRelFile :: Path Rel File
-    clientRelFile = $(mkRelFile "apps/anoma_client/anoma_client")
 
 withSapwnAnomaNode ::
   (Members '[EmbedIO, Logger, Process, Reader AnomaPath] r) =>
@@ -100,22 +98,22 @@ withSapwnAnomaNode body = withSystemTempFile "start.exs" $ \fp tmpHandle -> do
         { std_out = CreatePipe
         }
 
-anomaRpc' :: (Members '[Reader AnomaPath, Process, EmbedIO] r) => Value -> Sem r Value
-anomaRpc' msg = do
-  cproc <- grpcCliProcess
+anomaRpc' :: (Members '[Reader AnomaPath, Process, EmbedIO, Error SimpleError] r) => GrpcMethodUrl -> Value -> Sem r Value
+anomaRpc' method payload = do
+  cproc <- grpcCliProcess method
   withCreateProcess cproc $ \mstdin mstdout _stderr _procHandle -> do
     let stdinH = fromJust mstdin
         stdoutH = fromJust mstdout
-        inputbs = B.toStrict (encode msg)
+        inputbs = B.toStrict (encode payload)
     liftIO (B.hPutStr stdinH inputbs)
     hClose stdinH
     res <- eitherDecodeStrict <$> liftIO (B.hGetContents stdoutH)
     case res of
       Right r -> return r
-      Left err -> error (pack err)
+      Left err -> throw (SimpleError (mkAnsiText err))
 
-grpcCliProcess :: (Members '[Reader AnomaPath] r) => Sem r CreateProcess
-grpcCliProcess = do
+grpcCliProcess :: (Members '[Reader AnomaPath] r) => GrpcMethodUrl -> Sem r CreateProcess
+grpcCliProcess method = do
   paths <- relativeToAnomaDir relProtoDir
   return
     ( proc
@@ -128,24 +126,18 @@ grpcCliProcess = do
           "--protofiles",
           toFilePath relProtoFile,
           "localhost:" <> show listenPort,
-          "Anoma.Protobuf.Intents.Prove"
+          show method
         ]
     )
       { std_in = CreatePipe,
         std_out = CreatePipe
       }
-  where
-    relProtoDir :: Path Rel Dir
-    relProtoDir = $(mkRelDir "apps/anoma_protobuf/priv/protobuf")
 
-    relProtoFile :: Path Rel File
-    relProtoFile = $(mkRelFile "anoma.proto")
-
-runAnoma :: forall r a. (Members '[Logger, EmbedIO] r) => AnomaPath -> Sem (Anoma ': r) a -> Sem r a
+runAnoma :: forall r a. (Members '[Logger, EmbedIO, Error SimpleError] r) => AnomaPath -> Sem (Anoma ': r) a -> Sem r a
 runAnoma anomapath body = runReader anomapath . runConcurrent . runProcess $
   withSapwnAnomaNode $ \grpcport _nodeOut nodeH ->
     runReader (GrpcPort grpcport) $
       withSpawnAnomaClient $ \_clientH -> do
         (`interpret` inject body) $ \case
           NoHalt -> waitForProcess nodeH
-          AnomaRpc i -> anomaRpc' i
+          AnomaRpc method i -> anomaRpc' method i
