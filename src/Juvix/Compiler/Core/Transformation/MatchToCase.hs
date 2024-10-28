@@ -11,8 +11,7 @@ import Juvix.Compiler.Core.Pretty hiding (Options)
 import Juvix.Compiler.Core.Transformation.Base
 
 data PatternRow = PatternRow
-  { _patternRowOriginalPatterns :: [Pattern],
-    _patternRowPatterns :: [Pattern],
+  { _patternRowPatterns :: [Pattern],
     _patternRowRhs :: MatchBranchRhs,
     -- | The number of initial wildcard binders in `_patternRowPatterns` which
     -- don't originate from the input
@@ -61,8 +60,7 @@ goMatchToCase recur node = case node of
               matchBranchToPatternRow :: MatchBranch -> PatternRow
               matchBranchToPatternRow MatchBranch {..} =
                 PatternRow
-                  { _patternRowOriginalPatterns = toList _matchBranchPatterns,
-                    _patternRowPatterns = toList _matchBranchPatterns,
+                  { _patternRowPatterns = toList _matchBranchPatterns,
                     _patternRowRhs = _matchBranchRhs,
                     _patternRowIgnoredPatternsNum = 0,
                     _patternRowBinderChangesRev = [BCAdd n]
