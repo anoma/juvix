@@ -1,3 +1,7 @@
+-- | This module assumes that the following external dependencies are installed:
+-- 1. mix
+--
+-- 2. grpc_cli
 module Anoma.Effect.Base
   ( Anoma,
     noHalt,
@@ -22,7 +26,7 @@ import Juvix.Prelude.Aeson (Value, eitherDecodeStrict, encode)
 data Anoma :: Effect where
   -- | Keep the node and client running
   NoHalt :: Anoma m ExitCode
-  -- | Blocking rpc call
+  -- | grpc call
   AnomaRpc :: GrpcMethodUrl -> Value -> Anoma m Value
 
 makeSem ''Anoma
