@@ -18,6 +18,8 @@ import Juvix.Compiler.Nockma.Evaluator.Storage
 import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Prelude hiding (Atom, Path)
+import System.Random qualified as R
+import System.Random.SplitMix qualified as R
 
 newtype OpCounts = OpCounts
   { _opCountsMap :: HashMap NockOp Int
@@ -275,7 +277,51 @@ evalProfile inistack initerm =
               StdlibSha256 -> case args' of
                 TermAtom a -> TermAtom <$> goSha256 a
                 _ -> error "StdlibSha256 expects to be called with an atom"
+              StdlibRandomInitGen -> case args' of
+                TermAtom a -> goRandomInitGen a
+                _ -> error "StdlibRandomInitGen must be called with an atom"
+              StdlibRandomNextBytes -> case args' of
+                TermCell (Cell (TermAtom n) g) -> goRandomNextBytes n g
+                _ -> error "StdlibRandomNextBytes must be called with a cell containing an atom and a term"
+              StdlibRandomSplit -> goRandomSplit args'
           where
+            serializeSMGen :: R.SMGen -> Term a
+            serializeSMGen s =
+              let (seed, gamma) = R.unseedSMGen s
+                  seedAtom = TermAtom (mkEmptyAtom (fromIntegral seed))
+                  gammaAtom = TermAtom (mkEmptyAtom (fromIntegral gamma))
+               in TermCell (Cell seedAtom gammaAtom)
+
+            deserializeSMGen :: Term a -> Sem r (R.SMGen)
+            deserializeSMGen = \case
+              TermCell (Cell (TermAtom s) (TermAtom g)) -> do
+                seed :: Word64 <- fromIntegral <$> nockNatural s
+                gamma :: Word64 <- fromIntegral <$> nockNatural g
+                return (R.seedSMGen' (seed, gamma))
+              _ -> error "deserializeSMGen must be called with a cell containing two atoms"
+
+            goRandomNextBytes :: Atom a -> Term a -> Sem r (Term a)
+            goRandomNextBytes n g = do
+              gen <- deserializeSMGen g
+              len :: Int <- fromIntegral <$> nockNatural n
+              let (bs, newGen) = R.genByteString len gen
+                  newGenTerm = serializeSMGen newGen
+                  lenAtom = TermAtom (mkEmptyAtom (fromIntegral len))
+              atomBs <- byteStringToAtom bs
+              let bsCell = TermCell (Cell lenAtom (TermAtom atomBs))
+              return (TermCell (Cell bsCell newGenTerm))
+
+            goRandomInitGen :: Atom a -> Sem r (Term a)
+            goRandomInitGen s = do
+              seed :: Word64 <- fromIntegral <$> nockNatural s
+              return (serializeSMGen (R.mkSMGen seed))
+
+            goRandomSplit :: Term a -> Sem r (Term a)
+            goRandomSplit gt = do
+              gen <- deserializeSMGen gt
+              let (g1, g2) = R.splitSMGen gen
+              return (TermCell (Cell (serializeSMGen g1) (serializeSMGen g2)))
+
             goCat :: Atom a -> Atom a -> Sem r (Term a)
             goCat arg1 arg2 = TermAtom . setAtomHint AtomHintString <$> atomConcatenateBytes arg1 arg2
 
