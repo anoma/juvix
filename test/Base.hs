@@ -21,7 +21,7 @@ import Juvix.Compiler.Pipeline.Loader.PathResolver
 import Juvix.Compiler.Pipeline.Run
 import Juvix.Data.Effect.TaggedLock
 import Juvix.Extra.Paths hiding (rootBuildDir)
-import Juvix.Prelude hiding (assert)
+import Juvix.Prelude hiding (assert, readProcess)
 import Juvix.Prelude.Env
 import Juvix.Prelude.Pretty (prettyString)
 import System.Process qualified as P
