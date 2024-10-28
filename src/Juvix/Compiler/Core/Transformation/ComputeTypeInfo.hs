@@ -92,6 +92,9 @@ computeNodeTypeInfo md = umapL go
           OpAnomaZeroDelta -> mkDynamic'
           OpAnomaAddDelta -> mkDynamic'
           OpAnomaSubDelta -> mkDynamic'
+          OpAnomaRandomGeneratorInit -> mkDynamic'
+          OpAnomaRandomNextBytes -> mkDynamic'
+          OpAnomaRandomSplit -> mkDynamic'
           OpPoseidonHash -> case _builtinAppArgs of
             [arg] -> Info.getNodeType arg
             _ -> error "incorrect poseidon builtin application"

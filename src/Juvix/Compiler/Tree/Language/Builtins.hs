@@ -124,4 +124,10 @@ data AnomaOp
     OpAnomaAddDelta
   | -- | Subtract Deltas
     OpAnomaSubDelta
+  | -- | Initialize a pseudorandom number generator
+    OpAnomaRandomGeneratorInit
+  | -- | Generate the n random bytes using the pseudorandom number generator
+    OpAnomaRandomNextBytes
+  | -- | Split a pseudorandom number generator into two uncorrelated generators
+    OpAnomaRandomSplit
   deriving stock (Eq, Show)

@@ -239,6 +239,9 @@ geval opts herr tab env0 = eval' env0
       OpAnomaZeroDelta -> normalizeOrUnsupported opcode
       OpAnomaAddDelta -> normalizeOrUnsupported opcode
       OpAnomaSubDelta -> normalizeOrUnsupported opcode
+      OpAnomaRandomGeneratorInit -> normalizeOrUnsupported opcode
+      OpAnomaRandomNextBytes -> normalizeOrUnsupported opcode
+      OpAnomaRandomSplit -> normalizeOrUnsupported opcode
       OpPoseidonHash -> poseidonHashOp
       OpEc -> ecOp
       OpRandomEcPoint -> randomEcPointOp

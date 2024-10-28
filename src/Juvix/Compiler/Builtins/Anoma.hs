@@ -220,3 +220,34 @@ checkZeroDelta f = do
   delta <- getBuiltinNameScoper l BuiltinAnomaDelta
   unless (f ^. axiomType === delta) $
     builtinsErrorText (getLoc f) "zeroDelta must be of Delta"
+
+checkAnomaRandomGenerator :: (Members '[Error ScoperError] r) => AxiomDef -> Sem r ()
+checkAnomaRandomGenerator d =
+  unless (isSmallUniverse' (d ^. axiomType)) $
+    builtinsErrorText (getLoc d) "AnomaRandomGenerator should be in the small universe"
+
+checkAnomaRandomGeneratorInit :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
+checkAnomaRandomGeneratorInit f = do
+  let l = getLoc f
+  gen <- getBuiltinNameScoper l BuiltinAnomaRandomGenerator
+  nat_ <- getBuiltinNameScoper l BuiltinNat
+  unless (f ^. axiomType === (nat_ --> gen)) $
+    builtinsErrorText l "initRandomGenerator must be of type Nat -> AnomaRandomGenerator"
+
+checkAnomaRandomNextBytes :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
+checkAnomaRandomNextBytes f = do
+  let l = getLoc f
+  gen <- getBuiltinNameScoper l BuiltinAnomaRandomGenerator
+  nat_ <- getBuiltinNameScoper l BuiltinNat
+  bytearray <- getBuiltinNameScoper l BuiltinByteArray
+  pair_ <- getBuiltinNameScoper l BuiltinPair
+  unless (f ^. axiomType === (nat_ --> gen --> (pair_ @@ bytearray @@ gen))) $
+    builtinsErrorText l "nextBytes must be of type Nat -> AnomaRandomGenerator -> Pair ByteArray AnomaRandomGenerator"
+
+checkAnomaRandomSplit :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
+checkAnomaRandomSplit f = do
+  let l = getLoc f
+  gen <- getBuiltinNameScoper l BuiltinAnomaRandomGenerator
+  pair_ <- getBuiltinNameScoper l BuiltinPair
+  unless (f ^. axiomType === (gen --> pair_ @@ gen @@ gen)) $
+    builtinsErrorText l "randomSplit must be of type AnomaRandomGenerator -> Pair AnomaRandomGenerator AnomaRandomGenerator"

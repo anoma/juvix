@@ -431,6 +431,18 @@ anomaProveDelta = "anoma-prove-delta"
 anomaProveAction :: (IsString s) => s
 anomaProveAction = "anoma-prove-action"
 
+anomaRandomGenerator :: (IsString s) => s
+anomaRandomGenerator = "anoma-randomgenerator"
+
+anomaRandomGeneratorInit :: (IsString s) => s
+anomaRandomGeneratorInit = "anoma-randomgenerator-init"
+
+anomaRandomNextBytes :: (IsString s) => s
+anomaRandomNextBytes = "anoma-random-next-bytes"
+
+anomaRandomSplit :: (IsString s) => s
+anomaRandomSplit = "anoma-random-split"
+
 builtinSeq :: (IsString s) => s
 builtinSeq = "seq"
 

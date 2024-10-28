@@ -582,6 +582,9 @@ compile = \case
         Tree.OpAnomaZeroDelta -> rmValue RmZeroDelta
         Tree.OpAnomaAddDelta -> callRm RmDeltaAdd args
         Tree.OpAnomaSubDelta -> callRm RmDeltaSub args
+        Tree.OpAnomaRandomGeneratorInit -> callStdlib StdlibRandomInitGen args
+        Tree.OpAnomaRandomNextBytes -> goAnomaRandomNextBytes args
+        Tree.OpAnomaRandomSplit -> callStdlib StdlibRandomSplit args
 
     goByteArrayOp :: Tree.NodeByteArray -> Sem r (Term Natural)
     goByteArrayOp Tree.NodeByteArray {..} = do
@@ -707,6 +710,11 @@ compile = \case
       where
         sha256HashLength :: Integer
         sha256HashLength = 64
+
+    goAnomaRandomNextBytes :: [Term Natural] -> Sem r (Term Natural)
+    goAnomaRandomNextBytes args = case args of
+      [n, _] -> mkByteArray n <$> callStdlib StdlibRandomNextBytes args
+      _ -> impossible
 
     -- Conceptually this function is:
     -- anomaDecode <$> verify signedMessage pubKey

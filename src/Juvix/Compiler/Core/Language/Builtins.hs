@@ -51,6 +51,9 @@ data BuiltinOp
   | OpAnomaZeroDelta
   | OpAnomaAddDelta
   | OpAnomaSubDelta
+  | OpAnomaRandomGeneratorInit
+  | OpAnomaRandomNextBytes
+  | OpAnomaRandomSplit
   | OpPoseidonHash
   | OpEc
   | OpRandomEcPoint
@@ -136,6 +139,9 @@ builtinOpArgsNum = \case
   OpAnomaZeroDelta -> 0
   OpAnomaAddDelta -> 2
   OpAnomaSubDelta -> 2
+  OpAnomaRandomGeneratorInit -> 1
+  OpAnomaRandomNextBytes -> 2
+  OpAnomaRandomSplit -> 1
   OpPoseidonHash -> 1
   OpEc -> 3
   OpRandomEcPoint -> 0
@@ -198,6 +204,9 @@ builtinIsFoldable = \case
   OpAnomaAddDelta -> False
   OpAnomaSubDelta -> False
   OpAnomaSha256 -> False
+  OpAnomaRandomGeneratorInit -> False
+  OpAnomaRandomNextBytes -> False
+  OpAnomaRandomSplit -> False
   OpPoseidonHash -> False
   OpEc -> False
   OpRandomEcPoint -> False
@@ -234,7 +243,10 @@ builtinsAnoma =
     OpAnomaProveDelta,
     OpAnomaZeroDelta,
     OpAnomaAddDelta,
-    OpAnomaSubDelta
+    OpAnomaSubDelta,
+    OpAnomaRandomGeneratorInit,
+    OpAnomaRandomNextBytes,
+    OpAnomaRandomSplit
   ]
 
 builtinsUInt8 :: [BuiltinOp]

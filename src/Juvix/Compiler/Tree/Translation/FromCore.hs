@@ -70,6 +70,9 @@ toTreeOp = \case
   Core.OpAnomaZeroDelta -> TreeAnomaOp OpAnomaZeroDelta
   Core.OpAnomaAddDelta -> TreeAnomaOp OpAnomaAddDelta
   Core.OpAnomaSubDelta -> TreeAnomaOp OpAnomaSubDelta
+  Core.OpAnomaRandomGeneratorInit -> TreeAnomaOp OpAnomaRandomGeneratorInit
+  Core.OpAnomaRandomNextBytes -> TreeAnomaOp OpAnomaRandomNextBytes
+  Core.OpAnomaRandomSplit -> TreeAnomaOp OpAnomaRandomSplit
   -- TreeCairoOp
   Core.OpPoseidonHash -> TreeCairoOp OpCairoPoseidon
   Core.OpEc -> TreeCairoOp OpCairoEc
