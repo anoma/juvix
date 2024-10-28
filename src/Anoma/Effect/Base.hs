@@ -35,6 +35,11 @@ makeLenses ''GrpcPort
 listenPort :: Int
 listenPort = 50051
 
+relativeToAnomaDir :: (Members '[Reader AnomaPath] r) => Path Rel x -> Sem r (Path Abs x)
+relativeToAnomaDir p = do
+  anoma <- asks (^. anomaPath)
+  return (anoma <//> p)
+
 withSpawnAnomaClient ::
   (Members '[Process, Logger, EmbedIO, Reader AnomaPath, Reader GrpcPort] r) =>
   (ProcessHandle -> Sem r a) ->
@@ -53,11 +58,11 @@ withSpawnAnomaClient body = do
   where
     mkProcess :: (Members '[Reader AnomaPath, Reader GrpcPort] r') => Sem r' CreateProcess
     mkProcess = do
-      p <- asks (^. anomaPath)
       grpcport <- asks (^. grpcPort)
+      anomaClient <- relativeToAnomaDir clientRelFile
       return
         ( proc
-            (toFilePath (p <//> clientRelFile))
+            (toFilePath anomaClient)
             [ "--listen-port",
               show listenPort,
               "--node-host",
@@ -111,7 +116,7 @@ anomaRpc' msg = do
 
 grpcCliProcess :: (Members '[Reader AnomaPath] r) => Sem r CreateProcess
 grpcCliProcess = do
-  p <- asks (^. anomaPath)
+  protoFile <- relativeToAnomaDir relProtoFile
   return
     ( proc
         "grpc_cli"
@@ -119,7 +124,7 @@ grpcCliProcess = do
           "--json_input",
           "--json_output",
           "--protofiles",
-          toFilePath (p <//> relProtoFile),
+          toFilePath protoFile,
           "localhost:" <> show listenPort,
           "Anoma.Protobuf.Intents.Prove"
         ]
