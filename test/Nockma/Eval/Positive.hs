@@ -53,6 +53,7 @@ allTests =
     [ testGroup "Unit" (map mkNockmaTest unitTests),
       testGroup "Juvix calling convention" (map mkNockmaTest juvixCallingConventionTests),
       testGroup "Anoma calling convention" (map mkNockmaTest anomaCallingConventionTests),
+      testGroup "Anoma stldib intercept-only" (map mkNockmaTest anomaStdlibInterceptOnlyTests),
       testGroup "Anoma serialization tests" (map mkNockmaTest serializationTests)
     ]
   where
@@ -397,6 +398,33 @@ juvixCallingConventionTests =
            compilerTestM "length-bytes 1 == 1" (callStdlib StdlibLengthBytes [nockNatLiteral 1]) (eqNock [nock| 1 |]),
            compilerTestM "length-bytes 0 == 0" (callStdlib StdlibLengthBytes [nockNatLiteral 0]) (eqNock [nock| 0 |]),
            compilerTestM "zero-delta == 0" (rmValue RmZeroDelta) (eqNock [nock| 0 |])
+         ]
+
+-- These tests can only be run with stdlib interception as running the raw nock code is too slow
+anomaStdlibInterceptOnlyTests :: [Test]
+anomaStdlibInterceptOnlyTests =
+  [True]
+    <**> [ compilerTestM
+             "call next bytes in sequence"
+             ( do
+                 gen <- callStdlib StdlibRandomInitGen [nockNatLiteral 777]
+                 rgen1 <- callStdlib StdlibRandomNextBytes [nockNatLiteral 1, gen]
+                 rgen2 <- callStdlib StdlibRandomNextBytes [nockNatLiteral 1, rgen1 >># OpAddress # [R]]
+                 return ((rgen1 >># OpAddress # [L]) # (rgen2 >># OpAddress # [L]))
+             )
+             (eqNock [nock| [44 251] |]),
+           compilerTestM
+             "call next bytes on each generator returned by split"
+             ( do
+                 gen <- callStdlib StdlibRandomInitGen [nockNatLiteral 777]
+                 g1g2 <- callStdlib StdlibRandomSplit [gen]
+                 n1 <- callStdlib StdlibRandomNextBytes [nockNatLiteral 1, g1g2 >># OpAddress # [L]]
+                 n2 <- callStdlib StdlibRandomNextBytes [nockNatLiteral 1, g1g2 >># OpAddress # [R]]
+                 return ((n1 >># OpAddress # [L]) # (n2 >># OpAddress # [L]))
+             )
+             ( eqNock
+                 [nock| [102 42] |]
+             )
          ]
 
 unitTests :: [Test]
