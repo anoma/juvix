@@ -34,6 +34,9 @@ data StdlibFunction
   | StdlibLengthBytes
   | StdlibCurry
   | StdlibSha256
+  | StdlibRandomInitGen
+  | StdlibRandomNextBytes
+  | StdlibRandomSplit
   deriving stock (Show, Lift, Eq, Bounded, Enum, Generic)
 
 instance Hashable StdlibFunction
@@ -108,6 +111,9 @@ instance Pretty StdlibFunction where
     StdlibLengthBytes -> "length-bytes"
     StdlibCurry -> "curry"
     StdlibSha256 -> "sha256"
+    StdlibRandomInitGen -> "random-init"
+    StdlibRandomNextBytes -> "random-next-bytes"
+    StdlibRandomSplit -> "random-split"
 
 instance Pretty RmFunction where
   pretty = \case

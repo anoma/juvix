@@ -92,6 +92,18 @@ anomaLibPath = \case
                 1
               ]
       |]
+    -- Obtained from the urbit dojo using:
+    --
+    -- =>  rm  !=  |=  [seed=@]  ~(. og seed)
+    StdlibRandomInitGen -> [nock| [8 [1 0] [1 8 [9 47 0 31] 10 [6 0 14] 0 2] 0 1] |]
+    -- obtained from the urbit dojo using:
+    --
+    -- =>  rm  !=  |=  [rng=* width=@]   (raws:`_og`rng width)
+    StdlibRandomNextBytes -> [nock| [8 [1 0 0] [1 8 [7 [0 12] 9 4 0 1] 9 2 10 [6 0 29] 0 2] 0 1] |]
+    -- obtained from the urbit dojo using:
+    --
+    -- =>  rm  !=  |=  [rng=*]  split:`_og`rng
+    StdlibRandomSplit -> [nock| [8 [1 0] [1 7 [0 6] 9 21 0 1] 0 1] |]
   AnomaLibFunction (AnomaRmFunction f) -> case f of
     RmCommit -> [nock| [9 94 0 1] |]
     RmNullify -> [nock| [9 350 0 1] |]
