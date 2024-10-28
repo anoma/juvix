@@ -46,7 +46,7 @@ type Ordering :=
   | GreaterThan;
 ```
 
-- instances: lower camel case with `I` at the end (`instance eqNatI : Eq Nat := ..`)
+- instances: lower camel case with `I` at the end: trait + type + `I`, e.g., `instance eqNatI : Eq Nat := ..`
 - boolean check functions: start with `is` (`isWhatever`)
 - record constructors: `mk` + type name (`mkResource`)
 - meaningful descriptive long names for arguments of public functions, e.g., `element`, `list`, `initialValue`
