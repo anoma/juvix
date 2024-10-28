@@ -76,6 +76,25 @@ parseInputFile = parseInputFiles . NonEmpty.singleton
 numThreadsOpt :: ReadM NumThreads
 numThreadsOpt = eitherReader readNumThreads
 
+anomaDirOptLongStr :: forall str. (IsString str) => str
+anomaDirOptLongStr = "anoma-dir"
+
+anomaDirOpt :: Parser (AppPath Dir)
+anomaDirOpt = do
+  path <-
+    option
+      somePreDirOpt
+      ( long anomaDirOptLongStr
+          <> metavar "ANOMA_DIR"
+          <> help "Path to anoma repository"
+          <> action "directory"
+      )
+  return
+    AppPath
+      { _pathIsInput = False,
+        _pathPath = path
+      }
+
 parseNumThreads :: Parser NumThreads
 parseNumThreads = do
   option

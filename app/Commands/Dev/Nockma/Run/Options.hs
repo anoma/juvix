@@ -4,7 +4,9 @@ import CommonOptions
 
 data NockmaRunOptions = NockmaRunOptions
   { _nockmaRunFile :: AppPath File,
+    _nockmaRunAnomaDir :: Maybe (AppPath Dir),
     _nockmaRunProfile :: Bool,
+    _nockmaRunAnoma :: Bool,
     _nockmaRunArgs :: Maybe (AppPath File)
   }
   deriving stock (Data)
@@ -24,6 +26,12 @@ parseNockmaRunOptions = do
             <> action "file"
         )
     pure AppPath {_pathIsInput = True, ..}
+  _nockmaRunAnoma <-
+    switch
+      ( long "anoma"
+          <> help ("Run in Anoma node (makes --" <> anomaDirOptLongStr <> " mandatory)")
+      )
+  _nockmaRunAnomaDir <- optional anomaDirOpt
   _nockmaRunProfile <-
     switch
       ( long "profile"

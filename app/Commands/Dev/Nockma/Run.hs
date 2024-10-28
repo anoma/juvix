@@ -1,5 +1,6 @@
 module Commands.Dev.Nockma.Run where
 
+import Anoma.Effect
 import Commands.Base hiding (Atom)
 import Commands.Dev.Nockma.Run.Options
 import Juvix.Compiler.Nockma.Anoma
@@ -13,22 +14,36 @@ runCommand opts = do
   afile <- fromAppPathFile inputFile
   argsFile <- mapM fromAppPathFile (opts ^. nockmaRunArgs)
   parsedArgs <- runAppError @JuvixError (mapM Nockma.cueJammedFileOrPretty argsFile)
-  parsedTerm <- checkCued (Nockma.cueJammedFileOrPretty afile)
+  parsedTerm <- runAppError @JuvixError (Nockma.cueJammedFileOrPretty afile)
   case parsedTerm of
-    t@(TermCell {}) -> do
-      let formula = anomaCallTuple parsedArgs
-      (counts, res) <-
-        runOpCounts
-          . runReader defaultEvalOptions
-          . runOutputSem @(Term Natural) (logInfo . mkAnsiText . ppTrace)
-          $ evalCompiledNock' t formula
-      putStrLn (ppPrint res)
-      let statsFile = replaceExtension' ".profile" afile
-      writeFileEnsureLn statsFile (prettyText counts)
     TermAtom {} -> exitFailMsg "Expected nockma input to be a cell"
+    t@(TermCell {})
+      | opts ^. nockmaRunAnoma -> do
+          anomaDir <- getAnomaPath
+          runInAnoma anomaDir t (unfoldTuple parsedArgs)
+      | otherwise -> do
+          let formula = anomaCallTuple parsedArgs
+          (counts, res) <-
+            runOpCounts
+              . runReader defaultEvalOptions
+              . runOutputSem @(Term Natural) (logInfo . mkAnsiText . ppTrace)
+              $ evalCompiledNock' t formula
+          putStrLn (ppPrint res)
+          let statsFile = replaceExtension' ".profile" afile
+          writeFileEnsureLn statsFile (prettyText counts)
   where
+    getAnomaPath :: Sem r AnomaPath
+    getAnomaPath = do
+      apppath <- maybe err return (opts ^. nockmaRunAnomaDir)
+      AnomaPath <$> fromAppPathDir apppath
+      where
+        err :: Sem r x
+        err = exitFailMsg ("The --" <> anomaDirOptLongStr <> " must be provided")
+
     inputFile :: AppPath File
     inputFile = opts ^. nockmaRunFile
 
-    checkCued :: Sem (Error JuvixError ': r) a -> Sem r a
-    checkCued = runErrorNoCallStackWith exitJuvixError
+runInAnoma :: (Members AppEffects r) => AnomaPath -> Term Natural -> [Term Natural] -> Sem r ()
+runInAnoma anoma t args = runAnoma anoma $ do
+  res <- runAppError @SimpleError (runNockma t args)
+  putStrLn (ppPrint res)
