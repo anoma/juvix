@@ -306,10 +306,8 @@ evalProfile inistack initerm =
               len :: Int <- fromIntegral <$> nockNatural n
               let (bs, newGen) = R.genByteString len gen
                   newGenTerm = serializeSMGen newGen
-                  lenAtom = TermAtom (mkEmptyAtom (fromIntegral len))
-              atomBs <- byteStringToAtom bs
-              let bsCell = TermCell (Cell lenAtom (TermAtom atomBs))
-              return (TermCell (Cell bsCell newGenTerm))
+              atomBs <- TermAtom <$> byteStringToAtom bs
+              return (TermCell (Cell atomBs newGenTerm))
 
             goRandomInitGen :: Atom a -> Sem r (Term a)
             goRandomInitGen s = do
