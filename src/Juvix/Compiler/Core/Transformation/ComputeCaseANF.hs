@@ -12,7 +12,6 @@ module Juvix.Compiler.Core.Transformation.ComputeCaseANF (computeCaseANF) where
 -- ```
 -- let z := f x in case z of { c y := y + x; d y := y }
 -- ```
--- This transformation is needed for the Nockma backend.
 
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Core.Extra
