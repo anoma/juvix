@@ -716,15 +716,26 @@ compile = \case
 
     goAnomaRandomNextBytes :: [Term Natural] -> Sem r (Term Natural)
     goAnomaRandomNextBytes args = case args of
-      [n, _] -> do
-        next <- callStdlib StdlibRandomNextBytes args
-        withTemp next $ \ref -> do
-          refPath <- tempRefPath ref
-          return
-            ( mkPair
-                (mkByteArray n (opAddress "nextbytes-result-head" (refPath ++ [L])))
-                (opAddress "nextBytes-result-tail" (refPath ++ [R]))
-            )
+      [n, g] -> do
+        withTemp (n # g) $ \argsRef -> do
+          argRefAddress <- tempRefPath argsRef
+          next <-
+            callStdlib
+              StdlibRandomNextBytes
+              [ opAddress "args-n" (argRefAddress ++ [L]),
+                opAddress "args-g" (argRefAddress ++ [R])
+              ]
+          withTemp next $ \nextRef -> do
+            nextRefPath <- tempRefPath nextRef
+            argRefAddress' <- tempRefPath argsRef
+            return
+              ( mkPair
+                  ( mkByteArray
+                      (opAddress "args-n" (argRefAddress' ++ [L]))
+                      (opAddress "nextbytes-result-fst" (nextRefPath ++ [L]))
+                  )
+                  (opAddress "nextBytes-result-snd" (nextRefPath ++ [R]))
+              )
       _ -> impossible
 
     -- Conceptually this function is:
