@@ -80,7 +80,7 @@ goCheckRedundantPatterns md node = case node of
               ind = lookupConstructorInfo md (head' tags) ^. constructorInductive
               ctrsNum = length (lookupInductiveInfo md ind ^. inductiveConstructors)
            in if
-                  | length tags == ctrsNum ->
+                  | not (null tags) && length tags == ctrsNum ->
                       go tags
                   | otherwise ->
                       check (computeDefault matrix) ps
