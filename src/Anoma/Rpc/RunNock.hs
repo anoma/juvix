@@ -42,15 +42,18 @@ $( deriveJSON
      ''RunNock
  )
 
-newtype Response = Response
-  { _proof :: Text
-  }
+data Response
+  = ResponseProof Text
+  | ResponseError Text
 
 $( deriveJSON
      defaultOptions
-       { fieldLabelModifier = \case
-           "_proof" -> "proof"
-           _ -> impossibleError "All fields must be covered"
+       { unwrapUnaryRecords = True,
+         sumEncoding = ObjectWithSingleField,
+         constructorTagModifier = \case
+           "ResponseProof" -> "proof"
+           "ResponseError" -> "error"
+           _ -> impossibleError "All constructors must be covered"
        }
      ''Response
  )

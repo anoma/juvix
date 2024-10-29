@@ -58,4 +58,6 @@ runNockma prog inputs = do
           }
   let json = Aeson.toJSON msg
   res :: Response <- anomaRpc runNockGrpcUrl json >>= fromJSON
-  decodeJam64 (res ^. proof)
+  case res of
+    ResponseProof x -> decodeJam64 x
+    ResponseError err -> throw (SimpleError (mkAnsiText err))
