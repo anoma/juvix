@@ -1,4 +1,4 @@
-module Juvix.Compiler.Core.Transformation.CheckRedundantPatterns where
+module Juvix.Compiler.Core.Transformation.DetectRedundantPatterns where
 
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Core.Error
@@ -15,22 +15,22 @@ type PatternMatrix = [PatternRow]
 -- | Checks for redundant patterns in `Match` nodes. The algorithm is based on
 -- the paper: Luc Maranget, "Warnings for pattern matching", JFP 17 (3):
 -- 387–421, 2007.
-checkRedundantPatterns :: (Members '[Error CoreError, Reader CoreOptions] r) => Module -> Sem r Module
-checkRedundantPatterns md = do
+detectRedundantPatterns :: (Members '[Error CoreError, Reader CoreOptions] r) => Module -> Sem r Module
+detectRedundantPatterns md = do
   fCoverage <- asks (^. optCheckCoverage)
   if
       | fCoverage ->
-          mapAllNodesM (umapM (goCheckRedundantPatterns md)) md
+          mapAllNodesM (umapM (goDetectRedundantPatterns md)) md
       | otherwise ->
           return md
 
-goCheckRedundantPatterns ::
+goDetectRedundantPatterns ::
   forall r.
   (Members '[Error CoreError, Reader CoreOptions] r) =>
   Module ->
   Node ->
   Sem r Node
-goCheckRedundantPatterns md node = case node of
+goDetectRedundantPatterns md node = case node of
   NMatch m -> do
     checkMatch m
     return node

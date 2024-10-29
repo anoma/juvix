@@ -29,8 +29,8 @@ strLetRecLifting = "letrec-lifting"
 strTopEtaExpand :: Text
 strTopEtaExpand = "top-eta-expand"
 
-strCheckRedundantPatterns :: Text
-strCheckRedundantPatterns = "check-redundant-patterns"
+strDetectRedundantPatterns :: Text
+strDetectRedundantPatterns = "detect-redundant-patterns"
 
 strMatchToCase :: Text
 strMatchToCase = "match-to-case"

@@ -17,7 +17,7 @@ data TransformationId
   | UnrollRecursion
   | ComputeTypeInfo
   | ComputeCaseANF
-  | CheckRedundantPatterns
+  | DetectRedundantPatterns
   | MatchToCase
   | EtaExpandApps
   | DisambiguateNames
@@ -59,10 +59,10 @@ data PipelineId
 type TransformationLikeId = TransformationLikeId' TransformationId PipelineId
 
 toTypecheckTransformations :: [TransformationId]
-toTypecheckTransformations = [CheckRedundantPatterns, MatchToCase]
+toTypecheckTransformations = [DetectRedundantPatterns, MatchToCase]
 
 toStoredTransformations :: [TransformationId]
-toStoredTransformations = [EtaExpandApps, CheckRedundantPatterns, MatchToCase, NatToPrimInt, IntToPrimInt, ConvertBuiltinTypes, OptPhaseEval, DisambiguateNames]
+toStoredTransformations = [EtaExpandApps, DetectRedundantPatterns, MatchToCase, NatToPrimInt, IntToPrimInt, ConvertBuiltinTypes, OptPhaseEval, DisambiguateNames]
 
 combineInfoTablesTransformations :: [TransformationId]
 combineInfoTablesTransformations = [CombineInfoTables, FilterUnreachable]
@@ -84,7 +84,7 @@ instance TransformationId' TransformationId where
     LambdaLetRecLifting -> strLifting
     LetRecLifting -> strLetRecLifting
     TopEtaExpand -> strTopEtaExpand
-    CheckRedundantPatterns -> strCheckRedundantPatterns
+    DetectRedundantPatterns -> strDetectRedundantPatterns
     MatchToCase -> strMatchToCase
     EtaExpandApps -> strEtaExpandApps
     IdentityTrans -> strIdentity
