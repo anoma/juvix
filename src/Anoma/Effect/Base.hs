@@ -81,7 +81,8 @@ withSpawnAnomaClient body = do
           }
 
 withSapwnAnomaNode ::
-  (Members '[EmbedIO, Logger, Process, Reader AnomaPath] r) =>
+  forall r a.
+  (Members '[EmbedIO, Logger, Error SimpleError, Process, Reader AnomaPath] r) =>
   (Int -> Handle -> ProcessHandle -> Sem r a) ->
   Sem r a
 withSapwnAnomaNode body = withSystemTempFile "start.exs" $ \fp tmpHandle -> do
@@ -92,9 +93,11 @@ withSapwnAnomaNode body = withSystemTempFile "start.exs" $ \fp tmpHandle -> do
   withCreateProcess (cprocess (toFilePath fp)) $ \_stdin mstdout _stderr procHandle -> do
     setCurrentDir curDir
     let nodeOut = fromJust mstdout
-    grpcNode :: Int <- either (error . pack) id . readEither . unpack <$> hGetLine nodeOut
+    ln <- hGetLine nodeOut
+    let parseError = throw (SimpleError (mkAnsiText ("Failed to parse the grpc port when starting the anoma client.\nExpected a number but got " <> ln)))
+    nodeport :: Int <- either (const parseError) return . readEither . unpack $ ln
     logInfo "Anoma node successfully started"
-    body grpcNode (fromJust mstdout) procHandle
+    body nodeport (fromJust mstdout) procHandle
   where
     cprocess :: FilePath -> CreateProcess
     cprocess exs =
