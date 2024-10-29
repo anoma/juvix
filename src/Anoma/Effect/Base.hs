@@ -88,10 +88,8 @@ withSapwnAnomaNode ::
 withSapwnAnomaNode body = withSystemTempFile "start.exs" $ \fp tmpHandle -> do
   liftIO (B.hPutStr tmpHandle anomaStartExs)
   hClose tmpHandle
-  curDir <- getCurrentDir
-  asks (^. anomaPath) >>= setCurrentDir
-  withCreateProcess (cprocess (toFilePath fp)) $ \_stdin mstdout _stderr procHandle -> do
-    setCurrentDir curDir
+  cproc <- cprocess (toFilePath fp)
+  withCreateProcess cproc $ \_stdin mstdout _stderr procHandle -> do
     let nodeOut = fromJust mstdout
     ln <- hGetLine nodeOut
     let parseError = throw (SimpleError (mkAnsiText ("Failed to parse the grpc port when starting the anoma client.\nExpected a number but got " <> ln)))
@@ -99,11 +97,14 @@ withSapwnAnomaNode body = withSystemTempFile "start.exs" $ \fp tmpHandle -> do
     logInfo "Anoma node successfully started"
     body nodeport (fromJust mstdout) procHandle
   where
-    cprocess :: FilePath -> CreateProcess
-    cprocess exs =
-      (proc "mix" ["run", "--no-halt", exs])
-        { std_out = CreatePipe
-        }
+    cprocess :: (Members '[Reader AnomaPath] r') => FilePath -> Sem r' CreateProcess
+    cprocess exs = do
+      anomapath <- asks (^. anomaPath)
+      return
+        (proc "mix" ["run", "--no-halt", exs])
+          { std_out = CreatePipe,
+            cwd = Just (toFilePath anomapath)
+          }
 
 anomaRpc' :: (Members '[Reader AnomaPath, Process, EmbedIO, Error SimpleError] r) => GrpcMethodUrl -> Value -> Sem r Value
 anomaRpc' method payload = do
