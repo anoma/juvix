@@ -7,8 +7,12 @@ module Anoma.Effect.Base
     noHalt,
     anomaRpc,
     AnomaPath (..),
+    AnomaProcesses (..),
+    anomaNodeHandle,
+    anomaClientHandle,
     anomaPath,
     runAnoma,
+    runAnomaTest,
     module Anoma.Rpc.Base,
     module Juvix.Compiler.Nockma.Translation.FromTree,
   )
@@ -23,13 +27,19 @@ import Juvix.Extra.Paths (anomaStartExs)
 import Juvix.Prelude
 import Juvix.Prelude.Aeson (Value, eitherDecodeStrict, encode)
 
+data AnomaProcesses = AnomaProcesses
+  { _anomaNodeHandle :: ProcessHandle,
+    _anomaClientHandle :: ProcessHandle
+  }
+
 data Anoma :: Effect where
   -- | Keep the node and client running
-  NoHalt :: Anoma m ExitCode
+  NoHalt :: Anoma m AnomaProcesses
   -- | grpc call
   AnomaRpc :: GrpcMethodUrl -> Value -> Anoma m Value
 
 makeSem ''Anoma
+makeLenses ''AnomaProcesses
 
 newtype AnomaPath = AnomaPath {_anomaPath :: Path Abs Dir}
 
@@ -106,7 +116,11 @@ withSpawnAnomaNode body = withSystemTempFile "start.exs" $ \fp tmpHandle -> do
             cwd = Just (toFilePath anomapath)
           }
 
-anomaRpc' :: (Members '[Reader AnomaPath, Process, EmbedIO, Error SimpleError] r) => GrpcMethodUrl -> Value -> Sem r Value
+anomaRpc' ::
+  (Members '[Reader AnomaPath, Process, EmbedIO, Error SimpleError] r) =>
+  GrpcMethodUrl ->
+  Value ->
+  Sem r Value
 anomaRpc' method payload = do
   cproc <- grpcCliProcess method
   withCreateProcess cproc $ \mstdin mstdout _stderr _procHandle -> do
@@ -141,11 +155,23 @@ grpcCliProcess method = do
         std_out = CreatePipe
       }
 
+-- | Assumes the node and client are already running
+runAnomaTest :: forall r a. (Members '[Logger, EmbedIO, Error SimpleError] r) => AnomaPath -> Sem (Anoma ': r) a -> Sem r a
+runAnomaTest anomapath body = runReader anomapath . runProcess $
+  (`interpret` inject body) $ \case
+    NoHalt -> error "unsupported"
+    AnomaRpc method i -> anomaRpc' method i
+
 runAnoma :: forall r a. (Members '[Logger, EmbedIO, Error SimpleError] r) => AnomaPath -> Sem (Anoma ': r) a -> Sem r a
-runAnoma anomapath body = runReader anomapath . runConcurrent . runProcess $
+runAnoma anomapath body = runReader anomapath . runProcess $
   withSpawnAnomaNode $ \grpcport _nodeOut nodeH ->
     runReader (GrpcPort grpcport) $
-      withSpawnAnomaClient $ \_clientH -> do
+      withSpawnAnomaClient $ \clientH -> do
         (`interpret` inject body) $ \case
-          NoHalt -> waitForProcess nodeH
+          NoHalt ->
+            waitForProcess nodeH
+              $> AnomaProcesses
+                { _anomaNodeHandle = nodeH,
+                  _anomaClientHandle = clientH
+                }
           AnomaRpc method i -> anomaRpc' method i

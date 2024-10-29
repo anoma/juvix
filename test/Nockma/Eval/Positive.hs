@@ -11,7 +11,12 @@ import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Translation.FromSource.QQ
 import Juvix.Compiler.Nockma.Translation.FromTree
 
-type Check = Sem '[Reader [Term Natural], Reader (Term Natural), EmbedIO]
+type Check =
+  Sem
+    '[ Reader [Term Natural],
+       Reader (Term Natural),
+       EmbedIO
+     ]
 
 data Test = Test
   { _testEvalOptions :: EvalOptions,

@@ -23,10 +23,10 @@ import Juvix.Data.Effect.TaggedLock
 import Juvix.Extra.Paths hiding (rootBuildDir)
 import Juvix.Prelude hiding (assert, readProcess)
 import Juvix.Prelude.Env
-import Juvix.Prelude.Pretty (prettyString)
+import Juvix.Prelude.Pretty
 import System.Process qualified as P
 import Test.Tasty
-import Test.Tasty.HUnit hiding (assertFailure)
+import Test.Tasty.HUnit hiding (assertFailure, testCase)
 import Test.Tasty.HUnit qualified as HUnit
 
 data AssertionDescr
@@ -63,7 +63,7 @@ mkTest TestDescr {..} = case _testAssertion of
 withPrecondition :: Assertion -> IO TestTree -> IO TestTree
 withPrecondition assertion ifSuccess = do
   E.catch (assertion >> ifSuccess) $ \case
-    E.SomeException e -> return (testCase "Precondition failed" (assertFailure (show e)))
+    E.SomeException e -> return (testCase @String "Precondition failed" (assertFailure (show e)))
 
 assertEqDiffText :: String -> Text -> Text -> Assertion
 assertEqDiffText = assertEqDiff unpack
@@ -190,3 +190,17 @@ readProcessCwd' menv mcwd cmd args stdinText =
         hClose hout
         return r
     )
+
+to3DigitString :: Int -> Text
+to3DigitString n
+  | n < 10 = "00" <> show n
+  | n < 100 = "0" <> show n
+  | n < 1000 = show n
+  | otherwise = error ("The given number has more than 3 digits. Given number = " <> prettyText n)
+
+-- | E.g. Test001: str
+numberedTestName :: Int -> Text -> Text
+numberedTestName i str = "Test" <> to3DigitString i <> ": " <> str
+
+testCase :: (HasTextBackend str) => str -> Assertion -> TestTree
+testCase name = HUnit.testCase (toPlainString name)
