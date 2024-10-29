@@ -80,12 +80,12 @@ withSpawnAnomaClient body = do
           { std_out = CreatePipe
           }
 
-withSapwnAnomaNode ::
+withSpawnAnomaNode ::
   forall r a.
   (Members '[EmbedIO, Logger, Error SimpleError, Process, Reader AnomaPath] r) =>
   (Int -> Handle -> ProcessHandle -> Sem r a) ->
   Sem r a
-withSapwnAnomaNode body = withSystemTempFile "start.exs" $ \fp tmpHandle -> do
+withSpawnAnomaNode body = withSystemTempFile "start.exs" $ \fp tmpHandle -> do
   liftIO (B.hPutStr tmpHandle anomaStartExs)
   hClose tmpHandle
   cproc <- cprocess (toFilePath fp)
@@ -143,7 +143,7 @@ grpcCliProcess method = do
 
 runAnoma :: forall r a. (Members '[Logger, EmbedIO, Error SimpleError] r) => AnomaPath -> Sem (Anoma ': r) a -> Sem r a
 runAnoma anomapath body = runReader anomapath . runConcurrent . runProcess $
-  withSapwnAnomaNode $ \grpcport _nodeOut nodeH ->
+  withSpawnAnomaNode $ \grpcport _nodeOut nodeH ->
     runReader (GrpcPort grpcport) $
       withSpawnAnomaClient $ \_clientH -> do
         (`interpret` inject body) $ \case
