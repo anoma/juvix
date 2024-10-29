@@ -61,6 +61,7 @@ checkCairo md = do
           PrimField {} -> True
           PrimString {} -> False
           PrimByteArray {} -> False
+          PrimRandomGenerator {} -> False
 
         isRecordOrList :: TypeConstr -> Bool
         isRecordOrList TypeConstr {..} = case ii ^. inductiveBuiltin of

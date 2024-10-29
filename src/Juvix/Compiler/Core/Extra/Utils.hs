@@ -206,6 +206,9 @@ isDebugOp = \case
       OpAnomaZeroDelta -> False
       OpAnomaAddDelta -> False
       OpAnomaSubDelta -> False
+      OpAnomaRandomGeneratorInit -> False
+      OpAnomaRandomNextBytes -> False
+      OpAnomaRandomSplit -> False
       OpEc -> False
       OpFieldAdd -> False
       OpFieldDiv -> False
@@ -504,6 +507,9 @@ builtinOpArgTypes = \case
   OpAnomaZeroDelta -> []
   OpAnomaAddDelta -> [mkDynamic', mkDynamic']
   OpAnomaSubDelta -> [mkDynamic', mkDynamic']
+  OpAnomaRandomGeneratorInit -> [mkTypeInteger']
+  OpAnomaRandomNextBytes -> [mkTypeInteger', mkTypeRandomGenerator']
+  OpAnomaRandomSplit -> [mkTypeRandomGenerator']
   OpPoseidonHash -> [mkDynamic']
   OpEc -> [mkDynamic', mkTypeField', mkDynamic']
   OpRandomEcPoint -> []

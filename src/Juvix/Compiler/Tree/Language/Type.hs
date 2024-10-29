@@ -9,6 +9,7 @@ data Type
   | TyString
   | TyField
   | TyByteArray
+  | TyRandomGenerator
   | TyUnit
   | TyVoid
   | TyInductive TypeInductive
@@ -83,6 +84,7 @@ instance HasAtomicity Type where
     TyUnit -> Atom
     TyVoid -> Atom
     TyByteArray -> Atom
+    TyRandomGenerator -> Atom
     TyInductive x -> atomicity x
     TyConstr x -> atomicity x
     TyFun x -> atomicity x

@@ -667,5 +667,16 @@ allTests =
             [nock| 478793196187462788804451 |],
             [nock| 418565088612 |],
             [nock| 0 |]
+          ],
+      mkAnomaCallTest
+        "Test086: Anoma Random"
+        $(mkRelDir ".")
+        $(mkRelFile "test086.juvix")
+        []
+        $ checkOutput
+          [ [nock| [2 30764] |],
+            [nock| [3 10689019] |],
+            [nock| [2 20159] |],
+            [nock| [4 4187579825] |]
           ]
     ]

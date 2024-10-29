@@ -143,6 +143,8 @@ instance PrettyCode Type where
       return $ annotate (AnnKind KNameInductive) Str.field
     TyByteArray {} ->
       return $ annotate (AnnKind KNameInductive) Str.byteArray
+    TyRandomGenerator {} ->
+      return $ annotate (AnnKind KNameInductive) Str.randomGenerator
     TyBool {} ->
       return $ annotate (AnnKind KNameInductive) Str.bool
     TyString ->
@@ -298,6 +300,9 @@ instance PrettyCode AnomaOp where
     OpAnomaZeroDelta -> Str.anomaZeroDelta
     OpAnomaAddDelta -> Str.anomaAddDelta
     OpAnomaSubDelta -> Str.anomaSubDelta
+    OpAnomaRandomGeneratorInit -> Str.anomaRandomGeneratorInit
+    OpAnomaRandomNextBytes -> Str.anomaRandomNextBytes
+    OpAnomaRandomSplit -> Str.anomaRandomSplit
 
 instance PrettyCode UnaryOpcode where
   ppCode = \case

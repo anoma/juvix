@@ -662,6 +662,10 @@ goAxiomInductive a = whenJust (a ^. Internal.axiomBuiltin) builtinInductive
       Internal.BuiltinAnomaZeroDelta -> return ()
       Internal.BuiltinAnomaAddDelta -> return ()
       Internal.BuiltinAnomaSubDelta -> return ()
+      Internal.BuiltinAnomaRandomGenerator -> registerInductiveAxiom (Just BuiltinAnomaRandomGenerator) []
+      Internal.BuiltinAnomaRandomGeneratorInit -> return ()
+      Internal.BuiltinAnomaRandomNextBytes -> return ()
+      Internal.BuiltinAnomaRandomSplit -> return ()
       Internal.BuiltinPoseidon -> return ()
       Internal.BuiltinEcOp -> return ()
       Internal.BuiltinRandomEcPoint -> return ()
@@ -951,6 +955,30 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
                   mkDynamic'
                   (mkBuiltinApp' OpAnomaSubDelta [mkVar' 1, mkVar' 0])
               )
+          )
+      Internal.BuiltinAnomaRandomGenerator -> return ()
+      Internal.BuiltinAnomaRandomGeneratorInit -> do
+        natType <- getNatType
+        registerAxiomDef
+          ( mkLambda'
+              natType
+              (mkBuiltinApp' OpAnomaRandomGeneratorInit [mkVar' 0])
+          )
+      Internal.BuiltinAnomaRandomNextBytes -> do
+        natType <- getNatType
+        registerAxiomDef
+          ( mkLambda'
+              natType
+              ( mkLambda'
+                  mkDynamic'
+                  (mkBuiltinApp' OpAnomaRandomNextBytes [mkVar' 1, mkVar' 0])
+              )
+          )
+      Internal.BuiltinAnomaRandomSplit -> do
+        registerAxiomDef
+          ( mkLambda'
+              mkDynamic'
+              (mkBuiltinApp' OpAnomaRandomSplit [mkVar' 0])
           )
       Internal.BuiltinPoseidon -> do
         psName <- getPoseidonStateName
@@ -1407,6 +1435,10 @@ goApplication a = do
         Just Internal.BuiltinAnomaSubDelta -> app
         Just Internal.BuiltinAnomaProveAction -> app
         Just Internal.BuiltinAnomaProveDelta -> app
+        Just Internal.BuiltinAnomaRandomGenerator -> app
+        Just Internal.BuiltinAnomaRandomGeneratorInit -> app
+        Just Internal.BuiltinAnomaRandomNextBytes -> app
+        Just Internal.BuiltinAnomaRandomSplit -> app
         Just Internal.BuiltinPoseidon -> app
         Just Internal.BuiltinEcOp -> app
         Just Internal.BuiltinRandomEcPoint -> app

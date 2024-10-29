@@ -251,6 +251,10 @@ data BuiltinAxiom
   | BuiltinAnomaSubDelta
   | BuiltinAnomaProveAction
   | BuiltinAnomaProveDelta
+  | BuiltinAnomaRandomGenerator
+  | BuiltinAnomaRandomGeneratorInit
+  | BuiltinAnomaRandomNextBytes
+  | BuiltinAnomaRandomSplit
   | BuiltinPoseidon
   | BuiltinEcOp
   | BuiltinRandomEcPoint
@@ -311,6 +315,10 @@ instance HasNameKind BuiltinAxiom where
     BuiltinAnomaSubDelta -> KNameFunction
     BuiltinAnomaProveAction -> KNameFunction
     BuiltinAnomaProveDelta -> KNameFunction
+    BuiltinAnomaRandomGenerator -> KNameInductive
+    BuiltinAnomaRandomGeneratorInit -> KNameFunction
+    BuiltinAnomaRandomNextBytes -> KNameFunction
+    BuiltinAnomaRandomSplit -> KNameFunction
     BuiltinPoseidon -> KNameFunction
     BuiltinEcOp -> KNameFunction
     BuiltinRandomEcPoint -> KNameFunction
@@ -378,6 +386,10 @@ instance Pretty BuiltinAxiom where
     BuiltinAnomaSubDelta -> Str.anomaSubDelta
     BuiltinAnomaProveDelta -> Str.anomaProveDelta
     BuiltinAnomaProveAction -> Str.anomaProveAction
+    BuiltinAnomaRandomGenerator -> Str.anomaRandomGenerator
+    BuiltinAnomaRandomGeneratorInit -> Str.anomaRandomGeneratorInit
+    BuiltinAnomaRandomNextBytes -> Str.anomaRandomNextBytes
+    BuiltinAnomaRandomSplit -> Str.anomaRandomSplit
     BuiltinPoseidon -> Str.cairoPoseidon
     BuiltinEcOp -> Str.cairoEcOp
     BuiltinRandomEcPoint -> Str.cairoRandomEcPoint

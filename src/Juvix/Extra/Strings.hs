@@ -197,6 +197,9 @@ byteArrayFromListByte = "bytearray-from-list-byte"
 byteArrayLength :: (IsString s) => s
 byteArrayLength = "bytearray-length"
 
+randomGenerator :: (IsString s) => s
+randomGenerator = "randomgenerator"
+
 nat :: (IsString s) => s
 nat = "nat"
 
@@ -430,6 +433,18 @@ anomaProveDelta = "anoma-prove-delta"
 
 anomaProveAction :: (IsString s) => s
 anomaProveAction = "anoma-prove-action"
+
+anomaRandomGenerator :: (IsString s) => s
+anomaRandomGenerator = "anoma-random-generator"
+
+anomaRandomGeneratorInit :: (IsString s) => s
+anomaRandomGeneratorInit = "anoma-random-generator-init"
+
+anomaRandomNextBytes :: (IsString s) => s
+anomaRandomNextBytes = "anoma-random-next-bytes"
+
+anomaRandomSplit :: (IsString s) => s
+anomaRandomSplit = "anoma-random-generator-split"
 
 builtinSeq :: (IsString s) => s
 builtinSeq = "seq"

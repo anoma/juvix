@@ -582,6 +582,9 @@ compile = \case
         Tree.OpAnomaZeroDelta -> rmValue RmZeroDelta
         Tree.OpAnomaAddDelta -> callRm RmDeltaAdd args
         Tree.OpAnomaSubDelta -> callRm RmDeltaSub args
+        Tree.OpAnomaRandomGeneratorInit -> callStdlib StdlibRandomInitGen args
+        Tree.OpAnomaRandomNextBytes -> goAnomaRandomNextBytes args
+        Tree.OpAnomaRandomSplit -> callStdlib StdlibRandomSplit args
 
     goByteArrayOp :: Tree.NodeByteArray -> Sem r (Term Natural)
     goByteArrayOp Tree.NodeByteArray {..} = do
@@ -642,6 +645,9 @@ compile = \case
 
     mkByteArray :: Term Natural -> Term Natural -> Term Natural
     mkByteArray len payload = len # payload
+
+    mkPair :: Term Natural -> Term Natural -> Term Natural
+    mkPair t1 t2 = t1 # t2
 
     goAnomaVerifyDetached :: [Term Natural] -> Sem r (Term Natural)
     goAnomaVerifyDetached = \case
@@ -707,6 +713,30 @@ compile = \case
       where
         sha256HashLength :: Integer
         sha256HashLength = 64
+
+    goAnomaRandomNextBytes :: [Term Natural] -> Sem r (Term Natural)
+    goAnomaRandomNextBytes args = case args of
+      [n, g] -> do
+        withTemp (n # g) $ \argsRef -> do
+          argRefAddress <- tempRefPath argsRef
+          next <-
+            callStdlib
+              StdlibRandomNextBytes
+              [ opAddress "args-n" (argRefAddress ++ [L]),
+                opAddress "args-g" (argRefAddress ++ [R])
+              ]
+          withTemp next $ \nextRef -> do
+            nextRefPath <- tempRefPath nextRef
+            argRefAddress' <- tempRefPath argsRef
+            return
+              ( mkPair
+                  ( mkByteArray
+                      (opAddress "args-n" (argRefAddress' ++ [L]))
+                      (opAddress "nextbytes-result-fst" (nextRefPath ++ [L]))
+                  )
+                  (opAddress "nextBytes-result-snd" (nextRefPath ++ [R]))
+              )
+      _ -> impossible
 
     -- Conceptually this function is:
     -- anomaDecode <$> verify signedMessage pubKey

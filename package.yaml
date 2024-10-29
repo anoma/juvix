@@ -90,11 +90,13 @@ dependencies:
   - prettyprinter-ansi-terminal == 1.1.*
   - primitive == 0.9.*
   - process == 1.6.*
+  - random == 1.2.*
   - safe == 0.3.*
   - scientific == 0.3.*
   - singletons == 3.0.*
   - singletons-base == 3.3.*
   - singletons-th == 3.3.*
+  - splitmix == 0.1.*
   - stm == 2.5.*
   - Stream == 0.4.*
   - string-interpolate == 0.3.*

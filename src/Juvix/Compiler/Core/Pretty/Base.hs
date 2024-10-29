@@ -75,6 +75,9 @@ instance PrettyCode BuiltinOp where
     OpAnomaZeroDelta -> return primZeroDelta
     OpAnomaAddDelta -> return primAddDelta
     OpAnomaSubDelta -> return primSubDelta
+    OpAnomaRandomGeneratorInit -> return primRandomGeneratorInit
+    OpAnomaRandomNextBytes -> return primRandomNextBytes
+    OpAnomaRandomSplit -> return primRandomSplit
     OpPoseidonHash -> return primPoseidonHash
     OpEc -> return primEc
     OpRandomEcPoint -> return primRandomEcPoint
@@ -105,6 +108,7 @@ instance PrettyCode Primitive where
     PrimBool _ -> return $ annotate (AnnKind KNameInductive) (pretty ("Bool" :: String))
     PrimString -> return $ annotate (AnnKind KNameInductive) (pretty ("String" :: String))
     PrimByteArray -> return $ annotate (AnnKind KNameInductive) (pretty ("ByteArray" :: String))
+    PrimRandomGenerator -> return $ annotate (AnnKind KNameInductive) (pretty ("RandomGenerator" :: String))
 
 ppName :: NameKind -> Text -> Sem r (Doc Ann)
 ppName kind name = return $ annotate (AnnKind kind) (pretty name)
@@ -953,6 +957,15 @@ primAddDelta = primitive Str.anomaAddDelta
 
 primSubDelta :: Doc Ann
 primSubDelta = primitive Str.anomaSubDelta
+
+primRandomGeneratorInit :: Doc Ann
+primRandomGeneratorInit = primitive Str.anomaRandomGeneratorInit
+
+primRandomNextBytes :: Doc Ann
+primRandomNextBytes = primitive Str.anomaRandomNextBytes
+
+primRandomSplit :: Doc Ann
+primRandomSplit = primitive Str.anomaRandomSplit
 
 primPoseidonHash :: Doc Ann
 primPoseidonHash = primitive Str.cairoPoseidon

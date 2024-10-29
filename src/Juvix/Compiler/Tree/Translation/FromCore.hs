@@ -70,6 +70,9 @@ toTreeOp = \case
   Core.OpAnomaZeroDelta -> TreeAnomaOp OpAnomaZeroDelta
   Core.OpAnomaAddDelta -> TreeAnomaOp OpAnomaAddDelta
   Core.OpAnomaSubDelta -> TreeAnomaOp OpAnomaSubDelta
+  Core.OpAnomaRandomGeneratorInit -> TreeAnomaOp OpAnomaRandomGeneratorInit
+  Core.OpAnomaRandomNextBytes -> TreeAnomaOp OpAnomaRandomNextBytes
+  Core.OpAnomaRandomSplit -> TreeAnomaOp OpAnomaRandomSplit
   -- TreeCairoOp
   Core.OpPoseidonHash -> TreeCairoOp OpCairoPoseidon
   Core.OpEc -> TreeCairoOp OpCairoEc
@@ -382,6 +385,8 @@ convertPrimitiveType = \case
     TyField
   Core.PrimByteArray ->
     TyByteArray
+  Core.PrimRandomGenerator ->
+    TyRandomGenerator
 
 -- | `convertNestedType` ensures that the conversion of a type with Dynamic in the
 -- target is curried. The result of `convertType 0 ty` is always uncurried.

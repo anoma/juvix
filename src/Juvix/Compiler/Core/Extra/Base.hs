@@ -208,6 +208,12 @@ mkTypeByteArray i = mkTypePrim i PrimByteArray
 mkTypeByteArray' :: Type
 mkTypeByteArray' = mkTypeByteArray Info.empty
 
+mkTypeRandomGenerator :: Info -> Type
+mkTypeRandomGenerator i = mkTypePrim i PrimRandomGenerator
+
+mkTypeRandomGenerator' :: Type
+mkTypeRandomGenerator' = mkTypeRandomGenerator Info.empty
+
 mkDynamic :: Info -> Type
 mkDynamic i = NDyn (DynamicTy i)
 

@@ -125,6 +125,10 @@ fromCore fsize tab =
         BuiltinAnomaZeroDelta -> False
         BuiltinAnomaProveAction -> False
         BuiltinAnomaProveDelta -> False
+        BuiltinAnomaRandomGenerator -> False
+        BuiltinAnomaRandomGeneratorInit -> False
+        BuiltinAnomaRandomNextBytes -> False
+        BuiltinAnomaRandomSplit -> False
         BuiltinPoseidon -> False
         BuiltinEcOp -> False
         BuiltinRandomEcPoint -> False

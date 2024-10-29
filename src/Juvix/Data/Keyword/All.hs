@@ -535,6 +535,15 @@ kwAnomaAddDelta = asciiKw Str.anomaAddDelta
 kwAnomaSubDelta :: Keyword
 kwAnomaSubDelta = asciiKw Str.anomaSubDelta
 
+kwAnomaRandomGeneratorInit :: Keyword
+kwAnomaRandomGeneratorInit = asciiKw Str.anomaRandomGeneratorInit
+
+kwAnomaRandomNextBytes :: Keyword
+kwAnomaRandomNextBytes = asciiKw Str.anomaRandomNextBytes
+
+kwAnomaRandomSplit :: Keyword
+kwAnomaRandomSplit = asciiKw Str.anomaRandomSplit
+
 delimBraceL :: Keyword
 delimBraceL = mkDelim Str.braceL
 
