@@ -435,16 +435,16 @@ anomaProveAction :: (IsString s) => s
 anomaProveAction = "anoma-prove-action"
 
 anomaRandomGenerator :: (IsString s) => s
-anomaRandomGenerator = "anoma-randomgenerator"
+anomaRandomGenerator = "anoma-random-generator"
 
 anomaRandomGeneratorInit :: (IsString s) => s
-anomaRandomGeneratorInit = "anoma-randomgenerator-init"
+anomaRandomGeneratorInit = "anoma-random-generator-init"
 
 anomaRandomNextBytes :: (IsString s) => s
 anomaRandomNextBytes = "anoma-random-next-bytes"
 
 anomaRandomSplit :: (IsString s) => s
-anomaRandomSplit = "anoma-random-split"
+anomaRandomSplit = "anoma-random-generator-split"
 
 builtinSeq :: (IsString s) => s
 builtinSeq = "seq"
