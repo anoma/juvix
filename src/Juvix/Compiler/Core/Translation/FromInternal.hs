@@ -1165,7 +1165,7 @@ goPatternArgs ::
   [Internal.PatternArg] ->
   [Type] -> -- types of the patterns
   Sem r MatchBranch
-goPatternArgs lvl0 body = go lvl0 []
+goPatternArgs lvl0 body pats0 = go lvl0 [] pats0
   where
     -- `lvl` is the level of the lambda-bound variable corresponding to the current pattern
     go :: Level -> [Pattern] -> [Internal.PatternArg] -> [Type] -> Sem r MatchBranch
@@ -1190,7 +1190,8 @@ goPatternArgs lvl0 body = go lvl0 []
             impossible
       ([], []) -> do
         body' <- goCaseBranchRhs body
-        return $ MatchBranch Info.empty (nonEmpty' (reverse pats)) body'
+        let info = setInfoLocation (getLocSpan (nonEmpty' pats0)) Info.empty
+        return $ MatchBranch info (nonEmpty' (reverse pats)) body'
       _ ->
         impossible
 
