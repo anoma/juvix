@@ -16,7 +16,7 @@ type GameState :=
   mkGameState@{
     board : Board;
     player : Symbol;
-    error : Error
+    error : Error;
   };
 
 --- Textual representation of a ;GameState;
@@ -34,7 +34,7 @@ beginState : GameState :=
             :: (7 :: 8 :: 9 :: nil)
             :: nil));
     player := X;
-    error := noError
+    error := noError;
   };
 
 --- ;true; if some player has won the game

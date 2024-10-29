@@ -189,8 +189,10 @@ instance (SingI s) => PrettyPrint (ListPattern s) where
   ppCode ListPattern {..} = do
     let l = ppCode _listpBracketL
         r = ppCode _listpBracketR
-        e = hsepSemicolon (map ppPatternParensType _listpItems)
-    l <> e <> r
+        e = case sing :: SStage s of
+          SParsed -> ppBlockOrList _listpItems
+          SScoped -> ppBlockOrList _listpItems
+    grouped (align (l <> e <> r))
 
 instance PrettyPrint Interval where
   ppCode = noLoc . pretty
@@ -323,8 +325,10 @@ instance (SingI s) => PrettyPrint (List s) where
   ppCode List {..} = do
     let l = ppCode _listBracketL
         r = ppCode _listBracketR
-        es = vcatPreSemicolon (map ppExpressionType _listItems)
-    grouped (align (l <> spaceOrEmpty <> es <> lineOrEmpty <> r))
+        es = case sing :: SStage s of
+          SParsed -> ppBlockOrList _listItems
+          SScoped -> ppBlockOrList _listItems
+    grouped (align (l <> es <> r))
 
 instance (SingI s) => PrettyPrint (NamedArgumentAssign s) where
   ppCode NamedArgumentAssign {..} = do
@@ -350,14 +354,14 @@ instance (SingI s) => PrettyPrint (NamedApplicationNew s) where
   ppCode NamedApplicationNew {..} = do
     let args'
           | null _namedApplicationNewArguments = mempty
-          | otherwise =
-              blockIndent $
-                sequenceWith
-                  (semicolon >> line)
-                  (ppCode <$> _namedApplicationNewArguments)
-    ppIdentifierType _namedApplicationNewName
-      <> ppCode _namedApplicationNewExhaustive
-      <> braces args'
+          | otherwise = ppBlock _namedApplicationNewArguments
+    grouped
+      ( align
+          ( ppIdentifierType _namedApplicationNewName
+              <> ppCode _namedApplicationNewExhaustive
+              <> braces args'
+          )
+      )
 
 instance (SingI s) => PrettyPrint (NamedArgumentFunctionDef s) where
   ppCode (NamedArgumentFunctionDef f) = ppCode f
@@ -389,14 +393,7 @@ instance (SingI s) => PrettyPrint (RecordUpdate s) where
     let Irrelevant (l, r) = _recordUpdateDelims
         fields'
           | [f] <- _recordUpdateFields = ppCode f
-          | otherwise =
-              line
-                <> indent
-                  ( sequenceWith
-                      (semicolon >> line)
-                      (ppCode <$> _recordUpdateFields)
-                  )
-                <> line
+          | otherwise = ppBlockOrList _recordUpdateFields
     ppCode _recordUpdateAtKw
       <> ppIdentifierType _recordUpdateTypeName
       <> ppCode l
@@ -410,7 +407,7 @@ instance (SingI s) => PrettyPrint (DoubleBracesExpression s) where
 
 instance (SingI s) => PrettyPrint (DoLet s) where
   ppCode DoLet {..} = do
-    let letFunDefs' = blockIndent (ppBlock _doLetStatements)
+    let letFunDefs' = ppBlock _doLetStatements
     ppCode _doLetKw
       <> letFunDefs'
       <> ppCode _doLetInKw
@@ -631,7 +628,7 @@ ppMaybeTopExpression isTop e = case isTop of
 
 ppLet :: forall r s. (Members '[ExactPrint, Reader Options] r, SingI s) => IsTop -> Let s -> Sem r ()
 ppLet isTop Let {..} = do
-  let letFunDefs' = blockIndent (ppBlock _letFunDefs)
+  let letFunDefs' = ppBlock _letFunDefs
       letExpression' = ppMaybeTopExpression isTop _letExpression
   align $ ppCode _letKw <> letFunDefs' <> ppCode _letInKw <+> letExpression'
 
@@ -847,8 +844,20 @@ ppLRExpression associates fixlr e =
     (atomParens associates (atomicity e) fixlr)
     (ppCode e)
 
+ppBlock' :: (Members '[Reader Options, ExactPrint] r, Traversable t) => t (Sem r ()) -> Sem r ()
+ppBlock' items = blockIndent (vsepHard (sepEndSemicolon items))
+
 ppBlock :: (PrettyPrint a, Members '[Reader Options, ExactPrint] r, Traversable t) => t a -> Sem r ()
-ppBlock items = vsepHard (sepEndSemicolon (fmap ppCode items))
+ppBlock items = ppBlock' (fmap ppCode items)
+
+ppBlockOrList' :: (Members '[Reader Options, ExactPrint] r, Traversable t) => t (Sem r ()) -> Sem r ()
+ppBlockOrList' items =
+  flatAlt
+    (ppBlock' items)
+    (hsepSemicolon items)
+
+ppBlockOrList :: (PrettyPrint a, Members '[Reader Options, ExactPrint] r, Traversable t) => t a -> Sem r ()
+ppBlockOrList items = ppBlockOrList' (fmap ppCode items)
 
 instance (SingI s) => PrettyPrint (Lambda s) where
   ppCode Lambda {..} = do
@@ -866,8 +875,8 @@ instance PrettyPrint Precedence where
     PrecApp -> noLoc (pretty ("ω" :: Text))
     PrecUpdate -> noLoc (pretty ("ω₁" :: Text))
 
-ppFixityDefHeaderNew :: (SingI s) => PrettyPrinting (FixitySyntaxDef s)
-ppFixityDefHeaderNew FixitySyntaxDef {..} = do
+ppFixityDefHeader :: (SingI s) => PrettyPrinting (FixitySyntaxDef s)
+ppFixityDefHeader FixitySyntaxDef {..} = do
   let sym' = annotated (AnnKind KNameFixity) (ppSymbolType _fixitySymbol)
   ppCode _fixitySyntaxKw <+> ppCode _fixityKw <+> sym'
 
@@ -905,14 +914,14 @@ instance (SingI s) => PrettyPrint (ParsedFixityInfo s) where
               belowItem = do
                 a <- _fixityFieldsPrecBelow
                 return (ppCode Kw.kwBelow <+> ppCode Kw.kwAssign <+> ppSymbolList a)
-              items = hsepSemicolon (catMaybes [assocItem, sameItem, aboveItem, belowItem])
+              items = ppBlockOrList' (catMaybes [assocItem, sameItem, aboveItem, belowItem])
               (l, r) = _fixityFieldsBraces ^. unIrrelevant
-          return (ppCode l <> items <> ppCode r)
+          return (grouped (ppCode l <> items <> ppCode r))
     ppCode _fixityParsedArity <+?> rhs
 
 instance (SingI s) => PrettyPrint (FixitySyntaxDef s) where
   ppCode f@FixitySyntaxDef {..} = do
-    let header' = ppFixityDefHeaderNew f
+    let header' = ppFixityDefHeader f
         body' = ppCode _fixityInfo
     header' <+> ppCode _fixityAssignKw <+> body'
 
@@ -946,8 +955,8 @@ instance PrettyPrint ParsedIteratorInfo where
         rangeItem = do
           a <- _parsedIteratorInfoRangeNum
           return (ppCode Kw.kwRange <+> ppCode Kw.kwAssign <+> ppInt a)
-        items = hsepSemicolon (catMaybes [iniItem, rangeItem])
-    ppCode l <> items <> ppCode r
+        items = ppBlockOrList' (catMaybes [iniItem, rangeItem])
+    grouped (ppCode l <> items <> ppCode r)
 
 instance PrettyPrint IteratorSyntaxDef where
   ppCode IteratorSyntaxDef {..} = do
@@ -1190,8 +1199,8 @@ instance (SingI s) => PrettyPrint (RecordPatternItem s) where
 instance (SingI s) => PrettyPrint (RecordPattern s) where
   ppCode r = do
     let c = ppIdentifierType (r ^. recordPatternConstructor)
-        items = sepSemicolon (map ppCode (r ^. recordPatternItems))
-    c <> noLoc C.kwAt <> align (braces items)
+        items = ppBlockOrList (r ^. recordPatternItems)
+    grouped (align (c <> noLoc C.kwAt <> braces items))
 
 instance PrettyPrint Pattern where
   ppCode = \case
@@ -1241,14 +1250,14 @@ instance (SingI s) => PrettyPrint (HidingItem s) where
 instance (SingI s) => PrettyPrint (HidingList s) where
   ppCode HidingList {..} = do
     let (openb, closeb) = _hidingBraces ^. unIrrelevant
-        items' = sequenceWith (semicolon <> space) (ppCode <$> _hidingList)
-    ppCode _hidingKw <+> ppCode openb <> items' <> ppCode closeb
+        items' = ppBlockOrList _hidingList
+    grouped (ppCode _hidingKw <+> ppCode openb <> items' <> ppCode closeb)
 
 instance (SingI s) => PrettyPrint (UsingList s) where
   ppCode UsingList {..} = do
     let (openb, closeb) = _usingBraces ^. unIrrelevant
-        items' = sequenceWith (semicolon <> space) (ppCode <$> _usingList)
-    ppCode _usingKw <+> ppCode openb <> items' <> ppCode closeb
+        items' = ppBlockOrList _usingList
+    grouped (ppCode _usingKw <+> ppCode openb <> items' <> ppCode closeb)
 
 instance (SingI s) => PrettyPrint (UsingHiding s) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => UsingHiding s -> Sem r ()
@@ -1428,14 +1437,7 @@ instance (SingI s) => PrettyPrint (RhsRecord s) where
         fields'
           | [] <- _rhsRecordStatements = mempty
           | [f] <- _rhsRecordStatements = ppCode f
-          | otherwise =
-              hardline
-                <> indent
-                  ( sequenceWith
-                      (semicolon >> line)
-                      (ppCode <$> _rhsRecordStatements)
-                  )
-                <> hardline
+          | otherwise = ppBlock _rhsRecordStatements
     ppCode kwAt <> ppCode l <> fields' <> ppCode r
 
 instance (SingI s) => PrettyPrint (RhsAdt s) where

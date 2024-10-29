@@ -853,8 +853,8 @@ goExpression = \case
   ExpressionRecordUpdate i -> goRecordUpdateApp i
   ExpressionParensRecordUpdate i -> Internal.ExpressionLambda <$> goRecordUpdate (i ^. parensRecordUpdate)
   where
-    goNamedApplication :: ScopedIden -> NonEmpty (ArgumentBlock 'Scoped) -> [Internal.ApplicationArg] -> Sem r Internal.Expression
-    goNamedApplication fun blocks extraArgs = do
+    goNamedApplication' :: ScopedIden -> NonEmpty (ArgumentBlock 'Scoped) -> [Internal.ApplicationArg] -> Sem r Internal.Expression
+    goNamedApplication' fun blocks extraArgs = do
       s <- asks (^. S.infoNameSigs)
       runReader s (runNamedArguments fun blocks extraArgs) >>= goDesugaredNamedApplication
 
@@ -869,7 +869,7 @@ goExpression = \case
         sig <- fromJust <$> asks (^. S.infoNameSigs . at (name ^. S.nameId))
         let fun = napp ^. namedApplicationNewName
             blocks = createArgumentBlocks appargs (sig ^. nameSignatureArgs)
-        compiledNameApp <- goNamedApplication fun blocks extraArgs
+        compiledNameApp <- goNamedApplication' fun blocks extraArgs
         case nonEmpty (appargs ^.. each . _NamedArgumentNewFunction) of
           Nothing -> return compiledNameApp
           Just funs -> do

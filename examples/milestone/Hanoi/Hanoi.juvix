@@ -43,7 +43,7 @@ showPeg : Peg -> String
 type Move :=
   mkMove@{
     from : Peg;
-    to : Peg
+    to : Peg;
   };
 
 showMove (move : Move) : String :=

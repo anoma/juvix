@@ -3,6 +3,40 @@ module test059;
 
 import Stdlib.Prelude open;
 
+myLongList : List Nat :=
+  [
+    1;
+    2;
+    3;
+    4;
+    5;
+    6;
+    7;
+    8;
+    9;
+    10;
+    11;
+    12;
+    13;
+    14;
+    15;
+    16;
+    17;
+    18;
+    19;
+    20;
+    21;
+    22;
+    23;
+    24;
+    25;
+    26;
+    27;
+    28;
+    29;
+    30;
+  ];
+
 mylist : List Nat := [1; 2; 3 + 1];
 
 mylist2 : List (List Nat) := [[10]; [2]; 3 + 1 :: nil];
@@ -10,6 +44,40 @@ mylist2 : List (List Nat) := [[10]; [2]; 3 + 1 :: nil];
 head' : {a : Type} -> a -> List a -> a
   | a [] := a
   | a [x; _] := x
+  | _ [
+        x;
+        _;
+        _;
+        _;
+        _;
+        _;
+        _;
+        _;
+        _;
+        _;
+        _;
+        _;
+        _;
+        _;
+        _;
+        _;
+        _;
+        _;
+        _;
+        _;
+        _;
+        _;
+        _;
+        _;
+        _;
+        _;
+        _;
+        _;
+        _;
+        _;
+        _;
+        _;
+      ] := x
   | _ (h :: _) := h;
 
 main : Nat := head' 50 mylist + head' 50 (head' [] mylist2);
