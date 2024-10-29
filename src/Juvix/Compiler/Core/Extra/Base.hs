@@ -675,9 +675,19 @@ destruct = \case
           concat
             [ br
                 ^. matchBranchInfo
-                : concatMap getPatternInfos (br ^. matchBranchPatterns)
+                : getSideIfBranchInfos (br ^. matchBranchRhs)
+                ++ concatMap getPatternInfos (br ^. matchBranchPatterns)
               | br <- branches
             ]
+
+        getSideIfBranchInfos :: MatchBranchRhs -> [Info]
+        getSideIfBranchInfos = \case
+          MatchBranchRhsExpression _ -> []
+          MatchBranchRhsIfs ifs -> map getSideIfBranchInfos' (toList ifs)
+          where
+            getSideIfBranchInfos' :: SideIfBranch -> Info
+            getSideIfBranchInfos' SideIfBranch {..} = _sideIfBranchInfo
+
         -- sets the infos and the binder types in the patterns
         setPatternsInfos :: forall r. (Members '[Input Info, Input Node] r) => NonEmpty Pattern -> Sem r (NonEmpty Pattern)
         setPatternsInfos = mapM goPattern

@@ -54,7 +54,7 @@ goCheckRedundantPatterns md node = case node of
                 CoreError
                   { _coreErrorMsg = ppOutput "Redundant pattern",
                     _coreErrorNode = Nothing,
-                    _coreErrorLoc = fromMaybe defaultLoc (getNodeLocation node)
+                    _coreErrorLoc = fromMaybe defaultLoc (getInfoLocation _matchBranchInfo)
                   }
             case _matchBranchRhs of
               MatchBranchRhsExpression {} -> go (row : matrix) branches
