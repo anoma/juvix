@@ -1,14 +1,6 @@
 -- Integer arithmetic
 module test003;
 
-{-
-
-Multiline comment
-
-{- nested comments work -}
-
--}
-
 import Stdlib.Prelude open;
 
 main : IO :=
