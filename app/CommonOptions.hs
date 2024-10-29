@@ -28,7 +28,7 @@ import Juvix.Prelude.Pretty hiding (group, list)
 import Options.Applicative hiding (helpDoc)
 import Options.Applicative qualified as Opt
 import Prettyprinter.Render.Terminal hiding (renderIO, renderStrict)
-import System.Process
+import System.Process as System
 import Text.Read (readMaybe)
 import Prelude qualified
 
@@ -75,6 +75,25 @@ parseInputFile = parseInputFiles . NonEmpty.singleton
 
 numThreadsOpt :: ReadM NumThreads
 numThreadsOpt = eitherReader readNumThreads
+
+anomaDirOptLongStr :: forall str. (IsString str) => str
+anomaDirOptLongStr = "anoma-dir"
+
+anomaDirOpt :: Parser (AppPath Dir)
+anomaDirOpt = do
+  path <-
+    option
+      somePreDirOpt
+      ( long anomaDirOptLongStr
+          <> metavar "ANOMA_DIR"
+          <> help "Path to anoma repository"
+          <> action "directory"
+      )
+  return
+    AppPath
+      { _pathIsInput = False,
+        _pathPath = path
+      }
 
 parseNumThreads :: Parser NumThreads
 parseNumThreads = do
@@ -209,7 +228,7 @@ enumCompleter _ = listCompleter [Juvix.show e | e <- allElements @a]
 extCompleter :: FileExt -> Completer
 extCompleter ext = mkCompleter $ \word -> do
   let cmd = unwords ["compgen", "-o", "plusdirs", "-f", "-X", "!*" <> Prelude.show ext, "--", requote word]
-  result <- GHC.try @GHC.SomeException $ readProcess "bash" ["-c", cmd] ""
+  result <- GHC.try @GHC.SomeException $ System.readProcess "bash" ["-c", cmd] ""
   return . lines . fromRight [] $ result
 
 requote :: String -> String

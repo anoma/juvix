@@ -1,5 +1,6 @@
 module Commands.Dev.Nockma.Run where
 
+import Anoma.Effect
 import Commands.Base hiding (Atom)
 import Commands.Dev.Nockma.Run.Options
 import Juvix.Compiler.Nockma.Anoma
@@ -13,22 +14,28 @@ runCommand opts = do
   afile <- fromAppPathFile inputFile
   argsFile <- mapM fromAppPathFile (opts ^. nockmaRunArgs)
   parsedArgs <- runAppError @JuvixError (mapM Nockma.cueJammedFileOrPretty argsFile)
-  parsedTerm <- checkCued (Nockma.cueJammedFileOrPretty afile)
+  parsedTerm <- runAppError @JuvixError (Nockma.cueJammedFileOrPretty afile)
   case parsedTerm of
-    t@(TermCell {}) -> do
-      let formula = anomaCallTuple parsedArgs
-      (counts, res) <-
-        runOpCounts
-          . runReader defaultEvalOptions
-          . runOutputSem @(Term Natural) (logInfo . mkAnsiText . ppTrace)
-          $ evalCompiledNock' t formula
-      putStrLn (ppPrint res)
-      let statsFile = replaceExtension' ".profile" afile
-      writeFileEnsureLn statsFile (prettyText counts)
     TermAtom {} -> exitFailMsg "Expected nockma input to be a cell"
+    t@(TermCell {}) -> case opts ^. nockmaRunAnomaDir of
+      Just path -> do
+        anomaDir <- AnomaPath <$> fromAppPathDir path
+        runInAnoma anomaDir t (unfoldTuple parsedArgs)
+      Nothing -> do
+        let formula = anomaCallTuple parsedArgs
+        (counts, res) <-
+          runOpCounts
+            . runReader defaultEvalOptions
+            . runOutputSem @(Term Natural) (logInfo . mkAnsiText . ppTrace)
+            $ evalCompiledNock' t formula
+        putStrLn (ppPrint res)
+        let statsFile = replaceExtension' ".profile" afile
+        writeFileEnsureLn statsFile (prettyText counts)
   where
     inputFile :: AppPath File
     inputFile = opts ^. nockmaRunFile
 
-    checkCued :: Sem (Error JuvixError ': r) a -> Sem r a
-    checkCued = runErrorNoCallStackWith exitJuvixError
+runInAnoma :: (Members AppEffects r) => AnomaPath -> Term Natural -> [Term Natural] -> Sem r ()
+runInAnoma anoma t args = runAppError @SimpleError . runAnoma anoma $ do
+  res <- runNockma t args
+  putStrLn (ppPrint res)

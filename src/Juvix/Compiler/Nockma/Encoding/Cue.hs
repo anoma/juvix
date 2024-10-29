@@ -69,7 +69,7 @@ registerElementStart sem = do
 
 -- | Convert a BitReadError to a DecodingError
 handleBitError :: (Member (Error DecodingError) r) => DecodingError -> Sem (Error BitReadError ': r) x -> Sem r x
-handleBitError e = mapError @_ @_ @BitReadError (const e)
+handleBitError e = mapError @BitReadError (const e)
 
 -- | Consume the encoded length from the input bits
 consumeLength' :: forall r. (Members '[BitReader, Error DecodingError] r) => Sem r Int
@@ -173,6 +173,19 @@ cueFromBits ::
   Bit.Vector Bit ->
   Sem r (Term a)
 cueFromBits v = evalBitReader v (evalState (initCueState @a) (runReader initCueEnv cueFromBitsSem))
+
+cueFromByteStringNatural ::
+  forall r.
+  ( Members
+      '[ Error DecodingError,
+         Error NockNaturalNaturalError,
+         Error (ErrNockNatural' Natural)
+       ]
+      r
+  ) =>
+  ByteString ->
+  Sem r (Term Natural)
+cueFromByteStringNatural = cueFromByteString'
 
 cueFromByteString' ::
   forall a r.
@@ -324,7 +337,7 @@ When handling an error with `runError` before `a` is resolved, the compiler
 cannot distinguish between `Error (ErrNockNatural a)` and `Error DecodingError`.
 For some `a` it's possible that `ErrNockNatural a` is equal to `DecodingError`.
 -}
-newtype ErrNockNatural' a = ErrNockNatural' (ErrNockNatural a)
+newtype ErrNockNatural' a = ErrNockNatural' {_unErrNocknatural' :: ErrNockNatural a}
 
 fromNatural' :: forall a r. (NockNatural a, Member (Error (ErrNockNatural' a)) r) => Natural -> Sem r a
 fromNatural' = mapError (ErrNockNatural' @a) . fromNatural

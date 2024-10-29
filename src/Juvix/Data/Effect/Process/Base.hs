@@ -13,10 +13,10 @@ data ProcessCall = ProcessCall
     _processCallArgs :: [Text]
   }
 
-data Process :: Effect where
-  FindExecutable' :: Path Rel File -> Process m (Maybe (Path Abs File))
-  ReadProcess' :: ProcessCall -> Process m ProcessResult
+data ProcessE :: Effect where
+  FindExecutable' :: Path Rel File -> ProcessE m (Maybe (Path Abs File))
+  ReadProcess' :: ProcessCall -> ProcessE m ProcessResult
 
-makeSem ''Process
+makeSem ''ProcessE
 makeLenses ''ProcessResult
 makeLenses ''ProcessCall

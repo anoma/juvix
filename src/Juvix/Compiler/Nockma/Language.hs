@@ -560,3 +560,15 @@ instance (NockmaEq a) => NockmaEq (Term a) where
 
 instance (NockmaEq a) => NockmaEq (Cell a) where
   nockmaEq (Cell l r) (Cell l' r') = nockmaEq l l' && nockmaEq r r'
+
+unfoldTuple :: Maybe (Term Natural) -> [Term Natural]
+unfoldTuple = maybe [] (toList . unfoldTuple1)
+
+unfoldTuple1 :: Term Natural -> NonEmpty (Term Natural)
+unfoldTuple1 = nonEmpty' . run . execOutputList . go
+  where
+    go :: (Members '[Output (Term Natural)] r) => Term Natural -> Sem r ()
+    go t =
+      case t of
+        TermAtom {} -> output t
+        TermCell (Cell l r) -> output l >> go r

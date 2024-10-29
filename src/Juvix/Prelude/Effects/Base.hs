@@ -10,6 +10,7 @@ module Juvix.Prelude.Effects.Base
     module Effectful.Dispatch.Static,
     module Effectful.Provider,
     module Effectful.Concurrent.Async,
+    module Effectful.Process,
   )
 where
 
@@ -23,6 +24,7 @@ import Effectful.Dispatch.Dynamic qualified as E
 import Effectful.Dispatch.Static
 import Effectful.Error.Static hiding (runError, runErrorWith)
 import Effectful.Internal.Env (getEnv, putEnv)
+import Effectful.Process hiding (env)
 import Effectful.Provider
 import Effectful.Reader.Static
 import Effectful.State.Static.Local hiding (runState, state)
@@ -109,7 +111,7 @@ modifyShared = Shared.modify
 modify' :: (Member (State s) r) => (s -> s) -> Sem r ()
 modify' = State.modify
 
-mapError :: (Member (Error b) r) => (a -> b) -> Sem (Error a ': r) x -> Sem r x
+mapError :: forall a b r x. (Member (Error b) r) => (a -> b) -> Sem (Error a ': r) x -> Sem r x
 mapError f = runErrorWith (throwError . f)
 
 runM :: (MonadIO m) => Sem '[EmbedIO] a -> m a

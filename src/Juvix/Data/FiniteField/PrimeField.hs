@@ -33,7 +33,7 @@ import GHC.TypeLits.Singletons ()
 import Juvix.Data.FiniteField.Base
 import Juvix.Prelude.Base.Foundation hiding (toInteger)
 import Language.Haskell.TH qualified as TH
-import Prelude (Read, readsPrec, showsPrec)
+import Prelude (readsPrec, showsPrec)
 
 -- | Finite field of prime order p, Fp = Z/pZ.
 --

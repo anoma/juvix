@@ -52,6 +52,7 @@ dependencies:
   - ansi-terminal == 1.1.*
   - base == 4.19.*
   - base16-bytestring == 1.0.*
+  - base64-bytestring == 1.2.*
   - bitvec == 1.1.*
   - blaze-html == 0.9.*
   - bytestring == 0.12.*

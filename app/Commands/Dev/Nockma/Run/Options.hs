@@ -4,6 +4,7 @@ import CommonOptions
 
 data NockmaRunOptions = NockmaRunOptions
   { _nockmaRunFile :: AppPath File,
+    _nockmaRunAnomaDir :: Maybe (AppPath Dir),
     _nockmaRunProfile :: Bool,
     _nockmaRunArgs :: Maybe (AppPath File)
   }
@@ -24,6 +25,7 @@ parseNockmaRunOptions = do
             <> action "file"
         )
     pure AppPath {_pathIsInput = True, ..}
+  _nockmaRunAnomaDir <- optional anomaDirOpt
   _nockmaRunProfile <-
     switch
       ( long "profile"

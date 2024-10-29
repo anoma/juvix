@@ -27,6 +27,16 @@ deriving stock instance (Typeable k, Data (InputFileType k)) => Data (CompileCom
 
 makeLenses ''CompileCommonOptions
 
+defaultCompileCommonOptionsMain :: CompileCommonOptions 'InputMain
+defaultCompileCommonOptionsMain =
+  CompileCommonOptions
+    { _compileInputFile = Nothing,
+      _compileOutputFile = Nothing,
+      _compileDebug = False,
+      _compileInliningDepth = defaultInliningDepth,
+      _compileOptimizationLevel = Just defaultOptimizationLevel
+    }
+
 instance EntryPointOptions (CompileCommonOptions b) where
   applyOptions opts e =
     e

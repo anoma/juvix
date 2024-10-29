@@ -180,7 +180,7 @@ import Data.Text qualified as Text
 import Data.Text.Encoding
 import Data.Text.IO hiding (appendFile, getContents, getLine, hGetContents, hGetLine, hPutStr, hPutStrLn, interact, putStr, putStrLn, readFile, writeFile)
 import Data.Text.IO qualified as Text
-import Data.Text.IO.Utf8 hiding (getLine, hPutStr, hPutStrLn, putStr, putStrLn, readFile, writeFile)
+import Data.Text.IO.Utf8 hiding (getLine, hGetLine, hPutStr, hPutStrLn, putStr, putStrLn, readFile, writeFile)
 import Data.Text.IO.Utf8 qualified as Utf8
 import Data.Text.Lazy.Builder qualified as LazyText
 import Data.Traversable
@@ -213,8 +213,11 @@ import System.IO hiding
   ( appendFile,
     getContents,
     getLine,
+    hClose,
+    hFlush,
     hGetContents,
     hGetLine,
+    hIsEOF,
     hPutStr,
     hPutStrLn,
     interact,
@@ -229,7 +232,7 @@ import System.IO hiding
   )
 import System.IO qualified as IO
 import System.IO.Error
-import Text.Read (readEither)
+import Text.Read (Read, readEither)
 import Text.Read qualified as Text
 import Text.Show (Show)
 import Text.Show qualified as Show
@@ -247,6 +250,9 @@ type LazyHashMap = LazyHashMap.HashMap
 type SimpleFold s a = forall r. (Monoid r) => Getting r s a
 
 type SimpleGetter s a = forall r. Getting r s a
+
+readJust :: (Read a) => String -> a
+readJust = Text.read
 
 traverseM ::
   (Monad m, Traversable m, Applicative f) =>
@@ -558,6 +564,18 @@ indexFrom :: Int -> [a] -> [Indexed a]
 indexFrom i = zipWith Indexed [i ..]
 
 makeLenses ''Indexed
+
+hClose :: (MonadIO m) => Handle -> m ()
+hClose = liftIO . IO.hClose
+
+hGetLine :: (MonadIO m) => Handle -> m Text
+hGetLine = liftIO . Utf8.hGetLine
+
+hIsEOF :: (MonadIO m) => Handle -> m Bool
+hIsEOF = liftIO . IO.hIsEOF
+
+hFlush :: (MonadIO m) => Handle -> m ()
+hFlush = liftIO . IO.hFlush
 
 toTuple :: Indexed a -> (Int, a)
 toTuple i = (i ^. indexedIx, i ^. indexedThing)

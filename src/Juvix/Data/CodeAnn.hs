@@ -66,6 +66,9 @@ instance HasAnsiBackend (Doc CodeAnn) where
   toAnsiDoc = fmap stylize
   toAnsiStream = fmap stylize . layoutPretty defaultLayoutOptions
 
+simpleErrorCodeAnn :: (PrettyCodeAnn msg) => msg -> SimpleError
+simpleErrorCodeAnn = SimpleError . mkAnsiText . ppCodeAnn
+
 kwTypeAnn :: KeywordType -> CodeAnn
 kwTypeAnn = \case
   KeywordTypeDelimiter -> AnnDelimiter

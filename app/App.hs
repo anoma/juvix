@@ -321,5 +321,8 @@ instance AppError Text where
 instance AppError JuvixError where
   appError = exitJuvixError
 
+instance AppError SimpleError where
+  appError = exitFailMsg . toPlainText
+
 class AppError e where
   appError :: (Members '[App] r) => e -> Sem r a
