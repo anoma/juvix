@@ -1,0 +1,39 @@
+module test086;
+
+import Stdlib.Prelude open;
+import Stdlib.Debug.Trace open;
+
+builtin bytearray
+axiom ByteArray : Type;
+
+builtin bytearray-length
+axiom bytearrayLength : ByteArray -> Nat;
+
+builtin anoma-random-generator
+axiom RandomGenerator : Type;
+
+builtin anoma-random-generator-init
+axiom randomGeneratorInit : Nat -> RandomGenerator;
+
+builtin anoma-random-generator-split
+axiom randomGeneratorSplit : RandomGenerator
+  -> Pair RandomGenerator RandomGenerator;
+
+builtin anoma-random-next-bytes
+axiom randomNextBytes : Nat
+  -> RandomGenerator
+  -> Pair ByteArray RandomGenerator;
+
+main : ByteArray :=
+  let
+    gen : RandomGenerator := randomGeneratorInit 777;
+    next1 : Pair ByteArray RandomGenerator := randomNextBytes 2 gen;
+    next2 : Pair ByteArray RandomGenerator := randomNextBytes 3 (snd next1);
+    split : Pair RandomGenerator RandomGenerator :=
+      randomGeneratorSplit (snd next2);
+    next3 : Pair ByteArray RandomGenerator := randomNextBytes 2 (snd split);
+    next4 : Pair ByteArray RandomGenerator := randomNextBytes 4 (fst split);
+  in trace (fst next1)
+    >-> trace (fst next2)
+    >-> trace (fst next3)
+    >-> fst next4;
