@@ -16,6 +16,7 @@ data Primitive
   | PrimString
   | PrimField
   | PrimByteArray
+  | PrimRandomGenerator
   deriving stock (Eq, Generic)
 
 primitiveUInt8 :: Primitive

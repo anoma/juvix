@@ -67,6 +67,7 @@ isSubtype ty1 ty2 =
         (TyString, TyString) -> True
         (TyField, TyField) -> True
         (TyByteArray, TyByteArray) -> True
+        (TyRandomGenerator, TyRandomGenerator) -> True
         (TyUnit, TyUnit) -> True
         (TyVoid, TyVoid) -> True
         (TyInductive {}, TyInductive {}) -> ty1 == ty2
@@ -82,6 +83,8 @@ isSubtype ty1 ty2 =
         (_, TyField) -> False
         (TyByteArray, _) -> False
         (_, TyByteArray) -> False
+        (TyRandomGenerator, _) -> False
+        (_, TyRandomGenerator) -> False
         (TyBool {}, _) -> False
         (_, TyBool {}) -> False
         (TyFun {}, _) -> False
@@ -127,6 +130,7 @@ unifyTypes ty1 ty2 =
         (TyString, TyString) -> return TyString
         (TyField, TyField) -> return TyField
         (TyByteArray, TyByteArray) -> return TyByteArray
+        (TyRandomGenerator, TyRandomGenerator) -> return TyRandomGenerator
         (TyUnit, TyUnit) -> return TyUnit
         (TyVoid, TyVoid) -> return TyVoid
         (TyInductive {}, TyInductive {})
@@ -143,6 +147,8 @@ unifyTypes ty1 ty2 =
         (_, TyField) -> err
         (TyByteArray, _) -> err
         (_, TyByteArray) -> err
+        (TyRandomGenerator, _) -> err
+        (_, TyRandomGenerator) -> err
         (TyBool {}, _) -> err
         (_, TyBool {}) -> err
         (TyFun {}, _) -> err

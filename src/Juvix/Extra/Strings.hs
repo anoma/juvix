@@ -197,6 +197,9 @@ byteArrayFromListByte = "bytearray-from-list-byte"
 byteArrayLength :: (IsString s) => s
 byteArrayLength = "bytearray-length"
 
+randomGenerator :: (IsString s) => s
+randomGenerator = "randomgenerator"
+
 nat :: (IsString s) => s
 nat = "nat"
 

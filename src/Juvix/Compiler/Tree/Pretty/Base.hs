@@ -143,6 +143,8 @@ instance PrettyCode Type where
       return $ annotate (AnnKind KNameInductive) Str.field
     TyByteArray {} ->
       return $ annotate (AnnKind KNameInductive) Str.byteArray
+    TyRandomGenerator {} ->
+      return $ annotate (AnnKind KNameInductive) Str.randomGenerator
     TyBool {} ->
       return $ annotate (AnnKind KNameInductive) Str.bool
     TyString ->

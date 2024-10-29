@@ -108,6 +108,7 @@ instance PrettyCode Primitive where
     PrimBool _ -> return $ annotate (AnnKind KNameInductive) (pretty ("Bool" :: String))
     PrimString -> return $ annotate (AnnKind KNameInductive) (pretty ("String" :: String))
     PrimByteArray -> return $ annotate (AnnKind KNameInductive) (pretty ("ByteArray" :: String))
+    PrimRandomGenerator -> return $ annotate (AnnKind KNameInductive) (pretty ("RandomGenerator" :: String))
 
 ppName :: NameKind -> Text -> Sem r (Doc Ann)
 ppName kind name = return $ annotate (AnnKind kind) (pretty name)
