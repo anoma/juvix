@@ -92,7 +92,7 @@ computeNodeTypeInfo md = umapL go
           OpAnomaZeroDelta -> mkDynamic'
           OpAnomaAddDelta -> mkDynamic'
           OpAnomaSubDelta -> mkDynamic'
-          OpAnomaRandomGeneratorInit -> mkDynamic'
+          OpAnomaRandomGeneratorInit -> mkTypeRandomGenerator'
           OpAnomaRandomNextBytes -> mkDynamic'
           OpAnomaRandomSplit -> mkDynamic'
           OpPoseidonHash -> case _builtinAppArgs of
