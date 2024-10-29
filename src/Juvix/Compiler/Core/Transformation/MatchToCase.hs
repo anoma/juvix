@@ -104,7 +104,7 @@ goMatchToCase recur node = case node of
         where
           pat = err (replicate (length vs) ValueWildcard)
           seq = if length pat == 1 then "" else "sequence "
-          pat' = if length pat == 1 then doc defaultOptions (head' pat) else docSequence pat
+          pat' = if length pat == 1 then doc defaultOptions (head' pat) else docSequence defaultOptions pat
       r@PatternRow {..} : matrix'
         | all isPatWildcard _patternRowPatterns ->
             -- The first row matches all values (Section 4, case 2)

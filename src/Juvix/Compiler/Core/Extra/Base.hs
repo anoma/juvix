@@ -279,6 +279,11 @@ isTypeBool = \case
   NPrim (TypePrim _ (PrimBool _)) -> True
   _ -> False
 
+isUniverse :: Type -> Bool
+isUniverse = \case
+  NUniv {} -> True
+  _ -> False
+
 -- | `expandType argtys ty` expands the dynamic target of `ty` to match the
 -- number of arguments with types specified by `argstys`. For example,
 -- `expandType [int, string] (int -> any) = int -> string -> any`.

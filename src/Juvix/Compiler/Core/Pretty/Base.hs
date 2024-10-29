@@ -305,18 +305,44 @@ instance (PrettyCode a) => PrettyCode (If' i a) where
 
 instance PrettyCode PatternWildcard where
   ppCode PatternWildcard {..} = do
-    n <- ppName KNameLocal (_patternWildcardBinder ^. binderName)
-    ppWithType n (_patternWildcardBinder ^. binderType)
+    bPretty <- asks (^. optPrettyPatterns)
+    let name = _patternWildcardBinder ^. binderName
+    if
+        | not bPretty -> do
+            n <- ppName KNameLocal name
+            ppWithType n (_patternWildcardBinder ^. binderType)
+        | isPrefixOf "_" (fromText name) || name == "?" || name == "" ->
+            return kwWildcard
+        | otherwise ->
+            ppName KNameLocal name
 
 instance PrettyCode PatternConstr where
   ppCode PatternConstr {..} = do
+    bPretty <- asks (^. optPrettyPatterns)
     n <- ppName KNameConstructor (getInfoName _patternConstrInfo)
     bn <- ppName KNameLocal (_patternConstrBinder ^. binderName)
-    let mkpat :: Doc Ann -> Doc Ann
-        mkpat pat = if _patternConstrBinder ^. binderName == "?" || _patternConstrBinder ^. binderName == "" then pat else bn <> kwAt <> parens pat
-    args <- mapM (ppRightExpression appFixity) _patternConstrArgs
+    let name = fromText (_patternConstrBinder ^. binderName)
+        mkpat :: Doc Ann -> Doc Ann
+        mkpat pat = if name == "?" || name == "" || (bPretty && isPrefixOf "_" name) then pat else bn <> kwAt <> parens pat
+        args0 =
+          if
+              | bPretty ->
+                  filter (not . isWildcardTypeBinder) _patternConstrArgs
+              | otherwise ->
+                  _patternConstrArgs
+    args <- mapM (ppRightExpression appFixity) args0
     let pat = mkpat (hsep (n : args))
-    ppWithType pat (_patternConstrBinder ^. binderType)
+    if
+        | bPretty ->
+            return pat
+        | otherwise ->
+            ppWithType pat (_patternConstrBinder ^. binderType)
+    where
+      isWildcardTypeBinder :: Pattern -> Bool
+      isWildcardTypeBinder = \case
+        PatWildcard PatternWildcard {..} ->
+          isUniverse (typeTarget (_patternWildcardBinder ^. binderType))
+        _ -> False
 
 instance PrettyCode Pattern where
   ppCode = \case
@@ -741,10 +767,10 @@ ppSequence ::
   Sem r (Doc Ann)
 ppSequence vs = hsep <$> mapM (ppRightExpression appFixity) vs
 
-docSequence :: (PrettyCode a, HasAtomicity a) => [a] -> Doc Ann
-docSequence =
+docSequence :: (PrettyCode a, HasAtomicity a) => Options -> [a] -> Doc Ann
+docSequence opts =
   run
-    . runReader defaultOptions
+    . runReader opts
     . ppSequence
 
 ppPostExpression ::

@@ -52,13 +52,17 @@ goCheckRedundantPatterns md node = case node of
             unless (check matrix row) $
               throw
                 CoreError
-                  { _coreErrorMsg = ppOutput "Redundant pattern",
+                  { _coreErrorMsg = ppOutput ("Redundant pattern" <> seq <> ": " <> pat),
                     _coreErrorNode = Nothing,
                     _coreErrorLoc = fromMaybe defaultLoc (getInfoLocation _matchBranchInfo)
                   }
             case _matchBranchRhs of
               MatchBranchRhsExpression {} -> go (row : matrix) branches
               MatchBranchRhsIfs {} -> go matrix branches
+            where
+              opts = defaultOptions {_optPrettyPatterns = True}
+              seq = if length _matchBranchPatterns == 1 then "" else " sequence"
+              pat = if length _matchBranchPatterns == 1 then doc opts (head _matchBranchPatterns) else docSequence opts (toList _matchBranchPatterns)
 
     -- Returns True if vector is useful (not redundant) for matrix, i.e. it is
     -- not covered by any row in the matrix. See Definition 6 and Section 3.1 in
