@@ -1,7 +1,7 @@
 -- | This module assumes that the following external dependencies are installed:
 -- 1. mix
 --
--- 2. grpc_cli
+-- 2. grpcurl
 module Anoma.Effect.Base
   ( Anoma,
     noHalt,
@@ -121,17 +121,17 @@ anomaRpc' method payload = do
 
 grpcCliProcess :: (Members '[Reader AnomaPath] r) => GrpcMethodUrl -> Sem r CreateProcess
 grpcCliProcess method = do
-  paths <- relativeToAnomaDir relProtoDir
+  importPath <- relativeToAnomaDir relProtoDir
   return
     ( proc
-        "grpc_cli"
-        [ "call",
-          "--json_input",
-          "--json_output",
-          "--proto_path",
-          toFilePath paths,
-          "--protofiles",
+        "grpcurl"
+        [ "-import-path",
+          toFilePath importPath,
+          "-proto",
           toFilePath relProtoFile,
+          "-d",
+          "@",
+          "-plaintext",
           "localhost:" <> show listenPort,
           show method
         ]
