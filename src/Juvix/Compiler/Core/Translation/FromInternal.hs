@@ -1130,6 +1130,7 @@ fromPatternArg pa = case pa ^. Internal.patternArgName of
               PatConstr
                 PatternConstr
                   { _patternConstrInfo = setInfoName (ctrName ^. nameText) mempty,
+                    _patternConstrFixity = ctrName ^. nameFixity,
                     _patternConstrBinder = binder ctorTy,
                     _patternConstrTag = tag,
                     _patternConstrArgs = args

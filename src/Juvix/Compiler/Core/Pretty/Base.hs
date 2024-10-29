@@ -319,7 +319,8 @@ instance PrettyCode PatternWildcard where
 instance PrettyCode PatternConstr where
   ppCode PatternConstr {..} = do
     bPretty <- asks (^. optPrettyPatterns)
-    n <- ppName KNameConstructor (getInfoName _patternConstrInfo)
+    let cname = getInfoName _patternConstrInfo
+    n <- ppName KNameConstructor cname
     bn <- ppName KNameLocal (_patternConstrBinder ^. binderName)
     let name = fromText (_patternConstrBinder ^. binderName)
         mkpat :: Doc Ann -> Doc Ann
@@ -334,7 +335,15 @@ instance PrettyCode PatternConstr where
     let pat = mkpat (hsep (n : args))
     if
         | bPretty ->
-            return pat
+            case _patternConstrFixity of
+              Nothing -> do
+                return pat
+              Just fixity
+                | isBinary fixity ->
+                    goBinary (cname == ",") fixity n args0
+                | isUnary fixity ->
+                    goUnary fixity n args0
+              _ -> impossible
         | otherwise ->
             ppWithType pat (_patternConstrBinder ^. binderType)
     where
@@ -709,7 +718,7 @@ instance (PrettyCode a) => PrettyCode [a] where
 -- printing values
 --------------------------------------------------------------------------------
 
-goBinary :: (Member (Reader Options) r) => Bool -> Fixity -> Doc Ann -> [Value] -> Sem r (Doc Ann)
+goBinary :: (HasAtomicity a, PrettyCode a, Member (Reader Options) r) => Bool -> Fixity -> Doc Ann -> [a] -> Sem r (Doc Ann)
 goBinary isComma fixity name = \case
   [] -> return (parens name)
   [arg] -> do
@@ -726,7 +735,7 @@ goBinary isComma fixity name = \case
   _ ->
     impossible
 
-goUnary :: (Member (Reader Options) r) => Fixity -> Doc Ann -> [Value] -> Sem r (Doc Ann)
+goUnary :: (HasAtomicity a, PrettyCode a, Member (Reader Options) r) => Fixity -> Doc Ann -> [a] -> Sem r (Doc Ann)
 goUnary fixity name = \case
   [] -> return (parens name)
   [arg] -> do

@@ -197,6 +197,7 @@ data PatternWildcard' i a = PatternWildcard
 
 data PatternConstr' i a = PatternConstr
   { _patternConstrInfo :: i,
+    _patternConstrFixity :: Maybe Fixity,
     _patternConstrBinder :: Binder' a,
     _patternConstrTag :: !Tag,
     _patternConstrArgs :: ![Pattern' i a]
@@ -549,7 +550,7 @@ instance (Eq a) => Eq (MatchBranch' i a) where
   (MatchBranch _ pats1 b1) == (MatchBranch _ pats2 b2) = pats1 == pats2 && b1 == b2
 
 instance (Eq a) => Eq (PatternConstr' i a) where
-  (PatternConstr _ _ tag1 ps1) == (PatternConstr _ _ tag2 ps2) = tag1 == tag2 && ps1 == ps2
+  (PatternConstr _ _ _ tag1 ps1) == (PatternConstr _ _ _ tag2 ps2) = tag1 == tag2 && ps1 == ps2
 
 instance (Eq a) => Eq (SideIfBranch' i a) where
   (SideIfBranch _ c1 b1) == (SideIfBranch _ c2 b2) = c1 == c2 && b1 == b2
