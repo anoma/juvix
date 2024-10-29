@@ -646,6 +646,9 @@ compile = \case
     mkByteArray :: Term Natural -> Term Natural -> Term Natural
     mkByteArray len payload = len # payload
 
+    mkPair :: Term Natural -> Term Natural -> Term Natural
+    mkPair t1 t2 = t1 # t2
+
     goAnomaVerifyDetached :: [Term Natural] -> Sem r (Term Natural)
     goAnomaVerifyDetached = \case
       [sig, message, pubKey] -> do
@@ -713,7 +716,15 @@ compile = \case
 
     goAnomaRandomNextBytes :: [Term Natural] -> Sem r (Term Natural)
     goAnomaRandomNextBytes args = case args of
-      [n, _] -> mkByteArray n <$> callStdlib StdlibRandomNextBytes args
+      [n, _] -> do
+        next <- callStdlib StdlibRandomNextBytes args
+        withTemp next $ \ref -> do
+          refPath <- tempRefPath ref
+          return
+            ( mkPair
+                (mkByteArray n (opAddress "nextbytes-result-head" (refPath ++ [L])))
+                (opAddress "nextBytes-result-tail" (refPath ++ [R]))
+            )
       _ -> impossible
 
     -- Conceptually this function is:
