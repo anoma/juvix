@@ -145,6 +145,7 @@ jobs:
           key: "${{ runner.os }}-anoma"
 
       - name: Build anoma
+        if: steps.cache-anoma.outputs.cache-hit != 'true'
         run: |
           cd $HOME
           git clone https://github.com/anoma/anoma.git
