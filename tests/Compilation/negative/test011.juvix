@@ -1,0 +1,15 @@
+-- Redundant pattern after a true side condition
+module test011;
+
+import Stdlib.Prelude open;
+
+f (x : List Nat) : Nat :=
+  case x of
+    | nil := 0
+    | x :: _ :: nil := x
+    | _ :: _ :: _ :: _ if true := 0
+    | _ :: _ :: x :: nil := x
+    | _ :: nil := 1
+    | _ := 2;
+
+main : Nat := f (1 :: 2 :: nil);
