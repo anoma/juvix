@@ -139,18 +139,16 @@ jobs:
             ${{ env.HOME }}/anoma
           key: "${{ runner.os }}-anoma"
 
-      - name: add ~/.mix/escripts to PATH
-        run: |
-          echo "$HOME/.mix/escripts" >> $GITHUB_PATH
-
       - name: Build anoma
         run: |
           cd $HOME
           git clone https://github.com/anoma/anoma.git
           cd anoma
           git checkout 98e3660b91cd55f1d9424dcff9420425ae98f5f8
+          mix local.hex --force
+          mix escript.install hex protobuf --force
+          echo "$HOME/.mix/escripts" >> $GITHUB_PATH
           mix deps.get
-          mix escript.install hex protobuf
           mix compile
           mix do --app anoma_client escript.build
 
