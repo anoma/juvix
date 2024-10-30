@@ -52,7 +52,7 @@ goDetectRedundantPatterns md node = case node of
             unless (check matrix row) $
               throw
                 CoreError
-                  { _coreErrorMsg = ppOutput ("Redundant pattern" <> seq <> ": " <> pat),
+                  { _coreErrorMsg = ppOutput ("Redundant pattern" <> seq <> ": " <> pat <> "\nPerhaps you mistyped a constructor name in an earlier pattern?"),
                     _coreErrorNode = Nothing,
                     _coreErrorLoc = fromMaybe defaultLoc (getInfoLocation _matchBranchInfo)
                   }

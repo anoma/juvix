@@ -22,6 +22,7 @@ import Juvix.Compiler.Core.Transformation.CombineInfoTables (combineInfoTables)
 import Juvix.Compiler.Core.Transformation.ComputeCaseANF
 import Juvix.Compiler.Core.Transformation.ComputeTypeInfo
 import Juvix.Compiler.Core.Transformation.ConvertBuiltinTypes
+import Juvix.Compiler.Core.Transformation.DetectConstantSideConditions
 import Juvix.Compiler.Core.Transformation.DetectRedundantPatterns
 import Juvix.Compiler.Core.Transformation.DisambiguateNames
 import Juvix.Compiler.Core.Transformation.Eta
@@ -76,6 +77,7 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
       ComputeTypeInfo -> return . computeTypeInfo
       ComputeCaseANF -> return . computeCaseANF
       UnrollRecursion -> unrollRecursion
+      DetectConstantSideConditions -> return . detectConstantSideConditions
       DetectRedundantPatterns -> mapError (JuvixError @CoreError) . detectRedundantPatterns
       MatchToCase -> mapError (JuvixError @CoreError) . matchToCase
       EtaExpandApps -> return . etaExpansionApps

@@ -9,4 +9,3 @@ f : List Nat -> List Nat -> Nat
   | _ nil := 0;
 
 main : Nat := f (1 :: nil) (2 :: nil);
-
