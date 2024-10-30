@@ -125,5 +125,5 @@ runSimpleErrorIO :: (Members '[EmbedIO] r) => Sem (Error SimpleError ': r) a -> 
 runSimpleErrorIO m = do
   res <- runError m
   case res of
-    Left (SimpleError msg) -> renderIO True msg >> exitFailure
+    Left (SimpleError msg) -> hRenderIO True stderr msg >> exitFailure
     Right r -> return r

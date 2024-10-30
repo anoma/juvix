@@ -132,6 +132,13 @@ testRunIOEitherTermination entry =
 assertFailure :: (MonadIO m) => String -> m a
 assertFailure = liftIO . HUnit.assertFailure
 
+runSimpleErrorHUnit :: (Members '[EmbedIO] r) => Sem (Error SimpleError ': r) a -> Sem r a
+runSimpleErrorHUnit m = do
+  res <- runError m
+  case res of
+    Left (SimpleError msg) -> assertFailure (toPlainString msg)
+    Right r -> return r
+
 wantsError ::
   forall err b.
   (Generic err, GenericHasConstructor (GHC.Rep err)) =>

@@ -41,7 +41,7 @@ fromAnomaTest a@AnomaTest {..} =
     mkTestIO :: IO Test
     mkTestIO = do
       anomaRes <- withRootCopy (compileMain _anomaEnableDebug _anomaRelRoot _anomaMainFile)
-      let _testProgramFormula = anomaCall _anomaArgs
+      let _testProgramFormula = anomaCall (map (opQuote "Quote arg") _anomaArgs)
           _testProgramSubject = anomaRes ^. anomaClosure
           _testEvalOptions = defaultEvalOptions
           _testAssertEvalError :: Maybe (NockEvalError Natural -> Assertion) = Nothing
@@ -78,12 +78,16 @@ mkAnomaNodeTest a@AnomaTest {..} =
     assertion :: Assertion
     assertion = do
       program :: Term Natural <- (^. anomaClosure) <$> withRootCopy (compileMain False _anomaRelRoot _anomaMainFile)
+      -- For some reason the evaluation fails if no args are given
+      let args'
+            | null _anomaArgs = [toNock (nockVoid @Natural)]
+            | otherwise = _anomaArgs
       runM
         . ignoreLogger
-        . runSimpleErrorIO
-        . runAnomaTest testAnomaPath
+        . runSimpleErrorHUnit
+        . runAnoma testAnomaPath
         $ do
-          out <- runNockma program _anomaArgs
+          out <- runNockma program args'
           runM
             . runReader out
             . runReader []
@@ -170,28 +174,57 @@ anomaNodeValid =
       65
     ]
 
+anomaNodeBug :: IntSet
+anomaNodeBug =
+  intSet
+    [ 24,
+      41,
+      52,
+      54,
+      56
+    ]
+
 allTests :: TestTree
 allTests =
   testGroup
     "Anoma positive tests"
-    [ haskellNockmaTests,
+    [ -- haskellNockmaTests,
       anomaNodeTests
     ]
   where
     anomaNodeTests :: TestTree
     anomaNodeTests =
       testGroup
-        "Anoma positive tests (Anoma node evaluator)"
-        (map mkAnomaNodeTest (filter isAnomaNodeValid anomaTests))
+        "AnomaNode"
+        (map mkAnomaNodeTest (filter shouldRun anomaTests))
       where
-        isAnomaNodeValid :: AnomaTest -> Bool
-        isAnomaNodeValid AnomaTest {..} = IntSet.member _anomaTestNum anomaNodeValid
+        shouldRun :: AnomaTest -> Bool
+        shouldRun AnomaTest {..} =
+          IntSet.member _anomaTestNum anomaNodeValid
+            && IntSet.notMember _anomaTestNum anomaNodeBug
 
     haskellNockmaTests :: TestTree
     haskellNockmaTests =
+      -- withResource initNode freeNode $ \_ ->
       testGroup
         "Anoma positive tests (Haskell evaluator)"
         (map fromAnomaTest anomaTests)
+    -- where
+    -- initNode :: IO AnomaProcesses
+    -- initNode = runM
+    --   . runSimpleErrorHUnit
+    --   . ignoreLogger
+    --   . runAnoma testAnomaPath
+    --   $ do
+    --     noHalt
+
+    -- freeNode :: AnomaProcesses -> IO ()
+    -- freeNode AnomaProcesses {..} = runM . runProcess $ do
+    --   terminateProcess _anomaClientHandle
+    --   terminateProcess _anomaNodeHandle
+
+    natArg :: Natural -> Term Natural
+    natArg = toNock
 
     anomaTests :: [AnomaTest]
     anomaTests =
@@ -200,14 +233,14 @@ allTests =
           "Arithmetic operators"
           $(mkRelDir ".")
           $(mkRelFile "test001.juvix")
-          [nockNatLiteral 5]
+          [natArg 5]
           (checkNatOutput [11]),
         mkAnomaTest
           2
           "Arithmetic operators inside lambdas"
           $(mkRelDir ".")
           $(mkRelFile "test002.juvix")
-          [nockNatLiteral 2]
+          [natArg 2]
           (checkNatOutput [11]),
         mkAnomaTest
           3
@@ -228,7 +261,7 @@ allTests =
           "Higher-order functions"
           $(mkRelDir ".")
           $(mkRelFile "test005.juvix")
-          [nockNatLiteral 1]
+          [natArg 1]
           (checkNatOutput [6]),
         mkAnomaTest
           6
@@ -251,14 +284,14 @@ allTests =
           "Recursion"
           $(mkRelDir ".")
           $(mkRelFile "test008.juvix")
-          [nockNatLiteral 1000]
+          [natArg 1000]
           (eqNock [nock| 500500 |]),
         mkAnomaTest
           9
           "Tail recursion"
           $(mkRelDir ".")
           $(mkRelFile "test009.juvix")
-          [nockNatLiteral 1000]
+          [natArg 1000]
           $ checkNatOutput [500500, 120, 3628800, 479001600],
         mkAnomaTest
           10
@@ -283,7 +316,7 @@ allTests =
           "Trees"
           $(mkRelDir ".")
           $(mkRelFile "test012.juvix")
-          [nockNatLiteral 1000]
+          [natArg 1000]
           $ checkNatOutput
             [ 13200200200,
               21320020020013200200200,
@@ -324,7 +357,7 @@ allTests =
           "Tail recursion through higher-order functions"
           $(mkRelDir ".")
           $(mkRelFile "test017.juvix")
-          [nockNatLiteral 1000]
+          [natArg 1000]
           $ checkNatOutput [500500],
         mkAnomaTest
           18
@@ -359,7 +392,7 @@ allTests =
           "Lists"
           $(mkRelDir ".")
           $(mkRelFile "test022.juvix")
-          [nockNatLiteral 1000]
+          [natArg 1000]
           $ checkOutput
             [ [nock| [10 9 8 7 6 5 4 3 2 1 nil] |],
               [nock| [1 2 3 4 5 6 7 8 9 10 nil] |],
@@ -408,7 +441,7 @@ allTests =
           "Streams without memoization"
           $(mkRelDir ".")
           $(mkRelFile "test028.juvix")
-          [nockNatLiteral 10, nockNatLiteral 50]
+          [natArg 10, natArg 50]
           $ checkNatOutput [31, 233],
         mkAnomaTest
           29

@@ -4,7 +4,7 @@
 -- 2. grpcurl
 module Anoma.Effect.Base
   ( Anoma,
-    noHalt,
+    getAnomaProcesses,
     anomaRpc,
     AnomaPath (..),
     AnomaProcesses (..),
@@ -34,7 +34,7 @@ data AnomaProcesses = AnomaProcesses
 
 data Anoma :: Effect where
   -- | Keep the node and client running
-  NoHalt :: Anoma m AnomaProcesses
+  GetAnomaProcesses :: Anoma m AnomaProcesses
   -- | grpc call
   AnomaRpc :: GrpcMethodUrl -> Value -> Anoma m Value
 
@@ -159,7 +159,7 @@ grpcCliProcess method = do
 runAnomaTest :: forall r a. (Members '[Logger, EmbedIO, Error SimpleError] r) => AnomaPath -> Sem (Anoma ': r) a -> Sem r a
 runAnomaTest anomapath body = runReader anomapath . runProcess $
   (`interpret` inject body) $ \case
-    NoHalt -> error "unsupported"
+    GetAnomaProcesses -> error "unsupported"
     AnomaRpc method i -> anomaRpc' method i
 
 runAnoma :: forall r a. (Members '[Logger, EmbedIO, Error SimpleError] r) => AnomaPath -> Sem (Anoma ': r) a -> Sem r a
@@ -168,9 +168,9 @@ runAnoma anomapath body = runReader anomapath . runProcess $
     runReader (GrpcPort grpcport) $
       withSpawnAnomaClient $ \clientH -> do
         (`interpret` inject body) $ \case
-          NoHalt ->
-            waitForProcess nodeH
-              $> AnomaProcesses
+          GetAnomaProcesses ->
+            return
+              AnomaProcesses
                 { _anomaNodeHandle = nodeH,
                   _anomaClientHandle = clientH
                 }
