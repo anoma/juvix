@@ -196,7 +196,7 @@ allTests :: TestTree
 allTests =
   testGroup
     "Anoma positive tests"
-    [ -- haskellNockmaTests,
+    [ haskellNockmaTests,
       anomaNodeTests
     ]
   where
