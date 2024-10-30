@@ -1,0 +1,22 @@
+-- Pattern matching with side conditions
+module test082;
+
+import Stdlib.Prelude open;
+
+f (lst : List Nat) : Nat :=
+  case lst of
+    | [] := 0
+    | x :: xs
+      | if x == 0 := 1
+      | if true := 2;
+
+g (lst : List Nat) : Nat :=
+  case lst of
+    | [] := 0
+    | _ :: _ if false := 0
+    | x :: xs
+      | if x == 0 := 1
+      | if false := 2
+      | if true := 3;
+
+main : Nat := f [0; 1; 2] + g [1; 2];
