@@ -172,7 +172,14 @@ anomaNodeValid =
       60,
       62,
       64,
-      65
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72
     ]
 
 anomaNodeBug :: IntSet
