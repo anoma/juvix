@@ -823,7 +823,7 @@ allTests =
               "Anoma sign and verify"
               $(mkRelDir ".")
               $(mkRelFile "test078.juvix")
-              [OpQuote # toSignAndVerify]
+              [toSignAndVerify]
               $ checkOutput
                 [toSignAndVerify],
         let inputStr :: Term Natural = [nock| "Juvix!" |]
@@ -832,7 +832,7 @@ allTests =
               "Strings"
               $(mkRelDir ".")
               $(mkRelFile "test079.juvix")
-              [OpQuote # inputStr]
+              [inputStr]
               $ checkOutput [[nock| "Juvix! ✨ héllo world ✨" |]],
         mkAnomaTest
           80
