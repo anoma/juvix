@@ -126,6 +126,11 @@ jobs:
           elixir-version: "1.17.3"
           otp-version: "27.1"
 
+      - name: Install protoc
+        run: |
+          sudo apt install -y protobuf-compiler
+          protoc --version
+
       - name: Cache anoma
         id: cache-anoma
         uses: actions/cache@v3
