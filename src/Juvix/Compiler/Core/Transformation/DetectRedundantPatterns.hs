@@ -61,8 +61,8 @@ goDetectRedundantPatterns md node = case node of
               MatchBranchRhsIfs {} -> go matrix branches
             where
               opts = defaultOptions {_optPrettyPatterns = True}
-              seq = if length _matchBranchPatterns == 1 then "" else " sequence"
-              pat = if length _matchBranchPatterns == 1 then doc opts (head _matchBranchPatterns) else docSequence opts (toList _matchBranchPatterns)
+              seq = if isSingleton (toList _matchBranchPatterns) then "" else " sequence"
+              pat = if isSingleton (toList _matchBranchPatterns) then doc opts (head _matchBranchPatterns) else docSequence opts (toList _matchBranchPatterns)
 
     -- Returns True if vector is useful (not redundant) for matrix, i.e. it is
     -- not covered by any row in the matrix. See Definition 6 and Section 3.1 in

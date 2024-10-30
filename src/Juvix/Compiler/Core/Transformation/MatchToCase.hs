@@ -103,8 +103,8 @@ goMatchToCase recur node = case node of
                   mkBuiltinApp' OpFail [mkConstant' (ConstString ("Pattern sequence not matched: " <> ppTrace pat))]
         where
           pat = err (replicate (length vs) ValueWildcard)
-          seq = if length pat == 1 then "" else "sequence "
-          pat' = if length pat == 1 then doc defaultOptions (head' pat) else docSequence defaultOptions pat
+          seq = if isSingleton pat then "" else "sequence "
+          pat' = if isSingleton pat then doc defaultOptions (head' pat) else docSequence defaultOptions pat
       r@PatternRow {..} : matrix'
         | all isPatWildcard _patternRowPatterns ->
             -- The first row matches all values (Section 4, case 2)
