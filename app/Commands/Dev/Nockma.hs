@@ -1,6 +1,7 @@
 module Commands.Dev.Nockma where
 
 import Commands.Base
+import Commands.Dev.Nockma.Encode as Encode
 import Commands.Dev.Nockma.Eval as Eval
 import Commands.Dev.Nockma.Format as Format
 import Commands.Dev.Nockma.Options
@@ -13,3 +14,4 @@ runCommand = \case
   NockmaEval opts -> Eval.runCommand opts
   NockmaFormat opts -> Format.runCommand opts
   NockmaRun opts -> Run.runCommand opts
+  NockmaEncode opts -> Encode.runCommand opts

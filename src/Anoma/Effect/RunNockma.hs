@@ -6,12 +6,8 @@ where
 
 import Anoma.Effect.Base
 import Anoma.Rpc.RunNock
-import Data.ByteString.Base64 qualified as Base64
-import Juvix.Compiler.Nockma.Encoding.Cue (DecodingError, cueFromByteString'')
-import Juvix.Compiler.Nockma.Encoding.Jam (jamToByteString)
-import Juvix.Compiler.Nockma.Language (NockNaturalNaturalError)
+import Juvix.Compiler.Nockma.Encoding (decodeCue64, encodeJam64)
 import Juvix.Compiler.Nockma.Language qualified as Nockma
-import Juvix.Data.CodeAnn (simpleErrorCodeAnn)
 import Juvix.Prelude
 import Juvix.Prelude.Aeson (Value)
 import Juvix.Prelude.Aeson qualified as Aeson
@@ -60,5 +56,5 @@ runNockma prog inputs = do
   res :: Response <- anomaRpc runNockGrpcUrl (Aeson.toJSON msg) >>= fromJSON
   logVerbose (mkAnsiText ("Response Payload:\n" <> Aeson.jsonEncodeToPrettyText res))
   case res of
-    ResponseProof x -> decodeJam64 x
+    ResponseProof x -> decodeCue64 x
     ResponseError err -> throw (SimpleError (mkAnsiText err))

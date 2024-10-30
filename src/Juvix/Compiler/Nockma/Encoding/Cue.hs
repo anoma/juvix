@@ -1,11 +1,13 @@
 module Juvix.Compiler.Nockma.Encoding.Cue where
 
 import Data.Bit as Bit
+import Data.ByteString.Base64 qualified as Base64
 import Juvix.Compiler.Nockma.Encoding.Base
 import Juvix.Compiler.Nockma.Encoding.ByteString
 import Juvix.Compiler.Nockma.Encoding.Effect.BitReader
 import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Pretty.Base
+import Juvix.Data.Error.GenericError
 import Juvix.Prelude.Base
 import VectorBuilder.Builder as Builder
 import VectorBuilder.Vector
@@ -344,3 +346,16 @@ fromNatural' = mapError (ErrNockNatural' @a) . fromNatural
 
 nockNatural' :: forall a r. (NockNatural a, Member (Error (ErrNockNatural' a)) r) => Atom a -> Sem r Natural
 nockNatural' = mapError (ErrNockNatural' @a) . nockNatural
+
+decodeCue :: (Members '[Error SimpleError] r) => ByteString -> Sem r (Term Natural)
+decodeCue encoded =
+  case cueFromByteString'' encoded of
+    Left (err :: NockNaturalNaturalError) -> throw (simpleErrorCodeAnn err)
+    Right (Left (err :: DecodingError)) -> throw (simpleErrorCodeAnn err)
+    Right (Right r) -> return r
+
+decodeCue64 :: (Members '[Error SimpleError] r) => Text -> Sem r (Term Natural)
+decodeCue64 encoded =
+  case Base64.decode (encodeUtf8 encoded) of
+    Left err -> throw (SimpleError (mkAnsiText err))
+    Right bs' -> decodeCue bs'

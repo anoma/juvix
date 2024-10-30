@@ -182,7 +182,7 @@ import Data.Text qualified as Text
 import Data.Text.Encoding
 import Data.Text.IO hiding (appendFile, getContents, getLine, hGetContents, hGetLine, hPutStr, hPutStrLn, interact, putStr, putStrLn, readFile, writeFile)
 import Data.Text.IO qualified as Text
-import Data.Text.IO.Utf8 hiding (getLine, hGetLine, hPutStr, hPutStrLn, putStr, putStrLn, readFile, writeFile)
+import Data.Text.IO.Utf8 hiding (getContents, getLine, hGetLine, hPutStr, hPutStrLn, putStr, putStrLn, readFile, writeFile)
 import Data.Text.IO.Utf8 qualified as Utf8
 import Data.Text.Lazy.Builder qualified as LazyText
 import Data.Traversable
@@ -567,6 +567,9 @@ indexFrom :: Int -> [a] -> [Indexed a]
 indexFrom i = zipWith Indexed [i ..]
 
 makeLenses ''Indexed
+
+getContents :: (MonadIO m) => m Text
+getContents = liftIO Utf8.getContents
 
 hClose :: (MonadIO m) => Handle -> m ()
 hClose = liftIO . IO.hClose

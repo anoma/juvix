@@ -8,6 +8,7 @@ module Juvix.Compiler.Nockma.Encoding.Jam where
 
 import Data.Bit as Bit
 import Data.Bits
+import Data.ByteString.Base64 qualified as Base64
 import Juvix.Compiler.Nockma.Encoding.Base
 import Juvix.Compiler.Nockma.Encoding.ByteString
 import Juvix.Compiler.Nockma.Encoding.Effect.BitWriter
@@ -109,3 +110,6 @@ jam t = do
   let i = fromInteger . vectorBitsToInteger . jamToBits $ t
   ai <- fromNatural i
   return (Atom ai emptyAtomInfo)
+
+encodeJam64 :: Term Natural -> Text
+encodeJam64 = decodeUtf8 . Base64.encode . jamToByteString
