@@ -36,7 +36,7 @@ goDetectRedundantPatterns md node = case node of
     return node
   _ -> return node
   where
-    mockFile = $(mkAbsFile "/check-redundant-patterns")
+    mockFile = $(mkAbsFile "/detect-redundant-patterns")
     defaultLoc = singletonInterval (mkInitialLoc mockFile)
 
     checkMatch :: Match -> Sem r ()

@@ -77,7 +77,7 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
       ComputeTypeInfo -> return . computeTypeInfo
       ComputeCaseANF -> return . computeCaseANF
       UnrollRecursion -> unrollRecursion
-      DetectConstantSideConditions -> return . detectConstantSideConditions
+      DetectConstantSideConditions -> mapError (JuvixError @CoreError) . detectConstantSideConditions
       DetectRedundantPatterns -> mapError (JuvixError @CoreError) . detectRedundantPatterns
       MatchToCase -> mapError (JuvixError @CoreError) . matchToCase
       EtaExpandApps -> return . etaExpansionApps
