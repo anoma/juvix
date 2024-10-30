@@ -786,7 +786,7 @@ allTests =
               "Builtin anomaGet"
               $(mkRelDir ".")
               $(mkRelFile "test074.juvix")
-              [OpQuote # k1, OpQuote # k2]
+              [k1, k2]
               $ checkOutput [v1, v2],
         mkAnomaTest
           75
