@@ -145,7 +145,7 @@ jobs:
           mix compile
           mix do --app anoma_client escript.build
         with:
-          cached: "${{ steps.cache-llvm.outputs.cache-hit }}"
+          cached: "${{ steps.cache-anoma.outputs.cache-hit }}"
 
       - name: Install grpcurl
         run: >-
