@@ -1,10 +1,12 @@
-module test007;
+-- redundant pattern
+module test008;
 
 import Stdlib.Prelude open;
 
 f (x : List Nat) : Nat :=
   case x of
     | nil := 0
-    | x :: _ if x > 0 := x;
+    | x :: _ := x
+    | _ := 0;
 
 main : Nat := f (1 :: 2 :: nil);

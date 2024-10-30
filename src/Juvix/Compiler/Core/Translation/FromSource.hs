@@ -1156,7 +1156,16 @@ branchPattern' varsNum vars = do
       let info = setInfoName (ci ^. constructorName) Info.empty
           ty = fromMaybe mkDynamic' mty
           binder = Binder "_" (Just i) ty
-      return (PatConstr (PatternConstr info binder tag ps), (varsNum', vars'))
+          pat =
+            PatConstr
+              PatternConstr
+                { _patternConstrInfo = info,
+                  _patternConstrBinder = binder,
+                  _patternConstrTag = tag,
+                  _patternConstrArgs = ps,
+                  _patternConstrFixity = ci ^. constructorFixity
+                }
+      return (pat, (varsNum', vars'))
     _ -> do
       let vars1 = HashMap.insert txt varsNum vars
       mp <- optional (symbolAt >> parens (branchPattern (varsNum + 1) vars1))

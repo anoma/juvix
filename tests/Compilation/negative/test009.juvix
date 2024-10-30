@@ -1,10 +1,13 @@
-module test007;
+-- redundant pattern with side conditions
+module test009;
 
 import Stdlib.Prelude open;
 
 f (x : List Nat) : Nat :=
   case x of
     | nil := 0
-    | x :: _ if x > 0 := x;
+    | x :: _ if x > 0 := x
+    | _ := 0
+    | nil := 1;
 
 main : Nat := f (1 :: 2 :: nil);

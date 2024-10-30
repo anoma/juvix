@@ -305,18 +305,53 @@ instance (PrettyCode a) => PrettyCode (If' i a) where
 
 instance PrettyCode PatternWildcard where
   ppCode PatternWildcard {..} = do
-    n <- ppName KNameLocal (_patternWildcardBinder ^. binderName)
-    ppWithType n (_patternWildcardBinder ^. binderType)
+    bPretty <- asks (^. optPrettyPatterns)
+    let name = _patternWildcardBinder ^. binderName
+    if
+        | not bPretty -> do
+            n <- ppName KNameLocal name
+            ppWithType n (_patternWildcardBinder ^. binderType)
+        | isPrefixOf "_" (fromText name) || name == "?" || name == "" ->
+            return kwWildcard
+        | otherwise ->
+            ppName KNameLocal name
 
 instance PrettyCode PatternConstr where
   ppCode PatternConstr {..} = do
-    n <- ppName KNameConstructor (getInfoName _patternConstrInfo)
+    bPretty <- asks (^. optPrettyPatterns)
+    let cname = getInfoName _patternConstrInfo
+    n <- ppName KNameConstructor cname
     bn <- ppName KNameLocal (_patternConstrBinder ^. binderName)
-    let mkpat :: Doc Ann -> Doc Ann
-        mkpat pat = if _patternConstrBinder ^. binderName == "?" || _patternConstrBinder ^. binderName == "" then pat else bn <> kwAt <> parens pat
-    args <- mapM (ppRightExpression appFixity) _patternConstrArgs
+    let name = fromText (_patternConstrBinder ^. binderName)
+        mkpat :: Doc Ann -> Doc Ann
+        mkpat pat = if name == "?" || name == "" || (bPretty && isPrefixOf "_" name) then pat else bn <> kwAt <> parens pat
+        args0 =
+          if
+              | bPretty ->
+                  filter (not . isWildcardTypeBinder) _patternConstrArgs
+              | otherwise ->
+                  _patternConstrArgs
+    args <- mapM (ppRightExpression appFixity) args0
     let pat = mkpat (hsep (n : args))
-    ppWithType pat (_patternConstrBinder ^. binderType)
+    if
+        | bPretty ->
+            case _patternConstrFixity of
+              Nothing -> do
+                return pat
+              Just fixity
+                | isBinary fixity ->
+                    goBinary (cname == ",") fixity n args0
+                | isUnary fixity ->
+                    goUnary fixity n args0
+              _ -> impossible
+        | otherwise ->
+            ppWithType pat (_patternConstrBinder ^. binderType)
+    where
+      isWildcardTypeBinder :: Pattern -> Bool
+      isWildcardTypeBinder = \case
+        PatWildcard PatternWildcard {..} ->
+          isUniverse (typeTarget (_patternWildcardBinder ^. binderType))
+        _ -> False
 
 instance PrettyCode Pattern where
   ppCode = \case
@@ -683,7 +718,7 @@ instance (PrettyCode a) => PrettyCode [a] where
 -- printing values
 --------------------------------------------------------------------------------
 
-goBinary :: (Member (Reader Options) r) => Bool -> Fixity -> Doc Ann -> [Value] -> Sem r (Doc Ann)
+goBinary :: (HasAtomicity a, PrettyCode a, Member (Reader Options) r) => Bool -> Fixity -> Doc Ann -> [a] -> Sem r (Doc Ann)
 goBinary isComma fixity name = \case
   [] -> return (parens name)
   [arg] -> do
@@ -700,7 +735,7 @@ goBinary isComma fixity name = \case
   _ ->
     impossible
 
-goUnary :: (Member (Reader Options) r) => Fixity -> Doc Ann -> [Value] -> Sem r (Doc Ann)
+goUnary :: (HasAtomicity a, PrettyCode a, Member (Reader Options) r) => Fixity -> Doc Ann -> [a] -> Sem r (Doc Ann)
 goUnary fixity name = \case
   [] -> return (parens name)
   [arg] -> do
@@ -731,18 +766,21 @@ instance PrettyCode Value where
     ValueFun -> return "<function>"
     ValueType -> return "<type>"
 
-ppValueSequence :: (Member (Reader Options) r) => [Value] -> Sem r (Doc Ann)
-ppValueSequence vs = hsep <$> mapM (ppRightExpression appFixity) vs
-
-docValueSequence :: [Value] -> Doc Ann
-docValueSequence =
-  run
-    . runReader defaultOptions
-    . ppValueSequence
-
 --------------------------------------------------------------------------------
 -- helper functions
 --------------------------------------------------------------------------------
+
+ppSequence ::
+  (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>
+  [a] ->
+  Sem r (Doc Ann)
+ppSequence vs = hsep <$> mapM (ppRightExpression appFixity) vs
+
+docSequence :: (PrettyCode a, HasAtomicity a) => Options -> [a] -> Doc Ann
+docSequence opts =
+  run
+    . runReader opts
+    . ppSequence
 
 ppPostExpression ::
   (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>

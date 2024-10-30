@@ -279,6 +279,11 @@ isTypeBool = \case
   NPrim (TypePrim _ (PrimBool _)) -> True
   _ -> False
 
+isUniverse :: Type -> Bool
+isUniverse = \case
+  NUniv {} -> True
+  _ -> False
+
 -- | `expandType argtys ty` expands the dynamic target of `ty` to match the
 -- number of arguments with types specified by `argstys`. For example,
 -- `expandType [int, string] (int -> any) = int -> string -> any`.
@@ -675,9 +680,19 @@ destruct = \case
           concat
             [ br
                 ^. matchBranchInfo
-                : concatMap getPatternInfos (br ^. matchBranchPatterns)
+                : getSideIfBranchInfos (br ^. matchBranchRhs)
+                ++ concatMap getPatternInfos (br ^. matchBranchPatterns)
               | br <- branches
             ]
+
+        getSideIfBranchInfos :: MatchBranchRhs -> [Info]
+        getSideIfBranchInfos = \case
+          MatchBranchRhsExpression _ -> []
+          MatchBranchRhsIfs ifs -> map getSideIfBranchInfos' (toList ifs)
+          where
+            getSideIfBranchInfos' :: SideIfBranch -> Info
+            getSideIfBranchInfos' SideIfBranch {..} = _sideIfBranchInfo
+
         -- sets the infos and the binder types in the patterns
         setPatternsInfos :: forall r. (Members '[Input Info, Input Node] r) => NonEmpty Pattern -> Sem r (NonEmpty Pattern)
         setPatternsInfos = mapM goPattern
