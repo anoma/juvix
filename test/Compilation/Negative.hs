@@ -69,5 +69,17 @@ tests =
     NegTest
       "Test010: Redundant pattern detection with complex patterns"
       $(mkRelDir ".")
-      $(mkRelFile "test010.juvix")
+      $(mkRelFile "test010.juvix"),
+    NegTest
+      "Test011: Redundant pattern detection with side conditions"
+      $(mkRelDir ".")
+      $(mkRelFile "test011.juvix"),
+    NegTest
+      "Test012: Pattern matching coverage with side conditions"
+      $(mkRelDir ".")
+      $(mkRelFile "test012.juvix"),
+    NegTest
+      "Test013: Redundant side condition detection"
+      $(mkRelDir ".")
+      $(mkRelFile "test013.juvix")
   ]

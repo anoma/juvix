@@ -1,0 +1,11 @@
+-- Non-exhaustive pattern matching with false side conditions
+module test012;
+
+import Stdlib.Prelude open;
+
+f (x : List Nat) : Nat :=
+  case x of
+    | nil := 0
+    | x :: _ if false := x;
+
+main : Nat := f (1 :: 2 :: nil);
