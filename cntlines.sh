@@ -40,10 +40,12 @@ EXTRA=$(count src/Juvix/Extra/)
 DATA=$(count src/Juvix/Data/)
 PRELUDE=$(count src/Juvix/Prelude/)
 STORE=$(count src/Juvix/Compiler/Store/)
+ANOMA=$(count src/Anoma/)
+PARALLEL=$(count src/Parallel/)
 
 FRONT=$((CONCRETE + INTERNAL + BUILTINS + PIPELINE))
 BACK=$((BACKENDC + BACKENDRUST + VAMPIR + NOCK + REG + ASM + TREE + CORE + CASM + CAIRO))
-OTHER=$((APP + STORE + HTML + MARKDOWN + ISABELLE + EXTRA + DATA + PRELUDE))
+OTHER=$((APP + STORE + HTML + MARKDOWN + ISABELLE + EXTRA + DATA + PRELUDE + ANOMA + PARALLEL))
 TESTS=$(count test/)
 STDLIB=$(count_ext '*.juvix' juvix-stdlib/Stdlib)
 
@@ -79,6 +81,8 @@ echo "   Isabelle: $ISABELLE LOC"
 echo "   Extra: $EXTRA LOC"
 echo "   Data: $DATA LOC"
 echo "   Prelude: $PRELUDE LOC"
+echo "   Anoma: $ANOMA LOC"
+echo "   Parallel: $PARALLEL LOC"
 echo "Tests: $TESTS LOC"
 echo "Standard library: $STDLIB LOC"
 echo ""
