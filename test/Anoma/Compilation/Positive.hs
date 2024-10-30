@@ -68,8 +68,8 @@ mkAnomaTest' _anomaEnableDebug _anomaProgramStorage _anomaTestNum _anomaTestTag 
     { ..
     }
 
-testAnomaPath :: AnomaPath
-testAnomaPath = AnomaPath $(mkAbsDir "/home/jan/anoma")
+envAnomaPath :: (MonadIO m) => m AnomaPath
+envAnomaPath = AnomaPath <$> getAnomaPathAbs
 
 mkAnomaNodeTest :: AnomaTest -> TestTree
 mkAnomaNodeTest a@AnomaTest {..} =
@@ -82,6 +82,7 @@ mkAnomaNodeTest a@AnomaTest {..} =
       let args'
             | null _anomaArgs = [toNock (nockVoid @Natural)]
             | otherwise = _anomaArgs
+      testAnomaPath <- envAnomaPath
       runM
         . ignoreLogger
         . runSimpleErrorHUnit
