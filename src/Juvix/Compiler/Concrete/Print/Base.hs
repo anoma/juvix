@@ -400,6 +400,11 @@ instance (SingI s) => PrettyPrint (RecordUpdate s) where
       <> fields'
       <> ppCode r
 
+instance (SingI s) => PrettyPrint (UpdateSymbol s) where
+  ppCode UpdateSymbol {..} = do
+    ppCode _updateSymbolAtKw
+      <> ppSymbolType _updateSymbol
+
 instance (SingI s) => PrettyPrint (DoubleBracesExpression s) where
   ppCode DoubleBracesExpression {..} = do
     let (l, r) = _doubleBracesDelims ^. unIrrelevant
@@ -455,6 +460,7 @@ instance (SingI s) => PrettyPrint (ExpressionAtom s) where
     AtomList l -> ppCode l
     AtomUniverse uni -> ppCode uni
     AtomRecordUpdate u -> ppCode u
+    AtomUpdateSymbol u -> ppCode u
     AtomFunction fun -> ppCode fun
     AtomLiteral lit -> ppCode lit
     AtomFunArrow a -> ppCode a

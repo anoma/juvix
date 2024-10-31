@@ -2326,6 +2326,32 @@ instance Serialize RecordUpdateApp
 
 instance NFData RecordUpdateApp
 
+data UpdateSymbol (s :: Stage) = UpdateSymbol
+  { _updateSymbolAtKw :: Irrelevant KeywordRef,
+    _updateSymbol :: SymbolType s
+  }
+  deriving stock (Generic)
+
+instance Serialize (UpdateSymbol 'Parsed)
+
+instance NFData (UpdateSymbol 'Parsed)
+
+instance Serialize (UpdateSymbol 'Scoped)
+
+instance NFData (UpdateSymbol 'Scoped)
+
+deriving stock instance Show (UpdateSymbol 'Parsed)
+
+deriving stock instance Show (UpdateSymbol 'Scoped)
+
+deriving stock instance Eq (UpdateSymbol 'Parsed)
+
+deriving stock instance Eq (UpdateSymbol 'Scoped)
+
+deriving stock instance Ord (UpdateSymbol 'Parsed)
+
+deriving stock instance Ord (UpdateSymbol 'Scoped)
+
 newtype NamedArgumentFunctionDef (s :: Stage) = NamedArgumentFunctionDef
   { _namedArgumentFunctionDef :: FunctionDef s
   }
@@ -2575,6 +2601,7 @@ data ExpressionAtom (s :: Stage)
   | AtomDo (Do s)
   | AtomLet (Let s)
   | AtomRecordUpdate (RecordUpdate s)
+  | AtomUpdateSymbol (UpdateSymbol s)
   | AtomUniverse Universe
   | AtomFunction (Function s)
   | AtomFunArrow KeywordRef
@@ -2830,6 +2857,7 @@ makeLenses ''ParensRecordUpdate
 makeLenses ''RecordUpdateExtra
 makeLenses ''RecordUpdate
 makeLenses ''RecordUpdateApp
+makeLenses ''UpdateSymbol
 makeLenses ''RecordUpdateField
 makeLenses ''NonDefinitionsSection
 makeLenses ''DefinitionsSection
@@ -3181,6 +3209,9 @@ instance (SingI s) => HasLoc (RecordUpdateField s) where
 instance HasLoc (RecordUpdate s) where
   getLoc r = getLoc (r ^. recordUpdateAtKw) <> getLoc (r ^. recordUpdateDelims . unIrrelevant . _2)
 
+instance (SingI s) => HasLoc (UpdateSymbol s) where
+  getLoc r = getLoc (r ^. updateSymbolAtKw) <> getLocSymbolType (r ^. updateSymbol)
+
 instance HasLoc RecordUpdateApp where
   getLoc r = getLoc (r ^. recordAppExpression) <> getLoc (r ^. recordAppUpdate)
 
@@ -3437,6 +3468,7 @@ instance (SingI s) => HasLoc (ExpressionAtom s) where
     AtomDo x -> getLoc x
     AtomLet x -> getLoc x
     AtomRecordUpdate x -> getLoc x
+    AtomUpdateSymbol x -> getLoc x
     AtomUniverse x -> getLoc x
     AtomFunction x -> getLoc x
     AtomFunArrow x -> getLoc x

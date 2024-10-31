@@ -822,16 +822,29 @@ recordUpdateField = do
   let _fieldUpdateArgIx = ()
   return RecordUpdateField {..}
 
-recordUpdate :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r (RecordUpdate 'Parsed)
-recordUpdate = do
-  _recordUpdateAtKw <- Irrelevant <$> kw kwAt
-  _recordUpdateTypeName <- name
+recordUpdateOrUpdateSymbol :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r (ExpressionAtom 'Parsed)
+recordUpdateOrUpdateSymbol = do
+  off <- P.getOffset
+  atKw <- Irrelevant <$> kw kwAt
+  updateName <- name
+  (AtomRecordUpdate <$> recordUpdate' atKw updateName) <|> (AtomUpdateSymbol <$> updateSymbol' off atKw updateName)
+
+recordUpdate' :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => Irrelevant KeywordRef -> Name -> ParsecS r (RecordUpdate 'Parsed)
+recordUpdate' _recordUpdateAtKw _recordUpdateTypeName = do
   l <- kw delimBraceL
   _recordUpdateFields <- P.sepEndBy recordUpdateField semicolon
   r <- kw delimBraceR
   let _recordUpdateDelims = Irrelevant (l, r)
       _recordUpdateExtra = Irrelevant ()
   return RecordUpdate {..}
+
+updateSymbol' :: Int -> Irrelevant KeywordRef -> Name -> ParsecS r (UpdateSymbol 'Parsed)
+updateSymbol' off _updateSymbolAtKw updateName = do
+  case updateName of
+    NameQualified {} ->
+      parseFailure off "Expected record update"
+    NameUnqualified _updateSymbol ->
+      return UpdateSymbol {..}
 
 expressionAtom :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r (ExpressionAtom 'Parsed)
 expressionAtom =
@@ -852,7 +865,7 @@ expressionAtom =
       <|> AtomHole <$> hole
       <|> AtomParens <$> parens parseExpressionAtoms
       <|> AtomDoubleBraces <$> pdoubleBracesExpression
-      <|> AtomRecordUpdate <$> recordUpdate
+      <|> recordUpdateOrUpdateSymbol
       <|> AtomBraces <$> withLoc (braces parseExpressionAtoms)
 
 parseExpressionAtoms ::
