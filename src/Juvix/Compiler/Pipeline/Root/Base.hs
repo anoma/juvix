@@ -10,13 +10,6 @@ data PackageType
   | LocalPackage
   deriving stock (Eq, Show)
 
-hasPackageDotJuvix :: PackageType -> Bool
-hasPackageDotJuvix = \case
-  GlobalStdlib -> True
-  GlobalPackageDescription -> True
-  LocalPackage -> True
-  GlobalPackageBase -> False
-
 data Root = Root
   { _rootSomeRoot :: SomeRoot,
     _rootBuildDir :: BuildDir,
