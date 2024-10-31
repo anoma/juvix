@@ -7,7 +7,7 @@ where
 import Data.Aeson
 import Data.Aeson.BetterErrors
 import Data.Kind qualified as GHC
-import Data.Versions
+import Data.Versions hiding (Lens')
 import Juvix.Compiler.Pipeline.Lockfile
 import Juvix.Compiler.Pipeline.Package.Dependency
 import Juvix.Extra.Paths
@@ -43,6 +43,12 @@ type family PackageLockfileType s = res | res -> s where
   PackageLockfileType 'Raw = Maybe ()
   PackageLockfileType 'Processed = Maybe LockfileInfo
 
+data PackageId = PackageId
+  { _packageIdName :: Text,
+    _packageIdVersion :: SemVer
+  }
+  deriving stock (Eq, Show)
+
 data Package' (s :: IsProcessed) = Package
   { _packageName :: NameType s,
     _packageVersion :: VersionType s,
@@ -55,6 +61,7 @@ data Package' (s :: IsProcessed) = Package
   deriving stock (Generic)
 
 makeLenses ''Package'
+makeLenses ''PackageId
 
 type Package = Package' 'Processed
 
@@ -67,6 +74,9 @@ deriving stock instance Eq Package
 deriving stock instance Show RawPackage
 
 deriving stock instance Show Package
+
+packageId :: Lens' Package PackageId
+packageId = undefined
 
 rawPackageOptions :: Options
 rawPackageOptions =

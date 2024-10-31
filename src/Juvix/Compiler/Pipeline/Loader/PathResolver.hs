@@ -48,6 +48,14 @@ mkPackage mpackageEntry _packageRoot = do
         Nothing -> DefaultBuildDir
   maybe (readPackage _packageRoot buildDirDep) (return . (^. entryPointPackage)) mpackageEntry
 
+mkPackageLike ::
+  forall r.
+  (Members '[Files, Error JuvixError, Reader ResolverEnv, DependencyResolver, EvalFileEff] r) =>
+  Maybe EntryPoint ->
+  Path Abs Dir ->
+  Sem r PackageLike
+mkPackageLike mpackageEntry _packageRoot = undefined
+
 findPackageJuvixFiles :: (Members '[Files] r) => Path Abs Dir -> Sem r [Path Rel File]
 findPackageJuvixFiles pkgRoot = map (fromJust . stripProperPrefix pkgRoot) <$> walkDirRelAccum juvixAccum pkgRoot []
   where

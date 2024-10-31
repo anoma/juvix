@@ -11,8 +11,7 @@ data PackageType
   deriving stock (Eq, Show)
 
 data Root = Root
-  { _rootRootDir :: Path Abs Dir,
-    _rootPackageType :: PackageType,
+  { _rootSomeRoot :: SomeRoot,
     _rootBuildDir :: BuildDir,
     _rootInvokeDir :: Path Abs Dir
   }
@@ -22,5 +21,13 @@ data SomeRoot = SomeRoot
   { _someRootDir :: Path Abs Dir,
     _someRootType :: PackageType
   }
+  deriving stock (Eq, Show)
 
 makeLenses ''Root
+makeLenses ''SomeRoot
+
+rootRootDir :: Lens' Root (Path Abs Dir)
+rootRootDir = undefined
+
+rootPackageType :: Lens' Root PackageType
+rootPackageType = undefined

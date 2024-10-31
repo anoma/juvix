@@ -27,8 +27,8 @@ data EntryPoint = EntryPoint
     _entryPointNoPositivity :: Bool,
     _entryPointNoCoverage :: Bool,
     _entryPointNoStdlib :: Bool,
-    _entryPointPackage :: Package,
-    _entryPointPackageType :: PackageType,
+    _entryPointSomeRoot :: SomeRoot,
+    _entryPointPackageId :: PackageId,
     _entryPointStdin :: Maybe Text,
     _entryPointTarget :: Maybe Target,
     _entryPointDebug :: Bool,
@@ -53,13 +53,13 @@ getEntryPointTarget e = fromMaybe defaultTarget (e ^. entryPointTarget)
     -- TODO is having a default target a good idea?
     defaultTarget = TargetCore
 
-defaultEntryPoint :: Package -> Root -> Maybe (Path Abs File) -> EntryPoint
+defaultEntryPoint :: PackageId -> Root -> Maybe (Path Abs File) -> EntryPoint
 defaultEntryPoint pkg root mainFile =
   (defaultEntryPointNoFile pkg root)
     { _entryPointModulePath = mainFile
     }
 
-defaultEntryPointNoFile :: Package -> Root -> EntryPoint
+defaultEntryPointNoFile :: PackageId -> Root -> EntryPoint
 defaultEntryPointNoFile pkg root =
   EntryPoint
     { _entryPointRoot = root ^. rootRootDir,
@@ -70,8 +70,8 @@ defaultEntryPointNoFile pkg root =
       _entryPointNoCoverage = False,
       _entryPointNoStdlib = False,
       _entryPointStdin = Nothing,
-      _entryPointPackage = pkg,
-      _entryPointPackageType = root ^. rootPackageType,
+      _entryPointSomeRoot = root ^. rootSomeRoot,
+      _entryPointPackageId = pkg,
       _entryPointGenericOptions = defaultGenericOptions,
       _entryPointTarget = Nothing,
       _entryPointDebug = False,
@@ -85,6 +85,9 @@ defaultEntryPointNoFile pkg root =
       _entryPointFieldSize = defaultFieldSize,
       _entryPointIsabelleOnlyTypes = False
     }
+
+entryPointPackageType :: Lens' EntryPoint PackageType
+entryPointPackageType = entryPointSomeRoot . someRootType
 
 defaultUnrollLimit :: Int
 defaultUnrollLimit = 140
