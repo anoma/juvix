@@ -75,41 +75,41 @@ jobs:
   build-and-test-linux:
     runs-on: ubuntu-22.04
     steps:
-      #   - name: Free disk space
-      #     run: |
-      #       df -h
-      #       echo "/usr/local"
-      #       du -hsc /usr/local/*
-      #       sudo rm -rf \
-      #         /usr/local/aws-sam-cil \
-      #         /usr/local/julia* || :
-      #       echo "end /usr/local"
-      #       echo "/usr/local/lib"
-      #       du -hsc /usr/local/lib/*
-      #       sudo rm -rf \
-      #         /usr/local/lib/android \
-      #         /usr/local/lib/heroku \
-      #         /usr/local/lib/node_modules || :
-      #       echo "end /usr/local/lib"
-      #       echo "/usr/local/share"
-      #       du -hsc /usr/local/share/*
-      #       sudo rm -rf \
-      #         /usr/local/share/chromium \
-      #         /usr/local/share/powershell || :
-      #       echo "end /usr/local/share"
-      #       echo "/opt/hostedtoolcache/"
-      #       du -hsc /opt/hostedtoolcache/*
-      #       sudo rm -rf \
-      #         /opt/hostedtoolcache/CodeQL \
-      #         /opt/hostedtoolcache/go \
-      #         /opt/hostedtoolcache/PyPy \
-      #         /opt/hostedtoolcache/node || :
-      #       echo "end /opt/hostedtoolcache/*"
-      #       sudo apt purge -y \
-      #         firefox \
-      #         google-chrome-stable \
-      #         microsoft-edge-stable
-      #       df -h
+      - name: Free disk space
+        run: |
+          df -h
+          echo "/usr/local"
+          du -hsc /usr/local/*
+          sudo rm -rf \
+            /usr/local/aws-sam-cil \
+            /usr/local/julia* || :
+          echo "end /usr/local"
+          echo "/usr/local/lib"
+          du -hsc /usr/local/lib/*
+          sudo rm -rf \
+            /usr/local/lib/android \
+            /usr/local/lib/heroku \
+            /usr/local/lib/node_modules || :
+          echo "end /usr/local/lib"
+          echo "/usr/local/share"
+          du -hsc /usr/local/share/*
+          sudo rm -rf \
+            /usr/local/share/chromium \
+            /usr/local/share/powershell || :
+          echo "end /usr/local/share"
+          echo "/opt/hostedtoolcache/"
+          du -hsc /opt/hostedtoolcache/*
+          sudo rm -rf \
+            /opt/hostedtoolcache/CodeQL \
+            /opt/hostedtoolcache/go \
+            /opt/hostedtoolcache/PyPy \
+            /opt/hostedtoolcache/node || :
+          echo "end /opt/hostedtoolcache/*"
+          sudo apt purge -y \
+            firefox \
+            google-chrome-stable \
+            microsoft-edge-stable
+          df -h
 
       - uses: extractions/setup-just@v2
 
@@ -213,49 +213,49 @@ jobs:
           path: ${{ env.HOME }}/.local/bin/juvix-cairo-vm
           key: ${{ runner.os }}-cairo-vm-${{ env.CAIRO_VM_VERSION }}
 
-      # - name: Install Rust toolchain
-      #   if: steps.cache-cairo-vm.outputs.cache-hit != 'true'
-      #   uses: actions-rust-lang/setup-rust-toolchain@v1
-      #   with:
-      #     cache-on-failure: false
+      - name: Install Rust toolchain
+        if: steps.cache-cairo-vm.outputs.cache-hit != 'true'
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          cache-on-failure: false
 
-      # - name: Install RISC0 VM
-      #   shell: bash
-      #   run: |
-      #     cargo install cargo-binstall@1.6.9 --force
-      #     cargo binstall cargo-risczero@1.1.1 --no-confirm --force
-      #     cargo risczero install
+      - name: Install RISC0 VM
+        shell: bash
+        run: |
+          cargo install cargo-binstall@1.6.9 --force
+          cargo binstall cargo-risczero@1.1.1 --no-confirm --force
+          cargo risczero install
 
-      # - name: Checkout CairoVM
-      #   uses: actions/checkout@v4
-      #   if: steps.cache-cairo-vm.outputs.cache-hit != 'true'
-      #   with:
-      #     repository: anoma/juvix-cairo-vm
-      #     path: juvix-cairo-vm
-      #     ref: ${{ env.CAIRO_VM_VERSION }}
+      - name: Checkout CairoVM
+        uses: actions/checkout@v4
+        if: steps.cache-cairo-vm.outputs.cache-hit != 'true'
+        with:
+          repository: anoma/juvix-cairo-vm
+          path: juvix-cairo-vm
+          ref: ${{ env.CAIRO_VM_VERSION }}
 
-      # - name: Install Cairo VM
-      #   if: steps.cache-cairo-vm.outputs.cache-hit != 'true'
-      #   shell: bash
-      #   run: |
-      #     cd juvix-cairo-vm
-      #     cargo build --release
-      #     cp target/release/juvix-cairo-vm $HOME/.local/bin/juvix-cairo-vm
+      - name: Install Cairo VM
+        if: steps.cache-cairo-vm.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          cd juvix-cairo-vm
+          cargo build --release
+          cp target/release/juvix-cairo-vm $HOME/.local/bin/juvix-cairo-vm
 
-      # - name: Install run_cairo_vm.sh
-      #   shell: bash
-      #   run: |
-      #     cp main/scripts/run_cairo_vm.sh $HOME/.local/bin/run_cairo_vm.sh
+      - name: Install run_cairo_vm.sh
+        shell: bash
+        run: |
+          cp main/scripts/run_cairo_vm.sh $HOME/.local/bin/run_cairo_vm.sh
 
       - name: Make runtime
         run: |
           cd main
           just ${{ env.JUST_ARGS }} build runtime
 
-      # - name: Test Rust runtime
-      #   run: |
-      #     cd main/runtime/rust/juvix
-      #     cargo test --release
+      - name: Test Rust runtime
+        run: |
+          cd main/runtime/rust/juvix
+          cargo test --release
 
       # We use the options:
       #   - -fhide-source-paths
