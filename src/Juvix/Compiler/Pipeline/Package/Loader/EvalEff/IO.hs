@@ -130,7 +130,6 @@ loadPackage' packagePath = do
     . runProcessIO
     . runFilesIO
     . evalTopNameIdGen defaultModuleId
-    . runReader packageEntryPoint
     . ignoreLog
     . mapError (JuvixError @GitProcessError)
     . runGitProcess

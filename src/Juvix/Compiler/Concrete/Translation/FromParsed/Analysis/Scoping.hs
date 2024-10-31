@@ -930,12 +930,12 @@ checkFixityInfo ParsedFixityInfo {..} = do
 
 getModuleId :: forall r. (Member (Reader Package) r) => TopModulePathKey -> Sem r ModuleId
 getModuleId path = do
-  p <- ask
+  pkg <- ask
   return
     ModuleId
       { _moduleIdPath = path,
-        _moduleIdPackage = p ^. packageName,
-        _moduleIdPackageVersion = show (p ^. packageVersion)
+        _moduleIdPackage = pkg ^. packageName,
+        _moduleIdPackageVersion = show (pkg ^. packageVersion)
       }
 
 checkFixitySyntaxDef ::

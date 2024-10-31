@@ -17,4 +17,10 @@ data Root = Root
     _rootInvokeDir :: Path Abs Dir
   }
 
+-- | TODO think of a better name
+data SomeRoot = SomeRoot
+  { _someRootDir :: Path Abs Dir,
+    _someRootType :: PackageType
+  }
+
 makeLenses ''Root
