@@ -166,8 +166,10 @@ jobs:
         run: |
           cd $HOME/anoma
           echo "IO.puts(Anoma.Node.Examples.ENode.start_node().grpc_port)" > start.exs
-          mix run start.exs
-          ./apps/anoma_client/anoma_client
+          result=$(timeout 20s mix run --no-halt start.exs | { read -r line; echo "$line"; } &)
+          echo "Node = $result"
+          timeout 20s ./apps/anoma_client/anoma_client --listen-port 50051 --node-host localhost --node-port $result
+          exit 0
 
       - name: Cache LLVM and Clang
         id: cache-llvm
