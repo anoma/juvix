@@ -2,35 +2,20 @@ module Lambda;
 
 import Stdlib.Prelude open public;
 
-id' : {A : Type} → A → A := λ {| a := a};
+id' : {A : Type} → A → A := λ{| a := a};
 
-uncurry'
-  : {A : Type}
-    → {B : Type}
-    → {C : Type}
-    → (A → B → C)
-    → Pair A B
-    → C := λ {| f (a, b) := f a b};
+uncurry' : {A : Type} → {B : Type} → {C : Type} → (A → B → C) → Pair A B → C :=
+  λ{| f (a, b) := f a b};
 
 fst' : {A : Type} → {B : Type} → Pair A B → A
-  | {_} := λ {| (a, _) := a};
+  | {_} := λ{| (a, _) := a};
 
 first'
-  : {A : Type}
-    → {B : Type}
-    → {A' : Type}
-    → (A → A')
-    → Pair A B
-    → Pair A' B := λ {| f (a, b) := f a, b};
+  : {A : Type} → {B : Type} → {A' : Type} → (A → A') → Pair A B → Pair A' B :=
+  λ{| f (a, b) := f a, b};
 
-foldr'
-  : {A : Type}
-    → {B : Type}
-    → (A → B → B)
-    → B
-    → List A
-    → B :=
-  λ {
+foldr' {A B : Type} : (A → B → B) → B → List A → B :=
+  λ{
     | _ z nil := z
     | f z (h :: hs) := f h (foldr' f z hs)
   };

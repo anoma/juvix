@@ -1,3 +1,3 @@
 module AppLeftImplicit;
 
-x : Type := {x};
+x (dummy : Type) : Type := {x dummy};
