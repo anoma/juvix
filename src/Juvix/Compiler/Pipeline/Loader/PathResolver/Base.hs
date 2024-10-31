@@ -46,6 +46,17 @@ makeLenses ''RootInfo
 makeLenses ''PathInfoTopModule
 makeSem ''PathResolver
 
+-- getCurrentPackageInfo :: (Members '[PathResolver] r) => Sem r PackageInfo
+-- getCurrentPackageInfo = do
+--   tbl <- getPackageInfos
+--   r <- resolverRoot
+--   let err =
+--         impossibleError
+--           ( "The current root has not been registered as a package.\nCurrent root = "
+--               <> show r
+--           )
+--   return (fromMaybe err (tbl ^. at r))
+
 withPathFile ::
   (Members '[PathResolver] r) =>
   TopModulePath ->

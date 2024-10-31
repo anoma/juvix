@@ -8,7 +8,7 @@ import CommonOptions
 import Juvix.Compiler.Core.Options qualified as Core
 import Juvix.Compiler.Internal.Pretty.Options qualified as Internal
 import Juvix.Compiler.Pipeline
-import Juvix.Compiler.Pipeline.Root
+import Juvix.Compiler.Pipeline.EntryPoint.IO
 import Juvix.Data.Effect.TaggedLock
 import Juvix.Data.Error.GenericError qualified as E
 import Juvix.Data.Field
@@ -197,9 +197,7 @@ entryPointFromGlobalOptions ::
   Sem r EntryPoint
 entryPointFromGlobalOptions root mainFile opts = do
   mabsBuildDir :: Maybe (Path Abs Dir) <- liftIO (mapM (prepathToAbsDir cwd) optBuildDir)
-  pkg <- readPackageRootIO root
-  let def :: EntryPoint
-      def = defaultEntryPoint pkg root mainFile
+  def <- defaultEntryPointIO (root ^. rootRootDir) mainFile
   return
     def
       { _entryPointNoTermination = opts ^. globalNoTermination,
@@ -220,9 +218,7 @@ entryPointFromGlobalOptions root mainFile opts = do
 entryPointFromGlobalOptionsNoFile :: (Members '[EmbedIO, TaggedLock] r, MonadIO (Sem r)) => Root -> GlobalOptions -> Sem r EntryPoint
 entryPointFromGlobalOptionsNoFile root opts = do
   mabsBuildDir :: Maybe (Path Abs Dir) <- mapM (prepathToAbsDir cwd) optBuildDir
-  pkg <- readPackageRootIO root
-  let def :: EntryPoint
-      def = defaultEntryPointNoFile pkg root
+  def <- defaultEntryPointIO (root ^. rootRootDir) Nothing
   return
     def
       { _entryPointNoTermination = opts ^. globalNoTermination,

@@ -28,7 +28,7 @@ import Juvix.Compiler.Pipeline.Loader.PathResolver.Paths
 import Juvix.Compiler.Pipeline.Lockfile
 import Juvix.Compiler.Pipeline.Package
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
-import Juvix.Compiler.Pipeline.Root.Base (PackageType (..))
+import Juvix.Compiler.Pipeline.Root.Base hiding (rootBuildDir)
 import Juvix.Data.SHA256 qualified as SHA256
 import Juvix.Extra.Files
 import Juvix.Extra.PackageFiles
@@ -39,22 +39,12 @@ import Juvix.Prelude
 mkPackage ::
   forall r.
   (Members '[Files, Error JuvixError, Reader ResolverEnv, DependencyResolver, EvalFileEff] r) =>
-  Maybe EntryPoint ->
+  Maybe BuildDir ->
   Path Abs Dir ->
   Sem r Package
-mkPackage mpackageEntry _packageRoot = do
-  let buildDirDep = case mpackageEntry of
-        Just packageEntry -> rootedBuildDir _packageRoot (packageEntry ^. entryPointBuildDir)
-        Nothing -> DefaultBuildDir
-  maybe (readPackage _packageRoot buildDirDep) (return . (^. entryPointPackage)) mpackageEntry
-
-mkPackageLike ::
-  forall r.
-  (Members '[Files, Error JuvixError, Reader ResolverEnv, DependencyResolver, EvalFileEff] r) =>
-  Maybe EntryPoint ->
-  Path Abs Dir ->
-  Sem r PackageLike
-mkPackageLike mpackageEntry _packageRoot = undefined
+mkPackage mpackageBuildDir _packageRoot = do
+  let buildDirDep = fromMaybe DefaultBuildDir mpackageBuildDir
+  readPackage _packageRoot buildDirDep
 
 findPackageJuvixFiles :: (Members '[Files] r) => Path Abs Dir -> Sem r [Path Rel File]
 findPackageJuvixFiles pkgRoot = map (fromJust . stripProperPrefix pkgRoot) <$> walkDirRelAccum juvixAccum pkgRoot []
@@ -190,7 +180,8 @@ registerDependencies' conf = do
       LocalPackage -> do
         lockfile <- addRootDependency conf e (e ^. entryPointRoot)
         whenM shouldWriteLockfile $ do
-          packageFileChecksum <- SHA256.digestFile (e ^. entryPointPackage . packageFile)
+          let packagePath :: Path Abs File = mkPackagePath (e ^. entryPointSomeRoot . someRootDir)
+          packageFileChecksum <- SHA256.digestFile packagePath
           lockfilePath' <- lockfilePath
           writeLockfile lockfilePath' packageFileChecksum lockfile
   where
@@ -224,7 +215,7 @@ addRootDependency conf e root = do
   checkRemoteDependency resolvedDependency
   let p = resolvedDependency ^. resolvedDependencyPath
   withEnvInitialRoot p $ do
-    pkg <- mkPackage (Just e) p
+    pkg <- mkPackage (Just (e ^. entryPointBuildDir)) p
     shouldUpdateLockfile' <- shouldUpdateLockfile pkg
     when shouldUpdateLockfile' setShouldUpdateLockfile
     let resolvedPkg :: Package
@@ -253,7 +244,7 @@ addDependency me d = do
   case cached of
     Just cachedDep -> return cachedDep
     Nothing -> withEnvRoot p $ do
-      pkg <- mkPackage me p
+      pkg <- mkPackage ((^. entryPointBuildDir) <$> me) p
       addDependency' pkg me resolvedDependency
 
 addPackageRelativeFiles :: (Member (State ResolverState) r) => PackageInfo -> Sem r ()

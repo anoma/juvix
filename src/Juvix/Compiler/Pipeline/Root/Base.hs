@@ -10,6 +10,13 @@ data PackageType
   | LocalPackage
   deriving stock (Eq, Show)
 
+hasPackageDotJuvix :: PackageType -> Bool
+hasPackageDotJuvix = \case
+  GlobalStdlib -> True
+  GlobalPackageDescription -> True
+  LocalPackage -> True
+  GlobalPackageBase -> False
+
 data Root = Root
   { _rootSomeRoot :: SomeRoot,
     _rootBuildDir :: BuildDir,
@@ -27,7 +34,7 @@ makeLenses ''Root
 makeLenses ''SomeRoot
 
 rootRootDir :: Lens' Root (Path Abs Dir)
-rootRootDir = undefined
+rootRootDir = rootSomeRoot . someRootDir
 
 rootPackageType :: Lens' Root PackageType
-rootPackageType = undefined
+rootPackageType = rootSomeRoot . someRootType

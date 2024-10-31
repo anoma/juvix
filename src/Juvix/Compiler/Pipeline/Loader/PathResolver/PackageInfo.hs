@@ -9,6 +9,7 @@ import Data.Versions
 import Juvix.Compiler.Concrete.Translation.ImportScanner.Base
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Data.CodeAnn
+import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
 
 data PackageLike
@@ -46,11 +47,11 @@ packageLikeName :: SimpleGetter PackageLike Text
 packageLikeName = to $ \case
   PackageReal r -> r ^. packageName
   PackageGlobalStdlib -> "global-stdlib"
-  PackageBase -> "package-base"
+  PackageBase -> Str.packageBase
   PackageType -> "package-type"
   PackageDotJuvix -> "package-dot-juvix"
 
--- | TODO perhaps we could versions for the non-real packages
+-- | FIXME all PackageLike should have versions
 packageLikeVersion :: SimpleGetter PackageLike (Maybe SemVer)
 packageLikeVersion = to $ \case
   PackageReal pkg -> Just (pkg ^. packageVersion)

@@ -52,10 +52,10 @@ formatProject ::
   (Members '[App, EmbedIO, TaggedLock, Logger, Files, Output FormattedFileInfo] r) =>
   Sem r FormatResult
 formatProject = silenceProgressLog . runPipelineOptions . runPipelineSetup $ do
-  pkg <- askPackage
   res :: [(ImportNode, PipelineResult ModuleInfo)] <- processProject
-  res' :: [(ImportNode, SourceCode)] <- runReader pkg . forM res $ \(node, nfo) -> do
-    src <- formatModuleInfo node nfo
+  res' :: [(ImportNode, SourceCode)] <- forM res $ \(node, nfo) -> do
+    pkgId :: PackageId <- (^. entryPointPackageId) <$> ask
+    src <- runReader pkgId (formatModuleInfo node nfo)
     return (node, src)
   formatProjectSourceCode res'
 

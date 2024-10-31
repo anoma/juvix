@@ -152,23 +152,24 @@ loadPackage' packagePath = do
     packageEntryPoint :: EntryPoint
     packageEntryPoint = defaultEntryPoint rootPkg root (Just packagePath)
       where
+        sroot :: SomeRoot
+        sroot =
+          SomeRoot
+            { _someRootDir = rootPath,
+              _someRootType = GlobalPackageDescription
+            }
+
         root :: Root
         root =
           Root
-            { _rootRootDir = rootPath,
-              _rootPackageType = GlobalPackageDescription,
+            { _rootSomeRoot = sroot,
               _rootInvokeDir = rootPath,
               _rootBuildDir = DefaultBuildDir
             }
 
-        rootPkg :: Package
+        rootPkg :: PackageId
         rootPkg =
-          Package
-            { _packageVersion = defaultVersion,
-              _packageName = "Package",
-              _packageMain = Nothing,
-              _packageLockfile = Nothing,
-              _packageFile = packagePath,
-              _packageDependencies = [],
-              _packageBuildDir = Nothing
+          PackageId
+            { _packageIdVersion = defaultVersion,
+              _packageIdName = "Package"
             }
