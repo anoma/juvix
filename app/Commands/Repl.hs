@@ -190,7 +190,7 @@ replCommand opts input_ = catchAll $ do
 
         compileString :: Repl (Maybe Core.Node)
         compileString = do
-          (artifacts, res) <- liftIO $ compileReplInputIO' ctx (strip (pack s))
+          (artifacts, res) <- compileReplInputIO' ctx (strip (pack s))
           res' <- replFromEither res
           State.modify (over (replStateContext . _Just) (set replContextArtifacts artifacts))
           return res'
@@ -199,7 +199,7 @@ core :: String -> Repl ()
 core input_ = do
   ctx <- replGetContext
   opts <- Reader.asks (^. replOptions)
-  compileRes <- liftIO (compileReplInputIO' ctx (strip (pack input_))) >>= replFromEither . snd
+  compileRes <- compileReplInputIO' ctx (strip (pack input_)) >>= replFromEither . snd
   whenJust compileRes (renderOutLn . Core.ppOut opts)
 
 dev :: String -> Repl ()
@@ -484,7 +484,7 @@ replTabComplete = Prefix (wordCompleter optsCompleter) defaultMatcher
 printRoot :: String -> Repl ()
 printRoot _ = do
   r <- State.gets (^. replStateRoot . rootRootDir)
-  liftIO $ putStrLn (pack (toFilePath r))
+  putStrLn (pack (toFilePath r))
 
 runCommand :: (Members '[EmbedIO, App, TaggedLock] r) => ReplOptions -> Sem r ()
 runCommand opts = do
@@ -570,7 +570,7 @@ replExpressionUpToTyped txt = do
       $ expressionUpToTyped P.replPath txt
   replFromEither x
 
-compileReplInputIO' :: ReplContext -> Text -> IO (Artifacts, (Either JuvixError (Maybe Core.Node)))
+compileReplInputIO' :: (MonadIO m) => ReplContext -> Text -> m (Artifacts, (Either JuvixError (Maybe Core.Node)))
 compileReplInputIO' ctx txt =
   runM
     . runState (ctx ^. replContextArtifacts)

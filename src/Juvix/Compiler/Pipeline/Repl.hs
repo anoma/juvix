@@ -164,7 +164,7 @@ compileReplInputIO fp txt = do
   runError
     . runConcurrent
     . runReader defaultPipelineOptions
-    . runLoggerIO defaultLoggerOptions
+    . runLoggerIO replLoggerOptions
     . runReader defaultNumThreads
     . evalInternet hasInternet
     . ignoreHighlightBuilder
