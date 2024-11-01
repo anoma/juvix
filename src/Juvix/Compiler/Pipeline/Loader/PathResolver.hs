@@ -180,7 +180,12 @@ registerDependencies' conf = do
       LocalPackage -> do
         lockfile <- addRootDependency conf e (e ^. entryPointRoot)
         whenM shouldWriteLockfile $ do
-          let packagePath :: Path Abs File = mkPackagePath (e ^. entryPointSomeRoot . someRootDir)
+          let root :: Path Abs Dir = e ^. entryPointSomeRoot . someRootDir
+          packagePath :: Path Abs File <- do
+            let packageDotJuvix = mkPackagePath root
+                juvixDotYaml = mkPackageFilePath root
+            x <- findM fileExists' [packageDotJuvix, juvixDotYaml]
+            return (fromMaybe (error ("No package file found in " <> show root)) x)
           packageFileChecksum <- SHA256.digestFile packagePath
           lockfilePath' <- lockfilePath
           writeLockfile lockfilePath' packageFileChecksum lockfile
