@@ -30,7 +30,7 @@ makeLenses ''RootInfoFiles
 -- package and global standard library (currently under global-package/.juvix-build)
 runPackagePathResolver ::
   forall r a.
-  (Members '[TaggedLock, Error JuvixError, Files, EvalFileEff, Reader EntryPoint] r) =>
+  (Members '[TaggedLock, Error JuvixError, Files, EvalFileEff] r) =>
   Path Abs Dir ->
   Sem (PathResolver ': r) a ->
   Sem r a

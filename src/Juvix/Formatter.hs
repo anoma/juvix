@@ -109,7 +109,7 @@ formatModuleInfo ::
       '[ PathResolver,
          Error JuvixError,
          Files,
-         Reader Package
+         Reader PackageId
        ]
       r
   ) =>
@@ -120,7 +120,7 @@ formatModuleInfo node moduleInfo =
   withResolverRoot (node ^. importNodePackageRoot)
     . ignoreHighlightBuilder
     $ do
-      pkg :: Package <- ask
+      pkg :: PackageId <- ask
       parseRes :: ParserResult <-
         runTopModuleNameChecker $
           fromSource Nothing (Just (node ^. importNodeAbsFile))

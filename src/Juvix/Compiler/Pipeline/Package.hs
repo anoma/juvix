@@ -92,6 +92,8 @@ readYamlPackage ::
   BuildDir ->
   Sem r Package
 readYamlPackage root buildDir = mapError (JuvixError @PackageLoaderError) $ do
+  exi <- fileExists' yamlPath
+  unless exi (error ("The yaml file " <> show yamlPath <> " does not exist"))
   bs <- readFileBS' yamlPath
   mLockfile <- mayReadLockfile root
   if

@@ -37,7 +37,7 @@ upToInternalExpression ::
 upToInternalExpression p = do
   scopeTable <- gets (^. artifactScopeTable)
   mtab <- gets (^. artifactModuleTable)
-  pkg <- asks (^. entryPointPackage)
+  pkg <- asks (^. entryPointPackageId)
   runScoperScopeArtifacts
     . runStateArtifacts artifactScoperState
     . runReader pkg
@@ -63,7 +63,7 @@ expressionUpToAtomsScoped ::
 expressionUpToAtomsScoped fp txt = do
   scopeTable <- gets (^. artifactScopeTable)
   mtab <- gets (^. artifactModuleTable)
-  pkg <- asks (^. entryPointPackage)
+  pkg <- asks (^. entryPointPackageId)
   runScoperScopeArtifacts
     . runStateArtifacts artifactScoperState
     . runNameIdGenArtifacts
@@ -78,7 +78,7 @@ scopeCheckExpression ::
 scopeCheckExpression p = do
   scopeTable <- gets (^. artifactScopeTable)
   mtab <- gets (^. artifactModuleTable)
-  pkg <- asks (^. entryPointPackage)
+  pkg <- asks (^. entryPointPackageId)
   runNameIdGenArtifacts
     . runScoperScopeArtifacts
     . runStateArtifacts artifactScoperState
@@ -129,7 +129,7 @@ registerImport i = do
   modify' (appendArtifactsModuleTable mtab')
   scopeTable <- gets (^. artifactScopeTable)
   mtab'' <- gets (^. artifactModuleTable)
-  pkg <- asks (^. entryPointPackage)
+  pkg <- asks (^. entryPointPackageId)
   void
     . runNameIdGenArtifacts
     . runScoperScopeArtifacts
@@ -164,7 +164,7 @@ compileReplInputIO fp txt = do
   runError
     . runConcurrent
     . runReader defaultPipelineOptions
-    . runLoggerIO defaultLoggerOptions
+    . runLoggerIO replLoggerOptions
     . runReader defaultNumThreads
     . evalInternet hasInternet
     . ignoreHighlightBuilder

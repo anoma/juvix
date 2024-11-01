@@ -1184,5 +1184,8 @@ rustMemory = "Memory"
 rustContinue :: (IsString s) => s
 rustContinue = "continue"
 
+packageBase :: (IsString s) => s
+packageBase = "package-base"
+
 rustReturn :: (IsString s) => s
 rustReturn = "return"

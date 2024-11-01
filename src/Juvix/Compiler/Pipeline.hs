@@ -117,11 +117,11 @@ upToScopingEntry ::
   (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Error JuvixError, NameIdGen] r) =>
   Sem r Scoper.ScoperResult
 upToScopingEntry = do
-  pkg <- asks (^. entryPointPackage)
+  pkg <- asks (^. entryPointPackageId)
   runReader pkg (upToScoping)
 
 upToScoping ::
-  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader Package, Reader Store.ModuleTable, Error JuvixError, NameIdGen] r) =>
+  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader PackageId, Reader Store.ModuleTable, Error JuvixError, NameIdGen] r) =>
   Sem r Scoper.ScoperResult
 upToScoping = Scoper.fromParsed
 
@@ -129,7 +129,7 @@ upToInternal ::
   (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Error JuvixError, NameIdGen, Termination] r) =>
   Sem r Internal.InternalResult
 upToInternal = do
-  pkg <- asks (^. entryPointPackage)
+  pkg <- asks (^. entryPointPackageId)
   runReader pkg upToScoping >>= Internal.fromConcrete
 
 upToInternalTyped ::

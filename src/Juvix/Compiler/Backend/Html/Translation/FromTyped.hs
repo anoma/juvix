@@ -251,8 +251,8 @@ topTemplate rightMenu' content' = do
 
       packageHeader :: Sem r Html
       packageHeader = do
-        pkgName' <- toHtml <$> asks (^. entryPointPackage . packageName)
-        version' <- toHtml <$> asks (^. entryPointPackage . packageVersion . to prettySemVer)
+        pkgName' <- toHtml <$> asks (^. entryPointPackageId . packageIdName)
+        version' <- toHtml <$> asks (^. entryPointPackageId . packageIdVersion . to prettySemVer)
         return
           $ Html.div
             ! Attr.id "package-header"
