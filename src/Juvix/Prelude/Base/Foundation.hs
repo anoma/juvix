@@ -51,6 +51,7 @@ module Juvix.Prelude.Base.Foundation
     module GHC.Generics,
     module GHC.Num,
     module GHC.Real,
+    module GHC.Utils.Misc,
     module Control.Lens,
     module Language.Haskell.TH.Syntax,
     module Prettyprinter,
@@ -197,6 +198,7 @@ import GHC.Generics (Generic)
 import GHC.Num
 import GHC.Real
 import GHC.Stack.Types
+import GHC.Utils.Misc (isSingleton)
 import Language.Haskell.TH.Syntax (Exp, Lift, Q)
 import Numeric hiding (exp, log, pi)
 import Path (Abs, Dir, File, Path, Rel, SomeBase (..))

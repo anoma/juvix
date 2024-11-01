@@ -29,6 +29,9 @@ strLetRecLifting = "letrec-lifting"
 strTopEtaExpand :: Text
 strTopEtaExpand = "top-eta-expand"
 
+strDetectConstantSideConditions :: Text
+strDetectConstantSideConditions = "detect-constant-side-conditions"
+
 strDetectRedundantPatterns :: Text
 strDetectRedundantPatterns = "detect-redundant-patterns"
 

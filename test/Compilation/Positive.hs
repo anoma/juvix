@@ -480,5 +480,10 @@ tests =
         "Test081: Non-duplication in let-folding"
         $(mkRelDir ".")
         $(mkRelFile "test081.juvix")
-        $(mkRelFile "out/test081.out")
+        $(mkRelFile "out/test081.out"),
+      posTest
+        "Test082: Pattern matching with side conditions"
+        $(mkRelDir ".")
+        $(mkRelFile "test082.juvix")
+        $(mkRelFile "out/test082.out")
     ]

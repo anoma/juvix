@@ -1,0 +1,14 @@
+-- Redundant side condition
+module test013;
+
+import Stdlib.Prelude open;
+
+f (x : List Nat) : Nat :=
+  case x of
+    | nil := 0
+    | x :: _ if x > 0 := x
+             | if true := 0
+             | if false := 1
+             | if x == 0 := 2;
+
+main : Nat := f (1 :: 2 :: nil);
