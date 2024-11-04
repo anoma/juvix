@@ -3,7 +3,6 @@ module Anoma.Compilation.Positive (allTests) where
 import Anoma.Effect.Base
 import Anoma.Effect.RunNockma
 import Base
-import Data.IntSet qualified as IntSet
 import Juvix.Compiler.Backend (Target (TargetAnoma))
 import Juvix.Compiler.Nockma.Anoma
 import Juvix.Compiler.Nockma.Evaluator
@@ -137,60 +136,107 @@ checkOutput expected = case unsnoc expected of
     eqTraces xs
     eqNock x
 
-anomaNodeValid :: IntSet
-anomaNodeValid =
-  intSet
-    [ 1,
-      2,
-      5,
-      8,
-      10,
-      16,
-      17,
-      18,
-      19,
-      24,
-      26,
-      31,
-      36,
-      37,
-      38,
-      40,
-      41,
-      45,
-      46,
-      47,
-      50,
-      52,
-      53,
-      54,
-      55,
-      56,
-      57,
-      58,
-      59,
-      60,
-      62,
-      64,
-      65,
-      66,
-      67,
-      68,
-      69,
-      70,
-      71,
-      72
-    ]
+data TestClass
+  = ClassWorking
+  | -- | The test uses trace, so we need to wait until we update the anoma-node
+    -- and parse the traces from the response
+    ClassTrace
+  | -- | The anoma node returns a response with an error
+    ClassNodeError
+  | -- | The anoma node returns a value but it doesn't match the expected value
+    ClassWrong
+  | -- | We have no test with this number
+    ClassMissing
+  deriving stock (Eq, Show)
 
-anomaNodeBug :: IntSet
-anomaNodeBug =
-  intSet
-    [ 24,
-      41,
-      52,
-      54,
-      56
-    ]
+classify :: AnomaTest -> TestClass
+classify AnomaTest {..} = case _anomaTestNum of
+  1 -> ClassWorking
+  2 -> ClassWorking
+  3 -> ClassTrace
+  4 -> ClassMissing
+  5 -> ClassWorking
+  6 -> ClassTrace
+  7 -> ClassTrace
+  8 -> ClassWorking
+  9 -> ClassTrace
+  10 -> ClassWorking
+  11 -> ClassTrace
+  12 -> ClassTrace
+  13 -> ClassTrace
+  14 -> ClassTrace
+  15 -> ClassTrace
+  16 -> ClassWorking
+  17 -> ClassWorking
+  18 -> ClassWorking
+  19 -> ClassWorking
+  20 -> ClassTrace
+  21 -> ClassTrace
+  22 -> ClassTrace
+  23 -> ClassTrace
+  24 -> ClassNodeError
+  25 -> ClassTrace
+  26 -> ClassWorking
+  27 -> ClassMissing
+  28 -> ClassTrace
+  29 -> ClassTrace
+  30 -> ClassTrace
+  31 -> ClassWorking
+  32 -> ClassTrace
+  33 -> ClassTrace
+  34 -> ClassTrace
+  35 -> ClassTrace
+  36 -> ClassWorking
+  37 -> ClassWorking
+  38 -> ClassWorking
+  39 -> ClassTrace
+  40 -> ClassWorking
+  41 -> ClassWrong
+  42 -> ClassMissing
+  43 -> ClassTrace
+  45 -> ClassWorking
+  46 -> ClassWorking
+  47 -> ClassWorking
+  48 -> ClassMissing
+  49 -> ClassTrace
+  50 -> ClassWorking
+  51 -> ClassMissing
+  52 -> ClassWrong
+  53 -> ClassWorking
+  54 -> ClassNodeError
+  55 -> ClassWorking
+  56 -> ClassNodeError
+  57 -> ClassWorking
+  58 -> ClassWorking
+  59 -> ClassWorking
+  60 -> ClassNodeError
+  61 -> ClassTrace
+  62 -> ClassWorking
+  63 -> ClassTrace
+  64 -> ClassWorking
+  65 -> ClassWorking
+  66 -> ClassWorking
+  67 -> ClassWorking
+  68 -> ClassWorking
+  69 -> ClassWorking
+  70 -> ClassWorking
+  71 -> ClassWorking
+  72 -> ClassWorking
+  73 -> ClassWorking
+  74 -> ClassTrace
+  75 -> ClassTrace
+  76 -> ClassTrace
+  77 -> ClassNodeError
+  78 -> ClassNodeError
+  79 -> ClassWorking
+  80 -> ClassTrace
+  81 -> ClassTrace
+  82 -> ClassTrace
+  83 -> ClassTrace
+  84 -> ClassTrace
+  85 -> ClassTrace
+  86 -> ClassTrace
+  _ -> error "non-exhaustive test classification"
 
 allTests :: TestTree
 allTests =
@@ -207,9 +253,7 @@ allTests =
         (map mkAnomaNodeTest (filter shouldRun anomaTests))
       where
         shouldRun :: AnomaTest -> Bool
-        shouldRun AnomaTest {..} =
-          IntSet.member _anomaTestNum anomaNodeValid
-            && IntSet.notMember _anomaTestNum anomaNodeBug
+        shouldRun a = classify a == ClassWorking
 
     haskellNockmaTests :: TestTree
     haskellNockmaTests =
