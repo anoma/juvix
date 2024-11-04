@@ -150,7 +150,7 @@ jobs:
           cd $HOME
           git clone https://github.com/anoma/anoma.git
           cd anoma
-          git checkout 98e3660b91cd55f1d9424dcff9420425ae98f5f8
+          git checkout 513fab7d951042e991d75921ef34b0287138f758
           mix local.hex --force
           mix escript.install hex protobuf --force
           echo "$HOME/.mix/escripts" >> $GITHUB_PATH
