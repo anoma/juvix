@@ -2708,7 +2708,6 @@ checkExpressionAtom e = case e of
   AtomIterator i -> pure . AtomIterator <$> checkIterator i
   AtomNamedApplicationNew i -> pure . AtomNamedApplicationNew <$> checkNamedApplicationNew i
   AtomRecordUpdate i -> pure . AtomRecordUpdate <$> checkRecordUpdate i
-  AtomUpdateSymbol i -> pure . AtomIdentifier <$> checkUpdateSymbol i
 
 reserveNamedArgumentName :: (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable] r) => NamedArgumentNew 'Parsed -> Sem r ()
 reserveNamedArgumentName a = case a of
@@ -2825,7 +2824,7 @@ checkRecordUpdate RecordUpdate {..} = do
     bindRecordUpdateVariable :: NameItem 'Parsed -> Sem r (IsImplicit, S.Symbol)
     bindRecordUpdateVariable NameItem {..} = do
       -- all fields have names so it is safe to use fromJust
-      v <- bindVariableSymbol (mkRecordUpdateSymbol (fromJust _nameItemSymbol))
+      v <- ignoreSyntax $ freshVariable (fromJust _nameItemSymbol)
       return (_nameItemImplicit, v)
 
 checkUpdateField ::
@@ -2846,9 +2845,6 @@ checkUpdateField sig f = do
   where
     unexpectedField :: ScoperError
     unexpectedField = ErrUnexpectedField (UnexpectedField (f ^. fieldUpdateName))
-
-checkUpdateSymbol :: (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable] r) => UpdateSymbol 'Parsed -> Sem r ScopedIden
-checkUpdateSymbol UpdateSymbol {..} = checkScopedIden (NameUnqualified (mkRecordUpdateSymbol _updateSymbol))
 
 getRecordInfo ::
   forall r.
@@ -3658,6 +3654,3 @@ parsePatternAtoms atoms = do
 
     filePath :: FilePath
     filePath = "tmp"
-
-mkRecordUpdateSymbol :: Symbol -> Symbol
-mkRecordUpdateSymbol = over withLocParam ("@" <>)
