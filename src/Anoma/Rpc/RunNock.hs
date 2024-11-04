@@ -7,7 +7,7 @@ import Juvix.Prelude.Aeson
 runNockGrpcUrl :: GrpcMethodUrl
 runNockGrpcUrl =
   mkGrpcMethodUrl $
-    "Anoma" :| ["Protobuf", "Intents", "Prove"]
+    "Anoma" :| ["Protobuf", "NockService", "Prove"]
 
 data NockInput
   = NockInputText Text
