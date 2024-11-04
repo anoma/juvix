@@ -1,0 +1,13 @@
+-- Record update
+module test083;
+
+import Stdlib.Prelude open;
+
+type R := mkR@{
+  x : Nat;
+  y : Nat;
+};
+
+f (r : R) : R := let x := 7 in r@R{x := R.x r + x; y := x};
+
+main : Nat := case f (mkR 1 2) of mkR x y := x + 5;
