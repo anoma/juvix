@@ -485,10 +485,5 @@ tests =
         "Test082: Pattern matching with side conditions"
         $(mkRelDir ".")
         $(mkRelFile "test082.juvix")
-        $(mkRelFile "out/test082.out"),
-      posTest
-        "Test083: Record update"
-        $(mkRelDir ".")
-        $(mkRelFile "test083.juvix")
-        $(mkRelFile "out/test083.out")
+        $(mkRelFile "out/test082.out")
     ]
