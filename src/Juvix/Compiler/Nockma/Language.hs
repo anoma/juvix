@@ -561,8 +561,22 @@ instance (NockmaEq a) => NockmaEq (Term a) where
 instance (NockmaEq a) => NockmaEq (Cell a) where
   nockmaEq (Cell l r) (Cell l' r') = nockmaEq l l' && nockmaEq r r'
 
-unfoldTuple :: Maybe (Term Natural) -> [Term Natural]
-unfoldTuple = maybe [] (toList . unfoldTuple1)
+unfoldList :: Term Natural -> [Term Natural]
+unfoldList = ensureNockmList . nonEmpty . unfoldTuple
+  where
+    ensureNockmList :: Maybe (NonEmpty (Term Natural)) -> [Term Natural]
+    ensureNockmList = \case
+      Nothing -> err
+      Just l -> case l ^. _unsnoc1 of
+        (ini, lst)
+          | lst == nockNilTagged "unfoldList" -> ini
+          | otherwise -> err
+      where
+        err :: x
+        err = error "Nockma lists must have the form [x1 .. xn 0]"
+
+unfoldTuple :: Term Natural -> [Term Natural]
+unfoldTuple = toList . unfoldTuple1
 
 unfoldTuple1 :: Term Natural -> NonEmpty (Term Natural)
 unfoldTuple1 = nonEmpty' . run . execOutputList . go
