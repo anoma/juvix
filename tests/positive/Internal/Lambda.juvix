@@ -43,10 +43,10 @@ idB : {A : Type} → A → A
 
 mapB : {A : Type} → (A → A) → A → A := λ {f a := f a};
 
-add : Nat → Nat → Nat :=
+countDown {A} : Nat → A → A :=
   λ {
     | zero n := n
-    | (suc n) m := add n m
+    | (suc n) m := countDown n m
   };
 
 fst : {A : Type} → {B : Type} → A × B → A
@@ -90,10 +90,8 @@ map : {A : Type} → {B : Type} → (A → B) → List A → List B
 pairEval : {A : Type} → {B : Type} → (A → B) × A → B :=
   λ {(f, x) := f x};
 
-foldr
-  : {A : Type}
-    → {B : Type}
-    → (A → B → B)
+foldr {A B}
+  : (A → B → B)
     → B
     → List A
     → B :=
@@ -102,10 +100,8 @@ foldr
     | f z (h :: hs) := f h (foldr f z hs)
   };
 
-foldl
-  : {A : Type}
-    → {B : Type}
-    → (B → A → B)
+foldl {A B}
+  : (B → A → B)
     → B
     → List A
     → B :=
@@ -124,25 +120,22 @@ ite : {A : Type} → Bool → A → A → A :=
     | false _ b := b
   };
 
-filter : {A : Type} → (A → Bool) → List A → List A :=
+filter {A} : (A → Bool) → List A → List A :=
   λ {
     | _ nil := nil
     | f (h :: hs) := ite (f h) (h :: filter f hs) (filter f hs)
   };
 
-partition
-  : {A : Type} → (A → Bool) → List A → List A × List A :=
+partition {A}
+  : (A → Bool) → List A → List A × List A :=
   λ {
     | _ nil := nil, nil
     | f (x :: xs) :=
       ite (f x) first second ((::) x) (partition f xs)
   };
 
-zipWith
-  : {A : Type}
-    → {B : Type}
-    → {C : Type}
-    → (_ → _ → _)
+zipWith {A B C}
+  : (_ → _ → _)
     → List A
     → List B
     → List C :=

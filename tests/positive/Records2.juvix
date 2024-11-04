@@ -11,4 +11,4 @@ type Pair (A B : Type) :=
 main : Pair Nat Nat :=
   let
     p : Pair Nat Nat := mkPair 2 2;
-  in p@Pair{pfst := pfst + psnd};
+  in p@Pair{pfst := Pair.pfst p + Pair.psnd p};

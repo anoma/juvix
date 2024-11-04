@@ -5,7 +5,7 @@ tests:
     command:
       - juvix
       - repl
-    stdin: "let x : Bool := x in x"
+    stdin: "let x (dummy : Bool) : Bool := x dummy in x true"
     stdout:
       matches: |
         .*

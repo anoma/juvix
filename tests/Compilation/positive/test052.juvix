@@ -71,6 +71,11 @@ exprToString : Expr -> String
 instance
 showExprI : Show Expr := mkShow exprToString;
 
+--- ;Show; instance for ;Val;.
+terminating
+instance
+showValI : Show Val := mkShow valToString;
+
 terminating
 valToString : Val -> String
   | (vnum n) := natToString n
@@ -78,11 +83,6 @@ valToString : Val -> String
     Show.show {{showListI {{showValI}}}} ctx
       ++str " ⊢ "
       ++str Show.show n;
-
---- ;Show; instance for ;Val;.
-terminating
-instance
-showValI : Show Val := mkShow valToString;
 
 syntax operator >>= seq;
 --- Monadic binding for ;Either;.

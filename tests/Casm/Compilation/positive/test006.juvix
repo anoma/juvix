@@ -4,10 +4,10 @@ module test006;
 import Stdlib.Prelude open;
 
 terminating
-loop : Nat := loop;
+loop (dummy : Nat) : Nat := loop dummy;
 
 main : Nat :=
-  ite (3 > 0) 1 loop
-    + ite (2 < 1) loop (ite (7 >= 8) loop 1)
-    + ite (2 > 0 || loop == 0) 1 0
-    + ite (2 < 0 && loop == 0) 1 0;
+  ite (3 > 0) 1 (loop 0)
+    + ite (2 < 1) (loop 0) (ite (7 >= 8) (loop 0) 1)
+    + ite (2 > 0 || loop 0 == 0) 1 0
+    + ite (2 < 0 && loop 0 == 0) 1 0;

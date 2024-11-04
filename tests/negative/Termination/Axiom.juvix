@@ -1,5 +1,5 @@
 module Axiom;
 
 axiom A : let
-            x : Type := x;
+            x (y : Type) : Type := x y;
           in x;

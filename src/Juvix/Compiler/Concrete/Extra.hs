@@ -8,6 +8,7 @@ module Juvix.Compiler.Concrete.Extra
     getExpressionAtomIden,
     getPatternAtomIden,
     isBodyExpression,
+    isFunctionLike,
     symbolParsed,
   )
 where
@@ -106,3 +107,7 @@ isBodyExpression :: FunctionDefBody a -> Bool
 isBodyExpression = \case
   SigBodyExpression {} -> True
   SigBodyClauses {} -> False
+
+isFunctionLike :: FunctionDef a -> Bool
+isFunctionLike = \case
+  FunctionDef {..} -> not (null _signArgs) || not (isBodyExpression _signBody)

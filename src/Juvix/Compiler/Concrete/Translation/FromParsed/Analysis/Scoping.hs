@@ -17,7 +17,6 @@ import Juvix.Compiler.Concrete.Data.NameSignature
 import Juvix.Compiler.Concrete.Data.Scope
 import Juvix.Compiler.Concrete.Data.ScopedName (nameConcrete)
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
-import Juvix.Compiler.Concrete.Extra (recordNameSignatureByIndex)
 import Juvix.Compiler.Concrete.Extra qualified as P
 import Juvix.Compiler.Concrete.Gen qualified as G
 import Juvix.Compiler.Concrete.Language
@@ -435,6 +434,14 @@ reserveAxiomSymbol a =
   where
     kindPretty :: NameKind
     kindPretty = maybe KNameAxiom getNameKind (a ^? axiomBuiltin . _Just . withLocParam)
+
+reserveFunctionLikeSymbol ::
+  (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable] r) =>
+  FunctionDef 'Parsed ->
+  Sem r ()
+reserveFunctionLikeSymbol f =
+  when (P.isFunctionLike f) $
+    void (reserveFunctionSymbol f)
 
 bindFunctionSymbol ::
   (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, InfoTableBuilder, Reader InfoTable, State ScoperState, Reader BindingStrategy] r) =>
@@ -1077,14 +1084,17 @@ checkFunctionDef ::
   (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader PackageId, State ScoperSyntax, Reader BindingStrategy] r) =>
   FunctionDef 'Parsed ->
   Sem r (FunctionDef 'Scoped)
-checkFunctionDef FunctionDef {..} = do
-  sigName' <- bindFunctionSymbol _signName
+checkFunctionDef fdef@FunctionDef {..} = do
   sigDoc' <- mapM checkJudoc _signDoc
   (args', sigType', sigBody') <- withLocalScope $ do
     a' <- mapM checkArg _signArgs
     t' <- mapM checkParseExpressionAtoms _signRetType
     b' <- checkBody
     return (a', t', b')
+  sigName' <-
+    if
+        | P.isFunctionLike fdef -> bindFunctionSymbol _signName
+        | otherwise -> reserveFunctionSymbol fdef
   let def =
         FunctionDef
           { _signName = sigName',
@@ -1481,7 +1491,7 @@ checkSections sec = topBindings helper
         goDefinitions :: DefinitionsSection 'Parsed -> Sem r' (DefinitionsSection 'Scoped)
         goDefinitions DefinitionsSection {..} = goDefs [] [] (toList _definitionsSection)
           where
-            -- This functions goes through a section reserving definitions and
+            -- This functions go through a section reserving definitions and
             -- collecting inductive modules. It breaks a section when the
             -- collected inductive modules are non-empty (there were some
             -- inductive definitions) and the next definition is a function
@@ -1575,9 +1585,9 @@ checkSections sec = topBindings helper
             reserveDefinition :: Definition 'Parsed -> Sem r' (Maybe (Module 'Parsed 'ModuleLocal))
             reserveDefinition = \case
               DefinitionSyntax s -> resolveSyntaxDef s $> Nothing
-              DefinitionFunctionDef d -> void (reserveFunctionSymbol d) >> return Nothing
-              DefinitionAxiom d -> void (reserveAxiomSymbol d) >> return Nothing
-              DefinitionProjectionDef d -> void (reserveProjectionSymbol d) >> return Nothing
+              DefinitionFunctionDef d -> reserveFunctionLikeSymbol d >> return Nothing
+              DefinitionAxiom d -> reserveAxiomSymbol d >> return Nothing
+              DefinitionProjectionDef d -> reserveProjectionSymbol d >> return Nothing
               DefinitionInductive d -> Just <$> reserveInductive d
               where
                 -- returns the module generated for the inductive definition
@@ -2701,7 +2711,7 @@ checkExpressionAtom e = case e of
 
 reserveNamedArgumentName :: (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable] r) => NamedArgumentNew 'Parsed -> Sem r ()
 reserveNamedArgumentName a = case a of
-  NamedArgumentNewFunction f -> void (reserveFunctionSymbol (f ^. namedArgumentFunctionDef))
+  NamedArgumentNewFunction f -> reserveFunctionLikeSymbol (f ^. namedArgumentFunctionDef)
   NamedArgumentItemPun {} -> return ()
 
 checkNamedApplicationNew ::
@@ -2794,7 +2804,7 @@ checkRecordUpdate RecordUpdate {..} = do
   info <- getRecordInfo tyName'
   let sig = info ^. recordInfoSignature
   (vars' :: IntMap (IsImplicit, S.Symbol), fields') <- withLocalScope $ do
-    vs <- mapM bindRecordUpdateVariable (recordNameSignatureByIndex sig)
+    vs <- mapM bindRecordUpdateVariable (P.recordNameSignatureByIndex sig)
     fs <- mapM (checkUpdateField sig) _recordUpdateFields
     return (vs, fs)
   let extra' =
@@ -2814,7 +2824,7 @@ checkRecordUpdate RecordUpdate {..} = do
     bindRecordUpdateVariable :: NameItem 'Parsed -> Sem r (IsImplicit, S.Symbol)
     bindRecordUpdateVariable NameItem {..} = do
       -- all fields have names so it is safe to use fromJust
-      v <- bindVariableSymbol (fromJust _nameItemSymbol)
+      v <- ignoreSyntax $ freshVariable (fromJust _nameItemSymbol)
       return (_nameItemImplicit, v)
 
 checkUpdateField ::

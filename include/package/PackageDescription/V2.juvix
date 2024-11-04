@@ -43,16 +43,6 @@ type Dependency :=
   | --- The ;defaultStdlib; that is bundled with the Juvix compiler.
     defaultStdlib;
 
---- Construct a ;Package; with useful default arguments.
-defaultPackage
-  {name : String := "my-project"}
-  {version : SemVer := defaultVersion}
-  {dependencies : List Dependency := [defaultStdlib]}
-  {main : Maybe String := nothing}
-  {buildDir : Maybe String := nothing}
-  : Package :=
-  mkPackage name version dependencies main buildDir;
-
 --- Construct a ;SemVer; with useful default arguments.
 mkVersion
   (major minor patch : Nat)
@@ -69,6 +59,16 @@ mkVersion
 
 --- The default version used in `defaultPackage`.
 defaultVersion : SemVer := mkVersion 0 0 0;
+
+--- Construct a ;Package; with useful default arguments.
+defaultPackage
+  {name : String := "my-project"}
+  {version : SemVer := defaultVersion}
+  {dependencies : List Dependency := [defaultStdlib]}
+  {main : Maybe String := nothing}
+  {buildDir : Maybe String := nothing}
+  : Package :=
+  mkPackage name version dependencies main buildDir;
 
 --- Constructs a GitHub dependency.
 github (org repo ref : String) : Dependency :=

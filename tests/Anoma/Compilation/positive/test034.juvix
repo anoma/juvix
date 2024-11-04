@@ -6,11 +6,9 @@ import Stdlib.Debug.Trace open;
 
 sum : Nat → Nat :=
   let
-    sum' : Nat → Nat :=
-      λ {
-        zero := zero
-        | (suc n) := suc n + sum' n
-      };
+    sum' : Nat → Nat
+      | zero := zero
+      | (suc n) := suc n + sum' n
   in sum';
 
 mutrec : Nat :=
