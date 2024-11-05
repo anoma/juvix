@@ -191,7 +191,7 @@ classify AnomaTest {..} = case _anomaTestNum of
   38 -> ClassWorking
   39 -> ClassTrace
   40 -> ClassWorking
-  41 -> ClassWrong
+  41 -> ClassWorking
   42 -> ClassMissing
   43 -> ClassTrace
   45 -> ClassWorking
@@ -201,15 +201,15 @@ classify AnomaTest {..} = case _anomaTestNum of
   49 -> ClassTrace
   50 -> ClassWorking
   51 -> ClassMissing
-  52 -> ClassWrong
+  52 -> ClassWorking
   53 -> ClassWorking
-  54 -> ClassNodeError
+  54 -> ClassWorking
   55 -> ClassWorking
-  56 -> ClassNodeError
+  56 -> ClassWorking
   57 -> ClassWorking
   58 -> ClassWorking
   59 -> ClassWorking
-  60 -> ClassNodeError
+  60 -> ClassWorking
   61 -> ClassTrace
   62 -> ClassWorking
   63 -> ClassTrace
