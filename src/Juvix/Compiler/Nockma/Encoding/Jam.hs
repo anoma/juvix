@@ -11,11 +11,8 @@ import Data.Bits
 import Data.ByteString.Base64 qualified as Base64
 import Juvix.Compiler.Nockma.Encoding.Base
 import Juvix.Compiler.Nockma.Encoding.ByteString
-import Juvix.Compiler.Nockma.Encoding.Cue
 import Juvix.Compiler.Nockma.Encoding.Effect.BitWriter
 import Juvix.Compiler.Nockma.Language
-import Juvix.Data.CodeAnn
-import Juvix.Data.Error.GenericError
 import Juvix.Prelude.Base
 
 newtype JamState a = JamState
@@ -116,13 +113,3 @@ jam t = do
 
 encodeJam64 :: Term Natural -> Text
 encodeJam64 = decodeUtf8 . Base64.encode . jamToByteString
-
-decodeJam64 :: (Members '[Error SimpleError] r) => Text -> Sem r (Term Natural)
-decodeJam64 encoded =
-  case Base64.decode (encodeUtf8 encoded) of
-    Left err -> throw (SimpleError (mkAnsiText err))
-    Right bs' ->
-      case cueFromByteString'' bs' of
-        Left (err :: NockNaturalNaturalError) -> throw (simpleErrorCodeAnn err)
-        Right (Left (err :: DecodingError)) -> throw (simpleErrorCodeAnn err)
-        Right (Right r) -> return r

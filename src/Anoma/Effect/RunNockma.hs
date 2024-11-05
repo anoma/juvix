@@ -6,9 +6,7 @@ where
 
 import Anoma.Effect.Base
 import Anoma.Rpc.RunNock
-import Data.ByteString.Base64 qualified as Base64
 import Juvix.Compiler.Nockma.Encoding
-import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Language qualified as Nockma
 import Juvix.Data.CodeAnn
 import Juvix.Prelude
@@ -21,16 +19,6 @@ data RunNockmaInput = RunNockmaInput
   }
 
 makeLenses ''RunNockmaInput
-
-decodeJam64 :: (Members '[Error SimpleError] r) => Text -> Sem r (Nockma.Term Natural)
-decodeJam64 encoded =
-  case Base64.decode (encodeUtf8 encoded) of
-    Left err -> throw (SimpleError (mkAnsiText err))
-    Right bs' ->
-      case cueFromByteString'' bs' of
-        Left (err :: NockNaturalNaturalError) -> throw (simpleErrorCodeAnn err)
-        Right (Left (err :: DecodingError)) -> throw (simpleErrorCodeAnn err)
-        Right (Right r) -> return r
 
 fromJSON :: (Members '[Error SimpleError, Logger] r) => (Aeson.FromJSON a) => Value -> Sem r a
 fromJSON v = case Aeson.fromJSON v of
