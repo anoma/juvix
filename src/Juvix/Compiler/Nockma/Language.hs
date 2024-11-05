@@ -259,6 +259,25 @@ isAtom = not . isCell
 atomHint :: Lens' (Atom a) (Maybe AtomHint)
 atomHint = atomInfo . atomInfoHint
 
+-- | Removes all extra information recursively
+removeInfoRec :: Term a -> Term a
+removeInfoRec = go
+  where
+    go :: Term a -> Term a
+    go = \case
+      TermAtom a -> TermAtom (goAtom a)
+      TermCell a -> TermCell (goCell a)
+
+    goAtom :: Atom a -> Atom a
+    goAtom (Atom _atom _) =
+      Atom
+        { _atomInfo = emptyAtomInfo,
+          _atom
+        }
+
+    goCell :: Cell a -> Cell a
+    goCell (Cell l r) = Cell (go l) (go r)
+
 termLoc :: Lens' (Term a) (Maybe Interval)
 termLoc f = \case
   TermAtom a -> TermAtom <$> atomLoc f a

@@ -60,6 +60,12 @@ mkTest TestDescr {..} = case _testAssertion of
   Single assertion -> testCase _testName (withCurrentDir _testRoot assertion)
   Steps steps -> testCaseSteps _testName (withCurrentDir _testRoot . steps)
 
+fullFile :: Path Abs File
+fullFile = $(mkAbsFile "/home/jan/projects/juvix/full.txt")
+
+timeoutFile :: Path Abs File
+timeoutFile = $(mkAbsFile "/home/jan/projects/juvix/timeout.txt")
+
 withPrecondition :: Assertion -> IO TestTree -> IO TestTree
 withPrecondition assertion ifSuccess = do
   E.catch (assertion >> ifSuccess) $ \case

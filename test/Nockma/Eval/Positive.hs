@@ -10,6 +10,7 @@ import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Translation.FromSource.QQ
 import Juvix.Compiler.Nockma.Translation.FromTree
+import System.Timeout
 
 type Check =
   Sem
@@ -31,7 +32,7 @@ data Test = Test
 makeLenses ''Test
 
 mkNockmaAssertion :: Test -> Assertion
-mkNockmaAssertion Test {..} = do
+mkNockmaAssertion Test {..} = fromMaybeM handleTimeout . timeout (3 * (10 ^ (6 :: Int))) $ do
   let (traces, evalResult) =
         run
           . runReader _testEvalOptions
@@ -40,7 +41,6 @@ mkNockmaAssertion Test {..} = do
           . runError @(NockEvalError Natural)
           . runReader @(Storage Natural) _testProgramStorage
           $ eval _testProgramSubject _testProgramFormula
-
   case evalResult of
     Left natErr -> assertFailure ("Evaluation error: " <> show natErr)
     Right r -> case _testAssertEvalError of
@@ -50,6 +50,12 @@ mkNockmaAssertion Test {..} = do
       Just checkErrFn -> case r of
         Left evalErr -> checkErrFn evalErr
         Right {} -> assertFailure "expected error"
+  traces `deepseq` (appendFile (toFilePath fullFile) (_testName <> "\n"))
+  where
+    handleTimeout :: IO ()
+    handleTimeout = do
+      appendFile (toFilePath timeoutFile) (_testName <> "\n")
+      assertFailure "timeout"
 
 allTests :: TestTree
 allTests =
