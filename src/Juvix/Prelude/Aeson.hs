@@ -7,6 +7,7 @@ module Juvix.Prelude.Aeson
 where
 
 import Data.Aeson
+import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.Aeson.KeyMap qualified as KeyMap
 import Data.Aeson.TH
 import Data.Aeson.Text
@@ -21,6 +22,9 @@ readJSONFile f = do
 
 jsonEncodeToText :: (ToJSON a) => a -> Text
 jsonEncodeToText = Lazy.toStrict . encodeToLazyText
+
+jsonEncodeToPrettyText :: (ToJSON a) => a -> Text
+jsonEncodeToPrettyText = decodeUtf8Lenient . BS.toStrict . encodePretty
 
 jsonAppendFields :: [(Key, Value)] -> Value -> Value
 jsonAppendFields keyValues = \case

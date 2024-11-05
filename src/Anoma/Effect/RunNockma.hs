@@ -37,13 +37,13 @@ decodeJam64 encoded =
 encodeJam64 :: Nockma.Term Natural -> Text
 encodeJam64 = decodeUtf8 . Base64.encode . jamToByteString
 
-fromJSON :: (Members '[Error SimpleError] r) => (Aeson.FromJSON a) => Value -> Sem r a
+fromJSON :: (Members '[Error SimpleError, Logger] r) => (Aeson.FromJSON a) => Value -> Sem r a
 fromJSON v = case Aeson.fromJSON v of
   Aeson.Success r -> return r
   Aeson.Error err -> throw (SimpleError (mkAnsiText err))
 
 runNockma ::
-  (Members '[Anoma, Error SimpleError] r) =>
+  (Members '[Anoma, Error SimpleError, Logger] r) =>
   Nockma.Term Natural ->
   [Nockma.Term Natural] ->
   Sem r (Nockma.Term Natural)
@@ -56,8 +56,9 @@ runNockma prog inputs = do
             _runNockPrivateInputs = args,
             _runNockPublicInputs = []
           }
-  let json = Aeson.toJSON msg
-  res :: Response <- anomaRpc runNockGrpcUrl json >>= fromJSON
+  logVerbose (mkAnsiText ("Request Payload:\n" <> Aeson.jsonEncodeToPrettyText msg))
+  res :: Response <- anomaRpc runNockGrpcUrl (Aeson.toJSON msg) >>= fromJSON
+  logVerbose (mkAnsiText ("Response Payload:\n" <> Aeson.jsonEncodeToPrettyText res))
   case res of
     ResponseProof x -> decodeJam64 x
     ResponseError err -> throw (SimpleError (mkAnsiText err))
