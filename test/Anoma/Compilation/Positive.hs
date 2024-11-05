@@ -257,23 +257,9 @@ allTests =
 
     haskellNockmaTests :: TestTree
     haskellNockmaTests =
-      -- withResource initNode freeNode $ \_ ->
       testGroup
         "Anoma positive tests (Haskell evaluator)"
         (map fromAnomaTest anomaTests)
-    -- where
-    -- initNode :: IO AnomaProcesses
-    -- initNode = runM
-    --   . runSimpleErrorHUnit
-    --   . ignoreLogger
-    --   . runAnoma testAnomaPath
-    --   $ do
-    --     noHalt
-
-    -- freeNode :: AnomaProcesses -> IO ()
-    -- freeNode AnomaProcesses {..} = runM . runProcess $ do
-    --   terminateProcess _anomaClientHandle
-    --   terminateProcess _anomaNodeHandle
 
     natArg :: Natural -> Term Natural
     natArg = toNock

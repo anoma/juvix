@@ -12,7 +12,6 @@ module Anoma.Effect.Base
     anomaClientHandle,
     anomaPath,
     runAnoma,
-    -- runAnomaTest,
     module Anoma.Rpc.Base,
     module Juvix.Compiler.Nockma.Translation.FromTree,
   )
