@@ -174,7 +174,7 @@ classify AnomaTest {..} = case _anomaTestNum of
   21 -> ClassTrace
   22 -> ClassTrace
   23 -> ClassTrace
-  24 -> ClassNodeError
+  24 -> ClassWorking
   25 -> ClassTrace
   26 -> ClassWorking
   27 -> ClassMissing
