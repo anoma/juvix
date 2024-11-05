@@ -6,12 +6,14 @@ where
 
 import Anoma.Effect.Base
 import Anoma.Rpc.RunNock
-import Juvix.Compiler.Nockma.Encoding (decodeCue64, encodeJam64)
+import Data.ByteString.Base64 qualified as Base64
+import Juvix.Compiler.Nockma.Encoding
+import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Language qualified as Nockma
+import Juvix.Data.CodeAnn
 import Juvix.Prelude
 import Juvix.Prelude.Aeson (Value)
 import Juvix.Prelude.Aeson qualified as Aeson
-import Juvix.Prelude.Pretty
 
 data RunNockmaInput = RunNockmaInput
   { _runNockmaProgram :: AnomaResult,
@@ -29,9 +31,6 @@ decodeJam64 encoded =
         Left (err :: NockNaturalNaturalError) -> throw (simpleErrorCodeAnn err)
         Right (Left (err :: DecodingError)) -> throw (simpleErrorCodeAnn err)
         Right (Right r) -> return r
-
-encodeJam64 :: Nockma.Term Natural -> Text
-encodeJam64 = decodeUtf8 . Base64.encode . jamToByteString
 
 fromJSON :: (Members '[Error SimpleError, Logger] r) => (Aeson.FromJSON a) => Value -> Sem r a
 fromJSON v = case Aeson.fromJSON v of
