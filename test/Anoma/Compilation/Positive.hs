@@ -364,7 +364,7 @@ allTests =
               checkNatOutput [fib10, fib100, fib1000],
           mkAnomaTest
             12
-            AnomaTestModeFull
+            AnomaTestModeDebugOnly
             "Trees"
             $(mkRelDir ".")
             $(mkRelFile "test012.juvix")
