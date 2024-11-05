@@ -104,10 +104,10 @@ compileMain enableDebug relRoot mainFile rootCopyDir = do
   entryPoint <-
     set entryPointTarget (Just TargetAnoma) . set entryPointDebug enableDebug
       <$> testDefaultEntryPointIO testRootDir (testRootDir <//> mainFile)
-  (over anomaClosure removeInfoWhenDebug) . (^. pipelineResult) . snd <$> testRunIO entryPoint upToAnoma
+  (over anomaClosure removeInfoUnlessDebug) . (^. pipelineResult) . snd <$> testRunIO entryPoint upToAnoma
   where
-    removeInfoWhenDebug :: Term Natural -> Term Natural
-    removeInfoWhenDebug
+    removeInfoUnlessDebug :: Term Natural -> Term Natural
+    removeInfoUnlessDebug
       | enableDebug = id
       | otherwise = removeInfoRec
 
