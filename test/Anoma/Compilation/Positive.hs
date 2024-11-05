@@ -251,7 +251,7 @@ allTests =
   testGroup
     "Anoma positive tests"
     [ haskellNockmaTests,
-    anomaNodeTests
+      anomaNodeTests
     ]
   where
     anomaNodeTests :: TestTree
