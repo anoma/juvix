@@ -76,14 +76,8 @@ convertTest p = do
     go :: Base.Path Rel File -> Base.Path Rel File
     go = replaceExtensions' [".nockma", ".out"]
 
-    testNum :: String
-    testNum = take 3 (drop 4 (p ^. Tree.name))
-    to3DigitString :: Int -> String
-    to3DigitString n
-      | n < 10 = "00" ++ show n
-      | n < 100 = "0" ++ show n
-      | n < 1000 = show n
-      | otherwise = impossible
+    testNum :: Text
+    testNum = pack (take 3 (drop 4 (p ^. Tree.name)))
 
 allTests :: TestTree
 allTests =

@@ -120,3 +120,10 @@ runErrorIO' ::
   Sem (Error a ': r) b ->
   Sem r b
 runErrorIO' = runReader defaultGenericOptions . runErrorIO . raiseUnder
+
+runSimpleErrorIO :: (Members '[EmbedIO] r) => Sem (Error SimpleError ': r) a -> Sem r a
+runSimpleErrorIO m = do
+  res <- runError m
+  case res of
+    Left (SimpleError msg) -> hRenderIO True stderr msg >> exitFailure
+    Right r -> return r

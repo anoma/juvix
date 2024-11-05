@@ -146,6 +146,7 @@ import Data.Int
 import Data.IntMap.Strict (IntMap)
 import Data.IntMap.Strict qualified as IntMap
 import Data.IntSet (IntSet)
+import Data.IntSet qualified as IntSet
 import Data.Kind qualified as GHC
 import Data.List.Extra hiding (allSame, foldr1, groupSortOn, head, last, mconcatMap, replicate, unzip)
 import Data.List.Extra qualified as List
@@ -728,6 +729,9 @@ uncurryF g input_ = uncurry g <$> input_
 
 intMapToList :: IntMap a -> [Indexed a]
 intMapToList = map (uncurry Indexed) . IntMap.toList
+
+intSet :: (Foldable f) => f (Int) -> IntSet
+intSet = IntSet.fromList . toList
 
 intMap :: (Foldable f) => f (Int, a) -> IntMap a
 intMap = IntMap.fromList . toList

@@ -119,6 +119,49 @@ jobs:
           path: main
           submodules: true
 
+      - name: Add ~/.local/bin to PATH
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Set up Elixir
+        id: beam
+        uses: erlef/setup-beam@v1.18.2
+        with:
+          elixir-version: "1.17.3"
+          otp-version: "27.1"
+
+      - name: Install protoc
+        run: |
+          sudo apt install -y protobuf-compiler
+          protoc --version
+
+      - name: Cache anoma
+        id: cache-anoma
+        uses: actions/cache@v3
+        with:
+          path: |
+            ${{ env.HOME }}/anoma
+          key: "${{ runner.os }}-anoma"
+
+      - name: Build anoma
+        if: steps.cache-anoma.outputs.cache-hit != 'true'
+        run: |
+          cd $HOME
+          git clone https://github.com/anoma/anoma.git
+          cd anoma
+          git checkout 98e3660b91cd55f1d9424dcff9420425ae98f5f8
+          mix local.hex --force
+          mix escript.install hex protobuf --force
+          echo "$HOME/.mix/escripts" >> $GITHUB_PATH
+          mix deps.get
+          mix compile
+          mix do --app anoma_client escript.build
+
+      - name: Install grpcurl
+        run: |
+          curl -sSL "https://github.com/fullstorydev/grpcurl/releases/download/v1.9.1/grpcurl_1.9.1_linux_x86_64.tar.gz" | tar -xz -C ~/.local/bin --no-wildcards grpcurl
+
       - name: Cache LLVM and Clang
         id: cache-llvm
         uses: actions/cache@v3
@@ -146,10 +189,9 @@ jobs:
         run: |
           echo "WASI_SYSROOT_PATH=$GITHUB_WORKSPACE/wasi-sysroot" >> $GITHUB_ENV
 
-      - name: Add ~/.local/bin to PATH
+      - name: Set ANOMA_PATH
         run: |
-          mkdir -p "$HOME/.local/bin"
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          echo "ANOMA_PATH=$HOME/anoma" >> $GITHUB_ENV
 
       - run: echo "HOME=$HOME" >> $GITHUB_ENV
         shell: bash

@@ -885,9 +885,8 @@ callAnomaLib fun args = do
   let ref = AnomaLibFunction fun
       fPath = anomaLibPath ref
       getFunCode = opAddress "callStdlibFunCode" stdpath >># fPath
-  argsPath <- stackPath ArgsTuple
   let adjustArgs = case nonEmpty args of
-        Just args' -> opReplace "callStdlib-args" argsPath ((opAddress "stdlibR" [R]) >># foldTerms args') (opAddress "stdlibL" [L])
+        Just args' -> opReplace "callStdlib-args" [R, L] ((opAddress "stdlibR" [R]) >># foldTerms args') (opAddress "stdlibL" [L])
         Nothing -> opAddress "adjustArgsNothing" [L]
       callFn = opCall "callStdlib" (closurePath FunCode) adjustArgs
       meta =
