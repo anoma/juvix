@@ -20,7 +20,7 @@ runCommand opts = do
     t@(TermCell {}) -> case opts ^. nockmaRunAnomaDir of
       Just path -> do
         anomaDir <- AnomaPath <$> fromAppPathDir path
-        runInAnoma anomaDir t (unfoldTuple parsedArgs)
+        runInAnoma anomaDir t (fromMaybe [] (unfoldList <$> parsedArgs))
       Nothing -> do
         let formula = anomaCallTuple parsedArgs
         (counts, res) <-
