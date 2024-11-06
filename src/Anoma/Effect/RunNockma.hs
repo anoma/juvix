@@ -14,11 +14,17 @@ import Juvix.Prelude.Aeson (ToJSON, Value)
 import Juvix.Prelude.Aeson qualified as Aeson
 
 data RunNockmaInput = RunNockmaInput
-  { _runNockmaProgram :: AnomaResult,
-    _runNockmaInput :: [Nockma.Term Natural]
+  { _runNockmaProgram :: Nockma.Term Natural,
+    _runNockmaArgs :: [Nockma.Term Natural]
+  }
+
+data RunNockmaResult = RunNockmaResult
+  { _runNockmaResult :: Nockma.Term Natural,
+    _runNockmaTraces :: [Nockma.Term Natural]
   }
 
 makeLenses ''RunNockmaInput
+makeLenses ''RunNockmaResult
 
 fromJSON :: (Members '[Error SimpleError, Logger] r) => (Aeson.FromJSON a) => Value -> Sem r a
 fromJSON v = case Aeson.fromJSON v of
@@ -28,12 +34,11 @@ fromJSON v = case Aeson.fromJSON v of
 runNockma ::
   forall r.
   (Members '[Anoma, Error SimpleError, Logger] r) =>
-  Nockma.Term Natural ->
-  [Nockma.Term Natural] ->
-  Sem r (Nockma.Term Natural)
-runNockma prog inputs = do
-  let prog' = encodeJam64 prog
-      args = map (NockInputJammed . encodeJam64) inputs
+  RunNockmaInput ->
+  Sem r RunNockmaResult
+runNockma i = do
+  let prog' = encodeJam64 (i ^. runNockmaProgram)
+      args = map (NockInputJammed . encodeJam64) (i ^. runNockmaArgs)
       msg =
         RunNock
           { _runNockJammedProgram = prog',
@@ -44,8 +49,15 @@ runNockma prog inputs = do
       logValue title val = logVerbose (mkAnsiText (annotate AnnImportant (pretty title <> ":\n") <> pretty (Aeson.jsonEncodeToPrettyText val)))
   logValue "Request Payload" msg
   resVal :: Value <- anomaRpc runNockGrpcUrl (Aeson.toJSON msg) >>= fromJSON
-  logValue "Request Payload" resVal
+  logValue "Response Payload" resVal
   res :: Response <- fromJSON resVal
   case res of
-    ResponseProof x -> decodeCue64 x
+    ResponseSuccess s -> do
+      result <- decodeCue64 (s ^. successResult)
+      traces <- mapM decodeCue64 (s ^. successTraces)
+      return
+        RunNockmaResult
+          { _runNockmaResult = result,
+            _runNockmaTraces = traces
+          }
     ResponseError err -> throw (SimpleError (mkAnsiText err))

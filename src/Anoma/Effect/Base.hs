@@ -155,12 +155,6 @@ grpcCliProcess method = do
         std_out = CreatePipe
       }
 
--- | Assumes the node and client are already running
--- runAnomaTest :: forall r a. (Members '[Reader ListenPort, Logger, EmbedIO, Error SimpleError] r) => AnomaPath -> Sem (Anoma ': r) a -> Sem r a
--- runAnomaTest anomapath body = runReader anomapath . runProcess $
---   (`interpret` inject body) $ \case
---     GetAnomaProcesses -> error "unsupported"
---     AnomaRpc method i -> anomaRpc' method i
 runAnoma :: forall r a. (Members '[Logger, EmbedIO, Error SimpleError] r) => AnomaPath -> Sem (Anoma ': r) a -> Sem r a
 runAnoma anomapath body = runReader anomapath . runProcess $
   withSpawnAnomaNode $ \grpcport _nodeOut nodeH ->

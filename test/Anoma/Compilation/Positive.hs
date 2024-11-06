@@ -87,10 +87,15 @@ mkAnomaNodeTest a@AnomaTest {..} =
         . runSimpleErrorHUnit
         . runAnoma testAnomaPath
         $ do
-          out <- runNockma program args'
+          let rinput =
+                RunNockmaInput
+                  { _runNockmaProgram = program,
+                    _runNockmaArgs = args'
+                  }
+          out <- runNockma rinput
           runM
-            . runReader out
-            . runReader []
+            . runReader (out ^. runNockmaResult)
+            . runReader (out ^. runNockmaTraces)
             $ _anomaCheck
 
 withRootCopy :: (Prelude.Path Abs Dir -> IO a) -> IO a

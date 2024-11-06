@@ -42,8 +42,23 @@ $( deriveJSON
      ''RunNock
  )
 
+data NockSuccess = NockSuccess
+  { _successResult :: Text,
+    _successTraces :: [Text]
+  }
+
+$( deriveJSON
+     defaultOptions
+       { fieldLabelModifier = \case
+           "_successResult" -> "result"
+           "_successTraces" -> "output"
+           _ -> impossibleError "All fields must be covered"
+       }
+     ''NockSuccess
+ )
+
 data Response
-  = ResponseProof Text
+  = ResponseSuccess NockSuccess
   | ResponseError Text
 
 $( deriveJSON
@@ -51,7 +66,7 @@ $( deriveJSON
        { unwrapUnaryRecords = True,
          sumEncoding = ObjectWithSingleField,
          constructorTagModifier = \case
-           "ResponseProof" -> "proof"
+           "ResponseSuccess" -> "success"
            "ResponseError" -> "error"
            _ -> impossibleError "All constructors must be covered"
        }
@@ -59,3 +74,4 @@ $( deriveJSON
  )
 
 makeLenses ''Response
+makeLenses ''NockSuccess
