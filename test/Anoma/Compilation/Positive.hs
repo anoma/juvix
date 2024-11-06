@@ -983,7 +983,7 @@ allTests =
               ],
           mkAnomaTest
             82
-            AnomaTestModeDebugOnly
+            AnomaTestModeFull
             "ByteArray"
             $(mkRelDir ".")
             $(mkRelFile "test082.juvix")
@@ -1002,7 +1002,7 @@ allTests =
               ],
           mkAnomaTest
             83
-            AnomaTestModeDebugOnly
+            AnomaTestModeFull
             "Anoma ByteArray"
             $(mkRelDir ".")
             $(mkRelFile "test083.juvix")
@@ -1045,7 +1045,7 @@ allTests =
               ],
           mkAnomaTest
             86
-            AnomaTestModeFull
+            AnomaTestModeDebugOnly
             "Anoma Random"
             $(mkRelDir ".")
             $(mkRelFile "test086.juvix")
