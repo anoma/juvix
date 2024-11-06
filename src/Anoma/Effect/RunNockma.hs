@@ -10,7 +10,7 @@ import Juvix.Compiler.Nockma.Encoding
 import Juvix.Compiler.Nockma.Language qualified as Nockma
 import Juvix.Data.CodeAnn
 import Juvix.Prelude
-import Juvix.Prelude.Aeson (Value)
+import Juvix.Prelude.Aeson (ToJSON, Value)
 import Juvix.Prelude.Aeson qualified as Aeson
 
 data RunNockmaInput = RunNockmaInput
@@ -26,6 +26,7 @@ fromJSON v = case Aeson.fromJSON v of
   Aeson.Error err -> throw (SimpleError (mkAnsiText err))
 
 runNockma ::
+  forall r.
   (Members '[Anoma, Error SimpleError, Logger] r) =>
   Nockma.Term Natural ->
   [Nockma.Term Natural] ->
@@ -39,9 +40,12 @@ runNockma prog inputs = do
             _runNockPrivateInputs = args,
             _runNockPublicInputs = []
           }
-  logVerbose (mkAnsiText ("Request Payload:\n" <> Aeson.jsonEncodeToPrettyText msg))
-  res :: Response <- anomaRpc runNockGrpcUrl (Aeson.toJSON msg) >>= fromJSON
-  logVerbose (mkAnsiText ("Response Payload:\n" <> Aeson.jsonEncodeToPrettyText res))
+  let logValue :: (ToJSON val) => Text -> val -> Sem r ()
+      logValue title val = logVerbose (mkAnsiText (annotate AnnImportant (pretty title <> ":\n") <> pretty (Aeson.jsonEncodeToPrettyText val)))
+  logValue "Request Payload" msg
+  resVal :: Value <- anomaRpc runNockGrpcUrl (Aeson.toJSON msg) >>= fromJSON
+  logValue "Request Payload" resVal
+  res :: Response <- fromJSON resVal
   case res of
     ResponseProof x -> decodeCue64 x
     ResponseError err -> throw (SimpleError (mkAnsiText err))
