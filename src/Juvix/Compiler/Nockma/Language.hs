@@ -569,7 +569,7 @@ unfoldList = ensureNockmList . nonEmpty . unfoldTuple
       Nothing -> err
       Just l -> case l ^. _unsnoc1 of
         (ini, lst)
-          | lst == nockNilTagged "unfoldList" -> ini
+          | nockmaEq lst (nockNilTagged "unfoldList") -> ini
           | otherwise -> err
       where
         err :: x
