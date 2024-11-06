@@ -281,7 +281,7 @@ evalProfile inistack initerm =
                 TermAtom a -> goRandomInitGen a
                 _ -> error "StdlibRandomInitGen must be called with an atom"
               StdlibRandomNextBytes -> case args' of
-                TermCell (Cell (TermAtom n) g) -> goRandomNextBytes n g
+                TermCell (Cell g (TermAtom n)) -> goRandomNextBytes n g
                 _ -> error "StdlibRandomNextBytes must be called with a cell containing an atom and a term"
               StdlibRandomSplit -> goRandomSplit args'
           where
