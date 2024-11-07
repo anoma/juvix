@@ -1,7 +1,6 @@
 module Juvix.Compiler.Core.Transformation.Optimize.Phase.Exec where
 
 import Juvix.Compiler.Core.Options
-import Juvix.Compiler.Core.Scoper
 import Juvix.Compiler.Core.Transformation.Base
 import Juvix.Compiler.Core.Transformation.LambdaLetRecLifting
 import Juvix.Compiler.Core.Transformation.Optimize.LetFolding
@@ -13,12 +12,7 @@ optimize tab = do
   opts <- ask
   withOptimizationLevel' tab 1 $
     return
-      . scopeCheckDebug
       . topEtaExpand
-      . scopeCheckDebug
-      -- . letFolding
-      . scopeCheckDebug
-      -- . lambdaLetRecLifting
-      . scopeCheckDebug
+      . letFolding
+      . lambdaLetRecLifting
       . Main.optimize' opts
-      . scopeCheckDebug

@@ -66,10 +66,10 @@ applyTransformations ts tbl = foldM (flip appTransLog) tbl ts
   where
     appTransLog :: TransformationId -> Module -> Sem r Module
     appTransLog t m = do
-      m' <- scopeCheckDebugM m
+      m' <- force <$> scopeCheckDebugM m
       traceM ("Before ApplyTrans " <> show t)
       m'' <- appTrans t m'
-      res <- scopeCheckDebugM m''
+      res <- force <$> scopeCheckDebugM m''
       traceM ("After ApplyTrans " <> show t)
       return res
 

@@ -12,7 +12,7 @@ scopeCheckDebugM :: (Members '[Error JuvixError] r) => Module -> Sem r Module
 scopeCheckDebugM m = maybe (return m) (throw @JuvixError . error) (scopeCheck (m ^. moduleInfoTable))
 
 scopeCheckDebug' :: Text -> Module -> Module
-scopeCheckDebug' tag m = maybe m (error . ((tag <> ": ") <>)) (scopeCheck (m ^. moduleInfoTable))
+scopeCheckDebug' tag m = force $ maybe m (error . ((tag <> ": ") <>)) (scopeCheck (m ^. moduleInfoTable))
 
 scopeCheckDebug :: Module -> Module
 scopeCheckDebug = scopeCheckDebug' ""

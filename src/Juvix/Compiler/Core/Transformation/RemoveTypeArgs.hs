@@ -175,9 +175,9 @@ convertAxiom md = over axiomType (convertNode md)
 --  - https://github.com/anoma/juvix/pull/1954
 removeTypeArgs :: Module -> Module
 removeTypeArgs md =
-  filterOutTypeSynonyms $
-    mapAxioms (convertAxiom md) $
-      mapInductives (convertInductive md) $
-        mapConstructors (convertConstructor md) $
-          mapIdents (convertIdent md) $
-            mapT (const (convertNode md)) md
+  filterOutTypeSynonyms
+    . mapAxioms (convertAxiom md)
+    . mapInductives (convertInductive md)
+    . mapConstructors (convertConstructor md)
+    . mapIdents (convertIdent md)
+    $ mapT (const (convertNode md)) md
