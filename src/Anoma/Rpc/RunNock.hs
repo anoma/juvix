@@ -42,6 +42,37 @@ $( deriveJSON
      ''RunNock
  )
 
+data NockError = NockError
+  { _errorError :: Text,
+    _errorTraces :: [Text]
+  }
+
+$( deriveToJSON
+     defaultOptions
+       { fieldLabelModifier = \case
+           "_errorError" -> "error"
+           "_errorTraces" -> "output"
+           _ -> impossibleError "All fields must be covered"
+       }
+     ''NockError
+ )
+
+instance FromJSON NockError where
+  parseJSON =
+    $( mkParseJSON
+         defaultOptions
+           { fieldLabelModifier = \case
+               "_errorError" -> "error"
+               "_errorTraces" -> "output"
+               _ -> impossibleError "All fields must be covered"
+           }
+         ''NockError
+     )
+      . addDefaultValues' defaultValues
+    where
+      defaultValues :: HashMap Key Value
+      defaultValues = hashMap [("output", Aeson.Array mempty)]
+
 data NockSuccess = NockSuccess
   { _successResult :: Text,
     _successTraces :: [Text]
@@ -75,7 +106,7 @@ instance FromJSON NockSuccess where
 
 data Response
   = ResponseSuccess NockSuccess
-  | ResponseError Text
+  | ResponseError NockError
 
 $( deriveJSON
      defaultOptions
@@ -91,3 +122,4 @@ $( deriveJSON
 
 makeLenses ''Response
 makeLenses ''NockSuccess
+makeLenses ''NockError

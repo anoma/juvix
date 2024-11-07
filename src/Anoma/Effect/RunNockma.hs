@@ -60,4 +60,4 @@ runNockma i = do
           { _runNockmaResult = result,
             _runNockmaTraces = traces
           }
-    ResponseError err -> throw (SimpleError (mkAnsiText err))
+    ResponseError err -> throw (SimpleError (mkAnsiText (err ^. errorError)))
