@@ -722,8 +722,8 @@ compile = \case
           next <-
             callStdlib
               StdlibRandomNextBytes
-              [ opAddress "args-n" (argRefAddress ++ [L]),
-                opAddress "args-g" (argRefAddress ++ [R])
+              [ opAddress "args-g" (argRefAddress ++ [R]),
+                opAddress "args-n" (argRefAddress ++ [L])
               ]
           withTemp next $ \nextRef -> do
             nextRefPath <- tempRefPath nextRef
