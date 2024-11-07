@@ -12,7 +12,7 @@ runLogIO ::
   Sem (Log ': r) a ->
   Sem r a
 runLogIO sem = do
-  liftIO (hSetBuffering stdout LineBuffering)
+  liftIO (hSetBuffering stderr LineBuffering)
   interpret
     ( \case
         Log txt -> putStrLn txt
