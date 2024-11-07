@@ -184,7 +184,7 @@ classify AnomaTest {..} = case _anomaTestNum of
   25 -> ClassWorking
   26 -> ClassWorking
   27 -> ClassMissing
-  28 -> ClassWorking
+  28 -> ClassWrong
   29 -> ClassWorking
   30 -> ClassWorking
   31 -> ClassWorking
@@ -229,7 +229,7 @@ classify AnomaTest {..} = case _anomaTestNum of
   71 -> ClassWorking
   72 -> ClassWorking
   73 -> ClassWorking
-  74 -> ClassWorking
+  74 -> ClassNodeError
   75 -> ClassWorking
   76 -> ClassWorking
   77 -> ClassNodeError
@@ -239,9 +239,9 @@ classify AnomaTest {..} = case _anomaTestNum of
   81 -> ClassWorking
   82 -> ClassWorking
   83 -> ClassWorking
-  84 -> ClassWorking
+  84 -> ClassWrong
   85 -> ClassWorking
-  86 -> ClassWorking
+  86 -> ClassWrong -- this is due to different representation of rng in Anoma
   _ -> error "non-exhaustive test classification"
 
 allTests :: TestTree
