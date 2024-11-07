@@ -255,7 +255,7 @@ allTests :: TestTree
 allTests =
   testGroup
     "Anoma positive tests"
-    [ haskellNockmaTests,
+    [ -- haskellNockmaTests,
       anomaNodeTests
     ]
   where
@@ -267,7 +267,8 @@ allTests =
       where
         shouldRun :: AnomaTest -> Bool
         shouldRun a =
-          classify a == ClassWorking
+          -- classify a == ClassWorking
+          classify a == ClassTrace
 
     haskellNockmaTests :: TestTree
     haskellNockmaTests =

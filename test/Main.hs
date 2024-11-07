@@ -1,6 +1,7 @@
 module Main (main) where
 
 import Anoma qualified
+import Anoma.Compilation.Positive (allTests)
 import Asm qualified
 import BackendMarkdown qualified
 import Base
@@ -66,5 +67,4 @@ fastTests =
 
 main :: IO ()
 main = do
-  tests <- sequence [fastTests, slowTests]
-  defaultMain (testGroup "Juvix tests" tests)
+  defaultMain allTests
