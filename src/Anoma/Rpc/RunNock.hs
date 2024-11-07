@@ -2,7 +2,7 @@ module Anoma.Rpc.RunNock where
 
 import Anoma.Rpc.Base
 import Juvix.Prelude
-import Juvix.Prelude.Aeson
+import Juvix.Prelude.Aeson as Aeson
 
 runNockGrpcUrl :: GrpcMethodUrl
 runNockGrpcUrl =
@@ -47,7 +47,7 @@ data NockSuccess = NockSuccess
     _successTraces :: [Text]
   }
 
-$( deriveJSON
+$( deriveToJSON
      defaultOptions
        { fieldLabelModifier = \case
            "_successResult" -> "result"
@@ -56,6 +56,22 @@ $( deriveJSON
        }
      ''NockSuccess
  )
+
+instance FromJSON NockSuccess where
+  parseJSON =
+    $( mkParseJSON
+         defaultOptions
+           { fieldLabelModifier = \case
+               "_successResult" -> "result"
+               "_successTraces" -> "output"
+               _ -> impossibleError "All fields must be covered"
+           }
+         ''NockSuccess
+     )
+      . addDefaultValues' defaultValues
+    where
+      defaultValues :: HashMap Key Value
+      defaultValues = hashMap [("output", Aeson.Array mempty)]
 
 data Response
   = ResponseSuccess NockSuccess
