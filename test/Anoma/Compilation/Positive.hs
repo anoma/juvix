@@ -104,27 +104,35 @@ compileMain enableDebug relRoot mainFile rootCopyDir = do
   entryPoint <-
     set entryPointTarget (Just TargetAnoma) . set entryPointDebug enableDebug
       <$> testDefaultEntryPointIO testRootDir (testRootDir <//> mainFile)
-  (^. pipelineResult) . snd <$> testRunIO entryPoint upToAnoma
+  (over anomaClosure removeInfoUnlessDebug) . (^. pipelineResult) . snd <$> testRunIO entryPoint upToAnoma
+  where
+    removeInfoUnlessDebug :: Term Natural -> Term Natural
+    removeInfoUnlessDebug
+      | enableDebug = id
+      | otherwise = removeInfoRec
 
-mkAnomaTestNoDebug ::
-  Int ->
-  Text ->
-  Prelude.Path Rel Dir ->
-  Prelude.Path Rel File ->
-  [Term Natural] ->
-  Check () ->
-  AnomaTest
-mkAnomaTestNoDebug = mkAnomaTest' False emptyStorage
+data AnomaTestMode
+  = -- | We only run the tests in debug mode, where calls to stdlib are intercepted
+    AnomaTestModeDebugOnly
+  | -- | We run the tests in debug mode and in non-debug mode, where no stdlib
+    -- calls are intercepted. Only tests that run fast can use this mode
+    AnomaTestModeFull
 
 mkAnomaTest ::
   Int ->
+  AnomaTestMode ->
   Text ->
   Prelude.Path Rel Dir ->
   Prelude.Path Rel File ->
   [Term Natural] ->
   Check () ->
-  AnomaTest
-mkAnomaTest = mkAnomaTest' True emptyStorage
+  [AnomaTest]
+mkAnomaTest testNum testMode testName' dirPath filePath args check =
+  let debugTest = mkAnomaTest' True emptyStorage testNum (testName' <> " - debug") dirPath filePath args check
+      nonDebugTest = mkAnomaTest' False emptyStorage testNum testName' dirPath filePath args check
+   in case testMode of
+        AnomaTestModeDebugOnly -> [debugTest]
+        AnomaTestModeFull -> [debugTest, nonDebugTest]
 
 checkNatOutput :: [Natural] -> Check ()
 checkNatOutput = checkOutput . fmap toNock
@@ -253,7 +261,8 @@ allTests =
         (map mkAnomaNodeTest (filter shouldRun anomaTests))
       where
         shouldRun :: AnomaTest -> Bool
-        shouldRun a = classify a == ClassWorking
+        shouldRun a =
+          classify a == ClassWorking
 
     haskellNockmaTests :: TestTree
     haskellNockmaTests =
@@ -264,10 +273,15 @@ allTests =
     natArg :: Natural -> Term Natural
     natArg = toNock
 
+    -- added this to minimize git diff
     anomaTests :: [AnomaTest]
-    anomaTests =
+    anomaTests = concat anomaTests'
+
+    anomaTests' :: [[AnomaTest]]
+    anomaTests' =
       [ mkAnomaTest
           1
+          AnomaTestModeFull
           "Arithmetic operators"
           $(mkRelDir ".")
           $(mkRelFile "test001.juvix")
@@ -275,6 +289,7 @@ allTests =
           (checkNatOutput [11]),
         mkAnomaTest
           2
+          AnomaTestModeFull
           "Arithmetic operators inside lambdas"
           $(mkRelDir ".")
           $(mkRelFile "test002.juvix")
@@ -282,20 +297,15 @@ allTests =
           (checkNatOutput [11]),
         mkAnomaTest
           3
+          AnomaTestModeFull
           "Integer arithmetic"
-          $(mkRelDir ".")
-          $(mkRelFile "test003.juvix")
-          []
-          (checkNatOutput [1, 4, 2, 4, 0]),
-        mkAnomaTestNoDebug
-          3
-          "Integer arithmetic - no debug"
           $(mkRelDir ".")
           $(mkRelFile "test003.juvix")
           []
           (checkNatOutput [1, 4, 2, 4, 0]),
         mkAnomaTest
           5
+          AnomaTestModeFull
           "Higher-order functions"
           $(mkRelDir ".")
           $(mkRelFile "test005.juvix")
@@ -303,6 +313,7 @@ allTests =
           (checkNatOutput [6]),
         mkAnomaTest
           6
+          AnomaTestModeFull
           "If-then-else and lazy boolean operators"
           $(mkRelDir ".")
           $(mkRelFile "test006.juvix")
@@ -310,6 +321,7 @@ allTests =
           (checkOutput [[nock| 2 |], [nock| true |], [nock| false |]]),
         mkAnomaTest
           7
+          AnomaTestModeFull
           "Pattern matching and lambda-case"
           $(mkRelDir ".")
           $(mkRelFile "test007.juvix")
@@ -319,6 +331,7 @@ allTests =
             checkOutput [[nock| false |], [nock| true |], [nock| 0 |], [nock| [1 nil] |], [nock| 1 |], l, l],
         mkAnomaTest
           8
+          AnomaTestModeDebugOnly
           "Recursion"
           $(mkRelDir ".")
           $(mkRelFile "test008.juvix")
@@ -326,6 +339,7 @@ allTests =
           (eqNock [nock| 500500 |]),
         mkAnomaTest
           9
+          AnomaTestModeDebugOnly
           "Tail recursion"
           $(mkRelDir ".")
           $(mkRelFile "test009.juvix")
@@ -333,6 +347,7 @@ allTests =
           $ checkNatOutput [500500, 120, 3628800, 479001600],
         mkAnomaTest
           10
+          AnomaTestModeFull
           "Let"
           $(mkRelDir ".")
           $(mkRelFile "test010.juvix")
@@ -340,6 +355,7 @@ allTests =
           (checkNatOutput [32]),
         mkAnomaTest
           11
+          AnomaTestModeDebugOnly
           "Tail recursion: Fibonacci numbers in linear time"
           $(mkRelDir ".")
           $(mkRelFile "test011.juvix")
@@ -351,6 +367,7 @@ allTests =
             checkNatOutput [fib10, fib100, fib1000],
         mkAnomaTest
           12
+          AnomaTestModeDebugOnly
           "Trees"
           $(mkRelDir ".")
           $(mkRelFile "test012.juvix")
@@ -364,6 +381,7 @@ allTests =
             ],
         mkAnomaTest
           13
+          AnomaTestModeFull
           "Functions returning functions with variable capture"
           $(mkRelDir ".")
           $(mkRelFile "test013.juvix")
@@ -371,6 +389,7 @@ allTests =
           $ checkNatOutput [1, 0, 2, 5],
         mkAnomaTest
           14
+          AnomaTestModeFull
           "Arithmetic"
           $(mkRelDir ".")
           $(mkRelFile "test014.juvix")
@@ -378,6 +397,7 @@ allTests =
           $ checkNatOutput [7, 17, 37, 31],
         mkAnomaTest
           15
+          AnomaTestModeFull
           "Local functions with free variables"
           $(mkRelDir ".")
           $(mkRelFile "test015.juvix")
@@ -385,6 +405,7 @@ allTests =
           $ checkNatOutput [600, 25, 30, 45, 55, 16],
         mkAnomaTest
           16
+          AnomaTestModeFull
           "Recursion through higher-order functions"
           $(mkRelDir ".")
           $(mkRelFile "test016.juvix")
@@ -392,6 +413,7 @@ allTests =
           $ checkNatOutput [55],
         mkAnomaTest
           17
+          AnomaTestModeDebugOnly
           "Tail recursion through higher-order functions"
           $(mkRelDir ".")
           $(mkRelFile "test017.juvix")
@@ -399,6 +421,7 @@ allTests =
           $ checkNatOutput [500500],
         mkAnomaTest
           18
+          AnomaTestModeFull
           "Higher-order functions and recursion"
           $(mkRelDir ".")
           $(mkRelFile "test018.juvix")
@@ -406,6 +429,7 @@ allTests =
           $ checkNatOutput [11],
         mkAnomaTest
           19
+          AnomaTestModeFull
           "Self-application"
           $(mkRelDir ".")
           $(mkRelFile "test019.juvix")
@@ -413,6 +437,7 @@ allTests =
           $ checkNatOutput [7],
         mkAnomaTest
           20
+          AnomaTestModeDebugOnly
           "Recursive functions: McCarthy's 91 function, subtraction by increments"
           $(mkRelDir ".")
           $(mkRelFile "test020.juvix")
@@ -420,6 +445,7 @@ allTests =
           $ checkNatOutput [91, 91, 91, 91, 100, 6, 6, 400, 4000],
         mkAnomaTest
           21
+          AnomaTestModeDebugOnly
           "Fast exponentiation"
           $(mkRelDir ".")
           $(mkRelFile "test021.juvix")
@@ -427,6 +453,7 @@ allTests =
           $ checkNatOutput [8, 2187, 48828125],
         mkAnomaTest
           22
+          AnomaTestModeDebugOnly
           "Lists"
           $(mkRelDir ".")
           $(mkRelFile "test022.juvix")
@@ -441,6 +468,7 @@ allTests =
             ],
         mkAnomaTest
           23
+          AnomaTestModeDebugOnly
           "Mutual recursion"
           $(mkRelDir ".")
           $(mkRelFile "test023.juvix")
@@ -448,6 +476,7 @@ allTests =
           $ checkNatOutput [32, 869, 6385109],
         mkAnomaTest
           24
+          AnomaTestModeDebugOnly
           "Nested binders with variable capture"
           $(mkRelDir ".")
           $(mkRelFile "test024.juvix")
@@ -455,6 +484,7 @@ allTests =
           $ checkNatOutput [6688],
         mkAnomaTest
           25
+          AnomaTestModeDebugOnly
           "Euclid's algorithm"
           $(mkRelDir ".")
           $(mkRelFile "test025.juvix")
@@ -462,6 +492,7 @@ allTests =
           $ checkNatOutput [14, 70, 1, 1, 1],
         mkAnomaTest
           26
+          AnomaTestModeFull
           "Functional queues"
           $(mkRelDir ".")
           $(mkRelFile "test026.juvix")
@@ -470,12 +501,14 @@ allTests =
         -- TODO allow lambda branches of different number of patterns
         -- mkAnomaTest
         --   "Test027: Church numerals"
+        -- AnomaTestModeFull
         --   $(mkRelDir ".")
         --   $(mkRelFile "test027.juvix")
         --   []
         --   $ checkNatOutput [7, 10, 21],
         mkAnomaTest
           28
+          AnomaTestModeDebugOnly
           "Streams without memoization"
           $(mkRelDir ".")
           $(mkRelFile "test028.juvix")
@@ -483,6 +516,7 @@ allTests =
           $ checkNatOutput [31, 233],
         mkAnomaTest
           29
+          AnomaTestModeFull
           "Ackermann function"
           $(mkRelDir ".")
           $(mkRelFile "test029.juvix")
@@ -490,6 +524,7 @@ allTests =
           $ checkNatOutput [8, 9, 15, 17, 29],
         mkAnomaTest
           30
+          AnomaTestModeDebugOnly
           "Ackermann function (higher-order definition)"
           $(mkRelDir ".")
           $(mkRelFile "test030.juvix")
@@ -497,6 +532,7 @@ allTests =
           $ checkNatOutput [10, 21, 2187, 15],
         mkAnomaTest
           31
+          AnomaTestModeFull
           "Nested lists"
           $(mkRelDir ".")
           $(mkRelFile "test031.juvix")
@@ -504,6 +540,7 @@ allTests =
           $ checkOutput [[nock| [4 3 2 1 3 2 1 2 1 1 nil ] |]],
         mkAnomaTest
           32
+          AnomaTestModeDebugOnly
           "Merge sort"
           $(mkRelDir ".")
           $(mkRelFile "test032.juvix")
@@ -513,6 +550,7 @@ allTests =
             checkOutput [l, l, l],
         mkAnomaTest
           33
+          AnomaTestModeFull
           "Eta-expansion of builtins and constructors"
           $(mkRelDir ".")
           $(mkRelFile "test033.juvix")
@@ -526,6 +564,7 @@ allTests =
             ],
         mkAnomaTest
           34
+          AnomaTestModeDebugOnly
           "Recursive let"
           $(mkRelDir ".")
           $(mkRelFile "test034.juvix")
@@ -533,6 +572,7 @@ allTests =
           $ checkNatOutput [500500, 32, 869, 41, 85],
         mkAnomaTest
           35
+          AnomaTestModeDebugOnly
           "Pattern matching"
           $(mkRelDir ".")
           $(mkRelFile "test035.juvix")
@@ -547,6 +587,7 @@ allTests =
             ],
         mkAnomaTest
           36
+          AnomaTestModeFull
           "Eta-expansion"
           $(mkRelDir ".")
           $(mkRelFile "test036.juvix")
@@ -554,6 +595,7 @@ allTests =
           $ checkNatOutput [18],
         mkAnomaTest
           37
+          AnomaTestModeFull
           "Applications with lets and cases in function position"
           $(mkRelDir ".")
           $(mkRelFile "test037.juvix")
@@ -561,6 +603,7 @@ allTests =
           $ checkNatOutput [9],
         mkAnomaTest
           38
+          AnomaTestModeFull
           "Simple case expression"
           $(mkRelDir ".")
           $(mkRelFile "test038.juvix")
@@ -568,6 +611,7 @@ allTests =
           $ checkNatOutput [1],
         mkAnomaTest
           39
+          AnomaTestModeFull
           "Mutually recursive let expression"
           $(mkRelDir ".")
           $(mkRelFile "test039.juvix")
@@ -575,6 +619,7 @@ allTests =
           $ checkOutput [[nock| false |], [nock| true |]],
         mkAnomaTest
           40
+          AnomaTestModeFull
           "Pattern matching nullary constructor"
           $(mkRelDir ".")
           $(mkRelFile "test040.juvix")
@@ -582,6 +627,7 @@ allTests =
           $ checkOutput [[nock| true |]],
         mkAnomaTest
           41
+          AnomaTestModeFull
           "Use a builtin inductive in an inductive constructor"
           $(mkRelDir ".")
           $(mkRelFile "test041.juvix")
@@ -589,6 +635,7 @@ allTests =
           $ checkNatOutput [6],
         mkAnomaTest
           43
+          AnomaTestModeFull
           "Builtin trace"
           $(mkRelDir ".")
           $(mkRelFile "test043.juvix")
@@ -596,6 +643,7 @@ allTests =
           $ checkNatOutput [0, 1],
         mkAnomaTest
           45
+          AnomaTestModeFull
           "Implicit builtin bool"
           $(mkRelDir ".")
           $(mkRelFile "test045.juvix")
@@ -603,6 +651,7 @@ allTests =
           $ checkNatOutput [4],
         mkAnomaTest
           46
+          AnomaTestModeFull
           "Polymorphic type arguments"
           $(mkRelDir ".")
           $(mkRelFile "test046.juvix")
@@ -610,6 +659,7 @@ allTests =
           $ checkNatOutput [7],
         mkAnomaTest
           47
+          AnomaTestModeFull
           "Local Modules"
           $(mkRelDir ".")
           $(mkRelFile "test047.juvix")
@@ -617,6 +667,7 @@ allTests =
           $ checkNatOutput [660],
         mkAnomaTest
           49
+          AnomaTestModeFull
           "Builtin Int"
           $(mkRelDir ".")
           $(mkRelFile "test049.juvix")
@@ -642,6 +693,7 @@ allTests =
             ],
         mkAnomaTest
           50
+          AnomaTestModeFull
           "Pattern matching with integers"
           $(mkRelDir ".")
           $(mkRelFile "test050.juvix")
@@ -649,6 +701,7 @@ allTests =
           $ checkNatOutput [11],
         mkAnomaTest
           52
+          AnomaTestModeFull
           "Simple lambda calculus"
           $(mkRelDir ".")
           $(mkRelFile "test052.juvix")
@@ -656,6 +709,7 @@ allTests =
           $ checkOutput [[nock| [15 nil] |]],
         mkAnomaTest
           53
+          AnomaTestModeFull
           "Inlining"
           $(mkRelDir ".")
           $(mkRelFile "test053.juvix")
@@ -663,6 +717,7 @@ allTests =
           $ checkNatOutput [21],
         mkAnomaTest
           54
+          AnomaTestModeFull
           "Iterators"
           $(mkRelDir ".")
           $(mkRelFile "test054.juvix")
@@ -670,6 +725,7 @@ allTests =
           $ checkNatOutput [189],
         mkAnomaTest
           55
+          AnomaTestModeFull
           "Constructor printing"
           $(mkRelDir ".")
           $(mkRelFile "test055.juvix")
@@ -678,6 +734,7 @@ allTests =
             [[nock| [[[[1 2] 3] [[2 3] 4] nil] [1 2] [2 3] nil] |]],
         mkAnomaTest
           56
+          AnomaTestModeFull
           "Argument specialization"
           $(mkRelDir ".")
           $(mkRelFile "test056.juvix")
@@ -685,6 +742,7 @@ allTests =
           $ checkNatOutput [69],
         mkAnomaTest
           57
+          AnomaTestModeFull
           "Case folding"
           $(mkRelDir ".")
           $(mkRelFile "test057.juvix")
@@ -692,6 +750,7 @@ allTests =
           $ checkNatOutput [8],
         mkAnomaTest
           58
+          AnomaTestModeDebugOnly
           "Ranges"
           $(mkRelDir ".")
           $(mkRelFile "test058.juvix")
@@ -699,6 +758,7 @@ allTests =
           $ checkNatOutput [7550],
         mkAnomaTest
           59
+          AnomaTestModeFull
           "Builtin list"
           $(mkRelDir ".")
           $(mkRelFile "test059.juvix")
@@ -706,6 +766,7 @@ allTests =
           $ checkNatOutput [11],
         mkAnomaTest
           60
+          AnomaTestModeFull
           "Record update"
           $(mkRelDir ".")
           $(mkRelFile "test060.juvix")
@@ -713,6 +774,7 @@ allTests =
           $ checkOutput [[nock| [30 10 2] |]],
         mkAnomaTest
           61
+          AnomaTestModeFull
           "Traits"
           $(mkRelDir ".")
           $(mkRelFile "test061.juvix")
@@ -720,6 +782,7 @@ allTests =
           $ checkNatOutput [1, 0, 3, 5, 1, 6, 5, 3, 1, 1, 6, 1, 3],
         mkAnomaTest
           62
+          AnomaTestModeFull
           "Overapplication"
           $(mkRelDir ".")
           $(mkRelFile "test062.juvix")
@@ -727,6 +790,7 @@ allTests =
           $ checkNatOutput [1],
         mkAnomaTest
           63
+          AnomaTestModeFull
           "Coercions"
           $(mkRelDir ".")
           $(mkRelFile "test063.juvix")
@@ -734,6 +798,7 @@ allTests =
           $ checkNatOutput [0, 1, 2, 300, 4, 5, 6, 7],
         mkAnomaTest
           64
+          AnomaTestModeFull
           "Constant folding"
           $(mkRelDir ".")
           $(mkRelFile "test064.juvix")
@@ -741,6 +806,7 @@ allTests =
           $ checkNatOutput [37],
         mkAnomaTest
           65
+          AnomaTestModeFull
           "Arithmetic simplification"
           $(mkRelDir ".")
           $(mkRelFile "test065.juvix")
@@ -748,6 +814,7 @@ allTests =
           $ checkNatOutput [42],
         mkAnomaTest
           66
+          AnomaTestModeFull
           "Import function with a function call in default argument"
           $(mkRelDir "test066")
           $(mkRelFile "M.juvix")
@@ -755,6 +822,7 @@ allTests =
           $ checkNatOutput [0],
         mkAnomaTest
           67
+          AnomaTestModeFull
           "Dependent default values inserted during translation FromConcrete"
           $(mkRelDir ".")
           $(mkRelFile "test067.juvix")
@@ -762,6 +830,7 @@ allTests =
           $ checkNatOutput [30],
         mkAnomaTest
           68
+          AnomaTestModeFull
           "Dependent default values inserted in the arity checker"
           $(mkRelDir ".")
           $(mkRelFile "test068.juvix")
@@ -769,6 +838,7 @@ allTests =
           $ checkNatOutput [30],
         mkAnomaTest
           69
+          AnomaTestModeFull
           "Dependent default values for Ord trait"
           $(mkRelDir ".")
           $(mkRelFile "test069.juvix")
@@ -776,6 +846,7 @@ allTests =
           $ checkOutput [[nock| true |]],
         mkAnomaTest
           70
+          AnomaTestModeFull
           "Nested default values and named arguments"
           $(mkRelDir ".")
           $(mkRelFile "test070.juvix")
@@ -783,6 +854,7 @@ allTests =
           $ checkNatOutput [1463],
         mkAnomaTest
           71
+          AnomaTestModeFull
           "Named application (Ord instance with default cmp)"
           $(mkRelDir ".")
           $(mkRelFile "test071.juvix")
@@ -790,6 +862,7 @@ allTests =
           $ checkNatOutput [1528],
         mkAnomaTest
           72
+          AnomaTestModeFull
           "Monad transformers (ReaderT + StateT + Identity)"
           $(mkRelDir "test072")
           $(mkRelFile "ReaderT.juvix")
@@ -797,6 +870,7 @@ allTests =
           $ checkNatOutput [10],
         mkAnomaTest
           73
+          AnomaTestModeFull
           "Import and use a syntax alias"
           $(mkRelDir "test073")
           $(mkRelFile "test073.juvix")
@@ -810,23 +884,25 @@ allTests =
             -- The id is captured from the arguments tuple of the function.
             sk1 :: Term Natural = [nock| [[333 1 2 3 nil] 333 nil] |]
             sk2 :: Term Natural = [nock| [[333 1 2 3 nil] [1 2 3 nil] nil] |]
-         in mkAnomaTest'
-              True
-              ( Storage
-                  ( hashMap
-                      [ (StorageKey sk1, v1),
-                        (StorageKey sk2, v2)
-                      ]
-                  )
-              )
-              74
-              "Builtin anomaGet"
-              $(mkRelDir ".")
-              $(mkRelFile "test074.juvix")
-              [k1, k2]
-              $ checkOutput [v1, v2],
+         in [ mkAnomaTest'
+                True
+                ( Storage
+                    ( hashMap
+                        [ (StorageKey sk1, v1),
+                          (StorageKey sk2, v2)
+                        ]
+                    )
+                )
+                74
+                "Builtin anomaGet"
+                $(mkRelDir ".")
+                $(mkRelFile "test074.juvix")
+                [k1, k2]
+                $ checkOutput [v1, v2]
+            ],
         mkAnomaTest
           75
+          AnomaTestModeDebugOnly
           "Anoma encode"
           $(mkRelDir ".")
           $(mkRelFile "test075.juvix")
@@ -834,6 +910,7 @@ allTests =
           $ checkNatOutput [2, 84081, 4657, 12],
         mkAnomaTest
           76
+          AnomaTestModeDebugOnly
           "Anoma decode"
           $(mkRelDir ".")
           $(mkRelFile "test076.juvix")
@@ -846,6 +923,7 @@ allTests =
             ],
         mkAnomaTest
           77
+          AnomaTestModeDebugOnly
           "Anoma verify-detached"
           $(mkRelDir ".")
           $(mkRelFile "test077.juvix")
@@ -857,6 +935,7 @@ allTests =
         let toSignAndVerify :: Term Natural = [nock| [1 2 nil] |]
          in mkAnomaTest
               78
+              AnomaTestModeDebugOnly
               "Anoma sign and verify"
               $(mkRelDir ".")
               $(mkRelFile "test078.juvix")
@@ -866,6 +945,7 @@ allTests =
         let inputStr :: Term Natural = [nock| "Juvix!" |]
          in mkAnomaTest
               79
+              AnomaTestModeDebugOnly
               "Strings"
               $(mkRelDir ".")
               $(mkRelFile "test079.juvix")
@@ -873,6 +953,7 @@ allTests =
               $ checkOutput [[nock| "Juvix! ✨ héllo world ✨" |]],
         mkAnomaTest
           80
+          AnomaTestModeFull
           "Maybe"
           $(mkRelDir ".")
           $(mkRelFile "test080.juvix")
@@ -885,6 +966,7 @@ allTests =
             ],
         mkAnomaTest
           81
+          AnomaTestModeDebugOnly
           "UInt8"
           $(mkRelDir ".")
           $(mkRelFile "test081.juvix")
@@ -904,6 +986,7 @@ allTests =
             ],
         mkAnomaTest
           82
+          AnomaTestModeFull
           "ByteArray"
           $(mkRelDir ".")
           $(mkRelFile "test082.juvix")
@@ -922,6 +1005,7 @@ allTests =
             ],
         mkAnomaTest
           83
+          AnomaTestModeFull
           "Anoma ByteArray"
           $(mkRelDir ".")
           $(mkRelFile "test083.juvix")
@@ -935,6 +1019,7 @@ allTests =
             ],
         mkAnomaTest
           84
+          AnomaTestModeDebugOnly
           "Anoma Sha256"
           $(mkRelDir ".")
           $(mkRelFile "test084.juvix")
@@ -942,13 +1027,14 @@ allTests =
           $ checkOutput
             [ [nock| 64 |],
               [nock|
-              [
-                64
-                5092006196359674779938793937035252249221936503860319648757996882954518215195609232852607160812968472040491493412050369557521935588220586883008001462395444
-              ] |]
+                  [
+                    64
+                    5092006196359674779938793937035252249221936503860319648757996882954518215195609232852607160812968472040491493412050369557521935588220586883008001462395444
+                  ] |]
             ],
         mkAnomaTest
           85
+          AnomaTestModeFull
           "Anoma Resource Machine builtins"
           $(mkRelDir ".")
           $(mkRelFile "test085.juvix")
@@ -962,6 +1048,7 @@ allTests =
             ],
         mkAnomaTest
           86
+          AnomaTestModeDebugOnly
           "Anoma Random"
           $(mkRelDir ".")
           $(mkRelFile "test086.juvix")

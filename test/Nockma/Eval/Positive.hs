@@ -40,7 +40,6 @@ mkNockmaAssertion Test {..} = do
           . runError @(NockEvalError Natural)
           . runReader @(Storage Natural) _testProgramStorage
           $ eval _testProgramSubject _testProgramFormula
-
   case evalResult of
     Left natErr -> assertFailure ("Evaluation error: " <> show natErr)
     Right r -> case _testAssertEvalError of
