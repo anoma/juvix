@@ -75,7 +75,8 @@ lookupsSortedRev bl = go [] 0 bl
 
 lookupMay :: Index -> BinderList a -> Maybe a
 lookupMay idx bl
-  | idx < bl ^. blLength = Just $ (bl ^. blMap) !! idx
+  | idx < 0 = Nothing
+  | idx < bl ^. blLength = Just ((bl ^. blMap) !! idx)
   | otherwise = Nothing
 
 -- | lookup de Bruijn index

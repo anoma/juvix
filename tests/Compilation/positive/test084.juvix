@@ -1,0 +1,56 @@
+-- Do notation
+module test084;
+
+import Stdlib.Data.Nat.Base open;
+import Stdlib.System.IO open;
+import Stdlib.Data.Maybe open;
+
+trait
+type Functor (f : Type -> Type) := mkFunctor {map : {A B : Type} -> (A -> B) -> f A -> f B};
+
+trait
+type Monad (f : Type -> Type) :=
+  mkMonad {
+    {{MonadFunctor}} : Functor f;
+
+    builtin monad-bind
+    bind : {A B : Type} -> f A -> (A -> f B) -> f B
+  };
+
+open Functor;
+open Monad;
+
+instance
+maybeFunctor : Functor Maybe :=
+  mkFunctor@{
+    map {A B} (f : A -> B) : Maybe A -> Maybe B
+      | nothing := nothing
+      | (just x) := just (f x)
+  };
+
+instance
+maybeMonad : Monad Maybe :=
+  mkMonad@{
+    bind {A B} : Maybe A -> (A -> Maybe B) -> Maybe B
+      | nothing _ := nothing
+      | (just a) f := f a
+  };
+
+minusOne : Nat -> Maybe Nat
+  | zero := nothing
+  | (suc n) := just n;
+
+minusThree (n : Nat) : Maybe Nat :=
+  do {
+    x1 <- minusOne n;
+    x2 <- minusOne x1;
+    let
+      x2' : Nat := x2;
+      num := 3;
+      num1 := 4;
+    in
+    x3 <- minusOne x2';
+    just x3;
+  };
+
+main : IO := printLn (minusThree 1) >>> printLn (minusThree 4);
