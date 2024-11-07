@@ -1,6 +1,7 @@
 module Anoma.Rpc.RunNock where
 
 import Anoma.Rpc.Base
+import Anoma.Rpc.RunNock.JsonOptions
 import Juvix.Prelude
 import Juvix.Prelude.Aeson as Aeson
 
@@ -47,27 +48,11 @@ data NockError = NockError
     _errorTraces :: [Text]
   }
 
-$( deriveToJSON
-     defaultOptions
-       { fieldLabelModifier = \case
-           "_errorError" -> "error"
-           "_errorTraces" -> "output"
-           _ -> impossibleError "All fields must be covered"
-       }
-     ''NockError
- )
+$(deriveToJSON nockErrorOptions ''NockError)
 
 instance FromJSON NockError where
   parseJSON =
-    $( mkParseJSON
-         defaultOptions
-           { fieldLabelModifier = \case
-               "_errorError" -> "error"
-               "_errorTraces" -> "output"
-               _ -> impossibleError "All fields must be covered"
-           }
-         ''NockError
-     )
+    $(mkParseJSON nockErrorOptions ''NockError)
       . addDefaultValues' defaultValues
     where
       defaultValues :: HashMap Key Value
@@ -78,27 +63,11 @@ data NockSuccess = NockSuccess
     _successTraces :: [Text]
   }
 
-$( deriveToJSON
-     defaultOptions
-       { fieldLabelModifier = \case
-           "_successResult" -> "result"
-           "_successTraces" -> "output"
-           _ -> impossibleError "All fields must be covered"
-       }
-     ''NockSuccess
- )
+$(deriveToJSON nockSuccessOptions ''NockSuccess)
 
 instance FromJSON NockSuccess where
   parseJSON =
-    $( mkParseJSON
-         defaultOptions
-           { fieldLabelModifier = \case
-               "_successResult" -> "result"
-               "_successTraces" -> "output"
-               _ -> impossibleError "All fields must be covered"
-           }
-         ''NockSuccess
-     )
+    $(mkParseJSON nockSuccessOptions ''NockSuccess)
       . addDefaultValues' defaultValues
     where
       defaultValues :: HashMap Key Value
