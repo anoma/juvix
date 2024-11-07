@@ -66,11 +66,11 @@ walkT f tab = for_ (HashMap.toList (tab ^. identContext)) (uncurry f)
 
 mapAllNodes :: (Node -> Node) -> Module -> Module
 mapAllNodes f md =
-  mapAxioms convertAxiom $
-    mapInductives convertInductive $
-      mapConstructors convertConstructor $
-        mapIdents convertIdent $
-          mapT (const f) md
+  mapAxioms convertAxiom
+    . mapInductives convertInductive
+    . mapConstructors convertConstructor
+    . mapIdents convertIdent
+    $ mapT (const f) md
   where
     convertIdent :: IdentifierInfo -> IdentifierInfo
     convertIdent ii =

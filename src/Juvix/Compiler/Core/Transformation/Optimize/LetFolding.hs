@@ -17,6 +17,7 @@ import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info.DebugOpsInfo as Info
 import Juvix.Compiler.Core.Info.FreeVarsInfo as Info
+import Juvix.Compiler.Core.Scoper
 import Juvix.Compiler.Core.Transformation.Base
 
 convertNode :: (Module -> BinderList Binder -> Node -> Bool) -> Module -> Node -> Node
@@ -37,20 +38,38 @@ convertNode isFoldable md = rmapL go
       node ->
         recur [] node
 
+-- letFolding' :: (Module -> BinderList Binder -> Node -> Bool) -> Module -> Module
+-- letFolding' isFoldable tab =
+--   mapAllNodes
+--     ( removeInfo kDebugOpsInfo
+--         . removeInfo kFreeVarsInfo
+--         . convertNode isFoldable tab
+--         -- 2 is the lambda multiplier factor which guarantees that every free
+--         -- variable under a lambda is counted at least twice, preventing let
+--         -- folding for let-bound variables (with non-immediate values) that
+--         -- occur under lambdas
+--         . computeFreeVarsInfo' 2
+--         . computeDebugOpsInfo
+--     )
+--     tab
 letFolding' :: (Module -> BinderList Binder -> Node -> Bool) -> Module -> Module
 letFolding' isFoldable tab =
-  mapAllNodes
-    ( removeInfo kDebugOpsInfo
-        . removeInfo kFreeVarsInfo
-        . convertNode isFoldable tab
-        -- 2 is the lambda multiplier factor which guarantees that every free
-        -- variable under a lambda is counted at least twice, preventing let
-        -- folding for let-bound variables (with non-immediate values) that
-        -- occur under lambdas
-        . computeFreeVarsInfo' 2
-        . computeDebugOpsInfo
-    )
-    tab
+  mapAllNodes (removeInfo kDebugOpsInfo)
+    . scopeCheckDebug' "5"
+    . mapAllNodes (removeInfo kFreeVarsInfo)
+    . scopeCheckDebug' "4"
+    . mapAllNodes (convertNode isFoldable tab)
+    . scopeCheckDebug' "2"
+    -- 2 is the lambda multiplier factor which guarantees that every free
+    -- variable under a lambda is counted at least twice, preventing let
+    -- folding for let-bound variables (with non-immediate values) that
+    -- occur under lambdas
+    . mapAllNodes (computeFreeVarsInfo' 2)
+    . scopeCheckDebug' "1"
+    . mapAllNodes computeDebugOpsInfo
+    . force
+    . scopeCheckDebug' "0"
+    $ tab
 
 letFolding :: Module -> Module
 letFolding = letFolding' (\_ _ _ -> False)
