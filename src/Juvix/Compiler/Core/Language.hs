@@ -94,7 +94,9 @@ data Node
       { _closureEnv :: !Env,
         _closureNode :: !Node
       }
-  deriving stock (Eq)
+  deriving stock (Eq, Generic)
+
+instance NFData Node
 
 -- Other things we might need in the future:
 -- - laziness annotations (converting these to closure/thunk creation should be
