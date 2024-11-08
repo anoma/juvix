@@ -122,9 +122,9 @@ computeNodeTypeInfo md = umapL go
         let bodyTy = Info.getNodeType _letBody
          in subst (_letItem ^. letItemValue) bodyTy
       NRec LetRec {..} ->
-        shift
-          (-(length _letRecValues))
-          (Info.getNodeType _letRecBody)
+        let bodyTy = Info.getNodeType _letRecBody
+            itemsValues = _letRecValues ^.. each . letItemValue
+         in substs (reverse itemsValues) bodyTy
       NCase Case {..} -> case _caseDefault of
         Just nd -> Info.getNodeType nd
         Nothing -> case _caseBranches of
