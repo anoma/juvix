@@ -20,7 +20,7 @@ runCommand opts = do
     t@(TermCell {}) -> case opts ^. nockmaRunAnomaDir of
       Just path -> do
         anomaDir <- AnomaPath <$> fromAppPathDir path
-        runInAnoma anomaDir t (fromMaybe [] (unfoldList <$> parsedArgs))
+        runInAnoma anomaDir t (maybe [] unfoldList parsedArgs)
       Nothing -> do
         let formula = anomaCallTuple parsedArgs
         (counts, res) <-
@@ -37,5 +37,15 @@ runCommand opts = do
 
 runInAnoma :: (Members AppEffects r) => AnomaPath -> Term Natural -> [Term Natural] -> Sem r ()
 runInAnoma anoma t args = runAppError @SimpleError . runAnoma anoma $ do
-  res <- runNockma t args
-  putStrLn (ppPrint res)
+  res <-
+    runNockma
+      RunNockmaInput
+        { _runNockmaProgram = t,
+          _runNockmaArgs = args
+        }
+  let traces = res ^. runNockmaTraces
+  renderStdOutLn (annotate AnnImportant $ "Traces (" <> show (length traces) <> "):")
+  forM_ traces $ \tr ->
+    renderStdOutLn (ppPrint tr)
+  renderStdOutLn (annotate AnnImportant "Result:")
+  renderStdOutLn (ppPrint (res ^. runNockmaResult))

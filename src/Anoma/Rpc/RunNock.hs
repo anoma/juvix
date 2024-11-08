@@ -1,13 +1,14 @@
 module Anoma.Rpc.RunNock where
 
 import Anoma.Rpc.Base
+import Anoma.Rpc.RunNock.JsonOptions
 import Juvix.Prelude
-import Juvix.Prelude.Aeson
+import Juvix.Prelude.Aeson as Aeson
 
 runNockGrpcUrl :: GrpcMethodUrl
 runNockGrpcUrl =
   mkGrpcMethodUrl $
-    "Anoma" :| ["Protobuf", "Intents", "Prove"]
+    "Anoma" :| ["Protobuf", "NockService", "Prove"]
 
 data NockInput
   = NockInputText Text
@@ -42,16 +43,46 @@ $( deriveJSON
      ''RunNock
  )
 
+data NockError = NockError
+  { _errorError :: Text,
+    _errorTraces :: [Text]
+  }
+
+$(deriveToJSON nockErrorOptions ''NockError)
+
+instance FromJSON NockError where
+  parseJSON =
+    $(mkParseJSON nockErrorOptions ''NockError)
+      . addDefaultValues' defaultValues
+    where
+      defaultValues :: HashMap Key Value
+      defaultValues = hashMap [("output", Aeson.Array mempty)]
+
+data NockSuccess = NockSuccess
+  { _successResult :: Text,
+    _successTraces :: [Text]
+  }
+
+$(deriveToJSON nockSuccessOptions ''NockSuccess)
+
+instance FromJSON NockSuccess where
+  parseJSON =
+    $(mkParseJSON nockSuccessOptions ''NockSuccess)
+      . addDefaultValues' defaultValues
+    where
+      defaultValues :: HashMap Key Value
+      defaultValues = hashMap [("output", Aeson.Array mempty)]
+
 data Response
-  = ResponseProof Text
-  | ResponseError Text
+  = ResponseSuccess NockSuccess
+  | ResponseError NockError
 
 $( deriveJSON
      defaultOptions
        { unwrapUnaryRecords = True,
          sumEncoding = ObjectWithSingleField,
          constructorTagModifier = \case
-           "ResponseProof" -> "proof"
+           "ResponseSuccess" -> "success"
            "ResponseError" -> "error"
            _ -> impossibleError "All constructors must be covered"
        }
@@ -59,3 +90,5 @@ $( deriveJSON
  )
 
 makeLenses ''Response
+makeLenses ''NockSuccess
+makeLenses ''NockError

@@ -77,20 +77,21 @@ mkAnomaNodeTest a@AnomaTest {..} =
     assertion :: Assertion
     assertion = do
       program :: Term Natural <- (^. anomaClosure) <$> withRootCopy (compileMain False _anomaRelRoot _anomaMainFile)
-      -- For some reason the evaluation fails if no args are given
-      let args'
-            | null _anomaArgs = [toNock (nockVoid @Natural)]
-            | otherwise = _anomaArgs
       testAnomaPath <- envAnomaPath
       runM
         . ignoreLogger
         . runSimpleErrorHUnit
         . runAnoma testAnomaPath
         $ do
-          out <- runNockma program args'
+          let rinput =
+                RunNockmaInput
+                  { _runNockmaProgram = program,
+                    _runNockmaArgs = _anomaArgs
+                  }
+          out <- runNockma rinput
           runM
-            . runReader out
-            . runReader []
+            . runReader (out ^. runNockmaResult)
+            . runReader (out ^. runNockmaTraces)
             $ _anomaCheck
 
 withRootCopy :: (Prelude.Path Abs Dir -> IO a) -> IO a
@@ -146,67 +147,65 @@ checkOutput expected = case unsnoc expected of
 
 data TestClass
   = ClassWorking
-  | -- | The test uses trace, so we need to wait until we update the anoma-node
-    -- and parse the traces from the response
-    ClassTrace
   | -- | The anoma node returns a response with an error
     ClassNodeError
   | -- | The anoma node returns a value but it doesn't match the expected value
     ClassWrong
   | -- | We have no test with this number
     ClassMissing
+  | ClassExpectedFail
   deriving stock (Eq, Show)
 
 classify :: AnomaTest -> TestClass
 classify AnomaTest {..} = case _anomaTestNum of
   1 -> ClassWorking
   2 -> ClassWorking
-  3 -> ClassTrace
+  3 -> ClassWorking
   4 -> ClassMissing
   5 -> ClassWorking
-  6 -> ClassTrace
-  7 -> ClassTrace
+  6 -> ClassWorking
+  7 -> ClassWorking
   8 -> ClassWorking
-  9 -> ClassTrace
+  9 -> ClassWorking
   10 -> ClassWorking
-  11 -> ClassTrace
-  12 -> ClassTrace
-  13 -> ClassTrace
-  14 -> ClassTrace
-  15 -> ClassTrace
+  11 -> ClassWorking
+  12 -> ClassWorking
+  13 -> ClassWorking
+  14 -> ClassWorking
+  15 -> ClassWorking
   16 -> ClassWorking
   17 -> ClassWorking
   18 -> ClassWorking
   19 -> ClassWorking
-  20 -> ClassTrace
-  21 -> ClassTrace
-  22 -> ClassTrace
-  23 -> ClassTrace
+  20 -> ClassWorking
+  21 -> ClassWorking
+  22 -> ClassWorking
+  23 -> ClassWorking
   24 -> ClassWorking
-  25 -> ClassTrace
+  25 -> ClassWorking
   26 -> ClassWorking
   27 -> ClassMissing
-  28 -> ClassTrace
-  29 -> ClassTrace
-  30 -> ClassTrace
+  28 -> ClassWrong
+  29 -> ClassWorking
+  30 -> ClassWorking
   31 -> ClassWorking
-  32 -> ClassTrace
-  33 -> ClassTrace
-  34 -> ClassTrace
-  35 -> ClassTrace
+  32 -> ClassWorking
+  33 -> ClassWorking
+  34 -> ClassWorking
+  35 -> ClassWorking
   36 -> ClassWorking
   37 -> ClassWorking
   38 -> ClassWorking
-  39 -> ClassTrace
+  39 -> ClassWorking
   40 -> ClassWorking
   41 -> ClassWorking
   42 -> ClassMissing
-  43 -> ClassTrace
+  43 -> ClassWorking
   45 -> ClassWorking
   46 -> ClassWorking
   47 -> ClassWorking
   48 -> ClassMissing
-  49 -> ClassTrace
+  49 -> ClassWorking
   50 -> ClassWorking
   51 -> ClassMissing
   52 -> ClassWorking
@@ -218,9 +217,9 @@ classify AnomaTest {..} = case _anomaTestNum of
   58 -> ClassWorking
   59 -> ClassWorking
   60 -> ClassWorking
-  61 -> ClassTrace
+  61 -> ClassWorking
   62 -> ClassWorking
-  63 -> ClassTrace
+  63 -> ClassWorking
   64 -> ClassWorking
   65 -> ClassWorking
   66 -> ClassWorking
@@ -231,19 +230,19 @@ classify AnomaTest {..} = case _anomaTestNum of
   71 -> ClassWorking
   72 -> ClassWorking
   73 -> ClassWorking
-  74 -> ClassTrace
-  75 -> ClassTrace
-  76 -> ClassTrace
+  74 -> ClassExpectedFail
+  75 -> ClassWorking
+  76 -> ClassWorking
   77 -> ClassNodeError
   78 -> ClassNodeError
   79 -> ClassWorking
-  80 -> ClassTrace
-  81 -> ClassTrace
-  82 -> ClassTrace
-  83 -> ClassTrace
-  84 -> ClassTrace
-  85 -> ClassTrace
-  86 -> ClassTrace
+  80 -> ClassWorking
+  81 -> ClassWorking
+  82 -> ClassWorking
+  83 -> ClassWorking
+  84 -> ClassWrong
+  85 -> ClassWorking
+  86 -> ClassExpectedFail
   _ -> error "non-exhaustive test classification"
 
 allTests :: TestTree
