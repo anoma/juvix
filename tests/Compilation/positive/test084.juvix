@@ -1,48 +1,28 @@
 -- Do notation
 module test084;
 
-import Stdlib.Data.Nat.Base open;
-import Stdlib.System.IO open;
-import Stdlib.Data.Maybe open;
+type Phantom (M : Type) := nothing;
 
-trait
-type Functor (f : Type -> Type) := mkFunctor;
+type T := mkt;
 
-trait
 type Monad (f : Type -> Type) :=
-  mkMonad@{
-    {{MonadFunctor}} : Functor f;
+  mkMonad@{builtin monad-bind
+  bind : f T -> (T -> f T) -> f T};
 
-    builtin monad-bind
-    bind : {A B : Type} -> f A -> (A -> f B) -> f B;
-  };
-
-open Functor;
 open Monad;
 
-instance
-maybeFunctor : Functor Maybe := mkFunctor;
-
-instance
-maybeMonad : Monad Maybe :=
+maybeMonad : Monad Phantom :=
   mkMonad@{
-    bind {A B} : Maybe A -> (A -> Maybe B) -> Maybe B
-      | nothing _ := nothing
-      | (just a) f := f a;
+    bind : Phantom T -> (T -> Phantom T) -> Phantom T
+      | _ _ := nothing;
   };
 
-minusOne : Nat -> Maybe Nat
-  | zero := nothing
-  | (suc n) := just n;
+minusThree : Phantom T :=
+  bind maybeMonad
+    (nothing {T})
+    λ{_ :=
+      let
+        x2' : T := mkt;
+      in bind maybeMonad nothing  λ{_ := nothing}};
 
-minusThree (n : Nat) : Maybe Nat :=
-  do {
-    x1 <- minusOne n;
-    let
-      x2' : Nat := 4;
-    in
-    x3 <- minusOne 7;
-    just 6;
-  };
-
-main : Maybe Nat := minusThree 1;
+main : Phantom T := minusThree;
