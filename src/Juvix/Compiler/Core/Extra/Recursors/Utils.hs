@@ -3,11 +3,7 @@ module Juvix.Compiler.Core.Extra.Recursors.Utils where
 import Juvix.Compiler.Core.Extra.Recursors.Map.Named
 
 shiftVar :: Index -> Var -> Var
-shiftVar m v =
-  let v' = over varIndex (+ m) v
-   in if
-          | v' ^. varIndex < 0 -> error "shifting a variable resulted in a negative index"
-          | otherwise -> v'
+shiftVar m = over varIndex (+ m)
 
 -- | increase all free variable indices by a given value
 shift :: Index -> Node -> Node
