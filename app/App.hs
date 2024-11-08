@@ -144,7 +144,13 @@ reAppIO args@RunAppIOArgs {..} =
         . mkAnsiText
         . run
         . runReader (project' @GenericOptions g)
-        $ Error.render (not (_runAppIOArgsGlobalOptions ^. globalNoColors)) (g ^. globalIdeEndErrorChar) e
+        $ Error.render renderType (g ^. globalIdeEndErrorChar) e
+      where
+        renderType :: Error.RenderType
+        renderType
+          | g ^. globalVSCode = Error.RenderVSCode
+          | g ^. globalNoColors = Error.RenderText
+          | otherwise = Error.RenderAnsi
 
 getEntryPoint' ::
   (Members '[App, EmbedIO, TaggedLock] r) =>

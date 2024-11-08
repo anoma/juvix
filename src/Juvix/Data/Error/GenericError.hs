@@ -3,11 +3,17 @@ module Juvix.Data.Error.GenericError
   )
 where
 
+import Data.Text qualified as Text
 import Juvix.Data.Loc
 import Juvix.Prelude.Base
 import Juvix.Prelude.Pretty
 import Prettyprinter.Render.Terminal qualified as Ansi
 import System.Console.ANSI qualified as Ansi
+
+data RenderType
+  = RenderAnsi
+  | RenderText
+  | RenderVSCode
 
 data GenericError = GenericError
   { _genericErrorLoc :: Interval,
@@ -68,29 +74,31 @@ errorIntervals e = do
   e' <- genericError e
   return (e' ^. genericErrorIntervals)
 
-render :: (ToGenericError e, Member (Reader GenericOptions) r) => Bool -> Maybe Char -> e -> Sem r Text
-render ansi endChar err = do
+render :: (ToGenericError e, Member (Reader GenericOptions) r) => RenderType -> Maybe Char -> e -> Sem r Text
+render renderType endChar err = do
   g <- genericError err
   let gMsg = g ^. genericErrorMessage
       header = genericErrorHeader g
-      helper f x = (f . layoutPretty defaultLayoutOptions) (header <> x <> lastChar)
-  if
-      | ansi -> return $ helper Ansi.renderStrict (toAnsiDoc gMsg)
-      | otherwise -> return $ helper renderStrict (toTextDoc gMsg)
+      helper f x = f (header <> x <> lastChar)
+  return $
+    case renderType of
+      RenderAnsi -> helper (Ansi.renderStrict . layoutPretty defaultLayoutOptions) (toAnsiDoc gMsg)
+      RenderText -> helper (renderStrict . layoutPretty defaultLayoutOptions) (toTextDoc gMsg)
+      RenderVSCode -> Text.replace "\n" " " $ helper (renderStrict . layoutCompact) (toTextDoc gMsg)
   where
     lastChar :: Doc a
     lastChar = maybe "" pretty endChar
 
 -- | Render the error to Text.
 renderText :: (ToGenericError e, Member (Reader GenericOptions) r) => e -> Sem r Text
-renderText = render False Nothing
+renderText = render RenderText Nothing
 
 renderTextDefault :: (ToGenericError e) => e -> Text
 renderTextDefault = run . runReader defaultGenericOptions . renderText
 
 -- | Render the error with Ansi formatting (if any).
 renderAnsiText :: (ToGenericError e, Member (Reader GenericOptions) r) => e -> Sem r Text
-renderAnsiText = render True Nothing
+renderAnsiText = render RenderAnsi Nothing
 
 printErrorAnsi :: (ToGenericError e, Members '[EmbedIO, Reader GenericOptions] r) => e -> Sem r ()
 printErrorAnsi e = renderAnsiText e >>= \txt -> hPutStrLn stderr txt

@@ -15,6 +15,7 @@ import Juvix.Data.Field
 
 data GlobalOptions = GlobalOptions
   { _globalNoColors :: Bool,
+    _globalVSCode :: Bool,
     _globalShowNameIds :: Bool,
     _globalBuildDir :: Maybe (AppPath Dir),
     _globalIdeEndErrorChar :: Maybe Char,
@@ -60,6 +61,7 @@ defaultGlobalOptions :: GlobalOptions
 defaultGlobalOptions =
   GlobalOptions
     { _globalNoColors = False,
+      _globalVSCode = False,
       _globalNumThreads = defaultNumThreads,
       _globalShowNameIds = False,
       _globalIdeEndErrorChar = Nothing,
@@ -84,6 +86,11 @@ parseGlobalFlags = do
     switch
       ( long "no-colors"
           <> help "Disable ANSI formatting"
+      )
+  _globalVSCode <-
+    switch
+      ( long "vscode"
+          <> help "Enable VSCode compatible output"
       )
   _globalBuildDir <-
     optional
