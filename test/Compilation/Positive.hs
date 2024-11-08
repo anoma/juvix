@@ -490,5 +490,10 @@ tests =
         "Test083: Record update"
         $(mkRelDir ".")
         $(mkRelFile "test083.juvix")
-        $(mkRelFile "out/test083.out")
+        $(mkRelFile "out/test083.out"),
+      posTest
+        "Test084: issue3030"
+        $(mkRelDir ".")
+        $(mkRelFile "test084.juvix")
+        $(mkRelFile "out/test084.out")
     ]
