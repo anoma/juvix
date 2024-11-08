@@ -1,4 +1,5 @@
--- Do notation
+-- Minimal test where lambda lifting causes the type of a let body to contain
+-- the bound item
 module test084;
 
 type Phantom (M : Type) := nothing;
