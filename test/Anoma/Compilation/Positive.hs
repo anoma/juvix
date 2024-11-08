@@ -153,6 +153,7 @@ data TestClass
     ClassWrong
   | -- | We have no test with this number
     ClassMissing
+  | ClassExpectedFail
   deriving stock (Eq, Show)
 
 classify :: AnomaTest -> TestClass
@@ -229,7 +230,7 @@ classify AnomaTest {..} = case _anomaTestNum of
   71 -> ClassWorking
   72 -> ClassWorking
   73 -> ClassWorking
-  74 -> ClassNodeError
+  74 -> ClassExpectedFail
   75 -> ClassWorking
   76 -> ClassWorking
   77 -> ClassNodeError
@@ -241,7 +242,7 @@ classify AnomaTest {..} = case _anomaTestNum of
   83 -> ClassWorking
   84 -> ClassWrong
   85 -> ClassWorking
-  86 -> ClassWrong -- this is due to different representation of rng in Anoma
+  86 -> ClassExpectedFail
   _ -> error "non-exhaustive test classification"
 
 allTests :: TestTree
