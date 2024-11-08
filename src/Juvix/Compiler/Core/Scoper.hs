@@ -7,16 +7,6 @@ import Juvix.Compiler.Core.Transformation.Base
 
 type ScopeError = Text
 
--- | Sometimes it is more convenient to use the monadic version to guarantee order of execution
-scopeCheckDebugM :: (Members '[Error JuvixError] r) => Module -> Sem r Module
-scopeCheckDebugM m = maybe (return m) (throw @JuvixError . error) (scopeCheck (m ^. moduleInfoTable))
-
-scopeCheckDebug' :: Text -> Module -> Module
-scopeCheckDebug' tag m = force $ maybe m (error . ((tag <> ": ") <>)) (scopeCheck (m ^. moduleInfoTable))
-
-scopeCheckDebug :: Module -> Module
-scopeCheckDebug = scopeCheckDebug' ""
-
 scopeCheck :: InfoTable -> Maybe ScopeError
 scopeCheck = either Just (const Nothing) . run . runError . walkT goTopNode
 
