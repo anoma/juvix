@@ -2,7 +2,6 @@ module Juvix.Compiler.Core.Transformation.Optimize.Phase.Main where
 
 import Juvix.Compiler.Core.Data.IdentDependencyInfo
 import Juvix.Compiler.Core.Options
-import Juvix.Compiler.Core.Scoper
 import Juvix.Compiler.Core.Transformation.Base
 import Juvix.Compiler.Core.Transformation.Optimize.CaseFolding
 import Juvix.Compiler.Core.Transformation.Optimize.CasePermutation
@@ -28,9 +27,7 @@ optimize' opts@CoreOptions {..} md =
           . specializeArgs
       )
     . doConstantFolding
-    . scopeCheckDebug' "after let folding"
     . letFolding
-    . scopeCheckDebug' "before let folding"
     $ md
   where
     tab :: InfoTable
