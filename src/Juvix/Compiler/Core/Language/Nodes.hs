@@ -171,6 +171,7 @@ data Match' i a = Match
     _matchValues :: !(NonEmpty a),
     _matchBranches :: ![MatchBranch' i a]
   }
+  deriving stock (Generic)
 
 -- | The patterns introduce binders from left to right, with the binder for a
 -- constructor before the binders for the subpatterns, e.g., matching on the
@@ -185,15 +186,18 @@ data MatchBranch' i a = MatchBranch
     _matchBranchPatterns :: !(NonEmpty (Pattern' i a)),
     _matchBranchRhs :: !(MatchBranchRhs' i a)
   }
+  deriving stock (Generic)
 
 data Pattern' i a
   = PatWildcard (PatternWildcard' i a)
   | PatConstr (PatternConstr' i a)
+  deriving stock (Generic)
 
 data PatternWildcard' i a = PatternWildcard
   { _patternWildcardInfo :: i,
     _patternWildcardBinder :: Binder' a
   }
+  deriving stock (Generic)
 
 data PatternConstr' i a = PatternConstr
   { _patternConstrInfo :: i,
@@ -202,22 +206,26 @@ data PatternConstr' i a = PatternConstr
     _patternConstrTag :: !Tag,
     _patternConstrArgs :: ![Pattern' i a]
   }
+  deriving stock (Generic)
 
 data MatchBranchRhs' i a
   = MatchBranchRhsExpression !a
   | MatchBranchRhsIfs !(NonEmpty (SideIfBranch' i a))
+  deriving stock (Generic)
 
 data SideIfBranch' i a = SideIfBranch
   { _sideIfBranchInfo :: i,
     _sideIfBranchCondition :: !a,
     _sideIfBranchBody :: !a
   }
+  deriving stock (Generic)
 
 -- | Useful for unfolding Pi
 data PiLhs' i a = PiLhs
   { _piLhsInfo :: i,
     _piLhsBinder :: Binder' a
   }
+  deriving stock (Generic)
 
 -- | Dependent Pi-type. Compilation-time only. Pi implicitly introduces a binder
 -- in the body, exactly like Lambda. So `Pi info ty body` is `Pi x : ty .
@@ -334,6 +342,20 @@ instance (NFData i, NFData a) => NFData (Pi' i a)
 instance (Serialize i) => Serialize (Univ' i)
 
 instance (NFData i) => NFData (Univ' i)
+
+instance (NFData i, NFData a) => NFData (PatternWildcard' i a)
+
+instance (NFData i, NFData a) => NFData (PatternConstr' i a)
+
+instance (NFData i, NFData a) => NFData (Pattern' i a)
+
+instance (NFData i, NFData a) => NFData (MatchBranchRhs' i a)
+
+instance (NFData i, NFData a) => NFData (SideIfBranch' i a)
+
+instance (NFData i, NFData a) => NFData (MatchBranch' i a)
+
+instance (NFData i, NFData a) => NFData (Match' i a)
 
 instance (Serialize i) => Serialize (TypePrim' i)
 

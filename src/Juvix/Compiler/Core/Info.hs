@@ -13,6 +13,12 @@ newtype Info = Info
   }
   deriving newtype (Semigroup, Monoid)
 
+-- | NOTE the NFData instance for Info is a noop. I don't think it's possible to
+-- provide an NFData instance for it because a Dynamic can't have an instance.
+-- Still, having this instance is useful so we can derive NFData for Node.
+instance NFData Info where
+  rnf _info = ()
+
 type Key = Proxy
 
 makeLenses ''Info

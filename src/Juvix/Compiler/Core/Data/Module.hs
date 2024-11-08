@@ -15,6 +15,9 @@ data Module = Module
     -- B will be in the imports table of M nonetheless.
     _moduleImportsTable :: InfoTable
   }
+  deriving stock (Generic)
+
+instance NFData Module
 
 makeLenses ''Module
 
