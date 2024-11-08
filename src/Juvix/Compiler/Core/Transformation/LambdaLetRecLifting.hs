@@ -73,9 +73,9 @@ lambdaLiftNode aboveBl top =
                   freeVarsNum = length allfreevars
               f <- freshSymbol
               let name = uniqueName "lambda" f
-              traceM ("fBody' " <> ppTrace fBody')
+              traceM ("fBody' =\n" <> ppTrace fBody')
               ty <- nodeType fBody'
-              traceM ("ty' " <> ppTrace ty)
+              traceM ("ty' =\n" <> ppTrace ty)
               registerIdent
                 name
                 IdentifierInfo

@@ -6,7 +6,7 @@ type Phantom (M : Type) := nothing;
 type T := mkt;
 
 type Monad (f : Type -> Type) :=
-  mkMonad@{builtin monad-bind
+  mkMonad@{
   bind : f T -> (T -> f T) -> f T};
 
 open Monad;

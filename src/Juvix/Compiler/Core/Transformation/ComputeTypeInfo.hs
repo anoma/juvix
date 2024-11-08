@@ -3,6 +3,7 @@ module Juvix.Compiler.Core.Transformation.ComputeTypeInfo where
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info.TypeInfo qualified as Info
+import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation.Base
 
 computeNodeType :: Module -> Node -> Type
@@ -118,11 +119,12 @@ computeNodeTypeInfo md = umapL go
                 mkTypeConstr' (ci ^. constructorInductive) (take (length (ii ^. inductiveParams)) _constrArgs)
       NLam Lambda {..} ->
         mkPi mempty _lambdaBinder (Info.getNodeType _lambdaBody)
-      NLet Let {..} ->
-        shift
-          "compute type info let"
-          (-1)
-          (Info.getNodeType _letBody)
+      NLet l@Let {..} ->
+        let bodyTy = Info.getNodeType _letBody
+         in trace ("MODULE FULL =\n" <> ppTrace (md ^. moduleInfoTable) <> "\n+-------+\n")
+              . trace ("let FULL =\n" <> ppTrace l)
+              . trace ("let bodyTy =\n" <> ppTrace bodyTy)
+              $ subst (_letItem ^. letItemValue) bodyTy
       NRec LetRec {..} ->
         shift
           "letrec"

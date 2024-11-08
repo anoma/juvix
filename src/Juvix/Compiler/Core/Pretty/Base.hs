@@ -123,9 +123,10 @@ ppCodeVar' :: (Member (Reader Options) r) => Text -> Var' i -> Sem r (Doc Ann)
 ppCodeVar' name v = do
   name' <- ppName KNameLocal name
   showDeBruijn <- asks (^. optShowDeBruijnIndices)
-  if showDeBruijn || name == ""
-    then return $ name' <> kwDeBruijnVar <> pretty (v ^. varIndex)
-    else return name'
+  return $
+    if showDeBruijn || name == ""
+      then name' <> kwDeBruijnVar <> pretty (v ^. varIndex)
+      else name'
 
 instance PrettyCode ConstantValue where
   ppCode :: forall r. (Member (Reader Options) r) => ConstantValue -> Sem r (Doc Ann)
@@ -438,12 +439,15 @@ instance PrettyCode MatchBranchRhs where
       brs <- mapM ppCode x
       return $ vsep brs
 
+instance PrettyCode Var where
+  ppCode x =
+    let name = getInfoName (x ^. varInfo)
+     in ppCodeVar' name x
+
 instance PrettyCode Node where
   ppCode :: forall r. (Member (Reader Options) r) => Node -> Sem r (Doc Ann)
   ppCode node = case node of
-    NVar x ->
-      let name = getInfoName (x ^. varInfo)
-       in ppCodeVar' name x
+    NVar x -> ppCode x
     NIdt x -> do
       let name = getInfoName (x ^. identInfo)
        in ppIdentName name (x ^. identSymbol)
@@ -833,9 +837,6 @@ kwUnnamedIdent = keyword Str.exclamation
 
 kwUnnamedConstr :: Doc Ann
 kwUnnamedConstr = keyword Str.exclamation
-
-kwQuestion :: Doc Ann
-kwQuestion = keyword Str.questionMark
 
 primFieldAdd :: Doc Ann
 primFieldAdd = primitive Str.fadd
