@@ -20,9 +20,6 @@ type OnlyLetRec = Bool
 lambdaLiftNode' :: forall r. (Member InfoTableBuilder r) => Bool -> BinderList Binder -> Node -> Sem r Node
 lambdaLiftNode' onlyLetRec bl top = runReader onlyLetRec $ lambdaLiftNode bl top
 
-wvar :: Var -> Bool
-wvar v = v ^. varIndex < 0
-
 lambdaLiftNode :: forall r. (Members '[Reader OnlyLetRec, InfoTableBuilder] r) => BinderList Binder -> Node -> Sem r Node
 lambdaLiftNode aboveBl top =
   let topArgs :: [LambdaLhs]
@@ -59,11 +56,7 @@ lambdaLiftNode aboveBl top =
               let (freevarsAssocs, fBody') = captureFreeVarsCtx bl l'
 
                   allfreevars :: [Var]
-                  allfreevars =
-                    let vs = map fst freevarsAssocs
-                     in if
-                            | any wvar vs -> impossible
-                            | otherwise -> vs
+                  allfreevars = map fst freevarsAssocs
 
                   argsNum :: Int
                   argsNum = length (fst (unfoldLambdas fBody'))
@@ -125,7 +118,6 @@ lambdaLiftNode aboveBl top =
                   helper :: Var -> Maybe (Var, Binder)
                   helper v
                     | v ^. varIndex < ndefs = Nothing
-                    | idx' < 0 = impossible
                     | otherwise = Just (shiftVar (-ndefs) v, BL.lookup idx' bl)
                     where
                       idx' = v ^. varIndex - ndefs
