@@ -16,7 +16,7 @@ convertNode = dmap go
         let (tgt, args) = unfoldApps node
          in case tgt of
               NLet lt@(Let {..}) ->
-                NLet lt {_letBody = mkApps _letBody (map (second (shift "movap" 1)) args)}
+                NLet lt {_letBody = mkApps _letBody (map (second (shift 1)) args)}
               NCase cs@(Case {..}) ->
                 NCase
                   cs
@@ -24,7 +24,7 @@ convertNode = dmap go
                         map
                           ( \br@CaseBranch {..} ->
                               br
-                                { _caseBranchBody = mkApps _caseBranchBody (map (second (shift "nested" _caseBranchBindersNum)) args)
+                                { _caseBranchBody = mkApps _caseBranchBody (map (second (shift _caseBranchBindersNum)) args)
                                 }
                           )
                           _caseBranches,
@@ -47,7 +47,7 @@ convertNode = dmap go
                         mkLet'
                           mkDynamic'
                           (NBlt blt {_builtinAppArgs = [arg]})
-                          (mkApps' (mkVar' 0) (map (shift "builtinf" 1) args'))
+                          (mkApps' (mkVar' 0) (map (shift 1) args'))
                       _ -> impossible
               _ -> node
       _ -> node

@@ -9,7 +9,6 @@ import Juvix.Compiler.Core.Data.InfoTableBuilder
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info.NameInfo
 import Juvix.Compiler.Core.Info.PragmaInfo
-import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation.Base
 import Juvix.Compiler.Core.Transformation.ComputeTypeInfo (computeNodeType)
 
@@ -73,9 +72,7 @@ lambdaLiftNode aboveBl top =
                   freeVarsNum = length allfreevars
               f <- freshSymbol
               let name = uniqueName "lambda" f
-              traceM ("fBody' =\n" <> ppTrace fBody')
               ty <- nodeType fBody'
-              traceM ("ty' =\n" <> ppTrace ty)
               registerIdent
                 name
                 IdentifierInfo
@@ -129,7 +126,7 @@ lambdaLiftNode aboveBl top =
                   helper v
                     | v ^. varIndex < ndefs = Nothing
                     | idx' < 0 = impossible
-                    | otherwise = Just (shiftVar' "helper" (-ndefs) v, trace ("idex = " <> show idx') (BL.lookup "lambda lifting" idx' bl))
+                    | otherwise = Just (shiftVar (-ndefs) v, BL.lookup idx' bl)
                     where
                       idx' = v ^. varIndex - ndefs
 
@@ -193,11 +190,11 @@ lambdaLiftNode aboveBl top =
                   goShift k = \case
                     (x, bnd) :| yys -> case yys of
                       []
-                        | k == ndefs - 1 -> mkLet mempty bnd' (shift "1" k x) b
+                        | k == ndefs - 1 -> mkLet mempty bnd' (shift k x) b
                         | otherwise -> impossible
-                      (y : ys) -> mkLet mempty bnd' (shift "2" k x) (goShift (k + 1) (y :| ys))
+                      (y : ys) -> mkLet mempty bnd' (shift k x) (goShift (k + 1) (y :| ys))
                       where
-                        bnd' = over binderType (shift "3" k) bnd
+                        bnd' = over binderType (shift k) bnd
           let res :: Node
               res = shiftHelper body' (nonEmpty' (zipExact letItems letRecBinders'))
           return (Recur res)

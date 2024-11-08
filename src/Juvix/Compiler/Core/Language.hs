@@ -5,7 +5,6 @@ module Juvix.Compiler.Core.Language
   )
 where
 
-import Juvix.Compiler.Core.Info.NameInfo
 import Juvix.Compiler.Core.Language.Nodes
 
 type Type = Node
@@ -144,6 +143,3 @@ emptyBinder =
       _binderLocation = Nothing,
       _binderType = NDyn (DynamicTy mempty)
     }
-
-prettyVar :: Var -> Text
-prettyVar = getInfoName . (^. varInfo)

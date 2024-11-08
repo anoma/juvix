@@ -464,7 +464,7 @@ mkBody ppLam ty loc clauses
     -- relative to the match node. However the type of the match argument has
     -- been shifted by the number of pattern binders below it.
     shiftMatchTypeArg :: Indexed Type -> Type
-    shiftMatchTypeArg (Indexed idx ty') = shift "fromInternal" (nPatterns - idx) ty'
+    shiftMatchTypeArg (Indexed idx ty') = shift (nPatterns - idx) ty'
 
     checkPatternsNum :: Int -> [[a]] -> Int
     checkPatternsNum len = \case
@@ -602,7 +602,7 @@ goLet l = goClauses (toList (l ^. Internal.letClauses))
                 pragmas = zipWith adjustPragmas' implArgs (map (^. Internal.funDefPragmas) lfuns)
             tys' <- mapM goType tys
             localAddNames names $ do
-              vals' <- sequence [mkFunBody (shift "fromin" (length names) ty) f | (ty, f) <- zipExact tys' lfuns]
+              vals' <- sequence [mkFunBody (shift (length names) ty) f | (ty, f) <- zipExact tys' lfuns]
               let items = nonEmpty' (zipWith3Exact (\ty n v -> LetItem (Binder (n ^. nameText) (Just $ n ^. nameLoc) ty) v) tys' names vals')
               rest <- goClauses cs
               return (mkLetRec (setInfoPragmas pragmas mempty) items rest)
@@ -1384,7 +1384,7 @@ goApplication a = do
                 mkApps'
                   ( mkConstr'
                       (BuiltinTag TagBind)
-                      [arg1, mkLambda' (mkTypeConstr (setInfoName Str.io mempty) ioSym []) (shift "ioseq" 1 arg2)]
+                      [arg1, mkLambda' (mkTypeConstr (setInfoName Str.io mempty) ioSym []) (shift 1 arg2)]
                   )
                   xs
             _ -> error "internal to core: >> must be called with 2 arguments"

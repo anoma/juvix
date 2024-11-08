@@ -35,7 +35,7 @@ convertNode opts nonRecSyms tab md = umap go
                   (tyargs, tgt) = unfoldPi' (ii ^. identifierType)
                   n = length (takeWhile (isTypeConstr md) tyargs)
                   tys = reverse (take n args)
-                  tgt' = substs tys (shift "k" (-(length tyargs - n)) tgt)
+                  tgt' = substs tys (shift (-(length tyargs - n)) tgt)
               _ -> node
         where
           (h, args) = unfoldApps' node

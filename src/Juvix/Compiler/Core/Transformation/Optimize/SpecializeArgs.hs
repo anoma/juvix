@@ -218,7 +218,7 @@ convertNode = dmapLRM go
                           | otherwise -> do
                               sym' <- freshSymbol
                               let -- We're adding the letrec binder, so need to shift by 1
-                                  sargs = map (shift "sargs" 1) args'
+                                  sargs = map (shift 1) args'
                                   (ty', lams', body') = createFun 1 sym' sargs
                                   body'' = substSym sym' (argsNum - length specargs) body'
                                   args'' = removeSpecargs specargs sargs
@@ -227,7 +227,7 @@ convertNode = dmapLRM go
                                     mkLetItem
                                       (ii ^. identifierName)
                                       -- the type is not in the scope of the binder
-                                      (shift "other" (-1) ty')
+                                      (shift (-1) ty')
                                       fun
                                   node' =
                                     mkLetRec
@@ -249,10 +249,10 @@ convertNode = dmapLRM go
           ([], []) -> []
           (ty : tys', arg : args')
             | n `elem` specargs ->
-                let tys'' = zipWith (\ty' k -> substVar k (shift "goremove" k arg) ty') tys' [0 ..]
+                let tys'' = zipWith (\ty' k -> substVar k (shift k arg) ty') tys' [0 ..]
                  in goRemove (n + 1) specargs args' tys''
             | otherwise ->
-                ty : goRemove (n + 1) specargs (map (shift "tygoremo" 1) args') tys'
+                ty : goRemove (n + 1) specargs (map (shift 1) args') tys'
           _ -> impossible
 
     removeSpecargs :: [Int] -> [a] -> [a]
@@ -325,14 +325,14 @@ convertNode = dmapLRM go
                         if
                             | argNum `elem` specargs ->
                                 -- paste in the argument we specialise by
-                                shift "lvl" (lvl + argsNum') (args !! (argNum - 1))
+                                shift (lvl + argsNum') (args !! (argNum - 1))
                             | otherwise ->
                                 -- decrease de Bruijn index by the number of lambdas removed below the binder
                                 NVar $
-                                  shiftVar' "spec" (-(length (filter (argNum <) specargs))) v
+                                  shiftVar (-(length (filter (argNum <) specargs))) v
                     | otherwise ->
                         -- (argsNum - argsNum') binders removed (the specialised arguments) and shiftIdx binders added (the letrec binders)
-                        NVar $ shiftVar' "spec" (argsNum' - argsNum + shiftIdx) v
+                        NVar $ shiftVar (argsNum' - argsNum + shiftIdx) v
             where
               argIdx = _varIndex - lvl
               argNum = argsNum - argIdx

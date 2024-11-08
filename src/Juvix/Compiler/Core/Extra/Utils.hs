@@ -383,7 +383,7 @@ freeVarsCtxMany ctx =
       Just (v, vs) -> do
         output v
         let idx = v ^. varIndex
-            bi :: Binder = BL.lookup "utils" idx ctx
+            bi :: Binder = BL.lookup idx ctx
             fbi = freeVarsSorted (bi ^. binderType)
             freevarsbi' :: Set Var
             freevarsbi' = Set.mapMonotonic (over varIndex (+ (idx + 1))) fbi
@@ -391,14 +391,14 @@ freeVarsCtxMany ctx =
 
 -- | Increase the indices of free variables in the binderType by a given value
 shiftBinder :: Int -> Binder -> Binder
-shiftBinder = over binderType . shift "shiftbinder"
+shiftBinder = over binderType . shift
 
 -- | Increase the indices of free variables in the item binder and value
 shiftLetItem :: Int -> LetItem -> LetItem
 shiftLetItem n l =
   LetItem
     { _letItemBinder = shiftBinder n (l ^. letItemBinder),
-      _letItemValue = shift "shiftletitem" n (l ^. letItemValue)
+      _letItemValue = shift n (l ^. letItemValue)
     }
 
 -- | subst for multiple bindings; the first element in the list of substitutions
@@ -409,7 +409,7 @@ substs t = umapN go
     len = length t
     go k n = case n of
       NVar (Var i idx)
-        | idx >= k, idx - k < len -> shift "substs" k (t !! (idx - k))
+        | idx >= k, idx - k < len -> shift k (t !! (idx - k))
         | idx > k -> mkVar i (idx - len)
       _ -> n
 
@@ -427,7 +427,7 @@ substVar idx t = umapN go
   where
     go k n = case n of
       NVar Var {..}
-        | _varIndex == k + idx -> shift "substvar" k t
+        | _varIndex == k + idx -> shift k t
         | _varIndex > k + idx -> mkVar _varInfo (_varIndex - 1)
       _ -> n
 
@@ -442,7 +442,7 @@ removeClosures = dmap go
 etaExpand :: [Type] -> Node -> Node
 etaExpand [] n = n
 etaExpand argtys n =
-  mkLambdas (replicate (length argtys) (Info.singleton (ExpansionInfo ()))) (map mkBinder' argtys) (mkApps' (shift "etaexpand" k n) (map mkVar' (reverse [0 .. k - 1])))
+  mkLambdas (replicate (length argtys) (Info.singleton (ExpansionInfo ()))) (map mkBinder' argtys) (mkApps' (shift k n) (map mkVar' (reverse [0 .. k - 1])))
   where
     k = length argtys
 

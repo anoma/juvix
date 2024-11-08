@@ -21,10 +21,10 @@ convertNode md = convert mempty
     go :: BinderList Binder -> Node -> Recur
     go vars node = case node of
       NVar v@(Var {..}) ->
-        let ty = BL.lookup "remove type args" _varIndex vars ^. binderType
+        let ty = BL.lookup _varIndex vars ^. binderType
          in if
                 | isTypeConstr md ty -> End (mkDynamic _varInfo)
-                | otherwise -> End (NVar (shiftVar' "rmtypes" (-k) v))
+                | otherwise -> End (NVar (shiftVar (-k) v))
         where
           k = length (filter (isTypeConstr md . (^. binderType)) (take _varIndex (toList vars)))
       NIdt Ident {..} ->
@@ -39,7 +39,7 @@ convertNode md = convert mempty
             ty =
               case h of
                 NVar (Var {..}) ->
-                  BL.lookup "remove type args 2" _varIndex vars ^. binderType
+                  BL.lookup _varIndex vars ^. binderType
                 NIdt (Ident {..}) ->
                   let fi = lookupIdentifierInfo md _identSymbol
                    in fi ^. identifierType

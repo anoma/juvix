@@ -24,8 +24,8 @@ convertNode md = umap go
           idts = foldr (flip gatherIdents) mempty bodies
           idents = filter (\sym -> all (\x -> countApps sym x == 1) bodies) (toList idts)
           n = length idents
-          brs' k = map (over caseBranchBody (shift "case" (n + k))) _caseBranches
-          def' k = fmap (shift "def" (n + k)) _caseDefault
+          brs' k = map (over caseBranchBody (shift (n + k))) _caseBranches
+          def' k = fmap (shift (n + k)) _caseDefault
       node -> node
 
     liftApps :: Level -> Symbol -> Node -> [CaseBranch] -> Maybe Node -> [Symbol] -> Node
@@ -35,7 +35,7 @@ convertNode md = umap go
           Case
             { _caseInfo = mempty,
               _caseInductive = ind,
-              _caseValue = shift "caseval" lvl val,
+              _caseValue = shift lvl val,
               _caseBranches = brs,
               _caseDefault = def
             }
@@ -57,9 +57,8 @@ convertNode md = umap go
             | null (head' args) = []
             | otherwise =
                 shift
-                  "args"
                   (-idx - 1)
-                  (mkCase' ind (shift "mkcase" (lvl + 1) val) (zipWithExact (set caseBranchBody) hbs brs) hdef)
+                  (mkCase' ind (shift (lvl + 1) val) (zipWithExact (set caseBranchBody) hbs brs) hdef)
                   : computeArgs args' dargs'
             where
               hbs = map head' args

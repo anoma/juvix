@@ -12,7 +12,6 @@ import Juvix.Compiler.Core.Data.Module
 import Juvix.Compiler.Core.Data.TransformationId
 import Juvix.Compiler.Core.Error
 import Juvix.Compiler.Core.Options
-import Juvix.Compiler.Core.Scoper (scopeCheckDebugM)
 import Juvix.Compiler.Core.Transformation.Base
 import Juvix.Compiler.Core.Transformation.Check.Anoma
 import Juvix.Compiler.Core.Transformation.Check.Cairo
@@ -62,17 +61,8 @@ applyTransformations ::
   [TransformationId] ->
   Module ->
   Sem r Module
-applyTransformations ts tbl = foldM (flip appTransLog) tbl ts
+applyTransformations ts tbl = foldM (flip appTrans) tbl ts
   where
-    appTransLog :: TransformationId -> Module -> Sem r Module
-    appTransLog t m = do
-      m' <- force <$> scopeCheckDebugM m
-      traceM ("Before ApplyTrans " <> show t)
-      m'' <- appTrans t m'
-      res <- force <$> scopeCheckDebugM m''
-      traceM ("After ApplyTrans " <> show t)
-      return res
-
     appTrans :: TransformationId -> Module -> Sem r Module
     appTrans = \case
       LambdaLetRecLifting -> return . lambdaLetRecLifting

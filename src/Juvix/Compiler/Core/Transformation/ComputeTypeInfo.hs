@@ -3,7 +3,6 @@ module Juvix.Compiler.Core.Transformation.ComputeTypeInfo where
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info.TypeInfo qualified as Info
-import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation.Base
 
 computeNodeType :: Module -> Node -> Type
@@ -27,7 +26,7 @@ computeNodeTypeInfo md = umapL go
     nodeType :: BinderList Binder -> Node -> Type
     nodeType bl node = case node of
       NVar Var {..} ->
-        shift "nodetype" (_varIndex + 1) (BL.lookup "ctypeinfo" _varIndex bl ^. binderType)
+        shift (_varIndex + 1) (BL.lookup _varIndex bl ^. binderType)
       NIdt Ident {..} ->
         lookupIdentifierInfo md _identSymbol ^. identifierType
       NCst Constant {..} ->
@@ -119,22 +118,18 @@ computeNodeTypeInfo md = umapL go
                 mkTypeConstr' (ci ^. constructorInductive) (take (length (ii ^. inductiveParams)) _constrArgs)
       NLam Lambda {..} ->
         mkPi mempty _lambdaBinder (Info.getNodeType _lambdaBody)
-      NLet l@Let {..} ->
+      NLet Let {..} ->
         let bodyTy = Info.getNodeType _letBody
-         in trace ("MODULE FULL =\n" <> ppTrace (md ^. moduleInfoTable) <> "\n+-------+\n")
-              . trace ("let FULL =\n" <> ppTrace l)
-              . trace ("let bodyTy =\n" <> ppTrace bodyTy)
-              $ subst (_letItem ^. letItemValue) bodyTy
+         in subst (_letItem ^. letItemValue) bodyTy
       NRec LetRec {..} ->
         shift
-          "letrec"
           (-(length _letRecValues))
           (Info.getNodeType _letRecBody)
       NCase Case {..} -> case _caseDefault of
         Just nd -> Info.getNodeType nd
         Nothing -> case _caseBranches of
           CaseBranch {..} : _ ->
-            shift "case" (-_caseBranchBindersNum) (Info.getNodeType _caseBranchBody)
+            shift (-_caseBranchBindersNum) (Info.getNodeType _caseBranchBody)
           [] -> error "case with no branches"
       NMatch Match {} ->
         error "match unsupported"
