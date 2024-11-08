@@ -118,7 +118,7 @@ genCode infoTable fi =
 
     goVar :: BinderList MemRef -> Core.Var -> Node
     goVar refs Core.Var {..} =
-      mkMemRef (BL.lookup _varIndex refs)
+      mkMemRef (BL.lookup "tree from core" _varIndex refs)
 
     goIdent :: Core.Ident -> Node
     goIdent Core.Ident {..}
@@ -196,7 +196,7 @@ genCode infoTable fi =
               CallClosures $
                 NodeCallClosures
                   { _nodeCallClosuresInfo = mempty,
-                    _nodeCallClosuresFun = mkMemRef $ BL.lookup _varIndex refs,
+                    _nodeCallClosuresFun = mkMemRef $ BL.lookup "tree from core" _varIndex refs,
                     _nodeCallClosuresArgs = suppliedArgs'
                   }
 

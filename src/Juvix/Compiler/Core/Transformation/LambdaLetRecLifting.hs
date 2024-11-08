@@ -9,6 +9,7 @@ import Juvix.Compiler.Core.Data.InfoTableBuilder
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info.NameInfo
 import Juvix.Compiler.Core.Info.PragmaInfo
+import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation.Base
 import Juvix.Compiler.Core.Transformation.ComputeTypeInfo (computeNodeType)
 
@@ -19,6 +20,9 @@ type OnlyLetRec = Bool
 
 lambdaLiftNode' :: forall r. (Member InfoTableBuilder r) => Bool -> BinderList Binder -> Node -> Sem r Node
 lambdaLiftNode' onlyLetRec bl top = runReader onlyLetRec $ lambdaLiftNode bl top
+
+wvar :: Var -> Bool
+wvar v = v ^. varIndex < 0
 
 lambdaLiftNode :: forall r. (Members '[Reader OnlyLetRec, InfoTableBuilder] r) => BinderList Binder -> Node -> Sem r Node
 lambdaLiftNode aboveBl top =
@@ -54,15 +58,24 @@ lambdaLiftNode aboveBl top =
             goLambdaGo lm = do
               l' <- lambdaLiftNode bl (NLam lm)
               let (freevarsAssocs, fBody') = captureFreeVarsCtx bl l'
+
                   allfreevars :: [Var]
-                  allfreevars = map fst freevarsAssocs
+                  allfreevars =
+                    let vs = map fst freevarsAssocs
+                     in if
+                            | any wvar vs -> impossible
+                            | otherwise -> vs
+
                   argsNum :: Int
                   argsNum = length (fst (unfoldLambdas fBody'))
+
                   freeVarsNum :: Int
                   freeVarsNum = length allfreevars
               f <- freshSymbol
               let name = uniqueName "lambda" f
+              traceM ("fBody' " <> ppTrace fBody')
               ty <- nodeType fBody'
+              traceM ("ty' " <> ppTrace ty)
               registerIdent
                 name
                 IdentifierInfo
@@ -84,12 +97,16 @@ lambdaLiftNode aboveBl top =
         goLetRec letr = do
           let defs :: [Node]
               defs = letr ^.. letRecValues . each . letItemValue
+
               defsTypes :: [Type]
               defsTypes = letr ^.. letRecValues . each . letItemBinder . binderType
+
               ndefs :: Int
               ndefs = length defs
+
               binders :: [Binder]
               binders = letr ^.. letRecValues . each . letItemBinder
+
               pragmas :: [Pragmas]
               pragmas = getInfoPragmas (letr ^. letRecInfo)
 
@@ -111,7 +128,8 @@ lambdaLiftNode aboveBl top =
                   helper :: Var -> Maybe (Var, Binder)
                   helper v
                     | v ^. varIndex < ndefs = Nothing
-                    | otherwise = Just (shiftVar (-ndefs) v, BL.lookup idx' bl)
+                    | idx' < 0 = impossible
+                    | otherwise = Just (shiftVar' "helper" (-ndefs) v, trace ("idex = " <> show idx') (BL.lookup "lambda lifting" idx' bl))
                     where
                       idx' = v ^. varIndex - ndefs
 
@@ -134,10 +152,13 @@ lambdaLiftNode aboveBl top =
                             captureFreeVarsType
                               (map (first (^. varIndex)) recItemsFreeVars)
                               (b, bty)
+
                           argsNum :: Int
                           argsNum = length (fst (unfoldLambdas topBody))
+
                           freeVarsNum :: Int
                           freeVarsNum = length recItemsFreeVars
+
                       registerIdentNode sym topBody
                       registerIdent
                         name
@@ -172,11 +193,11 @@ lambdaLiftNode aboveBl top =
                   goShift k = \case
                     (x, bnd) :| yys -> case yys of
                       []
-                        | k == ndefs - 1 -> mkLet mempty bnd' (shift k x) b
+                        | k == ndefs - 1 -> mkLet mempty bnd' (shift "1" k x) b
                         | otherwise -> impossible
-                      (y : ys) -> mkLet mempty bnd' (shift k x) (goShift (k + 1) (y :| ys))
+                      (y : ys) -> mkLet mempty bnd' (shift "2" k x) (goShift (k + 1) (y :| ys))
                       where
-                        bnd' = over binderType (shift k) bnd
+                        bnd' = over binderType (shift "3" k) bnd
           let res :: Node
               res = shiftHelper body' (nonEmpty' (zipExact letItems letRecBinders'))
           return (Recur res)

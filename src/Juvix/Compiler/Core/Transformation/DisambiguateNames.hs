@@ -14,7 +14,7 @@ disambiguateNodeNames' disambiguate md = dmapL go
     go :: BinderList Binder -> Node -> Node
     go bl node = case node' of
       NVar Var {..} ->
-        mkVar (setInfoName (BL.lookup _varIndex bl ^. binderName) _varInfo) _varIndex
+        mkVar (setInfoName (BL.lookup "disambiguate" _varIndex bl ^. binderName) _varInfo) _varIndex
       NIdt Ident {..} ->
         mkIdent (setInfoName (identName md _identSymbol) _identInfo) _identSymbol
       NCtr Constr {..} ->

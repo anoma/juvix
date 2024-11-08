@@ -85,10 +85,10 @@ rmapG coll f = go mempty 0 (coll ^. cEmpty)
                   return $
                     maybe
                       (NVar v {_varIndex = getBinderIndex bl' lvl})
-                      (shift (bl' - lvl))
+                      (shift "rmap" (bl' - lvl))
                       mnode
                   where
-                    (lvl, mnode) = BL.lookup (v ^. varIndex) binders'
+                    (lvl, mnode) = BL.lookup "rmap" (v ^. varIndex) binders'
                 n' ->
                   let ni = destruct n'
                    in reassembleDetails ni <$> mapM goChild (ni ^. nodeChildren)

@@ -24,7 +24,7 @@ freeVars f = ufoldNA reassemble go
   where
     go k = \case
       NVar var@Var {..}
-        | _varIndex >= k -> NVar <$> f (shiftVar (-k) var)
+        | _varIndex >= k -> NVar <$> f (shiftVar' "free vars" (-k) var)
       n -> pure n
 
 freeVarOccurrences :: Index -> SimpleFold Node Var

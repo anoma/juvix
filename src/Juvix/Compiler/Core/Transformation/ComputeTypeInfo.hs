@@ -26,7 +26,7 @@ computeNodeTypeInfo md = umapL go
     nodeType :: BinderList Binder -> Node -> Type
     nodeType bl node = case node of
       NVar Var {..} ->
-        shift (_varIndex + 1) (BL.lookup _varIndex bl ^. binderType)
+        shift "nodetype" (_varIndex + 1) (BL.lookup "ctypeinfo" _varIndex bl ^. binderType)
       NIdt Ident {..} ->
         lookupIdentifierInfo md _identSymbol ^. identifierType
       NCst Constant {..} ->
@@ -120,17 +120,19 @@ computeNodeTypeInfo md = umapL go
         mkPi mempty _lambdaBinder (Info.getNodeType _lambdaBody)
       NLet Let {..} ->
         shift
+          "compute type info let"
           (-1)
           (Info.getNodeType _letBody)
       NRec LetRec {..} ->
         shift
+          "letrec"
           (-(length _letRecValues))
           (Info.getNodeType _letRecBody)
       NCase Case {..} -> case _caseDefault of
         Just nd -> Info.getNodeType nd
         Nothing -> case _caseBranches of
           CaseBranch {..} : _ ->
-            shift (-_caseBranchBindersNum) (Info.getNodeType _caseBranchBody)
+            shift "case" (-_caseBranchBindersNum) (Info.getNodeType _caseBranchBody)
           [] -> error "case with no branches"
       NMatch Match {} ->
         error "match unsupported"

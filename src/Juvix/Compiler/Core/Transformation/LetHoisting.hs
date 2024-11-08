@@ -46,7 +46,7 @@ letHoist n = do
       mkLetItemFromLItem :: Indexed LItem -> LetItem
       mkLetItemFromLItem i = shiftLetItem (i ^. indexedIx) (i ^. indexedThing . itemLet)
       letItems = map mkLetItemFromLItem il
-      body'' = substPlaceholders tbl (mkLets letItems (shift nlets body'))
+      body'' = substPlaceholders tbl (mkLets letItems (shift "letho" nlets body'))
   return (reLambdas topLambdas body'')
 
 -- | Removes every Let node and replaces references to it with a unique symbol.
@@ -63,7 +63,7 @@ removeLets = go mempty
       NVar v
         | v ^. varIndex < length bl -> do
             End . mkIdent' . (!! (v ^. varIndex)) <$> ask
-        | otherwise -> return . End . NVar . shiftVar (-length bl) $ v
+        | otherwise -> return . End . NVar . shiftVar' "lethoist" (-length bl) $ v
       NLet l -> do
         let _itemLevel = length bl
         _itemSymbol <- freshSymbol

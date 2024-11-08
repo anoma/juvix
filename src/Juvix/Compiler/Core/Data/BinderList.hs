@@ -71,7 +71,7 @@ lookupsSortedRev bl = go [] 0 bl
             ctx' = drop skipped ctx
          in go ((v, bhead' ctx') : acc) off' ctx' vs
     bhead' :: BinderList a -> a
-    bhead' = lookup 0
+    bhead' = lookup "rev" 0
 
 lookupMay :: Index -> BinderList a -> Maybe a
 lookupMay idx bl
@@ -80,13 +80,14 @@ lookupMay idx bl
   | otherwise = Nothing
 
 -- | lookup de Bruijn index
-lookup :: Index -> BinderList a -> a
-lookup idx bl = fromMaybe err (lookupMay idx bl)
+lookup :: Text -> Index -> BinderList a -> a
+lookup txt idx bl = fromMaybe err (lookupMay idx bl)
   where
     err :: a
     err =
       error
-        ( "invalid binder lookup. Got index "
+        ( txt
+            <> "Invalid binder lookup. Got index "
             <> show idx
             <> " and the length is "
             <> show (bl ^. blLength)

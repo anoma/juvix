@@ -24,7 +24,7 @@ convertNode = dmap go
       ([], []) ->
         body
       (b : bs', arg : args') ->
-        mkLet mempty b (shift k arg) (goBranch (k + 1) bs' args' body)
+        mkLet mempty b (shift "casefold" k arg) (goBranch (k + 1) bs' args' body)
       _ ->
         impossible
 

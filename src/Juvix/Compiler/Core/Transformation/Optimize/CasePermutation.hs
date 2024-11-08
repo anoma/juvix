@@ -64,7 +64,7 @@ convertNode md = dmap go
           where
             permuteBranch :: CaseBranch -> CaseBranch
             permuteBranch br@CaseBranch {..} =
-              case shift _caseBranchBindersNum (NCase c {_caseValue = mkBottom'}) of
+              case shift "perm" _caseBranchBindersNum (NCase c {_caseValue = mkBottom'}) of
                 NCase cs ->
                   over caseBranchBody (mkBody cs) br
                 _ -> impossible
