@@ -1,12 +1,19 @@
-module Juvix.Compiler.Nockma.Translation.FromSource.Base where
+module Juvix.Compiler.Nockma.Translation.FromSource.Base
+  ( module Juvix.Compiler.Nockma.Translation.FromSource.Base,
+    module Juvix.Compiler.Nockma.Highlight.Input,
+  )
+where
 
 import Data.HashMap.Internal.Strict qualified as HashMap
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.Text qualified as Text
 import Juvix.Compiler.Nockma.Encoding.ByteString (textToNatural)
 import Juvix.Compiler.Nockma.Encoding.Cue qualified as Cue
+import Juvix.Compiler.Nockma.Highlight.Input
 import Juvix.Compiler.Nockma.Language
-import Juvix.Data.CodeAnn
+-- import Juvix.Data.CodeAnn
+
+import Juvix.Data.CodeAnn (AnsiText, mkAnsiText, ppCodeAnn)
 import Juvix.Extra.Paths
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Parser.Error
@@ -17,7 +24,9 @@ import Juvix.Prelude.Parsing hiding (runParser)
 import Text.Megaparsec qualified as P
 import Text.Megaparsec.Char.Lexer qualified as L
 
-type Parser = Parsec Void Text
+type ParserSem = '[HighlightBuilder]
+
+type Parser = ParsecT Void Text (Sem '[HighlightBuilder])
 
 parseText :: Text -> Either MegaparsecError (Term Natural)
 parseText = runParser noFile
@@ -33,7 +42,7 @@ cueJammedFileOrPretty ::
   Prelude.Path Abs File ->
   Sem r (Term Natural)
 cueJammedFileOrPretty f
-  | f `hasExtensions` nockmaDebugFileExts = parseTermFile f
+  | f `hasExtensions` nockmaDebugFileExts = ignoreHighlightBuilder (parseTermFile f)
   | otherwise = cueJammedFile f
 
 -- | If the file ends in .debug.nockma it parses an annotated unjammed program. Otherwise
@@ -77,10 +86,11 @@ cueJammedFile fp = do
         loc :: Loc
         loc = mkInitialLoc fp
 
-parseTermFile :: (Members '[Files, Error JuvixError] r) => Prelude.Path Abs File -> Sem r (Term Natural)
+parseTermFile :: (Members '[Files, Error JuvixError, HighlightBuilder] r) => Prelude.Path Abs File -> Sem r (Term Natural)
 parseTermFile fp = do
   txt <- readFile' fp
-  either (throw . JuvixError) return (runParser fp txt)
+  mapError (JuvixError @MegaparsecError) $
+    runParserForSem term fp txt
 
 parseProgramFile :: (Members '[Files, Error JuvixError] r) => Prelude.Path Abs File -> Sem r (Program Natural)
 parseProgramFile fp = do
@@ -93,10 +103,20 @@ parseReplStatement = runParserFor replStatement noFile
 runParserProgram :: Prelude.Path Abs File -> Text -> Either MegaparsecError (Program Natural)
 runParserProgram = runParserFor program
 
+runParserForSem ::
+  (Members '[Error MegaparsecError, HighlightBuilder] r) =>
+  Parser a ->
+  Prelude.Path Abs File ->
+  Text ->
+  Sem r a
+runParserForSem p f txt = do
+  x <- inject (P.runParserT (spaceConsumer >> p <* eof) (toFilePath f) txt)
+  case x of
+    Left err -> throw (MegaparsecError err)
+    Right t -> return t
+
 runParserFor :: Parser a -> Prelude.Path Abs File -> Text -> Either MegaparsecError a
-runParserFor p f input_ = case P.runParser (spaceConsumer >> p <* eof) (toFilePath f) input_ of
-  Left err -> Left (MegaparsecError err)
-  Right t -> Right t
+runParserFor p f = run . ignoreHighlightBuilder . runError . runParserForSem p f
 
 runParser :: Prelude.Path Abs File -> Text -> Either MegaparsecError (Term Natural)
 runParser = runParserFor term
@@ -112,11 +132,25 @@ lexeme = L.lexeme spaceConsumer
 symbol :: Text -> Parser Text
 symbol = L.symbol spaceConsumer
 
+parsedItem :: ParsedItemTag -> Parser a -> Parser a
+parsedItem t p = do
+  WithLoc {..} <- withLoc p
+  lift $
+    highlightItem
+      ParsedItem
+        { _parsedLoc = _withLocInt,
+          _parsedTag = t
+        }
+  return _withLocParam
+
+delimiter :: Text -> Parser ()
+delimiter = parsedItem ParsedTagDelimiter . void . lexeme . chunk
+
 lsbracket :: Parser ()
-lsbracket = void (lexeme "[")
+lsbracket = delimiter "["
 
 rsbracket :: Parser ()
-rsbracket = void (lexeme "]")
+rsbracket = delimiter "]"
 
 stringLiteral :: Parser Text
 stringLiteral = lexeme (pack <$> (char '"' >> manyTill L.charLiteral (char '"')))

@@ -1,13 +1,11 @@
 module Juvix.Compiler.Concrete.Data.Highlight.Builder
   ( module Juvix.Compiler.Concrete.Data.Highlight.Input,
-    module Juvix.Compiler.Concrete.Data.ParsedItem,
     module Juvix.Compiler.Concrete.Data.Highlight.Builder,
   )
 where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Concrete.Data.Highlight.Input
-import Juvix.Compiler.Concrete.Data.ParsedItem
 import Juvix.Compiler.Concrete.Data.ScopedName
 import Juvix.Compiler.Concrete.Language.Base
 import Juvix.Compiler.Internal.Language qualified as Internal

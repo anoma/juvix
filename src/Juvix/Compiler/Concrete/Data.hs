@@ -8,7 +8,6 @@ module Juvix.Compiler.Concrete.Data
     module Juvix.Compiler.Store.Scoped.Data.InfoTable,
     module Juvix.Compiler.Concrete.Data.InfoTableBuilder,
     module Juvix.Data.NameKind,
-    module Juvix.Compiler.Concrete.Data.ParsedItem,
     module Juvix.Compiler.Concrete.Data.VisibilityAnn,
     module Juvix.Compiler.Concrete.Data.Literal,
     module Juvix.Compiler.Concrete.Data.NameRef,
@@ -27,7 +26,6 @@ import Juvix.Compiler.Concrete.Data.LocalModuleOrigin
 import Juvix.Compiler.Concrete.Data.ModuleIsTop
 import Juvix.Compiler.Concrete.Data.Name
 import Juvix.Compiler.Concrete.Data.NameRef
-import Juvix.Compiler.Concrete.Data.ParsedItem
 import Juvix.Compiler.Concrete.Data.PublicAnn
 import Juvix.Compiler.Concrete.Data.ScopedName qualified
 import Juvix.Compiler.Concrete.Data.VisibilityAnn

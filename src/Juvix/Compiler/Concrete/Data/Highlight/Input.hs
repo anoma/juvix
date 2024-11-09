@@ -1,10 +1,5 @@
-module Juvix.Compiler.Concrete.Data.Highlight.Input
-  ( module Juvix.Compiler.Concrete.Data.Highlight.Input,
-    module Juvix.Compiler.Concrete.Data.ParsedItem,
-  )
-where
+module Juvix.Compiler.Concrete.Data.Highlight.Input where
 
-import Juvix.Compiler.Concrete.Data.ParsedItem
 import Juvix.Compiler.Concrete.Data.ScopedName
 import Juvix.Compiler.Concrete.Language.Base
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as Internal
