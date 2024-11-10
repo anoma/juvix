@@ -1,4 +1,4 @@
-module Juvix.Compiler.Concrete.Data.Highlight.Properties where
+module Juvix.Emacs.Properties where
 
 import Data.Aeson (ToJSON)
 import Data.Aeson qualified as Aeson

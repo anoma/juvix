@@ -1,10 +1,9 @@
-module Juvix.Compiler.Concrete.Data.Highlight.RenderEmacs where
+module Juvix.Emacs.Render where
 
 import Data.Text qualified as Text
-import Juvix.Compiler.Concrete.Data.Highlight.Properties
-import Juvix.Compiler.Concrete.Data.ScopedName
 import Juvix.Data.CodeAnn
 import Juvix.Data.Emacs
+import Juvix.Emacs.Properties
 import Juvix.Prelude
 
 nameKindFace :: NameKind -> Maybe Face
@@ -34,7 +33,6 @@ fromCodeAnn = \case
   AnnImportant -> Nothing
   AnnUnkindedSym -> Nothing
   AnnDef {} -> Nothing
-  -- TODO goto property
   AnnRef {} -> Nothing
 
 data RenderState = RenderState

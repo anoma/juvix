@@ -1,7 +1,7 @@
 module Juvix.Compiler.Concrete.Data.Highlight
   ( module Juvix.Compiler.Concrete.Data.Highlight,
     module Juvix.Compiler.Concrete.Data.Highlight.Builder,
-    module Juvix.Compiler.Concrete.Data.Highlight.Properties,
+    module Juvix.Emacs.Properties,
   )
 where
 
@@ -10,14 +10,14 @@ import Data.ByteString.Lazy qualified as ByteString
 import Data.Text.Encoding qualified as Text
 import Juvix.Compiler.Concrete.Data.Highlight.Builder
 import Juvix.Compiler.Concrete.Data.Highlight.PrettyJudoc
-import Juvix.Compiler.Concrete.Data.Highlight.Properties
-import Juvix.Compiler.Concrete.Data.Highlight.RenderEmacs
 import Juvix.Compiler.Concrete.Data.ScopedName
 import Juvix.Compiler.Internal.Language qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as Internal
 import Juvix.Compiler.Store.Scoped.Data.InfoTable qualified as Scoped
 import Juvix.Data.CodeAnn
 import Juvix.Data.Emacs
+import Juvix.Emacs.Properties
+import Juvix.Emacs.Render
 import Juvix.Prelude as Prelude hiding (show)
 import Prelude qualified
 
