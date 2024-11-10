@@ -44,6 +44,9 @@ nockOpKey = \case
   OpHint -> "OpHint"
   OpScry -> "OpScry"
 
+stack :: Doc CodeAnn
+stack = annotate (AnnKind KNameAxiom) "𝒮"
+
 term1 :: Doc CodeAnn
 term1 = annotate AnnJudoc "𝓉₁"
 
@@ -56,9 +59,20 @@ term3 = annotate AnnLiteralInteger "𝓉₃"
 path1 :: Doc CodeAnn
 path1 = annotate (AnnKind KNameFunction) "𝓅"
 
+evaluatesTo :: Doc CodeAnn
+evaluatesTo = annotate AnnKeyword "⇒"
+
+indexOp :: Doc CodeAnn
+indexOp = annotate AnnKeyword "!"
+
 nockOpDoc :: NockOp -> Doc CodeAnn
 nockOpDoc = \case
-  OpAddress -> ""
+  OpAddress ->
+    stack <> ","
+      <+> ppCodeAnn OpAddress
+      <+> path1
+      <+> evaluatesTo
+      <+> stack <> indexOp <> path1
   OpQuote -> "OpQuote"
   OpApply -> "OpApply"
   OpIsCell -> "OpIsCell"
