@@ -30,12 +30,14 @@ filterInput absPth HighlightInput {..} =
 
 data HighlightBuilder :: Effect where
   HighlightItem :: SemanticItem -> HighlightBuilder m ()
+  HighlightNockOp :: WithLoc NockOp -> HighlightBuilder m ()
 
 makeSem ''HighlightBuilder
 
 ignoreHighlightBuilder :: Sem (HighlightBuilder ': r) a -> Sem r a
 ignoreHighlightBuilder = interpret $ \case
   HighlightItem {} -> return ()
+  HighlightNockOp {} -> return ()
 
 execHighlightBuilder :: Sem (HighlightBuilder ': r) a -> Sem r (HighlightInput)
 execHighlightBuilder = fmap fst . runHighlightBuilder
@@ -43,3 +45,4 @@ execHighlightBuilder = fmap fst . runHighlightBuilder
 runHighlightBuilder :: Sem (HighlightBuilder ': r) a -> Sem r (HighlightInput, a)
 runHighlightBuilder = reinterpret (runState emptyHighlightInput) $ \case
   HighlightItem i -> modify (over highlightSemanticItems (i :))
+  HighlightNockOp i -> modify (over highlightNockOps (i :))

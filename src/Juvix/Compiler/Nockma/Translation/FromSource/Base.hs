@@ -170,7 +170,8 @@ dottedNatural = lexeme $ do
 
 atomOp :: Maybe Tag -> Parser (Atom Natural)
 atomOp mtag = do
-  WithLoc loc op' <- withLoc (choice [functionSymbol opName $> op | (opName, op) <- HashMap.toList atomOps])
+  lop@(WithLoc loc op') <- withLoc (choice [functionSymbol opName $> op | (opName, op) <- HashMap.toList atomOps])
+  lift (highlightNockOp lop)
   let info =
         AtomInfo
           { _atomInfoHint = Just AtomHintOp,

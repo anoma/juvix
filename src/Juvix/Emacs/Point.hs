@@ -1,4 +1,4 @@
-module Juvix.Data.Emacs.Point
+module Juvix.Emacs.Point
   ( Point,
     unPoint,
     fromZeroBasedInt,

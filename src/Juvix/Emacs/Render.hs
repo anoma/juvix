@@ -1,9 +1,10 @@
-module Juvix.Emacs.Render where
+module Juvix.Emacs.Render (renderEmacs, nameKindFace) where
 
 import Data.Text qualified as Text
 import Juvix.Data.CodeAnn
-import Juvix.Data.Emacs
+import Juvix.Emacs.Point
 import Juvix.Emacs.Properties
+import Juvix.Emacs.SExp
 import Juvix.Prelude
 
 nameKindFace :: NameKind -> Maybe Face
@@ -44,9 +45,15 @@ data RenderState = RenderState
 
 makeLenses ''RenderState
 
-renderEmacs :: SimpleDocStream CodeAnn -> (Text, SExp)
+renderEmacs :: Doc CodeAnn -> (Text, SExp)
 renderEmacs s =
-  let r = run . execState iniRenderState . go . alterAnnotationsS fromCodeAnn $ s
+  let r =
+        run
+          . execState iniRenderState
+          . go
+          . alterAnnotationsS fromCodeAnn
+          . layoutPretty defaultLayoutOptions
+          $ s
    in (r ^. stateText, progn (map putProperty (r ^. stateProperties)))
   where
     iniRenderState =

@@ -15,9 +15,9 @@ import Juvix.Compiler.Internal.Language qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as Internal
 import Juvix.Compiler.Store.Scoped.Data.InfoTable qualified as Scoped
 import Juvix.Data.CodeAnn
-import Juvix.Data.Emacs
 import Juvix.Emacs.Properties
 import Juvix.Emacs.Render
+import Juvix.Emacs.SExp
 import Juvix.Prelude as Prelude hiding (show)
 import Prelude qualified
 
@@ -44,7 +44,7 @@ buildProperties HighlightInput {..} =
           <> mapMaybe goFaceName _highlightNames
           <> map goFaceError _highlightErrors,
       _propertiesGoto = map goGotoProperty _highlightNames,
-      _propertiesDoc = mapMaybe (goDocProperty _highlightDocTable _highlightTypes) _highlightNames
+      _propertiesInfo = mapMaybe (goDocProperty _highlightDocTable _highlightTypes) _highlightNames
     }
 
 goFaceError :: Interval -> WithLoc PropertyFace
@@ -91,9 +91,10 @@ goGotoProperty n = WithLoc (getLoc n) PropertyGoto {..}
     _gotoPos = n ^. anameDefinedLoc . intervalStart
     _gotoFile = n ^. anameDefinedLoc . intervalFile
 
-goDocProperty :: Scoped.DocTable -> Internal.TypesTable -> AName -> Maybe (WithLoc PropertyDoc)
+goDocProperty :: Scoped.DocTable -> Internal.TypesTable -> AName -> Maybe (WithLoc PropertyInfo)
 goDocProperty doctbl tbl a = do
   let ty :: Maybe Internal.Expression = tbl ^. Internal.typesTable . at (a ^. anameDocId)
   d <- ppDocDefault a ty (doctbl ^. at (a ^. anameDocId))
-  let (_docText, _docSExp) = renderEmacs (layoutPretty defaultLayoutOptions d)
-  return (WithLoc (getLoc a) PropertyDoc {..})
+  let (txt, _infoInit) = renderEmacs d
+      _infoInfo = String txt
+  return (WithLoc (getLoc a) PropertyInfo {..})
