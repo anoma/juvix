@@ -50,6 +50,24 @@ buildProperties HighlightInput {..} =
 goFaceError :: Interval -> WithLoc PropertyFace
 goFaceError i = WithLoc i (PropertyFace FaceError)
 
+goFaceSemanticItem :: SemanticItem -> Maybe (WithLoc PropertyFace)
+goFaceSemanticItem i = WithLoc (getLoc i) . PropertyFace <$> f
+  where
+    f :: Maybe Face
+    f = case i ^. withLocParam of
+      AnnKind k -> nameKindFace k
+      AnnKeyword -> Just FaceKeyword
+      AnnComment -> Just FaceComment
+      AnnJudoc -> Just FaceJudoc
+      AnnDelimiter -> Just FaceDelimiter
+      AnnLiteralString -> Just FaceString
+      AnnLiteralInteger -> Just FaceNumber
+      AnnCode -> Nothing
+      AnnImportant -> Nothing
+      AnnUnkindedSym -> Nothing
+      AnnDef {} -> Nothing
+      AnnRef {} -> Nothing
+
 goFaceParsedItem :: ParsedItem -> WithLoc PropertyFace
 goFaceParsedItem i = WithLoc (i ^. parsedLoc) (PropertyFace f)
   where

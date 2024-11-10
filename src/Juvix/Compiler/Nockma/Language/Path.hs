@@ -1,11 +1,17 @@
 module Juvix.Compiler.Nockma.Language.Path where
 
 import Juvix.Prelude hiding (Atom, Path)
+import Prelude (show)
 
 data Direction
   = L
   | R
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Bounded, Enum)
+
+instance Show Direction where
+  show = \case
+    L -> "L"
+    R -> "R"
 
 type Path = [Direction]
 

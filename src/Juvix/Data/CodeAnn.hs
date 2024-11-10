@@ -37,6 +37,8 @@ data CodeAnn
   | AnnDef CodeAnnReference
   | AnnRef CodeAnnReference
 
+type SemanticItem = WithLoc CodeAnn
+
 instance HasNameKind CodeAnnReference where
   getNameKind = (^. codeAnnReferenceNameKindPretty)
   getNameKindPretty = (^. codeAnnReferenceNameKindPretty)

@@ -1,9 +1,10 @@
 module Juvix.Compiler.Nockma.Highlight.Input where
 
+import Juvix.Data.CodeAnn
 import Juvix.Prelude
 
 newtype HighlightInput = HighlightInput
-  { _highlightParsedItems :: [ParsedItem]
+  { _highlightSemanticItems :: [SemanticItem]
   }
 
 makeLenses ''HighlightInput
@@ -11,17 +12,17 @@ makeLenses ''HighlightInput
 emptyHighlightInput :: HighlightInput
 emptyHighlightInput =
   HighlightInput
-    { _highlightParsedItems = []
+    { _highlightSemanticItems = []
     }
 
 filterInput :: Path Abs File -> HighlightInput -> HighlightInput
 filterInput absPth HighlightInput {..} =
   HighlightInput
-    { _highlightParsedItems = filterByLoc absPth _highlightParsedItems
+    { _highlightSemanticItems = filterByLoc absPth _highlightSemanticItems
     }
 
 data HighlightBuilder :: Effect where
-  HighlightItem :: ParsedItem -> HighlightBuilder m ()
+  HighlightItem :: SemanticItem -> HighlightBuilder m ()
 
 makeSem ''HighlightBuilder
 
@@ -34,4 +35,4 @@ execHighlightBuilder = fmap fst . runHighlightBuilder
 
 runHighlightBuilder :: Sem (HighlightBuilder ': r) a -> Sem r (HighlightInput, a)
 runHighlightBuilder = reinterpret (runState emptyHighlightInput) $ \case
-  HighlightItem i -> modify (over highlightParsedItems (i :))
+  HighlightItem i -> modify (over highlightSemanticItems (i :))
