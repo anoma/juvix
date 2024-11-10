@@ -1,10 +1,13 @@
 module Juvix.Compiler.Nockma.Highlight.Input where
 
+import Juvix.Compiler.Nockma.Language hiding (Path)
 import Juvix.Data.CodeAnn
 import Juvix.Prelude
 
-newtype HighlightInput = HighlightInput
-  { _highlightSemanticItems :: [SemanticItem]
+data HighlightInput = HighlightInput
+  { _highlightSemanticItems :: [SemanticItem],
+    _highlightNockOps :: [WithLoc NockOp],
+    _highlightErrors :: [Interval]
   }
 
 makeLenses ''HighlightInput
@@ -12,13 +15,17 @@ makeLenses ''HighlightInput
 emptyHighlightInput :: HighlightInput
 emptyHighlightInput =
   HighlightInput
-    { _highlightSemanticItems = []
+    { _highlightSemanticItems = [],
+      _highlightNockOps = [],
+      _highlightErrors = []
     }
 
 filterInput :: Path Abs File -> HighlightInput -> HighlightInput
 filterInput absPth HighlightInput {..} =
   HighlightInput
-    { _highlightSemanticItems = filterByLoc absPth _highlightSemanticItems
+    { _highlightSemanticItems = filterByLoc absPth _highlightSemanticItems,
+      _highlightNockOps = filterByLoc absPth _highlightNockOps,
+      _highlightErrors = _highlightErrors
     }
 
 data HighlightBuilder :: Effect where

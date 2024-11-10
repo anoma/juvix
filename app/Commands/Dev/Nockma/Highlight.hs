@@ -10,8 +10,18 @@ runCommand opts = silenceProgressLog . runPipelineOptions $ do
   afile <- fromAppPathFile (opts ^. nockmaHighlightFile)
   hinput <-
     fmap (filterInput afile)
-      . runAppError @JuvixError
+      . runJuvixErrorHighlight
       . execHighlightBuilder
       $ Nockma.parseTermFile afile
   renderStdOutRaw (highlight hinput)
   newline
+
+runJuvixErrorHighlight :: forall r. Sem (Error JuvixError ': r) HighlightInput -> Sem r HighlightInput
+runJuvixErrorHighlight m = do
+  res <- runError m
+  return $ case res of
+    Right r -> r
+    Left err ->
+      emptyHighlightInput
+        { _highlightErrors = [getLoc err]
+        }

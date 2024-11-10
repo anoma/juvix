@@ -5,7 +5,7 @@ module Juvix.Compiler.Nockma.Highlight
   )
 where
 
-import Juvix.Compiler.Concrete.Data.Highlight (goFaceSemanticItem)
+import Juvix.Compiler.Concrete.Data.Highlight (goFaceError, goFaceSemanticItem)
 import Juvix.Compiler.Nockma.Highlight.Base
 import Juvix.Compiler.Nockma.Highlight.Input
 import Juvix.Data.Emacs.SExp
@@ -18,7 +18,8 @@ buildProperties :: HighlightInput -> LocProperties
 buildProperties HighlightInput {..} =
   LocProperties
     { _propertiesFace =
-        mapMaybe goFaceSemanticItem _highlightSemanticItems,
+        mapMaybe goFaceSemanticItem _highlightSemanticItems
+          <> map goFaceError _highlightErrors,
       _propertiesGoto = [],
       _propertiesDoc = []
     }
