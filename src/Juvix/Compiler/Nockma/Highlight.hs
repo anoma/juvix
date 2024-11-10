@@ -44,9 +44,21 @@ nockOpKey = \case
   OpHint -> "OpHint"
   OpScry -> "OpScry"
 
+term1 :: Doc CodeAnn
+term1 = annotate AnnJudoc "𝓉₁"
+
+term2 :: Doc CodeAnn
+term2 = annotate AnnLiteralString "𝓉₂"
+
+term3 :: Doc CodeAnn
+term3 = annotate AnnLiteralInteger "𝓉₃"
+
+path1 :: Doc CodeAnn
+path1 = annotate (AnnKind KNameFunction) "𝓅"
+
 nockOpDoc :: NockOp -> Doc CodeAnn
 nockOpDoc = \case
-  OpAddress -> "OpAddress"
+  OpAddress -> ""
   OpQuote -> "OpQuote"
   OpApply -> "OpApply"
   OpIsCell -> "OpIsCell"

@@ -58,6 +58,7 @@ goFaceSemanticItem i = WithLoc (getLoc i) . PropertyFace <$> f
       AnnKind k -> nameKindFace k
       AnnKeyword -> Just FaceKeyword
       AnnComment -> Just FaceComment
+      AnnPragma -> Just FacePragma
       AnnJudoc -> Just FaceJudoc
       AnnDelimiter -> Just FaceDelimiter
       AnnLiteralString -> Just FaceString

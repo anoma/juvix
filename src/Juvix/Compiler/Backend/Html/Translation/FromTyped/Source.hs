@@ -324,6 +324,7 @@ putTag ann x = case ann of
   AnnKeyword -> return (Html.span ! juClass JuKeyword $ x)
   AnnUnkindedSym -> return (Html.span ! juClass JuVar $ x)
   AnnComment -> return (Html.span ! juClass JuComment $ x)
+  AnnPragma -> return (Html.span ! juClass JuComment $ x)
   AnnJudoc -> return (Html.span ! juClass JuJudoc $ x)
   AnnDelimiter -> return (Html.span ! juClass JuDelimiter $ x)
   AnnDef r -> boldDefine <*> tagDef r

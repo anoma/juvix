@@ -170,7 +170,13 @@ dottedNatural = lexeme $ do
 
 atomOp :: Maybe Tag -> Parser (Atom Natural)
 atomOp mtag = do
-  lop@(WithLoc loc op') <- withLoc (choice [functionSymbol opName $> op | (opName, op) <- HashMap.toList atomOps])
+  lop@(WithLoc loc op') <-
+    withLoc
+      ( choice
+          [ semanticSymbol (AnnKind (getNameKind op)) opName $> op
+            | (opName, op) <- HashMap.toList atomOps
+          ]
+      )
   lift (highlightNockOp lop)
   let info =
         AtomInfo
@@ -197,11 +203,8 @@ keyword = semanticSymbol AnnKeyword
 constructorSymbol :: Text -> Parser ()
 constructorSymbol = semanticSymbol (AnnKind KNameConstructor)
 
-functionSymbol :: Text -> Parser ()
-functionSymbol = semanticSymbol (AnnKind KNameFunction)
-
 directionSymbol :: Text -> Parser ()
-directionSymbol = constructorSymbol
+directionSymbol = semanticSymbol (AnnKind KNameInductive)
 
 direction :: Parser Direction
 direction = choice [directionSymbol (show lr) $> lr | lr <- allElements :: [Direction]]
