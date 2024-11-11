@@ -8,7 +8,6 @@ repos:
     rev: v4.5.0
     hooks:
       - id: check-yaml
-        args: ["--disable", "duplicate-keys"]
       - id: check-added-large-files
       - id: check-case-conflict
       - id: check-merge-conflict
