@@ -7,7 +7,7 @@ tests:
     stdout:
       matches:
         regex: |-
-          ^Juvix version 0.6.7-([a-f0-9]{7}).*
+          ^Juvix version 0.6.8-([a-f0-9]{7}).*
 
   - name: cli-numeric-version
     command:
