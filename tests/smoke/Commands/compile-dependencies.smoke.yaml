@@ -810,7 +810,6 @@ tests:
       contains: ""
     stderr:
       contains: invalid-ref
-      contains: Cloning
     exit-status: 1
 
   - name: git-dependencies-invalid-url
@@ -854,7 +853,6 @@ tests:
       contains: ""
     stderr:
       contains: Error
-      contains: Cloning
     exit-status: 1
 
   - name: git-dependencies-offline
@@ -973,7 +971,6 @@ tests:
       contains: ""
     stderr:
       contains: juvix clean
-      contains: Cloning
     exit-status: 1
 
   - name: git-dependencies-duplicate-names
