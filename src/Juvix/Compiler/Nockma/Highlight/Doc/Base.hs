@@ -42,11 +42,12 @@ data Symbol = Symbol
     _symbolSubscript :: Maybe Natural,
     _symbolPrimes :: Natural
   }
-  deriving stock (Eq, Ord, Generic)
+  deriving stock (Eq, Ord, Generic, Lift)
 
 instance Hashable Symbol
 
 data PathSymbol = PathP
+  deriving stock (Lift)
 
 data Atom
   = AtomSymbol Symbol
@@ -57,17 +58,20 @@ data Atom
   | AtomZero
   | AtomOne
   | AtomSuccessor Successor
+  deriving stock (Lift)
 
 -- | Syntax: succ _successor
 newtype Successor = Successor
   { _successor :: Term
   }
+  deriving stock (Lift)
 
 -- | Syntax: index(_indexAtBase; _indexAtIndex)
 data IndexAt = IndexAt
   { _indexAtBase :: Term,
     _indexAtPath :: PathSymbol
   }
+  deriving stock (Lift)
 
 -- | Syntax: replace (_replaceBase; _replacePath;  _replaceBy)
 data Replace = Replace
@@ -75,27 +79,32 @@ data Replace = Replace
     _replacePath :: PathSymbol,
     _replaceBy :: Term
   }
+  deriving stock (Lift)
 
 data Term
   = TermAtom Atom
   | TermCell Cell
+  deriving stock (Lift)
 
 data Cell = Cell
   { _cellLhs :: Term,
     _cellRhs :: Term
   }
+  deriving stock (Lift)
 
 -- | Syntax: _evalContext => _evalRhs
 data EvalRelation = EvalRelation
   { _evalContext :: Context,
     _evalRhs :: Term
   }
+  deriving stock (Lift)
 
 -- | Syntax: _contextLhs * _contextRhs
 data Context = Context
   { _contextLhs :: Term,
     _contextRhs :: Term
   }
+  deriving stock (Lift)
 
 -- | Syntax:
 -- rel_1 && .. && rel_n
@@ -105,6 +114,7 @@ data Rule = Rule
   { _ruleConditions :: [EvalRelation],
     _rulePost :: EvalRelation
   }
+  deriving stock (Lift)
 
 -- | Syntax:
 -- rule_1
@@ -115,3 +125,4 @@ data Rule = Rule
 newtype Rules = Rules
   { _rules :: NonEmpty Rule
   }
+  deriving stock (Lift)

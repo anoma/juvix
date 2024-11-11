@@ -144,7 +144,7 @@ data NockOp
   | OpReplace
   | OpHint
   | OpScry
-  deriving stock (Bounded, Enum, Eq, Generic)
+  deriving stock (Bounded, Enum, Eq, Generic, Lift)
 
 instance Hashable NockOp
 
