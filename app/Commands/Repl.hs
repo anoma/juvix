@@ -427,7 +427,13 @@ catchAll = Repline.dontCrash . catchJuvixError
             . hPutStrLn stderr
             . run
             . runReader (project' @GenericOptions opts)
-            $ Error.render (not (opts ^. globalNoColors) && hasAnsi) Nothing e
+            $ Error.render (renderType opts hasAnsi) Nothing e
+          where
+            renderType :: GlobalOptions -> Bool -> Error.RenderType
+            renderType opts hasAnsi
+              | opts ^. globalVSCode = Error.RenderVSCode
+              | opts ^. globalNoColors || not hasAnsi = Error.RenderText
+              | otherwise = Error.RenderAnsi
 
         catchErrorS :: ReplS () -> ReplS ()
         catchErrorS = (`Except.catchError` printErrorS)
