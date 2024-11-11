@@ -13,6 +13,27 @@ kwAs = asciiKw Str.as
 kwBuiltin :: Keyword
 kwBuiltin = asciiKw Str.builtin
 
+kwSucc :: Keyword
+kwSucc = asciiKw Str.succ
+
+delimRule :: Keyword
+delimRule = mkDelim Str.replace
+
+kwNockmaLogicAnd :: Keyword
+kwNockmaLogicAnd = asciiKw Str.nockmaLogicAnd
+
+kwAnd :: Keyword
+kwAnd = asciiKw Str.and
+
+kwReplace :: Keyword
+kwReplace = asciiKw Str.replace
+
+kwIndex :: Keyword
+kwIndex = asciiKw Str.index
+
+kwDoubleArrowR :: Keyword
+kwDoubleArrowR = unicodeKw Str.doubleArrowRAscii Str.doubleArrowR
+
 kwBottom :: Keyword
 kwBottom = unicodeKw Str.bottomAscii Str.bottom
 
@@ -404,7 +425,7 @@ kwFun :: Keyword
 kwFun = asciiKw Str.fun_
 
 kwStar :: Keyword
-kwStar = asciiKw Str.mul
+kwStar = unicodeKw Str.starAscii Str.star
 
 kwTrue :: Keyword
 kwTrue = asciiKw Str.true_
@@ -430,11 +451,11 @@ kwDollar = asciiKw Str.dollar
 kwMutual :: Keyword
 kwMutual = asciiKw Str.mutual
 
-kwBracketL :: Keyword
-kwBracketL = asciiKw Str.bracketL
+delimBracketL :: Keyword
+delimBracketL = mkDelim Str.bracketL
 
-kwBracketR :: Keyword
-kwBracketR = asciiKw Str.bracketR
+delimBracketR :: Keyword
+delimBracketR = mkDelim Str.bracketR
 
 kwAp :: Keyword
 kwAp = asciiKw Str.ap

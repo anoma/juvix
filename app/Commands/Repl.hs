@@ -11,7 +11,7 @@ import Control.Monad.Reader qualified as Reader
 import Control.Monad.State.Strict qualified as State
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (mapReaderT)
-import Data.String.Interpolate (i, __i)
+import Data.String.Interpolate (i)
 import HaskelineJB
 import Juvix.Compiler.Concrete.Data.Scope (scopePath)
 import Juvix.Compiler.Concrete.Data.Scope qualified as Scoped

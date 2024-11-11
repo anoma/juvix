@@ -6,7 +6,6 @@ where
 
 import Commands.Base
 import Commands.Dev.Latex.Export.Options
-import Data.String.Interpolate (__i)
 import Data.Text qualified as Text
 import Juvix.Compiler.Backend.Latex.Translation.FromScoped.Source
 import Juvix.Compiler.Concrete.Language

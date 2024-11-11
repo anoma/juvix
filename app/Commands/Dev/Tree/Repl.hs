@@ -4,7 +4,6 @@ import Commands.Base hiding (Atom)
 import Commands.Dev.Tree.Repl.Options
 import Control.Exception (throwIO)
 import Control.Monad.State.Strict qualified as State
-import Data.String.Interpolate (__i)
 import Juvix.Compiler.Tree.Data.InfoTable
 import Juvix.Compiler.Tree.Data.InfoTableBuilder qualified as Tree
 import Juvix.Compiler.Tree.Language

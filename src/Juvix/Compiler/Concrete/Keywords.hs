@@ -10,6 +10,8 @@ import Juvix.Data.Keyword.All
   ( -- delimiters
     delimBraceL,
     delimBraceR,
+    delimBracketL,
+    delimBracketR,
     delimDoubleBraceL,
     delimDoubleBraceR,
     delimJudocBlockEnd,
@@ -30,8 +32,6 @@ import Juvix.Data.Keyword.All
     kwAxiom,
     kwBelow,
     kwBinary,
-    kwBracketL,
-    kwBracketR,
     kwBuiltin,
     kwCase,
     kwCoercion,

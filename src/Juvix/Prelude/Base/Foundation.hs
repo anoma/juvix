@@ -64,6 +64,7 @@ module Juvix.Prelude.Base.Foundation
     module Text.Read,
     module Control.Monad.Catch,
     module Control.Monad.Zip,
+    module Data.String.Interpolate,
     Data,
     Text,
     pack,
@@ -177,6 +178,7 @@ import Data.Singletons.Sigma
 import Data.Singletons.TH (genSingletons, promoteOrdInstances, singOrdInstances)
 import Data.Stream (Stream)
 import Data.String
+import Data.String.Interpolate (__i)
 import Data.Text (Text, pack, strip, unpack)
 import Data.Text qualified as Text
 import Data.Text.Encoding
