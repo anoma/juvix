@@ -63,20 +63,20 @@ gitHeadRef = gitNormalizeRef "HEAD"
 
 -- | Checkout the clone at a particular ref
 gitCheckout :: (Members '[TaggedLock, ProcessE, Error GitProcessError, Reader CloneEnv] r) => Text -> Sem r ()
-gitCheckout ref = withTaggedLockDir' (void (runGitCmdInDir ["checkout", "-q", ref]))
+gitCheckout ref = withTaggedLockDir' (void (runGitCmdInDir ["checkout", ref]))
 
 -- | Fetch in the clone
 gitFetch :: (Members '[TaggedLock, ProcessE, Error GitProcessError, Reader CloneEnv, Internet] r) => Sem r ()
 gitFetch = whenHasInternet gitFetchOnline
 
 gitFetchOnline :: (Members '[TaggedLock, Reader CloneEnv, Error GitProcessError, ProcessE, Online] r) => Sem r ()
-gitFetchOnline = withTaggedLockDir' (void (runGitCmdInDir ["fetch", "-q"]))
+gitFetchOnline = withTaggedLockDir' (void (runGitCmdInDir ["fetch"]))
 
 gitCloneOnline :: (Members '[Log, Error GitProcessError, ProcessE, Online, Reader CloneEnv] r) => Text -> Sem r ()
 gitCloneOnline url = do
   p <- asks (^. cloneEnvDir)
   log ("Cloning " <> url <> " to " <> pack (toFilePath p))
-  void (runGitCmd ["clone", "-q", url, T.pack (toFilePath p)])
+  void (runGitCmd ["clone", url, T.pack (toFilePath p)])
 
 cloneGitRepo :: (Members '[Log, Files, ProcessE, Error GitProcessError, Reader CloneEnv, Internet] r) => Text -> Sem r ()
 cloneGitRepo = whenHasInternet . gitCloneOnline

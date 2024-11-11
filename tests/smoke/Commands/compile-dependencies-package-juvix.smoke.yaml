@@ -63,6 +63,9 @@ tests:
         ./HelloWorld
     stdout:
       contains: Hello from dep
+    stderr:
+      matches:
+        regex: .*
     exit-status: 0
 
   - name: git-dependencies-success-then-offline
@@ -131,6 +134,9 @@ tests:
         ./HelloWorld
     stdout:
       contains: Hello from dep
+    stderr:
+      matches:
+        regex: .*
     exit-status: 0
 
   - name: git-dependencies-fetch-new-commits
