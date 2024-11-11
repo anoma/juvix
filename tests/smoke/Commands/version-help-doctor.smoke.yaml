@@ -19,7 +19,7 @@ tests:
         regex: |-
           ^(\d+)((\.{1}\d+)*)(\.{0})$
 
-  - name: cli-flag-help  
+  - name: cli-flag-help
     command:
       - juvix
       - --help
@@ -35,7 +35,7 @@ tests:
       - doctor
       - --offline
     exit-status: 0
-    stdout: |
+    stderr: |
       > Checking for clang...
       > Checking clang version...
       > Checking for wasm-ld...
@@ -52,7 +52,7 @@ tests:
         unset JUVIX_LLVM_DIST_PATH
         juvix doctor --verbose --offline
     exit-status: 0
-    stdout:
+    stderr:
       matches:
         regex: |-
           Found clang(.*?)using system PATH
@@ -66,7 +66,7 @@ tests:
         export JUVIX_LLVM_DIST_PATH=${CLANG_PATH%$'/bin/clang'}
         juvix doctor --verbose --offline
     exit-status: 0
-    stdout:
+    stderr:
       matches:
         regex: |-
           Found clang(.*?)using JUVIX_LLVM_DIST_PATH
@@ -79,7 +79,7 @@ tests:
         export JUVIX_LLVM_DIST_PATH=/tmp
         juvix doctor --verbose --offline
     exit-status: 0
-    stdout:
+    stderr:
       matches:
         regex: |-
           Found clang(.*?)using system PATH
