@@ -121,10 +121,7 @@ computeNodeTypeInfo md = umapL go
       NLet Let {..} ->
         let bodyTy = Info.getNodeType _letBody
          in subst (_letItem ^. letItemValue) bodyTy
-      NRec LetRec {..} ->
-        let bodyTy = Info.getNodeType _letRecBody
-            itemsValues = _letRecValues ^.. each . letItemValue
-         in substs (reverse itemsValues) bodyTy
+      NRec {} -> error "letrec unsupported"
       NCase Case {..} -> case _caseDefault of
         Just nd -> Info.getNodeType nd
         Nothing -> case _caseBranches of
