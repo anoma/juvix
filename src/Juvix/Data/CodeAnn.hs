@@ -70,6 +70,9 @@ instance HasAnsiBackend (Doc CodeAnn) where
   toAnsiDoc = fmap stylize
   toAnsiStream = fmap stylize . layoutPretty defaultLayoutOptions
 
+instance PrettyCodeAnn Keyword where
+  ppCodeAnn = annotate AnnKeyword . pretty
+
 simpleErrorCodeAnn :: (PrettyCodeAnn msg) => msg -> SimpleError
 simpleErrorCodeAnn = SimpleError . mkAnsiText . ppCodeAnn
 

@@ -3,11 +3,10 @@ module Juvix.Compiler.Nockma.Highlight.Doc.Parser.Base where
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Nockma.Highlight.Doc.Base
 import Juvix.Compiler.Nockma.Language (atomOps)
+import Juvix.Parser.Error.Base
 import Juvix.Parser.Lexer
 import Juvix.Prelude
 import Juvix.Prelude.Parsing as P
-
-import Juvix.Parser.Error.Base
 import Text.Megaparsec.Char.Lexer (decimal)
 
 type Parse a = Parsec Void Text a
@@ -89,14 +88,16 @@ pPathSymbol = chunk "p" $> PathP
 pIndexAt :: Parse IndexAt
 pIndexAt = do
   kw kwIndex
-  _indexAtBase <- pTerm
-  _indexAtPath <- pPathSymbol
-  return IndexAt {..}
+  parens $ do
+    _indexAtBase <- pTerm
+    kw delimSemicolon
+    _indexAtPath <- pPathSymbol
+    return IndexAt {..}
 
 pSuccessor :: Parse Successor
 pSuccessor = do
   kw kwSucc
-  t <- pTerm
+  t <- parens pTerm
   return
     Successor
       { _successor = t
@@ -111,14 +112,14 @@ pOne = lexeme . void $ chunk "1"
 pAtom :: Parse Atom
 pAtom =
   choice
-    [ AtomSymbol <$> pSymbol,
-      AtomOperator <$> pNockOp,
-      AtomReplace <$> pReplace,
+    [ AtomReplace <$> pReplace,
       AtomIndex <$> pIndexAt,
       AtomStack <$ pStack,
+      AtomOperator <$> pNockOp,
+      AtomSuccessor <$> pSuccessor,
       AtomZero <$ pZero,
       AtomOne <$ pOne,
-      AtomSuccessor <$> pSuccessor
+      AtomSymbol <$> pSymbol
     ]
 
 pCell :: Parse Cell

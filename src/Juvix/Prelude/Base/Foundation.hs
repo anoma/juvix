@@ -815,3 +815,20 @@ mappendField t1 t2 = appendFieldWith t1 t2 (<>)
 
 appendFieldWith :: t -> t -> (f -> f -> f) -> Lens' t f -> f
 appendFieldWith t1 t2 joinfun l = joinfun (t1 ^. l) (t2 ^. l)
+
+unicodeSubscript :: Natural -> Text
+unicodeSubscript = pack . map toSubscript . show
+  where
+    toSubscript :: Char -> Char
+    toSubscript = \case
+      '0' -> '₀'
+      '1' -> '₁'
+      '2' -> '₂'
+      '3' -> '₃'
+      '4' -> '₄'
+      '5' -> '₅'
+      '6' -> '₆'
+      '7' -> '₇'
+      '8' -> '₈'
+      '9' -> '₉'
+      _ -> impossible

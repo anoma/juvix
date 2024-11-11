@@ -17,7 +17,7 @@ kwSucc :: Keyword
 kwSucc = asciiKw Str.succ
 
 delimRule :: Keyword
-delimRule = mkDelim Str.replace
+delimRule = mkDelim Str.nockmaRule
 
 kwNockmaLogicAnd :: Keyword
 kwNockmaLogicAnd = asciiKw Str.nockmaLogicAnd

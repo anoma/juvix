@@ -7,7 +7,9 @@ where
 
 import Juvix.Compiler.Nockma.Language (NockOp (..))
 import Juvix.Data.Keyword.All
-  ( delimBracketL,
+  ( delimBraceL,
+    delimBraceR,
+    delimBracketL,
     delimBracketR,
     delimParenL,
     delimParenR,
@@ -15,27 +17,15 @@ import Juvix.Data.Keyword.All
     delimSemicolon,
     kwAnd,
     kwDoubleArrowR,
+    kwExclamation,
     kwIndex,
+    kwMapsTo,
     kwNockmaLogicAnd,
     kwReplace,
     kwStar,
     kwSucc,
   )
 import Juvix.Prelude
-
-mytext :: Text
-mytext =
-  [__i|
-  s * [t1t2] => t' && s * t3 => t''
-  ---
-  s * [[t1t2]t3] => [t't'']
-  and
-  ---
-  s * [?t] => s!p
-  and
-  ---
-  t'2
-  |]
 
 data Symbol = Symbol
   { _symbolLetter :: Char,
@@ -60,7 +50,7 @@ data Atom
   | AtomSuccessor Successor
   deriving stock (Lift)
 
--- | Syntax: succ _successor
+-- | Syntax: succ(_successor)
 newtype Successor = Successor
   { _successor :: Term
   }
@@ -86,6 +76,7 @@ data Term
   | TermCell Cell
   deriving stock (Lift)
 
+-- | Syntax: [l r]
 data Cell = Cell
   { _cellLhs :: Term,
     _cellRhs :: Term
