@@ -6,7 +6,7 @@ tests:
       - juvix
       - typecheck
     stderr:
-      equals: "Well done! It type checks\n"
+      contains: "Well done! It type checks\n"
     exit-status: 0
 
   - name: flag-help-shows-juvix-file-for-autocompletion
@@ -25,7 +25,7 @@ tests:
     args:
       - positive/Internal/Simple.juvix
     stderr:
-      equals: "Well done! It type checks\n"
+      contains: "Well done! It type checks\n"
     exit-status: 0
 
   - name: flag-only-errors
@@ -82,7 +82,7 @@ tests:
         echo 'module foo;' > foo.juvix
         juvix typecheck foo.juvix
     stderr:
-      equals: "Well done! It type checks\n"
+      contains: "Well done! It type checks\n"
     exit-status: 0
 
   - name: typecheck-package-description

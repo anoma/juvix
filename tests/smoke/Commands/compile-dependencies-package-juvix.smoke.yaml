@@ -63,6 +63,8 @@ tests:
         ./HelloWorld
     stdout:
       contains: Hello from dep
+    stderr:
+      contains: ""
     exit-status: 0
 
   - name: git-dependencies-success-then-offline
@@ -131,6 +133,8 @@ tests:
         ./HelloWorld
     stdout:
       contains: Hello from dep
+    stderr:
+      contains: ""
     exit-status: 0
 
   - name: git-dependencies-fetch-new-commits
@@ -228,6 +232,8 @@ tests:
         ./HelloWorld
     stdout:
       contains: This is from the second commit
+    stderr:
+      contains: ""
     exit-status: 0
 
   - name: git-dependencies-lockfile
@@ -374,6 +380,8 @@ tests:
         ./HelloWorld
     stdout:
       contains: "Hello from dep1\nHello from dep2"
+    stderr:
+      contains: ""
     exit-status: 0
 
   - name: git-dependencies-uses-generated-lockfile
@@ -454,6 +462,8 @@ tests:
         ./HelloWorld
     stdout:
       contains: Hello from dep
+    stderr:
+      contains: ""
     exit-status: 0
 
   - name: git-dependencies-uses-generated-lockfile-update
@@ -552,6 +562,8 @@ tests:
         ./HelloWorld
     stdout:
       contains: Hello from commit 2
+    stderr:
+      contains: ""
     exit-status: 0
 
   - name: git-dependencies-nested-lockfile
@@ -670,6 +682,8 @@ tests:
         ./HelloWorld
     stdout:
       contains: "Hello from dep1\nHello from dep2"
+    stderr:
+      contains: ""
     exit-status: 0
 
   - name: git-dependencies-update-ref-offline
@@ -770,6 +784,8 @@ tests:
         ./HelloWorld
     stdout:
       contains: This is from the second commit
+    stderr:
+      contains: ""
     exit-status: 0
 
   - name: git-dependencies-invalid-ref
@@ -826,10 +842,10 @@ tests:
 
         # compile project
         juvix --log-level error compile native HelloWorld.juvix
+    stdout:
+      contains: ""
     stderr:
       contains: invalid-ref
-    stdout:
-      contains: Cloning
     exit-status: 1
 
   - name: git-dependencies-invalid-url
@@ -871,10 +887,10 @@ tests:
 
         # compile project
         juvix --log-level error compile native HelloWorld.juvix
+    stdout:
+      contains: ""
     stderr:
       contains: Error
-    stdout:
-      contains: Cloning
     exit-status: 1
 
   - name: git-dependencies-offline
@@ -992,10 +1008,10 @@ tests:
 
         # compile project
         juvix --log-level error compile native HelloWorld.juvix
+    stdout:
+      contains: ""
     stderr:
       contains: juvix clean
-    stdout:
-      contains: Cloning
     exit-status: 1
 
   - name: git-dependencies-duplicate-names
@@ -1106,7 +1122,8 @@ tests:
 
         # compile project
         juvix --log-level error compile native HelloWorld.juvix
-    stderr: ""
     stdout:
+      contains: ""
+    stderr:
       contains: Cloning
     exit-status: 0
