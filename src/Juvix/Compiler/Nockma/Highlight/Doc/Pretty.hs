@@ -26,9 +26,6 @@ getStackColor = getSymbolColor SymbolStack
 
 runColorCounter :: Sem (ColorCounter ': r) a -> Sem r a
 runColorCounter = reinterpret (evalState (mempty :: HashMap TermSymbol CodeAnn)) $ \case
-  -- GetPathColor p -> case p of
-  --   PathP -> return AnnLiteralString
-  -- GetStackColor ->
   GetSymbolColor s -> case s of
     SymbolStack -> return (AnnKind KNameLocal)
     SymbolPath p -> case p of

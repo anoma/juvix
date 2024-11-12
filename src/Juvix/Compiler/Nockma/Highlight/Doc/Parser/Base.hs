@@ -22,7 +22,7 @@ top p = whiteSpace >> p <* eof
 
 pTermSymbol :: Parse TermSymbol
 pTermSymbol = lexeme $ do
-  l <- satisfy validLetter
+  l <- satisfy isLetter
   subscript <- optional decimal
   ps <- length <$> P.many (chunk "'")
   return
@@ -31,10 +31,6 @@ pTermSymbol = lexeme $ do
         _termSymbolSubscript = subscript,
         _termSymbolPrimes = fromIntegral ps
       }
-  where
-    -- the letter 's' is reserved for the stack
-    validLetter :: Char -> Bool
-    validLetter = isLetter .&&. (not . isStackSymbol)
 
 isStackSymbol :: Char -> Bool
 isStackSymbol = (== 's') . toLower
