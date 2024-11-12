@@ -25,6 +25,9 @@ kwNockmaLogicAnd = asciiKw Str.nockmaLogicAnd
 kwAnd :: Keyword
 kwAnd = asciiKw Str.and
 
+kwStorage :: Keyword
+kwStorage = asciiKw Str.storage
+
 kwReplace :: Keyword
 kwReplace = asciiKw Str.replace
 

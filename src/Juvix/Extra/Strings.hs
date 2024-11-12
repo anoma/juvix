@@ -1208,6 +1208,9 @@ index = "index"
 replace :: (IsString s) => s
 replace = "replace"
 
+storage :: (IsString s) => s
+storage = "storage"
+
 neqSymbol :: (IsString s) => s
 neqSymbol = "≠"
 

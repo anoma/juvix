@@ -93,7 +93,7 @@ pIndexAt = do
   parens $ do
     _indexAtBase <- pTerm
     kw delimSemicolon
-    _indexAtPath <- pPathSymbol
+    _indexAtPath <- pTerm
     return IndexAt {..}
 
 pSuccessor :: Parse Successor
@@ -108,13 +108,17 @@ pSuccessor = do
 pZero :: Parse ()
 pZero = lexeme . void $ chunk "0"
 
+pStorage :: Parse ()
+pStorage = kw kwStorage
+
 pOne :: Parse ()
 pOne = lexeme . void $ chunk "1"
 
 pAtom :: Parse Atom
 pAtom =
   choice
-    [ AtomOperator <$> pNockOp,
+    [ AtomStorage <$ pStorage,
+      AtomOperator <$> pNockOp,
       AtomNotation <$> pNotation,
       AtomZero <$ pZero,
       AtomOne <$ pOne,

@@ -25,6 +25,7 @@ import Juvix.Data.Keyword.All
     kwNockmaLogicAnd,
     kwReplace,
     kwStar,
+    kwStorage,
     kwSuc,
   )
 import Juvix.Prelude
@@ -50,6 +51,7 @@ data Symbol
 data Atom
   = AtomSymbol Symbol
   | AtomOperator NockOp
+  | AtomStorage
   | AtomNotation Notation
   | AtomZero
   | AtomOne
@@ -78,7 +80,7 @@ newtype Successor = Successor
 -- | Syntax: index(_indexAtBase; _indexAtIndex)
 data IndexAt = IndexAt
   { _indexAtBase :: Term,
-    _indexAtPath :: PathSymbol
+    _indexAtPath :: Term
   }
   deriving stock (Lift)
 

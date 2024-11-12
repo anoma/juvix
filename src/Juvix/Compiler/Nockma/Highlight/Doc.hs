@@ -6,13 +6,6 @@ import Juvix.Compiler.Nockma.Highlight.Doc.Pretty ()
 import Juvix.Data.CodeAnn
 import Juvix.Prelude
 
-example :: Rules
-example =
-  [rules|
-    ---
-    s * p => index(s; p)
-    |]
-
 nockOpDoc :: NockOp -> Doc CodeAnn
 nockOpDoc n = ppCodeAnn $ case n of
   OpAddress ->
@@ -96,4 +89,9 @@ nockOpDoc n = ppCodeAnn $ case n of
     ---
     s * [hint [[t1 t2] t3]] => t3'
     |]
-  OpScry -> example
+  OpScry ->
+    [rules|
+    s * t1 => t1' && s * t2 => t2'
+    ---
+    s * [scry [t1 t2]] => index(storage; t2')
+    |]

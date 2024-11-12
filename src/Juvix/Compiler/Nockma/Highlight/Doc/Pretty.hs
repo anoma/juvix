@@ -53,12 +53,17 @@ runColorCounter = reinterpret (evalState (mempty :: HashMap TermSymbol CodeAnn))
 
         colors :: [CodeAnn]
         colors =
-          AnnKind
-            <$> [ KNameConstructor,
-                  KNameInductive,
-                  KNameAxiom,
-                  KNameTopModule
-                ]
+          ( AnnKind
+              <$> [ KNameConstructor,
+                    KNameInductive,
+                    KNameAxiom,
+                    KNameTopModule
+                  ]
+          )
+            ++ [ AnnJudoc,
+                 AnnPragma,
+                 AnnComment
+               ]
 
 type PP a = a -> Sem '[ColorCounter] (Doc CodeAnn)
 
@@ -76,6 +81,7 @@ ppAtom = \case
   AtomSymbol s -> ppSymbol s
   AtomOperator n -> ppOperator n
   AtomNotation n -> ppNotation n
+  AtomStorage -> return (ppCodeAnn kwStorage)
   AtomZero -> return (annotate AnnKeyword "0")
   AtomOne -> return (annotate AnnKeyword "1")
 
@@ -130,7 +136,7 @@ ppNeq Neq {..} = do
 ppIndexAt :: PP IndexAt
 ppIndexAt IndexAt {..} = do
   b' <- ppTerm _indexAtBase
-  ix' <- ppPathSymbol _indexAtPath
+  ix' <- ppTerm _indexAtPath
   return $
     b' <+> ppCodeAnn kwExclamation <+> ix'
 
