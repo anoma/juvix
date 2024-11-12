@@ -20,34 +20,53 @@ import Juvix.Data.Keyword.All
     kwExclamation,
     kwIndex,
     kwMapsTo,
+    kwNeq,
+    kwNeqSymbol,
     kwNockmaLogicAnd,
     kwReplace,
     kwStar,
-    kwSucc,
+    kwSuc,
   )
 import Juvix.Prelude
 
-data Symbol = Symbol
-  { _symbolLetter :: Char,
-    _symbolSubscript :: Maybe Natural,
-    _symbolPrimes :: Natural
+data TermSymbol = TermSymbol
+  { _termSymbolLetter :: Char,
+    _termSymbolSubscript :: Maybe Natural,
+    _termSymbolPrimes :: Natural
   }
   deriving stock (Eq, Ord, Generic, Lift)
 
-instance Hashable Symbol
+instance Hashable TermSymbol
 
 data PathSymbol = PathP
+  deriving stock (Lift)
+
+data Symbol
+  = SymbolTerm TermSymbol
+  | SymbolPath PathSymbol
+  | SymbolStack
   deriving stock (Lift)
 
 data Atom
   = AtomSymbol Symbol
   | AtomOperator NockOp
-  | AtomReplace Replace
-  | AtomIndex IndexAt
-  | AtomStack
+  | AtomNotation Notation
   | AtomZero
   | AtomOne
-  | AtomSuccessor Successor
+  deriving stock (Lift)
+
+-- | Syntax: notationName(arg1; .. ; argn), where `notationName` depends on each case
+data Notation
+  = NotationReplace Replace
+  | NotationIndex IndexAt
+  | NotationSuccessor Successor
+  deriving stock (Lift)
+
+-- | Syntax: neq(_neqLhs; _neqRhs)
+data Neq = Neq
+  { _neqLhs :: Term,
+    _neqRhs :: Term
+  }
   deriving stock (Lift)
 
 -- | Syntax: succ(_successor)
@@ -83,6 +102,11 @@ data Cell = Cell
   }
   deriving stock (Lift)
 
+data Relation
+  = RelationEval EvalRelation
+  | RelationNeq Neq
+  deriving stock (Lift)
+
 -- | Syntax: _evalContext => _evalRhs
 data EvalRelation = EvalRelation
   { _evalContext :: Context,
@@ -102,7 +126,7 @@ data Context = Context
 -- ---
 -- rel
 data Rule = Rule
-  { _ruleConditions :: [EvalRelation],
+  { _ruleConditions :: [Relation],
     _rulePost :: EvalRelation
   }
   deriving stock (Lift)

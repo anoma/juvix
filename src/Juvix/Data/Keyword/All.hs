@@ -13,8 +13,8 @@ kwAs = asciiKw Str.as
 kwBuiltin :: Keyword
 kwBuiltin = asciiKw Str.builtin
 
-kwSucc :: Keyword
-kwSucc = asciiKw Str.succ
+kwSuc :: Keyword
+kwSuc = asciiKw Str.suc
 
 delimRule :: Keyword
 delimRule = mkDelim Str.nockmaRule
@@ -30,6 +30,12 @@ kwReplace = asciiKw Str.replace
 
 kwIndex :: Keyword
 kwIndex = asciiKw Str.index
+
+kwNeq :: Keyword
+kwNeq = asciiKw Str.neq
+
+kwNeqSymbol :: Keyword
+kwNeqSymbol = unicodeKw Str.neqSymbolAscii Str.neqSymbol
 
 kwDoubleArrowR :: Keyword
 kwDoubleArrowR = unicodeKw Str.doubleArrowRAscii Str.doubleArrowR

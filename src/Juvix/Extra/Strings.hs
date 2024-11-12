@@ -1202,17 +1202,20 @@ doubleArrowRAscii = "=>"
 doubleArrowR :: (IsString s) => s
 doubleArrowR = "⇒"
 
-succ :: (IsString s) => s
-succ = "succ"
-
-by :: (IsString s) => s
-by = "by"
-
 index :: (IsString s) => s
 index = "index"
 
 replace :: (IsString s) => s
 replace = "replace"
+
+neqSymbol :: (IsString s) => s
+neqSymbol = "≠"
+
+neq :: (IsString s) => s
+neq = "neq"
+
+neqSymbolAscii :: (IsString s) => s
+neqSymbolAscii = "/="
 
 nockmaRule :: (IsString s) => s
 nockmaRule = "---"

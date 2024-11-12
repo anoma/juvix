@@ -11,64 +11,90 @@ import Juvix.Data.CodeAnn
 import Juvix.Prelude
 
 data ColorCounter :: Effect where
-  GetColor :: Symbol -> ColorCounter m NameKind
+  GetSymbolColor :: Symbol -> ColorCounter m CodeAnn
 
 makeSem ''ColorCounter
 
+getTermSymbolColor :: (Members '[ColorCounter] r) => TermSymbol -> Sem r CodeAnn
+getTermSymbolColor = getSymbolColor . SymbolTerm
+
+getPathColor :: (Members '[ColorCounter] r) => PathSymbol -> Sem r CodeAnn
+getPathColor = getSymbolColor . SymbolPath
+
+getStackColor :: (Members '[ColorCounter] r) => Sem r CodeAnn
+getStackColor = getSymbolColor SymbolStack
+
 runColorCounter :: Sem (ColorCounter ': r) a -> Sem r a
-runColorCounter = reinterpret (evalState (mempty :: HashMap Symbol NameKind)) $ \case
-  GetColor sym -> do
-    tbl <- get @(HashMap Symbol NameKind)
-    let m = length tbl
-    case tbl ^. at sym of
-      Just c -> return c
-      Nothing -> do
-        let color = colorAt m
-        modify (HashMap.insert sym color)
-        return color
-    where
-      colorAt :: Int -> NameKind
-      colorAt i = colors !! (i `mod` n)
+runColorCounter = reinterpret (evalState (mempty :: HashMap TermSymbol CodeAnn)) $ \case
+  -- GetPathColor p -> case p of
+  --   PathP -> return AnnLiteralString
+  -- GetStackColor ->
+  GetSymbolColor s -> case s of
+    SymbolStack -> return (AnnKind KNameLocal)
+    SymbolPath p -> case p of
+      PathP -> return AnnLiteralString
+    SymbolTerm sym -> do
+      tbl <- get @(HashMap TermSymbol CodeAnn)
+      let m = length tbl
+      case tbl ^. at sym of
+        Just c -> return c
+        Nothing -> do
+          let color = colorAt m
+          modify (HashMap.insert sym color)
+          return color
+      where
+        colorAt :: Int -> CodeAnn
+        colorAt i = colors !! (i `mod` n)
 
-      n :: Int
-      n
-        | notNull colors = length colors
-        | otherwise = impossibleError "there must be at least one color"
+        n :: Int
+        n
+          | notNull colors = length colors
+          | otherwise = impossibleError "there must be at least one color"
 
-      colors :: [NameKind]
-      colors =
-        [ KNameConstructor,
-          KNameInductive,
-          KNameFunction,
-          KNameTopModule
-        ]
+        colors :: [CodeAnn]
+        colors =
+          AnnKind
+            <$> [ KNameConstructor,
+                  KNameInductive,
+                  KNameAxiom,
+                  KNameTopModule
+                ]
 
 type PP a = a -> Sem '[ColorCounter] (Doc CodeAnn)
 
 instance PrettyCodeAnn Rules where
   ppCodeAnn = run . runColorCounter . ppRules
 
+ppNotation :: PP Notation
+ppNotation = \case
+  NotationReplace r -> ppReplace r
+  NotationIndex i -> ppIndexAt i
+  NotationSuccessor i -> ppSuccessor i
+
 ppAtom :: PP Atom
 ppAtom = \case
   AtomSymbol s -> ppSymbol s
   AtomOperator n -> ppOperator n
-  AtomReplace r -> ppReplace r
-  AtomIndex i -> ppIndexAt i
-  AtomStack -> return ppStack
+  AtomNotation n -> ppNotation n
   AtomZero -> return (annotate AnnKeyword "0")
   AtomOne -> return (annotate AnnKeyword "1")
-  AtomSuccessor s -> ppSuccessor s
 
 ppSymbol :: PP Symbol
-ppSymbol s@Symbol {..} = do
-  c <- getColor s
-  let primes = Text.replicate (fromIntegral _symbolPrimes) "'"
+ppSymbol = \case
+  SymbolStack -> ppStack
+  SymbolTerm t -> ppTermSymbol t
+  SymbolPath p -> ppPathSymbol p
+
+ppTermSymbol :: PP TermSymbol
+ppTermSymbol s@TermSymbol {..} = do
+  c <- getTermSymbolColor s
+  let primes = Text.replicate (fromIntegral _termSymbolPrimes) "'"
       sym =
-        Text.singleton _symbolLetter
-          <>? (unicodeSubscript <$> _symbolSubscript)
+        Text.singleton _termSymbolLetter
+          <>? (unicodeSubscript <$> _termSymbolSubscript)
           <> primes
   return
-    . annotate (AnnKind c)
+    . annotate c
     . pretty
     $ sym
 
@@ -86,10 +112,20 @@ ppReplace Replace {..} = do
       <> ix'
       <+> ppCodeAnn kwMapsTo
       <+> by'
+        <> ppCodeAnn delimBraceR
 
 ppPathSymbol :: PP PathSymbol
 ppPathSymbol = \case
-  PathP -> return (annotate (AnnKind KNameAxiom) "p")
+  p@PathP -> do
+    c <- getPathColor p
+    return (annotate c "p")
+
+ppNeq :: PP Neq
+ppNeq Neq {..} = do
+  l' <- ppTerm _neqLhs
+  r' <- ppTerm _neqRhs
+  return $
+    l' <+> ppCodeAnn kwNeqSymbol <+> r'
 
 ppIndexAt :: PP IndexAt
 ppIndexAt IndexAt {..} = do
@@ -98,8 +134,10 @@ ppIndexAt IndexAt {..} = do
   return $
     b' <+> ppCodeAnn kwExclamation <+> ix'
 
-ppStack :: Doc CodeAnn
-ppStack = annotate (AnnKind KNameLocal) "S"
+ppStack :: (Members '[ColorCounter] r) => Sem r (Doc CodeAnn)
+ppStack = do
+  c <- getStackColor
+  return (annotate c "S")
 
 ppSuccessor :: PP Successor
 ppSuccessor Successor {..} = do
@@ -136,13 +174,19 @@ ppContext Context {..} = do
   return $
     l <+> ppCodeAnn kwStar <+> r
 
+ppRelation :: PP Relation
+ppRelation = \case
+  RelationEval r -> ppEvalRelation r
+  RelationNeq n -> ppNeq n
+
 ppRule :: PP Rule
 ppRule Rule {..} = do
-  let sep_ r1 r2 = r1 <+> ppCodeAnn kwNockmaLogicAnd <+> r2
-  conds' <- concatWith sep_ <$> mapM ppEvalRelation _ruleConditions
-  let n = Text.length (toPlainText conds')
-      hrule = pretty (Text.replicate (max n 3) "-")
+  let sep_ r1 r2 = r1 <+> (" " :: Doc CodeAnn) <+> r2
+  conds' <- concatWith sep_ <$> mapM ppRelation _ruleConditions
   post' <- ppEvalRelation _rulePost
+  let n1 = Text.length (toPlainText conds')
+      n2 = Text.length (toPlainText post')
+      hrule = pretty (Text.replicate (max n1 (max n2 3)) "─")
   return $
     conds'
       <> hardline
@@ -157,6 +201,9 @@ ppRules Rules {..} = do
     concatWith
       ( \r1 r2 ->
           r1
+            <> hardline
+            <> hardline
+            <> ppCodeAnn kwAnd
             <> hardline
             <> hardline
             <> r2

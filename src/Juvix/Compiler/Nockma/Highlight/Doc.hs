@@ -9,23 +9,91 @@ import Juvix.Prelude
 example :: Rules
 example =
   [rules|
-    t * t => t
     ---
     s * p => index(s; p)
     |]
 
 nockOpDoc :: NockOp -> Doc CodeAnn
 nockOpDoc n = ppCodeAnn $ case n of
-  OpAddress -> example
-  OpQuote -> example
-  OpApply -> example
-  OpIsCell -> example
-  OpInc -> example
-  OpEq -> example
-  OpIf -> example
-  OpSequence -> example
-  OpPush -> example
-  OpCall -> example
-  OpReplace -> example
-  OpHint -> example
+  OpAddress ->
+    [rules|
+    ---
+    s * [@ p] => index(s; p)
+    |]
+  OpQuote ->
+    [rules|
+    ---
+    s * [quote t] => t
+    |]
+  OpApply ->
+    [rules|
+    s * t1 => t1' && s * t2 => t2'  && t1' * t2' => t'
+    ---
+    s * [apply [t1 t2]] => t'
+    |]
+  OpIsCell ->
+    [rules|
+    s * t => [t1' t2']
+    ---
+    s * [isCell t] => 0
+    and
+    s * t => a
+    ---
+    s * [isCell t] => 1
+    |]
+  OpInc ->
+    [rules|
+    s * t => n
+    ---
+    s * [suc t] => suc(t)
+    |]
+  OpEq ->
+    [rules|
+    ---
+    s * [= [t t]] => 0
+    and
+    neq(t1; t2)
+    ---
+    s * [= [t1 t2]] => 1
+    |]
+  OpIf ->
+    [rules|
+    s * t0 => 0 && s * t1 => t1'
+    ---
+    s * [if [t0 [t1 t2]]] => t1'
+    and
+    s * t0 => 1 && s * t2 => t2'
+    ---
+    s * [if [t0 [t1 t2]]] => t2'
+    |]
+  OpSequence ->
+    [rules|
+    s * t1 => t1' && t1' * t2 => t'
+    ---
+    s * [seq [t1 t2]] => t'
+    |]
+  OpPush ->
+    [rules|
+    s * t1 => t1' && [t1' s] * t2 => t'
+    ---
+    s * [push [t1 t2]] => t'
+    |]
+  OpCall ->
+    [rules|
+    s * t => t' && t' * index(t'; p) => t''
+    ---
+    s * [call [p t]] => t''
+    |]
+  OpReplace ->
+    [rules|
+    s * t1 => t1' && s * t2 => t2'
+    ---
+    s * [replace [[p t1] t2]] => replace(t2';p;t1')
+    |]
+  OpHint ->
+    [rules|
+    s * t2 => t2' && s * t3 => t3'
+    ---
+    s * [hint [[t1 t2] t3]] => t3'
+    |]
   OpScry -> example

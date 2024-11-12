@@ -20,16 +20,16 @@ lexeme m = m <* whiteSpace
 top :: Parse a -> Parse a
 top p = whiteSpace >> p <* eof
 
-pSymbol :: Parse Symbol
-pSymbol = lexeme $ do
+pTermSymbol :: Parse TermSymbol
+pTermSymbol = lexeme $ do
   l <- satisfy validLetter
   subscript <- optional decimal
   ps <- length <$> P.many (chunk "'")
   return
-    Symbol
-      { _symbolLetter = l,
-        _symbolSubscript = subscript,
-        _symbolPrimes = fromIntegral ps
+    TermSymbol
+      { _termSymbolLetter = l,
+        _termSymbolSubscript = subscript,
+        _termSymbolPrimes = fromIntegral ps
       }
   where
     -- the letter 's' is reserved for the stack
@@ -39,14 +39,19 @@ pSymbol = lexeme $ do
 isStackSymbol :: Char -> Bool
 isStackSymbol = (== 's') . toLower
 
-pStack :: Parse Atom
-pStack = lexeme $ satisfy isStackSymbol $> AtomStack
+pPathSymbol :: Parse PathSymbol
+pPathSymbol =
+  lexeme $
+    chunk "p" $> PathP
+
+pStack :: Parse Symbol
+pStack = lexeme $ satisfy isStackSymbol $> SymbolStack
 
 pNockOp :: Parse NockOp
 pNockOp =
   lexeme $
     choice
-      [ chunk opName $> op
+      [ chunk (opName <> " ") $> op
         | (opName, op) <- HashMap.toList atomOps
       ]
 
@@ -82,9 +87,6 @@ pReplace = do
     optional (kw delimSemicolon)
     return Replace {..}
 
-pPathSymbol :: Parse PathSymbol
-pPathSymbol = chunk "p" $> PathP
-
 pIndexAt :: Parse IndexAt
 pIndexAt = do
   kw kwIndex
@@ -96,7 +98,7 @@ pIndexAt = do
 
 pSuccessor :: Parse Successor
 pSuccessor = do
-  kw kwSucc
+  kw kwSuc
   t <- parens pTerm
   return
     Successor
@@ -112,15 +114,38 @@ pOne = lexeme . void $ chunk "1"
 pAtom :: Parse Atom
 pAtom =
   choice
-    [ AtomReplace <$> pReplace,
-      AtomIndex <$> pIndexAt,
-      AtomStack <$ pStack,
-      AtomOperator <$> pNockOp,
-      AtomSuccessor <$> pSuccessor,
+    [ AtomOperator <$> pNockOp,
+      AtomNotation <$> pNotation,
       AtomZero <$ pZero,
       AtomOne <$ pOne,
       AtomSymbol <$> pSymbol
     ]
+
+pSymbol :: Parse Symbol
+pSymbol =
+  choice
+    [ SymbolStack <$ pStack,
+      SymbolPath <$> pPathSymbol,
+      SymbolTerm <$> pTermSymbol
+    ]
+
+pNotation :: Parse Notation
+pNotation =
+  choice
+    [ NotationIndex <$> pIndexAt,
+      NotationReplace <$> pReplace,
+      NotationSuccessor <$> pSuccessor
+    ]
+
+pNeq :: Parse Neq
+pNeq = do
+  kw kwNeq
+  parens $ do
+    _neqLhs <- pTerm
+    kw delimSemicolon
+    _neqRhs <- pTerm
+    optional (kw delimSemicolon)
+    return Neq {..}
 
 pCell :: Parse Cell
 pCell = brackets $ do
@@ -140,18 +165,25 @@ pContext = do
   _contextRhs <- pTerm
   return Context {..}
 
-pRel :: Parse EvalRelation
-pRel = do
+pEvalRelation :: Parse EvalRelation
+pEvalRelation = do
   _evalContext <- pContext
   kw kwDoubleArrowR
   _evalRhs <- pTerm
   return EvalRelation {..}
 
+pRelation :: Parse Relation
+pRelation =
+  choice
+    [ RelationNeq <$> pNeq,
+      RelationEval <$> pEvalRelation
+    ]
+
 pRule :: Parse Rule
 pRule = do
-  _ruleConditions <- sepEndBy pRel (kw kwNockmaLogicAnd)
+  _ruleConditions <- sepEndBy pRelation (kw kwNockmaLogicAnd)
   kw delimRule
-  _rulePost <- pRel
+  _rulePost <- pEvalRelation
   return Rule {..}
 
 pRules :: Parse Rules
