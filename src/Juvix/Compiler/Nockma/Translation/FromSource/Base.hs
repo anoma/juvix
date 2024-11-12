@@ -214,9 +214,15 @@ direction :: Parser Direction
 direction = choice [directionSymbol (show lr) $> lr | lr <- allElements :: [Direction]]
 
 pPath :: Parser Path
-pPath =
-  directionSymbol "S" $> []
-    <|> NonEmpty.toList <$> some direction
+pPath = do
+  p <-
+    withLoc $
+      choice
+        [ directionSymbol "S" $> [],
+          NonEmpty.toList <$> some direction
+        ]
+  lift (highlightPath p)
+  return (p ^. withLocParam)
 
 atomNat :: Maybe Tag -> Parser (Atom Natural)
 atomNat mtag = do

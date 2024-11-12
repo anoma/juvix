@@ -9,7 +9,7 @@ import Juvix.Compiler.Concrete.Data.Highlight (goFaceError, goFaceSemanticItem)
 import Juvix.Compiler.Nockma.Highlight.Base
 import Juvix.Compiler.Nockma.Highlight.Doc
 import Juvix.Compiler.Nockma.Highlight.Input
-import Juvix.Compiler.Nockma.Language
+import Juvix.Compiler.Nockma.Language as Nockma
 import Juvix.Data.CodeAnn
 import Juvix.Emacs.Render
 import Juvix.Emacs.SExp
@@ -25,7 +25,7 @@ buildProperties HighlightInput {..} =
         mapMaybe goFaceSemanticItem _highlightSemanticItems
           <> map goFaceError _highlightErrors,
       _propertiesGoto = [],
-      _propertiesInfo = map goInfoNockOp _highlightNockOps
+      _propertiesInfo = map goInfoNockOp _highlightNockOps <> map goInfoPath _highlightPaths
     }
 
 -- | Used in nockma-mode
@@ -60,15 +60,30 @@ withDocTable body =
       body
     ]
 
+goInfoPath :: WithLoc Nockma.Path -> WithLoc PropertyInfo
+goInfoPath = fmap toProperty
+  where
+    toProperty :: Nockma.Path -> PropertyInfo
+    toProperty p =
+      PropertyInfo
+        { _infoInfo = String txt,
+          _infoInit = format
+        }
+      where
+        (txt, format) = renderEmacs msg
+
+        msg :: Doc CodeAnn
+        msg =
+          ppCodeAnn p
+            <+> kwEquals
+            <+> pretty (encodePath p ^. encodedPath)
+
 goInfoNockOp :: WithLoc NockOp -> WithLoc PropertyInfo
 goInfoNockOp = fmap toProperty
   where
     toProperty :: NockOp -> PropertyInfo
     toProperty o =
       PropertyInfo
-        { _infoInfo = toInfo o,
+        { _infoInfo = Symbol (nockOpKey o),
           _infoInit = nil
         }
-
-    toInfo :: NockOp -> SExp
-    toInfo = Symbol . nockOpKey

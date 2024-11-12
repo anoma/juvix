@@ -1,5 +1,6 @@
 module Juvix.Compiler.Nockma.Language.Path where
 
+import Juvix.Data.CodeAnn
 import Juvix.Prelude hiding (Atom, Path)
 import Prelude (show)
 
@@ -56,3 +57,13 @@ instance Semigroup EncodedPath where
 
 instance Monoid EncodedPath where
   mempty = encodePath []
+
+instance PrettyCodeAnn Path where
+  ppCodeAnn = \case
+    [] -> annotate (AnnKind KNameInductive) "S"
+    ds -> mconcatMap ppCodeAnn ds
+
+instance PrettyCodeAnn Direction where
+  ppCodeAnn d = annotate (AnnKind KNameInductive) $ case d of
+    L -> "L"
+    R -> "R"

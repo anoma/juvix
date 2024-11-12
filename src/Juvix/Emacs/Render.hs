@@ -1,4 +1,8 @@
-module Juvix.Emacs.Render (renderEmacs, nameKindFace) where
+module Juvix.Emacs.Render
+  ( renderEmacs,
+    nameKindFace,
+  )
+where
 
 import Data.Text qualified as Text
 import Juvix.Data.CodeAnn
