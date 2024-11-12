@@ -54,10 +54,13 @@ lambdaLiftNode aboveBl top =
             goLambdaGo lm = do
               l' <- lambdaLiftNode bl (NLam lm)
               let (freevarsAssocs, fBody') = captureFreeVarsCtx bl l'
+
                   allfreevars :: [Var]
                   allfreevars = map fst freevarsAssocs
+
                   argsNum :: Int
                   argsNum = length (fst (unfoldLambdas fBody'))
+
                   freeVarsNum :: Int
                   freeVarsNum = length allfreevars
               f <- freshSymbol
@@ -84,12 +87,16 @@ lambdaLiftNode aboveBl top =
         goLetRec letr = do
           let defs :: [Node]
               defs = letr ^.. letRecValues . each . letItemValue
+
               defsTypes :: [Type]
               defsTypes = letr ^.. letRecValues . each . letItemBinder . binderType
+
               ndefs :: Int
               ndefs = length defs
+
               binders :: [Binder]
               binders = letr ^.. letRecValues . each . letItemBinder
+
               pragmas :: [Pragmas]
               pragmas = getInfoPragmas (letr ^. letRecInfo)
 
@@ -134,10 +141,13 @@ lambdaLiftNode aboveBl top =
                             captureFreeVarsType
                               (map (first (^. varIndex)) recItemsFreeVars)
                               (b, bty)
+
                           argsNum :: Int
                           argsNum = length (fst (unfoldLambdas topBody))
+
                           freeVarsNum :: Int
                           freeVarsNum = length recItemsFreeVars
+
                       registerIdentNode sym topBody
                       registerIdent
                         name

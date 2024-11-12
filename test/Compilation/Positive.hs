@@ -471,7 +471,7 @@ tests =
         $(mkRelDir ".")
         $(mkRelFile "test079.juvix")
         $(mkRelFile "out/test079.out"),
-      posTestEval -- TODO: this test is not compiling
+      posTest
         "Test080: Do notation"
         $(mkRelDir ".")
         $(mkRelFile "test080.juvix")
@@ -490,5 +490,10 @@ tests =
         "Test083: Record update"
         $(mkRelDir ".")
         $(mkRelFile "test083.juvix")
-        $(mkRelFile "out/test083.out")
+        $(mkRelFile "out/test083.out"),
+      posTest
+        "Test084: issue3030"
+        $(mkRelDir ".")
+        $(mkRelFile "test084.juvix")
+        $(mkRelFile "out/test084.out")
     ]

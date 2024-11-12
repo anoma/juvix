@@ -119,13 +119,9 @@ computeNodeTypeInfo md = umapL go
       NLam Lambda {..} ->
         mkPi mempty _lambdaBinder (Info.getNodeType _lambdaBody)
       NLet Let {..} ->
-        shift
-          (-1)
-          (Info.getNodeType _letBody)
-      NRec LetRec {..} ->
-        shift
-          (-(length _letRecValues))
-          (Info.getNodeType _letRecBody)
+        let bodyTy = Info.getNodeType _letBody
+         in subst (_letItem ^. letItemValue) bodyTy
+      NRec {} -> error "letrec unsupported"
       NCase Case {..} -> case _caseDefault of
         Just nd -> Info.getNodeType nd
         Nothing -> case _caseBranches of

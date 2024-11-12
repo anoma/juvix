@@ -16,6 +16,7 @@ goTopNode sym = runReader sym . walkN check
 check :: (Members '[Reader Symbol, Error ScopeError] r) => Index -> Node -> Sem r ()
 check k = \case
   NVar v
+    | v ^. varIndex < 0 -> scopeErr ("variable " <> ppTrace (NVar v) <> " has negative index")
     | v ^. varIndex < k -> return ()
     | otherwise -> scopeErr ("variable " <> ppTrace (NVar v) <> " is out of scope")
   _ -> return ()

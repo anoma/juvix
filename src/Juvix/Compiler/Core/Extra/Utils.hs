@@ -543,16 +543,17 @@ translateCaseIf :: (Node -> Node -> Node -> a) -> Case -> a
 translateCaseIf f = translateCase f impossible
 
 checkDepth :: Module -> BinderList Binder -> Int -> Node -> Bool
-checkDepth md bl 0 node = isType md bl node
-checkDepth md bl d node = case node of
-  NApp App {..} ->
-    checkDepth md bl d _appLeft && checkDepth md bl (d - 1) _appRight
-  _ ->
-    all go (children node)
-    where
-      go :: NodeChild -> Bool
-      go NodeChild {..} =
-        checkDepth md (BL.prependRev _childBinders bl) (d - 1) _childNode
+checkDepth md bl d node
+  | d == 0 = isType md bl node
+  | otherwise = case node of
+      NApp App {..} ->
+        checkDepth md bl d _appLeft && checkDepth md bl (d - 1) _appRight
+      _ ->
+        all go (children node)
+        where
+          go :: NodeChild -> Bool
+          go NodeChild {..} =
+            checkDepth md (BL.prependRev _childBinders bl) (d - 1) _childNode
 
 isCaseBoolean :: [CaseBranch] -> Bool
 isCaseBoolean = \case
@@ -573,5 +574,5 @@ isCaseBoolean = \case
 checkInfoTable :: InfoTable -> Bool
 checkInfoTable tab =
   all isClosed (tab ^. identContext)
-    && all isClosed (fmap (^. identifierType) (tab ^. infoIdentifiers))
-    && all isClosed (fmap (^. constructorType) (tab ^. infoConstructors))
+    && all (isClosed . (^. identifierType)) (tab ^. infoIdentifiers)
+    && all (isClosed . (^. constructorType)) (tab ^. infoConstructors)

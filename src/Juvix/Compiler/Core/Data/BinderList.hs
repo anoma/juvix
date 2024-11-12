@@ -75,7 +75,8 @@ lookupsSortedRev bl = go [] 0 bl
 
 lookupMay :: Index -> BinderList a -> Maybe a
 lookupMay idx bl
-  | idx < bl ^. blLength = Just $ (bl ^. blMap) !! idx
+  | idx < 0 = Nothing
+  | idx < bl ^. blLength = Just ((bl ^. blMap) !! idx)
   | otherwise = Nothing
 
 -- | lookup de Bruijn index
@@ -85,7 +86,7 @@ lookup idx bl = fromMaybe err (lookupMay idx bl)
     err :: a
     err =
       error
-        ( "invalid binder lookup. Got index "
+        ( "Invalid binder lookup. Got index "
             <> show idx
             <> " and the length is "
             <> show (bl ^. blLength)

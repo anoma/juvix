@@ -7,8 +7,6 @@ where
 
 import Juvix.Compiler.Core.Language.Nodes
 
-{---------------------------------------------------------------------------------}
-
 type Type = Node
 
 type Var = Var' Info
