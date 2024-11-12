@@ -1,10 +1,35 @@
-module Juvix.Compiler.Nockma.Highlight.Doc (nockOpDoc) where
+module Juvix.Compiler.Nockma.Highlight.Doc (nockOpDoc, allRules) where
 
 import Juvix.Compiler.Nockma.Highlight.Doc.Base
 import Juvix.Compiler.Nockma.Highlight.Doc.Parser
 import Juvix.Compiler.Nockma.Highlight.Doc.Pretty ()
-import Juvix.Data.CodeAnn
+import Juvix.Data.CodeAnn as CodeAnn
 import Juvix.Prelude
+
+allRules :: Doc CodeAnn
+allRules =
+  concatWith
+    ( \a b ->
+        a
+          <> hardline
+          <> hardline
+          <> hardline
+          <> hardline
+          <> hardline
+          <> hardline
+          <> b
+    )
+    (map ppRule allElements)
+  where
+    ppRule :: NockOp -> Doc CodeAnn
+    ppRule op =
+      ppCodeAnn op
+        <+> "("
+          <> show op
+          <> ")"
+        <+> "evaluation rules:"
+          <> hardline
+          <> nockOpDoc op
 
 nockOpDoc :: NockOp -> Doc CodeAnn
 nockOpDoc n = ppCodeAnn $ case n of

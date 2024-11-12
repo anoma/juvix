@@ -58,6 +58,9 @@ let1 (x, xdef) body = let_ [(x, xdef)] body
 mkList :: [SExp] -> SExp
 mkList = Quote . App
 
+instance HasTextBackend SExp where
+  toTextDoc = pretty
+
 renderSExp :: SExp -> Text
 renderSExp =
   renderStrict

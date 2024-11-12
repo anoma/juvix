@@ -6,7 +6,7 @@ import Juvix.Compiler.Nockma.Highlight
 import Juvix.Compiler.Nockma.Translation.FromSource qualified as Nockma
 
 runCommand :: forall r. (Members AppEffects r) => NockmaCheckOptions -> Sem r ()
-runCommand opts = silenceProgressLog . runPipelineOptions $ do
+runCommand opts = do
   afile <- fromAppPathFile (opts ^. nockmaCheckFile)
   void
     . runAppError @JuvixError
