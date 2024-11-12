@@ -130,8 +130,11 @@ lexeme = L.lexeme spaceConsumer
 symbol :: Text -> Parser Text
 symbol = L.symbol spaceConsumer
 
+semanticSymbolBare :: CodeAnn -> Text -> Parser ()
+semanticSymbolBare t = semanticParser t . void . chunk
+
 semanticSymbol :: CodeAnn -> Text -> Parser ()
-semanticSymbol t = semanticParser t . void . lexeme . chunk
+semanticSymbol t = lexeme . semanticSymbolBare t
 
 semanticParserLoc :: forall a. CodeAnn -> Parser (WithLoc a) -> Parser (WithLoc a)
 semanticParserLoc t p = do
@@ -173,11 +176,12 @@ atomOp mtag = do
   lop@(WithLoc loc op') <-
     withLoc
       ( choice
-          [ semanticSymbol (AnnKind (getNameKind op)) opName $> op
+          [ semanticSymbolBare (AnnKind (getNameKind op)) opName $> op
             | (opName, op) <- HashMap.toList atomOps
           ]
       )
   lift (highlightNockOp lop)
+  spaceConsumer
   let info =
         AtomInfo
           { _atomInfoHint = Just AtomHintOp,
