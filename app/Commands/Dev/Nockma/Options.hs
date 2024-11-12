@@ -3,7 +3,7 @@ module Commands.Dev.Nockma.Options where
 import Commands.Dev.Nockma.Encode.Options
 import Commands.Dev.Nockma.Eval.Options
 import Commands.Dev.Nockma.Format.Options
-import Commands.Dev.Nockma.Highlight.Options
+import Commands.Dev.Nockma.Ide.Options
 import Commands.Dev.Nockma.Repl.Options
 import Commands.Dev.Nockma.Run.Options
 import CommonOptions
@@ -14,7 +14,7 @@ data NockmaCommand
   | NockmaFormat NockmaFormatOptions
   | NockmaRun NockmaRunOptions
   | NockmaEncode NockmaEncodeOptions
-  | NockmaHighlight NockmaHighlightOptions
+  | NockmaIde NockmaIdeCommand
   deriving stock (Data)
 
 parseNockmaCommand :: Parser NockmaCommand
@@ -25,18 +25,18 @@ parseNockmaCommand =
         commandFromAsm,
         commandFormat,
         commandEncode,
-        commandHighlight,
+        commandIde,
         commandRun
       ]
   where
-    commandHighlight :: Mod CommandFields NockmaCommand
-    commandHighlight = command "highlight" runInfo
+    commandIde :: Mod CommandFields NockmaCommand
+    commandIde = command "ide" runInfo
       where
         runInfo :: ParserInfo NockmaCommand
         runInfo =
           info
-            (NockmaHighlight <$> parseNockmaHighlightOptions)
-            (progDesc "Highlight a nockma term (only for Emacs)")
+            (NockmaIde <$> parseNockmaIdeCommand)
+            (progDesc "Ide related subcommands")
 
     commandEncode :: Mod CommandFields NockmaCommand
     commandEncode = command "encode" runInfo

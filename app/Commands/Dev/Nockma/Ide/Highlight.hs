@@ -1,7 +1,7 @@
-module Commands.Dev.Nockma.Highlight where
+module Commands.Dev.Nockma.Ide.Highlight where
 
 import Commands.Base hiding (Atom)
-import Commands.Dev.Nockma.Highlight.Options
+import Commands.Dev.Nockma.Ide.Highlight.Options
 import Juvix.Compiler.Nockma.Highlight
 import Juvix.Compiler.Nockma.Translation.FromSource qualified as Nockma
 

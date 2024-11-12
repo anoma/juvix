@@ -1,4 +1,4 @@
-module Commands.Dev.Nockma.Highlight.Options where
+module Commands.Dev.Nockma.Ide.Highlight.Options where
 
 import CommonOptions
 

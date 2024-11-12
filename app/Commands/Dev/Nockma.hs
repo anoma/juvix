@@ -4,7 +4,7 @@ import Commands.Base
 import Commands.Dev.Nockma.Encode as Encode
 import Commands.Dev.Nockma.Eval as Eval
 import Commands.Dev.Nockma.Format as Format
-import Commands.Dev.Nockma.Highlight as Highlight
+import Commands.Dev.Nockma.Ide as Ide
 import Commands.Dev.Nockma.Options
 import Commands.Dev.Nockma.Repl as Repl
 import Commands.Dev.Nockma.Run as Run
@@ -16,4 +16,4 @@ runCommand = \case
   NockmaFormat opts -> Format.runCommand opts
   NockmaRun opts -> Run.runCommand opts
   NockmaEncode opts -> Encode.runCommand opts
-  NockmaHighlight opts -> Highlight.runCommand opts
+  NockmaIde opts -> Ide.runCommand opts
