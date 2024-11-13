@@ -18,7 +18,7 @@ import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Print
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Extra.Assets
-import Juvix.Prelude
+import Juvix.Prelude hiding (Tree)
 import Juvix.Prelude.Pretty
 import Text.Blaze.Html.Renderer.Utf8 qualified as Html
 import Text.Blaze.Html5 as Html hiding (map)

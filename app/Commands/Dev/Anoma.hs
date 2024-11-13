@@ -10,4 +10,4 @@ import Commands.Dev.Anoma.Options
 
 runCommand :: (Members AppEffects r) => AnomaCommand -> Sem r ()
 runCommand = \case
-  Node opts -> Node.runCommand opts
+  AnomaCommandNode opts -> Node.runCommand opts

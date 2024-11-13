@@ -3,6 +3,7 @@
 module Juvix.Prelude.Base.Foundation
   ( module Juvix.Prelude.Base.Foundation,
     module Control.Applicative,
+    module Data.Tree,
     module Data.Graph,
     module Text.Show.Unicode,
     module Data.Map.Strict,
@@ -188,6 +189,7 @@ import Data.Text.IO.Utf8 hiding (getContents, getLine, hGetLine, hPutStr, hPutSt
 import Data.Text.IO.Utf8 qualified as Utf8
 import Data.Text.Lazy.Builder qualified as LazyText
 import Data.Traversable
+import Data.Tree hiding (levels)
 import Data.Tuple.Extra hiding (both)
 import Data.Type.Equality (type (~))
 import Data.Typeable hiding (TyCon)
