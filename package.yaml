@@ -47,10 +47,11 @@ extra-source-files:
   - config/configure.sh
 
 dependencies:
-  - aeson-better-errors == 0.9.*
   - aeson == 2.2.*
+  - aeson-better-errors == 0.9.*
   - aeson-pretty == 0.8.*
   - ansi-terminal == 1.1.*
+  - array == 0.5.*
   - base == 4.19.*
   - base16-bytestring == 1.0.*
   - base64-bytestring == 1.2.*

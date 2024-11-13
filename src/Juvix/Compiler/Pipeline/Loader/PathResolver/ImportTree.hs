@@ -1,6 +1,8 @@
 module Juvix.Compiler.Pipeline.Loader.PathResolver.ImportTree where
 
 import Data.HashMap.Strict qualified as HashMap
+import Data.List.NonEmpty qualified as NonEmpty
+import Data.Text qualified as Text
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Compiler.Concrete.Translation.ImportScanner
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Base
@@ -114,38 +116,42 @@ withImportTree entryModule x = do
 
 checkImportTreeCycles :: forall r. (Members '[Error ScoperError] r) => ImportTree -> Sem r ()
 checkImportTreeCycles tree = do
-  let sccs =
-        stronglyConnComp
-          [ (node, node, toList v) | (node, v) <- HashMap.toList (tree ^. importTree)
-          ]
-  whenJust (firstJust getCycle sccs) $ \(cyc :: NonEmpty ImportNode) ->
+  let graph :: GraphInfo ImportNode ImportNode =
+        mkGraphInfo [(node, node, toList v) | (node, v) <- HashMap.toList (tree ^. importTree)]
+  whenJust (graphCycle graph) $ \(cyc :: GraphCycle ImportNode) ->
     throw
       . ErrImportCycleNew
       . ImportCycleNew
-      $ getEdges cyc
+      . getEdges
+      $ cyc
   where
-    getEdges :: NonEmpty ImportNode -> NonEmpty ImportScan
-    getEdges = fmap (uncurry getEdge) . zipWithNextLoop
-
-    getEdge :: ImportNode -> ImportNode -> ImportScan
-    getEdge fromN toN = fromMaybe unexpected $ do
-      edges <- tree ^. importTreeEdges . at fromN
-      let rel :: Path Rel File = removeExtensions (toN ^. importNodeFile)
-          cond :: ImportScan -> Bool
-          cond = (== rel) . importScanToRelPath
-      find cond edges
+    getEdges :: GraphCycle ImportNode -> GraphCycle ImportScan
+    getEdges cycl =
+      over
+        graphCycleVertices
+        ( fmap (uncurry getEdge)
+            . zipWithNextLoop
+        )
+        cycl
       where
-        unexpected =
-          error $
-            "Impossible: Could not find edge between\n"
-              <> prettyText fromN
-              <> "\nand\n"
-              <> prettyText toN
-              <> "\n"
-              <> "Available Edges:\n"
-              <> prettyText (toList (tree ^. importTreeEdges . at fromN . _Just))
-
-    getCycle :: SCC ImportNode -> Maybe (NonEmpty ImportNode)
-    getCycle = \case
-      AcyclicSCC {} -> Nothing
-      CyclicSCC l -> Just (nonEmpty' l)
+        getEdge :: ImportNode -> ImportNode -> ImportScan
+        getEdge fromN toN = fromMaybe unexpected $ do
+          edges <- tree ^. importTreeEdges . at fromN
+          let rel :: Path Rel File = removeExtensions (toN ^. importNodeFile)
+              cond :: ImportScan -> Bool
+              cond = (== rel) . importScanToRelPath
+          find cond edges
+          where
+            unexpected =
+              impossibleError $
+                "Could not find edge between\n"
+                  <> prettyText fromN
+                  <> "\nand\n"
+                  <> prettyText toN
+                  <> "\n"
+                  <> "Available Edges from "
+                  <> prettyText fromN
+                  <> ":\n"
+                  <> prettyText (toList (tree ^. importTreeEdges . at fromN . _Just))
+                  <> "\n\nCycle found:\n"
+                  <> Text.unlines (prettyText <$> toList (cycl ^. graphCycleVertices))

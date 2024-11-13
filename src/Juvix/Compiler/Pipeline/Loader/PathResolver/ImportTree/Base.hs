@@ -79,8 +79,6 @@ runImportTreeBuilder = reinterpret (runState emptyImportTree) $ \case
     modify (over fimportTree (insertHelper fromNode toNode))
     modify (over fimportTreeReverse (insertHelper toNode fromNode))
     modify (over fimportTreeEdges (insertHelper fromNode importScan))
-    where
-
   where
     insertHelper :: (Hashable k, Hashable v) => k -> v -> HashMap k (HashSet v) -> HashMap k (HashSet v)
     insertHelper k v = over (at k) (Just . maybe (HashSet.singleton v) (HashSet.insert v))

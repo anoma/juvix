@@ -124,6 +124,7 @@ import Control.Monad.Extra qualified as Monad
 import Control.Monad.Fix
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.Zip
+import Data.Array qualified as Array
 import Data.Bifunctor hiding (first, second)
 import Data.Bitraversable
 import Data.Bool
@@ -137,7 +138,8 @@ import Data.Foldable hiding (foldr1, minimum, minimumBy)
 import Data.Function
 import Data.Functor
 import Data.Functor.Identity
-import Data.Graph (Graph, SCC (..), Vertex, stronglyConnComp)
+import Data.Graph (Graph, SCC (..), Vertex, scc, stronglyConnComp)
+import Data.Graph qualified as Graph
 import Data.HashMap.Lazy qualified as LazyHashMap
 import Data.HashMap.Strict (HashMap)
 import Data.HashMap.Strict qualified as HashMap
@@ -834,3 +836,55 @@ unicodeSubscript = pack . map toSubscript . show
       '8' -> '₈'
       '9' -> '₉'
       _ -> impossible
+
+-- | A list of vertices [v1, .., vn], s.t. ∀i, ⟨vi, v(i+1 `mod` n)⟩ ∈ Edges
+newtype GraphCycle a = GraphCycle
+  { _graphCycleVertices :: NonEmpty a
+  }
+  deriving stock (Show)
+
+makeLenses ''GraphCycle
+
+data GraphInfo node key = GraphInfo
+  { _graphInfoGraph :: Graph,
+    _graphInfoNodeFromVertex :: Vertex -> (node, key, [key]),
+    _graphInfoKeyToVertex :: key -> Maybe Vertex
+  }
+
+makeLenses ''GraphInfo
+
+mkGraphInfo :: (Ord key) => [(node, key, [key])] -> GraphInfo node key
+mkGraphInfo e =
+  let (_graphInfoGraph, _graphInfoNodeFromVertex, _graphInfoKeyToVertex) = Graph.graphFromEdges e
+   in GraphInfo {..}
+
+graphCycle :: forall node key. GraphInfo node key -> Maybe (GraphCycle node)
+graphCycle gi =
+  case mapM_ findCycle sccs of
+    Right {} -> Nothing
+    Left cycl ->
+      Just
+        . over graphCycleVertices (fmap getNode)
+        . GraphCycle
+        . NonEmpty.reverse
+        $ cycl
+  where
+    sccs :: [Tree Vertex] = scc g
+    g :: Graph = gi ^. graphInfoGraph
+
+    getNode :: Vertex -> node
+    getNode v = fst3 ((gi ^. graphInfoNodeFromVertex) v)
+
+    isEdge :: Vertex -> Vertex -> Bool
+    isEdge v u = u `elem` (g Array.! v)
+
+    findCycle :: Tree Vertex -> Either (NonEmpty Vertex) ()
+    findCycle (Node root ch) = goChildren (pure root) ch
+      where
+        go :: NonEmpty Vertex -> Tree Vertex -> Either (NonEmpty Vertex) ()
+        go path (Node n ns)
+          | isEdge n root = Left (NonEmpty.cons n path)
+          | otherwise = goChildren (NonEmpty.cons n path) ns
+
+        goChildren :: NonEmpty Vertex -> [Tree Vertex] -> Either (NonEmpty Vertex) ()
+        goChildren path = mapM_ (go path)
