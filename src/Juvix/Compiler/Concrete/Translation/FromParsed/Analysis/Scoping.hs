@@ -1263,6 +1263,7 @@ checkInductiveDef InductiveDef {..} = do
               -- field is checked with a local scope
               withLocalScope $ do
                 name' <- bindVariableSymbol _fieldName
+                -- TODO: register name signature?
                 return
                   RecordField
                     { _fieldType = type',
