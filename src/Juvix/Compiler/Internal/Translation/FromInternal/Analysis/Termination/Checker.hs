@@ -170,7 +170,7 @@ scanFunctionBody funName topbody = go [] topbody
       ExpressionLambda Lambda {..} -> mapM_ goClause _lambdaClauses
       _ ->
         local
-          (over sizeInfoMap (HashMap.insert funName (mkSizeInfo (reverse revArgs))))
+          (over sizeInfoMap ((funName, mkSizeInfo (reverse revArgs)) :))
           (scanExpression body)
       where
         goClause :: LambdaClause -> Sem r ()
@@ -208,7 +208,7 @@ scanExpression e =
   viewCall e >>= \case
     Just c -> do
       -- Are we recursively calling a function being defined?
-      recCall <- asks (HashMap.member (c ^. callRef) . (^. sizeInfoMap))
+      recCall <- asks (elem (c ^. callRef) . map fst . (^. sizeInfoMap))
       if
           | recCall ->
               runReader (c ^. callRef) (registerCall c)

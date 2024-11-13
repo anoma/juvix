@@ -7,6 +7,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Data
 import Juvix.Prelude
+import Safe (headMay)
 
 viewCall ::
   forall r.
@@ -50,8 +51,11 @@ viewCall = \case
                   Just s' -> CallRow (Just (s', REq))
               Nothing -> return (CallRow Nothing)
           findSizeInfo :: SizeInfoMap -> SizeInfo
-          findSizeInfo =
-            fromMaybe emptySizeInfo . (HashMap.lookup fref) . (^. sizeInfoMap)
+          findSizeInfo infos =
+            fromMaybe (maybe emptySizeInfo snd . headMay $ infos ^. sizeInfoMap)
+              . (lookup fref)
+              . (^. sizeInfoMap)
+              $ infos
   _ -> return Nothing
   where
     singletonCall :: FunctionRef -> FunCall
