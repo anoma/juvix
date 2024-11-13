@@ -67,7 +67,15 @@ tests =
     PosTest
       "Ignore instance arguments"
       $(mkRelDir ".")
-      $(mkRelFile "issue2414.juvix")
+      $(mkRelFile "issue2414.juvix"),
+    PosTest
+      "Nested local definitions"
+      $(mkRelDir ".")
+      $(mkRelFile "Nested1.juvix"),
+    PosTest
+      "Named arguments"
+      $(mkRelDir ".")
+      $(mkRelFile "Nested2.juvix")
   ]
 
 testsWithKeyword :: [PosTest]

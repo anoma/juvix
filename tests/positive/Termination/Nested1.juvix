@@ -1,0 +1,11 @@
+module Nested1;
+
+import Stdlib.Data.List open;
+
+go {A B} (f : A -> B) : List A -> List B
+  | nil := nil
+  | (elem :: next) :=
+    let
+      var1 := f elem;
+      var2 := go f next;
+    in var1 :: var2;
