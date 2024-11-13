@@ -207,7 +207,15 @@ scanExpression ::
 scanExpression e =
   viewCall e >>= \case
     Just c -> do
-      whenJustM (ask @(Maybe FunctionRef)) (\caller -> runReader caller (registerCall c))
+      -- Are we recursively calling a function being defined?
+      recCall <- asks (HashMap.member (c ^. callRef) . (^. sizeInfoMap))
+      if
+          | recCall ->
+              runReader (c ^. callRef) (registerCall c)
+          | otherwise ->
+              whenJustM
+                (ask @(Maybe FunctionRef))
+                (\caller -> runReader caller (registerCall c))
       mapM_ (scanExpression . snd) (c ^. callArgs)
     Nothing -> case e of
       ExpressionApplication a -> directExpressions_ scanExpression a
