@@ -15,7 +15,7 @@ jobs:
   build:
     name: Build static binary
     runs-on: ubuntu-latest
-    container: docker.io/benz0li/ghc-musl@sha256:0c491f49df224947847084159c85f60590c4c0324ecdf0efb366f82ed3b20023
+    container: quay.io/benz0li/ghc-musl:9.8.2
     steps:
       - name: checkout code
         uses: actions/checkout@v3
