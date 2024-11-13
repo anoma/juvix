@@ -1,10 +1,14 @@
-module Juvix.Compiler.Concrete.Data.Highlight.RenderEmacs where
+module Juvix.Emacs.Render
+  ( renderEmacs,
+    nameKindFace,
+  )
+where
 
 import Data.Text qualified as Text
-import Juvix.Compiler.Concrete.Data.Highlight.Properties
-import Juvix.Compiler.Concrete.Data.ScopedName
 import Juvix.Data.CodeAnn
-import Juvix.Data.Emacs
+import Juvix.Emacs.Point
+import Juvix.Emacs.Properties
+import Juvix.Emacs.SExp
 import Juvix.Prelude
 
 nameKindFace :: NameKind -> Maybe Face
@@ -27,6 +31,7 @@ fromCodeAnn = \case
   AnnKeyword -> Just (EPropertyFace (PropertyFace FaceKeyword))
   AnnDelimiter -> Just (EPropertyFace (PropertyFace FaceDelimiter))
   AnnComment -> Just (EPropertyFace (PropertyFace FaceComment))
+  AnnPragma -> Just (EPropertyFace (PropertyFace FacePragma))
   AnnJudoc -> Just (EPropertyFace (PropertyFace FaceJudoc))
   AnnLiteralString -> Just (EPropertyFace (PropertyFace FaceString))
   AnnLiteralInteger -> Just (EPropertyFace (PropertyFace FaceNumber))
@@ -34,7 +39,6 @@ fromCodeAnn = \case
   AnnImportant -> Nothing
   AnnUnkindedSym -> Nothing
   AnnDef {} -> Nothing
-  -- TODO goto property
   AnnRef {} -> Nothing
 
 data RenderState = RenderState
@@ -46,9 +50,15 @@ data RenderState = RenderState
 
 makeLenses ''RenderState
 
-renderEmacs :: SimpleDocStream CodeAnn -> (Text, SExp)
+renderEmacs :: Doc CodeAnn -> (Text, SExp)
 renderEmacs s =
-  let r = run . execState iniRenderState . go . alterAnnotationsS fromCodeAnn $ s
+  let r =
+        run
+          . execState iniRenderState
+          . go
+          . alterAnnotationsS fromCodeAnn
+          . layoutPretty defaultLayoutOptions
+          $ s
    in (r ^. stateText, progn (map putProperty (r ^. stateProperties)))
   where
     iniRenderState =

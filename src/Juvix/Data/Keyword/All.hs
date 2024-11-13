@@ -13,6 +13,36 @@ kwAs = asciiKw Str.as
 kwBuiltin :: Keyword
 kwBuiltin = asciiKw Str.builtin
 
+kwSuc :: Keyword
+kwSuc = asciiKw Str.suc
+
+delimRule :: Keyword
+delimRule = mkDelim Str.nockmaRule
+
+kwNockmaLogicAnd :: Keyword
+kwNockmaLogicAnd = asciiKw Str.nockmaLogicAnd
+
+kwAnd :: Keyword
+kwAnd = asciiKw Str.and
+
+kwStorage :: Keyword
+kwStorage = asciiKw Str.storage
+
+kwReplace :: Keyword
+kwReplace = asciiKw Str.replace
+
+kwIndex :: Keyword
+kwIndex = asciiKw Str.index
+
+kwNeq :: Keyword
+kwNeq = asciiKw Str.neq
+
+kwNeqSymbol :: Keyword
+kwNeqSymbol = unicodeKw Str.neqSymbolAscii Str.neqSymbol
+
+kwDoubleArrowR :: Keyword
+kwDoubleArrowR = unicodeKw Str.doubleArrowRAscii Str.doubleArrowR
+
 kwBottom :: Keyword
 kwBottom = unicodeKw Str.bottomAscii Str.bottom
 
@@ -404,7 +434,7 @@ kwFun :: Keyword
 kwFun = asciiKw Str.fun_
 
 kwStar :: Keyword
-kwStar = asciiKw Str.mul
+kwStar = unicodeKw Str.starAscii Str.star
 
 kwTrue :: Keyword
 kwTrue = asciiKw Str.true_
@@ -430,11 +460,11 @@ kwDollar = asciiKw Str.dollar
 kwMutual :: Keyword
 kwMutual = asciiKw Str.mutual
 
-kwBracketL :: Keyword
-kwBracketL = asciiKw Str.bracketL
+delimBracketL :: Keyword
+delimBracketL = mkDelim Str.bracketL
 
-kwBracketR :: Keyword
-kwBracketR = asciiKw Str.bracketR
+delimBracketR :: Keyword
+delimBracketR = mkDelim Str.bracketR
 
 kwAp :: Keyword
 kwAp = asciiKw Str.ap

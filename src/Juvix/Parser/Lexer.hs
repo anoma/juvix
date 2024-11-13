@@ -196,7 +196,7 @@ kw' k@Keyword {..} = P.label (unpack _keywordAscii) (reserved <|> normal)
       (w, i) <- interval morpheme
       case keywordMatch k w of
         Just u -> return (KeywordRef k i u)
-        Nothing -> failure Nothing (Set.singleton (Label (fromJust $ nonEmpty $ unpack _keywordAscii)))
+        Nothing -> failure Nothing (Set.singleton (Label (nonEmpty' $ unpack _keywordAscii)))
 
 rawIdentifier' :: (Char -> Bool) -> HashSet Text -> ParsecS r Text
 rawIdentifier' excludedTailChar allKeywords = label "<identifier>" $ P.try $ do

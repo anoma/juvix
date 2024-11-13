@@ -1,6 +1,5 @@
 module Juvix.Compiler.Concrete.Translation.FromSource.Data.ParserState where
 
-import Juvix.Compiler.Concrete.Data.ParsedItem
 import Juvix.Compiler.Concrete.Language
 import Juvix.Prelude
 

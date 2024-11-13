@@ -108,6 +108,7 @@ putTag ann x = case ann of
   AnnComment -> juColor JuComment x
   AnnJudoc -> juColor JuJudoc x
   AnnDelimiter -> juColor JuDelimiter x
+  AnnPragma -> juColor JuComment x
   AnnDef {} -> x
   AnnRef {} -> x
   AnnCode -> x

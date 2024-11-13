@@ -4,7 +4,6 @@ import Commands.Base hiding (Atom)
 import Commands.Dev.Nockma.Repl.Options
 import Control.Exception (throwIO)
 import Control.Monad.State.Strict qualified as State
-import Data.String.Interpolate (__i)
 import Juvix.Compiler.Nockma.Evaluator (NockEvalError, evalRepl, fromReplTerm, programAssignments)
 import Juvix.Compiler.Nockma.Evaluator.Options
 import Juvix.Compiler.Nockma.Language

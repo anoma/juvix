@@ -3,6 +3,7 @@ module Commands.Dev.Nockma.Options where
 import Commands.Dev.Nockma.Encode.Options
 import Commands.Dev.Nockma.Eval.Options
 import Commands.Dev.Nockma.Format.Options
+import Commands.Dev.Nockma.Ide.Options
 import Commands.Dev.Nockma.Repl.Options
 import Commands.Dev.Nockma.Run.Options
 import CommonOptions
@@ -13,6 +14,7 @@ data NockmaCommand
   | NockmaFormat NockmaFormatOptions
   | NockmaRun NockmaRunOptions
   | NockmaEncode NockmaEncodeOptions
+  | NockmaIde NockmaIdeCommand
   deriving stock (Data)
 
 parseNockmaCommand :: Parser NockmaCommand
@@ -23,9 +25,19 @@ parseNockmaCommand =
         commandFromAsm,
         commandFormat,
         commandEncode,
+        commandIde,
         commandRun
       ]
   where
+    commandIde :: Mod CommandFields NockmaCommand
+    commandIde = command "ide" runInfo
+      where
+        runInfo :: ParserInfo NockmaCommand
+        runInfo =
+          info
+            (NockmaIde <$> parseNockmaIdeCommand)
+            (progDesc "Ide related subcommands")
+
     commandEncode :: Mod CommandFields NockmaCommand
     commandEncode = command "encode" runInfo
       where

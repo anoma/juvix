@@ -1,6 +1,7 @@
-module Juvix.Compiler.Concrete.Data.ParsedItem where
+module Juvix.Data.ParsedItem where
 
-import Juvix.Prelude
+import Juvix.Data.Loc
+import Juvix.Prelude.Base
 
 data ParsedItem = ParsedItem
   { _parsedLoc :: Interval,

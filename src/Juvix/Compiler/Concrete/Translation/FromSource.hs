@@ -716,9 +716,9 @@ parsedFixityFields = do
     belowAbove aboveOrBelow = do
       kw aboveOrBelow
       kw kwAssign
-      kw kwBracketL
+      kw delimBracketL
       r <- P.sepEndBy symbol semicolon
-      kw kwBracketR
+      kw delimBracketR
       return r
 
     assoc :: ParsecS r BinaryAssoc
@@ -1062,16 +1062,16 @@ hole = kw kwHole
 
 parseListPattern :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r (ListPattern 'Parsed)
 parseListPattern = do
-  _listpBracketL <- Irrelevant <$> kw kwBracketL
+  _listpBracketL <- Irrelevant <$> kw delimBracketL
   _listpItems <- P.sepEndBy parsePatternAtoms (kw delimSemicolon)
-  _listpBracketR <- Irrelevant <$> kw kwBracketR
+  _listpBracketR <- Irrelevant <$> kw delimBracketR
   return ListPattern {..}
 
 parseList :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r (List 'Parsed)
 parseList = do
-  _listBracketL <- Irrelevant <$> kw kwBracketL
+  _listBracketL <- Irrelevant <$> kw delimBracketL
   _listItems <- P.sepEndBy parseExpressionAtoms (kw delimSemicolon)
-  _listBracketR <- Irrelevant <$> kw kwBracketR
+  _listBracketR <- Irrelevant <$> kw delimBracketR
   return List {..}
 
 --------------------------------------------------------------------------------

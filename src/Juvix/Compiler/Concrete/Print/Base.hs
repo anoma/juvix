@@ -894,9 +894,9 @@ instance PrettyPrint BinaryAssoc where
 
 ppSymbolList :: (SingI s) => PrettyPrinting [SymbolType s]
 ppSymbolList items = do
-  ppCode Kw.kwBracketL
+  ppCode Kw.delimBracketL
   hsepSemicolon (map ppSymbolType items)
-  ppCode Kw.kwBracketR
+  ppCode Kw.delimBracketR
 
 instance (SingI s) => PrettyPrint (ParsedFixityInfo s) where
   ppCode ParsedFixityInfo {..} = do

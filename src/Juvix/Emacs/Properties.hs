@@ -1,14 +1,28 @@
-module Juvix.Compiler.Concrete.Data.Highlight.Properties where
+module Juvix.Emacs.Properties where
 
 import Data.Aeson (ToJSON)
 import Data.Aeson qualified as Aeson
 import Data.Aeson.TH
-import Juvix.Data.Emacs
+import Juvix.Emacs.Point
+import Juvix.Emacs.SExp
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
 
+data PropertyId
+  = PropertyIdFace
+  | PropertyIdGoto
+  | PropertyIdInfo
+  | PropertyIdFormat
+
+propertyIdText :: PropertyId -> Text
+propertyIdText = \case
+  PropertyIdFace -> "face"
+  PropertyIdInfo -> "juvix-info"
+  PropertyIdGoto -> "juvix-goto"
+  PropertyIdFormat -> "juvix-format"
+
 data GenericProperty = GenericProperty
-  { _gpropProperty :: Text,
+  { _gpropProperty :: PropertyId,
     _gpropValue :: SExp
   }
 
@@ -65,7 +79,7 @@ instance ToJSON Face where
 data EmacsProperty
   = EPropertyGoto PropertyGoto
   | EPropertyFace PropertyFace
-  | EPropertyDoc PropertyDoc
+  | EPropertyInfo PropertyInfo
 
 type LocEmacsProperty = WithLoc EmacsProperty
 
@@ -78,15 +92,15 @@ newtype PropertyFace = PropertyFace
   { _faceFace :: Face
   }
 
-data PropertyDoc = PropertyDoc
-  { _docText :: Text,
-    _docSExp :: SExp
+data PropertyInfo = PropertyInfo
+  { _infoInfo :: SExp,
+    _infoInit :: SExp
   }
 
 data LocProperties = LocProperties
   { _propertiesGoto :: [WithLoc PropertyGoto],
     _propertiesFace :: [WithLoc PropertyFace],
-    _propertiesDoc :: [WithLoc PropertyDoc]
+    _propertiesInfo :: [WithLoc PropertyInfo]
   }
 
 data RawProperties = RawProperties
@@ -121,7 +135,7 @@ rawProperties LocProperties {..} =
   RawProperties
     { _rawPropertiesGoto = map (rawWithLoc rawGoto) _propertiesGoto,
       _rawPropertiesFace = map (rawWithLoc rawFace) _propertiesFace,
-      _rawPropertiesDoc = map (rawWithLoc rawType) _propertiesDoc
+      _rawPropertiesDoc = map (rawWithLoc rawType) _propertiesInfo
     }
   where
     rawInterval :: Interval -> RawInterval
@@ -137,8 +151,11 @@ rawProperties LocProperties {..} =
     rawWithLoc :: (a -> b) -> WithLoc a -> RawWithLoc b
     rawWithLoc f x = (rawInterval (getLoc x), f (x ^. withLocParam))
 
-    rawType :: PropertyDoc -> RawType
-    rawType PropertyDoc {..} = _docText
+    rawType :: PropertyInfo -> RawType
+    rawType PropertyInfo {..} = case _infoInfo of
+      Symbol s -> s
+      String s -> s
+      _ -> error "unsupported"
 
     rawFace :: PropertyFace -> RawFace
     rawFace PropertyFace {..} = _faceFace
@@ -153,7 +170,7 @@ rawProperties LocProperties {..} =
 instance IsProperty EmacsProperty where
   toProperties = \case
     EPropertyFace p -> toProperties p
-    EPropertyDoc p -> toProperties p
+    EPropertyInfo p -> toProperties p
     EPropertyGoto p -> toProperties p
 
 addGenericProperties :: WithRange (NonEmpty GenericProperty) -> SExp
@@ -166,7 +183,7 @@ addGenericProperties (WithRange i props) =
     propertyList = mkList (concat [[k, v] | (k, v) <- map mkItem (toList props)])
       where
         mkItem :: GenericProperty -> (SExp, SExp)
-        mkItem GenericProperty {..} = (Symbol _gpropProperty, _gpropValue)
+        mkItem GenericProperty {..} = (Symbol (propertyIdText _gpropProperty), _gpropValue)
 
 putProperty :: (IsProperty a) => WithRange a -> SExp
 putProperty = addGenericProperties . fmap toProperties
@@ -185,7 +202,7 @@ instance IsProperty PropertyFace where
   toProperties PropertyFace {..} =
     pure
       GenericProperty
-        { _gpropProperty = "face",
+        { _gpropProperty = PropertyIdFace,
           _gpropValue = toSExp _faceFace
         }
 
@@ -193,21 +210,21 @@ instance IsProperty PropertyGoto where
   toProperties PropertyGoto {..} =
     pure
       GenericProperty
-        { _gpropProperty = "juvix-goto",
+        { _gpropProperty = PropertyIdGoto,
           _gpropValue = gotoPair
         }
     where
       gotoPair = Pair (String (pack (toFilePath _gotoFile))) (Int (_gotoPos ^. locOffset . to (succ . fromIntegral)))
 
-instance IsProperty PropertyDoc where
-  toProperties PropertyDoc {..} =
+instance IsProperty PropertyInfo where
+  toProperties PropertyInfo {..} =
     GenericProperty
-      { _gpropProperty = "help-echo",
-        _gpropValue = String _docText
+      { _gpropProperty = PropertyIdInfo,
+        _gpropValue = _infoInfo
       }
       :| [ GenericProperty
-             { _gpropProperty = "juvix-format",
-               _gpropValue = _docSExp
+             { _gpropProperty = PropertyIdFormat,
+               _gpropValue = _infoInit
              }
          ]
 
@@ -216,5 +233,5 @@ instance ToSExp LocProperties where
     progn
       ( map putPropertyLoc _propertiesFace
           <> map putPropertyLoc _propertiesGoto
-          <> map putPropertyLoc _propertiesDoc
+          <> map putPropertyLoc _propertiesInfo
       )

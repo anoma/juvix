@@ -1189,3 +1189,42 @@ packageBase = "package-base"
 
 rustReturn :: (IsString s) => s
 rustReturn = "return"
+
+starAscii :: (IsString s) => s
+starAscii = "*"
+
+star :: (IsString s) => s
+star = "⋆"
+
+doubleArrowRAscii :: (IsString s) => s
+doubleArrowRAscii = "=>"
+
+doubleArrowR :: (IsString s) => s
+doubleArrowR = "⇒"
+
+index :: (IsString s) => s
+index = "index"
+
+replace :: (IsString s) => s
+replace = "replace"
+
+storage :: (IsString s) => s
+storage = "storage"
+
+neqSymbol :: (IsString s) => s
+neqSymbol = "≠"
+
+neq :: (IsString s) => s
+neq = "neq"
+
+neqSymbolAscii :: (IsString s) => s
+neqSymbolAscii = "/="
+
+nockmaRule :: (IsString s) => s
+nockmaRule = "---"
+
+nockmaLogicAnd :: (IsString s) => s
+nockmaLogicAnd = "&&"
+
+and :: (IsString s) => s
+and = "and"

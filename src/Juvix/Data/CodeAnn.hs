@@ -28,6 +28,7 @@ data CodeAnn
   | AnnKeyword
   | AnnCode
   | AnnComment
+  | AnnPragma
   | AnnJudoc
   | AnnImportant
   | AnnDelimiter
@@ -36,6 +37,8 @@ data CodeAnn
   | AnnUnkindedSym
   | AnnDef CodeAnnReference
   | AnnRef CodeAnnReference
+
+type SemanticItem = WithLoc CodeAnn
 
 instance HasNameKind CodeAnnReference where
   getNameKind = (^. codeAnnReferenceNameKindPretty)
@@ -52,6 +55,7 @@ stylize a = case a of
   AnnCode -> bold
   AnnImportant -> bold
   AnnComment -> colorDull Cyan
+  AnnPragma -> colorDull Cyan
   AnnJudoc -> colorDull Cyan
   AnnDelimiter -> colorDull White
   AnnLiteralString -> colorDull Red
@@ -65,6 +69,9 @@ class PrettyCodeAnn a where
 instance HasAnsiBackend (Doc CodeAnn) where
   toAnsiDoc = fmap stylize
   toAnsiStream = fmap stylize . layoutPretty defaultLayoutOptions
+
+instance PrettyCodeAnn Keyword where
+  ppCodeAnn = annotate AnnKeyword . pretty
 
 simpleErrorCodeAnn :: (PrettyCodeAnn msg) => msg -> SimpleError
 simpleErrorCodeAnn = SimpleError . mkAnsiText . ppCodeAnn

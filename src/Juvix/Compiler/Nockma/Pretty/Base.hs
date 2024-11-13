@@ -67,15 +67,10 @@ instance PrettyCode Natural where
   ppCode = return . pretty
 
 instance PrettyCode Path where
-  ppCode = \case
-    [] -> return "S"
-    ds -> mconcatMapM ppCode ds
+  ppCode = return . ppCodeAnn
 
 instance PrettyCode Direction where
-  ppCode =
-    return . \case
-      L -> annotate (AnnKind KNameAxiom) "L"
-      R -> annotate AnnKeyword "R"
+  ppCode = return . ppCodeAnn
 
 instance PrettyCode NockOp where
   ppCode =

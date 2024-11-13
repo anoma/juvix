@@ -144,7 +144,7 @@ data NockOp
   | OpReplace
   | OpHint
   | OpScry
-  deriving stock (Bounded, Enum, Eq, Generic)
+  deriving stock (Show, Bounded, Enum, Eq, Generic, Lift)
 
 instance Hashable NockOp
 
@@ -163,6 +163,13 @@ instance Pretty NockOp where
     OpReplace -> "replace"
     OpHint -> "hint"
     OpScry -> "scry"
+
+instance HasNameKind NockOp where
+  getNameKind = const KNameFunction
+  getNameKindPretty = const KNameFunction
+
+instance PrettyCodeAnn NockOp where
+  ppCodeAnn o = annotate (AnnKind (getNameKind o)) . pretty $ o
 
 data NockHint = NockHintPuts
   deriving stock (Show, Eq, Enum, Bounded)

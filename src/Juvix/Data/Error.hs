@@ -7,6 +7,7 @@ module Juvix.Data.Error
 where
 
 import Juvix.Data.Error.GenericError
+import Juvix.Data.Loc
 import Juvix.Prelude.Base
 
 data JuvixError
@@ -14,6 +15,9 @@ data JuvixError
 
 instance ToGenericError JuvixError where
   genericError (JuvixError e) = genericError e
+
+instance HasLoc JuvixError where
+  getLoc = getLoc . run . runReader defaultGenericOptions . genericError
 
 fromJuvixError :: (Typeable a) => JuvixError -> Maybe a
 fromJuvixError (JuvixError e) = cast e

@@ -119,8 +119,8 @@ literalInteger a = do
 mkList :: (Member (Reader Interval) r) => [NonEmpty (ExpressionAtom 'Parsed)] -> Sem r (ExpressionAtom 'Parsed)
 mkList as = do
   items <- mapM expressionAtoms' as
-  parenR <- Irrelevant <$> kw kwBracketR
-  parenL <- Irrelevant <$> kw kwBracketL
+  parenR <- Irrelevant <$> kw delimBracketR
+  parenL <- Irrelevant <$> kw delimBracketL
   return
     ( AtomList
         List
