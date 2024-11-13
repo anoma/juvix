@@ -233,7 +233,7 @@ classify AnomaTest {..} = case _anomaTestNum of
   74 -> ClassExpectedFail
   75 -> ClassWorking
   76 -> ClassWorking
-  77 -> ClassNodeError
+  77 -> ClassWorking
   78 -> ClassNodeError
   79 -> ClassWorking
   80 -> ClassWorking
