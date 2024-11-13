@@ -10,7 +10,7 @@ import Juvix.Prelude
 
 viewCall ::
   forall r.
-  (Members '[Reader SizeInfo] r) =>
+  (Members '[Reader SizeInfoMap] r) =>
   Expression ->
   Sem r (Maybe FunCall)
 viewCall = \case
@@ -19,12 +19,15 @@ viewCall = \case
   ExpressionApplication (Application f x impl)
     | isImplicitOrInstance impl -> viewCall f -- implicit arguments are ignored
     | otherwise -> do
-        c <- viewCall f
-        x' <- callArg
-        return $ over callArgs (`snoc` x') <$> c
+        mc <- viewCall f
+        case mc of
+          Just c -> do
+            x' <- callArg (c ^. callRef)
+            return $ Just $ over callArgs (`snoc` x') c
+          Nothing -> return Nothing
     where
-      callArg :: Sem r (CallRow, Expression)
-      callArg = do
+      callArg :: FunctionRef -> Sem r (CallRow, Expression)
+      callArg fref = do
         lt <- (^. callRow) <$> lessThan
         eq <- (^. callRow) <$> equalTo
         return (CallRow (lt `mplus` eq), x)
@@ -33,7 +36,7 @@ viewCall = \case
           lessThan = case viewExpressionAsPattern x of
             Nothing -> return (CallRow Nothing)
             Just x' -> do
-              s <- asks (findIndex (elem x') . (^. sizeSmaller))
+              s <- asks (findIndex (elem x') . (^. sizeSmaller) . findSizeInfo)
               return $ case s of
                 Nothing -> CallRow Nothing
                 Just s' -> CallRow (Just (s', RLe))
@@ -41,11 +44,14 @@ viewCall = \case
           equalTo =
             case viewExpressionAsPattern x of
               Just x' -> do
-                s <- asks (elemIndex x' . (^. sizeEqual))
+                s <- asks (elemIndex x' . (^. sizeEqual) . findSizeInfo)
                 return $ case s of
                   Nothing -> CallRow Nothing
                   Just s' -> CallRow (Just (s', REq))
               Nothing -> return (CallRow Nothing)
+          findSizeInfo :: SizeInfoMap -> SizeInfo
+          findSizeInfo =
+            fromMaybe emptySizeInfo . (HashMap.lookup fref) . (^. sizeInfoMap)
   _ -> return Nothing
   where
     singletonCall :: FunctionRef -> FunCall
