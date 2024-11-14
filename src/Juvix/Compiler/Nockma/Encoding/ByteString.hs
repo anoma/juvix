@@ -120,7 +120,4 @@ decodeByteStringWithDefault :: ByteString -> Integer -> ByteString
 decodeByteStringWithDefault d = fromRight d . run . runErrorNoCallStack @BitReadError . decodeByteString
 
 sha256Natural :: Natural -> ByteString
-sha256Natural =
-  Base16.encode
-    . SHA256.hash
-    . naturalToByteStringLE
+sha256Natural = SHA256.hash . naturalToByteStringLE
