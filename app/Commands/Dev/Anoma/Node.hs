@@ -11,5 +11,5 @@ runCommand opts = runAppError @SimpleError
   $ do
     anomaDir :: AnomaPath <- AnomaPath <$> fromAppPathDir (opts ^. nodeAnomaPath)
     runAnoma anomaDir $ do
-      p <- getAnomaProcesses
-      void (waitForProcess (p ^. anomaNodeHandle))
+      p <- getAnomaProcess
+      void (waitForProcess (p ^. anomaProcessHandle))

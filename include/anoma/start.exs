@@ -1,1 +1,1 @@
- IO.puts(Anoma.Node.Examples.ENode.start_node().grpc_port)
+IO.puts("#{inspect(Anoma.Client.Examples.EClient.create_example_client.client.grpc_port)}")
