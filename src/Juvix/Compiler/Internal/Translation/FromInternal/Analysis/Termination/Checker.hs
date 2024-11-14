@@ -53,7 +53,6 @@ instance Scannable Module where
   buildCallMap =
     run
       . execState emptyCallMap
-      . runReader emptySizeInfoMap
       . scanModule
 
 instance Scannable Expression where
@@ -102,18 +101,18 @@ checkTerminationShallow' topModule = do
           | Nothing <- order -> TerminatingFailed
 
 scanModule ::
-  (Members '[State CallMap, Reader SizeInfoMap] r) =>
+  (Members '[State CallMap] r) =>
   Module ->
   Sem r ()
 scanModule m = scanModuleBody (m ^. moduleBody)
 
-scanModuleBody :: (Members '[State CallMap, Reader SizeInfoMap] r) => ModuleBody -> Sem r ()
+scanModuleBody :: (Members '[State CallMap] r) => ModuleBody -> Sem r ()
 scanModuleBody body = mapM_ scanMutual (body ^. moduleStatements)
 
-scanMutual :: (Members '[State CallMap, Reader SizeInfoMap] r) => MutualBlock -> Sem r ()
+scanMutual :: (Members '[State CallMap] r) => MutualBlock -> Sem r ()
 scanMutual (MutualBlock ss) = mapM_ scanMutualStatement ss
 
-scanInductive :: forall r. (Members '[State CallMap, Reader SizeInfoMap] r) => InductiveDef -> Sem r ()
+scanInductive :: forall r. (Members '[State CallMap] r) => InductiveDef -> Sem r ()
 scanInductive i = do
   scanTopExpression (i ^. inductiveType)
   mapM_ scanConstructor (i ^. inductiveConstructors)
@@ -121,13 +120,13 @@ scanInductive i = do
     scanConstructor :: ConstructorDef -> Sem r ()
     scanConstructor c = scanTopExpression (c ^. inductiveConstructorType)
 
-scanMutualStatement :: (Members '[State CallMap, Reader SizeInfoMap] r) => MutualStatement -> Sem r ()
+scanMutualStatement :: (Members '[State CallMap] r) => MutualStatement -> Sem r ()
 scanMutualStatement = \case
   StatementInductive i -> scanInductive i
-  StatementFunction i -> scanFunctionDef i
+  StatementFunction i -> runReader emptySizeInfoMap $ scanFunctionDef i
   StatementAxiom a -> scanAxiom a
 
-scanAxiom :: (Members '[State CallMap, Reader SizeInfoMap] r) => AxiomDef -> Sem r ()
+scanAxiom :: (Members '[State CallMap] r) => AxiomDef -> Sem r ()
 scanAxiom = scanTopExpression . (^. axiomType)
 
 scanFunctionDef ::
@@ -143,7 +142,7 @@ scanFunctionDef f@FunctionDef {..} = do
 
 scanDefaultArgs ::
   forall r.
-  (Members '[Reader (Maybe FunctionRef), State CallMap, Reader SizeInfoMap] r) =>
+  (Members '[Reader (Maybe FunctionRef), State CallMap] r) =>
   [ArgInfo] ->
   Sem r ()
 scanDefaultArgs = mapM_ scanArgInfo
@@ -152,10 +151,10 @@ scanDefaultArgs = mapM_ scanArgInfo
     scanArgInfo = mapM_ scanTypeSignature . (^. argInfoDefault)
 
 scanTypeSignature ::
-  (Members '[State CallMap, Reader SizeInfoMap, Reader (Maybe FunctionRef)] r) =>
+  (Members '[State CallMap, Reader (Maybe FunctionRef)] r) =>
   Expression ->
   Sem r ()
-scanTypeSignature = scanExpression
+scanTypeSignature = runReader emptySizeInfoMap . scanExpression
 
 scanFunctionBody ::
   forall r.
@@ -193,11 +192,12 @@ scanMutualBlockLet :: (Members '[State CallMap, Reader SizeInfoMap] r) => Mutual
 scanMutualBlockLet MutualBlockLet {..} = mapM_ scanFunctionDef _mutualLet
 
 scanTopExpression ::
-  (Members '[State CallMap, Reader SizeInfoMap] r) =>
+  (Members '[State CallMap] r) =>
   Expression ->
   Sem r ()
 scanTopExpression =
-  runReader (Nothing @FunctionRef)
+  runReader emptySizeInfoMap
+    . runReader (Nothing @FunctionRef)
     . scanExpression
 
 scanExpression ::
