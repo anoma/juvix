@@ -346,24 +346,43 @@ goAxiomInductive = \case
 
 goProjectionDef ::
   forall r.
-  (Members '[NameIdGen, Error ScoperError, State ConstructorInfos, Reader S.InfoTable] r) =>
+  (Members '[Reader DefaultArgsStack, Reader Pragmas, NameIdGen, Error ScoperError, State ConstructorInfos, Reader S.InfoTable] r) =>
   ProjectionDef 'Scoped ->
   Sem r Internal.FunctionDef
 goProjectionDef ProjectionDef {..} = do
   let c = goSymbol _projectionConstructor
   info <- gets (^?! constructorInfos . at c . _Just)
+  let field = goSymbol _projectionField
+  msig <- asks (^. S.infoNameSigs . at (field ^. Internal.nameId))
+  argInfos <- maybe (return mempty) (fmap toList . goNameSignature) msig
   fun <-
     Internal.genFieldProjection
       _projectionKind
-      (goSymbol _projectionField)
+      field
       ( (^. withLocParam)
           <$> _projectionFieldBuiltin
       )
+      argInfos
       (fmap (^. withLocParam . withSourceValue) _projectionPragmas)
       info
       _projectionFieldIx
   whenJust (fun ^. Internal.funDefBuiltin) (checkBuiltinFunction fun)
   return fun
+
+goNameSignature :: forall r. (Members '[Reader DefaultArgsStack, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) => NameSignature 'Scoped -> Sem r [Internal.ArgInfo]
+goNameSignature = mconcatMapM (fmap toList . goBlock) . (^. nameSignatureArgs)
+  where
+    goBlock :: NameBlock 'Scoped -> Sem r (NonEmpty Internal.ArgInfo)
+    goBlock blk = mapM goItem (blk ^. nameBlockItems)
+      where
+        goItem :: NameItem 'Scoped -> Sem r Internal.ArgInfo
+        goItem i = do
+          _argInfoDefault' <- mapM goExpression (i ^? nameItemDefault . _Just . argDefaultValue)
+          return
+            Internal.ArgInfo
+              { _argInfoDefault = _argInfoDefault',
+                _argInfoName = goSymbol <$> (i ^. nameItemSymbol)
+              }
 
 goFunctionDef ::
   forall r.
@@ -389,21 +408,6 @@ goFunctionDef FunctionDef {..} = do
   whenJust _signBuiltin (checkBuiltinFunction fun . (^. withLocParam))
   return fun
   where
-    goNameSignature :: NameSignature 'Scoped -> Sem r [Internal.ArgInfo]
-    goNameSignature = mconcatMapM (fmap toList . goBlock) . (^. nameSignatureArgs)
-      where
-        goBlock :: NameBlock 'Scoped -> Sem r (NonEmpty Internal.ArgInfo)
-        goBlock blk = mapM goItem (blk ^. nameBlockItems)
-          where
-            goItem :: NameItem 'Scoped -> Sem r Internal.ArgInfo
-            goItem i = do
-              _argInfoDefault' <- mapM goExpression (i ^? nameItemDefault . _Just . argDefaultValue)
-              return
-                Internal.ArgInfo
-                  { _argInfoDefault = _argInfoDefault',
-                    _argInfoName = goSymbol <$> (i ^. nameItemSymbol)
-                  }
-
     goBody :: Sem r Internal.Expression
     goBody = do
       commonPatterns <- concatMapM (fmap toList . argToPattern) _signArgs

@@ -1217,6 +1217,7 @@ checkInductiveDef InductiveDef {..} = do
         ConstructorRhsRecord r ->
           forM_ (r ^. rhsRecordStatements) $ \case
             RecordStatementField f -> do
+              traceM ("register: " <> prettyText (f ^. fieldName))
               registerNameSignature (f ^. fieldName . S.nameId) (indDef, f)
             _ -> return ()
         _ -> return ()
@@ -1270,6 +1271,7 @@ checkInductiveDef InductiveDef {..} = do
             checkField RecordField {..} = do
               doc' <- maybe (return Nothing) (checkJudoc >=> return . Just) _fieldDoc
               type' <- checkParseExpressionAtoms _fieldType
+              indName' <- checkParseExpressionAtoms _fieldInductive
               -- Since we don't allow dependent types in constructor types, each
               -- field is checked with a local scope
               withLocalScope $ do
@@ -1280,6 +1282,7 @@ checkInductiveDef InductiveDef {..} = do
                     { _fieldType = type',
                       _fieldName = name',
                       _fieldDoc = doc',
+                      _fieldInductive = indName',
                       ..
                     }
 

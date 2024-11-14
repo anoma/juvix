@@ -106,23 +106,13 @@ instance (SingI s) => HasNameSignature s (InductiveDef s, RecordField s) where
     Sem r ()
   addArgs (i, f) = do
     mapM_ addConstructorParams (i ^. inductiveParameters)
-    addArgument implicity Nothing Nothing indty
+    addArgument implicity Nothing Nothing (f ^. fieldInductive)
+    addExpressionType (f ^. fieldType)
     where
       implicity :: IsImplicit
       implicity
         | isJust (i ^. inductiveTrait) = ImplicitInstance
         | otherwise = Explicit
-
-      indty :: ExpressionType s
-      indty =
-        case sing :: SStage s of
-          SParsed -> undefined
-          SScoped -> undefined
-
-{-          let params = i ^. inductiveParameters . inductiveParametersNames
-              ind = ExpressionIdentifier (IdenInductive (info ^. constructorInfoInductive))
-              saturatedTy = foldApplication ind (map (ExpressionIden . IdenVar) paramNames)
-          in saturatedTy -}
 
 mkNameSignature ::
   forall s d r.

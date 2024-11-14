@@ -1539,8 +1539,15 @@ inductiveDef _inductiveBuiltin = do
     optional (kw kwColon >> parseExpressionAtoms)
       P.<?> "<type annotation e.g. ': Type'>"
   _inductiveAssignKw <- Irrelevant <$> kw kwAssign P.<?> "<assignment symbol ':='>"
+  let name' = NameUnqualified _inductiveName
+      params = fmap (AtomIdentifier . NameUnqualified) (concatMap (toList . (^. inductiveParametersNames)) _inductiveParameters)
+      indType =
+        ExpressionAtoms
+          { _expressionAtoms = AtomIdentifier name' :| params,
+            _expressionAtomsLoc = Irrelevant (getLoc _inductiveName)
+          }
   _inductiveConstructors <-
-    pipeSep1 (constructorDef _inductiveName)
+    pipeSep1 (constructorDef indType _inductiveName)
       P.<?> "<constructor definition>"
   return InductiveDef {..}
 
@@ -1574,8 +1581,8 @@ rhsGadt = P.label "<constructor gadt>" $ do
   _rhsGadtType <- parseExpressionAtoms P.<?> "<constructor type>"
   return RhsGadt {..}
 
-recordField :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r (RecordField 'Parsed)
-recordField = do
+recordField :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ExpressionAtoms 'Parsed -> ParsecS r (RecordField 'Parsed)
+recordField _fieldInductive = do
   _fieldDoc <- optional stashJudoc >> getJudoc
   _fieldPragmas <- optional stashPragmas >> getPragmas
   _fieldBuiltin <- optional builtinRecordField
@@ -1592,19 +1599,19 @@ rhsAdt = P.label "<constructor arguments>" $ do
   _rhsAdtArguments <- many atomicExpression
   return RhsAdt {..}
 
-rhsRecord :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r (RhsRecord 'Parsed)
-rhsRecord = P.label "<constructor record>" $ do
+rhsRecord :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ExpressionAtoms 'Parsed -> ParsecS r (RhsRecord 'Parsed)
+rhsRecord indType = P.label "<constructor record>" $ do
   a <- optional (kw kwAt)
   l <- kw delimBraceL
-  _rhsRecordStatements <- P.sepEndBy recordStatement semicolon
+  _rhsRecordStatements <- P.sepEndBy (recordStatement indType) semicolon
   r <- kw delimBraceR
   let _rhsRecordDelim = Irrelevant (a, l, r)
   return RhsRecord {..}
 
-recordStatement :: forall r. (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r (RecordStatement 'Parsed)
-recordStatement =
+recordStatement :: forall r. (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ExpressionAtoms 'Parsed -> ParsecS r (RecordStatement 'Parsed)
+recordStatement indType =
   RecordStatementSyntax <$> syntax
-    <|> RecordStatementField <$> recordField
+    <|> RecordStatementField <$> recordField indType
   where
     syntax :: ParsecS r (RecordSyntaxDef 'Parsed)
     syntax = do
@@ -1612,18 +1619,18 @@ recordStatement =
       RecordSyntaxIterator <$> iteratorSyntaxDef syn
         <|> RecordSyntaxOperator <$> operatorSyntaxDef syn
 
-pconstructorRhs :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r (ConstructorRhs 'Parsed)
-pconstructorRhs =
+pconstructorRhs :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ExpressionAtoms 'Parsed -> ParsecS r (ConstructorRhs 'Parsed)
+pconstructorRhs indType =
   ConstructorRhsGadt <$> rhsGadt
-    <|> ConstructorRhsRecord <$> rhsRecord
+    <|> ConstructorRhsRecord <$> rhsRecord indType
     <|> ConstructorRhsAdt <$> rhsAdt
 
-constructorDef :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => Symbol -> Irrelevant (Maybe KeywordRef) -> ParsecS r (ConstructorDef 'Parsed)
-constructorDef _constructorInductiveName _constructorPipe = do
+constructorDef :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ExpressionAtoms 'Parsed -> Symbol -> Irrelevant (Maybe KeywordRef) -> ParsecS r (ConstructorDef 'Parsed)
+constructorDef indType _constructorInductiveName _constructorPipe = do
   _constructorDoc <- optional stashJudoc >> getJudoc
   _constructorPragmas <- optional stashPragmas >> getPragmas
   _constructorName <- symbol P.<?> "<constructor name>"
-  _constructorRhs <- pconstructorRhs
+  _constructorRhs <- pconstructorRhs indType
   return ConstructorDef {..}
 
 wildcard :: (Members '[ParserResultBuilder] r) => ParsecS r Wildcard
