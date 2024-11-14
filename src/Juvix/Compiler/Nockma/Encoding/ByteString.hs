@@ -5,7 +5,6 @@ import Data.Bit (Bit)
 import Data.Bit qualified as Bit
 import Data.Bits
 import Data.ByteString qualified as BS
-import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Builder qualified as BS
 import Juvix.Compiler.Nockma.Encoding.Base
 import Juvix.Compiler.Nockma.Encoding.Effect.BitReader
