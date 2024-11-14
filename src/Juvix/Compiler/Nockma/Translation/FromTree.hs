@@ -712,7 +712,7 @@ compile = \case
       return $ mkByteArray (nockNatLiteral (integerToNatural sha256HashLength)) stdcall
       where
         sha256HashLength :: Integer
-        sha256HashLength = 64
+        sha256HashLength = 32
 
     goAnomaRandomNextBytes :: [Term Natural] -> Sem r (Term Natural)
     goAnomaRandomNextBytes args = case args of
