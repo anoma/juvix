@@ -240,7 +240,7 @@ classify AnomaTest {..} = case _anomaTestNum of
   81 -> ClassWorking
   82 -> ClassWorking
   83 -> ClassWorking
-  84 -> ClassWrong
+  84 -> ClassWorking
   85 -> ClassWorking
   86 -> ClassExpectedFail
   _ -> error "non-exhaustive test classification"
