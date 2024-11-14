@@ -98,6 +98,16 @@ instance (SingI s) => HasNameSignature s (InductiveDef s) where
     mapM_ addInductiveParams (a ^. inductiveParameters)
     whenJust (a ^. inductiveType) addExpressionType
 
+instance (SingI s) => HasNameSignature s (InductiveDef s, RecordField s) where
+  addArgs ::
+    forall r.
+    (Members '[NameSignatureBuilder s] r) =>
+    (InductiveDef s, RecordField s) ->
+    Sem r ()
+  addArgs (i, f) = do
+    mapM_ addConstructorParams (i ^. inductiveParameters)
+
+
 mkNameSignature ::
   forall s d r.
   (SingI s, Members '[Error ScoperError] r, HasNameSignature s d) =>

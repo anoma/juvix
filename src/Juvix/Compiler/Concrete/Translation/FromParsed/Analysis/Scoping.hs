@@ -1208,8 +1208,19 @@ checkInductiveDef InductiveDef {..} = do
   registerNameSignature (inductiveName' ^. S.nameId) indDef
   forM_ inductiveConstructors' $ \c -> do
     registerNameSignature (c ^. constructorName . S.nameId) (indDef, c)
+    registerRecordFieldSignatures indDef c
   registerInductive @$> indDef
   where
+    registerRecordFieldSignatures :: InductiveDef 'Scoped -> ConstructorDef 'Scoped -> Sem r ()
+    registerRecordFieldSignatures indDef c =
+      case c ^. constructorRhs of
+        ConstructorRhsRecord r ->
+          forM_ (r ^. rhsRecordStatements) $ \case
+            RecordStatementField f -> do
+              registerNameSignature (f ^. fieldName . S.nameId) (indDef, f)
+            _ -> return ()
+        _ -> return ()
+
     -- note that the constructor name is not bound here
     checkConstructorDef :: S.Symbol -> S.Symbol -> ConstructorDef 'Parsed -> Sem r (ConstructorDef 'Scoped)
     checkConstructorDef inductiveName' constructorName' ConstructorDef {..} = do
