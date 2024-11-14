@@ -59,12 +59,12 @@ viewCall = \case
 
             Consider:
             ```
-            isEven (x : Nat) : Nat :=
+            isEven (x : Nat) : Bool :=
               let
-                isEven' : Nat -> Nat
+                isEven' : Nat -> Bool
                   | zero := true
                   | (suc n) := isOdd' n;
-                isOdd' : Nat -> Nat
+                isOdd' : Nat -> Bool
                   | zero := false
                   | (suc n) := isEven' n;
                in isEven' x;
