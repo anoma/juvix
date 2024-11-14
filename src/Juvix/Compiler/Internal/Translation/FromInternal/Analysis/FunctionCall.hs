@@ -52,6 +52,26 @@ viewCall = \case
               Nothing -> return (CallRow Nothing)
           findSizeInfo :: SizeInfoMap -> SizeInfo
           findSizeInfo infos =
+            {-
+            If the call is not to any nested function being defined, then we
+            associate it with the most nested function. Without this,
+            termination for mutually recursive functions doesn't work.
+
+            Consider:
+            ```
+            isEven (x : Nat) : Nat :=
+              let
+                isEven' : Nat -> Nat
+                  | zero := true
+                  | (suc n) := isOdd' n;
+                isOdd' : Nat -> Nat
+                  | zero := false
+                  | (suc n) := isEven' n;
+               in isEven' x;
+            ```
+            The call `isEven' n` inside `isOdd'` needs to be associated with
+            `isOdd'`, not with `isEven`, and not just forgotten.
+            -}
             fromMaybe (maybe emptySizeInfo snd . headMay $ infos ^. sizeInfoMap)
               . (lookup fref)
               . (^. sizeInfoMap)
