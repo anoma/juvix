@@ -1,0 +1,3 @@
+module Stdlib.Data.Fixity;
+
+import Juvix.Builtin.V1.Fixity open public;

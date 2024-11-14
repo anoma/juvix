@@ -1,0 +1,6 @@
+module Stdlib.Data.List.Base;
+
+import Juvix.Builtin.V1.List open public;
+import Stdlib.Data.Fixity open;
+import Stdlib.Trait.Ord open;
+import Stdlib.Trait.Partial open;

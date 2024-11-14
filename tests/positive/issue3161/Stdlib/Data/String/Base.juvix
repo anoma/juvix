@@ -1,0 +1,5 @@
+module Stdlib.Data.String.Base;
+
+import Juvix.Builtin.V1.String open public;
+import Stdlib.Data.List.Base open;
+import Stdlib.Data.Fixity open;

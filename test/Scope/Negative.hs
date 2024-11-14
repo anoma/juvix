@@ -293,5 +293,10 @@ scoperErrorTests =
       "Invalid default"
       $(mkRelDir ".")
       $(mkRelFile "InvalidDefault.juvix")
-      $ wantsError ErrWrongDefaultValue
+      $ wantsError ErrWrongDefaultValue,
+    negTest
+      "Import cycles (issue3161)"
+      $(mkRelDir "issue3161")
+      $(mkRelFile "Stdlib/Trait/Partial.juvix")
+      $ wantsError ErrImportCycleNew
   ]

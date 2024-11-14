@@ -1,0 +1,3 @@
+module Stdlib.Trait.Ord;
+
+import Stdlib.Data.Fixity open;
