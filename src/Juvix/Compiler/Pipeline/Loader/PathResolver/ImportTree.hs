@@ -1,7 +1,6 @@
 module Juvix.Compiler.Pipeline.Loader.PathResolver.ImportTree where
 
 import Data.HashMap.Strict qualified as HashMap
-import Data.List.NonEmpty qualified as NonEmpty
 import Data.Text qualified as Text
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Compiler.Concrete.Translation.ImportScanner
