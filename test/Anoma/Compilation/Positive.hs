@@ -240,7 +240,7 @@ classify AnomaTest {..} = case _anomaTestNum of
   81 -> ClassWorking
   82 -> ClassWorking
   83 -> ClassWorking
-  84 -> ClassWrong
+  84 -> ClassWorking
   85 -> ClassWorking
   86 -> ClassExpectedFail
   _ -> error "non-exhaustive test classification"
@@ -1024,11 +1024,11 @@ allTests =
           $(mkRelFile "test084.juvix")
           []
           $ checkOutput
-            [ [nock| 64 |],
+            [ [nock| 32 |],
               [nock|
                   [
-                    64
-                    5092006196359674779938793937035252249221936503860319648757996882954518215195609232852607160812968472040491493412050369557521935588220586883008001462395444
+                    32
+                    69779012276202546540741613998220636891790827476075440677599814057037833368907
                   ] |]
             ],
         mkAnomaTest

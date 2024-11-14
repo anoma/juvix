@@ -17,7 +17,7 @@ propEncodingRoundtrip = property $ do
 propSha256Length :: Property
 propSha256Length = property $ do
   n <- forAll (Gen.integral (Range.linear 0 1000000))
-  BS.length (Encoding.sha256Natural n) === 64
+  BS.length (Encoding.sha256Natural n) === 32
 
 propSha256HandlesLargeIntegers :: Property
 propSha256HandlesLargeIntegers = property $ do
