@@ -1,0 +1,16 @@
+module Nested2;
+
+type MyList A :=
+  | myNil
+  | myCons@{
+      elem : A;
+      next : MyList A;
+    };
+
+go {A B} (f : A -> B) : MyList A -> MyList B
+  | myNil := myNil
+  | myCons@{elem; next} :=
+    myCons@{
+      elem := f elem;
+      next := go f next;
+    };

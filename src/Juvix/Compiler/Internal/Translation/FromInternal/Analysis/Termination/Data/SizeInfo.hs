@@ -12,12 +12,21 @@ data SizeInfo = SizeInfo
 
 makeLenses ''SizeInfo
 
+newtype SizeInfoMap = SizeInfoMap
+  { _sizeInfoMap :: [(FunctionName, SizeInfo)]
+  }
+
+makeLenses ''SizeInfoMap
+
 emptySizeInfo :: SizeInfo
 emptySizeInfo =
   SizeInfo
     { _sizeEqual = mempty,
       _sizeSmaller = mempty
     }
+
+emptySizeInfoMap :: SizeInfoMap
+emptySizeInfoMap = SizeInfoMap []
 
 mkSizeInfo :: [PatternArg] -> SizeInfo
 mkSizeInfo args = SizeInfo {..}

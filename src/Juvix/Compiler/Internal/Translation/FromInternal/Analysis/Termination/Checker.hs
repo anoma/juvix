@@ -59,6 +59,7 @@ instance Scannable Expression where
   buildCallMap =
     run
       . execState emptyCallMap
+      . runReader emptySizeInfoMap
       . scanTopExpression
 
 runTerminationState :: TerminationState -> Sem (Termination ': r) a -> Sem r (TerminationState, a)
@@ -122,21 +123,21 @@ scanInductive i = do
 scanMutualStatement :: (Members '[State CallMap] r) => MutualStatement -> Sem r ()
 scanMutualStatement = \case
   StatementInductive i -> scanInductive i
-  StatementFunction i -> scanFunctionDef i
+  StatementFunction i -> runReader emptySizeInfoMap $ scanFunctionDef i
   StatementAxiom a -> scanAxiom a
 
 scanAxiom :: (Members '[State CallMap] r) => AxiomDef -> Sem r ()
 scanAxiom = scanTopExpression . (^. axiomType)
 
 scanFunctionDef ::
-  (Members '[State CallMap] r) =>
+  (Members '[State CallMap, Reader SizeInfoMap] r) =>
   FunctionDef ->
   Sem r ()
 scanFunctionDef f@FunctionDef {..} = do
   registerFunctionDef f
   runReader (Just _funDefName) $ do
     scanTypeSignature _funDefType
-    scanFunctionBody _funDefBody
+    scanFunctionBody _funDefName _funDefBody
     scanDefaultArgs _funDefArgsInfo
 
 scanDefaultArgs ::
@@ -153,38 +154,41 @@ scanTypeSignature ::
   (Members '[State CallMap, Reader (Maybe FunctionRef)] r) =>
   Expression ->
   Sem r ()
-scanTypeSignature = runReader emptySizeInfo . scanExpression
+scanTypeSignature = runReader emptySizeInfoMap . scanExpression
 
 scanFunctionBody ::
   forall r.
-  (Members '[State CallMap, Reader (Maybe FunctionRef)] r) =>
+  (Members '[State CallMap, Reader SizeInfoMap, Reader (Maybe FunctionRef)] r) =>
+  FunctionName ->
   Expression ->
   Sem r ()
-scanFunctionBody topbody = go [] topbody
+scanFunctionBody funName topbody = go [] topbody
   where
     go :: [PatternArg] -> Expression -> Sem r ()
     go revArgs body = case body of
       ExpressionLambda Lambda {..} -> mapM_ goClause _lambdaClauses
-      _ -> runReader (mkSizeInfo (reverse revArgs)) (scanExpression body)
+      _ ->
+        local
+          (over sizeInfoMap ((funName, mkSizeInfo (reverse revArgs)) :))
+          (scanExpression body)
       where
         goClause :: LambdaClause -> Sem r ()
         goClause (LambdaClause pats clBody) = go (reverse (toList pats) ++ revArgs) clBody
 
 scanLet ::
-  (Members '[State CallMap, Reader (Maybe FunctionRef), Reader SizeInfo] r) =>
+  (Members '[State CallMap, Reader (Maybe FunctionRef), Reader SizeInfoMap] r) =>
   Let ->
   Sem r ()
 scanLet l = do
   mapM_ scanLetClause (l ^. letClauses)
   scanExpression (l ^. letExpression)
 
--- NOTE that we forget about the arguments of the hosting function
-scanLetClause :: (Members '[State CallMap] r) => LetClause -> Sem r ()
+scanLetClause :: (Members '[State CallMap, Reader SizeInfoMap] r) => LetClause -> Sem r ()
 scanLetClause = \case
   LetFunDef d -> scanFunctionDef d
   LetMutualBlock m -> scanMutualBlockLet m
 
-scanMutualBlockLet :: (Members '[State CallMap] r) => MutualBlockLet -> Sem r ()
+scanMutualBlockLet :: (Members '[State CallMap, Reader SizeInfoMap] r) => MutualBlockLet -> Sem r ()
 scanMutualBlockLet MutualBlockLet {..} = mapM_ scanFunctionDef _mutualLet
 
 scanTopExpression ::
@@ -192,18 +196,26 @@ scanTopExpression ::
   Expression ->
   Sem r ()
 scanTopExpression =
-  runReader (Nothing @FunctionRef)
-    . runReader emptySizeInfo
+  runReader emptySizeInfoMap
+    . runReader (Nothing @FunctionRef)
     . scanExpression
 
 scanExpression ::
-  (Members '[State CallMap, Reader (Maybe FunctionRef), Reader SizeInfo] r) =>
+  (Members '[State CallMap, Reader (Maybe FunctionRef), Reader SizeInfoMap] r) =>
   Expression ->
   Sem r ()
 scanExpression e =
   viewCall e >>= \case
     Just c -> do
-      whenJustM (ask @(Maybe FunctionRef)) (\caller -> runReader caller (registerCall c))
+      -- Are we recursively calling a function being defined?
+      recCall <- asks (elem (c ^. callRef) . map fst . (^. sizeInfoMap))
+      if
+          | recCall ->
+              runReader (c ^. callRef) (registerCall c)
+          | otherwise ->
+              whenJustM
+                (ask @(Maybe FunctionRef))
+                (\caller -> runReader caller (registerCall c))
       mapM_ (scanExpression . snd) (c ^. callArgs)
     Nothing -> case e of
       ExpressionApplication a -> directExpressions_ scanExpression a
