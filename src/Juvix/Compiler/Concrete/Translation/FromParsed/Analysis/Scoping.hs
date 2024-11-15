@@ -27,7 +27,6 @@ import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context qualified as 
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Store.Scoped.Language as Store
 import Juvix.Data.FixityInfo qualified as FI
-import Juvix.Data.Keyword.All qualified as KW
 import Juvix.Prelude
 
 scopeCheck ::
@@ -1710,7 +1709,7 @@ checkSections sec = topBindings helper
                               ProjectionDef
                                 { _projectionConstructor = headConstr,
                                   _projectionField = field ^. fieldName,
-                                  _projectionType = mkProjectionType (field ^. fieldType),
+                                  _projectionType = G.mkProjectionType i (field ^. fieldType),
                                   _projectionFieldIx = idx,
                                   _projectionKind = kind,
                                   _projectionFieldBuiltin = field ^. fieldBuiltin,
@@ -1735,103 +1734,6 @@ checkSections sec = topBindings helper
                                           (\i2 -> i2 <|> (p1' ^. withLocParam . withSourceValue . pragmasIsabelleIgnore))
                                           p2'
                                       )
-
-                                mkProjectionType :: ExpressionType 'Parsed -> ExpressionType 'Parsed
-                                mkProjectionType ty =
-                                  foldr mkFun target params
-                                  where
-                                    params = map mkFunctionParameters $ i ^. inductiveParameters
-                                    target = mkFun (mkRecordParameter (i ^. inductiveTypeApplied)) ty
-
-                                mkFun :: FunctionParameters 'Parsed -> ExpressionType 'Parsed -> ExpressionType 'Parsed
-                                mkFun params tgt =
-                                  ExpressionAtoms
-                                    { _expressionAtoms =
-                                        NonEmpty.singleton $
-                                          AtomFunction $
-                                            Function
-                                              { _funParameters = params,
-                                                _funReturn = tgt,
-                                                _funKw = funkw
-                                              },
-                                      _expressionAtomsLoc = Irrelevant $ getLoc (i ^. inductiveName)
-                                    }
-                                  where
-                                    funkw =
-                                      KeywordRef
-                                        { _keywordRefKeyword = KW.kwRightArrow,
-                                          _keywordRefInterval = getLoc (i ^. inductiveName),
-                                          _keywordRefUnicode = Ascii
-                                        }
-
-                                mkFunctionParameters :: InductiveParameters 'Parsed -> FunctionParameters 'Parsed
-                                mkFunctionParameters InductiveParameters {..} =
-                                  FunctionParameters
-                                    { _paramNames = map FunctionParameterName $ toList _inductiveParametersNames,
-                                      _paramImplicit = Implicit,
-                                      _paramDelims = Irrelevant (Just (leftBrace, rightBrace)),
-                                      _paramColon = Irrelevant Nothing,
-                                      _paramType = maybe univ (^. inductiveParametersType) _inductiveParametersRhs
-                                    }
-                                  where
-                                    univ :: ExpressionAtoms 'Parsed
-                                    univ =
-                                      ExpressionAtoms
-                                        { _expressionAtoms =
-                                            NonEmpty.singleton $
-                                              AtomUniverse $
-                                                mkUniverse (Just smallLevel) (getLoc (i ^. inductiveName)),
-                                          _expressionAtomsLoc = Irrelevant $ getLoc (i ^. inductiveName)
-                                        }
-
-                                    leftBrace :: KeywordRef
-                                    leftBrace =
-                                      KeywordRef
-                                        { _keywordRefKeyword = KW.delimBraceL,
-                                          _keywordRefInterval = getLoc (i ^. inductiveName),
-                                          _keywordRefUnicode = Ascii
-                                        }
-
-                                    rightBrace :: KeywordRef
-                                    rightBrace =
-                                      KeywordRef
-                                        { _keywordRefKeyword = KW.delimBraceR,
-                                          _keywordRefInterval = getLoc (i ^. inductiveName),
-                                          _keywordRefUnicode = Ascii
-                                        }
-
-                                mkRecordParameter :: ExpressionType 'Parsed -> FunctionParameters 'Parsed
-                                mkRecordParameter ty =
-                                  FunctionParameters
-                                    { _paramNames = [FunctionParameterName wildcard],
-                                      _paramImplicit = implicity,
-                                      _paramDelims = Irrelevant (Just (leftDoubleBrace, rightDoubleBrace)),
-                                      _paramColon = Irrelevant Nothing,
-                                      _paramType = ty
-                                    }
-                                  where
-                                    wildcard = WithLoc (getLoc (i ^. inductiveName)) "_self"
-
-                                    implicity :: IsImplicit
-                                    implicity
-                                      | isJust (i ^. inductiveTrait) = ImplicitInstance
-                                      | otherwise = Explicit
-
-                                    leftDoubleBrace :: KeywordRef
-                                    leftDoubleBrace =
-                                      KeywordRef
-                                        { _keywordRefKeyword = KW.delimDoubleBraceL,
-                                          _keywordRefInterval = getLoc (i ^. inductiveName),
-                                          _keywordRefUnicode = Ascii
-                                        }
-
-                                    rightDoubleBrace :: KeywordRef
-                                    rightDoubleBrace =
-                                      KeywordRef
-                                        { _keywordRefKeyword = KW.delimDoubleBraceR,
-                                          _keywordRefInterval = getLoc (i ^. inductiveName),
-                                          _keywordRefUnicode = Ascii
-                                        }
 
                             getFields :: Sem (Fail ': s') [RecordStatement 'Parsed]
                             getFields = case i ^. inductiveConstructors of
