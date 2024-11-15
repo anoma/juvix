@@ -1,0 +1,4 @@
+module Stdlib.Data.String.Ord;
+
+import Stdlib.Data.Fixity open;
+import Stdlib.Data.String.Base open;

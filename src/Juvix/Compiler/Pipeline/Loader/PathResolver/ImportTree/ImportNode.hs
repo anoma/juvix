@@ -10,7 +10,7 @@ data ImportNode = ImportNode
   deriving stock (Eq, Ord, Generic, Show)
 
 instance Pretty ImportNode where
-  pretty ImportNode {..} = pretty _importNodePackageRoot <+> ":" <+> show _importNodeFile
+  pretty ImportNode {..} = pretty _importNodePackageRoot <+> ":" <+> pretty _importNodeFile
 
 instance Hashable ImportNode
 

@@ -1,0 +1,3 @@
+module Stdlib.Debug.Fail;
+
+import Stdlib.Data.String.Base open;

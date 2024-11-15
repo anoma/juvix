@@ -119,8 +119,7 @@ instance ToGenericError InfixErrorP where
               <> "Perhaps you forgot parentheses around a pattern?"
 
 newtype ImportCycleNew = ImportCycleNew
-  { -- | If we have [a, b, c] it means that a import b imports c imports a.
-    _importCycleImportsNew :: NonEmpty ImportScan
+  { _importCycleImportsNew :: GraphCycle ImportScan
   }
   deriving stock (Show)
 
@@ -136,7 +135,8 @@ instance ToGenericError ImportCycleNew where
             }
         where
           opts' = fromGenericOptions opts
-          h = head _importCycleImportsNew
+          cycl = _importCycleImportsNew ^. graphCycleVertices
+          h = head cycl
           i = getLoc h
           msg =
             "There is an import cycle:"
@@ -147,7 +147,7 @@ instance ToGenericError ImportCycleNew where
                      . map pp
                      . toList
                      . tie
-                     $ _importCycleImportsNew
+                     $ cycl
                  )
 
           pp :: ImportScan -> Doc Ann

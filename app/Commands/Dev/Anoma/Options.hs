@@ -4,7 +4,7 @@ import Commands.Dev.Anoma.Node.Options
 import CommonOptions
 
 newtype AnomaCommand
-  = Node NodeOptions
+  = AnomaCommandNode NodeOptions
   deriving stock (Data)
 
 parseAnomaCommand :: Parser AnomaCommand
@@ -20,5 +20,5 @@ parseAnomaCommand =
         runInfo :: ParserInfo AnomaCommand
         runInfo =
           info
-            (Node <$> parseNodeOptions)
+            (AnomaCommandNode <$> parseNodeOptions)
             (progDesc "Run an Anoma node and client.")

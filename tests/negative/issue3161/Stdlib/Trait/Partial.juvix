@@ -1,0 +1,4 @@
+module Stdlib.Trait.Partial;
+
+import Stdlib.Data.String.Base open;
+import Stdlib.Debug.Fail as Debug;
