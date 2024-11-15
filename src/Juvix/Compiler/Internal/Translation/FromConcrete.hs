@@ -355,10 +355,12 @@ goProjectionDef ProjectionDef {..} = do
   let field = goSymbol _projectionField
   msig <- asks (^. S.infoNameSigs . at (field ^. Internal.nameId))
   argInfos <- maybe (return mempty) (fmap toList . goNameSignature) msig
+  projType <- goExpression _projectionType
   fun <-
     Internal.genFieldProjection
       _projectionKind
       field
+      projType
       ( (^. withLocParam)
           <$> _projectionFieldBuiltin
       )

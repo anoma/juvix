@@ -1742,7 +1742,7 @@ checkSections sec = topBindings helper
                                   foldr mkFun target params
                                   where
                                     params = map mkFunctionParameters $ i ^. inductiveParameters
-                                    target = mkFun (mkInstanceParameter (i ^. inductiveTypeApplied)) ty
+                                    target = mkFun (mkRecordParameter (i ^. inductiveTypeApplied)) ty
 
                                 mkFun :: FunctionParameters 'Parsed -> ExpressionType 'Parsed -> ExpressionType 'Parsed
                                 mkFun params tgt =
@@ -1801,17 +1801,22 @@ checkSections sec = topBindings helper
                                           _keywordRefUnicode = Ascii
                                         }
 
-                                mkInstanceParameter :: ExpressionType 'Parsed -> FunctionParameters 'Parsed
-                                mkInstanceParameter ty =
+                                mkRecordParameter :: ExpressionType 'Parsed -> FunctionParameters 'Parsed
+                                mkRecordParameter ty =
                                   FunctionParameters
                                     { _paramNames = [FunctionParameterName wildcard],
-                                      _paramImplicit = ImplicitInstance,
+                                      _paramImplicit = implicity,
                                       _paramDelims = Irrelevant (Just (leftDoubleBrace, rightDoubleBrace)),
                                       _paramColon = Irrelevant Nothing,
                                       _paramType = ty
                                     }
                                   where
                                     wildcard = WithLoc (getLoc (i ^. inductiveName)) "_self"
+
+                                    implicity :: IsImplicit
+                                    implicity
+                                      | isJust (i ^. inductiveTrait) = ImplicitInstance
+                                      | otherwise = Explicit
 
                                     leftDoubleBrace :: KeywordRef
                                     leftDoubleBrace =
