@@ -1541,9 +1541,14 @@ inductiveDef _inductiveBuiltin = do
   _inductiveAssignKw <- Irrelevant <$> kw kwAssign P.<?> "<assignment symbol ':='>"
   let name' = NameUnqualified _inductiveName
       params = fmap (AtomIdentifier . NameUnqualified) (concatMap (toList . (^. inductiveParametersNames)) _inductiveParameters)
+      iden =
+        ExpressionAtoms
+          { _expressionAtoms = AtomIdentifier name' :| [],
+            _expressionAtomsLoc = Irrelevant (getLoc _inductiveName)
+          }
       _inductiveTypeApplied =
         ExpressionAtoms
-          { _expressionAtoms = AtomIdentifier name' :| params,
+          { _expressionAtoms = AtomParens iden :| params,
             _expressionAtomsLoc = Irrelevant (getLoc _inductiveName)
           }
   _inductiveConstructors <-
