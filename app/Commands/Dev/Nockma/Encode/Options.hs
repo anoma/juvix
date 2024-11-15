@@ -49,7 +49,7 @@ parseNockmaEncodeOptions = do
   _nockmaEncodeFrom <-
     option
       (enumReader Proxy)
-      ( long "to"
+      ( long "from"
           <> metavar "ENCODING"
           <> completer (enumCompleter @EncodeType Proxy)
           <> helpDoc
@@ -61,7 +61,7 @@ parseNockmaEncodeOptions = do
   _nockmaEncodeTo <-
     option
       (enumReader Proxy)
-      ( long "from"
+      ( long "to"
           <> metavar "ENCODING"
           <> completer (enumCompleter @EncodeType Proxy)
           <> helpDoc
