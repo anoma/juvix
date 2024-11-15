@@ -69,6 +69,9 @@ juvixNordCss = cssLink "juvix-nord.css"
 nordCss :: (Members '[Reader HtmlOptions] r) => Sem r Html
 nordCss = cssLink "nord.css"
 
+latteLightCss :: (Members '[Reader HtmlOptions] r) => Sem r Html
+latteLightCss = cssLink "latte-light.css"
+
 latteCss :: (Members '[Reader HtmlOptions] r) => Sem r Html
 latteCss = cssLink "latte.css"
 
@@ -87,6 +90,7 @@ flavourCss = do
   case theme of
     Nord -> nordCss
     Macchiato -> macchiatoCss
+    LatteLight -> latteLightCss
     Latte -> latteCss
     Frappe -> frappeCss
     Mocha -> mochaCss
@@ -97,6 +101,7 @@ themeCss = do
   case theme of
     Nord -> juvixNordCss
     Macchiato -> juvixCatppuchinCss
+    LatteLight -> juvixCatppuchinCss
     Latte -> juvixCatppuchinCss
     Frappe -> juvixCatppuchinCss
     Mocha -> juvixCatppuchinCss

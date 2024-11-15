@@ -40,6 +40,7 @@ defaultHtmlOptions =
 data Theme
   = Nord
   | Macchiato
+  | LatteLight
   | Latte
   | Frappe
   | Mocha
@@ -49,6 +50,7 @@ instance Show Theme where
   show = \case
     Nord -> "nord"
     Macchiato -> "macchiato"
+    LatteLight -> "latte-light"
     Latte -> "latte"
     Frappe -> "frappe"
     Mocha -> "mocha"
@@ -62,6 +64,7 @@ themeLight :: Theme -> ThemeLight
 themeLight = \case
   Nord -> Dark
   Macchiato -> Dark
+  LatteLight -> Light
   Latte -> Light
   Frappe -> Dark
   Mocha -> Dark
