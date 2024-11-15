@@ -98,21 +98,14 @@ instance (SingI s) => HasNameSignature s (InductiveDef s) where
     mapM_ addInductiveParams (a ^. inductiveParameters)
     whenJust (a ^. inductiveType) addExpressionType
 
-instance (SingI s) => HasNameSignature s (InductiveDef s, RecordField s) where
+instance (SingI s) => HasNameSignature s (ProjectionDef s) where
   addArgs ::
     forall r.
     (Members '[NameSignatureBuilder s] r) =>
-    (InductiveDef s, RecordField s) ->
+    ProjectionDef s ->
     Sem r ()
-  addArgs (i, f) = do
-    mapM_ addConstructorParams (i ^. inductiveParameters)
-    addArgument implicity Nothing Nothing (f ^. fieldInductive)
-    addExpressionType (f ^. fieldType)
-    where
-      implicity :: IsImplicit
-      implicity
-        | isJust (i ^. inductiveTrait) = ImplicitInstance
-        | otherwise = Explicit
+  addArgs p = do
+    addExpressionType (p ^. projectionType)
 
 mkNameSignature ::
   forall s d r.

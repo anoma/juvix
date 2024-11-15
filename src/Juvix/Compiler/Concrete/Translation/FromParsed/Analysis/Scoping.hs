@@ -27,6 +27,7 @@ import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context qualified as 
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Store.Scoped.Language as Store
 import Juvix.Data.FixityInfo qualified as FI
+import Juvix.Data.Keyword.All qualified as KW
 import Juvix.Prelude
 
 scopeCheck ::
@@ -155,25 +156,6 @@ scopeCheckOpenModule = mapError (JuvixError @ScoperError) . checkOpenModule
 freshVariable :: (Members '[NameIdGen, State ScoperSyntax, State Scope, State ScoperState] r) => Symbol -> Sem r S.Symbol
 freshVariable = freshSymbol KNameLocal KNameLocal
 
-checkProjectionDef ::
-  forall r.
-  (Members '[Error ScoperError, InfoTableBuilder, Reader PackageId, Reader ScopeParameters, Reader InfoTable, Reader BindingStrategy, State Scope, State ScoperState, NameIdGen, State ScoperSyntax] r) =>
-  ProjectionDef 'Parsed ->
-  Sem r (ProjectionDef 'Scoped)
-checkProjectionDef p = do
-  _projectionField <- getReservedDefinitionSymbol (p ^. projectionField)
-  _projectionDoc <- maybe (return Nothing) (checkJudoc >=> return . Just) (p ^. projectionDoc)
-  return
-    ProjectionDef
-      { _projectionFieldIx = p ^. projectionFieldIx,
-        _projectionConstructor = p ^. projectionConstructor,
-        _projectionFieldBuiltin = p ^. projectionFieldBuiltin,
-        _projectionPragmas = p ^. projectionPragmas,
-        _projectionKind = p ^. projectionKind,
-        _projectionField,
-        _projectionDoc
-      }
-
 freshSymbol ::
   forall r.
   (Members '[State Scope, State ScoperState, NameIdGen, State ScoperSyntax] r) =>
@@ -260,6 +242,13 @@ registerConstructorSignature ::
 registerConstructorSignature uid sig = do
   modify' (set (scoperScopedConstructorFields . at uid) (Just sig))
   registerConstructorSig uid sig
+
+registerProjectionSignature ::
+  (Members '[State ScoperState, Error ScoperError, InfoTableBuilder] r) =>
+  ProjectionDef 'Scoped ->
+  Sem r ()
+registerProjectionSignature p =
+  registerNameSignature (p ^. projectionField . S.nameId) p
 
 reserveSymbolOfNameSpace ::
   forall (ns :: NameSpace) r.
@@ -402,12 +391,9 @@ reserveProjectionSymbol ::
   (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable, State ScoperState] r) =>
   ProjectionDef 'Parsed ->
   Sem r S.Symbol
-reserveProjectionSymbol d =
-  reserveSymbolOf
-    SKNameFunction
-    Nothing
-    (toBuiltinPrim <$> d ^. projectionFieldBuiltin)
-    (d ^. projectionField)
+reserveProjectionSymbol d = do
+  sym <- reserveSymbolSignatureOf SKNameFunction d (toBuiltinPrim <$> d ^. projectionFieldBuiltin) (d ^. projectionField)
+  return sym
 
 reserveConstructorSymbol ::
   (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable] r) =>
@@ -1180,9 +1166,10 @@ checkInductiveDef InductiveDef {..} = do
     i <- bindInductiveSymbol _inductiveName
     cs <- mapM (bindConstructorSymbol . (^. constructorName)) _inductiveConstructors
     return (i, cs)
-  (inductiveParameters', inductiveType', inductiveDoc', inductiveConstructors') <- withLocalScope $ do
+  (inductiveParameters', inductiveType', inductiveTypeApplied', inductiveDoc', inductiveConstructors') <- withLocalScope $ do
     inductiveParameters' <- mapM checkInductiveParameters _inductiveParameters
     inductiveType' <- mapM checkParseExpressionAtoms _inductiveType
+    inductiveTypeApplied' <- checkParseExpressionAtoms _inductiveTypeApplied
     inductiveDoc' <- mapM checkJudoc _inductiveDoc
     inductiveConstructors' <-
       nonEmpty'
@@ -1190,7 +1177,7 @@ checkInductiveDef InductiveDef {..} = do
           [ checkConstructorDef inductiveName' cname cdef
             | (cname, cdef) <- zipExact (toList constructorNames') (toList _inductiveConstructors)
           ]
-    return (inductiveParameters', inductiveType', inductiveDoc', inductiveConstructors')
+    return (inductiveParameters', inductiveType', inductiveTypeApplied', inductiveDoc', inductiveConstructors')
   let indDef =
         InductiveDef
           { _inductiveName = inductiveName',
@@ -1198,6 +1185,7 @@ checkInductiveDef InductiveDef {..} = do
             _inductivePragmas = _inductivePragmas,
             _inductiveParameters = inductiveParameters',
             _inductiveType = inductiveType',
+            _inductiveTypeApplied = inductiveTypeApplied',
             _inductiveConstructors = inductiveConstructors',
             _inductiveBuiltin,
             _inductivePositive,
@@ -1208,20 +1196,8 @@ checkInductiveDef InductiveDef {..} = do
   registerNameSignature (inductiveName' ^. S.nameId) indDef
   forM_ inductiveConstructors' $ \c -> do
     registerNameSignature (c ^. constructorName . S.nameId) (indDef, c)
-    registerRecordFieldSignatures indDef c
   registerInductive @$> indDef
   where
-    registerRecordFieldSignatures :: InductiveDef 'Scoped -> ConstructorDef 'Scoped -> Sem r ()
-    registerRecordFieldSignatures indDef c =
-      case c ^. constructorRhs of
-        ConstructorRhsRecord r ->
-          forM_ (r ^. rhsRecordStatements) $ \case
-            RecordStatementField f -> do
-              traceM ("register: " <> prettyText (f ^. fieldName))
-              registerNameSignature (f ^. fieldName . S.nameId) (indDef, f)
-            _ -> return ()
-        _ -> return ()
-
     -- note that the constructor name is not bound here
     checkConstructorDef :: S.Symbol -> S.Symbol -> ConstructorDef 'Parsed -> Sem r (ConstructorDef 'Scoped)
     checkConstructorDef inductiveName' constructorName' ConstructorDef {..} = do
@@ -1271,18 +1247,15 @@ checkInductiveDef InductiveDef {..} = do
             checkField RecordField {..} = do
               doc' <- maybe (return Nothing) (checkJudoc >=> return . Just) _fieldDoc
               type' <- checkParseExpressionAtoms _fieldType
-              indName' <- checkParseExpressionAtoms _fieldInductive
               -- Since we don't allow dependent types in constructor types, each
               -- field is checked with a local scope
               withLocalScope $ do
                 name' <- bindVariableSymbol _fieldName
-                -- TODO: register name signature?
                 return
                   RecordField
                     { _fieldType = type',
                       _fieldName = name',
                       _fieldDoc = doc',
-                      _fieldInductive = indName',
                       ..
                     }
 
@@ -1302,6 +1275,29 @@ checkInductiveDef InductiveDef {..} = do
               { _rhsGadtType = constructorType',
                 _rhsGadtColon
               }
+
+checkProjectionDef ::
+  forall r.
+  (Members '[HighlightBuilder, Error ScoperError, InfoTableBuilder, Reader PackageId, Reader ScopeParameters, Reader InfoTable, Reader BindingStrategy, State Scope, State ScoperState, NameIdGen, State ScoperSyntax] r) =>
+  ProjectionDef 'Parsed ->
+  Sem r (ProjectionDef 'Scoped)
+checkProjectionDef p = do
+  _projectionField <- getReservedDefinitionSymbol (p ^. projectionField)
+  _projectionType <- checkParseExpressionAtoms (p ^. projectionType)
+  _projectionDoc <- maybe (return Nothing) (checkJudoc >=> return . Just) (p ^. projectionDoc)
+  let p' =
+        ProjectionDef
+          { _projectionFieldIx = p ^. projectionFieldIx,
+            _projectionConstructor = p ^. projectionConstructor,
+            _projectionFieldBuiltin = p ^. projectionFieldBuiltin,
+            _projectionPragmas = p ^. projectionPragmas,
+            _projectionKind = p ^. projectionKind,
+            _projectionField,
+            _projectionType,
+            _projectionDoc
+          }
+  registerProjectionSignature p'
+  return p'
 
 topBindings :: Sem (Reader BindingStrategy ': r) a -> Sem r a
 topBindings = runReader BindingTop
@@ -1506,7 +1502,7 @@ checkSections sec = topBindings helper
         goDefinitions :: DefinitionsSection 'Parsed -> Sem r' (DefinitionsSection 'Scoped)
         goDefinitions DefinitionsSection {..} = goDefs [] [] (toList _definitionsSection)
           where
-            -- This functions go through a section reserving definitions and
+            -- This function goes through a section reserving definitions and
             -- collecting inductive modules. It breaks a section when the
             -- collected inductive modules are non-empty (there were some
             -- inductive definitions) and the next definition is a function
@@ -1715,6 +1711,7 @@ checkSections sec = topBindings helper
                               ProjectionDef
                                 { _projectionConstructor = headConstr,
                                   _projectionField = field ^. fieldName,
+                                  _projectionType = mkProjectionType (field ^. fieldType),
                                   _projectionFieldIx = idx,
                                   _projectionKind = kind,
                                   _projectionFieldBuiltin = field ^. fieldBuiltin,
@@ -1739,6 +1736,98 @@ checkSections sec = topBindings helper
                                           (\i2 -> i2 <|> (p1' ^. withLocParam . withSourceValue . pragmasIsabelleIgnore))
                                           p2'
                                       )
+
+                                mkProjectionType :: ExpressionType 'Parsed -> ExpressionType 'Parsed
+                                mkProjectionType ty =
+                                  foldr mkFun target params
+                                  where
+                                    params = map mkFunctionParameters $ i ^. inductiveParameters
+                                    target = mkFun (mkInstanceParameter (i ^. inductiveTypeApplied)) ty
+
+                                mkFun :: FunctionParameters 'Parsed -> ExpressionType 'Parsed -> ExpressionType 'Parsed
+                                mkFun params tgt =
+                                  ExpressionAtoms
+                                    { _expressionAtoms =
+                                        NonEmpty.singleton $
+                                          AtomFunction $
+                                            Function
+                                              { _funParameters = params,
+                                                _funReturn = tgt,
+                                                _funKw = funkw
+                                              },
+                                      _expressionAtomsLoc = Irrelevant $ getLoc (i ^. inductiveName)
+                                    }
+                                  where
+                                    funkw =
+                                      KeywordRef
+                                        { _keywordRefKeyword = KW.kwRightArrow,
+                                          _keywordRefInterval = getLoc (i ^. inductiveName),
+                                          _keywordRefUnicode = Ascii
+                                        }
+
+                                mkFunctionParameters :: InductiveParameters 'Parsed -> FunctionParameters 'Parsed
+                                mkFunctionParameters InductiveParameters {..} =
+                                  FunctionParameters
+                                    { _paramNames = map FunctionParameterName $ toList _inductiveParametersNames,
+                                      _paramImplicit = Implicit,
+                                      _paramDelims = Irrelevant (Just (leftBrace, rightBrace)),
+                                      _paramColon = Irrelevant Nothing,
+                                      _paramType = maybe univ (^. inductiveParametersType) _inductiveParametersRhs
+                                    }
+                                  where
+                                    univ :: ExpressionAtoms 'Parsed
+                                    univ =
+                                      ExpressionAtoms
+                                        { _expressionAtoms =
+                                            NonEmpty.singleton $
+                                              AtomUniverse $
+                                                mkUniverse (Just smallLevel) (getLoc (i ^. inductiveName)),
+                                          _expressionAtomsLoc = Irrelevant $ getLoc (i ^. inductiveName)
+                                        }
+
+                                    leftBrace :: KeywordRef
+                                    leftBrace =
+                                      KeywordRef
+                                        { _keywordRefKeyword = KW.delimBraceL,
+                                          _keywordRefInterval = getLoc (i ^. inductiveName),
+                                          _keywordRefUnicode = Ascii
+                                        }
+
+                                    rightBrace :: KeywordRef
+                                    rightBrace =
+                                      KeywordRef
+                                        { _keywordRefKeyword = KW.delimBraceR,
+                                          _keywordRefInterval = getLoc (i ^. inductiveName),
+                                          _keywordRefUnicode = Ascii
+                                        }
+
+                                mkInstanceParameter :: ExpressionType 'Parsed -> FunctionParameters 'Parsed
+                                mkInstanceParameter ty =
+                                  FunctionParameters
+                                    { _paramNames = [FunctionParameterName wildcard],
+                                      _paramImplicit = ImplicitInstance,
+                                      _paramDelims = Irrelevant (Just (leftDoubleBrace, rightDoubleBrace)),
+                                      _paramColon = Irrelevant Nothing,
+                                      _paramType = ty
+                                    }
+                                  where
+                                    wildcard = WithLoc (getLoc (i ^. inductiveName)) "_self"
+
+                                    leftDoubleBrace :: KeywordRef
+                                    leftDoubleBrace =
+                                      KeywordRef
+                                        { _keywordRefKeyword = KW.delimDoubleBraceL,
+                                          _keywordRefInterval = getLoc (i ^. inductiveName),
+                                          _keywordRefUnicode = Ascii
+                                        }
+
+                                    rightDoubleBrace :: KeywordRef
+                                    rightDoubleBrace =
+                                      KeywordRef
+                                        { _keywordRefKeyword = KW.delimDoubleBraceR,
+                                          _keywordRefInterval = getLoc (i ^. inductiveName),
+                                          _keywordRefUnicode = Ascii
+                                        }
 
                             getFields :: Sem (Fail ': s') [RecordStatement 'Parsed]
                             getFields = case i ^. inductiveConstructors of
