@@ -113,18 +113,15 @@ genFieldProjection ::
   (Members '[NameIdGen] r) =>
   ProjectionKind ->
   FunctionName ->
+  Expression ->
   Maybe BuiltinFunction ->
+  [ArgInfo] ->
   Maybe Pragmas ->
   ConstructorInfo ->
   Int ->
   Sem r FunctionDef
-genFieldProjection kind _funDefName _funDefBuiltin mpragmas info fieldIx = do
+genFieldProjection kind _funDefName _funDefType _funDefBuiltin _funDefArgsInfo mpragmas info fieldIx = do
   body' <- genBody
-  let (inductiveParams, constrArgs) = constructorArgTypes info
-      saturatedTy :: FunctionParameter = unnamedParameter' constructorImplicity (constructorReturnType info)
-      inductiveArgs = map inductiveToFunctionParam inductiveParams
-      param = constrArgs !! fieldIx
-      retTy = param ^. paramType
   cloneFunctionDefSameName
     FunctionDef
       { _funDefTerminating = False,
@@ -132,17 +129,17 @@ genFieldProjection kind _funDefName _funDefBuiltin mpragmas info fieldIx = do
           if
               | kind == ProjectionCoercion -> Just IsInstanceCoercionCoercion
               | otherwise -> Nothing,
-        _funDefArgsInfo = mempty,
         _funDefPragmas =
           maybe
             (mempty {_pragmasInline = Just InlineAlways})
             (over pragmasInline (maybe (Just InlineAlways) Just))
             mpragmas,
         _funDefBody = body',
-        _funDefType = foldFunType (inductiveArgs ++ [saturatedTy]) retTy,
         _funDefDocComment = Nothing,
+        _funDefType,
         _funDefName,
-        _funDefBuiltin
+        _funDefBuiltin,
+        _funDefArgsInfo
       }
   where
     constructorImplicity :: IsImplicit

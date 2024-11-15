@@ -20,6 +20,7 @@ import Juvix.Compiler.Backend.Markdown.Error
 import Juvix.Compiler.Concrete (HighlightBuilder, ignoreHighlightBuilder)
 import Juvix.Compiler.Concrete.Extra (takeWhile1P)
 import Juvix.Compiler.Concrete.Extra qualified as P
+import Juvix.Compiler.Concrete.Gen (mkExpressionAtoms)
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context
 import Juvix.Compiler.Concrete.Translation.FromSource.Lexer hiding
@@ -1539,6 +1540,10 @@ inductiveDef _inductiveBuiltin = do
     optional (kw kwColon >> parseExpressionAtoms)
       P.<?> "<type annotation e.g. ': Type'>"
   _inductiveAssignKw <- Irrelevant <$> kw kwAssign P.<?> "<assignment symbol ':='>"
+  let name' = NameUnqualified _inductiveName
+      params = fmap (AtomIdentifier . NameUnqualified) (concatMap (toList . (^. inductiveParametersNames)) _inductiveParameters)
+      iden = mkExpressionAtoms (AtomIdentifier name' :| [])
+      _inductiveTypeApplied = mkExpressionAtoms (AtomParens iden :| params)
   _inductiveConstructors <-
     pipeSep1 (constructorDef _inductiveName)
       P.<?> "<constructor definition>"

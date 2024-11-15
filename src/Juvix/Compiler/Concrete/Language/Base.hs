@@ -309,6 +309,7 @@ deriving stock instance Ord (Statement 'Scoped)
 data ProjectionDef s = ProjectionDef
   { _projectionConstructor :: S.Symbol,
     _projectionField :: SymbolType s,
+    _projectionType :: ExpressionType s,
     _projectionKind :: ProjectionKind,
     _projectionFieldIx :: Int,
     _projectionFieldBuiltin :: Maybe (WithLoc BuiltinFunction),
@@ -931,6 +932,7 @@ data InductiveDef (s :: Stage) = InductiveDef
     _inductiveName :: InductiveName s,
     _inductiveParameters :: [InductiveParameters s],
     _inductiveType :: Maybe (ExpressionType s),
+    _inductiveTypeApplied :: ExpressionType s,
     _inductiveConstructors :: NonEmpty (ConstructorDef s),
     _inductivePositive :: Maybe KeywordRef,
     _inductiveTrait :: Maybe KeywordRef

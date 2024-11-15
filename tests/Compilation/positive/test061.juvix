@@ -33,7 +33,7 @@ g : {A : Type} → {{Show A}} → Nat := 5;
 instance
 showListI {A} {{Show' A}} : Show (List A) :=
   mkShow@{
-    show {A} : {{Show' A}} → List A → String
+    show : List A → String
       | nil := "nil"
       | (h :: t) := Show.show h ++str " :: " ++str show t
   };
@@ -41,7 +41,7 @@ showListI {A} {{Show' A}} : Show (List A) :=
 instance
 showMaybeI {A} {{Show A}} : Show (Maybe A) :=
   mkShow@{
-    show {A} {{Show A}} : Maybe A → String
+    show : Maybe A → String
       | (just x) := "just (" ++str Show.show x ++str ")"
       | nothing := "nothing"
   };

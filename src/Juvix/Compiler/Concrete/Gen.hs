@@ -4,6 +4,7 @@ module Juvix.Compiler.Concrete.Gen
   )
 where
 
+import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Concrete.Keywords
 import Juvix.Compiler.Concrete.Language.Base
 import Juvix.Prelude
@@ -135,3 +136,97 @@ functionDefExpression ::
   NonEmpty (ExpressionAtom 'Parsed) ->
   Sem r (FunctionDefBody 'Parsed)
 functionDefExpression exp = SigBodyExpression <$> expressionAtoms' exp
+
+mkProjectionType :: InductiveDef 'Parsed -> ExpressionType 'Parsed -> ExpressionType 'Parsed
+mkProjectionType i indTy =
+  foldr mkFun target indParams
+  where
+    indParams = map mkFunctionParameters $ i ^. inductiveParameters
+    target = mkFun (mkRecordParameter (i ^. inductiveTypeApplied)) indTy
+
+    mkFun :: FunctionParameters 'Parsed -> ExpressionType 'Parsed -> ExpressionType 'Parsed
+    mkFun params tgt =
+      mkExpressionAtoms
+        . NonEmpty.singleton
+        . AtomFunction
+        $ Function
+          { _funParameters = params,
+            _funReturn = tgt,
+            _funKw = funkw
+          }
+      where
+        funkw =
+          KeywordRef
+            { _keywordRefKeyword = kwRightArrow,
+              _keywordRefInterval = getLoc (i ^. inductiveName),
+              _keywordRefUnicode = Ascii
+            }
+
+    mkFunctionParameters :: InductiveParameters 'Parsed -> FunctionParameters 'Parsed
+    mkFunctionParameters InductiveParameters {..} =
+      FunctionParameters
+        { _paramNames = map FunctionParameterName $ toList _inductiveParametersNames,
+          _paramImplicit = Implicit,
+          _paramDelims = Irrelevant (Just (leftBrace, rightBrace)),
+          _paramColon = Irrelevant Nothing,
+          _paramType = maybe univ (^. inductiveParametersType) _inductiveParametersRhs
+        }
+      where
+        univ :: ExpressionAtoms 'Parsed
+        univ =
+          ExpressionAtoms
+            { _expressionAtoms =
+                NonEmpty.singleton $
+                  AtomUniverse $
+                    mkUniverse (Just smallLevel) (getLoc (i ^. inductiveName)),
+              _expressionAtomsLoc = Irrelevant $ getLoc (i ^. inductiveName)
+            }
+
+        leftBrace :: KeywordRef
+        leftBrace =
+          KeywordRef
+            { _keywordRefKeyword = delimBraceL,
+              _keywordRefInterval = getLoc (i ^. inductiveName),
+              _keywordRefUnicode = Ascii
+            }
+
+        rightBrace :: KeywordRef
+        rightBrace =
+          KeywordRef
+            { _keywordRefKeyword = delimBraceR,
+              _keywordRefInterval = getLoc (i ^. inductiveName),
+              _keywordRefUnicode = Ascii
+            }
+
+    mkRecordParameter :: ExpressionType 'Parsed -> FunctionParameters 'Parsed
+    mkRecordParameter ty =
+      FunctionParameters
+        { _paramNames = [FunctionParameterName wildcard],
+          _paramImplicit = implicity,
+          _paramDelims = Irrelevant (Just (leftDoubleBrace, rightDoubleBrace)),
+          _paramColon = Irrelevant Nothing,
+          _paramType = ty
+        }
+      where
+        wildcard = WithLoc (getLoc (i ^. inductiveName)) "_self"
+
+        implicity :: IsImplicit
+        implicity
+          | isJust (i ^. inductiveTrait) = ImplicitInstance
+          | otherwise = Explicit
+
+        leftDoubleBrace :: KeywordRef
+        leftDoubleBrace =
+          KeywordRef
+            { _keywordRefKeyword = delimDoubleBraceL,
+              _keywordRefInterval = getLoc (i ^. inductiveName),
+              _keywordRefUnicode = Ascii
+            }
+
+        rightDoubleBrace :: KeywordRef
+        rightDoubleBrace =
+          KeywordRef
+            { _keywordRefKeyword = delimDoubleBraceR,
+              _keywordRefInterval = getLoc (i ^. inductiveName),
+              _keywordRefUnicode = Ascii
+            }

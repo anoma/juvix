@@ -251,6 +251,10 @@ tests =
       $(mkRelDir ".")
       $(mkRelFile "Puns.juvix"),
     posTest
+      "Record projection signature"
+      $(mkRelDir ".")
+      $(mkRelFile "RecordProjectionSignature.juvix"),
+    posTest
       "Confluent imports"
       $(mkRelDir "ConfluentScoping")
       $(mkRelFile "Main.juvix"),

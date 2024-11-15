@@ -155,25 +155,6 @@ scopeCheckOpenModule = mapError (JuvixError @ScoperError) . checkOpenModule
 freshVariable :: (Members '[NameIdGen, State ScoperSyntax, State Scope, State ScoperState] r) => Symbol -> Sem r S.Symbol
 freshVariable = freshSymbol KNameLocal KNameLocal
 
-checkProjectionDef ::
-  forall r.
-  (Members '[Error ScoperError, InfoTableBuilder, Reader PackageId, Reader ScopeParameters, Reader InfoTable, Reader BindingStrategy, State Scope, State ScoperState, NameIdGen, State ScoperSyntax] r) =>
-  ProjectionDef 'Parsed ->
-  Sem r (ProjectionDef 'Scoped)
-checkProjectionDef p = do
-  _projectionField <- getReservedDefinitionSymbol (p ^. projectionField)
-  _projectionDoc <- maybe (return Nothing) (checkJudoc >=> return . Just) (p ^. projectionDoc)
-  return
-    ProjectionDef
-      { _projectionFieldIx = p ^. projectionFieldIx,
-        _projectionConstructor = p ^. projectionConstructor,
-        _projectionFieldBuiltin = p ^. projectionFieldBuiltin,
-        _projectionPragmas = p ^. projectionPragmas,
-        _projectionKind = p ^. projectionKind,
-        _projectionField,
-        _projectionDoc
-      }
-
 freshSymbol ::
   forall r.
   (Members '[State Scope, State ScoperState, NameIdGen, State ScoperSyntax] r) =>
@@ -260,6 +241,13 @@ registerConstructorSignature ::
 registerConstructorSignature uid sig = do
   modify' (set (scoperScopedConstructorFields . at uid) (Just sig))
   registerConstructorSig uid sig
+
+registerProjectionSignature ::
+  (Members '[State ScoperState, Error ScoperError, InfoTableBuilder] r) =>
+  ProjectionDef 'Scoped ->
+  Sem r ()
+registerProjectionSignature p =
+  registerNameSignature (p ^. projectionField . S.nameId) p
 
 reserveSymbolOfNameSpace ::
   forall (ns :: NameSpace) r.
@@ -403,11 +391,7 @@ reserveProjectionSymbol ::
   ProjectionDef 'Parsed ->
   Sem r S.Symbol
 reserveProjectionSymbol d =
-  reserveSymbolOf
-    SKNameFunction
-    Nothing
-    (toBuiltinPrim <$> d ^. projectionFieldBuiltin)
-    (d ^. projectionField)
+  reserveSymbolSignatureOf SKNameFunction d (toBuiltinPrim <$> d ^. projectionFieldBuiltin) (d ^. projectionField)
 
 reserveConstructorSymbol ::
   (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable] r) =>
@@ -1180,9 +1164,10 @@ checkInductiveDef InductiveDef {..} = do
     i <- bindInductiveSymbol _inductiveName
     cs <- mapM (bindConstructorSymbol . (^. constructorName)) _inductiveConstructors
     return (i, cs)
-  (inductiveParameters', inductiveType', inductiveDoc', inductiveConstructors') <- withLocalScope $ do
+  (inductiveParameters', inductiveType', inductiveTypeApplied', inductiveDoc', inductiveConstructors') <- withLocalScope $ do
     inductiveParameters' <- mapM checkInductiveParameters _inductiveParameters
     inductiveType' <- mapM checkParseExpressionAtoms _inductiveType
+    inductiveTypeApplied' <- checkParseExpressionAtoms _inductiveTypeApplied
     inductiveDoc' <- mapM checkJudoc _inductiveDoc
     inductiveConstructors' <-
       nonEmpty'
@@ -1190,7 +1175,7 @@ checkInductiveDef InductiveDef {..} = do
           [ checkConstructorDef inductiveName' cname cdef
             | (cname, cdef) <- zipExact (toList constructorNames') (toList _inductiveConstructors)
           ]
-    return (inductiveParameters', inductiveType', inductiveDoc', inductiveConstructors')
+    return (inductiveParameters', inductiveType', inductiveTypeApplied', inductiveDoc', inductiveConstructors')
   let indDef =
         InductiveDef
           { _inductiveName = inductiveName',
@@ -1198,6 +1183,7 @@ checkInductiveDef InductiveDef {..} = do
             _inductivePragmas = _inductivePragmas,
             _inductiveParameters = inductiveParameters',
             _inductiveType = inductiveType',
+            _inductiveTypeApplied = inductiveTypeApplied',
             _inductiveConstructors = inductiveConstructors',
             _inductiveBuiltin,
             _inductivePositive,
@@ -1287,6 +1273,29 @@ checkInductiveDef InductiveDef {..} = do
               { _rhsGadtType = constructorType',
                 _rhsGadtColon
               }
+
+checkProjectionDef ::
+  forall r.
+  (Members '[HighlightBuilder, Error ScoperError, InfoTableBuilder, Reader PackageId, Reader ScopeParameters, Reader InfoTable, Reader BindingStrategy, State Scope, State ScoperState, NameIdGen, State ScoperSyntax] r) =>
+  ProjectionDef 'Parsed ->
+  Sem r (ProjectionDef 'Scoped)
+checkProjectionDef p = do
+  _projectionField <- getReservedDefinitionSymbol (p ^. projectionField)
+  _projectionType <- checkParseExpressionAtoms (p ^. projectionType)
+  _projectionDoc <- maybe (return Nothing) (checkJudoc >=> return . Just) (p ^. projectionDoc)
+  let p' =
+        ProjectionDef
+          { _projectionFieldIx = p ^. projectionFieldIx,
+            _projectionConstructor = p ^. projectionConstructor,
+            _projectionFieldBuiltin = p ^. projectionFieldBuiltin,
+            _projectionPragmas = p ^. projectionPragmas,
+            _projectionKind = p ^. projectionKind,
+            _projectionField,
+            _projectionType,
+            _projectionDoc
+          }
+  registerProjectionSignature p'
+  return p'
 
 topBindings :: Sem (Reader BindingStrategy ': r) a -> Sem r a
 topBindings = runReader BindingTop
@@ -1491,7 +1500,7 @@ checkSections sec = topBindings helper
         goDefinitions :: DefinitionsSection 'Parsed -> Sem r' (DefinitionsSection 'Scoped)
         goDefinitions DefinitionsSection {..} = goDefs [] [] (toList _definitionsSection)
           where
-            -- This functions go through a section reserving definitions and
+            -- This function goes through a section reserving definitions and
             -- collecting inductive modules. It breaks a section when the
             -- collected inductive modules are non-empty (there were some
             -- inductive definitions) and the next definition is a function
@@ -1700,6 +1709,7 @@ checkSections sec = topBindings helper
                               ProjectionDef
                                 { _projectionConstructor = headConstr,
                                   _projectionField = field ^. fieldName,
+                                  _projectionType = G.mkProjectionType i (field ^. fieldType),
                                   _projectionFieldIx = idx,
                                   _projectionKind = kind,
                                   _projectionFieldBuiltin = field ^. fieldBuiltin,
