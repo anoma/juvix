@@ -5,4 +5,7 @@ import Stdlib.Data.Nat open;
 trait
 type R A := mkR@{fun : (n : A) -> A};
 
-f {{R Nat}} : Nat := R.fun@{n := 1};
+f {{R Nat}} : Nat :=
+  R.fun@{
+    n := 1;
+  };
