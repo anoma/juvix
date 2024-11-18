@@ -1095,8 +1095,7 @@ instance (SingI s) => PrettyPrint (AxiomDef s) where
       ?<> builtin'
       ?<> ppCode _axiomKw
       <+> axiomName'
-      <+> ppCode _axiomColonKw
-      <+> ppExpressionType _axiomType
+      <+> ppCode _axiomTypeSig
 
 instance PrettyPrint BuiltinInductive where
   ppCode i = ppCode Kw.kwBuiltin <+> keywordText (P.prettyText i)

@@ -1501,7 +1501,8 @@ goRecordPattern r = do
 
 goAxiom :: (Members '[Reader DefaultArgsStack, Reader Pragmas, Error ScoperError, NameIdGen, Reader S.InfoTable] r) => AxiomDef 'Scoped -> Sem r Internal.AxiomDef
 goAxiom a = do
-  _axiomType' <- goExpression (a ^. axiomType)
+  ty <- Gen.mkTypeSigType (a ^. axiomTypeSig)
+  _axiomType' <- goExpression ty
   _axiomPragmas' <- goPragmas (a ^. axiomPragmas)
   let axiom =
         Internal.AxiomDef

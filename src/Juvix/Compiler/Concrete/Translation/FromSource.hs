@@ -57,6 +57,13 @@ makeLenses ''MdModuleBuilder
 makeLenses ''FunctionSyntaxOptions
 makeLenses ''SigOptions
 
+defaultSigOptions :: SigOptions
+defaultSigOptions =
+  SigOptions
+    { _sigAllowDefault = False,
+      _sigAllowOmitType = False
+    }
+
 type JudocStash = State (Maybe (Judoc 'Parsed))
 
 type PragmasStash = State (Maybe ParsedPragmas)
@@ -1451,8 +1458,7 @@ axiomDef _axiomBuiltin = do
   _axiomDoc <- getJudoc
   _axiomPragmas <- getPragmas
   _axiomName <- symbol
-  _axiomColonKw <- Irrelevant <$> kw kwColon
-  _axiomType <- parseExpressionAtoms
+  _axiomTypeSig <- typeSig defaultSigOptions
   return AxiomDef {..}
 
 --------------------------------------------------------------------------------

@@ -61,7 +61,7 @@ instance (SingI s) => HasNameSignature s (TypeSig s) where
 
 instance (SingI s) => HasNameSignature s (AxiomDef s) where
   addArgs :: (Members '[NameSignatureBuilder s] r) => AxiomDef s -> Sem r ()
-  addArgs a = addExpressionType (a ^. axiomType)
+  addArgs a = addArgs (a ^. axiomTypeSig)
 
 instance (SingI s) => HasNameSignature s (FunctionDef s) where
   addArgs a = addArgs (a ^. signTypeSig)

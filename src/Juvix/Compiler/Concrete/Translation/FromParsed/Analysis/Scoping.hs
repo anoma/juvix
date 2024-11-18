@@ -2121,10 +2121,10 @@ checkAxiomDef ::
   AxiomDef 'Parsed ->
   Sem r (AxiomDef 'Scoped)
 checkAxiomDef AxiomDef {..} = do
-  axiomType' <- withLocalScope (checkParseExpressionAtoms _axiomType)
   axiomName' <- bindAxiomSymbol _axiomName
   axiomDoc' <- withLocalScope (mapM checkJudoc _axiomDoc)
-  let a = AxiomDef {_axiomName = axiomName', _axiomType = axiomType', _axiomDoc = axiomDoc', ..}
+  axiomSig' <- withLocalScope (checkTypeSig _axiomTypeSig)
+  let a = AxiomDef {_axiomName = axiomName', _axiomTypeSig = axiomSig', _axiomDoc = axiomDoc', ..}
   registerNameSignature (a ^. axiomName . S.nameId) a
   registerAxiom @$> a
 

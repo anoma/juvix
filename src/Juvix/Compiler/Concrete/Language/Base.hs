@@ -710,9 +710,8 @@ data AxiomDef (s :: Stage) = AxiomDef
     _axiomDoc :: Maybe (Judoc s),
     _axiomPragmas :: Maybe ParsedPragmas,
     _axiomName :: SymbolType s,
-    _axiomColonKw :: Irrelevant KeywordRef,
-    _axiomBuiltin :: Maybe (WithLoc BuiltinAxiom),
-    _axiomType :: ExpressionType s
+    _axiomTypeSig :: TypeSig s,
+    _axiomBuiltin :: Maybe (WithLoc BuiltinAxiom)
   }
   deriving stock (Generic)
 
@@ -3082,7 +3081,7 @@ instance HasLoc (InductiveDef s) where
   getLoc i = (getLoc <$> i ^. inductivePositive) ?<> getLoc (i ^. inductiveKw)
 
 instance (SingI s) => HasLoc (AxiomDef s) where
-  getLoc m = getLoc (m ^. axiomKw) <> getLocExpressionType (m ^. axiomType)
+  getLoc m = getLoc (m ^. axiomKw) <> getLocExpressionType (fromJust (m ^. axiomTypeSig . typeSigRetType))
 
 getLocPublicAnn :: PublicAnn -> Maybe Interval
 getLocPublicAnn p = getLoc <$> p ^? _Public

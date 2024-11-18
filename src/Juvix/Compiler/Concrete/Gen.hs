@@ -140,30 +140,45 @@ functionDefExpression ::
   Sem r (FunctionDefBody 'Parsed)
 functionDefExpression exp = SigBodyExpression <$> expressionAtoms' exp
 
+mkFun :: forall s. (SingI s) => FunctionParameters s -> ExpressionType s -> ExpressionType s
+mkFun params tgt = case sing :: SStage s of
+  SParsed -> mkFunParsed params tgt
+  SScoped -> mkFunScoped params tgt
+
+mkFunction :: forall s. (SingI s) => FunctionParameters s -> ExpressionType s -> Function s
+mkFunction params tgt =
+  Function
+    { _funParameters = params,
+      _funReturn = tgt,
+      _funKw = funkw
+    }
+  where
+    funkw =
+      KeywordRef
+        { _keywordRefKeyword = kwRightArrow,
+          _keywordRefInterval = case sing :: SStage s of
+            SParsed -> getLoc tgt
+            SScoped -> getLoc tgt,
+          _keywordRefUnicode = Ascii
+        }
+
+mkFunParsed :: FunctionParameters 'Parsed -> ExpressionType 'Parsed -> ExpressionType 'Parsed
+mkFunParsed params tgt =
+  mkExpressionAtoms
+    . NonEmpty.singleton
+    . AtomFunction
+    $ mkFunction params tgt
+
+mkFunScoped :: FunctionParameters 'Scoped -> ExpressionType 'Scoped -> ExpressionType 'Scoped
+mkFunScoped params tgt =
+  ExpressionFunction $ mkFunction params tgt
+
 mkProjectionType :: InductiveDef 'Parsed -> ExpressionType 'Parsed -> ExpressionType 'Parsed
 mkProjectionType i indTy =
   foldr mkFun target indParams
   where
     indParams = map mkFunctionParameters $ i ^. inductiveParameters
-    target = mkFun (mkRecordParameter (i ^. inductiveTypeApplied)) indTy
-
-    mkFun :: FunctionParameters 'Parsed -> ExpressionType 'Parsed -> ExpressionType 'Parsed
-    mkFun params tgt =
-      mkExpressionAtoms
-        . NonEmpty.singleton
-        . AtomFunction
-        $ Function
-          { _funParameters = params,
-            _funReturn = tgt,
-            _funKw = funkw
-          }
-      where
-        funkw =
-          KeywordRef
-            { _keywordRefKeyword = kwRightArrow,
-              _keywordRefInterval = getLoc (i ^. inductiveName),
-              _keywordRefUnicode = Ascii
-            }
+    target = mkFunParsed (mkRecordParameter (i ^. inductiveTypeApplied)) indTy
 
     mkFunctionParameters :: InductiveParameters 'Parsed -> FunctionParameters 'Parsed
     mkFunctionParameters InductiveParameters {..} =
@@ -233,3 +248,60 @@ mkProjectionType i indTy =
               _keywordRefInterval = getLoc (i ^. inductiveName),
               _keywordRefUnicode = Ascii
             }
+
+mkTypeSigType :: forall s r. (SingI s, Member NameIdGen r) => TypeSig s -> Sem r (ExpressionType s)
+mkTypeSigType TypeSig {..} =
+  case sing :: SStage s of
+    SParsed ->
+      return $ foldr mkFunParsed rty (map mkFunctionParameters _typeSigArgs)
+      where
+        rty = fromMaybe wildcard _typeSigRetType
+        wildcard =
+          mkExpressionAtoms $
+            NonEmpty.singleton $
+              AtomHole $
+                wildcardKw defaultLoc
+    SScoped -> do
+      wildcard <-
+        ExpressionHole
+          . mkHole defaultLoc
+          <$> freshNameId
+      let rty = fromMaybe wildcard _typeSigRetType
+      return $ foldr mkFunScoped rty (map mkFunctionParameters _typeSigArgs)
+  where
+    defaultLoc :: Interval
+    defaultLoc = singletonInterval (mkInitialLoc sourcePath)
+
+    sourcePath :: Path Abs File
+    sourcePath = $(mkAbsFile "/<source>")
+
+    wildcardKw :: Interval -> KeywordRef
+    wildcardKw loc =
+      KeywordRef
+        { _keywordRefKeyword = kwWildcard,
+          _keywordRefUnicode = Ascii,
+          _keywordRefInterval = loc
+        }
+
+    univ :: Interval -> ExpressionType s
+    univ loc = run (runReader loc smallUniverseExpression)
+
+    mkFunctionParameters :: SigArg s -> FunctionParameters s
+    mkFunctionParameters arg@SigArg {..} =
+      FunctionParameters
+        { _paramNames = getSigArgNames arg,
+          _paramImplicit = _sigArgImplicit,
+          _paramDelims = fmap Just _sigArgDelims,
+          _paramColon = Irrelevant $ maybe Nothing (Just . (^. unIrrelevant)) _sigArgColon,
+          _paramType = fromMaybe (univ (getLoc arg)) _sigArgType
+        }
+
+    getSigArgNames :: SigArg s -> [FunctionParameter s]
+    getSigArgNames arg = case arg ^. sigArgNames of
+      SigArgNames ns -> map getArgName (toList ns)
+      SigArgNamesInstance -> [FunctionParameterWildcard (wildcardKw (getLoc arg))]
+
+    getArgName :: Argument s -> FunctionParameter s
+    getArgName = \case
+      ArgumentSymbol n -> FunctionParameterName n
+      ArgumentWildcard (Wildcard loc) -> FunctionParameterWildcard (wildcardKw loc)
