@@ -1433,8 +1433,7 @@ instance (SingI s) => PrettyPrint (RecordField s) where
       ?<> pragmas'
       ?<> builtin'
       ?<> mayBraces (ppSymbolType _fieldName)
-      <+> ppCode _fieldColon
-      <+> ppExpressionType _fieldType
+      <+> ppCode _fieldTypeSig
 
 instance (SingI s) => PrettyPrint (RhsRecord s) where
   ppCode RhsRecord {..} = do

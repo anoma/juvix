@@ -20,7 +20,7 @@ import Juvix.Compiler.Backend.Markdown.Error
 import Juvix.Compiler.Concrete (HighlightBuilder, ignoreHighlightBuilder)
 import Juvix.Compiler.Concrete.Extra (takeWhile1P)
 import Juvix.Compiler.Concrete.Extra qualified as P
-import Juvix.Compiler.Concrete.Gen (mkExpressionAtoms)
+import Juvix.Compiler.Concrete.Gen qualified as Gen
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context
 import Juvix.Compiler.Concrete.Translation.FromSource.Lexer hiding
@@ -1563,8 +1563,8 @@ inductiveDef _inductiveBuiltin = do
   _inductiveAssignKw <- Irrelevant <$> kw kwAssign P.<?> "<assignment symbol ':='>"
   let name' = NameUnqualified _inductiveName
       params = fmap (AtomIdentifier . NameUnqualified) (concatMap (toList . (^. inductiveParametersNames)) _inductiveParameters)
-      iden = mkExpressionAtoms (AtomIdentifier name' :| [])
-      _inductiveTypeApplied = mkExpressionAtoms (AtomParens iden :| params)
+      iden = Gen.mkExpressionAtoms (AtomIdentifier name' :| [])
+      _inductiveTypeApplied = Gen.mkExpressionAtoms (AtomParens iden :| params)
   _inductiveConstructors <-
     pipeSep1 (constructorDef _inductiveName)
       P.<?> "<constructor definition>"
@@ -1608,8 +1608,8 @@ recordField = do
   _fieldName <- symbol
   whenJust mayImpl (void . implicitCloseField)
   let _fieldIsImplicit = fromMaybe ExplicitField mayImpl
-  _fieldColon <- Irrelevant <$> kw kwColon
-  _fieldType <- parseExpressionAtoms
+  _fieldTypeSig <- typeSig defaultSigOptions
+  let _fieldType = Gen.mkTypeSigType' (Gen.mkWildcardParsed (getLoc _fieldName)) _fieldTypeSig
   return RecordField {..}
 
 rhsAdt :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r (RhsAdt 'Parsed)

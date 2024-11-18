@@ -715,7 +715,7 @@ goConstructorDef retTy ConstructorDef {..} = do
         goRecordStatement = \case
           Concrete.RecordStatementSyntax {} -> return Nothing
           Concrete.RecordStatementField RecordField {..} -> do
-            ty' <- goExpression _fieldType
+            ty' <- goTypeSig _fieldTypeSig
             return $
               Just
                 Internal.FunctionParameter

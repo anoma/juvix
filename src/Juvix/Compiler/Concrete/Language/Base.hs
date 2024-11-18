@@ -792,7 +792,7 @@ deriving stock instance Ord (RecordUpdateField 'Scoped)
 data RecordField (s :: Stage) = RecordField
   { _fieldName :: SymbolType s,
     _fieldIsImplicit :: IsImplicitField,
-    _fieldColon :: Irrelevant (KeywordRef),
+    _fieldTypeSig :: TypeSig s,
     _fieldType :: ExpressionType s,
     _fieldBuiltin :: Maybe (WithLoc BuiltinFunction),
     _fieldDoc :: Maybe (Judoc s),

@@ -249,25 +249,32 @@ mkProjectionType i indTy =
               _keywordRefUnicode = Ascii
             }
 
+mkWildcardKw :: Interval -> KeywordRef
+mkWildcardKw loc =
+  KeywordRef
+    { _keywordRefKeyword = kwWildcard,
+      _keywordRefUnicode = Ascii,
+      _keywordRefInterval = loc
+    }
+
+mkWildcardParsed :: Interval -> ExpressionType 'Parsed
+mkWildcardParsed loc =
+  mkExpressionAtoms
+    . NonEmpty.singleton
+    . AtomHole
+    $ mkWildcardKw loc
+
 mkTypeSigType :: forall s r. (SingI s, Member NameIdGen r) => TypeSig s -> Sem r (ExpressionType s)
-mkTypeSigType TypeSig {..} =
-  case sing :: SStage s of
-    SParsed ->
-      return $ foldr mkFunParsed rty (map mkFunctionParameters _typeSigArgs)
-      where
-        rty = fromMaybe wildcard _typeSigRetType
-        wildcard =
-          mkExpressionAtoms $
-            NonEmpty.singleton $
-              AtomHole $
-                wildcardKw defaultLoc
-    SScoped -> do
-      wildcard <-
+mkTypeSigType ts = do
+  wildcard <-
+    case sing :: SStage s of
+      SParsed ->
+        return $ mkWildcardParsed defaultLoc
+      SScoped -> do
         ExpressionHole
           . mkHole defaultLoc
           <$> freshNameId
-      let rty = fromMaybe wildcard _typeSigRetType
-      return $ foldr mkFunScoped rty (map mkFunctionParameters _typeSigArgs)
+  return $ mkTypeSigType' wildcard ts
   where
     defaultLoc :: Interval
     defaultLoc = singletonInterval (mkInitialLoc sourcePath)
@@ -275,13 +282,11 @@ mkTypeSigType TypeSig {..} =
     sourcePath :: Path Abs File
     sourcePath = $(mkAbsFile "/<source>")
 
-    wildcardKw :: Interval -> KeywordRef
-    wildcardKw loc =
-      KeywordRef
-        { _keywordRefKeyword = kwWildcard,
-          _keywordRefUnicode = Ascii,
-          _keywordRefInterval = loc
-        }
+mkTypeSigType' :: forall s. (SingI s) => ExpressionType s -> TypeSig s -> (ExpressionType s)
+mkTypeSigType' wildcard TypeSig {..} =
+  foldr mkFun rty (map mkFunctionParameters _typeSigArgs)
+  where
+    rty = fromMaybe wildcard _typeSigRetType
 
     univ :: Interval -> ExpressionType s
     univ loc = run (runReader loc smallUniverseExpression)
@@ -299,9 +304,9 @@ mkTypeSigType TypeSig {..} =
     getSigArgNames :: SigArg s -> [FunctionParameter s]
     getSigArgNames arg = case arg ^. sigArgNames of
       SigArgNames ns -> map getArgName (toList ns)
-      SigArgNamesInstance -> [FunctionParameterWildcard (wildcardKw (getLoc arg))]
+      SigArgNamesInstance -> [FunctionParameterWildcard (mkWildcardKw (getLoc arg))]
 
     getArgName :: Argument s -> FunctionParameter s
     getArgName = \case
       ArgumentSymbol n -> FunctionParameterName n
-      ArgumentWildcard (Wildcard loc) -> FunctionParameterWildcard (wildcardKw loc)
+      ArgumentWildcard (Wildcard loc) -> FunctionParameterWildcard (mkWildcardKw loc)

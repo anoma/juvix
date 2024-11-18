@@ -1253,14 +1253,16 @@ checkInductiveDef InductiveDef {..} = do
             checkField :: RecordField 'Parsed -> Sem r (RecordField 'Scoped)
             checkField RecordField {..} = do
               doc' <- maybe (return Nothing) (checkJudoc >=> return . Just) _fieldDoc
-              type' <- checkParseExpressionAtoms _fieldType
               -- Since we don't allow dependent types in constructor types, each
               -- field is checked with a local scope
               withLocalScope $ do
+                type' <- checkParseExpressionAtoms _fieldType
+                typeSig' <- checkTypeSig _fieldTypeSig
                 name' <- bindVariableSymbol _fieldName
                 return
                   RecordField
-                    { _fieldType = type',
+                    { _fieldTypeSig = typeSig',
+                      _fieldType = type',
                       _fieldName = name',
                       _fieldDoc = doc',
                       ..
@@ -1276,7 +1278,7 @@ checkInductiveDef InductiveDef {..} = do
 
         checkGadt :: RhsGadt 'Parsed -> Sem r (RhsGadt 'Scoped)
         checkGadt RhsGadt {..} = do
-          constructorTypeSig' <- checkTypeSig _rhsGadtTypeSig
+          constructorTypeSig' <- withLocalScope (checkTypeSig _rhsGadtTypeSig)
           return
             RhsGadt
               { _rhsGadtTypeSig = constructorTypeSig'
@@ -1717,7 +1719,7 @@ checkSections sec = topBindings helper
                               ProjectionDef
                                 { _projectionConstructor = headConstr,
                                   _projectionField = field ^. fieldName,
-                                  _projectionType = G.mkProjectionType i (field ^. fieldType),
+                                  _projectionType = G.mkProjectionType i (G.mkTypeSigType' (G.mkWildcardParsed (getLoc (i ^. inductiveName))) (field ^. fieldTypeSig)),
                                   _projectionFieldIx = idx,
                                   _projectionKind = kind,
                                   _projectionFieldBuiltin = field ^. fieldBuiltin,
