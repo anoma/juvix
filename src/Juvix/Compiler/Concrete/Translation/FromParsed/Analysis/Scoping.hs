@@ -1063,33 +1063,15 @@ resolveIteratorSyntaxDef s@IteratorSyntaxDef {..} = do
 (@$>) :: (Functor m) => (a -> m ()) -> a -> m a
 (@$>) f a = f a $> a
 
-checkFunctionDef ::
+checkTypeSig ::
   forall r.
   (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader PackageId, State ScoperSyntax, Reader BindingStrategy] r) =>
-  FunctionDef 'Parsed ->
-  Sem r (FunctionDef 'Scoped)
-checkFunctionDef fdef@FunctionDef {..} = do
-  sigDoc' <- mapM checkJudoc _signDoc
-  (args', sigType', sigBody') <- withLocalScope $ do
-    a' <- mapM checkArg _signArgs
-    t' <- mapM checkParseExpressionAtoms _signRetType
-    b' <- checkBody
-    return (a', t', b')
-  sigName' <-
-    if
-        | P.isFunctionLike fdef -> bindFunctionSymbol _signName
-        | otherwise -> reserveFunctionSymbol fdef
-  let def =
-        FunctionDef
-          { _signName = sigName',
-            _signRetType = sigType',
-            _signDoc = sigDoc',
-            _signBody = sigBody',
-            _signArgs = args',
-            ..
-          }
-  registerNameSignature (sigName' ^. S.nameId) def
-  registerFunctionDef @$> def
+  TypeSig 'Parsed ->
+  Sem r (TypeSig 'Scoped)
+checkTypeSig TypeSig {..} = do
+  a' <- mapM checkArg _typeSigArgs
+  t' <- mapM checkParseExpressionAtoms _typeSigRetType
+  return TypeSig {_typeSigArgs = a', _typeSigRetType = t', ..}
   where
     checkSigArgNames :: SigArgNames 'Parsed -> Sem r (SigArgNames 'Scoped)
     checkSigArgNames = \case
@@ -1119,6 +1101,33 @@ checkFunctionDef fdef@FunctionDef {..} = do
             _sigArgDefault = default',
             ..
           }
+
+checkFunctionDef ::
+  forall r.
+  (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader PackageId, State ScoperSyntax, Reader BindingStrategy] r) =>
+  FunctionDef 'Parsed ->
+  Sem r (FunctionDef 'Scoped)
+checkFunctionDef fdef@FunctionDef {..} = do
+  sigDoc' <- mapM checkJudoc _signDoc
+  (sig', sigBody') <- withLocalScope $ do
+    a' <- checkTypeSig _signTypeSig
+    b' <- checkBody
+    return (a', b')
+  sigName' <-
+    if
+        | P.isFunctionLike fdef -> bindFunctionSymbol _signName
+        | otherwise -> reserveFunctionSymbol fdef
+  let def =
+        FunctionDef
+          { _signName = sigName',
+            _signDoc = sigDoc',
+            _signBody = sigBody',
+            _signTypeSig = sig',
+            ..
+          }
+  registerNameSignature (sigName' ^. S.nameId) def
+  registerFunctionDef @$> def
+  where
     checkBody :: Sem r (FunctionDefBody 'Scoped)
     checkBody = case _signBody of
       SigBodyExpression e -> SigBodyExpression <$> checkParseExpressionAtoms e

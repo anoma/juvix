@@ -592,6 +592,33 @@ deriving stock instance Ord (SigArg 'Parsed)
 
 deriving stock instance Ord (SigArg 'Scoped)
 
+data TypeSig (s :: Stage) = TypeSig
+  { _typeSigArgs :: [SigArg s],
+    _typeSigColonKw :: Irrelevant (Maybe KeywordRef),
+    _typeSigRetType :: Maybe (ExpressionType s)
+  }
+  deriving stock (Generic)
+
+instance Serialize (TypeSig 'Scoped)
+
+instance NFData (TypeSig 'Scoped)
+
+instance Serialize (TypeSig 'Parsed)
+
+instance NFData (TypeSig 'Parsed)
+
+deriving stock instance Show (TypeSig 'Parsed)
+
+deriving stock instance Show (TypeSig 'Scoped)
+
+deriving stock instance Eq (TypeSig 'Parsed)
+
+deriving stock instance Eq (TypeSig 'Scoped)
+
+deriving stock instance Ord (TypeSig 'Parsed)
+
+deriving stock instance Ord (TypeSig 'Scoped)
+
 data FunctionClause (s :: Stage) = FunctionClause
   { _clausenPipeKw :: Irrelevant KeywordRef,
     _clausenPatterns :: NonEmpty (PatternAtomType s),
@@ -647,9 +674,7 @@ deriving stock instance Ord (FunctionDefBody 'Scoped)
 
 data FunctionDef (s :: Stage) = FunctionDef
   { _signName :: FunctionName s,
-    _signArgs :: [SigArg s],
-    _signColonKw :: Irrelevant (Maybe KeywordRef),
-    _signRetType :: Maybe (ExpressionType s),
+    _signTypeSig :: TypeSig s,
     _signDoc :: Maybe (Judoc s),
     _signPragmas :: Maybe ParsedPragmas,
     _signBuiltin :: Maybe (WithLoc BuiltinFunction),
@@ -2809,12 +2834,11 @@ data FunctionLhs (s :: Stage) = FunctionLhs
     _funLhsInstance :: Maybe KeywordRef,
     _funLhsCoercion :: Maybe KeywordRef,
     _funLhsName :: FunctionName s,
-    _funLhsArgs :: [SigArg s],
-    _funLhsColonKw :: Irrelevant (Maybe KeywordRef),
-    _funLhsRetType :: Maybe (ExpressionType s)
+    _funLhsTypeSig :: TypeSig s
   }
 
 makeLenses ''SideIfs
+makeLenses ''TypeSig
 makeLenses ''FunctionLhs
 makeLenses ''Statements
 makeLenses ''NamedArgumentFunctionDef
@@ -2910,9 +2934,7 @@ functionDefLhs FunctionDef {..} =
       _funLhsInstance = _signInstance,
       _funLhsCoercion = _signCoercion,
       _funLhsName = _signName,
-      _funLhsArgs = _signArgs,
-      _funLhsColonKw = _signColonKw,
-      _funLhsRetType = _signRetType
+      _funLhsTypeSig = _signTypeSig
     }
 
 fixityFieldHelper :: SimpleGetter (ParsedFixityFields s) (Maybe a) -> SimpleGetter (ParsedFixityInfo s) (Maybe a)

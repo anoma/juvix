@@ -43,6 +43,11 @@ data FunctionSyntaxOptions = FunctionSyntaxOptions
     _funAllowInstance :: Bool
   }
 
+data SigOptions = SigOptions
+  { _sigAllowOmitType :: Bool,
+    _sigAllowDefault :: Bool
+  }
+
 data MdModuleBuilder = MdModuleBuilder
   { _mdModuleBuilder :: Module 'Parsed 'ModuleTop,
     _mdModuleBuilderBlocksLengths :: [Int]
@@ -50,6 +55,7 @@ data MdModuleBuilder = MdModuleBuilder
 
 makeLenses ''MdModuleBuilder
 makeLenses ''FunctionSyntaxOptions
+makeLenses ''SigOptions
 
 type JudocStash = State (Maybe (Judoc 'Parsed))
 
@@ -1291,6 +1297,20 @@ getPragmas = P.lift $ do
   put (Nothing @ParsedPragmas)
   return j
 
+typeSig :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => SigOptions -> ParsecS r (TypeSig 'Parsed)
+typeSig opts = do
+  _typeSigArgs <- many (parseArg opts)
+  _typeSigColonKw <-
+    Irrelevant
+      <$> if
+          | opts ^. sigAllowOmitType -> optional (kw kwColon)
+          | otherwise -> Just <$> kw kwColon
+  _typeSigRetType <-
+    case _typeSigColonKw ^. unIrrelevant of
+      Just {} -> Just <$> parseExpressionAtoms
+      Nothing -> return Nothing
+  return TypeSig {..}
+
 functionDefinitionLhs ::
   forall r.
   (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) =>
@@ -1312,30 +1332,24 @@ functionDefinitionLhs opts _funLhsBuiltin = P.label "<function definition>" $ do
   when (isJust _funLhsCoercion && isNothing _funLhsInstance) $
     parseFailure off0 "expected: instance"
   _funLhsName <- symbol
-  _funLhsArgs <- many parseArg
-  _funLhsColonKw <-
-    Irrelevant
-      <$> if
-          | allowOmitType -> optional (kw kwColon)
-          | otherwise -> Just <$> kw kwColon
-  _funLhsRetType <-
-    case _funLhsColonKw ^. unIrrelevant of
-      Just {} -> Just <$> parseExpressionAtoms
-      Nothing -> return Nothing
+  let sigOpts =
+        SigOptions
+          { _sigAllowDefault = True,
+            _sigAllowOmitType = allowOmitType
+          }
+  _funLhsTypeSig <- typeSig sigOpts
   return
     FunctionLhs
       { _funLhsInstance,
         _funLhsBuiltin,
         _funLhsCoercion,
         _funLhsName,
-        _funLhsArgs,
-        _funLhsColonKw,
-        _funLhsRetType,
+        _funLhsTypeSig,
         _funLhsTerminating
       }
 
-parseArg :: forall r. (Members '[ParserResultBuilder, JudocStash, PragmasStash, Error ParserError] r) => ParsecS r (SigArg 'Parsed)
-parseArg = do
+parseArg :: forall r. (Members '[ParserResultBuilder, JudocStash, PragmasStash, Error ParserError] r) => SigOptions -> ParsecS r (SigArg 'Parsed)
+parseArg opts = do
   (openDelim, _sigArgNames, _sigArgImplicit, _sigArgColon) <- P.try $ do
     (opn, impl) <- implicitOpen
     let parseArgumentName :: ParsecS r (Argument 'Parsed) =
@@ -1366,10 +1380,13 @@ parseArg = do
           return Nothing
     _ ->
       Just <$> parseExpressionAtoms
-  _sigArgDefault <- optional $ do
-    _argDefaultAssign <- Irrelevant <$> kw kwAssign
-    _argDefaultValue <- parseExpressionAtoms
-    return ArgDefault {..}
+  _sigArgDefault <-
+    if
+        | opts ^. sigAllowDefault -> optional $ do
+            _argDefaultAssign <- Irrelevant <$> kw kwAssign
+            _argDefaultValue <- parseExpressionAtoms
+            return ArgDefault {..}
+        | otherwise -> return Nothing
   closeDelim <- implicitClose _sigArgImplicit
   let _sigArgDelims = Irrelevant (openDelim, closeDelim)
   return SigArg {..}
@@ -1387,16 +1404,14 @@ functionDefinition opts _signBuiltin = P.label "<function definition>" $ do
   _signPragmas <- getPragmas
   _signBody <- parseBody
   unless
-    ( isJust (_funLhsColonKw ^. unIrrelevant)
-        || (P.isBodyExpression _signBody && null _funLhsArgs)
+    ( isJust (_funLhsTypeSig ^. typeSigColonKw . unIrrelevant)
+        || (P.isBodyExpression _signBody && null (_funLhsTypeSig ^. typeSigArgs))
     )
     $ parseFailure off "expected result type"
   return
     FunctionDef
       { _signName = _funLhsName,
-        _signArgs = _funLhsArgs,
-        _signColonKw = _funLhsColonKw,
-        _signRetType = _funLhsRetType,
+        _signTypeSig = _funLhsTypeSig,
         _signTerminating = _funLhsTerminating,
         _signInstance = _funLhsInstance,
         _signCoercion = _funLhsCoercion,

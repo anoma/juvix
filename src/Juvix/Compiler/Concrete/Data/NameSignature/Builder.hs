@@ -54,14 +54,17 @@ addSymbol isImplicit mdefault sym ty = addArgument isImplicit mdefault (Just sym
 class HasNameSignature (s :: Stage) d | d -> s where
   addArgs :: (Members '[NameSignatureBuilder s] r) => d -> Sem r ()
 
+instance (SingI s) => HasNameSignature s (TypeSig s) where
+  addArgs a = do
+    mapM_ addSigArg (a ^. typeSigArgs)
+    whenJust (a ^. typeSigRetType) addExpressionType
+
 instance (SingI s) => HasNameSignature s (AxiomDef s) where
   addArgs :: (Members '[NameSignatureBuilder s] r) => AxiomDef s -> Sem r ()
   addArgs a = addExpressionType (a ^. axiomType)
 
 instance (SingI s) => HasNameSignature s (FunctionDef s) where
-  addArgs a = do
-    mapM_ addSigArg (a ^. signArgs)
-    whenJust (a ^. signRetType) addExpressionType
+  addArgs a = addArgs (a ^. signTypeSig)
 
 instance (SingI s) => HasNameSignature s (InductiveDef s, ConstructorDef s) where
   addArgs ::

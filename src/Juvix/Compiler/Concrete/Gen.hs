@@ -29,9 +29,12 @@ simplestFunctionDef funName funBody =
   FunctionDef
     { _signName = funName,
       _signBody = SigBodyExpression funBody,
-      _signColonKw = Irrelevant Nothing,
-      _signArgs = [],
-      _signRetType = Nothing,
+      _signTypeSig =
+        TypeSig
+          { _typeSigColonKw = Irrelevant Nothing,
+            _typeSigArgs = [],
+            _typeSigRetType = Nothing
+          },
       _signDoc = Nothing,
       _signPragmas = Nothing,
       _signBuiltin = Nothing,

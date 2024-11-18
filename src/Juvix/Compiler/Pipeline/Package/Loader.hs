@@ -80,10 +80,15 @@ toConcrete t p = run . runReader l $ do
     funDef :: (Member (Reader Interval) r) => Sem r (Statement 'Parsed)
     funDef = do
       packageTypeIdentifier <- identifier (t ^. packageDescriptionTypeName)
-      _signRetType <- Just <$> expressionAtoms' (packageTypeIdentifier :| [])
+      _typeSigRetType <- Just <$> expressionAtoms' (packageTypeIdentifier :| [])
       _signName <- symbol Str.package
-      _signColonKw <- Irrelevant . Just <$> kw kwColon
+      _typeSigColonKw <- Irrelevant . Just <$> kw kwColon
       let _signBody = (t ^. packageDescriptionTypeTransform) p
+          _signTypeSig =
+            TypeSig
+              { _typeSigArgs = [],
+                ..
+              }
       return
         ( StatementFunctionDef
             FunctionDef
@@ -93,7 +98,6 @@ toConcrete t p = run . runReader l $ do
                 _signDoc = Nothing,
                 _signCoercion = Nothing,
                 _signBuiltin = Nothing,
-                _signArgs = [],
                 ..
               }
         )

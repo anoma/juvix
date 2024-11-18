@@ -214,7 +214,7 @@ instance ToGenericError NamedApplicationMissingAt where
     opts <- fromGenericOptions <$> ask @GenericOptions
     let lhs :: FunctionLhs 'Parsed = _namedApplicationMissingAtLhs
         funWord :: Text
-          | null (lhs ^. funLhsArgs) = "assignment"
+          | null (lhs ^. funLhsTypeSig . typeSigArgs) = "assignment"
           | otherwise = "function definition"
         fun' = ppCode opts _namedApplicationMissingAtFun
         msg :: Doc CodeAnn =
