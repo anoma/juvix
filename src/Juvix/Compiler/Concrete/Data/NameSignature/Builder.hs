@@ -92,7 +92,7 @@ instance (SingI s) => HasNameSignature s (InductiveDef s, ConstructorDef s) wher
 
       addRhs :: ConstructorRhs s -> Sem r ()
       addRhs = \case
-        ConstructorRhsGadt g -> addExpressionType (g ^. rhsGadtType)
+        ConstructorRhsGadt g -> addArgs (g ^. rhsGadtTypeSig)
         ConstructorRhsRecord g -> addRecord g
         ConstructorRhsAdt {} -> return ()
 

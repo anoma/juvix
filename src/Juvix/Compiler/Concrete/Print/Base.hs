@@ -1418,8 +1418,7 @@ instance (PrettyPrint a) => PrettyPrint (Irrelevant a) where
   ppCode (Irrelevant a) = ppCode a
 
 instance (SingI s) => PrettyPrint (RhsGadt s) where
-  ppCode RhsGadt {..} =
-    ppCode _rhsGadtColon <+> ppExpressionType _rhsGadtType
+  ppCode RhsGadt {..} = ppCode _rhsGadtTypeSig
 
 instance (SingI s) => PrettyPrint (RecordField s) where
   ppCode RecordField {..} = do

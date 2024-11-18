@@ -725,7 +725,7 @@ goConstructorDef retTy ConstructorDef {..} = do
                   }
 
     goGadtType :: Concrete.RhsGadt 'Scoped -> Sem r Internal.Expression
-    goGadtType = goExpression . (^. Concrete.rhsGadtType)
+    goGadtType = goTypeSig . (^. Concrete.rhsGadtTypeSig)
 
     goRhs :: Concrete.ConstructorRhs 'Scoped -> Sem r Internal.Expression
     goRhs = \case
@@ -1499,10 +1499,14 @@ goRecordPattern r = do
               output (Internal.patternArgFromVar Internal.Explicit v)
               go maxIdx (idx + 1) args
 
+goTypeSig :: (Members '[Reader DefaultArgsStack, Reader Pragmas, Error ScoperError, NameIdGen, Reader S.InfoTable] r) => TypeSig 'Scoped -> Sem r Internal.Expression
+goTypeSig s = do
+  ty <- Gen.mkTypeSigType s
+  goExpression ty
+
 goAxiom :: (Members '[Reader DefaultArgsStack, Reader Pragmas, Error ScoperError, NameIdGen, Reader S.InfoTable] r) => AxiomDef 'Scoped -> Sem r Internal.AxiomDef
 goAxiom a = do
-  ty <- Gen.mkTypeSigType (a ^. axiomTypeSig)
-  _axiomType' <- goExpression ty
+  _axiomType' <- goTypeSig (a ^. axiomTypeSig)
   _axiomPragmas' <- goPragmas (a ^. axiomPragmas)
   let axiom =
         Internal.AxiomDef

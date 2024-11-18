@@ -1596,8 +1596,7 @@ inductiveParams = inductiveParamsLong <|> inductiveParamsShort
 
 rhsGadt :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r (RhsGadt 'Parsed)
 rhsGadt = P.label "<constructor gadt>" $ do
-  _rhsGadtColon <- Irrelevant <$> kw kwColon
-  _rhsGadtType <- parseExpressionAtoms P.<?> "<constructor type>"
+  _rhsGadtTypeSig <- typeSig defaultSigOptions
   return RhsGadt {..}
 
 recordField :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r (RecordField 'Parsed)

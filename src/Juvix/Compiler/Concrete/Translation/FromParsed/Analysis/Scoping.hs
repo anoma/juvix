@@ -1276,11 +1276,10 @@ checkInductiveDef InductiveDef {..} = do
 
         checkGadt :: RhsGadt 'Parsed -> Sem r (RhsGadt 'Scoped)
         checkGadt RhsGadt {..} = do
-          constructorType' <- checkParseExpressionAtoms _rhsGadtType
+          constructorTypeSig' <- checkTypeSig _rhsGadtTypeSig
           return
             RhsGadt
-              { _rhsGadtType = constructorType',
-                _rhsGadtColon
+              { _rhsGadtTypeSig = constructorTypeSig'
               }
 
 checkProjectionDef ::

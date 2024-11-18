@@ -860,8 +860,7 @@ deriving stock instance Ord (RhsRecord 'Parsed)
 deriving stock instance Ord (RhsRecord 'Scoped)
 
 data RhsGadt (s :: Stage) = RhsGadt
-  { _rhsGadtColon :: Irrelevant KeywordRef,
-    _rhsGadtType :: ExpressionType s
+  { _rhsGadtTypeSig :: TypeSig s
   }
   deriving stock (Generic)
 
