@@ -118,10 +118,8 @@ runAnomaEphemeral anomapath body = runReader anomapath . runProcess $ do
         AnomaRpc method i -> anomaRpc' method i
 
 runAnomaPersistent :: forall r a. (Members '[Logger, EmbedIO, Error SimpleError] r) => AnomaPath -> Sem (Anoma ': r) a -> Sem r a
-runAnomaPersistent anomapath body = runConcurrent . runReader anomapath . runProcess $ handleServer
-  where
-    handleServer :: forall x'. (x' ~ Process ': Reader AnomaPath ': Concurrent ': r) => Sem x' a
-    handleServer = bracket setup teardown handler
+runAnomaPersistent anomapath body = runConcurrent . runReader anomapath . runProcess $
+   bracket setup teardown handler
       where
         setup :: (Members '[EmbedIO, Logger, Reader AnomaPath, Process, Concurrent, Error SimpleError] x) => Sem x (ProcessHandle, AnomaGrpcClientInfo)
         setup = do
@@ -134,9 +132,13 @@ runAnomaPersistent anomapath body = runConcurrent . runReader anomapath . runPro
         teardown (process, _) = do
           terminateProcess process
 
-        handler :: (ProcessHandle, AnomaGrpcClientInfo) -> Sem x' a
+        handler :: forall r'. (Subset r (Anoma ': r'), Members '[Error SimpleError, EmbedIO, Process] r')
+             => (ProcessHandle, AnomaGrpcClientInfo) -> Sem r' a
         handler (process, grpcServer) = runReader grpcServer $ do
-          res <- (`interpret` inject body) $ \case
+          res <- (`interpret` body') $ \case
             AnomaRpc method i -> anomaRpc' method i
           void (waitForProcess process)
           return res
+          where
+            body' :: Sem (Anoma ': Reader AnomaGrpcClientInfo ': r') a
+            body' = (raiseUnder . inject) body
