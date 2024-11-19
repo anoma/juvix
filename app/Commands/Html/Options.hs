@@ -47,7 +47,7 @@ parseHtml = do
       (eitherReader parseTheme)
       ( long "theme"
           <> metavar "THEME"
-          <> value Latte
+          <> value LatteLight
           <> showDefault
           <> help ("Theme for syntax highlighting. " <> availableStr)
           <> completeWith (map show allThemes)
