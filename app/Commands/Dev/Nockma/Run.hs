@@ -1,51 +1,13 @@
 module Commands.Dev.Nockma.Run where
 
-import Anoma.Effect
-import Commands.Base hiding (Atom)
+import Commands.Base
+import Commands.Dev.Nockma.Run.BuiltinClient as BuiltinClient
+import Commands.Dev.Nockma.Run.EphemeralClient as EphemeralClient
 import Commands.Dev.Nockma.Run.Options
-import Juvix.Compiler.Nockma.Anoma
-import Juvix.Compiler.Nockma.EvalCompiled
-import Juvix.Compiler.Nockma.Evaluator
-import Juvix.Compiler.Nockma.Pretty
-import Juvix.Compiler.Nockma.Translation.FromSource qualified as Nockma
+import Commands.Dev.Nockma.Run.WithClient as WithClient
 
-runCommand :: forall r. (Members AppEffects r) => NockmaRunOptions -> Sem r ()
-runCommand opts = do
-  afile <- fromAppPathFile inputFile
-  argsFile <- mapM fromAppPathFile (opts ^. nockmaRunArgs)
-  parsedArgs <- runAppError @JuvixError (mapM Nockma.cueJammedFileOrPretty argsFile)
-  parsedTerm <- runAppError @JuvixError (Nockma.cueJammedFileOrPretty afile)
-  case parsedTerm of
-    TermAtom {} -> exitFailMsg "Expected nockma input to be a cell"
-    t@(TermCell {}) -> case opts ^. nockmaRunAnomaDir of
-      Just path -> do
-        anomaDir <- AnomaPath <$> fromAppPathDir path
-        runInAnoma anomaDir t (maybe [] unfoldList parsedArgs)
-      Nothing -> do
-        let formula = anomaCallTuple parsedArgs
-        (counts, res) <-
-          runOpCounts
-            . runReader defaultEvalOptions
-            . runOutputSem @(Term Natural) (logInfo . mkAnsiText . ppTrace)
-            $ evalCompiledNock' t formula
-        putStrLn (ppPrint res)
-        let statsFile = replaceExtension' ".profile" afile
-        writeFileEnsureLn statsFile (prettyText counts)
-  where
-    inputFile :: AppPath File
-    inputFile = opts ^. nockmaRunFile
-
-runInAnoma :: (Members AppEffects r) => AnomaPath -> Term Natural -> [Term Natural] -> Sem r ()
-runInAnoma anoma t args = runAppError @SimpleError . runAnomaEphemeral anoma $ do
-  res <-
-    runNockma
-      RunNockmaInput
-        { _runNockmaProgram = t,
-          _runNockmaArgs = args
-        }
-  let traces = res ^. runNockmaTraces
-  renderStdOutLn (annotate AnnImportant $ "Traces (" <> show (length traces) <> "):")
-  forM_ traces $ \tr ->
-    renderStdOutLn (ppPrint tr)
-  renderStdOutLn (annotate AnnImportant "Result:")
-  renderStdOutLn (ppPrint (res ^. runNockmaResult))
+runCommand :: forall r. (Members AppEffects r) => NockmaRunCommand -> Sem r ()
+runCommand = \case
+  NockmaRunBuiltinClient opts -> BuiltinClient.runCommand opts
+  NockmaRunEphemeralClient opts -> EphemeralClient.runCommand opts
+  NockmaRunWithClient opts -> WithClient.runCommand opts

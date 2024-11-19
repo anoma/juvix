@@ -119,10 +119,12 @@ runAnomaEphemeral anomapath body = runReader anomapath . runProcess $ do
         AnomaRpc method i -> anomaRpc' method i
 
 runAnomaWithClient :: forall r a. (Members '[Logger, EmbedIO, Error SimpleError] r) => AnomaGrpcClientInfo -> Sem (Anoma ': r) a -> Sem r a
-runAnomaWithClient grpcInfo body = runProcess $ do
-  runReader grpcInfo $ do
-    (`interpret` inject body) $ \case
-      AnomaRpc method i -> anomaRpc' method i
+runAnomaWithClient grpcInfo body =
+  runProcess
+    . runReader grpcInfo
+    $ do
+      (`interpret` inject body) $ \case
+        AnomaRpc method i -> anomaRpc' method i
 
 launchAnoma :: (Members '[Logger, EmbedIO, Error SimpleError] r) => AnomaPath -> Sem r ProcessHandle
 launchAnoma anomapath = runReader anomapath . runProcess $ do
