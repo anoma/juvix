@@ -5,10 +5,12 @@ import Stdlib.Data.Nat open;
 axiom f (x : Nat) : Nat;
 
 g (x : Nat) : Nat :=
-  f@{x := x};
+  f@{
+    x := x;
+  };
 
-type R := mkR@{
-  rf (x : Nat) : Nat;
-};
+type R := mkR@{rf (x : Nat) : Nat};
 
 type R' := mkR' (rf : Nat -> Nat) : R';
+
+type RR := mkRR : (Nat -> Nat) -> RR;

@@ -1095,7 +1095,7 @@ instance (SingI s) => PrettyPrint (AxiomDef s) where
       ?<> builtin'
       ?<> ppCode _axiomKw
       <+> axiomName'
-      <+> ppCode _axiomTypeSig
+        <> ppCode _axiomTypeSig
 
 instance PrettyPrint BuiltinInductive where
   ppCode i = ppCode Kw.kwBuiltin <+> keywordText (P.prettyText i)
@@ -1433,7 +1433,7 @@ instance (SingI s) => PrettyPrint (RecordField s) where
       ?<> pragmas'
       ?<> builtin'
       ?<> mayBraces (ppSymbolType _fieldName)
-      <+> ppCode _fieldTypeSig
+      <> ppCode _fieldTypeSig
 
 instance (SingI s) => PrettyPrint (RhsRecord s) where
   ppCode RhsRecord {..} = do
@@ -1466,7 +1466,7 @@ ppConstructorDef singleConstructor ConstructorDef {..} = do
     constructorRhsHelper r = spaceMay <> ppCode r
       where
         spaceMay = case r of
-          ConstructorRhsGadt {} -> space
+          ConstructorRhsGadt {} -> mempty
           ConstructorRhsRecord {} -> mempty
           ConstructorRhsAdt a
             | null (a ^. rhsAdtArguments) -> mempty
