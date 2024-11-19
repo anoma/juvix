@@ -1305,8 +1305,9 @@ getPragmas = P.lift $ do
   return j
 
 typeSig :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => SigOptions -> ParsecS r (TypeSig 'Parsed)
-typeSig opts = do
+typeSig opts = P.label "<type signature>" $ do
   _typeSigArgs <- many (parseArg opts)
+  --  let _typeSigArgs :: [SigArg 'Parsed] = []
   _typeSigColonKw <-
     Irrelevant
       <$> if
@@ -1600,7 +1601,7 @@ rhsGadt = P.label "<constructor gadt>" $ do
   return RhsGadt {..}
 
 recordField :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r (RecordField 'Parsed)
-recordField = do
+recordField = P.label "<record field>" $ do
   _fieldDoc <- optional stashJudoc >> getJudoc
   _fieldPragmas <- optional stashPragmas >> getPragmas
   _fieldBuiltin <- optional builtinRecordField
@@ -1639,8 +1640,8 @@ recordStatement =
 
 pconstructorRhs :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r (ConstructorRhs 'Parsed)
 pconstructorRhs =
-  ConstructorRhsGadt <$> rhsGadt
-    <|> ConstructorRhsRecord <$> rhsRecord
+  ConstructorRhsRecord <$> rhsRecord
+    <|> ConstructorRhsGadt <$> rhsGadt
     <|> ConstructorRhsAdt <$> rhsAdt
 
 constructorDef :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => Symbol -> Irrelevant (Maybe KeywordRef) -> ParsecS r (ConstructorDef 'Parsed)
