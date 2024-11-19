@@ -4,21 +4,24 @@
 -- 2. grpcurl
 module Anoma.Effect.Base
   ( Anoma,
-    getAnomaProcess,
     anomaRpc,
     AnomaPath (..),
     AnomaProcess (..),
+    AnomaGrpcClientInfo (..),
+    anomaGrpcClientInfoPort,
+    anomaGrpcClientInfoUrl,
     anomaProcessHandle,
     anomaPath,
-    runAnoma,
+    runAnomaEphemeral,
+    launchAnoma,
     module Anoma.Rpc.Base,
     module Juvix.Compiler.Nockma.Translation.FromTree,
   )
 where
 
-import Anoma.Effect.Paths
 import Anoma.Rpc.Base
 import Data.ByteString qualified as B
+import Data.Text qualified as T
 import Juvix.Compiler.Nockma.Translation.FromTree (AnomaResult)
 import Juvix.Data.CodeAnn
 import Juvix.Extra.Paths (anomaStartExs)
@@ -29,9 +32,12 @@ newtype AnomaProcess = AnomaProcess
   { _anomaProcessHandle :: ProcessHandle
   }
 
+data AnomaGrpcClientInfo = AnomaGrpcClientInfo
+  { _anomaGrpcClientInfoPort :: Int,
+    _anomaGrpcClientInfoUrl :: String
+  }
+
 data Anoma :: Effect where
-  -- | Keep the node and client running
-  GetAnomaProcess :: Anoma m AnomaProcess
   -- | grpc call
   AnomaRpc :: GrpcMethodUrl -> Value -> Anoma m Value
 
@@ -40,44 +46,34 @@ makeLenses ''AnomaProcess
 
 newtype AnomaPath = AnomaPath {_anomaPath :: Path Abs Dir}
 
-newtype ClientGrpcPort = ClientGrpcPort {_clientGrpcPort :: Int}
-
 makeLenses ''AnomaPath
-makeLenses ''ClientGrpcPort
+makeLenses ''AnomaGrpcClientInfo
 
-relativeToAnomaDir :: (Members '[Reader AnomaPath] r) => Path Rel x -> Sem r (Path Abs x)
-relativeToAnomaDir p = do
-  anoma <- asks (^. anomaPath)
-  return (anoma <//> p)
+anomaCreateProcess :: (Members '[Reader AnomaPath] r') => Sem r' CreateProcess
+anomaCreateProcess = do
+  anomapath <- asks (^. anomaPath)
+  return
+    (proc "mix" ["run", "--no-halt", "-e", unpack (T.strip (decodeUtf8 anomaStartExs))])
+      { std_out = CreatePipe,
+        cwd = Just (toFilePath anomapath)
+      }
 
-withSpawnAnomaNodeAndClient ::
-  forall r a.
-  (Members '[EmbedIO, Logger, Error SimpleError, Process, Reader AnomaPath] r) =>
-  (ClientGrpcPort -> ProcessHandle -> Sem r a) ->
-  Sem r a
-withSpawnAnomaNodeAndClient body = withSystemTempFile "start.exs" $ \fp tmpHandle -> do
-  liftIO (B.hPutStr tmpHandle anomaStartExs) >> hClose tmpHandle
-  cproc <- cprocess (toFilePath fp)
-  withCreateProcess cproc $ \_stdin mstdout _stderr procHandle -> do
-    let nodeOut = fromJust mstdout
-    ln <- hGetLine nodeOut
-    let parseError = throw (SimpleError (mkAnsiText ("Failed to parse the client grpc port when starting the anoma node and client.\nExpected a number but got " <> ln)))
-    grpcPort :: Int <- either (const parseError) return . readEither . unpack $ ln
-    logInfo "Anoma node and client successfully started"
-    logInfo (mkAnsiText ("Listening on port " <> annotate AnnImportant (pretty grpcPort)))
-    body (ClientGrpcPort grpcPort) procHandle
-  where
-    cprocess :: (Members '[Reader AnomaPath] r') => FilePath -> Sem r' CreateProcess
-    cprocess exs = do
-      anomapath <- asks (^. anomaPath)
-      return
-        (proc "mix" ["run", "--no-halt", exs])
-          { std_out = CreatePipe,
-            cwd = Just (toFilePath anomapath)
-          }
+setupAnomaProcess :: (Members '[EmbedIO, Logger, Error SimpleError] r) => Handle -> Sem r AnomaGrpcClientInfo
+setupAnomaProcess nodeOut = do
+  ln <- hGetLine nodeOut
+  let parseError = throw (SimpleError (mkAnsiText ("Failed to parse the client grpc port when starting the anoma node and client.\nExpected a number but got " <> ln)))
+  grpcPort :: Int <- either (const parseError) return . readEither . unpack $ ln
+  logInfo "Anoma node and client successfully started"
+  logInfo (mkAnsiText ("Listening on port " <> annotate AnnImportant (pretty grpcPort)))
+  return
+    ( AnomaGrpcClientInfo
+        { _anomaGrpcClientInfoPort = grpcPort,
+          _anomaGrpcClientInfoUrl = "localhost"
+        }
+    )
 
 anomaRpc' ::
-  (Members '[Reader ClientGrpcPort, Reader AnomaPath, Process, EmbedIO, Error SimpleError] r) =>
+  (Members '[Reader AnomaGrpcClientInfo, Process, EmbedIO, Error SimpleError] r) =>
   GrpcMethodUrl ->
   Value ->
   Sem r Value
@@ -94,21 +90,17 @@ anomaRpc' method payload = do
       Right r -> return r
       Left err -> throw (SimpleError (mkAnsiText err))
 
-grpcCliProcess :: (Members '[Reader ClientGrpcPort, Reader AnomaPath] r) => GrpcMethodUrl -> Sem r CreateProcess
+grpcCliProcess :: (Members '[Reader AnomaGrpcClientInfo] r) => GrpcMethodUrl -> Sem r CreateProcess
 grpcCliProcess method = do
-  importPath <- relativeToAnomaDir relProtoDir
-  grpcPort <- asks (^. clientGrpcPort)
+  grpcPort <- asks (^. anomaGrpcClientInfoPort)
+  grpcUrl <- asks (^. anomaGrpcClientInfoUrl)
   return
     ( proc
         "grpcurl"
-        [ "-import-path",
-          toFilePath importPath,
-          "-proto",
-          toFilePath relProtoFile,
-          "-d",
+        [ "-d",
           "@",
           "-plaintext",
-          "localhost:" <> show grpcPort,
+          grpcUrl <> ":" <> show grpcPort,
           show method
         ]
     )
@@ -116,14 +108,17 @@ grpcCliProcess method = do
         std_out = CreatePipe
       }
 
-runAnoma :: forall r a. (Members '[Logger, EmbedIO, Error SimpleError] r) => AnomaPath -> Sem (Anoma ': r) a -> Sem r a
-runAnoma anomapath body = runReader anomapath . runProcess $
-  withSpawnAnomaNodeAndClient $ \grpcport anomaH ->
-    runReader grpcport $ do
+runAnomaEphemeral :: forall r a. (Members '[Logger, EmbedIO, Error SimpleError] r) => AnomaPath -> Sem (Anoma ': r) a -> Sem r a
+runAnomaEphemeral anomapath body = runReader anomapath . runProcess $ do
+  cproc <- anomaCreateProcess
+  withCreateProcess cproc $ \_stdin mstdout _stderr _procHandle -> do
+    grpcServer <- setupAnomaProcess (fromJust mstdout)
+    runReader grpcServer $ do
       (`interpret` inject body) $ \case
-        GetAnomaProcess ->
-          return
-            AnomaProcess
-              { _anomaProcessHandle = anomaH
-              }
         AnomaRpc method i -> anomaRpc' method i
+
+launchAnoma :: (Members '[Logger, EmbedIO, Error SimpleError] r) => AnomaPath -> Sem r ProcessHandle
+launchAnoma anomapath = runReader anomapath . runProcess $ do
+  cproc <- anomaCreateProcess
+  (_stdin, mstdout, _stderr, procHandle) <- createProcess cproc
+  setupAnomaProcess (fromJust mstdout) >> return procHandle

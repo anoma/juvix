@@ -36,7 +36,7 @@ runCommand opts = do
     inputFile = opts ^. nockmaRunFile
 
 runInAnoma :: (Members AppEffects r) => AnomaPath -> Term Natural -> [Term Natural] -> Sem r ()
-runInAnoma anoma t args = runAppError @SimpleError . runAnoma anoma $ do
+runInAnoma anoma t args = runAppError @SimpleError . runAnomaEphemeral anoma $ do
   res <-
     runNockma
       RunNockmaInput
