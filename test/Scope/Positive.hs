@@ -277,5 +277,9 @@ tests =
     posTest
       "Ignore dot files"
       $(mkRelDir "issue3068")
-      $(mkRelFile "main.juvix")
+      $(mkRelFile "main.juvix"),
+    posTest
+      "Type signatures"
+      $(mkRelDir ".")
+      $(mkRelFile "TypeSignatures.juvix")
   ]
