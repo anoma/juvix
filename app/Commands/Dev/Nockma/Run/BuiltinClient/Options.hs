@@ -4,7 +4,6 @@ import CommonOptions
 
 data NockmaRunBuiltinClientOptions = NockmaRunBuiltinClientOptions
   { _nockmaRunBuiltinFile :: AppPath File,
-    _nockmaRunBuiltinAnomaDir :: Maybe (AppPath Dir),
     _nockmaRunBuiltinProfile :: Bool,
     _nockmaRunBuiltinArgs :: Maybe (AppPath File)
   }
@@ -16,7 +15,6 @@ parseNockmaRunBuiltinClientOptions :: Parser NockmaRunBuiltinClientOptions
 parseNockmaRunBuiltinClientOptions = do
   _nockmaRunBuiltinFile <- parseInputFile FileExtNockma
   _nockmaRunBuiltinArgs <- optional anomaArgsOpt
-  _nockmaRunBuiltinAnomaDir <- optional anomaDirOpt
   _nockmaRunBuiltinProfile <-
     switch
       ( long "profile"
