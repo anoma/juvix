@@ -81,7 +81,7 @@ mkAnomaNodeTest a@AnomaTest {..} =
       runM
         . ignoreLogger
         . runSimpleErrorHUnit
-        . runAnoma testAnomaPath
+        . runAnomaEphemeral testAnomaPath
         $ do
           let rinput =
                 RunNockmaInput
