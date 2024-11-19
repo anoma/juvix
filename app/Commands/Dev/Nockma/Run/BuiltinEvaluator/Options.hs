@@ -1,18 +1,18 @@
-module Commands.Dev.Nockma.Run.BuiltinClient.Options where
+module Commands.Dev.Nockma.Run.BuiltinEvaluator.Options where
 
 import CommonOptions
 
-data NockmaRunBuiltinClientOptions = NockmaRunBuiltinClientOptions
+data NockmaRunBuiltinEvaluatorOptions = NockmaRunBuiltinEvaluatorOptions
   { _nockmaRunBuiltinFile :: AppPath File,
     _nockmaRunBuiltinProfile :: Bool,
     _nockmaRunBuiltinArgs :: Maybe (AppPath File)
   }
   deriving stock (Data)
 
-makeLenses ''NockmaRunBuiltinClientOptions
+makeLenses ''NockmaRunBuiltinEvaluatorOptions
 
-parseNockmaRunBuiltinClientOptions :: Parser NockmaRunBuiltinClientOptions
-parseNockmaRunBuiltinClientOptions = do
+parseNockmaRunBuiltinEvaluatorOptions :: Parser NockmaRunBuiltinEvaluatorOptions
+parseNockmaRunBuiltinEvaluatorOptions = do
   _nockmaRunBuiltinFile <- parseInputFile FileExtNockma
   _nockmaRunBuiltinArgs <- optional anomaArgsOpt
   _nockmaRunBuiltinProfile <-
@@ -20,4 +20,4 @@ parseNockmaRunBuiltinClientOptions = do
       ( long "profile"
           <> help "Report evaluator profiling statistics"
       )
-  pure NockmaRunBuiltinClientOptions {..}
+  pure NockmaRunBuiltinEvaluatorOptions {..}

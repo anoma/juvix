@@ -1,14 +1,14 @@
-module Commands.Dev.Nockma.Run.BuiltinClient where
+module Commands.Dev.Nockma.Run.BuiltinEvaluator where
 
 import Commands.Base hiding (Atom)
-import Commands.Dev.Nockma.Run.BuiltinClient.Options
+import Commands.Dev.Nockma.Run.BuiltinEvaluator.Options
 import Juvix.Compiler.Nockma.Anoma
 import Juvix.Compiler.Nockma.EvalCompiled
 import Juvix.Compiler.Nockma.Evaluator
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Translation.FromSource qualified as Nockma
 
-runCommand :: forall r. (Members AppEffects r) => NockmaRunBuiltinClientOptions -> Sem r ()
+runCommand :: forall r. (Members AppEffects r) => NockmaRunBuiltinEvaluatorOptions -> Sem r ()
 runCommand opts = do
   afile <- fromAppPathFile (opts ^. nockmaRunBuiltinFile)
   argsFile <- mapM fromAppPathFile (opts ^. nockmaRunBuiltinArgs)
