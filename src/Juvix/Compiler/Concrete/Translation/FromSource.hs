@@ -1307,7 +1307,6 @@ getPragmas = P.lift $ do
 typeSig :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => SigOptions -> ParsecS r (TypeSig 'Parsed)
 typeSig opts = P.label "<type signature>" $ do
   _typeSigArgs <- many (parseArg opts)
-  --  let _typeSigArgs :: [SigArg 'Parsed] = []
   _typeSigColonKw <-
     Irrelevant
       <$> if
