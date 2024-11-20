@@ -888,7 +888,7 @@ deriving stock instance Ord (RhsRecord 'Parsed)
 
 deriving stock instance Ord (RhsRecord 'Scoped)
 
-data RhsGadt (s :: Stage) = RhsGadt
+newtype RhsGadt (s :: Stage) = RhsGadt
   { _rhsGadtTypeSig :: TypeSig s
   }
   deriving stock (Generic)
@@ -3387,7 +3387,7 @@ instance (SingI s) => HasLoc (FunctionLhs s) where
     (getLoc <$> _funLhsBuiltin)
       ?<> (getLoc <$> _funLhsTerminating)
       ?<> ( getLocSymbolType _funLhsName
-              <>? (getLocExpressionType <$> _funLhsRetType)
+              <>? (getLocExpressionType <$> _funLhsTypeSig ^. typeSigRetType)
           )
 
 instance (SingI s) => HasLoc (FunctionDef s) where

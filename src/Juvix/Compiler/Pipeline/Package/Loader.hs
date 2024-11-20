@@ -87,7 +87,8 @@ toConcrete t p = run . runReader l $ do
           _signTypeSig =
             TypeSig
               { _typeSigArgs = [],
-                ..
+                _typeSigRetType,
+                _typeSigColonKw
               }
       return
         ( StatementFunctionDef
@@ -98,11 +99,9 @@ toConcrete t p = run . runReader l $ do
                 _signDoc = Nothing,
                 _signCoercion = Nothing,
                 _signBuiltin = Nothing,
-                _signArgs = [],
-                _signRetType,
                 _signName,
-                _signColonKw,
-                _signBody
+                _signBody,
+                _signTypeSig
               }
         )
 

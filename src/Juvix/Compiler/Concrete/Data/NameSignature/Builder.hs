@@ -15,6 +15,7 @@ where
 
 import Juvix.Compiler.Concrete.Data.NameSignature.Error
 import Juvix.Compiler.Concrete.Gen qualified as Gen
+import Juvix.Compiler.Concrete.Language.Base
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Prelude
 
@@ -64,9 +65,7 @@ instance (SingI s) => HasNameSignature s (AxiomDef s) where
   addArgs a = addArgs (a ^. axiomTypeSig)
 
 instance (SingI s) => HasNameSignature s (FunctionLhs s) where
-  addArgs a = do
-    mapM_ addSigArg (a ^. funLhsArgs)
-    whenJust (a ^. funLhsRetType) addExpressionType
+  addArgs FunctionLhs {..} = addArgs _funLhsTypeSig
 
 instance (SingI s) => HasNameSignature s (FunctionDef s) where
   addArgs = addArgs . functionDefLhs

@@ -728,26 +728,18 @@ argToPattern arg@SigArg {..} = do
 
 goDefType ::
   forall r.
-  ( Members
-      '[ Reader DefaultArgsStack,
-         NameIdGen,
-         Error ScoperError,
-         Reader Pragmas,
-         Reader S.InfoTable
-       ]
-      r
-  ) =>
+  (Members '[Reader DefaultArgsStack, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) =>
   FunctionLhs 'Scoped ->
   Sem r Internal.Expression
 goDefType FunctionLhs {..} = do
-  args <- concatMapM (fmap toList . argToParam) _funLhsArgs
-  ret <- maybe freshHole goExpression _funLhsRetType
+  args <- concatMapM (fmap toList . argToParam) (_funLhsTypeSig ^. typeSigArgs)
+  ret <- maybe freshHole goExpression (_funLhsTypeSig ^. typeSigRetType)
   return (Internal.foldFunType args ret)
   where
     freshHole :: Sem r Internal.Expression
     freshHole = do
       i <- freshNameId
-      let loc = maybe (getLoc _funLhsName) getLoc (lastMay _funLhsArgs)
+      let loc = maybe (getLoc _funLhsName) getLoc (lastMay (_funLhsTypeSig ^. typeSigArgs))
           h = mkHole loc i
       return $ Internal.ExpressionHole h
 

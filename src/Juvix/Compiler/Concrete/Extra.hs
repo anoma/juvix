@@ -111,7 +111,7 @@ isBodyExpression = \case
   SigBodyClauses {} -> False
 
 isLhsFunctionLike :: FunctionLhs 'Parsed -> Bool
-isLhsFunctionLike FunctionLhs {..} = notNull _funLhsArgs
+isLhsFunctionLike FunctionLhs {..} = notNull (_funLhsTypeSig ^. typeSigArgs)
 
 isFunctionLike :: FunctionDef 'Parsed -> Bool
 isFunctionLike d@FunctionDef {..} =

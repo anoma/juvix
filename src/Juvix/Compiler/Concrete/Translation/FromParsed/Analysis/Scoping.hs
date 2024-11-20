@@ -1072,25 +1072,32 @@ checkDeriving ::
   Sem r (Deriving 'Scoped)
 checkDeriving Deriving {..} = do
   let lhs@FunctionLhs {..} = _derivingFunLhs
+      TypeSig {..} = _funLhsTypeSig
   (args', ret') <- withLocalScope $ do
-    args' <- mapM checkSigArg _funLhsArgs
-    ret' <- mapM checkParseExpressionAtoms _funLhsRetType
+    args' <- mapM checkSigArg _typeSigArgs
+    ret' <- mapM checkParseExpressionAtoms _typeSigRetType
     return (args', ret')
   name' <-
     if
         | P.isLhsFunctionLike lhs -> getReservedDefinitionSymbol _funLhsName
         | otherwise -> reserveFunctionSymbol lhs
-  let lhs' =
+  let typeSig' =
+        TypeSig
+          { _typeSigArgs = args',
+            _typeSigRetType = ret',
+            ..
+          }
+      lhs' =
         FunctionLhs
-          { _funLhsArgs = args',
-            _funLhsRetType = ret',
-            _funLhsName = name',
+          { _funLhsName = name',
+            _funLhsTypeSig = typeSig',
             ..
           }
   return
     Deriving
       { _derivingFunLhs = lhs',
-        ..
+        _derivingKw,
+        _derivingPragmas
       }
 
 checkSigArg ::
@@ -1155,6 +1162,16 @@ checkSigArgNames = \case
   SigArgNames ns -> fmap SigArgNames . forM ns $ \case
     ArgumentSymbol s -> ArgumentSymbol <$> bindVariableSymbol s
     ArgumentWildcard w -> return (ArgumentWildcard w)
+
+checkTypeSig ::
+  forall r.
+  (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader PackageId, State ScoperSyntax, Reader BindingStrategy] r) =>
+  TypeSig 'Parsed ->
+  Sem r (TypeSig 'Scoped)
+checkTypeSig TypeSig {..} = do
+  a' <- mapM checkSigArg _typeSigArgs
+  t' <- mapM checkParseExpressionAtoms _typeSigRetType
+  return TypeSig {_typeSigArgs = a', _typeSigRetType = t', ..}
 
 checkFunctionDef ::
   forall r.
@@ -2194,11 +2211,16 @@ checkAxiomDef ::
   AxiomDef 'Parsed ->
   Sem r (AxiomDef 'Scoped)
 checkAxiomDef AxiomDef {..} = do
-  axiomType' <- withLocalScope (checkParseExpressionAtoms _axiomType)
   axiomName' <- getReservedDefinitionSymbol _axiomName
   axiomDoc' <- withLocalScope (mapM checkJudoc _axiomDoc)
   axiomSig' <- withLocalScope (checkTypeSig _axiomTypeSig)
-  let a = AxiomDef {_axiomName = axiomName', _axiomTypeSig = axiomSig', _axiomDoc = axiomDoc', ..}
+  let a =
+        AxiomDef
+          { _axiomName = axiomName',
+            _axiomTypeSig = axiomSig',
+            _axiomDoc = axiomDoc',
+            ..
+          }
   registerNameSignature (a ^. axiomName . S.nameId) a
   registerAxiom @$> a
 
