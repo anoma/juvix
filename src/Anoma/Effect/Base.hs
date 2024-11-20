@@ -13,6 +13,7 @@ module Anoma.Effect.Base
     anomaProcessHandle,
     anomaPath,
     runAnomaEphemeral,
+    runAnomaWithClient,
     launchAnoma,
     module Anoma.Rpc.Base,
     module Juvix.Compiler.Nockma.Translation.FromTree,
@@ -116,6 +117,14 @@ runAnomaEphemeral anomapath body = runReader anomapath . runProcess $ do
     runReader grpcServer $ do
       (`interpret` inject body) $ \case
         AnomaRpc method i -> anomaRpc' method i
+
+runAnomaWithClient :: forall r a. (Members '[Logger, EmbedIO, Error SimpleError] r) => AnomaGrpcClientInfo -> Sem (Anoma ': r) a -> Sem r a
+runAnomaWithClient grpcInfo body =
+  runProcess
+    . runReader grpcInfo
+    $ (`interpret` inject body)
+    $ \case
+      AnomaRpc method i -> anomaRpc' method i
 
 launchAnoma :: (Members '[Logger, EmbedIO, Error SimpleError] r) => AnomaPath -> Sem r ProcessHandle
 launchAnoma anomapath = runReader anomapath . runProcess $ do

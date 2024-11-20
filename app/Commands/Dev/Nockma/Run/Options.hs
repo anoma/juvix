@@ -1,34 +1,51 @@
-module Commands.Dev.Nockma.Run.Options where
+module Commands.Dev.Nockma.Run.Options
+  ( module Commands.Dev.Nockma.Run.BuiltinEvaluator.Options,
+    module Commands.Dev.Nockma.Run.EphemeralClient.Options,
+    module Commands.Dev.Nockma.Run.WithClient.Options,
+    module Commands.Dev.Nockma.Run.Options,
+  )
+where
 
+import Commands.Dev.Nockma.Run.BuiltinEvaluator.Options
+import Commands.Dev.Nockma.Run.EphemeralClient.Options
+import Commands.Dev.Nockma.Run.WithClient.Options
 import CommonOptions
 
-data NockmaRunOptions = NockmaRunOptions
-  { _nockmaRunFile :: AppPath File,
-    _nockmaRunAnomaDir :: Maybe (AppPath Dir),
-    _nockmaRunProfile :: Bool,
-    _nockmaRunArgs :: Maybe (AppPath File)
-  }
+data NockmaRunCommand
+  = NockmaRunBuiltinEvaluator NockmaRunBuiltinEvaluatorOptions
+  | NockmaRunEphemeralClient NockmaRunEphemeralClientOptions
+  | NockmaRunWithClient NockmaRunWithClientOptions
   deriving stock (Data)
 
-makeLenses ''NockmaRunOptions
+makeLenses ''NockmaRunCommand
 
-parseNockmaRunOptions :: Parser NockmaRunOptions
-parseNockmaRunOptions = do
-  _nockmaRunFile <- parseInputFile FileExtNockma
-  _nockmaRunArgs <- optional $ do
-    _pathPath <-
-      option
-        somePreFileOpt
-        ( long "args"
-            <> metavar "ARGS_FILE"
-            <> help "Path to file containing args. When run on anoma, the args file should contain a list (i.e. to pass 2 and [1 4] as args, the contents should be [2 [1 4] 0])."
-            <> action "file"
-        )
-    pure AppPath {_pathIsInput = True, ..}
-  _nockmaRunAnomaDir <- optional anomaDirOpt
-  _nockmaRunProfile <-
-    switch
-      ( long "profile"
-          <> help "Report evaluator profiling statistics"
-      )
-  pure NockmaRunOptions {..}
+parseNockmaRunCommand :: Parser NockmaRunCommand
+parseNockmaRunCommand =
+  hsubparser
+    ( mconcat
+        [ commandRunBuiltinEvaluator,
+          commandRunEphemeralClient,
+          commandRunWithClient
+        ]
+    )
+
+commandRunBuiltinEvaluator :: Mod CommandFields NockmaRunCommand
+commandRunBuiltinEvaluator =
+  command "builtin-evaluator" $
+    info
+      (NockmaRunBuiltinEvaluator <$> parseNockmaRunBuiltinEvaluatorOptions)
+      (progDesc "Run with the builtin Nockma evaluator")
+
+commandRunEphemeralClient :: Mod CommandFields NockmaRunCommand
+commandRunEphemeralClient =
+  command "ephemeral-client" $
+    info
+      (NockmaRunEphemeralClient <$> parseNockmaRunEphemeralClientOptions)
+      (progDesc "Run with an ephemeral Anoma client")
+
+commandRunWithClient :: Mod CommandFields NockmaRunCommand
+commandRunWithClient =
+  command "with-client" $
+    info
+      (NockmaRunWithClient <$> parseNockmaRunWithClientOptions)
+      (progDesc "Run with a running Anoma client")

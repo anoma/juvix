@@ -12,7 +12,7 @@ data NockmaCommand
   = NockmaRepl NockmaReplOptions
   | NockmaEval NockmaEvalOptions
   | NockmaFormat NockmaFormatOptions
-  | NockmaRun NockmaRunOptions
+  | NockmaRun NockmaRunCommand
   | NockmaEncode NockmaEncodeOptions
   | NockmaIde NockmaIdeCommand
   deriving stock (Data)
@@ -53,8 +53,8 @@ parseNockmaCommand =
         runInfo :: ParserInfo NockmaCommand
         runInfo =
           info
-            (NockmaRun <$> parseNockmaRunOptions)
-            (progDesc ("Run an Anoma program. It should be used with artefacts obtained from compilation with the anoma target. If the --" <> anomaDirOptLongStr <> " is given, then it runs the code in an anoma node"))
+            (NockmaRun <$> parseNockmaRunCommand)
+            (progDesc "Subcommands used to run an Anoma program. Use with artefacts obtained from compilation with the anoma target")
 
     commandFromAsm :: Mod CommandFields NockmaCommand
     commandFromAsm = command "eval" fromAsmInfo

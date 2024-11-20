@@ -95,6 +95,18 @@ anomaDirOpt = do
         _pathPath = path
       }
 
+anomaArgsOpt :: Parser (AppPath File)
+anomaArgsOpt = do
+  _pathPath <-
+    option
+      somePreFileOpt
+      ( long "args"
+          <> metavar "ARGS_FILE"
+          <> help "Path to file containing args. The args file should contain a list (i.e. to pass 2 and [1 4] as args, the contents should be [2 [1 4] 0])."
+          <> action "file"
+      )
+  pure AppPath {_pathIsInput = True, ..}
+
 parseNumThreads :: Parser NumThreads
 parseNumThreads = do
   option
