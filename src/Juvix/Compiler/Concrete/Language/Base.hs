@@ -592,6 +592,33 @@ deriving stock instance Ord (SigArg 'Parsed)
 
 deriving stock instance Ord (SigArg 'Scoped)
 
+data TypeSig (s :: Stage) = TypeSig
+  { _typeSigArgs :: [SigArg s],
+    _typeSigColonKw :: Irrelevant (Maybe KeywordRef),
+    _typeSigRetType :: Maybe (ExpressionType s)
+  }
+  deriving stock (Generic)
+
+instance Serialize (TypeSig 'Scoped)
+
+instance NFData (TypeSig 'Scoped)
+
+instance Serialize (TypeSig 'Parsed)
+
+instance NFData (TypeSig 'Parsed)
+
+deriving stock instance Show (TypeSig 'Parsed)
+
+deriving stock instance Show (TypeSig 'Scoped)
+
+deriving stock instance Eq (TypeSig 'Parsed)
+
+deriving stock instance Eq (TypeSig 'Scoped)
+
+deriving stock instance Ord (TypeSig 'Parsed)
+
+deriving stock instance Ord (TypeSig 'Scoped)
+
 data FunctionClause (s :: Stage) = FunctionClause
   { _clausenPipeKw :: Irrelevant KeywordRef,
     _clausenPatterns :: NonEmpty (PatternAtomType s),
@@ -647,9 +674,7 @@ deriving stock instance Ord (FunctionDefBody 'Scoped)
 
 data FunctionDef (s :: Stage) = FunctionDef
   { _signName :: FunctionName s,
-    _signArgs :: [SigArg s],
-    _signColonKw :: Irrelevant (Maybe KeywordRef),
-    _signRetType :: Maybe (ExpressionType s),
+    _signTypeSig :: TypeSig s,
     _signDoc :: Maybe (Judoc s),
     _signPragmas :: Maybe ParsedPragmas,
     _signBuiltin :: Maybe (WithLoc BuiltinFunction),
@@ -685,9 +710,8 @@ data AxiomDef (s :: Stage) = AxiomDef
     _axiomDoc :: Maybe (Judoc s),
     _axiomPragmas :: Maybe ParsedPragmas,
     _axiomName :: SymbolType s,
-    _axiomColonKw :: Irrelevant KeywordRef,
-    _axiomBuiltin :: Maybe (WithLoc BuiltinAxiom),
-    _axiomType :: ExpressionType s
+    _axiomTypeSig :: TypeSig s,
+    _axiomBuiltin :: Maybe (WithLoc BuiltinAxiom)
   }
   deriving stock (Generic)
 
@@ -768,7 +792,7 @@ deriving stock instance Ord (RecordUpdateField 'Scoped)
 data RecordField (s :: Stage) = RecordField
   { _fieldName :: SymbolType s,
     _fieldIsImplicit :: IsImplicitField,
-    _fieldColon :: Irrelevant (KeywordRef),
+    _fieldTypeSig :: TypeSig s,
     _fieldType :: ExpressionType s,
     _fieldBuiltin :: Maybe (WithLoc BuiltinFunction),
     _fieldDoc :: Maybe (Judoc s),
@@ -836,8 +860,7 @@ deriving stock instance Ord (RhsRecord 'Parsed)
 deriving stock instance Ord (RhsRecord 'Scoped)
 
 data RhsGadt (s :: Stage) = RhsGadt
-  { _rhsGadtColon :: Irrelevant KeywordRef,
-    _rhsGadtType :: ExpressionType s
+  { _rhsGadtTypeSig :: TypeSig s
   }
   deriving stock (Generic)
 
@@ -2809,12 +2832,11 @@ data FunctionLhs (s :: Stage) = FunctionLhs
     _funLhsInstance :: Maybe KeywordRef,
     _funLhsCoercion :: Maybe KeywordRef,
     _funLhsName :: FunctionName s,
-    _funLhsArgs :: [SigArg s],
-    _funLhsColonKw :: Irrelevant (Maybe KeywordRef),
-    _funLhsRetType :: Maybe (ExpressionType s)
+    _funLhsTypeSig :: TypeSig s
   }
 
 makeLenses ''SideIfs
+makeLenses ''TypeSig
 makeLenses ''FunctionLhs
 makeLenses ''Statements
 makeLenses ''NamedArgumentFunctionDef
@@ -2910,9 +2932,7 @@ functionDefLhs FunctionDef {..} =
       _funLhsInstance = _signInstance,
       _funLhsCoercion = _signCoercion,
       _funLhsName = _signName,
-      _funLhsArgs = _signArgs,
-      _funLhsColonKw = _signColonKw,
-      _funLhsRetType = _signRetType
+      _funLhsTypeSig = _signTypeSig
     }
 
 fixityFieldHelper :: SimpleGetter (ParsedFixityFields s) (Maybe a) -> SimpleGetter (ParsedFixityInfo s) (Maybe a)
@@ -3060,7 +3080,7 @@ instance HasLoc (InductiveDef s) where
   getLoc i = (getLoc <$> i ^. inductivePositive) ?<> getLoc (i ^. inductiveKw)
 
 instance (SingI s) => HasLoc (AxiomDef s) where
-  getLoc m = getLoc (m ^. axiomKw) <> getLocExpressionType (m ^. axiomType)
+  getLoc m = getLoc (m ^. axiomKw) <> getLocExpressionType (fromJust (m ^. axiomTypeSig . typeSigRetType))
 
 getLocPublicAnn :: PublicAnn -> Maybe Interval
 getLocPublicAnn p = getLoc <$> p ^? _Public

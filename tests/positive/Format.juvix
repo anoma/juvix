@@ -235,8 +235,9 @@ module Comments;
 
   -- attached to nothing
 
-  axiom a3 -- comment before axiom :
-  : Type;
+  axiom a3
+    -- comment before axiom :
+    : Type;
 
   num
     -- comment before type sig :
@@ -251,11 +252,12 @@ module Comments;
 
   -- attached to nothing 3
 
-  axiom a4 : -- before open pi brace
-    {-- after open pi brace
-    a -- before pi :
-    : Type}
-    -> Type;
+  axiom a4
+    : -- before open pi brace
+      {-- after open pi brace
+      a -- before pi :
+      : Type}
+      -> Type;
 
   id2 : {A : Type} -> A -> Nat -> A
     | -- before patternarg braces

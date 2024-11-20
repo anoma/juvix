@@ -20,7 +20,7 @@ import Juvix.Compiler.Backend.Markdown.Error
 import Juvix.Compiler.Concrete (HighlightBuilder, ignoreHighlightBuilder)
 import Juvix.Compiler.Concrete.Extra (takeWhile1P)
 import Juvix.Compiler.Concrete.Extra qualified as P
-import Juvix.Compiler.Concrete.Gen (mkExpressionAtoms)
+import Juvix.Compiler.Concrete.Gen qualified as Gen
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context
 import Juvix.Compiler.Concrete.Translation.FromSource.Lexer hiding
@@ -43,6 +43,11 @@ data FunctionSyntaxOptions = FunctionSyntaxOptions
     _funAllowInstance :: Bool
   }
 
+data SigOptions = SigOptions
+  { _sigAllowOmitType :: Bool,
+    _sigAllowDefault :: Bool
+  }
+
 data MdModuleBuilder = MdModuleBuilder
   { _mdModuleBuilder :: Module 'Parsed 'ModuleTop,
     _mdModuleBuilderBlocksLengths :: [Int]
@@ -50,6 +55,14 @@ data MdModuleBuilder = MdModuleBuilder
 
 makeLenses ''MdModuleBuilder
 makeLenses ''FunctionSyntaxOptions
+makeLenses ''SigOptions
+
+defaultSigOptions :: SigOptions
+defaultSigOptions =
+  SigOptions
+    { _sigAllowDefault = False,
+      _sigAllowOmitType = False
+    }
 
 type JudocStash = State (Maybe (Judoc 'Parsed))
 
@@ -1291,6 +1304,20 @@ getPragmas = P.lift $ do
   put (Nothing @ParsedPragmas)
   return j
 
+typeSig :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => SigOptions -> ParsecS r (TypeSig 'Parsed)
+typeSig opts = P.label "<type signature>" $ do
+  _typeSigArgs <- many (parseArg opts)
+  _typeSigColonKw <-
+    Irrelevant
+      <$> if
+          | opts ^. sigAllowOmitType -> optional (kw kwColon)
+          | otherwise -> Just <$> kw kwColon
+  _typeSigRetType <-
+    case _typeSigColonKw ^. unIrrelevant of
+      Just {} -> Just <$> parseExpressionAtoms
+      Nothing -> return Nothing
+  return TypeSig {..}
+
 functionDefinitionLhs ::
   forall r.
   (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) =>
@@ -1312,30 +1339,24 @@ functionDefinitionLhs opts _funLhsBuiltin = P.label "<function definition>" $ do
   when (isJust _funLhsCoercion && isNothing _funLhsInstance) $
     parseFailure off0 "expected: instance"
   _funLhsName <- symbol
-  _funLhsArgs <- many parseArg
-  _funLhsColonKw <-
-    Irrelevant
-      <$> if
-          | allowOmitType -> optional (kw kwColon)
-          | otherwise -> Just <$> kw kwColon
-  _funLhsRetType <-
-    case _funLhsColonKw ^. unIrrelevant of
-      Just {} -> Just <$> parseExpressionAtoms
-      Nothing -> return Nothing
+  let sigOpts =
+        SigOptions
+          { _sigAllowDefault = True,
+            _sigAllowOmitType = allowOmitType
+          }
+  _funLhsTypeSig <- typeSig sigOpts
   return
     FunctionLhs
       { _funLhsInstance,
         _funLhsBuiltin,
         _funLhsCoercion,
         _funLhsName,
-        _funLhsArgs,
-        _funLhsColonKw,
-        _funLhsRetType,
+        _funLhsTypeSig,
         _funLhsTerminating
       }
 
-parseArg :: forall r. (Members '[ParserResultBuilder, JudocStash, PragmasStash, Error ParserError] r) => ParsecS r (SigArg 'Parsed)
-parseArg = do
+parseArg :: forall r. (Members '[ParserResultBuilder, JudocStash, PragmasStash, Error ParserError] r) => SigOptions -> ParsecS r (SigArg 'Parsed)
+parseArg opts = do
   (openDelim, _sigArgNames, _sigArgImplicit, _sigArgColon) <- P.try $ do
     (opn, impl) <- implicitOpen
     let parseArgumentName :: ParsecS r (Argument 'Parsed) =
@@ -1366,10 +1387,13 @@ parseArg = do
           return Nothing
     _ ->
       Just <$> parseExpressionAtoms
-  _sigArgDefault <- optional $ do
-    _argDefaultAssign <- Irrelevant <$> kw kwAssign
-    _argDefaultValue <- parseExpressionAtoms
-    return ArgDefault {..}
+  _sigArgDefault <-
+    if
+        | opts ^. sigAllowDefault -> optional $ do
+            _argDefaultAssign <- Irrelevant <$> kw kwAssign
+            _argDefaultValue <- parseExpressionAtoms
+            return ArgDefault {..}
+        | otherwise -> return Nothing
   closeDelim <- implicitClose _sigArgImplicit
   let _sigArgDelims = Irrelevant (openDelim, closeDelim)
   return SigArg {..}
@@ -1387,16 +1411,14 @@ functionDefinition opts _signBuiltin = P.label "<function definition>" $ do
   _signPragmas <- getPragmas
   _signBody <- parseBody
   unless
-    ( isJust (_funLhsColonKw ^. unIrrelevant)
-        || (P.isBodyExpression _signBody && null _funLhsArgs)
+    ( isJust (_funLhsTypeSig ^. typeSigColonKw . unIrrelevant)
+        || (P.isBodyExpression _signBody && null (_funLhsTypeSig ^. typeSigArgs))
     )
     $ parseFailure off "expected result type"
   return
     FunctionDef
       { _signName = _funLhsName,
-        _signArgs = _funLhsArgs,
-        _signColonKw = _funLhsColonKw,
-        _signRetType = _funLhsRetType,
+        _signTypeSig = _funLhsTypeSig,
         _signTerminating = _funLhsTerminating,
         _signInstance = _funLhsInstance,
         _signCoercion = _funLhsCoercion,
@@ -1436,8 +1458,7 @@ axiomDef _axiomBuiltin = do
   _axiomDoc <- getJudoc
   _axiomPragmas <- getPragmas
   _axiomName <- symbol
-  _axiomColonKw <- Irrelevant <$> kw kwColon
-  _axiomType <- parseExpressionAtoms
+  _axiomTypeSig <- typeSig defaultSigOptions
   return AxiomDef {..}
 
 --------------------------------------------------------------------------------
@@ -1542,8 +1563,8 @@ inductiveDef _inductiveBuiltin = do
   _inductiveAssignKw <- Irrelevant <$> kw kwAssign P.<?> "<assignment symbol ':='>"
   let name' = NameUnqualified _inductiveName
       params = fmap (AtomIdentifier . NameUnqualified) (concatMap (toList . (^. inductiveParametersNames)) _inductiveParameters)
-      iden = mkExpressionAtoms (AtomIdentifier name' :| [])
-      _inductiveTypeApplied = mkExpressionAtoms (AtomParens iden :| params)
+      iden = Gen.mkExpressionAtoms (AtomIdentifier name' :| [])
+      _inductiveTypeApplied = Gen.mkExpressionAtoms (AtomParens iden :| params)
   _inductiveConstructors <-
     pipeSep1 (constructorDef _inductiveName)
       P.<?> "<constructor definition>"
@@ -1575,12 +1596,11 @@ inductiveParams = inductiveParamsLong <|> inductiveParamsShort
 
 rhsGadt :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r (RhsGadt 'Parsed)
 rhsGadt = P.label "<constructor gadt>" $ do
-  _rhsGadtColon <- Irrelevant <$> kw kwColon
-  _rhsGadtType <- parseExpressionAtoms P.<?> "<constructor type>"
+  _rhsGadtTypeSig <- typeSig defaultSigOptions
   return RhsGadt {..}
 
 recordField :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r (RecordField 'Parsed)
-recordField = do
+recordField = P.label "<record field>" $ do
   _fieldDoc <- optional stashJudoc >> getJudoc
   _fieldPragmas <- optional stashPragmas >> getPragmas
   _fieldBuiltin <- optional builtinRecordField
@@ -1588,8 +1608,8 @@ recordField = do
   _fieldName <- symbol
   whenJust mayImpl (void . implicitCloseField)
   let _fieldIsImplicit = fromMaybe ExplicitField mayImpl
-  _fieldColon <- Irrelevant <$> kw kwColon
-  _fieldType <- parseExpressionAtoms
+  _fieldTypeSig <- typeSig defaultSigOptions
+  let _fieldType = Gen.mkTypeSigType' (Gen.mkWildcardParsed (getLoc _fieldName)) _fieldTypeSig
   return RecordField {..}
 
 rhsAdt :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r (RhsAdt 'Parsed)
@@ -1619,8 +1639,8 @@ recordStatement =
 
 pconstructorRhs :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r (ConstructorRhs 'Parsed)
 pconstructorRhs =
-  ConstructorRhsGadt <$> rhsGadt
-    <|> ConstructorRhsRecord <$> rhsRecord
+  ConstructorRhsRecord <$> rhsRecord
+    <|> ConstructorRhsGadt <$> rhsGadt
     <|> ConstructorRhsAdt <$> rhsAdt
 
 constructorDef :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => Symbol -> Irrelevant (Maybe KeywordRef) -> ParsecS r (ConstructorDef 'Parsed)

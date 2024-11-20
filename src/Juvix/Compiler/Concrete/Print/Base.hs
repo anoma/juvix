@@ -1095,8 +1095,7 @@ instance (SingI s) => PrettyPrint (AxiomDef s) where
       ?<> builtin'
       ?<> ppCode _axiomKw
       <+> axiomName'
-      <+> ppCode _axiomColonKw
-      <+> ppExpressionType _axiomType
+        <> ppCode _axiomTypeSig
 
 instance PrettyPrint BuiltinInductive where
   ppCode i = ppCode Kw.kwBuiltin <+> keywordText (P.prettyText i)
@@ -1143,27 +1142,34 @@ instance (SingI s) => PrettyPrint (SigArg s) where
         defaultVal = ppCode <$> _sigArgDefault
     ppCode l <> arg <+?> defaultVal <> ppCode r
 
+instance (SingI s) => PrettyPrint (TypeSig s) where
+  ppCode TypeSig {..} = do
+    let margs' = fmap ppCode <$> nonEmpty _typeSigArgs
+        mtype' = case _typeSigColonKw ^. unIrrelevant of
+          Just col -> Just (ppCode col <+> ppExpressionType (fromJust _typeSigRetType))
+          Nothing -> Nothing
+        margsAndType' = case mtype' of
+          Nothing -> margs'
+          Just ty' -> case margs' of
+            Nothing -> Just (pure ty')
+            Just args' -> Just (args' <> pure ty')
+    case margsAndType' of
+      Nothing -> return ()
+      Just argsAndType' -> oneLineOrNext (sep argsAndType')
+
 instance (SingI s) => PrettyPrint (FunctionLhs s) where
   ppCode FunctionLhs {..} = do
     let termin' = (<> line) . ppCode <$> _funLhsTerminating
         coercion' = (<> if isJust instance' then space else line) . ppCode <$> _funLhsCoercion
         instance' = (<> line) . ppCode <$> _funLhsInstance
         builtin' = (<> line) . ppCode <$> _funLhsBuiltin
-        margs' = fmap ppCode <$> nonEmpty _funLhsArgs
-        mtype' = case _funLhsColonKw ^. unIrrelevant of
-          Just col -> Just (ppCode col <+> ppExpressionType (fromJust _funLhsRetType))
-          Nothing -> Nothing
-        argsAndType' = case mtype' of
-          Nothing -> margs'
-          Just ty' -> case margs' of
-            Nothing -> Just (pure ty')
-            Just args' -> Just (args' <> pure ty')
         name' = annDef _funLhsName (ppSymbolType _funLhsName)
+        sig' = ppCode _funLhsTypeSig
     builtin'
       ?<> termin'
       ?<> coercion'
       ?<> instance'
-      ?<> (name' <>? (oneLineOrNext . sep <$> argsAndType'))
+      ?<> (name' <> sig')
 
 instance (SingI s) => PrettyPrint (FunctionDef s) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => FunctionDef s -> Sem r ()
@@ -1412,8 +1418,7 @@ instance (PrettyPrint a) => PrettyPrint (Irrelevant a) where
   ppCode (Irrelevant a) = ppCode a
 
 instance (SingI s) => PrettyPrint (RhsGadt s) where
-  ppCode RhsGadt {..} =
-    ppCode _rhsGadtColon <+> ppExpressionType _rhsGadtType
+  ppCode RhsGadt {..} = ppCode _rhsGadtTypeSig
 
 instance (SingI s) => PrettyPrint (RecordField s) where
   ppCode RecordField {..} = do
@@ -1428,8 +1433,7 @@ instance (SingI s) => PrettyPrint (RecordField s) where
       ?<> pragmas'
       ?<> builtin'
       ?<> mayBraces (ppSymbolType _fieldName)
-      <+> ppCode _fieldColon
-      <+> ppExpressionType _fieldType
+      <> ppCode _fieldTypeSig
 
 instance (SingI s) => PrettyPrint (RhsRecord s) where
   ppCode RhsRecord {..} = do
@@ -1462,7 +1466,7 @@ ppConstructorDef singleConstructor ConstructorDef {..} = do
     constructorRhsHelper r = spaceMay <> ppCode r
       where
         spaceMay = case r of
-          ConstructorRhsGadt {} -> space
+          ConstructorRhsGadt {} -> mempty
           ConstructorRhsRecord {} -> mempty
           ConstructorRhsAdt a
             | null (a ^. rhsAdtArguments) -> mempty

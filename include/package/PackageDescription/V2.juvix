@@ -4,7 +4,7 @@ import Juvix.Builtin.V1 open public;
 
 --- A ;Package; defines the configuration for a Juvix package
 type Package :=
-  mkPackage {
+  mkPackage@{
     -- The name of the package
     name : String;
     -- The version for the package
@@ -19,7 +19,7 @@ type Package :=
 
 --- A ;SemVer; defines a version that conforms to the Semantic Versioning specification.
 type SemVer :=
-  mkSemVer {
+  mkSemVer@{
     major : Nat;
     minor : Nat;
     patch : Nat;
@@ -30,9 +30,9 @@ type SemVer :=
 --- A ;Dependency; defines a Juvix package dependency.
 type Dependency :=
   | --- A filesystem path to another Juvix Package.
-    path {path : String}
+    path@{path : String}
   | --- A ;git; repository containing a Juvix package at its root
-    git {
+    git@{
       -- A name for this dependency
       name : String;
       -- The URL to the git repository

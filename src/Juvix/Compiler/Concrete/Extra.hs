@@ -110,4 +110,4 @@ isBodyExpression = \case
 
 isFunctionLike :: FunctionDef a -> Bool
 isFunctionLike = \case
-  FunctionDef {..} -> not (null _signArgs) || not (isBodyExpression _signBody)
+  FunctionDef {..} -> not (null (_signTypeSig ^. typeSigArgs)) || not (isBodyExpression _signBody)

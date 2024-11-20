@@ -1063,33 +1063,15 @@ resolveIteratorSyntaxDef s@IteratorSyntaxDef {..} = do
 (@$>) :: (Functor m) => (a -> m ()) -> a -> m a
 (@$>) f a = f a $> a
 
-checkFunctionDef ::
+checkTypeSig ::
   forall r.
   (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader PackageId, State ScoperSyntax, Reader BindingStrategy] r) =>
-  FunctionDef 'Parsed ->
-  Sem r (FunctionDef 'Scoped)
-checkFunctionDef fdef@FunctionDef {..} = do
-  sigDoc' <- mapM checkJudoc _signDoc
-  (args', sigType', sigBody') <- withLocalScope $ do
-    a' <- mapM checkArg _signArgs
-    t' <- mapM checkParseExpressionAtoms _signRetType
-    b' <- checkBody
-    return (a', t', b')
-  sigName' <-
-    if
-        | P.isFunctionLike fdef -> bindFunctionSymbol _signName
-        | otherwise -> reserveFunctionSymbol fdef
-  let def =
-        FunctionDef
-          { _signName = sigName',
-            _signRetType = sigType',
-            _signDoc = sigDoc',
-            _signBody = sigBody',
-            _signArgs = args',
-            ..
-          }
-  registerNameSignature (sigName' ^. S.nameId) def
-  registerFunctionDef @$> def
+  TypeSig 'Parsed ->
+  Sem r (TypeSig 'Scoped)
+checkTypeSig TypeSig {..} = do
+  a' <- mapM checkArg _typeSigArgs
+  t' <- mapM checkParseExpressionAtoms _typeSigRetType
+  return TypeSig {_typeSigArgs = a', _typeSigRetType = t', ..}
   where
     checkSigArgNames :: SigArgNames 'Parsed -> Sem r (SigArgNames 'Scoped)
     checkSigArgNames = \case
@@ -1119,6 +1101,33 @@ checkFunctionDef fdef@FunctionDef {..} = do
             _sigArgDefault = default',
             ..
           }
+
+checkFunctionDef ::
+  forall r.
+  (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader PackageId, State ScoperSyntax, Reader BindingStrategy] r) =>
+  FunctionDef 'Parsed ->
+  Sem r (FunctionDef 'Scoped)
+checkFunctionDef fdef@FunctionDef {..} = do
+  sigDoc' <- mapM checkJudoc _signDoc
+  (sig', sigBody') <- withLocalScope $ do
+    a' <- checkTypeSig _signTypeSig
+    b' <- checkBody
+    return (a', b')
+  sigName' <-
+    if
+        | P.isFunctionLike fdef -> bindFunctionSymbol _signName
+        | otherwise -> reserveFunctionSymbol fdef
+  let def =
+        FunctionDef
+          { _signName = sigName',
+            _signDoc = sigDoc',
+            _signBody = sigBody',
+            _signTypeSig = sig',
+            ..
+          }
+  registerNameSignature (sigName' ^. S.nameId) def
+  registerFunctionDef @$> def
+  where
     checkBody :: Sem r (FunctionDefBody 'Scoped)
     checkBody = case _signBody of
       SigBodyExpression e -> SigBodyExpression <$> checkParseExpressionAtoms e
@@ -1244,14 +1253,16 @@ checkInductiveDef InductiveDef {..} = do
             checkField :: RecordField 'Parsed -> Sem r (RecordField 'Scoped)
             checkField RecordField {..} = do
               doc' <- maybe (return Nothing) (checkJudoc >=> return . Just) _fieldDoc
-              type' <- checkParseExpressionAtoms _fieldType
               -- Since we don't allow dependent types in constructor types, each
               -- field is checked with a local scope
               withLocalScope $ do
+                type' <- checkParseExpressionAtoms _fieldType
+                typeSig' <- checkTypeSig _fieldTypeSig
                 name' <- bindVariableSymbol _fieldName
                 return
                   RecordField
-                    { _fieldType = type',
+                    { _fieldTypeSig = typeSig',
+                      _fieldType = type',
                       _fieldName = name',
                       _fieldDoc = doc',
                       ..
@@ -1267,11 +1278,10 @@ checkInductiveDef InductiveDef {..} = do
 
         checkGadt :: RhsGadt 'Parsed -> Sem r (RhsGadt 'Scoped)
         checkGadt RhsGadt {..} = do
-          constructorType' <- checkParseExpressionAtoms _rhsGadtType
+          constructorTypeSig' <- withLocalScope (checkTypeSig _rhsGadtTypeSig)
           return
             RhsGadt
-              { _rhsGadtType = constructorType',
-                _rhsGadtColon
+              { _rhsGadtTypeSig = constructorTypeSig'
               }
 
 checkProjectionDef ::
@@ -1709,7 +1719,7 @@ checkSections sec = topBindings helper
                               ProjectionDef
                                 { _projectionConstructor = headConstr,
                                   _projectionField = field ^. fieldName,
-                                  _projectionType = G.mkProjectionType i (field ^. fieldType),
+                                  _projectionType = G.mkProjectionType i (G.mkTypeSigType' (G.mkWildcardParsed (getLoc (i ^. inductiveName))) (field ^. fieldTypeSig)),
                                   _projectionFieldIx = idx,
                                   _projectionKind = kind,
                                   _projectionFieldBuiltin = field ^. fieldBuiltin,
@@ -2112,10 +2122,10 @@ checkAxiomDef ::
   AxiomDef 'Parsed ->
   Sem r (AxiomDef 'Scoped)
 checkAxiomDef AxiomDef {..} = do
-  axiomType' <- withLocalScope (checkParseExpressionAtoms _axiomType)
   axiomName' <- bindAxiomSymbol _axiomName
   axiomDoc' <- withLocalScope (mapM checkJudoc _axiomDoc)
-  let a = AxiomDef {_axiomName = axiomName', _axiomType = axiomType', _axiomDoc = axiomDoc', ..}
+  axiomSig' <- withLocalScope (checkTypeSig _axiomTypeSig)
+  let a = AxiomDef {_axiomName = axiomName', _axiomTypeSig = axiomSig', _axiomDoc = axiomDoc', ..}
   registerNameSignature (a ^. axiomName . S.nameId) a
   registerAxiom @$> a
 

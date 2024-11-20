@@ -412,7 +412,7 @@ goFunctionDef FunctionDef {..} = do
   where
     goBody :: Sem r Internal.Expression
     goBody = do
-      commonPatterns <- concatMapM (fmap toList . argToPattern) _signArgs
+      commonPatterns <- concatMapM (fmap toList . argToPattern) (_signTypeSig ^. typeSigArgs)
       let goClause :: FunctionClause 'Scoped -> Sem r Internal.LambdaClause
           goClause FunctionClause {..} = do
             _lambdaBody <- goExpression _clausenBody
@@ -436,14 +436,14 @@ goFunctionDef FunctionDef {..} = do
 
     goDefType :: Sem r Internal.Expression
     goDefType = do
-      args <- concatMapM (fmap toList . argToParam) _signArgs
-      ret <- maybe freshHole goExpression _signRetType
+      args <- concatMapM (fmap toList . argToParam) (_signTypeSig ^. typeSigArgs)
+      ret <- maybe freshHole goExpression (_signTypeSig ^. typeSigRetType)
       return (Internal.foldFunType args ret)
       where
         freshHole :: Sem r Internal.Expression
         freshHole = do
           i <- freshNameId
-          let loc = maybe (getLoc _signName) getLoc (lastMay _signArgs)
+          let loc = maybe (getLoc _signName) getLoc (lastMay (_signTypeSig ^. typeSigArgs))
               h = mkHole loc i
           return $ Internal.ExpressionHole h
 
@@ -715,7 +715,7 @@ goConstructorDef retTy ConstructorDef {..} = do
         goRecordStatement = \case
           Concrete.RecordStatementSyntax {} -> return Nothing
           Concrete.RecordStatementField RecordField {..} -> do
-            ty' <- goExpression _fieldType
+            ty' <- goTypeSig _fieldTypeSig
             return $
               Just
                 Internal.FunctionParameter
@@ -725,7 +725,7 @@ goConstructorDef retTy ConstructorDef {..} = do
                   }
 
     goGadtType :: Concrete.RhsGadt 'Scoped -> Sem r Internal.Expression
-    goGadtType = goExpression . (^. Concrete.rhsGadtType)
+    goGadtType = goTypeSig . (^. Concrete.rhsGadtTypeSig)
 
     goRhs :: Concrete.ConstructorRhs 'Scoped -> Sem r Internal.Expression
     goRhs = \case
@@ -1499,9 +1499,14 @@ goRecordPattern r = do
               output (Internal.patternArgFromVar Internal.Explicit v)
               go maxIdx (idx + 1) args
 
+goTypeSig :: (Members '[Reader DefaultArgsStack, Reader Pragmas, Error ScoperError, NameIdGen, Reader S.InfoTable] r) => TypeSig 'Scoped -> Sem r Internal.Expression
+goTypeSig s = do
+  ty <- Gen.mkTypeSigType s
+  goExpression ty
+
 goAxiom :: (Members '[Reader DefaultArgsStack, Reader Pragmas, Error ScoperError, NameIdGen, Reader S.InfoTable] r) => AxiomDef 'Scoped -> Sem r Internal.AxiomDef
 goAxiom a = do
-  _axiomType' <- goExpression (a ^. axiomType)
+  _axiomType' <- goTypeSig (a ^. axiomTypeSig)
   _axiomPragmas' <- goPragmas (a ^. axiomPragmas)
   let axiom =
         Internal.AxiomDef
