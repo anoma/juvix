@@ -1,10 +1,10 @@
 module Commands.Dev.Anoma.Options where
 
-import Commands.Dev.Anoma.Node.Options
+import Commands.Dev.Anoma.Start.Options
 import CommonOptions
 
 newtype AnomaCommand
-  = AnomaCommandNode NodeOptions
+  = AnomaCommandStart StartOptions
   deriving stock (Data)
 
 parseAnomaCommand :: Parser AnomaCommand
@@ -20,5 +20,5 @@ parseAnomaCommand =
         runInfo :: ParserInfo AnomaCommand
         runInfo =
           info
-            (AnomaCommandNode <$> parseNodeOptions)
-            (progDesc "Run an Anoma node and client.")
+            (AnomaCommandStart <$> parseStartOptions)
+            (progDesc "Start an Anoma node and client.")
