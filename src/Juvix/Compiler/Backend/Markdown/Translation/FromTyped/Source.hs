@@ -213,12 +213,13 @@ indModuleFilter :: forall s. [Concrete.Statement s] -> [Concrete.Statement s]
 indModuleFilter =
   filter
     ( \case
-        Concrete.StatementSyntax _ -> True
-        Concrete.StatementFunctionDef _ -> True
-        Concrete.StatementImport _ -> True
-        Concrete.StatementInductive _ -> True
         Concrete.StatementModule o -> o ^. Concrete.moduleOrigin == LocalModuleSource
-        Concrete.StatementOpenModule _ -> True
-        Concrete.StatementAxiom _ -> True
-        Concrete.StatementProjectionDef _ -> True
+        Concrete.StatementSyntax {} -> True
+        Concrete.StatementFunctionDef {} -> True
+        Concrete.StatementDeriving {} -> True
+        Concrete.StatementImport {} -> True
+        Concrete.StatementInductive {} -> True
+        Concrete.StatementOpenModule {} -> True
+        Concrete.StatementAxiom {} -> True
+        Concrete.StatementProjectionDef {} -> True
     )

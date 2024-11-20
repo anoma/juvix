@@ -271,6 +271,7 @@ data NonDefinitionsSection (s :: Stage) = NonDefinitionsSection
 data Definition (s :: Stage)
   = DefinitionSyntax (SyntaxDef s)
   | DefinitionFunctionDef (FunctionDef s)
+  | DefinitionDeriving (Deriving s)
   | DefinitionInductive (InductiveDef s)
   | DefinitionAxiom (AxiomDef s)
   | DefinitionProjectionDef (ProjectionDef s)
@@ -287,6 +288,7 @@ newtype Statements (s :: Stage) = Statements
 data Statement (s :: Stage)
   = StatementSyntax (SyntaxDef s)
   | StatementFunctionDef (FunctionDef s)
+  | StatementDeriving (Deriving s)
   | StatementImport (Import s)
   | StatementInductive (InductiveDef s)
   | StatementModule (Module s 'ModuleLocal)
@@ -671,6 +673,33 @@ deriving stock instance Eq (FunctionDefBody 'Scoped)
 deriving stock instance Ord (FunctionDefBody 'Parsed)
 
 deriving stock instance Ord (FunctionDefBody 'Scoped)
+
+data Deriving (s :: Stage) = Deriving
+  { _derivingPragmas :: Maybe ParsedPragmas,
+    _derivingKw :: KeywordRef,
+    _derivingFunLhs :: FunctionLhs s
+  }
+  deriving stock (Generic)
+
+instance Serialize (Deriving 'Scoped)
+
+instance NFData (Deriving 'Scoped)
+
+instance Serialize (Deriving 'Parsed)
+
+instance NFData (Deriving 'Parsed)
+
+deriving stock instance Show (Deriving 'Parsed)
+
+deriving stock instance Show (Deriving 'Scoped)
+
+deriving stock instance Eq (Deriving 'Parsed)
+
+deriving stock instance Eq (Deriving 'Scoped)
+
+deriving stock instance Ord (Deriving 'Parsed)
+
+deriving stock instance Ord (Deriving 'Scoped)
 
 data FunctionDef (s :: Stage) = FunctionDef
   { _signName :: FunctionName s,
@@ -2834,6 +2863,27 @@ data FunctionLhs (s :: Stage) = FunctionLhs
     _funLhsName :: FunctionName s,
     _funLhsTypeSig :: TypeSig s
   }
+  deriving stock (Generic)
+
+instance Serialize (FunctionLhs 'Scoped)
+
+instance NFData (FunctionLhs 'Scoped)
+
+instance Serialize (FunctionLhs 'Parsed)
+
+instance NFData (FunctionLhs 'Parsed)
+
+deriving stock instance Show (FunctionLhs 'Parsed)
+
+deriving stock instance Show (FunctionLhs 'Scoped)
+
+deriving stock instance Eq (FunctionLhs 'Parsed)
+
+deriving stock instance Eq (FunctionLhs 'Scoped)
+
+deriving stock instance Ord (FunctionLhs 'Parsed)
+
+deriving stock instance Ord (FunctionLhs 'Scoped)
 
 makeLenses ''SideIfs
 makeLenses ''TypeSig
@@ -2922,6 +2972,8 @@ makeLenses ''NameBlock
 makeLenses ''NameItem
 makeLenses ''RecordInfo
 makeLenses ''MarkdownInfo
+makeLenses ''Deriving
+
 makePrisms ''NamedArgumentNew
 
 functionDefLhs :: FunctionDef s -> FunctionLhs s
@@ -3094,10 +3146,16 @@ instance HasLoc (OpenModule s short) where
 instance HasLoc (ProjectionDef s) where
   getLoc = getLoc . (^. projectionConstructor)
 
+instance (SingI s) => HasLoc (Deriving s) where
+  getLoc Deriving {..} =
+    getLoc _derivingKw
+      <> getLoc _derivingFunLhs
+
 instance HasLoc (Statement 'Scoped) where
   getLoc :: Statement 'Scoped -> Interval
   getLoc = \case
     StatementSyntax t -> getLoc t
+    StatementDeriving t -> getLoc t
     StatementFunctionDef t -> getLoc t
     StatementImport t -> getLoc t
     StatementInductive t -> getLoc t
@@ -3324,6 +3382,14 @@ instance (SingI s) => HasLoc (FunctionDefBody s) where
     SigBodyExpression e -> getLocExpressionType e
     SigBodyClauses cl -> getLocSpan cl
 
+instance (SingI s) => HasLoc (FunctionLhs s) where
+  getLoc FunctionLhs {..} =
+    (getLoc <$> _funLhsBuiltin)
+      ?<> (getLoc <$> _funLhsTerminating)
+      ?<> ( getLocSymbolType _funLhsName
+              <>? (getLocExpressionType <$> _funLhsRetType)
+          )
+
 instance (SingI s) => HasLoc (FunctionDef s) where
   getLoc FunctionDef {..} =
     (getLoc <$> _signDoc)
@@ -3331,7 +3397,7 @@ instance (SingI s) => HasLoc (FunctionDef s) where
       ?<> (getLoc <$> _signBuiltin)
       ?<> (getLoc <$> _signTerminating)
       ?<> getLocSymbolType _signName
-      <> getLoc _signBody
+      <> (getLoc _signBody)
 
 instance HasLoc (Example s) where
   getLoc e = e ^. exampleLoc

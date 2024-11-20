@@ -28,7 +28,7 @@ data InfoTableBuilder :: Effect where
   RegisterRecordInfo :: S.NameId -> RecordInfo -> InfoTableBuilder m ()
   RegisterAlias :: S.NameId -> PreSymbolEntry -> InfoTableBuilder m ()
   RegisterLocalModule :: ScopedModule -> InfoTableBuilder m ()
-  GetInfoTable :: InfoTableBuilder m InfoTable
+  GetBuilderInfoTable :: InfoTableBuilder m InfoTable
   GetBuiltinSymbol' :: Interval -> BuiltinPrim -> InfoTableBuilder m S.Symbol
   RegisterBuiltin' :: BuiltinPrim -> S.Symbol -> InfoTableBuilder m ()
 
@@ -92,7 +92,7 @@ runInfoTableBuilder ini = reinterpret (runState ini) $ \case
     modify (over infoScoperAlias (HashMap.insert uid a))
   RegisterLocalModule m ->
     mapM_ (uncurry registerBuiltinHelper) (m ^. scopedModuleInfoTable . infoBuiltins . to HashMap.toList)
-  GetInfoTable ->
+  GetBuilderInfoTable ->
     get
   GetBuiltinSymbol' i b -> do
     tbl <- get @InfoTable
@@ -153,16 +153,22 @@ anameFromScopedIden s =
       _anameVerbatim = s ^. scopedIdenSrcName . nameVerbatim
     }
 
-lookupInfo :: (Members '[InfoTableBuilder, Reader InfoTable] r) => (InfoTable -> Maybe a) -> Sem r a
+getInfo :: (Members '[InfoTableBuilder, Reader InfoTable] r) => (InfoTable -> Maybe a) -> Sem r a
+getInfo f = do
+  tab1 <- ask
+  fromMaybe (fromJust (f tab1)) . f <$> getBuilderInfoTable
+
+lookupInfo :: (Members '[InfoTableBuilder, Reader InfoTable] r) => (InfoTable -> Maybe a) -> Sem r (Maybe a)
 lookupInfo f = do
   tab1 <- ask
-  fromMaybe (fromJust (f tab1)) . f <$> getInfoTable
+  tab2 <- getBuilderInfoTable
+  return (f tab1 <|> f tab2)
 
 lookupFixity :: (Members '[InfoTableBuilder, Reader InfoTable] r) => S.NameId -> Sem r FixityDef
-lookupFixity uid = lookupInfo (HashMap.lookup uid . (^. infoFixities))
+lookupFixity uid = getInfo (^. infoFixities . at uid)
 
 getPrecedenceGraph :: (Members '[InfoTableBuilder, Reader InfoTable] r) => Sem r PrecedenceGraph
 getPrecedenceGraph = do
   tab <- ask
-  tab' <- getInfoTable
+  tab' <- getBuilderInfoTable
   return $ combinePrecedenceGraphs (tab ^. infoPrecedenceGraph) (tab' ^. infoPrecedenceGraph)

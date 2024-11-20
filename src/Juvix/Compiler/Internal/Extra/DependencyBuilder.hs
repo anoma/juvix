@@ -178,7 +178,7 @@ goInductive p i = do
     mapM_ goInductiveParameter (i ^. inductiveParameters)
     goExpression (i ^. inductiveType)
 
--- BuiltinBool and BuiltinNat are required by the Internal to Core translation
+-- | BuiltinBool and BuiltinNat are required by the Internal to Core translation
 -- when translating literal integers to Nats.
 checkBuiltinInductiveStartNode :: forall r. (Members '[State StartNodes, State BuilderState] r) => InductiveDef -> Sem r ()
 checkBuiltinInductiveStartNode i = whenJust (i ^. inductiveBuiltin) go
@@ -199,6 +199,7 @@ checkBuiltinInductiveStartNode i = whenJust (i ^. inductiveBuiltin) go
       BuiltinEcPoint -> return ()
       BuiltinAnomaResource -> return ()
       BuiltinAnomaAction -> return ()
+      BuiltinEq -> return ()
 
     addInductiveStartNode :: Sem r ()
     addInductiveStartNode = addStartNode (i ^. inductiveName)

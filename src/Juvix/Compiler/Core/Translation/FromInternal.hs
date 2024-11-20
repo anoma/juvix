@@ -217,6 +217,7 @@ goConstructor sym ctor = do
     ctorTag = \case
       Just Internal.BuiltinBoolTrue -> return (BuiltinTag TagTrue)
       Just Internal.BuiltinBoolFalse -> return (BuiltinTag TagFalse)
+      Just Internal.BuiltinMkEq -> freshTag
       Just Internal.BuiltinNatZero -> freshTag
       Just Internal.BuiltinNatSuc -> freshTag
       Just Internal.BuiltinIntOfNat -> freshTag

@@ -36,6 +36,7 @@ import Juvix.Data.Keyword.All
     kwCase,
     kwCoercion,
     kwColon,
+    kwDeriving,
     kwDo,
     kwElse,
     kwEnd,
@@ -85,6 +86,7 @@ reservedKeywords :: [Keyword]
 reservedKeywords =
   [ delimSemicolon,
     kwAssign,
+    kwDeriving,
     kwAt,
     kwAtQuestion,
     kwAxiom,

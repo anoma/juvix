@@ -98,7 +98,11 @@ toConcrete t p = run . runReader l $ do
                 _signDoc = Nothing,
                 _signCoercion = Nothing,
                 _signBuiltin = Nothing,
-                ..
+                _signArgs = [],
+                _signRetType,
+                _signName,
+                _signColonKw,
+                _signBody
               }
         )
 

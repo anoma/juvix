@@ -14,6 +14,8 @@ import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty.Options (Options, fromGenericOptions)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Pretty
 import Juvix.Compiler.Concrete.Translation.ImportScanner.Base
+import Juvix.Compiler.Internal.Language qualified as I
+import Juvix.Compiler.Internal.Pretty qualified as I
 import Juvix.Compiler.Store.Scoped.Language (FixitySymbolEntry, ModuleSymbolEntry, PreSymbolEntry)
 import Juvix.Data.CodeAnn
 import Juvix.Data.PPOutput
@@ -1158,3 +1160,36 @@ instance ToGenericError BuiltinErrorMessage where
     where
       i :: Interval
       i = _builtinErrorMessageLoc
+
+data DerivingTypeWrongForm = DerivingTypeWrongForm
+  { _derivingTypeWrongForm :: I.Expression,
+    _derivingTypeBuiltin :: I.DerivingTrait,
+    _derivingTypeSupportedBuiltins :: [I.Name]
+  }
+
+instance ToGenericError DerivingTypeWrongForm where
+  genericError :: (Member (Reader GenericOptions) r) => DerivingTypeWrongForm -> Sem r GenericError
+  genericError DerivingTypeWrongForm {..} = do
+    opts <- I.fromGenericOptions <$> ask
+    let ss = I.doc opts _derivingTypeWrongForm
+        msg =
+          "The return type of the deriving statement has the wrong form:"
+            <> line
+            <> ss
+            <> line
+            <> "It is expected to be of the form:"
+            <> line
+            <> ("<Trait>" <+> parens "<someType> <args>")
+            <> line
+            <> "where <someType> is an inductive type and <Trait> is one of:"
+            <> line
+            <> itemize (I.doc opts <$> _derivingTypeSupportedBuiltins)
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = mkAnsiText msg,
+          _genericErrorIntervals = [i]
+        }
+    where
+      i :: Interval
+      i = getLoc _derivingTypeWrongForm

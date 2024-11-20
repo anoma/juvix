@@ -44,10 +44,11 @@ functionInfoFromFunctionDef isLocal FunctionDef {..} =
     }
 
 inductiveInfoFromInductiveDef :: InductiveDef -> InductiveInfo
-inductiveInfoFromInductiveDef InductiveDef {..} =
+inductiveInfoFromInductiveDef d@InductiveDef {..} =
   InductiveInfo
     { _inductiveInfoName = _inductiveName,
       _inductiveInfoType = _inductiveType,
+      _inductiveInfoLoc = getLoc d,
       _inductiveInfoBuiltin = _inductiveBuiltin,
       _inductiveInfoParameters = _inductiveParameters,
       _inductiveInfoConstructors = map (^. inductiveConstructorName) _inductiveConstructors,

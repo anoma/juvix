@@ -39,6 +39,9 @@ instance PrettyCode Name where
     showNameId <- asks (^. optShowNameIds)
     return (prettyName showNameId n)
 
+instance PrettyCode DerivingTrait where
+  ppCode = return . ppCodeAnn
+
 instance PrettyCode ArgInfo where
   ppCode ArgInfo {..} = do
     name <- maybe (return kwWildcard) ppCode _argInfoName
