@@ -9,5 +9,9 @@ runCommand opts = runAppError @SimpleError
   . runConcurrent
   . runProcess
   $ do
+    let launchMode = opts ^. nodeLaunchMode
     anomaDir :: AnomaPath <- AnomaPath <$> fromAppPathDir (opts ^. nodeAnomaPath)
-    launchAnoma anomaDir >>= void . waitForProcess
+    processH <- launchAnomaClient launchMode anomaDir
+    case launchMode of
+      LaunchModeAttached -> void (waitForProcess processH)
+      LaunchModeDetached -> return ()
