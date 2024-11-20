@@ -24,10 +24,11 @@ simplestFunctionDefParsed funNameTxt funBody = do
   funName <- symbol funNameTxt
   return (simplestFunctionDef funName (mkExpressionAtoms funBody))
 
-simplestFunctionDef :: FunctionName s -> ExpressionType s -> FunctionDef s
+simplestFunctionDef :: forall s. (SingI s) => FunctionName s -> ExpressionType s -> FunctionDef s
 simplestFunctionDef funName funBody =
   FunctionDef
-    { _signName = funName,
+    { _signName = name,
+      _signPattern = pat,
       _signBody = SigBodyExpression funBody,
       _signTypeSig =
         TypeSig
@@ -42,6 +43,21 @@ simplestFunctionDef funName funBody =
       _signInstance = Nothing,
       _signCoercion = Nothing
     }
+  where
+    pat :: PatternAtomType s
+    pat = case sing :: SStage s of
+      SParsed -> PatternAtomIden (NameUnqualified funName)
+      SScoped ->
+        PatternArg
+          { _patternArgPattern = PatternVariable funName,
+            _patternArgName = Nothing,
+            _patternArgIsImplicit = Explicit
+          }
+
+    name :: FunctionSymbolType s
+    name = case sing :: SStage s of
+      SParsed -> Just funName
+      SScoped -> funName
 
 smallUniverseExpression :: forall s r. (SingI s) => (Members '[Reader Interval] r) => Sem r (ExpressionType s)
 smallUniverseExpression = do

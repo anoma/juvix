@@ -81,7 +81,7 @@ toConcrete t p = run . runReader l $ do
     funDef = do
       packageTypeIdentifier <- identifier (t ^. packageDescriptionTypeName)
       _typeSigRetType <- Just <$> expressionAtoms' (packageTypeIdentifier :| [])
-      _signName <- symbol Str.package
+      name' <- symbol Str.package
       _typeSigColonKw <- Irrelevant . Just <$> kw kwColon
       let _signBody = (t ^. packageDescriptionTypeTransform) p
           _signTypeSig =
@@ -90,6 +90,7 @@ toConcrete t p = run . runReader l $ do
                 _typeSigRetType,
                 _typeSigColonKw
               }
+          _signPattern = PatternAtomIden (NameUnqualified name')
       return
         ( StatementFunctionDef
             FunctionDef
@@ -99,7 +100,8 @@ toConcrete t p = run . runReader l $ do
                 _signDoc = Nothing,
                 _signCoercion = Nothing,
                 _signBuiltin = Nothing,
-                _signName,
+                _signName = Just name',
+                _signPattern,
                 _signBody,
                 _signTypeSig
               }

@@ -407,7 +407,7 @@ reserveFunctionSymbol ::
   FunctionLhs 'Parsed ->
   Sem r S.Symbol
 reserveFunctionSymbol f =
-  reserveSymbolSignatureOf SKNameFunction f (toBuiltinPrim <$> f ^. funLhsBuiltin) (f ^. funLhsName)
+  reserveSymbolSignatureOf SKNameFunction f (toBuiltinPrim <$> f ^. funLhsBuiltin) (fromJust (f ^. funLhsName))
 
 reserveAxiomSymbol ::
   (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable] r) =>
@@ -1075,7 +1075,7 @@ checkDeriving Deriving {..} = do
   typeSig' <- withLocalScope (checkTypeSig _funLhsTypeSig)
   name' <-
     if
-        | P.isLhsFunctionLike lhs -> getReservedDefinitionSymbol _funLhsName
+        | P.isLhsFunctionLike lhs -> getReservedDefinitionSymbol (fromJust _funLhsName)
         | otherwise -> reserveFunctionSymbol lhs
   let lhs' =
         FunctionLhs
@@ -1138,17 +1138,19 @@ checkFunctionDef ::
   Sem r (FunctionDef 'Scoped)
 checkFunctionDef fdef@FunctionDef {..} = do
   sigDoc' <- mapM checkJudoc _signDoc
-  (sig', sigBody') <- withLocalScope $ do
+  (sig', sigPattern', sigBody') <- withLocalScope $ do
     a' <- checkTypeSig _signTypeSig
+    p' <- checkParsePatternAtom _signPattern
     b' <- checkBody
-    return (a', b')
+    return (a', p', b')
   sigName' <-
     if
-        | P.isFunctionLike fdef -> getReservedDefinitionSymbol _signName
+        | P.isFunctionLike fdef -> getReservedDefinitionSymbol (fromJust _signName)
         | otherwise -> reserveFunctionSymbol (functionDefLhs fdef)
   let def =
         FunctionDef
           { _signName = sigName',
+            _signPattern = sigPattern',
             _signDoc = sigDoc',
             _signBody = sigBody',
             _signTypeSig = sig',
