@@ -1184,18 +1184,16 @@ checkFunctionDef ::
   Sem r (FunctionDef 'Scoped)
 checkFunctionDef fdef@FunctionDef {..} = do
   sigDoc' <- mapM checkJudoc _signDoc
-  let isFun = P.isFunctionLike fdef
-  when (not isFun) $
-    reservePatternFunctionSymbols _signPattern
-  sigName' <-
-    if
-        | isFun -> getReservedDefinitionSymbol (fromJust _signName)
-        | otherwise -> reserveFunctionSymbol (functionDefLhs fdef)
-  (sig', sigPattern', sigBody') <- withLocalScope $ do
+  (sig', sigBody') <- withLocalScope $ do
     a' <- checkTypeSig _signTypeSig
-    p' <- runReader PatternNamesKindFunctions $ checkParsePatternAtom _signPattern
     b' <- checkBody
-    return (a', p', b')
+    return (a', b')
+  when (not (P.isFunctionLike fdef)) $
+    reservePatternFunctionSymbols _signPattern
+  sigName' <- case _signName of
+    Just name' -> getReservedDefinitionSymbol name'
+    Nothing -> freshSymbol KNameFunction KNameFunction (WithLoc (getLoc _signPattern) "__pattern__")
+  sigPattern' <- runReader PatternNamesKindFunctions $ checkParsePatternAtom _signPattern
   let def =
         FunctionDef
           { _signName = sigName',
