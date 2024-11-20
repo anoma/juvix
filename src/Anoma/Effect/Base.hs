@@ -56,6 +56,7 @@ anomaCreateProcess = do
   return
     (proc "mix" ["run", "--no-halt", "-e", unpack (T.strip (decodeUtf8 anomaStartExs))])
       { std_out = CreatePipe,
+        std_in = NoStream,
         cwd = Just (toFilePath anomapath)
       }
 
