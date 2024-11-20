@@ -65,6 +65,13 @@ newtype DefaultArgsStack = DefaultArgsStack
 
 makeLenses ''DefaultArgsStack
 
+data DerivingArgs = DerivingArgs
+  { _derivingPragmas :: Maybe ParsedPragmas,
+    _derivingInstanceName :: Internal.FunctionName,
+    _derivingParameters :: [Internal.FunctionParameter],
+    _derivingReturnType :: (Internal.InductiveName, [Internal.ApplicationArg])
+  }
+
 fromConcrete ::
   (Members '[Reader EntryPoint, Error JuvixError, Reader Store.ModuleTable, NameIdGen, Termination] r) =>
   Scoper.ScoperResult ->
@@ -414,7 +421,15 @@ goDeriving Deriving {..} = do
   (funArgs, ret) <- Internal.unfoldFunType <$> goDefType _derivingFunLhs
   let (mtrait, traitArgs) = Internal.unfoldExpressionApp ret
   (n, der) <- findDerivingTrait mtrait
-  deriveTrait der _derivingPragmas ret name funArgs (n, traitArgs)
+  let deriveArgs =
+        DerivingArgs
+          { _derivingInstanceName = name,
+            _derivingReturnType = (n, traitArgs),
+            _derivingParameters = funArgs,
+            _derivingPragmas
+          }
+  -- deriveTrait der _derivingPragmas ret name funArgs (n, traitArgs)
+  deriveTrait der deriveArgs
 
 deriveTrait ::
   ( Members
@@ -429,11 +444,7 @@ deriveTrait ::
       r
   ) =>
   Internal.DerivingTrait ->
-  Maybe ParsedPragmas ->
-  Internal.Expression ->
-  Internal.Name ->
-  [Internal.FunctionParameter] ->
-  (Internal.InductiveName, [Internal.ApplicationArg]) ->
+  DerivingArgs ->
   Sem r Internal.FunctionDef
 deriveTrait = \case
   Internal.DerivingEq -> deriveEq
@@ -539,20 +550,16 @@ deriveEq ::
        ]
       r
   ) =>
-  Maybe ParsedPragmas ->
-  Internal.Expression ->
-  Internal.FunctionName ->
-  [Internal.FunctionParameter] ->
-  (Internal.InductiveName, [Internal.ApplicationArg]) ->
+  DerivingArgs ->
   Sem r Internal.FunctionDef
-deriveEq pragmas ret instanceName funParams (eqName, args) = do
+deriveEq DerivingArgs {..} = do
   arg <- getArg
-  argsInfo <- goArgsInfo instanceName
+  argsInfo <- goArgsInfo _derivingInstanceName
   lam <- eqLambda arg
   mkEq <- getBuiltin (getLoc eqName) BuiltinMkEq
   let body = mkEq Internal.@@ lam
-      ty = Internal.foldFunType funParams (Internal.foldApplication (Internal.toExpression eqName) args)
-  pragmas' <- goPragmas pragmas
+      ty = Internal.foldFunType _derivingParameters ret
+  pragmas' <- goPragmas _derivingPragmas
   return
     Internal.FunctionDef
       { _funDefTerminating = False,
@@ -560,12 +567,19 @@ deriveEq pragmas ret instanceName funParams (eqName, args) = do
         _funDefPragmas = pragmas',
         _funDefArgsInfo = argsInfo,
         _funDefDocComment = Nothing,
-        _funDefName = instanceName,
+        _funDefName = _derivingInstanceName,
         _funDefType = ty,
         _funDefBody = body,
         _funDefBuiltin = Nothing
       }
   where
+    ret :: Internal.Expression
+    ret = Internal.foldApplication (Internal.toExpression eqName) args
+
+    eqName :: Internal.InductiveName
+    args :: [Internal.ApplicationArg]
+    (eqName, args) = _derivingReturnType
+
     getArg :: Sem r Internal.InductiveInfo
     getArg = runFailDefaultM (throwDerivingWrongForm ret) $ do
       [Internal.ApplicationArg Explicit a] <- return args
@@ -614,7 +628,7 @@ deriveEq pragmas ret instanceName funParams (eqName, args) = do
           Sem r Internal.LambdaClause
         lambdaClause band btrue bisEqual c = do
           numArgs :: [IsImplicit] <- getNumArgs
-          let loc = getLoc instanceName
+          let loc = getLoc _derivingInstanceName
               mkpat :: Sem r ([Internal.VarName], Internal.PatternArg)
               mkpat = runOutputList . runStreamOf allWords $ do
                 xs :: [(IsImplicit, Internal.VarName)] <- forM numArgs $ \impl -> do

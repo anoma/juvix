@@ -9,14 +9,14 @@ checkEqDef :: forall r. (Members '[Reader BuiltinsTable, Error ScoperError] r) =
 checkEqDef d = do
   let err :: forall a. Text -> Sem r a
       err = builtinsErrorText (getLoc d)
-  unless (isSmallUniverse' (d ^. inductiveType)) (err "Lists should be in the small universe")
   let eqTxt = prettyText BuiltinEq
+  unless (isSmallUniverse' (d ^. inductiveType)) (err (eqTxt <> " should be in the small universe"))
   case d ^. inductiveParameters of
     [_] -> return ()
-    _ -> err (eqTxt <> "should have exactly one type parameter")
+    _ -> err (eqTxt <> " should have exactly one type parameter")
   case d ^. inductiveConstructors of
     [c1] -> checkMkEq c1
-    _ -> err (eqTxt <> "should have exactly two constructors")
+    _ -> err (eqTxt <> " should have exactly two constructors")
 
 checkMkEq :: ConstructorDef -> Sem r ()
 checkMkEq _ = return ()
