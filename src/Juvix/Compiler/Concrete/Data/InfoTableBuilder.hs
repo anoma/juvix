@@ -158,8 +158,8 @@ lookupInfo f = fromJust <$> lookupInfo' f
 
 lookupInfo' :: (Members '[InfoTableBuilder, Reader InfoTable] r) => (InfoTable -> Maybe a) -> Sem r (Maybe a)
 lookupInfo' f = do
-  tab1 <- ask
-  tab2 <- getBuilderInfoTable
+  tab1 <- getBuilderInfoTable
+  tab2 <- ask
   return (f tab1 <|> f tab2)
 
 lookupFixity :: (Members '[InfoTableBuilder, Reader InfoTable] r) => S.NameId -> Sem r FixityDef
