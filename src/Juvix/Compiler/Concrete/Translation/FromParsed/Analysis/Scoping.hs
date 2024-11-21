@@ -1072,22 +1072,12 @@ checkDeriving ::
   Sem r (Deriving 'Scoped)
 checkDeriving Deriving {..} = do
   let lhs@FunctionLhs {..} = _derivingFunLhs
-      TypeSig {..} = _funLhsTypeSig
-  (args', ret') <- withLocalScope $ do
-    args' <- mapM checkSigArg _typeSigArgs
-    ret' <- mapM checkParseExpressionAtoms _typeSigRetType
-    return (args', ret')
+  typeSig' <- withLocalScope (checkTypeSig _funLhsTypeSig)
   name' <-
     if
         | P.isLhsFunctionLike lhs -> getReservedDefinitionSymbol _funLhsName
         | otherwise -> reserveFunctionSymbol lhs
-  let typeSig' =
-        TypeSig
-          { _typeSigArgs = args',
-            _typeSigRetType = ret',
-            ..
-          }
-      lhs' =
+  let lhs' =
         FunctionLhs
           { _funLhsName = name',
             _funLhsTypeSig = typeSig',
@@ -1100,69 +1090,6 @@ checkDeriving Deriving {..} = do
         _derivingPragmas
       }
 
-checkSigArg ::
-  ( Members
-      '[ State Scope,
-         Error ScoperError,
-         State ScoperState,
-         Reader ScopeParameters,
-         Reader InfoTable,
-         Reader PackageId,
-         HighlightBuilder,
-         InfoTableBuilder,
-         NameIdGen,
-         State ScoperSyntax,
-         Reader BindingStrategy
-       ]
-      r
-  ) =>
-  SigArg 'Parsed ->
-  Sem r (SigArg 'Scoped)
-checkSigArg arg@SigArg {..} = do
-  names' <- checkSigArgNames _sigArgNames
-  ty' <- mapM checkParseExpressionAtoms _sigArgType
-  default' <- case _sigArgDefault of
-    Nothing -> return Nothing
-    Just ArgDefault {..} ->
-      let err = throw (ErrWrongDefaultValue WrongDefaultValue {_wrongDefaultValue = arg})
-       in case _sigArgImplicit of
-            Explicit -> err
-            ImplicitInstance -> err
-            Implicit -> do
-              val' <- checkParseExpressionAtoms _argDefaultValue
-              return (Just ArgDefault {_argDefaultValue = val', ..})
-  return
-    SigArg
-      { _sigArgNames = names',
-        _sigArgType = ty',
-        _sigArgDefault = default',
-        ..
-      }
-
-checkSigArgNames ::
-  ( Members
-      '[ State Scope,
-         Error ScoperError,
-         State ScoperState,
-         Reader ScopeParameters,
-         Reader InfoTable,
-         Reader PackageId,
-         HighlightBuilder,
-         InfoTableBuilder,
-         NameIdGen,
-         State ScoperSyntax,
-         Reader BindingStrategy
-       ]
-      r
-  ) =>
-  SigArgNames 'Parsed ->
-  Sem r (SigArgNames 'Scoped)
-checkSigArgNames = \case
-  SigArgNamesInstance -> return SigArgNamesInstance
-  SigArgNames ns -> fmap SigArgNames . forM ns $ \case
-    ArgumentSymbol s -> ArgumentSymbol <$> bindVariableSymbol s
-    ArgumentWildcard w -> return (ArgumentWildcard w)
-
 checkTypeSig ::
   forall r.
   (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader PackageId, State ScoperSyntax, Reader BindingStrategy] r) =>
@@ -1172,6 +1099,37 @@ checkTypeSig TypeSig {..} = do
   a' <- mapM checkSigArg _typeSigArgs
   t' <- mapM checkParseExpressionAtoms _typeSigRetType
   return TypeSig {_typeSigArgs = a', _typeSigRetType = t', ..}
+  where
+    checkSigArg ::
+      SigArg 'Parsed ->
+      Sem r (SigArg 'Scoped)
+    checkSigArg arg@SigArg {..} = do
+      names' <- checkSigArgNames _sigArgNames
+      ty' <- mapM checkParseExpressionAtoms _sigArgType
+      default' <- case _sigArgDefault of
+        Nothing -> return Nothing
+        Just ArgDefault {..} ->
+          let err = throw (ErrWrongDefaultValue WrongDefaultValue {_wrongDefaultValue = arg})
+           in case _sigArgImplicit of
+                Explicit -> err
+                ImplicitInstance -> err
+                Implicit -> do
+                  val' <- checkParseExpressionAtoms _argDefaultValue
+                  return (Just ArgDefault {_argDefaultValue = val', ..})
+      return
+        SigArg
+          { _sigArgNames = names',
+            _sigArgType = ty',
+            _sigArgDefault = default',
+            ..
+          }
+
+    checkSigArgNames :: SigArgNames 'Parsed -> Sem r (SigArgNames 'Scoped)
+    checkSigArgNames = \case
+      SigArgNamesInstance -> return SigArgNamesInstance
+      SigArgNames ns -> fmap SigArgNames . forM ns $ \case
+        ArgumentSymbol s -> ArgumentSymbol <$> bindVariableSymbol s
+        ArgumentWildcard w -> return (ArgumentWildcard w)
 
 checkFunctionDef ::
   forall r.
