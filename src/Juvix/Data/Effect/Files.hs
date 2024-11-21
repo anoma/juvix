@@ -123,3 +123,6 @@ globalPackageBaseRoot = (<//> $(mkRelDir "package-base")) <$> juvixConfigDir
 
 globalGitCache :: (Members '[Files] r) => Sem r (Path Abs Dir)
 globalGitCache = (<//> $(mkRelDir "git-cache")) <$> juvixConfigDir
+
+globalAnomaClient :: (Members '[Files] r) => Sem r (Path Abs Dir)
+globalAnomaClient = (<//> $(mkRelDir "anoma-client")) <$> juvixConfigDir

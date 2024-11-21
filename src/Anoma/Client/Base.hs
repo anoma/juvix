@@ -4,16 +4,35 @@ import Data.Text qualified as T
 import Juvix.Data.CodeAnn
 import Juvix.Extra.Paths (anomaStartExs)
 import Juvix.Prelude
+import Juvix.Prelude.Aeson as Aeson
 
 data AnomaClientInfo = AnomaClientInfo
   { _anomaClientInfoPort :: Int,
     _anomaClientInfoUrl :: String
   }
 
+$( deriveJSON
+     Aeson.defaultOptions
+       { unwrapUnaryRecords = True,
+         allowOmittedFields = False,
+         rejectUnknownFields = True,
+         fieldLabelModifier = \case
+           "_anomaClientInfoUrl" -> "url"
+           "_anomaClientInfoPort" -> "port"
+           _ -> impossibleError "All fields must be covered"
+       }
+     ''AnomaClientInfo
+ )
+
 newtype AnomaPath = AnomaPath {_anomaPath :: Path Abs Dir}
 
 newtype AnomaProcess = AnomaProcess
   { _anomaProcessHandle :: ProcessHandle
+  }
+
+data AnomaClientLaunchInfo = AnomaClientLaunchInfo
+  { _anomaClientLaunchInfoInfo :: AnomaClientInfo,
+    _anomaClientLaunchInfoProcess :: AnomaProcess
   }
 
 data LaunchMode
@@ -26,6 +45,7 @@ data LaunchMode
 makeLenses ''AnomaClientInfo
 makeLenses ''AnomaPath
 makeLenses ''AnomaProcess
+makeLenses ''AnomaClientLaunchInfo
 
 anomaClientCreateProcess :: forall r. (Members '[Reader AnomaPath] r) => LaunchMode -> Sem r CreateProcess
 anomaClientCreateProcess launchMode = do
@@ -58,11 +78,15 @@ setupAnomaClientProcess nodeOut = do
         }
     )
 
-launchAnomaClient :: (Members '[Logger, EmbedIO, Error SimpleError] r) => LaunchMode -> AnomaPath -> Sem r ProcessHandle
+launchAnomaClient :: (Members '[Logger, EmbedIO, Error SimpleError] r) => LaunchMode -> AnomaPath -> Sem r AnomaClientLaunchInfo
 launchAnomaClient launchMode anomapath = runReader anomapath . runProcess $ do
   cproc <- anomaClientCreateProcess launchMode
   (_mstdin, mstdout, _mstderr, procHandle) <- createProcess cproc
   let stdoutH = fromJust mstdout
-  setupAnomaClientProcess stdoutH
+  info <- setupAnomaClientProcess stdoutH
   hClose stdoutH
-  return procHandle
+  return
+    AnomaClientLaunchInfo
+      { _anomaClientLaunchInfoInfo = info,
+        _anomaClientLaunchInfoProcess = AnomaProcess procHandle
+      }

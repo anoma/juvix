@@ -86,3 +86,6 @@ preludePath = $(mkRelFile "Stdlib/Prelude.juvix")
 
 defaultStdlibPath :: Path Abs Dir -> Path Abs Dir
 defaultStdlibPath buildDir = buildDir <//> $(mkRelDir "stdlib")
+
+clientConfigPath :: Path Rel File
+clientConfigPath = $(mkRelFile "config.yaml")

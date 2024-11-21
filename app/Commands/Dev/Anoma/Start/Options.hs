@@ -5,7 +5,8 @@ import CommonOptions
 
 data StartOptions = StartOptions
   { _startAnomaPath :: AppPath Dir,
-    _startLaunchMode :: LaunchMode
+    _startLaunchMode :: LaunchMode,
+    _startForce :: Bool
   }
   deriving stock (Data)
 
@@ -16,10 +17,16 @@ parseStartOptions = do
   _startAnomaPath <- anomaDirOpt
   _startLaunchMode <-
     flag
-      LaunchModeAttached
       LaunchModeDetached
-      ( long "background"
-          <> short 'b'
-          <> help "Start the client in the background"
+      LaunchModeAttached
+      ( long "foreground"
+          <> short 'g'
+          <> help "Start the client in the foreground"
+      )
+  _startForce <-
+    switch
+      ( long "force"
+          <> short 'f'
+          <> help "Forcefully start a client, terminating any currently running client if necessary"
       )
   pure StartOptions {..}
