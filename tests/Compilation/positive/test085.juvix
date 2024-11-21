@@ -1,0 +1,16 @@
+-- Deriving Eq
+module test085;
+
+import Stdlib.Data.Fixity open;
+import Stdlib.Data.Bool open;
+import Stdlib.Data.Pair open;
+import Stdlib.Trait.Eq open;
+import Stdlib.System.IO open;
+
+syntax alias isEqual := Eq.eq;
+
+main : IO :=
+  printLn (isEqual true true)
+    >>> printLn (not (isEqual false true))
+    >>> printLn (isEqual (false, true) (false, true))
+    >>> printLn (not (isEqual (false, true) (false, false)));
