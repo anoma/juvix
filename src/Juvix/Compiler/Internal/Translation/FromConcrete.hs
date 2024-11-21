@@ -428,7 +428,6 @@ goDeriving Deriving {..} = do
             _derivingParameters = funArgs,
             _derivingPragmas
           }
-  -- deriveTrait der _derivingPragmas ret name funArgs (n, traitArgs)
   deriveTrait der deriveArgs
 
 deriveTrait ::
