@@ -153,19 +153,17 @@ anameFromScopedIden s =
       _anameVerbatim = s ^. scopedIdenSrcName . nameVerbatim
     }
 
-getInfo :: (Members '[InfoTableBuilder, Reader InfoTable] r) => (InfoTable -> Maybe a) -> Sem r a
-getInfo f = do
-  tab1 <- ask
-  fromMaybe (fromJust (f tab1)) . f <$> getBuilderInfoTable
+lookupInfo :: (Members '[InfoTableBuilder, Reader InfoTable] r) => (InfoTable -> Maybe a) -> Sem r a
+lookupInfo f = fromJust <$> lookupInfo' f
 
-lookupInfo :: (Members '[InfoTableBuilder, Reader InfoTable] r) => (InfoTable -> Maybe a) -> Sem r (Maybe a)
-lookupInfo f = do
+lookupInfo' :: (Members '[InfoTableBuilder, Reader InfoTable] r) => (InfoTable -> Maybe a) -> Sem r (Maybe a)
+lookupInfo' f = do
   tab1 <- ask
   tab2 <- getBuilderInfoTable
   return (f tab1 <|> f tab2)
 
 lookupFixity :: (Members '[InfoTableBuilder, Reader InfoTable] r) => S.NameId -> Sem r FixityDef
-lookupFixity uid = getInfo (^. infoFixities . at uid)
+lookupFixity uid = lookupInfo (^. infoFixities . at uid)
 
 getPrecedenceGraph :: (Members '[InfoTableBuilder, Reader InfoTable] r) => Sem r PrecedenceGraph
 getPrecedenceGraph = do
