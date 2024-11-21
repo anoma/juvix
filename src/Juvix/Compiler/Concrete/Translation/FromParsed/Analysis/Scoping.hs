@@ -351,6 +351,7 @@ reserveSymbolOf k =
 
 getReservedDefinitionSymbol ::
   forall r.
+  (HasCallStack) =>
   (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, InfoTableBuilder, Reader InfoTable, State ScoperState, Reader BindingStrategy] r) =>
   Symbol ->
   Sem r S.Symbol
@@ -1188,12 +1189,23 @@ checkFunctionDef fdef@FunctionDef {..} = do
     a' <- checkTypeSig _signTypeSig
     b' <- checkBody
     return (a', b')
-  when (not (P.isFunctionLike fdef)) $
-    reservePatternFunctionSymbols _signPattern
+  whenJust _signPattern $
+    reservePatternFunctionSymbols
   sigName' <- case _signName of
-    Just name' -> getReservedDefinitionSymbol name'
-    Nothing -> freshSymbol KNameFunction KNameFunction (WithLoc (getLoc _signPattern) "__pattern__")
-  sigPattern' <- runReader PatternNamesKindFunctions $ checkParsePatternAtom _signPattern
+    Just name'
+      | P.isFunctionLike fdef ->
+          getReservedDefinitionSymbol name'
+      | otherwise ->
+          reserveFunctionSymbol fdef
+    Nothing ->
+      freshSymbol KNameFunction KNameFunction (WithLoc (getLoc (fromJust _signPattern)) "__pattern__")
+  sigPattern' <-
+    case _signPattern of
+      Just pat ->
+        fmap Just
+          . runReader PatternNamesKindFunctions
+          $ checkParsePatternAtom pat
+      Nothing -> return Nothing
   let def =
         FunctionDef
           { _signName = sigName',
@@ -2706,7 +2718,7 @@ checkPatternName' bindFun n = do
           <$> case pk of
             PatternNamesKindVariables ->
               bindVariableSymbol sym
-            PatternNamesKindFunctions ->
+            PatternNamesKindFunctions -> do
               bindFun sym
       NameQualified {} -> nameNotInScope n
   where

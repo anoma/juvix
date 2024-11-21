@@ -1168,7 +1168,9 @@ instance (SingI s) => PrettyPrint (FunctionLhs s) where
         coercion' = (<> if isJust instance' then space else line) . ppCode <$> _funLhsCoercion
         instance' = (<> line) . ppCode <$> _funLhsInstance
         builtin' = (<> line) . ppCode <$> _funLhsBuiltin
-        name' = withFunctionSymbol id annDef _funLhsName (ppPatternAtomType _funLhsPattern)
+        name' = case _funLhsPattern of
+          Just pat -> withFunctionSymbol id annDef _funLhsName (ppPatternAtomType pat)
+          Nothing -> annDef (getFunctionSymbol _funLhsName) (ppSymbolType (getFunctionSymbol _funLhsName))
         sig' = ppCode _funLhsTypeSig
     builtin'
       ?<> termin'

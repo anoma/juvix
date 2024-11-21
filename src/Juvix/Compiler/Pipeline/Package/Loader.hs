@@ -90,7 +90,7 @@ toConcrete t p = run . runReader l $ do
                 _typeSigRetType,
                 _typeSigColonKw
               }
-          _signPattern = PatternAtomIden (NameUnqualified name')
+          _signPattern :: Maybe (PatternAtom 'Parsed) = Nothing
       return
         ( StatementFunctionDef
             FunctionDef

@@ -707,10 +707,10 @@ deriving stock instance Ord (Deriving 'Parsed)
 deriving stock instance Ord (Deriving 'Scoped)
 
 data FunctionDef (s :: Stage) = FunctionDef
-  { -- _signName must be a `Just` if the definition is
-    -- function-like: _signArgs is not empty or _signBody is SigBodyClauses
+  { -- When s = 'Parsed, _signName must be present if the definition is
+    -- function-like. One of _signName or _signPattern must be present.
     _signName :: FunctionSymbolType s,
-    _signPattern :: PatternAtomType s,
+    _signPattern :: Maybe (PatternAtomType s),
     _signTypeSig :: TypeSig s,
     _signDoc :: Maybe (Judoc s),
     _signPragmas :: Maybe ParsedPragmas,
@@ -2869,7 +2869,7 @@ data FunctionLhs (s :: Stage) = FunctionLhs
     _funLhsInstance :: Maybe KeywordRef,
     _funLhsCoercion :: Maybe KeywordRef,
     _funLhsName :: FunctionSymbolType s,
-    _funLhsPattern :: PatternAtomType s,
+    _funLhsPattern :: Maybe (PatternAtomType s),
     _funLhsTypeSig :: TypeSig s
   }
   deriving stock (Generic)
@@ -3406,8 +3406,8 @@ instance (SingI s) => HasLoc (FunctionDef s) where
       ?<> (getLoc <$> _signPragmas)
       ?<> (getLoc <$> _signBuiltin)
       ?<> (getLoc <$> _signTerminating)
-      ?<> getLocPatternAtomType _signPattern
-      <> getLoc _signBody
+      ?<> (getLocPatternAtomType <$> _signPattern)
+      ?<> getLoc _signBody
 
 instance HasLoc (Example s) where
   getLoc e = e ^. exampleLoc

@@ -1332,10 +1332,13 @@ functionDefinitionLhs opts _funLhsBuiltin = P.label "<function definition>" $ do
     parseFailure off0 "instance not allowed here"
   when (isJust _funLhsCoercion && isNothing _funLhsInstance) $
     parseFailure off0 "expected: instance"
-  _funLhsPattern <- patternAtom
-  let _funLhsName = case _funLhsPattern of
-        PatternAtomIden (NameUnqualified s) -> Just s
-        _ -> Nothing
+  _funLhsName <- optional $ do
+    n <- symbol
+    P.notFollowedBy (kw kwAt)
+    return n
+  _funLhsPattern <- case _funLhsName of
+    Nothing -> Just <$> patternAtom
+    Just {} -> return Nothing
   let sigOpts =
         SigOptions
           { _sigAllowDefault = True,

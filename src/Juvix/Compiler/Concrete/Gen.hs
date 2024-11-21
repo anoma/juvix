@@ -28,7 +28,7 @@ simplestFunctionDef :: forall s. (SingI s) => FunctionName s -> ExpressionType s
 simplestFunctionDef funName funBody =
   FunctionDef
     { _signName = name,
-      _signPattern = pat,
+      _signPattern = Nothing,
       _signBody = SigBodyExpression funBody,
       _signTypeSig =
         TypeSig
@@ -44,16 +44,6 @@ simplestFunctionDef funName funBody =
       _signCoercion = Nothing
     }
   where
-    pat :: PatternAtomType s
-    pat = case sing :: SStage s of
-      SParsed -> PatternAtomIden (NameUnqualified funName)
-      SScoped ->
-        PatternArg
-          { _patternArgPattern = PatternVariable funName,
-            _patternArgName = Nothing,
-            _patternArgIsImplicit = Explicit
-          }
-
     name :: FunctionSymbolType s
     name = case sing :: SStage s of
       SParsed -> Just funName
