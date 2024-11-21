@@ -500,5 +500,10 @@ tests =
         "Test085: Deriving Eq"
         $(mkRelDir ".")
         $(mkRelFile "test085.juvix")
-        $(mkRelFile "out/test085.out")
+        $(mkRelFile "out/test085.out"),
+      posTest
+        "Test086: Patterns in definitions"
+        $(mkRelDir ".")
+        $(mkRelFile "test086.juvix")
+        $(mkRelFile "out/test086.out")
     ]

@@ -1,0 +1,9 @@
+module test086;
+
+import Stdlib.Prelude open;
+
+f (p : Pair Nat Nat) : Nat :=
+  let (x, y) := p
+  in x + 2 * y;
+
+main : Nat := f (1, 2);
