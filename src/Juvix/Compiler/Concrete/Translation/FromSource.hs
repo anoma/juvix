@@ -1432,7 +1432,7 @@ functionDefinition opts _signBuiltin = P.label "<function definition>" $ do
             _signPragmas,
             _signBody
           }
-  when (isNothing _funLhsName && not (P.isFunctionLike fdef)) $
+  when (isNothing _funLhsName && P.isFunctionLike fdef) $
     parseFailure off0 "expected function name"
   return fdef
   where
