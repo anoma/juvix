@@ -1142,6 +1142,11 @@ instance (SingI s) => PrettyPrint (SigArg s) where
         defaultVal = ppCode <$> _sigArgDefault
     ppCode l <> arg <+?> defaultVal <> ppCode r
 
+instance (SingI s) => PrettyPrint (Deriving s) where
+  ppCode Deriving {..} =
+    ppCode _derivingKw
+      <+> ppCode _derivingFunLhs
+
 instance (SingI s) => PrettyPrint (TypeSig s) where
   ppCode TypeSig {..} = do
     let margs' = fmap ppCode <$> nonEmpty _typeSigArgs
@@ -1536,6 +1541,7 @@ instance (SingI s) => PrettyPrint (Statement s) where
   ppCode = \case
     StatementSyntax s -> ppCode s
     StatementFunctionDef f -> ppCode f
+    StatementDeriving f -> ppCode f
     StatementImport i -> ppCode i
     StatementInductive i -> ppCode i
     StatementModule m -> ppCode m

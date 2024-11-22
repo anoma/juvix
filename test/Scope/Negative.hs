@@ -298,5 +298,10 @@ scoperErrorTests =
       "Import cycles (issue3161)"
       $(mkRelDir "issue3161")
       $(mkRelFile "Stdlib/Trait/Partial.juvix")
-      $ wantsError ErrImportCycleNew
+      $ wantsError ErrImportCycleNew,
+    negTest
+      "Deriving statement wrong form"
+      $(mkRelDir ".")
+      $(mkRelFile "WrongDeriving.juvix")
+      $ wantsError ErrDerivingTypeWrongForm
   ]

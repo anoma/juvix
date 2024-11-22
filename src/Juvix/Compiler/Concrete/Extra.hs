@@ -9,6 +9,7 @@ module Juvix.Compiler.Concrete.Extra
     getPatternAtomIden,
     isBodyExpression,
     isFunctionLike,
+    isLhsFunctionLike,
     symbolParsed,
   )
 where
@@ -46,6 +47,7 @@ groupStatements = \case
     -- blank line
     g :: Statement s -> Statement s -> Bool
     g a b = case (a, b) of
+      (StatementDeriving _, _) -> False
       (StatementSyntax _, StatementSyntax _) -> True
       (StatementSyntax (SyntaxFixity _), _) -> False
       (StatementSyntax (SyntaxOperator o), s) -> definesSymbol (o ^. opSymbol) s
@@ -108,6 +110,9 @@ isBodyExpression = \case
   SigBodyExpression {} -> True
   SigBodyClauses {} -> False
 
-isFunctionLike :: FunctionDef a -> Bool
-isFunctionLike = \case
-  FunctionDef {..} -> not (null (_signTypeSig ^. typeSigArgs)) || not (isBodyExpression _signBody)
+isLhsFunctionLike :: FunctionLhs 'Parsed -> Bool
+isLhsFunctionLike FunctionLhs {..} = notNull (_funLhsTypeSig ^. typeSigArgs)
+
+isFunctionLike :: FunctionDef 'Parsed -> Bool
+isFunctionLike d@FunctionDef {..} =
+  isLhsFunctionLike (functionDefLhs d) || (not . isBodyExpression) _signBody

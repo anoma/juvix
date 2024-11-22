@@ -1,0 +1,5 @@
+module WrongDeriving;
+
+axiom A : Type;
+
+deriving instance i : A;

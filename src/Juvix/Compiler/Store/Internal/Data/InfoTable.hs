@@ -52,6 +52,7 @@ data InductiveInfo = InductiveInfo
     _inductiveInfoConstructors :: [ConstrName],
     _inductiveInfoPositive :: Bool,
     _inductiveInfoTrait :: Bool,
+    _inductiveInfoLoc :: Interval,
     _inductiveInfoPragmas :: Pragmas
   }
   deriving stock (Generic)
@@ -59,6 +60,9 @@ data InductiveInfo = InductiveInfo
 instance Serialize InductiveInfo
 
 instance NFData InductiveInfo
+
+instance HasLoc InductiveInfo where
+  getLoc InductiveInfo {..} = _inductiveInfoLoc
 
 data InfoTable = InfoTable
   { _infoConstructors :: HashMap Name ConstructorInfo,

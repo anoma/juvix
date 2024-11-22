@@ -12,6 +12,7 @@ where
 
 import Juvix.Compiler.Concrete.Data.Builtins
 import Juvix.Compiler.Internal.Data.Name
+import Juvix.Data.CodeAnn
 import Juvix.Data.Hole
 import Juvix.Data.InstanceHole
 import Juvix.Data.IsImplicit
@@ -30,6 +31,27 @@ type PreModuleBody = ModuleBody' PreStatement
 
 newtype PreLetStatement
   = PreLetFunctionDef FunctionDef
+
+-- | Traits that support builtin deriving
+data DerivingTrait = DerivingEq
+  deriving stock (Generic, Data, Bounded, Enum, Show)
+
+derivingTraitFromBuiltinMap :: HashMap BuiltinPrim DerivingTrait
+derivingTraitFromBuiltinMap = hashMap [(toBuiltinPrim d, d) | d <- allElements]
+
+derivingTraitFromBuiltin :: (IsBuiltin builtin) => builtin -> Maybe DerivingTrait
+derivingTraitFromBuiltin b = derivingTraitFromBuiltinMap ^. at (toBuiltinPrim b)
+
+instance IsBuiltin DerivingTrait where
+  toBuiltinPrim :: DerivingTrait -> BuiltinPrim
+  toBuiltinPrim = \case
+    DerivingEq -> toBuiltinPrim BuiltinEq
+
+instance Pretty DerivingTrait where
+  pretty = pretty . toBuiltinPrim
+
+instance PrettyCodeAnn DerivingTrait where
+  ppCodeAnn = annotateKind KNameInductive . pretty
 
 data PreStatement
   = PreFunctionDef FunctionDef
@@ -484,6 +506,7 @@ data NormalizedExpression = NormalizedExpression
   }
 
 makePrisms ''Expression
+makePrisms ''Iden
 makePrisms ''MutualStatement
 
 makeLenses ''SideIfBranch
@@ -584,7 +607,7 @@ instance HasAtomicity Pattern where
     PatternWildcardConstructor {} -> Atom
 
 instance HasLoc Module where
-  getLoc m = getLoc (m ^. moduleName) <>? maybe Nothing (Just . getLocSpan) (nonEmpty (m ^. moduleBody . moduleStatements))
+  getLoc m = getLoc (m ^. moduleName) <>? fmap getLocSpan (nonEmpty (m ^. moduleBody . moduleStatements))
 
 instance HasLoc MutualBlock where
   getLoc = getLocSpan . (^. mutualStatements)

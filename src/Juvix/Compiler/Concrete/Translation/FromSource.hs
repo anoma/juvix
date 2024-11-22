@@ -399,10 +399,6 @@ replInput =
       <|> ReplOpen <$> openModule
       <|> ReplImport <$> import_
 
---------------------------------------------------------------------------------
--- Symbols and names
---------------------------------------------------------------------------------
-
 symbol :: (Members '[ParserResultBuilder] r) => ParsecS r Symbol
 symbol = uncurry (flip WithLoc) <$> identifierL
 
@@ -460,10 +456,6 @@ pusingList = do
 topModulePath :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r TopModulePath
 topModulePath = mkTopModulePath <$> dottedSymbol
 
---------------------------------------------------------------------------------
--- Top level statement
---------------------------------------------------------------------------------
-
 recoverStashes :: (Members '[PragmasStash, JudocStash] r) => ParsecS r a -> ParsecS r a
 recoverStashes r = do
   p <- P.lift (get @(Maybe ParsedPragmas))
@@ -473,6 +465,23 @@ recoverStashes r = do
     put p
     put j
   return res
+
+derivingInstance ::
+  (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) =>
+  ParsecS r (Deriving 'Parsed)
+derivingInstance = do
+  _derivingKw <- kw kwDeriving
+  _derivingPragmas <- getPragmas
+  let opts =
+        FunctionSyntaxOptions
+          { _funAllowOmitType = False,
+            _funAllowInstance = True
+          }
+  off <- P.getOffset
+  _derivingFunLhs <- functionDefinitionLhs opts Nothing
+  unless (isJust (_derivingFunLhs ^. funLhsInstance)) $
+    parseFailure off "Expected `deriving instance`"
+  return Deriving {..}
 
 statement :: (Members '[Error ParserError, ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r (Statement 'Parsed)
 statement = P.label "<top level statement>" $ do
@@ -486,6 +495,7 @@ statement = P.label "<top level statement>" $ do
   ms <-
     optional
       ( StatementImport <$> import_
+          <|> StatementDeriving <$> derivingInstance
           <|> StatementOpenModule <$> openModule
           <|> StatementSyntax <$> syntaxDef
           <|> StatementInductive <$> inductiveDef Nothing
@@ -681,10 +691,6 @@ builtinRecordField = do
   void (kw kwBuiltin)
   builtinFunction
 
---------------------------------------------------------------------------------
--- Syntax declaration
---------------------------------------------------------------------------------
-
 syntaxDef :: forall r. (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r (SyntaxDef 'Parsed)
 syntaxDef = do
   syn <- kw kwSyntax
@@ -808,10 +814,6 @@ iteratorSyntaxDef _iterSyntaxKw = do
   _iterSymbol <- symbol
   _iterInfo <- optional parsedIteratorInfo
   return IteratorSyntaxDef {..}
-
---------------------------------------------------------------------------------
--- Import statement
---------------------------------------------------------------------------------
 
 import_ :: forall r. (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash, Error ParserError] r) => ParsecS r (Import 'Parsed)
 import_ = do
@@ -1088,10 +1090,6 @@ parseList = do
   _listBracketR <- Irrelevant <$> kw delimBracketR
   return List {..}
 
---------------------------------------------------------------------------------
--- Literals
---------------------------------------------------------------------------------
-
 literalInteger :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r LiteralLoc
 literalInteger = fmap LitIntegerWithBase <$> integerWithBase
 
@@ -1273,10 +1271,6 @@ multiwayIf = do
   _ifBranches <- many ifBranch
   _ifBranchElse <- ifBranch
   return If {..}
-
---------------------------------------------------------------------------------
--- Universe expression
---------------------------------------------------------------------------------
 
 universe :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r Universe
 universe = do
@@ -1461,10 +1455,6 @@ axiomDef _axiomBuiltin = do
   _axiomTypeSig <- typeSig defaultSigOptions
   return AxiomDef {..}
 
---------------------------------------------------------------------------------
--- Function expression
---------------------------------------------------------------------------------
-
 implicitOpenField ::
   (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) =>
   ParsecS r (KeywordRef, IsImplicitField)
@@ -1522,10 +1512,6 @@ function = do
   _funReturn <- parseExpressionAtoms
   return Function {..}
 
---------------------------------------------------------------------------------
--- Lambda expression
---------------------------------------------------------------------------------
-
 lambdaClause :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => Irrelevant (Maybe KeywordRef) -> ParsecS r (LambdaClause 'Parsed)
 lambdaClause _lambdaPipe = do
   _lambdaParameters <- P.some patternAtom
@@ -1541,10 +1527,6 @@ lambda = do
   brr <- kw delimBraceR
   let _lambdaBraces = Irrelevant (brl, brr)
   return Lambda {..}
-
--------------------------------------------------------------------------------
--- Data type construction declaration
--------------------------------------------------------------------------------
 
 inductiveDef :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => Maybe (WithLoc BuiltinInductive) -> ParsecS r (InductiveDef 'Parsed)
 inductiveDef _inductiveBuiltin = do
@@ -1784,10 +1766,6 @@ parsePatternAtomsNested :: (Members '[ParserResultBuilder, PragmasStash, Error P
 parsePatternAtomsNested = do
   (_patternAtoms, _patternAtomsLoc) <- second Irrelevant <$> interval (P.some patternAtomNested)
   return PatternAtoms {..}
-
---------------------------------------------------------------------------------
--- Module declaration
---------------------------------------------------------------------------------
 
 pmodulePath :: forall t r. (SingI t, Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r (ModulePathType 'Parsed t)
 pmodulePath = case sing :: SModuleIsTop t of

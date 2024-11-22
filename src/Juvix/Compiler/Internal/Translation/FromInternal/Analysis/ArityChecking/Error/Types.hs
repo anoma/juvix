@@ -52,25 +52,32 @@ newtype LhsTooManyPatterns = LhsTooManyPatterns
 makeLenses ''LhsTooManyPatterns
 
 instance ToGenericError LhsTooManyPatterns where
-  genericError e =
-    return
-      GenericError
-        { _genericErrorLoc = i,
-          _genericErrorMessage = ppOutput msg,
-          _genericErrorIntervals = [i]
-        }
+  genericError e = genErr <$> ask
     where
-      i = getLocSpan (e ^. lhsTooManyPatternsRemaining)
-      n = length (e ^. lhsTooManyPatternsRemaining)
-      howMany =
-        "The last" <+> case n of
-          1 -> "pattern"
-          _ -> pretty n <+> "patterns"
-      msg =
-        howMany <+> "on the left hand side of the function clause" <+> wasWere <+> "not expected"
-      wasWere
-        | n == 1 = "was"
-        | otherwise = "were"
+      genErr opts =
+        GenericError
+          { _genericErrorLoc = i,
+            _genericErrorMessage = ppOutput msg,
+            _genericErrorIntervals = [i]
+          }
+        where
+          opts' = fromGenericOptions opts
+          i = getLocSpan (e ^. lhsTooManyPatternsRemaining)
+          n = length (e ^. lhsTooManyPatternsRemaining)
+          howMany =
+            "The last" <+> case n of
+              1 -> "pattern"
+              _ -> pretty n <+> "patterns"
+          msg =
+            howMany
+              <+> "on the left hand side of the function clause"
+              <+> wasWere
+              <+> "not expected"
+                <> line
+                <> itemize (ppCode opts' <$> (e ^. lhsTooManyPatternsRemaining))
+          wasWere
+            | n == 1 = "was"
+            | otherwise = "were"
 
 data WrongPatternIsImplicit = WrongPatternIsImplicit
   { _wrongPatternIsImplicitExpected :: IsImplicit,

@@ -353,7 +353,7 @@ getReservedDefinitionSymbol ::
 getReservedDefinitionSymbol s = do
   m <- gets (^. scopeLocalSymbols)
   let s' = fromMaybe err (m ^. at s)
-      err = error ("impossible. Contents of scope:\n" <> ppTrace (toList m))
+      err = impossibleError ("Symbol " <> ppTrace s <> " not found in the scope. Contents of scope:\n" <> ppTrace (toList m))
   return s'
 
 ignoreSyntax :: Sem (State ScoperSyntax ': r) a -> Sem r a
@@ -404,10 +404,10 @@ reserveConstructorSymbol d c b = do
 
 reserveFunctionSymbol ::
   (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable] r) =>
-  FunctionDef 'Parsed ->
+  FunctionLhs 'Parsed ->
   Sem r S.Symbol
 reserveFunctionSymbol f =
-  reserveSymbolSignatureOf SKNameFunction f (toBuiltinPrim <$> f ^. signBuiltin) (f ^. signName)
+  reserveSymbolSignatureOf SKNameFunction f (toBuiltinPrim <$> f ^. funLhsBuiltin) (f ^. funLhsName)
 
 reserveAxiomSymbol ::
   (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable] r) =>
@@ -419,37 +419,22 @@ reserveAxiomSymbol a =
     kindPretty :: NameKind
     kindPretty = maybe KNameAxiom getNameKind (a ^? axiomBuiltin . _Just . withLocParam)
 
+reserveDerivingSymbol ::
+  (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable] r) =>
+  Deriving 'Parsed ->
+  Sem r ()
+reserveDerivingSymbol f = do
+  let lhs = f ^. derivingFunLhs
+  when (P.isLhsFunctionLike lhs) $
+    void (reserveFunctionSymbol lhs)
+
 reserveFunctionLikeSymbol ::
   (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable] r) =>
   FunctionDef 'Parsed ->
   Sem r ()
 reserveFunctionLikeSymbol f =
   when (P.isFunctionLike f) $
-    void (reserveFunctionSymbol f)
-
-bindFunctionSymbol ::
-  (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, InfoTableBuilder, Reader InfoTable, State ScoperState, Reader BindingStrategy] r) =>
-  Symbol ->
-  Sem r S.Symbol
-bindFunctionSymbol = getReservedDefinitionSymbol
-
-bindInductiveSymbol ::
-  (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, InfoTableBuilder, Reader InfoTable, State ScoperState, Reader BindingStrategy] r) =>
-  Symbol ->
-  Sem r S.Symbol
-bindInductiveSymbol = getReservedDefinitionSymbol
-
-bindAxiomSymbol ::
-  (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, InfoTableBuilder, Reader InfoTable, State ScoperState, Reader BindingStrategy] r) =>
-  Symbol ->
-  Sem r S.Symbol
-bindAxiomSymbol = getReservedDefinitionSymbol
-
-bindConstructorSymbol ::
-  (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, InfoTableBuilder, Reader InfoTable, State ScoperState, Reader BindingStrategy] r) =>
-  Symbol ->
-  Sem r S.Symbol
-bindConstructorSymbol = getReservedDefinitionSymbol
+    void (reserveFunctionSymbol (functionDefLhs f))
 
 bindFixitySymbol ::
   (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, InfoTableBuilder, Reader InfoTable, State ScoperState, Reader BindingStrategy] r) =>
@@ -726,7 +711,11 @@ lookupQualifiedSymbol ::
   ([Symbol], Symbol) ->
   Sem r (HashSet PreSymbolEntry, HashSet ModuleSymbolEntry, HashSet FixitySymbolEntry)
 lookupQualifiedSymbol sms = do
-  (es, (ms, fs)) <- runOutputHashSet . runOutputHashSet . execOutputHashSet $ go sms
+  (es, (ms, fs)) <-
+    runOutputHashSet
+      . runOutputHashSet
+      . execOutputHashSet
+      $ go sms
   return (es, ms, fs)
   where
     go ::
@@ -1063,25 +1052,58 @@ resolveIteratorSyntaxDef s@IteratorSyntaxDef {..} = do
 (@$>) :: (Functor m) => (a -> m ()) -> a -> m a
 (@$>) f a = f a $> a
 
+checkDeriving ::
+  ( Members
+      '[ State Scope,
+         Error ScoperError,
+         State ScoperState,
+         Reader ScopeParameters,
+         Reader InfoTable,
+         Reader PackageId,
+         HighlightBuilder,
+         InfoTableBuilder,
+         NameIdGen,
+         State ScoperSyntax,
+         Reader BindingStrategy
+       ]
+      r
+  ) =>
+  Deriving 'Parsed ->
+  Sem r (Deriving 'Scoped)
+checkDeriving Deriving {..} = do
+  let lhs@FunctionLhs {..} = _derivingFunLhs
+  typeSig' <- withLocalScope (checkTypeSig _funLhsTypeSig)
+  name' <-
+    if
+        | P.isLhsFunctionLike lhs -> getReservedDefinitionSymbol _funLhsName
+        | otherwise -> reserveFunctionSymbol lhs
+  let lhs' =
+        FunctionLhs
+          { _funLhsName = name',
+            _funLhsTypeSig = typeSig',
+            ..
+          }
+  return
+    Deriving
+      { _derivingFunLhs = lhs',
+        _derivingKw,
+        _derivingPragmas
+      }
+
 checkTypeSig ::
   forall r.
   (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader PackageId, State ScoperSyntax, Reader BindingStrategy] r) =>
   TypeSig 'Parsed ->
   Sem r (TypeSig 'Scoped)
 checkTypeSig TypeSig {..} = do
-  a' <- mapM checkArg _typeSigArgs
+  a' <- mapM checkSigArg _typeSigArgs
   t' <- mapM checkParseExpressionAtoms _typeSigRetType
   return TypeSig {_typeSigArgs = a', _typeSigRetType = t', ..}
   where
-    checkSigArgNames :: SigArgNames 'Parsed -> Sem r (SigArgNames 'Scoped)
-    checkSigArgNames = \case
-      SigArgNamesInstance -> return SigArgNamesInstance
-      SigArgNames ns -> fmap SigArgNames . forM ns $ \case
-        ArgumentSymbol s -> ArgumentSymbol <$> bindVariableSymbol s
-        ArgumentWildcard w -> return (ArgumentWildcard w)
-
-    checkArg :: SigArg 'Parsed -> Sem r (SigArg 'Scoped)
-    checkArg arg@SigArg {..} = do
+    checkSigArg ::
+      SigArg 'Parsed ->
+      Sem r (SigArg 'Scoped)
+    checkSigArg arg@SigArg {..} = do
       names' <- checkSigArgNames _sigArgNames
       ty' <- mapM checkParseExpressionAtoms _sigArgType
       default' <- case _sigArgDefault of
@@ -1102,6 +1124,13 @@ checkTypeSig TypeSig {..} = do
             ..
           }
 
+    checkSigArgNames :: SigArgNames 'Parsed -> Sem r (SigArgNames 'Scoped)
+    checkSigArgNames = \case
+      SigArgNamesInstance -> return SigArgNamesInstance
+      SigArgNames ns -> fmap SigArgNames . forM ns $ \case
+        ArgumentSymbol s -> ArgumentSymbol <$> bindVariableSymbol s
+        ArgumentWildcard w -> return (ArgumentWildcard w)
+
 checkFunctionDef ::
   forall r.
   (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader PackageId, State ScoperSyntax, Reader BindingStrategy] r) =>
@@ -1115,8 +1144,8 @@ checkFunctionDef fdef@FunctionDef {..} = do
     return (a', b')
   sigName' <-
     if
-        | P.isFunctionLike fdef -> bindFunctionSymbol _signName
-        | otherwise -> reserveFunctionSymbol fdef
+        | P.isFunctionLike fdef -> getReservedDefinitionSymbol _signName
+        | otherwise -> reserveFunctionSymbol (functionDefLhs fdef)
   let def =
         FunctionDef
           { _signName = sigName',
@@ -1165,13 +1194,27 @@ checkInductiveParameters params = do
 
 checkInductiveDef ::
   forall r.
-  (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader PackageId, State ScoperSyntax, Reader BindingStrategy] r) =>
+  ( Members
+      '[ HighlightBuilder,
+         Reader ScopeParameters,
+         Error ScoperError,
+         State Scope,
+         State ScoperState,
+         InfoTableBuilder,
+         Reader InfoTable,
+         NameIdGen,
+         Reader PackageId,
+         State ScoperSyntax,
+         Reader BindingStrategy
+       ]
+      r
+  ) =>
   InductiveDef 'Parsed ->
   Sem r (InductiveDef 'Scoped)
 checkInductiveDef InductiveDef {..} = do
   (inductiveName', constructorNames' :: NonEmpty S.Symbol) <- topBindings $ do
-    i <- bindInductiveSymbol _inductiveName
-    cs <- mapM (bindConstructorSymbol . (^. constructorName)) _inductiveConstructors
+    i <- getReservedDefinitionSymbol _inductiveName
+    cs <- mapM (getReservedDefinitionSymbol . (^. constructorName)) _inductiveConstructors
     return (i, cs)
   (inductiveParameters', inductiveType', inductiveTypeApplied', inductiveDoc', inductiveConstructors') <- withLocalScope $ do
     inductiveParameters' <- mapM checkInductiveParameters _inductiveParameters
@@ -1470,6 +1513,7 @@ checkModuleBody body = do
             toStatement :: Definition s -> Statement s
             toStatement = \case
               DefinitionSyntax d -> StatementSyntax d
+              DefinitionDeriving d -> StatementDeriving d
               DefinitionAxiom d -> StatementAxiom d
               DefinitionFunctionDef d -> StatementFunctionDef d
               DefinitionInductive d -> StatementInductive d
@@ -1605,6 +1649,7 @@ checkSections sec = topBindings helper
             reserveDefinition = \case
               DefinitionSyntax s -> resolveSyntaxDef s $> Nothing
               DefinitionFunctionDef d -> reserveFunctionLikeSymbol d >> return Nothing
+              DefinitionDeriving d -> reserveDerivingSymbol d >> return Nothing
               DefinitionAxiom d -> reserveAxiomSymbol d >> return Nothing
               DefinitionProjectionDef d -> reserveProjectionSymbol d >> return Nothing
               DefinitionInductive d -> Just <$> reserveInductive d
@@ -1660,6 +1705,7 @@ checkSections sec = topBindings helper
             goDefinition = \case
               DefinitionSyntax s -> DefinitionSyntax <$> checkSyntaxDef s
               DefinitionFunctionDef d -> DefinitionFunctionDef <$> checkFunctionDef d
+              DefinitionDeriving d -> DefinitionDeriving <$> checkDeriving d
               DefinitionAxiom d -> DefinitionAxiom <$> checkAxiomDef d
               DefinitionInductive d -> DefinitionInductive <$> checkInductiveDef d
               DefinitionProjectionDef d -> DefinitionProjectionDef <$> checkProjectionDef d
@@ -1800,6 +1846,7 @@ mkSections = \case
     fromStatement = \case
       StatementAxiom a -> Left (DefinitionAxiom a)
       StatementFunctionDef n -> Left (DefinitionFunctionDef n)
+      StatementDeriving n -> Left (DefinitionDeriving n)
       StatementInductive i -> Left (DefinitionInductive i)
       StatementSyntax s -> Left (DefinitionSyntax s)
       StatementProjectionDef s -> Left (DefinitionProjectionDef s)
@@ -1834,9 +1881,9 @@ checkLocalModule ::
   Sem r (Module 'Scoped 'ModuleLocal)
 checkLocalModule md@Module {..} = do
   tab1 <- ask @InfoTable
-  tab2 <- getInfoTable
+  tab2 <- getBuilderInfoTable
   (tab, (moduleExportInfo, moduleBody', moduleDoc')) <-
-    withLocalScope $ runReader (tab1 <> tab2) $ runInfoTableBuilder mempty $ do
+    withLocalScope . runReader (tab1 <> tab2) . runInfoTableBuilder mempty $ do
       inheritScope
       (e, b) <- checkModuleBody _moduleBody
       doc' <- mapM checkJudoc _moduleDoc
@@ -2122,10 +2169,16 @@ checkAxiomDef ::
   AxiomDef 'Parsed ->
   Sem r (AxiomDef 'Scoped)
 checkAxiomDef AxiomDef {..} = do
-  axiomName' <- bindAxiomSymbol _axiomName
+  axiomName' <- getReservedDefinitionSymbol _axiomName
   axiomDoc' <- withLocalScope (mapM checkJudoc _axiomDoc)
   axiomSig' <- withLocalScope (checkTypeSig _axiomTypeSig)
-  let a = AxiomDef {_axiomName = axiomName', _axiomTypeSig = axiomSig', _axiomDoc = axiomDoc', ..}
+  let a =
+        AxiomDef
+          { _axiomName = axiomName',
+            _axiomTypeSig = axiomSig',
+            _axiomDoc = axiomDoc',
+            ..
+          }
   registerNameSignature (a ^. axiomName . S.nameId) a
   registerAxiom @$> a
 
@@ -2185,6 +2238,7 @@ checkLetStatements =
               DefinitionFunctionDef d -> LetFunctionDef d
               DefinitionSyntax syn -> fromSyn syn
               DefinitionInductive {} -> impossible
+              DefinitionDeriving {} -> impossible
               DefinitionProjectionDef {} -> impossible
               DefinitionAxiom {} -> impossible
 

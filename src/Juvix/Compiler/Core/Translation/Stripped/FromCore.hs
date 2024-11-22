@@ -54,6 +54,7 @@ fromCore fsize tab =
       BuiltinIntLe -> False
       BuiltinIntLt -> False
       BuiltinSeq -> False
+      BuiltinIsEqual -> False
       BuiltinMonadBind -> True -- TODO revise
       BuiltinFromNat -> True
       BuiltinFromInt -> True
@@ -62,19 +63,20 @@ fromCore fsize tab =
     shouldKeepConstructor = \case
       BuiltinListNil -> True
       BuiltinListCons -> True
+      BuiltinMkEq -> True
       BuiltinMkPoseidonState -> True
       BuiltinMkEcPoint -> True
       BuiltinMaybeNothing -> True
       BuiltinMaybeJust -> True
       BuiltinPairConstr -> True
+      BuiltinMkAnomaResource -> True
+      BuiltinMkAnomaAction -> True
       BuiltinNatZero -> False
       BuiltinNatSuc -> False
       BuiltinBoolTrue -> False
       BuiltinBoolFalse -> False
       BuiltinIntOfNat -> False
       BuiltinIntNegSuc -> False
-      BuiltinMkAnomaResource -> True
-      BuiltinMkAnomaAction -> True
 
     shouldKeepType :: BuiltinType -> Bool
     shouldKeepType = \case
@@ -141,6 +143,7 @@ fromCore fsize tab =
         BuiltinByteArrayLength -> False
       BuiltinTypeInductive i -> case i of
         BuiltinList -> True
+        BuiltinEq -> True
         BuiltinMaybe -> True
         BuiltinPair -> True
         BuiltinPoseidonState -> True

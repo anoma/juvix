@@ -61,6 +61,7 @@ data ScoperError
   | ErrBuiltinErrorMessage BuiltinErrorMessage
   | ErrDoLastStatement DoLastStatement
   | ErrDoBindImplicitPattern DoBindImplicitPattern
+  | ErrDerivingTypeWrongForm DerivingTypeWrongForm
   deriving stock (Generic)
 
 instance ToGenericError ScoperError where
@@ -113,6 +114,7 @@ instance ToGenericError ScoperError where
     ErrBuiltinErrorMessage e -> genericError e
     ErrDoLastStatement e -> genericError e
     ErrDoBindImplicitPattern e -> genericError e
+    ErrDerivingTypeWrongForm e -> genericError e
 
 builtinsErrorMsg :: (Members '[Error ScoperError] r) => Interval -> AnsiText -> Sem r a
 builtinsErrorMsg loc msg =

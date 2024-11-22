@@ -1,19 +1,24 @@
 -- | An effect similar to Polysemy Fail but without an error message
-module Juvix.Data.Effect.Fail where
+module Juvix.Data.Effect.Fail
+  ( module Juvix.Data.Effect.Fail,
+    module Effectful.Fail,
+  )
+where
 
 import Control.Exception qualified as X
+import Control.Monad.Fail qualified as Fail
+import Effectful.Fail (Fail)
+import Effectful.Fail qualified as Fail
 import Juvix.Prelude.Base
 
-data Fail :: Effect where
-  Fail :: Fail m a
-
-makeSem ''Fail
+fail :: (Member Fail r) => Sem r a
+fail = Fail.fail "fail"
 
 -- | Run a 'Fail' effect purely.
 runFail ::
   Sem (Fail ': r) a ->
   Sem r (Maybe a)
-runFail = fmap (^? _Right) . reinterpret (runError @()) (\Fail -> throw ())
+runFail = fmap (^? _Right) . reinterpret (runError @()) (\Fail.Fail {} -> throw ())
 {-# INLINE runFail #-}
 
 -- | Run a 'Fail' effect purely with a default value.

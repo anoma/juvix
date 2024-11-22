@@ -180,6 +180,7 @@ import Data.Singletons hiding ((@@))
 import Data.Singletons.Sigma
 import Data.Singletons.TH (genSingletons, promoteOrdInstances, singOrdInstances)
 import Data.Stream (Stream)
+import Data.Stream qualified as Stream
 import Data.String
 import Data.String.Interpolate (__i)
 import Data.Text (Text, pack, strip, unpack)
@@ -888,3 +889,26 @@ graphCycle gi =
 
         goChildren :: NonEmpty Vertex -> [Tree Vertex] -> Either (NonEmpty Vertex) ()
         goChildren path = mapM_ (go path)
+
+allNaturals :: Stream Natural
+allNaturals = Stream.iterate succ 0
+
+allWords :: Stream Text
+allWords = pack . toList <$> allFiniteSequences ('a' :| ['b' .. 'z'])
+
+-- | Returns all non-empty finite sequences
+allFiniteSequences :: forall a. NonEmpty a -> Stream (NonEmpty a)
+allFiniteSequences elems = build 0 []
+  where
+    build :: Integer -> [NonEmpty a] -> Stream (NonEmpty a)
+    build n = \case
+      [] -> build (succ n) (toList (ofLength (succ n)))
+      s : ss -> Stream.Cons s (build n ss)
+    ofLength :: Integer -> NonEmpty (NonEmpty a)
+    ofLength n
+      | n < 1 = impossible
+      | n == 1 = pure <$> elems
+      | otherwise = do
+          seq <- ofLength (n - 1)
+          e <- elems
+          return (pure e <> seq)

@@ -423,6 +423,7 @@ goStatement = \case
   StatementInductive t -> goInductive t
   StatementOpenModule t -> goOpen t
   StatementFunctionDef t -> goFunctionDef t
+  StatementDeriving t -> goDeriving t
   StatementSyntax syn -> goSyntax syn
   StatementImport t -> goImport t
   StatementModule m -> goLocalModule m
@@ -537,13 +538,15 @@ goAxiom axiom = do
     axiomHeader :: Sem r Html
     axiomHeader = ppCodeHtml defaultOptions (set axiomDoc Nothing axiom)
 
+goDeriving :: forall r. (Members '[Reader HtmlOptions] r) => Deriving 'Scoped -> Sem r Html
+goDeriving def = do
+  sig <- ppHelper (ppCode def)
+  defHeader (def ^. derivingFunLhs . funLhsName) sig Nothing
+
 goFunctionDef :: forall r. (Members '[Reader HtmlOptions] r) => FunctionDef 'Scoped -> Sem r Html
 goFunctionDef def = do
-  sig' <- funSig
-  defHeader (def ^. signName) sig' (def ^. signDoc)
-  where
-    funSig :: Sem r Html
-    funSig = ppHelper (ppCode (functionDefLhs def))
+  sig <- ppHelper (ppCode (functionDefLhs def))
+  defHeader (def ^. signName) sig (def ^. signDoc)
 
 goInductive :: forall r. (Members '[Reader HtmlOptions] r) => InductiveDef 'Scoped -> Sem r Html
 goInductive def = do

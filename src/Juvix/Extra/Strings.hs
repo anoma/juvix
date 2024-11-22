@@ -452,6 +452,9 @@ builtinSeq = "seq"
 as :: (IsString s) => s
 as = "as"
 
+deriving_ :: (IsString s) => s
+deriving_ = "deriving"
+
 builtin :: (IsString s) => s
 builtin = "builtin"
 
@@ -538,6 +541,9 @@ seqq_ = ">>>"
 
 sseq_ :: (IsString s) => s
 sseq_ = "seq"
+
+isEqual :: (IsString s) => s
+isEqual = "isEqual"
 
 eq :: (IsString s) => s
 eq = "eq"
@@ -1144,6 +1150,9 @@ anomaMkResource = "mkResource"
 
 anomaMkAction :: (IsString s) => s
 anomaMkAction = "mkAction"
+
+mkEq :: (IsString s) => s
+mkEq = "mkEq"
 
 rustFn :: (IsString s) => s
 rustFn = "fn"

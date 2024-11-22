@@ -1,0 +1,32 @@
+-- Deriving Eq
+module test085;
+
+import Stdlib.Data.Nat open hiding {isEqual};
+import Stdlib.Data.Fixity open;
+import Stdlib.Data.Bool open;
+import Stdlib.Data.Pair open;
+import Stdlib.Trait.Eq open;
+import Stdlib.System.IO open;
+
+syntax alias isEqual := Eq.eq;
+
+type Tree A :=
+  | Leaf
+  | Node (Tree A) A (Tree A);
+
+{-# inline: case #-}
+deriving instance
+treeEqI {A} {{Eq A}} : Eq (Tree A);
+
+t1 : Tree Nat := Node (Node Leaf 0 Leaf) 1 Leaf;
+t2 : Tree Nat := Node (Node Leaf 1 Leaf) 1 Leaf;
+t3 : Tree Nat := Node Leaf 1 (Node Leaf 0 Leaf);
+
+main : IO :=
+  printLn (isEqual true true)
+    >>> printLn (not (isEqual false true))
+    >>> printLn (isEqual (false, true) (false, true))
+    >>> printLn (not (isEqual (false, true) (false, false)))
+    >>> printLn (isEqual t1 t1)
+    >>> printLn (isEqual t1 t2)
+    >>> printLn (isEqual t1 t3);

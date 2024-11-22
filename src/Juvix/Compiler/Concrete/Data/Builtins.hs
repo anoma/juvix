@@ -59,6 +59,7 @@ builtinConstructors = \case
   BuiltinEcPoint -> [BuiltinMkEcPoint]
   BuiltinAnomaResource -> [BuiltinMkAnomaResource]
   BuiltinAnomaAction -> [BuiltinMkAnomaAction]
+  BuiltinEq -> [BuiltinMkEq]
 
 data BuiltinInductive
   = BuiltinNat
@@ -67,6 +68,7 @@ data BuiltinInductive
   | BuiltinList
   | BuiltinMaybe
   | BuiltinPair
+  | BuiltinEq
   | BuiltinPoseidonState
   | BuiltinEcPoint
   | BuiltinAnomaResource
@@ -87,6 +89,7 @@ instance Pretty BuiltinInductive where
     BuiltinList -> Str.list
     BuiltinMaybe -> Str.maybe_
     BuiltinPair -> Str.pair
+    BuiltinEq -> Str.eq
     BuiltinPoseidonState -> Str.cairoPoseidonState
     BuiltinEcPoint -> Str.cairoEcPoint
     BuiltinAnomaResource -> Str.anomaResource
@@ -109,6 +112,7 @@ instance Pretty BuiltinConstructor where
     BuiltinMkEcPoint -> Str.cairoMkEcPoint
     BuiltinMkAnomaResource -> Str.anomaMkResource
     BuiltinMkAnomaAction -> Str.anomaMkAction
+    BuiltinMkEq -> Str.mkEq
 
 data BuiltinConstructor
   = BuiltinNatZero
@@ -119,6 +123,7 @@ data BuiltinConstructor
   | BuiltinIntNegSuc
   | BuiltinListNil
   | BuiltinListCons
+  | BuiltinMkEq
   | BuiltinMaybeNothing
   | BuiltinMaybeJust
   | BuiltinPairConstr
@@ -161,6 +166,7 @@ data BuiltinFunction
   | BuiltinIntLe
   | BuiltinIntLt
   | BuiltinFromNat
+  | BuiltinIsEqual
   | BuiltinFromInt
   | BuiltinSeq
   | BuiltinMonadBind
@@ -202,6 +208,7 @@ instance Pretty BuiltinFunction where
     BuiltinFromNat -> Str.fromNat
     BuiltinFromInt -> Str.fromInt
     BuiltinSeq -> Str.builtinSeq
+    BuiltinIsEqual -> Str.isEqual
     BuiltinMonadBind -> Str.builtinMonadBind
 
 data BuiltinAxiom
@@ -434,6 +441,7 @@ isNatBuiltin = \case
   BuiltinNatLt -> True
   BuiltinNatEq -> True
   --
+  BuiltinIsEqual -> False
   BuiltinAssert -> False
   BuiltinBoolIf -> False
   BuiltinBoolOr -> False
@@ -486,6 +494,7 @@ isIntBuiltin = \case
   BuiltinFromNat -> False
   BuiltinFromInt -> False
   BuiltinSeq -> False
+  BuiltinIsEqual -> False
   BuiltinMonadBind -> False
 
 isCastBuiltin :: BuiltinFunction -> Bool
@@ -493,6 +502,7 @@ isCastBuiltin = \case
   BuiltinFromNat -> True
   BuiltinFromInt -> True
   --
+  BuiltinIsEqual -> False
   BuiltinAssert -> False
   BuiltinIntEq -> False
   BuiltinIntPlus -> False
@@ -532,6 +542,7 @@ isIgnoredBuiltin f
         .&&. (not . isIntBuiltin)
         .&&. (not . isCastBuiltin)
         .&&. (/= BuiltinMonadBind)
+        .&&. (/= BuiltinIsEqual)
         $ f
 
     explicit :: Bool
@@ -562,6 +573,8 @@ isIgnoredBuiltin f
       BuiltinNatLe -> False
       BuiltinNatLt -> False
       BuiltinNatEq -> False
+      -- Eq
+      BuiltinIsEqual -> False
       -- Monad
       BuiltinMonadBind -> False
       -- Ignored

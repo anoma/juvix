@@ -9,7 +9,6 @@ where
 import Data.Stream
 import Juvix.Prelude.Base.Foundation
 import Juvix.Prelude.Effects.Base
-import Juvix.Prelude.Stream
 
 data StreamOf (i :: GHCType) :: Effect
 

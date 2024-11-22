@@ -495,5 +495,10 @@ tests =
         "Test084: issue3030"
         $(mkRelDir ".")
         $(mkRelFile "test084.juvix")
-        $(mkRelFile "out/test084.out")
+        $(mkRelFile "out/test084.out"),
+      posTest
+        "Test085: Deriving Eq"
+        $(mkRelDir ".")
+        $(mkRelFile "test085.juvix")
+        $(mkRelFile "out/test085.out")
     ]
