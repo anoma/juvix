@@ -107,6 +107,19 @@ anomaArgsOpt = do
       )
   pure AppPath {_pathIsInput = True, ..}
 
+anomaClientConfigOpt :: Parser (AppPath File)
+anomaClientConfigOpt = do
+  _pathPath <-
+    option
+      somePreFileOpt
+      ( long "config"
+          <> short 'c'
+          <> metavar "CONFIG_FILE"
+          <> help "A path to a Anoma client configuration file"
+          <> action "file"
+      )
+  pure AppPath {_pathIsInput = True, ..}
+
 parseNumThreads :: Parser NumThreads
 parseNumThreads = do
   option
