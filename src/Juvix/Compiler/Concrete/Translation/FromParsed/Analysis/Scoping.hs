@@ -1220,7 +1220,6 @@ checkFunctionDef fdef@FunctionDef {..} = do
   let def =
         FunctionDef
           { _signName = sigName',
-            -- _signPattern = sigPattern',
             _signDoc = sigDoc',
             _signBody = sigBody',
             _signTypeSig = sig',
