@@ -79,8 +79,7 @@ convertNode inlineDepth nonRecSyms md = dmapL go
                   node
                 Nothing
                   | HashSet.member _identSymbol nonRecSyms
-                      && isConstructorApp def
-                      && checkDepth md bl inlineDepth def ->
+                      && checkLambdaConstructorApp (length args) bl def ->
                       NCase cs {_caseValue = mkApps def args}
                 _ ->
                   node
@@ -92,6 +91,12 @@ convertNode inlineDepth nonRecSyms md = dmapL go
                 node
       _ ->
         node
+
+    checkLambdaConstructorApp :: Int -> BinderList Binder -> Node -> Bool
+    checkLambdaConstructorApp argsNum bl node =
+      argsNum >= lamsNum && isConstructorApp body && checkDepth md bl inlineDepth body
+      where
+        (lamsNum, body) = unfoldLambdas' node
 
 inlining' :: Int -> HashSet Symbol -> Module -> Module
 inlining' inliningDepth nonRecSyms md = mapT (const (convertNode inliningDepth nonRecSyms md)) md

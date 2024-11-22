@@ -10,11 +10,17 @@ import Stdlib.System.IO open;
 
 syntax alias isEqual := Eq.eq;
 
+type NTree :=
+  | NLeaf
+  | NNode NTree Nat NTree;
+
+deriving instance
+ntreeEq : Eq NTree;
+
 type Tree A :=
   | Leaf
   | Node (Tree A) A (Tree A);
 
-{-# inline: case #-}
 deriving instance
 treeEqI {A} {{Eq A}} : Eq (Tree A);
 
@@ -29,4 +35,5 @@ main : IO :=
     >>> printLn (not (isEqual (false, true) (false, false)))
     >>> printLn (isEqual t1 t1)
     >>> printLn (isEqual t1 t2)
-    >>> printLn (isEqual t1 t3);
+    >>> printLn (isEqual t1 t3)
+    >>> printLn (isEqual (NNode NLeaf 0 NLeaf) (NNode NLeaf 0 NLeaf));
