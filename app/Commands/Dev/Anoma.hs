@@ -5,9 +5,13 @@ module Commands.Dev.Anoma
 where
 
 import Commands.Base
-import Commands.Dev.Anoma.Node qualified as Node
 import Commands.Dev.Anoma.Options
+import Commands.Dev.Anoma.Start qualified as Start
+import Commands.Dev.Anoma.Status qualified as Status
+import Commands.Dev.Anoma.Stop qualified as Stop
 
 runCommand :: (Members AppEffects r) => AnomaCommand -> Sem r ()
 runCommand = \case
-  AnomaCommandNode opts -> Node.runCommand opts
+  AnomaCommandStart opts -> Start.runCommand opts
+  AnomaCommandStatus -> Status.runCommand
+  AnomaCommandStop -> Stop.runCommand

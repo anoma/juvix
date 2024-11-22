@@ -112,6 +112,7 @@ dependencies:
   - unicode-show == 0.1.*
   - uniplate == 1.6.*
   - unix-compat == 0.7.*
+  - unix == 2.8.*
   - unordered-containers == 0.2.*
   - utf8-string == 1.0.*
   - vector == 0.13.*

@@ -215,4 +215,4 @@ commandAnoma =
   command "anoma" $
     info
       (Anoma <$> parseAnomaCommand)
-      (progDesc "Subcommands related to the anoma")
+      (progDesc "Subcommands related to the Anoma client")

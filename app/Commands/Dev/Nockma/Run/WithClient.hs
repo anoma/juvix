@@ -12,9 +12,9 @@ runCommand opts =
     $ runInAnoma runArgs
   where
     grpcInfo =
-      AnomaGrpcClientInfo
-        { _anomaGrpcClientInfoUrl = opts ^. nockmaRunWithClientUrl,
-          _anomaGrpcClientInfoPort = opts ^. nockmaRunWithClientGrpcPort
+      AnomaClientInfo
+        { _anomaClientInfoUrl = opts ^. nockmaRunWithClientUrl,
+          _anomaClientInfoPort = opts ^. nockmaRunWithClientGrpcPort
         }
     runArgs =
       RunCommandArgs
