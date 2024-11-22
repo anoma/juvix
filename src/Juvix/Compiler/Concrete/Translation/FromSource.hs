@@ -481,7 +481,7 @@ derivingInstance = do
   _derivingFunLhs <- functionDefinitionLhs opts Nothing
   unless (isJust (_derivingFunLhs ^. funLhsInstance)) $
     parseFailure off "Expected `deriving instance`"
-  unless (isNothing (_derivingFunLhs ^. funLhsPattern)) $
+  when (has _FunctionDefNamePattern (_derivingFunLhs ^. funLhsName)) $
     parseFailure off "Patterns not allowed for `deriving instance`"
   return Deriving {..}
 
@@ -1334,27 +1334,26 @@ functionDefinitionLhs opts _funLhsBuiltin = P.label "<function definition>" $ do
     parseFailure off0 "instance not allowed here"
   when (isJust _funLhsCoercion && isNothing _funLhsInstance) $
     parseFailure off0 "expected: instance"
-  _funLhsName <- optional $ P.try $ do
+  mname <- optional . P.try $ do
     n <- symbol
     P.notFollowedBy (kw kwAt)
     return n
-  _funLhsPattern <- case _funLhsName of
-    Nothing -> Just <$> patternAtom
-    Just {} -> return Nothing
+  _funLhsName <- case mname of
+    Nothing -> FunctionDefNamePattern <$> patternAtom
+    Just fname -> return (FunctionDefName fname)
   let sigOpts =
         SigOptions
           { _sigAllowDefault = True,
             _sigAllowOmitType = allowOmitType
           }
   _funLhsTypeSig <- typeSig sigOpts
-  when (isNothing _funLhsName && not (null (_funLhsTypeSig ^. typeSigArgs))) $
+  when (isNothing (_funLhsName ^? _FunctionDefName) && notNull (_funLhsTypeSig ^. typeSigArgs)) $
     parseFailure off "expected function name"
   return
     FunctionLhs
       { _funLhsInstance,
         _funLhsBuiltin,
         _funLhsCoercion,
-        _funLhsPattern,
         _funLhsName,
         _funLhsTypeSig,
         _funLhsTerminating
@@ -1424,7 +1423,6 @@ functionDefinition opts _signBuiltin = P.label "<function definition>" $ do
   let fdef =
         FunctionDef
           { _signName = _funLhsName,
-            _signPattern = _funLhsPattern,
             _signTypeSig = _funLhsTypeSig,
             _signTerminating = _funLhsTerminating,
             _signInstance = _funLhsInstance,
@@ -1434,7 +1432,7 @@ functionDefinition opts _signBuiltin = P.label "<function definition>" $ do
             _signPragmas,
             _signBody
           }
-  when (isNothing _funLhsName && P.isFunctionLike fdef) $
+  when (isNothing (_funLhsName ^? _FunctionDefName) && P.isFunctionLike fdef) $
     parseFailure off0 "expected function name"
   return fdef
   where

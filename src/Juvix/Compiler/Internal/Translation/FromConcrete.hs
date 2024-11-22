@@ -418,7 +418,7 @@ goDeriving ::
   Sem r Internal.FunctionDef
 goDeriving Deriving {..} = do
   let FunctionLhs {..} = _derivingFunLhs
-      name = goSymbol _funLhsName
+      name = goSymbol (_funLhsName ^. functionDefName)
   (funArgs, ret) <- Internal.unfoldFunType <$> goDefType _derivingFunLhs
   let (mtrait, traitArgs) = Internal.unfoldExpressionApp ret
   (n, der) <- findDerivingTrait mtrait
@@ -674,7 +674,7 @@ goFunctionDef ::
   FunctionDef 'Scoped ->
   Sem r [Internal.FunctionDef]
 goFunctionDef def@FunctionDef {..} = do
-  let _funDefName = goSymbol _signName
+  let _funDefName = goSymbol (_signName ^. functionDefName)
       _funDefTerminating = isJust _signTerminating
       _funDefIsInstanceCoercion
         | isJust _signCoercion = Just Internal.IsInstanceCoercionCoercion
@@ -689,7 +689,7 @@ goFunctionDef def@FunctionDef {..} = do
   let _funDefDocComment = fmap ppPrintJudoc _signDoc
       fun = Internal.FunctionDef {..}
   whenJust _signBuiltin (checkBuiltinFunction fun . (^. withLocParam))
-  case _signPattern of
+  case _signName ^. functionDefNamePattern of
     Just pat -> do
       pat' <- goPatternArg pat
       (fun :) <$> Internal.genPatternDefs _funDefName pat'
@@ -1097,7 +1097,7 @@ createArgumentBlocks appargs =
   where
     namedArgumentRefSymbol :: NamedArgumentNew 'Scoped -> S.Symbol
     namedArgumentRefSymbol = \case
-      NamedArgumentNewFunction p -> p ^. namedArgumentFunctionDef . signName
+      NamedArgumentNewFunction p -> p ^. namedArgumentFunctionDef . signName . functionDefName
       NamedArgumentItemPun p -> over S.nameConcrete fromUnqualified' (p ^. namedArgumentReferencedSymbol . scopedIdenFinal)
     args0 :: HashSet S.Symbol = hashSet (namedArgumentRefSymbol <$> appargs)
     goBlock ::
@@ -1190,7 +1190,13 @@ goExpression = \case
           Nothing -> return compiledNameApp
           Just funs -> do
             cls <- funDefsToClauses funs
-            let funsNames :: [Internal.Name] = funs ^.. each . namedArgumentFunctionDef . signName . to goSymbol
+            let funsNames :: [Internal.Name] =
+                  funs
+                    ^.. each
+                      . namedArgumentFunctionDef
+                      . signName
+                      . functionDefName
+                      . to goSymbol
                 -- changes the kind from Variable to Function
                 updateKind :: Internal.Subs = Internal.subsKind funsNames KNameFunction
             let l =

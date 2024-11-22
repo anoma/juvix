@@ -412,7 +412,7 @@ reserveFunctionSymbol ::
   FunctionLhs 'Parsed ->
   Sem r S.Symbol
 reserveFunctionSymbol f =
-  reserveSymbolSignatureOf SKNameFunction f (toBuiltinPrim <$> f ^. funLhsBuiltin) (fromJust (f ^. funLhsName))
+  reserveSymbolSignatureOf SKNameFunction f (toBuiltinPrim <$> f ^. funLhsBuiltin) (f ^?! funLhsName . _FunctionDefName)
 
 reserveAxiomSymbol ::
   (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable] r) =>
@@ -1118,17 +1118,24 @@ checkDeriving ::
   Sem r (Deriving 'Scoped)
 checkDeriving Deriving {..} = do
   let lhs@FunctionLhs {..} = _derivingFunLhs
-  massert (isNothing _funLhsPattern)
+  massert (isJust (_funLhsName ^? _FunctionDefName))
+  let name = case _funLhsName of
+        FunctionDefName n -> n
+        FunctionDefNamePattern {} -> impossible
   typeSig' <- withLocalScope (checkTypeSig _funLhsTypeSig)
   name' <-
     if
-        | P.isLhsFunctionLike lhs -> getReservedDefinitionSymbol (fromJust _funLhsName)
+        | P.isLhsFunctionLike lhs -> getReservedDefinitionSymbol name
         | otherwise -> reserveFunctionSymbol lhs
+  let defname' =
+        FunctionDefNameScoped
+          { _functionDefName = name',
+            _functionDefNamePattern = Nothing
+          }
   let lhs' =
         FunctionLhs
-          { _funLhsName = name',
+          { _funLhsName = defname',
             _funLhsTypeSig = typeSig',
-            _funLhsPattern = Nothing,
             ..
           }
   return
@@ -1190,33 +1197,36 @@ checkFunctionDef fdef@FunctionDef {..} = do
     a' <- checkTypeSig _signTypeSig
     b' <- checkBody
     return (a', b')
-  whenJust _signPattern $
-    reservePatternFunctionSymbols
+  whenJust (functionSymbolPattern _signName) reservePatternFunctionSymbols
   sigName' <- case _signName of
-    Just name'
-      | P.isFunctionLike fdef ->
-          getReservedDefinitionSymbol name'
-      | otherwise ->
-          reserveFunctionSymbol (functionDefLhs fdef)
-    Nothing ->
-      freshSymbol KNameFunction KNameFunction (WithLoc (getLoc (fromJust _signPattern)) "__pattern__")
-  sigPattern' <-
-    case _signPattern of
-      Just pat ->
-        fmap Just
-          . runReader PatternNamesKindFunctions
-          $ checkParsePatternAtom pat
-      Nothing -> return Nothing
+    FunctionDefName name -> do
+      name' <-
+        if
+            | P.isFunctionLike fdef -> getReservedDefinitionSymbol name
+            | otherwise -> reserveFunctionSymbol (functionDefLhs fdef)
+      return
+        FunctionDefNameScoped
+          { _functionDefName = name',
+            _functionDefNamePattern = Nothing
+          }
+    FunctionDefNamePattern p -> do
+      name' <- freshSymbol KNameFunction KNameFunction (WithLoc (getLoc p) "__pattern__")
+      p' <- runReader PatternNamesKindFunctions (checkParsePatternAtom p)
+      return
+        FunctionDefNameScoped
+          { _functionDefName = name',
+            _functionDefNamePattern = Just p'
+          }
   let def =
         FunctionDef
           { _signName = sigName',
-            _signPattern = sigPattern',
+            -- _signPattern = sigPattern',
             _signDoc = sigDoc',
             _signBody = sigBody',
             _signTypeSig = sig',
             ..
           }
-  registerNameSignature (sigName' ^. S.nameId) def
+  registerNameSignature (sigName' ^. functionDefName . S.nameId) def
   registerFunctionDef @$> def
   where
     checkBody :: Sem r (FunctionDefBody 'Scoped)

@@ -28,7 +28,6 @@ simplestFunctionDef :: forall s. (SingI s) => FunctionName s -> ExpressionType s
 simplestFunctionDef funName funBody =
   FunctionDef
     { _signName = name,
-      _signPattern = Nothing,
       _signBody = SigBodyExpression funBody,
       _signTypeSig =
         TypeSig
@@ -46,8 +45,12 @@ simplestFunctionDef funName funBody =
   where
     name :: FunctionSymbolType s
     name = case sing :: SStage s of
-      SParsed -> Just funName
-      SScoped -> funName
+      SParsed -> FunctionDefName funName
+      SScoped ->
+        FunctionDefNameScoped
+          { _functionDefName = funName,
+            _functionDefNamePattern = Nothing
+          }
 
 smallUniverseExpression :: forall s r. (SingI s) => (Members '[Reader Interval] r) => Sem r (ExpressionType s)
 smallUniverseExpression = do
@@ -290,7 +293,7 @@ mkTypeSigType ts = do
 
 mkTypeSigType' :: forall s. (SingI s) => ExpressionType s -> TypeSig s -> (ExpressionType s)
 mkTypeSigType' wildcard TypeSig {..} =
-  foldr mkFun rty (map mkFunctionParameters _typeSigArgs)
+  foldr (mkFun . mkFunctionParameters) rty _typeSigArgs
   where
     rty = fromMaybe wildcard _typeSigRetType
 
@@ -303,7 +306,7 @@ mkTypeSigType' wildcard TypeSig {..} =
         { _paramNames = getSigArgNames arg,
           _paramImplicit = _sigArgImplicit,
           _paramDelims = fmap Just _sigArgDelims,
-          _paramColon = Irrelevant $ maybe Nothing (Just . (^. unIrrelevant)) _sigArgColon,
+          _paramColon = Irrelevant $ fmap (^. unIrrelevant) _sigArgColon,
           _paramType = fromMaybe (univ (getLoc arg)) _sigArgType
         }
 

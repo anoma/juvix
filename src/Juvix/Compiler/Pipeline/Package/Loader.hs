@@ -90,7 +90,6 @@ toConcrete t p = run . runReader l $ do
                 _typeSigRetType,
                 _typeSigColonKw
               }
-          _signPattern :: Maybe (PatternAtom 'Parsed) = Nothing
       return
         ( StatementFunctionDef
             FunctionDef
@@ -100,8 +99,7 @@ toConcrete t p = run . runReader l $ do
                 _signDoc = Nothing,
                 _signCoercion = Nothing,
                 _signBuiltin = Nothing,
-                _signName = Just name',
-                _signPattern,
+                _signName = FunctionDefName name',
                 _signBody,
                 _signTypeSig
               }
