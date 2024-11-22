@@ -481,6 +481,8 @@ derivingInstance = do
   _derivingFunLhs <- functionDefinitionLhs opts Nothing
   unless (isJust (_derivingFunLhs ^. funLhsInstance)) $
     parseFailure off "Expected `deriving instance`"
+  unless (isJust (_derivingFunLhs ^. funLhsPattern)) $
+    parseFailure off "Patterns not allowed for `deriving instance`"
   return Deriving {..}
 
 statement :: (Members '[Error ParserError, ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r (Statement 'Parsed)

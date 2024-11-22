@@ -3156,10 +3156,17 @@ instance HasLoc (OpenModule s short) where
 instance HasLoc (ProjectionDef s) where
   getLoc = getLoc . (^. projectionConstructor)
 
+getFunLhsLoc :: (SingI s) => FunctionLhs s -> Maybe Interval
+getFunLhsLoc FunctionLhs {..} =
+  (Just . getLoc <$> _funLhsBuiltin)
+    ?<> (Just . getLoc <$> _funLhsTerminating)
+    ?<> (Just . getLocPatternAtomType <$> _funLhsPattern)
+    ?<> (getLocExpressionType <$> _funLhsTypeSig ^. typeSigRetType)
+
 instance (SingI s) => HasLoc (Deriving s) where
   getLoc Deriving {..} =
     getLoc _derivingKw
-      <> getLoc _derivingFunLhs
+      <>? getFunLhsLoc _derivingFunLhs
 
 instance HasLoc (Statement 'Scoped) where
   getLoc :: Statement 'Scoped -> Interval
@@ -3391,14 +3398,6 @@ instance (SingI s) => HasLoc (FunctionDefBody s) where
   getLoc = \case
     SigBodyExpression e -> getLocExpressionType e
     SigBodyClauses cl -> getLocSpan cl
-
-instance (SingI s) => HasLoc (FunctionLhs s) where
-  getLoc FunctionLhs {..} =
-    (getLoc <$> _funLhsBuiltin)
-      ?<> (getLoc <$> _funLhsTerminating)
-      ?<> ( getLocSymbolType _funLhsName
-              <>? (getLocExpressionType <$> _funLhsTypeSig ^. typeSigRetType)
-          )
 
 instance (SingI s) => HasLoc (FunctionDef s) where
   getLoc FunctionDef {..} =

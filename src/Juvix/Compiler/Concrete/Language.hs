@@ -31,7 +31,7 @@ statementLabel = \case
   StatementOpenModule {} -> Nothing
   StatementProjectionDef {} -> Nothing
   StatementFunctionDef f -> withFunctionSymbol Nothing (Just . (^. symbolTypeLabel)) (f ^. signName)
-  StatementDeriving f -> Just (f ^. derivingFunLhs . funLhsName . symbolTypeLabel)
+  StatementDeriving f -> withFunctionSymbol Nothing (Just . (^. symbolTypeLabel)) (f ^. derivingFunLhs . funLhsName)
   StatementImport i -> Just (i ^. importModulePath . to modulePathTypeLabel)
   StatementInductive i -> Just (i ^. inductiveName . symbolTypeLabel)
   StatementModule i -> Just (i ^. modulePath . to modulePathTypeLabel)

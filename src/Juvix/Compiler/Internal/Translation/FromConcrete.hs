@@ -294,11 +294,12 @@ goModuleBody stmts = evalState emptyLocalTable $ do
   _moduleImports <- mapM goImport (scanImports stmts)
   otherThanFunctions :: [Indexed Internal.PreStatement] <- concatMapM (traverseM' goAxiomInductive) ss
   funs :: [Indexed Internal.PreStatement] <-
-    sequence
-      [ Indexed i . Internal.PreFunctionDef <$> d
-        | Indexed i s <- ss,
-          Just d <- [mkFunctionLike s]
-      ]
+    concat
+      <$> sequence
+        [ return . map (Indexed i . Internal.PreFunctionDef) =<< defs
+          | Indexed i s <- ss,
+            let defs = mkFunctionLike s
+        ]
   let unsorted = otherThanFunctions <> funs
       _moduleStatements = map (^. indexedThing) (sortOn (^. indexedIx) unsorted)
   return Internal.ModuleBody {..}
@@ -309,17 +310,17 @@ goModuleBody stmts = evalState emptyLocalTable $ do
     ss :: [Indexed (Statement 'Scoped)]
     ss = zipWith Indexed [0 ..] ss'
 
-    mkFunctionLike :: Statement 'Scoped -> Maybe (Sem (State LocalTable ': r) (Internal.FunctionDef))
+    mkFunctionLike :: Statement 'Scoped -> Sem (State LocalTable ': r) [Internal.FunctionDef]
     mkFunctionLike s = case s of
-      StatementFunctionDef d -> Just (goFunctionDef d)
-      StatementProjectionDef d -> Just (goProjectionDef d)
-      StatementDeriving d -> Just (goDeriving d)
-      StatementSyntax {} -> Nothing
-      StatementImport {} -> Nothing
-      StatementInductive {} -> Nothing
-      StatementModule {} -> Nothing
-      StatementOpenModule {} -> Nothing
-      StatementAxiom {} -> Nothing
+      StatementFunctionDef d -> goFunctionDef d
+      StatementProjectionDef d -> goProjectionDef d >>= return . pure
+      StatementDeriving d -> goDeriving d >>= return . pure
+      StatementSyntax {} -> return []
+      StatementImport {} -> return []
+      StatementInductive {} -> return []
+      StatementModule {} -> return []
+      StatementOpenModule {} -> return []
+      StatementAxiom {} -> return []
 
 scanImports :: [Statement 'Scoped] -> [Import 'Scoped]
 scanImports = mconcatMap go

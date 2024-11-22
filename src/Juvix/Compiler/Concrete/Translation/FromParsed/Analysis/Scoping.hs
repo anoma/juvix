@@ -1118,6 +1118,7 @@ checkDeriving ::
   Sem r (Deriving 'Scoped)
 checkDeriving Deriving {..} = do
   let lhs@FunctionLhs {..} = _derivingFunLhs
+  massert (isNothing _funLhsPattern)
   typeSig' <- withLocalScope (checkTypeSig _funLhsTypeSig)
   name' <-
     if
@@ -1127,6 +1128,7 @@ checkDeriving Deriving {..} = do
         FunctionLhs
           { _funLhsName = name',
             _funLhsTypeSig = typeSig',
+            _funLhsPattern = Nothing,
             ..
           }
   return
@@ -1195,7 +1197,7 @@ checkFunctionDef fdef@FunctionDef {..} = do
       | P.isFunctionLike fdef ->
           getReservedDefinitionSymbol name'
       | otherwise ->
-          reserveFunctionSymbol fdef
+          reserveFunctionSymbol (functionDefLhs fdef)
     Nothing ->
       freshSymbol KNameFunction KNameFunction (WithLoc (getLoc (fromJust _signPattern)) "__pattern__")
   sigPattern' <-
@@ -2371,7 +2373,7 @@ checkRecordPattern r = do
             PatternNamesKindVariables ->
               bindVariableSymbol (f ^. fieldPunField)
             PatternNamesKindFunctions -> do
-              bindFunctionSymbol (f ^. fieldPunField)
+              getReservedDefinitionSymbol (f ^. fieldPunField)
           return
             FieldPun
               { _fieldPunIx = idx',
@@ -2736,7 +2738,7 @@ checkPatternName ::
   (Members '[Reader PatternNamesKind, Error ScoperError, State Scope, NameIdGen, State ScoperState, State ScoperSyntax, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable] r) =>
   Name ->
   Sem r PatternScopedIden
-checkPatternName = checkPatternName' bindFunctionSymbol
+checkPatternName = checkPatternName' getReservedDefinitionSymbol
 
 reservePatternName ::
   forall r.
