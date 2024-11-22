@@ -1,0 +1,16 @@
+-- Non-exhaustive left-hand side pattern
+module test014;
+
+import Stdlib.Data.Nat open;
+
+type Tree A :=
+  | Leaf
+  | Node A (Tree A) (Tree A);
+
+t : Tree Nat :=
+  Node 1 Leaf Leaf;
+
+main : Nat :=
+  let
+    (Node x _ _) := t
+  in x;
