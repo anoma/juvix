@@ -1332,7 +1332,7 @@ functionDefinitionLhs opts _funLhsBuiltin = P.label "<function definition>" $ do
     parseFailure off0 "instance not allowed here"
   when (isJust _funLhsCoercion && isNothing _funLhsInstance) $
     parseFailure off0 "expected: instance"
-  _funLhsName <- optional $ do
+  _funLhsName <- optional $ P.try $ do
     n <- symbol
     P.notFollowedBy (kw kwAt)
     return n

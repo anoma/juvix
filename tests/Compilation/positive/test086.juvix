@@ -23,7 +23,9 @@ rr : R :=
 
 g (r : R) : Nat :=
   let
-    (mkR@{x := x1; y}) := r
+    mkR@{x := x1; y} := r
   in x1 + 2 * y;
 
-main : Nat := f (px, py) + g rr;
+mkR@{x := rx; y := ry} : R := rr;
+
+main : Nat := f (px, py) + g rr + f (rx, ry);
