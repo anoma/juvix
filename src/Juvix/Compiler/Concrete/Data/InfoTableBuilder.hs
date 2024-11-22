@@ -60,11 +60,11 @@ runInfoTableBuilder ini = reinterpret (runState ini) $ \case
      in do
           modify' (over infoInductives (HashMap.insert (ity ^. inductiveName . nameId) ity))
           highlightDoc (ity ^. inductiveName . nameId) j
-  RegisterFunctionDef f ->
+  RegisterFunctionDef f -> do
     let j = f ^. signDoc
-     in do
-          modify' (over infoFunctions (HashMap.insert (f ^. signName . nameId) f))
-          highlightDoc (f ^. signName . nameId) j
+        fid = f ^. signName . functionDefName . nameId
+    modify' (over infoFunctions (HashMap.insert fid f))
+    highlightDoc fid j
   RegisterName n -> highlightName (S.anameFromName n)
   RegisterScopedIden n -> highlightName (anameFromScopedIden n)
   RegisterModuleDoc uid doc -> highlightDoc uid doc

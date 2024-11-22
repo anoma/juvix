@@ -83,8 +83,8 @@ type family SymbolType s = res | res -> s where
 
 type FunctionSymbolType :: Stage -> GHCType
 type family FunctionSymbolType s = res | res -> s where
-  FunctionSymbolType 'Parsed = Maybe Symbol
-  FunctionSymbolType 'Scoped = S.Symbol
+  FunctionSymbolType 'Parsed = FunctionDefNameParsed
+  FunctionSymbolType 'Scoped = FunctionDefNameScoped
 
 type IdentifierType :: Stage -> GHCType
 type family IdentifierType s = res | res -> s where
@@ -706,11 +706,27 @@ deriving stock instance Ord (Deriving 'Parsed)
 
 deriving stock instance Ord (Deriving 'Scoped)
 
+data FunctionDefNameParsed
+  = FunctionDefNamePattern (PatternAtom 'Parsed)
+  | FunctionDefName Symbol
+  deriving stock (Eq, Ord, Show, Generic)
+
+instance Serialize FunctionDefNameParsed
+
+instance NFData FunctionDefNameParsed
+
+data FunctionDefNameScoped = FunctionDefNameScoped
+  { _functionDefName :: S.Symbol,
+    _functionDefNamePattern :: Maybe PatternArg
+  }
+  deriving stock (Eq, Ord, Show, Generic)
+
+instance Serialize FunctionDefNameScoped
+
+instance NFData FunctionDefNameScoped
+
 data FunctionDef (s :: Stage) = FunctionDef
-  { -- When s = 'Parsed, _signName must be present if the definition is
-    -- function-like. One of _signName or _signPattern must be present.
-    _signName :: FunctionSymbolType s,
-    _signPattern :: Maybe (PatternAtomType s),
+  { _signName :: FunctionSymbolType s,
     _signTypeSig :: TypeSig s,
     _signDoc :: Maybe (Judoc s),
     _signPragmas :: Maybe ParsedPragmas,
@@ -2869,7 +2885,6 @@ data FunctionLhs (s :: Stage) = FunctionLhs
     _funLhsInstance :: Maybe KeywordRef,
     _funLhsCoercion :: Maybe KeywordRef,
     _funLhsName :: FunctionSymbolType s,
-    _funLhsPattern :: Maybe (PatternAtomType s),
     _funLhsTypeSig :: TypeSig s
   }
   deriving stock (Generic)
@@ -2895,6 +2910,7 @@ deriving stock instance Ord (FunctionLhs 'Parsed)
 deriving stock instance Ord (FunctionLhs 'Scoped)
 
 makeLenses ''SideIfs
+makeLenses ''FunctionDefNameScoped
 makeLenses ''TypeSig
 makeLenses ''FunctionLhs
 makeLenses ''Statements
@@ -2984,6 +3000,7 @@ makeLenses ''MarkdownInfo
 makeLenses ''Deriving
 
 makePrisms ''NamedArgumentNew
+makePrisms ''FunctionDefNameParsed
 
 functionDefLhs :: FunctionDef s -> FunctionLhs s
 functionDefLhs FunctionDef {..} =
@@ -2993,7 +3010,6 @@ functionDefLhs FunctionDef {..} =
       _funLhsInstance = _signInstance,
       _funLhsCoercion = _signCoercion,
       _funLhsName = _signName,
-      _funLhsPattern = _signPattern,
       _funLhsTypeSig = _signTypeSig
     }
 
@@ -3156,17 +3172,33 @@ instance HasLoc (OpenModule s short) where
 instance HasLoc (ProjectionDef s) where
   getLoc = getLoc . (^. projectionConstructor)
 
-getFunLhsLoc :: (SingI s) => FunctionLhs s -> Maybe Interval
-getFunLhsLoc FunctionLhs {..} =
-  (Just . getLoc <$> _funLhsBuiltin)
-    ?<> (Just . getLoc <$> _funLhsTerminating)
-    ?<> (Just . getLocPatternAtomType <$> _funLhsPattern)
-    ?<> (getLocExpressionType <$> _funLhsTypeSig ^. typeSigRetType)
+getLocFunctionSymbolType :: forall s. (SingI s) => FunctionSymbolType s -> Interval
+getLocFunctionSymbolType = case sing :: SStage s of
+  SParsed -> getLoc
+  SScoped -> getLoc
+
+instance HasLoc FunctionDefNameScoped where
+  getLoc FunctionDefNameScoped {..} =
+    getLoc _functionDefName
+      <>? (getLoc <$> _functionDefNamePattern)
+
+instance HasLoc FunctionDefNameParsed where
+  getLoc = \case
+    FunctionDefNamePattern a -> getLoc a
+    FunctionDefName s -> getLoc s
+
+instance (SingI s) => HasLoc (FunctionLhs s) where
+  getLoc FunctionLhs {..} =
+    (getLoc <$> _funLhsBuiltin)
+      ?<> (getLoc <$> _funLhsTerminating)
+      ?<> ( getLocFunctionSymbolType _funLhsName
+              <>? (getLocExpressionType <$> _funLhsTypeSig ^. typeSigRetType)
+          )
 
 instance (SingI s) => HasLoc (Deriving s) where
   getLoc Deriving {..} =
     getLoc _derivingKw
-      <>? getFunLhsLoc _derivingFunLhs
+      <> getLoc _derivingFunLhs
 
 instance HasLoc (Statement 'Scoped) where
   getLoc :: Statement 'Scoped -> Interval
@@ -3405,8 +3437,8 @@ instance (SingI s) => HasLoc (FunctionDef s) where
       ?<> (getLoc <$> _signPragmas)
       ?<> (getLoc <$> _signBuiltin)
       ?<> (getLoc <$> _signTerminating)
-      ?<> (getLocPatternAtomType <$> _signPattern)
-      ?<> getLoc _signBody
+      ?<> (getLocFunctionSymbolType _signName)
+      <> getLoc _signBody
 
 instance HasLoc (Example s) where
   getLoc e = e ^. exampleLoc
@@ -3597,13 +3629,20 @@ symbolParsed sym = case sing :: SStage s of
 
 getFunctionSymbol :: forall s. (SingI s) => FunctionSymbolType s -> SymbolType s
 getFunctionSymbol sym = case sing :: SStage s of
-  SParsed -> fromJust sym
-  SScoped -> sym
+  SParsed -> case sym of
+    FunctionDefName p -> p
+    FunctionDefNamePattern {} -> impossibleError "invalid call"
+  SScoped -> sym ^. functionDefName
+
+functionSymbolPattern :: forall s. (SingI s) => FunctionSymbolType s -> Maybe (PatternAtomType s)
+functionSymbolPattern f = case sing :: SStage s of
+  SParsed -> f ^? _FunctionDefNamePattern
+  SScoped -> f ^. functionDefNamePattern
 
 withFunctionSymbol :: forall s a. (SingI s) => a -> (SymbolType s -> a) -> FunctionSymbolType s -> a
 withFunctionSymbol a f sym = case sing :: SStage s of
-  SParsed -> maybe a f sym
-  SScoped -> f sym
+  SParsed -> maybe a f (sym ^? _FunctionDefName)
+  SScoped -> f (sym ^. functionDefName)
 
 namedArgumentNewSymbolParsed :: (SingI s) => SimpleGetter (NamedArgumentNew s) Symbol
 namedArgumentNewSymbolParsed = to $ \case
@@ -3614,8 +3653,8 @@ namedArgumentNewSymbol :: Lens' (NamedArgumentNew 'Parsed) Symbol
 namedArgumentNewSymbol f = \case
   NamedArgumentItemPun a -> NamedArgumentItemPun <$> (namedArgumentPunSymbol f a)
   NamedArgumentNewFunction a -> do
-    a' <- f (fromJust (a ^. namedArgumentFunctionDef . signName))
-    return $ NamedArgumentNewFunction (over namedArgumentFunctionDef (set signName (Just a')) a)
+    a' <- f (a ^?! namedArgumentFunctionDef . signName . _FunctionDefName)
+    return $ NamedArgumentNewFunction (over namedArgumentFunctionDef (set signName (FunctionDefName a')) a)
 
 scopedIdenSrcName :: Lens' ScopedIden S.Name
 scopedIdenSrcName f n = case n ^. scopedIdenAlias of
