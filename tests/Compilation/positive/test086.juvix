@@ -23,8 +23,8 @@ rr : R :=
 
 g (r : R) : Nat :=
   let
-    mkR@{x := x1; y} := r
-  in x1 + 2 * y;
+    mkR@{x := x; y} := r
+  in x + 2 * y;
 
 mkR@{x := rx; y := ry} : R := rr;
 
