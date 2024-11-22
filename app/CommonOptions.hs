@@ -102,7 +102,7 @@ anomaArgsOpt = do
       somePreFileOpt
       ( long "args"
           <> metavar "ARGS_FILE"
-          <> help "Path to file containing args. The args file should contain a list (i.e. to pass 2 and [1 4] as args, the contents should be [2 [1 4] 0])."
+          <> help "Path to a file containing args. The args file should contain a list (i.e. to pass 2 and [1 4] as args, the contents should be [2 [1 4] 0])."
           <> action "file"
       )
   pure AppPath {_pathIsInput = True, ..}
@@ -115,7 +115,7 @@ anomaClientConfigOpt = do
       ( long "config"
           <> short 'c'
           <> metavar "CONFIG_FILE"
-          <> help "A path to a Anoma client configuration file"
+          <> help "A path to an Anoma client configuration file"
           <> action "file"
       )
   pure AppPath {_pathIsInput = True, ..}
