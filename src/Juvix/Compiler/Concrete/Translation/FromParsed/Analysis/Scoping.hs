@@ -482,7 +482,6 @@ reservePatternFunctionSymbols = goAtom
       RecordPatternItemFieldPun FieldPun {..} -> do
         void (reservePatternName (NameUnqualified _fieldPunField))
       RecordPatternItemAssign RecordPatternAssign {..} -> do
-        void (reservePatternName (NameUnqualified _recordPatternAssignField))
         goAtoms _recordPatternAssignPattern
 
     goAtoms :: PatternAtoms 'Parsed -> Sem r ()
@@ -2335,9 +2334,10 @@ checkRecordPattern r = do
   where
     noFields :: ScopedIden -> ScoperError
     noFields = ErrConstructorNotARecord . ConstructorNotARecord
+
     checkItem ::
       forall r'.
-      (Members '[Reader PatternNamesKind, Reader (RecordNameSignature 'Parsed), Error ScoperError, State Scope, State ScoperState, State ScoperSyntax, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable, NameIdGen] r') =>
+      (Members '[Reader (RecordNameSignature 'Parsed), Reader PatternNamesKind, Error ScoperError, State Scope, State ScoperState, State ScoperSyntax, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable, NameIdGen] r') =>
       RecordPatternItem 'Parsed ->
       Sem r' (RecordPatternItem 'Scoped)
     checkItem = \case
@@ -2366,7 +2366,12 @@ checkRecordPattern r = do
         checkPun :: FieldPun 'Parsed -> Sem r' (FieldPun 'Scoped)
         checkPun f = do
           idx' <- findField (f ^. fieldPunField)
-          f' <- bindVariableSymbol (f ^. fieldPunField)
+          pk <- ask
+          f' <- case pk of
+            PatternNamesKindVariables ->
+              bindVariableSymbol (f ^. fieldPunField)
+            PatternNamesKindFunctions -> do
+              bindFunctionSymbol (f ^. fieldPunField)
           return
             FieldPun
               { _fieldPunIx = idx',

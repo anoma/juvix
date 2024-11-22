@@ -3,7 +3,27 @@ module test086;
 import Stdlib.Prelude open;
 
 f (p : Pair Nat Nat) : Nat :=
-  let (x, y) := p
+  let
+    (x, y) := p;
   in x + 2 * y;
 
-main : Nat := f (1, 2);
+type R :=
+  mkR@{
+    x : Nat;
+    y : Nat;
+  };
+
+rr : R :=
+  mkR@{
+    x := 1;
+    y := 2;
+  };
+
+(px, py) : Pair Nat Nat := (1, 2);
+
+g (r : R) : Nat :=
+  let
+    (mkR@{x := x1; y}) := r
+  in x1 + 2 * y;
+
+main : Nat := f (px, py) + g rr;
