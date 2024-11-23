@@ -10,6 +10,7 @@ import Commands.Format.Options
 import Commands.Html.Options
 import Commands.Init.Options
 import Commands.Isabelle.Options
+import Commands.Lean.Options
 import Commands.Markdown.Options
 import Commands.Repl.Options
 import Commands.Typecheck.Options
