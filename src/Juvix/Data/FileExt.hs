@@ -103,6 +103,9 @@ markdownFileExt = ".md"
 isabelleFileExt :: (IsString a) => a
 isabelleFileExt = ".thy"
 
+leanFileExt :: (IsString a) => a
+leanFileExt = ".lean"
+
 cFileExt :: (IsString a) => a
 cFileExt = ".c"
 

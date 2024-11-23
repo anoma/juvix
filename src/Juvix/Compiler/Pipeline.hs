@@ -16,6 +16,8 @@ import Juvix.Compiler.Backend.C qualified as C
 import Juvix.Compiler.Backend.Cairo qualified as Cairo
 import Juvix.Compiler.Backend.Isabelle.Data.Result qualified as Isabelle
 import Juvix.Compiler.Backend.Isabelle.Translation.FromTyped qualified as Isabelle
+import Juvix.Compiler.Backend.Lean.Data.Result qualified as Lean
+import Juvix.Compiler.Backend.Lean.Translation.FromTyped qualified as Lean
 import Juvix.Compiler.Backend.Rust.Translation.FromReg qualified as Rust
 import Juvix.Compiler.Backend.VampIR.Translation qualified as VampIR
 import Juvix.Compiler.Casm.Data.Builtins qualified as Casm
@@ -141,6 +143,11 @@ upToIsabelle ::
   (Members '[HighlightBuilder, Reader Parser.ParserResult, Error JuvixError, Reader EntryPoint, Reader Store.ModuleTable, NameIdGen] r) =>
   Sem r Isabelle.Result
 upToIsabelle = upToInternalTyped >>= Isabelle.fromInternal
+
+upToLean ::
+  (Members '[HighlightBuilder, Reader Parser.ParserResult, Error JuvixError, Reader EntryPoint, Reader Store.ModuleTable, NameIdGen] r) =>
+  Sem r Lean.Result
+upToLean = upToInternalTyped >>= Lean.fromInternal
 
 upToCore ::
   (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError] r) =>

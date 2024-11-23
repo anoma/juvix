@@ -28,6 +28,7 @@ data TopCommand
   | Html HtmlOptions
   | Markdown MarkdownOptions
   | Isabelle IsabelleOptions
+  | Lean LeanOptions
   | Dev Dev.DevCommand
   | Doctor DoctorOptions
   | Init InitOptions
@@ -202,6 +203,13 @@ commandIsabelle =
       (Isabelle <$> parseIsabelle)
       (progDesc "Translate a Juvix file to Isabelle/HOL")
 
+commandLean :: Mod CommandFields TopCommand
+commandLean =
+  command "lean" $
+    info
+      (Lean <$> parseLean)
+      (progDesc "Translate a Juvix file to Lean 4")
+
 commandDev :: Mod CommandFields TopCommand
 commandDev =
   command "dev" $
@@ -220,7 +228,8 @@ parseCompilerCommand =
           commandEval,
           commandHtml,
           commandMarkdown,
-          commandIsabelle
+          commandIsabelle,
+          commandLean
         ]
     )
 

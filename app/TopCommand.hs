@@ -11,6 +11,7 @@ import Commands.Format qualified as Format
 import Commands.Html qualified as Html
 import Commands.Init qualified as Init
 import Commands.Isabelle qualified as Isabelle
+import Commands.Lean as Lean
 import Commands.Markdown qualified as Markdown
 import Commands.Repl qualified as Repl
 import Commands.Typecheck qualified as Typecheck
@@ -37,6 +38,7 @@ runTopCommand = \case
   DisplayHelp -> showHelpText
   Doctor opts -> runLogIO (Doctor.runCommand opts)
   Isabelle opts -> Isabelle.runCommand opts
+  Lean opts -> Lean.runCommand opts
   Init opts -> Init.init opts
   Dev opts -> Dev.runCommand opts
   Typecheck opts -> Typecheck.runCommand opts
