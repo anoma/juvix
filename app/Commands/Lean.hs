@@ -1,5 +1,6 @@
 module Commands.Lean where
 
+import Data.Text qualified as T
 import Commands.Base
 import Commands.Lean.Options
 import Juvix.Compiler.Backend.Lean.Data.Result
@@ -16,16 +17,21 @@ runCommand opts = do
   let modu = res ^. resultModule -- Lean module result
       comments = res ^. resultComments
   outputDir <- fromAppPathDir (opts ^. leanOutputDir)
-  if
-      | opts ^. leanStdout -> do
+  case inputFile of
+    Nothing -> error "No input file provided"
+    Just input -> do
+      let rawFileName = input ^. pathPath . prepath . to T.pack
+          baseFileName = fromMaybe rawFileName (T.stripSuffix ".juvix" rawFileName)
+      if opts ^. leanStdout
+        then do
           renderStdOut (ppOutDefault comments modu)
           putStrLn ""
-      | otherwise -> do
+        else do
           ensureDir outputDir
           let file :: Path Rel File
               file =
                 relFile
-                  ( unpack (modu ^. moduleName . namePretty)
+                  ( T.unpack baseFileName
                       <.> leanFileExt
                   )
               absPath :: Path Abs File

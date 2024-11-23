@@ -46,7 +46,7 @@ fromInternal res@Internal.InternalTypedResult {..} = do
 goModule :: Internal.InfoTable -> Internal.Module -> Module
 goModule infoTable Internal.Module {..} =
   Module
-    { _moduleName = _moduleName,
-      _moduleImports = map (^. Internal.importModuleName) (_moduleBody ^. Internal.moduleImports),
-      _moduleDeclarations = []
+    { _modulePrelude = False,
+      _moduleImports  = [],
+      _moduleCommands = []
     }
