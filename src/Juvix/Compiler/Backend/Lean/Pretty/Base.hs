@@ -251,8 +251,6 @@ instance PrettyCode Expression where
           <> line
           <> kwElse <+> elseDoc
 
-
-
 instance PrettyCode Application where
   ppCode Application {..} = do
     left <- ppTopCode _appLeft
