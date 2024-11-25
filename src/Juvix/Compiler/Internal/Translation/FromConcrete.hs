@@ -552,12 +552,12 @@ deriveEq ::
   DerivingArgs ->
   Sem r Internal.FunctionDef
 deriveEq DerivingArgs {..} = do
-  arg <- getArg
-  argty <- getArgType
+  indInfo <- getIndInfo
+  let argty = getArgType indInfo
   argsInfo <- goArgsInfo _derivingInstanceName
   lamName <- Internal.freshFunVar (getLoc _derivingInstanceName) ("__eq__" <> _derivingInstanceName ^. Internal.nameText)
   let lam = Internal.ExpressionIden (Internal.IdenFunction lamName)
-  lamFun <- eqLambda lam arg argty
+  lamFun <- eqLambda lam indInfo argty
   lamTy <- Internal.ExpressionHole <$> Internal.freshHole (getLoc _derivingInstanceName)
   let lamDef =
         Internal.FunctionDef
@@ -600,16 +600,20 @@ deriveEq DerivingArgs {..} = do
     args :: [Internal.ApplicationArg]
     (eqName, args) = _derivingReturnType
 
-    getArg :: Sem r Internal.InductiveInfo
-    getArg = runFailDefaultM (throwDerivingWrongForm ret) $ do
+    getIndInfo :: Sem r Internal.InductiveInfo
+    getIndInfo = runFailDefaultM (throwDerivingWrongForm ret) $ do
       [Internal.ApplicationArg Explicit a] <- return args
       Internal.ExpressionIden (Internal.IdenInductive ind) <- return (fst (Internal.unfoldExpressionApp a))
       getDefinedInductive ind
 
-    getArgType :: Sem r Internal.Expression
-    getArgType = runFailDefaultM (throwDerivingWrongForm ret) $ do
-      [Internal.ApplicationArg Explicit a] <- return args
-      return a
+    getArgType :: Internal.InductiveInfo -> Internal.Expression
+    getArgType indInfo =
+      Internal.foldApplication
+        (Internal.toExpression (indInfo ^. Internal.inductiveInfoName))
+        (map toAppArg (indInfo ^. Internal.inductiveInfoParameters))
+      where
+        toAppArg :: Internal.InductiveParameter -> Internal.ApplicationArg
+        toAppArg p = Internal.ApplicationArg Explicit (Internal.toExpression (p ^. Internal.inductiveParamName))
 
     eqLambda :: Internal.Expression -> Internal.InductiveInfo -> Internal.Expression -> Sem r Internal.Expression
     eqLambda lam d argty = do
