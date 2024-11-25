@@ -2,7 +2,6 @@ module Juvix.Compiler.Internal.Translation.FromConcrete
   ( module Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context,
     fromConcrete,
     DefaultArgsStack,
-    goTopModule,
     fromConcreteExpression,
     fromConcreteImport,
   )
@@ -577,7 +576,7 @@ deriveEq DerivingArgs {..} = do
   let body =
         Internal.ExpressionLet
           Internal.Let
-            { _letClauses = pure (Internal.LetFunDef lamDef),
+            { _letClauses = pure (Internal.LetMutualBlock (Internal.MutualBlockLet (pure lamDef))),
               _letExpression = mkEq Internal.@@ lam
             }
       ty = Internal.foldFunType _derivingParameters ret
