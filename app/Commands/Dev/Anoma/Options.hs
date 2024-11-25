@@ -67,6 +67,7 @@ parseAnomaCommand =
                           "",
                           "url: <ANOMA_CLIENT_URL>",
                           "port: <ANOMA_CLIENT_GRPC_PORT>",
+                          "nodeid: <ANOMA_CLIENT_NODE_ID>",
                           "",
                           "The gRPC response (a Nockma program) is saved to a file named <input>.proved.nockma, where <input> is the base name of the input file.",
                           "Use the -o/--output option to specify a custom output filename.",

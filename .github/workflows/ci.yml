@@ -26,6 +26,7 @@ env:
   SKIP: ormolu,format-juvix-files,typecheck-juvix-examples
   CAIRO_VM_VERSION: 06e8ddbfa14eef85f56c4d7b7631c17c9b0a248e
   RISC0_VM_VERSION: v1.0.1
+  ANOMA_VERSION: 5adbfa3fe15604e20bc345dab0d74c415956ce15
   JUST_ARGS: runtimeCcArg=$CC runtimeLibtoolArg=$LIBTOOL
   STACK_BUILD_ARGS: --pedantic -j4 --ghc-options=-j
 
@@ -150,7 +151,7 @@ jobs:
           cd $HOME
           git clone https://github.com/anoma/anoma.git
           cd anoma
-          git checkout da44f1881442b4b09f61e20bf503e8c69b03b035
+          git checkout ${{ env.ANOMA_VERSION }}
           mix local.hex --force
           mix escript.install hex protobuf --force
           echo "$HOME/.mix/escripts" >> $GITHUB_PATH

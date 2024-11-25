@@ -289,10 +289,10 @@ goMatchToCase recur node = case node of
           (argPatsIx ^. indexedThing)
       where
         argPatsIx :: Indexed [Pattern]
-        argPatsIx = fromJust (firstJust (mapM getArgs) (indexFrom 0 col))
+        argPatsIx = fromJust (firstJust (mapM getArgs') (indexFrom 0 col))
           where
-            getArgs :: Pattern -> Maybe [Pattern]
-            getArgs = \case
+            getArgs' :: Pattern -> Maybe [Pattern]
+            getArgs' = \case
               PatConstr PatternConstr {..}
                 | _patternConstrTag == tag -> Just _patternConstrArgs
               _ -> Nothing

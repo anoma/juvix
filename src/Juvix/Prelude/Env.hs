@@ -2,7 +2,7 @@ module Juvix.Prelude.Env where
 
 import Juvix.Prelude.Base
 import Juvix.Prelude.Path
-import System.Environment
+import System.Environment as E
 
 -- | Environment variables relevant to Juvix
 data EnvVar
@@ -21,7 +21,7 @@ envVarHint = \case
   EnvAnomaPath -> Just "It should point to the location of the Anoma repository"
 
 getEnvVar :: (MonadIO m) => EnvVar -> m String
-getEnvVar var = fromMaybeM (error (pack msg)) (liftIO (lookupEnv (envVarString var)))
+getEnvVar var = fromMaybeM (error (pack msg)) (liftIO (E.lookupEnv (envVarString var)))
   where
     msg :: String
     msg = "Missing environment variable " <> envVarString var <> maybe "" (". " <>) (envVarHint var)

@@ -7,7 +7,7 @@ import Data.ByteString qualified as BS
 import Data.FileEmbed qualified as FE
 import Juvix.Extra.Clang
 import Juvix.Extra.Paths
-import System.Environment
+import System.Environment qualified as E
 import System.Process qualified as P
 
 runCommandMain :: forall r. (Members '[EmbedIO, App] r) => CompileOptionsMain -> Sem r ()
@@ -159,7 +159,7 @@ clangWasmWasiCompile o = do
     sysrootEnvVar :: Sem r (Path Abs Dir)
     sysrootEnvVar =
       absDir
-        <$> fromMaybeM (exitFailMsg msg) (liftIO (lookupEnv "WASI_SYSROOT_PATH"))
+        <$> fromMaybeM (exitFailMsg msg) (liftIO (E.lookupEnv "WASI_SYSROOT_PATH"))
       where
         msg :: Text
         msg = "Missing environment variable WASI_SYSROOT_PATH"

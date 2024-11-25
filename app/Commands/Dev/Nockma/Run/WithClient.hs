@@ -14,7 +14,8 @@ runCommand opts =
     grpcInfo =
       AnomaClientInfo
         { _anomaClientInfoUrl = opts ^. nockmaRunWithClientUrl,
-          _anomaClientInfoPort = opts ^. nockmaRunWithClientGrpcPort
+          _anomaClientInfoPort = opts ^. nockmaRunWithClientGrpcPort,
+          _anomaClientInfoNodeId = opts ^. nockmaRunWithClientNodeId
         }
     runArgs =
       RunCommandArgs

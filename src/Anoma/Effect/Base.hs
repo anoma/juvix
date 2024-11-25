@@ -18,6 +18,7 @@ import Anoma.Client.Base
 import Anoma.Rpc.Base
 import Data.ByteString qualified as B
 import Data.Text qualified as T
+import Effectful.Environment
 import Juvix.Compiler.Nockma.Translation.FromTree (AnomaResult)
 import Juvix.Data.CodeAnn
 import Juvix.Prelude
@@ -94,7 +95,7 @@ grpcCliListProcess = do
     )
 
 runAnomaEphemeral :: forall r a. (Members '[Logger, EmbedIO, Error SimpleError] r) => AnomaPath -> Sem (Anoma ': r) a -> Sem r a
-runAnomaEphemeral anomapath body = runReader anomapath . runProcess $ do
+runAnomaEphemeral anomapath body = runEnvironment . runReader anomapath . runProcess $ do
   cproc <- anomaClientCreateProcess LaunchModeAttached
   withCreateProcess cproc $ \_stdin mstdout _stderr _procHandle -> do
     grpcServer <- setupAnomaClientProcess (fromJust mstdout)
