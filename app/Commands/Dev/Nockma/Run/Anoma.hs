@@ -18,6 +18,6 @@ runInAnoma runArgs = do
   let traces = res ^. runNockmaTraces
   renderStdOutLn (annotate AnnImportant $ "Traces (" <> show (length traces) <> "):")
   forM_ traces $ \tr ->
-    renderStdOutLn (ppPrint tr)
+    renderStdOutLn (ppOutDefault tr)
   renderStdOutLn (annotate AnnImportant "Result:")
-  renderStdOutLn (ppPrint (res ^. runNockmaResult))
+  renderStdOutLn (ppOutDefault (res ^. runNockmaResult))

@@ -12,7 +12,7 @@ runCommand :: forall r. (Members (Anoma ': Error SimpleError ': AppEffects) r) =
 runCommand opts = do
   res <- runNock (opts ^. proveFile) (opts ^. proveArgs)
   let traces = res ^. runNockmaTraces
-  forM_ traces (renderStdOutLn . ppPrint)
+  forM_ traces (renderStdOutLn . ppOutDefault)
   let provedCode = Encoding.jamToByteString (res ^. runNockmaResult)
   outputFile <- getOutputFile (opts ^. proveOutputFile)
   writeFileBS outputFile provedCode
