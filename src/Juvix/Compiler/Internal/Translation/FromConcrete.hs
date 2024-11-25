@@ -555,7 +555,7 @@ deriveEq DerivingArgs {..} = do
   indInfo <- getIndInfo
   let argty = getArgType indInfo
   argsInfo <- goArgsInfo _derivingInstanceName
-  lamName <- Internal.freshFunVar (getLoc _derivingInstanceName) ("__eq__" <> _derivingInstanceName ^. Internal.nameText)
+  lamName <- Internal.freshFunVar (getLoc _derivingInstanceName) ("eq__" <> _derivingInstanceName ^. Internal.nameText)
   let lam = Internal.ExpressionIden (Internal.IdenFunction lamName)
   lamFun <- eqLambda lam indInfo argty
   lamTy <- Internal.ExpressionHole <$> Internal.freshHole (getLoc _derivingInstanceName)

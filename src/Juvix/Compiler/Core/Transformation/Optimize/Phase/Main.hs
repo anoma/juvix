@@ -21,10 +21,10 @@ optimize' opts@CoreOptions {..} md =
     . compose
       (6 * _optOptimizationLevel)
       ( doConstantFolding
-          . doSimplification 2
-          . doInlining
           . doSimplification 1
           . specializeArgs
+          . doSimplification 2
+          . doInlining
       )
     . doConstantFolding
     . letFolding
@@ -36,13 +36,16 @@ optimize' opts@CoreOptions {..} md =
     nonRecs :: HashSet Symbol
     nonRecs = nonRecursiveIdents' tab
 
+    nonRecsReachable :: HashSet Symbol
+    nonRecsReachable = nonRecursiveReachableIdents' tab
+
     doConstantFolding :: Module -> Module
     doConstantFolding md' = constantFolding' opts nonRecs' tab' md'
       where
         tab' = computeCombinedInfoTable md'
         nonRecs'
-          | _optOptimizationLevel > 1 = nonRecursiveIdents' tab'
-          | otherwise = nonRecs
+          | _optOptimizationLevel > 1 = nonRecursiveReachableIdents' tab'
+          | otherwise = nonRecsReachable
 
     doInlining :: Module -> Module
     doInlining md' = inlining' _optInliningDepth nonRecs' md'
