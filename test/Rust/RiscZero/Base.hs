@@ -7,7 +7,7 @@ import Juvix.Compiler.Backend.Rust.Data.Result
 import Juvix.Compiler.Backend.Rust.Pretty
 import Juvix.Compiler.Core qualified as Core
 import System.Directory
-import System.Environment
+import System.Environment qualified as E
 import System.Process qualified as P
 
 precondition :: Assertion
@@ -84,6 +84,6 @@ compileAssertion tmpDir' root' optLevel mainFile expectedFile step = do
 
     executeRISC0 :: Path Abs File -> IO Text
     executeRISC0 outputFile = do
-      env <- getEnvironment
+      env <- E.getEnvironment
       out <- readProcessWithEnv (("RISC0_DEV_MODE", "1") : env) (toFilePath outputFile) [] ""
       return $ T.unlines $ filter (not . T.isPrefixOf "WARNING:") $ T.lines out
