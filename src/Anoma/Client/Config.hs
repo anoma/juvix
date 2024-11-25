@@ -30,10 +30,8 @@ $( deriveJSON
 
 instance PrettyCodeAnn ClientConfig where
   ppCodeAnn c =
-    "Anoma client info:"
-      <> line
-      -- The output of YAML encoding has a trailing newline
-      <> pretty (T.dropWhileEnd (== '\n') (decodeUtf8 (Y.encode c)))
+    -- The output of YAML encoding has a trailing newline
+    pretty (T.dropWhileEnd (== '\n') (decodeUtf8 (Y.encode c)))
 
 configPath :: (Member Files r) => Sem r (Path Abs File)
 configPath = (<//> clientConfigPath) <$> globalAnomaClient
