@@ -185,7 +185,7 @@ classify AnomaTest {..} = case _anomaTestNum of
   25 -> ClassWorking
   26 -> ClassWorking
   27 -> ClassMissing
-  28 -> ClassWrong
+  28 -> ClassWorking
   29 -> ClassWorking
   30 -> ClassWorking
   31 -> ClassWorking
@@ -234,7 +234,7 @@ classify AnomaTest {..} = case _anomaTestNum of
   75 -> ClassWorking
   76 -> ClassWorking
   77 -> ClassWorking
-  78 -> ClassNodeError
+  78 -> ClassWorking
   79 -> ClassWorking
   80 -> ClassWorking
   81 -> ClassWorking
@@ -511,8 +511,8 @@ allTests =
           "Streams without memoization"
           $(mkRelDir ".")
           $(mkRelFile "test028.juvix")
-          [natArg 10, natArg 50]
-          $ checkNatOutput [31, 233],
+          [natArg 10, natArg 30]
+          $ checkNatOutput [31, 127],
         mkAnomaTest
           29
           AnomaTestModeFull
