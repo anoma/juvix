@@ -29,6 +29,10 @@ import Juvix.Compiler.Store.Scoped.Language as Store
 import Juvix.Data.FixityInfo qualified as FI
 import Juvix.Prelude
 
+data PatternNamesKind
+  = PatternNamesKindVariables
+  | PatternNamesKindFunctions
+
 scopeCheck ::
   (Members '[HighlightBuilder, Error JuvixError, NameIdGen] r) =>
   PackageId ->
@@ -347,6 +351,7 @@ reserveSymbolOf k =
 
 getReservedDefinitionSymbol ::
   forall r.
+  (HasCallStack) =>
   (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, InfoTableBuilder, Reader InfoTable, State ScoperState, Reader BindingStrategy] r) =>
   Symbol ->
   Sem r S.Symbol
@@ -407,7 +412,7 @@ reserveFunctionSymbol ::
   FunctionLhs 'Parsed ->
   Sem r S.Symbol
 reserveFunctionSymbol f =
-  reserveSymbolSignatureOf SKNameFunction f (toBuiltinPrim <$> f ^. funLhsBuiltin) (f ^. funLhsName)
+  reserveSymbolSignatureOf SKNameFunction f (toBuiltinPrim <$> f ^. funLhsBuiltin) (f ^?! funLhsName . _FunctionDefName)
 
 reserveAxiomSymbol ::
   (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable] r) =>
@@ -445,6 +450,47 @@ bindFixitySymbol s = do
   let s' = fromMaybe err (m ^. at s)
       err = error ("impossible. Contents of scope:\n" <> ppTrace (toList m))
   return s'
+
+reservePatternFunctionSymbols ::
+  forall r.
+  (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable] r) =>
+  PatternAtomType 'Parsed ->
+  Sem r ()
+reservePatternFunctionSymbols = goAtom
+  where
+    goAtom :: PatternAtom 'Parsed -> Sem r ()
+    goAtom = \case
+      PatternAtomIden iden -> void (reservePatternName iden)
+      PatternAtomWildcard {} -> return ()
+      PatternAtomEmpty {} -> return ()
+      PatternAtomList x -> goList x
+      PatternAtomWildcardConstructor {} -> return ()
+      PatternAtomRecord x -> goRecord x
+      PatternAtomParens x -> goAtoms x
+      PatternAtomBraces x -> goAtoms x
+      PatternAtomDoubleBraces x -> goAtoms x
+      PatternAtomAt x -> goAt x
+
+    goList :: ListPattern 'Parsed -> Sem r ()
+    goList ListPattern {..} = mapM_ goAtoms _listpItems
+
+    goRecord :: RecordPattern 'Parsed -> Sem r ()
+    goRecord RecordPattern {..} = mapM_ goRecordItem _recordPatternItems
+
+    goRecordItem :: RecordPatternItem 'Parsed -> Sem r ()
+    goRecordItem = \case
+      RecordPatternItemFieldPun FieldPun {..} -> do
+        void (reservePatternName (NameUnqualified _fieldPunField))
+      RecordPatternItemAssign RecordPatternAssign {..} -> do
+        goAtoms _recordPatternAssignPattern
+
+    goAtoms :: PatternAtoms 'Parsed -> Sem r ()
+    goAtoms PatternAtoms {..} = mapM_ goAtom _patternAtoms
+
+    goAt :: PatternBinding -> Sem r ()
+    goAt PatternBinding {..} = do
+      void (reservePatternName (NameUnqualified _patternBindingName))
+      goAtom _patternBindingPattern
 
 checkImport ::
   forall r.
@@ -1072,14 +1118,23 @@ checkDeriving ::
   Sem r (Deriving 'Scoped)
 checkDeriving Deriving {..} = do
   let lhs@FunctionLhs {..} = _derivingFunLhs
+  massert (isJust (_funLhsName ^? _FunctionDefName))
+  let name = case _funLhsName of
+        FunctionDefName n -> n
+        FunctionDefNamePattern {} -> impossible
   typeSig' <- withLocalScope (checkTypeSig _funLhsTypeSig)
   name' <-
     if
-        | P.isLhsFunctionLike lhs -> getReservedDefinitionSymbol _funLhsName
+        | P.isLhsFunctionLike lhs -> getReservedDefinitionSymbol name
         | otherwise -> reserveFunctionSymbol lhs
+  let defname' =
+        FunctionDefNameScoped
+          { _functionDefName = name',
+            _functionDefNamePattern = Nothing
+          }
   let lhs' =
         FunctionLhs
-          { _funLhsName = name',
+          { _funLhsName = defname',
             _funLhsTypeSig = typeSig',
             ..
           }
@@ -1142,10 +1197,26 @@ checkFunctionDef fdef@FunctionDef {..} = do
     a' <- checkTypeSig _signTypeSig
     b' <- checkBody
     return (a', b')
-  sigName' <-
-    if
-        | P.isFunctionLike fdef -> getReservedDefinitionSymbol _signName
-        | otherwise -> reserveFunctionSymbol (functionDefLhs fdef)
+  whenJust (functionSymbolPattern _signName) reservePatternFunctionSymbols
+  sigName' <- case _signName of
+    FunctionDefName name -> do
+      name' <-
+        if
+            | P.isFunctionLike fdef -> getReservedDefinitionSymbol name
+            | otherwise -> reserveFunctionSymbol (functionDefLhs fdef)
+      return
+        FunctionDefNameScoped
+          { _functionDefName = name',
+            _functionDefNamePattern = Nothing
+          }
+    FunctionDefNamePattern p -> do
+      name' <- freshSymbol KNameFunction KNameFunction (WithLoc (getLoc p) "__pattern__")
+      p' <- runReader PatternNamesKindFunctions (checkParsePatternAtom p)
+      return
+        FunctionDefNameScoped
+          { _functionDefName = name',
+            _functionDefNamePattern = Just p'
+          }
   let def =
         FunctionDef
           { _signName = sigName',
@@ -1154,7 +1225,7 @@ checkFunctionDef fdef@FunctionDef {..} = do
             _signTypeSig = sig',
             ..
           }
-  registerNameSignature (sigName' ^. S.nameId) def
+  registerNameSignature (sigName' ^. functionDefName . S.nameId) def
   registerFunctionDef @$> def
   where
     checkBody :: Sem r (FunctionDefBody 'Scoped)
@@ -1165,7 +1236,7 @@ checkFunctionDef fdef@FunctionDef {..} = do
     checkClause :: FunctionClause 'Parsed -> Sem r (FunctionClause 'Scoped)
     checkClause FunctionClause {..} = do
       (patterns', body') <- withLocalScope $ do
-        p <- mapM checkParsePatternAtom _clausenPatterns
+        p <- mapM checkParsePatternAtom' _clausenPatterns
         b <- checkParseExpressionAtoms _clausenBody
         return (p, b)
       return
@@ -2254,7 +2325,7 @@ checkLetStatements =
 
 checkRecordPattern ::
   forall r.
-  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen] r) =>
+  (Members '[Reader PatternNamesKind, Error ScoperError, State Scope, State ScoperState, State ScoperSyntax, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable, NameIdGen] r) =>
   RecordPattern 'Parsed ->
   Sem r (RecordPattern 'Scoped)
 checkRecordPattern r = do
@@ -2274,9 +2345,10 @@ checkRecordPattern r = do
   where
     noFields :: ScopedIden -> ScoperError
     noFields = ErrConstructorNotARecord . ConstructorNotARecord
+
     checkItem ::
       forall r'.
-      (Members '[Reader (RecordNameSignature 'Parsed), Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen] r') =>
+      (Members '[Reader (RecordNameSignature 'Parsed), Reader PatternNamesKind, Error ScoperError, State Scope, State ScoperState, State ScoperSyntax, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable, NameIdGen] r') =>
       RecordPatternItem 'Parsed ->
       Sem r' (RecordPatternItem 'Scoped)
     checkItem = \case
@@ -2305,7 +2377,12 @@ checkRecordPattern r = do
         checkPun :: FieldPun 'Parsed -> Sem r' (FieldPun 'Scoped)
         checkPun f = do
           idx' <- findField (f ^. fieldPunField)
-          f' <- bindVariableSymbol (f ^. fieldPunField)
+          pk <- ask
+          f' <- case pk of
+            PatternNamesKindVariables ->
+              bindVariableSymbol (f ^. fieldPunField)
+            PatternNamesKindFunctions -> do
+              getReservedDefinitionSymbol (f ^. fieldPunField)
           return
             FieldPun
               { _fieldPunIx = idx',
@@ -2314,7 +2391,7 @@ checkRecordPattern r = do
 
 checkListPattern ::
   forall r.
-  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen] r) =>
+  (Members '[Reader PatternNamesKind, Error ScoperError, State Scope, State ScoperState, State ScoperSyntax, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable, NameIdGen] r) =>
   ListPattern 'Parsed ->
   Sem r (ListPattern 'Scoped)
 checkListPattern l = do
@@ -2449,7 +2526,7 @@ checkCaseBranch ::
   CaseBranch 'Parsed ->
   Sem r (CaseBranch 'Scoped)
 checkCaseBranch CaseBranch {..} = withLocalScope $ do
-  pattern' <- checkParsePatternAtoms _caseBranchPattern
+  pattern' <- checkParsePatternAtoms' _caseBranchPattern
   rhs' <- checkCaseBranchRhs _caseBranchRhs
   return $
     CaseBranch
@@ -2464,7 +2541,7 @@ checkDoBind ::
   Sem r (DoBind 'Scoped)
 checkDoBind DoBind {..} = do
   expr' <- checkParseExpressionAtoms _doBindExpression
-  pat' <- checkParsePatternAtoms _doBindPattern
+  pat' <- checkParsePatternAtoms' _doBindPattern
   unless (Explicit == pat' ^. patternArgIsImplicit) $
     throw (ErrDoBindImplicitPattern (DoBindImplicitPattern pat'))
   return
@@ -2573,7 +2650,7 @@ checkLambdaClause ::
   LambdaClause 'Parsed ->
   Sem r (LambdaClause 'Scoped)
 checkLambdaClause LambdaClause {..} = withLocalScope $ do
-  lambdaParameters' <- mapM checkParsePatternAtom _lambdaParameters
+  lambdaParameters' <- mapM checkParsePatternAtom' _lambdaParameters
   lambdaBody' <- checkParseExpressionAtoms _lambdaBody
   return
     LambdaClause
@@ -2640,22 +2717,46 @@ resolveShadowing es = go [(e, e ^. nsEntry . S.nameWhyInScope) | e <- es]
           S.BecauseInherited {} -> True
           _ -> False
 
-checkPatternName ::
+checkPatternName' ::
   forall r.
-  (Members '[Error ScoperError, State Scope, NameIdGen, State ScoperState, InfoTableBuilder, Reader InfoTable] r) =>
+  (Members '[Reader PatternNamesKind, Error ScoperError, State Scope, NameIdGen, State ScoperState, State ScoperSyntax, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable] r) =>
+  (Symbol -> Sem r S.Symbol) ->
   Name ->
   Sem r PatternScopedIden
-checkPatternName n = do
+checkPatternName' bindFun n = do
   c <- getConstructorRef
   case c of
-    Just constr -> return (PatternScopedConstructor constr) -- the symbol is a constructor
+    Just constr -> return (PatternScopedConstructor constr)
     Nothing -> case n of
-      NameUnqualified {} -> PatternScopedVar <$> bindVariableSymbol sym -- the symbol is a variable
+      NameUnqualified {} -> do
+        pk <- ask
+        PatternScopedVar
+          <$> case pk of
+            PatternNamesKindVariables ->
+              bindVariableSymbol sym
+            PatternNamesKindFunctions -> do
+              bindFun sym
       NameQualified {} -> nameNotInScope n
   where
     sym = snd (splitName n)
     getConstructorRef :: Sem r (Maybe ScopedIden)
     getConstructorRef = lookupNameOfKind KNameConstructor n
+
+checkPatternName ::
+  forall r.
+  (Members '[Reader PatternNamesKind, Error ScoperError, State Scope, NameIdGen, State ScoperState, State ScoperSyntax, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable] r) =>
+  Name ->
+  Sem r PatternScopedIden
+checkPatternName = checkPatternName' getReservedDefinitionSymbol
+
+reservePatternName ::
+  forall r.
+  (Members '[Error ScoperError, State Scope, NameIdGen, State ScoperState, State ScoperSyntax, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable] r) =>
+  Name ->
+  Sem r PatternScopedIden
+reservePatternName =
+  runReader PatternNamesKindFunctions
+    . checkPatternName' (reserveSymbolOf SKNameFunction Nothing Nothing)
 
 nameNotInScope :: forall r a. (Members '[Error ScoperError, State Scope] r) => Name -> Sem r a
 nameNotInScope n = err >>= throw
@@ -2700,26 +2801,32 @@ checkPatternBinding ::
   PatternBinding ->
   Sem r PatternArg
 checkPatternBinding PatternBinding {..} = do
-  p' <- checkParsePatternAtom _patternBindingPattern
+  p' <- checkParsePatternAtom' _patternBindingPattern
   n' <- bindVariableSymbol _patternBindingName
   if
       | isJust (p' ^. patternArgName) -> throw (ErrDoubleBinderPattern (DoubleBinderPattern n' p'))
       | otherwise -> return (set patternArgName (Just n') p')
 
 checkPatternAtoms ::
-  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen] r) =>
+  (Members '[Reader PatternNamesKind, Error ScoperError, State Scope, State ScoperState, State ScoperSyntax, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable, NameIdGen] r) =>
   PatternAtoms 'Parsed ->
   Sem r (PatternAtoms 'Scoped)
 checkPatternAtoms (PatternAtoms s i) = (`PatternAtoms` i) <$> mapM checkPatternAtom s
 
 checkParsePatternAtoms ::
-  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen] r) =>
+  (Members '[Reader PatternNamesKind, Error ScoperError, State Scope, State ScoperState, State ScoperSyntax, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable, NameIdGen] r) =>
   PatternAtoms 'Parsed ->
   Sem r PatternArg
 checkParsePatternAtoms = checkPatternAtoms >=> parsePatternAtoms
 
-checkPatternAtom ::
+checkParsePatternAtoms' ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen] r) =>
+  PatternAtoms 'Parsed ->
+  Sem r PatternArg
+checkParsePatternAtoms' = localBindings . ignoreSyntax . runReader PatternNamesKindVariables . checkParsePatternAtoms
+
+checkPatternAtom ::
+  (Members '[Reader PatternNamesKind, Error ScoperError, State Scope, State ScoperState, State ScoperSyntax, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable, NameIdGen] r) =>
   PatternAtom 'Parsed ->
   Sem r (PatternAtom 'Scoped)
 checkPatternAtom = \case
@@ -2985,8 +3092,8 @@ checkIterator iter = do
   let initAssignKws = iter ^.. iteratorInitializers . each . initializerAssignKw
       rangesInKws = iter ^.. iteratorRanges . each . rangeInKw
   withLocalScope $ do
-    inipats' <- mapM (checkParsePatternAtoms . (^. initializerPattern)) (iter ^. iteratorInitializers)
-    rngpats' <- mapM (checkParsePatternAtoms . (^. rangePattern)) (iter ^. iteratorRanges)
+    inipats' <- mapM (checkParsePatternAtoms' . (^. initializerPattern)) (iter ^. iteratorInitializers)
+    rngpats' <- mapM (checkParsePatternAtoms' . (^. rangePattern)) (iter ^. iteratorRanges)
     let _iteratorInitializers = [Initializer p k v | ((p, k), v) <- zipExact (zipExact inipats' initAssignKws) inivals']
         _iteratorRanges = [Range p k v | ((p, k), v) <- zipExact (zipExact rngpats' rangesInKws) rngvals']
         _iteratorParens = iter ^. iteratorParens
@@ -2999,7 +3106,7 @@ checkInitializer ::
   Initializer 'Parsed ->
   Sem r (Initializer 'Scoped)
 checkInitializer ini = do
-  _initializerPattern <- checkParsePatternAtoms (ini ^. initializerPattern)
+  _initializerPattern <- checkParsePatternAtoms' (ini ^. initializerPattern)
   _initializerExpression <- checkParseExpressionAtoms (ini ^. initializerExpression)
   return
     Initializer
@@ -3012,7 +3119,7 @@ checkRange ::
   Range 'Parsed ->
   Sem r (Range 'Scoped)
 checkRange rng = do
-  _rangePattern <- checkParsePatternAtoms (rng ^. rangePattern)
+  _rangePattern <- checkParsePatternAtoms' (rng ^. rangePattern)
   _rangeExpression <- checkParseExpressionAtoms (rng ^. rangeExpression)
   return
     Range
@@ -3106,10 +3213,16 @@ checkParseExpressionAtoms ::
 checkParseExpressionAtoms = checkExpressionAtoms >=> parseExpressionAtoms
 
 checkParsePatternAtom ::
-  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen] r) =>
+  (Members '[Reader PatternNamesKind, Error ScoperError, State Scope, State ScoperState, State ScoperSyntax, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable, NameIdGen] r) =>
   PatternAtom 'Parsed ->
   Sem r PatternArg
 checkParsePatternAtom = checkPatternAtom >=> parsePatternAtom
+
+checkParsePatternAtom' ::
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen] r) =>
+  PatternAtom 'Parsed ->
+  Sem r PatternArg
+checkParsePatternAtom' = localBindings . ignoreSyntax . runReader PatternNamesKindVariables . checkParsePatternAtom
 
 checkSyntaxDef ::
   (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader PackageId, State ScoperSyntax] r) =>

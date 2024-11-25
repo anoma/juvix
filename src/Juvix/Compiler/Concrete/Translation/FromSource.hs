@@ -481,6 +481,8 @@ derivingInstance = do
   _derivingFunLhs <- functionDefinitionLhs opts Nothing
   unless (isJust (_derivingFunLhs ^. funLhsInstance)) $
     parseFailure off "Expected `deriving instance`"
+  when (has _FunctionDefNamePattern (_derivingFunLhs ^. funLhsName)) $
+    parseFailure off "Patterns not allowed for `deriving instance`"
   return Deriving {..}
 
 statement :: (Members '[Error ParserError, ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r (Statement 'Parsed)
@@ -1332,13 +1334,21 @@ functionDefinitionLhs opts _funLhsBuiltin = P.label "<function definition>" $ do
     parseFailure off0 "instance not allowed here"
   when (isJust _funLhsCoercion && isNothing _funLhsInstance) $
     parseFailure off0 "expected: instance"
-  _funLhsName <- symbol
+  mname <- optional . P.try $ do
+    n <- symbol
+    P.notFollowedBy (kw kwAt)
+    return n
+  _funLhsName <- case mname of
+    Nothing -> FunctionDefNamePattern <$> patternAtom
+    Just fname -> return (FunctionDefName fname)
   let sigOpts =
         SigOptions
           { _sigAllowDefault = True,
             _sigAllowOmitType = allowOmitType
           }
   _funLhsTypeSig <- typeSig sigOpts
+  when (isNothing (_funLhsName ^? _FunctionDefName) && notNull (_funLhsTypeSig ^. typeSigArgs)) $
+    parseFailure off "expected function name"
   return
     FunctionLhs
       { _funLhsInstance,
@@ -1399,6 +1409,7 @@ functionDefinition ::
   Maybe (WithLoc BuiltinFunction) ->
   ParsecS r (FunctionDef 'Parsed)
 functionDefinition opts _signBuiltin = P.label "<function definition>" $ do
+  off0 <- P.getOffset
   FunctionLhs {..} <- functionDefinitionLhs opts _signBuiltin
   off <- P.getOffset
   _signDoc <- getJudoc
@@ -1409,18 +1420,21 @@ functionDefinition opts _signBuiltin = P.label "<function definition>" $ do
         || (P.isBodyExpression _signBody && null (_funLhsTypeSig ^. typeSigArgs))
     )
     $ parseFailure off "expected result type"
-  return
-    FunctionDef
-      { _signName = _funLhsName,
-        _signTypeSig = _funLhsTypeSig,
-        _signTerminating = _funLhsTerminating,
-        _signInstance = _funLhsInstance,
-        _signCoercion = _funLhsCoercion,
-        _signBuiltin = _funLhsBuiltin,
-        _signDoc,
-        _signPragmas,
-        _signBody
-      }
+  let fdef =
+        FunctionDef
+          { _signName = _funLhsName,
+            _signTypeSig = _funLhsTypeSig,
+            _signTerminating = _funLhsTerminating,
+            _signInstance = _funLhsInstance,
+            _signCoercion = _funLhsCoercion,
+            _signBuiltin = _funLhsBuiltin,
+            _signDoc,
+            _signPragmas,
+            _signBody
+          }
+  when (isNothing (_funLhsName ^? _FunctionDefName) && P.isFunctionLike fdef) $
+    parseFailure off0 "expected function name"
+  return fdef
   where
     parseBody :: ParsecS r (FunctionDefBody 'Parsed)
     parseBody =

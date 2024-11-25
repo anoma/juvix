@@ -613,7 +613,11 @@ inferExpression ::
   Sem r TypedExpression
 inferExpression hint = resolveInstanceHoles . resolveCastHoles . inferExpression' hint
 
-lookupVar :: (Members '[Reader LocalVars, Reader InfoTable] r) => Name -> Sem r Expression
+lookupVar ::
+  (HasCallStack) =>
+  (Members '[Reader LocalVars, Reader InfoTable] r) =>
+  Name ->
+  Sem r Expression
 lookupVar v = do
   locals <- asks (^. localTypes)
   return $ fromMaybe err (locals ^. at v)

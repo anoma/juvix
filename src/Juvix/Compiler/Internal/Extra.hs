@@ -162,6 +162,62 @@ genFieldProjection kind _funDefName _funDefType _funDefBuiltin _funDefArgsInfo m
             _lambdaClauses = pure cl
           }
 
+-- | Generates definitions for each variable in a given pattern.
+genPatternDefs ::
+  forall r.
+  (Members '[NameIdGen] r) =>
+  Name ->
+  PatternArg ->
+  Sem r [FunctionDef]
+genPatternDefs valueName pat =
+  execOutputList $ goPatternArg pat
+  where
+    goPatternArg :: PatternArg -> Sem (Output FunctionDef ': r) ()
+    goPatternArg PatternArg {..} = do
+      whenJust _patternArgName goPatternVariable
+      goPattern _patternArgPattern
+
+    goPattern :: Pattern -> Sem (Output FunctionDef ': r) ()
+    goPattern = \case
+      PatternVariable x -> goPatternVariable x
+      PatternWildcardConstructor {} -> return ()
+      PatternConstructorApp x -> goPatternConstructorApp x
+
+    goPatternVariable :: VarName -> Sem (Output FunctionDef ': r) ()
+    goPatternVariable var = do
+      h <- freshHole (getLoc valueName)
+      let body =
+            ExpressionCase
+              Case
+                { _caseExpression = ExpressionIden (IdenFunction valueName),
+                  _caseExpressionType = Nothing,
+                  _caseExpressionWholeType = Nothing,
+                  _caseBranches =
+                    pure $
+                      CaseBranch
+                        { _caseBranchPattern = pat,
+                          _caseBranchRhs =
+                            CaseBranchRhsExpression (ExpressionIden (IdenVar var))
+                        }
+                }
+      body' <- clone body
+      output $
+        FunctionDef
+          { _funDefTerminating = False,
+            _funDefIsInstanceCoercion = Nothing,
+            _funDefPragmas = mempty,
+            _funDefBody = body',
+            _funDefDocComment = Nothing,
+            _funDefType = ExpressionHole h,
+            _funDefName = var,
+            _funDefBuiltin = Nothing,
+            _funDefArgsInfo = []
+          }
+
+    goPatternConstructorApp :: ConstructorApp -> Sem (Output FunctionDef ': r) ()
+    goPatternConstructorApp ConstructorApp {..} = do
+      forM_ _constrAppParameters goPatternArg
+
 buildLetMutualBlocks ::
   NonEmpty PreLetStatement ->
   NonEmpty (SCC PreLetStatement)

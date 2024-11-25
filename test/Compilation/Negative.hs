@@ -81,5 +81,9 @@ tests =
     NegTest
       "Test013: Redundant side condition detection"
       $(mkRelDir ".")
-      $(mkRelFile "test013.juvix")
+      $(mkRelFile "test013.juvix"),
+    NegTest
+      "Test014: Non-exhaustive left-hand side pattern"
+      $(mkRelDir ".")
+      $(mkRelFile "test014.juvix")
   ]
