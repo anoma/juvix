@@ -18,7 +18,7 @@ import Juvix.Prelude.Path
 import Juvix.Prelude.Pretty
 import System.Directory (getHomeDirectory)
 import System.Directory qualified as System
-import System.Environment
+import System.Environment as E
 import Prelude (show)
 
 -- | A file/directory path that may contain environmental variables
@@ -88,7 +88,7 @@ expandParts = mconcatMapM fromPart
     fromPart = \case
       PrepathString s -> return s
       PrepathHome -> liftIO getHomeDirectory
-      PrepathVar s -> fromMaybe err <$> liftIO (lookupEnv s)
+      PrepathVar s -> fromMaybe err <$> liftIO (E.lookupEnv s)
         where
           err = error ("The environment variable " <> pack s <> " is not defined")
 

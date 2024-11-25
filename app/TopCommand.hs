@@ -15,13 +15,13 @@ import Commands.Markdown qualified as Markdown
 import Commands.Repl qualified as Repl
 import Commands.Typecheck qualified as Typecheck
 import Juvix.Extra.Version
-import System.Environment (getProgName)
+import System.Environment qualified as E
 import TopCommand.Options
 
 showHelpText :: (MonadIO m) => m ()
 showHelpText = do
   let p = prefs showHelpOnEmpty
-  progn <- liftIO getProgName
+  progn <- liftIO E.getProgName
   let helpText = parserFailure p descr (ShowHelpText Nothing) []
       (msg, _) = renderFailure helpText progn
   putStrLn (pack msg)

@@ -2,7 +2,7 @@ module Juvix.Extra.Clang where
 
 import Juvix.Config qualified as Config
 import Juvix.Prelude
-import System.Environment
+import System.Environment qualified as E
 import System.FilePath
 
 data ClangPath
@@ -51,7 +51,7 @@ findClangUsingEnvVar' clangRelPath = do
 
     llvmDistPath :: Sem r (Maybe (Path Abs Dir))
     llvmDistPath = liftIO $ do
-      p <- lookupEnv llvmDistEnvironmentVar
+      p <- E.lookupEnv llvmDistEnvironmentVar
       mapM parseAbsDir p
 
 findClangUsingEnvVar :: forall r. (Member EmbedIO r) => Sem r (Maybe (Path Abs File))

@@ -2,6 +2,7 @@ module Juvix.Prelude.Effects.Base
   ( module Juvix.Prelude.Effects.Base,
     module Effectful,
     module Effectful.Concurrent,
+    module Effectful.Environment,
     module Effectful.Reader.Static,
     module Effectful.State.Static.Local,
     module Effectful.Error.Static,
@@ -22,8 +23,9 @@ import Effectful.Concurrent.Async
 import Effectful.Dispatch.Dynamic (LocalEnv, SharedSuffix, impose, interpose, localLift, localLiftUnlift, localLiftUnliftIO, localSeqLift, localSeqUnlift, localSeqUnliftIO, localUnlift, localUnliftIO, withLiftMap, withLiftMapIO)
 import Effectful.Dispatch.Dynamic qualified as E
 import Effectful.Dispatch.Static
+import Effectful.Environment
 import Effectful.Error.Static hiding (runError, runErrorWith)
-import Effectful.Internal.Env (getEnv, putEnv)
+import Effectful.Internal.Env qualified as E
 import Effectful.Process hiding (env)
 import Effectful.Provider
 import Effectful.Reader.Static
@@ -75,7 +77,7 @@ overStaticRep ::
   ) =>
   (StaticRep e -> StaticRep e) ->
   Sem r ()
-overStaticRep f = unsafeEff $ \r -> getEnv r >>= putEnv r . f
+overStaticRep f = unsafeEff $ \r -> E.getEnv r >>= E.putEnv r . f
 
 mapReader ::
   (Member (Reader e1) r) => (e1 -> e2) -> Sem (Reader e2 ': r) a -> Sem r a

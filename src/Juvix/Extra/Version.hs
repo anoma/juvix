@@ -7,7 +7,7 @@ import Juvix.Prelude.Path
 import Paths_juvix qualified
 import Prettyprinter as PP
 import Prettyprinter.Render.Text (renderIO)
-import System.Environment (getProgName)
+import System.Environment qualified as E
 
 versionDir :: Path Rel Dir
 versionDir = relDir (unpack versionDoc)
@@ -37,7 +37,7 @@ versionTag :: Text
 versionTag = versionDoc <> "-" <> shortHash
 
 progName :: (MonadIO m) => m Text
-progName = pack . toUpperFirst <$> liftIO getProgName
+progName = pack . toUpperFirst <$> liftIO E.getProgName
 
 progNameVersion :: (MonadIO m) => m Text
 progNameVersion = do

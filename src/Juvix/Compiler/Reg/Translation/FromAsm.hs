@@ -107,8 +107,8 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
 
     -- s is the number of stack cells to skip from the top
     -- k is the number of arguments
-    getArgs :: Int -> Int -> [Value]
-    getArgs s k = map (\i -> VRef $ mkVarRef VarGroupLocal (ntmps + n - i)) [s .. (s + k - 1)]
+    getArgs' :: Int -> Int -> [Value]
+    getArgs' s k = map (\i -> VRef $ mkVarRef VarGroupLocal (ntmps + n - i)) [s .. (s + k - 1)]
 
     mkBinop :: BinaryOp -> Instruction
     mkBinop op =
@@ -136,7 +136,7 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
         InstrCairo
           { _instrCairoOpcode = op,
             _instrCairoResult = mkVarRef VarGroupLocal (ntmps + n + 1 - k),
-            _instrCairoArgs = getArgs 0 k
+            _instrCairoArgs = getArgs' 0 k
           }
       where
         k = cairoOpArgsNum op
@@ -179,7 +179,7 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
         InstrAlloc
           { _instrAllocTag = tag,
             _instrAllocResult = mkVarRef VarGroupLocal (ntmps + m),
-            _instrAllocArgs = getArgs 0 (ci ^. Asm.constructorArgsNum),
+            _instrAllocArgs = getArgs' 0 (ci ^. Asm.constructorArgsNum),
             _instrAllocMemRep = ci ^. Asm.constructorRepresentation
           }
       where
@@ -193,7 +193,7 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
           { _instrAllocClosureSymbol = fi ^. Asm.functionSymbol,
             _instrAllocClosureResult = mkVarRef VarGroupLocal (ntmps + m),
             _instrAllocClosureExpectedArgsNum = fi ^. Asm.functionArgsNum,
-            _instrAllocClosureArgs = getArgs 0 _allocClosureArgsNum
+            _instrAllocClosureArgs = getArgs' 0 _allocClosureArgsNum
           }
       where
         fi = fromMaybe impossible $ HashMap.lookup _allocClosureFunSymbol (tab ^. Asm.infoFunctions)
@@ -205,7 +205,7 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
         InstrExtendClosure
           { _instrExtendClosureResult = mkVarRef VarGroupLocal (ntmps + m),
             _instrExtendClosureValue = mkVarRef VarGroupLocal (ntmps + n),
-            _instrExtendClosureArgs = getArgs 1 _extendClosureArgsNum
+            _instrExtendClosureArgs = getArgs' 1 _extendClosureArgsNum
           }
       where
         m = n - _extendClosureArgsNum
@@ -217,14 +217,14 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
             InstrCall
               { _instrCallResult = mkVarRef VarGroupLocal (ntmps + m),
                 _instrCallType = ct,
-                _instrCallArgs = getArgs s _callArgsNum,
+                _instrCallArgs = getArgs' s _callArgsNum,
                 _instrCallLiveVars = liveVars (_callArgsNum + s)
               }
       | otherwise =
           TailCall $
             InstrTailCall
               { _instrTailCallType = ct,
-                _instrTailCallArgs = getArgs s _callArgsNum
+                _instrTailCallArgs = getArgs' s _callArgsNum
               }
       where
         m = n - _callArgsNum - s + 1
@@ -242,14 +242,14 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
             InstrCallClosures
               { _instrCallClosuresResult = mkVarRef VarGroupLocal (ntmps + m),
                 _instrCallClosuresValue = mkVarRef VarGroupLocal (ntmps + n),
-                _instrCallClosuresArgs = getArgs 1 _callClosuresArgsNum,
+                _instrCallClosuresArgs = getArgs' 1 _callClosuresArgsNum,
                 _instrCallClosuresLiveVars = liveVars (_callClosuresArgsNum + 1)
               }
       | otherwise =
           TailCallClosures $
             InstrTailCallClosures
               { _instrTailCallClosuresValue = mkVarRef VarGroupLocal (ntmps + n),
-                _instrTailCallClosuresArgs = getArgs 1 _callClosuresArgsNum
+                _instrTailCallClosuresArgs = getArgs' 1 _callClosuresArgsNum
               }
       where
         -- note: the value (closure) is also on the stack
