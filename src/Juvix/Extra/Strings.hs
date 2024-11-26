@@ -545,8 +545,23 @@ sseq_ = "seq"
 isEqual :: (IsString s) => s
 isEqual = "isEqual"
 
+compare :: (IsString s) => s
+compare = "compare"
+
+lt :: (IsString s) => s
+lt = "lt"
+
+gt :: (IsString s) => s
+gt = "gt"
+
 eq :: (IsString s) => s
 eq = "eq"
+
+ord :: (IsString s) => s
+ord = "ord"
+
+ordering :: (IsString s) => s
+ordering = "ordering"
 
 assert_ :: (IsString s) => s
 assert_ = "assert"
@@ -1153,6 +1168,9 @@ anomaMkAction = "mkAction"
 
 mkEq :: (IsString s) => s
 mkEq = "mkEq"
+
+mkOrd :: (IsString s) => s
+mkOrd = "mkOrd"
 
 rustFn :: (IsString s) => s
 rustFn = "fn"

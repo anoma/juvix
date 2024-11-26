@@ -2,6 +2,8 @@ module Juvix.Compiler.Builtins
   ( module Juvix.Compiler.Builtins.Nat,
     module Juvix.Compiler.Builtins.IO,
     module Juvix.Compiler.Builtins.Eq,
+    module Juvix.Compiler.Builtins.Ord,
+    module Juvix.Compiler.Builtins.Ordering,
     module Juvix.Compiler.Builtins.Int,
     module Juvix.Compiler.Builtins.Bool,
     module Juvix.Compiler.Builtins.List,
@@ -33,4 +35,6 @@ import Juvix.Compiler.Builtins.List
 import Juvix.Compiler.Builtins.Maybe
 import Juvix.Compiler.Builtins.Monad
 import Juvix.Compiler.Builtins.Nat
+import Juvix.Compiler.Builtins.Ord
+import Juvix.Compiler.Builtins.Ordering
 import Juvix.Compiler.Builtins.String

@@ -654,6 +654,8 @@ instance PrettyCode InfoTable where
               BuiltinAnomaAction -> True
               BuiltinList -> False
               BuiltinEq -> False
+              BuiltinOrd -> False
+              BuiltinOrdering -> False
               BuiltinMaybe -> False
               BuiltinNat -> False
               BuiltinInt -> False

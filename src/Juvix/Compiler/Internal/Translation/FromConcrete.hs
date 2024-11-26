@@ -64,6 +64,24 @@ newtype DefaultArgsStack = DefaultArgsStack
 
 makeLenses ''DefaultArgsStack
 
+data EqBuiltins = EqBuiltins
+  { _eqBuiltinIsEqual :: Internal.Name,
+    _eqBuiltinTrue :: Internal.Name,
+    _eqBuiltinFalse :: Internal.Name,
+    _eqBuiltinAnd :: Internal.Name
+  }
+
+makeLenses ''EqBuiltins
+
+data OrdBuiltins = OrdBuiltins
+  { _ordBuiltinCompare :: Internal.Name,
+    _ordBuiltinLt :: Internal.Name,
+    _ordBuiltinEq :: Internal.Name,
+    _ordBuiltinGt :: Internal.Name
+  }
+
+makeLenses ''OrdBuiltins
+
 data DerivingArgs = DerivingArgs
   { _derivingPragmas :: Maybe ParsedPragmas,
     _derivingInstanceName :: Internal.FunctionName,
@@ -295,7 +313,7 @@ goModuleBody stmts = evalState emptyLocalTable $ do
   funs :: [Indexed Internal.PreStatement] <-
     concat
       <$> sequence
-        [ return . map (Indexed i . Internal.PreFunctionDef) =<< defs
+        [ map (Indexed i . Internal.PreFunctionDef) <$> defs
           | Indexed i s <- ss,
             let defs = mkFunctionLike s
         ]
@@ -312,8 +330,8 @@ goModuleBody stmts = evalState emptyLocalTable $ do
     mkFunctionLike :: Statement 'Scoped -> Sem (State LocalTable ': r) [Internal.FunctionDef]
     mkFunctionLike s = case s of
       StatementFunctionDef d -> goFunctionDef d
-      StatementProjectionDef d -> goProjectionDef d >>= return . pure
-      StatementDeriving d -> goDeriving d >>= return . pure
+      StatementProjectionDef d -> pure <$> goProjectionDef d
+      StatementDeriving d -> pure <$> goDeriving d
       StatementSyntax {} -> return []
       StatementImport {} -> return []
       StatementInductive {} -> return []
@@ -447,6 +465,7 @@ deriveTrait ::
   Sem r Internal.FunctionDef
 deriveTrait = \case
   Internal.DerivingEq -> deriveEq
+  Internal.DerivingOrd -> deriveOrd
 
 findDerivingTrait ::
   forall r.
@@ -510,6 +529,14 @@ getDefinedConstructor ind = do
   tbl2 <- asks (^. infoConstructors . at ind)
   return (fromJust (tbl1 <|> tbl2))
 
+getDefinedInductiveConstructors ::
+  (Members '[Reader Internal.InfoTable, State LocalTable] r) =>
+  Internal.InductiveName ->
+  Sem r [ConstructorInfo]
+getDefinedInductiveConstructors d = do
+  i <- getDefinedInductive d
+  mapM getDefinedConstructor (i ^. Internal.inductiveInfoConstructors)
+
 getDefinedInductive ::
   (Members '[Reader Internal.InfoTable, State LocalTable] r) =>
   Internal.InductiveName ->
@@ -536,6 +563,148 @@ throwDerivingWrongForm ret = do
           _derivingTypeSupportedBuiltins
         }
 
+deriveOrd ::
+  forall r.
+  ( Members
+      '[ Reader S.InfoTable,
+         Reader Internal.InfoTable,
+         State LocalTable,
+         NameIdGen,
+         Error ScoperError,
+         Reader DefaultArgsStack,
+         Reader Pragmas
+       ]
+      r
+  ) =>
+  DerivingArgs ->
+  Sem r Internal.FunctionDef
+deriveOrd DerivingArgs {..} = do
+  arg <- derivingGetConstrs ret args
+  argsInfo <- goArgsInfo _derivingInstanceName
+  let loc = getLoc ordName
+  mkOrd <- getBuiltin loc BuiltinMkOrd
+  bcmp <- getBuiltin loc BuiltinOrdCompare
+  blt <- getBuiltin loc BuiltinOrderingLT
+  bgt <- getBuiltin loc BuiltinOrderingGT
+  beq <- getBuiltin loc BuiltinOrderingEQ
+  let bs =
+        OrdBuiltins
+          { _ordBuiltinCompare = bcmp,
+            _ordBuiltinLt = blt,
+            _ordBuiltinGt = bgt,
+            _ordBuiltinEq = beq
+          }
+  lam <- genOrdCompare (getLoc _derivingInstanceName) bs arg
+  let ty = Internal.foldFunType _derivingParameters ret
+      body = mkOrd Internal.@@ lam
+  pragmas' <- goPragmas _derivingPragmas
+  return
+    Internal.FunctionDef
+      { _funDefTerminating = False,
+        _funDefIsInstanceCoercion = Just Internal.IsInstanceCoercionInstance,
+        _funDefPragmas = pragmas',
+        _funDefArgsInfo = argsInfo,
+        _funDefDocComment = Nothing,
+        _funDefName = _derivingInstanceName,
+        _funDefType = ty,
+        _funDefBody = body,
+        _funDefBuiltin = Nothing
+      }
+  where
+    ret :: Internal.Expression
+    ret = Internal.foldApplication (Internal.toExpression ordName) args
+
+    ordName :: Internal.InductiveName
+    args :: [Internal.ApplicationArg]
+    (ordName, args) = _derivingReturnType
+
+genOrdCompare ::
+  forall r.
+  (Members '[NameIdGen] r) =>
+  Interval ->
+  OrdBuiltins ->
+  [ConstructorInfo] ->
+  Sem r Internal.Expression
+genOrdCompare loc bs cs = do
+  res <-
+    fmap nonEmpty
+      . execOutputList
+      . runInputList cs
+      $ repeatOnInput go
+  Internal.mkLambda <$> case res of
+    Nothing -> pure <$> emptyTypeClause
+    Just l -> return l
+  where
+    emptyTypeClause :: Sem r Internal.LambdaClause
+    emptyTypeClause = do
+      w1 <- Internal.genWildcard loc Explicit
+      w2 <- Internal.genWildcard loc Explicit
+      return
+        Internal.LambdaClause
+          { _lambdaBody = Internal.toExpression (bs ^. ordBuiltinEq),
+            _lambdaPatterns = w1 :| [w2]
+          }
+
+    go :: (Members '[NameIdGen, Output Internal.LambdaClause, Input ConstructorInfo] r') => ConstructorInfo -> Sem r' ()
+    go c = do
+      isLast <- isEndOfInput @ConstructorInfo
+      let mkPat = Internal.genConstructorPattern loc Explicit c
+      (p1, v1) <- mkPat
+      (p2, v2) <- mkPat
+      lord <- lexOrder (zipExact v1 v2)
+      let sameConstr =
+            Internal.LambdaClause
+              { _lambdaPatterns = p1 :| [p2],
+                _lambdaBody = lord
+              }
+      output sameConstr
+      unless isLast $ do
+        p3 <- fst <$> mkPat
+        w3 <- Internal.genWildcard loc Explicit
+        output
+          Internal.LambdaClause
+            { _lambdaPatterns = p3 :| [w3],
+              _lambdaBody = Internal.toExpression (bs ^. ordBuiltinLt)
+            }
+        p4 <- fst <$> mkPat
+        w4 <- Internal.genWildcard loc Explicit
+        output
+          Internal.LambdaClause
+            { _lambdaPatterns = w4 :| [p4],
+              _lambdaBody = Internal.toExpression (bs ^. ordBuiltinGt)
+            }
+
+    lexOrder :: forall r'. (Members '[NameIdGen] r') => [(Internal.VarName, Internal.VarName)] -> Sem r' Internal.Expression
+    lexOrder = lexgo
+      where
+        cmp :: Internal.VarName -> Internal.VarName -> Internal.Expression
+        cmp a b = (bs ^. ordBuiltinCompare) Internal.@@ a Internal.@@ b
+
+        lexgo :: [(Internal.VarName, Internal.VarName)] -> Sem r' Internal.Expression
+        lexgo = \case
+          [] -> return (Internal.toExpression (bs ^. ordBuiltinEq))
+          (x, x') : vs
+            | null vs -> return (cmp x x')
+            | otherwise -> do
+                v <- Internal.freshVar loc "ltGt"
+                let pv = Internal.mkVarPattern v Explicit
+                    mkPat :: Internal.Name -> Internal.PatternArg
+                    mkPat p = Internal.mkConstructorVarPattern Explicit p []
+                    branchNEq = Internal.mkCaseBranch pv (Internal.toExpression v)
+                branchEq <- Internal.mkCaseBranch (mkPat (bs ^. ordBuiltinEq)) <$> lexgo vs
+                let branches = branchEq :| [branchNEq]
+                return (Internal.mkCase (cmp x x') branches)
+
+derivingGetConstrs ::
+  (Members '[Error ScoperError, State LocalTable, Reader S.InfoTable, Reader Internal.InfoTable] r) =>
+  Internal.Expression ->
+  [Internal.ApplicationArg] ->
+  Sem r [Internal.ConstructorInfo]
+derivingGetConstrs retTy args = runFailDefaultM (throwDerivingWrongForm retTy) $ do
+  [Internal.ApplicationArg Explicit a] <- return args
+  Internal.ExpressionIden (Internal.IdenInductive ind) <- return (fst (Internal.unfoldExpressionApp a))
+  getDefinedInductiveConstructors ind
+
 deriveEq ::
   forall r.
   ( Members
@@ -557,7 +726,7 @@ deriveEq DerivingArgs {..} = do
   argsInfo <- goArgsInfo _derivingInstanceName
   lamName <- Internal.freshFunVar (getLoc _derivingInstanceName) ("eq__" <> _derivingInstanceName ^. Internal.nameText)
   let lam = Internal.ExpressionIden (Internal.IdenFunction lamName)
-  lamFun <- eqLambda lam indInfo argty
+  lamFun <- eqLambda lam argty
   lamTy <- Internal.ExpressionHole <$> Internal.freshHole (getLoc _derivingInstanceName)
   let lamDef =
         Internal.FunctionDef
@@ -615,59 +784,57 @@ deriveEq DerivingArgs {..} = do
         toAppArg :: Internal.InductiveParameter -> Internal.ApplicationArg
         toAppArg p = Internal.ApplicationArg Explicit (Internal.toExpression (p ^. Internal.inductiveParamName))
 
-    eqLambda :: Internal.Expression -> Internal.InductiveInfo -> Internal.Expression -> Sem r Internal.Expression
-    eqLambda lam d argty = do
+    eqLambda :: Internal.Expression -> Internal.Expression -> Sem r Internal.Expression
+    eqLambda recDef argty = do
       let loc = getLoc eqName
       band <- getBuiltin loc BuiltinBoolAnd
       btrue <- getBuiltin loc BuiltinBoolTrue
       bfalse <- getBuiltin loc BuiltinBoolFalse
       bisEqual <- getBuiltin loc BuiltinIsEqual
-      case nonEmpty (d ^. Internal.inductiveInfoConstructors) of
+      constrs <- derivingGetConstrs ret args
+      let bs =
+            EqBuiltins
+              { _eqBuiltinTrue = btrue,
+                _eqBuiltinFalse = bfalse,
+                _eqBuiltinIsEqual = bisEqual,
+                _eqBuiltinAnd = band
+              }
+      case nonEmpty constrs of
         Nothing -> return (Internal.toExpression btrue)
         Just cs -> do
-          cl' <- mapM (lambdaClause band btrue bisEqual) cs
+          cl' <- mapM (lambdaClause bs) cs
           defaultCl' <-
             if
-                | notNull (NonEmpty.tail cs) -> Just <$> defaultLambdaClause bfalse
+                | notNull (NonEmpty.tail cs) -> Just <$> defaultLambdaClause bs
                 | otherwise -> return Nothing
-          return
-            ( Internal.ExpressionLambda
-                Internal.Lambda
-                  { _lambdaType = Nothing,
-                    _lambdaClauses = snocNonEmptyMaybe cl' defaultCl'
-                  }
-            )
+          return $
+            Internal.ExpressionLambda
+              Internal.Lambda
+                { _lambdaType = Nothing,
+                  _lambdaClauses = snocNonEmptyMaybe cl' defaultCl'
+                }
       where
-        defaultLambdaClause :: Internal.Name -> Sem r Internal.LambdaClause
-        defaultLambdaClause btrue = do
+        defaultLambdaClause :: EqBuiltins -> Sem r Internal.LambdaClause
+        defaultLambdaClause bs = do
           let loc = getLoc eqName
           p1 <- Internal.genWildcard loc Internal.Explicit
           p2 <- Internal.genWildcard loc Internal.Explicit
           return
             Internal.LambdaClause
               { _lambdaPatterns = p1 :| [p2],
-                _lambdaBody = Internal.toExpression btrue
+                _lambdaBody = Internal.toExpression (bs ^. eqBuiltinFalse)
               }
 
         lambdaClause ::
-          Internal.FunctionName ->
-          Internal.FunctionName ->
-          Internal.FunctionName ->
-          Internal.ConstructorName ->
+          EqBuiltins ->
+          Internal.ConstructorInfo ->
           Sem r Internal.LambdaClause
-        lambdaClause band btrue bisEqual c = do
+        lambdaClause bs cinfo = do
           argsRecursive :: [Bool] <- getRecursiveArgs
-          numArgs :: [IsImplicit] <- getNumArgs
           let loc = getLoc _derivingInstanceName
-              mkpat :: Sem r ([Internal.VarName], Internal.PatternArg)
-              mkpat = runOutputList . runStreamOf allWords $ do
-                xs :: [(IsImplicit, Internal.VarName)] <- forM numArgs $ \impl -> do
-                  v <- yield >>= Internal.freshVar loc
-                  output v
-                  return (impl, v)
-                return (Internal.mkConstructorVarPattern Explicit c xs)
-          (v1, p1) <- mkpat
-          (v2, p2) <- mkpat
+              mkpat = Internal.genConstructorPattern loc Explicit cinfo
+          (p1, v1) <- mkpat
+          (p2, v2) <- mkpat
           return
             Internal.LambdaClause
               { _lambdaPatterns = p1 :| [p2],
@@ -676,34 +843,28 @@ deriveEq DerivingArgs {..} = do
           where
             allEq :: (Internal.IsExpression expr) => [(expr, expr, Bool)] -> Internal.Expression
             allEq k = case nonEmpty k of
-              Nothing -> Internal.toExpression btrue
+              Nothing -> Internal.toExpression (bs ^. eqBuiltinTrue)
               Just l -> mkAnds (fmap (uncurry3 mkEq) l)
 
             mkAnds :: (Internal.IsExpression expr) => NonEmpty expr -> Internal.Expression
             mkAnds = foldl1 mkAnd . fmap Internal.toExpression
 
             mkAnd :: (Internal.IsExpression expr) => expr -> expr -> Internal.Expression
-            mkAnd a b = band Internal.@@ a Internal.@@ b
+            mkAnd a b = (bs ^. eqBuiltinAnd) Internal.@@ a Internal.@@ b
 
             mkEq :: (Internal.IsExpression expr) => expr -> expr -> Bool -> Internal.Expression
             mkEq a b isRec
-              | isRec = lam Internal.@@ a Internal.@@ b
-              | otherwise = bisEqual Internal.@@ a Internal.@@ b
-
-            getNumArgs :: Sem r [IsImplicit]
-            getNumArgs = do
-              def <- getDefinedConstructor c
-              return $
-                def
-                  ^.. Internal.constructorInfoType
-                    . to Internal.constructorArgs
-                    . each
-                    . Internal.paramImplicit
+              | isRec = recDef Internal.@@ a Internal.@@ b
+              | otherwise = (bs ^. eqBuiltinIsEqual) Internal.@@ a Internal.@@ b
 
             getRecursiveArgs :: Sem r [Bool]
             getRecursiveArgs = do
-              def <- getDefinedConstructor c
-              let argTypes = map (^. Internal.paramType) $ Internal.constructorArgs (def ^. Internal.constructorInfoType)
+              let argTypes =
+                    cinfo
+                      ^.. Internal.constructorInfoType
+                        . to Internal.constructorArgs
+                        . each
+                        . Internal.paramType
               return $ map (== argty) argTypes
 
 goFunctionDef ::
@@ -850,6 +1011,8 @@ checkBuiltinInductive ::
 checkBuiltinInductive d b = localBuiltins $ case b of
   BuiltinNat -> checkNatDef d
   BuiltinEq -> checkEqDef d
+  BuiltinOrdering -> checkOrderingDef d
+  BuiltinOrd -> checkOrdDef d
   BuiltinBool -> checkBoolDef d
   BuiltinInt -> checkIntDef d
   BuiltinList -> checkListDef d
@@ -873,6 +1036,7 @@ checkBuiltinFunction ::
 checkBuiltinFunction d f = localBuiltins $ case f of
   BuiltinAssert -> checkAssert d
   BuiltinIsEqual -> checkIsEq d
+  BuiltinOrdCompare -> checkOrdCompare d
   BuiltinNatPlus -> checkNatPlus d
   BuiltinNatSub -> checkNatSub d
   BuiltinNatMul -> checkNatMul d

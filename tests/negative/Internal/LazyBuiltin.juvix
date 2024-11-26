@@ -2,8 +2,8 @@ module LazyBuiltin;
 
 builtin bool
 type Bool :=
-  | true : Bool
-  | false : Bool;
+  | false : Bool
+  | true : Bool;
 
 builtin bool-if
 ite : {A : Type} -> Bool -> A -> A -> A

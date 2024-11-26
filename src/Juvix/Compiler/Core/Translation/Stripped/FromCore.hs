@@ -55,6 +55,7 @@ fromCore fsize tab =
       BuiltinIntLt -> False
       BuiltinSeq -> False
       BuiltinIsEqual -> False
+      BuiltinOrdCompare -> False
       BuiltinMonadBind -> True -- TODO revise
       BuiltinFromNat -> True
       BuiltinFromInt -> True
@@ -64,6 +65,10 @@ fromCore fsize tab =
       BuiltinListNil -> True
       BuiltinListCons -> True
       BuiltinMkEq -> True
+      BuiltinMkOrd -> True
+      BuiltinOrderingLT -> True
+      BuiltinOrderingGT -> True
+      BuiltinOrderingEQ -> True
       BuiltinMkPoseidonState -> True
       BuiltinMkEcPoint -> True
       BuiltinMaybeNothing -> True
@@ -146,6 +151,8 @@ fromCore fsize tab =
         BuiltinEq -> True
         BuiltinMaybe -> True
         BuiltinPair -> True
+        BuiltinOrd -> True
+        BuiltinOrdering -> True
         BuiltinPoseidonState -> True
         BuiltinEcPoint -> True
         BuiltinNat -> False

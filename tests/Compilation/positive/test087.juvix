@@ -1,0 +1,26 @@
+-- Deriving Ord
+module test087;
+
+import Stdlib.Data.Fixity open;
+import Stdlib.Data.Bool open;
+import Stdlib.Data.Pair open;
+import Stdlib.Trait.Ord open;
+import Stdlib.System.IO open;
+
+syntax alias compare := Ord.cmp;
+
+type T :=
+  | One
+  | Two
+  | Three
+  | Four;
+
+deriving instance
+ordT : Ord T;
+
+main : IO :=
+  printLn (compare One One)
+    >>> printLn (compare One Two)
+    >>> printLn (compare Two One)
+    >>> printLn (compare (One, One) (One, Three))
+    >>> printLn (compare (Four, Four) (Four, Three));

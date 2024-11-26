@@ -3,5 +3,5 @@ module Juvix.Builtin.V1.Bool;
 --- Inductive definition of booleans.
 builtin bool
 type Bool :=
-  | true
-  | false;
+  | false
+  | true;

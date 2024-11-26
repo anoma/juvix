@@ -50,7 +50,7 @@ instance Pretty BuiltinPrim where
 builtinConstructors :: BuiltinInductive -> [BuiltinConstructor]
 builtinConstructors = \case
   BuiltinNat -> [BuiltinNatZero, BuiltinNatSuc]
-  BuiltinBool -> [BuiltinBoolTrue, BuiltinBoolFalse]
+  BuiltinBool -> [BuiltinBoolFalse, BuiltinBoolTrue]
   BuiltinInt -> [BuiltinIntOfNat, BuiltinIntNegSuc]
   BuiltinList -> [BuiltinListNil, BuiltinListCons]
   BuiltinMaybe -> [BuiltinMaybeNothing, BuiltinMaybeJust]
@@ -60,6 +60,8 @@ builtinConstructors = \case
   BuiltinAnomaResource -> [BuiltinMkAnomaResource]
   BuiltinAnomaAction -> [BuiltinMkAnomaAction]
   BuiltinEq -> [BuiltinMkEq]
+  BuiltinOrd -> [BuiltinMkOrd]
+  BuiltinOrdering -> [BuiltinOrderingLT, BuiltinOrderingEQ, BuiltinOrderingGT]
 
 data BuiltinInductive
   = BuiltinNat
@@ -69,6 +71,8 @@ data BuiltinInductive
   | BuiltinMaybe
   | BuiltinPair
   | BuiltinEq
+  | BuiltinOrd
+  | BuiltinOrdering
   | BuiltinPoseidonState
   | BuiltinEcPoint
   | BuiltinAnomaResource
@@ -90,6 +94,8 @@ instance Pretty BuiltinInductive where
     BuiltinMaybe -> Str.maybe_
     BuiltinPair -> Str.pair
     BuiltinEq -> Str.eq
+    BuiltinOrd -> Str.ord
+    BuiltinOrdering -> Str.ordering
     BuiltinPoseidonState -> Str.cairoPoseidonState
     BuiltinEcPoint -> Str.cairoEcPoint
     BuiltinAnomaResource -> Str.anomaResource
@@ -113,17 +119,25 @@ instance Pretty BuiltinConstructor where
     BuiltinMkAnomaResource -> Str.anomaMkResource
     BuiltinMkAnomaAction -> Str.anomaMkAction
     BuiltinMkEq -> Str.mkEq
+    BuiltinMkOrd -> Str.mkOrd
+    BuiltinOrderingLT -> Str.lt
+    BuiltinOrderingEQ -> Str.eq
+    BuiltinOrderingGT -> Str.gt
 
 data BuiltinConstructor
   = BuiltinNatZero
   | BuiltinNatSuc
   | BuiltinBoolTrue
   | BuiltinBoolFalse
+  | BuiltinOrderingLT
+  | BuiltinOrderingEQ
+  | BuiltinOrderingGT
   | BuiltinIntOfNat
   | BuiltinIntNegSuc
   | BuiltinListNil
   | BuiltinListCons
   | BuiltinMkEq
+  | BuiltinMkOrd
   | BuiltinMaybeNothing
   | BuiltinMaybeJust
   | BuiltinPairConstr
@@ -167,6 +181,7 @@ data BuiltinFunction
   | BuiltinIntLt
   | BuiltinFromNat
   | BuiltinIsEqual
+  | BuiltinOrdCompare
   | BuiltinFromInt
   | BuiltinSeq
   | BuiltinMonadBind
@@ -209,6 +224,7 @@ instance Pretty BuiltinFunction where
     BuiltinFromInt -> Str.fromInt
     BuiltinSeq -> Str.builtinSeq
     BuiltinIsEqual -> Str.isEqual
+    BuiltinOrdCompare -> Str.compare
     BuiltinMonadBind -> Str.builtinMonadBind
 
 data BuiltinAxiom
@@ -441,6 +457,7 @@ isNatBuiltin = \case
   BuiltinNatLt -> True
   BuiltinNatEq -> True
   --
+  BuiltinOrdCompare -> False
   BuiltinIsEqual -> False
   BuiltinAssert -> False
   BuiltinBoolIf -> False
@@ -495,6 +512,7 @@ isIntBuiltin = \case
   BuiltinFromInt -> False
   BuiltinSeq -> False
   BuiltinIsEqual -> False
+  BuiltinOrdCompare -> False
   BuiltinMonadBind -> False
 
 isCastBuiltin :: BuiltinFunction -> Bool
@@ -502,6 +520,7 @@ isCastBuiltin = \case
   BuiltinFromNat -> True
   BuiltinFromInt -> True
   --
+  BuiltinOrdCompare -> False
   BuiltinIsEqual -> False
   BuiltinAssert -> False
   BuiltinIntEq -> False
@@ -543,6 +562,7 @@ isIgnoredBuiltin f
         .&&. (not . isCastBuiltin)
         .&&. (/= BuiltinMonadBind)
         .&&. (/= BuiltinIsEqual)
+        .&&. (/= BuiltinOrdCompare)
         $ f
 
     explicit :: Bool
@@ -575,6 +595,8 @@ isIgnoredBuiltin f
       BuiltinNatEq -> False
       -- Eq
       BuiltinIsEqual -> False
+      -- Ord
+      BuiltinOrdCompare -> False
       -- Monad
       BuiltinMonadBind -> False
       -- Ignored
