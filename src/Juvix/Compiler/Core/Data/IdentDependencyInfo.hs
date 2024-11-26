@@ -97,11 +97,20 @@ recursiveIdentsClosure tab =
         chlds = fromJust $ HashMap.lookup sym graph
 
 -- | Complement of recursiveIdentsClosure
+nonRecursiveReachableIdents' :: InfoTable -> HashSet Symbol
+nonRecursiveReachableIdents' tab =
+  HashSet.difference
+    (HashSet.fromList (HashMap.keys (tab ^. infoIdentifiers)))
+    (recursiveIdentsClosure tab)
+
+nonRecursiveReachableIdents :: Module -> HashSet Symbol
+nonRecursiveReachableIdents = nonRecursiveReachableIdents' . computeCombinedInfoTable
+
 nonRecursiveIdents' :: InfoTable -> HashSet Symbol
 nonRecursiveIdents' tab =
   HashSet.difference
     (HashSet.fromList (HashMap.keys (tab ^. infoIdentifiers)))
-    (recursiveIdentsClosure tab)
+    (recursiveIdents' tab)
 
 nonRecursiveIdents :: Module -> HashSet Symbol
 nonRecursiveIdents = nonRecursiveIdents' . computeCombinedInfoTable

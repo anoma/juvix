@@ -75,7 +75,7 @@ constantFolding' opts nonRecSyms tab md =
 -- zero-order. For example, `3 + 4` is evaluated to `7`, and `id 3` is evaluated
 -- to `3`, but `id id` is not evaluated because the target type is not
 -- zero-order (it's a function type). This optimization is only applied to
--- non-recursive symbols.
+-- symbols from which no recursive symbols can be reached.
 --
 -- References:
 --  - https://github.com/anoma/juvix/pull/2450
@@ -83,6 +83,6 @@ constantFolding' opts nonRecSyms tab md =
 constantFolding :: (Member (Reader CoreOptions) r) => Module -> Sem r Module
 constantFolding md = do
   opts <- ask
-  return $ constantFolding' opts (nonRecursiveIdents' tab) tab md
+  return $ constantFolding' opts (nonRecursiveReachableIdents' tab) tab md
   where
     tab = computeCombinedInfoTable md

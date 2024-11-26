@@ -225,7 +225,7 @@ convertNode = dmapLRM go
                                   fun = reLambdas lams' body''
                                   letitem =
                                     mkLetItem
-                                      (ii ^. identifierName)
+                                      ("spec_" <> ii ^. identifierName)
                                       -- the type is not in the scope of the binder
                                       (shift (-1) ty')
                                       fun
