@@ -761,7 +761,7 @@ deriveRecursiveBinaryFunction label nonSelfRec DerivingArgs {..} mkLamDef = do
     args :: [Internal.ApplicationArg]
     (eqName, args) = _derivingReturnType
 
-deriveEq2 ::
+deriveEq ::
   forall r.
   ( Members
       '[ Reader S.InfoTable,
@@ -776,7 +776,7 @@ deriveEq2 ::
   ) =>
   DerivingArgs ->
   Sem r Internal.FunctionDef
-deriveEq2 der@DerivingArgs {..} = do
+deriveEq der@DerivingArgs {..} = do
   argsInfo <- goArgsInfo _derivingInstanceName
   bs <- mkBuiltins
   (recDefName, mutblock :: Internal.LetClause) <-
@@ -887,150 +887,6 @@ deriveEq2 der@DerivingArgs {..} = do
 
             mkAnd :: (Internal.IsExpression expr) => expr -> expr -> Internal.Expression
             mkAnd a b = (bs ^. eqBuiltinAnd) Internal.@@ a Internal.@@ b
-
-deriveEq ::
-  forall r.
-  ( Members
-      '[ Reader S.InfoTable,
-         Reader Internal.InfoTable,
-         State LocalTable,
-         NameIdGen,
-         Error ScoperError,
-         Reader DefaultArgsStack,
-         Reader Pragmas
-       ]
-      r
-  ) =>
-  DerivingArgs ->
-  Sem r Internal.FunctionDef
-deriveEq DerivingArgs {..} = do
-  argsInfo <- goArgsInfo _derivingInstanceName
-  recDefName <- Internal.freshFunVar (getLoc _derivingInstanceName) ("eq__" <> _derivingInstanceName ^. Internal.nameText)
-  lamFun <- eqLambda (Internal.toExpression recDefName)
-  lamTy <- Internal.ExpressionHole <$> Internal.freshHole (getLoc _derivingInstanceName)
-  let lamDef =
-        Internal.FunctionDef
-          { _funDefTerminating = False,
-            _funDefIsInstanceCoercion = Nothing,
-            _funDefPragmas = mempty,
-            _funDefArgsInfo = [],
-            _funDefDocComment = Nothing,
-            _funDefName = recDefName,
-            _funDefType = lamTy,
-            _funDefBody = lamFun,
-            _funDefBuiltin = Nothing
-          }
-  mkEq <- getBuiltin (getLoc eqName) BuiltinMkEq
-  pragmas' <- goPragmas _derivingPragmas
-  let body =
-        Internal.ExpressionLet
-          Internal.Let
-            { _letClauses = pure (Internal.LetMutualBlock (Internal.MutualBlockLet (pure lamDef))),
-              _letExpression = mkEq Internal.@@ recDefName
-            }
-      ty = Internal.foldFunType _derivingParameters ret
-  return
-    Internal.FunctionDef
-      { _funDefTerminating = False,
-        _funDefIsInstanceCoercion = Just Internal.IsInstanceCoercionInstance,
-        _funDefPragmas = pragmas',
-        _funDefArgsInfo = argsInfo,
-        _funDefDocComment = Nothing,
-        _funDefName = _derivingInstanceName,
-        _funDefType = ty,
-        _funDefBody = body,
-        _funDefBuiltin = Nothing
-      }
-  where
-    ret :: Internal.Expression
-    ret = Internal.foldApplication (Internal.toExpression eqName) args
-
-    eqName :: Internal.InductiveName
-    args :: [Internal.ApplicationArg]
-    (eqName, args) = _derivingReturnType
-
-    eqLambda :: Internal.Expression -> Sem r Internal.Expression
-    eqLambda recDef = do
-      let loc = getLoc eqName
-      band <- getBuiltin loc BuiltinBoolAnd
-      btrue <- getBuiltin loc BuiltinBoolTrue
-      bfalse <- getBuiltin loc BuiltinBoolFalse
-      bisEqual <- getBuiltin loc BuiltinIsEqual
-      constrs <- derivingGetConstrs ret args
-      let bs =
-            EqBuiltins
-              { _eqBuiltinTrue = btrue,
-                _eqBuiltinFalse = bfalse,
-                _eqBuiltinIsEqual = bisEqual,
-                _eqBuiltinAnd = band
-              }
-      case nonEmpty constrs of
-        Nothing -> return (Internal.toExpression btrue)
-        Just cs -> do
-          cl' <- mapM (lambdaClause bs) cs
-          defaultCl' <-
-            if
-                | notNull (NonEmpty.tail cs) -> Just <$> defaultLambdaClause bs
-                | otherwise -> return Nothing
-          return $
-            Internal.ExpressionLambda
-              Internal.Lambda
-                { _lambdaType = Nothing,
-                  _lambdaClauses = snocNonEmptyMaybe cl' defaultCl'
-                }
-      where
-        defaultLambdaClause :: EqBuiltins -> Sem r Internal.LambdaClause
-        defaultLambdaClause bs = do
-          let loc = getLoc eqName
-          p1 <- Internal.genWildcard loc Internal.Explicit
-          p2 <- Internal.genWildcard loc Internal.Explicit
-          return
-            Internal.LambdaClause
-              { _lambdaPatterns = p1 :| [p2],
-                _lambdaBody = Internal.toExpression (bs ^. eqBuiltinFalse)
-              }
-
-        lambdaClause ::
-          EqBuiltins ->
-          Internal.ConstructorInfo ->
-          Sem r Internal.LambdaClause
-        lambdaClause bs cinfo = do
-          let argsRecursive :: [Bool] = getRecursiveArgs
-          let loc = getLoc _derivingInstanceName
-              mkpat = Internal.genConstructorPattern loc Explicit cinfo
-          (p1, v1) <- mkpat
-          (p2, v2) <- mkpat
-          return
-            Internal.LambdaClause
-              { _lambdaPatterns = p1 :| [p2],
-                _lambdaBody = allEq (zip3Exact v1 v2 argsRecursive)
-              }
-          where
-            allEq :: (Internal.IsExpression expr) => [(expr, expr, Bool)] -> Internal.Expression
-            allEq k = case nonEmpty k of
-              Nothing -> Internal.toExpression (bs ^. eqBuiltinTrue)
-              Just l -> mkAnds (fmap (uncurry3 mkEq) l)
-
-            mkAnds :: (Internal.IsExpression expr) => NonEmpty expr -> Internal.Expression
-            mkAnds = foldl1 mkAnd . fmap Internal.toExpression
-
-            mkAnd :: (Internal.IsExpression expr) => expr -> expr -> Internal.Expression
-            mkAnd a b = (bs ^. eqBuiltinAnd) Internal.@@ a Internal.@@ b
-
-            mkEq :: (Internal.IsExpression expr) => expr -> expr -> Bool -> Internal.Expression
-            mkEq a b isRec
-              | isRec = recDef Internal.@@ a Internal.@@ b
-              | otherwise = (bs ^. eqBuiltinIsEqual) Internal.@@ a Internal.@@ b
-
-            getRecursiveArgs :: [Bool]
-            getRecursiveArgs =
-              let argTypes =
-                    cinfo
-                      ^.. Internal.constructorInfoType
-                        . to Internal.constructorArgs
-                        . each
-                        . Internal.paramType
-               in map (== ret) argTypes
 
 goFunctionDef ::
   forall r.
