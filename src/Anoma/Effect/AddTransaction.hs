@@ -1,4 +1,8 @@
-module Anoma.Effect.AddTransaction where
+module Anoma.Effect.AddTransaction
+  ( module Anoma.Effect.AddTransaction,
+    module Anoma.Rpc.AddTransaction,
+  )
+where
 
 import Anoma.Effect.Base
 import Anoma.Rpc.AddTransaction
@@ -8,7 +12,7 @@ import Juvix.Prelude
 import Juvix.Prelude.Aeson qualified as Aeson
 
 newtype AddTransactionInput = AddTransactionInput
-  { _mempoolAddTransactionInputCandidate :: Nockma.Term Natural
+  { _addTransactionInputCandidate :: Nockma.Term Natural
   }
 
 makeLenses ''AddTransactionInput
@@ -23,7 +27,7 @@ addTransaction i = do
   let msg =
         AddTransaction
           { _addTransactionNodeInfo = nodeInfo,
-            _addTransactionTransaction = encodeJam64 (i ^. mempoolAddTransactionInputCandidate)
+            _addTransactionTransaction = encodeJam64 (i ^. addTransactionInputCandidate)
           }
   logMessageValue "Request payload" msg
   -- addTransaction always returns an empty response

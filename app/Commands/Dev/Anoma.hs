@@ -4,9 +4,12 @@ module Commands.Dev.Anoma
   )
 where
 
+import Anoma.Client.Base
 import Anoma.Client.Config
 import Anoma.Effect.Base
 import Commands.Base
+import Commands.Dev.Anoma.AddTransaction.Options
+import Commands.Dev.Anoma.Base
 import Commands.Dev.Anoma.Client
 import Commands.Dev.Anoma.Options
 import Commands.Dev.Anoma.Prove qualified as Prove
@@ -21,10 +24,20 @@ runCommand =
     AnomaCommandStart opts -> Start.runCommand opts
     AnomaCommandStatus -> checkRunning >>= renderStdOutLn . ppCodeAnn
     AnomaCommandStop -> checkRunning >>= stopClient >> removeConfig
-    AnomaCommandProve opts -> do
-      host <- getHostConfig (opts ^. proveClientInfo)
-      runAnomaWithClient host (Prove.runCommand opts)
+    AnomaCommandProve opts ->
+      runAnomaWithHostConfig
+        (opts ^. proveClientInfo)
+        (Prove.runCommand opts)
+    AnomaCommandAddTransaction opts ->
+      runAnomaWithHostConfig
+        (opts ^. addTransactionClientInfo)
+        (addTransaction (opts ^. addTransactionFile))
   where
+    runAnomaWithHostConfig :: (Members (Error SimpleError ': AppEffects) x) => Maybe (AppPath File) -> Sem (Anoma ': x) () -> Sem x ()
+    runAnomaWithHostConfig mconfigFile eff = do
+      host <- getHostConfig mconfigFile
+      runAnomaWithClient host eff
+
     checkRunning :: (Members (Error SimpleError ': AppEffects) x) => Sem x ClientConfig
     checkRunning = fromMaybeM (logInfo "The Anoma client is not running" >> exitFailure) checkClientRunning
 
