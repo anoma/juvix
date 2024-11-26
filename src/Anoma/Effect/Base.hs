@@ -6,8 +6,11 @@ module Anoma.Effect.Base
   ( Anoma,
     anomaRpc,
     anomaListMethods,
+    getNodeInfo,
     runAnomaEphemeral,
     runAnomaWithClient,
+    fromJSONErr,
+    logMessageValue,
     module Anoma.Rpc.Base,
     module Anoma.Client.Base,
     module Juvix.Compiler.Nockma.Translation.FromTree,
@@ -23,12 +26,15 @@ import Juvix.Compiler.Nockma.Translation.FromTree (AnomaResult)
 import Juvix.Data.CodeAnn
 import Juvix.Prelude
 import Juvix.Prelude.Aeson (Value, eitherDecodeStrict, encode)
+import Juvix.Prelude.Aeson qualified as Aeson
 
 data Anoma :: Effect where
   -- | gRPC call
   AnomaRpc :: GrpcMethodUrl -> Value -> Anoma m Value
   -- | List all gRPC methods using server reflection
   AnomaListMethods :: Anoma m [GrpcMethodUrl]
+  -- | Get information on the node that the client sends messages to
+  GetNodeInfo :: Anoma m NodeInfo
 
 makeSem ''Anoma
 
@@ -103,6 +109,7 @@ runAnomaEphemeral anomapath body = runEnvironment . runReader anomapath . runPro
       (`interpret` inject body) $ \case
         AnomaRpc method i -> anomaRpc' method i
         AnomaListMethods -> anomaListMethods'
+        GetNodeInfo -> return NodeInfo {_nodeInfoId = grpcServer ^. anomaClientInfoNodeId}
 
 runAnomaWithClient :: forall r a. (Members '[Logger, EmbedIO, Error SimpleError] r) => AnomaClientInfo -> Sem (Anoma ': r) a -> Sem r a
 runAnomaWithClient grpcInfo body =
@@ -112,3 +119,12 @@ runAnomaWithClient grpcInfo body =
     $ \case
       AnomaRpc method i -> anomaRpc' method i
       AnomaListMethods -> anomaListMethods'
+      GetNodeInfo -> return NodeInfo {_nodeInfoId = grpcInfo ^. anomaClientInfoNodeId}
+
+fromJSONErr :: (Members '[Error SimpleError, Logger] r) => (Aeson.FromJSON a) => Value -> Sem r a
+fromJSONErr v = case Aeson.fromJSON v of
+  Aeson.Success r -> return r
+  Aeson.Error err -> throw (SimpleError (mkAnsiText err))
+
+logMessageValue :: (Aeson.ToJSON val, Member Logger r) => Text -> val -> Sem r ()
+logMessageValue title val = logVerbose (mkAnsiText (annotate AnnImportant (pretty title <> ":\n") <> pretty (Aeson.jsonEncodeToPrettyText val)))
