@@ -74,8 +74,7 @@ data EqBuiltins = EqBuiltins
 makeLenses ''EqBuiltins
 
 data OrdBuiltins = OrdBuiltins
-  { _ordBuiltinCompare :: Internal.Name,
-    _ordBuiltinLt :: Internal.Name,
+  { _ordBuiltinLt :: Internal.Name,
     _ordBuiltinEq :: Internal.Name,
     _ordBuiltinGt :: Internal.Name
   }
@@ -578,7 +577,7 @@ deriveOrd ::
   ) =>
   DerivingArgs ->
   Sem r Internal.FunctionDef
-deriveOrd DerivingArgs {..} = do
+deriveOrd der@DerivingArgs {..} = do
   arg <- derivingGetConstrs ret args
   argsInfo <- goArgsInfo _derivingInstanceName
   let loc = getLoc ordName
@@ -589,14 +588,18 @@ deriveOrd DerivingArgs {..} = do
   beq <- getBuiltin loc BuiltinOrderingEQ
   let bs =
         OrdBuiltins
-          { _ordBuiltinCompare = bcmp,
-            _ordBuiltinLt = blt,
+          { _ordBuiltinLt = blt,
             _ordBuiltinGt = bgt,
             _ordBuiltinEq = beq
           }
-  lam <- genOrdCompare (getLoc _derivingInstanceName) bs arg
-  let ty = Internal.foldFunType _derivingParameters ret
-      body = mkOrd Internal.@@ lam
+  (recName, mutblock) <- deriveRecursiveBinaryFunction "ord" bcmp der (genOrdCompare (getLoc _derivingInstanceName) bs arg)
+  let body =
+        Internal.ExpressionLet
+          Internal.Let
+            { _letClauses = pure mutblock,
+              _letExpression = mkOrd Internal.@@ recName
+            }
+      ty = Internal.foldFunType _derivingParameters ret
   pragmas' <- goPragmas _derivingPragmas
   return
     Internal.FunctionDef
@@ -618,82 +621,98 @@ deriveOrd DerivingArgs {..} = do
     args :: [Internal.ApplicationArg]
     (ordName, args) = _derivingReturnType
 
-genOrdCompare ::
-  forall r.
-  (Members '[NameIdGen] r) =>
-  Interval ->
-  OrdBuiltins ->
-  [ConstructorInfo] ->
-  Sem r Internal.Expression
-genOrdCompare loc bs cs = do
-  res <-
-    fmap nonEmpty
-      . execOutputList
-      . runInputList cs
-      $ repeatOnInput go
-  Internal.mkLambda <$> case res of
-    Nothing -> pure <$> emptyTypeClause
-    Just l -> return l
-  where
-    emptyTypeClause :: Sem r Internal.LambdaClause
-    emptyTypeClause = do
-      w1 <- Internal.genWildcard loc Explicit
-      w2 <- Internal.genWildcard loc Explicit
-      return
-        Internal.LambdaClause
-          { _lambdaBody = Internal.toExpression (bs ^. ordBuiltinEq),
-            _lambdaPatterns = w1 :| [w2]
-          }
-
-    go :: (Members '[NameIdGen, Output Internal.LambdaClause, Input ConstructorInfo] r') => ConstructorInfo -> Sem r' ()
-    go c = do
-      isLast <- isEndOfInput @ConstructorInfo
-      let mkPat = Internal.genConstructorPattern loc Explicit c
-      (p1, v1) <- mkPat
-      (p2, v2) <- mkPat
-      lord <- lexOrder (zipExact v1 v2)
-      let sameConstr =
-            Internal.LambdaClause
-              { _lambdaPatterns = p1 :| [p2],
-                _lambdaBody = lord
-              }
-      output sameConstr
-      unless isLast $ do
-        p3 <- fst <$> mkPat
-        w3 <- Internal.genWildcard loc Explicit
-        output
-          Internal.LambdaClause
-            { _lambdaPatterns = p3 :| [w3],
-              _lambdaBody = Internal.toExpression (bs ^. ordBuiltinLt)
-            }
-        p4 <- fst <$> mkPat
-        w4 <- Internal.genWildcard loc Explicit
-        output
-          Internal.LambdaClause
-            { _lambdaPatterns = w4 :| [p4],
-              _lambdaBody = Internal.toExpression (bs ^. ordBuiltinGt)
-            }
-
-    lexOrder :: forall r'. (Members '[NameIdGen] r') => [(Internal.VarName, Internal.VarName)] -> Sem r' Internal.Expression
-    lexOrder = lexgo
+    genOrdCompare ::
+      forall r'.
+      (Members '[NameIdGen] r') =>
+      Interval ->
+      OrdBuiltins ->
+      [ConstructorInfo] ->
+      (Bool -> Internal.ApplicationArg -> Internal.ApplicationArg -> Internal.Expression) ->
+      Sem r' Internal.Expression
+    genOrdCompare loc bs cs recCmp = do
+      res <-
+        fmap nonEmpty
+          . execOutputList
+          . runInputList cs
+          $ repeatOnInput go
+      Internal.mkLambda <$> case res of
+        Nothing -> pure <$> emptyTypeClause
+        Just l -> return l
       where
-        cmp :: Internal.VarName -> Internal.VarName -> Internal.Expression
-        cmp a b = (bs ^. ordBuiltinCompare) Internal.@@ a Internal.@@ b
+        emptyTypeClause :: Sem r' Internal.LambdaClause
+        emptyTypeClause = do
+          w1 <- Internal.genWildcard loc Explicit
+          w2 <- Internal.genWildcard loc Explicit
+          return
+            Internal.LambdaClause
+              { _lambdaBody = Internal.toExpression (bs ^. ordBuiltinEq),
+                _lambdaPatterns = w1 :| [w2]
+              }
 
-        lexgo :: [(Internal.VarName, Internal.VarName)] -> Sem r' Internal.Expression
-        lexgo = \case
-          [] -> return (Internal.toExpression (bs ^. ordBuiltinEq))
-          (x, x') : vs
-            | null vs -> return (cmp x x')
-            | otherwise -> do
-                v <- Internal.freshVar loc "ltGt"
-                let pv = Internal.mkVarPattern v Explicit
-                    mkPat :: Internal.Name -> Internal.PatternArg
-                    mkPat p = Internal.mkConstructorVarPattern Explicit p []
-                    branchNEq = Internal.mkCaseBranch pv (Internal.toExpression v)
-                branchEq <- Internal.mkCaseBranch (mkPat (bs ^. ordBuiltinEq)) <$> lexgo vs
-                let branches = branchEq :| [branchNEq]
-                return (Internal.mkCase (cmp x x') branches)
+        go ::
+          (Members '[NameIdGen, Output Internal.LambdaClause, Input ConstructorInfo] r'') =>
+          ConstructorInfo ->
+          Sem r'' ()
+        go c = do
+          isLast <- isEndOfInput @ConstructorInfo
+          let mkPat = Internal.genConstructorPattern loc Explicit c
+          (p1, v1) <- mkPat
+          (p2, v2) <- mkPat
+          let selfRecArgs :: [Bool]
+              selfRecArgs =
+                c
+                  ^.. Internal.constructorInfoType
+                    . to Internal.constructorArgs
+                    . each
+                    . Internal.paramType
+                    . to (== ret)
+          lord <- lexOrder (zip3Exact selfRecArgs v1 v2)
+          let sameConstr =
+                Internal.LambdaClause
+                  { _lambdaPatterns = p1 :| [p2],
+                    _lambdaBody = lord
+                  }
+          output sameConstr
+          unless isLast $ do
+            p3 <- fst <$> mkPat
+            w3 <- Internal.genWildcard loc Explicit
+            output
+              Internal.LambdaClause
+                { _lambdaPatterns = p3 :| [w3],
+                  _lambdaBody = Internal.toExpression (bs ^. ordBuiltinLt)
+                }
+            p4 <- fst <$> mkPat
+            w4 <- Internal.genWildcard loc Explicit
+            output
+              Internal.LambdaClause
+                { _lambdaPatterns = w4 :| [p4],
+                  _lambdaBody = Internal.toExpression (bs ^. ordBuiltinGt)
+                }
+
+        lexOrder ::
+          forall r''.
+          (Members '[NameIdGen] r'') =>
+          [(Bool, Internal.VarName, Internal.VarName)] ->
+          Sem r'' Internal.Expression
+        lexOrder = lexgo
+          where
+            cmp :: Bool -> Internal.VarName -> Internal.VarName -> Internal.Expression
+            cmp isRec a b = recCmp isRec (Internal.explicitApplicationArg a) (Internal.explicitApplicationArg b)
+
+            lexgo :: [(Bool, Internal.VarName, Internal.VarName)] -> Sem r'' Internal.Expression
+            lexgo = \case
+              [] -> return (Internal.toExpression (bs ^. ordBuiltinEq))
+              (isRec, x, x') : vs
+                | null vs -> return (cmp isRec x x')
+                | otherwise -> do
+                    v <- Internal.freshVar loc "ltGt"
+                    let pv = Internal.mkVarPattern v Explicit
+                        mkPat :: Internal.Name -> Internal.PatternArg
+                        mkPat p = Internal.mkConstructorVarPattern Explicit p []
+                        branchNEq = Internal.mkCaseBranch pv (Internal.toExpression v)
+                    branchEq <- Internal.mkCaseBranch (mkPat (bs ^. ordBuiltinEq)) <$> lexgo vs
+                    let branches = branchEq :| [branchNEq]
+                    return (Internal.mkCase (cmp isRec x x') branches)
 
 derivingGetConstrs ::
   (Members '[Error ScoperError, State LocalTable, Reader S.InfoTable, Reader Internal.InfoTable] r) =>
@@ -710,9 +729,10 @@ deriveRecursiveBinaryFunction ::
   Text ->
   Internal.Name ->
   DerivingArgs ->
-  ( ( Internal.ConstructorInfo ->
-      [(Internal.ApplicationArg, Internal.ApplicationArg)] ->
-      [Internal.Expression]
+  ( ( Bool -> -- isSelfRecursive
+      Internal.ApplicationArg ->
+      Internal.ApplicationArg ->
+      Internal.Expression
     ) ->
     Sem r Internal.Expression
   ) ->
@@ -724,20 +744,7 @@ deriveRecursiveBinaryFunction label nonSelfRec DerivingArgs {..} mkLamDef = do
   let rfun isRec
         | isRec = recDefName
         | otherwise = nonSelfRec
-      mkRecCall cinfo recArgs =
-        let selfRecArgs :: [Bool]
-            selfRecArgs =
-              let argTypes =
-                    cinfo
-                      ^.. Internal.constructorInfoType
-                        . to Internal.constructorArgs
-                        . each
-                        . Internal.paramType
-               in map (== ret) argTypes
-         in [ Internal.foldApplication (Internal.toExpression (rfun isRec)) [arg1, arg2]
-              | ((arg1, arg2), isRec) <- zipExact recArgs selfRecArgs
-            ]
-
+      mkRecCall isRec arg1 arg2 = Internal.foldApplication (Internal.toExpression (rfun isRec)) [arg1, arg2]
   lamBody <- mkLamDef mkRecCall
   lamTy <- Internal.ExpressionHole <$> Internal.freshHole (getLoc _derivingInstanceName)
   let lamDef =
@@ -753,13 +760,6 @@ deriveRecursiveBinaryFunction label nonSelfRec DerivingArgs {..} mkLamDef = do
             _funDefBuiltin = Nothing
           }
   return (recDefName, Internal.LetMutualBlock (Internal.MutualBlockLet (pure lamDef)))
-  where
-    ret :: Internal.Expression
-    ret = Internal.foldApplication (Internal.toExpression eqName) args
-
-    eqName :: Internal.InductiveName
-    args :: [Internal.ApplicationArg]
-    (eqName, args) = _derivingReturnType
 
 deriveEq ::
   forall r.
@@ -827,12 +827,13 @@ deriveEq der@DerivingArgs {..} = do
 
     eqLambda ::
       EqBuiltins ->
-      ( Internal.ConstructorInfo ->
-        [(Internal.ApplicationArg, Internal.ApplicationArg)] ->
-        [Internal.Expression]
+      ( Bool ->
+        Internal.ApplicationArg ->
+        Internal.ApplicationArg ->
+        Internal.Expression
       ) ->
       Sem r Internal.Expression
-    eqLambda bs recCalls = do
+    eqLambda bs recCall = do
       constrs <- derivingGetConstrs ret args
       case nonEmpty constrs of
         Nothing -> return (Internal.toExpression (bs ^. eqBuiltinTrue))
@@ -875,12 +876,23 @@ deriveEq der@DerivingArgs {..} = do
               }
           where
             allEq :: (Internal.IsExpression expr) => [(expr, expr)] -> Internal.Expression
-            allEq k = case nonEmpty (recCalls cinfo kargs) of
-              Nothing -> Internal.toExpression (bs ^. eqBuiltinTrue)
-              Just l -> mkAnds l
+            allEq k =
+              let rargs = [recCall r a b | ((a, b), r) <- zipExact kargs selfRecArgs]
+               in case nonEmpty rargs of
+                    Nothing -> Internal.toExpression (bs ^. eqBuiltinTrue)
+                    Just l -> mkAnds l
               where
                 kargs :: [(Internal.ApplicationArg, Internal.ApplicationArg)]
-                kargs = map (over both (Internal.explicitApplicationArg . Internal.toExpression)) k
+                kargs = map (over both Internal.explicitApplicationArg) k
+
+                selfRecArgs :: [Bool]
+                selfRecArgs =
+                  cinfo
+                    ^.. Internal.constructorInfoType
+                      . to Internal.constructorArgs
+                      . each
+                      . Internal.paramType
+                      . to (== ret)
 
             mkAnds :: (Internal.IsExpression expr) => NonEmpty expr -> Internal.Expression
             mkAnds = foldl1 mkAnd . fmap Internal.toExpression

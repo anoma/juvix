@@ -821,11 +821,11 @@ isSmallUniverse' = \case
 isTypeConstructor :: Expression -> Bool
 isTypeConstructor = isSmallUniverse' . snd . unfoldFunType
 
-explicitApplicationArg :: Expression -> ApplicationArg
+explicitApplicationArg :: (IsExpression expr) => expr -> ApplicationArg
 explicitApplicationArg e =
   ApplicationArg
     { _appArgIsImplicit = Explicit,
-      _appArg = e
+      _appArg = toExpression e
     }
 
 explicitPatternArg :: Pattern -> PatternArg
