@@ -3154,6 +3154,35 @@ instance HasLoc ScopedIden where
 instance (SingI s) => HasLoc (InductiveParameters s) where
   getLoc i = getLocSymbolType (i ^. inductiveParametersNames . _head1) <>? (getLocExpressionType <$> (i ^? inductiveParametersRhs . _Just . inductiveParametersType))
 
+getLocTypeSig :: (SingI s) => TypeSig s -> Maybe Interval
+getLocTypeSig TypeSig {..} =
+  (getLocSpan <$> nonEmpty _typeSigArgs)
+    ?<>? (getLocExpressionType <$> _typeSigRetType)
+
+instance HasLoc (RhsRecord s) where
+  getLoc RhsRecord {..} =
+    let (kat, kl, kr) = _rhsRecordDelim ^. unIrrelevant
+     in (getLoc <$> kat) ?<> getLoc kl <> getLoc kr
+
+instance (SingI s) => HasLoc (RhsGadt s) where
+  getLoc RhsGadt {..} = fromJust (getLocTypeSig _rhsGadtTypeSig)
+
+getLocRhsAdt :: (SingI s) => RhsAdt s -> Maybe Interval
+getLocRhsAdt RhsAdt {..} = getLocSpan' getLocExpressionType <$> nonEmpty _rhsAdtArguments
+
+getLocConstructorRhs :: (SingI s) => ConstructorRhs s -> Maybe Interval
+getLocConstructorRhs = \case
+  ConstructorRhsGadt a -> Just (getLoc a)
+  ConstructorRhsAdt a -> getLocRhsAdt a
+  ConstructorRhsRecord a -> Just (getLoc a)
+
+instance (SingI s) => HasLoc (ConstructorDef s) where
+  getLoc ConstructorDef {..} =
+    (getLoc <$> (_constructorPipe ^. unIrrelevant))
+      ?<> ( getLocSymbolType _constructorName
+              <>? getLocConstructorRhs _constructorRhs
+          )
+
 instance HasLoc (InductiveDef s) where
   getLoc i = (getLoc <$> i ^. inductivePositive) ?<> getLoc (i ^. inductiveKw)
 

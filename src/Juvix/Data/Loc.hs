@@ -103,7 +103,10 @@ instance HasLoc Interval where
 
 -- | The items are assumed to be in order with respect to their location.
 getLocSpan :: (HasLoc t) => NonEmpty t -> Interval
-getLocSpan l = getLoc (head l) <> getLoc (last l)
+getLocSpan = getLocSpan' getLoc
+
+getLocSpan' :: (t -> Interval) -> NonEmpty t -> Interval
+getLocSpan' gl l = gl (head l) <> gl (last l)
 
 -- | Assumes the file is the same
 instance Semigroup Interval where

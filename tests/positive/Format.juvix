@@ -53,7 +53,7 @@ case4 (n : Nat) : Nat :=
     | zero := case n of {x := zero}
     | _ := zero;
 
--- -- case with application subject
+-- case with application subject
 case5 (n : Nat) : Nat := case id n of x := zero;
 
 -- qualified commas
@@ -274,7 +274,8 @@ module Comments;
   type color : Type :=
     -- comment before pipe
     | black : color
-    | white : color
+    | --- documentation for white
+    white : color
     | red : color
     -- comment before pipe
     | blue : color;
