@@ -162,9 +162,23 @@ isDataValue = \case
   NCtr Constr {..} -> all isDataValue _constrArgs
   _ -> False
 
+isFullyApplied :: Module -> Node -> Bool
+isFullyApplied md node = case h of
+  NIdt Ident {..}
+    | Just ii <- lookupIdentifierInfo' md _identSymbol ->
+        length args >= ii ^. identifierArgsNum
+  _ -> True
+  where
+    (h, args) = unfoldApps' node
+
 isFailNode :: Node -> Bool
 isFailNode = \case
   NBlt (BuiltinApp {..}) | _builtinAppOp == OpFail -> True
+  _ -> False
+
+isLambda :: Node -> Bool
+isLambda = \case
+  NLam {} -> True
   _ -> False
 
 isTrueConstr :: Node -> Bool
