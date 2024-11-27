@@ -28,7 +28,7 @@ import Juvix.Compiler.Internal.Data.NameDependencyInfo qualified as Internal
 import Juvix.Compiler.Internal.Extra (mkLetClauses)
 import Juvix.Compiler.Internal.Extra qualified as Internal
 import Juvix.Compiler.Internal.Extra.DependencyBuilder
-import Juvix.Compiler.Internal.Language (varFromWildcard)
+import Juvix.Compiler.Internal.Pretty qualified as I
 import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context
 import Juvix.Compiler.Internal.Translation.FromConcrete.NamedArguments
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
@@ -578,7 +578,7 @@ deriveOrd ::
   DerivingArgs ->
   Sem r Internal.FunctionDef
 deriveOrd der@DerivingArgs {..} = do
-  arg <- derivingGetConstrs ret args
+  (constrs, subjectTy) <- derivingGetConstrs fullret args
   argsInfo <- goArgsInfo _derivingInstanceName
   let loc = getLoc ordName
   mkOrd <- getBuiltin loc BuiltinMkOrd
@@ -592,14 +592,14 @@ deriveOrd der@DerivingArgs {..} = do
             _ordBuiltinGt = bgt,
             _ordBuiltinEq = beq
           }
-  (recName, mutblock) <- deriveRecursiveBinaryFunction "ord" bcmp der (genOrdCompare (getLoc _derivingInstanceName) bs arg)
+  (recName, mutblock) <- deriveRecursiveBinaryFunction "ord" bcmp der (genOrdCompare (getLoc _derivingInstanceName) bs subjectTy constrs)
   let body =
         Internal.ExpressionLet
           Internal.Let
             { _letClauses = pure mutblock,
               _letExpression = mkOrd Internal.@@ recName
             }
-      ty = Internal.foldFunType _derivingParameters ret
+      ty = Internal.foldFunType _derivingParameters fullret
   pragmas' <- goPragmas _derivingPragmas
   return
     Internal.FunctionDef
@@ -614,8 +614,8 @@ deriveOrd der@DerivingArgs {..} = do
         _funDefBuiltin = Nothing
       }
   where
-    ret :: Internal.Expression
-    ret = Internal.foldApplication (Internal.toExpression ordName) args
+    fullret :: Internal.Expression
+    fullret = Internal.foldApplication (Internal.toExpression ordName) args
 
     ordName :: Internal.InductiveName
     args :: [Internal.ApplicationArg]
@@ -626,10 +626,11 @@ deriveOrd der@DerivingArgs {..} = do
       (Members '[NameIdGen] r') =>
       Interval ->
       OrdBuiltins ->
+      Internal.Expression ->
       [ConstructorInfo] ->
       (Bool -> Internal.ApplicationArg -> Internal.ApplicationArg -> Internal.Expression) ->
       Sem r' Internal.Expression
-    genOrdCompare loc bs cs recCmp = do
+    genOrdCompare loc bs subjectTy cs recCmp = do
       res <-
         fmap nonEmpty
           . execOutputList
@@ -658,14 +659,24 @@ deriveOrd der@DerivingArgs {..} = do
           let mkPat = Internal.genConstructorPattern loc Explicit c
           (p1, v1) <- mkPat
           (p2, v2) <- mkPat
-          let selfRecArgs :: [Bool]
-              selfRecArgs =
+          let tmp =
                 c
                   ^.. Internal.constructorInfoType
                     . to Internal.constructorArgs
                     . each
                     . Internal.paramType
-                    . to (== ret)
+
+          let selfRecArgs :: [Bool]
+              selfRecArgs =
+                trace
+                  ("fullret " <> I.ppTrace fullret <> "\nargs = " <> I.ppTrace ((^. Internal.appArg) <$> args))
+                  tmp
+                  ^.. each
+                    . to (== subjectTy)
+          traceM ("cargs = " <> I.ppTrace tmp)
+          traceM ("selfrecargs = " <> prettyText selfRecArgs)
+          traceM ("subjectTy = " <> I.ppTrace subjectTy)
+          traceM "\n\n"
           lord <- lexOrder (zip3Exact selfRecArgs v1 v2)
           let sameConstr =
                 Internal.LambdaClause
@@ -718,11 +729,12 @@ derivingGetConstrs ::
   (Members '[Error ScoperError, State LocalTable, Reader S.InfoTable, Reader Internal.InfoTable] r) =>
   Internal.Expression ->
   [Internal.ApplicationArg] ->
-  Sem r [Internal.ConstructorInfo]
+  Sem r ([Internal.ConstructorInfo], Internal.Expression)
 derivingGetConstrs retTy args = runFailDefaultM (throwDerivingWrongForm retTy) $ do
   [Internal.ApplicationArg Explicit a] <- return args
   Internal.ExpressionIden (Internal.IdenInductive ind) <- return (fst (Internal.unfoldExpressionApp a))
-  getDefinedInductiveConstructors ind
+  cs <- getDefinedInductiveConstructors ind
+  return (cs, a)
 
 deriveRecursiveBinaryFunction ::
   (Members '[NameIdGen] r) =>
@@ -788,7 +800,7 @@ deriveEq der@DerivingArgs {..} = do
             { _letClauses = pure mutblock,
               _letExpression = mkEq Internal.@@ recDefName
             }
-      ty = Internal.foldFunType _derivingParameters ret
+      ty = Internal.foldFunType _derivingParameters fullret
   pragmas' <- goPragmas _derivingPragmas
   return
     Internal.FunctionDef
@@ -803,8 +815,8 @@ deriveEq der@DerivingArgs {..} = do
         _funDefBuiltin = Nothing
       }
   where
-    ret :: Internal.Expression
-    ret = Internal.foldApplication (Internal.toExpression eqName) args
+    fullret :: Internal.Expression
+    fullret = Internal.foldApplication (Internal.toExpression eqName) args
 
     eqName :: Internal.InductiveName
     args :: [Internal.ApplicationArg]
@@ -834,11 +846,11 @@ deriveEq der@DerivingArgs {..} = do
       ) ->
       Sem r Internal.Expression
     eqLambda bs recCall = do
-      constrs <- derivingGetConstrs ret args
+      (constrs, subjectTy) <- derivingGetConstrs fullret args
       case nonEmpty constrs of
         Nothing -> return (Internal.toExpression (bs ^. eqBuiltinTrue))
         Just cs -> do
-          cl' <- mapM lambdaClause cs
+          cl' <- mapM (lambdaClause subjectTy) cs
           defaultCl' <-
             if
                 | notNull (NonEmpty.tail cs) -> Just <$> defaultLambdaClause
@@ -862,9 +874,10 @@ deriveEq der@DerivingArgs {..} = do
               }
 
         lambdaClause ::
+          Internal.Expression ->
           Internal.ConstructorInfo ->
           Sem r Internal.LambdaClause
-        lambdaClause cinfo = do
+        lambdaClause subjectTy cinfo = do
           let loc = getLoc _derivingInstanceName
               mkpat = Internal.genConstructorPattern loc Explicit cinfo
           (p1, v1) <- mkpat
@@ -892,7 +905,7 @@ deriveEq der@DerivingArgs {..} = do
                       . to Internal.constructorArgs
                       . each
                       . Internal.paramType
-                      . to (== ret)
+                      . to (== subjectTy)
 
             mkAnds :: (Internal.IsExpression expr) => NonEmpty expr -> Internal.Expression
             mkAnds = foldl1 mkAnd . fmap Internal.toExpression
@@ -962,7 +975,7 @@ argToPattern arg@SigArg {..} = do
       _patternArgName :: Maybe Internal.Name = Nothing
       noName = goWildcard (Wildcard (getLoc arg))
       goWildcard w = do
-        _patternArgPattern <- Internal.PatternVariable <$> varFromWildcard w
+        _patternArgPattern <- Internal.PatternVariable <$> Internal.varFromWildcard w
         return Internal.PatternArg {..}
       mk :: Concrete.Argument 'Scoped -> Sem r Internal.PatternArg
       mk = \case
@@ -1972,7 +1985,7 @@ goPattern p = case p of
   PatternApplication a -> Internal.PatternConstructorApp <$> goPatternApplication a
   PatternInfixApplication a -> Internal.PatternConstructorApp <$> goInfixPatternApplication a
   PatternPostfixApplication a -> Internal.PatternConstructorApp <$> goPostfixPatternApplication a
-  PatternWildcard i -> Internal.PatternVariable <$> varFromWildcard i
+  PatternWildcard i -> Internal.PatternVariable <$> Internal.varFromWildcard i
   PatternRecord i -> goRecordPattern i
   PatternEmpty {} -> error "unsupported empty pattern"
 
