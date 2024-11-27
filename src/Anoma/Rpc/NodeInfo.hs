@@ -9,8 +9,7 @@ newtype NodeInfo = NodeInfo
 
 $( deriveJSON
      defaultOptions
-       { unwrapUnaryRecords = True,
-         fieldLabelModifier = \case
+       { fieldLabelModifier = \case
            "_nodeInfoId" -> "node_id"
            _ -> impossibleError "All fields must be covered"
        }

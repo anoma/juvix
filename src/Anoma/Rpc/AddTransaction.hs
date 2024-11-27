@@ -7,7 +7,7 @@ import Juvix.Prelude.Aeson
 addTransactionGrpcUrl :: GrpcMethodUrl
 addTransactionGrpcUrl =
   mkGrpcMethodUrl $
-    "Anoma" :| ["Protobuf", "Mempool", "AddTransaction"]
+    "Anoma" :| ["Protobuf", "MempoolService", "Add"]
 
 data AddTransaction = AddTransaction
   { _addTransactionTransaction :: Text,
@@ -16,8 +16,7 @@ data AddTransaction = AddTransaction
 
 $( deriveJSON
      defaultOptions
-       { unwrapUnaryRecords = True,
-         fieldLabelModifier = \case
+       { fieldLabelModifier = \case
            "_addTransactionTransaction" -> "transaction"
            "_addTransactionNodeInfo" -> "node_info"
            _ -> impossibleError "All fields must be covered"

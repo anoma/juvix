@@ -31,4 +31,4 @@ addTransaction i = do
           }
   logMessageValue "Request payload" msg
   -- addTransaction always returns an empty response
-  anomaRpc addTransactionGrpcUrl (Aeson.toJSON msg) >>= fromJSONErr
+  void (anomaRpc addTransactionGrpcUrl (Aeson.toJSON msg))
