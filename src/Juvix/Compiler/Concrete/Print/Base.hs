@@ -1453,8 +1453,7 @@ instance (SingI s) => PrettyPrint (RhsRecord s) where
   ppCode RhsRecord {..} = do
     let Irrelevant (_, l, r) = _rhsRecordDelim
         fields'
-          | [] <- _rhsRecordStatements = mempty
-          | [f] <- _rhsRecordStatements = ppCode f
+          | null _rhsRecordStatements = mempty
           | otherwise = ppBlock _rhsRecordStatements
     ppCode kwAt <> ppCode l <> fields' <> ppCode r
 
@@ -1476,7 +1475,12 @@ instance (SingI s) => PrettyPrint (ConstructorDef s) where
         doc' = ppCode <$> _constructorDoc
         pragmas' = ppCode <$> _constructorPragmas
         pipe = ppCode <$> (_constructorPipe ^. unIrrelevant)
-    pipe <?+> doc' ?<> pragmas' ?<> constructorName' <> constructorRhs'
+
+        nestCond :: Sem r () -> Sem r ()
+        nestCond x = case _constructorPipe ^. unIrrelevant of
+          Just p -> printCommentsUntil (getLoc p) >> nest x
+          Nothing -> x
+    nestCond (pipe <?+> doc' ?<> pragmas' ?<> constructorName' <> constructorRhs')
     where
       constructorRhsHelper :: ConstructorRhs s -> Sem r ()
       constructorRhsHelper r = spaceMay <> ppCode r
@@ -1523,8 +1527,9 @@ instance (SingI s) => PrettyPrint (InductiveDef s) where
     where
       ppConstructorBlock :: NonEmpty (ConstructorDef s) -> Sem r ()
       ppConstructorBlock = \case
-        c :| [] -> oneLineOrNext (ppCode c)
-        cs -> line <> indent (vsep (ppCode <$> cs))
+        c :| []
+          | not (has (constructorRhs . _ConstructorRhsRecord . rhsRecordStatements . each) c) -> oneLineOrNext (ppCode c)
+        cs -> hardline <> indent (vsep (ppCode <$> cs))
 
 instance (SingI s) => PrettyPrint (ProjectionDef s) where
   ppCode ProjectionDef {..} =

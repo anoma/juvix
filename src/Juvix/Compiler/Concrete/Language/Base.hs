@@ -3000,6 +3000,7 @@ makeLenses ''MarkdownInfo
 makeLenses ''Deriving
 
 makePrisms ''NamedArgumentNew
+makePrisms ''ConstructorRhs
 makePrisms ''FunctionDefNameParsed
 
 functionDefLhs :: FunctionDef s -> FunctionLhs s
@@ -3630,11 +3631,6 @@ data ApeLeaf
   | ApeLeafPattern Pattern
   | ApeLeafPatternArg PatternArg
   | ApeLeafAtom (AnyStage ExpressionAtom)
-
-_ConstructorRhsRecord :: Traversal' (ConstructorRhs s) (RhsRecord s)
-_ConstructorRhsRecord f rhs = case rhs of
-  ConstructorRhsRecord r -> ConstructorRhsRecord <$> f r
-  _ -> pure rhs
 
 _DefinitionSyntax :: Traversal' (Definition s) (SyntaxDef s)
 _DefinitionSyntax f x = case x of
