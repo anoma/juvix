@@ -80,18 +80,12 @@ main : Delta :=
           logic := 22;
           quantity := 55
         })
-    -- commitment is too slow to be tested
-    -- >-> trace (commitment (mkResource' 0 0))
-    -- nullifier is too slow to be tested
-    -- >-> trace (nullifier (mkResource' 0 0))
-    -- actionDelta is a crash in the nock library so cannot be tested
-    -- >-> trace (actionDelta (mkAction 0))
-    -- actionsDelta is a crash in the nock library so cannot be tested
-    -- >-> trace (actionsDelta [mkAction 0])
-    -- addDelta is a crash in the nock library so cannot be tested
-    -- >-> trace (addDelta zeroDelta zeroDelta)
-    -- subDelta is a crash in the nock library so cannot be tested
-    -- >-> trace (subDelta zeroDelta zeroDelta)
+    >-> trace (commitment (mkResource' 0 0))
+    >-> trace (nullifier (mkResource' 0 0))
+    >-> trace (actionDelta (mkAction 0))
+    >-> trace (actionsDelta [mkAction 0])
+    >-> trace (addDelta zeroDelta zeroDelta)
+    >-> trace (subDelta zeroDelta zeroDelta)
     >-> trace (kind (mkResource' 10 11))
     >-> trace (proveAction (mkAction 0))
     >-> trace (proveDelta zeroDelta)

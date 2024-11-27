@@ -13,8 +13,18 @@ import Juvix.Prelude qualified as Prelude
 import Nockma.Eval.Positive (Check, Test (..), eqNock, eqTraces)
 import Nockma.Eval.Positive qualified as NockmaEval
 
+data AnomaTestMode
+  = -- | We only run the Haskell evaluator tests in debug mode, where calls to stdlib are intercepted
+    AnomaTestModeDebugOnly
+  | -- | We run the Haskell tests in debug mode and in non-debug mode, where no stdlib
+    -- calls are intercepted. Only tests that run fast can use this mode
+    AnomaTestModeFull
+  | -- | We run the test on the node only.
+    -- Use this for tests that must be jetted on the node.
+    AnomaTestModeNodeOnly
+
 data AnomaTest = AnomaTest
-  { _anomaEnableDebug :: Bool,
+  { _anomaTestMode :: AnomaTestMode,
     _anomaProgramStorage :: Storage Natural,
     _anomaTestNum :: Int,
     _anomaTestTag :: Text,
@@ -30,30 +40,40 @@ root = relToProject $(mkRelDir "tests/Anoma/Compilation/positive")
 anomaTestName :: AnomaTest -> Text
 anomaTestName AnomaTest {..} = numberedTestName _anomaTestNum _anomaTestTag
 
-fromAnomaTest :: AnomaTest -> TestTree
+fromAnomaTest :: AnomaTest -> Maybe TestTree
 fromAnomaTest a@AnomaTest {..} =
-  testCase testname (mkTestIO >>= NockmaEval.mkNockmaAssertion)
+  let testNonDebug = mkTest' False
+      testDebug = mkTest' True
+   in case _anomaTestMode of
+        AnomaTestModeNodeOnly -> Nothing
+        AnomaTestModeDebugOnly -> Just (testGroup (unpack baseTestname) [testDebug])
+        AnomaTestModeFull -> Just (testGroup (unpack baseTestname) [testDebug, testNonDebug])
   where
-    testname :: Text
-    testname = anomaTestName a
+    baseTestname :: Text
+    baseTestname = anomaTestName a
 
-    mkTestIO :: IO Test
-    mkTestIO = do
-      anomaRes <- withRootCopy (compileMain _anomaEnableDebug _anomaRelRoot _anomaMainFile)
-      let _testProgramFormula = anomaCall (map (opQuote "Quote arg") _anomaArgs)
-          _testProgramSubject = anomaRes ^. anomaClosure
-          _testEvalOptions = defaultEvalOptions
-          _testAssertEvalError :: Maybe (NockEvalError Natural -> Assertion) = Nothing
-      return
-        Test
-          { _testName = testname,
-            _testCheck = _anomaCheck,
-            _testProgramStorage = _anomaProgramStorage,
-            ..
-          }
+    mkTest' :: Bool -> TestTree
+    mkTest' enableDebug =
+      let testName' :: Text
+            | enableDebug = baseTestname <> " debug"
+            | otherwise = baseTestname <> " non-debug"
+          tIO :: IO Test = do
+            anomaRes <- withRootCopy (compileMain enableDebug _anomaRelRoot _anomaMainFile)
+            let _testProgramFormula = anomaCall (map (opQuote "Quote arg") _anomaArgs)
+                _testProgramSubject = anomaRes ^. anomaClosure
+                _testEvalOptions = defaultEvalOptions
+                _testAssertEvalError :: Maybe (NockEvalError Natural -> Assertion) = Nothing
+            return
+              Test
+                { _testCheck = _anomaCheck,
+                  _testProgramStorage = _anomaProgramStorage,
+                  _testName = testName',
+                  ..
+                }
+       in testCase (unpack testName') (tIO >>= NockmaEval.mkNockmaAssertion)
 
 mkAnomaTest' ::
-  Bool ->
+  AnomaTestMode ->
   Storage Natural ->
   Int ->
   Text ->
@@ -62,7 +82,7 @@ mkAnomaTest' ::
   [Term Natural] ->
   Check () ->
   AnomaTest
-mkAnomaTest' _anomaEnableDebug _anomaProgramStorage _anomaTestNum _anomaTestTag _anomaRelRoot _anomaMainFile _anomaArgs _anomaCheck =
+mkAnomaTest' _anomaTestMode _anomaProgramStorage _anomaTestNum _anomaTestTag _anomaRelRoot _anomaMainFile _anomaArgs _anomaCheck =
   AnomaTest
     { ..
     }
@@ -72,7 +92,7 @@ envAnomaPath = AnomaPath <$> getAnomaPathAbs
 
 mkAnomaNodeTest :: AnomaTest -> TestTree
 mkAnomaNodeTest a@AnomaTest {..} =
-  testCase (anomaTestName a) assertion
+  testCase (anomaTestName a <> " - node") assertion
   where
     assertion :: Assertion
     assertion = do
@@ -112,13 +132,6 @@ compileMain enableDebug relRoot mainFile rootCopyDir = do
       | enableDebug = id
       | otherwise = removeInfoRec
 
-data AnomaTestMode
-  = -- | We only run the tests in debug mode, where calls to stdlib are intercepted
-    AnomaTestModeDebugOnly
-  | -- | We run the tests in debug mode and in non-debug mode, where no stdlib
-    -- calls are intercepted. Only tests that run fast can use this mode
-    AnomaTestModeFull
-
 mkAnomaTest ::
   Int ->
   AnomaTestMode ->
@@ -127,13 +140,9 @@ mkAnomaTest ::
   Prelude.Path Rel File ->
   [Term Natural] ->
   Check () ->
-  [AnomaTest]
+  AnomaTest
 mkAnomaTest testNum testMode testName' dirPath filePath args check =
-  let debugTest = mkAnomaTest' True emptyStorage testNum (testName' <> " - debug") dirPath filePath args check
-      nonDebugTest = mkAnomaTest' False emptyStorage testNum testName' dirPath filePath args check
-   in case testMode of
-        AnomaTestModeDebugOnly -> [debugTest]
-        AnomaTestModeFull -> [debugTest, nonDebugTest]
+  mkAnomaTest' testMode emptyStorage testNum testName' dirPath filePath args check
 
 checkNatOutput :: [Natural] -> Check ()
 checkNatOutput = checkOutput . fmap toNock
@@ -241,7 +250,7 @@ classify AnomaTest {..} = case _anomaTestNum of
   82 -> ClassWorking
   83 -> ClassWorking
   84 -> ClassWorking
-  85 -> ClassWorking
+  85 -> ClassNodeError
   86 -> ClassExpectedFail
   _ -> error "non-exhaustive test classification"
 
@@ -267,17 +276,13 @@ allTests =
     haskellNockmaTests =
       testGroup
         "Anoma positive tests (Haskell evaluator)"
-        (map fromAnomaTest anomaTests)
+        (mapMaybe fromAnomaTest anomaTests)
 
     natArg :: Natural -> Term Natural
     natArg = toNock
 
-    -- added this to minimize git diff
     anomaTests :: [AnomaTest]
-    anomaTests = concat anomaTests'
-
-    anomaTests' :: [[AnomaTest]]
-    anomaTests' =
+    anomaTests =
       [ mkAnomaTest
           1
           AnomaTestModeFull
@@ -883,22 +888,21 @@ allTests =
             -- The id is captured from the arguments tuple of the function.
             sk1 :: Term Natural = [nock| [[333 1 2 3 nil] 333 nil] |]
             sk2 :: Term Natural = [nock| [[333 1 2 3 nil] [1 2 3 nil] nil] |]
-         in [ mkAnomaTest'
-                True
-                ( Storage
-                    ( hashMap
-                        [ (StorageKey sk1, v1),
-                          (StorageKey sk2, v2)
-                        ]
-                    )
-                )
-                74
-                "Builtin anomaGet"
-                $(mkRelDir ".")
-                $(mkRelFile "test074.juvix")
-                [k1, k2]
-                $ checkOutput [v1, v2]
-            ],
+         in mkAnomaTest'
+              AnomaTestModeDebugOnly
+              ( Storage
+                  ( hashMap
+                      [ (StorageKey sk1, v1),
+                        (StorageKey sk2, v2)
+                      ]
+                  )
+              )
+              74
+              "Builtin anomaGet"
+              $(mkRelDir ".")
+              $(mkRelFile "test074.juvix")
+              [k1, k2]
+              $ checkOutput [v1, v2],
         mkAnomaTest
           75
           AnomaTestModeDebugOnly
@@ -1033,7 +1037,7 @@ allTests =
             ],
         mkAnomaTest
           85
-          AnomaTestModeFull
+          AnomaTestModeNodeOnly
           "Anoma Resource Machine builtins"
           $(mkRelDir ".")
           $(mkRelFile "test085.juvix")
