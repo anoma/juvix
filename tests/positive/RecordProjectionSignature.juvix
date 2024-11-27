@@ -3,7 +3,10 @@ module RecordProjectionSignature;
 import Stdlib.Data.Nat open;
 
 trait
-type R A := mkR@{fun : (n : A) -> A};
+type R A :=
+  mkR@{
+    fun : (n : A) -> A;
+  };
 
 f {{R Nat}} : Nat :=
   R.fun@{
