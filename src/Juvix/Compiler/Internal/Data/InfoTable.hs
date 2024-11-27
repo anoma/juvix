@@ -263,5 +263,15 @@ mkConstructorEntries d =
       let _constructorInfoType = c ^. inductiveConstructorType,
       let _constructorInfoName = c ^. inductiveConstructorName,
       let _constructorInfoTrait = d ^. inductiveTrait,
-      let _constructorInfoRecord = c ^. inductiveConstructorIsRecord
+      let _constructorInfoRecord = c ^. inductiveConstructorIsRecord,
+      let _constructorSelfRecursiveArgs = selfRecursiveArgs (c ^. inductiveConstructorType)
   ]
+  where
+    selfRecursiveArgs :: Expression -> [Bool]
+    selfRecursiveArgs constrTy = constructorArgs constrTy ^.. each . paramType . to (== ty)
+      where
+        ty :: Expression
+        ty =
+          foldExplicitApplication
+            (toExpression (d ^. inductiveName))
+            (d ^.. inductiveParameters . each . inductiveParamName . to toExpression)
