@@ -1150,7 +1150,8 @@ instance (SingI s) => PrettyPrint (SigArg s) where
 
 instance (SingI s) => PrettyPrint (Deriving s) where
   ppCode Deriving {..} =
-    ppCode _derivingKw
+    (ppCode <$> _derivingPragmas)
+      ?<> ppCode _derivingKw
       <+> ppCode _derivingFunLhs
 
 instance (SingI s) => PrettyPrint (TypeSig s) where
