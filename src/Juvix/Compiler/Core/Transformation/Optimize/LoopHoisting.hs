@@ -13,9 +13,11 @@ loopHoisting md = mapT (const (umapL go)) md
     go :: BinderList Binder -> Node -> Node
     go bl node = case node of
       NApp {} -> case h of
+        -- TODO: variables
         NIdt Ident {..} -> goApp bl _identSymbol h 0 args
         _ -> node
         where
+          -- TODO: consider only fully applied
           (h, args) = unfoldApps node
       _ ->
         node
@@ -57,7 +59,7 @@ loopHoisting md = mapT (const (umapL go)) md
         extract :: (Member (State [Node]) r) => Level -> Node -> Sem r Recur
         extract n node
           | not (isImmediate md node || isLambda node)
-              && isFullyApplied md node
+              && isFullyApplied md node -- TODO: variables
               && null boundVars = do
               k <- length <$> get @[Node]
               modify' ((shift (-(n + bindersNum)) node) :)
