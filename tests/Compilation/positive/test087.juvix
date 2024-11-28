@@ -32,4 +32,12 @@ main : IO :=
     >>> printLn (compare (One, One) (One, Three))
     >>> printLn (compare (Four, Four) (Four, Three))
     >>> printLn
-      (compare (node leaf Four leaf) (node (node leaf One leaf) Two leaf));
+      (compare (node leaf Four leaf) (node (node leaf One leaf) Two leaf))
+    >>> printLn
+      (compare
+        (node (node leaf One leaf) Four leaf)
+        (node (node leaf One leaf) Two leaf))
+    >>> printLn
+      (compare
+        (node (node leaf One leaf) Four leaf)
+        (node (node leaf One leaf) Four leaf));
