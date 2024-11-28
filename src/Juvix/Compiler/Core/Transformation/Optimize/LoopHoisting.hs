@@ -1,7 +1,9 @@
 module Juvix.Compiler.Core.Transformation.Optimize.LoopHoisting (loopHoisting) where
 
 import Juvix.Compiler.Core.Extra
+import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.FreeVarsInfo qualified as Info
+import Juvix.Compiler.Core.Info.VolatilityInfo qualified as Info
 import Juvix.Compiler.Core.Transformation.Base
 import Juvix.Compiler.Core.Transformation.ComputeTypeInfo (computeNodeType')
 
@@ -31,12 +33,13 @@ loopHoisting md = mapT (const (umapL go)) md
     goLamApp bl sym info h arg argNum args'
       | null subterms = goApp bl sym (mkApp info h arg) argNum args'
       | otherwise =
-          mkLets'
-            (map (\node -> (computeNodeType' md bl node, node)) subterms')
-            ( adjustLetBoundVars
-                . shift n
-                $ (mkApps (mkApp info h (reLambdasRev lams body')) args')
-            )
+          setLetsVolatile n $
+            mkLets'
+              (map (\node -> (computeNodeType' md bl node, node)) subterms')
+              ( adjustLetBoundVars
+                  . shift n
+                  $ (mkApps (mkApp info h (reLambdasRev lams body')) args')
+              )
       where
         (lams, body) = unfoldLambdasRev arg
         (subterms, body') = extractMaximalInvariantSubterms (length lams) body
@@ -73,3 +76,16 @@ loopHoisting md = mapT (const (umapL go)) md
           NVar Var {..}
             | _varIndex < 0 -> mkVar' (n - _varIndex - 1)
           _ -> node
+
+    setLetsVolatile :: Int -> Node -> Node
+    setLetsVolatile n
+      | n == 0 = id
+      | otherwise = \case
+          NLet Let {..} ->
+            NLet
+              Let
+                { _letInfo = Info.insert (Info.VolatilityInfo True) _letInfo,
+                  _letBody = setLetsVolatile (n - 1) _letBody,
+                  _letItem
+                }
+          node -> node
