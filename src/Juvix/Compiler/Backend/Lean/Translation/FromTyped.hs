@@ -152,14 +152,16 @@ withBinders binderSpecs ctx action = do
   let finalCtx = ctx & ctxUsedNames .~ (ctx' ^. ctxUsedNames)
   return (result, finalCtx)
 
-convertModule :: (Member NameIdGen r) => TranslationContext -> Internal.InfoTable -> Internal.Module -> Sem r Module
+convertModule :: (Member NameIdGen r) => TranslationContext -> Internal.InfoTable -> Internal.Module -> Sem r Lean.Module
 convertModule initCtx table Internal.Module {..} = do
   let imports = map (^. Internal.importModuleName) (_moduleBody ^. Internal.moduleImports)
   commands <- concat <$> mapM (goMutualBlock initCtx) (_moduleBody ^. Internal.moduleStatements)
-  return $ Module
+  return $ Lean.Module
     { _modulePrelude = False,
-      _moduleImports = imports,
-      _moduleCommands = map Lean.ModCommand commands
+      _moduleImports = [],
+      _moduleCommands = 
+        [Lean.ModImport i | i <- imports] ++  -- Fixed: wrap in ModImport
+        [Lean.ModNamespace _moduleName commands]
     }
   where
     goMutualBlock :: (Member NameIdGen r) => TranslationContext -> Internal.MutualBlock -> Sem r [Command] 
@@ -255,12 +257,35 @@ convertModule initCtx table Internal.Module {..} = do
 
     goFunctionDef :: (Member NameIdGen r) => TranslationContext -> Internal.FunctionDef -> Sem r Command
     goFunctionDef ctx Internal.FunctionDef {..} = do
-      body <- goExpression ctx _funDefBody
-      return $ CmdDefinition Lean.Definition
-        { _definitionName = _funDefName,
-          _definitionType = Just (goType ctx _funDefType),
-          _definitionBody = body,
-          _definitionAttrs = []
+      case _funDefBody of
+        Internal.ExpressionLambda lam -> do
+          clauses <- mapM (goLambdaClause ctx) (toList $ lam ^. Internal.lambdaClauses)
+          return $ CmdDefinition Lean.Definition
+            { _definitionName = _funDefName,
+              _definitionType = Just (goType ctx _funDefType),
+              _definitionBody = ExprMatch Lean.Case 
+                { _caseValue = ExprVar 0,  -- reference to the input parameter
+                  _caseBranches = nonEmpty' clauses
+                },
+              _definitionAttrs = []
+            }
+        _ -> do
+          body <- goExpression ctx _funDefBody
+          return $ CmdDefinition Lean.Definition
+            { _definitionName = _funDefName,
+              _definitionType = Just (goType ctx _funDefType),
+              _definitionBody = body,
+              _definitionAttrs = []
+            }
+
+    goLambdaClause :: (Member NameIdGen r) => TranslationContext -> Internal.LambdaClause -> Sem r Lean.CaseBranch
+    goLambdaClause ctx Internal.LambdaClause {..} = do
+      let pat = NonEmpty.head _lambdaPatterns -- assuming single pattern for simplicity
+      (pattern', _) <- goPattern ctx (getLoc pat) (pat ^. Internal.patternArgPattern)  -- Note: handle the tuple
+      body <- goExpression ctx _lambdaBody
+      return Lean.CaseBranch
+        { _caseBranchPattern = pattern',
+          _caseBranchBody = body
         }
 
     goAxiomDef :: TranslationContext -> Internal.AxiomDef -> Command
@@ -286,7 +311,48 @@ convertModule initCtx table Internal.Module {..} = do
       Internal.ExpressionCase c -> goExpressionMatch ctx c
       Internal.ExpressionLiteral lit -> return $ goLiteral lit
       Internal.ExpressionUniverse _ -> return $ ExprSort LevelZero
-      _ -> error $ "unsupported expression: " -- <> show e
+      Internal.ExpressionFunction f -> 
+        case f ^. Internal.functionLeft of
+          Internal.FunctionParameter {_paramImplicit = imp} -> do
+            body <- goExpression ctx (f ^. Internal.functionRight)
+            case imp of
+              Internal.Implicit -> return $ ExprPi Lean.PiType
+                { _piTypeBinder = (goBinder (f ^. Internal.functionLeft)) { Lean._binderInfo = Lean.BinderImplicit }
+                , _piTypeBody = goType ctx (f ^. Internal.functionRight)
+                }
+              Internal.ImplicitInstance -> return $ ExprPi Lean.PiType
+                { _piTypeBinder = (goBinder (f ^. Internal.functionLeft)) { Lean._binderInfo = Lean.BinderInstImplicit }
+                , _piTypeBody = goType ctx (f ^. Internal.functionRight)
+                }
+              Internal.Explicit -> return $ ExprApp Lean.Application
+                { _appLeft = ExprLambda Lean.Lambda { _lambdaBinder = goBinder (f ^. Internal.functionLeft), _lambdaBody = body }
+                , _appRight = body
+                }
+      Internal.ExpressionHole loc -> 
+        return $ ExprHole (getLoc loc)
+      Internal.ExpressionInstanceHole ih ->
+        return $ ExprHole (getLoc ih)
+      Internal.ExpressionSimpleLambda slambda -> do
+        let binder = slambda ^. Internal.slambdaBinder
+            name = binder ^. Internal.sbinderVar
+        (expr, _) <- withBinders [(getLoc name, name ^. Internal.nameText)] ctx $ \newCtx -> do
+          bodyExpr <- goExpression newCtx (slambda ^. Internal.slambdaBody)
+          return $ ExprLambda Lean.Lambda
+            { _lambdaBinder = Lean.Binder
+                { _binderName = name
+                , _binderType = Nothing
+                , Lean._binderInfo = Lean.BinderDefault
+                , _binderDefault = Nothing
+                }
+            , _lambdaBody = bodyExpr
+            }
+        return expr
+      Internal.ExpressionIden (Internal.IdenAxiom name) -> 
+          return $ ExprConst name []
+      Internal.ExpressionIden (Internal.IdenInductive name) -> 
+          return $ ExprConst name []
+      Internal.ExpressionIden (Internal.IdenFunction name) -> 
+          return $ ExprConst name []
 
     goExpressionApp :: (Member NameIdGen r) => TranslationContext -> Internal.Application -> Sem r Expression
     goExpressionApp ctx Internal.Application {..} = do
@@ -302,7 +368,10 @@ convertModule initCtx table Internal.Module {..} = do
       let firstClause = NonEmpty.head (lam ^. Internal.lambdaClauses)
           name = case NonEmpty.head (firstClause ^. Internal.lambdaPatterns) of
             Internal.PatternArg _ _ (Internal.PatternVariable n) -> n
-            _ -> error "Unsupported lambda pattern"
+            Internal.PatternArg _ _ (Internal.PatternWildcardConstructor _) -> 
+              defaultName (getLoc firstClause) "_"
+            Internal.PatternArg _ _ (Internal.PatternConstructorApp c) -> 
+              c ^. Internal.constrAppConstructor
           body = firstClause ^. Internal.lambdaBody
       (expr, _) <- withBinders [(getLoc name, name ^. Internal.nameText)] ctx $ \newCtx -> do
         bodyExpr <- goExpression newCtx body  -- Bind the monadic result
@@ -377,8 +446,9 @@ convertModule initCtx table Internal.Module {..} = do
     goLiteral :: Internal.LiteralLoc -> Expression
     goLiteral l = case l ^. Internal.withLocParam of
       Internal.LitNumeric n -> ExprLiteral (WithLoc (getLoc l) (LitNumeric n))
+      Internal.LitInteger n -> ExprLiteral (WithLoc (getLoc l) (LitNumeric n))
+      Internal.LitNatural n -> ExprLiteral (WithLoc (getLoc l) (LitNumeric n))
       Internal.LitString s -> ExprLiteral (WithLoc (getLoc l) (LitString s))
-      _ -> error "unsupported literal"
 
     goType :: TranslationContext -> Internal.Expression -> Type
     goType ctx = \case
