@@ -43,6 +43,7 @@ import Juvix.Compiler.Core.Transformation.Optimize.FilterUnreachable (filterUnre
 import Juvix.Compiler.Core.Transformation.Optimize.Inlining
 import Juvix.Compiler.Core.Transformation.Optimize.LambdaFolding
 import Juvix.Compiler.Core.Transformation.Optimize.LetFolding
+import Juvix.Compiler.Core.Transformation.Optimize.LoopHoisting
 import Juvix.Compiler.Core.Transformation.Optimize.MandatoryInlining
 import Juvix.Compiler.Core.Transformation.Optimize.Phase.Eval qualified as Phase.Eval
 import Juvix.Compiler.Core.Transformation.Optimize.Phase.Exec qualified as Phase.Exec
@@ -92,6 +93,7 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
       LetFolding -> return . letFolding
       LambdaFolding -> return . lambdaFolding
       LetHoisting -> return . letHoisting
+      LoopHoisting -> return . loopHoisting
       Inlining -> inlining
       MandatoryInlining -> return . mandatoryInlining
       FoldTypeSynonyms -> return . foldTypeSynonyms

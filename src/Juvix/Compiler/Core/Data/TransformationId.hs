@@ -32,6 +32,7 @@ data TransformationId
   | LetFolding
   | LambdaFolding
   | LetHoisting
+  | LoopHoisting
   | Inlining
   | MandatoryInlining
   | FoldTypeSynonyms
@@ -109,6 +110,7 @@ instance TransformationId' TransformationId where
     LetFolding -> strLetFolding
     LambdaFolding -> strLambdaFolding
     LetHoisting -> strLetHoisting
+    LoopHoisting -> strLoopHoisting
     Inlining -> strInlining
     MandatoryInlining -> strMandatoryInlining
     FoldTypeSynonyms -> strFoldTypeSynonyms

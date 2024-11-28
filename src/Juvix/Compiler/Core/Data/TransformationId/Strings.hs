@@ -5,6 +5,9 @@ import Juvix.Prelude
 strLetHoisting :: Text
 strLetHoisting = "let-hoisting"
 
+strLoopHoisting :: Text
+strLoopHoisting = "loop-hoisting"
+
 strStoredPipeline :: Text
 strStoredPipeline = "pipeline-stored"
 
