@@ -48,36 +48,8 @@ isMarkedSpecializable md = \case
           _ ->
             False
 
--- | Checks if an argument is passed without modification to recursive calls.
 isArgSpecializable :: Module -> Symbol -> Int -> Bool
-isArgSpecializable tab sym argNum = run $ execState True $ dmapNRM go body
-  where
-    nodeSym = lookupIdentifierNode tab sym
-    (lams, body) = unfoldLambdas nodeSym
-    n = length lams
-
-    go :: (Member (State Bool) r) => Level -> Node -> Sem r Recur
-    go lvl node = case node of
-      NApp {} ->
-        let (h, args) = unfoldApps' node
-         in case h of
-              NIdt Ident {..}
-                | _identSymbol == sym ->
-                    let b =
-                          argNum <= length args
-                            && case args !! (argNum - 1) of
-                              NVar Var {..} | _varIndex == lvl + n - argNum -> True
-                              _ -> False
-                     in do
-                          modify' (&& b)
-                          mapM_ (dmapNRM' (lvl, go)) args
-                          return $ End node
-              _ -> return $ Recur node
-      NIdt Ident {..}
-        | _identSymbol == sym -> do
-            put False
-            return $ End node
-      _ -> return $ Recur node
+isArgSpecializable = isArgRecursiveInvariant
 
 convertNode :: forall r. (Member InfoTableBuilder r) => Node -> Sem r Node
 convertNode = dmapLRM go

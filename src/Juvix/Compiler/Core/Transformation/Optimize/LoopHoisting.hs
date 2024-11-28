@@ -10,21 +10,23 @@ loopHoisting md = mapT (const (umapL go)) md
   where
     go :: BinderList Binder -> Node -> Node
     go bl node = case node of
-      NApp {} -> goApp bl h 0 args
+      NApp {} -> case h of
+        NIdt Ident {..} ->
+          goApp bl _identSymbol h 0 args
+        _ -> node
         where
           (h, args) = unfoldApps node
       _ ->
         node
 
-    goApp :: BinderList Binder -> Node -> Int -> [(Info, Node)] -> Node
-    goApp bl h argNum args = case args of
+    goApp :: BinderList Binder -> Symbol -> Node -> Int -> [(Info, Node)] -> Node
+    goApp bl sym h argNum args = case args of
       [] -> h
       (info, arg) : args' -> case arg of
-        NLam {} ->
-          -- TODO: Check if `h` is recursive and its `argNum`th argument is
-          -- invariant
-          goApp bl (goLamApp bl info h arg) (argNum + 1) args'
-        _ -> goApp bl (mkApp info h arg) (argNum + 1) args'
+        NLam {}
+          | isArgRecursiveInvariant md sym argNum && isDirectlyRecursive md sym ->
+              goApp bl sym (goLamApp bl info h arg) (argNum + 1) args'
+        _ -> goApp bl sym (mkApp info h arg) (argNum + 1) args'
 
     goLamApp :: BinderList Binder -> Info -> Node -> Node -> Node
     goLamApp bl info h arg
