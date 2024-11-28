@@ -383,6 +383,14 @@ unfoldLambdaClauses t = do
       mkClause LambdaClause {..} = first (appendList _lambdaPatterns) (unfoldLambda _lambdaBody)
   return (mkClause <$> _lambdaClauses)
 
+mkLambda :: NonEmpty LambdaClause -> Expression
+mkLambda c =
+  ExpressionLambda
+    Lambda
+      { _lambdaType = Nothing,
+        _lambdaClauses = c
+      }
+
 -- Unfolds *single* clause lambdas
 unfoldLambda :: Expression -> ([PatternArg], Expression)
 unfoldLambda t = case t of
@@ -525,6 +533,9 @@ instance IsExpression Iden where
 instance IsExpression Expression where
   toExpression = id
 
+instance IsExpression Case where
+  toExpression = ExpressionCase
+
 instance IsExpression Hole where
   toExpression = ExpressionHole
 
@@ -655,10 +666,30 @@ freshVar _nameLoc n = do
         _nameLoc
       }
 
+mkCaseBranch :: PatternArg -> Expression -> CaseBranch
+mkCaseBranch pat body =
+  CaseBranch
+    { _caseBranchPattern = pat,
+      _caseBranchRhs = CaseBranchRhsExpression body
+    }
+
+mkCase :: Expression -> NonEmpty CaseBranch -> Expression
+mkCase cexpr clauses =
+  toExpression
+    Case
+      { _caseExpression = cexpr,
+        _caseBranches = clauses,
+        _caseExpressionType = Nothing,
+        _caseExpressionWholeType = Nothing
+      }
+
+mkVarPattern :: VarName -> IsImplicit -> PatternArg
+mkVarPattern var impl = PatternArg impl Nothing (PatternVariable var)
+
 genWildcard :: forall r'. (Members '[NameIdGen] r') => Interval -> IsImplicit -> Sem r' PatternArg
 genWildcard loc impl = do
   var <- varFromWildcard (Wildcard loc)
-  return (PatternArg impl Nothing (PatternVariable var))
+  return (mkVarPattern var impl)
 
 freshInstanceHole :: (Members '[NameIdGen] r) => Interval -> Sem r InstanceHole
 freshInstanceHole l = mkInstanceHole l <$> freshNameId
@@ -789,6 +820,13 @@ isSmallUniverse' = \case
 -- `Type' : Type := Type`).
 isTypeConstructor :: Expression -> Bool
 isTypeConstructor = isSmallUniverse' . snd . unfoldFunType
+
+explicitApplicationArg :: (IsExpression expr) => expr -> ApplicationArg
+explicitApplicationArg e =
+  ApplicationArg
+    { _appArgIsImplicit = Explicit,
+      _appArg = toExpression e
+    }
 
 explicitPatternArg :: Pattern -> PatternArg
 explicitPatternArg _patternArgPattern =

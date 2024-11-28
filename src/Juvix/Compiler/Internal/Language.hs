@@ -33,7 +33,9 @@ newtype PreLetStatement
   = PreLetFunctionDef FunctionDef
 
 -- | Traits that support builtin deriving
-data DerivingTrait = DerivingEq
+data DerivingTrait
+  = DerivingEq
+  | DerivingOrd
   deriving stock (Generic, Data, Bounded, Enum, Show)
 
 derivingTraitFromBuiltinMap :: HashMap BuiltinPrim DerivingTrait
@@ -46,6 +48,7 @@ instance IsBuiltin DerivingTrait where
   toBuiltinPrim :: DerivingTrait -> BuiltinPrim
   toBuiltinPrim = \case
     DerivingEq -> toBuiltinPrim BuiltinEq
+    DerivingOrd -> toBuiltinPrim BuiltinOrd
 
 instance Pretty DerivingTrait where
   pretty = pretty . toBuiltinPrim

@@ -1,3 +1,5 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+
 module Juvix.Prelude.Effects.Input
   ( Input,
     input,
@@ -5,6 +7,8 @@ module Juvix.Prelude.Effects.Input
     inputWhile,
     peekInput,
     runInputList,
+    repeatOnInput,
+    isEndOfInput,
   )
 where
 
@@ -42,6 +46,12 @@ peekInput = do
 
 runInputList :: [i] -> Sem (Input i ': r) a -> Sem r a
 runInputList = evalStaticRep . Input
+
+isEndOfInput :: forall i r. (Members '[Input i] r) => Sem r Bool
+isEndOfInput = isNothing <$> peekInput @i
+
+repeatOnInput :: (Members '[Input i] r) => (i -> Sem r a) -> Sem r ()
+repeatOnInput m = whenJustM input (m >=> const (repeatOnInput m))
 
 inputJust :: (Members '[Input i] r) => Sem r i
 inputJust = fromMaybe (error "inputJust") <$> input

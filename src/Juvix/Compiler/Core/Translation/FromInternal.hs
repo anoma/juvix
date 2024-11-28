@@ -215,23 +215,28 @@ goConstructor sym ctor = do
 
     ctorTag :: Maybe Internal.BuiltinConstructor -> Sem r Tag
     ctorTag = \case
-      Just Internal.BuiltinBoolTrue -> return (BuiltinTag TagTrue)
-      Just Internal.BuiltinBoolFalse -> return (BuiltinTag TagFalse)
-      Just Internal.BuiltinMkEq -> freshTag
-      Just Internal.BuiltinNatZero -> freshTag
-      Just Internal.BuiltinNatSuc -> freshTag
-      Just Internal.BuiltinIntOfNat -> freshTag
-      Just Internal.BuiltinIntNegSuc -> freshTag
-      Just Internal.BuiltinListNil -> freshTag
-      Just Internal.BuiltinListCons -> freshTag
-      Just Internal.BuiltinMaybeNothing -> freshTag
-      Just Internal.BuiltinMaybeJust -> freshTag
-      Just Internal.BuiltinPairConstr -> freshTag
-      Just Internal.BuiltinMkPoseidonState -> freshTag
-      Just Internal.BuiltinMkEcPoint -> freshTag
-      Just Internal.BuiltinMkAnomaAction -> freshTag
-      Just Internal.BuiltinMkAnomaResource -> freshTag
       Nothing -> freshTag
+      Just b -> case b of
+        Internal.BuiltinBoolTrue -> return (BuiltinTag TagTrue)
+        Internal.BuiltinBoolFalse -> return (BuiltinTag TagFalse)
+        Internal.BuiltinMkEq -> freshTag
+        Internal.BuiltinNatZero -> freshTag
+        Internal.BuiltinNatSuc -> freshTag
+        Internal.BuiltinIntOfNat -> freshTag
+        Internal.BuiltinIntNegSuc -> freshTag
+        Internal.BuiltinListNil -> freshTag
+        Internal.BuiltinListCons -> freshTag
+        Internal.BuiltinMaybeNothing -> freshTag
+        Internal.BuiltinMaybeJust -> freshTag
+        Internal.BuiltinPairConstr -> freshTag
+        Internal.BuiltinMkPoseidonState -> freshTag
+        Internal.BuiltinMkEcPoint -> freshTag
+        Internal.BuiltinMkAnomaAction -> freshTag
+        Internal.BuiltinMkAnomaResource -> freshTag
+        Internal.BuiltinMkOrd -> freshTag
+        Internal.BuiltinOrderingLT -> freshTag
+        Internal.BuiltinOrderingGT -> freshTag
+        Internal.BuiltinOrderingEQ -> freshTag
 
     ctorType :: Sem r Type
     ctorType =

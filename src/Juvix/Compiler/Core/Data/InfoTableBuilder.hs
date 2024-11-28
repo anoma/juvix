@@ -269,8 +269,8 @@ declareBoolBuiltins =
   declareInductiveBuiltins
     "Bool"
     (Just (BuiltinTypeInductive BuiltinBool))
-    [ (BuiltinTag TagTrue, "true", const mkTypeBool', Just BuiltinBoolTrue),
-      (BuiltinTag TagFalse, "false", const mkTypeBool', Just BuiltinBoolFalse)
+    [ (BuiltinTag TagFalse, "false", const mkTypeBool', Just BuiltinBoolFalse),
+      (BuiltinTag TagTrue, "true", const mkTypeBool', Just BuiltinBoolTrue)
     ]
 
 declareNatBuiltins :: (Member InfoTableBuilder r) => Sem r ()

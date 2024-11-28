@@ -505,5 +505,10 @@ tests =
         "Test086: Patterns in definitions"
         $(mkRelDir ".")
         $(mkRelFile "test086.juvix")
-        $(mkRelFile "out/test086.out")
+        $(mkRelFile "out/test086.out"),
+      posTest
+        "Test087: Deriving Ord"
+        $(mkRelDir ".")
+        $(mkRelFile "test087.juvix")
+        $(mkRelFile "out/test087.out")
     ]
