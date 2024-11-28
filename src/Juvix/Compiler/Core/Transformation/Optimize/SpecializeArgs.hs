@@ -49,7 +49,7 @@ isMarkedSpecializable md = \case
             False
 
 isArgSpecializable :: Module -> Symbol -> Int -> Bool
-isArgSpecializable = isArgRecursiveInvariant
+isArgSpecializable md sym argNum = isArgRecursiveInvariant md sym (argNum - 1)
 
 convertNode :: forall r. (Member InfoTableBuilder r) => Node -> Sem r Node
 convertNode = dmapLRM go

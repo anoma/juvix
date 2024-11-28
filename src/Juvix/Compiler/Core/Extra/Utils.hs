@@ -591,7 +591,7 @@ checkInfoTable tab =
     && all (isClosed . (^. identifierType)) (tab ^. infoIdentifiers)
     && all (isClosed . (^. constructorType)) (tab ^. infoConstructors)
 
--- | Checks if an argument is passed without modification to direct recursive calls.
+-- | Checks if `n`th argument (zero-based) is passed without modification to direct recursive calls.
 isArgRecursiveInvariant :: Module -> Symbol -> Int -> Bool
 isArgRecursiveInvariant tab sym argNum = run $ execState True $ dmapNRM go body
   where
@@ -607,9 +607,9 @@ isArgRecursiveInvariant tab sym argNum = run $ execState True $ dmapNRM go body
               NIdt Ident {..}
                 | _identSymbol == sym ->
                     let b =
-                          argNum <= length args
-                            && case args !! (argNum - 1) of
-                              NVar Var {..} | _varIndex == lvl + n - argNum -> True
+                          argNum < length args
+                            && case args !! argNum of
+                              NVar Var {..} | _varIndex == lvl + n - argNum - 1 -> True
                               _ -> False
                      in do
                           modify' (&& b)

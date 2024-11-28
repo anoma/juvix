@@ -11,8 +11,7 @@ loopHoisting md = mapT (const (umapL go)) md
     go :: BinderList Binder -> Node -> Node
     go bl node = case node of
       NApp {} -> case h of
-        NIdt Ident {..} ->
-          goApp bl _identSymbol h 0 args
+        NIdt Ident {..} -> goApp bl _identSymbol h 0 args
         _ -> node
         where
           (h, args) = unfoldApps node
@@ -25,19 +24,24 @@ loopHoisting md = mapT (const (umapL go)) md
       (info, arg) : args' -> case arg of
         NLam {}
           | isArgRecursiveInvariant md sym argNum && isDirectlyRecursive md sym ->
-              goApp bl sym (goLamApp bl info h arg) (argNum + 1) args'
+              goLamApp bl sym info h arg (argNum + 1) args'
         _ -> goApp bl sym (mkApp info h arg) (argNum + 1) args'
 
-    goLamApp :: BinderList Binder -> Info -> Node -> Node -> Node
-    goLamApp bl info h arg
-      | null subterms = mkApp info h arg
+    goLamApp :: BinderList Binder -> Symbol -> Info -> Node -> Node -> Int -> [(Info, Node)] -> Node
+    goLamApp bl sym info h arg argNum args'
+      | null subterms = goApp bl sym (mkApp info h arg) argNum args'
       | otherwise =
           mkLets'
-            (map (\node -> (computeNodeType' md bl node, node)) subterms)
-            (mkApp info h (reLambdasRev lams body'))
+            (map (\node -> (computeNodeType' md bl node, node)) subterms')
+            ( adjustLetBoundVars
+                . shift n
+                $ (mkApps (mkApp info h (reLambdasRev lams body')) args')
+            )
       where
         (lams, body) = unfoldLambdasRev arg
         (subterms, body') = extractMaximalInvariantSubterms (length lams) body
+        n = length subterms
+        subterms' = zipWith shift [0 ..] subterms
 
     extractMaximalInvariantSubterms :: Int -> Node -> ([Node], Node)
     extractMaximalInvariantSubterms bindersNum body =
@@ -51,11 +55,21 @@ loopHoisting md = mapT (const (umapL go)) md
         extract n node
           | not (isImmediate md node || isLambda node)
               && isFullyApplied md node
-              && null fvars = do
+              && null boundVars = do
               k <- length <$> get @[Node]
-              modify' (node :)
-              return $ End (mkVar' (n + bindersNum + k))
+              modify' ((shift (-(n + bindersNum)) node) :)
+              -- This variable is later adjusted to the correct index in `adjustLetBoundVars`
+              return $ End (mkVar' (-k - 1))
           | otherwise =
               return $ Recur node
           where
-            fvars = filter (>= n + bindersNum) $ Info.getFreeVars node
+            boundVars = filter (< n + bindersNum) $ Info.getFreeVars node
+
+    adjustLetBoundVars :: Node -> Node
+    adjustLetBoundVars = umapN adjust
+      where
+        adjust :: Level -> Node -> Node
+        adjust n node = case node of
+          NVar Var {..}
+            | _varIndex < 0 -> mkVar' (n - _varIndex - 1)
+          _ -> node
