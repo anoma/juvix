@@ -22,10 +22,24 @@ isSpecializable md node =
       NCtr Constr {..} ->
         case lookupConstructorInfo md _constrTag ^. constructorPragmas . pragmasSpecialise of
           Just (PragmaSpecialise False) -> False
-          _ -> True
+          _ ->
+            -- We need to avoid duplication of non-immediate expressions
+            all (isSpecializableConstrArg md) _constrArgs
       NApp {} ->
-        let (h, _) = unfoldApps' node
+        let (h, args) = unfoldApps' node
          in isSpecializable md h
+              -- We need to avoid duplication of non-immediate expressions
+              && all (isImmediateOrLambda md) args
+      _ -> False
+
+isSpecializableConstrArg :: Module -> Node -> Bool
+isSpecializableConstrArg md node =
+  isImmediateOrLambda md node
+    || case node of
+      NCtr Constr {..} ->
+        case lookupConstructorInfo md _constrTag ^. constructorPragmas . pragmasSpecialise of
+          Just (PragmaSpecialise False) -> False
+          _ -> all (isSpecializableConstrArg md) _constrArgs
       _ -> False
 
 -- | Check for `h a1 .. an` where `h` is an identifier explicitly marked for
@@ -48,6 +62,8 @@ isMarkedSpecializable md = \case
           _ ->
             False
 
+-- | Checks if the `n`th argument (one-based) is passed without modification to
+-- direct recursive calls.
 isArgSpecializable :: Module -> Symbol -> Int -> Bool
 isArgSpecializable md sym argNum = isArgRecursiveInvariant md sym (argNum - 1)
 

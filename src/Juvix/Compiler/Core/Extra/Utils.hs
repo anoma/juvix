@@ -155,6 +155,9 @@ isImmediate md = \case
 isImmediate' :: Node -> Bool
 isImmediate' = isImmediate emptyModule
 
+isImmediateOrLambda :: Module -> Node -> Bool
+isImmediateOrLambda md node = isImmediate md node || isLambda node
+
 -- | True if the argument is fully evaluated first-order data
 isDataValue :: Node -> Bool
 isDataValue = \case
@@ -167,7 +170,7 @@ isFullyApplied md node = case h of
   NIdt Ident {..}
     | Just ii <- lookupIdentifierInfo' md _identSymbol ->
         length args >= ii ^. identifierArgsNum
-  _ -> True
+  _ -> False
   where
     (h, args) = unfoldApps' node
 
@@ -591,7 +594,8 @@ checkInfoTable tab =
     && all (isClosed . (^. identifierType)) (tab ^. infoIdentifiers)
     && all (isClosed . (^. constructorType)) (tab ^. infoConstructors)
 
--- | Checks if `n`th argument (zero-based) is passed without modification to direct recursive calls.
+-- | Checks if the `n`th argument (zero-based) is passed without modification to
+-- direct recursive calls.
 isArgRecursiveInvariant :: Module -> Symbol -> Int -> Bool
 isArgRecursiveInvariant tab sym argNum = run $ execState True $ dmapNRM go body
   where
