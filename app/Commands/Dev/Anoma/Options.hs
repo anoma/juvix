@@ -13,17 +13,27 @@ data AnomaCommand
   | AnomaCommandAddTransaction AddTransactionOptions
   deriving stock (Data)
 
-parseAnomaCommand :: Parser AnomaCommand
+data AnomaCommandGlobal = AnomaCommandGlobal
+  { _anomaCommandGlobalClientConfig :: Maybe (AppPath File),
+    _anomaCommandGlobalCommand :: AnomaCommand
+  }
+  deriving stock (Data)
+
+makeLenses ''AnomaCommandGlobal
+
+parseAnomaCommand :: Parser AnomaCommandGlobal
 parseAnomaCommand =
-  hsubparser
-    ( mconcat
-        [ commandStart,
-          commandStatus,
-          commandStop,
-          commandProve,
-          commandAddTransaction
-        ]
-    )
+  AnomaCommandGlobal
+    <$> optional anomaClientConfigOpt
+    <*> hsubparser
+      ( mconcat
+          [ commandStart,
+            commandStatus,
+            commandStop,
+            commandProve,
+            commandAddTransaction
+          ]
+      )
   where
     commandStart :: Mod CommandFields AnomaCommand
     commandStart = command "start" runInfo
@@ -63,15 +73,12 @@ parseAnomaCommand =
                 ( Just
                     ( vsep
                         ( [ "The prove command submits a Nockma program to the Anoma.Protobuf.NockService.Prove gRPC endpoint.",
-                            ""
+                            "",
+                            "The gRPC response (a Nockma program) is saved to a file named <input>.proved.nockma, where <input> is the base name of the input file.",
+                            "Use the -o/--output option to specify a custom output filename.",
+                            "",
+                            "If the program generates traces, they will be written to standard output."
                           ]
-                            <> configHelp
-                            <> [ "",
-                                 "The gRPC response (a Nockma program) is saved to a file named <input>.proved.nockma, where <input> is the base name of the input file.",
-                                 "Use the -o/--output option to specify a custom output filename.",
-                                 "",
-                                 "If the program generates traces, they will be written to standard output."
-                               ]
                         )
                     )
                 )
@@ -85,26 +92,4 @@ parseAnomaCommand =
         runInfo =
           info
             (AnomaCommandAddTransaction <$> parseAddTransactionOptions)
-            ( headerDoc
-                ( Just
-                    ( vsep
-                        ( [ "The add-transaction command submits a Nockma transaction candidate to the Anoma.Protobuf.Mempool.AddTransaction gRPC endpoint.",
-                            ""
-                          ]
-                            <> configHelp
-                        )
-                    )
-                )
-                <> progDesc "Submit a Nockma transaction candidate to Anoma.Protobuf.Mempool.AddTransaction"
-            )
-
-configHelp :: [Doc AnsiStyle]
-configHelp =
-  [ "By default, the gRPC request is made to the client that is started by juvix dev anoma start.",
-    "Use the -c/--config option to use a different Anoma client.",
-    "The config file format is:",
-    "",
-    "url: <ANOMA_CLIENT_URL>",
-    "port: <ANOMA_CLIENT_GRPC_PORT>",
-    "nodeid: <ANOMA_CLIENT_NODE_ID>"
-  ]
+            (progDesc "Submit a Nockma transaction candidate to Anoma.Protobuf.Mempool.AddTransaction")

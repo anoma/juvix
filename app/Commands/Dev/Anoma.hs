@@ -13,36 +13,33 @@ import Commands.Dev.Anoma.Base
 import Commands.Dev.Anoma.Client
 import Commands.Dev.Anoma.Options
 import Commands.Dev.Anoma.Prove qualified as Prove
-import Commands.Dev.Anoma.Prove.Options
 import Commands.Dev.Anoma.Start qualified as Start
 import Juvix.Data.CodeAnn
 import Juvix.Data.Yaml qualified as Y
 
-runCommand :: forall r. (Members AppEffects r) => AnomaCommand -> Sem r ()
-runCommand =
-  runAppError @SimpleError . \case
+runCommand :: forall r. (Members AppEffects r) => AnomaCommandGlobal -> Sem r ()
+runCommand g =
+  runAppError @SimpleError $ case (g ^. anomaCommandGlobalCommand) of
     AnomaCommandStart opts -> Start.runCommand opts
     AnomaCommandStatus -> checkRunning >>= renderStdOutLn . ppCodeAnn
     AnomaCommandStop -> checkRunning >>= stopClient >> removeConfig
     AnomaCommandProve opts ->
       runAnomaWithHostConfig
-        (opts ^. proveClientInfo)
         (Prove.runCommand opts)
     AnomaCommandAddTransaction opts ->
       runAnomaWithHostConfig
-        (opts ^. addTransactionClientInfo)
         (addTransaction (opts ^. addTransactionFile))
   where
-    runAnomaWithHostConfig :: (Members (Error SimpleError ': AppEffects) x) => Maybe (AppPath File) -> Sem (Anoma ': x) () -> Sem x ()
-    runAnomaWithHostConfig mconfigFile eff = do
-      host <- getHostConfig mconfigFile
+    runAnomaWithHostConfig :: (Members (Error SimpleError ': AppEffects) x) => Sem (Anoma ': x) () -> Sem x ()
+    runAnomaWithHostConfig eff = do
+      host <- getHostConfig
       runAnomaWithClient host eff
 
     checkRunning :: (Members (Error SimpleError ': AppEffects) x) => Sem x ClientConfig
     checkRunning = fromMaybeM (logInfo "The Anoma client is not running" >> exitFailure) checkClientRunning
 
-    getHostConfig :: (Members (Error SimpleError ': AppEffects) x) => Maybe (AppPath File) -> Sem x AnomaClientInfo
-    getHostConfig = \case
+    getHostConfig :: (Members (Error SimpleError ': AppEffects) x) => Sem x AnomaClientInfo
+    getHostConfig = case g ^. anomaCommandGlobalClientConfig of
       Just p -> fromAppFile p >>= readClientInfo
       Nothing -> (^. clientConfigHost) <$> checkRunning
 
