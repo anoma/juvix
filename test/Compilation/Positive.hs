@@ -510,5 +510,10 @@ tests =
         "Test087: Deriving Ord"
         $(mkRelDir ".")
         $(mkRelFile "test087.juvix")
-        $(mkRelFile "out/test087.out")
+        $(mkRelFile "out/test087.out"),
+      posTest
+        "Test088: Record update pun"
+        $(mkRelDir ".")
+        $(mkRelFile "test088.juvix")
+        $(mkRelFile "out/test088.out")
     ]
