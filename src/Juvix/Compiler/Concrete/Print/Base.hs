@@ -366,6 +366,9 @@ instance (SingI s) => PrettyPrint (NamedApplicationNew s) where
 instance (SingI s) => PrettyPrint (NamedArgumentFunctionDef s) where
   ppCode (NamedArgumentFunctionDef f) = ppCode f
 
+instance PrettyPrint (RecordUpdatePun s) where
+  ppCode = ppCode . (^. recordUpdatePunSymbol)
+
 instance PrettyPrint (NamedArgumentPun s) where
   ppCode = ppCode . (^. namedArgumentPunSymbol)
 
@@ -1208,7 +1211,7 @@ instance (SingI s) => PrettyPrint (FunctionDef s) where
 instance PrettyPrint Wildcard where
   ppCode w = morpheme (getLoc w) C.kwWildcard
 
-instance (SingI s) => PrettyPrint (FieldPun s) where
+instance (SingI s) => PrettyPrint (PatternFieldPun s) where
   ppCode = ppSymbolType . (^. fieldPunField)
 
 instance (SingI s) => PrettyPrint (RecordPatternAssign s) where

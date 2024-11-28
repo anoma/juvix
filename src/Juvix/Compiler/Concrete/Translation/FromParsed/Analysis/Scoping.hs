@@ -479,7 +479,7 @@ reservePatternFunctionSymbols = goAtom
 
     goRecordItem :: RecordPatternItem 'Parsed -> Sem r ()
     goRecordItem = \case
-      RecordPatternItemFieldPun FieldPun {..} -> do
+      RecordPatternItemFieldPun PatternFieldPun {..} -> do
         void (reservePatternName (NameUnqualified _fieldPunField))
       RecordPatternItemAssign RecordPatternAssign {..} -> do
         goAtoms _recordPatternAssignPattern
@@ -2357,7 +2357,7 @@ checkRecordPattern r = do
       where
         checkAssign :: RecordPatternAssign 'Parsed -> Sem r' (RecordPatternAssign 'Scoped)
         checkAssign RecordPatternAssign {..} = do
-          idx' <- findFieldIdx _recordPatternAssignField
+          idx' <- findRecordFieldIdx _recordPatternAssignField
           pat' <- checkParsePatternAtoms _recordPatternAssignPattern
           return
             RecordPatternAssign
@@ -2366,9 +2366,9 @@ checkRecordPattern r = do
                 ..
               }
 
-        checkPun :: FieldPun 'Parsed -> Sem r' (FieldPun 'Scoped)
+        checkPun :: PatternFieldPun 'Parsed -> Sem r' (PatternFieldPun 'Scoped)
         checkPun f = do
-          idx' <- findFieldIdx (f ^. fieldPunField)
+          idx' <- findRecordFieldIdx (f ^. fieldPunField)
           pk <- ask
           f' <- case pk of
             PatternNamesKindVariables ->
@@ -2376,18 +2376,22 @@ checkRecordPattern r = do
             PatternNamesKindFunctions -> do
               getReservedDefinitionSymbol (f ^. fieldPunField)
           return
-            FieldPun
+            PatternFieldPun
               { _fieldPunIx = idx',
                 _fieldPunField = f'
               }
 
-        findFieldIdx :: Symbol -> Sem r' Int
-        findFieldIdx f =
-          fromMaybeM (throw err) $
-            asks @(RecordNameSignature 'Parsed) (^? recordNames . at f . _Just . nameItemIndex)
-          where
-            err :: ScoperError
-            err = ErrUnexpectedField (UnexpectedField f)
+findRecordFieldIdx ::
+  forall r.
+  (Members '[Reader (RecordNameSignature 'Parsed), Error ScoperError] r) =>
+  Symbol ->
+  Sem r Int
+findRecordFieldIdx f =
+  fromMaybeM (throw err) $
+    asks @(RecordNameSignature 'Parsed) (^? recordNames . at f . _Just . nameItemIndex)
+  where
+    err :: ScoperError
+    err = ErrUnexpectedField (UnexpectedField f)
 
 checkListPattern ::
   forall r.
@@ -3013,13 +3017,15 @@ checkUpdateField = \case
   RecordUpdateFieldAssign a -> RecordUpdateFieldAssign <$> checkUpdateFieldAssign a
   RecordUpdateFieldPun a -> RecordUpdateFieldPun <$> checkRecordPun a
   where
-    checkRecordPun :: NamedArgumentPun 'Parsed -> Sem r (NamedArgumentPun 'Scoped)
-    checkRecordPun NamedArgumentPun {..} = do
-      s <- checkScopedIden (NameUnqualified _namedArgumentPunSymbol)
+    checkRecordPun :: RecordUpdatePun 'Parsed -> Sem r (RecordUpdatePun 'Scoped)
+    checkRecordPun RecordUpdatePun {..} = do
+      idx <- findRecordFieldIdx _recordUpdatePunSymbol
+      s <- checkScopedIden (NameUnqualified _recordUpdatePunSymbol)
       return
-        NamedArgumentPun
-          { _namedArgumentPunSymbol,
-            _namedArgumentReferencedSymbol = s
+        RecordUpdatePun
+          { _recordUpdatePunSymbol,
+            _recordUpdatePunReferencedSymbol = s,
+            _recordUpdatePunFieldIndex = idx
           }
 
 getUpdateFieldIdx ::

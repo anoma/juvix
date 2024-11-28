@@ -844,8 +844,15 @@ recordUpdateFieldItemAssign = do
 
 recordUpdateFieldPun ::
   (Members '[Error ParserError, PragmasStash, JudocStash, ParserResultBuilder] r) =>
-  ParsecS r (NamedArgumentPun 'Parsed)
-recordUpdateFieldPun = P.try (pnamedArgumentItemPun <* P.notFollowedBy (kw kwAssign))
+  ParsecS r (RecordUpdatePun 'Parsed)
+recordUpdateFieldPun = do
+  s <- P.try (symbol <* P.notFollowedBy (kw kwAssign))
+  return
+    RecordUpdatePun
+      { _recordUpdatePunSymbol = s,
+        _recordUpdatePunFieldIndex = (),
+        _recordUpdatePunReferencedSymbol = ()
+      }
 
 recordUpdateField ::
   (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) =>
@@ -1737,9 +1744,9 @@ recordPatternItem = do
             _recordPatternAssignPattern = pat',
             ..
           }
-    fieldPun :: Symbol -> FieldPun 'Parsed
+    fieldPun :: Symbol -> PatternFieldPun 'Parsed
     fieldPun f =
-      FieldPun
+      PatternFieldPun
         { _fieldPunIx = (),
           _fieldPunField = f
         }

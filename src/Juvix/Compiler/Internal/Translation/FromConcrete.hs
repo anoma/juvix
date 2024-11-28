@@ -1512,19 +1512,26 @@ goExpression = \case
           }
       where
         -- fields indexed by field index.
-        mkFieldmap :: Sem r (IntMap (RecordUpdateFieldItemAssign 'Scoped))
-        mkFieldmap = execState mempty $ mapM go (r ^. recordUpdateFields)
+        mkFieldmap :: Sem r (IntMap (RecordUpdateField 'Scoped))
+        mkFieldmap = execState mempty $ mapM_ go (r ^. recordUpdateFields)
           where
-            go :: RecordUpdateField 'Scoped -> Sem (State (IntMap (RecordUpdateFieldItemAssign 'Scoped)) ': r) ()
-            go = \case
-              RecordUpdateFieldPun {} -> return ()
-              RecordUpdateFieldAssign f -> do
-                let idx = f ^. fieldUpdateArgIx
-                whenM (gets @(IntMap (RecordUpdateFieldItemAssign 'Scoped)) (IntMap.member idx)) (throw repeated)
-                modify' (IntMap.insert idx f)
-                where
-                  repeated :: ScoperError
-                  repeated = ErrRepeatedField (RepeatedField (f ^. fieldUpdateName))
+            go :: RecordUpdateField 'Scoped -> Sem (State (IntMap (RecordUpdateField 'Scoped)) ': r) ()
+            go f = do
+              whenM (gets @(IntMap (RecordUpdateField 'Scoped)) (IntMap.member idx)) (throw repeated)
+              modify' (IntMap.insert idx f)
+              where
+                idx :: Int
+                idx = case f of
+                  RecordUpdateFieldAssign g -> g ^. fieldUpdateArgIx
+                  RecordUpdateFieldPun g -> g ^. recordUpdatePunFieldIndex
+
+                name :: Symbol
+                name = case f of
+                  RecordUpdateFieldAssign g -> g ^. fieldUpdateName
+                  RecordUpdateFieldPun g -> g ^. recordUpdatePunSymbol
+
+                repeated :: ScoperError
+                repeated = ErrRepeatedField (RepeatedField name)
 
         mkArgs :: IntMap (IsImplicit, Internal.VarName) -> Sem r [Internal.ApplicationArg]
         mkArgs vs = do
@@ -1532,7 +1539,7 @@ goExpression = \case
           execOutputList $
             go (uncurry Indexed <$> IntMap.toAscList fieldMap) (intMapToList vs)
           where
-            go :: [Indexed (RecordUpdateFieldItemAssign 'Scoped)] -> [Indexed (IsImplicit, Internal.VarName)] -> Sem (Output Internal.ApplicationArg ': r) ()
+            go :: [Indexed (RecordUpdateField 'Scoped)] -> [Indexed (IsImplicit, Internal.VarName)] -> Sem (Output Internal.ApplicationArg ': r) ()
             go fields = \case
               [] -> return ()
               Indexed idx (impl, var) : vars' -> case getArg idx of
@@ -1544,7 +1551,7 @@ goExpression = \case
                       }
                   go fields vars'
                 Just (arg, fields') -> do
-                  val' <- goExpression (arg ^. fieldUpdateValue)
+                  val' <- goExpression (itemExpression arg)
                   output
                     Internal.ApplicationArg
                       { _appArg = val',
@@ -1552,12 +1559,12 @@ goExpression = \case
                       }
                   go fields' vars'
               where
-                itemExpression :: RecordUpdateField 'Scoped -> Sem r Internal.Expression
+                itemExpression :: RecordUpdateField 'Scoped -> Expression
                 itemExpression = \case
-                  RecordUpdateFieldAssign arg -> goExpression (arg ^. fieldUpdateValue)
-                  RecordUpdateFieldPun p -> undefined
+                  RecordUpdateFieldAssign arg -> arg ^. fieldUpdateValue
+                  RecordUpdateFieldPun p -> ExpressionIdentifier (p ^. recordUpdatePunReferencedSymbol)
 
-                getArg :: Int -> Maybe (RecordUpdateFieldItemAssign 'Scoped, [Indexed (RecordUpdateFieldItemAssign 'Scoped)])
+                getArg :: Int -> Maybe (RecordUpdateField 'Scoped, [Indexed (RecordUpdateField 'Scoped)])
                 getArg idx = do
                   Indexed fidx arg :| fs <- nonEmpty fields
                   guard (idx == fidx)
