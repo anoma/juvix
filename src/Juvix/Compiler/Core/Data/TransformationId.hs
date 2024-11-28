@@ -48,6 +48,7 @@ data TransformationId
   | OptPhaseExec
   | OptPhaseVampIR
   | OptPhaseMain
+  | OptPhasePreLifting
   deriving stock (Data, Bounded, Enum, Show)
 
 data PipelineId
@@ -126,6 +127,7 @@ instance TransformationId' TransformationId where
     OptPhaseExec -> strOptPhaseExec
     OptPhaseVampIR -> strOptPhaseVampIR
     OptPhaseMain -> strOptPhaseMain
+    OptPhasePreLifting -> strOptPhasePreLifting
 
 instance PipelineId' TransformationId PipelineId where
   pipelineText :: PipelineId -> Text
