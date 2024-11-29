@@ -1435,8 +1435,8 @@ functionDefinition opts _signBuiltin = P.label "<function definition>" $ do
   off0 <- P.getOffset
   FunctionLhs {..} <- functionDefinitionLhs opts _signBuiltin
   off <- P.getOffset
-  _signDoc <- getJudoc
-  _signPragmas <- getPragmas
+  _functionDefDoc <- getJudoc
+  _functionDefPragmas <- getPragmas
   _signBody <- parseBody
   unless
     ( isJust (_funLhsTypeSig ^. typeSigColonKw . unIrrelevant)
@@ -1451,8 +1451,8 @@ functionDefinition opts _signBuiltin = P.label "<function definition>" $ do
             _signInstance = _funLhsInstance,
             _signCoercion = _funLhsCoercion,
             _signBuiltin = _funLhsBuiltin,
-            _signDoc,
-            _signPragmas,
+            _functionDefDoc,
+            _functionDefPragmas,
             _signBody
           }
   when (isNothing (_funLhsName ^? _FunctionDefName) && P.isFunctionLike fdef) $

@@ -94,9 +94,9 @@ toConcrete t p = run . runReader l $ do
         ( StatementFunctionDef
             FunctionDef
               { _signTerminating = Nothing,
-                _signPragmas = Nothing,
+                _functionDefPragmas = Nothing,
                 _signInstance = Nothing,
-                _signDoc = Nothing,
+                _functionDefDoc = Nothing,
                 _signCoercion = Nothing,
                 _signBuiltin = Nothing,
                 _functionDefName = FunctionDefName name',

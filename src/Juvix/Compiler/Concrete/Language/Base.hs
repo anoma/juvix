@@ -739,8 +739,8 @@ instance NFData FunctionDefNameScoped
 data FunctionDef (s :: Stage) = FunctionDef
   { _functionDefName :: FunctionSymbolType s,
     _functionDefTypesig :: TypeSig s,
-    _signDoc :: Maybe (Judoc s),
-    _signPragmas :: Maybe ParsedPragmas,
+    _functionDefDoc :: Maybe (Judoc s),
+    _functionDefPragmas :: Maybe ParsedPragmas,
     _signBuiltin :: Maybe (WithLoc BuiltinFunction),
     _signBody :: FunctionDefBody s,
     _signTerminating :: Maybe KeywordRef,
@@ -3536,8 +3536,8 @@ instance (SingI s) => HasLoc (FunctionDefBody s) where
 
 instance (SingI s) => HasLoc (FunctionDef s) where
   getLoc FunctionDef {..} =
-    (getLoc <$> _signDoc)
-      ?<> (getLoc <$> _signPragmas)
+    (getLoc <$> _functionDefDoc)
+      ?<> (getLoc <$> _functionDefPragmas)
       ?<> (getLoc <$> _signBuiltin)
       ?<> (getLoc <$> _signTerminating)
       ?<> (getLocFunctionSymbolType _functionDefName)

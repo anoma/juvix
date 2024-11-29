@@ -1192,7 +1192,7 @@ checkFunctionDef ::
   FunctionDef 'Parsed ->
   Sem r (FunctionDef 'Scoped)
 checkFunctionDef fdef@FunctionDef {..} = do
-  sigDoc' <- mapM checkJudoc _signDoc
+  sigDoc' <- mapM checkJudoc _functionDefDoc
   (sig', sigBody') <- withLocalScope $ do
     a' <- checkTypeSig _functionDefTypesig
     b' <- checkBody
@@ -1220,7 +1220,7 @@ checkFunctionDef fdef@FunctionDef {..} = do
   let def =
         FunctionDef
           { _functionDefName = sigName',
-            _signDoc = sigDoc',
+            _functionDefDoc = sigDoc',
             _signBody = sigBody',
             _functionDefTypesig = sig',
             ..

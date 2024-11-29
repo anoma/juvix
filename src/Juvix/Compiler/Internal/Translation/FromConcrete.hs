@@ -902,10 +902,10 @@ goFunctionDef def@FunctionDef {..} = do
       _funDefCoercion = isJust _signCoercion
       _funDefBuiltin = (^. withLocParam) <$> _signBuiltin
   _funDefType <- goDefType (functionDefLhs def)
-  _funDefPragmas <- goPragmas _signPragmas
+  _funDefPragmas <- goPragmas _functionDefPragmas
   _funDefBody <- goBody
   _funDefArgsInfo <- goArgsInfo _funDefName
-  let _funDefDocComment = fmap ppPrintJudoc _signDoc
+  let _funDefDocComment = fmap ppPrintJudoc _functionDefDoc
       fun = Internal.FunctionDef {..}
   whenJust _signBuiltin (checkBuiltinFunction fun . (^. withLocParam))
   case _functionDefName ^. functionDefNamePattern of

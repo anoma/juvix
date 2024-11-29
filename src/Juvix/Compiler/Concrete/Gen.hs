@@ -35,8 +35,8 @@ simplestFunctionDef funName funBody =
             _typeSigArgs = [],
             _typeSigRetType = Nothing
           },
-      _signDoc = Nothing,
-      _signPragmas = Nothing,
+      _functionDefDoc = Nothing,
+      _functionDefPragmas = Nothing,
       _signBuiltin = Nothing,
       _signTerminating = Nothing,
       _signInstance = Nothing,

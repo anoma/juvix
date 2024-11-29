@@ -1205,8 +1205,8 @@ ppPipeBranches allowSameLine isTop ppBranch = \case
 instance (SingI s) => PrettyPrint (FunctionDef s) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => FunctionDef s -> Sem r ()
   ppCode fun@FunctionDef {..} = do
-    let doc' :: Maybe (Sem r ()) = ppCode <$> _signDoc
-        pragmas' :: Maybe (Sem r ()) = ppCode <$> _signPragmas
+    let doc' :: Maybe (Sem r ()) = ppCode <$> _functionDefDoc
+        pragmas' :: Maybe (Sem r ()) = ppCode <$> _functionDefPragmas
         sig' = ppCode (functionDefLhs fun)
         body' = case _signBody of
           SigBodyExpression e -> space <> ppCode Kw.kwAssign <> oneLineOrNext (ppTopExpressionType e)

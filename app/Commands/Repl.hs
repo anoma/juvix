@@ -293,7 +293,7 @@ printDocumentation = replParseIdentifiers >=> printIdentifiers
             getDocFunction fun = do
               tbl :: Scoped.InfoTable <- getScopedInfoTable
               let def = tbl ^?! Scoped.infoFunctions . at fun . _Just
-              return (def ^. Concrete.signDoc)
+              return (def ^. Concrete.functionDefDoc)
 
             getDocInductive :: Scoped.NameId -> Repl (Maybe (Concrete.Judoc 'Concrete.Scoped))
             getDocInductive ind = do
