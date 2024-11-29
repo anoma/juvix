@@ -1,7 +1,10 @@
 module M;
 
 trait
-type T A := mkT@{pp : A → A};
+type T A :=
+  mkT@{
+    pp : A → A;
+  };
 
 type Unit := unit;
 

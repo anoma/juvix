@@ -9,7 +9,10 @@ g (x : Nat) : Nat :=
     x := x;
   };
 
-type R := mkR@{rf (x : Nat) : Nat};
+type R :=
+  mkR@{
+    rf (x : Nat) : Nat;
+  };
 
 type R' := mkR' (rf : Nat -> Nat) : R';
 

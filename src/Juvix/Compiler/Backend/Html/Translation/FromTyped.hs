@@ -584,7 +584,7 @@ goConstructors cc = do
 
         srcPart :: Sem r Html
         srcPart = do
-          sig' <- ppHelper (ppConstructorDef False (set constructorDoc Nothing c))
+          sig' <- ppHelper (ppCode (set constructorDoc Nothing c))
           return
             $ td
               ! Attr.class_ "src"

@@ -7,9 +7,13 @@ import Logic.Extra open;
 --- A square is each of the holes in a board
 type Square :=
   | --- An empty square has a ;Nat; that uniquely identifies it
-    empty@{id : Nat}
+    empty@{
+      id : Nat;
+    }
   | --- An occupied square has a ;Symbol; in it
-    occupied@{player : Symbol};
+    occupied@{
+      player : Symbol;
+    };
 
 instance
 eqSquareI : Eq Square :=

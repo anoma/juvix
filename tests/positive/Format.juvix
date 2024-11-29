@@ -53,7 +53,7 @@ case4 (n : Nat) : Nat :=
     | zero := case n of {x := zero}
     | _ := zero;
 
--- -- case with application subject
+-- case with application subject
 case5 (n : Nat) : Nat := case id n of x := zero;
 
 -- qualified commas
@@ -274,7 +274,8 @@ module Comments;
   type color : Type :=
     -- comment before pipe
     | black : color
-    | white : color
+    | --- documentation for white
+      white : color
     | red : color
     -- comment before pipe
     | blue : color;
@@ -309,7 +310,10 @@ module Traits;
   import Stdlib.Prelude open hiding {Show; mkShow; module Show};
 
   trait
-  type Show A := mkShow@{show : A → String};
+  type Show A :=
+    mkShow@{
+      show : A → String;
+    };
 
   instance
   showStringI : Show String :=
@@ -394,6 +398,18 @@ module RecordFieldPragmas;
       {-# inline: false #-}
       psnd : B;
     };
+end;
+
+module MultiConstructorRecord;
+  type Tree (A : Type) :=
+    | leaf@{
+        element : A;
+      }
+    | node@{
+        element : A;
+        left : Tree A;
+        right : Tree A;
+      };
 end;
 
 longLongLongArg : Int := 0;

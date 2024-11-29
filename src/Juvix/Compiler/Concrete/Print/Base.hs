@@ -677,36 +677,33 @@ ppCaseBranch :: forall r s. (Members '[ExactPrint, Reader Options] r, SingI s) =
 ppCaseBranch isTop CaseBranch {..} = do
   let pat' = ppPatternParensType _caseBranchPattern
       rhs' = ppCaseBranchRhs isTop _caseBranchRhs
-  pat' <+> rhs'
+      pipe' = ppCode <$> (_caseBranchPipe ^. unIrrelevant)
+  pipe' <?+> pat' <+> rhs'
 
 ppCase :: forall r s. (Members '[ExactPrint, Reader Options] r, SingI s) => IsTop -> Case s -> Sem r ()
-ppCase isTop Case {..} = do
-  let exp' = ppExpressionType _caseExpression
-  align $ ppCode _caseKw <> oneLineOrNextBlock exp' <> ppCode _caseOfKw <> ppBranches _caseBranches
+ppCase isTop c = do
+  let exp' = ppExpressionType (c ^. caseExpression)
+
+  align $ ppCode (c ^. caseKw) <> oneLineOrNextBlock exp' <> ppCode (c ^. caseOfKw) <> ppBranches branches'
   where
+    branches' = insertFirstPipe1 (caseBranchPipe . unIrrelevant) (c ^. caseBranches)
+
     ppBranches :: NonEmpty (CaseBranch s) -> Sem r ()
     ppBranches = \case
       b :| [] -> case isTop of
-        Top -> oneLineOrNext (ppCaseBranch' True Top b)
-        NotTop -> space <> oneLineOrNextBraces (ppCaseBranch' True NotTop b)
+        Top -> oneLineOrNext (ppCaseBranch' Top b)
+        NotTop -> space <> oneLineOrNextBraces (ppCaseBranch' NotTop b)
       _ -> case isTop of
         Top -> do
           let brs =
-                vsepHard (ppCaseBranch' False NotTop <$> NonEmpty.init _caseBranches)
+                vsepHard (ppCaseBranch' NotTop <$> NonEmpty.init branches')
                   <> hardline
-                  <> ppCaseBranch' False Top (NonEmpty.last _caseBranches)
+                  <> ppCaseBranch' Top (NonEmpty.last branches')
           hardline <> indent brs
-        NotTop -> space <> braces (blockIndent (vsepHard (ppCaseBranch' False NotTop <$> _caseBranches)))
+        NotTop -> space <> braces (blockIndent (vsepHard (ppCaseBranch' NotTop <$> branches')))
 
-    ppCaseBranch' :: Bool -> IsTop -> CaseBranch s -> Sem r ()
-    ppCaseBranch' singleBranch lastTopBranch b = pipeHelper <?+> ppCaseBranch lastTopBranch b
-      where
-        pipeHelper :: Maybe (Sem r ())
-        pipeHelper
-          | singleBranch = Nothing
-          | otherwise = Just $ case b ^. caseBranchPipe . unIrrelevant of
-              Just p -> ppCode p
-              Nothing -> ppCode Kw.kwPipe
+    ppCaseBranch' :: IsTop -> CaseBranch s -> Sem r ()
+    ppCaseBranch' lastTopBranch b = ppCaseBranch lastTopBranch b
 
 instance (SingI s) => PrettyPrint (IfBranch s 'BranchIfBool) where
   ppCode IfBranch {..} = do
@@ -863,10 +860,19 @@ instance (SingI s) => PrettyPrint (Lambda s) where
   ppCode Lambda {..} = do
     let lambdaKw' = ppCode _lambdaKw
         braces' = uncurry enclose (over both ppCode (_lambdaBraces ^. unIrrelevant))
-        lambdaClauses' = braces' $ case _lambdaClauses of
+        lambdaClauses' = braces' $ case insertFirstPipe1 (lambdaPipe . unIrrelevant) _lambdaClauses of
           s :| [] -> ppCode s
-          _ -> blockIndent (vsepHard (ppCode <$> _lambdaClauses))
+          clauses' -> blockIndent (vsepHard (ppCode <$> clauses'))
     lambdaKw' <> lambdaClauses'
+
+-- | Inserts a pipe to the first element when it is not already there and the
+-- list has more than one element
+insertFirstPipe1 :: (HasLoc a) => Lens' a (Maybe KeywordRef) -> NonEmpty a -> NonEmpty a
+insertFirstPipe1 pipekw l = case l of
+  _ :| [] -> l
+  a :| as ->
+    let p = run (runReader (getLoc a) (Gen.kw Kw.kwPipe))
+     in over pipekw (<|> Just p) a :| as
 
 instance PrettyPrint Precedence where
   ppCode = \case
@@ -1144,7 +1150,8 @@ instance (SingI s) => PrettyPrint (SigArg s) where
 
 instance (SingI s) => PrettyPrint (Deriving s) where
   ppCode Deriving {..} =
-    ppCode _derivingKw
+    (ppCode <$> _derivingPragmas)
+      ?<> ppCode _derivingKw
       <+> ppCode _derivingFunLhs
 
 instance (SingI s) => PrettyPrint (TypeSig s) where
@@ -1447,8 +1454,7 @@ instance (SingI s) => PrettyPrint (RhsRecord s) where
   ppCode RhsRecord {..} = do
     let Irrelevant (_, l, r) = _rhsRecordDelim
         fields'
-          | [] <- _rhsRecordStatements = mempty
-          | [f] <- _rhsRecordStatements = ppCode f
+          | null _rhsRecordStatements = mempty
           | otherwise = ppBlock _rhsRecordStatements
     ppCode kwAt <> ppCode l <> fields' <> ppCode r
 
@@ -1462,36 +1468,30 @@ instance (SingI s) => PrettyPrint (ConstructorRhs s) where
     ConstructorRhsRecord r -> ppCode r
     ConstructorRhsAdt r -> ppCode r
 
-ppConstructorDef :: forall s r. (SingI s, Members '[ExactPrint, Reader Options] r) => Bool -> ConstructorDef s -> Sem r ()
-ppConstructorDef singleConstructor ConstructorDef {..} = do
-  let constructorName' = annDef _constructorName (ppSymbolType _constructorName)
-      constructorRhs' = constructorRhsHelper _constructorRhs
-      doc' = ppCode <$> _constructorDoc
-      pragmas' = ppCode <$> _constructorPragmas
-  pipeHelper <?+> nestHelper (doc' ?<> pragmas' ?<> constructorName' <> constructorRhs')
-  where
-    constructorRhsHelper :: ConstructorRhs s -> Sem r ()
-    constructorRhsHelper r = spaceMay <> ppCode r
-      where
-        spaceMay = case r of
-          ConstructorRhsGadt {} -> mempty
-          ConstructorRhsRecord {} -> mempty
-          ConstructorRhsAdt a
-            | null (a ^. rhsAdtArguments) -> mempty
-            | otherwise -> space
+instance (SingI s) => PrettyPrint (ConstructorDef s) where
+  ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => ConstructorDef s -> Sem r ()
+  ppCode ConstructorDef {..} = do
+    let constructorName' = annDef _constructorName (ppSymbolType _constructorName)
+        constructorRhs' = constructorRhsHelper _constructorRhs
+        doc' = ppCode <$> _constructorDoc
+        pragmas' = ppCode <$> _constructorPragmas
+        pipe = ppCode <$> (_constructorPipe ^. unIrrelevant)
 
-    nestHelper :: Sem r () -> Sem r ()
-    nestHelper
-      | singleConstructor = id
-      | otherwise = nest
-
-    -- we use this helper so that comments appear before the first optional pipe if the pipe was omitted
-    pipeHelper :: Maybe (Sem r ())
-    pipeHelper
-      | singleConstructor = Nothing
-      | otherwise = Just $ case _constructorPipe ^. unIrrelevant of
-          Just p -> ppCode p
-          Nothing -> ppCode Kw.kwPipe
+        nestCond :: Sem r () -> Sem r ()
+        nestCond x = case _constructorPipe ^. unIrrelevant of
+          Just p -> printCommentsUntil (getLoc p) >> nest x
+          Nothing -> x
+    nestCond (pipe <?+> doc' ?<> pragmas' ?<> constructorName' <> constructorRhs')
+    where
+      constructorRhsHelper :: ConstructorRhs s -> Sem r ()
+      constructorRhsHelper r = spaceMay <> ppCode r
+        where
+          spaceMay = case r of
+            ConstructorRhsGadt {} -> mempty
+            ConstructorRhsRecord {} -> mempty
+            ConstructorRhsAdt a
+              | null (a ^. rhsAdtArguments) -> mempty
+              | otherwise -> space
 
 ppInductiveSignature :: (SingI s) => PrettyPrinting (InductiveDef s)
 ppInductiveSignature InductiveDef {..} = do
@@ -1518,7 +1518,7 @@ instance (SingI s) => PrettyPrint (InductiveDef s) where
   ppCode d@InductiveDef {..} = do
     let doc' = ppCode <$> _inductiveDoc
         pragmas' = ppCode <$> _inductivePragmas
-        constrs' = ppConstructorBlock _inductiveConstructors
+        constrs' = ppConstructorBlock (insertFirstPipe1 (constructorPipe . unIrrelevant) _inductiveConstructors)
         sig' = ppInductiveSignature d
     doc'
       ?<> pragmas'
@@ -1528,8 +1528,9 @@ instance (SingI s) => PrettyPrint (InductiveDef s) where
     where
       ppConstructorBlock :: NonEmpty (ConstructorDef s) -> Sem r ()
       ppConstructorBlock = \case
-        c :| [] -> oneLineOrNext (ppConstructorDef True c)
-        cs -> line <> indent (vsep (ppConstructorDef False <$> cs))
+        c :| []
+          | not (has (constructorRhs . _ConstructorRhsRecord . rhsRecordStatements . each) c) -> oneLineOrNext (ppCode c)
+        cs -> hardline <> indent (vsep (ppCode <$> cs))
 
 instance (SingI s) => PrettyPrint (ProjectionDef s) where
   ppCode ProjectionDef {..} =
