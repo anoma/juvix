@@ -897,7 +897,7 @@ goFunctionDef def@FunctionDef {..} = do
       _funDefTerminating = isJust _functionDefTerminating
       _funDefIsInstanceCoercion
         | isJust _signCoercion = Just Internal.IsInstanceCoercionCoercion
-        | isJust _signInstance = Just Internal.IsInstanceCoercionInstance
+        | isJust _functionDefInstance = Just Internal.IsInstanceCoercionInstance
         | otherwise = Nothing
       _funDefCoercion = isJust _signCoercion
       _funDefBuiltin = (^. withLocParam) <$> _functionDefBuiltin

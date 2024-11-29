@@ -39,7 +39,7 @@ simplestFunctionDef funName funBody =
       _functionDefPragmas = Nothing,
       _functionDefBuiltin = Nothing,
       _functionDefTerminating = Nothing,
-      _signInstance = Nothing,
+      _functionDefInstance = Nothing,
       _signCoercion = Nothing
     }
   where

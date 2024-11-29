@@ -1448,7 +1448,7 @@ functionDefinition opts _functionDefBuiltin = P.label "<function definition>" $ 
           { _functionDefName = _funLhsName,
             _functionDefTypesig = _funLhsTypeSig,
             _functionDefTerminating = _funLhsTerminating,
-            _signInstance = _funLhsInstance,
+            _functionDefInstance = _funLhsInstance,
             _signCoercion = _funLhsCoercion,
             _functionDefBuiltin = _funLhsBuiltin,
             _functionDefDoc,

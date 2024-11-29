@@ -95,7 +95,7 @@ toConcrete t p = run . runReader l $ do
             FunctionDef
               { _functionDefTerminating = Nothing,
                 _functionDefPragmas = Nothing,
-                _signInstance = Nothing,
+                _functionDefInstance = Nothing,
                 _functionDefDoc = Nothing,
                 _signCoercion = Nothing,
                 _functionDefBuiltin = Nothing,

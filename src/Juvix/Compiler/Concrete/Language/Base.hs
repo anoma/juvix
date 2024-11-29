@@ -730,7 +730,7 @@ instance NFData FunctionDefNameScoped
 --   FunctionLhs
 --     { _funLhsBuiltin = _functionDefBuiltin,
 --       _funLhsTerminating = _functionDefTerminating,
---       _funLhsInstance = _signInstance,
+--       _funLhsInstance = _functionDefInstance,
 --       _funLhsCoercion = _signCoercion,
 --       _funLhsName = _signName,
 --       _funLhsTypeSig = _functionDefTypesig
@@ -744,7 +744,7 @@ data FunctionDef (s :: Stage) = FunctionDef
     _functionDefBuiltin :: Maybe (WithLoc BuiltinFunction),
     _functionDefBody :: FunctionDefBody s,
     _functionDefTerminating :: Maybe KeywordRef,
-    _signInstance :: Maybe KeywordRef,
+    _functionDefInstance :: Maybe KeywordRef,
     _signCoercion :: Maybe KeywordRef
   }
   deriving stock (Generic)
@@ -3073,7 +3073,7 @@ functionDefLhs FunctionDef {..} =
   FunctionLhs
     { _funLhsBuiltin = _functionDefBuiltin,
       _funLhsTerminating = _functionDefTerminating,
-      _funLhsInstance = _signInstance,
+      _funLhsInstance = _functionDefInstance,
       _funLhsCoercion = _signCoercion,
       _funLhsName = _functionDefName,
       _funLhsTypeSig = _functionDefTypesig
