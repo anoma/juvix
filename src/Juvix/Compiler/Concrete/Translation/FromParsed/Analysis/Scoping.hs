@@ -3266,17 +3266,7 @@ checkAliasDef def@AliasDef {..} = do
       aliasId <- gets (^?! scopeLocalSymbols . at (a ^. aliasDefName) . _Just . S.nameId)
       asName <- checkName (a ^. aliasDefAsName)
       modify' (set (scoperAlias . at aliasId) (Just asName))
-      checkLoop aliasId
       registerAlias aliasId asName
-      where
-        checkLoop :: NameId -> Sem r ()
-        checkLoop = evalState (mempty :: HashSet NameId) . go
-          where
-            go :: (Members '[State (HashSet NameId), Error ScoperError, State ScoperState] s) => NameId -> Sem s ()
-            go i = do
-              whenM (gets (HashSet.member i)) (throw (ErrAliasCycle (AliasCycle a)))
-              modify' (HashSet.insert i)
-              whenJustM (gets (^? scoperAlias . at i . _Just . preSymbolName . S.nameId)) go
 
 reserveAliasDef ::
   (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, State ScoperSyntax, Reader BindingStrategy] r) =>

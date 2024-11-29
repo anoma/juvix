@@ -1019,28 +1019,6 @@ instance ToGenericError IncomaprablePrecedences where
       i :: Interval
       i = getLoc _incomparablePrecedencesName1
 
-newtype AliasCycle = AliasCycle
-  { _aliasCycleDef :: AliasDef 'Parsed
-  }
-  deriving stock (Show)
-
-instance ToGenericError AliasCycle where
-  genericError AliasCycle {..} = do
-    opts <- fromGenericOptions <$> ask
-    let msg =
-          "The definition of"
-            <+> ppCode opts (_aliasCycleDef ^. aliasDefName)
-            <+> "creates an alias cycle."
-    return
-      GenericError
-        { _genericErrorLoc = i,
-          _genericErrorMessage = mkAnsiText msg,
-          _genericErrorIntervals = [i]
-        }
-    where
-      i :: Interval
-      i = getLoc _aliasCycleDef
-
 newtype WrongDefaultValue = WrongDefaultValue
   { _wrongDefaultValue :: SigArg 'Parsed
   }
