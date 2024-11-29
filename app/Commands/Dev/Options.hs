@@ -53,7 +53,7 @@ data DevCommand
   | JuvixDevRepl ReplOptions
   | MigrateJuvixYaml MigrateJuvixYamlOptions
   | Nockma NockmaCommand
-  | Anoma AnomaCommand
+  | Anoma AnomaCommandGlobal
   deriving stock (Data)
 
 parseDevCommand :: Parser DevCommand
@@ -212,7 +212,25 @@ commandNockma =
 
 commandAnoma :: Mod CommandFields DevCommand
 commandAnoma =
-  command "anoma" $
-    info
-      (Anoma <$> parseAnomaCommand)
-      (progDesc "Subcommands related to the Anoma client")
+  let descr :: (IsString a) => a
+      descr = "Subcommands related to the Anoma client"
+   in command "anoma" $
+        info
+          (Anoma <$> parseAnomaCommand)
+          ( headerDoc
+              ( Just
+                  ( vsep
+                      [ descr,
+                        "",
+                        "By default, the gRPC request is made to the client that is started by juvix dev anoma start.",
+                        "Use the -c/--config option to use a different Anoma client.",
+                        "The config file format is:",
+                        "",
+                        "url: <ANOMA_CLIENT_URL>",
+                        "port: <ANOMA_CLIENT_GRPC_PORT>",
+                        "nodeid: <ANOMA_CLIENT_NODE_ID>"
+                      ]
+                  )
+              )
+              <> progDesc descr
+          )

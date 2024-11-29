@@ -5,7 +5,6 @@ import CommonOptions
 data ProveOptions = ProveOptions
   { _proveFile :: AppPath File,
     _proveArgs :: Maybe (AppPath File),
-    _proveClientInfo :: Maybe (AppPath File),
     _proveOutputFile :: Maybe (AppPath File)
   }
   deriving stock (Data)
@@ -16,6 +15,5 @@ parseProveOptions :: Parser ProveOptions
 parseProveOptions = do
   _proveFile <- parseInputFile FileExtNockma
   _proveArgs <- optional anomaArgsOpt
-  _proveClientInfo <- optional anomaClientConfigOpt
   _proveOutputFile <- optional parseGenericOutputFile
   pure ProveOptions {..}
