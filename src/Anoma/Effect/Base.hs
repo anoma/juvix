@@ -6,8 +6,11 @@ module Anoma.Effect.Base
   ( Anoma,
     anomaRpc,
     anomaListMethods,
+    getNodeInfo,
     runAnomaEphemeral,
     runAnomaWithClient,
+    fromJSONErr,
+    logMessageValue,
     module Anoma.Rpc.Base,
     module Anoma.Client.Base,
     module Juvix.Compiler.Nockma.Translation.FromTree,
@@ -23,12 +26,15 @@ import Juvix.Compiler.Nockma.Translation.FromTree (AnomaResult)
 import Juvix.Data.CodeAnn
 import Juvix.Prelude
 import Juvix.Prelude.Aeson (Value, eitherDecodeStrict, encode)
+import Juvix.Prelude.Aeson qualified as Aeson
 
 data Anoma :: Effect where
   -- | gRPC call
   AnomaRpc :: GrpcMethodUrl -> Value -> Anoma m Value
   -- | List all gRPC methods using server reflection
   AnomaListMethods :: Anoma m [GrpcMethodUrl]
+  -- | Get information on the node that the client sends messages to
+  GetNodeInfo :: Anoma m NodeInfo
 
 makeSem ''Anoma
 
@@ -98,17 +104,36 @@ runAnomaEphemeral :: forall r a. (Members '[Logger, EmbedIO, Error SimpleError] 
 runAnomaEphemeral anomapath body = runEnvironment . runReader anomapath . runProcess $ do
   cproc <- anomaClientCreateProcess LaunchModeAttached
   withCreateProcess cproc $ \_stdin mstdout _stderr _procHandle -> do
-    grpcServer <- setupAnomaClientProcess (fromJust mstdout)
-    runReader grpcServer $ do
+    grpcInfo <- hardcodeNodeId <$> setupAnomaClientProcess (fromJust mstdout)
+    runReader grpcInfo $ do
       (`interpret` inject body) $ \case
         AnomaRpc method i -> anomaRpc' method i
         AnomaListMethods -> anomaListMethods'
+        GetNodeInfo -> return NodeInfo {_nodeInfoId = grpcInfo ^. anomaClientInfoNodeId}
 
 runAnomaWithClient :: forall r a. (Members '[Logger, EmbedIO, Error SimpleError] r) => AnomaClientInfo -> Sem (Anoma ': r) a -> Sem r a
-runAnomaWithClient grpcInfo body =
+runAnomaWithClient grpcInfo body = do
+  let grpcInfo' = hardcodeNodeId grpcInfo
   runProcess
-    . runReader grpcInfo
+    . runReader grpcInfo'
     $ (`interpret` inject body)
     $ \case
       AnomaRpc method i -> anomaRpc' method i
       AnomaListMethods -> anomaListMethods'
+      GetNodeInfo -> return NodeInfo {_nodeInfoId = grpcInfo' ^. anomaClientInfoNodeId}
+
+fromJSONErr :: (Members '[Error SimpleError, Logger] r) => (Aeson.FromJSON a) => Value -> Sem r a
+fromJSONErr v = case Aeson.fromJSON v of
+  Aeson.Success r -> return r
+  Aeson.Error err -> throw (SimpleError (mkAnsiText err))
+
+logMessageValue :: (Aeson.ToJSON val, Member Logger r) => Text -> val -> Sem r ()
+logMessageValue title val = logVerbose (mkAnsiText (annotate AnnImportant (pretty title <> ":\n") <> pretty (Aeson.jsonEncodeToPrettyText val)))
+
+-- 2024-11-27: This node id is hardcoded for now because:
+-- 1. The gRPC client crashes if the Anoma client node_id is not a valid base64 string
+-- 2. The client node_id is frequently not a valid base64 string
+-- 2. The node_id is unused in gRPC requests so will likely be removed
+--    See: https://github.com/anoma/anoma/issues/1635
+hardcodeNodeId :: AnomaClientInfo -> AnomaClientInfo
+hardcodeNodeId = set anomaClientInfoNodeId "40872587"
