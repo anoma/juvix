@@ -1194,7 +1194,7 @@ checkFunctionDef ::
 checkFunctionDef fdef@FunctionDef {..} = do
   sigDoc' <- mapM checkJudoc _signDoc
   (sig', sigBody') <- withLocalScope $ do
-    a' <- checkTypeSig _signTypeSig
+    a' <- checkTypeSig _functionDefTypesig
     b' <- checkBody
     return (a', b')
   whenJust (functionSymbolPattern _functionDefName) reservePatternFunctionSymbols
@@ -1222,7 +1222,7 @@ checkFunctionDef fdef@FunctionDef {..} = do
           { _functionDefName = sigName',
             _signDoc = sigDoc',
             _signBody = sigBody',
-            _signTypeSig = sig',
+            _functionDefTypesig = sig',
             ..
           }
   registerNameSignature (sigName' ^. functionDefNameScoped . S.nameId) def

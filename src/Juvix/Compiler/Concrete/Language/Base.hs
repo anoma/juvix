@@ -733,12 +733,12 @@ instance NFData FunctionDefNameScoped
 --       _funLhsInstance = _signInstance,
 --       _funLhsCoercion = _signCoercion,
 --       _funLhsName = _signName,
---       _funLhsTypeSig = _signTypeSig
+--       _funLhsTypeSig = _functionDefTypesig
 --     }
 
 data FunctionDef (s :: Stage) = FunctionDef
   { _functionDefName :: FunctionSymbolType s,
-    _signTypeSig :: TypeSig s,
+    _functionDefTypesig :: TypeSig s,
     _signDoc :: Maybe (Judoc s),
     _signPragmas :: Maybe ParsedPragmas,
     _signBuiltin :: Maybe (WithLoc BuiltinFunction),
@@ -3076,7 +3076,7 @@ functionDefLhs FunctionDef {..} =
       _funLhsInstance = _signInstance,
       _funLhsCoercion = _signCoercion,
       _funLhsName = _functionDefName,
-      _funLhsTypeSig = _signTypeSig
+      _funLhsTypeSig = _functionDefTypesig
     }
 
 fixityFieldHelper :: SimpleGetter (ParsedFixityFields s) (Maybe a) -> SimpleGetter (ParsedFixityInfo s) (Maybe a)

@@ -1446,7 +1446,7 @@ functionDefinition opts _signBuiltin = P.label "<function definition>" $ do
   let fdef =
         FunctionDef
           { _functionDefName = _funLhsName,
-            _signTypeSig = _funLhsTypeSig,
+            _functionDefTypesig = _funLhsTypeSig,
             _signTerminating = _funLhsTerminating,
             _signInstance = _funLhsInstance,
             _signCoercion = _funLhsCoercion,

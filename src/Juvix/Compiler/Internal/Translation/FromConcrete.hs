@@ -917,7 +917,7 @@ goFunctionDef def@FunctionDef {..} = do
   where
     goBody :: Sem r Internal.Expression
     goBody = do
-      commonPatterns <- concatMapM (fmap toList . argToPattern) (_signTypeSig ^. typeSigArgs)
+      commonPatterns <- concatMapM (fmap toList . argToPattern) (_functionDefTypesig ^. typeSigArgs)
       let goClause :: FunctionClause 'Scoped -> Sem r Internal.LambdaClause
           goClause FunctionClause {..} = do
             _lambdaBody <- goExpression _clausenBody

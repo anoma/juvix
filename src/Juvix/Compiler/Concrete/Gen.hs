@@ -29,7 +29,7 @@ simplestFunctionDef funName funBody =
   FunctionDef
     { _functionDefName = name,
       _signBody = SigBodyExpression funBody,
-      _signTypeSig =
+      _functionDefTypesig =
         TypeSig
           { _typeSigColonKw = Irrelevant Nothing,
             _typeSigArgs = [],

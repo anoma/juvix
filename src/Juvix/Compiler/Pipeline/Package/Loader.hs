@@ -84,7 +84,7 @@ toConcrete t p = run . runReader l $ do
       name' <- symbol Str.package
       _typeSigColonKw <- Irrelevant . Just <$> kw kwColon
       let _signBody = (t ^. packageDescriptionTypeTransform) p
-          _signTypeSig =
+          _functionDefTypesig =
             TypeSig
               { _typeSigArgs = [],
                 _typeSigRetType,
@@ -101,7 +101,7 @@ toConcrete t p = run . runReader l $ do
                 _signBuiltin = Nothing,
                 _functionDefName = FunctionDefName name',
                 _signBody,
-                _signTypeSig
+                _functionDefTypesig
               }
         )
 
