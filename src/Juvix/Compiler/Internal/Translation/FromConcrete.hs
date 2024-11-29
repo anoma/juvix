@@ -896,10 +896,10 @@ goFunctionDef def@FunctionDef {..} = do
   let _funDefName = goSymbol (_functionDefName ^. functionDefNameScoped)
       _funDefTerminating = isJust _functionDefTerminating
       _funDefIsInstanceCoercion
-        | isJust _signCoercion = Just Internal.IsInstanceCoercionCoercion
+        | isJust _functionDefCoercion = Just Internal.IsInstanceCoercionCoercion
         | isJust _functionDefInstance = Just Internal.IsInstanceCoercionInstance
         | otherwise = Nothing
-      _funDefCoercion = isJust _signCoercion
+      _funDefCoercion = isJust _functionDefCoercion
       _funDefBuiltin = (^. withLocParam) <$> _functionDefBuiltin
   _funDefType <- goDefType (functionDefLhs def)
   _funDefPragmas <- goPragmas _functionDefPragmas

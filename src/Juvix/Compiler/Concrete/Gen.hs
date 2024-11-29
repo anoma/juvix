@@ -40,7 +40,7 @@ simplestFunctionDef funName funBody =
       _functionDefBuiltin = Nothing,
       _functionDefTerminating = Nothing,
       _functionDefInstance = Nothing,
-      _signCoercion = Nothing
+      _functionDefCoercion = Nothing
     }
   where
     name :: FunctionSymbolType s
