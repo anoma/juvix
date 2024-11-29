@@ -56,6 +56,15 @@ case4 (n : Nat) : Nat :=
 -- case with application subject
 case5 (n : Nat) : Nat := case id n of x := zero;
 
+-- case on function clause
+case6 : Nat -> Nat
+  | zero :=
+    case zero of {
+      | zero := zero
+      | _ := zero
+    }
+  | (suc n) := n;
+
 -- qualified commas
 t4 : String := "a" M., "b" M., "c" M., "d";
 
