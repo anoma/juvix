@@ -1696,25 +1696,7 @@ checkSections sec = topBindings helper
             -- checks the definitions in a section
             goDefsSection :: NonEmpty (Definition 'Parsed) -> Sem r' (NonEmpty (Definition 'Scoped))
             goDefsSection defs = do
-              mapM_ scanAlias (defs ^.. each . _DefinitionSyntax . _SyntaxAlias)
               mapM goDefinition defs
-
-            scanAlias :: AliasDef 'Parsed -> Sem r' ()
-            scanAlias a = do
-              aliasId <- gets (^?! scopeLocalSymbols . at (a ^. aliasDefName) . _Just . S.nameId)
-              asName <- checkName (a ^. aliasDefAsName)
-              modify' (set (scoperAlias . at aliasId) (Just asName))
-              checkLoop aliasId
-              registerAlias aliasId asName
-              where
-                checkLoop :: NameId -> Sem r' ()
-                checkLoop = evalState (mempty :: HashSet NameId) . go
-                  where
-                    go :: (Members '[State (HashSet NameId), Error ScoperError, State ScoperState] s) => NameId -> Sem s ()
-                    go i = do
-                      whenM (gets (HashSet.member i)) (throw (ErrAliasCycle (AliasCycle a)))
-                      modify' (HashSet.insert i)
-                      whenJustM (gets (^? scoperAlias . at i . _Just . preSymbolName . S.nameId)) go
 
             reserveDefinition :: Definition 'Parsed -> Sem r' (Maybe (Module 'Parsed 'ModuleLocal))
             reserveDefinition = \case
@@ -3253,7 +3235,7 @@ checkParsePatternAtom' ::
 checkParsePatternAtom' = localBindings . ignoreSyntax . runReader PatternNamesKindVariables . checkParsePatternAtom
 
 checkSyntaxDef ::
-  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader PackageId, State ScoperSyntax] r) =>
+  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader PackageId, State ScoperSyntax] r) =>
   SyntaxDef 'Parsed ->
   Sem r (SyntaxDef 'Scoped)
 checkSyntaxDef = \case
@@ -3263,10 +3245,12 @@ checkSyntaxDef = \case
   SyntaxIterator iterDef -> return $ SyntaxIterator iterDef
 
 checkAliasDef ::
-  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, State ScoperSyntax] r) =>
+  forall r.
+  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable, NameIdGen, State ScoperSyntax] r) =>
   AliasDef 'Parsed ->
   Sem r (AliasDef 'Scoped)
-checkAliasDef AliasDef {..} = do
+checkAliasDef def@AliasDef {..} = do
+  scanAlias def
   aliasName' :: S.Symbol <- gets (^?! scopeLocalSymbols . at _aliasDefName . _Just)
   asName' <- checkScopedIden _aliasDefAsName
   return
@@ -3275,6 +3259,24 @@ checkAliasDef AliasDef {..} = do
         _aliasDefAsName = asName',
         ..
       }
+  where
+    scanAlias :: AliasDef 'Parsed -> Sem r ()
+    scanAlias a = do
+      reserveAliasDef a
+      aliasId <- gets (^?! scopeLocalSymbols . at (a ^. aliasDefName) . _Just . S.nameId)
+      asName <- checkName (a ^. aliasDefAsName)
+      modify' (set (scoperAlias . at aliasId) (Just asName))
+      checkLoop aliasId
+      registerAlias aliasId asName
+      where
+        checkLoop :: NameId -> Sem r ()
+        checkLoop = evalState (mempty :: HashSet NameId) . go
+          where
+            go :: (Members '[State (HashSet NameId), Error ScoperError, State ScoperState] s) => NameId -> Sem s ()
+            go i = do
+              whenM (gets (HashSet.member i)) (throw (ErrAliasCycle (AliasCycle a)))
+              modify' (HashSet.insert i)
+              whenJustM (gets (^? scoperAlias . at i . _Just . preSymbolName . S.nameId)) go
 
 reserveAliasDef ::
   (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, State ScoperSyntax, Reader BindingStrategy] r) =>
@@ -3290,7 +3292,7 @@ resolveSyntaxDef = \case
   SyntaxFixity fixDef -> resolveFixitySyntaxDef fixDef
   SyntaxOperator opDef -> resolveOperatorSyntaxDef opDef
   SyntaxIterator iterDef -> resolveIteratorSyntaxDef iterDef
-  SyntaxAlias a -> reserveAliasDef a
+  SyntaxAlias {} -> return ()
 
 -------------------------------------------------------------------------------
 -- Check precedences are comparable
