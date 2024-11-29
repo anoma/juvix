@@ -894,7 +894,7 @@ goFunctionDef ::
   Sem r [Internal.FunctionDef]
 goFunctionDef def@FunctionDef {..} = do
   let _funDefName = goSymbol (_functionDefName ^. functionDefNameScoped)
-      _funDefTerminating = isJust _signTerminating
+      _funDefTerminating = isJust _functionDefTerminating
       _funDefIsInstanceCoercion
         | isJust _signCoercion = Just Internal.IsInstanceCoercionCoercion
         | isJust _signInstance = Just Internal.IsInstanceCoercionInstance

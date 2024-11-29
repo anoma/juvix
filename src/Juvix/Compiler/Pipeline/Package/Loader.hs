@@ -93,7 +93,7 @@ toConcrete t p = run . runReader l $ do
       return
         ( StatementFunctionDef
             FunctionDef
-              { _signTerminating = Nothing,
+              { _functionDefTerminating = Nothing,
                 _functionDefPragmas = Nothing,
                 _signInstance = Nothing,
                 _functionDefDoc = Nothing,

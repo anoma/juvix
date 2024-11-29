@@ -38,7 +38,7 @@ simplestFunctionDef funName funBody =
       _functionDefDoc = Nothing,
       _functionDefPragmas = Nothing,
       _functionDefBuiltin = Nothing,
-      _signTerminating = Nothing,
+      _functionDefTerminating = Nothing,
       _signInstance = Nothing,
       _signCoercion = Nothing
     }
