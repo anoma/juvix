@@ -545,7 +545,7 @@ goDeriving def = do
 
 goFunctionDef :: forall r. (Members '[Reader HtmlOptions] r) => FunctionDef 'Scoped -> Sem r Html
 goFunctionDef def = do
-  sig <- ppHelper (ppCode (functionDefLhs def))
+  sig <- ppHelper (ppCode (def ^. functionDefLhs))
   defHeader (def ^. functionDefName . functionDefNameScoped) sig (def ^. functionDefDoc)
 
 goInductive :: forall r. (Members '[Reader HtmlOptions] r) => InductiveDef 'Scoped -> Sem r Html

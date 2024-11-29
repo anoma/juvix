@@ -439,7 +439,7 @@ reserveFunctionLikeSymbol ::
   Sem r ()
 reserveFunctionLikeSymbol f =
   when (P.isFunctionLike f) $
-    void (reserveFunctionSymbol (functionDefLhs f))
+    void (reserveFunctionSymbol (f ^. functionDefLhs))
 
 bindFixitySymbol ::
   (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, InfoTableBuilder, Reader InfoTable, State ScoperState, Reader BindingStrategy] r) =>
@@ -1192,18 +1192,19 @@ checkFunctionDef ::
   FunctionDef 'Parsed ->
   Sem r (FunctionDef 'Scoped)
 checkFunctionDef fdef@FunctionDef {..} = do
+  let FunctionLhs {..} = _functionDefLhs
   sigDoc' <- mapM checkJudoc _functionDefDoc
   (sig', sigBody') <- withLocalScope $ do
-    a' <- checkTypeSig _functionDefTypesig
+    a' <- checkTypeSig _funLhsTypeSig
     b' <- checkBody
     return (a', b')
-  whenJust (functionSymbolPattern _functionDefName) reservePatternFunctionSymbols
-  sigName' <- case _functionDefName of
+  whenJust (functionSymbolPattern _funLhsName) reservePatternFunctionSymbols
+  sigName' <- case _funLhsName of
     FunctionDefName name -> do
       name' <-
         if
             | P.isFunctionLike fdef -> getReservedDefinitionSymbol name
-            | otherwise -> reserveFunctionSymbol (functionDefLhs fdef)
+            | otherwise -> reserveFunctionSymbol (fdef ^. functionDefLhs)
       return
         FunctionDefNameScoped
           { _functionDefNameScoped = name',
@@ -1217,12 +1218,17 @@ checkFunctionDef fdef@FunctionDef {..} = do
           { _functionDefNameScoped = name',
             _functionDefNamePattern = Just p'
           }
-  let def =
+  let lhs' =
+        FunctionLhs
+          { _funLhsName = sigName',
+            _funLhsTypeSig = sig',
+            ..
+          }
+      def =
         FunctionDef
-          { _functionDefName = sigName',
+          { _functionDefLhs = lhs',
             _functionDefDoc = sigDoc',
             _functionDefBody = sigBody',
-            _functionDefTypesig = sig',
             ..
           }
   registerNameSignature (sigName' ^. functionDefNameScoped . S.nameId) def

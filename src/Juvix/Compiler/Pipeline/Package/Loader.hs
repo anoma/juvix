@@ -84,24 +84,28 @@ toConcrete t p = run . runReader l $ do
       name' <- symbol Str.package
       _typeSigColonKw <- Irrelevant . Just <$> kw kwColon
       let _functionDefBody = (t ^. packageDescriptionTypeTransform) p
-          _functionDefTypesig =
+          _funLhsTypeSig =
             TypeSig
               { _typeSigArgs = [],
                 _typeSigRetType,
                 _typeSigColonKw
               }
+          lhs =
+            FunctionLhs
+              { _funLhsTerminating = Nothing,
+                _funLhsCoercion = Nothing,
+                _funLhsBuiltin = Nothing,
+                _funLhsName = FunctionDefName name',
+                _funLhsInstance = Nothing,
+                _funLhsTypeSig
+              }
       return
         ( StatementFunctionDef
             FunctionDef
-              { _functionDefTerminating = Nothing,
-                _functionDefPragmas = Nothing,
-                _functionDefInstance = Nothing,
+              { _functionDefPragmas = Nothing,
+                _functionDefLhs = lhs,
                 _functionDefDoc = Nothing,
-                _functionDefCoercion = Nothing,
-                _functionDefBuiltin = Nothing,
-                _functionDefName = FunctionDefName name',
-                _functionDefBody,
-                _functionDefTypesig
+                _functionDefBody
               }
         )
 

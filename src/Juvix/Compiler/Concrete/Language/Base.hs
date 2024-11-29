@@ -725,27 +725,11 @@ instance Serialize FunctionDefNameScoped
 
 instance NFData FunctionDefNameScoped
 
--- functionDefLhs :: FunctionDef s -> FunctionLhs s
--- functionDefLhs FunctionDef {..} =
---   FunctionLhs
---     { _funLhsBuiltin = _functionDefBuiltin,
---       _funLhsTerminating = _functionDefTerminating,
---       _funLhsInstance = _functionDefInstance,
---       _funLhsCoercion = _functionDefCoercion,
---       _funLhsName = _signName,
---       _funLhsTypeSig = _functionDefTypesig
---     }
-
 data FunctionDef (s :: Stage) = FunctionDef
-  { _functionDefName :: FunctionSymbolType s,
-    _functionDefTypesig :: TypeSig s,
-    _functionDefDoc :: Maybe (Judoc s),
+  { _functionDefDoc :: Maybe (Judoc s),
     _functionDefPragmas :: Maybe ParsedPragmas,
-    _functionDefBuiltin :: Maybe (WithLoc BuiltinFunction),
-    _functionDefBody :: FunctionDefBody s,
-    _functionDefTerminating :: Maybe KeywordRef,
-    _functionDefInstance :: Maybe KeywordRef,
-    _functionDefCoercion :: Maybe KeywordRef
+    _functionDefLhs :: FunctionLhs s,
+    _functionDefBody :: FunctionDefBody s
   }
   deriving stock (Generic)
 
@@ -3068,16 +3052,23 @@ makePrisms ''NamedArgumentNew
 makePrisms ''ConstructorRhs
 makePrisms ''FunctionDefNameParsed
 
-functionDefLhs :: FunctionDef s -> FunctionLhs s
-functionDefLhs FunctionDef {..} =
-  FunctionLhs
-    { _funLhsBuiltin = _functionDefBuiltin,
-      _funLhsTerminating = _functionDefTerminating,
-      _funLhsInstance = _functionDefInstance,
-      _funLhsCoercion = _functionDefCoercion,
-      _funLhsName = _functionDefName,
-      _funLhsTypeSig = _functionDefTypesig
-    }
+functionDefBuiltin :: Lens' (FunctionDef s) (Maybe (WithLoc BuiltinFunction))
+functionDefBuiltin = functionDefLhs . funLhsBuiltin
+
+functionDefTerminating :: Lens' (FunctionDef s) (Maybe KeywordRef)
+functionDefTerminating = functionDefLhs . funLhsTerminating
+
+functionDefInstance :: Lens' (FunctionDef s) (Maybe KeywordRef)
+functionDefInstance = functionDefLhs . funLhsInstance
+
+functionDefCoercion :: Lens' (FunctionDef s) (Maybe KeywordRef)
+functionDefCoercion = functionDefLhs . funLhsCoercion
+
+functionDefName :: Lens' (FunctionDef s) (FunctionSymbolType s)
+functionDefName = functionDefLhs . funLhsName
+
+functionDefTypeSig :: Lens' (FunctionDef s) (TypeSig s)
+functionDefTypeSig = functionDefLhs . funLhsTypeSig
 
 fixityFieldHelper :: SimpleGetter (ParsedFixityFields s) (Maybe a) -> SimpleGetter (ParsedFixityInfo s) (Maybe a)
 fixityFieldHelper l = to (^? fixityFields . _Just . l . _Just)
@@ -3536,12 +3527,13 @@ instance (SingI s) => HasLoc (FunctionDefBody s) where
 
 instance (SingI s) => HasLoc (FunctionDef s) where
   getLoc FunctionDef {..} =
-    (getLoc <$> _functionDefDoc)
-      ?<> (getLoc <$> _functionDefPragmas)
-      ?<> (getLoc <$> _functionDefBuiltin)
-      ?<> (getLoc <$> _functionDefTerminating)
-      ?<> (getLocFunctionSymbolType _functionDefName)
-      <> getLoc _functionDefBody
+    let FunctionLhs {..} = _functionDefLhs
+     in (getLoc <$> _functionDefDoc)
+          ?<> (getLoc <$> _functionDefPragmas)
+          ?<> (getLoc <$> _funLhsBuiltin)
+          ?<> (getLoc <$> _funLhsTerminating)
+          ?<> (getLocFunctionSymbolType _funLhsName)
+          <> getLoc _functionDefBody
 
 instance HasLoc (Example s) where
   getLoc e = e ^. exampleLoc

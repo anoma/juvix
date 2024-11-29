@@ -893,22 +893,22 @@ goFunctionDef ::
   FunctionDef 'Scoped ->
   Sem r [Internal.FunctionDef]
 goFunctionDef def@FunctionDef {..} = do
-  let _funDefName = goSymbol (_functionDefName ^. functionDefNameScoped)
-      _funDefTerminating = isJust _functionDefTerminating
+  let _funDefName = goSymbol (def ^. functionDefName . functionDefNameScoped)
+      _funDefTerminating = isJust (def ^. functionDefTerminating)
       _funDefIsInstanceCoercion
-        | isJust _functionDefCoercion = Just Internal.IsInstanceCoercionCoercion
-        | isJust _functionDefInstance = Just Internal.IsInstanceCoercionInstance
+        | isJust (def ^. functionDefCoercion) = Just Internal.IsInstanceCoercionCoercion
+        | isJust (def ^. functionDefInstance) = Just Internal.IsInstanceCoercionInstance
         | otherwise = Nothing
-      _funDefCoercion = isJust _functionDefCoercion
-      _funDefBuiltin = (^. withLocParam) <$> _functionDefBuiltin
-  _funDefType <- goDefType (functionDefLhs def)
+      _funDefCoercion = isJust (def ^. functionDefCoercion)
+      _funDefBuiltin = (^. withLocParam) <$> (def ^. functionDefBuiltin)
+  _funDefType <- goDefType (def ^. functionDefLhs)
   _funDefPragmas <- goPragmas _functionDefPragmas
   _funDefBody <- goBody
   _funDefArgsInfo <- goArgsInfo _funDefName
   let _funDefDocComment = fmap ppPrintJudoc _functionDefDoc
       fun = Internal.FunctionDef {..}
-  whenJust _functionDefBuiltin (checkBuiltinFunction fun . (^. withLocParam))
-  case _functionDefName ^. functionDefNamePattern of
+  whenJust (def ^. functionDefBuiltin) (checkBuiltinFunction fun . (^. withLocParam))
+  case def ^. functionDefName . functionDefNamePattern of
     Just pat -> do
       pat' <- goPatternArg pat
       (fun :) <$> Internal.genPatternDefs _funDefName pat'
@@ -917,7 +917,7 @@ goFunctionDef def@FunctionDef {..} = do
   where
     goBody :: Sem r Internal.Expression
     goBody = do
-      commonPatterns <- concatMapM (fmap toList . argToPattern) (_functionDefTypesig ^. typeSigArgs)
+      commonPatterns <- concatMapM (fmap toList . argToPattern) (def ^. functionDefTypeSig . typeSigArgs)
       let goClause :: FunctionClause 'Scoped -> Sem r Internal.LambdaClause
           goClause FunctionClause {..} = do
             _lambdaBody <- goExpression _clausenBody
