@@ -99,7 +99,7 @@ toConcrete t p = run . runReader l $ do
                 _signDoc = Nothing,
                 _signCoercion = Nothing,
                 _signBuiltin = Nothing,
-                _signName = FunctionDefName name',
+                _functionDefName = FunctionDefName name',
                 _signBody,
                 _signTypeSig
               }

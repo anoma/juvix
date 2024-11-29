@@ -433,7 +433,7 @@ goDeriving ::
   Sem r Internal.FunctionDef
 goDeriving Deriving {..} = do
   let FunctionLhs {..} = _derivingFunLhs
-      name = goSymbol (_funLhsName ^. functionDefName)
+      name = goSymbol (_funLhsName ^. functionDefNameScoped)
   (funArgs, ret) <- Internal.unfoldFunType <$> goDefType _derivingFunLhs
   let (mtrait, traitArgs) = Internal.unfoldExpressionApp ret
   (n, der) <- findDerivingTrait mtrait
@@ -893,7 +893,7 @@ goFunctionDef ::
   FunctionDef 'Scoped ->
   Sem r [Internal.FunctionDef]
 goFunctionDef def@FunctionDef {..} = do
-  let _funDefName = goSymbol (_signName ^. functionDefName)
+  let _funDefName = goSymbol (_functionDefName ^. functionDefNameScoped)
       _funDefTerminating = isJust _signTerminating
       _funDefIsInstanceCoercion
         | isJust _signCoercion = Just Internal.IsInstanceCoercionCoercion
@@ -908,7 +908,7 @@ goFunctionDef def@FunctionDef {..} = do
   let _funDefDocComment = fmap ppPrintJudoc _signDoc
       fun = Internal.FunctionDef {..}
   whenJust _signBuiltin (checkBuiltinFunction fun . (^. withLocParam))
-  case _signName ^. functionDefNamePattern of
+  case _functionDefName ^. functionDefNamePattern of
     Just pat -> do
       pat' <- goPatternArg pat
       (fun :) <$> Internal.genPatternDefs _funDefName pat'
@@ -1319,7 +1319,7 @@ createArgumentBlocks appargs =
   where
     namedArgumentRefSymbol :: NamedArgumentNew 'Scoped -> S.Symbol
     namedArgumentRefSymbol = \case
-      NamedArgumentNewFunction p -> p ^. namedArgumentFunctionDef . signName . functionDefName
+      NamedArgumentNewFunction p -> p ^. namedArgumentFunctionDef . functionDefName . functionDefNameScoped
       NamedArgumentItemPun p -> over S.nameConcrete fromUnqualified' (p ^. namedArgumentReferencedSymbol . scopedIdenFinal)
     args0 :: HashSet S.Symbol = hashSet (namedArgumentRefSymbol <$> appargs)
     goBlock ::
@@ -1416,8 +1416,8 @@ goExpression = \case
                   funs
                     ^.. each
                       . namedArgumentFunctionDef
-                      . signName
                       . functionDefName
+                      . functionDefNameScoped
                       . to goSymbol
                 -- changes the kind from Variable to Function
                 updateKind :: Internal.Subs = Internal.subsKind funsNames KNameFunction

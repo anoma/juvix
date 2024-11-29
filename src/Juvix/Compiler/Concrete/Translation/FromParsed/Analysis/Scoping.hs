@@ -1129,7 +1129,7 @@ checkDeriving Deriving {..} = do
         | otherwise -> reserveFunctionSymbol lhs
   let defname' =
         FunctionDefNameScoped
-          { _functionDefName = name',
+          { _functionDefNameScoped = name',
             _functionDefNamePattern = Nothing
           }
   let lhs' =
@@ -1197,8 +1197,8 @@ checkFunctionDef fdef@FunctionDef {..} = do
     a' <- checkTypeSig _signTypeSig
     b' <- checkBody
     return (a', b')
-  whenJust (functionSymbolPattern _signName) reservePatternFunctionSymbols
-  sigName' <- case _signName of
+  whenJust (functionSymbolPattern _functionDefName) reservePatternFunctionSymbols
+  sigName' <- case _functionDefName of
     FunctionDefName name -> do
       name' <-
         if
@@ -1206,7 +1206,7 @@ checkFunctionDef fdef@FunctionDef {..} = do
             | otherwise -> reserveFunctionSymbol (functionDefLhs fdef)
       return
         FunctionDefNameScoped
-          { _functionDefName = name',
+          { _functionDefNameScoped = name',
             _functionDefNamePattern = Nothing
           }
     FunctionDefNamePattern p -> do
@@ -1214,18 +1214,18 @@ checkFunctionDef fdef@FunctionDef {..} = do
       p' <- runReader PatternNamesKindFunctions (checkParsePatternAtom p)
       return
         FunctionDefNameScoped
-          { _functionDefName = name',
+          { _functionDefNameScoped = name',
             _functionDefNamePattern = Just p'
           }
   let def =
         FunctionDef
-          { _signName = sigName',
+          { _functionDefName = sigName',
             _signDoc = sigDoc',
             _signBody = sigBody',
             _signTypeSig = sig',
             ..
           }
-  registerNameSignature (sigName' ^. functionDefName . S.nameId) def
+  registerNameSignature (sigName' ^. functionDefNameScoped . S.nameId) def
   registerFunctionDef @$> def
   where
     checkBody :: Sem r (FunctionDefBody 'Scoped)

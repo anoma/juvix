@@ -716,7 +716,7 @@ instance Serialize FunctionDefNameParsed
 instance NFData FunctionDefNameParsed
 
 data FunctionDefNameScoped = FunctionDefNameScoped
-  { _functionDefName :: S.Symbol,
+  { _functionDefNameScoped :: S.Symbol,
     _functionDefNamePattern :: Maybe PatternArg
   }
   deriving stock (Eq, Ord, Show, Generic)
@@ -725,8 +725,19 @@ instance Serialize FunctionDefNameScoped
 
 instance NFData FunctionDefNameScoped
 
+-- functionDefLhs :: FunctionDef s -> FunctionLhs s
+-- functionDefLhs FunctionDef {..} =
+--   FunctionLhs
+--     { _funLhsBuiltin = _signBuiltin,
+--       _funLhsTerminating = _signTerminating,
+--       _funLhsInstance = _signInstance,
+--       _funLhsCoercion = _signCoercion,
+--       _funLhsName = _signName,
+--       _funLhsTypeSig = _signTypeSig
+--     }
+
 data FunctionDef (s :: Stage) = FunctionDef
-  { _signName :: FunctionSymbolType s,
+  { _functionDefName :: FunctionSymbolType s,
     _signTypeSig :: TypeSig s,
     _signDoc :: Maybe (Judoc s),
     _signPragmas :: Maybe ParsedPragmas,
@@ -3064,7 +3075,7 @@ functionDefLhs FunctionDef {..} =
       _funLhsTerminating = _signTerminating,
       _funLhsInstance = _signInstance,
       _funLhsCoercion = _signCoercion,
-      _funLhsName = _signName,
+      _funLhsName = _functionDefName,
       _funLhsTypeSig = _signTypeSig
     }
 
@@ -3263,7 +3274,7 @@ getLocFunctionSymbolType = case sing :: SStage s of
 
 instance HasLoc FunctionDefNameScoped where
   getLoc FunctionDefNameScoped {..} =
-    getLoc _functionDefName
+    getLoc _functionDefNameScoped
       <>? (getLoc <$> _functionDefNamePattern)
 
 instance HasLoc FunctionDefNameParsed where
@@ -3529,7 +3540,7 @@ instance (SingI s) => HasLoc (FunctionDef s) where
       ?<> (getLoc <$> _signPragmas)
       ?<> (getLoc <$> _signBuiltin)
       ?<> (getLoc <$> _signTerminating)
-      ?<> (getLocFunctionSymbolType _signName)
+      ?<> (getLocFunctionSymbolType _functionDefName)
       <> getLoc _signBody
 
 instance HasLoc (Example s) where
@@ -3719,7 +3730,7 @@ getFunctionSymbol sym = case sing :: SStage s of
   SParsed -> case sym of
     FunctionDefName p -> p
     FunctionDefNamePattern {} -> impossibleError "invalid call"
-  SScoped -> sym ^. functionDefName
+  SScoped -> sym ^. functionDefNameScoped
 
 functionSymbolPattern :: forall s. (SingI s) => FunctionSymbolType s -> Maybe (PatternAtomType s)
 functionSymbolPattern f = case sing :: SStage s of
@@ -3729,19 +3740,19 @@ functionSymbolPattern f = case sing :: SStage s of
 withFunctionSymbol :: forall s a. (SingI s) => a -> (SymbolType s -> a) -> FunctionSymbolType s -> a
 withFunctionSymbol a f sym = case sing :: SStage s of
   SParsed -> maybe a f (sym ^? _FunctionDefName)
-  SScoped -> f (sym ^. functionDefName)
+  SScoped -> f (sym ^. functionDefNameScoped)
 
 namedArgumentNewSymbolParsed :: (SingI s) => SimpleGetter (NamedArgumentNew s) Symbol
 namedArgumentNewSymbolParsed = to $ \case
   NamedArgumentItemPun a -> a ^. namedArgumentPunSymbol
-  NamedArgumentNewFunction a -> symbolParsed (getFunctionSymbol (a ^. namedArgumentFunctionDef . signName))
+  NamedArgumentNewFunction a -> symbolParsed (getFunctionSymbol (a ^. namedArgumentFunctionDef . functionDefName))
 
 namedArgumentNewSymbol :: Lens' (NamedArgumentNew 'Parsed) Symbol
 namedArgumentNewSymbol f = \case
   NamedArgumentItemPun a -> NamedArgumentItemPun <$> (namedArgumentPunSymbol f a)
   NamedArgumentNewFunction a -> do
-    a' <- f (a ^?! namedArgumentFunctionDef . signName . _FunctionDefName)
-    return $ NamedArgumentNewFunction (over namedArgumentFunctionDef (set signName (FunctionDefName a')) a)
+    a' <- f (a ^?! namedArgumentFunctionDef . functionDefName . _FunctionDefName)
+    return $ NamedArgumentNewFunction (over namedArgumentFunctionDef (set functionDefName (FunctionDefName a')) a)
 
 scopedIdenSrcName :: Lens' ScopedIden S.Name
 scopedIdenSrcName f n = case n ^. scopedIdenAlias of

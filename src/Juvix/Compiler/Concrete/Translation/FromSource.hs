@@ -1445,7 +1445,7 @@ functionDefinition opts _signBuiltin = P.label "<function definition>" $ do
     $ parseFailure off "expected result type"
   let fdef =
         FunctionDef
-          { _signName = _funLhsName,
+          { _functionDefName = _funLhsName,
             _signTypeSig = _funLhsTypeSig,
             _signTerminating = _funLhsTerminating,
             _signInstance = _funLhsInstance,

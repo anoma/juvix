@@ -541,12 +541,12 @@ goAxiom axiom = do
 goDeriving :: forall r. (Members '[Reader HtmlOptions] r) => Deriving 'Scoped -> Sem r Html
 goDeriving def = do
   sig <- ppHelper (ppCode def)
-  defHeader (def ^. derivingFunLhs . funLhsName . functionDefName) sig Nothing
+  defHeader (def ^. derivingFunLhs . funLhsName . functionDefNameScoped) sig Nothing
 
 goFunctionDef :: forall r. (Members '[Reader HtmlOptions] r) => FunctionDef 'Scoped -> Sem r Html
 goFunctionDef def = do
   sig <- ppHelper (ppCode (functionDefLhs def))
-  defHeader (def ^. signName . functionDefName) sig (def ^. signDoc)
+  defHeader (def ^. functionDefName . functionDefNameScoped) sig (def ^. signDoc)
 
 goInductive :: forall r. (Members '[Reader HtmlOptions] r) => InductiveDef 'Scoped -> Sem r Html
 goInductive def = do

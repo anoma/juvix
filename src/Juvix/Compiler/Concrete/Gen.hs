@@ -27,7 +27,7 @@ simplestFunctionDefParsed funNameTxt funBody = do
 simplestFunctionDef :: forall s. (SingI s) => FunctionName s -> ExpressionType s -> FunctionDef s
 simplestFunctionDef funName funBody =
   FunctionDef
-    { _signName = name,
+    { _functionDefName = name,
       _signBody = SigBodyExpression funBody,
       _signTypeSig =
         TypeSig
@@ -48,7 +48,7 @@ simplestFunctionDef funName funBody =
       SParsed -> FunctionDefName funName
       SScoped ->
         FunctionDefNameScoped
-          { _functionDefName = funName,
+          { _functionDefNameScoped = funName,
             _functionDefNamePattern = Nothing
           }
 
