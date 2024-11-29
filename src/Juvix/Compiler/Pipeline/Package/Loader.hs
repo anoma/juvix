@@ -98,7 +98,7 @@ toConcrete t p = run . runReader l $ do
                 _signInstance = Nothing,
                 _functionDefDoc = Nothing,
                 _signCoercion = Nothing,
-                _signBuiltin = Nothing,
+                _functionDefBuiltin = Nothing,
                 _functionDefName = FunctionDefName name',
                 _signBody,
                 _functionDefTypesig

@@ -728,7 +728,7 @@ instance NFData FunctionDefNameScoped
 -- functionDefLhs :: FunctionDef s -> FunctionLhs s
 -- functionDefLhs FunctionDef {..} =
 --   FunctionLhs
---     { _funLhsBuiltin = _signBuiltin,
+--     { _funLhsBuiltin = _functionDefBuiltin,
 --       _funLhsTerminating = _signTerminating,
 --       _funLhsInstance = _signInstance,
 --       _funLhsCoercion = _signCoercion,
@@ -741,7 +741,7 @@ data FunctionDef (s :: Stage) = FunctionDef
     _functionDefTypesig :: TypeSig s,
     _functionDefDoc :: Maybe (Judoc s),
     _functionDefPragmas :: Maybe ParsedPragmas,
-    _signBuiltin :: Maybe (WithLoc BuiltinFunction),
+    _functionDefBuiltin :: Maybe (WithLoc BuiltinFunction),
     _signBody :: FunctionDefBody s,
     _signTerminating :: Maybe KeywordRef,
     _signInstance :: Maybe KeywordRef,
@@ -3071,7 +3071,7 @@ makePrisms ''FunctionDefNameParsed
 functionDefLhs :: FunctionDef s -> FunctionLhs s
 functionDefLhs FunctionDef {..} =
   FunctionLhs
-    { _funLhsBuiltin = _signBuiltin,
+    { _funLhsBuiltin = _functionDefBuiltin,
       _funLhsTerminating = _signTerminating,
       _funLhsInstance = _signInstance,
       _funLhsCoercion = _signCoercion,
@@ -3538,7 +3538,7 @@ instance (SingI s) => HasLoc (FunctionDef s) where
   getLoc FunctionDef {..} =
     (getLoc <$> _functionDefDoc)
       ?<> (getLoc <$> _functionDefPragmas)
-      ?<> (getLoc <$> _signBuiltin)
+      ?<> (getLoc <$> _functionDefBuiltin)
       ?<> (getLoc <$> _signTerminating)
       ?<> (getLocFunctionSymbolType _functionDefName)
       <> getLoc _signBody

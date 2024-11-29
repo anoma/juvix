@@ -900,14 +900,14 @@ goFunctionDef def@FunctionDef {..} = do
         | isJust _signInstance = Just Internal.IsInstanceCoercionInstance
         | otherwise = Nothing
       _funDefCoercion = isJust _signCoercion
-      _funDefBuiltin = (^. withLocParam) <$> _signBuiltin
+      _funDefBuiltin = (^. withLocParam) <$> _functionDefBuiltin
   _funDefType <- goDefType (functionDefLhs def)
   _funDefPragmas <- goPragmas _functionDefPragmas
   _funDefBody <- goBody
   _funDefArgsInfo <- goArgsInfo _funDefName
   let _funDefDocComment = fmap ppPrintJudoc _functionDefDoc
       fun = Internal.FunctionDef {..}
-  whenJust _signBuiltin (checkBuiltinFunction fun . (^. withLocParam))
+  whenJust _functionDefBuiltin (checkBuiltinFunction fun . (^. withLocParam))
   case _functionDefName ^. functionDefNamePattern of
     Just pat -> do
       pat' <- goPatternArg pat

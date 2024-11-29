@@ -1431,9 +1431,9 @@ functionDefinition ::
   FunctionSyntaxOptions ->
   Maybe (WithLoc BuiltinFunction) ->
   ParsecS r (FunctionDef 'Parsed)
-functionDefinition opts _signBuiltin = P.label "<function definition>" $ do
+functionDefinition opts _functionDefBuiltin = P.label "<function definition>" $ do
   off0 <- P.getOffset
-  FunctionLhs {..} <- functionDefinitionLhs opts _signBuiltin
+  FunctionLhs {..} <- functionDefinitionLhs opts _functionDefBuiltin
   off <- P.getOffset
   _functionDefDoc <- getJudoc
   _functionDefPragmas <- getPragmas
@@ -1450,7 +1450,7 @@ functionDefinition opts _signBuiltin = P.label "<function definition>" $ do
             _signTerminating = _funLhsTerminating,
             _signInstance = _funLhsInstance,
             _signCoercion = _funLhsCoercion,
-            _signBuiltin = _funLhsBuiltin,
+            _functionDefBuiltin = _funLhsBuiltin,
             _functionDefDoc,
             _functionDefPragmas,
             _signBody
