@@ -165,12 +165,19 @@ isDataValue = \case
   NCtr Constr {..} -> all isDataValue _constrArgs
   _ -> False
 
-isFullyApplied :: Module -> Node -> Bool
-isFullyApplied md node = case h of
+isFullyApplied :: Module -> BinderList Binder -> Node -> Bool
+isFullyApplied md bl node = case h of
   NIdt Ident {..}
     | Just ii <- lookupIdentifierInfo' md _identSymbol ->
-        length args >= ii ^. identifierArgsNum
-  _ -> False
+        length args == ii ^. identifierArgsNum
+  NVar Var {..} ->
+    case BL.lookupMay _varIndex bl of
+      Just Binder {..} ->
+        length args == length (typeArgs _binderType)
+      Nothing ->
+        False
+  _ ->
+    False
   where
     (h, args) = unfoldApps' node
 

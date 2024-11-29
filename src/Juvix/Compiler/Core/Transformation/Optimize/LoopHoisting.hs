@@ -1,5 +1,6 @@
 module Juvix.Compiler.Core.Transformation.Optimize.LoopHoisting (loopHoisting) where
 
+import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.FreeVarsInfo qualified as Info
@@ -13,11 +14,12 @@ loopHoisting md = mapT (const (umapL go)) md
     go :: BinderList Binder -> Node -> Node
     go bl node = case node of
       NApp {} -> case h of
-        -- TODO: variables
-        NIdt Ident {..} -> goApp bl _identSymbol h 0 args
+        NIdt Ident {..}
+          | Just ii <- lookupIdentifierInfo' md _identSymbol,
+            length args == ii ^. identifierArgsNum ->
+              goApp bl _identSymbol h 0 args
         _ -> node
         where
-          -- TODO: consider only fully applied
           (h, args) = unfoldApps node
       _ ->
         node
@@ -27,9 +29,13 @@ loopHoisting md = mapT (const (umapL go)) md
       [] -> h
       (info, arg) : args' -> case arg of
         NLam {}
-          | isArgRecursiveInvariant md sym argNum && isDirectlyRecursive md sym ->
+          | isHoistable sym argNum ->
               goLamApp bl sym info h arg (argNum + 1) args'
         _ -> goApp bl sym (mkApp info h arg) (argNum + 1) args'
+
+    isHoistable :: Symbol -> Int -> Bool
+    isHoistable sym argNum =
+      isArgRecursiveInvariant md sym argNum && isDirectlyRecursive md sym
 
     goLamApp :: BinderList Binder -> Symbol -> Info -> Node -> Node -> Int -> [(Info, Node)] -> Node
     goLamApp bl sym info h arg argNum args'
@@ -44,31 +50,33 @@ loopHoisting md = mapT (const (umapL go)) md
               )
       where
         (lams, body) = unfoldLambdasRev arg
-        (subterms, body') = extractMaximalInvariantSubterms (length lams) body
+        bl' = BL.prepend (map (^. lambdaLhsBinder) lams) bl
+        (subterms, body') = extractMaximalInvariantSubterms (length bl) bl' body
         n = length subterms
         subterms' = zipWith shift [0 ..] subterms
 
-    extractMaximalInvariantSubterms :: Int -> Node -> ([Node], Node)
-    extractMaximalInvariantSubterms bindersNum body =
+    extractMaximalInvariantSubterms :: Int -> BinderList Binder -> Node -> ([Node], Node)
+    extractMaximalInvariantSubterms initialBindersNum bl0 body =
       first (map (removeInfo Info.kFreeVarsInfo))
         . second (removeInfo Info.kFreeVarsInfo)
         . run
         . runState []
-        $ dmapNRM extract (Info.computeFreeVarsInfo body)
+        $ dmapLRM' (bl0, extract) (Info.computeFreeVarsInfo body)
       where
-        extract :: (Member (State [Node]) r) => Level -> Node -> Sem r Recur
-        extract n node
+        extract :: (Member (State [Node]) r) => BinderList Binder -> Node -> Sem r Recur
+        extract bl node
           | not (isImmediate md node || isLambda node)
-              && isFullyApplied md node -- TODO: variables
+              && isFullyApplied md bl node
               && null boundVars = do
               k <- length <$> get @[Node]
-              modify' ((shift (-(n + bindersNum)) node) :)
+              modify' ((shift (-n) node) :)
               -- This variable is later adjusted to the correct index in `adjustLetBoundVars`
               return $ End (mkVar' (-k - 1))
           | otherwise =
               return $ Recur node
           where
-            boundVars = filter (< n + bindersNum) $ Info.getFreeVars node
+            boundVars = filter (< n) $ Info.getFreeVars node
+            n = length bl - initialBindersNum
 
     adjustLetBoundVars :: Node -> Node
     adjustLetBoundVars = umapN adjust
