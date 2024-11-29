@@ -115,4 +115,4 @@ isLhsFunctionLike FunctionLhs {..} = notNull (_funLhsTypeSig ^. typeSigArgs)
 
 isFunctionLike :: FunctionDef 'Parsed -> Bool
 isFunctionLike d@FunctionDef {..} =
-  isLhsFunctionLike (functionDefLhs d) || (not . isBodyExpression) _signBody
+  isLhsFunctionLike (functionDefLhs d) || (not . isBodyExpression) _functionDefBody

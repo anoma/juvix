@@ -1221,7 +1221,7 @@ checkFunctionDef fdef@FunctionDef {..} = do
         FunctionDef
           { _functionDefName = sigName',
             _functionDefDoc = sigDoc',
-            _signBody = sigBody',
+            _functionDefBody = sigBody',
             _functionDefTypesig = sig',
             ..
           }
@@ -1229,7 +1229,7 @@ checkFunctionDef fdef@FunctionDef {..} = do
   registerFunctionDef @$> def
   where
     checkBody :: Sem r (FunctionDefBody 'Scoped)
-    checkBody = case _signBody of
+    checkBody = case _functionDefBody of
       SigBodyExpression e -> SigBodyExpression <$> checkParseExpressionAtoms e
       SigBodyClauses cls -> SigBodyClauses <$> mapM checkClause cls
 

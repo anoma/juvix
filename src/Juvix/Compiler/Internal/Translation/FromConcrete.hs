@@ -924,7 +924,7 @@ goFunctionDef def@FunctionDef {..} = do
             extraPatterns <- mapM goPatternArg _clausenPatterns
             let _lambdaPatterns = prependList commonPatterns extraPatterns
             return Internal.LambdaClause {..}
-      case _signBody of
+      case _functionDefBody of
         SigBodyExpression body -> do
           body' <- goExpression body
           return $ case nonEmpty commonPatterns of

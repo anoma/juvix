@@ -28,7 +28,7 @@ simplestFunctionDef :: forall s. (SingI s) => FunctionName s -> ExpressionType s
 simplestFunctionDef funName funBody =
   FunctionDef
     { _functionDefName = name,
-      _signBody = SigBodyExpression funBody,
+      _functionDefBody = SigBodyExpression funBody,
       _functionDefTypesig =
         TypeSig
           { _typeSigColonKw = Irrelevant Nothing,

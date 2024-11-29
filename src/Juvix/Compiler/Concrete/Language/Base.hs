@@ -742,7 +742,7 @@ data FunctionDef (s :: Stage) = FunctionDef
     _functionDefDoc :: Maybe (Judoc s),
     _functionDefPragmas :: Maybe ParsedPragmas,
     _functionDefBuiltin :: Maybe (WithLoc BuiltinFunction),
-    _signBody :: FunctionDefBody s,
+    _functionDefBody :: FunctionDefBody s,
     _signTerminating :: Maybe KeywordRef,
     _signInstance :: Maybe KeywordRef,
     _signCoercion :: Maybe KeywordRef
@@ -3541,7 +3541,7 @@ instance (SingI s) => HasLoc (FunctionDef s) where
       ?<> (getLoc <$> _functionDefBuiltin)
       ?<> (getLoc <$> _signTerminating)
       ?<> (getLocFunctionSymbolType _functionDefName)
-      <> getLoc _signBody
+      <> getLoc _functionDefBody
 
 instance HasLoc (Example s) where
   getLoc e = e ^. exampleLoc

@@ -1437,10 +1437,10 @@ functionDefinition opts _functionDefBuiltin = P.label "<function definition>" $ 
   off <- P.getOffset
   _functionDefDoc <- getJudoc
   _functionDefPragmas <- getPragmas
-  _signBody <- parseBody
+  _functionDefBody <- parseBody
   unless
     ( isJust (_funLhsTypeSig ^. typeSigColonKw . unIrrelevant)
-        || (P.isBodyExpression _signBody && null (_funLhsTypeSig ^. typeSigArgs))
+        || (P.isBodyExpression _functionDefBody && null (_funLhsTypeSig ^. typeSigArgs))
     )
     $ parseFailure off "expected result type"
   let fdef =
@@ -1453,7 +1453,7 @@ functionDefinition opts _functionDefBuiltin = P.label "<function definition>" $ 
             _functionDefBuiltin = _funLhsBuiltin,
             _functionDefDoc,
             _functionDefPragmas,
-            _signBody
+            _functionDefBody
           }
   when (isNothing (_funLhsName ^? _FunctionDefName) && P.isFunctionLike fdef) $
     parseFailure off0 "expected function name"

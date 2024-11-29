@@ -1208,7 +1208,7 @@ instance (SingI s) => PrettyPrint (FunctionDef s) where
     let doc' :: Maybe (Sem r ()) = ppCode <$> _functionDefDoc
         pragmas' :: Maybe (Sem r ()) = ppCode <$> _functionDefPragmas
         sig' = ppCode (functionDefLhs fun)
-        body' = case _signBody of
+        body' = case _functionDefBody of
           SigBodyExpression e -> space <> ppCode Kw.kwAssign <> oneLineOrNext (ppTopExpressionType e)
           SigBodyClauses k -> ppPipeBranches False Top ppFunctionClause k
     doc'
