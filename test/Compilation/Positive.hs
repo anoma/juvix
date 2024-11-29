@@ -512,8 +512,8 @@ tests =
         $(mkRelFile "test087.juvix")
         $(mkRelFile "out/test087.out"),
       posTest
-        "Test088: Loop invariant code motion"
+        "Test089: Loop invariant code motion"
         $(mkRelDir ".")
-        $(mkRelFile "test088.juvix")
-        $(mkRelFile "out/test088.out")
+        $(mkRelFile "test089.juvix")
+        $(mkRelFile "out/test089.out")
     ]
