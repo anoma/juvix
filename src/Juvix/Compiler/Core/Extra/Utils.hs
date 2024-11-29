@@ -640,3 +640,32 @@ isDirectlyRecursive md sym = ufold (\x xs -> or (x : xs)) go (lookupIdentifierNo
     go = \case
       NIdt Ident {..} -> _identSymbol == sym
       _ -> False
+
+-- Returns a map from symbols to their number of occurrences in the given node.
+getSymbolsMap :: Module -> Node -> HashMap Symbol Int
+getSymbolsMap md = gather go mempty
+  where
+    go :: HashMap Symbol Int -> Node -> HashMap Symbol Int
+    go acc = \case
+      NTyp TypeConstr {..} -> mapInc _typeConstrSymbol acc
+      NIdt Ident {..} -> mapInc _identSymbol acc
+      NCase Case {..} -> mapInc _caseInductive acc
+      NCtr Constr {..}
+        | Just ci <- lookupConstructorInfo' md _constrTag ->
+            mapInc (ci ^. constructorInductive) acc
+      _ -> acc
+
+    mapInc :: Symbol -> HashMap Symbol Int -> HashMap Symbol Int
+    mapInc k = HashMap.insertWith (+) k 1
+
+getTableSymbolsMap :: InfoTable -> HashMap Symbol Int
+getTableSymbolsMap tab =
+  foldr
+    (HashMap.unionWith (+))
+    mempty
+    (map (getSymbolsMap md) (HashMap.elems $ tab ^. identContext))
+  where
+    md = emptyModule {_moduleInfoTable = tab}
+
+getModuleSymbolsMap :: Module -> HashMap Symbol Int
+getModuleSymbolsMap = getTableSymbolsMap . computeCombinedInfoTable
