@@ -701,14 +701,7 @@ ppCase isTop c = do
       b :| [] -> case isTop of
         Top -> oneLineOrNext (ppCaseBranch' Top b)
         NotTop -> space <> oneLineOrNextBraces (ppCaseBranch' NotTop b)
-      _ -> case isTop of
-        Top -> do
-          let brs =
-                vsepHard (ppCaseBranch' NotTop <$> NonEmpty.init branches')
-                  <> hardline
-                  <> ppCaseBranch' Top (NonEmpty.last branches')
-          hardline <> indent brs
-        NotTop -> space <> braces (blockIndent (vsepHard (ppCaseBranch' NotTop <$> branches')))
+      _ -> ppPipeBranches True isTop ppCaseBranch' branches'
 
     ppCaseBranch' :: IsTop -> CaseBranch s -> Sem r ()
     ppCaseBranch' lastTopBranch b = ppCaseBranch lastTopBranch b
@@ -1120,12 +1113,11 @@ instance PrettyPrint BuiltinFunction where
 instance PrettyPrint BuiltinAxiom where
   ppCode i = ppCode Kw.kwBuiltin <+> keywordText (P.prettyText i)
 
-instance (SingI s) => PrettyPrint (FunctionClause s) where
-  ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => FunctionClause s -> Sem r ()
-  ppCode FunctionClause {..} = do
-    let pats' = hsep (ppPatternAtomType <$> _clausenPatterns)
-        e' = ppTopExpressionType _clausenBody
-    ppCode _clausenPipeKw <+> pats' <+> ppCode _clausenAssignKw <> oneLineOrNext e'
+ppFunctionClause :: (SingI s, Members '[ExactPrint, Reader Options] r) => IsTop -> FunctionClause s -> Sem r ()
+ppFunctionClause isTop FunctionClause {..} = do
+  let pats' = hsep (ppPatternAtomType <$> _clausenPatterns)
+      e' = ppMaybeTopExpression isTop _clausenBody
+  ppCode _clausenPipeKw <+> pats' <+> ppCode _clausenAssignKw <> oneLineOrNext e'
 
 instance (SingI s) => PrettyPrint (Argument s) where
   ppCode :: (Members '[ExactPrint, Reader Options] r) => Argument s -> Sem r ()
@@ -1194,6 +1186,22 @@ instance (SingI s) => PrettyPrint (FunctionLhs s) where
       ?<> instance'
       ?<> (name' <> sig')
 
+ppPipeBranches :: (Members '[ExactPrint, Reader Options] r) => Bool -> IsTop -> (IsTop -> a -> Sem r ()) -> NonEmpty a -> Sem r ()
+ppPipeBranches allowSameLine isTop ppBranch = \case
+  b :| [] -> case isTop of
+    Top
+      | allowSameLine -> oneLineOrNext (ppBranch Top b)
+      | otherwise -> hardline <> indent (ppBranch Top b)
+    NotTop -> space <> oneLineOrNextBraces (ppBranch NotTop b)
+  branches -> case isTop of
+    Top -> do
+      let brs =
+            vsepHard (ppBranch NotTop <$> NonEmpty.init branches)
+              <> hardline
+              <> ppBranch Top (NonEmpty.last branches)
+      hardline <> indent brs
+    NotTop -> space <> braces (blockIndent (vsepHard (ppBranch NotTop <$> branches)))
+
 instance (SingI s) => PrettyPrint (FunctionDef s) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => FunctionDef s -> Sem r ()
   ppCode fun@FunctionDef {..} = do
@@ -1202,7 +1210,7 @@ instance (SingI s) => PrettyPrint (FunctionDef s) where
         sig' = ppCode (functionDefLhs fun)
         body' = case _signBody of
           SigBodyExpression e -> space <> ppCode Kw.kwAssign <> oneLineOrNext (ppTopExpressionType e)
-          SigBodyClauses k -> line <> indent (vsep (ppCode <$> k))
+          SigBodyClauses k -> ppPipeBranches False Top ppFunctionClause k
     doc'
       ?<> pragmas'
       ?<> sig'
