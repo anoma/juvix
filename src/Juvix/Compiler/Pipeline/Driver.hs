@@ -322,7 +322,7 @@ processRecursiveUpTo a = do
       entry <- ask
       let entry' =
             entry
-              { _entryPointPackage = pkg,
+              { _entryPointPackageId = pkg ^. packageId,
                 _entryPointStdin = Nothing,
                 _entryPointModulePath = Just (node ^. importNodeAbsFile)
               }
