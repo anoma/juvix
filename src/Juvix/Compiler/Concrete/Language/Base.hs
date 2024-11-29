@@ -814,12 +814,9 @@ deriving stock instance Ord (ConstructorDef 'Parsed)
 
 deriving stock instance Ord (ConstructorDef 'Scoped)
 
-data RecordUpdateField (s :: Stage) = RecordUpdateField
-  { _fieldUpdateName :: Symbol,
-    _fieldUpdateArgIx :: FieldArgIxType s,
-    _fieldUpdateAssignKw :: Irrelevant (KeywordRef),
-    _fieldUpdateValue :: ExpressionType s
-  }
+data RecordUpdateField (s :: Stage)
+  = RecordUpdateFieldAssign (RecordUpdateFieldItemAssign s)
+  | RecordUpdateFieldPun (RecordUpdatePun s)
   deriving stock (Generic)
 
 instance Serialize (RecordUpdateField 'Scoped)
@@ -841,6 +838,34 @@ deriving stock instance Eq (RecordUpdateField 'Scoped)
 deriving stock instance Ord (RecordUpdateField 'Parsed)
 
 deriving stock instance Ord (RecordUpdateField 'Scoped)
+
+data RecordUpdateFieldItemAssign (s :: Stage) = RecordUpdateFieldItemAssign
+  { _fieldUpdateName :: Symbol,
+    _fieldUpdateArgIx :: FieldArgIxType s,
+    _fieldUpdateAssignKw :: Irrelevant (KeywordRef),
+    _fieldUpdateValue :: ExpressionType s
+  }
+  deriving stock (Generic)
+
+instance Serialize (RecordUpdateFieldItemAssign 'Scoped)
+
+instance NFData (RecordUpdateFieldItemAssign 'Scoped)
+
+instance Serialize (RecordUpdateFieldItemAssign 'Parsed)
+
+instance NFData (RecordUpdateFieldItemAssign 'Parsed)
+
+deriving stock instance Show (RecordUpdateFieldItemAssign 'Parsed)
+
+deriving stock instance Show (RecordUpdateFieldItemAssign 'Scoped)
+
+deriving stock instance Eq (RecordUpdateFieldItemAssign 'Parsed)
+
+deriving stock instance Eq (RecordUpdateFieldItemAssign 'Scoped)
+
+deriving stock instance Ord (RecordUpdateFieldItemAssign 'Parsed)
+
+deriving stock instance Ord (RecordUpdateFieldItemAssign 'Scoped)
 
 data RecordField (s :: Stage) = RecordField
   { _fieldName :: SymbolType s,
@@ -1161,34 +1186,34 @@ deriving stock instance Ord (RecordPatternAssign 'Parsed)
 
 deriving stock instance Ord (RecordPatternAssign 'Scoped)
 
-data FieldPun (s :: Stage) = FieldPun
+data PatternFieldPun (s :: Stage) = PatternFieldPun
   { _fieldPunIx :: FieldArgIxType s,
     _fieldPunField :: SymbolType s
   }
   deriving stock (Generic)
 
-instance Serialize (FieldPun 'Scoped)
+instance Serialize (PatternFieldPun 'Scoped)
 
-instance NFData (FieldPun 'Scoped)
+instance NFData (PatternFieldPun 'Scoped)
 
-instance Serialize (FieldPun 'Parsed)
+instance Serialize (PatternFieldPun 'Parsed)
 
-instance NFData (FieldPun 'Parsed)
+instance NFData (PatternFieldPun 'Parsed)
 
-deriving stock instance Show (FieldPun 'Parsed)
+deriving stock instance Show (PatternFieldPun 'Parsed)
 
-deriving stock instance Show (FieldPun 'Scoped)
+deriving stock instance Show (PatternFieldPun 'Scoped)
 
-deriving stock instance Eq (FieldPun 'Parsed)
+deriving stock instance Eq (PatternFieldPun 'Parsed)
 
-deriving stock instance Eq (FieldPun 'Scoped)
+deriving stock instance Eq (PatternFieldPun 'Scoped)
 
-deriving stock instance Ord (FieldPun 'Parsed)
+deriving stock instance Ord (PatternFieldPun 'Parsed)
 
-deriving stock instance Ord (FieldPun 'Scoped)
+deriving stock instance Ord (PatternFieldPun 'Scoped)
 
 data RecordPatternItem (s :: Stage)
-  = RecordPatternItemFieldPun (FieldPun s)
+  = RecordPatternItemFieldPun (PatternFieldPun s)
   | RecordPatternItemAssign (RecordPatternAssign s)
   deriving stock (Generic)
 
@@ -2429,6 +2454,33 @@ deriving stock instance Ord (NamedArgumentFunctionDef 'Parsed)
 
 deriving stock instance Ord (NamedArgumentFunctionDef 'Scoped)
 
+data RecordUpdatePun (s :: Stage) = RecordUpdatePun
+  { _recordUpdatePunSymbol :: Symbol,
+    _recordUpdatePunReferencedSymbol :: PunSymbolType s,
+    _recordUpdatePunFieldIndex :: FieldArgIxType s
+  }
+  deriving stock (Generic)
+
+instance Serialize (RecordUpdatePun 'Scoped)
+
+instance NFData (RecordUpdatePun 'Scoped)
+
+instance Serialize (RecordUpdatePun 'Parsed)
+
+instance NFData (RecordUpdatePun 'Parsed)
+
+deriving stock instance Show (RecordUpdatePun 'Parsed)
+
+deriving stock instance Show (RecordUpdatePun 'Scoped)
+
+deriving stock instance Eq (RecordUpdatePun 'Parsed)
+
+deriving stock instance Eq (RecordUpdatePun 'Scoped)
+
+deriving stock instance Ord (RecordUpdatePun 'Parsed)
+
+deriving stock instance Ord (RecordUpdatePun 'Scoped)
+
 data NamedArgumentPun (s :: Stage) = NamedArgumentPun
   { _namedArgumentPunSymbol :: Symbol,
     _namedArgumentReferencedSymbol :: PunSymbolType s
@@ -2910,6 +2962,8 @@ deriving stock instance Ord (FunctionLhs 'Parsed)
 deriving stock instance Ord (FunctionLhs 'Scoped)
 
 makeLenses ''SideIfs
+makeLenses ''RecordUpdatePun
+makeLenses ''RecordUpdateFieldItemAssign
 makeLenses ''FunctionDefNameScoped
 makeLenses ''TypeSig
 makeLenses ''FunctionLhs
@@ -2922,7 +2976,7 @@ makeLenses ''RhsExpression
 makeLenses ''PatternArg
 makeLenses ''WildcardConstructor
 makeLenses ''DoubleBracesExpression
-makeLenses ''FieldPun
+makeLenses ''PatternFieldPun
 makeLenses ''RecordPatternAssign
 makeLenses ''RecordPattern
 makeLenses ''ParensRecordUpdate
@@ -3328,6 +3382,9 @@ instance (SingI s) => HasLoc (NamedArgumentNew s) where
     NamedArgumentNewFunction f -> getLoc f
     NamedArgumentItemPun f -> getLoc f
 
+instance HasLoc (RecordUpdatePun s) where
+  getLoc RecordUpdatePun {..} = getLocSymbolType _recordUpdatePunSymbol
+
 instance HasLoc (NamedArgumentPun s) where
   getLoc NamedArgumentPun {..} = getLocSymbolType _namedArgumentPunSymbol
 
@@ -3335,6 +3392,11 @@ instance (SingI s) => HasLoc (NamedApplicationNew s) where
   getLoc NamedApplicationNew {..} = getLocIdentifierType _namedApplicationNewName
 
 instance (SingI s) => HasLoc (RecordUpdateField s) where
+  getLoc = \case
+    RecordUpdateFieldAssign a -> getLoc a
+    RecordUpdateFieldPun a -> getLoc a
+
+instance (SingI s) => HasLoc (RecordUpdateFieldItemAssign s) where
   getLoc f = getLocSymbolType (f ^. fieldUpdateName) <> getLocExpressionType (f ^. fieldUpdateValue)
 
 instance HasLoc (RecordUpdate s) where
@@ -3514,7 +3576,7 @@ instance (SingI s) => HasLoc (RecordPatternAssign s) where
     getLoc (a ^. recordPatternAssignField)
       <> getLocPatternParensType (a ^. recordPatternAssignPattern)
 
-instance (SingI s) => HasLoc (FieldPun s) where
+instance (SingI s) => HasLoc (PatternFieldPun s) where
   getLoc f = getLocSymbolType (f ^. fieldPunField)
 
 instance (SingI s) => HasLoc (RecordPatternItem s) where

@@ -832,13 +832,36 @@ import_ = do
     pasName :: ParsecS r TopModulePath
     pasName = void (kw kwAs) >> topModulePath
 
-recordUpdateField :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r (RecordUpdateField 'Parsed)
-recordUpdateField = do
+recordUpdateFieldItemAssign ::
+  (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) =>
+  ParsecS r (RecordUpdateFieldItemAssign 'Parsed)
+recordUpdateFieldItemAssign = do
   _fieldUpdateName <- symbol
   _fieldUpdateAssignKw <- Irrelevant <$> kw kwAssign
   _fieldUpdateValue <- parseExpressionAtoms
   let _fieldUpdateArgIx = ()
-  return RecordUpdateField {..}
+  return RecordUpdateFieldItemAssign {..}
+
+recordUpdateFieldPun ::
+  (Members '[Error ParserError, PragmasStash, JudocStash, ParserResultBuilder] r) =>
+  ParsecS r (RecordUpdatePun 'Parsed)
+recordUpdateFieldPun = do
+  s <- P.try (symbol <* P.notFollowedBy (kw kwAssign))
+  return
+    RecordUpdatePun
+      { _recordUpdatePunSymbol = s,
+        _recordUpdatePunFieldIndex = (),
+        _recordUpdatePunReferencedSymbol = ()
+      }
+
+recordUpdateField ::
+  (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) =>
+  ParsecS r (RecordUpdateField 'Parsed)
+recordUpdateField =
+  P.choice
+    [ RecordUpdateFieldPun <$> recordUpdateFieldPun,
+      RecordUpdateFieldAssign <$> recordUpdateFieldItemAssign
+    ]
 
 recordUpdate :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r (RecordUpdate 'Parsed)
 recordUpdate = do
@@ -1721,9 +1744,9 @@ recordPatternItem = do
             _recordPatternAssignPattern = pat',
             ..
           }
-    fieldPun :: Symbol -> FieldPun 'Parsed
+    fieldPun :: Symbol -> PatternFieldPun 'Parsed
     fieldPun f =
-      FieldPun
+      PatternFieldPun
         { _fieldPunIx = (),
           _fieldPunField = f
         }

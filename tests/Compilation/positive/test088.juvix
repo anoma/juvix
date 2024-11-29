@@ -1,0 +1,39 @@
+-- Record update pun
+module test088;
+
+import Stdlib.Prelude open;
+import Stdlib.System.IO open;
+
+type R :=
+  mkR@{
+    a : Nat;
+    b : Nat;
+    c : Nat;
+  };
+
+instance
+RShowI : Show R :=
+  mkShow@{
+    show (r : R) : String :=
+      Show.show (R.a r)
+        ++str " "
+        ++str Show.show (R.b r)
+        ++str " "
+        ++str Show.show (R.c r);
+  };
+
+main : IO :=
+  let
+    z :=
+      mkR@{
+        a := 0;
+        b := 0;
+        c := 0;
+      };
+    a := 6;
+    b := 7;
+    c := 8;
+  in printLn z
+    >>> printLn (z @R{a})
+    >>> printLn (z @R{c})
+    >>> printLn (z @R{a; b; c});
