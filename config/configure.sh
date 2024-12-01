@@ -5,6 +5,11 @@ if [ ! -d "config" ]; then
     exit 1
 fi
 
+if [ -z "$( ls -A 'juvix-stdlib' )" ]; then
+    printf "Empty standard library directory.\nDid you remember to clone with the --recursive option?\nTry running:\n   git submodule init\n   git submodule update\n" 1>&2
+    exit 1
+fi
+
 if [ -z "$CC" ]; then
     CC="clang"
 fi
