@@ -26,29 +26,33 @@ simplestFunctionDefParsed funNameTxt funBody = do
 
 simplestFunctionDef :: forall s. (SingI s) => FunctionName s -> ExpressionType s -> FunctionDef s
 simplestFunctionDef funName funBody =
-  FunctionDef
-    { _signName = name,
-      _signBody = SigBodyExpression funBody,
-      _signTypeSig =
-        TypeSig
-          { _typeSigColonKw = Irrelevant Nothing,
-            _typeSigArgs = [],
-            _typeSigRetType = Nothing
-          },
-      _signDoc = Nothing,
-      _signPragmas = Nothing,
-      _signBuiltin = Nothing,
-      _signTerminating = Nothing,
-      _signInstance = Nothing,
-      _signCoercion = Nothing
-    }
+  let lhs =
+        FunctionLhs
+          { _funLhsName = name,
+            _funLhsTypeSig =
+              TypeSig
+                { _typeSigColonKw = Irrelevant Nothing,
+                  _typeSigArgs = [],
+                  _typeSigRetType = Nothing
+                },
+            _funLhsBuiltin = Nothing,
+            _funLhsTerminating = Nothing,
+            _funLhsInstance = Nothing,
+            _funLhsCoercion = Nothing
+          }
+   in FunctionDef
+        { _functionDefBody = SigBodyExpression funBody,
+          _functionDefLhs = lhs,
+          _functionDefDoc = Nothing,
+          _functionDefPragmas = Nothing
+        }
   where
     name :: FunctionSymbolType s
     name = case sing :: SStage s of
       SParsed -> FunctionDefName funName
       SScoped ->
         FunctionDefNameScoped
-          { _functionDefName = funName,
+          { _functionDefNameScoped = funName,
             _functionDefNamePattern = Nothing
           }
 

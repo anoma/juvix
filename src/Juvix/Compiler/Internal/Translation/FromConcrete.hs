@@ -433,7 +433,7 @@ goDeriving ::
   Sem r Internal.FunctionDef
 goDeriving Deriving {..} = do
   let FunctionLhs {..} = _derivingFunLhs
-      name = goSymbol (_funLhsName ^. functionDefName)
+      name = goSymbol (_funLhsName ^. functionDefNameScoped)
   (funArgs, ret) <- Internal.unfoldFunType <$> goDefType _derivingFunLhs
   let (mtrait, traitArgs) = Internal.unfoldExpressionApp ret
   (n, der) <- findDerivingTrait mtrait
@@ -893,22 +893,22 @@ goFunctionDef ::
   FunctionDef 'Scoped ->
   Sem r [Internal.FunctionDef]
 goFunctionDef def@FunctionDef {..} = do
-  let _funDefName = goSymbol (_signName ^. functionDefName)
-      _funDefTerminating = isJust _signTerminating
+  let _funDefName = goSymbol (def ^. functionDefName . functionDefNameScoped)
+      _funDefTerminating = isJust (def ^. functionDefTerminating)
       _funDefIsInstanceCoercion
-        | isJust _signCoercion = Just Internal.IsInstanceCoercionCoercion
-        | isJust _signInstance = Just Internal.IsInstanceCoercionInstance
+        | isJust (def ^. functionDefCoercion) = Just Internal.IsInstanceCoercionCoercion
+        | isJust (def ^. functionDefInstance) = Just Internal.IsInstanceCoercionInstance
         | otherwise = Nothing
-      _funDefCoercion = isJust _signCoercion
-      _funDefBuiltin = (^. withLocParam) <$> _signBuiltin
-  _funDefType <- goDefType (functionDefLhs def)
-  _funDefPragmas <- goPragmas _signPragmas
+      _funDefCoercion = isJust (def ^. functionDefCoercion)
+      _funDefBuiltin = (^. withLocParam) <$> (def ^. functionDefBuiltin)
+  _funDefType <- goDefType (def ^. functionDefLhs)
+  _funDefPragmas <- goPragmas _functionDefPragmas
   _funDefBody <- goBody
   _funDefArgsInfo <- goArgsInfo _funDefName
-  let _funDefDocComment = fmap ppPrintJudoc _signDoc
+  let _funDefDocComment = fmap ppPrintJudoc _functionDefDoc
       fun = Internal.FunctionDef {..}
-  whenJust _signBuiltin (checkBuiltinFunction fun . (^. withLocParam))
-  case _signName ^. functionDefNamePattern of
+  whenJust (def ^. functionDefBuiltin) (checkBuiltinFunction fun . (^. withLocParam))
+  case def ^. functionDefName . functionDefNamePattern of
     Just pat -> do
       pat' <- goPatternArg pat
       (fun :) <$> Internal.genPatternDefs _funDefName pat'
@@ -917,14 +917,14 @@ goFunctionDef def@FunctionDef {..} = do
   where
     goBody :: Sem r Internal.Expression
     goBody = do
-      commonPatterns <- concatMapM (fmap toList . argToPattern) (_signTypeSig ^. typeSigArgs)
+      commonPatterns <- concatMapM (fmap toList . argToPattern) (def ^. functionDefTypeSig . typeSigArgs)
       let goClause :: FunctionClause 'Scoped -> Sem r Internal.LambdaClause
           goClause FunctionClause {..} = do
             _lambdaBody <- goExpression _clausenBody
             extraPatterns <- mapM goPatternArg _clausenPatterns
             let _lambdaPatterns = prependList commonPatterns extraPatterns
             return Internal.LambdaClause {..}
-      case _signBody of
+      case _functionDefBody of
         SigBodyExpression body -> do
           body' <- goExpression body
           return $ case nonEmpty commonPatterns of
@@ -1319,7 +1319,7 @@ createArgumentBlocks appargs =
   where
     namedArgumentRefSymbol :: NamedArgumentNew 'Scoped -> S.Symbol
     namedArgumentRefSymbol = \case
-      NamedArgumentNewFunction p -> p ^. namedArgumentFunctionDef . signName . functionDefName
+      NamedArgumentNewFunction p -> p ^. namedArgumentFunctionDef . functionDefName . functionDefNameScoped
       NamedArgumentItemPun p -> over S.nameConcrete fromUnqualified' (p ^. namedArgumentReferencedSymbol . scopedIdenFinal)
     args0 :: HashSet S.Symbol = hashSet (namedArgumentRefSymbol <$> appargs)
     goBlock ::
@@ -1416,8 +1416,8 @@ goExpression = \case
                   funs
                     ^.. each
                       . namedArgumentFunctionDef
-                      . signName
                       . functionDefName
+                      . functionDefNameScoped
                       . to goSymbol
                 -- changes the kind from Variable to Function
                 updateKind :: Internal.Subs = Internal.subsKind funsNames KNameFunction

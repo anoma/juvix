@@ -68,7 +68,7 @@ instance (SingI s) => HasNameSignature s (FunctionLhs s) where
   addArgs FunctionLhs {..} = addArgs _funLhsTypeSig
 
 instance (SingI s) => HasNameSignature s (FunctionDef s) where
-  addArgs = addArgs . functionDefLhs
+  addArgs = addArgs . (^. functionDefLhs)
 
 instance (SingI s) => HasNameSignature s (InductiveDef s, ConstructorDef s) where
   addArgs ::

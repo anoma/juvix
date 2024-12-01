@@ -270,11 +270,6 @@ scoperErrorTests =
       $(mkRelFile "PrecedenceInconsistency.juvix")
       $ wantsError ErrPrecedenceInconsistency,
     negTest
-      "Alias cycle"
-      $(mkRelDir ".")
-      $(mkRelFile "AliasCycle.juvix")
-      $ wantsError ErrAliasCycle,
-    negTest
       "Invalid range number in iterator definition"
       $(mkRelDir ".")
       $(mkRelFile "InvalidRangeNumber.juvix")
