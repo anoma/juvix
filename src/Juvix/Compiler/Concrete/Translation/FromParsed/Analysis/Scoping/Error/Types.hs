@@ -210,8 +210,8 @@ instance ToGenericError QualSymNotInScope where
           msg = "Qualified symbol not in scope:" <+> ppCode opts' _qualSymNotInScope
 
 data DuplicateOperator = DuplicateOperator
-  { _dupOperatorFirst :: OperatorSyntaxDef 'Scoped,
-    _dupOperatorSecond :: OperatorSyntaxDef 'Scoped
+  { _dupOperatorFirst :: OperatorSyntaxDef 'Parsed,
+    _dupOperatorSecond :: OperatorSyntaxDef 'Parsed
   }
   deriving stock (Show)
 
@@ -241,8 +241,8 @@ instance ToGenericError DuplicateOperator where
               locs = vsep $ map (pretty . getLoc) [_dupOperatorFirst, _dupOperatorSecond]
 
 data DuplicateIterator = DuplicateIterator
-  { _dupIteratorFirst :: IteratorSyntaxDef 'Scoped,
-    _dupIteratorSecond :: IteratorSyntaxDef 'Scoped
+  { _dupIteratorFirst :: IteratorSyntaxDef 'Parsed,
+    _dupIteratorSecond :: IteratorSyntaxDef 'Parsed
   }
   deriving stock (Show)
 
@@ -426,7 +426,7 @@ instance ToGenericError ModuleNotInScope where
           msg = "The module" <+> ppCode opts' _moduleNotInScopeName <+> "is not in scope"
 
 newtype UnusedOperatorDef = UnusedOperatorDef
-  { _unusedOperatorDef :: OperatorSyntaxDef 'Scoped
+  { _unusedOperatorDef :: OperatorSyntaxDef 'Parsed
   }
   deriving stock (Show)
 
@@ -449,7 +449,7 @@ instance ToGenericError UnusedOperatorDef where
               <> ppCode opts' _unusedOperatorDef
 
 newtype UnusedIteratorDef = UnusedIteratorDef
-  { _unusedIteratorDef :: IteratorSyntaxDef 'Scoped
+  { _unusedIteratorDef :: IteratorSyntaxDef 'Parsed
   }
   deriving stock (Show)
 
@@ -741,7 +741,7 @@ instance ToGenericError IteratorInitializer where
       i = getLoc _iteratorInitializerIterator
 
 newtype InvalidRangeNumber = InvalidRangeNumber
-  { _invalidRangeNumber :: IteratorSyntaxDef 'Scoped
+  { _invalidRangeNumber :: IteratorSyntaxDef 'Parsed
   }
   deriving stock (Show)
 
