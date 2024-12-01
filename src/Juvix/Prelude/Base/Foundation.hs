@@ -341,18 +341,6 @@ replaceText texts txt = fromMaybe txt (HashMap.lookup txt (HashMap.fromList text
 -- Foldable
 --------------------------------------------------------------------------------
 
--- | Returns the repeated elements
-findRepeated :: forall a. (Ord a) => [a] -> [a]
-findRepeated = mapMaybe rep . groupSortOn' id
-  where
-    rep :: [a] -> Maybe a
-    rep = \case
-      a : _ : _ -> Just a
-      _ -> Nothing
-
-allDifferent :: forall a. (Ord a) => [a] -> Bool
-allDifferent = null . findRepeated
-
 allSame :: forall t a. (Eq a, Foldable t) => t a -> Bool
 allSame t = case nonEmpty t of
   Nothing -> True
@@ -509,12 +497,6 @@ nonEmpty' = fromJust . nonEmpty
 
 _nonEmpty :: Lens' [a] (Maybe (NonEmpty a))
 _nonEmpty f x = maybe [] toList <$> f (nonEmpty x)
-
-groupSortOn :: (Ord b) => (a -> b) -> [a] -> [NonEmpty a]
-groupSortOn f = map nonEmpty' . List.groupSortOn f
-
-groupSortOn' :: (Ord b) => (a -> b) -> [a] -> [[a]]
-groupSortOn' = List.groupSortOn
 
 --------------------------------------------------------------------------------
 -- Errors
