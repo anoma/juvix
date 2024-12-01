@@ -3,7 +3,7 @@ module Juvix.Compiler.Backend.Lean.Pretty.Base where
 import Juvix.Compiler.Backend.Lean.Language
 import Juvix.Compiler.Backend.Lean.Pretty.Keywords
 import Juvix.Compiler.Backend.Lean.Pretty.Options
-import Juvix.Data.CodeAnn
+import Juvix.Data.CodeAnn hiding (kwInductive)
 
 arrow :: Doc Ann
 arrow = "→"
@@ -48,7 +48,11 @@ instance PrettyCode Literal where
 instance PrettyCode Expression where
   ppCode = \case
     ExprVar idx -> return $ "x" <> pretty idx
-    ExprSort lvl -> ppCode lvl
+    ExprSort lvl -> case lvl of
+      LevelZero -> return "Type"
+      _ -> do
+        lvlDoc <- ppCode lvl
+        return $ "Type" <+> lvlDoc
     ExprConst name levels -> do
       nameDoc <- ppCode name
       if null levels 
@@ -93,7 +97,11 @@ instance PrettyCode Level where
 
 instance PrettyCode Type where
   ppCode = \case
-    TySort lvl -> ppCode lvl
+    TySort lvl -> case lvl of
+      LevelZero -> return "Type"
+      _ -> do
+        lvlDoc <- ppCode lvl
+        return $ "Type" <+> lvlDoc
     TyVar var -> ppCode var
     TyFun fun -> ppCode fun
     TyPi piType -> ppCode piType
@@ -104,7 +112,7 @@ instance PrettyCode TypeVar where
 
 instance PrettyCode FunType where
   ppCode FunType{..} = do
-    left <- ppCode _funTypeLeft
+    left <- ppCodeQuoted _funTypeLeft
     right <- ppCode _funTypeRight
     return $ left <+> kwArrow <+> right
 
@@ -112,7 +120,7 @@ instance PrettyCode PiType where
   ppCode PiType{..} = do
     binderDoc <- ppCode _piTypeBinder
     bodyDoc <- ppCode _piTypeBody
-    return $ parens binderDoc <+> kwArrow <+> bodyDoc
+    return $ binderDoc <+> kwArrow <+> bodyDoc
 
 instance PrettyCode TypeApp where
   ppCode TypeApp{..} = do
@@ -123,7 +131,7 @@ instance PrettyCode TypeApp where
 instance PrettyCode Application where
   ppCode Application{..} = do
     left <- ppTopCode _appLeft
-    right <- ppCode _appRight
+    right <- ppTopCode _appRight
     return $ left <+> right
 
 instance PrettyCode Lambda where
@@ -148,22 +156,29 @@ instance PrettyCode Let where
 instance PrettyCode Binder where
   ppCode Binder{..} = do
     nameDoc <- ppCode _binderName
-    typeDoc <- maybe (return mempty) ppCode _binderType
+    typeDoc <- maybe 
+      (return nameDoc)  -- Just the name when no type
+      (\t -> do
+         tDoc <- ppCode t
+         return $ nameDoc <+> kwColon <+> tDoc)
+      _binderType
     let wrapper = case _binderInfo of
           BinderDefault -> parens
           BinderImplicit -> braces
           BinderStrictImplicit -> doubleBraces
           BinderInstImplicit -> brackets
-    return $ wrapper $ nameDoc <+> typeDoc
+    return $ wrapper typeDoc
 
 instance PrettyCode Case where
   ppCode Case{..} = do
     value <- ppCode _caseValue
     branches <- mapM ppCode (toList _caseBranches)
-    return $ vsep
-      [ "match" <+> value <+> "with"
-      , indent 2 (vsep branches)
-      ]
+    case _caseValue of 
+      ExprVar 0 -> return $ "fun" <> line <> indent 2 (vsep branches)
+      _ -> return $ vsep
+        [ "match" <+> value <+> "with"
+        , indent 2 (vsep branches)
+        ]
 
 instance PrettyCode CaseBranch where
   ppCode CaseBranch{..} = do
@@ -210,7 +225,7 @@ instance PrettyCode ModuleCommand where
       return $ vsep
         [ kwNamespace <+> nameDoc
         , indent' (vsep $ punctuate line cmdsDoc)
-        , kwEnd
+        , kwEnd <+> nameDoc
         ]
     ModSection name cmds -> do
       nameDoc <- ppCode name
@@ -218,7 +233,7 @@ instance PrettyCode ModuleCommand where
       return $ vsep
         [ kwSection <+> nameDoc
         , indent' (vsep cmdsDoc)
-        , kwEnd
+        , kwEnd <+> nameDoc
         ]
     ModSetOption name val -> do
       nameDoc <- ppCode name
@@ -278,10 +293,11 @@ instance PrettyCode Inductive where
     ctorsDoc <- mapM (\(name, ty) -> do
       nameDoc <- ppCode name
       tyDoc <- ppCode ty
-      return $ nameDoc <+> kwColon <+> tyDoc) _inductiveCtors
+      return $ "|" <+> nameDoc <+> kwColon <+> tyDoc) _inductiveCtors
     return $ vsep
       [ kwInductive <+> nameDoc <+> hsep paramsDoc <+> kwColon <+> typeDoc
       , indent 2 (vsep ctorsDoc)
+      , kwOpen <+> nameDoc
       ]
 
 instance PrettyCode Structure' where

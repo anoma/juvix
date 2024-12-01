@@ -15,8 +15,8 @@ kwTheorem = keyword "theorem"
 kwDef :: Doc Ann
 kwDef = keyword "def"
 
---kwInductive :: Doc Ann
---kwInductive = keyword "inductive"
+kwInductive :: Doc Ann
+kwInductive = keyword "inductive"
 
 kwStructure :: Doc Ann
 kwStructure = keyword "structure"

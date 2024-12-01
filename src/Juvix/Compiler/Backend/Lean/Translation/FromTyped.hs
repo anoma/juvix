@@ -106,11 +106,6 @@ disambiguate ctx = disambiguate' . quote
           Just (c, _) | isLetter c -> t
           _ -> "x_" <> t
 
-lookupVar :: TranslationContext -> Name -> Int
-lookupVar ctx name = case findIndex ((== name) . (^. binderVarName)) (ctx ^. ctxBinders) of
-  Just idx -> idx
-  Nothing -> error $ "unbound variable: " <> show name
-
 makeFreshName :: (Member NameIdGen r) => TranslationContext -> Interval -> Text -> Sem r (Name, TranslationContext)
 makeFreshName ctx loc base = do
   let freshText = disambiguate ctx base
@@ -257,35 +252,12 @@ convertModule initCtx table Internal.Module {..} = do
 
     goFunctionDef :: (Member NameIdGen r) => TranslationContext -> Internal.FunctionDef -> Sem r Command
     goFunctionDef ctx Internal.FunctionDef {..} = do
-      case _funDefBody of
-        Internal.ExpressionLambda lam -> do
-          clauses <- mapM (goLambdaClause ctx) (toList $ lam ^. Internal.lambdaClauses)
-          return $ CmdDefinition Lean.Definition
-            { _definitionName = _funDefName,
-              _definitionType = Just (goType ctx _funDefType),
-              _definitionBody = ExprMatch Lean.Case 
-                { _caseValue = ExprVar 0,  -- reference to the input parameter
-                  _caseBranches = nonEmpty' clauses
-                },
-              _definitionAttrs = []
-            }
-        _ -> do
-          body <- goExpression ctx _funDefBody
-          return $ CmdDefinition Lean.Definition
-            { _definitionName = _funDefName,
-              _definitionType = Just (goType ctx _funDefType),
-              _definitionBody = body,
-              _definitionAttrs = []
-            }
-
-    goLambdaClause :: (Member NameIdGen r) => TranslationContext -> Internal.LambdaClause -> Sem r Lean.CaseBranch
-    goLambdaClause ctx Internal.LambdaClause {..} = do
-      let pat = NonEmpty.head _lambdaPatterns -- assuming single pattern for simplicity
-      (pattern', _) <- goPattern ctx (getLoc pat) (pat ^. Internal.patternArgPattern)  -- Note: handle the tuple
-      body <- goExpression ctx _lambdaBody
-      return Lean.CaseBranch
-        { _caseBranchPattern = pattern',
-          _caseBranchBody = body
+      body <- goExpression ctx _funDefBody
+      return $ CmdDefinition Lean.Definition
+        { _definitionName = _funDefName
+        , _definitionType = Just (goType ctx _funDefType)
+        , _definitionBody = body
+        , _definitionAttrs = []
         }
 
     goAxiomDef :: TranslationContext -> Internal.AxiomDef -> Command
@@ -299,14 +271,33 @@ convertModule initCtx table Internal.Module {..} = do
     goExpression :: (Member NameIdGen r) => TranslationContext -> Internal.Expression -> Sem r Expression
     goExpression ctx = \case
       Internal.ExpressionIden (Internal.IdenVar name) -> 
-        return $ ExprVar (lookupVar ctx name)
+        return $ ExprConst name []
       Internal.ExpressionIden (Internal.IdenFunction name)
         | HashSet.member name (ctx ^. ctxGlobalVars) ->
             return $ ExprConst name []
       Internal.ExpressionIden (Internal.IdenConstructor name) ->
         return $ ExprConst name []
       Internal.ExpressionApplication app -> goExpressionApp ctx app
-      Internal.ExpressionLambda lam -> goExpressionLambda ctx lam
+      Internal.ExpressionLambda lam -> 
+        let clauses = lam ^. Internal.lambdaClauses
+        in if isPatternLambda clauses
+           then goPatternLambda ctx clauses
+           else goSimpleLambda ctx (NonEmpty.head clauses)
+        where
+          isPatternLambda :: NonEmpty Internal.LambdaClause -> Bool
+          isPatternLambda clauses = 
+            length clauses > 1 || -- Multiple clauses always means pattern matching
+            any hasPatternMatching (toList clauses)
+            where
+              hasPatternMatching :: Internal.LambdaClause -> Bool
+              hasPatternMatching clause = 
+                any hasNonVariablePattern 
+                    (toList $ clause ^. Internal.lambdaPatterns)
+              
+              hasNonVariablePattern :: Internal.PatternArg -> Bool
+              hasNonVariablePattern pat = case pat ^. Internal.patternArgPattern of
+                Internal.PatternVariable _ -> False
+                _ -> True  
       Internal.ExpressionLet l -> goExpressionLet ctx l
       Internal.ExpressionCase c -> goExpressionMatch ctx c
       Internal.ExpressionLiteral lit -> return $ goLiteral lit
@@ -363,28 +354,48 @@ convertModule initCtx table Internal.Module {..} = do
           _appRight = right
         }
 
-    goExpressionLambda :: (Member NameIdGen r) => TranslationContext -> Internal.Lambda -> Sem r Expression
-    goExpressionLambda ctx lam = do
-      let firstClause = NonEmpty.head (lam ^. Internal.lambdaClauses)
-          name = case NonEmpty.head (firstClause ^. Internal.lambdaPatterns) of
-            Internal.PatternArg _ _ (Internal.PatternVariable n) -> n
-            Internal.PatternArg _ _ (Internal.PatternWildcardConstructor _) -> 
-              defaultName (getLoc firstClause) "_"
-            Internal.PatternArg _ _ (Internal.PatternConstructorApp c) -> 
-              c ^. Internal.constrAppConstructor
-          body = firstClause ^. Internal.lambdaBody
-      (expr, _) <- withBinders [(getLoc name, name ^. Internal.nameText)] ctx $ \newCtx -> do
-        bodyExpr <- goExpression newCtx body  -- Bind the monadic result
-        return $ ExprLambda Lean.Lambda
-          { _lambdaBinder = Lean.Binder
-              { _binderName = name,
-                _binderType = fmap (goType ctx) (lam ^. Internal.lambdaType),
-                _binderInfo = Lean.BinderDefault,
-                _binderDefault = Nothing
-              },
-            _lambdaBody = bodyExpr  -- Use the bound result
-          }
-      return expr
+    -- | Convert a pattern lambda to a match expression
+    goPatternLambda :: (Member NameIdGen r) => TranslationContext -> NonEmpty Internal.LambdaClause -> Sem r Expression
+    goPatternLambda ctx clauses = do
+      branches <- mapM (goCaseBranch ctx) 
+        [ Internal.CaseBranch
+            { _caseBranchPattern = NonEmpty.head patterns
+            , _caseBranchRhs = Internal.CaseBranchRhsExpression body
+            }
+        | Internal.LambdaClause patterns body <- toList clauses
+        ]
+      return $ ExprMatch Lean.Case
+        { _caseValue = ExprVar 0
+        , _caseBranches = nonEmpty' branches
+        }
+
+    -- | Convert a simple lambda (non-pattern case)
+    goSimpleLambda :: (Member NameIdGen r) => TranslationContext -> Internal.LambdaClause -> Sem r Expression
+    goSimpleLambda ctx (Internal.LambdaClause patterns body) = 
+      foldr mkLambda <$> goExpression ctx body <*> pure (toList patterns)
+      where
+        mkLambda :: Internal.PatternArg -> Expression -> Expression
+        mkLambda pat inner = 
+          ExprLambda Lean.Lambda
+            { _lambdaBinder = Lean.Binder
+                { _binderName = getBoundName pat
+                , _binderType = Nothing
+                , _binderInfo = getBinderInfo pat
+                , _binderDefault = Nothing
+                }
+            , _lambdaBody = inner
+            }
+
+        getBoundName :: Internal.PatternArg -> Name
+        getBoundName pat = case pat ^. Internal.patternArgPattern of
+          Internal.PatternVariable name -> name
+          _ -> error "Expected variable pattern in non-pattern lambda"
+
+        getBinderInfo :: Internal.PatternArg -> Lean.BinderInfo
+        getBinderInfo pat = case pat ^. Internal.patternArgIsImplicit of
+          Internal.Implicit -> Lean.BinderImplicit
+          Internal.ImplicitInstance -> Lean.BinderInstImplicit
+          Internal.Explicit -> Lean.BinderDefault
 
     goExpressionLet :: (Member NameIdGen r) => TranslationContext -> Internal.Let -> Sem r Expression
     goExpressionLet ctx Internal.Let {..} = do
