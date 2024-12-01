@@ -11,6 +11,7 @@ module Juvix.Compiler.Pipeline.Loader.PathResolver
     evalPathResolverPipe,
     findPackageJuvixFiles,
     runGlobalVersions,
+    importNodePackageId,
   )
 where
 
@@ -383,6 +384,11 @@ isModuleOrphan topJuvixPath = do
         && not (pathPackageDescription `isProperPrefixOf` actualPath)
         && not (pathPackageBase `isProperPrefixOf` actualPath)
     )
+
+importNodePackageId :: (Members '[Reader GlobalVersions, PathResolver] r) => ImportNode -> Sem r PackageId
+importNodePackageId n = do
+  pkg <- fromJust . (^. at (n ^. importNodePackageRoot)) <$> getPackageInfos
+  packageLikePackageId (pkg ^. packagePackage)
 
 expectedPath' ::
   (Members '[Reader ResolverEnv, Files] r) =>
