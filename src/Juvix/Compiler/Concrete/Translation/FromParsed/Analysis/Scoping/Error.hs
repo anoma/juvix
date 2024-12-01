@@ -51,7 +51,6 @@ data ScoperError
   | ErrMissingArgs MissingArgs
   | ErrPrecedenceInconsistency PrecedenceInconsistencyError
   | ErrIncomparablePrecedences IncomaprablePrecedences
-  | ErrAliasCycle AliasCycle
   | ErrInvalidRangeNumber InvalidRangeNumber
   | ErrWrongDefaultValue WrongDefaultValue
   | ErrUnsupported Unsupported
@@ -104,7 +103,6 @@ instance ToGenericError ScoperError where
     ErrMissingArgs e -> genericError e
     ErrPrecedenceInconsistency e -> genericError e
     ErrIncomparablePrecedences e -> genericError e
-    ErrAliasCycle e -> genericError e
     ErrInvalidRangeNumber e -> genericError e
     ErrWrongDefaultValue e -> genericError e
     ErrUnsupported e -> genericError e

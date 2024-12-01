@@ -2,7 +2,8 @@ module Alias;
 
 import Stdlib.Data.Fixity open;
 
--- aliases are allowed to forward reference
+-- aliases are allowed to forward reference, but they themselves cannot be
+-- forward referenced
 syntax alias Boolean := Bool;
 syntax alias ⊥ := false;
 syntax alias ⊤ := true;
@@ -53,8 +54,22 @@ syntax alias , := mkPair;
 
 myPair : Pair := one, ⊥;
 
+syntax alias myPair' := myPair;
+
 localAlias : Binary -> Binary
   | b :=
     let
       syntax alias b' := b;
     in b';
+
+syntax alias g' := g;
+
+terminating
+f (b : Binary) : Binary := case b of
+  | zero := g' one
+  | one := zero;
+
+terminating
+g (b : Binary) : Binary := case b of
+  | zero := f one
+  | one := zero;
