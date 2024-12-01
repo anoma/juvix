@@ -70,7 +70,7 @@ data ScoperState = ScoperState
 data SymbolOperator = SymbolOperator
   { _symbolOperatorUsed :: Bool,
     _symbolOperatorFixity :: Fixity,
-    _symbolOperatorDef :: OperatorSyntaxDef
+    _symbolOperatorDef :: OperatorSyntaxDef 'Scoped
   }
   deriving stock (Show)
 
@@ -81,7 +81,7 @@ newtype ScoperOperators = ScoperOperators
 
 data SymbolIterator = SymbolIterator
   { _symbolIteratorUsed :: Bool,
-    _symbolIteratorDef :: IteratorSyntaxDef
+    _symbolIteratorDef :: IteratorSyntaxDef 'Scoped
   }
 
 newtype ScoperIterators = ScoperIterators

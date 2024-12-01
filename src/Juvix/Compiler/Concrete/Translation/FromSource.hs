@@ -705,6 +705,7 @@ aliasDef :: forall r. (Members '[ParserResultBuilder, PragmasStash, Error Parser
 aliasDef synKw = do
   let _aliasDefSyntaxKw = Irrelevant synKw
   _aliasDefAliasKw <- Irrelevant <$> kw kwAlias
+  _aliasDefDoc <- getJudoc
   _aliasDefName <- symbol
   kw kwAssign
   _aliasDefAsName <- name
@@ -770,16 +771,17 @@ parsedFixityInfo = do
 
 fixitySyntaxDef :: forall r. (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => KeywordRef -> ParsecS r (FixitySyntaxDef 'Parsed)
 fixitySyntaxDef _fixitySyntaxKw = P.label "<fixity declaration>" $ do
-  _fixityDoc <- getJudoc
   _fixityKw <- kw kwFixity
+  _fixityDoc <- getJudoc
   _fixitySymbol <- symbol
   _fixityAssignKw <- kw kwAssign
   _fixityInfo <- parsedFixityInfo
   return FixitySyntaxDef {..}
 
-operatorSyntaxDef :: forall r. (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => KeywordRef -> ParsecS r OperatorSyntaxDef
-operatorSyntaxDef _opSyntaxKw = do
+operatorSyntaxDef :: forall r. (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => KeywordRef -> ParsecS r (OperatorSyntaxDef 'Parsed)
+operatorSyntaxDef _opSyntaxKw = P.label "<operator declaration>" $ do
   _opKw <- kw kwOperator
+  _opDoc <- getJudoc
   _opSymbol <- symbol
   _opFixity <- symbol
   return OperatorSyntaxDef {..}
@@ -810,9 +812,10 @@ parsedIteratorInfo = do
       void (kw kwRange >> kw kwAssign)
       fmap fromIntegral <$> integer
 
-iteratorSyntaxDef :: forall r. (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => KeywordRef -> ParsecS r IteratorSyntaxDef
+iteratorSyntaxDef :: forall r. (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => KeywordRef -> ParsecS r (IteratorSyntaxDef 'Parsed)
 iteratorSyntaxDef _iterSyntaxKw = do
   _iterIteratorKw <- kw kwIterator
+  _iterDoc <- getJudoc
   _iterSymbol <- symbol
   _iterInfo <- optional parsedIteratorInfo
   return IteratorSyntaxDef {..}

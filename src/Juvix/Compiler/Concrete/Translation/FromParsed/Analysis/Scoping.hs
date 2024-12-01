@@ -1046,53 +1046,83 @@ resolveFixitySyntaxDef fdef@FixitySyntaxDef {..} = topBindings $ do
 
 resolveOperatorSyntaxDef ::
   forall r.
-  (Members '[Error ScoperError, State Scope, State ScoperState, State ScoperSyntax, InfoTableBuilder, Reader InfoTable] r) =>
-  OperatorSyntaxDef ->
+  (Members '[Reader PackageId, Reader ScopeParameters, Reader InfoTable, InfoTableBuilder, NameIdGen, Error ScoperError, State Scope, State ScoperState, State ScoperSyntax, InfoTableBuilder, Reader InfoTable] r) =>
+  OperatorSyntaxDef 'Parsed ->
   Sem r ()
-resolveOperatorSyntaxDef s@OperatorSyntaxDef {..} = do
-  checkNotDefined
+resolveOperatorSyntaxDef OperatorSyntaxDef {..} = do
+  doc :: Maybe (Judoc 'Scoped) <- maybe (return Nothing) (return . Just <=< checkJudoc) _opDoc
+  let def =
+        OperatorSyntaxDef
+          { _opDoc = doc,
+            ..
+          }
+  checkNotDefined def
   sym <- checkFixitySymbol _opFixity
   fx <- lookupFixity (sym ^. S.nameId)
   let sf =
         SymbolOperator
           { _symbolOperatorUsed = False,
-            _symbolOperatorDef = s,
+            _symbolOperatorDef = def,
             _symbolOperatorFixity = fx ^. fixityDefFixity
           }
   modify (over scoperSyntaxOperators (over scoperOperators (HashMap.insert _opSymbol sf)))
   where
-    checkNotDefined :: Sem r ()
-    checkNotDefined =
+    checkNotDefined :: OperatorSyntaxDef 'Scoped -> Sem r ()
+    checkNotDefined s =
       whenJustM
         (HashMap.lookup _opSymbol <$> gets (^. scoperSyntaxOperators . scoperOperators))
         $ \s' -> throw (ErrDuplicateOperator (DuplicateOperator (s' ^. symbolOperatorDef) s))
 
 resolveIteratorSyntaxDef ::
   forall r.
-  (Members '[Error ScoperError, State Scope, State ScoperState, State ScoperSyntax] r) =>
-  IteratorSyntaxDef ->
+  (Members '[Reader PackageId, Reader ScopeParameters, Reader InfoTable, InfoTableBuilder, NameIdGen, Error ScoperError, State Scope, State ScoperState, State ScoperSyntax] r) =>
+  IteratorSyntaxDef 'Parsed ->
   Sem r ()
-resolveIteratorSyntaxDef s@IteratorSyntaxDef {..} = do
-  checkNotDefined
-  checkAtLeastOneRange
+resolveIteratorSyntaxDef IteratorSyntaxDef {..} = do
+  doc :: Maybe (Judoc 'Scoped) <- maybe (return Nothing) (return . Just <=< checkJudoc) _iterDoc
+  let def =
+        IteratorSyntaxDef
+          { _iterDoc = doc,
+            ..
+          }
+  checkNotDefined def
+  checkAtLeastOneRange def
   let sf =
         SymbolIterator
           { _symbolIteratorUsed = False,
-            _symbolIteratorDef = s
+            _symbolIteratorDef = def
           }
   modify (set (scoperSyntaxIterators . scoperIterators . at _iterSymbol) (Just sf))
   where
-    checkAtLeastOneRange :: Sem r ()
-    checkAtLeastOneRange = unless (maybe True (> 0) num) (throw (ErrInvalidRangeNumber (InvalidRangeNumber s)))
+    checkAtLeastOneRange :: IteratorSyntaxDef 'Scoped -> Sem r ()
+    checkAtLeastOneRange s = unless (maybe True (> 0) num) (throw (ErrInvalidRangeNumber (InvalidRangeNumber s)))
       where
         num :: Maybe Int
         num = s ^? iterInfo . _Just . to fromParsedIteratorInfo . iteratorInfoRangeNum . _Just
 
-    checkNotDefined :: Sem r ()
-    checkNotDefined =
+    checkNotDefined :: IteratorSyntaxDef 'Scoped -> Sem r ()
+    checkNotDefined s =
       whenJustM
         (HashMap.lookup _iterSymbol <$> gets (^. scoperSyntaxIterators . scoperIterators))
         $ \s' -> throw (ErrDuplicateIterator (DuplicateIterator (s' ^. symbolIteratorDef) s))
+
+checkOperatorSyntaxDef ::
+  forall r.
+  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, State ScoperSyntax, NameIdGen, InfoTableBuilder, Reader InfoTable] r) =>
+  OperatorSyntaxDef 'Parsed ->
+  Sem r (OperatorSyntaxDef 'Scoped)
+checkOperatorSyntaxDef OperatorSyntaxDef {..} = do
+  mdef <- gets (^. scoperSyntaxOperators . scoperOperators . at _opSymbol)
+  return $ fromJust mdef ^. symbolOperatorDef
+
+checkIteratorSyntaxDef ::
+  forall r.
+  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, State ScoperSyntax, NameIdGen, InfoTableBuilder, Reader InfoTable] r) =>
+  IteratorSyntaxDef 'Parsed ->
+  Sem r (IteratorSyntaxDef 'Scoped)
+checkIteratorSyntaxDef IteratorSyntaxDef {..} = do
+  mdef <- gets (^. scoperSyntaxIterators . scoperIterators . at _iterSymbol)
+  return $ fromJust mdef ^. symbolIteratorDef
 
 -- | Only used as syntactical convenience for registerX functions
 (@$>) :: (Functor m) => (a -> m ()) -> a -> m a
@@ -1362,8 +1392,8 @@ checkInductiveDef InductiveDef {..} = do
 
             checkRecordSyntaxDef :: RecordSyntaxDef 'Parsed -> Sem r (RecordSyntaxDef 'Scoped)
             checkRecordSyntaxDef = \case
-              RecordSyntaxOperator d -> return (RecordSyntaxOperator d)
-              RecordSyntaxIterator d -> return (RecordSyntaxIterator d)
+              RecordSyntaxOperator d -> RecordSyntaxOperator <$> checkOperatorSyntaxDef d
+              RecordSyntaxIterator d -> RecordSyntaxIterator <$> checkIteratorSyntaxDef d
 
             checkRecordStatement :: RecordStatement 'Parsed -> Sem r (RecordStatement 'Scoped)
             checkRecordStatement = \case
@@ -3247,22 +3277,24 @@ checkSyntaxDef ::
 checkSyntaxDef = \case
   SyntaxFixity fixDef -> SyntaxFixity <$> checkFixitySyntaxDef fixDef
   SyntaxAlias a -> SyntaxAlias <$> checkAliasDef a
-  SyntaxOperator opDef -> return $ SyntaxOperator opDef
-  SyntaxIterator iterDef -> return $ SyntaxIterator iterDef
+  SyntaxOperator opDef -> SyntaxOperator <$> checkOperatorSyntaxDef opDef
+  SyntaxIterator iterDef -> SyntaxIterator <$> checkIteratorSyntaxDef iterDef
 
 checkAliasDef ::
   forall r.
-  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable, NameIdGen, State ScoperSyntax] r) =>
+  (Members '[Reader PackageId, Reader ScopeParameters, Reader InfoTable, InfoTableBuilder, NameIdGen, Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable, NameIdGen, State ScoperSyntax] r) =>
   AliasDef 'Parsed ->
   Sem r (AliasDef 'Scoped)
 checkAliasDef def@AliasDef {..} = do
   scanAlias def
+  doc' <- maybe (return Nothing) (return . Just <=< checkJudoc) _aliasDefDoc
   aliasName' :: S.Symbol <- gets (^?! scopeLocalSymbols . at _aliasDefName . _Just)
   asName' <- checkScopedIden _aliasDefAsName
   return
     AliasDef
       { _aliasDefName = aliasName',
         _aliasDefAsName = asName',
+        _aliasDefDoc = doc',
         ..
       }
   where
@@ -3281,7 +3313,7 @@ reserveAliasDef ::
 reserveAliasDef = void . reserveAliasSymbol
 
 resolveSyntaxDef ::
-  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, State ScoperSyntax, Reader BindingStrategy] r) =>
+  (Members '[Reader PackageId, Reader ScopeParameters, Reader InfoTable, InfoTableBuilder, NameIdGen, Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, State ScoperSyntax, Reader BindingStrategy] r) =>
   SyntaxDef 'Parsed ->
   Sem r ()
 resolveSyntaxDef = \case
