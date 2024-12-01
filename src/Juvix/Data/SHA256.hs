@@ -41,7 +41,7 @@ runSHA256Builder m = fmap
   $ \case
     BuilderDigestFiles f -> do
       fs <- mapM readFileBS' (toList f)
-      modify (\ctx -> SHA256.updates ctx (toList fs))
+      modify (`SHA256.updates` fs)
 
 ignoreSHA256Builder :: Sem (SHA256Builder ': r) a -> Sem r a
 ignoreSHA256Builder = interpret $ \case
@@ -52,4 +52,4 @@ execSHA256Builder = fmap fst . runSHA256Builder
 
 -- | Create a HEX encoded, SHA256 digest of the contents of some files
 digestFiles :: (Members '[Files] r, Foldable l) => l (Path Abs File) -> Sem r Text
-digestFiles = execSHA256Builder . digestFiles
+digestFiles = execSHA256Builder . builderDigestFiles
