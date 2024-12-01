@@ -1,3 +1,4 @@
+-- Patterns in definitions
 module test086;
 
 import Stdlib.Prelude open;

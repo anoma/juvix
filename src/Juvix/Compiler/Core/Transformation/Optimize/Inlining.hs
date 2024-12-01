@@ -61,6 +61,7 @@ convertNode inlineDepth nonRecSyms symOcc md = dmapL go
           Just InlineNever -> node
           _
             | HashSet.member _identSymbol nonRecSyms
+                && argsNum == 0
                 && ( HashMap.lookup _identSymbol symOcc == Just 1
                        || isImmediate md def
                    ) ->
