@@ -377,7 +377,7 @@ instance (SingI s) => PrettyPrint (NamedArgumentNew s) where
     NamedArgumentNewFunction f -> ppCode f
     NamedArgumentItemPun f -> ppCode f
 
-instance PrettyPrint (RecordSyntaxDef s) where
+instance (SingI s) => PrettyPrint (RecordSyntaxDef s) where
   ppCode = \case
     RecordSyntaxOperator d -> ppCode d
     RecordSyntaxIterator d -> ppCode d
@@ -594,8 +594,10 @@ instance PrettyPrint ScopedIden where
   ppCode = ppCode . (^. scopedIdenSrcName)
 
 instance (SingI s) => PrettyPrint (AliasDef s) where
-  ppCode AliasDef {..} =
-    ppCode _aliasDefSyntaxKw
+  ppCode AliasDef {..} = do
+    let doc' = ppCode <$> _aliasDefDoc
+    doc'
+      ?<> ppCode _aliasDefSyntaxKw
       <+> ppCode _aliasDefAliasKw
       <+> ppSymbolType _aliasDefName
       <+> ppCode Kw.kwAssign
@@ -928,15 +930,17 @@ instance (SingI s) => PrettyPrint (ParsedFixityInfo s) where
 
 instance (SingI s) => PrettyPrint (FixitySyntaxDef s) where
   ppCode f@FixitySyntaxDef {..} = do
-    let header' = ppFixityDefHeader f
+    let doc' = ppCode <$> _fixityDoc
+        header' = ppFixityDefHeader f
         body' = ppCode _fixityInfo
-    header' <+> ppCode _fixityAssignKw <+> body'
+    doc' ?<> header' <+> ppCode _fixityAssignKw <+> body'
 
-instance PrettyPrint OperatorSyntaxDef where
+instance (SingI s) => PrettyPrint (OperatorSyntaxDef s) where
   ppCode OperatorSyntaxDef {..} = do
-    let opSymbol' = ppUnkindedSymbol _opSymbol
+    let doc' = ppCode <$> _opDoc
+        opSymbol' = ppUnkindedSymbol _opSymbol
         p = ppUnkindedSymbol _opFixity
-    ppCode _opSyntaxKw <+> ppCode _opKw <+> opSymbol' <+> p
+    doc' ?<> ppCode _opSyntaxKw <+> ppCode _opKw <+> opSymbol' <+> p
 
 instance PrettyPrint PatternApp where
   ppCode = apeHelper
@@ -965,10 +969,12 @@ instance PrettyPrint ParsedIteratorInfo where
         items = ppBlockOrList' (catMaybes [iniItem, rangeItem])
     grouped (ppCode l <> items <> ppCode r)
 
-instance PrettyPrint IteratorSyntaxDef where
+instance (SingI s) => PrettyPrint (IteratorSyntaxDef s) where
   ppCode IteratorSyntaxDef {..} = do
-    let iterSymbol' = ppUnkindedSymbol _iterSymbol
-    ppCode _iterSyntaxKw
+    let doc' = ppCode <$> _iterDoc
+        iterSymbol' = ppUnkindedSymbol _iterSymbol
+    doc'
+      ?<> ppCode _iterSyntaxKw
       <+> ppCode _iterIteratorKw
       <+> iterSymbol'
       <+?> fmap ppCode _iterInfo
