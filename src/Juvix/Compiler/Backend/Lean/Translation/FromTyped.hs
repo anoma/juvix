@@ -276,18 +276,51 @@ convertModule table Internal.Module {..} = do
 
     -- | Convert a pattern lambda to a match expression
     goPatternLambda :: (Member NameIdGen r) => NonEmpty Internal.LambdaClause -> Sem r Expression
-    goPatternLambda clauses = do
-      branches <- mapM goCaseBranch
-        [ Internal.CaseBranch
-            { _caseBranchPattern = NonEmpty.head patterns
-            , _caseBranchRhs = Internal.CaseBranchRhsExpression body
-            }
-        | Internal.LambdaClause patterns body <- toList clauses
-        ]
-      return $ ExprMatch Lean.Case
-        { _caseValue = ExprVar 0
-        , _caseBranches = nonEmpty' branches
-        }
+    goPatternLambda clauses = buildNestedLambdas 0 (NonEmpty.head clauses)
+      where
+        buildNestedLambdas :: (Member NameIdGen r) => Int -> Internal.LambdaClause -> Sem r Expression
+        buildNestedLambdas pos Internal.LambdaClause{..} = 
+          case _lambdaPatterns of
+            pat :| [] -> do
+              body <- goExpression _lambdaBody
+              processArg pos pat body
+            pat :| rest -> do
+              inner <- buildNestedLambdas (pos + 1) (Internal.LambdaClause (fromJust $ nonEmpty rest) _lambdaBody)
+              processArg pos pat inner
+
+        processArg :: (Member NameIdGen r) => Int -> Internal.PatternArg -> Expression -> Sem r Expression
+        processArg pos pat body = case pat ^. Internal.patternArgPattern of
+          Internal.PatternVariable name -> 
+            -- Simple variable binding - wrap in regular lambda
+            return $ ExprLambda Lean.Lambda
+              { _lambdaBinder = Lean.Binder
+                  { _binderName = name
+                  , _binderType = Nothing
+                  , _binderInfo = getBinderInfo pat
+                  , _binderDefault = Nothing
+                  }
+              , _lambdaBody = body
+              }
+          _ -> do
+            -- Pattern matching - build match expression
+            branches <- mapM goCaseBranch
+              [ Internal.CaseBranch
+                  { _caseBranchPattern = clausePat
+                  , _caseBranchRhs = Internal.CaseBranchRhsExpression body
+                  }
+              | Internal.LambdaClause pats body <- toList clauses
+              , let clausePat = (toList pats) !! pos
+              ]
+            return $ ExprMatch Lean.Case
+              { _caseValue = ExprVar 0
+              , _caseBranches = nonEmpty' branches
+              }
+
+        getBinderInfo :: Internal.PatternArg -> Lean.BinderInfo  
+        getBinderInfo pat = case pat ^. Internal.patternArgIsImplicit of
+          Internal.Implicit -> Lean.BinderImplicit
+          Internal.ImplicitInstance -> Lean.BinderInstImplicit  
+          Internal.Explicit -> Lean.BinderDefault
 
     -- | Convert a simple lambda (non-pattern case)
     goSimpleLambda :: (Member NameIdGen r) => Internal.LambdaClause -> Sem r Expression
