@@ -130,7 +130,7 @@ instance PrettyCode TypeApp where
 
 instance PrettyCode Application where
   ppCode Application{..} = do
-    left <- ppTopCode _appLeft
+    left <- ppCode _appLeft
     right <- ppTopCode _appRight
     return $ left <+> right
 
@@ -326,7 +326,7 @@ instance PrettyCode Class where
       tyD <- ppCode ty
       return $ nameD <+> kwColon <+> tyD) _classFields
     return $ vsep
-      [ kwClass <+> nameDoc <+> hsep paramsDoc
+      [ kwClass <+> nameDoc <+> hsep paramsDoc <+> kwWhere
       , indent' (vsep fieldsDoc)
       ]
 

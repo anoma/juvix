@@ -60,8 +60,8 @@ kwThen = keyword "then"
 kwElse :: Doc Ann
 kwElse = keyword "else"
 
-kwWhere :: Doc Ann
-kwWhere = keyword "where"
+--kwWhere :: Doc Ann
+--kwWhere = keyword "where"
 
 kwSort :: Doc Ann
 kwSort = keyword "Sort"

@@ -15,24 +15,6 @@ import Juvix.Compiler.Store.Extra
 import Juvix.Compiler.Store.Language
 import Juvix.Prelude
 
-data DeBruijnInfo = DeBruijnInfo
-  { _binderVarName :: Name,
-    _binderIndex :: Int
-  }
-
-data TranslationContext = TranslationContext
-  { _ctxBinders :: [DeBruijnInfo],
-    _ctxGlobalVars :: HashSet Name,
-    _ctxUsedNames :: HashSet Text,
-    _ctxBinderDepth :: Int
-  }
-
-makeLenses ''DeBruijnInfo
-makeLenses ''TranslationContext
-
-emptyContext :: TranslationContext
-emptyContext = TranslationContext [] mempty mempty 0
-
 fromInternal ::
   forall r.
   (Members '[Error JuvixError, Reader EntryPoint, Reader ModuleTable, NameIdGen] r) =>
@@ -46,31 +28,16 @@ fromInternal res@Internal.InternalTypedResult {..} = do
       itab' = Internal.insertInternalModule itab md
       table :: Internal.InfoTable
       table = Internal.computeCombinedInfoTable itab'
-      ctx = buildInitialContext _resultModule
       file = getLoc _resultModule ^. intervalFile
       comments = filter 
         (\c -> c ^. commentInterval . intervalFile == file)
         (allComments (Internal.getInternalTypedResultComments res))
-  module' <- convertModule ctx table _resultModule
+  module' <- convertModule table _resultModule
   return $ Result
     { _resultModule = module',
       _resultModuleId = md ^. Internal.internalModuleId,
       _resultComments = comments
     }
-  where
-    buildInitialContext :: Internal.Module -> TranslationContext
-    buildInitialContext m =
-      let globals = HashSet.fromList $ concatMap getNames (m ^. Internal.moduleBody . Internal.moduleStatements)
-      in TranslationContext [] globals mempty 0
-      where
-        getNames :: Internal.MutualBlock -> [Name]
-        getNames (Internal.MutualBlock stmts) = concatMap getName (toList stmts)
-        
-        getName :: Internal.MutualStatement -> [Name]
-        getName = \case
-          Internal.StatementInductive ind -> [ind ^. Internal.inductiveName]
-          Internal.StatementFunction fun -> [fun ^. Internal.funDefName]
-          Internal.StatementAxiom ax -> [ax ^. Internal.axiomName]
 
 defaultName :: Interval -> Text -> Name
 defaultName loc n =
@@ -89,68 +56,24 @@ defaultName loc n =
         _nameIdModuleId = defaultModuleId 
       }
 
-disambiguate :: TranslationContext -> Text -> Text
-disambiguate ctx = disambiguate' . quote
-  where
-    disambiguate' :: Text -> Text
-    disambiguate' name
-      | name == "?" || name == "" || name == "_" = disambiguate' "X"
-      | HashSet.member name (ctx ^. ctxUsedNames) = disambiguate' (prime name)
-      | otherwise = name
-    
-    quote :: Text -> Text
-    quote = Text.filter isValidNameChar . ensureStartsWithLetter
-      where
-        isValidNameChar c = isAlphaNum c || c == '_' || c == '\''
-        ensureStartsWithLetter t = case Text.uncons t of
-          Just (c, _) | isLetter c -> t
-          _ -> "x_" <> t
-
-makeFreshName :: (Member NameIdGen r) => TranslationContext -> Interval -> Text -> Sem r (Name, TranslationContext)
-makeFreshName ctx loc base = do
-  let freshText = disambiguate ctx base
+makeFreshName :: (Member NameIdGen r) => Interval -> Text -> Sem r Name
+makeFreshName loc base = do
   uid <- freshNameId
   let name = Internal.Name
-        { _nameText = freshText,
+        { _nameText = base,
           _nameId = uid,
           _nameKind = Internal.KNameLocal,
           _nameKindPretty = Internal.KNameLocal,
-          _namePretty = freshText,
+          _namePretty = base,
           _nameLoc = loc,
           _nameFixity = Nothing
         }
-  let ctx' = over ctxUsedNames (HashSet.insert freshText) ctx
-  return (name, ctx')
+  return name
 
-extendContext :: (Member NameIdGen r) => Interval -> Text -> TranslationContext -> Sem r (Name, TranslationContext)
-extendContext loc base ctx = do
-  (name, ctx') <- makeFreshName ctx loc base
-  let binder = DeBruijnInfo
-        { _binderVarName = name,
-          _binderIndex = ctx ^. ctxBinderDepth
-        }
-  return
-    ( name,
-      ctx' & ctxBinders %~ (binder:)
-           & ctxBinderDepth %~ (+ 1)
-    )
-
-withBinders :: (Member NameIdGen r) => [(Interval, Text)] -> TranslationContext -> (TranslationContext -> Sem r a) -> Sem r (a, TranslationContext)
-withBinders binderSpecs ctx action = do
-  (ctx', _) <- foldM
-    (\(c, ns) (loc, base) -> do
-       (n, c') <- extendContext loc base c
-       return (c', ns ++ [n]))
-    (ctx, [])
-    binderSpecs
-  result <- action ctx'
-  let finalCtx = ctx & ctxUsedNames .~ (ctx' ^. ctxUsedNames)
-  return (result, finalCtx)
-
-convertModule :: (Member NameIdGen r) => TranslationContext -> Internal.InfoTable -> Internal.Module -> Sem r Lean.Module
-convertModule initCtx table Internal.Module {..} = do
+convertModule :: (Member NameIdGen r) => Internal.InfoTable -> Internal.Module -> Sem r Lean.Module
+convertModule table Internal.Module {..} = do
   let imports = map (^. Internal.importModuleName) (_moduleBody ^. Internal.moduleImports)
-  commands <- concat <$> mapM (goMutualBlock initCtx) (_moduleBody ^. Internal.moduleStatements)
+  commands <- concat <$> mapM goMutualBlock (_moduleBody ^. Internal.moduleStatements)
   return $ Lean.Module
     { _modulePrelude = False,
       _moduleImports = [],
@@ -159,25 +82,25 @@ convertModule initCtx table Internal.Module {..} = do
         [Lean.ModNamespace _moduleName commands]
     }
   where
-    goMutualBlock :: (Member NameIdGen r) => TranslationContext -> Internal.MutualBlock -> Sem r [Command] 
-    goMutualBlock ctx Internal.MutualBlock {..} =
-      mapM (goMutualStatement ctx) (toList _mutualStatements)
+    goMutualBlock :: (Member NameIdGen r) => Internal.MutualBlock -> Sem r [Command] 
+    goMutualBlock Internal.MutualBlock {..} =
+      mapM goMutualStatement (toList _mutualStatements)
 
-    goMutualStatement :: (Member NameIdGen r) => TranslationContext -> Internal.MutualStatement -> Sem r Command
-    goMutualStatement ctx = \case
+    goMutualStatement :: (Member NameIdGen r) => Internal.MutualStatement -> Sem r Command
+    goMutualStatement = \case
       Internal.StatementInductive x 
-        | x ^. Internal.inductiveTrait -> return $ goTraitDef ctx x
-        | otherwise -> goInductiveDef ctx x
+        | x ^. Internal.inductiveTrait -> return $ goTraitDef x
+        | otherwise -> goInductiveDef x
       Internal.StatementFunction x
-        | isInstanceDef x -> goInstanceDef ctx x
-        | otherwise -> goFunctionDef ctx x
-      Internal.StatementAxiom x -> return $ goAxiomDef ctx x
+        | isInstanceDef x -> goInstanceDef x
+        | otherwise -> goFunctionDef x
+      Internal.StatementAxiom x -> return $ goAxiomDef x
 
-    goTraitDef :: TranslationContext -> Internal.InductiveDef -> Command
-    goTraitDef ctx Internal.InductiveDef {..} =
+    goTraitDef :: Internal.InductiveDef -> Command
+    goTraitDef Internal.InductiveDef {..} =
       CmdClass Lean.Class
         { _className = _inductiveName,
-          _classParams = map (goInductiveParameter ctx) _inductiveParameters,
+          _classParams = map goInductiveParameter _inductiveParameters,
           _classFields = concatMap getTraitFields _inductiveConstructors
         }
       where
@@ -185,7 +108,7 @@ convertModule initCtx table Internal.Module {..} = do
           let (args, _) = Internal.unfoldFunType (cdef ^. Internal.inductiveConstructorType)
           in map (\param -> 
                    ( fromMaybe (defaultName (getLoc param) "_") (param ^. Internal.paramName),
-                     goType ctx (param ^. Internal.paramType)
+                     goType (param ^. Internal.paramType)
                    )) args
 
     isInstanceDef :: Internal.FunctionDef -> Bool
@@ -194,22 +117,22 @@ convertModule initCtx table Internal.Module {..} = do
       Just Internal.IsInstanceCoercionCoercion -> True
       Nothing -> False
 
-    goInstanceDef :: (Member NameIdGen r) => TranslationContext -> Internal.FunctionDef -> Sem r Command
-    goInstanceDef ctx Internal.FunctionDef {..} = do
-      value <- goExpression ctx _funDefBody
+    goInstanceDef :: (Member NameIdGen r) => Internal.FunctionDef -> Sem r Command
+    goInstanceDef Internal.FunctionDef {..} = do
+      value <- goExpression _funDefBody
       return $ CmdInstance Lean.Instance 
         { _instanceName = Just _funDefName,
-          _instanceType = goType ctx _funDefType,
+          _instanceType = goType _funDefType,
           _instanceValue = value,
           _instancePriority = Nothing
         }
 
-    goInductiveDef :: (Member NameIdGen r) => TranslationContext -> Internal.InductiveDef -> Sem r Command
-    goInductiveDef ctx Internal.InductiveDef {..}
+    goInductiveDef :: (Member NameIdGen r) =>  Internal.InductiveDef -> Sem r Command
+    goInductiveDef Internal.InductiveDef {..}
       | length _inductiveConstructors == 1
           && head' _inductiveConstructors ^. Internal.inductiveConstructorIsRecord = do
           let tyargs = fst $ Internal.unfoldFunType $ head' _inductiveConstructors ^. Internal.inductiveConstructorType
-          body <- goRecordConstructor ctx tyargs
+          body <- goRecordConstructor tyargs
           return $ CmdDefinition Lean.Definition
             { _definitionName = _inductiveName,
               _definitionType = Just (mkIndType _inductiveName []), 
@@ -219,70 +142,67 @@ convertModule initCtx table Internal.Module {..} = do
       | otherwise = 
           return $ CmdInductive Lean.Inductive
             { _inductiveName = _inductiveName,
-              _inductiveParams = map (goInductiveParameter ctx) _inductiveParameters,
-              _inductiveType = goType ctx _inductiveType,
-              _inductiveCtors = map (goConstructorDef ctx) _inductiveConstructors
+              _inductiveParams = map goInductiveParameter _inductiveParameters,
+              _inductiveType = goType _inductiveType,
+              _inductiveCtors = map goConstructorDef _inductiveConstructors
             }
 
-    goRecordConstructor :: (Member NameIdGen r) => TranslationContext -> [Internal.FunctionParameter] -> Sem r Expression
-    goRecordConstructor ctx params = do
-      fields <- mapM (goRecordField ctx) params
+    goRecordConstructor :: (Member NameIdGen r) => [Internal.FunctionParameter] -> Sem r Expression
+    goRecordConstructor params = do
+      fields <- mapM goRecordField params
       return $ ExprStruct Lean.Structure
         { _structBase = Nothing,
           _structFields = fields
         }
 
-    goRecordField :: (Member NameIdGen r) => TranslationContext -> Internal.FunctionParameter -> Sem r (Name, Expression)
-    goRecordField ctx Internal.FunctionParameter {..} = do
-      expr <- goExpression ctx _paramType
+    goRecordField :: (Member NameIdGen r) => Internal.FunctionParameter -> Sem r (Name, Expression)
+    goRecordField Internal.FunctionParameter {..} = do
+      expr <- goExpression _paramType
       return (fromMaybe (defaultName (getLoc _paramType) "_") _paramName, expr)
 
-    goInductiveParameter :: TranslationContext -> Internal.InductiveParameter -> Lean.Binder
-    goInductiveParameter ctx Internal.InductiveParameter {..} =
+    goInductiveParameter :: Internal.InductiveParameter -> Lean.Binder
+    goInductiveParameter Internal.InductiveParameter {..} =
       Lean.Binder
         { _binderName = _inductiveParamName,
-          _binderType = Just (goType ctx _inductiveParamType),
+          _binderType = Just (goType _inductiveParamType),
           _binderInfo = Lean.BinderDefault,
           _binderDefault = Nothing
         }
 
-    goConstructorDef :: TranslationContext -> Internal.ConstructorDef -> (Name, Type)
-    goConstructorDef ctx Internal.ConstructorDef {..} =
-      (_inductiveConstructorName, goType ctx _inductiveConstructorType)
+    goConstructorDef :: Internal.ConstructorDef -> (Name, Type)
+    goConstructorDef Internal.ConstructorDef {..} =
+      (_inductiveConstructorName, goType _inductiveConstructorType)
 
-    goFunctionDef :: (Member NameIdGen r) => TranslationContext -> Internal.FunctionDef -> Sem r Command
-    goFunctionDef ctx Internal.FunctionDef {..} = do
-      body <- goExpression ctx _funDefBody
+    goFunctionDef :: (Member NameIdGen r) => Internal.FunctionDef -> Sem r Command
+    goFunctionDef Internal.FunctionDef {..} = do
+      body <- goExpression _funDefBody
       return $ CmdDefinition Lean.Definition
         { _definitionName = _funDefName
-        , _definitionType = Just (goType ctx _funDefType)
+        , _definitionType = Just (goType _funDefType)
         , _definitionBody = body
         , _definitionAttrs = []
         }
 
-    goAxiomDef :: TranslationContext -> Internal.AxiomDef -> Command
-    goAxiomDef ctx Internal.AxiomDef {..} =
+    goAxiomDef :: Internal.AxiomDef -> Command
+    goAxiomDef Internal.AxiomDef {..} =
       CmdAxiom Lean.Axiom
         { _axiomName = _axiomName,
-          _axiomType = goType ctx _axiomType,
+          _axiomType = goType _axiomType,
           _axiomAttrs = []
         }
 
-    goExpression :: (Member NameIdGen r) => TranslationContext -> Internal.Expression -> Sem r Expression
-    goExpression ctx = \case
+    goExpression :: (Member NameIdGen r) => Internal.Expression -> Sem r Expression
+    goExpression = \case
       Internal.ExpressionIden (Internal.IdenVar name) -> 
         return $ ExprConst name []
-      Internal.ExpressionIden (Internal.IdenFunction name)
-        | HashSet.member name (ctx ^. ctxGlobalVars) ->
-            return $ ExprConst name []
       Internal.ExpressionIden (Internal.IdenConstructor name) ->
         return $ ExprConst name []
-      Internal.ExpressionApplication app -> goExpressionApp ctx app
+      Internal.ExpressionApplication app -> goExpressionApp app
       Internal.ExpressionLambda lam -> 
         let clauses = lam ^. Internal.lambdaClauses
         in if isPatternLambda clauses
-           then goPatternLambda ctx clauses
-           else goSimpleLambda ctx (NonEmpty.head clauses)
+           then goPatternLambda clauses
+           else goSimpleLambda (NonEmpty.head clauses)
         where
           isPatternLambda :: NonEmpty Internal.LambdaClause -> Bool
           isPatternLambda clauses = 
@@ -298,22 +218,22 @@ convertModule initCtx table Internal.Module {..} = do
               hasNonVariablePattern pat = case pat ^. Internal.patternArgPattern of
                 Internal.PatternVariable _ -> False
                 _ -> True  
-      Internal.ExpressionLet l -> goExpressionLet ctx l
-      Internal.ExpressionCase c -> goExpressionMatch ctx c
+      Internal.ExpressionLet l -> goExpressionLet l
+      Internal.ExpressionCase c -> goExpressionMatch c
       Internal.ExpressionLiteral lit -> return $ goLiteral lit
       Internal.ExpressionUniverse _ -> return $ ExprSort LevelZero
       Internal.ExpressionFunction f -> 
         case f ^. Internal.functionLeft of
           Internal.FunctionParameter {_paramImplicit = imp} -> do
-            body <- goExpression ctx (f ^. Internal.functionRight)
+            body <- goExpression (f ^. Internal.functionRight)
             case imp of
               Internal.Implicit -> return $ ExprPi Lean.PiType
                 { _piTypeBinder = (goBinder (f ^. Internal.functionLeft)) { Lean._binderInfo = Lean.BinderImplicit }
-                , _piTypeBody = goType ctx (f ^. Internal.functionRight)
+                , _piTypeBody = goType (f ^. Internal.functionRight)
                 }
               Internal.ImplicitInstance -> return $ ExprPi Lean.PiType
                 { _piTypeBinder = (goBinder (f ^. Internal.functionLeft)) { Lean._binderInfo = Lean.BinderInstImplicit }
-                , _piTypeBody = goType ctx (f ^. Internal.functionRight)
+                , _piTypeBody = goType (f ^. Internal.functionRight)
                 }
               Internal.Explicit -> return $ ExprApp Lean.Application
                 { _appLeft = ExprLambda Lean.Lambda { _lambdaBinder = goBinder (f ^. Internal.functionLeft), _lambdaBody = body }
@@ -326,8 +246,8 @@ convertModule initCtx table Internal.Module {..} = do
       Internal.ExpressionSimpleLambda slambda -> do
         let binder = slambda ^. Internal.slambdaBinder
             name = binder ^. Internal.sbinderVar
-        (expr, _) <- withBinders [(getLoc name, name ^. Internal.nameText)] ctx $ \newCtx -> do
-          bodyExpr <- goExpression newCtx (slambda ^. Internal.slambdaBody)
+        expr <- do
+          bodyExpr <- goExpression (slambda ^. Internal.slambdaBody)
           return $ ExprLambda Lean.Lambda
             { _lambdaBinder = Lean.Binder
                 { _binderName = name
@@ -345,19 +265,19 @@ convertModule initCtx table Internal.Module {..} = do
       Internal.ExpressionIden (Internal.IdenFunction name) -> 
           return $ ExprConst name []
 
-    goExpressionApp :: (Member NameIdGen r) => TranslationContext -> Internal.Application -> Sem r Expression
-    goExpressionApp ctx Internal.Application {..} = do
-      left <- goExpression ctx _appLeft
-      right <- goExpression ctx _appRight
+    goExpressionApp :: (Member NameIdGen r) => Internal.Application -> Sem r Expression
+    goExpressionApp Internal.Application {..} = do
+      left <- goExpression _appLeft
+      right <- goExpression _appRight
       return $ ExprApp Lean.Application
         { _appLeft = left,
           _appRight = right
         }
 
     -- | Convert a pattern lambda to a match expression
-    goPatternLambda :: (Member NameIdGen r) => TranslationContext -> NonEmpty Internal.LambdaClause -> Sem r Expression
-    goPatternLambda ctx clauses = do
-      branches <- mapM (goCaseBranch ctx) 
+    goPatternLambda :: (Member NameIdGen r) => NonEmpty Internal.LambdaClause -> Sem r Expression
+    goPatternLambda clauses = do
+      branches <- mapM goCaseBranch
         [ Internal.CaseBranch
             { _caseBranchPattern = NonEmpty.head patterns
             , _caseBranchRhs = Internal.CaseBranchRhsExpression body
@@ -370,9 +290,9 @@ convertModule initCtx table Internal.Module {..} = do
         }
 
     -- | Convert a simple lambda (non-pattern case)
-    goSimpleLambda :: (Member NameIdGen r) => TranslationContext -> Internal.LambdaClause -> Sem r Expression
-    goSimpleLambda ctx (Internal.LambdaClause patterns body) = 
-      foldr mkLambda <$> goExpression ctx body <*> pure (toList patterns)
+    goSimpleLambda :: (Member NameIdGen r) => Internal.LambdaClause -> Sem r Expression
+    goSimpleLambda (Internal.LambdaClause patterns body) = 
+      foldr mkLambda <$> goExpression body <*> pure (toList patterns)
       where
         mkLambda :: Internal.PatternArg -> Expression -> Expression
         mkLambda pat inner = 
@@ -397,62 +317,62 @@ convertModule initCtx table Internal.Module {..} = do
           Internal.ImplicitInstance -> Lean.BinderInstImplicit
           Internal.Explicit -> Lean.BinderDefault
 
-    goExpressionLet :: (Member NameIdGen r) => TranslationContext -> Internal.Let -> Sem r Expression
-    goExpressionLet ctx Internal.Let {..} = do
+    goExpressionLet :: (Member NameIdGen r) => Internal.Let -> Sem r Expression
+    goExpressionLet Internal.Let {..} = do
       case head _letClauses of
         Internal.LetFunDef fun -> do
-          (expr, _) <- withBinders [(getLoc (fun ^. Internal.funDefName), fun ^. Internal.funDefName . Internal.nameText)] ctx $ \ctx' -> do
-            value <- goExpression ctx (fun ^. Internal.funDefBody)
-            body <- goExpression ctx' _letExpression
+          expr <- do
+            value <- goExpression (fun ^. Internal.funDefBody)
+            body <- goExpression _letExpression
             return $ ExprLet Lean.Let
               { _letName = fun ^. Internal.funDefName,
-                _letType = Just $ goType ctx (fun ^. Internal.funDefType),
+                _letType = Just $ goType (fun ^. Internal.funDefType),
                 _letValue = value,
                 _letBody = body
               }
           return expr
         _ -> error "Unsupported let binding"
 
-    goExpressionMatch :: (Member NameIdGen r) => TranslationContext -> Internal.Case -> Sem r Expression
-    goExpressionMatch ctx Internal.Case {..} = do
-      value <- goExpression ctx _caseExpression
-      branches <- mapM (goCaseBranch ctx) (toList _caseBranches)
+    goExpressionMatch :: (Member NameIdGen r) => Internal.Case -> Sem r Expression
+    goExpressionMatch Internal.Case {..} = do
+      value <- goExpression _caseExpression
+      branches <- mapM goCaseBranch (toList _caseBranches)
       return $ ExprMatch Lean.Case
         { _caseValue = value,
           _caseBranches = nonEmpty' branches
         }
 
-    goCaseBranch :: (Member NameIdGen r) => TranslationContext -> Internal.CaseBranch -> Sem r Lean.CaseBranch
-    goCaseBranch ctx Internal.CaseBranch {..} = do
+    goCaseBranch :: (Member NameIdGen r) => Internal.CaseBranch -> Sem r Lean.CaseBranch
+    goCaseBranch Internal.CaseBranch {..} = do
       let pat = _caseBranchPattern ^. Internal.patternArgPattern  -- Extract the inner pattern
-      (translatedPat, ctx') <- goPattern ctx (getLoc _caseBranchPattern) pat
+      translatedPat <- goPattern (getLoc _caseBranchPattern) pat
       body <- case _caseBranchRhs of
-        Internal.CaseBranchRhsExpression e -> goExpression ctx' e
+        Internal.CaseBranchRhsExpression e -> goExpression e
         Internal.CaseBranchRhsIf _ -> error "Side conditions not supported yet"
       return Lean.CaseBranch
         { _caseBranchPattern = translatedPat,
           _caseBranchBody = body
         }
 
-    goPattern :: (Member NameIdGen r) => TranslationContext -> Interval -> Internal.Pattern -> Sem r (Pattern, TranslationContext)
-    goPattern ctx loc = \case
+    goPattern :: (Member NameIdGen r) =>  Interval -> Internal.Pattern -> Sem r Pattern
+    goPattern loc = \case
       Internal.PatternVariable name ->
-        return (PatVar name, ctx)
+        return (PatVar name)
       Internal.PatternWildcardConstructor _ -> do
-        (name, ctx') <- makeFreshName ctx loc "_"
-        return (PatVar name, ctx')
+        name <- makeFreshName loc "_"
+        return (PatVar name)
       Internal.PatternConstructorApp c -> 
-        goPatternConstructor ctx loc c
+        goPatternConstructor loc c
 
-    goPatternConstructor :: (Member NameIdGen r) => TranslationContext -> Interval -> Internal.ConstructorApp -> Sem r (Pattern, TranslationContext)
-    goPatternConstructor ctx loc Internal.ConstructorApp {..} = do
-      (pats, ctx') <- foldM
-        (\(ps, c) p -> do
-           (p', c') <- goPattern c loc (p ^. Internal.patternArgPattern)
-           return (ps ++ [p'], c'))
-        ([], ctx)
+    goPatternConstructor :: (Member NameIdGen r) => Interval -> Internal.ConstructorApp -> Sem r Pattern
+    goPatternConstructor loc Internal.ConstructorApp {..} = do
+      (pats) <- foldM
+        (\ps p -> do
+           p' <- goPattern loc (p ^. Internal.patternArgPattern)
+           return (ps ++ [p']))
+        []
         _constrAppParameters
-      return (PatCtor _constrAppConstructor pats, ctx')
+      return (PatCtor _constrAppConstructor pats)
 
     goLiteral :: Internal.LiteralLoc -> Expression
     goLiteral l = case l ^. Internal.withLocParam of
@@ -461,11 +381,11 @@ convertModule initCtx table Internal.Module {..} = do
       Internal.LitNatural n -> ExprLiteral (WithLoc (getLoc l) (LitNumeric n))
       Internal.LitString s -> ExprLiteral (WithLoc (getLoc l) (LitString s))
 
-    goType :: TranslationContext -> Internal.Expression -> Type
-    goType ctx = \case
+    goType :: Internal.Expression -> Type
+    goType = \case
       Internal.ExpressionIden x -> goTypeIden x
-      Internal.ExpressionApplication x -> goTypeApp ctx x
-      Internal.ExpressionFunction x -> goTypeFun ctx x
+      Internal.ExpressionApplication x -> goTypeApp x
+      Internal.ExpressionFunction x -> goTypeFun x
       Internal.ExpressionUniverse _ -> TySort LevelZero
       _ -> error $ "unsupported type: " -- <> show e
 
@@ -477,37 +397,37 @@ convertModule initCtx table Internal.Module {..} = do
       Internal.IdenAxiom name -> TyVar (Lean.TypeVar name)
       Internal.IdenInductive name -> TyVar (Lean.TypeVar name)
 
-    goTypeApp :: TranslationContext -> Internal.Application -> Type
-    goTypeApp ctx Internal.Application {..} =
+    goTypeApp :: Internal.Application -> Type
+    goTypeApp Internal.Application {..} =
       TyApp Lean.TypeApp
-        { _typeAppHead = goType ctx _appLeft,
-          _typeAppArg = goType ctx _appRight
+        { _typeAppHead = goType _appLeft,
+          _typeAppArg = goType _appRight
         }
 
-    goTypeFun :: TranslationContext -> Internal.Function -> Type
-    goTypeFun ctx Internal.Function {..} =
+    goTypeFun :: Internal.Function -> Type
+    goTypeFun Internal.Function {..} =
       case _functionLeft of
         Internal.FunctionParameter {_paramImplicit = Internal.Implicit} ->
           TyPi Lean.PiType
             { _piTypeBinder = goBinder _functionLeft,
-              _piTypeBody = goType ctx _functionRight
+              _piTypeBody = goType _functionRight
             }
         Internal.FunctionParameter {_paramImplicit = Internal.Explicit} ->
           TyFun Lean.FunType
-            { _funTypeLeft = goType ctx (_functionLeft ^. Internal.paramType),
-              _funTypeRight = goType ctx _functionRight
+            { _funTypeLeft = goType (_functionLeft ^. Internal.paramType),
+              _funTypeRight = goType _functionRight
             }
         Internal.FunctionParameter {_paramImplicit = Internal.ImplicitInstance} ->
           TyPi Lean.PiType
             { _piTypeBinder = goBinder _functionLeft,
-              _piTypeBody = goType ctx _functionRight
+              _piTypeBody = goType _functionRight
             }
 
     goBinder :: Internal.FunctionParameter -> Lean.Binder
     goBinder Internal.FunctionParameter {..} =
       Lean.Binder
         { _binderName = fromMaybe (defaultName (getLoc _paramType) "_") _paramName,
-          _binderType = Just (goType initCtx _paramType),
+          _binderType = Just (goType _paramType),
           _binderInfo = case _paramImplicit of
             Internal.Implicit -> Lean.BinderImplicit
             Internal.ImplicitInstance -> Lean.BinderInstImplicit
