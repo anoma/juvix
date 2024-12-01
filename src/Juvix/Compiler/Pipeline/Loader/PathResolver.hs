@@ -38,8 +38,14 @@ import Juvix.Extra.Paths
 import Juvix.Extra.Stdlib (ensureStdlib)
 import Juvix.Prelude
 
-runGlobalVersions :: forall r a. (Members '[PathResolver, Files, TaggedLock, Error JuvixError, EvalFileEff] r) => Sem (Reader GlobalVersions ': r) a -> Sem r a
-runGlobalVersions m = do
+runGlobalVersions ::
+  forall r a.
+  (Members '[PathResolver, Files, TaggedLock, Error JuvixError, EvalFileEff] r) =>
+  Text ->
+  Sem (Reader GlobalVersions ': r) a ->
+  Sem r a
+runGlobalVersions txt m = do
+  traceM ("runGlobalVersions " <> txt)
   infos <- toList <$> getPackageInfos
   globalVer <- findJustM getGlobalPkgVersion infos
   let g =
@@ -189,27 +195,36 @@ registerDependencies' conf = do
   initialized <- gets (^. resolverInitialized)
   unless initialized $ do
     modify (set resolverInitialized True)
-    e <- ask @EntryPoint
+    registerDepsFromRoot
+    checkConflicts
     mapError (JuvixError @ParserError) registerPackageBase
-    case e ^. entryPointPackageType of
-      GlobalStdlib -> do
-        glob <- globalRoot
-        void (addRootDependency conf e glob)
-      GlobalPackageBase -> return ()
-      GlobalPackageDescription -> void (addRootDependency conf e (e ^. entryPointRoot))
-      LocalPackage -> do
-        lockfile <- addRootDependency conf e (e ^. entryPointRoot)
-        whenM shouldWriteLockfile $ do
-          let root :: Path Abs Dir = e ^. entryPointSomeRoot . someRootDir
-          packagePath :: Path Abs File <- do
-            let packageDotJuvix = mkPackagePath root
-                juvixDotYaml = mkPackageFilePath root
-            x <- findM fileExists' [packageDotJuvix, juvixDotYaml]
-            return (fromMaybe (error ("No package file found in " <> show root)) x)
-          packageFileChecksum <- SHA256.digestFile packagePath
-          lockfilePath' <- lockfilePath
-          writeLockfile lockfilePath' packageFileChecksum lockfile
   where
+    -- Checks that no two different roots have the same PackageId
+    checkConflicts :: Sem r ()
+    checkConflicts = do
+      return ()
+
+    registerDepsFromRoot = do
+      e <- ask
+      case e ^. entryPointPackageType of
+        GlobalStdlib -> do
+          glob <- globalRoot
+          void (addRootDependency conf e glob)
+        GlobalPackageBase -> return ()
+        GlobalPackageDescription -> void (addRootDependency conf e (e ^. entryPointRoot))
+        LocalPackage -> do
+          lockfile <- addRootDependency conf e (e ^. entryPointRoot)
+          whenM shouldWriteLockfile $ do
+            let root :: Path Abs Dir = e ^. entryPointSomeRoot . someRootDir
+            packagePath :: Path Abs File <- do
+              let packageDotJuvix = mkPackagePath root
+                  juvixDotYaml = mkPackageFilePath root
+              x <- findM fileExists' [packageDotJuvix, juvixDotYaml]
+              return (fromMaybe (error ("No package file found in " <> show root)) x)
+            packageFileChecksum <- SHA256.digestFile packagePath
+            lockfilePath' <- lockfilePath
+            writeLockfile lockfilePath' packageFileChecksum lockfile
+
     shouldWriteLockfile :: Sem r Bool
     shouldWriteLockfile = do
       lockfileExists <- lockfilePath >>= fileExists'

@@ -118,7 +118,7 @@ compileExpression p =
     >>= fromInternalExpression
 
 registerImport ::
-  (Members '[TaggedLock, Error JuvixError, State Artifacts, Reader EntryPoint, Files, GitClone, PathResolver, ModuleInfoCache] r) =>
+  (Members '[TaggedLock, Reader GlobalVersions, Error JuvixError, State Artifacts, Reader EntryPoint, Files, GitClone, PathResolver, ModuleInfoCache] r) =>
   Import 'Parsed ->
   Sem r ()
 registerImport i = do
@@ -180,7 +180,7 @@ compileReplInputIO fp txt = do
     . runTopModuleNameChecker
     . runReader defaultImportScanStrategy
     . withImportTree (Just fp)
-    . runGlobalVersions
+    . runGlobalVersions "repl"
     . evalModuleInfoCacheHelper
     $ do
       p <- parseReplInput fp txt
