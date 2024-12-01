@@ -960,7 +960,7 @@ getModuleId path = do
   return
     ModuleId
       { _moduleIdPath = path,
-        _moduleIdPackage = pkg ^. packageIdName,
+        _moduleIdPackageName = pkg ^. packageIdName,
         _moduleIdPackageVersion = show (pkg ^. packageIdVersion)
       }
 

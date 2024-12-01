@@ -7,7 +7,7 @@ import Prettyprinter
 
 data ModuleId = ModuleId
   { _moduleIdPath :: TopModulePathKey,
-    _moduleIdPackage :: Text,
+    _moduleIdPackageName :: Text,
     _moduleIdPackageVersion :: Text
   }
   deriving stock (Show, Eq, Ord, Generic, Data)
@@ -27,6 +27,6 @@ defaultModuleId :: ModuleId
 defaultModuleId =
   ModuleId
     { _moduleIdPath = nonEmptyToTopModulePathKey (pure "$DefaultModule$"),
-      _moduleIdPackage = "$",
+      _moduleIdPackageName = "$",
       _moduleIdPackageVersion = "1.0"
     }
