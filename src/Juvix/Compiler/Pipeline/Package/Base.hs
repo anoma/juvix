@@ -48,7 +48,7 @@ data PackageId = PackageId
   { _packageIdName :: Text,
     _packageIdVersion :: SemVer
   }
-  deriving stock (Show, Eq)
+  deriving stock (Show, Ord, Eq)
 
 data Package' (s :: IsProcessed) = Package
   { _packageName :: NameType s,
