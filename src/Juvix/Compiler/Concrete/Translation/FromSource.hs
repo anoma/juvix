@@ -1431,31 +1431,26 @@ functionDefinition ::
   FunctionSyntaxOptions ->
   Maybe (WithLoc BuiltinFunction) ->
   ParsecS r (FunctionDef 'Parsed)
-functionDefinition opts _signBuiltin = P.label "<function definition>" $ do
+functionDefinition opts _functionDefBuiltin = P.label "<function definition>" $ do
   off0 <- P.getOffset
-  FunctionLhs {..} <- functionDefinitionLhs opts _signBuiltin
+  lhs <- functionDefinitionLhs opts _functionDefBuiltin
   off <- P.getOffset
-  _signDoc <- getJudoc
-  _signPragmas <- getPragmas
-  _signBody <- parseBody
+  _functionDefDoc <- getJudoc
+  _functionDefPragmas <- getPragmas
+  _functionDefBody <- parseBody
   unless
-    ( isJust (_funLhsTypeSig ^. typeSigColonKw . unIrrelevant)
-        || (P.isBodyExpression _signBody && null (_funLhsTypeSig ^. typeSigArgs))
+    ( isJust (lhs ^. funLhsTypeSig . typeSigColonKw . unIrrelevant)
+        || (P.isBodyExpression _functionDefBody && null (lhs ^. funLhsTypeSig . typeSigArgs))
     )
     $ parseFailure off "expected result type"
   let fdef =
         FunctionDef
-          { _signName = _funLhsName,
-            _signTypeSig = _funLhsTypeSig,
-            _signTerminating = _funLhsTerminating,
-            _signInstance = _funLhsInstance,
-            _signCoercion = _funLhsCoercion,
-            _signBuiltin = _funLhsBuiltin,
-            _signDoc,
-            _signPragmas,
-            _signBody
+          { _functionDefLhs = lhs,
+            _functionDefDoc,
+            _functionDefPragmas,
+            _functionDefBody
           }
-  when (isNothing (_funLhsName ^? _FunctionDefName) && P.isFunctionLike fdef) $
+  when (isNothing (lhs ^? funLhsName . _FunctionDefName) && P.isFunctionLike fdef) $
     parseFailure off0 "expected function name"
   return fdef
   where

@@ -439,7 +439,7 @@ reserveFunctionLikeSymbol ::
   Sem r ()
 reserveFunctionLikeSymbol f =
   when (P.isFunctionLike f) $
-    void (reserveFunctionSymbol (functionDefLhs f))
+    void (reserveFunctionSymbol (f ^. functionDefLhs))
 
 bindFixitySymbol ::
   (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, InfoTableBuilder, Reader InfoTable, State ScoperState, Reader BindingStrategy] r) =>
@@ -1129,7 +1129,7 @@ checkDeriving Deriving {..} = do
         | otherwise -> reserveFunctionSymbol lhs
   let defname' =
         FunctionDefNameScoped
-          { _functionDefName = name',
+          { _functionDefNameScoped = name',
             _functionDefNamePattern = Nothing
           }
   let lhs' =
@@ -1192,21 +1192,22 @@ checkFunctionDef ::
   FunctionDef 'Parsed ->
   Sem r (FunctionDef 'Scoped)
 checkFunctionDef fdef@FunctionDef {..} = do
-  sigDoc' <- mapM checkJudoc _signDoc
+  let FunctionLhs {..} = _functionDefLhs
+  sigDoc' <- mapM checkJudoc _functionDefDoc
   (sig', sigBody') <- withLocalScope $ do
-    a' <- checkTypeSig _signTypeSig
+    a' <- checkTypeSig _funLhsTypeSig
     b' <- checkBody
     return (a', b')
-  whenJust (functionSymbolPattern _signName) reservePatternFunctionSymbols
-  sigName' <- case _signName of
+  whenJust (functionSymbolPattern _funLhsName) reservePatternFunctionSymbols
+  sigName' <- case _funLhsName of
     FunctionDefName name -> do
       name' <-
         if
             | P.isFunctionLike fdef -> getReservedDefinitionSymbol name
-            | otherwise -> reserveFunctionSymbol (functionDefLhs fdef)
+            | otherwise -> reserveFunctionSymbol (fdef ^. functionDefLhs)
       return
         FunctionDefNameScoped
-          { _functionDefName = name',
+          { _functionDefNameScoped = name',
             _functionDefNamePattern = Nothing
           }
     FunctionDefNamePattern p -> do
@@ -1214,22 +1215,27 @@ checkFunctionDef fdef@FunctionDef {..} = do
       p' <- runReader PatternNamesKindFunctions (checkParsePatternAtom p)
       return
         FunctionDefNameScoped
-          { _functionDefName = name',
+          { _functionDefNameScoped = name',
             _functionDefNamePattern = Just p'
           }
-  let def =
-        FunctionDef
-          { _signName = sigName',
-            _signDoc = sigDoc',
-            _signBody = sigBody',
-            _signTypeSig = sig',
+  let lhs' =
+        FunctionLhs
+          { _funLhsName = sigName',
+            _funLhsTypeSig = sig',
             ..
           }
-  registerNameSignature (sigName' ^. functionDefName . S.nameId) def
+      def =
+        FunctionDef
+          { _functionDefLhs = lhs',
+            _functionDefDoc = sigDoc',
+            _functionDefBody = sigBody',
+            ..
+          }
+  registerNameSignature (sigName' ^. functionDefNameScoped . S.nameId) def
   registerFunctionDef @$> def
   where
     checkBody :: Sem r (FunctionDefBody 'Scoped)
-    checkBody = case _signBody of
+    checkBody = case _functionDefBody of
       SigBodyExpression e -> SigBodyExpression <$> checkParseExpressionAtoms e
       SigBodyClauses cls -> SigBodyClauses <$> mapM checkClause cls
 
