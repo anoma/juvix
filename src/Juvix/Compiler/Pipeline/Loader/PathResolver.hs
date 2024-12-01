@@ -10,6 +10,7 @@ module Juvix.Compiler.Pipeline.Loader.PathResolver
     runPathResolverPipe',
     evalPathResolverPipe,
     findPackageJuvixFiles,
+    runGlobalVersions,
   )
 where
 
@@ -35,6 +36,24 @@ import Juvix.Extra.PackageFiles
 import Juvix.Extra.Paths
 import Juvix.Extra.Stdlib (ensureStdlib)
 import Juvix.Prelude
+
+runGlobalVersions :: forall r a. (Members '[PathResolver, Files, TaggedLock, Error JuvixError, EvalFileEff] r) => Sem (Reader GlobalVersions ': r) a -> Sem r a
+runGlobalVersions m = do
+  infos <- toList <$> getPackageInfos
+  globalVer <- findJustM getGlobalPkgVersion infos
+  let g =
+        GlobalVersions
+          { _globalVersionsStdlib = globalVer
+          }
+  runReader g m
+  where
+    getGlobalPkgVersion :: PackageInfo -> Sem r (Maybe SemVer)
+    getGlobalPkgVersion pkginfo = runFail $ do
+      PackageGlobalStdlib <- pure (pkginfo ^. packagePackage)
+      meta <- SHA256.digestFiles (packageFiles pkginfo)
+      pkg <- readGlobalPackage
+      -- NOTE that we ignore the meta in the version field of the Package.juvix file
+      return ((pkg ^. packageVersion) {_svMeta = Just meta})
 
 mkPackage ::
   forall r.

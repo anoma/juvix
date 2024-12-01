@@ -126,6 +126,7 @@ runIOEitherPipeline' entry a = do
     . runDependencyResolver
     . runReader (opts ^. pipelineDependenciesConfig)
     . runPathResolverInput
+    . runGlobalVersions
     . runTopModuleNameChecker
     . runReader (opts ^. pipelineImportStrategy)
     . withImportTree (entry ^. entryPointModulePath)
@@ -147,6 +148,7 @@ evalModuleInfoCacheHelper ::
          Reader ImportScanStrategy,
          Reader NumThreads,
          Reader PipelineOptions,
+         Reader GlobalVersions,
          Logger,
          Files
        ]
@@ -234,6 +236,7 @@ runReplPipelineIOEither' lockMode entry = do
       . runTopModuleNameChecker
       . runReader defaultImportScanStrategy
       . withImportTree (entry ^. entryPointModulePath)
+      . runGlobalVersions
       . evalModuleInfoCacheHelper
       $ processFileToStoredCore entry
   return $ case eith of

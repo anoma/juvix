@@ -71,6 +71,7 @@ evalModuleInfoCacheSequential ::
          Reader EntryPoint,
          Reader ImportTree,
          Reader PipelineOptions,
+         Reader GlobalVersions,
          PathResolver
        ]
       r
@@ -140,6 +141,7 @@ evalModuleInfoCacheSetup ::
          Files,
          Reader ImportTree,
          Reader PipelineOptions,
+         Reader GlobalVersions,
          PathResolver
        ]
       r
@@ -288,6 +290,7 @@ processRecursiveUpToTyped ::
          TaggedLock,
          HighlightBuilder,
          Error JuvixError,
+         Reader GlobalVersions,
          Files,
          PathResolver,
          ModuleInfoCache
@@ -312,10 +315,13 @@ processRecursiveUpToTyped = do
   where
     goImport :: ImportNode -> Sem r InternalTypedResult
     goImport node = do
+      pkgInfo <- fromJust . HashMap.lookup (node ^. importNodePackageRoot) <$> getPackageInfos
+      pid <- packageLikePackageId (pkgInfo ^. packagePackage)
       entry <- ask
       let entry' =
             entry
               { _entryPointStdin = Nothing,
+                _entryPointPackageId = pid,
                 _entryPointModulePath = Just (node ^. importNodeAbsFile)
               }
       (^. pipelineResult) <$> runReader entry' (processFileUpTo upToInternalTyped)

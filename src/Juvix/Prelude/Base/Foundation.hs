@@ -4,6 +4,7 @@ module Juvix.Prelude.Base.Foundation
   ( module Juvix.Prelude.Base.Foundation,
     module Control.Applicative,
     module Data.Tree,
+    module Data.Versions,
     module Data.Graph,
     module Text.Show.Unicode,
     module Data.Map.Strict,
@@ -196,6 +197,7 @@ import Data.Tree hiding (levels)
 import Data.Tuple.Extra hiding (both)
 import Data.Type.Equality (type (~))
 import Data.Typeable hiding (TyCon)
+import Data.Versions (SemVer (..), Versioning (..))
 import Data.Void
 import Data.Word
 import GHC.Base (assert)
@@ -465,6 +467,11 @@ zip4Exact :: [a] -> [b] -> [c] -> [d] -> [(a, b, c, d)]
 zip4Exact [] [] [] [] = []
 zip4Exact (x1 : t1) (x2 : t2) (x3 : t3) (x4 : t4) = (x1, x2, x3, x4) : zip4Exact t1 t2 t3 t4
 zip4Exact _ _ _ _ = error "zip4Exact"
+
+findJustM :: forall a b m. (Monad m) => (a -> m (Maybe b)) -> [a] -> m (Maybe b)
+findJustM f = \case
+  [] -> return Nothing
+  x : xs -> f x >>= maybe (findJustM f xs) (return . Just)
 
 -- | Returns the first element that returns Just and the list with the remaining elements
 findJustAndRemove :: forall a b. (a -> Maybe b) -> [a] -> Maybe (b, [a])

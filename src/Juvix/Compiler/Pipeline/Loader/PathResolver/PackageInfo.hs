@@ -1,6 +1,7 @@
 module Juvix.Compiler.Pipeline.Loader.PathResolver.PackageInfo
   ( module Juvix.Compiler.Pipeline.Loader.PathResolver.PackageInfo,
     module Juvix.Compiler.Concrete.Translation.ImportScanner.Base,
+    module Juvix.Compiler.Pipeline.Loader.PathResolver.GlobalVersions,
   )
 where
 
@@ -8,6 +9,7 @@ import Data.HashSet qualified as HashSet
 import Data.Versions
 import Juvix.Compiler.Concrete.Translation.ImportScanner.Base
 import Juvix.Compiler.Pipeline.EntryPoint
+import Juvix.Compiler.Pipeline.Loader.PathResolver.GlobalVersions
 import Juvix.Data.CodeAnn
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
@@ -31,6 +33,7 @@ data PackageInfo = PackageInfo
   deriving stock (Show)
 
 makeLenses ''PackageInfo
+makePrisms ''PackageLike
 
 packageFiles :: PackageInfo -> [Path Abs File]
 packageFiles k = [k ^. packageRoot <//> f | f <- toList (k ^. packageJuvixRelativeFiles)]
@@ -43,6 +46,15 @@ packageJuvixFiles =
 keepJuvixFiles :: HashSet (Path Rel File) -> HashSet (Path Rel File)
 keepJuvixFiles = HashSet.filter isJuvixOrJuvixMdFile
 
+packageLikePackageId :: (Members '[Reader GlobalVersions] r) => PackageLike -> Sem r PackageId
+packageLikePackageId p = do
+  ver <- packageLikeVersion p
+  return
+    PackageId
+      { _packageIdName = p ^. packageLikeName,
+        _packageIdVersion = ver
+      }
+
 packageLikeName :: SimpleGetter PackageLike Text
 packageLikeName = to $ \case
   PackageReal r -> r ^. packageName
@@ -51,19 +63,27 @@ packageLikeName = to $ \case
   PackageType -> "package-type"
   PackageDotJuvix -> "package-dot-juvix"
 
--- | FIXME all PackageLike should have versions
-packageLikeVersion :: SimpleGetter PackageLike (Maybe SemVer)
-packageLikeVersion = to $ \case
-  PackageReal pkg -> Just (pkg ^. packageVersion)
-  PackageGlobalStdlib {} -> Nothing
-  PackageBase {} -> Nothing
-  PackageType {} -> Nothing
-  PackageDotJuvix {} -> Nothing
+packageLikeVersion :: (Members '[Reader GlobalVersions] r) => PackageLike -> Sem r SemVer
+packageLikeVersion = \case
+  PackageReal pkg -> return (pkg ^. packageVersion)
+  PackageGlobalStdlib {} -> fromMaybe err <$> asks (^. globalVersionsStdlib)
+  PackageBase {} -> return defaultVersion
+  PackageType {} -> return defaultVersion
+  PackageDotJuvix {} -> return defaultVersion
+  where
+    err :: a
+    err = impossibleError "Asked the version of the global standard library but wasn't there"
 
-packageLikeNameAndVersion :: SimpleGetter PackageLike (Doc CodeAnn)
-packageLikeNameAndVersion = to $ \n ->
-  annotate AnnImportant (pretty (n ^. packageLikeName))
-    <+?> (pretty . prettySemVer <$> n ^. packageLikeVersion)
+packageLikeNameAndVersion ::
+  (Members '[Reader GlobalVersions] r) =>
+  PackageLike ->
+  Sem r (Doc CodeAnn)
+packageLikeNameAndVersion n = do
+  v <- packageLikeVersion n
+  return
+    ( annotate AnnImportant (pretty (n ^. packageLikeName))
+        <+> pretty (prettySemVer v)
+    )
 
 packageLikeDependencies :: SimpleGetter PackageLike [Dependency]
 packageLikeDependencies = to $ \case

@@ -100,6 +100,12 @@ instance PrettyCode Tag where
     BuiltinTag tag -> ppCode tag
     UserTag (TagUser mid tag) -> return $ kwUnnamedConstr <> pretty tag <> "@" <> pretty mid
 
+instance PrettyCode ModuleId where
+  ppCode = return . pretty
+
+instance PrettyCode Symbol where
+  ppCode = return . pretty
+
 instance PrettyCode Primitive where
   ppCode = \case
     p@(PrimInteger _) | p == primitiveUInt8 -> return $ annotate (AnnKind KNameInductive) (pretty ("UInt8" :: String))
