@@ -530,4 +530,18 @@ module PublicImports;
   axiom a : Inner.X.Y.Z.Nat;
 end;
 
+--- Judoc comment 0
+syntax fixity aaa := binary {};
+
+--- Judoc comment 1
+syntax alias Value := Nat;
+
+--- Judoc comment 2
+syntax iterator op;
+
+--- Judoc comment 3
+syntax operator op aaa;
+--- Judoc comment 4
+op (x y : Nat) : Nat := x + y;
+
 -- Comment at the end of a module
