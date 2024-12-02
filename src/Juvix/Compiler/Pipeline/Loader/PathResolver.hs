@@ -12,6 +12,7 @@ module Juvix.Compiler.Pipeline.Loader.PathResolver
     findPackageJuvixFiles,
     runGlobalVersions,
     importNodePackageId,
+    mkPackageInfoPackageId,
   )
 where
 

@@ -87,23 +87,30 @@ runPackagePathResolver rootPath sem = do
         mkPkgBase :: Sem r PackageInfo
         mkPkgBase = do
           let rfiles = fs ^. rootInfoFilesPackageBase
+              root = ds ^. rootInfoArgPackageBaseDir
+              pkgTy = PackageBase
+          pkgId <- mkPackageInfoPackageId root (toList rfiles) pkgTy
           return
             PackageInfo
-              { _packageRoot = ds ^. rootInfoArgPackageBaseDir,
+              { _packageRoot = root,
                 _packageAvailableRoots = hashSet [ds ^. rootInfoArgPackageBaseDir],
                 _packageJuvixRelativeFiles = rfiles,
-                _packagePackage = PackageBase
+                _packagePackage = pkgTy,
+                _packageInfoPackageId = pkgId
               }
 
         mkPkgPackageType :: Sem r PackageInfo
         mkPkgPackageType = do
           let rfiles = fs ^. rootInfoFilesPackage
               root = ds ^. rootInfoArgPackageDir
+              pkgTy = PackageType
+          pkgId <- mkPackageInfoPackageId root (toList rfiles) pkgTy
           return
             PackageInfo
               { _packageRoot = root,
                 _packageJuvixRelativeFiles = rfiles,
-                _packagePackage = PackageType,
+                _packagePackage = pkgTy,
+                _packageInfoPackageId = pkgId,
                 _packageAvailableRoots =
                   hashSet
                     [ ds ^. rootInfoArgPackageDir,
@@ -116,23 +123,28 @@ runPackagePathResolver rootPath sem = do
         mkPkgGlobalStdlib = do
           let root = ds ^. rootInfoArgGlobalStdlibDir
           jufiles <- findPackageJuvixFiles root
-          let rfiles = hashSet jufiles
           pkg <- readGlobalPackage
+          let rfiles = hashSet jufiles
+              pkgTy = PackageGlobal pkg
+          pkgId <- mkPackageInfoPackageId root (toList rfiles) pkgTy
           return
             PackageInfo
               { _packageRoot = root,
                 _packageJuvixRelativeFiles = rfiles,
+                _packageInfoPackageId = pkgId,
                 _packageAvailableRoots =
                   hashSet
                     [ ds ^. rootInfoArgPackageBaseDir,
                       ds ^. rootInfoArgGlobalStdlibDir
                     ],
-                _packagePackage = PackageGlobal pkg
+                _packagePackage = pkgTy
               }
 
         mkPackageDotJuvix :: Sem r PackageInfo
         mkPackageDotJuvix = do
           let rfiles = hashSet [packageFilePath]
+              pkgTy = PackageDotJuvix
+          pkgId <- mkPackageInfoPackageId rootPath (toList rfiles) pkgTy
           return
             PackageInfo
               { _packageRoot = rootPath,
@@ -144,7 +156,8 @@ runPackagePathResolver rootPath sem = do
                       ds ^. rootInfoArgGlobalStdlibDir,
                       rootPath
                     ],
-                _packagePackage = PackageDotJuvix
+                _packagePackage = pkgTy,
+                _packageInfoPackageId = pkgId
               }
 
     rootInfoDirs :: Sem r RootInfoDirs

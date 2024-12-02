@@ -2,7 +2,6 @@ module Juvix.Compiler.Core.Data.InfoTable.Base where
 
 import Juvix.Compiler.Concrete.Data.Builtins
 import Juvix.Compiler.Core.Language.Base
-import Juvix.Extra.Serialize
 
 data InfoTable' n = InfoTable
   { _identContext :: HashMap Symbol n,
