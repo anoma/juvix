@@ -360,6 +360,7 @@ deriving stock instance Ord (Import 'Scoped)
 data AliasDef (s :: Stage) = AliasDef
   { _aliasDefSyntaxKw :: Irrelevant KeywordRef,
     _aliasDefAliasKw :: Irrelevant KeywordRef,
+    _aliasDefDoc :: Maybe (Judoc s),
     _aliasDefName :: SymbolType s,
     _aliasDefAsName :: IdentifierType s
   }
@@ -398,8 +399,8 @@ instance NFData ParsedIteratorInfo
 
 data SyntaxDef (s :: Stage)
   = SyntaxFixity (FixitySyntaxDef s)
-  | SyntaxOperator OperatorSyntaxDef
-  | SyntaxIterator IteratorSyntaxDef
+  | SyntaxOperator (OperatorSyntaxDef s)
+  | SyntaxIterator (IteratorSyntaxDef s)
   | SyntaxAlias (AliasDef s)
 
 deriving stock instance (Show (SyntaxDef 'Parsed))
@@ -484,34 +485,68 @@ instance Serialize FixityDef
 
 instance NFData FixityDef
 
-data OperatorSyntaxDef = OperatorSyntaxDef
+data OperatorSyntaxDef (s :: Stage) = OperatorSyntaxDef
   { _opSymbol :: Symbol,
     _opFixity :: Symbol,
+    _opDoc :: Maybe (Judoc s),
     _opKw :: KeywordRef,
     _opSyntaxKw :: KeywordRef
   }
-  deriving stock (Show, Eq, Ord, Generic)
+  deriving stock (Generic)
 
-instance Serialize OperatorSyntaxDef
+deriving stock instance Show (OperatorSyntaxDef 'Parsed)
 
-instance NFData OperatorSyntaxDef
+deriving stock instance Show (OperatorSyntaxDef 'Scoped)
 
-instance HasLoc OperatorSyntaxDef where
+deriving stock instance Eq (OperatorSyntaxDef 'Parsed)
+
+deriving stock instance Eq (OperatorSyntaxDef 'Scoped)
+
+deriving stock instance Ord (OperatorSyntaxDef 'Parsed)
+
+deriving stock instance Ord (OperatorSyntaxDef 'Scoped)
+
+instance Serialize (OperatorSyntaxDef 'Parsed)
+
+instance NFData (OperatorSyntaxDef 'Parsed)
+
+instance Serialize (OperatorSyntaxDef 'Scoped)
+
+instance NFData (OperatorSyntaxDef 'Scoped)
+
+instance HasLoc (OperatorSyntaxDef s) where
   getLoc OperatorSyntaxDef {..} = getLoc _opSyntaxKw <> getLoc _opSymbol
 
-data IteratorSyntaxDef = IteratorSyntaxDef
+data IteratorSyntaxDef (s :: Stage) = IteratorSyntaxDef
   { _iterSymbol :: Symbol,
     _iterInfo :: Maybe ParsedIteratorInfo,
+    _iterDoc :: Maybe (Judoc s),
     _iterSyntaxKw :: KeywordRef,
     _iterIteratorKw :: KeywordRef
   }
-  deriving stock (Show, Eq, Ord, Generic)
+  deriving stock (Generic)
 
-instance Serialize IteratorSyntaxDef
+deriving stock instance Show (IteratorSyntaxDef 'Parsed)
 
-instance NFData IteratorSyntaxDef
+deriving stock instance Show (IteratorSyntaxDef 'Scoped)
 
-instance HasLoc IteratorSyntaxDef where
+deriving stock instance Eq (IteratorSyntaxDef 'Parsed)
+
+deriving stock instance Eq (IteratorSyntaxDef 'Scoped)
+
+deriving stock instance Ord (IteratorSyntaxDef 'Parsed)
+
+deriving stock instance Ord (IteratorSyntaxDef 'Scoped)
+
+instance Serialize (IteratorSyntaxDef 'Parsed)
+
+instance NFData (IteratorSyntaxDef 'Parsed)
+
+instance Serialize (IteratorSyntaxDef 'Scoped)
+
+instance NFData (IteratorSyntaxDef 'Scoped)
+
+instance HasLoc (IteratorSyntaxDef s) where
   getLoc IteratorSyntaxDef {..} = getLoc _iterSyntaxKw <> getLoc _iterSymbol
 
 data ArgDefault (s :: Stage) = ArgDefault
@@ -2565,8 +2600,8 @@ deriving stock instance Ord (NamedApplicationNew 'Parsed)
 deriving stock instance Ord (NamedApplicationNew 'Scoped)
 
 data RecordSyntaxDef (s :: Stage)
-  = RecordSyntaxOperator OperatorSyntaxDef
-  | RecordSyntaxIterator IteratorSyntaxDef
+  = RecordSyntaxOperator (OperatorSyntaxDef s)
+  | RecordSyntaxIterator (IteratorSyntaxDef s)
   deriving stock (Generic)
 
 instance Serialize (RecordSyntaxDef 'Scoped)

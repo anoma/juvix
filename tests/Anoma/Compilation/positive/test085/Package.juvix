@@ -4,5 +4,6 @@ import PackageDescription.V2 open;
 
 package : Package :=
   defaultPackage@?{
-    name := "positive";
+    name := "test085";
+    dependencies := [defaultStdlib; path "client/"];
   };
