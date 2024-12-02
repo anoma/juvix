@@ -49,7 +49,7 @@ init opts = do
   when isInteractive (renderStdOutLn @Text "you are all set")
   where
     isInteractive :: Bool
-    isInteractive = not (opts ^. initOptionsNonInteractive) && not (opts ^. initOptionsBasic)
+    isInteractive = opts ^. initOptionsInteractive
 
 checkNotInProject :: forall r. (Members '[EmbedIO, App] r) => Sem r ()
 checkNotInProject =
