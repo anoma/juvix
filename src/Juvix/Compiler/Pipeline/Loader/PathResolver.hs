@@ -68,11 +68,6 @@ runGlobalVersions _txt m = do
               <> "\n"
               <> Text.unlines (l ^.. to toList . each . packageRoot . to toFilePath)
 
--- getGlobalPkgVersion :: (Members '[TaggedLock, Error JuvixError, EvalFileEff, Files] r) => Sem r SemVer
--- getGlobalPkgVersion = do
---   pkg <- readGlobalPackage
---   return (pkg ^. packageVersion)
-
 mkPackage ::
   forall r.
   (Members '[Files, Error JuvixError, Reader ResolverEnv, DependencyResolver, EvalFileEff] r) =>
@@ -92,14 +87,20 @@ findPackageJuvixFiles pkgRoot = map (fromJust . stripProperPrefix pkgRoot) <$> w
         newJuvixFiles :: [Path Abs File]
         newJuvixFiles = [cd <//> f | f <- files, isJuvixOrJuvixMdFile f, not (isPackageFile f)]
 
+-- | If the file has a pre-release tag we keep it as it is. Otherwise we hash
+-- all juvix files in the package.
 mkPackageInfoPackageId :: (Members '[Files] r) => Path Abs Dir -> [Path Rel File] -> PackageLike -> Sem r PackageId
 mkPackageInfoPackageId root pkgRelFiles pkgLike = do
   let baseVersion = packageLikeVersion pkgLike
-  filesHash <- SHA256.digestFiles [root <//> rFile | rFile <- pkgRelFiles]
+  version <- case Ver._svPreRel baseVersion of
+    Nothing -> do
+      filesHash <- SHA256.digestFiles [root <//> rFile | rFile <- pkgRelFiles]
+      return baseVersion {_svPreRel = Just (Ver.Release (pure (Ver.Alphanum filesHash)))}
+    Just {} -> return baseVersion
   return
     PackageId
       { _packageIdName = pkgLike ^. packageLikeName,
-        _packageIdVersion = baseVersion {_svPreRel = Just (Ver.Release (pure (Ver.Alphanum filesHash)))}
+        _packageIdVersion = version
       }
   where
     packageLikeVersion :: PackageLike -> SemVer
