@@ -17,6 +17,7 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
+import Data.Text qualified as Text
 import Juvix.Compiler.Concrete.Data.Name
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Compiler.Concrete.Translation.ImportScanner
@@ -52,8 +53,25 @@ runGlobalVersions txt m = do
         GlobalVersions
           { _globalVersionsStdlib = globalVer
           }
-  runReader g m
+  runReader g (checkConflicts >> m)
   where
+    -- Checks that no two different roots have the same PackageId
+    checkConflicts :: forall r'. (Members '[Reader GlobalVersions, PathResolver] r') => Sem r' ()
+    checkConflicts = do
+      pkgs :: [PackageInfo] <- toList <$> getPackageInfos
+      reps <- findRepeatedOnM (packageLikePackageId . (^. packagePackage)) pkgs
+      case nonEmpty reps of
+        Just (rep :| _) -> errRep rep
+        Nothing -> return ()
+      where
+        errRep :: (NonEmpty PackageInfo, PackageId) -> Sem r' ()
+        errRep (l, pid) =
+          error $
+            "Non-unique package id: "
+              <> show pid
+              <> "\n"
+              <> Text.unlines (l ^.. to toList . each . packageRoot . to toFilePath)
+
     getGlobalPkgVersion :: PackageInfo -> Sem r (Maybe SemVer)
     getGlobalPkgVersion pkginfo = runFail $ do
       PackageGlobalStdlib <- pure (pkginfo ^. packagePackage)
@@ -196,14 +214,8 @@ registerDependencies' conf = do
   unless initialized $ do
     modify (set resolverInitialized True)
     registerDepsFromRoot
-    checkConflicts
     mapError (JuvixError @ParserError) registerPackageBase
   where
-    -- Checks that no two different roots have the same PackageId
-    checkConflicts :: Sem r ()
-    checkConflicts = do
-      return ()
-
     registerDepsFromRoot = do
       e <- ask
       case e ^. entryPointPackageType of

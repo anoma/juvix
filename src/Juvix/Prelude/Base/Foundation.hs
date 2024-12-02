@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Juvix.Prelude.Base.Foundation
@@ -67,6 +68,7 @@ module Juvix.Prelude.Base.Foundation
     module Control.Monad.Catch,
     module Control.Monad.Zip,
     module Data.String.Interpolate,
+    module Data.Serialize,
     Data,
     Text,
     pack,
@@ -175,6 +177,8 @@ import Data.Maybe
 import Data.Monoid
 import Data.Ord
 import Data.Semigroup (Semigroup, sconcat, (<>))
+import Data.Serialize (Serialize)
+import Data.Serialize as Serial
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Singletons hiding ((@@))
@@ -198,6 +202,7 @@ import Data.Tuple.Extra hiding (both)
 import Data.Type.Equality (type (~))
 import Data.Typeable hiding (TyCon)
 import Data.Versions (SemVer (..), Versioning (..))
+import Data.Versions qualified as Versions
 import Data.Void
 import Data.Word
 import GHC.Base (assert)
@@ -901,3 +906,16 @@ allFiniteSequences elems = build 0 []
           seq <- ofLength (n - 1)
           e <- elems
           return (pure e <> seq)
+
+instance Serialize Text where
+  put txt = Serial.put (unpack txt)
+
+  get = pack <$> Serial.get
+
+instance (Serialize a) => Serialize (NonEmpty a)
+
+instance Serialize Versions.Chunk
+
+instance Serialize Versions.Release
+
+instance Serialize SemVer

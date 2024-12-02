@@ -5,11 +5,10 @@ module Juvix.Compiler.Store.Core.Language
 where
 
 import Juvix.Compiler.Core.Language.Nodes
-import Juvix.Extra.Serialize
 
 {---------------------------------------------------------------------------------}
 
-data LetRecInfo = LetRecInfo
+newtype LetRecInfo = LetRecInfo
   { _letRecInfoPragmas :: [Pragmas]
   }
   deriving stock (Generic)
@@ -18,7 +17,7 @@ instance Serialize LetRecInfo
 
 instance NFData LetRecInfo
 
-data LambdaInfo = LambdaInfo
+newtype LambdaInfo = LambdaInfo
   { _lambdaInfoPragma :: Pragmas
   }
   deriving stock (Generic)

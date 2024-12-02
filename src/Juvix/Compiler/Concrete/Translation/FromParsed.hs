@@ -10,7 +10,6 @@ import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context
 import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context qualified as Parsed
-import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Store.Extra
 import Juvix.Compiler.Store.Language
 import Juvix.Prelude

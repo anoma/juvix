@@ -11,7 +11,6 @@ import Data.Versions hiding (Lens')
 import Juvix.Compiler.Pipeline.Lockfile
 import Juvix.Compiler.Pipeline.Package.Dependency
 import Juvix.Extra.Paths
-import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
 
 data BuildDir
@@ -44,12 +43,6 @@ type family PackageLockfileType s = res | res -> s where
   PackageLockfileType 'Raw = Maybe ()
   PackageLockfileType 'Processed = Maybe LockfileInfo
 
-data PackageId = PackageId
-  { _packageIdName :: Text,
-    _packageIdVersion :: SemVer
-  }
-  deriving stock (Show, Ord, Eq)
-
 data Package' (s :: IsProcessed) = Package
   { _packageName :: NameType s,
     _packageVersion :: VersionType s,
@@ -62,7 +55,6 @@ data Package' (s :: IsProcessed) = Package
   deriving stock (Generic)
 
 makeLenses ''Package'
-makeLenses ''PackageId
 
 type Package = Package' 'Processed
 
@@ -159,9 +151,6 @@ rawPackage pkg =
       _packageLockfile = Nothing
     }
 
-defaultVersion :: SemVer
-defaultVersion = SemVer 0 0 0 Nothing Nothing
-
 unsetPackageLockfile :: Package -> Package
 unsetPackageLockfile = set packageLockfile Nothing
 
@@ -181,13 +170,6 @@ globalPackage p =
       _packageBuildDir = Nothing,
       _packageFile = p,
       _packageLockfile = Nothing
-    }
-
-packageBaseId :: PackageId
-packageBaseId =
-  PackageId
-    { _packageIdName = Str.packageBase,
-      _packageIdVersion = defaultVersion
     }
 
 mkPackageFilePath :: Path Abs Dir -> Path Abs File
