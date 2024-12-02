@@ -212,12 +212,12 @@ tests:
         temp=$(mktemp -d)
         trap 'rm -rf -- "$temp"' EXIT
         pushd $temp > /dev/null
-        juvix init -n
+        juvix init
         popd > /dev/null
         cp positive/Format.juvix $temp
         mkdir $temp/sub
         pushd $temp/sub > /dev/null
-        juvix init -n
+        juvix init
         popd > /dev/null
         cp positive/Format.juvix $temp/sub
         juvix format $temp
@@ -364,4 +364,3 @@ tests:
     stderr:
       contains: juvix format error
     exit-status: 1
-
