@@ -71,7 +71,6 @@ evalModuleInfoCacheSequential ::
          Reader EntryPoint,
          Reader ImportTree,
          Reader PipelineOptions,
-         Reader GlobalVersions,
          PathResolver
        ]
       r
@@ -95,11 +94,10 @@ evalModuleInfoCachePackageDotJuvix ::
        ]
       r
   ) =>
-  Sem (ModuleInfoCache ': ProgressLog ': JvoCache ': Reader GlobalVersions ': r) a ->
+  Sem (ModuleInfoCache ': ProgressLog ': JvoCache ': r) a ->
   Sem r a
 evalModuleInfoCachePackageDotJuvix =
-  runReader (GlobalVersions Nothing)
-    . evalJvoCache
+  evalJvoCache
     . ignoreProgressLog
     . evalCacheEmpty processModuleCacheMiss
 
@@ -110,7 +108,6 @@ compileSequentially ::
       '[ ModuleInfoCache,
          Reader EntryPoint,
          PathResolver,
-         Reader GlobalVersions,
          Reader ImportTree
        ]
       r
@@ -143,7 +140,6 @@ evalModuleInfoCacheSetup ::
          Files,
          Reader ImportTree,
          Reader PipelineOptions,
-         Reader GlobalVersions,
          PathResolver
        ]
       r
@@ -187,7 +183,6 @@ processModuleCacheMissDecide ::
          Error JuvixError,
          Files,
          JvoCache,
-         Reader GlobalVersions,
          PathResolver
        ]
       r,
@@ -198,7 +193,6 @@ processModuleCacheMissDecide ::
          TaggedLock,
          TopModuleNameChecker,
          HighlightBuilder,
-         Reader GlobalVersions,
          PathResolver
        ]
       rrecompile
@@ -264,7 +258,6 @@ processModuleCacheMiss ::
          JvoCache,
          ProgressLog,
          Concurrent,
-         Reader GlobalVersions,
          PathResolver
        ]
       r
@@ -281,7 +274,7 @@ processModuleCacheMiss entryIx = do
       return r
     ProcessModuleRecompile recomp -> recomp ^. recompileDo
 
-processProject :: (Members '[PathResolver, Reader GlobalVersions, ModuleInfoCache, Reader EntryPoint, Reader ImportTree] r) => Sem r [(ImportNode, PipelineResult ModuleInfo)]
+processProject :: (Members '[PathResolver, ModuleInfoCache, Reader EntryPoint, Reader ImportTree] r) => Sem r [(ImportNode, PipelineResult ModuleInfo)]
 processProject = do
   rootDir <- asks (^. entryPointRoot)
   nodes <- toList <$> asks (importTreeProjectNodes rootDir)
@@ -295,7 +288,6 @@ processRecursiveUpToTyped ::
          TaggedLock,
          HighlightBuilder,
          Error JuvixError,
-         Reader GlobalVersions,
          Files,
          PathResolver,
          ModuleInfoCache
@@ -321,7 +313,7 @@ processRecursiveUpToTyped = do
     goImport :: ImportNode -> Sem r InternalTypedResult
     goImport node = do
       pkgInfo <- fromJust . HashMap.lookup (node ^. importNodePackageRoot) <$> getPackageInfos
-      pid <- packageLikePackageId (pkgInfo ^. packagePackage)
+      let pid = pkgInfo ^. packageInfoPackageId
       entry <- ask
       let entry' =
             entry
@@ -333,7 +325,7 @@ processRecursiveUpToTyped = do
 
 processImport ::
   forall r.
-  (Members '[Reader GlobalVersions, ModuleInfoCache, Reader EntryPoint, Error JuvixError, Files, PathResolver] r) =>
+  (Members '[ModuleInfoCache, Reader EntryPoint, Error JuvixError, Files, PathResolver] r) =>
   TopModulePath ->
   Sem r (PipelineResult Store.ModuleInfo)
 processImport p = withPathFile p getCachedImport
@@ -350,7 +342,7 @@ processImport p = withPathFile p getCachedImport
 
 processFileUpToParsing ::
   forall r.
-  (Members '[ModuleInfoCache, Reader GlobalVersions, Reader EntryPoint, HighlightBuilder, TopModuleNameChecker, Error JuvixError, Files, PathResolver] r) =>
+  (Members '[ModuleInfoCache, Reader EntryPoint, HighlightBuilder, TopModuleNameChecker, Error JuvixError, Files, PathResolver] r) =>
   EntryPoint ->
   Sem r (PipelineResult Parser.ParserResult)
 processFileUpToParsing entry = do
@@ -366,7 +358,7 @@ processFileUpToParsing entry = do
 
 processFileUpTo ::
   forall r a.
-  (Members '[Reader GlobalVersions, Reader EntryPoint, Error JuvixError, TopModuleNameChecker, PathResolver, Files, HighlightBuilder, ModuleInfoCache] r) =>
+  (Members '[Reader EntryPoint, Error JuvixError, TopModuleNameChecker, PathResolver, Files, HighlightBuilder, ModuleInfoCache] r) =>
   Sem (Reader Parser.ParserResult ': Reader Store.ModuleTable ': NameIdGen ': r) a ->
   Sem r (PipelineResult a)
 processFileUpTo a = do
@@ -383,7 +375,7 @@ processFileUpTo a = do
 
 processImports ::
   forall r.
-  (Members '[Reader GlobalVersions, Reader EntryPoint, ModuleInfoCache, Error JuvixError, Files, PathResolver] r) =>
+  (Members '[Reader EntryPoint, ModuleInfoCache, Error JuvixError, Files, PathResolver] r) =>
   [TopModulePath] ->
   Sem r CompileResult
 processImports imports = do
@@ -400,7 +392,7 @@ processImports imports = do
 
 processModuleToStoredCore ::
   forall r.
-  (Members '[Reader GlobalVersions, ModuleInfoCache, PathResolver, HighlightBuilder, TopModuleNameChecker, Error JuvixError, Files] r) =>
+  (Members '[ModuleInfoCache, PathResolver, HighlightBuilder, TopModuleNameChecker, Error JuvixError, Files] r) =>
   Text ->
   EntryPoint ->
   Sem r (PipelineResult Store.ModuleInfo)
@@ -422,7 +414,7 @@ processModuleToStoredCore sha256 entry = over pipelineResult mkModuleInfo <$> pr
 
 processFileToStoredCore ::
   forall r.
-  (Members '[Reader GlobalVersions, ModuleInfoCache, HighlightBuilder, PathResolver, TopModuleNameChecker, Error JuvixError, Files] r) =>
+  (Members '[ModuleInfoCache, HighlightBuilder, PathResolver, TopModuleNameChecker, Error JuvixError, Files] r) =>
   EntryPoint ->
   Sem r (PipelineResult Core.CoreResult)
 processFileToStoredCore entry = runReader entry $ do

@@ -5,6 +5,7 @@ import Juvix.Compiler.Concrete hiding (Symbol)
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Pipeline.Loader.PathResolver
+import Juvix.Compiler.Pipeline.Package
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
 import Juvix.Extra.PackageFiles
 import Juvix.Extra.Paths
@@ -116,6 +117,7 @@ runPackagePathResolver rootPath sem = do
           let root = ds ^. rootInfoArgGlobalStdlibDir
           jufiles <- findPackageJuvixFiles root
           let rfiles = hashSet jufiles
+          pkg <- readGlobalPackage
           return
             PackageInfo
               { _packageRoot = root,
@@ -125,7 +127,7 @@ runPackagePathResolver rootPath sem = do
                     [ ds ^. rootInfoArgPackageBaseDir,
                       ds ^. rootInfoArgGlobalStdlibDir
                     ],
-                _packagePackage = PackageGlobalStdlib
+                _packagePackage = PackageGlobal pkg
               }
 
         mkPackageDotJuvix :: Sem r PackageInfo

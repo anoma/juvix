@@ -33,7 +33,7 @@ type Node = EntryIndex
 
 mkNodesIndex ::
   forall r.
-  (Members '[PathResolver, Reader GlobalVersions, Reader EntryPoint] r) =>
+  (Members '[PathResolver, Reader EntryPoint] r) =>
   ImportTree ->
   Sem r (NodesIndex ImportNode Node)
 mkNodesIndex tree =
@@ -77,7 +77,6 @@ compileInParallel ::
          Reader EntryPoint,
          PathResolver,
          Reader NumThreads,
-         Reader GlobalVersions,
          Reader ImportTree
        ]
       r
@@ -139,7 +138,6 @@ evalModuleInfoCacheParallel ::
          Reader ImportScanStrategy,
          Reader NumThreads,
          Reader PipelineOptions,
-         Reader GlobalVersions,
          Logger,
          Files
        ]

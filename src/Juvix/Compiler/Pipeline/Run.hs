@@ -148,7 +148,6 @@ evalModuleInfoCacheHelper ::
          Reader ImportScanStrategy,
          Reader NumThreads,
          Reader PipelineOptions,
-         Reader GlobalVersions,
          Logger,
          Files
        ]

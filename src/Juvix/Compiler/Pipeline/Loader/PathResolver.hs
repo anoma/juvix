@@ -39,27 +39,21 @@ import Juvix.Extra.Paths
 import Juvix.Extra.Stdlib (ensureStdlib)
 import Juvix.Prelude
 
+-- | TODO rename and move somewhere else
 runGlobalVersions ::
   forall r a.
   (Members '[PathResolver, Files, TaggedLock, Error JuvixError, EvalFileEff] r) =>
   Text ->
-  Sem (Reader GlobalVersions ': r) a ->
+  Sem r a ->
   Sem r a
-runGlobalVersions txt m = do
-  traceM ("runGlobalVersions " <> txt)
-  infos <- toList <$> getPackageInfos
-  globalVer <- findJustM getGlobalPkgVersion infos
-  let g =
-        GlobalVersions
-          { _globalVersionsStdlib = globalVer
-          }
-  runReader g (checkConflicts >> m)
+runGlobalVersions _txt m = do
+  checkConflicts >> m
   where
     -- Checks that no two different roots have the same PackageId
-    checkConflicts :: forall r'. (Members '[Reader GlobalVersions, PathResolver] r') => Sem r' ()
+    checkConflicts :: forall r'. (Members '[PathResolver] r') => Sem r' ()
     checkConflicts = do
       pkgs :: [PackageInfo] <- toList <$> getPackageInfos
-      reps <- findRepeatedOnM (packageLikePackageId . (^. packagePackage)) pkgs
+      let reps = findRepeatedOn (^. packageInfoPackageId) pkgs
       case nonEmpty reps of
         Just (rep :| _) -> errRep rep
         Nothing -> return ()
@@ -72,13 +66,10 @@ runGlobalVersions txt m = do
               <> "\n"
               <> Text.unlines (l ^.. to toList . each . packageRoot . to toFilePath)
 
-    getGlobalPkgVersion :: PackageInfo -> Sem r (Maybe SemVer)
-    getGlobalPkgVersion pkginfo = runFail $ do
-      PackageGlobalStdlib <- pure (pkginfo ^. packagePackage)
-      meta <- SHA256.digestFiles (packageFiles pkginfo)
-      pkg <- readGlobalPackage
-      -- NOTE that we ignore the meta in the version field of the Package.juvix file
-      return ((pkg ^. packageVersion) {_svMeta = Just meta})
+-- getGlobalPkgVersion :: (Members '[TaggedLock, Error JuvixError, EvalFileEff, Files] r) => Sem r SemVer
+-- getGlobalPkgVersion = do
+--   pkg <- readGlobalPackage
+--   return (pkg ^. packageVersion)
 
 mkPackage ::
   forall r.
@@ -98,6 +89,24 @@ findPackageJuvixFiles pkgRoot = map (fromJust . stripProperPrefix pkgRoot) <$> w
       where
         newJuvixFiles :: [Path Abs File]
         newJuvixFiles = [cd <//> f | f <- files, isJuvixOrJuvixMdFile f, not (isPackageFile f)]
+
+mkPackageInfoPackageId :: (Members '[Files] r) => Path Abs Dir -> [Path Rel File] -> PackageLike -> Sem r PackageId
+mkPackageInfoPackageId root pkgRelFiles pkgLike = do
+  let baseVersion = packageLikeVersion pkgLike
+  meta <- SHA256.digestFiles [root <//> rFile | rFile <- pkgRelFiles]
+  return
+    PackageId
+      { _packageIdName = pkgLike ^. packageLikeName,
+        _packageIdVersion = baseVersion {_svMeta = Just meta}
+      }
+  where
+    packageLikeVersion :: PackageLike -> SemVer
+    packageLikeVersion = \case
+      PackageReal pkg -> pkg ^. packageVersion
+      PackageGlobal pkg -> pkg ^. packageVersion
+      PackageBase {} -> defaultVersion
+      PackageType {} -> defaultVersion
+      PackageDotJuvix {} -> defaultVersion
 
 mkPackageInfo ::
   forall r.
@@ -122,7 +131,12 @@ mkPackageInfo mpackageEntry _packageRoot pkg = do
             : globalPackageBaseAbsDir
             : _packageRoot
             : depsPaths
-  return PackageInfo {..}
+  let pkgInfo0 = PackageInfo {_packageInfoPackageId = impossible, ..}
+  pkgId <- mkPackageInfoPackageId _packageRoot (toList _packageJuvixRelativeFiles) _packagePackage
+  return
+    pkgInfo0
+      { _packageInfoPackageId = pkgId
+      }
   where
     pkgFile :: Path Abs File
     pkgFile = pkg ^. packageFile
@@ -184,12 +198,14 @@ registerPackageBase = do
   packageBaseAbsDir <- globalPackageBaseRoot
   runReader packageBaseAbsDir updatePackageBaseFiles
   packageBaseRelFiles <- relFiles packageBaseAbsDir
+  _packageInfoPackageId <- mkPackageInfoPackageId packageBaseAbsDir (toList packageBaseRelFiles) PackageBase
   let pkgInfo =
         PackageInfo
           { _packageRoot = packageBaseAbsDir,
             _packageJuvixRelativeFiles = packageBaseRelFiles,
             _packagePackage = PackageBase,
-            _packageAvailableRoots = HashSet.singleton packageBaseAbsDir
+            _packageAvailableRoots = HashSet.singleton packageBaseAbsDir,
+            _packageInfoPackageId
           }
       dep =
         LockfileDependency
@@ -315,7 +331,7 @@ addDependency' pkg me resolvedDependency = do
   selectPackageLockfile pkg $ do
     pkgInfo <- mkPackageInfo me (resolvedDependency ^. resolvedDependencyPath) pkg
     addPackageRelativeFiles pkgInfo
-    let packagePath = pkgInfo ^. packagePackage . packageLikeFile
+    let packagePath = packageLikeFile (pkgInfo ^. packagePackage)
     subDeps <-
       forM
         (pkgInfo ^. packagePackage . packageLikeDependencies)
@@ -412,10 +428,9 @@ isModuleOrphan topJuvixPath = do
         && not (pathPackageBase `isProperPrefixOf` actualPath)
     )
 
-importNodePackageId :: (Members '[Reader GlobalVersions, PathResolver] r) => ImportNode -> Sem r PackageId
-importNodePackageId n = do
-  pkg <- fromJust . (^. at (n ^. importNodePackageRoot)) <$> getPackageInfos
-  packageLikePackageId (pkg ^. packagePackage)
+importNodePackageId :: (Members '[PathResolver] r) => ImportNode -> Sem r PackageId
+importNodePackageId n =
+  (^?! at (n ^. importNodePackageRoot) . _Just . packageInfoPackageId) <$> getPackageInfos
 
 expectedPath' ::
   (Members '[Reader ResolverEnv, Files] r) =>

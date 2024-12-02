@@ -28,7 +28,7 @@ entryIndexPath = fromMaybe err . (^. entryIxEntry . entryPointModulePath)
     err :: a
     err = error "unexpected: EntryIndex should always have a path"
 
-mkEntryIndex :: (Members '[Reader GlobalVersions, PathResolver, Reader EntryPoint] r) => ImportNode -> Sem r EntryIndex
+mkEntryIndex :: (Members '[PathResolver, Reader EntryPoint] r) => ImportNode -> Sem r EntryIndex
 mkEntryIndex node = do
   entry <- ask
   pkgId <- importNodePackageId node

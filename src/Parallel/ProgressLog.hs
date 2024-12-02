@@ -68,7 +68,6 @@ runProgressLog ::
       '[ PathResolver,
          Reader ImportTree,
          Reader PipelineOptions,
-         Reader GlobalVersions,
          Logger,
          Concurrent
        ]
@@ -92,7 +91,7 @@ runProgressLog m = do
 
 runProgressLogOptions ::
   forall r a.
-  (Members '[Logger, Concurrent, Reader GlobalVersions] r) =>
+  (Members '[Logger, Concurrent] r) =>
   ProgressLogOptions ->
   Sem (ProgressLog ': r) a ->
   Sem r a
@@ -105,8 +104,8 @@ runProgressLogOptions opts m = do
     wait logHandler
     return x
   where
-    getPackageTag :: Path Abs Dir -> Sem r (Doc CodeAnn)
-    getPackageTag pkgRoot = packageLikeNameAndVersion (opts ^?! progressLogOptionsPackages . at pkgRoot . _Just . packagePackage)
+    packageTag :: Path Abs Dir -> Doc CodeAnn
+    packageTag pkgRoot = packageInfoNameAndVersion (opts ^?! progressLogOptionsPackages . at pkgRoot . _Just)
 
     tree :: ImportTree
     tree = opts ^. progressLogOptionsImportTree
@@ -162,7 +161,7 @@ runProgressLogOptions opts m = do
     handler :: TVar ProgressLogState -> LogQueue -> EffectHandlerFO ProgressLog r
     handler st logs = \case
       ProgressLog i -> do
-        tag <- getPackageTag fromPackage
+        let tag = packageTag fromPackage
         atomically $ do
           n <- getNextNumber
           let k

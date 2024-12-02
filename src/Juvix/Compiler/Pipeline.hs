@@ -41,7 +41,6 @@ import Juvix.Compiler.Pipeline.Loader.PathResolver.Base
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Data
 import Juvix.Compiler.Pipeline.Loader.PathResolver.DependencyResolver
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Error
-import Juvix.Compiler.Pipeline.Loader.PathResolver.GlobalVersions
 import Juvix.Compiler.Pipeline.ModuleInfoCache
 import Juvix.Compiler.Pipeline.Options
 import Juvix.Compiler.Pipeline.Package.Loader.Error
@@ -66,7 +65,6 @@ type PipelineLocalEff =
      Reader ImportTree,
      Reader ImportScanStrategy,
      TopModuleNameChecker,
-     Reader GlobalVersions,
      PathResolver,
      Reader DependenciesConfig,
      DependencyResolver,
