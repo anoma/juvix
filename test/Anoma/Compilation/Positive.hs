@@ -250,7 +250,7 @@ classify AnomaTest {..} = case _anomaTestNum of
   82 -> ClassWorking
   83 -> ClassWorking
   84 -> ClassWorking
-  85 -> ClassNodeError
+  85 -> ClassWorking
   86 -> ClassExpectedFail
   _ -> error "non-exhaustive test classification"
 
@@ -1039,14 +1039,13 @@ allTests =
           85
           AnomaTestModeNodeOnly
           "Anoma Resource Machine builtins"
-          $(mkRelDir ".")
-          $(mkRelFile "test085.juvix")
+          $(mkRelDir "test085")
+          $(mkRelFile "delta.juvix")
           []
           $ checkOutput
-            [ [nock| [[[11 22] 110] 0] |],
-              [nock| [10 11] |],
-              [nock| 478793196187462788804451 |],
-              [nock| 418565088612 |],
+            [ [nock| 0 |],
+              [nock| 0 |],
+              [nock| 0 |],
               [nock| 0 |]
             ],
         mkAnomaTest
