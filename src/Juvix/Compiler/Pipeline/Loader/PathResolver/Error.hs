@@ -5,6 +5,7 @@ import Juvix.Compiler.Pipeline.Loader.PathResolver.PackageInfo
 import Juvix.Compiler.Pipeline.Package.Base
 import Juvix.Data.CodeAnn
 import Juvix.Data.Effect.Git
+import Juvix.Extra.Paths.Base
 import Juvix.Prelude
 
 data DependencyErrorGit = DependencyErrorGit
@@ -93,6 +94,7 @@ data PathResolverError
   = ErrDependencyConflict DependencyConflict
   | ErrMissingModule MissingModule
   | ErrPackageInvalidImport PackageInvalidImport
+  | ErrAmbiguousPackageId AmbiguousPackageId
   deriving stock (Show)
 
 instance ToGenericError PathResolverError where
@@ -114,12 +116,14 @@ instance HasLoc PathResolverError where
       getLoc _missingModule
     ErrPackageInvalidImport PackageInvalidImport {..} ->
       getLoc _packageInvalidImport
+    ErrAmbiguousPackageId a -> getLoc a
 
 instance PrettyCodeAnn PathResolverError where
   ppCodeAnn = \case
     ErrDependencyConflict e -> ppCodeAnn e
     ErrMissingModule e -> ppCodeAnn e
     ErrPackageInvalidImport e -> ppCodeAnn e
+    ErrAmbiguousPackageId e -> ppCodeAnn e
 
 data DependencyConflict = DependencyConflict
   { _conflictPackages :: NonEmpty PackageInfo,
@@ -184,3 +188,22 @@ instance PrettyCodeAnn PackageInvalidImport where
       <+> "cannot be imported by the Package file."
         <> line
         <> "Package files may only import modules from the Juvix standard library, Juvix.Builtin modules, or from the PackageDescription module."
+
+data AmbiguousPackageId = AmbiguousPackageId
+  { _ambiguousPackageId :: PackageId,
+    _ambiguousPackageIdPackages :: NonEmpty PackageInfo
+  }
+  deriving stock (Show)
+
+instance HasLoc AmbiguousPackageId where
+  getLoc AmbiguousPackageId {..} = intervalFromFile ((head _ambiguousPackageIdPackages) ^. packageRoot <//> packageFilePath)
+
+instance PrettyCodeAnn AmbiguousPackageId where
+  ppCodeAnn AmbiguousPackageId {..} = do
+    "Ambiguous package id:"
+      <> line
+      <> ppCodeAnn _ambiguousPackageId
+      <> line
+      <> "The above package id is the same for the following packages"
+      <> line
+      <> itemize []

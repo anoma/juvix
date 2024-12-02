@@ -1,8 +1,12 @@
 module Juvix.Compiler.Concrete.Data.Name where
 
 import Data.List.NonEmpty.Extra qualified as NonEmpty
+import Juvix.Data.Fixity
+import Juvix.Data.Loc
+import Juvix.Data.TopModulePathKey
+import Juvix.Data.WithLoc
 import Juvix.Extra.Serialize
-import Juvix.Prelude
+import Juvix.Prelude.Base
 import Juvix.Prelude.Pretty as Pretty
 
 type Symbol = WithLoc Text

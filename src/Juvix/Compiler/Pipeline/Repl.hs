@@ -180,7 +180,6 @@ compileReplInputIO fp txt = do
     . runTopModuleNameChecker
     . runReader defaultImportScanStrategy
     . withImportTree (Just fp)
-    . runGlobalVersions "repl"
     . evalModuleInfoCacheHelper
     $ do
       p <- parseReplInput fp txt

@@ -30,7 +30,7 @@ makeLenses ''RootInfoFiles
 -- package and global standard library (currently under global-package/.juvix-build)
 runPackagePathResolver ::
   forall r a.
-  (Members '[TaggedLock, Error JuvixError, Files, EvalFileEff] r) =>
+  (Members '[Error JuvixError, TaggedLock, Files, EvalFileEff] r) =>
   Path Abs Dir ->
   Sem (PathResolver ': r) a ->
   Sem r a
@@ -40,6 +40,7 @@ runPackagePathResolver rootPath sem = do
   fs <- rootInfoFiles ds
   let mkRootInfo' :: Path Rel File -> Maybe RootInfo = mkRootInfo ds fs
   packageInfos <- mkPackageInfos ds fs
+  checkConflicts (toList packageInfos)
   (`interpretH` sem) $ \localEnv -> \case
     SupportsParallel -> return False
     ResolverRoot -> return rootPath
@@ -67,6 +68,23 @@ runPackagePathResolver rootPath sem = do
       -- the _root' is not used because ResolvePath does not depend on it
       runTSimpleEff localEnv m
   where
+    checkConflicts :: forall r'. (Members '[Error JuvixError] r') => [PackageInfo] -> Sem r' ()
+    checkConflicts pkgs = do
+      let reps = findRepeatedOn (^. packageInfoPackageId) pkgs
+      case nonEmpty reps of
+        Just (rep :| _) -> errRep rep
+        Nothing -> return ()
+      where
+        errRep :: (NonEmpty PackageInfo, PackageId) -> Sem r' ()
+        errRep (l, pid) =
+          throw
+            . JuvixError
+            $ ErrAmbiguousPackageId
+              AmbiguousPackageId
+                { _ambiguousPackageId = pid,
+                  _ambiguousPackageIdPackages = l
+                }
+
     mkPackageInfos ::
       RootInfoDirs ->
       RootInfoFiles ->

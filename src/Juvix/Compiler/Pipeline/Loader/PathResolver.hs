@@ -10,7 +10,6 @@ module Juvix.Compiler.Pipeline.Loader.PathResolver
     runPathResolverPipe',
     evalPathResolverPipe,
     findPackageJuvixFiles,
-    runGlobalVersions,
     importNodePackageId,
     mkPackageInfoPackageId,
   )
@@ -18,7 +17,6 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
-import Data.Text qualified as Text
 import Data.Versions qualified as Ver
 import Juvix.Compiler.Concrete.Data.Name
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
@@ -40,33 +38,6 @@ import Juvix.Extra.PackageFiles
 import Juvix.Extra.Paths
 import Juvix.Extra.Stdlib (ensureStdlib)
 import Juvix.Prelude
-
--- | TODO rename and move somewhere else
-runGlobalVersions ::
-  forall r a.
-  (Members '[PathResolver, Files, TaggedLock, Error JuvixError, EvalFileEff] r) =>
-  Text ->
-  Sem r a ->
-  Sem r a
-runGlobalVersions _txt m = do
-  checkConflicts >> m
-  where
-    -- Checks that no two different roots have the same PackageId
-    checkConflicts :: forall r'. (Members '[PathResolver] r') => Sem r' ()
-    checkConflicts = do
-      pkgs :: [PackageInfo] <- toList <$> getPackageInfos
-      let reps = findRepeatedOn (^. packageInfoPackageId) pkgs
-      case nonEmpty reps of
-        Just (rep :| _) -> errRep rep
-        Nothing -> return ()
-      where
-        errRep :: (NonEmpty PackageInfo, PackageId) -> Sem r' ()
-        errRep (l, pid) =
-          error $
-            "Non-unique package id: "
-              <> show pid
-              <> "\n"
-              <> Text.unlines (l ^.. to toList . each . packageRoot . to toFilePath)
 
 mkPackage ::
   forall r.
@@ -134,12 +105,8 @@ mkPackageInfo mpackageEntry _packageRoot pkg = do
             : globalPackageBaseAbsDir
             : _packageRoot
             : depsPaths
-  let pkgInfo0 = PackageInfo {_packageInfoPackageId = impossible, ..}
-  pkgId <- mkPackageInfoPackageId _packageRoot (toList _packageJuvixRelativeFiles) _packagePackage
-  return
-    pkgInfo0
-      { _packageInfoPackageId = pkgId
-      }
+  _packageInfoPackageId <- mkPackageInfoPackageId _packageRoot (toList _packageJuvixRelativeFiles) _packagePackage
+  return PackageInfo {..}
   where
     pkgFile :: Path Abs File
     pkgFile = pkg ^. packageFile

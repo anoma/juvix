@@ -1,7 +1,7 @@
 module Juvix.Data.NameKind where
 
 import Juvix.Extra.Serialize
-import Juvix.Prelude
+import Juvix.Prelude.Base
 import Juvix.Prelude.Pretty
 import Prettyprinter.Render.Terminal
 

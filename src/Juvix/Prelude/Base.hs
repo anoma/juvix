@@ -43,12 +43,7 @@ findRepeatedOn f = runIdentity . findRepeatedOnM (return . f)
 
 -- | Returns the repeated elements
 findRepeated :: forall a. (Ord a) => [a] -> [a]
-findRepeated = mapMaybe rep . groupSortOn id
-  where
-    rep :: NonEmpty a -> Maybe a
-    rep = \case
-      (a :| _ : _) -> Just a
-      _ -> Nothing
+findRepeated = map (head . fst) . findRepeatedOn id
 
 allDifferent :: forall a. (Ord a) => [a] -> Bool
 allDifferent = null . findRepeated
