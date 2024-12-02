@@ -464,8 +464,9 @@ runPathResolver2 st topEnv arg = do
       handler
     )
     $ do
-      pkgs <- toList <$> getPackageInfos
-      checkConflicts pkgs
+      _pkgs <- toList <$> getPackageInfos
+      -- I think we should not check for conflicts
+      -- checkConflicts pkgs
       arg
   where
     handler ::
