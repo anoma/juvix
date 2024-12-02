@@ -12,6 +12,7 @@ module Juvix.Compiler.Pipeline.Loader.PathResolver
     findPackageJuvixFiles,
     importNodePackageId,
     mkPackageInfoPackageId,
+    checkConflicts,
   )
 where
 
@@ -38,6 +39,23 @@ import Juvix.Extra.PackageFiles
 import Juvix.Extra.Paths
 import Juvix.Extra.Stdlib (ensureStdlib)
 import Juvix.Prelude
+
+checkConflicts :: forall r'. (Members '[Error JuvixError] r') => [PackageInfo] -> Sem r' ()
+checkConflicts pkgs = do
+  let reps = findRepeatedOn (^. packageInfoPackageId) pkgs
+  case nonEmpty reps of
+    Just (rep :| _) -> errRep rep
+    Nothing -> return ()
+  where
+    errRep :: (NonEmpty PackageInfo, PackageId) -> Sem r' ()
+    errRep (l, pid) =
+      throw
+        . JuvixError
+        $ ErrAmbiguousPackageId
+          AmbiguousPackageId
+            { _ambiguousPackageId = pid,
+              _ambiguousPackageIdPackages = l
+            }
 
 mkPackage ::
   forall r.
@@ -445,7 +463,10 @@ runPathResolver2 st topEnv arg = do
       )
       handler
     )
-    arg
+    $ do
+      pkgs <- toList <$> getPackageInfos
+      checkConflicts pkgs
+      arg
   where
     handler ::
       forall t localEs x.

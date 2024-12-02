@@ -206,4 +206,4 @@ instance PrettyCodeAnn AmbiguousPackageId where
       <> line
       <> "The above package id is the same for the following packages"
       <> line
-      <> itemize []
+      <> itemize ((pretty . (^. packageRoot)) <$> _ambiguousPackageIdPackages)
