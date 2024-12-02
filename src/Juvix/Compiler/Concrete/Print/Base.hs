@@ -310,8 +310,8 @@ ppIterator _isTop Iterator {..} = do
   let n = ppIdentifierType _iteratorName
       is = ppCode <$> _iteratorInitializers
       rngs = ppCode <$> _iteratorRanges
-      is' = parens . hsepSemicolon <$> nonEmpty is
-      rngs' = parens . hsepSemicolon <$> nonEmpty rngs
+      is' = parens . oneLineOrNextNoIndent . hsepSemicolon <$> nonEmpty is
+      rngs' = parens . oneLineOrNextNoIndent . hsepSemicolon <$> nonEmpty rngs
       b
         | _iteratorBodyBraces = space <> braces (blockIndent (ppTopExpressionType _iteratorBody))
         | otherwise = parens (oneLineOrNextNoIndent (ppTopExpressionType _iteratorBody))

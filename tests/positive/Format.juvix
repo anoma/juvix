@@ -4,6 +4,20 @@ Format;
 
 ------------ many --- in comment
 
+module Iterators;
+  import Stdlib.Prelude open;
+
+  number : Nat :=
+    for
+      (longlongName1, longlongName2, longlongName3 := 4839248329, 10, 2438729)
+      (x in [1; 2; 3; 4; 5; 6; 7]) {
+        longlongName1 + longlongName2
+          , longlongName1 * longlongName2
+          , x + longlongName3
+      }
+      |> fst;
+end;
+
 import Stdlib.Prelude -- Import a module of name:
 open -- Bring all names into scope but..
 hiding -- Hide some names
