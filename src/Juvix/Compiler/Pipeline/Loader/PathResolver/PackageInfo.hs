@@ -34,11 +34,8 @@ data PackageInfo = PackageInfo
 makeLenses ''PackageInfo
 makePrisms ''PackageLike
 
-packageInfoFilesHelper :: Path Abs Dir -> [Path Rel File] -> [Path Abs File]
-packageInfoFilesHelper root files = [root <//> f | f <- files]
-
 packageInfoFiles :: PackageInfo -> [Path Abs File]
-packageInfoFiles k = packageInfoFilesHelper (k ^. packageRoot) (toList (k ^. packageJuvixRelativeFiles))
+packageInfoFiles k = [k ^. packageRoot <//> f | f <- (toList (k ^. packageJuvixRelativeFiles))]
 
 -- | Does *not* include Package.juvix
 packageJuvixFiles :: SimpleGetter PackageInfo (HashSet (Path Rel File))

@@ -133,7 +133,6 @@ ensureGlobalPackage = do
 
 readGlobalPackage :: (Members '[TaggedLock, Error JuvixError, EvalFileEff, Files] r) => Sem r Package
 readGlobalPackage = do
-  traceM "readGlobalPackage"
   packagePath <- ensureGlobalPackage
   readPackage (parent packagePath) DefaultBuildDir
 

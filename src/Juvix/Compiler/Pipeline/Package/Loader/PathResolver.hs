@@ -73,7 +73,7 @@ runPackagePathResolver rootPath sem = do
       Sem r (HashMap (Path Abs Dir) PackageInfo)
     mkPackageInfos ds fs = do
       pkgBase <- mkPkgBase
-      globalPkg <- mkPkgGlobal
+      globalPkg <- mkPkgStdlibInGlobal
       pkgDotJuvix <- mkPackageDotJuvix
       pkgType <- mkPkgPackageType
       return
@@ -118,8 +118,8 @@ runPackagePathResolver rootPath sem = do
                     ]
               }
 
-        mkPkgGlobal :: Sem r PackageInfo
-        mkPkgGlobal = do
+        mkPkgStdlibInGlobal :: Sem r PackageInfo
+        mkPkgStdlibInGlobal = do
           let root = ds ^. rootInfoArgGlobalStdlibDir
           jufiles <- findPackageJuvixFiles root
           let rfiles = hashSet jufiles
