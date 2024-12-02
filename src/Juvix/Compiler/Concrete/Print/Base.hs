@@ -316,7 +316,7 @@ ppIterator _isTop Iterator {..} = do
         | _iteratorBodyBraces = space <> braces (blockIndent (ppTopExpressionType _iteratorBody))
         | otherwise = parens (oneLineOrNextNoIndent (ppTopExpressionType _iteratorBody))
   parensIf _iteratorParens $
-    n <+?> is' <+?> rngs' <> b
+    n <>? is' <>? rngs' <> b
 
 instance PrettyPrint S.AName where
   ppCode n = annotated (AnnKind (S.getNameKind n)) (noLoc (pretty (n ^. S.anameVerbatim)))
