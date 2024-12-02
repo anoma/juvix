@@ -5,7 +5,6 @@ import Juvix.Compiler.Concrete hiding (Symbol)
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Pipeline.Loader.PathResolver
-import Juvix.Compiler.Pipeline.Package
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
 import Juvix.Extra.PackageFiles
 import Juvix.Extra.Paths
@@ -74,12 +73,12 @@ runPackagePathResolver rootPath sem = do
       Sem r (HashMap (Path Abs Dir) PackageInfo)
     mkPackageInfos ds fs = do
       pkgBase <- mkPkgBase
-      gstdlib <- mkPkgGlobalStdlib
+      globalPkg <- mkPkgGlobal
       pkgDotJuvix <- mkPackageDotJuvix
       pkgType <- mkPkgPackageType
       return
         . hashMap
-        $ mkAssoc <$> [pkgBase, pkgType, gstdlib, pkgDotJuvix]
+        $ mkAssoc <$> [pkgBase, pkgType, globalPkg, pkgDotJuvix]
       where
         mkAssoc :: PackageInfo -> (Path Abs Dir, PackageInfo)
         mkAssoc pkg = (pkg ^. packageRoot, pkg)
@@ -119,13 +118,12 @@ runPackagePathResolver rootPath sem = do
                     ]
               }
 
-        mkPkgGlobalStdlib :: Sem r PackageInfo
-        mkPkgGlobalStdlib = do
+        mkPkgGlobal :: Sem r PackageInfo
+        mkPkgGlobal = do
           let root = ds ^. rootInfoArgGlobalStdlibDir
           jufiles <- findPackageJuvixFiles root
-          pkg <- readGlobalPackage
           let rfiles = hashSet jufiles
-              pkgTy = PackageGlobal pkg
+              pkgTy = PackageStdlibInGlobalPackage
           pkgId <- mkPackageInfoPackageId root (toList rfiles) pkgTy
           return
             PackageInfo

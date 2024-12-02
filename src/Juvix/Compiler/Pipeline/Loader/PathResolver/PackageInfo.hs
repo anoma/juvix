@@ -14,7 +14,7 @@ import Juvix.Prelude
 
 data PackageLike
   = PackageReal Package
-  | PackageGlobal Package
+  | PackageStdlibInGlobalPackage
   | PackageBase
   | PackageType
   | PackageDotJuvix
@@ -51,7 +51,7 @@ keepJuvixFiles = HashSet.filter isJuvixOrJuvixMdFile
 packageLikeName :: SimpleGetter PackageLike Text
 packageLikeName = to $ \case
   PackageReal r -> r ^. packageName
-  PackageGlobal r -> r ^. packageName
+  PackageStdlibInGlobalPackage {} -> "global-stdlib"
   PackageBase -> Str.packageBase
   PackageType -> "package-type"
   PackageDotJuvix -> "package-dot-juvix"
@@ -67,7 +67,7 @@ packageInfoNameAndVersion n =
 packageLikeDependencies :: SimpleGetter PackageLike [Dependency]
 packageLikeDependencies = to $ \case
   PackageReal r -> r ^. packageDependencies
-  PackageGlobal r -> r ^. packageDependencies
+  PackageStdlibInGlobalPackage {} -> impossible
   PackageBase -> []
   PackageType -> []
   PackageDotJuvix -> []
@@ -75,7 +75,7 @@ packageLikeDependencies = to $ \case
 packageLikeFile :: PackageLike -> Path Abs File
 packageLikeFile = \case
   PackageReal r -> r ^. packageFile
-  PackageGlobal r -> r ^. packageFile
+  PackageStdlibInGlobalPackage {} -> impossible
   PackageBase -> impossible
   PackageType -> impossible
   PackageDotJuvix -> impossible

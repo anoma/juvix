@@ -19,6 +19,7 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Data.Text qualified as Text
+import Data.Versions qualified as Ver
 import Juvix.Compiler.Concrete.Data.Name
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Compiler.Concrete.Translation.ImportScanner
@@ -94,17 +95,17 @@ findPackageJuvixFiles pkgRoot = map (fromJust . stripProperPrefix pkgRoot) <$> w
 mkPackageInfoPackageId :: (Members '[Files] r) => Path Abs Dir -> [Path Rel File] -> PackageLike -> Sem r PackageId
 mkPackageInfoPackageId root pkgRelFiles pkgLike = do
   let baseVersion = packageLikeVersion pkgLike
-  meta <- SHA256.digestFiles [root <//> rFile | rFile <- pkgRelFiles]
+  filesHash <- SHA256.digestFiles [root <//> rFile | rFile <- pkgRelFiles]
   return
     PackageId
       { _packageIdName = pkgLike ^. packageLikeName,
-        _packageIdVersion = baseVersion {_svMeta = Just meta}
+        _packageIdVersion = baseVersion {_svPreRel = Just (Ver.Release (pure (Ver.Alphanum filesHash)))}
       }
   where
     packageLikeVersion :: PackageLike -> SemVer
     packageLikeVersion = \case
       PackageReal pkg -> pkg ^. packageVersion
-      PackageGlobal pkg -> pkg ^. packageVersion
+      PackageStdlibInGlobalPackage -> defaultVersion
       PackageBase {} -> defaultVersion
       PackageType {} -> defaultVersion
       PackageDotJuvix {} -> defaultVersion
@@ -176,17 +177,16 @@ mkPackageInfo mpackageEntry _packageRoot pkg = do
             checkDep d =
               unless
                 (mkName d `HashSet.member` lockfileDepNames)
-                ( throw
-                    DependencyError
-                      { _dependencyErrorPackageFile = pkgFile,
-                        _dependencyErrorCause =
-                          MissingLockfileDependencyError
-                            MissingLockfileDependency
-                              { _missingLockfileDependencyDependency = d,
-                                _missingLockfileDependencyPath = lf ^. lockfileInfoPath
-                              }
-                      }
-                )
+                $ throw
+                  DependencyError
+                    { _dependencyErrorPackageFile = pkgFile,
+                      _dependencyErrorCause =
+                        MissingLockfileDependencyError
+                          MissingLockfileDependency
+                            { _missingLockfileDependencyDependency = d,
+                              _missingLockfileDependencyPath = lf ^. lockfileInfoPath
+                            }
+                    }
 
 lookupCachedDependency :: (Members '[State ResolverState, Reader ResolverEnv, Files, DependencyResolver] r) => Path Abs Dir -> Sem r (Maybe LockfileDependency)
 lookupCachedDependency p = fmap (^. resolverCacheItemDependency) . HashMap.lookup p <$> gets (^. resolverCache)
