@@ -88,6 +88,11 @@ data PropertyGoto = PropertyGoto
     _gotoPos :: FileLoc
   }
 
+-- | Location where a top symbol is defined
+newtype PropertyTopDef = PropertyTopDef
+  { _topDef :: Text
+  }
+
 newtype PropertyFace = PropertyFace
   { _faceFace :: Face
   }
@@ -100,13 +105,15 @@ data PropertyInfo = PropertyInfo
 data LocProperties = LocProperties
   { _propertiesGoto :: [WithLoc PropertyGoto],
     _propertiesFace :: [WithLoc PropertyFace],
+    _propertiesTopDef :: [WithLoc PropertyTopDef],
     _propertiesInfo :: [WithLoc PropertyInfo]
   }
 
 data RawProperties = RawProperties
   { _rawPropertiesFace :: [RawWithLoc RawFace],
     _rawPropertiesGoto :: [RawWithLoc RawGoto],
-    _rawPropertiesDoc :: [RawWithLoc RawType]
+    _rawPropertiesDoc :: [RawWithLoc RawType],
+    _rawPropertiesTopDef :: [RawWithLoc RawTopDef]
   }
 
 -- | (File, Start Row, Start Col, Length, End Row, End Col)
@@ -118,6 +125,8 @@ type RawFace = Face
 
 -- | (TargetFile, TargetLine, TargetColumn)
 type RawGoto = (Path Abs File, Int, Int)
+
+type RawTopDef = Text
 
 -- | (Type)
 type RawType = Text
@@ -135,6 +144,7 @@ rawProperties LocProperties {..} =
   RawProperties
     { _rawPropertiesGoto = map (rawWithLoc rawGoto) _propertiesGoto,
       _rawPropertiesFace = map (rawWithLoc rawFace) _propertiesFace,
+      _rawPropertiesTopDef = map (rawWithLoc rawTopDef) _propertiesTopDef,
       _rawPropertiesDoc = map (rawWithLoc rawType) _propertiesInfo
     }
   where
@@ -159,6 +169,9 @@ rawProperties LocProperties {..} =
 
     rawFace :: PropertyFace -> RawFace
     rawFace PropertyFace {..} = _faceFace
+
+    rawTopDef :: PropertyTopDef -> RawTopDef
+    rawTopDef PropertyTopDef {..} = _topDef
 
     rawGoto :: PropertyGoto -> RawGoto
     rawGoto PropertyGoto {..} =

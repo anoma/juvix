@@ -44,11 +44,22 @@ buildProperties HighlightInput {..} =
           <> mapMaybe goFaceName _highlightNames
           <> map goFaceError _highlightErrors,
       _propertiesGoto = map goGotoProperty _highlightNames,
+      _propertiesTopDef = mapMaybe goDefProperty _highlightNames,
       _propertiesInfo = mapMaybe (goDocProperty _highlightDocTable _highlightTypes) _highlightNames
     }
 
 goFaceError :: Interval -> WithLoc PropertyFace
 goFaceError i = WithLoc i (PropertyFace FaceError)
+
+goDefProperty :: AName -> Maybe (WithLoc PropertyTopDef)
+goDefProperty n = do
+  guard (n ^. anameIsTop)
+  guard ((n ^. anameLoc) == (n ^. anameDefinedLoc))
+  return
+    WithLoc
+      { _withLocInt = n ^. anameLoc,
+        _withLocParam = PropertyTopDef (n ^. anameVerbatim)
+      }
 
 goFaceSemanticItem :: SemanticItem -> Maybe (WithLoc PropertyFace)
 goFaceSemanticItem i = WithLoc (getLoc i) . PropertyFace <$> f

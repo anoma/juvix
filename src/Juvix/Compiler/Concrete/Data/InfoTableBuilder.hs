@@ -15,8 +15,8 @@ data InfoTableBuilder :: Effect where
   RegisterConstructor :: ConstructorDef 'Scoped -> InfoTableBuilder m ()
   RegisterInductive :: InductiveDef 'Scoped -> InfoTableBuilder m ()
   RegisterFunctionDef :: FunctionDef 'Scoped -> InfoTableBuilder m ()
-  RegisterName :: (HasLoc c) => S.Name' c -> InfoTableBuilder m ()
-  RegisterScopedIden :: ScopedIden -> InfoTableBuilder m ()
+  RegisterName :: (HasLoc c) => Bool -> S.Name' c -> InfoTableBuilder m ()
+  RegisterScopedIden :: Bool -> ScopedIden -> InfoTableBuilder m ()
   RegisterModuleDoc :: S.NameId -> Maybe (Judoc 'Scoped) -> InfoTableBuilder m ()
   RegisterFixity :: FixityDef -> InfoTableBuilder m ()
   RegisterPrecedence :: S.NameId -> S.NameId -> InfoTableBuilder m ()
@@ -65,8 +65,8 @@ runInfoTableBuilder ini = reinterpret (runState ini) $ \case
         fid = f ^. functionDefName . functionDefNameScoped . nameId
     modify' (over infoFunctions (HashMap.insert fid f))
     highlightDoc fid j
-  RegisterName n -> highlightName (S.anameFromName n)
-  RegisterScopedIden n -> highlightName (anameFromScopedIden n)
+  RegisterName isTop n -> highlightName (S.anameFromName isTop n)
+  RegisterScopedIden isTop n -> highlightName (anameFromScopedIden isTop n)
   RegisterModuleDoc uid doc -> highlightDoc uid doc
   RegisterFixity f -> do
     let sid = f ^. fixityDefSymbol . S.nameId
@@ -143,10 +143,11 @@ runInfoTableBuilderRepl tab = ignoreHighlightBuilder . runInfoTableBuilder tab .
 ignoreInfoTableBuilder :: (Members '[Error ScoperError, HighlightBuilder] r) => Sem (InfoTableBuilder ': r) a -> Sem r a
 ignoreInfoTableBuilder = fmap snd . runInfoTableBuilder mempty
 
-anameFromScopedIden :: ScopedIden -> AName
-anameFromScopedIden s =
+anameFromScopedIden :: Bool -> ScopedIden -> AName
+anameFromScopedIden isTop s =
   AName
     { _anameLoc = getLoc s,
+      _anameIsTop = isTop,
       _anameKindPretty = getNameKindPretty s,
       _anameDocId = s ^. scopedIdenFinal . nameId,
       _anameDefinedLoc = s ^. scopedIdenSrcName . nameDefined,
