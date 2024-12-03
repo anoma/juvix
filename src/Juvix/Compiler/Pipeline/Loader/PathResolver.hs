@@ -18,6 +18,7 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
+import Data.List.NonEmpty.Extra qualified as NonEmpty
 import Data.Versions qualified as Ver
 import Juvix.Compiler.Concrete.Data.Name
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
@@ -76,16 +77,21 @@ findPackageJuvixFiles pkgRoot = map (fromJust . stripProperPrefix pkgRoot) <$> w
         newJuvixFiles :: [Path Abs File]
         newJuvixFiles = [cd <//> f | f <- files, isJuvixOrJuvixMdFile f, not (isPackageFile f)]
 
--- | If the file has a pre-release tag we keep it as it is. Otherwise we hash
--- all juvix files in the package.
+-- | Append the hash of all files in the project to the pre-release
 mkPackageInfoPackageId :: (Members '[Files] r) => Path Abs Dir -> [Path Rel File] -> PackageLike -> Sem r PackageId
 mkPackageInfoPackageId root pkgRelFiles pkgLike = do
+  let pkgDotJuvix = mkPackageFilePath root
+  pkgDotJuvixExists <- fileExists' pkgDotJuvix
+  let pkgJuvixFiles = [root <//> rFile | rFile <- pkgRelFiles]
   let baseVersion = packageLikeVersion pkgLike
-  version <- case Ver._svPreRel baseVersion of
-    Nothing -> do
-      filesHash <- SHA256.digestFiles [root <//> rFile | rFile <- pkgRelFiles]
-      return baseVersion {_svPreRel = Just (Ver.Release (pure (Ver.Alphanum filesHash)))}
-    Just {} -> return baseVersion
+      allFiles
+        | pkgDotJuvixExists = pkgDotJuvix : pkgJuvixFiles
+        | otherwise = pkgJuvixFiles
+  filesHash <- SHA256.digestFiles allFiles
+  let version = case Ver._svPreRel baseVersion of
+        Nothing ->
+          baseVersion {_svPreRel = Just (Ver.Release (pure (Ver.Alphanum filesHash)))}
+        Just (Ver.Release r) -> baseVersion {_svPreRel = Just (Ver.Release (NonEmpty.snoc r (Ver.Alphanum filesHash)))}
   return
     PackageId
       { _packageIdName = pkgLike ^. packageLikeName,
