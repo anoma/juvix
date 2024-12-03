@@ -59,16 +59,19 @@ documentedMessage w = uncurry DocumentedMessage (first (baseUrl <>) warningInfo)
     baseUrl :: Text
     baseUrl = "https://docs.juvix.org/" <> V.versionDoc <> "/reference/tooling/doctor/#"
 
-heading :: (Member Log r) => Text -> Sem r ()
-heading = log . ("> " <>)
+logDoctor :: (Member Logger r) => Text -> Sem r ()
+logDoctor = logInfo . mkAnsiText
 
-warning :: (Member Log r) => Text -> Sem r ()
-warning = log . ("  ! " <>)
+heading :: (Member Logger r) => Text -> Sem r ()
+heading = logDoctor . ("> " <>)
 
-info :: (Member Log r) => Text -> Sem r ()
-info = log . ("  | " <>)
+warning :: (Member Logger r) => Text -> Sem r ()
+warning = logDoctor . ("  ! " <>)
 
-type DoctorEff = '[Log, EmbedIO, App]
+info :: (Member Logger r) => Text -> Sem r ()
+info = logDoctor . ("  | " <>)
+
+type DoctorEff = '[Logger, EmbedIO, App]
 
 checkCmdOnPath :: (Members DoctorEff r) => String -> [Text] -> Sem r ()
 checkCmdOnPath cmd errMsg =

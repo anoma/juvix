@@ -74,7 +74,6 @@ type PipelineLocalEff =
      GitClone,
      Error GitProcessError,
      ProcessE,
-     Log,
      Reader EntryPoint,
      Files,
      Error JuvixError,
