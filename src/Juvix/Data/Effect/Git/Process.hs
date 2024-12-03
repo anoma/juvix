@@ -75,7 +75,7 @@ gitFetchOnline = withTaggedLockDir' (void (runGitCmdInDir ["fetch"]))
 gitCloneOnline :: (Members '[Logger, Error GitProcessError, ProcessE, Online, Reader CloneEnv] r) => Text -> Sem r ()
 gitCloneOnline url = do
   p <- asks (^. cloneEnvDir)
-  logProgress (mkAnsiText ("Cloning " <> url <> " to " <> pack (toFilePath p)))
+  logInfo (mkAnsiText ("Cloning " <> url <> " to " <> pack (toFilePath p)))
   void (runGitCmd ["clone", url, T.pack (toFilePath p)])
 
 cloneGitRepo :: (Members '[Logger, Files, ProcessE, Error GitProcessError, Reader CloneEnv, Internet] r) => Text -> Sem r ()
