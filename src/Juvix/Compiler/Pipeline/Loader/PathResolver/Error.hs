@@ -94,7 +94,8 @@ data PathResolverError
   = ErrDependencyConflict DependencyConflict
   | ErrMissingModule MissingModule
   | ErrPackageInvalidImport PackageInvalidImport
-  | ErrAmbiguousPackageId AmbiguousPackageId
+  | -- | This error is unused at the moment
+    ErrAmbiguousPackageId AmbiguousPackageId
   deriving stock (Show)
 
 instance ToGenericError PathResolverError where

@@ -70,11 +70,4 @@ resolverErrorTests =
         ErrMissingModule
           MissingModule {} -> Nothing
         _ -> wrongError
-    -- negTest
-    --   "Depend on two packages with the same package id"
-    --   $(mkRelDir "AmbiguousPackageId")
-    --   $(mkRelFile "Main.juvix")
-    --   $ \case
-    --     ErrAmbiguousPackageId {} -> Nothing
-    --     _ -> wrongError
   ]
