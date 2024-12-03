@@ -310,13 +310,13 @@ ppIterator _isTop Iterator {..} = do
   let n = ppIdentifierType _iteratorName
       is = ppCode <$> _iteratorInitializers
       rngs = ppCode <$> _iteratorRanges
-      is' = parens . hsepSemicolon <$> nonEmpty is
-      rngs' = parens . hsepSemicolon <$> nonEmpty rngs
+      is' = parens . oneLineOrNextNoIndent . hsepSemicolon <$> nonEmpty is
+      rngs' = parens . oneLineOrNextNoIndent . hsepSemicolon <$> nonEmpty rngs
       b
         | _iteratorBodyBraces = space <> braces (blockIndent (ppTopExpressionType _iteratorBody))
         | otherwise = parens (oneLineOrNextNoIndent (ppTopExpressionType _iteratorBody))
   parensIf _iteratorParens $
-    n <+?> is' <+?> rngs' <> b
+    n <>? is' <>? rngs' <> b
 
 instance PrettyPrint S.AName where
   ppCode n = annotated (AnnKind (S.getNameKind n)) (noLoc (pretty (n ^. S.anameVerbatim)))
@@ -347,18 +347,15 @@ instance (SingI s) => PrettyPrint (ArgumentBlock s) where
     where
       Irrelevant d = _argBlockDelims
 
-instance PrettyPrint IsExhaustive where
-  ppCode IsExhaustive {..} = ppCode _isExhaustiveKw
-
-instance (SingI s) => PrettyPrint (NamedApplicationNew s) where
-  ppCode NamedApplicationNew {..} = do
+instance (SingI s) => PrettyPrint (NamedApplication s) where
+  ppCode NamedApplication {..} = do
     let args'
-          | null _namedApplicationNewArguments = mempty
-          | otherwise = ppBlock _namedApplicationNewArguments
+          | null _namedApplicationArguments = mempty
+          | otherwise = ppBlock _namedApplicationArguments
     grouped
       ( align
-          ( ppIdentifierType _namedApplicationNewName
-              <> ppCode _namedApplicationNewExhaustive
+          ( ppIdentifierType _namedApplicationName
+              <> ppCode _namedApplicationAtKw
               <> braces args'
           )
       )
@@ -372,9 +369,9 @@ instance PrettyPrint (RecordUpdatePun s) where
 instance PrettyPrint (NamedArgumentPun s) where
   ppCode = ppCode . (^. namedArgumentPunSymbol)
 
-instance (SingI s) => PrettyPrint (NamedArgumentNew s) where
+instance (SingI s) => PrettyPrint (NamedArgument s) where
   ppCode = \case
-    NamedArgumentNewFunction f -> ppCode f
+    NamedArgumentFunction f -> ppCode f
     NamedArgumentItemPun f -> ppCode f
 
 instance (SingI s) => PrettyPrint (RecordSyntaxDef s) where
@@ -472,7 +469,7 @@ instance (SingI s) => PrettyPrint (ExpressionAtom s) where
     AtomHole w -> ppHoleType w
     AtomInstanceHole w -> ppHoleType w
     AtomIterator i -> ppIterator NotTop i
-    AtomNamedApplicationNew i -> ppCode i
+    AtomNamedApplication i -> ppCode i
 
 instance PrettyPrint PatternScopedIden where
   ppCode = \case
@@ -1006,7 +1003,7 @@ instance PrettyPrint Expression where
     ExpressionCase c -> ppCase NotTop c
     ExpressionIf c -> ppIf NotTop c
     ExpressionIterator i -> ppIterator NotTop i
-    ExpressionNamedApplicationNew i -> ppCode i
+    ExpressionNamedApplication i -> ppCode i
     ExpressionRecordUpdate i -> ppCode i
     ExpressionParensRecordUpdate i -> ppCode i
 

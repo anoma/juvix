@@ -3,7 +3,7 @@ module Package;
 import PackageDescription.V2 open;
 
 package : Package :=
-  defaultPackage@?{
+  defaultPackage@{
     name := "test085";
     dependencies := [defaultStdlib; path "client/"];
   };

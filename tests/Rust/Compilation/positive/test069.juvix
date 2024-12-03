@@ -23,7 +23,7 @@ mkOrdHelper
   : Ord A := mkOrd cmp lt gt;
 
 ordNatNamed : Ord Nat :=
-  mkOrdHelper@?{
+  mkOrdHelper@{
     cmp := Ord.compare
   };
 

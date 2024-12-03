@@ -1056,7 +1056,7 @@ tests:
         cat <<-EOF > Package.juvix
         module Package;
         import PackageDescription.V2 open;
-        package : Package := defaultPackage@?{dependencies := [defaultStdlib ; git "dep1" "$temp/dep" "main"]}
+        package : Package := defaultPackage@{dependencies := [defaultStdlib ; git "dep1" "$temp/dep" "main"]}
         EOF
 
         cat <<-EOF > HelloWorld.juvix
