@@ -22,10 +22,24 @@ isSpecializable md node =
       NCtr Constr {..} ->
         case lookupConstructorInfo md _constrTag ^. constructorPragmas . pragmasSpecialise of
           Just (PragmaSpecialise False) -> False
-          _ -> True
+          _ ->
+            -- We need to avoid duplication of non-immediate expressions
+            all (isSpecializableConstrArg md) _constrArgs
       NApp {} ->
-        let (h, _) = unfoldApps' node
+        let (h, args) = unfoldApps' node
          in isSpecializable md h
+              -- We need to avoid duplication of non-immediate expressions
+              && all (isImmediateOrLambda md) args
+      _ -> False
+
+isSpecializableConstrArg :: Module -> Node -> Bool
+isSpecializableConstrArg md node =
+  isImmediateOrLambda md node
+    || case node of
+      NCtr Constr {..} ->
+        case lookupConstructorInfo md _constrTag ^. constructorPragmas . pragmasSpecialise of
+          Just (PragmaSpecialise False) -> False
+          _ -> all (isSpecializableConstrArg md) _constrArgs
       _ -> False
 
 -- | Check for `h a1 .. an` where `h` is an identifier explicitly marked for
@@ -48,36 +62,10 @@ isMarkedSpecializable md = \case
           _ ->
             False
 
--- | Checks if an argument is passed without modification to recursive calls.
+-- | Checks if the `n`th argument (one-based) is passed without modification to
+-- direct recursive calls.
 isArgSpecializable :: Module -> Symbol -> Int -> Bool
-isArgSpecializable tab sym argNum = run $ execState True $ dmapNRM go body
-  where
-    nodeSym = lookupIdentifierNode tab sym
-    (lams, body) = unfoldLambdas nodeSym
-    n = length lams
-
-    go :: (Member (State Bool) r) => Level -> Node -> Sem r Recur
-    go lvl node = case node of
-      NApp {} ->
-        let (h, args) = unfoldApps' node
-         in case h of
-              NIdt Ident {..}
-                | _identSymbol == sym ->
-                    let b =
-                          argNum <= length args
-                            && case args !! (argNum - 1) of
-                              NVar Var {..} | _varIndex == lvl + n - argNum -> True
-                              _ -> False
-                     in do
-                          modify' (&& b)
-                          mapM_ (dmapNRM' (lvl, go)) args
-                          return $ End node
-              _ -> return $ Recur node
-      NIdt Ident {..}
-        | _identSymbol == sym -> do
-            put False
-            return $ End node
-      _ -> return $ Recur node
+isArgSpecializable md sym argNum = isArgRecursiveInvariant md sym (argNum - 1)
 
 convertNode :: forall r. (Member InfoTableBuilder r) => Node -> Sem r Node
 convertNode = dmapLRM go

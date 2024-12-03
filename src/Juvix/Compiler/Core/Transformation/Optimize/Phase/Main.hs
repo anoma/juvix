@@ -19,7 +19,7 @@ optimize' :: CoreOptions -> Module -> Module
 optimize' opts@CoreOptions {..} md =
   filterUnreachable
     . compose
-      (6 * _optOptimizationLevel)
+      (4 * _optOptimizationLevel)
       ( doConstantFolding
           . doSimplification 1
           . specializeArgs

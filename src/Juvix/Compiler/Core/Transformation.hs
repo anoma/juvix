@@ -43,10 +43,12 @@ import Juvix.Compiler.Core.Transformation.Optimize.FilterUnreachable (filterUnre
 import Juvix.Compiler.Core.Transformation.Optimize.Inlining
 import Juvix.Compiler.Core.Transformation.Optimize.LambdaFolding
 import Juvix.Compiler.Core.Transformation.Optimize.LetFolding
+import Juvix.Compiler.Core.Transformation.Optimize.LoopHoisting
 import Juvix.Compiler.Core.Transformation.Optimize.MandatoryInlining
 import Juvix.Compiler.Core.Transformation.Optimize.Phase.Eval qualified as Phase.Eval
 import Juvix.Compiler.Core.Transformation.Optimize.Phase.Exec qualified as Phase.Exec
 import Juvix.Compiler.Core.Transformation.Optimize.Phase.Main qualified as Phase.Main
+import Juvix.Compiler.Core.Transformation.Optimize.Phase.PreLifting qualified as Phase.PreLifting
 import Juvix.Compiler.Core.Transformation.Optimize.Phase.VampIR qualified as Phase.VampIR
 import Juvix.Compiler.Core.Transformation.Optimize.SimplifyComparisons (simplifyComparisons)
 import Juvix.Compiler.Core.Transformation.Optimize.SimplifyIfs
@@ -92,6 +94,7 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
       LetFolding -> return . letFolding
       LambdaFolding -> return . lambdaFolding
       LetHoisting -> return . letHoisting
+      LoopHoisting -> return . loopHoisting
       Inlining -> inlining
       MandatoryInlining -> return . mandatoryInlining
       FoldTypeSynonyms -> return . foldTypeSynonyms
@@ -107,3 +110,4 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
       OptPhaseExec -> Phase.Exec.optimize
       OptPhaseVampIR -> Phase.VampIR.optimize
       OptPhaseMain -> Phase.Main.optimize
+      OptPhasePreLifting -> Phase.PreLifting.optimize

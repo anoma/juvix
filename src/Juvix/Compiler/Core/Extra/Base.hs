@@ -59,11 +59,17 @@ mkLambda i bi b = NLam (Lambda i bi b)
 mkLambda' :: Type -> Node -> Node
 mkLambda' ty = mkLambda Info.empty (mkBinder' ty)
 
+mkLambda'' :: Binder -> Node -> Node
+mkLambda'' = mkLambda Info.empty
+
 mkLambdas :: [Info] -> [Binder] -> Node -> Node
 mkLambdas is bs n = foldl' (flip (uncurry mkLambda)) n (reverse (zipExact is bs))
 
 mkLambdas' :: [Type] -> Node -> Node
 mkLambdas' tys n = foldl' (flip mkLambda') n (reverse tys)
+
+mkLambdas'' :: [Binder] -> Node -> Node
+mkLambdas'' bs n = foldl' (flip mkLambda'') n (reverse bs)
 
 mkLetItem :: Text -> Type -> Node -> LetItem
 mkLetItem name ty = LetItem (mkBinder name ty)
