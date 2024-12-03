@@ -10,7 +10,7 @@ import Juvix.Compiler.Pipeline.Loader.PathResolver.ImportTree.Base
 import Juvix.Compiler.Pipeline.Loader.PathResolver.PackageInfo
 import Juvix.Compiler.Pipeline.Options
 import Juvix.Data.CodeAnn
-import Juvix.Data.Logger
+import Juvix.Data.Effect.Logger
 import Juvix.Prelude
 
 data ProgressLog :: Effect where

@@ -1,4 +1,4 @@
-module Juvix.Data.Logger
+module Juvix.Data.Effect.Logger
   ( defaultLoggerOptions,
     replLoggerOptions,
     defaultLogLevel,
