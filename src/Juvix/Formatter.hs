@@ -94,7 +94,7 @@ format p = do
 -- contents of a file) for every processed file.
 --
 -- NB: This function does not traverse into Juvix sub-projects, i.e into
--- subdirectories that contain a juvix.yaml file.
+-- subdirectories that contain a Package.juvix file.
 formatProjectSourceCode ::
   forall r.
   (Members '[Output FormattedFileInfo] r) =>
@@ -178,12 +178,11 @@ formatResultSourceCode filepath src = do
     mkResult :: FormatResult -> Sem r FormatResult
     mkResult res = do
       output
-        ( FormattedFileInfo
-            { _formattedFileInfoPath = filepath,
-              _formattedFileInfoContents = src ^. sourceCodeFormatted,
-              _formattedFileInfoContentsModified = res == FormatResultNotFormatted
-            }
-        )
+        FormattedFileInfo
+          { _formattedFileInfoPath = filepath,
+            _formattedFileInfoContents = src ^. sourceCodeFormatted,
+            _formattedFileInfoContentsModified = res == FormatResultNotFormatted
+          }
       return res
 
 formatScoperResult' ::

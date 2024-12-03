@@ -49,15 +49,22 @@ targetFromOptions opts = do
 -- | Formats the project on the root
 formatProject ::
   forall r.
-  (Members '[App, EmbedIO, TaggedLock, Logger, Files, Output FormattedFileInfo] r) =>
+  (Members '[App, EmbedIO, TaggedLock, Logger, ScopeEff, Files, Output FormattedFileInfo] r) =>
   Sem r FormatResult
 formatProject = silenceProgressLog . runPipelineOptions . runPipelineSetup $ do
   res :: [(ImportNode, PipelineResult ModuleInfo)] <- processProject
-  res' :: [(ImportNode, SourceCode)] <- forM res $ \(node, nfo) -> do
-    pkgId :: PackageId <- (^. entryPointPackageId) <$> ask
-    src <- runReader pkgId (formatModuleInfo node nfo)
+  pkgId :: PackageId <- (^. entryPointPackageId) <$> ask
+  res' :: [(ImportNode, SourceCode)] <- runReader pkgId $ forM res $ \(node, nfo) -> do
+    src <- formatModuleInfo node nfo
     return (node, src)
-  formatProjectSourceCode res'
+  formatRes <- formatProjectSourceCode res'
+  formatPkgRes <- formatPackageDotJuvix
+  return (formatRes <> formatPkgRes)
+
+formatPackageDotJuvix :: forall r. (Members '[App, Files, Logger, Output FormattedFileInfo, ScopeEff] r) => Sem r FormatResult
+formatPackageDotJuvix = do
+  pkgDotJuvix <- askPackageDotJuvixPath
+  ifM (fileExists' pkgDotJuvix) (format pkgDotJuvix) (return mempty)
 
 runCommand :: forall r. (Members AppEffects r) => FormatOptions -> Sem r ()
 runCommand opts = do
