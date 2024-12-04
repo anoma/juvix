@@ -2,7 +2,7 @@
 
 module Juvix.Formatter where
 
-import Juvix.Compiler.Concrete.Data.Highlight.Builder (ignoreHighlightBuilder)
+import Juvix.Compiler.Concrete.Data.Highlight.Builder (evalHighlightBuilder)
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Print (ppOutDefault)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping (ScoperResult, getModuleId, scopeCheck)
@@ -118,7 +118,7 @@ formatModuleInfo ::
   Sem r SourceCode
 formatModuleInfo node moduleInfo =
   withResolverRoot (node ^. importNodePackageRoot)
-    . ignoreHighlightBuilder
+    . evalHighlightBuilder
     $ do
       pkg :: PackageId <- ask
       parseRes :: ParserResult <-

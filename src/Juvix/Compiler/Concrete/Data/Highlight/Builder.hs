@@ -34,8 +34,8 @@ runHighlightBuilder = reinterpret (runStateShared emptyHighlightInput) $ \case
   HighlightMergeDocTable tbl -> modifyShared (over highlightDocTable (HashMap.union tbl))
   GetDocTable uid -> filterByTopModule uid <$> getsShared (^. highlightDocTable)
 
-ignoreHighlightBuilder :: Sem (HighlightBuilder ': r) a -> Sem r a
-ignoreHighlightBuilder = fmap snd . runHighlightBuilder
+evalHighlightBuilder :: Sem (HighlightBuilder ': r) a -> Sem r a
+evalHighlightBuilder = fmap snd . runHighlightBuilder
 
 runJuvixError :: (Members '[HighlightBuilder] r) => Sem (Error JuvixError ': r) a -> Sem r (Either JuvixError a)
 runJuvixError m = do

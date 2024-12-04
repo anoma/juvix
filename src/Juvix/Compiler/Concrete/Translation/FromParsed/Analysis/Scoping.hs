@@ -105,7 +105,7 @@ scopeCheckRepl ::
   Sem r b
 scopeCheckRepl check importTab tab a =
   mapError (JuvixError @ScoperError)
-    . ignoreHighlightBuilder
+    . evalHighlightBuilder
     . evalInfoTableBuilder tab
     . runReader iniScopeParameters
     . runReader tab'
@@ -3215,7 +3215,7 @@ checkJudoc ::
   Judoc 'Parsed ->
   Sem r (Judoc 'Scoped)
 checkJudoc (Judoc groups) =
-  ignoreHighlightBuilder
+  evalHighlightBuilder
     . ignoreInfoTableBuilder
     $ Judoc <$> mapM checkJudocGroup groups
 

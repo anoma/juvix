@@ -39,8 +39,8 @@ data HighlightBuilder :: Effect where
 
 makeSem ''HighlightBuilder
 
-ignoreHighlightBuilder :: Sem (HighlightBuilder ': r) a -> Sem r a
-ignoreHighlightBuilder = interpret $ \case
+evalHighlightBuilder :: Sem (HighlightBuilder ': r) a -> Sem r a
+evalHighlightBuilder = interpret $ \case
   HighlightItem {} -> return ()
   HighlightNockOp {} -> return ()
   HighlightPath {} -> return ()

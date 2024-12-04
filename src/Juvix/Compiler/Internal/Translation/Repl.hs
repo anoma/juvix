@@ -24,7 +24,7 @@ typeCheckExpressionType exp = do
   stable <- gets (^. artifactScopeTable)
   runResultBuilderArtifacts
     . runNameIdGenArtifacts
-    . ignoreHighlightBuilder
+    . evalHighlightBuilder
     . runReader table
     . runReader (stable ^. infoBuiltins)
     . runReader stable

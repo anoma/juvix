@@ -138,7 +138,7 @@ registerBuiltinHelper b n = do
             }
 
 runInfoTableBuilderRepl :: (Members '[Error ScoperError] r) => InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
-runInfoTableBuilderRepl tab = ignoreHighlightBuilder . runInfoTableBuilder tab . raiseUnder
+runInfoTableBuilderRepl tab = evalHighlightBuilder . runInfoTableBuilder tab . raiseUnder
 
 ignoreInfoTableBuilder :: (Members '[Error ScoperError, HighlightBuilder] r) => Sem (InfoTableBuilder ': r) a -> Sem r a
 ignoreInfoTableBuilder = fmap snd . runInfoTableBuilder mempty

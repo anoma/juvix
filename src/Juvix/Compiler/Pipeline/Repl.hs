@@ -1,6 +1,6 @@
 module Juvix.Compiler.Pipeline.Repl where
 
-import Juvix.Compiler.Concrete (ignoreHighlightBuilder)
+import Juvix.Compiler.Concrete (evalHighlightBuilder)
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromParsed qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
@@ -89,7 +89,7 @@ parseReplInput ::
   Text ->
   Sem r Parser.ReplInput
 parseReplInput fp txt =
-  ignoreHighlightBuilder
+  evalHighlightBuilder
     . runNameIdGenArtifacts
     . runStateLikeArtifacts runParserResultBuilder artifactParsing
     $ Parser.replInputFromTextSource fp txt
@@ -165,7 +165,7 @@ compileReplInputIO fp txt = do
     . runLoggerIO replLoggerOptions
     . runReader defaultNumThreads
     . evalInternet hasInternet
-    . ignoreHighlightBuilder
+    . evalHighlightBuilder
     . runTaggedLockPermissive
     . runFilesIO
     . mapError (JuvixError @GitProcessError)

@@ -126,7 +126,7 @@ loadPackage' packagePath = do
     . runConcurrent
     . ignoreLogger
     . evalInternetOffline
-    . ignoreHighlightBuilder
+    . evalHighlightBuilder
     . runProcessIO
     . runFilesIO
     . evalTopNameIdGen defaultModuleId
