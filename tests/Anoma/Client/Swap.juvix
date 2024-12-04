@@ -1,3 +1,4 @@
+--- translated from https://github.com/anoma/anoma/blob/61413dfc6460b7bf96e9207ce3b9d22b9c678f09/apps/anoma_node/lib/examples/e_transaction.ex#L309
 module Swap;
 
 import Stdlib.Prelude open;
@@ -46,48 +47,6 @@ trivial_true_eph_nullifier_action : Action :=
     proofs := [trivial_true_eph_nullifier];
     app-data := 0;
   };
-
--- trivial_true_resource_2 : Resource :=
---   mkResource@{
---     label := 0;
---     logic := \{_ _ := true};
---     ephemeral := true;
---     quantity := 1;
---     data := 0;
---     nullifier-key := replicate 32 0x0 |> mkByteArray |> toAnomaContents;
---     rseed := 0;
---     nonce := 1;
---   };
-
--- trivial_true_nullifier_2 : Nat := nullifier trivial_true_resource_2;
-
--- trivial_true_2_nullifier : Proof :=
---   let
---     publicInputs : Public-Inputs :=
---       mkPublic-Inputs@{
---         commitments := [];
---         nullifiers := [trivial_true_nullifier_2];
---         self-tag := trivial_true_nullifier_2;
---         other-public := 0;
---       };
---     privateInputs : Private-Inputs :=
---       mkPrivate-Inputs@{
---         committed-resources := [];
---         nullified-resources := [trivial_true_resource_2];
---         other-private := 0;
---       };
---   in mkProofLogic trivial_true_resource_eph publicInputs privateInputs;
-
--- trivial_true_2_nullifier_action : Action :=
---   mkAction@{
---     commitments := [];
---     nullifiers := [trivial_true_nullifier_2];
---     proofs := [trivial_true_2_nullifier];
---     app-data := 0;
---   };
-
--- trivial_true_2_nullifier_delta : Delta :=
---   actionDelta trivial_true_2_nullifier_action;
 
 nullify_intent_eph : Transaction :=
   mkTransaction@{
