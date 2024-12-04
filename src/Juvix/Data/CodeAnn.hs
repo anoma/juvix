@@ -6,10 +6,14 @@ module Juvix.Data.CodeAnn
 where
 
 import Juvix.Compiler.Concrete.Data.Name
+import Juvix.Data.Error.GenericError
+import Juvix.Data.IsImplicit
 import Juvix.Data.Keyword
+import Juvix.Data.NameId
 import Juvix.Data.NameKind
+import Juvix.Data.WithLoc
 import Juvix.Extra.Strings qualified as Str
-import Juvix.Prelude
+import Juvix.Prelude.Base
 import Juvix.Prelude.Pretty hiding (braces, brackets, group, list, parens)
 import Prettyprinter.Render.Terminal (Color (..), bold, colorDull)
 

@@ -1,6 +1,8 @@
 module Juvix.Data.Comment where
 
 import Data.HashMap.Strict qualified as HashMap
+import Data.Text qualified as Text
+import Juvix.Data.CodeAnn (CodeAnn (..), PrettyCodeAnn, ppCodeAnn)
 import Juvix.Data.Loc
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude.Base
@@ -99,14 +101,28 @@ instance HasLoc SpaceSection where
 instance HasLoc Comment where
   getLoc = (^. commentInterval)
 
+instance PrettyCodeAnn Comment where
+  ppCodeAnn = annotate AnnComment . pretty
+
 instance Pretty Comment where
   pretty :: Comment -> Doc ann
-  pretty c = delim (pretty (c ^. commentText))
+  pretty c = delim (c ^. commentText)
     where
-      delim :: Doc ann -> Doc ann
+      delim :: Text -> Doc ann
       delim = case c ^. commentType of
-        CommentOneLine -> (Str.commentLineStart <>)
-        CommentBlock -> enclose Str.commentBlockStart Str.commentBlockEnd
+        CommentOneLine -> (Str.commentLineStart <>) . pretty
+        CommentBlock ->
+          enclose Str.commentBlockStart Str.commentBlockEnd
+            . pretty
+            . trimPrefixSpace
+
+      trimPrefixSpace :: Text -> Text
+      trimPrefixSpace =
+        fromJust
+          . Text.stripSuffix "\n"
+          . Text.unlines
+          . map Text.strip
+          . Text.lines
 
 allComments :: Comments -> [Comment]
 allComments c =
