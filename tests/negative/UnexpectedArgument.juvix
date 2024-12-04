@@ -5,6 +5,6 @@ type T := t : T;
 f (a : T) : T := t;
 
 x : T :=
-  f@?{
+  f@{
     x := t
   };

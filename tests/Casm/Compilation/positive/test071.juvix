@@ -39,5 +39,5 @@ h {a : Nat := 2} (b c : Nat) {d : Nat := 3} : Nat := a * b + c * d;
 
 main : Nat :=
   fun@{a := fun; b := fun@{b := 3} * fun@{b := fun {2}}} +
-  f@{c := 5} + g@?{b := 4} 3 + ite (Ord.lt 1 0) 1 0 +
-  h@?{b := 4} 1;
+  f@{c := 5} + \{c := g@{b := 4; c}} 3 + ite (Ord.lt 1 0) 1 0 +
+  \{c := h@{b := 4; c}} 1;

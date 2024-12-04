@@ -62,7 +62,7 @@ mkVersion
   {release : Maybe String := nothing}
   {meta : Maybe String := nothing}
   : SemVer :=
-  mkSemVer@?{
+  mkSemVer@{
     major;
     minor;
     patch;

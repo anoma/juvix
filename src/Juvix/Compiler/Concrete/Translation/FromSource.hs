@@ -882,7 +882,7 @@ expressionAtom =
   P.label "<expression>" $
     AtomLiteral <$> P.try literal
       <|> AtomIterator <$> iterator
-      <|> AtomNamedApplicationNew <$> namedApplicationNew
+      <|> AtomNamedApplication <$> namedApplication
       <|> AtomList <$> parseList
       <|> AtomIf <$> multiwayIf
       <|> AtomIdentifier <$> name
@@ -1041,19 +1041,19 @@ pnamedArgumentItemPun = do
 
 -- | Parses zero or more named arguments. This function is necessary to avoid
 -- using excessive backtracking.
-manyNamedArgumentNewRBrace ::
+manyNamedArgumentRBrace ::
   forall r.
   (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) =>
-  ParsecS r [NamedArgumentNew 'Parsed]
-manyNamedArgumentNewRBrace = reverse <$> go []
+  ParsecS r [NamedArgument 'Parsed]
+manyNamedArgumentRBrace = reverse <$> go []
   where
-    go :: [NamedArgumentNew 'Parsed] -> ParsecS r [NamedArgumentNew 'Parsed]
+    go :: [NamedArgument 'Parsed] -> ParsecS r [NamedArgument 'Parsed]
     go acc =
       rbrace $> acc
         <|> itemHelper (P.try (withIsLast (NamedArgumentItemPun <$> pnamedArgumentItemPun)))
-        <|> itemHelper (withIsLast (NamedArgumentNewFunction <$> pnamedArgumentFunctionDef))
+        <|> itemHelper (withIsLast (NamedArgumentFunction <$> pnamedArgumentFunctionDef))
       where
-        itemHelper :: ParsecS r (Bool, NamedArgumentNew 'Parsed) -> ParsecS r [NamedArgumentNew 'Parsed]
+        itemHelper :: ParsecS r (Bool, NamedArgument 'Parsed) -> ParsecS r [NamedArgument 'Parsed]
         itemHelper p = do
           (isLast, item) <- p
           let acc' = item : acc
@@ -1072,34 +1072,20 @@ manyNamedArgumentNewRBrace = reverse <$> go []
       isLast <- pIsLast
       return (isLast, res)
 
-pisExhaustive ::
-  forall r.
-  (Members '[ParserResultBuilder] r) =>
-  ParsecS r IsExhaustive
-pisExhaustive = do
-  (keyword, exh) <-
-    (,False) <$> kw kwAtQuestion
-      <|> (,True) <$> kw kwAt
-  return
-    IsExhaustive
-      { _isExhaustiveKw = Irrelevant keyword,
-        _isExhaustive = exh
-      }
-
-namedApplicationNew ::
+namedApplication ::
   forall r.
   (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) =>
-  ParsecS r (NamedApplicationNew 'Parsed)
-namedApplicationNew = P.label "<named application>" $ do
+  ParsecS r (NamedApplication 'Parsed)
+namedApplication = P.label "<named application>" $ do
   checkNoNamedApplicationMissingAt
-  (_namedApplicationNewName, _namedApplicationNewExhaustive) <- P.try $ do
+  (_namedApplicationName, _namedApplicationAtKw) <- P.try $ do
     n <- name
-    exhaustive <- pisExhaustive
+    kwd <- Irrelevant <$> kw kwAt
     lbrace
-    return (n, exhaustive)
-  _namedApplicationNewArguments <- manyNamedArgumentNewRBrace
-  let _namedApplicationNewExtra = Irrelevant ()
-  return NamedApplicationNew {..}
+    return (n, kwd)
+  _namedApplicationArguments <- manyNamedArgumentRBrace
+  let _namedApplicationExtra = Irrelevant ()
+  return NamedApplication {..}
 
 hole :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r (HoleType 'Parsed)
 hole = kw kwHole

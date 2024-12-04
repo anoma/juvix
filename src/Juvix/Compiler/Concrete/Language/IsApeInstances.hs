@@ -81,12 +81,12 @@ instance IsApe Name ApeLeaf where
           _leafExpr = ApeLeafAtom (sing :&: AtomIdentifier n)
         }
 
-instance (SingI s) => IsApe (NamedApplicationNew s) ApeLeaf where
+instance (SingI s) => IsApe (NamedApplication s) ApeLeaf where
   toApe a =
     ApeLeaf $
       Leaf
         { _leafAtomicity = atomicity a,
-          _leafExpr = ApeLeafAtom (sing :&: AtomNamedApplicationNew a)
+          _leafExpr = ApeLeafAtom (sing :&: AtomNamedApplication a)
         }
 
 instance IsApe Application ApeLeaf where
@@ -144,7 +144,7 @@ instance IsApe Expression ApeLeaf where
     ExpressionInfixApplication a -> toApe a
     ExpressionPostfixApplication a -> toApe a
     ExpressionFunction a -> toApe a
-    ExpressionNamedApplicationNew a -> toApe a
+    ExpressionNamedApplication a -> toApe a
     ExpressionRecordUpdate a -> toApe a
     ExpressionParensRecordUpdate {} -> leaf
     ExpressionParensIdentifier {} -> leaf

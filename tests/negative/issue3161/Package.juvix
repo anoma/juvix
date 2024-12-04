@@ -3,7 +3,7 @@ module Package;
 import PackageDescription.V2 open;
 
 package : Package :=
-  defaultPackage@?{
+  defaultPackage@{
     name := "stdlib";
     version := mkVersion 0 0 1;
     dependencies := []

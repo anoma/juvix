@@ -37,7 +37,7 @@ tests:
         import PackageDescription.V2 open;
 
         package : Package :=
-          defaultPackage@?{name := "HelloWorld";
+          defaultPackage@{name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
                [defaultStdlib;
@@ -103,7 +103,7 @@ tests:
         import PackageDescription.V2 open;
 
         package : Package :=
-          defaultPackage@?{name := "HelloWorld";
+          defaultPackage@{name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
                [defaultStdlib;
@@ -173,7 +173,7 @@ tests:
         import PackageDescription.V2 open;
 
         package : Package :=
-          defaultPackage@?{name := "HelloWorld";
+          defaultPackage@{name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
                [defaultStdlib;
@@ -218,7 +218,7 @@ tests:
         import PackageDescription.V2 open;
 
         package : Package :=
-          defaultPackage@?{name := "HelloWorld";
+          defaultPackage@{name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
                [defaultStdlib;
@@ -280,7 +280,7 @@ tests:
         import PackageDescription.V2 open;
 
         package : Package :=
-          defaultPackage@?{name := "Dep1";
+          defaultPackage@{name := "Dep1";
             version := mkVersion 0 1 0;
             dependencies :=
                [defaultStdlib;
@@ -303,7 +303,7 @@ tests:
         import PackageDescription.V2 open;
 
         package : Package :=
-          defaultPackage@?{name := "HelloWorld";
+          defaultPackage@{name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
                [defaultStdlib;
@@ -420,7 +420,7 @@ tests:
         import PackageDescription.V2 open;
 
         package : Package :=
-          defaultPackage@?{name := "HelloWorld";
+          defaultPackage@{name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
                [defaultStdlib;
@@ -515,7 +515,7 @@ tests:
         import PackageDescription.V2 open;
 
         package : Package :=
-          defaultPackage@?{name := "HelloWorld";
+          defaultPackage@{name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
                [defaultStdlib;
@@ -546,7 +546,7 @@ tests:
         import PackageDescription.V2 open;
 
         package : Package :=
-          defaultPackage@?{name := "HelloWorld";
+          defaultPackage@{name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
                [defaultStdlib;
@@ -623,7 +623,7 @@ tests:
         import PackageDescription.V2 open;
 
         package : Package :=
-          defaultPackage@?{name := "Dep1";
+          defaultPackage@{name := "Dep1";
             version := mkVersion 0 1 0;
             dependencies :=
                [defaultStdlib;
@@ -659,7 +659,7 @@ tests:
         import PackageDescription.V2 open;
 
         package : Package :=
-          defaultPackage@?{name := "HelloWorld";
+          defaultPackage@{name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
                [defaultStdlib;
@@ -735,7 +735,7 @@ tests:
         import PackageDescription.V2 open;
 
         package : Package :=
-          defaultPackage@?{name := "HelloWorld";
+          defaultPackage@{name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
                [defaultStdlib;
@@ -771,7 +771,7 @@ tests:
         import PackageDescription.V2 open;
 
         package : Package :=
-          defaultPackage@?{name := "HelloWorld";
+          defaultPackage@{name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
                [defaultStdlib;
@@ -822,7 +822,7 @@ tests:
         import PackageDescription.V2 open;
 
         package : Package :=
-          defaultPackage@?{name := "HelloWorld";
+          defaultPackage@{name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
                [defaultStdlib;
@@ -867,7 +867,7 @@ tests:
         import PackageDescription.V2 open;
 
         package : Package :=
-          defaultPackage@?{name := "HelloWorld";
+          defaultPackage@{name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
                [defaultStdlib;
@@ -912,7 +912,7 @@ tests:
         import PackageDescription.V2 open;
 
         package : Package :=
-          defaultPackage@?{name := "HelloWorld";
+          defaultPackage@{name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
                [defaultStdlib;
@@ -982,7 +982,7 @@ tests:
         import PackageDescription.V2 open;
 
         package : Package :=
-          defaultPackage@?{name := "HelloWorld";
+          defaultPackage@{name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
                [defaultStdlib;
@@ -1033,7 +1033,7 @@ tests:
         import PackageDescription.V2 open;
 
         package : Package :=
-          defaultPackage@?{name := "HelloWorld";
+          defaultPackage@{name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
                [defaultStdlib;
@@ -1096,7 +1096,7 @@ tests:
         import PackageDescription.V2 open;
 
         package : Package :=
-          defaultPackage@?{name := "HelloWorld";
+          defaultPackage@{name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
                [defaultStdlib;

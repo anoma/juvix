@@ -67,16 +67,6 @@ smallUniverseExpression = do
           _expressionAtoms = pure (AtomUniverse (smallUniverse loc))
         }
 
-isExhaustive :: (Member (Reader Interval) r) => Bool -> Sem r IsExhaustive
-isExhaustive _isExhaustive = do
-  _isExhaustiveKw <-
-    Irrelevant
-      <$> if
-          | _isExhaustive -> kw kwAt
-          | otherwise -> kw kwAtQuestion
-
-  return IsExhaustive {..}
-
 symbol :: (Member (Reader Interval) r) => Text -> Sem r Symbol
 symbol t = do
   l <- ask
@@ -107,25 +97,13 @@ braced a = do
   l <- ask
   AtomBraces . WithLoc l <$> expressionAtoms' a
 
-mkIsExhaustive :: (Member (Reader Interval) r) => Bool -> Sem r IsExhaustive
-mkIsExhaustive _isExhaustive = do
-  keyw <-
-    if
-        | _isExhaustive -> kw kwAt
-        | otherwise -> kw kwAtQuestion
-  return
-    IsExhaustive
-      { _isExhaustiveKw = Irrelevant keyw,
-        _isExhaustive
-      }
-
-namedApplication :: Name -> IsExhaustive -> [NamedArgumentNew 'Parsed] -> ExpressionAtom 'Parsed
-namedApplication n exh as =
-  AtomNamedApplicationNew
-    NamedApplicationNew
-      { _namedApplicationNewName = n,
-        _namedApplicationNewExhaustive = exh,
-        _namedApplicationNewArguments = as
+namedApplication :: Name -> Irrelevant KeywordRef -> [NamedArgument 'Parsed] -> ExpressionAtom 'Parsed
+namedApplication n kwd as =
+  AtomNamedApplication
+    NamedApplication
+      { _namedApplicationName = n,
+        _namedApplicationAtKw = kwd,
+        _namedApplicationArguments = as
       }
 
 literalInteger :: (Member (Reader Interval) r, Integral a) => a -> Sem r (ExpressionAtom 'Parsed)

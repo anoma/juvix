@@ -2,6 +2,6 @@ module Package;
 
 import PackageDescription.V2 open;
 
-package : Package := defaultPackage@?{name := "abc"; version := mkVersion 0 0 1 ; dependencies := [ github "org" "repo" "ref1" ; github "org" "repo" "ref2" ]};
+package : Package := defaultPackage@{name := "abc"; version := mkVersion 0 0 1 ; dependencies := [ github "org" "repo" "ref1" ; github "org" "repo" "ref2" ]};
 
 main : Package := package;
