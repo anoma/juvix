@@ -534,6 +534,22 @@ module MultiIf;
       | else := 2;
 end;
 
+{-hi
+
+-}
+module CommentAfterFun;
+  myfun (a : Nat) : Nat :=
+    {-
+    My comment.
+    -}
+    {-nospaces-}
+    {-    somespaces   -}
+    {-    first line
+
+    last line  -}
+    1;
+end;
+
 module PublicImports;
 
   module Inner;

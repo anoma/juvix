@@ -6,7 +6,7 @@ import Juvix.Data.CodeAnn (CodeAnn (..), PrettyCodeAnn, ppCodeAnn)
 import Juvix.Data.Loc
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude.Base
-import Prettyprinter
+import Prettyprinter hiding (concatWith)
 
 newtype Comments = Comments
   { _commentsByFile :: HashMap (Path Abs File) FileComments
@@ -117,12 +117,32 @@ instance Pretty Comment where
             . trimPrefixSpace
 
       trimPrefixSpace :: Text -> Text
-      trimPrefixSpace =
-        fromJust
-          . Text.stripSuffix "\n"
-          . Text.unlines
-          . map Text.strip
-          . Text.lines
+      trimPrefixSpace txt = case Text.unsnoc txt of
+        Nothing -> ""
+        Just (_, l) ->
+          appendNl
+            . striplines
+            $ txt
+          where
+            striplines :: Text -> Text
+            striplines =
+              concatWith (\a b -> a <> "\n" <> b)
+                . run
+                . execOutputList
+                . go True
+                . Text.lines
+            go :: (Members '[Output Text] r) => Bool -> [Text] -> Sem r ()
+            go isFirst = \case
+              [] -> return ()
+              a : as
+                | isFirst && isLast -> output a
+                | isFirst -> output (Text.stripEnd a) >> go False as
+                | isLast -> output (Text.stripStart a)
+                | otherwise -> output (Text.strip a) >> go False as
+                where
+                  isLast = null as
+            lastnl = '\n' == l
+            appendNl = if lastnl then (<> "\n") else id
 
 allComments :: Comments -> [Comment]
 allComments c =
